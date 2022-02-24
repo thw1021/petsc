@@ -22,7 +22,6 @@
 PetscErrorCode DMPlexSetReferenceTree(DM dm, DM ref)
 {
   DM_Plex        *mesh = (DM_Plex *)dm->data;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -62,7 +61,6 @@ PetscErrorCode DMPlexGetReferenceTree(DM dm, DM *ref)
 static PetscErrorCode DMPlexReferenceTreeGetChildSymmetry_Default(DM dm, PetscInt parent, PetscInt parentOrientA, PetscInt childOrientA, PetscInt childA, PetscInt parentOrientB, PetscInt *childOrientB, PetscInt *childB)
 {
   PetscInt       coneSize, dStart, dEnd, dim, ABswap, oAvert, oBvert, ABswapVert;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (parentOrientA == parentOrientB) {
@@ -200,7 +198,6 @@ static PetscErrorCode DMPlexReferenceTreeGetChildSymmetry_Default(DM dm, PetscIn
 PetscErrorCode DMPlexReferenceTreeGetChildSymmetry(DM dm, PetscInt parent, PetscInt parentOrientA, PetscInt childOrientA, PetscInt childA, PetscInt parentOrientB, PetscInt *childOrientB, PetscInt *childB)
 {
   DM_Plex        *mesh = (DM_Plex *)dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -213,7 +210,6 @@ static PetscErrorCode DMPlexSetTree_Internal(DM,PetscSection,PetscInt*,PetscInt*
 
 PetscErrorCode DMPlexCreateReferenceTree_SetTree(DM dm, PetscSection parentSection, PetscInt parents[], PetscInt childIDs[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexSetTree_Internal(dm,parentSection,parents,childIDs,PETSC_TRUE,PETSC_FALSE));
@@ -229,7 +225,6 @@ PetscErrorCode DMPlexCreateReferenceTree_Union(DM K, DM Kref, const char *labelN
   PetscSection   unionSection, unionConeSection, parentSection;
   PetscScalar   *unionCoords;
   IS             perm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   comm = PetscObjectComm((PetscObject)K);
@@ -466,7 +461,6 @@ PetscErrorCode DMPlexCreateDefaultReferenceTree(MPI_Comm comm, PetscInt dim, Pet
   DM             K, Kref;
   PetscInt       p, pStart, pEnd;
   DMLabel        identity;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 #if 1
@@ -499,7 +493,6 @@ static PetscErrorCode DMPlexTreeSymmetrize(DM dm)
   PetscSection   childSec, pSec;
   PetscInt       p, pSize, cSize, parMax = PETSC_MIN_INT, parMin = PETSC_MAX_INT;
   PetscInt       *offsets, *children, pStart, pEnd;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -555,7 +548,6 @@ static PetscErrorCode AnchorsFlatten (PetscSection section, IS is, PetscSection 
   PetscSection   secNew;
   PetscBool      anyNew, globalAnyNew;
   PetscBool      compress;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSectionGetChart(section,&pStart,&pEnd));
@@ -705,7 +697,6 @@ static PetscErrorCode DMPlexCreateAnchors_Tree(DM dm)
   PetscSection   aSec;
   DMLabel        canonLabel;
   IS             aIS;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -808,7 +799,6 @@ static PetscErrorCode DMPlexCreateAnchors_Tree(DM dm)
 
 static PetscErrorCode DMPlexGetTrueSupportSize(DM dm,PetscInt p,PetscInt *dof,PetscInt *numTrueSupp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (numTrueSupp[p] == -1) {
@@ -842,7 +832,6 @@ static PetscErrorCode DMPlexTreeExchangeSupports(DM dm)
   PetscInt       newSize, *newSupports, pStart, pEnd, p, d, depth;
   PetscInt       *numTrueSupp;
   PetscInt       *offsets;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -954,7 +943,6 @@ static PetscErrorCode DMPlexSetTree_Internal(DM dm, PetscSection parentSection, 
   DM_Plex       *mesh = (DM_Plex *)dm->data;
   DM             refTree;
   PetscInt       size;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -1058,7 +1046,6 @@ static PetscErrorCode DMPlexSetTree_Internal(DM dm, PetscSection parentSection, 
 @*/
 PetscErrorCode DMPlexSetTree(DM dm, PetscSection parentSection, PetscInt parents[], PetscInt childIDs[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexSetTree_Internal(dm,parentSection,parents,childIDs,PETSC_FALSE,PETSC_TRUE));
@@ -1119,7 +1106,6 @@ PetscErrorCode DMPlexGetTreeParent(DM dm, PetscInt point, PetscInt *parent, Pets
 {
   DM_Plex       *mesh = (DM_Plex *)dm->data;
   PetscSection   pSec;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -1170,7 +1156,6 @@ PetscErrorCode DMPlexGetTreeChildren(DM dm, PetscInt point, PetscInt *numChildre
   DM_Plex       *mesh = (DM_Plex *)dm->data;
   PetscSection   childSec;
   PetscInt       dof = 0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -1196,7 +1181,6 @@ PetscErrorCode DMPlexGetTreeChildren(DM dm, PetscInt point, PetscInt *numChildre
 static PetscErrorCode EvaluateBasis(PetscSpace space, PetscInt nBasis, PetscInt nFunctionals, PetscInt nComps, PetscInt nPoints, const PetscInt *pointsPerFn, const PetscReal *points, const PetscReal *weights, PetscReal *work, Mat basisAtPoints)
 {
   PetscInt       f, b, p, c, offset, qPoints;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSpaceEvaluate(space,nPoints,points,work,NULL,NULL));
@@ -1228,7 +1212,6 @@ static PetscErrorCode DMPlexComputeAnchorMatrix_Tree_Direct(DM dm, PetscSection 
   PetscSection   aSec;
   PetscReal      *v0, *v0parent, *vtmp, *J, *Jparent, *invJparent, detJ, detJparent;
   IS             aIS;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexGetChart(dm,&pStart,&pEnd));
@@ -1494,7 +1477,6 @@ static PetscErrorCode DMPlexReferenceTreeGetChildrenMatrices(DM refTree, PetscSc
   const PetscInt    *refAnchors;
   const PetscInt    **perms;
   const PetscScalar **flips;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDS(refTree,&ds));
@@ -1609,7 +1591,6 @@ static PetscErrorCode DMPlexReferenceTreeRestoreChildrenMatrices(DM refTree, Pet
   PetscScalar    ***refPointFieldMats;
   PetscInt       numFields, maxFields, pRefStart, pRefEnd, p, f;
   PetscSection   refConSec;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   refPointFieldN = *childrenN;
@@ -1658,7 +1639,6 @@ static PetscErrorCode DMPlexComputeAnchorMatrix_Tree_FromReference(DM dm, PetscS
   PetscSection   refConSec, refAnSec, anSec;
   IS             refAnIS, anIS;
   const PetscInt *anchors;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -1891,7 +1871,6 @@ PetscErrorCode DMPlexTreeRefineCell (DM dm, PetscInt cell, DM *ncdm)
   PetscScalar *newVertexCoords;
   PetscInt numPointsWithParents, *parents, *childIDs, *perm, *iperm, *preOrient, pOffset;
   PetscSection parentSection;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)dm),&rank));
@@ -2215,7 +2194,6 @@ PetscErrorCode DMPlexComputeInterpolatorTree(DM coarse, DM fine, PetscSF coarseT
   PetscInt          *offsets, *newOffsets, *offsetsCopy, *newOffsetsCopy, *rowOffsets, *numD, *numO;
   const PetscInt    ***perms;
   const PetscScalar ***flips;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexGetChart(coarse,&pStartC,&pEndC));
@@ -3021,7 +2999,6 @@ PetscErrorCode DMPlexComputeInjectorReferenceTree(DM refTree, Mat *inj)
   PetscInt       m, n;
   PetscScalar    *pointScalar;
   PetscReal      *v0, *v0parent, *vtmp, *J, *Jparent, *invJ, *pointRef, detJ, detJparent;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetLocalSection(refTree,&section));
@@ -3369,7 +3346,6 @@ static PetscErrorCode DMPlexReferenceTreeGetChildrenMatrices_Injection(DM refTre
   PetscInt       numFields, f, pRefStart, pRefEnd, p, *rows, *cols, maxDof;
   PetscScalar    ***refPointFieldMats;
   PetscSection   refConSec, refSection;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDS(refTree,&ds));
@@ -3439,7 +3415,6 @@ static PetscErrorCode DMPlexReferenceTreeRestoreChildrenMatrices_Injection(DM re
   PetscScalar    ***refPointFieldMats;
   PetscInt       numFields, pRefStart, pRefEnd, p, f;
   PetscSection   refConSec, refSection;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   refPointFieldMats = *childrenMats;
@@ -3479,7 +3454,6 @@ static PetscErrorCode DMPlexReferenceTreeGetInjector(DM refTree,Mat *injRef)
 {
   Mat            cMatRef;
   PetscObject    injRefObj;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDefaultConstraints(refTree,NULL,&cMatRef));
@@ -3504,7 +3478,6 @@ static PetscErrorCode DMPlexTransferInjectorTree(DM coarse, DM fine, PetscSF coa
   const PetscInt *rootDegrees;
   PetscScalar    *leafVals = NULL, *rootVals = NULL;
   PetscSF        coarseToFineEmbedded;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexGetChart(coarse,&pStartC,&pEndC));
@@ -3750,7 +3723,6 @@ PetscErrorCode DMPlexComputeInjectorTree(DM coarse, DM fine, PetscSF coarseToFin
   PetscLayout    rowMap, colMap;
   PetscInt       rowStart, rowEnd, colStart, colEnd, *nnzD, *nnzO;
   PetscScalar    ***childrenMats=NULL ; /* gcc -O gives 'may be used uninitialized' warning'. Initializing to suppress this warning */
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 
@@ -4003,7 +3975,6 @@ static PetscErrorCode DMPlexTransferVecTree_Interpolate(DM coarse, Vec vecCoarse
   DM                cellDM = NULL, gradDM = NULL;
   const PetscScalar *cellGeomArray = NULL;
   const PetscScalar *gradArray = NULL;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecSetOption(vecFine,VEC_IGNORE_NEGATIVE_INDICES,PETSC_TRUE));
@@ -4329,7 +4300,6 @@ static PetscErrorCode DMPlexTransferVecTree_Inject(DM fine, Vec vecFine, DM coar
   PetscLayout    rowMap, colMap;
   PetscInt       rowStart, rowEnd, colStart, colEnd;
   PetscScalar    ***childrenMats=NULL ; /* gcc -O gives 'may be used uninitialized' warning'. Initializing to suppress this warning */
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 
@@ -4504,7 +4474,6 @@ static PetscErrorCode DMPlexTransferVecTree_Inject(DM fine, Vec vecFine, DM coar
 @*/
 PetscErrorCode DMPlexTransferVecTree(DM dmIn, Vec vecIn, DM dmOut, Vec vecOut, PetscSF sfRefine, PetscSF sfCoarsen, PetscInt *cidsRefine, PetscInt *cidsCoarsen, PetscBool useBCs, PetscReal time)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecSet(vecOut,0.0));

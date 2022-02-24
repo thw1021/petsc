@@ -76,7 +76,6 @@ PetscErrorCode ISColoringGetType(ISColoring coloring,ISColoringType *type)
 PetscErrorCode  ISColoringDestroy(ISColoring *iscoloring)
 {
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*iscoloring) PetscFunctionReturn(0);
@@ -112,7 +111,6 @@ PetscErrorCode  ISColoringDestroy(ISColoring *iscoloring)
 */
 PetscErrorCode ISColoringViewFromOptions(ISColoring obj,PetscObject bobj,const char optionname[])
 {
-  PetscErrorCode    ierr;
   PetscViewer       viewer;
   PetscBool         flg;
   PetscViewerFormat format;
@@ -146,7 +144,6 @@ PetscErrorCode ISColoringViewFromOptions(ISColoring obj,PetscObject bobj,const c
 PetscErrorCode  ISColoringView(ISColoring iscoloring,PetscViewer viewer)
 {
   PetscInt       i;
-  PetscErrorCode ierr;
   PetscBool      iascii;
   IS             *is;
 
@@ -228,7 +225,6 @@ PetscErrorCode  ISColoringGetColors(ISColoring iscoloring,PetscInt *n,PetscInt *
 @*/
 PetscErrorCode  ISColoringGetIS(ISColoring iscoloring,PetscCopyMode mode, PetscInt *nn,IS *isis[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(iscoloring,1);
@@ -332,7 +328,6 @@ PetscErrorCode  ISColoringRestoreIS(ISColoring iscoloring,PetscCopyMode mode,IS 
 @*/
 PetscErrorCode  ISColoringCreate(MPI_Comm comm,PetscInt ncolors,PetscInt n,const ISColoringValue colors[],PetscCopyMode mode,ISColoring *iscoloring)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    size,rank,tag;
   PetscInt       base,top,i;
   PetscInt       nc,ncwork;
@@ -421,7 +416,6 @@ PetscErrorCode  ISBuildTwoSided(IS ito,IS toindx, IS *rows)
    MPI_Comm        comm;
    PetscSF         sf;
    PetscSFNode    *iremote;
-   PetscErrorCode  ierr;
 
    PetscFunctionBegin;
    CHKERRQ(PetscObjectGetComm((PetscObject)ito,&comm));
@@ -531,7 +525,6 @@ PetscErrorCode  ISPartitioningToNumbering(IS part,IS *is)
   IS             ndorder;
   PetscInt       i,np,npt,n,*starts = NULL,*sums = NULL,*lsizes = NULL,*newi = NULL;
   const PetscInt *indices = NULL;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part,IS_CLASSID,1);
@@ -617,7 +610,6 @@ PetscErrorCode  ISPartitioningCount(IS part,PetscInt len,PetscInt count[])
   MPI_Comm       comm;
   PetscInt       i,n,*lsizes;
   const PetscInt *indices;
-  PetscErrorCode ierr;
   PetscMPIInt    npp;
 
   PetscFunctionBegin;
@@ -685,7 +677,6 @@ PetscErrorCode  ISPartitioningCount(IS part,PetscInt len,PetscInt count[])
 @*/
 PetscErrorCode  ISAllGather(IS is,IS *isout)
 {
-  PetscErrorCode ierr;
   PetscInt       *indices,n,i,N,step,first;
   const PetscInt *lindices;
   MPI_Comm       comm;
@@ -751,7 +742,6 @@ PetscErrorCode  ISAllGather(IS is,IS *isout)
 PetscErrorCode  ISAllGatherColors(MPI_Comm comm,PetscInt n,ISColoringValue *lindices,PetscInt *outN,ISColoringValue *outindices[])
 {
   ISColoringValue *indices;
-  PetscErrorCode  ierr;
   PetscInt        i,N;
   PetscMPIInt     size,*offsets = NULL,*sizes = NULL, nn = n;
 
@@ -801,7 +791,6 @@ PetscErrorCode  ISAllGatherColors(MPI_Comm comm,PetscInt n,ISColoringValue *lind
 @*/
 PetscErrorCode  ISComplement(IS is,PetscInt nmin,PetscInt nmax,IS *isout)
 {
-  PetscErrorCode ierr;
   const PetscInt *indices;
   PetscInt       n,i,j,unique,cnt,*nindices;
   PetscBool      sorted;

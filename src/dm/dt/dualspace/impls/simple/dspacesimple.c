@@ -7,7 +7,6 @@ static PetscErrorCode PetscDualSpaceSetUp_Simple(PetscDualSpace sp)
   DM                     dm = sp->dm;
   PetscInt               dim, pStart, pEnd;
   PetscSection           section;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -23,7 +22,6 @@ static PetscErrorCode PetscDualSpaceSetUp_Simple(PetscDualSpace sp)
 static PetscErrorCode PetscDualSpaceDestroy_Simple(PetscDualSpace sp)
 {
   PetscDualSpace_Simple *s = (PetscDualSpace_Simple *) sp->data;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(s->numDof));
@@ -36,7 +34,6 @@ static PetscErrorCode PetscDualSpaceDestroy_Simple(PetscDualSpace sp)
 static PetscErrorCode PetscDualSpaceDuplicate_Simple(PetscDualSpace sp, PetscDualSpace spNew)
 {
   PetscInt       dim, d;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscDualSpaceGetDimension(sp, &dim));
@@ -61,7 +58,6 @@ static PetscErrorCode PetscDualSpaceSimpleSetDimension_Simple(PetscDualSpace sp,
   PetscDualSpace_Simple *s = (PetscDualSpace_Simple *) sp->data;
   DM                     dm;
   PetscInt               spatialDim, f;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   for (f = 0; f < s->dim; ++f) CHKERRQ(PetscQuadratureDestroy(&sp->functional[f]));
@@ -81,7 +77,6 @@ static PetscErrorCode PetscDualSpaceSimpleSetFunctional_Simple(PetscDualSpace sp
   PetscDualSpace_Simple *s = (PetscDualSpace_Simple *) sp->data;
   PetscReal             *weights;
   PetscInt               Nc, c, Nq, p;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse((f < 0) || (f >= s->dim),PetscObjectComm((PetscObject) sp), PETSC_ERR_ARG_OUTOFRANGE, "Basis index %d not in [0, %d)", f, s->dim);
@@ -112,7 +107,6 @@ static PetscErrorCode PetscDualSpaceSimpleSetFunctional_Simple(PetscDualSpace sp
 @*/
 PetscErrorCode PetscDualSpaceSimpleSetDimension(PetscDualSpace sp, PetscInt dim)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
@@ -140,7 +134,6 @@ PetscErrorCode PetscDualSpaceSimpleSetDimension(PetscDualSpace sp, PetscInt dim)
 @*/
 PetscErrorCode PetscDualSpaceSimpleSetFunctional(PetscDualSpace sp, PetscInt func, PetscQuadrature q)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
@@ -178,7 +171,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PetscDualSpaceCreate_Simple(PetscDualSpace sp)
 {
   PetscDualSpace_Simple *s;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);

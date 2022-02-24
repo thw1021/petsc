@@ -69,7 +69,6 @@ PetscErrorCode  MatSetValuesLocal_HYPREStruct_3d(Mat mat,PetscInt nrow,const Pet
 
 PetscErrorCode  MatZeroRowsLocal_HYPREStruct_3d(Mat mat,PetscInt nrow,const PetscInt irow[],PetscScalar d,Vec x,Vec b)
 {
-  PetscErrorCode  ierr;
   HYPRE_Int       index[3],entries[7] = {0,1,2,3,4,5,6};
   PetscInt        row,i;
   HYPRE_Complex   values[7];
@@ -104,7 +103,6 @@ PetscErrorCode MatZeroEntries_HYPREStruct_3d(Mat mat)
 
 static PetscErrorCode  MatSetUp_HYPREStruct(Mat mat)
 {
-  PetscErrorCode         ierr;
   Mat_HYPREStruct        *ex = (Mat_HYPREStruct*) mat->data;
   HYPRE_Int              sw[6];
   HYPRE_Int              hlower[3],hupper[3];
@@ -224,7 +222,6 @@ static PetscErrorCode  MatSetUp_HYPREStruct(Mat mat)
 
 PetscErrorCode MatMult_HYPREStruct(Mat A,Vec x,Vec y)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *xx;
   PetscScalar       *yy;
   PetscInt          ilower[3],iupper[3];
@@ -279,7 +276,6 @@ PetscErrorCode MatZeroEntries_HYPREStruct(Mat mat)
 PetscErrorCode MatDestroy_HYPREStruct(Mat mat)
 {
   Mat_HYPREStruct *ex = (Mat_HYPREStruct*) mat->data;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscStackCallStandard(HYPRE_StructMatrixDestroy,ex->hmat);
@@ -294,7 +290,6 @@ PetscErrorCode MatDestroy_HYPREStruct(Mat mat)
 PETSC_EXTERN PetscErrorCode MatCreate_HYPREStruct(Mat B)
 {
   Mat_HYPREStruct *ex;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(B,&ex));
@@ -336,7 +331,6 @@ M*/
 
 PetscErrorCode  MatSetValuesLocal_HYPRESStruct_3d(Mat mat,PetscInt nrow,const PetscInt irow[],PetscInt ncol,const PetscInt icol[],const PetscScalar y[],InsertMode addv)
 {
-  PetscErrorCode    ierr;
   HYPRE_Int         index[3],*entries;
   PetscInt          i,j,stencil;
   HYPRE_Complex     *values = (HYPRE_Complex*)y;
@@ -446,7 +440,6 @@ PetscErrorCode  MatSetValuesLocal_HYPRESStruct_3d(Mat mat,PetscInt nrow,const Pe
 
 PetscErrorCode  MatZeroRowsLocal_HYPRESStruct_3d(Mat mat,PetscInt nrow,const PetscInt irow[],PetscScalar d,Vec x,Vec b)
 {
-  PetscErrorCode   ierr;
   HYPRE_Int        index[3],*entries;
   PetscInt         i;
   HYPRE_Complex    **values;
@@ -508,7 +501,6 @@ PetscErrorCode  MatZeroRowsLocal_HYPRESStruct_3d(Mat mat,PetscInt nrow,const Pet
 
 PetscErrorCode MatZeroEntries_HYPRESStruct_3d(Mat mat)
 {
-  PetscErrorCode   ierr;
   Mat_HYPRESStruct *ex  = (Mat_HYPRESStruct*) mat->data;
   PetscInt         nvars= ex->nvars;
   PetscInt         size;
@@ -540,7 +532,6 @@ PetscErrorCode MatZeroEntries_HYPRESStruct_3d(Mat mat)
 
 static PetscErrorCode  MatSetUp_HYPRESStruct(Mat mat)
 {
-  PetscErrorCode         ierr;
   Mat_HYPRESStruct       *ex = (Mat_HYPRESStruct*) mat->data;
   PetscInt               dim,dof,sw[3],nx,ny,nz;
   PetscInt               ilower[3],iupper[3],ssize,i;
@@ -698,7 +689,6 @@ static PetscErrorCode  MatSetUp_HYPRESStruct(Mat mat)
 
 PetscErrorCode MatMult_HYPRESStruct(Mat A,Vec x,Vec y)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *xx;
   PetscScalar       *yy;
   HYPRE_Int         hlower[3],hupper[3];
@@ -799,7 +789,6 @@ PetscErrorCode MatZeroEntries_HYPRESStruct(Mat mat)
 PetscErrorCode MatDestroy_HYPRESStruct(Mat mat)
 {
   Mat_HYPRESStruct       *ex = (Mat_HYPRESStruct*) mat->data;
-  PetscErrorCode         ierr;
   ISLocalToGlobalMapping ltog;
 
   PetscFunctionBegin;
@@ -818,7 +807,6 @@ PetscErrorCode MatDestroy_HYPRESStruct(Mat mat)
 PETSC_EXTERN PetscErrorCode MatCreate_HYPRESStruct(Mat B)
 {
   Mat_HYPRESStruct *ex;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(B,&ex));

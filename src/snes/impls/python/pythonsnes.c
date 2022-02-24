@@ -18,7 +18,6 @@
 @*/
 PetscErrorCode  SNESPythonSetType(SNES snes,const char pyname[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);

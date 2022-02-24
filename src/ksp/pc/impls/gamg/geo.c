@@ -35,7 +35,6 @@ PetscErrorCode PCSetCoordinates_GEO(PC pc, PetscInt ndm, PetscInt a_nloc, PetscR
 {
   PC_MG          *mg      = (PC_MG*)pc->data;
   PC_GAMG        *pc_gamg = (PC_GAMG*)mg->innerctx;
-  PetscErrorCode ierr;
   PetscInt       arrsz,bs,my0,kk,ii,nloc,Iend,aloc;
   Mat            Amat = pc->pmat;
 
@@ -102,7 +101,6 @@ PetscErrorCode PCSetData_GEO(PC pc, Mat m)
 */
 PetscErrorCode PCSetFromOptions_GEO(PetscOptionItems *PetscOptionsObject,PC pc)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"GAMG-GEO options"));
@@ -141,7 +139,6 @@ static PetscErrorCode triangulateAndFormProl(IS selected_2,PetscInt data_stride,
                                              const PetscInt crsGID[],PetscInt bs,Mat a_Prol,PetscReal *a_worst_best)
 {
 #if defined(PETSC_HAVE_TRIANGLE)
-  PetscErrorCode       ierr;
   PetscInt             jj,tid,tt,idx,nselected_2;
   struct triangulateio in,mid;
   const PetscInt       *selected_idx_2;
@@ -437,7 +434,6 @@ static PetscErrorCode triangulateAndFormProl(IS selected_2,PetscInt data_stride,
 */
 static PetscErrorCode getGIDsOnSquareGraph(PC pc, PetscInt nselected_1,const PetscInt clid_lid_1[],const Mat Gmat1,IS *a_selected_2,Mat *a_Gmat_2,PetscInt **a_crsGID)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    size;
   PetscInt       *crsGID, kk,my0,Iend,nloc;
   MPI_Comm       comm;
@@ -538,7 +534,6 @@ static PetscErrorCode getGIDsOnSquareGraph(PC pc, PetscInt nselected_1,const Pet
 */
 PetscErrorCode PCGAMGGraph_GEO(PC pc,Mat Amat,Mat *a_Gmat)
 {
-  PetscErrorCode  ierr;
   PC_MG           *mg      = (PC_MG*)pc->data;
   PC_GAMG         *pc_gamg = (PC_GAMG*)mg->innerctx;
   const PetscReal vfilter  = pc_gamg->threshold[0];
@@ -573,7 +568,6 @@ PetscErrorCode PCGAMGGraph_GEO(PC pc,Mat Amat,Mat *a_Gmat)
 */
 PetscErrorCode PCGAMGCoarsen_GEO(PC a_pc,Mat *a_Gmat,PetscCoarsenData **a_llist_parent)
 {
-  PetscErrorCode ierr;
   PetscInt       Istart,Iend,nloc,kk,Ii,ncols;
   IS             perm;
   GAMGNode       *gnodes;
@@ -664,7 +658,6 @@ PetscErrorCode PCGAMGProlongator_GEO(PC pc,Mat Amat,Mat Gmat,PetscCoarsenData *a
   PC_MG          *mg      = (PC_MG*)pc->data;
   PC_GAMG        *pc_gamg = (PC_GAMG*)mg->innerctx;
   const PetscInt dim      = pc_gamg->data_cell_cols, data_cols = pc_gamg->data_cell_cols;
-  PetscErrorCode ierr;
   PetscInt       Istart,Iend,nloc,my0,jj,kk,ncols,nLocalSelected,bs,*clid_flid;
   Mat            Prol;
   PetscMPIInt    rank, size;
@@ -782,7 +775,6 @@ PetscErrorCode PCGAMGProlongator_GEO(PC pc,Mat Amat,Mat Gmat,PetscCoarsenData *a
 
 static PetscErrorCode PCDestroy_GAMG_GEO(PC pc)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectComposeFunction((PetscObject)pc,"PCSetCoordinates_C",NULL));
@@ -798,7 +790,6 @@ static PetscErrorCode PCDestroy_GAMG_GEO(PC pc)
 */
 PetscErrorCode  PCCreateGAMG_GEO(PC pc)
 {
-  PetscErrorCode ierr;
   PC_MG          *mg      = (PC_MG*)pc->data;
   PC_GAMG        *pc_gamg = (PC_GAMG*)mg->innerctx;
 

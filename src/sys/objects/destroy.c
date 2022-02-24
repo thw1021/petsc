@@ -7,7 +7,6 @@
 
 PetscErrorCode PetscComposedQuantitiesDestroy(PetscObject obj)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -50,7 +49,6 @@ PetscErrorCode PetscComposedQuantitiesDestroy(PetscObject obj)
 @*/
 PetscErrorCode  PetscObjectDestroy(PetscObject *obj)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*obj) PetscFunctionReturn(0);
@@ -77,7 +75,6 @@ PetscErrorCode  PetscObjectDestroy(PetscObject *obj)
 @*/
 PetscErrorCode  PetscObjectView(PetscObject obj,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeader(obj,1);
@@ -107,7 +104,6 @@ PetscErrorCode  PetscObjectView(PetscObject obj,PetscViewer viewer)
 @*/
 PetscErrorCode PetscObjectViewFromOptions(PetscObject obj,PetscObject bobj,const char optionname[])
 {
-  PetscErrorCode    ierr;
   PetscViewer       viewer;
   PetscBool         flg;
   static PetscBool  incall = PETSC_FALSE;
@@ -151,7 +147,6 @@ PetscErrorCode PetscObjectViewFromOptions(PetscObject obj,PetscObject bobj,const
 @*/
 PetscErrorCode  PetscObjectTypeCompare(PetscObject obj,const char type_name[],PetscBool  *same)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(same,3);
@@ -185,7 +180,6 @@ PetscErrorCode  PetscObjectTypeCompare(PetscObject obj,const char type_name[],Pe
 @*/
 PetscErrorCode  PetscObjectBaseTypeCompare(PetscObject obj,const char type_name[],PetscBool  *same)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(same,3);
@@ -220,7 +214,6 @@ PetscErrorCode  PetscObjectBaseTypeCompare(PetscObject obj,const char type_name[
 @*/
 PetscErrorCode PetscObjectTypeCompareAny(PetscObject obj,PetscBool *match,const char type_name[],...)
 {
-  PetscErrorCode ierr;
   va_list        Argp;
 
   PetscFunctionBegin;
@@ -261,7 +254,6 @@ PetscErrorCode PetscObjectTypeCompareAny(PetscObject obj,PetscBool *match,const 
 @*/
 PetscErrorCode PetscObjectBaseTypeCompareAny(PetscObject obj,PetscBool *match,const char type_name[],...)
 {
-  PetscErrorCode ierr;
   va_list        Argp;
 
   PetscFunctionBegin;
@@ -325,7 +317,6 @@ PetscErrorCode  PetscObjectRegisterDestroy(PetscObject obj)
 @*/
 PetscErrorCode  PetscObjectRegisterDestroyAll(void)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -379,7 +370,6 @@ PetscErrorCode  PetscRegisterFinalize(PetscErrorCode (*f)(void))
 @*/
 PetscErrorCode  PetscRegisterFinalizeAll(void)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;

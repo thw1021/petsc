@@ -10,7 +10,6 @@ typedef struct {
 
 static PetscErrorCode PetscPartitionerDestroy_Simple(PetscPartitioner part)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(part->data));
@@ -26,7 +25,6 @@ static PetscErrorCode PetscPartitionerView_Simple_ASCII(PetscPartitioner part, P
 static PetscErrorCode PetscPartitionerView_Simple(PetscPartitioner part, PetscViewer viewer)
 {
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);
@@ -41,7 +39,6 @@ static PetscErrorCode PetscPartitionerSetFromOptions_Simple(PetscOptionItems *Pe
   PetscPartitioner_Simple *p = (PetscPartitioner_Simple *) part->data;
   PetscInt                 num, i;
   PetscBool                flg;
-  PetscErrorCode           ierr;
 
   PetscFunctionBegin;
   for (i = 0; i < 3; ++i) p->processGrid[i] = p->nodeGrid[i] = 1;
@@ -69,7 +66,6 @@ static PetscErrorCode PetscPartitionerPartition_Simple_Grid(PetscPartitioner par
   PetscInt                 Np    = 1, Nr, np, nk, nj, ni, pk, pj, pi, ck, cj, ci, i;
   MPI_Comm                 comm;
   PetscMPIInt              size;
-  PetscErrorCode           ierr;
 
   PetscFunctionBegin;
   if (vertSection)   CHKERRQ(PetscInfo(part, "PETSCPARTITIONERSIMPLE ignores vertex weights when using grid partition\n"));
@@ -140,7 +136,6 @@ static PetscErrorCode PetscPartitionerPartition_Simple(PetscPartitioner part, Pe
   MPI_Comm       comm;
   PetscInt       np, *tpwgts = NULL, sumw = 0, numVerticesGlobal  = 0;
   PetscMPIInt    size;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (p->useGrid) {
@@ -285,7 +280,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PetscPartitionerCreate_Simple(PetscPartitioner part)
 {
   PetscPartitioner_Simple *p;
-  PetscErrorCode           ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);

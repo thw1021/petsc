@@ -22,7 +22,6 @@ PetscErrorCode PetscLinearRegression(PetscInt n, const PetscReal x[], const Pets
   PetscScalar    H[4];
   PetscReal     *X, *Y, beta[2];
   PetscInt       i, j, k;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *slope = *intercept = 0.0;

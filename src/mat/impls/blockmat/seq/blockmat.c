@@ -20,7 +20,6 @@ static PetscErrorCode MatSOR_BlockMat_Symmetric(Mat A,Vec bb,PetscReal omega,Mat
   PetscScalar       *x;
   const Mat         *v;
   const PetscScalar *b;
-  PetscErrorCode    ierr;
   PetscInt          n = A->cmap->n,i,mbs = n/A->rmap->bs,j,bs = A->rmap->bs;
   const PetscInt    *idx;
   IS                row,col;
@@ -126,7 +125,6 @@ static PetscErrorCode MatSOR_BlockMat(Mat A,Vec bb,PetscReal omega,MatSORType fl
   PetscScalar       *x;
   const Mat         *v;
   const PetscScalar *b;
-  PetscErrorCode    ierr;
   PetscInt          n = A->cmap->n,i,mbs = n/A->rmap->bs,j,bs = A->rmap->bs;
   const PetscInt    *idx;
   IS                row,col;
@@ -221,7 +219,6 @@ static PetscErrorCode MatSetValues_BlockMat(Mat A,PetscInt m,const PetscInt im[]
   PetscInt       *rp,k,low,high,t,ii,row,nrow,i,col,l,rmax,N,lastcol = -1;
   PetscInt       *imax=a->imax,*ai=a->i,*ailen=a->ilen;
   PetscInt       *aj  =a->j,nonew=a->nonew,bs=A->rmap->bs,brow,bcol;
-  PetscErrorCode ierr;
   PetscInt       ridx,cidx;
   PetscBool      roworiented=a->roworiented;
   MatScalar      value;
@@ -409,7 +406,6 @@ static PetscErrorCode MatLoad_BlockMat(Mat newmat, PetscViewer viewer)
 static PetscErrorCode MatView_BlockMat(Mat A,PetscViewer viewer)
 {
   Mat_BlockMat      *a = (Mat_BlockMat*)A->data;
-  PetscErrorCode    ierr;
   const char        *name;
   PetscViewerFormat format;
 
@@ -427,7 +423,6 @@ static PetscErrorCode MatView_BlockMat(Mat A,PetscViewer viewer)
 
 static PetscErrorCode MatDestroy_BlockMat(Mat mat)
 {
-  PetscErrorCode ierr;
   Mat_BlockMat   *bmat = (Mat_BlockMat*)mat->data;
   PetscInt       i;
 
@@ -454,7 +449,6 @@ static PetscErrorCode MatDestroy_BlockMat(Mat mat)
 static PetscErrorCode MatMult_BlockMat(Mat A,Vec x,Vec y)
 {
   Mat_BlockMat   *bmat = (Mat_BlockMat*)A->data;
-  PetscErrorCode ierr;
   PetscScalar    *xx,*yy;
   PetscInt       *aj,i,*ii,jrow,m = A->rmap->n/A->rmap->bs,bs = A->rmap->bs,n,j;
   Mat            *aa;
@@ -490,7 +484,6 @@ static PetscErrorCode MatMult_BlockMat(Mat A,Vec x,Vec y)
 PetscErrorCode MatMult_BlockMat_Symmetric(Mat A,Vec x,Vec y)
 {
   Mat_BlockMat   *bmat = (Mat_BlockMat*)A->data;
-  PetscErrorCode ierr;
   PetscScalar    *xx,*yy;
   PetscInt       *aj,i,*ii,jrow,m = A->rmap->n/A->rmap->bs,bs = A->rmap->bs,n,j;
   Mat            *aa;
@@ -561,7 +554,6 @@ static PetscErrorCode MatMultTransposeAdd_BlockMat(Mat A,Vec x,Vec y,Vec z)
 static PetscErrorCode MatMarkDiagonal_BlockMat(Mat A)
 {
   Mat_BlockMat   *a = (Mat_BlockMat*)A->data;
-  PetscErrorCode ierr;
   PetscInt       i,j,mbs = A->rmap->n/A->rmap->bs;
 
   PetscFunctionBegin;
@@ -584,7 +576,6 @@ static PetscErrorCode MatCreateSubMatrix_BlockMat(Mat A,IS isrow,IS iscol,MatReu
 {
   Mat_BlockMat   *a = (Mat_BlockMat*)A->data;
   Mat_SeqAIJ     *c;
-  PetscErrorCode ierr;
   PetscInt       i,k,first,step,lensi,nrows,ncols;
   PetscInt       *j_new,*i_new,*aj = a->j,*ailen = a->ilen;
   PetscScalar    *a_new;
@@ -646,7 +637,6 @@ static PetscErrorCode MatCreateSubMatrix_BlockMat(Mat A,IS isrow,IS iscol,MatReu
 static PetscErrorCode MatAssemblyEnd_BlockMat(Mat A,MatAssemblyType mode)
 {
   Mat_BlockMat   *a = (Mat_BlockMat*)A->data;
-  PetscErrorCode ierr;
   PetscInt       fshift = 0,i,j,*ai = a->i,*aj = a->j,*imax = a->imax;
   PetscInt       m      = a->mbs,*ip,N,*ailen = a->ilen,rmax = 0;
   Mat            *aa    = a->a,*ap;
@@ -698,7 +688,6 @@ static PetscErrorCode MatAssemblyEnd_BlockMat(Mat A,MatAssemblyType mode)
 
 static PetscErrorCode MatSetOption_BlockMat(Mat A,MatOption opt,PetscBool flg)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   if (opt == MAT_SYMMETRIC && flg) {
     A->ops->sor  = MatSOR_BlockMat_Symmetric;
@@ -883,7 +872,6 @@ static struct _MatOps MatOps_Values = {MatSetValues_BlockMat,
 @*/
 PetscErrorCode  MatBlockMatSetPreallocation(Mat B,PetscInt bs,PetscInt nz,const PetscInt nnz[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscTryMethod(B,"MatBlockMatSetPreallocation_C",(Mat,PetscInt,PetscInt,const PetscInt[]),(B,bs,nz,nnz)));
@@ -893,7 +881,6 @@ PetscErrorCode  MatBlockMatSetPreallocation(Mat B,PetscInt bs,PetscInt nz,const 
 static PetscErrorCode  MatBlockMatSetPreallocation_BlockMat(Mat A,PetscInt bs,PetscInt nz,PetscInt *nnz)
 {
   Mat_BlockMat   *bmat = (Mat_BlockMat*)A->data;
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -964,7 +951,6 @@ M*/
 PETSC_EXTERN PetscErrorCode MatCreate_BlockMat(Mat A)
 {
   Mat_BlockMat   *b;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(A,&b));
@@ -1007,7 +993,6 @@ PETSC_EXTERN PetscErrorCode MatCreate_BlockMat(Mat A)
 @*/
 PetscErrorCode  MatCreateBlockMat(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt bs,PetscInt nz,PetscInt *nnz, Mat *A)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCreate(comm,A));

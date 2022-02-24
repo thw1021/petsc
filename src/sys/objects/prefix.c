@@ -81,7 +81,6 @@ PetscErrorCode  PetscObjectSetOptions(PetscObject obj,PetscOptions options)
 @*/
 PetscErrorCode  PetscObjectSetOptionsPrefix(PetscObject obj,const char prefix[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeader(obj,1);
@@ -119,7 +118,6 @@ PetscErrorCode  PetscObjectSetOptionsPrefix(PetscObject obj,const char prefix[])
 PetscErrorCode  PetscObjectAppendOptionsPrefix(PetscObject obj,const char prefix[])
 {
   char           *buf = obj->prefix;
-  PetscErrorCode ierr;
   size_t         len1,len2;
 
   PetscFunctionBegin;
@@ -187,7 +185,6 @@ PetscErrorCode  PetscObjectPrependOptionsPrefix(PetscObject obj,const char prefi
 {
   char           *buf;
   size_t         len1,len2;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeader(obj,1);

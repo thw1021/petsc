@@ -11,7 +11,6 @@ PETSC_INTERN PetscErrorCode MatSetBlockSizes_Default(Mat mat,PetscInt rbs, Petsc
 
 PETSC_INTERN PetscErrorCode MatShift_Basic(Mat Y,PetscScalar a)
 {
-  PetscErrorCode ierr;
   PetscInt       i,start,end;
   PetscScalar    alpha = a;
   PetscBool      prevoption;
@@ -71,7 +70,6 @@ PETSC_INTERN PetscErrorCode MatShift_Basic(Mat Y,PetscScalar a)
 PetscErrorCode  MatCreate(MPI_Comm comm,Mat *A)
 {
   Mat            B;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(A,2);
@@ -282,7 +280,6 @@ PetscErrorCode  MatSetFromOptions(Mat B)
 @*/
 PetscErrorCode MatXAIJSetPreallocation(Mat A,PetscInt bs,const PetscInt dnnz[],const PetscInt onnz[],const PetscInt dnnzu[],const PetscInt onnzu[])
 {
-  PetscErrorCode ierr;
   PetscInt       cbs;
   void           (*aij)(void);
   void           (*is)(void);
@@ -347,7 +344,6 @@ PetscErrorCode MatXAIJSetPreallocation(Mat A,PetscInt bs,const PetscInt dnnz[],c
 */
 PetscErrorCode MatHeaderMerge(Mat A,Mat *C)
 {
-  PetscErrorCode   ierr;
   PetscInt         refct;
   PetscOps         Abops;
   struct _MatOps   Aops;
@@ -418,7 +414,6 @@ PetscErrorCode MatHeaderMerge(Mat A,Mat *C)
 */
 PETSC_EXTERN PetscErrorCode MatHeaderReplace(Mat A,Mat *C)
 {
-  PetscErrorCode   ierr;
   PetscInt         refct;
   PetscObjectState state;
   struct _p_Mat    buffer;
@@ -470,7 +465,6 @@ PetscErrorCode MatBindToCPU(Mat A,PetscBool flg)
   if (A->boundtocpu == flg) PetscFunctionReturn(0);
   A->boundtocpu = flg;
   if (A->ops->bindtocpu) {
-    PetscErrorCode ierr;
     CHKERRQ((*A->ops->bindtocpu)(A,flg));
   }
 #endif
@@ -509,7 +503,6 @@ PetscErrorCode MatSetValuesCOO_Basic(Mat A,const PetscScalar coo_v[],InsertMode 
   const PetscInt *coo_i,*coo_j;
   PetscInt       n,n_i,n_j;
   PetscScalar    zero = 0.;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectQuery((PetscObject)A,"__PETSc_coo_i",(PetscObject*)&is_coo_i));
@@ -539,7 +532,6 @@ PetscErrorCode MatSetPreallocationCOO_Basic(Mat A,PetscCount ncoo,const PetscInt
   Mat            preallocator;
   IS             is_coo_i,is_coo_j;
   PetscScalar    zero = 0.0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLayoutSetUp(A->rmap));
@@ -592,7 +584,6 @@ PetscErrorCode MatSetPreallocationCOO_Basic(Mat A,PetscCount ncoo,const PetscInt
 PetscErrorCode MatSetPreallocationCOO(Mat A,PetscCount ncoo,const PetscInt coo_i[],const PetscInt coo_j[])
 {
   PetscErrorCode (*f)(Mat,PetscCount,const PetscInt[],const PetscInt[]) = NULL;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -641,7 +632,6 @@ PetscErrorCode MatSetPreallocationCOO(Mat A,PetscCount ncoo,const PetscInt coo_i
 @*/
 PetscErrorCode MatSetPreallocationCOOLocal(Mat A,PetscCount ncoo,PetscInt coo_i[],PetscInt coo_j[])
 {
-  PetscErrorCode ierr;
   ISLocalToGlobalMapping ltog_row,ltog_col;
 
   PetscFunctionBegin;
@@ -681,7 +671,6 @@ PetscErrorCode MatSetPreallocationCOOLocal(Mat A,PetscCount ncoo,PetscInt coo_i[
 PetscErrorCode MatSetValuesCOO(Mat A, const PetscScalar coo_v[], InsertMode imode)
 {
   PetscErrorCode (*f)(Mat,const PetscScalar[],InsertMode) = NULL;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);

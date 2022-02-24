@@ -23,7 +23,6 @@ PetscErrorCode  MatIncreaseOverlapSplit_Single(Mat mat,IS *is,PetscInt ov)
   PetscSFNode      *remote;
   Mat              *smat;
   MatPartitioning  part;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   /* get a sub communicator before call individual MatIncreaseOverlap

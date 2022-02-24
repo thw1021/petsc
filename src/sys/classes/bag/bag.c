@@ -7,7 +7,6 @@
 */
 static PetscErrorCode PetscBagRegister_Private(PetscBag bag,PetscBagItem item,const char *name,const char *help)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscStrncpy(item->name,name,PETSC_BAG_NAME_LENGTH-1));
@@ -45,7 +44,6 @@ static PetscErrorCode PetscBagRegister_Private(PetscBag bag,PetscBagItem item,co
 @*/
 PetscErrorCode PetscBagRegisterEnum(PetscBag bag,void *addr,const char *const *list,PetscEnum mdefault, const char *name, const char *help)
 {
-  PetscErrorCode ierr;
   PetscBagItem   item;
   char           nname[PETSC_BAG_NAME_LENGTH+1];
   PetscBool      printhelp;
@@ -99,7 +97,6 @@ PetscErrorCode PetscBagRegisterEnum(PetscBag bag,void *addr,const char *const *l
 @*/
 PetscErrorCode PetscBagRegisterIntArray(PetscBag bag,void *addr,PetscInt msize, const char *name, const char *help)
 {
-  PetscErrorCode ierr;
   PetscBagItem   item;
   char           nname[PETSC_BAG_NAME_LENGTH+1];
   PetscBool      printhelp;
@@ -150,7 +147,6 @@ PetscErrorCode PetscBagRegisterIntArray(PetscBag bag,void *addr,PetscInt msize, 
 @*/
 PetscErrorCode PetscBagRegisterRealArray(PetscBag bag,void *addr,PetscInt msize, const char *name, const char *help)
 {
-  PetscErrorCode ierr;
   PetscBagItem   item;
   char           nname[PETSC_BAG_NAME_LENGTH+1];
   PetscBool      printhelp;
@@ -201,7 +197,6 @@ PetscErrorCode PetscBagRegisterRealArray(PetscBag bag,void *addr,PetscInt msize,
 @*/
 PetscErrorCode PetscBagRegisterInt(PetscBag bag,void *addr,PetscInt mdefault,const char *name,const char *help)
 {
-  PetscErrorCode ierr;
   PetscBagItem   item;
   char           nname[PETSC_BAG_NAME_LENGTH+1];
   PetscBool      printhelp;
@@ -248,7 +243,6 @@ PetscErrorCode PetscBagRegisterInt(PetscBag bag,void *addr,PetscInt mdefault,con
 @*/
 PetscErrorCode PetscBagRegisterInt64(PetscBag bag,void *addr,PetscInt64 mdefault,const char *name,const char *help)
 {
-  PetscErrorCode ierr;
   PetscBagItem   item;
   char           nname[PETSC_BAG_NAME_LENGTH+1];
   PetscBool      printhelp;
@@ -298,7 +292,6 @@ PetscErrorCode PetscBagRegisterInt64(PetscBag bag,void *addr,PetscInt64 mdefault
 @*/
 PetscErrorCode PetscBagRegisterBoolArray(PetscBag bag,void *addr,PetscInt msize, const char* name, const char* help)
 {
-  PetscErrorCode ierr;
   PetscBagItem   item;
   char           nname[PETSC_BAG_NAME_LENGTH+1];
   PetscBool      printhelp;
@@ -352,7 +345,6 @@ PetscErrorCode PetscBagRegisterBoolArray(PetscBag bag,void *addr,PetscInt msize,
 @*/
 PetscErrorCode PetscBagRegisterString(PetscBag bag,void *addr,PetscInt msize,const char* mdefault,const char* name,const char* help)
 {
-  PetscErrorCode ierr;
   PetscBagItem   item;
   char           nname[PETSC_BAG_NAME_LENGTH+1];
   PetscBool      printhelp;
@@ -401,7 +393,6 @@ PetscErrorCode PetscBagRegisterString(PetscBag bag,void *addr,PetscInt msize,con
 @*/
 PetscErrorCode PetscBagRegisterReal(PetscBag bag,void *addr,PetscReal mdefault, const char *name, const char *help)
 {
-  PetscErrorCode ierr;
   PetscBagItem   item;
   char           nname[PETSC_BAG_NAME_LENGTH+1];
   PetscBool      printhelp;
@@ -448,7 +439,6 @@ PetscErrorCode PetscBagRegisterReal(PetscBag bag,void *addr,PetscReal mdefault, 
 @*/
 PetscErrorCode PetscBagRegisterScalar(PetscBag bag,void *addr,PetscScalar mdefault,const char *name,const char *help)
 {
-  PetscErrorCode ierr;
   PetscBagItem   item;
   char           nname[PETSC_BAG_NAME_LENGTH+1];
   PetscBool      printhelp;
@@ -495,7 +485,6 @@ PetscErrorCode PetscBagRegisterScalar(PetscBag bag,void *addr,PetscScalar mdefau
 @*/
 PetscErrorCode PetscBagRegisterBool(PetscBag bag,void *addr,PetscBool mdefault,const char *name,const char *help)
 {
-  PetscErrorCode ierr;
   PetscBagItem   item;
   char           nname[PETSC_BAG_NAME_LENGTH+1];
   PetscBool      printhelp;
@@ -540,7 +529,6 @@ PetscErrorCode PetscBagRegisterBool(PetscBag bag,void *addr,PetscBool mdefault,c
 @*/
 PetscErrorCode  PetscBagDestroy(PetscBag *bag)
 {
-  PetscErrorCode ierr;
   PetscBagItem   nitem = (*bag)->bagitems,item;
 
   PetscFunctionBegin;
@@ -653,7 +641,6 @@ PetscErrorCode  PetscBagSetFromOptions(PetscBag bag)
 PetscErrorCode  PetscBagView(PetscBag bag,PetscViewer view)
 {
   PetscBool      isascii,isbinary;
-  PetscErrorCode ierr;
   PetscBagItem   nitem = bag->bagitems;
 
   PetscFunctionBegin;
@@ -778,7 +765,6 @@ PetscErrorCode PetscBagViewFromOptions(PetscBag bag, PetscObject bobj, const cha
   PetscViewerFormat format;
   const char       *prefix, *bprefix = NULL;
   PetscBool         flg;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   if (incall) PetscFunctionReturn(0);
@@ -819,7 +805,6 @@ PetscErrorCode PetscBagViewFromOptions(PetscBag bag, PetscObject bobj, const cha
 @*/
 PetscErrorCode  PetscBagLoad(PetscViewer view,PetscBag bag)
 {
-  PetscErrorCode ierr;
   PetscBool      isbinary;
   PetscInt       classid,bagcount,i,dtype,msize,offset,deprecatedbagsize;
   char           name[PETSC_BAG_NAME_LENGTH],help[PETSC_BAG_HELP_LENGTH],**list;
@@ -897,7 +882,6 @@ PetscErrorCode  PetscBagLoad(PetscViewer view,PetscBag bag)
 @*/
 PetscErrorCode PetscBagCreate(MPI_Comm comm, size_t bagsize, PetscBag *bag)
 {
-  PetscErrorCode ierr;
   size_t         totalsize = bagsize+sizeof(struct _n_PetscBag)+sizeof(PetscScalar);
 
   PetscFunctionBegin;
@@ -931,7 +915,6 @@ PetscErrorCode PetscBagCreate(MPI_Comm comm, size_t bagsize, PetscBag *bag)
 
 PetscErrorCode PetscBagSetName(PetscBag bag, const char *name, const char *help)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscStrncpy(bag->bagname,name,PETSC_BAG_NAME_LENGTH-1));
@@ -1008,7 +991,6 @@ PetscErrorCode PetscBagGetData(PetscBag bag, void **data)
 
 PetscErrorCode PetscBagSetOptionsPrefix(PetscBag bag, const char pre[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!pre) {

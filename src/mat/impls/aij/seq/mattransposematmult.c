@@ -10,7 +10,6 @@
 
 PetscErrorCode MatDestroy_SeqDense_MatTransMatMult(void *data)
 {
-  PetscErrorCode      ierr;
   Mat_MatTransMatMult *atb = (Mat_MatTransMatMult *)data;
 
   PetscFunctionBegin;
@@ -25,7 +24,6 @@ static PetscErrorCode MatTMatTMultNumeric_SeqAIJ_SeqDense(Mat,Mat,Mat);
 
 PETSC_INTERN PetscErrorCode MatTMatTMultSymbolic_SeqAIJ_SeqDense(Mat A,Mat B,PetscReal fill,Mat C)
 {
-  PetscErrorCode      ierr;
   Mat_MatTransMatMult *atb;
   PetscBool           cisdense;
   PetscInt            dofm;
@@ -66,7 +64,6 @@ PETSC_INTERN PetscErrorCode MatTMatTMultSymbolic_SeqAIJ_SeqDense(Mat A,Mat B,Pet
 
 PetscErrorCode MatTMatTMultNumeric_SeqAIJ_SeqDense(Mat A,Mat B,Mat C)
 {
-  PetscErrorCode      ierr;
   PetscInt            i,j,m=A->rmap->n,n=A->cmap->n,blda,clda;
   PetscInt            mdof = C->cmap->N;
   const PetscScalar   *Barray;

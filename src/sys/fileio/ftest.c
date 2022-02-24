@@ -24,7 +24,6 @@
 static PetscErrorCode PetscTestOwnership(const char fname[], char mode, uid_t fuid, gid_t fgid, int fmode, PetscBool  *flg)
 {
   int            m = R_OK;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (mode == 'r') m = R_OK;
@@ -162,7 +161,6 @@ PetscErrorCode  PetscTestFile(const char fname[], char mode, PetscBool  *flg)
   uid_t          fuid;
   gid_t          fgid;
   int            fmode;
-  PetscErrorCode ierr;
   PetscBool      exists;
 
   PetscFunctionBegin;
@@ -200,7 +198,6 @@ PetscErrorCode  PetscTestDirectory(const char dirname[],char mode,PetscBool  *fl
   uid_t          fuid;
   gid_t          fgid;
   int            fmode;
-  PetscErrorCode ierr;
   PetscBool      exists;
 
   PetscFunctionBegin;
@@ -237,7 +234,6 @@ PetscErrorCode  PetscTestDirectory(const char dirname[],char mode,PetscBool  *fl
 @*/
 PetscErrorCode  PetscLs(MPI_Comm comm,const char dirname[],char found[],size_t tlen,PetscBool  *flg)
 {
-  PetscErrorCode ierr;
   size_t         len;
   char           *f,program[PETSC_MAX_PATH_LEN];
   FILE           *fp;

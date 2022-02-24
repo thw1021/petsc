@@ -147,7 +147,6 @@ PTScotchStrategyList[] = {
 static PetscErrorCode PetscPartitionerDestroy_PTScotch(PetscPartitioner part)
 {
   PetscPartitioner_PTScotch *p = (PetscPartitioner_PTScotch *) part->data;
-  PetscErrorCode             ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_free(&p->pcomm));
@@ -158,7 +157,6 @@ static PetscErrorCode PetscPartitionerDestroy_PTScotch(PetscPartitioner part)
 static PetscErrorCode PetscPartitionerView_PTScotch_ASCII(PetscPartitioner part, PetscViewer viewer)
 {
   PetscPartitioner_PTScotch *p = (PetscPartitioner_PTScotch *) part->data;
-  PetscErrorCode            ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerASCIIPushTab(viewer));
@@ -171,7 +169,6 @@ static PetscErrorCode PetscPartitionerView_PTScotch_ASCII(PetscPartitioner part,
 static PetscErrorCode PetscPartitionerView_PTScotch(PetscPartitioner part, PetscViewer viewer)
 {
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);
@@ -187,7 +184,6 @@ static PetscErrorCode PetscPartitionerSetFromOptions_PTScotch(PetscOptionItems *
   const char *const         *slist = PTScotchStrategyList;
   PetscInt                  nlist = (PetscInt)(sizeof(PTScotchStrategyList)/sizeof(PTScotchStrategyList[0]));
   PetscBool                 flag;
-  PetscErrorCode            ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject, "PetscPartitioner PTScotch Options"));
@@ -333,7 +329,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PetscPartitionerCreate_PTScotch(PetscPartitioner part)
 {
   PetscPartitioner_PTScotch *p;
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);

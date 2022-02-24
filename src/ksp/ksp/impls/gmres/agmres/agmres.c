@@ -27,7 +27,6 @@ extern PetscErrorCode KSPDGMRESSetEigen_DGMRES(KSP,PetscInt);
 */
 static PetscErrorCode KSPSetUp_AGMRES(KSP ksp)
 {
-  PetscErrorCode  ierr;
   PetscInt        hes;
   PetscInt        nloc;
   KSP_AGMRES      *agmres = (KSP_AGMRES*)ksp->data;
@@ -78,7 +77,6 @@ static PetscErrorCode KSPSetUp_AGMRES(KSP ksp)
 static PetscErrorCode KSPBuildSolution_AGMRES(KSP ksp,Vec ptr, Vec *result)
 {
   KSP_AGMRES     *agmres = (KSP_AGMRES*)ksp->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!ptr) {
@@ -102,7 +100,6 @@ static PetscErrorCode KSPBuildSolution_AGMRES(KSP ksp,Vec ptr, Vec *result)
 */
 PetscErrorCode KSPComputeShifts_GMRES(KSP ksp)
 {
-  PetscErrorCode  ierr;
   KSP_AGMRES      *agmres = (KSP_AGMRES*)(ksp->data);
   KSP             kspgmres;
   Mat             Amat, Pmat;
@@ -172,7 +169,6 @@ PetscErrorCode KSPComputeShifts_GMRES(KSP ksp)
 */
 static PetscErrorCode KSPComputeShifts_DGMRES(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_AGMRES     *agmres = (KSP_AGMRES*)(ksp->data);
   PetscInt       max_k   = agmres->max_k; /* size of the (non augmented) Krylov subspace */
   PetscInt       Neig    = 0;
@@ -259,7 +255,6 @@ static PetscErrorCode KSPComputeShifts_DGMRES(KSP ksp)
 */
 static PetscErrorCode KSPAGMRESBuildBasis(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_AGMRES     *agmres = (KSP_AGMRES*)ksp->data;
   PetscReal      *Rshift = agmres->Rshift;
   PetscReal      *Ishift = agmres->Ishift;
@@ -373,7 +368,6 @@ static PetscErrorCode KSPAGMRESBuildHessenberg(KSP ksp)
   PetscScalar    *Rshift = agmres->Rshift;
   PetscScalar    *Ishift = agmres->Ishift;
   PetscScalar    *Scale  = agmres->Scale;
-  PetscErrorCode ierr;
   PetscInt       i       = 0, j = 0;
   const PetscInt max_k   = agmres->max_k;
   PetscInt       KspSize = KSPSIZE;
@@ -415,7 +409,6 @@ static PetscErrorCode KSPAGMRESBuildHessenberg(KSP ksp)
 static PetscErrorCode KSPAGMRESBuildSoln(KSP ksp,PetscInt it)
 {
   KSP_AGMRES     *agmres = (KSP_AGMRES*)ksp->data;
-  PetscErrorCode ierr;
   const PetscInt max_k = agmres->max_k;       /* Size of the non-augmented Krylov basis */
   PetscInt       i, j;
   PetscInt       r = agmres->r;           /* current number of augmented eigenvectors */
@@ -483,7 +476,6 @@ static PetscErrorCode KSPAGMRESCycle(PetscInt *itcount,KSP ksp)
 {
   KSP_AGMRES     *agmres = (KSP_AGMRES*)(ksp->data);
   PetscReal      res;
-  PetscErrorCode ierr;
   PetscInt       KspSize = KSPSIZE;
 
   PetscFunctionBegin;
@@ -520,7 +512,6 @@ static PetscErrorCode KSPAGMRESCycle(PetscInt *itcount,KSP ksp)
 
 static PetscErrorCode KSPSolve_AGMRES(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       its;
   KSP_AGMRES     *agmres    = (KSP_AGMRES*)ksp->data;
   PetscBool      guess_zero = ksp->guess_zero;
@@ -576,7 +567,6 @@ static PetscErrorCode KSPSolve_AGMRES(KSP ksp)
 
 static PetscErrorCode KSPDestroy_AGMRES(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_AGMRES     *agmres = (KSP_AGMRES*)ksp->data;
 
   PetscFunctionBegin;
@@ -608,7 +598,6 @@ static PetscErrorCode KSPView_AGMRES(KSP ksp,PetscViewer viewer)
   KSP_AGMRES     *agmres = (KSP_AGMRES*)ksp->data;
   const char     *cstr   = "RODDEC ORTHOGONOLIZATION";
   char           ritzvec[25];
-  PetscErrorCode ierr;
   PetscBool      iascii,isstring;
 #if defined(KSP_AGMRES_NONORM)
   const char *Nstr = "SCALING FACTORS : NO";
@@ -647,7 +636,6 @@ static PetscErrorCode KSPView_AGMRES(KSP ksp,PetscViewer viewer)
 
 static PetscErrorCode KSPSetFromOptions_AGMRES(PetscOptionItems *PetscOptionsObject,KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       neig;
   KSP_AGMRES     *agmres = (KSP_AGMRES*)ksp->data;
   PetscBool      flg;
@@ -716,7 +704,6 @@ Mathematics, 62(9), pp. 1171-1186, 2012
 PETSC_EXTERN PetscErrorCode KSPCreate_AGMRES(KSP ksp)
 {
   KSP_AGMRES     *agmres;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(ksp,&agmres));

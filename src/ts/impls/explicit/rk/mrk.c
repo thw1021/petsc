@@ -20,7 +20,6 @@ static PetscErrorCode TSReset_RK_MultirateNonsplit(TS ts)
 {
   TS_RK          *rk = (TS_RK*)ts->data;
   RKTableau      tab = rk->tableau;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDestroy(&rk->X0));
@@ -36,7 +35,6 @@ static PetscErrorCode TSInterpolate_RK_MultirateNonsplit(TS ts,PetscReal itime,V
   PetscReal        tt,t;
   PetscScalar      *b;
   const PetscReal  *B = rk->tableau->binterp;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!B,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSRK %s does not have an interpolation formula",rk->tableau->name);
@@ -66,7 +64,6 @@ static PetscErrorCode TSStepRefine_RK_MultirateNonsplit(TS ts)
   PetscScalar     *w = rk->work;
   PetscInt        i,j,k;
   PetscReal       t = ts->ptime,h = ts->time_step;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDuplicate(ts->vec_sol,&vec_fast));
@@ -135,7 +132,6 @@ static PetscErrorCode TSStep_RK_MultirateNonsplit(TS ts)
   PetscScalar     *w = rk->work;
   PetscInt        i,j,dtratio = rk->dtratio;
   PetscReal       next_time_step = ts->time_step,t = ts->ptime,h = ts->time_step;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   rk->status = TS_STEP_INCOMPLETE;
@@ -182,7 +178,6 @@ static PetscErrorCode TSSetUp_RK_MultirateNonsplit(TS ts)
 {
   TS_RK          *rk = (TS_RK*)ts->data;
   RKTableau      tab = rk->tableau;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSRHSSplitGetIS(ts,"slow",&rk->is_slow));
@@ -206,7 +201,6 @@ static PetscErrorCode TSSetUp_RK_MultirateNonsplit(TS ts)
 static PetscErrorCode TSCopyDM(TS tssrc,TS tsdest)
 {
   DM             newdm,dmsrc,dmdest;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSGetDM(tssrc,&dmsrc));
@@ -222,7 +216,6 @@ static PetscErrorCode TSCopyDM(TS tssrc,TS tsdest)
 static PetscErrorCode TSReset_RK_MultirateSplit(TS ts)
 {
   TS_RK          *rk = (TS_RK*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (rk->subts_slow) {
@@ -249,7 +242,6 @@ static PetscErrorCode TSInterpolate_RK_MultirateSplit(TS ts,PetscReal itime,Vec 
   PetscReal       tt,t;
   PetscScalar     *b;
   const PetscReal *B = rk->tableau->binterp;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!B,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSRK %s does not have an interpolation formula",rk->tableau->name);
@@ -302,7 +294,6 @@ static PetscErrorCode TSEvaluateStep_RK_MultirateSplit(TS ts,PetscInt order,Vec 
   PetscScalar    *w = rk->work;
   PetscReal      h = ts->time_step;
   PetscInt       s = tab->s,j;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecCopy(ts->vec_sol,X));
@@ -334,7 +325,6 @@ static PetscErrorCode TSStepRefine_RK_MultirateSplit(TS ts)
   PetscScalar     *w = rk->work;
   PetscInt        i,j,k;
   PetscReal       t = ts->ptime,h = ts->time_step;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   for (k=0; k<rk->dtratio; k++) {
@@ -396,7 +386,6 @@ static PetscErrorCode TSStep_RK_MultirateSplit(TS ts)
   PetscScalar     *w = rk->work;
   PetscInt        i,j;
   PetscReal       next_time_step = ts->time_step,t = ts->ptime,h = ts->time_step;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   rk->status = TS_STEP_INCOMPLETE;
@@ -443,7 +432,6 @@ static PetscErrorCode TSSetUp_RK_MultirateSplit(TS ts)
   TS_RK          *rk = (TS_RK*)ts->data,*nextlevelrk,*currentlevelrk;
   TS             nextlevelts;
   Vec            X0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSRHSSplitGetIS(ts,"slow",&rk->is_slow));
@@ -503,7 +491,6 @@ static PetscErrorCode TSSetUp_RK_MultirateSplit(TS ts)
 PetscErrorCode TSRKSetMultirate_RK(TS ts,PetscBool use_multirate)
 {
   TS_RK          *rk = (TS_RK*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);

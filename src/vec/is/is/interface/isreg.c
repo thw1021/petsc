@@ -27,7 +27,6 @@ PetscBool         ISRegisterAllCalled = PETSC_FALSE;
 @*/
 PetscErrorCode  ISCreate(MPI_Comm comm,IS *is)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(is,2);
@@ -63,7 +62,6 @@ PetscErrorCode  ISSetType(IS is, ISType method)
 {
   PetscErrorCode (*r)(IS);
   PetscBool      match;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(is, IS_CLASSID,1);
@@ -99,7 +97,6 @@ PetscErrorCode  ISSetType(IS is, ISType method)
 @*/
 PetscErrorCode  ISGetType(IS is, ISType *type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(is, IS_CLASSID,1);
@@ -151,7 +148,6 @@ PetscErrorCode  ISGetType(IS is, ISType *type)
 @*/
 PetscErrorCode  ISRegister(const char sname[], PetscErrorCode (*function)(IS))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(ISInitializePackage());

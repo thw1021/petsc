@@ -11,7 +11,6 @@ typedef struct {
 
 static PetscErrorCode KSPSetUp_CGLS(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_CGLS       *cgls = (KSP_CGLS*)ksp->data;
 
   PetscFunctionBegin;
@@ -30,7 +29,6 @@ static PetscErrorCode KSPSetUp_CGLS(KSP ksp)
 
 static PetscErrorCode KSPSolve_CGLS(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_CGLS       *cgls = (KSP_CGLS*)ksp->data;
   Mat            A;
   Vec            x,b,r,p,q,ss;
@@ -93,7 +91,6 @@ static PetscErrorCode KSPSolve_CGLS(KSP ksp)
 static PetscErrorCode KSPDestroy_CGLS(KSP ksp)
 {
   KSP_CGLS       *cgls = (KSP_CGLS*)ksp->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* Free work vectors */
@@ -123,7 +120,6 @@ static PetscErrorCode KSPDestroy_CGLS(KSP ksp)
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_CGLS(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_CGLS       *cgls;
 
   PetscFunctionBegin;

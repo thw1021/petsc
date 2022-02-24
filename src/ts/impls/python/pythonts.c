@@ -18,7 +18,6 @@
 @*/
 PetscErrorCode  TSPythonSetType(TS ts,const char pyname[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);

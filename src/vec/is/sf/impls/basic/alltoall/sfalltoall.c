@@ -10,7 +10,6 @@ typedef PetscSF_Allgatherv PetscSF_Alltoall;
 /*===================================================================================*/
 static PetscErrorCode PetscSFGetGraph_Alltoall(PetscSF sf,PetscInt *nroots,PetscInt *nleaves,const PetscInt **ilocal,const PetscSFNode **iremote)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -33,7 +32,6 @@ static PetscErrorCode PetscSFGetGraph_Alltoall(PetscSF sf,PetscInt *nroots,Petsc
 
 static PetscErrorCode PetscSFBcastBegin_Alltoall(PetscSF sf,MPI_Datatype unit,PetscMemType rootmtype,const void *rootdata,PetscMemType leafmtype,void *leafdata,MPI_Op op)
 {
-  PetscErrorCode       ierr;
   PetscSFLink          link;
   MPI_Comm             comm;
   void                 *rootbuf = NULL,*leafbuf = NULL; /* buffer used by MPI */
@@ -52,7 +50,6 @@ static PetscErrorCode PetscSFBcastBegin_Alltoall(PetscSF sf,MPI_Datatype unit,Pe
 
 static PetscErrorCode PetscSFReduceBegin_Alltoall(PetscSF sf,MPI_Datatype unit,PetscMemType leafmtype,const void *leafdata,PetscMemType rootmtype,void *rootdata,MPI_Op op)
 {
-  PetscErrorCode       ierr;
   PetscSFLink          link;
   MPI_Comm             comm;
   void                 *rootbuf = NULL,*leafbuf = NULL; /* buffer used by MPI */
@@ -71,7 +68,6 @@ static PetscErrorCode PetscSFReduceBegin_Alltoall(PetscSF sf,MPI_Datatype unit,P
 
 static PetscErrorCode PetscSFCreateLocalSF_Alltoall(PetscSF sf,PetscSF *out)
 {
-  PetscErrorCode ierr;
   PetscInt       nroots = 1,nleaves = 1,*ilocal;
   PetscSFNode    *iremote = NULL;
   PetscSF        lsf;
@@ -96,7 +92,6 @@ static PetscErrorCode PetscSFCreateLocalSF_Alltoall(PetscSF sf,PetscSF *out)
 
 static PetscErrorCode PetscSFCreateEmbeddedRootSF_Alltoall(PetscSF sf,PetscInt nselected,const PetscInt *selected,PetscSF *newsf)
 {
-  PetscErrorCode ierr;
   PetscInt       i,*tmproots,*ilocal,ndranks,ndiranks;
   PetscSFNode    *iremote;
   PetscMPIInt    nroots,*roots,nleaves,*leaves,rank;
@@ -189,7 +184,6 @@ static PetscErrorCode PetscSFCreateEmbeddedRootSF_Alltoall(PetscSF sf,PetscInt n
 
 PETSC_INTERN PetscErrorCode PetscSFCreate_Alltoall(PetscSF sf)
 {
-  PetscErrorCode   ierr;
   PetscSF_Alltoall *dat = (PetscSF_Alltoall*)sf->data;
 
   PetscFunctionBegin;

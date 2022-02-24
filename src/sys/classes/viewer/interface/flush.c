@@ -17,7 +17,6 @@
 @*/
 PetscErrorCode  PetscViewerFlush(PetscViewer viewer)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);

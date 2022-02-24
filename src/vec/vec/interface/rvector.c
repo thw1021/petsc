@@ -18,7 +18,6 @@ PetscInt VecGetSubVectorSavedStateId = -1;
 PETSC_EXTERN PetscErrorCode VecValidValues(Vec vec,PetscInt argnum,PetscBool begin)
 {
 #if defined(PETSC_USE_DEBUG)
-  PetscErrorCode    ierr;
   PetscInt          n,i;
   const PetscScalar *x;
 
@@ -66,7 +65,6 @@ PETSC_EXTERN PetscErrorCode VecValidValues(Vec vec,PetscInt argnum,PetscBool beg
 @*/
 PetscErrorCode  VecMaxPointwiseDivide(Vec x,Vec y,PetscReal *max)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -113,7 +111,6 @@ $     val = (x,y) = y^T x,
 @*/
 PetscErrorCode  VecDot(Vec x,Vec y,PetscScalar *val)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -162,7 +159,6 @@ $    work load imbalance that causes certain processes to arrive much earlier th
 @*/
 PetscErrorCode  VecDotRealPart(Vec x,Vec y,PetscReal *val)
 {
-  PetscErrorCode ierr;
   PetscScalar    fdot;
 
   PetscFunctionBegin;
@@ -210,7 +206,6 @@ $    work load imbalance that causes certain processes to arrive much earlier th
 PetscErrorCode  VecNorm(Vec x,NormType type,PetscReal *val)
 {
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -271,7 +266,6 @@ $    work load imbalance that causes certain processes to arrive much earlier th
 @*/
 PetscErrorCode  VecNormAvailable(Vec x,NormType type,PetscBool  *available,PetscReal *val)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -301,7 +295,6 @@ PetscErrorCode  VecNormAvailable(Vec x,NormType type,PetscBool  *available,Petsc
 @*/
 PetscErrorCode  VecNormalize(Vec x,PetscReal *val)
 {
-  PetscErrorCode ierr;
   PetscReal      norm;
 
   PetscFunctionBegin;
@@ -342,7 +335,6 @@ PetscErrorCode  VecNormalize(Vec x,PetscReal *val)
 @*/
 PetscErrorCode  VecMax(Vec x,PetscInt *p,PetscReal *val)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -377,7 +369,6 @@ PetscErrorCode  VecMax(Vec x,PetscInt *p,PetscReal *val)
 @*/
 PetscErrorCode  VecMin(Vec x,PetscInt *p,PetscReal *val)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -416,7 +407,6 @@ $     val = (x,y) = y^H x,
 @*/
 PetscErrorCode  VecTDot(Vec x,Vec y,PetscScalar *val)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -453,7 +443,6 @@ PetscErrorCode  VecScale(Vec x, PetscScalar alpha)
 {
   PetscReal      norms[4] = {0.0,0.0,0.0, 0.0};
   PetscBool      flgs[4];
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -510,7 +499,6 @@ $     x[i] = alpha, for i=1,...,n,
 PetscErrorCode  VecSet(Vec x,PetscScalar alpha)
 {
   PetscReal      val;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -572,7 +560,6 @@ $    VecMAXPY(y,nv,alpha[],x[])           y = sum alpha[i] x[i] +      y
 @*/
 PetscErrorCode  VecAXPY(Vec y,PetscScalar alpha,Vec x)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,3);
@@ -617,7 +604,6 @@ PetscErrorCode  VecAXPY(Vec y,PetscScalar alpha,Vec x)
 @*/
 PetscErrorCode  VecAXPBY(Vec y,PetscScalar alpha,PetscScalar beta,Vec x)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,4);
@@ -660,7 +646,6 @@ PetscErrorCode  VecAXPBY(Vec y,PetscScalar alpha,PetscScalar beta,Vec x)
 @*/
 PetscErrorCode  VecAXPBYPCZ(Vec z,PetscScalar alpha,PetscScalar beta,PetscScalar gamma,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,5);
@@ -710,7 +695,6 @@ PetscErrorCode  VecAXPBYPCZ(Vec z,PetscScalar alpha,PetscScalar beta,PetscScalar
 @*/
 PetscErrorCode  VecAYPX(Vec y,PetscScalar beta,Vec x)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,3);
@@ -752,7 +736,6 @@ PetscErrorCode  VecAYPX(Vec y,PetscScalar beta,Vec x)
 @*/
 PetscErrorCode  VecWAXPY(Vec w,PetscScalar alpha,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(w,VEC_CLASSID,1);
@@ -816,7 +799,6 @@ PetscErrorCode  VecWAXPY(Vec w,PetscScalar alpha,Vec x,Vec y)
 @*/
 PetscErrorCode  VecSetValues(Vec x,PetscInt ni,const PetscInt ix[],const PetscScalar y[],InsertMode iora)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginHot;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -865,7 +847,6 @@ PetscErrorCode  VecSetValues(Vec x,PetscInt ni,const PetscInt ix[],const PetscSc
 @*/
 PetscErrorCode  VecGetValues(Vec x,PetscInt ni,const PetscInt ix[],PetscScalar y[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -916,7 +897,6 @@ PetscErrorCode  VecGetValues(Vec x,PetscInt ni,const PetscInt ix[],PetscScalar y
 @*/
 PetscErrorCode  VecSetValuesBlocked(Vec x,PetscInt ni,const PetscInt ix[],const PetscScalar y[],InsertMode iora)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginHot;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -966,7 +946,6 @@ PetscErrorCode  VecSetValuesBlocked(Vec x,PetscInt ni,const PetscInt ix[],const 
 @*/
 PetscErrorCode  VecSetValuesLocal(Vec x,PetscInt ni,const PetscInt ix[],const PetscScalar y[],InsertMode iora)
 {
-  PetscErrorCode ierr;
   PetscInt       lixp[128],*lix = lixp;
 
   PetscFunctionBeginHot;
@@ -1030,7 +1009,6 @@ PetscErrorCode  VecSetValuesLocal(Vec x,PetscInt ni,const PetscInt ix[],const Pe
 @*/
 PetscErrorCode  VecSetValuesBlockedLocal(Vec x,PetscInt ni,const PetscInt ix[],const PetscScalar y[],InsertMode iora)
 {
-  PetscErrorCode ierr;
   PetscInt       lixp[128],*lix = lixp;
 
   PetscFunctionBeginHot;
@@ -1083,7 +1061,6 @@ $      val = (x,y) = y^H x,
 @*/
 PetscErrorCode  VecMTDot(Vec x,PetscInt nv,const Vec y[],PetscScalar val[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -1131,7 +1108,6 @@ $     val = (x,y) = y^T x,
 @*/
 PetscErrorCode  VecMDot(Vec x,PetscInt nv,const Vec y[],PetscScalar val[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -1172,7 +1148,6 @@ PetscErrorCode  VecMDot(Vec x,PetscInt nv,const Vec y[],PetscScalar val[])
 @*/
 PetscErrorCode  VecMAXPY(Vec y,PetscInt nv,const PetscScalar alpha[],Vec x[])
 {
-  PetscErrorCode ierr;
   PetscInt       i;
   PetscBool      nonzero;
 
@@ -1235,7 +1210,6 @@ PetscErrorCode VecConcatenate(PetscInt nx, const Vec X[], Vec *Y, IS *x_is[])
   Vec            Ytmp, Xtmp;
   IS             *is_tmp;
   PetscInt       i, shift=0, Xnl, Xng, Xbegin;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidLogicalCollectiveInt(*X,nx,1);
@@ -1297,7 +1271,6 @@ PetscErrorCode VecConcatenate(PetscInt nx, const Vec X[], Vec *Y, IS *x_is[])
 */
 PetscErrorCode VecGetSubVectorContiguityAndBS_Private(Vec X,IS is,PetscBool *contig,PetscInt *start,PetscInt *blocksize)
 {
-  PetscErrorCode   ierr;
   PetscInt         gstart,gend,lstart;
   PetscBool        red[2] = {PETSC_TRUE/*contiguous*/,PETSC_TRUE/*validVBS*/};
   PetscInt         n,N,ibs,vbs,bs = -1;
@@ -1337,7 +1310,6 @@ PetscErrorCode VecGetSubVectorContiguityAndBS_Private(Vec X,IS is,PetscBool *con
 */
 PetscErrorCode VecGetSubVectorThroughVecScatter_Private(Vec X,IS is,PetscInt bs,Vec *Z)
 {
-  PetscErrorCode ierr;
   PetscInt       n,N;
   VecScatter     vscat;
   Vec            Y;
@@ -1384,7 +1356,6 @@ PetscErrorCode VecGetSubVectorThroughVecScatter_Private(Vec X,IS is,PetscInt bs,
 @*/
 PetscErrorCode  VecGetSubVector(Vec X,IS is,Vec *Y)
 {
-  PetscErrorCode   ierr;
   Vec              Z;
 
   PetscFunctionBegin;
@@ -1503,7 +1474,6 @@ PetscErrorCode  VecGetSubVector(Vec X,IS is,Vec *Y)
 @*/
 PetscErrorCode  VecRestoreSubVector(Vec X,IS is,Vec *Y)
 {
-  PetscErrorCode                ierr;
   PETSC_UNUSED PetscObjectState dummystate = 0;
   PetscBool                     unchanged;
 
@@ -1639,7 +1609,6 @@ PetscErrorCode  VecRestoreSubVector(Vec X,IS is,Vec *Y)
 @*/
 PetscErrorCode VecGetLocalVectorRead(Vec v,Vec w)
 {
-  PetscErrorCode ierr;
   PetscScalar    *a;
 
   PetscFunctionBegin;
@@ -1674,7 +1643,6 @@ PetscErrorCode VecGetLocalVectorRead(Vec v,Vec w)
 @*/
 PetscErrorCode VecRestoreLocalVectorRead(Vec v,Vec w)
 {
-  PetscErrorCode ierr;
   PetscScalar    *a;
 
   PetscFunctionBegin;
@@ -1722,7 +1690,6 @@ PetscErrorCode VecRestoreLocalVectorRead(Vec v,Vec w)
 @*/
 PetscErrorCode VecGetLocalVector(Vec v,Vec w)
 {
-  PetscErrorCode ierr;
   PetscScalar    *a;
 
   PetscFunctionBegin;
@@ -1755,7 +1722,6 @@ PetscErrorCode VecGetLocalVector(Vec v,Vec w)
 @*/
 PetscErrorCode VecRestoreLocalVector(Vec v,Vec w)
 {
-  PetscErrorCode ierr;
   PetscScalar    *a;
 
   PetscFunctionBegin;
@@ -1815,7 +1781,6 @@ $       call VecRestoreArray(x,x_array,i_x,ierr)
 @*/
 PetscErrorCode VecGetArray(Vec x,PetscScalar **a)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -1844,7 +1809,6 @@ PetscErrorCode VecGetArray(Vec x,PetscScalar **a)
 @*/
 PetscErrorCode VecRestoreArray(Vec x,PetscScalar **a)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -1883,7 +1847,6 @@ PetscErrorCode VecRestoreArray(Vec x,PetscScalar **a)
 @*/
 PetscErrorCode VecGetArrayRead(Vec x,const PetscScalar **a)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -1910,7 +1873,6 @@ PetscErrorCode VecGetArrayRead(Vec x,const PetscScalar **a)
 @*/
 PetscErrorCode VecRestoreArrayRead(Vec x,const PetscScalar **a)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -1950,7 +1912,6 @@ PetscErrorCode VecRestoreArrayRead(Vec x,const PetscScalar **a)
 @*/
 PetscErrorCode VecGetArrayWrite(Vec x,PetscScalar **a)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -1979,7 +1940,6 @@ PetscErrorCode VecGetArrayWrite(Vec x,PetscScalar **a)
 @*/
 PetscErrorCode VecRestoreArrayWrite(Vec x,PetscScalar **a)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -2016,7 +1976,6 @@ PetscErrorCode VecRestoreArrayWrite(Vec x,PetscScalar **a)
 @*/
 PetscErrorCode  VecGetArrays(const Vec x[],PetscInt n,PetscScalar **a[])
 {
-  PetscErrorCode ierr;
   PetscInt       i;
   PetscScalar    **q;
 
@@ -2059,7 +2018,6 @@ PetscErrorCode  VecGetArrays(const Vec x[],PetscInt n,PetscScalar **a[])
 @*/
 PetscErrorCode  VecRestoreArrays(const Vec x[],PetscInt n,PetscScalar **a[])
 {
-  PetscErrorCode ierr;
   PetscInt       i;
   PetscScalar    **q = *a;
 
@@ -2099,7 +2057,6 @@ PetscErrorCode  VecRestoreArrays(const Vec x[],PetscInt n,PetscScalar **a[])
 @*/
 PetscErrorCode VecGetArrayAndMemType(Vec x,PetscScalar **a,PetscMemType *mtype)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -2130,7 +2087,6 @@ PetscErrorCode VecGetArrayAndMemType(Vec x,PetscScalar **a,PetscMemType *mtype)
 @*/
 PetscErrorCode VecRestoreArrayAndMemType(Vec x,PetscScalar **a)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -2166,7 +2122,6 @@ PetscErrorCode VecRestoreArrayAndMemType(Vec x,PetscScalar **a)
 @*/
 PetscErrorCode VecGetArrayReadAndMemType(Vec x,const PetscScalar **a,PetscMemType *mtype)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -2202,7 +2157,6 @@ PetscErrorCode VecGetArrayReadAndMemType(Vec x,const PetscScalar **a,PetscMemTyp
 @*/
 PetscErrorCode VecRestoreArrayReadAndMemType(Vec x,const PetscScalar **a)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -2238,7 +2192,6 @@ PetscErrorCode VecRestoreArrayReadAndMemType(Vec x,const PetscScalar **a)
 @*/
 PetscErrorCode VecGetArrayWriteAndMemType(Vec x,PetscScalar **a,PetscMemType *mtype)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -2270,7 +2223,6 @@ PetscErrorCode VecGetArrayWriteAndMemType(Vec x,PetscScalar **a,PetscMemType *mt
 @*/
 PetscErrorCode VecRestoreArrayWriteAndMemType(Vec x,PetscScalar **a)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecRestoreArrayAndMemType(x,a));
@@ -2298,7 +2250,6 @@ PetscErrorCode VecRestoreArrayWriteAndMemType(Vec x,PetscScalar **a)
 @*/
 PetscErrorCode  VecPlaceArray(Vec vec,const PetscScalar array[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(vec,VEC_CLASSID,1);
@@ -2338,7 +2289,6 @@ PetscErrorCode  VecPlaceArray(Vec vec,const PetscScalar array[])
 @*/
 PetscErrorCode  VecReplaceArray(Vec vec,const PetscScalar array[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(vec,VEC_CLASSID,1);
@@ -2416,7 +2366,6 @@ PETSC_EXTERN PetscErrorCode VecCUDAGetArray(Vec v, PetscScalar **a)
 @*/
 PETSC_EXTERN PetscErrorCode VecCUDARestoreArray(Vec v, PetscScalar **a)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckTypeNames(v,VECSEQCUDA,VECMPICUDA);
@@ -2460,7 +2409,6 @@ PETSC_EXTERN PetscErrorCode VecCUDARestoreArray(Vec v, PetscScalar **a)
 @*/
 PETSC_EXTERN PetscErrorCode VecCUDAGetArrayRead(Vec v,const PetscScalar** a)
 {
-   PetscErrorCode ierr;
    PetscFunctionBegin;
    CHKERRQ(VecCUDAGetArray(v,(PetscScalar**)a));
    PetscFunctionReturn(0);
@@ -2557,7 +2505,6 @@ PETSC_EXTERN PetscErrorCode VecCUDAGetArrayWrite(Vec v, PetscScalar **a)
 @*/
 PETSC_EXTERN PetscErrorCode VecCUDARestoreArrayWrite(Vec v, PetscScalar **a)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckTypeNames(v,VECSEQCUDA,VECMPICUDA);
@@ -2592,7 +2539,6 @@ PETSC_EXTERN PetscErrorCode VecCUDARestoreArrayWrite(Vec v, PetscScalar **a)
 @*/
 PetscErrorCode VecCUDAPlaceArray(Vec vin,const PetscScalar a[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckTypeNames(vin,VECSEQCUDA,VECMPICUDA);
@@ -2637,7 +2583,6 @@ PetscErrorCode VecCUDAReplaceArray(Vec vin,const PetscScalar a[])
 #if defined(PETSC_HAVE_CUDA)
   cudaError_t err;
 #endif
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckTypeNames(vin,VECSEQCUDA,VECMPICUDA);
@@ -2668,7 +2613,6 @@ PetscErrorCode VecCUDAReplaceArray(Vec vin,const PetscScalar a[])
 @*/
 PetscErrorCode VecCUDAResetArray(Vec vin)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckTypeNames(vin,VECSEQCUDA,VECMPICUDA);
@@ -2750,7 +2694,6 @@ PETSC_EXTERN PetscErrorCode VecHIPGetArray(Vec v, PetscScalar **a)
 @*/
 PETSC_EXTERN PetscErrorCode VecHIPRestoreArray(Vec v, PetscScalar **a)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckTypeNames(v,VECSEQHIP,VECMPIHIP);
@@ -2902,7 +2845,6 @@ PETSC_EXTERN PetscErrorCode VecHIPGetArrayWrite(Vec v, PetscScalar **a)
 @*/
 PETSC_EXTERN PetscErrorCode VecHIPRestoreArrayWrite(Vec v, PetscScalar **a)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckTypeNames(v,VECSEQHIP,VECMPIHIP);
@@ -2937,7 +2879,6 @@ PETSC_EXTERN PetscErrorCode VecHIPRestoreArrayWrite(Vec v, PetscScalar **a)
 @*/
 PetscErrorCode VecHIPPlaceArray(Vec vin,const PetscScalar a[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckTypeNames(vin,VECSEQHIP,VECMPIHIP);
@@ -2982,7 +2923,6 @@ PetscErrorCode VecHIPReplaceArray(Vec vin,const PetscScalar a[])
 #if defined(PETSC_HAVE_HIP)
   hipError_t err;
 #endif
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckTypeNames(vin,VECSEQHIP,VECMPIHIP);
@@ -3011,7 +2951,6 @@ PetscErrorCode VecHIPReplaceArray(Vec vin,const PetscScalar a[])
 @*/
 PetscErrorCode VecHIPResetArray(Vec vin)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckTypeNames(vin,VECSEQHIP,VECMPIHIP);
@@ -3269,7 +3208,6 @@ M*/
 @*/
 PetscErrorCode  VecGetArray2d(Vec x,PetscInt m,PetscInt n,PetscInt mstart,PetscInt nstart,PetscScalar **a[])
 {
-  PetscErrorCode ierr;
   PetscInt       i,N;
   PetscScalar    *aa;
 
@@ -3322,7 +3260,6 @@ PetscErrorCode  VecGetArray2d(Vec x,PetscInt m,PetscInt n,PetscInt mstart,PetscI
 @*/
 PetscErrorCode  VecGetArray2dWrite(Vec x,PetscInt m,PetscInt n,PetscInt mstart,PetscInt nstart,PetscScalar **a[])
 {
-  PetscErrorCode ierr;
   PetscInt       i,N;
   PetscScalar    *aa;
 
@@ -3369,7 +3306,6 @@ PetscErrorCode  VecGetArray2dWrite(Vec x,PetscInt m,PetscInt n,PetscInt mstart,P
 @*/
 PetscErrorCode  VecRestoreArray2d(Vec x,PetscInt m,PetscInt n,PetscInt mstart,PetscInt nstart,PetscScalar **a[])
 {
-  PetscErrorCode ierr;
   void           *dummy;
 
   PetscFunctionBegin;
@@ -3411,7 +3347,6 @@ PetscErrorCode  VecRestoreArray2d(Vec x,PetscInt m,PetscInt n,PetscInt mstart,Pe
 @*/
 PetscErrorCode  VecRestoreArray2dWrite(Vec x,PetscInt m,PetscInt n,PetscInt mstart,PetscInt nstart,PetscScalar **a[])
 {
-  PetscErrorCode ierr;
   void           *dummy;
 
   PetscFunctionBegin;
@@ -3454,7 +3389,6 @@ PetscErrorCode  VecRestoreArray2dWrite(Vec x,PetscInt m,PetscInt n,PetscInt msta
 @*/
 PetscErrorCode  VecGetArray1d(Vec x,PetscInt m,PetscInt mstart,PetscScalar *a[])
 {
-  PetscErrorCode ierr;
   PetscInt       N;
 
   PetscFunctionBegin;
@@ -3498,7 +3432,6 @@ PetscErrorCode  VecGetArray1d(Vec x,PetscInt m,PetscInt mstart,PetscScalar *a[])
 @*/
 PetscErrorCode  VecGetArray1dWrite(Vec x,PetscInt m,PetscInt mstart,PetscScalar *a[])
 {
-  PetscErrorCode ierr;
   PetscInt       N;
 
   PetscFunctionBegin;
@@ -3539,7 +3472,6 @@ PetscErrorCode  VecGetArray1dWrite(Vec x,PetscInt m,PetscInt mstart,PetscScalar 
 @*/
 PetscErrorCode  VecRestoreArray1d(Vec x,PetscInt m,PetscInt mstart,PetscScalar *a[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -3577,7 +3509,6 @@ PetscErrorCode  VecRestoreArray1d(Vec x,PetscInt m,PetscInt mstart,PetscScalar *
 @*/
 PetscErrorCode  VecRestoreArray1dWrite(Vec x,PetscInt m,PetscInt mstart,PetscScalar *a[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -3621,7 +3552,6 @@ PetscErrorCode  VecRestoreArray1dWrite(Vec x,PetscInt m,PetscInt mstart,PetscSca
 @*/
 PetscErrorCode  VecGetArray3d(Vec x,PetscInt m,PetscInt n,PetscInt p,PetscInt mstart,PetscInt nstart,PetscInt pstart,PetscScalar ***a[])
 {
-  PetscErrorCode ierr;
   PetscInt       i,N,j;
   PetscScalar    *aa,**b;
 
@@ -3680,7 +3610,6 @@ PetscErrorCode  VecGetArray3d(Vec x,PetscInt m,PetscInt n,PetscInt p,PetscInt ms
 @*/
 PetscErrorCode  VecGetArray3dWrite(Vec x,PetscInt m,PetscInt n,PetscInt p,PetscInt mstart,PetscInt nstart,PetscInt pstart,PetscScalar ***a[])
 {
-  PetscErrorCode ierr;
   PetscInt       i,N,j;
   PetscScalar    *aa,**b;
 
@@ -3734,7 +3663,6 @@ PetscErrorCode  VecGetArray3dWrite(Vec x,PetscInt m,PetscInt n,PetscInt p,PetscI
 @*/
 PetscErrorCode  VecRestoreArray3d(Vec x,PetscInt m,PetscInt n,PetscInt p,PetscInt mstart,PetscInt nstart,PetscInt pstart,PetscScalar ***a[])
 {
-  PetscErrorCode ierr;
   void           *dummy;
 
   PetscFunctionBegin;
@@ -3778,7 +3706,6 @@ PetscErrorCode  VecRestoreArray3d(Vec x,PetscInt m,PetscInt n,PetscInt p,PetscIn
 @*/
 PetscErrorCode  VecRestoreArray3dWrite(Vec x,PetscInt m,PetscInt n,PetscInt p,PetscInt mstart,PetscInt nstart,PetscInt pstart,PetscScalar ***a[])
 {
-  PetscErrorCode ierr;
   void           *dummy;
 
   PetscFunctionBegin;
@@ -3828,7 +3755,6 @@ PetscErrorCode  VecRestoreArray3dWrite(Vec x,PetscInt m,PetscInt n,PetscInt p,Pe
 @*/
 PetscErrorCode  VecGetArray4d(Vec x,PetscInt m,PetscInt n,PetscInt p,PetscInt q,PetscInt mstart,PetscInt nstart,PetscInt pstart,PetscInt qstart,PetscScalar ****a[])
 {
-  PetscErrorCode ierr;
   PetscInt       i,N,j,k;
   PetscScalar    *aa,***b,**c;
 
@@ -3894,7 +3820,6 @@ PetscErrorCode  VecGetArray4d(Vec x,PetscInt m,PetscInt n,PetscInt p,PetscInt q,
 @*/
 PetscErrorCode  VecGetArray4dWrite(Vec x,PetscInt m,PetscInt n,PetscInt p,PetscInt q,PetscInt mstart,PetscInt nstart,PetscInt pstart,PetscInt qstart,PetscScalar ****a[])
 {
-  PetscErrorCode ierr;
   PetscInt       i,N,j,k;
   PetscScalar    *aa,***b,**c;
 
@@ -3954,7 +3879,6 @@ PetscErrorCode  VecGetArray4dWrite(Vec x,PetscInt m,PetscInt n,PetscInt p,PetscI
 @*/
 PetscErrorCode  VecRestoreArray4d(Vec x,PetscInt m,PetscInt n,PetscInt p,PetscInt q,PetscInt mstart,PetscInt nstart,PetscInt pstart,PetscInt qstart,PetscScalar ****a[])
 {
-  PetscErrorCode ierr;
   void           *dummy;
 
   PetscFunctionBegin;
@@ -4000,7 +3924,6 @@ PetscErrorCode  VecRestoreArray4d(Vec x,PetscInt m,PetscInt n,PetscInt p,PetscIn
 @*/
 PetscErrorCode  VecRestoreArray4dWrite(Vec x,PetscInt m,PetscInt n,PetscInt p,PetscInt q,PetscInt mstart,PetscInt nstart,PetscInt pstart,PetscInt qstart,PetscScalar ****a[])
 {
-  PetscErrorCode ierr;
   void           *dummy;
 
   PetscFunctionBegin;
@@ -4046,7 +3969,6 @@ PetscErrorCode  VecRestoreArray4dWrite(Vec x,PetscInt m,PetscInt n,PetscInt p,Pe
 @*/
 PetscErrorCode  VecGetArray2dRead(Vec x,PetscInt m,PetscInt n,PetscInt mstart,PetscInt nstart,PetscScalar **a[])
 {
-  PetscErrorCode    ierr;
   PetscInt          i,N;
   const PetscScalar *aa;
 
@@ -4093,7 +4015,6 @@ PetscErrorCode  VecGetArray2dRead(Vec x,PetscInt m,PetscInt n,PetscInt mstart,Pe
 @*/
 PetscErrorCode  VecRestoreArray2dRead(Vec x,PetscInt m,PetscInt n,PetscInt mstart,PetscInt nstart,PetscScalar **a[])
 {
-  PetscErrorCode ierr;
   void           *dummy;
 
   PetscFunctionBegin;
@@ -4136,7 +4057,6 @@ PetscErrorCode  VecRestoreArray2dRead(Vec x,PetscInt m,PetscInt n,PetscInt mstar
 @*/
 PetscErrorCode  VecGetArray1dRead(Vec x,PetscInt m,PetscInt mstart,PetscScalar *a[])
 {
-  PetscErrorCode ierr;
   PetscInt       N;
 
   PetscFunctionBegin;
@@ -4177,7 +4097,6 @@ PetscErrorCode  VecGetArray1dRead(Vec x,PetscInt m,PetscInt mstart,PetscScalar *
 @*/
 PetscErrorCode  VecRestoreArray1dRead(Vec x,PetscInt m,PetscInt mstart,PetscScalar *a[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -4221,7 +4140,6 @@ PetscErrorCode  VecRestoreArray1dRead(Vec x,PetscInt m,PetscInt mstart,PetscScal
 @*/
 PetscErrorCode  VecGetArray3dRead(Vec x,PetscInt m,PetscInt n,PetscInt p,PetscInt mstart,PetscInt nstart,PetscInt pstart,PetscScalar ***a[])
 {
-  PetscErrorCode    ierr;
   PetscInt          i,N,j;
   const PetscScalar *aa;
   PetscScalar       **b;
@@ -4275,7 +4193,6 @@ PetscErrorCode  VecGetArray3dRead(Vec x,PetscInt m,PetscInt n,PetscInt p,PetscIn
 @*/
 PetscErrorCode  VecRestoreArray3dRead(Vec x,PetscInt m,PetscInt n,PetscInt p,PetscInt mstart,PetscInt nstart,PetscInt pstart,PetscScalar ***a[])
 {
-  PetscErrorCode ierr;
   void           *dummy;
 
   PetscFunctionBegin;
@@ -4325,7 +4242,6 @@ PetscErrorCode  VecRestoreArray3dRead(Vec x,PetscInt m,PetscInt n,PetscInt p,Pet
 @*/
 PetscErrorCode  VecGetArray4dRead(Vec x,PetscInt m,PetscInt n,PetscInt p,PetscInt q,PetscInt mstart,PetscInt nstart,PetscInt pstart,PetscInt qstart,PetscScalar ****a[])
 {
-  PetscErrorCode    ierr;
   PetscInt          i,N,j,k;
   const PetscScalar *aa;
   PetscScalar       ***b,**c;
@@ -4386,7 +4302,6 @@ PetscErrorCode  VecGetArray4dRead(Vec x,PetscInt m,PetscInt n,PetscInt p,PetscIn
 @*/
 PetscErrorCode  VecRestoreArray4dRead(Vec x,PetscInt m,PetscInt n,PetscInt p,PetscInt q,PetscInt mstart,PetscInt nstart,PetscInt pstart,PetscInt qstart,PetscScalar ****a[])
 {
-  PetscErrorCode ierr;
   void           *dummy;
 
   PetscFunctionBegin;
@@ -4527,7 +4442,6 @@ PetscErrorCode VecLockWriteSet_Private(Vec x,PetscBool flg)
 @*/
 PetscErrorCode VecLockPush(Vec x)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRQ(VecLockReadPush(x));
   PetscFunctionReturn(0);
@@ -4542,7 +4456,6 @@ PetscErrorCode VecLockPush(Vec x)
 @*/
 PetscErrorCode VecLockPop(Vec x)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRQ(VecLockReadPop(x));
   PetscFunctionReturn(0);

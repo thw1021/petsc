@@ -28,7 +28,6 @@ typedef struct {PetscErrorCode (*solve)(SNES,Vec);void *ctx;} SNES_Shell;
 @*/
 PetscErrorCode  SNESShellSetSolve(SNES snes,PetscErrorCode (*solve)(SNES,Vec))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
@@ -44,7 +43,6 @@ PetscErrorCode SNESReset_Shell(SNES snes)
 
 PetscErrorCode SNESDestroy_Shell(SNES snes)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESReset_Shell(snes));
@@ -60,7 +58,6 @@ PetscErrorCode SNESSetUp_Shell(SNES snes)
 
 PetscErrorCode SNESSetFromOptions_Shell(PetscOptionItems *PetscOptionsObject,SNES snes)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"SNES Shell options"));
@@ -93,7 +90,6 @@ PetscErrorCode SNESView_Shell(SNES snes, PetscViewer viewer)
 @*/
 PetscErrorCode  SNESShellGetContext(SNES snes,void *ctx)
 {
-  PetscErrorCode ierr;
   PetscBool      flg;
 
   PetscFunctionBegin;
@@ -125,7 +121,6 @@ PetscErrorCode  SNESShellGetContext(SNES snes,void *ctx)
 PetscErrorCode  SNESShellSetContext(SNES snes,void *ctx)
 {
   SNES_Shell     *shell = (SNES_Shell*)snes->data;
-  PetscErrorCode ierr;
   PetscBool      flg;
 
   PetscFunctionBegin;
@@ -138,7 +133,6 @@ PetscErrorCode  SNESShellSetContext(SNES snes,void *ctx)
 PetscErrorCode SNESSolve_Shell(SNES snes)
 {
   SNES_Shell     *shell = (SNES_Shell*) snes->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!shell->solve,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE,"Must call SNESShellSetSolve() first");
@@ -167,7 +161,6 @@ M*/
 PETSC_EXTERN PetscErrorCode SNESCreate_Shell(SNES snes)
 {
   SNES_Shell     *shell;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   snes->ops->destroy        = SNESDestroy_Shell;

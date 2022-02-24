@@ -4,7 +4,6 @@
 PetscErrorCode KSPSetUp_LCD(KSP ksp)
 {
   KSP_LCD        *lcd = (KSP_LCD*)ksp->data;
-  PetscErrorCode ierr;
   PetscInt       restart = lcd->restart;
 
   PetscFunctionBegin;
@@ -30,7 +29,6 @@ PetscErrorCode KSPSetUp_LCD(KSP ksp)
 */
 PetscErrorCode  KSPSolve_LCD(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       it,j,max_k;
   PetscScalar    alfa, beta, num, den, mone;
   PetscReal      rnorm = 0.0;
@@ -128,7 +126,6 @@ PetscErrorCode  KSPSolve_LCD(KSP ksp)
 PetscErrorCode KSPReset_LCD(KSP ksp)
 {
   KSP_LCD        *lcd = (KSP_LCD*)ksp->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (lcd->P) CHKERRQ(VecDestroyVecs(lcd->restart+1,&lcd->P));
@@ -138,7 +135,6 @@ PetscErrorCode KSPReset_LCD(KSP ksp)
 
 PetscErrorCode KSPDestroy_LCD(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPReset_LCD(ksp));
@@ -158,7 +154,6 @@ PetscErrorCode KSPView_LCD(KSP ksp,PetscViewer viewer)
 {
 
   KSP_LCD        *lcd = (KSP_LCD*)ksp->data;
-  PetscErrorCode ierr;
   PetscBool      iascii;
 
   PetscFunctionBegin;
@@ -176,7 +171,6 @@ PetscErrorCode KSPView_LCD(KSP ksp,PetscViewer viewer)
 */
 PetscErrorCode KSPSetFromOptions_LCD(PetscOptionItems *PetscOptionsObject,KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscBool      flg;
   KSP_LCD        *lcd = (KSP_LCD*)ksp->data;
 
@@ -227,7 +221,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode KSPCreate_LCD(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_LCD        *lcd;
 
   PetscFunctionBegin;

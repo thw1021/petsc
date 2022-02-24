@@ -17,7 +17,6 @@ static PetscErrorCode SNESReset_NCG(SNES snes)
 */
 static PetscErrorCode SNESDestroy_NCG(SNES snes)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(snes->data));
@@ -37,7 +36,6 @@ static PetscErrorCode SNESDestroy_NCG(SNES snes)
 
 static PetscErrorCode SNESSetUp_NCG(SNES snes)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESSetWorkVecs(snes,2));
@@ -51,7 +49,6 @@ static PetscErrorCode SNESLineSearchApply_NCGLinear(SNESLineSearch linesearch)
   PetscScalar    alpha, ptAp;
   Vec            X, Y, F, W;
   SNES           snes;
-  PetscErrorCode ierr;
   PetscReal      *fnorm, *xnorm, *ynorm;
 
   PetscFunctionBegin;
@@ -125,7 +122,6 @@ PETSC_EXTERN PetscErrorCode SNESLineSearchCreate_NCGLinear(SNESLineSearch linese
 static PetscErrorCode SNESSetFromOptions_NCG(PetscOptionItems *PetscOptionsObject,SNES snes)
 {
   SNES_NCG       *ncg = (SNES_NCG*)snes->data;
-  PetscErrorCode ierr;
   PetscBool      debug = PETSC_FALSE;
   SNESNCGType    ncgtype=ncg->type;
   SNESLineSearch linesearch;
@@ -165,7 +161,6 @@ static PetscErrorCode SNESView_NCG(SNES snes, PetscViewer viewer)
 {
   SNES_NCG      *ncg = (SNES_NCG *) snes->data;
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii));
@@ -186,7 +181,6 @@ static PetscErrorCode SNESView_NCG(SNES snes, PetscViewer viewer)
  */
 PetscErrorCode SNESNCGComputeYtJtF_Private(SNES snes, Vec X, Vec F, Vec Y, Vec W, Vec G, PetscScalar * ytJtf)
 {
-  PetscErrorCode ierr;
   PetscScalar    ftf, ftg, fty, h;
 
   PetscFunctionBegin;
@@ -231,7 +225,6 @@ PetscErrorCode SNESNCGComputeYtJtF_Private(SNES snes, Vec X, Vec F, Vec Y, Vec W
 @*/
 PetscErrorCode SNESNCGSetType(SNES snes, SNESNCGType btype)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
@@ -266,7 +259,6 @@ static PetscErrorCode SNESSolve_NCG(SNES snes)
   PetscReal            fnorm, ynorm, xnorm, beta = 0.0;
   PetscScalar          dXdotdX, dXolddotdXold, dXdotdXold, lXdotdX, lXdotdXold;
   PetscInt             maxits, i;
-  PetscErrorCode       ierr;
   SNESLineSearchReason lsresult = SNES_LINESEARCH_SUCCEEDED;
   SNESLineSearch       linesearch;
   SNESConvergedReason  reason;
@@ -481,7 +473,6 @@ static PetscErrorCode SNESSolve_NCG(SNES snes)
 M*/
 PETSC_EXTERN PetscErrorCode SNESCreate_NCG(SNES snes)
 {
-  PetscErrorCode ierr;
   SNES_NCG       * neP;
 
   PetscFunctionBegin;

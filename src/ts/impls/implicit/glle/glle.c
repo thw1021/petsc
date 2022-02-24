@@ -33,7 +33,6 @@ static PetscScalar CPowF(PetscScalar c,PetscInt p)
 static PetscErrorCode TSGLLEGetVecs(TS ts,DM dm,Vec *Z,Vec *Ydotstage)
 {
   TS_GLLE        *gl = (TS_GLLE*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (Z) {
@@ -51,7 +50,6 @@ static PetscErrorCode TSGLLEGetVecs(TS ts,DM dm,Vec *Z,Vec *Ydotstage)
 
 static PetscErrorCode TSGLLERestoreVecs(TS ts,DM dm,Vec *Z,Vec *Ydotstage)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (Z) {
@@ -77,7 +75,6 @@ static PetscErrorCode DMCoarsenHook_TSGLLE(DM fine,DM coarse,void *ctx)
 static PetscErrorCode DMRestrictHook_TSGLLE(DM fine,Mat restrct,Vec rscale,Mat inject,DM coarse,void *ctx)
 {
   TS             ts = (TS)ctx;
-  PetscErrorCode ierr;
   Vec            Ydot,Ydot_c;
 
   PetscFunctionBegin;
@@ -99,7 +96,6 @@ static PetscErrorCode DMSubDomainHook_TSGLLE(DM dm,DM subdm,void *ctx)
 static PetscErrorCode DMSubDomainRestrictHook_TSGLLE(DM dm,VecScatter gscat, VecScatter lscat,DM subdm,void *ctx)
 {
   TS             ts = (TS)ctx;
-  PetscErrorCode ierr;
   Vec            Ydot,Ydot_s;
 
   PetscFunctionBegin;
@@ -119,7 +115,6 @@ static PetscErrorCode TSGLLESchemeCreate(PetscInt p,PetscInt q,PetscInt r,PetscI
 {
   TSGLLEScheme     scheme;
   PetscInt       j;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(p < 1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Scheme order must be positive");
@@ -288,7 +283,6 @@ static PetscErrorCode TSGLLESchemeCreate(PetscInt p,PetscInt q,PetscInt r,PetscI
 
 static PetscErrorCode TSGLLESchemeDestroy(TSGLLEScheme sc)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree5(sc->c,sc->a,sc->b,sc->u,sc->v));
@@ -299,7 +293,6 @@ static PetscErrorCode TSGLLESchemeDestroy(TSGLLEScheme sc)
 
 static PetscErrorCode TSGLLEDestroy_Default(TS_GLLE *gl)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -314,7 +307,6 @@ static PetscErrorCode TSGLLEDestroy_Default(TS_GLLE *gl)
 
 static PetscErrorCode TSGLLEViewTable_Private(PetscViewer viewer,PetscInt m,PetscInt n,const PetscScalar a[],const char name[])
 {
-  PetscErrorCode ierr;
   PetscBool      iascii;
   PetscInt       i,j;
 
@@ -369,7 +361,6 @@ static PetscErrorCode TSGLLESchemeView(TSGLLEScheme sc,PetscBool view_details,Pe
 
 static PetscErrorCode TSGLLEEstimateHigherMoments_Default(TSGLLEScheme sc,PetscReal h,Vec Ydot[],Vec Xold[],Vec hm[])
 {
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -388,7 +379,6 @@ static PetscErrorCode TSGLLEEstimateHigherMoments_Default(TSGLLEScheme sc,PetscR
 
 static PetscErrorCode TSGLLECompleteStep_Rescale(TSGLLEScheme sc,PetscReal h,TSGLLEScheme next_sc,PetscReal next_h,Vec Ydot[],Vec Xold[],Vec X[])
 {
-  PetscErrorCode ierr;
   PetscScalar    brow[32],vrow[32];
   PetscInt       i,j,r,s;
 
@@ -408,7 +398,6 @@ static PetscErrorCode TSGLLECompleteStep_Rescale(TSGLLEScheme sc,PetscReal h,TSG
 
 static PetscErrorCode TSGLLECompleteStep_RescaleAndModify(TSGLLEScheme sc,PetscReal h,TSGLLEScheme next_sc,PetscReal next_h,Vec Ydot[],Vec Xold[],Vec X[])
 {
-  PetscErrorCode ierr;
   PetscScalar    brow[32],vrow[32];
   PetscReal      ratio;
   PetscInt       i,j,p,r,s;
@@ -450,7 +439,6 @@ static PetscErrorCode TSGLLECompleteStep_RescaleAndModify(TSGLLEScheme sc,PetscR
 static PetscErrorCode TSGLLECreate_IRKS(TS ts)
 {
   TS_GLLE        *gl = (TS_GLLE*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   gl->Destroy               = TSGLLEDestroy_Default;
@@ -614,7 +602,6 @@ static PetscErrorCode TSGLLECreate_IRKS(TS ts)
 @*/
 PetscErrorCode  TSGLLESetType(TS ts,TSGLLEType type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -644,7 +631,6 @@ PetscErrorCode  TSGLLESetType(TS ts,TSGLLEType type)
 @*/
 PetscErrorCode  TSGLLESetAcceptType(TS ts,TSGLLEAcceptType type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -674,7 +660,6 @@ PetscErrorCode  TSGLLESetAcceptType(TS ts,TSGLLEAcceptType type)
 @*/
 PetscErrorCode  TSGLLEGetAdapt(TS ts,TSGLLEAdapt *adapt)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -693,7 +678,6 @@ static PetscErrorCode TSGLLEAccept_Always(TS ts,PetscReal tleft,PetscReal h,cons
 static PetscErrorCode TSGLLEUpdateWRMS(TS ts)
 {
   TS_GLLE        *gl = (TS_GLLE*)ts->data;
-  PetscErrorCode ierr;
   PetscScalar    *x,*w;
   PetscInt       n,i;
 
@@ -710,7 +694,6 @@ static PetscErrorCode TSGLLEUpdateWRMS(TS ts)
 static PetscErrorCode TSGLLEVecNormWRMS(TS ts,Vec X,PetscReal *nrm)
 {
   TS_GLLE        *gl = (TS_GLLE*)ts->data;
-  PetscErrorCode ierr;
   PetscScalar    *x,*w;
   PetscReal      sum = 0.0,gsum;
   PetscInt       n,N,i;
@@ -730,9 +713,9 @@ static PetscErrorCode TSGLLEVecNormWRMS(TS ts,Vec X,PetscReal *nrm)
 
 static PetscErrorCode TSGLLESetType_GLLE(TS ts,TSGLLEType type)
 {
-  PetscErrorCode ierr,(*r)(TS);
   PetscBool      same;
   TS_GLLE        *gl = (TS_GLLE*)ts->data;
+  PetscErrorCode (*r)(TS);
 
   PetscFunctionBegin;
   if (gl->type_name[0]) {
@@ -742,7 +725,7 @@ static PetscErrorCode TSGLLESetType_GLLE(TS ts,TSGLLEType type)
   }
 
   CHKERRQ(PetscFunctionListFind(TSGLLEList,type,&r));
-  PetscCheckFalse(!r,PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unknown TSGLLE type \"%s\" given",type);
+  PetscCheck(r,PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unknown TSGLLE type \"%s\" given",type);
   CHKERRQ((*r)(ts));
   CHKERRQ(PetscStrcpy(gl->type_name,type));
   PetscFunctionReturn(0);
@@ -750,7 +733,6 @@ static PetscErrorCode TSGLLESetType_GLLE(TS ts,TSGLLEType type)
 
 static PetscErrorCode TSGLLESetAcceptType_GLLE(TS ts,TSGLLEAcceptType type)
 {
-  PetscErrorCode       ierr;
   TSGLLEAcceptFunction r;
   TS_GLLE              *gl = (TS_GLLE*)ts->data;
 
@@ -764,7 +746,6 @@ static PetscErrorCode TSGLLESetAcceptType_GLLE(TS ts,TSGLLEAcceptType type)
 
 static PetscErrorCode TSGLLEGetAdapt_GLLE(TS ts,TSGLLEAdapt *adapt)
 {
-  PetscErrorCode ierr;
   TS_GLLE        *gl = (TS_GLLE*)ts->data;
 
   PetscFunctionBegin;
@@ -779,7 +760,6 @@ static PetscErrorCode TSGLLEGetAdapt_GLLE(TS ts,TSGLLEAdapt *adapt)
 
 static PetscErrorCode TSGLLEChooseNextScheme(TS ts,PetscReal h,const PetscReal hmnorm[],PetscInt *next_scheme,PetscReal *next_h,PetscBool  *finish)
 {
-  PetscErrorCode ierr;
   TS_GLLE        *gl = (TS_GLLE*)ts->data;
   PetscInt       i,n,cur_p,cur,next_sc,candidates[64],orders[64];
   PetscReal      errors[64],costs[64],tleft;
@@ -824,7 +804,6 @@ static PetscErrorCode TSSolve_GLLE(TS ts)
   PetscInt            i,k,its,lits,max_r,max_s;
   PetscBool           final_step,finish;
   SNESConvergedReason snesreason;
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSMonitor(ts,ts->steps,ts->ptime,ts->vec_sol));
@@ -1004,7 +983,6 @@ static PetscErrorCode TSReset_GLLE(TS ts)
 {
   TS_GLLE        *gl = (TS_GLLE*)ts->data;
   PetscInt       max_r,max_s;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (gl->setupcalled) {
@@ -1024,7 +1002,6 @@ static PetscErrorCode TSReset_GLLE(TS ts)
 static PetscErrorCode TSDestroy_GLLE(TS ts)
 {
   TS_GLLE        *gl = (TS_GLLE*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSReset_GLLE(ts));
@@ -1048,7 +1025,6 @@ static PetscErrorCode TSDestroy_GLLE(TS ts)
 static PetscErrorCode SNESTSFormFunction_GLLE(SNES snes,Vec x,Vec f,TS ts)
 {
   TS_GLLE        *gl = (TS_GLLE*)ts->data;
-  PetscErrorCode ierr;
   Vec            Z,Ydot;
   DM             dm,dmsave;
 
@@ -1067,7 +1043,6 @@ static PetscErrorCode SNESTSFormFunction_GLLE(SNES snes,Vec x,Vec f,TS ts)
 static PetscErrorCode SNESTSFormJacobian_GLLE(SNES snes,Vec x,Mat A,Mat B,TS ts)
 {
   TS_GLLE        *gl = (TS_GLLE*)ts->data;
-  PetscErrorCode ierr;
   Vec            Z,Ydot;
   DM             dm,dmsave;
 
@@ -1087,7 +1062,6 @@ static PetscErrorCode TSSetUp_GLLE(TS ts)
 {
   TS_GLLE        *gl = (TS_GLLE*)ts->data;
   PetscInt       max_r,max_s;
-  PetscErrorCode ierr;
   DM             dm;
 
   PetscFunctionBegin;
@@ -1124,7 +1098,6 @@ static PetscErrorCode TSSetFromOptions_GLLE(PetscOptionItems *PetscOptionsObject
 {
   TS_GLLE        *gl        = (TS_GLLE*)ts->data;
   char           tname[256] = TSGLLE_IRKS,completef[256] = "rescale-and-modify";
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"General Linear ODE solver options"));
@@ -1173,7 +1146,6 @@ static PetscErrorCode TSView_GLLE(TS ts,PetscViewer viewer)
   TS_GLLE        *gl = (TS_GLLE*)ts->data;
   PetscInt       i;
   PetscBool      iascii,details;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
@@ -1229,7 +1201,6 @@ $     -ts_gl_type my_scheme
 @*/
 PetscErrorCode  TSGLLERegister(const char sname[],PetscErrorCode (*function)(TS))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSGLLEInitializePackage());
@@ -1265,7 +1236,6 @@ $     -ts_gl_accept_type my_scheme
 @*/
 PetscErrorCode  TSGLLEAcceptRegister(const char sname[],TSGLLEAcceptFunction function)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListAdd(&TSGLLEAcceptList,sname,function));
@@ -1283,7 +1253,6 @@ PetscErrorCode  TSGLLEAcceptRegister(const char sname[],TSGLLEAcceptFunction fun
 @*/
 PetscErrorCode  TSGLLERegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (TSGLLERegisterAllCalled) PetscFunctionReturn(0);
@@ -1304,7 +1273,6 @@ PetscErrorCode  TSGLLERegisterAll(void)
 @*/
 PetscErrorCode  TSGLLEInitializePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (TSGLLEPackageInitialized) PetscFunctionReturn(0);
@@ -1324,7 +1292,6 @@ PetscErrorCode  TSGLLEInitializePackage(void)
 @*/
 PetscErrorCode  TSGLLEFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListDestroy(&TSGLLEList));
@@ -1429,7 +1396,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TSCreate_GLLE(TS ts)
 {
   TS_GLLE        *gl;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSGLLEInitializePackage());

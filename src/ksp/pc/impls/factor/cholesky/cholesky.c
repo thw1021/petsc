@@ -13,7 +13,6 @@ typedef struct {
 
 static PetscErrorCode PCSetFromOptions_Cholesky(PetscOptionItems *PetscOptionsObject,PC pc)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"Cholesky options"));
@@ -24,7 +23,6 @@ static PetscErrorCode PCSetFromOptions_Cholesky(PetscOptionItems *PetscOptionsOb
 
 static PetscErrorCode PCSetUp_Cholesky(PC pc)
 {
-  PetscErrorCode         ierr;
   PetscBool              flg;
   PC_Cholesky            *dir = (PC_Cholesky*)pc->data;
   MatSolverType          stype;
@@ -146,7 +144,6 @@ static PetscErrorCode PCSetUp_Cholesky(PC pc)
 static PetscErrorCode PCReset_Cholesky(PC pc)
 {
   PC_Cholesky    *dir = (PC_Cholesky*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!dir->hdr.inplace && ((PC_Factor*)dir)->fact) CHKERRQ(MatDestroy(&((PC_Factor*)dir)->fact));
@@ -158,7 +155,6 @@ static PetscErrorCode PCReset_Cholesky(PC pc)
 static PetscErrorCode PCDestroy_Cholesky(PC pc)
 {
   PC_Cholesky    *dir = (PC_Cholesky*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCReset_Cholesky(pc));
@@ -171,7 +167,6 @@ static PetscErrorCode PCDestroy_Cholesky(PC pc)
 static PetscErrorCode PCApply_Cholesky(PC pc,Vec x,Vec y)
 {
   PC_Cholesky    *dir = (PC_Cholesky*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (dir->hdr.inplace) {
@@ -185,7 +180,6 @@ static PetscErrorCode PCApply_Cholesky(PC pc,Vec x,Vec y)
 static PetscErrorCode PCMatApply_Cholesky(PC pc,Mat X,Mat Y)
 {
   PC_Cholesky    *dir = (PC_Cholesky*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (dir->hdr.inplace) {
@@ -199,7 +193,6 @@ static PetscErrorCode PCMatApply_Cholesky(PC pc,Mat X,Mat Y)
 static PetscErrorCode PCApplySymmetricLeft_Cholesky(PC pc,Vec x,Vec y)
 {
   PC_Cholesky    *dir = (PC_Cholesky*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (dir->hdr.inplace) {
@@ -213,7 +206,6 @@ static PetscErrorCode PCApplySymmetricLeft_Cholesky(PC pc,Vec x,Vec y)
 static PetscErrorCode PCApplySymmetricRight_Cholesky(PC pc,Vec x,Vec y)
 {
   PC_Cholesky    *dir = (PC_Cholesky*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (dir->hdr.inplace) {
@@ -227,7 +219,6 @@ static PetscErrorCode PCApplySymmetricRight_Cholesky(PC pc,Vec x,Vec y)
 static PetscErrorCode PCApplyTranspose_Cholesky(PC pc,Vec x,Vec y)
 {
   PC_Cholesky    *dir = (PC_Cholesky*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (dir->hdr.inplace) {
@@ -262,7 +253,6 @@ static PetscErrorCode PCApplyTranspose_Cholesky(PC pc,Vec x,Vec y)
 @*/
 PetscErrorCode  PCFactorSetReuseOrdering(PC pc,PetscBool flag)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -301,7 +291,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_Cholesky(PC pc)
 {
-  PetscErrorCode ierr;
   PC_Cholesky    *dir;
 
   PetscFunctionBegin;

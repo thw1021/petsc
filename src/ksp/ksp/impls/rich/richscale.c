@@ -20,7 +20,6 @@
 @*/
 PetscErrorCode  KSPRichardsonSetScale(KSP ksp,PetscReal scale)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
@@ -54,7 +53,6 @@ PetscErrorCode  KSPRichardsonSetScale(KSP ksp,PetscReal scale)
 @*/
 PetscErrorCode  KSPRichardsonSetSelfScale(KSP ksp,PetscBool scale)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);

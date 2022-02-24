@@ -9,7 +9,6 @@
 
 static PetscErrorCode DMCreateFieldDecomposition_Stag(DM dm, PetscInt *len,char ***namelist, IS **islist, DM **dmlist)
 {
-  PetscErrorCode ierr;
   PetscInt       f0,f1,f2,f3,dof0,dof1,dof2,dof3,n_entries,k,d,cnt,n_fields,dim;
   DMStagStencil  *stencil0,*stencil1,*stencil2,*stencil3;
 
@@ -242,7 +241,6 @@ static PetscErrorCode DMCreateFieldDecomposition_Stag(DM dm, PetscInt *len,char 
 
 static PetscErrorCode DMClone_Stag(DM dm,DM *newdm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* Destroy the DM created by generic logic in DMClone() */
@@ -256,7 +254,6 @@ static PetscErrorCode DMClone_Stag(DM dm,DM *newdm)
 
 static PetscErrorCode DMDestroy_Stag(DM dm)
 {
-  PetscErrorCode ierr;
   DM_Stag        *stag;
   PetscInt       i;
 
@@ -276,7 +273,6 @@ static PetscErrorCode DMDestroy_Stag(DM dm)
 
 static PetscErrorCode DMCreateGlobalVector_Stag(DM dm,Vec *vec)
 {
-  PetscErrorCode  ierr;
   DM_Stag * const stag = (DM_Stag*)dm->data;
 
   PetscFunctionBegin;
@@ -290,7 +286,6 @@ static PetscErrorCode DMCreateGlobalVector_Stag(DM dm,Vec *vec)
 
 static PetscErrorCode DMCreateLocalVector_Stag(DM dm,Vec *vec)
 {
-  PetscErrorCode  ierr;
   DM_Stag * const stag = (DM_Stag*)dm->data;
 
   PetscFunctionBegin;
@@ -303,7 +298,6 @@ static PetscErrorCode DMCreateLocalVector_Stag(DM dm,Vec *vec)
 
 static PetscErrorCode DMCreateMatrix_Stag(DM dm,Mat *mat)
 {
-  PetscErrorCode         ierr;
   MatType                mat_type;
   PetscBool              is_shell,is_aij;
   PetscInt               dim,entries;
@@ -381,7 +375,6 @@ static PetscErrorCode DMCreateMatrix_Stag(DM dm,Mat *mat)
 
 static PetscErrorCode DMGetCompatibility_Stag(DM dm,DM dm2,PetscBool *compatible,PetscBool *set)
 {
-  PetscErrorCode  ierr;
   const DM_Stag * const stag  = (DM_Stag*)dm->data;
   const DM_Stag * const stag2 = (DM_Stag*)dm2->data;
   PetscInt              dim,dim2,i;
@@ -467,7 +460,6 @@ Also in all cases, only subdomains which are the last in their dimension have pa
 
 static PetscErrorCode DMLocalToGlobalBegin_Stag(DM dm,Vec l,InsertMode mode,Vec g)
 {
-  PetscErrorCode  ierr;
   DM_Stag * const stag = (DM_Stag*)dm->data;
 
   PetscFunctionBegin;
@@ -485,7 +477,6 @@ static PetscErrorCode DMLocalToGlobalBegin_Stag(DM dm,Vec l,InsertMode mode,Vec 
 
 static PetscErrorCode DMLocalToGlobalEnd_Stag(DM dm,Vec l,InsertMode mode,Vec g)
 {
-  PetscErrorCode  ierr;
   DM_Stag * const stag = (DM_Stag*)dm->data;
 
   PetscFunctionBegin;
@@ -503,7 +494,6 @@ static PetscErrorCode DMLocalToGlobalEnd_Stag(DM dm,Vec l,InsertMode mode,Vec g)
 
 static PetscErrorCode DMGlobalToLocalBegin_Stag(DM dm,Vec g,InsertMode mode,Vec l)
 {
-  PetscErrorCode  ierr;
   DM_Stag * const stag = (DM_Stag*)dm->data;
 
   PetscFunctionBegin;
@@ -513,7 +503,6 @@ static PetscErrorCode DMGlobalToLocalBegin_Stag(DM dm,Vec g,InsertMode mode,Vec 
 
 static PetscErrorCode DMGlobalToLocalEnd_Stag(DM dm,Vec g,InsertMode mode,Vec l)
 {
-  PetscErrorCode  ierr;
   DM_Stag * const stag = (DM_Stag*)dm->data;
 
   PetscFunctionBegin;
@@ -555,7 +544,6 @@ static PetscErrorCode DMCreateCoordinateDM_Stag(DM dm,DM *dmc)
 
 static PetscErrorCode DMGetNeighbors_Stag(DM dm,PetscInt *nRanks,const PetscMPIInt *ranks[])
 {
-  PetscErrorCode  ierr;
   DM_Stag * const stag = (DM_Stag*)dm->data;
   PetscInt        dim;
 
@@ -573,7 +561,6 @@ static PetscErrorCode DMGetNeighbors_Stag(DM dm,PetscInt *nRanks,const PetscMPII
 
 static PetscErrorCode DMView_Stag(DM dm,PetscViewer viewer)
 {
-  PetscErrorCode  ierr;
   DM_Stag * const stag = (DM_Stag*)dm->data;
   PetscBool       isascii,viewAllRanks;
   PetscMPIInt     rank,size;
@@ -653,7 +640,6 @@ static PetscErrorCode DMView_Stag(DM dm,PetscViewer viewer)
 
 static PetscErrorCode DMSetFromOptions_Stag(PetscOptionItems *PetscOptionsObject,DM dm)
 {
-  PetscErrorCode  ierr;
   DM_Stag * const stag = (DM_Stag*)dm->data;
   PetscInt        dim;
 
@@ -708,7 +694,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode DMCreate_Stag(DM dm)
 {
-  PetscErrorCode ierr;
   DM_Stag        *stag;
   PetscInt       i,dim;
 

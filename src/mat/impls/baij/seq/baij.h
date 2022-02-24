@@ -280,7 +280,6 @@ PETSC_INTERN PetscErrorCode MatDestroySubMatrices_SeqBAIJ(PetscInt,Mat*[]);
 
 static inline PetscErrorCode PetscKernel_A_gets_A_times_B_2(PetscScalar *A,const PetscScalar *B,PetscScalar *W)
 {
-  PetscErrorCode ierr;
 
   CHKERRQ(PetscArraycpy(W,A,4));
   A[0] = W[0]*B[0] + W[2]*B[1];
@@ -322,7 +321,6 @@ static inline PetscErrorCode PetscKernel_A_gets_A_minus_B_times_C_2(PetscScalar 
 
 static inline PetscErrorCode PetscKernel_A_gets_A_times_B_3(PetscScalar *A,const PetscScalar *B,PetscScalar *W)
 {
-  PetscErrorCode ierr;
 
   CHKERRQ(PetscArraycpy(W,A,9));
   A[0] = W[0]*B[0] + W[3]*B[1] + W[6]*B[2];
@@ -374,7 +372,6 @@ static inline PetscErrorCode PetscKernel_A_gets_A_minus_B_times_C_3(PetscScalar 
 
 static inline PetscErrorCode PetscKernel_A_gets_A_times_B_4(PetscScalar *A,const PetscScalar *B,PetscScalar *W)
 {
-  PetscErrorCode ierr;
 
   CHKERRQ(PetscArraycpy(W,A,16));
   A[0]  =  W[0]*B[0]  + W[4]*B[1]  + W[8]*B[2]   + W[12]*B[3];
@@ -429,7 +426,6 @@ static inline PetscErrorCode PetscKernel_A_gets_A_minus_B_times_C_4(PetscScalar 
 
 static inline PetscErrorCode PetscKernel_A_gets_A_times_B_5(PetscScalar *A,const PetscScalar *B,PetscScalar *W)
 {
-  PetscErrorCode ierr;
 
   CHKERRQ(PetscArraycpy(W,A,25));
   A[0]  =  W[0]*B[0]  + W[5]*B[1]  + W[10]*B[2]   + W[15]*B[3] + W[20]*B[4];
@@ -502,7 +498,6 @@ static inline PetscErrorCode PetscKernel_A_gets_A_minus_B_times_C_5(PetscScalar 
 
 static inline PetscErrorCode PetscKernel_A_gets_A_times_B_6(PetscScalar *A,const PetscScalar *B,PetscScalar *W)
 {
-  PetscErrorCode ierr;
 
   CHKERRQ(PetscArraycpy(W,A,36));
   A[0]  =  W[0]*B[0]   + W[6]*B[1]   + W[12]*B[2]   + W[18]*B[3]  + W[24]*B[4]  + W[30]*B[5];
@@ -597,7 +592,6 @@ static inline PetscErrorCode PetscKernel_A_gets_A_minus_B_times_C_6(PetscScalar 
 
 static inline PetscErrorCode PetscKernel_A_gets_A_times_B_7(PetscScalar *A,const PetscScalar *B,PetscScalar *W)
 {
-  PetscErrorCode ierr;
 
   CHKERRQ(PetscArraycpy(W,A,49));
   A[0]  =  W[0]*B[0]   + W[7]*B[1]   + W[14]*B[2]   + W[21]*B[3]  + W[28]*B[4]  + W[35]*B[5]  + W[42]*B[6];
@@ -795,7 +789,6 @@ static inline PetscErrorCode PetscKernel_A_gets_A_times_B_9(PetscScalar *A,const
 #else
 static inline PetscErrorCode PetscKernel_A_gets_A_times_B_9(PetscScalar *A,const PetscScalar *B,PetscScalar *W)
 {
-  PetscErrorCode ierr;
 
   CHKERRQ(PetscArraycpy(W,A,81));
   A[ 0] = W[0]*B[ 0] + W[ 9]*B[ 1] + W[18]*B[ 2] + W[27]*B[ 3] + W[36]*B[ 4] + W[45]*B[ 5] + W[54]*B[ 6] + W[63]*B[ 7] + W[72]*B[ 8];
@@ -1072,7 +1065,6 @@ static inline PetscErrorCode PetscKernel_A_gets_A_minus_B_times_C_9(PetscScalar 
 */
 static inline PetscErrorCode PetscKernel_A_gets_A_times_B_11(PetscScalar *A,const PetscScalar *B,PetscScalar *W)
 {
-  PetscErrorCode ierr;
 
   CHKERRQ(PetscArraycpy(W,A,121));
   A[0]  =  W[0]*B[0]   + W[11]*B[1]   + W[22]*B[2]   + W[33]*B[3]  + W[44]*B[4]  + W[55]*B[5]  + W[66]*B[6] + W[77]*B[7] + W[88]*B[8] + W[99]*B[9] + W[110]*B[10];
@@ -1356,7 +1348,6 @@ static inline PetscErrorCode PetscKernel_A_gets_A_minus_B_times_C_11(PetscScalar
 
 static inline PetscErrorCode PetscKernel_A_gets_A_times_B_15(PetscScalar *A,const PetscScalar *B,PetscScalar *W)
 {
-  PetscErrorCode ierr;
 
   CHKERRQ(PetscArraycpy(W,A,225));
   A[0]   = W[0]*B[0] + W[15]*B[1] + W[30]*B[2] + W[45]*B[3] + W[60]*B[4] + W[75]*B[5] + W[90]*B[6] + W[105]*B[7] + W[120]*B[8] + W[135]*B[9] + W[150]*B[10] + W[165]*B[11] + W[180]*B[12] + W[195]*B[13] + W[210]*B[14];

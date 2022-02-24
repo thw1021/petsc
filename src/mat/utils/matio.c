@@ -6,7 +6,6 @@ PetscErrorCode MatView_Binary_BlockSizes(Mat mat,PetscViewer viewer)
   FILE           *info;
   PetscMPIInt    rank;
   PetscInt       rbs,cbs;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatGetBlockSizes(mat,&rbs,&cbs));

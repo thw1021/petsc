@@ -38,7 +38,6 @@
 @*/
 PETSC_EXTERN PetscErrorCode DMStagCreate1d(MPI_Comm comm,DMBoundaryType bndx,PetscInt M,PetscInt dof0,PetscInt dof1,DMStagStencilType stencilType,PetscInt stencilWidth,const PetscInt lx[],DM* dm)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    size;
 
   PetscFunctionBegin;
@@ -51,7 +50,6 @@ PETSC_EXTERN PetscErrorCode DMStagCreate1d(MPI_Comm comm,DMBoundaryType bndx,Pet
 
 PETSC_INTERN PetscErrorCode DMStagSetUniformCoordinatesExplicit_1d(DM dm,PetscReal xmin,PetscReal xmax)
 {
-  PetscErrorCode ierr;
   DM_Stag        *stagCoord;
   DM             dmCoord;
   Vec            coordLocal;
@@ -102,7 +100,6 @@ static PetscErrorCode DMStagComputeLocationOffsets_1d(DM);
 
 PETSC_INTERN PetscErrorCode DMSetUp_Stag_1d(DM dm)
 {
-  PetscErrorCode  ierr;
   DM_Stag * const stag = (DM_Stag*)dm->data;
   PetscMPIInt     size,rank;
   MPI_Comm        comm;
@@ -412,7 +409,6 @@ PETSC_INTERN PetscErrorCode DMSetUp_Stag_1d(DM dm)
 
 static PetscErrorCode DMStagComputeLocationOffsets_1d(DM dm)
 {
-  PetscErrorCode  ierr;
   DM_Stag * const stag = (DM_Stag*)dm->data;
   const PetscInt  epe = stag->entriesPerElement;
 
@@ -426,7 +422,6 @@ static PetscErrorCode DMStagComputeLocationOffsets_1d(DM dm)
 
 PETSC_INTERN PetscErrorCode DMStagPopulateLocalToGlobalInjective_1d(DM dm)
 {
-  PetscErrorCode  ierr;
   DM_Stag * const stag = (DM_Stag*)dm->data;
   PetscInt        *idxLocal,*idxGlobal;
   PetscInt        i,iLocal,d,count;
@@ -468,7 +463,6 @@ PETSC_INTERN PetscErrorCode DMStagPopulateLocalToGlobalInjective_1d(DM dm)
 
 PETSC_INTERN PetscErrorCode DMCreateMatrix_Stag_1D_AIJ_Assemble(DM dm,Mat A)
 {
-  PetscErrorCode    ierr;
   DMStagStencilType stencil_type;
   PetscInt          dof[2],start,n,n_extra,stencil_width,N,epe;
   DMBoundaryType    boundary_type_x;

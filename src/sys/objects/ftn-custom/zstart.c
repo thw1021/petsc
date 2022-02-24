@@ -145,7 +145,6 @@ PetscErrorCode PETScParseFortranArgs_Private(int *argc,char ***argv)
 #else
   int            i;
 #endif
-  PetscErrorCode ierr;
   int            warg = 256;
   PetscMPIInt    rank;
   char           *p;
@@ -209,7 +208,6 @@ PETSC_INTERN PetscErrorCode PetscPreMPIInit_Private();
 
 PETSC_INTERN PetscErrorCode PetscInitFortran_Private(PetscBool readarguments,const char *filename,PetscInt len)
 {
-  PetscErrorCode ierr;
   char           *tmp = NULL;
 
   PetscFunctionBegin;

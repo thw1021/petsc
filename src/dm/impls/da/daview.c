@@ -43,7 +43,6 @@ PetscErrorCode DMView_DA_Matlab(DM da,PetscViewer viewer)
 
 PetscErrorCode DMView_DA_Binary(DM da,PetscViewer viewer)
 {
-  PetscErrorCode   ierr;
   PetscMPIInt      rank;
   PetscInt         dim,m,n,p,dof,swidth,M,N,P;
   DMDAStencilType  stencil;
@@ -81,7 +80,6 @@ PetscErrorCode DMView_DA_Binary(DM da,PetscViewer viewer)
 PetscErrorCode DMView_DA_VTK(DM da, PetscViewer viewer)
 {
   PetscInt       dim, dof, M = 0, N = 0, P = 0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMDAGetInfo(da, &dim, &M, &N, &P, NULL, NULL, NULL, &dof, NULL, NULL, NULL, NULL, NULL));

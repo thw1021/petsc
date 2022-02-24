@@ -17,7 +17,6 @@
 static PetscErrorCode MPIPetsc_Type_free(MPI_Datatype *a)
 {
   PetscMPIInt    nints,naddrs,ntypes,combiner;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Type_get_envelope(*a,&nints,&naddrs,&ntypes,&combiner));
@@ -42,7 +41,6 @@ static PetscErrorCode MPIPetsc_Type_free(MPI_Datatype *a)
 */
 PetscErrorCode MPIPetsc_Type_unwrap(MPI_Datatype a,MPI_Datatype *atype,PetscBool *flg)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    nints,naddrs,ntypes,combiner,ints[1];
   MPI_Aint       addrs[1];
   MPI_Datatype   types[1];
@@ -81,7 +79,6 @@ PetscErrorCode MPIPetsc_Type_unwrap(MPI_Datatype a,MPI_Datatype *atype,PetscBool
 
 PetscErrorCode MPIPetsc_Type_compare(MPI_Datatype a,MPI_Datatype b,PetscBool *match)
 {
-  PetscErrorCode ierr;
   MPI_Datatype   atype,btype;
   PetscMPIInt    aintcount,aaddrcount,atypecount,acombiner;
   PetscMPIInt    bintcount,baddrcount,btypecount,bcombiner;
@@ -148,7 +145,6 @@ free_types:
  */
 PetscErrorCode MPIPetsc_Type_compare_contig(MPI_Datatype a,MPI_Datatype b,PetscInt *n)
 {
-  PetscErrorCode ierr;
   MPI_Datatype   atype,btype;
   PetscMPIInt    aintcount,aaddrcount,atypecount,acombiner;
   PetscBool      freeatype,freebtype;

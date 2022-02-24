@@ -5,7 +5,6 @@
 /*------------------------------------------------------------*/
 static PetscErrorCode TaoSolve_BLMVM(Tao tao)
 {
-  PetscErrorCode               ierr;
   TAO_BLMVM                    *blmP = (TAO_BLMVM *)tao->data;
   TaoLineSearchConvergedReason ls_status = TAOLINESEARCH_CONTINUE_ITERATING;
   PetscReal                    f, fold, gdx, gnorm, gnorm2;
@@ -118,7 +117,6 @@ static PetscErrorCode TaoSolve_BLMVM(Tao tao)
 static PetscErrorCode TaoSetup_BLMVM(Tao tao)
 {
   TAO_BLMVM      *blmP = (TAO_BLMVM *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* Existence of tao->solution checked in TaoSetup() */
@@ -154,7 +152,6 @@ static PetscErrorCode TaoSetup_BLMVM(Tao tao)
 static PetscErrorCode TaoDestroy_BLMVM(Tao tao)
 {
   TAO_BLMVM      *blmP = (TAO_BLMVM *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (tao->setupcalled) {
@@ -174,7 +171,6 @@ static PetscErrorCode TaoDestroy_BLMVM(Tao tao)
 static PetscErrorCode TaoSetFromOptions_BLMVM(PetscOptionItems* PetscOptionsObject,Tao tao)
 {
   TAO_BLMVM      *blmP = (TAO_BLMVM *)tao->data;
-  PetscErrorCode ierr;
   PetscBool      is_spd;
 
   PetscFunctionBegin;
@@ -194,7 +190,6 @@ static PetscErrorCode TaoView_BLMVM(Tao tao, PetscViewer viewer)
 {
   TAO_BLMVM      *lmP = (TAO_BLMVM *)tao->data;
   PetscBool      isascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
@@ -210,7 +205,6 @@ static PetscErrorCode TaoView_BLMVM(Tao tao, PetscViewer viewer)
 static PetscErrorCode TaoComputeDual_BLMVM(Tao tao, Vec DXL, Vec DXU)
 {
   TAO_BLMVM      *blm = (TAO_BLMVM *) tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
@@ -244,7 +238,6 @@ PETSC_EXTERN PetscErrorCode TaoCreate_BLMVM(Tao tao)
 {
   TAO_BLMVM      *blmP;
   const char     *morethuente_type = TAOLINESEARCHMT;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   tao->ops->setup = TaoSetup_BLMVM;
@@ -289,7 +282,6 @@ PetscErrorCode TaoLMVMRecycle(Tao tao, PetscBool flg)
   TAO_LMVM       *lmP;
   TAO_BLMVM      *blmP;
   PetscBool      is_lmvm, is_blmvm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)tao,TAOLMVM,&is_lmvm));
@@ -320,7 +312,6 @@ PetscErrorCode TaoLMVMSetH0(Tao tao, Mat H0)
   TAO_LMVM       *lmP;
   TAO_BLMVM      *blmP;
   PetscBool      is_lmvm, is_blmvm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)tao,TAOLMVM,&is_lmvm));
@@ -356,7 +347,6 @@ PetscErrorCode TaoLMVMGetH0(Tao tao, Mat *H0)
   TAO_BLMVM      *blmP;
   PetscBool      is_lmvm, is_blmvm;
   Mat            M;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)tao,TAOLMVM,&is_lmvm));
@@ -391,7 +381,6 @@ PetscErrorCode TaoLMVMGetH0KSP(Tao tao, KSP *ksp)
   TAO_BLMVM      *blmP;
   PetscBool      is_lmvm, is_blmvm;
   Mat            M;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)tao,TAOLMVM,&is_lmvm));

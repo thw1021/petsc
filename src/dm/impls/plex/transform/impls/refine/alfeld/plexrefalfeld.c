@@ -3,7 +3,6 @@
 static PetscErrorCode DMPlexTransformView_Alfeld(DMPlexTransform tr, PetscViewer viewer)
 {
   PetscBool      isascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 1);
@@ -29,7 +28,6 @@ static PetscErrorCode DMPlexTransformSetUp_Alfeld(DMPlexTransform tr)
 static PetscErrorCode DMPlexTransformDestroy_Alfeld(DMPlexTransform tr)
 {
   DMPlexRefine_Alfeld *f = (DMPlexRefine_Alfeld *) tr->data;
-  PetscErrorCode       ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(f));
@@ -40,7 +38,6 @@ static PetscErrorCode DMPlexTransformGetSubcellOrientation_Alfeld(DMPlexTransfor
 {
   DM             dm;
   PetscInt       dim;
-  PetscErrorCode ierr;
   static PetscInt tri_seg[]  = {1, 0, 0, 0, 2, 0,
                                 0, 0, 2, 0, 1, 0,
                                 2, 0, 1, 0, 0, 0,
@@ -171,7 +168,6 @@ static PetscErrorCode DMPlexTransformCellRefine_Alfeld(DMPlexTransform tr, DMPol
 {
   DM             dm;
   PetscInt       dim;
-  PetscErrorCode ierr;
   /* Add 1 vertex, 3 edges inside every triangle, making 3 new triangles.
    2
    |\
@@ -283,7 +279,6 @@ static PetscErrorCode DMPlexTransformInitialize_Alfeld(DMPlexTransform tr)
 PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_Alfeld(DMPlexTransform tr)
 {
   DMPlexRefine_Alfeld *f;
-  PetscErrorCode       ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 1);

@@ -26,7 +26,6 @@ typedef struct {
 PetscErrorCode PCLMVMSetMatLMVM(PC pc, Mat B)
 {
   PC_LMVM          *ctx = (PC_LMVM*)pc->data;
-  PetscErrorCode   ierr;
   PetscBool        same;
 
   PetscFunctionBegin;
@@ -56,7 +55,6 @@ PetscErrorCode PCLMVMSetMatLMVM(PC pc, Mat B)
 PetscErrorCode PCLMVMGetMatLMVM(PC pc, Mat *B)
 {
   PC_LMVM          *ctx = (PC_LMVM*)pc->data;
-  PetscErrorCode   ierr;
   PetscBool        same;
 
   PetscFunctionBegin;
@@ -81,7 +79,6 @@ PetscErrorCode PCLMVMGetMatLMVM(PC pc, Mat *B)
 PetscErrorCode PCLMVMSetIS(PC pc, IS inactive)
 {
   PC_LMVM          *ctx = (PC_LMVM*)pc->data;
-  PetscErrorCode   ierr;
   PetscBool        same;
 
   PetscFunctionBegin;
@@ -108,7 +105,6 @@ PetscErrorCode PCLMVMSetIS(PC pc, IS inactive)
 PetscErrorCode PCLMVMClearIS(PC pc)
 {
   PC_LMVM          *ctx = (PC_LMVM*)pc->data;
-  PetscErrorCode   ierr;
   PetscBool        same;
 
   PetscFunctionBegin;
@@ -124,7 +120,6 @@ PetscErrorCode PCLMVMClearIS(PC pc)
 static PetscErrorCode PCApply_LMVM(PC pc,Vec x,Vec y)
 {
   PC_LMVM          *ctx = (PC_LMVM*)pc->data;
-  PetscErrorCode   ierr;
   Vec              xsub, ysub;
 
   PetscFunctionBegin;
@@ -150,7 +145,6 @@ static PetscErrorCode PCApply_LMVM(PC pc,Vec x,Vec y)
 static PetscErrorCode PCReset_LMVM(PC pc)
 {
   PC_LMVM        *ctx = (PC_LMVM*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (ctx->xwork) {
@@ -165,7 +159,6 @@ static PetscErrorCode PCReset_LMVM(PC pc)
 static PetscErrorCode PCSetUp_LMVM(PC pc)
 {
   PC_LMVM        *ctx = (PC_LMVM*)pc->data;
-  PetscErrorCode ierr;
   PetscInt       n, N;
   PetscBool      allocated;
 
@@ -186,7 +179,6 @@ static PetscErrorCode PCSetUp_LMVM(PC pc)
 static PetscErrorCode PCView_LMVM(PC pc,PetscViewer viewer)
 {
   PC_LMVM        *ctx = (PC_LMVM*)pc->data;
-  PetscErrorCode ierr;
   PetscBool      iascii;
 
   PetscFunctionBegin;
@@ -202,7 +194,6 @@ static PetscErrorCode PCView_LMVM(PC pc,PetscViewer viewer)
 static PetscErrorCode PCSetFromOptions_LMVM(PetscOptionItems* PetscOptionsObject, PC pc)
 {
   PC_LMVM        *ctx = (PC_LMVM*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSetFromOptions(ctx->B));
@@ -212,7 +203,6 @@ static PetscErrorCode PCSetFromOptions_LMVM(PetscOptionItems* PetscOptionsObject
 static PetscErrorCode PCDestroy_LMVM(PC pc)
 {
   PC_LMVM        *ctx = (PC_LMVM*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (ctx->inactive) {
@@ -238,7 +228,6 @@ static PetscErrorCode PCDestroy_LMVM(PC pc)
 M*/
 PETSC_EXTERN PetscErrorCode PCCreate_LMVM(PC pc)
 {
-  PetscErrorCode ierr;
   PC_LMVM        *ctx;
 
   PetscFunctionBegin;

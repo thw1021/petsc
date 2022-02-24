@@ -6,7 +6,6 @@
 
 PetscErrorCode private_DMSwarmCreateCellLocalCoords_DA_Q1_Regular(PetscInt dim,PetscInt np[],PetscInt *_npoints,PetscReal **_xi)
 {
-  PetscErrorCode ierr;
   PetscReal      *xi;
   PetscInt       d,npoints=0,cnt;
   PetscReal      ds[] = {0.0,0.0,0.0};
@@ -70,7 +69,6 @@ PetscErrorCode private_DMSwarmCreateCellLocalCoords_DA_Q1_Regular(PetscInt dim,P
 
 PetscErrorCode private_DMSwarmCreateCellLocalCoords_DA_Q1_Gauss(PetscInt dim,PetscInt np_1d,PetscInt *_npoints,PetscReal **_xi)
 {
-  PetscErrorCode  ierr;
   PetscQuadrature quadrature;
   const PetscReal *quadrature_xi;
   PetscReal       *xi;
@@ -93,7 +91,6 @@ PetscErrorCode private_DMSwarmCreateCellLocalCoords_DA_Q1_Gauss(PetscInt dim,Pet
 
 PetscErrorCode private_DMSwarmInsertPointsUsingCellDM_DA_Q1(DM dm,DM dmc,PetscInt npoints,DMSwarmPICLayoutType layout)
 {
-  PetscErrorCode    ierr;
   PetscInt          dim,npoints_q;
   PetscInt          nel,npe,e,q,k,d;
   const PetscInt    *element_list;
@@ -214,7 +211,6 @@ PetscErrorCode private_DMSwarmInsertPointsUsingCellDM_DA_Q1(DM dm,DM dmc,PetscIn
 
 PetscErrorCode private_DMSwarmInsertPointsUsingCellDM_DA(DM dm,DM celldm,DMSwarmPICLayoutType layout,PetscInt layout_param)
 {
-  PetscErrorCode  ierr;
   DMDAElementType etype;
   PetscInt        dim;
 
@@ -234,7 +230,6 @@ PetscErrorCode private_DMSwarmInsertPointsUsingCellDM_DA(DM dm,DM celldm,DMSwarm
 
 PetscErrorCode DMSwarmProjectField_ApproxQ1_DA_2D(DM swarm,PetscReal *swarm_field,DM dm,Vec v_field)
 {
-  PetscErrorCode    ierr;
   Vec               v_field_l,denom_l,coor_l,denom;
   PetscScalar       *_field_l,*_denom_l;
   PetscInt          k,p,e,npoints,nel,npe;
@@ -320,7 +315,6 @@ PetscErrorCode DMSwarmProjectField_ApproxQ1_DA_2D(DM swarm,PetscReal *swarm_fiel
 
 PetscErrorCode private_DMSwarmProjectFields_DA(DM swarm,DM celldm,PetscInt project_type,PetscInt nfields,DMSwarmDataField dfield[],Vec vecs[])
 {
-  PetscErrorCode  ierr;
   PetscInt        f,dim;
   DMDAElementType etype;
 

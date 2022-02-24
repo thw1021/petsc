@@ -3,7 +3,6 @@
 
 static PetscErrorCode DMDAGetElements_1D(DM dm,PetscInt *nel,PetscInt *nen,const PetscInt *e[])
 {
-  PetscErrorCode ierr;
   DM_DA          *da = (DM_DA*)dm->data;
   PetscInt       i,xs,xe,Xs,Xe;
   PetscInt       cnt=0;
@@ -36,7 +35,6 @@ static PetscErrorCode DMDAGetElements_1D(DM dm,PetscInt *nel,PetscInt *nen,const
 
 static PetscErrorCode DMDAGetElements_2D(DM dm,PetscInt *nel,PetscInt *nen,const PetscInt *e[])
 {
-  PetscErrorCode ierr;
   DM_DA          *da = (DM_DA*)dm->data;
   PetscInt       i,xs,xe,Xs,Xe;
   PetscInt       j,ys,ye,Ys,Ye;
@@ -99,7 +97,6 @@ static PetscErrorCode DMDAGetElements_2D(DM dm,PetscInt *nel,PetscInt *nen,const
 
 static PetscErrorCode DMDAGetElements_3D(DM dm,PetscInt *nel,PetscInt *nen,const PetscInt *e[])
 {
-  PetscErrorCode ierr;
   DM_DA          *da = (DM_DA*)dm->data;
   PetscInt       i,xs,xe,Xs,Xe;
   PetscInt       j,ys,ye,Ys,Ye;
@@ -202,7 +199,6 @@ PetscErrorCode  DMDAGetElementsCorners(DM da, PetscInt *gx, PetscInt *gy, PetscI
   PetscInt       ys,Ys;
   PetscInt       zs,Zs;
   PetscBool      isda;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(da,DM_CLASSID,1,DMDA);
@@ -249,7 +245,6 @@ PetscErrorCode  DMDAGetElementsSizes(DM da, PetscInt *mx, PetscInt *my, PetscInt
   PetscInt       zs,ze,Zs;
   PetscInt       dim;
   PetscBool      isda;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(da,DM_CLASSID,1,DMDA);
@@ -297,7 +292,6 @@ PetscErrorCode  DMDAGetElementsSizes(DM da, PetscInt *mx, PetscInt *my, PetscInt
 PetscErrorCode  DMDASetElementType(DM da, DMDAElementType etype)
 {
   DM_DA          *dd = (DM_DA*)da->data;
-  PetscErrorCode ierr;
   PetscBool      isda;
 
   PetscFunctionBegin;
@@ -335,7 +329,6 @@ PetscErrorCode  DMDASetElementType(DM da, DMDAElementType etype)
 PetscErrorCode  DMDAGetElementType(DM da, DMDAElementType *etype)
 {
   DM_DA          *dd = (DM_DA*)da->data;
-  PetscErrorCode ierr;
   PetscBool      isda;
 
   PetscFunctionBegin;
@@ -377,7 +370,6 @@ PetscErrorCode  DMDAGetElementType(DM da, DMDAElementType *etype)
 PetscErrorCode  DMDAGetElements(DM dm,PetscInt *nel,PetscInt *nen,const PetscInt *e[])
 {
   PetscInt       dim;
-  PetscErrorCode ierr;
   DM_DA          *dd = (DM_DA*)dm->data;
   PetscBool      isda;
 
@@ -429,7 +421,6 @@ PetscErrorCode  DMDAGetElements(DM dm,PetscInt *nel,PetscInt *nen,const PetscInt
 @*/
 PetscErrorCode  DMDAGetSubdomainCornersIS(DM dm,IS *is)
 {
-  PetscErrorCode ierr;
   DM_DA          *dd = (DM_DA*)dm->data;
   PetscBool      isda;
 

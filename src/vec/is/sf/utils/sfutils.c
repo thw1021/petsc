@@ -28,7 +28,6 @@
 @*/
 PetscErrorCode PetscSFSetGraphLayout(PetscSF sf,PetscLayout layout,PetscInt nleaves,const PetscInt *ilocal,PetscCopyMode localmode,const PetscInt *iremote)
 {
-  PetscErrorCode ierr;
   const PetscInt *range;
   PetscInt       i, nroots, ls = -1, ln = -1;
   PetscMPIInt    lr = -1;
@@ -77,7 +76,6 @@ PetscErrorCode PetscSFSetGraphSection(PetscSF sf, PetscSection localSection, Pet
   PetscSFNode    *remote;
   PetscInt       pStart, pEnd, p, nroots, nleaves = 0, l;
   PetscMPIInt    size, rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf, PETSCSF_CLASSID, 1);
@@ -151,7 +149,6 @@ PetscErrorCode PetscSFSetGraphSection(PetscSF sf, PetscSection localSection, Pet
 
 static PetscErrorCode PetscSectionCheckConstraints_Static(PetscSection s)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!s->bc) {
@@ -185,7 +182,6 @@ PetscErrorCode PetscSFDistributeSection(PetscSF sf, PetscSection rootSection, Pe
   IS             selected;
   PetscInt       numFields, nroots, rpStart, rpEnd, lpStart = PETSC_MAX_INT, lpEnd = -1, f, c;
   PetscBool      *sub, hasc;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogEventBegin(PETSCSF_DistSect,sf,0,0,0));
@@ -327,7 +323,6 @@ PetscErrorCode PetscSFCreateRemoteOffsets(PetscSF sf, PetscSection rootSection, 
   const PetscInt *indices;
   IS              selected;
   PetscInt        numRoots, rpStart = 0, rpEnd = 0, lpStart = 0, lpEnd = 0;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   *remoteOffsets = NULL;
@@ -379,7 +374,6 @@ PetscErrorCode PetscSFCreateSectionSF(PetscSF sf, PetscSection rootSection, Pets
   PetscInt          *localIndices;
   PetscSFNode       *remoteIndices;
   PetscInt          i, ind;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
@@ -448,7 +442,6 @@ PetscErrorCode PetscSFCreateSectionSF(PetscSF sf, PetscSection rootSection, Pets
 @*/
 PetscErrorCode PetscSFCreateFromLayouts(PetscLayout rmap, PetscLayout lmap, PetscSF* sf)
 {
-  PetscErrorCode ierr;
   PetscInt       i,nroots,nleaves = 0;
   PetscInt       rN, lst, len;
   PetscMPIInt    owner = -1;
@@ -491,7 +484,6 @@ PetscErrorCode PetscLayoutMapLocal(PetscLayout map,PetscInt N,const PetscInt idx
   PetscSFNode   *ridxs;
   PetscMPIInt    rank, p = 0;
   PetscInt       r, len = 0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (on) *on = 0;              /* squelch -Wmaybe-uninitialized */
@@ -648,7 +640,6 @@ PetscErrorCode PetscSFCreateByMatchingIndices(PetscLayout layout, PetscInt numRo
   PetscInt        N1;
 #endif
   PetscBool       flag;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   if (rootIndices)      PetscValidIntPointer(rootIndices,3);

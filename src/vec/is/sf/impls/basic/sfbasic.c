@@ -7,7 +7,6 @@
 /*===================================================================================*/
 PETSC_INTERN PetscErrorCode PetscSFSetUp_Basic(PetscSF sf)
 {
-  PetscErrorCode ierr;
   PetscSF_Basic  *bas = (PetscSF_Basic*)sf->data;
   PetscInt       *rlengths,*ilengths,i,nRemoteRootRanks,nRemoteLeafRanks;
   PetscMPIInt    rank,niranks,*iranks,tag;
@@ -91,7 +90,6 @@ PETSC_INTERN PetscErrorCode PetscSFSetUp_Basic(PetscSF sf)
 
 PETSC_INTERN PetscErrorCode PetscSFReset_Basic(PetscSF sf)
 {
-  PetscErrorCode    ierr;
   PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
   PetscSFLink       link = bas->avail,next;
 
@@ -116,7 +114,6 @@ PETSC_INTERN PetscErrorCode PetscSFReset_Basic(PetscSF sf)
 
 PETSC_INTERN PetscErrorCode PetscSFDestroy_Basic(PetscSF sf)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSFReset_Basic(sf));
@@ -129,7 +126,6 @@ PETSC_INTERN PetscErrorCode PetscSFDestroy_Basic(PetscSF sf)
 
 PETSC_INTERN PetscErrorCode PetscSFView_Basic_PatternAndSizes(PetscSF sf,PetscViewer viewer)
 {
-  PetscErrorCode       ierr;
   PetscSF_Basic        *bas = (PetscSF_Basic*)sf->data;
   PetscInt             i,nrootranks,ndrootranks;
   const PetscInt       *rootoffset;
@@ -170,7 +166,6 @@ PETSC_INTERN PetscErrorCode PetscSFView_Basic_PatternAndSizes(PetscSF sf,PetscVi
 
 PETSC_INTERN PetscErrorCode PetscSFView_Basic(PetscSF sf,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscBool      isascii;
 
   PetscFunctionBegin;
@@ -191,7 +186,6 @@ PETSC_INTERN PetscErrorCode PetscSFView_Basic(PetscSF sf,PetscViewer viewer)
 
 static PetscErrorCode PetscSFBcastBegin_Basic(PetscSF sf,MPI_Datatype unit,PetscMemType rootmtype,const void *rootdata,PetscMemType leafmtype,void *leafdata,MPI_Op op)
 {
-  PetscErrorCode    ierr;
   PetscSFLink       link = NULL;
 
   PetscFunctionBegin;
@@ -208,7 +202,6 @@ static PetscErrorCode PetscSFBcastBegin_Basic(PetscSF sf,MPI_Datatype unit,Petsc
 
 PETSC_INTERN PetscErrorCode PetscSFBcastEnd_Basic(PetscSF sf,MPI_Datatype unit,const void *rootdata,void *leafdata,MPI_Op op)
 {
-  PetscErrorCode    ierr;
   PetscSFLink       link = NULL;
 
   PetscFunctionBegin;
@@ -226,7 +219,6 @@ PETSC_INTERN PetscErrorCode PetscSFBcastEnd_Basic(PetscSF sf,MPI_Datatype unit,c
 /* Shared by ReduceBegin and FetchAndOpBegin */
 static inline PetscErrorCode PetscSFLeafToRootBegin_Basic(PetscSF sf,MPI_Datatype unit,PetscMemType leafmtype,const void *leafdata,PetscMemType rootmtype,void *rootdata,MPI_Op op,PetscSFOperation sfop,PetscSFLink *out)
 {
-  PetscErrorCode    ierr;
   PetscSFLink       link = NULL;
 
   PetscFunctionBegin;
@@ -240,7 +232,6 @@ static inline PetscErrorCode PetscSFLeafToRootBegin_Basic(PetscSF sf,MPI_Datatyp
 /* leaf -> root with reduction */
 static PetscErrorCode PetscSFReduceBegin_Basic(PetscSF sf,MPI_Datatype unit,PetscMemType leafmtype,const void *leafdata,PetscMemType rootmtype,void *rootdata,MPI_Op op)
 {
-  PetscErrorCode    ierr;
   PetscSFLink       link = NULL;
 
   PetscFunctionBegin;
@@ -251,7 +242,6 @@ static PetscErrorCode PetscSFReduceBegin_Basic(PetscSF sf,MPI_Datatype unit,Pets
 
 PETSC_INTERN PetscErrorCode PetscSFReduceEnd_Basic(PetscSF sf,MPI_Datatype unit,const void *leafdata,void *rootdata,MPI_Op op)
 {
-  PetscErrorCode    ierr;
   PetscSFLink       link = NULL;
 
   PetscFunctionBegin;
@@ -264,7 +254,6 @@ PETSC_INTERN PetscErrorCode PetscSFReduceEnd_Basic(PetscSF sf,MPI_Datatype unit,
 
 PETSC_INTERN PetscErrorCode PetscSFFetchAndOpBegin_Basic(PetscSF sf,MPI_Datatype unit,PetscMemType rootmtype,void *rootdata,PetscMemType leafmtype,const void *leafdata,void *leafupdate,MPI_Op op)
 {
-  PetscErrorCode    ierr;
   PetscSFLink       link = NULL;
 
   PetscFunctionBegin;
@@ -275,7 +264,6 @@ PETSC_INTERN PetscErrorCode PetscSFFetchAndOpBegin_Basic(PetscSF sf,MPI_Datatype
 
 static PetscErrorCode PetscSFFetchAndOpEnd_Basic(PetscSF sf,MPI_Datatype unit,void *rootdata,const void *leafdata,void *leafupdate,MPI_Op op)
 {
-  PetscErrorCode    ierr;
   PetscSFLink       link = NULL;
 
   PetscFunctionBegin;
@@ -321,7 +309,6 @@ PETSC_INTERN PetscErrorCode PetscSFCreateEmbeddedRootSF_Basic(PetscSF sf,PetscIn
   PetscBool         connected;
   PetscSFNode       *new_iremote;
   PetscSF_Basic     *bas;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSFCreate(PetscObjectComm((PetscObject)sf),&esf));
@@ -447,7 +434,6 @@ PETSC_INTERN PetscErrorCode PetscSFCreateEmbeddedRootSF_Basic(PetscSF sf,PetscIn
 PETSC_EXTERN PetscErrorCode PetscSFCreate_Basic(PetscSF sf)
 {
   PetscSF_Basic  *dat;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   sf->ops->SetUp                = PetscSFSetUp_Basic;

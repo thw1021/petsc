@@ -40,7 +40,6 @@ PETSC_EXTERN PetscErrorCode VecCreate_HIP(Vec);
 @*/
 PetscErrorCode VecRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (VecRegisterAllCalled) PetscFunctionReturn(0);

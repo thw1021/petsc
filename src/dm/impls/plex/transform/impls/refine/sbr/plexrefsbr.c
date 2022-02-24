@@ -24,7 +24,6 @@ struct _p_PointQueue {
 static PetscErrorCode PointQueueCreate(PetscInt size, PointQueue *queue)
 {
   PointQueue     q;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(size < 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Queue size %D must be non-negative", size);
@@ -41,7 +40,6 @@ static PetscErrorCode PointQueueCreate(PetscInt size, PointQueue *queue)
 static PetscErrorCode PointQueueDestroy(PointQueue *queue)
 {
   PointQueue     q = *queue;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(q->points));
@@ -52,7 +50,6 @@ static PetscErrorCode PointQueueDestroy(PointQueue *queue)
 
 static PetscErrorCode PointQueueEnsureSize(PointQueue queue)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (queue->num < queue->size) PetscFunctionReturn(0);
@@ -63,7 +60,6 @@ static PetscErrorCode PointQueueEnsureSize(PointQueue queue)
 
 static PetscErrorCode PointQueueEnqueue(PointQueue queue, PetscInt p)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PointQueueEnsureSize(queue));
@@ -112,7 +108,6 @@ static PetscErrorCode SBRGetEdgeLen_Private(DMPlexTransform tr, PetscInt edge, P
   DMPlexRefine_SBR *sbr = (DMPlexRefine_SBR *) tr->data;
   DM                dm;
   PetscInt          off;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginHot;
   CHKERRQ(DMPlexTransformGetDM(tr, &dm));
@@ -147,7 +142,6 @@ static PetscErrorCode SBRSplitLocalEdges_Private(DMPlexTransform tr, PointQueue 
 {
   DMPlexRefine_SBR *sbr = (DMPlexRefine_SBR *) tr->data;
   DM                dm;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexTransformGetDM(tr, &dm));
@@ -196,7 +190,6 @@ static PetscErrorCode SBRInitializeComm(DMPlexTransform tr, PetscSF pointSF)
   const PetscInt   *degree;
   const PetscInt   *points;
   PetscInt          Nl, l, pStart, pEnd, p, val;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexTransformGetDM(tr, &dm));
@@ -228,7 +221,6 @@ static PetscErrorCode SBRFinalizeComm(DMPlexTransform tr, PetscSF pointSF, Point
   const PetscInt   *degree;
   const PetscInt   *points;
   PetscInt          Nl, l, pStart, pEnd, p, val;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexTransformGetDM(tr, &dm));
@@ -299,7 +291,6 @@ static PetscErrorCode DMPlexTransformSetUp_SBR(DMPlexTransform tr)
   PetscMPIInt       size;
   PetscInt          pStart, pEnd, p, eStart, eEnd, e, edgeLenSize, Nc, c;
   PetscBool         empty;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexTransformGetDM(tr, &dm));
@@ -438,7 +429,6 @@ static PetscErrorCode DMPlexTransformSetUp_SBR(DMPlexTransform tr)
 static PetscErrorCode DMPlexTransformGetSubcellOrientation_SBR(DMPlexTransform tr, DMPolytopeType sct, PetscInt sp, PetscInt so, DMPolytopeType tct, PetscInt r, PetscInt o, PetscInt *rnew, PetscInt *onew)
 {
   PetscInt         rt;
-  PetscErrorCode   ierr;
 
   PetscFunctionBeginHot;
   CHKERRQ(DMLabelGetValue(tr->trType, sp, &rt));
@@ -653,7 +643,6 @@ static PetscErrorCode DMPlexTransformCellTransform_SBR(DMPlexTransform tr, DMPol
 {
   DMLabel        trType = tr->trType;
   PetscInt       val;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginHot;
   PetscCheckFalse(p < 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Point argument is invalid");
@@ -700,7 +689,6 @@ static PetscErrorCode DMPlexTransformSetFromOptions_SBR(PetscOptionItems *PetscO
 {
   PetscInt       cells[256], n = 256, i;
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 2);
@@ -721,7 +709,6 @@ static PetscErrorCode DMPlexTransformSetFromOptions_SBR(PetscOptionItems *PetscO
 static PetscErrorCode DMPlexTransformView_SBR(DMPlexTransform tr, PetscViewer viewer)
 {
   PetscBool      isascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 1);
@@ -746,7 +733,6 @@ static PetscErrorCode DMPlexTransformView_SBR(DMPlexTransform tr, PetscViewer vi
 static PetscErrorCode DMPlexTransformDestroy_SBR(DMPlexTransform tr)
 {
   DMPlexRefine_SBR *sbr = (DMPlexRefine_SBR *) tr->data;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(sbr->edgeLen));
@@ -772,7 +758,6 @@ static PetscErrorCode DMPlexTransformInitialize_SBR(DMPlexTransform tr)
 PETSC_EXTERN PetscErrorCode DMPlexTransformCreate_SBR(DMPlexTransform tr)
 {
   DMPlexRefine_SBR *f;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 1);

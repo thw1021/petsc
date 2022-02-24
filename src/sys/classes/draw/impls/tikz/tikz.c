@@ -42,7 +42,6 @@ typedef struct {
 static PetscErrorCode  PetscDrawDestroy_TikZ(PetscDraw draw)
 {
   PetscDraw_TikZ *win = (PetscDraw_TikZ*)draw->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFPrintf(PetscObjectComm((PetscObject)draw),win->fd,TikZ_END_FRAME));
@@ -70,7 +69,6 @@ static PetscErrorCode PetscDrawClear_TikZ(PetscDraw draw)
 {
   PetscDraw_TikZ *win = (PetscDraw_TikZ*)draw->data;
   PetscBool      written;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* often PETSc generates unneeded clears, we want avoid creating empy pictures for them */
@@ -85,7 +83,6 @@ static PetscErrorCode PetscDrawClear_TikZ(PetscDraw draw)
 static PetscErrorCode PetscDrawLine_TikZ(PetscDraw draw,PetscReal xl,PetscReal yl,PetscReal xr,PetscReal yr,int cl)
 {
   PetscDraw_TikZ *win = (PetscDraw_TikZ*)draw->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   win->written = PETSC_TRUE;
@@ -96,7 +93,6 @@ static PetscErrorCode PetscDrawLine_TikZ(PetscDraw draw,PetscReal xl,PetscReal y
 static PetscErrorCode PetscDrawRectangle_TikZ(PetscDraw draw,PetscReal xl,PetscReal yl,PetscReal xr,PetscReal yr,int c1,int c2,int c3,int c4)
 {
   PetscDraw_TikZ *win = (PetscDraw_TikZ*)draw->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   win->written = PETSC_TRUE;
@@ -107,7 +103,6 @@ static PetscErrorCode PetscDrawRectangle_TikZ(PetscDraw draw,PetscReal xl,PetscR
 static PetscErrorCode PetscDrawTriangle_TikZ(PetscDraw draw,PetscReal x1,PetscReal y1,PetscReal x2,PetscReal y2,PetscReal x3,PetscReal y3,int c1,int c2,int c3)
 {
   PetscDraw_TikZ *win = (PetscDraw_TikZ*)draw->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   win->written = PETSC_TRUE;
@@ -119,7 +114,6 @@ static PetscErrorCode PetscDrawEllipse_TikZ(PetscDraw draw,PetscReal x,PetscReal
 {
   PetscDraw_TikZ *win = (PetscDraw_TikZ*)draw->data;
   PetscReal      rx,ry;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   win->written = PETSC_TRUE;
@@ -132,7 +126,6 @@ static PetscErrorCode PetscDrawEllipse_TikZ(PetscDraw draw,PetscReal x,PetscReal
 static PetscErrorCode PetscDrawString_TikZ(PetscDraw draw,PetscReal xl,PetscReal yl,int cl,const char text[])
 {
   PetscDraw_TikZ *win = (PetscDraw_TikZ*)draw->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   win->written = PETSC_TRUE;
@@ -143,7 +136,6 @@ static PetscErrorCode PetscDrawString_TikZ(PetscDraw draw,PetscReal xl,PetscReal
 static PetscErrorCode PetscDrawStringVertical_TikZ(PetscDraw draw,PetscReal xl,PetscReal yl,int cl,const char text[])
 {
   PetscDraw_TikZ *win = (PetscDraw_TikZ*)draw->data;
-  PetscErrorCode ierr;
   size_t         len;
   PetscReal      width;
 
@@ -162,7 +154,6 @@ static PetscErrorCode PetscDrawStringVertical_TikZ(PetscDraw draw,PetscReal xl,P
 static PetscErrorCode PetscDrawStringBoxed_TikZ(PetscDraw draw,PetscReal xl,PetscReal yl,int cl,int ct,const char text[],PetscReal *w,PetscReal *h)
 {
   PetscDraw_TikZ *win = (PetscDraw_TikZ*)draw->data;
-  PetscErrorCode ierr;
   size_t         len;
 
   PetscFunctionBegin;
@@ -224,7 +215,6 @@ static struct _PetscDrawOps DvOps = { NULL,
 PETSC_EXTERN PetscErrorCode PetscDrawCreate_TikZ(PetscDraw draw)
 {
   PetscDraw_TikZ *win;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscMemcpy(draw->ops,&DvOps,sizeof(DvOps)));

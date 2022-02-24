@@ -10,7 +10,6 @@ static PetscErrorCode VecMergedDot_Private(Vec U,Vec W,Vec R,PetscInt normtype,P
   const PetscScalar *PETSC_RESTRICT PU, *PETSC_RESTRICT PW, *PETSC_RESTRICT PR;
   PetscScalar       sumru = 0.0, sumwu = 0.0, sumuu = 0.0;
   PetscInt          j, n;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetArrayRead(U,(const PetscScalar**)&PU));
@@ -57,7 +56,6 @@ static PetscErrorCode VecMergedDot2_Private(Vec N,Vec M,Vec W,PetscScalar *wm,Pe
   const PetscScalar *PETSC_RESTRICT PN, *PETSC_RESTRICT PM, *PETSC_RESTRICT PW;
   PetscScalar       sumwm = 0.0, sumnm = 0.0;
   PetscInt          j, n;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetArrayRead(W,(const PetscScalar**)&PW));
@@ -87,7 +85,6 @@ static PetscErrorCode VecMergedOpsShort_Private(Vec vx,Vec vr,Vec vz,Vec vw,Vec 
   PetscScalar       *PETSC_RESTRICT pp, *PETSC_RESTRICT pq;
   PetscScalar       *PETSC_RESTRICT pc, *PETSC_RESTRICT pd, *PETSC_RESTRICT pg0, *PETSC_RESTRICT ph0, *PETSC_RESTRICT pg1,*PETSC_RESTRICT ph1,*PETSC_RESTRICT ps,*PETSC_RESTRICT pa1,*PETSC_RESTRICT pb1, *PETSC_RESTRICT pe,*PETSC_RESTRICT pf,*PETSC_RESTRICT pm,*PETSC_RESTRICT pn, *PETSC_RESTRICT pu;
   PetscInt          j, n;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetArray(vx,(PetscScalar**)&px));
@@ -297,7 +294,6 @@ static PetscErrorCode VecMergedOps_Private(Vec vx,Vec vr,Vec vz,Vec vw,Vec vp,Ve
   PetscScalar       *PETSC_RESTRICT pp, *PETSC_RESTRICT pq;
   PetscScalar       *PETSC_RESTRICT pc,  *PETSC_RESTRICT pd, *PETSC_RESTRICT pg0,  *PETSC_RESTRICT ph0,  *PETSC_RESTRICT pg1, *PETSC_RESTRICT ph1,*PETSC_RESTRICT ps, *PETSC_RESTRICT pa1,*PETSC_RESTRICT pb1,*PETSC_RESTRICT pe,*PETSC_RESTRICT pf, *PETSC_RESTRICT pm,*PETSC_RESTRICT pn, *PETSC_RESTRICT pu;
   PetscInt          j, n;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetArray(vx,(PetscScalar**)&px));
@@ -514,7 +510,6 @@ static PetscErrorCode VecMergedOps_Private(Vec vx,Vec vr,Vec vz,Vec vw,Vec vp,Ve
 */
 static  PetscErrorCode KSPSetUp_PIPECG2(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* get work vectors needed by PIPECG2 */
@@ -527,7 +522,6 @@ static  PetscErrorCode KSPSetUp_PIPECG2(KSP ksp)
 */
 static PetscErrorCode  KSPSolve_PIPECG2(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       i,n;
   PetscScalar    alpha[2],beta[2],gamma[2],delta[2],lambda[15];
   PetscScalar    dps = 0.0,alphaold=0.0;
@@ -718,7 +712,6 @@ static PetscErrorCode  KSPSolve_PIPECG2(KSP ksp)
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_PIPECG2(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPSetSupportedNorm(ksp,KSP_NORM_UNPRECONDITIONED,PC_LEFT,2));

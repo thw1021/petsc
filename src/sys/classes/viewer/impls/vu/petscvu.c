@@ -21,7 +21,6 @@ typedef struct {
 static PetscErrorCode PetscViewerFileClose_VU(PetscViewer viewer)
 {
   PetscViewer_VU *vu = (PetscViewer_VU*) viewer->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (vu->vecSeen) {
@@ -37,7 +36,6 @@ static PetscErrorCode PetscViewerFileClose_VU(PetscViewer viewer)
 PetscErrorCode PetscViewerDestroy_VU(PetscViewer viewer)
 {
   PetscViewer_VU *vu = (PetscViewer_VU*) viewer->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerFileClose_VU(viewer));
@@ -50,7 +48,6 @@ PetscErrorCode PetscViewerFlush_VU(PetscViewer viewer)
   PetscViewer_VU *vu = (PetscViewer_VU*) viewer->data;
   PetscMPIInt    rank;
   int            err;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)viewer), &rank));
@@ -93,7 +90,6 @@ static PetscErrorCode  PetscViewerFileSetName_VU(PetscViewer viewer, const char 
   PetscViewer_VU *vu = (PetscViewer_VU*) viewer->data;
   char           fname[PETSC_MAX_PATH_LEN];
   int            rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!name) PetscFunctionReturn(0);
@@ -140,7 +136,6 @@ static PetscErrorCode  PetscViewerFileSetName_VU(PetscViewer viewer, const char 
 PETSC_EXTERN PetscErrorCode PetscViewerCreate_VU(PetscViewer viewer)
 {
   PetscViewer_VU *vu;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(viewer,&vu));
@@ -261,7 +256,6 @@ PetscErrorCode  PetscViewerVUPrintDeferred(PetscViewer viewer, const char format
   va_list        Argp;
   size_t         fullLength;
   PrintfQueue    next;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(&next));
@@ -299,7 +293,6 @@ PetscErrorCode  PetscViewerVUFlushDeferred(PetscViewer viewer)
   PrintfQueue    next = vu->queueBase;
   PrintfQueue    previous;
   int            i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   for (i = 0; i < vu->queueLength; i++) {

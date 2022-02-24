@@ -67,7 +67,6 @@ typedef struct {
 static PetscErrorCode KSPFETIDPSetPressureOperator_FETIDP(KSP ksp, Mat P)
 {
   KSP_FETIDP     *fetidp = (KSP_FETIDP*)ksp->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (P) fetidp->saddlepoint = PETSC_TRUE;
@@ -98,7 +97,6 @@ static PetscErrorCode KSPFETIDPSetPressureOperator_FETIDP(KSP ksp, Mat P)
 @*/
 PetscErrorCode KSPFETIDPSetPressureOperator(KSP ksp, Mat P)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
@@ -131,7 +129,6 @@ static PetscErrorCode KSPFETIDPGetInnerKSP_FETIDP(KSP ksp, KSP* innerksp)
 @*/
 PetscErrorCode KSPFETIDPGetInnerKSP(KSP ksp, KSP* innerksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
@@ -164,7 +161,6 @@ static PetscErrorCode KSPFETIDPGetInnerBDDC_FETIDP(KSP ksp, PC* pc)
 @*/
 PetscErrorCode KSPFETIDPGetInnerBDDC(KSP ksp, PC* pc)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
@@ -176,7 +172,6 @@ PetscErrorCode KSPFETIDPGetInnerBDDC(KSP ksp, PC* pc)
 static PetscErrorCode KSPFETIDPSetInnerBDDC_FETIDP(KSP ksp, PC pc)
 {
   KSP_FETIDP     *fetidp = (KSP_FETIDP*)ksp->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectReference((PetscObject)pc));
@@ -204,7 +199,6 @@ static PetscErrorCode KSPFETIDPSetInnerBDDC_FETIDP(KSP ksp, PC pc)
 PetscErrorCode KSPFETIDPSetInnerBDDC(KSP ksp, PC pc)
 {
   PetscBool      isbddc;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
@@ -220,7 +214,6 @@ static PetscErrorCode KSPBuildSolution_FETIDP(KSP ksp,Vec v,Vec *V)
   KSP_FETIDP     *fetidp = (KSP_FETIDP*)ksp->data;
   Mat            F;
   Vec            Xl;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPGetOperators(fetidp->innerksp,&F,NULL));
@@ -237,7 +230,6 @@ static PetscErrorCode KSPBuildSolution_FETIDP(KSP ksp,Vec v,Vec *V)
 static PetscErrorCode KSPMonitor_FETIDP(KSP ksp,PetscInt it,PetscReal rnorm,void* ctx)
 {
   KSP_FETIDPMon  *monctx = (KSP_FETIDPMon*)ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPMonitor(monctx->parentksp,it,rnorm));
@@ -247,7 +239,6 @@ static PetscErrorCode KSPMonitor_FETIDP(KSP ksp,PetscInt it,PetscReal rnorm,void
 static PetscErrorCode KSPComputeEigenvalues_FETIDP(KSP ksp,PetscInt nmax,PetscReal *r,PetscReal *c,PetscInt *neig)
 {
   KSP_FETIDP     *fetidp = (KSP_FETIDP*)ksp->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPComputeEigenvalues(fetidp->innerksp,nmax,r,c,neig));
@@ -257,7 +248,6 @@ static PetscErrorCode KSPComputeEigenvalues_FETIDP(KSP ksp,PetscInt nmax,PetscRe
 static PetscErrorCode KSPComputeExtremeSingularValues_FETIDP(KSP ksp,PetscReal *emax,PetscReal *emin)
 {
   KSP_FETIDP     *fetidp = (KSP_FETIDP*)ksp->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPComputeExtremeSingularValues(fetidp->innerksp,emax,emin));
@@ -280,7 +270,6 @@ static PetscErrorCode KSPFETIDPCheckOperators(KSP ksp, PetscViewer viewer)
   const PetscInt *vertex_indices;
   PetscInt       i,n_vertices;
   PetscBool      isascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckSameComm(ksp,1,viewer,2);
@@ -1097,7 +1086,6 @@ static PetscErrorCode KSPSetUp_FETIDP(KSP ksp)
   KSP_FETIDP     *fetidp = (KSP_FETIDP*)ksp->data;
   PC_BDDC        *pcbddc = (PC_BDDC*)fetidp->innerbddc->data;
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPFETIDPSetUpOperators(ksp));
@@ -1158,7 +1146,6 @@ static PetscErrorCode KSPSetUp_FETIDP(KSP ksp)
 
 static PetscErrorCode KSPSolve_FETIDP(KSP ksp)
 {
-  PetscErrorCode     ierr;
   Mat                F,A;
   MatNullSpace       nsp;
   Vec                X,B,Xl,Bl;
@@ -1218,7 +1205,6 @@ static PetscErrorCode KSPReset_FETIDP(KSP ksp)
 {
   KSP_FETIDP     *fetidp = (KSP_FETIDP*)ksp->data;
   PC_BDDC        *pcbddc;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(ISDestroy(&fetidp->pP));
@@ -1241,7 +1227,6 @@ static PetscErrorCode KSPReset_FETIDP(KSP ksp)
 static PetscErrorCode KSPDestroy_FETIDP(KSP ksp)
 {
   KSP_FETIDP     *fetidp = (KSP_FETIDP*)ksp->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPReset_FETIDP(ksp));
@@ -1259,7 +1244,6 @@ static PetscErrorCode KSPDestroy_FETIDP(KSP ksp)
 static PetscErrorCode KSPView_FETIDP(KSP ksp,PetscViewer viewer)
 {
   KSP_FETIDP     *fetidp = (KSP_FETIDP*)ksp->data;
-  PetscErrorCode ierr;
   PetscBool      iascii;
 
   PetscFunctionBegin;
@@ -1284,7 +1268,6 @@ static PetscErrorCode KSPView_FETIDP(KSP ksp,PetscViewer viewer)
 static PetscErrorCode KSPSetFromOptions_FETIDP(PetscOptionItems *PetscOptionsObject,KSP ksp)
 {
   KSP_FETIDP     *fetidp = (KSP_FETIDP*)ksp->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* set options prefixes for the inner objects, since the parent prefix will be valid at this point */
@@ -1364,7 +1347,6 @@ static PetscErrorCode KSPSetFromOptions_FETIDP(PetscOptionItems *PetscOptionsObj
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_FETIDP(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_FETIDP     *fetidp;
   KSP_FETIDPMon  *monctx;
   PC_BDDC        *pcbddc;

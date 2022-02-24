@@ -62,7 +62,6 @@ static PetscErrorCode KSPFGMRESResidual(KSP ksp)
 {
   KSP_FGMRES     *fgmres = (KSP_FGMRES*)(ksp->data);
   Mat            Amat,Pmat;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCGetOperators(ksp->pc,&Amat,&Pmat));
@@ -98,7 +97,6 @@ PetscErrorCode KSPFGMRESCycle(PetscInt *itcount,KSP ksp)
   PetscReal      res_norm;
   PetscReal      hapbnd,tt;
   PetscBool      hapend = PETSC_FALSE;  /* indicates happy breakdown ending */
-  PetscErrorCode ierr;
   PetscInt       loc_it;                /* local count of # of dir. in Krylov space */
   PetscInt       max_k = fgmres->max_k; /* max # of directions Krylov space */
   Mat            Amat,Pmat;
@@ -260,7 +258,6 @@ PetscErrorCode KSPFGMRESCycle(PetscInt *itcount,KSP ksp)
 
 PetscErrorCode KSPSolve_FGMRES(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       cycle_its = 0; /* iterations done in a call to KSPFGMRESCycle */
   KSP_FGMRES     *fgmres   = (KSP_FGMRES*)ksp->data;
   PetscBool      diagonalscale;
@@ -301,7 +298,6 @@ extern PetscErrorCode KSPReset_FGMRES(KSP);
 */
 PetscErrorCode KSPDestroy_FGMRES(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPReset_FGMRES(ksp));
@@ -326,7 +322,6 @@ PetscErrorCode KSPDestroy_FGMRES(KSP ksp)
 static PetscErrorCode KSPFGMRESBuildSoln(PetscScalar *nrs,Vec vguess,Vec vdest,KSP ksp,PetscInt it)
 {
   PetscScalar    tt;
-  PetscErrorCode ierr;
   PetscInt       ii,k,j;
   KSP_FGMRES     *fgmres = (KSP_FGMRES*)(ksp->data);
 
@@ -520,7 +515,6 @@ static PetscErrorCode KSPFGMRESGetNewVectors(KSP ksp,PetscInt it)
 PetscErrorCode KSPBuildSolution_FGMRES(KSP ksp,Vec ptr,Vec *result)
 {
   KSP_FGMRES     *fgmres = (KSP_FGMRES*)ksp->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!ptr) {
@@ -543,7 +537,6 @@ PetscErrorCode KSPBuildSolution_FGMRES(KSP ksp,Vec ptr,Vec *result)
 
 PetscErrorCode KSPSetFromOptions_FGMRES(PetscOptionItems *PetscOptionsObject,KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscBool      flg;
 
   PetscFunctionBegin;
@@ -573,7 +566,6 @@ static PetscErrorCode  KSPFGMRESSetModifyPC_FGMRES(KSP ksp,FCN1 fcn,void *ctx,FC
 PetscErrorCode KSPReset_FGMRES(KSP ksp)
 {
   KSP_FGMRES     *fgmres = (KSP_FGMRES*)ksp->data;
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -597,7 +589,6 @@ PetscErrorCode KSPReset_FGMRES(KSP ksp)
 PetscErrorCode  KSPGMRESSetRestart_FGMRES(KSP ksp,PetscInt max_k)
 {
   KSP_FGMRES     *gmres = (KSP_FGMRES*)ksp->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(max_k < 1,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Restart must be positive");
@@ -662,7 +653,6 @@ M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_FGMRES(KSP ksp)
 {
   KSP_FGMRES     *fgmres;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(ksp,&fgmres));

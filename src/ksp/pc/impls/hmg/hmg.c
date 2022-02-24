@@ -19,7 +19,6 @@ PetscErrorCode PCReset_MG(PC);
 static PetscErrorCode PCHMGExtractSubMatrix_Private(Mat pmat,Mat *submat,MatReuse reuse,PetscInt component,PetscInt blocksize)
 {
   IS             isrow;
-  PetscErrorCode ierr;
   PetscInt       rstart,rend;
   MPI_Comm       comm;
 
@@ -40,7 +39,6 @@ static PetscErrorCode PCHMGExpandInterpolation_Private(Mat subinterp, Mat *inter
   PetscInt              subrow,row,nz,*d_nnz,*o_nnz,i,j,dnz,onz,max_nz,*indices;
   const PetscInt        *idx;
   const PetscScalar     *values;
-  PetscErrorCode        ierr;
   MPI_Comm              comm;
 
   PetscFunctionBegin;
@@ -223,7 +221,6 @@ PetscErrorCode PCSetUp_HMG(PC pc)
 
 PetscErrorCode PCDestroy_HMG(PC pc)
 {
-  PetscErrorCode ierr;
   PC_MG          *mg  = (PC_MG*)pc->data;
   PC_HMG         *hmg = (PC_HMG*) mg->innerctx;
 
@@ -244,7 +241,6 @@ PetscErrorCode PCView_HMG(PC pc,PetscViewer viewer)
 {
   PC_MG          *mg = (PC_MG*)pc->data;
   PC_HMG         *hmg = (PC_HMG*) mg->innerctx;
-  PetscErrorCode ierr;
   PetscBool      iascii;
 
   PetscFunctionBegin;
@@ -262,7 +258,6 @@ PetscErrorCode PCView_HMG(PC pc,PetscViewer viewer)
 
 PetscErrorCode PCSetFromOptions_HMG(PetscOptionItems *PetscOptionsObject,PC pc)
 {
-  PetscErrorCode ierr;
   PC_MG          *mg = (PC_MG*)pc->data;
   PC_HMG         *hmg = (PC_HMG*) mg->innerctx;
 
@@ -306,7 +301,6 @@ static PetscErrorCode PCHMGSetReuseInterpolation_HMG(PC pc, PetscBool reuse)
 @*/
 PetscErrorCode PCHMGSetReuseInterpolation(PC pc, PetscBool reuse)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -344,7 +338,6 @@ static PetscErrorCode PCHMGSetUseSubspaceCoarsening_HMG(PC pc, PetscBool subspac
 @*/
 PetscErrorCode PCHMGSetUseSubspaceCoarsening(PC pc, PetscBool subspace)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -356,7 +349,6 @@ static PetscErrorCode PCHMGSetInnerPCType_HMG(PC pc, PCType type)
 {
   PC_MG           *mg  = (PC_MG*)pc->data;
   PC_HMG          *hmg = (PC_HMG*) mg->innerctx;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscStrallocpy(type,&(hmg->innerpctype)));
@@ -383,7 +375,6 @@ static PetscErrorCode PCHMGSetInnerPCType_HMG(PC pc, PCType type)
 @*/
 PetscErrorCode PCHMGSetInnerPCType(PC pc, PCType type)
 {
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -421,7 +412,6 @@ static PetscErrorCode PCHMGSetCoarseningComponent_HMG(PC pc, PetscInt component)
 @*/
 PetscErrorCode PCHMGSetCoarseningComponent(PC pc, PetscInt component)
 {
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -459,7 +449,6 @@ static PetscErrorCode PCHMGUseMatMAIJ_HMG(PC pc, PetscBool usematmaij)
 @*/
 PetscErrorCode PCHMGUseMatMAIJ(PC pc, PetscBool usematmaij)
 {
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -498,7 +487,6 @@ PetscErrorCode PCHMGUseMatMAIJ(PC pc, PetscBool usematmaij)
 M*/
 PETSC_EXTERN PetscErrorCode PCCreate_HMG(PC pc)
 {
-  PetscErrorCode ierr;
   PC_HMG         *hmg;
   PC_MG          *mg;
 
