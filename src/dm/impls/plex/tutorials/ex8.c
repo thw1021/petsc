@@ -11,29 +11,29 @@ int main(int argc, char **argv)
   PetscErrorCode ierr;
 
   ierr = PetscInitialize(&argc,&argv,NULL,help);if (ierr) return ierr;
-  ierr = DMCreate(PETSC_COMM_WORLD, &dm);CHKERRQ(ierr);
-  ierr = DMSetType(dm, DMPLEX);CHKERRQ(ierr);
-  ierr = DMSetFromOptions(dm);CHKERRQ(ierr);
-  ierr = DMViewFromOptions(dm, NULL, "-dm_view");CHKERRQ(ierr);
-  ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
+  CHKERRQ(DMCreate(PETSC_COMM_WORLD, &dm));
+  CHKERRQ(DMSetType(dm, DMPLEX));
+  CHKERRQ(DMSetFromOptions(dm));
+  CHKERRQ(DMViewFromOptions(dm, NULL, "-dm_view"));
+  CHKERRQ(DMGetDimension(dm, &dim));
 
-  ierr = PetscFECreateDefault(PETSC_COMM_SELF,dim,1,PETSC_FALSE,NULL,PETSC_DETERMINE,&fe);CHKERRQ(ierr);
-  ierr = DMSetFromOptions(dm);CHKERRQ(ierr);
-  ierr = DMAddField(dm,NULL,(PetscObject)fe);CHKERRQ(ierr);
-  ierr = DMCreateDS(dm);CHKERRQ(ierr);
-  ierr = DMPlexSetClosurePermutationTensor(dm,PETSC_DETERMINE,NULL);CHKERRQ(ierr);
-  ierr = DMGetLocalSection(dm,&section);CHKERRQ(ierr);
-  ierr = DMPlexGetHeightStratum(dm,0,&cStart,&cEnd);CHKERRQ(ierr);
+  CHKERRQ(PetscFECreateDefault(PETSC_COMM_SELF,dim,1,PETSC_FALSE,NULL,PETSC_DETERMINE,&fe));
+  CHKERRQ(DMSetFromOptions(dm));
+  CHKERRQ(DMAddField(dm,NULL,(PetscObject)fe));
+  CHKERRQ(DMCreateDS(dm));
+  CHKERRQ(DMPlexSetClosurePermutationTensor(dm,PETSC_DETERMINE,NULL));
+  CHKERRQ(DMGetLocalSection(dm,&section));
+  CHKERRQ(DMPlexGetHeightStratum(dm,0,&cStart,&cEnd));
   for (c=cStart; c<cEnd; c++) {
     PetscInt numindices,*indices;
-    ierr = DMPlexGetClosureIndices(dm,section,section,c,PETSC_TRUE,&numindices,&indices,NULL,NULL);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_SELF,"Element #%D\n",c-cStart);CHKERRQ(ierr);
-    ierr = PetscIntView(numindices,indices,PETSC_VIEWER_STDOUT_SELF);CHKERRQ(ierr);
-    ierr = DMPlexRestoreClosureIndices(dm,section,section,c,PETSC_TRUE,&numindices,&indices,NULL,NULL);CHKERRQ(ierr);
+    CHKERRQ(DMPlexGetClosureIndices(dm,section,section,c,PETSC_TRUE,&numindices,&indices,NULL,NULL));
+    CHKERRQ(PetscPrintf(PETSC_COMM_SELF,"Element #%D\n",c-cStart));
+    CHKERRQ(PetscIntView(numindices,indices,PETSC_VIEWER_STDOUT_SELF));
+    CHKERRQ(DMPlexRestoreClosureIndices(dm,section,section,c,PETSC_TRUE,&numindices,&indices,NULL,NULL));
   }
 
-  ierr = PetscFEDestroy(&fe);CHKERRQ(ierr);
-  ierr = DMDestroy(&dm);CHKERRQ(ierr);
+  CHKERRQ(PetscFEDestroy(&fe));
+  CHKERRQ(DMDestroy(&dm));
   ierr = PetscFinalize();
   return ierr;
 }
