@@ -1147,7 +1147,7 @@ PetscErrorCode ISGetLayout(IS is,PetscLayout *map)
 /*@
    ISSetLayout - set PetscLayout describing index set layout
 
-   Not Collective
+   Collective
 
    Input Arguments:
 +  is - the index set
