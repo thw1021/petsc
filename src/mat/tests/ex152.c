@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
 
   ierr = PetscInitialize(&argc,&argv,NULL,help);if (ierr) return ierr;
 #if defined(PETSC_USE_64BIT_INDICES)
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"This example only works with 32 bit indices\n");CHKERRQ(ierr);
+  CHKERRQ(PetscPrintf(PETSC_COMM_WORLD,"This example only works with 32 bit indices\n"));
   ierr = PetscFinalize();
   return ierr;
 #endif
@@ -47,42 +47,42 @@ int main(int argc, char *argv[])
   MPI_Comm_size(PETSC_COMM_WORLD,&size);
 
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Parmetis test options","");CHKERRQ(ierr);
-  ierr = PetscOptionsString("-prefix","Path and prefix of test file","",prefix,prefix,sizeof(prefix),&flg);CHKERRQ(ierr);
+  CHKERRQ(PetscOptionsString("-prefix","Path and prefix of test file","",prefix,prefix,sizeof(prefix),&flg));
   PetscCheckFalse(!flg,PETSC_COMM_WORLD,PETSC_ERR_USER,"Must specify -prefix");
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
-  ierr = PetscMalloc1(size+1,&vtxdist);CHKERRQ(ierr);
+  CHKERRQ(PetscMalloc1(size+1,&vtxdist));
 
-  ierr = PetscSNPrintf(fname,sizeof(fname),"%s.%d.graph",prefix,rank);CHKERRQ(ierr);
+  CHKERRQ(PetscSNPrintf(fname,sizeof(fname),"%s.%d.graph",prefix,rank));
 
-  ierr = PetscFOpen(PETSC_COMM_SELF,fname,"r",&fp);CHKERRQ(ierr);
+  CHKERRQ(PetscFOpen(PETSC_COMM_SELF,fname,"r",&fp));
 
   red = fread(vtxdist, sizeof(idx_t), size+1, fp);PetscCheckFalse(red != (size_t) (size+1),PETSC_COMM_SELF,PETSC_ERR_SYS,"Unable to read from data file");
 
   ni = vtxdist[rank+1]-vtxdist[rank];
 
-  ierr = PetscMalloc1(ni+1,&xadj);CHKERRQ(ierr);
+  CHKERRQ(PetscMalloc1(ni+1,&xadj));
 
   red = fread(xadj, sizeof(idx_t), ni+1, fp);PetscCheckFalse(red != (size_t) (ni+1),PETSC_COMM_SELF,PETSC_ERR_SYS,"Unable to read from data file");
 
-  ierr = PetscMalloc1(xadj[ni],&adjncy);CHKERRQ(ierr);
+  CHKERRQ(PetscMalloc1(xadj[ni],&adjncy));
 
   for (i=0; i<ni; i++) {
     red = fread(&adjncy[xadj[i]], sizeof(idx_t), xadj[i+1]-xadj[i], fp);PetscCheckFalse(red != (size_t) (xadj[i+1]-xadj[i]),PETSC_COMM_SELF,PETSC_ERR_SYS,"Unable to read from data file");
   }
 
-  ierr = PetscFClose(PETSC_COMM_SELF,fp);CHKERRQ(ierr);
+  CHKERRQ(PetscFClose(PETSC_COMM_SELF,fp));
 
-  ierr = PetscSNPrintf(fname,sizeof(fname),"%s.%d.graph.xyz",prefix,rank);CHKERRQ(ierr);
-  ierr = PetscFOpen(PETSC_COMM_SELF,fname,"r",&fp);CHKERRQ(ierr);
+  CHKERRQ(PetscSNPrintf(fname,sizeof(fname),"%s.%d.graph.xyz",prefix,rank));
+  CHKERRQ(PetscFOpen(PETSC_COMM_SELF,fname,"r",&fp));
 
-  ierr = PetscMalloc3(ni*ndims,&xyz,ni,&part,size,&tpwgts);CHKERRQ(ierr);
-  ierr = PetscMalloc1(ni*ndims,&sxyz);CHKERRQ(ierr);
+  CHKERRQ(PetscMalloc3(ni*ndims,&xyz,ni,&part,size,&tpwgts));
+  CHKERRQ(PetscMalloc1(ni*ndims,&sxyz));
 
   red = fread(xyz, sizeof(PetscReal), ndims*ni, fp);PetscCheckFalse(red != (size_t) (ndims*ni),PETSC_COMM_SELF,PETSC_ERR_SYS,"Unable to read from data file");
   for (i=0; i<ni*ndims; i++) sxyz[i] = (size_t) xyz[i];
 
-  ierr = PetscFClose(PETSC_COMM_SELF,fp);CHKERRQ(ierr);
+  CHKERRQ(PetscFClose(PETSC_COMM_SELF,fp));
 
   vwgt = NULL;
 
@@ -96,15 +96,15 @@ int main(int argc, char *argv[])
   options[3] = 0;
   options[4] = 0;
 
-  ierr   = MPI_Comm_dup(MPI_COMM_WORLD, &comm);CHKERRMPI(ierr);
-  status = ParMETIS_V3_PartGeomKway(vtxdist, xadj, adjncy, vwgt, NULL, &wgtflag, &numflag, &ndims, sxyz, &ncon, &isize, tpwgts, ubvec,options, &edgecut, part, &comm);CHKERRQPARMETIS(status);
-  ierr = MPI_Comm_free(&comm);CHKERRMPI(ierr);
+  CHKERRMPI(MPI_Comm_dup(MPI_COMM_WORLD, &comm));
+  CHKERRQPARMETIS(ParMETIS_V3_PartGeomKway(vtxdist, xadj, adjncy, vwgt, NULL, &wgtflag, &numflag, &ndims, sxyz, &ncon, &isize, tpwgts, ubvec,options, &edgecut, part, &comm));
+  CHKERRMPI(MPI_Comm_free(&comm));
 
-  ierr = PetscFree(vtxdist);CHKERRQ(ierr);
-  ierr = PetscFree(xadj);CHKERRQ(ierr);
-  ierr = PetscFree(adjncy);CHKERRQ(ierr);
-  ierr = PetscFree3(xyz,part,tpwgts);CHKERRQ(ierr);
-  ierr = PetscFree(sxyz);CHKERRQ(ierr);
+  CHKERRQ(PetscFree(vtxdist));
+  CHKERRQ(PetscFree(xadj));
+  CHKERRQ(PetscFree(adjncy));
+  CHKERRQ(PetscFree3(xyz,part,tpwgts));
+  CHKERRQ(PetscFree(sxyz));
   ierr = PetscFinalize();
   return ierr;
 }

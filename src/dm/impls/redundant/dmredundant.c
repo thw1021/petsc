@@ -16,30 +16,30 @@ static PetscErrorCode DMCreateMatrix_Redundant(DM dm,Mat *J)
   PetscScalar            *vals;
 
   PetscFunctionBegin;
-  ierr = MatCreate(PetscObjectComm((PetscObject)dm),J);CHKERRQ(ierr);
-  ierr = MatSetSizes(*J,red->n,red->n,red->N,red->N);CHKERRQ(ierr);
-  ierr = MatSetType(*J,dm->mattype);CHKERRQ(ierr);
-  ierr = MatSeqAIJSetPreallocation(*J,red->n,NULL);CHKERRQ(ierr);
-  ierr = MatSeqBAIJSetPreallocation(*J,1,red->n,NULL);CHKERRQ(ierr);
-  ierr = MatMPIAIJSetPreallocation(*J,red->n,NULL,red->N-red->n,NULL);CHKERRQ(ierr);
-  ierr = MatMPIBAIJSetPreallocation(*J,1,red->n,NULL,red->N-red->n,NULL);CHKERRQ(ierr);
+  CHKERRQ(MatCreate(PetscObjectComm((PetscObject)dm),J));
+  CHKERRQ(MatSetSizes(*J,red->n,red->n,red->N,red->N));
+  CHKERRQ(MatSetType(*J,dm->mattype));
+  CHKERRQ(MatSeqAIJSetPreallocation(*J,red->n,NULL));
+  CHKERRQ(MatSeqBAIJSetPreallocation(*J,1,red->n,NULL));
+  CHKERRQ(MatMPIAIJSetPreallocation(*J,red->n,NULL,red->N-red->n,NULL));
+  CHKERRQ(MatMPIBAIJSetPreallocation(*J,1,red->n,NULL,red->N-red->n,NULL));
 
-  ierr = DMGetLocalToGlobalMapping(dm,&ltog);CHKERRQ(ierr);
-  ierr = MatSetLocalToGlobalMapping(*J,ltog,ltog);CHKERRQ(ierr);
-  ierr = MatSetDM(*J,dm);CHKERRQ(ierr);
+  CHKERRQ(DMGetLocalToGlobalMapping(dm,&ltog));
+  CHKERRQ(MatSetLocalToGlobalMapping(*J,ltog,ltog));
+  CHKERRQ(MatSetDM(*J,dm));
 
-  ierr = PetscMalloc2(red->N,&cols,red->N,&vals);CHKERRQ(ierr);
+  CHKERRQ(PetscMalloc2(red->N,&cols,red->N,&vals));
   for (i=0; i<red->N; i++) {
     cols[i] = i;
     vals[i] = 0.0;
   }
-  ierr = MatGetOwnershipRange(*J,&rstart,&rend);CHKERRQ(ierr);
+  CHKERRQ(MatGetOwnershipRange(*J,&rstart,&rend));
   for (i=rstart; i<rend; i++) {
-    ierr = MatSetValues(*J,1,&i,red->N,cols,vals,INSERT_VALUES);CHKERRQ(ierr);
+    CHKERRQ(MatSetValues(*J,1,&i,red->N,cols,vals,INSERT_VALUES));
   }
-  ierr = PetscFree2(cols,vals);CHKERRQ(ierr);
-  ierr = MatAssemblyBegin(*J,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(*J,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  CHKERRQ(PetscFree2(cols,vals));
+  CHKERRQ(MatAssemblyBegin(*J,MAT_FINAL_ASSEMBLY));
+  CHKERRQ(MatAssemblyEnd(*J,MAT_FINAL_ASSEMBLY));
   PetscFunctionReturn(0);
 }
 
@@ -48,11 +48,11 @@ static PetscErrorCode DMDestroy_Redundant(DM dm)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscObjectComposeFunction((PetscObject)dm,"DMRedundantSetSize_C",NULL);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)dm,"DMRedundantGetSize_C",NULL);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)dm,"DMSetUpGLVisViewer_C",NULL);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectComposeFunction((PetscObject)dm,"DMRedundantSetSize_C",NULL));
+  CHKERRQ(PetscObjectComposeFunction((PetscObject)dm,"DMRedundantGetSize_C",NULL));
+  CHKERRQ(PetscObjectComposeFunction((PetscObject)dm,"DMSetUpGLVisViewer_C",NULL));
   /* This was originally freed in DMDestroy(), but that prevents reference counting of backend objects */
-  ierr = PetscFree(dm->data);CHKERRQ(ierr);
+  CHKERRQ(PetscFree(dm->data));
   PetscFunctionReturn(0);
 }
 
@@ -66,12 +66,12 @@ static PetscErrorCode DMCreateGlobalVector_Redundant(DM dm,Vec *gvec)
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   PetscValidPointer(gvec,2);
   *gvec = NULL;
-  ierr  = VecCreate(PetscObjectComm((PetscObject)dm),gvec);CHKERRQ(ierr);
-  ierr  = VecSetSizes(*gvec,red->n,red->N);CHKERRQ(ierr);
-  ierr  = VecSetType(*gvec,dm->vectype);CHKERRQ(ierr);
-  ierr  = DMGetLocalToGlobalMapping(dm,&ltog);CHKERRQ(ierr);
-  ierr  = VecSetLocalToGlobalMapping(*gvec,ltog);CHKERRQ(ierr);
-  ierr  = VecSetDM(*gvec,dm);CHKERRQ(ierr);
+  CHKERRQ(VecCreate(PetscObjectComm((PetscObject)dm),gvec));
+  CHKERRQ(VecSetSizes(*gvec,red->n,red->N));
+  CHKERRQ(VecSetType(*gvec,dm->vectype));
+  CHKERRQ(DMGetLocalToGlobalMapping(dm,&ltog));
+  CHKERRQ(VecSetLocalToGlobalMapping(*gvec,ltog));
+  CHKERRQ(VecSetDM(*gvec,dm));
   PetscFunctionReturn(0);
 }
 
@@ -84,10 +84,10 @@ static PetscErrorCode DMCreateLocalVector_Redundant(DM dm,Vec *lvec)
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   PetscValidPointer(lvec,2);
   *lvec = NULL;
-  ierr  = VecCreate(PETSC_COMM_SELF,lvec);CHKERRQ(ierr);
-  ierr  = VecSetSizes(*lvec,red->N,red->N);CHKERRQ(ierr);
-  ierr  = VecSetType(*lvec,dm->vectype);CHKERRQ(ierr);
-  ierr  = VecSetDM(*lvec,dm);CHKERRQ(ierr);
+  CHKERRQ(VecCreate(PETSC_COMM_SELF,lvec));
+  CHKERRQ(VecSetSizes(*lvec,red->N,red->N));
+  CHKERRQ(VecSetType(*lvec,dm->vectype));
+  CHKERRQ(VecSetDM(*lvec,dm));
   PetscFunctionReturn(0);
 }
 
@@ -100,9 +100,9 @@ static PetscErrorCode DMLocalToGlobalBegin_Redundant(DM dm,Vec l,InsertMode imod
   PetscMPIInt       rank;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)dm),&rank);CHKERRMPI(ierr);
-  ierr = VecGetArrayRead(l,&lv);CHKERRQ(ierr);
-  ierr = VecGetArray(g,&gv);CHKERRQ(ierr);
+  CHKERRMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)dm),&rank));
+  CHKERRQ(VecGetArrayRead(l,&lv));
+  CHKERRQ(VecGetArray(g,&gv));
   switch (imode) {
   case ADD_VALUES:
   case MAX_VALUES:
@@ -115,7 +115,7 @@ static PetscErrorCode DMLocalToGlobalBegin_Redundant(DM dm,Vec l,InsertMode imod
       buffer = gv;
       source = MPI_IN_PLACE;
 #else
-      ierr   = PetscMalloc1(red->N,&buffer);CHKERRQ(ierr);
+      CHKERRQ(PetscMalloc1(red->N,&buffer));
       source = buffer;
 #endif
       if (imode == ADD_VALUES) for (i=0; i<red->N; i++) buffer[i] = gv[i] + lv[i];
@@ -123,18 +123,18 @@ static PetscErrorCode DMLocalToGlobalBegin_Redundant(DM dm,Vec l,InsertMode imod
       if (imode == MAX_VALUES) for (i=0; i<red->N; i++) buffer[i] = PetscMax(gv[i],lv[i]);
 #endif
     } else source = (void*)lv;
-    ierr = MPI_Reduce(source,gv,red->N,MPIU_SCALAR,(imode == ADD_VALUES) ? MPIU_SUM : MPIU_MAX,red->rank,PetscObjectComm((PetscObject)dm));CHKERRMPI(ierr);
+    CHKERRMPI(MPI_Reduce(source,gv,red->N,MPIU_SCALAR,(imode == ADD_VALUES) ? MPIU_SUM : MPIU_MAX,red->rank,PetscObjectComm((PetscObject)dm)));
 #if !defined(PETSC_HAVE_MPI_IN_PLACE)
-    if (rank == red->rank) {ierr = PetscFree(buffer);CHKERRQ(ierr);}
+    if (rank == red->rank) CHKERRQ(PetscFree(buffer));
 #endif
   } break;
   case INSERT_VALUES:
-    ierr = PetscArraycpy(gv,lv,red->n);CHKERRQ(ierr);
+    CHKERRQ(PetscArraycpy(gv,lv,red->n));
     break;
   default: SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"InsertMode not supported");
   }
-  ierr = VecRestoreArrayRead(l,&lv);CHKERRQ(ierr);
-  ierr = VecRestoreArray(g,&gv);CHKERRQ(ierr);
+  CHKERRQ(VecRestoreArrayRead(l,&lv));
+  CHKERRQ(VecRestoreArray(g,&gv));
   PetscFunctionReturn(0);
 }
 
@@ -152,17 +152,17 @@ static PetscErrorCode DMGlobalToLocalBegin_Redundant(DM dm,Vec g,InsertMode imod
   PetscScalar       *lv;
 
   PetscFunctionBegin;
-  ierr = VecGetArrayRead(g,&gv);CHKERRQ(ierr);
-  ierr = VecGetArray(l,&lv);CHKERRQ(ierr);
+  CHKERRQ(VecGetArrayRead(g,&gv));
+  CHKERRQ(VecGetArray(l,&lv));
   switch (imode) {
   case INSERT_VALUES:
-    if (red->n) {ierr = PetscArraycpy(lv,gv,red->n);CHKERRQ(ierr);}
-    ierr = MPI_Bcast(lv,red->N,MPIU_SCALAR,red->rank,PetscObjectComm((PetscObject)dm));CHKERRMPI(ierr);
+    if (red->n) CHKERRQ(PetscArraycpy(lv,gv,red->n));
+    CHKERRMPI(MPI_Bcast(lv,red->N,MPIU_SCALAR,red->rank,PetscObjectComm((PetscObject)dm)));
     break;
   default: SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"InsertMode not supported");
   }
-  ierr = VecRestoreArrayRead(g,&gv);CHKERRQ(ierr);
-  ierr = VecRestoreArray(l,&lv);CHKERRQ(ierr);
+  CHKERRQ(VecRestoreArrayRead(g,&gv));
+  CHKERRQ(VecRestoreArray(l,&lv));
   PetscFunctionReturn(0);
 }
 
@@ -185,9 +185,9 @@ static PetscErrorCode DMView_Redundant(DM dm,PetscViewer viewer)
   PetscBool      iascii;
 
   PetscFunctionBegin;
-  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
   if (iascii) {
-    ierr = PetscViewerASCIIPrintf(viewer,"redundant: rank=%D N=%D\n",red->rank,red->N);CHKERRQ(ierr);
+    CHKERRQ(PetscViewerASCIIPrintf(viewer,"redundant: rank=%D N=%D\n",red->rank,red->N));
   }
   PetscFunctionReturn(0);
 }
@@ -209,10 +209,10 @@ static PetscErrorCode DMCreateColoring_Redundant(DM dm,ISColoringType ctype,ISCo
     break;
   default: SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONG,"Unknown ISColoringType %d",(int)ctype);
   }
-  ierr = PetscMalloc1(nloc,&colors);CHKERRQ(ierr);
+  CHKERRQ(PetscMalloc1(nloc,&colors));
   for (i=0; i<nloc; i++) colors[i] = i;
-  ierr = ISColoringCreate(PetscObjectComm((PetscObject)dm),red->N,nloc,colors,PETSC_OWN_POINTER,coloring);CHKERRQ(ierr);
-  ierr = ISColoringSetType(*coloring,ctype);CHKERRQ(ierr);
+  CHKERRQ(ISColoringCreate(PetscObjectComm((PetscObject)dm),red->N,nloc,colors,PETSC_OWN_POINTER,coloring));
+  CHKERRQ(ISColoringSetType(*coloring,ctype));
   PetscFunctionReturn(0);
 }
 
@@ -224,11 +224,11 @@ static PetscErrorCode DMRefine_Redundant(DM dmc,MPI_Comm comm,DM *dmf)
 
   PetscFunctionBegin;
   if (comm == MPI_COMM_NULL) {
-    ierr = PetscObjectGetComm((PetscObject)dmc,&comm);CHKERRQ(ierr);
+    CHKERRQ(PetscObjectGetComm((PetscObject)dmc,&comm));
   }
-  ierr = MPI_Comm_compare(PetscObjectComm((PetscObject)dmc),comm,&flag);CHKERRMPI(ierr);
+  CHKERRMPI(MPI_Comm_compare(PetscObjectComm((PetscObject)dmc),comm,&flag));
   PetscCheckFalse(flag != MPI_CONGRUENT && flag != MPI_IDENT,PetscObjectComm((PetscObject)dmc),PETSC_ERR_SUP,"cannot change communicators");
-  ierr = DMRedundantCreate(comm,redc->rank,redc->N,dmf);CHKERRQ(ierr);
+  CHKERRQ(DMRedundantCreate(comm,redc->rank,redc->N,dmf));
   PetscFunctionReturn(0);
 }
 
@@ -240,11 +240,11 @@ static PetscErrorCode DMCoarsen_Redundant(DM dmf,MPI_Comm comm,DM *dmc)
 
   PetscFunctionBegin;
   if (comm == MPI_COMM_NULL) {
-    ierr = PetscObjectGetComm((PetscObject)dmf,&comm);CHKERRQ(ierr);
+    CHKERRQ(PetscObjectGetComm((PetscObject)dmf,&comm));
   }
-  ierr = MPI_Comm_compare(PetscObjectComm((PetscObject)dmf),comm,&flag);CHKERRMPI(ierr);
+  CHKERRMPI(MPI_Comm_compare(PetscObjectComm((PetscObject)dmf),comm,&flag));
   PetscCheckFalse(flag != MPI_CONGRUENT && flag != MPI_IDENT,PetscObjectComm((PetscObject)dmf),PETSC_ERR_SUP,"cannot change communicators");
-  ierr = DMRedundantCreate(comm,redf->rank,redf->N,dmc);CHKERRQ(ierr);
+  CHKERRQ(DMRedundantCreate(comm,redf->rank,redf->N,dmc));
   PetscFunctionReturn(0);
 }
 
@@ -257,20 +257,20 @@ static PetscErrorCode DMCreateInterpolation_Redundant(DM dmc,DM dmf,Mat *P,Vec *
   PetscInt       i,rstart,rend;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_compare(PetscObjectComm((PetscObject)dmc),PetscObjectComm((PetscObject)dmf),&flag);CHKERRMPI(ierr);
+  CHKERRMPI(MPI_Comm_compare(PetscObjectComm((PetscObject)dmc),PetscObjectComm((PetscObject)dmf),&flag));
   PetscCheckFalse(flag != MPI_CONGRUENT && flag != MPI_IDENT,PetscObjectComm((PetscObject)dmf),PETSC_ERR_SUP,"cannot change communicators");
   PetscCheckFalse(redc->rank != redf->rank,PetscObjectComm((PetscObject)dmf),PETSC_ERR_ARG_INCOMP,"Owning rank does not match");
   PetscCheckFalse(redc->N != redf->N,PetscObjectComm((PetscObject)dmf),PETSC_ERR_ARG_INCOMP,"Global size does not match");
-  ierr = MatCreate(PetscObjectComm((PetscObject)dmc),P);CHKERRQ(ierr);
-  ierr = MatSetSizes(*P,redc->n,redc->n,redc->N,redc->N);CHKERRQ(ierr);
-  ierr = MatSetType(*P,MATAIJ);CHKERRQ(ierr);
-  ierr = MatSeqAIJSetPreallocation(*P,1,NULL);CHKERRQ(ierr);
-  ierr = MatMPIAIJSetPreallocation(*P,1,NULL,0,NULL);CHKERRQ(ierr);
-  ierr = MatGetOwnershipRange(*P,&rstart,&rend);CHKERRQ(ierr);
-  for (i=rstart; i<rend; i++) {ierr = MatSetValue(*P,i,i,1.0,INSERT_VALUES);CHKERRQ(ierr);}
-  ierr = MatAssemblyBegin(*P,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  ierr = MatAssemblyEnd(*P,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
-  if (scale) {ierr = DMCreateInterpolationScale(dmc,dmf,*P,scale);CHKERRQ(ierr);}
+  CHKERRQ(MatCreate(PetscObjectComm((PetscObject)dmc),P));
+  CHKERRQ(MatSetSizes(*P,redc->n,redc->n,redc->N,redc->N));
+  CHKERRQ(MatSetType(*P,MATAIJ));
+  CHKERRQ(MatSeqAIJSetPreallocation(*P,1,NULL));
+  CHKERRQ(MatMPIAIJSetPreallocation(*P,1,NULL,0,NULL));
+  CHKERRQ(MatGetOwnershipRange(*P,&rstart,&rend));
+  for (i=rstart; i<rend; i++) CHKERRQ(MatSetValue(*P,i,i,1.0,INSERT_VALUES));
+  CHKERRQ(MatAssemblyBegin(*P,MAT_FINAL_ASSEMBLY));
+  CHKERRQ(MatAssemblyEnd(*P,MAT_FINAL_ASSEMBLY));
+  if (scale) CHKERRQ(DMCreateInterpolationScale(dmc,dmf,*P,scale));
   PetscFunctionReturn(0);
 }
 
@@ -297,7 +297,7 @@ PetscErrorCode DMRedundantSetSize(DM dm,PetscMPIInt rank,PetscInt N)
   PetscValidType(dm,1);
   PetscValidLogicalCollectiveMPIInt(dm,rank,2);
   PetscValidLogicalCollectiveInt(dm,N,3);
-  ierr = PetscTryMethod(dm,"DMRedundantSetSize_C",(DM,PetscMPIInt,PetscInt),(dm,rank,N));CHKERRQ(ierr);
+  CHKERRQ(PetscTryMethod(dm,"DMRedundantSetSize_C",(DM,PetscMPIInt,PetscInt),(dm,rank,N)));
   PetscFunctionReturn(0);
 }
 
@@ -324,7 +324,7 @@ PetscErrorCode DMRedundantGetSize(DM dm,PetscMPIInt *rank,PetscInt *N)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   PetscValidType(dm,1);
-  ierr = PetscUseMethod(dm,"DMRedundantGetSize_C",(DM,PetscMPIInt*,PetscInt*),(dm,rank,N));CHKERRQ(ierr);
+  CHKERRQ(PetscUseMethod(dm,"DMRedundantGetSize_C",(DM,PetscMPIInt*,PetscInt*),(dm,rank,N)));
   PetscFunctionReturn(0);
 }
 
@@ -336,16 +336,16 @@ static PetscErrorCode DMRedundantSetSize_Redundant(DM dm,PetscMPIInt rank,PetscI
   PetscInt       i,*globals;
 
   PetscFunctionBegin;
-  ierr      = MPI_Comm_rank(PetscObjectComm((PetscObject)dm),&myrank);CHKERRMPI(ierr);
+  CHKERRMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)dm),&myrank));
   red->rank = rank;
   red->N    = N;
   red->n    = (myrank == rank) ? N : 0;
 
   /* mapping is setup here */
-  ierr = PetscMalloc1(red->N,&globals);CHKERRQ(ierr);
+  CHKERRQ(PetscMalloc1(red->N,&globals));
   for (i=0; i<red->N; i++) globals[i] = i;
-  ierr = ISLocalToGlobalMappingDestroy(&dm->ltogmap);CHKERRQ(ierr);
-  ierr = ISLocalToGlobalMappingCreate(PetscObjectComm((PetscObject)dm),1,red->N,globals,PETSC_OWN_POINTER,&dm->ltogmap);CHKERRQ(ierr);
+  CHKERRQ(ISLocalToGlobalMappingDestroy(&dm->ltogmap));
+  CHKERRQ(ISLocalToGlobalMappingCreate(PetscObjectComm((PetscObject)dm),1,red->N,globals,PETSC_OWN_POINTER,&dm->ltogmap));
   PetscFunctionReturn(0);
 }
 
@@ -384,7 +384,7 @@ PETSC_EXTERN PetscErrorCode DMCreate_Redundant(DM dm)
   DM_Redundant   *red;
 
   PetscFunctionBegin;
-  ierr     = PetscNewLog(dm,&red);CHKERRQ(ierr);
+  CHKERRQ(PetscNewLog(dm,&red));
   dm->data = red;
 
   dm->ops->setup               = DMSetUp_Redundant;
@@ -402,9 +402,9 @@ PETSC_EXTERN PetscErrorCode DMCreate_Redundant(DM dm)
   dm->ops->createinterpolation = DMCreateInterpolation_Redundant;
   dm->ops->getcoloring         = DMCreateColoring_Redundant;
 
-  ierr = PetscObjectComposeFunction((PetscObject)dm,"DMRedundantSetSize_C",DMRedundantSetSize_Redundant);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)dm,"DMRedundantGetSize_C",DMRedundantGetSize_Redundant);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)dm,"DMSetUpGLVisViewer_C",DMSetUpGLVisViewer_Redundant);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectComposeFunction((PetscObject)dm,"DMRedundantSetSize_C",DMRedundantSetSize_Redundant));
+  CHKERRQ(PetscObjectComposeFunction((PetscObject)dm,"DMRedundantGetSize_C",DMRedundantGetSize_Redundant));
+  CHKERRQ(PetscObjectComposeFunction((PetscObject)dm,"DMSetUpGLVisViewer_C",DMSetUpGLVisViewer_Redundant));
   PetscFunctionReturn(0);
 }
 
@@ -432,9 +432,9 @@ PetscErrorCode DMRedundantCreate(MPI_Comm comm,PetscMPIInt rank,PetscInt N,DM *d
 
   PetscFunctionBegin;
   PetscValidPointer(dm,4);
-  ierr = DMCreate(comm,dm);CHKERRQ(ierr);
-  ierr = DMSetType(*dm,DMREDUNDANT);CHKERRQ(ierr);
-  ierr = DMRedundantSetSize(*dm,rank,N);CHKERRQ(ierr);
-  ierr = DMSetUp(*dm);CHKERRQ(ierr);
+  CHKERRQ(DMCreate(comm,dm));
+  CHKERRQ(DMSetType(*dm,DMREDUNDANT));
+  CHKERRQ(DMRedundantSetSize(*dm,rank,N));
+  CHKERRQ(DMSetUp(*dm));
   PetscFunctionReturn(0);
 }

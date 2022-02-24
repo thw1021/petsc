@@ -13,7 +13,7 @@ PetscErrorCode  DMGlobalToLocalBegin_DA(DM da,Vec g,InsertMode mode,Vec l)
   PetscValidHeaderSpecific(da,DM_CLASSID,1);
   PetscValidHeaderSpecific(g,VEC_CLASSID,2);
   PetscValidHeaderSpecific(l,VEC_CLASSID,4);
-  ierr = VecScatterBegin(dd->gtol,g,l,mode,SCATTER_FORWARD);CHKERRQ(ierr);
+  CHKERRQ(VecScatterBegin(dd->gtol,g,l,mode,SCATTER_FORWARD));
   PetscFunctionReturn(0);
 }
 
@@ -26,7 +26,7 @@ PetscErrorCode  DMGlobalToLocalEnd_DA(DM da,Vec g,InsertMode mode,Vec l)
   PetscValidHeaderSpecific(da,DM_CLASSID,1);
   PetscValidHeaderSpecific(g,VEC_CLASSID,2);
   PetscValidHeaderSpecific(l,VEC_CLASSID,4);
-  ierr = VecScatterEnd(dd->gtol,g,l,mode,SCATTER_FORWARD);CHKERRQ(ierr);
+  CHKERRQ(VecScatterEnd(dd->gtol,g,l,mode,SCATTER_FORWARD));
   PetscFunctionReturn(0);
 }
 
@@ -40,12 +40,12 @@ PetscErrorCode  DMLocalToGlobalBegin_DA(DM da,Vec l,InsertMode mode,Vec g)
   PetscValidHeaderSpecific(l,VEC_CLASSID,2);
   PetscValidHeaderSpecific(g,VEC_CLASSID,4);
   if (mode == ADD_VALUES) {
-    ierr = VecScatterBegin(dd->gtol,l,g,ADD_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
+    CHKERRQ(VecScatterBegin(dd->gtol,l,g,ADD_VALUES,SCATTER_REVERSE));
   } else if (mode == INSERT_VALUES) {
     PetscCheckFalse(dd->bx != DM_BOUNDARY_GHOSTED && dd->bx != DM_BOUNDARY_NONE && dd->s > 0 && dd->m == 1,PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Available only for boundary none or with parallelism in x direction");
     PetscCheckFalse(dd->bx != DM_BOUNDARY_GHOSTED && dd->by != DM_BOUNDARY_NONE && dd->s > 0 && dd->n == 1,PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Available only for boundary none or with parallelism in y direction");
     PetscCheckFalse(dd->bx != DM_BOUNDARY_GHOSTED && dd->bz != DM_BOUNDARY_NONE && dd->s > 0 && dd->p == 1,PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Available only for boundary none or with parallelism in z direction");
-    ierr = VecScatterBegin(dd->gtol,l,g,INSERT_VALUES,SCATTER_REVERSE_LOCAL);CHKERRQ(ierr);
+    CHKERRQ(VecScatterBegin(dd->gtol,l,g,INSERT_VALUES,SCATTER_REVERSE_LOCAL));
   } else SETERRQ(PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Not yet implemented");
   PetscFunctionReturn(0);
 }
@@ -60,9 +60,9 @@ PetscErrorCode  DMLocalToGlobalEnd_DA(DM da,Vec l,InsertMode mode,Vec g)
   PetscValidHeaderSpecific(l,VEC_CLASSID,2);
   PetscValidHeaderSpecific(g,VEC_CLASSID,4);
   if (mode == ADD_VALUES) {
-    ierr = VecScatterEnd(dd->gtol,l,g,ADD_VALUES,SCATTER_REVERSE);CHKERRQ(ierr);
+    CHKERRQ(VecScatterEnd(dd->gtol,l,g,ADD_VALUES,SCATTER_REVERSE));
   } else if (mode == INSERT_VALUES) {
-    ierr = VecScatterEnd(dd->gtol,l,g,INSERT_VALUES,SCATTER_REVERSE_LOCAL);CHKERRQ(ierr);
+    CHKERRQ(VecScatterEnd(dd->gtol,l,g,INSERT_VALUES,SCATTER_REVERSE_LOCAL));
   } else SETERRQ(PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Not yet implemented");
   PetscFunctionReturn(0);
 }
@@ -98,17 +98,17 @@ PetscErrorCode DMDAGlobalToNatural_Create(DM da)
   PetscCheckFalse(!dd->natural,PetscObjectComm((PetscObject)da),PETSC_ERR_ORDER,"Natural layout vector not yet created; cannot scatter into it");
 
   /* create the scatter context */
-  ierr = VecGetLocalSize(dd->natural,&m);CHKERRQ(ierr);
-  ierr = VecGetOwnershipRange(dd->natural,&start,NULL);CHKERRQ(ierr);
+  CHKERRQ(VecGetLocalSize(dd->natural,&m));
+  CHKERRQ(VecGetOwnershipRange(dd->natural,&start,NULL));
 
-  ierr = DMDAGetNatural_Private(da,&Nlocal,&to);CHKERRQ(ierr);
+  CHKERRQ(DMDAGetNatural_Private(da,&Nlocal,&to));
   PetscCheckFalse(Nlocal != m,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Internal error: Nlocal %D local vector size %D",Nlocal,m);
-  ierr = ISCreateStride(PetscObjectComm((PetscObject)da),m,start,1,&from);CHKERRQ(ierr);
-  ierr = VecCreateMPIWithArray(PetscObjectComm((PetscObject)da),dd->w,dd->Nlocal,PETSC_DETERMINE,NULL,&global);CHKERRQ(ierr);
-  ierr = VecScatterCreate(global,from,dd->natural,to,&dd->gton);CHKERRQ(ierr);
-  ierr = VecDestroy(&global);CHKERRQ(ierr);
-  ierr = ISDestroy(&from);CHKERRQ(ierr);
-  ierr = ISDestroy(&to);CHKERRQ(ierr);
+  CHKERRQ(ISCreateStride(PetscObjectComm((PetscObject)da),m,start,1,&from));
+  CHKERRQ(VecCreateMPIWithArray(PetscObjectComm((PetscObject)da),dd->w,dd->Nlocal,PETSC_DETERMINE,NULL,&global));
+  CHKERRQ(VecScatterCreate(global,from,dd->natural,to,&dd->gton));
+  CHKERRQ(VecDestroy(&global));
+  CHKERRQ(ISDestroy(&from));
+  CHKERRQ(ISDestroy(&to));
   PetscFunctionReturn(0);
 }
 
@@ -152,9 +152,9 @@ PetscErrorCode  DMDAGlobalToNaturalBegin(DM da,Vec g,InsertMode mode,Vec n)
   PetscValidHeaderSpecific(n,VEC_CLASSID,4);
   if (!dd->gton) {
     /* create the scatter context */
-    ierr = DMDAGlobalToNatural_Create(da);CHKERRQ(ierr);
+    CHKERRQ(DMDAGlobalToNatural_Create(da));
   }
-  ierr = VecScatterBegin(dd->gton,g,n,mode,SCATTER_FORWARD);CHKERRQ(ierr);
+  CHKERRQ(VecScatterBegin(dd->gton,g,n,mode,SCATTER_FORWARD));
   PetscFunctionReturn(0);
 }
 
@@ -193,7 +193,7 @@ PetscErrorCode  DMDAGlobalToNaturalEnd(DM da,Vec g,InsertMode mode,Vec n)
   PetscValidHeaderSpecificType(da,DM_CLASSID,1,DMDA);
   PetscValidHeaderSpecific(g,VEC_CLASSID,2);
   PetscValidHeaderSpecific(n,VEC_CLASSID,4);
-  ierr = VecScatterEnd(dd->gton,g,n,mode,SCATTER_FORWARD);CHKERRQ(ierr);
+  CHKERRQ(VecScatterEnd(dd->gton,g,n,mode,SCATTER_FORWARD));
   PetscFunctionReturn(0);
 }
 
@@ -235,9 +235,9 @@ PetscErrorCode  DMDANaturalToGlobalBegin(DM da,Vec n,InsertMode mode,Vec g)
   PetscValidHeaderSpecific(g,VEC_CLASSID,4);
   if (!dd->gton) {
     /* create the scatter context */
-    ierr = DMDAGlobalToNatural_Create(da);CHKERRQ(ierr);
+    CHKERRQ(DMDAGlobalToNatural_Create(da));
   }
-  ierr = VecScatterBegin(dd->gton,n,g,mode,SCATTER_REVERSE);CHKERRQ(ierr);
+  CHKERRQ(VecScatterBegin(dd->gton,n,g,mode,SCATTER_REVERSE));
   PetscFunctionReturn(0);
 }
 
@@ -276,6 +276,6 @@ PetscErrorCode  DMDANaturalToGlobalEnd(DM da,Vec n,InsertMode mode,Vec g)
   PetscValidHeaderSpecificType(da,DM_CLASSID,1,DMDA);
   PetscValidHeaderSpecific(n,VEC_CLASSID,2);
   PetscValidHeaderSpecific(g,VEC_CLASSID,4);
-  ierr = VecScatterEnd(dd->gton,n,g,mode,SCATTER_REVERSE);CHKERRQ(ierr);
+  CHKERRQ(VecScatterEnd(dd->gton,n,g,mode,SCATTER_REVERSE));
   PetscFunctionReturn(0);
 }

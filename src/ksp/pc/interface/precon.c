@@ -18,13 +18,13 @@ PetscErrorCode PCGetDefaultType_Private(PC pc,const char *type[])
   PetscBool      hasop,flg1,flg2,set,flg3;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_size(PetscObjectComm((PetscObject)pc),&size);CHKERRMPI(ierr);
+  CHKERRMPI(MPI_Comm_size(PetscObjectComm((PetscObject)pc),&size));
   if (pc->pmat) {
-    ierr = MatHasOperation(pc->pmat,MATOP_GET_DIAGONAL_BLOCK,&hasop);CHKERRQ(ierr);
+    CHKERRQ(MatHasOperation(pc->pmat,MATOP_GET_DIAGONAL_BLOCK,&hasop));
     if (size == 1) {
-      ierr = MatGetFactorAvailable(pc->pmat,"petsc",MAT_FACTOR_ICC,&flg1);CHKERRQ(ierr);
-      ierr = MatGetFactorAvailable(pc->pmat,"petsc",MAT_FACTOR_ILU,&flg2);CHKERRQ(ierr);
-      ierr = MatIsSymmetricKnown(pc->pmat,&set,&flg3);CHKERRQ(ierr);
+      CHKERRQ(MatGetFactorAvailable(pc->pmat,"petsc",MAT_FACTOR_ICC,&flg1));
+      CHKERRQ(MatGetFactorAvailable(pc->pmat,"petsc",MAT_FACTOR_ILU,&flg2));
+      CHKERRQ(MatIsSymmetricKnown(pc->pmat,&set,&flg3));
       if (flg1 && (!flg2 || (set && flg3))) {
         *type = PCICC;
       } else if (flg2) {
@@ -73,12 +73,12 @@ PetscErrorCode  PCReset(PC pc)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   if (pc->ops->reset) {
-    ierr = (*pc->ops->reset)(pc);CHKERRQ(ierr);
+    CHKERRQ((*pc->ops->reset)(pc));
   }
-  ierr = VecDestroy(&pc->diagonalscaleright);CHKERRQ(ierr);
-  ierr = VecDestroy(&pc->diagonalscaleleft);CHKERRQ(ierr);
-  ierr = MatDestroy(&pc->pmat);CHKERRQ(ierr);
-  ierr = MatDestroy(&pc->mat);CHKERRQ(ierr);
+  CHKERRQ(VecDestroy(&pc->diagonalscaleright));
+  CHKERRQ(VecDestroy(&pc->diagonalscaleleft));
+  CHKERRQ(MatDestroy(&pc->pmat));
+  CHKERRQ(MatDestroy(&pc->mat));
 
   pc->setupcalled = 0;
   PetscFunctionReturn(0);
@@ -105,13 +105,13 @@ PetscErrorCode  PCDestroy(PC *pc)
   PetscValidHeaderSpecific((*pc),PC_CLASSID,1);
   if (--((PetscObject)(*pc))->refct > 0) {*pc = NULL; PetscFunctionReturn(0);}
 
-  ierr = PCReset(*pc);CHKERRQ(ierr);
+  CHKERRQ(PCReset(*pc));
 
   /* if memory was published with SAWs then destroy it */
-  ierr = PetscObjectSAWsViewOff((PetscObject)*pc);CHKERRQ(ierr);
-  if ((*pc)->ops->destroy) {ierr = (*(*pc)->ops->destroy)((*pc));CHKERRQ(ierr);}
-  ierr = DMDestroy(&(*pc)->dm);CHKERRQ(ierr);
-  ierr = PetscHeaderDestroy(pc);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectSAWsViewOff((PetscObject)*pc));
+  if ((*pc)->ops->destroy) CHKERRQ((*(*pc)->ops->destroy)((*pc)));
+  CHKERRQ(DMDestroy(&(*pc)->dm));
+  CHKERRQ(PetscHeaderDestroy(pc));
   PetscFunctionReturn(0);
 }
 
@@ -175,14 +175,14 @@ PetscErrorCode  PCSetDiagonalScale(PC pc,Vec s)
   PetscValidHeaderSpecific(s,VEC_CLASSID,2);
   pc->diagonalscale     = PETSC_TRUE;
 
-  ierr = PetscObjectReference((PetscObject)s);CHKERRQ(ierr);
-  ierr = VecDestroy(&pc->diagonalscaleleft);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectReference((PetscObject)s));
+  CHKERRQ(VecDestroy(&pc->diagonalscaleleft));
 
   pc->diagonalscaleleft = s;
 
-  ierr = VecDuplicate(s,&pc->diagonalscaleright);CHKERRQ(ierr);
-  ierr = VecCopy(s,pc->diagonalscaleright);CHKERRQ(ierr);
-  ierr = VecReciprocal(pc->diagonalscaleright);CHKERRQ(ierr);
+  CHKERRQ(VecDuplicate(s,&pc->diagonalscaleright));
+  CHKERRQ(VecCopy(s,pc->diagonalscaleright));
+  CHKERRQ(VecReciprocal(pc->diagonalscaleright));
   PetscFunctionReturn(0);
 }
 
@@ -218,9 +218,9 @@ PetscErrorCode  PCDiagonalScaleLeft(PC pc,Vec in,Vec out)
   PetscValidHeaderSpecific(in,VEC_CLASSID,2);
   PetscValidHeaderSpecific(out,VEC_CLASSID,3);
   if (pc->diagonalscale) {
-    ierr = VecPointwiseMult(out,pc->diagonalscaleleft,in);CHKERRQ(ierr);
+    CHKERRQ(VecPointwiseMult(out,pc->diagonalscaleleft,in));
   } else if (in != out) {
-    ierr = VecCopy(in,out);CHKERRQ(ierr);
+    CHKERRQ(VecCopy(in,out));
   }
   PetscFunctionReturn(0);
 }
@@ -257,9 +257,9 @@ PetscErrorCode  PCDiagonalScaleRight(PC pc,Vec in,Vec out)
   PetscValidHeaderSpecific(in,VEC_CLASSID,2);
   PetscValidHeaderSpecific(out,VEC_CLASSID,3);
   if (pc->diagonalscale) {
-    ierr = VecPointwiseMult(out,pc->diagonalscaleright,in);CHKERRQ(ierr);
+    CHKERRQ(VecPointwiseMult(out,pc->diagonalscaleright,in));
   } else if (in != out) {
-    ierr = VecCopy(in,out);CHKERRQ(ierr);
+    CHKERRQ(VecCopy(in,out));
   }
   PetscFunctionReturn(0);
 }
@@ -379,9 +379,9 @@ PetscErrorCode  PCCreate(MPI_Comm comm,PC *newpc)
   PetscFunctionBegin;
   PetscValidPointer(newpc,2);
   *newpc = NULL;
-  ierr = PCInitializePackage();CHKERRQ(ierr);
+  CHKERRQ(PCInitializePackage());
 
-  ierr = PetscHeaderCreate(pc,PC_CLASSID,"PC","Preconditioner","PC",comm,PCDestroy,PCView);CHKERRQ(ierr);
+  CHKERRQ(PetscHeaderCreate(pc,PC_CLASSID,"PC","Preconditioner","PC",comm,PCDestroy,PCView));
 
   pc->mat                  = NULL;
   pc->pmat                 = NULL;
@@ -428,24 +428,24 @@ PetscErrorCode  PCApply(PC pc,Vec x,Vec y)
   PetscValidHeaderSpecific(x,VEC_CLASSID,2);
   PetscValidHeaderSpecific(y,VEC_CLASSID,3);
   PetscCheckFalse(x == y,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_IDN,"x and y must be different vectors");
-  if (pc->erroriffailure) {ierr = VecValidValues(x,2,PETSC_TRUE);CHKERRQ(ierr);}
+  if (pc->erroriffailure) CHKERRQ(VecValidValues(x,2,PETSC_TRUE));
   /* use pmat to check vector sizes since for KSPLSQR the pmat may be of a different size than mat */
-  ierr = MatGetLocalSize(pc->pmat,&m,&n);CHKERRQ(ierr);
-  ierr = VecGetLocalSize(x,&mv);CHKERRQ(ierr);
-  ierr = VecGetLocalSize(y,&nv);CHKERRQ(ierr);
+  CHKERRQ(MatGetLocalSize(pc->pmat,&m,&n));
+  CHKERRQ(VecGetLocalSize(x,&mv));
+  CHKERRQ(VecGetLocalSize(y,&nv));
   /* check pmat * y = x is feasible */
   PetscCheckFalse(mv != m,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Preconditioner number of local rows %D does not equal input vector size %D",m,mv);
   PetscCheckFalse(nv != n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Preconditioner number of local columns %D does not equal output vector size %D",n,nv);
-  ierr = VecSetErrorIfLocked(y,3);CHKERRQ(ierr);
+  CHKERRQ(VecSetErrorIfLocked(y,3));
 
-  ierr = PCSetUp(pc);CHKERRQ(ierr);
+  CHKERRQ(PCSetUp(pc));
   PetscCheckFalse(!pc->ops->apply,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"PC does not have apply");
-  ierr = VecLockReadPush(x);CHKERRQ(ierr);
-  ierr = PetscLogEventBegin(PC_Apply,pc,x,y,0);CHKERRQ(ierr);
-  ierr = (*pc->ops->apply)(pc,x,y);CHKERRQ(ierr);
-  ierr = PetscLogEventEnd(PC_Apply,pc,x,y,0);CHKERRQ(ierr);
-  if (pc->erroriffailure) {ierr = VecValidValues(y,3,PETSC_FALSE);CHKERRQ(ierr);}
-  ierr = VecLockReadPop(x);CHKERRQ(ierr);
+  CHKERRQ(VecLockReadPush(x));
+  CHKERRQ(PetscLogEventBegin(PC_Apply,pc,x,y,0));
+  CHKERRQ((*pc->ops->apply)(pc,x,y));
+  CHKERRQ(PetscLogEventEnd(PC_Apply,pc,x,y,0));
+  if (pc->erroriffailure) CHKERRQ(VecValidValues(y,3,PETSC_FALSE));
+  CHKERRQ(VecLockReadPop(x));
   PetscFunctionReturn(0);
 }
 
@@ -480,33 +480,33 @@ PetscErrorCode  PCMatApply(PC pc,Mat X,Mat Y)
   PetscCheckSameComm(pc, 1, X, 2);
   PetscCheckSameComm(pc, 1, Y, 3);
   PetscCheckFalse(Y == X,PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_IDN, "Y and X must be different matrices");
-  ierr = PCGetOperators(pc, NULL, &A);CHKERRQ(ierr);
-  ierr = MatGetLocalSize(A, &m3, &n3);CHKERRQ(ierr);
-  ierr = MatGetLocalSize(X, &m2, &n2);CHKERRQ(ierr);
-  ierr = MatGetLocalSize(Y, &m1, &n1);CHKERRQ(ierr);
-  ierr = MatGetSize(A, &M3, &N3);CHKERRQ(ierr);
-  ierr = MatGetSize(X, &M2, &N2);CHKERRQ(ierr);
-  ierr = MatGetSize(Y, &M1, &N1);CHKERRQ(ierr);
+  CHKERRQ(PCGetOperators(pc, NULL, &A));
+  CHKERRQ(MatGetLocalSize(A, &m3, &n3));
+  CHKERRQ(MatGetLocalSize(X, &m2, &n2));
+  CHKERRQ(MatGetLocalSize(Y, &m1, &n1));
+  CHKERRQ(MatGetSize(A, &M3, &N3));
+  CHKERRQ(MatGetSize(X, &M2, &N2));
+  CHKERRQ(MatGetSize(Y, &M1, &N1));
   PetscCheckFalse(n1 != n2 || N1 != N2,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Incompatible number of columns between block of input vectors (n,N) = (%D,%D) and block of output vectors (n,N) = (%D,%D)", n2, N2, n1, N1);
   PetscCheckFalse(m2 != m3 || M2 != M3,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Incompatible layout between block of input vectors (m,M) = (%D,%D) and Pmat (m,M)x(n,N) = (%D,%D)x(%D,%D)", m2, M2, m3, M3, n3, N3);
   PetscCheckFalse(m1 != n3 || M1 != N3,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Incompatible layout between block of output vectors (m,M) = (%D,%D) and Pmat (m,M)x(n,N) = (%D,%D)x(%D,%D)", m1, M1, m3, M3, n3, N3);
-  ierr = PetscObjectBaseTypeCompareAny((PetscObject)Y, &match, MATSEQDENSE, MATMPIDENSE, "");CHKERRQ(ierr);
+  CHKERRQ(PetscObjectBaseTypeCompareAny((PetscObject)Y, &match, MATSEQDENSE, MATMPIDENSE, ""));
   PetscCheckFalse(!match,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Provided block of output vectors not stored in a dense Mat");
-  ierr = PetscObjectBaseTypeCompareAny((PetscObject)X, &match, MATSEQDENSE, MATMPIDENSE, "");CHKERRQ(ierr);
+  CHKERRQ(PetscObjectBaseTypeCompareAny((PetscObject)X, &match, MATSEQDENSE, MATMPIDENSE, ""));
   PetscCheckFalse(!match,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Provided block of input vectors not stored in a dense Mat");
-  ierr = PCSetUp(pc);CHKERRQ(ierr);
+  CHKERRQ(PCSetUp(pc));
   if (pc->ops->matapply) {
-    ierr = PetscLogEventBegin(PC_MatApply, pc, X, Y, 0);CHKERRQ(ierr);
-    ierr = (*pc->ops->matapply)(pc, X, Y);CHKERRQ(ierr);
-    ierr = PetscLogEventEnd(PC_MatApply, pc, X, Y, 0);CHKERRQ(ierr);
+    CHKERRQ(PetscLogEventBegin(PC_MatApply, pc, X, Y, 0));
+    CHKERRQ((*pc->ops->matapply)(pc, X, Y));
+    CHKERRQ(PetscLogEventEnd(PC_MatApply, pc, X, Y, 0));
   } else {
-    ierr = PetscInfo(pc, "PC type %s applying column by column\n", ((PetscObject)pc)->type_name);CHKERRQ(ierr);
+    CHKERRQ(PetscInfo(pc, "PC type %s applying column by column\n", ((PetscObject)pc)->type_name));
     for (n1 = 0; n1 < N1; ++n1) {
-      ierr = MatDenseGetColumnVecRead(X, n1, &cx);CHKERRQ(ierr);
-      ierr = MatDenseGetColumnVecWrite(Y, n1, &cy);CHKERRQ(ierr);
-      ierr = PCApply(pc, cx, cy);CHKERRQ(ierr);
-      ierr = MatDenseRestoreColumnVecWrite(Y, n1, &cy);CHKERRQ(ierr);
-      ierr = MatDenseRestoreColumnVecRead(X, n1, &cx);CHKERRQ(ierr);
+      CHKERRQ(MatDenseGetColumnVecRead(X, n1, &cx));
+      CHKERRQ(MatDenseGetColumnVecWrite(Y, n1, &cy));
+      CHKERRQ(PCApply(pc, cx, cy));
+      CHKERRQ(MatDenseRestoreColumnVecWrite(Y, n1, &cy));
+      CHKERRQ(MatDenseRestoreColumnVecRead(X, n1, &cx));
     }
   }
   PetscFunctionReturn(0);
@@ -540,15 +540,15 @@ PetscErrorCode  PCApplySymmetricLeft(PC pc,Vec x,Vec y)
   PetscValidHeaderSpecific(x,VEC_CLASSID,2);
   PetscValidHeaderSpecific(y,VEC_CLASSID,3);
   PetscCheckFalse(x == y,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_IDN,"x and y must be different vectors");
-  if (pc->erroriffailure) {ierr = VecValidValues(x,2,PETSC_TRUE);CHKERRQ(ierr);}
-  ierr = PCSetUp(pc);CHKERRQ(ierr);
+  if (pc->erroriffailure) CHKERRQ(VecValidValues(x,2,PETSC_TRUE));
+  CHKERRQ(PCSetUp(pc));
   PetscCheckFalse(!pc->ops->applysymmetricleft,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"PC does not have left symmetric apply");
-  ierr = VecLockReadPush(x);CHKERRQ(ierr);
-  ierr = PetscLogEventBegin(PC_ApplySymmetricLeft,pc,x,y,0);CHKERRQ(ierr);
-  ierr = (*pc->ops->applysymmetricleft)(pc,x,y);CHKERRQ(ierr);
-  ierr = PetscLogEventEnd(PC_ApplySymmetricLeft,pc,x,y,0);CHKERRQ(ierr);
-  ierr = VecLockReadPop(x);CHKERRQ(ierr);
-  if (pc->erroriffailure) {ierr = VecValidValues(y,3,PETSC_FALSE);CHKERRQ(ierr);}
+  CHKERRQ(VecLockReadPush(x));
+  CHKERRQ(PetscLogEventBegin(PC_ApplySymmetricLeft,pc,x,y,0));
+  CHKERRQ((*pc->ops->applysymmetricleft)(pc,x,y));
+  CHKERRQ(PetscLogEventEnd(PC_ApplySymmetricLeft,pc,x,y,0));
+  CHKERRQ(VecLockReadPop(x));
+  if (pc->erroriffailure) CHKERRQ(VecValidValues(y,3,PETSC_FALSE));
   PetscFunctionReturn(0);
 }
 
@@ -580,15 +580,15 @@ PetscErrorCode  PCApplySymmetricRight(PC pc,Vec x,Vec y)
   PetscValidHeaderSpecific(x,VEC_CLASSID,2);
   PetscValidHeaderSpecific(y,VEC_CLASSID,3);
   PetscCheckFalse(x == y,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_IDN,"x and y must be different vectors");
-  if (pc->erroriffailure) {ierr = VecValidValues(x,2,PETSC_TRUE);CHKERRQ(ierr);}
-  ierr = PCSetUp(pc);CHKERRQ(ierr);
+  if (pc->erroriffailure) CHKERRQ(VecValidValues(x,2,PETSC_TRUE));
+  CHKERRQ(PCSetUp(pc));
   PetscCheckFalse(!pc->ops->applysymmetricright,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"PC does not have left symmetric apply");
-  ierr = VecLockReadPush(x);CHKERRQ(ierr);
-  ierr = PetscLogEventBegin(PC_ApplySymmetricRight,pc,x,y,0);CHKERRQ(ierr);
-  ierr = (*pc->ops->applysymmetricright)(pc,x,y);CHKERRQ(ierr);
-  ierr = PetscLogEventEnd(PC_ApplySymmetricRight,pc,x,y,0);CHKERRQ(ierr);
-  ierr = VecLockReadPop(x);CHKERRQ(ierr);
-  if (pc->erroriffailure) {ierr = VecValidValues(y,3,PETSC_FALSE);CHKERRQ(ierr);}
+  CHKERRQ(VecLockReadPush(x));
+  CHKERRQ(PetscLogEventBegin(PC_ApplySymmetricRight,pc,x,y,0));
+  CHKERRQ((*pc->ops->applysymmetricright)(pc,x,y));
+  CHKERRQ(PetscLogEventEnd(PC_ApplySymmetricRight,pc,x,y,0));
+  CHKERRQ(VecLockReadPop(x));
+  if (pc->erroriffailure) CHKERRQ(VecValidValues(y,3,PETSC_FALSE));
   PetscFunctionReturn(0);
 }
 
@@ -623,15 +623,15 @@ PetscErrorCode  PCApplyTranspose(PC pc,Vec x,Vec y)
   PetscValidHeaderSpecific(x,VEC_CLASSID,2);
   PetscValidHeaderSpecific(y,VEC_CLASSID,3);
   PetscCheckFalse(x == y,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_IDN,"x and y must be different vectors");
-  if (pc->erroriffailure) {ierr = VecValidValues(x,2,PETSC_TRUE);CHKERRQ(ierr);}
-  ierr = PCSetUp(pc);CHKERRQ(ierr);
+  if (pc->erroriffailure) CHKERRQ(VecValidValues(x,2,PETSC_TRUE));
+  CHKERRQ(PCSetUp(pc));
   PetscCheckFalse(!pc->ops->applytranspose,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"PC does not have apply transpose");
-  ierr = VecLockReadPush(x);CHKERRQ(ierr);
-  ierr = PetscLogEventBegin(PC_Apply,pc,x,y,0);CHKERRQ(ierr);
-  ierr = (*pc->ops->applytranspose)(pc,x,y);CHKERRQ(ierr);
-  ierr = PetscLogEventEnd(PC_Apply,pc,x,y,0);CHKERRQ(ierr);
-  ierr = VecLockReadPop(x);CHKERRQ(ierr);
-  if (pc->erroriffailure) {ierr = VecValidValues(y,3,PETSC_FALSE);CHKERRQ(ierr);}
+  CHKERRQ(VecLockReadPush(x));
+  CHKERRQ(PetscLogEventBegin(PC_Apply,pc,x,y,0));
+  CHKERRQ((*pc->ops->applytranspose)(pc,x,y));
+  CHKERRQ(PetscLogEventEnd(PC_Apply,pc,x,y,0));
+  CHKERRQ(VecLockReadPop(x));
+  if (pc->erroriffailure) CHKERRQ(VecValidValues(y,3,PETSC_FALSE));
   PetscFunctionReturn(0);
 }
 
@@ -698,46 +698,46 @@ PetscErrorCode  PCApplyBAorAB(PC pc,PCSide side,Vec x,Vec y,Vec work)
   PetscCheckFalse(x == y,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_IDN,"x and y must be different vectors");
   PetscCheckFalse(side != PC_LEFT && side != PC_SYMMETRIC && side != PC_RIGHT,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Side must be right, left, or symmetric");
   PetscCheckFalse(pc->diagonalscale && side == PC_SYMMETRIC,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Cannot include diagonal scaling with symmetric preconditioner application");
-  if (pc->erroriffailure) {ierr = VecValidValues(x,3,PETSC_TRUE);CHKERRQ(ierr);}
+  if (pc->erroriffailure) CHKERRQ(VecValidValues(x,3,PETSC_TRUE));
 
-  ierr = PCSetUp(pc);CHKERRQ(ierr);
+  CHKERRQ(PCSetUp(pc));
   if (pc->diagonalscale) {
     if (pc->ops->applyBA) {
       Vec work2; /* this is expensive, but to fix requires a second work vector argument to PCApplyBAorAB() */
-      ierr = VecDuplicate(x,&work2);CHKERRQ(ierr);
-      ierr = PCDiagonalScaleRight(pc,x,work2);CHKERRQ(ierr);
-      ierr = (*pc->ops->applyBA)(pc,side,work2,y,work);CHKERRQ(ierr);
-      ierr = PCDiagonalScaleLeft(pc,y,y);CHKERRQ(ierr);
-      ierr = VecDestroy(&work2);CHKERRQ(ierr);
+      CHKERRQ(VecDuplicate(x,&work2));
+      CHKERRQ(PCDiagonalScaleRight(pc,x,work2));
+      CHKERRQ((*pc->ops->applyBA)(pc,side,work2,y,work));
+      CHKERRQ(PCDiagonalScaleLeft(pc,y,y));
+      CHKERRQ(VecDestroy(&work2));
     } else if (side == PC_RIGHT) {
-      ierr = PCDiagonalScaleRight(pc,x,y);CHKERRQ(ierr);
-      ierr = PCApply(pc,y,work);CHKERRQ(ierr);
-      ierr = MatMult(pc->mat,work,y);CHKERRQ(ierr);
-      ierr = PCDiagonalScaleLeft(pc,y,y);CHKERRQ(ierr);
+      CHKERRQ(PCDiagonalScaleRight(pc,x,y));
+      CHKERRQ(PCApply(pc,y,work));
+      CHKERRQ(MatMult(pc->mat,work,y));
+      CHKERRQ(PCDiagonalScaleLeft(pc,y,y));
     } else if (side == PC_LEFT) {
-      ierr = PCDiagonalScaleRight(pc,x,y);CHKERRQ(ierr);
-      ierr = MatMult(pc->mat,y,work);CHKERRQ(ierr);
-      ierr = PCApply(pc,work,y);CHKERRQ(ierr);
-      ierr = PCDiagonalScaleLeft(pc,y,y);CHKERRQ(ierr);
+      CHKERRQ(PCDiagonalScaleRight(pc,x,y));
+      CHKERRQ(MatMult(pc->mat,y,work));
+      CHKERRQ(PCApply(pc,work,y));
+      CHKERRQ(PCDiagonalScaleLeft(pc,y,y));
     } else PetscCheckFalse(side == PC_SYMMETRIC,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Cannot provide diagonal scaling with symmetric application of preconditioner");
   } else {
     if (pc->ops->applyBA) {
-      ierr = (*pc->ops->applyBA)(pc,side,x,y,work);CHKERRQ(ierr);
+      CHKERRQ((*pc->ops->applyBA)(pc,side,x,y,work));
     } else if (side == PC_RIGHT) {
-      ierr = PCApply(pc,x,work);CHKERRQ(ierr);
-      ierr = MatMult(pc->mat,work,y);CHKERRQ(ierr);
+      CHKERRQ(PCApply(pc,x,work));
+      CHKERRQ(MatMult(pc->mat,work,y));
     } else if (side == PC_LEFT) {
-      ierr = MatMult(pc->mat,x,work);CHKERRQ(ierr);
-      ierr = PCApply(pc,work,y);CHKERRQ(ierr);
+      CHKERRQ(MatMult(pc->mat,x,work));
+      CHKERRQ(PCApply(pc,work,y));
     } else if (side == PC_SYMMETRIC) {
       /* There's an extra copy here; maybe should provide 2 work vectors instead? */
-      ierr = PCApplySymmetricRight(pc,x,work);CHKERRQ(ierr);
-      ierr = MatMult(pc->mat,work,y);CHKERRQ(ierr);
-      ierr = VecCopy(y,work);CHKERRQ(ierr);
-      ierr = PCApplySymmetricLeft(pc,work,y);CHKERRQ(ierr);
+      CHKERRQ(PCApplySymmetricRight(pc,x,work));
+      CHKERRQ(MatMult(pc->mat,work,y));
+      CHKERRQ(VecCopy(y,work));
+      CHKERRQ(PCApplySymmetricLeft(pc,work,y));
     }
   }
-  if (pc->erroriffailure) {ierr = VecValidValues(y,4,PETSC_FALSE);CHKERRQ(ierr);}
+  if (pc->erroriffailure) CHKERRQ(VecValidValues(y,4,PETSC_FALSE));
   PetscFunctionReturn(0);
 }
 
@@ -775,24 +775,24 @@ PetscErrorCode  PCApplyBAorABTranspose(PC pc,PCSide side,Vec x,Vec y,Vec work)
   PetscValidHeaderSpecific(y,VEC_CLASSID,4);
   PetscValidHeaderSpecific(work,VEC_CLASSID,5);
   PetscCheckFalse(x == y,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_IDN,"x and y must be different vectors");
-  if (pc->erroriffailure) {ierr = VecValidValues(x,3,PETSC_TRUE);CHKERRQ(ierr);}
+  if (pc->erroriffailure) CHKERRQ(VecValidValues(x,3,PETSC_TRUE));
   if (pc->ops->applyBAtranspose) {
-    ierr = (*pc->ops->applyBAtranspose)(pc,side,x,y,work);CHKERRQ(ierr);
-    if (pc->erroriffailure) {ierr = VecValidValues(y,4,PETSC_FALSE);CHKERRQ(ierr);}
+    CHKERRQ((*pc->ops->applyBAtranspose)(pc,side,x,y,work));
+    if (pc->erroriffailure) CHKERRQ(VecValidValues(y,4,PETSC_FALSE));
     PetscFunctionReturn(0);
   }
   PetscCheckFalse(side != PC_LEFT && side != PC_RIGHT,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Side must be right or left");
 
-  ierr = PCSetUp(pc);CHKERRQ(ierr);
+  CHKERRQ(PCSetUp(pc));
   if (side == PC_RIGHT) {
-    ierr = PCApplyTranspose(pc,x,work);CHKERRQ(ierr);
-    ierr = MatMultTranspose(pc->mat,work,y);CHKERRQ(ierr);
+    CHKERRQ(PCApplyTranspose(pc,x,work));
+    CHKERRQ(MatMultTranspose(pc->mat,work,y));
   } else if (side == PC_LEFT) {
-    ierr = MatMultTranspose(pc->mat,x,work);CHKERRQ(ierr);
-    ierr = PCApplyTranspose(pc,work,y);CHKERRQ(ierr);
+    CHKERRQ(MatMultTranspose(pc->mat,x,work));
+    CHKERRQ(PCApplyTranspose(pc,work,y));
   }
   /* add support for PC_SYMMETRIC */
-  if (pc->erroriffailure) {ierr = VecValidValues(y,4,PETSC_FALSE);CHKERRQ(ierr);}
+  if (pc->erroriffailure) CHKERRQ(VecValidValues(y,4,PETSC_FALSE));
   PetscFunctionReturn(0);
 }
 
@@ -867,9 +867,9 @@ PetscErrorCode  PCApplyRichardson(PC pc,Vec b,Vec y,Vec w,PetscReal rtol,PetscRe
   PetscValidHeaderSpecific(y,VEC_CLASSID,3);
   PetscValidHeaderSpecific(w,VEC_CLASSID,4);
   PetscCheckFalse(b == y,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_IDN,"b and y must be different vectors");
-  ierr = PCSetUp(pc);CHKERRQ(ierr);
+  CHKERRQ(PCSetUp(pc));
   PetscCheckFalse(!pc->ops->applyrichardson,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"PC does not have apply richardson");
-  ierr = (*pc->ops->applyrichardson)(pc,b,y,w,rtol,abstol,dtol,its,guesszero,outits,reason);CHKERRQ(ierr);
+  CHKERRQ((*pc->ops->applyrichardson)(pc,b,y,w,rtol,abstol,dtol,its,guesszero,outits,reason));
   PetscFunctionReturn(0);
 }
 
@@ -977,24 +977,24 @@ PetscErrorCode  PCSetUp(PC pc)
   PetscCheckFalse(!pc->mat,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONGSTATE,"Matrix must be set first");
 
   if (pc->setupcalled && pc->reusepreconditioner) {
-    ierr = PetscInfo(pc,"Leaving PC with identical preconditioner since reuse preconditioner is set\n");CHKERRQ(ierr);
+    CHKERRQ(PetscInfo(pc,"Leaving PC with identical preconditioner since reuse preconditioner is set\n"));
     PetscFunctionReturn(0);
   }
 
-  ierr = PetscObjectStateGet((PetscObject)pc->pmat,&matstate);CHKERRQ(ierr);
-  ierr = MatGetNonzeroState(pc->pmat,&matnonzerostate);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectStateGet((PetscObject)pc->pmat,&matstate));
+  CHKERRQ(MatGetNonzeroState(pc->pmat,&matnonzerostate));
   if (!pc->setupcalled) {
-    ierr     = PetscInfo(pc,"Setting up PC for first time\n");CHKERRQ(ierr);
+    CHKERRQ(PetscInfo(pc,"Setting up PC for first time\n"));
     pc->flag = DIFFERENT_NONZERO_PATTERN;
   } else if (matstate == pc->matstate) {
-    ierr = PetscInfo(pc,"Leaving PC with identical preconditioner since operator is unchanged\n");CHKERRQ(ierr);
+    CHKERRQ(PetscInfo(pc,"Leaving PC with identical preconditioner since operator is unchanged\n"));
     PetscFunctionReturn(0);
   } else {
     if (matnonzerostate > pc->matnonzerostate) {
-      ierr = PetscInfo(pc,"Setting up PC with different nonzero pattern\n");CHKERRQ(ierr);
+      CHKERRQ(PetscInfo(pc,"Setting up PC with different nonzero pattern\n"));
       pc->flag = DIFFERENT_NONZERO_PATTERN;
     } else {
-      ierr = PetscInfo(pc,"Setting up PC with same nonzero pattern\n");CHKERRQ(ierr);
+      CHKERRQ(PetscInfo(pc,"Setting up PC with same nonzero pattern\n"));
       pc->flag = SAME_NONZERO_PATTERN;
     }
   }
@@ -1002,23 +1002,23 @@ PetscErrorCode  PCSetUp(PC pc)
   pc->matnonzerostate = matnonzerostate;
 
   if (!((PetscObject)pc)->type_name) {
-    ierr = PCGetDefaultType_Private(pc,&def);CHKERRQ(ierr);
-    ierr = PCSetType(pc,def);CHKERRQ(ierr);
+    CHKERRQ(PCGetDefaultType_Private(pc,&def));
+    CHKERRQ(PCSetType(pc,def));
   }
 
-  ierr = MatSetErrorIfFailure(pc->pmat,pc->erroriffailure);CHKERRQ(ierr);
-  ierr = MatSetErrorIfFailure(pc->mat,pc->erroriffailure);CHKERRQ(ierr);
-  ierr = PetscLogEventBegin(PC_SetUp,pc,0,0,0);CHKERRQ(ierr);
+  CHKERRQ(MatSetErrorIfFailure(pc->pmat,pc->erroriffailure));
+  CHKERRQ(MatSetErrorIfFailure(pc->mat,pc->erroriffailure));
+  CHKERRQ(PetscLogEventBegin(PC_SetUp,pc,0,0,0));
   if (pc->ops->setup) {
     /* do not log solves and applications of preconditioners while constructing preconditioners; perhaps they should be logged separately from the regular solves */
-    ierr = KSPInitializePackage();CHKERRQ(ierr);
-    ierr = PetscLogEventDeactivatePush(KSP_Solve);CHKERRQ(ierr);
-    ierr = PetscLogEventDeactivatePush(PC_Apply);CHKERRQ(ierr);
-    ierr = (*pc->ops->setup)(pc);CHKERRQ(ierr);
-    ierr = PetscLogEventDeactivatePop(KSP_Solve);CHKERRQ(ierr);
-    ierr = PetscLogEventDeactivatePop(PC_Apply);CHKERRQ(ierr);
+    CHKERRQ(KSPInitializePackage());
+    CHKERRQ(PetscLogEventDeactivatePush(KSP_Solve));
+    CHKERRQ(PetscLogEventDeactivatePush(PC_Apply));
+    CHKERRQ((*pc->ops->setup)(pc));
+    CHKERRQ(PetscLogEventDeactivatePop(KSP_Solve));
+    CHKERRQ(PetscLogEventDeactivatePop(PC_Apply));
   }
-  ierr = PetscLogEventEnd(PC_SetUp,pc,0,0,0);CHKERRQ(ierr);
+  CHKERRQ(PetscLogEventEnd(PC_SetUp,pc,0,0,0));
   if (!pc->setupcalled) pc->setupcalled = 1;
   PetscFunctionReturn(0);
 }
@@ -1044,9 +1044,9 @@ PetscErrorCode  PCSetUpOnBlocks(PC pc)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   if (!pc->ops->setuponblocks) PetscFunctionReturn(0);
-  ierr = PetscLogEventBegin(PC_SetUpOnBlocks,pc,0,0,0);CHKERRQ(ierr);
-  ierr = (*pc->ops->setuponblocks)(pc);CHKERRQ(ierr);
-  ierr = PetscLogEventEnd(PC_SetUpOnBlocks,pc,0,0,0);CHKERRQ(ierr);
+  CHKERRQ(PetscLogEventBegin(PC_SetUpOnBlocks,pc,0,0,0));
+  CHKERRQ((*pc->ops->setuponblocks)(pc));
+  CHKERRQ(PetscLogEventEnd(PC_SetUpOnBlocks,pc,0,0,0));
   PetscFunctionReturn(0);
 }
 
@@ -1138,9 +1138,9 @@ PetscErrorCode  PCModifySubMatrices(PC pc,PetscInt nsub,const IS row[],const IS 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   if (!pc->modifysubmatrices) PetscFunctionReturn(0);
-  ierr = PetscLogEventBegin(PC_ModifySubMatrices,pc,0,0,0);CHKERRQ(ierr);
-  ierr = (*pc->modifysubmatrices)(pc,nsub,row,col,submat,ctx);CHKERRQ(ierr);
-  ierr = PetscLogEventEnd(PC_ModifySubMatrices,pc,0,0,0);CHKERRQ(ierr);
+  CHKERRQ(PetscLogEventBegin(PC_ModifySubMatrices,pc,0,0,0));
+  CHKERRQ((*pc->modifysubmatrices)(pc,nsub,row,col,submat,ctx));
+  CHKERRQ(PetscLogEventEnd(PC_ModifySubMatrices,pc,0,0,0));
   PetscFunctionReturn(0);
 }
 
@@ -1184,11 +1184,11 @@ PetscErrorCode  PCSetOperators(PC pc,Mat Amat,Mat Pmat)
   if (Amat) PetscCheckSameComm(pc,1,Amat,2);
   if (Pmat) PetscCheckSameComm(pc,1,Pmat,3);
   if (pc->setupcalled && pc->mat && pc->pmat && Amat && Pmat) {
-    ierr = MatGetLocalSize(Amat,&m1,&n1);CHKERRQ(ierr);
-    ierr = MatGetLocalSize(pc->mat,&m2,&n2);CHKERRQ(ierr);
+    CHKERRQ(MatGetLocalSize(Amat,&m1,&n1));
+    CHKERRQ(MatGetLocalSize(pc->mat,&m2,&n2));
     PetscCheckFalse(m1 != m2 || n1 != n2,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Cannot change local size of Amat after use old sizes %D %D new sizes %D %D",m2,n2,m1,n1);
-    ierr = MatGetLocalSize(Pmat,&m1,&n1);CHKERRQ(ierr);
-    ierr = MatGetLocalSize(pc->pmat,&m2,&n2);CHKERRQ(ierr);
+    CHKERRQ(MatGetLocalSize(Pmat,&m1,&n1));
+    CHKERRQ(MatGetLocalSize(pc->pmat,&m2,&n2));
     PetscCheckFalse(m1 != m2 || n1 != n2,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Cannot change local size of Pmat after use old sizes %D %D new sizes %D %D",m2,n2,m1,n1);
   }
 
@@ -1199,10 +1199,10 @@ PetscErrorCode  PCSetOperators(PC pc,Mat Amat,Mat Pmat)
   }
 
   /* reference first in case the matrices are the same */
-  if (Amat) {ierr = PetscObjectReference((PetscObject)Amat);CHKERRQ(ierr);}
-  ierr = MatDestroy(&pc->mat);CHKERRQ(ierr);
-  if (Pmat) {ierr = PetscObjectReference((PetscObject)Pmat);CHKERRQ(ierr);}
-  ierr     = MatDestroy(&pc->pmat);CHKERRQ(ierr);
+  if (Amat) CHKERRQ(PetscObjectReference((PetscObject)Amat));
+  CHKERRQ(MatDestroy(&pc->mat));
+  if (Pmat) CHKERRQ(PetscObjectReference((PetscObject)Pmat));
+  CHKERRQ(MatDestroy(&pc->pmat));
   pc->mat  = Amat;
   pc->pmat = Pmat;
   PetscFunctionReturn(0);
@@ -1321,12 +1321,12 @@ PetscErrorCode  PCGetOperators(PC pc,Mat *Amat,Mat *Pmat)
     if (!pc->mat) {
       if (pc->pmat && !Pmat) {  /* Apmat has been set, but user did not request it, so use for Amat */
         pc->mat = pc->pmat;
-        ierr    = PetscObjectReference((PetscObject)pc->mat);CHKERRQ(ierr);
+        CHKERRQ(PetscObjectReference((PetscObject)pc->mat));
       } else {                  /* both Amat and Pmat are empty */
-        ierr = MatCreate(PetscObjectComm((PetscObject)pc),&pc->mat);CHKERRQ(ierr);
+        CHKERRQ(MatCreate(PetscObjectComm((PetscObject)pc),&pc->mat));
         if (!Pmat) { /* user did NOT request Pmat, so make same as Amat */
           pc->pmat = pc->mat;
-          ierr     = PetscObjectReference((PetscObject)pc->pmat);CHKERRQ(ierr);
+          CHKERRQ(PetscObjectReference((PetscObject)pc->pmat));
         }
       }
     }
@@ -1336,12 +1336,12 @@ PetscErrorCode  PCGetOperators(PC pc,Mat *Amat,Mat *Pmat)
     if (!pc->pmat) {
       if (pc->mat && !Amat) {    /* Amat has been set but was not requested, so use for pmat */
         pc->pmat = pc->mat;
-        ierr     = PetscObjectReference((PetscObject)pc->pmat);CHKERRQ(ierr);
+        CHKERRQ(PetscObjectReference((PetscObject)pc->pmat));
       } else {
-        ierr = MatCreate(PetscObjectComm((PetscObject)pc),&pc->pmat);CHKERRQ(ierr);
+        CHKERRQ(MatCreate(PetscObjectComm((PetscObject)pc),&pc->pmat));
         if (!Amat) { /* user did NOT request Amat, so make same as Pmat */
           pc->mat = pc->pmat;
-          ierr    = PetscObjectReference((PetscObject)pc->mat);CHKERRQ(ierr);
+          CHKERRQ(PetscObjectReference((PetscObject)pc->mat));
         }
       }
     }
@@ -1403,7 +1403,7 @@ PetscErrorCode  PCFactorGetMatrix(PC pc,Mat *mat)
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidPointer(mat,2);
   if (pc->ops->getfactoredmatrix) {
-    ierr = (*pc->ops->getfactoredmatrix)(pc,mat);CHKERRQ(ierr);
+    CHKERRQ((*pc->ops->getfactoredmatrix)(pc,mat));
   } else SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"PC type does not support getting factor matrix");
   PetscFunctionReturn(0);
 }
@@ -1433,7 +1433,7 @@ PetscErrorCode  PCSetOptionsPrefix(PC pc,const char prefix[])
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
-  ierr = PetscObjectSetOptionsPrefix((PetscObject)pc,prefix);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectSetOptionsPrefix((PetscObject)pc,prefix));
   PetscFunctionReturn(0);
 }
 
@@ -1462,7 +1462,7 @@ PetscErrorCode  PCAppendOptionsPrefix(PC pc,const char prefix[])
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
-  ierr = PetscObjectAppendOptionsPrefix((PetscObject)pc,prefix);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectAppendOptionsPrefix((PetscObject)pc,prefix));
   PetscFunctionReturn(0);
 }
 
@@ -1493,7 +1493,7 @@ PetscErrorCode  PCGetOptionsPrefix(PC pc,const char *prefix[])
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidPointer(prefix,2);
-  ierr = PetscObjectGetOptionsPrefix((PetscObject)pc,prefix);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectGetOptionsPrefix((PetscObject)pc,prefix));
   PetscFunctionReturn(0);
 }
 
@@ -1510,7 +1510,7 @@ PETSC_INTERN PetscErrorCode  PCPreSolveChangeRHS(PC pc,PetscBool *change)
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidPointer(change,2);
   *change = PETSC_FALSE;
-  ierr = PetscTryMethod(pc,"PCPreSolveChangeRHS_C",(PC,PetscBool*),(pc,change));CHKERRQ(ierr);
+  CHKERRQ(PetscTryMethod(pc,"PCPreSolveChangeRHS_C",(PC,PetscBool*),(pc,change)));
   PetscFunctionReturn(0);
 }
 
@@ -1551,13 +1551,13 @@ PetscErrorCode PCPreSolve(PC pc,KSP ksp)
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,2);
   pc->presolvedone++;
   PetscCheckFalse(pc->presolvedone > 2,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Cannot embed PCPreSolve() more than twice");
-  ierr = KSPGetSolution(ksp,&x);CHKERRQ(ierr);
-  ierr = KSPGetRhs(ksp,&rhs);CHKERRQ(ierr);
+  CHKERRQ(KSPGetSolution(ksp,&x));
+  CHKERRQ(KSPGetRhs(ksp,&rhs));
 
   if (pc->ops->presolve) {
-    ierr = (*pc->ops->presolve)(pc,ksp,rhs,x);CHKERRQ(ierr);
+    CHKERRQ((*pc->ops->presolve)(pc,ksp,rhs,x));
   } else if (pc->presolve) {
-    ierr = (pc->presolve)(pc,ksp);CHKERRQ(ierr);
+    CHKERRQ((pc->presolve)(pc,ksp));
   }
   PetscFunctionReturn(0);
 }
@@ -1625,10 +1625,10 @@ PetscErrorCode  PCPostSolve(PC pc,KSP ksp)
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,2);
   pc->presolvedone--;
-  ierr = KSPGetSolution(ksp,&x);CHKERRQ(ierr);
-  ierr = KSPGetRhs(ksp,&rhs);CHKERRQ(ierr);
+  CHKERRQ(KSPGetSolution(ksp,&x));
+  CHKERRQ(KSPGetRhs(ksp,&rhs));
   if (pc->ops->postsolve) {
-    ierr =  (*pc->ops->postsolve)(pc,ksp,rhs,x);CHKERRQ(ierr);
+    CHKERRQ((*pc->ops->postsolve)(pc,ksp,rhs,x));
   }
   PetscFunctionReturn(0);
 }
@@ -1669,15 +1669,15 @@ PetscErrorCode  PCLoad(PC newdm, PetscViewer viewer)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(newdm,PC_CLASSID,1);
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,2);
-  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERBINARY,&isbinary);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERBINARY,&isbinary));
   PetscCheckFalse(!isbinary,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Invalid viewer; open viewer with PetscViewerBinaryOpen()");
 
-  ierr = PetscViewerBinaryRead(viewer,&classid,1,NULL,PETSC_INT);CHKERRQ(ierr);
+  CHKERRQ(PetscViewerBinaryRead(viewer,&classid,1,NULL,PETSC_INT));
   PetscCheckFalse(classid != PC_FILE_CLASSID,PetscObjectComm((PetscObject)newdm),PETSC_ERR_ARG_WRONG,"Not PC next in file");
-  ierr = PetscViewerBinaryRead(viewer,type,256,NULL,PETSC_CHAR);CHKERRQ(ierr);
-  ierr = PCSetType(newdm, type);CHKERRQ(ierr);
+  CHKERRQ(PetscViewerBinaryRead(viewer,type,256,NULL,PETSC_CHAR));
+  CHKERRQ(PCSetType(newdm, type));
   if (newdm->ops->load) {
-    ierr = (*newdm->ops->load)(newdm,viewer);CHKERRQ(ierr);
+    CHKERRQ((*newdm->ops->load)(newdm,viewer));
   }
   PetscFunctionReturn(0);
 }
@@ -1706,7 +1706,7 @@ PetscErrorCode  PCViewFromOptions(PC A,PetscObject obj,const char name[])
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,PC_CLASSID,1);
-  ierr = PetscObjectViewFromOptions((PetscObject)A,obj,name);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectViewFromOptions((PetscObject)A,obj,name));
   PetscFunctionReturn(0);
 }
 
@@ -1746,70 +1746,70 @@ PetscErrorCode  PCView(PC pc,PetscViewer viewer)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   if (!viewer) {
-    ierr = PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject)pc),&viewer);CHKERRQ(ierr);
+    CHKERRQ(PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject)pc),&viewer));
   }
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,2);
   PetscCheckSameComm(pc,1,viewer,2);
 
-  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERSTRING,&isstring);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERBINARY,&isbinary);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERDRAW,&isdraw);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
+  CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERSTRING,&isstring));
+  CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERBINARY,&isbinary));
+  CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERDRAW,&isdraw));
 #if defined(PETSC_HAVE_SAWS)
-  ierr = PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERSAWS,&issaws);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERSAWS,&issaws));
 #endif
 
   if (iascii) {
-    ierr = PetscObjectPrintClassNamePrefixType((PetscObject)pc,viewer);CHKERRQ(ierr);
+    CHKERRQ(PetscObjectPrintClassNamePrefixType((PetscObject)pc,viewer));
     if (!pc->setupcalled) {
-      ierr = PetscViewerASCIIPrintf(viewer,"  PC has not been set up so information may be incomplete\n");CHKERRQ(ierr);
+      CHKERRQ(PetscViewerASCIIPrintf(viewer,"  PC has not been set up so information may be incomplete\n"));
     }
     if (pc->ops->view) {
-      ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
-      ierr = (*pc->ops->view)(pc,viewer);CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
+      CHKERRQ(PetscViewerASCIIPushTab(viewer));
+      CHKERRQ((*pc->ops->view)(pc,viewer));
+      CHKERRQ(PetscViewerASCIIPopTab(viewer));
     }
     if (pc->mat) {
-      ierr = PetscViewerPushFormat(viewer,PETSC_VIEWER_ASCII_INFO);CHKERRQ(ierr);
+      CHKERRQ(PetscViewerPushFormat(viewer,PETSC_VIEWER_ASCII_INFO));
       if (pc->pmat == pc->mat) {
-        ierr = PetscViewerASCIIPrintf(viewer,"  linear system matrix = precond matrix:\n");CHKERRQ(ierr);
-        ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
-        ierr = MatView(pc->mat,viewer);CHKERRQ(ierr);
-        ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
+        CHKERRQ(PetscViewerASCIIPrintf(viewer,"  linear system matrix = precond matrix:\n"));
+        CHKERRQ(PetscViewerASCIIPushTab(viewer));
+        CHKERRQ(MatView(pc->mat,viewer));
+        CHKERRQ(PetscViewerASCIIPopTab(viewer));
       } else {
         if (pc->pmat) {
-          ierr = PetscViewerASCIIPrintf(viewer,"  linear system matrix followed by preconditioner matrix:\n");CHKERRQ(ierr);
+          CHKERRQ(PetscViewerASCIIPrintf(viewer,"  linear system matrix followed by preconditioner matrix:\n"));
         } else {
-          ierr = PetscViewerASCIIPrintf(viewer,"  linear system matrix:\n");CHKERRQ(ierr);
+          CHKERRQ(PetscViewerASCIIPrintf(viewer,"  linear system matrix:\n"));
         }
-        ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
-        ierr = MatView(pc->mat,viewer);CHKERRQ(ierr);
-        if (pc->pmat) {ierr = MatView(pc->pmat,viewer);CHKERRQ(ierr);}
-        ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
+        CHKERRQ(PetscViewerASCIIPushTab(viewer));
+        CHKERRQ(MatView(pc->mat,viewer));
+        if (pc->pmat) CHKERRQ(MatView(pc->pmat,viewer));
+        CHKERRQ(PetscViewerASCIIPopTab(viewer));
       }
-      ierr = PetscViewerPopFormat(viewer);CHKERRQ(ierr);
+      CHKERRQ(PetscViewerPopFormat(viewer));
     }
   } else if (isstring) {
-    ierr = PCGetType(pc,&cstr);CHKERRQ(ierr);
-    ierr = PetscViewerStringSPrintf(viewer," PCType: %-7.7s",cstr);CHKERRQ(ierr);
-    if (pc->ops->view) {ierr = (*pc->ops->view)(pc,viewer);CHKERRQ(ierr);}
-    if (pc->mat) {ierr = MatView(pc->mat,viewer);CHKERRQ(ierr);}
-    if (pc->pmat && pc->pmat != pc->mat) {ierr = MatView(pc->pmat,viewer);CHKERRQ(ierr);}
+    CHKERRQ(PCGetType(pc,&cstr));
+    CHKERRQ(PetscViewerStringSPrintf(viewer," PCType: %-7.7s",cstr));
+    if (pc->ops->view) CHKERRQ((*pc->ops->view)(pc,viewer));
+    if (pc->mat) CHKERRQ(MatView(pc->mat,viewer));
+    if (pc->pmat && pc->pmat != pc->mat) CHKERRQ(MatView(pc->pmat,viewer));
   } else if (isbinary) {
     PetscInt    classid = PC_FILE_CLASSID;
     MPI_Comm    comm;
     PetscMPIInt rank;
     char        type[256];
 
-    ierr = PetscObjectGetComm((PetscObject)pc,&comm);CHKERRQ(ierr);
-    ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
+    CHKERRQ(PetscObjectGetComm((PetscObject)pc,&comm));
+    CHKERRMPI(MPI_Comm_rank(comm,&rank));
     if (rank == 0) {
-      ierr = PetscViewerBinaryWrite(viewer,&classid,1,PETSC_INT);CHKERRQ(ierr);
-      ierr = PetscStrncpy(type,((PetscObject)pc)->type_name,256);CHKERRQ(ierr);
-      ierr = PetscViewerBinaryWrite(viewer,type,256,PETSC_CHAR);CHKERRQ(ierr);
+      CHKERRQ(PetscViewerBinaryWrite(viewer,&classid,1,PETSC_INT));
+      CHKERRQ(PetscStrncpy(type,((PetscObject)pc)->type_name,256));
+      CHKERRQ(PetscViewerBinaryWrite(viewer,type,256,PETSC_CHAR));
     }
     if (pc->ops->view) {
-      ierr = (*pc->ops->view)(pc,viewer);CHKERRQ(ierr);
+      CHKERRQ((*pc->ops->view)(pc,viewer));
     }
   } else if (isdraw) {
     PetscDraw draw;
@@ -1817,32 +1817,32 @@ PetscErrorCode  PCView(PC pc,PetscViewer viewer)
     PetscReal x,y,bottom,h;
     PetscInt  n;
 
-    ierr = PetscViewerDrawGetDraw(viewer,0,&draw);CHKERRQ(ierr);
-    ierr = PetscDrawGetCurrentPoint(draw,&x,&y);CHKERRQ(ierr);
+    CHKERRQ(PetscViewerDrawGetDraw(viewer,0,&draw));
+    CHKERRQ(PetscDrawGetCurrentPoint(draw,&x,&y));
     if (pc->mat) {
-      ierr = MatGetSize(pc->mat,&n,NULL);CHKERRQ(ierr);
-      ierr = PetscSNPrintf(str,25,"PC: %s (%D)",((PetscObject)pc)->type_name,n);CHKERRQ(ierr);
+      CHKERRQ(MatGetSize(pc->mat,&n,NULL));
+      CHKERRQ(PetscSNPrintf(str,25,"PC: %s (%D)",((PetscObject)pc)->type_name,n));
     } else {
-      ierr = PetscSNPrintf(str,25,"PC: %s",((PetscObject)pc)->type_name);CHKERRQ(ierr);
+      CHKERRQ(PetscSNPrintf(str,25,"PC: %s",((PetscObject)pc)->type_name));
     }
-    ierr   = PetscDrawStringBoxed(draw,x,y,PETSC_DRAW_RED,PETSC_DRAW_BLACK,str,NULL,&h);CHKERRQ(ierr);
+    CHKERRQ(PetscDrawStringBoxed(draw,x,y,PETSC_DRAW_RED,PETSC_DRAW_BLACK,str,NULL,&h));
     bottom = y - h;
-    ierr   = PetscDrawPushCurrentPoint(draw,x,bottom);CHKERRQ(ierr);
+    CHKERRQ(PetscDrawPushCurrentPoint(draw,x,bottom));
     if (pc->ops->view) {
-      ierr = (*pc->ops->view)(pc,viewer);CHKERRQ(ierr);
+      CHKERRQ((*pc->ops->view)(pc,viewer));
     }
-    ierr = PetscDrawPopCurrentPoint(draw);CHKERRQ(ierr);
+    CHKERRQ(PetscDrawPopCurrentPoint(draw));
 #if defined(PETSC_HAVE_SAWS)
   } else if (issaws) {
     PetscMPIInt rank;
 
-    ierr = PetscObjectName((PetscObject)pc);CHKERRQ(ierr);
-    ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
+    CHKERRQ(PetscObjectName((PetscObject)pc));
+    CHKERRMPI(MPI_Comm_rank(PETSC_COMM_WORLD,&rank));
     if (!((PetscObject)pc)->amsmem && rank == 0) {
-      ierr = PetscObjectViewSAWs((PetscObject)pc,viewer);CHKERRQ(ierr);
+      CHKERRQ(PetscObjectViewSAWs((PetscObject)pc,viewer));
     }
-    if (pc->mat) {ierr = MatView(pc->mat,viewer);CHKERRQ(ierr);}
-    if (pc->pmat && pc->pmat != pc->mat) {ierr = MatView(pc->pmat,viewer);CHKERRQ(ierr);}
+    if (pc->mat) CHKERRQ(MatView(pc->mat,viewer));
+    if (pc->pmat && pc->pmat != pc->mat) CHKERRQ(MatView(pc->pmat,viewer));
 #endif
   }
   PetscFunctionReturn(0);
@@ -1879,8 +1879,8 @@ PetscErrorCode  PCRegister(const char sname[],PetscErrorCode (*function)(PC))
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PCInitializePackage();CHKERRQ(ierr);
-  ierr = PetscFunctionListAdd(&PCList,sname,function);CHKERRQ(ierr);
+  CHKERRQ(PCInitializePackage());
+  CHKERRQ(PetscFunctionListAdd(&PCList,sname,function));
   PetscFunctionReturn(0);
 }
 
@@ -1890,8 +1890,8 @@ static PetscErrorCode MatMult_PC(Mat A,Vec X,Vec Y)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = MatShellGetContext(A,&pc);CHKERRQ(ierr);
-  ierr = PCApply(pc,X,Y);CHKERRQ(ierr);
+  CHKERRQ(MatShellGetContext(A,&pc));
+  CHKERRQ(PCApply(pc,X,Y));
   PetscFunctionReturn(0);
 }
 
@@ -1926,13 +1926,13 @@ PetscErrorCode  PCComputeOperator(PC pc,MatType mattype,Mat *mat)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidPointer(mat,3);
-  ierr = PCGetOperators(pc,&A,NULL);CHKERRQ(ierr);
-  ierr = MatGetLocalSize(A,&m,&n);CHKERRQ(ierr);
-  ierr = MatGetSize(A,&M,&N);CHKERRQ(ierr);
-  ierr = MatCreateShell(PetscObjectComm((PetscObject)pc),m,n,M,N,pc,&Apc);CHKERRQ(ierr);
-  ierr = MatShellSetOperation(Apc,MATOP_MULT,(void (*)(void))MatMult_PC);CHKERRQ(ierr);
-  ierr = MatComputeOperator(Apc,mattype,mat);CHKERRQ(ierr);
-  ierr = MatDestroy(&Apc);CHKERRQ(ierr);
+  CHKERRQ(PCGetOperators(pc,&A,NULL));
+  CHKERRQ(MatGetLocalSize(A,&m,&n));
+  CHKERRQ(MatGetSize(A,&M,&N));
+  CHKERRQ(MatCreateShell(PetscObjectComm((PetscObject)pc),m,n,M,N,pc,&Apc));
+  CHKERRQ(MatShellSetOperation(Apc,MATOP_MULT,(void (*)(void))MatMult_PC));
+  CHKERRQ(MatComputeOperator(Apc,mattype,mat));
+  CHKERRQ(MatDestroy(&Apc));
   PetscFunctionReturn(0);
 }
 
@@ -1968,7 +1968,7 @@ PetscErrorCode PCSetCoordinates(PC pc, PetscInt dim, PetscInt nloc, PetscReal co
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidLogicalCollectiveInt(pc,dim,2);
-  ierr = PetscTryMethod(pc,"PCSetCoordinates_C",(PC,PetscInt,PetscInt,PetscReal*),(pc,dim,nloc,coords));CHKERRQ(ierr);
+  CHKERRQ(PetscTryMethod(pc,"PCSetCoordinates_C",(PC,PetscInt,PetscInt,PetscReal*),(pc,dim,nloc,coords)));
   PetscFunctionReturn(0);
 }
 
@@ -1998,7 +1998,7 @@ PetscErrorCode PCGetInterpolations(PC pc,PetscInt *num_levels,Mat *interpolation
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidPointer(num_levels,2);
   PetscValidPointer(interpolations,3);
-  ierr = PetscUseMethod(pc,"PCGetInterpolations_C",(PC,PetscInt*,Mat*[]),(pc,num_levels,interpolations));CHKERRQ(ierr);
+  CHKERRQ(PetscUseMethod(pc,"PCGetInterpolations_C",(PC,PetscInt*,Mat*[]),(pc,num_levels,interpolations)));
   PetscFunctionReturn(0);
 }
 
@@ -2028,6 +2028,6 @@ PetscErrorCode PCGetCoarseOperators(PC pc,PetscInt *num_levels,Mat *coarseOperat
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidPointer(num_levels,2);
   PetscValidPointer(coarseOperators,3);
-  ierr = PetscUseMethod(pc,"PCGetCoarseOperators_C",(PC,PetscInt*,Mat*[]),(pc,num_levels,coarseOperators));CHKERRQ(ierr);
+  CHKERRQ(PetscUseMethod(pc,"PCGetCoarseOperators_C",(PC,PetscInt*,Mat*[]),(pc,num_levels,coarseOperators)));
   PetscFunctionReturn(0);
 }

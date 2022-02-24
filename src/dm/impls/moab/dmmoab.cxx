@@ -69,8 +69,8 @@ PetscErrorCode DMMoabCreate(MPI_Comm comm, DM *dmb)
 
   PetscFunctionBegin;
   PetscValidPointer(dmb, 2);
-  ierr = DMCreate(comm, dmb);CHKERRQ(ierr);
-  ierr = DMSetType(*dmb, DMMOAB);CHKERRQ(ierr);
+  CHKERRQ(DMCreate(comm, dmb));
+  CHKERRQ(DMSetType(*dmb, DMMOAB));
   PetscFunctionReturn(0);
 }
 
@@ -102,7 +102,7 @@ PetscErrorCode DMMoabCreateMoab(MPI_Comm comm, moab::Interface *mbiface, moab::T
   PetscFunctionBegin;
   PetscValidPointer(dmb, 6);
 
-  ierr = DMMoabCreate(comm, &dmmb);CHKERRQ(ierr);
+  CHKERRQ(DMMoabCreate(comm, &dmmb));
   dmmoab = (DM_Moab*)(dmmb)->data;
 
   if (!mbiface) {
@@ -133,8 +133,8 @@ PetscErrorCode DMMoabCreateMoab(MPI_Comm comm, moab::Interface *mbiface, moab::T
   /* do the remaining initializations for DMMoab */
   dmmoab->bs = 1;
   dmmoab->numFields = 1;
-  ierr = PetscMalloc(dmmoab->numFields * sizeof(char*), &dmmoab->fieldNames);CHKERRQ(ierr);
-  ierr = PetscStrallocpy("DEFAULT", (char**) &dmmoab->fieldNames[0]);CHKERRQ(ierr);
+  CHKERRQ(PetscMalloc(dmmoab->numFields * sizeof(char*), &dmmoab->fieldNames));
+  CHKERRQ(PetscStrallocpy("DEFAULT", (char**) &dmmoab->fieldNames[0]));
   dmmoab->rw_dbglevel = 0;
   dmmoab->partition_by_rank = PETSC_FALSE;
   dmmoab->extra_read_options[0] = '\0';
@@ -144,7 +144,7 @@ PetscErrorCode DMMoabCreateMoab(MPI_Comm comm, moab::Interface *mbiface, moab::T
 
   /* set global ID tag handle */
   if (ltog_tag && *ltog_tag) {
-    ierr = DMMoabSetLocalToGlobalTag(dmmb, *ltog_tag);CHKERRQ(ierr);
+    CHKERRQ(DMMoabSetLocalToGlobalTag(dmmb, *ltog_tag));
   }
   else {
     merr = dmmoab->mbiface->tag_get_handle(GLOBAL_ID_TAG_NAME, dmmoab->ltog_tag); MBERRNM(merr);
@@ -155,7 +155,7 @@ PetscErrorCode DMMoabCreateMoab(MPI_Comm comm, moab::Interface *mbiface, moab::T
 
   /* set the local range of entities (vertices) of interest */
   if (range) {
-    ierr = DMMoabSetLocalVertices(dmmb, range);CHKERRQ(ierr);
+    CHKERRQ(DMMoabSetLocalVertices(dmmb, range));
   }
   *dmb = dmmb;
   PetscFunctionReturn(0);
@@ -235,7 +235,7 @@ PetscErrorCode DMMoabGetInterface(DM dm, moab::Interface **mbiface)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-  ierr = PetscCitationsRegister("@techreport{tautges_moab:_2004,\n  type = {{SAND2004-1592}},\n  title = {{MOAB:} A Mesh-Oriented Database},  institution = {Sandia National Laboratories},\n  author = {Tautges, T. J. and Meyers, R. and Merkley, K. and Stimpson, C. and Ernst, C.},\n  year = {2004},  note = {Report}\n}\n", &cite);CHKERRQ(ierr);
+  CHKERRQ(PetscCitationsRegister("@techreport{tautges_moab:_2004,\n  type = {{SAND2004-1592}},\n  title = {{MOAB:} A Mesh-Oriented Database},  institution = {Sandia National Laboratories},\n  author = {Tautges, T. J. and Meyers, R. and Merkley, K. and Stimpson, C. and Ernst, C.},\n  year = {2004},  note = {Report}\n}\n", &cite));
   *mbiface = ((DM_Moab*)dm->data)->mbiface;
   PetscFunctionReturn(0);
 }
@@ -283,7 +283,7 @@ PetscErrorCode DMMoabSetLocalVertices(DM dm, moab::Range *range)
   dmmoab->nghost = dmmoab->vghost->size();
 #ifdef MOAB_HAVE_MPI
   PetscErrorCode  ierr;
-  ierr = MPIU_Allreduce(&dmmoab->nloc, &dmmoab->n, 1, MPI_INTEGER, MPI_SUM, ((PetscObject)dm)->comm);CHKERRMPI(ierr);
+  CHKERRMPI(MPIU_Allreduce(&dmmoab->nloc, &dmmoab->n, 1, MPI_INTEGER, MPI_SUM, ((PetscObject)dm)->comm));
 #else
   dmmoab->n = dmmoab->nloc;
 #endif
@@ -388,7 +388,7 @@ PetscErrorCode DMMoabSetLocalElements(DM dm, moab::Range *range)
   dmmoab->neleghost = dmmoab->eghost->size();
 #ifdef MOAB_HAVE_MPI
   PetscErrorCode  ierr;
-  ierr = MPIU_Allreduce(&dmmoab->neleloc, &dmmoab->nele, 1, MPI_INTEGER, MPI_SUM, ((PetscObject)dm)->comm);CHKERRMPI(ierr);
+  CHKERRMPI(MPIU_Allreduce(&dmmoab->neleloc, &dmmoab->nele, 1, MPI_INTEGER, MPI_SUM, ((PetscObject)dm)->comm));
   PetscInfo(dm, "Created %D local and %D global elements.\n", dmmoab->neleloc, dmmoab->nele);
 #else
   dmmoab->nele = dmmoab->neleloc;
@@ -699,8 +699,8 @@ PetscErrorCode DMMoabGetVertexConnectivity(DM dm, moab::EntityHandle vhandle, Pe
   merr = dmmoab->mbiface->get_connectivity(&adj_entities[0], adj_entities.size(), connect); MBERRNM(merr);
 
   if (conn) {
-    ierr = PetscMalloc(sizeof(moab::EntityHandle) * connect.size(), conn);CHKERRQ(ierr);
-    ierr = PetscArraycpy(*conn, &connect[0], connect.size());CHKERRQ(ierr);
+    CHKERRQ(PetscMalloc(sizeof(moab::EntityHandle) * connect.size(), conn));
+    CHKERRQ(PetscArraycpy(*conn, &connect[0], connect.size()));
   }
   if (nconn) *nconn = connect.size();
   PetscFunctionReturn(0);
@@ -730,7 +730,7 @@ PetscErrorCode DMMoabRestoreVertexConnectivity(DM dm, moab::EntityHandle ehandle
   PetscValidPointer(conn, 4);
 
   if (conn) {
-    ierr = PetscFree(*conn);CHKERRQ(ierr);
+    CHKERRQ(PetscFree(*conn));
   }
   if (nconn) *nconn = 0;
   PetscFunctionReturn(0);
@@ -904,20 +904,20 @@ PETSC_EXTERN PetscErrorCode DMDestroy_Moab(DM dm)
     delete dmmoab->bndyfaces;
     delete dmmoab->bndyelems;
 
-    ierr = PetscFree(dmmoab->gsindices);CHKERRQ(ierr);
-    ierr = PetscFree2(dmmoab->gidmap, dmmoab->lidmap);CHKERRQ(ierr);
-    ierr = PetscFree(dmmoab->dfill);CHKERRQ(ierr);
-    ierr = PetscFree(dmmoab->ofill);CHKERRQ(ierr);
-    ierr = PetscFree(dmmoab->materials);CHKERRQ(ierr);
+    CHKERRQ(PetscFree(dmmoab->gsindices));
+    CHKERRQ(PetscFree2(dmmoab->gidmap, dmmoab->lidmap));
+    CHKERRQ(PetscFree(dmmoab->dfill));
+    CHKERRQ(PetscFree(dmmoab->ofill));
+    CHKERRQ(PetscFree(dmmoab->materials));
     if (dmmoab->fieldNames) {
       for (i = 0; i < dmmoab->numFields; i++) {
-        ierr = PetscFree(dmmoab->fieldNames[i]);CHKERRQ(ierr);
+        CHKERRQ(PetscFree(dmmoab->fieldNames[i]));
       }
-      ierr = PetscFree(dmmoab->fieldNames);CHKERRQ(ierr);
+      CHKERRQ(PetscFree(dmmoab->fieldNames));
     }
 
     if (dmmoab->nhlevels) {
-      ierr = PetscFree(dmmoab->hsets);CHKERRQ(ierr);
+      CHKERRQ(PetscFree(dmmoab->hsets));
       dmmoab->nhlevels = 0;
       if (!dmmoab->hlevel && dmmoab->icreatedinstance) delete dmmoab->hierarchy;
       dmmoab->hierarchy = NULL;
@@ -932,9 +932,9 @@ PETSC_EXTERN PetscErrorCode DMDestroy_Moab(DM dm)
 #ifdef MOAB_HAVE_MPI
     dmmoab->pcomm = NULL;
 #endif
-    ierr = VecScatterDestroy(&dmmoab->ltog_sendrecv);CHKERRQ(ierr);
-    ierr = ISLocalToGlobalMappingDestroy(&dmmoab->ltog_map);CHKERRQ(ierr);
-    ierr = PetscFree(dm->data);CHKERRQ(ierr);
+    CHKERRQ(VecScatterDestroy(&dmmoab->ltog_sendrecv));
+    CHKERRQ(ISLocalToGlobalMappingDestroy(&dmmoab->ltog_map));
+    CHKERRQ(PetscFree(dm->data));
   }
   PetscFunctionReturn(0);
 }
@@ -946,14 +946,14 @@ PETSC_EXTERN PetscErrorCode DMSetFromOptions_Moab(PetscOptionItems *PetscOptions
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-  ierr = PetscOptionsHead(PetscOptionsObject, "DMMoab Options");CHKERRQ(ierr);
-  ierr  = PetscOptionsBoundedInt("-dm_moab_rw_dbg", "The verbosity level for reading and writing MOAB meshes", "DMView", dmmoab->rw_dbglevel, &dmmoab->rw_dbglevel, NULL,0);CHKERRQ(ierr);
-  ierr  = PetscOptionsBool("-dm_moab_partiton_by_rank", "Use partition by rank when reading MOAB meshes from file", "DMView", dmmoab->partition_by_rank, &dmmoab->partition_by_rank, NULL);CHKERRQ(ierr);
+  CHKERRQ(PetscOptionsHead(PetscOptionsObject, "DMMoab Options"));
+  CHKERRQ(PetscOptionsBoundedInt("-dm_moab_rw_dbg", "The verbosity level for reading and writing MOAB meshes", "DMView", dmmoab->rw_dbglevel, &dmmoab->rw_dbglevel, NULL,0));
+  CHKERRQ(PetscOptionsBool("-dm_moab_partiton_by_rank", "Use partition by rank when reading MOAB meshes from file", "DMView", dmmoab->partition_by_rank, &dmmoab->partition_by_rank, NULL));
   /* TODO: typically, the read options are needed before a DM is completely created and available in which case, the options wont be available ?? */
-  ierr  = PetscOptionsString("-dm_moab_read_opts", "Extra options to enable MOAB reader to load DM from file", "DMView", dmmoab->extra_read_options, dmmoab->extra_read_options, sizeof(dmmoab->extra_read_options), NULL);CHKERRQ(ierr);
-  ierr  = PetscOptionsString("-dm_moab_write_opts", "Extra options to enable MOAB writer to serialize DM to file", "DMView", dmmoab->extra_write_options, dmmoab->extra_write_options, sizeof(dmmoab->extra_write_options), NULL);CHKERRQ(ierr);
-  ierr  = PetscOptionsEnum("-dm_moab_read_mode", "MOAB parallel read mode", "DMView", MoabReadModes, (PetscEnum)dmmoab->read_mode, (PetscEnum*)&dmmoab->read_mode, NULL);CHKERRQ(ierr);
-  ierr  = PetscOptionsEnum("-dm_moab_write_mode", "MOAB parallel write mode", "DMView", MoabWriteModes, (PetscEnum)dmmoab->write_mode, (PetscEnum*)&dmmoab->write_mode, NULL);CHKERRQ(ierr);
+  CHKERRQ(PetscOptionsString("-dm_moab_read_opts", "Extra options to enable MOAB reader to load DM from file", "DMView", dmmoab->extra_read_options, dmmoab->extra_read_options, sizeof(dmmoab->extra_read_options), NULL));
+  CHKERRQ(PetscOptionsString("-dm_moab_write_opts", "Extra options to enable MOAB writer to serialize DM to file", "DMView", dmmoab->extra_write_options, dmmoab->extra_write_options, sizeof(dmmoab->extra_write_options), NULL));
+  CHKERRQ(PetscOptionsEnum("-dm_moab_read_mode", "MOAB parallel read mode", "DMView", MoabReadModes, (PetscEnum)dmmoab->read_mode, (PetscEnum*)&dmmoab->read_mode, NULL));
+  CHKERRQ(PetscOptionsEnum("-dm_moab_write_mode", "MOAB parallel write mode", "DMView", MoabWriteModes, (PetscEnum)dmmoab->write_mode, (PetscEnum*)&dmmoab->write_mode, NULL));
   PetscFunctionReturn(0);
 }
 
@@ -1001,7 +1001,7 @@ PETSC_EXTERN PetscErrorCode DMSetUp_Moab(DM dm)
     dmmoab->nghost = dmmoab->vghost->size();
 
 #ifdef MOAB_HAVE_MPI
-    ierr = MPIU_Allreduce(&dmmoab->nloc, &dmmoab->n, 1, MPI_INTEGER, MPI_SUM, ((PetscObject)dm)->comm);CHKERRMPI(ierr);
+    CHKERRMPI(MPIU_Allreduce(&dmmoab->nloc, &dmmoab->n, 1, MPI_INTEGER, MPI_SUM, ((PetscObject)dm)->comm));
     PetscInfo(NULL, "Filset ID: %u, Vertices: local - %D, owned - %D, ghosted - %D.\n", dmmoab->fileset, dmmoab->vlocal->size(), dmmoab->nloc, dmmoab->nghost);
 #else
     dmmoab->n = dmmoab->nloc;
@@ -1024,7 +1024,7 @@ PETSC_EXTERN PetscErrorCode DMSetUp_Moab(DM dm)
       }
     }
 
-    ierr = DMSetDimension(dm, dmmoab->dim);CHKERRQ(ierr);
+    CHKERRQ(DMSetDimension(dm, dmmoab->dim));
 
 #ifdef MOAB_HAVE_MPI
     /* filter the ghosted and owned element list */
@@ -1037,7 +1037,7 @@ PETSC_EXTERN PetscErrorCode DMSetUp_Moab(DM dm)
     dmmoab->neleghost = dmmoab->eghost->size();
 
 #ifdef MOAB_HAVE_MPI
-    ierr = MPIU_Allreduce(&dmmoab->neleloc, &dmmoab->nele, 1, MPI_INTEGER, MPI_SUM, ((PetscObject)dm)->comm);CHKERRMPI(ierr);
+    CHKERRMPI(MPIU_Allreduce(&dmmoab->neleloc, &dmmoab->nele, 1, MPI_INTEGER, MPI_SUM, ((PetscObject)dm)->comm));
     PetscInfo(NULL, "%d-dim elements: owned - %D, ghosted - %D.\n", dmmoab->dim, dmmoab->neleloc, dmmoab->neleghost);
 #else
     dmmoab->nele = dmmoab->neleloc;
@@ -1054,7 +1054,7 @@ PETSC_EXTERN PetscErrorCode DMSetUp_Moab(DM dm)
 
   totsize = dmmoab->vlocal->size();
   PetscCheckFalse(totsize != dmmoab->nloc + dmmoab->nghost,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Mismatch between local and owned+ghost vertices. %D != %D.", totsize, dmmoab->nloc + dmmoab->nghost);
-  ierr = PetscCalloc1(totsize, &dmmoab->gsindices);CHKERRQ(ierr);
+  CHKERRQ(PetscCalloc1(totsize, &dmmoab->gsindices));
   {
     /* first get the local indices */
     merr = dmmoab->mbiface->tag_get_data(dmmoab->ltog_tag, *dmmoab->vowned, &dmmoab->gsindices[0]); MBERRNM(merr);
@@ -1069,8 +1069,8 @@ PETSC_EXTERN PetscErrorCode DMSetUp_Moab(DM dm)
       if (dmmoab->lminmax[1] < dmmoab->gsindices[i]) dmmoab->lminmax[1] = dmmoab->gsindices[i];
     }
 
-    ierr = MPIU_Allreduce(&dmmoab->lminmax[0], &dmmoab->gminmax[0], 1, MPI_INT, MPI_MIN, ((PetscObject)dm)->comm);CHKERRMPI(ierr);
-    ierr = MPIU_Allreduce(&dmmoab->lminmax[1], &dmmoab->gminmax[1], 1, MPI_INT, MPI_MAX, ((PetscObject)dm)->comm);CHKERRMPI(ierr);
+    CHKERRMPI(MPIU_Allreduce(&dmmoab->lminmax[0], &dmmoab->gminmax[0], 1, MPI_INT, MPI_MIN, ((PetscObject)dm)->comm));
+    CHKERRMPI(MPIU_Allreduce(&dmmoab->lminmax[1], &dmmoab->gminmax[1], 1, MPI_INT, MPI_MAX, ((PetscObject)dm)->comm));
 
     /* set the GID map */
     for (i = 0; i < totsize; ++i) {
@@ -1089,8 +1089,8 @@ PETSC_EXTERN PetscErrorCode DMSetUp_Moab(DM dm)
     dmmoab->seqend = dmmoab->mbiface->id_from_handle(dmmoab->vlocal->back());
     PetscInfo(NULL, "SEQUENCE: Local [min, max] - [%D, %D]\n", dmmoab->seqstart, dmmoab->seqend);
 
-    ierr = PetscMalloc2(dmmoab->seqend - dmmoab->seqstart + 1, &dmmoab->gidmap, dmmoab->seqend - dmmoab->seqstart + 1, &dmmoab->lidmap);CHKERRQ(ierr);
-    ierr = PetscMalloc1(totsize * dmmoab->numFields, &lgmap);CHKERRQ(ierr);
+    CHKERRQ(PetscMalloc2(dmmoab->seqend - dmmoab->seqstart + 1, &dmmoab->gidmap, dmmoab->seqend - dmmoab->seqstart + 1, &dmmoab->lidmap));
+    CHKERRQ(PetscMalloc1(totsize * dmmoab->numFields, &lgmap));
 
     i = j = 0;
     /* set the owned vertex data first */
@@ -1118,17 +1118,17 @@ PETSC_EXTERN PetscErrorCode DMSetUp_Moab(DM dm)
        3) Create VecScatter and LtoGMapping objects
        4) Cleanup the IS and Vec objects
     */
-    ierr = DMCreateGlobalVector(dm, &global);CHKERRQ(ierr);
-    ierr = DMCreateLocalVector(dm, &local);CHKERRQ(ierr);
+    CHKERRQ(DMCreateGlobalVector(dm, &global));
+    CHKERRQ(DMCreateLocalVector(dm, &local));
 
-    ierr = VecGetOwnershipRange(global, &dmmoab->vstart, &dmmoab->vend);CHKERRQ(ierr);
+    CHKERRQ(VecGetOwnershipRange(global, &dmmoab->vstart, &dmmoab->vend));
 
     /* global to local must retrieve ghost points */
-    ierr = ISCreateStride(((PetscObject)dm)->comm, dmmoab->nloc * dmmoab->numFields, dmmoab->vstart, 1, &from);CHKERRQ(ierr);
-    ierr = ISSetBlockSize(from, bs);CHKERRQ(ierr);
+    CHKERRQ(ISCreateStride(((PetscObject)dm)->comm, dmmoab->nloc * dmmoab->numFields, dmmoab->vstart, 1, &from));
+    CHKERRQ(ISSetBlockSize(from, bs));
 
-    ierr = ISCreateGeneral(((PetscObject)dm)->comm, dmmoab->nloc * dmmoab->numFields, &lgmap[0], PETSC_COPY_VALUES, &to);CHKERRQ(ierr);
-    ierr = ISSetBlockSize(to, bs);CHKERRQ(ierr);
+    CHKERRQ(ISCreateGeneral(((PetscObject)dm)->comm, dmmoab->nloc * dmmoab->numFields, &lgmap[0], PETSC_COPY_VALUES, &to));
+    CHKERRQ(ISSetBlockSize(to, bs));
 
     if (!dmmoab->ltog_map) {
       /* create to the local to global mapping for vectors in order to use VecSetValuesLocal */
@@ -1137,14 +1137,14 @@ PETSC_EXTERN PetscErrorCode DMSetUp_Moab(DM dm)
     }
 
     /* now create the scatter object from local to global vector */
-    ierr = VecScatterCreate(local, from, global, to, &dmmoab->ltog_sendrecv);CHKERRQ(ierr);
+    CHKERRQ(VecScatterCreate(local, from, global, to, &dmmoab->ltog_sendrecv));
 
     /* clean up IS, Vec */
-    ierr = PetscFree(lgmap);CHKERRQ(ierr);
-    ierr = ISDestroy(&from);CHKERRQ(ierr);
-    ierr = ISDestroy(&to);CHKERRQ(ierr);
-    ierr = VecDestroy(&local);CHKERRQ(ierr);
-    ierr = VecDestroy(&global);CHKERRQ(ierr);
+    CHKERRQ(PetscFree(lgmap));
+    CHKERRQ(ISDestroy(&from));
+    CHKERRQ(ISDestroy(&to));
+    CHKERRQ(VecDestroy(&local));
+    CHKERRQ(VecDestroy(&global));
   }
 
   dmmoab->bndyvtx = new moab::Range();
@@ -1203,7 +1203,7 @@ PETSC_EXTERN PetscErrorCode DMSetUp_Moab(DM dm)
 
   /* Get the material sets and populate the data for all locally owned elements */
   {
-    ierr = PetscCalloc1(dmmoab->elocal->size(), &dmmoab->materials);CHKERRQ(ierr);
+    CHKERRQ(PetscCalloc1(dmmoab->elocal->size(), &dmmoab->materials));
     /* Get the count of entities of particular type from dmmoab->elocal
        -- Then, for each non-zero type, loop through and query the fileset to get the material tag data */
     moab::Range msets;
@@ -1338,7 +1338,7 @@ PetscErrorCode DMMoabCreateSubmesh(DM dm, DM *newdm)
   dmmoab = (DM_Moab*) dm->data;
 
   /* Create the basic DMMoab object and keep the default parameters created by DM impls */
-  ierr = DMMoabCreateMoab(((PetscObject)dm)->comm, dmmoab->mbiface, &dmmoab->ltog_tag, PETSC_NULL, newdm);CHKERRQ(ierr);
+  CHKERRQ(DMMoabCreateMoab(((PetscObject)dm)->comm, dmmoab->mbiface, &dmmoab->ltog_tag, PETSC_NULL, newdm));
 
   /* get all the necessary handles from the private DM object */
   ndmmoab = (DM_Moab*) (*newdm)->data;
@@ -1354,7 +1354,7 @@ PetscErrorCode DMMoabCreateSubmesh(DM dm, DM *newdm)
   merr = ndmmoab->mbiface->add_entities(ndmmoab->fileset, *dmmoab->elocal); MBERR("Adding child elements to parent failed", merr);
 
   /* preserve the field association between the parent and sub-mesh objects */
-  ierr = DMMoabSetFieldNames(*newdm, dmmoab->numFields, dmmoab->fieldNames);CHKERRQ(ierr);
+  CHKERRQ(DMMoabSetFieldNames(*newdm, dmmoab->numFields, dmmoab->fieldNames));
   PetscFunctionReturn(0);
 }
 
@@ -1367,36 +1367,36 @@ PETSC_EXTERN PetscErrorCode DMMoabView_Ascii(DM dm, PetscViewer viewer)
   PetscErrorCode    ierr;
 
   PetscFunctionBegin;
-  ierr = PetscObjectGetComm((PetscObject)dm, &comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
-  ierr = PetscObjectGetName((PetscObject) dm, &name);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
-  if (name) {ierr = PetscViewerASCIIPrintf(viewer, "%s in %D dimensions:\n", name, dmmoab->dim);CHKERRQ(ierr);}
-  else      {ierr = PetscViewerASCIIPrintf(viewer, "Mesh in %D dimensions:\n", dmmoab->dim);CHKERRQ(ierr);}
+  CHKERRQ(PetscObjectGetComm((PetscObject)dm, &comm));
+  CHKERRMPI(MPI_Comm_size(comm, &size));
+  CHKERRQ(PetscObjectGetName((PetscObject) dm, &name));
+  CHKERRQ(PetscViewerASCIIPushTab(viewer));
+  if (name) CHKERRQ(PetscViewerASCIIPrintf(viewer, "%s in %D dimensions:\n", name, dmmoab->dim));
+  else      CHKERRQ(PetscViewerASCIIPrintf(viewer, "Mesh in %D dimensions:\n", dmmoab->dim));
   /* print details about the global mesh */
   {
-    ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
-    ierr = PetscViewerASCIIPrintf(viewer, "Sizes: cells=%D, vertices=%D, blocks=%D\n", dmmoab->nele, dmmoab->n, dmmoab->bs);CHKERRQ(ierr);
+    CHKERRQ(PetscViewerASCIIPushTab(viewer));
+    CHKERRQ(PetscViewerASCIIPrintf(viewer, "Sizes: cells=%D, vertices=%D, blocks=%D\n", dmmoab->nele, dmmoab->n, dmmoab->bs));
     /* print boundary data */
-    ierr = PetscViewerASCIIPrintf(viewer, "Boundary trace:\n", dmmoab->bndyelems->size(), dmmoab->bndyfaces->size(), dmmoab->bndyvtx->size());CHKERRQ(ierr);
+    CHKERRQ(PetscViewerASCIIPrintf(viewer, "Boundary trace:\n", dmmoab->bndyelems->size(), dmmoab->bndyfaces->size(), dmmoab->bndyvtx->size()));
     {
-      ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPrintf(viewer, "cells=%D, faces=%D, vertices=%D\n", dmmoab->bndyelems->size(), dmmoab->bndyfaces->size(), dmmoab->bndyvtx->size());CHKERRQ(ierr);
-      ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
+      CHKERRQ(PetscViewerASCIIPushTab(viewer));
+      CHKERRQ(PetscViewerASCIIPrintf(viewer, "cells=%D, faces=%D, vertices=%D\n", dmmoab->bndyelems->size(), dmmoab->bndyfaces->size(), dmmoab->bndyvtx->size()));
+      CHKERRQ(PetscViewerASCIIPopTab(viewer));
     }
     /* print field data */
-    ierr = PetscViewerASCIIPrintf(viewer, "Fields: %D components\n", dmmoab->numFields);CHKERRQ(ierr);
+    CHKERRQ(PetscViewerASCIIPrintf(viewer, "Fields: %D components\n", dmmoab->numFields));
     {
-      ierr = PetscViewerASCIIPushTab(viewer);CHKERRQ(ierr);
+      CHKERRQ(PetscViewerASCIIPushTab(viewer));
       for (int i = 0; i < dmmoab->numFields; ++i) {
-        ierr = PetscViewerASCIIPrintf(viewer, "[%D] - %s\n", i, dmmoab->fieldNames[i]);CHKERRQ(ierr);
+        CHKERRQ(PetscViewerASCIIPrintf(viewer, "[%D] - %s\n", i, dmmoab->fieldNames[i]));
       }
-      ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
+      CHKERRQ(PetscViewerASCIIPopTab(viewer));
     }
-    ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
+    CHKERRQ(PetscViewerASCIIPopTab(viewer));
   }
-  ierr = PetscViewerASCIIPopTab(viewer);CHKERRQ(ierr);
-  ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
+  CHKERRQ(PetscViewerASCIIPopTab(viewer));
+  CHKERRQ(PetscViewerFlush(viewer));
   PetscFunctionReturn(0);
 }
 
@@ -1418,22 +1418,22 @@ PETSC_EXTERN PetscErrorCode DMView_Moab(DM dm, PetscViewer viewer)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
-  ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERVTK,   &isvtk);CHKERRQ(ierr);
-  ierr = PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERHDF5,  &ishdf5);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii));
+  CHKERRQ(PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERVTK,   &isvtk));
+  CHKERRQ(PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERHDF5,  &ishdf5));
   if (iascii) {
-    ierr = DMMoabView_Ascii(dm, viewer);CHKERRQ(ierr);
+    CHKERRQ(DMMoabView_Ascii(dm, viewer));
   } else if (ishdf5) {
 #if defined(PETSC_HAVE_HDF5) && defined(MOAB_HAVE_HDF5)
-    ierr = PetscViewerPushFormat(viewer, PETSC_VIEWER_HDF5_VIZ);CHKERRQ(ierr);
-    ierr = DMMoabView_HDF5(dm, viewer);CHKERRQ(ierr);
-    ierr = PetscViewerPopFormat(viewer);CHKERRQ(ierr);
+    CHKERRQ(PetscViewerPushFormat(viewer, PETSC_VIEWER_HDF5_VIZ));
+    CHKERRQ(DMMoabView_HDF5(dm, viewer));
+    CHKERRQ(PetscViewerPopFormat(viewer));
 #else
     SETERRQ(PetscObjectComm((PetscObject) dm), PETSC_ERR_SUP, "HDF5 not supported in this build.\nPlease reconfigure using --download-hdf5");
 #endif
   }
   else if (isvtk) {
-    ierr = DMMoabView_VTK(dm, viewer);CHKERRQ(ierr);
+    CHKERRQ(DMMoabView_VTK(dm, viewer));
   }
   PetscFunctionReturn(0);
 }
@@ -1481,8 +1481,8 @@ PETSC_EXTERN PetscErrorCode DMClone_Moab(DM dm, DM *newdm)
   (*newdm)->data = (DM_Moab*) dm->data;
   ((DM_Moab*)dm->data)->refct++;
 
-  ierr = PetscObjectChangeTypeName((PetscObject) *newdm, DMMOAB);CHKERRQ(ierr);
-  ierr = DMInitialize_Moab(*newdm);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectChangeTypeName((PetscObject) *newdm, DMMOAB));
+  CHKERRQ(DMInitialize_Moab(*newdm));
   PetscFunctionReturn(0);
 }
 
@@ -1492,7 +1492,7 @@ PETSC_EXTERN PetscErrorCode DMCreate_Moab(DM dm)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-  ierr = PetscNewLog(dm, (DM_Moab**)&dm->data);CHKERRQ(ierr);
+  CHKERRQ(PetscNewLog(dm, (DM_Moab**)&dm->data));
 
   ((DM_Moab*)dm->data)->bs = 1;
   ((DM_Moab*)dm->data)->numFields = 1;
@@ -1513,7 +1513,6 @@ PETSC_EXTERN PetscErrorCode DMCreate_Moab(DM dm)
   ((DM_Moab*)dm->data)->elocal = new moab::Range();
   ((DM_Moab*)dm->data)->eghost = new moab::Range();
 
-  ierr = DMInitialize_Moab(dm);CHKERRQ(ierr);
+  CHKERRQ(DMInitialize_Moab(dm));
   PetscFunctionReturn(0);
 }
-

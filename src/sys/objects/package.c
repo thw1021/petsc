@@ -31,11 +31,11 @@ PetscErrorCode  PetscHasExternalPackage(const char pkg[], PetscBool *has)
   PetscErrorCode        ierr;
 
   PetscFunctionBegin;
-  ierr = PetscSNPrintfCount(pkgstr,sizeof(pkgstr),":%s:",&cnt,pkg);CHKERRQ(ierr);
+  CHKERRQ(PetscSNPrintfCount(pkgstr,sizeof(pkgstr),":%s:",&cnt,pkg));
   PetscCheckFalse(cnt >= sizeof(pkgstr),PETSC_COMM_SELF, PETSC_ERR_SUP, "Package name is too long: \"%s\"", pkg);
-  ierr = PetscStrtolower(pkgstr);CHKERRQ(ierr);
+  CHKERRQ(PetscStrtolower(pkgstr));
 #if defined(PETSC_HAVE_PACKAGES)
-  ierr = PetscStrstr(PETSC_HAVE_PACKAGES, pkgstr, &loc);CHKERRQ(ierr);
+  CHKERRQ(PetscStrstr(PETSC_HAVE_PACKAGES, pkgstr, &loc));
 #else
 #error "PETSC_HAVE_PACKAGES macro undefined. Please reconfigure"
 #endif

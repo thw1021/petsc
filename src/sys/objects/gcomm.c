@@ -58,7 +58,7 @@ PetscErrorCode  PetscObjectGetComm(PetscObject obj,MPI_Comm *comm)
   PetscValidHeader(obj,1);
   PetscValidPointer(comm,2);
   if (obj->bops->getcomm) {
-    ierr = obj->bops->getcomm(obj,comm);CHKERRQ(ierr);
+    CHKERRQ(obj->bops->getcomm(obj,comm));
   } else *comm = obj->comm;
   PetscFunctionReturn(0);
 }

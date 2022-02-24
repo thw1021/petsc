@@ -203,7 +203,7 @@ PetscErrorCode  PetscPushSignalHandler(PetscErrorCode (*routine)(int,void*),void
 
   PetscFunctionBegin;
   if (!SIGNAL_CLASSID) {
-    /* ierr = PetscClassIdRegister("Signal",&SIGNAL_CLASSID);CHKERRQ(ierr); */
+    /* CHKERRQ(PetscClassIdRegister("Signal",&SIGNAL_CLASSID)); */
     SIGNAL_CLASSID = 19;
   }
   if (!SignalSet && routine) {
@@ -225,7 +225,7 @@ PetscErrorCode  PetscPushSignalHandler(PetscErrorCode (*routine)(int,void*),void
       struct  sigaction action;
       sigaction(SIGHUP,NULL,&action);
       if (action.sa_handler == SIG_IGN) {
-        ierr = PetscInfo(NULL,"SIGHUP previously set to ignore, therefor not changing its signal handler\n");CHKERRQ(ierr);
+        CHKERRQ(PetscInfo(NULL,"SIGHUP previously set to ignore, therefor not changing its signal handler\n"));
       } else {
         signal(SIGHUP, PETSC_SIGNAL_CAST PetscSignalHandler_Private);
       }
@@ -326,7 +326,7 @@ PetscErrorCode  PetscPushSignalHandler(PetscErrorCode (*routine)(int,void*),void
 #endif
     SignalSet = PETSC_FALSE;
   }
-  ierr = PetscNew(&newsh);CHKERRQ(ierr);
+  CHKERRQ(PetscNew(&newsh));
   if (sh) {
     PetscCheckFalse(sh->classid != SIGNAL_CLASSID,PETSC_COMM_SELF,PETSC_ERR_COR,"Signal object has been corrupted");
     newsh->previous = sh;
@@ -361,7 +361,7 @@ PetscErrorCode  PetscPopSignalHandler(void)
 
   tmp = sh;
   sh  = sh->previous;
-  ierr = PetscFree(tmp);CHKERRQ(ierr);
+  CHKERRQ(PetscFree(tmp));
   if (!sh || !sh->handler) {
 #if !defined(PETSC_MISSING_SIGALRM)
     /* signal(SIGALRM, SIG_DFL); */

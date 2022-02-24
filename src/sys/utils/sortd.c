@@ -120,8 +120,8 @@ static PetscErrorCode PetscSortRealWithArrayInt_Private(PetscReal *v,PetscInt *V
     if (v[i] < rvl) {last++; SWAP2ri(v[last],v[i],V[last],V[i],rtmp,itmp);}
   }
   SWAP2ri(v[0],v[last],V[0],V[last],rtmp,itmp);
-  ierr = PetscSortRealWithArrayInt_Private(v,V,last-1);CHKERRQ(ierr);
-  ierr = PetscSortRealWithArrayInt_Private(v+last+1,V+last+1,right-(last+1));CHKERRQ(ierr);
+  CHKERRQ(PetscSortRealWithArrayInt_Private(v,V,last-1));
+  CHKERRQ(PetscSortRealWithArrayInt_Private(v+last+1,V+last+1,right-(last+1)));
   PetscFunctionReturn(0);
 }
 /*@
@@ -159,7 +159,7 @@ PetscErrorCode  PetscSortRealWithArrayInt(PetscInt n,PetscReal r[],PetscInt Ii[]
       }
     }
   } else {
-    ierr = PetscSortRealWithArrayInt_Private(r,Ii,n-1);CHKERRQ(ierr);
+    CHKERRQ(PetscSortRealWithArrayInt_Private(r,Ii,n-1));
   }
   PetscFunctionReturn(0);
 }
@@ -222,7 +222,7 @@ PetscErrorCode  PetscSortRemoveDupsReal(PetscInt *n,PetscReal v[])
   PetscInt       i,s = 0,N = *n, b = 0;
 
   PetscFunctionBegin;
-  ierr = PetscSortReal(N,v);CHKERRQ(ierr);
+  CHKERRQ(PetscSortReal(N,v));
   for (i=0; i<N-1; i++) {
     if (v[b+s+1] != v[b]) {
       v[b+1] = v[b+s+1]; b++;
