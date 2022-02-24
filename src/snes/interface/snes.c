@@ -2616,7 +2616,7 @@ PetscErrorCode SNESTestJacobian(SNES snes)
     CHKERRQ(PetscViewerASCIIPrintf(viewer,"    of hand-coded and finite difference Jacobian entries greater than <threshold>.\n"));
   }
   if (!directionsprinted) {
-    ierr = PetscViewerASCIIPrintf(viewer,"  Testing hand-coded Jacobian, if (for double precision runs) ||J - Jfd||_F/||J||_F is\n");CHKERRQ(ierr);
+    CHKERRQ(PetscViewerASCIIPrintf(viewer,"  Testing hand-coded Jacobian, if (for double precision runs) ||J - Jfd||_F/||J||_F is\n"));
     CHKERRQ(PetscViewerASCIIPrintf(viewer,"    O(1.e-8), the hand-coded Jacobian is probably correct.\n"));
     directionsprinted = PETSC_TRUE;
   }

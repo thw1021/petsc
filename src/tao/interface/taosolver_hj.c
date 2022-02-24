@@ -125,7 +125,7 @@ PetscErrorCode TaoTestHessian(Tao tao)
     CHKERRQ(PetscViewerASCIIPrintf(viewer,"    of hand-coded and finite difference Hessian entries greater than <threshold>.\n"));
   }
   if (!directionsprinted) {
-    ierr = PetscViewerASCIIPrintf(viewer,"  Testing hand-coded Hessian, if (for double precision runs) ||J - Jfd||_F/||J||_F is\n");CHKERRQ(ierr);
+    CHKERRQ(PetscViewerASCIIPrintf(viewer,"  Testing hand-coded Hessian, if (for double precision runs) ||J - Jfd||_F/||J||_F is\n"));
     CHKERRQ(PetscViewerASCIIPrintf(viewer,"    O(1.e-8), the hand-coded Hessian is probably correct.\n"));
     directionsprinted = PETSC_TRUE;
   }

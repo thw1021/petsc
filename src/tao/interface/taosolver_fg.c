@@ -59,7 +59,7 @@ PetscErrorCode TaoTestGradient(Tao tao,Vec x,Vec g1)
     CHKERRQ(PetscViewerASCIIPrintf(viewer,"    of hand-coded and finite difference gradient entries greater than <threshold>.\n"));
   }
   if (!directionsprinted) {
-    ierr = PetscViewerASCIIPrintf(viewer,"  Testing hand-coded Gradient, if (for double precision runs) ||G - Gfd||/||G|| is\n");CHKERRQ(ierr);
+    CHKERRQ(PetscViewerASCIIPrintf(viewer,"  Testing hand-coded Gradient, if (for double precision runs) ||G - Gfd||/||G|| is\n"));
     CHKERRQ(PetscViewerASCIIPrintf(viewer,"    O(1.e-8), the hand-coded Gradient is probably correct.\n"));
     directionsprinted = PETSC_TRUE;
   }

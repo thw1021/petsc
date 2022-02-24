@@ -597,7 +597,7 @@ static PetscErrorCode PetscViewerFileSetName_GLVis(PetscViewer viewer, const cha
 
     *sport++ = 0;
     CHKERRQ(PetscStrlen(sport,&len));
-    ierr = PetscOptionsStringToInt(sport,&port);CHKERRCONTINUE(ierr);
+    ierr = PetscOptionsStringToInt(sport,&port);
     if (PetscUnlikely(ierr)) {
       socket->port = 19916;
     } else {

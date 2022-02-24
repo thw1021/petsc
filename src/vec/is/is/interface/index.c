@@ -1148,12 +1148,10 @@ PetscErrorCode ISGetLayout(IS is,PetscLayout *map)
 @*/
 PetscErrorCode ISSetLayout(IS is,PetscLayout map)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(is,IS_CLASSID,1);
   PetscValidPointer(map,2);
-  ierr = PetscLayoutReference(map,&is->map);CHKERRQ(ierr);
+  CHKERRQ(PetscLayoutReference(map,&is->map));
   PetscFunctionReturn(0);
 }
 
