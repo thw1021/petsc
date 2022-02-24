@@ -9,7 +9,6 @@
 
 static PetscErrorCode KSPSetUp_CGS(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPSetWorkVecs(ksp,7));
@@ -18,7 +17,6 @@ static PetscErrorCode KSPSetUp_CGS(KSP ksp)
 
 static PetscErrorCode  KSPSolve_CGS(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
   PetscScalar    rho,rhoold,a,s,b;
   Vec            X,B,V,P,R,RP,T,Q,U,AUQ;
@@ -154,7 +152,6 @@ static PetscErrorCode  KSPSolve_CGS(KSP ksp)
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_CGS(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   ksp->data = (void*)0;

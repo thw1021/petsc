@@ -99,7 +99,6 @@ PetscErrorCode StokesSetupPC(Stokes *s, KSP ksp)
   KSP            *subksp;
   PC             pc;
   PetscInt       n = 1;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(KSPGetPC(ksp, &pc));
@@ -122,7 +121,6 @@ PetscErrorCode StokesWriteSolution(Stokes *s)
   PetscMPIInt       size;
   PetscInt          n,i,j;
   const PetscScalar *array;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   /* write data (*warning* only works sequential) */
@@ -146,7 +144,6 @@ PetscErrorCode StokesWriteSolution(Stokes *s)
 
 PetscErrorCode StokesSetupIndexSets(Stokes *s)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   /* the two index sets */
@@ -156,7 +153,6 @@ PetscErrorCode StokesSetupIndexSets(Stokes *s)
 
 PetscErrorCode StokesSetupVectors(Stokes *s)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   /* solution vector x */
@@ -191,7 +187,6 @@ PetscErrorCode StokesExactSolution(Stokes *s)
   PetscInt       row, start, end, i, j;
   PetscScalar    val;
   Vec            y0,y1;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   /* velocity part */
@@ -225,7 +220,6 @@ PetscErrorCode StokesRhs(Stokes *s)
   PetscInt       row, start, end, i, j;
   PetscScalar    val;
   Vec            b0,b1;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   /* velocity part */
@@ -262,7 +256,6 @@ PetscErrorCode StokesSetupMatBlock00(Stokes *s)
   PetscInt       row, start, end, sz, i, j;
   PetscInt       cols[5];
   PetscScalar    vals[5];
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   /* A[0] is 2N-by-2N */
@@ -294,7 +287,6 @@ PetscErrorCode StokesSetupMatBlock01(Stokes *s)
   PetscInt       row, start, end, sz, i, j;
   PetscInt       cols[5];
   PetscScalar    vals[5];
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   /* A[1] is 2N-by-N */
@@ -324,7 +316,6 @@ PetscErrorCode StokesSetupMatBlock01(Stokes *s)
 
 PetscErrorCode StokesSetupMatBlock10(Stokes *s)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   /* A[2] is minus transpose of A[1] */
@@ -338,7 +329,6 @@ PetscErrorCode StokesSetupMatBlock10(Stokes *s)
 
 PetscErrorCode StokesSetupMatBlock11(Stokes *s)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   /* A[3] is N-by-N null matrix */
@@ -355,7 +345,6 @@ PetscErrorCode StokesSetupMatBlock11(Stokes *s)
 PetscErrorCode StokesSetupApproxSchur(Stokes *s)
 {
   Vec            diag;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   /* Schur complement approximation: myS = A11 - A10 inv(DIAGFORM(A00)) A01 */
@@ -384,7 +373,6 @@ PetscErrorCode StokesSetupApproxSchur(Stokes *s)
 
 PetscErrorCode StokesSetupMatrix(Stokes *s)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(StokesSetupMatBlock00(s));
@@ -599,7 +587,6 @@ PetscErrorCode StokesCalcResidual(Stokes *s)
 {
   PetscReal      val;
   Vec            b0, b1;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   /* residual Ax-b (*warning* overwrites b) */
@@ -629,7 +616,6 @@ PetscErrorCode StokesCalcError(Stokes *s)
   PetscScalar    scale = PetscSqrtReal((double)s->nx*s->ny);
   PetscReal      val;
   Vec            y0, y1;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   /* error y-x */

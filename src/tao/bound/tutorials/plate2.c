@@ -209,7 +209,6 @@ int main(int argc, char **argv)
 PetscErrorCode FormFunctionGradient(Tao tao, Vec X, PetscReal *fcn, Vec G,void *userCtx)
 {
   AppCtx         *user = (AppCtx *) userCtx;
-  PetscErrorCode ierr;
   PetscInt       i,j,row;
   PetscInt       mx=user->mx, my=user->my;
   PetscInt       xs,xm,gxs,gxm,ys,ym,gys,gym;
@@ -432,7 +431,6 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec X, PetscReal *fcn, Vec G,void *
 */
 PetscErrorCode FormHessian(Tao tao,Vec X,Mat Hptr, Mat Hessian, void *ptr)
 {
-  PetscErrorCode ierr;
   AppCtx         *user = (AppCtx *) ptr;
   PetscInt       i,j,k,row;
   PetscInt       mx=user->mx, my=user->my;
@@ -614,7 +612,6 @@ PetscErrorCode FormHessian(Tao tao,Vec X,Mat Hptr, Mat Hessian, void *ptr)
 */
 static PetscErrorCode MSA_BoundaryConditions(AppCtx * user)
 {
-  int        ierr;
   PetscInt   i,j,k,maxits=5,limit=0;
   PetscInt   xs,ys,xm,ym,gxs,gys,gxm,gym;
   PetscInt   mx=user->mx,my=user->my;
@@ -741,7 +738,6 @@ static PetscErrorCode MSA_BoundaryConditions(AppCtx * user)
 static PetscErrorCode MSA_Plate(Vec XL,Vec XU,void *ctx)
 {
   AppCtx         *user=(AppCtx *)ctx;
-  PetscErrorCode ierr;
   PetscInt       i,j,row;
   PetscInt       xs,ys,xm,ym;
   PetscInt       mx=user->mx, my=user->my, bmy, bmx;
@@ -804,7 +800,6 @@ static PetscErrorCode MSA_Plate(Vec XL,Vec XU,void *ctx)
 */
 static PetscErrorCode MSA_InitialPoint(AppCtx * user, Vec X)
 {
-  PetscErrorCode ierr;
   PetscInt       start=-1,i,j;
   PetscReal      zero=0.0;
   PetscBool      flg;
@@ -867,7 +862,6 @@ static PetscErrorCode MSA_InitialPoint(AppCtx * user, Vec X)
 /* For testing matrix free submatrices */
 PetscErrorCode MatrixFreeHessian(Tao tao, Vec x, Mat H, Mat Hpre, void *ptr)
 {
-  PetscErrorCode ierr;
   AppCtx         *user = (AppCtx*)ptr;
   PetscFunctionBegin;
   CHKERRQ(FormHessian(tao,x,user->H,user->H,ptr));
@@ -875,7 +869,6 @@ PetscErrorCode MatrixFreeHessian(Tao tao, Vec x, Mat H, Mat Hpre, void *ptr)
 }
 PetscErrorCode MyMatMult(Mat H_shell, Vec X, Vec Y)
 {
-  PetscErrorCode ierr;
   void           *ptr;
   AppCtx         *user;
   PetscFunctionBegin;

@@ -25,7 +25,6 @@
 @*/
 PetscErrorCode  SNESMonitorSolution(SNES snes,PetscInt its,PetscReal fgnorm,PetscViewerAndFormat *vf)
 {
-  PetscErrorCode ierr;
   Vec            x;
   PetscViewer    viewer = vf->viewer;
 
@@ -59,7 +58,6 @@ PetscErrorCode  SNESMonitorSolution(SNES snes,PetscInt its,PetscReal fgnorm,Pets
 @*/
 PetscErrorCode  SNESMonitorResidual(SNES snes,PetscInt its,PetscReal fgnorm,PetscViewerAndFormat *vf)
 {
-  PetscErrorCode ierr;
   Vec            x;
   PetscViewer    viewer = vf->viewer;
 
@@ -93,7 +91,6 @@ PetscErrorCode  SNESMonitorResidual(SNES snes,PetscInt its,PetscReal fgnorm,Pets
 @*/
 PetscErrorCode  SNESMonitorSolutionUpdate(SNES snes,PetscInt its,PetscReal fgnorm,PetscViewerAndFormat *vf)
 {
-  PetscErrorCode ierr;
   Vec            x;
   PetscViewer    viewer = vf->viewer;
 
@@ -135,7 +132,6 @@ PetscErrorCode KSPMonitorSNESResidual(KSP ksp, PetscInt n, PetscReal rnorm, Pets
   PetscReal         snorm;
   PetscInt          tablevel;
   const char       *prefix;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
@@ -188,7 +184,6 @@ PetscErrorCode KSPMonitorSNESResidualDrawLG(KSP ksp, PetscInt n, PetscReal rnorm
   PetscReal          snorm;
   KSPConvergedReason reason;
   PetscReal          x[2], y[2];
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
@@ -241,7 +236,6 @@ PetscErrorCode KSPMonitorSNESResidualDrawLG(KSP ksp, PetscInt n, PetscReal rnorm
 PetscErrorCode KSPMonitorSNESResidualDrawLGCreate(PetscViewer viewer, PetscViewerFormat format, void *ctx, PetscViewerAndFormat **vf)
 {
   const char    *names[] = {"linear", "nonlinear"};
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerAndFormatCreate(viewer, format, vf));
@@ -252,7 +246,6 @@ PetscErrorCode KSPMonitorSNESResidualDrawLGCreate(PetscViewer viewer, PetscViewe
 
 PetscErrorCode SNESMonitorDefaultSetUp(SNES snes, PetscViewerAndFormat *vf)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (vf->format == PETSC_VIEWER_DRAW_LG) {
@@ -284,7 +277,6 @@ PetscErrorCode  SNESMonitorDefault(SNES snes,PetscInt its,PetscReal fgnorm,Petsc
   PetscViewer       viewer = vf->viewer;
   PetscViewerFormat format = vf->format;
   PetscBool         isascii, isdraw;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,4);
@@ -336,7 +328,6 @@ PetscErrorCode  SNESMonitorDefault(SNES snes,PetscInt its,PetscReal fgnorm,Petsc
 @*/
 PetscErrorCode  SNESMonitorScaling(SNES snes,PetscInt its,PetscReal fgnorm,PetscViewerAndFormat *vf)
 {
-  PetscErrorCode ierr;
   PetscViewer    viewer = vf->viewer;
   KSP            ksp;
   Mat            J;
@@ -362,7 +353,6 @@ PetscErrorCode SNESMonitorJacUpdateSpectrum(SNES snes,PetscInt it,PetscReal fnor
 {
   Vec            X;
   Mat            J,dJ,dJdense;
-  PetscErrorCode ierr;
   PetscErrorCode (*func)(SNES,Vec,Mat,Mat,void*);
   PetscInt       n;
   PetscBLASInt   nb = 0,lwork;
@@ -417,7 +407,6 @@ PETSC_INTERN PetscErrorCode  SNESMonitorRange_Private(SNES,PetscInt,PetscReal*);
 
 PetscErrorCode  SNESMonitorRange_Private(SNES snes,PetscInt it,PetscReal *per)
 {
-  PetscErrorCode ierr;
   Vec            resid;
   PetscReal      rmax,pwork;
   PetscInt       i,n,N;
@@ -459,7 +448,6 @@ PetscErrorCode  SNESMonitorRange_Private(SNES snes,PetscInt it,PetscReal *per)
 @*/
 PetscErrorCode  SNESMonitorRange(SNES snes,PetscInt it,PetscReal rnorm,PetscViewerAndFormat *vf)
 {
-  PetscErrorCode ierr;
   PetscReal      perc,rel;
   PetscViewer    viewer = vf->viewer;
   /* should be in a MonitorRangeContext */
@@ -500,7 +488,6 @@ PetscErrorCode  SNESMonitorRange(SNES snes,PetscInt it,PetscReal rnorm,PetscView
 @*/
 PetscErrorCode  SNESMonitorRatio(SNES snes,PetscInt its,PetscReal fgnorm,PetscViewerAndFormat *vf)
 {
-  PetscErrorCode          ierr;
   PetscInt                len;
   PetscReal               *history;
   PetscViewer             viewer = vf->viewer;
@@ -535,7 +522,6 @@ PetscErrorCode  SNESMonitorRatio(SNES snes,PetscInt its,PetscReal fgnorm,PetscVi
 @*/
 PetscErrorCode  SNESMonitorRatioSetUp(SNES snes,PetscViewerAndFormat *vf)
 {
-  PetscErrorCode          ierr;
   PetscReal               *history;
 
   PetscFunctionBegin;
@@ -558,7 +544,6 @@ PetscErrorCode  SNESMonitorRatioSetUp(SNES snes,PetscViewerAndFormat *vf)
 */
 PetscErrorCode  SNESMonitorDefaultShort(SNES snes,PetscInt its,PetscReal fgnorm,PetscViewerAndFormat *vf)
 {
-  PetscErrorCode ierr;
   PetscViewer    viewer = vf->viewer;
 
   PetscFunctionBegin;
@@ -602,7 +587,6 @@ PetscErrorCode SNESMonitorDefaultField(SNES snes, PetscInt its, PetscReal fgnorm
   DM             dm;
   PetscReal      res[256];
   PetscInt       tablevel;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,4);
@@ -681,7 +665,6 @@ $  SNES_DIVERGED_DTOL             - (fnorm > divtol*snes->fnorm0)
 @*/
 PetscErrorCode  SNESConvergedDefault(SNES snes,PetscInt it,PetscReal xnorm,PetscReal snorm,PetscReal fnorm,SNESConvergedReason *reason,void *dummy)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
@@ -747,7 +730,6 @@ PetscErrorCode  SNESConvergedDefault(SNES snes,PetscInt it,PetscReal xnorm,Petsc
 @*/
 PetscErrorCode  SNESConvergedSkip(SNES snes,PetscInt it,PetscReal xnorm,PetscReal snorm,PetscReal fnorm,SNESConvergedReason *reason,void *dummy)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
@@ -778,7 +760,6 @@ PetscErrorCode SNESSetWorkVecs(SNES snes,PetscInt nw)
 {
   DM             dm;
   Vec            v;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (snes->work) CHKERRQ(VecDestroyVecs(snes->nwork,&snes->work));

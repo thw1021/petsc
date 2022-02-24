@@ -10,7 +10,6 @@ struct _n_User {
 static PetscErrorCode MatGetDiagonal_User(Mat A,Vec X)
 {
   User           user;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(A,&user));
@@ -21,7 +20,6 @@ static PetscErrorCode MatGetDiagonal_User(Mat A,Vec X)
 static PetscErrorCode MatMult_User(Mat A,Vec X,Vec Y)
 {
   User           user;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(A,&user));
@@ -32,7 +30,6 @@ static PetscErrorCode MatMult_User(Mat A,Vec X,Vec Y)
 static PetscErrorCode MatMultTranspose_User(Mat A,Vec X,Vec Y)
 {
   User           user;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(A,&user));
@@ -43,7 +40,6 @@ static PetscErrorCode MatMultTranspose_User(Mat A,Vec X,Vec Y)
 static PetscErrorCode MatCopy_User(Mat A,Mat X,MatStructure str)
 {
   User           user,userX;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(A,&user));
@@ -56,7 +52,6 @@ static PetscErrorCode MatCopy_User(Mat A,Mat X,MatStructure str)
 static PetscErrorCode MatDestroy_User(Mat A)
 {
   User           user;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(A,&user));

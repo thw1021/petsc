@@ -188,7 +188,6 @@ int main(int argc,char **argv)
 PetscErrorCode FormInitialGuess(Vec X,AppCtx *user)
 {
   PetscInt       i,j,row,mx,my;
-  PetscErrorCode ierr;
   PetscReal      one = 1.0,lambda;
   PetscReal      temp1,temp,hx,hy;
   PetscScalar    *x;
@@ -221,7 +220,6 @@ PetscErrorCode FormInitialGuess(Vec X,AppCtx *user)
 PetscErrorCode FormFunction(TS ts,PetscReal t,Vec X,Vec F,void *ptr)
 {
   AppCtx            *user = (AppCtx*)ptr;
-  PetscErrorCode    ierr;
   PetscInt          i,j,row,mx,my;
   PetscReal         two = 2.0,one = 1.0,lambda;
   PetscReal         hx,hy,hxdhy,hydhx;
@@ -275,7 +273,6 @@ PetscErrorCode FormJacobian(TS ts,PetscReal t,Vec X,Mat J,Mat B,void *ptr)
 {
   AppCtx            *user = (AppCtx*)ptr;
   PetscInt          i,j,row,mx,my,col[5];
-  PetscErrorCode    ierr;
   PetscScalar       two = 2.0,one = 1.0,lambda,v[5],sc;
   const PetscScalar *x;
   PetscReal         hx,hy,hxdhy,hydhx;

@@ -9,7 +9,6 @@
 
 static PetscErrorCode QPIPComputeResidual(TAO_BQPIP *qp,Tao tao)
 {
-  PetscErrorCode ierr;
   PetscReal      dtmp = 1.0 - qp->psteplength;
 
   PetscFunctionBegin;
@@ -34,7 +33,6 @@ static PetscErrorCode QPIPComputeResidual(TAO_BQPIP *qp,Tao tao)
 
 static PetscErrorCode  QPIPSetInitialPoint(TAO_BQPIP *qp, Tao tao)
 {
-  PetscErrorCode ierr;
   PetscReal      two=2.0,p01=1;
   PetscReal      gap1,gap2,fff,mu;
 
@@ -126,7 +124,6 @@ static PetscErrorCode  QPIPSetInitialPoint(TAO_BQPIP *qp, Tao tao)
 static PetscErrorCode QPIPStepLength(TAO_BQPIP *qp)
 {
   PetscReal      tstep1,tstep2,tstep3,tstep4,tstep;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* Compute stepsize to the boundary */
@@ -148,7 +145,6 @@ static PetscErrorCode QPIPStepLength(TAO_BQPIP *qp)
 
 static PetscErrorCode QPIPComputeNormFromCentralPath(TAO_BQPIP *qp,PetscReal *norm)
 {
-  PetscErrorCode ierr;
   PetscReal      gap[2],mu[2],nmu;
 
   PetscFunctionBegin;
@@ -174,7 +170,6 @@ static PetscErrorCode QPIPComputeNormFromCentralPath(TAO_BQPIP *qp,PetscReal *no
 
 static PetscErrorCode QPIPComputeStepDirection(TAO_BQPIP *qp,Tao tao)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* Calculate DG */
@@ -203,7 +198,6 @@ static PetscErrorCode QPIPComputeStepDirection(TAO_BQPIP *qp,Tao tao)
 static PetscErrorCode TaoSetup_BQPIP(Tao tao)
 {
   TAO_BQPIP      *qp =(TAO_BQPIP*)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* Set pointers to Data */
@@ -254,7 +248,6 @@ static PetscErrorCode TaoSetup_BQPIP(Tao tao)
 static PetscErrorCode TaoSolve_BQPIP(Tao tao)
 {
   TAO_BQPIP          *qp = (TAO_BQPIP*)tao->data;
-  PetscErrorCode     ierr;
   PetscInt           its;
   PetscReal          d1,d2,ksptol,sigmamu;
   PetscReal          gnorm,dstep,pstep,step=0;
@@ -480,7 +473,6 @@ static PetscErrorCode TaoView_BQPIP(Tao tao,PetscViewer viewer)
 static PetscErrorCode TaoSetFromOptions_BQPIP(PetscOptionItems *PetscOptionsObject,Tao tao)
 {
   TAO_BQPIP      *qp = (TAO_BQPIP*)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"Interior point method for bound constrained quadratic optimization"));
@@ -493,7 +485,6 @@ static PetscErrorCode TaoSetFromOptions_BQPIP(PetscOptionItems *PetscOptionsObje
 static PetscErrorCode TaoDestroy_BQPIP(Tao tao)
 {
   TAO_BQPIP      *qp = (TAO_BQPIP*)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (tao->setupcalled) {
@@ -526,7 +517,6 @@ static PetscErrorCode TaoDestroy_BQPIP(Tao tao)
 static PetscErrorCode TaoComputeDual_BQPIP(Tao tao,Vec DXL,Vec DXU)
 {
   TAO_BQPIP       *qp = (TAO_BQPIP*)tao->data;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecCopy(qp->Z,DXL));
@@ -552,7 +542,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TaoCreate_BQPIP(Tao tao)
 {
   TAO_BQPIP      *qp;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(tao,&qp));

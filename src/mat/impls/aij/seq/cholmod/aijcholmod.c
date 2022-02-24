@@ -10,7 +10,6 @@ static PetscErrorCode MatWrapCholmod_seqaij(Mat A,PetscBool values,cholmod_spars
   const PetscInt    *ai = aij->i,*aj = aij->j,*adiag;
   PetscInt          m = A->rmap->n,i,j,k,nz,*ci,*cj;
   PetscBool         vain = PETSC_FALSE;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMarkDiagonal_SeqAIJ(A));
@@ -65,7 +64,6 @@ PETSC_INTERN PetscErrorCode MatGetFactor_seqaij_cholmod(Mat A,MatFactorType ftyp
 {
   Mat            B;
   Mat_CHOLMOD    *chol;
-  PetscErrorCode ierr;
   PetscInt       m=A->rmap->n,n=A->cmap->n;
   const char     *prefix;
 

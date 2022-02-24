@@ -18,7 +18,6 @@
 @*/
 PetscErrorCode  PCPythonSetType(PC pc,const char pyname[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);

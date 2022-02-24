@@ -138,7 +138,6 @@ static PetscErrorCode CreateSpectralPlanes(DM dm, PetscInt numPlanes, const Pets
   Vec                coordinates;
   const PetscScalar *coords;
   PetscInt           dim, p, vStart, vEnd, v;
-  PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetCoordinateDim(dm, &dim));
@@ -169,7 +168,6 @@ static PetscErrorCode CreateSpectralPlanes(DM dm, PetscInt numPlanes, const Pets
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(comm, dm));
@@ -194,7 +192,6 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
   const PetscInt id = 1;
   PetscPointFunc f0 = user->homogeneous ? f0_trig_homogeneous_u : f0_trig_inhomogeneous_u;
   PetscErrorCode (*ex)(PetscInt, PetscReal, const PetscReal [], PetscInt, PetscScalar *, void *) = user->homogeneous ? trig_homogeneous_u : trig_inhomogeneous_u;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDS(dm, &ds));
@@ -211,7 +208,6 @@ static PetscErrorCode SetupAdjointProblem(DM dm, AppCtx *user)
   PetscDS        ds;
   DMLabel        label;
   const PetscInt id = 1;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDS(dm, &ds));
@@ -226,7 +222,6 @@ static PetscErrorCode SetupAdjointProblem(DM dm, AppCtx *user)
 static PetscErrorCode SetupErrorProblem(DM dm, AppCtx *user)
 {
   PetscDS        prob;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDS(dm, &prob));
@@ -241,7 +236,6 @@ static PetscErrorCode SetupDiscretization(DM dm, const char name[], PetscErrorCo
   PetscBool      simplex;
   PetscInt       dim, cStart;
   char           prefix[PETSC_MAX_PATH_LEN];
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -273,7 +267,6 @@ static PetscErrorCode ComputeSpectral(DM dm, Vec u, PetscInt numPlanes, const Pe
   const PetscScalar *coords, *array;
   PetscInt           p;
   PetscMPIInt        size, rank;
-  PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscObjectGetComm((PetscObject) dm, &comm));

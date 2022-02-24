@@ -11,7 +11,6 @@ struct _n_User {
 static PetscErrorCode MatMult_User(Mat A,Vec X,Vec Y)
 {
   User           user;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(A,&user));
@@ -22,7 +21,6 @@ static PetscErrorCode MatMult_User(Mat A,Vec X,Vec Y)
 static PetscErrorCode MatMultTranspose_User(Mat A,Vec X,Vec Y)
 {
   User           user;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(A,&user));
@@ -33,7 +31,6 @@ static PetscErrorCode MatMultTranspose_User(Mat A,Vec X,Vec Y)
 static PetscErrorCode MyFunction(void *ctx,Vec x,Vec y)
 {
   User           user = (User) ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMult(user->B,x,y));

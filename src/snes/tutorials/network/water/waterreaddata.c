@@ -4,7 +4,6 @@
 
 PetscErrorCode PumpHeadCurveResidual(SNES snes,Vec X, Vec F,void *ctx)
 {
-  PetscErrorCode ierr;
   const PetscScalar *x;
   PetscScalar *f;
   Pump        *pump=(Pump*)ctx;
@@ -30,7 +29,6 @@ PetscErrorCode PumpHeadCurveResidual(SNES snes,Vec X, Vec F,void *ctx)
 
 PetscErrorCode SetPumpHeadCurveParams(Pump *pump)
 {
-  PetscErrorCode ierr;
   SNES           snes;
   Vec            X,F;
   PetscScalar   *head,*flow,*x;
@@ -134,7 +132,6 @@ PetscErrorCode GetDataSegment(FILE *fp,char *line,fpos_t *data_segment_start_pos
 PetscErrorCode WaterReadData(WATERDATA *water,char *filename)
 {
   FILE           *fp=NULL;
-  PetscErrorCode ierr;
   VERTEX_Water   vert;
   EDGE_Water     edge;
   fpos_t         junc_start_pos,res_start_pos,tank_start_pos,pipe_start_pos,pump_start_pos;

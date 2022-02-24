@@ -56,7 +56,7 @@ int main(int argc,char **argv)
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
   CHKERRMPI(MPI_Comm_size(PETSC_COMM_WORLD,&size));
-  PetscCheckFalse(size != 1,PETSC_COMM_SELF,PETSC_ERR_SUP,"This is a uniprocessor example only");
+  PetscCheck(size == 1,PETSC_COMM_SELF,PETSC_ERR_SUP,"This is a uniprocessor example only");
 
   /* initializations */
   zInitial  = 0.0;
@@ -75,8 +75,8 @@ int main(int argc,char **argv)
   CHKERRQ(PetscOptionsName("-debug",NULL,NULL,&appctx.debug));
   CHKERRQ(PetscOptionsName("-useAlhs",NULL,NULL,&appctx.useAlhs));
   CHKERRQ(PetscOptionsRangeInt("-nphase",NULL,NULL,nphase,&nphase,NULL,1,3));
-  PetscOptionsEnd();
-  T         = 0.014/nphase;
+  ierr = PetscOptionsEnd();CHKERRQ(ierr);
+  T = 0.014/nphase;
 
   /* create vector to hold ts solution */
   /*-----------------------------------*/
@@ -155,7 +155,7 @@ int main(int argc,char **argv)
     PetscBool sundialstype=PETSC_FALSE;
     CHKERRQ(TSGetType(ts,&type));
     CHKERRQ(PetscObjectTypeCompare((PetscObject)ts,TSSUNDIALS,&sundialstype));
-    PetscCheckFalse(sundialstype && appctx.useAlhs,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot use Alhs formulation for TSSUNDIALS type");
+    if (sundialstype) PetscCheck(!appctx.useAlhs,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot use Alhs formulation for TSSUNDIALS type");
   }
 #endif
   /* Sets the initial solution */
@@ -226,7 +226,6 @@ PetscScalar exact(PetscScalar z,PetscReal t)
 PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal time,Vec u,void *ctx)
 {
   AppCtx         *appctx = (AppCtx*)ctx;
-  PetscErrorCode ierr;
   PetscInt       i,m=appctx->m;
   PetscReal      norm_2,norm_max,h=1.0/(m+1);
   PetscScalar    *u_exact;
@@ -268,7 +267,6 @@ PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal time,Vec u,void *ctx)
 
 PetscErrorCode Petsc_KSPSolve(AppCtx *obj)
 {
-  PetscErrorCode ierr;
   KSP            ksp;
   PC             pc;
 
@@ -420,7 +418,6 @@ PetscErrorCode femA(AppCtx *obj,PetscInt nz,PetscScalar *z)
   PetscInt       nli[num_z][2],indx[num_z];
   PetscScalar    dd,dl,zip,zipq,zz,bb,bbb,aij;
   PetscScalar    rquad[num_z][3],dlen[num_z],qdwt[3],add_term;
-  PetscErrorCode ierr;
 
   /*  initializing everything  */
   for (i=0; i < nz; i++) {
@@ -497,7 +494,6 @@ PetscErrorCode rhs(AppCtx *obj,PetscScalar *y, PetscInt nz, PetscScalar *z, Pets
 {
   PetscInt       i,j,js,je,jj;
   PetscScalar    val,g[num_z],btri[num_z][3],add_term;
-  PetscErrorCode ierr;
 
   for (i=0; i < nz-2; i++) {
     for (j=0; j <= 2; j++) btri[i][j]=0.0;
@@ -540,7 +536,6 @@ PetscErrorCode rhs(AppCtx *obj,PetscScalar *y, PetscInt nz, PetscScalar *z, Pets
 
 PetscErrorCode RHSfunction(TS ts,PetscReal t,Vec globalin,Vec globalout,void *ctx)
 {
-  PetscErrorCode    ierr;
   AppCtx            *obj = (AppCtx*)ctx;
   PetscScalar       soln[num_z];
   const PetscScalar *soln_ptr;

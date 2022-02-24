@@ -8,7 +8,6 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqSBAIJ_SeqAIJ(Mat A, MatType newtype,Ma
   Mat            B;
   Mat_SeqSBAIJ   *a = (Mat_SeqSBAIJ*)A->data;
   Mat_SeqAIJ     *b;
-  PetscErrorCode ierr;
   PetscInt       *ai=a->i,*aj=a->j,m=A->rmap->N,n=A->cmap->n,i,j,k,*bi,*bj,*rowlengths,nz,*rowstart,itmp;
   PetscInt       bs =A->rmap->bs,bs2=bs*bs,mbs=A->rmap->N/bs,diagcnt=0;
   MatScalar      *av,*bv;
@@ -121,7 +120,6 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqSBAIJ(Mat A,MatType newtype,Mat
   Mat            B;
   Mat_SeqAIJ     *a = (Mat_SeqAIJ*)A->data;
   Mat_SeqSBAIJ   *b;
-  PetscErrorCode ierr;
   PetscInt       *ai=a->i,*aj,m=A->rmap->N,n=A->cmap->N,i,j,*bi,*bj,*rowlengths,bs=PetscAbs(A->rmap->bs);
   MatScalar      *av,*bv;
   PetscBool      miss = PETSC_FALSE;
@@ -188,7 +186,6 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqSBAIJ_SeqBAIJ(Mat A, MatType newtype,M
   Mat            B;
   Mat_SeqSBAIJ   *a = (Mat_SeqSBAIJ*)A->data;
   Mat_SeqBAIJ    *b;
-  PetscErrorCode ierr;
   PetscInt       *ai=a->i,*aj=a->j,m=A->rmap->N,n=A->cmap->n,i,k,*bi,*bj,*browlengths,nz,*browstart,itmp;
   PetscInt       bs =A->rmap->bs,bs2=bs*bs,mbs=m/bs,col,row;
   MatScalar      *av,*bv;
@@ -285,7 +282,6 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqBAIJ_SeqSBAIJ(Mat A, MatType newtype,M
   Mat            B;
   Mat_SeqBAIJ    *a = (Mat_SeqBAIJ*)A->data;
   Mat_SeqSBAIJ   *b;
-  PetscErrorCode ierr;
   PetscInt       *ai=a->i,*aj,m=A->rmap->N,n=A->cmap->n,i,j,k,*bi,*bj,*browlengths;
   PetscInt       bs =A->rmap->bs,bs2=bs*bs,mbs=m/bs,dd;
   MatScalar      *av,*bv;

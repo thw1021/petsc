@@ -38,17 +38,17 @@ int main(int argc,char **argv)
   IS          rowperm = NULL,colperm = NULL;
 
   PetscInitialize(&argc,&argv,(char *)0,help);
-  ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRMPI(ierr);
+  CHKERRMPI(MPI_Comm_size(PETSC_COMM_WORLD,&size));
   PetscCheck(size == 1,PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,"This is a uniprocessor example only!");
 
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Matrix Market example options","");CHKERRQ(ierr);
   {
-    ierr = PetscOptionsString("-fin","Input Matrix Market file","",filein,filein,sizeof(filein),&flag);CHKERRQ(ierr);
+    CHKERRQ(PetscOptionsString("-fin","Input Matrix Market file","",filein,filein,sizeof(filein),&flag));
     PetscCheck(flag,PETSC_COMM_SELF,PETSC_ERR_USER_INPUT,"Please use -fin <filename> to specify the input file name!");
-    ierr = PetscOptionsString("-fout","Output file in petsc sparse binary format","",fileout,fileout,sizeof(fileout),&flag);CHKERRQ(ierr);
+    CHKERRQ(PetscOptionsString("-fout","Output file in petsc sparse binary format","",fileout,fileout,sizeof(fileout),&flag));
     PetscCheck(flag,PETSC_COMM_SELF,PETSC_ERR_USER_INPUT,"Please use -fout <filename> to specify the output file name!");
-    ierr = PetscOptionsBool("-aij_only","Use MATAIJ for all cases","",aijonly,&aijonly,NULL);CHKERRQ(ierr);
-    ierr = PetscOptionsFList("-permute","Permute matrix and vector to solving in new ordering","",MatOrderingList,ordering,ordering,sizeof(ordering),&permute);CHKERRQ(ierr);
+    CHKERRQ(PetscOptionsBool("-aij_only","Use MATAIJ for all cases","",aijonly,&aijonly,NULL));
+    CHKERRQ(PetscOptionsFList("-permute","Permute matrix and vector to solving in new ordering","",MatOrderingList,ordering,ordering,sizeof(ordering),&permute));
   }
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
@@ -83,11 +83,11 @@ int main(int argc,char **argv)
   for (i=0; i<nz; i++) {
     if (pattern) {
       ninput = fscanf(file, "%d %d\n", &ia[i], &ja[i]);
-      PetscCheckFalse(ninput < 2,PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED,"Badly formatted input file");
+      PetscCheck(ninput >= 2,PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED,"Badly formatted input file");
       val[i] = 1.0;
     } else if (real) {
       ninput = fscanf(file, "%d %d %lg\n", &ia[i], &ja[i], &val[i]);
-      PetscCheckFalse(ninput < 3,PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED,"Badly formatted input file");
+      PetscCheck(ninput >= 3,PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED,"Badly formatted input file");
     }
     ia[i]--; ja[i]--;     /* adjust from 1-based to 0-based */
     if (ia[i] != ja[i]) { /* already counted the diagonals above */
@@ -110,31 +110,25 @@ int main(int argc,char **argv)
     CHKERRQ(MatSetUp(A));
     CHKERRQ(MatSeqSBAIJSetPreallocation(A,1,0,rownz));
     CHKERRQ(PetscObjectTypeCompare((PetscObject)A,MATSEQSBAIJ,&sametype));
-    PetscCheckFalse(!sametype,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Only AIJ and SBAIJ are supported. Your mattype is not supported");
+    PetscCheck(sametype,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Only AIJ and SBAIJ are supported. Your mattype is not supported");
   } else {
     CHKERRQ(MatSetType(A,MATSEQAIJ));
     CHKERRQ(MatSetFromOptions(A));
     CHKERRQ(MatSetUp(A));
     CHKERRQ(MatSeqAIJSetPreallocation(A,0,rownz));
     CHKERRQ(PetscObjectTypeCompare((PetscObject)A,MATSEQAIJ,&sametype));
-    PetscCheckFalse(!sametype,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Only AIJ and SBAIJ are supported. Your mattype is not supported");
+    PetscCheck(sametype,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Only AIJ and SBAIJ are supported. Your mattype is not supported");
   }
 
   /* Add zero to diagonals, in case the matrix missing diagonals */
-  for (j=0; j<M; j++)  {
-    CHKERRQ(MatSetValues(A,1,&j,1,&j,&zero,INSERT_VALUES));
-  }
+  for (j=0; j<M; j++)  CHKERRQ(MatSetValues(A,1,&j,1,&j,&zero,INSERT_VALUES));
   /* Add values to the matrix, these correspond to lower triangular part for symmetric or skew matrices */
-  for (j=0; j<nz; j++) {
-    CHKERRQ(MatSetValues(A,1,&ia[j],1,&ja[j],&val[j],INSERT_VALUES));
-  }
+  for (j=0; j<nz; j++) CHKERRQ(MatSetValues(A,1,&ia[j],1,&ja[j],&val[j],INSERT_VALUES));
 
   /* Add values to upper triangular part for some cases */
   if (symmetric && aijonly) {
     /* MatrixMarket matrix stores symm matrix in lower triangular part. Take its transpose */
-    for (j=0; j<nz; j++) {
-      CHKERRQ(MatSetValues(A,1,&ja[j],1,&ia[j],&val[j],INSERT_VALUES));
-    }
+    for (j=0; j<nz; j++) CHKERRQ(MatSetValues(A,1,&ja[j],1,&ia[j],&val[j],INSERT_VALUES));
   }
   if (skew) {
     for (j=0; j<nz; j++) {
@@ -148,9 +142,9 @@ int main(int argc,char **argv)
 
   if (permute) {
     Mat Aperm;
-    ierr = MatGetOrdering(A,ordering,&rowperm,&colperm);CHKERRQ(ierr);
-    ierr = MatPermute(A,rowperm,colperm,&Aperm);CHKERRQ(ierr);
-    ierr = MatDestroy(&A);CHKERRQ(ierr);
+    CHKERRQ(MatGetOrdering(A,ordering,&rowperm,&colperm));
+    CHKERRQ(MatPermute(A,rowperm,colperm,&Aperm));
+    CHKERRQ(MatDestroy(&A));
     A    = Aperm;               /* Replace original operator with permuted version */
   }
 
@@ -161,11 +155,11 @@ int main(int argc,char **argv)
   CHKERRQ(PetscViewerDestroy(&view));
   CHKERRQ(PetscPrintf(PETSC_COMM_SELF,"Writing matrix completes.\n"));
 
-  ierr = PetscFree4(ia,ja,val,rownz);CHKERRQ(ierr);
-  ierr = MatDestroy(&A);CHKERRQ(ierr);
-  ierr = ISDestroy(&rowperm);CHKERRQ(ierr);
-  ierr = ISDestroy(&colperm);CHKERRQ(ierr);
-  ierr = PetscFinalize();CHKERRQ(ierr);
+  CHKERRQ(PetscFree4(ia,ja,val,rownz));
+  CHKERRQ(MatDestroy(&A));
+  CHKERRQ(ISDestroy(&rowperm));
+  CHKERRQ(ISDestroy(&colperm));
+  CHKERRQ(PetscFinalize());
   return 0;
 }
 

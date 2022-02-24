@@ -16,7 +16,6 @@ typedef struct {
 
 static PetscErrorCode PCMult_Eisenstat(Mat mat,Vec b,Vec x)
 {
-  PetscErrorCode ierr;
   PC             pc;
   PC_Eisenstat   *eis;
 
@@ -30,7 +29,6 @@ static PetscErrorCode PCMult_Eisenstat(Mat mat,Vec b,Vec x)
 static PetscErrorCode PCApply_Eisenstat(PC pc,Vec x,Vec y)
 {
   PC_Eisenstat   *eis = (PC_Eisenstat*)pc->data;
-  PetscErrorCode ierr;
   PetscBool      hasop;
 
   PetscFunctionBegin;
@@ -49,7 +47,6 @@ static PetscErrorCode PCPreSolve_Eisenstat(PC pc,KSP ksp,Vec b,Vec x)
 {
   PC_Eisenstat   *eis = (PC_Eisenstat*)pc->data;
   PetscBool      nonzero;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (pc->presolvedone < 2) {
@@ -82,7 +79,6 @@ static PetscErrorCode PCPreSolve_Eisenstat(PC pc,KSP ksp,Vec b,Vec x)
 static PetscErrorCode PCPostSolve_Eisenstat(PC pc,KSP ksp,Vec b,Vec x)
 {
   PC_Eisenstat   *eis = (PC_Eisenstat*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* get back true b */
@@ -98,7 +94,6 @@ static PetscErrorCode PCPostSolve_Eisenstat(PC pc,KSP ksp,Vec b,Vec x)
 static PetscErrorCode PCReset_Eisenstat(PC pc)
 {
   PC_Eisenstat   *eis = (PC_Eisenstat*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDestroy(&eis->b[0]));
@@ -110,7 +105,6 @@ static PetscErrorCode PCReset_Eisenstat(PC pc)
 
 static PetscErrorCode PCDestroy_Eisenstat(PC pc)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCReset_Eisenstat(pc));
@@ -121,7 +115,6 @@ static PetscErrorCode PCDestroy_Eisenstat(PC pc)
 static PetscErrorCode PCSetFromOptions_Eisenstat(PetscOptionItems *PetscOptionsObject,PC pc)
 {
   PC_Eisenstat   *eis = (PC_Eisenstat*)pc->data;
-  PetscErrorCode ierr;
   PetscBool      set,flg;
 
   PetscFunctionBegin;
@@ -138,7 +131,6 @@ static PetscErrorCode PCSetFromOptions_Eisenstat(PetscOptionItems *PetscOptionsO
 static PetscErrorCode PCView_Eisenstat(PC pc,PetscViewer viewer)
 {
   PC_Eisenstat   *eis = (PC_Eisenstat*)pc->data;
-  PetscErrorCode ierr;
   PetscBool      iascii;
 
   PetscFunctionBegin;
@@ -156,7 +148,6 @@ static PetscErrorCode PCView_Eisenstat(PC pc,PetscViewer viewer)
 
 static PetscErrorCode PCSetUp_Eisenstat(PC pc)
 {
-  PetscErrorCode ierr;
   PetscInt       M,N,m,n;
   PC_Eisenstat   *eis = (PC_Eisenstat*)pc->data;
 
@@ -249,7 +240,6 @@ $    -pc_type  sor  -pc_sor_symmetric
 @*/
 PetscErrorCode  PCEisenstatSetOmega(PC pc,PetscReal omega)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -282,7 +272,6 @@ PetscErrorCode  PCEisenstatSetOmega(PC pc,PetscReal omega)
 @*/
 PetscErrorCode  PCEisenstatSetNoDiagonalScaling(PC pc,PetscBool flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -321,7 +310,6 @@ $    -pc_type  sor  -pc_sor_symmetric
 @*/
 PetscErrorCode  PCEisenstatGetOmega(PC pc,PetscReal *omega)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -355,7 +343,6 @@ PetscErrorCode  PCEisenstatGetOmega(PC pc,PetscReal *omega)
 @*/
 PetscErrorCode  PCEisenstatGetNoDiagonalScaling(PC pc,PetscBool *flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -393,7 +380,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_Eisenstat(PC pc)
 {
-  PetscErrorCode ierr;
   PC_Eisenstat   *eis;
 
   PetscFunctionBegin;

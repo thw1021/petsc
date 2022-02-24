@@ -11,7 +11,6 @@ struct _n_User {
 static PetscErrorCode MatView_User(Mat A,PetscViewer viewer)
 {
   User           user;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(A,&user));
@@ -22,7 +21,6 @@ static PetscErrorCode MatView_User(Mat A,PetscViewer viewer)
 static PetscErrorCode MatMult_User(Mat A,Vec X,Vec Y)
 {
   User           user;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(A,&user));
@@ -33,7 +31,6 @@ static PetscErrorCode MatMult_User(Mat A,Vec X,Vec Y)
 static PetscErrorCode MatMultTranspose_User(Mat A,Vec X,Vec Y)
 {
   User           user;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(A,&user));
@@ -44,7 +41,6 @@ static PetscErrorCode MatMultTranspose_User(Mat A,Vec X,Vec Y)
 static PetscErrorCode MatGetDiagonal_User(Mat A,Vec X)
 {
   User           user;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(A,&user));
@@ -54,7 +50,6 @@ static PetscErrorCode MatGetDiagonal_User(Mat A,Vec X)
 
 static PetscErrorCode TestMatrix(Mat A,Vec X,Vec Y,Vec Z)
 {
-  PetscErrorCode ierr;
   Vec            W1,W2,diff;
   Mat            E;
   const char     *mattypename;

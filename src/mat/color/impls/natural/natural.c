@@ -3,7 +3,6 @@
 
 static PetscErrorCode MatColoringApply_Natural(MatColoring mc,ISColoring *iscoloring)
 {
-  PetscErrorCode  ierr;
   PetscInt        start,end,i,bs = 1,n;
   ISColoringValue *colors;
   MPI_Comm        comm;

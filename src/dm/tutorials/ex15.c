@@ -18,7 +18,6 @@ PetscErrorCode MyVecDump(const char fname[],PetscBool skippheader,PetscBool usem
   MPI_Comm       comm;
   PetscViewer    viewer;
   PetscBool      ismpiio,isskip;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscObjectGetComm((PetscObject)x,&comm));
@@ -46,7 +45,6 @@ PetscErrorCode MyVecLoad(const char fname[],PetscBool skippheader,PetscBool usem
   MPI_Comm       comm;
   PetscViewer    viewer;
   PetscBool      ismpiio,isskip;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscObjectGetComm((PetscObject)x,&comm));
@@ -73,7 +71,6 @@ PetscErrorCode DMDAVecGenerateEntries(DM dm,Vec a)
 {
   PetscScalar    ****LA_v;
   PetscInt       i,j,k,l,si,sj,sk,ni,nj,nk,M,N,dof;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMDAGetInfo(dm,NULL,&M,&N,NULL,NULL,NULL,NULL,&dof,NULL,NULL,NULL,NULL,NULL));
@@ -97,7 +94,6 @@ PetscErrorCode DMDAVecGenerateEntries(DM dm,Vec a)
 
 PetscErrorCode HeaderlessBinaryReadCheck(DM dm,const char name[])
 {
-  PetscErrorCode ierr;
   int            fdes;
   PetscScalar    buffer[DMDA_I*DMDA_J*DMDA_K*10];
   PetscInt       len,d,i,j,k,M,N,dof;
@@ -152,7 +148,6 @@ PetscErrorCode VecCompare(Vec a,Vec b)
   PetscInt       locmin[2],locmax[2];
   PetscReal      min[2],max[2];
   Vec            ref;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecMin(a,&locmin[0],&min[0]));

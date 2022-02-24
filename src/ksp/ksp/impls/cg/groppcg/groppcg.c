@@ -8,7 +8,6 @@
 */
 static PetscErrorCode KSPSetUp_GROPPCG(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPSetWorkVecs(ksp,6));
@@ -24,7 +23,6 @@ static PetscErrorCode KSPSetUp_GROPPCG(KSP ksp)
 */
 static PetscErrorCode  KSPSolve_GROPPCG(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
   PetscScalar    alpha,beta = 0.0,gamma,gammaNew,t;
   PetscReal      dp = 0.0;
@@ -170,7 +168,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode KSPCreate_GROPPCG(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPSetSupportedNorm(ksp,KSP_NORM_UNPRECONDITIONED,PC_LEFT,2));

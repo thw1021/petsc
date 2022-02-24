@@ -15,7 +15,6 @@ static PetscErrorCode SNESTR_KSPConverged_Private(KSP ksp,PetscInt n,PetscReal r
   SNES_NEWTONTR            *neP = (SNES_NEWTONTR*)snes->data;
   Vec                      x;
   PetscReal                nrm;
-  PetscErrorCode           ierr;
 
   PetscFunctionBegin;
   CHKERRQ((*ctx->convtest)(ksp,n,rnorm,reason,ctx->convctx));
@@ -35,7 +34,6 @@ static PetscErrorCode SNESTR_KSPConverged_Private(KSP ksp,PetscInt n,PetscReal r
 static PetscErrorCode SNESTR_KSPConverged_Destroy(void *cctx)
 {
   SNES_TR_KSPConverged_Ctx *ctx = (SNES_TR_KSPConverged_Ctx*)cctx;
-  PetscErrorCode           ierr;
 
   PetscFunctionBegin;
   CHKERRQ((*ctx->convdestroy)(ctx->convctx));
@@ -52,7 +50,6 @@ static PetscErrorCode SNESTR_KSPConverged_Destroy(void *cctx)
 static PetscErrorCode SNESTR_Converged_Private(SNES snes,PetscInt it,PetscReal xnorm,PetscReal pnorm,PetscReal fnorm,SNESConvergedReason *reason,void *dummy)
 {
   SNES_NEWTONTR  *neP = (SNES_NEWTONTR*)snes->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *reason = SNES_CONVERGED_ITERATING;
@@ -197,7 +194,6 @@ PetscErrorCode  SNESNewtonTRGetPostCheck(SNES snes,PetscErrorCode (**func)(SNES,
 static PetscErrorCode SNESNewtonTRPreCheck(SNES snes,Vec X,Vec Y,PetscBool *changed_Y)
 {
   SNES_NEWTONTR  *tr = (SNES_NEWTONTR*)snes->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *changed_Y = PETSC_FALSE;
@@ -233,7 +229,6 @@ static PetscErrorCode SNESNewtonTRPreCheck(SNES snes,Vec X,Vec Y,PetscBool *chan
 static PetscErrorCode SNESNewtonTRPostCheck(SNES snes,Vec X,Vec Y,Vec W,PetscBool *changed_Y,PetscBool *changed_W)
 {
   SNES_NEWTONTR  *tr = (SNES_NEWTONTR*)snes->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *changed_Y = PETSC_FALSE;
@@ -255,7 +250,6 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
 {
   SNES_NEWTONTR            *neP = (SNES_NEWTONTR*)snes->data;
   Vec                      X,F,Y,G,Ytmp,W;
-  PetscErrorCode           ierr;
   PetscInt                 maxits,i,lits;
   PetscReal                rho,fnorm,gnorm,gpnorm,xnorm=0,delta,nrm,ynorm,norm1;
   PetscScalar              cnorm;
@@ -426,7 +420,6 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
 /*------------------------------------------------------------*/
 static PetscErrorCode SNESSetUp_NEWTONTR(SNES snes)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESSetWorkVecs(snes,4));
@@ -443,7 +436,6 @@ PetscErrorCode SNESReset_NEWTONTR(SNES snes)
 
 static PetscErrorCode SNESDestroy_NEWTONTR(SNES snes)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESReset_NEWTONTR(snes));
@@ -455,7 +447,6 @@ static PetscErrorCode SNESDestroy_NEWTONTR(SNES snes)
 static PetscErrorCode SNESSetFromOptions_NEWTONTR(PetscOptionItems *PetscOptionsObject,SNES snes)
 {
   SNES_NEWTONTR  *ctx = (SNES_NEWTONTR*)snes->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"SNES trust region options for nonlinear equations"));
@@ -474,7 +465,6 @@ static PetscErrorCode SNESSetFromOptions_NEWTONTR(PetscOptionItems *PetscOptions
 static PetscErrorCode SNESView_NEWTONTR(SNES snes,PetscViewer viewer)
 {
   SNES_NEWTONTR  *tr = (SNES_NEWTONTR*)snes->data;
-  PetscErrorCode ierr;
   PetscBool      iascii;
 
   PetscFunctionBegin;
@@ -512,7 +502,6 @@ M*/
 PETSC_EXTERN PetscErrorCode SNESCreate_NEWTONTR(SNES snes)
 {
   SNES_NEWTONTR  *neP;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   snes->ops->setup          = SNESSetUp_NEWTONTR;

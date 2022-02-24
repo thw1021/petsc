@@ -61,7 +61,6 @@ int main(int argc,char **argv)
 
 static PetscErrorCode CreateMat(DM dmSol,Mat *pA)
 {
-  PetscErrorCode    ierr;
   Vec               coordLocal;
   Mat               A;
   PetscInt          startx,starty,startz,N[3],nx,ny,nz,ex,ey,ez,d;
@@ -523,7 +522,6 @@ static PetscErrorCode check_vals(PetscInt ex, PetscInt ey, PetscInt ez, PetscInt
 /* The same function as above, but getting and checking values, instead of setting them */
 static PetscErrorCode CheckMat(DM dmSol,Mat A)
 {
-  PetscErrorCode    ierr;
   Vec               coordLocal;
   PetscInt          startx,starty,startz,N[3],nx,ny,nz,ex,ey,ez,d;
   PetscInt          icp[3],icux[3],icuy[3],icuz[3],icux_right[3],icuy_up[3],icuz_front[3];

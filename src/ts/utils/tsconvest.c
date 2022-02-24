@@ -7,7 +7,6 @@
 static PetscErrorCode PetscConvEstSetTS_Private(PetscConvEst ce, PetscObject solver)
 {
   PetscClassId   id;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetClassId(ce->solver, &id));
@@ -18,7 +17,6 @@ static PetscErrorCode PetscConvEstSetTS_Private(PetscConvEst ce, PetscObject sol
 
 static PetscErrorCode PetscConvEstInitGuessTS_Private(PetscConvEst ce, PetscInt r, DM dm, Vec u)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSComputeInitialCondition((TS) ce->solver, u));
@@ -29,7 +27,6 @@ static PetscErrorCode PetscConvEstComputeErrorTS_Private(PetscConvEst ce, PetscI
 {
   TS               ts = (TS) ce->solver;
   PetscErrorCode (*exactError)(TS, Vec, Vec);
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSGetComputeExactError(ts, &exactError));
@@ -57,7 +54,6 @@ static PetscErrorCode PetscConvEstGetConvRateTS_Temporal_Private(PetscConvEst ce
   Vec            u;
   PetscReal     *dt, *x, *y, slope, intercept;
   PetscInt       Ns, oNs, Nf = ce->Nf, f, Nr = ce->Nr, r;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSGetSolution(ts, &u));
@@ -121,7 +117,6 @@ static PetscErrorCode PetscConvEstGetConvRateTS_Spatial_Private(PetscConvEst ce,
   PetscReal     *x, *y, slope, intercept;
   PetscInt       Nr = ce->Nr, r, Nf = ce->Nf, f, dim, oldlevel, oldnlev;
   void          *ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(ce->r != 2.0,PetscObjectComm((PetscObject) ce), PETSC_ERR_SUP, "Only refinement factor 2 is currently supported (not %g)", (double) ce->r);

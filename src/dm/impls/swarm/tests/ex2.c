@@ -95,7 +95,6 @@ static PetscErrorCode PerturbVertices(DM dm, AppCtx *user)
   PetscScalar   *coords;
   PetscReal     *hh, low[3], high[3];
   PetscInt       d, cdim, cEnd, N, p, bs;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetBoundingBox(dm, low, high));
@@ -129,7 +128,6 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm, AppCtx *user)
 {
   PetscReal      low[3], high[3];
   PetscInt       cdim, d;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(comm, dm));
@@ -159,7 +157,6 @@ static PetscErrorCode CreateFEM(DM dm, AppCtx *user)
   DMPolytopeType ct;
   PetscBool      simplex;
   PetscInt       dim, cStart;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -187,7 +184,6 @@ static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
   PetscReal     *centroid, *coords, *xi0, *v0, *J, *invJ, detJ;
   PetscInt      *cellid;
   PetscInt       Ncell, Np = user->particlesPerCell, p, cStart, c, dim, d;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -262,7 +258,6 @@ static PetscErrorCode computeParticleMoments(DM sw, PetscReal moments[3], AppCtx
   const PetscScalar *w;
   PetscReal          mom[3] = {0.0, 0.0, 0.0};
   PetscInt           cell, cStart, cEnd, dim;
-  PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDimension(sw, &dim));
@@ -323,7 +318,6 @@ static void f0_r2(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 static PetscErrorCode computeFEMMoments(DM dm, Vec u, PetscReal moments[3], AppCtx *user)
 {
   PetscDS        prob;
-  PetscErrorCode ierr;
   PetscScalar    mom;
 
   PetscFunctionBeginUser;
@@ -350,7 +344,6 @@ static PetscErrorCode TestL2ProjectionParticlesToField(DM dm, DM sw, AppCtx *use
   PetscReal      pmoments[3];  /* \int f, \int x f, \int r^2 f */
   PetscReal      fmoments[3];  /* \int \hat f, \int x \hat f, \int r^2 \hat f */
   PetscInt       m;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscObjectGetComm((PetscObject) dm, &comm));
@@ -408,7 +401,6 @@ static PetscErrorCode TestL2ProjectionFieldToParticles(DM dm, DM sw, AppCtx *use
   PetscReal      pmoments[3];  /* \int f, \int x f, \int r^2 f */
   PetscReal      fmoments[3];  /* \int \hat f, \int x \hat f, \int r^2 \hat f */
   PetscInt       m;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscObjectGetComm((PetscObject) dm, &comm));
@@ -472,7 +464,6 @@ static PetscErrorCode InterpolateGradient(DM dm, Vec locX, Vec locC)
   PetscReal       *coords;
   const PetscReal *quadPoints, *quadWeights;
   PetscInt         dim, coordDim, numFields, numComponents = 0, qNc, Nq, cStart, cEnd, vStart, vEnd, v, field, fieldOffset;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetDM(locC, &dmC));
@@ -533,14 +524,7 @@ static PetscErrorCode InterpolateGradient(DM dm, Vec locX, Vec locC)
         else if (id == PETSCFV_CLASSID) {CHKERRQ(PetscFVGetNumComponents((PetscFV) obj, &Nc));Nb = 1;}
         else SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Unknown discretization type for field %d", field);
         for (q = 0; q < Nq; ++q) {
-          PetscCheckFalse(fegeom.detJ[q] <= 0.0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid determinant %g for element %D, quadrature points %D", (double)fegeom.detJ[q], cell, q);
-          if (ierr) {
-            PetscErrorCode ierr2;
-            CHKERRQ(DMPlexVecRestoreClosure(dm, NULL, locX, cell, NULL, &x));
-            CHKERRQ(DMPlexRestoreTransitiveClosure(dm, v, PETSC_FALSE, &starSize, &star));
-            CHKERRQ(PetscFree6(gradsum,interpolant,coords,fegeom.detJ,fegeom.J,fegeom.invJ));
-            CHKERRQ(ierr);
-          }
+          PetscCheck(fegeom.detJ[q] > 0.0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid determinant %g for element %D, quadrature points %D", (double)fegeom.detJ[q], cell, q);
           if (id == PETSCFE_CLASSID)      CHKERRQ(PetscFEInterpolateGradient_Static((PetscFE) obj, 1, &x[fieldOffset], &fegeom, q, interpolant));
           else SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Unknown discretization type for field %d", field);
           for (fc = 0; fc < Nc; ++fc) {
@@ -586,7 +570,6 @@ static PetscErrorCode TestFieldGradientProjection(DM dm, DM sw, AppCtx *user)
   PetscReal      pmoments[3];         /* \int f, \int x f, \int r^2 f */
   PetscReal      fmoments[3];         /* \int \hat f, \int x \hat f, \int r^2 \hat f */
   PetscInt       m;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscObjectGetComm((PetscObject) dm, &comm));

@@ -28,7 +28,6 @@ PetscErrorCode FWDRun(TS, Vec, void *);
 PetscErrorCode EventFunction(TS ts,PetscReal t,Vec U,PetscScalar *fvalue,void *ctx)
 {
   AppCtx            *actx=(AppCtx*)ctx;
-  PetscErrorCode    ierr;
   const PetscScalar *u;
 
   PetscFunctionBegin;
@@ -47,7 +46,6 @@ PetscErrorCode ShiftGradients(TS ts,Vec U,AppCtx *actx)
   Vec               *lambda,*mu;
   PetscScalar       *x,*y;
   const PetscScalar *u;
-  PetscErrorCode    ierr;
   PetscScalar       tmp[2],A1[2][2],A2[2],denorm1,denorm2;
   PetscInt          numcost;
 
@@ -103,7 +101,6 @@ PetscErrorCode ShiftGradients(TS ts,Vec U,AppCtx *actx)
 PetscErrorCode PostEventFunction(TS ts,PetscInt nevents,PetscInt event_list[],PetscReal t,Vec U,PetscBool forwardsolve,void* ctx)
 {
   AppCtx         *actx=(AppCtx*)ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!forwardsolve) {
@@ -125,7 +122,6 @@ PetscErrorCode PostEventFunction(TS ts,PetscInt nevents,PetscInt event_list[],Pe
 static PetscErrorCode IFunction(TS ts,PetscReal t,Vec U,Vec Udot,Vec F,void *ctx)
 {
   AppCtx            *actx=(AppCtx*)ctx;
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *u,*udot;
 
@@ -155,7 +151,6 @@ static PetscErrorCode IFunction(TS ts,PetscReal t,Vec U,Vec Udot,Vec F,void *ctx
 static PetscErrorCode IJacobian(TS ts,PetscReal t,Vec U,Vec Udot,PetscReal a,Mat A,Mat B,void *ctx)
 {
   AppCtx            *actx=(AppCtx*)ctx;
-  PetscErrorCode    ierr;
   PetscInt          rowcol[] = {0,1};
   PetscScalar       J[2][2];
   const PetscScalar *u,*udot;
@@ -324,7 +319,6 @@ int main(int argc,char **argv)
 PetscErrorCode FWDRun(TS ts, Vec U0, void *ctx0)
 {
   Vec            U;             /* solution will be stored here */
-  PetscErrorCode ierr;
   AppCtx         *ctx=(AppCtx*)ctx0;
 
   PetscFunctionBeginUser;

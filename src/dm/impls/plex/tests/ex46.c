@@ -46,7 +46,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(comm, dm));
@@ -63,7 +62,6 @@ static PetscErrorCode SetupDiscretization(DM dm, AppCtx *user)
   PetscFE        fe;
   PetscSpace     sp;
   PetscInt       dim, deg;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -92,7 +90,6 @@ static PetscErrorCode CheckError(DM dm, Vec u, PetscSimplePointFunc funcs[])
 {
   PetscReal      error, tol = PETSC_SMALL;
   MPI_Comm       comm;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMComputeL2Diff(dm, 0.0, funcs, NULL, u, &error));

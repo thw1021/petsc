@@ -14,7 +14,6 @@ static PetscErrorCode PFApply_Constant(void *value,PetscInt n,const PetscScalar 
 
 static PetscErrorCode PFApplyVec_Constant(void *value,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecSet(y,*((PetscScalar*)value)));
@@ -22,7 +21,6 @@ static PetscErrorCode PFApplyVec_Constant(void *value,Vec x,Vec y)
 }
 PetscErrorCode PFView_Constant(void *value,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscBool      iascii;
 
   PetscFunctionBegin;
@@ -38,7 +36,6 @@ PetscErrorCode PFView_Constant(void *value,PetscViewer viewer)
 }
 static PetscErrorCode PFDestroy_Constant(void *value)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(value));
@@ -47,7 +44,6 @@ static PetscErrorCode PFDestroy_Constant(void *value)
 
 static PetscErrorCode PFSetFromOptions_Constant(PetscOptionItems *PetscOptionsObject,PF pf)
 {
-  PetscErrorCode ierr;
   PetscScalar    *value = (PetscScalar*)pf->data;
 
   PetscFunctionBegin;
@@ -59,7 +55,6 @@ static PetscErrorCode PFSetFromOptions_Constant(PetscOptionItems *PetscOptionsOb
 
 PETSC_EXTERN PetscErrorCode PFCreate_Constant(PF pf,void *value)
 {
-  PetscErrorCode ierr;
   PetscScalar    *loc;
 
   PetscFunctionBegin;
@@ -77,7 +72,6 @@ PETSC_EXTERN PetscErrorCode PFCreate_Constant(PF pf,void *value)
 
 PETSC_EXTERN PetscErrorCode PFCreate_Quick(PF pf,PetscErrorCode (*function)(void*,PetscInt,const PetscScalar*,PetscScalar*))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PFSet(pf,function,NULL,NULL,NULL,NULL));
@@ -97,7 +91,6 @@ static PetscErrorCode PFApply_Identity(void *value,PetscInt n,const PetscScalar 
 
 static PetscErrorCode PFApplyVec_Identity(void *value,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecCopy(x,y));
@@ -105,7 +98,6 @@ static PetscErrorCode PFApplyVec_Identity(void *value,Vec x,Vec y)
 }
 static PetscErrorCode PFView_Identity(void *value,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscBool      iascii;
 
   PetscFunctionBegin;
@@ -117,7 +109,6 @@ static PetscErrorCode PFView_Identity(void *value,PetscViewer viewer)
 }
 static PetscErrorCode PFDestroy_Identity(void *value)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(value));
@@ -126,7 +117,6 @@ static PetscErrorCode PFDestroy_Identity(void *value)
 
 PETSC_EXTERN PetscErrorCode PFCreate_Identity(PF pf,void *value)
 {
-  PetscErrorCode ierr;
   PetscInt       *loc;
 
   PetscFunctionBegin;

@@ -45,7 +45,6 @@ int main(int argc,char **argv)
 
 PetscErrorCode ComputeInitialSolution(DM da,Vec x)
 {
-  PetscErrorCode ierr;
   PetscInt       mx,col[2],xs,xm,i;
   PetscScalar    Hx,val[2];
 
@@ -66,7 +65,6 @@ PetscErrorCode ComputeInitialSolution(DM da,Vec x)
 
 PetscErrorCode ComputeRHS(KSP ksp,Vec b,void *ctx)
 {
-  PetscErrorCode ierr;
   PetscInt       mx;
   PetscScalar    h;
   Vec            x;
@@ -84,7 +82,6 @@ PetscErrorCode ComputeRHS(KSP ksp,Vec b,void *ctx)
 
 PetscErrorCode ComputeMatrix(KSP ksp,Mat J,Mat jac,void *ctx)
 {
-  PetscErrorCode ierr;
   PetscInt       i,mx,xm,xs;
   PetscScalar    v[7],Hx;
   MatStencil     row,col[7];

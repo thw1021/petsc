@@ -20,7 +20,6 @@ PetscScalar Flow_Pump(Pump *pump,PetscScalar hf, PetscScalar ht)
 
 PetscErrorCode FormFunction_Water(DM networkdm,Vec localX,Vec localF,PetscInt nv,PetscInt ne,const PetscInt* vtx,const PetscInt* edges,void* appctx)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *xarr;
   const PetscInt    *cone;
   PetscScalar       *farr,hf,ht,flow;
@@ -100,7 +99,6 @@ PetscErrorCode FormFunction_Water(DM networkdm,Vec localX,Vec localF,PetscInt nv
 
 PetscErrorCode WaterFormFunction(SNES snes,Vec X, Vec F, void *user)
 {
-  PetscErrorCode ierr;
   DM             networkdm;
   Vec            localX,localF;
   const PetscInt *v,*e;
@@ -137,7 +135,6 @@ PetscErrorCode WaterFormFunction(SNES snes,Vec X, Vec F, void *user)
 
 PetscErrorCode WaterSetInitialGuess(DM networkdm,Vec X)
 {
-  PetscErrorCode ierr;
   PetscInt       nv,ne;
   const PetscInt *vtx,*edges;
   Vec            localX;
@@ -161,7 +158,6 @@ PetscErrorCode WaterSetInitialGuess(DM networkdm,Vec X)
 
 PetscErrorCode GetListofEdges_Water(WATERDATA *water,PetscInt *edgelist)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,node1,node2;
   Pipe           *pipe;
   Pump           *pump;
@@ -205,7 +201,6 @@ PetscErrorCode GetListofEdges_Water(WATERDATA *water,PetscInt *edgelist)
 
 PetscErrorCode SetInitialGuess_Water(DM networkdm,Vec localX,PetscInt nv,PetscInt ne, const PetscInt *vtx, const PetscInt *edges,void* appctx)
 {
-  PetscErrorCode ierr;
   PetscInt       i,offset,key;
   PetscBool      ghostvtex,sharedv;
   VERTEX_Water   vertex;

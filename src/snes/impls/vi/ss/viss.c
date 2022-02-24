@@ -17,7 +17,6 @@
 */
 static PetscErrorCode SNESVIComputeMeritFunction(Vec phi, PetscReal *merit,PetscReal *phinorm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecNormBegin(phi,NORM_2,phinorm));
@@ -52,7 +51,6 @@ static inline PetscScalar DPhi(PetscScalar a,PetscScalar b)
 */
 static PetscErrorCode SNESVIComputeFunction(SNES snes,Vec X,Vec phi,void *functx)
 {
-  PetscErrorCode    ierr;
   SNES_VINEWTONSSLS *vi = (SNES_VINEWTONSSLS*)snes->data;
   Vec               Xl  = snes->xl,Xu = snes->xu,F = snes->vec_func;
   PetscScalar       *phi_arr,*f_arr,*l,*u;
@@ -96,7 +94,6 @@ static PetscErrorCode SNESVIComputeFunction(SNES snes,Vec X,Vec phi,void *functx
 */
 PetscErrorCode SNESVIComputeBsubdifferentialVectors(SNES snes,Vec X,Vec F,Mat jac,Vec Da,Vec Db)
 {
-  PetscErrorCode ierr;
   PetscScalar    *l,*u,*x,*f,*da,*db,da1,da2,db1,db2;
   PetscInt       i,nlocal;
 
@@ -161,7 +158,6 @@ PetscErrorCode SNESVIComputeBsubdifferentialVectors(SNES snes,Vec X,Vec F,Mat ja
 */
 PetscErrorCode SNESVIComputeJacobian(Mat jac, Mat jac_pre,Vec Da, Vec Db)
 {
-  PetscErrorCode ierr;
 
   /* Do row scaling  and add diagonal perturbation */
   PetscFunctionBegin;
@@ -190,7 +186,6 @@ PetscErrorCode SNESVIComputeJacobian(Mat jac, Mat jac_pre,Vec Da, Vec Db)
 */
 PetscErrorCode SNESVIComputeMeritFunctionGradient(Mat H, Vec phi, Vec dpsi)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatMultTranspose(H,phi,dpsi));
@@ -217,7 +212,6 @@ PetscErrorCode SNESVIComputeMeritFunctionGradient(Mat H, Vec phi, Vec dpsi)
 PetscErrorCode SNESSolve_VINEWTONSSLS(SNES snes)
 {
   SNES_VINEWTONSSLS    *vi = (SNES_VINEWTONSSLS*)snes->data;
-  PetscErrorCode       ierr;
   PetscInt             maxits,i,lits;
   SNESLineSearchReason lssucceed;
   PetscReal            gnorm,xnorm=0,ynorm;
@@ -386,7 +380,6 @@ PetscErrorCode SNESSolve_VINEWTONSSLS(SNES snes)
  */
 PetscErrorCode SNESSetUp_VINEWTONSSLS(SNES snes)
 {
-  PetscErrorCode    ierr;
   SNES_VINEWTONSSLS *vi = (SNES_VINEWTONSSLS*) snes->data;
 
   PetscFunctionBegin;
@@ -403,7 +396,6 @@ PetscErrorCode SNESSetUp_VINEWTONSSLS(SNES snes)
 PetscErrorCode SNESReset_VINEWTONSSLS(SNES snes)
 {
   SNES_VINEWTONSSLS *vi = (SNES_VINEWTONSSLS*) snes->data;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESReset_VI(snes));
@@ -427,7 +419,6 @@ PetscErrorCode SNESReset_VINEWTONSSLS(SNES snes)
 */
 static PetscErrorCode SNESSetFromOptions_VINEWTONSSLS(PetscOptionItems *PetscOptionsObject,SNES snes)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESSetFromOptions_VI(PetscOptionsObject,snes));
@@ -457,7 +448,6 @@ static PetscErrorCode SNESSetFromOptions_VINEWTONSSLS(PetscOptionItems *PetscOpt
 M*/
 PETSC_EXTERN PetscErrorCode SNESCreate_VINEWTONSSLS(SNES snes)
 {
-  PetscErrorCode    ierr;
   SNES_VINEWTONSSLS *vi;
   SNESLineSearch    linesearch;
 

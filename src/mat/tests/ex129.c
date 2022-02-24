@@ -148,7 +148,6 @@ int main(int argc,char **args)
 
 PetscErrorCode ComputeRHS(DM da,Vec b)
 {
-  PetscErrorCode ierr;
   PetscInt       mx,my,mz;
   PetscScalar    h;
 
@@ -161,7 +160,6 @@ PetscErrorCode ComputeRHS(DM da,Vec b)
 
 PetscErrorCode ComputeRHSMatrix(PetscInt m,PetscInt nrhs,Mat *C)
 {
-  PetscErrorCode ierr;
   PetscRandom    rand;
   Mat            RHS;
   PetscScalar    *array,rval;
@@ -197,7 +195,6 @@ PetscErrorCode ComputeRHSMatrix(PetscInt m,PetscInt nrhs,Mat *C)
 
 PetscErrorCode ComputeMatrix(DM da,Mat B)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,k,mx,my,mz,xm,ym,zm,xs,ys,zs,dof,k1,k2,k3;
   PetscScalar    *v,*v_neighbor,Hx,Hy,Hz,HxHydHz,HyHzdHx,HxHzdHy,r1,r2;
   MatStencil     row,col;

@@ -4,7 +4,6 @@
 
 static PetscErrorCode DMKSPDestroy(DMKSP *kdm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*kdm) PetscFunctionReturn(0);
@@ -17,7 +16,6 @@ static PetscErrorCode DMKSPDestroy(DMKSP *kdm)
 
 static PetscErrorCode DMKSPCreate(MPI_Comm comm,DMKSP *kdm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPInitializePackage());
@@ -30,7 +28,6 @@ static PetscErrorCode DMKSPCreate(MPI_Comm comm,DMKSP *kdm)
  */
 static PetscErrorCode DMCoarsenHook_DMKSP(DM dm,DM dmc,void *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMCopyDMKSP(dm,dmc));
@@ -42,7 +39,6 @@ static PetscErrorCode DMCoarsenHook_DMKSP(DM dm,DM dmc,void *ctx)
  */
 static PetscErrorCode DMRefineHook_DMKSP(DM dm,DM dmc,void *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMCopyDMKSP(dm,dmc));
@@ -64,7 +60,6 @@ static PetscErrorCode DMRefineHook_DMKSP(DM dm,DM dmc,void *ctx)
 @*/
 PetscErrorCode DMKSPCopy(DMKSP kdm,DMKSP nkdm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(kdm,DMKSP_CLASSID,1);
@@ -110,7 +105,6 @@ PetscErrorCode DMKSPCopy(DMKSP kdm,DMKSP nkdm)
 @*/
 PetscErrorCode DMGetDMKSP(DM dm,DMKSP *kspdm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
@@ -143,7 +137,6 @@ PetscErrorCode DMGetDMKSP(DM dm,DMKSP *kspdm)
 @*/
 PetscErrorCode DMGetDMKSPWrite(DM dm,DMKSP *kspdm)
 {
-  PetscErrorCode ierr;
   DMKSP          kdm;
 
   PetscFunctionBegin;
@@ -181,7 +174,6 @@ PetscErrorCode DMGetDMKSPWrite(DM dm,DMKSP *kspdm)
 @*/
 PetscErrorCode DMCopyDMKSP(DM dmsrc,DM dmdest)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dmsrc,DM_CLASSID,1);
@@ -215,7 +207,6 @@ PetscErrorCode DMCopyDMKSP(DM dmsrc,DM dmdest)
 @*/
 PetscErrorCode DMKSPSetComputeOperators(DM dm,PetscErrorCode (*func)(KSP,Mat,Mat,void*),void *ctx)
 {
-  PetscErrorCode ierr;
   DMKSP          kdm;
 
   PetscFunctionBegin;
@@ -244,7 +235,6 @@ PetscErrorCode DMKSPSetComputeOperators(DM dm,PetscErrorCode (*func)(KSP,Mat,Mat
 @*/
 PetscErrorCode DMKSPGetComputeOperators(DM dm,PetscErrorCode (**func)(KSP,Mat,Mat,void*),void *ctx)
 {
-  PetscErrorCode ierr;
   DMKSP          kdm;
 
   PetscFunctionBegin;
@@ -276,7 +266,6 @@ PetscErrorCode DMKSPGetComputeOperators(DM dm,PetscErrorCode (**func)(KSP,Mat,Ma
 @*/
 PetscErrorCode DMKSPSetComputeRHS(DM dm,PetscErrorCode (*func)(KSP,Vec,void*),void *ctx)
 {
-  PetscErrorCode ierr;
   DMKSP          kdm;
 
   PetscFunctionBegin;
@@ -307,7 +296,6 @@ PetscErrorCode DMKSPSetComputeRHS(DM dm,PetscErrorCode (*func)(KSP,Vec,void*),vo
 @*/
 PetscErrorCode DMKSPSetComputeInitialGuess(DM dm,PetscErrorCode (*func)(KSP,Vec,void*),void *ctx)
 {
-  PetscErrorCode ierr;
   DMKSP          kdm;
 
   PetscFunctionBegin;
@@ -336,7 +324,6 @@ PetscErrorCode DMKSPSetComputeInitialGuess(DM dm,PetscErrorCode (*func)(KSP,Vec,
 @*/
 PetscErrorCode DMKSPGetComputeRHS(DM dm,PetscErrorCode (**func)(KSP,Vec,void*),void *ctx)
 {
-  PetscErrorCode ierr;
   DMKSP          kdm;
 
   PetscFunctionBegin;
@@ -365,7 +352,6 @@ PetscErrorCode DMKSPGetComputeRHS(DM dm,PetscErrorCode (**func)(KSP,Vec,void*),v
 @*/
 PetscErrorCode DMKSPGetComputeInitialGuess(DM dm,PetscErrorCode (**func)(KSP,Vec,void*),void *ctx)
 {
-  PetscErrorCode ierr;
   DMKSP          kdm;
 
   PetscFunctionBegin;

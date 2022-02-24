@@ -33,7 +33,6 @@ const char *const SNESNASMFJTypes[] = {"FINALOUTER","FINALINNER","INITIAL"};
 static PetscErrorCode SNESReset_NASM(SNES snes)
 {
   SNES_NASM      *nasm = (SNES_NASM*)snes->data;
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -74,7 +73,6 @@ static PetscErrorCode SNESReset_NASM(SNES snes)
 
 static PetscErrorCode SNESDestroy_NASM(SNES snes)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESReset_NASM(snes));
@@ -84,7 +82,6 @@ static PetscErrorCode SNESDestroy_NASM(SNES snes)
 
 static PetscErrorCode DMGlobalToLocalSubDomainDirichletHook_Private(DM dm,Vec g,InsertMode mode,Vec l,void *ctx)
 {
-  PetscErrorCode ierr;
   Vec            bcs = (Vec)ctx;
 
   PetscFunctionBegin;
@@ -95,7 +92,6 @@ static PetscErrorCode DMGlobalToLocalSubDomainDirichletHook_Private(DM dm,Vec g,
 static PetscErrorCode SNESSetUp_NASM(SNES snes)
 {
   SNES_NASM      *nasm = (SNES_NASM*)snes->data;
-  PetscErrorCode ierr;
   DM             dm,subdm;
   DM             *subdms;
   PetscInt       i;
@@ -178,7 +174,6 @@ static PetscErrorCode SNESSetUp_NASM(SNES snes)
 
 static PetscErrorCode SNESSetFromOptions_NASM(PetscOptionItems *PetscOptionsObject,SNES snes)
 {
-  PetscErrorCode    ierr;
   PCASMType         asmtype;
   PetscBool         flg,monflg;
   SNES_NASM         *nasm = (SNES_NASM*)snes->data;
@@ -206,7 +201,6 @@ static PetscErrorCode SNESSetFromOptions_NASM(PetscOptionItems *PetscOptionsObje
 static PetscErrorCode SNESView_NASM(SNES snes, PetscViewer viewer)
 {
   SNES_NASM         *nasm = (SNES_NASM*)snes->data;
-  PetscErrorCode    ierr;
   PetscMPIInt       rank,size;
   PetscInt          i,N,bsz;
   PetscBool         iascii,isstring;
@@ -284,7 +278,6 @@ static PetscErrorCode SNESView_NASM(SNES snes, PetscViewer viewer)
 @*/
 PetscErrorCode SNESNASMSetType(SNES snes,PCASMType type)
 {
-  PetscErrorCode ierr;
   PetscErrorCode (*f)(SNES,PCASMType);
 
   PetscFunctionBegin;
@@ -320,7 +313,6 @@ static PetscErrorCode SNESNASMSetType_NASM(SNES snes,PCASMType type)
 @*/
 PetscErrorCode SNESNASMGetType(SNES snes,PCASMType *type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscUseMethod(snes,"SNESNASMGetType_C",(SNES,PCASMType*),(snes,type)));
@@ -355,7 +347,6 @@ static PetscErrorCode SNESNASMGetType_NASM(SNES snes,PCASMType *type)
 @*/
 PetscErrorCode SNESNASMSetSubdomains(SNES snes,PetscInt n,SNES subsnes[],VecScatter iscatter[],VecScatter oscatter[],VecScatter gscatter[])
 {
-  PetscErrorCode ierr;
   PetscErrorCode (*f)(SNES,PetscInt,SNES*,VecScatter*,VecScatter*,VecScatter*);
 
   PetscFunctionBegin;
@@ -367,7 +358,6 @@ PetscErrorCode SNESNASMSetSubdomains(SNES snes,PetscInt n,SNES subsnes[],VecScat
 static PetscErrorCode SNESNASMSetSubdomains_NASM(SNES snes,PetscInt n,SNES subsnes[],VecScatter iscatter[],VecScatter oscatter[],VecScatter gscatter[])
 {
   PetscInt       i;
-  PetscErrorCode ierr;
   SNES_NASM      *nasm = (SNES_NASM*)snes->data;
 
   PetscFunctionBegin;
@@ -437,7 +427,6 @@ static PetscErrorCode SNESNASMSetSubdomains_NASM(SNES snes,PetscInt n,SNES subsn
 @*/
 PetscErrorCode SNESNASMGetSubdomains(SNES snes,PetscInt *n,SNES *subsnes[],VecScatter *iscatter[],VecScatter *oscatter[],VecScatter *gscatter[])
 {
-  PetscErrorCode ierr;
   PetscErrorCode (*f)(SNES,PetscInt*,SNES**,VecScatter**,VecScatter**,VecScatter**);
 
   PetscFunctionBegin;
@@ -480,7 +469,6 @@ static PetscErrorCode SNESNASMGetSubdomains_NASM(SNES snes,PetscInt *n,SNES *sub
 @*/
 PetscErrorCode SNESNASMGetSubdomainVecs(SNES snes,PetscInt *n,Vec **x,Vec **y,Vec **b, Vec **xl)
 {
-  PetscErrorCode ierr;
   PetscErrorCode (*f)(SNES,PetscInt*,Vec**,Vec**,Vec**,Vec**);
 
   PetscFunctionBegin;
@@ -522,7 +510,6 @@ static PetscErrorCode SNESNASMGetSubdomainVecs_NASM(SNES snes,PetscInt *n,Vec **
 PetscErrorCode SNESNASMSetComputeFinalJacobian(SNES snes,PetscBool flg)
 {
   PetscErrorCode (*f)(SNES,PetscBool);
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectQueryFunction((PetscObject)snes,"SNESNASMSetComputeFinalJacobian_C",&f));
@@ -558,7 +545,6 @@ static PetscErrorCode SNESNASMSetComputeFinalJacobian_NASM(SNES snes,PetscBool f
 PetscErrorCode SNESNASMSetDamping(SNES snes,PetscReal dmp)
 {
   PetscErrorCode (*f)(SNES,PetscReal);
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectQueryFunction((PetscObject)snes,"SNESNASMSetDamping_C",(void (**)(void))&f));
@@ -590,7 +576,6 @@ static PetscErrorCode SNESNASMSetDamping_NASM(SNES snes,PetscReal dmp)
 @*/
 PetscErrorCode SNESNASMGetDamping(SNES snes,PetscReal *dmp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscUseMethod(snes,"SNESNASMGetDamping_C",(SNES,PetscReal*),(snes,dmp)));
@@ -623,7 +608,6 @@ PetscErrorCode SNESNASMSolveLocal_Private(SNES snes,Vec B,Vec Y,Vec X)
   SNES           subsnes;
   PetscInt       i;
   PetscReal      dmp;
-  PetscErrorCode ierr;
   Vec            Xl,Bl,Yl,Xlloc;
   VecScatter     iscat,oscat,gscat,oscat_copy;
   DM             dm,subdm;
@@ -699,7 +683,6 @@ static PetscErrorCode SNESNASMComputeFinalJacobian_Private(SNES snes, Vec Xfinal
   SNES_NASM      *nasm = (SNES_NASM*)snes->data;
   SNES           subsnes;
   PetscInt       i,lag = 1;
-  PetscErrorCode ierr;
   Vec            Xlloc,Xl,Fl,F;
   VecScatter     oscat,gscat;
   DM             dm,subdm;
@@ -750,7 +733,6 @@ static PetscErrorCode SNESSolve_NASM(SNES snes)
   Vec              Y;
   PetscInt         i;
   PetscReal        fnorm = 0.0;
-  PetscErrorCode   ierr;
   SNESNormSchedule normschedule;
   SNES_NASM        *nasm = (SNES_NASM*)snes->data;
 
@@ -866,7 +848,6 @@ M*/
 PETSC_EXTERN PetscErrorCode SNESCreate_NASM(SNES snes)
 {
   SNES_NASM      *nasm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(snes,&nasm));
@@ -987,7 +968,6 @@ PetscErrorCode SNESNASMGetNumber(SNES snes,PetscInt *n)
 PetscErrorCode SNESNASMSetWeight(SNES snes,Vec weight)
 {
   SNES_NASM      *nasm = (SNES_NASM*)snes->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 

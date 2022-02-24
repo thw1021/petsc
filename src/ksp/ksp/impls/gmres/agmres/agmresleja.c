@@ -51,7 +51,6 @@ PetscErrorCode KSPAGMRESLejaOrdering(PetscScalar *re, PetscScalar *im, PetscScal
 {
   PetscInt       *spos;
   PetscScalar    *n_cmpl,temp;
-  PetscErrorCode ierr;
   PetscInt       i, pos, j;
 
   PetscFunctionBegin;

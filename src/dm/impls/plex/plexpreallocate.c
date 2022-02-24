@@ -9,7 +9,6 @@ static PetscErrorCode DMPlexComputeAnchorAdjacencies(DM dm, PetscBool useCone, P
   PetscInt       pStart, pEnd;
   PetscSection   section, sectionGlobal, adjSec, aSec;
   IS             aIS;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetLocalSection(dm, &section));
@@ -168,7 +167,6 @@ static PetscErrorCode DMPlexCreateAdjacencySection_Static(DM dm, PetscInt bs, Pe
   PetscInt           dim, pStart, pEnd, numDof, globalOffStart, globalOffEnd, numCols;
   PetscInt          *tmpAdj = NULL, *adj, *rootAdj, *anchorAdj = NULL, *cols, *remoteOffsets;
   PetscInt           adjSize;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject) dm, &comm));
@@ -585,7 +583,6 @@ static PetscErrorCode DMPlexUpdateAllocation_Static(DM dm, PetscLayout rLayout, 
 {
   PetscSection   section;
   PetscInt       rStart, rEnd, r, pStart, pEnd, p;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* This loop needs to change to a loop over points, then field dofs, which means we need to look both sections */
@@ -647,7 +644,6 @@ static PetscErrorCode DMPlexFillMatrix_Static(DM dm, PetscLayout rLayout, PetscI
   PetscSection   section;
   PetscScalar   *values;
   PetscInt       rStart, rEnd, r, pStart, pEnd, p, len, maxRowLen = 0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLayoutGetRange(rLayout, &rStart, &rEnd));
@@ -721,7 +717,6 @@ PetscErrorCode DMPlexPreallocateOperator(DM dm, PetscInt bs, PetscInt dnz[], Pet
   PetscLayout    rLayout;
   PetscBool      isSymBlock, isSymSeqBlock, isSymMPIBlock, debug = PETSC_FALSE;
   PetscMPIInt    size;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);

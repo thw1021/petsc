@@ -11,7 +11,6 @@ static PetscErrorCode Tao_mcstep(TaoLineSearch ls,PetscReal *stx,PetscReal *fx,P
 
 static PetscErrorCode TaoLineSearchDestroy_MT(TaoLineSearch ls)
 {
-  PetscErrorCode   ierr;
   TaoLineSearch_MT *mt = (TaoLineSearch_MT*)(ls->data);
 
   PetscFunctionBegin;
@@ -30,7 +29,6 @@ static PetscErrorCode TaoLineSearchSetFromOptions_MT(PetscOptionItems *PetscOpti
 static PetscErrorCode TaoLineSearchMonitor_MT(TaoLineSearch ls)
 {
   TaoLineSearch_MT *mt = (TaoLineSearch_MT*)ls->data;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerASCIIPrintf(ls->viewer, "stx: %g, fx: %g, dgx: %g\n", (double)mt->stx, (double)mt->fx, (double)mt->dgx));
@@ -40,7 +38,6 @@ static PetscErrorCode TaoLineSearchMonitor_MT(TaoLineSearch ls)
 
 static PetscErrorCode TaoLineSearchApply_MT(TaoLineSearch ls, Vec x, PetscReal *f, Vec g, Vec s)
 {
-  PetscErrorCode   ierr;
   TaoLineSearch_MT *mt = (TaoLineSearch_MT*)(ls->data);
   PetscReal        xtrapf = 4.0;
   PetscReal        finit, width, width1, dginit, fm, fxm, fym, dgm, dgxm, dgym;
@@ -289,7 +286,6 @@ static PetscErrorCode TaoLineSearchApply_MT(TaoLineSearch ls, Vec x, PetscReal *
 M*/
 PETSC_EXTERN PetscErrorCode TaoLineSearchCreate_MT(TaoLineSearch ls)
 {
-  PetscErrorCode   ierr;
   TaoLineSearch_MT *ctx;
 
   PetscFunctionBegin;

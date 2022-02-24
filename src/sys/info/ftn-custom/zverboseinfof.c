@@ -8,7 +8,6 @@
 
 static PetscErrorCode PetscFixSlashN(const char *in, char **out)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
   size_t         len;
 

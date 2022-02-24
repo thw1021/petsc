@@ -7,7 +7,6 @@
 PetscErrorCode  MatMPIAIJSetPreallocation_MPIAIJViennaCL(Mat B,PetscInt d_nz,const PetscInt d_nnz[],PetscInt o_nz,const PetscInt o_nnz[])
 {
   Mat_MPIAIJ     *b = (Mat_MPIAIJ*)B->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLayoutSetUp(B->rmap));
@@ -32,7 +31,6 @@ PetscErrorCode  MatMPIAIJSetPreallocation_MPIAIJViennaCL(Mat B,PetscInt d_nz,con
 PetscErrorCode MatAssemblyEnd_MPIAIJViennaCL(Mat A,MatAssemblyType mode)
 {
   Mat_MPIAIJ     *b = (Mat_MPIAIJ*)A->data;
-  PetscErrorCode ierr;
   PetscBool      v;
 
   PetscFunctionBegin;
@@ -49,8 +47,6 @@ PetscErrorCode MatAssemblyEnd_MPIAIJViennaCL(Mat A,MatAssemblyType mode)
 
 PetscErrorCode MatDestroy_MPIAIJViennaCL(Mat A)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(MatDestroy_MPIAIJ(A));
   PetscFunctionReturn(0);
@@ -58,8 +54,6 @@ PetscErrorCode MatDestroy_MPIAIJViennaCL(Mat A)
 
 PETSC_EXTERN PetscErrorCode MatCreate_MPIAIJViennaCL(Mat A)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(MatCreate_MPIAIJ(A));
   A->boundtocpu = PETSC_FALSE;
@@ -115,7 +109,6 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPIAIJViennaCL(Mat A)
 @*/
 PetscErrorCode  MatCreateAIJViennaCL(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt M,PetscInt N,PetscInt d_nz,const PetscInt d_nnz[],PetscInt o_nz,const PetscInt o_nnz[],Mat *A)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    size;
 
   PetscFunctionBegin;

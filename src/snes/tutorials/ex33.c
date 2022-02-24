@@ -37,7 +37,6 @@ PetscErrorCode FormPermeability(DM da, Vec Kappa, AppCtx *user)
   PetscScalar    *K;
   PetscScalar    *coords;
   PetscInt       xs, xm, i;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetCoordinateDM(da, &cda));
@@ -75,7 +74,6 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, Field *u, Field *f, AppCtx
   Field          *uold;
   PetscScalar    *Kappa;
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetGlobalVector(user->cda, &L));

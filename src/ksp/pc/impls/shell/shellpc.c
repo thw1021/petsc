@@ -49,7 +49,6 @@ typedef struct {
 @*/
 PetscErrorCode  PCShellGetContext(PC pc,void *ctx)
 {
-  PetscErrorCode ierr;
   PetscBool      flg;
 
   PetscFunctionBegin;
@@ -81,7 +80,6 @@ PetscErrorCode  PCShellGetContext(PC pc,void *ctx)
 PetscErrorCode  PCShellSetContext(PC pc,void *ctx)
 {
   PC_Shell       *shell = (PC_Shell*)pc->data;
-  PetscErrorCode ierr;
   PetscBool      flg;
 
   PetscFunctionBegin;
@@ -94,7 +92,6 @@ PetscErrorCode  PCShellSetContext(PC pc,void *ctx)
 static PetscErrorCode PCSetUp_Shell(PC pc)
 {
   PC_Shell       *shell = (PC_Shell*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!shell->setup,PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"No setup() routine provided to Shell PC");
@@ -105,7 +102,6 @@ static PetscErrorCode PCSetUp_Shell(PC pc)
 static PetscErrorCode PCApply_Shell(PC pc,Vec x,Vec y)
 {
   PC_Shell         *shell = (PC_Shell*)pc->data;
-  PetscErrorCode   ierr;
   PetscObjectState instate,outstate;
 
   PetscFunctionBegin;
@@ -123,7 +119,6 @@ static PetscErrorCode PCApply_Shell(PC pc,Vec x,Vec y)
 static PetscErrorCode PCMatApply_Shell(PC pc,Mat X,Mat Y)
 {
   PC_Shell         *shell = (PC_Shell*)pc->data;
-  PetscErrorCode   ierr;
   PetscObjectState instate,outstate;
 
   PetscFunctionBegin;
@@ -141,7 +136,6 @@ static PetscErrorCode PCMatApply_Shell(PC pc,Mat X,Mat Y)
 static PetscErrorCode PCApplySymmetricLeft_Shell(PC pc,Vec x,Vec y)
 {
   PC_Shell       *shell = (PC_Shell*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!shell->applysymmetricleft,PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"No apply() routine provided to Shell PC");
@@ -152,7 +146,6 @@ static PetscErrorCode PCApplySymmetricLeft_Shell(PC pc,Vec x,Vec y)
 static PetscErrorCode PCApplySymmetricRight_Shell(PC pc,Vec x,Vec y)
 {
   PC_Shell       *shell = (PC_Shell*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!shell->applysymmetricright,PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"No apply() routine provided to Shell PC");
@@ -163,7 +156,6 @@ static PetscErrorCode PCApplySymmetricRight_Shell(PC pc,Vec x,Vec y)
 static PetscErrorCode PCApplyBA_Shell(PC pc,PCSide side,Vec x,Vec y,Vec w)
 {
   PC_Shell         *shell = (PC_Shell*)pc->data;
-  PetscErrorCode   ierr;
   PetscObjectState instate,outstate;
 
   PetscFunctionBegin;
@@ -188,7 +180,6 @@ static PetscErrorCode PCPreSolveChangeRHS_Shell(PC pc,PetscBool* change)
 static PetscErrorCode PCPreSolve_Shell(PC pc,KSP ksp,Vec b,Vec x)
 {
   PC_Shell       *shell = (PC_Shell*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!shell->presolve,PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"No presolve() routine provided to Shell PC");
@@ -199,7 +190,6 @@ static PetscErrorCode PCPreSolve_Shell(PC pc,KSP ksp,Vec b,Vec x)
 static PetscErrorCode PCPostSolve_Shell(PC pc,KSP ksp,Vec b,Vec x)
 {
   PC_Shell       *shell = (PC_Shell*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!shell->postsolve,PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"No postsolve() routine provided to Shell PC");
@@ -210,7 +200,6 @@ static PetscErrorCode PCPostSolve_Shell(PC pc,KSP ksp,Vec b,Vec x)
 static PetscErrorCode PCApplyTranspose_Shell(PC pc,Vec x,Vec y)
 {
   PC_Shell         *shell = (PC_Shell*)pc->data;
-  PetscErrorCode   ierr;
   PetscObjectState instate,outstate;
 
   PetscFunctionBegin;
@@ -227,7 +216,6 @@ static PetscErrorCode PCApplyTranspose_Shell(PC pc,Vec x,Vec y)
 
 static PetscErrorCode PCApplyRichardson_Shell(PC pc,Vec x,Vec y,Vec w,PetscReal rtol,PetscReal abstol, PetscReal dtol,PetscInt it,PetscBool guesszero,PetscInt *outits,PCRichardsonConvergedReason *reason)
 {
-  PetscErrorCode   ierr;
   PC_Shell         *shell = (PC_Shell*)pc->data;
   PetscObjectState instate,outstate;
 
@@ -246,7 +234,6 @@ static PetscErrorCode PCApplyRichardson_Shell(PC pc,Vec x,Vec y,Vec w,PetscReal 
 static PetscErrorCode PCDestroy_Shell(PC pc)
 {
   PC_Shell       *shell = (PC_Shell*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(shell->name));
@@ -273,7 +260,6 @@ static PetscErrorCode PCDestroy_Shell(PC pc)
 static PetscErrorCode PCView_Shell(PC pc,PetscViewer viewer)
 {
   PC_Shell       *shell = (PC_Shell*)pc->data;
-  PetscErrorCode ierr;
   PetscBool      iascii;
 
   PetscFunctionBegin;
@@ -364,7 +350,6 @@ static PetscErrorCode  PCShellSetApplyBA_Shell(PC pc,PetscErrorCode (*applyBA)(P
 static PetscErrorCode  PCShellSetPreSolve_Shell(PC pc,PetscErrorCode (*presolve)(PC,KSP,Vec,Vec))
 {
   PC_Shell       *shell = (PC_Shell*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   shell->presolve = presolve;
@@ -423,7 +408,6 @@ static PetscErrorCode  PCShellSetApplyRichardson_Shell(PC pc,PetscErrorCode (*ap
 static PetscErrorCode  PCShellSetName_Shell(PC pc,const char name[])
 {
   PC_Shell       *shell = (PC_Shell*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(shell->name));
@@ -468,7 +452,6 @@ static PetscErrorCode  PCShellGetName_Shell(PC pc,const char *name[])
 @*/
 PetscErrorCode  PCShellSetDestroy(PC pc,PetscErrorCode (*destroy)(PC))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -502,7 +485,6 @@ PetscErrorCode  PCShellSetDestroy(PC pc,PetscErrorCode (*destroy)(PC))
 @*/
 PetscErrorCode  PCShellSetSetUp(PC pc,PetscErrorCode (*setup)(PC))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -536,7 +518,6 @@ PetscErrorCode  PCShellSetSetUp(PC pc,PetscErrorCode (*setup)(PC))
 @*/
 PetscErrorCode  PCShellSetView(PC pc,PetscErrorCode (*view)(PC,PetscViewer))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -571,7 +552,6 @@ PetscErrorCode  PCShellSetView(PC pc,PetscErrorCode (*view)(PC,PetscViewer))
 @*/
 PetscErrorCode  PCShellSetApply(PC pc,PetscErrorCode (*apply)(PC,Vec,Vec))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -606,7 +586,6 @@ PetscErrorCode  PCShellSetApply(PC pc,PetscErrorCode (*apply)(PC,Vec,Vec))
 @*/
 PetscErrorCode  PCShellSetMatApply(PC pc,PetscErrorCode (*matapply)(PC,Mat,Mat))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -641,7 +620,6 @@ PetscErrorCode  PCShellSetMatApply(PC pc,PetscErrorCode (*matapply)(PC,Mat,Mat))
 @*/
 PetscErrorCode  PCShellSetApplySymmetricLeft(PC pc,PetscErrorCode (*apply)(PC,Vec,Vec))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -676,7 +654,6 @@ PetscErrorCode  PCShellSetApplySymmetricLeft(PC pc,PetscErrorCode (*apply)(PC,Ve
 @*/
 PetscErrorCode  PCShellSetApplySymmetricRight(PC pc,PetscErrorCode (*apply)(PC,Vec,Vec))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -711,7 +688,6 @@ PetscErrorCode  PCShellSetApplySymmetricRight(PC pc,PetscErrorCode (*apply)(PC,V
 @*/
 PetscErrorCode  PCShellSetApplyBA(PC pc,PetscErrorCode (*applyBA)(PC,PCSide,Vec,Vec,Vec))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -749,7 +725,6 @@ PetscErrorCode  PCShellSetApplyBA(PC pc,PetscErrorCode (*applyBA)(PC,PCSide,Vec,
 @*/
 PetscErrorCode  PCShellSetApplyTranspose(PC pc,PetscErrorCode (*applytranspose)(PC,Vec,Vec))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -786,7 +761,6 @@ PetscErrorCode  PCShellSetApplyTranspose(PC pc,PetscErrorCode (*applytranspose)(
 @*/
 PetscErrorCode  PCShellSetPreSolve(PC pc,PetscErrorCode (*presolve)(PC,KSP,Vec,Vec))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -823,7 +797,6 @@ PetscErrorCode  PCShellSetPreSolve(PC pc,PetscErrorCode (*presolve)(PC,KSP,Vec,V
 @*/
 PetscErrorCode  PCShellSetPostSolve(PC pc,PetscErrorCode (*postsolve)(PC,KSP,Vec,Vec))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -847,7 +820,6 @@ PetscErrorCode  PCShellSetPostSolve(PC pc,PetscErrorCode (*postsolve)(PC,KSP,Vec
 @*/
 PetscErrorCode  PCShellSetName(PC pc,const char name[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -873,7 +845,6 @@ PetscErrorCode  PCShellSetName(PC pc,const char name[])
 @*/
 PetscErrorCode  PCShellGetName(PC pc,const char *name[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -915,7 +886,6 @@ PetscErrorCode  PCShellGetName(PC pc,const char *name[])
 @*/
 PetscErrorCode  PCShellSetApplyRichardson(PC pc,PetscErrorCode (*apply)(PC,Vec,Vec,Vec,PetscReal,PetscReal,PetscReal,PetscInt,PetscBool,PetscInt*,PCRichardsonConvergedReason*))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
@@ -953,7 +923,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_Shell(PC pc)
 {
-  PetscErrorCode ierr;
   PC_Shell       *shell;
 
   PetscFunctionBegin;

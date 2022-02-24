@@ -20,7 +20,6 @@ PetscErrorCode InitialConditions(DM,Vec);
 PetscErrorCode InitializeLambda(DM da,Vec lambda,PetscReal x,PetscReal y)
 {
    PetscInt i,j,Mx,My,xs,ys,xm,ym;
-   PetscErrorCode ierr;
    Field **l;
    PetscFunctionBegin;
 
@@ -153,7 +152,6 @@ int main(int argc,char **argv)
 /* ------------------------------------------------------------------- */
 PetscErrorCode InitialConditions(DM da,Vec U)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,xs,ys,xm,ym,Mx,My;
   Field          **u;
   PetscReal      hx,hy,x,y;

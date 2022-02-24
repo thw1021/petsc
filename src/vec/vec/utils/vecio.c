@@ -13,7 +13,6 @@
 
 PetscErrorCode VecView_Binary(Vec vec,PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   PetscBool         skipHeader;
   PetscLayout       map;
   PetscInt          tr[2],n,s,N;
@@ -63,7 +62,6 @@ PetscErrorCode VecView_Binary(Vec vec,PetscViewer viewer)
 
 PetscErrorCode VecLoad_Binary(Vec vec, PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscBool      skipHeader,flg;
   PetscInt       tr[2],rows,N,n,s,bs;
   PetscScalar    *array;
@@ -115,7 +113,6 @@ PetscErrorCode VecLoad_HDF5(Vec xin, PetscViewer viewer)
   hid_t          scalartype; /* scalar type (H5T_NATIVE_FLOAT or H5T_NATIVE_DOUBLE) */
   PetscScalar    *x,*arr;
   const char     *vecname;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!((PetscObject)xin)->name,PetscObjectComm((PetscObject)xin), PETSC_ERR_SUP, "Vec name must be set with PetscObjectSetName() before VecLoad()");
@@ -192,7 +189,6 @@ PetscErrorCode VecLoad_ADIOS(Vec xin, PetscViewer viewer)
 
 PetscErrorCode  VecLoad_Default(Vec newvec, PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   PetscBool      isbinary;
 #if defined(PETSC_HAVE_HDF5)
   PetscBool      ishdf5;
@@ -252,7 +248,6 @@ PetscErrorCode VecChop(Vec v, PetscReal tol)
 {
   PetscScalar    *a;
   PetscInt       n, i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetLocalSize(v, &n));

@@ -258,7 +258,6 @@ PetscErrorCode InitialConditions(Vec u,AppCtx *appctx)
 {
   PetscScalar    *u_localptr,h = appctx->h;
   PetscInt       i;
-  PetscErrorCode ierr;
 
   /*
     Get a pointer to vector data.
@@ -309,7 +308,6 @@ PetscErrorCode ExactSolution(PetscReal t,Vec solution,AppCtx *appctx)
 {
   PetscScalar    *s_localptr,h = appctx->h,ex1,ex2,sc1,sc2,tc = t;
   PetscInt       i;
-  PetscErrorCode ierr;
 
   /*
      Get a pointer to vector data.
@@ -350,7 +348,6 @@ PetscErrorCode ExactSolution(PetscReal t,Vec solution,AppCtx *appctx)
 PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal time,Vec u,void *ctx)
 {
   AppCtx         *appctx = (AppCtx*) ctx;   /* user-defined application context */
-  PetscErrorCode ierr;
   PetscReal      norm_2,norm_max;
 
   /*
@@ -428,7 +425,6 @@ PetscErrorCode RHSMatrixHeat(TS ts,PetscReal t,Vec X,Mat AA,Mat BB,void *ctx)
   AppCtx         *appctx = (AppCtx*)ctx;     /* user-defined application context */
   PetscInt       mstart  = 0;
   PetscInt       mend    = appctx->m;
-  PetscErrorCode ierr;
   PetscInt       i,idx[3];
   PetscScalar    v[3],stwo = -2./(appctx->h*appctx->h),sone = -.5*stwo;
 

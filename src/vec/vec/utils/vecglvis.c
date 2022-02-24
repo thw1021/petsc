@@ -4,7 +4,6 @@
 static PetscErrorCode PetscViewerGLVisVecInfoDestroy_Private(void *ptr)
 {
   PetscViewerGLVisVecInfo info = (PetscViewerGLVisVecInfo)ptr;
-  PetscErrorCode          ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscFree(info->fec_type));
@@ -23,7 +22,6 @@ PetscErrorCode VecView_GLVis(Vec U,PetscViewer viewer)
   void                   *userctx;
   PetscInt               i,nfields,*spacedim;
   PetscBool              pause = PETSC_FALSE;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerGLVisGetStatus_Private(viewer,&sockstatus));

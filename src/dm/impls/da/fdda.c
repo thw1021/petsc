@@ -15,7 +15,6 @@ extern PetscErrorCode DMCreateColoring_DA_3d_MPIAIJ(DM,ISColoringType,ISColoring
 
 static PetscErrorCode DMDASetBlockFills_Private(const PetscInt *dfill,PetscInt w,PetscInt **rfill)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,nz,*fill;
 
   PetscFunctionBegin;
@@ -50,7 +49,6 @@ static PetscErrorCode DMDASetBlockFills_Private(const PetscInt *dfill,PetscInt w
 
 static PetscErrorCode DMDASetBlockFillsSparse_Private(const PetscInt *dfillsparse,PetscInt w,PetscInt **rfill)
 {
-  PetscErrorCode ierr;
   PetscInt       nz;
 
   PetscFunctionBegin;
@@ -67,7 +65,6 @@ static PetscErrorCode DMDASetBlockFillsSparse_Private(const PetscInt *dfillspars
 
 static PetscErrorCode DMDASetBlockFills_Private2(DM_DA *dd)
 {
-  PetscErrorCode ierr;
   PetscInt       i,k,cnt = 1;
 
   PetscFunctionBegin;
@@ -123,7 +120,6 @@ $                         0, 1, 1}
 PetscErrorCode  DMDASetBlockFills(DM da,const PetscInt *dfill,const PetscInt *ofill)
 {
   DM_DA          *dd = (DM_DA*)da->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* save the given dfill and ofill information */
@@ -178,7 +174,6 @@ PetscErrorCode  DMDASetBlockFills(DM da,const PetscInt *dfill,const PetscInt *of
 PetscErrorCode  DMDASetBlockFillsSparse(DM da,const PetscInt *dfillsparse,const PetscInt *ofillsparse)
 {
   DM_DA          *dd = (DM_DA*)da->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* save the given dfill and ofill information */
@@ -193,7 +188,6 @@ PetscErrorCode  DMDASetBlockFillsSparse(DM da,const PetscInt *dfillsparse,const 
 
 PetscErrorCode  DMCreateColoring_DA(DM da,ISColoringType ctype,ISColoring *coloring)
 {
-  PetscErrorCode   ierr;
   PetscInt         dim,m,n,p,nc;
   DMBoundaryType   bx,by,bz;
   MPI_Comm         comm;
@@ -277,7 +271,6 @@ PetscErrorCode  DMCreateColoring_DA(DM da,ISColoringType ctype,ISColoring *color
 
 PetscErrorCode DMCreateColoring_DA_2d_MPIAIJ(DM da,ISColoringType ctype,ISColoring *coloring)
 {
-  PetscErrorCode  ierr;
   PetscInt        xs,ys,nx,ny,i,j,ii,gxs,gys,gnx,gny,m,n,M,N,dim,s,k,nc,col;
   PetscInt        ncolors;
   MPI_Comm        comm;
@@ -346,7 +339,6 @@ PetscErrorCode DMCreateColoring_DA_2d_MPIAIJ(DM da,ISColoringType ctype,ISColori
 
 PetscErrorCode DMCreateColoring_DA_3d_MPIAIJ(DM da,ISColoringType ctype,ISColoring *coloring)
 {
-  PetscErrorCode  ierr;
   PetscInt        xs,ys,nx,ny,i,j,gxs,gys,gnx,gny,m,n,p,dim,s,k,nc,col,zs,gzs,ii,l,nz,gnz,M,N,P;
   PetscInt        ncolors;
   MPI_Comm        comm;
@@ -413,7 +405,6 @@ PetscErrorCode DMCreateColoring_DA_3d_MPIAIJ(DM da,ISColoringType ctype,ISColori
 
 PetscErrorCode DMCreateColoring_DA_1d_MPIAIJ(DM da,ISColoringType ctype,ISColoring *coloring)
 {
-  PetscErrorCode  ierr;
   PetscInt        xs,nx,i,i1,gxs,gnx,l,m,M,dim,s,nc,col;
   PetscInt        ncolors;
   MPI_Comm        comm;
@@ -485,7 +476,6 @@ PetscErrorCode DMCreateColoring_DA_1d_MPIAIJ(DM da,ISColoringType ctype,ISColori
 
 PetscErrorCode DMCreateColoring_DA_2d_5pt_MPIAIJ(DM da,ISColoringType ctype,ISColoring *coloring)
 {
-  PetscErrorCode  ierr;
   PetscInt        xs,ys,nx,ny,i,j,ii,gxs,gys,gnx,gny,m,n,dim,s,k,nc;
   PetscInt        ncolors;
   MPI_Comm        comm;
@@ -569,7 +559,6 @@ extern PetscErrorCode DMCreateMatrix_DA_IS(DM,Mat);
 @*/
 PetscErrorCode MatSetupDM(Mat mat,DM da)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
@@ -581,7 +570,6 @@ PetscErrorCode MatSetupDM(Mat mat,DM da)
 PetscErrorCode  MatView_MPI_DA(Mat A,PetscViewer viewer)
 {
   DM                da;
-  PetscErrorCode    ierr;
   const char        *prefix;
   Mat               Anatural;
   AO                ao;
@@ -622,7 +610,6 @@ PetscErrorCode  MatView_MPI_DA(Mat A,PetscViewer viewer)
 PetscErrorCode  MatLoad_MPI_DA(Mat A,PetscViewer viewer)
 {
   DM             da;
-  PetscErrorCode ierr;
   Mat            Anatural,Aapp;
   AO             ao;
   PetscInt       rstart,rend,*app,i,m,n,M,N;
@@ -660,7 +647,6 @@ PetscErrorCode  MatLoad_MPI_DA(Mat A,PetscViewer viewer)
 
 PetscErrorCode DMCreateMatrix_DA(DM da, Mat *J)
 {
-  PetscErrorCode ierr;
   PetscInt       dim,dof,nx,ny,nz,dims[3],starts[3],M,N,P;
   Mat            A;
   MPI_Comm       comm;
@@ -833,7 +819,6 @@ PetscErrorCode DMCreateMatrix_DA_IS(DM dm,Mat J)
   const PetscInt         *e_loc,*idx;
   PetscInt               nel,nen,nv,dof,dim,*gidx,nb;
   PetscBool              flg;
-  PetscErrorCode         ierr;
 
   /* The l2g map of DMDA has all ghosted nodes, and e_loc is a subset of all the local nodes (including the ghosted)
      We need to filter the local indices that are represented through the DMDAGetElements decomposition
@@ -1519,7 +1504,6 @@ PetscErrorCode DMCreateMatrix_DA_3d_MPIAIJ(DM da,Mat J,PetscBool isIS)
 
 PetscErrorCode DMCreateMatrix_DA_1d_MPIAIJ_Fill(DM da,Mat J)
 {
-  PetscErrorCode         ierr;
   DM_DA                  *dd = (DM_DA*)da->data;
   PetscInt               xs,nx,i,j,gxs,gnx,row,k,l;
   PetscInt               m,dim,s,*cols = NULL,nc,cnt,maxcnt = 0,*ocols;
@@ -1695,7 +1679,6 @@ PetscErrorCode DMCreateMatrix_DA_1d_MPIAIJ_Fill(DM da,Mat J)
 
 PetscErrorCode DMCreateMatrix_DA_1d_MPIAIJ(DM da,Mat J,PetscBool isIS)
 {
-  PetscErrorCode         ierr;
   PetscInt               xs,nx,i,i1,slot,gxs,gnx;
   PetscInt               m,dim,s,*cols = NULL,nc,*rows = NULL,col,cnt,l;
   PetscInt               istart,iend;
@@ -1767,7 +1750,6 @@ PetscErrorCode DMCreateMatrix_DA_1d_MPIAIJ(DM da,Mat J,PetscBool isIS)
 
 PetscErrorCode DMCreateMatrix_DA_1d_SeqAIJ_NoPreallocation(DM da,Mat J,PetscBool isIS)
 {
-  PetscErrorCode         ierr;
   PetscInt               xs,nx,i,i1,slot,gxs,gnx;
   PetscInt               m,dim,s,*cols = NULL,nc,*rows = NULL,col,cnt,l;
   PetscInt               istart,iend;
@@ -2039,7 +2021,6 @@ PetscErrorCode DMCreateMatrix_DA_3d_MPIBAIJ(DM da,Mat J)
 */
 static PetscErrorCode L2GFilterUpperTriangular(ISLocalToGlobalMapping ltog,PetscInt *row,PetscInt *cnt,PetscInt col[])
 {
-  PetscErrorCode ierr;
   PetscInt       i,n;
 
   PetscFunctionBegin;

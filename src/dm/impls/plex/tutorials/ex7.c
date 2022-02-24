@@ -6,7 +6,6 @@ static PetscErrorCode SetupSection(DM dm)
 {
   PetscSection   s;
   PetscInt       vStart, vEnd, v;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMPlexGetDepthStratum(dm, 0, &vStart, &vEnd));

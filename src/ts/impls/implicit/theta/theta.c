@@ -45,7 +45,6 @@ typedef struct {
 static PetscErrorCode TSThetaGetX0AndXdot(TS ts,DM dm,Vec *X0,Vec *Xdot)
 {
   TS_Theta       *th = (TS_Theta*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (X0) {
@@ -63,7 +62,6 @@ static PetscErrorCode TSThetaGetX0AndXdot(TS ts,DM dm,Vec *X0,Vec *Xdot)
 
 static PetscErrorCode TSThetaRestoreX0AndXdot(TS ts,DM dm,Vec *X0,Vec *Xdot)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (X0) {
@@ -88,7 +86,6 @@ static PetscErrorCode DMCoarsenHook_TSTheta(DM fine,DM coarse,void *ctx)
 static PetscErrorCode DMRestrictHook_TSTheta(DM fine,Mat restrct,Vec rscale,Mat inject,DM coarse,void *ctx)
 {
   TS             ts = (TS)ctx;
-  PetscErrorCode ierr;
   Vec            X0,Xdot,X0_c,Xdot_c;
 
   PetscFunctionBegin;
@@ -112,7 +109,6 @@ static PetscErrorCode DMSubDomainHook_TSTheta(DM dm,DM subdm,void *ctx)
 static PetscErrorCode DMSubDomainRestrictHook_TSTheta(DM dm,VecScatter gscat,VecScatter lscat,DM subdm,void *ctx)
 {
   TS             ts = (TS)ctx;
-  PetscErrorCode ierr;
   Vec            X0,Xdot,X0_sub,Xdot_sub;
 
   PetscFunctionBegin;
@@ -134,7 +130,6 @@ static PetscErrorCode TSThetaEvaluateCostIntegral(TS ts)
 {
   TS_Theta       *th = (TS_Theta*)ts->data;
   TS             quadts = ts->quadraturets;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (th->endpoint) {
@@ -156,7 +151,6 @@ static PetscErrorCode TSForwardCostIntegral_Theta(TS ts)
 {
   TS_Theta       *th = (TS_Theta*)ts->data;
   TS             quadts = ts->quadraturets;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* backup cost integral */
@@ -168,7 +162,6 @@ static PetscErrorCode TSForwardCostIntegral_Theta(TS ts)
 static PetscErrorCode TSAdjointCostIntegral_Theta(TS ts)
 {
   TS_Theta       *th = (TS_Theta*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* Like TSForwardCostIntegral(), the adjoint cost integral evaluation relies on ptime0 and time_step0. */
@@ -181,7 +174,6 @@ static PetscErrorCode TSAdjointCostIntegral_Theta(TS ts)
 static PetscErrorCode TSTheta_SNESSolve(TS ts,Vec b,Vec x)
 {
   PetscInt       nits,lits;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESSolve(ts->snes,b,x));
@@ -197,7 +189,6 @@ static PetscErrorCode TSStep_Theta(TS ts)
   PetscInt       rejections = 0;
   PetscBool      stageok,accept = PETSC_TRUE;
   PetscReal      next_time_step = ts->time_step;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!ts->steprollback) {
@@ -273,7 +264,6 @@ static PetscErrorCode TSAdjointStepBEuler_Private(TS ts)
   TSEquationType eqtype;
   PetscBool      isexplicitode = PETSC_FALSE;
   PetscReal      adjoint_time_step;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSGetEquationType(ts,&eqtype));
@@ -428,7 +418,6 @@ static PetscErrorCode TSAdjointStep_Theta(TS ts)
   PetscScalar    *xarr;
   PetscReal      adjoint_time_step;
   PetscReal      adjoint_ptime; /* end time of the adjoint time step (ts->ptime is the start time, ususally ts->ptime is larger than adjoint_ptime) */
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (th->Theta == 1.) {
@@ -702,7 +691,6 @@ static PetscErrorCode TSInterpolate_Theta(TS ts,PetscReal t,Vec X)
 {
   TS_Theta       *th = (TS_Theta*)ts->data;
   PetscReal      dt  = t - ts->ptime;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecCopy(ts->vec_sol,th->X));
@@ -717,7 +705,6 @@ static PetscErrorCode TSEvaluateWLTE_Theta(TS ts,NormType wnormtype,PetscInt *or
   Vec            X = ts->vec_sol;      /* X = solution */
   Vec            Y = th->vec_lte_work; /* Y = X + LTE  */
   PetscReal      wltea,wlter;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!th->vec_sol_prev) {*wlte = -1; PetscFunctionReturn(0);}
@@ -742,7 +729,6 @@ static PetscErrorCode TSRollBack_Theta(TS ts)
 {
   TS_Theta       *th = (TS_Theta*)ts->data;
   TS             quadts = ts->quadraturets;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecCopy(th->X0,ts->vec_sol));
@@ -770,7 +756,6 @@ static PetscErrorCode TSForwardStep_Theta(TS ts)
   Mat            J,Jpre,quadJ = NULL,quadJp = NULL;
   PetscScalar    *barr,*xarr;
   PetscReal      previous_shift;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   previous_shift = th->shift;
@@ -918,7 +903,6 @@ static PetscErrorCode TSForwardGetStages_Theta(TS ts,PetscInt *ns,Mat *stagesens
 static PetscErrorCode TSReset_Theta(TS ts)
 {
   TS_Theta       *th = (TS_Theta*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDestroy(&th->X));
@@ -936,7 +920,6 @@ static PetscErrorCode TSReset_Theta(TS ts)
 static PetscErrorCode TSAdjointReset_Theta(TS ts)
 {
   TS_Theta       *th = (TS_Theta*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDestroyVecs(ts->numcost,&th->VecsDeltaLam));
@@ -950,7 +933,6 @@ static PetscErrorCode TSAdjointReset_Theta(TS ts)
 
 static PetscErrorCode TSDestroy_Theta(TS ts)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSReset_Theta(ts));
@@ -977,7 +959,6 @@ static PetscErrorCode TSDestroy_Theta(TS ts)
 static PetscErrorCode SNESTSFormFunction_Theta(SNES snes,Vec x,Vec y,TS ts)
 {
   TS_Theta       *th = (TS_Theta*)ts->data;
-  PetscErrorCode ierr;
   Vec            X0,Xdot;
   DM             dm,dmsave;
   PetscReal      shift = th->shift;
@@ -1003,7 +984,6 @@ static PetscErrorCode SNESTSFormFunction_Theta(SNES snes,Vec x,Vec y,TS ts)
 static PetscErrorCode SNESTSFormJacobian_Theta(SNES snes,Vec x,Mat A,Mat B,TS ts)
 {
   TS_Theta       *th = (TS_Theta*)ts->data;
-  PetscErrorCode ierr;
   Vec            Xdot;
   DM             dm,dmsave;
   PetscReal      shift = th->shift;
@@ -1025,7 +1005,6 @@ static PetscErrorCode TSForwardSetUp_Theta(TS ts)
 {
   TS_Theta       *th = (TS_Theta*)ts->data;
   TS             quadts = ts->quadraturets;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* combine sensitivities to parameters and sensitivities to initial values into one array */
@@ -1046,7 +1025,6 @@ static PetscErrorCode TSForwardReset_Theta(TS ts)
 {
   TS_Theta       *th = (TS_Theta*)ts->data;
   TS             quadts = ts->quadraturets;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (quadts && quadts->mat_sensip) {
@@ -1064,7 +1042,6 @@ static PetscErrorCode TSSetUp_Theta(TS ts)
   TS_Theta       *th = (TS_Theta*)ts->data;
   TS             quadts = ts->quadraturets;
   PetscBool      match;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!th->VecCostIntegral0 && quadts && ts->costintegralfwd) { /* back up cost integral */
@@ -1108,7 +1085,6 @@ static PetscErrorCode TSSetUp_Theta(TS ts)
 static PetscErrorCode TSAdjointSetUp_Theta(TS ts)
 {
   TS_Theta       *th = (TS_Theta*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDuplicateVecs(ts->vecs_sensi[0],ts->numcost,&th->VecsDeltaLam));
@@ -1135,7 +1111,6 @@ static PetscErrorCode TSAdjointSetUp_Theta(TS ts)
 static PetscErrorCode TSSetFromOptions_Theta(PetscOptionItems *PetscOptionsObject,TS ts)
 {
   TS_Theta       *th = (TS_Theta*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"Theta ODE solver options"));
@@ -1152,7 +1127,6 @@ static PetscErrorCode TSView_Theta(TS ts,PetscViewer viewer)
 {
   TS_Theta       *th = (TS_Theta*)ts->data;
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
@@ -1288,7 +1262,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TSCreate_Theta(TS ts)
 {
   TS_Theta       *th;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   ts->ops->reset           = TSReset_Theta;
@@ -1359,7 +1332,6 @@ PETSC_EXTERN PetscErrorCode TSCreate_Theta(TS ts)
 @*/
 PetscErrorCode  TSThetaGetTheta(TS ts,PetscReal *theta)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -1386,7 +1358,6 @@ PetscErrorCode  TSThetaGetTheta(TS ts,PetscReal *theta)
 @*/
 PetscErrorCode  TSThetaSetTheta(TS ts,PetscReal theta)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -1411,7 +1382,6 @@ PetscErrorCode  TSThetaSetTheta(TS ts,PetscReal theta)
 @*/
 PetscErrorCode TSThetaGetEndpoint(TS ts,PetscBool *endpoint)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -1438,7 +1408,6 @@ PetscErrorCode TSThetaGetEndpoint(TS ts,PetscBool *endpoint)
 @*/
 PetscErrorCode TSThetaSetEndpoint(TS ts,PetscBool flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -1454,7 +1423,6 @@ PetscErrorCode TSThetaSetEndpoint(TS ts,PetscBool flg)
 static PetscErrorCode TSSetUp_BEuler(TS ts)
 {
   TS_Theta       *th = (TS_Theta*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(th->Theta != 1.0,PetscObjectComm((PetscObject)ts),PETSC_ERR_OPT_OVERWRITE,"Can not change the default value (1) of theta when using backward Euler");
@@ -1484,7 +1452,6 @@ $  -ts_type theta -ts_theta_theta 1.0
 M*/
 PETSC_EXTERN PetscErrorCode TSCreate_BEuler(TS ts)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSCreate_Theta(ts));
@@ -1498,7 +1465,6 @@ PETSC_EXTERN PetscErrorCode TSCreate_BEuler(TS ts)
 static PetscErrorCode TSSetUp_CN(TS ts)
 {
   TS_Theta       *th = (TS_Theta*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(th->Theta != 0.5,PetscObjectComm((PetscObject)ts),PETSC_ERR_OPT_OVERWRITE,"Can not change the default value (0.5) of theta when using Crank-Nicolson");
@@ -1528,7 +1494,6 @@ $  -ts_type theta -ts_theta_theta 0.5 -ts_theta_endpoint
 M*/
 PETSC_EXTERN PetscErrorCode TSCreate_CN(TS ts)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSCreate_Theta(ts));

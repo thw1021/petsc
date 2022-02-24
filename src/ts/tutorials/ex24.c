@@ -151,7 +151,6 @@ static PetscErrorCode MonitorObjective(TS ts,PetscInt step,PetscReal t,Vec X,voi
  */
 static PetscErrorCode FormIFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void *ictx)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *x;
   PetscScalar       *f;
   PetscInt          i;
@@ -204,7 +203,6 @@ static PetscErrorCode FormIFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void 
 static PetscErrorCode FormIJacobian(TS ts,PetscReal t,Vec X,Vec Xdot,PetscReal shift,Mat J,Mat B,void *ictx)
 {
   const PetscScalar *x;
-  PetscErrorCode    ierr;
   PetscInt          i;
   Ctx               *ctx = (Ctx*)ictx;
 

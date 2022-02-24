@@ -16,7 +16,6 @@ struct  _n_PetscOptionsHelpPrinted{
 
 PetscErrorCode PetscOptionsHelpPrintedDestroy(PetscOptionsHelpPrinted *hp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*hp) PetscFunctionReturn(0);
@@ -38,7 +37,6 @@ PetscErrorCode PetscOptionsHelpPrintedDestroy(PetscOptionsHelpPrinted *hp)
 @*/
 PetscErrorCode PetscOptionsHelpPrintedCreate(PetscOptionsHelpPrinted *hp)
 {
-  PetscErrorCode             ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(hp));
@@ -71,7 +69,6 @@ PetscErrorCode PetscOptionsHelpPrintedCheck(PetscOptionsHelpPrinted hp,const cha
   char            *both;
   int             newitem;
 #endif
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscStrlen(pre,&l1));
@@ -218,7 +215,6 @@ $       saws[:communicatorname]                    publishes object to the Scien
 PetscErrorCode  PetscOptionsGetViewer(MPI_Comm comm,PetscOptions options,const char pre[],const char name[],PetscViewer *viewer,PetscViewerFormat *format,PetscBool  *set)
 {
   const char                     *value;
-  PetscErrorCode                 ierr;
   PetscBool                      flag,hashelp;
 
   PetscFunctionBegin;
@@ -386,7 +382,6 @@ PetscErrorCode  PetscOptionsGetViewer(MPI_Comm comm,PetscOptions options,const c
 PetscErrorCode  PetscViewerCreate(MPI_Comm comm,PetscViewer *inviewer)
 {
   PetscViewer    viewer;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *inviewer = NULL;
@@ -420,8 +415,8 @@ PetscErrorCode  PetscViewerCreate(MPI_Comm comm,PetscViewer *inviewer)
 @*/
 PetscErrorCode  PetscViewerSetType(PetscViewer viewer,PetscViewerType type)
 {
-  PetscErrorCode ierr,(*r)(PetscViewer);
   PetscBool      match;
+  PetscErrorCode (*r)(PetscViewer);
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
@@ -473,7 +468,6 @@ $     -viewer_type my_viewer_type
  @*/
 PetscErrorCode  PetscViewerRegister(const char *sname,PetscErrorCode (*function)(PetscViewer))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerInitializePackage());
@@ -532,7 +526,6 @@ PetscErrorCode  PetscViewerSetFromOptions(PetscViewer viewer)
 
 PetscErrorCode PetscViewerFlowControlStart(PetscViewer viewer,PetscInt *mcnt,PetscInt *cnt)
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRQ(PetscViewerBinaryGetFlowControl(viewer,mcnt));
   CHKERRQ(PetscViewerBinaryGetFlowControl(viewer,cnt));
@@ -541,7 +534,6 @@ PetscErrorCode PetscViewerFlowControlStart(PetscViewer viewer,PetscInt *mcnt,Pet
 
 PetscErrorCode PetscViewerFlowControlStepMain(PetscViewer viewer,PetscInt i,PetscInt *mcnt,PetscInt cnt)
 {
-  PetscErrorCode ierr;
   MPI_Comm       comm;
 
   PetscFunctionBegin;
@@ -555,7 +547,6 @@ PetscErrorCode PetscViewerFlowControlStepMain(PetscViewer viewer,PetscInt i,Pets
 
 PetscErrorCode PetscViewerFlowControlEndMain(PetscViewer viewer,PetscInt *mcnt)
 {
-  PetscErrorCode ierr;
   MPI_Comm       comm;
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)viewer,&comm));
@@ -566,7 +557,6 @@ PetscErrorCode PetscViewerFlowControlEndMain(PetscViewer viewer,PetscInt *mcnt)
 
 PetscErrorCode PetscViewerFlowControlStepWorker(PetscViewer viewer,PetscMPIInt rank,PetscInt *mcnt)
 {
-  PetscErrorCode ierr;
   MPI_Comm       comm;
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)viewer,&comm));
@@ -579,7 +569,6 @@ PetscErrorCode PetscViewerFlowControlStepWorker(PetscViewer viewer,PetscMPIInt r
 
 PetscErrorCode PetscViewerFlowControlEndWorker(PetscViewer viewer,PetscInt *mcnt)
 {
-  PetscErrorCode ierr;
   MPI_Comm       comm;
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)viewer,&comm));

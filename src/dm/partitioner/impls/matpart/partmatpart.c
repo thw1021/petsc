@@ -31,7 +31,6 @@ static PetscErrorCode PetscPartitionerMatPartitioningGetMatPartitioning_MatParti
 @*/
 PetscErrorCode PetscPartitionerMatPartitioningGetMatPartitioning(PetscPartitioner part, MatPartitioning *mp)
 {
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);
@@ -43,7 +42,6 @@ PetscErrorCode PetscPartitionerMatPartitioningGetMatPartitioning(PetscPartitione
 static PetscErrorCode PetscPartitionerDestroy_MatPartitioning(PetscPartitioner part)
 {
   PetscPartitioner_MatPartitioning  *p = (PetscPartitioner_MatPartitioning *) part->data;
-  PetscErrorCode                    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatPartitioningDestroy(&p->mp));
@@ -55,7 +53,6 @@ static PetscErrorCode PetscPartitionerView_MatPartitioning_ASCII(PetscPartitione
 {
   PetscPartitioner_MatPartitioning  *p = (PetscPartitioner_MatPartitioning *) part->data;
   PetscViewerFormat                 format;
-  PetscErrorCode                    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerGetFormat(viewer, &format));
@@ -69,7 +66,6 @@ static PetscErrorCode PetscPartitionerView_MatPartitioning_ASCII(PetscPartitione
 static PetscErrorCode PetscPartitionerView_MatPartitioning(PetscPartitioner part, PetscViewer viewer)
 {
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);
@@ -82,7 +78,6 @@ static PetscErrorCode PetscPartitionerView_MatPartitioning(PetscPartitioner part
 static PetscErrorCode PetscPartitionerSetFromOptions_MatPartitioning(PetscOptionItems *PetscOptionsObject, PetscPartitioner part)
 {
   PetscPartitioner_MatPartitioning  *p = (PetscPartitioner_MatPartitioning *) part->data;
-  PetscErrorCode                    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectSetOptionsPrefix((PetscObject)p->mp,((PetscObject)part)->prefix));
@@ -99,7 +94,6 @@ static PetscErrorCode PetscPartitionerPartition_MatPartitioning(PetscPartitioner
   PetscInt                          numVerticesGlobal, numEdges;
   PetscInt                          *i, *j, *vwgt = NULL;
   MPI_Comm                          comm;
-  PetscErrorCode                    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)part, &comm));
@@ -195,7 +189,6 @@ static PetscErrorCode PetscPartitionerPartition_MatPartitioning(PetscPartitioner
 
 static PetscErrorCode PetscPartitionerInitialize_MatPartitioning(PetscPartitioner part)
 {
-  PetscErrorCode                    ierr;
 
   PetscFunctionBegin;
   part->ops->view           = PetscPartitionerView_MatPartitioning;
@@ -217,7 +210,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PetscPartitionerCreate_MatPartitioning(PetscPartitioner part)
 {
   PetscPartitioner_MatPartitioning  *p;
-  PetscErrorCode                    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part, PETSCPARTITIONER_CLASSID, 1);

@@ -12,7 +12,6 @@
 */
 PetscErrorCode DMDAGetNatural_Private(DM da,PetscInt *outNlocal,IS *isnatural)
 {
-  PetscErrorCode ierr;
   PetscInt       Nlocal,i,j,k,*lidx,lict = 0,dim = da->dim;
   DM_DA          *dd = (DM_DA*)da->data;
 
@@ -73,7 +72,6 @@ PetscErrorCode  DMDASetAOType(DM da,AOType aotype)
 {
   DM_DA          *dd;
   PetscBool      isdmda;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(da,DM_CLASSID,1,DMDA);
@@ -122,7 +120,6 @@ PetscErrorCode  DMDAGetAO(DM da,AO *ao)
 {
   DM_DA          *dd;
   PetscBool      isdmda;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(da,DM_CLASSID,1,DMDA);
@@ -137,7 +134,6 @@ PetscErrorCode  DMDAGetAO(DM da,AO *ao)
   */
   if (!dd->ao) {
     IS             ispetsc,isnatural;
-    PetscErrorCode ierr;
     PetscInt       Nlocal;
 
     CHKERRQ(DMDAGetNatural_Private(da,&Nlocal,&isnatural));

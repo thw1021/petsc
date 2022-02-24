@@ -124,7 +124,6 @@ static PetscBool petsc_sse_global_is_untested = PETSC_TRUE;
 static PetscBool petsc_sse_enabled_global     = PETSC_FALSE;
 PetscErrorCode  PetscSSEIsEnabled(MPI_Comm comm,PetscBool  *lflag,PetscBool  *gflag)
 {
-  PetscErrorCode ierr;
   PetscBool      disabled_option;
 
   PetscFunctionBegin;

@@ -5,7 +5,6 @@ static char help[] = "Test combinations of scalings, shifts and get diagonal of 
 static PetscErrorCode myMult(Mat S,Vec x,Vec y)
 {
   Mat            A;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(S,&A));
@@ -16,7 +15,6 @@ static PetscErrorCode myMult(Mat S,Vec x,Vec y)
 static PetscErrorCode myGetDiagonal(Mat S,Vec d)
 {
   Mat            A;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(S,&A));
@@ -26,7 +24,6 @@ static PetscErrorCode myGetDiagonal(Mat S,Vec d)
 
 static PetscErrorCode shiftandscale(Mat A,Vec *D)
 {
-  PetscErrorCode ierr;
   Vec            ll,d,rr;
 
   PetscFunctionBegin;

@@ -18,7 +18,6 @@ static PetscErrorCode DMFieldDestroy_DS(DMField field)
 {
   DMField_DS     *dsfield;
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   dsfield = (DMField_DS *) field->data;
@@ -36,7 +35,6 @@ static PetscErrorCode DMFieldView_DS(DMField field,PetscViewer viewer)
   DMField_DS     *dsfield = (DMField_DS *) field->data;
   PetscBool      iascii;
   PetscObject    disc;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
@@ -57,7 +55,6 @@ static PetscErrorCode DMFieldView_DS(DMField field,PetscViewer viewer)
 static PetscErrorCode DMFieldDSGetHeightDisc(DMField field, PetscInt height, PetscObject *disc)
 {
   DMField_DS     *dsfield = (DMField_DS *) field->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!dsfield->disc[height]) {
@@ -103,7 +100,6 @@ static PetscErrorCode DMFieldEvaluateFE_DS(DMField field, IS pointIS, PetscQuadr
   PetscBool       isStride;
   const PetscInt  *points = NULL;
   PetscInt        sfirst = -1, stride = -1;
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginHot;
   dm   = field->dm;
@@ -200,7 +196,6 @@ static PetscErrorCode DMFieldEvaluate_DS(DMField field, Vec points, PetscDataTyp
   PetscScalar       *cellBs = NULL, *cellDs = NULL, *cellHs = NULL;
   PetscReal         *cellBr = NULL, *cellDr = NULL, *cellHr = NULL;
   PetscReal         *v, *J, *invJ, *detJ;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   nc   = field->numComponents;
@@ -442,7 +437,6 @@ static PetscErrorCode DMFieldEvaluateFV_DS(DMField field, IS pointIS, PetscDataT
   MPI_Datatype     mpitype = type == PETSC_SCALAR ? MPIU_SCALAR : MPIU_REAL;
   PetscObject      disc;
   DMField          coordField;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   Nc = field->numComponents;
@@ -654,7 +648,6 @@ static PetscErrorCode DMFieldGetDegree_DS(DMField field, IS pointIS, PetscInt *m
   PetscObject    disc;
   PetscInt       h, imin, imax;
   PetscClassId   id;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   dsfield = (DMField_DS *) field->data;
@@ -688,24 +681,23 @@ PetscErrorCode DMFieldGetFVQuadrature_Internal(DMField field, IS pointIS, PetscQ
   DMPolytopeType  ct;
   PetscInt        dim, n;
   PetscBool       isplex;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  ierr = PetscObjectTypeCompare((PetscObject) dm, DMPLEX, &isplex);CHKERRQ(ierr);
-  ierr = ISGetLocalSize(pointIS, &n);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectTypeCompare((PetscObject) dm, DMPLEX, &isplex));
+  CHKERRQ(ISGetLocalSize(pointIS, &n));
   if (isplex && n) {
-    ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
-    ierr = ISGetIndices(pointIS, &points);CHKERRQ(ierr);
-    ierr = DMPlexGetCellType(dm, points[0], &ct);CHKERRQ(ierr);
+    CHKERRQ(DMGetDimension(dm, &dim));
+    CHKERRQ(ISGetIndices(pointIS, &points));
+    CHKERRQ(DMPlexGetCellType(dm, points[0], &ct));
     switch (ct) {
       case DM_POLYTOPE_TRIANGLE:
       case DM_POLYTOPE_TETRAHEDRON:
-        ierr = PetscDTStroudConicalQuadrature(dim, 1, 1, -1.0, 1.0, quad);CHKERRQ(ierr);break;
-      default: ierr = PetscDTGaussTensorQuadrature(dim, 1, 1, -1.0, 1.0, quad);CHKERRQ(ierr);
+        CHKERRQ(PetscDTStroudConicalQuadrature(dim, 1, 1, -1.0, 1.0, quad));break;
+      default: CHKERRQ(PetscDTGaussTensorQuadrature(dim, 1, 1, -1.0, 1.0, quad));
     }
-    ierr = ISRestoreIndices(pointIS, &points);CHKERRQ(ierr);
+    CHKERRQ(ISRestoreIndices(pointIS, &points));
   } else {
-    ierr = DMFieldCreateDefaultQuadrature(field, pointIS, quad);CHKERRQ(ierr);
+    CHKERRQ(DMFieldCreateDefaultQuadrature(field, pointIS, quad));
   }
   PetscFunctionReturn(0);
 }
@@ -718,7 +710,6 @@ static PetscErrorCode DMFieldCreateDefaultQuadrature_DS(DMField field, IS pointI
   PetscObject    disc;
   PetscFE        fe;
   PetscClassId   id;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   dm = field->dm;
@@ -753,7 +744,6 @@ static PetscErrorCode DMFieldComputeFaceData_DS(DMField field, IS pointIS, Petsc
   DMLabel         depthLabel;
   IS              cellIS;
   DM              dm = field->dm;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   dim = geom->dim;
@@ -1082,7 +1072,6 @@ static PetscErrorCode DMFieldInitialize_DS(DMField field)
 PETSC_INTERN PetscErrorCode DMFieldCreate_DS(DMField field)
 {
   DMField_DS     *dsfield;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(field,&dsfield));
@@ -1100,7 +1089,6 @@ PetscErrorCode DMFieldCreateDS(DM dm, PetscInt fieldNum, Vec vec,DMField *field)
   PetscClassId   id = -1;
   PetscInt       numComponents = -1, dsNumFields;
   PetscSection   section;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetLocalSection(dm,&section));
@@ -1117,13 +1105,13 @@ PetscErrorCode DMFieldCreateDS(DM dm, PetscInt fieldNum, Vec vec,DMField *field)
     DMPolytopeType ct, locct = DM_POLYTOPE_UNKNOWN;
     PetscInt       dim, cStart, cEnd, cellHeight;
 
-    ierr = DMPlexGetVTKCellHeight(dm, &cellHeight);CHKERRQ(ierr);
-    ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
-    ierr = DMPlexGetHeightStratum(dm, cellHeight, &cStart, &cEnd);CHKERRQ(ierr);
-    if (cEnd > cStart) {ierr = DMPlexGetCellType(dm, cStart, &locct);CHKERRQ(ierr);}
-    ierr = MPI_Allreduce(&locct, &ct, 1, MPI_INT, MPI_MIN, comm);CHKERRMPI(ierr);
-    ierr = PetscFECreateLagrangeByCell(PETSC_COMM_SELF, dim, numComponents, ct, 1, PETSC_DETERMINE, &fe);CHKERRQ(ierr);
-    ierr = PetscFEViewFromOptions(fe, NULL, "-field_fe_view");CHKERRQ(ierr);
+    CHKERRQ(DMPlexGetVTKCellHeight(dm, &cellHeight));
+    CHKERRQ(DMGetDimension(dm, &dim));
+    CHKERRQ(DMPlexGetHeightStratum(dm, cellHeight, &cStart, &cEnd));
+    if (cEnd > cStart) CHKERRQ(DMPlexGetCellType(dm, cStart, &locct));
+    CHKERRMPI(MPI_Allreduce(&locct, &ct, 1, MPI_INT, MPI_MIN, comm));
+    CHKERRQ(PetscFECreateLagrangeByCell(PETSC_COMM_SELF, dim, numComponents, ct, 1, PETSC_DETERMINE, &fe));
+    CHKERRQ(PetscFEViewFromOptions(fe, NULL, "-field_fe_view"));
     disc = (PetscObject) fe;
   } else {
     CHKERRQ(PetscObjectReference(disc));

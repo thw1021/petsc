@@ -155,7 +155,6 @@ PetscErrorCode main(int argc,char **argv)
 
 PetscErrorCode InitializeProblem(AppCtx *user)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    size;
   PetscMPIInt    rank;
   PetscInt       nloc,neloc,niloc;
@@ -229,7 +228,6 @@ PetscErrorCode InitializeProblem(AppCtx *user)
 
 PetscErrorCode DestroyProblem(AppCtx *user)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!user->noeqflag) {
@@ -261,7 +259,6 @@ PetscErrorCode FormFunctionGradient(Tao tao, Vec X, PetscReal *f, Vec G, void *c
   const PetscScalar *x;
   MPI_Comm          comm;
   PetscMPIInt       rank;
-  PetscErrorCode    ierr;
   PetscReal         fin;
   AppCtx            *user=(AppCtx*)ctx;
   Vec               Xseq=user->Xseq;
@@ -307,7 +304,6 @@ PetscErrorCode FormHessian(Tao tao, Vec x,Mat H, Mat Hpre, void *ctx)
   VecScatter        Descat,Discat;
   PetscMPIInt       rank;
   MPI_Comm          comm;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TaoGetDualVariables(tao,&DE,&DI));
@@ -360,7 +356,6 @@ PetscErrorCode FormInequalityConstraints(Tao tao,Vec X,Vec CI,void *ctx)
 {
   const PetscScalar *x;
   PetscScalar       ci;
-  PetscErrorCode    ierr;
   MPI_Comm          comm;
   PetscMPIInt       rank;
   AppCtx            *user=(AppCtx*)ctx;
@@ -394,7 +389,6 @@ PetscErrorCode FormEqualityConstraints(Tao tao,Vec X,Vec CE,void *ctx)
 {
   const PetscScalar *x;
   PetscScalar       ce;
-  PetscErrorCode    ierr;
   MPI_Comm          comm;
   PetscMPIInt       rank;
   AppCtx            *user=(AppCtx*)ctx;
@@ -429,7 +423,6 @@ PetscErrorCode FormInequalityJacobian(Tao tao, Vec X, Mat JI, Mat JIpre,  void *
   PetscInt          zero=0,one=1,cols[2];
   PetscScalar       vals[2];
   const PetscScalar *x;
-  PetscErrorCode    ierr;
   Vec               Xseq=user->Xseq;
   VecScatter        scat=user->scat;
   MPI_Comm          comm;
@@ -466,7 +459,6 @@ PetscErrorCode FormEqualityJacobian(Tao tao,Vec X,Mat JE,Mat JEpre,void *ctx)
   const PetscScalar *x;
   PetscMPIInt       rank;
   MPI_Comm          comm;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)tao,&comm));

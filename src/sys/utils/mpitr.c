@@ -26,7 +26,6 @@
  @*/
 PetscErrorCode  PetscMPIDump(FILE *fd)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank;
   double         tsends,trecvs,work;
   int            err;
@@ -74,7 +73,6 @@ PetscErrorCode  PetscMPIDump(FILE *fd)
 */
 PetscErrorCode MPIU_Win_allocate_shared(MPI_Aint sz,PetscMPIInt szind,MPI_Info info,MPI_Comm comm,void *ptr,MPI_Win *win)
 {
-  PetscErrorCode ierr;
   float          *tmp;
 
   PetscFunctionBegin;
@@ -86,7 +84,6 @@ PetscErrorCode MPIU_Win_allocate_shared(MPI_Aint sz,PetscMPIInt szind,MPI_Info i
 
 PETSC_EXTERN PetscErrorCode MPIU_Win_shared_query(MPI_Win win,PetscMPIInt rank,MPI_Aint *sz,PetscMPIInt *szind,void *ptr)
 {
-  PetscErrorCode ierr;
   float          *tmp;
 
   PetscFunctionBegin;

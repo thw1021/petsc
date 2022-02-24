@@ -4,7 +4,6 @@ static char help[] = "Tests repeated setups and solves of PCFIELDSPLIT.\n\n";
 
 static PetscErrorCode replace_submats(Mat A)
 {
-  PetscErrorCode ierr;
   IS             *r,*c;
   PetscInt       i,j,nr,nc;
 

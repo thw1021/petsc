@@ -16,7 +16,6 @@
 
 PetscErrorCode MatGetSymbolicTranspose_SeqAIJ(Mat A,PetscInt *Ati[],PetscInt *Atj[])
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,anzj;
   Mat_SeqAIJ     *a=(Mat_SeqAIJ*)A->data;
   PetscInt       an=A->cmap->N,am=A->rmap->N;
@@ -69,7 +68,6 @@ PetscErrorCode MatGetSymbolicTranspose_SeqAIJ(Mat A,PetscInt *Ati[],PetscInt *At
 */
 PetscErrorCode MatGetSymbolicTransposeReduced_SeqAIJ(Mat A,PetscInt rstart,PetscInt rend,PetscInt *Ati[],PetscInt *Atj[])
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,anzj;
   Mat_SeqAIJ     *a=(Mat_SeqAIJ*)A->data;
   PetscInt       an=A->cmap->N;
@@ -119,7 +117,6 @@ PetscErrorCode MatGetSymbolicTransposeReduced_SeqAIJ(Mat A,PetscInt rstart,Petsc
 
 PetscErrorCode MatTranspose_SeqAIJ(Mat A,MatReuse reuse,Mat *B)
 {
-  PetscErrorCode  ierr;
   PetscInt        i,j,anzj;
   Mat             At;
   Mat_SeqAIJ      *a=(Mat_SeqAIJ*)A->data,*at;
@@ -193,7 +190,6 @@ PetscErrorCode MatTranspose_SeqAIJ(Mat A,MatReuse reuse,Mat *B)
 
 PetscErrorCode MatRestoreSymbolicTranspose_SeqAIJ(Mat A,PetscInt *ati[],PetscInt *atj[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscInfo(A,"Restoring Symbolic Transpose.\n"));

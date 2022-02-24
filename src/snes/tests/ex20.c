@@ -112,7 +112,6 @@ PetscErrorCode FormInitialGuess(SNES snes,Vec X,void *ctx)
 {
   AppCtx         *user;
   PetscInt       i,j,k,xs,ys,xm,ym,zs,zm;
-  PetscErrorCode ierr;
   PetscScalar    ***x;
   DM             da;
 
@@ -137,7 +136,6 @@ PetscErrorCode FormInitialGuess(SNES snes,Vec X,void *ctx)
 PetscErrorCode FormFunction(SNES snes,Vec X,Vec F,void *ptr)
 {
   AppCtx         *user = (AppCtx*)ptr;
-  PetscErrorCode ierr;
   PetscInt       i,j,k,mx,my,mz,xs,ys,zs,xm,ym,zm;
   PetscScalar    zero = 0.0,one = 1.0;
   PetscScalar    hx,hy,hz,hxhydhz,hyhzdhx,hzhxdhy;
@@ -452,7 +450,6 @@ PetscErrorCode FormFunction(SNES snes,Vec X,Vec F,void *ptr)
 PetscErrorCode FormJacobian(SNES snes,Vec X,Mat J,Mat jac,void *ptr)
 {
   AppCtx         *user = (AppCtx*)ptr;
-  PetscErrorCode ierr;
   PetscInt       i,j,k,mx,my,mz,xs,ys,zs,xm,ym,zm;
   PetscScalar    one = 1.0;
   PetscScalar    hx,hy,hz,hxhydhz,hyhzdhx,hzhxdhy;

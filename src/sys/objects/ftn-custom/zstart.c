@@ -145,7 +145,6 @@ PetscErrorCode PETScParseFortranArgs_Private(int *argc,char ***argv)
 #else
   int            i;
 #endif
-  PetscErrorCode ierr;
   int            warg = 256;
   PetscMPIInt    rank;
   char           *p;
@@ -174,7 +173,7 @@ PetscErrorCode PETScParseFortranArgs_Private(int *argc,char ***argv)
 #elif defined(PETSC_HAVE_PXFGETARG_NEW)
       {char *tmp = (*argv)[i];
       int ilen;
-      getarg_(&i,tmp,&ilen,&ierr,warg);CHKERRQ(ierr);
+      CHKERR_FORTRAN_VOID_FUNCTION(getarg_(&i,tmp,&ilen,&ierr,warg));
       tmp[ilen] = 0;}
 #elif defined(PETSC_USE_NARGS)
       GETARG(&i,(*argv)[i],warg,&flg);
@@ -209,7 +208,6 @@ PETSC_INTERN PetscErrorCode PetscPreMPIInit_Private();
 
 PETSC_INTERN PetscErrorCode PetscInitFortran_Private(PetscBool readarguments,const char *filename,PetscInt len)
 {
-  PetscErrorCode ierr;
   char           *tmp = NULL;
 
   PetscFunctionBegin;

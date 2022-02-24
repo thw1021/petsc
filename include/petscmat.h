@@ -871,11 +871,11 @@ static inline PetscErrorCode MatSetValueLocal(Mat v,PetscInt i,PetscInt j,PetscS
 M*/
 #define MatPreallocateInitialize(comm,nrows,ncols,dnz,onz) 0; \
 do { \
-  PetscErrorCode _4_ierr; PetscInt __nrows = (nrows),__ncols = (ncols),__rstart,__start,__end; \
-  _4_ierr = PetscCalloc2((size_t)__nrows,&dnz,(size_t)__nrows,&onz);CHKERRQ(_4_ierr); \
+  PetscInt __nrows = (nrows),__ncols = (ncols),__rstart,__start,__end; \
+  CHKERRQ(PetscCalloc2((size_t)__nrows,&dnz,(size_t)__nrows,&onz)); \
   __start = 0; __end = __start;                                         \
-  _4_ierr = MPI_Scan(&__ncols,&__end,1,MPIU_INT,MPI_SUM,comm);CHKERRMPI(_4_ierr); __start = __end - __ncols;\
-  _4_ierr = MPI_Scan(&__nrows,&__rstart,1,MPIU_INT,MPI_SUM,comm);CHKERRMPI(_4_ierr); __rstart = __rstart - __nrows; \
+  CHKERRMPI(MPI_Scan(&__ncols,&__end,1,MPIU_INT,MPI_SUM,comm)); __start = __end - __ncols;\
+  CHKERRMPI(MPI_Scan(&__nrows,&__rstart,1,MPIU_INT,MPI_SUM,comm)); __rstart = __rstart - __nrows; \
   do { } while (0)
 
 /*MC
@@ -910,12 +910,9 @@ do { \
 M*/
 #define MatPreallocateSetLocal(rmap,nrows,rows,cmap,ncols,cols,dnz,onz) 0; \
 do {\
-  PetscInt __l;\
-  _4_ierr = ISLocalToGlobalMappingApply(rmap,nrows,rows,rows);CHKERRQ(_4_ierr);\
-  _4_ierr = ISLocalToGlobalMappingApply(cmap,ncols,cols,cols);CHKERRQ(_4_ierr);\
-  for (__l=0;__l<nrows;__l++) {\
-    _4_ierr = MatPreallocateSet((rows)[__l],ncols,cols,dnz,onz);CHKERRQ(_4_ierr);\
-  }\
+  CHKERRQ(ISLocalToGlobalMappingApply(rmap,nrows,rows,rows));\
+  CHKERRQ(ISLocalToGlobalMappingApply(cmap,ncols,cols,cols));\
+  for (PetscInt __l=0;__l<nrows;__l++) CHKERRQ(MatPreallocateSet((rows)[__l],ncols,cols,dnz,onz));\
  } while (0)
 
 /*MC
@@ -950,13 +947,10 @@ do {\
 M*/
 #define MatPreallocateSetLocalRemoveDups(rmap,nrows,rows,cmap,ncols,cols,dnz,onz) 0; \
 do {\
-  PetscInt __l;\
-  _4_ierr = ISLocalToGlobalMappingApply(rmap,nrows,rows,rows);CHKERRQ(_4_ierr);\
-  _4_ierr = ISLocalToGlobalMappingApply(cmap,ncols,cols,cols);CHKERRQ(_4_ierr);\
-  _4_ierr = PetscSortRemoveDupsInt(&ncols,cols);CHKERRQ(_4_ierr);\
-  for (__l=0;__l<nrows;__l++) {\
-    _4_ierr = MatPreallocateSet((rows)[__l],ncols,cols,dnz,onz);CHKERRQ(_4_ierr);\
-  }\
+  CHKERRQ(ISLocalToGlobalMappingApply(rmap,nrows,rows,rows));\
+  CHKERRQ(ISLocalToGlobalMappingApply(cmap,ncols,cols,cols));\
+  CHKERRQ(PetscSortRemoveDupsInt(&ncols,cols));\
+  for (PetscInt __l=0;__l<nrows;__l++) CHKERRQ(MatPreallocateSet((rows)[__l],ncols,cols,dnz,onz));\
  } while (0)
 
 /*MC
@@ -991,12 +985,9 @@ do {\
 M*/
 #define MatPreallocateSetLocalBlock(rmap,nrows,rows,cmap,ncols,cols,dnz,onz) 0; \
 do {\
-  PetscInt __l;\
-  _4_ierr = ISLocalToGlobalMappingApplyBlock(rmap,nrows,rows,rows);CHKERRQ(_4_ierr);\
-  _4_ierr = ISLocalToGlobalMappingApplyBlock(cmap,ncols,cols,cols);CHKERRQ(_4_ierr);\
-  for (__l=0;__l<nrows;__l++) {\
-    _4_ierr = MatPreallocateSet((rows)[__l],ncols,cols,dnz,onz);CHKERRQ(_4_ierr);\
-  }\
+  CHKERRQ(ISLocalToGlobalMappingApplyBlock(rmap,nrows,rows,rows));\
+  CHKERRQ(ISLocalToGlobalMappingApplyBlock(cmap,ncols,cols,cols));\
+  for (PetscInt __l=0;__l<nrows;__l++) CHKERRQ(MatPreallocateSet((rows)[__l],ncols,cols,dnz,onz));\
 } while (0)
 
 /*MC
@@ -1030,12 +1021,9 @@ do {\
 M*/
 #define MatPreallocateSymmetricSetLocalBlock(map,nrows,rows,ncols,cols,dnz,onz) 0;\
 do {\
-  PetscInt __l;\
-  _4_ierr = ISLocalToGlobalMappingApplyBlock(map,nrows,rows,rows);CHKERRQ(_4_ierr);\
-  _4_ierr = ISLocalToGlobalMappingApplyBlock(map,ncols,cols,cols);CHKERRQ(_4_ierr);\
-  for (__l=0;__l<nrows;__l++) {\
-    _4_ierr = MatPreallocateSymmetricSetBlock((rows)[__l],ncols,cols,dnz,onz);CHKERRQ(_4_ierr);\
-  }\
+  CHKERRQ(ISLocalToGlobalMappingApplyBlock(map,nrows,rows,rows));\
+  CHKERRQ(ISLocalToGlobalMappingApplyBlock(map,ncols,cols,cols));\
+  for (PetscInt __l=0;__l<nrows;__l++) CHKERRQ(MatPreallocateSymmetricSetBlock((rows)[__l],ncols,cols,dnz,onz));\
 } while (0)
 
 /*MC
@@ -1070,10 +1058,10 @@ do {\
           MatPreallocateInitialize(), MatPreallocateSetLocal()
 M*/
 #define MatPreallocateSet(row,nc,cols,dnz,onz) 0;\
-do { PetscInt __i; \
+do {\
   PetscCheck(row >= __rstart,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Trying to set preallocation for row %" PetscInt_FMT " less than first local row %" PetscInt_FMT,row,__rstart); \
   PetscCheck(row < __rstart+__nrows,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Trying to set preallocation for row %" PetscInt_FMT " greater than last local row %" PetscInt_FMT,row,__rstart+__nrows-1); \
-  for (__i=0; __i<nc; __i++) {\
+  for (PetscInt __i=0; __i<nc; __i++) {\
     if ((cols)[__i] < __start || (cols)[__i] >= __end) onz[row - __rstart]++; \
     else if (dnz[row - __rstart] < __ncols) dnz[row - __rstart]++;\
   }\
@@ -1110,8 +1098,8 @@ do { PetscInt __i; \
           MatPreallocateSymmetricSetLocalBlock(), MatPreallocateSetLocal()
 M*/
 #define MatPreallocateSymmetricSetBlock(row,nc,cols,dnz,onz) 0;\
-do { PetscInt __i; \
-  for (__i=0; __i<nc; __i++) {\
+do { \
+  for (PetscInt __i=0; __i<nc; __i++) {\
     if (cols[__i] >= __end) onz[row - __rstart]++; \
     else if (cols[__i] >= row && dnz[row - __rstart] < __ncols) dnz[row - __rstart]++;\
   }\
@@ -1146,7 +1134,7 @@ do { PetscInt __i; \
 .seealso: MatPreallocateInitialize(), MatPreallocateSet(), MatPreallocateSymmetricSetBlock(), MatPreallocateSetLocal(),
           MatPreallocateSymmetricSetLocalBlock()
 M*/
-#define MatPreallocateLocation(A,row,ncols,cols,dnz,onz) 0; do {if (A) {ierr = MatSetValues(A,1,&row,ncols,cols,NULL,INSERT_VALUES);CHKERRQ(ierr);} else {ierr =  MatPreallocateSet(row,ncols,cols,dnz,onz);CHKERRQ(ierr);}} while (0)
+#define MatPreallocateLocation(A,row,ncols,cols,dnz,onz) 0; do {if (A) CHKERRQ(MatSetValues(A,1,&row,ncols,cols,NULL,INSERT_VALUES)); else CHKERRQ(MatPreallocateSet(row,ncols,cols,dnz,onz));} while (0)
 
 /*MC
    MatPreallocateFinalize - Ends the block of code that will count the number of nonzeros per
@@ -1174,7 +1162,7 @@ M*/
 .seealso: MatPreallocateInitialize(), MatPreallocateSet(), MatPreallocateSymmetricSetBlock(), MatPreallocateSetLocal(),
           MatPreallocateSymmetricSetLocalBlock()
 M*/
-#define MatPreallocateFinalize(dnz,onz) 0;_4_ierr = PetscFree2(dnz,onz);CHKERRQ(_4_ierr);} while (0)
+#define MatPreallocateFinalize(dnz,onz) 0;CHKERRQ(PetscFree2(dnz,onz));} while (0)
 
 /* Routines unique to particular data structures */
 PETSC_EXTERN PetscErrorCode MatShellGetContext(Mat,void *);

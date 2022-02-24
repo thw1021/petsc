@@ -143,7 +143,6 @@ int main(int argc,char **argv)
 
 static PetscErrorCode CreateSystem(DM dmSol,Mat *pA,Vec *pRhs, PetscBool pinPressure)
 {
-  PetscErrorCode    ierr;
   Vec               rhs,coordLocal;
   Mat               A;
   PetscInt          startx,starty,startz,N[3],nx,ny,nz,ex,ey,ez,d;
@@ -638,7 +637,6 @@ static PetscErrorCode CreateSystem(DM dmSol,Mat *pA,Vec *pRhs, PetscBool pinPres
    - Destroy everything (the operator keeps the references it needs) */
 static PetscErrorCode AttachNullspace(DM dmSol,Mat A)
 {
-  PetscErrorCode ierr;
   DM             dmPressure;
   Vec            constantPressure,basis;
   PetscReal      nrm;
@@ -662,7 +660,6 @@ static PetscErrorCode AttachNullspace(DM dmSol,Mat A)
 
 static PetscErrorCode CreateReferenceSolution(DM dmSol,Vec *pSolRef)
 {
-  PetscErrorCode    ierr;
   PetscInt          start[3],n[3],nExtra[3],ex,ey,ez,d;
   PetscInt          ip,iux,iuy,iuz,icp[3],icux[3],icuy[3],icuz[3];
   Vec               solRef,solRefLocal,coord,coordLocal;
@@ -730,7 +727,6 @@ static PetscErrorCode CreateReferenceSolution(DM dmSol,Vec *pSolRef)
 
 static PetscErrorCode CheckSolution(Vec sol,Vec solRef)
 {
-  PetscErrorCode ierr;
   Vec            diff;
   PetscReal      normsolRef,errAbs,errRel;
 

@@ -85,7 +85,6 @@ PetscErrorCode GetElasticityMatrix(PetscInt m,Mat *newmat)
 {
   PetscInt       i,j,k,i1,i2,j_1,j2,k1,k2,h1,h2,shiftx,shifty,shiftz;
   PetscInt       ict,nz,base,r1,r2,N,*rowkeep,nstart;
-  PetscErrorCode ierr;
   IS             iskeep;
   PetscReal      **K,norm;
   Mat            mat,submat = 0,*submatb;
@@ -173,7 +172,6 @@ PetscErrorCode AddElement(Mat mat,PetscInt r1,PetscInt r2,PetscReal **K,PetscInt
 {
   PetscScalar    val;
   PetscInt       l1,l2,row,col;
-  PetscErrorCode ierr;
 
   for (l1=0; l1<3; l1++) {
     for (l2=0; l2<3; l2++) {

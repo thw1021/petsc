@@ -12,9 +12,7 @@ typedef struct { double x; double y; double z; } Point;
 static Point origin = {0.0, 0.0, 0.0};
 PETSC_HASH_MAP(HMapIS, PetscInt, Point, PetscHashInt, PetscHashEqual, origin)
 
-#define PetscTestCheck(expr) do {            \
-PetscCheck(expr,PETSC_COMM_SELF,PETSC_ERR_LIB, "Assertion: `%s' failed.", PetscStringize(expr)); \
-} while (0)
+#define PetscTestCheck(expr) PetscCheck(expr,PETSC_COMM_SELF,PETSC_ERR_LIB, "Assertion: `%s' failed.", PetscStringize(expr))
 
 int main(int argc,char **argv)
 {
@@ -135,14 +133,12 @@ int main(int argc,char **argv)
   CHKERRQ(PetscHMapIVResize(htv,n));
   CHKERRQ(PetscHMapIVGetCapacity(htv,&na));
   PetscTestCheck(na>=n);
-  for (i=0; i<n; i++) {
-    CHKERRQ(PetscHMapIVSet(htv,i+100,10.));
-  }
+  for (i=0; i<n; i++) CHKERRQ(PetscHMapIVSet(htv,i+100,10.));
+
   CHKERRQ(PetscHMapIVGetCapacity(htv,&nb));
   PetscTestCheck(nb>=na);
-  for (i=0; i<(2*n); i++) {
-    CHKERRQ(PetscHMapIVAddValue(htv,i+100,5.));
-  }
+  for (i=0; i<(2*n); i++) CHKERRQ(PetscHMapIVAddValue(htv,i+100,5.));
+
   CHKERRQ(PetscHMapIVGetSize(htv,&size));
   PetscTestCheck(size==(2*n));
   CHKERRQ(PetscMalloc3(size,&karray,size,&varray,size,&vwork));

@@ -114,7 +114,6 @@ PetscErrorCode KSPMonitorResidual(KSP ksp, PetscInt n, PetscReal rnorm, PetscVie
   PetscViewerFormat format = vf->format;
   PetscInt          tablevel;
   const char       *prefix;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
@@ -152,7 +151,6 @@ PetscErrorCode KSPMonitorResidualDraw(KSP ksp, PetscInt n, PetscReal rnorm, Pets
   PetscViewer       viewer = vf->viewer;
   PetscViewerFormat format = vf->format;
   Vec               r;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
@@ -192,7 +190,6 @@ PetscErrorCode KSPMonitorResidualDrawLG(KSP ksp, PetscInt n, PetscReal rnorm, Pe
   PetscDrawLG        lg     = vf->lg;
   KSPConvergedReason reason;
   PetscReal          x, y;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
@@ -231,7 +228,6 @@ PetscErrorCode KSPMonitorResidualDrawLG(KSP ksp, PetscInt n, PetscReal rnorm, Pe
 @*/
 PetscErrorCode KSPMonitorResidualDrawLGCreate(PetscViewer viewer, PetscViewerFormat format, void *ctx, PetscViewerAndFormat **vf)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerAndFormatCreate(viewer, format, vf));
@@ -253,7 +249,6 @@ PetscErrorCode KSPMonitorResidualShort(KSP ksp, PetscInt its, PetscReal fnorm, P
   PetscViewerFormat format = vf->format;
   PetscInt          tablevel;
   const char       *prefix;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
@@ -276,7 +271,6 @@ PetscErrorCode KSPMonitorRange_Private(KSP ksp, PetscInt it, PetscReal *per)
   const PetscScalar *r;
   PetscReal          rmax, pwork;
   PetscInt           i, n, N;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPBuildResidual(ksp, NULL, NULL, &resid));
@@ -319,7 +313,6 @@ PetscErrorCode KSPMonitorResidualRange(KSP ksp, PetscInt it, PetscReal rnorm, Pe
   PetscInt          tablevel;
   const char       *prefix;
   PetscReal         perc, rel;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
@@ -368,7 +361,6 @@ PetscErrorCode KSPMonitorTrueResidual(KSP ksp, PetscInt n, PetscReal rnorm, Pets
   char              normtype[256];
   PetscInt          tablevel;
   const char       *prefix;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
@@ -413,7 +405,6 @@ PetscErrorCode KSPMonitorTrueResidualDraw(KSP ksp, PetscInt n, PetscReal rnorm, 
   PetscViewer       viewer = vf->viewer;
   PetscViewerFormat format = vf->format;
   Vec               r;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
@@ -454,7 +445,6 @@ PetscErrorCode KSPMonitorTrueResidualDrawLG(KSP ksp, PetscInt n, PetscReal rnorm
   Vec                r;
   KSPConvergedReason reason;
   PetscReal          truenorm, x[2], y[2];
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
@@ -500,7 +490,6 @@ PetscErrorCode KSPMonitorTrueResidualDrawLG(KSP ksp, PetscInt n, PetscReal rnorm
 PetscErrorCode KSPMonitorTrueResidualDrawLGCreate(PetscViewer viewer, PetscViewerFormat format, void *ctx, PetscViewerAndFormat **vf)
 {
   const char    *names[] = {"preconditioned", "true"};
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerAndFormatCreate(viewer, format, vf));
@@ -539,7 +528,6 @@ PetscErrorCode KSPMonitorTrueResidualMax(KSP ksp, PetscInt n, PetscReal rnorm, P
   char              normtype[256];
   PetscInt          tablevel;
   const char       *prefix;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
@@ -589,7 +577,6 @@ PetscErrorCode KSPMonitorError(KSP ksp, PetscInt n, PetscReal rnorm, PetscViewer
   PetscInt          Nf, f;
   PetscInt          tablevel;
   const char       *prefix;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
@@ -645,7 +632,6 @@ PetscErrorCode KSPMonitorErrorDraw(KSP ksp, PetscInt n, PetscReal rnorm, PetscVi
   PetscViewerFormat format = vf->format;
   DM                dm;
   Vec               sol, e;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
@@ -692,7 +678,6 @@ PetscErrorCode KSPMonitorErrorDrawLG(KSP ksp, PetscInt n, PetscReal rnorm, Petsc
   KSPConvergedReason reason;
   PetscReal         *x, *errors;
   PetscInt           Nf, f;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
@@ -747,7 +732,6 @@ PetscErrorCode KSPMonitorErrorDrawLGCreate(PetscViewer viewer, PetscViewerFormat
   DM             dm;
   char         **names;
   PetscInt       Nf, f;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPGetDM(ksp, &dm));
@@ -799,7 +783,6 @@ PetscErrorCode KSPMonitorSolution(KSP ksp, PetscInt n, PetscReal rnorm, PetscVie
   PetscReal         snorm;
   PetscInt          tablevel;
   const char       *prefix;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
@@ -839,7 +822,6 @@ PetscErrorCode KSPMonitorSolutionDraw(KSP ksp, PetscInt n, PetscReal rnorm, Pets
   PetscViewer       viewer = vf->viewer;
   PetscViewerFormat format = vf->format;
   Vec               x;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
@@ -879,7 +861,6 @@ PetscErrorCode KSPMonitorSolutionDrawLG(KSP ksp, PetscInt n, PetscReal rnorm, Pe
   Vec                u;
   KSPConvergedReason reason;
   PetscReal          snorm, x, y;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 4);
@@ -920,7 +901,6 @@ PetscErrorCode KSPMonitorSolutionDrawLG(KSP ksp, PetscInt n, PetscReal rnorm, Pe
 @*/
 PetscErrorCode KSPMonitorSolutionDrawLGCreate(PetscViewer viewer, PetscViewerFormat format, void *ctx, PetscViewerAndFormat **vf)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerAndFormatCreate(viewer, format, vf));
@@ -959,7 +939,6 @@ PetscErrorCode KSPMonitorSingularValue(KSP ksp, PetscInt n, PetscReal rnorm, Pet
   PetscReal         emin, emax;
   PetscInt          tablevel;
   const char       *prefix;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
@@ -1000,7 +979,6 @@ PetscErrorCode KSPMonitorSingularValue(KSP ksp, PetscInt n, PetscReal rnorm, Pet
 PetscErrorCode KSPMonitorSingularValueCreate(PetscViewer viewer, PetscViewerFormat format, void *ctx, PetscViewerAndFormat **vf)
 {
   KSP            ksp = (KSP) ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerAndFormatCreate(viewer, format, vf));
@@ -1034,7 +1012,6 @@ PetscErrorCode KSPMonitorSingularValueCreate(PetscViewer viewer, PetscViewerForm
 @*/
 PetscErrorCode KSPMonitorDynamicTolerance(KSP ksp,PetscInt its,PetscReal fnorm,void *dummy)
 {
-  PetscErrorCode ierr;
   PC             pc;
   PetscReal      outer_rtol, outer_abstol, outer_dtol, inner_rtol;
   PetscInt       outer_maxits,nksp,first,i;
@@ -1093,7 +1070,6 @@ PetscErrorCode KSPMonitorDynamicTolerance(KSP ksp,PetscInt its,PetscReal fnorm,v
 */
 PetscErrorCode KSPMonitorDynamicToleranceDestroy(void **dummy)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(*dummy));
@@ -1151,7 +1127,6 @@ PetscErrorCode  KSPConvergedSkip(KSP ksp,PetscInt n,PetscReal rnorm,KSPConverged
 @*/
 PetscErrorCode  KSPConvergedDefaultCreate(void **ctx)
 {
-  PetscErrorCode         ierr;
   KSPConvergedDefaultCtx *cctx;
 
   PetscFunctionBegin;
@@ -1194,7 +1169,7 @@ PetscErrorCode  KSPConvergedDefaultSetUIRNorm(KSP ksp)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
   if (ksp->converged != KSPConvergedDefault) PetscFunctionReturn(0);
-  PetscCheckFalse(ctx->mininitialrtol,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_WRONGSTATE,"Cannot use KSPConvergedDefaultSetUIRNorm() and KSPConvergedDefaultSetUMIRNorm() together");
+  PetscCheck(!ctx->mininitialrtol,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_WRONGSTATE,"Cannot use KSPConvergedDefaultSetUIRNorm() and KSPConvergedDefaultSetUMIRNorm() together");
   ctx->initialrtol = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
@@ -1228,7 +1203,7 @@ PetscErrorCode  KSPConvergedDefaultSetUMIRNorm(KSP ksp)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
   if (ksp->converged != KSPConvergedDefault) PetscFunctionReturn(0);
-  PetscCheckFalse(ctx->initialrtol,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_WRONGSTATE,"Cannot use KSPConvergedDefaultSetUIRNorm() and KSPConvergedDefaultSetUMIRNorm() together");
+  PetscCheck(!ctx->initialrtol,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_WRONGSTATE,"Cannot use KSPConvergedDefaultSetUIRNorm() and KSPConvergedDefaultSetUMIRNorm() together");
   ctx->mininitialrtol = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
@@ -1313,7 +1288,6 @@ PetscErrorCode  KSPConvergedDefaultSetConvergedMaxits(KSP ksp, PetscBool flg)
 @*/
 PetscErrorCode  KSPConvergedDefault(KSP ksp,PetscInt n,PetscReal rnorm,KSPConvergedReason *reason,void *ctx)
 {
-  PetscErrorCode         ierr;
   KSPConvergedDefaultCtx *cctx = (KSPConvergedDefaultCtx*) ctx;
   KSPNormType            normtype;
 
@@ -1321,7 +1295,7 @@ PetscErrorCode  KSPConvergedDefault(KSP ksp,PetscInt n,PetscReal rnorm,KSPConver
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
   PetscValidLogicalCollectiveInt(ksp,n,2);
   PetscValidPointer(reason,4);
-  PetscCheckFalse(!cctx,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_NULL,"Convergence context must have been created with KSPConvergedDefaultCreate()");
+  PetscCheck(cctx,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_NULL,"Convergence context must have been created with KSPConvergedDefaultCreate()");
   *reason = KSP_CONVERGED_ITERATING;
 
   if (cctx->convmaxits && n >= ksp->max_it) {
@@ -1418,7 +1392,6 @@ PetscErrorCode  KSPConvergedDefault(KSP ksp,PetscInt n,PetscReal rnorm,KSPConver
 @*/
 PetscErrorCode  KSPConvergedDefaultDestroy(void *ctx)
 {
-  PetscErrorCode         ierr;
   KSPConvergedDefaultCtx *cctx = (KSPConvergedDefaultCtx*) ctx;
 
   PetscFunctionBegin;
@@ -1447,7 +1420,6 @@ PetscErrorCode  KSPConvergedDefaultDestroy(void *ctx)
 */
 PetscErrorCode KSPBuildSolutionDefault(KSP ksp,Vec v,Vec *V)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (ksp->pc_side == PC_RIGHT) {
@@ -1462,7 +1434,7 @@ PetscErrorCode KSPBuildSolutionDefault(KSP ksp,Vec v,Vec *V)
     }
   } else if (ksp->pc_side == PC_SYMMETRIC) {
     if (ksp->pc) {
-      PetscCheckFalse(ksp->transpose_solve,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"Not working with symmetric preconditioner and transpose solve");
+      PetscCheck(!ksp->transpose_solve,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"Not working with symmetric preconditioner and transpose solve");
       if (v) {
         CHKERRQ(PCApplySymmetricRight(ksp->pc,ksp->vec_sol,v));
         *V = v;
@@ -1501,7 +1473,6 @@ PetscErrorCode KSPBuildSolutionDefault(KSP ksp,Vec v,Vec *V)
 */
 PetscErrorCode KSPBuildResidualDefault(KSP ksp,Vec t,Vec v,Vec *V)
 {
-  PetscErrorCode ierr;
   Mat            Amat,Pmat;
 
   PetscFunctionBegin;
@@ -1543,7 +1514,6 @@ PetscErrorCode KSPBuildResidualDefault(KSP ksp,Vec t,Vec v,Vec *V)
 @*/
 PetscErrorCode KSPCreateVecs(KSP ksp,PetscInt rightn, Vec **right,PetscInt leftn,Vec **left)
 {
-  PetscErrorCode ierr;
   Vec            vecr = NULL,vecl = NULL;
   PetscBool      matset,pmatset,isshell,preferdm = PETSC_FALSE;
   Mat            mat = NULL;
@@ -1554,7 +1524,7 @@ PetscErrorCode KSPCreateVecs(KSP ksp,PetscInt rightn, Vec **right,PetscInt leftn
     preferdm = isshell ? PETSC_FALSE : PETSC_TRUE;
   }
   if (rightn) {
-    PetscCheckFalse(!right,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_INCOMP,"You asked for right vectors but did not pass a pointer to hold them");
+    PetscCheck(right,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_INCOMP,"You asked for right vectors but did not pass a pointer to hold them");
     if (ksp->vec_sol) vecr = ksp->vec_sol;
     else {
       if (preferdm) {
@@ -1573,7 +1543,7 @@ PetscErrorCode KSPCreateVecs(KSP ksp,PetscInt rightn, Vec **right,PetscInt leftn
       if (!vecr && ksp->dm) {
         CHKERRQ(DMGetGlobalVector(ksp->dm,&vecr));
       }
-      PetscCheckFalse(!vecr,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_WRONGSTATE,"You requested a vector from a KSP that cannot provide one");
+      PetscCheck(vecr,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_WRONGSTATE,"You requested a vector from a KSP that cannot provide one");
     }
     CHKERRQ(VecDuplicateVecs(vecr,rightn,right));
     if (!ksp->vec_sol) {
@@ -1587,7 +1557,7 @@ PetscErrorCode KSPCreateVecs(KSP ksp,PetscInt rightn, Vec **right,PetscInt leftn
     }
   }
   if (leftn) {
-    PetscCheckFalse(!left,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_INCOMP,"You asked for left vectors but did not pass a pointer to hold them");
+    PetscCheck(left,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_INCOMP,"You asked for left vectors but did not pass a pointer to hold them");
     if (ksp->vec_rhs) vecl = ksp->vec_rhs;
     else {
       if (preferdm) {
@@ -1603,10 +1573,8 @@ PetscErrorCode KSPCreateVecs(KSP ksp,PetscInt rightn, Vec **right,PetscInt leftn
           CHKERRQ(MatCreateVecs(mat,NULL,&vecl));
         }
       }
-      if (!vecl && ksp->dm) {
-        CHKERRQ(DMGetGlobalVector(ksp->dm,&vecl));
-      }
-      PetscCheckFalse(!vecl,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_WRONGSTATE,"You requested a vector from a KSP that cannot provide one");
+      if (!vecl && ksp->dm) CHKERRQ(DMGetGlobalVector(ksp->dm,&vecl));
+      PetscCheck(vecl,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_WRONGSTATE,"You requested a vector from a KSP that cannot provide one");
     }
     CHKERRQ(VecDuplicateVecs(vecl,leftn,left));
     if (!ksp->vec_rhs) {
@@ -1638,8 +1606,6 @@ PetscErrorCode KSPCreateVecs(KSP ksp,PetscInt rightn, Vec **right,PetscInt leftn
 @*/
 PetscErrorCode KSPSetWorkVecs(KSP ksp,PetscInt nw)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(VecDestroyVecs(ksp->nwork,&ksp->work));
   ksp->nwork = nw;
@@ -1660,7 +1626,6 @@ PetscErrorCode KSPSetWorkVecs(KSP ksp,PetscInt nw)
 */
 PetscErrorCode KSPDestroyDefault(KSP ksp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
@@ -1765,7 +1730,6 @@ PetscErrorCode KSPGetConvergedReasonString(KSP ksp,const char** strreason)
 @*/
 PetscErrorCode  KSPSetDM(KSP ksp,DM dm)
 {
-  PetscErrorCode ierr;
   PC             pc;
 
   PetscFunctionBegin;
@@ -1831,7 +1795,6 @@ PetscErrorCode  KSPSetDMActive(KSP ksp,PetscBool flg)
 @*/
 PetscErrorCode  KSPGetDM(KSP ksp,DM *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
@@ -1862,7 +1825,6 @@ PetscErrorCode  KSPGetDM(KSP ksp,DM *dm)
 @*/
 PetscErrorCode  KSPSetApplicationContext(KSP ksp,void *usrP)
 {
-  PetscErrorCode ierr;
   PC             pc;
 
   PetscFunctionBegin;
@@ -1923,21 +1885,18 @@ PetscErrorCode  KSPGetApplicationContext(KSP ksp,void *usrP)
 @*/
 PetscErrorCode KSPCheckSolve(KSP ksp,PC pc,Vec vec)
 {
-  PetscErrorCode     ierr;
-  PCFailedReason     pcreason;
-  PC                 subpc;
+  PCFailedReason pcreason;
+  PC             subpc;
 
   PetscFunctionBegin;
   CHKERRQ(KSPGetPC(ksp,&subpc));
   CHKERRQ(PCGetFailedReason(subpc,&pcreason));
   if (pcreason || (ksp->reason < 0 && ksp->reason != KSP_DIVERGED_ITS)) {
-    PetscCheckFalse(pc->erroriffailure,PETSC_COMM_SELF,PETSC_ERR_NOT_CONVERGED,"Detected not converged in KSP inner solve: KSP reason %s PC reason %s",KSPConvergedReasons[ksp->reason],PCFailedReasons[pcreason]);
+    PetscCheck(!pc->erroriffailure,PETSC_COMM_SELF,PETSC_ERR_NOT_CONVERGED,"Detected not converged in KSP inner solve: KSP reason %s PC reason %s",KSPConvergedReasons[ksp->reason],PCFailedReasons[pcreason]);
     else {
       CHKERRQ(PetscInfo(ksp,"Detected not converged in KSP inner solve: KSP reason %s PC reason %s\n",KSPConvergedReasons[ksp->reason],PCFailedReasons[pcreason]));
       pc->failedreason = PC_SUBPC_ERROR;
-      if (vec) {
-        CHKERRQ(VecSetInf(vec));
-      }
+      if (vec) CHKERRQ(VecSetInf(vec));
     }
   }
   PetscFunctionReturn(0);

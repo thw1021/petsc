@@ -39,7 +39,6 @@ static PetscErrorCode PetscDrawXiOpenDisplay(PetscDraw_X *XiWin,const char displ
 
 PetscErrorCode PetscDrawXiClose(PetscDraw_X *XiWin)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!XiWin) PetscFunctionReturn(0);
@@ -89,7 +88,6 @@ static PetscErrorCode PetscDrawXiCreateGC(PetscDraw_X *XiWin,PetscDrawXiPixVal f
 */
 PetscErrorCode PetscDrawXiInit(PetscDraw_X *XiWin,const char display[])
 {
-  PetscErrorCode ierr;
   PetscFunctionBegin;
   CHKERRQ(PetscDrawXiOpenDisplay(XiWin,display));
   CHKERRQ(PetscDrawXiCreateGC(XiWin,XiWin->foreground));
@@ -227,7 +225,6 @@ static PetscErrorCode PetscDrawXiDisplayWindow(PetscDraw_X *XiWin,char *label,in
 
 PetscErrorCode PetscDrawXiQuickWindow(PetscDraw_X *XiWin,char *name,int x,int y,int nx,int ny)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscDrawSetColormap_X(XiWin,(Colormap)0));
@@ -243,7 +240,6 @@ PetscErrorCode PetscDrawXiQuickWindow(PetscDraw_X *XiWin,char *name,int x,int y,
 PetscErrorCode PetscDrawXiQuickWindowFromWindow(PetscDraw_X *XiWin,Window win)
 {
   XWindowAttributes attributes;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   XiWin->win = win;

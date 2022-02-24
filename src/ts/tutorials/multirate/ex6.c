@@ -104,7 +104,6 @@ static PetscErrorCode PhysicsCreate_Advect(FVCtx *ctx)
 
 PetscErrorCode FVSample_2WaySplit(FVCtx *ctx,DM da,PetscReal time,Vec U)
 {
-  PetscErrorCode  ierr;
   PetscScalar     *u,*uj,xj,xi;
   PetscInt        i,j,k,dof,xs,xm,Mx;
   const PetscInt  N = 200;
@@ -155,7 +154,6 @@ PetscErrorCode FVSample_2WaySplit(FVCtx *ctx,DM da,PetscReal time,Vec U)
 
 static PetscErrorCode SolutionErrorNorms_2WaySplit(FVCtx *ctx,DM da,PetscReal t,Vec X,PetscReal *nrm1)
 {
-  PetscErrorCode    ierr;
   Vec               Y;
   PetscInt          i,Mx;
   const PetscScalar *ptr_X,*ptr_Y;
@@ -182,7 +180,6 @@ static PetscErrorCode SolutionErrorNorms_2WaySplit(FVCtx *ctx,DM da,PetscReal t,
 PetscErrorCode FVRHSFunction_2WaySplit(TS ts,PetscReal time,Vec X,Vec F,void *vctx)
 {
   FVCtx          *ctx = (FVCtx*)vctx;
-  PetscErrorCode ierr;
   PetscInt       i,j,k,Mx,dof,xs,xm,sf = ctx->sf,fs = ctx->fs;
   PetscReal      hxf,hxs,cfl_idt = 0;
   PetscScalar    *x,*f,*slope;
@@ -335,7 +332,6 @@ PetscErrorCode FVRHSFunction_2WaySplit(TS ts,PetscReal time,Vec X,Vec F,void *vc
 PetscErrorCode FVRHSFunctionslow_2WaySplit(TS ts,PetscReal time,Vec X,Vec F,void *vctx)
 {
   FVCtx          *ctx = (FVCtx*)vctx;
-  PetscErrorCode ierr;
   PetscInt       i,j,k,Mx,dof,xs,xm,islow = 0,sf = ctx->sf,fs = ctx->fs,lsbwidth = ctx->lsbwidth,rsbwidth = ctx->rsbwidth;
   PetscReal      hxs,hxf,cfl_idt = 0;
   PetscScalar    *x,*f,*slope;
@@ -463,7 +459,6 @@ PetscErrorCode FVRHSFunctionslow_2WaySplit(TS ts,PetscReal time,Vec X,Vec F,void
 PetscErrorCode FVRHSFunctionslowbuffer_2WaySplit(TS ts,PetscReal time,Vec X,Vec F,void *vctx)
 {
   FVCtx          *ctx = (FVCtx*)vctx;
-  PetscErrorCode ierr;
   PetscInt       i,j,k,Mx,dof,xs,xm,islow = 0,sf = ctx->sf,fs = ctx->fs,lsbwidth = ctx->lsbwidth,rsbwidth = ctx->rsbwidth;
   PetscReal      hxs,hxf;
   PetscScalar    *x,*f,*slope;
@@ -611,7 +606,6 @@ PetscErrorCode FVRHSFunctionslowbuffer_2WaySplit(TS ts,PetscReal time,Vec X,Vec 
 PetscErrorCode FVRHSFunctionfast_2WaySplit(TS ts,PetscReal time,Vec X,Vec F,void *vctx)
 {
   FVCtx          *ctx = (FVCtx*)vctx;
-  PetscErrorCode ierr;
   PetscInt       i,j,k,Mx,dof,xs,xm,ifast = 0,sf = ctx->sf,fs = ctx->fs;
   PetscReal      hxs,hxf;
   PetscScalar    *x,*f,*slope;

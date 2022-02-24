@@ -140,7 +140,6 @@ static PetscErrorCode PhysicsCreate_Advect(FVCtx *ctx)
 PetscErrorCode FVRHSFunctionslow(TS ts,PetscReal time,Vec X,Vec F,void *vctx)
 {
   FVCtx          *ctx = (FVCtx*)vctx;
-  PetscErrorCode ierr;
   PetscInt       i,j,k,Mx,dof,xs,xm,len_slow;
   PetscReal      hx,cfl_idt = 0;
   PetscScalar    *x,*f,*slope;
@@ -246,7 +245,6 @@ PetscErrorCode FVRHSFunctionslow(TS ts,PetscReal time,Vec X,Vec F,void *vctx)
 PetscErrorCode FVRHSFunctionfast(TS ts,PetscReal time,Vec X,Vec F,void *vctx)
 {
   FVCtx          *ctx = (FVCtx*)vctx;
-  PetscErrorCode ierr;
   PetscInt       i,j,k,Mx,dof,xs,xm,len_slow;
   PetscReal      hx,cfl_idt = 0;
   PetscScalar    *x,*f,*slope;
@@ -348,7 +346,6 @@ PetscErrorCode FVRHSFunctionfast(TS ts,PetscReal time,Vec X,Vec F,void *vctx)
 PetscErrorCode FVRHSFunctionslow2(TS ts,PetscReal time,Vec X,Vec F,void *vctx)
 {
   FVCtx          *ctx = (FVCtx*)vctx;
-  PetscErrorCode ierr;
   PetscInt       i,j,k,Mx,dof,xs,xm,len_slow1,len_slow2;
   PetscReal      hx,cfl_idt = 0;
   PetscScalar    *x,*f,*slope;
@@ -464,7 +461,6 @@ PetscErrorCode FVRHSFunctionslow2(TS ts,PetscReal time,Vec X,Vec F,void *vctx)
 PetscErrorCode FVRHSFunctionfast2(TS ts,PetscReal time,Vec X,Vec F,void *vctx)
 {
   FVCtx          *ctx = (FVCtx*)vctx;
-  PetscErrorCode ierr;
   PetscInt       i,j,k,Mx,dof,xs,xm,len_slow1,len_slow2;
   PetscReal      hx,cfl_idt = 0;
   PetscScalar    *x,*f,*slope;

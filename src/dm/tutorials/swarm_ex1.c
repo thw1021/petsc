@@ -11,7 +11,6 @@ PETSC_EXTERN PetscErrorCode DMSwarmCollect_DMDABoundingBox(DM,PetscInt*);
 PetscErrorCode ex1_1(void)
 {
   DM             dms;
-  PetscErrorCode ierr;
   Vec            x;
   PetscMPIInt    rank,size;
   PetscInt       p;
@@ -97,7 +96,6 @@ PetscErrorCode ex1_1(void)
 PetscErrorCode ex1_2(void)
 {
   DM             dms;
-  PetscErrorCode ierr;
   Vec            x;
   PetscMPIInt    rank,size;
   PetscInt       p;
@@ -188,7 +186,6 @@ PetscErrorCode ex1_2(void)
 PetscErrorCode ex1_3(void)
 {
   DM             dms;
-  PetscErrorCode ierr;
   PetscMPIInt    rank,size;
   PetscInt       is,js,ni,nj,overlap;
   DM             dmcell;
@@ -305,7 +302,6 @@ PetscErrorCode collect_zone(DM dm,void *ctx,PetscInt *nfound,PetscInt **foundlis
   PetscReal      *array_x,*array_y,r2;
   PetscInt       p2collect,*plist;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(PETSC_COMM_WORLD,&rank));
@@ -348,7 +344,6 @@ PetscErrorCode collect_zone(DM dm,void *ctx,PetscInt *nfound,PetscInt **foundlis
 PetscErrorCode ex1_4(void)
 {
   DM             dms;
-  PetscErrorCode ierr;
   PetscMPIInt    rank,size;
   PetscInt       is,js,ni,nj,overlap,nn;
   DM             dmcell;

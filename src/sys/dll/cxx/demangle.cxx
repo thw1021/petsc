@@ -7,7 +7,6 @@
 
 PetscErrorCode PetscDemangleSymbol(const char mangledName[], char **name)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 #if defined(PETSC_HAVE_CXXABI_H)

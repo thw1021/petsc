@@ -11,7 +11,6 @@ struct _n_User {
 static PetscErrorCode MatGetDiagonal_User(Mat A,Vec X)
 {
   User           user;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(A,&user));

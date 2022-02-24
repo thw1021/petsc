@@ -18,14 +18,13 @@
 @*/
 PetscErrorCode DMNetworkMonitorCreate(DM network,DMNetworkMonitor *monitorptr)
 {
-  PetscErrorCode   ierr;
   DMNetworkMonitor monitor;
   MPI_Comm         comm;
   PetscMPIInt      size;
 
   PetscFunctionBegin;
-  ierr = PetscObjectGetComm((PetscObject)network,&comm);CHKERRQ(ierr);
-  ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
+  CHKERRQ(PetscObjectGetComm((PetscObject)network,&comm));
+  CHKERRMPI(MPI_Comm_size(comm, &size));
   PetscCheck(size == 1,PETSC_COMM_SELF,PETSC_ERR_SUP,"Parallel DMNetworkMonitor is not supported yet");
 
   CHKERRQ(PetscMalloc1(1,&monitor));
@@ -51,7 +50,6 @@ PetscErrorCode DMNetworkMonitorCreate(DM network,DMNetworkMonitor *monitorptr)
 @*/
 PetscErrorCode DMNetworkMonitorDestroy(DMNetworkMonitor *monitor)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   while ((*monitor)->firstnode) {
@@ -76,7 +74,6 @@ PetscErrorCode DMNetworkMonitorDestroy(DMNetworkMonitor *monitor)
 @*/
 PetscErrorCode DMNetworkMonitorPop(DMNetworkMonitor monitor)
 {
-  PetscErrorCode       ierr;
   DMNetworkMonitorList node;
 
   PetscFunctionBegin;
@@ -124,7 +121,6 @@ PetscErrorCode DMNetworkMonitorPop(DMNetworkMonitor monitor)
 @*/
 PetscErrorCode DMNetworkMonitorAdd(DMNetworkMonitor monitor,const char *name,PetscInt element,PetscInt nodes,PetscInt start,PetscInt blocksize,PetscReal xmin,PetscReal xmax,PetscReal ymin,PetscReal ymax,PetscBool hold)
 {
-  PetscErrorCode       ierr;
   PetscDrawLG          drawlg;
   PetscDrawAxis        axis;
   PetscMPIInt          rank, size;
@@ -192,7 +188,6 @@ PetscErrorCode DMNetworkMonitorAdd(DMNetworkMonitor monitor,const char *name,Pet
 
 PetscErrorCode DMNetworkMonitorView(DMNetworkMonitor monitor,Vec x)
 {
-  PetscErrorCode      ierr;
   PetscInt            varoffset,i,start;
   const PetscScalar   *xx;
   PetscScalar         *vv;

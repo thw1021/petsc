@@ -32,7 +32,6 @@ static PetscErrorCode IPMInitializeBounds(Tao tao);
 
 static PetscErrorCode TaoSolve_IPM(Tao tao)
 {
-  PetscErrorCode     ierr;
   TAO_IPM            *ipmP = (TAO_IPM*)tao->data;
   PetscInt           its,i;
   PetscScalar        stepsize=1.0;
@@ -206,7 +205,6 @@ static PetscErrorCode TaoSolve_IPM(Tao tao)
 static PetscErrorCode TaoSetup_IPM(Tao tao)
 {
   TAO_IPM        *ipmP = (TAO_IPM*)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   ipmP->nb = ipmP->mi = ipmP->me = 0;
@@ -250,7 +248,6 @@ static PetscErrorCode IPMInitializeBounds(Tao tao)
   const PetscInt *xli,*xui;
   PetscInt       xl_offset,xu_offset;
   IS             bigxl,bigxu,isuc,isc,isx,sis,is1;
-  PetscErrorCode ierr;
   MPI_Comm       comm;
 
   PetscFunctionBegin;
@@ -476,7 +473,6 @@ static PetscErrorCode IPMInitializeBounds(Tao tao)
 static PetscErrorCode TaoDestroy_IPM(Tao tao)
 {
   TAO_IPM        *ipmP = (TAO_IPM*)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDestroy(&ipmP->rd));
@@ -533,7 +529,6 @@ static PetscErrorCode TaoDestroy_IPM(Tao tao)
 static PetscErrorCode TaoSetFromOptions_IPM(PetscOptionItems *PetscOptionsObject,Tao tao)
 {
   TAO_IPM        *ipmP = (TAO_IPM*)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"IPM method for constrained optimization"));
@@ -591,7 +586,6 @@ static PetscErrorCode IPMComputeKKT(Tao tao)
 {
   TAO_IPM        *ipmP = (TAO_IPM *)tao->data;
   PetscScalar    norm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecCopy(tao->gradient,ipmP->rd));
@@ -643,7 +637,6 @@ static PetscErrorCode IPMComputeKKT(Tao tao)
 PetscErrorCode IPMEvaluate(Tao tao)
 {
   TAO_IPM        *ipmP = (TAO_IPM *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TaoComputeObjectiveAndGradient(tao,tao->solution,&ipmP->kkt_f,tao->gradient));
@@ -667,7 +660,6 @@ PetscErrorCode IPMEvaluate(Tao tao)
 PetscErrorCode IPMPushInitialPoint(Tao tao)
 {
   TAO_IPM        *ipmP = (TAO_IPM *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TaoComputeVariableBounds(tao));
@@ -709,7 +701,6 @@ PetscErrorCode IPMUpdateAi(Tao tao)
   PetscInt          *nonzeros;
   PetscInt          r2,r3,r4;
   PetscMPIInt       size;
-  PetscErrorCode    ierr;
   Vec               solu;
   PetscInt          nloc;
 
@@ -833,7 +824,6 @@ PetscErrorCode IPMUpdateK(Tao tao)
   TAO_IPM         *ipmP = (TAO_IPM *)tao->data;
   MPI_Comm        comm;
   PetscMPIInt     size;
-  PetscErrorCode  ierr;
   PetscInt        i,j,row;
   PetscInt        ncols,newcol,newcols[2],newrow;
   const PetscInt  *cols;
@@ -1013,7 +1003,6 @@ PetscErrorCode IPMUpdateK(Tao tao)
 PetscErrorCode IPMGatherRHS(Tao tao,Vec RHS,Vec X1,Vec X2,Vec X3,Vec X4)
 {
   TAO_IPM        *ipmP = (TAO_IPM *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* rhs = [x1      (n)
@@ -1044,7 +1033,6 @@ PetscErrorCode IPMGatherRHS(Tao tao,Vec RHS,Vec X1,Vec X2,Vec X3,Vec X4)
 PetscErrorCode IPMScatterStep(Tao tao, Vec STEP, Vec X1, Vec X2, Vec X3, Vec X4)
 {
   TAO_IPM        *ipmP = (TAO_IPM *)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKMEMQ;
@@ -1088,7 +1076,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TaoCreate_IPM(Tao tao)
 {
   TAO_IPM        *ipmP;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   tao->ops->setup = TaoSetup_IPM;

@@ -19,8 +19,7 @@ PetscErrorCode MatConvertToSparseElemental(Mat A,MatReuse reuse,Mat_SparseElemen
 
 PetscErrorCode MatView_SparseElemental(Mat A,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
-  PetscBool      iascii;
+  PetscBool iascii;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
@@ -44,8 +43,6 @@ PetscErrorCode MatView_SparseElemental(Mat A,PetscViewer viewer)
 
 PetscErrorCode MatDestroy_SparseElemental(Mat A)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(PetscObjectComposeFunction((PetscObject)A,"MatFactorGetSolverType_C",NULL));
   PetscFunctionReturn(0);
@@ -105,8 +102,6 @@ static PetscErrorCode MatGetFactor_aij_sparseelemental(Mat A,MatFactorType ftype
 
 PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_SparseElemental(void)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(MatSolverTypeRegister(MATSOLVERSPARSEELEMENTAL,MATMPIAIJ,MAT_FACTOR_LU,MatGetFactor_aij_sparseelemental));
   PetscFunctionReturn(0);

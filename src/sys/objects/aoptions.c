@@ -21,16 +21,12 @@
 */
 PetscErrorCode PetscOptionsBegin_Private(PetscOptionItems *PetscOptionsObject,MPI_Comm comm,const char prefix[],const char title[],const char mansec[])
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   if (prefix) PetscValidCharPointer(prefix,3);
   PetscValidCharPointer(title,4);
   if (mansec) PetscValidCharPointer(mansec,5);
   if (!PetscOptionsObject->alreadyprinted) {
-    if (!PetscOptionsHelpPrintedSingleton) {
-      CHKERRQ(PetscOptionsHelpPrintedCreate(&PetscOptionsHelpPrintedSingleton));
-    }
+    if (!PetscOptionsHelpPrintedSingleton) CHKERRQ(PetscOptionsHelpPrintedCreate(&PetscOptionsHelpPrintedSingleton));
     CHKERRQ(PetscOptionsHelpPrintedCheck(PetscOptionsHelpPrintedSingleton,prefix,title,&PetscOptionsObject->alreadyprinted));
   }
   PetscOptionsObject->next          = NULL;
@@ -54,22 +50,19 @@ PetscErrorCode PetscOptionsBegin_Private(PetscOptionItems *PetscOptionsObject,MP
 */
 PetscErrorCode PetscObjectOptionsBegin_Private(PetscOptionItems *PetscOptionsObject,PetscObject obj)
 {
-  PetscErrorCode ierr;
-  char           title[256];
-  PetscBool      flg;
+  char      title[256];
+  PetscBool flg;
 
   PetscFunctionBegin;
+  PetscValidPointer(PetscOptionsObject,1);
   PetscValidHeader(obj,2);
   PetscOptionsObject->object         = obj;
   PetscOptionsObject->alreadyprinted = obj->optionsprinted;
 
   CHKERRQ(PetscStrcmp(obj->description,obj->class_name,&flg));
-  if (flg) {
-    CHKERRQ(PetscSNPrintf(title,sizeof(title),"%s options",obj->class_name));
-  } else {
-    CHKERRQ(PetscSNPrintf(title,sizeof(title),"%s (%s) options",obj->description,obj->class_name));
-  }
-  ierr = PetscOptionsBegin_Private(PetscOptionsObject,obj->comm,obj->prefix,title,obj->mansec);CHKERRQ(ierr);
+  if (flg) CHKERRQ(PetscSNPrintf(title,sizeof(title),"%s options",obj->class_name));
+  else     CHKERRQ(PetscSNPrintf(title,sizeof(title),"%s (%s) options",obj->description,obj->class_name));
+  CHKERRQ(PetscOptionsBegin_Private(PetscOptionsObject,obj->comm,obj->prefix,title,obj->mansec));
   PetscFunctionReturn(0);
 }
 
@@ -78,13 +71,12 @@ PetscErrorCode PetscObjectOptionsBegin_Private(PetscOptionItems *PetscOptionsObj
 */
 static int PetscOptionItemCreate_Private(PetscOptionItems *PetscOptionsObject,const char opt[],const char text[],const char man[],PetscOptionType t,PetscOptionItem *amsopt)
 {
-  int             ierr;
   PetscOptionItem next;
   PetscBool       valid;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsValidKey(opt,&valid));
-  PetscCheckFalse(!valid,PETSC_COMM_WORLD,PETSC_ERR_ARG_INCOMP,"The option '%s' is not a valid key",opt);
+  PetscCheck(valid,PETSC_COMM_WORLD,PETSC_ERR_ARG_INCOMP,"The option '%s' is not a valid key",opt);
 
   CHKERRQ(PetscNew(amsopt));
   (*amsopt)->next = NULL;
@@ -119,18 +111,16 @@ static int PetscOptionItemCreate_Private(PetscOptionItems *PetscOptionsObject,co
 .   Assumes process 0 of the given communicator has access to stdin
 
 */
-static PetscErrorCode PetscScanString(MPI_Comm comm,size_t n,char str[])
+static PetscErrorCode PetscScanString(MPI_Comm comm, size_t n, char str[])
 {
-  size_t         i;
-  char           c;
-  PetscMPIInt    rank,nm;
-  PetscErrorCode ierr;
+  PetscMPIInt rank,nm;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(comm,&rank));
   if (rank == 0) {
-    c = (char) getchar();
-    i = 0;
+    char   c = (char)getchar();
+    size_t i = 0;
+
     while (c != '\n' && i < n-1) {
       str[i++] = c;
       c = (char)getchar();
@@ -145,17 +135,17 @@ static PetscErrorCode PetscScanString(MPI_Comm comm,size_t n,char str[])
 /*
     This is needed because certain strings may be freed by SAWs, hence we cannot use PetscStrallocpy()
 */
-static PetscErrorCode  PetscStrdup(const char s[],char *t[])
+static PetscErrorCode PetscStrdup(const char s[], char *t[])
 {
-  PetscErrorCode ierr;
-  size_t         len;
-  char           *tmp = NULL;
+  char *tmp = NULL;
 
   PetscFunctionBegin;
   if (s) {
+    size_t len;
+
     CHKERRQ(PetscStrlen(s,&len));
-    tmp = (char*) malloc((len+1)*sizeof(char));
-    PetscCheckFalse(!tmp,PETSC_COMM_SELF,PETSC_ERR_MEM,"No memory to duplicate string");
+    tmp = (char*) malloc((len+1)*sizeof(*tmp));
+    PetscCheck(tmp,PETSC_COMM_SELF,PETSC_ERR_MEM,"No memory to duplicate string");
     CHKERRQ(PetscStrcpy(tmp,s));
   }
   *t = tmp;
@@ -183,7 +173,6 @@ static PetscErrorCode  PetscStrdup(const char s[],char *t[])
 */
 PetscErrorCode PetscOptionsGetFromTextInput(PetscOptionItems *PetscOptionsObject)
 {
-  PetscErrorCode  ierr;
   PetscOptionItem next = PetscOptionsObject->next;
   char            str[512];
   PetscBool       bid;
@@ -394,7 +383,6 @@ static const char *OptionsBodyBottom = "<div id=\"variablesInfo\" style=\"backgr
 */
 PetscErrorCode PetscOptionsSAWsInput(PetscOptionItems *PetscOptionsObject)
 {
-  PetscErrorCode  ierr;
   PetscOptionItem next     = PetscOptionsObject->next;
   static int      mancount = 0;
   char            options[16];
@@ -428,35 +416,35 @@ PetscErrorCode PetscOptionsSAWsInput(PetscOptionItems *PetscOptionsObject)
     case OPTION_HEAD:
       break;
     case OPTION_INT_ARRAY:
-    CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Options/%s",next->option));
+      CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Options/%s",next->option));
       PetscStackCallSAWs(SAWs_Register,(dir,next->data,next->arraylength,SAWs_WRITE,SAWs_INT));
       break;
     case OPTION_REAL_ARRAY:
-    CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Options/%s",next->option));
+      CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Options/%s",next->option));
       PetscStackCallSAWs(SAWs_Register,(dir,next->data,next->arraylength,SAWs_WRITE,SAWs_DOUBLE));
       break;
     case OPTION_INT:
-    CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Options/%s",next->option));
+      CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Options/%s",next->option));
       PetscStackCallSAWs(SAWs_Register,(dir,next->data,1,SAWs_WRITE,SAWs_INT));
       break;
     case OPTION_REAL:
-    CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Options/%s",next->option));
+      CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Options/%s",next->option));
       PetscStackCallSAWs(SAWs_Register,(dir,next->data,1,SAWs_WRITE,SAWs_DOUBLE));
       break;
     case OPTION_BOOL:
-    CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Options/%s",next->option));
+      CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Options/%s",next->option));
       PetscStackCallSAWs(SAWs_Register,(dir,next->data,1,SAWs_WRITE,SAWs_BOOLEAN));
       break;
     case OPTION_BOOL_ARRAY:
-    CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Options/%s",next->option));
+      CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Options/%s",next->option));
       PetscStackCallSAWs(SAWs_Register,(dir,next->data,next->arraylength,SAWs_WRITE,SAWs_BOOLEAN));
       break;
     case OPTION_STRING:
-    CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Options/%s",next->option));
+      CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Options/%s",next->option));
       PetscStackCallSAWs(SAWs_Register,(dir,&next->data,1,SAWs_WRITE,SAWs_STRING));
       break;
     case OPTION_STRING_ARRAY:
-    CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Options/%s",next->option));
+      CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Options/%s",next->option));
       PetscStackCallSAWs(SAWs_Register,(dir,next->data,next->arraylength,SAWs_WRITE,SAWs_STRING));
       break;
     case OPTION_FLIST:
@@ -514,7 +502,6 @@ PetscErrorCode PetscOptionsSAWsInput(PetscOptionItems *PetscOptionsObject)
 
 PetscErrorCode PetscOptionsEnd_Private(PetscOptionItems *PetscOptionsObject)
 {
-  PetscErrorCode  ierr;
   PetscOptionItem last;
   char            option[256],value[1024],tmp[32];
   size_t          j;
@@ -545,9 +532,7 @@ PetscErrorCode PetscOptionsEnd_Private(PetscOptionItems *PetscOptionsObject)
         CHKERRQ(PetscStrcpy(option,"-"));
         CHKERRQ(PetscStrcat(option,PetscOptionsObject->prefix));
         CHKERRQ(PetscStrcat(option,PetscOptionsObject->next->option+1));
-      } else {
-        CHKERRQ(PetscStrcpy(option,PetscOptionsObject->next->option));
-      }
+      } else CHKERRQ(PetscStrcpy(option,PetscOptionsObject->next->option));
 
       switch (PetscOptionsObject->next->type) {
       case OPTION_HEAD:
@@ -627,7 +612,7 @@ PetscErrorCode PetscOptionsEnd_Private(PetscOptionItems *PetscOptionsObject)
       CHKERRQ(PetscFree(PetscOptionsObject->next->data));
     }
 
-    last                    = PetscOptionsObject->next;
+    last                     = PetscOptionsObject->next;
     PetscOptionsObject->next = PetscOptionsObject->next->next;
     CHKERRQ(PetscFree(last));
   }
@@ -683,7 +668,6 @@ M*/
 
 PetscErrorCode  PetscOptionsEnum_Private(PetscOptionItems *PetscOptionsObject,const char opt[],const char text[],const char man[],const char *const *list,PetscEnum currentvalue,PetscEnum *value,PetscBool  *set)
 {
-  PetscErrorCode ierr;
   PetscInt       ntext = 0;
   PetscInt       tval;
   PetscBool      tflg;
@@ -744,7 +728,6 @@ PetscErrorCode  PetscOptionsEnumArray_Private(PetscOptionItems *PetscOptionsObje
 {
   PetscInt        i,nlist = 0;
   PetscOptionItem amsopt;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   while (list[nlist++]) PetscCheckFalse(nlist > 50,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"List argument appears to be wrong or have more than 50 entries");
@@ -902,7 +885,6 @@ M*/
 
 PetscErrorCode  PetscOptionsInt_Private(PetscOptionItems *PetscOptionsObject,const char opt[],const char text[],const char man[],PetscInt currentvalue,PetscInt *value,PetscBool  *set,PetscInt lb,PetscInt ub)
 {
-  PetscErrorCode  ierr;
   PetscOptionItem amsopt;
   PetscBool       wasset;
 
@@ -972,7 +954,6 @@ M*/
 
 PetscErrorCode  PetscOptionsString_Private(PetscOptionItems *PetscOptionsObject,const char opt[],const char text[],const char man[],const char currentvalue[],char value[],size_t len,PetscBool  *set)
 {
-  PetscErrorCode  ierr;
   PetscOptionItem amsopt;
   PetscBool       lset;
 
@@ -1034,7 +1015,6 @@ M*/
 
 PetscErrorCode  PetscOptionsReal_Private(PetscOptionItems *PetscOptionsObject,const char opt[],const char text[],const char man[],PetscReal currentvalue,PetscReal *value,PetscBool  *set)
 {
-  PetscErrorCode  ierr;
   PetscOptionItem amsopt;
   PetscBool       lset;
 
@@ -1097,7 +1077,6 @@ M*/
 
 PetscErrorCode  PetscOptionsScalar_Private(PetscOptionItems *PetscOptionsObject,const char opt[],const char text[],const char man[],PetscScalar currentvalue,PetscScalar *value,PetscBool  *set)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 #if !defined(PETSC_USE_COMPLEX)
@@ -1142,7 +1121,6 @@ M*/
 
 PetscErrorCode  PetscOptionsName_Private(PetscOptionItems *PetscOptionsObject,const char opt[],const char text[],const char man[],PetscBool  *flg)
 {
-  PetscErrorCode  ierr;
   PetscOptionItem amsopt;
 
   PetscFunctionBegin;
@@ -1209,7 +1187,6 @@ M*/
 
 PetscErrorCode  PetscOptionsFList_Private(PetscOptionItems *PetscOptionsObject,const char opt[],const char ltext[],const char man[],PetscFunctionList list,const char currentvalue[],char value[],size_t len,PetscBool  *set)
 {
-  PetscErrorCode  ierr;
   PetscOptionItem amsopt;
   PetscBool       lset;
 
@@ -1271,7 +1248,6 @@ M*/
 
 PetscErrorCode  PetscOptionsEList_Private(PetscOptionItems *PetscOptionsObject,const char opt[],const char ltext[],const char man[],const char *const *list,PetscInt ntext,const char currentvalue[],PetscInt *value,PetscBool  *set)
 {
-  PetscErrorCode  ierr;
   PetscInt        i;
   PetscOptionItem amsopt;
   PetscBool       lset;
@@ -1331,7 +1307,6 @@ M*/
 
 PetscErrorCode  PetscOptionsBoolGroupBegin_Private(PetscOptionItems *PetscOptionsObject,const char opt[],const char text[],const char man[],PetscBool  *flg)
 {
-  PetscErrorCode  ierr;
   PetscOptionItem amsopt;
 
   PetscFunctionBegin;
@@ -1385,7 +1360,6 @@ M*/
 
 PetscErrorCode  PetscOptionsBoolGroup_Private(PetscOptionItems *PetscOptionsObject,const char opt[],const char text[],const char man[],PetscBool  *flg)
 {
-  PetscErrorCode  ierr;
   PetscOptionItem amsopt;
 
   PetscFunctionBegin;
@@ -1438,7 +1412,6 @@ M*/
 
 PetscErrorCode  PetscOptionsBoolGroupEnd_Private(PetscOptionItems *PetscOptionsObject,const char opt[],const char text[],const char man[],PetscBool  *flg)
 {
-  PetscErrorCode  ierr;
   PetscOptionItem amsopt;
 
   PetscFunctionBegin;
@@ -1500,7 +1473,6 @@ M*/
 
 PetscErrorCode  PetscOptionsBool_Private(PetscOptionItems *PetscOptionsObject,const char opt[],const char text[],const char man[],PetscBool currentvalue,PetscBool  *flg,PetscBool  *set)
 {
-  PetscErrorCode  ierr;
   PetscBool       iset;
   PetscOptionItem amsopt;
 
@@ -1559,7 +1531,6 @@ M*/
 
 PetscErrorCode PetscOptionsRealArray_Private(PetscOptionItems *PetscOptionsObject,const char opt[],const char text[],const char man[],PetscReal value[],PetscInt *n,PetscBool  *set)
 {
-  PetscErrorCode  ierr;
   PetscInt        i;
   PetscOptionItem amsopt;
 
@@ -1623,7 +1594,6 @@ M*/
 
 PetscErrorCode PetscOptionsScalarArray_Private(PetscOptionItems *PetscOptionsObject,const char opt[],const char text[],const char man[],PetscScalar value[],PetscInt *n,PetscBool  *set)
 {
-  PetscErrorCode  ierr;
   PetscInt        i;
   PetscOptionItem amsopt;
 
@@ -1692,7 +1662,6 @@ M*/
 
 PetscErrorCode  PetscOptionsIntArray_Private(PetscOptionItems *PetscOptionsObject,const char opt[],const char text[],const char man[],PetscInt value[],PetscInt *n,PetscBool  *set)
 {
-  PetscErrorCode ierr;
   PetscInt        i;
   PetscOptionItem amsopt;
 
@@ -1760,7 +1729,6 @@ M*/
 
 PetscErrorCode  PetscOptionsStringArray_Private(PetscOptionItems *PetscOptionsObject,const char opt[],const char text[],const char man[],char *value[],PetscInt *nmax,PetscBool  *set)
 {
-  PetscErrorCode  ierr;
   PetscOptionItem amsopt;
 
   PetscFunctionBegin;
@@ -1816,7 +1784,6 @@ M*/
 
 PetscErrorCode  PetscOptionsBoolArray_Private(PetscOptionItems *PetscOptionsObject,const char opt[],const char text[],const char man[],PetscBool value[],PetscInt *n,PetscBool *set)
 {
-  PetscErrorCode   ierr;
   PetscInt         i;
   PetscOptionItem  amsopt;
 
@@ -1877,7 +1844,6 @@ M*/
 
 PetscErrorCode  PetscOptionsViewer_Private(PetscOptionItems *PetscOptionsObject,const char opt[],const char text[],const char man[],PetscViewer *viewer,PetscViewerFormat *format,PetscBool  *set)
 {
-  PetscErrorCode  ierr;
   PetscOptionItem amsopt;
 
   PetscFunctionBegin;
@@ -1918,7 +1884,6 @@ PetscErrorCode  PetscOptionsViewer_Private(PetscOptionItems *PetscOptionsObject,
 @*/
 PetscErrorCode  PetscOptionsHead(PetscOptionItems *PetscOptionsObject,const char head[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscOptionsObject->printhelp && PetscOptionsObject->count == 1 && !PetscOptionsObject->alreadyprinted) {

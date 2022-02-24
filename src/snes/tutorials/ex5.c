@@ -245,7 +245,6 @@ int main(int argc,char **argv)
 PetscErrorCode FormInitialGuess(DM da,AppCtx *user,Vec X)
 {
   PetscInt       i,j,Mx,My,xs,ys,xm,ym;
-  PetscErrorCode ierr;
   PetscReal      lambda,temp1,temp,hx,hy;
   PetscScalar    **x;
 
@@ -313,7 +312,6 @@ PetscErrorCode FormExactSolution(DM da, AppCtx *user, Vec U)
   DMDACoor2d   **coords;
   PetscScalar  **u;
   PetscInt       xs, ys, xm, ym, i, j;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMDAGetCorners(da, &xs, &ys, NULL, &xm, &ym, NULL));
@@ -414,7 +412,6 @@ PetscErrorCode MMSForcing4(AppCtx *user,const DMDACoor2d *c,PetscScalar *f)
  */
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info,PetscScalar **x,PetscScalar **f,AppCtx *user)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j;
   PetscReal      lambda,hx,hy,hxdhy,hydhx;
   PetscScalar    u,ue,uw,un,us,uxx,uyy,mms_solution,mms_forcing;
@@ -464,7 +461,6 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info,PetscScalar **x,PetscScalar
 /* FormObjectiveLocal - Evaluates nonlinear function, F(x) on local process patch */
 PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info,PetscScalar **x,PetscReal *obj,AppCtx *user)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j;
   PetscReal      lambda,hx,hy,hxdhy,hydhx,sc,lobj=0;
   PetscScalar    u,ue,uw,un,us,uxux,uyuy;
@@ -517,7 +513,6 @@ PetscErrorCode FormObjectiveLocal(DMDALocalInfo *info,PetscScalar **x,PetscReal 
 */
 PetscErrorCode FormJacobianLocal(DMDALocalInfo *info,PetscScalar **x,Mat jac,Mat jacpre,AppCtx *user)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,k;
   MatStencil     col[5],row;
   PetscScalar    lambda,v[5],hx,hy,hxdhy,hydhx,sc;
@@ -658,7 +653,6 @@ PetscErrorCode FormFunctionMatlab(SNES snes,Vec X,Vec F,void *ptr)
 PetscErrorCode NonlinearGS(SNES snes,Vec X, Vec B, void *ctx)
 {
   PetscInt       i,j,k,Mx,My,xs,ys,xm,ym,its,tot_its,sweeps,l;
-  PetscErrorCode ierr;
   PetscReal      lambda,hx,hy,hxdhy,hydhx,sc;
   PetscScalar    **x,**b,bij,F,F0=0,J,u,un,us,ue,eu,uw,uxx,uyy,y;
   PetscReal      atol,rtol,stol;

@@ -17,7 +17,6 @@ PetscErrorCode PrintVecWithGhosts(DM da, Vec v)
 {
   PetscScalar    **p;
   PetscInt       i, j;
-  PetscErrorCode ierr;
   MPI_Comm       com;
   PetscMPIInt    rank;
   DMDALocalInfo  info;
@@ -44,7 +43,6 @@ PetscErrorCode VecSetOwned(DM da, Vec v, PetscScalar value)
 {
   PetscScalar    **p;
   PetscInt         i, j, xs, xm, ys, ym;
-  PetscErrorCode   ierr;
 
   CHKERRQ(DMDAGetCorners(da, &xs, &ys, 0, &xm, &ym, 0));
   CHKERRQ(DMDAVecGetArray(da, v, &p));

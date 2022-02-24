@@ -9,7 +9,6 @@ static PetscErrorCode testOrthogonality(PetscInt dim, PetscInt deg)
   const PetscReal *points, *weights;
   PetscInt        Npoly, npoints, i, j, k;
   PetscReal       *p;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscDTStroudConicalQuadrature(dim, 1, deg + 1, -1., 1., &q));
@@ -49,7 +48,6 @@ static PetscErrorCode testDerivativesLegendre(PetscInt dim, PetscInt deg, PetscI
   PetscReal      *lgndre_jet;
   PetscReal     **D;
   PetscReal      *pkd_jet, *pkd_jet_basis;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscDTBinomialInt(dim + deg, dim, &Np));

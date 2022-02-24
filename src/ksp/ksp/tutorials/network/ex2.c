@@ -41,7 +41,6 @@ PetscReal findDistance(PetscReal x1, PetscReal x2, PetscReal y1, PetscReal y2)
 
 PetscErrorCode random_network(PetscInt nvertex,PetscInt *pnbranch,Node **pnode,Branch **pbranch,PetscInt **pedgelist,PetscInt seed)
 {
-  PetscErrorCode ierr;
   PetscInt       i, j, nedges = 0;
   PetscInt       *edgelist;
   PetscInt       nbat, ncurr, fr, to;
@@ -167,12 +166,11 @@ PetscErrorCode random_network(PetscInt nvertex,PetscInt *pnbranch,Node **pnode,B
   *pedgelist = edgelist;
   *pbranch   = branch;
   *pnode     = node;
-  PetscFunctionReturn(ierr);
+  PetscFunctionReturn(0);
 }
 
 PetscErrorCode FormOperator(DM networkdm,Mat A,Vec b)
 {
-  PetscErrorCode    ierr;
   Vec               localb;
   Branch            *branch;
   Node              *node;

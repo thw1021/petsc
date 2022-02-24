@@ -354,7 +354,6 @@ static PetscErrorCode AssembleStokes_A(Mat A,DM stokes_da,DM quadrature)
   PetscScalar            Ce[NODES_PER_EL*P_DOFS*NODES_PER_EL*P_DOFS];
   PetscScalar            el_coords[NODES_PER_EL*NSD];
   PetscScalar            *q_eta,*prop_eta;
-  PetscErrorCode         ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(MatZeroEntries(A));
@@ -418,7 +417,6 @@ static PetscErrorCode AssembleStokes_PC(Mat A,DM stokes_da,DM quadrature)
   PetscScalar            Ce[NODES_PER_EL*P_DOFS*NODES_PER_EL*P_DOFS];
   PetscScalar            el_coords[NODES_PER_EL*NSD];
   PetscScalar            *q_eta,*prop_eta;
-  PetscErrorCode         ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(MatZeroEntries(A));
@@ -482,7 +480,6 @@ static PetscErrorCode AssembleStokes_RHS(Vec F,DM stokes_da,DM quadrature)
   PetscScalar            *q_rhs,*prop_fy;
   Vec                    local_F;
   PetscScalar            *LA_F;
-  PetscErrorCode         ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecZeroEntries(F));
@@ -536,7 +533,6 @@ static PetscErrorCode AssembleStokes_RHS(Vec F,DM stokes_da,DM quadrature)
 
 PetscErrorCode DMSwarmPICInsertPointsCellwise(DM dm,DM dmc,PetscInt e,PetscInt npoints,PetscReal xi[],PetscBool proximity_initialization)
 {
-  PetscErrorCode    ierr;
   PetscInt          dim,nel,npe,q,k,d,ncurr;
   const PetscInt    *element_list;
   Vec               coor;
@@ -692,7 +688,6 @@ PetscErrorCode MaterialPoint_PopulateCell(DM dm_vp,DM dm_mpoint)
   PetscQuadrature quadrature;
   const PetscReal *xi;
   PetscInt        npoints_q,cnt,cnt_g;
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMDAGetElements(dm_vp,&_nel,&_npe,&element));
@@ -728,7 +723,6 @@ PetscErrorCode MaterialPoint_PopulateCell(DM dm_vp,DM dm_mpoint)
 
 PetscErrorCode MaterialPoint_AdvectRK1(DM dm_vp,Vec vp,PetscReal dt,DM dm_mpoint)
 {
-  PetscErrorCode    ierr;
   Vec               vp_l,coor_l;
   const PetscScalar *LA_vp;
   PetscInt          i,p,e,npoints,nel,npe;
@@ -820,7 +814,6 @@ PetscErrorCode MaterialPoint_Interpolate(DM dm,Vec eta_v,Vec rho_v,DM dm_quadrat
   PetscScalar    Ni[GAUSS_POINTS][NODES_PER_EL];
   const PetscInt *element_list;
   PetscReal      *q_eta,*q_rhs;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   /* define quadrature rule */
@@ -896,7 +889,6 @@ static PetscErrorCode SolveTimeDepStokes(PetscInt mx,PetscInt my)
   PetscInt               tk,nt,dump_freq;
   PetscReal              dt,dt_max = 0.0;
   PetscReal              vx[2],vy[2],max_v = 0.0,max_v_step,dh;
-  PetscErrorCode         ierr;
   const char             *fieldnames[] = { "eta" , "rho" };
   Vec                    *pfields;
   PetscInt               ppcell = 1;
@@ -1323,7 +1315,6 @@ static PetscErrorCode BCApplyZero_EAST(DM da,PetscInt d_idx,Mat A,Vec b)
   PetscScalar            *bc_vals;
   PetscInt               nbcs;
   PetscInt               n_dofs;
-  PetscErrorCode         ierr;
   ISLocalToGlobalMapping ltogm;
 
   PetscFunctionBeginUser;
@@ -1384,7 +1375,6 @@ static PetscErrorCode BCApplyZero_WEST(DM da,PetscInt d_idx,Mat A,Vec b)
   PetscScalar            *bc_vals;
   PetscInt               nbcs;
   PetscInt               n_dofs;
-  PetscErrorCode         ierr;
   ISLocalToGlobalMapping ltogm;
 
   PetscFunctionBeginUser;
@@ -1446,7 +1436,6 @@ static PetscErrorCode BCApplyZero_NORTH(DM da,PetscInt d_idx,Mat A,Vec b)
   PetscScalar            *bc_vals;
   PetscInt               nbcs;
   PetscInt               n_dofs;
-  PetscErrorCode         ierr;
   ISLocalToGlobalMapping ltogm;
 
   PetscFunctionBeginUser;
@@ -1507,7 +1496,6 @@ static PetscErrorCode BCApplyZero_SOUTH(DM da,PetscInt d_idx,Mat A,Vec b)
   PetscScalar            *bc_vals;
   PetscInt               nbcs;
   PetscInt               n_dofs;
-  PetscErrorCode         ierr;
   ISLocalToGlobalMapping ltogm;
 
   PetscFunctionBeginUser;
@@ -1562,7 +1550,6 @@ static PetscErrorCode BCApplyZero_SOUTH(DM da,PetscInt d_idx,Mat A,Vec b)
 */
 static PetscErrorCode DMDAApplyBoundaryConditions(DM dm_stokes,Mat A,Vec f)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(BCApplyZero_NORTH(dm_stokes,0,A,f));

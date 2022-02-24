@@ -6,7 +6,6 @@ static char help[] = "Tests options database monitoring and precedence.\n\n";
 
 PetscErrorCode PetscOptionsMonitorCustom(const char name[],const char value[],void *ctx)
 {
-  PetscErrorCode ierr;
   PetscViewer    viewer = (PetscViewer)ctx;
 
   PetscFunctionBegin;

@@ -105,7 +105,6 @@ int main(int argc, char **argv)
 
 PetscErrorCode PostStep(TS ts)
 {
-  PetscErrorCode ierr;
   Vec            X,gc;
   AppCtx         *user;
   PetscScalar    sum = 0,asum;
@@ -142,7 +141,6 @@ PetscErrorCode PostStep(TS ts)
 
 PetscErrorCode ini_bou(Vec X,AppCtx* user)
 {
-  PetscErrorCode ierr;
   DM             cda;
   DMDACoor2d     **coors;
   PetscScalar    **p;
@@ -249,7 +247,6 @@ PetscErrorCode diffuse(PetscScalar **p,PetscInt i,PetscInt j,PetscReal t,PetscSc
 
 PetscErrorCode IFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void *ctx)
 {
-  PetscErrorCode ierr;
   AppCtx         *user=(AppCtx*)ctx;
   DM             cda;
   DMDACoor2d     **coors;
@@ -300,7 +297,6 @@ PetscErrorCode IFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void *ctx)
 
 PetscErrorCode IJacobian(TS ts,PetscReal t,Vec X,Vec Xdot,PetscReal a,Mat J,Mat Jpre,void *ctx)
 {
-  PetscErrorCode ierr;
   AppCtx         *user=(AppCtx*)ctx;
   DM             cda;
   DMDACoor2d     **coors;
@@ -351,7 +347,6 @@ PetscErrorCode IJacobian(TS ts,PetscReal t,Vec X,Vec Xdot,PetscReal a,Mat J,Mat 
 
 PetscErrorCode Parameter_settings(AppCtx *user)
 {
-  PetscErrorCode ierr;
   PetscBool      flg;
 
   PetscFunctionBeginUser;

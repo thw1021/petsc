@@ -36,7 +36,6 @@ PetscErrorCode IJacobianShell(TS,PetscReal,Vec,Vec,PetscReal,Mat,Mat,void*);
 PetscErrorCode InitializeLambda(DM da,Vec lambda,PetscReal x,PetscReal y)
 {
    PetscInt i,j,Mx,My,xs,ys,xm,ym;
-   PetscErrorCode ierr;
    Field **l;
    PetscFunctionBegin;
 
@@ -66,7 +65,6 @@ static PetscErrorCode MyRHSMatMultTranspose(Mat A_shell,Vec X,Vec Y)
   PetscScalar    uc,uxx,uyy,vc,vxx,vyy,ucb,vcb;
   Field          **u,**x,**y;
   Vec            localX;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(MatShellGetContext(A_shell,&mctx));
@@ -124,7 +122,6 @@ static PetscErrorCode MyIMatMultTranspose(Mat A_shell,Vec X,Vec Y)
   PetscScalar    uc,uxx,uyy,vc,vxx,vyy,ucb,vcb;
   Field          **u,**x,**y;
   Vec            localX;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(MatShellGetContext(A_shell,&mctx));
@@ -184,7 +181,6 @@ static PetscErrorCode MyIMatMult(Mat A_shell,Vec X,Vec Y)
   PetscScalar    uc,uxx,uyy,vc,vxx,vyy,ucb,vcb;
   Field          **u,**x,**y;
   Vec            localX;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(MatShellGetContext(A_shell,&mctx));
@@ -388,7 +384,6 @@ int main(int argc,char **argv)
 PetscErrorCode RHSJacobianShell(TS ts,PetscReal t,Vec U,Mat A,Mat BB,void *ctx)
 {
   MCtx           *mctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(A,&mctx));
@@ -399,7 +394,6 @@ PetscErrorCode RHSJacobianShell(TS ts,PetscReal t,Vec U,Mat A,Mat BB,void *ctx)
 PetscErrorCode IJacobianShell(TS ts,PetscReal t,Vec U,Vec Udot,PetscReal a,Mat A,Mat BB,void *ctx)
 {
   MCtx           *mctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(A,&mctx));
@@ -412,7 +406,6 @@ PetscErrorCode IJacobianShell(TS ts,PetscReal t,Vec U,Vec Udot,PetscReal a,Mat A
 /* ------------------------------------------------------------------- */
 PetscErrorCode InitialConditions(DM da,Vec U)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,xs,ys,xm,ym,Mx,My;
   Field          **u;
   PetscReal      hx,hy,x,y;

@@ -75,7 +75,6 @@ int main(int argc,char **argv)
 
 PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec x,Vec f,void *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecSet(f,(PetscReal)1));
@@ -84,7 +83,6 @@ PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec x,Vec f,void *ctx)
 
 PetscErrorCode RHSJacobian(TS ts,PetscReal t,Vec x,Mat A,Mat B,void *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatZeroEntries(B));
@@ -105,7 +103,6 @@ PetscErrorCode PostEvent(TS ts,PetscInt nevents,PetscInt event_list[],PetscReal 
 {
   PetscInt          i;
   const PetscScalar *a;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSGetStepNumber(ts,&i));

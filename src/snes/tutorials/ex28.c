@@ -73,7 +73,6 @@ static PetscErrorCode FormFunction_All(SNES snes,Vec X,Vec F,void *ctx)
   DMDALocalInfo  infou,infok;
   PetscScalar    *u,*k;
   PetscScalar    *fu,*fk;
-  PetscErrorCode ierr;
   Vec            Uloc,Kloc,Fu,Fk;
 
   PetscFunctionBeginUser;
@@ -127,7 +126,6 @@ static PetscErrorCode FormFunction_All(SNES snes,Vec X,Vec F,void *ctx)
 static PetscErrorCode FormJacobianLocal_U(User user,DMDALocalInfo *info,const PetscScalar u[],const PetscScalar k[],Mat Buu)
 {
   PetscReal      hx = 1./info->mx;
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBeginUser;
@@ -149,7 +147,6 @@ static PetscErrorCode FormJacobianLocal_U(User user,DMDALocalInfo *info,const Pe
 static PetscErrorCode FormJacobianLocal_K(User user,DMDALocalInfo *info,const PetscScalar u[],const PetscScalar k[],Mat Bkk)
 {
   PetscReal      hx = 1./info->mx;
-  PetscErrorCode ierr;
   PetscInt       i;
 
   PetscFunctionBeginUser;
@@ -164,7 +161,6 @@ static PetscErrorCode FormJacobianLocal_K(User user,DMDALocalInfo *info,const Pe
 static PetscErrorCode FormJacobianLocal_UK(User user,DMDALocalInfo *info,DMDALocalInfo *infok,const PetscScalar u[],const PetscScalar k[],Mat Buk)
 {
   PetscReal      hx = 1./info->mx;
-  PetscErrorCode ierr;
   PetscInt       i;
   PetscInt       row,cols[2];
   PetscScalar    vals[2];
@@ -183,7 +179,6 @@ static PetscErrorCode FormJacobianLocal_UK(User user,DMDALocalInfo *info,DMDALoc
 
 static PetscErrorCode FormJacobianLocal_KU(User user,DMDALocalInfo *info,DMDALocalInfo *infok,const PetscScalar u[],const PetscScalar k[],Mat Bku)
 {
-  PetscErrorCode ierr;
   PetscInt       i;
   PetscReal      hx = 1./(info->mx-1);
 
@@ -220,7 +215,6 @@ static PetscErrorCode FormJacobian_All(SNES snes,Vec X,Mat J,Mat B,void *ctx)
   DM             dau,dak;
   DMDALocalInfo  infou,infok;
   PetscScalar    *u,*k;
-  PetscErrorCode ierr;
   Vec            Uloc,Kloc;
 
   PetscFunctionBeginUser;
@@ -296,7 +290,6 @@ static PetscErrorCode FormJacobian_All(SNES snes,Vec X,Mat J,Mat B,void *ctx)
 
 static PetscErrorCode FormInitial_Coupled(User user,Vec X)
 {
-  PetscErrorCode ierr;
   DM             dau,dak;
   DMDALocalInfo  infou,infok;
   Vec            Xu,Xk;

@@ -50,7 +50,6 @@ PetscErrorCode DMPlexExtrude(DM dm, PetscInt layers, PetscReal thickness, PetscB
   DM              cdm, ecdm;
   const char     *prefix;
   PetscOptions    options;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexTransformCreate(PetscObjectComm((PetscObject) dm), &tr));
@@ -86,7 +85,6 @@ PetscErrorCode DMPlexExtrude(DM dm, PetscInt layers, PetscReal thickness, PetscB
 
 PetscErrorCode DMExtrude_Plex(DM dm, PetscInt layers, DM *edm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexExtrude(dm, layers, PETSC_DETERMINE, PETSC_TRUE, PETSC_FALSE, NULL, NULL, edm));

@@ -194,7 +194,6 @@ int main(int argc,char **argv)
 PetscErrorCode FormInitialGuess(AppCtx *user,DM da,Vec X)
 {
   PetscInt       i,j,mx,xs,ys,xm,ym;
-  PetscErrorCode ierr;
   PetscReal      grashof,dx;
   Field          **x;
 
@@ -243,7 +242,6 @@ PetscErrorCode FormInitialGuess(AppCtx *user,DM da,Vec X)
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info,Field **x,Field **f,void *ptr)
 {
   AppCtx         *user = (AppCtx*)ptr;
-  PetscErrorCode ierr;
   PetscInt       xints,xinte,yints,yinte,i,j;
   PetscReal      hx,hy,dhx,dhy,hxdhy,hydhx;
   PetscReal      grashof,prandtl,lid;
@@ -374,7 +372,6 @@ PetscErrorCode NonlinearGS(SNES snes, Vec X, Vec B, void *ctx)
 {
   DMDALocalInfo  info;
   Field          **x,**b;
-  PetscErrorCode ierr;
   Vec            localX, localB;
   DM             da;
   PetscInt       xints,xinte,yints,yinte,i,j,k,l;

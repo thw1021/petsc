@@ -40,7 +40,6 @@ static PetscErrorCode ExpectedNumDofs_Interior(PetscInt dim, PetscInt order, Pet
 
 static PetscErrorCode ExpectedNumDofs_Total(PetscInt dim, PetscInt order, PetscInt formDegree, PetscBool trimmed, PetscInt tensor, PetscInt nCopies, PetscInt *nDofs)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   formDegree = PetscAbsInt(formDegree);
@@ -101,7 +100,6 @@ static PetscErrorCode ExpectedNumDofs_Total(PetscInt dim, PetscInt order, PetscI
 static PetscErrorCode ExpectedNumDofs_Interior(PetscInt dim, PetscInt order, PetscInt formDegree, PetscBool trimmed,
                                                PetscInt tensor, PetscInt nCopies, PetscInt *nDofs)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   formDegree = PetscAbsInt(formDegree);
@@ -183,7 +181,6 @@ PetscErrorCode testLagrange(PetscHashLag lagTable, DM K, PetscInt dim, PetscInt 
   PetscHashIter   iter;
   PetscBool       missing;
   PetscInt        spdim, spintdim, exspdim, exspintdim;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscDTBinomialInt(dim, PetscAbsInt(formDegree), &Nk));

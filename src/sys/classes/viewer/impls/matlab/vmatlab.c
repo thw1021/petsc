@@ -27,7 +27,6 @@ typedef struct {
 @*/
 PetscErrorCode  PetscViewerMatlabPutArray(PetscViewer mfile,int m,int n,const PetscScalar *array,const char *name)
 {
-  PetscErrorCode     ierr;
   PetscViewer_Matlab *ml;
   mxArray            *mat;
 
@@ -77,7 +76,6 @@ PetscErrorCode  PetscViewerMatlabPutVariable(PetscViewer viewer,const char *name
 @*/
 PetscErrorCode  PetscViewerMatlabGetArray(PetscViewer mfile,int m,int n,PetscScalar *array,const char *name)
 {
-  PetscErrorCode     ierr;
   PetscViewer_Matlab *ml;
   mxArray            *mat;
 
@@ -127,7 +125,6 @@ PetscErrorCode  PetscViewerFileSetName_Matlab(PetscViewer viewer,const char name
 
 PetscErrorCode PetscViewerDestroy_Matlab(PetscViewer v)
 {
-  PetscErrorCode     ierr;
   PetscViewer_Matlab *vf = (PetscViewer_Matlab*)v->data;
 
   PetscFunctionBegin;
@@ -172,7 +169,6 @@ $                xnew(:) = x;    % reshape one dimensional vector back to two di
 M*/
 PETSC_EXTERN PetscErrorCode PetscViewerCreate_Matlab(PetscViewer viewer)
 {
-  PetscErrorCode     ierr;
   PetscViewer_Matlab *e;
 
   PetscFunctionBegin;
@@ -218,8 +214,6 @@ $    FILE_MODE_WRITE - open existing file for MATLAB output
 @*/
 PetscErrorCode  PetscViewerMatlabOpen(MPI_Comm comm,const char name[],PetscFileMode type,PetscViewer *binv)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(PetscViewerCreate(comm,binv));
   CHKERRQ(PetscViewerSetType(*binv,PETSCVIEWERMATLAB));

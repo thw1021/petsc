@@ -6,7 +6,6 @@
 
 PetscErrorCode PCMGACycle_Private(PC pc,PC_MG_Levels **mglevels,PetscBool transpose,PetscBool matapp)
 {
-  PetscErrorCode ierr;
   PetscInt       i,l = mglevels[0]->levels;
 
   PetscFunctionBegin;

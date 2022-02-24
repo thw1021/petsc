@@ -8,7 +8,6 @@ static char help[] = "Create a mesh, refine and coarsen simultaneously, and tran
 static PetscErrorCode AddIdentityLabel(DM dm)
 {
   PetscInt       pStart,pEnd,p;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMCreateLabel(dm, "identity"));
@@ -21,7 +20,6 @@ static PetscErrorCode CreateAdaptivityLabel(DM forest,DMLabel *adaptLabel)
 {
   DMLabel        identLabel;
   PetscInt       cStart, cEnd, c;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMLabelCreate(PETSC_COMM_SELF,"adapt",adaptLabel));
@@ -72,7 +70,6 @@ bc_func_ctx;
 static PetscErrorCode bc_func_fv (PetscReal time, const PetscReal *c, const PetscReal *n, const PetscScalar *xI, PetscScalar *xG, void *ctx)
 {
   bc_func_ctx    *bcCtx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   bcCtx = (bc_func_ctx *) ctx;
@@ -87,7 +84,6 @@ static PetscErrorCode IdentifyBadPoints (DM dm, Vec vec, PetscReal tol)
   Vec            vecLocal;
   DMLabel        depthLabel;
   PetscSection   section;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMCreateLocalVector(dm, &vecLocal));

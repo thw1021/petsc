@@ -144,7 +144,6 @@ M*/
 @*/
 PetscErrorCode TSGLEERegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (TSGLEERegisterAllCalled) PetscFunctionReturn(0);
@@ -395,7 +394,6 @@ PetscErrorCode TSGLEERegisterDestroy(void)
 @*/
 PetscErrorCode TSGLEEInitializePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (TSGLEEPackageInitialized) PetscFunctionReturn(0);
@@ -416,7 +414,6 @@ PetscErrorCode TSGLEEInitializePackage(void)
 @*/
 PetscErrorCode TSGLEEFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   TSGLEEPackageInitialized = PETSC_FALSE;
@@ -465,7 +462,6 @@ PetscErrorCode TSGLEERegister(TSGLEEType name,PetscInt order,PetscInt s, PetscIn
                               const PetscReal Serror[],
                               PetscInt pinterp, const PetscReal binterp[])
 {
-  PetscErrorCode    ierr;
   GLEETableauLink   link;
   GLEETableau       t;
   PetscInt          i,j;
@@ -517,7 +513,6 @@ static PetscErrorCode TSEvaluateStep_GLEE(TS ts,PetscInt order,Vec X,PetscBool *
   PetscInt        s = tab->s, r = tab->r, i, j;
   Vec             *Y = glee->Y, *YdotStage = glee->YdotStage;
   PetscScalar     *ws = glee->swork, *wr = glee->rwork;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
 
@@ -591,7 +586,6 @@ static PetscErrorCode TSStep_GLEE(TS ts)
   PetscReal       next_time_step;
   PetscReal       t;
   PetscBool       accept;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscCitationsRegister(citation,&cited));
@@ -680,7 +674,6 @@ static PetscErrorCode TSInterpolate_GLEE(TS ts,PetscReal itime,Vec X)
   PetscReal       h,tt,t;
   PetscScalar     *b;
   const PetscReal *B = glee->tableau->binterp;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!B,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSGLEE %s does not have an interpolation formula",glee->tableau->name);
@@ -714,7 +707,6 @@ static PetscErrorCode TSReset_GLEE(TS ts)
 {
   TS_GLEE        *glee = (TS_GLEE*)ts->data;
   PetscInt       s, r;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!glee->tableau) PetscFunctionReturn(0);
@@ -734,7 +726,6 @@ static PetscErrorCode TSReset_GLEE(TS ts)
 static PetscErrorCode TSGLEEGetVecs(TS ts,DM dm,Vec *Ydot)
 {
   TS_GLEE     *glee = (TS_GLEE*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (Ydot) {
@@ -747,7 +738,6 @@ static PetscErrorCode TSGLEEGetVecs(TS ts,DM dm,Vec *Ydot)
 
 static PetscErrorCode TSGLEERestoreVecs(TS ts,DM dm,Vec *Ydot)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (Ydot) {
@@ -767,7 +757,6 @@ static PetscErrorCode SNESTSFormFunction_GLEE(SNES snes,Vec X,Vec F,TS ts)
   DM             dm,dmsave;
   Vec            Ydot;
   PetscReal      shift = glee->scoeff / ts->time_step;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESGetDM(snes,&dm));
@@ -791,7 +780,6 @@ static PetscErrorCode SNESTSFormJacobian_GLEE(SNES snes,Vec X,Mat A,Mat B,TS ts)
   DM             dm,dmsave;
   Vec            Ydot;
   PetscReal      shift = glee->scoeff / ts->time_step;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESGetDM(snes,&dm));
@@ -836,7 +824,6 @@ static PetscErrorCode TSSetUp_GLEE(TS ts)
   TS_GLEE        *glee = (TS_GLEE*)ts->data;
   GLEETableau    tab;
   PetscInt       s,r;
-  PetscErrorCode ierr;
   DM             dm;
 
   PetscFunctionBegin;
@@ -867,7 +854,6 @@ PetscErrorCode TSStartingMethod_GLEE(TS ts)
   GLEETableau    tab  = glee->tableau;
   PetscInt       r=tab->r,i;
   PetscReal      *S=tab->S;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   for (i=0; i<r; i++) {
@@ -882,7 +868,6 @@ PetscErrorCode TSStartingMethod_GLEE(TS ts)
 
 static PetscErrorCode TSSetFromOptions_GLEE(PetscOptionItems *PetscOptionsObject,TS ts)
 {
-  PetscErrorCode ierr;
   char           gleetype[256];
 
   PetscFunctionBegin;
@@ -910,7 +895,6 @@ static PetscErrorCode TSView_GLEE(TS ts,PetscViewer viewer)
   TS_GLEE        *glee   = (TS_GLEE*)ts->data;
   GLEETableau    tab  = glee->tableau;
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
@@ -928,7 +912,6 @@ static PetscErrorCode TSView_GLEE(TS ts,PetscViewer viewer)
 
 static PetscErrorCode TSLoad_GLEE(TS ts,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   SNES           snes;
   TSAdapt        tsadapt;
 
@@ -958,7 +941,6 @@ static PetscErrorCode TSLoad_GLEE(TS ts,PetscViewer viewer)
 @*/
 PetscErrorCode TSGLEESetType(TS ts,TSGLEEType gleetype)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -984,7 +966,6 @@ PetscErrorCode TSGLEESetType(TS ts,TSGLEEType gleetype)
 @*/
 PetscErrorCode TSGLEEGetType(TS ts,TSGLEEType *gleetype)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -995,7 +976,6 @@ PetscErrorCode TSGLEEGetType(TS ts,TSGLEEType *gleetype)
 PetscErrorCode  TSGLEEGetType_GLEE(TS ts,TSGLEEType *gleetype)
 {
   TS_GLEE     *glee = (TS_GLEE*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!glee->tableau) {
@@ -1007,7 +987,6 @@ PetscErrorCode  TSGLEEGetType_GLEE(TS ts,TSGLEEType *gleetype)
 PetscErrorCode  TSGLEESetType_GLEE(TS ts,TSGLEEType gleetype)
 {
   TS_GLEE         *glee = (TS_GLEE*)ts->data;
-  PetscErrorCode  ierr;
   PetscBool       match;
   GLEETableauLink link;
 
@@ -1041,7 +1020,6 @@ PetscErrorCode TSGetSolutionComponents_GLEE(TS ts,PetscInt *n,Vec *Y)
 {
   TS_GLEE         *glee = (TS_GLEE*)ts->data;
   GLEETableau     tab   = glee->tableau;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   if (!Y) *n = tab->r;
@@ -1062,7 +1040,6 @@ PetscErrorCode TSGetAuxSolution_GLEE(TS ts,Vec *X)
   Vec             *Y    = glee->Y;
   PetscScalar     *wr   = glee->rwork;
   PetscInt        i;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecZeroEntries(*X));
@@ -1080,7 +1057,6 @@ PetscErrorCode TSGetTimeError_GLEE(TS ts,PetscInt n,Vec *X)
   Vec             *Y    = glee->Y;
   PetscScalar     *wr   = glee->rwork;
   PetscInt        i;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecZeroEntries(*X));
@@ -1100,7 +1076,6 @@ PetscErrorCode TSSetTimeError_GLEE(TS ts,Vec X)
   PetscReal       *S    = tab->Serror;
   PetscInt        r     = tab->r,i;
   Vec             *Y    = glee->Y;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(r != 2,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSSetTimeError_GLEE not supported for '%s' with r=%D.",tab->name,tab->r);
@@ -1114,7 +1089,6 @@ PetscErrorCode TSSetTimeError_GLEE(TS ts,Vec X)
 
 static PetscErrorCode TSDestroy_GLEE(TS ts)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSReset_GLEE(ts));
@@ -1148,7 +1122,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TSCreate_GLEE(TS ts)
 {
   TS_GLEE         *th;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSGLEEInitializePackage());

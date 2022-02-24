@@ -36,7 +36,6 @@ PetscErrorCode  ISEqual(IS is1,IS is2,PetscBool  *flg)
   const PetscInt *ptr1,*ptr2;
   PetscBool      flag;
   MPI_Comm       comm;
-  PetscErrorCode ierr;
   PetscMPIInt    mflg;
 
   PetscFunctionBegin;
@@ -116,7 +115,6 @@ PetscErrorCode  ISEqualUnsorted(IS is1,IS is2,PetscBool  *flg)
   const PetscInt *ptr1,*ptr2;
   PetscBool      flag;
   MPI_Comm       comm;
-  PetscErrorCode ierr;
   PetscMPIInt    mflg;
 
   PetscFunctionBegin;

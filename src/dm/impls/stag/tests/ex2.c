@@ -32,7 +32,6 @@ int main(int argc,char **argv)
 
 static PetscErrorCode Test_3d_4x4x4_3x3x3(DM dmstag)
 {
-  PetscErrorCode ierr;
   Vec            vecLocal,vecGlobal;
   PetscInt       i,low,high,n;
   PetscScalar    *arr;

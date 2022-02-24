@@ -11,7 +11,6 @@ static char help[] = "Tests DMSwarm\n\n";
 PetscErrorCode ex2_1(void)
 {
   DM             dms;
-  PetscErrorCode ierr;
   Vec            x;
   PetscMPIInt    rank;
   PetscInt       p,bs,nlocal;

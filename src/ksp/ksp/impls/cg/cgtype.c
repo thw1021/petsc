@@ -29,7 +29,6 @@
 @*/
 PetscErrorCode  KSPCGSetType(KSP ksp,KSPCGType type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
@@ -63,7 +62,6 @@ PetscErrorCode  KSPCGSetType(KSP ksp,KSPCGType type)
 @*/
 PetscErrorCode  KSPCGUseSingleReduction(KSP ksp,PetscBool flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
@@ -87,7 +85,6 @@ PetscErrorCode  KSPCGUseSingleReduction(KSP ksp,PetscBool flg)
 @*/
 PetscErrorCode  KSPCGSetRadius(KSP ksp, PetscReal radius)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
@@ -111,7 +108,6 @@ PetscErrorCode  KSPCGSetRadius(KSP ksp, PetscReal radius)
 @*/
 PetscErrorCode  KSPCGGetNormD(KSP ksp, PetscReal *norm_d)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
@@ -134,7 +130,6 @@ PetscErrorCode  KSPCGGetNormD(KSP ksp, PetscReal *norm_d)
 @*/
 PetscErrorCode  KSPCGGetObjFcn(KSP ksp, PetscReal *o_fcn)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);

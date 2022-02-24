@@ -9,7 +9,6 @@ PetscErrorCode private_PetscViewerCreate_XDMF(MPI_Comm comm,const char filename[
   long int       *bytes;
   PetscContainer container;
   PetscViewer    viewer;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerCreate(comm,&viewer));
@@ -39,7 +38,6 @@ PetscErrorCode private_PetscViewerDestroy_XDMF(PetscViewer *v)
   DM             dm = NULL;
   long int       *bytes;
   PetscContainer container = NULL;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!v) PetscFunctionReturn(0);
@@ -71,7 +69,6 @@ PetscErrorCode private_CreateDataFileNameXDMF(const char filename[],char dfilena
 {
   char           *ext;
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscStrrchr(filename,'.',&ext));
@@ -99,7 +96,6 @@ PetscErrorCode private_DMSwarmView_XDMF(DM dm,PetscViewer viewer)
   long int       *bytes = NULL;
   PetscContainer container = NULL;
   const char     *dmname;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectQuery((PetscObject)viewer,"XDMFViewerContext",(PetscObject*)&container));
@@ -206,7 +202,6 @@ PetscErrorCode private_VecView_Swarm_XDMF(Vec x,PetscViewer viewer)
   PetscInt       N,bs;
   const char     *vecname;
   char           fieldname[PETSC_MAX_PATH_LEN];
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectQuery((PetscObject)viewer,"XDMFViewerContext",(PetscObject*)&container));
@@ -271,7 +266,6 @@ PetscErrorCode private_ISView_Swarm_XDMF(IS is,PetscViewer viewer)
   PetscInt       N,bs;
   const char     *vecname;
   char           fieldname[PETSC_MAX_PATH_LEN];
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectQuery((PetscObject)viewer,"XDMFViewerContext",(PetscObject*)&container));
@@ -345,7 +339,6 @@ PetscErrorCode private_ISView_Swarm_XDMF(IS is,PetscViewer viewer)
 @*/
 PETSC_EXTERN PetscErrorCode DMSwarmViewFieldsXDMF(DM dm,const char filename[],PetscInt nfields,const char *field_name_list[])
 {
-  PetscErrorCode ierr;
   Vec            dvec;
   PetscInt       f,N;
   PetscViewer    viewer;
@@ -406,7 +399,6 @@ PETSC_EXTERN PetscErrorCode DMSwarmViewFieldsXDMF(DM dm,const char filename[],Pe
 PETSC_EXTERN PetscErrorCode DMSwarmViewXDMF(DM dm,const char filename[])
 {
   DM_Swarm       *swarm = (DM_Swarm*)dm->data;
-  PetscErrorCode ierr;
   Vec            dvec;
   PetscInt       f;
   PetscViewer    viewer;

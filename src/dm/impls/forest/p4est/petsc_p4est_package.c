@@ -33,8 +33,6 @@ PETSC_INTERN void PetscScAbort_longjmp(void)
 
 static PetscErrorCode PetscP4estFinalize(void)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   if (PetscBeganSc) {
     /* We do not want libsc to abort on a mismatched allocation and prevent further Petsc unwinding */
@@ -49,13 +47,12 @@ static PetscErrorCode PetscP4estFinalize(void)
 
 PetscErrorCode PetscP4estInitialize(void)
 {
-  PetscBool      psc_catch_signals    = PETSC_FALSE;
-  PetscBool      psc_print_backtrace  = PETSC_TRUE;
-  int            psc_log_threshold    = SC_LP_DEFAULT;
-  int            pp4est_log_threshold = SC_LP_DEFAULT;
-  char           logList[256];
-  PetscBool      opt,pkg;
-  PetscErrorCode ierr;
+  PetscBool psc_catch_signals    = PETSC_FALSE;
+  PetscBool psc_print_backtrace  = PETSC_TRUE;
+  int       psc_log_threshold    = SC_LP_DEFAULT;
+  int       pp4est_log_threshold = SC_LP_DEFAULT;
+  char      logList[256];
+  PetscBool opt,pkg;
 
   PetscFunctionBegin;
   if (PetscP4estInitialized) PetscFunctionReturn(0);

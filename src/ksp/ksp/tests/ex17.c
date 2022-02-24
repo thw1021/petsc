@@ -94,9 +94,8 @@ int main(int argc,char **args)
 
 PetscErrorCode FormTestMatrix(Mat A,PetscInt n,TestType type)
 {
-  PetscScalar    val[5];
-  PetscErrorCode ierr;
-  PetscInt       i,j,Ii,J,col[5],Istart,Iend;
+  PetscScalar val[5];
+  PetscInt    i,j,Ii,J,col[5],Istart,Iend;
 
   CHKERRQ(MatGetOwnershipRange(A,&Istart,&Iend));
   if (type == TEST_1) {

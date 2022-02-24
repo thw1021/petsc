@@ -23,7 +23,6 @@ PetscErrorCode CharacteristicSiftDown(Characteristic, Queue, PetscInt, PetscInt)
 PetscErrorCode CharacteristicView(Characteristic c, PetscViewer viewer)
 {
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(c, CHARACTERISTIC_CLASSID, 1);
@@ -44,7 +43,6 @@ PetscErrorCode CharacteristicView(Characteristic c, PetscViewer viewer)
 
 PetscErrorCode CharacteristicDestroy(Characteristic *c)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*c) PetscFunctionReturn(0);
@@ -72,7 +70,6 @@ PetscErrorCode CharacteristicDestroy(Characteristic *c)
 PetscErrorCode CharacteristicCreate(MPI_Comm comm, Characteristic *c)
 {
   Characteristic newC;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(c, 2);
@@ -155,8 +152,8 @@ PetscErrorCode CharacteristicCreate(MPI_Comm comm, Characteristic *c)
 @*/
 PetscErrorCode CharacteristicSetType(Characteristic c, CharacteristicType type)
 {
-  PetscErrorCode ierr, (*r)(Characteristic);
   PetscBool      match;
+  PetscErrorCode (*r)(Characteristic);
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(c, CHARACTERISTIC_CLASSID, 1);
@@ -173,7 +170,7 @@ PetscErrorCode CharacteristicSetType(Characteristic c, CharacteristicType type)
   }
 
   CHKERRQ(PetscFunctionListFind(CharacteristicList,type,&r));
-  PetscCheckFalse(!r,PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown Characteristic type given: %s", type);
+  PetscCheck(r,PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown Characteristic type given: %s", type);
   c->setupcalled = 0;
   CHKERRQ((*r)(c));
   CHKERRQ(PetscObjectChangeTypeName((PetscObject) c, type));
@@ -195,7 +192,6 @@ PetscErrorCode CharacteristicSetType(Characteristic c, CharacteristicType type)
 @*/
 PetscErrorCode CharacteristicSetUp(Characteristic c)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(c, CHARACTERISTIC_CLASSID, 1);
@@ -248,7 +244,6 @@ PetscErrorCode CharacteristicSetUp(Characteristic c)
 @*/
 PetscErrorCode CharacteristicRegister(const char sname[],PetscErrorCode (*function)(Characteristic))
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(CharacteristicInitializePackage());
@@ -286,7 +281,7 @@ PetscErrorCode CharacteristicSetFieldInterpolation(Characteristic c, DM da, Vec 
 {
   PetscFunctionBegin;
 #if 0
-  PetscCheckFalse(numComponents > 2,PETSC_COMM_SELF,PETSC_ERR_SUP, "Fields with more than 2 components are not supported. Send mail to petsc-maint@mcs.anl.gov.");
+  PetscCheck(numComponents <= 2,PETSC_COMM_SELF,PETSC_ERR_SUP, "Fields with more than 2 components are not supported. Send mail to petsc-maint@mcs.anl.gov.");
 #endif
   c->fieldDA      = da;
   c->field        = v;
@@ -301,7 +296,7 @@ PetscErrorCode CharacteristicSetFieldInterpolationLocal(Characteristic c, DM da,
 {
   PetscFunctionBegin;
 #if 0
-  PetscCheckFalse(numComponents > 2,PETSC_COMM_SELF,PETSC_ERR_SUP, "Fields with more than 2 components are not supported. Send mail to petsc-maint@mcs.anl.gov.");
+  PetscCheck(numComponents <= 2,PETSC_COMM_SELF,PETSC_ERR_SUP, "Fields with more than 2 components are not supported. Send mail to petsc-maint@mcs.anl.gov.");
 #endif
   c->fieldDA          = da;
   c->field            = v;
@@ -332,7 +327,6 @@ PetscErrorCode CharacteristicSolve(Characteristic c, PetscReal dt, Vec solution)
   PetscInt                dof;
   PetscInt                gx, gy;
   PetscInt                n, is, ie, js, je, comp;
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
   c->queueSize = 0;
@@ -548,7 +542,6 @@ PetscErrorCode CharacteristicSolve(Characteristic c, PetscReal dt, Vec solution)
 
 PetscErrorCode CharacteristicSetNeighbors(Characteristic c, PetscInt numNeighbors, PetscMPIInt neighbors[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   c->numNeighbors = numNeighbors;
@@ -561,7 +554,7 @@ PetscErrorCode CharacteristicSetNeighbors(Characteristic c, PetscInt numNeighbor
 PetscErrorCode CharacteristicAddPoint(Characteristic c, CharacteristicPointDA2D *point)
 {
   PetscFunctionBegin;
-  PetscCheckFalse(c->queueSize >= c->queueMax,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE, "Exceeded maximum queue size %d", c->queueMax);
+  PetscCheck(c->queueSize < c->queueMax,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE, "Exceeded maximum queue size %d", c->queueMax);
   c->queue[c->queueSize++] = *point;
   PetscFunctionReturn(0);
 }
@@ -570,7 +563,6 @@ int CharacteristicSendCoordinatesBegin(Characteristic c)
 {
   PetscMPIInt    rank, tag = 121;
   PetscInt       i, n;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)c), &rank));
@@ -621,14 +613,13 @@ PetscErrorCode CharacteristicSendCoordinatesEnd(Characteristic c)
   PetscMPIInt rank;
   PetscInt    n;
 #endif
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Waitall(c->numNeighbors-1, c->request, c->status));
 #if 0
   CHKERRMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)c), &rank));
   for (n = 0; n < c->queueRemoteSize; n++) {
-    PetscCheckFalse(c->neighbors[c->queueRemote[n].proc] == rank,PETSC_COMM_SELF,PETSC_ERR_PLIB, "This is messed up, n = %d proc = %d", n, c->queueRemote[n].proc);
+    PetscCheck(c->neighbors[c->queueRemote[n].proc] != rank,PETSC_COMM_SELF,PETSC_ERR_PLIB, "This is messed up, n = %d proc = %d", n, c->queueRemote[n].proc);
   }
 #endif
   PetscFunctionReturn(0);
@@ -638,7 +629,6 @@ PetscErrorCode CharacteristicGetValuesBegin(Characteristic c)
 {
   PetscMPIInt    tag = 121;
   PetscInt       n;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* SEND AND RECIEVE FILLED REQUESTS for velocities at t_n+1/2 */
@@ -653,7 +643,6 @@ PetscErrorCode CharacteristicGetValuesBegin(Characteristic c)
 
 PetscErrorCode CharacteristicGetValuesEnd(Characteristic c)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Waitall(c->numNeighbors-1, c->request, c->status));
@@ -669,7 +658,6 @@ PetscErrorCode CharacteristicGetValuesEnd(Characteristic c)
 PetscErrorCode CharacteristicHeapSort(Characteristic c, Queue queue, PetscInt size)
 /*---------------------------------------------------------------------*/
 {
-  PetscErrorCode          ierr;
   CharacteristicPointDA2D temp;
   PetscInt                n;
 
@@ -735,7 +723,6 @@ PetscErrorCode DMDAGetNeighborsRank(DM da, PetscMPIInt neighbors[])
   MPI_Comm         comm;
   PetscMPIInt      rank;
   PetscInt         **procs,pi,pj,pim,pip,pjm,pjp,PI,PJ;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject) da, &comm));
@@ -802,7 +789,6 @@ PetscInt DMDAGetNeighborRelative(DM da, PetscReal ir, PetscReal jr)
 {
   DMDALocalInfo  info;
   PetscReal      is,ie,js,je;
-  PetscErrorCode ierr;
 
   CHKERRQ(DMDAGetLocalInfo(da, &info));
   is   = (PetscReal) info.xs - 0.5; ie = (PetscReal) info.xs + info.xm - 0.5;

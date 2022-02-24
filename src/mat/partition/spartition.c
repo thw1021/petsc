@@ -39,7 +39,6 @@ PETSC_EXTERN PetscErrorCode MatPartitioningCreate_PTScotch(MatPartitioning);
 @*/
 PetscErrorCode  MatPartitioningRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (MatPartitioningRegisterAllCalled) PetscFunctionReturn(0);

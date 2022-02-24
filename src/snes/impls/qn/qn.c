@@ -22,7 +22,6 @@ typedef struct {
 
 static PetscErrorCode SNESSolve_QN(SNES snes)
 {
-  PetscErrorCode       ierr;
   SNES_QN              *qn = (SNES_QN*) snes->data;
   Vec                  X,Xold;
   Vec                  F,W;
@@ -232,7 +231,6 @@ static PetscErrorCode SNESSolve_QN(SNES snes)
 static PetscErrorCode SNESSetUp_QN(SNES snes)
 {
   SNES_QN        *qn = (SNES_QN*)snes->data;
-  PetscErrorCode ierr;
   DM             dm;
   PetscInt       n, N;
 
@@ -306,7 +304,6 @@ static PetscErrorCode SNESSetUp_QN(SNES snes)
 
 static PetscErrorCode SNESReset_QN(SNES snes)
 {
-  PetscErrorCode ierr;
   SNES_QN        *qn;
 
   PetscFunctionBegin;
@@ -319,7 +316,6 @@ static PetscErrorCode SNESReset_QN(SNES snes)
 
 static PetscErrorCode SNESDestroy_QN(SNES snes)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESReset_QN(snes));
@@ -331,7 +327,6 @@ static PetscErrorCode SNESDestroy_QN(SNES snes)
 static PetscErrorCode SNESSetFromOptions_QN(PetscOptionItems *PetscOptionsObject,SNES snes)
 {
 
-  PetscErrorCode    ierr;
   SNES_QN           *qn    = (SNES_QN*)snes->data;
   PetscBool         flg;
   SNESLineSearch    linesearch;
@@ -376,7 +371,6 @@ static PetscErrorCode SNESView_QN(SNES snes, PetscViewer viewer)
 {
   SNES_QN        *qn    = (SNES_QN*)snes->data;
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii));
@@ -410,7 +404,6 @@ static PetscErrorCode SNESView_QN(SNES snes, PetscViewer viewer)
 @*/
 PetscErrorCode SNESQNSetRestartType(SNES snes, SNESQNRestartType rtype)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
@@ -444,7 +437,6 @@ PetscErrorCode SNESQNSetRestartType(SNES snes, SNESQNRestartType rtype)
 
 PetscErrorCode SNESQNSetScaleType(SNES snes, SNESQNScaleType stype)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
@@ -494,7 +486,6 @@ PetscErrorCode SNESQNSetRestartType_QN(SNES snes, SNESQNRestartType rtype)
 
 PetscErrorCode SNESQNSetType(SNES snes, SNESQNType qtype)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
@@ -559,7 +550,6 @@ PetscErrorCode SNESQNSetType_QN(SNES snes, SNESQNType qtype)
 M*/
 PETSC_EXTERN PetscErrorCode SNESCreate_QN(SNES snes)
 {
-  PetscErrorCode ierr;
   SNES_QN        *qn;
   const char     *optionsprefix;
 

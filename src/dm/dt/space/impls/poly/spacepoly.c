@@ -3,7 +3,6 @@
 static PetscErrorCode PetscSpaceSetFromOptions_Polynomial(PetscOptionItems *PetscOptionsObject,PetscSpace sp)
 {
   PetscSpace_Poly *poly = (PetscSpace_Poly *) sp->data;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"PetscSpace polynomial options"));
@@ -15,7 +14,6 @@ static PetscErrorCode PetscSpaceSetFromOptions_Polynomial(PetscOptionItems *Pets
 static PetscErrorCode PetscSpacePolynomialView_Ascii(PetscSpace sp, PetscViewer v)
 {
   PetscSpace_Poly *poly = (PetscSpace_Poly *) sp->data;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerASCIIPrintf(v, "%s space of degree %D\n", poly->tensor ? "Tensor polynomial" : "Polynomial", sp->degree));
@@ -25,7 +23,6 @@ static PetscErrorCode PetscSpacePolynomialView_Ascii(PetscSpace sp, PetscViewer 
 static PetscErrorCode PetscSpaceView_Polynomial(PetscSpace sp, PetscViewer viewer)
 {
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCSPACE_CLASSID, 1);
@@ -38,7 +35,6 @@ static PetscErrorCode PetscSpaceView_Polynomial(PetscSpace sp, PetscViewer viewe
 static PetscErrorCode PetscSpaceDestroy_Polynomial(PetscSpace sp)
 {
   PetscSpace_Poly *poly = (PetscSpace_Poly *) sp->data;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectComposeFunction((PetscObject) sp, "PetscSpacePolynomialGetTensor_C", NULL));
@@ -58,7 +54,6 @@ static PetscErrorCode PetscSpaceDestroy_Polynomial(PetscSpace sp)
 static PetscErrorCode PetscSpaceSetUp_Polynomial(PetscSpace sp)
 {
   PetscSpace_Poly *poly    = (PetscSpace_Poly *) sp->data;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   if (poly->setupCalled) PetscFunctionReturn(0);
@@ -117,7 +112,6 @@ static PetscErrorCode PetscSpaceGetDimension_Polynomial(PetscSpace sp, PetscInt 
 {
   PetscInt         deg  = sp->degree;
   PetscInt         n    = sp->Nv;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscDTBinomialInt(n + deg, n, dim));
@@ -127,7 +121,6 @@ static PetscErrorCode PetscSpaceGetDimension_Polynomial(PetscSpace sp, PetscInt 
 
 static PetscErrorCode CoordinateBasis(PetscInt dim, PetscInt npoints, const PetscReal points[], PetscInt jet, PetscInt Njet, PetscReal pScalar[])
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscArrayzero(pScalar, (1 + dim) * Njet * npoints));
@@ -160,7 +153,6 @@ static PetscErrorCode PetscSpaceEvaluate_Polynomial(PetscSpace sp, PetscInt npoi
   PetscInt         dim     = sp->Nv;
   PetscInt         Nb, jet, Njet;
   PetscReal       *pScalar;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   if (!poly->setupCalled) {
@@ -271,7 +263,6 @@ static PetscErrorCode PetscSpaceEvaluate_Polynomial(PetscSpace sp, PetscInt npoi
 @*/
 PetscErrorCode PetscSpacePolynomialSetTensor(PetscSpace sp, PetscBool tensor)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCSPACE_CLASSID, 1);
@@ -296,7 +287,6 @@ PetscErrorCode PetscSpacePolynomialSetTensor(PetscSpace sp, PetscBool tensor)
 @*/
 PetscErrorCode PetscSpacePolynomialGetTensor(PetscSpace sp, PetscBool *tensor)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCSPACE_CLASSID, 1);
@@ -330,7 +320,6 @@ static PetscErrorCode PetscSpaceGetHeightSubspace_Polynomial(PetscSpace sp, Pets
   PetscSpace_Poly *poly = (PetscSpace_Poly *) sp->data;
   PetscInt         Nc, dim, order;
   PetscBool        tensor;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSpaceGetNumComponents(sp, &Nc));
@@ -364,7 +353,6 @@ static PetscErrorCode PetscSpaceGetHeightSubspace_Polynomial(PetscSpace sp, Pets
 
 static PetscErrorCode PetscSpaceInitialize_Polynomial(PetscSpace sp)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   sp->ops->setfromoptions    = PetscSpaceSetFromOptions_Polynomial;
@@ -391,7 +379,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PetscSpaceCreate_Polynomial(PetscSpace sp)
 {
   PetscSpace_Poly *poly;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCSPACE_CLASSID, 1);

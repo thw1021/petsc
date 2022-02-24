@@ -15,7 +15,6 @@ Input arguments are:\n\
 */
 PetscErrorCode MatNormDifference(Mat A,Mat B,PetscReal *norm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatAXPY(B,-1.0,A,DIFFERENT_NONZERO_PATTERN));

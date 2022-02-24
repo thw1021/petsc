@@ -252,7 +252,6 @@ M*/
 @*/
 PetscErrorCode TSARKIMEXRegisterAll(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (TSARKIMEXRegisterAllCalled) PetscFunctionReturn(0);
@@ -474,7 +473,6 @@ PetscErrorCode TSARKIMEXRegisterAll(void)
 @*/
 PetscErrorCode TSARKIMEXRegisterDestroy(void)
 {
-  PetscErrorCode ierr;
   ARKTableauLink link;
 
   PetscFunctionBegin;
@@ -501,7 +499,6 @@ PetscErrorCode TSARKIMEXRegisterDestroy(void)
 @*/
 PetscErrorCode TSARKIMEXInitializePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (TSARKIMEXPackageInitialized) PetscFunctionReturn(0);
@@ -521,7 +518,6 @@ PetscErrorCode TSARKIMEXInitializePackage(void)
 @*/
 PetscErrorCode TSARKIMEXFinalizePackage(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   TSARKIMEXPackageInitialized = PETSC_FALSE;
@@ -563,7 +559,6 @@ PetscErrorCode TSARKIMEXRegister(TSARKIMEXType name,PetscInt order,PetscInt s,
                                  const PetscReal bembedt[],const PetscReal bembed[],
                                  PetscInt pinterp,const PetscReal binterpt[],const PetscReal binterp[])
 {
-  PetscErrorCode ierr;
   ARKTableauLink link;
   ARKTableau     t;
   PetscInt       i,j;
@@ -629,7 +624,6 @@ static PetscErrorCode TSEvaluateStep_ARKIMEX(TS ts,PetscInt order,Vec X,PetscBoo
   PetscScalar    *w   = ark->work;
   PetscReal      h;
   PetscInt       s = tab->s,j;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   switch (ark->status) {
@@ -682,7 +676,6 @@ unavailable:
 
 static PetscErrorCode TSARKIMEXTestMassIdentity(TS ts,PetscBool *id)
 {
-  PetscErrorCode ierr;
   Vec            Udot,Y1,Y2;
   TS_ARKIMEX     *ark = (TS_ARKIMEX*)ts->data;
   PetscReal      norm;
@@ -719,7 +712,6 @@ static PetscErrorCode TSRollBack_ARKIMEX(TS ts)
   Vec             *YdotI = ark->YdotI,*YdotRHS = ark->YdotRHS;
   PetscInt        j;
   PetscReal       h;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   switch (ark->status) {
@@ -752,7 +744,6 @@ static PetscErrorCode TSStep_ARKIMEX(TS ts)
   PetscInt        rejections = 0;
   PetscBool       stageok,accept = PETSC_TRUE;
   PetscReal       next_time_step = ts->time_step;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   if (ark->extrapolate && !ark->Y_prev) {
@@ -915,7 +906,6 @@ static PetscErrorCode TSInterpolate_ARKIMEX(TS ts,PetscReal itime,Vec X)
   PetscReal       tt,t;
   PetscScalar     *bt,*b;
   const PetscReal *Bt = ark->tableau->binterpt,*B = ark->tableau->binterp;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!Bt || !B,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSARKIMEX %s does not have an interpolation formula",ark->tableau->name);
@@ -953,7 +943,6 @@ static PetscErrorCode TSExtrapolate_ARKIMEX(TS ts,PetscReal c,Vec X)
   PetscReal       h,h_prev,t,tt;
   PetscScalar     *bt,*b;
   const PetscReal *Bt = ark->tableau->binterpt,*B = ark->tableau->binterp;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!Bt || !B,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSARKIMEX %s does not have an interpolation formula",ark->tableau->name);
@@ -981,7 +970,6 @@ static PetscErrorCode TSARKIMEXTableauReset(TS ts)
 {
   TS_ARKIMEX     *ark = (TS_ARKIMEX*)ts->data;
   ARKTableau     tab  = ark->tableau;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!tab) PetscFunctionReturn(0);
@@ -998,7 +986,6 @@ static PetscErrorCode TSARKIMEXTableauReset(TS ts)
 static PetscErrorCode TSReset_ARKIMEX(TS ts)
 {
   TS_ARKIMEX     *ark = (TS_ARKIMEX*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSARKIMEXTableauReset(ts));
@@ -1011,7 +998,6 @@ static PetscErrorCode TSReset_ARKIMEX(TS ts)
 static PetscErrorCode TSARKIMEXGetVecs(TS ts,DM dm,Vec *Z,Vec *Ydot)
 {
   TS_ARKIMEX     *ax = (TS_ARKIMEX*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (Z) {
@@ -1029,7 +1015,6 @@ static PetscErrorCode TSARKIMEXGetVecs(TS ts,DM dm,Vec *Z,Vec *Ydot)
 
 static PetscErrorCode TSARKIMEXRestoreVecs(TS ts,DM dm,Vec *Z,Vec *Ydot)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (Z) {
@@ -1055,7 +1040,6 @@ static PetscErrorCode SNESTSFormFunction_ARKIMEX(SNES snes,Vec X,Vec F,TS ts)
   DM             dm,dmsave;
   Vec            Z,Ydot;
   PetscReal      shift = ark->scoeff / ts->time_step;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESGetDM(snes,&dm));
@@ -1077,7 +1061,6 @@ static PetscErrorCode SNESTSFormJacobian_ARKIMEX(SNES snes,Vec X,Mat A,Mat B,TS 
   DM             dm,dmsave;
   Vec            Ydot;
   PetscReal      shift = ark->scoeff / ts->time_step;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESGetDM(snes,&dm));
@@ -1102,7 +1085,6 @@ static PetscErrorCode DMCoarsenHook_TSARKIMEX(DM fine,DM coarse,void *ctx)
 static PetscErrorCode DMRestrictHook_TSARKIMEX(DM fine,Mat restrct,Vec rscale,Mat inject,DM coarse,void *ctx)
 {
   TS             ts = (TS)ctx;
-  PetscErrorCode ierr;
   Vec            Z,Z_c;
 
   PetscFunctionBegin;
@@ -1124,7 +1106,6 @@ static PetscErrorCode DMSubDomainHook_TSARKIMEX(DM dm,DM subdm,void *ctx)
 static PetscErrorCode DMSubDomainRestrictHook_TSARKIMEX(DM dm,VecScatter gscat,VecScatter lscat,DM subdm,void *ctx)
 {
   TS             ts = (TS)ctx;
-  PetscErrorCode ierr;
   Vec            Z,Z_c;
 
   PetscFunctionBegin;
@@ -1143,7 +1124,6 @@ static PetscErrorCode TSARKIMEXTableauSetUp(TS ts)
 {
   TS_ARKIMEX     *ark = (TS_ARKIMEX*)ts->data;
   ARKTableau     tab  = ark->tableau;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscMalloc1(tab->s,&ark->work));
@@ -1161,7 +1141,6 @@ static PetscErrorCode TSARKIMEXTableauSetUp(TS ts)
 static PetscErrorCode TSSetUp_ARKIMEX(TS ts)
 {
   TS_ARKIMEX     *ark = (TS_ARKIMEX*)ts->data;
-  PetscErrorCode ierr;
   DM             dm;
   SNES           snes;
 
@@ -1181,7 +1160,6 @@ static PetscErrorCode TSSetUp_ARKIMEX(TS ts)
 static PetscErrorCode TSSetFromOptions_ARKIMEX(PetscOptionItems *PetscOptionsObject,TS ts)
 {
   TS_ARKIMEX     *ark = (TS_ARKIMEX*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"ARKIMEX ODE solver options"));
@@ -1210,7 +1188,6 @@ static PetscErrorCode TSView_ARKIMEX(TS ts,PetscViewer viewer)
 {
   TS_ARKIMEX     *ark = (TS_ARKIMEX*)ts->data;
   PetscBool      iascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
@@ -1237,7 +1214,6 @@ static PetscErrorCode TSView_ARKIMEX(TS ts,PetscViewer viewer)
 
 static PetscErrorCode TSLoad_ARKIMEX(TS ts,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   SNES           snes;
   TSAdapt        adapt;
 
@@ -1271,7 +1247,6 @@ static PetscErrorCode TSLoad_ARKIMEX(TS ts,PetscViewer viewer)
 @*/
 PetscErrorCode TSARKIMEXSetType(TS ts,TSARKIMEXType arktype)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -1297,7 +1272,6 @@ PetscErrorCode TSARKIMEXSetType(TS ts,TSARKIMEXType arktype)
 @*/
 PetscErrorCode TSARKIMEXGetType(TS ts,TSARKIMEXType *arktype)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -1320,7 +1294,6 @@ PetscErrorCode TSARKIMEXGetType(TS ts,TSARKIMEXType *arktype)
 @*/
 PetscErrorCode TSARKIMEXSetFullyImplicit(TS ts,PetscBool flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -1346,7 +1319,6 @@ PetscErrorCode TSARKIMEXSetFullyImplicit(TS ts,PetscBool flg)
 @*/
 PetscErrorCode TSARKIMEXGetFullyImplicit(TS ts,PetscBool *flg)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
@@ -1366,7 +1338,6 @@ static PetscErrorCode  TSARKIMEXGetType_ARKIMEX(TS ts,TSARKIMEXType *arktype)
 static PetscErrorCode  TSARKIMEXSetType_ARKIMEX(TS ts,TSARKIMEXType arktype)
 {
   TS_ARKIMEX     *ark = (TS_ARKIMEX*)ts->data;
-  PetscErrorCode ierr;
   PetscBool      match;
   ARKTableauLink link;
 
@@ -1408,7 +1379,6 @@ static PetscErrorCode  TSARKIMEXGetFullyImplicit_ARKIMEX(TS ts,PetscBool *flg)
 
 static PetscErrorCode TSDestroy_ARKIMEX(TS ts)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSReset_ARKIMEX(ts));
@@ -1451,7 +1421,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TSCreate_ARKIMEX(TS ts)
 {
   TS_ARKIMEX     *th;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSARKIMEXInitializePackage());

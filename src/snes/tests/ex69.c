@@ -164,7 +164,6 @@ int main(int argc,char **argv)
 PetscErrorCode FormInitialGuess(AppCtx *user,DM da,Vec X)
 {
   PetscInt       i,j,mx,xs,ys,xm,ym;
-  PetscErrorCode ierr;
   PetscReal      grashof,dx;
   Field          **x;
 
@@ -213,7 +212,6 @@ PetscErrorCode FormInitialGuess(AppCtx *user,DM da,Vec X)
 PetscErrorCode FormFunctionLocal(DMDALocalInfo *info,Field **x,Field **f,void *ptr)
 {
   AppCtx          *user = (AppCtx*)ptr;
-  PetscErrorCode  ierr;
   PetscInt        xints,xinte,yints,yinte,i,j;
   PetscReal       hx,hy,dhx,dhy,hxdhy,hydhx;
   PetscReal       grashof,prandtl,lid;
@@ -347,7 +345,6 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info,Field **x,Field **f,void *p
 
 PetscErrorCode MatMult_MyShell(Mat A,Vec x,Vec y)
 {
-  PetscErrorCode  ierr;
   MatShellCtx     *matshellctx;
   static PetscInt fail = 0;
 
@@ -364,7 +361,6 @@ PetscErrorCode MatMult_MyShell(Mat A,Vec x,Vec y)
 
 PetscErrorCode MatAssemblyEnd_MyShell(Mat A,MatAssemblyType tp)
 {
-  PetscErrorCode ierr;
   MatShellCtx    *matshellctx;
 
   PetscFunctionBegin;
@@ -375,7 +371,6 @@ PetscErrorCode MatAssemblyEnd_MyShell(Mat A,MatAssemblyType tp)
 
 PetscErrorCode PCApply_MyShell(PC pc,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
   static PetscInt fail = 0;
 
   PetscFunctionBegin;
@@ -393,7 +388,6 @@ PETSC_EXTERN PetscErrorCode SNESComputeJacobian_DMDA(SNES,Vec,Mat,Mat,void*);
 PetscErrorCode SNESComputeJacobian_MyShell(SNES snes,Vec X,Mat A,Mat B,void *ctx)
 {
   static PetscInt fail = 0;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(SNESComputeJacobian_DMDA(snes,X,A,B,ctx));

@@ -265,7 +265,6 @@ PetscErrorCode InitialConditions(Vec u,AppCtx *appctx)
 {
   PetscScalar    *u_localptr;
   PetscInt       i;
-  PetscErrorCode ierr;
 
   /*
     Get a pointer to vector data.
@@ -315,7 +314,6 @@ PetscErrorCode ExactSolution(PetscReal t,Vec solution,AppCtx *appctx)
 {
   PetscScalar    *s_localptr, h = appctx->h, ex1, ex2, sc1, sc2;
   PetscInt       i;
-  PetscErrorCode ierr;
 
   /*
      Get a pointer to vector data.
@@ -358,7 +356,6 @@ PetscErrorCode ExactSolution(PetscReal t,Vec solution,AppCtx *appctx)
 PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal crtime,Vec u,void *ctx)
 {
   AppCtx         *appctx = (AppCtx*) ctx;   /* user-defined application context */
-  PetscErrorCode ierr;
   PetscReal      norm_2, norm_max, dt, dttol;
   PetscBool      flg;
 
@@ -445,7 +442,6 @@ PetscErrorCode RHSMatrixHeat(TS ts,PetscReal t,Vec X,Mat AA,Mat BB,void *ctx)
   AppCtx         *appctx = (AppCtx*) ctx;      /* user-defined application context */
   PetscInt       mstart  = 0;
   PetscInt       mend    = appctx->m;
-  PetscErrorCode ierr;
   PetscInt       i, idx[3];
   PetscScalar    v[3], stwo = -2./(appctx->h*appctx->h), sone = -.5*stwo;
 
@@ -506,7 +502,6 @@ PetscErrorCode RHSMatrixHeat(TS ts,PetscReal t,Vec X,Mat AA,Mat BB,void *ctx)
 PetscErrorCode MyBCRoutine(TS ts,PetscReal t,Vec f,void *ctx)
 {
   AppCtx         *appctx = (AppCtx*) ctx;      /* user-defined application context */
-  PetscErrorCode ierr;
   PetscInt       m = appctx->m;
   PetscScalar    *fa;
 

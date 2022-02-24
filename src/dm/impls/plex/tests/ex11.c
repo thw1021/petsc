@@ -8,7 +8,6 @@ static PetscErrorCode TestInsertion()
   DMLabel        label, label2;
   const PetscInt values[5] = {0, 3, 4, -1, 176}, N = 10000;
   PetscInt       i, v;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMLabelCreate(PETSC_COMM_SELF, "Test Label", &label));
@@ -78,7 +77,6 @@ static PetscErrorCode TestEmptyStrata(MPI_Comm comm)
   PetscInt         c12[4] = {21,22,23,24};
   PetscInt         dim    = 3;
   PetscMPIInt      rank;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(comm, &rank));
@@ -193,7 +191,6 @@ static PetscErrorCode TestDistribution(MPI_Comm comm)
   PetscInt         overlap = 0, cStart, cEnd, c;
   PetscMPIInt      rank;
   PetscBool        flg;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(comm, &rank));
@@ -231,7 +228,6 @@ static PetscErrorCode TestUniversalLabel(MPI_Comm comm)
   DMUniversalLabel universal;
   PetscInt         pStart, pEnd, p;
   PetscBool        run = PETSC_FALSE, notFile;
-  PetscErrorCode   ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscOptionsGetBool(NULL, NULL, "-universal", &run, NULL));
