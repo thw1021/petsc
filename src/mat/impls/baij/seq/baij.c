@@ -2852,7 +2852,7 @@ PetscErrorCode  MatSeqBAIJSetPreallocation_SeqBAIJ(Mat B,PetscInt bs,PetscInt nz
   if (nnz) {
     for (i=0; i<mbs; i++) {
       PetscCheck(nnz[i] >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"nnz cannot be less than 0: local row %" PetscInt_FMT " value %" PetscInt_FMT,i,nnz[i]);
-      PetscCheck(nnz[i] >= nbs,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"nnz cannot be greater than block row length: local row %" PetscInt_FMT " value %" PetscInt_FMT " rowlength %" PetscInt_FMT,i,nnz[i],nbs);
+      PetscCheck(nnz[i] < nbs,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"nnz cannot be greater than block row length: local row %" PetscInt_FMT " value %" PetscInt_FMT " rowlength %" PetscInt_FMT,i,nnz[i],nbs);
     }
   }
 
