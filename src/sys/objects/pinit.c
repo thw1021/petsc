@@ -603,10 +603,10 @@ PETSC_INTERN PetscErrorCode PetscInitializeSAWs(const char help[])
     }
     CHKERRQ(PetscFree(options));
     CHKERRQ(PetscGetVersion(version,sizeof(version)));
-    ierr = PetscSNPrintf(intro,introlen,"<body>\n"
-                                    "<center><h2> <a href=\"https://petsc.org/\">PETSc</a> Application Web server powered by <a href=\"https://bitbucket.org/saws/saws\">SAWs</a> </h2></center>\n"
-                                    "<center>This is the default PETSc application dashboard, from it you can access any published PETSc objects or logging data</center><br><center>%s configured with %s</center><br>\n"
-                                    "%s",version,petscconfigureoptions,appline);CHKERRQ(ierr);
+    CHKERRQ(PetscSNPrintf(intro,introlen,"<body>\n"
+                          "<center><h2> <a href=\"https://petsc.org/\">PETSc</a> Application Web server powered by <a href=\"https://bitbucket.org/saws/saws\">SAWs</a> </h2></center>\n"
+                          "<center>This is the default PETSc application dashboard, from it you can access any published PETSc objects or logging data</center><br><center>%s configured with %s</center><br>\n"
+                          "%s",version,petscconfigureoptions,appline));
     PetscStackCallSAWs(SAWs_Push_Body,("index.html",0,intro));
     CHKERRQ(PetscFree(intro));
     CHKERRQ(PetscFree(appline));
@@ -629,11 +629,11 @@ PETSC_INTERN PetscErrorCode PetscInitializeSAWs(const char help[])
     } else {
       PetscStackCallSAWs(SAWs_Initialize,());
     }
-    ierr = PetscCitationsRegister("@TechReport{ saws,\n"
-                                  "  Author = {Matt Otten and Jed Brown and Barry Smith},\n"
-                                  "  Title  = {Scientific Application Web Server (SAWs) Users Manual},\n"
-                                  "  Institution = {Argonne National Laboratory},\n"
-                                  "  Year   = 2013\n}\n",NULL);CHKERRQ(ierr);
+    CHKERRQ(PetscCitationsRegister("@TechReport{ saws,\n"
+                                   "  Author = {Matt Otten and Jed Brown and Barry Smith},\n"
+                                   "  Title  = {Scientific Application Web Server (SAWs) Users Manual},\n"
+                                   "  Institution = {Argonne National Laboratory},\n"
+                                   "  Year   = 2013\n}\n",NULL));
   }
   PetscFunctionReturn(0);
 }
@@ -694,10 +694,9 @@ PetscBool PetscViennaCLSynchronize = PETSC_FALSE;
 */
 PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char* prog,const char* file,const char *help,PetscBool ftn,PetscBool readarguments,PetscInt len)
 {
-  PetscErrorCode ierr;
-  PetscMPIInt    size;
-  PetscBool      flg = PETSC_TRUE;
-  char           hostname[256];
+  PetscMPIInt size;
+  PetscBool   flg = PETSC_TRUE;
+  char        hostname[256];
 
   PetscFunctionBegin;
   if (PetscInitializeCalled) PetscFunctionReturn(0);
@@ -726,9 +725,9 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char* prog,const char* 
 
 #if defined(PETSC_HAVE_MPI_GET_LIBRARY_VERSION)
   {
-    char        mpilibraryversion[MPI_MAX_LIBRARY_VERSION_STRING];
-    PetscMPIInt mpilibraryversionlength;
-    ierr = MPI_Get_library_version(mpilibraryversion,&mpilibraryversionlength);
+    char           mpilibraryversion[MPI_MAX_LIBRARY_VERSION_STRING];
+    PetscMPIInt    mpilibraryversionlength;
+    PetscErrorCode ierr = MPI_Get_library_version(mpilibraryversion,&mpilibraryversionlength);
     if (ierr) PetscFunctionReturn(ierr);
     /* check for MPICH versions before MPI ABI initiative */
 #if defined(MPICH_VERSION)
@@ -978,7 +977,7 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char* prog,const char* 
   CHKERRQ(PetscInitializeSAWs(ftn ? NULL : help));
   flg = PETSC_FALSE;
   CHKERRQ(PetscOptionsHasName(NULL,NULL,"-stack_view",&flg));
-  if (flg) PetscStackViewSAWs();
+  if (flg) CHKERRQ(PetscStackViewSAWs());
 #endif
 
   /*
@@ -993,8 +992,9 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char* prog,const char* 
   CHKERRQ(PetscInfo(NULL,"Running on machine: %s\n",hostname));
 #if defined(PETSC_HAVE_OPENMP)
   {
-    PetscBool omp_view_flag;
-    char      *threads = getenv("OMP_NUM_THREADS");
+    PetscBool       omp_view_flag;
+    char           *threads = getenv("OMP_NUM_THREADS");
+    PetscErrorCode  ierr;
 
     if (threads) {
       CHKERRQ(PetscInfo(NULL,"Number of OpenMP threads %s (as given by OMP_NUM_THREADS)\n",threads));
@@ -1023,9 +1023,7 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char* prog,const char* 
 
       Currently not used because it is not supported by MPICH.
   */
-  if (!PetscBinaryBigEndian()) {
-    CHKERRMPI(MPI_Register_datarep((char*)"petsc",PetscDataRep_read_conv_fn,PetscDataRep_write_conv_fn,PetscDataRep_extent_fn,NULL));
-  }
+  if (!PetscBinaryBigEndian()) CHKERRMPI(MPI_Register_datarep((char*)"petsc",PetscDataRep_read_conv_fn,PetscDataRep_write_conv_fn,PetscDataRep_extent_fn,NULL));
 #endif
 
 #if defined(PETSC_SERIALIZE_FUNCTIONS)
@@ -1057,9 +1055,7 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char* prog,const char* 
 #if defined(__VALGRIND_H)
   PETSC_RUNNING_ON_VALGRIND = RUNNING_ON_VALGRIND? PETSC_TRUE: PETSC_FALSE;
 #if defined(PETSC_USING_DARWIN) && defined(PETSC_BLASLAPACK_SDOT_RETURNS_DOUBLE)
-  if (PETSC_RUNNING_ON_VALGRIND) {
-    CHKERRQ(PetscPrintf(PETSC_COMM_WORLD,"WARNING: Running valgrind with the MacOS native BLAS and LAPACK can fail. If it fails suggest configuring with --download-fblaslapack or --download-f2cblaslapack"));
-    }
+  if (PETSC_RUNNING_ON_VALGRIND) CHKERRQ(PetscPrintf(PETSC_COMM_WORLD,"WARNING: Running valgrind with the MacOS native BLAS and LAPACK can fail. If it fails suggest configuring with --download-fblaslapack or --download-f2cblaslapack"));
 #endif
 #endif
   /*

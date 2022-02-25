@@ -113,17 +113,11 @@ static PetscErrorCode PetscOptionsSetValue_Private(PetscOptions,const char[],con
 */
 static PetscErrorCode PetscOptionsMonitor(PetscOptions options,const char name[],const char value[])
 {
-  PetscInt       i;
-
   if (!PetscErrorHandlingInitialized) return 0;
   PetscFunctionBegin;
   if (!value) value = "";
-  if (options->monitorFromOptions) {
-    CHKERRQ(PetscOptionsMonitorDefault(name,value,NULL));
-  }
-  for (i=0; i<options->numbermonitors; i++) {
-    CHKERRQ((*options->monitor[i])(name,value,options->monitorcontext[i]));
-  }
+  if (options->monitorFromOptions) CHKERRQ(PetscOptionsMonitorDefault(name,value,NULL));
+  for (PetscInt i=0; i<options->numbermonitors; i++) CHKERRQ((*options->monitor[i])(name,value,options->monitorcontext[i]));
   PetscFunctionReturn(0);
 }
 
@@ -167,7 +161,7 @@ PetscErrorCode PetscOptionsDestroy(PetscOptions *options)
 
   PetscFunctionBegin;
   if (!*options) return 0;
-  PetscCheckFalse((*options)->previous,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"You are destroying an option that has been used with PetscOptionsPush() but does not have a corresponding PetscOptionsPop()");
+  PetscCheck(!(*options)->previous,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"You are destroying an option that has been used with PetscOptionsPush() but does not have a corresponding PetscOptionsPop()");
   ierr = PetscOptionsClear(*options);if (ierr) return ierr;
   /* XXX what about monitors ? */
   free(*options);
@@ -180,12 +174,10 @@ PetscErrorCode PetscOptionsDestroy(PetscOptions *options)
 */
 PetscErrorCode PetscOptionsCreateDefault(void)
 {
-  PetscErrorCode ierr;
+  PetscErrorCode ierr = 0;
 
-  if (!defaultoptions) {
-    ierr = PetscOptionsCreate(&defaultoptions);if (ierr) return ierr;
-  }
-  return 0;
+  if (!defaultoptions) {ierr = PetscOptionsCreate(&defaultoptions);}
+  return ierr;
 }
 
 /*@
@@ -212,7 +204,6 @@ PetscErrorCode PetscOptionsCreateDefault(void)
 @*/
 PetscErrorCode PetscOptionsPush(PetscOptions opt)
 {
-
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsCreateDefault());
   opt->previous  = defaultoptions;
@@ -2037,12 +2028,12 @@ PetscErrorCode PetscOptionsStringToBool(const char value[],PetscBool *a)
 */
 PetscErrorCode PetscOptionsStringToInt(const char name[],PetscInt *a)
 {
-  size_t         len;
-  PetscBool      decide,tdefault,mouse;
+  size_t    len;
+  PetscBool decide,tdefault,mouse;
 
   PetscFunctionBegin;
   CHKERRQ(PetscStrlen(name,&len));
-  PetscCheckFalse(!len,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"character string of length zero has no numerical value");
+  PetscCheck(len,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"character string of length zero has no numerical value");
 
   CHKERRQ(PetscStrcasecmp(name,"PETSC_DEFAULT",&tdefault));
   if (!tdefault) {

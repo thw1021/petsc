@@ -53,9 +53,8 @@ PetscErrorCode PetscOptionsBegin_Private(PetscOptionItems *PetscOptionsObject,MP
 */
 PetscErrorCode PetscObjectOptionsBegin_Private(PetscOptionItems *PetscOptionsObject,PetscObject obj)
 {
-  PetscErrorCode ierr;
-  char           title[256];
-  PetscBool      flg;
+  char      title[256];
+  PetscBool flg;
 
   PetscFunctionBegin;
   PetscValidHeader(obj,2);
@@ -68,7 +67,7 @@ PetscErrorCode PetscObjectOptionsBegin_Private(PetscOptionItems *PetscOptionsObj
   } else {
     CHKERRQ(PetscSNPrintf(title,sizeof(title),"%s (%s) options",obj->description,obj->class_name));
   }
-  ierr = PetscOptionsBegin_Private(PetscOptionsObject,obj->comm,obj->prefix,title,obj->mansec);CHKERRQ(ierr);
+  CHKERRQ(PetscOptionsBegin_Private(PetscOptionsObject,obj->comm,obj->prefix,title,obj->mansec));
   PetscFunctionReturn(0);
 }
 
@@ -389,7 +388,6 @@ static const char *OptionsBodyBottom = "<div id=\"variablesInfo\" style=\"backgr
 */
 PetscErrorCode PetscOptionsSAWsInput(PetscOptionItems *PetscOptionsObject)
 {
-  PetscErrorCode  ierr;
   PetscOptionItem next     = PetscOptionsObject->next;
   static int      mancount = 0;
   char            options[16];
@@ -423,35 +421,35 @@ PetscErrorCode PetscOptionsSAWsInput(PetscOptionItems *PetscOptionsObject)
     case OPTION_HEAD:
       break;
     case OPTION_INT_ARRAY:
-    CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Options/%s",next->option));
+      CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Options/%s",next->option));
       PetscStackCallSAWs(SAWs_Register,(dir,next->data,next->arraylength,SAWs_WRITE,SAWs_INT));
       break;
     case OPTION_REAL_ARRAY:
-    CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Options/%s",next->option));
+      CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Options/%s",next->option));
       PetscStackCallSAWs(SAWs_Register,(dir,next->data,next->arraylength,SAWs_WRITE,SAWs_DOUBLE));
       break;
     case OPTION_INT:
-    CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Options/%s",next->option));
+      CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Options/%s",next->option));
       PetscStackCallSAWs(SAWs_Register,(dir,next->data,1,SAWs_WRITE,SAWs_INT));
       break;
     case OPTION_REAL:
-    CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Options/%s",next->option));
+      CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Options/%s",next->option));
       PetscStackCallSAWs(SAWs_Register,(dir,next->data,1,SAWs_WRITE,SAWs_DOUBLE));
       break;
     case OPTION_BOOL:
-    CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Options/%s",next->option));
+      CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Options/%s",next->option));
       PetscStackCallSAWs(SAWs_Register,(dir,next->data,1,SAWs_WRITE,SAWs_BOOLEAN));
       break;
     case OPTION_BOOL_ARRAY:
-    CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Options/%s",next->option));
+      CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Options/%s",next->option));
       PetscStackCallSAWs(SAWs_Register,(dir,next->data,next->arraylength,SAWs_WRITE,SAWs_BOOLEAN));
       break;
     case OPTION_STRING:
-    CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Options/%s",next->option));
+      CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Options/%s",next->option));
       PetscStackCallSAWs(SAWs_Register,(dir,&next->data,1,SAWs_WRITE,SAWs_STRING));
       break;
     case OPTION_STRING_ARRAY:
-    CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Options/%s",next->option));
+      CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Options/%s",next->option));
       PetscStackCallSAWs(SAWs_Register,(dir,next->data,next->arraylength,SAWs_WRITE,SAWs_STRING));
       break;
     case OPTION_FLIST:

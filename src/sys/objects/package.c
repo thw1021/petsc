@@ -26,12 +26,14 @@
 @*/
 PetscErrorCode  PetscHasExternalPackage(const char pkg[], PetscBool *has)
 {
-  char                  pkgstr[128], *loc;
-  size_t                cnt;
+  char   pkgstr[128], *loc;
+  size_t cnt;
 
   PetscFunctionBegin;
+  PetscValidCharPointer(pkg,1);
+  PetscValidBoolPointer(has,2);
   CHKERRQ(PetscSNPrintfCount(pkgstr,sizeof(pkgstr),":%s:",&cnt,pkg));
-  PetscCheckFalse(cnt >= sizeof(pkgstr),PETSC_COMM_SELF, PETSC_ERR_SUP, "Package name is too long: \"%s\"", pkg);
+  PetscCheck(cnt < sizeof(pkgstr),PETSC_COMM_SELF, PETSC_ERR_SUP, "Package name is too long: \"%s\"", pkg);
   CHKERRQ(PetscStrtolower(pkgstr));
 #if defined(PETSC_HAVE_PACKAGES)
   CHKERRQ(PetscStrstr(PETSC_HAVE_PACKAGES, pkgstr, &loc));
