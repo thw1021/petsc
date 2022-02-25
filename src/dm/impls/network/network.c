@@ -1628,11 +1628,10 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
   /*
     make sure that
 
-    warning: ‘header’ may be used uninitialized in this function [-Wmaybe-uninitialized]
+    warning: 'header' may be used uninitialized in this function [-Wmaybe-uninitialized]
     newDMnetwork->subnet[header->subnetid].edges[newDMnetwork->subnet[header->subnetid].nedge++] = e;
                                ^
-
-    is just an overzealous compiler warning
+    is just an overzealous compiler
   */
   PetscAssert(header,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Null Pointer: header");
   PetscAssert(PetscCheckPointer(header,PETSC_CHAR),PETSC_COMM_SELF,PETSC_ERR_ARG_BADPTR,"header bad pointer");
