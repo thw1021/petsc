@@ -7325,13 +7325,12 @@ PetscErrorCode MatProductSymbolic_MPIAIJBACKEND(Mat C)
 
 PetscErrorCode MatProductSetFromOptions_MPIAIJBACKEND(Mat mat)
 {
-  Mat_Product    *product = mat->product;
-  PetscErrorCode ierr;
+  Mat_Product *product = mat->product;
 #if defined(PETSC_HAVE_DEVICE)
-  PetscBool      match = PETSC_FALSE;
-  PetscBool      usecpu = PETSC_FALSE;
+  PetscBool    match   = PETSC_FALSE;
+  PetscBool    usecpu  = PETSC_FALSE;
 #else
-  PetscBool      match = PETSC_TRUE;
+  PetscBool    match   = PETSC_TRUE;
 #endif
 
   PetscFunctionBegin;
@@ -7341,6 +7340,7 @@ PetscErrorCode MatProductSetFromOptions_MPIAIJBACKEND(Mat mat)
     CHKERRQ(PetscObjectTypeCompare((PetscObject)product->B,((PetscObject)product->A)->type_name,&match));
   }
   if (match) { /* we can always fallback to the CPU if requested */
+    PetscErrorCode ierr;
     switch (product->type) {
     case MATPRODUCT_AB:
       if (product->api_user) {
@@ -7393,9 +7393,7 @@ PetscErrorCode MatProductSetFromOptions_MPIAIJBACKEND(Mat mat)
     }
   }
   /* fallback to MPIAIJ ops */
-  if (!mat->ops->productsymbolic) {
-    CHKERRQ(MatProductSetFromOptions_MPIAIJ(mat));
-  }
+  if (!mat->ops->productsymbolic) CHKERRQ(MatProductSetFromOptions_MPIAIJ(mat));
   PetscFunctionReturn(0);
 }
 
