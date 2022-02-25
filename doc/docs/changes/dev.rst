@@ -247,6 +247,7 @@ Changes: Development
 - Add ``DMCreateFEDefault()`` as a convenience method for creating the right element on a mesh
 - Add ``DMPlexCreateReferenceCell()``
 - Remove deprecated ``DMPlexCreateFromCellList()`` and ``DMPlexCreateFromCellListParallel()``
+- Improve loading performance related to coordinate projection in common cases.
 
 .. rubric:: DMPlexLandau:
 
@@ -265,6 +266,7 @@ Changes: Development
 - Add argument to ``PetscFEIntegrateHybridJacobian()`` to indicate the face for the integration
 - Add ``PetscFECreateByCell()`` and ``PetscFECreateLagrangeByCell()`` to create FE spaces on specific cell types
 - Replace ``PetscDualSpaceCreateReferenceCell()`` with ``DMPlexCreateReferenceCell()``
+- Add ``PetscDualSpaceEqual()`` and ``PetscQuadratureEqual()``
 
 .. rubric:: DMNetwork:
 
