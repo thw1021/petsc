@@ -204,6 +204,7 @@ PetscErrorCode DMNetworkAddSubnetwork(DM dm,const char* name,PetscInt ne,PetscIn
   ierr = MPIU_Allreduce(&nvtx,&Nvtx,1,MPIU_INT,MPI_MAX,PetscObjectComm((PetscObject)dm));CHKERRMPI(ierr);
 
   /* Get local nvtx for this subnet */
+  /* TODO(Barry): Make this more scalable by using a local min and max for vertex numbering and only counting values between the min and max */
   ierr = PetscBTCreate(Nvtx,&table);CHKERRQ(ierr);
   ierr = PetscBTMemzero(Nvtx,table);CHKERRQ(ierr);
   i = 0;
@@ -642,9 +643,9 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
   ierr = DMSetDimension(network->plex,1);CHKERRQ(ierr);
 
   if (size == 1) {
-    ierr = DMPlexBuildFromCellList(network->plex,network->nEdges,network->nVertices-nmerged,2,edges);CHKERRQ(ierr);
+    ierr = DMPlexBuildFromCellList(network->plex,network->nEdges,PETSC_DECIDE,2,edges);CHKERRQ(ierr);
   } else {
-    ierr = DMPlexBuildFromCellListParallel(network->plex,network->nEdges,network->nVertices-nmerged,PETSC_DECIDE,2,edges,NULL, NULL);CHKERRQ(ierr);
+    ierr = DMPlexBuildFromCellListParallel(network->plex,network->nEdges,PETSC_DECIDE,PETSC_DECIDE,2,edges,NULL, NULL);CHKERRQ(ierr);
   }
 
   ierr = DMPlexGetChart(network->plex,&network->pStart,&network->pEnd);CHKERRQ(ierr);
@@ -1005,16 +1006,20 @@ PetscErrorCode DMNetworkGetEdgeRange(DM dm,PetscInt *eStart,PetscInt *eEnd)
 
 static PetscErrorCode DMNetworkGetIndex(DM dm,PetscInt p,PetscInt *index)
 {
-  PetscErrorCode           ierr;
-  DM_Network               *network = (DM_Network*)dm->data;
-  PetscInt                 offsetp;
-  DMNetworkComponentHeader header;
+  DM_Network *network = (DM_Network*)dm->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(!dm->setupcalled,PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE,"Must call DMSetUp() first");
-  ierr = PetscSectionGetOffset(network->DataSection,p,&offsetp);CHKERRQ(ierr);
-  header = (DMNetworkComponentHeader)(network->componentdataarray+offsetp);
-  *index = header->index;
+  if (network->header) {
+    *index = network->header[p].index;
+  } else {
+    PetscErrorCode           ierr;
+    PetscInt                 offsetp;
+    DMNetworkComponentHeader header;
+
+    ierr = PetscSectionGetOffset(network->DataSection,p,&offsetp);CHKERRQ(ierr);
+    header = (DMNetworkComponentHeader)(network->componentdataarray+offsetp);
+    *index = header->index;
+  }
   PetscFunctionReturn(0);
 }
 
@@ -1676,6 +1681,7 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
   for (e = newDMnetwork->eStart; e < newDMnetwork->eEnd; e++) {
     ierr = PetscSectionGetOffset(newDMnetwork->DataSection,e,&offset);CHKERRQ(ierr);
     header = (DMNetworkComponentHeader)(newDMnetwork->componentdataarray+offset);
+
     /* Update pointers */
     header->size          = (PetscInt*)(header + 1);
     header->key           = header->size   + header->maxcomps;
@@ -1695,6 +1701,7 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
   for (v = newDMnetwork->vStart; v < newDMnetwork->vEnd; v++) {
     ierr = PetscSectionGetOffset(newDMnetwork->DataSection,v,&offset);CHKERRQ(ierr);
     header = (DMNetworkComponentHeader)(newDMnetwork->componentdataarray+offset);CHKERRQ(ierr);
+
     /* Update pointers */
     header->size          = (PetscInt*)(header + 1);
     header->key           = header->size   + header->maxcomps;
@@ -2662,7 +2669,6 @@ PetscErrorCode DMView_Network(DM dm,PetscViewer viewer)
   PetscMPIInt    rank;
 
   PetscFunctionBegin;
-  PetscCheckFalse(!dm->setupcalled,PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE,"Must call DMSetUp() first");
   ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)dm),&rank);CHKERRMPI(ierr);
   PetscValidHeaderSpecific(dm,DM_CLASSID, 1);
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
