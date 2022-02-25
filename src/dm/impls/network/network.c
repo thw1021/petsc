@@ -285,7 +285,7 @@ PetscErrorCode DMNetworkSharedVertexGetInfo(DM dm,PetscInt v,PetscInt *gidx,Pets
   PetscFunctionBegin;
   ierr = DMNetworkGetGlobalVertexIndex(dm,v,&gidx_tmp);CHKERRQ(ierr);
   ierr = PetscTableFind(network->svtable,gidx_tmp+1,&i);CHKERRQ(ierr);
-  if (i<=0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"input vertex is not a shared vertex");
+  PetscCheck(i > 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"input vertex is not a shared vertex");
 
   i--;
   if (gidx) *gidx = gidx_tmp;
