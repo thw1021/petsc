@@ -166,8 +166,6 @@ void SilenceVariableIsNotNeededAndWillNotBeEmittedWarning_ThisFunctionShouldNeve
     if (PetscUnlikely(cerr_ != cupmSuccess)) return false;      \
   } while (0)
 
-
-
 template <DeviceType T>
 PETSC_CXX_COMPAT_DEFN(bool Device<T>::DeviceInternal::CUPMAwareMPI_())
 {
