@@ -2393,7 +2393,7 @@ PetscErrorCode  MatCreateSeqSBAIJWithArrays(MPI_Comm comm,PetscInt bs,PetscInt m
   if (PetscDefined(USE_DEBUG)) {
     for (ii=0; ii<sbaij->i[m]; ii++) {
       PetscCheck(j[ii] >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Negative column index at location = %" PetscInt_FMT " index = %" PetscInt_FMT,ii,j[ii]);
-      PetscCheck(j[ii] < n,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Column index to large at location = %" PetscInt_FMT " index = %" PetscInt_FMT,ii,j[ii]);
+      PetscCheck(j[ii] < n,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Column index too large at location = %" PetscInt_FMT " index = %" PetscInt_FMT,ii,j[ii]);
     }
   }
 
