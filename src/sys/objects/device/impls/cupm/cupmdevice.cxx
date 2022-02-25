@@ -59,8 +59,6 @@ public:
 template <DeviceType T>
 PetscErrorCode Device<T>::DeviceInternal::initialize() noexcept
 {
-  cupmError_t cerr;
-
   PetscFunctionBegin;
   if (devInitialized_) PetscFunctionReturn(0);
   devInitialized_ = true;
@@ -100,9 +98,6 @@ PetscErrorCode Device<T>::DeviceInternal::initialize() noexcept
 template <DeviceType T>
 PetscErrorCode Device<T>::DeviceInternal::configure() noexcept
 {
-  cupmError_t    cerr;
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscAssert(devInitialized_,PETSC_COMM_SELF,PETSC_ERR_COR,"Device %d being configured before it was initialized",id_);
   // why on EARTH nvidia insists on making otherwise informational states into
@@ -118,8 +113,7 @@ PetscErrorCode Device<T>::DeviceInternal::configure() noexcept
 template <DeviceType T>
 PetscErrorCode Device<T>::DeviceInternal::view(PetscViewer viewer) const noexcept
 {
-  PetscBool      iascii;
-  PetscErrorCode ierr;
+  PetscBool iascii;
 
   PetscFunctionBegin;
   PetscAssert(devInitialized_,PETSC_COMM_SELF,PETSC_ERR_COR,"Device %d being viewed before it was initialized or configured",id_);
@@ -167,7 +161,12 @@ void SilenceVariableIsNotNeededAndWillNotBeEmittedWarning_ThisFunctionShouldNeve
   if (cupmMPIAwareJumpBufferSet) (void)cupmMPIAwareJumpBuffer;
 }
 
-#define CHKCUPMAWARE(expr) if (PetscUnlikely((expr) != cupmSuccess)) return false
+#define CHKCUPMAWARE(...) do {                                  \
+    cupmError_t cerr_ = __VA_ARGS__;                            \
+    if (PetscUnlikely(cerr_ != cupmSuccess)) return false;      \
+  } while (0)
+
+
 
 template <DeviceType T>
 PETSC_CXX_COMPAT_DEFN(bool Device<T>::DeviceInternal::CUPMAwareMPI_())
@@ -177,16 +176,14 @@ PETSC_CXX_COMPAT_DEFN(bool Device<T>::DeviceInternal::CUPMAwareMPI_())
   int            *dbuf = nullptr;
   constexpr auto bytes = bufSize*sizeof(*dbuf);
   auto           awareness = false;
-  cupmError_t    cerr;
-  PetscErrorCode ierr;
   const auto     cupmSignalHandler = [](int signal, void *ptr) -> PetscErrorCode {
     if ((signal == SIGSEGV) && cupmMPIAwareJumpBufferSet) std::longjmp(cupmMPIAwareJumpBuffer,1);
     return PetscSignalHandlerDefault(signal,ptr);
   };
 
   PetscFunctionBegin;
-  cerr = cupmMalloc(reinterpret_cast<void**>(&dbuf),bytes);CHKCUPMAWARE(cerr);
-  cerr = cupmMemcpy(dbuf,hbuf,bytes,cupmMemcpyHostToDevice);CHKCUPMAWARE(cerr);
+  CHKCUPMAWARE(cupmMalloc(reinterpret_cast<void**>(&dbuf),bytes));
+  CHKCUPMAWARE(cupmMemcpy(dbuf,hbuf,bytes,cupmMemcpyHostToDevice));
   CHKERRABORT(PETSC_COMM_SELF,PetscPushSignalHandler(cupmSignalHandler,nullptr));
   cupmMPIAwareJumpBufferSet = true;
   if (setjmp(cupmMPIAwareJumpBuffer)) {
@@ -214,7 +211,7 @@ PETSC_CXX_COMPAT_DEFN(bool Device<T>::DeviceInternal::CUPMAwareMPI_())
   } else if (!MPI_Allreduce(dbuf,dbuf+1,1,MPI_INT,MPI_SUM,PETSC_COMM_SELF)) awareness = true;
   cupmMPIAwareJumpBufferSet = false;
   CHKERRABORT(PETSC_COMM_SELF,PetscPopSignalHandler());
-  cerr = cupmFree(dbuf);CHKCUPMAWARE(cerr);
+  CHKCUPMAWARE(cupmFree(dbuf));
   PetscFunctionReturn(awareness);
 }
 
@@ -235,7 +232,7 @@ PetscErrorCode Device<T>::finalize_() noexcept
   if (!initialized_) PetscFunctionReturn(0);
   for (auto&& device : devices_) {
     if (device) {
-      const CHKERRQ(device->finalize());
+      CHKERRQ(device->finalize());
       device.reset();
     }
   }
@@ -293,11 +290,10 @@ PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 const char* device_view_cupmtype())
 template <DeviceType T>
 PetscErrorCode Device<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, PetscDeviceInitType *defaultInitType) noexcept
 {
-  PetscInt       initTypeCUPM = *defaultInitType,id = *defaultDeviceId;
-  PetscBool      view = PETSC_FALSE,flg;
-  int            ndev;
-  cupmError_t    cerr;
-  PetscErrorCode ierr;
+  PetscInt    initTypeCUPM = *defaultInitType,id = *defaultDeviceId;
+  PetscBool   view         = PETSC_FALSE,flg;
+  int         ndev;
+  cupmError_t cerr;
 
   PetscFunctionBegin;
   if (initialized_) PetscFunctionReturn(0);
@@ -305,6 +301,8 @@ PetscErrorCode Device<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, P
   CHKERRQ(PetscRegisterFinalize(finalize_));
 
   {
+    PetscErrorCode ierr;
+
     // the functions to populate the command line strings are named after the string they return
     ierr = PetscOptionsBegin(comm,nullptr,PetscDevice_CUPMTYPE_Options<T>(),"Sys");CHKERRQ(ierr);
     CHKERRQ(PetscOptionsEList(device_enable_cupmtype<T>(),"How (or whether) to initialize a device","CUPMDevice<CUPMDeviceType>::initialize()",PetscDeviceInitTypes,3,PetscDeviceInitTypes[initTypeCUPM],&initTypeCUPM,nullptr));
@@ -368,8 +366,7 @@ PetscErrorCode Device<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, P
 template <DeviceType T>
 PetscErrorCode Device<T>::getDevice(PetscDevice device, PetscInt id) const noexcept
 {
-  const auto     cerr = static_cast<cupmError_t>(-defaultDevice_);
-  PetscErrorCode ierr;
+  const auto cerr = static_cast<cupmError_t>(-defaultDevice_);
 
   PetscFunctionBegin;
   PetscCheck(defaultDevice_ != PETSC_CUPM_DEVICE_NONE,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Trying to retrieve a %s PetscDevice when it has been disabled",cupmName());
@@ -390,8 +387,6 @@ PetscErrorCode Device<T>::getDevice(PetscDevice device, PetscInt id) const noexc
 template <DeviceType T>
 PetscErrorCode Device<T>::configureDevice(PetscDevice device) noexcept
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(devices_[device->deviceId]->configure());
   PetscFunctionReturn(0);
@@ -400,8 +395,6 @@ PetscErrorCode Device<T>::configureDevice(PetscDevice device) noexcept
 template <DeviceType T>
 PetscErrorCode Device<T>::viewDevice(PetscDevice device, PetscViewer viewer) noexcept
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   // now this __shouldn't__ reconfigure the device, but there is a petscinfo call to indicate
   // it is being reconfigured

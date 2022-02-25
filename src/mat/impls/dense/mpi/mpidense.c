@@ -1019,7 +1019,6 @@ PetscErrorCode MatGetColumnReductions_MPIDense(Mat A,PetscInt type,PetscReal *re
 static PetscErrorCode MatDenseGetColumnVec_MPIDenseCUDA(Mat A,PetscInt col,Vec *v)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
   PetscInt       lda;
 
   PetscFunctionBegin;
@@ -1040,7 +1039,6 @@ static PetscErrorCode MatDenseGetColumnVec_MPIDenseCUDA(Mat A,PetscInt col,Vec *
 static PetscErrorCode MatDenseRestoreColumnVec_MPIDenseCUDA(Mat A,PetscInt col,Vec *v)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!a->vecinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseGetColumnVec() first");
@@ -1056,7 +1054,6 @@ static PetscErrorCode MatDenseGetColumnVecRead_MPIDenseCUDA(Mat A,PetscInt col,V
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
   PetscInt       lda;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(a->vecinuse,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Need to call MatDenseRestoreColumnVec() first");
@@ -1077,7 +1074,6 @@ static PetscErrorCode MatDenseGetColumnVecRead_MPIDenseCUDA(Mat A,PetscInt col,V
 static PetscErrorCode MatDenseRestoreColumnVecRead_MPIDenseCUDA(Mat A,PetscInt col,Vec *v)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!a->vecinuse,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Need to call MatDenseGetColumnVec() first");
@@ -1093,7 +1089,6 @@ static PetscErrorCode MatDenseRestoreColumnVecRead_MPIDenseCUDA(Mat A,PetscInt c
 static PetscErrorCode MatDenseGetColumnVecWrite_MPIDenseCUDA(Mat A,PetscInt col,Vec *v)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
   PetscInt       lda;
 
   PetscFunctionBegin;
@@ -1114,7 +1109,6 @@ static PetscErrorCode MatDenseGetColumnVecWrite_MPIDenseCUDA(Mat A,PetscInt col,
 static PetscErrorCode MatDenseRestoreColumnVecWrite_MPIDenseCUDA(Mat A,PetscInt col,Vec *v)
 {
   Mat_MPIDense   *a = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(!a->vecinuse,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Need to call MatDenseGetColumnVec() first");
@@ -1129,7 +1123,6 @@ static PetscErrorCode MatDenseRestoreColumnVecWrite_MPIDenseCUDA(Mat A,PetscInt 
 static PetscErrorCode MatDenseCUDAPlaceArray_MPIDenseCUDA(Mat A, const PetscScalar *a)
 {
   Mat_MPIDense   *l = (Mat_MPIDense*) A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(l->vecinuse,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Need to call MatDenseRestoreColumnVec() first");
@@ -1141,7 +1134,6 @@ static PetscErrorCode MatDenseCUDAPlaceArray_MPIDenseCUDA(Mat A, const PetscScal
 static PetscErrorCode MatDenseCUDAResetArray_MPIDenseCUDA(Mat A)
 {
   Mat_MPIDense   *l = (Mat_MPIDense*) A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(l->vecinuse,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Need to call MatDenseRestoreColumnVec() first");
@@ -1153,7 +1145,6 @@ static PetscErrorCode MatDenseCUDAResetArray_MPIDenseCUDA(Mat A)
 static PetscErrorCode MatDenseCUDAReplaceArray_MPIDenseCUDA(Mat A, const PetscScalar *a)
 {
   Mat_MPIDense   *l = (Mat_MPIDense*) A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(l->vecinuse,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Need to call MatDenseRestoreColumnVec() first");
@@ -1165,7 +1156,6 @@ static PetscErrorCode MatDenseCUDAReplaceArray_MPIDenseCUDA(Mat A, const PetscSc
 static PetscErrorCode MatDenseCUDAGetArrayWrite_MPIDenseCUDA(Mat A, PetscScalar **a)
 {
   Mat_MPIDense   *l = (Mat_MPIDense*) A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDenseCUDAGetArrayWrite(l->A,a));
@@ -1175,7 +1165,6 @@ static PetscErrorCode MatDenseCUDAGetArrayWrite_MPIDenseCUDA(Mat A, PetscScalar 
 static PetscErrorCode MatDenseCUDARestoreArrayWrite_MPIDenseCUDA(Mat A, PetscScalar **a)
 {
   Mat_MPIDense   *l = (Mat_MPIDense*) A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDenseCUDARestoreArrayWrite(l->A,a));
@@ -1185,7 +1174,6 @@ static PetscErrorCode MatDenseCUDARestoreArrayWrite_MPIDenseCUDA(Mat A, PetscSca
 static PetscErrorCode MatDenseCUDAGetArrayRead_MPIDenseCUDA(Mat A, const PetscScalar **a)
 {
   Mat_MPIDense   *l = (Mat_MPIDense*) A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDenseCUDAGetArrayRead(l->A,a));
@@ -1195,7 +1183,6 @@ static PetscErrorCode MatDenseCUDAGetArrayRead_MPIDenseCUDA(Mat A, const PetscSc
 static PetscErrorCode MatDenseCUDARestoreArrayRead_MPIDenseCUDA(Mat A, const PetscScalar **a)
 {
   Mat_MPIDense   *l = (Mat_MPIDense*) A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDenseCUDARestoreArrayRead(l->A,a));
@@ -1205,7 +1192,6 @@ static PetscErrorCode MatDenseCUDARestoreArrayRead_MPIDenseCUDA(Mat A, const Pet
 static PetscErrorCode MatDenseCUDAGetArray_MPIDenseCUDA(Mat A, PetscScalar **a)
 {
   Mat_MPIDense   *l = (Mat_MPIDense*) A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDenseCUDAGetArray(l->A,a));
@@ -1215,7 +1201,6 @@ static PetscErrorCode MatDenseCUDAGetArray_MPIDenseCUDA(Mat A, PetscScalar **a)
 static PetscErrorCode MatDenseCUDARestoreArray_MPIDenseCUDA(Mat A, PetscScalar **a)
 {
   Mat_MPIDense   *l = (Mat_MPIDense*) A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDenseCUDARestoreArray(l->A,a));
@@ -1233,7 +1218,6 @@ static PetscErrorCode MatDenseRestoreSubMatrix_MPIDense(Mat,Mat*);
 static PetscErrorCode MatBindToCPU_MPIDenseCUDA(Mat mat,PetscBool bind)
 {
   Mat_MPIDense   *d = (Mat_MPIDense*)mat->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(d->vecinuse,PetscObjectComm((PetscObject)mat),PETSC_ERR_ORDER,"Need to call MatDenseRestoreColumnVec() first");
@@ -1276,7 +1260,6 @@ static PetscErrorCode MatBindToCPU_MPIDenseCUDA(Mat mat,PetscBool bind)
 PetscErrorCode MatMPIDenseCUDASetPreallocation(Mat A, PetscScalar *d_data)
 {
   Mat_MPIDense   *d = (Mat_MPIDense*)A->data;
-  PetscErrorCode ierr;
   PetscBool      iscuda;
 
   PetscFunctionBegin;
@@ -1623,7 +1606,6 @@ PetscErrorCode MatConvert_MPIDenseCUDA_MPIDense(Mat M,MatType type,MatReuse reus
 {
   Mat            B;
   Mat_MPIDense   *m;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (reuse == MAT_INITIAL_MATRIX) {
@@ -1665,7 +1647,6 @@ PetscErrorCode MatConvert_MPIDense_MPIDenseCUDA(Mat M,MatType type,MatReuse reus
 {
   Mat            B;
   Mat_MPIDense   *m;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (reuse == MAT_INITIAL_MATRIX) {
@@ -1954,7 +1935,6 @@ M*/
 #include <petsc/private/deviceimpl.h>
 PETSC_EXTERN PetscErrorCode MatCreate_MPIDenseCUDA(Mat B)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscDeviceInitialize(PETSC_DEVICE_CUDA));
@@ -2136,7 +2116,6 @@ PetscErrorCode  MatDenseReplaceArray(Mat mat,const PetscScalar *array)
 @*/
 PetscErrorCode  MatDenseCUDAPlaceArray(Mat mat,const PetscScalar *array)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
@@ -2164,7 +2143,6 @@ PetscErrorCode  MatDenseCUDAPlaceArray(Mat mat,const PetscScalar *array)
 @*/
 PetscErrorCode  MatDenseCUDAResetArray(Mat mat)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
@@ -2195,7 +2173,6 @@ PetscErrorCode  MatDenseCUDAResetArray(Mat mat)
 @*/
 PetscErrorCode  MatDenseCUDAReplaceArray(Mat mat,const PetscScalar *array)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
@@ -2225,7 +2202,6 @@ PetscErrorCode  MatDenseCUDAReplaceArray(Mat mat,const PetscScalar *array)
 @*/
 PetscErrorCode MatDenseCUDAGetArrayWrite(Mat A, PetscScalar **a)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -2251,7 +2227,6 @@ PetscErrorCode MatDenseCUDAGetArrayWrite(Mat A, PetscScalar **a)
 @*/
 PetscErrorCode MatDenseCUDARestoreArrayWrite(Mat A, PetscScalar **a)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -2281,7 +2256,6 @@ PetscErrorCode MatDenseCUDARestoreArrayWrite(Mat A, PetscScalar **a)
 @*/
 PetscErrorCode MatDenseCUDAGetArrayRead(Mat A, const PetscScalar **a)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -2307,7 +2281,6 @@ PetscErrorCode MatDenseCUDAGetArrayRead(Mat A, const PetscScalar **a)
 @*/
 PetscErrorCode MatDenseCUDARestoreArrayRead(Mat A, const PetscScalar **a)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscUseMethod(A,"MatDenseCUDARestoreArrayRead_C",(Mat,const PetscScalar**),(A,a)));
@@ -2334,7 +2307,6 @@ PetscErrorCode MatDenseCUDARestoreArrayRead(Mat A, const PetscScalar **a)
 @*/
 PetscErrorCode MatDenseCUDAGetArray(Mat A, PetscScalar **a)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -2360,7 +2332,6 @@ PetscErrorCode MatDenseCUDAGetArray(Mat A, PetscScalar **a)
 @*/
 PetscErrorCode MatDenseCUDARestoreArray(Mat A, PetscScalar **a)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -2456,7 +2427,6 @@ PetscErrorCode  MatCreateDense(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt M,Pe
 @*/
 PetscErrorCode  MatCreateDenseCUDA(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt M,PetscInt N,PetscScalar *data,Mat *A)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    size;
 
   PetscFunctionBegin;

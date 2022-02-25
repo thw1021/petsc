@@ -1491,7 +1491,6 @@ static PetscErrorCode PetscLogNestedTreePrintFlamegraph(PetscViewer viewer,Petsc
 PetscErrorCode PetscLogView_Flamegraph(PetscViewer viewer)
 {
   int                   nTimers=0,i,nChildren;
-  PetscErrorCode        ierr;
   PetscIntStack         eventStack;
   PetscLogDouble        totalTime;
   PetscNestedEventTree  *tree=NULL;
@@ -1501,7 +1500,7 @@ PetscErrorCode PetscLogView_Flamegraph(PetscViewer viewer)
   CHKERRQ(PetscGetTotalTime(viewer,&totalTime));
   CHKERRQ(PetscLogNestedTreeCreate(viewer, &tree, &nTimers));
   /* We use an integer stack to keep track of parent event IDs */
-  ierr = PetscIntStackCreate(&eventStack);
+  CHKERRQ(PetscIntStackCreate(&eventStack));
 
   /* Initialize the child events and write them recursively */
   CHKERRQ(PetscLogNestedTreeGetChildrenCount(tree,nTimers,-1,0,&nChildren));

@@ -946,14 +946,13 @@ static PetscErrorCode LandauDMCreateVMeshes(MPI_Comm comm_self, const PetscInt d
 
 static PetscErrorCode SetupDS(DM pack, PetscInt dim, PetscInt grid, LandauCtx *ctx)
 {
-  PetscErrorCode  ierr;
   PetscInt        ii,i0;
   char            buf[256];
   PetscSection    section;
 
   PetscFunctionBegin;
   for (ii = ctx->species_offset[grid], i0 = 0 ; ii < ctx->species_offset[grid+1] ; ii++, i0++) {
-    if (ii==0) ierr = PetscSNPrintf(buf, 256, "e");
+    if (ii==0) CHKERRQ(PetscSNPrintf(buf, 256, "e"));
     else CHKERRQ(PetscSNPrintf(buf, 256, "i%D", ii));
     /* Setup Discretization - FEM */
     CHKERRQ(PetscFECreateDefault(PETSC_COMM_SELF, dim, 1, PETSC_FALSE, NULL, PETSC_DECIDE, &ctx->fe[ii]));
@@ -963,8 +962,8 @@ static PetscErrorCode SetupDS(DM pack, PetscInt dim, PetscInt grid, LandauCtx *c
   CHKERRQ(DMCreateDS(ctx->plex[grid]));
   CHKERRQ(DMGetSection(ctx->plex[grid], &section));
   for (PetscInt ii = ctx->species_offset[grid], i0 = 0 ; ii < ctx->species_offset[grid+1] ; ii++, i0++) {
-    if (ii==0) ierr = PetscSNPrintf(buf, 256, "se");
-    else ierr = PetscSNPrintf(buf, 256, "si%D", ii);
+    if (ii==0) CHKERRQ(PetscSNPrintf(buf, 256, "se"));
+    else CHKERRQ(PetscSNPrintf(buf, 256, "si%D", ii));
     CHKERRQ(PetscSectionSetComponentName(section, i0, 0, buf));
   }
   PetscFunctionReturn(0);
@@ -1872,7 +1871,6 @@ static void g0_r(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 
 static PetscErrorCode LandauCreateBatchOrdering(MPI_Comm comm, Vec X, IS grid_batch_is_inv[LANDAU_MAX_GRIDS], LandauCtx *ctx)
 {
-  PetscErrorCode ierr;
   PetscInt       *idxs=NULL;
   Mat            subM[LANDAU_MAX_GRIDS];
 
@@ -1898,9 +1896,9 @@ static PetscErrorCode LandauCreateBatchOrdering(MPI_Comm comm, Vec X, IS grid_ba
     for (int ix=0, ii=ctx->species_offset[grid];ii<ctx->species_offset[grid+1];ii++,ix++) {
       CHKERRQ(PetscDSSetJacobian(prob, ix, ix, g0_fake, NULL, NULL, NULL));
     }
-    ierr = PetscOptionsInsertString(NULL,"-dm_preallocate_only");
+    CHKERRQ(PetscOptionsInsertString(NULL,"-dm_preallocate_only"));
     CHKERRQ(DMCreateMatrix(massDM, &gMat));
-    ierr = PetscOptionsInsertString(NULL,"-dm_preallocate_only false");
+    CHKERRQ(PetscOptionsInsertString(NULL,"-dm_preallocate_only false"));
     CHKERRQ(MatSetOption(gMat, MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE));
     CHKERRQ(DMCreateLocalVector(ctx->plex[grid],&tvec));
     CHKERRQ(DMPlexSNESComputeJacobianFEM(massDM, tvec, gMat, gMat, ctx));
@@ -2003,7 +2001,6 @@ PetscErrorCode LandauCreateMassMatrix(DM pack, Mat *Amat);
  @*/
 PetscErrorCode LandauCreateVelocitySpace(MPI_Comm comm, PetscInt dim, const char prefix[], Vec *X, Mat *J, DM *pack)
 {
-  PetscErrorCode ierr;
   LandauCtx      *ctx;
   Vec            Xsub[LANDAU_MAX_GRIDS];
   IS             grid_batch_is_inv[LANDAU_MAX_GRIDS];
@@ -2066,10 +2063,10 @@ PetscErrorCode LandauCreateVelocitySpace(MPI_Comm comm, PetscInt dim, const char
   }
   // creat DM & Jac
   CHKERRQ(DMSetApplicationContext(*pack, ctx));
-  ierr = PetscOptionsInsertString(NULL,"-dm_preallocate_only");
+  CHKERRQ(PetscOptionsInsertString(NULL,"-dm_preallocate_only"));
   CHKERRQ(DMSetFromOptions(*pack));
   CHKERRQ(DMCreateMatrix(*pack, &ctx->J));
-  ierr = PetscOptionsInsertString(NULL,"-dm_preallocate_only false");
+  CHKERRQ(PetscOptionsInsertString(NULL,"-dm_preallocate_only false"));
   CHKERRQ(MatSetOption(ctx->J, MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE));
   CHKERRQ(MatSetOption(ctx->J, MAT_STRUCTURALLY_SYMMETRIC, PETSC_TRUE));
   CHKERRQ(PetscObjectSetName((PetscObject)ctx->J, "Jac"));
@@ -2471,7 +2468,6 @@ PetscErrorCode LandauCreateMassMatrix(DM pack, Mat *Amat)
   DM             mass_pack,massDM[LANDAU_MAX_GRIDS];
   PetscDS        prob;
   PetscInt       ii,dim,N1=1,N2;
-  PetscErrorCode ierr;
   LandauCtx      *ctx;
   Mat            packM,subM[LANDAU_MAX_GRIDS];
 
@@ -2510,10 +2506,10 @@ PetscErrorCode LandauCreateMassMatrix(DM pack, Mat *Amat)
     }
   }
 #endif
-  ierr = PetscOptionsInsertString(NULL,"-dm_preallocate_only");
+  CHKERRQ(PetscOptionsInsertString(NULL,"-dm_preallocate_only"));
   CHKERRQ(DMSetFromOptions(mass_pack));
   CHKERRQ(DMCreateMatrix(mass_pack, &packM));
-  ierr = PetscOptionsInsertString(NULL,"-dm_preallocate_only false");
+  CHKERRQ(PetscOptionsInsertString(NULL,"-dm_preallocate_only false"));
   CHKERRQ(MatSetOption(packM, MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE));
   CHKERRQ(MatSetOption(packM, MAT_STRUCTURALLY_SYMMETRIC, PETSC_TRUE));
   CHKERRQ(DMDestroy(&mass_pack));

@@ -23,8 +23,6 @@ PetscErrorCode VecDestroy_MPICUDA(Vec v)
 {
   Vec_MPI        *vecmpi = (Vec_MPI*)v->data;
   Vec_CUDA       *veccuda;
-  PetscErrorCode ierr;
-  cudaError_t    err;
 
   PetscFunctionBegin;
   if (v->spptr) {
@@ -51,7 +49,6 @@ PetscErrorCode VecDestroy_MPICUDA(Vec v)
 PetscErrorCode VecNorm_MPICUDA(Vec xin,NormType type,PetscReal *z)
 {
   PetscReal      sum,work = 0.0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (type == NORM_2 || type == NORM_FROBENIUS) {
@@ -83,7 +80,6 @@ PetscErrorCode VecNorm_MPICUDA(Vec xin,NormType type,PetscReal *z)
 PetscErrorCode VecDot_MPICUDA(Vec xin,Vec yin,PetscScalar *z)
 {
   PetscScalar    sum,work;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDot_SeqCUDA(xin,yin,&work));
@@ -95,7 +91,6 @@ PetscErrorCode VecDot_MPICUDA(Vec xin,Vec yin,PetscScalar *z)
 PetscErrorCode VecTDot_MPICUDA(Vec xin,Vec yin,PetscScalar *z)
 {
   PetscScalar    sum,work;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecTDot_SeqCUDA(xin,yin,&work));
@@ -107,7 +102,6 @@ PetscErrorCode VecTDot_MPICUDA(Vec xin,Vec yin,PetscScalar *z)
 PetscErrorCode VecMDot_MPICUDA(Vec xin,PetscInt nv,const Vec y[],PetscScalar *z)
 {
   PetscScalar    awork[128],*work = awork;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (nv > 128) {
@@ -134,7 +128,6 @@ M*/
 
 PetscErrorCode VecDuplicate_MPICUDA(Vec win,Vec *v)
 {
-  PetscErrorCode ierr;
   Vec_MPI        *vw,*w = (Vec_MPI*)win->data;
   PetscScalar    *array;
 
@@ -176,7 +169,6 @@ PetscErrorCode VecDuplicate_MPICUDA(Vec win,Vec *v)
 
 PetscErrorCode VecDotNorm2_MPICUDA(Vec s,Vec t,PetscScalar *dp,PetscScalar *nm)
 {
-  PetscErrorCode ierr;
   PetscScalar    work[2],sum[2];
 
   PetscFunctionBegin;
@@ -189,7 +181,6 @@ PetscErrorCode VecDotNorm2_MPICUDA(Vec s,Vec t,PetscScalar *dp,PetscScalar *nm)
 
 PetscErrorCode VecCreate_MPICUDA(Vec vv)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscDeviceInitialize(PETSC_DEVICE_CUDA));
@@ -205,7 +196,6 @@ PetscErrorCode VecCreate_MPICUDA(Vec vv)
 
 PetscErrorCode VecCreate_CUDA(Vec v)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    size;
 
   PetscFunctionBegin;
@@ -244,7 +234,6 @@ PetscErrorCode VecCreate_CUDA(Vec v)
  @*/
  PetscErrorCode VecCreateMPICUDA(MPI_Comm comm,PetscInt n,PetscInt N,Vec *v)
  {
-   PetscErrorCode ierr;
 
    PetscFunctionBegin;
    CHKERRQ(VecCreate(comm,v));
@@ -288,7 +277,6 @@ PetscErrorCode VecCreate_CUDA(Vec v)
 @*/
 PetscErrorCode  VecCreateMPICUDAWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,PetscInt N,const PetscScalar array[],Vec *vv)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(n == PETSC_DECIDE,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must set local size of vector");
@@ -337,7 +325,6 @@ PetscErrorCode  VecCreateMPICUDAWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,P
 @*/
 PetscErrorCode  VecCreateMPICUDAWithArrays(MPI_Comm comm,PetscInt bs,PetscInt n,PetscInt N,const PetscScalar cpuarray[],const PetscScalar gpuarray[],Vec *vv)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecCreateMPICUDAWithArray(comm,bs,n,N,gpuarray,vv));
@@ -361,7 +348,6 @@ PetscErrorCode  VecCreateMPICUDAWithArrays(MPI_Comm comm,PetscInt bs,PetscInt n,
 
 PetscErrorCode VecMax_MPICUDA(Vec xin,PetscInt *idx,PetscReal *z)
 {
-  PetscErrorCode ierr;
   PetscReal      work;
 
   PetscFunctionBegin;
@@ -386,7 +372,6 @@ PetscErrorCode VecMax_MPICUDA(Vec xin,PetscInt *idx,PetscReal *z)
 
 PetscErrorCode VecMin_MPICUDA(Vec xin,PetscInt *idx,PetscReal *z)
 {
-  PetscErrorCode ierr;
   PetscReal      work;
 
   PetscFunctionBegin;
@@ -411,7 +396,6 @@ PetscErrorCode VecMin_MPICUDA(Vec xin,PetscInt *idx,PetscReal *z)
 
 PetscErrorCode VecBindToCPU_MPICUDA(Vec V,PetscBool bind)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   V->boundtocpu = bind;

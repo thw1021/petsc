@@ -562,7 +562,6 @@ template<typename Type> struct AtomicLXOR {__device__ Type operator()(Type& x,Ty
 template<typename Type,PetscInt BS,PetscInt EQ>
 static PetscErrorCode Pack(PetscSFLink link,PetscInt count,PetscInt start,PetscSFPackOpt opt,const PetscInt *idx,const void *data,void *buf)
 {
-  cudaError_t        cerr;
   PetscInt           nthreads=256;
   PetscInt           nblocks=(count+nthreads-1)/nthreads;
   const PetscInt     *iarray=opt ? opt->array : NULL;
@@ -585,7 +584,6 @@ static PetscErrorCode Pack(PetscSFLink link,PetscInt count,PetscInt start,PetscS
 template<typename Type,PetscInt BS,PetscInt EQ>
 static PetscErrorCode Unpack(PetscSFLink link,PetscInt count,PetscInt start,PetscSFPackOpt opt,const PetscInt *idx,void *data,const void *buf)
 {
-  cudaError_t        cerr;
   PetscInt           nthreads=256;
   PetscInt           nblocks=(count+nthreads-1)/nthreads;
   const PetscInt     *iarray=opt ? opt->array : NULL;
@@ -605,7 +603,6 @@ static PetscErrorCode Unpack(PetscSFLink link,PetscInt count,PetscInt start,Pets
 template<typename Type,class Op,PetscInt BS,PetscInt EQ>
 static PetscErrorCode UnpackAndOp(PetscSFLink link,PetscInt count,PetscInt start,PetscSFPackOpt opt,const PetscInt *idx,void *data,const void *buf)
 {
-  cudaError_t        cerr;
   PetscInt           nthreads=256;
   PetscInt           nblocks=(count+nthreads-1)/nthreads;
   const PetscInt     *iarray=opt ? opt->array : NULL;
@@ -621,7 +618,6 @@ static PetscErrorCode UnpackAndOp(PetscSFLink link,PetscInt count,PetscInt start
 template<typename Type,class Op,PetscInt BS,PetscInt EQ>
 static PetscErrorCode FetchAndOp(PetscSFLink link,PetscInt count,PetscInt start,PetscSFPackOpt opt,const PetscInt *idx,void *data,void *buf)
 {
-  cudaError_t        cerr;
   PetscInt           nthreads=256;
   PetscInt           nblocks=(count+nthreads-1)/nthreads;
   const PetscInt     *iarray=opt ? opt->array : NULL;
@@ -637,7 +633,6 @@ static PetscErrorCode FetchAndOp(PetscSFLink link,PetscInt count,PetscInt start,
 template<typename Type,class Op,PetscInt BS,PetscInt EQ>
 static PetscErrorCode ScatterAndOp(PetscSFLink link,PetscInt count,PetscInt srcStart,PetscSFPackOpt srcOpt,const PetscInt *srcIdx,const void *src,PetscInt dstStart,PetscSFPackOpt dstOpt,const PetscInt *dstIdx,void *dst)
 {
-  cudaError_t        cerr;
   PetscInt           nthreads=256;
   PetscInt           nblocks=(count+nthreads-1)/nthreads;
   PetscInt           srcx=0,srcy=0,srcX=0,srcY=0,dstx=0,dsty=0,dstX=0,dstY=0;
@@ -662,8 +657,6 @@ static PetscErrorCode ScatterAndOp(PetscSFLink link,PetscInt count,PetscInt srcS
 template<typename Type,PetscInt BS,PetscInt EQ>
 static PetscErrorCode ScatterAndInsert(PetscSFLink link,PetscInt count,PetscInt srcStart,PetscSFPackOpt srcOpt,const PetscInt *srcIdx,const void *src,PetscInt dstStart,PetscSFPackOpt dstOpt,const PetscInt *dstIdx,void *dst)
 {
-  PetscErrorCode    ierr;
-  cudaError_t       cerr;
 
   PetscFunctionBegin;
   if (!count) PetscFunctionReturn(0);
@@ -679,7 +672,6 @@ static PetscErrorCode ScatterAndInsert(PetscSFLink link,PetscInt count,PetscInt 
 template<typename Type,class Op,PetscInt BS,PetscInt EQ>
 static PetscErrorCode FetchAndOpLocal(PetscSFLink link,PetscInt count,PetscInt rootstart,PetscSFPackOpt rootopt,const PetscInt *rootidx,void *rootdata,PetscInt leafstart,PetscSFPackOpt leafopt,const PetscInt *leafidx,const void *leafdata,void *leafupdate)
 {
-  cudaError_t       cerr;
   PetscInt          nthreads=256;
   PetscInt          nblocks=(count+nthreads-1)/nthreads;
   const PetscInt    *rarray = rootopt ? rootopt->array : NULL;
@@ -859,7 +851,6 @@ static void PackInit_DumbType(PetscSFLink link)
 /* Some device-specific utilities */
 static PetscErrorCode PetscSFLinkSyncDevice_CUDA(PetscSFLink link)
 {
-  cudaError_t cerr;
   PetscFunctionBegin;
   CHKERRCUDA(cudaDeviceSynchronize());
   PetscFunctionReturn(0);
@@ -867,7 +858,6 @@ static PetscErrorCode PetscSFLinkSyncDevice_CUDA(PetscSFLink link)
 
 static PetscErrorCode PetscSFLinkSyncStream_CUDA(PetscSFLink link)
 {
-  cudaError_t cerr;
   PetscFunctionBegin;
   CHKERRCUDA(cudaStreamSynchronize(link->stream));
   PetscFunctionReturn(0);
@@ -913,7 +903,6 @@ PetscErrorCode PetscSFFree_CUDA(PetscMemType mtype,void* ptr)
 /* Destructor when the link uses MPI for communication on CUDA device */
 static PetscErrorCode PetscSFLinkDestroy_MPI_CUDA(PetscSF sf,PetscSFLink link)
 {
-  cudaError_t    cerr;
 
   PetscFunctionBegin;
   for (int i=PETSCSF_LOCAL; i<=PETSCSF_REMOTE; i++) {
@@ -926,8 +915,6 @@ static PetscErrorCode PetscSFLinkDestroy_MPI_CUDA(PetscSF sf,PetscSFLink link)
 /* Some fields of link are initialized by PetscSFPackSetUp_Host. This routine only does what needed on device */
 PetscErrorCode PetscSFLinkSetUp_CUDA(PetscSF sf,PetscSFLink link,MPI_Datatype unit)
 {
-  PetscErrorCode ierr;
-  cudaError_t    cerr;
   PetscInt       nSignedChar=0,nUnsignedChar=0,nInt=0,nPetscInt=0,nPetscReal=0;
   PetscBool      is2Int,is2PetscInt;
 #if defined(PETSC_HAVE_COMPLEX)

@@ -1353,10 +1353,9 @@ PetscErrorCode DMPlexMetricNormalize(DM dm, Vec metricIn, PetscBool restrictSize
 @*/
 PetscErrorCode DMPlexMetricAverage(DM dm, PetscInt numMetrics, PetscReal weights[], Vec metrics[], Vec *metricAvg)
 {
-  PetscBool      haveWeights = PETSC_TRUE;
-  PetscErrorCode ierr;
-  PetscInt       i, m, n;
-  PetscReal      sum = 0.0, tol = 1.0e-10;
+  PetscBool haveWeights = PETSC_TRUE;
+  PetscInt  i, m, n;
+  PetscReal sum = 0.0, tol = 1.0e-10;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogEventBegin(DMPLEX_MetricAverage,0,0,0,0));
@@ -1366,7 +1365,7 @@ PetscErrorCode DMPlexMetricAverage(DM dm, PetscInt numMetrics, PetscReal weights
   CHKERRQ(VecGetSize(*metricAvg, &m));
   for (i = 0; i < numMetrics; ++i) {
     CHKERRQ(VecGetSize(metrics[i], &n));
-    PetscCheckFalse(m != n,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Averaging different metric types not implemented");
+    PetscCheck(m == n,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Averaging different metric types not implemented");
   }
 
   /* Default to the unweighted case */
@@ -1378,11 +1377,11 @@ PetscErrorCode DMPlexMetricAverage(DM dm, PetscInt numMetrics, PetscReal weights
 
   /* Check weights sum to unity */
   for (i = 0; i < numMetrics; ++i) sum += weights[i];
-  PetscCheckFalse(PetscAbsReal(sum - 1) > tol,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Weights do not sum to unity");
+  PetscCheck(PetscAbsReal(sum - 1) <= tol,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Weights do not sum to unity");
 
   /* Compute metric average */
   for (i = 0; i < numMetrics; ++i) CHKERRQ(VecAXPY(*metricAvg, weights[i], metrics[i]));
-  if (!haveWeights) { ierr = PetscFree(weights); }
+  if (!haveWeights) CHKERRQ(PetscFree(weights));
 
   CHKERRQ(PetscLogEventEnd(DMPLEX_MetricAverage,0,0,0,0));
   PetscFunctionReturn(0);
@@ -1441,7 +1440,6 @@ PetscErrorCode DMPlexMetricAverage3(DM dm, Vec metric1, Vec metric2, Vec metric3
 
 static PetscErrorCode DMPlexMetricIntersection_Private(PetscInt dim, PetscScalar M1[], PetscScalar M2[])
 {
-  PetscErrorCode ierr;
   PetscInt       i, j, k, l, m;
   PetscReal     *evals, *evals1;
   PetscScalar   *evecs, *sqrtM1, *isqrtM1;
@@ -1488,7 +1486,7 @@ static PetscErrorCode DMPlexMetricIntersection_Private(PetscInt dim, PetscScalar
         LAPACKsyevFail(dim, M1);
         SETERRQ(PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine %d", (int) lierr);
       }
-      ierr = PetscFPTrapPop();
+      CHKERRQ(PetscFPTrapPop());
 
       /* Compute square root and reciprocal */
       for (i = 0; i < dim; ++i) {
@@ -1541,7 +1539,7 @@ static PetscErrorCode DMPlexMetricIntersection_Private(PetscInt dim, PetscScalar
         LAPACKsyevFail(dim, evecs);
         SETERRQ(PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine %d", (int) lierr);
       }
-      ierr = PetscFPTrapPop();
+      CHKERRQ(PetscFPTrapPop());
 
       /* Modify eigenvalues */
       for (i = 0; i < dim; ++i) evals[i] = PetscMin(evals[i], evals1[i]);

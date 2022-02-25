@@ -37,7 +37,6 @@ PETSC_INTERN PetscErrorCode MatGetOrdering_WBM(Mat mat, MatOrderingType type, IS
   PetscInt       job = 5;
   PetscInt       *perm, nrow, ncol, nnz, liw, *iw, ldw;
   PetscBool      done;
-  PetscErrorCode ierr;
 #if defined(PETSC_HAVE_SUPERLU_DIST)
   PetscInt       num, info[10], icntl[10], i;
 #endif

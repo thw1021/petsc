@@ -93,7 +93,6 @@ private:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode set_handle_stream_(cupmBlasHandle_t &handle, cupmStream_t &stream))
   {
     cupmStream_t    cupmStream;
-    cupmBlasError_t cberr;
 
     PetscFunctionBegin;
     CHKERRCUPMBLAS(cupmBlasGetStream(handle,&cupmStream));
@@ -122,7 +121,6 @@ private:
 
   PETSC_CXX_COMPAT_DECL(PetscErrorCode initialize_(PetscInt id, PetscDeviceContext_IMPLS *dci))
   {
-    PetscErrorCode ierr;
 
     PetscFunctionBegin;
     CHKERRQ(PetscDeviceCheckDeviceCount_Internal(id));
@@ -174,8 +172,6 @@ public:
 template <DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::destroy(PetscDeviceContext dctx))
 {
-  cupmError_t    cerr;
-  PetscErrorCode ierr;
   auto           dci = impls_cast_(dctx);
 
   PetscFunctionBegin;
@@ -206,8 +202,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::changeStreamType(PetscDev
 template <DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::setUp(PetscDeviceContext dctx))
 {
-  PetscErrorCode ierr;
-  cupmError_t    cerr;
   auto           dci = impls_cast_(dctx);
 
   PetscFunctionBegin;
@@ -256,7 +250,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::query(PetscDeviceContext 
 template <DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::waitForContext(PetscDeviceContext dctxa, PetscDeviceContext dctxb))
 {
-  cupmError_t cerr;
   auto        dcib = impls_cast_(dctxb);
 
   PetscFunctionBegin;
@@ -268,7 +261,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::waitForContext(PetscDevic
 template <DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::synchronize(PetscDeviceContext dctx))
 {
-  cupmError_t cerr;
   auto        dci = impls_cast_(dctx);
 
   PetscFunctionBegin;
@@ -291,7 +283,6 @@ template <DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::beginTimer(PetscDeviceContext dctx))
 {
   auto        dci = impls_cast_(dctx);
-  cupmError_t cerr;
 
   PetscFunctionBegin;
 #if PetscDefined(USE_DEBUG)
@@ -309,7 +300,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::beginTimer(PetscDeviceCon
 template <DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::endTimer(PetscDeviceContext dctx, PetscLogDouble *elapsed))
 {
-  cupmError_t cerr;
   float       gtime;
   auto        dci = impls_cast_(dctx);
 

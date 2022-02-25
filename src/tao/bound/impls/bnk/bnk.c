@@ -264,7 +264,6 @@ PetscErrorCode TaoBNKInitialize(Tao tao, PetscInt initType, PetscBool *needH)
 
 PetscErrorCode TaoBNKComputeHessian(Tao tao)
 {
-  PetscErrorCode ierr;
   TAO_BNK        *bnk = (TAO_BNK *)tao->data;
 
   PetscFunctionBegin;
@@ -295,7 +294,7 @@ PetscErrorCode TaoBNKComputeHessian(Tao tao)
       CHKERRQ(PetscObjectReference((PetscObject)bnk->H_inactive));
       bnk->Hpre_inactive = bnk->H_inactive;
     } else {
-      ierr = PetscObjectReference((PetscObject)tao->hessian_pre);
+      CHKERRQ(PetscObjectReference((PetscObject)tao->hessian_pre));
       bnk->Hpre_inactive = tao->hessian_pre;
     }
     if (bnk->bfgs_pre) {

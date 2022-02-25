@@ -662,7 +662,6 @@ PetscErrorCode MatMult_SeqBAIJ_9_AVX2(Mat A,Vec xx,Vec zz)
   PetscScalar       *z = NULL,*work,*workt,*zarray;
   const PetscScalar *x,*xb;
   const MatScalar   *v;
-  PetscErrorCode    ierr;
   PetscInt          mbs,i,bs=A->rmap->bs,j,n,bs2=a->bs2;
   const PetscInt    *idx,*ii,*ridx=NULL;
   PetscInt          k;
@@ -1185,7 +1184,6 @@ PetscErrorCode MatMult_SeqBAIJ_12_AVX2(Mat A,Vec xx,Vec zz)
   PetscScalar       *z = NULL,*zarray;
   const PetscScalar *x,*work;
   const MatScalar   *v = a->a;
-  PetscErrorCode    ierr;
   PetscInt          mbs,i,j,n;
   const PetscInt    *idx = a->j,*ii,*ridx=NULL;
   PetscBool         usecprow=a->compressedrow.use;
@@ -2125,7 +2123,6 @@ PetscErrorCode MatMultAdd_SeqBAIJ_9_AVX2(Mat A,Vec xx,Vec yy,Vec zz)
   PetscScalar       *z = NULL,*work,*workt,*zarray;
   const PetscScalar *x,*xb;
   const MatScalar   *v;
-  PetscErrorCode    ierr;
   PetscInt          mbs,i,j,n;
   PetscInt          k;
   PetscBool         usecprow=a->compressedrow.use;

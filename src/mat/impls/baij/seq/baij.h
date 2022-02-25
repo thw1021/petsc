@@ -280,7 +280,6 @@ PETSC_INTERN PetscErrorCode MatDestroySubMatrices_SeqBAIJ(PetscInt,Mat*[]);
 
 static inline PetscErrorCode PetscKernel_A_gets_A_times_B_2(PetscScalar *A,const PetscScalar *B,PetscScalar *W)
 {
-
   CHKERRQ(PetscArraycpy(W,A,4));
   A[0] = W[0]*B[0] + W[2]*B[1];
   A[1] = W[1]*B[0] + W[3]*B[1];
@@ -714,7 +713,6 @@ static inline PetscErrorCode PetscKernel_A_gets_A_minus_B_times_C_7(PetscScalar 
 #include <immintrin.h>
 static inline PetscErrorCode PetscKernel_A_gets_A_times_B_9(PetscScalar *A,const PetscScalar *B,PetscScalar *W)
 {
-  PetscErrorCode ierr;
   PetscInt        i;
   __m256d         S0,S1,S2,S3,S4,S5,S6,S7,S8,B0,B1,B2,B6,B7,B8,A0,A1,A2,A3,A4,A5,A6,A7,A8;
 

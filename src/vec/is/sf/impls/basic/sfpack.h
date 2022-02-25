@@ -282,7 +282,6 @@ static inline PetscErrorCode PetscSFLinkFinishCommunication(PetscSF sf,PetscSFLi
 */
 static inline PetscErrorCode PetscSFLinkCopyRootBufferInCaseNotUseGpuAwareMPI(PetscSF sf,PetscSFLink link,PetscBool device2host)
 {
-  PetscErrorCode ierr;
   PetscSF_Basic  *bas = (PetscSF_Basic*)sf->data;
 
   PetscFunctionBegin;
@@ -304,7 +303,6 @@ static inline PetscErrorCode PetscSFLinkCopyRootBufferInCaseNotUseGpuAwareMPI(Pe
 
 static inline PetscErrorCode PetscSFLinkCopyLeafBufferInCaseNotUseGpuAwareMPI(PetscSF sf,PetscSFLink link,PetscBool device2host)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PetscMemTypeDevice(link->leafmtype) && PetscMemTypeHost(link->leafmtype_mpi) && sf->leafbuflen[PETSCSF_REMOTE]) {
@@ -325,7 +323,6 @@ static inline PetscErrorCode PetscSFLinkCopyLeafBufferInCaseNotUseGpuAwareMPI(Pe
 /* Make sure root/leafbuf for the remote is ready for MPI */
 static inline PetscErrorCode PetscSFLinkSyncStreamBeforeCallMPI(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
 {
-  PetscErrorCode ierr;
   PetscSF_Basic  *bas;
   PetscInt       buflen;
   PetscMemType   mtype;

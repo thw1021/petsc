@@ -244,7 +244,6 @@ PETSC_INTERN PetscErrorCode  PetscOptionsCheckInitial_Private(const char help[])
   char              string[64];
   MPI_Comm          comm = PETSC_COMM_WORLD;
   PetscBool         flg1 = PETSC_FALSE,flg2 = PETSC_FALSE,flg3 = PETSC_FALSE,flag,hasHelp;
-  PetscErrorCode    ierr;
   PetscReal         si;
   PetscInt          intensity;
   int               i;
@@ -518,7 +517,7 @@ PETSC_INTERN PetscErrorCode  PetscOptionsCheckInitial_Private(const char help[])
     CHKERRQ(PetscInfoSetFromOptions(NULL));
   }
 #endif
-  ierr = PetscDetermineInitialFPTrap();
+  CHKERRQ(PetscDetermineInitialFPTrap());
   flg1 = PETSC_FALSE;
   CHKERRQ(PetscOptionsGetBool(NULL,NULL,"-fp_trap",&flg1,&flag));
   if (flag) CHKERRQ(PetscSetFPTrap((PetscFPTrap)flg1));

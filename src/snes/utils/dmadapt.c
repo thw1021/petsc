@@ -538,7 +538,6 @@ static PetscErrorCode DMAdaptorAdapt_Sequence_Private(DMAdaptor adaptor, Vec inx
   MPI_Comm       comm;
   PetscInt       numAdapt = adaptor->numSeq, adaptIter;
   PetscInt       dim, coordDim, numFields, cStart, cEnd, c;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMViewFromOptions(adaptor->idm, NULL, "-dm_adapt_pre_view"));
@@ -645,7 +644,7 @@ static PetscErrorCode DMAdaptorAdapt_Sequence_Private(DMAdaptor adaptor, Vec inx
                            const PetscInt[], const PetscInt[], const PetscScalar[], const PetscScalar[], const PetscScalar[],
                            PetscReal, const PetscReal[], PetscInt, const PetscScalar[], PetscScalar[]);
 
-      ierr = PetscMalloc(1, &funcs);
+      CHKERRQ(PetscMalloc(1, &funcs));
       funcs[0] = identityFunc;
 
       /*     Setup finite element spaces */

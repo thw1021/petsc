@@ -2337,7 +2337,6 @@ PETSC_EXTERN PetscErrorCode VecCUDAGetArray(Vec v, PetscScalar **a)
   PetscCheckTypeNames(v,VECSEQCUDA,VECMPICUDA);
  #if defined(PETSC_HAVE_CUDA)
   {
-    PetscErrorCode ierr;
     CHKERRQ(VecCUDACopyToGPU(v));
     *a   = ((Vec_CUDA*)v->spptr)->GPUarray;
   }
@@ -2476,7 +2475,6 @@ PETSC_EXTERN PetscErrorCode VecCUDAGetArrayWrite(Vec v, PetscScalar **a)
   PetscCheckTypeNames(v,VECSEQCUDA,VECMPICUDA);
  #if defined(PETSC_HAVE_CUDA)
   {
-    PetscErrorCode ierr;
     CHKERRQ(VecCUDAAllocateCheck(v));
     *a   = ((Vec_CUDA*)v->spptr)->GPUarray;
   }
@@ -2581,7 +2579,6 @@ PetscErrorCode VecCUDAPlaceArray(Vec vin,const PetscScalar a[])
 PetscErrorCode VecCUDAReplaceArray(Vec vin,const PetscScalar a[])
 {
 #if defined(PETSC_HAVE_CUDA)
-  cudaError_t err;
 #endif
 
   PetscFunctionBegin;

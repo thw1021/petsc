@@ -460,7 +460,8 @@ static PetscErrorCode PetscSFGetWindow(PetscSF sf,MPI_Datatype unit,void *array,
   case PETSCSF_WINDOW_FLAVOR_DYNAMIC:
     CHKERRMPI(MPI_Win_create_dynamic(w->info,PetscObjectComm((PetscObject)sf),&link->win));
 #if defined(PETSC_HAVE_OMPI_MAJOR_VERSION) /* some OpenMPI versions do not support MPI_Win_attach(win,NULL,0); */
-    CHKERRMPI(MPI_Win_attach(link->win,wsize ? array : &ierr,wsize));
+    int dummy = 0;
+    CHKERRMPI(MPI_Win_attach(link->win,wsize ? array : (void*)&dummy,wsize));
 #else
     CHKERRMPI(MPI_Win_attach(link->win,array,wsize));
 #endif

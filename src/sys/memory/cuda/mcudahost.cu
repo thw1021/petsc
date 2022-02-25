@@ -3,14 +3,12 @@
 
 static PetscErrorCode PetscCUDAHostMalloc(size_t a,PetscBool clear,int lineno,const char function[],const char filename[],void **result)
 {
-  cudaError_t ierr;
   CHKERRCUDA(cudaMallocHost(result,a));
   return 0;
 }
 
 static PetscErrorCode PetscCUDAHostFree(void *aa,int lineno,const char function[],const char filename[])
 {
-  cudaError_t ierr;
   CHKERRCUDA(cudaFreeHost(aa));
   return 0;
 }
