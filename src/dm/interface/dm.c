@@ -6804,7 +6804,9 @@ PetscErrorCode DMProjectCoordinates(DM dm, PetscFE disc)
   ierr = PetscFEView(disc,0);CHKERRQ(ierr);
   if (1) { // Check if the new space is the same as the old modulo quadrature
     PetscDualSpace dsOld, ds;
+    PetscQuadrature quad;
     PetscInt sizeOld, size, dim;
+    PetscTabulation tab;
     const PetscInt *dofOld, *dof;
     ierr = PetscFEGetDualSpace(discOld, &dsOld);CHKERRQ(ierr);
     ierr = PetscFEGetDualSpace(disc, &ds);CHKERRQ(ierr);
@@ -6818,8 +6820,9 @@ PetscErrorCode DMProjectCoordinates(DM dm, PetscFE disc)
       if (dof[d] != dofOld[d]) goto do_project;
     }
     // Spaces are equivalent so we can just use the new discretization without an actual projection
-    ierr = DMSetField(cdmOld, 0, NULL, (PetscObject)disc);CHKERRQ(ierr);
-    ierr = DMCreateDS(cdmOld);CHKERRQ(ierr);
+    ierr = PetscFEGetQuadrature(discOld, &quad);CHKERRQ(ierr);
+    ierr = PetscFESetQuadrature(disc, quad);CHKERRQ(ierr);
+    ierr = PetscFEGetCellTabulation(disc, 1, &tab);CHKERRQ(ierr);
     printf("### SKIPPED:\n");
     PetscFunctionReturn(0);
   }
