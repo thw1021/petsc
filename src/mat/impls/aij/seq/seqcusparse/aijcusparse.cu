@@ -2168,7 +2168,6 @@ static PetscErrorCode MatProductNumeric_SeqAIJCUSPARSE_SeqDENSECUDA(Mat C)
                                    mmdata->matCDescr,cusparse_scalartype,
                                    cusp->spmmAlg,&mmBufferSize);CHKERRCUSPARSE(stat);
     if ((mmdata->mmBuffer && mmdata->mmBufferSize < mmBufferSize) || !mmdata->mmBuffer) {
-      cudaError_t cerr;
       CHKERRCUDA(cudaFree(mmdata->mmBuffer));
       CHKERRCUDA(cudaMalloc(&mmdata->mmBuffer,mmBufferSize));
       mmdata->mmBufferSize = mmBufferSize;
@@ -3019,7 +3018,7 @@ static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat A,Vec xx,Vec yy,Vec zz
 #endif
 
   PetscFunctionBegin;
-  PetscCheckFalse(herm && !trans,PetscObjectComm((PetscObject)A),PETSC_ERR_GPU,"Hermitian and not transpose not supported");
+  if (herm) PetscCheck(trans,PetscObjectComm((PetscObject)A),PETSC_ERR_GPU,"Hermitian and not transpose not supported");
   if (!a->nonzerorowcnt) {
     if (!yy) CHKERRQ(VecSet_SeqCUDA(zz,0));
     else CHKERRQ(VecCopy_SeqCUDA(yy,zz));
@@ -3094,16 +3093,15 @@ static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat A,Vec xx,Vec yy,Vec zz
      #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
       PetscCheckFalse(opA < 0 || opA > 2,PETSC_COMM_SELF,PETSC_ERR_SUP,"cuSPARSE ABI on cusparseOperation_t has changed and PETSc has not been updated accordingly");
       if (!matstruct->cuSpMV[opA].initialized) { /* built on demand */
-        cudaError_t cerr;
         CHKERRCUSPARSE(cusparseCreateDnVec(&matstruct->cuSpMV[opA].vecXDescr,nx,xptr,cusparse_scalartype));
         CHKERRCUSPARSE(cusparseCreateDnVec(&matstruct->cuSpMV[opA].vecYDescr,ny,dptr,cusparse_scalartype));
-        stat = cusparseSpMV_bufferSize(cusparsestruct->handle, opA, matstruct->alpha_one,
-                                matstruct->matDescr,
-                                matstruct->cuSpMV[opA].vecXDescr, beta,
-                                matstruct->cuSpMV[opA].vecYDescr,
-                                cusparse_scalartype,
-                                cusparsestruct->spmvAlg,
-                                &matstruct->cuSpMV[opA].spmvBufferSize);CHKERRCUSPARSE(stat);
+        CHKERRCUSPARSE(cusparseSpMV_bufferSize(cusparsestruct->handle, opA, matstruct->alpha_one,
+                                               matstruct->matDescr,
+                                               matstruct->cuSpMV[opA].vecXDescr, beta,
+                                               matstruct->cuSpMV[opA].vecYDescr,
+                                               cusparse_scalartype,
+                                               cusparsestruct->spmvAlg,
+                                               &matstruct->cuSpMV[opA].spmvBufferSize));
         CHKERRCUDA(cudaMalloc(&matstruct->cuSpMV[opA].spmvBuffer,matstruct->cuSpMV[opA].spmvBufferSize));
 
         matstruct->cuSpMV[opA].initialized = PETSC_TRUE;
@@ -3113,23 +3111,23 @@ static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat A,Vec xx,Vec yy,Vec zz
         CHKERRCUSPARSE(cusparseDnVecSetValues(matstruct->cuSpMV[opA].vecYDescr,dptr));
       }
 
-      stat = cusparseSpMV(cusparsestruct->handle, opA,
-                               matstruct->alpha_one,
-                               matstruct->matDescr, /* built in MatSeqAIJCUSPARSECopyToGPU() or MatSeqAIJCUSPARSEFormExplicitTranspose() */
-                               matstruct->cuSpMV[opA].vecXDescr,
-                               beta,
-                               matstruct->cuSpMV[opA].vecYDescr,
-                               cusparse_scalartype,
-                               cusparsestruct->spmvAlg,
-                               matstruct->cuSpMV[opA].spmvBuffer);CHKERRCUSPARSE(stat);
+      CHKERRCUSPARSE(cusparseSpMV(cusparsestruct->handle, opA,
+                                  matstruct->alpha_one,
+                                  matstruct->matDescr, /* built in MatSeqAIJCUSPARSECopyToGPU() or MatSeqAIJCUSPARSEFormExplicitTranspose() */
+                                  matstruct->cuSpMV[opA].vecXDescr,
+                                  beta,
+                                  matstruct->cuSpMV[opA].vecYDescr,
+                                  cusparse_scalartype,
+                                  cusparsestruct->spmvAlg,
+                                  matstruct->cuSpMV[opA].spmvBuffer));
      #else
       CsrMatrix *mat = (CsrMatrix*)matstruct->mat;
-      stat = cusparse_csr_spmv(cusparsestruct->handle, opA,
-                               mat->num_rows, mat->num_cols,
-                               mat->num_entries, matstruct->alpha_one, matstruct->descr,
-                               mat->values->data().get(), mat->row_offsets->data().get(),
-                               mat->column_indices->data().get(), xptr, beta,
-                               dptr);CHKERRCUSPARSE(stat);
+      CHKERRCUSPARSE(cusparse_csr_spmv(cusparsestruct->handle, opA,
+                                       mat->num_rows, mat->num_cols,
+                                       mat->num_entries, matstruct->alpha_one, matstruct->descr,
+                                       mat->values->data().get(), mat->row_offsets->data().get(),
+                                       mat->column_indices->data().get(), xptr, beta,
+                                       dptr));
      #endif
     } else {
       if (cusparsestruct->nrows) {
@@ -3137,10 +3135,10 @@ static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat A,Vec xx,Vec yy,Vec zz
         SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"MAT_CUSPARSE_ELL and MAT_CUSPARSE_HYB are not supported since CUDA-11.0");
        #else
         cusparseHybMat_t hybMat = (cusparseHybMat_t)matstruct->mat;
-        stat = cusparse_hyb_spmv(cusparsestruct->handle, opA,
-                                 matstruct->alpha_one, matstruct->descr, hybMat,
-                                 xptr, beta,
-                                 dptr);CHKERRCUSPARSE(stat);
+        CHKERRCUSPARSE(cusparse_hyb_spmv(cusparsestruct->handle, opA,
+                                         matstruct->alpha_one, matstruct->descr, hybMat,
+                                         xptr, beta,
+                                         dptr));
        #endif
       }
     }
@@ -3332,8 +3330,8 @@ static PetscErrorCode MatAXPY_SeqAIJCUSPARSE(Mat Y,PetscScalar a,Mat X,MatStruct
   /* if we are here, it means both matrices are bound to GPU */
   CHKERRQ(MatSeqAIJCUSPARSECopyToGPU(Y));
   CHKERRQ(MatSeqAIJCUSPARSECopyToGPU(X));
-  PetscCheckFalse(cy->format != MAT_CUSPARSE_CSR,PetscObjectComm((PetscObject)Y),PETSC_ERR_GPU,"only MAT_CUSPARSE_CSR supported");
-  PetscCheckFalse(cx->format != MAT_CUSPARSE_CSR,PetscObjectComm((PetscObject)X),PETSC_ERR_GPU,"only MAT_CUSPARSE_CSR supported");
+  PetscCheck(cy->format == MAT_CUSPARSE_CSR,PetscObjectComm((PetscObject)Y),PETSC_ERR_GPU,"only MAT_CUSPARSE_CSR supported");
+  PetscCheck(cx->format == MAT_CUSPARSE_CSR,PetscObjectComm((PetscObject)X),PETSC_ERR_GPU,"only MAT_CUSPARSE_CSR supported");
   csry = (CsrMatrix*)cy->mat->mat;
   csrx = (CsrMatrix*)cx->mat->mat;
   /* see if we can turn this into a cublas axpy */
@@ -3348,37 +3346,35 @@ static PetscErrorCode MatAXPY_SeqAIJCUSPARSE(Mat Y,PetscScalar a,Mat X,MatStruct
   if (Y->cmap->n == 1 && str != SAME_NONZERO_PATTERN) str = DIFFERENT_NONZERO_PATTERN;
 
   if (str == SUBSET_NONZERO_PATTERN) {
-    cusparseStatus_t stat;
-    PetscScalar      b = 1.0;
+    PetscScalar b = 1.0;
 #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
-    size_t           bufferSize;
-    void             *buffer;
-    cudaError_t      cerr;
+    size_t      bufferSize;
+    void        *buffer;
 #endif
 
     CHKERRQ(MatSeqAIJCUSPARSEGetArrayRead(X,&ax));
     CHKERRQ(MatSeqAIJCUSPARSEGetArray(Y,&ay));
     CHKERRCUSPARSE(cusparseSetPointerMode(cy->handle, CUSPARSE_POINTER_MODE_HOST));
 #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
-    stat = cusparse_csr_spgeam_bufferSize(cy->handle,Y->rmap->n,Y->cmap->n,
-                                          &a,cx->mat->descr,x->nz,ax,csrx->row_offsets->data().get(),csrx->column_indices->data().get(),
-                                          &b,cy->mat->descr,y->nz,ay,csry->row_offsets->data().get(),csry->column_indices->data().get(),
-                                             cy->mat->descr,      ay,csry->row_offsets->data().get(),csry->column_indices->data().get(),&bufferSize);CHKERRCUSPARSE(stat);
+    CHKERRCUSPARSE(cusparse_csr_spgeam_bufferSize(cy->handle,Y->rmap->n,Y->cmap->n,
+                                                  &a,cx->mat->descr,x->nz,ax,csrx->row_offsets->data().get(),csrx->column_indices->data().get(),
+                                                  &b,cy->mat->descr,y->nz,ay,csry->row_offsets->data().get(),csry->column_indices->data().get(),
+                                                  cy->mat->descr,      ay,csry->row_offsets->data().get(),csry->column_indices->data().get(),&bufferSize));
     CHKERRCUDA(cudaMalloc(&buffer,bufferSize));
     CHKERRQ(PetscLogGpuTimeBegin());
-    stat = cusparse_csr_spgeam(cy->handle,Y->rmap->n,Y->cmap->n,
-                               &a,cx->mat->descr,x->nz,ax,csrx->row_offsets->data().get(),csrx->column_indices->data().get(),
-                               &b,cy->mat->descr,y->nz,ay,csry->row_offsets->data().get(),csry->column_indices->data().get(),
-                                  cy->mat->descr,      ay,csry->row_offsets->data().get(),csry->column_indices->data().get(),buffer);CHKERRCUSPARSE(stat);
+    CHKERRCUSPARSE(cusparse_csr_spgeam(cy->handle,Y->rmap->n,Y->cmap->n,
+                                       &a,cx->mat->descr,x->nz,ax,csrx->row_offsets->data().get(),csrx->column_indices->data().get(),
+                                       &b,cy->mat->descr,y->nz,ay,csry->row_offsets->data().get(),csry->column_indices->data().get(),
+                                       cy->mat->descr,      ay,csry->row_offsets->data().get(),csry->column_indices->data().get(),buffer));
     CHKERRQ(PetscLogGpuFlops(x->nz + y->nz));
     CHKERRQ(PetscLogGpuTimeEnd());
     CHKERRCUDA(cudaFree(buffer));
 #else
     CHKERRQ(PetscLogGpuTimeBegin());
-    stat = cusparse_csr_spgeam(cy->handle,Y->rmap->n,Y->cmap->n,
-                               &a,cx->mat->descr,x->nz,ax,csrx->row_offsets->data().get(),csrx->column_indices->data().get(),
-                               &b,cy->mat->descr,y->nz,ay,csry->row_offsets->data().get(),csry->column_indices->data().get(),
-                                  cy->mat->descr,      ay,csry->row_offsets->data().get(),csry->column_indices->data().get());CHKERRCUSPARSE(stat);
+    CHKERRCUSPARSE(cusparse_csr_spgeam(cy->handle,Y->rmap->n,Y->cmap->n,
+                                       &a,cx->mat->descr,x->nz,ax,csrx->row_offsets->data().get(),csrx->column_indices->data().get(),
+                                       &b,cy->mat->descr,y->nz,ay,csry->row_offsets->data().get(),csry->column_indices->data().get(),
+                                       cy->mat->descr,      ay,csry->row_offsets->data().get(),csry->column_indices->data().get()));
     CHKERRQ(PetscLogGpuFlops(x->nz + y->nz));
     CHKERRQ(PetscLogGpuTimeEnd());
 #endif

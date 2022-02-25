@@ -25,7 +25,6 @@ PetscErrorCode MatMult_SeqCUFFT(Mat A, Vec x, Vec y)
   CHKERRQ(VecGetArray(x, &x_array));
   CHKERRQ(VecGetArray(y, &y_array));
   if (!cufft->p_forward) {
-    cufftResult result;
     /* create a plan, then execute it */
     switch (ndim) {
     case 1:

@@ -1032,7 +1032,6 @@ PetscErrorCode VecConjugate_SeqCUDA(Vec xin)
 {
 #if defined(PETSC_USE_COMPLEX)
   PetscScalar                     *xarray;
-  PetscErrorCode                  ierr;
   PetscInt                        n = xin->map->n;
   thrust::device_ptr<PetscScalar> xptr;
 
