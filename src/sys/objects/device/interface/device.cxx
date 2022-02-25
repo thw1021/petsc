@@ -52,7 +52,7 @@ static_assert(
 
 #define PETSC_DEVICE_CASE(IMPLS,func,...)                                     \
   case PetscConcat_(PETSC_DEVICE_,IMPLS): {                                   \
-    CHKERRQ(PetscConcat_(IMPLS,Device).func(__VA_ARGS__)); \
+    CHKERRQ(PetscConcat_(IMPLS,Device).func(__VA_ARGS__));                    \
   } break
 
 /*
