@@ -1496,7 +1496,7 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
   PetscInt       to_net,from_net,*svto;
   PetscBT        btable;
   PetscPartitioner         part;
-  DMNetworkComponentHeader header;
+  DMNetworkComponentHeader header = NULL;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)*dm,&comm));
@@ -1625,6 +1625,17 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
   }
   newDMnetwork->svertices = subnetvtx;
 
+  /*
+    make sure that
+
+    warning: ‘header’ may be used uninitialized in this function [-Wmaybe-uninitialized]
+    newDMnetwork->subnet[header->subnetid].edges[newDMnetwork->subnet[header->subnetid].nedge++] = e;
+                               ^
+
+    is just an overzealous compiler warning
+  */
+  PetscAssert(header,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Null Pointer: header");
+  PetscAssert(PetscCheckPointer(header,PETSC_CHAR),PETSC_COMM_SELF,PETSC_ERR_ARG_BADPTR,"header bad pointer");
   /* Set the edges and vertices in each subnetwork */
   for (e = newDMnetwork->eStart; e < newDMnetwork->eEnd; e++) {
     CHKERRQ(PetscSectionGetOffset(newDMnetwork->DataSection,e,&offset));
