@@ -14,31 +14,24 @@ PetscInt VecGetSubVectorSavedStateId = -1;
 
 PETSC_EXTERN PetscErrorCode VecValidValues(Vec vec,PetscInt argnum,PetscBool begin)
 {
-#if defined(PETSC_USE_DEBUG)
-  PetscErrorCode    ierr;
-  PetscInt          n,i;
-  const PetscScalar *x;
-
   PetscFunctionBegin;
-#if defined(PETSC_HAVE_DEVICE)
-  if ((vec->petscnative || vec->ops->getarray) && (vec->offloadmask & PETSC_OFFLOAD_CPU)) {
-#else
-  if (vec->petscnative || vec->ops->getarray) {
-#endif
+  if (!PetscDefined(USE_DEBUG)) PetscFunctionReturn(0);
+  if ((vec->petscnative || vec->ops->getarray) && (PetscDefined(HAVE_DEVICE) ? vec->offloadmask & PETSC_OFFLOAD_CPU : 1)) {
+    PetscErrorCode    ierr;
+    PetscInt           n;
+    const PetscScalar *x;
+
     ierr = VecGetLocalSize(vec,&n);CHKERRQ(ierr);
     ierr = VecGetArrayRead(vec,&x);CHKERRQ(ierr);
-    for (i=0; i<n; i++) {
+    for (PetscInt i=0; i<n; i++) {
       if (begin) {
-        PetscCheckFalse(PetscIsInfOrNanScalar(x[i]),PETSC_COMM_SELF,PETSC_ERR_FP,"Vec entry at local location %" PetscInt_FMT " is not-a-number or infinite at beginning of function: Parameter number %" PetscInt_FMT,i,argnum);
+        PetscCheck(!PetscIsInfOrNanScalar(x[i]),PETSC_COMM_SELF,PETSC_ERR_FP,"Vec entry at local location %" PetscInt_FMT " is not-a-number or infinite at beginning of function: Parameter number %" PetscInt_FMT,i,argnum);
       } else {
-        PetscCheckFalse(PetscIsInfOrNanScalar(x[i]),PETSC_COMM_SELF,PETSC_ERR_FP,"Vec entry at local location %" PetscInt_FMT " is not-a-number or infinite at end of function: Parameter number %" PetscInt_FMT,i,argnum);
+        PetscCheck(!PetscIsInfOrNanScalar(x[i]),PETSC_COMM_SELF,PETSC_ERR_FP,"Vec entry at local location %" PetscInt_FMT " is not-a-number or infinite at end of function: Parameter number %" PetscInt_FMT,i,argnum);
       }
     }
     ierr = VecRestoreArrayRead(vec,&x);CHKERRQ(ierr);
   }
-#else
-  PetscFunctionBegin;
-#endif
   PetscFunctionReturn(0);
 }
 
