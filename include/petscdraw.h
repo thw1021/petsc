@@ -325,6 +325,7 @@ PETSC_EXTERN_TYPEDEF typedef void (*PetscXIOErrorHandler)(void *);
 PETSC_EXTERN PetscXIOErrorHandler PetscSetXIOErrorHandler(PetscXIOErrorHandler);
 
 #define PetscDrawCollectiveBegin(draw) 0; do {                                                 \
+  PetscErrorCode                _ierr_draw_collective_;                                        \
   jmp_buf                       _Petsc_jmpbuf;                                                 \
   volatile PetscXIOErrorHandler _Petsc_xioerrhdl=NULL;                                         \
   PetscBool                     _Petsc_isdrawx,_Petsc_xioerr,_Petsc_xioerr_local=PETSC_FALSE;  \
@@ -334,7 +335,9 @@ PETSC_EXTERN PetscXIOErrorHandler PetscSetXIOErrorHandler(PetscXIOErrorHandler);
   _Petsc_xioerrhdl = PetscSetXIOErrorHandler(PetscXIOErrorHandlerJump);                        \
   if (setjmp(PetscXIOErrorHandlerJumpBuf)) {                                                   \
     _Petsc_xioerr_local = PETSC_TRUE;                                                          \
-    do { PetscErrorCode ierr_draw_ = PetscDrawCollectiveEnd(draw);CHKERRQ(ierr_draw_); }       \
+    do {                                                                                       \
+      _ierr_draw_collective_ = PetscDrawCollectiveEnd(draw);CHKERRQ(_ierr_draw_collective_);   \
+    }                                                                                          \
   }                                                                                            \
   do {} while (0)
 
