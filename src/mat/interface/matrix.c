@@ -570,17 +570,13 @@ PetscErrorCode MatGetRow(Mat mat,PetscInt row,PetscInt *ncols,const PetscInt *co
 @*/
 PetscErrorCode MatConjugate(Mat mat)
 {
-#if defined(PETSC_USE_COMPLEX)
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
-  PetscCheckFalse(!mat->assembled,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled matrix");
-  PetscCheckFalse(!mat->ops->conjugate,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Not provided for matrix type %s, send email to petsc-maint@mcs.anl.gov",((PetscObject)mat)->type_name);
-  CHKERRQ((*mat->ops->conjugate)(mat));
-#else
-  PetscFunctionBegin;
-#endif
+  PetscCheck(mat->assembled,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled matrix");
+  if (PetscDefined(USE_COMPLEX)) {
+    PetscCheck(mat->ops->conjugate,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Not provided for matrix type %s, send email to petsc-maint@mcs.anl.gov",((PetscObject)mat)->type_name);
+    CHKERRQ((*mat->ops->conjugate)(mat));
+  }
   PetscFunctionReturn(0);
 }
 

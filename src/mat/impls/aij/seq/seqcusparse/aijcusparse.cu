@@ -419,7 +419,6 @@ static PetscErrorCode MatSeqAIJCUSPARSEBuildILULowerTriMatrix(Mat A)
   PetscInt                          n = A->rmap->n;
   Mat_SeqAIJCUSPARSETriFactors      *cusparseTriFactors = (Mat_SeqAIJCUSPARSETriFactors*)A->spptr;
   Mat_SeqAIJCUSPARSETriFactorStruct *loTriFactor = (Mat_SeqAIJCUSPARSETriFactorStruct*)cusparseTriFactors->loTriFactorPtr;
-  cusparseStatus_t                  stat;
   const PetscInt                    *ai = a->i,*aj = a->j,*vi;
   const MatScalar                   *aa = a->a,*v;
   PetscInt                          *AiLo, *AjLo;
@@ -503,25 +502,25 @@ static PetscErrorCode MatSeqAIJCUSPARSEBuildILULowerTriMatrix(Mat A)
         CHKERRQ(PetscLogEventBegin(MAT_CUSPARSESolveAnalysis,A,0,0,0));
         CHKERRCUSPARSE(cusparse_create_analysis_info(&loTriFactor->solveInfo));
       #if PETSC_PKG_CUDA_VERSION_GE(9,0,0)
-        stat = cusparse_get_svbuffsize(cusparseTriFactors->handle, loTriFactor->solveOp,
-                                       loTriFactor->csrMat->num_rows, loTriFactor->csrMat->num_entries, loTriFactor->descr,
-                                       loTriFactor->csrMat->values->data().get(), loTriFactor->csrMat->row_offsets->data().get(),
-                                       loTriFactor->csrMat->column_indices->data().get(), loTriFactor->solveInfo,
-                                       &loTriFactor->solveBufferSize);CHKERRCUSPARSE(stat);
+        CHKERRCUSPARSE(cusparse_get_svbuffsize(cusparseTriFactors->handle, loTriFactor->solveOp,
+                                               loTriFactor->csrMat->num_rows, loTriFactor->csrMat->num_entries, loTriFactor->descr,
+                                               loTriFactor->csrMat->values->data().get(), loTriFactor->csrMat->row_offsets->data().get(),
+                                               loTriFactor->csrMat->column_indices->data().get(), loTriFactor->solveInfo,
+                                               &loTriFactor->solveBufferSize));
         CHKERRCUDA(cudaMalloc(&loTriFactor->solveBuffer,loTriFactor->solveBufferSize));
       #endif
 
         /* perform the solve analysis */
-        stat = cusparse_analysis(cusparseTriFactors->handle, loTriFactor->solveOp,
-                                 loTriFactor->csrMat->num_rows, loTriFactor->csrMat->num_entries, loTriFactor->descr,
-                                 loTriFactor->csrMat->values->data().get(), loTriFactor->csrMat->row_offsets->data().get(),
-                                 loTriFactor->csrMat->column_indices->data().get(),
-                               #if PETSC_PKG_CUDA_VERSION_GE(9,0,0)
-                                 loTriFactor->solveInfo,
-                                 loTriFactor->solvePolicy, loTriFactor->solveBuffer);CHKERRCUSPARSE(stat);
-                               #else
-                                 loTriFactor->solveInfo);CHKERRCUSPARSE(stat);
-                               #endif
+        CHKERRCUSPARSE(cusparse_analysis(cusparseTriFactors->handle, loTriFactor->solveOp,
+                                         loTriFactor->csrMat->num_rows, loTriFactor->csrMat->num_entries, loTriFactor->descr,
+                                         loTriFactor->csrMat->values->data().get(), loTriFactor->csrMat->row_offsets->data().get(),
+                                         loTriFactor->csrMat->column_indices->data().get(),
+                                         #if PETSC_PKG_CUDA_VERSION_GE(9,0,0)
+                                         loTriFactor->solveInfo,
+                                         loTriFactor->solvePolicy, loTriFactor->solveBuffer));
+                                         #else
+                                         loTriFactor->solveInfo));
+                                         #endif
         CHKERRCUDA(WaitForCUDA());
         CHKERRQ(PetscLogEventEnd(MAT_CUSPARSESolveAnalysis,A,0,0,0));
 
@@ -564,7 +563,6 @@ static PetscErrorCode MatSeqAIJCUSPARSEBuildILUUpperTriMatrix(Mat A)
   PetscInt                          n = A->rmap->n;
   Mat_SeqAIJCUSPARSETriFactors      *cusparseTriFactors = (Mat_SeqAIJCUSPARSETriFactors*)A->spptr;
   Mat_SeqAIJCUSPARSETriFactorStruct *upTriFactor = (Mat_SeqAIJCUSPARSETriFactorStruct*)cusparseTriFactors->upTriFactorPtr;
-  cusparseStatus_t                  stat;
   const PetscInt                    *aj = a->j,*adiag = a->diag,*vi;
   const MatScalar                   *aa = a->a,*v;
   PetscInt                          *AiUp, *AjUp;
@@ -645,25 +643,25 @@ static PetscErrorCode MatSeqAIJCUSPARSEBuildILUUpperTriMatrix(Mat A)
         CHKERRQ(PetscLogEventBegin(MAT_CUSPARSESolveAnalysis,A,0,0,0));
         CHKERRCUSPARSE(cusparse_create_analysis_info(&upTriFactor->solveInfo));
       #if PETSC_PKG_CUDA_VERSION_GE(9,0,0)
-        stat = cusparse_get_svbuffsize(cusparseTriFactors->handle, upTriFactor->solveOp,
-                                     upTriFactor->csrMat->num_rows, upTriFactor->csrMat->num_entries, upTriFactor->descr,
-                                     upTriFactor->csrMat->values->data().get(), upTriFactor->csrMat->row_offsets->data().get(),
-                                     upTriFactor->csrMat->column_indices->data().get(), upTriFactor->solveInfo,
-                                     &upTriFactor->solveBufferSize);CHKERRCUSPARSE(stat);
+        CHKERRCUSPARSE(cusparse_get_svbuffsize(cusparseTriFactors->handle, upTriFactor->solveOp,
+                                               upTriFactor->csrMat->num_rows, upTriFactor->csrMat->num_entries, upTriFactor->descr,
+                                               upTriFactor->csrMat->values->data().get(), upTriFactor->csrMat->row_offsets->data().get(),
+                                               upTriFactor->csrMat->column_indices->data().get(), upTriFactor->solveInfo,
+                                               &upTriFactor->solveBufferSize));
         CHKERRCUDA(cudaMalloc(&upTriFactor->solveBuffer,upTriFactor->solveBufferSize));
       #endif
 
         /* perform the solve analysis */
-        stat = cusparse_analysis(cusparseTriFactors->handle, upTriFactor->solveOp,
-                                 upTriFactor->csrMat->num_rows, upTriFactor->csrMat->num_entries, upTriFactor->descr,
-                                 upTriFactor->csrMat->values->data().get(), upTriFactor->csrMat->row_offsets->data().get(),
-                                 upTriFactor->csrMat->column_indices->data().get(),
-                               #if PETSC_PKG_CUDA_VERSION_GE(9,0,0)
-                                 upTriFactor->solveInfo,
-                                 upTriFactor->solvePolicy, upTriFactor->solveBuffer);CHKERRCUSPARSE(stat);
-                               #else
-                                 upTriFactor->solveInfo);CHKERRCUSPARSE(stat);
-                               #endif
+        CHKERRCUSPARSE(cusparse_analysis(cusparseTriFactors->handle, upTriFactor->solveOp,
+                                         upTriFactor->csrMat->num_rows, upTriFactor->csrMat->num_entries, upTriFactor->descr,
+                                         upTriFactor->csrMat->values->data().get(), upTriFactor->csrMat->row_offsets->data().get(),
+                                         upTriFactor->csrMat->column_indices->data().get(),
+                                         #if PETSC_PKG_CUDA_VERSION_GE(9,0,0)
+                                         upTriFactor->solveInfo,
+                                         upTriFactor->solvePolicy, upTriFactor->solveBuffer));
+                                         #else
+                                         upTriFactor->solveInfo));
+                                         #endif
         CHKERRCUDA(WaitForCUDA());
         CHKERRQ(PetscLogEventEnd(MAT_CUSPARSESolveAnalysis,A,0,0,0));
 
@@ -751,7 +749,6 @@ static PetscErrorCode MatSeqAIJCUSPARSEBuildICCTriMatrices(Mat A)
   Mat_SeqAIJCUSPARSETriFactors      *cusparseTriFactors = (Mat_SeqAIJCUSPARSETriFactors*)A->spptr;
   Mat_SeqAIJCUSPARSETriFactorStruct *loTriFactor = (Mat_SeqAIJCUSPARSETriFactorStruct*)cusparseTriFactors->loTriFactorPtr;
   Mat_SeqAIJCUSPARSETriFactorStruct *upTriFactor = (Mat_SeqAIJCUSPARSETriFactorStruct*)cusparseTriFactors->upTriFactorPtr;
-  cusparseStatus_t                  stat;
   PetscInt                          *AiUp, *AjUp;
   PetscScalar                       *AAUp;
   PetscScalar                       *AALo;
@@ -836,25 +833,25 @@ static PetscErrorCode MatSeqAIJCUSPARSEBuildICCTriMatrices(Mat A)
         CHKERRQ(PetscLogEventBegin(MAT_CUSPARSESolveAnalysis,A,0,0,0));
         CHKERRCUSPARSE(cusparse_create_analysis_info(&upTriFactor->solveInfo));
       #if PETSC_PKG_CUDA_VERSION_GE(9,0,0)
-        stat = cusparse_get_svbuffsize(cusparseTriFactors->handle, upTriFactor->solveOp,
-                                       upTriFactor->csrMat->num_rows, upTriFactor->csrMat->num_entries, upTriFactor->descr,
-                                       upTriFactor->csrMat->values->data().get(), upTriFactor->csrMat->row_offsets->data().get(),
-                                       upTriFactor->csrMat->column_indices->data().get(), upTriFactor->solveInfo,
-                                       &upTriFactor->solveBufferSize);CHKERRCUSPARSE(stat);
+        CHKERRCUSPARSE(cusparse_get_svbuffsize(cusparseTriFactors->handle, upTriFactor->solveOp,
+                                               upTriFactor->csrMat->num_rows, upTriFactor->csrMat->num_entries, upTriFactor->descr,
+                                               upTriFactor->csrMat->values->data().get(), upTriFactor->csrMat->row_offsets->data().get(),
+                                               upTriFactor->csrMat->column_indices->data().get(), upTriFactor->solveInfo,
+                                               &upTriFactor->solveBufferSize));
         CHKERRCUDA(cudaMalloc(&upTriFactor->solveBuffer,upTriFactor->solveBufferSize));
       #endif
 
         /* perform the solve analysis */
-        stat = cusparse_analysis(cusparseTriFactors->handle, upTriFactor->solveOp,
-                                 upTriFactor->csrMat->num_rows, upTriFactor->csrMat->num_entries, upTriFactor->descr,
-                                 upTriFactor->csrMat->values->data().get(), upTriFactor->csrMat->row_offsets->data().get(),
-                                 upTriFactor->csrMat->column_indices->data().get(),
-                                #if PETSC_PKG_CUDA_VERSION_GE(9,0,0)
-                                 upTriFactor->solveInfo,
-                                 upTriFactor->solvePolicy, upTriFactor->solveBuffer);CHKERRCUSPARSE(stat);
-                                #else
-                                  upTriFactor->solveInfo);CHKERRCUSPARSE(stat);
-                                #endif
+        CHKERRCUSPARSE(cusparse_analysis(cusparseTriFactors->handle, upTriFactor->solveOp,
+                                         upTriFactor->csrMat->num_rows, upTriFactor->csrMat->num_entries, upTriFactor->descr,
+                                         upTriFactor->csrMat->values->data().get(), upTriFactor->csrMat->row_offsets->data().get(),
+                                         upTriFactor->csrMat->column_indices->data().get(),
+                                         #if PETSC_PKG_CUDA_VERSION_GE(9,0,0)
+                                         upTriFactor->solveInfo,
+                                         upTriFactor->solvePolicy, upTriFactor->solveBuffer));
+                                         #else
+                                         upTriFactor->solveInfo));
+                                         #endif
         CHKERRCUDA(WaitForCUDA());
         CHKERRQ(PetscLogEventEnd(MAT_CUSPARSESolveAnalysis,A,0,0,0));
 
@@ -898,25 +895,25 @@ static PetscErrorCode MatSeqAIJCUSPARSEBuildICCTriMatrices(Mat A)
         CHKERRQ(PetscLogEventBegin(MAT_CUSPARSESolveAnalysis,A,0,0,0));
         CHKERRCUSPARSE(cusparse_create_analysis_info(&loTriFactor->solveInfo));
       #if PETSC_PKG_CUDA_VERSION_GE(9,0,0)
-        stat = cusparse_get_svbuffsize(cusparseTriFactors->handle, loTriFactor->solveOp,
-                                       loTriFactor->csrMat->num_rows, loTriFactor->csrMat->num_entries, loTriFactor->descr,
-                                       loTriFactor->csrMat->values->data().get(), loTriFactor->csrMat->row_offsets->data().get(),
-                                       loTriFactor->csrMat->column_indices->data().get(), loTriFactor->solveInfo,
-                                       &loTriFactor->solveBufferSize);CHKERRCUSPARSE(stat);
+        CHKERRCUSPARSE(cusparse_get_svbuffsize(cusparseTriFactors->handle, loTriFactor->solveOp,
+                                               loTriFactor->csrMat->num_rows, loTriFactor->csrMat->num_entries, loTriFactor->descr,
+                                               loTriFactor->csrMat->values->data().get(), loTriFactor->csrMat->row_offsets->data().get(),
+                                               loTriFactor->csrMat->column_indices->data().get(), loTriFactor->solveInfo,
+                                               &loTriFactor->solveBufferSize));
         CHKERRCUDA(cudaMalloc(&loTriFactor->solveBuffer,loTriFactor->solveBufferSize));
       #endif
 
         /* perform the solve analysis */
-        stat = cusparse_analysis(cusparseTriFactors->handle, loTriFactor->solveOp,
-                                 loTriFactor->csrMat->num_rows, loTriFactor->csrMat->num_entries, loTriFactor->descr,
-                                 loTriFactor->csrMat->values->data().get(), loTriFactor->csrMat->row_offsets->data().get(),
-                                 loTriFactor->csrMat->column_indices->data().get(),
-                                #if PETSC_PKG_CUDA_VERSION_GE(9,0,0)
-                                 loTriFactor->solveInfo,
-                                 loTriFactor->solvePolicy, loTriFactor->solveBuffer);CHKERRCUSPARSE(stat);
-                                #else
-                                 loTriFactor->solveInfo);CHKERRCUSPARSE(stat);
-                                #endif
+        CHKERRCUSPARSE(cusparse_analysis(cusparseTriFactors->handle, loTriFactor->solveOp,
+                                         loTriFactor->csrMat->num_rows, loTriFactor->csrMat->num_entries, loTriFactor->descr,
+                                         loTriFactor->csrMat->values->data().get(), loTriFactor->csrMat->row_offsets->data().get(),
+                                         loTriFactor->csrMat->column_indices->data().get(),
+                                         #if PETSC_PKG_CUDA_VERSION_GE(9,0,0)
+                                         loTriFactor->solveInfo,
+                                         loTriFactor->solvePolicy, loTriFactor->solveBuffer));
+                                         #else
+                                         loTriFactor->solveInfo));
+                                         #endif
         CHKERRCUDA(WaitForCUDA());
         CHKERRQ(PetscLogEventEnd(MAT_CUSPARSESolveAnalysis,A,0,0,0));
 
@@ -1036,7 +1033,6 @@ static PetscErrorCode MatSeqAIJCUSPARSEAnalyzeTransposeForSolve(Mat A)
   Mat_SeqAIJCUSPARSETriFactorStruct *upTriFactor = (Mat_SeqAIJCUSPARSETriFactorStruct*)cusparseTriFactors->upTriFactorPtr;
   Mat_SeqAIJCUSPARSETriFactorStruct *loTriFactorT;
   Mat_SeqAIJCUSPARSETriFactorStruct *upTriFactorT;
-  cusparseStatus_t                  stat;
   cusparseIndexBase_t               indexBase;
   cusparseMatrixType_t              matrixType;
   cusparseFillMode_t                fillMode;
@@ -1075,33 +1071,33 @@ static PetscErrorCode MatSeqAIJCUSPARSEAnalyzeTransposeForSolve(Mat A)
 
   /* compute the transpose of the lower triangular factor, i.e. the CSC */
 #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
-  stat = cusparseCsr2cscEx2_bufferSize(cusparseTriFactors->handle, loTriFactor->csrMat->num_rows,
-                                       loTriFactor->csrMat->num_cols, loTriFactor->csrMat->num_entries,
-                                       loTriFactor->csrMat->values->data().get(),
-                                       loTriFactor->csrMat->row_offsets->data().get(),
-                                       loTriFactor->csrMat->column_indices->data().get(),
-                                       loTriFactorT->csrMat->values->data().get(),
-                                       loTriFactorT->csrMat->row_offsets->data().get(), loTriFactorT->csrMat->column_indices->data().get(), cusparse_scalartype,
-                                       CUSPARSE_ACTION_NUMERIC,indexBase,
-                                       CUSPARSE_CSR2CSC_ALG1, &loTriFactor->csr2cscBufferSize);CHKERRCUSPARSE(stat);
+  CHKERRCUSPARSE(cusparseCsr2cscEx2_bufferSize(cusparseTriFactors->handle, loTriFactor->csrMat->num_rows,
+                                               loTriFactor->csrMat->num_cols, loTriFactor->csrMat->num_entries,
+                                               loTriFactor->csrMat->values->data().get(),
+                                               loTriFactor->csrMat->row_offsets->data().get(),
+                                               loTriFactor->csrMat->column_indices->data().get(),
+                                               loTriFactorT->csrMat->values->data().get(),
+                                               loTriFactorT->csrMat->row_offsets->data().get(), loTriFactorT->csrMat->column_indices->data().get(), cusparse_scalartype,
+                                               CUSPARSE_ACTION_NUMERIC,indexBase,
+                                               CUSPARSE_CSR2CSC_ALG1, &loTriFactor->csr2cscBufferSize));
   CHKERRCUDA(cudaMalloc(&loTriFactor->csr2cscBuffer,loTriFactor->csr2cscBufferSize));
 #endif
 
   CHKERRQ(PetscLogEventBegin(MAT_CUSPARSEGenerateTranspose,A,0,0,0));
-  stat = cusparse_csr2csc(cusparseTriFactors->handle, loTriFactor->csrMat->num_rows,
-                          loTriFactor->csrMat->num_cols, loTriFactor->csrMat->num_entries,
-                          loTriFactor->csrMat->values->data().get(),
-                          loTriFactor->csrMat->row_offsets->data().get(),
-                          loTriFactor->csrMat->column_indices->data().get(),
-                          loTriFactorT->csrMat->values->data().get(),
-                        #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
-                          loTriFactorT->csrMat->row_offsets->data().get(), loTriFactorT->csrMat->column_indices->data().get(), cusparse_scalartype,
-                          CUSPARSE_ACTION_NUMERIC, indexBase,
-                          CUSPARSE_CSR2CSC_ALG1, loTriFactor->csr2cscBuffer);CHKERRCUSPARSE(stat);
-                        #else
-                          loTriFactorT->csrMat->column_indices->data().get(), loTriFactorT->csrMat->row_offsets->data().get(),
-                          CUSPARSE_ACTION_NUMERIC, indexBase);CHKERRCUSPARSE(stat);
-                        #endif
+  CHKERRCUSPARSE(cusparse_csr2csc(cusparseTriFactors->handle, loTriFactor->csrMat->num_rows,
+                                  loTriFactor->csrMat->num_cols, loTriFactor->csrMat->num_entries,
+                                  loTriFactor->csrMat->values->data().get(),
+                                  loTriFactor->csrMat->row_offsets->data().get(),
+                                  loTriFactor->csrMat->column_indices->data().get(),
+                                  loTriFactorT->csrMat->values->data().get(),
+                                  #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
+                                  loTriFactorT->csrMat->row_offsets->data().get(), loTriFactorT->csrMat->column_indices->data().get(), cusparse_scalartype,
+                                  CUSPARSE_ACTION_NUMERIC, indexBase,
+                                  CUSPARSE_CSR2CSC_ALG1, loTriFactor->csr2cscBuffer));
+                                  #else
+                                  loTriFactorT->csrMat->column_indices->data().get(), loTriFactorT->csrMat->row_offsets->data().get(),
+                                  CUSPARSE_ACTION_NUMERIC, indexBase));
+                                  #endif
   CHKERRCUDA(WaitForCUDA());
   CHKERRQ(PetscLogEventBegin(MAT_CUSPARSEGenerateTranspose,A,0,0,0));
 
@@ -1109,25 +1105,25 @@ static PetscErrorCode MatSeqAIJCUSPARSEAnalyzeTransposeForSolve(Mat A)
   CHKERRQ(PetscLogEventBegin(MAT_CUSPARSESolveAnalysis,A,0,0,0));
   CHKERRCUSPARSE(cusparse_create_analysis_info(&loTriFactorT->solveInfo));
 #if PETSC_PKG_CUDA_VERSION_GE(9,0,0)
-  stat = cusparse_get_svbuffsize(cusparseTriFactors->handle, loTriFactorT->solveOp,
-                                loTriFactorT->csrMat->num_rows, loTriFactorT->csrMat->num_entries, loTriFactorT->descr,
-                                loTriFactorT->csrMat->values->data().get(), loTriFactorT->csrMat->row_offsets->data().get(),
-                                loTriFactorT->csrMat->column_indices->data().get(), loTriFactorT->solveInfo,
-                                &loTriFactorT->solveBufferSize);CHKERRCUSPARSE(stat);
+  CHKERRCUSPARSE(cusparse_get_svbuffsize(cusparseTriFactors->handle, loTriFactorT->solveOp,
+                                         loTriFactorT->csrMat->num_rows, loTriFactorT->csrMat->num_entries, loTriFactorT->descr,
+                                         loTriFactorT->csrMat->values->data().get(), loTriFactorT->csrMat->row_offsets->data().get(),
+                                         loTriFactorT->csrMat->column_indices->data().get(), loTriFactorT->solveInfo,
+                                         &loTriFactorT->solveBufferSize));
   CHKERRCUDA(cudaMalloc(&loTriFactorT->solveBuffer,loTriFactorT->solveBufferSize));
 #endif
 
   /* perform the solve analysis */
-  stat = cusparse_analysis(cusparseTriFactors->handle, loTriFactorT->solveOp,
-                           loTriFactorT->csrMat->num_rows, loTriFactorT->csrMat->num_entries, loTriFactorT->descr,
-                           loTriFactorT->csrMat->values->data().get(), loTriFactorT->csrMat->row_offsets->data().get(),
-                           loTriFactorT->csrMat->column_indices->data().get(),
-                          #if PETSC_PKG_CUDA_VERSION_GE(9,0,0)
-                           loTriFactorT->solveInfo,
-                           loTriFactorT->solvePolicy, loTriFactorT->solveBuffer);CHKERRCUSPARSE(stat);
-                          #else
-                           loTriFactorT->solveInfo);CHKERRCUSPARSE(stat);
-                          #endif
+  CHKERRCUSPARSE(cusparse_analysis(cusparseTriFactors->handle, loTriFactorT->solveOp,
+                                   loTriFactorT->csrMat->num_rows, loTriFactorT->csrMat->num_entries, loTriFactorT->descr,
+                                   loTriFactorT->csrMat->values->data().get(), loTriFactorT->csrMat->row_offsets->data().get(),
+                                   loTriFactorT->csrMat->column_indices->data().get(),
+                                   #if PETSC_PKG_CUDA_VERSION_GE(9,0,0)
+                                   loTriFactorT->solveInfo,
+                                   loTriFactorT->solvePolicy, loTriFactorT->solveBuffer));
+                                   #else
+                                   loTriFactorT->solveInfo));
+                                   #endif
   CHKERRCUDA(WaitForCUDA());
   CHKERRQ(PetscLogEventEnd(MAT_CUSPARSESolveAnalysis,A,0,0,0));
 
@@ -1170,33 +1166,33 @@ static PetscErrorCode MatSeqAIJCUSPARSEAnalyzeTransposeForSolve(Mat A)
 
   /* compute the transpose of the upper triangular factor, i.e. the CSC */
 #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
-  stat = cusparseCsr2cscEx2_bufferSize(cusparseTriFactors->handle,upTriFactor->csrMat->num_rows,
-                                upTriFactor->csrMat->num_cols, upTriFactor->csrMat->num_entries,
-                                upTriFactor->csrMat->values->data().get(),
-                                upTriFactor->csrMat->row_offsets->data().get(),
-                                upTriFactor->csrMat->column_indices->data().get(),
-                                upTriFactorT->csrMat->values->data().get(),
-                                upTriFactorT->csrMat->row_offsets->data().get(), upTriFactorT->csrMat->column_indices->data().get(), cusparse_scalartype,
-                                CUSPARSE_ACTION_NUMERIC,indexBase,
-                                CUSPARSE_CSR2CSC_ALG1, &upTriFactor->csr2cscBufferSize);CHKERRCUSPARSE(stat);
+  CHKERRCUSPARSE(cusparseCsr2cscEx2_bufferSize(cusparseTriFactors->handle,upTriFactor->csrMat->num_rows,
+                                               upTriFactor->csrMat->num_cols, upTriFactor->csrMat->num_entries,
+                                               upTriFactor->csrMat->values->data().get(),
+                                               upTriFactor->csrMat->row_offsets->data().get(),
+                                               upTriFactor->csrMat->column_indices->data().get(),
+                                               upTriFactorT->csrMat->values->data().get(),
+                                               upTriFactorT->csrMat->row_offsets->data().get(), upTriFactorT->csrMat->column_indices->data().get(), cusparse_scalartype,
+                                               CUSPARSE_ACTION_NUMERIC,indexBase,
+                                               CUSPARSE_CSR2CSC_ALG1, &upTriFactor->csr2cscBufferSize));
   CHKERRCUDA(cudaMalloc(&upTriFactor->csr2cscBuffer,upTriFactor->csr2cscBufferSize));
 #endif
 
   CHKERRQ(PetscLogEventBegin(MAT_CUSPARSEGenerateTranspose,A,0,0,0));
-  stat = cusparse_csr2csc(cusparseTriFactors->handle, upTriFactor->csrMat->num_rows,
-                          upTriFactor->csrMat->num_cols, upTriFactor->csrMat->num_entries,
-                          upTriFactor->csrMat->values->data().get(),
-                          upTriFactor->csrMat->row_offsets->data().get(),
-                          upTriFactor->csrMat->column_indices->data().get(),
-                          upTriFactorT->csrMat->values->data().get(),
-                        #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
-                          upTriFactorT->csrMat->row_offsets->data().get(), upTriFactorT->csrMat->column_indices->data().get(), cusparse_scalartype,
-                          CUSPARSE_ACTION_NUMERIC, indexBase,
-                          CUSPARSE_CSR2CSC_ALG1, upTriFactor->csr2cscBuffer);CHKERRCUSPARSE(stat);
-                        #else
-                          upTriFactorT->csrMat->column_indices->data().get(), upTriFactorT->csrMat->row_offsets->data().get(),
-                          CUSPARSE_ACTION_NUMERIC, indexBase);CHKERRCUSPARSE(stat);
-                        #endif
+  CHKERRCUSPARSE(cusparse_csr2csc(cusparseTriFactors->handle, upTriFactor->csrMat->num_rows,
+                                  upTriFactor->csrMat->num_cols, upTriFactor->csrMat->num_entries,
+                                  upTriFactor->csrMat->values->data().get(),
+                                  upTriFactor->csrMat->row_offsets->data().get(),
+                                  upTriFactor->csrMat->column_indices->data().get(),
+                                  upTriFactorT->csrMat->values->data().get(),
+                                  #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
+                                  upTriFactorT->csrMat->row_offsets->data().get(), upTriFactorT->csrMat->column_indices->data().get(), cusparse_scalartype,
+                                  CUSPARSE_ACTION_NUMERIC, indexBase,
+                                  CUSPARSE_CSR2CSC_ALG1, upTriFactor->csr2cscBuffer));
+                                  #else
+                                  upTriFactorT->csrMat->column_indices->data().get(), upTriFactorT->csrMat->row_offsets->data().get(),
+                                 CUSPARSE_ACTION_NUMERIC, indexBase));
+                                 #endif
 
   CHKERRCUDA(WaitForCUDA());
   CHKERRQ(PetscLogEventBegin(MAT_CUSPARSEGenerateTranspose,A,0,0,0));
@@ -1205,25 +1201,26 @@ static PetscErrorCode MatSeqAIJCUSPARSEAnalyzeTransposeForSolve(Mat A)
   CHKERRQ(PetscLogEventBegin(MAT_CUSPARSESolveAnalysis,A,0,0,0));
   CHKERRCUSPARSE(cusparse_create_analysis_info(&upTriFactorT->solveInfo));
   #if PETSC_PKG_CUDA_VERSION_GE(9,0,0)
-  stat = cusparse_get_svbuffsize(cusparseTriFactors->handle, upTriFactorT->solveOp,
-                                 upTriFactorT->csrMat->num_rows, upTriFactorT->csrMat->num_entries, upTriFactorT->descr,
-                                 upTriFactorT->csrMat->values->data().get(), upTriFactorT->csrMat->row_offsets->data().get(),
-                                 upTriFactorT->csrMat->column_indices->data().get(), upTriFactorT->solveInfo,
-                                 &upTriFactorT->solveBufferSize);CHKERRCUSPARSE(stat);
+  CHKERRCUSPARSE(cusparse_get_svbuffsize(cusparseTriFactors->handle, upTriFactorT->solveOp,
+                                         upTriFactorT->csrMat->num_rows, upTriFactorT->csrMat->num_entries, upTriFactorT->descr,
+                                         upTriFactorT->csrMat->values->data().get(), upTriFactorT->csrMat->row_offsets->data().get(),
+                                         upTriFactorT->csrMat->column_indices->data().get(), upTriFactorT->solveInfo,
+                                         &upTriFactorT->solveBufferSize));
   CHKERRCUDA(cudaMalloc(&upTriFactorT->solveBuffer,upTriFactorT->solveBufferSize));
   #endif
 
   /* perform the solve analysis */
-  stat = cusparse_analysis(cusparseTriFactors->handle, upTriFactorT->solveOp,
-                           upTriFactorT->csrMat->num_rows, upTriFactorT->csrMat->num_entries, upTriFactorT->descr,
-                           upTriFactorT->csrMat->values->data().get(), upTriFactorT->csrMat->row_offsets->data().get(),
-                           upTriFactorT->csrMat->column_indices->data().get(),
-                          #if PETSC_PKG_CUDA_VERSION_GE(9,0,0)
-                           upTriFactorT->solveInfo,
-                           upTriFactorT->solvePolicy, upTriFactorT->solveBuffer);CHKERRCUSPARSE(stat);
-                          #else
-                           upTriFactorT->solveInfo);CHKERRCUSPARSE(stat);
-                          #endif
+  /* christ, would it have killed you to put this stuff in a function????????? */
+  CHKERRCUSPARSE(cusparse_analysis(cusparseTriFactors->handle, upTriFactorT->solveOp,
+                                   upTriFactorT->csrMat->num_rows, upTriFactorT->csrMat->num_entries, upTriFactorT->descr,
+                                   upTriFactorT->csrMat->values->data().get(), upTriFactorT->csrMat->row_offsets->data().get(),
+                                   upTriFactorT->csrMat->column_indices->data().get(),
+                                   #if PETSC_PKG_CUDA_VERSION_GE(9,0,0)
+                                   upTriFactorT->solveInfo,
+                                   upTriFactorT->solvePolicy, upTriFactorT->solveBuffer));
+                                   #else
+                                   upTriFactorT->solveInfo));
+                                   #endif
 
   CHKERRCUDA(WaitForCUDA());
   CHKERRQ(PetscLogEventEnd(MAT_CUSPARSESolveAnalysis,A,0,0,0));
@@ -2042,10 +2039,7 @@ struct MatMatCusparse {
 
 static PetscErrorCode MatDestroy_MatMatCusparse(void *data)
 {
-  MatMatCusparse   *mmdata = (MatMatCusparse *)data;
- #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
-  cusparseStatus_t stat;
- #endif
+  MatMatCusparse *mmdata = (MatMatCusparse *)data;
 
   PetscFunctionBegin;
   CHKERRCUDA(cudaFree(mmdata->Bt));
@@ -4403,7 +4397,7 @@ PetscErrorCode MatSeqAIJCUSPARSEMergeMats(Mat A,Mat B,MatReuse reuse,Mat* C)
   PetscValidPointer(C,4);
   PetscCheckTypeName(A,MATSEQAIJCUSPARSE);
   PetscCheckTypeName(B,MATSEQAIJCUSPARSE);
-  PetscCheckFalse(A->rmap->n != B->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Invalid number or rows %" PetscInt_FMT " != %" PetscInt_FMT,A->rmap->n,B->rmap->n);
+  PetscCheck(A->rmap->n == B->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Invalid number or rows %" PetscInt_FMT " != %" PetscInt_FMT,A->rmap->n,B->rmap->n);
   PetscCheckFalse(reuse == MAT_INPLACE_MATRIX,PETSC_COMM_SELF,PETSC_ERR_SUP,"MAT_INPLACE_MATRIX not supported");
   PetscCheckFalse(Acusp->format == MAT_CUSPARSE_ELL || Acusp->format == MAT_CUSPARSE_HYB,PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented");
   PetscCheckFalse(Bcusp->format == MAT_CUSPARSE_ELL || Bcusp->format == MAT_CUSPARSE_HYB,PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented");
@@ -4638,13 +4632,13 @@ PetscErrorCode MatSeqAIJCUSPARSEMergeMats(Mat A,Mat B,MatReuse reuse,Mat* C)
     c = (Mat_SeqAIJ*)(*C)->data;
     if (c->nz) {
       Ccusp = (Mat_SeqAIJCUSPARSE*)(*C)->spptr;
-      PetscCheckFalse(!Ccusp->cooPerm,PETSC_COMM_SELF,PETSC_ERR_COR,"Missing cooPerm");
+      PetscCheck(Ccusp->cooPerm,PETSC_COMM_SELF,PETSC_ERR_COR,"Missing cooPerm");
       PetscCheckFalse(Ccusp->format == MAT_CUSPARSE_ELL || Ccusp->format == MAT_CUSPARSE_HYB,PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented");
       PetscCheckFalse(Ccusp->nonzerostate != (*C)->nonzerostate,PETSC_COMM_SELF,PETSC_ERR_COR,"Wrong nonzerostate");
       CHKERRQ(MatSeqAIJCUSPARSECopyToGPU(A));
       CHKERRQ(MatSeqAIJCUSPARSECopyToGPU(B));
-      PetscCheckFalse(!Acusp->mat,PETSC_COMM_SELF,PETSC_ERR_COR,"Missing Mat_SeqAIJCUSPARSEMultStruct");
-      PetscCheckFalse(!Bcusp->mat,PETSC_COMM_SELF,PETSC_ERR_COR,"Missing Mat_SeqAIJCUSPARSEMultStruct");
+      PetscCheck(Acusp->mat,PETSC_COMM_SELF,PETSC_ERR_COR,"Missing Mat_SeqAIJCUSPARSEMultStruct");
+      PetscCheck(Bcusp->mat,PETSC_COMM_SELF,PETSC_ERR_COR,"Missing Mat_SeqAIJCUSPARSEMultStruct");
       Acsr = (CsrMatrix*)Acusp->mat->mat;
       Bcsr = (CsrMatrix*)Bcusp->mat->mat;
       Ccsr = (CsrMatrix*)Ccusp->mat->mat;
@@ -4652,7 +4646,7 @@ PetscErrorCode MatSeqAIJCUSPARSEMergeMats(Mat A,Mat B,MatReuse reuse,Mat* C)
       PetscCheckFalse(Bcsr->num_entries != (PetscInt)Bcsr->values->size(),PETSC_COMM_SELF,PETSC_ERR_COR,"B nnz %" PetscInt_FMT " != %" PetscInt_FMT,Bcsr->num_entries,(PetscInt)Bcsr->values->size());
       PetscCheckFalse(Ccsr->num_entries != (PetscInt)Ccsr->values->size(),PETSC_COMM_SELF,PETSC_ERR_COR,"C nnz %" PetscInt_FMT " != %" PetscInt_FMT,Ccsr->num_entries,(PetscInt)Ccsr->values->size());
       PetscCheckFalse(Ccsr->num_entries != Acsr->num_entries + Bcsr->num_entries,PETSC_COMM_SELF,PETSC_ERR_COR,"C nnz %" PetscInt_FMT " != %" PetscInt_FMT " + %" PetscInt_FMT,Ccsr->num_entries,Acsr->num_entries,Bcsr->num_entries);
-      PetscCheckFalse(Ccusp->cooPerm->size() != Ccsr->values->size(),PETSC_COMM_SELF,PETSC_ERR_COR,"permSize %" PetscInt_FMT " != %" PetscInt_FMT,(PetscInt)Ccusp->cooPerm->size(),(PetscInt)Ccsr->values->size());
+      PetscCheck(Ccusp->cooPerm->size() == Ccsr->values->size(),PETSC_COMM_SELF,PETSC_ERR_COR,"permSize %" PetscInt_FMT " != %" PetscInt_FMT,(PetscInt)Ccusp->cooPerm->size(),(PetscInt)Ccsr->values->size());
       auto pmid = Ccusp->cooPerm->begin();
       thrust::advance(pmid,Acsr->num_entries);
       CHKERRQ(PetscLogGpuTimeBegin());
@@ -4668,7 +4662,7 @@ PetscErrorCode MatSeqAIJCUSPARSEMergeMats(Mat A,Mat B,MatReuse reuse,Mat* C)
       thrust::for_each(zibbit,ziebit,VecCUDAEquals());
       CHKERRQ(MatSeqAIJCUSPARSEInvalidateTranspose(*C,PETSC_FALSE));
       if (A->form_explicit_transpose && B->form_explicit_transpose && (*C)->form_explicit_transpose) {
-        PetscCheckFalse(!Ccusp->matTranspose,PETSC_COMM_SELF,PETSC_ERR_COR,"Missing transpose Mat_SeqAIJCUSPARSEMultStruct");
+        PetscCheck(Ccusp->matTranspose,PETSC_COMM_SELF,PETSC_ERR_COR,"Missing transpose Mat_SeqAIJCUSPARSEMultStruct");
         PetscBool AT = Acusp->matTranspose ? PETSC_TRUE : PETSC_FALSE, BT = Bcusp->matTranspose ? PETSC_TRUE : PETSC_FALSE;
         CsrMatrix *AcsrT = AT ? (CsrMatrix*)Acusp->matTranspose->mat : NULL;
         CsrMatrix *BcsrT = BT ? (CsrMatrix*)Bcusp->matTranspose->mat : NULL;

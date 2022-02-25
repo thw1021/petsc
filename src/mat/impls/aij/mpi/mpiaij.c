@@ -1249,7 +1249,6 @@ PetscErrorCode MatView_MPIAIJ_Binary(Mat mat,PetscViewer viewer)
 PetscErrorCode MatView_MPIAIJ_ASCIIorDraworSocket(Mat mat,PetscViewer viewer)
 {
   Mat_MPIAIJ        *aij = (Mat_MPIAIJ*)mat->data;
-  PetscErrorCode    ierr;
   PetscMPIInt       rank = aij->rank,size = aij->size;
   PetscBool         isdraw,iascii,isbinary;
   PetscViewer       sviewer;
@@ -1285,11 +1284,11 @@ PetscErrorCode MatView_MPIAIJ_ASCIIorDraworSocket(Mat mat,PetscViewer viewer)
       CHKERRQ(MatInodeGetInodeSizes(aij->A,NULL,&inodes,NULL));
       CHKERRQ(PetscViewerASCIIPushSynchronized(viewer));
       if (!inodes) {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Local rows %" PetscInt_FMT " nz %" PetscInt_FMT " nz alloced %" PetscInt_FMT " mem %g, not using I-node routines\n",
-                                                  rank,mat->rmap->n,(PetscInt)info.nz_used,(PetscInt)info.nz_allocated,(double)info.memory);CHKERRQ(ierr);
+        CHKERRQ(PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Local rows %" PetscInt_FMT " nz %" PetscInt_FMT " nz alloced %" PetscInt_FMT " mem %g, not using I-node routines\n",
+                                                   rank,mat->rmap->n,(PetscInt)info.nz_used,(PetscInt)info.nz_allocated,(double)info.memory));
       } else {
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Local rows %" PetscInt_FMT " nz %" PetscInt_FMT " nz alloced %" PetscInt_FMT " mem %g, using I-node routines\n",
-                                                  rank,mat->rmap->n,(PetscInt)info.nz_used,(PetscInt)info.nz_allocated,(double)info.memory);CHKERRQ(ierr);
+        CHKERRQ(PetscViewerASCIISynchronizedPrintf(viewer,"[%d] Local rows %" PetscInt_FMT " nz %" PetscInt_FMT " nz alloced %" PetscInt_FMT " mem %g, using I-node routines\n",
+                                                   rank,mat->rmap->n,(PetscInt)info.nz_used,(PetscInt)info.nz_allocated,(double)info.memory));
       }
       CHKERRQ(MatGetInfo(aij->A,MAT_LOCAL,&info));
       CHKERRQ(PetscViewerASCIISynchronizedPrintf(viewer,"[%d] on-diagonal part: nz %" PetscInt_FMT " \n",rank,(PetscInt)info.nz_used));
@@ -2108,16 +2107,13 @@ PETSC_INTERN PetscErrorCode MatConjugate_SeqAIJ(Mat);
 
 PetscErrorCode MatConjugate_MPIAIJ(Mat mat)
 {
-#if defined(PETSC_USE_COMPLEX)
-  PetscErrorCode ierr;
-  Mat_MPIAIJ     *aij = (Mat_MPIAIJ*)mat->data;
+  PetscFunctionBegin;
+  if (PetscDefined(USE_COMPLEX)) {
+    Mat_MPIAIJ *aij = (Mat_MPIAIJ*)mat->data;
 
-  PetscFunctionBegin;
-  CHKERRQ(MatConjugate_SeqAIJ(aij->A));
-  CHKERRQ(MatConjugate_SeqAIJ(aij->B));
-#else
-  PetscFunctionBegin;
-#endif
+    CHKERRQ(MatConjugate_SeqAIJ(aij->A));
+    CHKERRQ(MatConjugate_SeqAIJ(aij->B));
+  }
   PetscFunctionReturn(0);
 }
 
@@ -7411,8 +7407,8 @@ PetscErrorCode MatProductSetFromOptions_MPIAIJBACKEND(Mat mat)
 /* Change these macros so can be used in void function */
 /* Identical to CHKERRV, except it assigns to *_ierr */
 #undef CHKERRQ
-#define CHKERRQ(ierr) do {                                                                     \
-    PetscErrorCode ierr_msv_mpiaij = (ierr);                                                   \
+#define CHKERRQ(...) do {                                                                      \
+    PetscErrorCode ierr_msv_mpiaij = __VA_ARGS__;                                              \
     if (PetscUnlikely(ierr_msv_mpiaij)) {                                                      \
       *_ierr = PetscError(PETSC_COMM_SELF,__LINE__,PETSC_FUNCTION_NAME,__FILE__,ierr_msv_mpiaij,PETSC_ERROR_REPEAT," "); \
       return;                                                                                  \
@@ -7433,15 +7429,15 @@ PetscErrorCode MatProductSetFromOptions_MPIAIJBACKEND(Mat mat)
 #endif
 PETSC_EXTERN void matsetvaluesmpiaij_(Mat *mmat,PetscInt *mm,const PetscInt im[],PetscInt *mn,const PetscInt in[],const PetscScalar v[],InsertMode *maddv,PetscErrorCode *_ierr)
 {
-  Mat            mat  = *mmat;
-  PetscInt       m    = *mm, n = *mn;
-  InsertMode     addv = *maddv;
-  Mat_MPIAIJ     *aij = (Mat_MPIAIJ*)mat->data;
-  PetscScalar    value;
+  Mat          mat  = *mmat;
+  PetscInt     m    = *mm, n = *mn;
+  InsertMode   addv = *maddv;
+  Mat_MPIAIJ  *aij  = (Mat_MPIAIJ*)mat->data;
+  PetscScalar  value;
 
   MatCheckPreallocated(mat,1);
   if (mat->insertmode == NOT_SET_VALUES) mat->insertmode = addv;
-  else PetscCheckFalse(mat->insertmode != addv,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Cannot mix add values and insert values");
+  else PetscCheck(mat->insertmode == addv,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Cannot mix add values and insert values");
   {
     PetscInt  i,j,rstart  = mat->rmap->rstart,rend = mat->rmap->rend;
     PetscInt  cstart      = mat->cmap->rstart,cend = mat->cmap->rend,row,col;

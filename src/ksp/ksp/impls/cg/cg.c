@@ -103,7 +103,7 @@ static PetscErrorCode KSPSolve_CG(KSP ksp)
 
   PetscFunctionBegin;
   CHKERRQ(PCGetDiagonalScale(ksp->pc,&diagonalscale));
-  PetscCheckFalse(diagonalscale,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"Krylov method %s does not support diagonal scaling",((PetscObject)ksp)->type_name);
+  PetscCheck(!diagonalscale,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"Krylov method %s does not support diagonal scaling",((PetscObject)ksp)->type_name);
 
   cg            = (KSP_CG*)ksp->data;
   eigs          = ksp->calc_sings;
@@ -171,7 +171,7 @@ static PetscErrorCode KSPSolve_CG(KSP ksp)
       break;
 #if !defined(PETSC_USE_COMPLEX)
     } else if ((i > 0) && (beta*betaold < 0.0)) {
-      PetscCheckFalse(ksp->errorifnotconverged,PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"Diverged due to indefinite preconditioner, beta %g, betaold %g",(double)beta,(double)betaold);
+      PetscCheck(!ksp->errorifnotconverged,PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"Diverged due to indefinite preconditioner, beta %g, betaold %g",(double)beta,(double)betaold);
       ksp->reason = KSP_DIVERGED_INDEFINITE_PC;
       CHKERRQ(PetscInfo(ksp,"diverging due to indefinite preconditioner\n"));
       break;
@@ -183,7 +183,7 @@ static PetscErrorCode KSPSolve_CG(KSP ksp)
     } else {
       b = beta/betaold;
       if (eigs) {
-        PetscCheckFalse(ksp->max_it != stored_max_it,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"Can not change maxit AND calculate eigenvalues");
+        PetscCheck(ksp->max_it == stored_max_it,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"Can not change maxit AND calculate eigenvalues");
         e[i] = PetscSqrtReal(PetscAbsScalar(b))/a;
       }
       CHKERRQ(VecAYPX(P,b,Z));                     /*     p <- z + b* p                    */
@@ -195,7 +195,7 @@ static PetscErrorCode KSPSolve_CG(KSP ksp)
     betaold = beta;
 
     if ((dpi == 0.0) || ((i > 0) && ((PetscSign(PetscRealPart(dpi))*PetscSign(PetscRealPart(dpiold))) < 0.0))) {
-      PetscCheckFalse(ksp->errorifnotconverged,PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"Diverged due to indefinite matrix, dpi %g, dpiold %g",(double)PetscRealPart(dpi),(double)PetscRealPart(dpiold));
+      PetscCheck(!ksp->errorifnotconverged,PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"Diverged due to indefinite matrix, dpi %g, dpiold %g",(double)PetscRealPart(dpi),(double)PetscRealPart(dpiold));
       ksp->reason = KSP_DIVERGED_INDEFINITE_MAT;
       CHKERRQ(PetscInfo(ksp,"diverging due to indefinite or negative definite matrix\n"));
       break;
@@ -262,7 +262,7 @@ static PetscErrorCode KSPSolve_CG_SingleReduction(KSP ksp)
 
   PetscFunctionBegin;
   CHKERRQ(PCGetDiagonalScale(ksp->pc,&diagonalscale));
-  PetscCheckFalse(diagonalscale,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"Krylov method %s does not support diagonal scaling",((PetscObject)ksp)->type_name);
+  PetscCheck(!diagonalscale,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"Krylov method %s does not support diagonal scaling",((PetscObject)ksp)->type_name);
 
   cg            = (KSP_CG*)ksp->data;
   eigs          = ksp->calc_sings;
@@ -335,7 +335,7 @@ static PetscErrorCode KSPSolve_CG_SingleReduction(KSP ksp)
       break;
 #if !defined(PETSC_USE_COMPLEX)
     } else if ((i > 0) && (beta*betaold < 0.0)) {
-      PetscCheckFalse(ksp->errorifnotconverged,PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"Diverged due to indefinite preconditioner");
+      PetscCheck(!ksp->errorifnotconverged,PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"Diverged due to indefinite preconditioner");
       ksp->reason = KSP_DIVERGED_INDEFINITE_PC;
       CHKERRQ(PetscInfo(ksp,"diverging due to indefinite preconditioner\n"));
       break;
@@ -347,7 +347,7 @@ static PetscErrorCode KSPSolve_CG_SingleReduction(KSP ksp)
     } else {
       b = beta/betaold;
       if (eigs) {
-        PetscCheckFalse(ksp->max_it != stored_max_it,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"Can not change maxit AND calculate eigenvalues");
+        PetscCheck(ksp->max_it == stored_max_it,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"Can not change maxit AND calculate eigenvalues");
         e[i] = PetscSqrtReal(PetscAbsScalar(b))/a;
       }
       CHKERRQ(VecAYPX(P,b,Z));                     /*    p <- z + b* p                     */
@@ -364,7 +364,7 @@ static PetscErrorCode KSPSolve_CG_SingleReduction(KSP ksp)
     KSPCheckDot(ksp,beta);
 
     if ((dpi == 0.0) || ((i > 0) && (PetscRealPart(dpi*dpiold) <= 0.0))) {
-      PetscCheckFalse(ksp->errorifnotconverged,PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"Diverged due to indefinite matrix");
+      PetscCheck(!ksp->errorifnotconverged,PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"Diverged due to indefinite matrix");
       ksp->reason = KSP_DIVERGED_INDEFINITE_MAT;
       CHKERRQ(PetscInfo(ksp,"diverging due to indefinite or negative definite matrix\n"));
       break;
@@ -463,19 +463,17 @@ PetscErrorCode KSPView_CG(KSP ksp,PetscViewer viewer)
 */
 PetscErrorCode KSPSetFromOptions_CG(PetscOptionItems *PetscOptionsObject,KSP ksp)
 {
-  KSP_CG         *cg = (KSP_CG*)ksp->data;
-  PetscBool      flg;
+  KSP_CG    *cg = (KSP_CG*)ksp->data;
+  PetscBool  flg;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"KSP CG and CGNE options"));
 #if defined(PETSC_USE_COMPLEX)
-  ierr = PetscOptionsEnum("-ksp_cg_type","Matrix is Hermitian or complex symmetric","KSPCGSetType",KSPCGTypes,(PetscEnum)cg->type,
-                          (PetscEnum*)&cg->type,NULL);CHKERRQ(ierr);
+  CHKERRQ(PetscOptionsEnum("-ksp_cg_type","Matrix is Hermitian or complex symmetric","KSPCGSetType",KSPCGTypes,(PetscEnum)cg->type,
+                           (PetscEnum*)&cg->type,NULL));
 #endif
   CHKERRQ(PetscOptionsBool("-ksp_cg_single_reduction","Merge inner products into single MPI_Allreduce()","KSPCGUseSingleReduction",cg->singlereduction,&cg->singlereduction,&flg));
-  if (flg) {
-    CHKERRQ(KSPCGUseSingleReduction(ksp,cg->singlereduction));
-  }
+  if (flg) CHKERRQ(KSPCGUseSingleReduction(ksp,cg->singlereduction));
   CHKERRQ(PetscOptionsTail());
   PetscFunctionReturn(0);
 }

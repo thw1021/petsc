@@ -865,16 +865,13 @@ extern PetscErrorCode MatConjugate_SeqSELL(Mat);
 
 PetscErrorCode MatConjugate_MPISELL(Mat mat)
 {
-#if defined(PETSC_USE_COMPLEX)
-  PetscErrorCode ierr;
-  Mat_MPISELL    *sell=(Mat_MPISELL*)mat->data;
+  PetscFunctionBegin;
+  if (PetscDefined(USE_COMPLEX)) {
+    Mat_MPISELL *sell=(Mat_MPISELL*)mat->data;
 
-  PetscFunctionBegin;
-  CHKERRQ(MatConjugate_SeqSELL(sell->A));
-  CHKERRQ(MatConjugate_SeqSELL(sell->B));
-#else
-  PetscFunctionBegin;
-#endif
+    CHKERRQ(MatConjugate_SeqSELL(sell->A));
+    CHKERRQ(MatConjugate_SeqSELL(sell->B));
+  }
   PetscFunctionReturn(0);
 }
 
