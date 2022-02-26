@@ -608,7 +608,7 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
   PetscInt       nmerged=0;
 
   PetscFunctionBegin;
-  PetscCheckFalse(network->nsubnet != Nsubnet,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Must call DMNetworkAddSubnetwork() %D times",Nsubnet);
+  PetscCheck(network->nsubnet == Nsubnet,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Must call DMNetworkAddSubnetwork() %" PetscInt_FMT " times",Nsubnet);
 
   /* This implementation requires user input each subnet by a single processor when Nsubnet>1, thus subnet[net].nvtx=subnet[net].Nvtx when net>0 */
   for (net=1; net<Nsubnet; net++) {
