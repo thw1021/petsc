@@ -1348,6 +1348,9 @@ PetscErrorCode PCMGGetGridComplexity(PC pc, PetscReal *gc, PetscReal *oc)
   MatInfo        info;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc,PC_CLASSID,1);
+  if (gc) PetscValidRealPointer(gc,2);
+  if (oc) PetscValidRealPointer(oc,3);
   if (!pc->setupcalled) {
     *gc = *oc = 0;
     PetscFunctionReturn(0);
