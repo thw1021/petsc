@@ -1330,7 +1330,7 @@ PetscErrorCode PCMGGetLevels(PC pc,PetscInt *levels)
    Input Parameter:
 .  pc - the preconditioner context
 
-   Output Parameter:
+   Output Parameters:
 +  gc - grid complexity = sum_i(n_i) / n_0
 -  oc - operator complexity = sum_i(nnz_i) / nnz_0
 
