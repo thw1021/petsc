@@ -315,7 +315,6 @@ static PetscErrorCode VtxGetInfo(PetscInt Nsvtx,SVtx *svtx,PetscInt net,PetscInt
   PetscFunctionBegin;
   if (!Nsvtx) PetscFunctionReturn(0);
 
-  i     = -1;
   g_idx = -1;
   vtype = SVNONE;
 
@@ -390,7 +389,6 @@ static PetscErrorCode SharedVtxCreate(DM dm,PetscInt Nsedgelist,PetscInt *sedgel
   /* (1) Crete an array of ctables svtas to map (net,idx) -> gidx; a svtas[] for a shared/merged vertex */
   ierr = PetscCalloc3(Nsedgelist,&svtas,Nsedgelist,&tdata,2*Nsedgelist,&ta2sv);CHKERRQ(ierr);
 
-  j   = 0;   /* sedgelist counter */
   k   = 0;   /* sedgelist vertex counter j = 4*k */
   nta = 0;   /* num of svta tables created */
 
@@ -402,7 +400,7 @@ static PetscErrorCode SharedVtxCreate(DM dm,PetscInt Nsedgelist,PetscInt *sedgel
   ierr = TableAddSVtx(network,sedgelist,k+2,svtas[nta],&tdata[nta],ta2sv[nta]);CHKERRQ(ierr);
   nta++; k += 4;
 
-  for (j = 1; j < Nsedgelist; j++) {
+  for (j = 1; j < Nsedgelist; j++) { /* j: sedgelist counter */
     for (ita = 0; ita < nta; ita++) {
       /* vfrom */
       net = sedgelist[k]; idx = sedgelist[k+1];
