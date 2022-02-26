@@ -25,7 +25,7 @@ int main(int argc,char **argv)
   ierr = MPI_Comm_size(PETSC_COMM_WORLD,&nproc);CHKERRMPI(ierr);
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&grank);CHKERRMPI(ierr);
 
-  if (nproc < 2) SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_SIZ,"This test must have at least two processes to run");
+  PetscCheckFalse(nproc < 2,PETSC_COMM_WORLD,PETSC_ERR_ARG_SIZ,"This test must have at least two processes to run");
 
   ierr = PetscOptionsGetBool(NULL,0,"-world2sub",&world2sub,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsGetBool(NULL,0,"-sub2sub",&sub2sub,NULL);CHKERRQ(ierr);
@@ -465,8 +465,8 @@ int main(int argc,char **argv)
      test:
        suffix: 2
        args: -sub2sub
-       # deadlocks with NECMPI
-       requires: !defined(PETSC_HAVE_NECMPI)
+       # deadlocks with NECMPI and INTELMPI (20210400300)
+       requires: !defined(PETSC_HAVE_NECMPI) !defined(PETSC_HAVE_I_MPI_NUMVERSION)
 
      test:
        suffix: 3

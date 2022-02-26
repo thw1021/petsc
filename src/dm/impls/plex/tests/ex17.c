@@ -47,10 +47,10 @@ static PetscErrorCode TestLocation(DM dm)
     for (c = 0; c < n; ++c) {
       if (cells[c].index != c+cStart) {ierr = PetscPrintf(PETSC_COMM_SELF, "Could not locate centroid of cell %D, error %D\n", c+cStart, cells[c].index);CHKERRQ(ierr);}
     }
-    SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Located %D points instead of %D", n, cEnd - cStart);
+    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Located %D points instead of %D", n, cEnd - cStart);
   }
   for (c = cStart; c < cEnd; ++c) {
-    if (cells[c - cStart].index != c) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Could not locate centroid of cell %D, instead found %D", c, cells[c - cStart].index);
+    PetscCheckFalse(cells[c - cStart].index != c,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Could not locate centroid of cell %D, instead found %D", c, cells[c - cStart].index);
   }
   ierr = PetscSFDestroy(&cellSF);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -71,9 +71,15 @@ int main(int argc, char **argv)
 
 /*TEST
 
-  test:
-    suffix: seg
+  testset:
     args: -dm_plex_dim 1 -dm_plex_box_faces 10
+
+    test:
+      suffix: seg
+
+    test:
+      suffix: seg_hash
+      args: -dm_refine 2 -dm_plex_hash_location
 
   testset:
     args: -dm_plex_box_faces 5,5

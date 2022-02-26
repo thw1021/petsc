@@ -10,8 +10,8 @@ class CompilerOptions(config.base.Configure):
     if language == 'C':
       if [s for s in ['mpicc','mpiicc'] if os.path.basename(compiler).find(s)>=0]:
         try:
-          output   = self.executeShellCommand(compiler + ' -show', log = self.log)[0]
-          self.framework.addMakeMacro('MPICC_SHOW',output.strip().replace('\n','\\\\n'))
+          output = self.executeShellCommand(compiler + ' -show', log = self.log)[0]
+          self.framework.addMakeMacro('MPICC_SHOW',output.strip().replace('\n','\\\\n').replace('"','\\"'))
         except:
           self.framework.addMakeMacro('MPICC_SHOW',"Unavailable")
       else:
@@ -21,9 +21,9 @@ class CompilerOptions(config.base.Configure):
     # GNU gcc
     if config.setCompilers.Configure.isGNU(compiler, self.log) or config.setCompilers.Configure.isClang(compiler, self.log):
       if bopt == '':
-        flags.extend(['-Wall', '-Wwrite-strings', '-Wno-strict-aliasing','-Wno-unknown-pragmas'])
+        flags.extend(['-Wall', '-Wwrite-strings', '-Wno-unknown-pragmas'])
         if config.setCompilers.Configure.isGcc110plus(compiler, self.log):
-          flags.extend(['-Wno-misleading-indentation','-Wno-stringop-overflow'])
+          flags.extend(['-Wno-stringop-overflow'])
         # skip -fstack-protector for brew gcc - as this gives SEGV
         if not (config.setCompilers.Configure.isDarwin(self.log) and config.setCompilers.Configure.isGNU(compiler, self.log)):
           flags.extend(['-fstack-protector'])
@@ -103,9 +103,7 @@ class CompilerOptions(config.base.Configure):
         if bopt == '':
           flags.extend(['-Wall', '-fdiag-vector=0', '-fdiag-parallel=0', '-fdiag-inline=0'])
         elif bopt == 'O':
-          flags.append('-O2') # defaults to O2, which is quite buggy (as of version 3.2.1)
-          flags.append('-fnamed-alias')
-          flags.append('-mno-vector-dependency-test') # vector dependency test seems buggy
+          flags.append('-O1') # defaults to O2, which is quite buggy (as of version 3.3.1)
         elif bopt == 'g':
           flags.append('-g')
           flags.append('-traceback=verbose')
@@ -155,7 +153,11 @@ class CompilerOptions(config.base.Configure):
           flags.extend(['-Wno-unused-but-set-variable'])
       elif bopt in ['g']:
         # -g3 causes an as SEGV on OSX
-        flags.extend(['-g','-O0'])
+        if config.setCompilers.Configure.isHIP(compiler, self.log):
+          # HIP can cause buggy code with -O0
+          flags.extend(['-g'])
+        else:
+          flags.extend(['-g','-O0'])
       elif bopt == 'gcov':
         flags.extend(['--coverage','-Og'])
       elif bopt in ['O']:
@@ -214,9 +216,7 @@ class CompilerOptions(config.base.Configure):
         if bopt == '':
           flags.extend(['-Wall', '-fdiag-vector=0', '-fdiag-parallel=0', '-fdiag-inline=0'])
         elif bopt == 'O':
-          flags.append('-O2') # defaults to O2, which is quite buggy (as of version 3.2.1)
-          flags.append('-fnamed-alias')
-          flags.append('-mno-vector-dependency-test') # vector dependency test seems buggy
+          flags.append('-O1') # defaults to O2, which is quite buggy (as of version 3.3.1)
         elif bopt == 'g':
           flags.append('-g')
           flags.append('-traceback=verbose')
@@ -224,7 +224,11 @@ class CompilerOptions(config.base.Configure):
     # Generic
     if not len(flags):
       if bopt in ['g']:
-        flags.extend(['-g','-O0'])
+        if config.setCompilers.Configure.isHIP(compiler, self.log):
+          # HIP can cause buggy code with -O0
+          flags.extend(['-g'])
+        else:
+          flags.extend(['-g','-O0'])
       elif bopt in ['O']:
         flags.append('-O')
     if bopt == 'O':

@@ -3,11 +3,11 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.gitcommit              = 'b30a056' # Sep 27 2021, fix macosx install
+    self.gitcommit              = '325a72a' # Feb 7 2022
     self.download               = ['git://https://github.com/ecrc/h2opus']
     self.precisions             = ['single','double']
     self.skippackagewithoptions = 1
-    self.cxx                    = 1
+    self.buildLanguages         = ['Cxx']
     self.requirescxx14          = 1
     self.liblist                = [['libh2opus.a']]
     self.includes               = ['h2opusconf.h']
@@ -97,6 +97,7 @@ class Configure(config.package.Package):
         g.write('H2OPUS_USE_FLAME = 1\n')
       if config.setCompilers.Configure.isNEC(cxx, self.log):
         g.write('H2OPUS_USE_NEC = 1\n')
+        g.write('H2OPUS_DISABLE_SHARED = 1\n')
       if config.setCompilers.Configure.isNVC(cxx, self.log):
         g.write('H2OPUS_USE_NVOMP = 1\n')
       cppfixes = ''
@@ -112,6 +113,8 @@ class Configure(config.package.Package):
 
       if with_gpu:
         g.write('H2OPUS_USE_GPU = 1\n')
+        if self.libraries.check(self.cuda.dlib, 'cuMemRelease'):
+          g.write('H2OPUS_USE_GPU_VMM = 1\n')
         g.write('H2OPUS_USE_MAGMA_POTRF = 1\n')
         g.write('NVCC = '+nvcc+'\n')
         g.write('NVCCFLAGS = '+nvopts+' --expt-relaxed-constexpr\n')

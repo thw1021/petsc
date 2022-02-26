@@ -4,17 +4,15 @@ import os
 class Configure(config.package.CMakePackage):
   def __init__(self, framework):
     config.package.CMakePackage.__init__(self, framework)
-    self.gitcommit        = '54e4213ca028163a76639d23b1204b213203bc79' # develop of 2021-04-28
-    self.versionname      = 'KOKKOS_KERNELS_VERSION'  # It looks kokkos-kernels does not yet have a macro for version number
+    self.gitcommit        = '6fff4fffe0b531a8d5f93bc61bd22000c729ad0f' # develop of 2022-02-14 (fixes Ampere CSR bug)
+    self.versionname      = 'KOKKOSKERNELS_VERSION'
     self.download         = ['git://https://github.com/kokkos/kokkos-kernels.git']
-    # See also kokkos.py. Cannot test includes with standard approaches since that requires Kokkos nvcc_wapper that we do not handle in configure
-    self.doNotCheckIncludes = 1
     self.includes         = ['KokkosBlas.hpp','KokkosSparse_CrsMatrix.hpp']
     self.liblist          = [['libkokkoskernels.a']]
     self.functions        = ['']
     # I don't know how to make it work since all KK routines are templated and always need Kokkos::View. So I cheat here and use functionCxx from Kokkos.
     self.functionsCxx     = [1,'namespace Kokkos {void initialize(int&,char*[]);}','int one = 1;char* args[1];Kokkos::initialize(one,args);']
-    self.cxx              = 1
+    self.buildLanguages   = ['Cxx']
     self.downloadonWindows= 0
     self.hastests         = 1
     self.requiresrpath    = 1
@@ -39,7 +37,8 @@ class Configure(config.package.CMakePackage):
     self.deps                = [self.kokkos]
     self.cuda                = framework.require('config.packages.cuda',self)
     self.hip                 = framework.require('config.packages.hip',self)
-    self.odeps               = [self.cuda,self.hip]
+    self.sycl                = framework.require('config.packages.sycl',self)
+    self.odeps               = [self.cuda,self.hip,self.sycl]
     return
 
   def versionToStandardForm(self,ver):
@@ -69,28 +68,40 @@ class Configure(config.package.CMakePackage):
     if self.checkSharedLibrariesEnabled():
       args.append('-DCMAKE_INSTALL_RPATH_USE_LINK_PATH:BOOL=ON')
       args.append('-DCMAKE_BUILD_WITH_INSTALL_RPATH:BOOL=ON')
+
     if self.cuda.found:
       args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_COMPILER=')
       args.append('-DCMAKE_CXX_COMPILER='+self.getCompiler('Cxx')) # use the host CXX compiler, let Kokkos handle the nvcc_wrapper business
-      # as of version 3.2.00 Cuda 11 is not supported, e.g., identifier "cusparseXcsrgemmNnz" is undefined
-      if not self.argDB['with-kokkos-kernels-tpl'] or self.cuda.version_tuple >= (11,0):
-        args.append('-DKokkosKernels_ENABLE_TPL_CUBLAS=OFF')
+      if not self.argDB['with-kokkos-kernels-tpl']:
+        args.append('-DKokkosKernels_ENABLE_TPL_CUBLAS=OFF')  # These are turned ON by KK by default when CUDA is enabled
         args.append('-DKokkosKernels_ENABLE_TPL_CUSPARSE=OFF')
     elif self.hip.found:
-      self.system = 'HIP'
-      with self.Language('HIP'):
-        petscHipc = self.getCompiler()
-        hipFlags = self.updatePackageCxxFlags(self.getCompilerFlags())
-        # kokkos uses clang and offload flag
-        hipFlags = ' '.join([i for i in hipFlags.split() if '--amdgpu-target' not in i])
-      self.getExecutable(petscHipc,getFullPath=1,resultName='systemHipc')
-      if not hasattr(self,'systemHipc'):
-        raise RuntimeError('HIP error: could not find path of hipc')
       args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_COMPILER=')
-      args.append('-DCMAKE_CXX_COMPILER='+self.systemHipc)
-      args = self.rmArgsStartsWith(args, '-DCMAKE_CXX_FLAGS')
-      args.append('-DCMAKE_CXX_FLAGS="' + hipFlags + '"')
+      args.append('-DCMAKE_CXX_COMPILER='+self.getCompiler('HIP'))
+      # TPL
+      if self.argDB['with-kokkos-kernels-tpl'] and os.path.isdir(self.hip.rocBlasDir) and os.path.isdir(self.hip.rocSparseDir): # TPL is required either by default or by users
+        args.append('-DKokkosKernels_ENABLE_TPL_ROCBLAS=ON')
+        args.append('-DKokkosKernels_ENABLE_TPL_ROCSPARSE=ON')
+        args.append('-DKokkosKernels_ROCBLAS_ROOT='+self.hip.rocBlasDir)
+        args.append('-DKokkosKernels_ROCSPARSE_ROOT='+self.hip.rocSparseDir)
+      elif 'with-kokkos-kernels-tpl' in self.framework.clArgDB and self.argDB['with-kokkos-kernels-tpl']: # TPL is explicitly required by users
+        raise RuntimeError('Kokkos-Kernels TPL is required but {x} and {y} do not exist! If not needed, use --with-kokkos-kernels-tpl=0'.format(x=self.hip.rocBlasDir,y=self.hip.rocSparseDir))
+      else: # Users turned it off or because rocBlas/rocSparse dirs not found
+        args.append('-DKokkosKernels_ENABLE_TPL_ROCBLAS=OFF')
+        args.append('-DKokkosKernels_ENABLE_TPL_ROCSPARSE=OFF')
+    elif self.sycl.found:
+      args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_COMPILER=')
+      args.append('-DCMAKE_CXX_COMPILER='+self.getCompiler('SYCL'))
 
-    # -DCMAKE_CXX_STANDARD= will be taken from Kokkos
+    # These options will be taken from Kokkos configuration
     args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_STANDARD=')
+    args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_FLAGS')
+    args = self.rmArgsStartsWith(args,'-DCMAKE_C_COMPILER=')
+    args = self.rmArgsStartsWith(args,'-DCMAKE_C_FLAGS')
+    args = self.rmArgsStartsWith(args,'-DCMAKE_AR')
+    args = self.rmArgsStartsWith(args,'-DCMAKE_RANLIB')
     return args
+
+  def configureLibrary(self):
+    self.buildLanguages= self.kokkos.buildLanguages
+    config.package.CMakePackage.configureLibrary(self)

@@ -9,15 +9,18 @@ class Configure(config.package.Package):
     self.versionname      = 'HIP_VERSION_MAJOR.HIP_VERSION_MINOR'
     self.versioninclude   = 'hip/hip_version.h'
     self.requiresversion  = 1
-    self.functionsCxx     = [1,'', 'hipblasCreate']
-    self.includes         = ['hipblas.h','hipsparse.h']
+    self.functionsCxx     = [1,'', 'rocblas_create']
+    self.includes         = ['hip/hip_runtime.h']
+    # PETSc does not use hipsparse or hipblas, but dependencies can (e.g., magma)
     self.liblist          = [['libhipsparse.a','libhipblas.a','librocsparse.a','librocsolver.a','librocblas.a','librocrand.a','libamdhip64.a'],
                              ['hipsparse.lib','hipblas.lib','rocsparse.lib','rocsolver.lib','rocblas.lib','rocrand.lib','amdhip64.lib'],]
     self.precisions       = ['single','double']
-    self.cxx              = 1
+    self.buildLanguages   = ['HIP']
     self.complex          = 1
     self.hastests         = 0
     self.hastestsdatafiles= 0
+    self.devicePackage    = 1
+    self.fullPathHIPC     = ''
     return
 
   def setupHelp(self, help):
@@ -37,18 +40,6 @@ class Configure(config.package.Package):
     if hasattr(self,'hipArch'):
       output += '  HIP arch: '+ self.hipArch +'\n'
     return output
-
-  def getSearchDirectories(self):
-    import os
-    self.pushLanguage('HIP')
-    petscHip = self.getCompiler()
-    self.popLanguage()
-    self.getExecutable(petscHip,getFullPath=1,resultName='systemHipc')
-    if hasattr(self,'systemHipc'):
-      hipcDir = os.path.dirname(self.systemHipc)
-      hipDir = os.path.split(hipcDir)[0]
-      yield hipDir
-    return
 
   def checkSizeofVoidP(self):
     '''Checks if the HIPC compiler agrees with the C compiler on what size of void * should be'''
@@ -77,7 +68,24 @@ class Configure(config.package.Package):
         raise RuntimeError('HIP compiler error: memory alignment doesn\'t match C compiler (try adding -malign-double to compiler options)')
     return
 
+  def setFullPathHIPC(self):
+    self.pushLanguage('HIP')
+    HIPC = self.getCompiler()
+    self.popLanguage()
+    self.getExecutable(HIPC,getFullPath=1,resultName='fullPathHIPC')
+    if not hasattr(self,'fullPathHIPC'):
+      raise RuntimeError('Unable to locate the HIPC compiler')
+
+  def getSearchDirectories(self):
+    # Package.getSearchDirectories() return '' by default, so that HIPC's default include path could
+    # be checked. But here we lower priority of '', so that once we validated a header path, it will
+    # be added to HIP_INCLUDE.  Other compilers, ex. CC or CXX, might need this path for compilation.
+    yield os.path.dirname(os.path.dirname(self.fullPathHIPC)) # yield /opt/rocm from /opt/rocm/bin/hipcc
+    yield ''
+
   def configureLibrary(self):
+    self.setFullPathHIPC()
+    config.package.Package.configureLibrary(self)
     self.getExecutable('hipconfig',getFullPath=1,resultName='hip_config')
     if hasattr(self,'hip_config'):
       try:
@@ -96,6 +104,7 @@ class Configure(config.package.Package):
 
     self.libraries.pushLanguage('HIP')
     self.addDefine('HAVE_HIP','1')
+    self.addDefine('HAVE_CUPM','1') # Have either CUDA or HIP
     if self.platform in ['nvcc','nvidia']:
       self.pushLanguage('CUDA')
       petscNvcc = self.getCompiler()
@@ -129,12 +138,28 @@ class Configure(config.package.Package):
             try:
               s = set([i for i in out.split() if 'gfx' in i])
               self.hipArch = list(s)[0]
+              self.log.write('ROCM utility ' + self.rocminfo + ' said the HIP arch is ' + self.hipArch + '\n')
             except:
               self.log.write('Unable to parse the ROCM utility ' + self.rocminfo + '\n')
-        if hasattr(self,'hipArch'):
-          self.setCompilers.HIPFLAGS += ' --amdgpu-target=' + self.hipArch +' '
+      if hasattr(self,'hipArch'):
+        self.hipArch.lower() # to have a uniform format even if user set hip arch in weird cases
+        if not self.hipArch.startswith('gfx'):
+          raise RuntimeError('HIP arch name ' + self.hipArch + ' is not in the supported gfxnnn format')
+        self.setCompilers.HIPFLAGS += ' --amdgpu-target=' + self.hipArch +' '
+      else:
+        raise RuntimeError('You must set --with-hip-arch=gfx900, gfx906, gfx908, gfx90a etc or make ROCM utility "rocminfo" available on your PATH')
 
-    config.package.Package.configureLibrary(self)
+      # Record rocBlas and rocSparse directories as they are needed by Kokkos-Kernels HIP TPL, so that we can hanle
+      # a weird (but valid) case --with-hipcc=/opt/rocm-4.5.2/hip/bin/hipcc --with-hip-dir=/opt/rocm-4.5.2 (which
+      # should be better written as --with-hipcc=/opt/rocm-4.5.2/bin/hipcc --with-hip-dir=/opt/rocm-4.5.2 or simply
+      # --with-hip-dir=/opt/rocm-4.5.2)
+      if self.directory:
+        self.rocBlasDir   = self.directory
+        self.rocSparseDir = self.directory
+      else: # directory is '', indicating we are using the compiler's default, so the last resort is to guess the dir from hipcc
+        hipDir            = os.path.dirname(os.path.dirname(self.fullPathHIPC)) # Ex. peel /opt/rocm-4.5.2/bin/hipcc twice
+        self.rocBlasDir   = hipDir
+        self.rocSparseDir = hipDir
     #self.checkHIPDoubleAlign()
     self.configureTypes()
     self.libraries.popLanguage()

@@ -14,6 +14,7 @@ typedef const char* DMPlexTransformType;
 #define DMPLEXREFINESBR           "refine_sbr"
 #define DMPLEXREFINETOBOX         "refine_tobox"
 #define DMPLEXREFINETOSIMPLEX     "refine_tosimplex"
+#define DMPLEXREFINE1D            "refine_1d"
 #define DMPLEXEXTRUDE             "extrude"
 #define DMPLEXTRANSFORMFILTER     "transform_filter"
 
@@ -51,7 +52,7 @@ PETSC_EXTERN PetscErrorCode DMPlexTransformGetConeOriented(DMPlexTransform, Pets
 PETSC_EXTERN PetscErrorCode DMPlexTransformRestoreCone(DMPlexTransform, PetscInt, const PetscInt *[], const PetscInt *[]);
 PETSC_EXTERN PetscErrorCode DMPlexTransformGetCellVertices(DMPlexTransform, DMPolytopeType, PetscInt *, PetscScalar *[]);
 PETSC_EXTERN PetscErrorCode DMPlexTransformGetSubcellVertices(DMPlexTransform, DMPolytopeType, DMPolytopeType, PetscInt, PetscInt *[]);
-PETSC_EXTERN PetscErrorCode DMPlexTransformAdaptLabel(DM, DMLabel, DM *);
+PETSC_EXTERN PetscErrorCode DMPlexTransformAdaptLabel(DM, Vec, DMLabel, DMLabel, DM *);
 
 PETSC_EXTERN PetscErrorCode DMPlexRefineRegularGetAffineTransforms(DMPlexTransform, DMPolytopeType, PetscInt *, PetscReal *[], PetscReal *[], PetscReal *[]);
 PETSC_EXTERN PetscErrorCode DMPlexRefineRegularGetAffineFaceTransforms(DMPlexTransform, DMPolytopeType, PetscInt *, PetscReal *[], PetscReal *[], PetscReal *[], PetscReal *[]);

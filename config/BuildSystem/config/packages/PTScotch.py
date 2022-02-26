@@ -3,7 +3,7 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.version          = '6.1.1'
+    self.version          = '6.1.2'
     self.versionname      = 'SCOTCH_VERSION.SCOTCH_RELEASE.SCOTCH_PATCHLEVEL'
     self.gitcommit        = 'v'+self.version
     self.download         = ['git://https://gitlab.inria.fr/scotch/scotch.git',
@@ -70,7 +70,7 @@ class Configure(config.package.Package):
     if self.libraries.add('-lrt','timer_create'): ldflags += ' -lrt'
     self.cflags = self.cflags + ' -DCOMMON_RANDOM_FIXED_SEED'
     # do not use -DSCOTCH_PTHREAD because requires MPI built for threads.
-    self.cflags = self.cflags + ' -DSCOTCH_RENAME -Drestrict="'+self.compilers.cRestrict+'"'
+    self.cflags = self.cflags + ' -DSCOTCH_RENAME -Drestrict="restrict"'
     # this is needed on the Mac, because common2.c includes common.h which DOES NOT include mpi.h because
     # SCOTCH_PTSCOTCH is NOT defined above Mac does not know what clock_gettime() is!
     if self.setCompilers.isDarwin(self.log):

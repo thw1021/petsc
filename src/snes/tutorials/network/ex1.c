@@ -191,15 +191,15 @@ PetscErrorCode FormFunction(SNES snes,Vec X,Vec F,void *appctx)
       /* Verify the coupling vertex is a powernet load vertex or a water vertex */
       switch (k) {
       case 0:
-        if (key != appctx_power.compkey_bus || nvar != 2) SETERRQ2(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"key %D not a power bus vertex or nvar %D != 2",key,nvar);
+        PetscCheckFalse(key != appctx_power.compkey_bus || nvar != 2,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"key %D not a power bus vertex or nvar %D != 2",key,nvar);
         break;
       case 1:
-        if (key != appctx_power.compkey_load || nvar != 0 || goffset[1] != goffset[0]+2) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Not a power load vertex");
+        PetscCheckFalse(key != appctx_power.compkey_load || nvar != 0 || goffset[1] != goffset[0]+2,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Not a power load vertex");
         break;
       case 2:
-        if (key != appctx_water.compkey_vtx || nvar != 1 || goffset[2] != goffset[1]) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Not a water vertex");
+        PetscCheckFalse(key != appctx_water.compkey_vtx || nvar != 1 || goffset[2] != goffset[1],PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Not a water vertex");
         break;
-      default: SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "k %D is wrong",k);
+      default: SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "k %D is wrong",k);
       }
       /* printf("  [%d] coupling vertex[%D]: key %D; nvar %D, goffset %D\n",rank,v,key,nvar,goffset[k]); */
     }
@@ -218,7 +218,7 @@ PetscErrorCode FormFunction(SNES snes,Vec X,Vec F,void *appctx)
           /* printf("  connected edge[%D]=%D has keye=%D, is appctx_water.compkey_edge with EDGE_TYPE_PUMP\n",k,e,keye); */
         }
       } else { /* ower->compkey_branch */
-        if (keye != appctx_power.compkey_branch) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Not a power branch");
+        PetscCheckFalse(keye != appctx_power.compkey_branch,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Not a power branch");
       }
     }
   }
@@ -464,14 +464,10 @@ int main(int argc,char **argv)
     ierr = DMNetworkAddComponent(networkdm,vtx[i],appctx_water->compkey_vtx,&waterdata->vertex[i],1);CHKERRQ(ierr);
   }
 
-  /* ADD VARIABLES AND COMPONENTS AT THE SHARED VERTEX: net[0].4 coupls with net[1].0 -- only the owner of the vertex does this */
+  /* ADD VARIABLES AND COMPONENTS AT THE SHARED VERTEX: net[0].4 coupls with net[1].0 -- owning and all ghost ranks of the vertex do this */
   /*----------------------------------------------------------------------------------------------------------------------------*/
   ierr = DMNetworkGetSharedVertices(networkdm,&nv,&vtx);CHKERRQ(ierr);
   for (i = 0; i < nv; i++) {
-    ierr = DMNetworkIsGhostVertex(networkdm,vtx[i],&ghost);CHKERRQ(ierr);
-    /* printf("[%d] coupling info: nv %d; sv[0] %d; ghost %d\n",rank,nv,vtx[0],ghost);CHKERRQ(ierr); */
-    if (ghost) continue;
-
     /* power */
     ierr = DMNetworkAddComponent(networkdm,vtx[i],appctx_power->compkey_bus,&pfdata->bus[4],2);CHKERRQ(ierr);
     /* bus[4] is a load, add its component */

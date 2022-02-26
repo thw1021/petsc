@@ -15,9 +15,9 @@ Getting Started: A Simple TAO Example
 -------------------------------------
 
 To help the user start using TAO immediately, we introduce here a simple
-uniprocessor example. Please read :any:`sec_tao_solver`
+uniprocessor example. Please read :any:`sec_tao_solvers`
 for a more in-depth discussion on using the TAO solvers. The code
-presented `below <#tao-example1>`_ minimizes the
+presented :any:`below <tao-example1>` minimizes the
 extended Rosenbrock function :math:`f: \mathbb R^n \to \mathbb R`
 defined by
 
@@ -31,7 +31,7 @@ usable from C++ and Fortran 77/90.
 :any:`chapter_fortran` discusses additional
 issues concerning Fortran usage.
 
-The code in `the example <#tao-example1>`_ contains many of
+The code in :any:`the example <tao-example1>` contains many of
 the components needed to write most TAO programs and thus is
 illustrative of the features present in complex optimization problems.
 Note that for display purposes we have omitted some nonessential lines
@@ -41,10 +41,10 @@ the code for ``FormHessian``, which evaluates the Hessian matrix for
 Rosenbrock’s function. The complete code is available in
 `$TAO_DIR/src/unconstrained/tutorials/rosenbrock1.c <../../src/tao/unconstrained/tutorials/rosenbrock1.c.html>`__.
 The following sections annotate the lines of code in
-`the example <#tao-example1>`_.
+:any:`the example <tao-example1>`.
 
+.. _tao-example1:
 .. admonition:: Listing: ``src/tao/unconstrained/tutorials/rosenbrock1.c``
-   :name: tao-example1
 
    .. literalinclude:: /../src/tao/unconstrained/tutorials/rosenbrock1.c
       :prepend: #include <petsctao.h>
@@ -69,13 +69,13 @@ is shown below.
 
 .. code::
 
-      TaoCreate(MPI_Comm comm, Tao *tao); 
+      TaoCreate(MPI_Comm comm, Tao *tao);
       TaoSetType(Tao tao, TaoType type);
-      TaoSetInitialVector(Tao tao, Vec x);
-      TaoSetObjectiveAndGradientRoutine(Tao tao, 
-           PetscErrorCode (*FormFGradient)(Tao,Vec,PetscReal*,Vec,void*), 
+      TaoSetSolution(Tao tao, Vec x);
+      TaoSetObjectiveAndGradient(Tao tao, Vec g,
+           PetscErrorCode (*FormFGradient)(Tao,Vec,PetscReal*,Vec,void*),
            void *user);
-      TaoSetHessianRoutine(Tao tao, Mat H, Mat Hpre,
+      TaoSetHessian(Tao tao, Mat H, Mat Hpre,
            PetscErrorCode (*FormHessian)(Tao,Vec,Mat,Mat,
            void*), void *user);
       TaoSolve(Tao tao);
@@ -88,7 +88,7 @@ minimization method (e.g., limited-memory variable metric, conjugate
 gradient, Newton with line search or trust region) but also can
 prescribe the convergence tolerance, set various monitoring routines,
 set iterative methods and preconditions for solving the linear systems,
-and so forth. See :any:`sec_tao_solver` for more
+and so forth. See :any:`sec_tao_solvers` for more
 information on the solver methods available in TAO.
 
 Header File
@@ -186,7 +186,7 @@ the application object by using the
 
 .. code::
 
-      TaoSetInitialVector(Tao, Vec);
+      TaoSetSolution(Tao, Vec);
 
 routine. When using this routine, the application should initialize the
 vector with an approximate solution of the optimization problem before
@@ -196,7 +196,7 @@ can be retrieved from the application object by using the
 
 .. code::
 
-      TaoGetSolutionVector(Tao, Vec*);
+      TaoGetSolution(Tao, Vec*);
 
 routine. This routine takes the address of a ``Vec`` in the second
 argument and sets it to the solution vector used in the application.
@@ -235,6 +235,8 @@ application objects will never access this structure, so the application
 developer has complete freedom to define it. If no such structure or
 needed by the application then a NULL pointer can be used.
 
+.. _sec_fghj:
+
 Objective Function and Gradient Routines
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -263,7 +265,7 @@ application object by using the
 
 .. code::
 
-      TaoSetObjectiveRoutine(Tao, PetscErrorCode(*)(Tao,Vec,PetscReal*,void*), void*);
+      TaoSetObjective(Tao, PetscErrorCode(*)(Tao,Vec,PetscReal*,void*), void*);
 
 routine. The first argument in this routine is the TAO solver object,
 the second argument is a function pointer to the routine that evaluates
@@ -295,10 +297,11 @@ be passed to the application object by using the
 
 .. code::
 
-      TaoSetGradientRoutine(Tao, PetscErrorCode (*)(Tao,Vec,Vec,void*), void*);
+      TaoSetGradient(Tao, Vec, PetscErrorCode (*)(Tao,Vec,Vec,void*), void*);
 
-routine. In this routine, the first argument is the Tao object, the
-second argument is the function pointer, and the third object is the
+routine. In this routine, the first argument is the Tao object, the second
+argument is the optional vector to hold the computed gradient, the
+third argument is the function pointer, and the fourth object is the
 application context, cast to ``(void*)``.
 
 Instead of evaluating the objective and its gradient in separate
@@ -320,9 +323,10 @@ routine should be set with the call
 
 .. code::
 
-      TaoSetObjectiveAndGradientRoutine(Tao, PetscErrorCode (*)(Tao,Vec,PetscReal*,Vec,void*), void*);
+      TaoSetObjectiveAndGradient(Tao, Vec PetscErrorCode (*)(Tao,Vec,PetscReal*,Vec,void*), void*);
 
-where the arguments are the TAO application, a function name, and a
+where the arguments are the TAO application, the optional vector to be
+used to hold the computed gradient, a function pointer, and a
 pointer to a user-defined context.
 
 The TAO example problems demonstrate the use of these application
@@ -358,7 +362,7 @@ One can set the Hessian evaluation routine by calling the
 
 .. code::
 
-      TaoSetHessianRoutine(Tao, Mat, Mat, PetscErrorCode (*)(Tao,Vec,Mat,Mat,void*), void*);
+      TaoSetHessian(Tao, Mat, Mat, PetscErrorCode (*)(Tao,Vec,Mat,Mat,void*), void*);
 
 routine. The first argument is the TAO Solver object. The second and
 third arguments are, respectively, the Mat object where the Hessian will
@@ -385,8 +389,8 @@ and
 
       TaoDefaultComputeHessian(Tao, Vec, Mat*, Mat*,void*);
 
-respectively. They can be set by using ``TaoSetGradientRoutine()`` and
-``TaoSetHessianRoutine()`` or through the options database with the
+respectively. They can be set by using ``TaoSetGradient()`` and
+``TaoSetHessian()`` or through the options database with the
 options ``-tao_fdgrad`` and ``-tao_fd``, respectively.
 
 The efficiency of the finite-difference Hessian can be improved if the
@@ -400,7 +404,7 @@ routine to
       TaoDefaultComputeHessianColor(Tao, Vec, Mat*, Mat*, void*);
 
 and using the ``MatFDColoring`` object as the last (``void *``) argument
-to ``TaoSetHessianRoutine()``.
+to ``TaoSetHessian()``.
 
 One also can use finite-difference approximations to directly check the
 correctness of the gradient and/or Hessian evaluation routines. This
@@ -498,6 +502,7 @@ interface functions
 .. code::
 
       TaoSetEqualityConstraintsRoutine(Tao, Vec, PetscErrorCode (*)(Tao,Vec,Vec,void*), void*);
+
 and
 
 .. code::
@@ -507,7 +512,7 @@ and
 Inequality constraints are assumed to be formulated as :math:`c_i(x) \leq 0`
 and follow the same workflow as equality constraints using the
 ``TaoSetInequalityConstraintsRoutine()`` and ``TaoSetJacobianInequalityRoutine()``
-interfaces. 
+interfaces.
 
 Some TAO algorithms may adopt an alternative double-sided
 :math:`c_l \leq c_i(x) \leq c_u` formulation and require the lower and upper
@@ -610,11 +615,11 @@ recovered with the following routines.
 
 .. code::
 
-      TaoGetSolutionVector(Tao, Vec*);
-      TaoGetGradientVector(Tao, Vec*);
+      TaoGetSolution(Tao, Vec*);
+      TaoGetGradient(Tao, Vec*, NULL, NULL);
 
-Note that the ``Vec`` returned by ``TaoGetSolutionVector()`` will be the
-same vector passed to ``TaoSetInitialVector()``. This information can be
+Note that the ``Vec`` returned by ``TaoGetSolution()`` will be the
+same vector passed to ``TaoSetSolution()``. This information can be
 obtained during user-defined routines such as a function evaluation and
 customized monitoring routine or after the solver has terminated.
 
@@ -712,10 +717,10 @@ routines should be registered with TAO by using the
 
 .. code::
 
-      TaoSetJacobianStateRoutine(Tao, Mat, Mat, Mat, 
+      TaoSetJacobianStateRoutine(Tao, Mat, Mat, Mat,
                               PetscErrorCode (*)(Tao,Vec,Mat,Mat,void*),
                               void*);
-      TaoSetJacobianDesignRoutine(Tao, Mat, 
+      TaoSetJacobianDesignRoutine(Tao, Mat,
                               PetscErrorCode (*)(Tao,Vec,Mat*,void*),
                               void*);
 
@@ -731,6 +736,7 @@ function pointer, and the sixth argument is an optional user-defined
 context. Since no solve is performed with the design Jacobian, there is
 no need to provide preconditioner or inverse matrices.
 
+.. _sec_evalsof:
 
 Nonlinear Least Squares
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -835,7 +841,7 @@ and the fifth argument is an optional user-defined context. The Jacobian
 matrix should be created in a way such that the product of it and the
 variable vector can be stored in the constraint vector.
 
-.. _tao-solvers-1:
+.. _sec_tao_solvers:
 
 TAO Algorithms
 --------------
@@ -885,8 +891,8 @@ Newton-Krylov Methods
 ^^^^^^^^^^^^^^^^^^^^^
 
 TAO features three Newton-Krylov algorithms, separated by their globalization methods
-for unconstrained optimization: line search (NLS), trust region (NTR), and trust 
-region with a line search (NTL). They are available via the TAO solvers 
+for unconstrained optimization: line search (NLS), trust region (NTR), and trust
+region with a line search (NTL). They are available via the TAO solvers
 ``TAONLS``, ``TAONTR`` and ``TAONTL``, respectively, or the ``-tao_type``
 ``nls``/``ntr``/``ntl`` flag.
 
@@ -1556,7 +1562,7 @@ scaled gradient or a gradient descent step. The trust radius is then
 modified based on the line search step length.
 
 This algorithm will be deprecated in the next version and replaced by
-the Bounded Newton Trust Region with Line Search (BNTL) algorithm that 
+the Bounded Newton Trust Region with Line Search (BNTL) algorithm that
 can solve both bound constrained and unconstrained problems.
 
 Limited-Memory Variable-Metric Method (LMVM)
@@ -1965,7 +1971,7 @@ set via ``-tao_bncg_as_tol`` and ``-tao_bncg_as_step``, respectively.
 In addition to automatic scaled gradient descent restarts under certain
 local curvature conditions, we also employ restarts based on a check on
 descent direction such that
-:math:`\nabla f(x_k)^T d_k \in [-10^{11}, -1^{-9}]`. Furthermore, we
+:math:`\nabla f(x_k)^T d_k \in [-10^{11}, -10^{-9}]`. Furthermore, we
 allow for a variety of alternative restart strategies, all disabled by
 default. The ``-tao_bncg_unscaled_restart`` flag allows one to disable
 rescaling of the gradient for gradient descent steps. The
@@ -1997,7 +2003,7 @@ the form
 .. math::
 
    \begin{array}{ll}
-   \displaystyle \min_{x} & f(x) + g(z) \\ 
+   \displaystyle \min_{x} & f(x) + g(z) \\
    \text{subject to} & Ax + Bz = c
    \end{array}
 
@@ -2489,9 +2495,9 @@ trust-region subproblem
    :label: eq_poundersp
 
    \min\left\{
-    m_k(x) : 
-    \|x-x_k\|_{p} \leq \Delta_k, 
-    \right \}, 
+    m_k(x) :
+    \|x-x_k\|_{p} \leq \Delta_k,
+    \right \},
 
 where :math:`\Delta_k` is the current trust-region radius. By default we
 use a trust-region norm with :math:`p=\infty` and solve
@@ -2518,7 +2524,7 @@ approximation on the trust region is then used to update the iterate,
    x_+ & \text{if } \rho_k \geq \eta_1 \\
    x_+ & \text{if } 0<\rho_k <\eta_1  \text{ and \texttt{valid}=\texttt{true}}
    \\
-   x_k & \text{else}, 
+   x_k & \text{else},
    \end{array}
    \right.
 
@@ -2558,8 +2564,8 @@ quadratic models
 .. math::
    :label: eq_models
 
-   q_k^{(i)}(x) = 
-    F_i(x_k) + (x-x_k)^T g_k^{(i)} + \frac{1}{2} (x-x_k)^T H_k^{(i)} (x-x_k), 
+   q_k^{(i)}(x) =
+    F_i(x_k) + (x-x_k)^T g_k^{(i)} + \frac{1}{2} (x-x_k)^T H_k^{(i)} (x-x_k),
     \qquad i = 1, \ldots, m
 
 thus satisfy the interpolation conditions
@@ -2576,7 +2582,7 @@ model,
 .. math::
   :label: eq_newton2
 
-   m_k(x) = f(x_k) + 
+   m_k(x) = f(x_k) +
    2(x-x_k)^T \sum_{i=1}^{m} F_i(x_k) g_k^{(i)} +
    (x-x_k)^T \sum_{i=1}^{m}
    \left( g_k^{(i)} \left(g_k^{(i)}\right)^T +  F_i(x_k)
@@ -2797,14 +2803,14 @@ Active-Set Methods
 ^^^^^^^^^^^^^^^^^^
 
 TAO also contained two active-set semismooth methods for solving
-complementarity problems.  These methods solve a reduced system 
+complementarity problems.  These methods solve a reduced system
 constructed by block elimination of active constraints.  The
 subdifferential in these cases enables this block elimination.
 
 The first active-set semismooth algorithm available in TAO is not guaranteed to
 remain feasible with respect to the bounds, :math:`[\ell, u]`, and is
-termed an infeasible active-set semismooth method. This method can be 
-specified by using the ``tao_asils`` solver. 
+termed an infeasible active-set semismooth method. This method can be
+specified by using the ``tao_asils`` solver.
 
 An alternative is to remain feasible with respect to the bounds by using
 a projected Armijo line search. This method can be specified by using
@@ -2939,7 +2945,7 @@ computation of the solution. Since linear equation solvers often have a
 wide variety of options associated with them, TAO allows the user to
 access the linear solver with the
 
-::
+.. code-block::
 
       TaoGetKSP(Tao, KSP *);
 
@@ -2953,7 +2959,7 @@ Monitors
 By default the TAO solvers run silently without displaying information
 about the iterations. The user can initiate monitoring with the command
 
-::
+.. code-block::
 
       TaoSetMonitor(Tao, PetscErrorCode (*mon)(Tao,void*), void*);
 
@@ -2979,7 +2985,7 @@ choices are not sufficient, the user can specify a customized test
 
 Users can set their own customized convergence tests of the form
 
-::
+.. code-block::
 
       PetscErrorCode  conv(Tao, void*);
 
@@ -2990,7 +2996,7 @@ routines such as ``TaoGetSolutionStatus()`` and ``TaoGetTolerances()``.
 
 To use this convergence test within a TAO solver, one uses the command
 
-::
+.. code-block::
 
       TaoSetConvergenceTest(Tao, PetscErrorCode (*conv)(Tao,void*), void*);
 
@@ -3000,7 +3006,7 @@ user-defined context for private data. The convergence routine receives
 the TAO solver and this private data structure. The termination flag can
 be set by using the routine
 
-::
+.. code-block::
 
       TaoSetConvergedReason(Tao, TaoConvergedReason);
 
@@ -3109,7 +3115,7 @@ Header File
 TAO solver implementation files must include the TAO implementation file
 ``taoimpl.h``:
 
-::
+.. code-block::
 
       #include "petsc/private/taoimpl.h"
 
@@ -3129,7 +3135,7 @@ solver, setup appropriate data structures, and destroy these data
 structures. In order to implement the conjugate gradient algorithm, for
 example, the following structure is useful.
 
-::
+.. code-block::
 
    typedef struct{
 
@@ -3138,7 +3144,7 @@ example, the following structure is useful.
      PetscInt  ngradtseps;
      PetscInt  nresetsteps;
      Vec X_old;
-     Vec G_old; 
+     Vec G_old;
 
    } TAO_CG;
 
@@ -3158,7 +3164,7 @@ convergence monitoring. As an example, consider the following code that
 solves an unconstrained minimization problem using the conjugate
 gradient method.
 
-::
+.. code-block::
 
    PetscErrorCode TaoSolve_CG(Tao tao)
    {
@@ -3177,7 +3183,7 @@ gradient method.
      ierr = TaoComputeObjectiveAndGradient(tao,x,&f,g);CHKERRQ(ierr);
      ierr = VecNorm(g,NORM_2,&gnorm);  CHKERRQ(ierr);
 
-     ierr = VecSet(s,0); CHKERRQ(ierr); 
+     ierr = VecSet(s,0); CHKERRQ(ierr);
 
      cg->beta=0;
      gnormPrev = gnorm;
@@ -3192,13 +3198,13 @@ gradient method.
        cg->beta=(gnorm*gnorm)/(gnormPrev*gnormPrev);
        ierr = VecScale(s,cg->beta); CHKERRQ(ierr);
        ierr = VecAXPY(s,-1.0,g); CHKERRQ(ierr);
-       
+
        ierr = VecDot(s,g,&gdx); CHKERRQ(ierr);
        if (gdx>=0){     /* If not a descent direction, use gradient */
          ierr = VecCopy(g,s); CHKERRQ(ierr);
          ierr = VecScale(s,-1.0); CHKERRQ(ierr);
          gdx=-gnorm*gnorm;
-       } 
+       }
 
        /* Line Search */
        gnormPrev = gnorm;  step=1.0;
@@ -3208,7 +3214,7 @@ gradient method.
        ierr = VecNorm(g,NORM_2,&gnorm);CHKERRQ(ierr);
        iter++;
      }
-     
+
      PetscFunctionReturn(0);
    }
 
@@ -3229,7 +3235,7 @@ nonnegative and equals zero at the solution. The solver will pass this
 quantity, the current function value, the current iteration number, and
 a measure of infeasibility to TAO with the routine
 
-::
+.. code-block::
 
       PetscErrorCode TaoMonitor(Tao tao, PetscInt iter, PetscReal f,
                      PetscReal res, PetscReal cnorm, PetscReal steplength,
@@ -3261,10 +3267,10 @@ pages.
 Nonlinear conjugate gradient algorithms also require a line search. TAO
 provides several line searches and support for using them. The routine
 
-::
+.. code-block::
 
-      TaoLineSearchApply(TaoLineSearch ls, Vec x, PetscReal *f, Vec g, 
-                             TaoVec *s, PetscReal *steplength, 
+      TaoLineSearchApply(TaoLineSearch ls, Vec x, PetscReal *f, Vec g,
+                             TaoVec *s, PetscReal *steplength,
                              TaoLineSearchConvergedReason *lsflag)
 
 passes the current solution, gradient, and objective value to the line
@@ -3288,7 +3294,7 @@ line search or linear solver if needed, and creates structures needed by
 this solver. For example, the routine that creates the nonlinear
 conjugate gradient algorithm shown above can be implemented as follows.
 
-::
+.. code-block::
 
    PETSC_EXTERN PetscErrorCode TaoCreate_CG(Tao tao)
    {
@@ -3350,7 +3356,7 @@ created by earlier routines. For the nonlinear conjugate gradient method
 discussed earlier, the following routine destroys the two work vectors
 and the ``TAO_CG`` structure.
 
-::
+.. code-block::
 
    PetscErrorCode TaoDestroy_CG(TAO_SOLVER tao)
    {
@@ -3383,7 +3389,7 @@ is optional, it is often provided to allocate the gradient vector, work
 vectors, and other data structures required by the solver. It should
 have the following form.
 
-::
+.. code-block::
 
    PetscErrorCode TaoSetUp_CG(Tao tao)
    {
@@ -3407,7 +3413,7 @@ algorithm-specific options set by the user and will be called when the
 application makes a call to ``TaoSetFromOptions()``. It should have the
 following form.
 
-::
+.. code-block::
 
    PetscErrorCode TaoSetFromOptions_CG(Tao tao, void *solver);
    {
@@ -3432,10 +3438,10 @@ called when the application makes a call to ``TaoView()`` or when the
 command line option ``-tao_view`` is used. It should have the following
 form.
 
-::
+.. code-block::
 
    PetscErrorCode TaoView_CG(Tao tao, PetscViewer viewer)
-   { 
+   {
      TAO_CG *cg = (TAO_CG*)tao->data;
      PetscErrorCode ierr;
 
@@ -3454,11 +3460,11 @@ Once a new solver is implemented, TAO needs to know the name of the
 solver and what function to use to create the solver. To this end, one
 can use the routine
 
-::
+.. code-block::
 
-     TaoRegister(const char *name, 
+     TaoRegister(const char *name,
                      const char *path,
-                     const char *cname, 
+                     const char *cname,
                      PetscErrorCode (*create) (Tao));
 
 where ``name`` is the name of the solver (i.e., ``tao_blmvm``), ``path``
@@ -3479,8 +3485,5 @@ either by using the ``TaoSetType()`` function or by using the
 
     <hr>
 
-.. bibliography:: /../src/docs/tao_tex/tao.bib
-   :filter: docname in docnames
-
-.. bibliography:: /../src/docs/tao_tex/manual/mathprog.bib
+.. bibliography:: /petsc.bib
    :filter: docname in docnames

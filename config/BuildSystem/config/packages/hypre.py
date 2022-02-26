@@ -4,13 +4,12 @@ import os
 class Configure(config.package.GNUPackage):
   def __init__(self, framework):
     config.package.GNUPackage.__init__(self, framework)
-    self.version         = '2.23.0'
+    self.version         = '2.24.0'
     self.minversion      = '2.14'
     self.versionname     = 'HYPRE_RELEASE_VERSION'
     self.versioninclude  = 'HYPRE_config.h'
     self.requiresversion = 1
-    # self.gitcommit       = 'v'+self.version
-    self.gitcommit       = 'e12e942fcbc73623f8cdd94505701f2ffb605e5e' # master Sep 29, 2021 (pre-2.23.0)
+    self.gitcommit       = 'v'+self.version
     self.download        = ['git://https://github.com/hypre-space/hypre','https://github.com/hypre-space/hypre/archive/'+self.gitcommit+'.tar.gz']
     self.functions       = ['HYPRE_IJMatrixCreate']
     self.includes        = ['HYPRE.h']
@@ -91,6 +90,7 @@ class Configure(config.package.GNUPackage):
     cudabuild = False
     hasharch = 'with-gpu-arch' in args
     if self.hip.found:
+      stdflag  = '-std=c++14'
       hipbuild = True
       args.append('--with-hip')
       if not hasharch:
@@ -103,11 +103,12 @@ class Configure(config.package.GNUPackage):
           args.append('--with-gpu-arch='+self.argDB['with-hypre-gpu-arch'])
       self.pushLanguage('HIP')
       cucc = self.getCompiler()
-      devflags += ' -x hip -std=c++14 '
-      devflags += self.getCompilerFlags() + ' ' + self.setCompilers.HIPPPFLAGS + ' ' + self.mpi.includepaths
+      devflags += ' '.join(('','-x','hip',stdflag,''))
+      devflags += self.getCompilerFlags() + ' ' + self.setCompilers.HIPPPFLAGS + ' ' + self.mpi.includepaths + ' ' + self.headers.toString(self.dinclude)
       devflags = devflags.replace('-fvisibility=hidden','')
       self.popLanguage()
     elif self.cuda.found:
+      stdflag   = '-std=c++11'
       cudabuild = True
       args.append('CUDA_HOME="'+self.cuda.cudaDir+'"')
       args.append('--with-cuda')
@@ -121,8 +122,8 @@ class Configure(config.package.GNUPackage):
           args.append('--with-gpu-arch='+self.argDB['with-hypre-gpu-arch'])
       self.pushLanguage('CUDA')
       cucc = self.getCompiler()
-      devflags += ' -expt-extended-lambda -std=c++11 --x cu '
-      devflags += self.getCompilerFlags() + ' ' + self.setCompilers.CUDAPPFLAGS + ' ' + self.mpi.includepaths
+      devflags += ' '.join(('','-expt-extended-lambda',stdflag,'-x','cu',''))
+      devflags += self.getCompilerFlags() + ' ' + self.setCompilers.CUDAPPFLAGS + ' ' + self.mpi.includepaths+ ' ' + self.headers.toString(self.dinclude)
       self.popLanguage()
     elif self.openmp.found:
       args.append('--with-openmp')
@@ -141,12 +142,13 @@ class Configure(config.package.GNUPackage):
     args.append('--with-fmangle-lapack='+mang)
 
     args.append('--without-mli')
-    args.append('--without-fei')
     args.append('--without-superlu')
 
     if self.getDefaultIndexSize() == 64:
-      args.append('--enable-bigint')
-
+      if cudabuild: # HYPRE 2.23 supports only mixedint configurations with CUDA
+        args.append('--enable-bigint=no --enable-mixedint=yes')
+      else:
+        args.append('--enable-bigint')
     if self.scalar.scalartype == 'complex':
       args.append('--enable-complex')
 
@@ -161,12 +163,13 @@ class Configure(config.package.GNUPackage):
     args.append('LDFLAGS="'+self.setCompilers.LDFLAGS.replace('-dynamic','')+'"')
 
     # Prevent NVCC from complaining about different standards
-    if cudabuild:
-      args = [arg.replace('-std=gnu++14','-std=c++11') for arg in args]
-      args = [arg.replace('-std=c++14','-std=c++11') for arg in args]
-      args = [arg.replace('-std=c++17','-std=c++11') for arg in args]
-    if hipbuild:
-      args = [arg.replace('-std=c++17','-std=c++14') for arg in args]
+    if cudabuild or hipbuild:
+      for dialect in ('20','17','14','11'):
+        if dialect < stdflag[-2:]:
+          break
+        gnuflag = '-std=gnu++'+dialect
+        cppflag = '-std=c++'+dialect
+        args    = [a.replace(gnuflag,stdflag).replace(cppflag,stdflag) for a in args]
 
     return args
 

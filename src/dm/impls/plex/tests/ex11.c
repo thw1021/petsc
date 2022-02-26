@@ -21,7 +21,7 @@ static PetscErrorCode TestInsertion()
     PetscInt val;
 
     ierr = DMLabelGetValue(label, i, &val);CHKERRQ(ierr);
-    if (val != values[i%5]) SETERRQ3(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Value %d for point %d should be %d", val, i, values[i%5]);
+    PetscCheckFalse(val != values[i%5],PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Value %d for point %d should be %d", val, i, values[i%5]);
   }
   /* Test stratum */
   for (v = 0; v < 5; ++v) {
@@ -30,11 +30,11 @@ static PetscErrorCode TestInsertion()
     PetscInt        n;
 
     ierr = DMLabelGetStratumIS(label, values[v], &stratum);CHKERRQ(ierr);
-    if (!stratum) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Stratum %d is empty!", v);
+    PetscCheckFalse(!stratum,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Stratum %d is empty!", v);
     ierr = ISGetIndices(stratum, &points);CHKERRQ(ierr);
     ierr = ISGetLocalSize(stratum, &n);CHKERRQ(ierr);
     for (i = 0; i < n; ++i) {
-      if (points[i] != i*5+v) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Point %d should be %d", points[i], i*5+v);
+      PetscCheckFalse(points[i] != i*5+v,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Point %d should be %d", points[i], i*5+v);
     }
     ierr = ISRestoreIndices(stratum, &points);CHKERRQ(ierr);
     ierr = ISDestroy(&stratum);CHKERRQ(ierr);
@@ -44,7 +44,7 @@ static PetscErrorCode TestInsertion()
     PetscInt val;
 
     ierr = DMLabelGetValue(label, i, &val);CHKERRQ(ierr);
-    if (val != values[i%5]) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Value %d should be %d", val, values[i%5]);
+    PetscCheckFalse(val != values[i%5],PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Value %d should be %d", val, values[i%5]);
   }
   /* Test Duplicate */
   ierr = DMLabelDuplicate(label, &label2);CHKERRQ(ierr);
@@ -52,7 +52,7 @@ static PetscErrorCode TestInsertion()
     PetscInt val;
 
     ierr = DMLabelGetValue(label2, i, &val);CHKERRQ(ierr);
-    if (val != values[i%5]) SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Value %d should be %d", val, values[i%5]);
+    PetscCheckFalse(val != values[i%5],PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Value %d should be %d", val, values[i%5]);
   }
   ierr = DMLabelDestroy(&label2);CHKERRQ(ierr);
   ierr = DMLabelDestroy(&label);CHKERRQ(ierr);
@@ -175,7 +175,7 @@ static PetscErrorCode TestEmptyStrata(MPI_Comm comm)
     ierr = VecGetSize(v, &N);CHKERRQ(ierr);
     if (N != 2) {
       ierr = DMView(dm, PETSC_VIEWER_STDOUT_(comm));CHKERRQ(ierr);
-      SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "FAIL: Vector size %d != 2\n", N);
+      SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "FAIL: Vector size %d != 2", N);
     }
     ierr = VecDestroy(&v);CHKERRQ(ierr);
   }
@@ -200,7 +200,7 @@ static PetscErrorCode TestDistribution(MPI_Comm comm)
   ierr = PetscOptionsGetString(NULL, NULL, "-filename", filename, sizeof(filename), &flg);CHKERRQ(ierr);
   if (!flg) PetscFunctionReturn(0);
   ierr = PetscOptionsGetInt(NULL, NULL, "-overlap", &overlap, NULL);CHKERRQ(ierr);
-  ierr = DMPlexCreateFromFile(comm, filename, PETSC_TRUE, &dm);CHKERRQ(ierr);
+  ierr = DMPlexCreateFromFile(comm, filename, "ex11_plex", PETSC_TRUE, &dm);CHKERRQ(ierr);
   ierr = DMSetBasicAdjacency(dm, PETSC_TRUE, PETSC_FALSE);CHKERRQ(ierr);
   ierr = DMCreateLabel(dm, name);CHKERRQ(ierr);
   ierr = DMGetLabel(dm, name, &label);CHKERRQ(ierr);
@@ -242,7 +242,7 @@ static PetscErrorCode TestUniversalLabel(MPI_Comm comm)
 
   ierr = PetscOptionsGetString(NULL, NULL, "-filename", filename, sizeof(filename), &flg);CHKERRQ(ierr);
   if (flg) {
-    ierr = DMPlexCreateFromFile(comm, filename, PETSC_TRUE, &dm1);CHKERRQ(ierr);
+    ierr = DMPlexCreateFromFile(comm, filename, "ex11_plex", PETSC_TRUE, &dm1);CHKERRQ(ierr);
   } else {
     ierr = DMCreate(comm, &dm1);CHKERRQ(ierr);
     ierr = DMSetType(dm1, DMPLEX);CHKERRQ(ierr);

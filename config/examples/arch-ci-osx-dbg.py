@@ -8,7 +8,7 @@ configure_options = [
   '--with-cc=gcc',
   '--with-fc=gfortran', # https://brew.sh/
   '--with-cxx=g++',
-  'COPTFLAGS=-g -O',
+  'COPTFLAGS=-g -O -fsanitize=address',
   'FOPTFLAGS=-g -O',
   'CXXOPTFLAGS=-g -O',
   '--download-mpich=1',
@@ -28,6 +28,7 @@ configure_options = [
   '--download-libjpeg=1',
   '--download-h2opus=1',
   '--download-thrust=1',
+  '--download-hcephes=1',
   '--with-zlib=1',
   ]
 

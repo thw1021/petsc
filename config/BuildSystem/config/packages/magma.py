@@ -24,8 +24,7 @@ class Configure(config.package.Package):
     self.hastestsdatafiles= 0
     self.requirec99flag   = 1 #From CMakeLists.txt -> some code may not compile
     self.precisions       = ['single','double']
-    self.cxx              = 1
-    self.minCxxVersion    = 'c++11' #From CMakeLists.txt -> some code may not compile
+    self.buildLanguages   = ['Cxx']
     self.makerulename     = ' lib ' #make sparse-lib is broken in many ways
     return
 

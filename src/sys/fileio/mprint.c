@@ -37,36 +37,37 @@ FILE *PETSC_STDERR = NULL;
 @*/
 PetscErrorCode PetscFormatConvertGetSize(const char *format,size_t *size)
 {
-  PetscInt i = 0;
+  size_t   sz = 0;
+  PetscInt i  = 0;
 
   PetscFunctionBegin;
-  *size = 0;
+  PetscValidCharPointer(format,1);
+  PetscValidPointer(size,2);
   while (format[i]) {
-    if (format[i] == '%' && format[i+1] == '%') {
-      i++; i++; *size += 2;
-    } else if (format[i] == '%') {
+    if (format[i] == '%') {
+      if (format[i+1] == '%') {
+        i  += 2;
+        sz += 2;
+        continue;
+      }
       /* Find the letter */
-      for (; format[i] && format[i] <= '9'; i++,(*size += 1));
+      while (format[i] && (format[i] <= '9')) {++i;++sz;}
       switch (format[i]) {
+#if PetscDefined(USE_64BIT_INDICES)
       case 'D':
-#if defined(PETSC_USE_64BIT_INDICES)
-        *size += 2;
+        sz += 2;
+        break;
 #endif
-        break;
       case 'g':
-        *size += 4;
-        break;
+        sz += 4;
       default:
         break;
       }
-      *size += 1;
-      i++;
-    } else {
-      i++;
-      *size += 1;
     }
+    ++i;
+    ++sz;
   }
-  *size += 1; /* space for NULL character */
+  *size = sz+1; /* space for NULL character */
   PetscFunctionReturn(0);
 }
 
@@ -165,9 +166,9 @@ PetscErrorCode PetscVSNPrintf(char *str,size_t len,const char *format,size_t *fu
 
   PetscFunctionBegin;
   ierr = PetscFormatConvertGetSize(format,&newLength);CHKERRQ(ierr);
-  if (newLength < PETSCDEFAULTBUFFERSIZE) {
+  if (newLength < sizeof(formatbuf)) {
     newformat = formatbuf;
-    newLength = PETSCDEFAULTBUFFERSIZE-1;
+    newLength = sizeof(formatbuf)-1;
   } else {
     ierr      = PetscMalloc1(newLength, &newformat);CHKERRQ(ierr);
   }
@@ -177,7 +178,7 @@ PetscErrorCode PetscVSNPrintf(char *str,size_t len,const char *format,size_t *fu
 #else
 #error "vsnprintf not found"
 #endif
-  if (newLength > PETSCDEFAULTBUFFERSIZE-1) {
+  if (newLength > sizeof(formatbuf)-1) {
     ierr = PetscFree(newformat);CHKERRQ(ierr);
   }
   {
@@ -298,7 +299,7 @@ PetscErrorCode PetscVFPrintfDefault(FILE *fd,const char *format,va_list Argp)
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"C89 does not support va_copy() hence cannot print long strings with PETSc printing routines");
 #endif
   }
-  fprintf(fd,"%s",buff);CHKERRQ(ierr);
+  fprintf(fd,"%s",buff);
   fflush(fd);
   if (buff != str) {
     ierr = PetscFree(buff);CHKERRQ(ierr);
@@ -398,7 +399,7 @@ PetscErrorCode PetscSynchronizedPrintf(MPI_Comm comm,const char format[],...)
   PetscMPIInt    rank;
 
   PetscFunctionBegin;
-  if (comm == MPI_COMM_NULL) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Called with MPI_COMM_NULL, likely PetscObjectComm() failed");
+  PetscCheckFalse(comm == MPI_COMM_NULL,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Called with MPI_COMM_NULL, likely PetscObjectComm() failed");
   ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
 
   /* First processor prints immediately to stdout */
@@ -423,9 +424,9 @@ PetscErrorCode PetscSynchronizedPrintf(MPI_Comm comm,const char format[],...)
       petsc_printfqueue->next = NULL;
     } else petsc_printfqueuebase = petsc_printfqueue = next;
     petsc_printfqueuelength++;
-    next->size   = -1;
+    next->size   = 0;
     next->string = NULL;
-    while ((PetscInt)fullLength >= next->size) {
+    while (fullLength >= next->size) {
       next->size = fullLength+1;
       ierr = PetscFree(next->string);CHKERRQ(ierr);
       ierr = PetscMalloc1(next->size, &next->string);CHKERRQ(ierr);
@@ -466,7 +467,7 @@ PetscErrorCode PetscSynchronizedFPrintf(MPI_Comm comm,FILE *fp,const char format
   PetscMPIInt    rank;
 
   PetscFunctionBegin;
-  if (comm == MPI_COMM_NULL) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Called with MPI_COMM_NULL, likely PetscObjectComm() failed");
+  PetscCheckFalse(comm == MPI_COMM_NULL,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Called with MPI_COMM_NULL, likely PetscObjectComm() failed");
   ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
 
   /* First processor prints immediately to fp */
@@ -491,9 +492,9 @@ PetscErrorCode PetscSynchronizedFPrintf(MPI_Comm comm,FILE *fp,const char format
       petsc_printfqueue->next = NULL;
     } else petsc_printfqueuebase = petsc_printfqueue = next;
     petsc_printfqueuelength++;
-    next->size   = -1;
+    next->size   = 0;
     next->string = NULL;
-    while ((PetscInt)fullLength >= next->size) {
+    while (fullLength >= next->size) {
       next->size = fullLength+1;
       ierr = PetscFree(next->string);CHKERRQ(ierr);
       ierr = PetscMalloc1(next->size, &next->string);CHKERRQ(ierr);
@@ -603,7 +604,7 @@ PetscErrorCode PetscFPrintf(MPI_Comm comm,FILE* fd,const char format[],...)
   PetscMPIInt    rank;
 
   PetscFunctionBegin;
-  if (comm == MPI_COMM_NULL) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Called with MPI_COMM_NULL, likely PetscObjectComm() failed");
+  PetscCheckFalse(comm == MPI_COMM_NULL,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Called with MPI_COMM_NULL, likely PetscObjectComm() failed");
   ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
   if (rank == 0) {
     va_list Argp;
@@ -646,7 +647,7 @@ PetscErrorCode PetscPrintf(MPI_Comm comm,const char format[],...)
   PetscMPIInt    rank;
 
   PetscFunctionBegin;
-  if (comm == MPI_COMM_NULL) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Called with MPI_COMM_NULL, likely PetscObjectComm() failed");
+  PetscCheckFalse(comm == MPI_COMM_NULL,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Called with MPI_COMM_NULL, likely PetscObjectComm() failed");
   ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
   if (rank == 0) {
     va_list Argp;
@@ -667,7 +668,7 @@ PetscErrorCode PetscHelpPrintfDefault(MPI_Comm comm,const char format[],...)
   PetscMPIInt    rank;
 
   PetscFunctionBegin;
-  if (comm == MPI_COMM_NULL) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Called with MPI_COMM_NULL, likely PetscObjectComm() failed");
+  PetscCheckFalse(comm == MPI_COMM_NULL,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Called with MPI_COMM_NULL, likely PetscObjectComm() failed");
   ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
   if (rank == 0) {
     va_list Argp;
@@ -716,7 +717,7 @@ PetscErrorCode PetscSynchronizedFGets(MPI_Comm comm,FILE *fp,size_t len,char str
 
     if (!ptr) {
       string[0] = 0;
-      if (!feof(fp)) SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_FILE_READ, "Error reading from file: %d", errno);
+      PetscCheckFalse(!feof(fp),PETSC_COMM_SELF, PETSC_ERR_FILE_READ, "Error reading from file: %d", errno);
     }
   }
   ierr = MPI_Bcast(string,len,MPI_BYTE,0,comm);CHKERRMPI(ierr);
@@ -788,7 +789,7 @@ PetscErrorCode PetscFormatRealArray(char buf[],size_t len,const char *fmt,PetscI
   PetscFunctionBegin;
   for (i=0,p=buf,left=len; i<n; i++) {
     ierr = PetscSNPrintfCount(p,left,fmt,&count,(double)x[i]);CHKERRQ(ierr);
-    if (count >= left) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Insufficient space in buffer");
+    PetscCheckFalse(count >= left,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Insufficient space in buffer");
     left -= count;
     p    += count-1;
     *p++  = ' ';

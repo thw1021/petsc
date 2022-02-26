@@ -7,8 +7,7 @@ class Configure(config.package.Package):
     self.download      = ['git://https://github.com/SciCompKL/CoDiPack.git']
     self.includes      = ['codi/adjointInterface.hpp']
     self.liblist       = []
-    self.cxx           = 1
-    self.minCxxVersion = 'c++11'
+    self.buildLanguages= ['Cxx']
     return
 
   def setupDependencies(self, framework):

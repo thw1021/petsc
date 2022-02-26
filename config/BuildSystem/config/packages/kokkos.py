@@ -4,24 +4,23 @@ import os
 class Configure(config.package.CMakePackage):
   def __init__(self, framework):
     config.package.CMakePackage.__init__(self, framework)
-    self.gitcommit        = 'd4ed86ffb1b156faaa0f936ce839cfd6d3282478' # develop of 2021-04-28
+    self.gitcommit        = '1ec0d1ee961cd86d69b950ff8525729cc9a3a60f' # develop of 2022-01-26
+    self.minversion       = '3.5.00'
     self.versionname      = 'KOKKOS_VERSION'
     self.download         = ['git://https://github.com/kokkos/kokkos.git']
     self.downloaddirnames = ['kokkos']
     self.excludedDirs     = ['kokkos-kernels'] # Do not wrongly think kokkos-kernels as kokkos-vernum
-    # TODO: Currently the BuildSystem checks C++ headers blindly using CXX. However, when Kokkos is compiled by CUDAC for example, using
-    # CXX to compile a Kokkos code raises an error. As a workaround, we set this field to skip checking headers in includes.
-    self.doNotCheckIncludes = 1
     self.includes         = ['Kokkos_Macros.hpp']
     self.liblist          = [['libkokkoscontainers.a','libkokkoscore.a']]
     self.functions        = ['']
     self.functionsCxx     = [1,'namespace Kokkos {void initialize(int&,char*[]);}','int one = 1;char* args[1];Kokkos::initialize(one,args);']
-    self.cxx              = 1
-    self.minCxxxVersion   = 'c++14'
+    self.minCxxVersion    = 'c++14'
+    self.buildLanguages   = ['Cxx'] # Depending on if cuda, hip or sycl is avaiable, it will be modified.
     self.downloadonWindows= 0
     self.hastests         = 1
     self.requiresrpath    = 1
     self.precisions       = ['single','double']
+    self.devicePackage    = 1
     return
 
   def __str__(self):
@@ -32,7 +31,6 @@ class Configure(config.package.CMakePackage):
   def setupHelp(self, help):
     import nargs
     config.package.CMakePackage.setupHelp(self, help)
-    help.addArgument('KOKKOS', '-with-kokkos-hip-arch=<string>',  nargs.ArgString(None, 0, 'One of VEGA900, VEGA906, VEGA908'))
     help.addArgument('KOKKOS', '-with-kokkos-init-warnings=<bool>',  nargs.ArgBool(None, True, 'Enable/disable warnings in Kokkos initialization'))
     return
 
@@ -40,6 +38,7 @@ class Configure(config.package.CMakePackage):
     config.package.CMakePackage.setupDependencies(self, framework)
     self.externalpackagesdir = framework.require('PETSc.options.externalpackagesdir',self)
     self.compilerFlags   = framework.require('config.compilerFlags', self)
+    self.setCompilers    = framework.require('config.setCompilers', self)
     self.blasLapack      = framework.require('config.packages.BlasLapack',self)
     self.mpi             = framework.require('config.packages.MPI',self)
     self.flibs           = framework.require('config.packages.flibs',self)
@@ -50,6 +49,7 @@ class Configure(config.package.CMakePackage):
     self.pthread         = framework.require('config.packages.pthread',self)
     self.cuda            = framework.require('config.packages.cuda',self)
     self.hip             = framework.require('config.packages.hip',self)
+    self.sycl            = framework.require('config.packages.sycl',self)
     self.hwloc           = framework.require('config.packages.hwloc',self)
     self.mpi             = framework.require('config.packages.MPI',self)
     self.odeps           = [self.mpi,self.openmp,self.hwloc,self.cuda,self.hip,self.pthread]
@@ -95,6 +95,7 @@ class Configure(config.package.CMakePackage):
       raise RuntimeError("Kokkos only supports a single parallel system during its configuration")
 
     args.append('-DKokkos_ENABLE_SERIAL=ON')
+    args.append('-DKokkos_ENABLE_LIBDL=OFF')
     if self.openmp.found:
       args.append('-DKokkos_ENABLE_OPENMP=ON')
       self.system = 'OpenMP'
@@ -103,6 +104,7 @@ class Configure(config.package.CMakePackage):
       self.system = 'PThread'
 
     lang = 'cxx'
+    deviceArchName = ''
     if self.cuda.found:
       # lang is used below to get nvcc C++ dialect. In a case with nvhpc-21.7 and "nvcc -ccbin nvc++ -std=c++17",
       # nvcc complains the host compiler does not support c++17, even though it does. So we have to respect
@@ -119,7 +121,7 @@ class Configure(config.package.CMakePackage):
       args.append('-DCMAKE_CXX_COMPILER='+self.getCompiler('Cxx')) # use the host CXX compiler, let Kokkos handle the nvcc_wrapper business
       genToName = {'3': 'KEPLER','5': 'MAXWELL', '6': 'PASCAL', '7': 'VOLTA', '8': 'AMPERE', '9': 'LOVELACE', '10': 'HOPPER'}
       if hasattr(self.cuda,'cudaArch'):
-        generation = self.cuda.cudaArch[:-1]
+        generation = self.cuda.cudaArch[:-1] # cudaArch is a number 'nn', such as '75'
         try:
           # Kokkos uses names like VOLTA75, AMPERE86
           deviceArchName = genToName[generation] + self.cuda.cudaArch
@@ -127,13 +129,15 @@ class Configure(config.package.CMakePackage):
           raise RuntimeError('Could not find an arch name for CUDA gen number '+ self.cuda.cudaArch)
       else:
         raise RuntimeError('You must set --with-cuda-arch=60, 70, 75, 80 etc.')
-      args.append('-DKokkos_ARCH_'+deviceArchName+'=ON')
       args.append('-DKokkos_ENABLE_CUDA_LAMBDA:BOOL=ON')
       #  Kokkos nvcc_wrapper REQUIRES nvcc be visible in the PATH!
       path = os.getenv('PATH')
       nvccpath = os.path.dirname(petscNvcc)
       if nvccpath:
-         os.environ['PATH'] = path+':'+nvccpath
+        # Put nvccpath in the beginning of PATH, as there might be other nvcc in PATH and we got this one from --with-cuda-dir.
+        # Kokkos provids Kokkos_CUDA_DIR and CUDA_ROOT. But they do not actually work (as of Jan. 2022) in the aforementioned
+        # case, since these cmake options are not passed correctly to nvcc_wrapper.
+        os.environ['PATH'] = nvccpath+':'+path
     elif self.hip.found:
       lang = 'hip'
       self.system = 'HIP'
@@ -151,36 +155,68 @@ class Configure(config.package.CMakePackage):
       args.append('-DCMAKE_CXX_COMPILER='+self.systemHipc)
       args = self.rmArgsStartsWith(args, '-DCMAKE_CXX_FLAGS')
       args.append('-DCMAKE_CXX_FLAGS="' + hipFlags + '"')
-      if hasattr(self.hip,'hipArch'):
-        genToName = {'gfx': 'VEGA'}
-        generation = self.hip.hipArch[0:3]
-        try:
-          # Kokkos uses names like VEGA908
-          deviceArchName = genToName[generation] + self.hip.hipArch[3:]
-        except KeyError:
-          raise RuntimeError('Could not find an arch name for HIP gen number '+ self.hip.hipArch)
-      else:
-        raise RuntimeError('You must set --with-hip-arch=gfx900, gfx906, gfx908 etc.')
-
-      args.append('-DKokkos_ARCH_'+deviceArchName+'=ON')
+      deviceArchName = self.hip.hipArch.upper().replace('GFX','VEGA',1) # ex. map gfx90a to VEGA90A
       args.append('-DKokkos_ENABLE_HIP_RELOCATABLE_DEVICE_CODE=OFF')
+    elif self.sycl.found:
+      lang = 'sycl'
+      self.system = 'SYCL'
+      args.append('-DKokkos_ENABLE_SYCL=ON')
+      with self.Language('SYCL'):
+        petscSyclc = self.getCompiler()
+      self.getExecutable(petscSyclc,getFullPath=1,resultName='systemSyclc')
+      if not hasattr(self,'systemSyclc'):
+        raise RuntimeError('SYCL error: could not find path of the sycl compiler')
+      args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_COMPILER=')
+      args.append('-DCMAKE_CXX_COMPILER='+self.systemSyclc)
+      args.append('-DCMAKE_CXX_EXTENSIONS=OFF')
+      args.append('-DKokkos_ENABLE_DEPRECATED_CODE_3=OFF')
+      if hasattr(self.sycl,'syclArch') and self.sycl.syclArch != 'x86_64':
+        deviceArchName = 'INTEL_' + self.sycl.syclArch.upper()  # Ex. map xehp to INTEL_XEHP
 
-    # set -DCMAKE_CXX_STANDARD=
-    if not hasattr(self.compilers,lang+'dialect'): # lang can be cuda, hip, or cxx
-      raise RuntimeError('Did not properly determine C++ dialect for the '+lang.upper()+' compiler')
-    langdialect = getattr(self.compilers,lang+'dialect')
-    args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_STANDARD=')
-    args.append('-DCMAKE_CXX_STANDARD='+langdialect.split("C++",1)[1]) # e.g., extract 14 from C++14
+    if deviceArchName: args.append('-DKokkos_ARCH_'+deviceArchName+'=ON')
+
+    langdialect = getattr(self.setCompilers,lang+'dialect',None)
+    if langdialect:
+      # langdialect is only set as an attribute if the user specifically chose a dialect
+      # (see config/setCompilers.py::checkCxxDialect())
+      args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_STANDARD=')
+      args.append('-DCMAKE_CXX_STANDARD='+langdialect[-2:]) # e.g., extract 14 from C++14
     return args
 
   def configureLibrary(self):
     import os
-    config.package.CMakePackage.configureLibrary(self)
     if self.cuda.found:
-      self.addMakeMacro('KOKKOS_BIN',os.path.join(self.directory,'bin'))
+      self.buildLanguages = ['CUDA']
       self.addMakeMacro('KOKKOS_USE_CUDA_COMPILER',1) # use the CUDA compiler to compile PETSc Kokkos code
     elif self.hip.found:
+      self.buildLanguages= ['HIP']
       self.addMakeMacro('KOKKOS_USE_HIP_COMPILER',1)  # use the HIP compiler to compile PETSc Kokkos code
+    elif self.sycl.found:
+      self.buildLanguages= ['SYCL']
+      self.setCompilers.SYCLPPFLAGS        += " -Wno-deprecated-declarations "
+      self.setCompilers.SYCLFLAGS          += ' -fno-sycl-id-queries-fit-in-int -fsycl-unnamed-lambda '
+      self.addMakeMacro('KOKKOS_USE_SYCL_COMPILER',1)
+
+    config.package.CMakePackage.configureLibrary(self)
+
+    if self.cuda.found:
+      self.addMakeMacro('KOKKOS_BIN',os.path.join(self.directory,'bin'))
+      self.logWrite('Checking if Kokkos is configured with CUDA lambda\n')
+      self.pushLanguage('CUDA')
+      cuda_lambda_test = '''
+         #include <Kokkos_Macros.hpp>
+         #if !defined(KOKKOS_ENABLE_CUDA_LAMBDA)
+         #error "Kokkos is not configured with CUDA lambda"
+         #endif
+      '''
+      oldFlags = self.compilers.CUDAPPFLAGS
+      self.compilers.CUDAPPFLAGS += ' '+self.headers.toString(self.include)
+      if self.checkPreprocess(cuda_lambda_test):
+        self.logPrint('Kokkos is configured with CUDA lambda\n')
+      else:
+        raise RuntimeError('Kokkos is not configured with -DKokkos_ENABLE_CUDA_LAMBDA. PETSc usage requires Kokkos to be configured with that')
+      self.compilers.CUDAPPFLAGS = oldFlags
+      self.popLanguage()
 
     if self.argDB['with-kokkos-init-warnings']: # usually one wants to enable warnings
       self.addDefine('HAVE_KOKKOS_INIT_WARNINGS', 1)
