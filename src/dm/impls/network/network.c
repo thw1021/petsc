@@ -278,9 +278,9 @@ PetscErrorCode DMNetworkAddSubnetwork(DM dm,const char* name,PetscInt ne,PetscIn
 PetscErrorCode DMNetworkSharedVertexGetInfo(DM dm,PetscInt v,PetscInt *gidx,PetscInt *n,const PetscInt **sv)
 {
   PetscErrorCode ierr;
-  DM_Network *network = (DM_Network*)dm->data;
-  SVtx       *svtx = network->svtx;
-  PetscInt   i,gidx_tmp;
+  DM_Network     *network = (DM_Network*)dm->data;
+  SVtx           *svtx = network->svtx;
+  PetscInt       i,gidx_tmp;
 
   PetscFunctionBegin;
   ierr = DMNetworkGetGlobalVertexIndex(dm,v,&gidx_tmp);CHKERRQ(ierr);
