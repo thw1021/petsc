@@ -882,6 +882,7 @@ PetscErrorCode DMNetworkGetSharedVertices(DM dm,PetscInt *nsv,const PetscInt **s
   DM_Network *net = (DM_Network*)dm->data;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   if (nsv)  *nsv  = net->nsvtx;
   if (svtx) *svtx = net->svertices;
   PetscFunctionReturn(0);
