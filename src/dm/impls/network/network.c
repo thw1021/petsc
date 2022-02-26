@@ -1621,6 +1621,8 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
   DMNetworkComponentHeader header;
 
   PetscFunctionBegin;
+  PetscValidPointer(dm,1);
+  PetscValidHeaderSpecific(*dm,DM_CLASSID,1);
   ierr = PetscObjectGetComm((PetscObject)*dm,&comm);CHKERRQ(ierr);
   ierr = MPI_Comm_size(comm, &size);CHKERRMPI(ierr);
   if (size == 1) PetscFunctionReturn(0);
