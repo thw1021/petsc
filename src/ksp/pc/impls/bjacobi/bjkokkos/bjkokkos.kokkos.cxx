@@ -15,9 +15,8 @@ typedef Kokkos::TeamPolicy<>::member_type team_member;
 #define PCBJKOKKOS_VEC_SIZE 16
 #define PCBJKOKKOS_TEAM_SIZE 16
 #define PCBJKOKKOS_VERBOSE_LEVEL 0
-//#define PCBJKOKKOS_MONITOR
 
-typedef enum {BATCH_KSP_BICG_IDX=0,BATCH_KSP_TFQMR_IDX=1,NUM_BATCH_TYPES} KSPIndex;
+typedef enum {BATCH_KSP_BICG_IDX,BATCH_KSP_TFQMR_IDX,BATCH_KSP_GMRES_IDX,NUM_BATCH_TYPES} KSPIndex;
 typedef struct {
   Vec                                              vec_diag;
   PetscInt                                         nBlocks; /* total number of blocks */
@@ -449,6 +448,13 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
         case BATCH_KSP_TFQMR_IDX:
           BJSolve_TFQMR(team, glb_Aai, glb_Aaj, glb_Aaa, d_isrow, d_isicol, work_buff, stride, rtol, atol, dtol, maxit, &d_metadata[blkID], start, end, glb_idiag, glb_bdata, glb_xdata, print);
           break;
+        case BATCH_KSP_GMRES_IDX:
+#if defined(PETSC_USE_DEBUG)
+          printf("GMRES not implemented %d\n",ksp_type_idx);
+#else
+          /* void */;
+#endif
+          break;
         default:
 #if defined(PETSC_USE_DEBUG)
           printf("Unknown KSP type %d\n",ksp_type_idx);
@@ -456,10 +462,7 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
           /* void */;
 #endif
         }
-#if defined(PETSC_USE_DEBUG)
-        if (d_metadata[blkID].reason<0) printf("Solver diverged %d\n",d_metadata[blkID].reason);
-#endif
-      });
+    });
     auto h_metadata = Kokkos::create_mirror(Kokkos::HostSpace::memory_space(), d_metadata);
     Kokkos::fence();
     Kokkos::deep_copy (h_metadata, d_metadata);
@@ -492,26 +495,24 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
 #if PCBJKOKKOS_VERBOSE_LEVEL < 4
     ierr = PetscPrintf(PETSC_COMM_WORLD,"\n");CHKERRQ(ierr);
 #endif
-#elif PCBJKOKKOS_VERBOSE_LEVEL >= 2
-    PetscInt count=0;
-    for (PetscInt dmIdx=0, s=0, head=0 ; dmIdx < jac->num_dms; dmIdx += batch_sz) {
-      for (PetscInt f=0, idx=head ; f < jac->dm_Nf[dmIdx] ; f++,s++,idx++) {
-        if (h_metadata[idx + bid*jac->dm_Nf[dmIdx]].its > count) count = h_metadata[idx + bid*jac->dm_Nf[dmIdx]].its;
-      }
-    }
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"%D max iterations", count);CHKERRQ(ierr);
 #endif
+    PetscInt count=0, mbid;
     for (int blkID=0;blkID<nBlk;blkID++) {
       ierr = PetscLogGpuFlops((PetscLogDouble)h_metadata[blkID].flops);CHKERRQ(ierr);
       if (jac->reason) {
-        if (jac->batch_target==blkID || (jac->batch_target==-1 && h_metadata[blkID].its > 100)) {
-          ierr = PetscPrintf(PETSC_COMM_SELF,  "    Linear solve converged due to %s iterations %d\n", KSPConvergedReasons[h_metadata[blkID].reason], h_metadata[blkID].its);CHKERRQ(ierr);
-        }
-        if (jac->batch_target==-1 && h_metadata[blkID].reason < 0) {
-          ierr = PetscPrintf(PETSC_COMM_SELF, "ERROR reason=%s, its=%D. species %D, batch %D, %D species\n",
-                             KSPConvergedReasons[h_metadata[blkID].reason],h_metadata[blkID].its,blkID/batch_sz,blkID%batch_sz,nBlk/batch_sz);CHKERRQ(ierr);
+        if (jac->batch_target==blkID) {
+          ierr = PetscPrintf(PETSC_COMM_SELF,  "    Linear solve converged due to %s iterations %d, batch %D, species %D\n", KSPConvergedReasons[h_metadata[blkID].reason], h_metadata[blkID].its, blkID%batch_sz, blkID/batch_sz);CHKERRQ(ierr);
+        } else if (h_metadata[blkID].reason < 0) {
+          ierr = PetscPrintf(PETSC_COMM_SELF, "ERROR reason=%s, its=%D. species %D, batch %D\n",
+                             KSPConvergedReasons[h_metadata[blkID].reason],h_metadata[blkID].its,blkID/batch_sz,blkID%batch_sz);CHKERRQ(ierr);
+        } else if (jac->batch_target==-1 && h_metadata[blkID].its > count) {
+          count = h_metadata[blkID].its;
+          mbid = blkID;
         }
       }
+    }
+    if (jac->batch_target==-1) {
+      ierr = PetscPrintf(PETSC_COMM_SELF,  "    Linear solve converged due to %s iterations %d, batch %D, specie %D\n", KSPConvergedReasons[h_metadata[mbid].reason], h_metadata[mbid].its,mbid%batch_sz,mbid/batch_sz);CHKERRQ(ierr);
     }
     ierr = VecRestoreArrayAndMemType(xout,&glb_xdata);CHKERRQ(ierr);
     ierr = VecRestoreArrayReadAndMemType(bvec,&glb_bdata);CHKERRQ(ierr);
@@ -601,7 +602,11 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
       else {
         ierr = PetscObjectTypeCompareAny((PetscObject)jac->ksp,&flg,KSPTFQMR,"");CHKERRQ(ierr);
         if (flg) {jac->ksp_type_idx = BATCH_KSP_TFQMR_IDX; jac->nwork = 10;}
-        else SETERRQ(PetscObjectComm((PetscObject)jac->ksp),PETSC_ERR_ARG_WRONG,"unsupported type %s", ((PetscObject)jac->ksp)->type_name);
+        else {
+          ierr = PetscObjectTypeCompareAny((PetscObject)jac->ksp,&flg,KSPGMRES,"");CHKERRQ(ierr);
+          if (flg) {jac->ksp_type_idx = BATCH_KSP_GMRES_IDX; jac->nwork = 0;}
+          SETERRQ(PetscObjectComm((PetscObject)jac->ksp),PETSC_ERR_ARG_WRONG,"unsupported type %s", ((PetscObject)jac->ksp)->type_name);
+        }
       }
       {
         PetscViewer       viewer;
@@ -613,8 +618,9 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
         ierr   = PetscOptionsGetViewer(PetscObjectComm((PetscObject)jac->ksp),((PetscObject)jac->ksp)->options,((PetscObject)jac->ksp)->prefix,"-ksp_monitor",&viewer,&format,&flg);CHKERRQ(ierr);
         jac->monitor = flg;
         ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
-        ierr = PetscOptionsGetInt(((PetscObject)jac->ksp)->options,((PetscObject)jac->ksp)->prefix,"-ksp_batch_target",&jac->batch_target,NULL);CHKERRQ(ierr);
+        ierr = PetscOptionsGetInt(((PetscObject)jac->ksp)->options,((PetscObject)jac->ksp)->prefix,"-ksp_batch_target",&jac->batch_target,&flg);CHKERRQ(ierr);
         PetscCheckFalse(jac->batch_target >= jac->num_dms,PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"-ksp_batch_target (%D) >= number of DMs (%D)",jac->batch_target,jac->num_dms);
+        if (!jac->monitor && !flg) jac->batch_target = -1; // turn it off
       }
       // get blocks - jac->d_bid_eqOffset_k
       ierr = PetscMalloc(sizeof(*subX)*nDMs, &subX);CHKERRQ(ierr);
