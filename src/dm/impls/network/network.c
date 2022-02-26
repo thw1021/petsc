@@ -378,12 +378,12 @@ static PetscErrorCode TableAddSVtx(DM_Network *network,PetscInt *sedgelist,Petsc
  */
 static PetscErrorCode SharedVtxCreate(DM dm,PetscInt Nsedgelist,PetscInt *sedgelist)
 {
-  PetscErrorCode ierr;
-  SVtx           *svtx = NULL;
-  PetscInt       *sv,k,j,nsv,*tdata,**ta2sv;
-  PetscTable     *svtas;
-  PetscInt       gidx,net,idx,i,nta,ita,idx_from,idx_to,n;
-  DM_Network     *network = (DM_Network*)dm->data;
+  PetscErrorCode     ierr;
+  SVtx               *svtx = NULL;
+  PetscInt           *sv,k,j,nsv,*tdata,**ta2sv;
+  PetscTable         *svtas;
+  PetscInt           gidx,net,idx,i,nta,ita,idx_from,idx_to,n;
+  DM_Network         *network = (DM_Network*)dm->data;
   PetscTablePosition ppos;
 
   PetscFunctionBegin;
