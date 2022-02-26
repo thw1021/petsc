@@ -239,6 +239,9 @@ Changes: Development
 
 - Add ``PetscDTPTrimmedEvalJet()`` to evaluate a stable basis for trimmed polynomials, and ``PetscDTPTrimmedSize()`` for the size of that space
 - Add ``PetscDSGetRHSResidual()`` and ``PetscDSSetRHSResidual()`` to support explicit timestepping
+- Add ``PetscProbComputeKSStatistic()`` to apply the Kolmogorov-Smirnov test
+- Add probability distributions ``PetscPDFMaxwellBoltzmann1D()``, ``PetscCDFMaxwellBoltzmann1D()``, ``PetscPDFMaxwellBoltzmann2D()``, ``PetscCDFMaxwellBoltzmann2D()``, ``PetscPDFMaxwellBoltzmann3D()``, ``PetscCDFMaxwellBoltzmann3D()``, ``PetscPDFGaussian1D()``, ``PetscCDFGaussian1D()``, ``PetscPDFSampleGaussian1D()``, ``PetscPDFGaussian2D()``, ``PetscPDFSampleGaussian2D()``, ``PetscPDFConstant1D()``, ``PetscCDFConstant1D()``
+
 
 .. rubric:: Fortran:
 
