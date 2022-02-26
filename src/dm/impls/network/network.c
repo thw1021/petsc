@@ -2719,7 +2719,7 @@ PetscErrorCode DMView_Network(DM dm,PetscViewer viewer)
         if (ghost) continue;
 
         ierr = DMNetworkSharedVertexGetInfo(dm,vtx[i],&gidx,&nv,&sv);CHKERRQ(ierr);
-        ierr = PetscViewerASCIISynchronizedPrintf(viewer, "       svtx %D: global index %D, subnet[%D].%D ---->\n",i,gidx,sv[0],sv[1]);CHKERRQ(ierr);
+        ierr = PetscViewerASCIISynchronizedPrintf(viewer, "       svtx %" PetscInt_FMT ": global index %" PetscInt_FMT ", subnet[%" PetscInt_FMT "].%" PetscInt_FMT " ---->\n",i,gidx,sv[0],sv[1]);CHKERRQ(ierr);
         for (j=1; j<nv; j++) {
           ierr = PetscViewerASCIISynchronizedPrintf(viewer, "                                           ----> subnet[%D].%D\n",sv[2*j],sv[2*j+1]);CHKERRQ(ierr);
         }
