@@ -2725,7 +2725,7 @@ PetscErrorCode DMView_Network(DM dm,PetscViewer viewer)
     }
     ierr = PetscViewerFlush(viewer);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPopSynchronized(viewer);CHKERRQ(ierr);
-  } else SETERRQ(PetscObjectComm((PetscObject) dm), PETSC_ERR_SUP, "Viewer type %s not yet supported for DMNetwork writing", ((PetscObject)viewer)->type_name);
+  } else PetscCheck(!iascii,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Viewer type %s not yet supported for DMNetwork writing",((PetscObject)viewer)->type_name);
   PetscFunctionReturn(0);
 }
 
