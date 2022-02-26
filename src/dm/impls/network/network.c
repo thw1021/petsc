@@ -1000,8 +1000,9 @@ PetscErrorCode DMNetworkGetEdgeRange(DM dm,PetscInt *eStart,PetscInt *eEnd)
   DM_Network *network = (DM_Network*)dm->data;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   if (eStart) *eStart = network->eStart;
-  if (eEnd)     *eEnd = network->eEnd;
+  if (eEnd)   *eEnd   = network->eEnd;
   PetscFunctionReturn(0);
 }
 
