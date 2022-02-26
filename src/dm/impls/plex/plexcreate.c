@@ -2344,44 +2344,8 @@ static PetscErrorCode TPSNearestPoint(TPSEvaluateFunc feval, PetscScalar x[])
 }
 
 const char *const DMPlexTPSTypes[] = {"SCHWARZ_P", "GYROID", "DMPlexTPSType", "DMPLEX_TPS_", NULL};
-/*@
-  DMPlexCreateTPSMesh - Create a distributed, interpolated mesh of a triply-periodic surface
 
-  Collective
-
-  Input Parameters:
-+ comm   - The communicator for the DM object
-. tpstype - Type of triply-periodic surface
-. extent - Array of length 3 containing number of periods in each direction
-. periodic - array of length 3 with periodicity, or NULL for non-periodic
-. thickness - Thickness in normal direction
-- refinements - Number of factor-of-2 refinements
-
-  Output Parameter:
-. dm  - The DM object
-
-  Notes:
-  This meshes the surface of the Schwarz P or Gyroid surfaces.  Schwarz P is is the simplest member of the triply-periodic minimal surfaces.
-  https://en.wikipedia.org/wiki/Schwarz_minimal_surface#Schwarz_P_(%22Primitive%22) and can be cut with "clean" boundaries.
-  The Gyroid (https://en.wikipedia.org/wiki/Gyroid) is another triply-periodic minimal surface with applications in additive manufacturing; it is much more difficult to "cut" since there are no planes of symmetry.
-  Our implementation creates a very coarse mesh of the surface and refines (by 4-way splitting) as many times as requested.
-  On each refinement, all vertices are projected to their nearest point on the surface.
-  This projection could readily be extended to related surfaces.
-
-  The face (edge) sets for the Schwarz P surface are numbered 1(-x), 2(+x), 3(-y), 4(+y), 5(-z), 6(+z).
-  When the mesh is refined, "Face Sets" contain the new vertices (created during refinement).  Use DMPlexLabelComplete() to propagate to coarse-level vertices.
-
-  References:
-  Maskery et al, Insights into the mechanical properties of several triply periodic minimal surface lattice structures made by polymer additive manufacturing, 2017. https://doi.org/10.1016/j.polymer.2017.11.049
-
-  Developer Notes:
-  The Gyroid mesh does not currently mark boundary sets.
-
-  Level: beginner
-
-.seealso: DMPlexCreateSphereMesh(), DMSetType(), DMCreate()
-@*/
-PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const PetscInt extent[], const DMBoundaryType periodic[], PetscInt refinements, PetscInt layers, PetscReal thickness, DM *dm)
+static PetscErrorCode DMPlexCreateTPSMesh_Internal(DM dm, DMPlexTPSType tpstype, const PetscInt extent[], const DMBoundaryType periodic[], PetscInt refinements, PetscInt layers, PetscReal thickness)
 {
   PetscErrorCode ierr;
   PetscMPIInt rank;
@@ -2389,15 +2353,15 @@ PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const P
   PetscInt (*edges)[2] = NULL, *edgeSets = NULL;
   PetscInt *cells_flat = NULL;
   PetscReal *vtxCoords = NULL;
-  TPSEvaluateFunc evalFunc = 0;
+  TPSEvaluateFunc evalFunc = NULL;
   DMLabel label;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_rank(comm, &rank);CHKERRMPI(ierr);
-  PetscCheck((layers != 0) ^ (thickness == 0.),comm, PETSC_ERR_ARG_INCOMP, "Layers %D must be nonzero iff thickness %g is nonzero", layers, (double)thickness);
+  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)dm), &rank);CHKERRMPI(ierr);
+  PetscCheck((layers != 0) ^ (thickness == 0.), PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_INCOMP, "Layers %D must be nonzero iff thickness %g is nonzero", layers, (double)thickness);
   switch (tpstype) {
   case DMPLEX_TPS_SCHWARZ_P:
-    PetscCheck(!periodic || (periodic[0] == DM_BOUNDARY_NONE && periodic[1] == DM_BOUNDARY_NONE && periodic[2] == DM_BOUNDARY_NONE), comm, PETSC_ERR_SUP, "Schwarz P does not support periodic meshes");
+    PetscCheck(!periodic || (periodic[0] == DM_BOUNDARY_NONE && periodic[1] == DM_BOUNDARY_NONE && periodic[2] == DM_BOUNDARY_NONE), PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Schwarz P does not support periodic meshes");
     if (!rank) {
       PetscInt (*cells)[6][4][4] = NULL; // [junction, junction-face, cell, conn]
       PetscInt Njunctions = 0, Ncuts = 0, Npipes[3], vcount;
@@ -2509,7 +2473,7 @@ PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const P
           }
         }
       }
-      PetscCheck(numEdges == Ncuts * 4, comm, PETSC_ERR_PLIB, "Edge count %D incompatible with number of cuts %D", numEdges, Ncuts);
+      PetscCheck(numEdges == Ncuts * 4, PetscObjectComm((PetscObject)dm), PETSC_ERR_PLIB, "Edge count %D incompatible with number of cuts %D", numEdges, Ncuts);
       numFaces = 24 * Njunctions;
       cells_flat = cells[0][0][0];
     }
@@ -2731,7 +2695,7 @@ PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const P
       for (PetscInt i = 0; i < numFaces; i++) {
         for (PetscInt e = 0; e < 4; e++) {
           PetscInt ev[] = {cells_flat[i*4 + e], cells_flat[i*4 + ((e+1)%4)]};
-          const double *evCoords[] = {&vtxCoords[3*ev[0]], &vtxCoords[3*ev[1]]};
+          const PetscReal *evCoords[] = {&vtxCoords[3*ev[0]], &vtxCoords[3*ev[1]]};
 
           for (PetscInt d = 0; d < 3; d++) {
             if (!periodic || periodic[0] != DM_BOUNDARY_PERIODIC) {
@@ -2769,47 +2733,42 @@ PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const P
     break;
   }
 
-  ierr = DMPlexCreateFromCellListPetsc(comm, topoDim, numFaces, numVertices, 4, PETSC_TRUE, cells_flat, spaceDim, vtxCoords, dm);CHKERRQ(ierr);
-  ierr = PetscFree(vtxCoords);CHKERRQ(ierr);
+  ierr = DMSetDimension(dm, topoDim);CHKERRQ(ierr);
+  if (!rank) {ierr = DMPlexBuildFromCellList(dm, numFaces, numVertices, 4, cells_flat);CHKERRQ(ierr);}
+  else       {ierr = DMPlexBuildFromCellList(dm, 0, 0, 0, NULL);CHKERRQ(ierr);}
   ierr = PetscFree(cells_flat);CHKERRQ(ierr);
+  {
+    DM idm;
+    ierr = DMPlexInterpolate(dm, &idm);CHKERRQ(ierr);
+    ierr = DMPlexReplace_Static(dm, &idm);CHKERRQ(ierr);
+  }
+  if (!rank) {ierr = DMPlexBuildCoordinatesFromCellList(dm, spaceDim, vtxCoords);CHKERRQ(ierr);}
+  else       {ierr = DMPlexBuildCoordinatesFromCellList(dm, spaceDim, NULL);CHKERRQ(ierr);}
+  ierr = PetscFree(vtxCoords);CHKERRQ(ierr);
 
-  ierr = DMCreateLabel(*dm, "Face Sets");CHKERRQ(ierr);
-  ierr = DMGetLabel(*dm, "Face Sets", &label);CHKERRQ(ierr);
+  ierr = DMCreateLabel(dm, "Face Sets");CHKERRQ(ierr);
+  ierr = DMGetLabel(dm, "Face Sets", &label);CHKERRQ(ierr);
   for (PetscInt e=0; e<numEdges; e++) {
     PetscInt njoin;
     const PetscInt *join, verts[] = {numFaces + edges[e][0], numFaces + edges[e][1]};
-    ierr = DMPlexGetJoin(*dm, 2, verts, &njoin, &join);CHKERRQ(ierr);
+    ierr = DMPlexGetJoin(dm, 2, verts, &njoin, &join);CHKERRQ(ierr);
     PetscCheck(njoin == 1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Expected unique join of vertices %D and %D", edges[e][0], edges[e][1]);
     ierr = DMLabelSetValue(label, join[0], edgeSets[e]);CHKERRQ(ierr);
-    ierr = DMPlexRestoreJoin(*dm, 2, verts, &njoin, &join);CHKERRQ(ierr);
+    ierr = DMPlexRestoreJoin(dm, 2, verts, &njoin, &join);CHKERRQ(ierr);
   }
   ierr = PetscFree(edges);CHKERRQ(ierr);
   ierr = PetscFree(edgeSets);CHKERRQ(ierr);
 
-  {
-    DM dmserial = *dm;
-    PetscPartitioner part;
-
-    ierr = DMPlexGetPartitioner(dmserial, &part);CHKERRQ(ierr);
-    ierr = PetscPartitionerSetFromOptions(part);CHKERRQ(ierr);
-    ierr = DMPlexDistribute(dmserial, 0, NULL, dm);CHKERRQ(ierr);
-    if (*dm) { // Distribution was actually done
-      ierr = DMDestroy(&dmserial);CHKERRQ(ierr);
-    } else {
-      *dm = dmserial;
-    }
-  }
-
-  ierr = DMPlexSetRefinementUniform(*dm, PETSC_TRUE);CHKERRQ(ierr);
+  ierr = DMPlexSetRefinementUniform(dm, PETSC_TRUE);CHKERRQ(ierr);
   for (PetscInt refine=0; refine<refinements; refine++) {
     PetscInt m;
-    DM dmc = *dm;
+    DM dmf;
     Vec X;
     PetscScalar *x;
-    ierr = DMRefine(dmc, MPI_COMM_NULL, dm);CHKERRQ(ierr);
-    ierr = DMDestroy(&dmc);CHKERRQ(ierr);
+    ierr = DMRefine(dm, MPI_COMM_NULL, &dmf);CHKERRQ(ierr);
+    ierr = DMPlexReplace_Static(dm, &dmf);CHKERRQ(ierr);
 
-    ierr = DMGetCoordinatesLocal(*dm, &X);CHKERRQ(ierr);
+    ierr = DMGetCoordinatesLocal(dm, &X);CHKERRQ(ierr);
     ierr = VecGetLocalSize(X, &m);CHKERRQ(ierr);
     ierr = VecGetArray(X, &x);CHKERRQ(ierr);
     for (PetscInt i=0; i<m; i+=3) {
@@ -2819,15 +2778,62 @@ PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const P
   }
 
   // Face Sets has already been propagated to new vertices during refinement; this propagates to the initial vertices.
-  ierr = DMGetLabel(*dm, "Face Sets", &label);CHKERRQ(ierr);
-  ierr = DMPlexLabelComplete(*dm, label);CHKERRQ(ierr);
+  ierr = DMGetLabel(dm, "Face Sets", &label);CHKERRQ(ierr);
+  ierr = DMPlexLabelComplete(dm, label);CHKERRQ(ierr);
 
   if (thickness > 0) {
     DM dm3;
-    ierr = DMPlexExtrude(*dm, layers, thickness, PETSC_FALSE, PETSC_TRUE, NULL, NULL, &dm3);CHKERRQ(ierr);
-    ierr = DMDestroy(dm);CHKERRQ(ierr);
-    *dm = dm3;
+    ierr = DMPlexExtrude(dm, layers, thickness, PETSC_FALSE, PETSC_TRUE, NULL, NULL, &dm3);CHKERRQ(ierr);
+    ierr = DMPlexReplace_Static(dm, &dm3);CHKERRQ(ierr);
   }
+  PetscFunctionReturn(0);
+}
+
+/*@
+  DMPlexCreateTPSMesh - Create a distributed, interpolated mesh of a triply-periodic surface
+
+  Collective
+
+  Input Parameters:
++ comm   - The communicator for the DM object
+. tpstype - Type of triply-periodic surface
+. extent - Array of length 3 containing number of periods in each direction
+. periodic - array of length 3 with periodicity, or NULL for non-periodic
+. thickness - Thickness in normal direction
+- refinements - Number of factor-of-2 refinements
+
+  Output Parameter:
+. dm  - The DM object
+
+  Notes:
+  This meshes the surface of the Schwarz P or Gyroid surfaces.  Schwarz P is is the simplest member of the triply-periodic minimal surfaces.
+  https://en.wikipedia.org/wiki/Schwarz_minimal_surface#Schwarz_P_(%22Primitive%22) and can be cut with "clean" boundaries.
+  The Gyroid (https://en.wikipedia.org/wiki/Gyroid) is another triply-periodic minimal surface with applications in additive manufacturing; it is much more difficult to "cut" since there are no planes of symmetry.
+  Our implementation creates a very coarse mesh of the surface and refines (by 4-way splitting) as many times as requested.
+  On each refinement, all vertices are projected to their nearest point on the surface.
+  This projection could readily be extended to related surfaces.
+
+  The face (edge) sets for the Schwarz P surface are numbered 1(-x), 2(+x), 3(-y), 4(+y), 5(-z), 6(+z).
+  When the mesh is refined, "Face Sets" contain the new vertices (created during refinement).  Use DMPlexLabelComplete() to propagate to coarse-level vertices.
+
+  References:
+  Maskery et al, Insights into the mechanical properties of several triply periodic minimal surface lattice structures made by polymer additive manufacturing, 2017. https://doi.org/10.1016/j.polymer.2017.11.049
+
+  Developer Notes:
+  The Gyroid mesh does not currently mark boundary sets.
+
+  Level: beginner
+
+.seealso: DMPlexCreateSphereMesh(), DMSetType(), DMCreate()
+@*/
+PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const PetscInt extent[], const DMBoundaryType periodic[], PetscInt refinements, PetscInt layers, PetscReal thickness, DM *dm)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = DMCreate(comm, dm);CHKERRQ(ierr);
+  ierr = DMSetType(*dm, DMPLEX);CHKERRQ(ierr);
+  ierr = DMPlexCreateTPSMesh_Internal(*dm, tpstype, extent, periodic, refinements, layers, thickness);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -3131,7 +3137,7 @@ static PetscErrorCode DMPlexCreateBoundaryLabel_Private(DM dm, const char name[]
   PetscFunctionReturn(0);
 }
 
-const char * const DMPlexShapes[] = {"box", "box_surface", "ball", "sphere", "cylinder", "unknown", "DMPlexShape", "DM_SHAPE_", NULL};
+const char * const DMPlexShapes[] = {"box", "box_surface", "ball", "sphere", "cylinder", "schwarz_p", "gyroid", "unknown", "DMPlexShape", "DM_SHAPE_", NULL};
 
 static PetscErrorCode DMPlexCreateFromOptions_Internal(PetscOptionItems *PetscOptionsObject, PetscBool *useCoordSpace, DM dm)
 {
@@ -3282,6 +3288,22 @@ static PetscErrorCode DMPlexCreateFromOptions_Internal(PetscOptionItems *PetscOp
             ierr = DMPlexCreateHexCylinderMesh_Internal(dm, bdt);CHKERRQ(ierr);
             break;
         }
+      }
+      break;
+      case DM_SHAPE_SCHWARZ_P: // fallthrough
+      case DM_SHAPE_GYROID:
+      {
+        PetscInt       extent[3] = {1,1,1}, refine = 0, layers = 0, three;
+        PetscReal      thickness = 0.;
+        DMBoundaryType periodic[3] = {DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE};
+        DMPlexTPSType  tps_type = shape == DM_SHAPE_SCHWARZ_P ? DMPLEX_TPS_SCHWARZ_P : DMPLEX_TPS_GYROID;
+        ierr = PetscOptionsIntArray("-dm_plex_tps_extent", "Number of replicas for each of three dimensions", NULL, extent, (three=3, &three), NULL);CHKERRQ(ierr);
+        ierr = PetscOptionsInt("-dm_plex_tps_refine", "Number of refinements", NULL, refine, &refine, NULL);CHKERRQ(ierr);
+        ierr = PetscOptionsEnumArray("-dm_plex_tps_periodic", "Periodicity in each of three dimensions", NULL, DMBoundaryTypes, (PetscEnum*)periodic, (three=3, &three), NULL);CHKERRQ(ierr);
+        ierr = PetscOptionsInt("-dm_plex_tps_layers", "Number of layers in volumetric extrusion (or zero to not extrude)", NULL, layers, &layers, NULL);CHKERRQ(ierr);
+        ierr = PetscOptionsReal("-dm_plex_tps_thickness", "Thickness of volumetric extrusion", NULL, thickness, &thickness, NULL);CHKERRQ(ierr);
+
+        ierr = DMPlexCreateTPSMesh_Internal(dm, tps_type, extent, periodic, refine, layers, thickness);CHKERRQ(ierr);
       }
       break;
       default: SETERRQ(comm, PETSC_ERR_SUP, "Domain shape %s is unsupported", DMPlexShapes[shape]);
