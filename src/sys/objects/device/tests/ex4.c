@@ -1,6 +1,5 @@
 static const char help[] = "Tests PetscDeviceContextFork/Join.\n\n";
 
-#include <petsc/private/deviceimpl.h>
 #include "petscdevicetestcommon.h"
 
 static PetscErrorCode TestNestedPetscDeviceContextForkJoin(PetscDeviceContext parCtx, PetscDeviceContext *sub)

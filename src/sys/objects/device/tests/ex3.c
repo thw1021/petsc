@@ -1,6 +1,5 @@
 static const char help[] = "Tests PetscDeviceContextDuplicate.\n\n";
 
-#include <petsc/private/deviceimpl.h>
 #include "petscdevicetestcommon.h"
 
 /* test duplication creates the same object type */

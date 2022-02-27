@@ -1,6 +1,5 @@
 static const char help[] = "Tests creation and destruction of PetscDeviceContext.\n\n";
 
-#include <petsc/private/deviceimpl.h>
 #include "petscdevicetestcommon.h"
 
 int main(int argc, char *argv[])
