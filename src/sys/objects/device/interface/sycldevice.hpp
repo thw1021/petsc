@@ -2,7 +2,6 @@
 #define PETSCSYCLDEVICE_HPP
 
 #include "../impls/impldevicebase.hpp" /* I "petscdevice.h" */
-#include <limits>
 
 namespace Petsc
 {

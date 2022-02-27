@@ -161,7 +161,7 @@ void SilenceVariableIsNotNeededAndWillNotBeEmittedWarning_ThisFunctionShouldNeve
   if (cupmMPIAwareJumpBufferSet) (void)cupmMPIAwareJumpBuffer;
 }
 
-#define CHKCUPMAWARE(expr) if (PetscUnlikely((expr) != cupmSuccess)) return false
+#define CHKCUPMAWARE(...) if (PetscUnlikely((__VA_ARGS__) != cupmSuccess)) return false
 
 template <DeviceType T>
 PETSC_CXX_COMPAT_DEFN(bool Device<T>::DeviceInternal::CUPMAwareMPI_())
@@ -215,24 +215,11 @@ PETSC_CXX_COMPAT_DEFN(bool Device<T>::DeviceInternal::CUPMAwareMPI_())
 #undef CHKCUPMAWARE
 
 template <DeviceType T>
-PetscErrorCode Device<T>::DeviceInternal::finalize() noexcept
-{
-  PetscFunctionBegin;
-  devInitialized_ = false;
-  PetscFunctionReturn(0);
-}
-
-template <DeviceType T>
 PetscErrorCode Device<T>::finalize_() noexcept
 {
   PetscFunctionBegin;
-  if (!initialized_) PetscFunctionReturn(0);
-  for (auto&& device : devices_) {
-    if (device) {
-      const auto ierr = device->finalize();CHKERRQ(ierr);
-      device.reset();
-    }
-  }
+  if (PetscUnlikely(!initialized_)) PetscFunctionReturn(0);
+  for (auto&& device : devices_) device.reset();
   defaultDevice_ = PETSC_CUPM_DEVICE_NONE;  // disabled by default
   initialized_   = false;
   PetscFunctionReturn(0);
@@ -253,10 +240,11 @@ PetscErrorCode Device<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, P
   initialized_ = true;
   ierr = PetscRegisterFinalize(finalize_);CHKERRQ(ierr);
   ierr = base_type::PetscOptionDeviceAll(comm,initType,initId,initView);CHKERRQ(ierr);
+  initView.first = static_cast<decltype(initView.first)>(initView.first && initView.second);
   cerr = cupmGetDeviceCount(&ndev);
   // post-process the options and lay the groundwork for initialization if needs be
   if (PetscUnlikely((cerr == cupmErrorStubLibrary) || (cerr == cupmErrorNoDevice))) {
-    if (PetscUnlikely((initType.first == PETSC_DEVICE_INIT_EAGER) || (initView.first && flg))) {
+    if (PetscUnlikely((initType.first == PETSC_DEVICE_INIT_EAGER) || initView.first)) {
       const auto name    = cupmGetErrorName(cerr);
       const auto desc    = cupmGetErrorString(cerr);
       const auto backend = cupmName();
@@ -279,7 +267,6 @@ PetscErrorCode Device<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, P
         initId.first   = rank % ndev;
       } else initId.first = 0;
     }
-    initView.first = static_cast<decltype(initView.first)>(initView.first && initView.second);
     if (initView.first) initType.first = PETSC_DEVICE_INIT_EAGER;
   }
 

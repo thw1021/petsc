@@ -4,7 +4,6 @@
 #include "../impls/impldevicebase.hpp" /* I "petscdevice.h" */
 #include <petsc/private/cupminterface.hpp>
 #include <memory>
-#include <limits>
 
 namespace Petsc
 {

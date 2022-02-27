@@ -299,11 +299,11 @@ PetscErrorCode PetscDeviceContextSetUp(PetscDeviceContext dctx)
 
   PetscFunctionBegin;
   PetscValidDeviceContext(dctx,1);
+  if (dctx->setup) PetscFunctionReturn(0);
   if (!dctx->device) {
     ierr = PetscInfo(nullptr,"PetscDeviceContext %" PetscInt_FMT " did not have an explicitly attached PetscDevice, using default with type %s\n",dctx->id,PetscDeviceTypes[PETSC_DEVICE_DEFAULT]);CHKERRQ(ierr);
     ierr = PetscDeviceContextSetDefaultDevice_Internal(dctx);CHKERRQ(ierr);
   }
-  if (dctx->setup) PetscFunctionReturn(0);
   ierr = (*dctx->ops->setup)(dctx);CHKERRQ(ierr);
   dctx->setup = PETSC_TRUE;
   PetscFunctionReturn(0);
@@ -598,7 +598,7 @@ PetscErrorCode PetscDeviceContextJoin(PetscDeviceContext dctx, PetscInt n, Petsc
   case PETSC_DEVICE_CONTEXT_JOIN_DESTROY: {
     PetscInt j = 0;
 
-    PetscAssert(n <= dctx->numChildren,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Trying to destroy %" PetscInt_FMT " children of a parent context that only has %" PetscInt_FMT " children, likely trying to restore to wrong parent",n,dctx->numChildren);
+    PetscCheck(n <= dctx->numChildren,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Trying to destroy %" PetscInt_FMT " children of a parent context that only has %" PetscInt_FMT " children, likely trying to restore to wrong parent",n,dctx->numChildren);
     /* update child count while it's still fresh in memory */
     dctx->numChildren -= n;
     for (PetscInt i = 0; i < dctx->maxNumChildren; ++i) {
@@ -610,9 +610,8 @@ PetscErrorCode PetscDeviceContextJoin(PetscDeviceContext dctx, PetscInt n, Petsc
         if (++j == n) break;
       }
     }
-    /* gone through the loop but did not find every child, if this triggers (or well,
-       doesn't) on perf-builds we leak the remaining contexts memory */
-    PetscAssert(j == n,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"%" PetscInt_FMT " contexts still remain after destroy, this may be because you are trying to restore to the wrong parent context, or the device contexts are not in the same order as they were checked out out in.",n-j);
+    /* gone through the loop but did not find every child */
+    PetscCheck(j == n,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"%" PetscInt_FMT " contexts still remain after destroy, this may be because you are trying to restore to the wrong parent context, or the device contexts are not in the same order as they were checked out out in",n-j);
     ierr = PetscFree(*dsub);CHKERRQ(ierr);
   } break;
   case PETSC_DEVICE_CONTEXT_JOIN_SYNC:
@@ -683,8 +682,8 @@ PetscErrorCode PetscDeviceContextGetNullContextForType_Internal(PetscDevice devi
     nullContextsFinalizer = true;
     ierr = PetscRegisterFinalize(finalizer);CHKERRQ(ierr);
   }
-  PetscCheck(devid >= 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Device ID (%" PetscInt_FMT ")must be a positive integer",devid);
-  if (PetscUnlikely((devid >= ctxlist.size()) || !ctxlist[devid])) {
+  PetscCheck(devid >= 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Device ID (%" PetscInt_FMT ") must be positive",devid);
+  if (PetscUnlikely((static_cast<std::size_t>(devid) >= ctxlist.size()) || !ctxlist[devid])) {
     // we have not seen this device before
     ierr = PetscInfo(nullptr,"Initializing null PetscDeviceContext for device %" PetscInt_FMT "\n",devid);CHKERRQ(ierr);
     ierr = PetscDeviceContextCreate(dctx);CHKERRQ(ierr);
