@@ -669,16 +669,14 @@ int64_t Petsc_adios_group;
 PetscInt PetscNumOMPThreads;
 #endif
 
-#if PetscDefined(HAVE_DEVICE)
 #include <petsc/private/deviceimpl.h>
-#  if PetscDefined(HAVE_CUDA)
+#if PetscDefined(HAVE_CUDA)
 // REMOVE ME
 cudaStream_t PetscDefaultCudaStream = NULL;
-#  endif
-#  if PetscDefined(HAVE_HIP)
+#endif
+#if PetscDefined(HAVE_HIP)
 // REMOVE ME
 hipStream_t PetscDefaultHipStream = NULL;
-#  endif
 #endif
 
 #if PetscDefined(HAVE_DLFCN_H)
