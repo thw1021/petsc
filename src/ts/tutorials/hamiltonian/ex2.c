@@ -131,7 +131,6 @@ static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
   PetscReal     *centroid, *coords, *xi0, *v0, *J, *invJ, detJ, *initialConditions, normalized_vel;
   PetscInt      *cellid, cStart;
   PetscInt       Ncell, Np = user->particlesPerCell, p, c, dim, d;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -172,7 +171,7 @@ static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
         cellid[n] = c;
         if (user->uniform) {
           spacing = 2./Np;
-          ierr = PetscRandomGetValue(rnd, &value);
+          CHKERRQ(PetscRandomGetValue(rnd, &value));
           for (d=0; d<dim; ++d) refcoords[d] = d == 0 ? -1. + spacing/2. + p*spacing + value/100. : 0.;
         }
         else{
@@ -249,7 +248,6 @@ static PetscErrorCode RHSFunction2(TS ts,PetscReal t,Vec X,Vec Vres,void *ctx)
   PetscScalar       *vres;
   PetscReal         *coords, phi_0;
   PetscInt           dim, d, cStart, cEnd, cell, cdim;
-  PetscErrorCode     ierr;
   PetscReal          m_e = 9.11e-31, q_e = 1.60e-19, epsi_0 = 8.85e-12;
 
   PetscFunctionBeginUser;
@@ -266,11 +264,11 @@ static PetscErrorCode RHSFunction2(TS ts,PetscReal t,Vec X,Vec Vres,void *ctx)
   CHKERRQ(DMGetGlobalVector(plex, &phi));
   CHKERRQ(DMGetLocalVector(plex, &locPhi));
   CHKERRQ(DMCreateMassMatrix(dm, plex, &M_p));
-  ierr = MatViewFromOptions(M_p, NULL, "-mp_view");
+  CHKERRQ(MatViewFromOptions(M_p, NULL, "-mp_view"));
   CHKERRQ(DMGetGlobalVector(plex, &rho));
   CHKERRQ(DMSwarmCreateGlobalVectorFromField(dm, "w_q", &f));
-  ierr = PetscObjectSetName((PetscObject) f, "weights vector");
-  ierr = VecViewFromOptions(f, NULL, "-weights_view");
+  CHKERRQ(PetscObjectSetName((PetscObject) f, "weights vector"));
+  CHKERRQ(VecViewFromOptions(f, NULL, "-weights_view"));
   CHKERRQ(MatMultTranspose(M_p, f, rho));
   CHKERRQ(DMSwarmDestroyGlobalVectorFromField(dm, "w_q", &f));
   CHKERRQ(PetscObjectSetName((PetscObject) rho, "rho"));
@@ -318,7 +316,7 @@ static PetscErrorCode RHSFunction2(TS ts,PetscReal t,Vec X,Vec Vres,void *ctx)
       }
     }
     CHKERRQ(DMPlexCoordinatesToReference(plex, cell, Ncp, pcoord, refcoord));
-    PetscFECreateTabulation(fe, 1, Ncp, refcoord, 1, &tab);CHKERRQ(ierr);
+    CHKERRQ(PetscFECreateTabulation(fe, 1, Ncp, refcoord, 1, &tab));
     CHKERRQ(DMPlexVecGetClosure(plex, NULL, locPhi, cell, NULL, &ph));
     for (cp = 0; cp < Ncp; ++cp) {
       const PetscInt p = points[cp];
@@ -356,12 +354,12 @@ int main(int argc,char **argv)
   DM                dm, sw;
   AppCtx            user;
   MPI_Comm          comm;
-  PetscErrorCode    ierr;
   Vec               coorVec, kinVec, probVec, solution, position, momentum;
   const PetscScalar *coorArr, *kinArr;
   PetscReal         ftime   = 10., *probArr, *probVecArr;
   IS                is1,is2;
   PetscReal         *coor, *kin, *pos, *mom;
+  PetscErrorCode    ierr;
 
   ierr = PetscInitialize(&argc,&argv,NULL,help);if (ierr) return ierr;
   comm = PETSC_COMM_WORLD;
@@ -395,7 +393,7 @@ int main(int argc,char **argv)
 
     CHKERRQ(DMSwarmCreateGlobalVectorFromField(sw, "kinematics", &kinVec));
     CHKERRQ(DMSwarmCreateGlobalVectorFromField(sw, DMSwarmPICField_coor, &coorVec));
-    ierr = VecViewFromOptions(kinVec, NULL, "-ic_vec_view");
+    CHKERRQ(VecViewFromOptions(kinVec, NULL, "-ic_vec_view"));
     CHKERRQ(DMGetDimension(sw, &dim));
     CHKERRQ(VecGetLocalSize(kinVec, &locSize));
     CHKERRQ(PetscMalloc1(locSize, &idx1));
@@ -438,14 +436,12 @@ int main(int argc,char **argv)
     CHKERRQ(VecSetBlockSize(probVec,1));
     CHKERRQ(VecSetSizes(probVec,PETSC_DECIDE,2*locSize));
     CHKERRQ(VecSetUp(probVec));
-    ierr = VecGetArray(probVec,&probVecArr);
-    for (i=0; i < 2*locSize; ++i) {
-      probVecArr[i] = probArr[i];
-    }
+    CHKERRQ(VecGetArray(probVec,&probVecArr));
+    for (i=0; i < 2*locSize; ++i) probVecArr[i] = probArr[i];
     CHKERRQ(VecRestoreArray(probVec,&probVecArr));
     CHKERRQ(TSSetSolution(ts, probVec));
     CHKERRQ(PetscFree(probArr));
-    ierr = VecViewFromOptions(kinVec, NULL, "-ic_view");
+    CHKERRQ(VecViewFromOptions(kinVec, NULL, "-ic_view"));
     CHKERRQ(DMSwarmDestroyGlobalVectorFromField(sw, "kinematics", &kinVec));
     CHKERRQ(DMSwarmDestroyGlobalVectorFromField(sw, DMSwarmPICField_coor, &coorVec));
     CHKERRQ(TSMonitor(ts, step, ts->ptime, ts->vec_sol));

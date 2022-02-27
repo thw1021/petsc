@@ -325,13 +325,15 @@ PetscErrorCode MatGetDiagonalBlock(Mat A,Mat *a)
   PetscValidType(A,1);
   PetscValidPointer(a,2);
   PetscCheckFalse(A->factortype,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONGSTATE,"Not for factored matrix");
-  if (!A->ops->getdiagonalblock) {
+  if (A->ops->getdiagonalblock) {
+    CHKERRQ((*A->ops->getdiagonalblock)(A,a));
+  } else {
     PetscMPIInt size;
+
     CHKERRMPI(MPI_Comm_size(PetscObjectComm((PetscObject)A),&size));
-    PetscCheck(size == 1,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Not coded for matrix type %s",((PetscObject)A)->type_name);
+    PetscCheck(size == 1,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Not for parallel matrix type %s",((PetscObject)A)->type_name);
     *a = A;
   }
-  CHKERRQ((*A->ops->getdiagonalblock)(A,a));
   PetscFunctionReturn(0);
 }
 

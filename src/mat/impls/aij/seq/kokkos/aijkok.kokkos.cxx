@@ -1516,14 +1516,14 @@ static PetscErrorCode MatSolve_SeqAIJKokkos(Mat A,Vec b,Vec x)
   PetscFunctionBegin;
   CHKERRQ(PetscLogGpuTimeBegin());
   CHKERRQ(MatSeqAIJKokkosSymbolicSolveCheck(A));
-  CHKERRQ(VecGetKokkosView(x,&xv));
-  CHKERRQ(VecGetKokkosViewWrite(b,&bv));
+  CHKERRQ(VecGetKokkosView(b,&bv));
+  CHKERRQ(VecGetKokkosViewWrite(x,&xv));
   /* Solve L tmpv = b */
   CHKERRCXX(KokkosSparse::Experimental::sptrsv_solve(&factors->khL,factors->iL_d,factors->jL_d,factors->aL_d,bv,factors->workVector));
   /* Solve Ux = tmpv */
   CHKERRCXX(KokkosSparse::Experimental::sptrsv_solve(&factors->khU,factors->iU_d,factors->jU_d,factors->aU_d,factors->workVector,xv));
-  CHKERRQ(VecRestoreKokkosView(x,&xv));
-  CHKERRQ(VecRestoreKokkosViewWrite(b,&bv));
+  CHKERRQ(VecRestoreKokkosView(b,&bv));
+  CHKERRQ(VecRestoreKokkosViewWrite(x,&xv));
   CHKERRQ(PetscLogGpuTimeEnd());
   PetscFunctionReturn(0);
 }
@@ -1538,15 +1538,15 @@ static PetscErrorCode MatSolveTranspose_SeqAIJKokkos(Mat A,Vec b,Vec x)
   PetscFunctionBegin;
   CHKERRQ(PetscLogGpuTimeBegin());
   CHKERRQ(MatSeqAIJKokkosTransposeSolveCheck(A));
-  CHKERRQ(VecGetKokkosView(x,&xv));
-  CHKERRQ(VecGetKokkosViewWrite(b,&bv));
+  CHKERRQ(VecGetKokkosView(b,&bv));
+  CHKERRQ(VecGetKokkosViewWrite(x,&xv));
   /* Solve U^T tmpv = b */
   KokkosSparse::Experimental::sptrsv_solve(&factors->khUt,factors->iUt_d,factors->jUt_d,factors->aUt_d,bv,factors->workVector);
 
   /* Solve L^T x = tmpv */
   KokkosSparse::Experimental::sptrsv_solve(&factors->khLt,factors->iLt_d,factors->jLt_d,factors->aLt_d,factors->workVector,xv);
-  CHKERRQ(VecRestoreKokkosView(x,&xv));
-  CHKERRQ(VecRestoreKokkosViewWrite(b,&bv));
+  CHKERRQ(VecRestoreKokkosView(b,&bv));
+  CHKERRQ(VecRestoreKokkosViewWrite(x,&xv));
   CHKERRQ(PetscLogGpuTimeEnd());
   PetscFunctionReturn(0);
 }

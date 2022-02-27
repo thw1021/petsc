@@ -289,10 +289,7 @@ static PetscErrorCode  PetscViewerHDF5SetCollective_HDF5(PetscViewer viewer, Pet
     PetscStackCallHDF5(H5Pset_dxpl_mpio,(hdf5->dxpl_id, flg ? H5FD_MPIO_COLLECTIVE : H5FD_MPIO_INDEPENDENT));
   }
 #else
-  if (flg) {
-    PetscErrorCode ierr;
-    CHKERRQ(PetscPrintf(PetscObjectComm((PetscObject)viewer), "Warning: PetscViewerHDF5SetCollective(viewer,PETSC_TRUE) is ignored for HDF5 versions prior to 1.10.3 or if built without MPI support\n"));
-  }
+  if (flg) CHKERRQ(PetscPrintf(PetscObjectComm((PetscObject)viewer), "Warning: PetscViewerHDF5SetCollective(viewer,PETSC_TRUE) is ignored for HDF5 versions prior to 1.10.3 or if built without MPI support\n"));
 #endif
   PetscFunctionReturn(0);
 }
@@ -405,7 +402,7 @@ static PetscErrorCode  PetscViewerFileSetName_HDF5(PetscViewer viewer, const cha
       CHKERRMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)viewer),&rank));
       if (rank == 0) {
         CHKERRQ(PetscTestFile(hdf5->filename, 'r', &flg));
-        PetscCheckFalse(!flg,PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"File %s requested for reading does not exist",hdf5->filename);
+        PetscCheck(flg,PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"File %s requested for reading does not exist",hdf5->filename);
       }
       CHKERRMPI(MPI_Barrier(PetscObjectComm((PetscObject)viewer)));
     }
@@ -428,7 +425,7 @@ static PetscErrorCode  PetscViewerFileSetName_HDF5(PetscViewer viewer, const cha
   default:
     SETERRQ(PetscObjectComm((PetscObject)viewer),PETSC_ERR_SUP, "Unsupported file mode %s",PetscFileModes[hdf5->btype]);
   }
-  PetscCheckFalse(hdf5->file_id < 0,PETSC_COMM_SELF,PETSC_ERR_LIB, "H5Fcreate failed for %s", name);
+  PetscCheck(hdf5->file_id >= 0,PETSC_COMM_SELF,PETSC_ERR_LIB, "H5Fcreate failed for %s", name);
   PetscStackCallHDF5(H5Pclose,(plist_id));
   PetscFunctionReturn(0);
 }
@@ -546,7 +543,7 @@ PETSC_EXTERN PetscErrorCode PetscViewerCreate_HDF5(PetscViewer v)
   {
     PetscMPIInt size;
     CHKERRMPI(MPI_Comm_size(PetscObjectComm((PetscObject)v), &size));
-    PetscCheckFalse(size > 1,PetscObjectComm((PetscObject)v), PETSC_ERR_SUP, "Cannot use parallel HDF5 viewer since the given HDF5 does not support parallel I/O (H5_HAVE_PARALLEL is unset)");
+    PetscCheck(size <= 1,PetscObjectComm((PetscObject)v), PETSC_ERR_SUP, "Cannot use parallel HDF5 viewer since the given HDF5 does not support parallel I/O (H5_HAVE_PARALLEL is unset)");
   }
 #endif
 
@@ -736,7 +733,7 @@ PetscErrorCode  PetscViewerHDF5PopGroup(PetscViewer viewer)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
-  PetscCheckFalse(!hdf5->groups,PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONGSTATE, "HDF5 group stack is empty, cannot pop");
+  PetscCheck(hdf5->groups,PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONGSTATE, "HDF5 group stack is empty, cannot pop");
   groupNode    = hdf5->groups;
   hdf5->groups = hdf5->groups->next;
   CHKERRQ(PetscFree(groupNode->name));
@@ -807,10 +804,10 @@ PetscErrorCode PetscViewerHDF5OpenGroup(PetscViewer viewer, hid_t *fileId, hid_t
   CHKERRQ(PetscViewerHDF5GetGroup(viewer, &groupName));
   CHKERRQ(PetscViewerHDF5Traverse_Internal(viewer, groupName, writable, &has, &type));
   if (!has) {
-    PetscCheckFalse(!writable,PetscObjectComm((PetscObject)viewer), PETSC_ERR_FILE_UNEXPECTED, "Group %s does not exist and file %s is not open for writing", groupName, fileName);
+    PetscCheck(writable,PetscObjectComm((PetscObject)viewer), PETSC_ERR_FILE_UNEXPECTED, "Group %s does not exist and file %s is not open for writing", groupName, fileName);
     else           SETERRQ(PetscObjectComm((PetscObject)viewer), PETSC_ERR_LIB, "HDF5 failed to create group %s although file %s is open for writing", groupName, fileName);
   }
-  PetscCheckFalse(type != H5O_TYPE_GROUP,PetscObjectComm((PetscObject)viewer), PETSC_ERR_FILE_UNEXPECTED, "Path %s in file %s resolves to something which is not a group", groupName, fileName);
+  PetscCheck(type == H5O_TYPE_GROUP,PetscObjectComm((PetscObject)viewer), PETSC_ERR_FILE_UNEXPECTED, "Path %s in file %s resolves to something which is not a group", groupName, fileName);
   PetscStackCallHDF5Return(*groupId,H5Gopen2,(file_id, groupName ? groupName : "/", H5P_DEFAULT));
   *fileId  = file_id;
   PetscFunctionReturn(0);
@@ -847,7 +844,7 @@ PetscErrorCode  PetscViewerHDF5PushTimestepping(PetscViewer viewer)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
-  PetscCheckFalse(hdf5->timestepping,PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONGSTATE, "Timestepping is already pushed");
+  PetscCheck(!hdf5->timestepping,PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONGSTATE, "Timestepping is already pushed");
   hdf5->timestepping = PETSC_TRUE;
   if (hdf5->timestep < 0) hdf5->timestep = 0;
   PetscFunctionReturn(0);
@@ -874,7 +871,7 @@ PetscErrorCode  PetscViewerHDF5PopTimestepping(PetscViewer viewer)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
-  PetscCheckFalse(!hdf5->timestepping,PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONGSTATE, "Timestepping has not been pushed yet. Call PetscViewerHDF5PushTimestepping() first");
+  PetscCheck(hdf5->timestepping,PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONGSTATE, "Timestepping has not been pushed yet. Call PetscViewerHDF5PushTimestepping() first");
   hdf5->timestepping = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
@@ -928,7 +925,7 @@ PetscErrorCode PetscViewerHDF5IncrementTimestep(PetscViewer viewer)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
-  PetscCheckFalse(!hdf5->timestepping,PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONGSTATE, "Timestepping has not been pushed yet. Call PetscViewerHDF5PushTimestepping() first");
+  PetscCheck(hdf5->timestepping,PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONGSTATE, "Timestepping has not been pushed yet. Call PetscViewerHDF5PushTimestepping() first");
   ++hdf5->timestep;
   PetscFunctionReturn(0);
 }
@@ -956,8 +953,8 @@ PetscErrorCode  PetscViewerHDF5SetTimestep(PetscViewer viewer, PetscInt timestep
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
   PetscValidLogicalCollectiveInt(viewer, timestep, 2);
-  PetscCheckFalse(timestep < 0,PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONGSTATE, "Timestep %" PetscInt_FMT " is negative", timestep);
-  PetscCheckFalse(!hdf5->timestepping,PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONGSTATE, "Timestepping has not been pushed yet. Call PetscViewerHDF5PushTimestepping() first");
+  PetscCheck(timestep >= 0,PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONGSTATE, "Timestep %" PetscInt_FMT " is negative", timestep);
+  PetscCheck(hdf5->timestepping,PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONGSTATE, "Timestepping has not been pushed yet. Call PetscViewerHDF5PushTimestepping() first");
   hdf5->timestep = timestep;
   PetscFunctionReturn(0);
 }
@@ -987,7 +984,7 @@ PetscErrorCode  PetscViewerHDF5GetTimestep(PetscViewer viewer, PetscInt *timeste
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
   PetscValidIntPointer(timestep,2);
-  PetscCheckFalse(!hdf5->timestepping,PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONGSTATE, "Timestepping has not been pushed yet. Call PetscViewerHDF5PushTimestepping() first");
+  PetscCheck(hdf5->timestepping,PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONGSTATE, "Timestepping has not been pushed yet. Call PetscViewerHDF5PushTimestepping() first");
   *timestep = hdf5->timestep;
   PetscFunctionReturn(0);
 }
@@ -1451,7 +1448,7 @@ PetscErrorCode PetscViewerHDF5HasObject(PetscViewer viewer, PetscObject obj, Pet
   PetscValidHeader(obj,2);
   PetscValidBoolPointer(has,3);
   CHKERRQ(PetscStrlen(obj->name, &len));
-  PetscCheckFalse(!len,PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONG, "Object must be named");
+  PetscCheck(len,PetscObjectComm((PetscObject)viewer), PETSC_ERR_ARG_WRONG, "Object must be named");
   CHKERRQ(PetscViewerHDF5HasDataset(viewer, obj->name, has));
   PetscFunctionReturn(0);
 }
