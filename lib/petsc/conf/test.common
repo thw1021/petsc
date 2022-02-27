@@ -3,7 +3,11 @@
 
 TESTMODE = testexamples
 ALLTESTS_CHECK_FAILURES = no
+ifdef PETSC_DIR
+ALLTESTS_MAKEFILE = ${PETSC_DIR}/gmakefile.test
+else
 ALLTESTS_MAKEFILE = gmakefile.test
+endif
 VALGRIND=0
 alltests: ${PETSC_DIR}/${PETSC_ARCH}/tests/testfiles
 	-@${RM} -rf ${PETSC_ARCH}/lib/petsc/conf/alltests.log alltests.log
