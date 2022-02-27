@@ -226,7 +226,7 @@ static inline PetscErrorCode PetscDeviceCheckDeviceCount_Internal(PetscInt count
   PetscFunctionReturn(0);
 }
 
-static inline PetscErrorCode  PetscDeviceReference_Internal(PetscDevice device)
+static inline PetscErrorCode PetscDeviceReference_Internal(PetscDevice device)
 {
   PetscFunctionBegin;
   ++(device->refcnt);
