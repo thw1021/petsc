@@ -41,7 +41,6 @@ typedef struct {
 */
 static PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec U,Vec F,AppCtx *ctx)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *u;
   PetscScalar       *f,Pmax;
 
@@ -65,7 +64,6 @@ static PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec U,Vec F,AppCtx *ctx)
 */
 static PetscErrorCode RHSJacobian(TS ts,PetscReal t,Vec U,Mat A,Mat B,AppCtx *ctx)
 {
-  PetscErrorCode    ierr;
   PetscInt          rowcol[] = {0,1};
   PetscScalar       J[2][2],Pmax;
   const PetscScalar *u;

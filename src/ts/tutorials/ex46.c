@@ -248,7 +248,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm, AppCtx *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(comm, dm));
@@ -264,7 +263,6 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *ctx)
   DMLabel        label;
   const PetscInt id = 1;
   PetscInt       dim;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -308,7 +306,6 @@ static PetscErrorCode SetupDiscretization(DM dm, AppCtx *ctx)
   PetscFE         fe[2];
   PetscInt        dim;
   PetscBool       simplex;
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscObjectGetComm((PetscObject) dm, &comm));
@@ -348,7 +345,6 @@ static PetscErrorCode MonitorError(TS ts, PetscInt step, PetscReal crtime, Vec u
   DM                   dm;
   PetscDS              ds;
   PetscReal            ferrors[2];
-  PetscErrorCode       ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(TSGetDM(ts, &dm));

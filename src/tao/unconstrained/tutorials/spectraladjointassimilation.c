@@ -302,7 +302,6 @@ int main(int argc,char **argv)
 */
 PetscErrorCode ComputeSolutionCoefficients(AppCtx *appctx)
 {
-  PetscErrorCode    ierr;
   PetscRandom       rand;
   PetscInt          i;
 
@@ -332,7 +331,6 @@ PetscErrorCode InitialConditions(Vec u,AppCtx *appctx)
 {
   PetscScalar       *s;
   const PetscScalar *xg;
-  PetscErrorCode    ierr;
   PetscInt          i,j,lenglob;
   PetscReal         sum,val;
   PetscRandom       rand;
@@ -375,7 +373,6 @@ PetscErrorCode TrueSolution(Vec u,AppCtx *appctx)
 {
   PetscScalar       *s;
   const PetscScalar *xg;
-  PetscErrorCode    ierr;
   PetscInt          i,j,lenglob;
   PetscReal         sum;
 
@@ -410,7 +407,6 @@ PetscErrorCode ComputeReference(TS ts,PetscReal t,Vec obj,AppCtx *appctx)
 {
   PetscScalar       *s,tc;
   const PetscScalar *xg;
-  PetscErrorCode    ierr;
   PetscInt          i, j,lenglob;
 
   PetscFunctionBegin;
@@ -431,7 +427,6 @@ PetscErrorCode ComputeReference(TS ts,PetscReal t,Vec obj,AppCtx *appctx)
 
 PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec globalin,Vec globalout,void *ctx)
 {
-  PetscErrorCode ierr;
   AppCtx          *appctx = (AppCtx*)ctx;
 
   PetscFunctionBegin;
@@ -441,7 +436,6 @@ PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec globalin,Vec globalout,void *ct
 
 PetscErrorCode RHSJacobian(TS ts,PetscReal t,Vec globalin,Mat A, Mat B,void *ctx)
 {
-  PetscErrorCode ierr;
   AppCtx         *appctx = (AppCtx*)ctx;
 
   PetscFunctionBegin;
@@ -473,7 +467,6 @@ PetscErrorCode RHSLaplacian(TS ts,PetscReal t,Vec X,Mat A,Mat BB,void *ctx)
   PetscReal      **temp;
   PetscReal      vv;
   AppCtx         *appctx = (AppCtx*)ctx;     /* user-defined application context */
-  PetscErrorCode ierr;
   PetscInt       i,xs,xn,l,j;
   PetscInt       *rowsDM;
 
@@ -527,7 +520,6 @@ PetscErrorCode RHSAdvection(TS ts,PetscReal t,Vec X,Mat A,Mat BB,void *ctx)
   PetscReal      **temp;
   PetscReal      vv;
   AppCtx         *appctx = (AppCtx*)ctx;     /* user-defined application context */
-  PetscErrorCode ierr;
   PetscInt       i,xs,xn,l,j;
   PetscInt       *rowsDM;
 
@@ -607,7 +599,6 @@ PetscErrorCode RHSAdvection(TS ts,PetscReal t,Vec X,Mat A,Mat BB,void *ctx)
 PetscErrorCode FormFunctionGradient(Tao tao,Vec ic,PetscReal *f,Vec G,void *ctx)
 {
   AppCtx           *appctx = (AppCtx*)ctx;     /* user-defined application context */
-  PetscErrorCode    ierr;
   Vec               temp;
 
   PetscFunctionBegin;
@@ -643,7 +634,6 @@ PetscErrorCode MonitorError(Tao tao,void *ctx)
   AppCtx         *appctx = (AppCtx*)ctx;
   Vec            temp,grad;
   PetscReal      nrm;
-  PetscErrorCode ierr;
   PetscInt       its;
   PetscReal      fct,gnorm;
 
@@ -670,7 +660,6 @@ PetscErrorCode MonitorError(Tao tao,void *ctx)
 
 PetscErrorCode MonitorDestroy(void **ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscPrintf(PETSC_COMM_WORLD,"];\n"));

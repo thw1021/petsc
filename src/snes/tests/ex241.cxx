@@ -74,7 +74,6 @@ PetscErrorCode UserFunction(SNES snes,Vec X,Vec F,void *ptr)
   PetscScalar       *f;
   PetscReal         half;
   const PetscScalar *x;
-  PetscErrorCode    ierr;
 
   half = 0.5;
 
@@ -109,7 +108,6 @@ PetscErrorCode UserJacobian(SNES snes,Vec X,Mat J,Mat jac,void *ptr)
   PetscInt          N,i,row,col;
   const PetscScalar *x;
   PetscScalar       v;
-  PetscErrorCode    ierr;
 
   CHKERRQ(VecGetSize(X,&N));
   CHKERRQ(VecGetArrayRead(X,&x));

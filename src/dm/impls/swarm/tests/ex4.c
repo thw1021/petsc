@@ -53,7 +53,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm, AppCtx *user)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(comm, dm));
@@ -72,7 +71,6 @@ static PetscErrorCode SetInitialCoordinates(DM dmSw)
   PetscBool      simplex;
   PetscReal     *centroid, *coords, *xi0, *v0, *J, *invJ, detJ;
   PetscInt       dim, d, cStart, cEnd, c, Np, p;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscRandomCreate(PetscObjectComm((PetscObject) dmSw), &rnd));
@@ -122,7 +120,6 @@ static PetscErrorCode SetInitialConditions(DM dmSw, Vec u)
   PetscReal     *coords;
   PetscScalar   *initialConditions;
   PetscInt       dim, cStart, cEnd, c, Np, p;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetApplicationContext(dmSw, &user));
@@ -148,7 +145,6 @@ static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
 {
   PetscInt      *cellid;
   PetscInt       dim, cStart, cEnd, c, Np, p;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -185,7 +181,6 @@ static PetscErrorCode Monitor(TS ts, PetscInt step, PetscReal t, Vec U, void *ct
   MPI_Comm           comm;
   PetscReal          dt;
   PetscInt           Np, p;
-  PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
   if (step%user->ostep == 0) {
@@ -211,7 +206,6 @@ static PetscErrorCode InitializeSolve(TS ts, Vec u)
 {
   DM             dm;
   AppCtx        *user;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(TSGetDM(ts, &dm));
@@ -268,7 +262,6 @@ static PetscErrorCode RHSFunction1(TS ts, PetscReal t, Vec V, Vec Xres, void *ct
   const PetscScalar *v;
   PetscScalar       *xres;
   PetscInt          Np, p;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecGetArray(Xres, &xres));
@@ -288,7 +281,6 @@ static PetscErrorCode RHSFunction2(TS ts, PetscReal t, Vec X, Vec Vres, void *ct
   const PetscScalar *x;
   PetscScalar       *vres;
   PetscInt          Np, p;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecGetArray(Vres, &vres));
@@ -312,7 +304,6 @@ static PetscErrorCode RHSFunction(TS ts, PetscReal t, Vec U, Vec G, void *ctx)
   const PetscScalar *u;
   PetscScalar       *g;
   PetscInt          Np, p;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(TSGetDM(ts, &dm));
@@ -340,7 +331,6 @@ static PetscErrorCode RHSJacobian(TS ts, PetscReal t, Vec U , Mat J, Mat P, void
   PetscInt           i, m, n;
   const PetscScalar *u;
   PetscScalar        vals[4] = {0., 1., -PetscSqr(user->omega), 0.};
-  PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecGetArrayRead(U, &u));
@@ -376,7 +366,6 @@ PetscErrorCode Sfunc(TS ts, PetscReal t, Vec U, Mat S, void *ctx)
   PetscInt           i, m, n;
   const PetscScalar *u;
   PetscScalar        vals[4] = {0., 1., -1, 0.};
-  PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecGetArrayRead(U, &u));
@@ -400,7 +389,6 @@ PetscErrorCode Ffunc(TS ts, PetscReal t, Vec U, PetscScalar *F, void *ctx)
   const PetscScalar *u;
   PetscInt           Np;
   PetscInt           p;
-  PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(TSGetDM(ts, &dm));
@@ -424,7 +412,6 @@ PetscErrorCode gradFfunc(TS ts, PetscReal t, Vec U, Vec gradF, void *ctx)
   PetscScalar       *g;
   PetscInt          Np;
   PetscInt          p;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(TSGetDM(ts, &dm));

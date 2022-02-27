@@ -249,7 +249,6 @@ PetscErrorCode InitialConditions(Vec u,AppCtx *appctx)
 {
   PetscScalar    *u_localptr,h = appctx->h,x;
   PetscInt       i,mybase,myend;
-  PetscErrorCode ierr;
 
   /*
      Determine starting point of each processor's range of
@@ -307,7 +306,6 @@ PetscErrorCode InitialConditions(Vec u,AppCtx *appctx)
  */
 PetscErrorCode SetBounds(Vec xl, Vec xu, PetscScalar ul, PetscScalar uh,AppCtx *appctx)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *l,*u;
   PetscMPIInt       rank,size;
   PetscInt          localsize;
@@ -350,7 +348,6 @@ PetscErrorCode ExactSolution(PetscReal t,Vec solution,AppCtx *appctx)
 {
   PetscScalar    *s_localptr,h = appctx->h,x;
   PetscInt       i,mybase,myend;
-  PetscErrorCode ierr;
 
   /*
      Determine starting and ending points of each processor's
@@ -398,7 +395,6 @@ PetscErrorCode ExactSolution(PetscReal t,Vec solution,AppCtx *appctx)
 PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal time,Vec u,void *ctx)
 {
   AppCtx         *appctx = (AppCtx*) ctx;   /* user-defined application context */
-  PetscErrorCode ierr;
   PetscReal      en2,en2s,enmax;
   PetscDraw      draw;
 
@@ -478,7 +474,6 @@ PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec global_in,Vec global_out,void *
   DM                da        = appctx->da;        /* distributed array */
   Vec               local_in  = appctx->u_local;   /* local ghosted input vector */
   Vec               localwork = appctx->localwork; /* local ghosted work vector */
-  PetscErrorCode    ierr;
   PetscInt          i,localsize;
   PetscMPIInt       rank,size;
   PetscScalar       *copyptr,sc;
@@ -594,7 +589,6 @@ PetscErrorCode RHSJacobian(TS ts,PetscReal t,Vec global_in,Mat AA,Mat B,void *ct
   DM                da       = appctx->da;        /* distributed array */
   PetscScalar       v[3],sc;
   const PetscScalar *localptr;
-  PetscErrorCode    ierr;
   PetscInt          i,mstart,mend,mstarts,mends,idx[3],is;
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

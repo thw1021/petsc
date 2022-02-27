@@ -144,7 +144,6 @@ PetscErrorCode FormRightHandSide(Vec f,void *ctx)
 {
   DM             da    = (DM) ctx;
   PetscScalar    *ff;
-  PetscErrorCode ierr;
   PetscInt       i,M,xs,xm;
   PetscReal      h;
 
@@ -175,7 +174,6 @@ PetscErrorCode FormRightHandSide(Vec f,void *ctx)
 PetscErrorCode FormMatrix(Mat jac,void *ctx)
 {
   PetscScalar    A[3];
-  PetscErrorCode ierr;
   PetscInt       i,M,xs,xm;
   DM             da = (DM) ctx;
   MatStencil     row,cols[3];

@@ -23,7 +23,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm, AppCtx *user)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(comm, dm));
@@ -37,7 +36,6 @@ static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
 {
   PetscInt      *cellid;
   PetscInt       dim, cStart, cEnd, c, Np = user->particlesPerCell, p;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDimension(dm, &dim));

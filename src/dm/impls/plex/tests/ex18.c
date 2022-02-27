@@ -229,7 +229,6 @@ static PetscErrorCode DMPlexExpandedConesToFaces_Private(DM, IS, PetscSection, I
 static PetscErrorCode PortableBoundaryDestroy(PortableBoundary *bnd)
 {
   PetscInt       d;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!*bnd) PetscFunctionReturn(0);
@@ -319,7 +318,6 @@ static PetscErrorCode CreateMesh_1D(MPI_Comm comm, PetscBool interpolate, AppCtx
 {
   PetscInt       testNum = user->testNum;
   PetscMPIInt    rank,size;
-  PetscErrorCode ierr;
   PetscInt       numCorners=2,i;
   PetscInt       numCells,numVertices,network;
   PetscInt       *cells;
@@ -407,7 +405,6 @@ static PetscErrorCode CreateSimplex_2D(MPI_Comm comm, PetscBool interpolate, App
 {
   PetscInt       testNum = user->testNum, p;
   PetscMPIInt    rank, size;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(comm, &rank));
@@ -528,7 +525,6 @@ static PetscErrorCode CreateSimplex_3D(MPI_Comm comm, PetscBool interpolate, App
 {
   PetscInt       testNum = user->testNum, p;
   PetscMPIInt    rank, size;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(comm, &rank));
@@ -583,7 +579,6 @@ static PetscErrorCode CreateQuad_2D(MPI_Comm comm, PetscBool interpolate, AppCtx
 {
   PetscInt       testNum = user->testNum, p;
   PetscMPIInt    rank, size;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(comm, &rank));
@@ -626,7 +621,6 @@ static PetscErrorCode CreateHex_3D(MPI_Comm comm, PetscBool interpolate, AppCtx 
 {
   PetscInt       testNum = user->testNum, p;
   PetscMPIInt    rank, size;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(comm, &rank));
@@ -669,7 +663,6 @@ static PetscErrorCode CustomView(DM dm, PetscViewer v)
 {
   DMPlexInterpolatedFlag interpolated;
   PetscBool              distributed;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexIsDistributed(dm, &distributed));
@@ -685,7 +678,6 @@ static PetscErrorCode CreateMeshFromFile(MPI_Comm comm, AppCtx *user, DM *dm, DM
   PetscBool      testHeavy      = user->testHeavy;
   PetscBool      interpCreate   = user->interpolate == CREATE ? PETSC_TRUE : PETSC_FALSE;
   PetscBool      distributed    = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   *serialDM = NULL;
@@ -718,7 +710,6 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
   PetscBool      interpParallel = user->interpolate == AFTER_DISTRIBUTE ? PETSC_TRUE : PETSC_FALSE;
   PetscBool      testHeavy      = user->testHeavy;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(comm, &rank));
@@ -847,7 +838,6 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 #define ps2d(number) ((double) PetscRealPart(number))
 static inline PetscErrorCode coord2str(char buf[], size_t len, PetscInt dim, const PetscScalar coords[], PetscReal tol)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(dim > 3,PETSC_COMM_SELF, PETSC_ERR_SUP, "dim must be less than or equal 3");
@@ -876,7 +866,6 @@ static PetscErrorCode ViewVerticesFromCoords(DM dm, Vec coordsVec, PetscReal tol
   char           coordstr[128];
   MPI_Comm       comm;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)dm, &comm));
@@ -907,7 +896,6 @@ static PetscErrorCode TestExpandPoints(DM dm, AppCtx *user)
   IS                *iss;
   PetscInt          d,depth;
   PetscMPIInt       rank;
-  PetscErrorCode    ierr;
   PetscViewer       viewer=PETSC_VIEWER_STDOUT_WORLD, sviewer;
 
   PetscFunctionBegin;
@@ -948,7 +936,6 @@ static PetscErrorCode DMPlexExpandedConesToFaces_Private(DM dm, IS is, PetscSect
   const PetscInt    *coveredPoints;
   const PetscInt    *arr, *cone;
   PetscInt          *newarr;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(ISGetLocalSize(is, &n));
@@ -987,7 +974,6 @@ static PetscErrorCode DMPlexExpandedVerticesToFaces_Private(DM dm, IS boundary_e
 {
   PetscInt          d;
   IS                is,newis;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   is = boundary_expanded_is;
@@ -1005,7 +991,6 @@ static PetscErrorCode DMPlexExpandedVerticesToFaces_Private(DM dm, IS boundary_e
 
 static PetscErrorCode DMLabelViewFromOptionsOnComm_Private(DMLabel label, const char optionname[], MPI_Comm comm)
 {
-  PetscErrorCode    ierr;
   PetscViewer       viewer;
   PetscBool         flg;
   static PetscBool  incall = PETSC_FALSE;
@@ -1014,12 +999,12 @@ static PetscErrorCode DMLabelViewFromOptionsOnComm_Private(DMLabel label, const 
   PetscFunctionBegin;
   if (incall) PetscFunctionReturn(0);
   incall = PETSC_TRUE;
-  CHKERRQI(PetscOptionsGetViewer(comm,((PetscObject)label)->options,((PetscObject)label)->prefix,optionname,&viewer,&format,&flg));
+  CHKERRQI(incall,PetscOptionsGetViewer(comm,((PetscObject)label)->options,((PetscObject)label)->prefix,optionname,&viewer,&format,&flg));
   if (flg) {
-    CHKERRQI(PetscViewerPushFormat(viewer,format));
-    CHKERRQI(DMLabelView(label, viewer));
-    CHKERRQI(PetscViewerPopFormat(viewer));
-    CHKERRQI(PetscViewerDestroy(&viewer));
+    CHKERRQI(incall,PetscViewerPushFormat(viewer,format));
+    CHKERRQI(incall,DMLabelView(label, viewer));
+    CHKERRQI(incall,PetscViewerPopFormat(viewer));
+    CHKERRQI(incall,PetscViewerDestroy(&viewer));
   }
   incall = PETSC_FALSE;
   PetscFunctionReturn(0);
@@ -1029,7 +1014,6 @@ static PetscErrorCode DMLabelViewFromOptionsOnComm_Private(DMLabel label, const 
 static inline PetscErrorCode DMLabelGetStratumISOnComm_Private(DMLabel label, PetscInt value, MPI_Comm comm, IS *is)
 {
   IS                tmpis;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMLabelGetStratumIS(label, value, &tmpis));
@@ -1046,7 +1030,6 @@ static PetscErrorCode PetscSectionReplicate_Private(MPI_Comm comm, PetscMPIInt r
   PetscInt          chart[2], p;
   PetscInt          *dofarr;
   PetscMPIInt       rank;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(comm, &rank));
@@ -1075,7 +1058,6 @@ static PetscErrorCode PetscSectionReplicate_Private(MPI_Comm comm, PetscMPIInt r
 static PetscErrorCode DMPlexExpandedVerticesCoordinatesToFaces_Private(DM ipdm, PortableBoundary bnd, IS *face_is)
 {
   IS                  faces_expanded_is;
-  PetscErrorCode      ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexFindVertices(ipdm, bnd->coordinates, 0.0, &faces_expanded_is));
@@ -1093,7 +1075,6 @@ static PetscErrorCode DMPlexSetOrientInterface_Private(DM dm, PetscBool enable)
   char              prefix_opt[512];
   PetscBool         flg, set;
   static PetscBool  wasSetTrue = PETSC_FALSE;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   if (dm) {
@@ -1139,7 +1120,6 @@ static PetscErrorCode DMPlexGetExpandedBoundary_Private(DM dm, PortableBoundary 
   PetscInt               value = 1;
   DMPlexInterpolatedFlag intp;
   PetscBool              flg;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(&bnd));
@@ -1239,7 +1219,6 @@ static PetscErrorCode DMPlexGetInterfaceFaces_Private(DM ipdm, IS boundary_faces
   const char             partBoundaryName[] = "DMPlexDistributeInterpolateMarkInterface_partBoundary";
   PetscInt               value = 1;
   DMPlexInterpolatedFlag intp;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)ipdm, &comm));
@@ -1269,7 +1248,6 @@ static PetscErrorCode DMPlexComputeCompleteInterface_Private(DM ipdm, IS interfa
   const char             interfaceName[] = "DMPlexDistributeInterpolateMarkInterface_interface";
   DMPlexInterpolatedFlag intp;
   MPI_Comm               comm;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)ipdm, &comm));
@@ -1294,7 +1272,6 @@ static PetscErrorCode PointSFGetOutwardInterfacePoints(PetscSF sf, IS *is)
 {
   PetscInt        n;
   const PetscInt  *arr;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSFGetGraph(sf, NULL, &n, &arr, NULL));
@@ -1307,7 +1284,6 @@ static PetscErrorCode PointSFGetInwardInterfacePoints(PetscSF sf, IS *is)
   PetscInt        n;
   const PetscInt  *rootdegree;
   PetscInt        *arr;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSFSetUp(sf));
@@ -1321,7 +1297,6 @@ static PetscErrorCode PointSFGetInwardInterfacePoints(PetscSF sf, IS *is)
 static PetscErrorCode PointSFGetInterfacePoints_Private(PetscSF pointSF, IS *is)
 {
   IS pointSF_out_is, pointSF_in_is;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PointSFGetOutwardInterfacePoints(pointSF, &pointSF_out_is));
@@ -1332,7 +1307,7 @@ static PetscErrorCode PointSFGetInterfacePoints_Private(PetscSF pointSF, IS *is)
   PetscFunctionReturn(0);
 }
 
-#define CHKERRMY(ierr) do {PetscCheckFalse(ierr,PETSC_COMM_SELF, PETSC_ERR_PLIB, "PointSF is wrong. Unable to show details!");} while (0)
+#define CHKERRMY(ierr) PetscCheck(!ierr,PETSC_COMM_SELF, PETSC_ERR_PLIB, "PointSF is wrong. Unable to show details!")
 
 static PetscErrorCode ViewPointsWithType_Internal(DM dm, IS pointsIS, PetscViewer v)
 {
@@ -1342,7 +1317,6 @@ static PetscErrorCode ViewPointsWithType_Internal(DM dm, IS pointsIS, PetscViewe
   PetscScalar     *coordsScalar;
   PetscInt        coneSize, depth, dim, i, p, npoints;
   const PetscInt  *points;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -1400,7 +1374,6 @@ static PetscErrorCode ViewPointsWithType(DM dm, IS points, PetscViewer v)
   PetscBool       flg;
   PetscInt        npoints;
   PetscMPIInt     rank;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)v, PETSCVIEWERASCII, &flg));
@@ -1424,7 +1397,6 @@ static PetscErrorCode DMPlexComparePointSFWithInterface_Private(DM ipdm, IS inte
   PetscBool       flg;
   MPI_Comm        comm;
   PetscMPIInt     size;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)ipdm, &comm));
@@ -1470,7 +1442,6 @@ static PetscErrorCode DMPlexISFilterVertices_Private(DM dm, IS points)
 {
   PetscInt        vStart, vEnd;
   MPI_Comm        comm;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)dm, &comm));
@@ -1511,7 +1482,6 @@ static PetscErrorCode DMPlexCheckPointSFHeavy(DM dm, PortableBoundary bnd)
   IS                     boundary_faces_is, interface_faces_is, interface_is;
   DMPlexInterpolatedFlag intp;
   MPI_Comm               comm;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)dm, &comm));

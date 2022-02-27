@@ -19,7 +19,6 @@ typedef struct {
 PetscErrorCode MatMultMtM_SeqAIJ(Mat MtM,Vec xx,Vec yy)
 {
   MatShellCtx    *matshellctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(MatShellGetContext(MtM,&matshellctx));
@@ -32,7 +31,6 @@ PetscErrorCode MatMultMtM_SeqAIJ(Mat MtM,Vec xx,Vec yy)
 PetscErrorCode MatMultAddMtM_SeqAIJ(Mat MtM,Vec xx, Vec yy, Vec zz)
 {
   MatShellCtx    *matshellctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(MatShellGetContext(MtM,&matshellctx));
@@ -44,7 +42,6 @@ PetscErrorCode MatMultAddMtM_SeqAIJ(Mat MtM,Vec xx, Vec yy, Vec zz)
 
 PetscErrorCode createSwarm(const DM dm, DM *sw)
 {
-  PetscErrorCode ierr;
   PetscInt       Nc = 1, dim = 2;
 
   PetscFunctionBeginUser;
@@ -172,7 +169,6 @@ PetscErrorCode particlesToGrid(const DM dm, DM sw, const PetscInt Np, const Pets
   PetscDataType  dtype;
   Mat            M_p;
   Vec            ff;
-  PetscErrorCode ierr;
   PetscInt       bs,p,zero=0;
 
   PetscFunctionBeginUser;

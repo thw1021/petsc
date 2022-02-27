@@ -69,7 +69,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm, AppCtx *user)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(comm, dm));
@@ -104,7 +103,6 @@ static PetscErrorCode CreateFEM(DM dm, AppCtx *user)
   DMPolytopeType ct;
   PetscBool      simplex;
   PetscInt       dim, cStart;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -217,7 +215,6 @@ static PetscErrorCode RHSFunction1(TS ts,PetscReal t,Vec V,Vec Posres,void *ctx)
   PetscScalar       *posres;
   PetscInt          Np, p, dim, d;
   DM                dm;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecGetLocalSize(Posres, &Np));

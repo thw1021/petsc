@@ -159,7 +159,6 @@ static PetscErrorCode TransformCoordinates(DM dm, AppCtx *user)
   Vec            coordinates;
   PetscScalar   *coords;
   PetscInt       vStart, vEnd, v;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   if (user->nonaffineCoords) {
@@ -223,7 +222,6 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 {
   PetscInt       dim = 2;
   PetscBool      simplex;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   if (user->useDA) {
@@ -318,7 +316,6 @@ static void symmetric_gradient_inner_product(PetscInt dim, PetscInt Nf, PetscInt
 
 static PetscErrorCode SetupSection(DM dm, AppCtx *user)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   if (user->constraints) {
@@ -454,7 +451,6 @@ static PetscErrorCode SetupSection(DM dm, AppCtx *user)
 
 static PetscErrorCode TestFEJacobian(DM dm, AppCtx *user)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   if (!user->useDA) {
@@ -516,7 +512,6 @@ static PetscErrorCode TestInjector(DM dm, AppCtx *user)
 {
   DM             refTree;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexGetReferenceTree(dm,&refTree));
@@ -544,7 +539,6 @@ static PetscErrorCode TestFVGrad(DM dm, AppCtx *user)
   Vec               cellgeom, grad, locGrad;
   const PetscScalar *cgeom;
   PetscReal         allVecMaxDiff = 0., fvTol = 100. * PETSC_MACHINE_EPSILON;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   comm = PetscObjectComm((PetscObject)dm);
@@ -660,7 +654,6 @@ static PetscErrorCode ComputeError(DM dm, PetscErrorCode (**exactFuncs)(PetscInt
 {
   Vec            u;
   PetscReal      n[3] = {1.0, 1.0, 1.0};
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetGlobalVector(dm, &u));
@@ -681,7 +674,6 @@ static PetscErrorCode CheckFunctions(DM dm, PetscInt order, AppCtx *user)
   void            *exactCtxs[3];
   MPI_Comm         comm;
   PetscReal        error, errorDer, tol = PETSC_SMALL;
-  PetscErrorCode   ierr;
 
   PetscFunctionBeginUser;
   exactCtxs[0]       = user;
@@ -730,7 +722,6 @@ static PetscErrorCode CheckInterpolation(DM dm, PetscBool checkRestrict, PetscIn
   MPI_Comm        comm;
   PetscInt        dim;
   PetscReal       error, errorDer, tol = PETSC_SMALL;
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginUser;
   exactCtxs[0]       = user;
@@ -806,7 +797,6 @@ static PetscErrorCode CheckConvergence(DM dm, PetscInt Nr, AppCtx *user)
   PetscInt         r, c, cStart, cEnd;
   PetscReal        errorOld, errorDerOld, error, errorDer, rel, len, lenOld;
   double           p;
-  PetscErrorCode   ierr;
 
   PetscFunctionBeginUser;
   if (!user->convergence) PetscFunctionReturn(0);

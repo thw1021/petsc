@@ -42,7 +42,6 @@ PetscErrorCode Adjoint2(Vec,PetscScalar[],User);
 
 static PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec U,Vec F,void *ctx)
 {
-  PetscErrorCode    ierr;
   User              user = (User)ctx;
   PetscScalar       *f;
   const PetscScalar *u;
@@ -59,7 +58,6 @@ static PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec U,Vec F,void *ctx)
 
 static PetscErrorCode RHSJacobian(TS ts,PetscReal t,Vec U,Mat A,Mat B,void *ctx)
 {
-  PetscErrorCode    ierr;
   User              user = (User)ctx;
   PetscReal         mu   = user->mu;
   PetscInt          rowcol[] = {0,1};
@@ -90,7 +88,6 @@ static PetscErrorCode RHSHessianProductUU(TS ts,PetscReal t,Vec U,Vec *Vl,Vec Vr
   PetscScalar       dJdU[2][2][2]={{{0}}};
   PetscInt          i,j,k;
   User              user = (User)ctx;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecGetArrayRead(U,&u));
@@ -118,7 +115,6 @@ static PetscErrorCode RHSHessianProductUU(TS ts,PetscReal t,Vec U,Vec *Vl,Vec Vr
 
 static PetscErrorCode IFunction(TS ts,PetscReal t,Vec U,Vec Udot,Vec F,void *ctx)
 {
-  PetscErrorCode    ierr;
   User              user = (User)ctx;
   const PetscScalar *u,*udot;
   PetscScalar       *f;
@@ -137,7 +133,6 @@ static PetscErrorCode IFunction(TS ts,PetscReal t,Vec U,Vec Udot,Vec F,void *ctx
 
 static PetscErrorCode IJacobian(TS ts,PetscReal t,Vec U,Vec Udot,PetscReal a,Mat A,Mat B,void *ctx)
 {
-  PetscErrorCode    ierr;
   User              user = (User)ctx;
   PetscInt          rowcol[] = {0,1};
   PetscScalar       J[2][2];
@@ -192,7 +187,6 @@ static PetscErrorCode IHessianProductUU(TS ts,PetscReal t,Vec U,Vec *Vl,Vec Vr,V
   PetscScalar       dJdU[2][2][2]={{{0}}};
   PetscInt          i,j,k;
   User              user = (User)ctx;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecGetArrayRead(U,&u));
@@ -223,7 +217,6 @@ static PetscErrorCode FormFunctionGradient(Tao tao,Vec IC,PetscReal *f,Vec G,voi
   TS                ts = user_ptr->ts;
   const PetscScalar *x_ptr;
   PetscScalar       *y_ptr;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecCopy(IC,user_ptr->U)); /* set up the initial condition */
@@ -255,7 +248,6 @@ static PetscErrorCode FormHessian(Tao tao,Vec U,Mat H,Mat Hpre,void *ctx)
   PetscScalar    *x_ptr;
   const PetscInt rows[2] = {0,1};
   PetscInt       col;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecCopy(U,user_ptr->U));
@@ -288,7 +280,6 @@ static PetscErrorCode FormHessian(Tao tao,Vec U,Mat H,Mat Hpre,void *ctx)
 static PetscErrorCode MatrixFreeHessian(Tao tao,Vec U,Mat H,Mat Hpre,void *ctx)
 {
   User           user_ptr = (User)ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecCopy(U,user_ptr->U));
@@ -305,7 +296,6 @@ PetscErrorCode Adjoint2(Vec U,PetscScalar arr[],User ctx)
   TS             ts = ctx->ts;
   PetscScalar    *x_ptr,*y_ptr;
   Mat            tlmsen;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(TSAdjointReset(ts));
@@ -358,7 +348,6 @@ PetscErrorCode FiniteDiff(Vec U,PetscScalar arr[],User ctx)
   PetscScalar       *u;
   Tao               tao = NULL;
   PetscReal         f;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecDuplicate(U,&Up));
@@ -401,7 +390,6 @@ static PetscErrorCode HessianProductMat(Mat mat,Vec svec,Vec y)
 {
   User           user_ptr;
   PetscScalar    *y_ptr;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(MatShellGetContext(mat,&user_ptr));

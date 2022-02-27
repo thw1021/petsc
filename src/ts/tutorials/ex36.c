@@ -47,7 +47,6 @@ PetscErrorCode Ue(PetscScalar t,PetscScalar *U)
 */
 static PetscErrorCode IFunctionImplicit(TS ts,PetscReal t,Vec Y,Vec Ydot,Vec F,void *ctx)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *y,*ydot;
   PetscScalar       *f;
 
@@ -74,7 +73,6 @@ static PetscErrorCode IFunctionImplicit(TS ts,PetscReal t,Vec Y,Vec Ydot,Vec F,v
 */
 static PetscErrorCode IJacobianImplicit(TS ts,PetscReal t,Vec Y,Vec Ydot,PetscReal a,Mat A,Mat B,void *ctx)
 {
-  PetscErrorCode    ierr;
   PetscInt          rowcol[] = {0,1,2,3,4};
   const PetscScalar *y,*ydot;
   PetscScalar       J[5][5];

@@ -4,7 +4,6 @@
 
 PetscErrorCode GetListofEdges_Power(PFDATA *pfdata,PetscInt *edgelist)
 {
-  PetscErrorCode ierr;
   PetscInt       i,fbus,tbus,nbranches=pfdata->nbranch;
   EDGE_Power     branch=pfdata->branch;
   PetscBool      netview=PETSC_FALSE;
@@ -34,7 +33,6 @@ PetscErrorCode GetListofEdges_Power(PFDATA *pfdata,PetscInt *edgelist)
 
 PetscErrorCode FormJacobian_Power_private(DM networkdm,Vec localX,Mat J,PetscInt nv,PetscInt ne,const PetscInt* vtx,const PetscInt* edges,void* appctx)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *xarr;
   PetscInt          i,v,row[2],col[8],e,vfrom,vto;
   PetscInt          offsetfrom,offsetto,goffsetfrom,goffsetto,numComps;
@@ -194,7 +192,6 @@ PetscErrorCode FormJacobian_Power_private(DM networkdm,Vec localX,Mat J,PetscInt
 
 PetscErrorCode FormJacobian_Power(SNES snes,Vec X, Mat J,Mat Jpre,void *appctx)
 {
-  PetscErrorCode ierr;
   DM             networkdm;
   Vec            localX;
   PetscInt       nv,ne;
@@ -221,7 +218,6 @@ PetscErrorCode FormJacobian_Power(SNES snes,Vec X, Mat J,Mat Jpre,void *appctx)
 
 PetscErrorCode FormFunction_Power(DM networkdm,Vec localX, Vec localF,PetscInt nv,PetscInt ne,const PetscInt* vtx,const PetscInt* edges,void* appctx)
 {
-  PetscErrorCode    ierr;
   UserCtx_Power     *User=(UserCtx_Power*)appctx;
   PetscInt          e,v,vfrom,vto;
   const PetscScalar *xarr;
@@ -334,7 +330,6 @@ PetscErrorCode FormFunction_Power(DM networkdm,Vec localX, Vec localF,PetscInt n
 
 PetscErrorCode SetInitialGuess_Power(DM networkdm,Vec localX,PetscInt nv,PetscInt ne,const PetscInt *vtx,const PetscInt *edges,void* appctx)
 {
-  PetscErrorCode ierr;
   VERTEX_Power   bus;
   PetscInt       i;
   GEN            gen;

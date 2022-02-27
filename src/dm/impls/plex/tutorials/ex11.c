@@ -57,7 +57,6 @@ static PetscBool ignoreOrnt(AppCtx *user, PetscInt o)
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(comm, dm));
@@ -74,7 +73,6 @@ static PetscErrorCode CheckCellVertices(DM dm, PetscInt cell, PetscInt o)
   PetscInt       *closure = NULL;
   PetscInt        Ncl, cl, Nv, vStart, vEnd, v;
   MPI_Comm        comm;
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscObjectGetComm((PetscObject) dm, &comm));
@@ -104,7 +102,6 @@ static PetscErrorCode ReorientCell(DM dm, PetscInt cell, PetscInt o, PetscBool s
   PetscScalar    *coords, *ccoords = NULL;
   PetscInt       *closure = NULL;
   PetscInt        cdim, d, Nc, Ncl, cl, vStart, vEnd, Nv;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   /* Change vertex coordinates so that it plots as we expect */
@@ -141,7 +138,6 @@ static PetscErrorCode GenerateArrangments(DM dm, AppCtx *user)
   DMPolytopeType ct;
   PetscInt       No, o;
   const char    *name;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   if (!user->genArr) PetscFunctionReturn(0);
@@ -168,7 +164,6 @@ static PetscErrorCode VerifyCayleyTable(DM dm, AppCtx *user)
   PetscInt        No, o1, o2, o3, o4;
   PetscBool       equal;
   const char     *name;
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginUser;
   if (!user->genArr) PetscFunctionReturn(0);
@@ -184,7 +179,7 @@ static PetscErrorCode VerifyCayleyTable(DM dm, AppCtx *user)
       CHKERRQ(DMPlexCheckFaces(dm1, 0));
       CHKERRQ(DMPlexOrientPoint(dm1, 0, o1));
       CHKERRQ(DMPlexCheckFaces(dm1, 0));
-      o3   = DMPolytopeTypeComposeOrientation(ct, o1, o2);CHKERRQ(ierr);
+      o3   = DMPolytopeTypeComposeOrientation(ct, o1, o2);
       /* First verification */
       CHKERRQ(CreateMesh(PetscObjectComm((PetscObject) dm), user, &dm2));
       CHKERRQ(DMPlexOrientPoint(dm2, 0, o3));
@@ -216,7 +211,6 @@ static PetscErrorCode VerifyInverse(DM dm, AppCtx *user)
   PetscInt        No, o, oi, o2;
   PetscBool       equal;
   const char     *name;
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginUser;
   if (!user->genArr) PetscFunctionReturn(0);
@@ -227,7 +221,7 @@ static PetscErrorCode VerifyInverse(DM dm, AppCtx *user)
   if (user->printTable) CHKERRQ(PetscPrintf(PETSC_COMM_SELF, "Inverse table for %s\n", DMPolytopeTypes[ct]));
   for (o = PetscMax(-No, user->orntBounds[0]); o < PetscMin(No, user->orntBounds[1]); ++o) {
     if (ignoreOrnt(user, o)) continue;
-    oi   = DMPolytopeTypeComposeOrientationInv(ct, 0, o);CHKERRQ(ierr);
+    oi   = DMPolytopeTypeComposeOrientationInv(ct, 0, o);
     CHKERRQ(CreateMesh(PetscObjectComm((PetscObject) dm), user, &dm1));
     CHKERRQ(DMPlexOrientPoint(dm1, 0, o));
     CHKERRQ(DMPlexCheckFaces(dm1, 0));
@@ -262,7 +256,6 @@ static PetscErrorCode CheckSubcells(DM dm, DM odm, PetscInt p, PetscInt o, AppCt
   const PetscInt *cone, *ornt, *ocone, *oornt;
   PetscInt       *rsize, *rcone, *rornt;
   PetscInt        Nct, n, oi, debug = 0;
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMPlexTransformCreate(PetscObjectComm((PetscObject) dm), &tr));
@@ -280,7 +273,7 @@ static PetscErrorCode CheckSubcells(DM dm, DM odm, PetscInt p, PetscInt o, AppCt
   CHKERRQ(DMPlexGetConeOrientation(dm, p, &ornt));
   CHKERRQ(DMPlexGetCone(odm, p, &ocone));
   CHKERRQ(DMPlexGetConeOrientation(odm, p, &oornt));
-  oi   = DMPolytopeTypeComposeOrientationInv(ct, 0, o);CHKERRQ(ierr);
+  oi   = DMPolytopeTypeComposeOrientationInv(ct, 0, o);
   if (user->printTable) CHKERRQ(PetscPrintf(PETSC_COMM_SELF, "Orientation %D\n", oi));
 
   CHKERRQ(DMPlexTransformCellTransform(tr, ct, p, NULL, &Nct, &rct, &rsize, &rcone, &rornt));
@@ -354,7 +347,6 @@ static PetscErrorCode RefineArrangments(DM dm, AppCtx *user)
   DMPolytopeType ct;
   PetscInt       No, o;
   const char    *name;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   if (!user->refArr) PetscFunctionReturn(0);

@@ -29,7 +29,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 static PetscErrorCode CreateHybridMesh(MPI_Comm comm, PetscBool interpolate, DM *dm)
 {
   PetscInt       dim;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   dim  = 3;
@@ -82,7 +81,6 @@ static PetscErrorCode CreateHybridMesh(MPI_Comm comm, PetscBool interpolate, DM 
 static PetscErrorCode CreateReverseHybridMesh(MPI_Comm comm, PetscBool interpolate, DM *dm)
 {
   PetscInt       dim;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   dim  = 3;
@@ -128,7 +126,6 @@ static PetscErrorCode OrderHybridMesh(DM *dm)
   IS             perm;
   PetscInt      *ind;
   PetscInt       dim, pStart, pEnd, p, cStart, cEnd, c, Nhyb = 0, off[2];
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDimension(*dm, &dim));
@@ -168,7 +165,6 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
   PetscBool      interpolate = user->interpolate;
   PetscInt       meshNum     = user->meshNum;
   size_t         len;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscStrlen(filename, &len));

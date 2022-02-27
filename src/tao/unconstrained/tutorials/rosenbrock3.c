@@ -144,7 +144,6 @@ PetscErrorCode FormFunctionGradient(Tao tao,Vec X,PetscReal *f, Vec G,void *ptr)
 {
   AppCtx            *user = (AppCtx *) ptr;
   PetscInt          i,nn=user->n/2;
-  PetscErrorCode    ierr;
   PetscReal         ff=0,t1,t2,alpha=user->alpha;
   PetscScalar       *g;
   const PetscScalar *x;
@@ -199,7 +198,6 @@ PetscErrorCode FormFunctionGradient(Tao tao,Vec X,PetscReal *f, Vec G,void *ptr)
 PetscErrorCode FormHessian(Tao tao,Vec X,Mat H, Mat Hpre, void *ptr)
 {
   AppCtx            *user = (AppCtx*)ptr;
-  PetscErrorCode    ierr;
   PetscInt          i, ind[2];
   PetscReal         alpha=user->alpha;
   PetscReal         v[2][2];

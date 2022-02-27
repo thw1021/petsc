@@ -78,7 +78,6 @@ static PetscErrorCode ProcessOptions(AppCtx *options)
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMCreate(comm, dm));
@@ -92,7 +91,6 @@ static PetscErrorCode SetupDiscretization(DM dm, PetscInt dim, PetscBool simplex
 {
   PetscFE        fe;
   MPI_Comm       comm;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscObjectGetComm((PetscObject) dm, &comm));
@@ -112,7 +110,6 @@ static PetscErrorCode SetupOutputDiscretization(DM dm, PetscInt dim, PetscBool s
 {
   PetscFE        fe;
   MPI_Comm       comm;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscObjectGetComm((PetscObject) dm, &comm));
@@ -129,7 +126,6 @@ static PetscErrorCode CreateSubdomainMesh(DM dm, DMLabel *domLabel, DM *subdm, A
   DMLabel        label;
   PetscBool      simplex;
   PetscInt       dim, cStart, cEnd, c;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMPlexIsSimplex(dm, &simplex));
@@ -151,7 +147,6 @@ static PetscErrorCode CreateBoundaryMesh(DM dm, DMLabel *bdLabel, DM *subdm, App
   DMLabel        label;
   PetscBool      simplex;
   PetscInt       dim;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMPlexIsSimplex(dm, &simplex));
@@ -173,7 +168,6 @@ static PetscErrorCode CreateAuxiliaryVec(DM dm, DM *auxdm, Vec *la, AppCtx *user
   PetscErrorCode (**afuncs)(PetscInt, PetscReal, const PetscReal [], PetscInt, PetscScalar *, void *);
   PetscBool         simplex;
   PetscInt          dim, Nf, f;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -197,7 +191,6 @@ static PetscErrorCode TestFunctionProjection(DM dm, DM dmAux, DMLabel label, Vec
   PetscInt          Nf, f;
   PetscInt          val[1] = {1};
   char              lname[PETSC_MAX_PATH_LEN];
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   if (dmAux) CHKERRQ(DMSetAuxiliaryVec(dm, NULL, 0, la));
@@ -236,7 +229,6 @@ static PetscErrorCode TestFieldProjection(DM dm, DM dmAux, DMLabel label, Vec la
   PetscInt          Nf, f;
   PetscInt          val[1] = {1};
   char              lname[PETSC_MAX_PATH_LEN];
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   if (dmAux) CHKERRQ(DMSetAuxiliaryVec(dm, NULL, 0, la));
@@ -277,7 +269,6 @@ static PetscErrorCode TestFieldProjectionMultiple(DM dm, DM dmIn, DM dmAux, DMLa
   PetscInt          Nf, NfIn;
   PetscInt          val[1] = {1};
   char              lname[PETSC_MAX_PATH_LEN];
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   if (dmAux) CHKERRQ(DMSetAuxiliaryVec(dm, NULL, 0, la));

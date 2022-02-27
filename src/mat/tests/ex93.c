@@ -92,7 +92,6 @@ int main(int argc,char **argv)
 PetscErrorCode testPTAPRectangular(void)
 {
   const int      rows = 3,cols = 5;
-  PetscErrorCode ierr;
   int            i;
   Mat            A,P,C;
 

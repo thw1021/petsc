@@ -76,7 +76,6 @@ int main(int argc,char **argv)
 
 static PetscErrorCode ComputeRHS(KSP ksp,Vec b,void *ctx)
 {
-  PetscErrorCode ierr;
   PetscInt       mx,idx[2];
   PetscScalar    h,v[2];
   DM             da;
@@ -97,7 +96,6 @@ static PetscErrorCode ComputeRHS(KSP ksp,Vec b,void *ctx)
 static PetscErrorCode ComputeMatrix(KSP ksp,Mat J,Mat jac,void *ctx)
 {
   AppCtx         *user = (AppCtx*)ctx;
-  PetscErrorCode ierr;
   PetscInt       i,mx,xm,xs;
   PetscScalar    v[3],h,xlow,xhigh;
   MatStencil     row,col[3];

@@ -69,7 +69,6 @@ int main(int argc,char **argv)
 PetscErrorCode TestPetscVSNPrintf(char *str,size_t l_str,size_t *fullLength,const char* format,...)
 {
   va_list        Argp;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   va_start(Argp,format);

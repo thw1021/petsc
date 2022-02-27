@@ -128,7 +128,6 @@ int main(int argc,char **argv)
 
 PetscErrorCode FormFunction(SNES snes,Vec x,Vec f,void *ctx)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *xx;
   PetscScalar       *ff;
 
@@ -155,7 +154,6 @@ PetscErrorCode FormJacobian(SNES snes,Vec x,Mat jac,Mat B,void *dummy)
 {
   const PetscScalar *xx;
   PetscScalar       A[1];
-  PetscErrorCode    ierr;
   PetscInt          idx[1] = {0};
 
   /*

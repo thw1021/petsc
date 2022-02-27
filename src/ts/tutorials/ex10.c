@@ -64,7 +64,6 @@ struct _n_RD {
 
 static PetscErrorCode RDDestroy(RD *rd)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMDestroy(&(*rd)->da));
@@ -254,7 +253,6 @@ static PetscScalar RDDiffusion(RD rd,PetscReal hx,const RDNode x[],PetscInt i,RD
 
 static PetscErrorCode RDGetLocalArrays(RD rd,TS ts,Vec X,Vec Xdot,PetscReal *Theta,PetscReal *dt,Vec *X0loc,RDNode **x0,Vec *Xloc,RDNode **x,Vec *Xloc_t,RDNode **xdot)
 {
-  PetscErrorCode ierr;
   PetscBool      istheta;
 
   PetscFunctionBeginUser;
@@ -291,7 +289,6 @@ static PetscErrorCode RDGetLocalArrays(RD rd,TS ts,Vec X,Vec Xdot,PetscReal *The
 
 static PetscErrorCode RDRestoreLocalArrays(RD rd,Vec *X0loc,RDNode **x0,Vec *Xloc,RDNode **x,Vec *Xloc_t,RDNode **xdot)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMDAVecRestoreArray(rd->da,*X0loc,x0));
@@ -305,7 +302,6 @@ static PetscErrorCode RDRestoreLocalArrays(RD rd,Vec *X0loc,RDNode **x0,Vec *Xlo
 
 static PetscErrorCode RDCheckDomain_Private(RD rd,TS ts,Vec X,PetscBool  *in)
 {
-  PetscErrorCode ierr;
   PetscInt       minloc;
   PetscReal      min;
 
@@ -331,7 +327,6 @@ static PetscErrorCode RDCheckDomain_Private(RD rd,TS ts,Vec X,PetscBool  *in)
 
 static PetscErrorCode RDIFunction_FD(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void *ctx)
 {
-  PetscErrorCode ierr;
   RD             rd = (RD)ctx;
   RDNode         *x,*x0,*xdot,*f;
   Vec            X0loc,Xloc,Xloc_t;
@@ -340,7 +335,6 @@ static PetscErrorCode RDIFunction_FD(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void
   PetscInt       i;
 
   PetscFunctionBeginUser;
-  RDCheckDomain(rd,ts,X);
   CHKERRQ(RDGetLocalArrays(rd,ts,X,Xdot,&Theta,&dt,&X0loc,&x0,&Xloc,&x,&Xloc_t,&xdot));
   CHKERRQ(DMDAVecGetArray(rd->da,F,&f));
   CHKERRQ(DMDAGetLocalInfo(rd->da,&info));
@@ -400,7 +394,6 @@ static PetscErrorCode RDIFunction_FD(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void
 
 static PetscErrorCode RDIJacobian_FD(TS ts,PetscReal t,Vec X,Vec Xdot,PetscReal a,Mat A,Mat B,void *ctx)
 {
-  PetscErrorCode ierr;
   RD             rd = (RD)ctx;
   RDNode         *x,*x0,*xdot;
   Vec            X0loc,Xloc,Xloc_t;
@@ -409,7 +402,6 @@ static PetscErrorCode RDIJacobian_FD(TS ts,PetscReal t,Vec X,Vec Xdot,PetscReal 
   PetscInt       i;
 
   PetscFunctionBeginUser;
-  RDCheckDomain(rd,ts,X);
   CHKERRQ(RDGetLocalArrays(rd,ts,X,Xdot,&Theta,&dt,&X0loc,&x0,&Xloc,&x,&Xloc_t,&xdot));
   CHKERRQ(DMDAGetLocalInfo(rd->da,&info));
   hx   = rd->L / (info.mx-1);
@@ -577,7 +569,6 @@ static PetscErrorCode RDGetQuadrature(RD rd,PetscReal hx,PetscInt *nq,PetscReal 
 */
 static PetscErrorCode RDIFunction_FE(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void *ctx)
 {
-  PetscErrorCode ierr;
   RD             rd = (RD)ctx;
   RDNode         *x,*x0,*xdot,*f;
   Vec            X0loc,Xloc,Xloc_t,Floc;
@@ -586,7 +577,6 @@ static PetscErrorCode RDIFunction_FE(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void
   PetscInt       i,j,q,nq;
 
   PetscFunctionBeginUser;
-  RDCheckDomain(rd,ts,X);
   CHKERRQ(RDGetLocalArrays(rd,ts,X,Xdot,&Theta,&dt,&X0loc,&x0,&Xloc,&x,&Xloc_t,&xdot));
 
   CHKERRQ(DMGetLocalVector(rd->da,&Floc));
@@ -665,7 +655,6 @@ static PetscErrorCode RDIFunction_FE(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void
 
 static PetscErrorCode RDIJacobian_FE(TS ts,PetscReal t,Vec X,Vec Xdot,PetscReal a,Mat A,Mat B,void *ctx)
 {
-  PetscErrorCode ierr;
   RD             rd = (RD)ctx;
   RDNode         *x,*x0,*xdot;
   Vec            X0loc,Xloc,Xloc_t;
@@ -675,7 +664,6 @@ static PetscErrorCode RDIJacobian_FE(TS ts,PetscReal t,Vec X,Vec Xdot,PetscReal 
   PetscScalar    K[4][4];
 
   PetscFunctionBeginUser;
-  RDCheckDomain(rd,ts,X);
   CHKERRQ(RDGetLocalArrays(rd,ts,X,Xdot,&Theta,&dt,&X0loc,&x0,&Xloc,&x,&Xloc_t,&xdot));
   CHKERRQ(DMDAGetLocalInfo(rd->da,&info));
   hx   = rd->L / (info.mx-1);
@@ -749,7 +737,6 @@ static PetscErrorCode RDInitialState(RD rd,Vec X)
   DMDALocalInfo  info;
   PetscInt       i;
   RDNode         *x;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMDAGetLocalInfo(rd->da,&info));
@@ -778,7 +765,6 @@ static PetscErrorCode RDInitialState(RD rd,Vec X)
 
 static PetscErrorCode RDView(RD rd,Vec X,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   Vec            Y;
   const RDNode   *x;
   PetscScalar    *y;

@@ -18,7 +18,6 @@ static char help[] = "Illustrate how to solves a matrix-free linear system with 
  */
 PetscErrorCode MyMatShellMult(Mat As,Vec x,Vec y)
 {
-  PetscErrorCode    ierr;
   Mat               P;
 
   PetscFunctionBegin;

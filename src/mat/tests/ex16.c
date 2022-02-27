@@ -7,7 +7,6 @@ static PetscErrorCode CheckValues(Mat A,PetscBool one)
 {
   const PetscScalar *array;
   PetscInt          M,N,rstart,rend,lda,i,j;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatDenseGetArrayRead(A,&array));

@@ -61,7 +61,6 @@ static PetscErrorCode assembled_system(void)
   PC             pc;           /* preconditioner context */
   Vec            x,r;         /* solution, residual vectors */
   Mat            J;            /* Jacobian matrix */
-  PetscErrorCode ierr;
   PetscInt       its;
   PetscScalar    pfive = .5,*xx;
   PetscBool      flg;
@@ -183,7 +182,6 @@ Output Parameter:
 */
 static PetscErrorCode FormFunction1(SNES snes,Vec x,Vec f,void *dummy)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *xx;
   PetscScalar       *ff;
 
@@ -229,7 +227,6 @@ static PetscErrorCode FormJacobian1(SNES snes,Vec x,Mat jac,Mat B,void *dummy)
 {
   const PetscScalar *xx;
   PetscScalar       A[4];
-  PetscErrorCode    ierr;
   PetscInt          idx[2] = {0,1};
 
   PetscFunctionBeginUser;
@@ -263,7 +260,6 @@ static PetscErrorCode FormJacobian1(SNES snes,Vec x,Mat jac,Mat B,void *dummy)
 /* ------------------------------------------------------------------- */
 static PetscErrorCode FormFunction2(SNES snes,Vec x,Vec f,void *dummy)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *xx;
   PetscScalar       *ff;
 
@@ -297,7 +293,6 @@ static PetscErrorCode FormJacobian2(SNES snes,Vec x,Mat jac,Mat B,void *dummy)
 {
   const PetscScalar *xx;
   PetscScalar       A[4];
-  PetscErrorCode    ierr;
   PetscInt          idx[2] = {0,1};
 
   PetscFunctionBeginUser;
@@ -335,7 +330,6 @@ static PetscErrorCode block_system(void)
   PC             pc;           /* preconditioner context */
   Vec            x,r;         /* solution, residual vectors */
   Mat            J;            /* Jacobian matrix */
-  PetscErrorCode ierr;
   PetscInt       its;
   PetscScalar    pfive = .5;
   PetscBool      flg;
@@ -516,7 +510,6 @@ static PetscErrorCode FormFunction1_block(SNES snes,Vec x,Vec f,void *dummy)
   PetscScalar    ff_0, ff_1;
   PetscScalar    xx_0, xx_1;
   PetscInt       index,nb;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   /* get blocks for function */
@@ -555,7 +548,6 @@ static PetscErrorCode FormJacobian1_block(SNES snes,Vec x,Mat jac,Mat B,void *du
   PetscScalar    A_00, A_01, A_10, A_11;
   Mat            j11, j12, j21, j22;
   Mat            **mats;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   /* get blocks for solution */
@@ -595,7 +587,6 @@ static PetscErrorCode FormJacobian1_block(SNES snes,Vec x,Mat jac,Mat B,void *du
 /* ------------------------------------------------------------------- */
 static PetscErrorCode FormFunction2_block(SNES snes,Vec x,Vec f,void *dummy)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *ff;
   const PetscScalar *xx;
 
@@ -629,7 +620,6 @@ static PetscErrorCode FormJacobian2_block(SNES snes,Vec x,Mat jac,Mat B,void *du
 {
   const PetscScalar *xx;
   PetscScalar       A[4];
-  PetscErrorCode    ierr;
   PetscInt          idx[2] = {0,1};
 
   PetscFunctionBeginUser;

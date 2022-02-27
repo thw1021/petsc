@@ -140,7 +140,6 @@ PetscErrorCode EventFunction(TS ts,PetscReal t,Vec X,PetscScalar *fvalue,void *c
   Vec            Xgen,Xnet;
   PetscInt       i,idx=0;
   const PetscScalar *xgen,*xnet;
-  PetscErrorCode ierr;
   PetscScalar    Efd,RF,VR,Vr,Vi,Vm;
 
   PetscFunctionBegin;
@@ -192,7 +191,6 @@ PetscErrorCode PostEventFunction(TS ts,PetscInt nevents,PetscInt event_list[],Pe
   PetscScalar *xgen,*xnet;
   PetscInt row_loc,col_loc;
   PetscScalar val;
-  PetscErrorCode ierr;
   PetscInt i,idx=0,event_num;
   PetscScalar fvalue;
   PetscScalar Efd, RF, VR;
@@ -319,7 +317,6 @@ PetscErrorCode ri2dq(PetscScalar Fr,PetscScalar Fi,PetscScalar delta,PetscScalar
 /* Saves the solution at each time to a matrix */
 PetscErrorCode SaveSolution(TS ts)
 {
-  PetscErrorCode    ierr;
   Userctx           *user;
   Vec               X;
   const PetscScalar *x;
@@ -344,7 +341,6 @@ PetscErrorCode SaveSolution(TS ts)
 
 PetscErrorCode SetInitialGuess(Vec X,Userctx *user)
 {
-  PetscErrorCode    ierr;
   Vec               Xgen,Xnet;
   PetscScalar       *xgen;
   const PetscScalar *xnet;
@@ -431,7 +427,6 @@ PetscErrorCode SetInitialGuess(Vec X,Userctx *user)
 /* Computes F = [f(x,y);g(x,y)] */
 PetscErrorCode ResidualFunction(Vec X, Vec F, Userctx *user)
 {
-  PetscErrorCode    ierr;
   Vec               Xgen,Xnet,Fgen,Fnet;
   const PetscScalar *xgen,*xnet;
   PetscScalar       *fgen,*fnet;
@@ -556,7 +551,6 @@ PetscErrorCode ResidualFunction(Vec X, Vec F, Userctx *user)
  */
 PetscErrorCode RHSFunction(TS ts,PetscReal t, Vec X, Vec F, void *ctx)
 {
-  PetscErrorCode ierr;
   Userctx        *user=(Userctx*)ctx;
 
   PetscFunctionBegin;
@@ -570,7 +564,6 @@ PetscErrorCode RHSFunction(TS ts,PetscReal t, Vec X, Vec F, void *ctx)
  */
 PetscErrorCode IFunction(TS ts,PetscReal t, Vec X, Vec Xdot, Vec F, void *ctx)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *xdot;
   PetscInt          i;
@@ -601,7 +594,6 @@ PetscErrorCode IFunction(TS ts,PetscReal t, Vec X, Vec Xdot, Vec F, void *ctx)
 */
 PetscErrorCode AlgFunction(SNES snes, Vec X, Vec F, void *ctx)
 {
-  PetscErrorCode ierr;
   Userctx        *user=(Userctx*)ctx;
   PetscScalar    *f;
   PetscInt       i;
@@ -624,7 +616,6 @@ PetscErrorCode AlgFunction(SNES snes, Vec X, Vec F, void *ctx)
 
 PetscErrorCode PostStage(TS ts, PetscReal t, PetscInt i, Vec *X)
 {
-  PetscErrorCode ierr;
   Userctx        *user;
 
   PetscFunctionBegin;
@@ -635,7 +626,6 @@ PetscErrorCode PostStage(TS ts, PetscReal t, PetscInt i, Vec *X)
 
 PetscErrorCode PostEvaluate(TS ts)
 {
-  PetscErrorCode ierr;
   Userctx        *user;
   Vec            X;
 
@@ -648,7 +638,6 @@ PetscErrorCode PostEvaluate(TS ts)
 
 PetscErrorCode PreallocateJacobian(Mat J, Userctx *user)
 {
-  PetscErrorCode ierr;
   PetscInt       *d_nnz;
   PetscInt       i,idx=0,start=0;
   PetscInt       ncols;
@@ -694,7 +683,6 @@ PetscErrorCode PreallocateJacobian(Mat J, Userctx *user)
 */
 PetscErrorCode ResidualJacobian(Vec X,Mat J,Mat B,void *ctx)
 {
-  PetscErrorCode    ierr;
   Userctx           *user = (Userctx*)ctx;
   Vec               Xgen,Xnet;
   const PetscScalar *xgen,*xnet;
@@ -936,7 +924,6 @@ PetscErrorCode ResidualJacobian(Vec X,Mat J,Mat B,void *ctx)
 */
 PetscErrorCode AlgJacobian(SNES snes,Vec X,Mat A,Mat B,void *ctx)
 {
-  PetscErrorCode ierr;
   Userctx        *user=(Userctx*)ctx;
 
   PetscFunctionBegin;
@@ -953,7 +940,6 @@ PetscErrorCode AlgJacobian(SNES snes,Vec X,Mat A,Mat B,void *ctx)
 
 PetscErrorCode RHSJacobian(TS ts,PetscReal t,Vec X,Mat A,Mat B,void *ctx)
 {
-  PetscErrorCode ierr;
   Userctx        *user=(Userctx*)ctx;
 
   PetscFunctionBegin;
@@ -971,7 +957,6 @@ PetscErrorCode RHSJacobian(TS ts,PetscReal t,Vec X,Mat A,Mat B,void *ctx)
 
 PetscErrorCode IJacobian(TS ts,PetscReal t,Vec X,Vec Xdot,PetscReal a,Mat A,Mat B,Userctx *user)
 {
-  PetscErrorCode ierr;
   PetscScalar    atmp = (PetscScalar) a;
   PetscInt       i,row;
 

@@ -298,7 +298,6 @@ PetscErrorCode InitialConditions(Vec u,AppCtx *appctx)
 {
   PetscScalar    *u_localptr,h = appctx->h;
   PetscInt       i,mybase,myend;
-  PetscErrorCode ierr;
 
   /*
      Determine starting point of each processor's range of
@@ -355,7 +354,6 @@ PetscErrorCode ExactSolution(PetscReal t,Vec solution,AppCtx *appctx)
 {
   PetscScalar    *s_localptr,h = appctx->h,ex1,ex2,sc1,sc2;
   PetscInt       i,mybase,myend;
-  PetscErrorCode ierr;
 
   /*
      Determine starting and ending points of each processor's
@@ -402,7 +400,6 @@ PetscErrorCode ExactSolution(PetscReal t,Vec solution,AppCtx *appctx)
 PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal time,Vec u,void *ctx)
 {
   AppCtx         *appctx = (AppCtx*) ctx;   /* user-defined application context */
-  PetscErrorCode ierr;
   PetscReal      norm_2,norm_max;
 
   /*
@@ -492,7 +489,6 @@ PetscErrorCode RHSMatrixHeat(TS ts,PetscReal t,Vec X,Mat AA,Mat BB,void *ctx)
 {
   Mat            A       = AA;              /* Jacobian matrix */
   AppCtx         *appctx = (AppCtx*)ctx;     /* user-defined application context */
-  PetscErrorCode ierr;
   PetscInt       i,mstart,mend,idx[3];
   PetscScalar    v[3],stwo = -2./(appctx->h*appctx->h),sone = -.5*stwo;
 
@@ -551,7 +547,6 @@ PetscErrorCode RHSMatrixHeat(TS ts,PetscReal t,Vec X,Mat AA,Mat BB,void *ctx)
 
 PetscErrorCode RHSFunctionHeat(TS ts,PetscReal t,Vec globalin,Vec globalout,void *ctx)
 {
-  PetscErrorCode ierr;
   Mat            A;
 
   PetscFunctionBeginUser;

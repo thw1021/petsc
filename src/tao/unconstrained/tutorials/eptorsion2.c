@@ -74,7 +74,6 @@ PetscErrorCode FormHessian(Tao,Vec,Mat,Mat,void*);
 
 int main(int argc, char **argv)
 {
-    PetscErrorCode     ierr;
     Vec                x;
     Mat                H;
     PetscInt           Nx, Ny;
@@ -166,7 +165,6 @@ int main(int argc, char **argv)
 */
 PetscErrorCode FormInitialGuess(AppCtx *user,Vec X)
 {
-  PetscErrorCode ierr;
   PetscInt       i, j, k, mx = user->mx, my = user->my;
   PetscInt       xs, ys, xm, ym, gxm, gym, gxs, gys, xe, ye;
   PetscReal      hx = 1.0/(mx+1), hy = 1.0/(my+1), temp, val;
@@ -208,7 +206,6 @@ PetscErrorCode FormInitialGuess(AppCtx *user,Vec X)
 PetscErrorCode FormFunctionGradient(Tao tao,Vec X,PetscReal *f,Vec G,void *ptr)
 {
   AppCtx         *user = (AppCtx *)ptr;
-  PetscErrorCode ierr;
   PetscInt       i,j,k,ind;
   PetscInt       xe,ye,xsm,ysm,xep,yep;
   PetscInt       xs, ys, xm, ym, gxm, gym, gxs, gys;
@@ -333,7 +330,6 @@ PetscErrorCode FormFunctionGradient(Tao tao,Vec X,PetscReal *f,Vec G,void *ptr)
 PetscErrorCode FormHessian(Tao tao, Vec X, Mat A, Mat Hpre, void*ctx)
 {
   AppCtx         *user= (AppCtx*) ctx;
-  PetscErrorCode ierr;
   PetscInt       i,j,k;
   PetscInt       col[5],row;
   PetscInt       xs,xm,gxs,gxm,ys,ym,gys,gym;

@@ -110,7 +110,6 @@ int main(int argc,char **argv)
 PetscErrorCode FormFunction(SNES snes,Vec U,Vec FU,void *dummy)
 {
   UserCtx        *user = (UserCtx*)dummy;
-  PetscErrorCode ierr;
   PetscInt       xs,xm,i,N;
   PetscScalar    *u,*lambda,*w,*fu,*fw,*flambda,d,h;
   Vec            vw,vu,vlambda,vfw,vfu,vflambda;
@@ -168,7 +167,6 @@ PetscErrorCode FormFunction(SNES snes,Vec U,Vec FU,void *dummy)
 PetscErrorCode Monitor(SNES snes,PetscInt its,PetscReal rnorm,void *dummy)
 {
   UserCtx        *user = (UserCtx*)dummy;
-  PetscErrorCode ierr;
   Vec            w,u,lambda,U,F;
 
   PetscFunctionBeginUser;

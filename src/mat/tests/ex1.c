@@ -13,7 +13,6 @@ static PetscErrorCode createMatsAndVecs(PetscInt m, PetscInt n, PetscInt nrhs, P
   PetscInt       cstart, cend;
   PetscScalar    value = 1.0;
   Vec            x, y, b;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* create multiple vectors RHS and SOLU */

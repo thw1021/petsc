@@ -11,7 +11,6 @@ PetscErrorCode fill(Mat m, Vec v)
   PetscInt       idxn[3] = {0, 1, 2};
   PetscInt       localRows = 0;
   PetscMPIInt    rank,size;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(MPI_COMM_WORLD, &rank));

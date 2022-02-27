@@ -131,7 +131,6 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info,PetscScalar **x,PetscScalar
   PetscScalar    u, ux, uy, uxx, uyy;
   PetscReal      D, K, hx, hy, hxdhy, hydhx;
   PetscInt       i,j;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   D     = user->D;
@@ -174,7 +173,6 @@ PetscErrorCode FormJacobianLocal(DMDALocalInfo *info,PetscScalar **x,Mat jac,App
   PetscScalar    D, K, A, v[5], hx, hy, hxdhy, hydhx, ux, uy;
   PetscReal      normGradZ;
   PetscInt       i, j,k;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   D     = user->D;

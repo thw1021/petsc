@@ -17,7 +17,6 @@ typedef struct {
 
 static PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec U,Vec F,AppCtx *ctx)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *u;
   PetscScalar       *f;
 
@@ -33,7 +32,6 @@ static PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec U,Vec F,AppCtx *ctx)
 
 static PetscErrorCode RHSFunctionslow(TS ts,PetscReal t,Vec U,Vec F,AppCtx *ctx)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *u;
   PetscScalar       *f;
 
@@ -48,7 +46,6 @@ static PetscErrorCode RHSFunctionslow(TS ts,PetscReal t,Vec U,Vec F,AppCtx *ctx)
 
 static PetscErrorCode RHSFunctionfast(TS ts,PetscReal t,Vec U,Vec F,AppCtx *ctx)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *u;
   PetscScalar       *f;
 
@@ -66,7 +63,6 @@ static PetscErrorCode RHSFunctionfast(TS ts,PetscReal t,Vec U,Vec F,AppCtx *ctx)
 */
 static PetscErrorCode sol_true(PetscReal t,Vec U,AppCtx *ctx)
 {
-  PetscErrorCode ierr;
   PetscScalar    *u;
 
   PetscFunctionBegin;

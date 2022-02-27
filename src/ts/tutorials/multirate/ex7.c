@@ -67,7 +67,6 @@ typedef struct {
 /* --------------------------------- Physics ----------------------------------- */
 static PetscErrorCode PhysicsDestroy_SimpleFree(void *vctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscFree(vctx));
@@ -143,7 +142,6 @@ static PetscErrorCode PhysicsCreate_Advect(FVCtx *ctx)
 static PetscErrorCode FVRHSFunction(TS ts,PetscReal time,Vec X,Vec F,void *vctx)
 {
   FVCtx          *ctx = (FVCtx*)vctx;
-  PetscErrorCode ierr;
   PetscInt       i,j,Mx,dof,xs,xm,sf = ctx->sf,fs = ctx->fs;
   PetscReal      hf,hs,cfl_idt = 0;
   PetscScalar    *x,*f,*r,*min,*alpha,*gamma;
@@ -295,7 +293,6 @@ static PetscErrorCode FVRHSFunction(TS ts,PetscReal time,Vec X,Vec F,void *vctx)
 static PetscErrorCode FVRHSFunctionslow(TS ts,PetscReal time,Vec X,Vec F,void *vctx)
 {
   FVCtx             *ctx = (FVCtx*)vctx;
-  PetscErrorCode    ierr;
   PetscInt          i,j,Mx,dof,xs,xm,islow = 0,sf = ctx->sf,fs = ctx->fs;
   PetscReal         hf,hs;
   PetscScalar       *x,*f,*r,*min,*alpha,*gamma;
@@ -418,7 +415,6 @@ static PetscErrorCode FVRHSFunctionslow(TS ts,PetscReal time,Vec X,Vec F,void *v
 static PetscErrorCode FVRHSFunctionfast(TS ts,PetscReal time,Vec X,Vec F,void *vctx)
 {
   FVCtx          *ctx = (FVCtx*)vctx;
-  PetscErrorCode ierr;
   PetscInt       i,j,Mx,dof,xs,xm,ifast = 0,sf = ctx->sf,fs = ctx->fs;
   PetscReal      hf,hs;
   PetscScalar    *x,*f,*r,*min,*alpha,*gamma;
@@ -525,7 +521,6 @@ static PetscErrorCode FVRHSFunctionfast(TS ts,PetscReal time,Vec X,Vec F,void *v
 
 PetscErrorCode FVSample(FVCtx *ctx,DM da,PetscReal time,Vec U)
 {
-  PetscErrorCode ierr;
   PetscScalar    *u,*uj,xj,xi;
   PetscInt       i,j,k,dof,xs,xm,Mx,count_slow,count_fast;
   const PetscInt N=200;
@@ -577,7 +572,6 @@ PetscErrorCode FVSample(FVCtx *ctx,DM da,PetscReal time,Vec U)
 
 static PetscErrorCode SolutionStatsView(DM da,Vec X,PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   PetscReal         xmin,xmax;
   PetscScalar       sum,tvsum,tvgsum;
   const PetscScalar *x;
@@ -613,7 +607,6 @@ static PetscErrorCode SolutionStatsView(DM da,Vec X,PetscViewer viewer)
 
 static PetscErrorCode SolutionErrorNorms(FVCtx *ctx,DM da,PetscReal t,Vec X,PetscReal *nrm1)
 {
-  PetscErrorCode    ierr;
   Vec               Y;
   PetscInt          i,Mx,count_slow=0,count_fast=0;
   const PetscScalar *ptr_X,*ptr_Y;

@@ -38,7 +38,6 @@ PetscErrorCode ProcessOptions(AppCtx *options)
 
 PetscErrorCode CleanupContext(AppCtx *user)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(user->numComponents));
@@ -54,7 +53,6 @@ PetscErrorCode CreateTestMesh(MPI_Comm comm, DM *dm, AppCtx *options)
   const PetscReal   coords[15*2] = {0, -3,  0, -1,  2, -1,  0,  1,  2, 1,
                                     0,  3,  1, -2,  1, -1,  0, -2,  2, 0,
                                     1,  0,  1,  1,  0,  0,  1,  2,  0, 2};
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexCreateFromCellListPetsc(comm, 2, 16, 15, 3, PETSC_FALSE, cells, 2, coords, dm));
@@ -68,7 +66,6 @@ PetscErrorCode TestReordering(DM dm, AppCtx *user)
   Mat             A, pA;
   PetscInt        bw, pbw;
   MatOrderingType order = MATORDERINGRCM;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexGetOrdering(dm, order, NULL, &perm));
@@ -100,7 +97,6 @@ PetscErrorCode CreateGroupLabel(DM dm, PetscInt numGroups, DMLabel *label, AppCt
   const PetscInt groupA[10] = {15, 3, 13, 12, 2, 10, 7, 6, 0, 4};
   const PetscInt groupB[6]  = {14, 11, 9, 1, 8, 5};
   PetscInt       c;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (numGroups < 2) {*label = NULL; PetscFunctionReturn(0);}
@@ -118,7 +114,6 @@ PetscErrorCode TestReorderingByGroup(DM dm, AppCtx *user)
   Mat             A, pA;
   MatOrderingType order = MATORDERINGRCM;
   IS              perm;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(CreateGroupLabel(dm, user->numGroups, &label, user));

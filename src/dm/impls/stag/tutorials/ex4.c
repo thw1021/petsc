@@ -136,7 +136,6 @@ int main(int argc,char **argv)
 
 static PetscErrorCode CreateSystem(const Ctx ctx,Mat *pA,Vec *pRhs)
 {
-  PetscErrorCode ierr;
   PetscInt       N[2];
   PetscInt       ex,ey,startx,starty,nx,ny;
   Mat            A;
@@ -387,7 +386,6 @@ static PetscErrorCode CreateSystem(const Ctx ctx,Mat *pA,Vec *pRhs)
 This would usually be done with direct array access, though. */
 static PetscErrorCode PopulateCoefficientData(Ctx ctx)
 {
-  PetscErrorCode ierr;
   PetscInt       N[2],nExtra[2];
   PetscInt       ex,ey,startx,starty,nx,ny;
   Vec            coeffLocal,coordLocal;
@@ -472,7 +470,6 @@ static PetscErrorCode PopulateCoefficientData(Ctx ctx)
 
 static PetscErrorCode DumpSolution(Ctx ctx,Vec x)
 {
-  PetscErrorCode ierr;
   DM             dmVelAvg;
   Vec            velAvg;
   DM             daVelAvg,daP,daEtaElement,daEtaCorner,daRho;

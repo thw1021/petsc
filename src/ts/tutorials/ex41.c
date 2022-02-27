@@ -16,7 +16,6 @@ static char help[] = "Parallel bouncing ball example to test TS event feature.\n
 
 PetscErrorCode EventFunction(TS ts,PetscReal t,Vec U,PetscScalar *fvalue,void *ctx)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *u;
 
   PetscFunctionBegin;
@@ -29,7 +28,6 @@ PetscErrorCode EventFunction(TS ts,PetscReal t,Vec U,PetscScalar *fvalue,void *c
 
 PetscErrorCode PostEventFunction(TS ts,PetscInt nevents,PetscInt event_list[],PetscReal t,Vec U,PetscBool forwardsolve,void* ctx)
 {
-  PetscErrorCode ierr;
   PetscScalar    *u;
   PetscMPIInt    rank;
 
@@ -51,7 +49,6 @@ PetscErrorCode PostEventFunction(TS ts,PetscInt nevents,PetscInt event_list[],Pe
 */
 static PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec U,Vec F,void *ctx)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *u;
 
@@ -73,7 +70,6 @@ static PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec U,Vec F,void *ctx)
 */
 static PetscErrorCode RHSJacobian(TS ts,PetscReal t,Vec U,Mat A,Mat B,void *ctx)
 {
-  PetscErrorCode    ierr;
   PetscInt          rowcol[2],rstart;
   PetscScalar       J[2][2];
   const PetscScalar *u;
@@ -103,7 +99,6 @@ static PetscErrorCode RHSJacobian(TS ts,PetscReal t,Vec U,Mat A,Mat B,void *ctx)
 */
 static PetscErrorCode IFunction(TS ts,PetscReal t,Vec U,Vec Udot,Vec F,void *ctx)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *f;
   const PetscScalar *u,*udot;
 
@@ -127,7 +122,6 @@ static PetscErrorCode IFunction(TS ts,PetscReal t,Vec U,Vec Udot,Vec F,void *ctx
 */
 static PetscErrorCode IJacobian(TS ts,PetscReal t,Vec U,Vec Udot,PetscReal a,Mat A,Mat B,void *ctx)
 {
-  PetscErrorCode    ierr;
   PetscInt          rowcol[2],rstart;
   PetscScalar       J[2][2];
   const PetscScalar *u,*udot;

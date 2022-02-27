@@ -296,7 +296,6 @@ int main(int argc,char **argv)
 PetscErrorCode InitialConditions(Vec u,AppCtx *appctx)
 {
   PetscScalar    *u_localptr,h = appctx->h;
-  PetscErrorCode ierr;
   PetscInt       i;
 
   /*
@@ -347,7 +346,6 @@ PetscErrorCode InitialConditions(Vec u,AppCtx *appctx)
 PetscErrorCode ExactSolution(PetscReal t,Vec solution,AppCtx *appctx)
 {
   PetscScalar    *s_localptr,h = appctx->h,ex1,ex2,sc1,sc2,tc = t;
-  PetscErrorCode ierr;
   PetscInt       i;
 
   /*
@@ -392,7 +390,6 @@ PetscErrorCode ExactSolution(PetscReal t,Vec solution,AppCtx *appctx)
 PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal time,Vec u,void *ctx)
 {
   AppCtx         *appctx = (AppCtx*) ctx;   /* user-defined application context */
-  PetscErrorCode ierr;
   PetscReal      norm_2,norm_max,dt,dttol;
 
   /*
@@ -477,7 +474,6 @@ PetscErrorCode RHSMatrixHeat(TS ts,PetscReal t,Vec X,Mat AA,Mat BB,void *ctx)
   AppCtx         *appctx = (AppCtx*)ctx;     /* user-defined application context */
   PetscInt       mstart  = 0;
   PetscInt       mend    = appctx->m;
-  PetscErrorCode ierr;
   PetscInt       i,idx[3];
   PetscScalar    v[3],stwo = -2./(appctx->h*appctx->h),sone = -.5*stwo;
 
@@ -531,7 +527,6 @@ PetscErrorCode RHSMatrixHeat(TS ts,PetscReal t,Vec X,Mat AA,Mat BB,void *ctx)
 PetscErrorCode IFunctionHeat(TS ts,PetscReal t,Vec X,Vec Xdot,Vec r,void *ctx)
 {
   AppCtx         *appctx = (AppCtx*)ctx;     /* user-defined application context */
-  PetscErrorCode ierr;
 
   CHKERRQ(MatMult(appctx->A,X,r));
   CHKERRQ(VecAYPX(r,-1.0,Xdot));
@@ -541,7 +536,6 @@ PetscErrorCode IFunctionHeat(TS ts,PetscReal t,Vec X,Vec Xdot,Vec r,void *ctx)
 PetscErrorCode IJacobianHeat(TS ts,PetscReal t,Vec X,Vec Xdot,PetscReal s,Mat A,Mat B,void *ctx)
 {
   AppCtx         *appctx = (AppCtx*)ctx;     /* user-defined application context */
-  PetscErrorCode ierr;
 
   if (appctx->oshift == s) return 0;
   CHKERRQ(MatCopy(appctx->A,A,SAME_NONZERO_PATTERN));

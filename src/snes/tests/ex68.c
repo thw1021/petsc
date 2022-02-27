@@ -19,7 +19,6 @@ Test 2:
 PetscErrorCode ComputeFunctionLinear(SNES snes, Vec x, Vec f, void *ctx)
 {
   Mat            A = (Mat) ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(MatMult(A, x, f));
@@ -35,7 +34,6 @@ PetscErrorCode ComputeJacobianLinear(SNES snes, Vec x, Mat A, Mat J, void *ctx)
 PetscErrorCode ConstructProblem1(Mat A, Vec b)
 {
   PetscInt       rStart, rEnd, row;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecSet(b, -3.0));
@@ -54,7 +52,6 @@ PetscErrorCode CheckProblem1(Mat A, Vec b, Vec u)
 {
   Vec            errorVec;
   PetscReal      norm, error;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecDuplicate(b, &errorVec));
@@ -70,7 +67,6 @@ PetscErrorCode ConstructProblem2(Mat A, Vec b)
 {
   PetscInt       N = 10, constraintSize = 4;
   PetscInt       row;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecSet(b, -3.0));
@@ -102,7 +98,6 @@ PetscErrorCode CheckProblem2(Mat A, Vec b, Vec u)
   PetscInt          N = 10, constraintSize = 4, r;
   PetscReal         norm, error;
   const PetscScalar *uArray, *bArray;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecNorm(b, NORM_2, &norm));

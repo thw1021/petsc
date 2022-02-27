@@ -8,7 +8,6 @@ static PetscErrorCode ISGetBlockGlobalIS(IS is, Vec vec, PetscInt bs, IS *isBloc
   const PetscInt *idxin;
   PetscInt       *idxout, i, n, rstart;
   PetscLayout    map;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
 

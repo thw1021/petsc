@@ -33,7 +33,6 @@ PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 {
   PetscMPIInt    rank, size;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogEventBegin(user->createMeshEvent,0,0,0,0));

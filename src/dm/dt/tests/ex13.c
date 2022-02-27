@@ -13,7 +13,6 @@ static PetscErrorCode constructTabulationAndMass(PetscInt dim, PetscInt deg, Pet
   PetscInt       Nbpt; // number of trimmed polynomials
   PetscInt       Nk; // jet size
   PetscReal     *p_trimmed;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscDTBinomialInt(dim, PetscAbsInt(form), &Nf));

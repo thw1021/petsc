@@ -14,7 +14,6 @@ PetscErrorCode test_vec_ops(void)
   Vec            X,Y,a,b;
   Vec            c,d,e,f,g,h;
   PetscScalar    val;
-  PetscErrorCode ierr;
   PetscInt       tmp_ind[2];
   Vec            tmp_buf[2];
 

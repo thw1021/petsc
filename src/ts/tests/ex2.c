@@ -91,7 +91,6 @@ int main(int argc,char **argv)
 
 PetscErrorCode MyMatMult(Mat S,Vec x,Vec y)
 {
-  PetscErrorCode     ierr;
   const PetscScalar  *inptr;
   PetscScalar        *outptr;
 
@@ -113,7 +112,6 @@ PetscErrorCode Initial(Vec global,void *ctx)
 {
   PetscScalar    *localptr;
   PetscInt       i,mybase,myend,locsize;
-  PetscErrorCode ierr;
 
   /* determine starting point of each processor */
   CHKERRQ(VecGetOwnershipRange(global,&mybase,&myend));
@@ -174,7 +172,6 @@ PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec globalin,Vec globalout,void *ct
   PetscScalar       *outptr;
   const PetscScalar *inptr;
   PetscInt          i,n,*idx;
-  PetscErrorCode    ierr;
   IS                from,to;
   VecScatter        scatter;
   Vec               tmp_in,tmp_out;
@@ -230,7 +227,6 @@ PetscErrorCode RHSJacobian(TS ts,PetscReal t,Vec x,Mat A,Mat BB,void *ctx)
   PetscScalar       v[3];
   const PetscScalar *tmp;
   PetscInt          idx[3],i;
-  PetscErrorCode    ierr;
 
   idx[0]=0; idx[1]=1; idx[2]=2;
   CHKERRQ(VecGetArrayRead(x,&tmp));

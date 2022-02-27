@@ -27,7 +27,6 @@ static PetscErrorCode RHSFunction(TS ts,PetscReal t,Vec U,Vec F,void *ctx)
   const PetscScalar *u,*v,*w;
   PetscScalar       *f;
   PetscInt          step;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(TSGetStepNumber(ts,&step));
@@ -50,7 +49,6 @@ static PetscErrorCode RHSJacobianP(TS ts,PetscReal t,Vec U,Mat A,void *ctx)
   const PetscScalar *u,*v,*w;
   PetscInt          step,rows[2] = {0,1},rowcol[2];
   PetscScalar       Jp[2][2];
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(MatZeroEntries(A));
@@ -102,7 +100,6 @@ static PetscErrorCode RHSHessianProductPP(TS ts,PetscReal t,Vec U,Vec *Vl,Vec Vr
   PetscScalar       *vhv;
   PetscScalar       dJpdP[2][2][2]={{{0}}};
   PetscInt          step,i,j,k;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(TSGetStepNumber(ts,&step));
@@ -142,7 +139,6 @@ static PetscErrorCode IntegrandHessianProductUU(TS ts,PetscReal t,Vec U,Vec *Vl,
   PetscScalar       *vhv;
   PetscScalar       dRudU[2][2]={{0}};
   PetscInt          step,j,k;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(TSGetStepNumber(ts,&step));
@@ -190,7 +186,6 @@ static PetscErrorCode CostIntegrand(TS ts,PetscReal t,Vec U,Vec R,void *ctx)
   PetscScalar       *r;
   PetscReal         dx,dy;
   const PetscScalar *u;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetArrayRead(U,&u));
@@ -210,7 +205,6 @@ static PetscErrorCode DRDUJacobianTranspose(TS ts,PetscReal t,Vec U,Mat DRDU,Mat
   const PetscScalar *u;
   PetscReal         dx,dy;
   PetscInt          row[] = {0,1},col[] = {0};
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetArrayRead(U,&u));
@@ -227,7 +221,6 @@ static PetscErrorCode DRDUJacobianTranspose(TS ts,PetscReal t,Vec U,Mat DRDU,Mat
 
 static PetscErrorCode DRDPJacobianTranspose(TS ts,PetscReal t,Vec U,Mat DRDP,void *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatZeroEntries(DRDP));
@@ -450,7 +443,6 @@ PetscErrorCode FormObjFunctionGradient(Tao tao,Vec P,PetscReal *f,Vec G,void *ct
   const PetscScalar *p,*q;
   PetscScalar       *u,*v,*w;
   PetscInt          i;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecGetArrayRead(P,&p));
@@ -503,7 +495,6 @@ PetscErrorCode FormObjHessian(Tao tao,Vec P,Mat H,Mat Hpre,void *ctx)
   PetscInt          ind[1];
   PetscInt          *cols,i;
   Vec               Dir;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   /* set up control parameters */
@@ -549,7 +540,6 @@ PetscErrorCode MatrixFreeObjHessian(Tao tao, Vec P, Mat H, Mat Hpre, void *ctx)
   PetscScalar       *v,*w;
   const PetscScalar *p;
   PetscInt          i;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetArrayRead(P,&p));
@@ -569,7 +559,6 @@ PetscErrorCode MyMatMult(Mat H_shell, Vec X, Vec Y)
 {
   PetscScalar    *y;
   void           *ptr;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(H_shell,&ptr));
@@ -586,7 +575,6 @@ PetscErrorCode ComputeObjHessianWithSOA(Vec Dir,PetscScalar arr[],Aircraft actx)
   PetscScalar       *u;
   Vec               Q;
   PetscInt          i;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   /* Reset TSAdjoint so that AdjointSetUp will be called again */

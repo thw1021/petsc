@@ -275,7 +275,6 @@ int main(int argc, char **argv)
 PetscErrorCode ComputeVariableBounds(Tao tao, Vec xl, Vec xu, void*ctx)
 {
   AppCtx         *user = (AppCtx *) ctx;
-  PetscErrorCode ierr;
   PetscInt       i;
   PetscInt       xs,xm;
   PetscInt       ms = user->ms;
@@ -326,7 +325,6 @@ PetscErrorCode FormConstraints(Tao tao, Vec X, Vec F, void *ptr)
   PetscReal      rate = user->rate;
   PetscReal      dt = user->dt, ds = user->ds;
   PetscInt       ms = user->ms;
-  PetscErrorCode ierr;
   PetscInt       i, xs,xm,gxs,gxm;
   Vec            localX,localF;
   PetscReal      zero=0.0;
@@ -402,7 +400,6 @@ PetscErrorCode FormJacobian(Tao tao, Vec X, Mat J, Mat tJPre, void *ptr)
   PetscReal      dt = user->dt, ds = user->ds;
   PetscInt       ms = user->ms;
   PetscReal      val[3];
-  PetscErrorCode ierr;
   PetscInt       col[3];
   PetscInt       i;
   PetscInt       gxs,gxm;

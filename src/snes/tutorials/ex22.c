@@ -147,7 +147,6 @@ typedef struct {
 */
 PetscErrorCode ComputeFunction(SNES snes,Vec U,Vec FU,void *ctx)
 {
-  PetscErrorCode ierr;
   PetscInt       xs,xm,i,N;
   ULambda        *u_lambda,*fu_lambda;
   PetscScalar    d,h,*w,*fw;
@@ -219,7 +218,6 @@ PetscErrorCode ExactSolution(DM packer,Vec U)
   Vec            x,u_global;
   PetscScalar    *w;
   DM             da;
-  PetscErrorCode ierr;
   PetscInt       m;
 
   PetscFunctionBeginUser;
@@ -244,7 +242,6 @@ PetscErrorCode ExactSolution(DM packer,Vec U)
 PetscErrorCode Monitor(SNES snes,PetscInt its,PetscReal rnorm,void *dummy)
 {
   UserCtx        *user;
-  PetscErrorCode ierr;
   PetscInt       m,N;
   PetscScalar    *w,*dw;
   Vec            u_lambda,U,F,Uexact;
@@ -282,7 +279,6 @@ PetscErrorCode Monitor(SNES snes,PetscInt its,PetscReal rnorm,void *dummy)
 
 PetscErrorCode DMCreateMatrix_MF(DM packer,Mat *A)
 {
-  PetscErrorCode ierr;
   Vec            t;
   PetscInt       m;
 
@@ -298,7 +294,6 @@ PetscErrorCode DMCreateMatrix_MF(DM packer,Mat *A)
 
 PetscErrorCode ComputeJacobian_MF(SNES snes,Vec x,Mat A,Mat B,void *ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(MatMFFDSetFunction(A,(PetscErrorCode (*)(void*,Vec,Vec))SNESComputeFunction,snes));

@@ -1348,7 +1348,6 @@ static PetscErrorCode SetupParameters(DM dm, AppCtx *user)
   Parameter     *p;
   PetscReal      dir;
   PetscInt       dim;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -1375,7 +1374,6 @@ static PetscErrorCode SetupParameters(DM dm, AppCtx *user)
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(comm, dm));
@@ -1390,7 +1388,6 @@ static PetscErrorCode UniformBoundaryConditions(DM dm, DMLabel label, PetscSimpl
   PetscDS        ds;
   PetscInt       id;
   void          *ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDS(dm, &ds));
@@ -1423,7 +1420,6 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
   DMLabel              label;
   Parameter           *ctx;
   PetscInt             id, bd;
-  PetscErrorCode       ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetLabel(dm, "marker", &label));
@@ -1631,7 +1627,6 @@ static PetscErrorCode CreateCellDM(DM dm, AppCtx *user)
   DMPolytopeType ct;
   PetscInt       dim, cStart;
   PetscBool      simplex;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -1655,7 +1650,6 @@ static PetscErrorCode CreateCellDM(DM dm, AppCtx *user)
 static PetscErrorCode GetCellDM(DM dm, AppCtx *user, DM *dmCell)
 {
   PetscInt       cStart, cEnd, cellStart = -1, cellEnd = -1;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMPlexGetSimplexOrBoxCells(dm, 0, &cStart, &cEnd));
@@ -1673,7 +1667,6 @@ static PetscErrorCode SetupDiscretization(DM dm, AppCtx *user)
   DMPolytopeType  ct;
   PetscInt        dim, cStart;
   PetscBool       simplex;
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -1723,7 +1716,6 @@ static PetscErrorCode CreatePressureNullSpace(DM dm, PetscInt ofield, PetscInt n
 {
   Vec              vec;
   PetscErrorCode (*funcs[3])(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar *, void *) = {zero, zero, zero};
-  PetscErrorCode   ierr;
 
   PetscFunctionBeginUser;
   PetscCheckFalse(ofield != PRES,PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "Nullspace must be for pressure field at index %D, not %D", PRES, ofield);
@@ -1743,7 +1735,6 @@ static PetscErrorCode RemoveDiscretePressureNullspace_Private(TS ts, Vec u)
   DM             dm;
   AppCtx        *user;
   MatNullSpace   nullsp;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSGetDM(ts, &dm));
@@ -1759,7 +1750,6 @@ static PetscErrorCode RemoveDiscretePressureNullspace_Private(TS ts, Vec u)
 static PetscErrorCode RemoveDiscretePressureNullspace(TS ts)
 {
   Vec            u;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSGetSolution(ts, &u));
@@ -1783,7 +1773,6 @@ static PetscErrorCode SetInitialConditions(TS ts, Vec u)
   AppCtx        *user;
   DM             dm;
   PetscReal      t;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSGetDM(ts, &dm));
@@ -1804,7 +1793,6 @@ static PetscErrorCode MonitorError(TS ts, PetscInt step, PetscReal crtime, Vec u
   Vec              v, divu;
   PetscReal        ferrors[3], massFlux;
   PetscInt         f;
-  PetscErrorCode   ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(TSGetDM(ts, &dm));

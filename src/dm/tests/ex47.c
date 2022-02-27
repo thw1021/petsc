@@ -18,7 +18,6 @@ PetscErrorCode test_3d(const char filename[])
   DMDALocalInfo     info;
   PetscScalar       ***va;
   PetscInt          i,j,k;
-  PetscErrorCode    ierr;
 
   CHKERRQ(DMDACreate3d(comm,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DMDA_STENCIL_STAR, M,N,P,PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,dof,sw,NULL,NULL,NULL,&da));
   CHKERRQ(DMSetFromOptions(da));
@@ -62,7 +61,6 @@ PetscErrorCode test_2d(const char filename[])
   DMDALocalInfo     info;
   PetscScalar       **va;
   PetscInt          i,j;
-  PetscErrorCode    ierr;
 
   CHKERRQ(DMDACreate2d(comm,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DMDA_STENCIL_STAR, M,N,PETSC_DECIDE,PETSC_DECIDE,dof,sw,NULL,NULL,&da));
   CHKERRQ(DMSetFromOptions(da));
@@ -102,7 +100,6 @@ PetscErrorCode test_2d_nocoord(const char filename[])
   DMDALocalInfo     info;
   PetscScalar       **va;
   PetscInt          i,j;
-  PetscErrorCode    ierr;
 
   CHKERRQ(DMDACreate2d(comm,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DMDA_STENCIL_STAR,M,N,PETSC_DECIDE,PETSC_DECIDE,dof,sw,NULL,NULL,&da));
   CHKERRQ(DMSetFromOptions(da));
@@ -141,7 +138,6 @@ PetscErrorCode test_3d_nocoord(const char filename[])
   DMDALocalInfo     info;
   PetscScalar       ***va;
   PetscInt          i,j,k;
-  PetscErrorCode    ierr;
 
   CHKERRQ(DMDACreate3d(comm,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DMDA_STENCIL_STAR, M,N,P,PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,dof,sw,NULL,NULL,NULL,&da));
   CHKERRQ(DMSetFromOptions(da));

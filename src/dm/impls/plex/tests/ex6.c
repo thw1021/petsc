@@ -34,7 +34,6 @@ PetscErrorCode TestSetup(DMLabel label, AppCtx *user)
 {
   PetscRandom    r;
   PetscInt       n = (PetscInt) (user->fill*(user->pEnd - user->pStart)), i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscRandomCreate(PETSC_COMM_SELF, &r));
@@ -65,7 +64,6 @@ PetscErrorCode TestLookup(DMLabel label, AppCtx *user)
   const PetscInt pStart = user->pStart;
   const PetscInt pEnd   = user->pEnd;
   PetscInt       p, n = 0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   for (p = pStart; p < pEnd; ++p) {
@@ -86,7 +84,6 @@ PetscErrorCode TestClear(DMLabel label, AppCtx *user)
 {
   PetscInt       pStart = user->pStart, pEnd = user->pEnd, p;
   PetscInt       defaultValue;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMLabelGetDefaultValue(label,&defaultValue));

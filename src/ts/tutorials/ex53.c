@@ -394,7 +394,6 @@ static PetscErrorCode terzaghi_drainage_pressure(PetscInt dim, PetscReal time, c
 {
   AppCtx        *user = (AppCtx *) ctx;
   Parameter     *param;
-  PetscErrorCode ierr;
 
   CHKERRQ(PetscBagGetData(user->bag, (void **) &param));
   if (time <= 0.0) {
@@ -418,7 +417,6 @@ static PetscErrorCode terzaghi_initial_u(PetscInt dim, PetscReal time, const Pet
 {
   AppCtx        *user = (AppCtx *) ctx;
   Parameter     *param;
-  PetscErrorCode ierr;
 
   CHKERRQ(PetscBagGetData(user->bag, (void **) &param));
   {
@@ -439,7 +437,6 @@ static PetscErrorCode terzaghi_initial_eps(PetscInt dim, PetscReal time, const P
 {
   AppCtx        *user = (AppCtx *) ctx;
   Parameter     *param;
-  PetscErrorCode ierr;
 
   CHKERRQ(PetscBagGetData(user->bag, (void **) &param));
   {
@@ -457,7 +454,6 @@ static PetscErrorCode terzaghi_2d_u(PetscInt dim, PetscReal time, const PetscRea
 {
   AppCtx        *user = (AppCtx *) ctx;
   Parameter     *param;
-  PetscErrorCode ierr;
 
   CHKERRQ(PetscBagGetData(user->bag, (void **) &param));
   if (time < 0.0) {
@@ -497,7 +493,6 @@ static PetscErrorCode terzaghi_2d_eps(PetscInt dim, PetscReal time, const PetscR
 {
   AppCtx        *user = (AppCtx *) ctx;
   Parameter     *param;
-  PetscErrorCode ierr;
 
   CHKERRQ(PetscBagGetData(user->bag, (void **) &param));
   if (time < 0.0) {
@@ -537,7 +532,6 @@ static PetscErrorCode terzaghi_2d_p(PetscInt dim, PetscReal time, const PetscRea
 {
   AppCtx        *user = (AppCtx *) ctx;
   Parameter     *param;
-  PetscErrorCode ierr;
 
   CHKERRQ(PetscBagGetData(user->bag, (void **) &param));
   if (time <= 0.0) {
@@ -577,7 +571,6 @@ static PetscErrorCode terzaghi_2d_u_t(PetscInt dim, PetscReal time, const PetscR
 {
   AppCtx        *user = (AppCtx *) ctx;
   Parameter     *param;
-  PetscErrorCode ierr;
 
   CHKERRQ(PetscBagGetData(user->bag, (void **) &param));
   if (time <= 0.0) {
@@ -618,7 +611,6 @@ static PetscErrorCode terzaghi_2d_eps_t(PetscInt dim, PetscReal time, const Pets
 {
   AppCtx        *user = (AppCtx *) ctx;
   Parameter     *param;
-  PetscErrorCode ierr;
 
   CHKERRQ(PetscBagGetData(user->bag, (void **) &param));
   if (time <= 0.0) {
@@ -658,7 +650,6 @@ static PetscErrorCode terzaghi_2d_p_t(PetscInt dim, PetscReal time, const PetscR
 
   AppCtx        *user = (AppCtx *) ctx;
   Parameter     *param;
-  PetscErrorCode ierr;
 
   CHKERRQ(PetscBagGetData(user->bag, (void **) &param));
   if (time <= 0.0) {
@@ -714,7 +705,6 @@ static PetscErrorCode mandel_drainage_pressure(PetscInt dim, PetscReal time, con
 {
   AppCtx        *user = (AppCtx *) ctx;
   Parameter     *param;
-  PetscErrorCode ierr;
 
   CHKERRQ(PetscBagGetData(user->bag, (void **) &param));
   if (time <= 0.0) {
@@ -753,7 +743,6 @@ static PetscErrorCode mandel_initial_u(PetscInt dim, PetscReal time, const Petsc
 {
   AppCtx        *user = (AppCtx *) ctx;
   Parameter     *param;
-  PetscErrorCode ierr;
 
   CHKERRQ(PetscBagGetData(user->bag, (void **) &param));
   {
@@ -792,7 +781,6 @@ static PetscErrorCode mandel_initial_eps(PetscInt dim, PetscReal time, const Pet
 {
   AppCtx        *user = (AppCtx *) ctx;
   Parameter     *param;
-  PetscErrorCode ierr;
 
   CHKERRQ(PetscBagGetData(user->bag, (void **) &param));
   {
@@ -832,7 +820,6 @@ static PetscErrorCode mandel_2d_u(PetscInt dim, PetscReal time, const PetscReal 
 {
 
   Parameter  *param;
-  PetscErrorCode ierr;
 
   AppCtx *user = (AppCtx *) ctx;
 
@@ -877,7 +864,6 @@ static PetscErrorCode mandel_2d_eps(PetscInt dim, PetscReal time, const PetscRea
 {
 
   Parameter  *param;
-  PetscErrorCode ierr;
 
   AppCtx *user = (AppCtx *) ctx;
 
@@ -931,7 +917,6 @@ static PetscErrorCode mandel_2d_p(PetscInt dim, PetscReal time, const PetscReal 
 {
 
   Parameter  *param;
-  PetscErrorCode ierr;
 
   AppCtx *user = (AppCtx *) ctx;
 
@@ -979,7 +964,6 @@ static PetscErrorCode mandel_2d_u_t(PetscInt dim, PetscReal time, const PetscRea
 {
 
   Parameter  *param;
-  PetscErrorCode ierr;
 
   AppCtx *user = (AppCtx *) ctx;
 
@@ -1022,7 +1006,6 @@ static PetscErrorCode mandel_2d_eps_t(PetscInt dim, PetscReal time, const PetscR
 {
 
   Parameter  *param;
-  PetscErrorCode ierr;
 
   AppCtx *user = (AppCtx *) ctx;
 
@@ -1071,7 +1054,6 @@ static PetscErrorCode mandel_2d_p_t(PetscInt dim, PetscReal time, const PetscRea
 {
 
   Parameter  *param;
-  PetscErrorCode ierr;
 
   AppCtx *user = (AppCtx *) ctx;
 
@@ -1116,7 +1098,6 @@ static PetscErrorCode cryer_drainage_pressure(PetscInt dim, PetscReal time, cons
 {
   AppCtx        *user = (AppCtx *) ctx;
   Parameter     *param;
-  PetscErrorCode ierr;
 
   CHKERRQ(PetscBagGetData(user->bag, (void **) &param));
   if (time <= 0.0) {
@@ -1137,7 +1118,6 @@ static PetscErrorCode cryer_initial_u(PetscInt dim, PetscReal time, const PetscR
 {
   AppCtx        *user = (AppCtx *) ctx;
   Parameter     *param;
-  PetscErrorCode ierr;
 
   CHKERRQ(PetscBagGetData(user->bag, (void **) &param));
   {
@@ -1161,7 +1141,6 @@ static PetscErrorCode cryer_initial_eps(PetscInt dim, PetscReal time, const Pets
 {
   AppCtx        *user = (AppCtx *) ctx;
   Parameter     *param;
-  PetscErrorCode ierr;
 
   CHKERRQ(PetscBagGetData(user->bag, (void **) &param));
   {
@@ -1187,7 +1166,6 @@ static PetscErrorCode cryer_3d_u(PetscInt dim, PetscReal time, const PetscReal x
 {
   AppCtx        *user = (AppCtx *) ctx;
   Parameter     *param;
-  PetscErrorCode ierr;
 
   CHKERRQ(PetscBagGetData(user->bag, (void **) &param));
   if (time <= 0.0) {
@@ -1238,7 +1216,6 @@ static PetscErrorCode cryer_3d_eps(PetscInt dim, PetscReal time, const PetscReal
 {
   AppCtx        *user = (AppCtx *) ctx;
   Parameter     *param;
-  PetscErrorCode ierr;
 
   CHKERRQ(PetscBagGetData(user->bag, (void **) &param));
   if (time <= 0.0) {
@@ -1297,7 +1274,6 @@ static PetscErrorCode cryer_3d_p(PetscInt dim, PetscReal time, const PetscReal x
 {
   AppCtx        *user = (AppCtx *) ctx;
   Parameter     *param;
-  PetscErrorCode ierr;
 
   CHKERRQ(PetscBagGetData(user->bag, (void **) &param));
   if (time <= 0.0) {
@@ -1770,7 +1746,6 @@ static PetscErrorCode SetupParameters(MPI_Comm comm, AppCtx *ctx)
 {
   PetscBag       bag;
   Parameter     *p;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   /* setup PETSc parameter bag */
@@ -1851,7 +1826,6 @@ static PetscErrorCode SetupParameters(MPI_Comm comm, AppCtx *ctx)
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(comm, dm));
@@ -1875,7 +1849,6 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
   PetscInt         comp[1];
   PetscInt         comp_mandel[2];
   PetscInt         dim, id, bd, f;
-  PetscErrorCode   ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetLabel(dm, "marker", &label));
@@ -2065,7 +2038,6 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
 
 static PetscErrorCode CreateElasticityNullSpace(DM dm, PetscInt origField, PetscInt field, MatNullSpace *nullspace)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMPlexCreateRigidBody(dm, origField, nullspace));
@@ -2081,7 +2053,6 @@ static PetscErrorCode SetupFE(DM dm, PetscInt Nf, PetscInt Nc[], const char *nam
   char            prefix[PETSC_MAX_PATH_LEN];
   PetscInt        dim, f;
   PetscBool       simplex;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   /* Create finite element */
@@ -2112,7 +2083,6 @@ static PetscErrorCode SetInitialConditions(TS ts, Vec u)
 {
   DM             dm;
   PetscReal      t;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSGetDM(ts, &dm));
@@ -2160,7 +2130,6 @@ static PetscErrorCode SolutionMonitor(TS ts, PetscInt steps, PetscReal time, Vec
   PetscViewerFormat format;
   PetscOptions      options;
   const char       *prefix;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSGetDM(ts, &dm));
@@ -2222,7 +2191,6 @@ static PetscErrorCode SetupMonitor(TS ts, AppCtx *ctx)
   PetscOptions      options;
   const char       *prefix;
   PetscBool         flg;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetOptions((PetscObject) ts, &options));
@@ -2240,7 +2208,6 @@ static PetscErrorCode TSAdaptChoose_Terzaghi(TSAdapt adapt, TS ts, PetscReal h, 
   DM               dm;
   AppCtx          *ctx;
   PetscInt         step;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSGetDM(ts, &dm));

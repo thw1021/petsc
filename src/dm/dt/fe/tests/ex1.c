@@ -70,7 +70,6 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
   PetscDS        prob;
   DMLabel        label;
   const PetscInt id = 1;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDS(dm, &prob));
@@ -87,7 +86,6 @@ static PetscErrorCode SetupDiscretization(DM dm, const char name[], PetscErrorCo
   DM             cdm = dm;
   PetscFE        fe;
   char           prefix[PETSC_MAX_PATH_LEN];
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   /* Create finite element */
@@ -110,7 +108,6 @@ static PetscErrorCode SetupDiscretization(DM dm, const char name[], PetscErrorCo
 static PetscErrorCode PetscContainerUserDestroy_PetscFEGeom(void *ctx)
 {
   PetscFEGeom   *geom = (PetscFEGeom *) ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFEGeomDestroy(&geom));
@@ -122,7 +119,6 @@ PetscErrorCode CellRangeGetFEGeom(IS cellIS, DMField coordField, PetscQuadrature
   char            composeStr[33] = {0};
   PetscObjectId   id;
   PetscContainer  container;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetId((PetscObject) quad, &id));
@@ -152,7 +148,6 @@ static PetscErrorCode CreateFEGeometry(DM dm, PetscDS ds, IS cellIS, PetscQuadra
 {
   DMField        coordField;
   PetscInt       Nf, f, maxDegree;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   *affineQuad = NULL;
@@ -183,7 +178,6 @@ static PetscErrorCode DestroyFEGeometry(DM dm, PetscDS ds, IS cellIS, PetscQuadr
 {
   DMField        coordField;
   PetscInt       Nf, f;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscDSGetNumFields(ds, &Nf));
@@ -214,7 +208,6 @@ static PetscErrorCode TestIntegration(DM dm, PetscInt cbs, PetscInt its)
   PetscLogStage   stage;
   PetscLogEvent   event;
 #endif
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscLogStageRegister("PetscFE Residual Integration Test", &stage));
@@ -282,7 +275,6 @@ static PetscErrorCode TestIntegration2(DM dm, PetscInt cbs, PetscInt its)
   PetscLogStage   stage;
 #endif
   PetscInt        i;
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscLogStageRegister("DMPlex Residual Integration Test", &stage));

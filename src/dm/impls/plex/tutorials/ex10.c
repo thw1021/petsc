@@ -23,7 +23,6 @@ static PetscErrorCode CreateDomainLabel(DM dm)
 {
   DMLabel        label;
   PetscInt       cStart, cEnd, c;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreateLabel(dm, "Cell Sets"));
@@ -53,7 +52,6 @@ static PetscErrorCode AdaptMesh(DM *dm, AppCtx *ctx)
   PetscReal       ratio;
   PetscInt        dim, Nv, v, cStart, cEnd, c;
   PetscBool       adapt = PETSC_TRUE;
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginUser;
   if (!ctx->adapt) PetscFunctionReturn(0);
@@ -136,7 +134,6 @@ static PetscErrorCode AdaptMesh(DM *dm, AppCtx *ctx)
 static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 {
   PetscInt       dim;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   /* Create top surface */

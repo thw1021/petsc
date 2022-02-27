@@ -274,7 +274,6 @@ int main(int argc,char **argv)
 static PetscErrorCode FormInitialGuess(AppCtx *user,DM da,Vec X)
 {
   PetscInt       i,j,Mx,My,xs,ys,xm,ym;
-  PetscErrorCode ierr;
   PetscReal      temp1,temp,hx,hy;
   PetscScalar    **x;
 
@@ -360,7 +359,6 @@ static PetscErrorCode FormInitialGuess(AppCtx *user,DM da,Vec X)
 static PetscErrorCode FormRHS(AppCtx *user,DM da,Vec B)
 {
   PetscInt       i,j,Mx,My,xs,ys,xm,ym;
-  PetscErrorCode ierr;
   PetscReal      hx,hy;
   PetscScalar    **b;
 
@@ -409,7 +407,6 @@ static PetscErrorCode FormFunctionLocal(DMDALocalInfo *info,PetscScalar **x,Pets
   PetscReal      hx,hy,dhx,dhy,sc;
   PetscInt       i,j;
   PetscScalar    eu;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   hx     = 1.0/(PetscReal)(info->mx-1);
@@ -465,7 +462,6 @@ static PetscErrorCode FormFunctionPicardLocal(DMDALocalInfo *info,PetscScalar **
 {
   PetscReal hx,hy,sc;
   PetscInt  i,j;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   hx     = 1.0/(PetscReal)(info->mx-1);
@@ -493,7 +489,6 @@ static PetscErrorCode FormFunctionPicardLocal(DMDALocalInfo *info,PetscScalar **
 */
 static PetscErrorCode FormJacobianLocal(DMDALocalInfo *info,PetscScalar **x,Mat J,Mat B,AppCtx *user)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j;
   MatStencil     col[9],row;
   PetscScalar    v[9];
@@ -670,7 +665,6 @@ PetscErrorCode PreCheckSetFromOptions(PreCheck precheck)
 */
 PetscErrorCode PreCheckFunction(SNESLineSearch linesearch,Vec X,Vec Y,PetscBool *changed, void *ctx)
 {
-  PetscErrorCode ierr;
   PreCheck       precheck;
   Vec            Ylast;
   PetscScalar    dot;
@@ -719,7 +713,6 @@ PetscErrorCode PreCheckFunction(SNESLineSearch linesearch,Vec X,Vec Y,PetscBool 
 
 PetscErrorCode PreCheckDestroy(PreCheck *precheck)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   if (!*precheck) PetscFunctionReturn(0);
@@ -731,7 +724,6 @@ PetscErrorCode PreCheckDestroy(PreCheck *precheck)
 
 PetscErrorCode PreCheckCreate(MPI_Comm comm,PreCheck *precheck)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscNew(precheck));
@@ -748,7 +740,6 @@ PetscErrorCode PreCheckCreate(MPI_Comm comm,PreCheck *precheck)
 PetscErrorCode NonlinearGS(SNES snes,Vec X, Vec B, void *ctx)
 {
   PetscInt       i,j,k,xs,ys,xm,ym,its,tot_its,sweeps,l,m;
-  PetscErrorCode ierr;
   PetscReal      hx,hy,hxdhy,hydhx,dhx,dhy,sc;
   PetscScalar    **x,**b,bij,F,F0=0,J,y,u,eu;
   PetscReal      atol,rtol,stol;

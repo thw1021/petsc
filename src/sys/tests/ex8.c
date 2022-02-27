@@ -10,7 +10,6 @@ typedef struct {
 
 static PetscErrorCode MakeDatatype(MPI_Datatype *dtype)
 {
-  PetscErrorCode ierr;
   MPI_Datatype dtypes[3],tmptype;
   PetscMPIInt  lengths[3];
   MPI_Aint     displs[3];
@@ -51,7 +50,6 @@ struct FCtx {
 static PetscErrorCode FSend(MPI_Comm comm,const PetscMPIInt tag[],PetscMPIInt tonum,PetscMPIInt rank,void *todata,MPI_Request req[],void *ctx)
 {
   struct FCtx *fctx = (struct FCtx*)ctx;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckFalse(rank != fctx->toranks[tonum],PETSC_COMM_SELF,PETSC_ERR_PLIB,"Rank %d does not match toranks[%d] %d",rank,tonum,fctx->toranks[tonum]);
@@ -64,7 +62,6 @@ static PetscErrorCode FSend(MPI_Comm comm,const PetscMPIInt tag[],PetscMPIInt to
 static PetscErrorCode FRecv(MPI_Comm comm,const PetscMPIInt tag[],PetscMPIInt rank,void *fromdata,MPI_Request req[],void *ctx)
 {
   struct FCtx *fctx = (struct FCtx*)ctx;
-  PetscErrorCode ierr;
   Unit           *buf;
 
   PetscFunctionBegin;

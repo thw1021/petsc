@@ -6,7 +6,6 @@ static char help[] = "Shows how to add a new MatOperation to AIJ MatType\n\n";
 
 static PetscErrorCode MatScaleUserImpl_SeqAIJ(Mat inA,PetscScalar alpha)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatScale(inA,alpha));
@@ -17,7 +16,6 @@ extern PetscErrorCode MatScaleUserImpl(Mat,PetscScalar);
 
 static PetscErrorCode MatScaleUserImpl_MPIAIJ(Mat A,PetscScalar aa)
 {
-  PetscErrorCode ierr;
   Mat            AA,AB;
 
   PetscFunctionBegin;
@@ -32,7 +30,6 @@ static PetscErrorCode MatScaleUserImpl_MPIAIJ(Mat A,PetscScalar aa)
    functionality for SeqAIJ and MPIAIJ matrix-types */
 PetscErrorCode RegisterMatScaleUserImpl(Mat mat)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    size;
 
   PetscFunctionBegin;
@@ -56,13 +53,11 @@ PetscErrorCode RegisterMatScaleUserImpl(Mat mat)
    called */
 PetscErrorCode MatScaleUserImpl(Mat mat,PetscScalar a)
 {
-  PetscErrorCode ierr,(*f)(Mat,PetscScalar);
+  PetscErrorCode (*f)(Mat,PetscScalar);
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectQueryFunction((PetscObject)mat,"MatScaleUserImpl_C",&f));
-  if (f) {
-    CHKERRQ((*f)(mat,a));
-  }
+  if (f) CHKERRQ((*f)(mat,a));
   PetscFunctionReturn(0);
 }
 

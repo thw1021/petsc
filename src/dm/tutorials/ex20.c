@@ -12,7 +12,6 @@ Options: \n\
 
 PetscErrorCode pic_insert_DMDA(PetscInt dim)
 {
-  PetscErrorCode ierr;
   DM             celldm = NULL,swarm;
   PetscInt       dof,stencil_width;
   PetscReal      min[3],max[3];
@@ -85,7 +84,6 @@ PetscErrorCode pic_insert_DMDA(PetscInt dim)
 
 PetscErrorCode pic_insert_DMPLEX_with_cell_list(PetscInt dim)
 {
-  PetscErrorCode ierr;
   DM             celldm = NULL,swarm,distributedMesh = NULL;
   const  char    *fieldnames[] = {"viscosity"};
 
@@ -209,7 +207,6 @@ PetscErrorCode pic_insert_DMPLEX_with_cell_list(PetscInt dim)
 
 PetscErrorCode pic_insert_DMPLEX(PetscBool is_simplex,PetscInt dim)
 {
-  PetscErrorCode ierr;
   DM             celldm,swarm,distributedMesh = NULL;
   const char     *fieldnames[] = {"viscosity","DMSwarm_rank"};
 

@@ -12,7 +12,6 @@ static char help[] = "Solves DAE with integrator only on non-algebraic terms \n"
 */
 PetscErrorCode f(PetscReal t,Vec U,Vec V,Vec F)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecWAXPY(F,1.0,U,V));
@@ -24,7 +23,6 @@ PetscErrorCode f(PetscReal t,Vec U,Vec V,Vec F)
 */
 PetscErrorCode F(PetscReal t,Vec U,Vec V,Vec F)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecWAXPY(F,-1.0,V,U));
@@ -87,7 +85,6 @@ int main(int argc,char **argv)
 PetscErrorCode TSFunction(TS ts,PetscReal t,Vec U,Vec F,void *actx)
 {
   AppCtx         *ctx = (AppCtx*)actx;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   ctx->t = t;
@@ -103,7 +100,6 @@ PetscErrorCode TSFunction(TS ts,PetscReal t,Vec U,Vec F,void *actx)
 PetscErrorCode SNESFunction(SNES snes,Vec V,Vec F,void *actx)
 {
   AppCtx         *ctx = (AppCtx*)actx;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ((*ctx->F)(ctx->t,ctx->U,V,F));

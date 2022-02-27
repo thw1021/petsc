@@ -4,7 +4,6 @@ static char help[] = "Solves a linear system with a block of right-hand sides, a
 
 PetscErrorCode MatApply(PC pc, Mat X, Mat Y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(MatCopy(X,Y,SAME_NONZERO_PATTERN));
