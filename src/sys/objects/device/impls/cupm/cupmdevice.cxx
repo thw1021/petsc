@@ -34,7 +34,6 @@ public:
   PETSC_NODISCARD PetscErrorCode initialize() noexcept;
   PETSC_NODISCARD PetscErrorCode configure() noexcept;
   PETSC_NODISCARD PetscErrorCode view(PetscViewer) const noexcept;
-  PETSC_NODISCARD PetscErrorCode finalize() noexcept;
 
   PETSC_NODISCARD auto id()          const -> decltype(id_)             { return id_;             }
   PETSC_NODISCARD auto initialized() const -> decltype(devInitialized_) { return devInitialized_; }
