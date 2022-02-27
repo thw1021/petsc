@@ -2687,7 +2687,7 @@ PetscErrorCode DMView_Network(DM dm,PetscViewer viewer)
 
     ierr = DMNetworkGetSharedVertices(dm,&nsv,NULL);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPushSynchronized(viewer);CHKERRQ(ierr);
-    ierr = PetscViewerASCIISynchronizedPrintf(viewer, "  [%d] nEdges: %D; nVertices: %D; nSharedVertices: %D\n",rank,network->nEdges,network->nVertices,nsv);CHKERRQ(ierr);
+    ierr = PetscViewerASCIISynchronizedPrintf(viewer, "  [%d] nEdges: %" PetscInt_FMT "; nVertices: %" PetscInt_FMT "; nSharedVertices: %" PetscInt_FMT "\n",rank,network->nEdges,network->nVertices,nsv);CHKERRQ(ierr);
 
     for (i=0; i<nsubnet; i++) {
       ierr = DMNetworkGetSubnetwork(dm,i,&nv,&ne,&vtx,&edges);CHKERRQ(ierr);
