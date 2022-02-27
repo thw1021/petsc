@@ -300,7 +300,7 @@ static PetscErrorCode RDRestoreLocalArrays(RD rd,Vec *X0loc,RDNode **x0,Vec *Xlo
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode RDCheckDomain_Private(RD rd,TS ts,Vec X,PetscBool  *in)
+static PetscErrorCode PETSC_UNUSED RDCheckDomain_Private(RD rd,TS ts,Vec X,PetscBool  *in)
 {
   PetscInt       minloc;
   PetscReal      min;
@@ -318,11 +318,10 @@ static PetscErrorCode RDCheckDomain_Private(RD rd,TS ts,Vec X,PetscBool  *in)
 }
 
 /* Energy and temperature must remain positive */
-#define RDCheckDomain(rd,ts,X) do {                                \
-    PetscErrorCode _ierr;                                          \
-    PetscBool      _in;                                                \
-    CHKERRQ(RDCheckDomain_Private(rd,ts,X,&_in));    \
-    if (!_in) PetscFunctionReturn(0);                              \
+#define RDCheckDomain(rd,ts,X) do {                                    \
+    PetscBool _in;                                                     \
+    CHKERRQ(RDCheckDomain_Private(rd,ts,X,&_in));                      \
+    if (!_in) PetscFunctionReturn(0);                                  \
   } while (0)
 
 static PetscErrorCode RDIFunction_FD(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void *ctx)

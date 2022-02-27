@@ -13,7 +13,7 @@ static inline PetscErrorCode PetscRevolveIntCast(PetscInt a,PetscRevolveInt *b)
   PetscFunctionBegin;
 #if defined(PETSC_USE_64BIT_INDICES)
   *b = 0;
-  PetscCheckFalse(a > PETSC_REVOLVE_INT_MAX,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Parameter is too large for Revolve, which is restricted to 32 bit integers");
+  PetscCheck(a <= PETSC_REVOLVE_INT_MAX,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Parameter is too large for Revolve, which is restricted to 32 bit integers");
 #endif
   *b = (PetscRevolveInt)(a);
   PetscFunctionReturn(0);
@@ -261,7 +261,7 @@ static PetscErrorCode StackResize(Stack *stack,PetscInt newsize)
 static PetscErrorCode StackPush(Stack *stack,StackElement e)
 {
   PetscFunctionBegin;
-  PetscCheckFalse(stack->top+1 >= stack->stacksize,PETSC_COMM_SELF,PETSC_ERR_MEMC,"Maximum stack size (%D) exceeded",stack->stacksize);
+  PetscCheck(stack->top+1 < stack->stacksize,PETSC_COMM_SELF,PETSC_ERR_MEMC,"Maximum stack size (%D) exceeded",stack->stacksize);
   stack->container[++stack->top] = e;
   PetscFunctionReturn(0);
 }
@@ -270,7 +270,7 @@ static PetscErrorCode StackPop(Stack *stack,StackElement *e)
 {
   PetscFunctionBegin;
   *e = NULL;
-  PetscCheckFalse(stack->top == -1,PETSC_COMM_SELF,PETSC_ERR_MEMC,"Empty stack");
+  PetscCheck(stack->top != -1,PETSC_COMM_SELF,PETSC_ERR_MEMC,"Empty stack");
   *e = stack->container[stack->top--];
   PetscFunctionReturn(0);
 }
@@ -297,14 +297,12 @@ static PetscErrorCode StackInit(Stack *stack,PetscInt size,PetscInt ny)
 
 static PetscErrorCode StackDestroy(Stack *stack)
 {
-  PetscInt       i,n = stack->nallocated;
+  const PetscInt n = stack->nallocated;
 
   PetscFunctionBegin;
   if (!stack->container) PetscFunctionReturn(0);
-  PetscCheckFalse(stack->top+1 > stack->nallocated,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Stack size does not match element counter %D",stack->nallocated);
-  for (i=0; i<n; i++) {
-    CHKERRQ(ElementDestroy(stack,stack->container[i]));
-  }
+  PetscCheck(stack->top+1 <= n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Stack size does not match element counter %D",n);
+  for (PetscInt i=0; i<n; i++) CHKERRQ(ElementDestroy(stack,stack->container[i]));
   CHKERRQ(PetscFree(stack->container));
   PetscFunctionReturn(0);
 }
@@ -313,22 +311,18 @@ static PetscErrorCode StackFind(Stack *stack,StackElement *e,PetscInt index)
 {
   PetscFunctionBegin;
   *e = NULL;
-  PetscCheckFalse(index < 0 || index > stack->top,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Invalid index %D",index);
+  PetscCheck(index >= 0 && index <= stack->top,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Invalid index %D",index);
   *e = stack->container[index];
   PetscFunctionReturn(0);
 }
 
 static PetscErrorCode WriteToDisk(PetscBool stifflyaccurate,PetscInt stepnum,PetscReal time,PetscReal timeprev,Vec X,Vec *Y,PetscInt numY,CheckpointType cptype,PetscViewer viewer)
 {
-  PetscInt       i;
-
   PetscFunctionBegin;
   CHKERRQ(PetscViewerBinaryWrite(viewer,&stepnum,1,PETSC_INT));
-  if (HaveSolution(cptype)) {
-    CHKERRQ(VecView(X,viewer));
-  }
+  if (HaveSolution(cptype)) CHKERRQ(VecView(X,viewer));
   if (HaveStages(cptype)) {
-    for (i=0; i<numY; i++) {
+    for (PetscInt i=0; i<numY; i++) {
       /* For stiffly accurate TS methods, the last stage Y[ns-1] is the same as the solution X, thus does not need to be saved again. */
       if (stifflyaccurate && i == numY-1 && HaveSolution(cptype)) continue;
       CHKERRQ(VecView(Y[i],viewer));
@@ -341,15 +335,11 @@ static PetscErrorCode WriteToDisk(PetscBool stifflyaccurate,PetscInt stepnum,Pet
 
 static PetscErrorCode ReadFromDisk(PetscBool stifflyaccurate,PetscInt *stepnum,PetscReal *time,PetscReal *timeprev,Vec X,Vec *Y,PetscInt numY,CheckpointType cptype,PetscViewer viewer)
 {
-  PetscInt       i;
-
   PetscFunctionBegin;
   CHKERRQ(PetscViewerBinaryRead(viewer,stepnum,1,NULL,PETSC_INT));
-  if (HaveSolution(cptype)) {
-    CHKERRQ(VecLoad(X,viewer));
-  }
+  if (HaveSolution(cptype)) CHKERRQ(VecLoad(X,viewer));
   if (HaveStages(cptype)) {
-    for (i=0; i<numY; i++) {
+    for (PetscInt i=0; i<numY; i++) {
       /* For stiffly accurate TS methods, the last stage Y[ns-1] is the same as the solution X, thus does not need to be loaded again. */
       if (stifflyaccurate && i == numY-1 && HaveSolution(cptype)) continue;
       CHKERRQ(VecLoad(Y[i],viewer));
@@ -362,12 +352,12 @@ static PetscErrorCode ReadFromDisk(PetscBool stifflyaccurate,PetscInt *stepnum,P
 
 static PetscErrorCode StackDumpAll(TSTrajectory tj,TS ts,Stack *stack,PetscInt id)
 {
-  Vec            *Y;
-  PetscInt       i,ndumped,cptype_int;
-  StackElement   e = NULL;
-  TJScheduler    *tjsch = (TJScheduler*)tj->data;
-  char           filename[PETSC_MAX_PATH_LEN];
-  MPI_Comm       comm;
+  Vec          *Y;
+  PetscInt      ndumped,cptype_int;
+  StackElement  e     = NULL;
+  TJScheduler  *tjsch = (TJScheduler*)tj->data;
+  char          filename[PETSC_MAX_PATH_LEN];
+  MPI_Comm      comm;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)ts,&comm));
@@ -381,7 +371,7 @@ static PetscErrorCode StackDumpAll(TSTrajectory tj,TS ts,Stack *stack,PetscInt i
   CHKERRQ(PetscViewerSetUp(tjsch->viewer));
   ndumped = stack->top+1;
   CHKERRQ(PetscViewerBinaryWrite(tjsch->viewer,&ndumped,1,PETSC_INT));
-  for (i=0;i<ndumped;i++) {
+  for (PetscInt i=0;i<ndumped;i++) {
     e = stack->container[i];
     cptype_int = (PetscInt)e->cptype;
     CHKERRQ(PetscViewerBinaryWrite(tjsch->viewer,&cptype_int,1,PETSC_INT));
@@ -402,11 +392,11 @@ static PetscErrorCode StackDumpAll(TSTrajectory tj,TS ts,Stack *stack,PetscInt i
 
 static PetscErrorCode StackLoadAll(TSTrajectory tj,TS ts,Stack *stack,PetscInt id)
 {
-  Vec            *Y;
-  PetscInt       i,nloaded,cptype_int;
-  StackElement   e;
-  PetscViewer    viewer;
-  char           filename[PETSC_MAX_PATH_LEN];
+  Vec          *Y;
+  PetscInt      i,nloaded,cptype_int;
+  StackElement  e;
+  PetscViewer   viewer;
+  char          filename[PETSC_MAX_PATH_LEN];
 
   PetscFunctionBegin;
   if (tj->monitor) {
@@ -442,16 +432,15 @@ static PetscErrorCode StackLoadAll(TSTrajectory tj,TS ts,Stack *stack,PetscInt i
 #if defined(PETSC_HAVE_REVOLVE)
 static PetscErrorCode StackLoadLast(TSTrajectory tj,TS ts,Stack *stack,PetscInt id)
 {
-  Vec            *Y;
-  PetscInt       size;
-  PetscViewer    viewer;
-  char           filename[PETSC_MAX_PATH_LEN];
+  Vec         *Y;
+  PetscInt     size;
+  PetscViewer  viewer;
+  char         filename[PETSC_MAX_PATH_LEN];
 #if defined(PETSC_HAVE_MPIIO)
-  PetscBool      usempiio;
+  PetscBool    usempiio;
 #endif
-  int            fd;
-  off_t          off,offset;
-  PetscErrorCode ierr;
+  int          fd;
+  off_t        off,offset;
 
   PetscFunctionBegin;
   if (tj->monitor) {
@@ -705,7 +694,7 @@ static PetscErrorCode TSTrajectoryMemorySet_N_2(TS ts,TJScheduler *tjsch,PetscIn
     CHKERRQ(StackTop(stack,&e));
     e->timenext = ts->ptime;
   }
-  PetscCheckFalse(stepnum < stack->top,PetscObjectComm((PetscObject)ts),PETSC_ERR_MEMC,"Illegal modification of a non-top stack element");
+  PetscCheck(stepnum >= stack->top,PetscObjectComm((PetscObject)ts),PETSC_ERR_MEMC,"Illegal modification of a non-top stack element");
   cptype = stack->solution_only ? SOLUTIONONLY : SOLUTION_STAGES; /* Always include solution in a checkpoint in non-adjoint mode */
   CHKERRQ(ElementCreate(ts,cptype,stack,&e));
   CHKERRQ(ElementSet(ts,stack,&e,stepnum,time,X));
@@ -740,12 +729,12 @@ static PetscErrorCode TSTrajectoryMemoryGet_N(TS ts,TJScheduler *tjsch,PetscInt 
 
 static PetscErrorCode TSTrajectoryMemoryGet_N_2(TS ts,TJScheduler *tjsch,PetscInt stepnum)
 {
-  Stack          *stack = &tjsch->stack;
-  StackElement   e = NULL;
+  Stack        *stack = &tjsch->stack;
+  StackElement  e     = NULL;
 
   PetscFunctionBegin;
   CHKERRQ(StackFind(stack,&e,stepnum));
-  PetscCheckFalse(stepnum != e->stepnum,PetscObjectComm((PetscObject)ts),PETSC_ERR_PLIB,"Inconsistent steps! %D != %D",stepnum,e->stepnum);
+  PetscCheck(stepnum == e->stepnum,PetscObjectComm((PetscObject)ts),PETSC_ERR_PLIB,"Inconsistent steps! %D != %D",stepnum,e->stepnum);
   CHKERRQ(UpdateTS(ts,stack,e,stepnum,PETSC_FALSE));
   PetscFunctionReturn(0);
 }
@@ -848,8 +837,6 @@ static PetscErrorCode TSTrajectoryMemoryGet_TLNR(TSTrajectory tj,TS ts,TJSchedul
 #if defined(PETSC_HAVE_REVOLVE)
 static PetscErrorCode printwhattodo(PetscViewer viewer,PetscRevolveInt whattodo,RevolveCTX *rctx,PetscRevolveInt shift)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   if (!viewer) PetscFunctionReturn(0);
 
@@ -884,8 +871,6 @@ static PetscErrorCode printwhattodo(PetscViewer viewer,PetscRevolveInt whattodo,
 
 static PetscErrorCode printwhattodo2(PetscViewer viewer,PetscRevolveInt whattodo,RevolveCTX *rctx,PetscRevolveInt shift)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   if (!viewer) PetscFunctionReturn(0);
 
@@ -921,7 +906,6 @@ static PetscErrorCode printwhattodo2(PetscViewer viewer,PetscRevolveInt whattodo
 static PetscErrorCode InitRevolve(PetscInt fine,PetscInt snaps,RevolveCTX *rctx)
 {
   PetscRevolveInt rsnaps,rfine;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscRevolveIntCast(snaps,&rsnaps));
@@ -951,7 +935,6 @@ static PetscErrorCode FastForwardRevolve(RevolveCTX *rctx)
 
 static PetscErrorCode ApplyRevolve(PetscViewer viewer,SchedulerType stype,RevolveCTX *rctx,PetscRevolveInt total_steps,PetscRevolveInt stepnum,PetscRevolveInt localstepnum,PetscBool toplevel,PetscInt *store)
 {
-  PetscErrorCode  ierr;
   PetscRevolveInt shift,whattodo;
 
   PetscFunctionBegin;
@@ -971,7 +954,7 @@ static PetscErrorCode ApplyRevolve(PetscViewer viewer,SchedulerType stype,Revolv
   if (stype == REVOLVE_ONLINE && whattodo == 7) whattodo = 2;
   if (!toplevel) CHKERRQ(printwhattodo(viewer,whattodo,rctx,shift));
   else CHKERRQ(printwhattodo2(viewer,whattodo,rctx,shift));
-  PetscCheckFalse(whattodo == -1,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in the Revolve library");
+  PetscCheck(whattodo != -1,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in the Revolve library");
   if (whattodo == 1) { /* advance some time steps */
     if (stype == REVOLVE_ONLINE && rctx->capo >= total_steps-1) {
       revolve_turn(total_steps,&rctx->capo,&rctx->fine);
@@ -1022,7 +1005,6 @@ static PetscErrorCode TSTrajectoryMemorySet_ROF(TSTrajectory tj,TS ts,TJSchedule
   StackElement    e;
   PetscRevolveInt rtotal_steps,rstepnum;
   CheckpointType  cptype;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   if (!stack->solution_only && stepnum == 0) PetscFunctionReturn(0);
@@ -1031,7 +1013,7 @@ static PetscErrorCode TSTrajectoryMemorySet_ROF(TSTrajectory tj,TS ts,TJSchedule
   CHKERRQ(PetscRevolveIntCast(stepnum,&rstepnum));
   CHKERRQ(ApplyRevolve(tj->monitor,tjsch->stype,tjsch->rctx,rtotal_steps,rstepnum,rstepnum,PETSC_FALSE,&store));
   if (store == 1) {
-    PetscCheckFalse(stepnum < stack->top,PetscObjectComm((PetscObject)ts),PETSC_ERR_MEMC,"Illegal modification of a non-top stack element");
+    PetscCheck(stepnum >= stack->top,PetscObjectComm((PetscObject)ts),PETSC_ERR_MEMC,"Illegal modification of a non-top stack element");
     cptype = stack->solution_only ? SOLUTIONONLY : SOLUTION_STAGES;
     CHKERRQ(ElementCreate(ts,cptype,stack,&e));
     CHKERRQ(ElementSet(ts,stack,&e,stepnum,time,X));
@@ -1046,7 +1028,6 @@ static PetscErrorCode TSTrajectoryMemoryGet_ROF(TSTrajectory tj,TS ts,TJSchedule
   PetscInt        store;
   PetscRevolveInt whattodo,shift,rtotal_steps,rstepnum;
   StackElement    e;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   if (stepnum == 0 || stepnum == tjsch->total_steps) {
@@ -1095,7 +1076,6 @@ static PetscErrorCode TSTrajectoryMemorySet_RON(TSTrajectory tj,TS ts,TJSchedule
   RevolveCTX      *rctx = tjsch->rctx;
   PetscRevolveInt rtotal_steps,rstepnum;
   CheckpointType  cptype;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   if (!stack->solution_only && stepnum == 0) PetscFunctionReturn(0);
@@ -1120,7 +1100,7 @@ static PetscErrorCode TSTrajectoryMemorySet_RON(TSTrajectory tj,TS ts,TJSchedule
       CHKERRQ(TSGetPrevTime(ts,&timeprev));
       e->timeprev = timeprev;
     } else {
-      PetscCheckFalse(stepnum < stack->top,PetscObjectComm((PetscObject)ts),PETSC_ERR_MEMC,"Illegal modification of a non-top stack element");
+      PetscCheck(stepnum >= stack->top,PetscObjectComm((PetscObject)ts),PETSC_ERR_MEMC,"Illegal modification of a non-top stack element");
       cptype = stack->solution_only ? SOLUTIONONLY : SOLUTION_STAGES;
       CHKERRQ(ElementCreate(ts,cptype,stack,&e));
       CHKERRQ(ElementSet(ts,stack,&e,stepnum,time,X));
@@ -1135,7 +1115,6 @@ static PetscErrorCode TSTrajectoryMemoryGet_RON(TSTrajectory tj,TS ts,TJSchedule
   Stack           *stack = &tjsch->stack;
   PetscRevolveInt whattodo,shift,rstepnum;
   StackElement    e;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   if (stepnum == 0 || stepnum == tjsch->total_steps) {
@@ -1183,7 +1162,6 @@ static PetscErrorCode TSTrajectoryMemorySet_TLR(TSTrajectory tj,TS ts,TJSchedule
   PetscBool       done = PETSC_FALSE;
   PetscRevolveInt rtotal_steps,rstepnum,rlocalstepnum;
   CheckpointType  cptype;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   if (!stack->solution_only && stepnum == 0) PetscFunctionReturn(0);
@@ -1216,7 +1194,7 @@ static PetscErrorCode TSTrajectoryMemorySet_TLR(TSTrajectory tj,TS ts,TJSchedule
   CHKERRQ(PetscRevolveIntCast(localstepnum,&rlocalstepnum));
   CHKERRQ(ApplyRevolve(tj->monitor,tjsch->stype,tjsch->rctx,rtotal_steps,rstepnum,rlocalstepnum,PETSC_FALSE,&store));
   if (store == 1) {
-    PetscCheckFalse(localstepnum < stack->top,PetscObjectComm((PetscObject)ts),PETSC_ERR_MEMC,"Illegal modification of a non-top stack element");
+    PetscCheck(localstepnum >= stack->top,PetscObjectComm((PetscObject)ts),PETSC_ERR_MEMC,"Illegal modification of a non-top stack element");
     cptype = stack->solution_only ? SOLUTIONONLY : SOLUTION_STAGES;
     CHKERRQ(ElementCreate(ts,cptype,stack,&e));
     CHKERRQ(ElementSet(ts,stack,&e,stepnum,time,X));
@@ -1232,7 +1210,6 @@ static PetscErrorCode TSTrajectoryMemoryGet_TLR(TSTrajectory tj,TS ts,TJSchedule
   PetscInt        localstepnum,stridenum,laststridesize,store;
   StackElement    e;
   CheckpointType  cptype;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   localstepnum = stepnum%tjsch->stride;
@@ -1337,7 +1314,6 @@ static PetscErrorCode TSTrajectoryMemorySet_TLTR(TSTrajectory tj,TS ts,TJSchedul
   StackElement    e;
   PetscBool       done = PETSC_FALSE;
   PetscRevolveInt rlocalstepnum,rstepnum,rtotal_steps;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   if (!stack->solution_only && stepnum == 0) PetscFunctionReturn(0);
@@ -1382,7 +1358,7 @@ static PetscErrorCode TSTrajectoryMemorySet_TLTR(TSTrajectory tj,TS ts,TJSchedul
   CHKERRQ(ApplyRevolve(tj->monitor,tjsch->stype,tjsch->rctx,rtotal_steps,rstepnum,rlocalstepnum,PETSC_FALSE,&store));
   if (store == 1) {
     CheckpointType cptype;
-    PetscCheckFalse(localstepnum < stack->top,PetscObjectComm((PetscObject)ts),PETSC_ERR_MEMC,"Illegal modification of a non-top stack element");
+    PetscCheck(localstepnum >= stack->top,PetscObjectComm((PetscObject)ts),PETSC_ERR_MEMC,"Illegal modification of a non-top stack element");
     cptype = stack->solution_only ? SOLUTIONONLY : SOLUTION_STAGES;
     CHKERRQ(ElementCreate(ts,cptype,stack,&e));
     CHKERRQ(ElementSet(ts,stack,&e,stepnum,time,X));
@@ -1399,7 +1375,6 @@ static PetscErrorCode TSTrajectoryMemoryGet_TLTR(TSTrajectory tj,TS ts,TJSchedul
   StackElement    e;
   PetscRevolveInt whattodo,shift;
   PetscRevolveInt rtotal_steps,rstepnum,rlocalstepnum;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   localstepnum = stepnum%tjsch->stride;
@@ -1560,7 +1535,6 @@ static PetscErrorCode TSTrajectoryMemorySet_RMS(TSTrajectory tj,TS ts,TJSchedule
   PetscInt        store;
   StackElement    e;
   PetscRevolveInt rtotal_steps,rstepnum;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   if (!stack->solution_only && stepnum == 0) PetscFunctionReturn(0);
@@ -1570,7 +1544,7 @@ static PetscErrorCode TSTrajectoryMemorySet_RMS(TSTrajectory tj,TS ts,TJSchedule
   CHKERRQ(ApplyRevolve(tj->monitor,tjsch->stype,tjsch->rctx,rtotal_steps,rstepnum,rstepnum,PETSC_FALSE,&store));
   if (store == 1) {
     CheckpointType cptype;
-    PetscCheckFalse(stepnum < stack->top,PetscObjectComm((PetscObject)ts),PETSC_ERR_MEMC,"Illegal modification of a non-top stack element");
+    PetscCheck(stepnum >= stack->top,PetscObjectComm((PetscObject)ts),PETSC_ERR_MEMC,"Illegal modification of a non-top stack element");
     cptype = stack->solution_only ? SOLUTIONONLY : SOLUTION_STAGES;
     CHKERRQ(ElementCreate(ts,cptype,stack,&e));
     CHKERRQ(ElementSet(ts,stack,&e,stepnum,time,X));
@@ -1588,7 +1562,6 @@ static PetscErrorCode TSTrajectoryMemoryGet_RMS(TSTrajectory tj,TS ts,TJSchedule
   PetscInt        restart;
   PetscBool       ondisk;
   StackElement    e;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   if (stepnum == 0 || stepnum == tjsch->total_steps) {
@@ -1644,9 +1617,9 @@ static PetscErrorCode TSTrajectoryMemoryGet_RMS(TSTrajectory tj,TS ts,TJSchedule
 /* Optimal offline adjoint checkpointing for multistage time integration methods */
 static PetscErrorCode TSTrajectoryMemorySet_AOF(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscInt stepnum,PetscReal time,Vec X)
 {
-  Stack          *stack = &tjsch->stack;
-  StackElement   e;
-  PetscErrorCode ierr;
+  Stack        *stack = &tjsch->stack;
+  StackElement  e;
+
 
   PetscFunctionBegin;
   /* skip if no checkpoint to use. This also avoids an error when num_units_avail=0  */
@@ -1663,7 +1636,7 @@ static PetscErrorCode TSTrajectoryMemorySet_AOF(TSTrajectory tj,TS ts,TJSchedule
   if (stack->solution_only && stepnum == tjsch->total_steps) PetscFunctionReturn(0);
 
   if (tjsch->actx->nextcheckpointstep == stepnum) {
-    PetscCheckFalse(stepnum < stack->top,PetscObjectComm((PetscObject)ts),PETSC_ERR_MEMC,"Illegal modification of a non-top stack element");
+    PetscCheck(stepnum >= stack->top,PetscObjectComm((PetscObject)ts),PETSC_ERR_MEMC,"Illegal modification of a non-top stack element");
 
     if (tjsch->actx->nextcheckpointtype == 2) { /* solution + stage values */
       if (tj->monitor) {
@@ -1705,10 +1678,9 @@ static PetscErrorCode TSTrajectoryMemorySet_AOF(TSTrajectory tj,TS ts,TJSchedule
 
 static PetscErrorCode TSTrajectoryMemoryGet_AOF(TSTrajectory tj,TS ts,TJScheduler *tjsch,PetscInt stepnum)
 {
-  Stack          *stack = &tjsch->stack;
-  StackElement   e;
-  PetscInt       estepnum;
-  PetscErrorCode ierr;
+  Stack        *stack = &tjsch->stack;
+  StackElement  e;
+  PetscInt      estepnum;
 
   PetscFunctionBegin;
   if (stepnum == 0 || stepnum == tjsch->total_steps) {
@@ -1790,34 +1762,34 @@ static PetscErrorCode TSTrajectorySet_Memory(TSTrajectory tj,TS ts,PetscInt step
       }
       break;
     case TWO_LEVEL_NOREVOLVE:
-      PetscCheckFalse(!tj->adjoint_solve_mode,PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
+      PetscCheck(tj->adjoint_solve_mode,PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
       CHKERRQ(TSTrajectoryMemorySet_TLNR(tj,ts,tjsch,stepnum,time,X));
       break;
 #if defined(PETSC_HAVE_REVOLVE)
     case TWO_LEVEL_REVOLVE:
-      PetscCheckFalse(!tj->adjoint_solve_mode,PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
+      PetscCheck(tj->adjoint_solve_mode,PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
       CHKERRQ(TSTrajectoryMemorySet_TLR(tj,ts,tjsch,stepnum,time,X));
       break;
     case TWO_LEVEL_TWO_REVOLVE:
-      PetscCheckFalse(!tj->adjoint_solve_mode,PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
+      PetscCheck(tj->adjoint_solve_mode,PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
       CHKERRQ(TSTrajectoryMemorySet_TLTR(tj,ts,tjsch,stepnum,time,X));
       break;
     case REVOLVE_OFFLINE:
-      PetscCheckFalse(!tj->adjoint_solve_mode,PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
+      PetscCheck(tj->adjoint_solve_mode,PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
       CHKERRQ(TSTrajectoryMemorySet_ROF(tj,ts,tjsch,stepnum,time,X));
       break;
     case REVOLVE_ONLINE:
-      PetscCheckFalse(!tj->adjoint_solve_mode,PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
+      PetscCheck(tj->adjoint_solve_mode,PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
       CHKERRQ(TSTrajectoryMemorySet_RON(tj,ts,tjsch,stepnum,time,X));
       break;
     case REVOLVE_MULTISTAGE:
-      PetscCheckFalse(!tj->adjoint_solve_mode,PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
+      PetscCheck(tj->adjoint_solve_mode,PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
       CHKERRQ(TSTrajectoryMemorySet_RMS(tj,ts,tjsch,stepnum,time,X));
       break;
 #endif
 #if defined(PETSC_HAVE_CAMS)
     case CAMS_OFFLINE:
-      PetscCheckFalse(!tj->adjoint_solve_mode,PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
+      PetscCheck(tj->adjoint_solve_mode,PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
       CHKERRQ(TSTrajectoryMemorySet_AOF(tj,ts,tjsch,stepnum,time,X));
       break;
 #endif
@@ -1845,34 +1817,34 @@ static PetscErrorCode TSTrajectoryGet_Memory(TSTrajectory tj,TS ts,PetscInt step
       }
       break;
     case TWO_LEVEL_NOREVOLVE:
-      PetscCheckFalse(!tj->adjoint_solve_mode,PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
+      PetscCheck(tj->adjoint_solve_mode,PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
       CHKERRQ(TSTrajectoryMemoryGet_TLNR(tj,ts,tjsch,stepnum));
       break;
 #if defined(PETSC_HAVE_REVOLVE)
     case TWO_LEVEL_REVOLVE:
-      PetscCheckFalse(!tj->adjoint_solve_mode,PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
+      PetscCheck(tj->adjoint_solve_mode,PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
       CHKERRQ(TSTrajectoryMemoryGet_TLR(tj,ts,tjsch,stepnum));
       break;
     case TWO_LEVEL_TWO_REVOLVE:
-      PetscCheckFalse(!tj->adjoint_solve_mode,PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
+      PetscCheck(tj->adjoint_solve_mode,PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
       CHKERRQ(TSTrajectoryMemoryGet_TLTR(tj,ts,tjsch,stepnum));
       break;
     case REVOLVE_OFFLINE:
-      PetscCheckFalse(!tj->adjoint_solve_mode,PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
+      PetscCheck(tj->adjoint_solve_mode,PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
       CHKERRQ(TSTrajectoryMemoryGet_ROF(tj,ts,tjsch,stepnum));
       break;
     case REVOLVE_ONLINE:
-      PetscCheckFalse(!tj->adjoint_solve_mode,PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
+      PetscCheck(tj->adjoint_solve_mode,PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
       CHKERRQ(TSTrajectoryMemoryGet_RON(tj,ts,tjsch,stepnum));
       break;
     case REVOLVE_MULTISTAGE:
-      PetscCheckFalse(!tj->adjoint_solve_mode,PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
+      PetscCheck(tj->adjoint_solve_mode,PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
       CHKERRQ(TSTrajectoryMemoryGet_RMS(tj,ts,tjsch,stepnum));
       break;
 #endif
 #if defined(PETSC_HAVE_CAMS)
     case CAMS_OFFLINE:
-      PetscCheckFalse(!tj->adjoint_solve_mode,PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
+      PetscCheck(tj->adjoint_solve_mode,PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"Not implemented");
       CHKERRQ(TSTrajectoryMemoryGet_AOF(tj,ts,tjsch,stepnum));
       break;
 #endif
@@ -1914,7 +1886,7 @@ static PetscErrorCode TSTrajectorySetMaxUnitsRAM_Memory(TSTrajectory tj,PetscInt
   TJScheduler *tjsch = (TJScheduler*)tj->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(!tjsch->max_cps_ram,PetscObjectComm((PetscObject)tj),PETSC_ERR_ARG_INCOMP,"Conflict with -ts_trjaectory_max_cps_ram or TSTrajectorySetMaxCpsRAM. You can set max_cps_ram or max_units_ram, but not both at the same time.");
+  PetscCheck(tjsch->max_cps_ram,PetscObjectComm((PetscObject)tj),PETSC_ERR_ARG_INCOMP,"Conflict with -ts_trjaectory_max_cps_ram or TSTrajectorySetMaxCpsRAM. You can set max_cps_ram or max_units_ram, but not both at the same time.");
   tjsch->max_units_ram = max_units_ram;
   PetscFunctionReturn(0);
 }
@@ -1924,7 +1896,7 @@ static PetscErrorCode TSTrajectorySetMaxUnitsDisk_Memory(TSTrajectory tj,PetscIn
   TJScheduler *tjsch = (TJScheduler*)tj->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(!tjsch->max_cps_disk,PetscObjectComm((PetscObject)tj),PETSC_ERR_ARG_INCOMP,"Conflict with -ts_trjaectory_max_cps_disk or TSTrajectorySetMaxCpsDisk. You can set max_cps_disk or max_units_disk, but not both at the same time.");
+  PetscCheck(tjsch->max_cps_disk,PetscObjectComm((PetscObject)tj),PETSC_ERR_ARG_INCOMP,"Conflict with -ts_trjaectory_max_cps_disk or TSTrajectorySetMaxCpsDisk. You can set max_cps_disk or max_units_disk, but not both at the same time.");
   tjsch->max_units_ram = max_units_disk;
   PetscFunctionReturn(0);
 }
@@ -1934,7 +1906,7 @@ static PetscErrorCode TSTrajectoryMemorySetType_Memory(TSTrajectory tj,TSTraject
   TJScheduler *tjsch = (TJScheduler*)tj->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(tj->setupcalled,PetscObjectComm((PetscObject)tj),PETSC_ERR_ARG_WRONGSTATE,"Cannot change schedule software after TSTrajectory has been setup or used");
+  PetscCheck(!tj->setupcalled,PetscObjectComm((PetscObject)tj),PETSC_ERR_ARG_WRONGSTATE,"Cannot change schedule software after TSTrajectory has been setup or used");
   tjsch->tj_memory_type = tj_memory_type;
   PetscFunctionReturn(0);
 }
@@ -2307,8 +2279,7 @@ static PetscErrorCode TSTrajectorySetUp_Memory(TSTrajectory tj,TS ts)
 static PetscErrorCode TSTrajectoryReset_Memory(TSTrajectory tj)
 {
 #if defined (PETSC_HAVE_REVOLVE) || defined (PETSC_HAVE_CAMS)
-  TJScheduler    *tjsch = (TJScheduler*)tj->data;
-  PetscErrorCode ierr;
+  TJScheduler *tjsch = (TJScheduler*)tj->data;
 #endif
 
   PetscFunctionBegin;
