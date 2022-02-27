@@ -12,13 +12,14 @@ namespace Host
 PetscErrorCode Device::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, PetscDeviceInitType *defaultInitType) noexcept
 {
   auto           initType = std::make_pair(*defaultInitType,PETSC_FALSE);
-  // host is also always "device" 0
-  auto           initId   = std::make_pair(0,PETSC_FALSE);
+  // host should always be "device" 0, but we humor the user for the options query
+  auto           initId   = std::make_pair(*defaultDeviceId,PETSC_FALSE);
   auto           initView = std::make_pair(PETSC_FALSE,PETSC_FALSE);
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   ierr = base_type::PetscOptionDeviceAll(comm,initType,initId,initView);CHKERRQ(ierr);
+  PetscCheck(initId.first == 0,comm,PETSC_ERR_USER_INPUT,"The host is always device 0");
   if (initView.first && initView.second) {
     PetscViewer vwr;
 
@@ -26,7 +27,6 @@ PetscErrorCode Device::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, Pets
     ierr = PetscViewerASCIIGetStdout(comm,&vwr);CHKERRQ(ierr);
     ierr = viewDevice(nullptr,vwr);CHKERRQ(ierr);
   }
-  PetscCheck(initId.first == 0,comm,PETSC_ERR_USER_INPUT,"The host is always device 0");
   *defaultDeviceId = initId.first;
   *defaultInitType = initType.first;
   PetscFunctionReturn(0);
