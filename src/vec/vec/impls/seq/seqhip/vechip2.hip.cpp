@@ -147,7 +147,6 @@ PetscErrorCode VecAYPX_SeqHIP(Vec yin,PetscScalar alpha,Vec xin)
   PetscScalar       sone = 1.0;
   hipblasHandle_t   hipblasv2handle;
 
-
   PetscFunctionBegin;
   CHKERRQ(PetscHIPBLASGetHandle(&hipblasv2handle));
   CHKERRQ(PetscBLASIntCast(yin->map->n,&bn));
