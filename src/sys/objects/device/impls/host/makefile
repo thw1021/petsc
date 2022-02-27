@@ -1,17 +1,16 @@
-#requiresdefine 'PETSC_HAVE_CXX'
 ALL: lib
 
 CFLAGS    =
 FFLAGS    =
 CPPFLAGS  =
 SOURCEC	  =
-SOURCECXX = dcontext.cxx device.cxx devicereg.cxx
+SOURCECXX = hostdevice.cxx hostcontext.cxx
 SOURCEF	  =
-SOURCEH   = objpool.hpp cupmdevice.hpp sycldevice.hpp hostdevice.hpp
+SOURCEH   =
 MANSEC	  = Sys
 LIBBASE	  = libpetscsys
 DIRS	  =
-LOCDIR	  = src/sys/objects/device/interface/
+LOCDIR	  = src/sys/objects/device/impls/host/
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules

@@ -1,14 +1,9 @@
 #include "../../interface/sycldevice.hpp"
+#include <limits>  // for std::numeric_limits
 #include <csetjmp> // for MPI sycl device awareness
 #include <csignal> // SIGSEGV
 #include <vector>
 #include <CL/sycl.hpp>
-
-#if PetscDefined(USE_LOG)
-  PETSC_INTERN PetscErrorCode PetscLogInitialize(void);
-#else
-  #define PetscLogInitialize() 0
-#endif
 
 namespace Petsc
 {
@@ -124,26 +119,26 @@ private:
 
 PetscErrorCode Device::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, PetscDeviceInitType *defaultInitType) noexcept
 {
-  PetscInt       initType = *defaultInitType,id = *defaultDeviceId;
-  PetscBool      view = PETSC_FALSE,flg;
-  PetscInt       ngpus;
+  PetscInt            id       = *defaultDeviceId;
+  PetscDeviceInitType initType = *defaultInitType;
+  PetscBool           view     = PETSC_FALSE,flg;
+  PetscInt            ngpus;
 
   PetscFunctionBegin;
   if (initialized_) PetscFunctionReturn(0);
   initialized_ = true;
   PetscCall(PetscRegisterFinalize(finalize_));
-
   PetscOptionsBegin(comm,nullptr,"PetscDevice SYCL Options","Sys");
-  PetscCall(PetscOptionsEList("-device_enable_sycl","How (or whether) to initialize a device","SyclDevice::initialize()",PetscDeviceInitTypes,3,PetscDeviceInitTypes[initType],&initType,nullptr));
-  PetscCall(PetscOptionsRangeInt("-device_select_sycl","Which sycl device to use? Pass -2 for host, PETSC_DECIDE (-1) to let PETSc decide, 0 and up for GPUs","PetscDeviceCreate",id,&id,nullptr,-2,std::numeric_limits<decltype(ngpus)>::max()));
-  PetscCall(PetscOptionsBool("-device_view_sycl","Display device information and assignments (forces eager initialization)",nullptr,view,&view,&flg));
+  PetscCall(base_type::PetscOptionDeviceInitialize(PetscOptionsObject,&initType,nullptr));
+  PetscCall(base_type::PetscOptionDeviceSelect(PetscOptionsObject,"Which sycl device to use? Pass -2 for host, PETSC_DECIDE (" PetscStringize(PETSC_DECIDE) ") to let PETSc decide, 0 and up for GPUs","PetscDeviceCreate()",id,&id,nullptr,-2,std::numeric_limits<decltype(ngpus)>::max()));
+  PetscCall(base_type::PetscOptionDeviceView(PetscOptionsObject,&view,&flg));
   PetscOptionsEnd();
 
   // post-process the options and lay the groundwork for initialization if needs be
   std::vector<sycl::device> gpu_devices = sycl::device::get_devices(sycl::info::device_type::gpu);
   ngpus = static_cast<PetscInt>(gpu_devices.size());
-  PetscCheckFalse(ngpus == 0 && id >= 0,comm,PETSC_ERR_USER_INPUT,"You specified a sycl gpu device with -device_select_sycl %d but there is no GPU", (int)id);
-  PetscCheckFalse(ngpus > 0 && id >= ngpus,comm,PETSC_ERR_USER_INPUT,"You specified a sycl gpu device with -device_select_sycl %d but there are only %d GPU", (int)id, (int)ngpus);
+  if (ngpus == 0) PetscCheck(id < 0,comm,PETSC_ERR_USER_INPUT,"You specified a sycl gpu device with -device_select_sycl %d but there is no GPU", (int)id);
+  if (ngpus > 0) PetscCheck(id < ngpus,comm,PETSC_ERR_USER_INPUT,"You specified a sycl gpu device with -device_select_sycl %d but there are only %d GPU", (int)id, (int)ngpus);
 
   if (initType == PETSC_DEVICE_INIT_NONE) id = PETSC_SYCL_DEVICE_NONE; /* user wants to disable all sycl devices */
   else {
@@ -162,7 +157,7 @@ PetscErrorCode Device::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, Pets
   if (id == -2) id = PETSC_SYCL_DEVICE_HOST; // user passed in '-device_select_sycl -2'. We transform it into canonical form
 
   defaultDevice_ = static_cast<decltype(defaultDevice_)>(id);
-  PetscCheckFalse(initType == PETSC_DEVICE_INIT_EAGER && id == PETSC_SYCL_DEVICE_NONE,comm,PETSC_ERR_USER_INPUT,"Cannot eagerly initialize sycl devices as you disabled them by -device_enable_sycl none");
+  if (initType == PETSC_DEVICE_INIT_EAGER) PetscCheck(id != PETSC_SYCL_DEVICE_NONE,comm,PETSC_ERR_USER_INPUT,"Cannot eagerly initialize sycl devices as you disabled them by -device_enable_sycl none");
 
   if (initType == PETSC_DEVICE_INIT_EAGER) {
     devices_[defaultDevice_] = new DeviceInternal(defaultDevice_);
@@ -176,7 +171,7 @@ PetscErrorCode Device::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, Pets
   }
 
   // record the results of the initialization
-  *defaultInitType = static_cast<PetscDeviceInitType>(initType);
+  *defaultInitType = initType;
   *defaultDeviceId = id;
   PetscFunctionReturn(0);
 }
