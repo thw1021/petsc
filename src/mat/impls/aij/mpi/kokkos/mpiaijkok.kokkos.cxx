@@ -1077,7 +1077,7 @@ PetscErrorCode MatProductNumeric_MPIAIJKokkos(Mat C)
     /* atb->C2 = Bo^t * ab->C_petsc */
     if (atb->C2->product->A != Bo) CHKERRQ(MatProductReplaceMats(Bo,NULL,NULL,atb->C2));
     CHKERRQ((*atb->C2->ops->productnumeric)(atb->C2));
-    CKHERRQ(MatSeqAIJKokkosReduce(atb->C2,MAT_REUSE_MATRIX,PETSC_FALSE,0/*N*/,MatColIdxKokkosView()/*l2g*/,NULL/*ownerSF*/,atb->sf,
+    CHKERRQ(MatSeqAIJKokkosReduce(atb->C2,MAT_REUSE_MATRIX,PETSC_FALSE,0/*N*/,MatColIdxKokkosView()/*l2g*/,NULL/*ownerSF*/,atb->sf,
                                   atb->abuf,atb->srcrowoffset,atb->dstrowoffset,atb->C2_global));
     KokkosSparse::spadd_numeric(&atb->kh,one,atb->C1_global,one,atb->C2_global,atb->C_global);
     mm = static_cast<MatMatStruct*>(atb);

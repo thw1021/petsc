@@ -53,8 +53,6 @@ struct PetscMultiplyComplex
  */
 PetscErrorCode VecHIPAllocateCheck(Vec v)
 {
-  PetscErrorCode ierr;
-  hipError_t     err;
   Vec_HIP        *vechip;
   PetscBool      option_set;
 
@@ -87,8 +85,6 @@ PetscErrorCode VecHIPAllocateCheck(Vec v)
 /* Copies a vector from the CPU to the GPU unless we already have an up-to-date copy on the GPU */
 PetscErrorCode VecHIPCopyToGPU(Vec v)
 {
-  PetscErrorCode ierr;
-  hipError_t     err;
   Vec_HIP        *vechip;
   PetscScalar    *varray;
 
@@ -112,8 +108,6 @@ PetscErrorCode VecHIPCopyToGPU(Vec v)
 */
 PetscErrorCode VecHIPCopyFromGPU(Vec v)
 {
-  PetscErrorCode ierr;
-  hipError_t     err;
   Vec_HIP        *vechip;
   PetscScalar    *varray;
 
@@ -147,12 +141,10 @@ PetscErrorCode VecAYPX_SeqHIP(Vec yin,PetscScalar alpha,Vec xin)
 {
   const PetscScalar *xarray;
   PetscScalar       *yarray;
-  PetscErrorCode    ierr;
   PetscBLASInt      one = 1,bn = 0;
   PetscScalar       sone = 1.0;
   hipblasHandle_t   hipblasv2handle;
   hipblasStatus_t   hberr;
-  hipError_t        err;
 
   PetscFunctionBegin;
   CHKERRQ(PetscHIPBLASGetHandle(&hipblasv2handle));
@@ -181,7 +173,6 @@ PetscErrorCode VecAXPY_SeqHIP(Vec yin,PetscScalar alpha,Vec xin)
 {
   const PetscScalar *xarray;
   PetscScalar       *yarray;
-  PetscErrorCode    ierr;
   PetscBLASInt      one = 1,bn = 0;
   hipblasHandle_t   hipblasv2handle;
   hipblasStatus_t   hberr;
@@ -215,7 +206,6 @@ PetscErrorCode VecPointwiseDivide_SeqHIP(Vec win, Vec xin, Vec yin)
   PetscScalar                           *warray=NULL;
   thrust::device_ptr<const PetscScalar> xptr,yptr;
   thrust::device_ptr<PetscScalar>       wptr;
-  PetscErrorCode                        ierr;
 
   PetscFunctionBegin;
   if (xin->boundtocpu || yin->boundtocpu) {
@@ -250,11 +240,9 @@ PetscErrorCode VecWAXPY_SeqHIP(Vec win,PetscScalar alpha,Vec xin, Vec yin)
 {
   const PetscScalar *xarray=NULL,*yarray=NULL;
   PetscScalar       *warray=NULL;
-  PetscErrorCode    ierr;
   PetscBLASInt      one = 1,bn = 0;
   hipblasHandle_t   hipblasv2handle;
   hipblasStatus_t   hberr;
-  hipError_t        err;
 
   PetscFunctionBegin;
   CHKERRQ(PetscHIPBLASGetHandle(&hipblasv2handle));
@@ -280,7 +268,6 @@ PetscErrorCode VecWAXPY_SeqHIP(Vec win,PetscScalar alpha,Vec xin, Vec yin)
 
 PetscErrorCode VecMAXPY_SeqHIP(Vec xin, PetscInt nv,const PetscScalar *alpha,Vec *y)
 {
-  PetscErrorCode    ierr;
   PetscInt          n = xin->map->n,j;
   PetscScalar       *xarray;
   const PetscScalar *yarray;
@@ -308,7 +295,6 @@ PetscErrorCode VecMAXPY_SeqHIP(Vec xin, PetscInt nv,const PetscScalar *alpha,Vec
 PetscErrorCode VecDot_SeqHIP(Vec xin,Vec yin,PetscScalar *z)
 {
   const PetscScalar *xarray,*yarray;
-  PetscErrorCode    ierr;
   PetscBLASInt      one = 1,bn = 0;
   hipblasHandle_t   hipblasv2handle;
   hipblasStatus_t   cerr;
@@ -537,7 +523,6 @@ __global__ void VecMDot_SeqHIP_kernel8(const PetscScalar *x,const PetscScalar *y
 
 PetscErrorCode VecMDot_SeqHIP(Vec xin,PetscInt nv,const Vec yin[],PetscScalar *z)
 {
-  PetscErrorCode    ierr;
   PetscInt          i,n = xin->map->n,current_y_index = 0;
   const PetscScalar *xptr,*y0ptr,*y1ptr,*y2ptr,*y3ptr,*y4ptr,*y5ptr,*y6ptr,*y7ptr;
 #if !defined(PETSC_USE_COMPLEX)
@@ -697,8 +682,6 @@ PetscErrorCode VecSet_SeqHIP(Vec xin,PetscScalar alpha)
   PetscInt                        n = xin->map->n;
   PetscScalar                     *xarray = NULL;
   thrust::device_ptr<PetscScalar> xptr;
-  PetscErrorCode                  ierr;
-  hipError_t                      err;
 
   PetscFunctionBegin;
   CHKERRQ(VecHIPGetArrayWrite(xin,&xarray));
@@ -738,7 +721,6 @@ struct PetscScalarReciprocal
 
 PetscErrorCode VecReciprocal_SeqHIP(Vec v)
 {
-  PetscErrorCode ierr;
   PetscInt       n;
   PetscScalar    *x;
 
@@ -760,7 +742,6 @@ PetscErrorCode VecReciprocal_SeqHIP(Vec v)
 PetscErrorCode VecScale_SeqHIP(Vec xin,PetscScalar alpha)
 {
   PetscScalar     *xarray;
-  PetscErrorCode  ierr;
   PetscBLASInt    one = 1,bn = 0;
   hipblasHandle_t hipblasv2handle;
   hipblasStatus_t hberr;
@@ -785,7 +766,6 @@ PetscErrorCode VecScale_SeqHIP(Vec xin,PetscScalar alpha)
 PetscErrorCode VecTDot_SeqHIP(Vec xin,Vec yin,PetscScalar *z)
 {
   const PetscScalar *xarray,*yarray;
-  PetscErrorCode    ierr;
   PetscBLASInt      one = 1,bn = 0;
   hipblasHandle_t   hipblasv2handle;
   hipblasStatus_t   cerr;
@@ -811,8 +791,6 @@ PetscErrorCode VecCopy_SeqHIP(Vec xin,Vec yin)
 {
   const PetscScalar *xarray;
   PetscScalar       *yarray;
-  PetscErrorCode    ierr;
-  hipError_t        err;
 
   PetscFunctionBegin;
   if (xin != yin) {
@@ -876,7 +854,6 @@ PetscErrorCode VecCopy_SeqHIP(Vec xin,Vec yin)
 
 PetscErrorCode VecSwap_SeqHIP(Vec xin,Vec yin)
 {
-  PetscErrorCode  ierr;
   PetscBLASInt    one = 1,bn;
   PetscScalar     *xarray,*yarray;
   hipblasHandle_t hipblasv2handle;
@@ -899,14 +876,12 @@ PetscErrorCode VecSwap_SeqHIP(Vec xin,Vec yin)
 
 PetscErrorCode VecAXPBY_SeqHIP(Vec yin,PetscScalar alpha,PetscScalar beta,Vec xin)
 {
-  PetscErrorCode    ierr;
   PetscScalar       a = alpha,b = beta;
   const PetscScalar *xarray;
   PetscScalar       *yarray;
   PetscBLASInt      one = 1, bn = 0;
   hipblasHandle_t   hipblasv2handle;
   hipblasStatus_t   hberr;
-  hipError_t        err;
 
   PetscFunctionBegin;
   CHKERRQ(PetscHIPBLASGetHandle(&hipblasv2handle));
@@ -945,7 +920,6 @@ PetscErrorCode VecAXPBY_SeqHIP(Vec yin,PetscScalar alpha,PetscScalar beta,Vec xi
 
 PetscErrorCode VecAXPBYPCZ_SeqHIP(Vec zin,PetscScalar alpha,PetscScalar beta,PetscScalar gamma,Vec xin,Vec yin)
 {
-  PetscErrorCode ierr;
   PetscInt       n = zin->map->n;
 
   PetscFunctionBegin;
@@ -971,7 +945,6 @@ PetscErrorCode VecPointwiseMult_SeqHIP(Vec win,Vec xin,Vec yin)
   PetscScalar                           *warray;
   thrust::device_ptr<const PetscScalar> xptr,yptr;
   thrust::device_ptr<PetscScalar>       wptr;
-  PetscErrorCode                        ierr;
 
   PetscFunctionBegin;
   if (xin->boundtocpu || yin->boundtocpu) {
@@ -1006,13 +979,11 @@ PetscErrorCode VecPointwiseMult_SeqHIP(Vec win,Vec xin,Vec yin)
 
 PetscErrorCode VecNorm_SeqHIP(Vec xin,NormType type,PetscReal *z)
 {
-  PetscErrorCode    ierr;
   PetscInt          n = xin->map->n;
   PetscBLASInt      one = 1, bn = 0;
   const PetscScalar *xarray;
   hipblasHandle_t   hipblasv2handle;
   hipblasStatus_t   hberr;
-  hipError_t        err;
 
   PetscFunctionBegin;
   CHKERRQ(PetscHIPBLASGetHandle(&hipblasv2handle));
@@ -1053,7 +1024,6 @@ PetscErrorCode VecNorm_SeqHIP(Vec xin,NormType type,PetscReal *z)
 
 PetscErrorCode VecDotNorm2_SeqHIP(Vec s, Vec t, PetscScalar *dp, PetscScalar *nm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDot_SeqHIP(s,t,dp));
@@ -1063,8 +1033,6 @@ PetscErrorCode VecDotNorm2_SeqHIP(Vec s, Vec t, PetscScalar *dp, PetscScalar *nm
 
 PetscErrorCode VecDestroy_SeqHIP(Vec v)
 {
-  PetscErrorCode ierr;
-  hipError_t    err;
 
   PetscFunctionBegin;
   if (v->spptr) {
@@ -1097,7 +1065,6 @@ PetscErrorCode VecConjugate_SeqHIP(Vec xin)
 {
 #if defined(PETSC_USE_COMPLEX)
   PetscScalar                     *xarray;
-  PetscErrorCode                  ierr;
   PetscInt                        n = xin->map->n;
   thrust::device_ptr<PetscScalar> xptr;
 
@@ -1120,8 +1087,6 @@ PetscErrorCode VecConjugate_SeqHIP(Vec xin)
 
 static inline PetscErrorCode VecGetLocalVectorK_SeqHIP(Vec v,Vec w,PetscBool read)
 {
-  PetscErrorCode ierr;
-  hipError_t     err;
   PetscBool      wisseqhip;
 
   PetscFunctionBegin;
@@ -1177,8 +1142,6 @@ static inline PetscErrorCode VecGetLocalVectorK_SeqHIP(Vec v,Vec w,PetscBool rea
 
 static inline PetscErrorCode VecRestoreLocalVectorK_SeqHIP(Vec v,Vec w,PetscBool read)
 {
-  PetscErrorCode ierr;
-  hipError_t     err;
   PetscBool      wisseqhip;
 
   PetscFunctionBegin;
@@ -1214,7 +1177,6 @@ static inline PetscErrorCode VecRestoreLocalVectorK_SeqHIP(Vec v,Vec w,PetscBool
 
 PetscErrorCode VecGetLocalVector_SeqHIP(Vec v,Vec w)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetLocalVectorK_SeqHIP(v,w,PETSC_FALSE));
@@ -1223,7 +1185,6 @@ PetscErrorCode VecGetLocalVector_SeqHIP(Vec v,Vec w)
 
 PetscErrorCode VecGetLocalVectorRead_SeqHIP(Vec v,Vec w)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetLocalVectorK_SeqHIP(v,w,PETSC_TRUE));
@@ -1232,7 +1193,6 @@ PetscErrorCode VecGetLocalVectorRead_SeqHIP(Vec v,Vec w)
 
 PetscErrorCode VecRestoreLocalVector_SeqHIP(Vec v,Vec w)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecRestoreLocalVectorK_SeqHIP(v,w,PETSC_FALSE));
@@ -1241,7 +1201,6 @@ PetscErrorCode VecRestoreLocalVector_SeqHIP(Vec v,Vec w)
 
 PetscErrorCode VecRestoreLocalVectorRead_SeqHIP(Vec v,Vec w)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecRestoreLocalVectorK_SeqHIP(v,w,PETSC_TRUE));
@@ -1302,7 +1261,6 @@ struct petscmini : public thrust::binary_function<thrust::tuple<PetscReal, Petsc
 
 PetscErrorCode VecMax_SeqHIP(Vec v, PetscInt *p, PetscReal *m)
 {
-  PetscErrorCode                        ierr;
   PetscInt                              n = v->map->n;
   const PetscScalar                     *av;
   thrust::device_ptr<const PetscScalar> avpt;
@@ -1349,7 +1307,6 @@ PetscErrorCode VecMax_SeqHIP(Vec v, PetscInt *p, PetscReal *m)
 
 PetscErrorCode VecMin_SeqHIP(Vec v, PetscInt *p, PetscReal *m)
 {
-  PetscErrorCode                        ierr;
   PetscInt                              n = v->map->n;
   const PetscScalar                     *av;
   thrust::device_ptr<const PetscScalar> avpt;
@@ -1396,7 +1353,6 @@ PetscErrorCode VecMin_SeqHIP(Vec v, PetscInt *p, PetscReal *m)
 
 PetscErrorCode VecSum_SeqHIP(Vec v,PetscScalar *sum)
 {
-  PetscErrorCode                        ierr;
   PetscInt                              n = v->map->n;
   const PetscScalar                     *a;
   thrust::device_ptr<const PetscScalar> dptr;
@@ -1426,7 +1382,6 @@ struct petscshift : public thrust::unary_function<PetscScalar,PetscScalar>
 
 PetscErrorCode VecShift_SeqHIP(Vec v,PetscScalar shift)
 {
-  PetscErrorCode                        ierr;
   PetscInt                              n = v->map->n;
   PetscScalar                           *a;
   thrust::device_ptr<PetscScalar>       dptr;

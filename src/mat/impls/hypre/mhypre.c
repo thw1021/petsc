@@ -1086,7 +1086,6 @@ static PetscErrorCode MatProductSymbolic_PtAP_HYPRE(Mat C)
 
 static PetscErrorCode MatProductSetFromOptions_HYPRE_PtAP(Mat C)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = C->product;
   PetscBool      flg;
   PetscInt       type = 0;
@@ -1094,6 +1093,7 @@ static PetscErrorCode MatProductSetFromOptions_HYPRE_PtAP(Mat C)
   PetscInt       ntype = 4;
   Mat            A = product->A;
   PetscBool      Ahypre;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)A,MATHYPRE,&Ahypre));
@@ -1257,7 +1257,6 @@ static PetscErrorCode MatBindToCPU_HYPRE(Mat A, PetscBool bind)
 {
   Mat_HYPRE            *hA = (Mat_HYPRE*)A->data;
   HYPRE_MemoryLocation hmem = bind ? HYPRE_MEMORY_HOST : HYPRE_MEMORY_DEVICE;
-  PetscErrorCode       ierr;
 
   PetscFunctionBegin;
   A->boundtocpu = bind;

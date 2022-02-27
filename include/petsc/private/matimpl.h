@@ -264,7 +264,10 @@ PETSC_INTERN PetscErrorCode MatProductCreate_Private(Mat,Mat,Mat,Mat);
    does not rely on the function pointers; used by cuSPARSE and KOKKOS-KERNELS */
 PETSC_INTERN PetscErrorCode MatProductSymbolic_ABC_Basic(Mat);
 
-#if !defined(PETSC_CLANG_STATIC_ANALYZER)
+#if defined(PETSC_CLANG_STATIC_ANALYZER)
+template <typename Tm> void MatCheckPreallocated(Tm,int);
+template <typename Tm> void MatCheckProduct(Tm,int);
+#else/* PETSC_CLANG_STATIC_ANALYZER */
 #if defined(PETSC_USE_DEBUG)
 #  define MatCheckPreallocated(A,arg) do {                              \
     PetscCheck((A)->preallocated,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call MatXXXSetPreallocation(), MatSetUp() or the matrix has not yet been factored on argument %d \"%s\" before %s()",(arg),#A,PETSC_FUNCTION_NAME); \
@@ -280,11 +283,6 @@ PETSC_INTERN PetscErrorCode MatProductSymbolic_ABC_Basic(Mat);
 #else
 #  define MatCheckProduct(A,arg) do {} while (0)
 #endif
-#else  /* PETSC_CLANG_STATIC_ANALYZER */
-template <typename Tm>
-void MatCheckPreallocated(Tm,int);
-template <typename Tm>
-void MatCheckProduct(Tm,int);
 #endif /* PETSC_CLANG_STATIC_ANALYZER */
 
 /*

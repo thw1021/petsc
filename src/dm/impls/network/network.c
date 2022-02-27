@@ -2480,9 +2480,7 @@ PetscErrorCode DMDestroy_Network(DM dm)
 
   PetscFunctionBegin;
   if (--network->refct > 0) PetscFunctionReturn(0);
-  if (network->Je) {
-    CHKERRQ(PetscFree(network->Je));
-  }
+  CHKERRQ(PetscFree(network->Je));
   if (network->Jv) {
     CHKERRQ(PetscFree(network->Jvptr));
     CHKERRQ(PetscFree(network->Jv));
@@ -2491,27 +2489,19 @@ PetscErrorCode DMDestroy_Network(DM dm)
   CHKERRQ(ISLocalToGlobalMappingDestroy(&network->vertex.mapping));
   CHKERRQ(PetscSectionDestroy(&network->vertex.DofSection));
   CHKERRQ(PetscSectionDestroy(&network->vertex.GlobalDofSection));
-  if (network->vltog) {
-    CHKERRQ(PetscFree(network->vltog));
-  }
-  if (network->vertex.sf) {
-    CHKERRQ(PetscSFDestroy(&network->vertex.sf));
-  }
+  CHKERRQ(PetscFree(network->vltog));
+  CHKERRQ(PetscSFDestroy(&network->vertex.sf));
   /* edge */
   CHKERRQ(ISLocalToGlobalMappingDestroy(&network->edge.mapping));
   CHKERRQ(PetscSectionDestroy(&network->edge.DofSection));
   CHKERRQ(PetscSectionDestroy(&network->edge.GlobalDofSection));
-  if (network->edge.sf) {
-    CHKERRQ(PetscSFDestroy(&network->edge.sf));
-  }
+  CHKERRQ(PetscSFDestroy(&network->edge.sf));
   CHKERRQ(DMDestroy(&network->plex));
   CHKERRQ(PetscSectionDestroy(&network->DataSection));
   CHKERRQ(PetscSectionDestroy(&network->DofSection));
 
-  for (j=0; j<network->Nsvtx; j++) {
-    CHKERRQ(PetscFree(network->svtx[j].sv));
-  }
-  if (network->svtx) CHKERRQ(PetscFree(network->svtx));
+  for (j=0; j<network->Nsvtx; j++) CHKERRQ(PetscFree(network->svtx[j].sv));
+  CHKERRQ(PetscFree(network->svtx));
   CHKERRQ(PetscFree2(network->subnetedge,network->subnetvtx));
 
   CHKERRQ(PetscTableDestroy(&network->svtable));

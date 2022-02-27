@@ -6,7 +6,6 @@ PetscErrorCode PetscDeviceContextCreate_HIP(PetscDeviceContext dctx)
 {
   static constexpr auto     contextHip = CUPMContextHip();
   PetscDeviceContext_(HIP) *dci;
-  PetscErrorCode            ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(&dci));
@@ -27,7 +26,6 @@ PetscErrorCode PetscDeviceContextCreate_HIP(PetscDeviceContext dctx)
 PetscErrorCode PetscHIPBLASGetHandle(hipblasHandle_t *handle)
 {
   PetscDeviceContext dctx;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(handle,1);
@@ -39,7 +37,6 @@ PetscErrorCode PetscHIPBLASGetHandle(hipblasHandle_t *handle)
 PetscErrorCode PetscHIPSOLVERGetHandle(hipsolverHandle_t *handle)
 {
   PetscDeviceContext dctx;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscValidPointer(handle,1);

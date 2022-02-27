@@ -10,7 +10,6 @@
 
 PetscErrorCode VecDestroy_MPIKokkos(Vec v)
 {
-  PetscErrorCode ierr;
   Vec_Kokkos     *veckok = static_cast<Vec_Kokkos*>(v->spptr);
 
   PetscFunctionBegin;
@@ -22,7 +21,6 @@ PetscErrorCode VecDestroy_MPIKokkos(Vec v)
 PetscErrorCode VecNorm_MPIKokkos(Vec xin,NormType type,PetscReal *z)
 {
   PetscReal      sum,work = 0.0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (type == NORM_2 || type == NORM_FROBENIUS) {
@@ -55,7 +53,6 @@ PetscErrorCode VecNorm_MPIKokkos(Vec xin,NormType type,PetscReal *z)
 PetscErrorCode VecDot_MPIKokkos(Vec xin,Vec yin,PetscScalar *z)
 {
   PetscScalar    sum,work;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDot_SeqKokkos(xin,yin,&work));
@@ -67,7 +64,6 @@ PetscErrorCode VecDot_MPIKokkos(Vec xin,Vec yin,PetscScalar *z)
 PetscErrorCode VecMDot_MPIKokkos(Vec xin,PetscInt nv,const Vec y[],PetscScalar *z)
 {
   PetscScalar    awork[128],*work = awork;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (nv > 128) CHKERRQ(PetscMalloc1(nv,&work));
@@ -81,7 +77,6 @@ PetscErrorCode VecMDot_MPIKokkos(Vec xin,PetscInt nv,const Vec y[],PetscScalar *
 PetscErrorCode VecTDot_MPIKokkos(Vec xin,Vec yin,PetscScalar *z)
 {
   PetscScalar    sum,work;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecTDot_SeqKokkos(xin,yin,&work));
@@ -93,7 +88,6 @@ PetscErrorCode VecTDot_MPIKokkos(Vec xin,Vec yin,PetscScalar *z)
 PetscErrorCode VecMTDot_MPIKokkos(Vec xin,PetscInt nv,const Vec y[],PetscScalar *z)
 {
   PetscScalar    awork[128],*work = awork;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (nv > 128) CHKERRQ(PetscMalloc1(nv,&work));
@@ -105,7 +99,6 @@ PetscErrorCode VecMTDot_MPIKokkos(Vec xin,PetscInt nv,const Vec y[],PetscScalar 
 
 PetscErrorCode VecMax_MPIKokkos(Vec xin,PetscInt *idx,PetscReal *z)
 {
-  PetscErrorCode ierr;
   PetscReal      work;
 
   PetscFunctionBegin;
@@ -132,7 +125,6 @@ PetscErrorCode VecMax_MPIKokkos(Vec xin,PetscInt *idx,PetscReal *z)
 
 PetscErrorCode VecMin_MPIKokkos(Vec xin,PetscInt *idx,PetscReal *z)
 {
-  PetscErrorCode ierr;
   PetscReal      work;
 
   PetscFunctionBegin;
@@ -159,7 +151,6 @@ PetscErrorCode VecMin_MPIKokkos(Vec xin,PetscInt *idx,PetscReal *z)
 
 PetscErrorCode VecDuplicate_MPIKokkos(Vec win,Vec *vv)
 {
-  PetscErrorCode ierr;
   Vec            v;
   Vec_MPI        *vecmpi;
   Vec_Kokkos     *veckok;
@@ -182,7 +173,6 @@ PetscErrorCode VecDuplicate_MPIKokkos(Vec win,Vec *vv)
 
 PetscErrorCode VecDotNorm2_MPIKokkos(Vec s,Vec t,PetscScalar *dp,PetscScalar *nm)
 {
-  PetscErrorCode ierr;
   PetscScalar    work[2],sum[2];
 
   PetscFunctionBegin;
@@ -195,7 +185,6 @@ PetscErrorCode VecDotNorm2_MPIKokkos(Vec s,Vec t,PetscScalar *dp,PetscScalar *nm
 
 static PetscErrorCode VecGetSubVector_MPIKokkos(Vec x,IS is,Vec *y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetSubVector_Kokkos_Private(x,PETSC_TRUE,is,y));
@@ -312,7 +301,6 @@ PetscErrorCode VecCreate_MPIKokkos(Vec v)
 @*/
 PetscErrorCode  VecCreateMPIKokkosWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,PetscInt N,const PetscScalar darray[],Vec *v)
 {
-  PetscErrorCode ierr;
   Vec            w;
   Vec_Kokkos     *veckok;
   Vec_MPI        *vecmpi;
@@ -393,7 +381,6 @@ PetscErrorCode  VecCreateMPIKokkosWithArrays_Private(MPI_Comm comm,PetscInt bs,P
 
 PetscErrorCode VecCreate_Kokkos(Vec v)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    size;
 
   PetscFunctionBegin;

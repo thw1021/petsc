@@ -1166,19 +1166,17 @@ typedef struct _n_LoadLabelsCtx *LoadLabelsCtx;
 
 static PetscErrorCode LoadLabelsCtxCreate(DM dm, PetscViewer viewer, PetscSF sfXC, LoadLabelsCtx *ctx)
 {
-  PetscErrorCode  ierr;
-
   PetscFunctionBegin;
   CHKERRQ(PetscNew(ctx));
-  ierr = PetscObjectReference((PetscObject) ((*ctx)->dm = dm));
-  ierr = PetscObjectReference((PetscObject) ((*ctx)->viewer = viewer));
+  CHKERRQ(PetscObjectReference((PetscObject) ((*ctx)->dm = dm)));
+  CHKERRQ(PetscObjectReference((PetscObject) ((*ctx)->viewer = viewer)));
   CHKERRQ(PetscObjectGetComm((PetscObject)dm, &(*ctx)->comm));
   CHKERRMPI(MPI_Comm_rank((*ctx)->comm, &(*ctx)->rank));
   (*ctx)->sfXC = sfXC;
   if (sfXC) {
     PetscInt nX;
 
-    ierr = PetscObjectReference((PetscObject) sfXC);
+    CHKERRQ(PetscObjectReference((PetscObject) sfXC));
     CHKERRQ(PetscSFGetGraph(sfXC, &nX, NULL, NULL, NULL));
     CHKERRQ(PetscLayoutCreateFromSizes((*ctx)->comm, nX, PETSC_DECIDE, 1, &(*ctx)->layoutX));
   }
@@ -1289,9 +1287,7 @@ static herr_t ReadLabelHDF5_Static(hid_t g_id, const char *lname, const H5L_info
   herr_t         err;
 
   CHKERRQ(DMHasLabel(dm, lname, &flg));
-  if (flg) {
-    CHKERRQ(DMRemoveLabel(dm, lname, NULL));
-  }
+  if (flg) CHKERRQ(DMRemoveLabel(dm, lname, NULL));
   ierr = DMCreateLabel(dm, lname); if (ierr) return (herr_t) ierr;
   ierr = DMGetLabel(dm, lname, &ctx->label); if (ierr) return (herr_t) ierr;
   CHKERRQ(PetscViewerHDF5PushGroup(ctx->viewer, lname)); /* labels/<lname> */

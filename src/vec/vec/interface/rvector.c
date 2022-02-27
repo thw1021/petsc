@@ -1781,7 +1781,6 @@ $       call VecRestoreArray(x,x_array,i_x,ierr)
 @*/
 PetscErrorCode VecGetArray(Vec x,PetscScalar **a)
 {
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
   CHKERRQ(VecSetErrorIfLocked(x,1));
@@ -1809,7 +1808,6 @@ PetscErrorCode VecGetArray(Vec x,PetscScalar **a)
 @*/
 PetscErrorCode VecRestoreArray(Vec x,PetscScalar **a)
 {
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
   if (x->ops->restorearray) { /* VECNEST, VECCUDA etc */
@@ -2656,10 +2654,6 @@ PetscErrorCode VecCUDAResetArray(Vec vin)
 @*/
 PETSC_EXTERN PetscErrorCode VecHIPGetArray(Vec v, PetscScalar **a)
 {
-#if defined(PETSC_HAVE_HIP)
-  PetscErrorCode ierr;
-#endif
-
   PetscFunctionBegin;
   PetscCheckTypeNames(v,VECSEQHIP,VECMPIHIP);
 #if defined(PETSC_HAVE_HIP)
@@ -2735,10 +2729,6 @@ PETSC_EXTERN PetscErrorCode VecHIPRestoreArray(Vec v, PetscScalar **a)
 @*/
 PETSC_EXTERN PetscErrorCode VecHIPGetArrayRead(Vec v, const PetscScalar **a)
 {
-#if defined(PETSC_HAVE_HIP)
-  PetscErrorCode ierr;
-#endif
-
   PetscFunctionBegin;
   PetscCheckTypeNames(v,VECSEQHIP,VECMPIHIP);
 #if defined(PETSC_HAVE_HIP)
@@ -2807,10 +2797,6 @@ PETSC_EXTERN PetscErrorCode VecHIPRestoreArrayRead(Vec v, const PetscScalar **a)
 @*/
 PETSC_EXTERN PetscErrorCode VecHIPGetArrayWrite(Vec v, PetscScalar **a)
 {
-#if defined(PETSC_HAVE_HIP)
-  PetscErrorCode ierr;
-#endif
-
   PetscFunctionBegin;
   PetscCheckTypeNames(v,VECSEQHIP,VECMPIHIP);
 #if defined(PETSC_HAVE_HIP)
