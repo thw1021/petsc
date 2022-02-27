@@ -1,6 +1,5 @@
 static const char help[] = "Tests creation and destruction of PetscDevice.\n\n";
 
-#include <petsc/private/deviceimpl.h>
 #include "petscdevicetestcommon.h"
 
 int main(int argc, char *argv[])
@@ -72,28 +71,27 @@ int main(int argc, char *argv[])
    requires: defined(PETSC_HAVE_CXX)
 
  testset:
-   TODO: broken in ci
-   requires: !device
-   suffix: no_device
-   filter: Error: grep -E -o -e ".*No support for this operation for this object type" -e ".*PETSc is not configured with device support.*" -e "^\[0\]PETSC ERROR:.*[0-9]{1} [A-z]+\(\)"
-   test:
-     requires: debug
-     suffix:   debug
-   test:
-     requires: !debug
-     suffix:   opt
-
- testset:
    output_file: ./output/ExitSuccess.out
    nsize: {{1 2 5}}
+   args: -device_enable {{lazy eager}}
+   test:
+     requires: !device
+     suffix: host_no_device
+   test:
+     requires: device
+     args: -root_device_context_device_type host
+     suffix: host_with_device
    test:
      requires: cuda
+     args: -root_device_context_device_type cuda
      suffix: cuda
    test:
      requires: hip
+     args: -root_device_context_device_type hip
      suffix: hip
    test:
      requires: sycl
+     args: -root_device_context_device_type sycl
      suffix: sycl
 
 TEST*/
