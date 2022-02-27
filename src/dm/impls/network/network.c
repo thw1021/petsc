@@ -1565,7 +1565,7 @@ static inline PetscErrorCode SetSubnetIdLookupBT(DM dm,PetscInt v,PetscInt Nsubn
 /*
   Setup a btable to keep track subnetworks owned by this process
 */
-PETSC_STATIC_INLINE PetscErrorCode SetSubnetLookupBT(DM dm,PetscBT btable)
+static inline PetscErrorCode SetSubnetLookupBT(DM dm,PetscBT btable)
 {
   PetscErrorCode ierr;
   DM_Network     *network = (DM_Network*)dm->data;
