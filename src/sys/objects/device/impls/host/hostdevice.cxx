@@ -72,8 +72,8 @@ PetscErrorCode Device::viewDevice(PetscDevice device, PetscViewer viewer) noexce
 #undef BUFFER_COMMA_SIZE
 
     ierr = PetscObjectGetComm(vobj,&comm);CHKERRQ(ierr);
-    ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
-    ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
+    ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
+    ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
 
     ierr = PetscViewerGetSubViewer(viewer,PETSC_COMM_SELF,&sviewer);CHKERRQ(ierr);
     if (device) {
