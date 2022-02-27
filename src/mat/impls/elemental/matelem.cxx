@@ -18,7 +18,6 @@ static PetscMPIInt Petsc_Elemental_keyval = MPI_KEYVAL_INVALID;
 
 static PetscErrorCode MatView_Elemental(Mat A,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   Mat_Elemental  *a = (Mat_Elemental*)A->data;
   PetscBool      iascii;
 
@@ -317,7 +316,6 @@ PetscErrorCode MatMatMultNumeric_Elemental(Mat A,Mat B,Mat C)
 
 PetscErrorCode MatMatMultSymbolic_Elemental(Mat A,Mat B,PetscReal fill,Mat Ce)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSetSizes(Ce,A->rmap->n,B->cmap->n,PETSC_DECIDE,PETSC_DECIDE));
@@ -344,7 +342,6 @@ static PetscErrorCode MatMatTransposeMultNumeric_Elemental(Mat A,Mat B,Mat C)
 
 static PetscErrorCode MatMatTransposeMultSymbolic_Elemental(Mat A,Mat B,PetscReal fill,Mat C)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSetSizes(C,A->rmap->n,B->rmap->n,PETSC_DECIDE,PETSC_DECIDE));
@@ -372,7 +369,6 @@ static PetscErrorCode MatProductSetFromOptions_Elemental_ABt(Mat C)
 
 PETSC_INTERN PetscErrorCode MatProductSetFromOptions_Elemental(Mat C)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = C->product;
 
   PetscFunctionBegin;
@@ -392,7 +388,6 @@ PETSC_INTERN PetscErrorCode MatProductSetFromOptions_Elemental(Mat C)
 PetscErrorCode MatMatMultNumeric_Elemental_MPIDense(Mat A,Mat B,Mat C)
 {
   Mat            Be,Ce;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatConvert(B,MATELEMENTAL,MAT_INITIAL_MATRIX,&Be));
@@ -405,7 +400,6 @@ PetscErrorCode MatMatMultNumeric_Elemental_MPIDense(Mat A,Mat B,Mat C)
 
 PetscErrorCode MatMatMultSymbolic_Elemental_MPIDense(Mat A,Mat B,PetscReal fill,Mat C)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSetSizes(C,A->rmap->n,B->cmap->n,PETSC_DECIDE,PETSC_DECIDE));
@@ -425,7 +419,6 @@ PetscErrorCode MatProductSetFromOptions_Elemental_MPIDense_AB(Mat C)
 
 PetscErrorCode MatProductSetFromOptions_Elemental_MPIDense(Mat C)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = C->product;
 
   PetscFunctionBegin;
@@ -511,7 +504,6 @@ static PetscErrorCode MatAXPY_Elemental(Mat Y,PetscScalar a,Mat X,MatStructure s
 {
   Mat_Elemental  *x = (Mat_Elemental*)X->data;
   Mat_Elemental  *y = (Mat_Elemental*)Y->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   El::Axpy((PetscElemScalar)a,*x->emat,*y->emat);
@@ -523,7 +515,6 @@ static PetscErrorCode MatCopy_Elemental(Mat A,Mat B,MatStructure str)
 {
   Mat_Elemental *a=(Mat_Elemental*)A->data;
   Mat_Elemental *b=(Mat_Elemental*)B->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   El::Copy(*a->emat,*b->emat);
@@ -536,7 +527,6 @@ static PetscErrorCode MatDuplicate_Elemental(Mat A,MatDuplicateOption op,Mat *B)
   Mat            Be;
   MPI_Comm       comm;
   Mat_Elemental  *a=(Mat_Elemental*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)A,&comm));
@@ -556,14 +546,13 @@ static PetscErrorCode MatDuplicate_Elemental(Mat A,MatDuplicateOption op,Mat *B)
 static PetscErrorCode MatTranspose_Elemental(Mat A,MatReuse reuse,Mat *B)
 {
   Mat            Be = *B;
-  PetscErrorCode ierr;
   MPI_Comm       comm;
   Mat_Elemental  *a = (Mat_Elemental*)A->data, *b;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)A,&comm));
   /* Only out-of-place supported */
-  PetscCheckFalse(reuse == MAT_INPLACE_MATRIX,comm,PETSC_ERR_SUP,"Only out-of-place supported");
+  PetscCheck(reuse != MAT_INPLACE_MATRIX,comm,PETSC_ERR_SUP,"Only out-of-place supported");
   if (reuse == MAT_INITIAL_MATRIX) {
     CHKERRQ(MatCreate(comm,&Be));
     CHKERRQ(MatSetSizes(Be,A->cmap->n,A->rmap->n,PETSC_DECIDE,PETSC_DECIDE));
@@ -589,7 +578,6 @@ static PetscErrorCode MatConjugate_Elemental(Mat A)
 static PetscErrorCode MatHermitianTranspose_Elemental(Mat A,MatReuse reuse,Mat *B)
 {
   Mat            Be = *B;
-  PetscErrorCode ierr;
   MPI_Comm       comm;
   Mat_Elemental  *a = (Mat_Elemental*)A->data, *b;
 
@@ -664,7 +652,6 @@ static PetscErrorCode MatMatSolve_Elemental(Mat A,Mat B,Mat X)
   PetscInt       pivoting = a->pivoting;
   PetscBool      flg;
   MatType        type;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatGetType(X,&type));
@@ -703,7 +690,6 @@ static PetscErrorCode MatMatSolve_Elemental(Mat A,Mat B,Mat X)
 static PetscErrorCode MatLUFactor_Elemental(Mat A,IS row,IS col,const MatFactorInfo *info)
 {
   Mat_Elemental  *a = (Mat_Elemental*)A->data;
-  PetscErrorCode ierr;
   PetscInt       pivoting = a->pivoting;
 
   PetscFunctionBegin;
@@ -724,7 +710,6 @@ static PetscErrorCode MatLUFactor_Elemental(Mat A,IS row,IS col,const MatFactorI
 
 static PetscErrorCode  MatLUFactorNumeric_Elemental(Mat F,Mat A,const MatFactorInfo *info)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCopy(A,F,SAME_NONZERO_PATTERN));
@@ -743,7 +728,6 @@ static PetscErrorCode MatCholeskyFactor_Elemental(Mat A,IS perm,const MatFactorI
 {
   Mat_Elemental  *a = (Mat_Elemental*)A->data;
   El::DistMatrix<PetscElemScalar,El::MC,El::STAR> d;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   El::Cholesky(El::UPPER,*a->emat);
@@ -757,7 +741,6 @@ static PetscErrorCode MatCholeskyFactor_Elemental(Mat A,IS perm,const MatFactorI
 
 static PetscErrorCode MatCholeskyFactorNumeric_Elemental(Mat F,Mat A,const MatFactorInfo *info)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCopy(A,F,SAME_NONZERO_PATTERN));
@@ -782,7 +765,6 @@ PetscErrorCode MatFactorGetSolverType_elemental_elemental(Mat A,MatSolverType *t
 static PetscErrorCode MatGetFactor_elemental_elemental(Mat A,MatFactorType ftype,Mat *F)
 {
   Mat            B;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* Create the factorization matrix */
@@ -802,7 +784,6 @@ static PetscErrorCode MatGetFactor_elemental_elemental(Mat A,MatFactorType ftype
 
 PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_Elemental(void)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSolverTypeRegister(MATSOLVERELEMENTAL,MATELEMENTAL,        MAT_FACTOR_LU,MatGetFactor_elemental_elemental));
@@ -843,7 +824,6 @@ static PetscErrorCode MatZeroEntries_Elemental(Mat A)
 static PetscErrorCode MatGetOwnershipIS_Elemental(Mat A,IS *rows,IS *cols)
 {
   Mat_Elemental  *a = (Mat_Elemental*)A->data;
-  PetscErrorCode ierr;
   PetscInt       i,m,shift,stride,*idx;
 
   PetscFunctionBegin;
@@ -1140,7 +1120,6 @@ static PetscErrorCode MatDestroy_Elemental(Mat A)
 PetscErrorCode MatSetUp_Elemental(Mat A)
 {
   Mat_Elemental  *a = (Mat_Elemental*)A->data;
-  PetscErrorCode ierr;
   MPI_Comm       comm;
   PetscMPIInt    rsize,csize;
   PetscInt       n;
@@ -1156,18 +1135,18 @@ PetscErrorCode MatSetUp_Elemental(Mat A)
   CHKERRQ(PetscObjectGetComm((PetscObject)A,&comm));
   n = PETSC_DECIDE;
   CHKERRQ(PetscSplitOwnership(comm,&n,&A->rmap->N));
-  PetscCheckFalse(n != A->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local row size %" PetscInt_FMT " of ELEMENTAL matrix must be equally distributed",A->rmap->n);
+  PetscCheck(n == A->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local row size %" PetscInt_FMT " of ELEMENTAL matrix must be equally distributed",A->rmap->n);
 
   n = PETSC_DECIDE;
   CHKERRQ(PetscSplitOwnership(comm,&n,&A->cmap->N));
-  PetscCheckFalse(n != A->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local column size %" PetscInt_FMT " of ELEMENTAL matrix must be equally distributed",A->cmap->n);
+  PetscCheck(n == A->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local column size %" PetscInt_FMT " of ELEMENTAL matrix must be equally distributed",A->cmap->n);
 
   a->emat->Resize(A->rmap->N,A->cmap->N);
   El::Zero(*a->emat);
 
   CHKERRMPI(MPI_Comm_size(A->rmap->comm,&rsize));
   CHKERRMPI(MPI_Comm_size(A->cmap->comm,&csize));
-  PetscCheckFalse(csize != rsize,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_INCOMP,"Cannot use row and column communicators of different sizes");
+  PetscCheck(csize == rsize,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_INCOMP,"Cannot use row and column communicators of different sizes");
   a->commsize = rsize;
   a->mr[0] = A->rmap->N % rsize; if (!a->mr[0]) a->mr[0] = rsize;
   a->mr[1] = A->cmap->N % csize; if (!a->mr[1]) a->mr[1] = csize;
@@ -1196,7 +1175,6 @@ PetscErrorCode MatAssemblyEnd_Elemental(Mat A, MatAssemblyType type)
 
 PetscErrorCode MatLoad_Elemental(Mat newMat, PetscViewer viewer)
 {
-  PetscErrorCode ierr;
   Mat            Adense,Ae;
   MPI_Comm       comm;
 

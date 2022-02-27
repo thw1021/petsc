@@ -58,7 +58,9 @@ PetscErrorCode VecHIPAllocateCheck(Vec v)
 
   PetscFunctionBegin;
   if (!v->spptr) {
-    PetscReal pinned_memory_min;
+    PetscReal      pinned_memory_min;
+    PetscErrorCode ierr;
+
     CHKERRQ(PetscCalloc(sizeof(Vec_HIP),&v->spptr));
     vechip = (Vec_HIP*)v->spptr;
     CHKERRHIP(hipMalloc((void**)&vechip->GPUarray_allocated,sizeof(PetscScalar)*((PetscBLASInt)v->map->n)));
@@ -144,7 +146,7 @@ PetscErrorCode VecAYPX_SeqHIP(Vec yin,PetscScalar alpha,Vec xin)
   PetscBLASInt      one = 1,bn = 0;
   PetscScalar       sone = 1.0;
   hipblasHandle_t   hipblasv2handle;
-  hipblasStatus_t   hberr;
+
 
   PetscFunctionBegin;
   CHKERRQ(PetscHIPBLASGetHandle(&hipblasv2handle));
@@ -175,7 +177,6 @@ PetscErrorCode VecAXPY_SeqHIP(Vec yin,PetscScalar alpha,Vec xin)
   PetscScalar       *yarray;
   PetscBLASInt      one = 1,bn = 0;
   hipblasHandle_t   hipblasv2handle;
-  hipblasStatus_t   hberr;
   PetscBool         xiship;
 
   PetscFunctionBegin;
@@ -242,7 +243,6 @@ PetscErrorCode VecWAXPY_SeqHIP(Vec win,PetscScalar alpha,Vec xin, Vec yin)
   PetscScalar       *warray=NULL;
   PetscBLASInt      one = 1,bn = 0;
   hipblasHandle_t   hipblasv2handle;
-  hipblasStatus_t   hberr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscHIPBLASGetHandle(&hipblasv2handle));
@@ -528,11 +528,9 @@ PetscErrorCode VecMDot_SeqHIP(Vec xin,PetscInt nv,const Vec yin[],PetscScalar *z
 #if !defined(PETSC_USE_COMPLEX)
   PetscInt          nv1 = ((nv % 4) == 1) ? nv-1: nv,j;
   PetscScalar       *group_results_gpu,*group_results_cpu;
-  hipError_t        hip_ierr;
 #endif
   PetscBLASInt      one = 1,bn = 0;
   hipblasHandle_t   hipblasv2handle;
-  hipblasStatus_t   hberr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscHIPBLASGetHandle(&hipblasv2handle));
@@ -744,7 +742,6 @@ PetscErrorCode VecScale_SeqHIP(Vec xin,PetscScalar alpha)
   PetscScalar     *xarray;
   PetscBLASInt    one = 1,bn = 0;
   hipblasHandle_t hipblasv2handle;
-  hipblasStatus_t hberr;
 
   PetscFunctionBegin;
   if (alpha == (PetscScalar)0.0) {
@@ -857,7 +854,6 @@ PetscErrorCode VecSwap_SeqHIP(Vec xin,Vec yin)
   PetscBLASInt    one = 1,bn;
   PetscScalar     *xarray,*yarray;
   hipblasHandle_t hipblasv2handle;
-  hipblasStatus_t hberr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscHIPBLASGetHandle(&hipblasv2handle));
@@ -881,7 +877,6 @@ PetscErrorCode VecAXPBY_SeqHIP(Vec yin,PetscScalar alpha,PetscScalar beta,Vec xi
   PetscScalar       *yarray;
   PetscBLASInt      one = 1, bn = 0;
   hipblasHandle_t   hipblasv2handle;
-  hipblasStatus_t   hberr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscHIPBLASGetHandle(&hipblasv2handle));
@@ -983,7 +978,6 @@ PetscErrorCode VecNorm_SeqHIP(Vec xin,NormType type,PetscReal *z)
   PetscBLASInt      one = 1, bn = 0;
   const PetscScalar *xarray;
   hipblasHandle_t   hipblasv2handle;
-  hipblasStatus_t   hberr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscHIPBLASGetHandle(&hipblasv2handle));

@@ -483,7 +483,9 @@ PetscErrorCode VecCreate_SeqHIP_Private(Vec V,const PetscScalar *array)
   /* Later, functions check for the Vec_HIP structure existence, so do not create it without array */
   if (array) {
     if (!V->spptr) {
-      PetscReal pinned_memory_min;
+      PetscReal      pinned_memory_min;
+      PetscErrorCode ierr;
+
       CHKERRQ(PetscCalloc(sizeof(Vec_HIP),&V->spptr));
       vechip = (Vec_HIP*)V->spptr;
       V->offloadmask = PETSC_OFFLOAD_UNALLOCATED;

@@ -2903,10 +2903,6 @@ PetscErrorCode VecHIPPlaceArray(Vec vin,const PetscScalar a[])
 @*/
 PetscErrorCode VecHIPReplaceArray(Vec vin,const PetscScalar a[])
 {
-#if defined(PETSC_HAVE_HIP)
-  hipError_t err;
-#endif
-
   PetscFunctionBegin;
   PetscCheckTypeNames(vin,VECSEQHIP,VECMPIHIP);
 #if defined(PETSC_HAVE_HIP)
@@ -2934,7 +2930,6 @@ PetscErrorCode VecHIPReplaceArray(Vec vin,const PetscScalar a[])
 @*/
 PetscErrorCode VecHIPResetArray(Vec vin)
 {
-
   PetscFunctionBegin;
   PetscCheckTypeNames(vin,VECSEQHIP,VECMPIHIP);
 #if defined(PETSC_HAVE_HIP)

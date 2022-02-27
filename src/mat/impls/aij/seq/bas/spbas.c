@@ -60,8 +60,8 @@ size_t spbas_memory_requirement(spbas_matrix matrix)
 */
 PetscErrorCode spbas_allocate_pattern(spbas_matrix * result, PetscBool do_values)
 {
-  PetscInt       nrows        = result->nrows;
-  PetscInt       col_idx_type = result->col_idx_type;
+  PetscInt nrows        = result->nrows;
+  PetscInt col_idx_type = result->col_idx_type;
 
   PetscFunctionBegin;
   /* Allocate sparseness pattern */
@@ -94,12 +94,12 @@ spbas_allocate_data:
 */
 PetscErrorCode spbas_allocate_data(spbas_matrix * result)
 {
-  PetscInt       i;
-  PetscInt       nnz   = result->nnz;
-  PetscInt       nrows = result->nrows;
-  PetscInt       r_nnz;
-  PetscBool      do_values  = (result->values) ? PETSC_TRUE : PETSC_FALSE;
-  PetscBool      block_data = result->block_data;
+  PetscInt  i;
+  PetscInt  nnz        = result->nnz;
+  PetscInt  nrows      = result->nrows;
+  PetscInt  r_nnz;
+  PetscBool do_values  = (result->values) ? PETSC_TRUE : PETSC_FALSE;
+  PetscBool block_data = result->block_data;
 
   PetscFunctionBegin;
   if (block_data) {
@@ -853,7 +853,7 @@ PetscErrorCode spbas_keep_upper(spbas_matrix * inout_matrix)
   PetscInt jstart;
 
   PetscFunctionBegin;
-  PetscCheckFalse(inout_matrix->block_data,PETSC_COMM_SELF, PETSC_ERR_SUP_SYS, "Not yet for block data matrices");
+  PetscCheck(!inout_matrix->block_data,PETSC_COMM_SELF, PETSC_ERR_SUP_SYS, "Not yet for block data matrices");
   for (i=0; i<inout_matrix->nrows; i++)  {
     for (jstart=0; (jstart<inout_matrix->row_nnz[i]) && (inout_matrix->icols[i][jstart]<0); jstart++) {}
     if (jstart>0) {

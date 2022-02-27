@@ -505,8 +505,10 @@ PetscErrorCode VecCreate_MPIHIP_Private(Vec vv,PetscBool alloc,PetscInt nghost,c
   }
   if (array) {
     if (!vv->spptr) {
-      PetscReal pinned_memory_min;
-      PetscBool flag;
+      PetscReal      pinned_memory_min;
+      PetscBool      flag;
+      PetscErrorCode ierr;
+
       /* Cannot use PetscNew() here because spptr is void* */
       CHKERRQ(PetscCalloc(sizeof(Vec_HIP),&vv->spptr));
       vechip = (Vec_HIP*)vv->spptr;
