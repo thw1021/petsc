@@ -1,14 +1,9 @@
 #include "../../interface/sycldevice.hpp"
+#include <limits>  // for std::numeric_limits
 #include <csetjmp> // for MPI sycl device awareness
 #include <csignal> // SIGSEGV
 #include <vector>
 #include <CL/sycl.hpp>
-
-#if PetscDefined(USE_LOG)
-  PETSC_INTERN PetscErrorCode PetscLogInitialize(void);
-#else
-  #define PetscLogInitialize() 0
-#endif
 
 namespace Petsc
 {
@@ -124,19 +119,19 @@ private:
 
 PetscErrorCode Device::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, PetscDeviceInitType *defaultInitType) noexcept
 {
-  PetscInt       initType = *defaultInitType,id = *defaultDeviceId;
-  PetscBool      view = PETSC_FALSE,flg;
-  PetscInt       ngpus;
+  PetscInt            id       = *defaultDeviceId;
+  PetscDeviceInitType initType = *defaultInitType;
+  PetscBool           view     = PETSC_FALSE,flg;
+  PetscInt            ngpus;
 
   PetscFunctionBegin;
   if (initialized_) PetscFunctionReturn(0);
   initialized_ = true;
   PetscCall(PetscRegisterFinalize(finalize_));
-
   PetscOptionsBegin(comm,nullptr,"PetscDevice SYCL Options","Sys");
-  PetscCall(PetscOptionsEList("-device_enable_sycl","How (or whether) to initialize a device","SyclDevice::initialize()",PetscDeviceInitTypes,3,PetscDeviceInitTypes[initType],&initType,nullptr));
-  PetscCall(PetscOptionsRangeInt("-device_select_sycl","Which sycl device to use? Pass -2 for host, PETSC_DECIDE (-1) to let PETSc decide, 0 and up for GPUs","PetscDeviceCreate",id,&id,nullptr,-2,std::numeric_limits<decltype(ngpus)>::max()));
-  PetscCall(PetscOptionsBool("-device_view_sycl","Display device information and assignments (forces eager initialization)",nullptr,view,&view,&flg));
+  PetscCall(base_type::PetscOptionDeviceInitialize(PetscOptionsObject,&initType,nullptr));
+  PetscCall(base_type::PetscOptionDeviceSelect(PetscOptionsObject,"Which sycl device to use? Pass -2 for host, PETSC_DECIDE (" PetscStringize(PETSC_DECIDE) ") to let PETSc decide, 0 and up for GPUs","PetscDeviceCreate()",id,&id,nullptr,-2,std::numeric_limits<decltype(ngpus)>::max()));
+  PetscCall(base_type::PetscOptionDeviceView(PetscOptionsObject,&view,&flg));
   PetscOptionsEnd();
 
   // post-process the options and lay the groundwork for initialization if needs be
@@ -176,7 +171,7 @@ PetscErrorCode Device::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, Pets
   }
 
   // record the results of the initialization
-  *defaultInitType = static_cast<PetscDeviceInitType>(initType);
+  *defaultInitType = initType;
   *defaultDeviceId = id;
   PetscFunctionReturn(0);
 }
