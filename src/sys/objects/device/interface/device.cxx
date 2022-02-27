@@ -2,6 +2,7 @@
 #include <petsc/private/deviceimpl.h>  /* I "petscdevice.h" */
 #include "hostdevice.hpp"
 #include "cupmdevice.hpp"
+#include <limits> // for std::numeric_limits
 
 // REVIEW ME: this should probably go somewhere better
 #define PETSC_HAVE_HOST 1

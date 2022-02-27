@@ -307,7 +307,7 @@ PetscErrorCode Device<T>::getDevice(PetscDevice device, PetscInt id) const noexc
   } else devices_[id] = DeviceInternal::makeDevice(id);
   ierr = devices_[id]->initialize();CHKERRQ(ierr);
   device->deviceId           = devices_[id]->id(); // technically id = _devices[id]->_id here
-  device->ops->createcontext = create_;
+  device->ops->createcontext = this->create_;
   device->ops->configure     = this->configureDevice;
   device->ops->view          = this->viewDevice;
   PetscFunctionReturn(0);
