@@ -9,6 +9,7 @@ PetscErrorCode PetscDeviceContextCreate_HIP(PetscDeviceContext dctx)
   PetscErrorCode            ierr;
 
   PetscFunctionBegin;
+  ierr = contextHip.initialize();CHKERRQ(ierr);
   ierr = PetscNew(&dci);CHKERRQ(ierr);
   dctx->data = static_cast<decltype(dctx->data)>(dci);
   ierr = PetscMemcpy(dctx->ops,&contextHip.ops,sizeof(contextHip.ops));CHKERRQ(ierr);
