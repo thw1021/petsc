@@ -27,7 +27,7 @@ int main(int argc,char **args)
 
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;
   CHKERRMPI(MPI_Comm_size(PETSC_COMM_WORLD,&size));
-  PetscCheckFalse(size != 1,PETSC_COMM_WORLD,PETSC_ERR_SUP,"This is a uniprocessor example only!");
+  PetscCheck(size == 1,PETSC_COMM_WORLD,PETSC_ERR_SUP,"This is a uniprocessor example only!");
 
   CHKERRQ(PetscOptionsHasName(NULL,NULL, "-test_zheevx", &flg));
   if (flg) {
@@ -101,7 +101,7 @@ int main(int argc,char **args)
     Mat Trans;
     CHKERRQ(MatTranspose(A,MAT_INITIAL_MATRIX, &Trans));
     CHKERRQ(MatEqual(A, Trans, &isSymmetric));
-    PetscCheckFalse(!isSymmetric,PETSC_COMM_SELF,PETSC_ERR_USER,"A must be symmetric");
+    PetscCheck(isSymmetric,PETSC_COMM_SELF,PETSC_ERR_USER,"A must be symmetric");
     CHKERRQ(MatDestroy(&Trans));
   }
 
@@ -186,7 +186,7 @@ int main(int argc,char **args)
     CHKERRQ(PetscFree(rwork));
   }
   CHKERRQ(MatDenseRestoreArray(A_dense,&arrayA));
-  PetscCheckFalse(nevs <= 0,PETSC_COMM_SELF,PETSC_ERR_CONV_FAILED, "nev=%d, no eigensolution has found", nevs);
+  PetscCheck(nevs > 0,PETSC_COMM_SELF,PETSC_ERR_CONV_FAILED, "nev=%d, no eigensolution has found", nevs);
 
   /* View evals */
   CHKERRQ(PetscOptionsHasName(NULL,NULL, "-eig_view", &flg));
@@ -237,7 +237,7 @@ int main(int argc,char **args)
 */
 PetscErrorCode CkEigenSolutions(PetscInt cklvl,Mat A,PetscInt il,PetscInt iu,PetscReal *eval,Vec *evec,PetscReal *tols)
 {
-  PetscInt    ierr,i,j,nev;
+  PetscInt    i,j,nev;
   Vec         vt1,vt2;  /* tmp vectors */
   PetscReal   norm,tmp,norm_max,dot_max,rdot;
   PetscScalar dot;
