@@ -6,10 +6,10 @@ FFLAGS    =
 CPPFLAGS  =
 SOURCEC	  =
 SOURCEF	  =
-SOURCEH	  =
+SOURCEH	  = impldevicebase.hpp
 MANSEC	  = Sys
 LIBBASE	  = libpetscsys
-DIRS	    = cupm sycl
+DIRS	  = cupm sycl host
 LOCDIR	  = src/sys/objects/device/impls/
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
