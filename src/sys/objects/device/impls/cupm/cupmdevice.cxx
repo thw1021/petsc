@@ -5,12 +5,6 @@
 #include <iterator>
 #include <type_traits>
 
-#if PetscDefined(USE_LOG)
-PETSC_INTERN PetscErrorCode PetscLogInitialize(void);
-#else
-#define PetscLogInitialize() 0
-#endif
-
 namespace Petsc
 {
 
@@ -40,7 +34,6 @@ public:
   PETSC_NODISCARD PetscErrorCode initialize() noexcept;
   PETSC_NODISCARD PetscErrorCode configure() noexcept;
   PETSC_NODISCARD PetscErrorCode view(PetscViewer) const noexcept;
-  PETSC_NODISCARD PetscErrorCode finalize() noexcept;
 
   PETSC_NODISCARD auto id()          const -> decltype(id_)             { return id_;             }
   PETSC_NODISCARD auto initialized() const -> decltype(devInitialized_) { return devInitialized_; }
@@ -167,7 +160,7 @@ void SilenceVariableIsNotNeededAndWillNotBeEmittedWarning_ThisFunctionShouldNeve
   if (cupmMPIAwareJumpBufferSet) (void)cupmMPIAwareJumpBuffer;
 }
 
-#define CHKCUPMAWARE(expr) if (PetscUnlikely((expr) != cupmSuccess)) return false
+#define CHKCUPMAWARE(...) if (PetscUnlikely((__VA_ARGS__) != cupmSuccess)) return false
 
 template <DeviceType T>
 PETSC_CXX_COMPAT_DEFN(bool Device<T>::DeviceInternal::CUPMAwareMPI_())
@@ -221,73 +214,14 @@ PETSC_CXX_COMPAT_DEFN(bool Device<T>::DeviceInternal::CUPMAwareMPI_())
 #undef CHKCUPMAWARE
 
 template <DeviceType T>
-PetscErrorCode Device<T>::DeviceInternal::finalize() noexcept
-{
-  PetscFunctionBegin;
-  devInitialized_ = false;
-  PetscFunctionReturn(0);
-}
-
-template <DeviceType T>
 PetscErrorCode Device<T>::finalize_() noexcept
 {
   PetscFunctionBegin;
-  if (!initialized_) PetscFunctionReturn(0);
-  for (auto&& device : devices_) {
-    if (device) {
-      const auto ierr = device->finalize();CHKERRQ(ierr);
-      device.reset();
-    }
-  }
+  if (PetscUnlikely(!initialized_)) PetscFunctionReturn(0);
+  for (auto&& device : devices_) device.reset();
   defaultDevice_ = PETSC_CUPM_DEVICE_NONE;  // disabled by default
   initialized_   = false;
   PetscFunctionReturn(0);
-}
-
-// these functions should be named identically to the option they produce where "CUPMTYPE" and
-// "cupmtype" are the uppercase and lowercase string versions of the cupm backend respectively
-template <DeviceType T>
-PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 const char* PetscDevice_CUPMTYPE_Options())
-{
-  switch (T) {
-  case DeviceType::CUDA: return "PetscDevice CUDA Options";
-  case DeviceType::HIP:  return "PetscDevice HIP Options";
-  }
-  PetscUnreachable();
-  return "PETSC_ERROR_PLIB";
-}
-
-template <DeviceType T>
-PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 const char* device_enable_cupmtype())
-{
-  switch (T) {
-  case DeviceType::CUDA: return "-device_enable_cuda";
-  case DeviceType::HIP:  return "-device_enable_hip";
-  }
-  PetscUnreachable();
-  return "PETSC_ERROR_PLIB";
-}
-
-template <DeviceType T>
-PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 const char* device_select_cupmtype())
-{
-  switch (T) {
-  case DeviceType::CUDA: return "-device_select_cuda";
-  case DeviceType::HIP:  return "-device_select_hip";
-  }
-  PetscUnreachable();
-  return "PETSC_ERROR_PLIB";
-}
-
-template <DeviceType T>
-PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 const char* device_view_cupmtype())
-{
-  switch (T) {
-  case DeviceType::CUDA: return "-device_view_cuda";
-  case DeviceType::HIP:  return "-device_view_hip";
-  }
-  PetscUnreachable();
-  return "PETSC_ERROR_PLIB";
 }
 
 template <DeviceType T>
@@ -304,8 +238,9 @@ PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 const char* CUPM_VISIBLE_DEVICES())
 template <DeviceType T>
 PetscErrorCode Device<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, PetscDeviceInitType *defaultInitType) noexcept
 {
-  PetscInt       initTypeCUPM = *defaultInitType,id = *defaultDeviceId;
-  PetscBool      view = PETSC_FALSE,flg;
+  auto           initType = std::make_pair(*defaultInitType,PETSC_FALSE);
+  auto           initId   = std::make_pair(*defaultDeviceId,PETSC_FALSE);
+  auto           initView = std::make_pair(PETSC_FALSE,PETSC_FALSE);
   int            ndev;
   cupmError_t    cerr;
   PetscErrorCode ierr;
@@ -314,16 +249,8 @@ PetscErrorCode Device<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, P
   if (initialized_) PetscFunctionReturn(0);
   initialized_ = true;
   ierr = PetscRegisterFinalize(finalize_);CHKERRQ(ierr);
-
-  {
-    // the functions to populate the command line strings are named after the string they return
-    ierr = PetscOptionsBegin(comm,nullptr,PetscDevice_CUPMTYPE_Options<T>(),"Sys");CHKERRQ(ierr);
-    ierr = PetscOptionsEList(device_enable_cupmtype<T>(),"How (or whether) to initialize a device","CUPMDevice<CUPMDeviceType>::initialize()",PetscDeviceInitTypes,3,PetscDeviceInitTypes[initTypeCUPM],&initTypeCUPM,nullptr);CHKERRQ(ierr);
-    ierr = PetscOptionsRangeInt(device_select_cupmtype<T>(),"Which device to use. Pass " PetscStringize(PETSC_DECIDE) " to have PETSc decide or (given they exist) [0-NUM_DEVICE) for a specific device","PetscDeviceCreate",id,&id,nullptr,PETSC_DECIDE,std::numeric_limits<decltype(defaultDevice_)>::max());CHKERRQ(ierr);
-    ierr = PetscOptionsBool(device_view_cupmtype<T>(),"Display device information and assignments (forces eager initialization)",nullptr,view,&view,&flg);CHKERRQ(ierr);
-    ierr = PetscOptionsEnd();CHKERRQ(ierr);
-  }
-
+  ierr = base_type::PetscOptionDeviceAll(comm,initType,initId,initView);CHKERRQ(ierr);
+  initView.first = static_cast<decltype(initView.first)>(initView.first && initView.second);
   cerr = cupmGetDeviceCount(&ndev);
   switch (cerr) {
   case cupmErrorNoDevice: {
@@ -341,19 +268,19 @@ PetscErrorCode Device<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, P
         break;
       }
     }
-    id = PETSC_CUPM_DEVICE_NONE; // there are no devices anyway
+    initId.first = PETSC_CUPM_DEVICE_NONE; // there are no devices anyway
     if (ignoreCupmError) {auto PETSC_UNUSED ignored = cupmGetLastError(); break;}
     // if we don't outright ignore the error we then drop and check if the user tried to
     // eagerly initialize the device
   }
   case cupmErrorStubLibrary:
-    if (PetscUnlikely((initTypeCUPM == PETSC_DEVICE_INIT_EAGER) || (view && flg))) {
+    if (PetscUnlikely((initType.first == PETSC_DEVICE_INIT_EAGER) || initView.first)) {
       const auto name    = cupmGetErrorName(cerr);
       const auto desc    = cupmGetErrorString(cerr);
       const auto backend = cupmName();
       SETERRQ(comm,PETSC_ERR_USER_INPUT,"Cannot eagerly initialize %s, as doing so results in %s error %d (%s) : %s",backend,backend,static_cast<PetscErrorCode>(cerr),name,desc);
     }
-    initTypeCUPM = PETSC_DEVICE_INIT_NONE;
+    initType.first = PETSC_DEVICE_INIT_NONE;
     {auto PETSC_UNUSED ignored = cupmGetLastError();}
     break;
   default:
@@ -361,30 +288,29 @@ PetscErrorCode Device<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, P
     break;
   }
 
-  if (initTypeCUPM == PETSC_DEVICE_INIT_NONE) {
-    if ((id > 0) || (id == PETSC_DECIDE)) id = PETSC_CUPM_DEVICE_NONE;
+  if (initType.first == PETSC_DEVICE_INIT_NONE) {
+    if ((initId.first > 0) || (initId.first == PETSC_DECIDE)) initId.first = PETSC_CUPM_DEVICE_NONE;
   } else {
     ierr = PetscDeviceCheckDeviceCount_Internal(ndev);CHKERRQ(ierr);
-    if (id == PETSC_DECIDE) {
+    if (initId.first == PETSC_DECIDE) {
       if (ndev) {
         PetscMPIInt rank;
 
         ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
-        id   = rank % ndev;
-      } else id = 0;
+        initId.first   = rank % ndev;
+      } else initId.first = 0;
     }
-    view = static_cast<decltype(view)>(view && flg);
-    if (view) initTypeCUPM = PETSC_DEVICE_INIT_EAGER;
+    if (initView.first) initType.first = PETSC_DEVICE_INIT_EAGER;
   }
 
   static_assert(std::is_same<PetscMPIInt,decltype(defaultDevice_)>::value,"");
-  // id is PetscInt, _defaultDevice is int
-  ierr = PetscMPIIntCast(id,&defaultDevice_);CHKERRQ(ierr);
-  if (initTypeCUPM == PETSC_DEVICE_INIT_EAGER) {
+  // initId.first is PetscInt, _defaultDevice is int
+  ierr = PetscMPIIntCast(initId.first,&defaultDevice_);CHKERRQ(ierr);
+  if (initType.first == PETSC_DEVICE_INIT_EAGER) {
     devices_[defaultDevice_] = DeviceInternal::makeDevice(defaultDevice_);
     ierr = devices_[defaultDevice_]->initialize();CHKERRQ(ierr);
     ierr = devices_[defaultDevice_]->configure();CHKERRQ(ierr);
-    if (view) {
+    if (initView.first) {
       PetscViewer vwr;
 
       ierr = PetscLogInitialize();CHKERRQ(ierr);
@@ -394,8 +320,8 @@ PetscErrorCode Device<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, P
   }
 
   // record the results of the initialization
-  *defaultInitType = static_cast<PetscDeviceInitType>(initTypeCUPM);
-  *defaultDeviceId = id;
+  *defaultInitType = initType.first;
+  *defaultDeviceId = initId.first;
   PetscFunctionReturn(0);
 }
 
@@ -415,7 +341,7 @@ PetscErrorCode Device<T>::getDevice(PetscDevice device, PetscInt id) const noexc
   } else devices_[id] = DeviceInternal::makeDevice(id);
   ierr = devices_[id]->initialize();CHKERRQ(ierr);
   device->deviceId           = devices_[id]->id(); // technically id = _devices[id]->_id here
-  device->ops->createcontext = create_;
+  device->ops->createcontext = this->create_;
   device->ops->configure     = this->configureDevice;
   device->ops->view          = this->viewDevice;
   PetscFunctionReturn(0);

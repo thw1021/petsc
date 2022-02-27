@@ -256,6 +256,8 @@ PETSC_EXTERN PetscBool      PetscDeviceInitialized(PetscDeviceType);
 PETSC_EXTERN PetscErrorCode PetscDeviceCreate(PetscDeviceType,PetscInt,PetscDevice*);
 PETSC_EXTERN PetscErrorCode PetscDeviceConfigure(PetscDevice);
 PETSC_EXTERN PetscErrorCode PetscDeviceView(PetscDevice,PetscViewer);
+PETSC_EXTERN PetscErrorCode PetscDeviceGetType(PetscDevice,PetscDeviceType*);
+PETSC_EXTERN PetscErrorCode PetscDeviceGetDeviceId(PetscDevice,PetscInt*);
 PETSC_EXTERN PetscErrorCode PetscDeviceDestroy(PetscDevice*);
 
 /* PetscDeviceContext */
