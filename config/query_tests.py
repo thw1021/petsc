@@ -271,6 +271,21 @@ def do_query(use_source, startdir, srcdir, testdir, petsc_dir, petsc_arch,
 
     return
 
+def expand_path_like(petscdir,string):
+    # do the obvious first
+    path_like = False
+    string    = os.path.expandvars(os.path.expanduser(string))
+    if os.path.exists(string):
+        path_like = True
+    else:
+        pardir = os.path.dirname(string)
+        if os.path.exists(pardir):
+            # the exact file may not exist but it is certainly a path
+            path_like = True
+    if path_like:
+        string = os.path.relpath(os.path.abspath(string),petscdir)
+    return string
+
 def main():
     parser = optparse.OptionParser(usage="%prog [options] field match_pattern")
     parser.add_option('-s', '--startdir', dest='startdir',
@@ -347,6 +362,8 @@ def main():
         if not os.path.isdir(petsc_full_src):
             print("Source directory must be a directory"+petsc_full_src)
             return
+
+    match = expand_path_like(opts.petsc_dir,match)
 
     # Do the actual query
     do_query(opts.use_source, startdir, petsc_full_src, petsc_full_test,
