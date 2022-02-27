@@ -78,6 +78,7 @@ private:
     cupmError_t    cerr;
 
     PetscFunctionBegin;
+    PetscAssert(initialized_,PETSC_COMM_SELF,PETSC_ERR_PLIB,"CUPMDeviceContext not initialized, must call DeviceContext::initialize()");
     PetscCheck(devidl == devidr,PETSC_COMM_SELF,PETSC_ERR_GPU,"Device contexts must be on the same device; dctx A (id %" PetscInt_FMT " device id %" PetscInt_FMT ") dctx B (id %" PetscInt_FMT " device id %" PetscInt_FMT ")",dctxl->id,devidl,dctxr->id,devidr);
     ierr = PetscDeviceCheckDeviceCount_Internal(devidl);CHKERRQ(ierr);
     ierr = PetscDeviceCheckDeviceCount_Internal(devidr);CHKERRQ(ierr);
@@ -107,8 +108,8 @@ private:
     PetscFunctionReturn(0);
   }
 
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode initialize_handle_(stream_tag,PetscDeviceContext))
-  { SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"This function exists only to satisfy a template and should not be called"); }
+  // this exists purely to satisfy the tag interface for the other handles
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode initialize_handle2_(stream_tag,PetscDeviceContext)) { return 0; }
 
   PETSC_CXX_COMPAT_DECL(PetscErrorCode create_handle_(cupmBlasHandle_t &handle))
   {
@@ -167,10 +168,6 @@ private:
     PetscErrorCode ierr;
 
     PetscFunctionBegin;
-    if (PetscUnlikely(!initialized_)) {
-      initialized_ = true;
-      ierr = PetscRegisterFinalize(finalize_);CHKERRQ(ierr);
-    }
     ierr = check_current_device_(dctx);CHKERRQ(ierr);
     ierr = initialize_handle2_(TagType{},dctx);CHKERRQ(ierr);
     PetscFunctionReturn(0);
@@ -179,6 +176,7 @@ private:
 public:
   // All of these functions MUST be static in order to be callable from C, otherwise they
   // get the implicit 'this' pointer tacked on
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode initialize());
   PETSC_CXX_COMPAT_DECL(PetscErrorCode destroy(PetscDeviceContext));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode changeStreamType(PetscDeviceContext,PetscStreamType));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode setUp(PetscDeviceContext));
@@ -204,6 +202,18 @@ public:
     endTimer
   };
 };
+
+// not a PetscDeviceContext method, this initializes the CLASS
+template <DeviceType T>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::initialize())
+{
+  PetscFunctionBegin;
+  if (PetscUnlikely(!initialized_)) {
+    initialized_ = true;
+    auto ierr = PetscRegisterFinalize(finalize_);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
 
 template <DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::destroy(PetscDeviceContext dctx))
