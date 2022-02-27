@@ -1,9 +1,10 @@
 # -*- mode: makefile -*-
 #
+include ../../../petscdir.mk
 
 TESTMODE = testexamples
 ALLTESTS_CHECK_FAILURES = no
-ALLTESTS_MAKEFILE = $(if ${PETSC_DIR},${PETSC_DIR}/gmakefile.test,gmakefile.test)
+ALLTESTS_MAKEFILE = ${PETSC_DIR}/gmakefile.test
 VALGRIND=0
 alltests: ${PETSC_DIR}/${PETSC_ARCH}/tests/testfiles
 	-@${RM} -rf ${PETSC_ARCH}/lib/petsc/conf/alltests.log alltests.log
