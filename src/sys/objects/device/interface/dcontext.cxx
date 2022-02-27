@@ -1,5 +1,7 @@
 #include <petsc/private/deviceimpl.h> /*I "petscdevice.h" I*/
 #include "objpool.hpp"
+#include <array>
+#include <vector>
 
 const char *const PetscStreamTypes[] = {
   "global_blocking",
@@ -297,11 +299,11 @@ PetscErrorCode PetscDeviceContextSetUp(PetscDeviceContext dctx)
 
   PetscFunctionBegin;
   PetscValidDeviceContext(dctx,1);
+  if (dctx->setup) PetscFunctionReturn(0);
   if (!dctx->device) {
     ierr = PetscInfo(nullptr,"PetscDeviceContext %" PetscInt_FMT " did not have an explicitly attached PetscDevice, using default with type %s\n",dctx->id,PetscDeviceTypes[PETSC_DEVICE_DEFAULT]);CHKERRQ(ierr);
     ierr = PetscDeviceContextSetDefaultDevice_Internal(dctx);CHKERRQ(ierr);
   }
-  if (dctx->setup) PetscFunctionReturn(0);
   ierr = (*dctx->ops->setup)(dctx);CHKERRQ(ierr);
   dctx->setup = PETSC_TRUE;
   PetscFunctionReturn(0);
@@ -596,7 +598,7 @@ PetscErrorCode PetscDeviceContextJoin(PetscDeviceContext dctx, PetscInt n, Petsc
   case PETSC_DEVICE_CONTEXT_JOIN_DESTROY: {
     PetscInt j = 0;
 
-    PetscAssert(n <= dctx->numChildren,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Trying to destroy %" PetscInt_FMT " children of a parent context that only has %" PetscInt_FMT " children, likely trying to restore to wrong parent",n,dctx->numChildren);
+    PetscCheck(n <= dctx->numChildren,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Trying to destroy %" PetscInt_FMT " children of a parent context that only has %" PetscInt_FMT " children, likely trying to restore to wrong parent",n,dctx->numChildren);
     /* update child count while it's still fresh in memory */
     dctx->numChildren -= n;
     for (PetscInt i = 0; i < dctx->maxNumChildren; ++i) {
@@ -608,9 +610,8 @@ PetscErrorCode PetscDeviceContextJoin(PetscDeviceContext dctx, PetscInt n, Petsc
         if (++j == n) break;
       }
     }
-    /* gone through the loop but did not find every child, if this triggers (or well,
-       doesn't) on perf-builds we leak the remaining contexts memory */
-    PetscAssert(j == n,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"%" PetscInt_FMT " contexts still remain after destroy, this may be because you are trying to restore to the wrong parent context, or the device contexts are not in the same order as they were checked out out in.",n-j);
+    /* gone through the loop but did not find every child */
+    PetscCheck(j == n,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"%" PetscInt_FMT " contexts still remain after destroy, this may be because you are trying to restore to the wrong parent context, or the device contexts are not in the same order as they were checked out out in",n-j);
     ierr = PetscFree(*dsub);CHKERRQ(ierr);
   } break;
   case PETSC_DEVICE_CONTEXT_JOIN_SYNC:
@@ -652,11 +653,53 @@ PetscErrorCode PetscDeviceContextSynchronize(PetscDeviceContext dctx)
   PetscFunctionReturn(0);
 }
 
-#define PETSC_DEVICE_CONTEXT_DEFAULT_DEVICE PETSC_DEVICE_DEFAULT
-// REMOVE ME (change)
-#define PETSC_DEVICE_CONTEXT_DEFAULT_STREAM PETSC_STREAM_GLOBAL_BLOCKING
+// each device needs a null context, and each device type needs a set of devices
+static auto nullContexts          = std::array<std::vector<PetscDeviceContext>,PETSC_DEVICE_MAX>{ };
+static auto nullContextsFinalizer = false;
 
-static PetscDeviceType    rootDeviceType = PETSC_DEVICE_CONTEXT_DEFAULT_DEVICE;
+PetscErrorCode PetscDeviceContextGetNullContextForType_Internal(PetscDevice device, PetscDeviceContext *dctx)
+{
+  const auto     devid   = device->deviceId;
+  const auto     dtype   = device->type;
+  auto&          ctxlist = nullContexts[dtype];
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidDevice(device,1);
+  PetscValidPointer(dctx,2);
+  if (PetscUnlikely(!nullContextsFinalizer)) {
+    const auto finalizer = []
+    {
+      PetscFunctionBegin;
+      for (auto&& dvec : nullContexts) {
+        for (auto&& dctx : dvec) {PetscErrorCode ierr = PetscDeviceContextDestroy(&dctx);CHKERRQ(ierr);}
+        dvec.clear();
+      }
+      nullContextsFinalizer = false;
+      PetscFunctionReturn(0);
+    };
+
+    nullContextsFinalizer = true;
+    ierr = PetscRegisterFinalize(finalizer);CHKERRQ(ierr);
+  }
+  PetscCheck(devid >= 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Device ID (%" PetscInt_FMT ") must be positive",devid);
+  if (PetscUnlikely((static_cast<std::size_t>(devid) >= ctxlist.size()) || !ctxlist[devid])) {
+    // we have not seen this device before
+    ierr = PetscInfo(nullptr,"Initializing null PetscDeviceContext for device %" PetscInt_FMT "\n",devid);CHKERRQ(ierr);
+    ierr = PetscDeviceContextCreate(dctx);CHKERRQ(ierr);
+    ierr = PetscDeviceContextSetStreamType(*dctx,PETSC_STREAM_GLOBAL_BLOCKING);CHKERRQ(ierr);
+    ierr = PetscDeviceContextSetDevice(*dctx,device);CHKERRQ(ierr);
+    ierr = PetscDeviceContextSetUp(*dctx);CHKERRQ(ierr);
+    CHKERRCXX(ctxlist.insert(std::next(ctxlist.cbegin(),devid),*dctx));
+  } else *dctx = ctxlist[devid];
+  PetscFunctionReturn(0);
+}
+
+#define PETSC_DEVICE_CONTEXT_DEFAULT_DEVICE_TYPE PETSC_DEVICE_DEFAULT
+// REMOVE ME (change)
+#define PETSC_DEVICE_CONTEXT_DEFAULT_STREAM      PETSC_STREAM_GLOBAL_BLOCKING
+
+static PetscDeviceType    rootDeviceType = PETSC_DEVICE_CONTEXT_DEFAULT_DEVICE_TYPE;
 static PetscStreamType    rootStreamType = PETSC_DEVICE_CONTEXT_DEFAULT_STREAM;
 static PetscDeviceContext globalContext  = nullptr;
 
@@ -689,7 +732,7 @@ static PetscErrorCode PetscDeviceContextSetupGlobalContext_Private(void)
 
     PetscFunctionBegin;
     ierr = PetscDeviceContextDestroy(&globalContext);CHKERRQ(ierr);
-    rootDeviceType = PETSC_DEVICE_CONTEXT_DEFAULT_DEVICE;
+    rootDeviceType = PETSC_DEVICE_CONTEXT_DEFAULT_DEVICE_TYPE;
     rootStreamType = PETSC_DEVICE_CONTEXT_DEFAULT_STREAM;
     PetscFunctionReturn(0);
   };
@@ -813,14 +856,22 @@ PetscErrorCode PetscDeviceContextSetFromOptions(MPI_Comm comm, const char prefix
   if (prefix) PetscValidCharPointer(prefix,2);
   PetscValidDeviceContext(dctx,3);
   ierr = PetscOptionsBegin(comm,prefix,"PetscDeviceContext Options","Sys");CHKERRQ(ierr);
-  ierr = PetscOptionsEList("-device_context_stream_type","PetscDeviceContext PetscStreamType","PetscDeviceContextSetStreamType",PetscStreamTypes,PETSC_STREAM_MAX,PetscStreamTypes[dctx->streamType],&stype,&flag);CHKERRQ(ierr);
+
+  // set the device type first
+  if (auto device = dctx->device) {
+    ierr = PetscDeviceGetType(device,reinterpret_cast<PetscDeviceType*>(&dtype));CHKERRQ(ierr);
+  } else dtype = PETSC_DEVICE_CONTEXT_DEFAULT_DEVICE_TYPE;
+  ierr = PetscOptionsEList("-device_context_device_type","Underlying PetscDevice","PetscDeviceContextSetDevice",PetscDeviceTypes,PETSC_DEVICE_MAX,PetscDeviceTypes[dtype],&dtype,&flag);CHKERRQ(ierr);
+  if (flag) {
+    ierr = PetscDeviceContextSetDefaultDeviceForType_Internal(dctx,static_cast<PetscDeviceType>(dtype));CHKERRQ(ierr);
+  }
+
+  ierr = PetscDeviceContextGetStreamType(dctx,reinterpret_cast<PetscStreamType*>(&stype));CHKERRQ(ierr);
+  ierr = PetscOptionsEList("-device_context_stream_type","PetscDeviceContext PetscStreamType","PetscDeviceContextSetStreamType",PetscStreamTypes,PETSC_STREAM_MAX,PetscStreamTypes[stype],&stype,&flag);CHKERRQ(ierr);
   if (flag) {
     ierr = PetscDeviceContextSetStreamType(dctx,static_cast<PetscStreamType>(stype));CHKERRQ(ierr);
   }
-  ierr = PetscOptionsEList("-device_context_device_type","Underlying PetscDevice","PetscDeviceContextSetDevice",PetscDeviceTypes+1,PETSC_DEVICE_MAX-1,PetscDeviceTypes[dctx->device ? dctx->device->type : PETSC_DEVICE_CONTEXT_DEFAULT_DEVICE],&dtype,&flag);CHKERRQ(ierr);
-  if (flag) {
-    ierr = PetscDeviceContextSetDefaultDeviceForType_Internal(dctx,static_cast<PetscDeviceType>(dtype+1));CHKERRQ(ierr);
-  }
+
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
