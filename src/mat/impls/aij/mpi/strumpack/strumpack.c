@@ -12,7 +12,6 @@ static PetscErrorCode MatGetDiagonal_STRUMPACK(Mat A,Vec v)
 static PetscErrorCode MatDestroy_STRUMPACK(Mat A)
 {
   STRUMPACK_SparseSolver *S = (STRUMPACK_SparseSolver*)A->spptr;
-  PetscErrorCode         ierr;
   PetscBool              flg;
 
   PetscFunctionBegin;
@@ -68,8 +67,6 @@ static PetscErrorCode MatSTRUMPACKSetReordering_STRUMPACK(Mat F,MatSTRUMPACKReor
 @*/
 PetscErrorCode MatSTRUMPACKSetReordering(Mat F,MatSTRUMPACKReordering reordering)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(F,MAT_CLASSID,1);
   PetscValidLogicalCollectiveEnum(F,reordering,2);
@@ -106,7 +103,6 @@ static PetscErrorCode MatSTRUMPACKSetColPerm_STRUMPACK(Mat F,PetscBool cperm)
 @*/
 PetscErrorCode MatSTRUMPACKSetColPerm(Mat F,PetscBool cperm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(F,MAT_CLASSID,1);
@@ -144,8 +140,6 @@ static PetscErrorCode MatSTRUMPACKSetHSSRelTol_STRUMPACK(Mat F,PetscReal rtol)
 @*/
 PetscErrorCode MatSTRUMPACKSetHSSRelTol(Mat F,PetscReal rtol)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(F,MAT_CLASSID,1);
   PetscValidLogicalCollectiveReal(F,rtol,2);
@@ -182,7 +176,6 @@ static PetscErrorCode MatSTRUMPACKSetHSSAbsTol_STRUMPACK(Mat F,PetscReal atol)
 @*/
 PetscErrorCode MatSTRUMPACKSetHSSAbsTol(Mat F,PetscReal atol)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(F,MAT_CLASSID,1);
@@ -220,7 +213,6 @@ static PetscErrorCode MatSTRUMPACKSetHSSMaxRank_STRUMPACK(Mat F,PetscInt hssmaxr
 @*/
 PetscErrorCode MatSTRUMPACKSetHSSMaxRank(Mat F,PetscInt hssmaxrank)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(F,MAT_CLASSID,1);
@@ -258,7 +250,6 @@ static PetscErrorCode MatSTRUMPACKSetHSSLeafSize_STRUMPACK(Mat F,PetscInt leaf_s
 @*/
 PetscErrorCode MatSTRUMPACKSetHSSLeafSize(Mat F,PetscInt leaf_size)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(F,MAT_CLASSID,1);
@@ -296,7 +287,6 @@ static PetscErrorCode MatSTRUMPACKSetHSSMinSepSize_STRUMPACK(Mat F,PetscInt hssm
 @*/
 PetscErrorCode MatSTRUMPACKSetHSSMinSepSize(Mat F,PetscInt hssminsize)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(F,MAT_CLASSID,1);
@@ -309,7 +299,6 @@ static PetscErrorCode MatSolve_STRUMPACK(Mat A,Vec b_mpi,Vec x)
 {
   STRUMPACK_SparseSolver *S = (STRUMPACK_SparseSolver*)A->spptr;
   STRUMPACK_RETURN_CODE  sp_err;
-  PetscErrorCode         ierr;
   const PetscScalar      *bptr;
   PetscScalar            *xptr;
 
@@ -331,7 +320,6 @@ static PetscErrorCode MatSolve_STRUMPACK(Mat A,Vec b_mpi,Vec x)
 
 static PetscErrorCode MatMatSolve_STRUMPACK(Mat A,Mat B_mpi,Mat X)
 {
-  PetscErrorCode   ierr;
   PetscBool        flg;
 
   PetscFunctionBegin;
@@ -345,7 +333,6 @@ static PetscErrorCode MatMatSolve_STRUMPACK(Mat A,Mat B_mpi,Mat X)
 
 static PetscErrorCode MatView_Info_STRUMPACK(Mat A,PetscViewer viewer)
 {
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   /* check if matrix is strumpack type */
@@ -356,7 +343,6 @@ static PetscErrorCode MatView_Info_STRUMPACK(Mat A,PetscViewer viewer)
 
 static PetscErrorCode MatView_STRUMPACK(Mat A,PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   PetscBool         iascii;
   PetscViewerFormat format;
 
@@ -377,7 +363,6 @@ static PetscErrorCode MatLUFactorNumeric_STRUMPACK(Mat F,Mat A,const MatFactorIn
   STRUMPACK_RETURN_CODE  sp_err;
   Mat_SeqAIJ             *A_d,*A_o;
   Mat_MPIAIJ             *mat;
-  PetscErrorCode         ierr;
   PetscInt               M=A->rmap->N,m=A->rmap->n;
   PetscBool              flg;
 
@@ -460,7 +445,6 @@ M*/
 static PetscErrorCode MatGetFactor_aij_strumpack(Mat A,MatFactorType ftype,Mat *F)
 {
   Mat                           B;
-  PetscErrorCode                ierr;
   PetscInt                      M=A->rmap->N,N=A->cmap->N;
   PetscBool                     verb,flg,set;
   PetscReal                     ctol;
@@ -568,8 +552,6 @@ static PetscErrorCode MatGetFactor_aij_strumpack(Mat A,MatFactorType ftype,Mat *
 
 PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_STRUMPACK(void)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(MatSolverTypeRegister(MATSOLVERSTRUMPACK,MATMPIAIJ,MAT_FACTOR_LU,MatGetFactor_aij_strumpack));
   CHKERRQ(MatSolverTypeRegister(MATSOLVERSTRUMPACK,MATSEQAIJ,MAT_FACTOR_LU,MatGetFactor_aij_strumpack));

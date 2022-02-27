@@ -25,11 +25,10 @@
 /* Swap a & b, *c & *d. c, d, t2 are pointers to a type of size <siz> */
 #define SWAP2Data(a,b,c,d,t1,t2,siz)                                             \
   do {                                                                           \
-    PetscErrorCode ierr;                                                         \
     t1=a; a=b; b=t1;                                                             \
-    CHKERRQ(PetscMemcpy(t2,c,siz));                                  \
-    CHKERRQ(PetscMemcpy(c,d,siz));                                   \
-    CHKERRQ(PetscMemcpy(d,t2,siz));                                  \
+    CHKERRQ(PetscMemcpy(t2,c,siz));                                              \
+    CHKERRQ(PetscMemcpy(c,d,siz));                                               \
+    CHKERRQ(PetscMemcpy(d,t2,siz));                                              \
   } while (0)
 
 /*
@@ -52,7 +51,7 @@
   do {                                                                           \
     l = lo;                                                                      \
     r = hi;                                                                      \
-    while (1) {                                                                   \
+    while (1) {                                                                  \
       while (X[l] < pivot) l++;                                                  \
       while (X[r] > pivot) r--;                                                  \
       if (l >= r) {r++; break;}                                                  \
@@ -78,11 +77,11 @@
     The TwoWayPartition2/3 variants also partition other arrays along with X.
     These arrays can have different types, so they provide their own temp t2,t3
  */
-#define TwoWayPartitionReverse1(X,pivot,t1,lo,hi,l,r)                                   \
+#define TwoWayPartitionReverse1(X,pivot,t1,lo,hi,l,r)                            \
   do {                                                                           \
     l = lo;                                                                      \
     r = hi;                                                                      \
-    while (1) {                                                                   \
+    while (1) {                                                                  \
       while (X[l] > pivot) l++;                                                  \
       while (X[r] < pivot) r--;                                                  \
       if (l >= r) {r++; break;}                                                  \
@@ -96,7 +95,7 @@
   do {                                                                           \
     l = lo;                                                                      \
     r = hi;                                                                      \
-    while (1) {                                                                   \
+    while (1) {                                                                  \
       while (X[l] < pivot) l++;                                                  \
       while (X[r] > pivot) r--;                                                  \
       if (l >= r) {r++; break;}                                                  \
@@ -110,7 +109,7 @@
   do {                                                                           \
     l = lo;                                                                      \
     r = hi;                                                                      \
-    while (1) {                                                                   \
+    while (1) {                                                                  \
       while (X[l] < pivot) l++;                                                  \
       while (X[r] > pivot) r--;                                                  \
       if (l >= r) {r++; break;}                                                  \
@@ -121,7 +120,7 @@
   } while (0)
 
 /* Templates for similar functions used below */
-#define QuickSort1(FuncName,X,n,pivot,t1,ierr)                                   \
+#define QuickSort1(FuncName,X,n,pivot,t1)                                        \
   do {                                                                           \
     PetscCount i,j,p,l,r,hi=n-1;                                                 \
     if (n < 8) {                                                                 \
@@ -138,13 +137,13 @@
       p     = MEDIAN(X,hi);                                                      \
       pivot = X[p];                                                              \
       TwoWayPartition1(X,pivot,t1,0,hi,l,r);                                     \
-      CHKERRQ(FuncName(l,X));                                       \
-      CHKERRQ(FuncName(hi-r+1,X+r));                                \
+      CHKERRQ(FuncName(l,X));                                                    \
+      CHKERRQ(FuncName(hi-r+1,X+r));                                             \
     }                                                                            \
   } while (0)
 
 /* Templates for similar functions used below */
-#define QuickSortReverse1(FuncName,X,n,pivot,t1,ierr)                            \
+#define QuickSortReverse1(FuncName,X,n,pivot,t1)                                 \
   do {                                                                           \
     PetscCount i,j,p,l,r,hi=n-1;                                                 \
     if (n < 8) {                                                                 \
@@ -161,12 +160,12 @@
       p     = MEDIAN(X,hi);                                                      \
       pivot = X[p];                                                              \
       TwoWayPartitionReverse1(X,pivot,t1,0,hi,l,r);                              \
-      CHKERRQ(FuncName(l,X));                                       \
-      CHKERRQ(FuncName(hi-r+1,X+r));                                \
+      CHKERRQ(FuncName(l,X));                                                    \
+      CHKERRQ(FuncName(hi-r+1,X+r));                                             \
     }                                                                            \
   } while (0)
 
-#define QuickSort2(FuncName,X,Y,n,pivot,t1,t2,ierr)                              \
+#define QuickSort2(FuncName,X,Y,n,pivot,t1,t2)                                   \
   do {                                                                           \
     PetscCount i,j,p,l,r,hi=n-1;                                                 \
     if (n < 8) {                                                                 \
@@ -183,12 +182,12 @@
       p     = MEDIAN(X,hi);                                                      \
       pivot = X[p];                                                              \
       TwoWayPartition2(X,Y,pivot,t1,t2,0,hi,l,r);                                \
-      CHKERRQ(FuncName(l,X,Y));                                     \
-      CHKERRQ(FuncName(hi-r+1,X+r,Y+r));                            \
+      CHKERRQ(FuncName(l,X,Y));                                                  \
+      CHKERRQ(FuncName(hi-r+1,X+r,Y+r));                                         \
     }                                                                            \
   } while (0)
 
-#define QuickSort3(FuncName,X,Y,Z,n,pivot,t1,t2,t3,ierr)                         \
+#define QuickSort3(FuncName,X,Y,Z,n,pivot,t1,t2,t3)                              \
   do {                                                                           \
     PetscCount i,j,p,l,r,hi=n-1;                                                 \
     if (n < 8) {                                                                 \
@@ -205,8 +204,8 @@
       p     = MEDIAN(X,hi);                                                      \
       pivot = X[p];                                                              \
       TwoWayPartition3(X,Y,Z,pivot,t1,t2,t3,0,hi,l,r);                           \
-      CHKERRQ(FuncName(l,X,Y,Z));                                   \
-      CHKERRQ(FuncName(hi-r+1,X+r,Y+r,Z+r));                        \
+      CHKERRQ(FuncName(l,X,Y,Z));                                                \
+      CHKERRQ(FuncName(hi-r+1,X+r,Y+r,Z+r));                                     \
     }                                                                            \
   } while (0)
 
@@ -229,6 +228,8 @@
 PetscErrorCode  PetscSortedInt(PetscInt n,const PetscInt X[],PetscBool *sorted)
 {
   PetscFunctionBegin;
+  if (n) PetscValidIntPointer(X,2);
+  PetscValidBoolPointer(sorted,3);
   PetscSorted(n,X,*sorted);
   PetscFunctionReturn(0);
 }
@@ -253,10 +254,11 @@ PetscErrorCode  PetscSortedInt(PetscInt n,const PetscInt X[],PetscBool *sorted)
 @*/
 PetscErrorCode  PetscSortInt(PetscInt n,PetscInt X[])
 {
-  PetscInt       pivot,t1;
+  PetscInt pivot,t1;
 
   PetscFunctionBegin;
-  QuickSort1(PetscSortInt,X,n,pivot,t1,ierr);
+  if (n) PetscValidIntPointer(X,2);
+  QuickSort1(PetscSortInt,X,n,pivot,t1);
   PetscFunctionReturn(0);
 }
 
@@ -275,10 +277,11 @@ PetscErrorCode  PetscSortInt(PetscInt n,PetscInt X[])
 @*/
 PetscErrorCode  PetscSortReverseInt(PetscInt n,PetscInt X[])
 {
-  PetscInt       pivot,t1;
+  PetscInt pivot,t1;
 
   PetscFunctionBegin;
-  QuickSortReverse1(PetscSortReverseInt,X,n,pivot,t1,ierr);
+  if (n) PetscValidIntPointer(X,2);
+  QuickSortReverse1(PetscSortReverseInt,X,n,pivot,t1);
   PetscFunctionReturn(0);
 }
 
@@ -303,6 +306,7 @@ PetscErrorCode  PetscSortedRemoveDupsInt(PetscInt *n,PetscInt X[])
   PetscInt i,s = 0,N = *n, b = 0;
 
   PetscFunctionBegin;
+  PetscValidIntPointer(n,1);
   PetscCheckSorted(*n,X);
   for (i=0; i<N-1; i++) {
     if (X[b+s+1] != X[b]) {
@@ -331,8 +335,8 @@ PetscErrorCode  PetscSortedRemoveDupsInt(PetscInt *n,PetscInt X[])
 @*/
 PetscErrorCode  PetscSortRemoveDupsInt(PetscInt *n,PetscInt X[])
 {
-
   PetscFunctionBegin;
+  PetscValidIntPointer(n,1);
   CHKERRQ(PetscSortInt(*n,X));
   CHKERRQ(PetscSortedRemoveDupsInt(n,X));
   PetscFunctionReturn(0);
@@ -360,7 +364,7 @@ PetscErrorCode PetscFindInt(PetscInt key, PetscInt n, const PetscInt X[], PetscI
   PetscInt lo = 0,hi = n;
 
   PetscFunctionBegin;
-  PetscValidPointer(loc,4);
+  PetscValidIntPointer(loc,4);
   if (!n) {*loc = -1; PetscFunctionReturn(0);}
   PetscValidPointer(X,3);
   PetscCheckSorted(n,X);
@@ -391,12 +395,13 @@ PetscErrorCode PetscFindInt(PetscInt key, PetscInt n, const PetscInt X[], PetscI
 @*/
 PetscErrorCode PetscCheckDupsInt(PetscInt n,const PetscInt X[],PetscBool *dups)
 {
-  PetscInt       i;
-  PetscHSetI     ht;
-  PetscBool      missing;
+  PetscInt   i;
+  PetscHSetI ht;
+  PetscBool  missing;
 
   PetscFunctionBegin;
-  PetscValidPointer(dups,3);
+  if (n) PetscValidIntPointer(X,2);
+  PetscValidBoolPointer(dups,3);
   *dups = PETSC_FALSE;
   if (n > 1) {
     CHKERRQ(PetscHSetICreate(&ht));
@@ -462,10 +467,10 @@ PetscErrorCode PetscFindMPIInt(PetscMPIInt key, PetscInt n, const PetscMPIInt X[
 @*/
 PetscErrorCode  PetscSortIntWithArray(PetscInt n,PetscInt X[],PetscInt Y[])
 {
-  PetscInt       pivot,t1,t2;
+  PetscInt pivot,t1,t2;
 
   PetscFunctionBegin;
-  QuickSort2(PetscSortIntWithArray,X,Y,n,pivot,t1,t2,ierr);
+  QuickSort2(PetscSortIntWithArray,X,Y,n,pivot,t1,t2);
   PetscFunctionReturn(0);
 }
 
@@ -487,10 +492,10 @@ PetscErrorCode  PetscSortIntWithArray(PetscInt n,PetscInt X[],PetscInt Y[])
 @*/
 PetscErrorCode  PetscSortIntWithArrayPair(PetscInt n,PetscInt X[],PetscInt Y[],PetscInt Z[])
 {
-  PetscInt       pivot,t1,t2,t3;
+  PetscInt pivot,t1,t2,t3;
 
   PetscFunctionBegin;
-  QuickSort3(PetscSortIntWithArrayPair,X,Y,Z,n,pivot,t1,t2,t3,ierr);
+  QuickSort3(PetscSortIntWithArrayPair,X,Y,Z,n,pivot,t1,t2,t3);
   PetscFunctionReturn(0);
 }
 
@@ -511,11 +516,11 @@ PetscErrorCode  PetscSortIntWithArrayPair(PetscInt n,PetscInt X[],PetscInt Y[],P
 @*/
 PetscErrorCode  PetscSortIntWithCountArray(PetscCount n,PetscInt X[],PetscCount Y[])
 {
-  PetscInt       pivot,t1;
-  PetscCount     t2;
+  PetscInt   pivot,t1;
+  PetscCount t2;
 
   PetscFunctionBegin;
-  QuickSort2(PetscSortIntWithCountArray,X,Y,n,pivot,t1,t2,ierr);
+  QuickSort2(PetscSortIntWithCountArray,X,Y,n,pivot,t1,t2);
   PetscFunctionReturn(0);
 }
 
@@ -540,11 +545,11 @@ PetscErrorCode  PetscSortIntWithCountArray(PetscCount n,PetscInt X[],PetscCount 
 @*/
 PetscErrorCode  PetscSortIntWithIntCountArrayPair(PetscCount n,PetscInt X[],PetscInt Y[],PetscCount Z[])
 {
-  PetscInt       pivot,t1,t2; /* pivot is take from X[], so its type is still PetscInt */
-  PetscCount     t3; /* temp for Z[] */
+  PetscInt   pivot,t1,t2; /* pivot is take from X[], so its type is still PetscInt */
+  PetscCount t3; /* temp for Z[] */
 
   PetscFunctionBegin;
-  QuickSort3(PetscSortIntWithIntCountArrayPair,X,Y,Z,n,pivot,t1,t2,t3,ierr);
+  QuickSort3(PetscSortIntWithIntCountArrayPair,X,Y,Z,n,pivot,t1,t2,t3);
   PetscFunctionReturn(0);
 }
 
@@ -591,10 +596,10 @@ PetscErrorCode  PetscSortedMPIInt(PetscInt n,const PetscMPIInt X[],PetscBool *so
 @*/
 PetscErrorCode  PetscSortMPIInt(PetscInt n,PetscMPIInt X[])
 {
-  PetscMPIInt    pivot,t1;
+  PetscMPIInt pivot,t1;
 
   PetscFunctionBegin;
-  QuickSort1(PetscSortMPIInt,X,n,pivot,t1,ierr);
+  QuickSort1(PetscSortMPIInt,X,n,pivot,t1);
   PetscFunctionReturn(0);
 }
 
@@ -616,11 +621,11 @@ PetscErrorCode  PetscSortMPIInt(PetscInt n,PetscMPIInt X[])
 @*/
 PetscErrorCode  PetscSortRemoveDupsMPIInt(PetscInt *n,PetscMPIInt X[])
 {
-  PetscInt       i,s = 0,N = *n, b = 0;
+  PetscInt s = 0,N = *n,b = 0;
 
   PetscFunctionBegin;
   CHKERRQ(PetscSortMPIInt(N,X));
-  for (i=0; i<N-1; i++) {
+  for (PetscInt i=0; i<N-1; i++) {
     if (X[b+s+1] != X[b]) {
       X[b+1] = X[b+s+1]; b++;
     } else s++;
@@ -646,10 +651,10 @@ PetscErrorCode  PetscSortRemoveDupsMPIInt(PetscInt *n,PetscMPIInt X[])
 @*/
 PetscErrorCode  PetscSortMPIIntWithArray(PetscMPIInt n,PetscMPIInt X[],PetscMPIInt Y[])
 {
-  PetscMPIInt    pivot,t1,t2;
+  PetscMPIInt pivot,t1,t2;
 
   PetscFunctionBegin;
-  QuickSort2(PetscSortMPIIntWithArray,X,Y,n,pivot,t1,t2,ierr);
+  QuickSort2(PetscSortMPIIntWithArray,X,Y,n,pivot,t1,t2);
   PetscFunctionReturn(0);
 }
 
@@ -672,11 +677,11 @@ PetscErrorCode  PetscSortMPIIntWithArray(PetscMPIInt n,PetscMPIInt X[],PetscMPII
 @*/
 PetscErrorCode PetscSortMPIIntWithIntArray(PetscMPIInt n,PetscMPIInt X[],PetscInt Y[])
 {
-  PetscMPIInt    pivot,t1;
-  PetscInt       t2;
+  PetscMPIInt pivot,t1;
+  PetscInt    t2;
 
   PetscFunctionBegin;
-  QuickSort2(PetscSortMPIIntWithIntArray,X,Y,n,pivot,t1,t2,ierr);
+  QuickSort2(PetscSortMPIIntWithIntArray,X,Y,n,pivot,t1,t2);
   PetscFunctionReturn(0);
 }
 
@@ -697,11 +702,11 @@ PetscErrorCode PetscSortMPIIntWithIntArray(PetscMPIInt n,PetscMPIInt X[],PetscIn
 @*/
 PetscErrorCode  PetscSortIntWithScalarArray(PetscInt n,PetscInt X[],PetscScalar Y[])
 {
-  PetscInt       pivot,t1;
-  PetscScalar    t2;
+  PetscInt    pivot,t1;
+  PetscScalar t2;
 
   PetscFunctionBegin;
-  QuickSort2(PetscSortIntWithScalarArray,X,Y,n,pivot,t1,t2,ierr);
+  QuickSort2(PetscSortIntWithScalarArray,X,Y,n,pivot,t1,t2);
   PetscFunctionReturn(0);
 }
 
@@ -726,7 +731,7 @@ PetscErrorCode  PetscSortIntWithScalarArray(PetscInt n,PetscInt X[],PetscScalar 
 PetscErrorCode  PetscSortIntWithDataArray(PetscInt n,PetscInt X[],void *Y,size_t size,void *t2)
 {
   char     *YY       = (char*)Y;
-  PetscInt  pivot,hi = n-1;
+  PetscInt  t1,pivot,hi = n-1;
 
   PetscFunctionBegin;
   if (n<8) {
@@ -734,6 +739,7 @@ PetscErrorCode  PetscSortIntWithDataArray(PetscInt n,PetscInt X[],void *Y,size_t
       pivot = X[i];
       for (PetscInt j=i+1; j<n; j++) {
         if (pivot > X[j]) {
+          SWAP2Data(X[i],X[j],YY+size*i,YY+size*j,t1,t2,size);
           pivot = X[i];
         }
       }
@@ -747,6 +753,7 @@ PetscErrorCode  PetscSortIntWithDataArray(PetscInt n,PetscInt X[],void *Y,size_t
       while (X[l] < pivot) l++;
       while (X[r] > pivot) r--;
       if (l >= r) {r++; break;}
+      SWAP2Data(X[l],X[r],YY+size*l,YY+size*r,t1,t2,size);
       l++;
       r--;
     }

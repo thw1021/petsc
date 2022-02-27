@@ -224,7 +224,6 @@ static PetscErrorCode ComputeError(TS ts, Vec U, Vec E)
   PetscScalar       *e;
   PetscReal          t, omega;
   PetscInt           dim, Np, p;
-  PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(PetscObjectGetComm((PetscObject) ts, &comm));
@@ -245,7 +244,7 @@ static PetscErrorCode ComputeError(TS ts, Vec U, Vec E)
     const PetscReal ex =  x0*PetscCosReal(omega*t);
     const PetscReal ev = -x0*omega*PetscSinReal(omega*t);
 
-    if (user->error) {ierr = PetscPrintf(comm, "p%D error [%.2g %.2g] sol [%.6lf %.6lf] exact [%.6lf %.6lf] energy/exact energy %g / %g\n", p, (double) PetscAbsReal(x-ex), (double) PetscAbsReal(v-ev), (double) x, (double) v, (double) ex, (double) ev, 0.5*(v*v + PetscSqr(omega)*x*x), (double) 0.5*PetscSqr(omega*x0));}
+    if (user->error) CHKERRQ(PetscPrintf(comm, "p%D error [%.2g %.2g] sol [%.6lf %.6lf] exact [%.6lf %.6lf] energy/exact energy %g / %g\n", p, (double) PetscAbsReal(x-ex), (double) PetscAbsReal(v-ev), (double) x, (double) v, (double) ex, (double) ev, 0.5*(v*v + PetscSqr(omega)*x*x), (double) 0.5*PetscSqr(omega*x0)));
     e[p*2+0] = x - ex;
     e[p*2+1] = v - ev;
   }

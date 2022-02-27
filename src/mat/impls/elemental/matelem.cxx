@@ -212,7 +212,6 @@ static PetscErrorCode MatSetValues_Elemental(Mat A,PetscInt nr,const PetscInt *r
 static PetscErrorCode MatMult_Elemental(Mat A,Vec X,Vec Y)
 {
   Mat_Elemental         *a = (Mat_Elemental*)A->data;
-  PetscErrorCode        ierr;
   const PetscElemScalar *x;
   PetscElemScalar       *y;
   PetscElemScalar       one = 1,zero = 0;
@@ -234,7 +233,6 @@ static PetscErrorCode MatMult_Elemental(Mat A,Vec X,Vec Y)
 static PetscErrorCode MatMultTranspose_Elemental(Mat A,Vec X,Vec Y)
 {
   Mat_Elemental         *a = (Mat_Elemental*)A->data;
-  PetscErrorCode        ierr;
   const PetscElemScalar *x;
   PetscElemScalar       *y;
   PetscElemScalar       one = 1,zero = 0;
@@ -256,7 +254,6 @@ static PetscErrorCode MatMultTranspose_Elemental(Mat A,Vec X,Vec Y)
 static PetscErrorCode MatMultAdd_Elemental(Mat A,Vec X,Vec Y,Vec Z)
 {
   Mat_Elemental         *a = (Mat_Elemental*)A->data;
-  PetscErrorCode        ierr;
   const PetscElemScalar *x;
   PetscElemScalar       *z;
   PetscElemScalar       one = 1;
@@ -279,7 +276,6 @@ static PetscErrorCode MatMultAdd_Elemental(Mat A,Vec X,Vec Y,Vec Z)
 static PetscErrorCode MatMultTransposeAdd_Elemental(Mat A,Vec X,Vec Y,Vec Z)
 {
   Mat_Elemental         *a = (Mat_Elemental*)A->data;
-  PetscErrorCode        ierr;
   const PetscElemScalar *x;
   PetscElemScalar       *z;
   PetscElemScalar       one = 1;
@@ -433,7 +429,6 @@ static PetscErrorCode MatGetDiagonal_Elemental(Mat A,Vec D)
 {
   PetscInt        i,nrows,ncols,nD,rrank,ridx,crank,cidx;
   Mat_Elemental   *a = (Mat_Elemental*)A->data;
-  PetscErrorCode  ierr;
   PetscElemScalar v;
   MPI_Comm        comm;
 
@@ -461,7 +456,6 @@ static PetscErrorCode MatDiagonalScale_Elemental(Mat X,Vec L,Vec R)
 {
   Mat_Elemental         *x = (Mat_Elemental*)X->data;
   const PetscElemScalar *d;
-  PetscErrorCode        ierr;
 
   PetscFunctionBegin;
   if (R) {
@@ -600,7 +594,6 @@ static PetscErrorCode MatHermitianTranspose_Elemental(Mat A,MatReuse reuse,Mat *
 static PetscErrorCode MatSolve_Elemental(Mat A,Vec B,Vec X)
 {
   Mat_Elemental     *a = (Mat_Elemental*)A->data;
-  PetscErrorCode    ierr;
   PetscElemScalar   *x;
   PetscInt          pivoting = a->pivoting;
 
@@ -636,7 +629,6 @@ static PetscErrorCode MatSolve_Elemental(Mat A,Vec B,Vec X)
 
 static PetscErrorCode MatSolveAdd_Elemental(Mat A,Vec B,Vec Y,Vec X)
 {
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatSolve_Elemental(A,B,X));
@@ -859,7 +851,6 @@ static PetscErrorCode MatConvert_Elemental_Dense(Mat A,MatType newtype,MatReuse 
   Mat                Bmpi;
   Mat_Elemental      *a = (Mat_Elemental*)A->data;
   MPI_Comm           comm;
-  PetscErrorCode     ierr;
   IS                 isrows,iscols;
   PetscInt           rrank,ridx,crank,cidx,nrows,ncols,i,j,erow,ecol,elrow,elcol;
   const PetscInt     *rows,*cols;
@@ -933,7 +924,6 @@ static PetscErrorCode MatConvert_Elemental_Dense(Mat A,MatType newtype,MatReuse 
 PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_Elemental(Mat A, MatType newtype,MatReuse reuse,Mat *newmat)
 {
   Mat               mat_elemental;
-  PetscErrorCode    ierr;
   PetscInt          M=A->rmap->N,N=A->cmap->N,row,ncols;
   const PetscInt    *cols;
   const PetscScalar *vals;
@@ -968,7 +958,6 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_Elemental(Mat A, MatType newtype,M
 PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_Elemental(Mat A, MatType newtype,MatReuse reuse,Mat *newmat)
 {
   Mat               mat_elemental;
-  PetscErrorCode    ierr;
   PetscInt          row,ncols,rstart=A->rmap->rstart,rend=A->rmap->rend,j;
   const PetscInt    *cols;
   const PetscScalar *vals;
@@ -1005,7 +994,6 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_Elemental(Mat A, MatType newtype,M
 PETSC_INTERN PetscErrorCode MatConvert_SeqSBAIJ_Elemental(Mat A, MatType newtype,MatReuse reuse,Mat *newmat)
 {
   Mat               mat_elemental;
-  PetscErrorCode    ierr;
   PetscInt          M=A->rmap->N,N=A->cmap->N,row,ncols,j;
   const PetscInt    *cols;
   const PetscScalar *vals;
@@ -1048,7 +1036,6 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqSBAIJ_Elemental(Mat A, MatType newtype
 PETSC_INTERN PetscErrorCode MatConvert_MPISBAIJ_Elemental(Mat A, MatType newtype,MatReuse reuse,Mat *newmat)
 {
   Mat               mat_elemental;
-  PetscErrorCode    ierr;
   PetscInt          M=A->rmap->N,N=A->cmap->N,row,ncols,j,rstart=A->rmap->rstart,rend=A->rmap->rend;
   const PetscInt    *cols;
   const PetscScalar *vals;
@@ -1091,7 +1078,6 @@ PETSC_INTERN PetscErrorCode MatConvert_MPISBAIJ_Elemental(Mat A, MatType newtype
 static PetscErrorCode MatDestroy_Elemental(Mat A)
 {
   Mat_Elemental      *a = (Mat_Elemental*)A->data;
-  PetscErrorCode     ierr;
   Mat_Elemental_Grid *commgrid;
   PetscBool          flg;
   MPI_Comm           icomm;
@@ -1360,7 +1346,6 @@ M*/
 PETSC_EXTERN PetscErrorCode MatCreate_Elemental(Mat A)
 {
   Mat_Elemental      *a;
-  PetscErrorCode     ierr;
   PetscBool          flg,flg1;
   Mat_Elemental_Grid *commgrid;
   MPI_Comm           icomm;
@@ -1384,6 +1369,8 @@ PETSC_EXTERN PetscErrorCode MatCreate_Elemental(Mat A)
   CHKERRQ(PetscCommDuplicate(cxxcomm.comm,&icomm,NULL));
   CHKERRMPI(MPI_Comm_get_attr(icomm,Petsc_Elemental_keyval,(void**)&commgrid,(int*)&flg));
   if (!flg) {
+    PetscErrorCode ierr;
+
     CHKERRQ(PetscNewLog(A,&commgrid));
 
     ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)A),((PetscObject)A)->prefix,"Elemental Options","Mat");CHKERRQ(ierr);

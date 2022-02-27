@@ -62,7 +62,6 @@ typedef struct {
 static PetscErrorCode MatView_Info_SuperLU(Mat A,PetscViewer viewer)
 {
   Mat_SuperLU       *lu= (Mat_SuperLU*)A->data;
-  PetscErrorCode    ierr;
   superlu_options_t options;
 
   PetscFunctionBegin;
@@ -96,7 +95,6 @@ PetscErrorCode MatSolve_SuperLU_Private(Mat A,Vec b,Vec x)
   Mat_SuperLU       *lu = (Mat_SuperLU*)A->data;
   const PetscScalar *barray;
   PetscScalar       *xarray;
-  PetscErrorCode    ierr;
   PetscInt          info,i,n;
   PetscReal         ferr,berr;
   static PetscBool  cite = PETSC_FALSE;
@@ -200,7 +198,7 @@ PetscErrorCode MatSolve_SuperLU_Private(Mat A,Vec b,Vec x)
     } else {
       ierr = PetscPrintf(PETSC_COMM_SELF,"  Warning: gssvx() returns info %" PetscInt_FMT "\n",info);
     }
-  } else PetscCheckFalse(info < 0,PETSC_COMM_SELF,PETSC_ERR_LIB, "info = %" PetscInt_FMT ", the %" PetscInt_FMT "-th argument in gssvx() had an illegal value", info,-info);
+  } else PetscCheck(info >= 0,PETSC_COMM_SELF,PETSC_ERR_LIB, "info = %" PetscInt_FMT ", the %" PetscInt_FMT "-th argument in gssvx() had an illegal value", info,-info);
 
   if (lu->options.PrintStat) {
     ierr = PetscPrintf(PETSC_COMM_SELF,"MatSolve__SuperLU():\n");
@@ -212,7 +210,6 @@ PetscErrorCode MatSolve_SuperLU_Private(Mat A,Vec b,Vec x)
 PetscErrorCode MatSolve_SuperLU(Mat A,Vec b,Vec x)
 {
   Mat_SuperLU    *lu = (Mat_SuperLU*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (A->factorerrortype) {
@@ -229,7 +226,6 @@ PetscErrorCode MatSolve_SuperLU(Mat A,Vec b,Vec x)
 PetscErrorCode MatSolveTranspose_SuperLU(Mat A,Vec b,Vec x)
 {
   Mat_SuperLU    *lu = (Mat_SuperLU*)A->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (A->factorerrortype) {
@@ -247,7 +243,6 @@ static PetscErrorCode MatLUFactorNumeric_SuperLU(Mat F,Mat A,const MatFactorInfo
 {
   Mat_SuperLU    *lu = (Mat_SuperLU*)F->data;
   Mat_SeqAIJ     *aa;
-  PetscErrorCode ierr;
   PetscInt       sinfo;
   PetscReal      ferr, berr;
   NCformat       *Ustore;
@@ -393,7 +388,6 @@ static PetscErrorCode MatLUFactorNumeric_SuperLU(Mat F,Mat A,const MatFactorInfo
 
 static PetscErrorCode MatDestroy_SuperLU(Mat A)
 {
-  PetscErrorCode ierr;
   Mat_SuperLU    *lu=(Mat_SuperLU*)A->data;
 
   PetscFunctionBegin;
@@ -424,7 +418,6 @@ static PetscErrorCode MatDestroy_SuperLU(Mat A)
 
 static PetscErrorCode MatView_SuperLU(Mat A,PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   PetscBool         iascii;
   PetscViewerFormat format;
 
@@ -443,13 +436,12 @@ PetscErrorCode MatMatSolve_SuperLU(Mat A,Mat B,Mat X)
 {
   Mat_SuperLU    *lu = (Mat_SuperLU*)A->data;
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompareAny((PetscObject)B,&flg,MATSEQDENSE,MATMPIDENSE,NULL));
-  PetscCheckFalse(!flg,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONG,"Matrix B must be MATDENSE matrix");
+  PetscCheck(flg,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONG,"Matrix B must be MATDENSE matrix");
   CHKERRQ(PetscObjectTypeCompareAny((PetscObject)X,&flg,MATSEQDENSE,MATMPIDENSE,NULL));
-  PetscCheckFalse(!flg,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONG,"Matrix X must be MATDENSE matrix");
+  PetscCheck(flg,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONG,"Matrix X must be MATDENSE matrix");
   lu->options.Trans = TRANS;
   SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"MatMatSolve_SuperLU() is not implemented yet");
   PetscFunctionReturn(0);
@@ -458,7 +450,6 @@ PetscErrorCode MatMatSolve_SuperLU(Mat A,Mat B,Mat X)
 static PetscErrorCode MatLUFactorSymbolic_SuperLU(Mat F,Mat A,IS r,IS c,const MatFactorInfo *info)
 {
   Mat_SuperLU    *lu = (Mat_SuperLU*)(F->data);
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   lu->flg                 = DIFFERENT_NONZERO_PATTERN;
@@ -505,7 +496,6 @@ static PetscErrorCode MatSuperluSetILUDropTol_SuperLU(Mat F,PetscReal dtol)
 @*/
 PetscErrorCode MatSuperluSetILUDropTol(Mat F,PetscReal dtol)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(F,MAT_CLASSID,1);
@@ -562,7 +552,6 @@ static PetscErrorCode MatGetFactor_seqaij_superlu(Mat A,MatFactorType ftype,Mat 
 {
   Mat            B;
   Mat_SuperLU    *lu;
-  PetscErrorCode ierr;
   PetscInt       indx,m=A->rmap->n,n=A->cmap->n;
   PetscBool      flg,set;
   PetscReal      real_input;
@@ -692,7 +681,6 @@ static PetscErrorCode MatGetFactor_seqaij_superlu(Mat A,MatFactorType ftype,Mat 
 static PetscErrorCode MatGetFactor_seqsell_superlu(Mat A,MatFactorType ftype,Mat *F)
 {
   Mat_SuperLU    *lu;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatGetFactor_seqaij_superlu(A,ftype,F));
@@ -703,8 +691,6 @@ static PetscErrorCode MatGetFactor_seqsell_superlu(Mat A,MatFactorType ftype,Mat
 
 PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_SuperLU(void)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(MatSolverTypeRegister(MATSOLVERSUPERLU,MATSEQAIJ,MAT_FACTOR_LU,MatGetFactor_seqaij_superlu));
   CHKERRQ(MatSolverTypeRegister(MATSOLVERSUPERLU,MATSEQAIJ,MAT_FACTOR_ILU,MatGetFactor_seqaij_superlu));
