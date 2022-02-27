@@ -7580,7 +7580,7 @@ PetscErrorCode PCBDDCMatISSubassemble(Mat mat, IS is_sends, PetscInt n_subdomain
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
   CHKERRQ(PetscObjectTypeCompare((PetscObject)mat,MATIS,&ismatis));
-  PetscCheckFalse(!ismatis,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot use %s on a matrix object which is not of type MATIS",PETSC_FUNCTION_NAME);
+  PetscCheck(ismatis,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot use %s on a matrix object which is not of type MATIS",PETSC_FUNCTION_NAME);
   PetscValidLogicalCollectiveInt(mat,n_subdomains,3);
   PetscValidLogicalCollectiveBool(mat,restrict_comm,4);
   PetscValidLogicalCollectiveBool(mat,restrict_full,5);
@@ -7594,25 +7594,25 @@ PetscErrorCode PCBDDCMatISSubassemble(Mat mat, IS is_sends, PetscInt n_subdomain
   /* further checks */
   CHKERRQ(MatISGetLocalMat(mat,&local_mat));
   CHKERRQ(PetscObjectTypeCompare((PetscObject)local_mat,MATSEQDENSE,&isdense));
-  PetscCheckFalse(!isdense,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Currently cannot subassemble MATIS when local matrix type is not of type SEQDENSE");
+  PetscCheck(isdense,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Currently cannot subassemble MATIS when local matrix type is not of type SEQDENSE");
   CHKERRQ(MatGetSize(local_mat,&rows,&cols));
-  PetscCheckFalse(rows != cols,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Local MATIS matrices should be square");
+  PetscCheck(rows == cols,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Local MATIS matrices should be square");
   if (reuse && *mat_n) {
     PetscInt mrows,mcols,mnrows,mncols;
     PetscValidHeaderSpecific(*mat_n,MAT_CLASSID,7);
     CHKERRQ(PetscObjectTypeCompare((PetscObject)*mat_n,MATIS,&ismatis));
-    PetscCheckFalse(!ismatis,PetscObjectComm((PetscObject)*mat_n),PETSC_ERR_SUP,"Cannot reuse a matrix which is not of type MATIS");
+    PetscCheck(ismatis,PetscObjectComm((PetscObject)*mat_n),PETSC_ERR_SUP,"Cannot reuse a matrix which is not of type MATIS");
     CHKERRQ(MatGetSize(mat,&mrows,&mcols));
     CHKERRQ(MatGetSize(*mat_n,&mnrows,&mncols));
-    PetscCheckFalse(mrows != mnrows,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot reuse matrix! Wrong number of rows %D != %D",mrows,mnrows);
-    PetscCheckFalse(mcols != mncols,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot reuse matrix! Wrong number of cols %D != %D",mcols,mncols);
+    PetscCheck(mrows == mnrows,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot reuse matrix! Wrong number of rows %D != %D",mrows,mnrows);
+    PetscCheck(mcols == mncols,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot reuse matrix! Wrong number of cols %D != %D",mcols,mncols);
   }
   CHKERRQ(MatGetBlockSize(local_mat,&bs));
   PetscValidLogicalCollectiveInt(mat,bs,1);
 
   /* prepare IS for sending if not provided */
   if (!is_sends) {
-    PetscCheckFalse(!n_subdomains,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"You should specify either an IS or a target number of subdomains");
+    PetscCheck(n_subdomains,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"You should specify either an IS or a target number of subdomains");
     CHKERRQ(PCBDDCMatISGetSubassemblingPattern(mat,&n_subdomains,0,&is_sends_internal,NULL));
   } else {
     CHKERRQ(PetscObjectReference((PetscObject)is_sends));
@@ -7654,7 +7654,7 @@ PetscErrorCode PCBDDCMatISSubassemble(Mat mat, IS is_sends, PetscInt n_subdomain
       if (*mat_n) {
         PetscMPIInt subcommsize2;
         CHKERRMPI(MPI_Comm_size(PetscObjectComm((PetscObject)*mat_n),&subcommsize2));
-        PetscCheckFalse(subcommsize != subcommsize2,PetscObjectComm((PetscObject)*mat_n),PETSC_ERR_PLIB,"Cannot reuse matrix! wrong subcomm size %d != %d",subcommsize,subcommsize2);
+        PetscCheck(subcommsize == subcommsize2,PetscObjectComm((PetscObject)*mat_n),PETSC_ERR_PLIB,"Cannot reuse matrix! wrong subcomm size %d != %d",subcommsize,subcommsize2);
         comm_n = PetscObjectComm((PetscObject)*mat_n);
       } else {
         comm_n = PETSC_COMM_SELF;
@@ -7684,7 +7684,7 @@ PetscErrorCode PCBDDCMatISSubassemble(Mat mat, IS is_sends, PetscInt n_subdomain
   }
 
   /* Get data from local matrices */
-  PetscCheckFalse(!isdense,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Subassembling of AIJ local matrices not yet implemented");
+  PetscCheck(isdense,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Subassembling of AIJ local matrices not yet implemented");
     /* TODO: See below some guidelines on how to prepare the local buffers */
     /*
        send_buffer_vals should contain the raw values of the local matrix

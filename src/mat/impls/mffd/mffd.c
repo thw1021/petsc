@@ -498,9 +498,8 @@ static PetscErrorCode  MatMFFDSetCheckh_MFFD(Mat J,FCN3 fun,void *ectx)
 .seealso: MatSetFromOptions(), MatCreateSNESMF(), MatCreateMFFD()
 @*/
 PetscErrorCode  MatMFFDSetOptionsPrefix(Mat mat,const char prefix[])
-
 {
-  MatMFFD        mfctx;
+  MatMFFD mfctx;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);

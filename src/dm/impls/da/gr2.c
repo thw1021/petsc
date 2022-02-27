@@ -688,7 +688,7 @@ PetscErrorCode  VecView_MPI_DA(Vec xin,PetscViewer viewer)
       if (dmvtk) {
         PetscValidHeaderSpecific((DM)dmvtk,DM_CLASSID,2);
         CHKERRQ(DMGetCompatibility(da,(DM)dmvtk,&compatible,&compatibleSet));
-        PetscCheckFalse(!compatibleSet || !compatible,PetscObjectComm((PetscObject)da),PETSC_ERR_ARG_INCOMP,"Cannot confirm compatibility of DMs associated with Vecs viewed in the same VTK file. Check that grids are the same.");
+        PetscCheck(compatibleSet && compatible,PetscObjectComm((PetscObject)da),PETSC_ERR_ARG_INCOMP,"Cannot confirm compatibility of DMs associated with Vecs viewed in the same VTK file. Check that grids are the same.");
       }
       CHKERRQ(PetscViewerVTKAddField(viewer,(PetscObject)da,DMDAVTKWriteAll,PETSC_DEFAULT,PETSC_VTK_POINT_FIELD,PETSC_FALSE,(PetscObject)Y));
     }

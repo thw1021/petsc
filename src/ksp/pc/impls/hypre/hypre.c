@@ -166,7 +166,7 @@ static PetscErrorCode PCGetCoarseOperators_BoomerAMG(PC pc,PetscInt *nlevels,Mat
 
   PetscFunctionBegin;
   CHKERRQ(PetscStrcmp(jac->hypre_type,"boomeramg",&same));
-  PetscCheckFalse(!same,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_NOTSAMETYPE,"Hypre type is not BoomerAMG ");
+  PetscCheck(same,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_NOTSAMETYPE,"Hypre type is not BoomerAMG ");
   num_levels = hypre_ParAMGDataNumLevels((hypre_ParAMGData*) (jac->hsolver));
   CHKERRQ(PetscMalloc1(num_levels,&mattmp));
   A_array    = hypre_ParAMGDataAArray((hypre_ParAMGData*) (jac->hsolver));
@@ -195,7 +195,7 @@ static PetscErrorCode PCGetInterpolations_BoomerAMG(PC pc,PetscInt *nlevels,Mat 
 
   PetscFunctionBegin;
   CHKERRQ(PetscStrcmp(jac->hypre_type,"boomeramg",&same));
-  PetscCheckFalse(!same,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_NOTSAMETYPE,"Hypre type is not BoomerAMG ");
+  PetscCheck(same,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_NOTSAMETYPE,"Hypre type is not BoomerAMG ");
   num_levels = hypre_ParAMGDataNumLevels((hypre_ParAMGData*) (jac->hsolver));
   CHKERRQ(PetscMalloc1(num_levels,&mattmp));
   P_array  = hypre_ParAMGDataPArray((hypre_ParAMGData*) (jac->hsolver));
@@ -317,7 +317,7 @@ static PetscErrorCode PCSetUp_HYPRE(PC pc)
       if (jac->coords[2]) PetscStackCallStandard(HYPRE_IJVectorGetObject,jac->coords[2]->ij,(void**)(&coords[2]));
       PetscStackCallStandard(HYPRE_AMSSetCoordinateVectors,jac->hsolver,coords[0],coords[1],coords[2]);
     }
-    PetscCheckFalse(!jac->G,PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"HYPRE AMS preconditioner needs the discrete gradient operator via PCHYPRESetDiscreteGradient");
+    PetscCheck(jac->G,PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"HYPRE AMS preconditioner needs the discrete gradient operator via PCHYPRESetDiscreteGradient");
     hm = (Mat_HYPRE*)(jac->G->data);
     PetscStackCallStandard(HYPRE_IJMatrixGetObject,hm->ij,(void**)(&parcsr));
     PetscStackCallStandard(HYPRE_AMSSetDiscreteGradient,jac->hsolver,parcsr);
@@ -361,8 +361,8 @@ static PetscErrorCode PCSetUp_HYPRE(PC pc)
       SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"HYPRE ADS preconditioner needs either the coordinate vectors via PCSetCoordinates() or the interpolation matrices via PCHYPRESetInterpolations");
     }
     else PetscCheckFalse(!jac->coords[1] || !jac->coords[2],PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"HYPRE ADS preconditioner has been designed for three dimensional problems! For two dimensional problems, use HYPRE AMS instead");
-    PetscCheckFalse(!jac->G,PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"HYPRE ADS preconditioner needs the discrete gradient operator via PCHYPRESetDiscreteGradient");
-    PetscCheckFalse(!jac->C,PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"HYPRE ADS preconditioner needs the discrete curl operator via PCHYPRESetDiscreteGradient");
+    PetscCheck(jac->G,PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"HYPRE ADS preconditioner needs the discrete gradient operator via PCHYPRESetDiscreteGradient");
+    PetscCheck(jac->C,PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"HYPRE ADS preconditioner needs the discrete curl operator via PCHYPRESetDiscreteGradient");
     if (jac->coords[0]) {
       HYPRE_ParVector coords[3];
       coords[0] = NULL;
@@ -438,9 +438,11 @@ static PetscErrorCode PCApply_HYPRE(PC pc,Vec b,Vec x)
   PetscStackCallStandard(HYPRE_IJMatrixGetObject,hjac->ij,(void**)&hmat);
   PetscStackCallStandard(HYPRE_IJVectorGetObject,hjac->b->ij,(void**)&jbv);
   PetscStackCallStandard(HYPRE_IJVectorGetObject,hjac->x->ij,(void**)&jxv);
-  PetscStackCall("Hypre solve",hierr = (*jac->solve)(jac->hsolver,hmat,jbv,jxv);
-  PetscCheckFalse(hierr && hierr != HYPRE_ERROR_CONV,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in HYPRE solver, error code %d",hierr);
-  if (hierr) hypre__global_error = 0;);
+  PetscStackCall("Hypre solve",
+                 hierr = (*jac->solve)(jac->hsolver,hmat,jbv,jxv);
+                 if (hierr) PetscCheck(hierr == HYPRE_ERROR_CONV,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in HYPRE solver, error code %d",hierr);
+                 if (hierr) hypre__global_error = 0;
+  );
 
   if (jac->setup == HYPRE_AMSSetup && jac->ams_beta_is_zero_part) {
     PetscStackCallStandard(HYPRE_AMSProjectOutGradients,jac->hsolver,jxv);
@@ -1782,13 +1784,12 @@ static PetscErrorCode  PCHYPREGetType_HYPRE(PC pc,const char *name[])
 static PetscErrorCode  PCHYPRESetType_HYPRE(PC pc,const char name[])
 {
   PC_HYPRE       *jac = (PC_HYPRE*)pc->data;
-  PetscErrorCode ierr;
   PetscBool      flag;
 
   PetscFunctionBegin;
   if (jac->hypre_type) {
     CHKERRQ(PetscStrcmp(jac->hypre_type,name,&flag));
-    PetscCheckFalse(!flag,PetscObjectComm((PetscObject)pc),PETSC_ERR_ORDER,"Cannot reset the HYPRE preconditioner type once it has been set");
+    PetscCheck(flag,PetscObjectComm((PetscObject)pc),PETSC_ERR_ORDER,"Cannot reset the HYPRE preconditioner type once it has been set");
     PetscFunctionReturn(0);
   } else {
     CHKERRQ(PetscStrallocpy(name, &jac->hypre_type));
