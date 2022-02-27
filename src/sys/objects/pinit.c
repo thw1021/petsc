@@ -670,16 +670,14 @@ int64_t Petsc_adios_group;
 PetscInt PetscNumOMPThreads;
 #endif
 
-#if PetscDefined(HAVE_DEVICE)
 #include <petsc/private/deviceimpl.h>
-#  if PetscDefined(HAVE_CUDA)
+#if PetscDefined(HAVE_CUDA)
 // REMOVE ME
 cudaStream_t PetscDefaultCudaStream = NULL;
-#  endif
-#  if PetscDefined(HAVE_HIP)
+#endif
+#if PetscDefined(HAVE_HIP)
 // REMOVE ME
 hipStream_t PetscDefaultHipStream = NULL;
-#  endif
 #endif
 
 #if PetscDefined(HAVE_DLFCN_H)
@@ -949,9 +947,7 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char* prog,const char* 
    3. Petsc error handling initialized, specifically signal handlers. This expects to set up its own SIGSEV handler via
       the push/pop interface.
   */
-#if (PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP) || PetscDefined(HAVE_SYCL))
   PetscCall(PetscDeviceInitializeFromOptions_Internal(PETSC_COMM_WORLD));
-#endif
 
 #if PetscDefined(HAVE_VIENNACL)
   flg = PETSC_FALSE;
