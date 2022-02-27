@@ -34,8 +34,8 @@ template <typename T> void PetscCheckCompatibleDeviceContexts(T,int,T,int);
 #  define PetscStreamTypeCast(...) static_cast<PetscStreamType>(__VA_ARGS__)
 #  define PetscDeviceTypeCast(...) static_cast<PetscDeviceType>(__VA_ARGS__)
 #else
-#  define PetscDeviceTypeCast(...) ((PetscDeviceType)(__VA_ARGS__))
 #  define PetscStreamTypeCast(...) ((PetscStreamType)(__VA_ARGS__))
+#  define PetscDeviceTypeCast(...) ((PetscDeviceType)(__VA_ARGS__))
 #endif
 
 #define PetscValidDeviceType(dtype,argno)                            do {                      \

@@ -189,14 +189,15 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceBase<D>::PetscOptionDeviceAll(MPI_Com
   PetscFunctionReturn(0);
 }
 
-#define PETSC_DEVICE_IMPL_BASE_CLASS_HEADER(base_name,T)        \
-  using base_name = Petsc::Device::Impl::DeviceBase<T>;         \
-  friend base_name
-
 } // namespace Impl
 
 } // namespace Device
 
 } // namespace Petsc
+
+#define PETSC_DEVICE_IMPL_BASE_CLASS_HEADER(base_name,T)        \
+  using base_name = Petsc::Device::Impl::DeviceBase<T>;         \
+  friend base_name;                                             \
+  using base_name::base_name
 
 #endif // IMPLDEVICEBASE_HPP

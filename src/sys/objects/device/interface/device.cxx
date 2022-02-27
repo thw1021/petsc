@@ -1,6 +1,7 @@
 #include <petsc/private/petscadvancedmacros.h>
+#include <petsc/private/deviceimpl.h>  /* I "petscdevice.h" */
 #include "hostdevice.hpp"
-#include "cupmdevice.hpp" /* I "petscdevice.h" */
+#include "cupmdevice.hpp"
 
 // REVIEW ME: this should probably go somewhere better
 #define PETSC_HAVE_HOST 1
