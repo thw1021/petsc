@@ -5,6 +5,7 @@
 #include <petsc/private/cpputil.hpp>
 #include <petsc/private/viewerimpl.h>
 #include <array>
+#include <cstring> // for std::strlen
 
 #if PetscDefined(USE_LOG)
 PETSC_INTERN PetscErrorCode PetscLogInitialize(void);
