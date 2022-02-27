@@ -427,7 +427,6 @@ static PetscErrorCode PCApply_HYPRE(PC pc,Vec b,Vec x)
   Mat_HYPRE          *hjac = (Mat_HYPRE*)(jac->hpmat->data);
   HYPRE_ParCSRMatrix hmat;
   HYPRE_ParVector    jbv,jxv;
-  PetscInt           hierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscCitationsRegister(hypreCitation,&cite));
@@ -438,11 +437,13 @@ static PetscErrorCode PCApply_HYPRE(PC pc,Vec b,Vec x)
   PetscStackCallStandard(HYPRE_IJMatrixGetObject,hjac->ij,(void**)&hmat);
   PetscStackCallStandard(HYPRE_IJVectorGetObject,hjac->b->ij,(void**)&jbv);
   PetscStackCallStandard(HYPRE_IJVectorGetObject,hjac->x->ij,(void**)&jxv);
-  PetscStackCall("Hypre solve",
-                 hierr = (*jac->solve)(jac->hsolver,hmat,jbv,jxv);
-                 if (hierr) PetscCheck(hierr == HYPRE_ERROR_CONV,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in HYPRE solver, error code %d",hierr);
-                 if (hierr) hypre__global_error = 0;
-  );
+  PetscStackCall("Hypre solve",do {
+      HYPRE_Int hierr = (*jac->solve)(jac->hsolver,hmat,jbv,jxv);
+      if (hierr) {
+        PetscCheck(hierr == HYPRE_ERROR_CONV,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in HYPRE solver, error code %d",(int)hierr);
+        hypre__global_error = 0;
+      }
+    } while (0));
 
   if (jac->setup == HYPRE_AMSSetup && jac->ams_beta_is_zero_part) {
     PetscStackCallStandard(HYPRE_AMSProjectOutGradients,jac->hsolver,jxv);
@@ -616,7 +617,6 @@ static PetscErrorCode PCApplyTranspose_HYPRE_BoomerAMG(PC pc,Vec b,Vec x)
   Mat_HYPRE          *hjac = (Mat_HYPRE*)(jac->hpmat->data);
   HYPRE_ParCSRMatrix hmat;
   HYPRE_ParVector    jbv,jxv;
-  PetscInt           hierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscCitationsRegister(hypreCitation,&cite));
@@ -628,10 +628,14 @@ static PetscErrorCode PCApplyTranspose_HYPRE_BoomerAMG(PC pc,Vec b,Vec x)
   PetscStackCallStandard(HYPRE_IJVectorGetObject,hjac->b->ij,(void**)&jbv);
   PetscStackCallStandard(HYPRE_IJVectorGetObject,hjac->x->ij,(void**)&jxv);
 
-  hierr = HYPRE_BoomerAMGSolveT(jac->hsolver,hmat,jxv,jbv);
-  /* error code of 1 in BoomerAMG merely means convergence not achieved */
-  PetscCheckFalse(hierr && (hierr != 1),PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in HYPRE solver, error code %d",hierr);
-  if (hierr) hypre__global_error = 0;
+  PetscStackCall("Hypre Transpose solve",do {
+      HYPRE_Int hierr = HYPRE_BoomerAMGSolveT(jac->hsolver,hmat,jbv,jxv);
+      if (hierr) {
+        /* error code of 1 in BoomerAMG merely means convergence not achieved */
+        PetscCheck(hierr == 1,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in HYPRE solver, error code %d",(int)hierr);
+        hypre__global_error = 0;
+      }
+    } while (0));
 
   CHKERRQ(VecHYPRE_IJVectorPopVec(hjac->x));
   CHKERRQ(VecHYPRE_IJVectorPopVec(hjac->b));
@@ -1856,7 +1860,7 @@ static PetscErrorCode  PCHYPRESetType_HYPRE(PC pc,const char name[])
   }
   CHKERRQ(PetscStrcmp("boomeramg",jac->hypre_type,&flag));
   if (flag) {
-    ierr                     = HYPRE_BoomerAMGCreate(&jac->hsolver);
+    PetscStackCallStandard(HYPRE_BoomerAMGCreate,&jac->hsolver);
     pc->ops->setfromoptions  = PCSetFromOptions_HYPRE_BoomerAMG;
     pc->ops->view            = PCView_HYPRE_BoomerAMG;
     pc->ops->applytranspose  = PCApplyTranspose_HYPRE_BoomerAMG;
@@ -1965,7 +1969,7 @@ static PetscErrorCode  PCHYPRESetType_HYPRE(PC pc,const char name[])
   }
   CHKERRQ(PetscStrcmp("ams",jac->hypre_type,&flag));
   if (flag) {
-    ierr                     = HYPRE_AMSCreate(&jac->hsolver);
+    CHKERRQ(HYPRE_AMSCreate(&jac->hsolver));
     pc->ops->setfromoptions  = PCSetFromOptions_HYPRE_AMS;
     pc->ops->view            = PCView_HYPRE_AMS;
     jac->destroy             = HYPRE_AMSDestroy;
@@ -2025,7 +2029,7 @@ static PetscErrorCode  PCHYPRESetType_HYPRE(PC pc,const char name[])
   }
   CHKERRQ(PetscStrcmp("ads",jac->hypre_type,&flag));
   if (flag) {
-    ierr                     = HYPRE_ADSCreate(&jac->hsolver);
+    CHKERRQ(HYPRE_ADSCreate(&jac->hsolver));
     pc->ops->setfromoptions  = PCSetFromOptions_HYPRE_ADS;
     pc->ops->view            = PCView_HYPRE_ADS;
     jac->destroy             = HYPRE_ADSDestroy;
