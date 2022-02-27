@@ -59,7 +59,7 @@ def pathToLabel(path):
     label=prefix+"-"+suffix+'_*'
   else:
     path=path.rstrip('/')
-    label=path.replace("/","_")+"-*"
+    label=path.replace("/","_").replace('tests_','tests-').replace('tutorials_','tutorials-')
   return label
 
 def get_value(varset):
