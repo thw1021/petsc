@@ -37,7 +37,6 @@ private:
 
   PETSC_NODISCARD static PetscErrorCode initialize_(PetscInt id, DeviceContext *dci) noexcept
   {
-    PetscErrorCode ierr;
 
     PetscFunctionBegin;
     PetscCall(PetscDeviceCheckDeviceCount_Internal(id));

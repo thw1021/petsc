@@ -101,7 +101,7 @@ PETSC_EXTERN const char *const PetscDeviceInitTypes[];
 /*E
   PetscDeviceType - Kind of accelerator device backend
 
-$ PETSC_DEVICE_INVALID - Invalid type, do not use
+$ PETSC_DEVICE_HOST    - Host, no accelerator backend found
 $ PETSC_DEVICE_CUDA    - CUDA enabled GPU
 $ PETSC_DEVICE_HIP     - ROCM/HIP enabled GPU
 $ PETSC_DEVICE_SYCL    - SYCL enabled device
@@ -110,14 +110,14 @@ $ PETSC_DEVICE_MAX     - Always 1 greater than the largest valid PetscDeviceType
 
   Notes:
   PETSC_DEVICE_DEFAULT is selected in the following order: PETSC_DEVICE_HIP, PETSC_DEVICE_CUDA,
-  PETSC_DEVICE_SYCL, PETSC_DEVICE_INVALID.
+  PETSC_DEVICE_SYCL, PETSC_DEVICE_HOST.
 
   Level: beginner
 
 .seealso: PetscDevice, PetscDeviceInitType, PetscDeviceCreate()
 E*/
 typedef enum {
-  PETSC_DEVICE_INVALID,
+  PETSC_DEVICE_HOST,
   PETSC_DEVICE_CUDA,
   PETSC_DEVICE_HIP,
   PETSC_DEVICE_SYCL,
@@ -131,7 +131,7 @@ PETSC_EXTERN const char *const PetscDeviceTypes[];
 #elif PetscDefined(HAVE_SYCL)
 #  define PETSC_DEVICE_DEFAULT PETSC_DEVICE_SYCL
 #else
-#  define PETSC_DEVICE_DEFAULT PETSC_DEVICE_INVALID
+#  define PETSC_DEVICE_DEFAULT PETSC_DEVICE_HOST
 #endif
 
 /*S
