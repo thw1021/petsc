@@ -16,6 +16,15 @@
 #  error using both nvcc and hipcc at the same time?
 #endif
 
+/* type cast macros for some additional type-safety in C++ land */
+#if defined(__cplusplus)
+#  define PetscStreamTypeCast(...) static_cast<PetscStreamType>(__VA_ARGS__)
+#  define PetscDeviceTypeCast(...) static_cast<PetscDeviceType>(__VA_ARGS__)
+#else
+#  define PetscStreamTypeCast(...) ((PetscStreamType)(__VA_ARGS__))
+#  define PetscDeviceTypeCast(...) ((PetscDeviceType)(__VA_ARGS__))
+#endif
+
 #if defined(PETSC_CLANG_STATIC_ANALYZER)
 template <typename T> void PetscValidDeviceType(T,int);
 template <typename T> void PetscValidDevice(T,int);
@@ -28,15 +37,6 @@ template <typename T> void PetscCheckCompatibleDeviceContexts(T,int,T,int);
   note any changes to these macros must be mirrored in
   src/sys/objects/device/test/petscdevicecommon.h!
 */
-
-/* type cast macros for some additional type-safety in C++ land */
-#if defined(__cplusplus)
-#  define PetscStreamTypeCast(...) static_cast<PetscStreamType>(__VA_ARGS__)
-#  define PetscDeviceTypeCast(...) static_cast<PetscDeviceType>(__VA_ARGS__)
-#else
-#  define PetscStreamTypeCast(...) ((PetscStreamType)(__VA_ARGS__))
-#  define PetscDeviceTypeCast(...) ((PetscDeviceType)(__VA_ARGS__))
-#endif
 
 #define PetscValidDeviceType(dtype,argno)                            do {                      \
     PetscDeviceType pvdt_dtype_ = PetscDeviceTypeCast(dtype);                                  \
