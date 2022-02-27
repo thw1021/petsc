@@ -42,13 +42,12 @@ protected:
   const createContextFunction_t create_;
 
   // if you want the base class to handle the entire options query, has the same arguments as
-  // the direct overload
-  template <typename... T>
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscOptionDeviceAll(MPI_Comm,T&&...));
+  // PetscOptionDeviceBasic
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscOptionDeviceAll(MPI_Comm,std::pair<PetscDeviceInitType,PetscBool>&,std::pair<PetscInt,PetscBool>&,std::pair<PetscBool,PetscBool>&));
 
   // if you want to start and end the options query yourself, but still want all the default
   // options
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscOptionDeviceAll(PetscOptionItems*,std::pair<PetscDeviceInitType,PetscBool>&,std::pair<PetscInt,PetscBool>&,std::pair<PetscBool,PetscBool>&));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscOptionDeviceBasic(PetscOptionItems*,std::pair<PetscDeviceInitType,PetscBool>&,std::pair<PetscInt,PetscBool>&,std::pair<PetscBool,PetscBool>&));
 
 
   // option templates to follow, each one has two forms:
@@ -161,7 +160,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceBase<D>::PetscOptionDeviceView(PetscO
 }
 
 template <typename D>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceBase<D>::PetscOptionDeviceAll(PetscOptionItems *PetscOptionsObject, std::pair<PetscDeviceInitType,PetscBool> &initType, std::pair<PetscInt,PetscBool> &initId, std::pair<PetscBool,PetscBool> &initView))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceBase<D>::PetscOptionDeviceBasic(PetscOptionItems *PetscOptionsObject, std::pair<PetscDeviceInitType,PetscBool> &initType, std::pair<PetscInt,PetscBool> &initId, std::pair<PetscBool,PetscBool> &initView))
 {
   PetscErrorCode ierr;
 
@@ -173,8 +172,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceBase<D>::PetscOptionDeviceAll(PetscOp
 }
 
 template <typename D>
-template <typename... T>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceBase<D>::PetscOptionDeviceAll(MPI_Comm comm, T&&... args))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceBase<D>::PetscOptionDeviceAll(MPI_Comm comm, std::pair<PetscDeviceInitType,PetscBool> &initType, std::pair<PetscInt,PetscBool> &initId, std::pair<PetscBool,PetscBool> &initView))
 {
   auto           buf = std::array<char,128>{};
   const auto     implname = PetscDeviceTypes[GetPetscDeviceType()];
@@ -184,7 +182,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceBase<D>::PetscOptionDeviceAll(MPI_Com
   PetscAssert(std::strlen(implname) < buf.size(),comm,PETSC_ERR_PLIB,"char buffer is not large enough to hold 'PetscDevice %s Options'; have %zu need %zu",implname,buf.size(),std::strlen(implname));
   ierr = PetscSNPrintf(buf.data(),buf.size(),"PetscDevice %s Options",implname);CHKERRQ(ierr);
   ierr = PetscOptionsBegin(comm,nullptr,buf.data(),"Sys");CHKERRQ(ierr);
-  ierr = PetscOptionDeviceAll(PetscOptionsObject,std::forward<T>(args)...);CHKERRQ(ierr);
+  ierr = PetscOptionDeviceBasic(PetscOptionsObject,initType,initId,initView);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
