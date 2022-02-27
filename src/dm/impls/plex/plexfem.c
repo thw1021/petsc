@@ -1294,6 +1294,7 @@ PetscErrorCode DMPlexComputeL2DiffLocal(DM dm, PetscReal time, PetscErrorCode (*
         } else {
           gcoords = &coords[coordDim*q];
         }
+        for (fc = 0; fc < Nc; ++fc) funcVal[fc] = 0.;
         ierr = (*funcs[field])(coordDim, time, gcoords, Nc, funcVal, ctx);
         if (ierr) {
           PetscErrorCode ierr2;
@@ -1402,6 +1403,7 @@ PetscErrorCode DMComputeL2GradientDiff_Plex(DM dm, PetscReal time, PetscErrorCod
         } else {
           gcoords = &coords[coordDim*q];
         }
+        for (fc = 0; fc < Nc; ++fc) funcVal[fc] = 0.;
         ierr = (*funcs[field])(coordDim, time, gcoords, n, Nc, funcVal, ctx);
         if (ierr) {
           PetscErrorCode ierr2;
@@ -1549,6 +1551,7 @@ PetscErrorCode DMComputeL2FieldDiff_Plex(DM dm, PetscReal time, PetscErrorCode (
           } else {
             gcoords = &coords[dE*q];
           }
+          for (fc = 0; fc < Nc; ++fc) funcVal[fc] = 0.;
           ierr = (*funcs[fields[f]])(dE, time, gcoords, Nc, funcVal, ctx);
           if (ierr) {
             PetscErrorCode ierr2;
