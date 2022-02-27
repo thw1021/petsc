@@ -378,11 +378,11 @@ static PetscErrorCode PetscDeviceInitializeTypeFromOptions_Private(MPI_Comm comm
 
   PetscFunctionBegin;
   if (!PetscDeviceConfiguredFor_Internal(type)) {
-    ierr = PetscInfo(nullptr,"PetscDeviceType %s not supported\n",PetscDeviceTypes[type]);CHKERRQ(ierr);
+    ierr = PetscInfo(nullptr,"PetscDeviceType %s not available\n",PetscDeviceTypes[type]);CHKERRQ(ierr);
     defaultDevices[type].first = nullptr;
     PetscFunctionReturn(0);
   }
-  ierr = PetscInfo(nullptr,"PetscDeviceType %s supported, initializing\n",PetscDeviceTypes[type]);CHKERRQ(ierr);
+  ierr = PetscInfo(nullptr,"PetscDeviceType %s available, initializing\n",PetscDeviceTypes[type]);CHKERRQ(ierr);
   /* ugly switch needed to pick the right global variable... could maybe do this as a union? */
   switch (type) {
     PETSC_DEVICE_CASE_IF_PETSC_DEFINED(HOST,initialize,comm,&defaultDeviceId,defaultInitType);
@@ -392,12 +392,12 @@ static PetscErrorCode PetscDeviceInitializeTypeFromOptions_Private(MPI_Comm comm
   default:
     SETERRQ(comm,PETSC_ERR_PLIB,"PETSc was seemingly configured for PetscDeviceType %s but we've fallen through all cases in a switch",PetscDeviceTypes[type]);
   }
+  ierr = PetscInfo(nullptr,"PetscDevice %s initialized, device id %" PetscInt_FMT ", init type %s\n",PetscDeviceTypes[type],defaultDeviceId,PetscDeviceInitTypes[Petsc::util::integral_value(*defaultInitType)]);CHKERRQ(ierr);
   /*
     defaultInitType and defaultDeviceId now represent what the individual TYPES have decided to
     initialize as
   */
   if (*defaultInitType == PETSC_DEVICE_INIT_EAGER) {
-    ierr = PetscInfo(nullptr,"Eagerly initializing %s PetscDevice\n",PetscDeviceTypes[type]);CHKERRQ(ierr);
     ierr = PetscDeviceInitializeDefaultDevice_Internal(type,defaultDeviceId);CHKERRQ(ierr);
     if (defaultView) {
       PetscViewer vwr;
@@ -502,9 +502,9 @@ PetscErrorCode PetscDeviceInitializeFromOptions_Internal(MPI_Comm comm)
     PetscInt initIdx = flg ? PETSC_DEVICE_INIT_EAGER : PETSC_DEVICE_INIT_LAZY;
 
     ierr = PetscOptionsBegin(comm,nullptr,"PetscDevice Options","Sys");CHKERRQ(ierr);
-    ierr = PetscOptionsEList("-device_enable","How (or whether) to initialize PetscDevices","PetscDeviceInitializeFromOptions_Internal()",PetscDeviceInitTypes,3,PetscDeviceInitTypes[initIdx],&initIdx,nullptr);CHKERRQ(ierr);
-    ierr = PetscOptionsRangeInt("-device_select","Which device to use. Pass " PetscStringize(PETSC_DECIDE) " to have PETSc decide or (given they exist) [0-NUM_DEVICE) for a specific device","PetscDeviceCreate()",defaultDevice,&defaultDevice,nullptr,PETSC_DECIDE,std::numeric_limits<int>::max());CHKERRQ(ierr);
-    ierr = PetscOptionsBool("-device_view","Display device information and assignments (forces eager initialization)",nullptr,defaultView,&defaultView,&flg);CHKERRQ(ierr);
+    ierr = PetscOptionsEList("-device_enable","How (or whether) to initialize PetscDevices","PetscDeviceInitialize()",PetscDeviceInitTypes,3,PetscDeviceInitTypes[initIdx],&initIdx,nullptr);CHKERRQ(ierr);
+    ierr = PetscOptionsRangeInt("-device_select","Which device to use. Pass " PetscStringize(PETSC_DECIDE) " to have PETSc decide or (given they exist) [0-NUM_DEVICE) for a specific device","PetscDeviceCreate()",defaultDevice,&defaultDevice,nullptr,PETSC_DECIDE,PETSC_DEVICE_MAX_DEVICES);CHKERRQ(ierr);
+    ierr = PetscOptionsBool("-device_view","Display device information and assignments (forces eager initialization)","PetscDeviceView()",defaultView,&defaultView,&flg);CHKERRQ(ierr);
     ierr = PetscOptionsEnd();CHKERRQ(ierr);
     if (initIdx == PETSC_DEVICE_INIT_NONE) {
       /* disabled all device initialization if devices are globally disabled */
@@ -525,6 +525,7 @@ PetscErrorCode PetscDeviceInitializeFromOptions_Internal(MPI_Comm comm)
     if (PetscDeviceConfiguredFor_Internal(deviceType) && (initType == PETSC_DEVICE_INIT_EAGER)) {
       initializeDeviceContextEagerly = PETSC_TRUE;
       deviceContextInitDevice        = deviceType;
+      ierr = PetscInfo(nullptr,"PetscDevice %s set as default device type due to eager initialization\n",PetscDeviceTypes[deviceType]);CHKERRQ(ierr);
     }
   }
   if (initializeDeviceContextEagerly) {
