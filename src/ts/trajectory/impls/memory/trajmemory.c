@@ -1620,7 +1620,6 @@ static PetscErrorCode TSTrajectoryMemorySet_AOF(TSTrajectory tj,TS ts,TJSchedule
   Stack        *stack = &tjsch->stack;
   StackElement  e;
 
-
   PetscFunctionBegin;
   /* skip if no checkpoint to use. This also avoids an error when num_units_avail=0  */
   if (tjsch->actx->nextcheckpointstep == -1) PetscFunctionReturn(0);
