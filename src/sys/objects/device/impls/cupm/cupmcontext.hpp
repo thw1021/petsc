@@ -78,7 +78,6 @@ private:
     cupmError_t    cerr;
 
     PetscFunctionBegin;
-    PetscAssert(initialized_,PETSC_COMM_SELF,PETSC_ERR_PLIB,"CUPMDeviceContext not initialized, must call DeviceContext::initialize()");
     PetscCheck(devidl == devidr,PETSC_COMM_SELF,PETSC_ERR_GPU,"Device contexts must be on the same device; dctx A (id %" PetscInt_FMT " device id %" PetscInt_FMT ") dctx B (id %" PetscInt_FMT " device id %" PetscInt_FMT ")",dctxl->id,devidl,dctxr->id,devidr);
     ierr = PetscDeviceCheckDeviceCount_Internal(devidl);CHKERRQ(ierr);
     ierr = PetscDeviceCheckDeviceCount_Internal(devidr);CHKERRQ(ierr);
@@ -218,12 +217,12 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::initialize())
 template <DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::destroy(PetscDeviceContext dctx))
 {
+  auto           dci = impls_cast_(dctx);
   cupmError_t    cerr;
   PetscErrorCode ierr;
-  auto           dci = impls_cast_(dctx);
 
   PetscFunctionBegin;
-  ierr = check_current_device_(dctx);CHKERRQ(ierr);
+  if (!dci) PetscFunctionReturn(0);
   if (dci->stream) {cerr = cupmStreamDestroy(dci->stream);CHKERRCUPM(cerr);}
   if (dci->event)  {cerr = cupmEventDestroy(dci->event);CHKERRCUPM(cerr);  }
   if (dci->begin)  {cerr = cupmEventDestroy(dci->begin);CHKERRCUPM(cerr);  }
@@ -239,7 +238,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::changeStreamType(PetscDev
 
   PetscFunctionBegin;
   if (dci->stream) {
-    auto ierr = check_current_device_(dctx);CHKERRQ(ierr);
     auto cerr = cupmStreamDestroy(dci->stream);CHKERRCUPM(cerr);
     dci->stream = nullptr;
   }
