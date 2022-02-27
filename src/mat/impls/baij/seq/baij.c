@@ -3174,7 +3174,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqBAIJ(Mat B)
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_size(PetscObjectComm((PetscObject)B),&size));
-  PetscCheck(size < 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Comm must be of size 1");
+  PetscCheck(size == 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Comm must be of size 1");
 
   CHKERRQ(PetscNewLog(B,&b));
   B->data = (void*)b;
