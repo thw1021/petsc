@@ -1115,6 +1115,16 @@ static PetscErrorCode VecSetOps_SeqKokkos(Vec v)
   PetscFunctionReturn(0);
 }
 
+/*MC
+   VECSEQKOKKOS - VECSEQKOKKOS = "seqkokkos" - The basic sequential vector, modified to use Kokkos
+
+   Options Database Keys:
+. -vec_type seqkokkos - sets the vector type to VECSEQKOKKOS during a call to VecSetFromOptions()
+
+  Level: beginner
+
+.seealso: VecCreate(), VecSetType(), VecSetFromOptions(), VecCreateMPIWithArray(), VECMPI, VecType, VecCreateMPI()
+M*/
 PetscErrorCode VecCreate_SeqKokkos(Vec v)
 {
   PetscErrorCode ierr;
@@ -1136,7 +1146,7 @@ PetscErrorCode VecCreate_SeqKokkos(Vec v)
   PetscFunctionReturn(0);
 }
 
-/*@C
+/*MC
    VecCreateSeqKokkosWithArray - Creates a Kokkos sequential array-style vector,
    where the user provides the array space to store the vector values. The array
    provided must be a device array.
@@ -1167,7 +1177,7 @@ PetscErrorCode VecCreate_SeqKokkos(Vec v)
 .seealso: VecCreateMPICUDAWithArray(), VecCreate(), VecDuplicate(), VecDuplicateVecs(),
           VecCreateGhost(), VecCreateSeq(), VecCUDAPlaceArray(), VecCreateSeqWithArray(),
           VecCreateMPIWithArray()
-@*/
+M*/
 PetscErrorCode  VecCreateSeqKokkosWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,const PetscScalar darray[],Vec *v)
 {
   PetscErrorCode ierr;
@@ -1259,7 +1269,7 @@ PetscErrorCode  VecCreateSeqKokkosWithArrays_Private(MPI_Comm comm,PetscInt bs,P
 }
 
 /* TODO: ftn-auto generates veckok.kokkosf.c */
-/*@C
+/*MC
  VecCreateSeqKokkos - Creates a standard, sequential array-style vector.
 
  Collective
@@ -1278,7 +1288,7 @@ PetscErrorCode  VecCreateSeqKokkosWithArrays_Private(MPI_Comm comm,PetscInt bs,P
  Level: intermediate
 
  .seealso: VecCreateMPI(), VecCreate(), VecDuplicate(), VecDuplicateVecs(), VecCreateGhost()
- @*/
+ M*/
 PetscErrorCode VecCreateSeqKokkos(MPI_Comm comm,PetscInt n,Vec *v)
 {
   PetscErrorCode ierr;
