@@ -610,7 +610,7 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
 
   /* This implementation requires user input each subnet by a single processor when Nsubnet>1, thus subnet[net].nvtx=subnet[net].Nvtx when net>0 */
   for (net=1; net<Nsubnet; net++) {
-    PetscCheckFalse(network->subnet[net].nvtx && network->subnet[net].nvtx != network->subnet[net].Nvtx,PETSC_COMM_SELF,PETSC_ERR_SUP,"subnetwork %D local num of vertices %D != %D global num",net,network->subnet[net].nvtx,network->subnet[net].Nvtx);
+    if (network->subnet[net].nvtx) PetscCheck(network->subnet[net].nvtx == network->subnet[net].Nvtx,PETSC_COMM_SELF,PETSC_ERR_SUP,"subnetwork %D local num of vertices %" PetscInt_FMT " != %" PetscInt_FMT " global num",net,network->subnet[net].nvtx,network->subnet[net].Nvtx);
   }
 
   ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
