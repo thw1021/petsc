@@ -653,7 +653,7 @@ PetscErrorCode PetscDeviceContextSynchronize(PetscDeviceContext dctx)
   PetscFunctionReturn(0);
 }
 
-// each device needs a null context, and each device type needs a set of devices
+/* each device needs a null context, and each device type needs a set of devices */
 static auto nullContexts          = std::array<std::vector<PetscDeviceContext>,PETSC_DEVICE_MAX>{ };
 static auto nullContextsFinalizer = false;
 
@@ -697,10 +697,10 @@ PetscErrorCode PetscDeviceContextGetNullContextForType_Internal(PetscDevice devi
 
 #define PETSC_DEVICE_CONTEXT_DEFAULT_DEVICE_TYPE PETSC_DEVICE_DEFAULT
 // REMOVE ME (change)
-#define PETSC_DEVICE_CONTEXT_DEFAULT_STREAM      PETSC_STREAM_GLOBAL_BLOCKING
+#define PETSC_DEVICE_CONTEXT_DEFAULT_STREAM_TYPE PETSC_STREAM_GLOBAL_BLOCKING
 
 static PetscDeviceType    rootDeviceType = PETSC_DEVICE_CONTEXT_DEFAULT_DEVICE_TYPE;
-static PetscStreamType    rootStreamType = PETSC_DEVICE_CONTEXT_DEFAULT_STREAM;
+static PetscStreamType    rootStreamType = PETSC_DEVICE_CONTEXT_DEFAULT_STREAM_TYPE;
 static PetscDeviceContext globalContext  = nullptr;
 
 /* when PetsDevice initializes PetscDeviceContext eagerly the type of device created should
@@ -713,8 +713,6 @@ PetscErrorCode PetscDeviceContextSetRootDeviceType_Internal(PetscDeviceType type
   PetscFunctionReturn(0);
 }
 
-#if 0
-/* currently unused */
 PetscErrorCode PetscDeviceContextSetRootStreamType_Internal(PetscStreamType type)
 {
   PetscFunctionBegin;
@@ -722,7 +720,6 @@ PetscErrorCode PetscDeviceContextSetRootStreamType_Internal(PetscStreamType type
   rootStreamType = type;
   PetscFunctionReturn(0);
 }
-#endif
 
 static PetscErrorCode PetscDeviceContextSetupGlobalContext_Private(void)
 {
@@ -733,7 +730,7 @@ static PetscErrorCode PetscDeviceContextSetupGlobalContext_Private(void)
     PetscFunctionBegin;
     ierr = PetscDeviceContextDestroy(&globalContext);CHKERRQ(ierr);
     rootDeviceType = PETSC_DEVICE_CONTEXT_DEFAULT_DEVICE_TYPE;
-    rootStreamType = PETSC_DEVICE_CONTEXT_DEFAULT_STREAM;
+    rootStreamType = PETSC_DEVICE_CONTEXT_DEFAULT_STREAM_TYPE;
     PetscFunctionReturn(0);
   };
 
@@ -824,6 +821,29 @@ PetscErrorCode PetscDeviceContextSetCurrentContext(PetscDeviceContext dctx)
   PetscFunctionReturn(0);
 }
 
+/*
+  needed because PetscInitialize() needs to also query these options to set the defaults. Since
+  it does not yet have a PetscDeviceContext to call this with, the actual options queries are
+  abstracted out, so you can call this without one.
+*/
+PetscErrorCode PetscDeviceContextQueryOptions_Internal(MPI_Comm comm, const char prefix[], std::pair<PetscDeviceType,PetscBool> &deviceType, std::pair<PetscStreamType,PetscBool> &streamType)
+{
+  PetscInt       dtype = static_cast<PetscInt>(deviceType.first);
+  PetscInt       stype = static_cast<PetscInt>(streamType.first);
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (prefix) PetscValidCharPointer(prefix,2);
+  ierr = PetscOptionsBegin(comm,prefix,"PetscDeviceContext Options","Sys");CHKERRQ(ierr);
+  /* set the device type first */
+  ierr = PetscOptionsEList("-device_context_device_type","Underlying PetscDevice","PetscDeviceContextSetDevice",PetscDeviceTypes,PETSC_DEVICE_MAX,PetscDeviceTypes[dtype],&dtype,&deviceType.second);CHKERRQ(ierr);
+  ierr = PetscOptionsEList("-device_context_stream_type","PetscDeviceContext PetscStreamType","PetscDeviceContextSetStreamType",PetscStreamTypes,PETSC_STREAM_MAX,PetscStreamTypes[stype],&stype,&streamType.second);CHKERRQ(ierr);
+  ierr = PetscOptionsEnd();CHKERRQ(ierr);
+  deviceType.first = static_cast<PetscDeviceType>(dtype);
+  streamType.first = static_cast<PetscStreamType>(stype);
+  PetscFunctionReturn(0);
+}
+
 /*@C
   PetscDeviceContextSetFromOptions - Configure a PetscDeviceContext from the options database
 
@@ -848,30 +868,20 @@ PetscErrorCode PetscDeviceContextSetCurrentContext(PetscDeviceContext dctx)
 @*/
 PetscErrorCode PetscDeviceContextSetFromOptions(MPI_Comm comm, const char prefix[], PetscDeviceContext dctx)
 {
-  PetscBool      flag;
-  PetscInt       stype,dtype;
+  auto           dtype = std::make_pair(PETSC_DEVICE_CONTEXT_DEFAULT_DEVICE_TYPE,PETSC_FALSE);
+  auto           stype = std::make_pair(PETSC_DEVICE_CONTEXT_DEFAULT_STREAM_TYPE,PETSC_FALSE);
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (prefix) PetscValidCharPointer(prefix,2);
   PetscValidDeviceContext(dctx,3);
-  ierr = PetscOptionsBegin(comm,prefix,"PetscDeviceContext Options","Sys");CHKERRQ(ierr);
-
-  // set the device type first
-  if (auto device = dctx->device) {
-    ierr = PetscDeviceGetType(device,reinterpret_cast<PetscDeviceType*>(&dtype));CHKERRQ(ierr);
-  } else dtype = PETSC_DEVICE_CONTEXT_DEFAULT_DEVICE_TYPE;
-  ierr = PetscOptionsEList("-device_context_device_type","Underlying PetscDevice","PetscDeviceContextSetDevice",PetscDeviceTypes,PETSC_DEVICE_MAX,PetscDeviceTypes[dtype],&dtype,&flag);CHKERRQ(ierr);
-  if (flag) {
-    ierr = PetscDeviceContextSetDefaultDeviceForType_Internal(dctx,static_cast<PetscDeviceType>(dtype));CHKERRQ(ierr);
+  /* set the device type first */
+  if (auto device = dctx->device) {ierr = PetscDeviceGetType(device,&dtype.first);CHKERRQ(ierr);}
+  ierr = PetscDeviceContextGetStreamType(dctx,&stype.first);CHKERRQ(ierr);
+  ierr = PetscDeviceContextQueryOptions_Internal(comm,prefix,dtype,stype);CHKERRQ(ierr);
+  if (dtype.second) {
+    ierr = PetscDeviceContextSetDefaultDeviceForType_Internal(dctx,dtype.first);CHKERRQ(ierr);
   }
-
-  ierr = PetscDeviceContextGetStreamType(dctx,reinterpret_cast<PetscStreamType*>(&stype));CHKERRQ(ierr);
-  ierr = PetscOptionsEList("-device_context_stream_type","PetscDeviceContext PetscStreamType","PetscDeviceContextSetStreamType",PetscStreamTypes,PETSC_STREAM_MAX,PetscStreamTypes[stype],&stype,&flag);CHKERRQ(ierr);
-  if (flag) {
-    ierr = PetscDeviceContextSetStreamType(dctx,static_cast<PetscStreamType>(stype));CHKERRQ(ierr);
-  }
-
-  ierr = PetscOptionsEnd();CHKERRQ(ierr);
+  if (stype.second) {ierr = PetscDeviceContextSetStreamType(dctx,stype.first);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
