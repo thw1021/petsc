@@ -57,7 +57,6 @@ static PetscErrorCode KSPGuessReset_Fischer(KSPGuess guess)
 static PetscErrorCode KSPGuessSetUp_Fischer(KSPGuess guess)
 {
   KSPGuessFischer *itg = (KSPGuessFischer*)guess->data;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   if (!itg->alpha) {

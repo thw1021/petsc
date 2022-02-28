@@ -26,7 +26,6 @@ static const char citation[] =
 
 static PetscErrorCode KSPAllocateVectors_PIPEFCG(KSP ksp, PetscInt nvecsneeded, PetscInt chunksize)
 {
-  PetscErrorCode  ierr;
   PetscInt        i;
   KSP_PIPEFCG     *pipefcg;
   PetscInt        nnewvecs, nvecsprev;

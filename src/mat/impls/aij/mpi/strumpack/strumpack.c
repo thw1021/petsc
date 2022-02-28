@@ -320,20 +320,19 @@ static PetscErrorCode MatSolve_STRUMPACK(Mat A,Vec b_mpi,Vec x)
 
 static PetscErrorCode MatMatSolve_STRUMPACK(Mat A,Mat B_mpi,Mat X)
 {
-  PetscBool        flg;
+  PetscBool flg;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompareAny((PetscObject)B_mpi,&flg,MATSEQDENSE,MATMPIDENSE,NULL));
-  PetscCheckFalse(!flg,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONG,"Matrix B must be MATDENSE matrix");
+  PetscCheck(flg,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONG,"Matrix B must be MATDENSE matrix");
   CHKERRQ(PetscObjectTypeCompareAny((PetscObject)X,&flg,MATSEQDENSE,MATMPIDENSE,NULL));
-  PetscCheckFalse(!flg,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONG,"Matrix X must be MATDENSE matrix");
+  PetscCheck(flg,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONG,"Matrix X must be MATDENSE matrix");
   SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"MatMatSolve_STRUMPACK() is not implemented yet");
   PetscFunctionReturn(0);
 }
 
 static PetscErrorCode MatView_Info_STRUMPACK(Mat A,PetscViewer viewer)
 {
-
   PetscFunctionBegin;
   /* check if matrix is strumpack type */
   if (A->ops->solve != MatSolve_STRUMPACK) PetscFunctionReturn(0);
@@ -350,9 +349,7 @@ static PetscErrorCode MatView_STRUMPACK(Mat A,PetscViewer viewer)
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
   if (iascii) {
     CHKERRQ(PetscViewerGetFormat(viewer,&format));
-    if (format == PETSC_VIEWER_ASCII_INFO) {
-      CHKERRQ(MatView_Info_STRUMPACK(A,viewer));
-    }
+    if (format == PETSC_VIEWER_ASCII_INFO) CHKERRQ(MatView_Info_STRUMPACK(A,viewer));
   }
   PetscFunctionReturn(0);
 }
@@ -461,6 +458,7 @@ static PetscErrorCode MatGetFactor_aij_strumpack(Mat A,MatFactorType ftype,Mat *
   const STRUMPACK_PRECISION     prec = table[(sizeof(PetscInt)==8)?0:1][(PETSC_SCALAR==PETSC_COMPLEX)?0:1][(PETSC_REAL==PETSC_FLOAT)?0:1];
   const char *const             STRUMPACKNDTypes[] = {"NATURAL","METIS","PARMETIS","SCOTCH","PTSCOTCH","RCM","STRUMPACKNDTypes","",0};
   const char *const             SolverTypes[] = {"AUTO","NONE","REFINE","PREC_GMRES","GMRES","PREC_BICGSTAB","BICGSTAB","SolverTypes","",0};
+  PetscErrorCode                ierr;
 
   PetscFunctionBegin;
   /* Create the factorization matrix */
@@ -544,7 +542,7 @@ static PetscErrorCode MatGetFactor_aij_strumpack(Mat A,MatFactorType ftype,Mat *
   CHKERRQ(PetscOptionsEnum("-mat_strumpack_iterative_solver","Select iterative solver from STRUMPACK","None",SolverTypes,(PetscEnum)itcurrent,(PetscEnum*)&itsolver,&set));
   if (set) PetscStackCall("STRUMPACK_set_Krylov_solver",STRUMPACK_set_Krylov_solver(*S,itsolver));
 
-  PetscOptionsEnd();
+  ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
   *F = B;
   PetscFunctionReturn(0);

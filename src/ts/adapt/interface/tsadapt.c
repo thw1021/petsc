@@ -418,11 +418,11 @@ PetscErrorCode TSAdaptSetSafety(TSAdapt adapt,PetscReal safety,PetscReal reject_
   PetscValidLogicalCollectiveReal(adapt,safety,2);
   PetscValidLogicalCollectiveReal(adapt,reject_safety,3);
   if (safety != PETSC_DEFAULT) {
-    PetscCheck((safety >= 0) && (safety < 1),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Safety factor %g must in [0,1)",(double)safety);
+    PetscCheck((safety >= 0) && (safety <= 1),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Safety factor %g must in [0,1]",(double)safety);
     adapt->safety = safety;
   }
   if (reject_safety != PETSC_DEFAULT) {
-    PetscCheck((reject_safety >= 0) && (reject_safety < 1),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Reject safety factor %g must be in [0,1)",(double)reject_safety);
+    PetscCheck((reject_safety >= 0) && (reject_safety <= 1),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Reject safety factor %g must be in [0,1]",(double)reject_safety);
     adapt->reject_safety = reject_safety;
   }
   PetscFunctionReturn(0);

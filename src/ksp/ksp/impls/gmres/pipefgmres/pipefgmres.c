@@ -37,7 +37,6 @@ extern PetscErrorCode KSPReset_PIPEFGMRES(KSP);
 */
 static PetscErrorCode KSPSetUp_PIPEFGMRES(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       k;
   KSP_PIPEFGMRES *pipefgmres = (KSP_PIPEFGMRES*)ksp->data;
   const PetscInt max_k = pipefgmres->max_k;
@@ -726,7 +725,6 @@ static PetscErrorCode KSPPIPEFGMRESGetNewVectors(KSP ksp,PetscInt it)
   KSP_PIPEFGMRES *pipefgmres = (KSP_PIPEFGMRES*)ksp->data;
   PetscInt       nwork   = pipefgmres->nwork_alloc; /* number of work vector chunks allocated */
   PetscInt       nalloc;                            /* number to allocate */
-  PetscErrorCode ierr;
   PetscInt       k;
 
   PetscFunctionBegin;

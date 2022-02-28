@@ -14,7 +14,6 @@ extern PetscErrorCode KSPComputeEigenvalues_CG(KSP,PetscInt,PetscReal*,PetscReal
 
 static PetscErrorCode KSPAllocateVectors_FCG(KSP ksp, PetscInt nvecsneeded, PetscInt chunksize)
 {
-  PetscErrorCode  ierr;
   PetscInt        i;
   KSP_FCG         *fcg = (KSP_FCG*)ksp->data;
   PetscInt        nnewvecs, nvecsprev;

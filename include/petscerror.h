@@ -563,7 +563,7 @@ M*/
 #define CHKMEMQ
 #define CHKMEMA
 #else
-#define CHKMEMQ do {PetscErrorCode _7_ierr = PetscMallocValidate(__LINE__,PETSC_FUNCTION_NAME,__FILE__);CHKERRQ(_7_ierr);} while (0)
+#define CHKMEMQ do CHKERRQ(PetscMallocValidate(__LINE__,PETSC_FUNCTION_NAME,__FILE__)); while (0)
 #define CHKMEMA PetscMallocValidate(__LINE__,PETSC_FUNCTION_NAME,__FILE__)
 #endif
 /*E

@@ -137,7 +137,6 @@ PetscErrorCode MatLUFactorSymbolic_SeqAIJ_inplace(Mat B,Mat A,IS isrow,IS iscol,
 {
   Mat_SeqAIJ         *a = (Mat_SeqAIJ*)A->data,*b;
   IS                 isicol;
-  PetscErrorCode     ierr;
   const PetscInt     *r,*ic;
   PetscInt           i,n=A->rmap->n,*ai=a->i,*aj=a->j;
   PetscInt           *bi,*bj,*ajtmp;
@@ -289,7 +288,6 @@ PetscErrorCode MatLUFactorSymbolic_SeqAIJ(Mat B,Mat A,IS isrow,IS iscol,const Ma
 {
   Mat_SeqAIJ         *a = (Mat_SeqAIJ*)A->data,*b;
   IS                 isicol;
-  PetscErrorCode     ierr;
   const PetscInt     *r,*ic,*ai=a->i,*aj=a->j,*ajtmp;
   PetscInt           i,n=A->rmap->n;
   PetscInt           *bi,*bj;
@@ -1658,7 +1656,6 @@ PetscErrorCode MatILUFactorSymbolic_SeqAIJ(Mat fact,Mat A,IS isrow,IS iscol,cons
 {
   Mat_SeqAIJ         *a = (Mat_SeqAIJ*)A->data,*b;
   IS                 isicol;
-  PetscErrorCode     ierr;
   const PetscInt     *r,*ic;
   PetscInt           n=A->rmap->n,*ai=a->i,*aj=a->j;
   PetscInt           *bi,*cols,nnz,*cols_lvl;
@@ -1834,7 +1831,6 @@ PetscErrorCode MatILUFactorSymbolic_SeqAIJ_inplace(Mat fact,Mat A,IS isrow,IS is
 {
   Mat_SeqAIJ         *a = (Mat_SeqAIJ*)A->data,*b;
   IS                 isicol;
-  PetscErrorCode     ierr;
   const PetscInt     *r,*ic;
   PetscInt           n=A->rmap->n,*ai=a->i,*aj=a->j;
   PetscInt           *bi,*cols,nnz,*cols_lvl;
@@ -2351,7 +2347,6 @@ PetscErrorCode MatICCFactorSymbolic_SeqAIJ(Mat fact,Mat A,IS perm,const MatFacto
 {
   Mat_SeqAIJ         *a = (Mat_SeqAIJ*)A->data;
   Mat_SeqSBAIJ       *b;
-  PetscErrorCode     ierr;
   PetscBool          perm_identity,missing;
   PetscInt           reallocs=0,i,*ai=a->i,*aj=a->j,am=A->rmap->n,*ui,*udiag;
   const PetscInt     *rip,*riip;
@@ -2553,7 +2548,6 @@ PetscErrorCode MatICCFactorSymbolic_SeqAIJ_inplace(Mat fact,Mat A,IS perm,const 
 {
   Mat_SeqAIJ         *a = (Mat_SeqAIJ*)A->data;
   Mat_SeqSBAIJ       *b;
-  PetscErrorCode     ierr;
   PetscBool          perm_identity,missing;
   PetscInt           reallocs=0,i,*ai=a->i,*aj=a->j,am=A->rmap->n,*ui,*udiag;
   const PetscInt     *rip,*riip;
@@ -2755,7 +2749,6 @@ PetscErrorCode MatCholeskyFactorSymbolic_SeqAIJ(Mat fact,Mat A,IS perm,const Mat
 {
   Mat_SeqAIJ         *a = (Mat_SeqAIJ*)A->data;
   Mat_SeqSBAIJ       *b;
-  PetscErrorCode     ierr;
   PetscBool          perm_identity,missing;
   PetscReal          fill = info->fill;
   const PetscInt     *rip,*riip;
@@ -2926,7 +2919,6 @@ PetscErrorCode MatCholeskyFactorSymbolic_SeqAIJ_inplace(Mat fact,Mat A,IS perm,c
 {
   Mat_SeqAIJ         *a = (Mat_SeqAIJ*)A->data;
   Mat_SeqSBAIJ       *b;
-  PetscErrorCode     ierr;
   PetscBool          perm_identity,missing;
   PetscReal          fill = info->fill;
   const PetscInt     *rip,*riip;
@@ -3191,7 +3183,6 @@ PetscErrorCode MatILUDTFactor_SeqAIJ(Mat A,IS isrow,IS iscol,const MatFactorInfo
   Mat            B = *fact;
   Mat_SeqAIJ     *a=(Mat_SeqAIJ*)A->data,*b;
   IS             isicol;
-  PetscErrorCode ierr;
   const PetscInt *r,*ic;
   PetscInt       i,n=A->rmap->n,*ai=a->i,*aj=a->j,*ajtmp,*adiag;
   PetscInt       *bi,*bj,*bdiag,*bdiag_rev;

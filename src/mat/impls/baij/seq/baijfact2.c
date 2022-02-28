@@ -339,7 +339,6 @@ PetscErrorCode MatILUFactorSymbolic_SeqBAIJ(Mat fact,Mat A,IS isrow,IS iscol,con
 {
   Mat_SeqBAIJ        *a = (Mat_SeqBAIJ*)A->data,*b;
   IS                 isicol;
-  PetscErrorCode     ierr;
   const PetscInt     *r,*ic;
   PetscInt           n=a->mbs,*ai=a->i,*aj=a->j,d;
   PetscInt           *bi,*cols,nnz,*cols_lvl;

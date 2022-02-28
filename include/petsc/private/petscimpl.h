@@ -227,10 +227,9 @@ PETSC_EXTERN PetscBool PetscCheckPointer(const void*,PetscDataType);
 /*  This check is for subtype methods such as DMDAGetCorners() that do not use the PetscTryMethod() or PetscUseMethod() paradigm */
 #define PetscValidHeaderSpecificType(h,ck,arg,t) \
   do {   \
-    PetscErrorCode _7_ierr; \
-    PetscBool      _7_same; \
+    PetscBool _7_same; \
     PetscValidHeaderSpecific(h,ck,arg); \
-    _7_ierr = PetscObjectTypeCompare((PetscObject)(h),t,&_7_same);CHKERRQ(_7_ierr); \
+    CHKERRQ(PetscObjectTypeCompare((PetscObject)(h),t,&_7_same)); \
     PetscCheck(_7_same,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Wrong subtype object:Parameter # %d must have implementation %s it is %s",arg,t,((PetscObject)(h))->type_name); \
   } while (0)
 
@@ -486,10 +485,10 @@ void PetscValidLogicalCollectiveEnum(Ta,Tb,int);
 
 .seealso: PetscUseMethod()
 */
-#define  PetscTryMethod(obj,A,B,C) \
-  0; do { PetscErrorCode (*_7_f)B, _7_ierr; \
-    _7_ierr = PetscObjectQueryFunction((PetscObject)(obj),A,&_7_f);CHKERRQ(_7_ierr); \
-    if (_7_f) {_7_ierr = (*_7_f)C;CHKERRQ(_7_ierr);} \
+#define  PetscTryMethod(obj,A,B,C) 0; do {                         \
+    PetscErrorCode (*_7_f)B;                                       \
+    CHKERRQ(PetscObjectQueryFunction((PetscObject)(obj),A,&_7_f)); \
+    if (_7_f) CHKERRQ((*_7_f)C);                                   \
   } while (0)
 
 /*
@@ -500,11 +499,11 @@ void PetscValidLogicalCollectiveEnum(Ta,Tb,int);
 
 .seealso: PetscTryMethod()
 */
-#define  PetscUseMethod(obj,A,B,C) \
-  0; do { PetscErrorCode (*_7_f)B, _7_ierr; \
-    _7_ierr = PetscObjectQueryFunction((PetscObject)(obj),A,&_7_f);CHKERRQ(_7_ierr); \
-    if (_7_f) {_7_ierr = (*_7_f)C;CHKERRQ(_7_ierr);} \
-    else SETERRQ(PetscObjectComm((PetscObject)(obj)),PETSC_ERR_SUP,"Cannot locate function %s in object",A); \
+#define  PetscUseMethod(obj,A,B,C) 0; do {                                                     \
+    PetscErrorCode (*_7_f)B;                                                                   \
+    CHKERRQ(PetscObjectQueryFunction((PetscObject)(obj),A,&_7_f));                             \
+    PetscCheck(_7_f,PetscObjectComm((PetscObject)(obj)),PETSC_ERR_SUP,"Cannot locate function %s in object",A); \
+    CHKERRQ((*_7_f)C);                                                                         \
   } while (0)
 
 /*MC

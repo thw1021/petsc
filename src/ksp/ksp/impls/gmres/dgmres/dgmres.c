@@ -442,7 +442,6 @@ static PetscErrorCode KSPDGMRESUpdateHessenberg(KSP ksp,PetscInt it,PetscBool ha
 static PetscErrorCode KSPDGMRESGetNewVectors(KSP ksp,PetscInt it)
 {
   KSP_DGMRES     *dgmres = (KSP_DGMRES*) ksp->data;
-  PetscErrorCode ierr;
   PetscInt       nwork = dgmres->nwork_alloc,k,nalloc;
 
   PetscFunctionBegin;

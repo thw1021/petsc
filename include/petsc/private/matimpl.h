@@ -792,35 +792,31 @@ static inline PetscErrorCode MatPivotCheck_inblocks(Mat mat,const MatFactorInfo 
 
 static inline PetscErrorCode MatPivotCheck_none(Mat fact,Mat mat,const MatFactorInfo *info,FactorShiftCtx *sctx,PetscInt row)
 {
-  PetscReal      _zero = info->zeropivot;
-  PetscErrorCode ierr;
+  PetscReal _zero = info->zeropivot;
 
   PetscFunctionBegin;
   sctx->newshift = PETSC_FALSE;
   if (PetscAbsScalar(sctx->pv) <= _zero && !PetscIsNanScalar(sctx->pv)) {
-    if (!mat->erroriffailure) {
-      ierr = PetscInfo(mat,"Detected zero pivot in factorization in row %" PetscInt_FMT " value %g tolerance %g\n",row,(double)PetscAbsScalar(sctx->pv),(double)_zero);CHKERRQ(ierr);
-      fact->factorerrortype             = MAT_FACTOR_NUMERIC_ZEROPIVOT;
-      fact->factorerror_zeropivot_value = PetscAbsScalar(sctx->pv);
-      fact->factorerror_zeropivot_row   = row;
-    } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MAT_LU_ZRPVT,"Zero pivot row %" PetscInt_FMT " value %g tolerance %g",row,(double)PetscAbsScalar(sctx->pv),(double)_zero);
+    PetscCheck(mat->erroriffailure,PETSC_COMM_SELF,PETSC_ERR_MAT_LU_ZRPVT,"Zero pivot row %" PetscInt_FMT " value %g tolerance %g",row,(double)PetscAbsScalar(sctx->pv),(double)_zero);
+    CHKERRQ(PetscInfo(mat,"Detected zero pivot in factorization in row %" PetscInt_FMT " value %g tolerance %g\n",row,(double)PetscAbsScalar(sctx->pv),(double)_zero));
+    fact->factorerrortype             = MAT_FACTOR_NUMERIC_ZEROPIVOT;
+    fact->factorerror_zeropivot_value = PetscAbsScalar(sctx->pv);
+    fact->factorerror_zeropivot_row   = row;
   }
   PetscFunctionReturn(0);
 }
 
 static inline PetscErrorCode MatPivotCheck(Mat fact,Mat mat,const MatFactorInfo *info,FactorShiftCtx *sctx,PetscInt row)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   if (info->shifttype == (PetscReal) MAT_SHIFT_NONZERO) {
-    ierr = MatPivotCheck_nz(mat,info,sctx,row);CHKERRQ(ierr);
+    CHKERRQ(MatPivotCheck_nz(mat,info,sctx,row));
   } else if (info->shifttype == (PetscReal) MAT_SHIFT_POSITIVE_DEFINITE) {
-    ierr = MatPivotCheck_pd(mat,info,sctx,row);CHKERRQ(ierr);
+    CHKERRQ(MatPivotCheck_pd(mat,info,sctx,row));
   } else if (info->shifttype == (PetscReal) MAT_SHIFT_INBLOCKS) {
-    ierr = MatPivotCheck_inblocks(mat,info,sctx,row);CHKERRQ(ierr);
+    CHKERRQ(MatPivotCheck_inblocks(mat,info,sctx,row));
   } else {
-    ierr = MatPivotCheck_none(fact,mat,info,sctx,row);CHKERRQ(ierr);
+    CHKERRQ(MatPivotCheck_none(fact,mat,info,sctx,row));
   }
   PetscFunctionReturn(0);
 }
@@ -1062,7 +1058,7 @@ static inline PetscErrorCode MatPivotCheck(Mat fact,Mat mat,const MatFactorInfo 
   for (_j=0; _j<nlnk; _j++) {\
     _idx = lnk[_idx];\
     indices[_j] = _idx;\
-    ierr = PetscBTClear(bt,_idx);CHKERRQ(ierr);\
+    CHKERRQ(PetscBTClear(bt,_idx));\
   }\
   lnk[idx_start] = lnk_max;\
 }
@@ -1333,7 +1329,7 @@ do {\
     *(indices+_j) = _idx;\
     *(indiceslvl+_j) = lnklvl[_idx];\
     lnklvl[_idx] = -1;\
-    ierr = PetscBTClear(bt,_idx);CHKERRQ(ierr);\
+    CHKERRQ(PetscBTClear(bt,_idx));\
   }\
   lnk[idx_start] = lnk_max;\
 } while (0)
@@ -1403,13 +1399,12 @@ void MatCheckSameSize(Tm,int,Tm,int);
 */
 static inline PetscErrorCode PetscLLCondensedCreate(PetscInt nlnk_max,PetscInt lnk_max,PetscInt **lnk,PetscBT *bt)
 {
-  PetscErrorCode ierr;
-  PetscInt       *llnk,lsize = 0;
+  PetscInt *llnk,lsize = 0;
 
   PetscFunctionBegin;
-  ierr = PetscIntMultError(2,nlnk_max+2,&lsize);CHKERRQ(ierr);
-  ierr = PetscMalloc1(lsize,lnk);CHKERRQ(ierr);
-  ierr = PetscBTCreate(lnk_max,bt);CHKERRQ(ierr);
+  CHKERRQ(PetscIntMultError(2,nlnk_max+2,&lsize));
+  CHKERRQ(PetscMalloc1(lsize,lnk));
+  CHKERRQ(PetscBTCreate(lnk_max,bt));
   llnk = *lnk;
   llnk[0] = 0;         /* number of entries on the list */
   llnk[2] = lnk_max;   /* value in the head node */
@@ -1459,16 +1454,14 @@ static inline PetscErrorCode PetscLLCondensedAddSorted(PetscInt nidx,const Petsc
 
 static inline PetscErrorCode PetscLLCondensedClean(PetscInt lnk_max,PetscInt nidx,PetscInt *indices,PetscInt lnk[],PetscBT bt)
 {
-  PetscErrorCode ierr;
-  PetscInt       _k,_next,_nlnk;
+  PetscInt _next = lnk[3]; /* head node */
+  PetscInt _nlnk = lnk[0]; /* num of entries on the list */
 
   PetscFunctionBegin;
-  _next = lnk[3];       /* head node */
-  _nlnk = lnk[0];       /* num of entries on the list */
-  for (_k=0; _k<_nlnk; _k++) {
+  for (PetscInt _k=0; _k<_nlnk; _k++) {
     indices[_k] = lnk[_next];
     _next       = lnk[_next + 1];
-    ierr = PetscBTClear(bt,indices[_k]);CHKERRQ(ierr);
+    CHKERRQ(PetscBTClear(bt,indices[_k]));
   }
   lnk[0] = 0;          /* num of entries on the list */
   lnk[2] = lnk_max;    /* initialize head node */
@@ -1478,12 +1471,10 @@ static inline PetscErrorCode PetscLLCondensedClean(PetscInt lnk_max,PetscInt nid
 
 static inline PetscErrorCode PetscLLCondensedView(PetscInt *lnk)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = PetscPrintf(PETSC_COMM_SELF,"LLCondensed of size %" PetscInt_FMT ", (val,  next)\n",lnk[0]);CHKERRQ(ierr);
+  CHKERRQ(PetscPrintf(PETSC_COMM_SELF,"LLCondensed of size %" PetscInt_FMT ", (val,  next)\n",lnk[0]));
   for (PetscInt k = 2; k < lnk[0]+2; ++k) {
-    ierr = PetscPrintf(PETSC_COMM_SELF," %" PetscInt_FMT ": (%" PetscInt_FMT ", %" PetscInt_FMT")\n",2*k,lnk[2*k],lnk[2*k+1]);CHKERRQ(ierr);
+    CHKERRQ(PetscPrintf(PETSC_COMM_SELF," %" PetscInt_FMT ": (%" PetscInt_FMT ", %" PetscInt_FMT")\n",2*k,lnk[2*k],lnk[2*k+1]));
   }
   PetscFunctionReturn(0);
 }
@@ -1493,11 +1484,9 @@ static inline PetscErrorCode PetscLLCondensedView(PetscInt *lnk)
 */
 static inline PetscErrorCode PetscLLCondensedDestroy(PetscInt *lnk,PetscBT bt)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = PetscFree(lnk);CHKERRQ(ierr);
-  ierr = PetscBTDestroy(&bt);CHKERRQ(ierr);
+  CHKERRQ(PetscFree(lnk));
+  CHKERRQ(PetscBTDestroy(&bt));
   PetscFunctionReturn(0);
 }
 
@@ -1511,12 +1500,11 @@ static inline PetscErrorCode PetscLLCondensedDestroy(PetscInt *lnk,PetscBT bt)
 */
 static inline PetscErrorCode PetscLLCondensedCreate_Scalable(PetscInt nlnk_max,PetscInt **lnk)
 {
-  PetscErrorCode ierr;
-  PetscInt       *llnk,lsize = 0;
+  PetscInt *llnk,lsize = 0;
 
   PetscFunctionBegin;
-  ierr = PetscIntMultError(2,nlnk_max+2,&lsize);CHKERRQ(ierr);
-  ierr = PetscMalloc1(lsize,lnk);CHKERRQ(ierr);
+  CHKERRQ(PetscIntMultError(2,nlnk_max+2,&lsize));
+  CHKERRQ(PetscMalloc1(lsize,lnk));
   llnk = *lnk;
   llnk[0] = 0;               /* number of entries on the list */
   llnk[2] = PETSC_MAX_INT;   /* value in the head node */
@@ -1526,12 +1514,11 @@ static inline PetscErrorCode PetscLLCondensedCreate_Scalable(PetscInt nlnk_max,P
 
 static inline PetscErrorCode PetscLLCondensedExpand_Scalable(PetscInt nlnk_max,PetscInt **lnk)
 {
-  PetscErrorCode ierr;
-  PetscInt       lsize = 0;
+  PetscInt lsize = 0;
 
   PetscFunctionBegin;
-  ierr = PetscIntMultError(2,nlnk_max+2,&lsize);CHKERRQ(ierr);
-  ierr = PetscRealloc(lsize*sizeof(PetscInt),lnk);CHKERRQ(ierr);
+  CHKERRQ(PetscIntMultError(2,nlnk_max+2,&lsize));
+  CHKERRQ(PetscRealloc(lsize*sizeof(PetscInt),lnk));
   PetscFunctionReturn(0);
 }
 
@@ -1604,12 +1591,11 @@ static inline PetscErrorCode PetscLLCondensedDestroy_Scalable(PetscInt *lnk)
 
 static inline PetscErrorCode PetscLLCondensedCreate_fast(PetscInt nlnk_max,PetscInt **lnk)
 {
-  PetscErrorCode ierr;
-  PetscInt       *llnk,lsize = 0;
+  PetscInt *llnk,lsize = 0;
 
   PetscFunctionBegin;
-  ierr = PetscIntMultError(3,nlnk_max+3,&lsize);CHKERRQ(ierr);
-  ierr = PetscMalloc1(lsize,lnk);CHKERRQ(ierr);
+  CHKERRQ(PetscIntMultError(3,nlnk_max+3,&lsize));
+  CHKERRQ(PetscMalloc1(lsize,lnk));
   llnk = *lnk;
   llnk[0] = 0;   /* nlnk: number of entries on the list */
   llnk[1] = 0;          /* number of integer entries represented in list */

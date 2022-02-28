@@ -36,7 +36,6 @@ static PetscErrorCode KSPGMRESBuildSoln(PetscScalar*,Vec,Vec,KSP,PetscInt);
 PetscErrorCode    KSPSetUp_GMRES(KSP ksp)
 {
   PetscInt       hh,hes,rs,cc;
-  PetscErrorCode ierr;
   PetscInt       max_k,k;
   KSP_GMRES      *gmres = (KSP_GMRES*)ksp->data;
 
@@ -446,7 +445,6 @@ static PetscErrorCode KSPGMRESUpdateHessenberg(KSP ksp,PetscInt it,PetscBool hap
 PetscErrorCode KSPGMRESGetNewVectors(KSP ksp,PetscInt it)
 {
   KSP_GMRES      *gmres = (KSP_GMRES*)ksp->data;
-  PetscErrorCode ierr;
   PetscInt       nwork = gmres->nwork_alloc,k,nalloc;
 
   PetscFunctionBegin;

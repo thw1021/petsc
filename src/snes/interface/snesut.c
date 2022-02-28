@@ -760,7 +760,6 @@ PetscErrorCode SNESSetWorkVecs(SNES snes,PetscInt nw)
 {
   DM             dm;
   Vec            v;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (snes->work) CHKERRQ(VecDestroyVecs(snes->nwork,&snes->work));

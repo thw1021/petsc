@@ -64,7 +64,6 @@ PetscErrorCode MatProductSymbolic_PtAP_SeqAIJ_SeqAIJ(Mat C)
 
 PetscErrorCode MatPtAPSymbolic_SeqAIJ_SeqAIJ_SparseAxpy(Mat A,Mat P,PetscReal fill,Mat C)
 {
-  PetscErrorCode     ierr;
   PetscFreeSpaceList free_space=NULL,current_space=NULL;
   Mat_SeqAIJ         *a        = (Mat_SeqAIJ*)A->data,*p = (Mat_SeqAIJ*)P->data,*c;
   PetscInt           *pti,*ptj,*ptJ,*ai=a->i,*aj=a->j,*ajj,*pi=p->i,*pj=p->j,*pjj;

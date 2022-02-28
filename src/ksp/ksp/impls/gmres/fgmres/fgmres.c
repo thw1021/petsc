@@ -31,7 +31,6 @@ static PetscErrorCode KSPFGMRESBuildSoln(PetscScalar*,Vec,Vec,KSP,PetscInt);
 */
 PetscErrorCode    KSPSetUp_FGMRES(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       max_k,k;
   KSP_FGMRES     *fgmres = (KSP_FGMRES*)ksp->data;
 
@@ -461,7 +460,6 @@ static PetscErrorCode KSPFGMRESGetNewVectors(KSP ksp,PetscInt it)
   KSP_FGMRES     *fgmres = (KSP_FGMRES*)ksp->data;
   PetscInt       nwork   = fgmres->nwork_alloc; /* number of work vector chunks allocated */
   PetscInt       nalloc;                      /* number to allocate */
-  PetscErrorCode ierr;
   PetscInt       k;
 
   PetscFunctionBegin;

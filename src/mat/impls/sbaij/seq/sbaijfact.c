@@ -11,7 +11,7 @@ PetscErrorCode MatGetInertia_SeqSBAIJ(Mat F,PetscInt *nneg,PetscInt *nzero,Petsc
   PetscInt     mbs=fact->mbs,bs=F->rmap->bs,i,nneg_tmp,npos_tmp,*fi=fact->diag;
 
   PetscFunctionBegin;
-  PetscCheckFalse(bs != 1,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support for bs: %" PetscInt_FMT " >1 yet",bs);
+  PetscCheck(bs == 1,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support for bs: %" PetscInt_FMT " >1 yet",bs);
 
   nneg_tmp = 0; npos_tmp = 0;
   for (i=0; i<mbs; i++) {
@@ -84,7 +84,7 @@ PetscErrorCode MatCholeskyFactorSymbolic_SeqSBAIJ_MSR(Mat F,Mat A,IS perm,const 
         do {
           m = qm; qm = q[m];
         } while (qm < vj);
-        PetscCheckFalse(qm == vj,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Duplicate entry in A");
+        PetscCheck(qm != vj,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Duplicate entry in A");
         nzk++;
         q[m]  = vj;
         q[vj] = qm;
@@ -208,7 +208,6 @@ PetscErrorCode MatCholeskyFactorSymbolic_SeqSBAIJ(Mat fact,Mat A,IS perm,const M
 {
   Mat_SeqSBAIJ       *a = (Mat_SeqSBAIJ*)A->data;
   Mat_SeqSBAIJ       *b;
-  PetscErrorCode     ierr;
   PetscBool          perm_identity,missing;
   PetscReal          fill = info->fill;
   const PetscInt     *rip,*ai=a->i,*aj=a->j;
@@ -219,9 +218,9 @@ PetscErrorCode MatCholeskyFactorSymbolic_SeqSBAIJ(Mat fact,Mat A,IS perm,const M
   PetscBT            lnkbt;
 
   PetscFunctionBegin;
-  PetscCheckFalse(A->rmap->n != A->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must be square matrix, rows %" PetscInt_FMT " columns %" PetscInt_FMT,A->rmap->n,A->cmap->n);
+  PetscCheck(A->rmap->n == A->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must be square matrix, rows %" PetscInt_FMT " columns %" PetscInt_FMT,A->rmap->n,A->cmap->n);
   CHKERRQ(MatMissingDiagonal(A,&missing,&i));
-  PetscCheckFalse(missing,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Matrix is missing diagonal entry %" PetscInt_FMT,i);
+  PetscCheck(!missing,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Matrix is missing diagonal entry %" PetscInt_FMT,i);
   if (bs > 1) {
     CHKERRQ(MatCholeskyFactorSymbolic_SeqSBAIJ_inplace(fact,A,perm,info));
     PetscFunctionReturn(0);
@@ -229,7 +228,7 @@ PetscErrorCode MatCholeskyFactorSymbolic_SeqSBAIJ(Mat fact,Mat A,IS perm,const M
 
   /* check whether perm is the identity mapping */
   CHKERRQ(ISIdentity(perm,&perm_identity));
-  PetscCheckFalse(!perm_identity,PETSC_COMM_SELF,PETSC_ERR_SUP,"Matrix reordering is not supported for sbaij matrix. Use aij format");
+  PetscCheck(perm_identity,PETSC_COMM_SELF,PETSC_ERR_SUP,"Matrix reordering is not supported for sbaij matrix. Use aij format");
   a->permute = PETSC_FALSE;
   CHKERRQ(ISGetIndices(perm,&rip));
 
@@ -257,7 +256,7 @@ PetscErrorCode MatCholeskyFactorSymbolic_SeqSBAIJ(Mat fact,Mat A,IS perm,const M
     /* initialize lnk by the column indices of row rip[k] of A */
     nzk   = 0;
     ncols = ai[k+1] - ai[k];
-    PetscCheckFalse(!ncols,PETSC_COMM_SELF,PETSC_ERR_MAT_CH_ZRPVT,"Empty row %" PetscInt_FMT " in matrix ",k);
+    PetscCheck(ncols,PETSC_COMM_SELF,PETSC_ERR_MAT_CH_ZRPVT,"Empty row %" PetscInt_FMT " in matrix ",k);
     for (j=0; j<ncols; j++) {
       i       = *(aj + ai[k] + j);
       cols[j] = i;
@@ -374,7 +373,6 @@ PetscErrorCode MatCholeskyFactorSymbolic_SeqSBAIJ_inplace(Mat fact,Mat A,IS perm
 {
   Mat_SeqSBAIJ       *a = (Mat_SeqSBAIJ*)A->data;
   Mat_SeqSBAIJ       *b;
-  PetscErrorCode     ierr;
   PetscBool          perm_identity,missing;
   PetscReal          fill = info->fill;
   const PetscInt     *rip,*ai,*aj;
@@ -386,7 +384,7 @@ PetscErrorCode MatCholeskyFactorSymbolic_SeqSBAIJ_inplace(Mat fact,Mat A,IS perm
 
   PetscFunctionBegin;
   CHKERRQ(MatMissingDiagonal(A,&missing,&d));
-  PetscCheckFalse(missing,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Matrix is missing diagonal entry %" PetscInt_FMT,d);
+  PetscCheck(!missing,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Matrix is missing diagonal entry %" PetscInt_FMT,d);
 
   /*
    This code originally uses Modified Sparse Row (MSR) storage
@@ -404,12 +402,9 @@ PetscErrorCode MatCholeskyFactorSymbolic_SeqSBAIJ_inplace(Mat fact,Mat A,IS perm
 
   /* check whether perm is the identity mapping */
   CHKERRQ(ISIdentity(perm,&perm_identity));
-
-  if (perm_identity) {
-    a->permute = PETSC_FALSE;
-
-    ai = a->i; aj = a->j;
-  } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Matrix reordering is not supported for sbaij matrix. Use aij format");
+  PetscCheck(perm_identity,PETSC_COMM_SELF,PETSC_ERR_SUP,"Matrix reordering is not supported for sbaij matrix. Use aij format");
+  a->permute = PETSC_FALSE;
+  ai = a->i; aj = a->j;
   CHKERRQ(ISGetIndices(perm,&rip));
 
   /* initialization */

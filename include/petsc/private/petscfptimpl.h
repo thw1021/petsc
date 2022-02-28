@@ -37,9 +37,9 @@ static inline PetscErrorCode  PetscFPTDestroy(void)
 
   PetscFPTData = NULL;
   if (!_PetscFPTData) return 0;
-  ierr = PetscFree((_PetscFPTData)->functionpointer);CHKERRQ(ierr);
-  ierr = PetscFree((_PetscFPTData)->functionname);CHKERRQ(ierr);
-  ierr = PetscFree(_PetscFPTData);CHKERRQ(ierr);
+  CHKERRQ(PetscFree((_PetscFPTData)->functionpointer));
+  CHKERRQ(PetscFree((_PetscFPTData)->functionname));
+  CHKERRQ(PetscFree(_PetscFPTData));
   return(0);
 }
 
@@ -58,14 +58,14 @@ static inline PetscErrorCode  PetscFPTCreate(PetscInt n)
 
   PetscCheck(n >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"n < 0");
   /* Cannot use PetscNew() here because it is not yet defined in the include file chain */
-  ierr          = PetscMalloc(sizeof(struct _n_PetscFPT),&_PetscFPTData);CHKERRQ(ierr);
+  CHKERRQ(PetscMalloc(sizeof(struct _n_PetscFPT),&_PetscFPTData));
   _PetscFPTData->tablesize = (3*n)/2 + 17;
   if (_PetscFPTData->tablesize < n) _PetscFPTData->tablesize = PETSC_MAX_INT/4; /* overflow */
-  ierr          = PetscMalloc(sizeof(void*)*_PetscFPTData->tablesize,&_PetscFPTData->functionpointer);CHKERRQ(ierr);
+  CHKERRQ(PetscMalloc(sizeof(void*)*_PetscFPTData->tablesize,&_PetscFPTData->functionpointer));
   for (i=0; i<_PetscFPTData->tablesize; i++) {
     _PetscFPTData->functionpointer[i] = NULL;
   }
-  ierr          = PetscMalloc(sizeof(char**)*_PetscFPTData->tablesize,&_PetscFPTData->functionname);CHKERRQ(ierr);
+  CHKERRQ(PetscMalloc(sizeof(char**)*_PetscFPTData->tablesize,&_PetscFPTData->functionname));
   _PetscFPTData->count     = 0;
   PetscFPTData = _PetscFPTData;
   return(0);

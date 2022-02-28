@@ -206,13 +206,13 @@ typedef PETSC_UINTPTR_T PetscFortranAddr;
   } while (0)
 
 /* Entire function body, _ctx is a "special" variable that can be passed along */
-#define PetscObjectUseFortranCallback_Private(obj,cid,types,args,cbclass) { \
-    PetscErrorCode ierr;                                                \
-    void (*func) types,*_ctx;                             \
-    PetscFunctionBegin;                                                 \
-    ierr = PetscObjectGetFortranCallback((PetscObject)(obj),(cbclass),(cid),(PetscVoidFunction*)&func,&_ctx);CHKERRQ(ierr); \
-    if (func) {(*func)args;CHKERRQ(ierr);}                              \
-    PetscFunctionReturn(0);                                             \
+#define PetscObjectUseFortranCallback_Private(obj,cid,types,args,cbclass) {                    \
+    PetscErrorCode ierr = 0;                                                                   \
+    void (*func) types,*_ctx;                                                                  \
+    PetscFunctionBegin;                                                                        \
+    CHKERRQ(PetscObjectGetFortranCallback((PetscObject)(obj),(cbclass),(cid),(PetscVoidFunction*)&func,&_ctx)); \
+    if (func) {(*func)args;CHKERRQ(ierr);}                                                     \
+    PetscFunctionReturn(0);                                                                    \
   }
 #define PetscObjectUseFortranCallback(obj,cid,types,args) PetscObjectUseFortranCallback_Private(obj,cid,types,args,PETSC_FORTRAN_CALLBACK_CLASS)
 #define PetscObjectUseFortranCallbackSubType(obj,cid,types,args) PetscObjectUseFortranCallback_Private(obj,cid,types,args,PETSC_FORTRAN_CALLBACK_SUBTYPE)

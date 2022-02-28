@@ -33,7 +33,6 @@ PetscErrorCode  KSPLGMRESSetConstant(KSP ksp)
 */
 PetscErrorCode    KSPSetUp_LGMRES(KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       max_k,k, aug_dim;
   KSP_LGMRES     *lgmres = (KSP_LGMRES*)ksp->data;
 
@@ -573,7 +572,6 @@ static PetscErrorCode KSPLGMRESGetNewVectors(KSP ksp,PetscInt it)
   KSP_LGMRES     *lgmres = (KSP_LGMRES*)ksp->data;
   PetscInt       nwork   = lgmres->nwork_alloc; /* number of work vector chunks allocated */
   PetscInt       nalloc;                      /* number to allocate */
-  PetscErrorCode ierr;
   PetscInt       k;
 
   PetscFunctionBegin;
