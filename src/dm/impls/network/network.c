@@ -187,37 +187,42 @@ PetscErrorCode DMNetworkAddSubnetwork(DM dm,const char* name,PetscInt ne,PetscIn
 {
   PetscErrorCode ierr;
   DM_Network     *network = (DM_Network*)dm->data;
-  PetscInt       i,Nedge,j,Nvtx,nvtx;
+  PetscInt       i,Nedge,j,Nvtx,nvtx,nvtx_min=-1,nvtx_max=0;
   PetscBT        table;
 
   PetscFunctionBegin;
   for (i=0; i<ne; i++) {
     PetscCheck(edgelist[2*i] != edgelist[2*i+1],PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Edge %" PetscInt_FMT " has the same vertex %" PetscInt_FMT " at each endpoint",i,edgelist[2*i]);
   }
-  /* Get global total Nvtx = max(edgelist[])+1 for this subnet */
-  nvtx = -1; i = 0;
-  for (j=0; j<ne; j++) {
-    nvtx = PetscMax(nvtx, edgelist[i]); i++;
-    nvtx = PetscMax(nvtx, edgelist[i]); i++;
-  }
-  nvtx++;
-  ierr = MPIU_Allreduce(&nvtx,&Nvtx,1,MPIU_INT,MPI_MAX,PetscObjectComm((PetscObject)dm));CHKERRMPI(ierr);
 
-  /* Get local nvtx for this subnet */
-  /* TODO(Barry): Make this more scalable by using a local min and max for vertex numbering and only counting values between the min and max */
+  i = 0;
+  if (ne) nvtx_min = nvtx_max = edgelist[0];
+  for (j=0; j<ne; j++) {
+    nvtx_min = PetscMin(nvtx_min, edgelist[i]);
+    nvtx_max = PetscMax(nvtx_max, edgelist[i]);
+    i++;
+    nvtx_min = PetscMin(nvtx_min, edgelist[i]);
+    nvtx_max = PetscMax(nvtx_max, edgelist[i]);
+    i++;
+  }
+  Nvtx = nvtx_max - nvtx_min + 1; /* approximated total local nvtx for this subnet */
+
+  /* Get exact local nvtx for this subnet: counting local values between nvtx_min and nvtx_max */
   ierr = PetscBTCreate(Nvtx,&table);CHKERRQ(ierr);
   ierr = PetscBTMemzero(Nvtx,table);CHKERRQ(ierr);
   i = 0;
   for (j=0; j<ne; j++) {
-    ierr = PetscBTSet(table,edgelist[i]);CHKERRQ(ierr);
-    i++;
-    ierr = PetscBTSet(table,edgelist[i]);CHKERRQ(ierr);
-    i++;
+    ierr = PetscBTSet(table,edgelist[i++]-nvtx_min);CHKERRQ(ierr);
+    ierr = PetscBTSet(table,edgelist[i++]-nvtx_min);CHKERRQ(ierr);
   }
   nvtx = 0;
   for (j=0; j<Nvtx; j++) {
     if (PetscBTLookup(table,j)) nvtx++;
   }
+
+  /* Get global total Nvtx = max(edgelist[])+1 for this subnet */
+  ierr = MPIU_Allreduce(&nvtx_max,&Nvtx,1,MPIU_INT,MPI_MAX,PetscObjectComm((PetscObject)dm));CHKERRMPI(ierr);
+  Nvtx++;
   ierr = PetscBTDestroy(&table);CHKERRQ(ierr);
 
   /* Get global total Nedge for this subnet */
