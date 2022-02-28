@@ -59,7 +59,7 @@ def pathToLabel(path):
     label=prefix+"-"+suffix+'_*'
   else:
     path=path.rstrip('/')
-    label=path.replace("/","_")+"-*"
+    label=path.replace("/","_").replace('tests_','tests-').replace('tutorials_','tutorials-')
   return label
 
 def get_value(varset):
@@ -271,6 +271,14 @@ def do_query(use_source, startdir, srcdir, testdir, petsc_dir, petsc_arch,
 
     return
 
+def expand_path_like(petscdir,pathlike):
+    # expand user second, as expandvars may insert a '~'
+    string = os.path.expanduser(os.path.expandvars(pathlike))
+    # if the dirname check succeeds then likely we have a glob expression
+    if any(map(os.path.exists,(string,os.path.dirname(string)))):
+        pathlike = os.path.relpath(os.path.abspath(string),petscdir)
+    return pathlike
+
 def main():
     parser = optparse.OptionParser(usage="%prog [options] field match_pattern")
     parser.add_option('-s', '--startdir', dest='startdir',
@@ -347,6 +355,8 @@ def main():
         if not os.path.isdir(petsc_full_src):
             print("Source directory must be a directory"+petsc_full_src)
             return
+
+    match = expand_path_like(opts.petsc_dir,match)
 
     # Do the actual query
     do_query(opts.use_source, startdir, petsc_full_src, petsc_full_test,
