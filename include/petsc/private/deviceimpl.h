@@ -254,6 +254,7 @@ static inline PetscErrorCode PetscDeviceDereference_Internal(PetscDevice device)
 /* PetscDeviceContext Internal Functions */
 #if PetscDefined(HAVE_CXX)
 PETSC_INTERN PetscErrorCode PetscDeviceContextSetRootDeviceType_Internal(PetscDeviceType);
+PETSC_INTERN PetscErrorCode PetscDeviceContextSetRootStreamType_Internal(PetscStreamType);
 PETSC_INTERN PetscErrorCode PetscDeviceContextGetNullContextForDevice_Internal(PetscDevice,PetscDeviceContext*);
 
 static inline PetscErrorCode PetscDeviceContextSetDefaultDeviceForType_Internal(PetscDeviceContext dctx, PetscDeviceType type)
@@ -356,6 +357,7 @@ static inline PetscErrorCode PetscDeviceContextEndTimer_Internal(PetscDeviceCont
 }
 #else /* PETSC_HAVE_CXX for PetscDeviceContext Internal Functions */
 #define PetscDeviceContextSetRootDeviceType_Internal(type)                0
+#define PetscDeviceContextSetRootStreamType_Internal(type)                0
 #define PetscDeviceContextSetDefaultDeviceForType_Internal(dctx,type)     0
 #define PetscDeviceContextSetDefaultDevice_Internal(dctx)                 0
 #define PetscDeviceContextGetCurrentContextAssertType_Internal(dctx,type) 0

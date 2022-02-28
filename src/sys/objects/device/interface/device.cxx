@@ -473,6 +473,10 @@ static PetscErrorCode PetscDeviceFinalize_Private(void)
       to checking for specific device init. if view or specific device init
       subTypeDefaultInitType -> EAGER. disabled once again overrides all.
 */
+
+/* can't put this in a header since its not C-portable and only used here and in dcontext.cxx */
+extern PETSC_VISIBILITY_INTERNAL PetscErrorCode PetscDeviceContextQueryOptions_Internal(MPI_Comm,const char[],std::pair<PetscDeviceType,PetscBool>&,std::pair<PetscStreamType,PetscBool>&);
+
 PetscErrorCode PetscDeviceInitializeFromOptions_Internal(MPI_Comm comm)
 {
   PetscBool           flg,defaultView = PETSC_FALSE,initializeDeviceContextEagerly = PETSC_FALSE;
@@ -530,17 +534,29 @@ PetscErrorCode PetscDeviceInitializeFromOptions_Internal(MPI_Comm comm)
       ierr = PetscInfo(nullptr,"PetscDevice %s set as default device type due to eager initialization\n",PetscDeviceTypes[deviceType]);CHKERRQ(ierr);
     }
   }
+  {
+    /*
+      query the options db to get the root settings from the user (if any).
+
+      This section is a bit of a hack. We have to reach across to dcontext.cxx to all but call
+      PetscDeviceContextSetFromOptions() before we even have one, then set a few static
+      variables in that file with the results.
+    */
+    auto dtype = std::make_pair(deviceContextInitDevice,PETSC_FALSE);
+    auto stype = std::make_pair(PETSC_STREAM_GLOBAL_BLOCKING,PETSC_FALSE);
+
+    ierr = PetscDeviceContextQueryOptions_Internal(comm,"root_",dtype,stype);CHKERRQ(ierr);
+    if (initializeDeviceContextEagerly || dtype.second) {
+      ierr = PetscDeviceContextSetRootDeviceType_Internal(dtype.first);CHKERRQ(ierr);
+    }
+    if (stype.second) {ierr = PetscDeviceContextSetRootStreamType_Internal(stype.first);CHKERRQ(ierr);}
+  }
   if (initializeDeviceContextEagerly) {
     PetscDeviceContext dctx;
 
-    /*
-      somewhat inefficient here as the device context is potentially fully set up twice (once
-      when retrieved then the second time if setfromoptions makes changes)
-    */
     ierr = PetscInfo(nullptr,"Eagerly initializing PetscDeviceContext with %s device\n",PetscDeviceTypes[deviceContextInitDevice]);CHKERRQ(ierr);
-    ierr = PetscDeviceContextSetRootDeviceType_Internal(deviceContextInitDevice);CHKERRQ(ierr);
+    /* instantiates the device context */
     ierr = PetscDeviceContextGetCurrentContext(&dctx);CHKERRQ(ierr);
-    ierr = PetscDeviceContextSetFromOptions(comm,"root_",dctx);CHKERRQ(ierr);
     ierr = PetscDeviceContextSetUp(dctx);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
