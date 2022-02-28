@@ -18,9 +18,9 @@ PetscErrorCode MatICCFactorSymbolic_SeqAIJ_Bas(Mat fact,Mat A,IS perm,const MatF
   spbas_matrix   Pattern_0, Pattern_P;
 
   PetscFunctionBegin;
-  PetscCheckFalse(A->rmap->n != A->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must be square matrix, rows %" PetscInt_FMT " columns %" PetscInt_FMT,A->rmap->n,A->cmap->n);
+  PetscCheck(A->rmap->n == A->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must be square matrix, rows %" PetscInt_FMT " columns %" PetscInt_FMT,A->rmap->n,A->cmap->n);
   CHKERRQ(MatMissingDiagonal(A,&missing,&d));
-  PetscCheckFalse(missing,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Matrix is missing diagonal entry %" PetscInt_FMT,d);
+  PetscCheck(!missing,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Matrix is missing diagonal entry %" PetscInt_FMT,d);
   CHKERRQ(ISIdentity(perm,&perm_identity));
   CHKERRQ(ISInvertPermutation(perm,PETSC_DECIDE,&iperm));
 
@@ -103,10 +103,8 @@ PetscErrorCode MatCholeskyFactorNumeric_SeqAIJ_Bas(Mat B,Mat A,const MatFactorIn
   Mat            C = B;
   Mat_SeqSBAIJ   *b=(Mat_SeqSBAIJ*)C->data;
   IS             ip=b->row,iip = b->icol;
-  PetscErrorCode ierr;
   const PetscInt *rip,*riip;
   PetscInt       mbs=A->rmap->n,*bi=b->i,*bj=b->j;
-
   MatScalar      *ba     = b->a;
   PetscReal      shiftnz = info->shiftamount;
   PetscReal      droptol = -1;
@@ -128,13 +126,12 @@ PetscErrorCode MatCholeskyFactorNumeric_SeqAIJ_Bas(Mat B,Mat A,const MatFactorIn
   CHKERRQ(ISGetIndices(ip,&rip));
   CHKERRQ(ISGetIndices(iip,&riip));
 
-  if (info->usedt) {
-    droptol = info->dt;
-  }
-  for (ierr = NEGATIVE_DIAGONAL; ierr == NEGATIVE_DIAGONAL;)
-  {
+  if (info->usedt) droptol = info->dt;
+
+  for (PetscErrorCode ierr = NEGATIVE_DIAGONAL; ierr == NEGATIVE_DIAGONAL;) {
     PetscBool success;
-    CHKERRQ(spbas_incomplete_cholesky(A, rip, riip, Pattern, droptol, shiftnz,&matrix_LT,&success));
+
+    ierr = spbas_incomplete_cholesky(A, rip, riip, Pattern, droptol, shiftnz,&matrix_LT,&success);
     if (!success) {
       shiftnz *= 1.5;
       if (shiftnz < 1e-5) shiftnz=1e-5;

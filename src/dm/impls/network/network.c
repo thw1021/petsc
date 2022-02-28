@@ -1496,14 +1496,14 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
   PetscInt       to_net,from_net,*svto;
   PetscBT        btable;
   PetscPartitioner         part;
-  DMNetworkComponentHeader header = NULL;
+  DMNetworkComponentHeader header;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)*dm,&comm));
   CHKERRMPI(MPI_Comm_size(comm, &size));
   if (size == 1) PetscFunctionReturn(0);
 
-  PetscCheck(overlap == 0,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"overlap %D != 0 is not supported yet",overlap);
+  PetscCheck(overlap == 0,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"overlap %" PetscInt_FMT " != 0 is not supported yet",overlap);
 
   /* This routine moves the component data to the appropriate processors. It makes use of the DataSection and the componentdataarray to move the component data to appropriate processors and returns a new DataSection and new componentdataarray. */
   CHKERRQ(DMNetworkCreate(PetscObjectComm((PetscObject)*dm),&newDM));
@@ -1625,19 +1625,10 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
   }
   newDMnetwork->svertices = subnetvtx;
 
-  /*
-    make sure that
-
-    warning: 'header' may be used uninitialized in this function [-Wmaybe-uninitialized]
-    newDMnetwork->subnet[header->subnetid].edges[newDMnetwork->subnet[header->subnetid].nedge++] = e;
-                               ^
-    is just an overzealous compiler
-  */
-  PetscAssert(header,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Null Pointer: header");
-  PetscAssert(PetscCheckPointer(header,PETSC_CHAR),PETSC_COMM_SELF,PETSC_ERR_ARG_BADPTR,"header bad pointer");
   /* Set the edges and vertices in each subnetwork */
   for (e = newDMnetwork->eStart; e < newDMnetwork->eEnd; e++) {
     CHKERRQ(PetscSectionGetOffset(newDMnetwork->DataSection,e,&offset));
+    header = (DMNetworkComponentHeader)(newDMnetwork->componentdataarray+offset);
     newDMnetwork->subnet[header->subnetid].edges[newDMnetwork->subnet[header->subnetid].nedge++] = e;
   }
 
