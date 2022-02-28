@@ -258,6 +258,16 @@ static PetscErrorCode VecSetOps_MPIKokkos(Vec v)
   PetscFunctionReturn(0);
 }
 
+/*MC
+   VECMPIKOKKOS - VECMPIKOKKOS = "mpikokkos" - The basic parallel vector, modified to use Kokkos
+
+   Options Database Keys:
+. -vec_type mpikokkos - sets the vector type to VECMPIKOKKOS during a call to VecSetFromOptions()
+
+  Level: beginner
+
+.seealso: VecCreate(), VecSetType(), VecSetFromOptions(), VecCreateMPIKokkosWithArray(), VECMPI, VecType, VecCreateMPI()
+M*/
 PetscErrorCode VecCreate_MPIKokkos(Vec v)
 {
   PetscErrorCode ierr;
@@ -278,7 +288,7 @@ PetscErrorCode VecCreate_MPIKokkos(Vec v)
   PetscFunctionReturn(0);
 }
 
-/*@C
+/*MC
    VecCreateMPIKokkosWithArray - Creates a parallel, array-style vector,
    where the user provides the GPU array space to store the vector values.
 
@@ -310,7 +320,7 @@ PetscErrorCode VecCreate_MPIKokkos(Vec v)
           VecCreate(), VecDuplicate(), VecDuplicateVecs(), VecCreateGhost(),
           VecCreateMPI(), VecCreateGhostWithArray(), VecPlaceArray()
 
-@*/
+M*/
 PetscErrorCode  VecCreateMPIKokkosWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,PetscInt N,const PetscScalar darray[],Vec *v)
 {
   PetscErrorCode ierr;
