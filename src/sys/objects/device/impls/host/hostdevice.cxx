@@ -18,9 +18,6 @@ PetscErrorCode Device::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, Pets
 
   PetscFunctionBegin;
   ierr = base_type::PetscOptionDeviceAll(comm,initType,initId,initView);CHKERRQ(ierr);
-  PetscOptionsBegin(comm,nullptr,nullptr,nullptr);
-  ierr = base_type::PetscOptionDeviceInitialize(PetscOptionsObject,nullptr,nullptr);
-  PetscOptionsEnd();
   if (initId.first == PETSC_DECIDE) initId.first = 0;
   // host should probably always be "device" 0, but we humor the user for the options query
   PetscCheck(initId.first == 0,comm,PETSC_ERR_USER_INPUT,"The host is always device 0");
