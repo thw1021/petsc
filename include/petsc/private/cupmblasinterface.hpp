@@ -341,8 +341,7 @@ struct BlasInterface<DeviceType::CUDA> : BlasInterfaceBase<DeviceType::CUDA>
 
   PETSC_CXX_COMPAT_DECL(PetscErrorCode SetHandleStream(cupmSolverHandle_t &handle, cupmStream_t &stream))
   {
-    cupmStream_t      cupmStream;
-    cupmSolverError_t cerr;
+    cupmStream_t cupmStream;
 
     PetscFunctionBegin;
     CHKERRCUSOLVER(cusolverDnGetStream(handle,&cupmStream));
@@ -424,8 +423,7 @@ struct BlasInterface<DeviceType::HIP> : BlasInterfaceBase<DeviceType::HIP>
 
   PETSC_CXX_COMPAT_DECL(PetscErrorCode SetHandleStream(cupmSolverHandle_t &handle, cupmStream_t &stream))
   {
-    cupmStream_t      cupmStream;
-    cupmSolverError_t cerr;
+    cupmStream_t cupmStream;
 
     PetscFunctionBegin;
     CHKERRHIPSOLVER(hipsolverGetStream(handle,&cupmStream));
