@@ -868,14 +868,14 @@ PetscErrorCode LandauCUDAJacobian(DM plex[], const PetscInt Nq, const PetscInt b
     CHKERRQ(PetscLogEventEnd(events[4],0,0,0,0));
   } else { // mass
     dim3 dimBlock(nnn,Nq);
-    ierr = PetscInfo(plex[0], "Mass d_maps = %p. Nq=%d, vector size %d num_cells_batch=%d\n",d_maps,Nq,nnn,num_cells_batch);CHKERRQ(ierr);
-    ierr = PetscLogEventBegin(events[16],0,0,0,0);CHKERRQ(ierr);
-    ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
+    CHKERRQ(PetscInfo(plex[0], "Mass d_maps = %p. Nq=%d, vector size %d num_cells_batch=%d\n",d_maps,Nq,nnn,num_cells_batch));
+    CHKERRQ(PetscLogEventBegin(events[16],0,0,0,0));
+    CHKERRQ(PetscLogGpuTimeBegin());
     landau_mass<<<dimGrid,dimBlock>>>(dim, Nb, num_grids, d_w, d_BB, d_DD, d_elem_mats,
                                       d_maps, d_mat, shift, d_numCells, d_species_offset, d_mat_offset, d_ip_offset, d_elem_offset);
     CHECK_LAUNCH_ERROR(); // has sync
-    ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
-    ierr = PetscLogEventEnd(events[16],0,0,0,0);CHKERRQ(ierr);
+    CHKERRQ(PetscLogGpuTimeEnd());
+    CHKERRQ(PetscLogEventEnd(events[16],0,0,0,0));
   }
   // First time assembly with or without GPU assembly
   if (d_elem_mats) {

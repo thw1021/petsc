@@ -305,13 +305,13 @@ PetscErrorCode PetscDualSpaceSetFromOptions(PetscDualSpace sp)
   if (sp->ops->setfromoptions) {
     CHKERRQ((*sp->ops->setfromoptions)(PetscOptionsObject,sp));
   }
-  ierr = PetscOptionsEnum("-petscdualspace_refcell", "Reference cell shape", "PetscDualSpaceSetReferenceCell", DMPolytopeTypes, (PetscEnum) refCell, (PetscEnum *) &refCell, &flg);CHKERRQ(ierr);
+  CHKERRQ(PetscOptionsEnum("-petscdualspace_refcell", "Reference cell shape", "PetscDualSpaceSetReferenceCell", DMPolytopeTypes, (PetscEnum) refCell, (PetscEnum *) &refCell, &flg));
   if (flg) {
     DM K;
 
-    ierr = DMPlexCreateReferenceCell(PETSC_COMM_SELF, refCell, &K);CHKERRQ(ierr);
-    ierr = PetscDualSpaceSetDM(sp, K);CHKERRQ(ierr);
-    ierr = DMDestroy(&K);CHKERRQ(ierr);
+    CHKERRQ(DMPlexCreateReferenceCell(PETSC_COMM_SELF, refCell, &K));
+    CHKERRQ(PetscDualSpaceSetDM(sp, K));
+    CHKERRQ(DMDestroy(&K));
   }
 
   /* process any options handlers added with PetscObjectAddOptionsHandler() */

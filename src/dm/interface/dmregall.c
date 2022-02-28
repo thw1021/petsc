@@ -96,13 +96,13 @@ PetscErrorCode PetscSpaceRegisterAll(void)
   if (PetscSpaceRegisterAllCalled) PetscFunctionReturn(0);
   PetscSpaceRegisterAllCalled = PETSC_TRUE;
 
-  ierr = PetscSpaceRegister(PETSCSPACEPOLYNOMIAL, PetscSpaceCreate_Polynomial);CHKERRQ(ierr);
-  ierr = PetscSpaceRegister(PETSCSPACEPTRIMMED,   PetscSpaceCreate_Ptrimmed);CHKERRQ(ierr);
-  ierr = PetscSpaceRegister(PETSCSPACETENSOR,     PetscSpaceCreate_Tensor);CHKERRQ(ierr);
-  ierr = PetscSpaceRegister(PETSCSPACESUM,        PetscSpaceCreate_Sum);CHKERRQ(ierr);
-  ierr = PetscSpaceRegister(PETSCSPACEPOINT,      PetscSpaceCreate_Point);CHKERRQ(ierr);
-  ierr = PetscSpaceRegister(PETSCSPACESUBSPACE,   PetscSpaceCreate_Subspace);CHKERRQ(ierr);
-  ierr = PetscSpaceRegister(PETSCSPACEWXY,        PetscSpaceCreate_WXY);CHKERRQ(ierr);
+  CHKERRQ(PetscSpaceRegister(PETSCSPACEPOLYNOMIAL, PetscSpaceCreate_Polynomial));
+  CHKERRQ(PetscSpaceRegister(PETSCSPACEPTRIMMED,   PetscSpaceCreate_Ptrimmed));
+  CHKERRQ(PetscSpaceRegister(PETSCSPACETENSOR,     PetscSpaceCreate_Tensor));
+  CHKERRQ(PetscSpaceRegister(PETSCSPACESUM,        PetscSpaceCreate_Sum));
+  CHKERRQ(PetscSpaceRegister(PETSCSPACEPOINT,      PetscSpaceCreate_Point));
+  CHKERRQ(PetscSpaceRegister(PETSCSPACESUBSPACE,   PetscSpaceCreate_Subspace));
+  CHKERRQ(PetscSpaceRegister(PETSCSPACEWXY,        PetscSpaceCreate_WXY));
   PetscFunctionReturn(0);
 }
 

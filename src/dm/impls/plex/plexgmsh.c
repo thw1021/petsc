@@ -1308,16 +1308,16 @@ static PetscErrorCode GmshCreateFE(MPI_Comm comm, const char prefix[], PetscBool
   }
   CHKERRQ(PetscSpaceSetUp(P));
   /* Create dual space */
-  ierr = PetscDualSpaceCreate(comm, &Q);CHKERRQ(ierr);
-  ierr = PetscDualSpaceSetType(Q, PETSCDUALSPACELAGRANGE);CHKERRQ(ierr);
-  ierr = PetscDualSpaceLagrangeSetTensor(Q, isTensor);CHKERRQ(ierr);
-  ierr = PetscDualSpaceLagrangeSetContinuity(Q, continuity);CHKERRQ(ierr);
-  ierr = PetscDualSpaceLagrangeSetNodeType(Q, nodeType, endpoint, 0);CHKERRQ(ierr);
-  ierr = PetscDualSpaceSetNumComponents(Q, Nc);CHKERRQ(ierr);
-  ierr = PetscDualSpaceSetOrder(Q, k);CHKERRQ(ierr);
-  ierr = DMPlexCreateReferenceCell(PETSC_COMM_SELF, DMPolytopeTypeSimpleShape(dim, isSimplex), &K);CHKERRQ(ierr);
-  ierr = PetscDualSpaceSetDM(Q, K);CHKERRQ(ierr);
-  ierr = DMDestroy(&K);CHKERRQ(ierr);
+  CHKERRQ(PetscDualSpaceCreate(comm, &Q));
+  CHKERRQ(PetscDualSpaceSetType(Q, PETSCDUALSPACELAGRANGE));
+  CHKERRQ(PetscDualSpaceLagrangeSetTensor(Q, isTensor));
+  CHKERRQ(PetscDualSpaceLagrangeSetContinuity(Q, continuity));
+  CHKERRQ(PetscDualSpaceLagrangeSetNodeType(Q, nodeType, endpoint, 0));
+  CHKERRQ(PetscDualSpaceSetNumComponents(Q, Nc));
+  CHKERRQ(PetscDualSpaceSetOrder(Q, k));
+  CHKERRQ(DMPlexCreateReferenceCell(PETSC_COMM_SELF, DMPolytopeTypeSimpleShape(dim, isSimplex), &K));
+  CHKERRQ(PetscDualSpaceSetDM(Q, K));
+  CHKERRQ(DMDestroy(&K));
   if (prefix) {
     CHKERRQ(PetscObjectSetOptionsPrefix((PetscObject) Q, prefix));
     CHKERRQ(PetscDualSpaceSetFromOptions(Q));

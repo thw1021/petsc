@@ -1322,7 +1322,6 @@ PetscErrorCode PCMGGetLevels(PC pc,PetscInt *levels)
 @*/
 PetscErrorCode PCMGGetGridComplexity(PC pc, PetscReal *gc, PetscReal *oc)
 {
-  PetscErrorCode ierr;
   PC_MG          *mg      = (PC_MG*)pc->data;
   PC_MG_Levels   **mglevels = mg->levels;
   PetscInt       lev,N;
@@ -1341,9 +1340,9 @@ PetscErrorCode PCMGGetGridComplexity(PC pc, PetscReal *gc, PetscReal *oc)
   PetscCheck(mg->nlevels > 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"MG has no levels");
   for (lev=0; lev<mg->nlevels; lev++) {
     Mat dB;
-    ierr = KSPGetOperators(mglevels[lev]->smoothd,NULL,&dB);CHKERRQ(ierr);
-    ierr = MatGetInfo(dB,MAT_GLOBAL_SUM,&info);CHKERRQ(ierr); /* global reduction */
-    ierr = MatGetSize(dB,&N,NULL);CHKERRQ(ierr);
+    CHKERRQ(KSPGetOperators(mglevels[lev]->smoothd,NULL,&dB));
+    CHKERRQ(MatGetInfo(dB,MAT_GLOBAL_SUM,&info)); /* global reduction */
+    CHKERRQ(MatGetSize(dB,&N,NULL));
     sgc += N;
     soc += info.nz_used;
     if (lev==mg->nlevels-1) {nnz0 = info.nz_used; n0 = N;}

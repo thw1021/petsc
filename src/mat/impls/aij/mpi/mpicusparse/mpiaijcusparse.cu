@@ -224,19 +224,19 @@ static PetscErrorCode MatSetPreallocationCOO_MPIAIJCUSPARSE(Mat mat, PetscCount 
     CHKERRQ(MatSetPreallocationCOO_MPIAIJCUSPARSE_Basic(mat,coo_n,coo_i,coo_j));
   } else {
     mpiaij = static_cast<Mat_MPIAIJ*>(mat->data);
-    ierr = MatCreate(PetscObjectComm((PetscObject)mat),&newmat);CHKERRQ(ierr);
-    ierr = MatSetSizes(newmat,mat->rmap->n,mat->cmap->n,mat->rmap->N,mat->cmap->N);CHKERRQ(ierr);
-    ierr = MatSetType(newmat,MATMPIAIJ);CHKERRQ(ierr);
-    ierr = MatSetOption(newmat,MAT_IGNORE_OFF_PROC_ENTRIES,mpiaij->donotstash);CHKERRQ(ierr); /* Inherit the two options that we respect from mat */
-    ierr = MatSetOption(newmat,MAT_NO_OFF_PROC_ENTRIES,mat->nooffprocentries);CHKERRQ(ierr);
-    ierr = MatSetPreallocationCOO_MPIAIJ(newmat,coo_n,coo_i,coo_j);CHKERRQ(ierr);
-    ierr = MatConvert(newmat,MATMPIAIJCUSPARSE,MAT_INPLACE_MATRIX,&newmat);CHKERRQ(ierr);
-    ierr = MatHeaderMerge(mat,&newmat);CHKERRQ(ierr);
+    CHKERRQ(MatCreate(PetscObjectComm((PetscObject)mat),&newmat));
+    CHKERRQ(MatSetSizes(newmat,mat->rmap->n,mat->cmap->n,mat->rmap->N,mat->cmap->N));
+    CHKERRQ(MatSetType(newmat,MATMPIAIJ));
+    CHKERRQ(MatSetOption(newmat,MAT_IGNORE_OFF_PROC_ENTRIES,mpiaij->donotstash)); /* Inherit the two options that we respect from mat */
+    CHKERRQ(MatSetOption(newmat,MAT_NO_OFF_PROC_ENTRIES,mat->nooffprocentries));
+    CHKERRQ(MatSetPreallocationCOO_MPIAIJ(newmat,coo_n,coo_i,coo_j));
+    CHKERRQ(MatConvert(newmat,MATMPIAIJCUSPARSE,MAT_INPLACE_MATRIX,&newmat));
+    CHKERRQ(MatHeaderMerge(mat,&newmat));
     mpiaij = static_cast<Mat_MPIAIJ*>(mat->data); /* mat->data was changed in MatHeaderReplace() */
     mpidev = static_cast<Mat_MPIAIJCUSPARSE*>(mpiaij->spptr);
-    ierr = MatSeqAIJCUSPARSECopyToGPU(mpiaij->A);CHKERRQ(ierr);
-    ierr = MatSeqAIJCUSPARSECopyToGPU(mpiaij->B);CHKERRQ(ierr);
-    ierr = MatZeroEntries(mat);CHKERRQ(ierr); /* Zero matrix on device */
+    CHKERRQ(MatSeqAIJCUSPARSECopyToGPU(mpiaij->A));
+    CHKERRQ(MatSeqAIJCUSPARSECopyToGPU(mpiaij->B));
+    CHKERRQ(MatZeroEntries(mat)); /* Zero matrix on device */
     mpidev->use_extended_coo = PETSC_TRUE;
 
     CHKERRCUDA(cudaMalloc((void**)&mpidev->Aimap1_d,mpiaij->Annz1*sizeof(PetscCount)));

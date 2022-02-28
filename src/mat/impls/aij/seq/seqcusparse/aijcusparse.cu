@@ -4027,14 +4027,14 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJCUSPARSE(Mat mat, PetscCount coo_n, 
   if (coo_basic) { /* i,j are on device or do not contain negative indices */
     CHKERRQ(MatSetPreallocationCOO_SeqAIJCUSPARSE_Basic(mat,coo_n,coo_i,coo_j));
   } else {
-    ierr = MatCreate(PetscObjectComm((PetscObject)mat),&newmat);CHKERRQ(ierr);
-    ierr = MatSetSizes(newmat,mat->rmap->n,mat->cmap->n,mat->rmap->N,mat->cmap->N);CHKERRQ(ierr);
-    ierr = MatSetType(newmat,MATSEQAIJ);CHKERRQ(ierr);
-    ierr = MatSetPreallocationCOO_SeqAIJ(newmat,coo_n,coo_i,coo_j);CHKERRQ(ierr);
-    ierr = MatConvert(newmat,MATSEQAIJCUSPARSE,MAT_INPLACE_MATRIX,&newmat);CHKERRQ(ierr);
-    ierr = MatHeaderMerge(mat,&newmat);CHKERRQ(ierr);
-    ierr = MatSeqAIJCUSPARSECopyToGPU(mat);CHKERRQ(ierr);
-    ierr = MatZeroEntries(mat);CHKERRQ(ierr); /* Zero matrix on device */
+    CHKERRQ(MatCreate(PetscObjectComm((PetscObject)mat),&newmat));
+    CHKERRQ(MatSetSizes(newmat,mat->rmap->n,mat->cmap->n,mat->rmap->N,mat->cmap->N));
+    CHKERRQ(MatSetType(newmat,MATSEQAIJ));
+    CHKERRQ(MatSetPreallocationCOO_SeqAIJ(newmat,coo_n,coo_i,coo_j));
+    CHKERRQ(MatConvert(newmat,MATSEQAIJCUSPARSE,MAT_INPLACE_MATRIX,&newmat));
+    CHKERRQ(MatHeaderMerge(mat,&newmat));
+    CHKERRQ(MatSeqAIJCUSPARSECopyToGPU(mat));
+    CHKERRQ(MatZeroEntries(mat)); /* Zero matrix on device */
 
     seq  = static_cast<Mat_SeqAIJ*>(mat->data);
     dev  = static_cast<Mat_SeqAIJCUSPARSE*>(mat->spptr);

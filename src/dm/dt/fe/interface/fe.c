@@ -1821,71 +1821,71 @@ static PetscErrorCode PetscFECreate_Internal(MPI_Comm comm, PetscInt dim, PetscI
     default: tensor = PETSC_FALSE;
   }
   /* Create space */
-  ierr = PetscSpaceCreate(comm, &P);CHKERRQ(ierr);
-  ierr = PetscSpaceSetType(P, PETSCSPACEPOLYNOMIAL);CHKERRQ(ierr);
-  ierr = PetscObjectSetOptionsPrefix((PetscObject) P, prefix);CHKERRQ(ierr);
-  ierr = PetscSpacePolynomialSetTensor(P, tensor);CHKERRQ(ierr);
-  ierr = PetscSpaceSetNumComponents(P, Nc);CHKERRQ(ierr);
-  ierr = PetscSpaceSetNumVariables(P, dim);CHKERRQ(ierr);
+  CHKERRQ(PetscSpaceCreate(comm, &P));
+  CHKERRQ(PetscSpaceSetType(P, PETSCSPACEPOLYNOMIAL));
+  CHKERRQ(PetscObjectSetOptionsPrefix((PetscObject) P, prefix));
+  CHKERRQ(PetscSpacePolynomialSetTensor(P, tensor));
+  CHKERRQ(PetscSpaceSetNumComponents(P, Nc));
+  CHKERRQ(PetscSpaceSetNumVariables(P, dim));
   if (degree >= 0) {
-    ierr = PetscSpaceSetDegree(P, degree, PETSC_DETERMINE);CHKERRQ(ierr);
+    CHKERRQ(PetscSpaceSetDegree(P, degree, PETSC_DETERMINE));
     if (1 && (ct == DM_POLYTOPE_TRI_PRISM || ct == DM_POLYTOPE_TRI_PRISM_TENSOR)) {
       PetscSpace Pend, Pside;
 
-      ierr = PetscSpaceCreate(comm, &Pend);CHKERRQ(ierr);
-      ierr = PetscSpaceSetType(Pend, PETSCSPACEPOLYNOMIAL);CHKERRQ(ierr);
-      ierr = PetscSpacePolynomialSetTensor(Pend, PETSC_FALSE);CHKERRQ(ierr);
-      ierr = PetscSpaceSetNumComponents(Pend, Nc);CHKERRQ(ierr);
-      ierr = PetscSpaceSetNumVariables(Pend, dim-1);CHKERRQ(ierr);
-      ierr = PetscSpaceSetDegree(Pend, degree, PETSC_DETERMINE);CHKERRQ(ierr);
-      ierr = PetscSpaceCreate(comm, &Pside);CHKERRQ(ierr);
-      ierr = PetscSpaceSetType(Pside, PETSCSPACEPOLYNOMIAL);CHKERRQ(ierr);
-      ierr = PetscSpacePolynomialSetTensor(Pside, PETSC_FALSE);CHKERRQ(ierr);
-      ierr = PetscSpaceSetNumComponents(Pside, 1);CHKERRQ(ierr);
-      ierr = PetscSpaceSetNumVariables(Pside, 1);CHKERRQ(ierr);
-      ierr = PetscSpaceSetDegree(Pside, degree, PETSC_DETERMINE);CHKERRQ(ierr);
-      ierr = PetscSpaceSetType(P, PETSCSPACETENSOR);CHKERRQ(ierr);
-      ierr = PetscSpaceTensorSetNumSubspaces(P, 2);CHKERRQ(ierr);
-      ierr = PetscSpaceTensorSetSubspace(P, 0, Pend);CHKERRQ(ierr);
-      ierr = PetscSpaceTensorSetSubspace(P, 1, Pside);CHKERRQ(ierr);
-      ierr = PetscSpaceDestroy(&Pend);CHKERRQ(ierr);
-      ierr = PetscSpaceDestroy(&Pside);CHKERRQ(ierr);
+      CHKERRQ(PetscSpaceCreate(comm, &Pend));
+      CHKERRQ(PetscSpaceSetType(Pend, PETSCSPACEPOLYNOMIAL));
+      CHKERRQ(PetscSpacePolynomialSetTensor(Pend, PETSC_FALSE));
+      CHKERRQ(PetscSpaceSetNumComponents(Pend, Nc));
+      CHKERRQ(PetscSpaceSetNumVariables(Pend, dim-1));
+      CHKERRQ(PetscSpaceSetDegree(Pend, degree, PETSC_DETERMINE));
+      CHKERRQ(PetscSpaceCreate(comm, &Pside));
+      CHKERRQ(PetscSpaceSetType(Pside, PETSCSPACEPOLYNOMIAL));
+      CHKERRQ(PetscSpacePolynomialSetTensor(Pside, PETSC_FALSE));
+      CHKERRQ(PetscSpaceSetNumComponents(Pside, 1));
+      CHKERRQ(PetscSpaceSetNumVariables(Pside, 1));
+      CHKERRQ(PetscSpaceSetDegree(Pside, degree, PETSC_DETERMINE));
+      CHKERRQ(PetscSpaceSetType(P, PETSCSPACETENSOR));
+      CHKERRQ(PetscSpaceTensorSetNumSubspaces(P, 2));
+      CHKERRQ(PetscSpaceTensorSetSubspace(P, 0, Pend));
+      CHKERRQ(PetscSpaceTensorSetSubspace(P, 1, Pside));
+      CHKERRQ(PetscSpaceDestroy(&Pend));
+      CHKERRQ(PetscSpaceDestroy(&Pside));
     }
   }
-  if (setFromOptions) {ierr = PetscSpaceSetFromOptions(P);CHKERRQ(ierr);}
-  ierr = PetscSpaceSetUp(P);CHKERRQ(ierr);
-  ierr = PetscSpaceGetDegree(P, &degree, NULL);CHKERRQ(ierr);
-  ierr = PetscSpacePolynomialGetTensor(P, &tensor);CHKERRQ(ierr);
-  ierr = PetscSpaceGetNumComponents(P, &Nc);CHKERRQ(ierr);
+  if (setFromOptions) CHKERRQ(PetscSpaceSetFromOptions(P));
+  CHKERRQ(PetscSpaceSetUp(P));
+  CHKERRQ(PetscSpaceGetDegree(P, &degree, NULL));
+  CHKERRQ(PetscSpacePolynomialGetTensor(P, &tensor));
+  CHKERRQ(PetscSpaceGetNumComponents(P, &Nc));
   /* Create dual space */
-  ierr = PetscDualSpaceCreate(comm, &Q);CHKERRQ(ierr);
-  ierr = PetscDualSpaceSetType(Q,PETSCDUALSPACELAGRANGE);CHKERRQ(ierr);
-  ierr = PetscObjectSetOptionsPrefix((PetscObject) Q, prefix);CHKERRQ(ierr);
-  ierr = DMPlexCreateReferenceCell(PETSC_COMM_SELF, ct, &K);CHKERRQ(ierr);
-  ierr = PetscDualSpaceSetDM(Q, K);CHKERRQ(ierr);
-  ierr = DMDestroy(&K);CHKERRQ(ierr);
-  ierr = PetscDualSpaceSetNumComponents(Q, Nc);CHKERRQ(ierr);
-  ierr = PetscDualSpaceSetOrder(Q, degree);CHKERRQ(ierr);
+  CHKERRQ(PetscDualSpaceCreate(comm, &Q));
+  CHKERRQ(PetscDualSpaceSetType(Q,PETSCDUALSPACELAGRANGE));
+  CHKERRQ(PetscObjectSetOptionsPrefix((PetscObject) Q, prefix));
+  CHKERRQ(DMPlexCreateReferenceCell(PETSC_COMM_SELF, ct, &K));
+  CHKERRQ(PetscDualSpaceSetDM(Q, K));
+  CHKERRQ(DMDestroy(&K));
+  CHKERRQ(PetscDualSpaceSetNumComponents(Q, Nc));
+  CHKERRQ(PetscDualSpaceSetOrder(Q, degree));
   /* TODO For some reason, we need a tensor dualspace with wedges */
-  ierr = PetscDualSpaceLagrangeSetTensor(Q, (tensor || (ct == DM_POLYTOPE_TRI_PRISM)) ? PETSC_TRUE : PETSC_FALSE);CHKERRQ(ierr);
-  if (setFromOptions) {ierr = PetscDualSpaceSetFromOptions(Q);CHKERRQ(ierr);}
-  ierr = PetscDualSpaceSetUp(Q);CHKERRQ(ierr);
+  CHKERRQ(PetscDualSpaceLagrangeSetTensor(Q, (tensor || (ct == DM_POLYTOPE_TRI_PRISM)) ? PETSC_TRUE : PETSC_FALSE));
+  if (setFromOptions) CHKERRQ(PetscDualSpaceSetFromOptions(Q));
+  CHKERRQ(PetscDualSpaceSetUp(Q));
   /* Create finite element */
-  ierr = PetscFECreate(comm, fem);CHKERRQ(ierr);
-  ierr = PetscObjectSetOptionsPrefix((PetscObject) *fem, prefix);CHKERRQ(ierr);
-  ierr = PetscFESetType(*fem, PETSCFEBASIC);CHKERRQ(ierr);
-  ierr = PetscFESetBasisSpace(*fem, P);CHKERRQ(ierr);
-  ierr = PetscFESetDualSpace(*fem, Q);CHKERRQ(ierr);
-  ierr = PetscFESetNumComponents(*fem, Nc);CHKERRQ(ierr);
-  if (setFromOptions) {ierr = PetscFESetFromOptions(*fem);CHKERRQ(ierr);}
-  ierr = PetscFESetUp(*fem);CHKERRQ(ierr);
-  ierr = PetscSpaceDestroy(&P);CHKERRQ(ierr);
-  ierr = PetscDualSpaceDestroy(&Q);CHKERRQ(ierr);
+  CHKERRQ(PetscFECreate(comm, fem));
+  CHKERRQ(PetscObjectSetOptionsPrefix((PetscObject) *fem, prefix));
+  CHKERRQ(PetscFESetType(*fem, PETSCFEBASIC));
+  CHKERRQ(PetscFESetBasisSpace(*fem, P));
+  CHKERRQ(PetscFESetDualSpace(*fem, Q));
+  CHKERRQ(PetscFESetNumComponents(*fem, Nc));
+  if (setFromOptions) CHKERRQ(PetscFESetFromOptions(*fem));
+  CHKERRQ(PetscFESetUp(*fem));
+  CHKERRQ(PetscSpaceDestroy(&P));
+  CHKERRQ(PetscDualSpaceDestroy(&Q));
   /* Create quadrature (with specified order if given) */
   qorder = qorder >= 0 ? qorder : degree;
   if (setFromOptions) {
     ierr = PetscObjectOptionsBegin((PetscObject)*fem);CHKERRQ(ierr);
-    ierr = PetscOptionsBoundedInt("-petscfe_default_quadrature_order","Quadrature order is one less than quadrature points per edge","PetscFECreateDefault",qorder,&qorder,NULL,0);CHKERRQ(ierr);
+    CHKERRQ(PetscOptionsBoundedInt("-petscfe_default_quadrature_order","Quadrature order is one less than quadrature points per edge","PetscFECreateDefault",qorder,&qorder,NULL,0));
     ierr = PetscOptionsEnd();CHKERRQ(ierr);
   }
   quadPointsPerEdge = PetscMax(qorder + 1,1);
@@ -1896,34 +1896,34 @@ static PetscErrorCode PetscFECreate_Internal(MPI_Comm comm, PetscInt dim, PetscI
     case DM_POLYTOPE_SEG_PRISM_TENSOR:
     case DM_POLYTOPE_HEXAHEDRON:
     case DM_POLYTOPE_QUAD_PRISM_TENSOR:
-      ierr = PetscDTGaussTensorQuadrature(dim,   1, quadPointsPerEdge, -1.0, 1.0, &q);CHKERRQ(ierr);
-      ierr = PetscDTGaussTensorQuadrature(dim-1, 1, quadPointsPerEdge, -1.0, 1.0, &fq);CHKERRQ(ierr);
+      CHKERRQ(PetscDTGaussTensorQuadrature(dim,   1, quadPointsPerEdge, -1.0, 1.0, &q));
+      CHKERRQ(PetscDTGaussTensorQuadrature(dim-1, 1, quadPointsPerEdge, -1.0, 1.0, &fq));
       break;
     case DM_POLYTOPE_TRIANGLE:
     case DM_POLYTOPE_TETRAHEDRON:
-      ierr = PetscDTStroudConicalQuadrature(dim,   1, quadPointsPerEdge, -1.0, 1.0, &q);CHKERRQ(ierr);
-      ierr = PetscDTStroudConicalQuadrature(dim-1, 1, quadPointsPerEdge, -1.0, 1.0, &fq);CHKERRQ(ierr);
+      CHKERRQ(PetscDTStroudConicalQuadrature(dim,   1, quadPointsPerEdge, -1.0, 1.0, &q));
+      CHKERRQ(PetscDTStroudConicalQuadrature(dim-1, 1, quadPointsPerEdge, -1.0, 1.0, &fq));
       break;
     case DM_POLYTOPE_TRI_PRISM:
     case DM_POLYTOPE_TRI_PRISM_TENSOR:
       {
         PetscQuadrature q1, q2;
 
-        ierr = PetscDTStroudConicalQuadrature(2, 1, quadPointsPerEdge, -1.0, 1.0, &q1);CHKERRQ(ierr);
-        ierr = PetscDTGaussTensorQuadrature(1, 1, quadPointsPerEdge, -1.0, 1.0, &q2);CHKERRQ(ierr);
-        ierr = PetscDTTensorQuadratureCreate(q1, q2, &q);CHKERRQ(ierr);
-        ierr = PetscQuadratureDestroy(&q1);CHKERRQ(ierr);
-        ierr = PetscQuadratureDestroy(&q2);CHKERRQ(ierr);
+        CHKERRQ(PetscDTStroudConicalQuadrature(2, 1, quadPointsPerEdge, -1.0, 1.0, &q1));
+        CHKERRQ(PetscDTGaussTensorQuadrature(1, 1, quadPointsPerEdge, -1.0, 1.0, &q2));
+        CHKERRQ(PetscDTTensorQuadratureCreate(q1, q2, &q));
+        CHKERRQ(PetscQuadratureDestroy(&q1));
+        CHKERRQ(PetscQuadratureDestroy(&q2));
       }
-      ierr = PetscDTStroudConicalQuadrature(dim-1, 1, quadPointsPerEdge, -1.0, 1.0, &fq);CHKERRQ(ierr);
+      CHKERRQ(PetscDTStroudConicalQuadrature(dim-1, 1, quadPointsPerEdge, -1.0, 1.0, &fq));
       /* TODO Need separate quadratures for each face */
       break;
     default: SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "No quadrature for celltype %s", DMPolytopeTypes[PetscMin(ct, DM_POLYTOPE_UNKNOWN)]);
   }
-  ierr = PetscFESetQuadrature(*fem, q);CHKERRQ(ierr);
-  ierr = PetscFESetFaceQuadrature(*fem, fq);CHKERRQ(ierr);
-  ierr = PetscQuadratureDestroy(&q);CHKERRQ(ierr);
-  ierr = PetscQuadratureDestroy(&fq);CHKERRQ(ierr);
+  CHKERRQ(PetscFESetQuadrature(*fem, q));
+  CHKERRQ(PetscFESetFaceQuadrature(*fem, fq));
+  CHKERRQ(PetscQuadratureDestroy(&q));
+  CHKERRQ(PetscQuadratureDestroy(&fq));
   /* Set finite element name */
   switch (ct) {
     case DM_POLYTOPE_SEGMENT:
@@ -1932,20 +1932,20 @@ static PetscErrorCode PetscFECreate_Internal(MPI_Comm comm, PetscInt dim, PetscI
     case DM_POLYTOPE_SEG_PRISM_TENSOR:
     case DM_POLYTOPE_HEXAHEDRON:
     case DM_POLYTOPE_QUAD_PRISM_TENSOR:
-      ierr = PetscSNPrintf(name, sizeof(name), "Q%" PetscInt_FMT, degree);CHKERRQ(ierr);
+      CHKERRQ(PetscSNPrintf(name, sizeof(name), "Q%" PetscInt_FMT, degree));
       break;
     case DM_POLYTOPE_TRIANGLE:
     case DM_POLYTOPE_TETRAHEDRON:
-      ierr = PetscSNPrintf(name, sizeof(name), "P%" PetscInt_FMT, degree);CHKERRQ(ierr);
+      CHKERRQ(PetscSNPrintf(name, sizeof(name), "P%" PetscInt_FMT, degree));
       break;
     case DM_POLYTOPE_TRI_PRISM:
     case DM_POLYTOPE_TRI_PRISM_TENSOR:
-      ierr = PetscSNPrintf(name, sizeof(name), "P%" PetscInt_FMT "xQ%" PetscInt_FMT, degree, degree);CHKERRQ(ierr);
+      CHKERRQ(PetscSNPrintf(name, sizeof(name), "P%" PetscInt_FMT "xQ%" PetscInt_FMT, degree, degree));
       break;
     default:
-      ierr = PetscSNPrintf(name, sizeof(name), "FE");CHKERRQ(ierr);
+      CHKERRQ(PetscSNPrintf(name, sizeof(name), "FE"));
   }
-  ierr = PetscFESetName(*fem, name);CHKERRQ(ierr);
+  CHKERRQ(PetscFESetName(*fem, name));
   PetscFunctionReturn(0);
 }
 
@@ -1974,10 +1974,9 @@ static PetscErrorCode PetscFECreate_Internal(MPI_Comm comm, PetscInt dim, PetscI
 @*/
 PetscErrorCode PetscFECreateDefault(MPI_Comm comm, PetscInt dim, PetscInt Nc, PetscBool isSimplex, const char prefix[], PetscInt qorder, PetscFE *fem)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscFECreate_Internal(comm, dim, Nc, DMPolytopeTypeSimpleShape(dim, isSimplex), prefix, PETSC_DECIDE, qorder, PETSC_TRUE, fem);CHKERRQ(ierr);
+  CHKERRQ(PetscFECreate_Internal(comm, dim, Nc, DMPolytopeTypeSimpleShape(dim, isSimplex), prefix, PETSC_DECIDE, qorder, PETSC_TRUE, fem));
   PetscFunctionReturn(0);
 }
 
@@ -2006,10 +2005,9 @@ PetscErrorCode PetscFECreateDefault(MPI_Comm comm, PetscInt dim, PetscInt Nc, Pe
 @*/
 PetscErrorCode PetscFECreateByCell(MPI_Comm comm, PetscInt dim, PetscInt Nc, DMPolytopeType ct, const char prefix[], PetscInt qorder, PetscFE *fem)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = PetscFECreate_Internal(comm, dim, Nc, ct, prefix, PETSC_DECIDE, qorder, PETSC_TRUE, fem);CHKERRQ(ierr);
+  CHKERRQ(PetscFECreate_Internal(comm, dim, Nc, ct, prefix, PETSC_DECIDE, qorder, PETSC_TRUE, fem));
   PetscFunctionReturn(0);
 }
 
@@ -2038,10 +2036,9 @@ PetscErrorCode PetscFECreateByCell(MPI_Comm comm, PetscInt dim, PetscInt Nc, DMP
 @*/
 PetscErrorCode PetscFECreateLagrange(MPI_Comm comm, PetscInt dim, PetscInt Nc, PetscBool isSimplex, PetscInt k, PetscInt qorder, PetscFE *fem)
 {
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  ierr = PetscFECreate_Internal(comm, dim, Nc, DMPolytopeTypeSimpleShape(dim, isSimplex), NULL, k, qorder, PETSC_FALSE, fem);CHKERRQ(ierr);
+  CHKERRQ(PetscFECreate_Internal(comm, dim, Nc, DMPolytopeTypeSimpleShape(dim, isSimplex), NULL, k, qorder, PETSC_FALSE, fem));
   PetscFunctionReturn(0);
 }
 
@@ -2070,10 +2067,9 @@ PetscErrorCode PetscFECreateLagrange(MPI_Comm comm, PetscInt dim, PetscInt Nc, P
 @*/
 PetscErrorCode PetscFECreateLagrangeByCell(MPI_Comm comm, PetscInt dim, PetscInt Nc, DMPolytopeType ct, PetscInt k, PetscInt qorder, PetscFE *fem)
 {
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  ierr = PetscFECreate_Internal(comm, dim, Nc, ct, NULL, k, qorder, PETSC_FALSE, fem);CHKERRQ(ierr);
+  CHKERRQ(PetscFECreate_Internal(comm, dim, Nc, ct, NULL, k, qorder, PETSC_FALSE, fem));
   PetscFunctionReturn(0);
 }
 

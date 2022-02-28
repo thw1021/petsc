@@ -243,17 +243,17 @@ static PetscErrorCode MatMult_SeqAIJKokkos(Mat A,Vec xx,Vec yy)
   PetscScalarKokkosView            yv;
 
   PetscFunctionBegin;
-  ierr   = PetscLogGpuTimeBegin();CHKERRQ(ierr);
-  ierr   = MatSeqAIJKokkosSyncDevice(A);CHKERRQ(ierr);
-  ierr   = VecGetKokkosView(xx,&xv);CHKERRQ(ierr);
-  ierr   = VecGetKokkosViewWrite(yy,&yv);CHKERRQ(ierr);
+  CHKERRQ(PetscLogGpuTimeBegin());
+  CHKERRQ(MatSeqAIJKokkosSyncDevice(A));
+  CHKERRQ(VecGetKokkosView(xx,&xv));
+  CHKERRQ(VecGetKokkosViewWrite(yy,&yv));
   aijkok = static_cast<Mat_SeqAIJKokkos*>(A->spptr);
   KokkosSparse::spmv("N",1.0/*alpha*/,aijkok->csrmat,xv,0.0/*beta*/,yv); /* y = alpha A x + beta y */
   CHKERRQ(VecRestoreKokkosView(xx,&xv));
   CHKERRQ(VecRestoreKokkosViewWrite(yy,&yv));
   /* 2.0*nnz - numRows seems more accurate here but assumes there are no zero-rows. So a little sloppy here. */
-  ierr   = PetscLogGpuFlops(2.0*aijkok->csrmat.nnz());CHKERRQ(ierr);
-  ierr   = PetscLogGpuTimeEnd();CHKERRQ(ierr);
+  CHKERRQ(PetscLogGpuFlops(2.0*aijkok->csrmat.nnz()));
+  CHKERRQ(PetscLogGpuTimeEnd());
   PetscFunctionReturn(0);
 }
 
@@ -829,9 +829,9 @@ static PetscErrorCode MatScale_SeqAIJKokkos(Mat A, PetscScalar a)
   CHKERRQ(MatSeqAIJKokkosSyncDevice(A));
   aijkok = static_cast<Mat_SeqAIJKokkos*>(A->spptr);
   KokkosBlas::scal(aijkok->a_dual.view_device(),a,aijkok->a_dual.view_device());
-  ierr = MatSeqAIJKokkosModifyDevice(A);CHKERRQ(ierr);
-  ierr = PetscLogGpuFlops(aijkok->a_dual.extent(0));CHKERRQ(ierr);
-  ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
+  CHKERRQ(MatSeqAIJKokkosModifyDevice(A));
+  CHKERRQ(PetscLogGpuFlops(aijkok->a_dual.extent(0)));
+  CHKERRQ(PetscLogGpuTimeEnd());
   PetscFunctionReturn(0);
 }
 

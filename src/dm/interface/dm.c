@@ -5579,7 +5579,6 @@ PetscErrorCode DMCreateFEDefault(DM dm, PetscInt Nc, const char prefix[], PetscI
 {
   DMPolytopeType ct;
   PetscInt       dim, cStart;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
@@ -5587,10 +5586,10 @@ PetscErrorCode DMCreateFEDefault(DM dm, PetscInt Nc, const char prefix[], PetscI
   if (prefix) PetscValidCharPointer(prefix, 3);
   PetscValidLogicalCollectiveInt(dm, qorder, 4);
   PetscValidPointer(fem, 5);
-  ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
-  ierr = DMPlexGetHeightStratum(dm, 0, &cStart, NULL);CHKERRQ(ierr);
-  ierr = DMPlexGetCellType(dm, cStart, &ct);CHKERRQ(ierr);
-  ierr = PetscFECreateByCell(PETSC_COMM_SELF, dim, Nc, ct, prefix, qorder, fem);CHKERRQ(ierr);
+  CHKERRQ(DMGetDimension(dm, &dim));
+  CHKERRQ(DMPlexGetHeightStratum(dm, 0, &cStart, NULL));
+  CHKERRQ(DMPlexGetCellType(dm, cStart, &ct));
+  CHKERRQ(PetscFECreateByCell(PETSC_COMM_SELF, dim, Nc, ct, prefix, qorder, fem));
   PetscFunctionReturn(0);
 }
 
@@ -6215,8 +6214,8 @@ PetscErrorCode DMSetCoordinatesLocal(DM dm, Vec c)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   if (c) PetscValidHeaderSpecific(c,VEC_CLASSID,2);
-  ierr = PetscObjectReference((PetscObject) c);CHKERRQ(ierr);
-  ierr = VecDestroy(&dm->coordinatesLocal);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectReference((PetscObject) c));
+  CHKERRQ(VecDestroy(&dm->coordinatesLocal));
 
   dm->coordinatesLocal = c;
 

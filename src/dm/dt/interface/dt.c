@@ -2207,27 +2207,26 @@ PetscErrorCode PetscDTTensorQuadratureCreate(PetscQuadrature q1, PetscQuadrature
   PetscInt         dim1, Nc1, Np1, order1, qa, d1;
   PetscInt         dim2, Nc2, Np2, order2, qb, d2;
   PetscInt         dim,  Nc,  Np,  order, qc, d;
-  PetscErrorCode   ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(q1, PETSCQUADRATURE_CLASSID, 1);
   PetscValidHeaderSpecific(q2, PETSCQUADRATURE_CLASSID, 2);
   PetscValidPointer(q, 3);
-  ierr = PetscQuadratureGetOrder(q1, &order1);CHKERRQ(ierr);
-  ierr = PetscQuadratureGetOrder(q2, &order2);CHKERRQ(ierr);
+  CHKERRQ(PetscQuadratureGetOrder(q1, &order1));
+  CHKERRQ(PetscQuadratureGetOrder(q2, &order2));
   PetscCheck(order1 == order2, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Order1 %" PetscInt_FMT " != %" PetscInt_FMT " Order2", order1, order2);
-  ierr = PetscQuadratureGetData(q1, &dim1, &Nc1, &Np1, &x1, &w1);CHKERRQ(ierr);
-  ierr = PetscQuadratureGetData(q2, &dim2, &Nc2, &Np2, &x2, &w2);CHKERRQ(ierr);
+  CHKERRQ(PetscQuadratureGetData(q1, &dim1, &Nc1, &Np1, &x1, &w1));
+  CHKERRQ(PetscQuadratureGetData(q2, &dim2, &Nc2, &Np2, &x2, &w2));
   PetscCheck(Nc1 == Nc2, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "NumComp1 %" PetscInt_FMT " != %" PetscInt_FMT " NumComp2", Nc1, Nc2);
 
   dim   = dim1 + dim2;
   Nc    = Nc1;
   Np    = Np1 * Np2;
   order = order1;
-  ierr = PetscQuadratureCreate(PETSC_COMM_SELF, q);CHKERRQ(ierr);
-  ierr = PetscQuadratureSetOrder(*q, order);CHKERRQ(ierr);
-  ierr = PetscMalloc1(Np*dim, &x);CHKERRQ(ierr);
-  ierr = PetscMalloc1(Np, &w);CHKERRQ(ierr);
+  CHKERRQ(PetscQuadratureCreate(PETSC_COMM_SELF, q));
+  CHKERRQ(PetscQuadratureSetOrder(*q, order));
+  CHKERRQ(PetscMalloc1(Np*dim, &x));
+  CHKERRQ(PetscMalloc1(Np, &w));
   for (qa = 0, qc = 0; qa < Np1; ++qa) {
     for (qb = 0; qb < Np2; ++qb, ++qc) {
       for (d1 = 0, d = 0; d1 < dim1; ++d1, ++d) {
@@ -2239,7 +2238,7 @@ PetscErrorCode PetscDTTensorQuadratureCreate(PetscQuadrature q1, PetscQuadrature
       w[qc] = w1[qa] * w2[qb];
     }
   }
-  ierr = PetscQuadratureSetData(*q, dim, Nc, Np, x, w);CHKERRQ(ierr);
+  CHKERRQ(PetscQuadratureSetData(*q, dim, Nc, Np, x, w));
   PetscFunctionReturn(0);
 }
 

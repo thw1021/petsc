@@ -313,14 +313,14 @@ static PetscErrorCode GLVisCreateFE(PetscFE femIn,char name[32],PetscFE *fem)
   MPI_Comm        comm;
 
   PetscFunctionBegin;
-  ierr = PetscObjectGetComm((PetscObject)femIn, &comm);CHKERRQ(ierr);
-  ierr = PetscFEGetBasisSpace(femIn,&P);CHKERRQ(ierr);
-  ierr = PetscFEGetDualSpace(femIn,&Q);CHKERRQ(ierr);
-  ierr = PetscDualSpaceGetDM(Q,&K);CHKERRQ(ierr);
-  ierr = DMGetDimension(K,&dim);CHKERRQ(ierr);
-  ierr = PetscSpaceGetDegree(P,&deg,NULL);CHKERRQ(ierr);
-  ierr = PetscSpaceGetNumComponents(P,&dof);CHKERRQ(ierr);
-  ierr = DMPlexGetCellType(K,0,&ptype);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectGetComm((PetscObject)femIn, &comm));
+  CHKERRQ(PetscFEGetBasisSpace(femIn,&P));
+  CHKERRQ(PetscFEGetDualSpace(femIn,&Q));
+  CHKERRQ(PetscDualSpaceGetDM(Q,&K));
+  CHKERRQ(DMGetDimension(K,&dim));
+  CHKERRQ(PetscSpaceGetDegree(P,&deg,NULL));
+  CHKERRQ(PetscSpaceGetNumComponents(P,&dof));
+  CHKERRQ(DMPlexGetCellType(K,0,&ptype));
   switch (ptype) {
   case DM_POLYTOPE_QUADRILATERAL:
   case DM_POLYTOPE_HEXAHEDRON:
@@ -338,17 +338,17 @@ static PetscErrorCode GLVisCreateFE(PetscFE femIn,char name[32],PetscFE *fem)
   CHKERRQ(PetscSpaceSetDegree(P,deg,PETSC_DETERMINE));
   CHKERRQ(PetscSpaceSetUp(P));
   /* Create dual space */
-  ierr = PetscDualSpaceCreate(comm,&Q);CHKERRQ(ierr);
-  ierr = PetscDualSpaceSetType(Q,PETSCDUALSPACELAGRANGE);CHKERRQ(ierr);
-  ierr = PetscDualSpaceLagrangeSetTensor(Q,isTensor);CHKERRQ(ierr);
-  ierr = PetscDualSpaceLagrangeSetContinuity(Q,continuity);CHKERRQ(ierr);
-  ierr = PetscDualSpaceLagrangeSetNodeType(Q,nodeType,endpoint,0);CHKERRQ(ierr);
-  ierr = PetscDualSpaceSetNumComponents(Q,dof);CHKERRQ(ierr);
-  ierr = PetscDualSpaceSetOrder(Q,deg);CHKERRQ(ierr);
-  ierr = DMPlexCreateReferenceCell(PETSC_COMM_SELF, DMPolytopeTypeSimpleShape(dim, isSimplex), &K);CHKERRQ(ierr);
-  ierr = PetscDualSpaceSetDM(Q,K);CHKERRQ(ierr);
-  ierr = DMDestroy(&K);CHKERRQ(ierr);
-  ierr = PetscDualSpaceSetUp(Q);CHKERRQ(ierr);
+  CHKERRQ(PetscDualSpaceCreate(comm,&Q));
+  CHKERRQ(PetscDualSpaceSetType(Q,PETSCDUALSPACELAGRANGE));
+  CHKERRQ(PetscDualSpaceLagrangeSetTensor(Q,isTensor));
+  CHKERRQ(PetscDualSpaceLagrangeSetContinuity(Q,continuity));
+  CHKERRQ(PetscDualSpaceLagrangeSetNodeType(Q,nodeType,endpoint,0));
+  CHKERRQ(PetscDualSpaceSetNumComponents(Q,dof));
+  CHKERRQ(PetscDualSpaceSetOrder(Q,deg));
+  CHKERRQ(DMPlexCreateReferenceCell(PETSC_COMM_SELF, DMPolytopeTypeSimpleShape(dim, isSimplex), &K));
+  CHKERRQ(PetscDualSpaceSetDM(Q,K));
+  CHKERRQ(DMDestroy(&K));
+  CHKERRQ(PetscDualSpaceSetUp(Q));
   /* Create quadrature */
   if (isSimplex) {
     CHKERRQ(PetscDTStroudConicalQuadrature(dim,  1,deg+1,-1,+1,&q));

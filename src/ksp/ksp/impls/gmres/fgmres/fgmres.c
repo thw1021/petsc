@@ -169,7 +169,7 @@ PetscErrorCode KSPFGMRESCycle(PetscInt *itcount,KSP ksp)
     CHKERRQ((*fgmres->orthog)(ksp,loc_it));
 
     /* new entry in hessenburg is the 2-norm of our new direction */
-    ierr = VecNorm(VEC_VV(loc_it+1),NORM_2,&tt);CHKERRQ(ierr);
+    CHKERRQ(VecNorm(VEC_VV(loc_it+1),NORM_2,&tt));
     KSPCheckNorm(ksp,tt);
 
     *HH(loc_it+1,loc_it)  = tt;

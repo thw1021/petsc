@@ -30,32 +30,30 @@ const char *const RHSTypes[] = {"FILE", "ONE", "RANDOM", "RHSType", "RHS_", NULL
 
 PetscErrorCode CheckResult(KSP *ksp, Mat *A, Vec *b, Vec *x, IS *rowperm)
 {
-  PetscErrorCode    ierr;
   PetscReal         norm;        /* norm of solution error */
   PetscInt          its;
   PetscFunctionBegin;
-  ierr = KSPGetTotalIterations(*ksp,&its);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD,"Number of iterations = %d\n",its);CHKERRQ(ierr);
+  CHKERRQ(KSPGetTotalIterations(*ksp,&its));
+  CHKERRQ(PetscPrintf(PETSC_COMM_WORLD,"Number of iterations = %d\n",its));
 
-  ierr = KSPGetResidualNorm(*ksp,&norm);CHKERRQ(ierr);
+  CHKERRQ(KSPGetResidualNorm(*ksp,&norm));
   if (norm < 1.e-12) {
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"Residual norm < 1.e-12\n");CHKERRQ(ierr);
+    CHKERRQ(PetscPrintf(PETSC_COMM_WORLD,"Residual norm < 1.e-12\n"));
   } else {
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"Residual norm %e\n",(double)norm);CHKERRQ(ierr);
+    CHKERRQ(PetscPrintf(PETSC_COMM_WORLD,"Residual norm %e\n",(double)norm));
   }
 
-  ierr = KSPDestroy(ksp);CHKERRQ(ierr);
-  ierr = MatDestroy(A);CHKERRQ(ierr);
-  ierr = VecDestroy(x);CHKERRQ(ierr);
-  ierr = VecDestroy(b);CHKERRQ(ierr);
-  ierr = ISDestroy(rowperm);CHKERRQ(ierr);
+  CHKERRQ(KSPDestroy(ksp));
+  CHKERRQ(MatDestroy(A));
+  CHKERRQ(VecDestroy(x));
+  CHKERRQ(VecDestroy(b));
+  CHKERRQ(ISDestroy(rowperm));
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode CreateSystem(const char filename[PETSC_MAX_PATH_LEN], RHSType rhstype, MatOrderingType ordering, PetscBool permute, IS *rowperm_out, Mat *A_out, Vec *b_out, Vec *x_out)
 {
 
-  PetscErrorCode    ierr;
   Vec               x,b,b2;
   Mat               A;           /* linear system matrix */
   PetscViewer       viewer;      /* viewer */
@@ -66,7 +64,7 @@ PetscErrorCode CreateSystem(const char filename[PETSC_MAX_PATH_LEN], RHSType rhs
 
   PetscFunctionBegin;
   /* open binary file. Note that we use FILE_MODE_READ to indicate reading from this file */
-  ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,FILE_MODE_READ,&viewer);CHKERRQ(ierr);
+  CHKERRQ(PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,FILE_MODE_READ,&viewer));
 
   /* load the matrix and vector; then destroy the viewer */
   CHKERRQ(MatCreate(PETSC_COMM_WORLD,&A));
@@ -120,12 +118,12 @@ PetscErrorCode CreateSystem(const char filename[PETSC_MAX_PATH_LEN], RHSType rhs
 
   if (permute) {
     Mat Aperm;
-    ierr = MatGetOrdering(A,ordering,&rowperm,&colperm);CHKERRQ(ierr);
-    ierr = MatPermute(A,rowperm,colperm,&Aperm);CHKERRQ(ierr);
-    ierr = VecPermute(b,colperm,PETSC_FALSE);CHKERRQ(ierr);
-    ierr = MatDestroy(&A);CHKERRQ(ierr);
+    CHKERRQ(MatGetOrdering(A,ordering,&rowperm,&colperm));
+    CHKERRQ(MatPermute(A,rowperm,colperm,&Aperm));
+    CHKERRQ(VecPermute(b,colperm,PETSC_FALSE));
+    CHKERRQ(MatDestroy(&A));
     A    = Aperm;               /* Replace original operator with permuted version */
-    ierr = ISDestroy(&colperm);CHKERRQ(ierr);
+    CHKERRQ(ISDestroy(&colperm));
   }
 
   *b_out = b;
@@ -159,21 +157,21 @@ int main(int argc,char **args)
        Determine files from which we read the two linear systems
        (matrix and right-hand-side vector).
     */
-    ierr = PetscOptionsBool("-trans","Solve transpose system instead","",trans,&trans,&flg);CHKERRQ(ierr);
-    ierr = PetscOptionsString("-f","First file to load (small system)","",file[0],file[0],sizeof(file[0]),&flg);CHKERRQ(ierr);
-    ierr = PetscOptionsFList("-permute","Permute matrix and vector to solve in new ordering","",MatOrderingList,ordering,ordering,sizeof(ordering),&permute);CHKERRQ(ierr);
+    CHKERRQ(PetscOptionsBool("-trans","Solve transpose system instead","",trans,&trans,&flg));
+    CHKERRQ(PetscOptionsString("-f","First file to load (small system)","",file[0],file[0],sizeof(file[0]),&flg));
+    CHKERRQ(PetscOptionsFList("-permute","Permute matrix and vector to solve in new ordering","",MatOrderingList,ordering,ordering,sizeof(ordering),&permute));
 
     if (flg) {
-      ierr    = PetscStrcpy(file[1],file[0]);CHKERRQ(ierr);
+      CHKERRQ(PetscStrcpy(file[1],file[0]));
       preload = PETSC_FALSE;
     } else {
-      ierr = PetscOptionsString("-f0","First file to load (small system)","",file[0],file[0],sizeof(file[0]),&flg);CHKERRQ(ierr);
+      CHKERRQ(PetscOptionsString("-f0","First file to load (small system)","",file[0],file[0],sizeof(file[0]),&flg));
       PetscCheck(flg,PETSC_COMM_WORLD,PETSC_ERR_USER_INPUT,"Must indicate binary file with the -f0 or -f option");
-      ierr = PetscOptionsString("-f1","Second file to load (larger system)","",file[1],file[1],sizeof(file[1]),&flg);CHKERRQ(ierr);
+      CHKERRQ(PetscOptionsString("-f1","Second file to load (larger system)","",file[1],file[1],sizeof(file[1]),&flg));
       if (!flg) preload = PETSC_FALSE;   /* don't bother with second system */
     }
 
-    ierr = PetscOptionsEnum("-rhs","Right hand side","",RHSTypes,(PetscEnum)rhstype,(PetscEnum*)&rhstype,NULL);CHKERRQ(ierr);
+    CHKERRQ(PetscOptionsEnum("-rhs","Right hand side","",RHSTypes,(PetscEnum)rhstype,(PetscEnum*)&rhstype,NULL));
   }
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
@@ -211,7 +209,7 @@ int main(int argc,char **args)
     =========================*/
 
   PetscPreLoadBegin(preload,"Load System 0");
-  ierr = CreateSystem(file[0],rhstype,ordering,permute,&rowperm,&A,&b,&x);CHKERRQ(ierr);
+  CHKERRQ(CreateSystem(file[0],rhstype,ordering,permute,&rowperm,&A,&b,&x));
 
   PetscPreLoadStage("KSPSetUp 0");
   CHKERRQ(KSPCreate(PETSC_COMM_WORLD,&ksp));
@@ -231,9 +229,9 @@ int main(int argc,char **args)
   if (trans) CHKERRQ(KSPSolveTranspose(ksp,b,x));
   else       CHKERRQ(KSPSolve(ksp,b,x));
 
-  if (permute) {ierr = VecPermute(x,rowperm,PETSC_TRUE);CHKERRQ(ierr);}
+  if (permute) CHKERRQ(VecPermute(x,rowperm,PETSC_TRUE));
 
-  ierr = CheckResult(&ksp,&A,&b,&x,&rowperm);CHKERRQ(ierr);
+  CHKERRQ(CheckResult(&ksp,&A,&b,&x,&rowperm));
 
   /*=========================
     solve a large system
@@ -241,12 +239,12 @@ int main(int argc,char **args)
 
   PetscPreLoadStage("Load System 1");
 
-  ierr = CreateSystem(file[1],rhstype,ordering,permute,&rowperm,&A,&b,&x);CHKERRQ(ierr);
+  CHKERRQ(CreateSystem(file[1],rhstype,ordering,permute,&rowperm,&A,&b,&x));
 
   PetscPreLoadStage("KSPSetUp 1");
-  ierr = KSPCreate(PETSC_COMM_WORLD,&ksp);CHKERRQ(ierr);
-  ierr = KSPSetOperators(ksp,A,A);CHKERRQ(ierr);
-  ierr = KSPSetFromOptions(ksp);CHKERRQ(ierr);
+  CHKERRQ(KSPCreate(PETSC_COMM_WORLD,&ksp));
+  CHKERRQ(KSPSetOperators(ksp,A,A));
+  CHKERRQ(KSPSetFromOptions(ksp));
 
   /*
     Here we explicitly call KSPSetUp() and KSPSetUpOnBlocks() to
@@ -261,9 +259,9 @@ int main(int argc,char **args)
   if (trans) CHKERRQ(KSPSolveTranspose(ksp,b,x));
   else       CHKERRQ(KSPSolve(ksp,b,x));
 
-  if (permute) {ierr = VecPermute(x,rowperm,PETSC_TRUE);CHKERRQ(ierr);}
+  if (permute) CHKERRQ(VecPermute(x,rowperm,PETSC_TRUE));
 
-  ierr = CheckResult(&ksp,&A,&b,&x,&rowperm);CHKERRQ(ierr);
+  CHKERRQ(CheckResult(&ksp,&A,&b,&x,&rowperm));
 
   PetscPreLoadEnd();
   /*

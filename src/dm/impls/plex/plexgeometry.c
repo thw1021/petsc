@@ -1595,12 +1595,11 @@ static PetscErrorCode DMPlexComputeTriangularPrismGeometry_Internal(DM dm, Petsc
   PetscScalar   *coords = NULL;
   const PetscInt dim = 3;
   PetscInt       d;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = DMGetCoordinatesLocal(dm, &coordinates);CHKERRQ(ierr);
-  ierr = DMGetCoordinateSection(dm, &coordSection);CHKERRQ(ierr);
-  ierr = DMPlexVecGetClosure(dm, coordSection, coordinates, e, NULL, &coords);CHKERRQ(ierr);
+  CHKERRQ(DMGetCoordinatesLocal(dm, &coordinates));
+  CHKERRQ(DMGetCoordinateSection(dm, &coordSection));
+  CHKERRQ(DMPlexVecGetClosure(dm, coordSection, coordinates, e, NULL, &coords));
   if (!Nq) {
     /* Assume that the map to the reference is affine */
     *detJ = 0.0;
@@ -1611,7 +1610,7 @@ static PetscErrorCode DMPlexComputeTriangularPrismGeometry_Internal(DM dm, Petsc
         J[d*dim+1] = 0.5*(PetscRealPart(coords[1*dim+d]) - PetscRealPart(coords[0*dim+d]));
         J[d*dim+2] = 0.5*(PetscRealPart(coords[4*dim+d]) - PetscRealPart(coords[0*dim+d]));
       }
-      ierr = PetscLogFlops(18.0);CHKERRQ(ierr);
+      CHKERRQ(PetscLogFlops(18.0));
       DMPlex_Det3D_Internal(detJ, J);
     }
     if (invJ) {DMPlex_Invert3D_Internal(invJ, J, *detJ);}
@@ -1716,7 +1715,7 @@ static PetscErrorCode DMPlexComputeTriangularPrismGeometry_Internal(DM dm, Petsc
       }
     }
   }
-  ierr = DMPlexVecRestoreClosure(dm, coordSection, coordinates, e, NULL, &coords);CHKERRQ(ierr);
+  CHKERRQ(DMPlexVecRestoreClosure(dm, coordSection, coordinates, e, NULL, &coords));
   PetscFunctionReturn(0);
 }
 
@@ -1773,7 +1772,7 @@ static PetscErrorCode DMPlexComputeCellGeometryFEM_Implicit(DM dm, PetscInt cell
     isAffine = PETSC_FALSE;
     break;
     case DM_POLYTOPE_TRI_PRISM:
-    ierr = DMPlexComputeTriangularPrismGeometry_Internal(dm, cell, Nq, points, v, J, invJ, detJ);CHKERRQ(ierr);
+    CHKERRQ(DMPlexComputeTriangularPrismGeometry_Internal(dm, cell, Nq, points, v, J, invJ, detJ));
     isAffine = PETSC_FALSE;
     break;
     default: SETERRQ(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "No element geometry for cell %" PetscInt_FMT " with type %s", cell, DMPolytopeTypes[PetscMax(0, PetscMin(ct, DM_NUM_POLYTOPES))]);

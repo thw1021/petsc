@@ -1012,13 +1012,13 @@ static PetscErrorCode PetscDualSpaceCreateEdgeSubspace_Lagrange(PetscDualSpace s
   PetscDualSpace_Lag *newlag;
 
   PetscFunctionBegin;
-  ierr = PetscDualSpaceDuplicate(sp,bdsp);CHKERRQ(ierr);
-  ierr = PetscDualSpaceSetFormDegree(*bdsp, k);CHKERRQ(ierr);
-  ierr = DMPlexCreateReferenceCell(PETSC_COMM_SELF, DMPolytopeTypeSimpleShape(1, PETSC_TRUE), &K);CHKERRQ(ierr);
-  ierr = PetscDualSpaceSetDM(*bdsp, K);CHKERRQ(ierr);
-  ierr = DMDestroy(&K);CHKERRQ(ierr);
-  ierr = PetscDualSpaceSetOrder(*bdsp, order);CHKERRQ(ierr);
-  ierr = PetscDualSpaceSetNumComponents(*bdsp, Nc);CHKERRQ(ierr);
+  CHKERRQ(PetscDualSpaceDuplicate(sp,bdsp));
+  CHKERRQ(PetscDualSpaceSetFormDegree(*bdsp, k));
+  CHKERRQ(DMPlexCreateReferenceCell(PETSC_COMM_SELF, DMPolytopeTypeSimpleShape(1, PETSC_TRUE), &K));
+  CHKERRQ(PetscDualSpaceSetDM(*bdsp, K));
+  CHKERRQ(DMDestroy(&K));
+  CHKERRQ(PetscDualSpaceSetOrder(*bdsp, order));
+  CHKERRQ(PetscDualSpaceSetNumComponents(*bdsp, Nc));
   newlag = (PetscDualSpace_Lag *) (*bdsp)->data;
   newlag->interiorOnly = interiorOnly;
   CHKERRQ(PetscDualSpaceSetUp(*bdsp));
@@ -1331,11 +1331,11 @@ static PetscErrorCode PetscDualSpaceCreateFacetSubspace_Lagrange(PetscDualSpace 
       DMPolytopeType ct;
 
       pointDim = dim - 1;
-      ierr = DMPlexGetCellType(dm, f, &ct);CHKERRQ(ierr);
-      ierr = DMPlexCreateReferenceCell(PETSC_COMM_SELF, ct, &K);CHKERRQ(ierr);
+      CHKERRQ(DMPlexGetCellType(dm, f, &ct));
+      CHKERRQ(DMPlexCreateReferenceCell(PETSC_COMM_SELF, ct, &K));
     } else if (depth == 1) {
       pointDim = 0;
-      ierr = DMPlexCreateReferenceCell(PETSC_COMM_SELF, DM_POLYTOPE_POINT, &K);CHKERRQ(ierr);
+      CHKERRQ(DMPlexCreateReferenceCell(PETSC_COMM_SELF, DM_POLYTOPE_POINT, &K));
     } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unsupported interpolation state of reference element");
   } else {
     CHKERRQ(PetscObjectReference((PetscObject)K));

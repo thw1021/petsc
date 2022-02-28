@@ -29,18 +29,18 @@ static PetscErrorCode private_PetscFECreateDefault_scalar_pk1(DM dm, PetscInt di
   CHKERRQ(PetscSpaceGetDegree(P, &order, NULL));
   CHKERRQ(PetscSpacePolynomialGetTensor(P, &tensor));
   /* Create dual space */
-  ierr = PetscDualSpaceCreate(PetscObjectComm((PetscObject) dm), &Q);CHKERRQ(ierr);
-  ierr = PetscDualSpaceSetType(Q,PETSCDUALSPACELAGRANGE);CHKERRQ(ierr);
-  /*ierr = PetscObjectSetOptionsPrefix((PetscObject) Q, prefix);CHKERRQ(ierr);*/
-  ierr = DMPlexCreateReferenceCell(PETSC_COMM_SELF, DMPolytopeTypeSimpleShape(dim, isSimplex), &K);CHKERRQ(ierr);
-  ierr = PetscDualSpaceSetDM(Q, K);CHKERRQ(ierr);
-  ierr = DMDestroy(&K);CHKERRQ(ierr);
-  ierr = PetscDualSpaceSetNumComponents(Q, Nc);CHKERRQ(ierr);
-  ierr = PetscDualSpaceSetOrder(Q, order);CHKERRQ(ierr);
-  ierr = PetscDualSpaceLagrangeSetTensor(Q, tensor);CHKERRQ(ierr);
-  /*ierr = PetscDualSpaceSetFromOptions(Q);CHKERRQ(ierr);*/
-  ierr = PetscDualSpaceSetType(Q,PETSCDUALSPACELAGRANGE);CHKERRQ(ierr);
-  ierr = PetscDualSpaceSetUp(Q);CHKERRQ(ierr);
+  CHKERRQ(PetscDualSpaceCreate(PetscObjectComm((PetscObject) dm), &Q));
+  CHKERRQ(PetscDualSpaceSetType(Q,PETSCDUALSPACELAGRANGE));
+  /*CHKERRQ(PetscObjectSetOptionsPrefix((PetscObject) Q, prefix));*/
+  CHKERRQ(DMPlexCreateReferenceCell(PETSC_COMM_SELF, DMPolytopeTypeSimpleShape(dim, isSimplex), &K));
+  CHKERRQ(PetscDualSpaceSetDM(Q, K));
+  CHKERRQ(DMDestroy(&K));
+  CHKERRQ(PetscDualSpaceSetNumComponents(Q, Nc));
+  CHKERRQ(PetscDualSpaceSetOrder(Q, order));
+  CHKERRQ(PetscDualSpaceLagrangeSetTensor(Q, tensor));
+  /*CHKERRQ(PetscDualSpaceSetFromOptions(Q));*/
+  CHKERRQ(PetscDualSpaceSetType(Q,PETSCDUALSPACELAGRANGE));
+  CHKERRQ(PetscDualSpaceSetUp(Q));
   /* Create element */
   CHKERRQ(PetscFECreate(PetscObjectComm((PetscObject) dm), fem));
   /*CHKERRQ(PetscObjectSetOptionsPrefix((PetscObject) *fem, prefix));*/

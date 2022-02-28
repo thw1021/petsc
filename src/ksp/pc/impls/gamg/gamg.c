@@ -399,19 +399,19 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc,Mat Amat_fine,PetscInt cr_bs,
     {
       Mat       mat;
       PetscBool flg;
-      ierr = MatCreateSubMatrix(Cmat, new_eq_indices, new_eq_indices, MAT_INITIAL_MATRIX, &mat);CHKERRQ(ierr);
-      ierr = MatGetOption(Cmat, MAT_SPD, &flg);CHKERRQ(ierr);
+      CHKERRQ(MatCreateSubMatrix(Cmat, new_eq_indices, new_eq_indices, MAT_INITIAL_MATRIX, &mat));
+      CHKERRQ(MatGetOption(Cmat, MAT_SPD, &flg));
       if (flg) {
-        ierr = MatSetOption(mat, MAT_SPD,PETSC_TRUE);CHKERRQ(ierr);
+        CHKERRQ(MatSetOption(mat, MAT_SPD,PETSC_TRUE));
       } else {
-        ierr = MatGetOption(Cmat, MAT_HERMITIAN, &flg);CHKERRQ(ierr);
+        CHKERRQ(MatGetOption(Cmat, MAT_HERMITIAN, &flg));
         if (flg) {
-          ierr = MatSetOption(mat, MAT_HERMITIAN,PETSC_TRUE);CHKERRQ(ierr);
+          CHKERRQ(MatSetOption(mat, MAT_HERMITIAN,PETSC_TRUE));
         } else {
 #if !defined(PETSC_USE_COMPLEX)
-          ierr = MatGetOption(Cmat, MAT_SYMMETRIC, &flg);CHKERRQ(ierr);
+          CHKERRQ(MatGetOption(Cmat, MAT_SYMMETRIC, &flg));
           if (flg) {
-            ierr = MatSetOption(mat, MAT_SYMMETRIC,PETSC_TRUE);CHKERRQ(ierr);
+            CHKERRQ(MatSetOption(mat, MAT_SYMMETRIC,PETSC_TRUE));
           }
 #endif
         }
@@ -744,7 +744,7 @@ PetscErrorCode PCSetUp_GAMG(PC pc)
         ASMLocalIDsArr[level] = NULL;
         nASMBlocksArr[level]  = 0;
       } else {
-        ierr = PCSetType(subpc, PCJACOBI);CHKERRQ(ierr);
+        CHKERRQ(PCSetType(subpc, PCJACOBI));
       }
     }
     {
@@ -1561,7 +1561,6 @@ static PetscErrorCode PCGAMGSetType_GAMG(PC pc, PCGAMGType type)
 
 static PetscErrorCode PCView_GAMG(PC pc,PetscViewer viewer)
 {
-  PetscErrorCode ierr,i;
   PC_MG          *mg      = (PC_MG*)pc->data;
   PC_GAMG        *pc_gamg = (PC_GAMG*)mg->innerctx;
   PetscReal       gc=0, oc=0;
@@ -1591,8 +1590,8 @@ static PetscErrorCode PCView_GAMG(PC pc,PetscViewer viewer)
   if (pc_gamg->ops->view) {
     CHKERRQ((*pc_gamg->ops->view)(pc,viewer));
   }
-  ierr = PCMGGetGridComplexity(pc,&gc,&oc);CHKERRQ(ierr);
-  ierr = PetscViewerASCIIPrintf(viewer,"      Complexity:    grid = %g    operator = %g\n",gc,oc);CHKERRQ(ierr);
+  CHKERRQ(PCMGGetGridComplexity(pc,&gc,&oc));
+  CHKERRQ(PetscViewerASCIIPrintf(viewer,"      Complexity:    grid = %g    operator = %g\n",gc,oc));
   PetscFunctionReturn(0);
 }
 

@@ -2298,7 +2298,6 @@ static void TPSNearestPointResJac(TPSEvaluateFunc feval, const PetscScalar x[], 
 static PetscErrorCode TPSNearestPoint(TPSEvaluateFunc feval, PetscScalar x[])
 {
   PetscScalar y[3] = {x[0], x[1], x[2]}; // Initial guess
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   for (PetscInt iter=0; iter<10; iter++) {
@@ -2307,12 +2306,12 @@ static PetscErrorCode TPSNearestPoint(TPSEvaluateFunc feval, PetscScalar x[])
     TPSNearestPointResJac(feval, x, y, res, J);
     resnorm = PetscSqrtReal(PetscSqr(PetscRealPart(res[0])) + PetscSqr(PetscRealPart(res[1])) + PetscSqr(PetscRealPart(res[2])));
     if (0) { // Turn on this monitor if you need to confirm quadratic convergence
-      ierr = PetscPrintf(PETSC_COMM_SELF, "[%D] res [%g %g %g]\n", iter, PetscRealPart(res[0]), PetscRealPart(res[1]), PetscRealPart(res[2]));CHKERRQ(ierr);
+      CHKERRQ(PetscPrintf(PETSC_COMM_SELF, "[%D] res [%g %g %g]\n", iter, PetscRealPart(res[0]), PetscRealPart(res[1]), PetscRealPart(res[2])));
     }
     if (resnorm < PETSC_SMALL) break;
 
     // Take the Newton step
-    ierr = PetscKernel_A_gets_inverse_A_3(J, 0., PETSC_FALSE, NULL);CHKERRQ(ierr);
+    CHKERRQ(PetscKernel_A_gets_inverse_A_3(J, 0., PETSC_FALSE, NULL));
     PetscKernel_v_gets_v_minus_A_times_w_3(y, J, res);
   }
   for (PetscInt i=0; i<3; i++) x[i] = y[i];
@@ -2323,7 +2322,6 @@ const char *const DMPlexTPSTypes[] = {"SCHWARZ_P", "GYROID", "DMPlexTPSType", "D
 
 static PetscErrorCode DMPlexCreateTPSMesh_Internal(DM dm, DMPlexTPSType tpstype, const PetscInt extent[], const DMBoundaryType periodic[], PetscInt refinements, PetscInt layers, PetscReal thickness)
 {
-  PetscErrorCode ierr;
   PetscMPIInt rank;
   PetscInt topoDim = 2, spaceDim = 3, numFaces = 0, numVertices = 0, numEdges = 0;
   PetscInt (*edges)[2] = NULL, *edgeSets = NULL;
@@ -2333,7 +2331,7 @@ static PetscErrorCode DMPlexCreateTPSMesh_Internal(DM dm, DMPlexTPSType tpstype,
   DMLabel label;
 
   PetscFunctionBegin;
-  ierr = MPI_Comm_rank(PetscObjectComm((PetscObject)dm), &rank);CHKERRMPI(ierr);
+  CHKERRMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)dm), &rank));
   PetscCheck((layers != 0) ^ (thickness == 0.), PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_INCOMP, "Layers %D must be nonzero iff thickness %g is nonzero", layers, (double)thickness);
   switch (tpstype) {
   case DMPLEX_TPS_SCHWARZ_P:
@@ -2349,10 +2347,10 @@ static PetscErrorCode DMPlexCreateTPSMesh_Internal(DM dm, DMPlexTPSType tpstype,
       Njunctions = extent[0] * extent[1] * extent[2];
       Ncuts = 2 * (extent[0] * extent[1] + extent[1] * extent[2] + extent[2] * extent[0]);
       numVertices = 4 * (Npipes[0] + Npipes[1] + Npipes[2]) + 8 * Njunctions;
-      ierr = PetscMalloc1(3*numVertices, &vtxCoords);CHKERRQ(ierr);
-      ierr = PetscMalloc1(Njunctions, &cells);CHKERRQ(ierr);
-      ierr = PetscMalloc1(Ncuts*4, &edges);CHKERRQ(ierr);
-      ierr = PetscMalloc1(Ncuts*4, &edgeSets);CHKERRQ(ierr);
+      CHKERRQ(PetscMalloc1(3*numVertices, &vtxCoords));
+      CHKERRQ(PetscMalloc1(Njunctions, &cells));
+      CHKERRQ(PetscMalloc1(Ncuts*4, &edges));
+      CHKERRQ(PetscMalloc1(Ncuts*4, &edgeSets));
       // x-normal pipes
       vcount = 0;
       for (PetscInt i=0; i<extent[0]+1; i++) {
@@ -2607,8 +2605,8 @@ static PetscErrorCode DMPlexCreateTPSMesh_Internal(DM dm, DMPlexTPSType tpstype,
       numBlocksPlus = 1;
       for (PetscInt i = 0; i < 3; i++) numBlocksPlus *= extentPlus[i];
       numFaces = numBlocks * facesPerBlock;
-      ierr = PetscMalloc1(numBlocks, &cells);CHKERRQ(ierr);
-      ierr = PetscCalloc1(numBlocksPlus * vertsPerBlock,&seen);CHKERRQ(ierr);
+      CHKERRQ(PetscMalloc1(numBlocks, &cells));
+      CHKERRQ(PetscCalloc1(numBlocksPlus * vertsPerBlock,&seen));
       for (PetscInt k = 0; k < extent[2]; k++) {
         for (PetscInt j = 0; j < extent[1]; j++) {
           for (PetscInt i = 0; i < extent[0]; i++) {
@@ -2634,8 +2632,8 @@ static PetscErrorCode DMPlexCreateTPSMesh_Internal(DM dm, DMPlexTPSType tpstype,
       }
       for (PetscInt i = 0; i < numBlocksPlus * vertsPerBlock; i++) if (seen[i]) numVertices++;
       count = 0;
-      ierr = PetscMalloc1(numBlocksPlus * vertsPerBlock, &vertToTrueVert);CHKERRQ(ierr);
-      ierr = PetscMalloc1(numVertices * 3, &vtxCoords);CHKERRQ(ierr);
+      CHKERRQ(PetscMalloc1(numBlocksPlus * vertsPerBlock, &vertToTrueVert));
+      CHKERRQ(PetscMalloc1(numVertices * 3, &vtxCoords));
       for (PetscInt i = 0; i < numBlocksPlus * vertsPerBlock; i++) vertToTrueVert[i] = -1;
       for (PetscInt k = 0; k < extentPlus[2]; k++) {
         for (PetscInt j = 0; j < extentPlus[1]; j++) {
@@ -2664,8 +2662,8 @@ static PetscErrorCode DMPlexCreateTPSMesh_Internal(DM dm, DMPlexTPSType tpstype,
           }
         }
       }
-      ierr = PetscFree(vertToTrueVert);CHKERRQ(ierr);
-      ierr = PetscFree(seen);CHKERRQ(ierr);
+      CHKERRQ(PetscFree(vertToTrueVert));
+      CHKERRQ(PetscFree(seen));
       cells_flat = cells[0][0];
       numEdges = 0;
       for (PetscInt i = 0; i < numFaces; i++) {
@@ -2681,8 +2679,8 @@ static PetscErrorCode DMPlexCreateTPSMesh_Internal(DM dm, DMPlexTPSType tpstype,
           }
         }
       }
-      ierr = PetscMalloc1(numEdges, &edges);CHKERRQ(ierr);
-      ierr = PetscMalloc1(numEdges, &edgeSets);CHKERRQ(ierr);
+      CHKERRQ(PetscMalloc1(numEdges, &edges));
+      CHKERRQ(PetscMalloc1(numEdges, &edgeSets));
       for (PetscInt edge = 0, i = 0; i < numFaces; i++) {
         for (PetscInt e = 0; e < 4; e++) {
           PetscInt ev[] = {cells_flat[i*4 + e], cells_flat[i*4 + ((e+1)%4)]};
@@ -2709,58 +2707,58 @@ static PetscErrorCode DMPlexCreateTPSMesh_Internal(DM dm, DMPlexTPSType tpstype,
     break;
   }
 
-  ierr = DMSetDimension(dm, topoDim);CHKERRQ(ierr);
-  if (!rank) {ierr = DMPlexBuildFromCellList(dm, numFaces, numVertices, 4, cells_flat);CHKERRQ(ierr);}
-  else       {ierr = DMPlexBuildFromCellList(dm, 0, 0, 0, NULL);CHKERRQ(ierr);}
-  ierr = PetscFree(cells_flat);CHKERRQ(ierr);
+  CHKERRQ(DMSetDimension(dm, topoDim));
+  if (!rank) CHKERRQ(DMPlexBuildFromCellList(dm, numFaces, numVertices, 4, cells_flat));
+  else       CHKERRQ(DMPlexBuildFromCellList(dm, 0, 0, 0, NULL));
+  CHKERRQ(PetscFree(cells_flat));
   {
     DM idm;
-    ierr = DMPlexInterpolate(dm, &idm);CHKERRQ(ierr);
-    ierr = DMPlexReplace_Static(dm, &idm);CHKERRQ(ierr);
+    CHKERRQ(DMPlexInterpolate(dm, &idm));
+    CHKERRQ(DMPlexReplace_Static(dm, &idm));
   }
-  if (!rank) {ierr = DMPlexBuildCoordinatesFromCellList(dm, spaceDim, vtxCoords);CHKERRQ(ierr);}
-  else       {ierr = DMPlexBuildCoordinatesFromCellList(dm, spaceDim, NULL);CHKERRQ(ierr);}
-  ierr = PetscFree(vtxCoords);CHKERRQ(ierr);
+  if (!rank) CHKERRQ(DMPlexBuildCoordinatesFromCellList(dm, spaceDim, vtxCoords));
+  else       CHKERRQ(DMPlexBuildCoordinatesFromCellList(dm, spaceDim, NULL));
+  CHKERRQ(PetscFree(vtxCoords));
 
-  ierr = DMCreateLabel(dm, "Face Sets");CHKERRQ(ierr);
-  ierr = DMGetLabel(dm, "Face Sets", &label);CHKERRQ(ierr);
+  CHKERRQ(DMCreateLabel(dm, "Face Sets"));
+  CHKERRQ(DMGetLabel(dm, "Face Sets", &label));
   for (PetscInt e=0; e<numEdges; e++) {
     PetscInt njoin;
     const PetscInt *join, verts[] = {numFaces + edges[e][0], numFaces + edges[e][1]};
-    ierr = DMPlexGetJoin(dm, 2, verts, &njoin, &join);CHKERRQ(ierr);
+    CHKERRQ(DMPlexGetJoin(dm, 2, verts, &njoin, &join));
     PetscCheck(njoin == 1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Expected unique join of vertices %D and %D", edges[e][0], edges[e][1]);
-    ierr = DMLabelSetValue(label, join[0], edgeSets[e]);CHKERRQ(ierr);
-    ierr = DMPlexRestoreJoin(dm, 2, verts, &njoin, &join);CHKERRQ(ierr);
+    CHKERRQ(DMLabelSetValue(label, join[0], edgeSets[e]));
+    CHKERRQ(DMPlexRestoreJoin(dm, 2, verts, &njoin, &join));
   }
-  ierr = PetscFree(edges);CHKERRQ(ierr);
-  ierr = PetscFree(edgeSets);CHKERRQ(ierr);
+  CHKERRQ(PetscFree(edges));
+  CHKERRQ(PetscFree(edgeSets));
 
-  ierr = DMPlexSetRefinementUniform(dm, PETSC_TRUE);CHKERRQ(ierr);
+  CHKERRQ(DMPlexSetRefinementUniform(dm, PETSC_TRUE));
   for (PetscInt refine=0; refine<refinements; refine++) {
     PetscInt m;
     DM dmf;
     Vec X;
     PetscScalar *x;
-    ierr = DMRefine(dm, MPI_COMM_NULL, &dmf);CHKERRQ(ierr);
-    ierr = DMPlexReplace_Static(dm, &dmf);CHKERRQ(ierr);
+    CHKERRQ(DMRefine(dm, MPI_COMM_NULL, &dmf));
+    CHKERRQ(DMPlexReplace_Static(dm, &dmf));
 
-    ierr = DMGetCoordinatesLocal(dm, &X);CHKERRQ(ierr);
-    ierr = VecGetLocalSize(X, &m);CHKERRQ(ierr);
-    ierr = VecGetArray(X, &x);CHKERRQ(ierr);
+    CHKERRQ(DMGetCoordinatesLocal(dm, &X));
+    CHKERRQ(VecGetLocalSize(X, &m));
+    CHKERRQ(VecGetArray(X, &x));
     for (PetscInt i=0; i<m; i+=3) {
-      ierr = TPSNearestPoint(evalFunc, &x[i]);CHKERRQ(ierr);
+      CHKERRQ(TPSNearestPoint(evalFunc, &x[i]));
     }
-    ierr = VecRestoreArray(X, &x);CHKERRQ(ierr);
+    CHKERRQ(VecRestoreArray(X, &x));
   }
 
   // Face Sets has already been propagated to new vertices during refinement; this propagates to the initial vertices.
-  ierr = DMGetLabel(dm, "Face Sets", &label);CHKERRQ(ierr);
-  ierr = DMPlexLabelComplete(dm, label);CHKERRQ(ierr);
+  CHKERRQ(DMGetLabel(dm, "Face Sets", &label));
+  CHKERRQ(DMPlexLabelComplete(dm, label));
 
   if (thickness > 0) {
     DM dm3;
-    ierr = DMPlexExtrude(dm, layers, thickness, PETSC_FALSE, PETSC_TRUE, NULL, NULL, &dm3);CHKERRQ(ierr);
-    ierr = DMPlexReplace_Static(dm, &dm3);CHKERRQ(ierr);
+    CHKERRQ(DMPlexExtrude(dm, layers, thickness, PETSC_FALSE, PETSC_TRUE, NULL, NULL, &dm3));
+    CHKERRQ(DMPlexReplace_Static(dm, &dm3));
   }
   PetscFunctionReturn(0);
 }
@@ -2804,12 +2802,11 @@ static PetscErrorCode DMPlexCreateTPSMesh_Internal(DM dm, DMPlexTPSType tpstype,
 @*/
 PetscErrorCode DMPlexCreateTPSMesh(MPI_Comm comm, DMPlexTPSType tpstype, const PetscInt extent[], const DMBoundaryType periodic[], PetscInt refinements, PetscInt layers, PetscReal thickness, DM *dm)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = DMCreate(comm, dm);CHKERRQ(ierr);
-  ierr = DMSetType(*dm, DMPLEX);CHKERRQ(ierr);
-  ierr = DMPlexCreateTPSMesh_Internal(*dm, tpstype, extent, periodic, refinements, layers, thickness);CHKERRQ(ierr);
+  CHKERRQ(DMCreate(comm, dm));
+  CHKERRQ(DMSetType(*dm, DMPLEX));
+  CHKERRQ(DMPlexCreateTPSMesh_Internal(*dm, tpstype, extent, periodic, refinements, layers, thickness));
   PetscFunctionReturn(0);
 }
 
@@ -3266,13 +3263,13 @@ static PetscErrorCode DMPlexCreateFromOptions_Internal(PetscOptionItems *PetscOp
         PetscReal      thickness = 0.;
         DMBoundaryType periodic[3] = {DM_BOUNDARY_NONE, DM_BOUNDARY_NONE, DM_BOUNDARY_NONE};
         DMPlexTPSType  tps_type = shape == DM_SHAPE_SCHWARZ_P ? DMPLEX_TPS_SCHWARZ_P : DMPLEX_TPS_GYROID;
-        ierr = PetscOptionsIntArray("-dm_plex_tps_extent", "Number of replicas for each of three dimensions", NULL, extent, (three=3, &three), NULL);CHKERRQ(ierr);
-        ierr = PetscOptionsInt("-dm_plex_tps_refine", "Number of refinements", NULL, refine, &refine, NULL);CHKERRQ(ierr);
-        ierr = PetscOptionsEnumArray("-dm_plex_tps_periodic", "Periodicity in each of three dimensions", NULL, DMBoundaryTypes, (PetscEnum*)periodic, (three=3, &three), NULL);CHKERRQ(ierr);
-        ierr = PetscOptionsInt("-dm_plex_tps_layers", "Number of layers in volumetric extrusion (or zero to not extrude)", NULL, layers, &layers, NULL);CHKERRQ(ierr);
-        ierr = PetscOptionsReal("-dm_plex_tps_thickness", "Thickness of volumetric extrusion", NULL, thickness, &thickness, NULL);CHKERRQ(ierr);
+        CHKERRQ(PetscOptionsIntArray("-dm_plex_tps_extent", "Number of replicas for each of three dimensions", NULL, extent, (three=3, &three), NULL));
+        CHKERRQ(PetscOptionsInt("-dm_plex_tps_refine", "Number of refinements", NULL, refine, &refine, NULL));
+        CHKERRQ(PetscOptionsEnumArray("-dm_plex_tps_periodic", "Periodicity in each of three dimensions", NULL, DMBoundaryTypes, (PetscEnum*)periodic, (three=3, &three), NULL));
+        CHKERRQ(PetscOptionsInt("-dm_plex_tps_layers", "Number of layers in volumetric extrusion (or zero to not extrude)", NULL, layers, &layers, NULL));
+        CHKERRQ(PetscOptionsReal("-dm_plex_tps_thickness", "Thickness of volumetric extrusion", NULL, thickness, &thickness, NULL));
 
-        ierr = DMPlexCreateTPSMesh_Internal(dm, tps_type, extent, periodic, refine, layers, thickness);CHKERRQ(ierr);
+        CHKERRQ(DMPlexCreateTPSMesh_Internal(dm, tps_type, extent, periodic, refine, layers, thickness));
       }
       break;
       default: SETERRQ(comm, PETSC_ERR_SUP, "Domain shape %s is unsupported", DMPlexShapes[shape]);

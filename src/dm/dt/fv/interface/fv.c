@@ -1511,15 +1511,15 @@ PetscErrorCode PetscFVGetDualSpace(PetscFV fvm, PetscDualSpace *sp)
     DM              K;
     PetscInt        dim, Nc, c;
 
-    ierr = PetscFVGetSpatialDimension(fvm, &dim);CHKERRQ(ierr);
-    ierr = PetscFVGetNumComponents(fvm, &Nc);CHKERRQ(ierr);
-    ierr = PetscDualSpaceCreate(PetscObjectComm((PetscObject) fvm), &fvm->dualSpace);CHKERRQ(ierr);
-    ierr = PetscDualSpaceSetType(fvm->dualSpace, PETSCDUALSPACESIMPLE);CHKERRQ(ierr);
-    ierr = DMPlexCreateReferenceCell(PETSC_COMM_SELF, DMPolytopeTypeSimpleShape(dim, PETSC_FALSE), &K);CHKERRQ(ierr);
-    ierr = PetscDualSpaceSetNumComponents(fvm->dualSpace, Nc);CHKERRQ(ierr);
-    ierr = PetscDualSpaceSetDM(fvm->dualSpace, K);CHKERRQ(ierr);
-    ierr = DMDestroy(&K);CHKERRQ(ierr);
-    ierr = PetscDualSpaceSimpleSetDimension(fvm->dualSpace, Nc);CHKERRQ(ierr);
+    CHKERRQ(PetscFVGetSpatialDimension(fvm, &dim));
+    CHKERRQ(PetscFVGetNumComponents(fvm, &Nc));
+    CHKERRQ(PetscDualSpaceCreate(PetscObjectComm((PetscObject) fvm), &fvm->dualSpace));
+    CHKERRQ(PetscDualSpaceSetType(fvm->dualSpace, PETSCDUALSPACESIMPLE));
+    CHKERRQ(DMPlexCreateReferenceCell(PETSC_COMM_SELF, DMPolytopeTypeSimpleShape(dim, PETSC_FALSE), &K));
+    CHKERRQ(PetscDualSpaceSetNumComponents(fvm->dualSpace, Nc));
+    CHKERRQ(PetscDualSpaceSetDM(fvm->dualSpace, K));
+    CHKERRQ(DMDestroy(&K));
+    CHKERRQ(PetscDualSpaceSimpleSetDimension(fvm->dualSpace, Nc));
     /* Should we be using PetscFVGetQuadrature() here? */
     for (c = 0; c < Nc; ++c) {
       PetscQuadrature qc;

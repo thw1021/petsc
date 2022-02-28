@@ -681,24 +681,23 @@ PetscErrorCode DMFieldGetFVQuadrature_Internal(DMField field, IS pointIS, PetscQ
   DMPolytopeType  ct;
   PetscInt        dim, n;
   PetscBool       isplex;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  ierr = PetscObjectTypeCompare((PetscObject) dm, DMPLEX, &isplex);CHKERRQ(ierr);
-  ierr = ISGetLocalSize(pointIS, &n);CHKERRQ(ierr);
+  CHKERRQ(PetscObjectTypeCompare((PetscObject) dm, DMPLEX, &isplex));
+  CHKERRQ(ISGetLocalSize(pointIS, &n));
   if (isplex && n) {
-    ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
-    ierr = ISGetIndices(pointIS, &points);CHKERRQ(ierr);
-    ierr = DMPlexGetCellType(dm, points[0], &ct);CHKERRQ(ierr);
+    CHKERRQ(DMGetDimension(dm, &dim));
+    CHKERRQ(ISGetIndices(pointIS, &points));
+    CHKERRQ(DMPlexGetCellType(dm, points[0], &ct));
     switch (ct) {
       case DM_POLYTOPE_TRIANGLE:
       case DM_POLYTOPE_TETRAHEDRON:
-        ierr = PetscDTStroudConicalQuadrature(dim, 1, 1, -1.0, 1.0, quad);CHKERRQ(ierr);break;
-      default: ierr = PetscDTGaussTensorQuadrature(dim, 1, 1, -1.0, 1.0, quad);CHKERRQ(ierr);
+        CHKERRQ(PetscDTStroudConicalQuadrature(dim, 1, 1, -1.0, 1.0, quad));break;
+      default: CHKERRQ(PetscDTGaussTensorQuadrature(dim, 1, 1, -1.0, 1.0, quad));
     }
-    ierr = ISRestoreIndices(pointIS, &points);CHKERRQ(ierr);
+    CHKERRQ(ISRestoreIndices(pointIS, &points));
   } else {
-    ierr = DMFieldCreateDefaultQuadrature(field, pointIS, quad);CHKERRQ(ierr);
+    CHKERRQ(DMFieldCreateDefaultQuadrature(field, pointIS, quad));
   }
   PetscFunctionReturn(0);
 }
@@ -1106,13 +1105,13 @@ PetscErrorCode DMFieldCreateDS(DM dm, PetscInt fieldNum, Vec vec,DMField *field)
     DMPolytopeType ct, locct = DM_POLYTOPE_UNKNOWN;
     PetscInt       dim, cStart, cEnd, cellHeight;
 
-    ierr = DMPlexGetVTKCellHeight(dm, &cellHeight);CHKERRQ(ierr);
-    ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
-    ierr = DMPlexGetHeightStratum(dm, cellHeight, &cStart, &cEnd);CHKERRQ(ierr);
-    if (cEnd > cStart) {ierr = DMPlexGetCellType(dm, cStart, &locct);CHKERRQ(ierr);}
-    ierr = MPI_Allreduce(&locct, &ct, 1, MPI_INT, MPI_MIN, comm);CHKERRMPI(ierr);
-    ierr = PetscFECreateLagrangeByCell(PETSC_COMM_SELF, dim, numComponents, ct, 1, PETSC_DETERMINE, &fe);CHKERRQ(ierr);
-    ierr = PetscFEViewFromOptions(fe, NULL, "-field_fe_view");CHKERRQ(ierr);
+    CHKERRQ(DMPlexGetVTKCellHeight(dm, &cellHeight));
+    CHKERRQ(DMGetDimension(dm, &dim));
+    CHKERRQ(DMPlexGetHeightStratum(dm, cellHeight, &cStart, &cEnd));
+    if (cEnd > cStart) CHKERRQ(DMPlexGetCellType(dm, cStart, &locct));
+    CHKERRMPI(MPI_Allreduce(&locct, &ct, 1, MPI_INT, MPI_MIN, comm));
+    CHKERRQ(PetscFECreateLagrangeByCell(PETSC_COMM_SELF, dim, numComponents, ct, 1, PETSC_DETERMINE, &fe));
+    CHKERRQ(PetscFEViewFromOptions(fe, NULL, "-field_fe_view"));
     disc = (PetscObject) fe;
   } else {
     CHKERRQ(PetscObjectReference(disc));
