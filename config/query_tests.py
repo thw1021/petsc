@@ -365,7 +365,7 @@ def main():
             return
 
     match = expand_path_like(petsc_dir,petsc_arch,match)
-    raise RuntimeError(petsc_full_src,petsc_dir,petsc_arch,match)
+
     # Do the actual query
     do_query(opts.use_source, startdir, petsc_full_src, petsc_full_test,
              petsc_dir, petsc_arch, field, match, searchin)
