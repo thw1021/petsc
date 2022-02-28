@@ -32,9 +32,7 @@ struct DeviceBase
 
   template <typename D = Derived>
   PETSC_CXX_COMPAT_DECL(constexpr PetscDeviceType GetPetscDeviceType())
-  {
-    return D::GetPetscDeviceType_();
-  }
+  { return D::GetPetscDeviceType_(); }
 
 protected:
   // function to create a PetscDeviceContext (the (*create) function pointer usually set
@@ -54,27 +52,27 @@ protected:
   // - A simple form returning only the value and flag. This gives no control over the message,
   //   arguments to the options query or otherwise
   // - A complex form, which allows you to pass most of the options query arguments *EXCEPT*
-  //   - The actual options query function called
+  //   - The options query function called
   //   - The option string
 
   // option template for initializing the device
   PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscOptionDeviceInitialize(PetscOptionItems*,PetscDeviceInitType*,PetscBool*));
-  template <typename...T>
+  template <typename...T, util::enable_if_t<sizeof...(T)>=3,int> = 0>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscOptionDeviceInitialize(PetscOptionItems*,T&&...));
   // option template for selecting the default device
   PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscOptionDeviceSelect(PetscOptionItems*,PetscInt*,PetscBool*));
-  template <typename...T>
+  template <typename...T, util::enable_if_t<sizeof...(T)>=3,int> = 0>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscOptionDeviceSelect(PetscOptionItems*,T&&...));
   // option templates for viewing a device
   PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscOptionDeviceView(PetscOptionItems*,PetscBool*,PetscBool*));
-  template <typename...T>
+  template <typename...T, util::enable_if_t<sizeof...(T)>=3,int> = 0>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscOptionDeviceView(PetscOptionItems*,T&&...));
 
 
 private:
   // base function for all options templates above, they basically just reformat the arguments,
   // create the option string and pass it off to this function
-  template <typename...T, typename F = PetscErrorCode(*)(PetscOptionItems,const char*,T...)>
+  template <typename...T, typename F = PetscErrorCode(*)(PetscOptionItems*,const char*,T&&...)>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscOptionDevice(F&&,PetscOptionItems*,const char[],T&&...));
 };
 
@@ -85,17 +83,22 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceBase<D>::PetscOptionDevice(F&& Option
   constexpr auto dtype    = GetPetscDeviceType();
   const auto     implname = PetscDeviceTypes[dtype];
   auto           buf      = std::array<char,128>{};
+  constexpr auto buflen   = buf.size()-1;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscAssert((std::strlen(optstub)+std::strlen(implname)) < buf.size(),PetscOptionsObject->comm,PETSC_ERR_PLIB,"char buffer is not large enough to hold '%s%s'; have %zu need %zu",optstub,implname,buf.size(),std::strlen(optstub)+std::strlen(implname));
-  ierr = PetscSNPrintf(buf.data(),buf.size(),"%s%s",optstub,implname);CHKERRQ(ierr);
+  if (PetscDefined(USE_DEBUG)) {
+    const auto len = std::strlen(optstub)+std::strlen(implname);
+
+    PetscCheck(len < buflen,PetscOptionsObject->comm,PETSC_ERR_PLIB,"char buffer is not large enough to hold '%s%s'; have %zu need %zu",optstub,implname,buflen,len);
+  }
+  ierr = PetscSNPrintf(buf.data(),buflen,"%s%s",optstub,implname);CHKERRQ(ierr);
   ierr = OptionsFunction(PetscOptionsObject,buf.data(),std::forward<T>(args)...);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 template <typename D>
-template <typename...T>
+template <typename...T, util::enable_if_t<sizeof...(T)>=3,int>>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceBase<D>::PetscOptionDeviceInitialize(PetscOptionItems *PetscOptionsObject, T&&... args))
 {
   PetscErrorCode ierr;
@@ -118,7 +121,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceBase<D>::PetscOptionDeviceInitialize(
 }
 
 template <typename D>
-template <typename...T>
+template <typename...T, util::enable_if_t<sizeof...(T)>=3,int>>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceBase<D>::PetscOptionDeviceSelect(PetscOptionItems *PetscOptionsObject, T&&... args))
 {
   PetscErrorCode ierr;
@@ -139,7 +142,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceBase<D>::PetscOptionDeviceSelect(Pets
 }
 
 template <typename D>
-template <typename...T>
+template <typename...T, util::enable_if_t<sizeof...(T)>=3,int>>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceBase<D>::PetscOptionDeviceView(PetscOptionItems *PetscOptionsObject, T&&... args))
 {
   PetscErrorCode ierr;
@@ -174,13 +177,21 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceBase<D>::PetscOptionDeviceBasic(Petsc
 template <typename D>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceBase<D>::PetscOptionDeviceAll(MPI_Comm comm, std::pair<PetscDeviceInitType,PetscBool> &initType, std::pair<PetscInt,PetscBool> &initId, std::pair<PetscBool,PetscBool> &initView))
 {
-  auto           buf = std::array<char,128>{};
-  const auto     implname = PetscDeviceTypes[GetPetscDeviceType()];
+  constexpr char optname[] = "PetscDevice %s Options";
+  constexpr auto dtype     = GetPetscDeviceType();
+  const auto     implname  = PetscDeviceTypes[dtype];
+  auto           buf       = std::array<char,128>{};
+  constexpr auto buflen    = buf.size()-1; // -1 to leave room for null
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscAssert(std::strlen(implname) < buf.size(),comm,PETSC_ERR_PLIB,"char buffer is not large enough to hold 'PetscDevice %s Options'; have %zu need %zu",implname,buf.size(),std::strlen(implname));
-  ierr = PetscSNPrintf(buf.data(),buf.size(),"PetscDevice %s Options",implname);CHKERRQ(ierr);
+  if (PetscDefined(USE_DEBUG)) {
+    // -3 since '%s' is replaced and dont count null char for optname
+    const auto len = std::strlen(implname)+sizeof(optname)-3;
+
+    PetscCheck(len < buflen,comm,PETSC_ERR_PLIB,"char buffer is not large enough to hold 'PetscDevice %s Options'; have %zu need %zu",implname,buflen,len);
+  }
+  ierr = PetscSNPrintf(buf.data(),buflen,optname,implname);CHKERRQ(ierr);
   ierr = PetscOptionsBegin(comm,nullptr,buf.data(),"Sys");CHKERRQ(ierr);
   ierr = PetscOptionDeviceBasic(PetscOptionsObject,initType,initId,initView);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
