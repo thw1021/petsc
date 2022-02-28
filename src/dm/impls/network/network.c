@@ -1503,7 +1503,7 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
   CHKERRMPI(MPI_Comm_size(comm, &size));
   if (size == 1) PetscFunctionReturn(0);
 
-  PetscCheck(!overlap,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"overlap %D != 0 is not supported yet",overlap);
+  PetscCheck(overlap == 0,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"overlap %D != 0 is not supported yet",overlap);
 
   /* This routine moves the component data to the appropriate processors. It makes use of the DataSection and the componentdataarray to move the component data to appropriate processors and returns a new DataSection and new componentdataarray. */
   CHKERRQ(DMNetworkCreate(PetscObjectComm((PetscObject)*dm),&newDM));
