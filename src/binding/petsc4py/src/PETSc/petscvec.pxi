@@ -197,6 +197,7 @@ cdef extern from * nogil:
     int VecCreateSeqHIPWithArray(MPI_Comm,PetscInt,PetscInt,const PetscScalar*,PetscVec*)
     int VecCreateMPIHIPWithArray(MPI_Comm,PetscInt,PetscInt,PetscInt,const PetscScalar*,PetscVec*)
 
+    int VecLockGet(PetscVec,PetscInt*)
 # --------------------------------------------------------------------
 
 cdef inline Vec ref_Vec(PetscVec vec):

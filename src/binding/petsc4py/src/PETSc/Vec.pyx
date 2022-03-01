@@ -481,6 +481,17 @@ cdef class Vec(Object):
         anxiliary information inherits from Y.
           X.attachDLPackInfo(Y)
           X.toDLPack()
+
+        The tensor libraries such as PyTorch do not have the concept of read
+        or write access to values so we assume it needs write access unless
+        the vector has already been read locked. This is not ideal because
+        users may incorrectly change values that are read only, but we hope
+        that the caller of the routine uses it correctly and so it will only
+        write into values when it is allowed to. Immediately restoring the
+        array access is incorrect but since we do not have access to objects
+        after the values are used or changed we need to immediately restore
+        the array and hope that users do not change or access the values
+        incorrectly later in the run.
         """
         cdef int64_t ndim = 0
         cdef object ctx0 = self.get_attr('__dltensor_ctx__')
@@ -495,17 +506,38 @@ cdef class Vec(Object):
         dl_tensor.byte_offset = 0
         cval = self.getType()
         cdef PetscDLDeviceType dltype = device_type
+        cdef PetscInt state = 0
+        CHKERR ( VecLockGet(self.vec, &state) )
         if dltype in [kDLCUDA,kDLCUDAManaged] and cval == self.Type.CUDA or cval == self.Type.SEQCUDA or cval == self.Type.MPICUDA:
-            CHKERR( VecCUDAGetArray(self.vec, <PetscScalar**>&a) )
+            if state > 0:
+                CHKERR( VecCUDAGetArrayRead(self.vec, <const PetscScalar**>&a) )
+                dl_tensor.data = <void *>a
+                CHKERR( VecCUDARestoreArrayRead(self.vec, <const PetscScalar**>&a) )
+            else:
+                CHKERR( VecCUDAGetArray(self.vec, <PetscScalar**>&a) )
+                dl_tensor.data = <void *>a
+                CHKERR( VecCUDARestoreArray(self.vec, <PetscScalar**>&a) )
         elif dltype == kDLROCM and cval == self.Type.HIP or cval == self.Type.SEQHIP or cval == self.Type.MPIHIP:
-            CHKERR( VecHIPGetArray(self.vec, <PetscScalar**>&a) )
+            if state > 0:
+                CHKERR( VecHIPGetArrayRead(self.vec, <const PetscScalar**>&a) )
+                dl_tensor.data = <void *>a
+                CHKERR( VecHIPRestoreArrayRead(self.vec, <const PetscScalar**>&a) )
+            else:
+                CHKERR( VecHIPGetArray(self.vec, <PetscScalar**>&a) )
+                dl_tensor.data = <void *>a
+                CHKERR( VecHIPRestoreArray(self.vec, <PetscScalar**>&a) )
         else:
-            CHKERR( VecGetArray(self.vec, <PetscScalar**>&a) )
+            if state > 0:
+                CHKERR( VecGetArrayRead(self.vec, <const PetscScalar**>&a) )
+                dl_tensor.data = <void *>a
+                CHKERR( VecRestoreArrayRead(self.vec, <const PetscScalar**>&a) )
+            else:
+                CHKERR( VecGetArray(self.vec, <PetscScalar**>&a) )
+                dl_tensor.data = <void *>a
+                CHKERR( VecRestoreArray(self.vec, <PetscScalar**>&a) )
             if device_type != kDLCPU:
                 device_type = kDLCPU
                 device_id = 0 #????
-
-        dl_tensor.data = <void *>a
 
         cdef DLContext* ctx = &dl_tensor.ctx
         ctx.device_type = device_type
