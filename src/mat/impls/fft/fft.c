@@ -6,12 +6,10 @@
 
 PetscErrorCode MatDestroy_FFT(Mat A)
 {
-  Mat_FFT        *fft = (Mat_FFT*)A->data;
+  Mat_FFT *fft = (Mat_FFT*)A->data;
 
   PetscFunctionBegin;
-  if (fft->matdestroy) {
-    CHKERRQ((fft->matdestroy)(A));
-  }
+  if (fft->matdestroy) CHKERRQ((fft->matdestroy)(A));
   CHKERRQ(PetscFree(fft->dim));
   CHKERRQ(PetscFree(A->data));
   CHKERRQ(PetscObjectChangeTypeName((PetscObject)A,NULL));
@@ -52,7 +50,7 @@ PetscErrorCode MatCreateFFT(MPI_Comm comm,PetscInt ndim,const PetscInt dim[],Mat
   PetscFunctionBegin;
   PetscValidIntPointer(dim,3);
   PetscValidPointer(A,5);
-  PetscCheckFalse(ndim < 1,comm,PETSC_ERR_USER,"ndim %" PetscInt_FMT " must be > 0",ndim);
+  PetscCheck(ndim >= 1,comm,PETSC_ERR_USER,"ndim %" PetscInt_FMT " must be > 0",ndim);
   CHKERRMPI(MPI_Comm_size(comm, &size));
 
   CHKERRQ(MatCreate(comm,&FFT));
@@ -60,7 +58,7 @@ PetscErrorCode MatCreateFFT(MPI_Comm comm,PetscInt ndim,const PetscInt dim[],Mat
   FFT->data = (void*)fft;
   N         = 1;
   for (i=0; i<ndim; i++) {
-    PetscCheckFalse(dim[i] < 1,PETSC_COMM_SELF,PETSC_ERR_USER,"dim[%" PetscInt_FMT "]=%" PetscInt_FMT " must be > 0",i,dim[i]);
+    PetscCheck(dim[i] >= 1,PETSC_COMM_SELF,PETSC_ERR_USER,"dim[%" PetscInt_FMT "]=%" PetscInt_FMT " must be > 0",i,dim[i]);
     N *= dim[i];
   }
 
@@ -76,9 +74,9 @@ PetscErrorCode MatCreateFFT(MPI_Comm comm,PetscInt ndim,const PetscInt dim[],Mat
 
   FFT->ops->destroy = MatDestroy_FFT;
 
-  /* get runtime options */
-  ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)FFT),((PetscObject)FFT)->prefix,"FFT Options","Mat");CHKERRQ(ierr);
-  PetscOptionsEnd();
+  /* get runtime options... what options? */
+  ierr = PetscObjectOptionsBegin((PetscObject)FFT);CHKERRQ(ierr);
+  ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
   *A = FFT;
   PetscFunctionReturn(0);
