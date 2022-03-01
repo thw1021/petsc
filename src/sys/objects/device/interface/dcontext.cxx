@@ -690,7 +690,8 @@ PetscErrorCode PetscDeviceContextGetNullContextForType_Internal(PetscDevice devi
     ierr = PetscDeviceContextSetStreamType(*dctx,PETSC_STREAM_GLOBAL_BLOCKING);CHKERRQ(ierr);
     ierr = PetscDeviceContextSetDevice(*dctx,device);CHKERRQ(ierr);
     ierr = PetscDeviceContextSetUp(*dctx);CHKERRQ(ierr);
-    CHKERRCXX(ctxlist.insert(std::next(ctxlist.cbegin(),devid),*dctx));
+    // would use ctxlist.cbegin() but GGC 4.8 can't handle const iterator insert!
+    CHKERRCXX(ctxlist.insert(std::next(ctxlist.begin(),devid),*dctx));
   } else *dctx = ctxlist[devid];
   PetscFunctionReturn(0);
 }
