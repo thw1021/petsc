@@ -502,8 +502,11 @@ PetscErrorCode PetscDeviceInitializeFromOptions_Internal(MPI_Comm comm)
   }
   comm = PETSC_COMM_WORLD; /* from this point on we assume we're on PETSC_COMM_WORLD */
   ierr = PetscRegisterFinalize(PetscDeviceFinalize_Private);CHKERRQ(ierr);
-  ierr = PetscOptionsHasName(nullptr,nullptr,"-log_view",&flg);CHKERRQ(ierr);
-  if (!flg) {ierr = PetscOptionsHasName(nullptr,nullptr,"-log_summary",&flg);CHKERRQ(ierr);}
+  if (PetscDefined(USE_LOG)) {
+    ierr = PetscOptionsHasName(nullptr,nullptr,"-log_view",&flg);CHKERRQ(ierr);
+    if (!flg) {ierr = PetscOptionsHasName(nullptr,nullptr,"-log_summary",&flg);CHKERRQ(ierr);}
+  } else flg = PETSC_FALSE;
+
   {
     PetscInt initIdx = flg ? PETSC_DEVICE_INIT_EAGER : PETSC_DEVICE_INIT_LAZY;
 
