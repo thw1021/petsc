@@ -433,7 +433,7 @@ PETSC_EXTERN PetscErrorCode MatGetFactor_seqaij_umfpack(Mat A,MatFactorType ftyp
 
   /* Control parameters used by solve */
   CHKERRQ(PetscOptionsReal("-mat_umfpack_irstep","Control[UMFPACK_IRSTEP]","None",lu->Control[UMFPACK_IRSTEP],&lu->Control[UMFPACK_IRSTEP],NULL));
-  PetscOptionsEnd();
+  ierr = PetscOptionsEnd();CHKERRQ(ierr);
   *F = B;
   PetscFunctionReturn(0);
 }

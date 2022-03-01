@@ -227,6 +227,9 @@ PETSC_EXTERN PetscErrorCode PetscObjectOptionsBegin_Private(PetscOptionItems *,P
 PETSC_EXTERN PetscErrorCode PetscOptionsEnd_Private(PetscOptionItems *);
 PETSC_EXTERN PetscErrorCode PetscOptionsHead(PetscOptionItems *,const char[]);
 
+#if defined(PETSC_CLANG_STATIC_ANALYZER)
+#  define PetscOptionsTail() 0
+#else
 /*MC
      PetscOptionsTail - Ends a section of options begun with PetscOptionsHead()
             See, for example, KSPSetFromOptions_GMRES().
@@ -258,6 +261,7 @@ PETSC_EXTERN PetscErrorCode PetscOptionsHead(PetscOptionItems *,const char[]);
           PetscOptionsFList(), PetscOptionsEList(), PetscOptionsEnum()
 M*/
 #define    PetscOptionsTail() 0; do {if (PetscOptionsObject->count != 1) PetscFunctionReturn(0);} while (0)
+#endif /* PETSC_CLANG_STATIC_ANALYZER */
 
 #define PetscOptionsEnum(a,b,c,d,e,f,g) PetscOptionsEnum_Private(PetscOptionsObject,a,b,c,d,e,f,g)
 #define PetscOptionsInt(a,b,c,d,e,f) PetscOptionsInt_Private(PetscOptionsObject,a,b,c,d,e,f,PETSC_MIN_INT,PETSC_MAX_INT)

@@ -908,7 +908,6 @@ PetscErrorCode  MatMFFDSetPeriod(Mat mat,PetscInt period)
 @*/
 PetscErrorCode  MatMFFDSetFunctionError(Mat mat,PetscReal error)
 {
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
   PetscValidLogicalCollectiveReal(mat,error,2);

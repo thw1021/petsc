@@ -56,7 +56,7 @@ int main(int argc,char **argv)
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
   CHKERRMPI(MPI_Comm_size(PETSC_COMM_WORLD,&size));
-  PetscCheckFalse(size != 1,PETSC_COMM_SELF,PETSC_ERR_SUP,"This is a uniprocessor example only");
+  PetscCheck(size == 1,PETSC_COMM_SELF,PETSC_ERR_SUP,"This is a uniprocessor example only");
 
   /* initializations */
   zInitial  = 0.0;
@@ -75,8 +75,8 @@ int main(int argc,char **argv)
   CHKERRQ(PetscOptionsName("-debug",NULL,NULL,&appctx.debug));
   CHKERRQ(PetscOptionsName("-useAlhs",NULL,NULL,&appctx.useAlhs));
   CHKERRQ(PetscOptionsRangeInt("-nphase",NULL,NULL,nphase,&nphase,NULL,1,3));
-  PetscOptionsEnd();
-  T         = 0.014/nphase;
+  ierr = PetscOptionsEnd();CHKERRQ(ierr);
+  T = 0.014/nphase;
 
   /* create vector to hold ts solution */
   /*-----------------------------------*/
@@ -155,7 +155,7 @@ int main(int argc,char **argv)
     PetscBool sundialstype=PETSC_FALSE;
     CHKERRQ(TSGetType(ts,&type));
     CHKERRQ(PetscObjectTypeCompare((PetscObject)ts,TSSUNDIALS,&sundialstype));
-    PetscCheckFalse(sundialstype && appctx.useAlhs,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot use Alhs formulation for TSSUNDIALS type");
+    if (sundialstype) PetscCheck(!appctx.useAlhs,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot use Alhs formulation for TSSUNDIALS type");
   }
 #endif
   /* Sets the initial solution */

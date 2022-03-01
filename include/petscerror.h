@@ -336,10 +336,14 @@ MC*/
 .seealso: SETERRQ(), PetscCheck(), PetscAssert(), PetscTraceBackErrorHandler(),
 PetscPushErrorHandler(), PetscError(), CHKMEMQ, CHKERRA()
 M*/
+#if defined(PETSC_CLANG_STATIC_ANALYZER)
+void CHKERRQ(PetscErrorCode);
+#else
 #define CHKERRQ(...) do {                                                                      \
     PetscErrorCode ierr_q_ = __VA_ARGS__;                                                      \
     if (PetscUnlikely(ierr_q_)) return PetscError(PETSC_COMM_SELF,__LINE__,PETSC_FUNCTION_NAME,__FILE__,ierr_q_,PETSC_ERROR_REPEAT," "); \
   } while (0)
+#endif
 #define CHKERRV(...) do {                                                                      \
     PetscErrorCode ierr_void_ = __VA_ARGS__;                                                   \
     if (PetscUnlikely(ierr_void_)) {                                                           \

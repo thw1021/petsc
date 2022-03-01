@@ -477,6 +477,10 @@ void PetscValidLogicalCollectiveEnum(Ta,Tb,int);
 #define PetscCheckSorted(n,idx)
 #endif /* PETSC_CLANG_STATIC_ANALYZER */
 
+#if defined(PETSC_CLANG_STATIC_ANALYZER)
+#define PetscTryMethod(...) 0
+#define PetscUseMethod(...) 0
+#else
 /*
    PetscTryMethod - Queries an object for a method, if it exists then calls it.
               These are intended to be used only inside PETSc functions.
@@ -505,6 +509,7 @@ void PetscValidLogicalCollectiveEnum(Ta,Tb,int);
     PetscCheck(_7_f,PetscObjectComm((PetscObject)(obj)),PETSC_ERR_SUP,"Cannot locate function %s in object",A); \
     CHKERRQ((*_7_f)C);                                                                         \
   } while (0)
+#endif /* PETSC_CLANG_STATIC_ANALYZER */
 
 /*MC
    PetscObjectStateIncrease - Increases the state of any PetscObject
