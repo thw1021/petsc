@@ -496,18 +496,19 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
     ierr = PetscPrintf(PETSC_COMM_WORLD,"\n");CHKERRQ(ierr);
 #endif
 #endif
-    PetscInt count=0, mbid;
+    PetscInt count=0, mbid=0;
     for (int blkID=0;blkID<nBlk;blkID++) {
       ierr = PetscLogGpuFlops((PetscLogDouble)h_metadata[blkID].flops);CHKERRQ(ierr);
       if (jac->reason) {
         if (jac->batch_target==blkID) {
           ierr = PetscPrintf(PETSC_COMM_SELF,  "    Linear solve converged due to %s iterations %d, batch %D, species %D\n", KSPConvergedReasons[h_metadata[blkID].reason], h_metadata[blkID].its, blkID%batch_sz, blkID/batch_sz);CHKERRQ(ierr);
-        } else if (h_metadata[blkID].reason < 0) {
-          ierr = PetscPrintf(PETSC_COMM_SELF, "ERROR reason=%s, its=%D. species %D, batch %D\n",
-                             KSPConvergedReasons[h_metadata[blkID].reason],h_metadata[blkID].its,blkID/batch_sz,blkID%batch_sz);CHKERRQ(ierr);
         } else if (jac->batch_target==-1 && h_metadata[blkID].its > count) {
           count = h_metadata[blkID].its;
           mbid = blkID;
+        }
+        if (h_metadata[blkID].reason < 0) {
+          ierr = PetscPrintf(PETSC_COMM_SELF, "ERROR reason=%s, its=%D. species %D, batch %D\n",
+                             KSPConvergedReasons[h_metadata[blkID].reason],h_metadata[blkID].its,blkID/batch_sz,blkID%batch_sz);CHKERRQ(ierr);
         }
       }
     }
