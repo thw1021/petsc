@@ -779,8 +779,10 @@ MC*/
 
 .seealso: PetscExpand(), PetscConcat(), PetscStringize()
 MC*/
-#if defined(__GNUC__) || defined(PETSC_CLANG_STATIC_ANALYZER)
-#  define PetscMacroReturns(retexpr,...) ({ __VA_ARGS__; retexpr; })
+#if defined(PETSC_CLANG_STATIC_ANALYZER)
+// silence compiler warnings when using -pedantic, this is only used by the linter and it cares
+// not what ISO C allows
+#  define PetscMacroReturns(retexpr,...) __extension__ ({ __VA_ARGS__; retexpr; })
 #else
 #  define PetscMacroReturns(retexpr,...) retexpr; do { __VA_ARGS__; } while (0)
 #endif
