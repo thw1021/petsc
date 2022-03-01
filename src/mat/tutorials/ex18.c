@@ -18,8 +18,6 @@ static char help[] = "Demonstrates the use of the COO interface to PETSc matrice
 
 static PetscErrorCode CreateFEStruct(FEStruct *fe)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBeginUser;
   fe->Nv = 5;
   fe->Ne = 3;
@@ -40,8 +38,6 @@ static PetscErrorCode CreateFEStruct(FEStruct *fe)
 
 static PetscErrorCode DestroyFEStruct(FEStruct *fe)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBeginUser;
   CHKERRQ(PetscFree(fe->vertices));
   CHKERRQ(PetscFree(fe->coo));
@@ -50,8 +46,7 @@ static PetscErrorCode DestroyFEStruct(FEStruct *fe)
 
 static PetscErrorCode CreateMatrix(FEStruct *fe,Mat *A)
 {
-  PetscErrorCode ierr;
-  PetscInt       *oor,*ooc,cnt = 0;
+  PetscInt *oor,*ooc,cnt = 0;
 
   PetscFunctionBeginUser;
   CHKERRQ(MatCreate(PETSC_COMM_WORLD,A));
@@ -84,8 +79,7 @@ static PetscErrorCode CreateMatrix(FEStruct *fe,Mat *A)
 
 static PetscErrorCode FillMatrixCPU(FEStruct *fe,Mat A)
 {
-  PetscErrorCode ierr;
-  PetscScalar    s[9];
+  PetscScalar s[9];
 
   PetscFunctionBeginUser;
   /* simulation of traditional PETSc CPU based finite assembly process */
@@ -108,8 +102,7 @@ static PetscErrorCode FillMatrixCPU(FEStruct *fe,Mat A)
 */
 static PetscErrorCode FillMatrixCPUCOO(FEStruct *fe,Mat A)
 {
-  PetscErrorCode ierr;
-  PetscScalar    *v,*s;
+  PetscScalar *v,*s;
 
   PetscFunctionBeginUser;
   /* simulation of CPU based finite assembly process with COO */
@@ -133,8 +126,7 @@ static PetscErrorCode FillMatrixCPUCOO(FEStruct *fe,Mat A)
 */
 static PetscErrorCode FillMatrixCPUCOO3d(FEStruct *fe,Mat A)
 {
-  PetscErrorCode ierr;
-  PetscScalar    (*s)[3][3];
+  PetscScalar (*s)[3][3];
 
   PetscFunctionBeginUser;
   /* simulation of CPU based finite assembly process with COO */
