@@ -263,7 +263,7 @@ PetscErrorCode DMNetworkAddSubnetwork(DM dm,const char* name,PetscInt ne,PetscIn
 }
 
 /*@C
-  Get info of a shared vertex struct, see petsc/private/dmnetworkimpl.h
+  DMNetworkSharedVertexGetInfo - Get info of a shared vertex struct, see petsc/private/dmnetworkimpl.h
 
   Not collective
 
@@ -272,8 +272,8 @@ PetscErrorCode DMNetworkAddSubnetwork(DM dm,const char* name,PetscInt ne,PetscIn
 - v - vertex point
 
   Output Parameters:
-+ gidx - global index of the shared vertices in dmplex
-. n - number of subnetworks that share the common DMNetwork vertex
++ gidx - global number of this shared vertex in the internal dmplex
+. n - number of subnetworks that share this vertex
 - sv - array of size n: sv[2*i,2*i+1]=(net[i], idx[i]), i=0,...,n-1
 
   Level: intermediate
@@ -300,7 +300,7 @@ PetscErrorCode DMNetworkSharedVertexGetInfo(DM dm,PetscInt v,PetscInt *gidx,Pets
 }
 
 /*
-  Get info of an input vertex=(net,idx)
+  VtxGetInfo - Get info of an input vertex=(net,idx)
 
   Input Parameters:
 + Nsvtx - global num of shared vertices
@@ -312,7 +312,7 @@ PetscErrorCode DMNetworkSharedVertexGetInfo(DM dm,PetscInt v,PetscInt *gidx,Pets
 . svtype - see petsc/private/dmnetworkimpl.h
 - svtx_idx - ordering in the svtx array
 */
-static PetscErrorCode VtxGetInfo(PetscInt Nsvtx,SVtx *svtx,PetscInt net,PetscInt idx,PetscInt *gidx,SVtxType *svtype,PetscInt *svtx_idx)
+static inline PetscErrorCode VtxGetInfo(PetscInt Nsvtx,SVtx *svtx,PetscInt net,PetscInt idx,PetscInt *gidx,SVtxType *svtype,PetscInt *svtx_idx)
 {
   PetscInt i,j,*svto,g_idx;
   SVtxType vtype;
@@ -346,12 +346,12 @@ static PetscErrorCode VtxGetInfo(PetscInt Nsvtx,SVtx *svtx,PetscInt net,PetscInt
 }
 
 /*
-  Add a new shared vertice from sedgelist[k] to a ctable svta
+  TableAddSVtx - Add a new shared vertice from sedgelist[k] to a ctable svta
 
   Input:  network, sedgelist, k, svta
   Output: svta, tdata, ta2sv
 */
-static PetscErrorCode TableAddSVtx(DM_Network *network,PetscInt *sedgelist,PetscInt k,PetscTable svta,PetscInt* tdata,PetscInt *ta2sv)
+static inline PetscErrorCode TableAddSVtx(DM_Network *network,PetscInt *sedgelist,PetscInt k,PetscTable svta,PetscInt* tdata,PetscInt *ta2sv)
 {
   PetscInt       net,idx,gidx;
   PetscErrorCode ierr;
@@ -368,7 +368,7 @@ static PetscErrorCode TableAddSVtx(DM_Network *network,PetscInt *sedgelist,Petsc
 }
 
 /*
-  Create an array of global shared vertices. See SVtx and SVtxType in dmnetworkimpl.h
+  SharedVtxCreate - Create an array of global shared vertices. See SVtx and SVtxType in dmnetworkimpl.h
 
   Input:  dm, Nsedgelist, sedgelist
 
@@ -483,7 +483,7 @@ static PetscErrorCode SharedVtxCreate(DM dm,PetscInt Nsedgelist,PetscInt *sedgel
 }
 
 /*
-  Get an integrated edgelist for dmplex from user-provided subnet[].edgelist when subnets are coupled by shared vertices
+  GetEdgelist_Coupling - Get an integrated edgelist for dmplex from user-provided subnet[].edgelist when subnets are coupled by shared vertices
 
   Input Parameters:
 . dm - the dmnetwork object
@@ -751,34 +751,6 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
   /* Create a global section to be used by DMNetworkIsGhostVertex() which is a non-collective routine */
   /* see snes_tutorials_network-ex1_4 */
   ierr = DMGetGlobalSection(network->plex,&sectiong);CHKERRQ(ierr);
-
-#if 0
-  {
-  /* Update network->subnet[net].nvtx for ghoted subnetworks */
-  PetscBT        table;
-  PetscInt       nsv,gidx,ns=0;
-  const PetscInt *sv=NULL;
-
-  /* Create and setup table to keep track subnetworks that this processor ownes */
-  ierr = PetscBTCreate(Nsubnet,&table);CHKERRQ(ierr);
-  ierr = PetscBTMemzero(Nsubnet,table);CHKERRQ(ierr);
-  for (net=0; net<Nsubnet; net++) {
-    if (network->subnet[net].nvtx) {
-      ierr = PetscBTSet(table,net);CHKERRQ(ierr);
-    }
-  }
-  /* Add number of shared vertices to network->subnet[net].nvtx for none-owning subnetworks */
-  ierr = DMNetworkGetSharedVertices(dm,&nsv,NULL);CHKERRQ(ierr);
-  for (v=0; v<nsv; v++) {
-    ierr = DMNetworkSharedVertexGetInfo(dm,v,&gidx,&ns,&sv);CHKERRQ(ierr);
-    for (i=0; i<ns; i++) {
-      net = sv[2*i];
-      if (!PetscBTLookup(table,net)) network->subnet[net].nvtx++;
-    }
-  }
-  ierr = PetscBTDestroy(&table);CHKERRQ(ierr);
-  }
-#endif
   PetscFunctionReturn(0);
 }
 
@@ -1565,28 +1537,6 @@ static inline PetscErrorCode SetSubnetIdLookupBT(DM dm,PetscInt v,PetscInt Nsubn
   }
   PetscFunctionReturn(0);
 }
-
-#if 0
-/*
-  Setup a btable to keep track subnetworks owned by this process
-*/
-static inline PetscErrorCode SetSubnetLookupBT(DM dm,PetscBT btable)
-{
-  PetscErrorCode ierr;
-  DM_Network     *network = (DM_Network*)dm->data;
-  PetscInt       Nsubnet  = network->Nsubnet,net;
-
-  PetscFunctionBegin;
-  ierr = PetscBTMemzero(Nsubnet,btable);CHKERRQ(ierr);
-
-  for (net=0; net<Nsubnet; net++) {
-    if (network->subnet[net].nedge) {
-      ierr = PetscBTSet(btable,net);CHKERRQ(ierr);
-    }
-  }
-  PetscFunctionReturn(0);
-}
-#endif
 
 /*@
   DMNetworkDistribute - Distributes the network and moves associated component data
