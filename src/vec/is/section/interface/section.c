@@ -3309,6 +3309,33 @@ PetscErrorCode PetscSectionGetPointSyms(PetscSection section, PetscInt numPoints
   PetscFunctionReturn(0);
 }
 
+/*@
+  PetscSectionSymDistribute - Distribute the symmetries in accordance with the input SF
+
+  Collective
+
+  Input Parameters:
++ sym - the PetscSectionSym
+- migrationSF - the distribution map from roots to leaves
+
+  Output Parameters:
+. sym - the updated symmetries
+
+  Note: this function rewrites the label describing symmetries in-place
+
+  Level: developer
+
+.seealso: PetscSectionSymCreate(), PetscSectionSetSym(), PetscSectionGetSym(), PetscSectionSymLabelSetStratum(), PetscSectionGetPointSyms()
+@*/
+PetscErrorCode PetscSectionSymDistribute(PetscSectionSym sym, PetscSF migrationSF)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (sym->ops->distribute) {ierr = (*sym->ops->distribute)(sym, migrationSF);CHKERRQ(ierr);}
+  PetscFunctionReturn(0);
+}
+
 /*@C
   PetscSectionRestorePointSyms - Restore the symmetries returned by PetscSectionGetPointSyms()
 
