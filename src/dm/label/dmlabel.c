@@ -2344,6 +2344,19 @@ static PetscErrorCode PetscSectionSymGetPoints_Label(PetscSectionSym sym, PetscS
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode PetscSectionSymDistribute_Label(PetscSectionSym sym, PetscSF migrationSF)
+{
+  PetscSectionSym_Label *sl = (PetscSectionSym_Label *) sym->data;
+  DMLabel                labelNew;
+  PetscErrorCode         ierr;
+
+  PetscFunctionBegin;
+  ierr = DMLabelDistribute(sl->label, migrationSF, &labelNew);CHKERRQ(ierr);
+  ierr = DMLabelDestroy(&sl->label);CHKERRQ(ierr);
+  sl->label = labelNew;
+  PetscFunctionReturn(0);
+}
+
 PetscErrorCode PetscSectionSymCreate_Label(PetscSectionSym sym)
 {
   PetscSectionSym_Label *sl;
@@ -2351,10 +2364,11 @@ PetscErrorCode PetscSectionSymCreate_Label(PetscSectionSym sym)
 
   PetscFunctionBegin;
   ierr = PetscNewLog(sym,&sl);CHKERRQ(ierr);
-  sym->ops->getpoints = PetscSectionSymGetPoints_Label;
-  sym->ops->view      = PetscSectionSymView_Label;
-  sym->ops->destroy   = PetscSectionSymDestroy_Label;
-  sym->data           = (void *) sl;
+  sym->ops->getpoints  = PetscSectionSymGetPoints_Label;
+  sym->ops->distribute = PetscSectionSymDistribute_Label;
+  sym->ops->view       = PetscSectionSymView_Label;
+  sym->ops->destroy    = PetscSectionSymDestroy_Label;
+  sym->data            = (void *) sl;
   PetscFunctionReturn(0);
 }
 
