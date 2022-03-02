@@ -214,6 +214,7 @@ PetscErrorCode PetscSFDistributeSection(PetscSF sf, PetscSection rootSection, Pe
     ierr = PetscSectionGetFieldComponents(rootSection, f, &numComp);CHKERRQ(ierr);
     ierr = PetscSectionGetFieldName(rootSection, f, &name);CHKERRQ(ierr);
     ierr = PetscSectionGetFieldSym(rootSection, f, &sym);CHKERRQ(ierr);
+    if (sym) {ierr = PetscSectionSymDistribute(sym, sf);CHKERRQ(ierr);}
     ierr = PetscSectionSetFieldComponents(leafSection, f, numComp);CHKERRQ(ierr);
     ierr = PetscSectionSetFieldName(leafSection, f, name);CHKERRQ(ierr);
     ierr = PetscSectionSetFieldSym(leafSection, f, sym);CHKERRQ(ierr);
