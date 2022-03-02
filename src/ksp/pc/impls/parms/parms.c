@@ -38,18 +38,17 @@ typedef struct {
 
 static PetscErrorCode PCSetUp_PARMS(PC pc)
 {
-  Mat               pmat;
+  Mat                pmat;
   PC_PARMS          *parms = (PC_PARMS*)pc->data;
   const PetscInt    *mapptr0;
-  PetscInt          n, lsize, low, high, i, pos, ncols, length;
+  PetscInt           n, lsize, low, high, i, pos, ncols, length;
   int               *maptmp, *mapptr, *ia, *ja, *ja1, *im;
   PetscScalar       *aa, *aa1;
   const PetscInt    *cols;
-  PetscInt          meth[8];
+  PetscInt           meth[8];
   const PetscScalar *values;
-  PetscErrorCode    ierr;
-  MatInfo           matinfo;
-  PetscMPIInt       rank, npro;
+  MatInfo            matinfo;
+  PetscMPIInt        rank, npro;
 
   PetscFunctionBegin;
   /* Get preconditioner matrix from PETSc and setup pARMS structs */
@@ -182,11 +181,10 @@ static PetscErrorCode PCSetUp_PARMS(PC pc)
 
 static PetscErrorCode PCView_PARMS(PC pc,PetscViewer viewer)
 {
-  PetscErrorCode ierr;
-  PetscBool      iascii;
-  PC_PARMS       *parms = (PC_PARMS*)pc->data;
-  char           *str;
-  double         fill_fact;
+  PetscBool  iascii;
+  PC_PARMS  *parms = (PC_PARMS*)pc->data;
+  char      *str;
+  double     fill_fact;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
@@ -242,8 +240,7 @@ static PetscErrorCode PCView_PARMS(PC pc,PetscViewer viewer)
 
 static PetscErrorCode PCDestroy_PARMS(PC pc)
 {
-  PC_PARMS       *parms = (PC_PARMS*)pc->data;
-  PetscErrorCode ierr;
+  PC_PARMS *parms = (PC_PARMS*)pc->data;
 
   PetscFunctionBegin;
   if (parms->map) parms_MapFree(&parms->map);
@@ -270,10 +267,9 @@ static PetscErrorCode PCDestroy_PARMS(PC pc)
 static PetscErrorCode PCSetFromOptions_PARMS(PetscOptionItems *PetscOptionsObject,PC pc)
 {
   PC_PARMS          *parms = (PC_PARMS*)pc->data;
-  PetscBool         flag;
-  PCPARMSGlobalType global;
-  PCPARMSLocalType  local;
-  PetscErrorCode    ierr;
+  PetscBool          flag;
+  PCPARMSGlobalType  global;
+  PCPARMSLocalType   local;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"PARMS Options"));
@@ -312,7 +308,6 @@ static PetscErrorCode PCSetFromOptions_PARMS(PetscOptionItems *PetscOptionsObjec
 
 static PetscErrorCode PCApply_PARMS(PC pc,Vec b,Vec x)
 {
-  PetscErrorCode    ierr;
   PC_PARMS          *parms = (PC_PARMS*)pc->data;
   const PetscScalar *b1;
   PetscScalar       *x1;
@@ -366,8 +361,6 @@ static PetscErrorCode PCPARMSSetGlobal_PARMS(PC pc,PCPARMSGlobalType type)
 @*/
 PetscErrorCode PCPARMSSetGlobal(PC pc,PCPARMSGlobalType type)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidLogicalCollectiveEnum(pc,type,2);
@@ -418,8 +411,6 @@ static PetscErrorCode PCPARMSSetLocal_PARMS(PC pc,PCPARMSLocalType type)
 @*/
 PetscErrorCode PCPARMSSetLocal(PC pc,PCPARMSLocalType type)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidLogicalCollectiveEnum(pc,type,2);
@@ -467,8 +458,6 @@ static PetscErrorCode PCPARMSSetSolveTolerances_PARMS(PC pc,PetscReal tol,PetscI
 @*/
 PetscErrorCode PCPARMSSetSolveTolerances(PC pc,PetscReal tol,PetscInt maxits)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   CHKERRQ(PetscTryMethod(pc,"PCPARMSSetSolveTolerances_C",(PC,PetscReal,PetscInt),(pc,tol,maxits)));
@@ -509,8 +498,6 @@ static PetscErrorCode PCPARMSSetSolveRestart_PARMS(PC pc,PetscInt restart)
 @*/
 PetscErrorCode PCPARMSSetSolveRestart(PC pc,PetscInt restart)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   CHKERRQ(PetscTryMethod(pc,"PCPARMSSetSolveRestart_C",(PC,PetscInt),(pc,restart)));
@@ -552,8 +539,6 @@ static PetscErrorCode PCPARMSSetNonsymPerm_PARMS(PC pc,PetscBool nonsym)
 @*/
 PetscErrorCode PCPARMSSetNonsymPerm(PC pc,PetscBool nonsym)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   CHKERRQ(PetscTryMethod(pc,"PCPARMSSetNonsymPerm_C",(PC,PetscBool),(pc,nonsym)));
@@ -607,8 +592,6 @@ static PetscErrorCode PCPARMSSetFill_PARMS(PC pc,PetscInt lfil0,PetscInt lfil1,P
 @*/
 PetscErrorCode PCPARMSSetFill(PC pc,PetscInt lfil0,PetscInt lfil1,PetscInt lfil2)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   CHKERRQ(PetscTryMethod(pc,"PCPARMSSetFill_C",(PC,PetscInt,PetscInt,PetscInt),(pc,lfil0,lfil1,lfil2)));
@@ -656,8 +639,7 @@ M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_PARMS(PC pc)
 {
-  PC_PARMS       *parms;
-  PetscErrorCode ierr;
+  PC_PARMS *parms;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(pc,&parms));

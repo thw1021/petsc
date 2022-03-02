@@ -67,7 +67,6 @@ PETSC_EXTERN PetscErrorCode PetscDrawImageSavePNG(const char filename[],unsigned
   png_struct     *png_ptr;
   png_info       *info_ptr;
   unsigned int   row, stride = palette ? w : 3*w;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidCharPointer(filename,1);
@@ -176,7 +175,6 @@ PETSC_EXTERN PetscErrorCode PetscDrawMovieSaveGIF(const char pattern[],PetscInt 
   char           image[PETSC_MAX_PATH_LEN];
   GifFileType    *GifMovie = NULL;
   GifFileType    *GifImage = NULL;
-  PetscErrorCode ierr;
 # define         SETERRGIF(msg,fn) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,msg" GIF file %s",fn)
 
   PetscFunctionBegin;
@@ -251,7 +249,6 @@ PETSC_EXTERN PetscErrorCode PetscDrawImageSaveJPG(const char filename[],unsigned
   FILE                        *fp;
   struct jpeg_compress_struct cinfo;
   struct jpeg_error_mgr       jerr;
-  PetscErrorCode              ierr;
 
   PetscFunctionBegin;
   PetscValidCharPointer(filename,1);

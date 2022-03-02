@@ -683,7 +683,6 @@ static struct _PetscDrawOps DvOps = { PetscDrawSetDoubleBuffer_Win32,
 
 static PetscErrorCode PetscDrawGetPopup_Win32(PetscDraw draw,PetscDraw *popup)
 {
-  PetscErrorCode  ierr;
   PetscDraw_Win32 *win = (PetscDraw_Win32*)draw->data;
   PetscBool       flg  = PETSC_TRUE;
 
@@ -702,7 +701,6 @@ PETSC_EXTERN PetscErrorCode  PetscDrawCreate_Win32(PetscDraw draw)
 {
   PetscDraw_Win32 *windraw;
   HANDLE          hThread = NULL;
-  PetscErrorCode  ierr;
   WindowNode      newnode;
 
   PetscFunctionBegin;
@@ -830,7 +828,6 @@ static PetscErrorCode MouseRecord_Win32(HWND hWnd,PetscDrawButton button)
   WindowNode     current = NULL;
   MouseNode      newnode;
   POINT          mousepos;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   WaitForSingleObject(g_hWindowListMutex, INFINITE);

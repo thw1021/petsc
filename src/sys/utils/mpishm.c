@@ -254,7 +254,6 @@ struct _n_PetscOmpCtrl {
  */
 static inline PetscErrorCode PetscOmpCtrlCreateBarrier(PetscOmpCtrl ctrl)
 {
-  PetscErrorCode        ierr;
   MPI_Aint              size;
   void                  *baseptr;
   pthread_barrierattr_t  attr;
@@ -313,8 +312,6 @@ static inline PetscErrorCode PetscOmpCtrlCreateBarrier(PetscOmpCtrl ctrl)
 /* Destroy the pthread barrier in the PETSc OpenMP controller */
 static inline PetscErrorCode PetscOmpCtrlDestroyBarrier(PetscOmpCtrl ctrl)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   /* this MPI_Barrier is to make sure slaves have finished using the omp barrier before master destroys it */
   CHKERRMPI(MPI_Barrier(ctrl->omp_comm));
@@ -346,14 +343,13 @@ static inline PetscErrorCode PetscOmpCtrlDestroyBarrier(PetscOmpCtrl ctrl)
 @*/
 PetscErrorCode PetscOmpCtrlCreate(MPI_Comm petsc_comm,PetscInt nthreads,PetscOmpCtrl *pctrl)
 {
-  PetscErrorCode        ierr;
-  PetscOmpCtrl          ctrl;
-  unsigned long         *cpu_ulongs=NULL;
-  PetscInt              i,nr_cpu_ulongs;
-  PetscShmComm          pshmcomm;
-  MPI_Comm              shm_comm;
-  PetscMPIInt           shm_rank,shm_comm_size,omp_rank,color;
-  PetscInt              num_packages,num_cores;
+  PetscOmpCtrl   ctrl;
+  unsigned long *cpu_ulongs = NULL;
+  PetscInt       i,nr_cpu_ulongs;
+  PetscShmComm   pshmcomm;
+  MPI_Comm       shm_comm;
+  PetscMPIInt    shm_rank,shm_comm_size,omp_rank,color;
+  PetscInt       num_packages,num_cores;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNew(&ctrl));
@@ -391,7 +387,7 @@ PetscErrorCode PetscOmpCtrlCreate(MPI_Comm petsc_comm,PetscInt nthreads,PetscOmp
     if (nthreads > shm_comm_size) nthreads = shm_comm_size;
   }
 
-  PetscCheckFalse(nthreads < 1 || nthreads > shm_comm_size,petsc_comm,PETSC_ERR_ARG_OUTOFRANGE,"number of OpenMP threads %" PetscInt_FMT " can not be < 1 or > the MPI shared memory communicator size %d",nthreads,shm_comm_size);
+  PetscCheck(nthreads >= 1 && nthreads <= shm_comm_size,petsc_comm,PETSC_ERR_ARG_OUTOFRANGE,"number of OpenMP threads %" PetscInt_FMT " can not be < 1 or > the MPI shared memory communicator size %d",nthreads,shm_comm_size);
   if (shm_comm_size % nthreads) CHKERRQ(PetscPrintf(petsc_comm,"Warning: number of OpenMP threads %" PetscInt_FMT " is not a factor of the MPI shared memory communicator size %d, which may cause load-imbalance!\n",nthreads,shm_comm_size));
 
   /* split shm_comm into a set of omp_comms with each of size nthreads. Ex., if
@@ -476,8 +472,7 @@ PetscErrorCode PetscOmpCtrlCreate(MPI_Comm petsc_comm,PetscInt nthreads,PetscOmp
 @*/
 PetscErrorCode PetscOmpCtrlDestroy(PetscOmpCtrl *pctrl)
 {
-  PetscErrorCode  ierr;
-  PetscOmpCtrl    ctrl = *pctrl;
+  PetscOmpCtrl ctrl = *pctrl;
 
   PetscFunctionBegin;
   hwloc_bitmap_free(ctrl->cpuset);
@@ -567,8 +562,6 @@ PetscErrorCode PetscOmpCtrlBarrier(PetscOmpCtrl ctrl)
 @*/
 PetscErrorCode PetscOmpCtrlOmpRegionOnMasterBegin(PetscOmpCtrl ctrl)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(hwloc_set_cpubind(ctrl->topology,ctrl->omp_cpuset,HWLOC_CPUBIND_PROCESS));
   omp_set_num_threads(ctrl->omp_comm_size); /* may override the OMP_NUM_THREAD env var */
@@ -591,8 +584,6 @@ PetscErrorCode PetscOmpCtrlOmpRegionOnMasterBegin(PetscOmpCtrl ctrl)
 @*/
 PetscErrorCode PetscOmpCtrlOmpRegionOnMasterEnd(PetscOmpCtrl ctrl)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(hwloc_set_cpubind(ctrl->topology,ctrl->cpuset,HWLOC_CPUBIND_PROCESS));
   omp_set_num_threads(1);

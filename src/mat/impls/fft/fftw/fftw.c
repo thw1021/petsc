@@ -48,7 +48,6 @@ extern PetscErrorCode VecDestroy_MPIFFTW(Vec);
 */
 PetscErrorCode MatMult_SeqFFTW(Mat A,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
   Mat_FFT        *fft  = (Mat_FFT*)A->data;
   Mat_FFTW       *fftw = (Mat_FFTW*)fft->data;
   const PetscScalar *x_array;
@@ -151,7 +150,6 @@ PetscErrorCode MatMult_SeqFFTW(Mat A,Vec x,Vec y)
 
 PetscErrorCode MatMultTranspose_SeqFFTW(Mat A,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
   Mat_FFT        *fft  = (Mat_FFT*)A->data;
   Mat_FFTW       *fftw = (Mat_FFTW*)fft->data;
   const PetscScalar *x_array;
@@ -233,7 +231,6 @@ PetscErrorCode MatMultTranspose_SeqFFTW(Mat A,Vec x,Vec y)
 */
 PetscErrorCode MatMult_MPIFFTW(Mat A,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
   Mat_FFT        *fft  = (Mat_FFT*)A->data;
   Mat_FFTW       *fftw = (Mat_FFTW*)fft->data;
   const PetscScalar *x_array;
@@ -304,7 +301,6 @@ PetscErrorCode MatMult_MPIFFTW(Mat A,Vec x,Vec y)
 */
 PetscErrorCode MatMultTranspose_MPIFFTW(Mat A,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
   Mat_FFT        *fft  = (Mat_FFT*)A->data;
   Mat_FFTW       *fftw = (Mat_FFTW*)fft->data;
   const PetscScalar *x_array;
@@ -367,7 +363,6 @@ PetscErrorCode MatDestroy_FFTW(Mat A)
 {
   Mat_FFT        *fft  = (Mat_FFT*)A->data;
   Mat_FFTW       *fftw = (Mat_FFTW*)fft->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   fftw_destroy_plan(fftw->p_forward);
@@ -387,7 +382,6 @@ PetscErrorCode MatDestroy_FFTW(Mat A)
 #include <../src/vec/vec/impls/mpi/pvecimpl.h>   /*I  "petscvec.h"   I*/
 PetscErrorCode VecDestroy_MPIFFTW(Vec v)
 {
-  PetscErrorCode ierr;
   PetscScalar    *array;
 
   PetscFunctionBegin;
@@ -402,7 +396,6 @@ PetscErrorCode VecDestroy_MPIFFTW(Vec v)
 #if !PetscDefined(HAVE_MPIUNI)
 static PetscErrorCode VecDuplicate_FFTW_fin(Vec fin,Vec *fin_new)
 {
-  PetscErrorCode ierr;
   Mat            A;
 
   PetscFunctionBegin;
@@ -413,7 +406,6 @@ static PetscErrorCode VecDuplicate_FFTW_fin(Vec fin,Vec *fin_new)
 
 static PetscErrorCode VecDuplicate_FFTW_fout(Vec fout,Vec *fout_new)
 {
-  PetscErrorCode ierr;
   Mat            A;
 
   PetscFunctionBegin;
@@ -424,7 +416,6 @@ static PetscErrorCode VecDuplicate_FFTW_fout(Vec fout,Vec *fout_new)
 
 static PetscErrorCode VecDuplicate_FFTW_bout(Vec bout, Vec *bout_new)
 {
-  PetscErrorCode ierr;
   Mat            A;
 
   PetscFunctionBegin;
@@ -467,7 +458,6 @@ static PetscErrorCode VecDuplicate_FFTW_bout(Vec bout, Vec *bout_new)
 @*/
 PetscErrorCode MatCreateVecsFFTW(Mat A,Vec *x,Vec *y,Vec *z)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscUseMethod(A,"MatCreateVecsFFTW_C",(Mat,Vec*,Vec*,Vec*),(A,x,y,z)));
@@ -476,7 +466,6 @@ PetscErrorCode MatCreateVecsFFTW(Mat A,Vec *x,Vec *y,Vec *z)
 
 PetscErrorCode  MatCreateVecsFFTW_FFTW(Mat A,Vec *fin,Vec *fout,Vec *bout)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    size,rank;
   MPI_Comm       comm;
   Mat_FFT        *fft  = (Mat_FFT*)A->data;
@@ -737,7 +726,6 @@ PetscErrorCode  MatCreateVecsFFTW_FFTW(Mat A,Vec *fin,Vec *fout,Vec *bout)
 @*/
 PetscErrorCode VecScatterPetscToFFTW(Mat A,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscUseMethod(A,"VecScatterPetscToFFTW_C",(Mat,Vec,Vec),(A,x,y)));
@@ -746,7 +734,6 @@ PetscErrorCode VecScatterPetscToFFTW(Mat A,Vec x,Vec y)
 
 PetscErrorCode VecScatterPetscToFFTW_FFTW(Mat A,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
   MPI_Comm       comm;
   Mat_FFT        *fft  = (Mat_FFT*)A->data;
   PetscInt       low;
@@ -973,7 +960,6 @@ PetscErrorCode VecScatterPetscToFFTW_FFTW(Mat A,Vec x,Vec y)
 @*/
 PetscErrorCode VecScatterFFTWToPetsc(Mat A,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscUseMethod(A,"VecScatterFFTWToPetsc_C",(Mat,Vec,Vec),(A,x,y)));
@@ -982,7 +968,6 @@ PetscErrorCode VecScatterFFTWToPetsc(Mat A,Vec x,Vec y)
 
 PetscErrorCode VecScatterFFTWToPetsc_FFTW(Mat A,Vec x,Vec y)
 {
-  PetscErrorCode ierr;
   MPI_Comm       comm;
   Mat_FFT        *fft  = (Mat_FFT*)A->data;
   PetscInt       low;
@@ -1190,7 +1175,6 @@ PetscErrorCode VecScatterFFTWToPetsc_FFTW(Mat A,Vec x,Vec y)
 */
 PETSC_EXTERN PetscErrorCode MatCreate_FFTW(Mat A)
 {
-  PetscErrorCode ierr;
   MPI_Comm       comm;
   Mat_FFT        *fft = (Mat_FFT*)A->data;
   Mat_FFTW       *fftw;

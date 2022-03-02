@@ -168,7 +168,7 @@ PetscErrorCode PetscObjectCopyFortranFunctionPointers(PetscObject src,PetscObjec
   PetscFunctionBegin;
   PetscValidHeader(src,1);
   PetscValidHeader(dest,2);
-  PetscCheckFalse(src->classid != dest->classid,src->comm,PETSC_ERR_ARG_INCOMP,"Objects must be of the same class");
+  PetscCheck(src->classid == dest->classid,src->comm,PETSC_ERR_ARG_INCOMP,"Objects must be of the same class");
 
   CHKERRQ(PetscFree(dest->fortran_func_pointers));
   CHKERRQ(PetscMalloc(src->num_fortran_func_pointers*sizeof(void(*)(void)),&dest->fortran_func_pointers));
@@ -250,8 +250,8 @@ PetscErrorCode PetscObjectGetFortranCallback(PetscObject obj,PetscFortranCallbac
 
   PetscFunctionBegin;
   PetscValidHeader(obj,1);
-  PetscCheckFalse(cid < PETSC_SMALLEST_FORTRAN_CALLBACK,obj->comm,PETSC_ERR_ARG_CORRUPT,"Fortran callback Id invalid");
-  PetscCheckFalse(cid >= PETSC_SMALLEST_FORTRAN_CALLBACK+obj->num_fortrancallback[cbtype],obj->comm,PETSC_ERR_ARG_CORRUPT,"Fortran callback not set on this object");
+  PetscCheck(cid >= PETSC_SMALLEST_FORTRAN_CALLBACK,obj->comm,PETSC_ERR_ARG_CORRUPT,"Fortran callback Id invalid");
+  PetscCheck(cid < PETSC_SMALLEST_FORTRAN_CALLBACK+obj->num_fortrancallback[cbtype],obj->comm,PETSC_ERR_ARG_CORRUPT,"Fortran callback not set on this object");
   cb = &obj->fortrancallback[cbtype][cid-PETSC_SMALLEST_FORTRAN_CALLBACK];
   if (func) *func = cb->func;
   if (ctx) *ctx = cb->ctx;
@@ -631,7 +631,7 @@ PetscErrorCode PetscObjectCompose_Petsc(PetscObject obj,const char name[],PetscO
     PetscBool skipreference;
 
     CHKERRQ(PetscObjectListReverseFind(ptr->olist,obj,&tname,&skipreference));
-    if (tname) PetscCheckFalse(skipreference,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"An object cannot be composed with an object that was composed with it");
+    if (tname) PetscCheck(skipreference,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"An object cannot be composed with an object that was composed with it");
   }
   CHKERRQ(PetscObjectListAdd(&obj->olist,name,ptr));
   PetscFunctionReturn(0);

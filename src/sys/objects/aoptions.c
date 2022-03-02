@@ -21,15 +21,12 @@
 */
 PetscErrorCode PetscOptionsBegin_Private(PetscOptionItems *PetscOptionsObject,MPI_Comm comm,const char prefix[],const char title[],const char mansec[])
 {
-
   PetscFunctionBegin;
   if (prefix) PetscValidCharPointer(prefix,3);
   PetscValidCharPointer(title,4);
   if (mansec) PetscValidCharPointer(mansec,5);
   if (!PetscOptionsObject->alreadyprinted) {
-    if (!PetscOptionsHelpPrintedSingleton) {
-      CHKERRQ(PetscOptionsHelpPrintedCreate(&PetscOptionsHelpPrintedSingleton));
-    }
+    if (!PetscOptionsHelpPrintedSingleton) CHKERRQ(PetscOptionsHelpPrintedCreate(&PetscOptionsHelpPrintedSingleton));
     CHKERRQ(PetscOptionsHelpPrintedCheck(PetscOptionsHelpPrintedSingleton,prefix,title,&PetscOptionsObject->alreadyprinted));
   }
   PetscOptionsObject->next          = NULL;
@@ -57,16 +54,14 @@ PetscErrorCode PetscObjectOptionsBegin_Private(PetscOptionItems *PetscOptionsObj
   PetscBool flg;
 
   PetscFunctionBegin;
+  PetscValidPointer(PetscOptionsObject,1);
   PetscValidHeader(obj,2);
   PetscOptionsObject->object         = obj;
   PetscOptionsObject->alreadyprinted = obj->optionsprinted;
 
   CHKERRQ(PetscStrcmp(obj->description,obj->class_name,&flg));
-  if (flg) {
-    CHKERRQ(PetscSNPrintf(title,sizeof(title),"%s options",obj->class_name));
-  } else {
-    CHKERRQ(PetscSNPrintf(title,sizeof(title),"%s (%s) options",obj->description,obj->class_name));
-  }
+  if (flg) CHKERRQ(PetscSNPrintf(title,sizeof(title),"%s options",obj->class_name));
+  else     CHKERRQ(PetscSNPrintf(title,sizeof(title),"%s (%s) options",obj->description,obj->class_name));
   CHKERRQ(PetscOptionsBegin_Private(PetscOptionsObject,obj->comm,obj->prefix,title,obj->mansec));
   PetscFunctionReturn(0);
 }
@@ -81,7 +76,7 @@ static int PetscOptionItemCreate_Private(PetscOptionItems *PetscOptionsObject,co
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsValidKey(opt,&valid));
-  PetscCheckFalse(!valid,PETSC_COMM_WORLD,PETSC_ERR_ARG_INCOMP,"The option '%s' is not a valid key",opt);
+  PetscCheck(valid,PETSC_COMM_WORLD,PETSC_ERR_ARG_INCOMP,"The option '%s' is not a valid key",opt);
 
   CHKERRQ(PetscNew(amsopt));
   (*amsopt)->next = NULL;
@@ -116,17 +111,16 @@ static int PetscOptionItemCreate_Private(PetscOptionItems *PetscOptionsObject,co
 .   Assumes process 0 of the given communicator has access to stdin
 
 */
-static PetscErrorCode PetscScanString(MPI_Comm comm,size_t n,char str[])
+static PetscErrorCode PetscScanString(MPI_Comm comm, size_t n, char str[])
 {
-  size_t         i;
-  char           c;
-  PetscMPIInt    rank,nm;
+  PetscMPIInt rank,nm;
 
   PetscFunctionBegin;
   CHKERRMPI(MPI_Comm_rank(comm,&rank));
   if (rank == 0) {
-    c = (char) getchar();
-    i = 0;
+    char   c = (char)getchar();
+    size_t i = 0;
+
     while (c != '\n' && i < n-1) {
       str[i++] = c;
       c = (char)getchar();
@@ -141,16 +135,17 @@ static PetscErrorCode PetscScanString(MPI_Comm comm,size_t n,char str[])
 /*
     This is needed because certain strings may be freed by SAWs, hence we cannot use PetscStrallocpy()
 */
-static PetscErrorCode  PetscStrdup(const char s[],char *t[])
+static PetscErrorCode PetscStrdup(const char s[], char *t[])
 {
-  size_t         len;
-  char           *tmp = NULL;
+  char *tmp = NULL;
 
   PetscFunctionBegin;
   if (s) {
+    size_t len;
+
     CHKERRQ(PetscStrlen(s,&len));
-    tmp = (char*) malloc((len+1)*sizeof(char));
-    PetscCheckFalse(!tmp,PETSC_COMM_SELF,PETSC_ERR_MEM,"No memory to duplicate string");
+    tmp = (char*) malloc((len+1)*sizeof(*tmp));
+    PetscCheck(tmp,PETSC_COMM_SELF,PETSC_ERR_MEM,"No memory to duplicate string");
     CHKERRQ(PetscStrcpy(tmp,s));
   }
   *t = tmp;
@@ -537,9 +532,7 @@ PetscErrorCode PetscOptionsEnd_Private(PetscOptionItems *PetscOptionsObject)
         CHKERRQ(PetscStrcpy(option,"-"));
         CHKERRQ(PetscStrcat(option,PetscOptionsObject->prefix));
         CHKERRQ(PetscStrcat(option,PetscOptionsObject->next->option+1));
-      } else {
-        CHKERRQ(PetscStrcpy(option,PetscOptionsObject->next->option));
-      }
+      } else CHKERRQ(PetscStrcpy(option,PetscOptionsObject->next->option));
 
       switch (PetscOptionsObject->next->type) {
       case OPTION_HEAD:
@@ -619,7 +612,7 @@ PetscErrorCode PetscOptionsEnd_Private(PetscOptionItems *PetscOptionsObject)
       CHKERRQ(PetscFree(PetscOptionsObject->next->data));
     }
 
-    last                    = PetscOptionsObject->next;
+    last                     = PetscOptionsObject->next;
     PetscOptionsObject->next = PetscOptionsObject->next->next;
     CHKERRQ(PetscFree(last));
   }

@@ -6,8 +6,6 @@
 
 static PetscErrorCode PetscViewerSetFromOptions_ADIOS(PetscOptionItems *PetscOptionsObject,PetscViewer v)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"ADIOS PetscViewer Options"));
   CHKERRQ(PetscOptionsTail());
@@ -17,7 +15,6 @@ static PetscErrorCode PetscViewerSetFromOptions_ADIOS(PetscOptionItems *PetscOpt
 static PetscErrorCode PetscViewerFileClose_ADIOS(PetscViewer viewer)
 {
   PetscViewer_ADIOS *adios = (PetscViewer_ADIOS*)viewer->data;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   switch (adios->btype) {
@@ -37,7 +34,6 @@ static PetscErrorCode PetscViewerFileClose_ADIOS(PetscViewer viewer)
 PetscErrorCode PetscViewerDestroy_ADIOS(PetscViewer viewer)
 {
   PetscViewer_ADIOS *adios = (PetscViewer_ADIOS*) viewer->data;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscViewerFileClose_ADIOS(viewer));
@@ -60,7 +56,6 @@ PetscErrorCode  PetscViewerFileSetMode_ADIOS(PetscViewer viewer, PetscFileMode t
 PetscErrorCode  PetscViewerFileSetName_ADIOS(PetscViewer viewer, const char name[])
 {
   PetscViewer_ADIOS *adios = (PetscViewer_ADIOS*) viewer->data;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   if (adios->filename) CHKERRQ(PetscFree(adios->filename));
@@ -104,7 +99,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PetscViewerCreate_ADIOS(PetscViewer v)
 {
   PetscViewer_ADIOS *adios;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(v,&adios));
@@ -150,8 +144,6 @@ $    FILE_MODE_APPEND - open existing file for binary output
 @*/
 PetscErrorCode  PetscViewerADIOSOpen(MPI_Comm comm, const char name[], PetscFileMode type, PetscViewer *adiosv)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(PetscViewerCreate(comm, adiosv));
   CHKERRQ(PetscViewerSetType(*adiosv, PETSCVIEWERADIOS));

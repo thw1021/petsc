@@ -141,7 +141,6 @@ static PetscErrorCode MatPartitioningApply_Party(MatPartitioning part,IS *partit
 PetscErrorCode MatPartitioningView_Party(MatPartitioning part,PetscViewer viewer)
 {
   MatPartitioning_Party *party = (MatPartitioning_Party*)part->data;
-  PetscErrorCode        ierr;
   PetscBool             isascii;
 
   PetscFunctionBegin;
@@ -150,15 +149,9 @@ PetscErrorCode MatPartitioningView_Party(MatPartitioning part,PetscViewer viewer
     CHKERRQ(PetscViewerASCIIPrintf(viewer,"  Global method: %s\n",party->global));
     CHKERRQ(PetscViewerASCIIPrintf(viewer,"  Local method: %s\n",party->local));
     CHKERRQ(PetscViewerASCIIPrintf(viewer,"  Number of vertices for the coarse graph: %d\n",party->nbvtxcoarsed));
-    if (party->redm) {
-      CHKERRQ(PetscViewerASCIIPrintf(viewer,"  Using matching method for graph reduction\n"));
-    }
-    if (party->redo) {
-      CHKERRQ(PetscViewerASCIIPrintf(viewer,"  Using matching optimization\n"));
-    }
-    if (party->recursive) {
-      CHKERRQ(PetscViewerASCIIPrintf(viewer,"  Using recursive bipartitioning\n"));
-    }
+    if (party->redm) CHKERRQ(PetscViewerASCIIPrintf(viewer,"  Using matching method for graph reduction\n"));
+    if (party->redo) CHKERRQ(PetscViewerASCIIPrintf(viewer,"  Using matching optimization\n"));
+    if (party->recursive) CHKERRQ(PetscViewerASCIIPrintf(viewer,"  Using recursive bipartitioning\n"));
   }
   PetscFunctionReturn(0);
 }
@@ -187,8 +180,7 @@ PetscErrorCode MatPartitioningView_Party(MatPartitioning part,PetscViewer viewer
 @*/
 PetscErrorCode MatPartitioningPartySetGlobal(MatPartitioning part,const char *global)
 {
-  PetscErrorCode ierr;
-
+k
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part,MAT_PARTITIONING_CLASSID,1);
   CHKERRQ(PetscTryMethod(part,"MatPartitioningPartySetGlobal_C",(MatPartitioning,const char*),(part,global)));
@@ -198,7 +190,6 @@ PetscErrorCode MatPartitioningPartySetGlobal(MatPartitioning part,const char *gl
 PetscErrorCode MatPartitioningPartySetGlobal_Party(MatPartitioning part,const char *global)
 {
   MatPartitioning_Party *party = (MatPartitioning_Party*)part->data;
-  PetscErrorCode        ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscStrncpy(party->global,global,15));
@@ -227,8 +218,6 @@ PetscErrorCode MatPartitioningPartySetGlobal_Party(MatPartitioning part,const ch
 @*/
 PetscErrorCode MatPartitioningPartySetLocal(MatPartitioning part,const char *local)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part,MAT_PARTITIONING_CLASSID,1);
   CHKERRQ(PetscTryMethod(part,"MatPartitioningPartySetLocal_C",(MatPartitioning,const char*),(part,local)));
@@ -239,7 +228,6 @@ PetscErrorCode MatPartitioningPartySetLocal_Party(MatPartitioning part,const cha
 
 {
   MatPartitioning_Party *party = (MatPartitioning_Party*)part->data;
-  PetscErrorCode        ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscStrncpy(party->local,local,15));
@@ -263,8 +251,6 @@ PetscErrorCode MatPartitioningPartySetLocal_Party(MatPartitioning part,const cha
 @*/
 PetscErrorCode MatPartitioningPartySetCoarseLevel(MatPartitioning part,PetscReal level)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part,MAT_PARTITIONING_CLASSID,1);
   PetscValidLogicalCollectiveReal(part,level,2);
@@ -300,8 +286,6 @@ PetscErrorCode MatPartitioningPartySetCoarseLevel_Party(MatPartitioning part,Pet
 @*/
 PetscErrorCode MatPartitioningPartySetMatchOptimization(MatPartitioning part,PetscBool opt)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part,MAT_PARTITIONING_CLASSID,1);
   PetscValidLogicalCollectiveBool(part,opt,2);
@@ -334,8 +318,6 @@ PetscErrorCode MatPartitioningPartySetMatchOptimization_Party(MatPartitioning pa
 @*/
 PetscErrorCode MatPartitioningPartySetBipart(MatPartitioning part,PetscBool bp)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part,MAT_PARTITIONING_CLASSID,1);
   PetscValidLogicalCollectiveBool(part,bp,2);
@@ -354,7 +336,6 @@ PetscErrorCode MatPartitioningPartySetBipart_Party(MatPartitioning part,PetscBoo
 
 PetscErrorCode MatPartitioningSetFromOptions_Party(PetscOptionItems *PetscOptionsObject,MatPartitioning part)
 {
-  PetscErrorCode        ierr;
   PetscBool             flag;
   char                  value[256];
   PetscReal             r;
@@ -378,7 +359,6 @@ PetscErrorCode MatPartitioningSetFromOptions_Party(PetscOptionItems *PetscOption
 PetscErrorCode MatPartitioningDestroy_Party(MatPartitioning part)
 {
   MatPartitioning_Party *party = (MatPartitioning_Party*)part->data;
-  PetscErrorCode        ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscFree(party));
@@ -407,7 +387,6 @@ M*/
 
 PETSC_EXTERN PetscErrorCode MatPartitioningCreate_Party(MatPartitioning part)
 {
-  PetscErrorCode        ierr;
   MatPartitioning_Party *party;
 
   PetscFunctionBegin;
