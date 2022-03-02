@@ -42,7 +42,7 @@ PetscErrorCode MatMultAddMtM_SeqAIJ(Mat MtM,Vec xx, Vec yy, Vec zz)
 
 PetscErrorCode createSwarm(const DM dm, DM *sw)
 {
-  PetscInt       Nc = 1, dim = 2;
+  PetscInt Nc = 1, dim = 2;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMCreate(PETSC_COMM_SELF, sw));
@@ -307,21 +307,21 @@ PetscErrorCode go()
   /* Create particle swarm */
   PetscPragmaOMP(parallel for)
   for (int tid=0; tid<numthreads; tid++) {
-    CHKERRQ(createSwarm(dm_t[tid], &sw_t[tid]));
+    CHKERRABORT(PETSC_COMM_SELF,createSwarm(dm_t[tid], &sw_t[tid]));
   }
   PetscPragmaOMP(parallel for)
   for (int tid=0; tid<numthreads; tid++) {
-    CHKERRQ(particlesToGrid(dm_t[tid], sw_t[tid], Np_t[tid], tid, dim, target, xx_t[tid], yy_t[tid], wp_t[tid], rho_t[tid], &M_p_t[tid]));
+    CHKERRABORT(PETSC_COMM_SELF,particlesToGrid(dm_t[tid], sw_t[tid], Np_t[tid], tid, dim, target, xx_t[tid], yy_t[tid], wp_t[tid], rho_t[tid], &M_p_t[tid]));
   }
   /* Project field to particles */
   /*   This gives f_p = M_p^+ M f */
   PetscPragmaOMP(parallel for)
   for (int tid=0; tid<numthreads; tid++) {
-    CHKERRQ(VecCopy(rho_t[tid], rhs_t[tid])); /* Identity: M^1 M rho */
+    CHKERRABORT(PETSC_COMM_SELF,VecCopy(rho_t[tid], rhs_t[tid])); /* Identity: M^1 M rho */
   }
   PetscPragmaOMP(parallel for)
   for (int tid=0; tid<numthreads; tid++) {
-    CHKERRQ(gridToParticles(dm_t[tid], sw_t[tid], (tid==target) ?  moments_1 : NULL, rhs_t[tid], M_p_t[tid]));
+    CHKERRABORT(PETSC_COMM_SELF,gridToParticles(dm_t[tid], sw_t[tid], (tid==target) ?  moments_1 : NULL, rhs_t[tid], M_p_t[tid]));
   }
   /* Cleanup */
   for (int tid=0; tid<numthreads; tid++) {
@@ -344,19 +344,19 @@ PetscErrorCode go()
   /* Create particle swarm */
     PetscPragmaOMP(parallel for)
     for (int tid=0; tid<numthreads; tid++) {
-      CHKERRQ(createSwarm(dm_t[tid], &sw_t[tid]));
+      CHKERRABORT(PETSC_COMM_SELF,createSwarm(dm_t[tid], &sw_t[tid]));
     }
     PetscPragmaOMP(parallel for)
     for (int tid=0; tid<numthreads; tid++) {
-      CHKERRQ(particlesToGrid(dm_t[tid], sw_t[tid], Np_t[tid], tid, dim, target, xx_t[tid], yy_t[tid], wp_t[tid], rho_t[tid], &M_p_t[tid]));
+      CHKERRABORT(PETSC_COMM_SELF,particlesToGrid(dm_t[tid], sw_t[tid], Np_t[tid], tid, dim, target, xx_t[tid], yy_t[tid], wp_t[tid], rho_t[tid], &M_p_t[tid]));
     }
     PetscPragmaOMP(parallel for)
     for (int tid=0; tid<numthreads; tid++) {
-      CHKERRQ(VecCopy(rho_t[tid], rhs_t[tid])); /* Identity: M^1 M rho */
+      CHKERRABORT(PETSC_COMM_SELF,VecCopy(rho_t[tid], rhs_t[tid])); /* Identity: M^1 M rho */
     }
     PetscPragmaOMP(parallel for)
     for (int tid=0; tid<numthreads; tid++) {
-      CHKERRQ(gridToParticles(dm_t[tid], sw_t[tid], NULL, rhs_t[tid], M_p_t[tid]));
+      CHKERRABORT(PETSC_COMM_SELF,gridToParticles(dm_t[tid], sw_t[tid], NULL, rhs_t[tid], M_p_t[tid]));
     }
     /* Cleanup */
     for (int tid=0; tid<numthreads; tid++) {

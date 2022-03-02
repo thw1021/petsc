@@ -22,11 +22,10 @@ static PetscErrorCode MatGetDiagonal_Htool(Mat A,Vec v)
   Mat_Htool      *a = (Mat_Htool*)A->data;
   PetscScalar    *x;
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatHasCongruentLayouts(A,&flg));
-  PetscCheckFalse(!flg,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Only congruent layouts supported");
+  PetscCheck(flg,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Only congruent layouts supported");
   CHKERRQ(VecGetArrayWrite(v,&x));
   a->hmatrix->copy_local_diagonal(x);
   CHKERRQ(VecRestoreArrayWrite(v,&x));
@@ -40,11 +39,10 @@ static PetscErrorCode MatGetDiagonalBlock_Htool(Mat A,Mat *b)
   Mat            B;
   PetscScalar    *ptr;
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatHasCongruentLayouts(A,&flg));
-  PetscCheckFalse(!flg,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Only congruent layouts supported");
+  PetscCheck(flg,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Only congruent layouts supported");
   CHKERRQ(PetscObjectQuery((PetscObject)A,"DiagonalBlock",(PetscObject*)&B)); /* same logic as in MatGetDiagonalBlock_MPIDense() */
   if (!B) {
     CHKERRQ(MatCreateDense(PETSC_COMM_SELF,A->rmap->n,A->rmap->n,A->rmap->n,A->rmap->n,NULL,&B));
@@ -67,7 +65,6 @@ static PetscErrorCode MatMult_Htool(Mat A,Vec x,Vec y)
   Mat_Htool         *a = (Mat_Htool*)A->data;
   const PetscScalar *in;
   PetscScalar       *out;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetArrayRead(x,&in));
@@ -85,7 +82,6 @@ static PetscErrorCode MatMultAdd_Htool(Mat A,Vec v1,Vec v2,Vec v3)
   Mat_Htool         *a = (Mat_Htool*)A->data;
   Vec               tmp;
   const PetscScalar scale = a->s;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDuplicate(v2,&tmp));
@@ -103,7 +99,6 @@ static PetscErrorCode MatMultTranspose_Htool(Mat A,Vec x,Vec y)
   Mat_Htool         *a = (Mat_Htool*)A->data;
   const PetscScalar *in;
   PetscScalar       *out;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecGetArrayRead(x,&in));
@@ -121,7 +116,6 @@ static PetscErrorCode MatIncreaseOverlap_Htool(Mat A,PetscInt is_max,IS is[],Pet
   const PetscInt     *idx;
   PetscInt           *oidx,size,bs[2];
   PetscMPIInt        csize;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatGetBlockSizes(A,bs,bs+1));
@@ -130,7 +124,7 @@ static PetscErrorCode MatIncreaseOverlap_Htool(Mat A,PetscInt is_max,IS is[],Pet
     /* basic implementation that adds indices by shifting an IS by -ov, -ov+1..., -1, 1..., ov-1, ov */
     /* needed to avoid subdomain matrices to replicate A since it is dense                           */
     CHKERRMPI(MPI_Comm_size(PetscObjectComm((PetscObject)is[i]),&csize));
-    PetscCheckFalse(csize != 1,PETSC_COMM_SELF,PETSC_ERR_SUP,"Unsupported parallel IS");
+    PetscCheck(csize == 1,PETSC_COMM_SELF,PETSC_ERR_SUP,"Unsupported parallel IS");
     CHKERRQ(ISGetSize(is[i],&size));
     CHKERRQ(ISGetIndices(is[i],&idx));
     for (PetscInt j=0; j<size; ++j) {
@@ -167,7 +161,6 @@ static PetscErrorCode MatCreateSubMatrices_Htool(Mat A,PetscInt n,const IS irow[
   const PetscInt    *idxr,*idxc,*it;
   PetscInt          nrow,m,i;
   PetscBool         flg;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   if (scall != MAT_REUSE_MATRIX) {
@@ -268,7 +261,6 @@ static PetscErrorCode MatDestroy_Htool(Mat A)
   Mat_Htool               *a = (Mat_Htool*)A->data;
   PetscContainer          container;
   MatHtoolKernelTranspose *kernelt;
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectChangeTypeName((PetscObject)A,NULL));
@@ -304,7 +296,6 @@ static PetscErrorCode MatView_Htool(Mat A,PetscViewer pv)
 {
   Mat_Htool      *a = (Mat_Htool*)A->data;
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)pv,PETSCVIEWERASCII,&flg));
@@ -350,7 +341,6 @@ static PetscErrorCode MatGetRow_Htool(Mat A,PetscInt row,PetscInt *nz,PetscInt *
   Mat_Htool      *a = (Mat_Htool*)A->data;
   PetscInt       *idxc;
   PetscBLASInt   one = 1,bn;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (nz) *nz = A->cmap->N;
@@ -374,7 +364,6 @@ static PetscErrorCode MatGetRow_Htool(Mat A,PetscInt row,PetscInt *nz,PetscInt *
 
 static PetscErrorCode MatRestoreRow_Htool(Mat A,PetscInt row,PetscInt *nz,PetscInt **idx,PetscScalar **v)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (nz) *nz = 0;
@@ -392,7 +381,6 @@ static PetscErrorCode MatSetFromOptions_Htool(PetscOptionItems *PetscOptionsObje
   Mat_Htool      *a = (Mat_Htool*)A->data;
   PetscInt       n;
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"Htool options"));
@@ -422,7 +410,6 @@ static PetscErrorCode MatAssemblyEnd_Htool(Mat A,MatAssemblyType type)
   htool::VirtualGenerator<PetscScalar>                         *generator = nullptr;
   std::shared_ptr<htool::VirtualCluster>                       t,s = nullptr;
   std::shared_ptr<htool::VirtualLowRankGenerator<PetscScalar>> compressor = nullptr;
-  PetscErrorCode                                               ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscCitationsRegister(HtoolCitation,&HtoolCite));
@@ -506,13 +493,12 @@ static PetscErrorCode MatProductNumeric_Htool(Mat C)
   const PetscScalar *in;
   PetscScalar       *out;
   PetscInt          N,lda;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   MatCheckProduct(C,1);
   CHKERRQ(MatGetSize(C,NULL,&N));
   CHKERRQ(MatDenseGetLDA(C,&lda));
-  PetscCheckFalse(lda != C->rmap->n,PETSC_COMM_SELF,PETSC_ERR_SUP,"Unsupported leading dimension (%" PetscInt_FMT " != %" PetscInt_FMT ")",lda,C->rmap->n);
+  PetscCheck(lda == C->rmap->n,PETSC_COMM_SELF,PETSC_ERR_SUP,"Unsupported leading dimension (%" PetscInt_FMT " != %" PetscInt_FMT ")",lda,C->rmap->n);
   CHKERRQ(MatDenseGetArrayRead(product->B,&in));
   CHKERRQ(MatDenseGetArrayWrite(C,&out));
   switch (product->type) {
@@ -536,14 +522,13 @@ static PetscErrorCode MatProductSymbolic_Htool(Mat C)
   Mat_Product    *product = C->product;
   Mat            A,B;
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   MatCheckProduct(C,1);
   A = product->A;
   B = product->B;
   CHKERRQ(PetscObjectTypeCompareAny((PetscObject)B,&flg,MATSEQDENSE,MATMPIDENSE,""));
-  PetscCheckFalse(!flg,PetscObjectComm((PetscObject)B),PETSC_ERR_SUP,"MatProduct_AB not supported for %s",((PetscObject)product->B)->type_name);
+  PetscCheck(flg,PetscObjectComm((PetscObject)B),PETSC_ERR_SUP,"MatProduct_AB not supported for %s",((PetscObject)product->B)->type_name);
   switch (product->type) {
   case MATPRODUCT_AB:
     if (C->rmap->n == PETSC_DECIDE || C->cmap->n == PETSC_DECIDE || C->rmap->N == PETSC_DECIDE || C->cmap->N == PETSC_DECIDE) {
@@ -600,7 +585,6 @@ static PetscErrorCode MatHtoolGetHierarchicalMat_Htool(Mat A,const htool::Virtua
 @*/
 PETSC_EXTERN PetscErrorCode MatHtoolGetHierarchicalMat(Mat A,const htool::VirtualHMatrix<PetscScalar> **hmatrix)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -635,7 +619,6 @@ static PetscErrorCode MatHtoolSetKernel_Htool(Mat A,MatHtoolKernel kernel,void *
 @*/
 PETSC_EXTERN PetscErrorCode MatHtoolSetKernel(Mat A,MatHtoolKernel kernel,void *kernelctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -649,7 +632,6 @@ static PetscErrorCode MatHtoolGetPermutationSource_Htool(Mat A,IS* is)
 {
   Mat_Htool             *a = (Mat_Htool*)A->data;
   std::vector<PetscInt> source;
-  PetscErrorCode        ierr;
 
   PetscFunctionBegin;
   source = a->hmatrix->get_source_cluster()->get_local_perm();
@@ -673,7 +655,6 @@ static PetscErrorCode MatHtoolGetPermutationSource_Htool(Mat A,IS* is)
 @*/
 PETSC_EXTERN PetscErrorCode MatHtoolGetPermutationSource(Mat A,IS* is)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -686,7 +667,6 @@ static PetscErrorCode MatHtoolGetPermutationTarget_Htool(Mat A,IS* is)
 {
   Mat_Htool             *a = (Mat_Htool*)A->data;
   std::vector<PetscInt> target;
-  PetscErrorCode        ierr;
 
   PetscFunctionBegin;
   target = a->hmatrix->get_target_cluster()->get_local_perm();
@@ -710,7 +690,6 @@ static PetscErrorCode MatHtoolGetPermutationTarget_Htool(Mat A,IS* is)
 @*/
 PETSC_EXTERN PetscErrorCode MatHtoolGetPermutationTarget(Mat A,IS* is)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -741,7 +720,6 @@ static PetscErrorCode MatHtoolUsePermutation_Htool(Mat A,PetscBool use)
 @*/
 PETSC_EXTERN PetscErrorCode MatHtoolUsePermutation(Mat A,PetscBool use)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -756,14 +734,13 @@ static PetscErrorCode MatConvert_Htool_Dense(Mat A,MatType newtype,MatReuse reus
   Mat_Htool      *a = (Mat_Htool*)A->data;
   PetscInt       lda;
   PetscScalar    *array;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (reuse == MAT_REUSE_MATRIX) {
     C = *B;
-    PetscCheckFalse(C->rmap->n != A->rmap->n || C->cmap->N != A->cmap->N,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Incompatible dimensions");
+    PetscCheck(C->rmap->n == A->rmap->n && C->cmap->N == A->cmap->N,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Incompatible dimensions");
     CHKERRQ(MatDenseGetLDA(C,&lda));
-    PetscCheckFalse(lda != C->rmap->n,PETSC_COMM_SELF,PETSC_ERR_SUP,"Unsupported leading dimension (%" PetscInt_FMT " != %" PetscInt_FMT ")",lda,C->rmap->n);
+    PetscCheck(lda == C->rmap->n,PETSC_COMM_SELF,PETSC_ERR_SUP,"Unsupported leading dimension (%" PetscInt_FMT " != %" PetscInt_FMT ")",lda,C->rmap->n);
   } else {
     CHKERRQ(MatCreate(PetscObjectComm((PetscObject)A),&C));
     CHKERRQ(MatSetSizes(C,A->rmap->n,A->cmap->n,A->rmap->N,A->cmap->N));
@@ -787,7 +764,6 @@ static PetscErrorCode GenEntriesTranspose(PetscInt sdim,PetscInt M,PetscInt N,co
 {
   MatHtoolKernelTranspose *generator = (MatHtoolKernelTranspose*)ctx;
   PetscScalar             *tmp;
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
   generator->kernel(sdim,N,M,cols,rows,ptr,generator->kernelctx);
@@ -808,10 +784,9 @@ static PetscErrorCode MatTranspose_Htool(Mat A,MatReuse reuse,Mat *B)
   PetscInt                M = A->rmap->N,N = A->cmap->N,m = A->rmap->n,n = A->cmap->n;
   PetscContainer          container;
   MatHtoolKernelTranspose *kernelt;
-  PetscErrorCode          ierr;
 
   PetscFunctionBegin;
-  PetscCheckFalse(reuse == MAT_INPLACE_MATRIX,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"MatTranspose() with MAT_INPLACE_MATRIX not supported");
+  PetscCheck(reuse != MAT_INPLACE_MATRIX,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"MatTranspose() with MAT_INPLACE_MATRIX not supported");
   if (reuse == MAT_INITIAL_MATRIX) {
     CHKERRQ(MatCreate(PetscObjectComm((PetscObject)A),&C));
     CHKERRQ(MatSetSizes(C,n,m,N,M));
@@ -824,7 +799,7 @@ static PetscErrorCode MatTranspose_Htool(Mat A,MatReuse reuse,Mat *B)
   } else {
     C = *B;
     CHKERRQ(PetscObjectQuery((PetscObject)C,"KernelTranspose",(PetscObject*)&container));
-    PetscCheckFalse(!container,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call MatTranspose() with MAT_INITIAL_MATRIX first");
+    PetscCheck(container,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call MatTranspose() with MAT_INITIAL_MATRIX first");
     CHKERRQ(PetscContainerGetPointer(container,(void**)&kernelt));
   }
   c                  = (Mat_Htool*)C->data;
@@ -890,7 +865,6 @@ PetscErrorCode MatCreateHtoolFromKernel(MPI_Comm comm,PetscInt m,PetscInt n,Pets
 {
   Mat            A;
   Mat_Htool      *a;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(MatCreate(comm,&A));
@@ -934,8 +908,7 @@ PetscErrorCode MatCreateHtoolFromKernel(MPI_Comm comm,PetscInt m,PetscInt n,Pets
 M*/
 PETSC_EXTERN PetscErrorCode MatCreate_Htool(Mat A)
 {
-  Mat_Htool      *a;
-  PetscErrorCode ierr;
+  Mat_Htool *a;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(A,&a));

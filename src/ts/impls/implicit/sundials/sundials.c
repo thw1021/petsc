@@ -17,7 +17,6 @@ PetscErrorCode TSPrecond_Sundials(realtype tn,N_Vector y,N_Vector fy,booleantype
   TS             ts     = (TS) P_data;
   TS_Sundials    *cvode = (TS_Sundials*)ts->data;
   PC             pc;
-  PetscErrorCode ierr;
   Mat            J,P;
   Vec            yy  = cvode->w1,yydot = cvode->ydot;
   PetscReal      gm  = (PetscReal)_gamma;
@@ -48,7 +47,6 @@ PetscErrorCode TSPSolve_Sundials(realtype tn,N_Vector y,N_Vector fy,N_Vector r,N
   TS_Sundials    *cvode = (TS_Sundials*)ts->data;
   PC             pc;
   Vec            rr = cvode->w1,zz = cvode->w2;
-  PetscErrorCode ierr;
   PetscScalar    *r_data,*z_data;
 
   PetscFunctionBegin;
@@ -79,7 +77,6 @@ int TSFunction_Sundials(realtype t,N_Vector y,N_Vector ydot,void *ctx)
   TS_Sundials    *cvode = (TS_Sundials*)ts->data;
   Vec            yy     = cvode->w1,yyd = cvode->w2,yydot = cvode->ydot;
   PetscScalar    *y_data,*ydot_data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)ts,&comm));
@@ -111,7 +108,6 @@ int TSFunction_Sundials(realtype t,N_Vector y,N_Vector ydot,void *ctx)
 PetscErrorCode TSStep_Sundials(TS ts)
 {
   TS_Sundials    *cvode = (TS_Sundials*)ts->data;
-  PetscErrorCode ierr;
   PetscInt       flag;
   long int       nits,lits,nsteps;
   realtype       t,tout;
@@ -207,7 +203,6 @@ static PetscErrorCode TSInterpolate_Sundials(TS ts,PetscReal t,Vec X)
 {
   TS_Sundials    *cvode = (TS_Sundials*)ts->data;
   N_Vector       y;
-  PetscErrorCode ierr;
   PetscScalar    *x_data;
   PetscInt       glosize,locsize;
 
@@ -238,7 +233,6 @@ static PetscErrorCode TSInterpolate_Sundials(TS ts,PetscReal t,Vec X)
 PetscErrorCode TSReset_Sundials(TS ts)
 {
   TS_Sundials    *cvode = (TS_Sundials*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(VecDestroy(&cvode->update));
@@ -252,7 +246,6 @@ PetscErrorCode TSReset_Sundials(TS ts)
 PetscErrorCode TSDestroy_Sundials(TS ts)
 {
   TS_Sundials    *cvode = (TS_Sundials*)ts->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSReset_Sundials(ts));
@@ -274,7 +267,6 @@ PetscErrorCode TSDestroy_Sundials(TS ts)
 PetscErrorCode TSSetUp_Sundials(TS ts)
 {
   TS_Sundials    *cvode = (TS_Sundials*)ts->data;
-  PetscErrorCode ierr;
   PetscInt       glosize,locsize,i,flag;
   PetscScalar    *y_data,*parray;
   void           *mem;
@@ -405,7 +397,6 @@ const char *const TSSundialsGramSchmidtTypes[] = {"","MODIFIED","CLASSICAL","TSS
 PetscErrorCode TSSetFromOptions_Sundials(PetscOptionItems *PetscOptionsObject,TS ts)
 {
   TS_Sundials    *cvode = (TS_Sundials*)ts->data;
-  PetscErrorCode ierr;
   int            indx;
   PetscBool      flag;
   PC             pc;
@@ -438,7 +429,6 @@ PetscErrorCode TSSetFromOptions_Sundials(PetscOptionItems *PetscOptionsObject,TS
 PetscErrorCode TSView_Sundials(TS ts,PetscViewer viewer)
 {
   TS_Sundials    *cvode = (TS_Sundials*)ts->data;
-  PetscErrorCode ierr;
   char           *type;
   char           atype[] = "Adams";
   char           btype[] = "BDF: backward differentiation formula";
@@ -476,9 +466,7 @@ PetscErrorCode TSView_Sundials(TS ts,PetscViewer viewer)
     /* Outputs from CVODE, CVSPILS */
     CHKERRQ(CVodeGetTolScaleFactor(cvode->mem,&tolsfac));
     CHKERRQ(PetscViewerASCIIPrintf(viewer,"Sundials suggested factor for tolerance scaling %g\n",tolsfac));
-    ierr = CVodeGetIntegratorStats(cvode->mem,&nsteps,&nfevals,
-                                   &nlinsetups,&nfails,&qlast,&qcur,
-                                   &hinused,&hlast,&hcur,&tcur);CHKERRQ(ierr);
+    CHKERRQ(CVodeGetIntegratorStats(cvode->mem,&nsteps,&nfevals,&nlinsetups,&nfails,&qlast,&qcur,&hinused,&hlast,&hcur,&tcur));
     CHKERRQ(PetscViewerASCIIPrintf(viewer,"Sundials cumulative number of internal steps %D\n",nsteps));
     CHKERRQ(PetscViewerASCIIPrintf(viewer,"Sundials no. of calls to rhs function %D\n",nfevals));
     CHKERRQ(PetscViewerASCIIPrintf(viewer,"Sundials no. of calls to linear solver setup function %D\n",nlinsetups));
@@ -588,7 +576,6 @@ PetscErrorCode  TSSundialsGetPC_Sundials(TS ts,PC *pc)
 {
   SNES           snes;
   KSP            ksp;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(TSGetSNES(ts,&snes));
@@ -640,7 +627,6 @@ PetscErrorCode  TSSundialsMonitorInternalSteps_Sundials(TS ts,PetscBool s)
 @*/
 PetscErrorCode  TSSundialsGetIterations(TS ts,int *nonlin,int *lin)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscUseMethod(ts,"TSSundialsGetIterations_C",(TS,int*,int*),(ts,nonlin,lin)));
@@ -666,7 +652,6 @@ PetscErrorCode  TSSundialsGetIterations(TS ts,int *nonlin,int *lin)
 @*/
 PetscErrorCode  TSSundialsSetType(TS ts,TSSundialsLmmType type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscTryMethod(ts,"TSSundialsSetType_C",(TS,TSSundialsLmmType),(ts,type)));
@@ -693,7 +678,6 @@ PetscErrorCode  TSSundialsSetType(TS ts,TSSundialsLmmType type)
 @*/
 PetscErrorCode  TSSundialsSetMaxord(TS ts,PetscInt maxord)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidLogicalCollectiveInt(ts,maxord,2);
@@ -723,7 +707,6 @@ PetscErrorCode  TSSundialsSetMaxord(TS ts,PetscInt maxord)
 @*/
 PetscErrorCode  TSSundialsSetMaxl(TS ts,PetscInt maxl)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidLogicalCollectiveInt(ts,maxl,2);
@@ -753,7 +736,6 @@ PetscErrorCode  TSSundialsSetMaxl(TS ts,PetscInt maxl)
 @*/
 PetscErrorCode  TSSundialsSetLinearTolerance(TS ts,PetscReal tol)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidLogicalCollectiveReal(ts,tol,2);
@@ -782,7 +764,6 @@ PetscErrorCode  TSSundialsSetLinearTolerance(TS ts,PetscReal tol)
 @*/
 PetscErrorCode  TSSundialsSetGramSchmidtType(TS ts,TSSundialsGramSchmidtType type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscTryMethod(ts,"TSSundialsSetGramSchmidtType_C",(TS,TSSundialsGramSchmidtType),(ts,type)));
@@ -814,7 +795,6 @@ PetscErrorCode  TSSundialsSetGramSchmidtType(TS ts,TSSundialsGramSchmidtType typ
 @*/
 PetscErrorCode  TSSundialsSetTolerance(TS ts,PetscReal aabs,PetscReal rel)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscTryMethod(ts,"TSSundialsSetTolerance_C",(TS,PetscReal,PetscReal),(ts,aabs,rel)));
@@ -839,7 +819,6 @@ PetscErrorCode  TSSundialsSetTolerance(TS ts,PetscReal aabs,PetscReal rel)
 @*/
 PetscErrorCode  TSSundialsGetPC(TS ts,PC *pc)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscUseMethod(ts,"TSSundialsGetPC_C",(TS,PC*),(ts,pc)));
@@ -863,7 +842,6 @@ PetscErrorCode  TSSundialsGetPC(TS ts,PC *pc)
 @*/
 PetscErrorCode  TSSundialsSetMinTimeStep(TS ts,PetscReal mindt)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscTryMethod(ts,"TSSundialsSetMinTimeStep_C",(TS,PetscReal),(ts,mindt)));
@@ -883,7 +861,6 @@ PetscErrorCode  TSSundialsSetMinTimeStep(TS ts,PetscReal mindt)
 @*/
 PetscErrorCode  TSSundialsSetMaxTimeStep(TS ts,PetscReal maxdt)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscTryMethod(ts,"TSSundialsSetMaxTimeStep_C",(TS,PetscReal),(ts,maxdt)));
@@ -906,7 +883,6 @@ PetscErrorCode  TSSundialsSetMaxTimeStep(TS ts,PetscReal maxdt)
 @*/
 PetscErrorCode  TSSundialsMonitorInternalSteps(TS ts,PetscBool ft)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscTryMethod(ts,"TSSundialsMonitorInternalSteps_C",(TS,PetscBool),(ts,ft)));
@@ -929,7 +905,6 @@ PetscErrorCode  TSSundialsMonitorInternalSteps(TS ts,PetscBool ft)
 @*/
 PetscErrorCode  TSSundialsSetUseDense(TS ts,PetscBool use_dense)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidLogicalCollectiveInt(ts,use_dense,2);
@@ -964,7 +939,6 @@ M*/
 PETSC_EXTERN PetscErrorCode TSCreate_Sundials(TS ts)
 {
   TS_Sundials    *cvode;
-  PetscErrorCode ierr;
   PC             pc;
 
   PetscFunctionBegin;

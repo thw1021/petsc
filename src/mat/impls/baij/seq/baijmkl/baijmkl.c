@@ -143,7 +143,6 @@ static PetscErrorCode MatSeqBAIJMKL_create_mkl_handle(Mat A)
   PetscInt        mbs, nbs, nz, bs;
   MatScalar       *aa;
   PetscInt        *aj,*ai;
-  sparse_status_t stat;
   PetscInt        i;
 
   PetscFunctionBegin;
@@ -211,7 +210,6 @@ static PetscErrorCode MatMult_SeqBAIJMKL_SpMV2(Mat A,Vec xx,Vec yy)
   Mat_SeqBAIJMKL     *baijmkl=(Mat_SeqBAIJMKL*)A->spptr;
   const PetscScalar  *x;
   PetscScalar        *y;
-  sparse_status_t    stat = SPARSE_STATUS_SUCCESS;
 
   PetscFunctionBegin;
   /* If there are no nonzero entries, zero yy and return immediately. */
@@ -245,7 +243,6 @@ static PetscErrorCode MatMultTranspose_SeqBAIJMKL_SpMV2(Mat A,Vec xx,Vec yy)
   Mat_SeqBAIJMKL    *baijmkl = (Mat_SeqBAIJMKL*)A->spptr;
   const PetscScalar *x;
   PetscScalar       *y;
-  sparse_status_t   stat;
 
   PetscFunctionBegin;
   /* If there are no nonzero entries, zero yy and return immediately. */
@@ -281,8 +278,6 @@ static PetscErrorCode MatMultAdd_SeqBAIJMKL_SpMV2(Mat A,Vec xx,Vec yy,Vec zz)
   PetscScalar        *y,*z;
   PetscInt           m=a->mbs*A->rmap->bs;
   PetscInt           i;
-
-  sparse_status_t stat = SPARSE_STATUS_SUCCESS;
 
   PetscFunctionBegin;
   /* If there are no nonzero entries, set zz = yy and return immediately. */
@@ -330,7 +325,6 @@ static PetscErrorCode MatMultTransposeAdd_SeqBAIJMKL_SpMV2(Mat A,Vec xx,Vec yy,V
   PetscInt          n=a->nbs*A->rmap->bs;
   PetscInt          i;
   /* Variables not in MatMultTransposeAdd_SeqBAIJ. */
-  sparse_status_t   stat = SPARSE_STATUS_SUCCESS;
 
   PetscFunctionBegin;
   /* If there are no nonzero entries, set zz = yy and return immediately. */

@@ -527,7 +527,6 @@ PetscErrorCode VecView_Seq_Binary(Vec xin,PetscViewer viewer)
 #include <mat.h>   /* MATLAB include file */
 PetscErrorCode VecView_Seq_Matlab(Vec vec,PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   PetscInt          n;
   const PetscScalar *array;
 

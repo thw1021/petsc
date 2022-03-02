@@ -10,7 +10,6 @@
 #include <../src/vec/vec/impls/seq/ftn-kernels/fmdot.h>
 PetscErrorCode VecMDot_Seq(Vec xin,PetscInt nv,const Vec yin[],PetscScalar *z)
 {
-  PetscErrorCode    ierr;
   PetscInt          i,nv_rem,n = xin->map->n;
   PetscScalar       sum0,sum1,sum2,sum3;
   const PetscScalar *yy0,*yy1,*yy2,*yy3,*x;
@@ -728,7 +727,7 @@ PetscErrorCode VecPlaceArray_Seq(Vec vin,const PetscScalar *a)
   Vec_Seq *v = (Vec_Seq*)vin->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(v->unplacedarray,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"VecPlaceArray() was already called on this vector, without a call to VecResetArray()");
+  PetscCheck(!v->unplacedarray,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"VecPlaceArray() was already called on this vector, without a call to VecResetArray()");
   v->unplacedarray = v->array;  /* save previous array so reset can bring it back */
   v->array         = (PetscScalar*)a;
   PetscFunctionReturn(0);

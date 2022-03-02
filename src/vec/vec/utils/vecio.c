@@ -149,7 +149,6 @@ PetscErrorCode VecLoad_HDF5(Vec xin, PetscViewer viewer)
 PetscErrorCode VecLoad_ADIOS(Vec xin, PetscViewer viewer)
 {
   PetscViewer_ADIOS *adios = (PetscViewer_ADIOS*)viewer->data;
-  PetscErrorCode    ierr;
   PetscScalar       *x;
   PetscInt          Nfile,N,rstart,n;
   uint64_t          N_t,rstart_t;
@@ -165,9 +164,7 @@ PetscErrorCode VecLoad_ADIOS(Vec xin, PetscViewer viewer)
   Nfile = (PetscInt) v->dims[0];
 
   /* Set Vec sizes,blocksize,and type if not already set */
-  if ((xin)->map->n < 0 && (xin)->map->N < 0) {
-    CHKERRQ(VecSetSizes(xin, PETSC_DECIDE, Nfile));
-  }
+  if ((xin)->map->n < 0 && (xin)->map->N < 0) CHKERRQ(VecSetSizes(xin, PETSC_DECIDE, Nfile));
   /* If sizes and type already set,check if the vector global size is correct */
   CHKERRQ(VecGetSize(xin, &N));
   CHKERRQ(VecGetLocalSize(xin, &n));
