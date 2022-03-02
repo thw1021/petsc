@@ -394,7 +394,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
   PetscSplitCSRDataStructure d_mat;
   PetscContainer    container;
   const int         conc = Kokkos::DefaultExecutionSpace().concurrency(), openmp = !!(conc < 1000), team_size = (openmp==0) ? Nq : 1;
-  const PetscInt    coo_sz_batch = SData_d->coo_size/batch_sz; // capture )
+  const PetscInt    coo_sz_batch = SData_d->coo_size/batch_sz; // capture
   auto              d_alpha_k = static_cast<Kokkos::View<PetscReal*, Kokkos::LayoutLeft>*>(SData_d->alpha); //static data
   const PetscReal   *d_alpha = d_alpha_k->data();
   const PetscInt    Nftot = d_alpha_k->size(); // total number of species
