@@ -2699,4 +2699,6 @@ PETSC_EXTERN PetscErrorCode  PetscHasExternalPackage(const char[],PetscBool*);
 #define PetscPragmaOMP(...)
 #endif
 
+PETSC_EXTERN PetscErrorCode VecStreamsView(PetscViewer);
+
 #endif
