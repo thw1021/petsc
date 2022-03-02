@@ -145,28 +145,22 @@ int main(int argc,char **args)
   {
     ierr = MPI_Barrier(MPI_COMM_WORLD);
     times[0][k] = MPI_Wtime();
-    /* should all these barriers be pulled outside of the time call? */
-    ierr = MPI_Barrier(MPI_COMM_WORLD);
     for (j=0; j<N; j++) c[j] = a[j];
-    ierr = MPI_Barrier(MPI_COMM_WORLD);
     times[0][k] = MPI_Wtime() - times[0][k];
 
+    ierr = MPI_Barrier(MPI_COMM_WORLD);
     times[1][k] = MPI_Wtime();
-    ierr = MPI_Barrier(MPI_COMM_WORLD);
     for (j=0; j<N; j++) b[j] = scalar*c[j];
-    ierr = MPI_Barrier(MPI_COMM_WORLD);
     times[1][k] = MPI_Wtime() - times[1][k];
 
+    ierr = MPI_Barrier(MPI_COMM_WORLD);
     times[2][k] = MPI_Wtime();
-    ierr = MPI_Barrier(MPI_COMM_WORLD);
     for (j=0; j<N; j++) c[j] = a[j]+b[j];
-    ierr = MPI_Barrier(MPI_COMM_WORLD);
     times[2][k] = MPI_Wtime() - times[2][k];
 
+    ierr = MPI_Barrier(MPI_COMM_WORLD);
     times[3][k] = MPI_Wtime();
-    ierr = MPI_Barrier(MPI_COMM_WORLD);
     for (j=0; j<N; j++) a[j] = b[j]+scalar*c[j];
-    ierr = MPI_Barrier(MPI_COMM_WORLD);
     times[3][k] = MPI_Wtime() - times[3][k];
   }
 

@@ -1974,6 +1974,7 @@ PetscErrorCode  PetscLogView_Default(PetscViewer viewer)
   ierr = PetscFPrintf(comm, fd, "\n");CHKERRQ(ierr);
   ierr = PetscLogViewWarnNoGpuAwareMpi(comm,fd);CHKERRQ(ierr);
   ierr = PetscLogViewWarnDebugging(comm,fd);CHKERRQ(ierr);
+
   PetscFunctionReturn(0);
 }
 
