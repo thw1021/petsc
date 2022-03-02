@@ -1322,12 +1322,8 @@ def checkTraceableToParentArgs(obj,parentArgNames):
     tGroup    = list(clx.TokenGroup.get_tokens(tu,lineRange))
     funcProto = [i for i,t in enumerate(tGroup) if t.cursor.type.get_canonical().kind in functionTypes]
     if funcProto:
-      import itertools
-
-      assert len(funcProto) == 1, "Could not determine unique function prototype from {} for provenance of {}".format("".join([t.spelling for t in tGroup]),obj)
-      idx        = funcProto[0]
-      lambdaExpr = lambda t: (t.spelling != ")") and t.kind in varTokens
-      iterator   = map(lambda x: x.cursor,itertools.takewhile(lambdaExpr,tGroup[idx+2:]))
+      filterExpr = lambda t: t.kind in varTokens and t.cursor.type.kind not in functionTypes
+      iterator   = [x.cursor for x in filter(filterExpr,tGroup[funcProto[0]+2:])]
     # we now have completely different cursor selected, so we recursively call this
     # function
     else:
