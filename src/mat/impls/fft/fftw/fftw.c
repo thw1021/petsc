@@ -1185,6 +1185,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_FFTW(Mat A)
   PetscInt       p_flag,partial_dim=1,ctr;
   PetscMPIInt    size,rank;
   ptrdiff_t      *pdim;
+  PetscErrorCode ierr;
 #if !defined(PETSC_USE_COMPLEX)
   PetscInt       tot_dim;
 #endif
@@ -1329,9 +1330,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_FFTW(Mat A)
   /* get runtime options */
   ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)A),((PetscObject)A)->prefix,"FFTW Options","Mat");CHKERRQ(ierr);
   CHKERRQ(PetscOptionsEList("-mat_fftw_plannerflags","Planner Flags","None",plans,4,plans[0],&p_flag,&flg));
-  if (flg) {
-    fftw->p_flag = iplans[p_flag];
-  }
+  if (flg) fftw->p_flag = iplans[p_flag];
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }

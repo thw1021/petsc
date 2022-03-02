@@ -24,7 +24,6 @@ static PetscErrorCode PCReset_HPDDM(PC pc)
 {
   PC_HPDDM       *data = (PC_HPDDM*)pc->data;
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (data->levels) {
@@ -50,7 +49,6 @@ static PetscErrorCode PCReset_HPDDM(PC pc)
 static PetscErrorCode PCDestroy_HPDDM(PC pc)
 {
   PC_HPDDM       *data = (PC_HPDDM*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCReset_HPDDM(pc));
@@ -68,7 +66,6 @@ static PetscErrorCode PCDestroy_HPDDM(PC pc)
 static PetscErrorCode PCHPDDMSetAuxiliaryMat_HPDDM(PC pc, IS is, Mat A, PetscErrorCode (*setup)(Mat, PetscReal, Vec, Vec, PetscReal, IS, void*), void* setup_ctx)
 {
   PC_HPDDM       *data = (PC_HPDDM*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (is) {
@@ -108,7 +105,6 @@ static PetscErrorCode PCHPDDMSetAuxiliaryMat_HPDDM(PC pc, IS is, Mat A, PetscErr
 @*/
 PetscErrorCode PCHPDDMSetAuxiliaryMat(PC pc, IS is, Mat A, PetscErrorCode (*setup)(Mat, PetscReal, Vec, Vec, PetscReal, IS, void*), void* setup_ctx)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
@@ -144,7 +140,6 @@ static PetscErrorCode PCHPDDMHasNeumannMat_HPDDM(PC pc, PetscBool has)
 @*/
 PetscErrorCode PCHPDDMHasNeumannMat(PC pc, PetscBool has)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
@@ -155,7 +150,6 @@ PetscErrorCode PCHPDDMHasNeumannMat(PC pc, PetscBool has)
 static PetscErrorCode PCHPDDMSetRHSMat_HPDDM(PC pc, Mat B)
 {
   PC_HPDDM       *data = (PC_HPDDM*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectReference((PetscObject)B));
@@ -177,7 +171,6 @@ static PetscErrorCode PCHPDDMSetRHSMat_HPDDM(PC pc, Mat B)
 @*/
 PetscErrorCode PCHPDDMSetRHSMat(PC pc, Mat B)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
@@ -198,7 +191,6 @@ static PetscErrorCode PCSetFromOptions_HPDDM(PetscOptionItems *PetscOptionsObjec
   PetscInt                    n;
   PCHPDDMCoarseCorrectionType type;
   PetscBool                   flg = PETSC_TRUE;
-  PetscErrorCode              ierr;
 
   PetscFunctionBegin;
   if (!data->levels) {
@@ -293,7 +285,6 @@ static PetscErrorCode PCSetFromOptions_HPDDM(PetscOptionItems *PetscOptionsObjec
 static PetscErrorCode PCApply_HPDDM(PC pc, Vec x, Vec y)
 {
   PC_HPDDM       *data = (PC_HPDDM*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscCitationsRegister(HPDDMCitation, &HPDDMCite));
@@ -312,7 +303,6 @@ static PetscErrorCode PCApply_HPDDM(PC pc, Vec x, Vec y)
 static PetscErrorCode PCMatApply_HPDDM(PC pc, Mat X, Mat Y)
 {
   PC_HPDDM       *data = (PC_HPDDM*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscCitationsRegister(HPDDMCitation, &HPDDMCite));
@@ -345,7 +335,6 @@ static PetscErrorCode PCHPDDMGetComplexities(PC pc, PetscReal *gc, PetscReal *oc
   MatInfo        info;
   PetscInt       n, m;
   PetscLogDouble accumulate[2] { }, nnz1 = 1.0, m1 = 1.0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   for (n = 0, *gc = 0, *oc = 0; n < data->N; ++n) {
@@ -389,7 +378,6 @@ static PetscErrorCode PCView_HPDDM(PC pc, PetscViewer viewer)
   PetscInt       i, tabs;
   PetscMPIInt    size, color, rank;
   PetscBool      ascii;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &ascii));
@@ -450,7 +438,6 @@ static PetscErrorCode PCPreSolve_HPDDM(PC pc, KSP ksp, Vec, Vec)
   PC_HPDDM       *data = (PC_HPDDM*)pc->data;
   PetscBool      flg;
   Mat            A;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (ksp) {
@@ -469,7 +456,6 @@ static PetscErrorCode PCHPDDMShellSetUp(PC pc)
   Mat            A, P;
   Vec            x;
   const char     *pcpre;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCShellGetContext(pc, &ctx));
@@ -496,7 +482,6 @@ static inline PetscErrorCode PCHPDDMDeflate_Private(PC pc, Type x, Type y)
 {
   PC_HPDDM_Level *ctx;
   PetscScalar    *out;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCShellGetContext(pc, &ctx));
@@ -519,7 +504,6 @@ static inline PetscErrorCode PCHPDDMDeflate_Private(PC pc, Type X, Type Y)
   Vec            vX, vY, vC;
   PetscScalar    *out;
   PetscInt       i, N;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCShellGetContext(pc, &ctx));
@@ -579,7 +563,6 @@ static PetscErrorCode PCHPDDMShellApply(PC pc, Vec x, Vec y)
 {
   PC_HPDDM_Level *ctx;
   Mat            A;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCShellGetContext(pc, &ctx));
@@ -639,7 +622,6 @@ static PetscErrorCode PCHPDDMShellMatApply(PC pc, Mat X, Mat Y)
   PetscScalar    *array;
   PetscInt       m, M, N, prev = 0;
   PetscBool      reset = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCShellGetContext(pc, &ctx));
@@ -735,7 +717,6 @@ static PetscErrorCode PCHPDDMShellDestroy(PC pc)
 {
   PC_HPDDM_Level *ctx;
   PetscContainer container;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCShellGetContext(pc, &ctx));
@@ -758,7 +739,6 @@ static PetscErrorCode PCHPDDMSolve_Private(const PC_HPDDM_Level *ctx, PetscScala
 {
   Mat            B, X;
   PetscInt       n, N, j = 0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(KSPGetOperators(ctx->ksp, &B, NULL));
@@ -794,7 +774,6 @@ static PetscErrorCode PCHPDDMSolve_Private(const PC_HPDDM_Level *ctx, PetscScala
 static PetscErrorCode PCHPDDMSetUpNeumannOverlap_Private(PC pc)
 {
   PC_HPDDM       *data = (PC_HPDDM*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (data->setup) {
@@ -814,7 +793,6 @@ static PetscErrorCode PCHPDDMSetUpNeumannOverlap_Private(PC pc)
 static PetscErrorCode PCHPDDMCreateSubMatrices_Private(Mat mat, PetscInt n, const IS*, const IS*, MatReuse scall, Mat *submat[])
 {
   Mat            A;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheck(n == 1, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "MatCreateSubMatrices() called to extract %" PetscInt_FMT " submatrices, which is different than 1", n);
@@ -833,7 +811,6 @@ static PetscErrorCode PCHPDDMCreateSubMatrices_Private(Mat mat, PetscInt n, cons
 static PetscErrorCode PCHPDDMCommunicationAvoidingPCASM_Private(PC pc, Mat C, PetscBool sorted)
 {
   void           (*op)(void);
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* previously-composed Mat */
@@ -859,7 +836,6 @@ static PetscErrorCode PCHPDDMPermute_Private(IS is, IS in_is, IS *out_is, Mat in
   PetscInt                     *concatenate, size, n;
   std::map<PetscInt, PetscInt> order;
   PetscBool                    sorted;
-  PetscErrorCode               ierr;
 
   PetscFunctionBegin;
   CHKERRQ(ISSorted(is, &sorted));
@@ -906,7 +882,6 @@ static PetscErrorCode PCHPDDMPermute_Private(IS is, IS in_is, IS *out_is, Mat in
 static PetscErrorCode PCHPDDMDestroySubMatrices_Private(PetscBool flg, PetscBool algebraic, Mat *sub)
 {
   IS             is;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!flg) {
@@ -928,7 +903,6 @@ static PetscErrorCode PCHPDDMAlgebraicAuxiliaryMat_Private(Mat P, IS *is, Mat *s
   PetscReal      *ptr;
   PetscInt       *idx, p = 0, n;
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(ISCreateStride(PETSC_COMM_SELF, P->cmap->N, 0, 1, icol + 2));
@@ -1051,7 +1025,6 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
   MatStructure             structure = UNKNOWN_NONZERO_PATTERN;
   PetscBool                subdomains = PETSC_FALSE, flg = PETSC_FALSE, ismatis, swap = PETSC_FALSE, algebraic = PETSC_FALSE, block = PETSC_FALSE;
   DM                       dm;
-  PetscErrorCode           ierr;
 
   PetscFunctionBegin;
   PetscCheck(data->levels && data->levels[0], PETSC_COMM_SELF, PETSC_ERR_PLIB, "Not a single level allocated");
@@ -1544,7 +1517,6 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
 @*/
 PetscErrorCode PCHPDDMSetCoarseCorrectionType(PC pc, PCHPDDMCoarseCorrectionType type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
@@ -1568,7 +1540,6 @@ PetscErrorCode PCHPDDMSetCoarseCorrectionType(PC pc, PCHPDDMCoarseCorrectionType
 @*/
 PetscErrorCode PCHPDDMGetCoarseCorrectionType(PC pc, PCHPDDMCoarseCorrectionType *type)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
@@ -1616,7 +1587,6 @@ static PetscErrorCode PCHPDDMGetCoarseCorrectionType_HPDDM(PC pc, PCHPDDMCoarseC
 @*/
 PetscErrorCode PCHPDDMGetSTShareSubKSP(PC pc, PetscBool *share)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
@@ -1639,7 +1609,6 @@ static PetscErrorCode PCHPDDMGetSTShareSubKSP_HPDDM(PC pc, PetscBool *share)
 PetscErrorCode HPDDMLoadDL_Private(PetscBool *found)
 {
   char           lib[PETSC_MAX_PATH_LEN], dlib[PETSC_MAX_PATH_LEN], dir[PETSC_MAX_PATH_LEN];
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscStrcpy(dir, "${PETSC_LIB_DIR}"));
@@ -1709,7 +1678,6 @@ PETSC_EXTERN PetscErrorCode PCCreate_HPDDM(PC pc)
 {
   PC_HPDDM       *data;
   PetscBool      found;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!loadedSym) {
@@ -1749,7 +1717,6 @@ PetscErrorCode PCHPDDMInitializePackage(void)
 {
   char           ename[32];
   PetscInt       i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (PCHPDDMPackageInitialized) PetscFunctionReturn(0);

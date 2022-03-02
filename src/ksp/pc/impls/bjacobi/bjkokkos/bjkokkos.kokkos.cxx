@@ -40,9 +40,8 @@ typedef struct {
 
 static PetscErrorCode  PCBJKOKKOSCreateKSP_BJKOKKOS(PC pc)
 {
-  PetscErrorCode ierr;
-  const char     *prefix;
-  PC_PCBJKOKKOS   *jac = (PC_PCBJKOKKOS*)pc->data;
+  const char    *prefix;
+  PC_PCBJKOKKOS *jac = (PC_PCBJKOKKOS*)pc->data;
   DM             dm;
 
   PetscFunctionBegin;
@@ -52,15 +51,14 @@ static PetscErrorCode  PCBJKOKKOSCreateKSP_BJKOKKOS(PC pc)
   CHKERRQ(PCGetOptionsPrefix(pc,&prefix));
   CHKERRQ(KSPSetOptionsPrefix(jac->ksp,prefix));
   CHKERRQ(KSPAppendOptionsPrefix(jac->ksp,"pc_bjkokkos_"));
-  CHKERRQ(PCGetDM(pc, &dm));
+  CHKERRQ(PCGetDM(pc,&dm));
   if (dm) {
     CHKERRQ(KSPSetDM(jac->ksp, dm));
     CHKERRQ(KSPSetDMActive(jac->ksp, PETSC_FALSE));
   }
-  jac->reason = PETSC_FALSE;
-  jac->monitor = PETSC_FALSE;
+  jac->reason       = PETSC_FALSE;
+  jac->monitor      = PETSC_FALSE;
   jac->batch_target = 0;
-
   PetscFunctionReturn(0);
 }
 
@@ -362,10 +360,9 @@ KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_BICG(const team_member team, const
 // KSP solver solve Ax = b; x is output, bin is input
 static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
 {
-  PetscErrorCode      ierr;
-  PC_PCBJKOKKOS       *jac = (PC_PCBJKOKKOS*)pc->data;
-  Mat                 A = pc->pmat;
-  Mat_SeqAIJKokkos    *aijkok;
+  PC_PCBJKOKKOS    *jac = (PC_PCBJKOKKOS*)pc->data;
+  Mat               A   = pc->pmat;
+  Mat_SeqAIJKokkos *aijkok;
 
   PetscFunctionBegin;
   PetscCheck(jac->vec_diag && A,PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"Not setup???? %p %p",jac->vec_diag,A);
@@ -508,8 +505,7 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
           CHKERRQ(PetscPrintf(PETSC_COMM_SELF,  "    Linear solve converged due to %s iterations %d\n", KSPConvergedReasons[h_metadata[blkID].reason], h_metadata[blkID].its));
         }
         if (jac->batch_target==-1 && h_metadata[blkID].reason < 0) {
-          ierr = PetscPrintf(PETSC_COMM_SELF, "ERROR reason=%s, its=%D. species %D, batch %D, %D species\n",
-                             KSPConvergedReasons[h_metadata[blkID].reason],h_metadata[blkID].its,blkID/batch_sz,blkID%batch_sz,nBlk/batch_sz);CHKERRQ(ierr);
+          CHKERRQ(PetscPrintf(PETSC_COMM_SELF, "ERROR reason=%s, its=%D. species %D, batch %D, %D species\n",KSPConvergedReasons[h_metadata[blkID].reason],h_metadata[blkID].its,blkID/batch_sz,blkID%batch_sz,nBlk/batch_sz));
         }
       }
     }
@@ -520,8 +516,7 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
       Kokkos::parallel_reduce(nBlk, KOKKOS_LAMBDA (const int idx, int& lsum) {
           if (d_metadata[idx].reason < 0 && d_metadata[idx].reason != KSP_DIVERGED_ITS && d_metadata[idx].reason != KSP_CONVERGED_ITS) lsum += 1;
         }, errsum);
-      if (!errsum) pcreason = PC_NOERROR;
-      else pcreason = PC_SUBPC_ERROR;
+      pcreason = errsum ? PC_SUBPC_ERROR : PC_NOERROR;
     }
     CHKERRQ(PCSetFailedReason(pc,pcreason));
     // map back to Plex space
@@ -532,16 +527,14 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
     }
     CHKERRQ(VecDestroy(&bvec));
   }
-
   PetscFunctionReturn(0);
 }
 
 static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
 {
-  PetscErrorCode    ierr;
-  PC_PCBJKOKKOS     *jac = (PC_PCBJKOKKOS*)pc->data;
-  Mat               A = pc->pmat;
-  Mat_SeqAIJKokkos  *aijkok;
+  PC_PCBJKOKKOS    *jac = (PC_PCBJKOKKOS*)pc->data;
+  Mat               A   = pc->pmat;
+  Mat_SeqAIJKokkos *aijkok;
   PetscBool         flg;
 
   PetscFunctionBegin;
@@ -631,9 +624,9 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
         CHKERRQ(PetscSectionGetNumFields(section, &Nf));
         jac->nBlocks += Nf;
 #if PCBJKOKKOS_VERBOSE_LEVEL <= 2
-        if (ii==0) { ierr = PetscInfo(pc,"%D) %D blocks (%D total)\n",ii,Nf,jac->nBlocks); }
+        if (ii==0) CHKERRQ(PetscInfo(pc,"%D) %D blocks (%D total)\n",ii,Nf,jac->nBlocks));
 #else
-        ierr = PetscInfo(pc,"%D) %D blocks (%D total)\n",ii,Nf,jac->nBlocks);
+        CHKERRQ(PetscInfo(pc,"%D) %D blocks (%D total)\n",ii,Nf,jac->nBlocks));
 #endif
         jac->dm_Nf[ii] = Nf;
       }
@@ -699,8 +692,7 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
 /* Default destroy, if it has never been setup */
 static PetscErrorCode PCReset_BJKOKKOS(PC pc)
 {
-  PC_PCBJKOKKOS   *jac = (PC_PCBJKOKKOS*)pc->data;
-  PetscErrorCode ierr;
+  PC_PCBJKOKKOS *jac = (PC_PCBJKOKKOS*)pc->data;
 
   PetscFunctionBegin;
   CHKERRQ(KSPDestroy(&jac->ksp));
@@ -722,8 +714,6 @@ static PetscErrorCode PCReset_BJKOKKOS(PC pc)
 
 static PetscErrorCode PCDestroy_BJKOKKOS(PC pc)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(PCReset_BJKOKKOS(pc));
   CHKERRQ(PetscFree(pc->data));
@@ -732,8 +722,7 @@ static PetscErrorCode PCDestroy_BJKOKKOS(PC pc)
 
 static PetscErrorCode PCView_BJKOKKOS(PC pc,PetscViewer viewer)
 {
-  PC_PCBJKOKKOS   *jac = (PC_PCBJKOKKOS*)pc->data;
-  PetscErrorCode ierr;
+  PC_PCBJKOKKOS *jac = (PC_PCBJKOKKOS*)pc->data;
   PetscBool      iascii;
 
   PetscFunctionBegin;
@@ -741,17 +730,13 @@ static PetscErrorCode PCView_BJKOKKOS(PC pc,PetscViewer viewer)
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
   if (iascii) {
     CHKERRQ(PetscViewerASCIIPrintf(viewer,"  Batched device linear solver: Krylov (KSP) method with Jacobi preconditioning\n"));
-    ierr = PetscViewerASCIIPrintf(viewer,"\t\tnwork = %D, rel tol = %e, abs tol = %e, div tol = %e, max it =%D, type = %s\n",jac->nwork,jac->ksp->rtol,
-                                  jac->ksp->abstol, jac->ksp->divtol, jac->ksp->max_it,
-                                  ((PetscObject)jac->ksp)->type_name);CHKERRQ(ierr);
+    CHKERRQ(PetscViewerASCIIPrintf(viewer,"\t\tnwork = %D, rel tol = %e, abs tol = %e, div tol = %e, max it =%D, type = %s\n",jac->nwork,jac->ksp->rtol,jac->ksp->abstol, jac->ksp->divtol, jac->ksp->max_it,((PetscObject)jac->ksp)->type_name));
   }
   PetscFunctionReturn(0);
 }
 
 static PetscErrorCode PCSetFromOptions_BJKOKKOS(PetscOptionItems *PetscOptionsObject,PC pc)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"PC BJKOKKOS options"));
   CHKERRQ(PetscOptionsTail());
@@ -760,8 +745,7 @@ static PetscErrorCode PCSetFromOptions_BJKOKKOS(PetscOptionItems *PetscOptionsOb
 
 static PetscErrorCode  PCBJKOKKOSSetKSP_BJKOKKOS(PC pc,KSP ksp)
 {
-  PC_PCBJKOKKOS         *jac = (PC_PCBJKOKKOS*)pc->data;
-  PetscErrorCode ierr;
+  PC_PCBJKOKKOS *jac = (PC_PCBJKOKKOS*)pc->data;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectReference((PetscObject)ksp));
@@ -787,8 +771,6 @@ static PetscErrorCode  PCBJKOKKOSSetKSP_BJKOKKOS(PC pc,KSP ksp)
 @*/
 PetscErrorCode  PCBJKOKKOSSetKSP(PC pc,KSP ksp)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,2);
@@ -799,8 +781,7 @@ PetscErrorCode  PCBJKOKKOSSetKSP(PC pc,KSP ksp)
 
 static PetscErrorCode  PCBJKOKKOSGetKSP_BJKOKKOS(PC pc,KSP *ksp)
 {
-  PC_PCBJKOKKOS         *jac = (PC_PCBJKOKKOS*)pc->data;
-  PetscErrorCode ierr;
+  PC_PCBJKOKKOS *jac = (PC_PCBJKOKKOS*)pc->data;
 
   PetscFunctionBegin;
   if (!jac->ksp) CHKERRQ(PCBJKOKKOSCreateKSP_BJKOKKOS(pc));
@@ -829,8 +810,6 @@ static PetscErrorCode  PCBJKOKKOSGetKSP_BJKOKKOS(PC pc,KSP *ksp)
 @*/
 PetscErrorCode  PCBJKOKKOSGetKSP(PC pc,KSP *ksp)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidPointer(ksp,2);
@@ -860,20 +839,19 @@ M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_BJKOKKOS(PC pc)
 {
-  PetscErrorCode ierr;
-  PC_PCBJKOKKOS   *jac;
+  PC_PCBJKOKKOS *jac;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(pc,&jac));
   pc->data = (void*)jac;
 
-  jac->ksp = NULL;
-  jac->vec_diag = NULL;
+  jac->ksp              = NULL;
+  jac->vec_diag         = NULL;
   jac->d_bid_eqOffset_k = NULL;
-  jac->d_idiag_k = NULL;
-  jac->d_isrow_k = NULL;
-  jac->d_isicol_k = NULL;
-  jac->nBlocks = 1;
+  jac->d_idiag_k        = NULL;
+  jac->d_isrow_k        = NULL;
+  jac->d_isicol_k       = NULL;
+  jac->nBlocks          = 1;
 
   CHKERRQ(PetscMemzero(pc->ops,sizeof(struct _PCOps)));
   pc->ops->apply           = PCApply_BJKOKKOS;

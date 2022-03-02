@@ -121,7 +121,6 @@ PetscErrorCode LandauKokkosStaticDataSet(DM plex, const PetscInt Nq, const Petsc
                                          PetscReal a_x[], PetscReal a_y[], PetscReal a_z[], PetscReal a_w[], LandauStaticData *SData_d)
 {
   PetscReal       *BB,*DD;
-  PetscErrorCode  ierr;
   PetscTabulation *Tf;
   PetscInt        dim;
   PetscInt        Nb=Nq,ip_offset[LANDAU_MAX_GRIDS+1],ipf_offset[LANDAU_MAX_GRIDS+1],elem_offset[LANDAU_MAX_GRIDS+1],nip,IPf_sz,Nftot;
@@ -349,7 +348,6 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
   using scale_scr_t = Kokkos::View<PetscReal**, Kokkos::LayoutRight, scr_mem_t>;
   using g2_scr_t = Kokkos::View<PetscReal***, Kokkos::LayoutRight, scr_mem_t>;
   using g3_scr_t = Kokkos::View<PetscReal****, Kokkos::LayoutRight, scr_mem_t>;
-  PetscErrorCode    ierr;
   PetscInt          Nb=Nq,dim,num_cells_max,Nf_max,num_cells_batch;
   int               nfaces=0;
   LandauCtx         *ctx;

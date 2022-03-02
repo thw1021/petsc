@@ -180,7 +180,6 @@ PetscErrorCode MatPartitioningView_Party(MatPartitioning part,PetscViewer viewer
 @*/
 PetscErrorCode MatPartitioningPartySetGlobal(MatPartitioning part,const char *global)
 {
-k
   PetscFunctionBegin;
   PetscValidHeaderSpecific(part,MAT_PARTITIONING_CLASSID,1);
   CHKERRQ(PetscTryMethod(part,"MatPartitioningPartySetGlobal_C",(MatPartitioning,const char*),(part,global)));
