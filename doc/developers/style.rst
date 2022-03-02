@@ -128,6 +128,14 @@ C Formatting
 #. There *must* be a single blank line between the local variable
    declarations and the body of the function.
 
+#. All PETSc functions must have their return value checked for errors using the
+   ``CHKERRQ()`` macro. This should be wrapped around the function in question.
+
+   ::
+
+      CHKERRQ(MyFunction(...)); /* Correct */
+      PetscErrorCode ierr = MyFunction(...);CHKERRQ(ierr); /* Incorrect */
+
 #. Indentation for ``if`` statements *must* be done as follows.
 
    ::
@@ -166,20 +174,16 @@ C Formatting
          a single indented line
        }
 
-   Note that error checking is a separate statement, so the following is
-   *incorrect*
-
-   ::
-
-       if ( ) ierr = XXX();CHKERRQ(ierr); /* Incorrect */
-
-   and instead you should use
+   Note that error checking is a complete statement, so should be put inline with the
+   ``if`` statement
 
    ::
 
        if ( ) {
-         ierr = XXX();CHKERRQ(ierr);
+         CHKERRQ(XXX()); /* Incorrect */
        }
+
+       if ( ) CHKERRQ(XXX()); /* Correct */
 
 #. Always have a space between ``if`` or ``for`` and the following
    ``()``.
@@ -218,9 +222,9 @@ C Formatting
      if (cond) {
        PetscScalar *tmp;
 
-       ierr = PetscMalloc1(10,&tmp);CHKERRQ(ierr);
+       CHKERRQ(PetscMalloc1(10,&tmp));
        // use tmp
-       ierr = PetscFree(tmp);CHKERRQ(ierr);
+       CHKERRQ(PetscFree(tmp));
      }
 
    It is also permissible to use ``for`` loop declarations::
@@ -233,13 +237,13 @@ C Formatting
 
    ::
 
-       ierr = PetscMalloc1( 10,&a );CHKERRQ(ierr); /* Incorrect */
+       CHKERRQ(PetscMalloc1( 10,&a )); /* Incorrect */
 
    but instead write
 
    ::
 
-       ierr = PetscMalloc1(10,&a);CHKERRQ(ierr);
+       CHKERRQ(PetscMalloc1(10,&a));
 
 #. Do not use a space after the ``)`` in a cast or between the type and
    the ``*`` in a cast.
@@ -249,13 +253,13 @@ C Formatting
 
    ::
 
-       ierr = func(a, 22.0);CHKERRQ(ierr); /* Incorrect */
+       CHKERRQ(func(a, 22.0)); /* Incorrect */
 
    but instead write
 
    ::
 
-       ierr = func(a,22.0);CHKERRQ(ierr);
+       CHKERRQ(func(a,22.0));
 
 C Usage
 ~~~~~~~
@@ -419,18 +423,6 @@ Usage of PETSc Functions and Macros
    character-width-rule. Try to make error messages short but
    informative.
 
-#. Do not include a space before ``CHKXXX()``. That is, do not write
-
-   ::
-
-       ierr = PetscMalloc1(10,&a); CHKERRQ(ierr); /* Incorrect */
-
-   but instead write
-
-   ::
-
-       ierr = PetscMalloc1(10,&a);CHKERRQ(ierr);
-
 #. Except in code that may be called before PETSc is fully initialized,
    always use ``PetscMallocN()`` (for example, ``PetscMalloc1()``),
    ``PetscCallocN()``, ``PetscNew()``, and ``PetscFree()``, not
@@ -444,11 +436,9 @@ Usage of PETSc Functions and Macros
    ::
 
        #if defined(PETSC_HAVE_MPI_IN_PLACE)
-         ierr = MPI_Allgatherv(MPI_IN_PLACE,0,MPI_DATATYPE_NULL,lens,
-                               recvcounts,displs,MPIU_INT,comm);CHKERRQ(ierr);
+         CHKERRMPI(MPI_Allgatherv(MPI_IN_PLACE,0,MPI_DATATYPE_NULL,lens,recvcounts,displs,MPIU_INT,comm));
        #else
-         ierr = MPI_Allgatherv(lens,sendcount,MPIU_INT,lens,recvcounts,
-                               displs,MPIU_INT,comm);CHKERRQ(ierr);
+         CHKERRMPI(MPI_Allgatherv(lens,sendcount,MPIU_INT,lens,recvcounts,displs,MPIU_INT,comm));
        #endif
 
 #. Do not introduce PETSc routines that provide essentially the same
@@ -461,21 +451,25 @@ Usage of PETSc Functions and Macros
    accumulate flops and then call ``PetscLogFlops();`` *always* just
    call ``PetscLogFlops()`` directly when needed.
 
-#. Library functions should be declared
-   ``PETSC_INTERN`` if they are intended to be visible only within a
-   single PETSc shared library. They should be declared ``PETSC_EXTERN``
-   if intended to be visible across shared libraries. Note that PETSc
-   can be configured to build a separate shared library for each
-   top-level class (``Mat``, ``Vec``, ``KSP``, and so on) and that
-   plugin implementations of these classes can be included as separate
-   shared libraries; thus, private functions may need to be marked
-   ``PETSC_EXTERN``. For example,
+#. Library symbols meant to be directly usable by the user should be declared
+   ``PETSC_EXTERN`` in their respective public header-file. Symbols intended to be for
+   internal use only should instead be declared ``PETSC_INTERN``. Note that doing so is
+   not necessary in the case of symbols local to a single translation unit, these should
+   be declared ``static``. Note that PETSc can be configured to build a separate shared
+   library for each top-level class (``Mat``, ``Vec``, ``KSP``, and so on) and that plugin
+   implementations of these classes can be included as separate shared libraries; thus,
+   otherwise private symbols may need to be marked ``PETSC_SINGLE_LIBRARY_INTERN``. For
+   example
 
-   -  ``MatStashCreatePrivate`` is marked ``PETSC_INTERN`` as it is used
+   -  ``MatStashCreate_Private()`` is marked ``PETSC_INTERN`` as it is used
       across compilation units, but only within the ``Mat`` package;
 
    -  all functions, such as ``KSPCreate()``, included in the public
       headers (``include/petsc*.h``) should be marked ``PETSC_EXTERN``;
+
+   - ``PetscDeviceInitializeDefaultDevice_Internal()`` is marked
+     ``PETSC_SINGLE_LIBRARY_INTERN`` as it may be used across library boundaries, but is
+     not intended to be visible to users;
 
 #. Before removing or renaming an API function, type, or enumerator,
    ``PETSC_DEPRECATED_XXX()`` should be used in the relevant header file
@@ -509,9 +503,8 @@ Usage of PETSc Functions and Macros
    ``PetscOptionsDeprecated()`` should be used for at least one major
    release.
 
-#. The format strings in PETSc ASCII output routines, such as
-   ``PetscPrintf``, take a ``%D`` for all PETSc variables of type ``PetscInt``,
-   not a ``%d``.
+#. The format strings in PETSc ASCII output routines, such as ``PetscPrintf``, take a ``%"
+   PetscInt_FMT "`` for all PETSc variables of type ``PetscInt``, not a ``%d``.
 
 #. All arguments of type ``PetscReal`` to PETSc ASCII output routines,
    such as ``PetscPrintf``, must be cast to ``double``, for example,
