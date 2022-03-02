@@ -89,7 +89,6 @@ PetscErrorCode LandauKokkosCreateMatMaps(P4estVertexMaps maps[], pointInterpolat
   h_maps.deviceType = maps[grid].deviceType;
   h_maps.numgrids = maps[grid].numgrids;
   h_maps.Nf = Nf[grid];
-  h_maps.Nq = Nq;
   h_maps.c_maps = (pointInterpolationP4est (*)[LANDAU_MAX_Q_FACE]) d_points->data();
   maps[grid].vp1 = (void*)d_points;
   h_maps.gIdx = (LandauIdx (*)[LANDAU_MAX_SPECIES][LANDAU_MAX_NQ]) d_gidx->data();

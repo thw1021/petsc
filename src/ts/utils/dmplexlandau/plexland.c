@@ -1634,7 +1634,7 @@ static PetscErrorCode CreateStaticGPUData(PetscInt dim, IS grid_batch_is_inv[], 
       // count reduced and get
       ierr = PetscMalloc(maps[grid].num_elements * sizeof(*maps[grid].gIdx), &maps[grid].gIdx);CHKERRQ(ierr);
       for (int ej = cStart, eidx = 0 ; ej < cEnd; ++ej, ++eidx, glb_elem_idx++) {
-        ctx->SData_d.coo_elem_offsets[glb_elem_idx+1] = ctx->SData_d.coo_elem_offsets[glb_elem_idx]; // start with last one, then add
+        if (ctx->SData_d.coo_elem_offsets) ctx->SData_d.coo_elem_offsets[glb_elem_idx+1] = ctx->SData_d.coo_elem_offsets[glb_elem_idx]; // start with last one, then add
         for (int fieldA=0;fieldA<Nf[grid];fieldA++) {
           int fullNb = 0;
           for (int q = 0; q < Nb; ++q) {

@@ -189,7 +189,6 @@ typedef struct _lP4estVertexMaps {
   LandauIdx                num_face;  // (Q or Q^2 for 3D)
   LandauDeviceType         deviceType;
   PetscInt                 Nf;
-  PetscInt                 Nq;
   pointInterpolationP4est (*c_maps)[LANDAU_MAX_Q_FACE];
   struct _lP4estVertexMaps*d_self;
   void                    *vp1,*vp2,*vp3;
