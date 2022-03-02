@@ -89,6 +89,7 @@ PETSC_EXTERN PetscErrorCode PetscSectionSymRegister(const char[],PetscErrorCode 
 PETSC_EXTERN PetscErrorCode PetscSectionSymCreate(MPI_Comm, PetscSectionSym*);
 PETSC_EXTERN PetscErrorCode PetscSectionSymDestroy(PetscSectionSym*);
 PETSC_EXTERN PetscErrorCode PetscSectionSymView(PetscSectionSym,PetscViewer);
+PETSC_EXTERN PetscErrorCode PetscSectionSymDistribute(PetscSectionSym,PetscSF);
 
 PETSC_EXTERN PetscErrorCode PetscSectionSetSym(PetscSection, PetscSectionSym);
 PETSC_EXTERN PetscErrorCode PetscSectionGetSym(PetscSection, PetscSectionSym*);
