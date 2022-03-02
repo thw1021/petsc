@@ -63,7 +63,6 @@ PetscErrorCode  PetscObjectSAWsGrantAccess(PetscObject obj)
 @*/
 PetscErrorCode  PetscSAWsBlock(void)
 {
-  PetscErrorCode     ierr;
   volatile PetscBool block = PETSC_TRUE;
 
   PetscFunctionBegin;
@@ -71,13 +70,13 @@ PetscErrorCode  PetscSAWsBlock(void)
   SAWs_Lock();
   while (block) {
     SAWs_Unlock();
-    ierr = PetscInfo(NULL,"Blocking on SAWs\n");
+    CHKERRQ(PetscInfo(NULL,"Blocking on SAWs\n"));
     CHKERRQ(PetscSleep(.3));
     SAWs_Lock();
   }
   SAWs_Unlock();
   PetscStackCallSAWs(SAWs_Delete,("__Block"));
-  ierr = PetscInfo(NULL,"Out of SAWs block\n");
+  CHKERRQ(PetscInfo(NULL,"Out of SAWs block\n"));
   PetscFunctionReturn(0);
 }
 
@@ -98,8 +97,6 @@ PetscErrorCode  PetscSAWsBlock(void)
 @*/
 PetscErrorCode  PetscObjectSAWsBlock(PetscObject obj)
 {
-  PetscErrorCode     ierr;
-
   PetscFunctionBegin;
   PetscValidHeader(obj,1);
 
@@ -134,13 +131,12 @@ PetscErrorCode  PetscObjectSAWsSetBlock(PetscObject obj,PetscBool flg)
 
 PetscErrorCode PetscObjectSAWsViewOff(PetscObject obj)
 {
-  char           dir[1024];
-  PetscErrorCode ierr;
+  char dir[PETSC_MAX_PATH_LEN];
 
   PetscFunctionBegin;
   if (obj->classid == PETSC_VIEWER_CLASSID) PetscFunctionReturn(0);
   if (!obj->amsmem) PetscFunctionReturn(0);
-  CHKERRQ(PetscSNPrintf(dir,1024,"/PETSc/Objects/%s",obj->name));
+  CHKERRQ(PetscSNPrintf(dir,sizeof(dir),"/PETSc/Objects/%s",obj->name));
   PetscStackCallSAWs(SAWs_Delete,(dir));
   PetscFunctionReturn(0);
 }

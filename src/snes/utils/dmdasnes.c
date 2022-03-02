@@ -63,7 +63,7 @@ static PetscErrorCode SNESComputeFunction_DMDA(SNES snes,Vec X,Vec F,void *ctx)
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
   PetscValidHeaderSpecific(X,VEC_CLASSID,2);
   PetscValidHeaderSpecific(F,VEC_CLASSID,3);
-  PetscCheckFalse(!dmdasnes->residuallocal,PetscObjectComm((PetscObject)snes),PETSC_ERR_PLIB,"Corrupt context");
+  PetscCheck(dmdasnes->residuallocal,PetscObjectComm((PetscObject)snes),PETSC_ERR_PLIB,"Corrupt context");
   CHKERRQ(SNESGetDM(snes,&dm));
   CHKERRQ(DMGetLocalVector(dm,&Xloc));
   CHKERRQ(DMGlobalToLocalBegin(dm,X,INSERT_VALUES,Xloc));

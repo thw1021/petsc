@@ -173,7 +173,7 @@ PetscErrorCode PETScParseFortranArgs_Private(int *argc,char ***argv)
 #elif defined(PETSC_HAVE_PXFGETARG_NEW)
       {char *tmp = (*argv)[i];
       int ilen;
-      getarg_(&i,tmp,&ilen,&ierr,warg);CHKERRQ(ierr);
+      CHKERR_FORTRAN_VOID_FUNCTION(getarg_(&i,tmp,&ilen,&ierr,warg));
       tmp[ilen] = 0;}
 #elif defined(PETSC_USE_NARGS)
       GETARG(&i,(*argv)[i],warg,&flg);

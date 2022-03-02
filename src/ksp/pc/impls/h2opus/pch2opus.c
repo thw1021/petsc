@@ -49,8 +49,7 @@ PETSC_EXTERN PetscErrorCode MatNorm_H2OPUS(Mat,NormType,PetscReal*);
 
 static PetscErrorCode PCReset_H2OPUS(PC pc)
 {
-  PC_H2OPUS      *pch2opus = (PC_H2OPUS*)pc->data;
-  PetscErrorCode ierr;
+  PC_H2OPUS *pch2opus = (PC_H2OPUS*)pc->data;
 
   PetscFunctionBegin;
   pch2opus->sdim  = 0;
@@ -74,9 +73,8 @@ static PetscErrorCode PCReset_H2OPUS(PC pc)
 
 static PetscErrorCode PCSetCoordinates_H2OPUS(PC pc, PetscInt sdim, PetscInt nlocc, PetscReal *coords)
 {
-  PC_H2OPUS      *pch2opus = (PC_H2OPUS*)pc->data;
-  PetscBool      reset = PETSC_TRUE;
-  PetscErrorCode ierr;
+  PC_H2OPUS *pch2opus = (PC_H2OPUS*)pc->data;
+  PetscBool  reset    = PETSC_TRUE;
 
   PetscFunctionBegin;
   if (pch2opus->sdim && sdim == pch2opus->sdim && nlocc == pch2opus->nlocc) {
@@ -96,8 +94,6 @@ static PetscErrorCode PCSetCoordinates_H2OPUS(PC pc, PetscInt sdim, PetscInt nlo
 
 static PetscErrorCode PCDestroy_H2OPUS(PC pc)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(PCReset_H2OPUS(pc));
   CHKERRQ(PetscObjectComposeFunction((PetscObject)pc,"PCSetCoordinates_C",NULL));
@@ -107,8 +103,7 @@ static PetscErrorCode PCDestroy_H2OPUS(PC pc)
 
 static PetscErrorCode PCSetFromOptions_H2OPUS(PetscOptionItems *PetscOptionsObject,PC pc)
 {
-  PC_H2OPUS      *pch2opus = (PC_H2OPUS*)pc->data;
-  PetscErrorCode ierr;
+  PC_H2OPUS *pch2opus = (PC_H2OPUS*)pc->data;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"H2OPUS options"));
@@ -135,8 +130,7 @@ typedef struct {
 
 static PetscErrorCode MatMult_AAt(Mat A, Vec x, Vec y)
 {
-  AAtCtx         *aat;
-  PetscErrorCode ierr;
+  AAtCtx *aat;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(A,(void*)&aat));
@@ -148,13 +142,12 @@ static PetscErrorCode MatMult_AAt(Mat A, Vec x, Vec y)
 
 static PetscErrorCode PCH2OpusSetUpInit(PC pc)
 {
-  PC_H2OPUS      *pch2opus = (PC_H2OPUS*)pc->data;
-  Mat            A = pc->useAmat ? pc->mat : pc->pmat, AAt;
-  PetscInt       M,m;
-  VecType        vtype;
-  PetscReal      n;
-  AAtCtx         aat;
-  PetscErrorCode ierr;
+  PC_H2OPUS *pch2opus = (PC_H2OPUS*)pc->data;
+  Mat        A        = pc->useAmat ? pc->mat : pc->pmat, AAt;
+  PetscInt   M,m;
+  VecType    vtype;
+  PetscReal  n;
+  AAtCtx     aat;
 
   PetscFunctionBegin;
   aat.A = A;
@@ -178,36 +171,26 @@ static PetscErrorCode PCH2OpusSetUpInit(PC pc)
 
 static PetscErrorCode PCApplyKernel_H2OPUS(PC pc, Vec x, Vec y, PetscBool t)
 {
-  PC_H2OPUS      *pch2opus = (PC_H2OPUS*)pc->data;
-  PetscErrorCode ierr;
+  PC_H2OPUS *pch2opus = (PC_H2OPUS*)pc->data;
 
   PetscFunctionBegin;
-  if (t) {
-    CHKERRQ(MatMultTranspose(pch2opus->M,x,y));
-  } else {
-    CHKERRQ(MatMult(pch2opus->M,x,y));
-  }
+  if (t) CHKERRQ(MatMultTranspose(pch2opus->M,x,y));
+  else  CHKERRQ(MatMult(pch2opus->M,x,y));
   PetscFunctionReturn(0);
 }
 
 static PetscErrorCode PCApplyMatKernel_H2OPUS(PC pc, Mat X, Mat Y, PetscBool t)
 {
-  PC_H2OPUS      *pch2opus = (PC_H2OPUS*)pc->data;
-  PetscErrorCode ierr;
+  PC_H2OPUS *pch2opus = (PC_H2OPUS*)pc->data;
 
   PetscFunctionBegin;
-  if (t) {
-    CHKERRQ(MatTransposeMatMult(pch2opus->M,X,MAT_REUSE_MATRIX,PETSC_DEFAULT,&Y));
-  } else {
-    CHKERRQ(MatMatMult(pch2opus->M,X,MAT_REUSE_MATRIX,PETSC_DEFAULT,&Y));
-  }
+  if (t) CHKERRQ(MatTransposeMatMult(pch2opus->M,X,MAT_REUSE_MATRIX,PETSC_DEFAULT,&Y));
+  else   CHKERRQ(MatMatMult(pch2opus->M,X,MAT_REUSE_MATRIX,PETSC_DEFAULT,&Y));
   PetscFunctionReturn(0);
 }
 
 static PetscErrorCode PCApplyMat_H2OPUS(PC pc, Mat X, Mat Y)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(PCApplyMatKernel_H2OPUS(pc,X,Y,PETSC_FALSE));
   PetscFunctionReturn(0);
@@ -215,8 +198,6 @@ static PetscErrorCode PCApplyMat_H2OPUS(PC pc, Mat X, Mat Y)
 
 static PetscErrorCode PCApplyTransposeMat_H2OPUS(PC pc, Mat X, Mat Y)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(PCApplyMatKernel_H2OPUS(pc,X,Y,PETSC_TRUE));
   PetscFunctionReturn(0);
@@ -224,8 +205,6 @@ static PetscErrorCode PCApplyTransposeMat_H2OPUS(PC pc, Mat X, Mat Y)
 
 static PetscErrorCode PCApply_H2OPUS(PC pc, Vec x, Vec y)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(PCApplyKernel_H2OPUS(pc,x,y,PETSC_FALSE));
   PetscFunctionReturn(0);
@@ -233,8 +212,6 @@ static PetscErrorCode PCApply_H2OPUS(PC pc, Vec x, Vec y)
 
 static PetscErrorCode PCApplyTranspose_H2OPUS(PC pc, Vec x, Vec y)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(PCApplyKernel_H2OPUS(pc,x,y,PETSC_TRUE));
   PetscFunctionReturn(0);
@@ -243,18 +220,15 @@ static PetscErrorCode PCApplyTranspose_H2OPUS(PC pc, Vec x, Vec y)
 /* used to test the norm of (M^-1 A - I) */
 static PetscErrorCode MatMultKernel_MAmI(Mat M, Vec x, Vec y, PetscBool t)
 {
-  PC             pc;
-  Mat            A;
-  PC_H2OPUS      *pch2opus;
-  PetscErrorCode ierr;
-  PetscBool      sideleft = PETSC_TRUE;
+  PC         pc;
+  Mat        A;
+  PC_H2OPUS *pch2opus;
+  PetscBool  sideleft = PETSC_TRUE;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(M,(void*)&pc));
   pch2opus = (PC_H2OPUS*)pc->data;
-  if (!pch2opus->w) {
-    CHKERRQ(MatCreateVecs(pch2opus->M,&pch2opus->w,NULL));
-  }
+  if (!pch2opus->w) CHKERRQ(MatCreateVecs(pch2opus->M,&pch2opus->w,NULL));
   A = pch2opus->A;
   CHKERRQ(VecBindToCPU(pch2opus->w,pch2opus->boundtocpu));
   if (t) {
@@ -274,16 +248,12 @@ static PetscErrorCode MatMultKernel_MAmI(Mat M, Vec x, Vec y, PetscBool t)
       CHKERRQ(MatMult(A,pch2opus->w,y));
     }
   }
-  if (!pch2opus->testMA) {
-    CHKERRQ(VecAXPY(y,-1.0,x));
-  }
+  if (!pch2opus->testMA) CHKERRQ(VecAXPY(y,-1.0,x));
   PetscFunctionReturn(0);
 }
 
 static PetscErrorCode MatMult_MAmI(Mat A, Vec x, Vec y)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(MatMultKernel_MAmI(A,x,y,PETSC_FALSE));
   PetscFunctionReturn(0);
@@ -291,8 +261,6 @@ static PetscErrorCode MatMult_MAmI(Mat A, Vec x, Vec y)
 
 static PetscErrorCode MatMultTranspose_MAmI(Mat A, Vec x, Vec y)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(MatMultKernel_MAmI(A,x,y,PETSC_TRUE));
   PetscFunctionReturn(0);
@@ -307,11 +275,9 @@ Y = Xk * Y
 */
 static PetscErrorCode MatMultKernel_Hyper(Mat M, Vec x, Vec y, PetscBool t)
 {
-  PC             pc;
-  Mat            A;
-  PC_H2OPUS      *pch2opus;
-  PetscInt       i;
-  PetscErrorCode ierr;
+  PC         pc;
+  Mat        A;
+  PC_H2OPUS *pch2opus;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(M,(void*)&pc));
@@ -326,7 +292,7 @@ static PetscErrorCode MatMultKernel_Hyper(Mat M, Vec x, Vec y, PetscBool t)
   CHKERRQ(VecCopy(x,pch2opus->wns[0]));
   CHKERRQ(VecCopy(x,pch2opus->wns[3]));
   if (t) {
-    for (i=0;i<pch2opus->hyperorder-1;i++) {
+    for (PetscInt i=0;i<pch2opus->hyperorder-1;i++) {
       CHKERRQ(MatMultTranspose(A,pch2opus->wns[0],pch2opus->wns[1]));
       CHKERRQ(PCApplyTranspose_H2OPUS(pc,pch2opus->wns[1],pch2opus->wns[2]));
       CHKERRQ(VecAXPY(pch2opus->wns[0],-1.,pch2opus->wns[2]));
@@ -334,7 +300,7 @@ static PetscErrorCode MatMultKernel_Hyper(Mat M, Vec x, Vec y, PetscBool t)
     }
     CHKERRQ(PCApplyTranspose_H2OPUS(pc,pch2opus->wns[3],y));
   } else {
-    for (i=0;i<pch2opus->hyperorder-1;i++) {
+    for (PetscInt i=0;i<pch2opus->hyperorder-1;i++) {
       CHKERRQ(PCApply_H2OPUS(pc,pch2opus->wns[0],pch2opus->wns[1]));
       CHKERRQ(MatMult(A,pch2opus->wns[1],pch2opus->wns[2]));
       CHKERRQ(VecAXPY(pch2opus->wns[0],-1.,pch2opus->wns[2]));
@@ -347,8 +313,6 @@ static PetscErrorCode MatMultKernel_Hyper(Mat M, Vec x, Vec y, PetscBool t)
 
 static PetscErrorCode MatMult_Hyper(Mat M, Vec x, Vec y)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(MatMultKernel_Hyper(M,x,y,PETSC_FALSE));
   PetscFunctionReturn(0);
@@ -356,8 +320,6 @@ static PetscErrorCode MatMult_Hyper(Mat M, Vec x, Vec y)
 
 static PetscErrorCode MatMultTranspose_Hyper(Mat M, Vec x, Vec y)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(MatMultKernel_Hyper(M,x,y,PETSC_TRUE));
   PetscFunctionReturn(0);
@@ -366,11 +328,10 @@ static PetscErrorCode MatMultTranspose_Hyper(Mat M, Vec x, Vec y)
 /* Hyper power kernel, MatMat version */
 static PetscErrorCode MatMatMultKernel_Hyper(Mat M, Mat X, Mat Y, PetscBool t)
 {
-  PC             pc;
-  Mat            A;
-  PC_H2OPUS      *pch2opus;
-  PetscInt       i;
-  PetscErrorCode ierr;
+  PC         pc;
+  Mat        A;
+  PC_H2OPUS *pch2opus;
+  PetscInt   i;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(M,(void*)&pc));
@@ -416,8 +377,6 @@ static PetscErrorCode MatMatMultKernel_Hyper(Mat M, Mat X, Mat Y, PetscBool t)
 
 static PetscErrorCode MatMatMultNumeric_Hyper(Mat M, Mat X, Mat Y,void *ctx)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(MatMatMultKernel_Hyper(M,X,Y,PETSC_FALSE));
   PetscFunctionReturn(0);
@@ -426,10 +385,9 @@ static PetscErrorCode MatMatMultNumeric_Hyper(Mat M, Mat X, Mat Y,void *ctx)
 /* Basic Newton-Schultz sampler: (2 * I - M * A)*M */
 static PetscErrorCode MatMultKernel_NS(Mat M, Vec x, Vec y, PetscBool t)
 {
-  PC             pc;
-  Mat            A;
-  PC_H2OPUS      *pch2opus;
-  PetscErrorCode ierr;
+  PC         pc;
+  Mat        A;
+  PC_H2OPUS *pch2opus;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(M,(void*)&pc));
@@ -454,8 +412,6 @@ static PetscErrorCode MatMultKernel_NS(Mat M, Vec x, Vec y, PetscBool t)
 
 static PetscErrorCode MatMult_NS(Mat M, Vec x, Vec y)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(MatMultKernel_NS(M,x,y,PETSC_FALSE));
   PetscFunctionReturn(0);
@@ -463,8 +419,6 @@ static PetscErrorCode MatMult_NS(Mat M, Vec x, Vec y)
 
 static PetscErrorCode MatMultTranspose_NS(Mat M, Vec x, Vec y)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(MatMultKernel_NS(M,x,y,PETSC_TRUE));
   PetscFunctionReturn(0);
@@ -473,10 +427,9 @@ static PetscErrorCode MatMultTranspose_NS(Mat M, Vec x, Vec y)
 /* Basic Newton-Schultz sampler: (2 * I - M * A)*M, MatMat version */
 static PetscErrorCode MatMatMultKernel_NS(Mat M, Mat X, Mat Y, PetscBool t)
 {
-  PC             pc;
-  Mat            A;
-  PC_H2OPUS      *pch2opus;
-  PetscErrorCode ierr;
+  PC         pc;
+  Mat        A;
+  PC_H2OPUS *pch2opus;
 
   PetscFunctionBegin;
   CHKERRQ(MatShellGetContext(M,(void*)&pc));
@@ -508,8 +461,6 @@ static PetscErrorCode MatMatMultKernel_NS(Mat M, Mat X, Mat Y, PetscBool t)
 
 static PetscErrorCode MatMatMultNumeric_NS(Mat M, Mat X, Mat Y, void *ctx)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(MatMatMultKernel_NS(M,X,Y,PETSC_FALSE));
   PetscFunctionReturn(0);
@@ -517,9 +468,8 @@ static PetscErrorCode MatMatMultNumeric_NS(Mat M, Mat X, Mat Y, void *ctx)
 
 static PetscErrorCode PCH2OpusSetUpSampler_Private(PC pc)
 {
-  PC_H2OPUS      *pch2opus = (PC_H2OPUS*)pc->data;
-  Mat            A = pc->useAmat ? pc->mat : pc->pmat;
-  PetscErrorCode ierr;
+  PC_H2OPUS *pch2opus = (PC_H2OPUS*)pc->data;
+  Mat        A        = pc->useAmat ? pc->mat : pc->pmat;
 
   PetscFunctionBegin;
   if (!pch2opus->S) {
@@ -553,13 +503,12 @@ static PetscErrorCode PCH2OpusSetUpSampler_Private(PC pc)
 
 static PetscErrorCode PCSetUp_H2OPUS(PC pc)
 {
-  PC_H2OPUS      *pch2opus = (PC_H2OPUS*)pc->data;
-  Mat            A = pc->useAmat ? pc->mat : pc->pmat;
-  NormType       norm = pch2opus->normtype;
-  PetscReal      initerr = 0.0,err;
-  PetscReal      initerrMA = 0.0,errMA;
-  PetscBool      ish2opus;
-  PetscErrorCode ierr;
+  PC_H2OPUS *pch2opus  = (PC_H2OPUS*)pc->data;
+  Mat        A         = pc->useAmat ? pc->mat : pc->pmat;
+  NormType   norm      = pch2opus->normtype;
+  PetscReal  initerr   = 0.0,err;
+  PetscReal  initerrMA = 0.0,errMA;
+  PetscBool  ish2opus;
 
   PetscFunctionBegin;
   if (!pch2opus->T) {
@@ -609,9 +558,7 @@ static PetscErrorCode PCSetUp_H2OPUS(PC pc)
 
     CHKERRQ(MatBindToCPU(pch2opus->M,pch2opus->boundtocpu));
     CHKERRQ(MatNorm(pch2opus->T,norm,&reuse));
-    if (reuse >= 1.0) {
-      CHKERRQ(MatDestroy(&pch2opus->M));
-    }
+    if (reuse >= 1.0) CHKERRQ(MatDestroy(&pch2opus->M));
   }
   if (!pch2opus->M) {
     const char *prefix;
@@ -688,9 +635,8 @@ static PetscErrorCode PCSetUp_H2OPUS(PC pc)
 
 static PetscErrorCode PCView_H2OPUS(PC pc, PetscViewer viewer)
 {
-  PetscErrorCode ierr;
-  PC_H2OPUS      *pch2opus = (PC_H2OPUS*)pc->data;
-  PetscBool      isascii;
+  PC_H2OPUS *pch2opus = (PC_H2OPUS*)pc->data;
+  PetscBool  isascii;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isascii));
@@ -718,8 +664,7 @@ static PetscErrorCode PCView_H2OPUS(PC pc, PetscViewer viewer)
 
 PETSC_EXTERN PetscErrorCode PCCreate_H2OPUS(PC pc)
 {
-  PetscErrorCode ierr;
-  PC_H2OPUS      *pch2opus;
+  PC_H2OPUS *pch2opus;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(pc,&pch2opus));
