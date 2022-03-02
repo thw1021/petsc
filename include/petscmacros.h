@@ -361,7 +361,7 @@ M*/
 #endif
 
 /*MC
-  PetscUnreachable() - Indicate to the compiler that a code-path is logically unreachable
+  PetscUnreachable - Indicate to the compiler that a code-path is logically unreachable
 
   Synopsis:
   #include <petscmacros.h>
