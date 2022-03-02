@@ -1396,6 +1396,20 @@ PetscErrorCode  PetscFinalize(void)
   }
 #endif
 
+  //  if (PetscDefined(USE_DEBUG)) {
+    PetscViewer       viewer;
+    PetscViewerFormat format;
+    //    PetscBool         flg;
+
+    ierr   = PetscOptionsGetViewer(PETSC_COMM_WORLD,NULL,NULL,"-log_view",&viewer,&format,&flg);CHKERRQ(ierr);
+    if (flg) {
+      ierr = PetscViewerPushFormat(viewer,format);CHKERRQ(ierr);
+      ierr = VecStreamsView(viewer);CHKERRQ(ierr);
+      ierr = PetscViewerPopFormat(viewer);CHKERRQ(ierr);
+      ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
+    }
+    //}
+
 #if defined(PETSC_SERIALIZE_FUNCTIONS)
   ierr = PetscFPTDestroy();CHKERRQ(ierr);
 #endif
