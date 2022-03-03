@@ -105,7 +105,7 @@ static PetscErrorCode  KSPSolve_QMRCGS(KSP ksp)
 
     CHKERRQ(VecDot(V,RP,&rho2)); /* rho2 <- (v,rp) */
     if (rho2 == 0.0) {
-      PetscCheckFalse(ksp->errorifnotconverged,PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"KSPSolve has not converged due to division by zero");
+      PetscCheck(!ksp->errorifnotconverged,PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"KSPSolve has not converged due to division by zero");
       else {
         ksp->reason = KSP_DIVERGED_NANORINF;
         break;
@@ -113,7 +113,7 @@ static PetscErrorCode  KSPSolve_QMRCGS(KSP ksp)
     }
 
     if (rho1 == 0) {
-      PetscCheckFalse(ksp->errorifnotconverged,PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"KSPSolve has stagnated");
+      PetscCheck(!ksp->errorifnotconverged,PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"KSPSolve has stagnated");
       else {
         ksp->reason = KSP_DIVERGED_BREAKDOWN; /* Stagnation */
         break;
@@ -143,7 +143,7 @@ static PetscErrorCode  KSPSolve_QMRCGS(KSP ksp)
     if (vv == 0.0) {
       CHKERRQ(VecDot(S,S,&uu));
       if (uu != 0.0) {
-        PetscCheckFalse(ksp->errorifnotconverged,PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"KSPSolve has not converged due to division by zero");
+        PetscCheck(!ksp->errorifnotconverged,PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"KSPSolve has not converged due to division by zero");
         else {
           ksp->reason = KSP_DIVERGED_NANORINF;
           break;
@@ -162,7 +162,7 @@ static PetscErrorCode  KSPSolve_QMRCGS(KSP ksp)
     CHKERRQ(VecNorm(V,NORM_2,&NV)); /* nv <- norm(v) */
 
     if (NV == 0) {
-      PetscCheckFalse(ksp->errorifnotconverged,PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"KSPSolve has not converged due to singular matrix");
+      PetscCheck(!ksp->errorifnotconverged,PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"KSPSolve has not converged due to singular matrix");
       else {
         ksp->reason = KSP_DIVERGED_BREAKDOWN;
         break;
@@ -170,7 +170,7 @@ static PetscErrorCode  KSPSolve_QMRCGS(KSP ksp)
     }
 
     if (uu == 0) {
-      PetscCheckFalse(ksp->errorifnotconverged,PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"KSPSolve has stagnated");
+      PetscCheck(!ksp->errorifnotconverged,PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"KSPSolve has stagnated");
       else {
         ksp->reason = KSP_DIVERGED_BREAKDOWN; /* Stagnation */
         break;
@@ -187,7 +187,7 @@ static PetscErrorCode  KSPSolve_QMRCGS(KSP ksp)
     }
 
     if (tau2 == 0) {
-      PetscCheckFalse(ksp->errorifnotconverged,PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"KSPSolve has not converged due to division by zero");
+      PetscCheck(!ksp->errorifnotconverged,PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"KSPSolve has not converged due to division by zero");
       else {
         ksp->reason = KSP_DIVERGED_NANORINF;
         break;
