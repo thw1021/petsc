@@ -4630,7 +4630,7 @@ PetscErrorCode  TSGetSolveTime(TS ts,PetscReal *ftime)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
-  PetscValidPointer(ftime,2);
+  PetscValidRealPointer(ftime,2);
   *ftime = ts->solvetime;
   PetscFunctionReturn(0);
 }
@@ -4962,9 +4962,9 @@ PetscErrorCode TSErrorWeightedNorm2(TS ts,Vec U,Vec Y,PetscReal *norm,PetscReal 
   PetscValidType(U,2);
   PetscValidType(Y,3);
   PetscCheckSameComm(U,2,Y,3);
-  PetscValidPointer(norm,4);
-  PetscValidPointer(norma,5);
-  PetscValidPointer(normr,6);
+  PetscValidRealPointer(norm,4);
+  PetscValidRealPointer(norma,5);
+  PetscValidRealPointer(normr,6);
   PetscCheckFalse(U == Y,PetscObjectComm((PetscObject)U),PETSC_ERR_ARG_IDN,"U and Y cannot be the same vector");
 
   CHKERRQ(VecGetSize(U,&N));
@@ -5133,9 +5133,9 @@ PetscErrorCode TSErrorWeightedNormInfinity(TS ts,Vec U,Vec Y,PetscReal *norm,Pet
   PetscValidType(U,2);
   PetscValidType(Y,3);
   PetscCheckSameComm(U,2,Y,3);
-  PetscValidPointer(norm,4);
-  PetscValidPointer(norma,5);
-  PetscValidPointer(normr,6);
+  PetscValidRealPointer(norm,4);
+  PetscValidRealPointer(norma,5);
+  PetscValidRealPointer(normr,6);
   PetscCheckFalse(U == Y,PetscObjectComm((PetscObject)U),PETSC_ERR_ARG_IDN,"U and Y cannot be the same vector");
 
   CHKERRQ(VecGetSize(U,&N));
@@ -5324,9 +5324,9 @@ PetscErrorCode TSErrorWeightedENorm2(TS ts,Vec E,Vec U,Vec Y,PetscReal *norm,Pet
   PetscValidType(Y,4);
   PetscCheckSameComm(E,2,U,3);
   PetscCheckSameComm(U,3,Y,4);
-  PetscValidPointer(norm,5);
-  PetscValidPointer(norma,6);
-  PetscValidPointer(normr,7);
+  PetscValidRealPointer(norm,5);
+  PetscValidRealPointer(norma,6);
+  PetscValidRealPointer(normr,7);
 
   CHKERRQ(VecGetSize(E,&N));
   CHKERRQ(VecGetLocalSize(E,&n));
@@ -5499,9 +5499,9 @@ PetscErrorCode TSErrorWeightedENormInfinity(TS ts,Vec E,Vec U,Vec Y,PetscReal *n
   PetscValidType(Y,4);
   PetscCheckSameComm(E,2,U,3);
   PetscCheckSameComm(U,3,Y,4);
-  PetscValidPointer(norm,5);
-  PetscValidPointer(norma,6);
-  PetscValidPointer(normr,7);
+  PetscValidRealPointer(norm,5);
+  PetscValidRealPointer(norma,6);
+  PetscValidRealPointer(normr,7);
 
   CHKERRQ(VecGetSize(E,&N));
   CHKERRQ(VecGetLocalSize(E,&n));
@@ -5827,7 +5827,7 @@ PetscErrorCode  TSGetStages(TS ts,PetscInt *ns,Vec **Y)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts, TS_CLASSID,1);
-  if (ns) PetscValidPointer(ns,2);
+  if (ns) PetscValidIntPointer(ns,2);
   if (Y) PetscValidPointer(Y,3);
   if (!ts->ops->getstages) {
     if (ns) *ns = 0;
