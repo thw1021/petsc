@@ -37,7 +37,7 @@ static PetscErrorCode TSInterpolate_RK_MultirateNonsplit(TS ts,PetscReal itime,V
   const PetscReal  *B = rk->tableau->binterp;
 
   PetscFunctionBegin;
-  PetscCheckFalse(!B,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSRK %s does not have an interpolation formula",rk->tableau->name);
+  PetscCheck(B,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSRK %s does not have an interpolation formula",rk->tableau->name);
   t = (itime - rk->ptime)/h;
   CHKERRQ(PetscMalloc1(s,&b));
   for (i=0; i<s; i++) b[i] = 0;
@@ -244,7 +244,7 @@ static PetscErrorCode TSInterpolate_RK_MultirateSplit(TS ts,PetscReal itime,Vec 
   const PetscReal *B = rk->tableau->binterp;
 
   PetscFunctionBegin;
-  PetscCheckFalse(!B,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSRK %s does not have an interpolation formula",rk->tableau->name);
+  PetscCheck(B,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSRK %s does not have an interpolation formula",rk->tableau->name);
 
   switch (rk->status) {
     case TS_STEP_INCOMPLETE:

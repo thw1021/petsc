@@ -319,7 +319,7 @@ static PetscErrorCode TaoSetUp_BRGN(Tao tao)
   PetscInt              i,n,N,K; /* dict has size K*N*/
 
   PetscFunctionBegin;
-  PetscCheckFalse(!tao->ls_res,PetscObjectComm((PetscObject)tao),PETSC_ERR_ORDER,"TaoSetResidualRoutine() must be called before setup!");
+  PetscCheck(tao->ls_res,PetscObjectComm((PetscObject)tao),PETSC_ERR_ORDER,"TaoSetResidualRoutine() must be called before setup!");
   CHKERRQ(PetscObjectTypeCompare((PetscObject)gn->subsolver,TAOBNLS,&is_bnls));
   CHKERRQ(PetscObjectTypeCompare((PetscObject)gn->subsolver,TAOBNTR,&is_bntr));
   CHKERRQ(PetscObjectTypeCompare((PetscObject)gn->subsolver,TAOBNTL,&is_bntl));

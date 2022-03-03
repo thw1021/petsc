@@ -170,7 +170,7 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, PetscInt stepi, PetscReal time, 
   PetscFunctionBeginUser;
   PetscCheckFalse(ctx->num_species!=2,PETSC_COMM_SELF, PETSC_ERR_PLIB, "ctx->num_species %D != 2",ctx->num_species);
   CHKERRQ(VecGetDM(X, &pack));
-  PetscCheckFalse(!pack,PETSC_COMM_SELF, PETSC_ERR_PLIB, "no DM");
+  PetscCheck(pack,PETSC_COMM_SELF, PETSC_ERR_PLIB, "no DM");
   CHKERRQ(DMCompositeGetNumberDM(pack,&nDMs));
   PetscCheckFalse(nDMs != ctx->num_grids*ctx->batch_sz,PETSC_COMM_SELF, PETSC_ERR_PLIB, "nDMs != ctx->num_grids*ctx->batch_sz %D != %D",nDMs,ctx->num_grids*ctx->batch_sz);
   CHKERRQ(PetscMalloc(sizeof(*XsubArray)*nDMs, &XsubArray));
@@ -346,7 +346,7 @@ static PetscErrorCode EInduction(Vec X, Vec X_t, PetscInt step, PetscReal time, 
   /* get d current / dt */
   CHKERRQ(PetscDSSetConstants(prob, ctx->num_species, qv0));
   CHKERRQ(PetscDSSetObjective(prob, 0, &f0_jz_sum));
-  PetscCheckFalse(!X_t,PETSC_COMM_SELF, PETSC_ERR_PLIB, "X_t");
+  PetscCheck(X_t,PETSC_COMM_SELF, PETSC_ERR_PLIB, "X_t");
   CHKERRQ(DMPlexComputeIntegralFEM(plex,X_t,tt,NULL));
   dJ_dt = -ctx->n_0*PetscRealPart(tt[0])/ctx->t_0;
   /* E induction */
@@ -621,11 +621,11 @@ static PetscErrorCode ProcessREOptions(REctx *rectx, const LandauCtx *ctx, DM dm
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
   /* get impurity source rate function */
   CHKERRQ(PetscFunctionListFind(plist,pname,&rectx->impuritySrcRate));
-  PetscCheckFalse(!rectx->impuritySrcRate,PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"No impurity source function found '%s'",pname);
+  PetscCheck(rectx->impuritySrcRate,PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"No impurity source function found '%s'",pname);
   CHKERRQ(PetscFunctionListFind(testlist,testname,&rectx->test));
-  PetscCheckFalse(!rectx->test,PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"No test found '%s'",testname);
+  PetscCheck(rectx->test,PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"No test found '%s'",testname);
   CHKERRQ(PetscFunctionListFind(elist,ename,&rectx->E));
-  PetscCheckFalse(!rectx->E,PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"No E field function found '%s'",ename);
+  PetscCheck(rectx->E,PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"No E field function found '%s'",ename);
   CHKERRQ(PetscFunctionListDestroy(&plist));
   CHKERRQ(PetscFunctionListDestroy(&testlist));
   CHKERRQ(PetscFunctionListDestroy(&elist));

@@ -621,7 +621,7 @@ PetscErrorCode PetscLogEventGetPerfInfo(int stage,PetscLogEvent event,PetscEvent
 
   PetscFunctionBegin;
   PetscValidPointer(info,3);
-  PetscCheckFalse(!PetscLogPLB,PETSC_COMM_SELF,PETSC_ERR_SUP,"Must use -log_view or PetscLogDefaultBegin() before calling this routine");
+  PetscCheck(PetscLogPLB,PETSC_COMM_SELF,PETSC_ERR_SUP,"Must use -log_view or PetscLogDefaultBegin() before calling this routine");
   CHKERRQ(PetscLogGetStageLog(&stageLog));
   if (stage < 0) CHKERRQ(PetscStageLogGetCurrent(stageLog,&stage));
   CHKERRQ(PetscStageLogGetEventPerfLog(stageLog,stage,&eventLog));
@@ -636,7 +636,7 @@ PetscErrorCode PetscLogEventGetFlops(PetscLogEvent event,PetscLogDouble *flops)
   int               stage;
 
   PetscFunctionBegin;
-  PetscCheckFalse(!PetscLogPLB,PETSC_COMM_SELF,PETSC_ERR_SUP,"Must use -log_view or PetscLogDefaultBegin() before calling this routine");
+  PetscCheck(PetscLogPLB,PETSC_COMM_SELF,PETSC_ERR_SUP,"Must use -log_view or PetscLogDefaultBegin() before calling this routine");
   CHKERRQ(PetscLogGetStageLog(&stageLog));
   CHKERRQ(PetscStageLogGetCurrent(stageLog,&stage));
   CHKERRQ(PetscStageLogGetEventPerfLog(stageLog,stage,&eventLog));
@@ -923,7 +923,7 @@ PetscErrorCode PetscLogEventBeginTrace(PetscLogEvent event,int t,PetscObject o1,
   petsc_tracespace[2*petsc_tracelevel] = 0;
 
   err = fflush(petsc_tracefile);
-  PetscCheckFalse(err,PETSC_COMM_SELF,PETSC_ERR_SYS,"fflush() failed on file");
+  PetscCheck(!err,PETSC_COMM_SELF,PETSC_ERR_SYS,"fflush() failed on file");
   PetscFunctionReturn(0);
 }
 
@@ -956,7 +956,7 @@ PetscErrorCode PetscLogEventEndTrace(PetscLogEvent event,int t,PetscObject o1,Pe
   PetscTime(&cur_time);
   CHKERRQ(PetscFPrintf(PETSC_COMM_SELF,petsc_tracefile,"%s[%d] %g Event end: %s\n",petsc_tracespace,rank,cur_time-petsc_tracetime,eventRegLog->eventInfo[event].name));
   err  = fflush(petsc_tracefile);
-  PetscCheckFalse(err,PETSC_COMM_SELF,PETSC_ERR_SYS,"fflush() failed on file");
+  PetscCheck(!err,PETSC_COMM_SELF,PETSC_ERR_SYS,"fflush() failed on file");
   PetscFunctionReturn(0);
 }
 

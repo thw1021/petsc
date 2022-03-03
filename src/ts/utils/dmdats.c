@@ -60,7 +60,7 @@ static PetscErrorCode TSComputeIFunction_DMDA(TS ts,PetscReal ptime,Vec X,Vec Xd
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
   PetscValidHeaderSpecific(X,VEC_CLASSID,3);
   PetscValidHeaderSpecific(F,VEC_CLASSID,5);
-  PetscCheckFalse(!dmdats->ifunctionlocal,PetscObjectComm((PetscObject)ts),PETSC_ERR_PLIB,"Corrupt context");
+  PetscCheck(dmdats->ifunctionlocal,PetscObjectComm((PetscObject)ts),PETSC_ERR_PLIB,"Corrupt context");
   CHKERRQ(TSGetDM(ts,&dm));
   CHKERRQ(DMGetLocalVector(dm,&Xdotloc));
   CHKERRQ(DMGlobalToLocalBegin(dm,Xdot,INSERT_VALUES,Xdotloc));
@@ -111,7 +111,7 @@ static PetscErrorCode TSComputeIJacobian_DMDA(TS ts,PetscReal ptime,Vec X,Vec Xd
   void           *x,*xdot;
 
   PetscFunctionBegin;
-  PetscCheckFalse(!dmdats->ifunctionlocal,PetscObjectComm((PetscObject)ts),PETSC_ERR_PLIB,"Corrupt context");
+  PetscCheck(dmdats->ifunctionlocal,PetscObjectComm((PetscObject)ts),PETSC_ERR_PLIB,"Corrupt context");
   CHKERRQ(TSGetDM(ts,&dm));
 
   if (dmdats->ijacobianlocal) {
@@ -148,7 +148,7 @@ static PetscErrorCode TSComputeRHSFunction_DMDA(TS ts,PetscReal ptime,Vec X,Vec 
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
   PetscValidHeaderSpecific(X,VEC_CLASSID,3);
   PetscValidHeaderSpecific(F,VEC_CLASSID,4);
-  PetscCheckFalse(!dmdats->rhsfunctionlocal,PetscObjectComm((PetscObject)ts),PETSC_ERR_PLIB,"Corrupt context");
+  PetscCheck(dmdats->rhsfunctionlocal,PetscObjectComm((PetscObject)ts),PETSC_ERR_PLIB,"Corrupt context");
   CHKERRQ(TSGetDM(ts,&dm));
   CHKERRQ(DMGetLocalVector(dm,&Xloc));
   CHKERRQ(DMGlobalToLocalBegin(dm,X,INSERT_VALUES,Xloc));
@@ -193,7 +193,7 @@ static PetscErrorCode TSComputeRHSJacobian_DMDA(TS ts,PetscReal ptime,Vec X,Mat 
   void           *x;
 
   PetscFunctionBegin;
-  PetscCheckFalse(!dmdats->rhsfunctionlocal,PetscObjectComm((PetscObject)ts),PETSC_ERR_PLIB,"Corrupt context");
+  PetscCheck(dmdats->rhsfunctionlocal,PetscObjectComm((PetscObject)ts),PETSC_ERR_PLIB,"Corrupt context");
   CHKERRQ(TSGetDM(ts,&dm));
 
   if (dmdats->rhsjacobianlocal) {
