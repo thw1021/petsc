@@ -169,8 +169,8 @@ PetscErrorCode PetscPartitionerShellSetPartition(PetscPartitioner part, PetscInt
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(part, PETSCPARTITIONER_CLASSID, 1, PETSCPARTITIONERSHELL);
-  if (sizes)  {PetscValidPointer(sizes, 3);}
-  if (points) {PetscValidPointer(points, 4);}
+  if (sizes)  {PetscValidIntPointer(sizes, 3);}
+  if (points) {PetscValidIntPointer(points, 4);}
   CHKERRQ(PetscSectionDestroy(&p->section));
   CHKERRQ(ISDestroy(&p->partition));
   CHKERRQ(PetscSectionCreate(PetscObjectComm((PetscObject) part), &p->section));
@@ -230,7 +230,7 @@ PetscErrorCode PetscPartitionerShellGetRandom(PetscPartitioner part, PetscBool *
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(part, PETSCPARTITIONER_CLASSID, 1, PETSCPARTITIONERSHELL);
-  PetscValidPointer(random, 2);
+  PetscValidBoolPointer(random, 2);
   *random = p->random;
   PetscFunctionReturn(0);
 }
