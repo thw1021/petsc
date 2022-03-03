@@ -212,7 +212,7 @@ static PetscErrorCode MatCreateSubMatrix_ADA(Mat mat,IS isrow,IS iscol,MatReuse 
 
   PetscFunctionBegin;
   CHKERRQ(ISEqual(isrow,iscol,&isequal));
-  PetscCheckFalse(!isequal,PETSC_COMM_SELF,PETSC_ERR_SUP,"Only for identical column and row indices");
+  PetscCheck(isequal,PETSC_COMM_SELF,PETSC_ERR_SUP,"Only for identical column and row indices");
   CHKERRQ(MatShellGetContext(mat,&ctx));
 
   CHKERRQ(MatGetOwnershipRange(ctx->A,&low,&high));

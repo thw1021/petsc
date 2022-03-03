@@ -106,7 +106,7 @@ static PetscErrorCode TaoSolve_Shell(Tao tao)
   Tao_Shell                    *shell = (Tao_Shell*)tao->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(!shell->solve,PetscObjectComm((PetscObject)tao),PETSC_ERR_ARG_WRONGSTATE,"Must call TaoShellSetSolve() first");
+  PetscCheck(shell->solve,PetscObjectComm((PetscObject)tao),PETSC_ERR_ARG_WRONGSTATE,"Must call TaoShellSetSolve() first");
   tao->reason = TAO_CONVERGED_USER;
   CHKERRQ((*(shell->solve)) (tao));
   PetscFunctionReturn(0);

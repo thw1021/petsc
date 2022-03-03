@@ -262,7 +262,7 @@ PetscErrorCode TaoComputeHessian(Tao tao, Vec X, Mat H, Mat Hpre)
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
   PetscValidHeaderSpecific(X, VEC_CLASSID,2);
   PetscCheckSameComm(tao,1,X,2);
-  PetscCheckFalse(!tao->ops->computehessian,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call TaoSetHessian() first");
+  PetscCheck(tao->ops->computehessian,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call TaoSetHessian() first");
   ++tao->nhess;
   CHKERRQ(VecLockReadPush(X));
   CHKERRQ(PetscLogEventBegin(TAO_HessianEval,tao,X,H,Hpre));
@@ -308,7 +308,7 @@ PetscErrorCode TaoComputeJacobian(Tao tao, Vec X, Mat J, Mat Jpre)
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
   PetscValidHeaderSpecific(X, VEC_CLASSID,2);
   PetscCheckSameComm(tao,1,X,2);
-  PetscCheckFalse(!tao->ops->computejacobian,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call TaoSetJacobian() first");
+  PetscCheck(tao->ops->computejacobian,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call TaoSetJacobian() first");
   ++tao->njac;
   CHKERRQ(VecLockReadPush(X));
   CHKERRQ(PetscLogEventBegin(TAO_JacobianEval,tao,X,J,Jpre));
@@ -352,7 +352,7 @@ PetscErrorCode TaoComputeResidualJacobian(Tao tao, Vec X, Mat J, Mat Jpre)
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
   PetscValidHeaderSpecific(X, VEC_CLASSID,2);
   PetscCheckSameComm(tao,1,X,2);
-  PetscCheckFalse(!tao->ops->computeresidualjacobian,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call TaoSetResidualJacobian() first");
+  PetscCheck(tao->ops->computeresidualjacobian,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call TaoSetResidualJacobian() first");
   ++tao->njac;
   CHKERRQ(VecLockReadPush(X));
   CHKERRQ(PetscLogEventBegin(TAO_JacobianEval,tao,X,J,Jpre));
@@ -397,7 +397,7 @@ PetscErrorCode TaoComputeJacobianState(Tao tao, Vec X, Mat J, Mat Jpre, Mat Jinv
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
   PetscValidHeaderSpecific(X, VEC_CLASSID,2);
   PetscCheckSameComm(tao,1,X,2);
-  PetscCheckFalse(!tao->ops->computejacobianstate,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call TaoSetJacobianState() first");
+  PetscCheck(tao->ops->computejacobianstate,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call TaoSetJacobianState() first");
   ++tao->njac_state;
   CHKERRQ(VecLockReadPush(X));
   CHKERRQ(PetscLogEventBegin(TAO_JacobianEval,tao,X,J,Jpre));
@@ -440,7 +440,7 @@ PetscErrorCode TaoComputeJacobianDesign(Tao tao, Vec X, Mat J)
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
   PetscValidHeaderSpecific(X, VEC_CLASSID,2);
   PetscCheckSameComm(tao,1,X,2);
-  PetscCheckFalse(!tao->ops->computejacobiandesign,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call TaoSetJacobianDesign() first");
+  PetscCheck(tao->ops->computejacobiandesign,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call TaoSetJacobianDesign() first");
   ++tao->njac_design;
   CHKERRQ(VecLockReadPush(X));
   CHKERRQ(PetscLogEventBegin(TAO_JacobianEval,tao,X,J,NULL));
@@ -736,7 +736,7 @@ PetscErrorCode TaoComputeJacobianEquality(Tao tao, Vec X, Mat J, Mat Jpre)
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
   PetscValidHeaderSpecific(X, VEC_CLASSID,2);
   PetscCheckSameComm(tao,1,X,2);
-  PetscCheckFalse(!tao->ops->computejacobianequality,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call TaoSetJacobianEquality() first");
+  PetscCheck(tao->ops->computejacobianequality,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call TaoSetJacobianEquality() first");
   ++tao->njac_equality;
   CHKERRQ(VecLockReadPush(X));
   CHKERRQ(PetscLogEventBegin(TAO_JacobianEval,tao,X,J,Jpre));
@@ -776,7 +776,7 @@ PetscErrorCode TaoComputeJacobianInequality(Tao tao, Vec X, Mat J, Mat Jpre)
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
   PetscValidHeaderSpecific(X, VEC_CLASSID,2);
   PetscCheckSameComm(tao,1,X,2);
-  PetscCheckFalse(!tao->ops->computejacobianinequality,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call TaoSetJacobianInequality() first");
+  PetscCheck(tao->ops->computejacobianinequality,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call TaoSetJacobianInequality() first");
   ++tao->njac_inequality;
   CHKERRQ(VecLockReadPush(X));
   CHKERRQ(PetscLogEventBegin(TAO_JacobianEval,tao,X,J,Jpre));

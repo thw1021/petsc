@@ -1154,7 +1154,7 @@ static PetscErrorCode ModelFunctionalSetFromOptions(Model mod,PetscOptions *Pets
       CHKERRQ(PetscStrcasecmp(names[i],link->name,&match));
       if (match) break;
     }
-    PetscCheckFalse(!link,mod->comm,PETSC_ERR_USER,"No known functional '%s'",names[i]);
+    PetscCheck(link,mod->comm,PETSC_ERR_USER,"No known functional '%s'",names[i]);
     mod->functionalMonitored[i] = link;
     for (j=0; j<i; j++) {
       if (mod->functionalCall[j]->func == link->func && mod->functionalCall[j]->ctx == link->ctx) goto next_name;
@@ -1370,7 +1370,7 @@ static PetscErrorCode TestMonitor(DM dm, const char *filename, Vec X, PetscReal 
   CHKERRQ(VecCreate(PETSC_COMM_WORLD,&odesolution));
   CHKERRQ(VecLoad(odesolution,viewer));
   VecEqual(X,odesolution,&equal);
-  PetscCheckFalse(!equal,PETSC_COMM_WORLD,PETSC_ERR_FILE_UNEXPECTED,"Error in reading the vec data from file");
+  PetscCheck(equal,PETSC_COMM_WORLD,PETSC_ERR_FILE_UNEXPECTED,"Error in reading the vec data from file");
   else {
     CHKERRQ(PetscPrintf(PETSC_COMM_WORLD,"IO test OK for Vec\n"));
   }
