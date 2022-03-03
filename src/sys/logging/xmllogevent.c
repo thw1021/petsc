@@ -129,7 +129,7 @@ PetscErrorCode PetscLogNestedBegin(void)
 {
 
   PetscFunctionBegin;
-  PetscCheckFalse(nestedEvents,PETSC_COMM_SELF,PETSC_ERR_COR,"nestedEvents already allocated");
+  PetscCheck(!nestedEvents,PETSC_COMM_SELF,PETSC_ERR_COR,"nestedEvents already allocated");
 
   nNestedEventsAllocated = 10;
   CHKERRQ(PetscMalloc1(nNestedEventsAllocated,&nestedEvents));

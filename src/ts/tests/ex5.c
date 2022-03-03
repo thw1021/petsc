@@ -483,7 +483,7 @@ PetscErrorCode readinput(struct in *put)
 
   PetscFunctionBegin;
   ifp = fopen("ex5_control.txt", "r");
-  PetscCheckFalse(!ifp,PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Unable to open input file");
+  PetscCheck(ifp,PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Unable to open input file");
   for (i=0; i<110; i++) { PetscCheckFalse(fscanf(ifp, "%c", &x) != 1,PETSC_COMM_SELF,PETSC_ERR_FILE_READ,"Unable to read file");}
   PetscCheckFalse(fscanf(ifp, "%lf", &tmp) != 1,PETSC_COMM_SELF,PETSC_ERR_FILE_READ,"Unable to read file");
   put->Ts = tmp;
