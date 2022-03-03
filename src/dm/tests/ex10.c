@@ -12,7 +12,7 @@ int main(int argc,char ** argv)
   DM                network;
   PetscMPIInt       size,rank;
   MPI_Comm          comm;
-  PetscInt          e,ne,nv,v,ecompkey,vcompkey;
+  PetscInt          e,ne,nv,v,ecompkey,vcompkey,itest=0;
   PetscInt          *edgelist = NULL;
   const PetscInt    *nodes,*edges;
   DM                plex;
@@ -32,6 +32,7 @@ int main(int argc,char ** argv)
   ierr = DMNetworkRegisterComponent(network,"ecomp",0,&ecompkey);CHKERRQ(ierr);
   ierr = DMNetworkRegisterComponent(network,"vcomp",0,&vcompkey);CHKERRQ(ierr);
 
+  ierr = PetscOptionsGetInt(NULL,NULL,"-test",&itest,NULL);CHKERRQ(ierr);
   Ne = 2;
   Ni = 1;
   nodeOffset = (Ne+Ni)*rank;   /* The global node index of the first node defined on this process */
@@ -42,10 +43,23 @@ int main(int argc,char ** argv)
   if (rank == 0) {
     nedge = 1;
     ierr = PetscCalloc1(2*nedge,&edgelist);CHKERRQ(ierr);
-    edgelist[0] = nodeOffset + 2;
-    edgelist[1] = nodeOffset + 3;
+    switch (itest) {
+    case 0:
+      /* v0, v1 are isolated vertices */
+      nv = 4;
+      edgelist[0] = nodeOffset + 2;
+      edgelist[1] = nodeOffset + 3;
+      break;
+    case 1:
+      /* v2 is an isolated vertex */
+      nv = 3;
+      edgelist[0] = nodeOffset + 0;
+      edgelist[1] = nodeOffset + 1;
+      break;
+    default: PetscCheck(itest < 2,PETSC_COMM_SELF,PETSC_ERR_SUP,"Test case %" PetscInt_FMT " not supported.",itest);
+    }
   } else {
-    nedge = 2;
+    nedge = 2; nv = 3;
     ierr = PetscCalloc1(2*nedge,&edgelist);CHKERRQ(ierr);
     edgelist[0] = nodeOffset + 0;
     edgelist[1] = nodeOffset + 2;
@@ -54,7 +68,7 @@ int main(int argc,char ** argv)
   }
 
   ierr = DMNetworkSetNumSubNetworks(network,PETSC_DECIDE,1);CHKERRQ(ierr);
-  ierr = DMNetworkAddSubnetwork(network,"Subnetwork 1",nedge,edgelist,NULL);CHKERRQ(ierr);
+  ierr = DMNetworkAddSubnetwork_new(network,"Subnetwork 1",nedge,nv,edgelist,NULL);CHKERRQ(ierr);
   ierr = DMNetworkLayoutSetUp(network);CHKERRQ(ierr);
 
   ierr = PetscPrintf(PETSC_COMM_WORLD,"Network after DMNetworkLayoutSetUp:\n");CHKERRQ(ierr);
@@ -62,6 +76,7 @@ int main(int argc,char ** argv)
 
   /* Add components and variables for the network */
   ierr = DMNetworkGetSubnetwork(network,0,&nv,&ne,&nodes,&edges);CHKERRQ(ierr);
+  printf("[%d] subnet[0]: nv %d\n",rank,nv);
   for (e = 0; e < ne; e++) {
     /* The edges have no degrees of freedom */
     ierr = DMNetworkAddComponent(network,edges[e],ecompkey,NULL,1);CHKERRQ(ierr);
