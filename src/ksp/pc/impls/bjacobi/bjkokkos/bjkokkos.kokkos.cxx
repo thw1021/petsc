@@ -418,7 +418,7 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
       ierr = PetscContainerGetPointer(container, (void **) &pNf);CHKERRQ(ierr);
       batch_sz = *pNf;
     } else batch_sz = 1;
-    PetscCheck(nBlk%batch_sz == 0,PetscObjectComm((PetscObject) pc),PETSC_ERR_ARG_WRONG,"batch_sz = %" PetscInt_FMT ", nBlk = %" PetscInt_FMT "",batch_sz,nBlk);
+    PetscCheck(nBlk%batch_sz == 0,PetscObjectComm((PetscObject) pc),PETSC_ERR_ARG_WRONG,"batch_sz = %" PetscInt_FMT ", nBlk = %" PetscInt_FMT,batch_sz,nBlk);
     d_bid_eqOffset = jac->d_bid_eqOffset_k->data();
     // solve each block independently
     if (jac->const_block_size) { // use shared memory for work vectors only if constant block size - todo: test efficiency loss
@@ -452,7 +452,7 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
 #if defined(PETSC_USE_DEBUG)
           printf("GMRES not implemented %d\n",ksp_type_idx);
 #else
-          /* void */;
+          /* void */
 #endif
           break;
         default:
@@ -520,10 +520,9 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
     {
       int errsum;
       Kokkos::parallel_reduce(nBlk, KOKKOS_LAMBDA (const int idx, int& lsum) {
-          if (d_metadata[idx].reason < 0) lsum += 1;
+          if (d_metadata[idx].reason < 0) ++lsum;
         }, errsum);
-      if (!errsum) pcreason = PC_NOERROR;
-      else pcreason = PC_SUBPC_ERROR;
+      pcreason = errsum ? PC_SUBPC_ERROR : PC_NOERROR;
     }
     ierr = PCSetFailedReason(pc,pcreason);CHKERRQ(ierr);
     // map back to Plex space

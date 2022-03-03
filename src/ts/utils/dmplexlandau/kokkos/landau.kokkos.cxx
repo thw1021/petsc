@@ -484,9 +484,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
       } else {
         d_mat = NULL;
       }
-    } else { // kernel output - this can not happen anymore
-      SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "GPU assembly but no metadata in container");
-    }
+    } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "GPU assembly but no metadata in container");
   } else {
     for (PetscInt grid=0 ; grid<num_grids ; grid++) maps[grid] = NULL;
     nfaces = 0;
@@ -741,7 +739,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
   } else { // mass
     ierr = PetscLogEventBegin(events[16],0,0,0,0);CHKERRQ(ierr);
     ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
-    ierr = PetscInfo(plex[0], "Mass conc=%D team size=%D #face=%D Nb=%D\n",conc,team_size,nfaces,Nb);CHKERRQ(ierr);
+    ierr = PetscInfo(plex[0], "Mass conc=%" PetscInt_FMT " team size=%" PetscInt_FMT " #face=%" PetscInt_FMT " Nb=%" PetscInt_FMT "\n",conc,team_size,nfaces,Nb);CHKERRQ(ierr);
     Kokkos::parallel_for("Mass", Kokkos::TeamPolicy<>(num_cells_batch*batch_sz, team_size, /* Kokkos::AUTO */ 16), KOKKOS_LAMBDA (const team_member team) {
         const PetscInt  b_Nelem = d_elem_offset[num_grids], b_elem_idx = team.league_rank()%b_Nelem, b_id = team.league_rank()/b_Nelem;
         // find my grid
@@ -781,11 +779,10 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
   Kokkos::fence();
   if (d_coo_vals) {
     ierr = MatSetValuesCOO(JacP,d_coo_vals,ADD_VALUES);CHKERRQ(ierr);
-  }
-  else if (elem_mat_num_cells_max_grid) { // CPU assembly
+  } else if (elem_mat_num_cells_max_grid) { // CPU assembly
     Kokkos::View<PetscScalar****, Kokkos::LayoutRight>::HostMirror h_elem_mats = Kokkos::create_mirror_view(d_elem_mats);
     Kokkos::deep_copy (h_elem_mats, d_elem_mats);
-    PetscCheckFalse(container,PETSC_COMM_SELF, PETSC_ERR_PLIB, "?????");
+     PetscCheck(!container,PETSC_COMM_SELF, PETSC_ERR_PLIB, "?????");
     for (PetscInt b_id = 0 ; b_id < batch_sz ; b_id++) { // OpenMP (once)
       for (PetscInt grid=0 ; grid<num_grids ; grid++) {
         PetscSection      section, globalSection;
