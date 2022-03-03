@@ -102,17 +102,17 @@ struct Mat_SeqAIJKokkos {
   /* Construct a nrows by ncols matrix with nnz nonzeros from the given (i,j,a) on host. Caller also specifies a nonzero state */
   Mat_SeqAIJKokkos(PetscInt nrows,PetscInt ncols,PetscInt nnz,const MatRowMapType *i,MatColIdxType *j,MatScalarType *a,PetscObjectState nzstate,PetscBool copyValues=PETSC_TRUE)
   {
-    MatScalarKokkosViewHost    a_h(a,nnz);
-    MatRowMapKokkosViewHost    i_h(const_cast<MatRowMapType*>(i),nrows+1);
-    MatColIdxKokkosViewHost    j_h(j,nnz);
+    MatScalarKokkosViewHost a_h(a,nnz);
+    MatRowMapKokkosViewHost i_h(const_cast<MatRowMapType*>(i),nrows+1);
+    MatColIdxKokkosViewHost j_h(j,nnz);
 
     auto a_d = Kokkos::create_mirror_view(DefaultMemorySpace(),a_h);
     auto i_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(),i_h);
     auto j_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(),j_h);
 
-    a_dual   = MatScalarKokkosDualView(a_d,a_h);
-    i_dual   = MatRowMapKokkosDualView(i_d,i_h);
-    j_dual   = MatColIdxKokkosDualView(j_d,j_h);
+    a_dual = MatScalarKokkosDualView(a_d,a_h);
+    i_dual = MatRowMapKokkosDualView(i_d,i_h);
+    j_dual = MatColIdxKokkosDualView(j_d,j_h);
 
     a_dual.modify_host(); /* Since caller provided values on host */
     if (copyValues) a_dual.sync_device();
