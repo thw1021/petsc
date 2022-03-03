@@ -78,8 +78,7 @@
 @*/
 PetscErrorCode  MatCreateMPIAIJMKL(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt M,PetscInt N,PetscInt d_nz,const PetscInt d_nnz[],PetscInt o_nz,const PetscInt o_nnz[],Mat *A)
 {
-  PetscErrorCode ierr;
-  PetscMPIInt    size;
+  PetscMPIInt size;
 
   PetscFunctionBegin;
   CHKERRQ(MatCreate(comm,A));
@@ -99,8 +98,7 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJMKL(Mat,MatType,MatReuse,Mat
 
 PetscErrorCode  MatMPIAIJSetPreallocation_MPIAIJMKL(Mat B,PetscInt d_nz,const PetscInt d_nnz[],PetscInt o_nz,const PetscInt o_nnz[])
 {
-  Mat_MPIAIJ     *b = (Mat_MPIAIJ*)B->data;
-  PetscErrorCode ierr;
+  Mat_MPIAIJ *b = (Mat_MPIAIJ*)B->data;
 
   PetscFunctionBegin;
   CHKERRQ(MatMPIAIJSetPreallocation_MPIAIJ(B,d_nz,d_nnz,o_nz,o_nnz));
@@ -111,14 +109,10 @@ PetscErrorCode  MatMPIAIJSetPreallocation_MPIAIJMKL(Mat B,PetscInt d_nz,const Pe
 
 PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIAIJMKL(Mat A,MatType type,MatReuse reuse,Mat *newmat)
 {
-  PetscErrorCode ierr;
-  Mat            B = *newmat;
+  Mat B = *newmat;
 
   PetscFunctionBegin;
-  if (reuse == MAT_INITIAL_MATRIX) {
-    CHKERRQ(MatDuplicate(A,MAT_COPY_VALUES,&B));
-  }
-
+  if (reuse == MAT_INITIAL_MATRIX) CHKERRQ(MatDuplicate(A,MAT_COPY_VALUES,&B));
   CHKERRQ(PetscObjectChangeTypeName((PetscObject) B, MATMPIAIJMKL));
   CHKERRQ(PetscObjectComposeFunction((PetscObject)B,"MatMPIAIJSetPreallocation_C",MatMPIAIJSetPreallocation_MPIAIJMKL));
   *newmat = B;
@@ -127,8 +121,6 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIAIJMKL(Mat A,MatType type,MatRe
 
 PETSC_EXTERN PetscErrorCode MatCreate_MPIAIJMKL(Mat A)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(MatSetType(A,MATMPIAIJ));
   CHKERRQ(MatConvert_MPIAIJ_MPIAIJMKL(A,MATMPIAIJMKL,MAT_INPLACE_MATRIX,&A));

@@ -115,11 +115,11 @@ PetscErrorCode DMPlexGetLocalOffsets(DM dm, DMLabel domain_label, PetscInt label
       const PetscInt *orients, *faces, *cells;
       CHKERRQ(DMPlexGetSupport(dm, c, &cells));
       CHKERRQ(DMPlexGetSupportSize(dm, c, &num_cells_support));
-      PetscCheckFalse(num_cells_support != 1,PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Expected one cell in support of exterior face, but got %D cells", num_cells_support);
+      PetscCheck(num_cells_support == 1,PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Expected one cell in support of exterior face, but got %" PetscInt_FMT " cells", num_cells_support);
       CHKERRQ(DMPlexGetCone(dm, cells[0], &faces));
       CHKERRQ(DMPlexGetConeSize(dm, cells[0], &num_faces));
       for (PetscInt i=0; i<num_faces; i++) {if (faces[i] == c) start = i;}
-      PetscCheckFalse(start < 0,PETSC_COMM_SELF, PETSC_ERR_ARG_CORRUPT, "Could not find face %D in cone of its support", c);
+      PetscCheck(start >= 0,PETSC_COMM_SELF, PETSC_ERR_ARG_CORRUPT, "Could not find face %" PetscInt_FMT " in cone of its support", c);
       CHKERRQ(DMPlexGetConeOrientation(dm, cells[0], &orients));
       if (orients[start] < 0) flip = PETSC_TRUE;
     }
