@@ -4,7 +4,7 @@ import os
 class Configure(config.package.CMakePackage):
   def __init__(self, framework):
     config.package.CMakePackage.__init__(self, framework)
-    self.version          = '6.2.1'
+    self.version          = '6.3.1'
     self.versionname      = 'STRUMPACK_VERSION_MAJOR.STRUMPACK_VERSION_MINOR.STRUMPACK_VERSION_PATCH'
     self.versioninclude   = 'StrumpackConfig.hpp'
     self.gitcommit        = 'v'+self.version
@@ -23,6 +23,20 @@ class Configure(config.package.CMakePackage):
     output  = config.package.CMakePackage.__str__(self)
     if hasattr(self,'system'): output += '  Backend: '+self.system+'\n'
     return output
+
+  def setupHelp(self, help):
+    config.package.Package.setupHelp(self,help)
+    import nargs
+    help.addArgument('STRUMPACK', '-with-strumpack-tpl-slate=<root dir>', nargs.ArgDir(None, None, 'Specify the root directory of the SLATE (and BLAS++, LAPACK++) installation'))
+    help.addArgument('STRUMPACK', '-with-strumpack-tpl-slate-lib=<libraries: e.g. [/Users/..../libslate.a,...]>', nargs.ArgLibrary(None, None, 'Indicate the library(s) containing SLATE, BLAS++, LAPACK++'))
+    # help.addArgument('STRUMPACK', '-with-strumpack-tpl-slate-include=<dir>', nargs.ArgDir(None, None, 'Path to SLATE, BLAS++, LAPACK++ headers'))
+    help.addArgument('STRUMPACK', '-with-strumpack-tpl-zfp=<root dir>', nargs.ArgDir(None, None, 'Specify the root directory of the ZFP installation'))
+    help.addArgument('STRUMPACK', '-with-strumpack-tpl-zfp-lib=<libraries: e.g. [/Users/..../libzfp.a,...]>', nargs.ArgLibrary(None, None, 'Indicate the library(s) containing ZFP'))
+    # help.addArgument('STRUMPACK', '-with-strumpack-tpl-zfp-include=<dir>', nargs.ArgDir(None, None, 'Path to ZFP headers'))
+    help.addArgument('STRUMPACK', '-with-strumpack-tpl-butterflypack=<root dir>', nargs.ArgDir(None, None, 'Specify the root directory of the ButterflyPACK installation'))
+    help.addArgument('STRUMPACK', '-with-strumpack-tpl-butterflypack-lib=<libraries: e.g. [/Users/..../libdbutterflypack.so,...]>', nargs.ArgLibrary(None, None, 'Indicate the library(s) containing ButterflyPACK'))
+    # help.addArgument('STRUMPACK', '-with-strumpack-tpl-butterflypack-include=<dir>', nargs.ArgDir(None, None, 'Path to ButterflyPACK headers'))
+    return
 
   def setupDependencies(self, framework):
     config.package.CMakePackage.setupDependencies(self, framework)
@@ -97,7 +111,22 @@ class Configure(config.package.CMakePackage):
       args.append('-DSTRUMPACK_USE_HIP=ON')
       self.system = 'HIP'
 
-    # TODO other dependencies: HIP, SLATE, ZFP, ButterflyPACK, CombBLAS?
+    # TODO other dependencies: CombBLAS?
+
+    if 'with-strumpack-tpl-zfp' in self.argDB:
+      args.append('-DTPL_ZFP_PREFIX='+self.argDB['with-strumpack-tpl-zfp'])
+    if 'with-strumpack-tpl-zfp-lib' in self.argDB:
+      self.liblist.append(self.argDB['with-strumpack-tpl-zfp-lib'])
+
+    if 'with-strumpack-tpl-butterflypack' in self.argDB:
+      args.append('-DTPL_BUTTERFLYPACK_PREFIX='+self.argDB['with-strumpack-tpl-butterflypack'])
+    if 'with-strumpack-tpl-butterflypack-lib' in self.argDB:
+      self.liblist.append(self.argDB['with-strumpack-tpl-butterflypack-lib'])
+
+    if 'with-strumpack-tpl-slate' in self.argDB:
+      args.append('-Dslate_ROOT='+self.argDB['with-strumpack-tpl-slate'])
+    if 'with-strumpack-tpl-slate-lib' in self.argDB:
+      self.liblist.append(self.argDB['with-strumpack-tpl-slate-lib'])
 
     return args
 
