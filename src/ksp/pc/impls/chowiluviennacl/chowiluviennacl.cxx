@@ -40,7 +40,6 @@ static PetscErrorCode PCSetUp_CHOWILUVIENNACL(PC pc)
 {
   PC_CHOWILUVIENNACL *ilu = (PC_CHOWILUVIENNACL*)pc->data;
   PetscBool           flg = PETSC_FALSE;
-  PetscErrorCode      ierr;
   Mat_SeqAIJViennaCL  *gpustruct;
 
   PetscFunctionBegin;
@@ -87,7 +86,6 @@ static PetscErrorCode PCSetUp_CHOWILUVIENNACL(PC pc)
 static PetscErrorCode PCApply_CHOWILUVIENNACL(PC pc,Vec x,Vec y)
 {
   PC_CHOWILUVIENNACL            *ilu = (PC_CHOWILUVIENNACL*)pc->data;
-  PetscErrorCode                ierr;
   PetscBool                     flg1,flg2;
   viennacl::vector<PetscScalar> const *xarray=NULL;
   viennacl::vector<PetscScalar> *yarray=NULL;
@@ -131,7 +129,6 @@ static PetscErrorCode PCApply_CHOWILUVIENNACL(PC pc,Vec x,Vec y)
 static PetscErrorCode PCDestroy_CHOWILUVIENNACL(PC pc)
 {
   PC_CHOWILUVIENNACL  *ilu = (PC_CHOWILUVIENNACL*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (ilu->CHOWILUVIENNACL) {
@@ -151,8 +148,6 @@ static PetscErrorCode PCDestroy_CHOWILUVIENNACL(PC pc)
 
 static PetscErrorCode PCSetFromOptions_CHOWILUVIENNACL(PetscOptionItems *PetscOptionsObject,PC pc)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"CHOWILUVIENNACL options"));
   CHKERRQ(PetscOptionsTail());
@@ -173,7 +168,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PCCreate_CHOWILUVIENNACL(PC pc)
 {
   PC_CHOWILUVIENNACL  *ilu;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /*

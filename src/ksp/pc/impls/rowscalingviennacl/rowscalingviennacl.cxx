@@ -40,7 +40,6 @@ static PetscErrorCode PCSetUp_ROWSCALINGVIENNACL(PC pc)
 {
   PC_ROWSCALINGVIENNACL  *rowscaling = (PC_ROWSCALINGVIENNACL*)pc->data;
   PetscBool              flg = PETSC_FALSE;
-  PetscErrorCode         ierr;
   Mat_SeqAIJViennaCL     *gpustruct;
 
   PetscFunctionBegin;
@@ -87,7 +86,6 @@ static PetscErrorCode PCSetUp_ROWSCALINGVIENNACL(PC pc)
 static PetscErrorCode PCApply_ROWSCALINGVIENNACL(PC pc,Vec x,Vec y)
 {
   PC_ROWSCALINGVIENNACL         *ilu = (PC_ROWSCALINGVIENNACL*)pc->data;
-  PetscErrorCode                ierr;
   PetscBool                     flg1,flg2;
   viennacl::vector<PetscScalar> const *xarray=NULL;
   viennacl::vector<PetscScalar> *yarray=NULL;
@@ -131,7 +129,6 @@ static PetscErrorCode PCApply_ROWSCALINGVIENNACL(PC pc,Vec x,Vec y)
 static PetscErrorCode PCDestroy_ROWSCALINGVIENNACL(PC pc)
 {
   PC_ROWSCALINGVIENNACL  *rowscaling = (PC_ROWSCALINGVIENNACL*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (rowscaling->ROWSCALINGVIENNACL) {
@@ -151,8 +148,6 @@ static PetscErrorCode PCDestroy_ROWSCALINGVIENNACL(PC pc)
 
 static PetscErrorCode PCSetFromOptions_ROWSCALINGVIENNACL(PetscOptionItems *PetscOptionsObject,PC pc)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"ROWSCALINGVIENNACL options"));
   CHKERRQ(PetscOptionsTail());
@@ -173,7 +168,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PCCreate_ROWSCALINGVIENNACL(PC pc)
 {
   PC_ROWSCALINGVIENNACL  *rowscaling;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /*

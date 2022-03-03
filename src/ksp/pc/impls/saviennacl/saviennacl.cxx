@@ -39,7 +39,6 @@ static PetscErrorCode PCSetUp_SAVIENNACL(PC pc)
 {
   PC_SAVIENNACL      *sa = (PC_SAVIENNACL*)pc->data;
   PetscBool          flg = PETSC_FALSE;
-  PetscErrorCode     ierr;
   Mat_SeqAIJViennaCL *gpustruct;
 
   PetscFunctionBegin;
@@ -89,7 +88,6 @@ static PetscErrorCode PCSetUp_SAVIENNACL(PC pc)
 static PetscErrorCode PCApply_SAVIENNACL(PC pc,Vec x,Vec y)
 {
   PC_SAVIENNACL                 *sac = (PC_SAVIENNACL*)pc->data;
-  PetscErrorCode                ierr;
   PetscBool                     flg1,flg2;
   viennacl::vector<PetscScalar> const *xarray=NULL;
   viennacl::vector<PetscScalar> *yarray=NULL;
@@ -130,7 +128,6 @@ static PetscErrorCode PCApply_SAVIENNACL(PC pc,Vec x,Vec y)
 static PetscErrorCode PCDestroy_SAVIENNACL(PC pc)
 {
   PC_SAVIENNACL  *sac = (PC_SAVIENNACL*)pc->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (sac->SAVIENNACL) {
@@ -150,8 +147,6 @@ static PetscErrorCode PCDestroy_SAVIENNACL(PC pc)
 
 static PetscErrorCode PCSetFromOptions_SAVIENNACL(PetscOptionItems *PetscOptionsObject,PC pc)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject,"SAVIENNACL options"));
   CHKERRQ(PetscOptionsTail());
@@ -172,7 +167,6 @@ M*/
 PETSC_EXTERN PetscErrorCode PCCreate_SAVIENNACL(PC pc)
 {
   PC_SAVIENNACL  *sac;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /*

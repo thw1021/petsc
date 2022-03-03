@@ -35,7 +35,6 @@ PETSC_EXTERN PetscErrorCode DMPlexGenerate_Tetgen(DM boundary, PetscBool interpo
   PetscInt               vStart, vEnd, v, eStart, eEnd, e, fStart, fEnd, f;
   DMPlexInterpolatedFlag isInterpolated;
   PetscMPIInt            rank;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)boundary,&comm));
@@ -295,7 +294,6 @@ PETSC_EXTERN PetscErrorCode DMPlexRefine_Tetgen(DM dm, double *maxVolumes, DM *d
   PetscInt               vStart, vEnd, v, eStart, eEnd, e, fStart, fEnd, f, cStart, cEnd, c;
   DMPlexInterpolatedFlag isInterpolated;
   PetscMPIInt            rank;
-  PetscErrorCode         ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)dm,&comm));

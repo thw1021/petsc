@@ -20,8 +20,6 @@
 @*/
 PetscErrorCode DMGetCeed(DM dm, Ceed *ceed)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscValidPointer(ceed, 2);

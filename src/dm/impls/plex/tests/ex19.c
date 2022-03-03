@@ -55,8 +55,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 
 static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(DMCreate(comm, dm));
   CHKERRQ(DMSetType(*dm, DMPLEX));
@@ -74,7 +72,6 @@ static PetscErrorCode ComputeMetricSensor(DM dm, AppCtx *user, Vec *metric)
   Vec            f, g, H;
   PetscBool      simplex;
   PetscInt       dim;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDimension(dm, &dim));
@@ -119,7 +116,6 @@ static PetscErrorCode ComputeMetricSensor(DM dm, AppCtx *user, Vec *metric)
 static PetscErrorCode ComputeMetric(DM dm, AppCtx *user, Vec *metric)
 {
   PetscReal          lambda = 1/(user->hmax*user->hmax);
-  PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
   if (user->metOpt == 0) {
@@ -190,7 +186,6 @@ static PetscErrorCode TestL2Projection(DM dm, DM dma, AppCtx *user)
   PetscReal        error;
   PetscBool        simplex;
   PetscInt         dim;
-  PetscErrorCode   ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(DMGetDimension(dm, &dim));
