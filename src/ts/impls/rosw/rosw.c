@@ -1071,7 +1071,7 @@ static PetscErrorCode TSInterpolate_RosW(TS ts,PetscReal itime,Vec U)
   Vec             *Y        = ros->Y;
 
   PetscFunctionBegin;
-  PetscCheckFalse(!Bt,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSRosW %s does not have an interpolation formula",ros->tableau->name);
+  PetscCheck(Bt,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSRosW %s does not have an interpolation formula",ros->tableau->name);
 
   switch (ros->status) {
   case TS_STEP_INCOMPLETE:

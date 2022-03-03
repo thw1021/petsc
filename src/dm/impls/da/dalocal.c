@@ -26,7 +26,7 @@ static PetscErrorCode  VecMatlabEnginePut_DA2d(PetscObject obj,void *mengine)
 
   PetscFunctionBegin;
   CHKERRQ(VecGetDM(vec, &da));
-  PetscCheckFalse(!da,PetscObjectComm((PetscObject)vec),PETSC_ERR_ARG_WRONGSTATE,"Vector not associated with a DMDA");
+  PetscCheck(da,PetscObjectComm((PetscObject)vec),PETSC_ERR_ARG_WRONGSTATE,"Vector not associated with a DMDA");
   CHKERRQ(DMDAGetGhostCorners(da,0,0,0,&m,&n,0));
 
   CHKERRQ(VecGetArray(vec,&array));

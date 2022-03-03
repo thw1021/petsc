@@ -297,7 +297,7 @@ PetscErrorCode  TSSetFromOptions(TS ts)
     PetscCheckFalse(!monfilename[0],PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"-ts_monitor_solution_vtk requires a file template, e.g. filename-%%03D.vts");
     /* Do some cursory validation of the input. */
     CHKERRQ(PetscStrstr(monfilename,"%",(char**)&ptr));
-    PetscCheckFalse(!ptr,PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"-ts_monitor_solution_vtk requires a file template, e.g. filename-%%03D.vts");
+    PetscCheck(ptr,PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"-ts_monitor_solution_vtk requires a file template, e.g. filename-%%03D.vts");
     for (ptr++; ptr && *ptr; ptr++) {
       CHKERRQ(PetscStrchr("DdiouxX",*ptr,(char**)&ptr2));
       PetscCheckFalse(!ptr2 && (*ptr < '0' || '9' < *ptr),PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"Invalid file template argument to -ts_monitor_solution_vtk, should look like filename-%%03D.vts");
@@ -1943,7 +1943,7 @@ PetscErrorCode  TSLoad(TS ts, PetscViewer viewer)
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,2);
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERBINARY,&isbinary));
-  PetscCheckFalse(!isbinary,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Invalid viewer; open viewer with PetscViewerBinaryOpen()");
+  PetscCheck(isbinary,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Invalid viewer; open viewer with PetscViewerBinaryOpen()");
 
   CHKERRQ(PetscViewerBinaryRead(viewer,&classid,1,NULL,PETSC_INT));
   PetscCheckFalse(classid != TS_FILE_CLASSID,PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_WRONG,"Not TS next in file");
@@ -2531,7 +2531,7 @@ PetscErrorCode  TSSetTimeError(TS ts,Vec v)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
-  PetscCheckFalse(!ts->setupcalled,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call TSSetUp() first");
+  PetscCheck(ts->setupcalled,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call TSSetUp() first");
   if (ts->ops->settimeerror) {
     CHKERRQ((*ts->ops->settimeerror)(ts,v));
   }
@@ -3498,7 +3498,7 @@ PetscErrorCode TSInterpolate(TS ts,PetscReal t,Vec U)
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
   PetscValidHeaderSpecific(U,VEC_CLASSID,3);
   PetscCheckFalse(t < ts->ptime_prev || t > ts->ptime,PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_OUTOFRANGE,"Requested time %g not in last time steps [%g,%g]",t,(double)ts->ptime_prev,(double)ts->ptime);
-  PetscCheckFalse(!ts->ops->interpolate,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"%s does not provide interpolation",((PetscObject)ts)->type_name);
+  PetscCheck(ts->ops->interpolate,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"%s does not provide interpolation",((PetscObject)ts)->type_name);
   CHKERRQ((*ts->ops->interpolate)(ts,t,U));
   PetscFunctionReturn(0);
 }
@@ -3543,7 +3543,7 @@ PetscErrorCode  TSStep(TS ts)
   CHKERRQ(TSSetUp(ts));
   CHKERRQ(TSTrajectorySetUp(ts->trajectory,ts));
 
-  PetscCheckFalse(!ts->ops->step,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSStep not implemented for type '%s'",((PetscObject)ts)->type_name);
+  PetscCheck(ts->ops->step,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSStep not implemented for type '%s'",((PetscObject)ts)->type_name);
   PetscCheckFalse(ts->max_time >= PETSC_MAX_REAL && ts->max_steps == PETSC_MAX_INT,PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_WRONGSTATE,"You must call TSSetMaxTime() or TSSetMaxSteps(), or use -ts_max_time <time> or -ts_max_steps <steps>");
   PetscCheckFalse(ts->exact_final_time == TS_EXACTFINALTIME_UNSPECIFIED,PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_WRONGSTATE,"You must call TSSetExactFinalTime() or use -ts_exact_final_time <stepover,interpolate,matchstep> before calling TSStep()");
   PetscCheckFalse(ts->exact_final_time == TS_EXACTFINALTIME_MATCHSTEP && !ts->adapt,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"Since TS is not adaptive you cannot use TS_EXACTFINALTIME_MATCHSTEP, suggest TS_EXACTFINALTIME_INTERPOLATE");
@@ -3610,7 +3610,7 @@ PetscErrorCode TSEvaluateWLTE(TS ts,NormType wnormtype,PetscInt *order,PetscReal
   if (order) PetscValidLogicalCollectiveInt(ts,*order,3);
   PetscValidRealPointer(wlte,4);
   PetscCheckFalse(wnormtype != NORM_2 && wnormtype != NORM_INFINITY,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"No support for norm type %s",NormTypes[wnormtype]);
-  PetscCheckFalse(!ts->ops->evaluatewlte,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSEvaluateWLTE not implemented for type '%s'",((PetscObject)ts)->type_name);
+  PetscCheck(ts->ops->evaluatewlte,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSEvaluateWLTE not implemented for type '%s'",((PetscObject)ts)->type_name);
   CHKERRQ((*ts->ops->evaluatewlte)(ts,wnormtype,order,wlte));
   PetscFunctionReturn(0);
 }
@@ -3643,7 +3643,7 @@ PetscErrorCode TSEvaluateStep(TS ts,PetscInt order,Vec U,PetscBool *done)
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
   PetscValidType(ts,1);
   PetscValidHeaderSpecific(U,VEC_CLASSID,3);
-  PetscCheckFalse(!ts->ops->evaluatestep,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSEvaluateStep not implemented for type '%s'",((PetscObject)ts)->type_name);
+  PetscCheck(ts->ops->evaluatestep,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSEvaluateStep not implemented for type '%s'",((PetscObject)ts)->type_name);
   CHKERRQ((*ts->ops->evaluatestep)(ts,order,U,done));
   PetscFunctionReturn(0);
 }
@@ -3849,7 +3849,7 @@ PetscErrorCode TSSolve(TS ts,Vec u)
       CHKERRQ(VecDestroy(&solution)); /* grant ownership */
     }
     CHKERRQ(VecCopy(u,ts->vec_sol));
-    PetscCheckFalse(ts->forward_solve,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"Sensitivity analysis does not support the mode TS_EXACTFINALTIME_INTERPOLATE");
+    PetscCheck(!ts->forward_solve,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"Sensitivity analysis does not support the mode TS_EXACTFINALTIME_INTERPOLATE");
   } else if (u) {
     CHKERRQ(TSSetSolution(ts,u));
   }
@@ -5778,7 +5778,7 @@ PetscErrorCode TSComputeLinearStability(TS ts,PetscReal xr,PetscReal xi,PetscRea
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
-  PetscCheckFalse(!ts->ops->linearstability,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"Linearized stability function not provided for this method");
+  PetscCheck(ts->ops->linearstability,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"Linearized stability function not provided for this method");
   CHKERRQ((*ts->ops->linearstability)(ts,xr,xi,yr,yi));
   PetscFunctionReturn(0);
 }
@@ -5828,8 +5828,8 @@ PetscErrorCode  TSRollBack(TS ts)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts, TS_CLASSID,1);
-  PetscCheckFalse(ts->steprollback,PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_WRONGSTATE,"TSRollBack already called");
-  PetscCheckFalse(!ts->ops->rollback,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSRollBack not implemented for type '%s'",((PetscObject)ts)->type_name);
+  PetscCheck(!ts->steprollback,PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_WRONGSTATE,"TSRollBack already called");
+  PetscCheck(ts->ops->rollback,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSRollBack not implemented for type '%s'",((PetscObject)ts)->type_name);
   CHKERRQ((*ts->ops->rollback)(ts));
   ts->time_step = ts->ptime - ts->ptime_prev;
   ts->ptime = ts->ptime_prev;

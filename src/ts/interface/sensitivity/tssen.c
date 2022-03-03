@@ -949,8 +949,8 @@ PetscErrorCode TSAdjointSetForward(TS ts,Mat didp)
 
   PetscFunctionBegin;
   ts->forward_solve = PETSC_TRUE; /* turn on tangent linear mode */
-  PetscCheckFalse(!ts->vecs_sensi2,PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"Must call TSSetCostHessianProducts() first");
-  PetscCheckFalse(!ts->vec_dir,PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"Directional vector is missing. Call TSSetCostHessianProducts() to set it.");
+  PetscCheck(ts->vecs_sensi2,PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"Must call TSSetCostHessianProducts() first");
+  PetscCheck(ts->vec_dir,PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"Directional vector is missing. Call TSSetCostHessianProducts() to set it.");
   /* create a single-column dense matrix */
   CHKERRQ(VecGetLocalSize(ts->vec_sol,&lsize));
   CHKERRQ(MatCreateDense(PetscObjectComm((PetscObject)ts),lsize,PETSC_DECIDE,PETSC_DECIDE,1,NULL,&A));
@@ -1020,14 +1020,14 @@ PetscErrorCode TSAdjointSetUp(TS ts)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
   if (ts->adjointsetupcalled) PetscFunctionReturn(0);
-  PetscCheckFalse(!ts->vecs_sensi,PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_WRONGSTATE,"Must call TSSetCostGradients() first");
+  PetscCheck(ts->vecs_sensi,PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_WRONGSTATE,"Must call TSSetCostGradients() first");
   PetscCheckFalse(ts->vecs_sensip && !ts->Jacp && !ts->Jacprhs,PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_WRONGSTATE,"Must call TSSetRHSJacobianP() or TSSetIJacobianP() first");
   CHKERRQ(TSGetTrajectory(ts,&tj));
   CHKERRQ(PetscObjectTypeCompare((PetscObject)tj,TSTRAJECTORYBASIC,&match));
   if (match) {
     PetscBool solution_only;
     CHKERRQ(TSTrajectoryGetSolutionOnly(tj,&solution_only));
-    PetscCheckFalse(solution_only,PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"TSAdjoint cannot use the solution-only mode when choosing the Basic TSTrajectory type. Turn it off with -ts_trajectory_solution_only 0");
+    PetscCheck(!solution_only,PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"TSAdjoint cannot use the solution-only mode when choosing the Basic TSTrajectory type. Turn it off with -ts_trajectory_solution_only 0");
   }
   CHKERRQ(TSTrajectorySetUseHistory(tj,PETSC_FALSE)); /* not use TSHistory */
 
@@ -1470,14 +1470,14 @@ PetscErrorCode TSAdjointStep(TS ts)
 
   ts->reason = TS_CONVERGED_ITERATING;
   ts->ptime_prev = ts->ptime;
-  PetscCheckFalse(!ts->ops->adjointstep,PetscObjectComm((PetscObject)ts),PETSC_ERR_NOT_CONVERGED,"TSStep has failed because the adjoint of  %s has not been implemented, try other time stepping methods for adjoint sensitivity analysis",((PetscObject)ts)->type_name);
+  PetscCheck(ts->ops->adjointstep,PetscObjectComm((PetscObject)ts),PETSC_ERR_NOT_CONVERGED,"TSStep has failed because the adjoint of  %s has not been implemented, try other time stepping methods for adjoint sensitivity analysis",((PetscObject)ts)->type_name);
   CHKERRQ(PetscLogEventBegin(TS_AdjointStep,ts,0,0,0));
   CHKERRQ((*ts->ops->adjointstep)(ts));
   CHKERRQ(PetscLogEventEnd(TS_AdjointStep,ts,0,0,0));
   ts->adjoint_steps++;
 
   if (ts->reason < 0) {
-    PetscCheckFalse(ts->errorifstepfailed,PetscObjectComm((PetscObject)ts),PETSC_ERR_NOT_CONVERGED,"TSAdjointStep has failed due to %s",TSConvergedReasons[ts->reason]);
+    PetscCheck(!ts->errorifstepfailed,PetscObjectComm((PetscObject)ts),PETSC_ERR_NOT_CONVERGED,"TSAdjointStep has failed due to %s",TSConvergedReasons[ts->reason]);
   } else if (!ts->reason) {
     if (ts->adjoint_steps >= ts->adjoint_max_steps) ts->reason = TS_CONVERGED_ITS;
   }
@@ -1616,7 +1616,7 @@ PetscErrorCode TSAdjointCostIntegral(TS ts)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
-  PetscCheckFalse(!ts->ops->adjointintegral,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"%s does not provide integral evaluation in the adjoint run",((PetscObject)ts)->type_name);
+  PetscCheck(ts->ops->adjointintegral,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"%s does not provide integral evaluation in the adjoint run",((PetscObject)ts)->type_name);
   CHKERRQ((*ts->ops->adjointintegral)(ts));
   PetscFunctionReturn(0);
 }
@@ -1746,7 +1746,7 @@ PetscErrorCode TSForwardStep(TS ts)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
-  PetscCheckFalse(!ts->ops->forwardstep,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"%s does not provide forward sensitivity analysis",((PetscObject)ts)->type_name);
+  PetscCheck(ts->ops->forwardstep,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"%s does not provide forward sensitivity analysis",((PetscObject)ts)->type_name);
   CHKERRQ(PetscLogEventBegin(TS_ForwardStep,ts,0,0,0));
   CHKERRQ((*ts->ops->forwardstep)(ts));
   CHKERRQ(PetscLogEventEnd(TS_ForwardStep,ts,0,0,0));
@@ -1833,7 +1833,7 @@ PetscErrorCode TSForwardCostIntegral(TS ts)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
-  PetscCheckFalse(!ts->ops->forwardintegral,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"%s does not provide integral evaluation in the forward run",((PetscObject)ts)->type_name);
+  PetscCheck(ts->ops->forwardintegral,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"%s does not provide integral evaluation in the forward run",((PetscObject)ts)->type_name);
   CHKERRQ((*ts->ops->forwardintegral)(ts));
   PetscFunctionReturn(0);
 }

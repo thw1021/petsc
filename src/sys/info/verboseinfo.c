@@ -185,7 +185,7 @@ PetscErrorCode PetscInfoSetClasses(PetscBool exclude, PetscInt N, const char *co
 {
 
   PetscFunctionBegin;
-  PetscCheckFalse(PetscInfoClassesLocked,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "PetscInfoSetClasses() cannot be called after PetscInfoGetClass() or PetscInfoProcessClass()");
+  PetscCheck(!PetscInfoClassesLocked,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "PetscInfoSetClasses() cannot be called after PetscInfoGetClass() or PetscInfoProcessClass()");
   CHKERRQ(PetscStrNArrayDestroy(PetscInfoNumClasses, &PetscInfoClassnames));
   CHKERRQ(PetscStrNArrayallocpy(N, classnames, &PetscInfoClassnames));
   PetscInfoNumClasses = N;
@@ -426,7 +426,7 @@ PetscErrorCode PetscInfoDestroy(void)
   CHKERRQ(PetscInfoAllow(PETSC_FALSE));
   CHKERRQ(PetscStrNArrayDestroy(PetscInfoNumClasses, &PetscInfoClassnames));
   err  = fflush(PetscInfoFile);
-  PetscCheckFalse(err,PETSC_COMM_SELF,PETSC_ERR_SYS,"fflush() failed on file");
+  PetscCheck(!err,PETSC_COMM_SELF,PETSC_ERR_SYS,"fflush() failed on file");
   if (PetscInfoFilename) {
     CHKERRQ(PetscFClose(MPI_COMM_SELF, PetscInfoFile));
   }
@@ -597,7 +597,7 @@ PetscErrorCode  PetscInfo_Private(const char func[],PetscObject obj, const char 
   CHKERRQ(PetscVSNPrintf(string+len, 8*1024-len,message,&fullLength, Argp));
   CHKERRQ(PetscFPrintf(PETSC_COMM_SELF,PetscInfoFile, "%s", string));
   err  = fflush(PetscInfoFile);
-  PetscCheckFalse(err,PETSC_COMM_SELF,PETSC_ERR_SYS,"fflush() failed on file");
+  PetscCheck(!err,PETSC_COMM_SELF,PETSC_ERR_SYS,"fflush() failed on file");
   if (petsc_history) {
     va_start(Argp, message);
     CHKERRQ((*PetscVFPrintf)(petsc_history, message, Argp));

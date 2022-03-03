@@ -41,7 +41,7 @@ PETSC_EXTERN PetscErrorCode  VecMatlabEngineGet_Default(PetscObject obj,void *me
   CHKERRQ(VecGetArray(vec,&array));
   CHKERRQ(VecGetLocalSize(vec,&n));
   mat  = engGetVariable((Engine*)mengine,obj->name);
-  PetscCheckFalse(!mat,PETSC_COMM_SELF,PETSC_ERR_LIB,"Unable to get object %s from matlab",obj->name);
+  PetscCheck(mat,PETSC_COMM_SELF,PETSC_ERR_LIB,"Unable to get object %s from matlab",obj->name);
   CHKERRQ(PetscArraycpy(array,mxGetPr(mat),n));
   CHKERRQ(VecRestoreArray(vec,&array));
   PetscFunctionReturn(0);

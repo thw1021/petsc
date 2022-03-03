@@ -1078,7 +1078,7 @@ static PetscErrorCode TSSetUp_MPRK(TS ts)
 
   if (tab->np == 3) {
     CHKERRQ(TSRHSSplitGetIS(ts,"medium",&mprk->is_medium));
-    PetscCheckFalse(!mprk->is_medium,PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"Must set up RHSSplits with TSRHSSplitSetIS() using split names 'slow' and 'medium' and 'fast' respectively in order to use the method '%s'",tab->name);
+    PetscCheck(mprk->is_medium,PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"Must set up RHSSplits with TSRHSSplitSetIS() using split names 'slow' and 'medium' and 'fast' respectively in order to use the method '%s'",tab->name);
     CHKERRQ(TSRHSSplitGetIS(ts,"mediumbuffer",&mprk->is_mediumbuffer));
     if (!mprk->is_mediumbuffer) { /* let medium buffer cover whole medium region */
       mprk->is_mediumbuffer = mprk->is_medium;

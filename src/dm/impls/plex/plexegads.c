@@ -802,7 +802,7 @@ static PetscErrorCode DMPlexCreateEGADS(MPI_Comm comm, ego context, ego model, D
     CHKERRQ(EG_getBodyTopos(body, NULL, NODE, &Nv, &nobjs));
 
     CHKERRQ(PetscHMapIFind(bodyVertexMap, b, &BViter, &BVfound));
-    PetscCheckFalse(!BVfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "Body %d not found in bodyVertexMap", b);
+    PetscCheck(BVfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "Body %d not found in bodyVertexMap", b);
     CHKERRQ(PetscHMapIGet(bodyVertexMap, b, &bodyVertexIndexStart));
 
     for (int v = 0; v < Nv; ++v) {
@@ -823,11 +823,11 @@ static PetscErrorCode DMPlexCreateEGADS(MPI_Comm comm, ego context, ego model, D
     CHKERRQ(EG_getBodyTopos(body, NULL, EDGE, &Ne, &eobjs));
 
     CHKERRQ(PetscHMapIFind(bodyEdgeMap, b, &BEiter, &BEfound));
-    PetscCheckFalse(!BEfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "Body %d not found in bodyEdgeMap", b);
+    PetscCheck(BEfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "Body %d not found in bodyEdgeMap", b);
     CHKERRQ(PetscHMapIGet(bodyEdgeMap, b, &bodyEdgeIndexStart));
 
     CHKERRQ(PetscHMapIFind(bodyEdgeGlobalMap, b, &BEGiter, &BEGfound));
-    PetscCheckFalse(!BEGfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "Body %d not found in bodyEdgeGlobalMap", b);
+    PetscCheck(BEGfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "Body %d not found in bodyEdgeGlobalMap", b);
     CHKERRQ(PetscHMapIGet(bodyEdgeGlobalMap, b, &bodyEdgeGlobalIndexStart));
 
     for (int e = 0; e < Ne; ++e) {
@@ -843,7 +843,7 @@ static PetscErrorCode DMPlexCreateEGADS(MPI_Comm comm, ego context, ego model, D
 
     // get relative offset from globalEdgeID Vector
     CHKERRQ(PetscHMapIFind(edgeMap, bodyEdgeGlobalIndexStart + eid - 1, &EMiter, &EMfound));
-      PetscCheckFalse(!EMfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "Edge %d not found in edgeMap", bodyEdgeGlobalIndexStart + eid - 1);
+      PetscCheck(EMfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "Edge %d not found in edgeMap", bodyEdgeGlobalIndexStart + eid - 1);
       CHKERRQ(PetscHMapIGet(edgeMap, bodyEdgeGlobalIndexStart + eid - 1, &eOffset));
 
     CHKERRQ(EG_getRange(edge, range, &periodic));
@@ -860,7 +860,7 @@ static PetscErrorCode DMPlexCreateEGADS(MPI_Comm comm, ego context, ego model, D
     CHKERRQ(EG_getBodyTopos(body, NULL, FACE, &Nf, &fobjs));
 
     CHKERRQ(PetscHMapIFind(bodyFaceMap, b, &BFiter, &BFfound));
-    PetscCheckFalse(!BFfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "Body %d not found in bodyFaceMap", b);
+    PetscCheck(BFfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "Body %d not found in bodyFaceMap", b);
     CHKERRQ(PetscHMapIGet(bodyFaceMap, b, &bodyFaceIndexStart));
 
     for (int f = 0; f < Nf; ++f) {
@@ -913,7 +913,7 @@ static PetscErrorCode DMPlexCreateEGADS(MPI_Comm comm, ego context, ego model, D
 
         // get relative offset from globalEdgeID Vector
         CHKERRQ(PetscHMapIFind(edgeMap, bodyEdgeGlobalIndexStart + eid - 1, &EMiter, &EMfound));
-          PetscCheckFalse(!EMfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "Edge %d of Body %d not found in edgeMap. Global Edge ID :: %d", eid, b, bodyEdgeGlobalIndexStart + eid - 1);
+          PetscCheck(EMfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "Edge %d of Body %d not found in edgeMap. Global Edge ID :: %d", eid, b, bodyEdgeGlobalIndexStart + eid - 1);
           CHKERRQ(PetscHMapIGet(edgeMap, bodyEdgeGlobalIndexStart + eid - 1, &eOffset));
 
       midPntID = numVertices + bodyEdgeIndexStart + eOffset - 1;
@@ -984,19 +984,19 @@ static PetscErrorCode DMPlexCreateEGADS(MPI_Comm comm, ego context, ego model, D
   PetscBool       BVfound, BEfound, BEGfound, BFfound, EMfound;
 
   CHKERRQ(PetscHMapIFind(bodyVertexMap, b, &BViter, &BVfound));
-  PetscCheckFalse(!BVfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "Body %d not found in bodyVertexMap", b);
+  PetscCheck(BVfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "Body %d not found in bodyVertexMap", b);
   CHKERRQ(PetscHMapIGet(bodyVertexMap, b, &bodyVertexIndexStart));
 
   CHKERRQ(PetscHMapIFind(bodyEdgeMap, b, &BEiter, &BEfound));
-  PetscCheckFalse(!BEfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "Body %d not found in bodyEdgeMap", b);
+  PetscCheck(BEfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "Body %d not found in bodyEdgeMap", b);
   CHKERRQ(PetscHMapIGet(bodyEdgeMap, b, &bodyEdgeIndexStart));
 
     CHKERRQ(PetscHMapIFind(bodyFaceMap, b, &BFiter, &BFfound));
-  PetscCheckFalse(!BFfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "Body %d not found in bodyFaceMap", b);
+  PetscCheck(BFfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "Body %d not found in bodyFaceMap", b);
   CHKERRQ(PetscHMapIGet(bodyFaceMap, b, &bodyFaceIndexStart));
 
     CHKERRQ(PetscHMapIFind(bodyEdgeGlobalMap, b, &BEGiter, &BEGfound));
-    PetscCheckFalse(!BEGfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "Body %d not found in bodyEdgeGlobalMap", b);
+    PetscCheck(BEGfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "Body %d not found in bodyEdgeGlobalMap", b);
     CHKERRQ(PetscHMapIGet(bodyEdgeGlobalMap, b, &bodyEdgeGlobalIndexStart));
 
   CHKERRQ(EG_getBodyTopos(body, NULL, FACE,  &Nf, &fobjs));
@@ -1026,7 +1026,7 @@ static PetscErrorCode DMPlexCreateEGADS(MPI_Comm comm, ego context, ego model, D
 
       // get relative offset from globalEdgeID Vector
       CHKERRQ(PetscHMapIFind(edgeMap, bodyEdgeGlobalIndexStart + eid - 1, &EMiter, &EMfound));
-      PetscCheckFalse(!EMfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "Edge %d of Body %d not found in edgeMap. Global Edge ID :: %d", eid, b, bodyEdgeGlobalIndexStart + eid - 1);
+      PetscCheck(EMfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "Edge %d of Body %d not found in edgeMap. Global Edge ID :: %d", eid, b, bodyEdgeGlobalIndexStart + eid - 1);
       CHKERRQ(PetscHMapIGet(edgeMap, bodyEdgeGlobalIndexStart + eid - 1, &eOffset));
 
       CHKERRQ(EG_getBodyTopos(body, edge, NODE, &Nv, &nobjs));
@@ -1200,7 +1200,7 @@ static PetscErrorCode DMPlexCreateEGADS_Tess_Internal(MPI_Comm comm, ego context
   PetscBool       PISfound;
 
   CHKERRQ(PetscHMapIFind(pointIndexStartMap, b, &PISiter, &PISfound));
-  PetscCheckFalse(!PISfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "Body %d not found in pointIndexStartMap", b);
+  PetscCheck(PISfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "Body %d not found in pointIndexStartMap", b);
   CHKERRQ(PetscHMapIGet(pointIndexStartMap, b, &pointIndexStart));
 
   CHKERRQ(EG_getBodyTopos(body, NULL, FACE,  &Nf, &fobjs));
@@ -1315,15 +1315,15 @@ static PetscErrorCode DMPlexCreateEGADS_Tess_Internal(MPI_Comm comm, ego context
 
     //Converted to Hash Tables
     CHKERRQ(PetscHMapIFind(pTypeLabelMap, n - nStart, &PTLiter, &PTLfound));
-    PetscCheckFalse(!PTLfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "DAG Point %d not found in pTypeLabelMap", n);
+    PetscCheck(PTLfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "DAG Point %d not found in pTypeLabelMap", n);
     CHKERRQ(PetscHMapIGet(pTypeLabelMap, n - nStart, &pTypeVal));
 
     CHKERRQ(PetscHMapIFind(pIndexLabelMap, n - nStart, &PILiter, &PILfound));
-    PetscCheckFalse(!PILfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "DAG Point %d not found in pIndexLabelMap", n);
+    PetscCheck(PILfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "DAG Point %d not found in pIndexLabelMap", n);
     CHKERRQ(PetscHMapIGet(pIndexLabelMap, n - nStart, &pIndexVal));
 
     CHKERRQ(PetscHMapIFind(pBodyIndexLabelMap, n - nStart, &PBLiter, &PBLfound));
-    PetscCheckFalse(!PBLfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "DAG Point %d not found in pBodyLabelMap", n);
+    PetscCheck(PBLfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "DAG Point %d not found in pBodyLabelMap", n);
     CHKERRQ(PetscHMapIGet(pBodyIndexLabelMap, n - nStart, &pBodyVal));
 
     CHKERRQ(DMLabelSetValue(bodyLabel, n, pBodyVal));
@@ -1362,11 +1362,11 @@ static PetscErrorCode DMPlexCreateEGADS_Tess_Internal(MPI_Comm comm, ego context
 
     // Convert to Hash Table
   CHKERRQ(PetscHMapIFind(triFaceIDLabelMap, f - fStart, &TFLiter, &TFLfound));
-  PetscCheckFalse(!TFLfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "DAG Point %d not found in triFaceIDLabelMap", f);
+  PetscCheck(TFLfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "DAG Point %d not found in triFaceIDLabelMap", f);
   CHKERRQ(PetscHMapIGet(triFaceIDLabelMap, f - fStart, &triFaceVal));
 
   CHKERRQ(PetscHMapIFind(triBodyIDLabelMap, f - fStart, &TBLiter, &TBLfound));
-  PetscCheckFalse(!TBLfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "DAG Point %d not found in triBodyIDLabelMap", f);
+  PetscCheck(TBLfound,PETSC_COMM_SELF, PETSC_ERR_SUP, "DAG Point %d not found in triBodyIDLabelMap", f);
     CHKERRQ(PetscHMapIGet(triBodyIDLabelMap, f - fStart, &triBodyVal));
 
   CHKERRQ(DMLabelSetValue(bodyLabel, f, triBodyVal));

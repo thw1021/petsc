@@ -1005,13 +1005,13 @@ PetscErrorCode  DMCreateGlobalVector(DM dm,Vec *vec)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   PetscValidPointer(vec,2);
-  PetscCheckFalse(!dm->ops->createglobalvector,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMCreateGlobalVector",((PetscObject)dm)->type_name);
+  PetscCheck(dm->ops->createglobalvector,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMCreateGlobalVector",((PetscObject)dm)->type_name);
   CHKERRQ((*dm->ops->createglobalvector)(dm,vec));
   if (PetscDefined(USE_DEBUG)) {
     DM vdm;
 
     CHKERRQ(VecGetDM(*vec,&vdm));
-    PetscCheckFalse(!vdm,PETSC_COMM_SELF,PETSC_ERR_PLIB,"DM type '%s' did not attach the DM to the vector",((PetscObject)dm)->type_name);
+    PetscCheck(vdm,PETSC_COMM_SELF,PETSC_ERR_PLIB,"DM type '%s' did not attach the DM to the vector",((PetscObject)dm)->type_name);
   }
   PetscFunctionReturn(0);
 }
@@ -1038,13 +1038,13 @@ PetscErrorCode  DMCreateLocalVector(DM dm,Vec *vec)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   PetscValidPointer(vec,2);
-  PetscCheckFalse(!dm->ops->createlocalvector,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMCreateLocalVector",((PetscObject)dm)->type_name);
+  PetscCheck(dm->ops->createlocalvector,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMCreateLocalVector",((PetscObject)dm)->type_name);
   CHKERRQ((*dm->ops->createlocalvector)(dm,vec));
   if (PetscDefined(USE_DEBUG)) {
     DM vdm;
 
     CHKERRQ(VecGetDM(*vec,&vdm));
-    PetscCheckFalse(!vdm,PETSC_COMM_SELF,PETSC_ERR_LIB,"DM type '%s' did not attach the DM to the vector",((PetscObject)dm)->type_name);
+    PetscCheck(vdm,PETSC_COMM_SELF,PETSC_ERR_LIB,"DM type '%s' did not attach the DM to the vector",((PetscObject)dm)->type_name);
   }
   PetscFunctionReturn(0);
 }
@@ -1128,7 +1128,7 @@ PetscErrorCode DMGetLocalToGlobalMapping(DM dm,ISLocalToGlobalMapping *ltog)
       CHKERRQ(ISLocalToGlobalMappingCreate(PetscObjectComm((PetscObject)dm), bs, n, ltog, PETSC_OWN_POINTER, &dm->ltogmap));
       CHKERRQ(PetscLogObjectParent((PetscObject)dm, (PetscObject)dm->ltogmap));
     } else {
-      PetscCheckFalse(!dm->ops->getlocaltoglobalmapping,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMGetLocalToGlobalMapping",((PetscObject)dm)->type_name);
+      PetscCheck(dm->ops->getlocaltoglobalmapping,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMGetLocalToGlobalMapping",((PetscObject)dm)->type_name);
       CHKERRQ((*dm->ops->getlocaltoglobalmapping)(dm));
     }
   }
@@ -1193,7 +1193,7 @@ PetscErrorCode  DMCreateInterpolation(DM dmc,DM dmf,Mat *mat,Vec *vec)
   PetscValidHeaderSpecific(dmc,DM_CLASSID,1);
   PetscValidHeaderSpecific(dmf,DM_CLASSID,2);
   PetscValidPointer(mat,3);
-  PetscCheckFalse(!dmc->ops->createinterpolation,PetscObjectComm((PetscObject)dmc),PETSC_ERR_SUP,"DM type %s does not implement DMCreateInterpolation",((PetscObject)dmc)->type_name);
+  PetscCheck(dmc->ops->createinterpolation,PetscObjectComm((PetscObject)dmc),PETSC_ERR_SUP,"DM type %s does not implement DMCreateInterpolation",((PetscObject)dmc)->type_name);
   CHKERRQ(PetscLogEventBegin(DM_CreateInterpolation,dmc,dmf,0,0));
   CHKERRQ((*dmc->ops->createinterpolation)(dmc,dmf,mat,vec));
   CHKERRQ(PetscLogEventEnd(DM_CreateInterpolation,dmc,dmf,0,0));
@@ -1277,7 +1277,7 @@ PetscErrorCode  DMCreateRestriction(DM dmc,DM dmf,Mat *mat)
   PetscValidHeaderSpecific(dmc,DM_CLASSID,1);
   PetscValidHeaderSpecific(dmf,DM_CLASSID,2);
   PetscValidPointer(mat,3);
-  PetscCheckFalse(!dmc->ops->createrestriction,PetscObjectComm((PetscObject)dmc),PETSC_ERR_SUP,"DM type %s does not implement DMCreateRestriction",((PetscObject)dmc)->type_name);
+  PetscCheck(dmc->ops->createrestriction,PetscObjectComm((PetscObject)dmc),PETSC_ERR_SUP,"DM type %s does not implement DMCreateRestriction",((PetscObject)dmc)->type_name);
   CHKERRQ(PetscLogEventBegin(DM_CreateRestriction,dmc,dmf,0,0));
   CHKERRQ((*dmc->ops->createrestriction)(dmc,dmf,mat));
   CHKERRQ(PetscLogEventEnd(DM_CreateRestriction,dmc,dmf,0,0));
@@ -1312,7 +1312,7 @@ PetscErrorCode  DMCreateInjection(DM dac,DM daf,Mat *mat)
   PetscValidHeaderSpecific(dac,DM_CLASSID,1);
   PetscValidHeaderSpecific(daf,DM_CLASSID,2);
   PetscValidPointer(mat,3);
-  PetscCheckFalse(!dac->ops->createinjection,PetscObjectComm((PetscObject)dac),PETSC_ERR_SUP,"DM type %s does not implement DMCreateInjection",((PetscObject)dac)->type_name);
+  PetscCheck(dac->ops->createinjection,PetscObjectComm((PetscObject)dac),PETSC_ERR_SUP,"DM type %s does not implement DMCreateInjection",((PetscObject)dac)->type_name);
   CHKERRQ(PetscLogEventBegin(DM_CreateInjection,dac,daf,0,0));
   CHKERRQ((*dac->ops->createinjection)(dac,daf,mat));
   CHKERRQ(PetscLogEventEnd(DM_CreateInjection,dac,daf,0,0));
@@ -1402,7 +1402,7 @@ PetscErrorCode  DMCreateColoring(DM dm,ISColoringType ctype,ISColoring *coloring
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   PetscValidPointer(coloring,3);
-  PetscCheckFalse(!dm->ops->getcoloring,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMCreateColoring",((PetscObject)dm)->type_name);
+  PetscCheck(dm->ops->getcoloring,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMCreateColoring",((PetscObject)dm)->type_name);
   CHKERRQ((*dm->ops->getcoloring)(dm,ctype,coloring));
   PetscFunctionReturn(0);
 }
@@ -1445,7 +1445,7 @@ PetscErrorCode  DMCreateMatrix(DM dm,Mat *mat)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   PetscValidPointer(mat,2);
-  PetscCheckFalse(!dm->ops->creatematrix,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMCreateMatrix",((PetscObject)dm)->type_name);
+  PetscCheck(dm->ops->creatematrix,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMCreateMatrix",((PetscObject)dm)->type_name);
   CHKERRQ(MatInitializePackage());
   CHKERRQ(PetscLogEventBegin(DM_CreateMatrix,0,0,0,0));
   CHKERRQ((*dm->ops->creatematrix)(dm,mat));
@@ -1453,7 +1453,7 @@ PetscErrorCode  DMCreateMatrix(DM dm,Mat *mat)
     DM mdm;
 
     CHKERRQ(MatGetDM(*mat,&mdm));
-    PetscCheckFalse(!mdm,PETSC_COMM_SELF,PETSC_ERR_PLIB,"DM type '%s' did not attach the DM to the matrix",((PetscObject)dm)->type_name);
+    PetscCheck(mdm,PETSC_COMM_SELF,PETSC_ERR_PLIB,"DM type '%s' did not attach the DM to the matrix",((PetscObject)dm)->type_name);
   }
   /* Handle nullspace and near nullspace */
   if (dm->Nf) {
@@ -1917,7 +1917,7 @@ PetscErrorCode DMCreateFieldDecomposition(DM dm, PetscInt *len, char ***namelist
    Perhaps some impls can have a well-defined decomposition before DMSetUp?
    This, however, follows the general principle that accessors are not well-behaved until the object is set up.
    */
-  PetscCheckFalse(!dm->setupcalled,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE, "Decomposition defined only after DMSetUp");
+  PetscCheck(dm->setupcalled,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE, "Decomposition defined only after DMSetUp");
   if (!dm->ops->createfielddecomposition) {
     PetscSection section;
     PetscInt     numFields, f;
@@ -1978,7 +1978,7 @@ PetscErrorCode DMCreateSubDM(DM dm, PetscInt numFields, const PetscInt fields[],
   PetscValidPointer(fields,3);
   if (is) PetscValidPointer(is,4);
   if (subdm) PetscValidPointer(subdm,5);
-  PetscCheckFalse(!dm->ops->createsubdm,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMCreateSubDM",((PetscObject)dm)->type_name);
+  PetscCheck(dm->ops->createsubdm,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMCreateSubDM",((PetscObject)dm)->type_name);
   CHKERRQ((*dm->ops->createsubdm)(dm, numFields, fields, is, subdm));
   PetscFunctionReturn(0);
 }
@@ -2014,7 +2014,7 @@ PetscErrorCode DMCreateSuperDM(DM dms[], PetscInt len, IS **is, DM *superdm)
   PetscCheckFalse(len < 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of DMs must be nonnegative: %D", len);
   if (len) {
     DM dm = dms[0];
-    PetscCheckFalse(!dm->ops->createsuperdm,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMCreateSuperDM",((PetscObject)dm)->type_name);
+    PetscCheck(dm->ops->createsuperdm,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMCreateSuperDM",((PetscObject)dm)->type_name);
     CHKERRQ((*dm->ops->createsuperdm)(dms, len, is, superdm));
   }
   PetscFunctionReturn(0);
@@ -2065,7 +2065,7 @@ PetscErrorCode DMCreateDomainDecomposition(DM dm, PetscInt *len, char ***namelis
    Perhaps some impls can have a well-defined decomposition before DMSetUp?
    This, however, follows the general principle that accessors are not well-behaved until the object is set up.
    */
-  PetscCheckFalse(!dm->setupcalled,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE, "Decomposition defined only after DMSetUp");
+  PetscCheck(dm->setupcalled,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE, "Decomposition defined only after DMSetUp");
   if (dm->ops->createdomaindecomposition) {
     CHKERRQ((*dm->ops->createdomaindecomposition)(dm,&l,namelist,innerislist,outerislist,dmlist));
     /* copy subdomain hooks and context over to the subdomain DMs */
@@ -2113,7 +2113,7 @@ PetscErrorCode DMCreateDomainDecompositionScatters(DM dm,PetscInt n,DM *subdms,V
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   PetscValidPointer(subdms,3);
-  PetscCheckFalse(!dm->ops->createddscatters,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMCreateDomainDecompositionScatters",((PetscObject)dm)->type_name);
+  PetscCheck(dm->ops->createddscatters,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMCreateDomainDecompositionScatters",((PetscObject)dm)->type_name);
   CHKERRQ((*dm->ops->createddscatters)(dm,n,subdms,iscat,oscat,gscat));
   PetscFunctionReturn(0);
 }
@@ -2145,7 +2145,7 @@ PetscErrorCode  DMRefine(DM dm,MPI_Comm comm,DM *dmf)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  PetscCheckFalse(!dm->ops->refine,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMRefine",((PetscObject)dm)->type_name);
+  PetscCheck(dm->ops->refine,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMRefine",((PetscObject)dm)->type_name);
   CHKERRQ(PetscLogEventBegin(DM_Refine,dm,0,0,0));
   CHKERRQ((*dm->ops->refine)(dm,comm,dmf));
   if (*dmf) {
@@ -2403,7 +2403,7 @@ PetscErrorCode DMExtrude(DM dm, PetscInt layers, DM *dme)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-  PetscCheckFalse(!dm->ops->extrude,PetscObjectComm((PetscObject) dm), PETSC_ERR_SUP, "DM type %s does not implement DMExtrude", ((PetscObject) dm)->type_name);
+  PetscCheck(dm->ops->extrude,PetscObjectComm((PetscObject) dm), PETSC_ERR_SUP, "DM type %s does not implement DMExtrude", ((PetscObject) dm)->type_name);
   CHKERRQ((*dm->ops->extrude)(dm, layers, dme));
   if (*dme) {
     (*dme)->ops->creatematrix = dm->ops->creatematrix;
@@ -2667,7 +2667,7 @@ PetscErrorCode  DMGlobalToLocalBegin(DM dm,Vec g,InsertMode mode,Vec l)
     CHKERRQ(VecRestoreArrayAndMemType(l, &lArray));
     CHKERRQ(VecRestoreArrayReadAndMemType(g, &gArray));
   } else {
-    PetscCheckFalse(!dm->ops->globaltolocalbegin,PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Missing DMGlobalToLocalBegin() for type %s",((PetscObject)dm)->type_name);
+    PetscCheck(dm->ops->globaltolocalbegin,PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Missing DMGlobalToLocalBegin() for type %s",((PetscObject)dm)->type_name);
     CHKERRQ((*dm->ops->globaltolocalbegin)(dm,g,mode == INSERT_ALL_VALUES ? INSERT_VALUES : (mode == ADD_ALL_VALUES ? ADD_VALUES : mode),l));
   }
   PetscFunctionReturn(0);
@@ -2712,7 +2712,7 @@ PetscErrorCode  DMGlobalToLocalEnd(DM dm,Vec g,InsertMode mode,Vec l)
     CHKERRQ(VecRestoreArrayReadAndMemType(g, &gArray));
     if (transform) CHKERRQ(DMPlexGlobalToLocalBasis(dm, l));
   } else {
-    PetscCheckFalse(!dm->ops->globaltolocalend,PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Missing DMGlobalToLocalEnd() for type %s",((PetscObject)dm)->type_name);
+    PetscCheck(dm->ops->globaltolocalend,PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Missing DMGlobalToLocalEnd() for type %s",((PetscObject)dm)->type_name);
     CHKERRQ((*dm->ops->globaltolocalend)(dm,g,mode == INSERT_ALL_VALUES ? INSERT_VALUES : (mode == ADD_ALL_VALUES ? ADD_VALUES : mode),l));
   }
   CHKERRQ(DMGlobalToLocalHook_Constraints(dm,g,mode,l,NULL));
@@ -2962,7 +2962,7 @@ PetscErrorCode  DMLocalToGlobalBegin(DM dm,Vec l,InsertMode mode,Vec g)
       CHKERRQ(VecRestoreArrayRead(l, &lArray));
     }
   } else {
-    PetscCheckFalse(!dm->ops->localtoglobalbegin,PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Missing DMLocalToGlobalBegin() for type %s",((PetscObject)dm)->type_name);
+    PetscCheck(dm->ops->localtoglobalbegin,PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Missing DMLocalToGlobalBegin() for type %s",((PetscObject)dm)->type_name);
     CHKERRQ((*dm->ops->localtoglobalbegin)(dm,l,mode == INSERT_ALL_VALUES ? INSERT_VALUES : (mode == ADD_ALL_VALUES ? ADD_VALUES : mode),g));
   }
   PetscFunctionReturn(0);
@@ -3028,7 +3028,7 @@ PetscErrorCode  DMLocalToGlobalEnd(DM dm,Vec l,InsertMode mode,Vec g)
     CHKERRQ(VecRestoreArrayAndMemType(g, &gArray));
   } else if (s && isInsert) {
   } else {
-    PetscCheckFalse(!dm->ops->localtoglobalend,PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Missing DMLocalToGlobalEnd() for type %s",((PetscObject)dm)->type_name);
+    PetscCheck(dm->ops->localtoglobalend,PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Missing DMLocalToGlobalEnd() for type %s",((PetscObject)dm)->type_name);
     CHKERRQ((*dm->ops->localtoglobalend)(dm,l,mode == INSERT_ALL_VALUES ? INSERT_VALUES : (mode == ADD_ALL_VALUES ? ADD_VALUES : mode),g));
   }
   for (link=dm->ltoghook; link; link=link->next) {
@@ -3068,7 +3068,7 @@ PetscErrorCode  DMLocalToLocalBegin(DM dm,Vec g,InsertMode mode,Vec l)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  PetscCheckFalse(!dm->ops->localtolocalbegin,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"This DM does not support local to local maps");
+  PetscCheck(dm->ops->localtolocalbegin,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"This DM does not support local to local maps");
   CHKERRQ((*dm->ops->localtolocalbegin)(dm,g,mode == INSERT_ALL_VALUES ? INSERT_VALUES : (mode == ADD_ALL_VALUES ? ADD_VALUES : mode),l));
   PetscFunctionReturn(0);
 }
@@ -3104,7 +3104,7 @@ PetscErrorCode  DMLocalToLocalEnd(DM dm,Vec g,InsertMode mode,Vec l)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  PetscCheckFalse(!dm->ops->localtolocalend,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"This DM does not support local to local maps");
+  PetscCheck(dm->ops->localtolocalend,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"This DM does not support local to local maps");
   CHKERRQ((*dm->ops->localtolocalend)(dm,g,mode == INSERT_ALL_VALUES ? INSERT_VALUES : (mode == ADD_ALL_VALUES ? ADD_VALUES : mode),l));
   PetscFunctionReturn(0);
 }
@@ -3132,7 +3132,7 @@ PetscErrorCode DMCoarsen(DM dm, MPI_Comm comm, DM *dmc)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  PetscCheckFalse(!dm->ops->coarsen,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMCoarsen",((PetscObject)dm)->type_name);
+  PetscCheck(dm->ops->coarsen,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMCoarsen",((PetscObject)dm)->type_name);
   CHKERRQ(PetscLogEventBegin(DM_Coarsen,dm,0,0,0));
   CHKERRQ((*dm->ops->coarsen)(dm, comm, dmc));
   if (*dmc) {
@@ -3667,7 +3667,7 @@ PetscErrorCode DMComputeVariableBounds(DM dm, Vec xl, Vec xu)
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   PetscValidHeaderSpecific(xl,VEC_CLASSID,2);
   PetscValidHeaderSpecific(xu,VEC_CLASSID,3);
-  PetscCheckFalse(!dm->ops->computevariablebounds,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMComputeVariableBounds",((PetscObject)dm)->type_name);
+  PetscCheck(dm->ops->computevariablebounds,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMComputeVariableBounds",((PetscObject)dm)->type_name);
   CHKERRQ((*dm->ops->computevariablebounds)(dm, xl,xu));
   PetscFunctionReturn(0);
 }
@@ -3786,7 +3786,7 @@ PetscErrorCode  DMSetType(DM dm, DMType method)
 
   CHKERRQ(DMRegisterAll());
   CHKERRQ(PetscFunctionListFind(DMList,method,&r));
-  PetscCheckFalse(!r,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown DM type: %s", method);
+  PetscCheck(r,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown DM type: %s", method);
 
   if (dm->ops->destroy) {
     CHKERRQ((*dm->ops->destroy)(dm));
@@ -4494,8 +4494,8 @@ PetscErrorCode DMGetGlobalSection(DM dm, PetscSection *section)
     PetscSection s;
 
     CHKERRQ(DMGetLocalSection(dm, &s));
-    PetscCheckFalse(!s,PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONGSTATE, "DM must have a default PetscSection in order to create a global PetscSection");
-    PetscCheckFalse(!dm->sf,PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "DM must have a point PetscSF in order to create a global PetscSection");
+    PetscCheck(s,PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONGSTATE, "DM must have a default PetscSection in order to create a global PetscSection");
+    PetscCheck(dm->sf,PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "DM must have a point PetscSF in order to create a global PetscSection");
     CHKERRQ(PetscSectionCreateGlobalSection(s, dm->sf, PETSC_FALSE, PETSC_FALSE, &dm->globalSection));
     CHKERRQ(PetscLayoutDestroy(&dm->map));
     CHKERRQ(PetscSectionGetValueLayout(PetscObjectComm((PetscObject)dm), dm->globalSection, &dm->map));
@@ -5657,7 +5657,7 @@ PetscErrorCode DMCreateDS(DM dm)
     PetscInt *fld, nf;
 
     for (f = 0, nf = 0; f < Nf; ++f) if (!dm->fields[f].label) ++nf;
-    PetscCheckFalse(!nf,comm, PETSC_ERR_PLIB, "All fields have labels, but we are trying to create a default DS");
+    PetscCheck(nf,comm, PETSC_ERR_PLIB, "All fields have labels, but we are trying to create a default DS");
     CHKERRQ(PetscMalloc1(nf, &fld));
     for (f = 0, nf = 0; f < Nf; ++f) if (!dm->fields[f].label) fld[nf++] = f;
     CHKERRQ(ISCreate(PETSC_COMM_SELF, &fields));
@@ -5930,7 +5930,7 @@ PetscErrorCode DMTransferDS_Internal(DM dm, DMLabel label, IS fields, PetscDS ds
   for (b = dsNew->boundary; b; b = b->next) {
     CHKERRQ(DMGetLabel(dm, b->lname, &b->label));
     /* Do not check if label exists here, since p4est calls this for the reference tree which does not have the labels */
-    //PetscCheckFalse(!b->label,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Label %s missing in new DM", name);
+    //PetscCheck(b->label,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Label %s missing in new DM", name);
   }
 
   CHKERRQ(DMSetRegionDS(dm, label, fields, dsNew));
@@ -6150,7 +6150,7 @@ PetscErrorCode DMGetDimPoints(DM dm, PetscInt dim, PetscInt *pStart, PetscInt *p
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   CHKERRQ(DMGetDimension(dm, &d));
   PetscCheckFalse((dim < 0) || (dim > d),PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "Invalid dimension %d 1", dim, d);
-  PetscCheckFalse(!dm->ops->getdimpoints,PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "DM type %s does not implement DMGetDimPoints",((PetscObject)dm)->type_name);
+  PetscCheck(dm->ops->getdimpoints,PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "DM type %s does not implement DMGetDimPoints",((PetscObject)dm)->type_name);
   CHKERRQ((*dm->ops->getdimpoints)(dm, dim, pStart, pEnd));
   PetscFunctionReturn(0);
 }
@@ -6412,7 +6412,7 @@ PetscErrorCode DMGetCoordinatesLocalTuple(DM dm, IS p, PetscSection *pCoordSecti
   PetscValidHeaderSpecific(p, IS_CLASSID, 2);
   if (pCoordSection) PetscValidPointer(pCoordSection, 3);
   if (pCoord) PetscValidPointer(pCoord, 4);
-  PetscCheckFalse(!dm->coordinatesLocal,PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "DMGetCoordinatesLocalSetUp() has not been called or coordinates not set");
+  PetscCheck(dm->coordinatesLocal,PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "DMGetCoordinatesLocalSetUp() has not been called or coordinates not set");
   PetscCheckFalse(!dm->coordinateDM || !dm->coordinateDM->localSection,PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "DM not supported");
   cs = dm->coordinateDM->localSection;
   coords = dm->coordinatesLocal;
@@ -6483,7 +6483,7 @@ PetscErrorCode DMGetCoordinateDM(DM dm, DM *cdm)
   if (!dm->coordinateDM) {
     DM cdm;
 
-    PetscCheckFalse(!dm->ops->createcoordinatedm,PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Unable to create coordinates for this DM");
+    PetscCheck(dm->ops->createcoordinatedm,PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Unable to create coordinates for this DM");
     CHKERRQ((*dm->ops->createcoordinatedm)(dm, &cdm));
     CHKERRQ(PetscObjectSetName((PetscObject)cdm, "coordinateDM"));
     /* Just in case the DM sets the coordinate DM when creating it (DMP4est can do this, because it may not setup
@@ -7059,7 +7059,7 @@ PetscErrorCode DMLocalizeCoordinates(DM dm)
     } else SETERRQ(PetscObjectComm((PetscObject) cdm), PETSC_ERR_ARG_WRONG, "Coordinate localization requires a DMPLEX coordinate DM");
   }
   CHKERRQ(DMGetCoordinatesLocal(dm, &coordinates));
-  PetscCheckFalse(!coordinates,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Missing local coordinates vector");
+  PetscCheck(coordinates,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Missing local coordinates vector");
   CHKERRQ(DMGetCoordinateSection(dm, &coordSection));
   CHKERRQ(VecGetBlockSize(coordinates, &bs));
   CHKERRQ(PetscSectionGetChart(coordSection,&sStart,&sEnd));
@@ -7209,7 +7209,7 @@ PetscErrorCode DMLocatePoints(DM dm, Vec v, DMPointLocationType ltype, PetscSF *
   } else {
     CHKERRQ(PetscSFCreate(PetscObjectComm((PetscObject)v),cellSF));
   }
-  PetscCheckFalse(!dm->ops->locatepoints,PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Point location not available for this DM");
+  PetscCheck(dm->ops->locatepoints,PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Point location not available for this DM");
   CHKERRQ(PetscLogEventBegin(DM_LocatePoints,dm,0,0,0));
   CHKERRQ((*dm->ops->locatepoints)(dm,v,ltype,*cellSF));
   CHKERRQ(PetscLogEventEnd(DM_LocatePoints,dm,0,0,0));
@@ -7507,7 +7507,7 @@ PetscErrorCode DMGetLabelValue(DM dm, const char name[], PetscInt point, PetscIn
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscValidCharPointer(name, 2);
   CHKERRQ(DMGetLabel(dm, name, &label));
-  PetscCheckFalse(!label,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "No label named %s was found", name);
+  PetscCheck(label,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "No label named %s was found", name);
   CHKERRQ(DMLabelGetValue(label, point, value));
   PetscFunctionReturn(0);
 }
@@ -7967,7 +7967,7 @@ PetscErrorCode DMAddLabel(DM dm, DMLabel label)
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   CHKERRQ(PetscObjectGetName((PetscObject) label, &lname));
   CHKERRQ(DMHasLabel(dm, lname, &hasLabel));
-  PetscCheckFalse(hasLabel,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label %s already exists in this DM", lname);
+  PetscCheck(!hasLabel,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label %s already exists in this DM", lname);
   CHKERRQ(PetscCalloc1(1, &tmpLabel));
   tmpLabel->label  = label;
   tmpLabel->output = PETSC_TRUE;
@@ -8365,7 +8365,7 @@ finish:
   }
   /* If same output arg not ser and labels are not equal, throw error */
   if (equal) *equal = eq;
-  else PetscCheckFalse(!eq,comm, PETSC_ERR_ARG_INCOMP, "DMLabels are not the same in dm0 and dm1");
+  else PetscCheck(eq,comm, PETSC_ERR_ARG_INCOMP, "DMLabels are not the same in dm0 and dm1");
   PetscFunctionReturn(0);
 }
 
@@ -8527,7 +8527,7 @@ PetscErrorCode DMUniversalLabelCreateLabels(DMUniversalLabel ul, PetscBool prese
 
       CHKERRQ(DMGetLabelName(dm, ul->indices[l], &name));
       CHKERRQ(PetscStrcmp(name, ul->names[l], &match));
-      PetscCheckFalse(!match,PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "Label %D name %s does not match new name %s", l, name, ul->names[l]);
+      PetscCheck(match,PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "Label %D name %s does not match new name %s", l, name, ul->names[l]);
     }
   }
   PetscFunctionReturn(0);
@@ -8860,7 +8860,7 @@ PetscErrorCode DMProjectFunctionLocal(DM dm, PetscReal time, PetscErrorCode (**f
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   PetscValidHeaderSpecific(localX,VEC_CLASSID,6);
-  PetscCheckFalse(!dm->ops->projectfunctionlocal,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMProjectFunctionLocal",((PetscObject)dm)->type_name);
+  PetscCheck(dm->ops->projectfunctionlocal,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMProjectFunctionLocal",((PetscObject)dm)->type_name);
   CHKERRQ((dm->ops->projectfunctionlocal) (dm, time, funcs, ctxs, mode, localX));
   PetscFunctionReturn(0);
 }
@@ -8943,7 +8943,7 @@ PetscErrorCode DMProjectFunctionLabelLocal(DM dm, PetscReal time, DMLabel label,
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   PetscValidHeaderSpecific(localX,VEC_CLASSID,11);
-  PetscCheckFalse(!dm->ops->projectfunctionlabellocal,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMProjectFunctionLabelLocal",((PetscObject)dm)->type_name);
+  PetscCheck(dm->ops->projectfunctionlabellocal,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMProjectFunctionLabelLocal",((PetscObject)dm)->type_name);
   CHKERRQ((dm->ops->projectfunctionlabellocal) (dm, time, label, numIds, ids, Nc, comps, funcs, ctxs, mode, localX));
   PetscFunctionReturn(0);
 }
@@ -9009,7 +9009,7 @@ PetscErrorCode DMProjectFieldLocal(DM dm, PetscReal time, Vec localU,
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   PetscValidHeaderSpecific(localU,VEC_CLASSID,3);
   PetscValidHeaderSpecific(localX,VEC_CLASSID,6);
-  PetscCheckFalse(!dm->ops->projectfieldlocal,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMProjectFieldLocal",((PetscObject)dm)->type_name);
+  PetscCheck(dm->ops->projectfieldlocal,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMProjectFieldLocal",((PetscObject)dm)->type_name);
   CHKERRQ((dm->ops->projectfieldlocal) (dm, time, localU, funcs, mode, localX));
   PetscFunctionReturn(0);
 }
@@ -9080,7 +9080,7 @@ PetscErrorCode DMProjectFieldLabelLocal(DM dm, PetscReal time, DMLabel label, Pe
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   PetscValidHeaderSpecific(localU,VEC_CLASSID,8);
   PetscValidHeaderSpecific(localX,VEC_CLASSID,11);
-  PetscCheckFalse(!dm->ops->projectfieldlabellocal,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMProjectFieldLabelLocal",((PetscObject)dm)->type_name);
+  PetscCheck(dm->ops->projectfieldlabellocal,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMProjectFieldLabelLocal",((PetscObject)dm)->type_name);
   CHKERRQ((dm->ops->projectfieldlabellocal)(dm, time, label, numIds, ids, Nc, comps, localU, funcs, mode, localX));
   PetscFunctionReturn(0);
 }
@@ -9153,7 +9153,7 @@ PetscErrorCode DMProjectBdFieldLabelLocal(DM dm, PetscReal time, DMLabel label, 
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   PetscValidHeaderSpecific(localU,VEC_CLASSID,8);
   PetscValidHeaderSpecific(localX,VEC_CLASSID,11);
-  PetscCheckFalse(!dm->ops->projectbdfieldlabellocal,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMProjectBdFieldLabelLocal",((PetscObject)dm)->type_name);
+  PetscCheck(dm->ops->projectbdfieldlabellocal,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMProjectBdFieldLabelLocal",((PetscObject)dm)->type_name);
   CHKERRQ((dm->ops->projectbdfieldlabellocal)(dm, time, label, numIds, ids, Nc, comps, localU, funcs, mode, localX));
   PetscFunctionReturn(0);
 }
@@ -9181,7 +9181,7 @@ PetscErrorCode DMComputeL2Diff(DM dm, PetscReal time, PetscErrorCode (**funcs)(P
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   PetscValidHeaderSpecific(X,VEC_CLASSID,5);
-  PetscCheckFalse(!dm->ops->computel2diff,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMComputeL2Diff",((PetscObject)dm)->type_name);
+  PetscCheck(dm->ops->computel2diff,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMComputeL2Diff",((PetscObject)dm)->type_name);
   CHKERRQ((dm->ops->computel2diff)(dm,time,funcs,ctxs,X,diff));
   PetscFunctionReturn(0);
 }
@@ -9212,7 +9212,7 @@ PetscErrorCode DMComputeL2GradientDiff(DM dm, PetscReal time, PetscErrorCode (**
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   PetscValidHeaderSpecific(X,VEC_CLASSID,5);
-  PetscCheckFalse(!dm->ops->computel2gradientdiff,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMComputeL2GradientDiff",((PetscObject)dm)->type_name);
+  PetscCheck(dm->ops->computel2gradientdiff,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMComputeL2GradientDiff",((PetscObject)dm)->type_name);
   CHKERRQ((dm->ops->computel2gradientdiff)(dm,time,funcs,ctxs,X,n,diff));
   PetscFunctionReturn(0);
 }
@@ -9242,7 +9242,7 @@ PetscErrorCode DMComputeL2FieldDiff(DM dm, PetscReal time, PetscErrorCode (**fun
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   PetscValidHeaderSpecific(X,VEC_CLASSID,5);
-  PetscCheckFalse(!dm->ops->computel2fielddiff,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMComputeL2FieldDiff",((PetscObject)dm)->type_name);
+  PetscCheck(dm->ops->computel2fielddiff,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMComputeL2FieldDiff",((PetscObject)dm)->type_name);
   CHKERRQ((dm->ops->computel2fielddiff)(dm,time,funcs,ctxs,X,diff));
   PetscFunctionReturn(0);
 }
@@ -9271,7 +9271,7 @@ PetscErrorCode DMGetNeighbors(DM dm,PetscInt *nranks,const PetscMPIInt *ranks[])
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
-  PetscCheckFalse(!dm->ops->getneighbors,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMGetNeighbors",((PetscObject)dm)->type_name);
+  PetscCheck(dm->ops->getneighbors,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DM type %s does not implement DMGetNeighbors",((PetscObject)dm)->type_name);
   CHKERRQ((dm->ops->getneighbors)(dm,nranks,ranks));
   PetscFunctionReturn(0);
 }
@@ -9290,7 +9290,7 @@ PetscErrorCode  MatFDColoringApply_AIJDM(Mat J,MatFDColoring coloring,Vec x1,voi
     Vec x1local;
     DM  dm;
     CHKERRQ(MatGetDM(J,&dm));
-    PetscCheckFalse(!dm,PetscObjectComm((PetscObject)J),PETSC_ERR_ARG_INCOMP,"IS_COLORING_LOCAL requires a DM");
+    PetscCheck(dm,PetscObjectComm((PetscObject)J),PETSC_ERR_ARG_INCOMP,"IS_COLORING_LOCAL requires a DM");
     CHKERRQ(DMGetLocalVector(dm,&x1local));
     CHKERRQ(DMGlobalToLocalBegin(dm,x1,INSERT_VALUES,x1local));
     CHKERRQ(DMGlobalToLocalEnd(dm,x1,INSERT_VALUES,x1local));
@@ -9904,7 +9904,7 @@ PetscErrorCode DMPolytopeGetOrientation(DMPolytopeType ct, const PetscInt source
 
   PetscFunctionBegin;
   CHKERRQ(DMPolytopeMatchOrientation(ct, sourceCone, targetCone, ornt, &found));
-  PetscCheckFalse(!found,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Could not find orientation for %s", DMPolytopeTypes[ct]);
+  PetscCheck(found,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Could not find orientation for %s", DMPolytopeTypes[ct]);
   PetscFunctionReturn(0);
 }
 
@@ -9969,7 +9969,7 @@ PetscErrorCode DMPolytopeGetVertexOrientation(DMPolytopeType ct, const PetscInt 
 
   PetscFunctionBegin;
   CHKERRQ(DMPolytopeMatchVertexOrientation(ct, sourceCone, targetCone, ornt, &found));
-  PetscCheckFalse(!found,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Could not find orientation for %s", DMPolytopeTypes[ct]);
+  PetscCheck(found,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Could not find orientation for %s", DMPolytopeTypes[ct]);
   PetscFunctionReturn(0);
 }
 

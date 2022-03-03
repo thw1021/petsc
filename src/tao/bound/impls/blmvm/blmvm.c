@@ -181,7 +181,7 @@ static PetscErrorCode TaoSetFromOptions_BLMVM(PetscOptionItems* PetscOptionsObje
   CHKERRQ(MatAppendOptionsPrefix(blmP->M, "tao_blmvm_"));
   CHKERRQ(MatSetFromOptions(blmP->M));
   CHKERRQ(MatGetOption(blmP->M, MAT_SPD, &is_spd));
-  PetscCheckFalse(!is_spd,PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_INCOMP, "LMVM matrix must be symmetric positive-definite");
+  PetscCheck(is_spd,PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_INCOMP, "LMVM matrix must be symmetric positive-definite");
   PetscFunctionReturn(0);
 }
 

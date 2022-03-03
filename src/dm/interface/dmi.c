@@ -110,8 +110,8 @@ PetscErrorCode DMCreateSectionSubDM(DM dm, PetscInt numFields, const PetscInt fi
   if (!numFields) PetscFunctionReturn(0);
   CHKERRQ(DMGetLocalSection(dm, &section));
   CHKERRQ(DMGetGlobalSection(dm, &sectionGlobal));
-  PetscCheckFalse(!section,PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Must set default section for DM before splitting fields");
-  PetscCheckFalse(!sectionGlobal,PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Must set default global section for DM before splitting fields");
+  PetscCheck(section,PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Must set default section for DM before splitting fields");
+  PetscCheck(sectionGlobal,PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Must set default global section for DM before splitting fields");
   CHKERRQ(PetscSectionGetNumFields(section, &Nf));
   PetscCheckFalse(numFields > Nf,PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Number of requested fields %d greater than number of DM fields %d", numFields, Nf);
   if (is) {
@@ -249,7 +249,7 @@ PetscErrorCode DMCreateSectionSubDM(DM dm, PetscInt numFields, const PetscInt fi
             CHKERRQ(ISIntersect(infields, dm->probs[d].fields, &dsfields));
             CHKERRQ(ISDestroy(&infields));
             CHKERRQ(ISGetLocalSize(dsfields, &nf));
-            PetscCheckFalse(!nf,PETSC_COMM_SELF, PETSC_ERR_PLIB, "DS cannot be supported on 0 fields");
+            PetscCheck(nf,PETSC_COMM_SELF, PETSC_ERR_PLIB, "DS cannot be supported on 0 fields");
             CHKERRQ(ISGetIndices(dsfields, &fld));
             CHKERRQ(ISGetLocalSize(dm->probs[d].fields, &onf));
             CHKERRQ(ISGetIndices(dm->probs[d].fields, &ofld));

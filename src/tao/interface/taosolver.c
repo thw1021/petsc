@@ -176,7 +176,7 @@ PetscErrorCode TaoSetUp(Tao tao)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao, TAO_CLASSID,1);
   if (tao->setupcalled) PetscFunctionReturn(0);
-  PetscCheckFalse(!tao->solution,PetscObjectComm((PetscObject)tao),PETSC_ERR_ARG_WRONGSTATE,"Must call TaoSetSolution");
+  PetscCheck(tao->solution,PetscObjectComm((PetscObject)tao),PETSC_ERR_ARG_WRONGSTATE,"Must call TaoSetSolution");
   if (tao->ops->setup) {
     CHKERRQ((*tao->ops->setup)(tao));
   }
@@ -2116,7 +2116,7 @@ PetscErrorCode TaoSetType(Tao tao, TaoType type)
   if (issame) PetscFunctionReturn(0);
 
   CHKERRQ(PetscFunctionListFind(TaoList, type, (void(**)(void))&create_xxx));
-  PetscCheckFalse(!create_xxx,PetscObjectComm((PetscObject)tao),PETSC_ERR_ARG_UNKNOWN_TYPE,"Unable to find requested Tao type %s",type);
+  PetscCheck(create_xxx,PetscObjectComm((PetscObject)tao),PETSC_ERR_ARG_UNKNOWN_TYPE,"Unable to find requested Tao type %s",type);
 
   /* Destroy the existing solver information */
   if (tao->ops->destroy) {

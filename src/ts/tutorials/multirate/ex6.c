@@ -770,7 +770,7 @@ int main(int argc,char *argv[])
   {
     PetscErrorCode (*r)(FVCtx*);
     CHKERRQ(PetscFunctionListFind(physics,physname,&r));
-    PetscCheckFalse(!r,PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Physics '%s' not found",physname);
+    PetscCheck(r,PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Physics '%s' not found",physname);
     /* Create the physics, will set the number of fields and their names */
     CHKERRQ((*r)(&ctx));
   }
@@ -899,7 +899,7 @@ int main(int argc,char *argv[])
       PetscBool    flg;
       const PetscScalar  *ptr_XR;
       CHKERRQ(PetscOptionsGetString(NULL,NULL,"-f",filename,sizeof(filename),&flg));
-      PetscCheckFalse(!flg,PETSC_COMM_WORLD,PETSC_ERR_USER,"Must indicate binary file with the -f option");
+      PetscCheck(flg,PETSC_COMM_WORLD,PETSC_ERR_USER,"Must indicate binary file with the -f option");
       CHKERRQ(PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,FILE_MODE_READ,&fd));
       CHKERRQ(VecDuplicate(X0,&XR));
       CHKERRQ(VecLoad(XR,fd));

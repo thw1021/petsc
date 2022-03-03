@@ -11,7 +11,7 @@ static PetscErrorCode TSAdaptChoose_CFL(TSAdapt adapt,TS ts,PetscReal h,PetscInt
   CHKERRQ(TSAdaptCandidatesGet(adapt,&ncandidates,NULL,NULL,&ccflarray,NULL));
   ccfl = (ncandidates > 0) ? ccflarray[0] : 1.0;
 
-  PetscCheckFalse(!adapt->always_accept,PetscObjectComm((PetscObject)adapt),PETSC_ERR_SUP,"Step rejection not implemented. The CFL implementation is incomplete/unusable");
+  PetscCheck(adapt->always_accept,PetscObjectComm((PetscObject)adapt),PETSC_ERR_SUP,"Step rejection not implemented. The CFL implementation is incomplete/unusable");
 
   /* Determine whether the step is accepted of rejected */
   *accept = PETSC_TRUE;

@@ -99,7 +99,7 @@ static PetscErrorCode DMDASampleGLVisFields_Private(PetscObject oX, PetscInt nf,
 
   PetscFunctionBegin;
   CHKERRQ(VecGetDM(ctx->xlocal,&da));
-  PetscCheckFalse(!da,PetscObjectComm(oX),PETSC_ERR_ARG_WRONG,"Vector not generated from a DMDA");
+  PetscCheck(da,PetscObjectComm(oX),PETSC_ERR_ARG_WRONG,"Vector not generated from a DMDA");
   CHKERRQ(DMGetApplicationContext(da,&dactx));
   CHKERRQ(VecGetBlockSize(ctx->xlocal,&bs));
   CHKERRQ(DMGlobalToLocalBegin(da,(Vec)oX,INSERT_VALUES,ctx->xlocal));
@@ -344,14 +344,14 @@ static PetscErrorCode DMDAView_GLVis_ASCII(DM dm, PetscViewer viewer)
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,2);
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isascii));
-  PetscCheckFalse(!isascii,PetscObjectComm((PetscObject)viewer),PETSC_ERR_SUP,"Viewer must be of type VIEWERASCII");
+  PetscCheck(isascii,PetscObjectComm((PetscObject)viewer),PETSC_ERR_SUP,"Viewer must be of type VIEWERASCII");
   CHKERRMPI(MPI_Comm_size(PetscObjectComm((PetscObject)viewer),&size));
   PetscCheckFalse(size > 1,PetscObjectComm((PetscObject)viewer),PETSC_ERR_SUP,"Use single sequential viewers for parallel visualization");
   CHKERRQ(DMGetDimension(dm,&dim));
 
   /* get container: determines if a process visualizes is portion of the data or not */
   CHKERRQ(PetscObjectQuery((PetscObject)viewer,"_glvis_info_container",(PetscObject*)&glvis_container));
-  PetscCheckFalse(!glvis_container,PetscObjectComm((PetscObject)dm),PETSC_ERR_PLIB,"Missing GLVis container");
+  PetscCheck(glvis_container,PetscObjectComm((PetscObject)dm),PETSC_ERR_PLIB,"Missing GLVis container");
   {
     PetscViewerGLVisInfo glvis_info;
     CHKERRQ(PetscContainerGetPointer(glvis_container,(void**)&glvis_info));
@@ -362,7 +362,7 @@ static PetscErrorCode DMDAView_GLVis_ASCII(DM dm, PetscViewer viewer)
   CHKERRQ(PetscObjectQuery((PetscObject)dm,"GLVisGraphicsDMDAGhosted",(PetscObject*)&da));
   if (!da) CHKERRQ(DMSetUpGLVisViewer_DMDA((PetscObject)dm,NULL));
   CHKERRQ(PetscObjectQuery((PetscObject)dm,"GLVisGraphicsDMDAGhosted",(PetscObject*)&da));
-  PetscCheckFalse(!da,PetscObjectComm((PetscObject)dm),PETSC_ERR_PLIB,"Missing GLVis ghosted DMDA");
+  PetscCheck(da,PetscObjectComm((PetscObject)dm),PETSC_ERR_PLIB,"Missing GLVis ghosted DMDA");
   CHKERRQ(DMGetCoordinateDim(da,&sdim));
 
   CHKERRQ(PetscViewerASCIIPrintf(viewer,"MFEM mesh v1.0\n"));
@@ -436,7 +436,7 @@ static PetscErrorCode DMDAView_GLVis_ASCII(DM dm, PetscViewer viewer)
 
   /* vertex coordinates */
   CHKERRQ(PetscObjectQuery((PetscObject)da,"GLVisGraphicsCoordsGhosted",(PetscObject*)&xcoorl));
-  PetscCheckFalse(!xcoorl,PetscObjectComm((PetscObject)dm),PETSC_ERR_PLIB,"Missing GLVis ghosted coords");
+  PetscCheck(xcoorl,PetscObjectComm((PetscObject)dm),PETSC_ERR_PLIB,"Missing GLVis ghosted coords");
   CHKERRQ(DMDAGetNumVerticesGhosted(da,&ien,&jen,&ken));
   CHKERRQ(PetscViewerASCIIPrintf(viewer,"\nvertices\n"));
   CHKERRQ(PetscViewerASCIIPrintf(viewer,"%D\n",ien*jen*ken));

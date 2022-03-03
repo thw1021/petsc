@@ -235,9 +235,9 @@ static PetscErrorCode MatDenseCUDAPlaceArray_SeqDenseCUDA(Mat A, const PetscScal
   Mat_SeqDenseCUDA *dA = (Mat_SeqDenseCUDA*)A->spptr;
 
   PetscFunctionBegin;
-  PetscCheckFalse(aa->vecinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseRestoreColumnVec() first");
-  PetscCheckFalse(aa->matinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseRestoreSubMatrix() first");
-  PetscCheckFalse(dA->unplacedarray,PETSC_COMM_SELF,PETSC_ERR_ORDER,"MatDenseCUDAResetArray() must be called first");
+  PetscCheck(!aa->vecinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseRestoreColumnVec() first");
+  PetscCheck(!aa->matinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseRestoreSubMatrix() first");
+  PetscCheck(!dA->unplacedarray,PETSC_COMM_SELF,PETSC_ERR_ORDER,"MatDenseCUDAResetArray() must be called first");
   if (aa->v) CHKERRQ(MatSeqDenseCUDACopyToGPU(A));
   dA->unplacedarray = dA->d_v;
   dA->unplaced_user_alloc = dA->user_alloc;
@@ -252,8 +252,8 @@ static PetscErrorCode MatDenseCUDAResetArray_SeqDenseCUDA(Mat A)
   Mat_SeqDenseCUDA *dA = (Mat_SeqDenseCUDA*)A->spptr;
 
   PetscFunctionBegin;
-  PetscCheckFalse(a->vecinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseRestoreColumnVec() first");
-  PetscCheckFalse(a->matinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseRestoreSubMatrix() first");
+  PetscCheck(!a->vecinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseRestoreColumnVec() first");
+  PetscCheck(!a->matinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseRestoreSubMatrix() first");
   if (a->v) CHKERRQ(MatSeqDenseCUDACopyToGPU(A));
   dA->d_v = dA->unplacedarray;
   dA->user_alloc = dA->unplaced_user_alloc;
@@ -267,9 +267,9 @@ static PetscErrorCode MatDenseCUDAReplaceArray_SeqDenseCUDA(Mat A, const PetscSc
   Mat_SeqDenseCUDA *dA = (Mat_SeqDenseCUDA*)A->spptr;
 
   PetscFunctionBegin;
-  PetscCheckFalse(aa->vecinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseRestoreColumnVec() first");
-  PetscCheckFalse(aa->matinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseRestoreSubMatrix() first");
-  PetscCheckFalse(dA->unplacedarray,PETSC_COMM_SELF,PETSC_ERR_ORDER,"MatDenseCUDAResetArray() must be called first");
+  PetscCheck(!aa->vecinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseRestoreColumnVec() first");
+  PetscCheck(!aa->matinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseRestoreSubMatrix() first");
+  PetscCheck(!dA->unplacedarray,PETSC_COMM_SELF,PETSC_ERR_ORDER,"MatDenseCUDAResetArray() must be called first");
   if (!dA->user_alloc) CHKERRCUDA(cudaFree(dA->d_v));
   dA->d_v = (PetscScalar*)a;
   dA->user_alloc = PETSC_FALSE;
@@ -1199,7 +1199,7 @@ static PetscErrorCode MatReset_SeqDenseCUDA(Mat A)
 
   PetscFunctionBegin;
   if (dA) {
-    PetscCheckFalse(dA->unplacedarray,PETSC_COMM_SELF,PETSC_ERR_ORDER,"MatDenseCUDAResetArray() must be called first");
+    PetscCheck(!dA->unplacedarray,PETSC_COMM_SELF,PETSC_ERR_ORDER,"MatDenseCUDAResetArray() must be called first");
     if (!dA->user_alloc) CHKERRCUDA(cudaFree(dA->d_v));
     CHKERRCUDA(cudaFree(dA->d_fact_tau));
     CHKERRCUDA(cudaFree(dA->d_fact_ipiv));
@@ -1298,8 +1298,8 @@ static PetscErrorCode MatDenseGetColumnVec_SeqDenseCUDA(Mat A,PetscInt col,Vec *
   Mat_SeqDense   *a = (Mat_SeqDense*)A->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(a->vecinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseRestoreColumnVec() first");
-  PetscCheckFalse(a->matinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseRestoreSubMatrix() first");
+  PetscCheck(!a->vecinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseRestoreColumnVec() first");
+  PetscCheck(!a->matinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseRestoreSubMatrix() first");
   CHKERRQ(MatDenseCUDAGetArray(A,(PetscScalar**)&a->ptrinuse));
   if (!a->cvec) { /* we pass the data of A, to prevent allocating needless GPU memory the first time VecCUDAPlaceArray is called */
     CHKERRQ(VecCreateSeqCUDAWithArray(PetscObjectComm((PetscObject)A),A->rmap->bs,A->rmap->n,a->ptrinuse,&a->cvec));
@@ -1316,8 +1316,8 @@ static PetscErrorCode MatDenseRestoreColumnVec_SeqDenseCUDA(Mat A,PetscInt col,V
   Mat_SeqDense   *a = (Mat_SeqDense*)A->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(!a->vecinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseGetColumnVec() first");
-  PetscCheckFalse(!a->cvec,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Missing internal column vector");
+  PetscCheck(a->vecinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseGetColumnVec() first");
+  PetscCheck(a->cvec,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Missing internal column vector");
   a->vecinuse = 0;
   CHKERRQ(VecCUDAResetArray(a->cvec));
   CHKERRQ(MatDenseCUDARestoreArray(A,(PetscScalar**)&a->ptrinuse));
@@ -1330,8 +1330,8 @@ static PetscErrorCode MatDenseGetColumnVecRead_SeqDenseCUDA(Mat A,PetscInt col,V
   Mat_SeqDense   *a = (Mat_SeqDense*)A->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(a->vecinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseRestoreColumnVec() first");
-  PetscCheckFalse(a->matinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseRestoreSubMatrix() first");
+  PetscCheck(!a->vecinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseRestoreColumnVec() first");
+  PetscCheck(!a->matinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseRestoreSubMatrix() first");
   CHKERRQ(MatDenseCUDAGetArrayRead(A,&a->ptrinuse));
   if (!a->cvec) { /* we pass the data of A, to prevent allocating needless GPU memory the first time VecCUDAPlaceArray is called */
     CHKERRQ(VecCreateSeqCUDAWithArray(PetscObjectComm((PetscObject)A),A->rmap->bs,A->rmap->n,a->ptrinuse,&a->cvec));
@@ -1349,8 +1349,8 @@ static PetscErrorCode MatDenseRestoreColumnVecRead_SeqDenseCUDA(Mat A,PetscInt c
   Mat_SeqDense   *a = (Mat_SeqDense*)A->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(!a->vecinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseGetColumnVec() first");
-  PetscCheckFalse(!a->cvec,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Missing internal column vector");
+  PetscCheck(a->vecinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseGetColumnVec() first");
+  PetscCheck(a->cvec,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Missing internal column vector");
   a->vecinuse = 0;
   CHKERRQ(VecLockReadPop(a->cvec));
   CHKERRQ(VecCUDAResetArray(a->cvec));
@@ -1364,8 +1364,8 @@ static PetscErrorCode MatDenseGetColumnVecWrite_SeqDenseCUDA(Mat A,PetscInt col,
   Mat_SeqDense   *a = (Mat_SeqDense*)A->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(a->vecinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseRestoreColumnVec() first");
-  PetscCheckFalse(a->matinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseRestoreSubMatrix() first");
+  PetscCheck(!a->vecinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseRestoreColumnVec() first");
+  PetscCheck(!a->matinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseRestoreSubMatrix() first");
   CHKERRQ(MatDenseCUDAGetArrayWrite(A,(PetscScalar**)&a->ptrinuse));
   if (!a->cvec) { /* we pass the data of A, to prevent allocating needless GPU memory the first time VecCUDAPlaceArray is called */
     CHKERRQ(VecCreateSeqCUDAWithArray(PetscObjectComm((PetscObject)A),A->rmap->bs,A->rmap->n,a->ptrinuse,&a->cvec));
@@ -1382,8 +1382,8 @@ static PetscErrorCode MatDenseRestoreColumnVecWrite_SeqDenseCUDA(Mat A,PetscInt 
   Mat_SeqDense   *a = (Mat_SeqDense*)A->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(!a->vecinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseGetColumnVec() first");
-  PetscCheckFalse(!a->cvec,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Missing internal column vector");
+  PetscCheck(a->vecinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseGetColumnVec() first");
+  PetscCheck(a->cvec,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Missing internal column vector");
   a->vecinuse = 0;
   CHKERRQ(VecCUDAResetArray(a->cvec));
   CHKERRQ(MatDenseCUDARestoreArrayWrite(A,(PetscScalar**)&a->ptrinuse));
@@ -1397,8 +1397,8 @@ static PetscErrorCode MatDenseGetSubMatrix_SeqDenseCUDA(Mat A,PetscInt cbegin,Pe
   Mat_SeqDenseCUDA *dA = (Mat_SeqDenseCUDA*)A->spptr;
 
   PetscFunctionBegin;
-  PetscCheckFalse(a->vecinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseRestoreColumnVec() first");
-  PetscCheckFalse(a->matinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseRestoreSubMatrix() first");
+  PetscCheck(!a->vecinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseRestoreColumnVec() first");
+  PetscCheck(!a->matinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseRestoreSubMatrix() first");
   if (a->cmat && cend-cbegin != a->cmat->cmap->N) {
     CHKERRQ(MatDestroy(&a->cmat));
   }
@@ -1422,8 +1422,8 @@ static PetscErrorCode MatDenseRestoreSubMatrix_SeqDenseCUDA(Mat A,Mat *v)
   Mat_SeqDense   *a = (Mat_SeqDense*)A->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(!a->matinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseGetSubMatrix() first");
-  PetscCheckFalse(!a->cmat,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Missing internal column matrix");
+  PetscCheck(a->matinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseGetSubMatrix() first");
+  PetscCheck(a->cmat,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Missing internal column matrix");
   PetscCheckFalse(*v != a->cmat,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Not the matrix obtained from MatDenseGetSubMatrix()");
   a->matinuse = 0;
   A->offloadmask = PETSC_OFFLOAD_GPU;
@@ -1452,8 +1452,8 @@ static PetscErrorCode MatBindToCPU_SeqDenseCUDA(Mat A,PetscBool flg)
   Mat_SeqDense   *a = (Mat_SeqDense*)A->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(a->vecinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseRestoreColumnVec() first");
-  PetscCheckFalse(a->matinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseRestoreSubMatrix() first");
+  PetscCheck(!a->vecinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseRestoreColumnVec() first");
+  PetscCheck(!a->matinuse,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Need to call MatDenseRestoreSubMatrix() first");
   A->boundtocpu = flg;
   if (!flg) {
     PetscBool iscuda;
