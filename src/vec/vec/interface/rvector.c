@@ -956,7 +956,7 @@ PetscErrorCode  VecSetValuesLocal(Vec x,PetscInt ni,const PetscInt ix[],const Pe
 
   CHKERRQ(PetscLogEventBegin(VEC_SetValues,x,0,0,0));
   if (!x->ops->setvalueslocal) {
-    PetscCheckFalse(!x->map->mapping,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Local to global never set with VecSetLocalToGlobalMapping()");
+    PetscCheck(x->map->mapping,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Local to global never set with VecSetLocalToGlobalMapping()");
     if (ni > 128) {
       CHKERRQ(PetscMalloc1(ni,&lix));
     }
@@ -2123,7 +2123,7 @@ PetscErrorCode VecGetArrayReadAndMemType(Vec x,const PetscScalar **a,PetscMemTyp
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
   PetscValidType(x,1);
  #if defined(PETSC_USE_DEBUG)
-  PetscCheckFalse(x->ops->getarrayreadandmemtype,PetscObjectComm((PetscObject)x),PETSC_ERR_SUP,"Not expected vector type \"%s\" has ops->getarrayreadandmemtype",((PetscObject)x)->type_name);
+  PetscCheck(!x->ops->getarrayreadandmemtype,PetscObjectComm((PetscObject)x),PETSC_ERR_SUP,"Not expected vector type \"%s\" has ops->getarrayreadandmemtype",((PetscObject)x)->type_name);
  #endif
 
   if (x->ops->getarrayandmemtype) { /* VECCUDA, VECKOKKOS etc, though they are also petscnative */

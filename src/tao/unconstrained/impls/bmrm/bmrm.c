@@ -125,7 +125,7 @@ static PetscErrorCode TaoSolve_BMRM(Tao tao)
       /* set up the Q */
       pgrad = grad_list.next;
       for (i=0; i<=tao->niter; i++) {
-        PetscCheckFalse(!pgrad,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Assert that there are at least tao->niter+1 pgrad available");
+        PetscCheck(pgrad,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Assert that there are at least tao->niter+1 pgrad available");
         CHKERRQ(VecDot(pgrad->V, bmrm->local_w, &reg));
         df.Q[i][tao->niter] = df.Q[tao->niter][i] = reg / lambda;
         pgrad = pgrad->next;

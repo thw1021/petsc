@@ -142,7 +142,7 @@ PetscErrorCode VecView_MPI_Draw_DA2d(Vec xin,PetscViewer viewer)
   CHKERRQ(PetscViewerDrawGetBounds(viewer,&nbounds,&bounds));
 
   CHKERRQ(VecGetDM(xin,&da));
-  PetscCheckFalse(!da,PetscObjectComm((PetscObject)xin),PETSC_ERR_ARG_WRONG,"Vector not generated from a DMDA");
+  PetscCheck(da,PetscObjectComm((PetscObject)xin),PETSC_ERR_ARG_WRONG,"Vector not generated from a DMDA");
 
   CHKERRQ(PetscObjectGetComm((PetscObject)xin,&comm));
   CHKERRMPI(MPI_Comm_rank(comm,&zctx.rank));
@@ -438,7 +438,7 @@ PetscErrorCode VecView_MPI_HDF5_DA(Vec xin,PetscViewer viewer)
   CHKERRQ(PetscViewerHDF5GetSPOutput(viewer,&spoutput));
 
   CHKERRQ(VecGetDM(xin,&dm));
-  PetscCheckFalse(!dm,PetscObjectComm((PetscObject)xin),PETSC_ERR_ARG_WRONG,"Vector not generated from a DMDA");
+  PetscCheck(dm,PetscObjectComm((PetscObject)xin),PETSC_ERR_ARG_WRONG,"Vector not generated from a DMDA");
   da = (DM_DA*)dm->data;
   CHKERRQ(DMGetDimension(dm, &dimension));
 
@@ -659,7 +659,7 @@ PetscErrorCode  VecView_MPI_DA(Vec xin,PetscViewer viewer)
 
   PetscFunctionBegin;
   CHKERRQ(VecGetDM(xin,&da));
-  PetscCheckFalse(!da,PetscObjectComm((PetscObject)xin),PETSC_ERR_ARG_WRONG,"Vector not generated from a DMDA");
+  PetscCheck(da,PetscObjectComm((PetscObject)xin),PETSC_ERR_ARG_WRONG,"Vector not generated from a DMDA");
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERDRAW,&isdraw));
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERVTK,&isvtk));
 #if defined(PETSC_HAVE_HDF5)
@@ -940,7 +940,7 @@ PetscErrorCode  VecLoad_Default_DA(Vec xin, PetscViewer viewer)
 
   PetscFunctionBegin;
   CHKERRQ(VecGetDM(xin,&da));
-  PetscCheckFalse(!da,PetscObjectComm((PetscObject)xin),PETSC_ERR_ARG_WRONG,"Vector not generated from a DMDA");
+  PetscCheck(da,PetscObjectComm((PetscObject)xin),PETSC_ERR_ARG_WRONG,"Vector not generated from a DMDA");
 
 #if defined(PETSC_HAVE_HDF5)
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERHDF5,&ishdf5));

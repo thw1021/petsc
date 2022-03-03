@@ -246,7 +246,7 @@ PetscErrorCode DMGetDMTSWrite(DM dm,DMTS *tsdm)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   CHKERRQ(DMGetDMTS(dm,&sdm));
-  PetscCheckFalse(!sdm->originaldm,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"DMTS has a NULL originaldm");
+  PetscCheck(sdm->originaldm,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"DMTS has a NULL originaldm");
   if (sdm->originaldm != dm) {  /* Copy on write */
     DMTS oldsdm = sdm;
     CHKERRQ(PetscInfo(dm,"Copying DMTS due to write\n"));

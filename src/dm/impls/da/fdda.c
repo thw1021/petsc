@@ -584,7 +584,7 @@ PetscErrorCode  MatView_MPI_DA(Mat A,PetscViewer viewer)
 
   CHKERRQ(PetscObjectGetComm((PetscObject)A,&comm));
   CHKERRQ(MatGetDM(A, &da));
-  PetscCheckFalse(!da,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONG,"Matrix not generated from a DMDA");
+  PetscCheck(da,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONG,"Matrix not generated from a DMDA");
 
   CHKERRQ(DMDAGetAO(da,&ao));
   CHKERRQ(MatGetOwnershipRange(A,&rstart,&rend));
@@ -618,7 +618,7 @@ PetscErrorCode  MatLoad_MPI_DA(Mat A,PetscViewer viewer)
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject)A,&comm));
   CHKERRQ(MatGetDM(A, &da));
-  PetscCheckFalse(!da,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONG,"Matrix not generated from a DMDA");
+  PetscCheck(da,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONG,"Matrix not generated from a DMDA");
 
   /* Load the matrix in natural ordering */
   CHKERRQ(MatCreate(PetscObjectComm((PetscObject)A),&Anatural));

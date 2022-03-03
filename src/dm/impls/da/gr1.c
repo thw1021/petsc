@@ -34,7 +34,7 @@ PetscErrorCode  DMDASetUniformCoordinates(DM da,PetscReal xmin,PetscReal xmax,Pe
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(da,DM_CLASSID,1,DMDA);
-  PetscCheckFalse(!dd->gtol,PetscObjectComm((PetscObject)da),PETSC_ERR_ARG_WRONGSTATE,"Cannot set coordinates until after DMDA has been setup");
+  PetscCheck(dd->gtol,PetscObjectComm((PetscObject)da),PETSC_ERR_ARG_WRONGSTATE,"Cannot set coordinates until after DMDA has been setup");
   CHKERRQ(DMDAGetInfo(da,&dim,&M,&N,&P,NULL,NULL,NULL,NULL,NULL,&bx,&by,&bz,NULL));
   PetscCheckFalse(xmax < xmin,PetscObjectComm((PetscObject)da),PETSC_ERR_ARG_INCOMP,"xmax must be larger than xmin %g %g",(double)xmin,(double)xmax);
   PetscCheckFalse((dim > 1) && (ymax < ymin),PetscObjectComm((PetscObject)da),PETSC_ERR_ARG_INCOMP,"ymax must be larger than ymin %g %g",(double)ymin,(double)ymax);
@@ -167,7 +167,7 @@ PetscErrorCode VecView_MPI_Draw_DA1d(Vec xin,PetscViewer v)
   CHKERRQ(PetscViewerDrawGetBounds(v,&nbounds,&bounds));
 
   CHKERRQ(VecGetDM(xin,&da));
-  PetscCheckFalse(!da,PetscObjectComm((PetscObject)xin),PETSC_ERR_ARG_WRONG,"Vector not generated from a DMDA");
+  PetscCheck(da,PetscObjectComm((PetscObject)xin),PETSC_ERR_ARG_WRONG,"Vector not generated from a DMDA");
   CHKERRQ(PetscObjectGetComm((PetscObject)xin,&comm));
   CHKERRMPI(MPI_Comm_size(comm,&size));
   CHKERRMPI(MPI_Comm_rank(comm,&rank));

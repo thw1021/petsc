@@ -770,7 +770,7 @@ static PetscErrorCode TSStep_ARKIMEX(TS ts)
     if (PetscDefined(USE_DEBUG)) {
       PetscBool id = PETSC_FALSE;
       CHKERRQ(TSARKIMEXTestMassIdentity(ts,&id));
-      PetscCheckFalse(!id,PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_INCOMP,"This scheme requires an identity mass matrix, however the TSIFunction you provide does not utilize an identity mass matrix");
+      PetscCheck(id,PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_INCOMP,"This scheme requires an identity mass matrix, however the TSIFunction you provide does not utilize an identity mass matrix");
     }
     CHKERRQ(TSClone(ts,&ts_start));
     CHKERRQ(TSSetSolution(ts_start,ts->vec_sol));
@@ -848,7 +848,7 @@ static PetscErrorCode TSStep_ARKIMEX(TS ts)
       }
       if (ts->equation_type >= TS_EQ_IMPLICIT) {
         if (i==0 && tab->explicit_first_stage) {
-          PetscCheckFalse(!tab->stiffly_accurate,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSARKIMEX %s is not stiffly accurate and therefore explicit-first stage methods cannot be used if the equation is implicit because the slope cannot be evaluated",ark->tableau->name);
+          PetscCheck(tab->stiffly_accurate,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSARKIMEX %s is not stiffly accurate and therefore explicit-first stage methods cannot be used if the equation is implicit because the slope cannot be evaluated",ark->tableau->name);
           CHKERRQ(VecCopy(Ydot0,YdotI[0]));                                      /* YdotI = YdotI(tn-1) */
         } else {
           CHKERRQ(VecAXPBYPCZ(YdotI[i],-ark->scoeff/h,ark->scoeff/h,0,Z,Y[i]));  /* YdotI = shift*(X-Z) */
@@ -956,7 +956,7 @@ static PetscErrorCode TSExtrapolate_ARKIMEX(TS ts,PetscReal c,Vec X)
       b[i]  += h * B[i*pinterp+j] * tt;
     }
   }
-  PetscCheckFalse(!ark->Y_prev,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"Stages from previous step have not been stored");
+  PetscCheck(ark->Y_prev,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"Stages from previous step have not been stored");
   CHKERRQ(VecCopy(ark->Y_prev[0],X));
   CHKERRQ(VecMAXPY(X,s,bt,ark->YdotI_prev));
   CHKERRQ(VecMAXPY(X,s,b,ark->YdotRHS_prev));

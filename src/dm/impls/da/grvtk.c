@@ -530,7 +530,7 @@ PetscErrorCode DMDAVTKWriteAll(PetscObject odm,PetscViewer viewer)
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,2);
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERVTK,&isvtk));
-  PetscCheckFalse(!isvtk,PetscObjectComm((PetscObject)viewer),PETSC_ERR_ARG_INCOMP,"Cannot use viewer type %s",((PetscObject)viewer)->type_name);
+  PetscCheck(isvtk,PetscObjectComm((PetscObject)viewer),PETSC_ERR_ARG_INCOMP,"Cannot use viewer type %s",((PetscObject)viewer)->type_name);
   switch (viewer->format) {
   case PETSC_VIEWER_VTK_VTS:
     CHKERRQ(DMDAVTKWriteAll_VTS(dm,viewer));
