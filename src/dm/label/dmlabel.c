@@ -977,7 +977,7 @@ PetscErrorCode DMLabelGetValue(DMLabel label, PetscInt point, PetscInt *value)
 
   PetscFunctionBeginHot;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
-  PetscValidPointer(value, 3);
+  PetscValidIntPointer(value, 3);
   *value = label->defaultValue;
   for (v = 0; v < label->numStrata; ++v) {
     if (label->validIS[v]) {
@@ -1118,7 +1118,7 @@ PetscErrorCode DMLabelGetNumValues(DMLabel label, PetscInt *numValues)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
-  PetscValidPointer(numValues, 2);
+  PetscValidIntPointer(numValues, 2);
   *numValues = label->numStrata;
   PetscFunctionReturn(0);
 }
@@ -1217,7 +1217,7 @@ PetscErrorCode DMLabelGetValueIndex(DMLabel label, PetscInt value, PetscInt *ind
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
-  PetscValidPointer(index, 3);
+  PetscValidIntPointer(index, 3);
   /* Do not assume they are sorted */
   for (v = 0; v < label->numStrata; ++v) if (label->stratumValues[v] == value) break;
   if (v >= label->numStrata) *index = -1;
@@ -1247,7 +1247,7 @@ PetscErrorCode DMLabelHasStratum(DMLabel label, PetscInt value, PetscBool *exist
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
-  PetscValidPointer(exists, 3);
+  PetscValidBoolPointer(exists, 3);
   CHKERRQ(DMLabelLookupStratum(label, value, &v));
   *exists = v < 0 ? PETSC_FALSE : PETSC_TRUE;
   PetscFunctionReturn(0);
@@ -1275,7 +1275,7 @@ PetscErrorCode DMLabelGetStratumSize(DMLabel label, PetscInt value, PetscInt *si
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
-  PetscValidPointer(size, 3);
+  PetscValidIntPointer(size, 3);
   CHKERRQ(DMLabelLookupStratum(label, value, &v));
   CHKERRQ(DMLabelGetStratumSize_Private(label, v, size));
   PetscFunctionReturn(0);
@@ -1304,8 +1304,8 @@ PetscErrorCode DMLabelGetStratumBounds(DMLabel label, PetscInt value, PetscInt *
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
-  if (start) {PetscValidPointer(start, 3); *start = -1;}
-  if (end)   {PetscValidPointer(end,   4); *end   = -1;}
+  if (start) {PetscValidIntPointer(start, 3); *start = -1;}
+  if (end)   {PetscValidIntPointer(end,   4); *end   = -1;}
   CHKERRQ(DMLabelLookupStratum(label, value, &v));
   if (v < 0) PetscFunctionReturn(0);
   CHKERRQ(DMLabelMakeValid_Private(label, v));
@@ -1495,7 +1495,7 @@ PetscErrorCode DMLabelGetStratumPointIndex(DMLabel label, PetscInt value, PetscI
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
-  PetscValidPointer(index, 4);
+  PetscValidIntPointer(index, 4);
   *index = -1;
   CHKERRQ(DMLabelLookupStratum(label, value, &v));
   if (v < 0) PetscFunctionReturn(0);
