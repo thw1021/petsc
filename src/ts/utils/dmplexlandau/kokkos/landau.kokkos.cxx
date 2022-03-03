@@ -400,7 +400,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
   PetscFunctionBegin;
   CHKERRQ(PetscLogEventBegin(events[3],0,0,0,0));
   CHKERRQ(DMGetApplicationContext(plex[0], &ctx));
-  PetscCheckFalse(!ctx,PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
+  PetscCheck(ctx,PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
   CHKERRQ(DMGetDimension(plex[0], &dim));
   PetscCheckFalse(LANDAU_DIM != dim,PETSC_COMM_WORLD, PETSC_ERR_PLIB, "dim %D != LANDAU_DIM %d",dim,LANDAU_DIM);
   if (ctx->gpu_assembly) {
@@ -729,7 +729,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
   if (elem_mat_num_cells_max_grid) { // CPU assembly
     Kokkos::View<PetscScalar****, Kokkos::LayoutRight>::HostMirror h_elem_mats = Kokkos::create_mirror_view(d_elem_mats);
     Kokkos::deep_copy (h_elem_mats, d_elem_mats);
-    PetscCheckFalse(container,PETSC_COMM_SELF, PETSC_ERR_PLIB, "?????");
+    PetscCheck(!container,PETSC_COMM_SELF, PETSC_ERR_PLIB, "?????");
     for (PetscInt b_id = 0 ; b_id < batch_sz ; b_id++) { // OpenMP (once)
       for (PetscInt grid=0 ; grid<num_grids ; grid++) {
         PetscSection      section, globalSection;

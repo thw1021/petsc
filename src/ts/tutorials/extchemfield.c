@@ -80,7 +80,7 @@ static PetscErrorCode FormRHSFunction(TS,PetscReal,Vec,Vec,void*);
 static PetscErrorCode FormRHSJacobian(TS,PetscReal,Vec,Mat,Mat,void*);
 static PetscErrorCode FormInitialSolution(TS,Vec,void*);
 
-#define CHKERRTC(ierr) do {PetscCheckFalse(ierr,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in TChem library, return code %d",ierr);} while (0)
+#define CHKERRTC(ierr) do {PetscCheck(!ierr,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in TChem library, return code %d",ierr);} while (0)
 
 int main(int argc,char **argv)
 {

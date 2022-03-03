@@ -353,8 +353,8 @@ static PetscErrorCode TaoSolve_ADMM(Tao tao)
 
   PetscFunctionBegin;
   if (am->regswitch != TAO_ADMM_REGULARIZER_SOFT_THRESH) {
-    PetscCheckFalse(!am->subsolverX->ops->computejacobianequality,PetscObjectComm((PetscObject)tao),PETSC_ERR_ARG_WRONGSTATE,"Must call TaoADMMSetMisfitConstraintJacobian() first");
-    PetscCheckFalse(!am->subsolverZ->ops->computejacobianequality,PetscObjectComm((PetscObject)tao),PETSC_ERR_ARG_WRONGSTATE,"Must call TaoADMMSetRegularizerConstraintJacobian() first");
+    PetscCheck(am->subsolverX->ops->computejacobianequality,PetscObjectComm((PetscObject)tao),PETSC_ERR_ARG_WRONGSTATE,"Must call TaoADMMSetMisfitConstraintJacobian() first");
+    PetscCheck(am->subsolverZ->ops->computejacobianequality,PetscObjectComm((PetscObject)tao),PETSC_ERR_ARG_WRONGSTATE,"Must call TaoADMMSetRegularizerConstraintJacobian() first");
     if (am->constraint != NULL) {
       CHKERRQ(VecNorm(am->constraint,NORM_2,&am->const_norm));
     }
@@ -382,7 +382,7 @@ static PetscErrorCode TaoSolve_ADMM(Tao tao)
   if (!is_reg_shell) {
     switch (am->regswitch) {
     case (TAO_ADMM_REGULARIZER_USER):
-      PetscCheckFalse(!am->ops->regobjgrad,PetscObjectComm((PetscObject)tao),PETSC_ERR_ARG_WRONGSTATE,"Must call TaoADMMSetRegularizerObjectiveAndGradientRoutine() first if one wishes to use TAO_ADMM_REGULARIZER_USER with non-TAOSHELL type");
+      PetscCheck(am->ops->regobjgrad,PetscObjectComm((PetscObject)tao),PETSC_ERR_ARG_WRONGSTATE,"Must call TaoADMMSetRegularizerObjectiveAndGradientRoutine() first if one wishes to use TAO_ADMM_REGULARIZER_USER with non-TAOSHELL type");
       break;
     case (TAO_ADMM_REGULARIZER_SOFT_THRESH):
       /* Soft Threshold. */

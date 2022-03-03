@@ -349,7 +349,7 @@ int main(int argc,char **argv)
     PetscErrorCode (*pcreate)(Problem);
 
     CHKERRQ(PetscFunctionListFind(plist,pname,&pcreate));
-    PetscCheckFalse(!pcreate,PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"No problem '%s'",pname);
+    PetscCheck(pcreate,PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"No problem '%s'",pname);
     CHKERRQ((*pcreate)(problem));
   }
 

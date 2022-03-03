@@ -118,7 +118,7 @@ static PetscErrorCode ProcessMonitorOptions(MPI_Comm comm, AppCtx *options)
       CHKERRQ(PetscStrcasecmp(names[f], func->name, &match));
       if (match) break;
     }
-    PetscCheckFalse(!func,comm, PETSC_ERR_USER, "No known functional '%s'", names[f]);
+    PetscCheck(func,comm, PETSC_ERR_USER, "No known functional '%s'", names[f]);
     options->monitorFuncs[f] = func;
     /* Jed inserts a de-duplication of functionals here */
     CHKERRQ(PetscFree(names[f]));

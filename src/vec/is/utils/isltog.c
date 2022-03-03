@@ -1926,7 +1926,7 @@ PetscErrorCode  ISLocalToGlobalMappingSetType(ISLocalToGlobalMapping ltog, ISLoc
   if (match) PetscFunctionReturn(0);
 
   CHKERRQ(PetscFunctionListFind(ISLocalToGlobalMappingList,type,&r));
-  PetscCheckFalse(!r,PetscObjectComm((PetscObject)ltog),PETSC_ERR_ARG_UNKNOWN_TYPE,"Unable to find requested ISLocalToGlobalMapping type %s",type);
+  PetscCheck(r,PetscObjectComm((PetscObject)ltog),PETSC_ERR_ARG_UNKNOWN_TYPE,"Unable to find requested ISLocalToGlobalMapping type %s",type);
   /* Destroy the previous private LTOG context */
   if (ltog->ops->destroy) {
     CHKERRQ((*ltog->ops->destroy)(ltog));

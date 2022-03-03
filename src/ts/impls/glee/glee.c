@@ -676,7 +676,7 @@ static PetscErrorCode TSInterpolate_GLEE(TS ts,PetscReal itime,Vec X)
   const PetscReal *B = glee->tableau->binterp;
 
   PetscFunctionBegin;
-  PetscCheckFalse(!B,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSGLEE %s does not have an interpolation formula",glee->tableau->name);
+  PetscCheck(B,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSGLEE %s does not have an interpolation formula",glee->tableau->name);
   switch (glee->status) {
     case TS_STEP_INCOMPLETE:
     case TS_STEP_PENDING:
