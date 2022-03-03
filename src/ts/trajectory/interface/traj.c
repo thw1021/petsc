@@ -126,7 +126,7 @@ PetscErrorCode TSTrajectoryGet(TSTrajectory tj,TS ts,PetscInt stepnum,PetscReal 
   PetscValidHeaderSpecific(tj,TSTRAJECTORY_CLASSID,1);
   PetscValidHeaderSpecific(ts,TS_CLASSID,2);
   PetscValidLogicalCollectiveInt(tj,stepnum,3);
-  PetscValidPointer(time,4);
+  PetscValidRealPointer(time,4);
   PetscCheck(tj->ops->get,PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"TSTrajectory type %s",((PetscObject)tj)->type_name);
   PetscCheck(tj->setupcalled,PetscObjectComm((PetscObject)tj),PETSC_ERR_ORDER,"TSTrajectorySetUp should be called first");
   PetscCheckFalse(stepnum < 0,PetscObjectComm((PetscObject)tj),PETSC_ERR_PLIB,"Requesting negative step number");
@@ -172,7 +172,7 @@ PetscErrorCode TSTrajectoryGetVecs(TSTrajectory tj,TS ts,PetscInt stepnum,PetscR
   PetscValidHeaderSpecific(tj,TSTRAJECTORY_CLASSID,1);
   if (ts) PetscValidHeaderSpecific(ts,TS_CLASSID,2);
   PetscValidLogicalCollectiveInt(tj,stepnum,3);
-  PetscValidPointer(time,4);
+  PetscValidRealPointer(time,4);
   if (U) PetscValidHeaderSpecific(U,VEC_CLASSID,5);
   if (Udot) PetscValidHeaderSpecific(Udot,VEC_CLASSID,6);
   if (!U && !Udot) PetscFunctionReturn(0);
@@ -957,7 +957,7 @@ PetscErrorCode TSTrajectoryGetSolutionOnly(TSTrajectory tj,PetscBool *solution_o
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tj,TSTRAJECTORY_CLASSID,1);
-  PetscValidPointer(solution_only,2);
+  PetscValidBoolPointer(solution_only,2);
   *solution_only = tj->solution_only;
   PetscFunctionReturn(0);
 }

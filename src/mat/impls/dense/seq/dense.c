@@ -2098,7 +2098,7 @@ PetscErrorCode  MatDenseGetLDA(Mat A,PetscInt *lda)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
-  PetscValidPointer(lda,2);
+  PetscValidIntPointer(lda,2);
   CHKERRQ(PetscUseMethod(A,"MatDenseGetLDA_C",(Mat,PetscInt*),(A,lda)));
   PetscFunctionReturn(0);
 }

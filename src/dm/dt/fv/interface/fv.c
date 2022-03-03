@@ -338,7 +338,7 @@ PetscErrorCode PetscLimiterLimit(PetscLimiter lim, PetscReal flim, PetscReal *ph
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(lim, PETSCLIMITER_CLASSID, 1);
-  PetscValidPointer(phi, 3);
+  PetscValidRealPointer(phi, 3);
   CHKERRQ((*lim->ops->limit)(lim, flim, phi));
   PetscFunctionReturn(0);
 }
@@ -1288,7 +1288,7 @@ PetscErrorCode PetscFVGetNumComponents(PetscFV fvm, PetscInt *comp)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
-  PetscValidPointer(comp, 2);
+  PetscValidIntPointer(comp, 2);
   *comp = fvm->numComponents;
   PetscFunctionReturn(0);
 }
@@ -1377,7 +1377,7 @@ PetscErrorCode PetscFVGetSpatialDimension(PetscFV fvm, PetscInt *dim)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
-  PetscValidPointer(dim, 2);
+  PetscValidIntPointer(dim, 2);
   *dim = fvm->dim;
   PetscFunctionReturn(0);
 }
@@ -1422,7 +1422,7 @@ PetscErrorCode PetscFVGetComputeGradients(PetscFV fvm, PetscBool *computeGradien
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
-  PetscValidPointer(computeGradients, 2);
+  PetscValidBoolPointer(computeGradients, 2);
   *computeGradients = fvm->computeGradients;
   PetscFunctionReturn(0);
 }
@@ -1637,7 +1637,7 @@ PetscErrorCode PetscFVCreateTabulation(PetscFV fvm, PetscInt nrepl, PetscInt npo
     PetscFunctionReturn(0);
   }
   PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
-  PetscValidPointer(points, 4);
+  PetscValidRealPointer(points, 4);
   PetscValidPointer(T, 6);
   CHKERRQ(PetscFVGetSpatialDimension(fvm, &cdim));
   CHKERRQ(PetscFVGetNumComponents(fvm, &Nc));

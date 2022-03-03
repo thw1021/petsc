@@ -577,7 +577,7 @@ PetscErrorCode PetscDualSpaceGetOrder(PetscDualSpace sp, PetscInt *order)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
-  PetscValidPointer(order, 2);
+  PetscValidIntPointer(order, 2);
   *order = sp->order;
   PetscFunctionReturn(0);
 }
@@ -623,7 +623,7 @@ PetscErrorCode PetscDualSpaceGetNumComponents(PetscDualSpace sp, PetscInt *Nc)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
-  PetscValidPointer(Nc, 2);
+  PetscValidIntPointer(Nc, 2);
   *Nc = sp->Nc;
   PetscFunctionReturn(0);
 }
@@ -697,7 +697,7 @@ PetscErrorCode PetscDualSpaceGetDimension(PetscDualSpace sp, PetscInt *dim)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
-  PetscValidPointer(dim, 2);
+  PetscValidIntPointer(dim, 2);
   if (sp->spdim < 0) {
     PetscSection section;
 
@@ -730,7 +730,7 @@ PetscErrorCode PetscDualSpaceGetInteriorDimension(PetscDualSpace sp, PetscInt *i
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
-  PetscValidPointer(intdim, 2);
+  PetscValidIntPointer(intdim, 2);
   if (sp->spintdim < 0) {
     PetscSection section;
 
@@ -766,7 +766,7 @@ PetscErrorCode PetscDualSpaceGetUniform(PetscDualSpace sp, PetscBool *uniform)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
-  PetscValidPointer(uniform, 2);
+  PetscValidBoolPointer(uniform, 2);
   *uniform = sp->uniform;
   PetscFunctionReturn(0);
 }
@@ -1011,7 +1011,7 @@ PetscErrorCode PetscDualSpaceApply(PetscDualSpace sp, PetscInt f, PetscReal time
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
   PetscValidPointer(cgeom, 4);
-  PetscValidPointer(value, 8);
+  PetscValidScalarPointer(value, 8);
   CHKERRQ((*sp->ops->apply)(sp, f, time, cgeom, numComp, func, ctx, value));
   PetscFunctionReturn(0);
 }
@@ -1104,7 +1104,7 @@ PetscErrorCode PetscDualSpaceApplyDefault(PetscDualSpace sp, PetscInt f, PetscRe
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
-  PetscValidPointer(value, 8);
+  PetscValidScalarPointer(value, 8);
   CHKERRQ(PetscDualSpaceGetDM(sp, &dm));
   CHKERRQ(PetscDualSpaceGetFunctional(sp, f, &n));
   CHKERRQ(PetscQuadratureGetData(n, &dim, &qNc, &Nq, &points, &weights));
@@ -1493,7 +1493,7 @@ PetscErrorCode PetscDualSpaceApplyFVM(PetscDualSpace sp, PetscInt f, PetscReal t
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
-  PetscValidPointer(value, 8);
+  PetscValidScalarPointer(value, 8);
   CHKERRQ(PetscDualSpaceGetDM(sp, &dm));
   CHKERRQ(DMGetCoordinateDim(dm, &dimEmbed));
   CHKERRQ(PetscDualSpaceGetFunctional(sp, f, &n));
@@ -1698,7 +1698,7 @@ PetscErrorCode PetscDualSpaceGetFormDegree(PetscDualSpace dsp, PetscInt *k)
 {
   PetscFunctionBeginHot;
   PetscValidHeaderSpecific(dsp, PETSCDUALSPACE_CLASSID, 1);
-  PetscValidPointer(k, 2);
+  PetscValidIntPointer(k, 2);
   *k = dsp->k;
   PetscFunctionReturn(0);
 }
@@ -1758,7 +1758,7 @@ PetscErrorCode PetscDualSpaceGetDeRahm(PetscDualSpace dsp, PetscInt *k)
 
   PetscFunctionBeginHot;
   PetscValidHeaderSpecific(dsp, PETSCDUALSPACE_CLASSID, 1);
-  PetscValidPointer(k, 2);
+  PetscValidIntPointer(k, 2);
   dim = dsp->dm->dim;
   if (!dsp->k) *k = IDENTITY_TRANSFORM;
   else if (dsp->k == 1) *k = COVARIANT_PIOLA_TRANSFORM;
@@ -1796,7 +1796,7 @@ PetscErrorCode PetscDualSpaceTransform(PetscDualSpace dsp, PetscDualSpaceTransfo
   PetscFunctionBeginHot;
   PetscValidHeaderSpecific(dsp, PETSCDUALSPACE_CLASSID, 1);
   PetscValidPointer(fegeom, 4);
-  PetscValidPointer(vals, 7);
+  PetscValidScalarPointer(vals, 7);
   /* TODO: not handling dimEmbed != dim right now */
   dim = dsp->dm->dim;
   /* No change needed for 0-forms */
@@ -1850,7 +1850,7 @@ PetscErrorCode PetscDualSpaceTransformGradient(PetscDualSpace dsp, PetscDualSpac
   PetscFunctionBeginHot;
   PetscValidHeaderSpecific(dsp, PETSCDUALSPACE_CLASSID, 1);
   PetscValidPointer(fegeom, 4);
-  PetscValidPointer(vals, 7);
+  PetscValidScalarPointer(vals, 7);
 #ifdef PETSC_USE_DEBUG
   PetscCheckFalse(dE <= 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid embedding dimension %D", dE);
 #endif
@@ -1963,7 +1963,7 @@ PetscErrorCode PetscDualSpaceTransformHessian(PetscDualSpace dsp, PetscDualSpace
   PetscFunctionBeginHot;
   PetscValidHeaderSpecific(dsp, PETSCDUALSPACE_CLASSID, 1);
   PetscValidPointer(fegeom, 4);
-  PetscValidPointer(vals, 7);
+  PetscValidScalarPointer(vals, 7);
 #ifdef PETSC_USE_DEBUG
   PetscCheckFalse(dE <= 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid embedding dimension %D", dE);
 #endif
@@ -2028,7 +2028,7 @@ PetscErrorCode PetscDualSpacePullback(PetscDualSpace dsp, PetscFEGeom *fegeom, P
   PetscFunctionBeginHot;
   PetscValidHeaderSpecific(dsp, PETSCDUALSPACE_CLASSID, 1);
   PetscValidPointer(fegeom, 2);
-  PetscValidPointer(pointEval, 5);
+  PetscValidScalarPointer(pointEval, 5);
   /* The dualspace dofs correspond to some simplex in the DeRahm complex, which we label by k.
      This determines their transformation properties. */
   CHKERRQ(PetscDualSpaceGetDeRahm(dsp, &k));
@@ -2076,7 +2076,7 @@ PetscErrorCode PetscDualSpacePushforward(PetscDualSpace dsp, PetscFEGeom *fegeom
   PetscFunctionBeginHot;
   PetscValidHeaderSpecific(dsp, PETSCDUALSPACE_CLASSID, 1);
   PetscValidPointer(fegeom, 2);
-  PetscValidPointer(pointEval, 5);
+  PetscValidScalarPointer(pointEval, 5);
   /* The dualspace dofs correspond to some simplex in the DeRahm complex, which we label by k.
      This determines their transformation properties. */
   CHKERRQ(PetscDualSpaceGetDeRahm(dsp, &k));
@@ -2124,7 +2124,7 @@ PetscErrorCode PetscDualSpacePushforwardGradient(PetscDualSpace dsp, PetscFEGeom
   PetscFunctionBeginHot;
   PetscValidHeaderSpecific(dsp, PETSCDUALSPACE_CLASSID, 1);
   PetscValidPointer(fegeom, 2);
-  PetscValidPointer(pointEval, 5);
+  PetscValidScalarPointer(pointEval, 5);
   /* The dualspace dofs correspond to some simplex in the DeRahm complex, which we label by k.
      This determines their transformation properties. */
   CHKERRQ(PetscDualSpaceGetDeRahm(dsp, &k));
@@ -2172,7 +2172,7 @@ PetscErrorCode PetscDualSpacePushforwardHessian(PetscDualSpace dsp, PetscFEGeom 
   PetscFunctionBeginHot;
   PetscValidHeaderSpecific(dsp, PETSCDUALSPACE_CLASSID, 1);
   PetscValidPointer(fegeom, 2);
-  PetscValidPointer(pointEval, 5);
+  PetscValidScalarPointer(pointEval, 5);
   /* The dualspace dofs correspond to some simplex in the DeRahm complex, which we label by k.
      This determines their transformation properties. */
   CHKERRQ(PetscDualSpaceGetDeRahm(dsp, &k));

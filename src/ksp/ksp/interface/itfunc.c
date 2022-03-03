@@ -266,7 +266,7 @@ PetscErrorCode  KSPGetReusePreconditioner(KSP ksp,PetscBool *flag)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
-  PetscValidPointer(flag,2);
+  PetscValidBoolPointer(flag,2);
   *flag = PETSC_FALSE;
   if (ksp->pc) {
     CHKERRQ(PCGetReusePreconditioner(ksp->pc,flag));
@@ -2770,7 +2770,7 @@ PetscErrorCode  KSPGetDiagonalScale(KSP ksp,PetscBool  *scale)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
-  PetscValidPointer(scale,2);
+  PetscValidBoolPointer(scale,2);
   *scale = ksp->dscale;
   PetscFunctionReturn(0);
 }
@@ -2836,7 +2836,7 @@ PetscErrorCode  KSPGetDiagonalScaleFix(KSP ksp,PetscBool  *fix)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
-  PetscValidPointer(fix,2);
+  PetscValidBoolPointer(fix,2);
   *fix = ksp->dscalefix;
   PetscFunctionReturn(0);
 }

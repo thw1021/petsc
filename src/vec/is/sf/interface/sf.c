@@ -1265,7 +1265,7 @@ PetscErrorCode PetscSFCreateEmbeddedRootSF(PetscSF sf,PetscInt nselected,const P
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
   PetscSFCheckGraphSet(sf,1);
-  if (nselected) PetscValidPointer(selected,3);
+  if (nselected) PetscValidIntPointer(selected,3);
   PetscValidPointer(esf,4);
 
   CHKERRQ(PetscSFSetUp(sf));
@@ -1351,7 +1351,7 @@ PetscErrorCode PetscSFCreateEmbeddedLeafSF(PetscSF sf,PetscInt nselected,const P
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
   PetscSFCheckGraphSet(sf,1);
-  if (nselected) PetscValidPointer(selected,3);
+  if (nselected) PetscValidIntPointer(selected,3);
   PetscValidPointer(newsf,4);
 
   /* Uniq selected[] and put results in leaves[] */
