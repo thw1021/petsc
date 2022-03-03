@@ -1343,7 +1343,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   ctx->lnLam = 10;         /* cross section ratio large - small angle collisions */
   ctx->n_0 = 1.e20;        /* typical plasma n, but could set it to 1 */
   ctx->Ez = 0;
-  for (PetscInt grid=0;grid<LANDAU_NUM_TIMERS;grid++) ctx->times[grid] = 0;
+  ierr = PetscArrayzero(ctx->times,LANDAU_NUM_TIMERS);CHKERRQ(ierr);
   ctx->use_matrix_mass = PETSC_FALSE; /* fast but slightly fragile */
   ctx->use_relativistic_corrections = PETSC_FALSE;
   ctx->use_energy_tensor_trick = PETSC_FALSE; /* Use Eero's trick for energy conservation v --> grad(v^2/2) */
@@ -2491,7 +2491,7 @@ PetscErrorCode LandauPrintNorms(Vec X, PetscInt stepi)
   ierr = DMGetDimension(pack, &dim);CHKERRQ(ierr);
   PetscCheck(dim == 2 || dim == 3,PETSC_COMM_SELF, PETSC_ERR_PLIB, "dim %" PetscInt_FMT " not in [2,3]",dim);
   ierr = DMGetApplicationContext(pack, &ctx);CHKERRQ(ierr);
-  PetscCheckFalse(!ctx,PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
+  PetscCheck(ctx,PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
   /* print momentum and energy */
   ierr = DMCompositeGetNumberDM(pack,&nDMs);CHKERRQ(ierr);
   PetscCheck(nDMs == ctx->num_grids*ctx->batch_sz,PETSC_COMM_WORLD, PETSC_ERR_PLIB, "#DM wrong %" PetscInt_FMT " %" PetscInt_FMT,nDMs,ctx->num_grids*ctx->batch_sz);
