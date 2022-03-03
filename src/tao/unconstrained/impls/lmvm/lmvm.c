@@ -160,7 +160,7 @@ static PetscErrorCode TaoSetUp_LMVM(Tao tao)
   CHKERRQ(MatSetSizes(lmP->M, n, n, N, N));
   CHKERRQ(MatLMVMAllocate(lmP->M,tao->solution,tao->gradient));
   CHKERRQ(MatGetOption(lmP->M, MAT_SPD, &is_spd));
-  PetscCheckFalse(!is_spd,PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_INCOMP, "LMVM matrix is not symmetric positive-definite.");
+  PetscCheck(is_spd,PetscObjectComm((PetscObject)tao), PETSC_ERR_ARG_INCOMP, "LMVM matrix is not symmetric positive-definite.");
 
   /* If the user has set a matrix to solve as the initial H0, set the options prefix here, and set up the KSP */
   if (lmP->H0) {

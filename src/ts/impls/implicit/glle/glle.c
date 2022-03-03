@@ -738,7 +738,7 @@ static PetscErrorCode TSGLLESetAcceptType_GLLE(TS ts,TSGLLEAcceptType type)
 
   PetscFunctionBegin;
   CHKERRQ(PetscFunctionListFind(TSGLLEAcceptList,type,&r));
-  PetscCheckFalse(!r,PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unknown TSGLLEAccept type \"%s\" given",type);
+  PetscCheck(r,PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unknown TSGLLEAccept type \"%s\" given",type);
   gl->Accept = r;
   CHKERRQ(PetscStrncpy(gl->accept_name,type,sizeof(gl->accept_name)));
   PetscFunctionReturn(0);

@@ -399,7 +399,7 @@ PetscErrorCode DMTSCheckJacobian(TS ts, DM dm, PetscReal t, Vec u, Vec u_t, Pets
   if (nullspace) {
     PetscBool isNull;
     CHKERRQ(MatNullSpaceTest(nullspace, J, &isNull));
-    PetscCheckFalse(!isNull,comm, PETSC_ERR_PLIB, "The null space calculated for the system operator is invalid.");
+    PetscCheck(isNull,comm, PETSC_ERR_PLIB, "The null space calculated for the system operator is invalid.");
   }
   /* Taylor test */
   {

@@ -148,7 +148,7 @@ PetscErrorCode MatCreateSubMatrix_SeqSBAIJ_Private(Mat A,IS isrow,IS iscol,MatRe
 
     PetscCheckFalse(c->mbs!=nrows || c->nbs!=ncols || (*B)->rmap->bs!=bs,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Submatrix wrong size");
     CHKERRQ(PetscArraycmp(c->ilen,lens,c->mbs,&flag));
-    PetscCheckFalse(!flag,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Cannot reuse matrix. wrong no of nonzeros");
+    PetscCheck(flag,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Cannot reuse matrix. wrong no of nonzeros");
     CHKERRQ(PetscArrayzero(c->ilen,c->mbs));
     C    = *B;
   } else {
@@ -1360,7 +1360,7 @@ PetscErrorCode MatDiagonalScale_SeqSBAIJ(Mat A,Vec ll,Vec rr)
   PetscFunctionBegin;
   if (ll != rr) {
     CHKERRQ(VecEqual(ll,rr,&flg));
-    PetscCheckFalse(!flg,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"For symmetric format, left and right scaling vectors must be same");
+    PetscCheck(flg,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"For symmetric format, left and right scaling vectors must be same");
   }
   if (!ll) PetscFunctionReturn(0);
   ai  = a->i;
@@ -1435,8 +1435,8 @@ PetscErrorCode MatGetRowMaxAbs_SeqSBAIJ(Mat A,Vec v,PetscInt idx[])
   PetscInt        ncols,brow,bcol,krow,kcol;
 
   PetscFunctionBegin;
-  PetscCheckFalse(idx,PETSC_COMM_SELF,PETSC_ERR_SUP,"Send email to petsc-maint@mcs.anl.gov");
-  PetscCheckFalse(A->factortype,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for factored matrix");
+  PetscCheck(!idx,PETSC_COMM_SELF,PETSC_ERR_SUP,"Send email to petsc-maint@mcs.anl.gov");
+  PetscCheck(!A->factortype,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for factored matrix");
   bs  = A->rmap->bs;
   aa  = a->a;
   ai  = a->i;

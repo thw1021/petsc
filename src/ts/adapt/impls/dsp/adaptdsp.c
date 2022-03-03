@@ -240,7 +240,7 @@ static PetscErrorCode TSAdaptDSPSetFilter_DSP(TSAdapt adapt,const char *name)
     CHKERRQ(PetscStrcasecmp(name,filterlist[i].name,&match));
     if (match) { tab = &filterlist[i]; break; }
   }
-  PetscCheckFalse(!tab,PetscObjectComm((PetscObject)adapt),PETSC_ERR_ARG_UNKNOWN_TYPE,"Filter name %s not found",name);
+  PetscCheck(tab,PetscObjectComm((PetscObject)adapt),PETSC_ERR_ARG_UNKNOWN_TYPE,"Filter name %s not found",name);
   dsp->kBeta[0] = tab->kBeta[0]/tab->scale;
   dsp->kBeta[1] = tab->kBeta[1]/tab->scale;
   dsp->kBeta[2] = tab->kBeta[2]/tab->scale;
