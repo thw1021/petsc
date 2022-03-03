@@ -1,7 +1,7 @@
 
 /* Contributed by - Mark Adams */
 
-#include <petscsys.h>
+#include <petsc/private/petscimpl.h>
 #include <petscctable.h>
 
 static PetscErrorCode PetscTableCreateHashSize(PetscInt sz, PetscInt *hsz)
@@ -53,18 +53,17 @@ static PetscErrorCode PetscTableCreateHashSize(PetscInt sz, PetscInt *hsz)
     keys are between 1 and maxkey inclusive
 
 */
-PetscErrorCode  PetscTableCreate(const PetscInt n,PetscInt maxkey,PetscTable *rta)
+PetscErrorCode PetscTableCreate(PetscInt n, PetscInt maxkey, PetscTable *rta)
 {
-  PetscTable     ta;
+  PetscTable ta;
 
   PetscFunctionBegin;
-  PetscCheckFalse(n < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"n < 0");
+  PetscValidPointer(rta,3);
+  PetscCheck(n >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"n < 0");
   CHKERRQ(PetscNew(&ta));
   CHKERRQ(PetscTableCreateHashSize(n,&ta->tablesize));
   CHKERRQ(PetscCalloc1(ta->tablesize,&ta->keytable));
   CHKERRQ(PetscMalloc1(ta->tablesize,&ta->table));
-  ta->head   = 0;
-  ta->count  = 0;
   ta->maxkey = maxkey;
   *rta       = ta;
   PetscFunctionReturn(0);
@@ -75,24 +74,20 @@ PetscErrorCode  PetscTableCreate(const PetscInt n,PetscInt maxkey,PetscTable *rt
  * hash table for non-zero data and keys
  *
  */
-PetscErrorCode  PetscTableCreateCopy(const PetscTable intable,PetscTable *rta)
+PetscErrorCode PetscTableCreateCopy(const PetscTable intable, PetscTable *rta)
 {
-  PetscTable     ta;
+  PetscTable ta;
 
   PetscFunctionBegin;
+  PetscValidPointer(intable,1);
+  PetscValidPointer(rta,2);
   CHKERRQ(PetscNew(&ta));
   ta->tablesize = intable->tablesize;
   CHKERRQ(PetscMalloc1(ta->tablesize,&ta->keytable));
   CHKERRQ(PetscMalloc1(ta->tablesize,&ta->table));
   CHKERRQ(PetscMemcpy(ta->keytable,intable->keytable,ta->tablesize*sizeof(PetscInt)));
   CHKERRQ(PetscMemcpy(ta->table,intable->table,ta->tablesize*sizeof(PetscInt)));
-  if (PetscDefined(USE_DEBUG)) {
-    PetscInt i;
-    for (i = 0; i < ta->tablesize; i++) {
-      PetscCheckFalse(ta->keytable[i] < 0,PETSC_COMM_SELF,PETSC_ERR_COR,"ta->keytable[i] < 0");
-    }
-  }
-  ta->head   = 0;
+  for (PetscInt i = 0; i < ta->tablesize; i++) PetscAssert(ta->keytable[i] >= 0,PETSC_COMM_SELF,PETSC_ERR_COR,"ta->keytable[i] < 0");
   ta->count  = intable->count;
   ta->maxkey = intable->maxkey;
   *rta       = ta;
@@ -103,9 +98,8 @@ PetscErrorCode  PetscTableCreateCopy(const PetscTable intable,PetscTable *rta)
  *
  *
  */
-PetscErrorCode  PetscTableDestroy(PetscTable *ta)
+PetscErrorCode PetscTableDestroy(PetscTable *ta)
 {
-
   PetscFunctionBegin;
   if (!*ta) PetscFunctionReturn(0);
   CHKERRQ(PetscFree((*ta)->keytable));
@@ -116,18 +110,22 @@ PetscErrorCode  PetscTableDestroy(PetscTable *ta)
 
 /* PetscTableGetCount() ********************************************
  */
-PetscErrorCode  PetscTableGetCount(const PetscTable ta,PetscInt *count)
+PetscErrorCode PetscTableGetCount(const PetscTable ta, PetscInt *count)
 {
   PetscFunctionBegin;
+  PetscValidPointer(ta,1);
+  PetscValidIntPointer(count,2);
   *count = ta->count;
   PetscFunctionReturn(0);
 }
 
 /* PetscTableIsEmpty() ********************************************
  */
-PetscErrorCode  PetscTableIsEmpty(const PetscTable ta,PetscInt *flag)
+PetscErrorCode PetscTableIsEmpty(const PetscTable ta, PetscInt *flag)
 {
   PetscFunctionBegin;
+  PetscValidPointer(ta,1);
+  PetscValidIntPointer(flag,2);
   *flag = !(ta->count);
   PetscFunctionReturn(0);
 }
@@ -136,13 +134,13 @@ PetscErrorCode  PetscTableIsEmpty(const PetscTable ta,PetscInt *flag)
     PetscTableAddExpand - called by PetscTableAdd() if more space is needed
 
 */
-PetscErrorCode  PetscTableAddExpand(PetscTable ta,PetscInt key,PetscInt data,InsertMode imode)
+PetscErrorCode PetscTableAddExpand(PetscTable ta, PetscInt key, PetscInt data, InsertMode imode)
 {
-  PetscInt       ii      = 0;
   const PetscInt tsize   = ta->tablesize,tcount = ta->count;
-  PetscInt       *oldtab = ta->table,*oldkt = ta->keytable,newk,ndata;
+  PetscInt       *oldtab = ta->table,*oldkt = ta->keytable;
 
   PetscFunctionBegin;
+  PetscValidPointer(ta,1);
   CHKERRQ(PetscTableCreateHashSize(ta->tablesize,&ta->tablesize));
   CHKERRQ(PetscMalloc1(ta->tablesize,&ta->table));
   CHKERRQ(PetscCalloc1(ta->tablesize,&ta->keytable));
@@ -152,14 +150,12 @@ PetscErrorCode  PetscTableAddExpand(PetscTable ta,PetscInt key,PetscInt data,Ins
 
   CHKERRQ(PetscTableAdd(ta,key,data,INSERT_VALUES));
   /* rehash */
-  for (ii = 0; ii < tsize; ii++) {
-    newk = oldkt[ii];
-    if (newk) {
-      ndata = oldtab[ii];
-      CHKERRQ(PetscTableAdd(ta,newk,ndata,imode));
-    }
+  for (PetscInt ii = 0; ii < tsize; ++ii) {
+    PetscInt newk = oldkt[ii];
+
+    if (newk) CHKERRQ(PetscTableAdd(ta,newk,oldtab[ii],imode));
   }
-  PetscCheckFalse(ta->count != tcount + 1,PETSC_COMM_SELF,PETSC_ERR_COR,"corrupted ta->count");
+  PetscCheck(ta->count == tcount + 1,PETSC_COMM_SELF,PETSC_ERR_COR,"corrupted ta->count");
 
   CHKERRQ(PetscFree(oldtab));
   CHKERRQ(PetscFree(oldkt));
@@ -170,10 +166,10 @@ PetscErrorCode  PetscTableAddExpand(PetscTable ta,PetscInt key,PetscInt data,Ins
  *
  *
  */
-PetscErrorCode  PetscTableRemoveAll(PetscTable ta)
+PetscErrorCode PetscTableRemoveAll(PetscTable ta)
 {
-
   PetscFunctionBegin;
+  PetscValidPointer(ta,1);
   ta->head = 0;
   if (ta->count) {
     ta->count = 0;
@@ -186,11 +182,13 @@ PetscErrorCode  PetscTableRemoveAll(PetscTable ta)
 /* PetscTableGetHeadPosition() ********************************************
  *
  */
-PetscErrorCode  PetscTableGetHeadPosition(PetscTable ta,PetscTablePosition *ppos)
+PetscErrorCode PetscTableGetHeadPosition(PetscTable ta, PetscTablePosition *ppos)
 {
   PetscInt i = 0;
 
   PetscFunctionBegin;
+  PetscValidPointer(ta,1);
+  PetscValidPointer(ppos,2);
   *ppos = NULL;
   if (!ta->count) PetscFunctionReturn(0);
 
@@ -201,7 +199,7 @@ PetscErrorCode  PetscTableGetHeadPosition(PetscTable ta,PetscTablePosition *ppos
       break;
     }
   } while (i++ < ta->tablesize);
-  PetscCheckFalse(!*ppos,PETSC_COMM_SELF,PETSC_ERR_COR,"No head");
+  PetscCheck(*ppos,PETSC_COMM_SELF,PETSC_ERR_COR,"No head");
   PetscFunctionReturn(0);
 }
 
@@ -210,12 +208,16 @@ PetscErrorCode  PetscTableGetHeadPosition(PetscTable ta,PetscTablePosition *ppos
  *  - iteration - PetscTablePosition is always valid (points to a data)
  *
  */
-PetscErrorCode  PetscTableGetNext(PetscTable ta,PetscTablePosition *rPosition,PetscInt *pkey,PetscInt *data)
+PetscErrorCode PetscTableGetNext(PetscTable ta, PetscTablePosition *rPosition, PetscInt *pkey, PetscInt *data)
 {
   PetscInt           idex;
   PetscTablePosition pos;
 
   PetscFunctionBegin;
+  PetscValidPointer(ta,1);
+  PetscValidPointer(rPosition,2);
+  PetscValidIntPointer(pkey,3);
+  PetscValidIntPointer(data,4);
   pos = *rPosition;
   PetscCheck(pos,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Null position");
   *data = *pos;

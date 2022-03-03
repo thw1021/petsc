@@ -26,13 +26,11 @@ $       call PetscGetArchType(str,ierr)
 
 .seealso: PetscGetUserName(),PetscGetHostName()
 @*/
-PetscErrorCode  PetscGetArchType(char str[],size_t slen)
+PetscErrorCode  PetscGetArchType(char str[], size_t slen)
 {
-
   PetscFunctionBegin;
 #if defined(PETSC_ARCH)
   CHKERRQ(PetscStrncpy(str,PETSC_ARCH,slen-1));
-  str[slen-1] = 0;
 #else
 #error "$PETSC_ARCH/include/petscconf.h is missing PETSC_ARCH"
 #endif

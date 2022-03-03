@@ -1212,7 +1212,6 @@ PetscErrorCode  VecSetRandom(Vec x,PetscRandom rctx)
 @*/
 PetscErrorCode  VecZeroEntries(Vec vec)
 {
-
   PetscFunctionBegin;
   CHKERRQ(VecSet(vec,0));
   PetscFunctionReturn(0);

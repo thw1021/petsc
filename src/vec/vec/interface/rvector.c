@@ -111,7 +111,6 @@ $     val = (x,y) = y^T x,
 @*/
 PetscErrorCode  VecDot(Vec x,Vec y,PetscScalar *val)
 {
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
   PetscValidHeaderSpecific(y,VEC_CLASSID,2);
@@ -1108,7 +1107,6 @@ $     val = (x,y) = y^T x,
 @*/
 PetscErrorCode  VecMDot(Vec x,PetscInt nv,const Vec y[],PetscScalar val[])
 {
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
   PetscValidLogicalCollectiveInt(x,nv,2);

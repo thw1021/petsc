@@ -4,7 +4,7 @@
   they are broken or have the wrong prototypes.
 
 */
-#include <petscsys.h>                   /*I  "petscsys.h"   I*/
+#include <petsc/private/petscimpl.h> /*I  "petscsys.h"   I*/
 #if defined(PETSC_HAVE_STRINGS_H)
 #  include <strings.h>          /* strcasecmp */
 #endif
@@ -377,12 +377,12 @@ PetscErrorCode  PetscStrcpy(char s[],const char t[])
 .seealso: PetscStrcpy(), PetscStrcat(), PetscStrlcat()
 
 @*/
-PetscErrorCode  PetscStrncpy(char s[],const char t[],size_t n)
+PetscErrorCode PetscStrncpy(char s[], const char t[], size_t n)
 {
   PetscFunctionBegin;
-  PetscCheckFalse(t && !s,PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"Trying to copy string into null pointer");
-  PetscCheckFalse(s && !n,PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"Requires an output string of length at least 1 to hold the termination character");
+  if (s) PetscCheck(n,PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"Requires an output string of length at least 1 to hold the termination character");
   if (t) {
+    PetscValidCharPointer(s,1);
     if (n > 1) {
       strncpy(s,t,n-1);
       s[n-1] = '\0';
