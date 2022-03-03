@@ -262,6 +262,113 @@ PetscErrorCode DMNetworkAddSubnetwork(DM dm,const char* name,PetscInt ne,PetscIn
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode DMNetworkAddSubnetwork_new(DM dm,const char* name,PetscInt ne,PetscInt nv,PetscInt edgelist[],PetscInt *netnum)
+{
+  PetscErrorCode ierr;
+  DM_Network     *network = (DM_Network*)dm->data;
+  PetscInt       i,Nedge,j,Nvtx,nvtx,nvtx_min=-1,nvtx_max=0;
+  PetscBT        table;
+
+  PetscFunctionBegin;
+  for (i=0; i<ne; i++) {
+    PetscCheck(edgelist[2*i] != edgelist[2*i+1],PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Edge %" PetscInt_FMT " has the same vertex %" PetscInt_FMT " at each endpoint",i,edgelist[2*i]);
+  }
+
+  //------- new ----------------
+  MPI_Comm       comm;
+  PetscMPIInt    size,rank;
+  DM             subplex;
+  PetscInt       vStart,vEnd;
+
+  ierr = PetscObjectGetComm((PetscObject)dm,&comm);CHKERRQ(ierr);
+  ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
+  ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
+
+  ierr = DMCreate(comm,&subplex);CHKERRQ(ierr);
+  ierr = DMSetType(subplex,DMPLEX);CHKERRQ(ierr);
+  ierr = DMSetDimension(subplex,1);CHKERRQ(ierr);
+
+  nvtx = PETSC_DECIDE;
+  if (size == 1) {
+    ierr = DMPlexBuildFromCellList(subplex,ne,nv,2,edgelist);CHKERRQ(ierr);
+  } else {
+    ierr = DMPlexBuildFromCellListParallel(subplex,ne,nv,PETSC_DETERMINE,2,edgelist,NULL, NULL);CHKERRQ(ierr);
+  }
+
+  //------- new ----------------
+  i = 0;
+  if (ne) nvtx_min = nvtx_max = edgelist[0];
+  for (j=0; j<ne; j++) {
+    nvtx_min = PetscMin(nvtx_min, edgelist[i]);
+    nvtx_max = PetscMax(nvtx_max, edgelist[i]);
+    i++;
+    nvtx_min = PetscMin(nvtx_min, edgelist[i]);
+    nvtx_max = PetscMax(nvtx_max, edgelist[i]);
+    i++;
+  }
+  Nvtx = nvtx_max - nvtx_min + 1; /* approximated total local nvtx for this subnet */
+
+  /* Get exact local nvtx for this subnet: counting local values between nvtx_min and nvtx_max */
+  ierr = PetscBTCreate(Nvtx,&table);CHKERRQ(ierr);
+  ierr = PetscBTMemzero(Nvtx,table);CHKERRQ(ierr);
+  i = 0;
+  for (j=0; j<ne; j++) {
+    ierr = PetscBTSet(table,edgelist[i++]-nvtx_min);CHKERRQ(ierr);
+    ierr = PetscBTSet(table,edgelist[i++]-nvtx_min);CHKERRQ(ierr);
+  }
+
+  ierr = DMPlexGetHeightStratum(subplex,1,&vStart,&vEnd);CHKERRQ(ierr);
+  if (size == 1) {
+    Nvtx = nvtx = vEnd - vStart;
+  } else {
+    if (nv == PETSC_DECIDE) {
+      nvtx = vEnd - vStart;
+    } else {
+      nvtx = nv;
+    }
+    /* Get global total Nvtx = max(edgelist[])+1 for this subnet */
+    ierr = MPIU_Allreduce(&nvtx_max,&Nvtx,1,MPIU_INT,MPI_MAX,PetscObjectComm((PetscObject)dm));CHKERRMPI(ierr);
+    Nvtx++;
+  }
+  ierr = PetscBTDestroy(&table);CHKERRQ(ierr);
+
+  /* Get global total Nedge for this subnet */
+  ierr = MPIU_Allreduce(&ne,&Nedge,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)dm));CHKERRMPI(ierr);
+
+  i = network->nsubnet;
+  network->subnet[i].nvtx     = nvtx; /* include ghost vertices */
+  network->subnet[i].nedge    = ne;
+  network->subnet[i].edgelist = edgelist;
+  network->subnet[i].Nvtx     = Nvtx;
+  network->subnet[i].Nedge    = Nedge;
+  printf("[%d] subnet[%d].nvtx %d %d\n",rank,i,nvtx,Nvtx);
+
+  ierr = DMDestroy(&subplex);CHKERRQ(ierr);
+
+  /* ----------------------------------------------------------
+   p=v or e;
+   subnet[0].pStart   = 0
+   subnet[i+1].pStart = subnet[i].pEnd = subnet[i].pStart + (nE[i] or NV[i])
+   ----------------------------------------------------------------------- */
+  /* GLOBAL subnet[].vStart and vEnd, used by DMNetworkLayoutSetUp() */
+  network->subnet[i].vStart = network->NVertices;
+  network->subnet[i].vEnd   = network->subnet[i].vStart + network->subnet[i].Nvtx; /* global vEnd of subnet[i] */
+
+  network->nVertices += nvtx; /* include ghost vertices */
+  network->NVertices += network->subnet[i].Nvtx;
+
+  /* LOCAL subnet[].eStart and eEnd, used by DMNetworkLayoutSetUp() */
+  network->subnet[i].eStart = network->nEdges;
+  network->subnet[i].eEnd   = network->subnet[i].eStart + ne;
+  network->nEdges += ne;
+  network->NEdges += network->subnet[i].Nedge;
+
+  ierr = PetscStrcpy(network->subnet[i].name,name);CHKERRQ(ierr);
+  if (netnum) *netnum = network->nsubnet;
+  network->nsubnet++;
+  PetscFunctionReturn(0);
+}
+
 /*@C
   DMNetworkSharedVertexGetInfo - Get info of a shared vertex struct, see petsc/private/dmnetworkimpl.h
 
@@ -648,12 +755,13 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
   if (size == 1) {
     ierr = DMPlexBuildFromCellList(network->plex,network->nEdges,PETSC_DECIDE,2,edges);CHKERRQ(ierr);
   } else {
-    ierr = DMPlexBuildFromCellListParallel(network->plex,network->nEdges,PETSC_DECIDE,PETSC_DECIDE,2,edges,NULL, NULL);CHKERRQ(ierr);
+    ierr = DMPlexBuildFromCellListParallel(network->plex,network->nEdges,PETSC_DECIDE,PETSC_DETERMINE,2,edges,NULL, NULL);CHKERRQ(ierr);
   }
 
   ierr = DMPlexGetChart(network->plex,&network->pStart,&network->pEnd);CHKERRQ(ierr);
   ierr = DMPlexGetHeightStratum(network->plex,0,&network->eStart,&network->eEnd);CHKERRQ(ierr);
   ierr = DMPlexGetHeightStratum(network->plex,1,&network->vStart,&network->vEnd);CHKERRQ(ierr);
+  printf("[%d] nv %d, ne %d; np %d\n",rank,network->vEnd - network->vStart,network->eEnd-network->eStart,network->pEnd - network->pStart);
 
   ierr = PetscSectionCreate(comm,&network->DataSection);CHKERRQ(ierr);
   ierr = PetscSectionCreate(comm,&network->DofSection);CHKERRQ(ierr);
@@ -666,6 +774,8 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
     network->header[i].maxcomps = 1;
     ierr = SetUpNetworkHeaderComponentValue(dm,&network->header[i],&network->cvalue[i]);CHKERRQ(ierr);
   }
+  printf("[%d] nv %d, ne %d; np %d\n",rank,network->vEnd - network->vStart,network->eEnd-network->eStart,np);
+
 
   /* Create edge and vertex arrays for the subnetworks
      This implementation assumes that DMNetwork reads
