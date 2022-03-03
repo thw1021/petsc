@@ -3706,7 +3706,7 @@ PetscErrorCode  MatSeqAIJSetColumnIndices(Mat mat,PetscInt *indices)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
-  PetscValidPointer(indices,2);
+  PetscValidIntPointer(indices,2);
   CHKERRQ(PetscUseMethod(mat,"MatSeqAIJSetColumnIndices_C",(Mat,PetscInt*),(mat,indices)));
   PetscFunctionReturn(0);
 }

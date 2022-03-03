@@ -5481,7 +5481,7 @@ PetscErrorCode MatAssembled(Mat mat,PetscBool *assembled)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
-  PetscValidPointer(assembled,2);
+  PetscValidBoolPointer(assembled,2);
   *assembled = mat->assembled;
   PetscFunctionReturn(0);
 }
@@ -7571,8 +7571,8 @@ PetscErrorCode MatGetRowIJ(Mat mat,PetscInt shift,PetscBool symmetric,PetscBool 
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
   PetscValidType(mat,1);
   PetscValidIntPointer(n,5);
-  if (ia) PetscValidIntPointer(ia,6);
-  if (ja) PetscValidIntPointer(ja,7);
+  if (ia) PetscValidPointer(ia,6);
+  if (ja) PetscValidPointer(ja,7);
   PetscValidBoolPointer(done,8);
   MatCheckPreallocated(mat,1);
   if (!mat->ops->getrowij) *done = PETSC_FALSE;
@@ -7616,8 +7616,8 @@ PetscErrorCode MatGetColumnIJ(Mat mat,PetscInt shift,PetscBool symmetric,PetscBo
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
   PetscValidType(mat,1);
   PetscValidIntPointer(n,5);
-  if (ia) PetscValidIntPointer(ia,6);
-  if (ja) PetscValidIntPointer(ja,7);
+  if (ia) PetscValidPointer(ia,6);
+  if (ja) PetscValidPointer(ja,7);
   PetscValidBoolPointer(done,8);
   MatCheckPreallocated(mat,1);
   if (!mat->ops->getcolumnij) *done = PETSC_FALSE;
@@ -7664,8 +7664,8 @@ PetscErrorCode MatRestoreRowIJ(Mat mat,PetscInt shift,PetscBool symmetric,PetscB
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
   PetscValidType(mat,1);
-  if (ia) PetscValidIntPointer(ia,6);
-  if (ja) PetscValidIntPointer(ja,7);
+  if (ia) PetscValidPointer(ia,6);
+  if (ja) PetscValidPointer(ja,7);
   PetscValidBoolPointer(done,8);
   MatCheckPreallocated(mat,1);
 
@@ -7711,8 +7711,8 @@ PetscErrorCode MatRestoreColumnIJ(Mat mat,PetscInt shift,PetscBool symmetric,Pet
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
   PetscValidType(mat,1);
-  if (ia) PetscValidIntPointer(ia,6);
-  if (ja) PetscValidIntPointer(ja,7);
+  if (ia) PetscValidPointer(ia,6);
+  if (ja) PetscValidPointer(ja,7);
   PetscValidBoolPointer(done,8);
   MatCheckPreallocated(mat,1);
 
@@ -8909,7 +8909,7 @@ PetscErrorCode MatIsSymmetricKnown(Mat A,PetscBool *set,PetscBool *flg)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
-  PetscValidPointer(set,2);
+  PetscValidBoolPointer(set,2);
   PetscValidBoolPointer(flg,3);
   if (A->symmetric_set) {
     *set = PETSC_TRUE;
@@ -8943,7 +8943,7 @@ PetscErrorCode MatIsHermitianKnown(Mat A,PetscBool *set,PetscBool *flg)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
-  PetscValidPointer(set,2);
+  PetscValidBoolPointer(set,2);
   PetscValidBoolPointer(flg,3);
   if (A->hermitian_set) {
     *set = PETSC_TRUE;
@@ -10626,7 +10626,7 @@ PetscErrorCode MatHasOperation(Mat mat,MatOperation op,PetscBool *has)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
-  PetscValidPointer(has,3);
+  PetscValidBoolPointer(has,3);
   if (mat->ops->hasoperation) {
     CHKERRQ((*mat->ops->hasoperation)(mat,op,has));
   } else {
@@ -10670,7 +10670,7 @@ PetscErrorCode MatHasCongruentLayouts(Mat mat,PetscBool *cong)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
   PetscValidType(mat,1);
-  PetscValidPointer(cong,2);
+  PetscValidBoolPointer(cong,2);
   if (!mat->rmap || !mat->cmap) {
     *cong = mat->rmap == mat->cmap ? PETSC_TRUE : PETSC_FALSE;
     PetscFunctionReturn(0);

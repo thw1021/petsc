@@ -1358,7 +1358,7 @@ PetscErrorCode PetscWeakFormGetNumFields(PetscWeakForm wf, PetscInt *Nf)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(wf, PETSCWEAKFORM_CLASSID, 1);
-  PetscValidPointer(Nf, 2);
+  PetscValidIntPointer(Nf, 2);
   *Nf = wf->Nf;
   PetscFunctionReturn(0);
 }
