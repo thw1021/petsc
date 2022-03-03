@@ -804,7 +804,7 @@ PetscErrorCode  PCApplyRichardsonExists(PC pc,PetscBool  *exists)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
-  PetscValidPointer(exists,2);
+  PetscValidBoolPointer(exists,2);
   if (pc->ops->applyrichardson) *exists = PETSC_TRUE;
   else *exists = PETSC_FALSE;
   PetscFunctionReturn(0);
@@ -1230,7 +1230,7 @@ PetscErrorCode  PCGetReusePreconditioner(PC pc,PetscBool *flag)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
-  PetscValidPointer(flag,2);
+  PetscValidBoolPointer(flag,2);
   *flag = pc->reusepreconditioner;
   PetscFunctionReturn(0);
 }
@@ -1961,7 +1961,7 @@ PetscErrorCode PCGetInterpolations(PC pc,PetscInt *num_levels,Mat *interpolation
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
-  PetscValidPointer(num_levels,2);
+  PetscValidIntPointer(num_levels,2);
   PetscValidPointer(interpolations,3);
   CHKERRQ(PetscUseMethod(pc,"PCGetInterpolations_C",(PC,PetscInt*,Mat*[]),(pc,num_levels,interpolations)));
   PetscFunctionReturn(0);
@@ -1990,7 +1990,7 @@ PetscErrorCode PCGetCoarseOperators(PC pc,PetscInt *num_levels,Mat *coarseOperat
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
-  PetscValidPointer(num_levels,2);
+  PetscValidIntPointer(num_levels,2);
   PetscValidPointer(coarseOperators,3);
   CHKERRQ(PetscUseMethod(pc,"PCGetCoarseOperators_C",(PC,PetscInt*,Mat*[]),(pc,num_levels,coarseOperators)));
   PetscFunctionReturn(0);
