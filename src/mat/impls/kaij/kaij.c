@@ -305,7 +305,7 @@ PetscErrorCode MatKAIJSetAIJ(Mat A,Mat B)
   CHKERRMPI(MPI_Comm_size(PetscObjectComm((PetscObject)A),&size));
   if (size == 1) {
     CHKERRQ(PetscObjectTypeCompare((PetscObject)B,MATSEQAIJ,&flg));
-    PetscCheckFalse(!flg,PetscObjectComm((PetscObject)B),PETSC_ERR_SUP,"MatKAIJSetAIJ() with MATSEQKAIJ does not support %s as the AIJ mat",((PetscObject)B)->type_name);
+    PetscCheck(flg,PetscObjectComm((PetscObject)B),PETSC_ERR_SUP,"MatKAIJSetAIJ() with MATSEQKAIJ does not support %s as the AIJ mat",((PetscObject)B)->type_name);
     Mat_SeqKAIJ *a = (Mat_SeqKAIJ*)A->data;
     a->AIJ = B;
   } else {
@@ -857,7 +857,7 @@ PetscErrorCode MatSOR_SeqKAIJ(Mat A,Vec bb,PetscReal omega,MatSORType flag,Petsc
   its = its*lits;
   PetscCheckFalse(flag & SOR_EISENSTAT,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support yet for Eisenstat");
   PetscCheckFalse(its <= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Relaxation requires global its %" PetscInt_FMT " and local its %" PetscInt_FMT " both positive",its,lits);
-  PetscCheckFalse(fshift,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support for diagonal shift");
+  PetscCheck(!fshift,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support for diagonal shift");
   PetscCheckFalse((flag & SOR_APPLY_UPPER) || (flag & SOR_APPLY_LOWER),PETSC_COMM_SELF,PETSC_ERR_SUP,"No support for applying upper or lower triangular parts");
   PetscCheckFalse(p != q,PETSC_COMM_SELF,PETSC_ERR_SUP,"MatSOR for KAIJ: No support for non-square dense blocks");
   else        {bs = p; bs2 = bs*bs; }
@@ -1177,7 +1177,7 @@ PetscErrorCode MatGetRow_SeqKAIJ(Mat A,PetscInt row,PetscInt *ncols,PetscInt **c
   PetscScalar     *vaij,*v,*S=b->S,*T=b->T;
 
   PetscFunctionBegin;
-  PetscCheckFalse(b->getrowactive,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Already active");
+  PetscCheck(!b->getrowactive,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Already active");
   b->getrowactive = PETSC_TRUE;
   PetscCheckFalse(row < 0 || row >= A->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Row %" PetscInt_FMT " out of range",row);
 
@@ -1264,7 +1264,7 @@ PetscErrorCode MatGetRow_MPIKAIJ(Mat A,PetscInt row,PetscInt *ncols,PetscInt **c
   CHKERRQ(MatKAIJ_build_AIJ_OAIJ(A)); /* Ensure b->AIJ and b->OAIJ are up to date. */
   MatAIJ  = ((Mat_SeqKAIJ*)b->AIJ->data)->AIJ;
   MatOAIJ = ((Mat_SeqKAIJ*)b->OAIJ->data)->AIJ;
-  PetscCheckFalse(b->getrowactive,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Already active");
+  PetscCheck(!b->getrowactive,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Already active");
   b->getrowactive = PETSC_TRUE;
   PetscCheckFalse(row < rstart || row >= rend,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Only local rows");
   lrow = row - rstart;
