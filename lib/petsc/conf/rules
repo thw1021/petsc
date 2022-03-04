@@ -539,7 +539,7 @@ exampleconcepts:
 # which is processed to generate HTML.
 #
 manimplementations:
-	-@git grep "struct\s\+_p_[^\s]\+.*{" -- *.cu *.c *.h *.cxx | grep -v -e ";" -e "/tests/" -e "/tutorials/" > implsClassAll.txt ; \
+	-@git grep "struct\s\+_[pn]_[^\s]\+.*{" -- *.cu *.c *.h *.cxx | grep -v -e ";" -e "/tests/" -e "/tutorials/" > implsClassAll.txt ; \
   git grep -n "^\(static \)\?\(PETSC_EXTERN \)\?\(PETSC_INTERN \)\?\(extern \)\?PetscErrorCode \+[^_ ]\+_[^_ ]\+(" -- '*/impls/*.c' '*/impls/*.cu' '*/impls/*.cxx' '*/impls/*.h' | grep -v -e ";" -e "_[Pp]rivate" > implsFuncAll.txt ; \
   for i in ${LOC}/docs/manualpages/*/*.html foo; do \
        if [ "$$i" != "foo" ] ; then \
@@ -588,8 +588,9 @@ simplehtml: chk_c2html
               idir=`dirname $$i`;\
               if [ ! -d $${loc}/$${idir} ]; then ${MKDIR} -p $${loc}/$${idir}; fi ; \
               ${RM} $${loc}/$$i.html; \
-              sed -e "s/CHKERRMPI(ierr);//g" -e "s/CHKERRQ(ierr);//g" -e "s/PetscFunctionReturn(0)/return(0)/g" -e "s/ierr [ ]*= //g" -e "s/PETSC[A-Z]*_DLLEXPORT//g" $$i | ${C2HTML} -n | \
-              awk '{ sub(/<pre width="80">/,"<pre width=\"80\">\n"); print }' > $${loc}/$$i.html ; \
+              sed -e "s/CHKERRMPI(\(.*\));/\1/g" -e "s/CHKERRQ(\(.*\));/\1/g" -e "s/ierr;//g" -e "s/PetscFunctionReturn(0)/return(0)/g" -e "s/ierr [ ]*= //g" -e "s/PETSC[A-Z]*_DLLEXPORT//g" $$i | \
+              ${C2HTML} -n | awk '{ sub(/<pre width="80">/,"<pre width=\"80\">\n"); print }' > \
+              $${loc}/$$i.html ; \
 	    fi; \
          done
 
