@@ -152,7 +152,7 @@ int main(int argc, char **argv)
   ierr = PetscDrawSPGetAxis(positionDrawSP, &axis);CHKERRQ(ierr);
   ierr = PetscDrawSPReset(positionDrawSP);CHKERRQ(ierr);
   ierr = PetscDrawAxisSetLabels(axis, "Particles", "x", "y");CHKERRQ(ierr);
-  ierr = PetscDrawSetSave(positionDraw, "ex35_pos.png");CHKERRQ(ierr);
+  ierr = PetscDrawSetSave(positionDraw, "ex35_pos.ppm");CHKERRQ(ierr);
   ierr = PetscDrawSPReset(positionDrawSP);CHKERRQ(ierr);
   ierr = PetscDrawSPSetLimits(positionDrawSP, 0, 1, 0, 1);CHKERRQ(ierr);
   for (p = 0; p < Np; ++p) {
