@@ -703,7 +703,6 @@ PetscErrorCode PCSetUp_GAMG(PC pc)
   ierr             = PCMGSetLevels(pc,pc_gamg->Nlevels,NULL);CHKERRQ(ierr);
 
   if (pc_gamg->Nlevels > 1) { /* don't setup MG if one level */
-    PetscErrorCode (*savesetfromoptions[PETSC_MG_MAXLEVELS])(PetscOptionItems*,KSP);
 
     /* set default smoothers & set operators */
     for (lidx = 1, level = pc_gamg->Nlevels-2; lidx <= fine_level; lidx++, level--) {
@@ -779,56 +778,33 @@ PetscErrorCode PCSetUp_GAMG(PC pc)
     ierr = PCMGSetGalerkin(pc,PC_MG_GALERKIN_EXTERNAL);CHKERRQ(ierr);
 
     /* setup cheby eigen estimates from SA */
-    if (pc_gamg->use_sa_esteig==1) {
+    if (pc_gamg->use_sa_esteig) {
       for (lidx = 1, level = pc_gamg->Nlevels-2; level >= 0 ; lidx++, level--) {
         KSP       smoother;
         PetscBool ischeb;
 
-        savesetfromoptions[level] = NULL;
         ierr = PCMGGetSmoother(pc, lidx, &smoother);CHKERRQ(ierr);
         ierr = PetscObjectTypeCompare((PetscObject)smoother,KSPCHEBYSHEV,&ischeb);CHKERRQ(ierr);
         if (ischeb) {
           KSP_Chebyshev *cheb = (KSP_Chebyshev*)smoother->data;
 
-          ierr = KSPSetFromOptions(smoother);CHKERRQ(ierr); /* let command line emax override using SA's eigenvalues */
-          if (mg->max_eigen_DinvA[level] > 0 && cheb->emax == 0.) {
-            PC        subpc;
-            PetscBool isjac;
-            ierr = KSPGetPC(smoother, &subpc);CHKERRQ(ierr);
-            ierr = PetscObjectTypeCompare((PetscObject)subpc,PCJACOBI,&isjac);CHKERRQ(ierr);
-            if (isjac && pc_gamg->use_sa_esteig==1) {
-              PetscReal emax,emin;
+          // The command line will override these settings because KSPSetFromOptions is called in PCSetUp_MG
+          if (mg->max_eigen_DinvA[level] > 0) {
+            // SA uses Jacobi for P; we use SA estimates if the smoother is also Jacobi or if the user explicitly requested it.
+            // TODO: This should test whether it's the same Jacobi variant (DIAG, ROWSUM, etc.)
+            PetscReal emax,emin;
 
-              emin = mg->min_eigen_DinvA[level];
-              emax = mg->max_eigen_DinvA[level];
-              ierr = PetscInfo(pc,"PCSetUp_GAMG: call KSPChebyshevSetEigenvalues on level %D (N=%D) with emax = %g emin = %g\n",level,Aarr[level]->rmap->N,(double)emax,(double)emin);CHKERRQ(ierr);
-              cheb->emin_computed = emin;
-              cheb->emax_computed = emax;
-              ierr = KSPChebyshevSetEigenvalues(smoother, cheb->tform[2]*emin + cheb->tform[3]*emax, cheb->tform[0]*emin + cheb->tform[1]*emax);CHKERRQ(ierr);
-
-              /* We have set the eigenvalues and consumed the transformation values
-                 prevent from flagging the recomputation of the eigenvalues again in PCSetUp_MG
-                 below when setfromoptions will be called again */
-              savesetfromoptions[level] = smoother->ops->setfromoptions;
-              smoother->ops->setfromoptions = NULL;
-            }
+            emin = mg->min_eigen_DinvA[level];
+            emax = mg->max_eigen_DinvA[level];
+            ierr = PetscInfo(pc,"PCSetUp_GAMG: call KSPChebyshevSetEigenvalues on level %D (N=%D) with emax = %g emin = %g\n",level,Aarr[level]->rmap->N,(double)emax,(double)emin);CHKERRQ(ierr);
+            cheb->emin_provided = emin;
+            cheb->emax_provided = emax;
           }
         }
       }
     }
 
     ierr = PCSetUp_MG(pc);CHKERRQ(ierr);
-
-    /* restore Chebyshev smoother for next calls */
-    if (pc_gamg->use_sa_esteig==1) {
-      for (lidx = 1, level = pc_gamg->Nlevels-2; level >= 0 ; lidx++, level--) {
-        if (savesetfromoptions[level]) {
-          KSP smoother;
-          ierr = PCMGGetSmoother(pc, lidx, &smoother);CHKERRQ(ierr);
-          smoother->ops->setfromoptions = savesetfromoptions[level];
-        }
-      }
-    }
 
     /* clean up */
     for (level=1; level<pc_gamg->Nlevels; level++) {
@@ -1032,7 +1008,7 @@ static PetscErrorCode PCGAMGSetEstEigKSPMaxIt_GAMG(PC pc, PetscInt n)
 }
 
 /*@
-   PCGAMGSetUseSAEstEig - Use eigen estimate from smoothed aggregation for Cheby smoother
+   PCGAMGSetUseSAEstEig - Use eigen estimate from smoothed aggregation for Chebyshev smoother
 
    Collective on PC
 
@@ -1044,10 +1020,15 @@ static PetscErrorCode PCGAMGSetEstEigKSPMaxIt_GAMG(PC pc, PetscInt n)
 .  -pc_gamg_use_sa_esteig <true,false>
 
    Notes:
+   Smoothed aggregation constructs the smoothed prolongator $P = (I - \omega D^{-1} A) T$ where $T$ is the tentative prolongator and $D$ is the diagonal of $A$.
+   Eigenvalue estimates (based on a few CG or GMRES iterations) are computed to choose $\omega$ so that this is a stable smoothing operation.
+   If Chebyshev with Jacobi (diagonal) preconditioning is used for smoothing, then the eigenvalue estimates can be reused.
+   This option is only used when the smoother uses Jacobi, and should be turned off if a different PCJacobiType is used.
+   It became default in PETSc 3.17.
 
-   Level: intermediate
+   Level: advanced
 
-.seealso: ()
+.seealso: PCGAMGSetEstEigKSPType(), KSPChebyshevSetEigenvalues(), KSPChebyshevEstEigSet()
 @*/
 PetscErrorCode PCGAMGSetUseSAEstEig(PC pc, PetscBool n)
 {
@@ -1065,7 +1046,7 @@ static PetscErrorCode PCGAMGSetUseSAEstEig_GAMG(PC pc, PetscBool n)
   PC_GAMG *pc_gamg = (PC_GAMG*)mg->innerctx;
 
   PetscFunctionBegin;
-  pc_gamg->use_sa_esteig = n ? 1 : 0;
+  pc_gamg->use_sa_esteig = n;
   PetscFunctionReturn(0);
 }
 
@@ -1627,7 +1608,7 @@ PetscErrorCode PCSetFromOptions_GAMG(PetscOptionItems *PetscOptionsObject,PC pc)
   PetscErrorCode ierr;
   PC_MG          *mg      = (PC_MG*)pc->data;
   PC_GAMG        *pc_gamg = (PC_GAMG*)mg->innerctx;
-  PetscBool      flag,f2;
+  PetscBool      flag;
   MPI_Comm       comm;
   char           prefix[256],tname[32];
   PetscInt       i,n;
@@ -1645,9 +1626,7 @@ PetscErrorCode PCSetFromOptions_GAMG(PetscOptionItems *PetscOptionsObject,PC pc)
     ierr = PCGAMGSetEstEigKSPType(pc,tname);CHKERRQ(ierr);
   }
   ierr = PetscOptionsBool("-pc_gamg_repartition","Repartion coarse grids","PCGAMGSetRepartition",pc_gamg->repart,&pc_gamg->repart,NULL);CHKERRQ(ierr);
-  f2 = PETSC_TRUE;
-  ierr = PetscOptionsBool("-pc_gamg_use_sa_esteig","Use eigen estimate from Smoothed aggregation for smoother","PCGAMGSetUseSAEstEig",f2,&f2,&flag);CHKERRQ(ierr);
-  if (flag) pc_gamg->use_sa_esteig = f2 ? 1 : 0;
+  ierr = PetscOptionsBool("-pc_gamg_use_sa_esteig","Use eigen estimate from Smoothed aggregation for smoother","PCGAMGSetUseSAEstEig",pc_gamg->use_sa_esteig,&pc_gamg->use_sa_esteig,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-pc_gamg_reuse_interpolation","Reuse prolongation operator","PCGAMGReuseInterpolation",pc_gamg->reuse_prol,&pc_gamg->reuse_prol,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-pc_gamg_asm_use_agg","Use aggregation aggregates for ASM smoother","PCGAMGASMSetUseAggs",pc_gamg->use_aggs_in_asm,&pc_gamg->use_aggs_in_asm,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-pc_gamg_use_parallel_coarse_grid_solver","Use parallel coarse grid solver (otherwise put last grid on one process)","PCGAMGSetUseParallelCoarseGridSolve",pc_gamg->use_parallel_coarse_grid_solver,&pc_gamg->use_parallel_coarse_grid_solver,NULL);CHKERRQ(ierr);
@@ -1793,7 +1772,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_GAMG(PC pc)
   pc_gamg->current_level    = 0; /* don't need to init really */
   ierr = PetscStrcpy(pc_gamg->esteig_type,NULL);CHKERRQ(ierr);
   pc_gamg->esteig_max_it    = 10;
-  pc_gamg->use_sa_esteig    = -1;
+  pc_gamg->use_sa_esteig    = PETSC_TRUE;
   pc_gamg->emin             = 0;
   pc_gamg->emax             = 0;
 
