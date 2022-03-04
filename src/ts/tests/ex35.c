@@ -23,7 +23,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   ierr = PetscOptionsInt("-Np", "Number of particles", "ex35.c", options->Np, &options->Np, PETSC_NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-dim", "Number of dimensions", "ex35.c", options->dim_inp, &options->dim_inp, PETSC_NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
-
   PetscFunctionReturn(0);
 }
 
@@ -32,9 +31,9 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 */
 PetscReal erfinv(PetscReal x)
 {
-  PetscReal *ck, r = 0.;
-  PetscInt k, m, maxIter=100;
-  PetscErrorCode  ierr;
+  PetscReal      *ck, r = 0.;
+  PetscInt       k, m, maxIter=100;
+  PetscErrorCode ierr;
 
   ierr = PetscCalloc1(maxIter,&ck);CHKERRQ(ierr);
   ck[0] = 1;
@@ -145,7 +144,6 @@ int main(int argc, char **argv)
     ierr = VecDestroy(&subvecvy);CHKERRQ(ierr);
     ierr = VecDestroy(&randVec);CHKERRQ(ierr);
   } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Do not support dimension %D", dim);
-
 
   ierr = PetscDrawCreate(comm, NULL, "monitor_particle_positions", 0,0,400,300, &positionDraw);CHKERRQ(ierr);
   ierr = PetscDrawSetFromOptions(positionDraw);CHKERRQ(ierr);
