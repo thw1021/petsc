@@ -681,7 +681,7 @@ int main(int argc, char **argv)
     suffix: kokkos
     args: -dm_plex_dim 3 -dm_plex_box_faces 2,3,6 -petscpartitioner_type simple -dm_plex_simplex 0 -potential_petscspace_degree 1 \
          -dm_refine 0 -ksp_type cg -ksp_rtol 1.e-11 -ksp_norm_type unpreconditioned -pc_type gamg -pc_gamg_coarse_eq_limit 1000 -pc_gamg_threshold 0.0 \
-         -pc_gamg_threshold_scale .5 -mg_levels_ksp_type chebyshev -mg_levels_ksp_max_it 2 -pc_gamg_esteig_ksp_type cg-pc_gamg_esteig_ksp_max_it 10 \
+         -pc_gamg_threshold_scale .5 -mg_levels_ksp_type chebyshev -mg_levels_ksp_max_it 2 -pc_gamg_esteig_ksp_type cg -pc_gamg_esteig_ksp_max_it 10 \
          -ksp_monitor -snes_monitor -dm_view -dm_mat_type aijkokkos -dm_vec_type kokkos
 
 TEST*/
