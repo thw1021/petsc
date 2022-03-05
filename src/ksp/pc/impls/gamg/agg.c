@@ -5,6 +5,7 @@
 #include <../src/ksp/pc/impls/gamg/gamg.h>        /*I "petscpc.h" I*/
 #include <petscblaslapack.h>
 #include <petscdm.h>
+#include <petsc/private/kspimpl.h>
 
 typedef struct {
   PetscInt  nsmooths;
@@ -1093,7 +1094,7 @@ static PetscErrorCode PCGAMGOptProlongator_AGG(PC pc,Mat Amat,Mat *a_P)
 
       ierr = MatCreateVecs(Amat, &bb, NULL);CHKERRQ(ierr);
       ierr = MatCreateVecs(Amat, &xx, NULL);CHKERRQ(ierr);
-      ierr = VecSetRandom(bb,NULL);CHKERRQ(ierr);
+      ierr = KSPSetNoisy_Private(bb);CHKERRQ(ierr);
 
       ierr = KSPCreate(comm,&eksp);CHKERRQ(ierr);
       ierr = PCGetOptionsPrefix(pc,&prefix);CHKERRQ(ierr);
