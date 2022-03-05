@@ -23,7 +23,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   ierr = PetscOptionsInt("-Np", "Number of particles", "ex35.c", options->Np, &options->Np, PETSC_NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-dim", "Number of dimensions", "ex35.c", options->dim_inp, &options->dim_inp, PETSC_NULL);CHKERRQ(ierr);
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
-
   PetscFunctionReturn(0);
 }
 
@@ -32,9 +31,9 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 */
 PetscReal erfinv(PetscReal x)
 {
-  PetscReal    *ck, r = 0.;
-  PetscInt     k, m, maxIter=100;
-  PetscErrorCode  ierr;
+  PetscReal      *ck, r = 0.;
+  PetscInt       k, m, maxIter=100;
+  PetscErrorCode ierr;
 
   ierr = PetscCalloc1(maxIter,&ck);CHKERRQ(ierr);
   ck[0] = 1;
@@ -154,7 +153,7 @@ int main(int argc, char **argv)
   ierr = PetscDrawSPGetAxis(positionDrawSP, &axis);CHKERRQ(ierr);
   ierr = PetscDrawSPReset(positionDrawSP);CHKERRQ(ierr);
   ierr = PetscDrawAxisSetLabels(axis, "Particles", "x", "y");CHKERRQ(ierr);
-  ierr = PetscDrawSetSave(positionDraw, "ex35_pos.png");CHKERRQ(ierr);
+  ierr = PetscDrawSetSave(positionDraw, "ex35_pos.ppm");CHKERRQ(ierr);
   ierr = PetscDrawSPReset(positionDrawSP);CHKERRQ(ierr);
   ierr = PetscDrawSPSetLimits(positionDrawSP, 0, 1, 0, 1);CHKERRQ(ierr);
   for (p = 0; p < Np; ++p) {

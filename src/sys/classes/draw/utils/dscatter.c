@@ -1,4 +1,3 @@
-
 /*
        Contains the data structure for drawing scatter plots
     graphs in a window with an axis. This is intended for scatter
@@ -177,7 +176,7 @@ PetscErrorCode  PetscDrawSPDestroy(PetscDrawSP *sp)
    Notes:
     the new points will not be displayed until a call to PetscDrawSPDraw() is made
 
-.seealso: PetscDrawSPAddPoints(), PetscDrawSP, PetscDrawSPCreate(), PetscDrawSPReset(), PetscDrawSPDraw()
+.seealso: PetscDrawSPAddPoints(), PetscDrawSP, PetscDrawSPCreate(), PetscDrawSPReset(), PetscDrawSPDraw(), PetscDrawSPAddPointColorized()
 
 @*/
 PetscErrorCode  PetscDrawSPAddPoint(PetscDrawSP sp,PetscReal *x,PetscReal *y)
@@ -228,7 +227,7 @@ PetscErrorCode  PetscDrawSPAddPoint(PetscDrawSP sp,PetscReal *x,PetscReal *y)
    Notes:
     the new points will not be displayed until a call to PetscDrawSPDraw() is made
 
-.seealso: PetscDrawSPAddPoint(), PetscDrawSP, PetscDrawSPCreate(), PetscDrawSPReset(), PetscDrawSPDraw()
+.seealso: PetscDrawSPAddPoint(), PetscDrawSP, PetscDrawSPCreate(), PetscDrawSPReset(), PetscDrawSPDraw(), PetscDrawSPAddPointColorized()
 @*/
 PetscErrorCode  PetscDrawSPAddPoints(PetscDrawSP sp,int n,PetscReal **xx,PetscReal **yy)
 {
@@ -287,7 +286,7 @@ PetscErrorCode  PetscDrawSPAddPoints(PetscDrawSP sp,int n,PetscReal **xx,PetscRe
    Notes:
     the new points will not be displayed until a call to PetscDrawSPDraw() is made
 
-.seealso: PetscDrawSPAddPoints(), PetscDrawSP, PetscDrawSPCreate(), PetscDrawSPReset(), PetscDrawSPDraw()
+.seealso: PetscDrawSPAddPoints(), PetscDrawSP, PetscDrawSPCreate(), PetscDrawSPReset(), PetscDrawSPDraw(), PetscDrawSPAddPoint()
 
 @*/
 PetscErrorCode  PetscDrawSPAddPointColorized(PetscDrawSP sp,PetscReal *x,PetscReal *y,PetscReal *z)
