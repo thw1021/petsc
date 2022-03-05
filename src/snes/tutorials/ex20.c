@@ -241,8 +241,8 @@ int main(int argc, char **argv)
         -pc_gamg_square_graph 1 \
         -pc_gamg_threshold 0.05 \
         -pc_gamg_threshold_scale .0 \
-      -mg_levels_ksp_type chebyshev -mg_levels_ksp_norm_type preconditioned -mg_levels_ksp_converged_rate \
-        -mg_levels_ksp_max_it 5 \
+        -mg_levels_ksp_type chebyshev -mg_levels_ksp_norm_type preconditioned -mg_levels_ksp_converged_rate \
+        -pc_gamg_use_sa_esteig 0 -mg_levels_ksp_max_it 5                                                \
         -mg_levels_esteig_ksp_type cg \
         -mg_levels_esteig_ksp_max_it 10 \
         -mg_levels_ksp_chebyshev_esteig 0,0.05,0,1.05 \

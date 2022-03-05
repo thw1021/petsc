@@ -1099,7 +1099,7 @@ static PetscErrorCode PCGAMGOptProlongator_AGG(PC pc,Mat Amat,Mat *a_P)
       ierr = KSPCreate(comm,&eksp);CHKERRQ(ierr);
       ierr = PCGetOptionsPrefix(pc,&prefix);CHKERRQ(ierr);
       ierr = KSPSetOptionsPrefix(eksp,prefix);CHKERRQ(ierr);
-      ierr = KSPAppendOptionsPrefix(eksp,"pc_gamg_smoothprolongator_");CHKERRQ(ierr);
+      ierr = KSPAppendOptionsPrefix(eksp,"pc_gamg_esteig_");CHKERRQ(ierr);
       if (pc_gamg->esteig_type[0] == '\0') {
         PetscBool sflg;
         ierr = MatGetOption(Amat, MAT_SPD, &sflg);CHKERRQ(ierr);
