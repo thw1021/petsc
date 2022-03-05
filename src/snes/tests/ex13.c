@@ -223,14 +223,14 @@ int main(int argc, char **argv)
     nsize: 4
     args: -dm_plex_dim 3 -dm_plex_simplex 0 -dm_plex_box_faces 2,2,8 -dm_refine 1 \
           -petscpartitioner_type simple -petscpartitioner_simple_process_grid 1,1,2 -petscpartitioner_simple_node_grid 1,1,2 \
-          -potential_petscspace_degree 2 -ksp_type cg -pc_type gamg -benchmark_it 1 -dm_view -snes_rtol 1.e-4
+          -potential_petscspace_degree 2 -ksp_type cg -pc_type gamg -pc_gamg_esteig_ksp_type cg -pc_gamg_esteig_ksp_max_it 10 -benchmark_it 1 -dm_view -snes_rtol 1.e-4
 
   test:
     suffix: comparison
     nsize: 4
     args: -dm_plex_dim 2 -dm_plex_box_faces 4,4 -dm_refine 3 -petscpartitioner_simple_process_grid 2,2 \
       -petscpartitioner_simple_node_grid 1,1 -potential_petscspace_degree 2 -petscpartitioner_type simple \
-      -dm_plex_simplex 0 -snes_monitor_short -snes_type ksponly -dm_view -pc_type gamg -pc_gamg_process_eq_limit 400 -ksp_norm_type unpreconditioned \
+      -dm_plex_simplex 0 -snes_monitor_short -snes_type ksponly -dm_view -pc_type gamg -pc_gamg_esteig_ksp_type cg -pc_gamg_esteig_ksp_max_it 10 -pc_gamg_process_eq_limit 400 -ksp_norm_type unpreconditioned \
       -pc_gamg_coarse_eq_limit 10 -snes_converged_reason -ksp_converged_reason -snes_rtol 1.e-4
 
   test:
@@ -240,7 +240,7 @@ int main(int argc, char **argv)
     output_file: output/ex13_comparison.out
     args: -dm_plex_dim 2 -dm_plex_box_faces 4,4 -dm_refine 3 -petscpartitioner_simple_process_grid 2,2 \
       -petscpartitioner_simple_node_grid 1,1 -potential_petscspace_degree 2 -petscpartitioner_type simple \
-      -dm_plex_simplex 0 -snes_monitor_short -snes_type ksponly -dm_view -pc_type gamg -pc_gamg_process_eq_limit 400 -ksp_norm_type unpreconditioned \
+      -dm_plex_simplex 0 -snes_monitor_short -snes_type ksponly -dm_view -pc_type gamg -pc_gamg_esteig_ksp_type cg -pc_gamg_esteig_ksp_max_it 10 -pc_gamg_process_eq_limit 400 -ksp_norm_type unpreconditioned \
       -pc_gamg_coarse_eq_limit 10 -snes_converged_reason -ksp_converged_reason -snes_rtol 1.e-4 -dm_mat_type aijcusparse -dm_vec_type cuda
 
   test:
@@ -250,7 +250,7 @@ int main(int argc, char **argv)
     output_file: output/ex13_comparison.out
     args: -dm_plex_dim 2 -dm_plex_box_faces 4,4 -dm_refine 3 -petscpartitioner_simple_process_grid 2,2 \
       -petscpartitioner_simple_node_grid 1,1 -potential_petscspace_degree 2 -petscpartitioner_type simple \
-      -dm_plex_simplex 0 -snes_monitor_short -snes_type ksponly -dm_view -pc_type gamg -pc_gamg_process_eq_limit 400 -ksp_norm_type unpreconditioned \
+      -dm_plex_simplex 0 -snes_monitor_short -snes_type ksponly -dm_view -pc_type gamg -pc_gamg_esteig_ksp_type cg -pc_gamg_esteig_ksp_max_it 10 -pc_gamg_process_eq_limit 400 -ksp_norm_type unpreconditioned \
       -pc_gamg_coarse_eq_limit 10 -snes_converged_reason -ksp_converged_reason -snes_rtol 1.e-4 -dm_mat_type aijkokkos -dm_vec_type kokkos
 
   test:
@@ -268,7 +268,7 @@ int main(int argc, char **argv)
     output_file: output/ex13_comparison.out
     args: -dm_plex_dim 2 -dm_plex_box_faces 4,4 -dm_refine 3 -petscpartitioner_simple_process_grid 2,2 \
       -petscpartitioner_simple_node_grid 1,1 -potential_petscspace_degree 2 -petscpartitioner_type simple \
-      -dm_plex_simplex 0 -snes_monitor_short -snes_type ksponly -dm_view -pc_type gamg -pc_gamg_process_eq_limit 400 -ksp_norm_type unpreconditioned \
+      -dm_plex_simplex 0 -snes_monitor_short -snes_type ksponly -dm_view -pc_type gamg -pc_gamg_esteig_ksp_type cg -pc_gamg_esteig_ksp_max_it 10 -pc_gamg_process_eq_limit 400 -ksp_norm_type unpreconditioned \
       -pc_gamg_coarse_eq_limit 10 -snes_converged_reason -ksp_converged_reason -snes_rtol 1.e-4 -dm_mat_type aijmkl
 
   test:
