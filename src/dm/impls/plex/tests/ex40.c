@@ -34,6 +34,7 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm)
   ierr = DMSetFromOptions(*dm);CHKERRQ(ierr);
   ierr = LabelPoints(*dm);CHKERRQ(ierr);
   ierr = PetscObjectSetOptionsPrefix((PetscObject) *dm, "post_label_");CHKERRQ(ierr);
+  ierr = DMPlexDistributeSetDefault(*dm, PETSC_FALSE);CHKERRQ(ierr);
   ierr = DMSetFromOptions(*dm);CHKERRQ(ierr);
   ierr = PetscObjectSetOptionsPrefix((PetscObject) *dm, NULL);CHKERRQ(ierr);
   ierr = DMViewFromOptions(*dm, NULL, "-dm_view");CHKERRQ(ierr);
