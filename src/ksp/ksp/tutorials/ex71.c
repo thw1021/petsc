@@ -504,7 +504,7 @@ int main(int argc,char **args)
    nsize: 8
    filter: grep -v "variant HERMITIAN" | sed -e "s/iterations 1[0-9]/iterations 10/g"
    suffix: bddc_elast_dir_approx
-   args: -pde_type Elasticity -cells 7,9,8 -dim 3 -ksp_view -pc_bddc_coarse_redundant_pc_type svd -ksp_error_if_not_converged -pc_bddc_monolithic -pc_bddc_dirichlet_pc_type gamg -ksp_converged_reason -pc_bddc_dirichlet_approximate
+   args: -pde_type Elasticity -cells 7,9,8 -dim 3 -ksp_view -pc_bddc_coarse_redundant_pc_type svd -ksp_error_if_not_converged -pc_bddc_monolithic -pc_bddc_dirichlet_pc_type gamg -pc_bddc_dirichlet_pc_gamg_esteig_ksp_max_it 10 -ksp_converged_reason -pc_bddc_dirichlet_approximate
  test:
    nsize: 8
    filter: grep -v "variant HERMITIAN" | sed -e "s/iterations 1[0-9]/iterations 10/g"
@@ -514,7 +514,7 @@ int main(int argc,char **args)
    nsize: 8
    filter: grep -v "variant HERMITIAN" | sed -e "s/iterations 1[0-9]/iterations 10/g"
    suffix: bddc_elast_both_approx
-   args: -pde_type Elasticity -cells 7,9,8 -dim 3 -ksp_view -pc_bddc_coarse_redundant_pc_type svd -ksp_error_if_not_converged -pc_bddc_monolithic -pc_bddc_dirichlet_pc_type gamg -pc_bddc_neumann_pc_type gamg -ksp_converged_reason -pc_bddc_neumann_approximate -pc_bddc_dirichlet_approximate
+   args: -pde_type Elasticity -cells 7,9,8 -dim 3 -ksp_view -pc_bddc_coarse_redundant_pc_type svd -ksp_error_if_not_converged -pc_bddc_monolithic -pc_bddc_dirichlet_pc_type gamg -pc_bddc_dirichlet_pc_gamg_esteig_ksp_max_it 10 -pc_bddc_neumann_pc_type gamg -pc_bddc_neumann_pc_gamg_esteig_ksp_max_it 10 -ksp_converged_reason -pc_bddc_neumann_approximate -pc_bddc_dirichlet_approximate
  test:
    nsize: 8
    filter: grep -v "variant HERMITIAN"
