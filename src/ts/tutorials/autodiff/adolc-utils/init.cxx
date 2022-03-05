@@ -56,8 +56,7 @@ template <class T> PetscErrorCode AdolcFree2(T **A)
 */
 template <class T> PetscErrorCode GiveGhostPoints(DM da,T *cgs,void *array)
 {
-  PetscErrorCode ierr;
-  PetscInt       dim;
+  PetscInt dim;
 
   PetscFunctionBegin;
   CHKERRQ(DMDAGetInfo(da,&dim,0,0,0,0,0,0,0,0,0,0,0,0));
@@ -81,8 +80,7 @@ template <class T> PetscErrorCode GiveGhostPoints(DM da,T *cgs,void *array)
 */
 template <class T> PetscErrorCode GiveGhostPoints1d(DM da,T *a1d[])
 {
-  PetscErrorCode ierr;
-  PetscInt       gxs;
+  PetscInt gxs;
 
   PetscFunctionBegin;
   CHKERRQ(DMDAGetGhostCorners(da,&gxs,NULL,NULL,NULL,NULL,NULL));
@@ -105,13 +103,11 @@ template <class T> PetscErrorCode GiveGhostPoints1d(DM da,T *a1d[])
 */
 template <class T> PetscErrorCode GiveGhostPoints2d(DM da,T *cgs,T **a2d[])
 {
-  PetscErrorCode ierr;
-  PetscInt       gxs,gys,gxm,gym,j;
+  PetscInt gxs,gys,gxm,gym;
 
   PetscFunctionBegin;
   CHKERRQ(DMDAGetGhostCorners(da,&gxs,&gys,NULL,&gxm,&gym,NULL));
-  for (j=0; j<gym; j++)
-    (*a2d)[j] = cgs + j*gxm - gxs;
+  for (PetscInt j=0; j<gym; j++) (*a2d)[j] = cgs + j*gxm - gxs;
   *a2d -= gys;
   PetscFunctionReturn(0);
 }
@@ -146,8 +142,6 @@ template <class T> PetscErrorCode Subidentity(PetscInt n,PetscInt s,T **S)
 */
 template <class T> PetscErrorCode Identity(PetscInt n,T **I)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(Subidentity(n,0,I));
   PetscFunctionReturn(0);

@@ -75,8 +75,6 @@ PetscErrorCode Initialize_AppContext(UserCtx *puser)
 
 PetscErrorCode Destroy_AppContext(UserCtx *user)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   CHKERRQ(PetscFree(*user));
   PetscFunctionReturn(0);
@@ -102,7 +100,6 @@ int main(int argc,char **argv)
   PetscReal         hx,dt,ftime;
   UserCtx           user;       /* user-defined work context */
   TSConvergedReason reason;
-
   DM                dm;
   const char        *fields[2] = {"U","V"};
 
@@ -200,7 +197,6 @@ int main(int argc,char **argv)
 PetscErrorCode FormIJacobian(TS ts,PetscReal t,Vec X,Vec Xdot,PetscReal a,Mat J,Mat Jpre,void *ptr)
 {
   UserCtx             user = (UserCtx)ptr;
-  PetscErrorCode      ierr;
   PetscInt            dof;
   PetscReal           hx;
   DM                  dm;
@@ -258,7 +254,6 @@ static PetscErrorCode FormRHSFunction(TS ts,PetscReal t,Vec X,Vec F,void *ptr)
   Field             *f;
   PetscInt          dof;
   const moab::Range *ownedvtx;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   hx = 1.0/user->n;
@@ -295,7 +290,6 @@ static PetscErrorCode FormIFunction(TS ts,PetscReal t,Vec X,Vec Xdot,Vec F,void 
   Field           *x,*xdot,*f;
   PetscReal       hx;
   Vec             Xloc;
-  PetscErrorCode  ierr;
   PetscInt        i,bcindx;
   PetscBool       elem_on_boundary;
   const moab::Range   *vlocal;
@@ -358,7 +352,6 @@ PetscErrorCode FormInitialSolution(TS ts,Vec X,void *ctx)
   PetscReal         vpos[3];
   DM                dm;
   Field             *x;
-  PetscErrorCode    ierr;
   const moab::Range *vowned;
   PetscInt          dof;
   moab::Range::iterator iter;

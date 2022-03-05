@@ -20,14 +20,11 @@
 */
 PetscErrorCode PrintSparsity(MPI_Comm comm,PetscInt m,unsigned int **sparsity)
 {
-  PetscErrorCode ierr;
-  PetscInt       i,j;
-
   PetscFunctionBegin;
   CHKERRQ(PetscPrintf(comm,"Sparsity pattern:\n"));
-  for (i=0; i<m ;i++) {
+  for (PetscInt i=0; i<m ;i++) {
     CHKERRQ(PetscPrintf(comm,"\n %2d: ",i));
-    for (j=1; j<= (PetscInt) sparsity[i][0] ;j++) {
+    for (PetscInt j=1; j<= (PetscInt) sparsity[i][0] ;j++) {
       CHKERRQ(PetscPrintf(comm," %2d ",sparsity[i][j]));
     }
   }
@@ -52,18 +49,16 @@ PetscErrorCode PrintSparsity(MPI_Comm comm,PetscInt m,unsigned int **sparsity)
 */
 PetscErrorCode GenerateSeedMatrix(ISColoring iscoloring,PetscScalar **S)
 {
-  PetscErrorCode ierr;
   IS             *is;
-  PetscInt       p,size,colour,j;
+  PetscInt       p,size;
   const PetscInt *indices;
 
   PetscFunctionBegin;
   CHKERRQ(ISColoringGetIS(iscoloring,PETSC_USE_POINTER,&p,&is));
-  for (colour=0; colour<p; colour++) {
+  for (PetscInt colour=0; colour<p; colour++) {
     CHKERRQ(ISGetLocalSize(is[colour],&size));
     CHKERRQ(ISGetIndices(is[colour],&indices));
-    for (j=0; j<size; j++)
-      S[indices[j]][colour] = 1.;
+    for (PetscInt j=0; j<size; j++) S[indices[j]][colour] = 1.;
     CHKERRQ(ISRestoreIndices(is[colour],&indices));
   }
   CHKERRQ(ISColoringRestoreIS(iscoloring,PETSC_USE_POINTER,&is));
@@ -84,7 +79,6 @@ PetscErrorCode GenerateSeedMatrix(ISColoring iscoloring,PetscScalar **S)
 */
 PetscErrorCode GenerateSeedMatrixPlusRecovery(ISColoring iscoloring,PetscScalar **S,PetscScalar *R)
 {
-  PetscErrorCode ierr;
   IS             *is;
   PetscInt       p,size,colour,j;
   const PetscInt *indices;
@@ -154,16 +148,12 @@ PetscErrorCode GetRecoveryMatrix(PetscScalar **S,unsigned int **sparsity,PetscIn
 */
 PetscErrorCode RecoverJacobian(Mat A,InsertMode mode,PetscInt m,PetscInt p,PetscScalar **R,PetscScalar **C,PetscReal *a)
 {
-  PetscErrorCode ierr;
-  PetscInt       i,j,colour;
-
   PetscFunctionBegin;
-  for (i=0; i<m; i++) {
-    for (colour=0; colour<p; colour++) {
-      j = (PetscInt) R[i][colour];
+  for (PetscInt i=0; i<m; i++) {
+    for (PetscInt colour=0; colour<p; colour++) {
+      PetscInt j = (PetscInt) R[i][colour];
       if (j != -1) {
-        if (a)
-          C[i][colour] *= *a;
+        if (a) C[i][colour] *= *a;
         CHKERRQ(MatSetValues(A,1,&i,1,&j,&C[i][colour],mode));
       }
     }
@@ -188,16 +178,12 @@ PetscErrorCode RecoverJacobian(Mat A,InsertMode mode,PetscInt m,PetscInt p,Petsc
 */
 PetscErrorCode RecoverJacobianLocal(Mat A,InsertMode mode,PetscInt m,PetscInt p,PetscScalar **R,PetscScalar **C,PetscReal *a)
 {
-  PetscErrorCode ierr;
-  PetscInt       i,j,colour;
-
   PetscFunctionBegin;
-  for (i=0; i<m; i++) {
-    for (colour=0; colour<p; colour++) {
-      j = (PetscInt) R[i][colour];
+  for (PetscInt i=0; i<m; i++) {
+    for (PetscInt colour=0; colour<p; colour++) {
+      PetscInt j = (PetscInt) R[i][colour];
       if (j != -1) {
-        if (a)
-          C[i][colour] *= *a;
+        if (a) C[i][colour] *= *a;
         CHKERRQ(MatSetValuesLocal(A,1,&i,1,&j,&C[i][colour],mode));
       }
     }
@@ -220,14 +206,10 @@ PetscErrorCode RecoverJacobianLocal(Mat A,InsertMode mode,PetscInt m,PetscInt p,
 */
 PetscErrorCode RecoverDiagonal(Vec diag,InsertMode mode,PetscInt m,PetscScalar *R,PetscScalar **C,PetscReal *a)
 {
-  PetscErrorCode ierr;
-  PetscInt       i,colour;
-
   PetscFunctionBegin;
-  for (i=0; i<m; i++) {
-    colour = (PetscInt)R[i];
-    if (a)
-      C[i][colour] *= *a;
+  for (PetscInt i=0; i<m; i++) {
+    PetscInt colour = (PetscInt)R[i];
+    if (a) C[i][colour] *= *a;
     CHKERRQ(VecSetValues(diag,1,&i,&C[i][colour],mode));
   }
   PetscFunctionReturn(0);
@@ -248,14 +230,10 @@ PetscErrorCode RecoverDiagonal(Vec diag,InsertMode mode,PetscInt m,PetscScalar *
 */
 PetscErrorCode RecoverDiagonalLocal(Vec diag,InsertMode mode,PetscInt m,PetscScalar *R,PetscScalar **C,PetscReal *a)
 {
-  PetscErrorCode ierr;
-  PetscInt       i,colour;
-
   PetscFunctionBegin;
-  for (i=0; i<m; i++) {
-    colour = (PetscInt)R[i];
-    if (a)
-      C[i][colour] *= *a;
+  for (PetscInt i=0; i<m; i++) {
+    PetscInt colour = (PetscInt)R[i];
+    if (a) C[i][colour] *= *a;
     CHKERRQ(VecSetValuesLocal(diag,1,&i,&C[i][colour],mode));
   }
   PetscFunctionReturn(0);

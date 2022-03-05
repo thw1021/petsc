@@ -186,7 +186,6 @@ int main(int argc,char **argv)
 
 PetscErrorCode InitialConditions(DM da,Vec U)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,xs,ys,xm,ym,Mx,My;
   Field          **u;
   PetscReal      hx,hy,x,y;
@@ -231,7 +230,6 @@ PetscErrorCode InitialConditions(DM da,Vec U)
 PetscErrorCode InitializeLambda(DM da,Vec lambda,PetscReal x,PetscReal y)
 {
    PetscInt i,j,Mx,My,xs,ys,xm,ym;
-   PetscErrorCode ierr;
    Field **l;
 
    PetscFunctionBegin;
@@ -257,7 +255,6 @@ PetscErrorCode IFunctionLocalPassive(DMDALocalInfo *info,PetscReal t,Field**u,Fi
   PetscInt       i,j,xs,ys,xm,ym;
   PetscReal      hx,hy,sx,sy;
   PetscScalar    uc,uxx,uyy,vc,vxx,vyy;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   hx = 2.50/(PetscReal)(info->mx); sx = 1.0/(hx*hx);
@@ -285,7 +282,6 @@ PetscErrorCode IFunctionLocalPassive(DMDALocalInfo *info,PetscReal t,Field**u,Fi
 
 PetscErrorCode IFunctionActive(TS ts,PetscReal ftime,Vec U,Vec Udot,Vec F,void *ptr)
 {
-  PetscErrorCode ierr;
   AppCtx         *appctx = (AppCtx*)ptr;
   DM             da;
   DMDALocalInfo  info;
@@ -412,7 +408,6 @@ PetscErrorCode IFunctionActive(TS ts,PetscReal ftime,Vec U,Vec Udot,Vec F,void *
 PetscErrorCode IJacobianMatFree(TS ts,PetscReal t,Vec X,Vec Xdot,PetscReal a,Mat A_shell,Mat B,void *ctx)
 {
   AdolcMatCtx       *mctx;
-  PetscErrorCode    ierr;
   DM                da;
 
   PetscFunctionBeginUser;

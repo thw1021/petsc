@@ -31,7 +31,6 @@
 PetscErrorCode PetscAdolcComputeRHSJacobian(PetscInt tag,Mat A,const PetscScalar *u_vec,void *ctx)
 {
   AdolcCtx       *adctx = (AdolcCtx*)ctx;
-  PetscErrorCode ierr;
   PetscInt       i,j,m = adctx->m,n = adctx->n,p = adctx->p;
   PetscScalar    **J;
 
@@ -74,7 +73,6 @@ PetscErrorCode PetscAdolcComputeRHSJacobian(PetscInt tag,Mat A,const PetscScalar
 PetscErrorCode PetscAdolcComputeRHSJacobianLocal(PetscInt tag,Mat A,const PetscScalar *u_vec,void *ctx)
 {
   AdolcCtx       *adctx = (AdolcCtx*)ctx;
-  PetscErrorCode ierr;
   PetscInt       i,j,m = adctx->m,n = adctx->n,p = adctx->p;
   PetscScalar    **J;
 
@@ -118,7 +116,6 @@ PetscErrorCode PetscAdolcComputeRHSJacobianLocal(PetscInt tag,Mat A,const PetscS
 PetscErrorCode PetscAdolcComputeIJacobian(PetscInt tag1,PetscInt tag2,Mat A,const PetscScalar *u_vec,PetscReal a,void *ctx)
 {
   AdolcCtx       *adctx = (AdolcCtx*)ctx;
-  PetscErrorCode ierr;
   PetscInt       i,j,m = adctx->m,n = adctx->n,p = adctx->p;
   PetscScalar    **J;
 
@@ -185,7 +182,6 @@ PetscErrorCode PetscAdolcComputeIJacobian(PetscInt tag1,PetscInt tag2,Mat A,cons
 PetscErrorCode PetscAdolcComputeIJacobianIDMass(PetscInt tag,Mat A,PetscScalar *u_vec,PetscReal a,void *ctx)
 {
   AdolcCtx       *adctx = (AdolcCtx*)ctx;
-  PetscErrorCode ierr;
   PetscInt       i,j,m = adctx->m,n = adctx->n,p = adctx->p;
   PetscScalar    **J;
 
@@ -235,7 +231,6 @@ PetscErrorCode PetscAdolcComputeIJacobianIDMass(PetscInt tag,Mat A,PetscScalar *
 PetscErrorCode PetscAdolcComputeIJacobianLocal(PetscInt tag1,PetscInt tag2,Mat A,PetscScalar *u_vec,PetscReal a,void *ctx)
 {
   AdolcCtx       *adctx = (AdolcCtx*)ctx;
-  PetscErrorCode ierr;
   PetscInt       i,j,m = adctx->m,n = adctx->n,p = adctx->p;
   PetscScalar    **J;
 
@@ -301,7 +296,6 @@ PetscErrorCode PetscAdolcComputeIJacobianLocal(PetscInt tag1,PetscInt tag2,Mat A
 PetscErrorCode PetscAdolcComputeIJacobianLocalIDMass(PetscInt tag,Mat A,const PetscScalar *u_vec,PetscReal a,void *ctx)
 {
   AdolcCtx       *adctx = (AdolcCtx*)ctx;
-  PetscErrorCode ierr;
   PetscInt       i,j,m = adctx->m,n = adctx->n,p = adctx->p;
   PetscScalar    **J;
 
@@ -352,7 +346,6 @@ PetscErrorCode PetscAdolcComputeIJacobianLocalIDMass(PetscInt tag,Mat A,const Pe
 PetscErrorCode PetscAdolcComputeRHSJacobianP(PetscInt tag,Mat A,const PetscScalar *u_vec,PetscScalar *params,void *ctx)
 {
   AdolcCtx       *adctx = (AdolcCtx*)ctx;
-  PetscErrorCode ierr;
   PetscInt       i,j = 0,m = adctx->m,n = adctx->n,p = adctx->num_params;
   PetscScalar    **J,*concat,**S;
 
@@ -400,7 +393,6 @@ PetscErrorCode PetscAdolcComputeRHSJacobianP(PetscInt tag,Mat A,const PetscScala
 PetscErrorCode PetscAdolcComputeRHSJacobianPLocal(PetscInt tag,Mat A,const PetscScalar *u_vec,PetscScalar *params,void *ctx)
 {
   AdolcCtx       *adctx = (AdolcCtx*)ctx;
-  PetscErrorCode ierr;
   PetscInt       i,j = 0,m = adctx->m,n = adctx->n,p = adctx->num_params;
   PetscScalar    **J,*concat,**S;
 
@@ -453,7 +445,6 @@ PetscErrorCode PetscAdolcComputeRHSJacobianPLocal(PetscInt tag,Mat A,const Petsc
 PetscErrorCode PetscAdolcComputeIJacobianAndDiagonalLocal(PetscInt tag1,PetscInt tag2,Vec diag,PetscScalar *u_vec,PetscReal a,void *ctx)
 {
   AdolcCtx       *adctx = (AdolcCtx*)ctx;
-  PetscErrorCode ierr;
   PetscInt       i,m = adctx->m,n = adctx->n,p = adctx->p;
   PetscScalar    **J;
 
