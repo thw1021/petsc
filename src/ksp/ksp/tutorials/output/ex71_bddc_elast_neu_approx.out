@@ -153,15 +153,7 @@ PC Object: 8 MPI processes
         KSP Object: (pc_bddc_neumann_mg_levels_1_) 1 MPI processes
           type: chebyshev
             eigenvalue targets used: min 0.262061, max 2.88267
-            eigenvalues estimated via cg: min 0.100732, max 2.62061
-            eigenvalues estimated using cg with transform: [0. 0.1; 0. 1.1]
-            KSP Object: (pc_bddc_neumann_mg_levels_1_esteig_) 1 MPI processes
-              type: cg
-              maximum iterations=10, initial guess is zero
-              tolerances:  relative=1e-12, absolute=1e-50, divergence=10000.
-              left preconditioning
-              using PRECONDITIONED norm type for convergence test
-            estimating eigenvalues using noisy right hand side
+            eigenvalues provided (min 0.100732, max 2.62061) with transform: [0. 0.1; 0. 1.1]
           maximum iterations=2, nonzero initial guess
           tolerances:  relative=1e-05, absolute=1e-50, divergence=10000.
           left preconditioning
@@ -175,6 +167,7 @@ PC Object: 8 MPI processes
             rows=279, cols=279, bs=3
             total: nonzeros=14265, allocated nonzeros=14265
             total number of mallocs used during MatSetValues calls=0
+              has attached near null space
               using I-node routines: found 93 nodes, limit used is 5
       Up solver (post-smoother) same as down solver (pre-smoother)
       linear system matrix = precond matrix:
@@ -183,6 +176,7 @@ PC Object: 8 MPI processes
         rows=279, cols=279, bs=3
         total: nonzeros=14265, allocated nonzeros=14265
         total number of mallocs used during MatSetValues calls=0
+          has attached near null space
           using I-node routines: found 93 nodes, limit used is 5
   --- Coarse solver
     KSP Object: (pc_bddc_coarse_) 8 MPI processes
