@@ -1100,17 +1100,14 @@ static PetscErrorCode PCGAMGOptProlongator_AGG(PC pc,Mat Amat,Mat *a_P)
       ierr = PCGetOptionsPrefix(pc,&prefix);CHKERRQ(ierr);
       ierr = KSPSetOptionsPrefix(eksp,prefix);CHKERRQ(ierr);
       ierr = KSPAppendOptionsPrefix(eksp,"pc_gamg_esteig_");CHKERRQ(ierr);
-      if (pc_gamg->esteig_type[0] == '\0') {
+      {
         PetscBool sflg;
         ierr = MatGetOption(Amat, MAT_SPD, &sflg);CHKERRQ(ierr);
         if (sflg) {
           ierr = KSPSetType(eksp, KSPCG);CHKERRQ(ierr);
         }
-      } else {
-        ierr = KSPSetType(eksp, pc_gamg->esteig_type);CHKERRQ(ierr);
       }
       ierr = KSPSetErrorIfNotConverged(eksp,pc->erroriffailure);CHKERRQ(ierr);
-      ierr = KSPSetTolerances(eksp,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT,pc_gamg->esteig_max_it);CHKERRQ(ierr);
       ierr = KSPSetNormType(eksp, KSP_NORM_NONE);CHKERRQ(ierr);
 
       ierr = KSPSetInitialGuessNonzero(eksp, PETSC_FALSE);CHKERRQ(ierr);
