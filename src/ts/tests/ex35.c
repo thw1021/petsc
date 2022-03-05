@@ -32,8 +32,8 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 */
 PetscReal erfinv(PetscReal x)
 {
-  PetscReal *ck, r = 0.;
-  PetscInt k, m, maxIter=100;
+  PetscReal    *ck, r = 0.;
+  PetscInt     k, m, maxIter=100;
   PetscErrorCode  ierr;
 
   ierr = PetscCalloc1(maxIter,&ck);CHKERRQ(ierr);
@@ -53,8 +53,9 @@ PetscReal erfinv(PetscReal x)
 
 int main(int argc, char **argv)
 {
-  PetscInt          p, d, dim, Np;
-  PetscReal         *x, *v, speed, value, *randVecNums;
+  PetscInt          p, dim, Np;
+  PetscScalar       *randVecNums;
+  PetscReal         speed, value, *x, *v;
   PetscRandom       rngx, rng1, rng2;
   Vec               randVec, subvecvx, subvecvy;
   IS                isvx, isvy;
@@ -125,8 +126,8 @@ int main(int argc, char **argv)
     for (p = 0; p < Np; ++p) {
       PetscReal u1, u2, mag, zx, zy;
 
-      u1 = randVecNums[p*dim];
-      u2 = randVecNums[p*dim+1];
+      u1 = PetscRealPart(randVecNums[p*dim]);
+      u2 = PetscRealPart(randVecNums[p*dim+1]);
 
       x[p*dim] = u1;
       x[p*dim+1] = u2;
@@ -145,7 +146,6 @@ int main(int argc, char **argv)
     ierr = VecDestroy(&subvecvy);CHKERRQ(ierr);
     ierr = VecDestroy(&randVec);CHKERRQ(ierr);
   } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Do not support dimension %D", dim);
-
 
   ierr = PetscDrawCreate(comm, NULL, "monitor_particle_positions", 0,0,400,300, &positionDraw);CHKERRQ(ierr);
   ierr = PetscDrawSetFromOptions(positionDraw);CHKERRQ(ierr);
