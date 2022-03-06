@@ -619,7 +619,7 @@ int main(int argc, char **argv)
     requires: triangle
     args: -potential_petscspace_degree 1 -dm_refine 3 \
       -ksp_type cg -ksp_rtol 1.e-11 -ksp_norm_type unpreconditioned \
-      -pc_type gamg \
+      -pc_type gamg -pc_gamg_esteig_ksp_type cg -pc_gamg_esteig_ksp_max_it 10 \
         -pc_gamg_type agg -pc_gamg_agg_nsmooths 1 \
         -pc_gamg_coarse_eq_limit 1000 \
         -pc_gamg_square_graph 1 \
@@ -627,9 +627,6 @@ int main(int argc, char **argv)
         -pc_gamg_threshold_scale .0 \
         -mg_levels_ksp_type chebyshev \
         -mg_levels_ksp_max_it 1 \
-        -pc_gamg_use_sa_esteig 0 -mg_levels_esteig_ksp_type cg \
-        -mg_levels_esteig_ksp_max_it 10 \
-        -mg_levels_ksp_chebyshev_esteig 0,0.1,0,1.1 \
         -mg_levels_pc_type jacobi \
       -matptap_via scalable
   test:
