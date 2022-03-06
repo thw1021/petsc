@@ -169,12 +169,14 @@ PetscErrorCode  PetscSequentialPhaseEnd(MPI_Comm comm,int ng)
 @*/
 PetscErrorCode PetscGlobalMinMaxInt(MPI_Comm comm, PetscInt minMaxVal[2], PetscInt minMaxValGlobal[2])
 {
+  PetscBool      inplace = (PetscBool)(minMaxVal == minMaxValGlobal);
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  minMaxVal[1] = -minMaxVal[1];
-  ierr = MPI_Allreduce(minMaxVal, minMaxValGlobal, 2, MPIU_INT, MPI_MIN, comm);CHKERRMPI(ierr);
-  minMaxValGlobal[1] = -minMaxValGlobal[1];
+  minMaxVal[0] = -minMaxVal[0];
+  ierr = MPIU_Allreduce(inplace ? MPI_IN_PLACE : minMaxVal,minMaxValGlobal,2,MPIU_INT,MPI_MAX,comm);CHKERRMPI(ierr);
+  minMaxValGlobal[0] = -minMaxValGlobal[0];
+  if (!inplace) { minMaxVal[0] = -minMaxVal[0]; }
   PetscFunctionReturn(0);
 }
 
@@ -195,11 +197,13 @@ PetscErrorCode PetscGlobalMinMaxInt(MPI_Comm comm, PetscInt minMaxVal[2], PetscI
 @*/
 PetscErrorCode PetscGlobalMinMaxReal(MPI_Comm comm, PetscReal minMaxVal[2], PetscReal minMaxValGlobal[2])
 {
+  PetscBool      inplace = (PetscBool)(minMaxVal == minMaxValGlobal);
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  minMaxVal[1] = -minMaxVal[1];
-  ierr = MPI_Allreduce(minMaxVal, minMaxValGlobal, 2, MPIU_REAL, MPI_MIN, comm);CHKERRMPI(ierr);
-  minMaxValGlobal[1] = -minMaxValGlobal[1];
+  minMaxVal[0] = -minMaxVal[0];
+  ierr = MPIU_Allreduce(inplace ? MPI_IN_PLACE : minMaxVal,minMaxValGlobal,2,MPIU_REAL,MPIU_MAX,comm);CHKERRMPI(ierr);
+  minMaxValGlobal[0] = -minMaxValGlobal[0];
+  if (!inplace) { minMaxVal[0] = -minMaxVal[0]; }
   PetscFunctionReturn(0);
 }

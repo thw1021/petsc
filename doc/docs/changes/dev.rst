@@ -80,6 +80,7 @@ Changes: Development
 - ``ISLocalToGlobalMappingCreateSF()``: allow passing ``start = PETSC_DECIDE``
 - Add ``ISGeneralSetIndicesFromMask()``
 - Add ``ISSetLayout()``
+- Add ``ISLocalToGlobalMappingGetType()``
 
 .. rubric:: VecScatter / PetscSF:
 
@@ -116,6 +117,8 @@ Changes: Development
 - Add ``MATORDERINGMETISND`` use METIS for nested dissection ordering of ``MatSeqAIJ``, with options ``nseps``, ``niter``, ``ufactor`` and ``pfactor`` under the common prefix ``-mat_ordering_metisnd_``
 - Change options ``-matproduct_<product_type>_via`` to ``-mat_product_algorithm``
 - Add ``-mat_superlu_dist_3d`` and ``-mat_superlu_dist_d <n>`` to support using SuperLU_DIST's version 7.2 3d decomposition algorithms
+- ``MATIS`` now supports negative and repeated indices in the local-to-global map and the COO assembly routines. This allows for better integration with libceed
+- Add ``MatISGetLocalToGlobalMapping()`` to retrieve the logical map for assembled subdomain problem
 
 .. rubric:: PC:
 
