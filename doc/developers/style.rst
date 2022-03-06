@@ -107,34 +107,85 @@ C Formatting
    ``PetscReal a, b, c``.
 
 #. The prototypes for functions should not include the names of the
-   variables; for example, write
+   variables
 
    ::
 
-       PETSC_EXTERN PetscErrorCode MyFunction(PetscInt);
+       PETSC_EXTERN PetscErrorCode MyFunction(PetscInt); // Correct
+       PETSC_EXTERN PetscErrorCode MyFunction(PetscInt myvalue); // Incorrect
 
-   not
+#. All local variables of a particular type (for example, ``PetscInt``) should be listed
+   on the same line if possible; otherwise, they should be listed on adjacent lines. Note
+   that pointers of different arity are considered to be different types
 
    ::
 
-       PETSC_EXTERN PetscErrorCode MyFunction(PetscInt myvalue); /* Incorrect */
+      // Correct
+      PetscInt a,b,c;
+      PetscInt *d,*e;
+      PetscInt **f;
 
-#. All local variables of a particular type (for example, ``PetscInt``)
-   should be listed on the same line if possible; otherwise, they should
-   be listed on adjacent lines.
+      // Incorrect
+      PetscInt a,b,c,*d,*e,**f;
 
-#. Equal signs should be aligned in regions where possible.
+#. Equal signs should be aligned in regions where possible, but are allowed to not be
+   aligned across comments, empty lines, or preprocessor directives.
+
+   ::
+
+      // Correct
+      bob   = 1;
+      alice = 2;
+
+      // Correct, broken by an allowed delimiter
+      bob = 1;
+
+      alice = 2;
+
+      bob = 1;
+      // a very instructive comment
+      alice = 2;
+
+      // Incorrect
+      bob = 1;
+      alice = 2;
 
 #. There *must* be a single blank line between the local variable
    declarations and the body of the function.
+
+   ::
+
+      // Correct
+      PetscInt x;
+
+      PetscFunctionBegin;
+
+      // Incorrect
+      PetscInt x;
+      PetscFunctionBegin;
 
 #. All PETSc functions must have their return value checked for errors using the
    ``CHKERRQ()`` macro. This should be wrapped around the function in question.
 
    ::
 
-      CHKERRQ(MyFunction(...)); /* Correct */
-      PetscErrorCode ierr = MyFunction(...);CHKERRQ(ierr); /* Incorrect */
+      CHKERRQ(MyFunction(...)); // Correct
+      PetscErrorCode ierr = MyFunction(...);CHKERRQ(ierr); // Incorrect
+
+   The only exceptions to this rule are begin-end style macros which embed local variables
+   or loops as part of their expansion
+   (e.g. ``PetscOptionsBegin()``/``PetscOptionsEnd()``).  These should assign to ``ierr``
+   and place the ``CHKERRQ()`` call immediately afterwards on the same line
+
+   ::
+
+      // Correct
+      ierr = PetscOptionsBegin(...);CHKERRQ(ierr);
+      ierr = PetscOptionsEnd();CHKERRQ(ierr);
+
+      // Incorrect
+      CHKERRQ(PetscOptionsBegin(...));
+      CHKERRQ(PetscOptionsEnd());
 
 #. Indentation for ``if`` statements *must* be done as follows.
 
@@ -206,9 +257,22 @@ C Formatting
    See the next item for an exception. The closing
    brace should *always* be on its own line.
 
-#. In function declarations, the opening brace
-   should be on the *next* line, not on the same line as the function
-   name and arguments. This is an exception to the previous item.
+#. In function declarations, the opening brace should be on the *next* line, not on the
+   same line as the function name and arguments. This is an exception to the previous
+   item.
+
+   ::
+
+      // Correct
+      PetscErrorCode Foo(...)
+      {
+
+      }
+
+      // Incorrect
+      PetscErrorCode Foo(...) {
+
+      }
 
 #. Do not leave sections of commented-out code in the source files.
 
@@ -227,9 +291,26 @@ C Formatting
        CHKERRQ(PetscFree(tmp));
      }
 
-   It is also permissible to use ``for`` loop declarations::
+   The only exception to this variables used exclusively within a ``for`` loop, which must
+   be declared inside the loop initializer::
 
-     for (PetscInt i=0; i<n; i++) {
+     // Correct
+     for (PetscInt i=0; i<n; ++i) {
+       // loop body
+     }
+
+     // Correct, variable used outside of loop
+     PetscInt i;
+
+     for (i=0; i<n; ++i) {
+       // loop body
+     }
+     j = i;
+
+     // Incorrect
+     PetscInt i;
+     ...
+     for (i=0; i<n; ++i) {
        // loop body
      }
 
@@ -247,6 +328,16 @@ C Formatting
 
 #. Do not use a space after the ``)`` in a cast or between the type and
    the ``*`` in a cast.
+
+   ::
+
+      // Correct
+      (PetscInt)x;
+      (PetscInt*)y;
+
+      // Incorrect
+      (PetscInt) x;
+      (PetscInt *)y;
 
 #. Do not include a space before or after a comma in lists. That is, do
    not write
