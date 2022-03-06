@@ -588,7 +588,7 @@ simplehtml: chk_c2html
               idir=`dirname $$i`;\
               if [ ! -d $${loc}/$${idir} ]; then ${MKDIR} -p $${loc}/$${idir}; fi ; \
               ${RM} $${loc}/$$i.html; \
-              sed -e "s/CHKERRMPI(\(.*\));/\1/g" -e "s/CHKERRQ(\(.*\));/\1/g" -e "s/ierr;//g" -e "s/PetscFunctionReturn(0)/return(0)/g" -e "s/ierr [ ]*= //g" -e "s/PETSC[A-Z]*_DLLEXPORT//g" $$i | \
+              sed -e "s/CHKERRMPI(\(.*\))\;/\1;/g" -e "s/CHKERRQ(\(.*\))\;/\1;/g" -e "s/ierr\;//g" -e "/\s*PetscFunctionBegin\;/d" -e "s/PetscFunctionReturn(\(\w\+\))/return \1/g" -e "s/PetscFunctionReturnVoid()/return/g" -e "s/ierr\s\+=\s\+//g" -e "s/PETSC[A-Z]*_DLLEXPORT//g" $$i | \
               ${C2HTML} -n | awk '{ sub(/<pre width="80">/,"<pre width=\"80\">\n"); print }' > \
               $${loc}/$$i.html ; \
 	    fi; \
