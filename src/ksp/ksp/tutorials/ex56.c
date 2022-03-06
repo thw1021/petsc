@@ -986,7 +986,7 @@ PetscErrorCode elem_3d_elast_v_25(PetscScalar *dd)
    test:
       suffix: nns_telescope
       nsize: 2
-      args: -use_mat_nearnullspace -ksp_monitor_short -pc_type telescope -pc_telescope_reduction_factor 2 -telescope_pc_type gamg -telescope_pc_gamg_esteig_ksp_type cg
+      args: -use_mat_nearnullspace -ksp_monitor_short -pc_type telescope -pc_telescope_reduction_factor 2 -telescope_pc_type gamg -telescope_pc_gamg_esteig_ksp_type cg -telescope_pc_gamg_esteig_ksp_max_it 10
 
    test:
       suffix: seqaijmkl
