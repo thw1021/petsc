@@ -1852,7 +1852,7 @@ static PetscErrorCode PetscFECreate_Internal(MPI_Comm comm, PetscInt dim, PetscI
   PetscCall(PetscDualSpaceSetNumComponents(Q, Nc));
   PetscCall(PetscDualSpaceSetOrder(Q, degree));
   /* TODO For some reason, we need a tensor dualspace with wedges */
-  PetscCall(PetscDualSpaceLagrangeSetTensor(Q, (tensor || (ct == DM_POLYTOPE_TRI_PRISM)) ? PETSC_TRUE : PETSC_FALSE));
+  PetscCall(PetscDualSpaceLagrangeSetTensor(Q, (tensor || (ct == DM_POLYTOPE_TRI_PRISM) || (ct == DM_POLYTOPE_TRI_PRISM_TENSOR)) ? PETSC_TRUE : PETSC_FALSE));
   if (setFromOptions) PetscCall(PetscDualSpaceSetFromOptions(Q));
   PetscCall(PetscDualSpaceSetUp(Q));
   /* Create finite element */
