@@ -6812,21 +6812,23 @@ PetscErrorCode DMProjectCoordinates(DM dm, PetscFE disc)
     if (classid == PETSC_CONTAINER_CLASSID) {
       PetscFE        feLinear;
       DMPolytopeType ct;
-      PetscInt       dim, dE, cStart;
+      PetscInt       dim, dE, cStart, cEnd;
       PetscBool      simplex;
 
       /* Assume linear vertex coordinates */
       ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
       ierr = DMGetCoordinateDim(dm, &dE);CHKERRQ(ierr);
-      ierr = DMPlexGetHeightStratum(cdmOld, 0, &cStart, NULL);CHKERRQ(ierr);
-      ierr = DMPlexGetCellType(dm, cStart, &ct);CHKERRQ(ierr);
-      switch (ct) {
+      ierr = DMPlexGetHeightStratum(cdmOld, 0, &cStart, &cEnd);CHKERRQ(ierr);
+      if (cStart < cEnd) {
+        ierr = DMPlexGetCellType(dm, cStart, &ct);CHKERRQ(ierr);
+        switch (ct) {
         case DM_POLYTOPE_TRI_PRISM:
         case DM_POLYTOPE_TRI_PRISM_TENSOR:
           SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Cannot autoamtically create coordinate space for prisms");
         default: break;
+        }
       }
-      simplex = DMPolytopeTypeGetNumVertices(ct) == DMPolytopeTypeGetDim(ct)+1 ? PETSC_TRUE : PETSC_FALSE;
+      ierr = DMPlexIsSimplex(dm, &simplex);
       ierr = PetscFECreateLagrange(PETSC_COMM_SELF, dim, dE, simplex, 1, -1, &feLinear);CHKERRQ(ierr);
       ierr = DMSetField(cdmOld, 0, NULL, (PetscObject) feLinear);CHKERRQ(ierr);
       ierr = PetscFEDestroy(&feLinear);CHKERRQ(ierr);
