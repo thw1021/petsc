@@ -299,7 +299,6 @@ int main(int argc,char **argv)
 
 PetscErrorCode InitialConditions(DM da,Vec U)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,xs,ys,xm,ym,Mx,My;
   Field          **u;
   PetscReal      hx,hy,x,y;
@@ -344,7 +343,6 @@ PetscErrorCode InitialConditions(DM da,Vec U)
 PetscErrorCode InitializeLambda(DM da,Vec lambda,PetscReal x,PetscReal y)
 {
    PetscInt i,j,Mx,My,xs,ys,xm,ym;
-   PetscErrorCode ierr;
    Field **l;
    PetscFunctionBegin;
 
@@ -370,7 +368,6 @@ PetscErrorCode IFunctionLocalPassive(DMDALocalInfo *info,PetscReal t,Field**u,Fi
   PetscInt       i,j,xs,ys,xm,ym;
   PetscReal      hx,hy,sx,sy;
   PetscScalar    uc,uxx,uyy,vc,vxx,vyy;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   hx = 2.50/(PetscReal)(info->mx); sx = 1.0/(hx*hx);
@@ -398,7 +395,6 @@ PetscErrorCode IFunctionLocalPassive(DMDALocalInfo *info,PetscReal t,Field**u,Fi
 
 PetscErrorCode IFunctionActive(TS ts,PetscReal ftime,Vec U,Vec Udot,Vec F,void *ptr)
 {
-  PetscErrorCode ierr;
   AppCtx         *appctx = (AppCtx*)ptr;
   DM             da;
   DMDALocalInfo  info;
@@ -525,7 +521,6 @@ PetscErrorCode RHSFunctionPassive(TS ts,PetscReal ftime,Vec U,Vec F,void *ptr)
 {
   AppCtx         *appctx = (AppCtx*)ptr;
   DM             da;
-  PetscErrorCode ierr;
   PetscInt       i,j,xs,ys,xm,ym,Mx,My;
   PetscReal      hx,hy,sx,sy;
   PetscScalar    uc,uxx,uyy,vc,vxx,vyy;
@@ -604,7 +599,6 @@ PetscErrorCode RHSFunctionActive(TS ts,PetscReal ftime,Vec U,Vec F,void *ptr)
 {
   AppCtx         *appctx = (AppCtx*)ptr;
   DM             da;
-  PetscErrorCode ierr;
   PetscInt       i,j,xs,ys,xm,ym,gxs,gys,gxm,gym,Mx,My;
   PetscReal      hx,hy,sx,sy;
   AField         **f_a,*f_c,**u_a,*u_c;
@@ -748,7 +742,6 @@ PetscErrorCode IJacobianAdolc(TS ts,PetscReal t,Vec U,Vec Udot,PetscReal a,Mat A
 {
   AppCtx            *appctx = (AppCtx*)ctx;
   DM                da;
-  PetscErrorCode    ierr;
   const PetscScalar *u_vec;
   Vec               localU;
 
@@ -785,7 +778,6 @@ PetscErrorCode IJacobianByHand(TS ts,PetscReal t,Vec U,Vec Udot,PetscReal a,Mat 
 {
   AppCtx         *appctx = (AppCtx*)ctx;     /* user-defined application context */
   DM             da;
-  PetscErrorCode ierr;
   PetscInt       i,j,Mx,My,xs,ys,xm,ym;
   PetscReal      hx,hy,sx,sy;
   PetscScalar    uc,vc;
@@ -899,7 +891,6 @@ PetscErrorCode RHSJacobianByHand(TS ts,PetscReal t,Vec U,Mat A,Mat B,void *ctx)
 {
   AppCtx         *appctx = (AppCtx*)ctx;     /* user-defined application context */
   DM             da;
-  PetscErrorCode ierr;
   PetscInt       i,j,Mx,My,xs,ys,xm,ym;
   PetscReal      hx,hy,sx,sy;
   PetscScalar    uc,vc;
@@ -1010,7 +1001,6 @@ PetscErrorCode RHSJacobianAdolc(TS ts,PetscReal t,Vec U,Mat A,Mat B,void *ctx)
 {
   AppCtx         *appctx = (AppCtx*)ctx;
   DM             da;
-  PetscErrorCode ierr;
   PetscScalar    *u_vec;
   Vec            localU;
 

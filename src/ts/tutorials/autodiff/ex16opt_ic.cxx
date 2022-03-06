@@ -46,7 +46,6 @@ PetscErrorCode FormFunctionGradient(Tao,Vec,PetscReal*,Vec,void*);
 */
 static PetscErrorCode RHSFunctionPassive(TS ts,PetscReal t,Vec X,Vec F,void *ctx)
 {
-  PetscErrorCode    ierr;
   User              user = (User)ctx;
   PetscScalar       *f;
   const PetscScalar *x;
@@ -67,7 +66,6 @@ static PetscErrorCode RHSFunctionPassive(TS ts,PetscReal t,Vec X,Vec F,void *ctx
 */
 static PetscErrorCode RHSFunctionActive(TS ts,PetscReal t,Vec X,Vec F,void *ctx)
 {
-  PetscErrorCode    ierr;
   User              user = (User)ctx;
   PetscReal         mu   = user->mu;
   PetscScalar       *f;
@@ -97,7 +95,6 @@ static PetscErrorCode RHSFunctionActive(TS ts,PetscReal t,Vec X,Vec F,void *ctx)
 */
 static PetscErrorCode RHSJacobian(TS ts,PetscReal t,Vec X,Mat A,Mat B,void *ctx)
 {
-  PetscErrorCode    ierr;
   User              user=(User)ctx;
   const PetscScalar *x;
 
@@ -113,7 +110,6 @@ static PetscErrorCode RHSJacobian(TS ts,PetscReal t,Vec X,Mat A,Mat B,void *ctx)
 */
 static PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal t,Vec X,void *ctx)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *x;
   PetscReal         tfinal, dt, tprev;
   User              user = (User)ctx;
@@ -294,7 +290,6 @@ PetscErrorCode FormFunctionGradient(Tao tao,Vec IC,PetscReal *f,Vec G,void *ctx)
   User              user = (User)ctx;
   TS                ts;
   PetscScalar       *x_ptr,*y_ptr;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   CHKERRQ(VecCopy(IC,user->x));

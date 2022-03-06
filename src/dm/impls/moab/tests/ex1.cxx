@@ -40,7 +40,6 @@ PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
   moab::Range range;
   PetscInt tagsize;
   moab::ErrorCode merr;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogEventBegin(user->createMeshEvent,0,0,0,0));

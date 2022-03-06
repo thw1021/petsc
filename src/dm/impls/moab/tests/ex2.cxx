@@ -45,7 +45,7 @@ PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   CHKERRQ(PetscOptionsStringArray("-fields", "The list of names of the field variables", "ex2.cxx", options->fieldnames,&options->nfields, &flg));
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
 
-  if (options->debug) PetscPrintf(comm, "Total number of fields: %D.\n",options->nfields);
+  if (options->debug) CHKERRQ(PetscPrintf(comm, "Total number of fields: %D.\n",options->nfields));
   if (!flg) { /* if no field names were given by user, assign a default */
     options->nfields = 1;
     CHKERRQ(PetscStrallocpy("TestEX2Var",&options->fieldnames[0]));
@@ -60,19 +60,18 @@ PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user)
   PetscInt       i;
   size_t         len;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PetscLogEventBegin(user->createMeshEvent,0,0,0,0));
   CHKERRMPI(MPI_Comm_rank(comm, &rank));
   CHKERRQ(PetscStrlen(user->input_file, &len));
   if (len) {
-    if (user->debug) PetscPrintf(comm, "Loading mesh from file: %s and creating a DM object.\n",user->input_file);
+    if (user->debug) CHKERRQ(PetscPrintf(comm, "Loading mesh from file: %s and creating a DM object.\n",user->input_file));
     CHKERRQ(DMMoabLoadFromFile(comm, user->dim, 1, user->input_file, "", &user->dm));
   }
   else {
     if (user->debug) {
-      PetscPrintf(comm, "Creating a %D-dimensional structured %s mesh of %Dx%Dx%D in memory and creating a DM object.\n",user->dim,(user->simplex?"simplex":"regular"),user->nele,user->nele,user->nele);
+      CHKERRQ(PetscPrintf(comm, "Creating a %D-dimensional structured %s mesh of %Dx%Dx%D in memory and creating a DM object.\n",user->dim,(user->simplex?"simplex":"regular"),user->nele,user->nele,user->nele));
     }
     CHKERRQ(DMMoabCreateBoxMesh(comm, user->dim, user->simplex, NULL, user->nele, 1, &user->dm));
   }
@@ -112,13 +111,13 @@ int main(int argc, char **argv)
   /* SetUp the data structures for DMMOAB */
   CHKERRQ(DMSetUp(user.dm));
 
-  if (user.debug) PetscPrintf(comm, "Creating a global vector defined on DM and setting random data.\n");
+  if (user.debug) CHKERRQ(PetscPrintf(comm, "Creating a global vector defined on DM and setting random data.\n"));
   CHKERRQ(DMCreateGlobalVector(user.dm,&solution));
   CHKERRQ(PetscRandomCreate(comm,&rctx));
   CHKERRQ(VecSetRandom(solution,rctx));
 
   /* test if matrix allocation for the prescribed matrix type is done correctly */
-  if (user.debug) PetscPrintf(comm, "Creating a global matrix defined on DM with the right block structure.\n");
+  if (user.debug) CHKERRQ(PetscPrintf(comm, "Creating a global matrix defined on DM with the right block structure.\n"));
   CHKERRQ(DMCreateMatrix(user.dm,&system));
 
   if (user.write_output) {
@@ -128,9 +127,7 @@ int main(int argc, char **argv)
   }
 
   if (user.nfields) {
-    for (i=0; i<user.nfields; i++) {
-      CHKERRQ(PetscFree(user.fieldnames[i]));
-    }
+    for (i=0; i<user.nfields; i++) CHKERRQ(PetscFree(user.fieldnames[i]));
   }
   CHKERRQ(PetscRandomDestroy(&rctx));
   CHKERRQ(VecDestroy(&solution));

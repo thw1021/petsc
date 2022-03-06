@@ -40,7 +40,6 @@ struct _n_User {
 */
 static PetscErrorCode RHSFunctionPassive(TS ts,PetscReal t,Vec X,Vec F,void *ctx)
 {
-  PetscErrorCode    ierr;
   User              user = (User)ctx;
   PetscScalar       *f;
   const PetscScalar *x;
@@ -61,7 +60,6 @@ static PetscErrorCode RHSFunctionPassive(TS ts,PetscReal t,Vec X,Vec F,void *ctx
 */
 static PetscErrorCode RHSFunctionActive(TS ts,PetscReal t,Vec X,Vec F,void *ctx)
 {
-  PetscErrorCode    ierr;
   User              user = (User)ctx;
   PetscScalar       *f;
   const PetscScalar *x;
@@ -93,7 +91,6 @@ static PetscErrorCode RHSFunctionActive(TS ts,PetscReal t,Vec X,Vec F,void *ctx)
 */
 static PetscErrorCode RHSFunctionActiveP(TS ts,PetscReal t,Vec X,Vec F,void *ctx)
 {
-  PetscErrorCode    ierr;
   User              user = (User)ctx;
   PetscScalar       *f;
   const PetscScalar *x;
@@ -124,7 +121,6 @@ static PetscErrorCode RHSFunctionActiveP(TS ts,PetscReal t,Vec X,Vec F,void *ctx
 */
 static PetscErrorCode RHSJacobian(TS ts,PetscReal t,Vec X,Mat A,Mat B,void *ctx)
 {
-  PetscErrorCode    ierr;
   User              user = (User)ctx;
   const PetscScalar *x;
 
@@ -140,7 +136,6 @@ static PetscErrorCode RHSJacobian(TS ts,PetscReal t,Vec X,Mat A,Mat B,void *ctx)
 */
 static PetscErrorCode RHSJacobianP(TS ts,PetscReal t,Vec X,Mat A,void *ctx)
 {
-  PetscErrorCode    ierr;
   User              user = (User)ctx;
   const PetscScalar *x;
 
@@ -156,7 +151,6 @@ static PetscErrorCode RHSJacobianP(TS ts,PetscReal t,Vec X,Mat A,void *ctx)
 */
 static PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal t,Vec X,void *ctx)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *x;
   PetscReal         tfinal, dt, tprev;
   User              user = (User)ctx;
