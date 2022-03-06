@@ -258,7 +258,7 @@ int main(int argc, char **argv)
     requires: !sycl kokkos_kernels
     suffix: kokkos
     args: -dm_plex_dim 2 -dm_plex_box_faces 2,8 -petscpartitioner_type simple -petscpartitioner_simple_process_grid 2,1 \
-          -petscpartitioner_simple_node_grid 2,1 -dm_plex_simplex 0 -potential_petscspace_degree 1 -dm_refine 1 -ksp_type cg -pc_type gamg -ksp_norm_type unpreconditioned \
+          -petscpartitioner_simple_node_grid 2,1 -dm_plex_simplex 0 -potential_petscspace_degree 1 -dm_refine 1 -ksp_type cg -pc_type gamg -pc_gamg_esteig_ksp_type cg -ksp_norm_type unpreconditioned \
           -pc_gamg_esteig_ksp_type cg -ksp_converged_reason -snes_monitor_short -snes_rtol 1.e-4 -dm_view -dm_mat_type aijkokkos -dm_vec_type kokkos
 
   test:
