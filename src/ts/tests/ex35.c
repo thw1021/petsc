@@ -175,8 +175,6 @@ int main(int argc, char **argv)
 }
 
 /*TEST
-   build:
-     requires:
    test:
      suffix: 1D
      args: -Np 50\

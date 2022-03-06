@@ -149,7 +149,6 @@ Changes: Development
   - Add ``TSDiscGradUseGonzalez()`` to set discrete gradient formulation with or without additional conservative terms.  Without flag, the discrete gradients timestepper is just backwards euler
 - Add ``TSRemoveTrajectory`` to destroy and remove the internal TSTrajectory object from TS
 - Change ``TSMonitorSPSwarmSolution()`` to have correct axes labels and bounds
-- Add
 
 .. rubric:: Tao:
 
