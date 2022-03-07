@@ -59,7 +59,7 @@ PetscErrorCode _DMLocatePoints_DMDARegular_IS(DM dm,Vec pos,IS *iscell)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode DMLocatePoints_DMDARegular(DM dm,Vec pos,DMPointLocationType ltype, PetscSF cellSF)
+PetscErrorCode DMLocatePoints_DMDARegular(DM dm,Vec pos,DMPointLocationType ltype, PetscSF cellSF, PetscSF notFoundSF)
 {
   IS             iscell;
   PetscSFNode    *cells;
