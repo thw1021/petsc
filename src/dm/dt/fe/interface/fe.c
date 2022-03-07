@@ -1904,7 +1904,7 @@ static PetscErrorCode PetscFECreate_Internal(MPI_Comm comm, PetscInt dim, PetscI
   ierr = PetscDualSpaceSetNumComponents(Q, Nc);CHKERRQ(ierr);
   ierr = PetscDualSpaceSetOrder(Q, degree);CHKERRQ(ierr);
   /* TODO For some reason, we need a tensor dualspace with wedges */
-  ierr = PetscDualSpaceLagrangeSetTensor(Q, (tensor || (ct == DM_POLYTOPE_TRI_PRISM)) ? PETSC_TRUE : PETSC_FALSE);CHKERRQ(ierr);
+  ierr = PetscDualSpaceLagrangeSetTensor(Q, (tensor || (ct == DM_POLYTOPE_TRI_PRISM) || (ct == DM_POLYTOPE_TRI_PRISM_TENSOR)) ? PETSC_TRUE : PETSC_FALSE);CHKERRQ(ierr);
   if (setFromOptions) {ierr = PetscDualSpaceSetFromOptions(Q);CHKERRQ(ierr);}
   ierr = PetscDualSpaceSetUp(Q);CHKERRQ(ierr);
   /* Create finite element */
