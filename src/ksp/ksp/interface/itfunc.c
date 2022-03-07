@@ -919,9 +919,6 @@ static PetscErrorCode KSPSolve_Private(KSP ksp,Vec b,Vec x)
     ksp->vec_rhs = btmp;
   }
   ierr = VecLockReadPush(ksp->vec_rhs);CHKERRQ(ierr);
-  if (ksp->reason == KSP_DIVERGED_PC_FAILED) {
-    ierr = VecSetInf(ksp->vec_sol);CHKERRQ(ierr);
-  }
   ierr = (*ksp->ops->solve)(ksp);CHKERRQ(ierr);
   ierr  = KSPMonitorPauseFinal_Internal(ksp);CHKERRQ(ierr);
 

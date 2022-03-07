@@ -240,7 +240,6 @@ PetscErrorCode KSPSolve_GMRES(KSP ksp)
 
   itcount     = 0;
   gmres->fullcycle = 0;
-  ksp->reason = KSP_CONVERGED_ITERATING;
   ksp->rnorm  = -1.0; /* special marker for KSPGMRESCycle() */
   while (!ksp->reason) {
     ierr = KSPInitialResidual(ksp,ksp->vec_sol,VEC_TEMP,VEC_TEMP_MATOP,VEC_VV(0),ksp->vec_rhs);CHKERRQ(ierr);
