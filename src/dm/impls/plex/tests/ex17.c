@@ -16,7 +16,7 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm)
 static PetscErrorCode TestLocation(DM dm)
 {
   Vec                points;
-  PetscSF            cellSF = NULL;
+  PetscSF            cellSF = NULL, notFoundSF = NULL;
   const PetscSFNode *cells;
   PetscScalar       *a;
   PetscInt           cdim, n;
@@ -38,7 +38,8 @@ static PetscErrorCode TestLocation(DM dm)
     for (d = 0; d < cdim; ++d) a[off+d] = centroid[d];
   }
   PetscCall(VecRestoreArray(points, &a));
-  PetscCall(DMLocatePoints(dm, points, DM_POINTLOCATION_NONE, &cellSF));
+  PetscCall(DMLocatePoints(dm, points, DM_POINTLOCATION_NONE, &cellSF, &notFoundSF));
+  PetscCall(PetscSFDestroy(&notFoundSF));
   PetscCall(VecDestroy(&points));
   PetscCall(PetscSFGetGraph(cellSF, NULL, &n, NULL, &cells));
   if (n != (cEnd - cStart)) {
