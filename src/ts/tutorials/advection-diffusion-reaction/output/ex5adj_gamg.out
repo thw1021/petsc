@@ -1,30 +1,25 @@
 0 TS dt 0.5 time 0.
       0 KSP Residual norm 0.0286914 
       1 KSP Residual norm 8.08178e-05 
-      2 KSP Residual norm 6.40532e-07 
-      0 KSP Residual norm 4.80605e-06 
-      1 KSP Residual norm 4.38373e-08 
-      2 KSP Residual norm 2.995e-10 
-      0 KSP Residual norm 2.995e-10 
-      1 KSP Residual norm < 1.e-11
+      0 KSP Residual norm 8.1875e-05 
+      1 KSP Residual norm 6.60792e-07 
+      0 KSP Residual norm 6.63341e-07 
+      1 KSP Residual norm 5.37761e-09 
+      0 KSP Residual norm 5.29784e-09 
+      1 KSP Residual norm 8.781e-11 
       2 KSP Residual norm < 1.e-11
 1 TS dt 0.5 time 0.5
-      0 KSP Residual norm 0.0273983 
-      1 KSP Residual norm 8.25795e-05 
-      2 KSP Residual norm 6.39553e-07 
-      0 KSP Residual norm 4.75812e-06 
-      1 KSP Residual norm 6.92476e-08 
-      2 KSP Residual norm 6.100e-10 
-      0 KSP Residual norm 6.125e-10 
-      1 KSP Residual norm < 1.e-11
-      2 KSP Residual norm < 1.e-11
+      0 KSP Residual norm 0.0273985 
+      1 KSP Residual norm 8.23426e-05 
+      0 KSP Residual norm 8.33817e-05 
+      1 KSP Residual norm 6.27907e-07 
+      0 KSP Residual norm 6.29222e-07 
+      1 KSP Residual norm 4.91758e-09 
 2 TS dt 0.5 time 1.
 2 TS dt -0.5 time 1.
-      0 KSP Residual norm 1.34075 
-      1 KSP Residual norm 0.00513509 
-      2 KSP Residual norm 3.57125e-05 
+      0 KSP Residual norm 1.34057 
+      1 KSP Residual norm 0.00520923 
 1 TS dt -0.5 time 0.5
-      0 KSP Residual norm 1.21056 
-      1 KSP Residual norm 0.00524197 
-      2 KSP Residual norm 4.48257e-05 
+      0 KSP Residual norm 1.21052 
+      1 KSP Residual norm 0.00523181 
 0 TS dt -0.5 time 0.5
