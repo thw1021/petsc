@@ -210,7 +210,7 @@ PetscErrorCode  PetscMaxSum(MPI_Comm comm,const PetscInt sizes[],PetscInt *max,P
   }
 #else
   {
-    PetscMPIInt    size,rank;
+    PetscMPIInt size,rank;
     struct {PetscInt max,sum;} *work;
     ierr = MPI_Comm_size(comm,&size);CHKERRMPI(ierr);
     ierr = MPI_Comm_rank(comm,&rank);CHKERRMPI(ierr);
