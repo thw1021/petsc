@@ -5,6 +5,7 @@
 #include <../src/ksp/pc/impls/gamg/gamg.h>        /*I "petscpc.h" I*/
 #include <petscblaslapack.h>
 #include <petscdm.h>
+#include <petsc/private/kspimpl.h>
 
 typedef struct {
   PetscInt  nsmooths;
@@ -1093,37 +1094,20 @@ static PetscErrorCode PCGAMGOptProlongator_AGG(PC pc,Mat Amat,Mat *a_P)
 
       ierr = MatCreateVecs(Amat, &bb, NULL);CHKERRQ(ierr);
       ierr = MatCreateVecs(Amat, &xx, NULL);CHKERRQ(ierr);
-      ierr = VecSetRandom(bb,NULL);CHKERRQ(ierr);
+      ierr = KSPSetNoisy_Private(bb);CHKERRQ(ierr);
 
       ierr = KSPCreate(comm,&eksp);CHKERRQ(ierr);
       ierr = PCGetOptionsPrefix(pc,&prefix);CHKERRQ(ierr);
       ierr = KSPSetOptionsPrefix(eksp,prefix);CHKERRQ(ierr);
-      ierr = KSPAppendOptionsPrefix(eksp,"pc_gamg_smoothprolongator_");CHKERRQ(ierr);
-      if (pc_gamg->esteig_type[0] == '\0') {
-        PetscBool sflg,hflg;
+      ierr = KSPAppendOptionsPrefix(eksp,"pc_gamg_esteig_");CHKERRQ(ierr);
+      {
+        PetscBool sflg;
         ierr = MatGetOption(Amat, MAT_SPD, &sflg);CHKERRQ(ierr);
         if (sflg) {
-          ierr = KSPGetOptionsPrefix(eksp,&prefix);CHKERRQ(ierr);
-          ierr = PetscOptionsHasName(NULL,prefix,"-ksp_type",&sflg);CHKERRQ(ierr);
-          if (!sflg) {
-            ierr = KSPSetType(eksp, KSPCG);CHKERRQ(ierr);
-          }
-        } else {
-          ierr = MatGetOption(Amat, MAT_HERMITIAN, &hflg);CHKERRQ(ierr);
-          ierr = MatGetOption(Amat, MAT_SYMMETRIC, &sflg);CHKERRQ(ierr);
-          if (sflg || hflg) {
-            ierr = KSPGetOptionsPrefix(eksp,&prefix);CHKERRQ(ierr);
-            ierr = PetscOptionsHasName(NULL,prefix,"-ksp_type",&sflg);CHKERRQ(ierr);
-            if (!sflg) {
-              ierr = KSPSetType(eksp, KSPCR);CHKERRQ(ierr);
-            }
-          }
+          ierr = KSPSetType(eksp, KSPCG);CHKERRQ(ierr);
         }
-      } else {
-        ierr = KSPSetType(eksp, pc_gamg->esteig_type);CHKERRQ(ierr);
       }
       ierr = KSPSetErrorIfNotConverged(eksp,pc->erroriffailure);CHKERRQ(ierr);
-      ierr = KSPSetTolerances(eksp,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT,pc_gamg->esteig_max_it);CHKERRQ(ierr);
       ierr = KSPSetNormType(eksp, KSP_NORM_NONE);CHKERRQ(ierr);
 
       ierr = KSPSetInitialGuessNonzero(eksp, PETSC_FALSE);CHKERRQ(ierr);
