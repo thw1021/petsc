@@ -250,25 +250,25 @@ PETSC_EXTERN PetscErrorCode DMAdaptMetric_ParMmg_Plex(DM dm, Vec vertexMetric, D
   CHKERRQ(DMPlexMetricGetVerbosity(dm, &verbosity));
   CHKERRQ(DMPlexMetricGetNumIterations(dm, &numIter));
   CHKERRQ(DMPlexMetricGetGradationFactor(dm, &gradationFactor));
-  CHKERRMMG(PMMG_Init_parMesh, PMMG_ARG_start, PMMG_ARG_ppParMesh, &parmesh, PMMG_ARG_pMesh, PMMG_ARG_pMet, PMMG_ARG_dim, 3, PMMG_ARG_MPIComm, comm, PMMG_ARG_end);
-  CHKERRMMG(PMMG_Set_meshSize, parmesh, numVertices, numCells, 0, numFaceTags, 0, 0);
-  CHKERRMMG(PMMG_Set_iparameter, parmesh, PMMG_IPARAM_APImode, PMMG_APIDISTRIB_nodes);
-  CHKERRMMG(PMMG_Set_iparameter, parmesh, PMMG_IPARAM_noinsert, noInsert);
-  CHKERRMMG(PMMG_Set_iparameter, parmesh, PMMG_IPARAM_noswap, noSwap);
-  CHKERRMMG(PMMG_Set_iparameter, parmesh, PMMG_IPARAM_nomove, noMove);
-  CHKERRMMG(PMMG_Set_iparameter, parmesh, PMMG_IPARAM_verbose, verbosity);
-  CHKERRMMG(PMMG_Set_iparameter, parmesh, PMMG_IPARAM_globalNum, 1);
-  CHKERRMMG(PMMG_Set_iparameter, parmesh, PMMG_IPARAM_niter, numIter);
-  CHKERRMMG(PMMG_Set_dparameter, parmesh, PMMG_DPARAM_hgrad, gradationFactor);
-  CHKERRMMG(PMMG_Set_vertices, parmesh, vertices, verTags);
-  CHKERRMMG(PMMG_Set_tetrahedra, parmesh, cells, cellTags);
-  CHKERRMMG(PMMG_Set_triangles, parmesh, bdFaces, faceTags);
-  CHKERRMMG(PMMG_Set_metSize, parmesh, MMG5_Vertex, numVertices, MMG5_Tensor);
-  CHKERRMMG(PMMG_Set_tensorMets, parmesh, metric);
-  CHKERRMMG(PMMG_Set_numberOfNodeCommunicators, parmesh, numNgbRanks);
+  CHKERRMMG_NONSTANDARD(PMMG_Init_parMesh, PMMG_ARG_start, PMMG_ARG_ppParMesh, &parmesh, PMMG_ARG_pMesh, PMMG_ARG_pMet, PMMG_ARG_dim, 3, PMMG_ARG_MPIComm, comm, PMMG_ARG_end);
+  CHKERRMMG_NONSTANDARD(PMMG_Set_meshSize, parmesh, numVertices, numCells, 0, numFaceTags, 0, 0);
+  CHKERRMMG_NONSTANDARD(PMMG_Set_iparameter, parmesh, PMMG_IPARAM_APImode, PMMG_APIDISTRIB_nodes);
+  CHKERRMMG_NONSTANDARD(PMMG_Set_iparameter, parmesh, PMMG_IPARAM_noinsert, noInsert);
+  CHKERRMMG_NONSTANDARD(PMMG_Set_iparameter, parmesh, PMMG_IPARAM_noswap, noSwap);
+  CHKERRMMG_NONSTANDARD(PMMG_Set_iparameter, parmesh, PMMG_IPARAM_nomove, noMove);
+  CHKERRMMG_NONSTANDARD(PMMG_Set_iparameter, parmesh, PMMG_IPARAM_verbose, verbosity);
+  CHKERRMMG_NONSTANDARD(PMMG_Set_iparameter, parmesh, PMMG_IPARAM_globalNum, 1);
+  CHKERRMMG_NONSTANDARD(PMMG_Set_iparameter, parmesh, PMMG_IPARAM_niter, numIter);
+  CHKERRMMG_NONSTANDARD(PMMG_Set_dparameter, parmesh, PMMG_DPARAM_hgrad, gradationFactor);
+  CHKERRMMG_NONSTANDARD(PMMG_Set_vertices, parmesh, vertices, verTags);
+  CHKERRMMG_NONSTANDARD(PMMG_Set_tetrahedra, parmesh, cells, cellTags);
+  CHKERRMMG_NONSTANDARD(PMMG_Set_triangles, parmesh, bdFaces, faceTags);
+  CHKERRMMG_NONSTANDARD(PMMG_Set_metSize, parmesh, MMG5_Vertex, numVertices, MMG5_Tensor);
+  CHKERRMMG_NONSTANDARD(PMMG_Set_tensorMets, parmesh, metric);
+  CHKERRMMG_NONSTANDARD(PMMG_Set_numberOfNodeCommunicators, parmesh, numNgbRanks);
   for (c = 0; c < numNgbRanks; ++c) {
-    CHKERRMMG(PMMG_Set_ithNodeCommunicatorSize, parmesh, c, ngbRanks[c], intOffset[c+1]-intOffset[c]);
-    CHKERRMMG(PMMG_Set_ithNodeCommunicator_nodes, parmesh, c, &interfaces_lv[intOffset[c]], &interfaces_gv[intOffset[c]], 1);
+    CHKERRMMG_NONSTANDARD(PMMG_Set_ithNodeCommunicatorSize, parmesh, c, ngbRanks[c], intOffset[c+1]-intOffset[c]);
+    CHKERRMMG_NONSTANDARD(PMMG_Set_ithNodeCommunicator_nodes, parmesh, c, &interfaces_lv[intOffset[c]], &interfaces_gv[intOffset[c]], 1);
   }
   CHKERRMMG(PMMG_parmmglib_distributed, parmesh);
   CHKERRQ(PetscFree(cells));
@@ -282,16 +282,16 @@ PETSC_EXTERN PetscErrorCode DMAdaptMetric_ParMmg_Plex(DM dm, Vec vertexMetric, D
 
   /* Retrieve mesh from Mmg */
   numCornersNew = 4;
-  CHKERRMMG(PMMG_Get_meshSize, parmesh, &numVerticesNew, &numCellsNew, 0, &numFacesNew, 0, 0);
+  CHKERRMMG_NONSTANDARD(PMMG_Get_meshSize, parmesh, &numVerticesNew, &numCellsNew, 0, &numFacesNew, 0, 0);
   CHKERRQ(PetscMalloc4(dim*numVerticesNew, &verticesNew, numVerticesNew, &verTagsNew, numVerticesNew, &corners, numVerticesNew, &requiredVer));
   CHKERRQ(PetscMalloc3((dim+1)*numCellsNew, &cellsNew, numCellsNew, &cellTagsNew, numCellsNew, &requiredCells));
   CHKERRQ(PetscMalloc4(dim*numFacesNew, &facesNew, numFacesNew, &faceTagsNew, numFacesNew, &ridges, numFacesNew, &requiredFaces));
-  CHKERRMMG(PMMG_Get_vertices, parmesh, verticesNew, verTagsNew, corners, requiredVer);
-  CHKERRMMG(PMMG_Get_tetrahedra, parmesh, cellsNew, cellTagsNew, requiredCells);
-  CHKERRMMG(PMMG_Get_triangles, parmesh, facesNew, faceTagsNew, requiredFaces);
-  CHKERRMMG(PetscMalloc2, numVerticesNew, &owners, numVerticesNew, &gv_new);
-  CHKERRMMG(PMMG_Set_iparameter, parmesh, PMMG_IPARAM_globalNum, 1);
-  CHKERRMMG(PMMG_Get_verticesGloNum, parmesh, gv_new, owners);
+  CHKERRMMG_NONSTANDARD(PMMG_Get_vertices, parmesh, verticesNew, verTagsNew, corners, requiredVer);
+  CHKERRMMG_NONSTANDARD(PMMG_Get_tetrahedra, parmesh, cellsNew, cellTagsNew, requiredCells);
+  CHKERRMMG_NONSTANDARD(PMMG_Get_triangles, parmesh, facesNew, faceTagsNew, requiredFaces);
+  CHKERRQ(PetscMalloc2(numVerticesNew, &owners, numVerticesNew, &gv_new));
+  CHKERRMMG_NONSTANDARD(PMMG_Set_iparameter, parmesh, PMMG_IPARAM_globalNum, 1);
+  CHKERRMMG_NONSTANDARD(PMMG_Get_verticesGloNum, parmesh, gv_new, owners);
   for (i = 0; i < dim*numFacesNew; ++i) facesNew[i] -= 1;
   for (i = 0; i < (dim+1)*numCellsNew; ++i) cellsNew[i] = gv_new[cellsNew[i]-1]-1;
   for (i = 0, numVerticesNewLoc = 0; i < numVerticesNew; ++i) {

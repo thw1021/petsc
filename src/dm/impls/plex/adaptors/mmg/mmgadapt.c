@@ -145,33 +145,33 @@ PETSC_EXTERN PetscErrorCode DMAdaptMetric_Mmg_Plex(DM dm, Vec vertexMetric, DMLa
   CHKERRQ(DMPlexMetricNoMovement(dm, &noMove));
   switch (dim) {
   case 2:
-    CHKERRMMG(MMG2D_Init_mesh, MMG5_ARG_start, MMG5_ARG_ppMesh, &mmg_mesh, MMG5_ARG_ppMet, &mmg_metric, MMG5_ARG_end);
-    CHKERRMMG(MMG2D_Set_iparameter, mmg_mesh, mmg_metric, MMG2D_IPARAM_noinsert, noInsert);
-    CHKERRMMG(MMG2D_Set_iparameter, mmg_mesh, mmg_metric, MMG2D_IPARAM_noswap, noSwap);
-    CHKERRMMG(MMG2D_Set_iparameter, mmg_mesh, mmg_metric, MMG2D_IPARAM_nomove, noMove);
-    CHKERRMMG(MMG2D_Set_iparameter, mmg_mesh, mmg_metric, MMG2D_IPARAM_verbose, verbosity);
-    CHKERRMMG(MMG2D_Set_dparameter, mmg_mesh, mmg_metric, MMG2D_DPARAM_hgrad, gradationFactor);
-    CHKERRMMG(MMG2D_Set_meshSize, mmg_mesh, numVertices, numCells, 0, numFaceTags);
-    CHKERRMMG(MMG2D_Set_vertices, mmg_mesh, vertices, verTags);
-    CHKERRMMG(MMG2D_Set_triangles, mmg_mesh, cells, cellTags);
-    CHKERRMMG(MMG2D_Set_edges, mmg_mesh, bdFaces, faceTags);
-    CHKERRMMG(MMG2D_Set_solSize, mmg_mesh, mmg_metric, MMG5_Vertex, numVertices, MMG5_Tensor);
-    CHKERRMMG(MMG2D_Set_tensorSols, mmg_metric, metric);
+    CHKERRMMG_NONSTANDARD(MMG2D_Init_mesh, MMG5_ARG_start, MMG5_ARG_ppMesh, &mmg_mesh, MMG5_ARG_ppMet, &mmg_metric, MMG5_ARG_end);
+    CHKERRMMG_NONSTANDARD(MMG2D_Set_iparameter, mmg_mesh, mmg_metric, MMG2D_IPARAM_noinsert, noInsert);
+    CHKERRMMG_NONSTANDARD(MMG2D_Set_iparameter, mmg_mesh, mmg_metric, MMG2D_IPARAM_noswap, noSwap);
+    CHKERRMMG_NONSTANDARD(MMG2D_Set_iparameter, mmg_mesh, mmg_metric, MMG2D_IPARAM_nomove, noMove);
+    CHKERRMMG_NONSTANDARD(MMG2D_Set_iparameter, mmg_mesh, mmg_metric, MMG2D_IPARAM_verbose, verbosity);
+    CHKERRMMG_NONSTANDARD(MMG2D_Set_dparameter, mmg_mesh, mmg_metric, MMG2D_DPARAM_hgrad, gradationFactor);
+    CHKERRMMG_NONSTANDARD(MMG2D_Set_meshSize, mmg_mesh, numVertices, numCells, 0, numFaceTags);
+    CHKERRMMG_NONSTANDARD(MMG2D_Set_vertices, mmg_mesh, vertices, verTags);
+    CHKERRMMG_NONSTANDARD(MMG2D_Set_triangles, mmg_mesh, cells, cellTags);
+    CHKERRMMG_NONSTANDARD(MMG2D_Set_edges, mmg_mesh, bdFaces, faceTags);
+    CHKERRMMG_NONSTANDARD(MMG2D_Set_solSize, mmg_mesh, mmg_metric, MMG5_Vertex, numVertices, MMG5_Tensor);
+    CHKERRMMG_NONSTANDARD(MMG2D_Set_tensorSols, mmg_metric, metric);
     CHKERRMMG(MMG2D_mmg2dlib, mmg_mesh, mmg_metric);
     break;
   case 3:
-    CHKERRMMG(MMG3D_Init_mesh, MMG5_ARG_start, MMG5_ARG_ppMesh, &mmg_mesh, MMG5_ARG_ppMet, &mmg_metric, MMG5_ARG_end);
-    CHKERRMMG(MMG3D_Set_iparameter, mmg_mesh, mmg_metric, MMG3D_IPARAM_noinsert, noInsert);
-    CHKERRMMG(MMG3D_Set_iparameter, mmg_mesh, mmg_metric, MMG3D_IPARAM_noswap, noSwap);
-    CHKERRMMG(MMG3D_Set_iparameter, mmg_mesh, mmg_metric, MMG3D_IPARAM_nomove, noMove);
-    CHKERRMMG(MMG3D_Set_iparameter, mmg_mesh, mmg_metric, MMG3D_IPARAM_verbose, verbosity);
-    CHKERRMMG(MMG3D_Set_dparameter, mmg_mesh, mmg_metric, MMG3D_DPARAM_hgrad, gradationFactor);
-    CHKERRMMG(MMG3D_Set_meshSize, mmg_mesh, numVertices, numCells, 0, numFaceTags, 0, 0);
-    CHKERRMMG(MMG3D_Set_vertices, mmg_mesh, vertices, verTags);
-    CHKERRMMG(MMG3D_Set_tetrahedra, mmg_mesh, cells, cellTags);
-    CHKERRMMG(MMG3D_Set_triangles, mmg_mesh, bdFaces, faceTags);
-    CHKERRMMG(MMG3D_Set_solSize, mmg_mesh, mmg_metric, MMG5_Vertex, numVertices, MMG5_Tensor);
-    CHKERRMMG(MMG3D_Set_tensorSols, mmg_metric, metric);
+    CHKERRMMG_NONSTANDARD(MMG3D_Init_mesh, MMG5_ARG_start, MMG5_ARG_ppMesh, &mmg_mesh, MMG5_ARG_ppMet, &mmg_metric, MMG5_ARG_end);
+    CHKERRMMG_NONSTANDARD(MMG3D_Set_iparameter, mmg_mesh, mmg_metric, MMG3D_IPARAM_noinsert, noInsert);
+    CHKERRMMG_NONSTANDARD(MMG3D_Set_iparameter, mmg_mesh, mmg_metric, MMG3D_IPARAM_noswap, noSwap);
+    CHKERRMMG_NONSTANDARD(MMG3D_Set_iparameter, mmg_mesh, mmg_metric, MMG3D_IPARAM_nomove, noMove);
+    CHKERRMMG_NONSTANDARD(MMG3D_Set_iparameter, mmg_mesh, mmg_metric, MMG3D_IPARAM_verbose, verbosity);
+    CHKERRMMG_NONSTANDARD(MMG3D_Set_dparameter, mmg_mesh, mmg_metric, MMG3D_DPARAM_hgrad, gradationFactor);
+    CHKERRMMG_NONSTANDARD(MMG3D_Set_meshSize, mmg_mesh, numVertices, numCells, 0, numFaceTags, 0, 0);
+    CHKERRMMG_NONSTANDARD(MMG3D_Set_vertices, mmg_mesh, vertices, verTags);
+    CHKERRMMG_NONSTANDARD(MMG3D_Set_tetrahedra, mmg_mesh, cells, cellTags);
+    CHKERRMMG_NONSTANDARD(MMG3D_Set_triangles, mmg_mesh, bdFaces, faceTags);
+    CHKERRMMG_NONSTANDARD(MMG3D_Set_solSize, mmg_mesh, mmg_metric, MMG5_Vertex, numVertices, MMG5_Tensor);
+    CHKERRMMG_NONSTANDARD(MMG3D_Set_tensorSols, mmg_metric, metric);
     CHKERRMMG(MMG3D_mmg3dlib, mmg_mesh, mmg_metric);
     break;
   default: SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "No Mmg adaptation defined for dimension %D", dim);
@@ -185,23 +185,23 @@ PETSC_EXTERN PetscErrorCode DMAdaptMetric_Mmg_Plex(DM dm, Vec vertexMetric, DMLa
   switch (dim) {
   case 2:
     numCornersNew = 3;
-    CHKERRMMG(MMG2D_Get_meshSize, mmg_mesh, &numVerticesNew, &numCellsNew, 0, &numFacesNew);
+    CHKERRMMG_NONSTANDARD(MMG2D_Get_meshSize, mmg_mesh, &numVerticesNew, &numCellsNew, 0, &numFacesNew);
     CHKERRQ(PetscMalloc4(2*numVerticesNew, &verticesNew, numVerticesNew, &verTagsNew, numVerticesNew, &corners, numVerticesNew, &requiredVer));
     CHKERRQ(PetscMalloc3(3*numCellsNew, &cellsNew, numCellsNew, &cellTagsNew, numCellsNew, &requiredCells));
     CHKERRQ(PetscMalloc4(2*numFacesNew, &facesNew, numFacesNew, &faceTagsNew, numFacesNew, &ridges, numFacesNew, &requiredFaces));
-    CHKERRMMG(MMG2D_Get_vertices, mmg_mesh, verticesNew, verTagsNew, corners, requiredVer);
-    CHKERRMMG(MMG2D_Get_triangles, mmg_mesh, cellsNew, cellTagsNew, requiredCells);
-    CHKERRMMG(MMG2D_Get_edges, mmg_mesh, facesNew, faceTagsNew, ridges, requiredFaces);
+    CHKERRMMG_NONSTANDARD(MMG2D_Get_vertices, mmg_mesh, verticesNew, verTagsNew, corners, requiredVer);
+    CHKERRMMG_NONSTANDARD(MMG2D_Get_triangles, mmg_mesh, cellsNew, cellTagsNew, requiredCells);
+    CHKERRMMG_NONSTANDARD(MMG2D_Get_edges, mmg_mesh, facesNew, faceTagsNew, ridges, requiredFaces);
     break;
   case 3:
     numCornersNew = 4;
-    CHKERRMMG(MMG3D_Get_meshSize, mmg_mesh, &numVerticesNew, &numCellsNew, 0, &numFacesNew, 0, 0);
+    CHKERRMMG_NONSTANDARD(MMG3D_Get_meshSize, mmg_mesh, &numVerticesNew, &numCellsNew, 0, &numFacesNew, 0, 0);
     CHKERRQ(PetscMalloc4(3*numVerticesNew, &verticesNew, numVerticesNew, &verTagsNew, numVerticesNew, &corners, numVerticesNew, &requiredVer));
     CHKERRQ(PetscMalloc3(4*numCellsNew, &cellsNew, numCellsNew, &cellTagsNew, numCellsNew, &requiredCells));
     CHKERRQ(PetscMalloc4(3*numFacesNew, &facesNew, numFacesNew, &faceTagsNew, numFacesNew, &ridges, numFacesNew, &requiredFaces));
-    CHKERRMMG(MMG3D_Get_vertices, mmg_mesh, verticesNew, verTagsNew, corners, requiredVer);
-    CHKERRMMG(MMG3D_Get_tetrahedra, mmg_mesh, cellsNew, cellTagsNew, requiredCells);
-    CHKERRMMG(MMG3D_Get_triangles, mmg_mesh, facesNew, faceTagsNew, requiredFaces);
+    CHKERRMMG_NONSTANDARD(MMG3D_Get_vertices, mmg_mesh, verticesNew, verTagsNew, corners, requiredVer);
+    CHKERRMMG_NONSTANDARD(MMG3D_Get_tetrahedra, mmg_mesh, cellsNew, cellTagsNew, requiredCells);
+    CHKERRMMG_NONSTANDARD(MMG3D_Get_triangles, mmg_mesh, facesNew, faceTagsNew, requiredFaces);
 
     /* Reorder for consistency with DMPlex */
     for (i = 0; i < numCellsNew; ++i) CHKERRQ(DMPlexInvertCell(DM_POLYTOPE_TETRAHEDRON, &cellsNew[4*i]));
