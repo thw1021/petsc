@@ -32,6 +32,8 @@ int main(int argc, char **argv)
     ierr = DMPlexRestoreClosureIndices(dm,section,section,c,PETSC_TRUE,&numindices,&indices,NULL,NULL);CHKERRQ(ierr);
   }
 
+  ierr = PetscObjectSetName((PetscObject)dm,"Box");CHKERRQ(ierr);
+  ierr = DMViewFromOptions(dm,NULL,"-dm_view");CHKERRQ(ierr);
   ierr = PetscFEDestroy(&fe);CHKERRQ(ierr);
   ierr = DMDestroy(&dm);CHKERRQ(ierr);
   ierr = PetscFinalize();
@@ -55,5 +57,8 @@ int main(int argc, char **argv)
   test:
     suffix: 3d_q1
     args: -dm_plex_dim 3 -petscspace_degree 1 -dm_plex_simplex 0 -dm_plex_box_faces 1,1,1
+  test:
+    suffix: 3d_q2_periodic
+    args: -dm_plex_dim 3 -petscspace_degree 2 -dm_plex_simplex 0 -dm_plex_box_faces 2,2,2 -dm_plex_box_bd periodic,none,periodic -dm_view
 
 TEST*/
