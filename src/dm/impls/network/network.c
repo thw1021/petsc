@@ -318,6 +318,7 @@ PetscErrorCode DMNetworkAddSubnetwork_new(DM dm,const char* name,PetscInt ne,Pet
   }
 
   ierr = DMPlexGetHeightStratum(subplex,1,&vStart,&vEnd);CHKERRQ(ierr);
+  printf("[%d] subplex has nv=%d, vEnd-vStart=%d\n",rank,nv,vEnd-vStart);
   if (size == 1) {
     Nvtx = nvtx = vEnd - vStart;
   } else {
@@ -341,9 +342,7 @@ PetscErrorCode DMNetworkAddSubnetwork_new(DM dm,const char* name,PetscInt ne,Pet
   network->subnet[i].edgelist = edgelist;
   network->subnet[i].Nvtx     = Nvtx;
   network->subnet[i].Nedge    = Nedge;
-  printf("[%d] subnet[%d].nvtx %d %d\n",rank,i,nvtx,Nvtx);
-
-  ierr = DMDestroy(&subplex);CHKERRQ(ierr);
+  network->subnet[i].plex     = subplex;
 
   /* ----------------------------------------------------------
    p=v or e;
@@ -753,7 +752,7 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
   ierr = DMSetDimension(network->plex,1);CHKERRQ(ierr);
 
   if (size == 1) {
-    ierr = DMPlexBuildFromCellList(network->plex,network->nEdges,PETSC_DECIDE,2,edges);CHKERRQ(ierr);
+    ierr = DMPlexBuildFromCellList(network->plex,network->nEdges,network->nVertices,2,edges);CHKERRQ(ierr);
   } else {
     ierr = DMPlexBuildFromCellListParallel(network->plex,network->nEdges,PETSC_DECIDE,PETSC_DETERMINE,2,edges,NULL, NULL);CHKERRQ(ierr);
   }
@@ -761,7 +760,8 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
   ierr = DMPlexGetChart(network->plex,&network->pStart,&network->pEnd);CHKERRQ(ierr);
   ierr = DMPlexGetHeightStratum(network->plex,0,&network->eStart,&network->eEnd);CHKERRQ(ierr);
   ierr = DMPlexGetHeightStratum(network->plex,1,&network->vStart,&network->vEnd);CHKERRQ(ierr);
-  printf("[%d] nv %d, ne %d; np %d\n",rank,network->vEnd - network->vStart,network->eEnd-network->eStart,network->pEnd - network->pStart);
+  //printf("[%d] DMNetworkLayoutSetUp: nv %d, ne %d; np %d\n",rank,network->vEnd - network->vStart,network->eEnd-network->eStart,network->pEnd - network->pStart);
+  //printf("[%d] DMNetworkLayoutSetUp: nVertices %d\n",rank,network->nVertices);
 
   ierr = PetscSectionCreate(comm,&network->DataSection);CHKERRQ(ierr);
   ierr = PetscSectionCreate(comm,&network->DofSection);CHKERRQ(ierr);
@@ -774,8 +774,6 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
     network->header[i].maxcomps = 1;
     ierr = SetUpNetworkHeaderComponentValue(dm,&network->header[i],&network->cvalue[i]);CHKERRQ(ierr);
   }
-  printf("[%d] nv %d, ne %d; np %d\n",rank,network->vEnd - network->vStart,network->eEnd-network->eStart,np);
-
 
   /* Create edge and vertex arrays for the subnetworks
      This implementation assumes that DMNetwork reads
@@ -791,6 +789,7 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
 
     network->subnet[j].vertices = subnetvtx;
     subnetvtx                  += network->subnet[j].nvtx;
+    //printf("[%d] DMNetworkLayoutSetUp: network->subnet[%d].nvtx %d\n",rank,j,network->subnet[j].nvtx);
   }
   network->svertices = subnetvtx;
 
@@ -842,10 +841,29 @@ PetscErrorCode DMNetworkLayoutSetUp(DM dm)
 
       e++; ctr++;
     }
+
+    /* isolated vertices */
+    DM subplex = network->subnet[i].plex;
+    if (subplex) {
+      PetscInt vStart,vEnd,nedges;
+      ierr = DMPlexGetHeightStratum(subplex,1,&vStart,&vEnd);CHKERRQ(ierr);
+      for (j=vStart; j<vEnd; j++) {
+        ierr = DMPlexGetSupportSize(subplex,j,&nedges);CHKERRQ(ierr);
+        if (!nedges) {
+          if (size == 1 && Nsubnet == 1) {
+            v = j-vStart;
+            network->header[j].index       = v; /* Global vertex index */
+            network->header[j].subnetid    = i;
+            network->subnet[i].vertices[v] = j; /* user's subnet[].dix = petsc's v */
+            printf("  [%d] v net[%d].%d is an isolated vtx=%d; gidx %d\n",rank,i,v,j,network->header[j].index);
+          } else PetscCheck(size==1,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Not done yet");
+        }
+      }
+    }
   }
   ierr = PetscFree2(edges,eowners);CHKERRQ(ierr);
 
-  /* Set local vertex array for the subnetworks */
+  /* Set local vertex array for the subnetworks; e=nedges below */
   j = 0;
   for (v = network->vStart; v < network->vEnd; v++) {
     network->header[v].ndata           = 0;
@@ -2731,6 +2749,10 @@ PetscErrorCode DMDestroy_Network(DM dm)
   ierr = PetscFree2(network->subnetedge,network->subnetvtx);CHKERRQ(ierr);
 
   ierr = PetscTableDestroy(&network->svtable);CHKERRQ(ierr);
+
+  for (j=0; j<network->nsubnet; j++) {
+    ierr = DMDestroy(&network->subnet[j].plex);CHKERRQ(ierr);
+  }
   ierr = PetscFree(network->subnet);CHKERRQ(ierr);
   ierr = PetscFree(network->component);CHKERRQ(ierr);
   ierr = PetscFree(network->componentdataarray);CHKERRQ(ierr);
