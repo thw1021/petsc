@@ -5023,7 +5023,7 @@ PetscErrorCode DMCreateCoordinateDM_Plex(DM dm, DM *cdm)
   ierr = PetscSectionDestroy(&section);CHKERRQ(ierr);
   ierr = PetscSectionCreate(PETSC_COMM_SELF, &s);CHKERRQ(ierr);
   ierr = MatCreate(PETSC_COMM_SELF, &m);CHKERRQ(ierr);
-  ierr = DMSetDefaultConstraints(*cdm, s, m);CHKERRQ(ierr);
+  ierr = DMSetDefaultConstraints(*cdm, s, m, NULL);CHKERRQ(ierr);
   ierr = PetscSectionDestroy(&s);CHKERRQ(ierr);
   ierr = MatDestroy(&m);CHKERRQ(ierr);
 
@@ -5270,8 +5270,9 @@ PetscErrorCode DMPlexSetClosurePermutationTensor(DM dm, PetscInt point, PetscSec
     PetscInt pStart,pEnd,cStart,cEnd;
     ierr = DMPlexGetDepthStratum(dm,0,&pStart,&pEnd);CHKERRQ(ierr);
     ierr = PetscSectionGetChart(section,&cStart,&cEnd);CHKERRQ(ierr);
-    if (pStart == cStart && pEnd == cEnd) vertexchart = PETSC_TRUE; /* Just vertices */
-    else vertexchart = PETSC_FALSE;                                 /* Assume all interpolated points are in chart */
+    if (pStart == cStart && pEnd == cEnd) vertexchart = PETSC_TRUE;      /* Only vertices are in the chart */
+    else if (cStart <= point && point < cEnd) vertexchart = PETSC_FALSE; /* Some interpolated points exist in the chart */
+    else vertexchart = PETSC_TRUE;                                       /* Some interpolated points are not in chart; assume dofs only at cells and vertices */
   }
   ierr = PetscSectionGetNumFields(section, &Nf);CHKERRQ(ierr);
   for (PetscInt d=1; d<=dim; d++) {
@@ -5457,6 +5458,15 @@ PetscErrorCode DMPlexSetClosurePermutationTensor(DM dm, PetscInt point, PetscSec
       ierr = PetscFree(check);CHKERRQ(ierr);
     }
     ierr = PetscSectionSetClosurePermutation_Internal(section, (PetscObject) dm, d, size, PETSC_OWN_POINTER, perm);CHKERRQ(ierr);
+    if (d == dim) { // Add permutation for localized (in case this is a coordinate DM)
+      PetscInt *loc_perm;
+      ierr = PetscMalloc1(size*2, &loc_perm);CHKERRQ(ierr);
+      for (PetscInt i=0; i<size; i++) {
+        loc_perm[i] = perm[i];
+        loc_perm[size+i] = size + perm[i];
+      }
+      ierr = PetscSectionSetClosurePermutation_Internal(section, (PetscObject) dm, d, size*2, PETSC_OWN_POINTER, loc_perm);CHKERRQ(ierr);
+    }
   }
   PetscFunctionReturn(0);
 }
@@ -6858,7 +6868,7 @@ PetscErrorCode DMPlexAnchorsModifyMat(DM dm, PetscSection section, PetscInt numP
 
   PetscCheckFalse(numFields && newOffsets[numFields] != newNumIndices,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid size for closure %D should be %D", newOffsets[numFields], newNumIndices);
 
-  ierr = DMGetDefaultConstraints(dm, &cSec, &cMat);CHKERRQ(ierr);
+  ierr = DMGetDefaultConstraints(dm, &cSec, &cMat, NULL);CHKERRQ(ierr);
 
   /* workspaces */
   if (numFields) {
@@ -9396,7 +9406,7 @@ PetscErrorCode DMPlexSetRegularRefinement(DM dm, PetscBool regular)
 /* anchors */
 /*@
   DMPlexGetAnchors - Get the layout of the anchor (point-to-point) constraints.  Typically, the user will not have to
-  call DMPlexGetAnchors() directly: if there are anchors, then DMPlexGetAnchors() is called during DMGetConstraints().
+  call DMPlexGetAnchors() directly: if there are anchors, then DMPlexGetAnchors() is called during DMGetDefaultConstraints().
 
   not collective
 
@@ -9409,7 +9419,7 @@ PetscErrorCode DMPlexSetRegularRefinement(DM dm, PetscBool regular)
 
   Level: intermediate
 
-.seealso: DMPlexSetAnchors(), DMGetConstraints(), DMSetConstraints()
+.seealso: DMPlexSetAnchors(), DMGetDefaultConstraints(), DMSetDefaultConstraints()
 @*/
 PetscErrorCode DMPlexGetAnchors(DM dm, PetscSection *anchorSection, IS *anchorIS)
 {
@@ -9430,7 +9440,7 @@ PetscErrorCode DMPlexGetAnchors(DM dm, PetscSection *anchorSection, IS *anchorIS
   point's degrees of freedom to be a linear combination of other points' degrees of freedom.
 
   After specifying the layout of constraints with DMPlexSetAnchors(), one specifies the constraints by calling
-  DMGetConstraints() and filling in the entries in the constraint matrix.
+  DMGetDefaultConstraints() and filling in the entries in the constraint matrix.
 
   collective on dm
 
@@ -9443,7 +9453,7 @@ PetscErrorCode DMPlexGetAnchors(DM dm, PetscSection *anchorSection, IS *anchorIS
 
   Level: intermediate
 
-.seealso: DMPlexGetAnchors(), DMGetConstraints(), DMSetConstraints()
+.seealso: DMPlexGetAnchors(), DMGetDefaultConstraints(), DMSetDefaultConstraints()
 @*/
 PetscErrorCode DMPlexSetAnchors(DM dm, PetscSection anchorSection, IS anchorIS)
 {
@@ -9498,7 +9508,7 @@ PetscErrorCode DMPlexSetAnchors(DM dm, PetscSection anchorSection, IS anchorIS)
     ierr = ISRestoreIndices(anchorIS,&anchors);CHKERRQ(ierr);
   }
   /* reset the generic constraints */
-  ierr = DMSetDefaultConstraints(dm,NULL,NULL);CHKERRQ(ierr);
+  ierr = DMSetDefaultConstraints(dm,NULL,NULL,NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -9685,7 +9695,7 @@ PetscErrorCode DMCreateDefaultConstraints_Plex(DM dm)
     ierr = DMPlexCreateConstraintMatrix_Anchors(dm,section,cSec,&cMat);CHKERRQ(ierr);
     ierr = DMGetNumFields(dm,&Nf);CHKERRQ(ierr);
     if (Nf && plex->computeanchormatrix) {ierr = (*plex->computeanchormatrix)(dm,section,cSec,cMat);CHKERRQ(ierr);}
-    ierr = DMSetDefaultConstraints(dm,cSec,cMat);CHKERRQ(ierr);
+    ierr = DMSetDefaultConstraints(dm,cSec,cMat,NULL);CHKERRQ(ierr);
     ierr = PetscSectionDestroy(&cSec);CHKERRQ(ierr);
     ierr = MatDestroy(&cMat);CHKERRQ(ierr);
   }
