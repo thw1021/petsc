@@ -6,7 +6,7 @@ static char help[] = "An example of writing a global Vec from a DMPlex with HDF5
 int main(int argc, char **argv)
 {
   MPI_Comm       comm;
-  DM             dm;
+  DM             dm, ddm;
   Vec            v, nv, rv, coord;
   PetscBool      test_read = PETSC_FALSE, verbose = PETSC_FALSE, flg;
   PetscViewer    hdf5Viewer;
@@ -43,20 +43,15 @@ int main(int argc, char **argv)
   ierr = DMSetUseNatural(dm, PETSC_TRUE);CHKERRQ(ierr);
   {
     PetscPartitioner part;
-    DM               dmDist;
 
     ierr = DMPlexGetPartitioner(dm,&part);CHKERRQ(ierr);
     ierr = PetscPartitionerSetFromOptions(part);CHKERRQ(ierr);
-    ierr = DMPlexDistribute(dm, 0, NULL, &dmDist);CHKERRQ(ierr);
-    if (dmDist) {
-      ierr = DMDestroy(&dm);CHKERRQ(ierr);
-      dm   = dmDist;
-    }
+    ierr = DMPlexDistribute(dm, 0, NULL, &ddm);CHKERRQ(ierr);
   }
 
-  ierr = DMCreateGlobalVector(dm, &v);CHKERRQ(ierr);
+  ierr = DMCreateGlobalVector(ddm, &v);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) v, "V");CHKERRQ(ierr);
-  ierr = DMGetCoordinates(dm, &coord);CHKERRQ(ierr);
+  ierr = DMGetCoordinates(ddm, &coord);CHKERRQ(ierr);
   ierr = VecCopy(coord, v);CHKERRQ(ierr);
 
   if (verbose) {
@@ -70,8 +65,10 @@ int main(int argc, char **argv)
 
   ierr = DMCreateGlobalVector(dm, &nv);CHKERRQ(ierr);
   ierr = PetscObjectSetName((PetscObject) nv, "NV");CHKERRQ(ierr);
-  ierr = DMPlexGlobalToNaturalBegin(dm, v, nv);CHKERRQ(ierr);
-  ierr = DMPlexGlobalToNaturalEnd(dm, v, nv);CHKERRQ(ierr);
+  CHKMEMQ;
+  ierr = DMPlexGlobalToNaturalBegin(ddm, v, nv);CHKERRQ(ierr);
+  ierr = DMPlexGlobalToNaturalEnd(ddm, v, nv);CHKERRQ(ierr);
+  CHKMEMQ;
 
   if (verbose) {
     PetscInt size, bs;
@@ -79,13 +76,15 @@ int main(int argc, char **argv)
     ierr = VecGetSize(nv, &size);CHKERRQ(ierr);
     ierr = VecGetBlockSize(nv, &bs);CHKERRQ(ierr);
     ierr = PetscPrintf(PETSC_COMM_WORLD, "====  V in natural ordering. size==%d\tblock size=%d\n", size, bs);CHKERRQ(ierr);
+    CHKMEMQ;
     ierr = VecView(nv, PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
+    CHKMEMQ;
   }
 
   ierr = VecViewFromOptions(v, NULL, "-global_vec_view");CHKERRQ(ierr);
 
-  if (test_read) {
-    ierr = DMCreateGlobalVector(dm, &rv);CHKERRQ(ierr);
+  if (0 && test_read) {
+    ierr = DMCreateGlobalVector(ddm, &rv);CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject) rv, "V");CHKERRQ(ierr);
     /* Test native read */
     ierr = PetscViewerHDF5Open(comm, "V.h5", FILE_MODE_READ, &hdf5Viewer);CHKERRQ(ierr);
@@ -137,6 +136,7 @@ int main(int argc, char **argv)
   }
   ierr = VecDestroy(&nv);CHKERRQ(ierr);
   ierr = VecDestroy(&v);CHKERRQ(ierr);
+  ierr = DMDestroy(&ddm);CHKERRQ(ierr);
   ierr = DMDestroy(&dm);CHKERRQ(ierr);
   ierr = PetscFinalize();
   return ierr;
