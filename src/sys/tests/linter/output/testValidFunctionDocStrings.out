@@ -1,6 +1,6 @@
 <--- FIXED --->
 [ROOT] -------------------------------------------------------------------------------------
-ERROR 0: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:71
+ERROR 0: ./src/sys/tests/linter/testValidFunctionDocStrings.c:71:16
 'testIllFormedFunctionDocString' of derived type 'PetscErrorCode (PetscViewer, PetscInt, PetscScalar *, PetscBool)', canonical type 'int (_p_PetscViewer *, int, double *, PetscBool)'
   69: @*/
   70: 
@@ -118,7 +118,7 @@ Note first instance found here:
                                                                  ^^^^^^^^^^^^^^^^^^^^^^^^^
   68: testIllFormedFunctionDocString(), testNonExistentFunction(), testIllFormedMinimalDocString()
 
-ERROR 1: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:89
+ERROR 1: ./src/sys/tests/linter/testValidFunctionDocStrings.c:89:16
 'testIllFormedMinimalDocString' of derived type 'PetscErrorCode ()', canonical type 'int ()'
   87:    .seealso: testNonExistentFunction(), testNonExistentType,testNonExistentFunction()
   88: */
@@ -168,7 +168,7 @@ Note first instance found here:
                    ^^^^^^^^^^^^^^^^^^^^^^^^^
   88: */
 
-ERROR 2: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:112
+ERROR 2: ./src/sys/tests/linter/testValidFunctionDocStrings.c:112:16
 'testTerribleSpellingDocString' of derived type 'PetscErrorCode (PetscViewer, PetscInt, PetscScalar *)', canonical type 'int (_p_PetscViewer *, int, double *)'
   110: .zeeakso:
   111: C@*/
@@ -264,7 +264,7 @@ Unknown section header '.zeeakso', assuming you meant '.seealso' [-fdoc-section-
   111: C@*/
   112: PetscErrorCode testTerribleSpellingDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
 
-ERROR 3: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:128
+ERROR 3: ./src/sys/tests/linter/testValidFunctionDocStrings.c:128:16
 'testCustomFortranInterfaceDocString' of derived type 'PetscErrorCode (char *******, PetscErrorCode (*)(PetscInt))', canonical type 'int (char *******, int (*)(int))'
   126: .seealso: Lorem(), ipsum(), dolor(), sit(), amet(), consectetur(), adipiscing(), elit()
   127: @*/
@@ -299,7 +299,7 @@ Description 'a char pointer' must be aligned to 1 space from longest (valid) arg
   122: - function_ptr - a function pointer
   123: 
 
-ERROR 6: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:176
+ERROR 6: ./src/sys/tests/linter/testValidFunctionDocStrings.c:176:16
 'testAllParamsUndocumented' of derived type 'PetscErrorCode (PetscInt, PetscInt)', canonical type 'int (int, int)'
   174: .seealso:
   175: @*/
@@ -316,7 +316,7 @@ Unknown Level subheading 'beginner developer', assuming you meant 'developer' [-
   166: 
   167: Example Usage:
 
-ERROR 7: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:193
+ERROR 7: ./src/sys/tests/linter/testValidFunctionDocStrings.c:193:16
 'testParameterGrouping' of derived type 'PetscErrorCode (PetscInt, PetscInt, ...)', canonical type 'int (int, int, ...)'
   191: .see also: testStaticFunction()
   192: @*/
@@ -365,7 +365,7 @@ Unknown section header '.see also', assuming you meant '.seealso' [-fdoc-section
   192: @*/
   193: PetscErrorCode testParameterGrouping(PetscInt a, PetscInt b,...)
 
-ERROR 8: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:212
+ERROR 8: ./src/sys/tests/linter/testValidFunctionDocStrings.c:212:16
 'testScatteredVerbatimBlocks' of derived type 'PetscErrorCode (PetscInt, PetscInt)', canonical type 'int (int, int)'
   210: .seealso: Foo()
   211: @*/
@@ -382,7 +382,7 @@ Description 'a beta' must be aligned to 1 space from longest (valid) argument 'a
   207: 
   208:   Level: beginner
 
-ERROR 9: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:228
+ERROR 9: ./src/sys/tests/linter/testValidFunctionDocStrings.c:228:16
 'testBadParamListDescrSep' of derived type 'PetscErrorCode (PetscInt, PetscInt)', canonical type 'int (int, int)'
   226: .seealso: Foo()
   227: @*/
@@ -409,7 +409,7 @@ Description 'a beta' must be aligned to 1 space from longest (valid) argument 'a
 [ROOT] -------------------------------------------------------------------------------------
 <--- LEFT --->
 [ROOT] -------------------------------------------------------------------------------------
-ERROR 0: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:71
+ERROR 0: ./src/sys/tests/linter/testValidFunctionDocStrings.c:71:16
 'testIllFormedFunctionDocString' of derived type 'PetscErrorCode (PetscViewer, PetscInt, PetscScalar *, PetscBool)', canonical type 'int (_p_PetscViewer *, int, double *, PetscBool)'
   69: @*/
   70: 
@@ -515,7 +515,7 @@ Unknown Level subheading 'Lorem ipsum dolor sit amet', expected one of beginner,
   47: 
   48:   Level:
 
-ERROR 1: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:89
+ERROR 1: ./src/sys/tests/linter/testValidFunctionDocStrings.c:89:16
 'testIllFormedMinimalDocString' of derived type 'PetscErrorCode ()', canonical type 'int ()'
   87:    .seealso: testNonExistentFunction(), testNonExistentType,testNonExistentFunction()
   88: */
@@ -559,7 +559,7 @@ Docstring missing synopsis. Expected 'testIllFormedMinimalDocString - a very use
   79:   input parms:
   80: . foo
 
-ERROR 2: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:112
+ERROR 2: ./src/sys/tests/linter/testValidFunctionDocStrings.c:112:16
 'testTerribleSpellingDocString' of derived type 'PetscErrorCode (PetscViewer, PetscInt, PetscScalar *)', canonical type 'int (_p_PetscViewer *, int, double *)'
   110: .zeeakso:
   111: C@*/
@@ -576,7 +576,7 @@ Section appears to be empty; while I'm all for a good mystery, you should probab
   111: C@*/
   112: PetscErrorCode testTerribleSpellingDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
 
-ERROR 3: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:128
+ERROR 3: ./src/sys/tests/linter/testValidFunctionDocStrings.c:128:16
 'testCustomFortranInterfaceDocString' of derived type 'PetscErrorCode (char *******, PetscErrorCode (*)(PetscInt))', canonical type 'int (char *******, int (*)(int))'
   126: .seealso: Lorem(), ipsum(), dolor(), sit(), amet(), consectetur(), adipiscing(), elit()
   127: @*/
@@ -593,7 +593,7 @@ Section appears to be empty; while I'm all for a good mystery, you should probab
   126: .seealso: Lorem(), ipsum(), dolor(), sit(), amet(), consectetur(), adipiscing(), elit()
   127: @*/
 
-ERROR 4: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:145
+ERROR 4: ./src/sys/tests/linter/testValidFunctionDocStrings.c:145:16
 'testInternFunction' of derived type 'PetscErrorCode ()', canonical type 'int ()'
   143: .seealso: function()
   144: @*/
@@ -615,7 +615,7 @@ A sowing docstring for a function with internal linkage is pointless! [-fdoc-int
   145: PetscErrorCode testInternFunction()
   146: {
 
-Note 'testInternFunction()' is declared 'PETSC_INTERN' at ./src/sys/tests/linter/testValidFunctionDocStrings.c:1:136
+Note 'testInternFunction()' is declared 'PETSC_INTERN' at ./src/sys/tests/linter/testValidFunctionDocStrings.c:136:1
 'hidden' of derived type '', canonical type ''
   134: void function() { }
   135: 
@@ -625,7 +625,7 @@ Note 'testInternFunction()' is declared 'PETSC_INTERN' at ./src/sys/tests/linter
   138: /*@
 
 
-ERROR 5: ./src/sys/tests/linter/testValidFunctionDocStrings.c:23:157
+ERROR 5: ./src/sys/tests/linter/testValidFunctionDocStrings.c:157:23
 'testStaticFunction' of derived type 'PetscErrorCode ()', canonical type 'int ()'
   155: .seealso: function()
   156: @*/
@@ -647,7 +647,7 @@ A sowing docstring for a function with internal linkage is pointless! [-fdoc-int
   157: static PetscErrorCode testStaticFunction()
   158: {
 
-Note 'testStaticFunction()' is declared 'STATIC' at ./src/sys/tests/linter/testValidFunctionDocStrings.c:23:157
+Note 'testStaticFunction()' is declared 'STATIC' at ./src/sys/tests/linter/testValidFunctionDocStrings.c:157:23
 'testStaticFunction' of derived type 'PetscErrorCode ()', canonical type 'int ()'
   155: .seealso: function()
   156: @*/
@@ -657,7 +657,7 @@ Note 'testStaticFunction()' is declared 'STATIC' at ./src/sys/tests/linter/testV
   159:   return 0;
 
 
-ERROR 6: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:176
+ERROR 6: ./src/sys/tests/linter/testValidFunctionDocStrings.c:176:16
 'testAllParamsUndocumented' of derived type 'PetscErrorCode (PetscInt, PetscInt)', canonical type 'int (int, int)'
   174: .seealso:
   175: @*/
@@ -676,7 +676,7 @@ Section appears to be empty; while I'm all for a good mystery, you should probab
 
 Function parameters are all undocumented [-fdoc-param-list-undocumented-parameter]
 
-ERROR 7: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:193
+ERROR 7: ./src/sys/tests/linter/testValidFunctionDocStrings.c:193:16
 'testParameterGrouping' of derived type 'PetscErrorCode (PetscInt, PetscInt, ...)', canonical type 'int (int, int, ...)'
   191: .see also: testStaticFunction()
   192: @*/
@@ -733,7 +733,7 @@ Unknown Level subheading 'dev', expected one of beginner, intermediate, advanced
   190: 
   191: .see also: testStaticFunction()
 
-ERROR 9: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:228
+ERROR 9: ./src/sys/tests/linter/testValidFunctionDocStrings.c:228:16
 'testBadParamListDescrSep' of derived type 'PetscErrorCode (PetscInt, PetscInt)', canonical type 'int (int, int)'
   226: .seealso: Foo()
   227: @*/
@@ -758,7 +758,7 @@ Parameters seems to be missing a description separator; I suspect you may be usi
   223: 
   224:   Level: beginner
 
-ERROR 10: ./src/sys/tests/linter/testValidFunctionDocStrings.c:16:245
+ERROR 10: ./src/sys/tests/linter/testValidFunctionDocStrings.c:245:16
 'testBadMidSentenceColons' of derived type 'PetscErrorCode ()', canonical type 'int ()'
   243: .seealso: Foo()
   244: @*/

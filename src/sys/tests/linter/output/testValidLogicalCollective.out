@@ -1,6 +1,6 @@
 <--- FIXED --->
 [ROOT] -------------------------------------------------------------------------------------
-ERROR 0: ./src/sys/tests/linter/testValidLogicalCollective.c:36:8
+ERROR 0: ./src/sys/tests/linter/testValidLogicalCollective.c:8:36
 'd' of derived type 'PetscBool', canonical type 'PetscBool'
   6 : 
   7 : /* incorrect */
@@ -11,7 +11,7 @@ ERROR 0: ./src/sys/tests/linter/testValidLogicalCollective.c:36:8
 
 Incorrect use of PetscValidLogicalCollectiveInt(), use PetscValidLogicalCollectiveBool() instead [-fincompatible-function]
 
-ERROR 1: ./src/sys/tests/linter/testValidLogicalCollective.c:38:8
+ERROR 1: ./src/sys/tests/linter/testValidLogicalCollective.c:8:38
 '2' of derived type 'int', canonical type 'int'
   6 : 
   7 : /* incorrect */
@@ -24,7 +24,7 @@ Argument number doesn't match for 'd'. Found '2' expected '4' from [-fmatching-a
 > 3: PetscErrorCode testValidLogicalCollective(PetscInt a, PetscMPIInt b, PetscInt64 c, PetscBool d, PetscScalar e, PetscReal f)
                                                                                         ^^^^^^^^^^^
 
-ERROR 2: ./src/sys/tests/linter/testValidLogicalCollective.c:37:9
+ERROR 2: ./src/sys/tests/linter/testValidLogicalCollective.c:9:37
 'e' of derived type 'PetscScalar', canonical type 'double'
   7 : /* incorrect */
   8 : PetscValidLogicalCollectiveInt(v,d,2);
@@ -35,7 +35,7 @@ ERROR 2: ./src/sys/tests/linter/testValidLogicalCollective.c:37:9
 
 Incorrect use of PetscValidLogicalCollectiveEnum(), use PetscValidLogicalCollectiveScalar() instead [-fincompatible-function]
 
-ERROR 3: ./src/sys/tests/linter/testValidLogicalCollective.c:39:9
+ERROR 3: ./src/sys/tests/linter/testValidLogicalCollective.c:9:39
 '3' of derived type 'int', canonical type 'int'
   7 : /* incorrect */
   8 : PetscValidLogicalCollectiveInt(v,d,2);
@@ -48,7 +48,7 @@ Argument number doesn't match for 'e'. Found '3' expected '5' from [-fmatching-a
 > 3: PetscErrorCode testValidLogicalCollective(PetscInt a, PetscMPIInt b, PetscInt64 c, PetscBool d, PetscScalar e, PetscReal f)
                                                                                                      ^^^^^^^^^^^^^
 
-ERROR 4: ./src/sys/tests/linter/testValidLogicalCollective.c:39:10
+ERROR 4: ./src/sys/tests/linter/testValidLogicalCollective.c:10:39
 'f' of derived type 'PetscReal', canonical type 'double'
   8 : PetscValidLogicalCollectiveInt(v,d,2);
   9 : PetscValidLogicalCollectiveEnum(v,e,3);
@@ -59,7 +59,7 @@ ERROR 4: ./src/sys/tests/linter/testValidLogicalCollective.c:39:10
 
 Incorrect use of PetscValidLogicalCollectiveMPIInt(), use PetscValidLogicalCollectiveReal() instead [-fincompatible-function]
 
-ERROR 5: ./src/sys/tests/linter/testValidLogicalCollective.c:41:10
+ERROR 5: ./src/sys/tests/linter/testValidLogicalCollective.c:10:41
 '4' of derived type 'int', canonical type 'int'
   8 : PetscValidLogicalCollectiveInt(v,d,2);
   9 : PetscValidLogicalCollectiveEnum(v,e,3);
@@ -72,7 +72,7 @@ Argument number doesn't match for 'f'. Found '4' expected '6' from [-fmatching-a
 > 3: PetscErrorCode testValidLogicalCollective(PetscInt a, PetscMPIInt b, PetscInt64 c, PetscBool d, PetscScalar e, PetscReal f)
                                                                                                                     ^^^^^^^^^^^
 
-ERROR 6: ./src/sys/tests/linter/testValidLogicalCollective.c:39:11
+ERROR 6: ./src/sys/tests/linter/testValidLogicalCollective.c:11:39
 'a' of derived type 'PetscInt', canonical type 'int'
   9 : PetscValidLogicalCollectiveEnum(v,e,3);
   10: PetscValidLogicalCollectiveMPIInt(v,f,4);
@@ -83,7 +83,7 @@ ERROR 6: ./src/sys/tests/linter/testValidLogicalCollective.c:39:11
 
 Incorrect use of PetscValidLogicalCollectiveScalar(), use PetscValidLogicalCollectiveInt() instead [-fincompatible-function]
 
-ERROR 7: ./src/sys/tests/linter/testValidLogicalCollective.c:41:11
+ERROR 7: ./src/sys/tests/linter/testValidLogicalCollective.c:11:41
 '5' of derived type 'int', canonical type 'int'
   9 : PetscValidLogicalCollectiveEnum(v,e,3);
   10: PetscValidLogicalCollectiveMPIInt(v,f,4);
@@ -96,7 +96,7 @@ Argument number doesn't match for 'a'. Found '5' expected '1' from [-fmatching-a
 > 3: PetscErrorCode testValidLogicalCollective(PetscInt a, PetscMPIInt b, PetscInt64 c, PetscBool d, PetscScalar e, PetscReal f)
                                                ^^^^^^^^^^
 
-ERROR 8: ./src/sys/tests/linter/testValidLogicalCollective.c:37:12
+ERROR 8: ./src/sys/tests/linter/testValidLogicalCollective.c:12:37
 'b' of derived type 'PetscMPIInt', canonical type 'int'
   10: PetscValidLogicalCollectiveMPIInt(v,f,4);
   11: PetscValidLogicalCollectiveScalar(v,a,5);
@@ -107,7 +107,7 @@ ERROR 8: ./src/sys/tests/linter/testValidLogicalCollective.c:37:12
 
 Incorrect use of PetscValidLogicalCollectiveReal(), use PetscValidLogicalCollectiveMPIInt() instead [-fincompatible-function]
 
-ERROR 9: ./src/sys/tests/linter/testValidLogicalCollective.c:39:12
+ERROR 9: ./src/sys/tests/linter/testValidLogicalCollective.c:12:39
 '6' of derived type 'int', canonical type 'int'
   10: PetscValidLogicalCollectiveMPIInt(v,f,4);
   11: PetscValidLogicalCollectiveScalar(v,a,5);
@@ -120,7 +120,7 @@ Argument number doesn't match for 'b'. Found '6' expected '2' from [-fmatching-a
 > 3: PetscErrorCode testValidLogicalCollective(PetscInt a, PetscMPIInt b, PetscInt64 c, PetscBool d, PetscScalar e, PetscReal f)
                                                            ^^^^^^^^^^^^^
 
-ERROR 10: ./src/sys/tests/linter/testValidLogicalCollective.c:37:13
+ERROR 10: ./src/sys/tests/linter/testValidLogicalCollective.c:13:37
 'c' of derived type 'PetscInt64', canonical type 'long long'
   11: PetscValidLogicalCollectiveScalar(v,a,5);
   12: PetscValidLogicalCollectiveReal(v,b,6);
@@ -131,7 +131,7 @@ ERROR 10: ./src/sys/tests/linter/testValidLogicalCollective.c:37:13
 
 Incorrect use of PetscValidLogicalCollectiveEnum(), use PetscValidLogicalCollectiveInt() instead [-fincompatible-function]
 
-ERROR 11: ./src/sys/tests/linter/testValidLogicalCollective.c:39:13
+ERROR 11: ./src/sys/tests/linter/testValidLogicalCollective.c:13:39
 '7' of derived type 'int', canonical type 'int'
   11: PetscValidLogicalCollectiveScalar(v,a,5);
   12: PetscValidLogicalCollectiveReal(v,b,6);

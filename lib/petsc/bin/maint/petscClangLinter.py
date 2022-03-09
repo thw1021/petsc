@@ -230,13 +230,17 @@ class DescribableItem(object):
         if prefix:
           arg = text.split(prefix,maxsplit=1)[1].strip()
         else:
-          arg,descr = text.split(maxsplit=1)
+          arg,*descr = text.split(maxsplit=1)
+          if isinstance(descr,list):
+            descr = descr[0] if len(descr) else ""
+          assert isinstance(descr,str)
     self.text        = raw
     self.prefix      = prefix
     self.sep         = sep
     self.arg         = arg
     self.description = descr
     return
+
 
   @staticmethod
   def splitParam(text,prefixes,char):
@@ -314,10 +318,11 @@ class PetscDocString(PetscDocStringBase):
 
     def __init__(self,name,required=False,keywords=None,titles=None):
       assert isinstance(name,str)
+      titlename = name.title()
       if titles is None:
-        titles = (name.title(),)
+        titles = (titlename,)
       if keywords is None:
-        keywords = (name.title(),)
+        keywords = (titlename,)
       self.name     = name
       self.required = required
       self.titles   = tuple(titles)
@@ -867,13 +872,13 @@ class PetscDocString(PetscDocStringBase):
       sectionNames = sections.keys()
       get_matches  = difflib.get_close_matches
       try:
-        match = get_matches(heading,sectionNames,n=1)[0]
+        match  = get_matches(heading,sectionNames,n=1)[0]
         reason = "name" # delete me
       except IndexError:
         keywords = [(kw,s.name) for kw,s in self.keywords(sections=True)]
         kwOnly   = [k for k,_ in keywords]
         try:
-          match = get_matches(heading,kwOnly,n=1)[0]
+          match  = get_matches(heading,kwOnly,n=1)[0]
           reason = "keyword" # delete me
         except IndexError:
           # try if we can find a sub-word
@@ -1038,7 +1043,8 @@ class PetscDocString(PetscDocStringBase):
   @staticmethod
   def _defaultAttributes():
     return {
-      "floating" : False
+      "floating" : False,
+      "macro"    : False
     }
 
   @classmethod
@@ -1170,8 +1176,9 @@ class PetscDocString(PetscDocStringBase):
         diagName,mess,self.makeSourceRange(line,line,self.extent.start.line)
       )
       beginSowing = [sowingType]
+    self._attr["macro"] = "M" in str(beginSowing)
     if beginSowing[0] not in self.sowingTypes:
-      import ipdb; ipdb.set_trace()
+      raise RuntimeError('sowing char {} not in sowing types {}'.format(beginSowing[0],self.sowingTypes))
       raise ParsingError
     beginSowing = "".join(beginSowing)
     # check that nothing else is on the comment begin line
@@ -1306,7 +1313,7 @@ class PetscDocString(PetscDocStringBase):
 
       heading = isHeading(lstrip)
       if heading > 0:
-        if heading == 2:
+        if heading == self.Verdict.MAYBE_HEADING:
           self._checkSectionHeaderTypo(line,lineno)
         self._checkValidSectionSpacing(rawData[-1][1] if rawData else None,lineno)
         newSection = findSection(lstrip.split(":",maxsplit=1)[0].strip().casefold())
@@ -1664,7 +1671,7 @@ class PetscCursor(object):
   @staticmethod
   def getFormattedLocationStringFromCursor(cursor):
     loc = cursor.location
-    return ":".join([loc.file.name,str(loc.column),str(loc.line)])
+    return ":".join([loc.file.name,str(loc.line),str(loc.column)])
 
   def getFormattedLocationString(self):
     return self.getFormattedLocationStringFromCursor(self)
@@ -2643,30 +2650,44 @@ def checkDocValidSynopsis(linter,cursor,docstring):
   synopsis   = docstring.sections.synopsis
   items      = synopsis.items
   if isinstance(items,tuple):
-    loc,symbol = items[0]["name"] # normal synopsis
+    pass # normal synopsis
   elif isinstance(items,PetscDocString.ParameterList):
-    loc,symbol = items.items[0]["name"] # enum synopsis
+    items = items.items # enum synopsis
   else:
     raise ValueError(type(items))
+  loc,symbol = items[0]["name"]
   if symbol:
     assert loc is not None
-    if "M" in docstring.raw.splitlines()[0]:
-      if docstring._attr["floating"]:
-        sync_print("FLOATING DOCSTRING",loc.raw())
-      else:
-        import ipdb; ipdb.set_trace()
-    # chances are that if it is a macro then the name won't match
-    if symbol != cursorName and "M" not in docstring.raw.splitlines()[0]:
-      diag = synopsis.diags.matching_symbol_name
-      if len(difflib.get_close_matches(symbol,[cursorName],n=1)):
-        mess  = "Docstring name '{}' does not match symbol. Assuming you meant '{}'".format(
-          symbol,cursorName
-        )
-        patch = Patch(loc,cursorName)
-      else:
-        mess  = "Docstring name '{}' does not match symbol name '{}'".format(symbol,cursorName)
-        patch = None
-      docstring.addErrorFromSourceRange(diag,mess,loc,patch=patch)
+    if docstring._attr["macro"]:
+      explicitSynopsis = items[0]["synopsis"]
+      assert len(explicitSynopsis) or docstring._attr["floating"],"macro docstring without explicit synopsis"
+      for loc,line in explicitSynopsis:
+        if line.endswith(":") or line.casefold().lstrip().startswith("synopsis"):
+          continue
+        elif "#include" in line:
+          continue
+          # TODO check that the prototype actually exists in the file specified
+          file  = line.split(maxsplit=1)[1]
+          fname = file.replace("\"","").replace("<","").replace(">","")
+          if file.startswith("\"") and file.endswith("\""):
+            import ipdb; ipdb.set_trace()
+        else:
+          args = re.search("\(([^)]+)",line).group(1).split(",")
+          import ipdb; ipdb.set_trace()
+          # TODO parse the argnames here, easiest to have clang parse it for us
+    else:
+      # chances are that if it is a macro then the name won't match
+      if symbol != cursorName:
+        diag = synopsis.diags.matching_symbol_name
+        if len(difflib.get_close_matches(symbol,[cursorName],n=1)):
+          mess  = "Docstring name '{}' does not match symbol. Assuming you meant '{}'".format(
+            symbol,cursorName
+          )
+          patch = Patch(loc,cursorName)
+        else:
+          mess  = "Docstring name '{}' does not match symbol name '{}'".format(symbol,cursorName)
+          patch = None
+        docstring.addErrorFromSourceRange(diag,mess,loc,patch=patch)
 
     symbolLine = loc.start.line
     wordCount  = 0

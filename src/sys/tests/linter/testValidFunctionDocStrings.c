@@ -259,3 +259,28 @@ PetscErrorCode testFloatingDocstring(void)
 {
   return 0;
 }
+
+/*@M
+  testExplicitSynopsis - Lorem Ipsum
+
+  Collective
+
+  Synopsis:
+  #include <petscsys.h>
+  PetscErrorCode testExplicitSynopsis(PetscInt foo, PetscReal bar, void *baz)
+
+  Input Parameters:
++ foo - a foo
+- bar - a bar
+
+  Output Parameter:
+. baz -                 a baz
+
+  Level: beginner
+
+.seealso: testExplicitSynopsisBad()
+M@*/
+PetscErrorCode testExplicitSynopsis_Private(PetscScalar unknown, PetscInt foo, PetscReal bar, void *baz)
+{
+  return 0;
+}

@@ -1,6 +1,6 @@
 <--- FIXED --->
 [ROOT] -------------------------------------------------------------------------------------
-ERROR 0: ./src/sys/tests/linter/testDisabled.c:51:6
+ERROR 0: ./src/sys/tests/linter/testDisabled.c:6:51
 '2' of derived type 'int', canonical type 'int'
   4: {
   5:   /* incorrect */
