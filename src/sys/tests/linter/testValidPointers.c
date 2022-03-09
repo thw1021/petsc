@@ -1,6 +1,6 @@
-#include <petscsys.h>
+#include <petsc/private/petscimpl.h>
 
-void testValidPointers(void *a, char *b, PetscInt *c, PetscMPIInt *d, PetscInt64 *e, PetscBool *f, PetscScalar *g, PetscReal *h)
+PetscErrorCode testValidPointers(void *a, char *b, PetscInt *c, PetscMPIInt *d, PetscInt64 *e, PetscBool *f, PetscScalar *g, PetscReal *h)
 {
   /* incorrect */
   PetscValidCharPointer(a,2);
@@ -21,5 +21,5 @@ void testValidPointers(void *a, char *b, PetscInt *c, PetscMPIInt *d, PetscInt64
   PetscValidBoolPointer(f,6);
   PetscValidScalarPointer(g,7);
   PetscValidRealPointer(h,8);
-  return;
+  return 0;
 }
