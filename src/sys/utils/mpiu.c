@@ -169,14 +169,16 @@ PetscErrorCode  PetscSequentialPhaseEnd(MPI_Comm comm,int ng)
 @*/
 PetscErrorCode PetscGlobalMinMaxInt(MPI_Comm comm, PetscInt minMaxVal[2], PetscInt minMaxValGlobal[2])
 {
-  PetscBool      inplace = (PetscBool)(minMaxVal == minMaxValGlobal);
   PetscErrorCode ierr;
+  PetscInt       sendbuf[3],recvbuf[3];
 
   PetscFunctionBegin;
-  minMaxVal[0] = -minMaxVal[0];
-  ierr = MPIU_Allreduce(inplace ? MPI_IN_PLACE : minMaxVal,minMaxValGlobal,2,MPIU_INT,MPI_MAX,comm);CHKERRMPI(ierr);
-  minMaxValGlobal[0] = -minMaxValGlobal[0];
-  if (!inplace) { minMaxVal[0] = -minMaxVal[0]; }
+  sendbuf[0] = -minMaxVal[0]; /* Note that -PETSC_MIN_INT = PETSC_MIN_INT */
+  sendbuf[1] = minMaxVal[1];
+  sendbuf[2] = (minMaxVal[0] == PETSC_MIN_INT) ? 1 : 0; /* Are there PETSC_MIN_INT in minMaxVal[0]? */
+  ierr = MPI_Allreduce(sendbuf, recvbuf, 3, MPIU_INT, MPI_MAX, comm);CHKERRMPI(ierr);
+  minMaxValGlobal[0] = recvbuf[2] ? PETSC_MIN_INT : -recvbuf[0];
+  minMaxValGlobal[1] = recvbuf[1];
   PetscFunctionReturn(0);
 }
 
