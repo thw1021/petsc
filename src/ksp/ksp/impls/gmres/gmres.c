@@ -121,6 +121,9 @@ PetscErrorCode KSPGMRESCycle(PetscInt *itcount,KSP ksp)
   PetscFunctionBegin;
   if (itcount) *itcount = 0;
   ierr = VecNormalize(VEC_VV(0),&res);CHKERRQ(ierr);
+  ierr       = PetscObjectSAWsTakeAccess((PetscObject)ksp);CHKERRQ(ierr);
+  ksp->rnorm = res;
+  ierr       = PetscObjectSAWsGrantAccess((PetscObject)ksp);CHKERRQ(ierr);
   KSPCheckNorm(ksp,res);
 
   /* the constant .1 is arbitrary, just some measure at how incorrect the residuals are */
@@ -135,9 +138,6 @@ PetscErrorCode KSPGMRESCycle(PetscInt *itcount,KSP ksp)
   *GRS(0) = gmres->rnorm0 = res;
 
   /* check for the convergence */
-  ierr       = PetscObjectSAWsTakeAccess((PetscObject)ksp);CHKERRQ(ierr);
-  ksp->rnorm = res;
-  ierr       = PetscObjectSAWsGrantAccess((PetscObject)ksp);CHKERRQ(ierr);
   gmres->it  = (it - 1);
   ierr = KSPLogResidualHistory(ksp,res);CHKERRQ(ierr);
   ierr = KSPLogErrorHistory(ksp);CHKERRQ(ierr);
@@ -240,9 +240,8 @@ PetscErrorCode KSPSolve_GMRES(KSP ksp)
 
   itcount     = 0;
   gmres->fullcycle = 0;
-  ksp->reason = KSP_CONVERGED_ITERATING;
   ksp->rnorm  = -1.0; /* special marker for KSPGMRESCycle() */
-  while (!ksp->reason) {
+  while (!ksp->reason || (ksp->rnorm == -1 && ksp->reason == KSP_DIVERGED_PC_FAILED)) {
     ierr = KSPInitialResidual(ksp,ksp->vec_sol,VEC_TEMP,VEC_TEMP_MATOP,VEC_VV(0),ksp->vec_rhs);CHKERRQ(ierr);
     ierr = KSPGMRESCycle(&its,ksp);CHKERRQ(ierr);
     /* Store the Hessenberg matrix and the basis vectors of the Krylov subspace
