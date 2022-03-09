@@ -1,7 +1,5 @@
 /*
-    Simple example demonstrating creating a one sub-network DMNetwork in parallel.
-
-    In this example vertices 0 and 1 are not connected to any edges.
+    Simple example demonstrating how to create a one sub-network DMNetwork in parallel.
 */
 
 #include <petscdmnetwork.h>
@@ -18,7 +16,7 @@ int main(int argc,char ** argv)
   DM                plex;
   PetscSection      section;
   PetscInt          Ne,Ni;
-  PetscInt          nodeOffset,k = 2,nedge;
+  PetscInt          nodeOffset,nedge;
 
   ierr = PetscInitialize(&argc,&argv,NULL,NULL);if (ierr) return ierr;
   ierr = PetscOptionsSetValue(NULL,"-petscpartitioner_use_vertex_weights","No");CHKERRQ(ierr);
@@ -33,38 +31,61 @@ int main(int argc,char ** argv)
   ierr = DMNetworkRegisterComponent(network,"vcomp",0,&vcompkey);CHKERRQ(ierr);
 
   ierr = PetscOptionsGetInt(NULL,NULL,"-test",&itest,NULL);CHKERRQ(ierr);
+
+  /* nodeOffset for rank > 0 */
   Ne = 2;
   Ni = 1;
   nodeOffset = (Ne+Ni)*rank;   /* The global node index of the first node defined on this process */
 
   /* There are three nodes on each rank and two edges. The edges only connect nodes on the given rank */
-  nedge = k * Ni;
+  nedge = 2 * Ni;
+  ierr = PetscCalloc1(2*nedge,&edgelist);CHKERRQ(ierr);
 
   if (rank == 0) {
-    nedge = 1;
-    ierr = PetscCalloc1(2*nedge,&edgelist);CHKERRQ(ierr);
+    nedge = 1; nv = 4;
     switch (itest) {
     case 0:
       /* v0, v1 are isolated vertices */
-      nv = 4;
       edgelist[0] = nodeOffset + 2;
       edgelist[1] = nodeOffset + 3;
       break;
     case 1:
-      /* v2 is an isolated vertex */
-      nv = 3;
+      /* v0,v2 are isolated vertices */
+      edgelist[0] = nodeOffset + 1;
+      edgelist[1] = nodeOffset + 3;
+      break;
+    case 2:
+      /* v0,v3 are isolated vertices */
+      edgelist[0] = nodeOffset + 1;
+      edgelist[1] = nodeOffset + 2;
+      break;
+    default: PetscCheck(itest < 3,PETSC_COMM_SELF,PETSC_ERR_SUP,"Test case %" PetscInt_FMT " not supported.",itest);
+    }
+  } else { /* rank > 0 */
+    nedge = 2; nv = 4;
+    switch (itest) {
+    case 0: /* no isolated vertex */
+      edgelist[0] = nodeOffset + 0;
+      edgelist[1] = nodeOffset + 2;
+      edgelist[2] = nodeOffset + 1;
+      edgelist[3] = nodeOffset + 3;
+    break;
+    case 1:
+      /* v=nodeOffset+3 is an isolated vertex */
       edgelist[0] = nodeOffset + 0;
       edgelist[1] = nodeOffset + 1;
+      edgelist[2] = nodeOffset + 1;
+      edgelist[3] = nodeOffset + 2;
       break;
-    default: PetscCheck(itest < 2,PETSC_COMM_SELF,PETSC_ERR_SUP,"Test case %" PetscInt_FMT " not supported.",itest);
+    case 2:
+      /* v=nodeOffset+0 is an isolated vertex */
+      edgelist[0] = nodeOffset + 1;
+      edgelist[1] = nodeOffset + 2;
+      edgelist[2] = nodeOffset + 2;
+      edgelist[3] = nodeOffset + 3;
+      break;
+    default: PetscCheck(itest < 3,PETSC_COMM_SELF,PETSC_ERR_SUP,"Test case %" PetscInt_FMT " not supported.",itest);
     }
-  } else {
-    nedge = 2; nv = 3;
-    ierr = PetscCalloc1(2*nedge,&edgelist);CHKERRQ(ierr);
-    edgelist[0] = nodeOffset + 0;
-    edgelist[1] = nodeOffset + 2;
-    edgelist[2] = nodeOffset + 1;
-    edgelist[3] = nodeOffset + 2;
   }
 
   ierr = DMNetworkSetNumSubNetworks(network,PETSC_DECIDE,1);CHKERRQ(ierr);
@@ -76,11 +97,11 @@ int main(int argc,char ** argv)
 
   /* Add components and variables for the network */
   ierr = DMNetworkGetSubnetwork(network,0,&nv,&ne,&nodes,&edges);CHKERRQ(ierr);
-  printf("[%d] subnet[0]: nv %d\n",rank,nv);
   for (e = 0; e < ne; e++) {
     /* The edges have no degrees of freedom */
     ierr = DMNetworkAddComponent(network,edges[e],ecompkey,NULL,1);CHKERRQ(ierr);
   }
+
   for (v = 0; v < nv; v++) {
     ierr = DMNetworkAddComponent(network,nodes[v],vcompkey,NULL,2);CHKERRQ(ierr);
   }

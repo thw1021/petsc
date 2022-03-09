@@ -77,6 +77,7 @@ typedef struct {
   PetscInt  *vertices;      /* Vertices for this subnetwork. These are mapped to the vertex numbers for the whole network */
   PetscInt  *edges;         /* Edges for this subnetwork. These are mapped to the edge numbers for the whole network */
   char      name[32-sizeof(PetscInt)];
+  DM        plex;
 } DMSubnetwork;
 
 typedef struct {
