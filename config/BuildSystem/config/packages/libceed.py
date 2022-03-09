@@ -3,12 +3,12 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.gitcommit              = 'c5fbda681b280c9c826da7afffcb465658d8a54c' # main on May 31, 2021
-    self.download               = ['git://https://github.com/CEED/libceed.git']
-    self.functions              = ['CeedRegister']
-    self.includes               = ['ceed.h']
-    self.liblist                = [['libceed.a']]
-    self.requires32bitint       = 1;   # TODO: fix for 64 bit integers
+    self.gitcommit        = 'b76375bc85e86b9d60a7f4a82891b9de31d2bfc8' # main on Feb 25, 2022
+    self.download         = ['git://https://github.com/CEED/libceed.git']
+    self.functions        = ['CeedRegister']
+    self.includes         = ['ceed.h']
+    self.liblist          = [['libceed.a']]
+    self.requires32bitint = 1;   # TODO: fix for 64 bit integers
     return
 
   def setupHelp(self, help):
@@ -18,8 +18,8 @@ class Configure(config.package.Package):
 
   def setupDependencies(self, framework):
     config.package.Package.setupDependencies(self, framework)
-    self.setCompilers    = framework.require('config.setCompilers',self)
-    self.make            = framework.require('config.packages.make',self)
+    self.setCompilers = framework.require('config.setCompilers',self)
+    self.make         = framework.require('config.packages.make',self)
     return
 
   def Install(self):
