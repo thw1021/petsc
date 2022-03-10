@@ -73,8 +73,7 @@ private:
 
   PETSC_CXX_COMPAT_DECL(PetscErrorCode check_current_device_(PetscDeviceContext dctxl, PetscDeviceContext dctxr))
   {
-    const auto     devidl = dctxl->device->deviceId,devidr = dctxr->device->deviceId;
-    cupmError_t    cerr;
+    const auto devidl = dctxl->device->deviceId,devidr = dctxr->device->deviceId;
 
     PetscFunctionBegin;
     PetscCheck(devidl == devidr,PETSC_COMM_SELF,PETSC_ERR_GPU,"Device contexts must be on the same device; dctx A (id %" PetscInt_FMT " device id %" PetscInt_FMT ") dctx B (id %" PetscInt_FMT " device id %" PetscInt_FMT ")",dctxl->id,devidl,dctxr->id,devidr);
@@ -91,16 +90,12 @@ private:
   {
     PetscFunctionBegin;
     for (auto&& handle : blashandles_) {
-      if (handle) {
-        PetscCallCUPMBLAS(cupmBlasDestroy(handle));
-        handle     = nullptr;
-      }
+      if (handle) PetscCallCUPMBLAS(cupmBlasDestroy(handle));
+      handle = nullptr;
     }
     for (auto&& handle : solverhandles_) {
-      if (handle) {
-        PetscCall(cupmBlasInterface_t::DestroyHandle(handle));
-        handle    = nullptr;
-      }
+      if (handle) PetscCall(cupmBlasInterface_t::DestroyHandle(handle));
+      handle = nullptr;
     }
     initialized_ = false;
     PetscFunctionReturn(0);
@@ -157,8 +152,6 @@ private:
   template <typename TagType>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode initialize_handle_(PetscDeviceContext dctx))
   {
-    PetscErrorCode ierr;
-
     PetscFunctionBegin;
     PetscCall(check_current_device_(dctx));
     PetscCall(initialize_handle2_(TagType{},dctx));
@@ -273,8 +266,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::setUp(PetscDeviceContext 
 template <DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::query(PetscDeviceContext dctx, PetscBool *idle))
 {
-  cupmError_t    cerr;
-  PetscErrorCode ierr;
+  cupmError_t cerr;
 
   PetscFunctionBegin;
   PetscCall(check_current_device_(dctx));
