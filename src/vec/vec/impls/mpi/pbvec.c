@@ -5,9 +5,9 @@
 #include <petscsys.h>
 #include <../src/vec/vec/impls/mpi/pvecimpl.h>   /*I  "petscvec.h"   I*/
 
-PetscErrorCode VecDot_MPI(Vec xin,Vec yin,PetscScalar *z)
+PetscErrorCode VecDot_MPI(Vec xin, Vec yin, PetscManagedScalar z, PetscDeviceContext dctx)
 {
-  PetscScalar    sum,work;
+  PetscScalar    work;
 
   PetscFunctionBegin;
   PetscCall(VecDot_Seq(xin,yin,&work));
@@ -16,9 +16,9 @@ PetscErrorCode VecDot_MPI(Vec xin,Vec yin,PetscScalar *z)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecTDot_MPI(Vec xin,Vec yin,PetscScalar *z)
+PetscErrorCode VecTDot_MPI(Vec xin, Vec yin, PetscManagedScalar z, PetscDeviceContext dctx)
 {
-  PetscScalar    sum,work;
+  PetscScalar    work;
 
   PetscFunctionBegin;
   PetscCall(VecTDot_Seq(xin,yin,&work));
@@ -29,7 +29,7 @@ PetscErrorCode VecTDot_MPI(Vec xin,Vec yin,PetscScalar *z)
 
 extern PetscErrorCode VecView_MPI_Draw(Vec,PetscViewer);
 
-PetscErrorCode VecPlaceArray_MPI(Vec vin,const PetscScalar *a)
+PetscErrorCode VecPlaceArray_MPI(Vec vin, const PetscScalar *a, PetscDeviceContext PETSC_UNUSED dctx)
 {
   Vec_MPI        *v = (Vec_MPI*)vin->data;
 
@@ -37,13 +37,11 @@ PetscErrorCode VecPlaceArray_MPI(Vec vin,const PetscScalar *a)
   PetscCheck(!v->unplacedarray,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"VecPlaceArray() was already called on this vector, without a call to VecResetArray()");
   v->unplacedarray = v->array;  /* save previous array so reset can bring it back */
   v->array         = (PetscScalar*)a;
-  if (v->localrep) {
-    PetscCall(VecPlaceArray(v->localrep,a));
-  }
+  if (v->localrep) PetscCall(VecPlaceArray(v->localrep,a));
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecDuplicate_MPI(Vec win,Vec *v)
+PetscErrorCode VecDuplicate_MPI(Vec win, Vec *v, PetscDeviceContext dctx)
 {
   Vec_MPI        *vw,*w = (Vec_MPI*)win->data;
   PetscScalar    *array;
@@ -52,7 +50,7 @@ PetscErrorCode VecDuplicate_MPI(Vec win,Vec *v)
   PetscCall(VecCreate(PetscObjectComm((PetscObject)win),v));
   PetscCall(PetscLayoutReference(win->map,&(*v)->map));
 
-  PetscCall(VecCreate_MPI_Private(*v,PETSC_TRUE,w->nghost,NULL));
+  PetscCall(VecCreate_MPI_Private(*v,PETSC_TRUE,w->nghost,NULL,dctx));
   vw   = (Vec_MPI*)(*v)->data;
   PetscCall(PetscMemcpy((*v)->ops,win->ops,sizeof(struct _VecOps)));
 
@@ -65,9 +63,7 @@ PetscErrorCode VecDuplicate_MPI(Vec win,Vec *v)
     PetscCall(PetscLogObjectParent((PetscObject)*v,(PetscObject)vw->localrep));
 
     vw->localupdate = w->localupdate;
-    if (vw->localupdate) {
-      PetscCall(PetscObjectReference((PetscObject)vw->localupdate));
-    }
+    if (vw->localupdate) PetscCall(PetscObjectReference((PetscObject)vw->localupdate));
   }
 
   /* New vector should inherit stashing property of parent */
@@ -104,16 +100,14 @@ static PetscErrorCode VecSetOption_MPI(Vec V,VecOption op,PetscBool flag)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecResetArray_MPI(Vec vin)
+PetscErrorCode VecResetArray_MPI(Vec vin, PetscDeviceContext PETSC_UNUSED dctx)
 {
   Vec_MPI        *v = (Vec_MPI*)vin->data;
 
   PetscFunctionBegin;
   v->array         = v->unplacedarray;
   v->unplacedarray = NULL;
-  if (v->localrep) {
-    PetscCall(VecResetArray(v->localrep));
-  }
+  if (v->localrep) PetscCall(VecResetArray(v->localrep));
   PetscFunctionReturn(0);
 }
 
@@ -479,7 +473,7 @@ static struct _VecOps DvOps = {
     If alloc is true and array is NULL then this routine allocates the space, otherwise
     no space is allocated.
 */
-PetscErrorCode VecCreate_MPI_Private(Vec v,PetscBool alloc,PetscInt nghost,const PetscScalar array[])
+PetscErrorCode VecCreate_MPI_Private(Vec v, PetscBool alloc, PetscInt nghost, const PetscScalar array[], PetscDeviceContext PETSC_UNUSED dctx)
 {
   Vec_MPI        *s;
 
@@ -536,7 +530,7 @@ M*/
 PetscErrorCode VecCreate_MPI(Vec vv)
 {
   PetscFunctionBegin;
-  PetscCall(VecCreate_MPI_Private(vv,PETSC_TRUE,0,NULL));
+  PetscCall(VecCreate_MPI_Private(vv,PETSC_TRUE,0,NULL,NULL));
   PetscFunctionReturn(0);
 }
 
@@ -605,7 +599,7 @@ PetscErrorCode  VecCreateMPIWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,Petsc
   PetscCall(VecCreate(comm,vv));
   PetscCall(VecSetSizes(*vv,n,N));
   PetscCall(VecSetBlockSize(*vv,bs));
-  PetscCall(VecCreate_MPI_Private(*vv,PETSC_FALSE,0,array));
+  PetscCall(VecCreate_MPI_Private(*vv,PETSC_FALSE,0,array,NULL));
   PetscFunctionReturn(0);
 }
 
@@ -657,7 +651,7 @@ PetscErrorCode  VecCreateGhostWithArray(MPI_Comm comm,PetscInt n,PetscInt N,Pets
   /* Create global representation */
   PetscCall(VecCreate(comm,vv));
   PetscCall(VecSetSizes(*vv,n,N));
-  PetscCall(VecCreate_MPI_Private(*vv,PETSC_TRUE,nghost,array));
+  PetscCall(VecCreate_MPI_Private(*vv,PETSC_TRUE,nghost,array,NULL));
   w    = (Vec_MPI*)(*vv)->data;
   /* Create local representation */
   PetscCall(VecGetArray(*vv,&larray));
@@ -773,7 +767,7 @@ PetscErrorCode  VecMPISetGhost(Vec vv,PetscInt nghost,const PetscInt ghosts[])
     N    = vv->map->N;
     PetscCall((*vv->ops->destroy)(vv));
     PetscCall(VecSetSizes(vv,n,N));
-    PetscCall(VecCreate_MPI_Private(vv,PETSC_TRUE,nghost,NULL));
+    PetscCall(VecCreate_MPI_Private(vv,PETSC_TRUE,nghost,NULL,NULL));
     w    = (Vec_MPI*)(vv)->data;
     /* Create local representation */
     PetscCall(VecGetArray(vv,&larray));
@@ -860,7 +854,7 @@ PetscErrorCode  VecCreateGhostBlockWithArray(MPI_Comm comm,PetscInt bs,PetscInt 
   PetscCall(VecCreate(comm,vv));
   PetscCall(VecSetSizes(*vv,n,N));
   PetscCall(VecSetBlockSize(*vv,bs));
-  PetscCall(VecCreate_MPI_Private(*vv,PETSC_TRUE,nghost*bs,array));
+  PetscCall(VecCreate_MPI_Private(*vv,PETSC_TRUE,nghost*bs,array,NULL));
   w    = (Vec_MPI*)(*vv)->data;
   /* Create local representation */
   PetscCall(VecGetArray(*vv,&larray));

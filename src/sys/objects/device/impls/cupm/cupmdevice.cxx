@@ -60,7 +60,7 @@ PetscErrorCode Device<T>::DeviceInternal::initialize() noexcept
   if (cupmSetDeviceFlags(cupmDeviceMapHost) == cupmErrorSetOnActiveProcess) {
     // reset the error if it was cupmErrorSetOnActiveProcess
     const auto PETSC_UNUSED unused = cupmGetLastError();
-  } else {PetscCallCUPM(cupmGetLastError());}
+  } else PetscCallCUPM(cupmGetLastError());
   // cuda 5.0+ will create a context when cupmSetDevice is called
   if (cupmSetDevice(id_) != cupmErrorDeviceAlreadyInUse) PetscCallCUPM(cupmGetLastError());
   // forces cuda < 5.0 to initialize a context
@@ -289,7 +289,7 @@ PetscErrorCode Device<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, P
         PetscMPIInt rank;
 
         PetscCallMPI(MPI_Comm_rank(comm,&rank));
-        initId.first   = rank % ndev;
+        initId.first = rank % ndev;
       } else initId.first = 0;
     }
     if (initView.first) initType.first = PETSC_DEVICE_INIT_EAGER;
