@@ -521,6 +521,13 @@ struct BlasInterface : BlasInterfaceImpl<T>
     CHKERRCUPMBLAS(cupmBlasSetPointerMode(handle,PetscMemTypeDevice(mtype) ? CUPMBLAS_POINTER_MODE_DEVICE : CUPMBLAS_POINTER_MODE_HOST));
     PetscFunctionReturn(0);
   }
+
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode cupmBlasSetPointerModeFromPointer(cupmBlasHandle_t handle, const PetscManagedScalar &ptr))
+  {
+    PetscFunctionBegin;
+    CHKERRCUPMBLAS(cupmBlasSetPointerMode(handle,PetscMemTypeDevice(ptr.mtype) ? CUPMBLAS_POINTER_MODE_DEVICE : CUPMBLAS_POINTER_MODE_HOST));
+    PetscFunctionReturn(0);
+  }
 };
 
 #define PETSC_CUPMBLAS_INHERIT_INTERFACE_TYPEDEFS_USING(base_name,T)   \

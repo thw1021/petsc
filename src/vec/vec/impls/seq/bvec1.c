@@ -65,7 +65,7 @@ PetscErrorCode VecScale_Seq(Vec xin, PetscScalar alpha)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecAXPY_Seq(Vec yin,PetscScalar alpha,Vec xin)
+PetscErrorCode VecAXPY_Seq(Vec yin,PetscManagedScalar alpha,Vec xin,PetscDeviceContext PETSC_UNUSED dctx)
 {
   PetscErrorCode    ierr;
   const PetscScalar *xarray;

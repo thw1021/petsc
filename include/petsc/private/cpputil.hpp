@@ -14,6 +14,7 @@ namespace util
 {
 
 #if __cplusplus >= 201402L // C++14
+using std::enable_if_t;
 using std::conditional_t;
 using std::remove_const_t;
 using std::add_const_t;

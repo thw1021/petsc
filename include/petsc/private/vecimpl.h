@@ -32,7 +32,7 @@ struct _VecOps {
   PetscErrorCode (*copy)(Vec,Vec);                     /* y = x */
   PetscErrorCode (*set)(Vec,PetscScalar);                        /* y = alpha  */
   PetscErrorCode (*swap)(Vec,Vec);                               /* exchange x and y */
-  PetscErrorCode (*axpy)(Vec,PetscScalar,Vec);                   /* y = y + alpha * x */
+  PetscErrorCode (*axpy)(Vec,PetscManagedScalar,Vec,PetscDeviceContext);                   /* y = y + alpha * x */
   PetscErrorCode (*axpby)(Vec,PetscScalar,PetscScalar,Vec);      /* y = alpha * x + beta * y*/
   PetscErrorCode (*maxpy)(Vec,PetscInt,const PetscScalar*,Vec*); /* y = y + alpha[j] x[j] */
   PetscErrorCode (*aypx)(Vec,PetscScalar,Vec);                   /* y = x + alpha * y */

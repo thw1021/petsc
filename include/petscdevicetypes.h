@@ -188,4 +188,30 @@ PETSC_EXTERN const char *const PetscDeviceContextJoinModes[];
 PetscDeviceContextDestroy(), PetscDeviceContextFork(), PetscDeviceContextJoin()
 S*/
 typedef struct _n_PetscDeviceContext *PetscDeviceContext;
+
+typedef struct PetscManagedScalar
+{
+  PetscScalar  *ptr;
+  PetscMemType mtype;
+
+#if defined(__cplusplus)
+  PetscManagedScalar() noexcept : ptr(nullptr), mtype(PETSC_MEMTYPE_HOST) { }
+
+        PetscScalar& operator[](std::size_t idx)       noexcept { return ptr[idx]; }
+  const PetscScalar& operator[](std::size_t idx) const noexcept { return ptr[idx]; }
+#endif
+} PetscManagedScalar;
+
+#if defined(__cplusplus)
+bool operator==(const PetscManagedScalar &a, const PetscScalar &b) noexcept
+{
+  return PetscMemTypeHost(a.mtype) ? a[0] == b : false;
+}
+
+bool operator!=(const PetscManagedScalar &a, const PetscScalar &b) noexcept
+{
+  return !(a == b);
+}
+#endif
+
 #endif /* PETSCDEVICETYPES_H */
