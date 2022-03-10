@@ -83,7 +83,7 @@ public:
   // callable indirectly via function pointers
   PETSC_CXX_COMPAT_DECL(PetscErrorCode duplicate_async(Vec,Vec*));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode aypx_async(Vec,PetscScalar,Vec));
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode axpy_async(Vec,PetscScalar,Vec));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode axpy_async(Vec,PetscManagedScalar,Vec,PetscDeviceContext));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode pointwisedivide_async(Vec,Vec,Vec));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode pointwisemult_async(Vec,Vec,Vec));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode reciprocal_async(Vec));
@@ -494,7 +494,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::aypx_async(Vec yin, PetscSc
 }
 
 template <Device::CUPM::DeviceType T>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::axpy_async(Vec yin, PetscScalar alpha, Vec xin))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::axpy_async(Vec yin, PetscManagedScalar alpha, Vec xin, PetscDeviceContext dctx))
 {
   PetscErrorCode ierr;
   PetscBool      xiscupm;
@@ -504,20 +504,19 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::axpy_async(Vec yin, PetscSc
   ierr = PetscObjectTypeCompareAny(PetscObjectCast(xin),&xiscupm,VECSEQCUPM(),VECMPICUPM(),"");CHKERRQ(ierr);
   if (xiscupm) {
     const auto         n = static_cast<cupmBlasInt_t>(yin->map->n);
-    const auto         calpha = makeCupmScalar(alpha);
     cupmBlasHandle_t   cupmBlasHandle;
     cupmBlasError_t    cberr;
     PetscDeviceContext dctx;
 
     ierr = GetHandles_(&dctx,&cupmBlasHandle);CHKERRQ(ierr);
-    cberr = cupmBlasSetPointerMode(cupmBlasHandle,CUPMBLAS_POINTER_MODE_HOST);CHKERRCUPMBLAS(cberr);
+    cberr = cupmBlasSetPointerModeFromPointer(cupmBlasHandle,alpha);CHKERRCUPMBLAS(cberr);
     ierr = PetscLogGpuTimeBegin();CHKERRQ(ierr);
-    cberr = cupmBlasXaxpy(cupmBlasHandle,n,&calpha,DeviceArrayRead(dctx,xin),1,DeviceArrayReadWrite(dctx,yin),1);CHKERRCUPMBLAS(cberr);
+    cberr = cupmBlasXaxpy(cupmBlasHandle,n,cupmScalarCast(alpha.ptr),DeviceArrayRead(dctx,xin),1,DeviceArrayReadWrite(dctx,yin),1);CHKERRCUPMBLAS(cberr);
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
     ierr = PetscLogGpuFlops(2*n);CHKERRQ(ierr);
     ierr = PetscLogCpuToGpuScalar(sizeof(alpha));CHKERRQ(ierr);
   } else {
-    ierr = VecAXPY_Seq(yin,alpha,xin);CHKERRQ(ierr);
+    ierr = VecAXPY_Seq(yin,alpha,xin,dctx);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
@@ -1069,7 +1068,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::axpby_async(Vec yin, PetscS
   if (alpha == PetscScalar(0.0)) {
     ierr = scale_async(yin,beta);CHKERRQ(ierr);
   } else if (beta == PetscScalar(1.0)) {
-    ierr = axpy_async(yin,alpha,xin);CHKERRQ(ierr);
+    ierr = axpy_async(yin,alpha,xin,dctx);CHKERRQ(ierr);
   } else if (alpha == PetscScalar(1.0)) {
     ierr = aypx_async(yin,beta,xin);CHKERRQ(ierr);
   } else {
@@ -1121,8 +1120,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::axpbypcz_async(Vec zin, Pet
     // z <- a*x + b*y + c*z
     ierr = scale_async(zin,gamma);CHKERRQ(ierr);
   }
-  ierr = axpy_async(zin,alpha,xin);CHKERRQ(ierr);
-  ierr = axpy_async(zin,beta,yin);CHKERRQ(ierr);
+  ierr = axpy_async(zin,alpha,xin,dctx);CHKERRQ(ierr);
+  ierr = axpy_async(zin,beta,yin,dctx);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
