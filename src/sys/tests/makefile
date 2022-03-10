@@ -10,6 +10,8 @@ EXAMPLESC       = ex1.c ex2.c ex3.c ex4.c ex5.c ex6.c ex7.c ex8.c ex9.c ex10.c e
                   ex44.cxx ex45.cxx ex46.cxx ex47.c ex49.c \
                   ex50.c ex51.c ex52.c ex53.c
 EXAMPLESF       = ex1f.F90 ex5f.F ex6f.F ex17f.F ex36f.F90 ex38f.F90 ex47f.F90 ex48f90.F90 ex49f.F90
+EXAMPLECU       = ex1cu.cu
+EXAMPLEHIP      = ex1hip.cpp
 MANSEC          = Sys
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
