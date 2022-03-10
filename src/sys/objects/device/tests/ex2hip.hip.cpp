@@ -6,7 +6,7 @@ static char help[] = "Benchmarking hipPointerGetAttributes() time\n";
     Average hipPointerGetAttributes() time = 0.10 microseconds
 */
 #include <petscsys.h>
-#include <petscdevice.h>
+#include <petscdevice_hip.h>
 
 int main(int argc,char **argv)
 {

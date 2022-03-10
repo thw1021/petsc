@@ -58,7 +58,8 @@ public:
     getSolverHandle,
     getStreamHandle,
     beginTimer,
-    endTimer
+    endTimer,
+    arrayCopy
   };
 
   // default constructor
@@ -83,6 +84,7 @@ public:
   PETSC_NODISCARD static PetscErrorCode getStreamHandle(PetscDeviceContext,void*) noexcept { SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented"); };
   PETSC_NODISCARD static PetscErrorCode beginTimer(PetscDeviceContext) noexcept { SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented"); };
   PETSC_NODISCARD static PetscErrorCode endTimer(PetscDeviceContext,PetscLogDouble*) noexcept { SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented"); };
+  PETSC_NODISCARD static PetscErrorCode arrayCopy(PetscDeviceContext,void*PETSC_RESTRICT,const void*PETSC_RESTRICT,std::size_t,PetscDeviceCopyMode) noexcept { SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented"); };
 };
 
 } // namespace Impl

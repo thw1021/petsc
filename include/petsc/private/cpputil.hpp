@@ -7,16 +7,39 @@
 #include <type_traits>
 #include <tuple>
 
+// basic building blocks
+#define PETSC_DECLTYPE_AUTO(...)         -> decltype(__VA_ARGS__)
+#define PETSC_NOEXCEPT_AUTO(...)         noexcept(noexcept(__VA_ARGS__))
+#define PETSC_RETURNS(...)               { return __VA_ARGS__; }
+
+// one without the other
+#define PETSC_DECLTYPE_AUTO_RETURNS(...) PETSC_DECLTYPE_AUTO(__VA_ARGS__) PETSC_RETURNS(__VA_ARGS__)
+#define PETSC_NOEXCEPT_AUTO_RETURNS(...) PETSC_NOEXCEPT_AUTO(__VA_ARGS__) PETSC_RETURNS(__VA_ARGS__)
+
+// both
+#define PETSC_DECLTYPE_NOEXCEPT_AUTO(...)                               \
+  PETSC_NOEXCEPT_AUTO(__VA_ARGS__) PETSC_DECLTYPE_AUTO(__VA_ARGS__)
+// all
+#define PETSC_DECLTYPE_NOEXCEPT_AUTO_RETURNS(...)                       \
+  PETSC_DECLTYPE_NOEXCEPT_AUTO(__VA_ARGS__) PETSC_RETURNS(__VA_ARGS__)
+
 namespace Petsc
 {
 
 namespace util
 {
 
+#if __cplusplus >= 201703L // C++17
+using std::void_t;
+#else // C++17
+template <class...> using void_t = void;
+#endif // C++17
+
 #if __cplusplus >= 201402L // C++14
 using std::enable_if_t;
 using std::conditional_t;
 using std::remove_const_t;
+using std::remove_cv_t;
 using std::add_const_t;
 using std::underlying_type_t;
 using std::remove_pointer_t;
@@ -24,25 +47,23 @@ using std::add_pointer_t;
 using std::index_sequence;
 using std::make_index_sequence;
 using std::decay_t;
+using std::remove_cv_t;
 using std::tuple_element_t;
-#if __cplusplus >= 201703L
-using std::void_t;
-#else // C++17
-template <class... T> using void_t = void;
-#endif // C++17
 #else // C++14
 template <bool B, class T = void>   using enable_if_t   = typename std::enable_if<B,T>::type;
 template <bool B, class T, class F> using conditional_t = typename std::conditional<B,T,F>::type;
 template <class T> using remove_const_t    = typename std::remove_const<T>::type;
+template <class T> using remove_cv_t       = typename std::remove_cv<T>::type;
 template <class T> using add_const_t       = typename std::add_const<T>::type;
 template <class T> using underlying_type_t = typename std::underlying_type<T>::type;
 template <class T> using remove_pointer_t  = typename std::remove_pointer<T>::type;
 template <class T> using add_pointer_t     = typename std::add_pointer<T>::type;
 template <class T> using decay_t           = typename std::decay<T>::type;
-template <class... T> using void_t = void;
+template< class T> using remove_cv_t       = typename std::remove_cv<T>::type;
 template <std::size_t I, class T> using tuple_element_t = typename std::tuple_element<I,T>::type;
 // index sequence only
-template <std::size_t... idx> struct index_sequence
+template <std::size_t... idx>
+struct index_sequence
 {
   using value_type = std::size_t;
 
@@ -65,7 +86,7 @@ struct index_sequence_impl<0U,rest...>
 } // namespace detail
 
 template <std::size_t N> using make_index_sequence = typename detail::index_sequence_impl<N>::type;
-#endif // c++14
+#endif // C++14
 
 namespace detail
 {
@@ -119,6 +140,38 @@ static inline constexpr can_call<F,A...> is_callable_with(F&&) noexcept
 }
 
 template <typename... T> struct always_false : std::false_type { };
+
+namespace detail
+{
+
+template <typename T, std::size_t N, std::size_t... i>
+static inline constexpr std::array<util::remove_cv_t<T>,N> make_array_impl(T (&&a)[N], util::index_sequence<i...>) noexcept(noexcept(std::is_nothrow_move_constructible<T>::value))
+{
+  return {{std::move(a[i])...}};
+}
+
+} // namespace detail
+
+template <typename T, std::size_t N>
+static inline constexpr std::array<util::remove_cv_t<T>,N> make_array(T (&&a)[N])
+PETSC_NOEXCEPT_AUTO_RETURNS(detail::make_array_impl(std::move(a),make_index_sequence<N>{}));
+
+namespace detail
+{
+
+template <typename T, std::size_t NL, std::size_t... IL, std::size_t NR, std::size_t... IR>
+static inline constexpr std::array<T,NL+NR> concat_array_impl(const std::array<T,NL>& l, const std::array<T,NR>& r, util::index_sequence<IL...>, util::index_sequence<IR...>)
+{
+  return {l[IL]...,r[IR]...};
+}
+
+} // namespace detail
+
+template <typename T, std::size_t NL, std::size_t NR>
+static inline constexpr std::array<T,NL+NR> concat_array(const std::array<T,NL>& l, const std::array<T,NR>& r)
+{
+  return detail::concat_array_impl(l,r,util::make_index_sequence<NL>{},util::make_index_sequence<NR>{});
+}
 
 } // namespace util
 
@@ -179,13 +232,6 @@ static inline constexpr PetscObject& PetscObjectCast(const T& object) noexcept
 {
   return PetscObjectCast(PetscRemoveConstCast(object));
 }
-
-#define PETSC_RETURNS(...)                   { return __VA_ARGS__; }
-#define PETSC_DECLTYPE_AUTO(...)             -> decltype(__VA_ARGS__)
-#define PETSC_DECLTYPE_AUTO_RETURNS(...)     PETSC_DECLTYPE_AUTO(__VA_ARGS__) PETSC_RETURNS(__VA_ARGS__)
-#define PETSC_NOEXCEPT_AUTO(...)             noexcept(noexcept(__VA_ARGS__))
-#define PETSC_DECLTYPE_NOEXCEPT_AUTO(...)    PETSC_NOEXCEPT_AUTO(__VA_ARGS__) PETSC_DECLTYPE_AUTO(__VA_ARGS__)
-#define PETSC_DECLTYPE_NOEXCEPT_AUTO_RETURNS(...) PETSC_DECLTYPE_NOEXCEPT_AUTO(__VA_ARGS__) PETSC_RETURNS(__VA_ARGS__)
 
 #define PETSC_ALIAS_FUNCTION_WITH_PROLOGUE_AND_EPILOGUE_(alias,original,dispatch,prologue,epilogue) \
   template <typename... Args> static inline auto dispatch(int,Args&&... args)                  \
@@ -322,6 +368,24 @@ static inline constexpr PetscObject& PetscObjectCast(const T& object) noexcept
 //   ...
 // }
 #define PETSC_CXX_COMPAT_DEFN(...) inline __VA_ARGS__ noexcept
+
+template <typename T>
+PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscCxxObjectRegisterFinalize(T *obj, MPI_Comm comm = PETSC_COMM_SELF))
+{
+  const auto finalizer = [](void *ptr) {
+    PetscFunctionBegin;
+    PetscCall(static_cast<T*>(ptr)->finalize());
+    PetscFunctionReturn(0);
+  };
+  PetscContainer contain;
+
+  PetscFunctionBegin;
+  PetscCall(PetscContainerCreate(comm,&contain));
+  PetscCall(PetscContainerSetPointer(contain,obj));
+  PetscCall(PetscContainerSetUserDestroy(contain,finalizer));
+  PetscCall(PetscObjectRegisterDestroy(reinterpret_cast<PetscObject>(contain)));
+  PetscFunctionReturn(0);
+}
 
 } // namespace Petsc
 

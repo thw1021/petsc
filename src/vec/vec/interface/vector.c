@@ -2,6 +2,7 @@
      Provides the interface functions for vector operations that do NOT have PetscScalar/PetscReal in the signature
    These are the vector functions the user calls.
 */
+#include "petsc/private/deviceimpl.h"
 #include <petsc/private/vecimpl.h>    /*I  "petscvec.h"   I*/
 #include <petsc/private/deviceimpl.h>
 
@@ -166,6 +167,39 @@ PetscErrorCode  VecAssemblyEnd(Vec vec)
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode VecPointwiseApplyAsync_Private(Vec w, Vec x, Vec y, PetscDeviceContext dctx, PetscLogEvent event, PetscErrorCode(*const pointwise_op)(Vec,Vec,Vec,PetscDeviceContext))
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(w,VEC_CLASSID,1);
+  PetscValidHeaderSpecific(x,VEC_CLASSID,2);
+  PetscValidHeaderSpecific(y,VEC_CLASSID,3);
+  PetscValidType(w,1);
+  PetscValidType(x,2);
+  PetscValidType(y,3);
+  PetscCheckSameTypeAndComm(x,2,y,3);
+  PetscCheckSameTypeAndComm(y,3,w,1);
+  VecCheckSameSize(w,1,x,2);
+  VecCheckSameSize(w,1,y,3);
+  PetscCall(VecSetErrorIfLocked(w,1));
+  PetscValidFunction(pointwise_op,6);
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+
+  if (event) PetscCall(PetscLogEventBegin(event,x,y,w,0));
+  PetscCall((*pointwise_op)(w,x,y,dctx));
+  if (event) PetscCall(PetscLogEventEnd(event,x,y,w,0));
+  PetscCall(PetscObjectStateIncrease((PetscObject)w));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecPointwiseMaxAsync(Vec w, Vec x, Vec y, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(w,VEC_CLASSID,1);
+  // REVIEW ME: no log event?
+  PetscCall(VecPointwiseApplyAsync_Private(w,x,y,dctx,0,w->ops->pointwisemax));
+  PetscFunctionReturn(0);
+}
+
 /*@
    VecSetPreallocationCOO - set preallocation for a vector using a coordinate format of the entries with global indices
 
@@ -196,7 +230,10 @@ PetscErrorCode VecSetPreallocationCOO(Vec x,PetscCount ncoo,const PetscInt coo_i
   PetscCall(PetscLogEventBegin(VEC_SetPreallocateCOO,x,0,0,0));
   PetscCall(PetscLayoutSetUp(x->map));
   if (x->ops->setpreallocationcoo) {
-    PetscCall((*x->ops->setpreallocationcoo)(x,ncoo,coo_i));
+    PetscDeviceContext dctx;
+
+    PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
+    PetscCall((*x->ops->setpreallocationcoo)(x,ncoo,coo_i,dctx));
   } else {
     IS is_coo_i;
     /* The default implementation only supports ncoo within limit of PetscInt */
@@ -276,7 +313,10 @@ PetscErrorCode VecSetValuesCOO(Vec x,const PetscScalar coo_v[],InsertMode imode)
   PetscValidLogicalCollectiveEnum(x,imode,3);
   PetscCall(PetscLogEventBegin(VEC_SetValuesCOO,x,0,0,0));
   if (x->ops->setvaluescoo) {
-    PetscCall((*x->ops->setvaluescoo)(x,coo_v,imode));
+    PetscDeviceContext dctx;
+
+    PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
+    PetscCall((*x->ops->setvaluescoo)(x,coo_v,imode,dctx));
     PetscCall(PetscObjectStateIncrease((PetscObject)x));
   } else {
     IS             is_coo_i;
@@ -322,19 +362,16 @@ PetscErrorCode VecSetValuesCOO(Vec x,const PetscScalar coo_v[],InsertMode imode)
 PetscErrorCode  VecPointwiseMax(Vec w,Vec x,Vec y)
 {
   PetscFunctionBegin;
+  PetscCall(VecPointwiseMaxAsync(w,x,y,NULL));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecPointwiseMinAsync(Vec w, Vec x, Vec y, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
   PetscValidHeaderSpecific(w,VEC_CLASSID,1);
-  PetscValidHeaderSpecific(x,VEC_CLASSID,2);
-  PetscValidHeaderSpecific(y,VEC_CLASSID,3);
-  PetscValidType(w,1);
-  PetscValidType(x,2);
-  PetscValidType(y,3);
-  PetscCheckSameTypeAndComm(x,2,y,3);
-  PetscCheckSameTypeAndComm(y,3,w,1);
-  VecCheckSameSize(w,1,x,2);
-  VecCheckSameSize(w,1,y,3);
-  PetscCall(VecSetErrorIfLocked(w,1));
-  PetscCall((*w->ops->pointwisemax)(w,x,y));
-  PetscCall(PetscObjectStateIncrease((PetscObject)w));
+  // REVIEW ME: no log event?
+  PetscCall(VecPointwiseApplyAsync_Private(w,x,y,dctx,0,w->ops->pointwisemin));
   PetscFunctionReturn(0);
 }
 
@@ -360,19 +397,16 @@ PetscErrorCode  VecPointwiseMax(Vec w,Vec x,Vec y)
 PetscErrorCode  VecPointwiseMin(Vec w,Vec x,Vec y)
 {
   PetscFunctionBegin;
+  PetscCall(VecPointwiseMinAsync(w,x,y,NULL));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecPointwiseMaxAbsAsync(Vec w, Vec x, Vec y, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
   PetscValidHeaderSpecific(w,VEC_CLASSID,1);
-  PetscValidHeaderSpecific(x,VEC_CLASSID,2);
-  PetscValidHeaderSpecific(y,VEC_CLASSID,3);
-  PetscValidType(w,1);
-  PetscValidType(x,2);
-  PetscValidType(y,3);
-  PetscCheckSameTypeAndComm(x,2,y,3);
-  PetscCheckSameTypeAndComm(y,3,w,1);
-  VecCheckSameSize(w,1,x,2);
-  VecCheckSameSize(w,1,y,3);
-  PetscCall(VecSetErrorIfLocked(w,1));
-  PetscCall((*w->ops->pointwisemin)(w,x,y));
-  PetscCall(PetscObjectStateIncrease((PetscObject)w));
+  // REVIEW ME: no log event?
+  PetscCall(VecPointwiseApplyAsync_Private(w,x,y,dctx,0,w->ops->pointwisemaxabs));
   PetscFunctionReturn(0);
 }
 
@@ -397,19 +431,16 @@ PetscErrorCode  VecPointwiseMin(Vec w,Vec x,Vec y)
 PetscErrorCode  VecPointwiseMaxAbs(Vec w,Vec x,Vec y)
 {
   PetscFunctionBegin;
+  PetscCall(VecPointwiseMaxAbsAsync(w,x,y,NULL));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecPointwiseDivideAsync(Vec w, Vec x, Vec y, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
   PetscValidHeaderSpecific(w,VEC_CLASSID,1);
-  PetscValidHeaderSpecific(x,VEC_CLASSID,2);
-  PetscValidHeaderSpecific(y,VEC_CLASSID,3);
-  PetscValidType(w,1);
-  PetscValidType(x,2);
-  PetscValidType(y,3);
-  PetscCheckSameTypeAndComm(x,2,y,3);
-  PetscCheckSameTypeAndComm(y,3,w,1);
-  VecCheckSameSize(w,1,x,2);
-  VecCheckSameSize(w,1,y,3);
-  PetscCall(VecSetErrorIfLocked(w,1));
-  PetscCall((*w->ops->pointwisemaxabs)(w,x,y));
-  PetscCall(PetscObjectStateIncrease((PetscObject)w));
+  // REVIEW ME: no log event?
+  PetscCall(VecPointwiseApplyAsync_Private(w,x,y,dctx,0,w->ops->pointwisedivide));
   PetscFunctionReturn(0);
 }
 
@@ -434,19 +465,59 @@ PetscErrorCode  VecPointwiseMaxAbs(Vec w,Vec x,Vec y)
 PetscErrorCode  VecPointwiseDivide(Vec w,Vec x,Vec y)
 {
   PetscFunctionBegin;
+  PetscCall(VecPointwiseDivideAsync(w,x,y,NULL));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecPointwiseMultAsync(Vec w, Vec x, Vec y, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
   PetscValidHeaderSpecific(w,VEC_CLASSID,1);
-  PetscValidHeaderSpecific(x,VEC_CLASSID,2);
-  PetscValidHeaderSpecific(y,VEC_CLASSID,3);
-  PetscValidType(w,1);
-  PetscValidType(x,2);
-  PetscValidType(y,3);
-  PetscCheckSameTypeAndComm(x,2,y,3);
-  PetscCheckSameTypeAndComm(y,3,w,1);
-  VecCheckSameSize(w,1,x,2);
-  VecCheckSameSize(w,1,y,3);
-  PetscCall(VecSetErrorIfLocked(w,1));
-  PetscCall((*w->ops->pointwisedivide)(w,x,y));
-  PetscCall(PetscObjectStateIncrease((PetscObject)w));
+  PetscCall(VecPointwiseApplyAsync_Private(w,x,y,dctx,VEC_PointwiseMult,w->ops->pointwisemult));
+  PetscFunctionReturn(0);
+}
+
+/*@
+   VecPointwiseMult - Computes the componentwise multiplication w = x*y.
+
+   Logically Collective on Vec
+
+   Input Parameters:
+.  x, y  - the vectors
+
+   Output Parameter:
+.  w - the result
+
+   Level: advanced
+
+   Notes:
+    any subset of the x, y, and w may be the same vector.
+
+.seealso: VecPointwiseDivide(), VecPointwiseMax(), VecPointwiseMin(), VecPointwiseMaxAbs(), VecMaxPointwiseDivide()
+@*/
+PetscErrorCode  VecPointwiseMult(Vec w,Vec x,Vec y)
+{
+  PetscFunctionBegin;
+  PetscCall(VecPointwiseMultAsync(w,x,y,NULL));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecDuplicateAsync(Vec v, Vec *newv, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
+  PetscValidPointer(newv,2);
+  PetscValidType(v,1);
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+
+  PetscCall((*v->ops->duplicate)(v,newv,dctx));
+#if PetscDefined(HAVE_DEVICE)
+  if (v->boundtocpu && v->bindingpropagates) {
+    PetscCall(VecSetBindingPropagates(*newv,PETSC_TRUE));
+    PetscCall(VecBindToCPU(*newv,PETSC_TRUE));
+  }
+#endif
+  PetscCall(PetscObjectStateIncrease((PetscObject)*newv));
   PetscFunctionReturn(0);
 }
 
@@ -475,17 +546,27 @@ PetscErrorCode  VecPointwiseDivide(Vec w,Vec x,Vec y)
 PetscErrorCode  VecDuplicate(Vec v,Vec *newv)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
-  PetscValidPointer(newv,2);
-  PetscValidType(v,1);
-  PetscCall((*v->ops->duplicate)(v,newv));
-#if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA)
-  if (v->boundtocpu && v->bindingpropagates) {
-    PetscCall(VecSetBindingPropagates(*newv,PETSC_TRUE));
-    PetscCall(VecBindToCPU(*newv,PETSC_TRUE));
+  PetscCall(VecDuplicateAsync(v,newv,NULL));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecDestroyAsync(PetscDeviceContext dctx, Vec *v)
+{
+  PetscFunctionBegin;
+  if (!*v) PetscFunctionReturn(0);
+  PetscValidHeaderSpecific((*v),VEC_CLASSID,2);
+  if (--((PetscObject)(*v))->refct > 0) {*v = NULL; PetscFunctionReturn(0);}
+
+  PetscCall(PetscObjectSAWsViewOff((PetscObject)*v));
+  /* destroy the internal part */
+  if ((*v)->ops->destroy) {
+    PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+    PetscCall((*(*v)->ops->destroy)(*v,dctx));
   }
-#endif
-  PetscCall(PetscObjectStateIncrease((PetscObject)*newv));
+  PetscCall(PetscFree((*v)->defaultrandtype));
+  /* destroy the external/common part */
+  PetscCall(PetscLayoutDestroy(&(*v)->map));
+  PetscCall(PetscHeaderDestroy(v));
   PetscFunctionReturn(0);
 }
 
@@ -504,19 +585,7 @@ PetscErrorCode  VecDuplicate(Vec v,Vec *newv)
 PetscErrorCode  VecDestroy(Vec *v)
 {
   PetscFunctionBegin;
-  if (!*v) PetscFunctionReturn(0);
-  PetscValidHeaderSpecific((*v),VEC_CLASSID,1);
-  if (--((PetscObject)(*v))->refct > 0) {*v = NULL; PetscFunctionReturn(0);}
-
-  PetscCall(PetscObjectSAWsViewOff((PetscObject)*v));
-  /* destroy the internal part */
-  if ((*v)->ops->destroy) {
-    PetscCall((*(*v)->ops->destroy)(*v));
-  }
-  PetscCall(PetscFree((*v)->defaultrandtype));
-  /* destroy the external/common part */
-  PetscCall(PetscLayoutDestroy(&(*v)->map));
-  PetscCall(PetscHeaderDestroy(v));
+  PetscCall(VecDestroyAsync(NULL,v));
   PetscFunctionReturn(0);
 }
 
@@ -733,8 +802,8 @@ PetscErrorCode  VecView(Vec vec,PetscViewer viewer)
   } else {
     PetscCall((*vec->ops->view)(vec,viewer));
   }
-  PetscCall(VecLockReadPop(vec));
   PetscCall(PetscLogEventEnd(VEC_View,vec,viewer,0,0));
+  PetscCall(VecLockReadPop(vec));
   PetscFunctionReturn(0);
 }
 
@@ -972,6 +1041,19 @@ PetscErrorCode VecDestroyVecs_Default(PetscInt m,Vec v[])
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode VecResetArrayAsync(Vec vec, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(vec,VEC_CLASSID,1);
+  PetscValidType(vec,1);
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+
+  PetscCheck(vec->ops->resetarray,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot reset array in this type of vector");
+  PetscCall((*vec->ops->resetarray)(vec,dctx));
+  PetscCall(PetscObjectStateIncrease((PetscObject)vec));
+  PetscFunctionReturn(0);
+}
+
 /*@
    VecResetArray - Resets a vector to use its default memory. Call this
    after the use of VecPlaceArray().
@@ -989,12 +1071,7 @@ PetscErrorCode VecDestroyVecs_Default(PetscInt m,Vec v[])
 PetscErrorCode  VecResetArray(Vec vec)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(vec,VEC_CLASSID,1);
-  PetscValidType(vec,1);
-  if (vec->ops->resetarray) {
-    PetscCall((*vec->ops->resetarray)(vec));
-  } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot reset array in this type of vector");
-  PetscCall(PetscObjectStateIncrease((PetscObject)vec));
+  PetscCall(VecResetArrayAsync(vec,NULL));
   PetscFunctionReturn(0);
 }
 
@@ -1084,6 +1161,21 @@ PetscErrorCode  VecLoad(Vec vec, PetscViewer viewer)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode VecReciprocalAsync(Vec vec, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(vec,VEC_CLASSID,1);
+  PetscValidType(vec,1);
+  PetscCheck(vec->stash.insertmode == NOT_SET_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
+  PetscCheck(vec->ops->reciprocal,PETSC_COMM_SELF,PETSC_ERR_SUP,"Vector does not support reciprocal operation");
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+
+  PetscCall(VecSetErrorIfLocked(vec,1));
+  PetscCall((*vec->ops->reciprocal)(vec,dctx));
+  PetscCall(PetscObjectStateIncrease((PetscObject)vec));
+  PetscFunctionReturn(0);
+}
+
 /*@
    VecReciprocal - Replaces each component of a vector by its reciprocal.
 
@@ -1103,13 +1195,7 @@ PetscErrorCode  VecLoad(Vec vec, PetscViewer viewer)
 PetscErrorCode  VecReciprocal(Vec vec)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(vec,VEC_CLASSID,1);
-  PetscValidType(vec,1);
-  PetscCheck(vec->stash.insertmode == NOT_SET_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
-  PetscCheck(vec->ops->reciprocal,PETSC_COMM_SELF,PETSC_ERR_SUP,"Vector does not support reciprocal operation");
-  PetscCall(VecSetErrorIfLocked(vec,1));
-  PetscCall((*vec->ops->reciprocal)(vec));
-  PetscCall(PetscObjectStateIncrease((PetscObject)vec));
+  PetscCall(VecReciprocalAsync(vec,NULL));
   PetscFunctionReturn(0);
 }
 
@@ -1193,6 +1279,24 @@ PetscErrorCode  VecStashSetInitialSize(Vec vec,PetscInt size,PetscInt bsize)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode VecConjugateAsync(Vec x, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
+  PetscCheck(x->stash.insertmode == NOT_SET_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
+  PetscCall(VecSetErrorIfLocked(x,1));
+  if (PetscDefined(USE_COMPLEX)) {
+    PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+
+    PetscCheck(x->ops->conjugate,PETSC_COMM_SELF,PETSC_ERR_SUP,"Vec type %s does not support conjugation",((PetscObject)x)->type_name);
+    PetscCall((*x->ops->conjugate)(x,dctx));
+    /* we need to copy norms here */
+    PetscCall(PetscObjectStateIncrease((PetscObject)x));
+  }
+  PetscFunctionReturn(0);
+}
+
 /*@
    VecConjugate - Conjugates a vector.
 
@@ -1207,54 +1311,35 @@ PetscErrorCode  VecStashSetInitialSize(Vec vec,PetscInt size,PetscInt bsize)
 PetscErrorCode  VecConjugate(Vec x)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  PetscValidType(x,1);
-  PetscCheck(x->stash.insertmode == NOT_SET_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
-  if (PetscDefined(USE_COMPLEX)) {
-    PetscCall(VecSetErrorIfLocked(x,1));
-    PetscCall((*x->ops->conjugate)(x));
-    /* we need to copy norms here */
-    PetscCall(PetscObjectStateIncrease((PetscObject)x));
-  }
+  PetscCall(VecConjugateAsync(x,NULL));
   PetscFunctionReturn(0);
 }
 
-/*@
-   VecPointwiseMult - Computes the componentwise multiplication w = x*y.
-
-   Logically Collective on Vec
-
-   Input Parameters:
-.  x, y  - the vectors
-
-   Output Parameter:
-.  w - the result
-
-   Level: advanced
-
-   Notes:
-    any subset of the x, y, and w may be the same vector.
-
-.seealso: `VecPointwiseDivide()`, `VecPointwiseMax()`, `VecPointwiseMin()`, `VecPointwiseMaxAbs()`, `VecMaxPointwiseDivide()`
-@*/
-PetscErrorCode  VecPointwiseMult(Vec w,Vec x,Vec y)
+PetscErrorCode VecSetRandomAsync(Vec x, PetscRandom rctx, PetscDeviceContext dctx)
 {
+  PetscRandom randObj = NULL;
+
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(w,VEC_CLASSID,1);
-  PetscValidHeaderSpecific(x,VEC_CLASSID,2);
-  PetscValidHeaderSpecific(y,VEC_CLASSID,3);
-  PetscValidType(w,1);
-  PetscValidType(x,2);
-  PetscValidType(y,3);
-  PetscCheckSameTypeAndComm(x,2,y,3);
-  PetscCheckSameTypeAndComm(y,3,w,1);
-  VecCheckSameSize(w,1,x,2);
-  VecCheckSameSize(w,2,y,3);
-  PetscCall(VecSetErrorIfLocked(w,1));
-  PetscCall(PetscLogEventBegin(VEC_PointwiseMult,x,y,w,0));
-  PetscCall((*w->ops->pointwisemult)(w,x,y));
-  PetscCall(PetscLogEventEnd(VEC_PointwiseMult,x,y,w,0));
-  PetscCall(PetscObjectStateIncrease((PetscObject)w));
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  if (rctx) PetscValidHeaderSpecific(rctx,PETSC_RANDOM_CLASSID,2);
+  PetscValidType(x,1);
+  PetscCheck(x->stash.insertmode == NOT_SET_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
+  PetscCall(VecSetErrorIfLocked(x,1));
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+
+  if (!rctx) {
+    PetscCall(PetscRandomCreate(PetscObjectComm((PetscObject)x),&randObj));
+    PetscCall(PetscRandomSetType(randObj,x->defaultrandtype));
+    PetscCall(PetscRandomSetFromOptions(randObj));
+    rctx = randObj;
+  }
+
+  PetscCall(PetscLogEventBegin(VEC_SetRandom,x,rctx,0,0));
+  PetscCall((*x->ops->setrandom)(x,rctx,dctx));
+  PetscCall(PetscLogEventEnd(VEC_SetRandom,x,rctx,0,0));
+  PetscCall(PetscObjectStateIncrease((PetscObject)x));
+
+  PetscCall(PetscRandomDestroy(&randObj));
   PetscFunctionReturn(0);
 }
 
@@ -1284,28 +1369,22 @@ PetscErrorCode  VecPointwiseMult(Vec w,Vec x,Vec y)
 @*/
 PetscErrorCode  VecSetRandom(Vec x,PetscRandom rctx)
 {
-  PetscRandom randObj = NULL;
+  PetscFunctionBegin;
+  PetscCall(VecSetRandomAsync(x,rctx,NULL));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecZeroEntriesAsync(Vec vec, PetscDeviceContext dctx)
+{
+  const PetscScalar  scalzero = 0.0;
+  PetscManagedScalar zero;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  if (rctx) PetscValidHeaderSpecific(rctx,PETSC_RANDOM_CLASSID,2);
-  PetscValidType(x,1);
-  PetscCheck(x->stash.insertmode == NOT_SET_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
-  PetscCall(VecSetErrorIfLocked(x,1));
-
-  if (!rctx) {
-    PetscCall(PetscRandomCreate(PetscObjectComm((PetscObject)x),&randObj));
-    PetscCall(PetscRandomSetType(randObj,x->defaultrandtype));
-    PetscCall(PetscRandomSetFromOptions(randObj));
-    rctx = randObj;
-  }
-
-  PetscCall(PetscLogEventBegin(VEC_SetRandom,x,rctx,0,0));
-  PetscCall((*x->ops->setrandom)(x,rctx));
-  PetscCall(PetscLogEventEnd(VEC_SetRandom,x,rctx,0,0));
-
-  PetscCall(PetscRandomDestroy(&randObj));
-  PetscCall(PetscObjectStateIncrease((PetscObject)x));
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  PetscCall(PetscManagedScalarCreateDefault(dctx,1,&zero));
+  PetscCall(PetscManagedScalarSetValues(dctx,zero,PETSC_MEMTYPE_HOST,&scalzero,1));
+  PetscCall(VecSetAsync(vec,zero,dctx));
+  PetscCall(PetscManagedScalarDestroy(dctx,&zero));
   PetscFunctionReturn(0);
 }
 
@@ -1324,6 +1403,10 @@ PetscErrorCode  VecSetRandom(Vec x,PetscRandom rctx)
 PetscErrorCode  VecZeroEntries(Vec vec)
 {
   PetscFunctionBegin;
+  // REVIEW ME:
+  // TODO add PetscManagedTypeGetValuesAvailable().
+  // cannot call VecZeroEntriesAsync() since it does not set the stashed norms as it cannot
+  // safely retrieve the "set" value without synchronizing.
   PetscCall(VecSet(vec,0));
   PetscFunctionReturn(0);
 }
@@ -1439,7 +1522,10 @@ PetscErrorCode  VecSetSizes(Vec v, PetscInt n, PetscInt N)
   v->map->n = n;
   v->map->N = N;
   if (v->ops->create) {
-    PetscCall((*v->ops->create)(v));
+    PetscDeviceContext dctx;
+
+    PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
+    PetscCall((*v->ops->create)(v,dctx));
     v->ops->create = NULL;
   }
   PetscFunctionReturn(0);
@@ -1616,40 +1702,10 @@ PetscErrorCode  VecSetUp(Vec v)
   PetscFunctionReturn(0);
 }
 
-/*
-    These currently expose the PetscScalar/PetscReal in updating the
-    cached norm. If we push those down into the implementation these
-    will become independent of PetscScalar/PetscReal
-*/
-
-/*@
-   VecCopy - Copies a vector. y <- x
-
-   Logically Collective on Vec
-
-   Input Parameter:
-.  x - the vector
-
-   Output Parameter:
-.  y - the copy
-
-   Notes:
-   For default parallel PETSc vectors, both x and y must be distributed in
-   the same manner; local copies are done.
-
-   Developer Notes:
-   PetscCheckSameTypeAndComm(x,1,y,2) is not used on these vectors because we allow one
-   of the vectors to be sequential and one to be parallel so long as both have the same
-   local sizes. This is used in some internal functions in PETSc.
-
-   Level: beginner
-
-.seealso: `VecDuplicate()`
-@*/
-PetscErrorCode  VecCopy(Vec x,Vec y)
+PetscErrorCode VecCopyAsync(Vec x, Vec y, PetscDeviceContext dctx)
 {
   PetscBool flgs[4];
-  PetscReal norms[4] = {0.0,0.0,0.0,0.0};
+  PetscReal norms[4] = {0.0};
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -1660,6 +1716,7 @@ PetscErrorCode  VecCopy(Vec x,Vec y)
   VecCheckSameLocalSize(x,1,y,2);
   PetscCheck(x->stash.insertmode == NOT_SET_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
   PetscCall(VecSetErrorIfLocked(y,2));
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
 
 #if !defined(PETSC_USE_MIXED_PRECISION)
   for (PetscInt i=0; i<4; i++) PetscCall(PetscObjectComposedDataGetReal((PetscObject)x,NormIds[i],norms[i],flgs[i]));
@@ -1696,10 +1753,10 @@ PetscErrorCode  VecCopy(Vec x,Vec y)
     PetscCall(VecRestoreArrayRead(x,&xx));
     PetscCall(VecRestoreArray(y,&yy));
   } else {
-    PetscCall((*x->ops->copy)(x,y));
+    PetscCall((*x->ops->copy)(x,y,dctx));
   }
 #else
-  PetscCall((*x->ops->copy)(x,y));
+  PetscCall((*x->ops->copy)(x,y,dctx));
 #endif
 
   PetscCall(PetscObjectStateIncrease((PetscObject)y));
@@ -1710,6 +1767,80 @@ PetscErrorCode  VecCopy(Vec x,Vec y)
 #endif
 
   PetscCall(PetscLogEventEnd(VEC_Copy,x,y,0,0));
+  PetscFunctionReturn(0);
+}
+
+/*
+    These currently expose the PetscScalar/PetscReal in updating the
+    cached norm. If we push those down into the implementation these
+    will become independent of PetscScalar/PetscReal
+*/
+
+/*@
+   VecCopy - Copies a vector. y <- x
+
+   Logically Collective on Vec
+
+   Input Parameter:
+.  x - the vector
+
+   Output Parameter:
+.  y - the copy
+
+   Notes:
+   For default parallel PETSc vectors, both x and y must be distributed in
+   the same manner; local copies are done.
+
+   Developer Notes:
+   PetscCheckSameTypeAndComm(x,1,y,2) is not used on these vectors because we allow one
+   of the vectors to be sequential and one to be parallel so long as both have the same
+   local sizes. This is used in some internal functions in PETSc.
+
+   Level: beginner
+
+.seealso: VecDuplicate()
+@*/
+PetscErrorCode  VecCopy(Vec x,Vec y)
+{
+  PetscFunctionBegin;
+  PetscCall(VecCopyAsync(x,y,NULL));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecSwapAsync(Vec x, Vec y, PetscDeviceContext dctx)
+{
+  PetscReal normxs[4],normys[4];
+  PetscBool flgxs[4],flgys[4];
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidHeaderSpecific(y,VEC_CLASSID,2);
+  PetscValidType(x,1);
+  PetscValidType(y,2);
+  PetscCheckSameTypeAndComm(x,1,y,2);
+  VecCheckSameSize(x,1,y,2);
+  PetscCheck(x->stash.insertmode == NOT_SET_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
+  PetscCheck(y->stash.insertmode == NOT_SET_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
+  PetscCall(VecSetErrorIfLocked(x,1));
+  PetscCall(VecSetErrorIfLocked(y,2));
+
+  for (PetscInt i = 0; i < 4; ++i) {
+    PetscCall(PetscObjectComposedDataGetReal((PetscObject)x,NormIds[i],normxs[i],flgxs[i]));
+    PetscCall(PetscObjectComposedDataGetReal((PetscObject)y,NormIds[i],normys[i],flgys[i]));
+  }
+
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+
+  PetscCall(PetscLogEventBegin(VEC_Swap,x,y,0,0));
+  PetscCall((*x->ops->swap)(x,y,dctx));
+  PetscCall(PetscLogEventEnd(VEC_Swap,x,y,0,0));
+
+  PetscCall(PetscObjectStateIncrease((PetscObject)x));
+  PetscCall(PetscObjectStateIncrease((PetscObject)y));
+  for (PetscInt i = 0; i < 4; ++i) {
+    if (flgxs[i]) PetscCall(PetscObjectComposedDataSetReal((PetscObject)y,NormIds[i],normxs[i]));
+    if (flgys[i]) PetscCall(PetscObjectComposedDataSetReal((PetscObject)x,NormIds[i],normys[i]));
+  }
   PetscFunctionReturn(0);
 }
 
@@ -1726,34 +1857,8 @@ PetscErrorCode  VecCopy(Vec x,Vec y)
 @*/
 PetscErrorCode  VecSwap(Vec x,Vec y)
 {
-  PetscReal normxs[4] = {0.0,0.0,0.0,0.0},normys[4]={0.0,0.0,0.0,0.0};
-  PetscBool flgxs[4],flgys[4];
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  PetscValidHeaderSpecific(y,VEC_CLASSID,2);
-  PetscValidType(x,1);
-  PetscValidType(y,2);
-  PetscCheckSameTypeAndComm(x,1,y,2);
-  VecCheckSameSize(x,1,y,2);
-  PetscCheck(x->stash.insertmode == NOT_SET_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
-  PetscCheck(y->stash.insertmode == NOT_SET_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
-  PetscCall(VecSetErrorIfLocked(x,1));
-  PetscCall(VecSetErrorIfLocked(y,2));
-
-  PetscCall(PetscLogEventBegin(VEC_Swap,x,y,0,0));
-  for (PetscInt i=0; i<4; i++) {
-    PetscCall(PetscObjectComposedDataGetReal((PetscObject)x,NormIds[i],normxs[i],flgxs[i]));
-    PetscCall(PetscObjectComposedDataGetReal((PetscObject)y,NormIds[i],normys[i],flgys[i]));
-  }
-  PetscCall((*x->ops->swap)(x,y));
-  PetscCall(PetscObjectStateIncrease((PetscObject)x));
-  PetscCall(PetscObjectStateIncrease((PetscObject)y));
-  for (PetscInt i=0; i<4; i++) {
-    if (flgxs[i]) PetscCall(PetscObjectComposedDataSetReal((PetscObject)y,NormIds[i],normxs[i]));
-    if (flgys[i]) PetscCall(PetscObjectComposedDataSetReal((PetscObject)x,NormIds[i],normys[i]));
-  }
-  PetscCall(PetscLogEventEnd(VEC_Swap,x,y,0,0));
+  PetscCall(VecSwapAsync(x,y,NULL));
   PetscFunctionReturn(0);
 }
 
@@ -1929,20 +2034,54 @@ PetscErrorCode VecSetLayout(Vec x,PetscLayout map)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecSetInf(Vec xin)
+PetscErrorCode VecSetInfAsync(Vec xin, PetscDeviceContext dctx)
 {
-  PetscInt       i,n = xin->map->n;
-  PetscScalar    *xx;
-  PetscScalar    zero=0.0,one=1.0,inf=one/zero;
+  PetscScalar zero = 0.0,one = 1.0,inf = one/zero;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(xin,VEC_CLASSID,1);
+  PetscValidType(xin,1);
   if (xin->ops->set) { /* can be called by a subset of processes, do not use collective routines */
-    PetscCall((*xin->ops->set)(xin,inf));
+    PetscManagedScalar tmp;
+
+    // REVIEW ME: need to make this device-friendly
+    PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+    PetscCall(PetscManageHostScalar(dctx,&inf,1,&tmp));
+    PetscCall((*xin->ops->set)(xin,tmp,dctx));
+    PetscCall(PetscManagedScalarDestroy(dctx,&tmp));
   } else {
+    const PetscInt  n = xin->map->n;
+    PetscScalar    *xx;
+
     PetscCall(VecGetArrayWrite(xin,&xx));
-    for (i=0; i<n; i++) xx[i] = inf;
+    for (PetscInt i = 0; i < n; ++i) xx[i] = inf;
     PetscCall(VecRestoreArrayWrite(xin,&xx));
   }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecSetInf(Vec xin)
+{
+  PetscFunctionBegin;
+  PetscCall(VecSetInfAsync(xin,NULL));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecBindToCPUAsync(Vec v, PetscBool flg, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
+  PetscValidLogicalCollectiveBool(v,flg,2);
+#if PetscDefined(HAVE_DEVICE)
+  if (v->boundtocpu == flg) PetscFunctionReturn(0);
+  v->boundtocpu = flg;
+  if (v->ops->bindtocpu) {
+    PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+    PetscCall((*v->ops->bindtocpu)(v,flg,dctx));
+  }
+#else
+  (void)dctx;
+#endif
   PetscFunctionReturn(0);
 }
 
@@ -1960,15 +2099,7 @@ PetscErrorCode VecSetInf(Vec xin)
 PetscErrorCode VecBindToCPU(Vec v,PetscBool flg)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
-  PetscValidLogicalCollectiveBool(v,flg,2);
-#if defined(PETSC_HAVE_DEVICE)
-  if (v->boundtocpu == flg) PetscFunctionReturn(0);
-  v->boundtocpu = flg;
-  if (v->ops->bindtocpu) {
-    PetscCall((*v->ops->bindtocpu)(v,flg));
-  }
-#endif
+  PetscCall(VecBindToCPUAsync(v,flg,NULL));
   PetscFunctionReturn(0);
 }
 
@@ -2023,8 +2154,10 @@ PetscErrorCode VecSetBindingPropagates(Vec v,PetscBool flg)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
-#if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA)
+#if PetscDefined(HAVE_DEVICE)
   v->bindingpropagates = flg;
+#else
+  (void)flg;
 #endif
   PetscFunctionReturn(0);
 }
@@ -2047,7 +2180,7 @@ PetscErrorCode VecGetBindingPropagates(Vec v,PetscBool *flg)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
   PetscValidBoolPointer(flg,2);
-#if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA)
+#if PetscDefined(HAVE_DEVICE)
   *flg = v->bindingpropagates;
 #else
   *flg = PETSC_FALSE;
@@ -2076,13 +2209,14 @@ PetscErrorCode VecGetBindingPropagates(Vec v,PetscBool *flg)
 @*/
 PetscErrorCode VecSetPinnedMemoryMin(Vec v,size_t mbytes)
 {
-#if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
+#if PetscDefined(HAVE_DEVICE)
   v->minimum_bytes_pinned_memory = mbytes;
-  PetscFunctionReturn(0);
 #else
-  return 0;
+  (void)mbytes;
 #endif
+  PetscFunctionReturn(0);
 }
 
 /*@C
@@ -2102,13 +2236,13 @@ PetscErrorCode VecSetPinnedMemoryMin(Vec v,size_t mbytes)
 @*/
 PetscErrorCode VecGetPinnedMemoryMin(Vec v,size_t *mbytes)
 {
-#if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
+  PetscValidPointer(mbytes,2);
+#if PetscDefined(HAVE_DEVICE)
   *mbytes = v->minimum_bytes_pinned_memory;
-  PetscFunctionReturn(0);
-#else
-  return 0;
 #endif
+  PetscFunctionReturn(0);
 }
 
 /*@
@@ -2129,6 +2263,8 @@ PetscErrorCode VecGetPinnedMemoryMin(Vec v,size_t *mbytes)
 PetscErrorCode VecGetOffloadMask(Vec v,PetscOffloadMask* mask)
 {
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
+  PetscValidPointer(mask,2);
   *mask = v->offloadmask;
   PetscFunctionReturn(0);
 }

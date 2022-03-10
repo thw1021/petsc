@@ -9,149 +9,154 @@
 #include <../src/vec/vec/impls/mpi/pvecimpl.h> /* for VecCreate/Destroy_MPI */
 #include <../src/vec/vec/impls/seq/kokkos/veckokkosimpl.hpp>
 #include <petscsf.h>
+#include <petsc/private/deviceimpl.h>
 
-PetscErrorCode VecDestroy_MPIKokkos(Vec v)
+PetscErrorCode VecDestroy_MPIKokkos(Vec v, PetscDeviceContext dctx)
 {
-  Vec_Kokkos     *veckok = static_cast<Vec_Kokkos*>(v->spptr);
-
   PetscFunctionBegin;
-  delete veckok;
-  PetscCall(VecDestroy_MPI(v));
+  delete static_cast<Vec_Kokkos*>(v->spptr);
+  PetscCall(VecDestroy_MPI(v,dctx));
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecNorm_MPIKokkos(Vec xin,NormType type,PetscReal *z)
+static PetscErrorCode VecNorm_MPIKokkos(Vec xin, NormType type, PetscManagedReal z, PetscDeviceContext dctx)
 {
-  PetscReal      sum,work = 0.0;
+  constexpr auto  one = PetscInt{1};
+  PetscReal      *zptr;
 
   PetscFunctionBegin;
   if (type == NORM_2 || type == NORM_FROBENIUS) {
-    PetscCall(VecNorm_SeqKokkos(xin,NORM_2,&work));
-    work *= work;
-    PetscCall(MPIU_Allreduce(&work,&sum,1,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)xin)));
-    *z    = PetscSqrtReal(sum);
+    PetscCall(VecNorm_SeqKokkos(xin,NORM_2,z,dctx));
+    PetscCall(PetscManagedRealGetValues(dctx,z,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,PETSC_TRUE,&zptr));
+    *zptr *= *zptr;
+    PetscCall(MPIU_Allreduce(MPI_IN_PLACE,zptr,1,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)xin)));
+    *zptr = PetscSqrtReal(*zptr);
   } else if (type == NORM_1) {
     /* Find the local part */
-    PetscCall(VecNorm_SeqKokkos(xin,NORM_1,&work));
+    PetscCall(VecNorm_SeqKokkos(xin,NORM_1,z,dctx));
     /* Find the global max */
-    PetscCall(MPIU_Allreduce(&work,z,1,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)xin)));
+    PetscCall(PetscDeviceContextAllReduceManagedReal_Internal(dctx,z,&one,MPIU_SUM,(PetscObject)xin));
   } else if (type == NORM_INFINITY) {
     /* Find the local max */
-    PetscCall(VecNorm_SeqKokkos(xin,NORM_INFINITY,&work));
+    PetscCall(VecNorm_SeqKokkos(xin,NORM_INFINITY,z,dctx));
     /* Find the global max */
-    PetscCall(MPIU_Allreduce(&work,z,1,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)xin)));
+    PetscCall(PetscDeviceContextAllReduceManagedReal_Internal(dctx,z,&one,MPIU_MAX,(PetscObject)xin));
   } else if (type == NORM_1_AND_2) {
-    PetscReal temp[2];
-    PetscCall(VecNorm_SeqKokkos(xin,NORM_1,temp));
-    PetscCall(VecNorm_SeqKokkos(xin,NORM_2,temp+1));
-    temp[1] = temp[1]*temp[1];
-    PetscCall(MPIU_Allreduce(temp,z,2,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)xin)));
-    z[1] = PetscSqrtReal(z[1]);
+    PetscManagedReal zp1;
+
+    PetscCall(VecNorm_SeqKokkos(xin,NORM_1,z,dctx));
+    PetscCall(PetscManagedRealGetSubRange(dctx,z,1,1,&zp1));
+    PetscCall(VecNorm_SeqKokkos(xin,NORM_2,zp1,dctx));
+    PetscCall(PetscManagedRealRestoreSubRange(dctx,z,&zp1));
+    PetscCall(PetscManagedRealGetValues(dctx,z,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,PETSC_TRUE,&zptr));
+    zptr[1] *= zptr[1];
+    PetscCall(MPIU_Allreduce(MPI_IN_PLACE,z,2,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)xin)));
+    zptr[1] = PetscSqrtReal(zptr[1]);
   }
+  PetscFunctionReturn(0);
+}
+
+template <typename SeqFunctionType>
+static PetscErrorCode VecXDot_MPIKokkos(Vec xin, Vec yin, PetscManagedScalar z, PetscDeviceContext dctx, SeqFunctionType&& VecXDot_SeqKokkos)
+{
+  constexpr auto one = PetscInt{1};
+
+  PetscFunctionBegin;
+  PetscCall(VecXDot_SeqKokkos(xin,yin,z,dctx));
+  PetscCall(PetscDeviceContextAllReduceManagedScalar_Internal(dctx,z,&one,MPIU_SUM,(PetscObject)xin));
   PetscFunctionReturn(0);
 }
 
 /* z = y^H x */
-PetscErrorCode VecDot_MPIKokkos(Vec xin,Vec yin,PetscScalar *z)
+static PetscErrorCode VecDot_MPIKokkos(Vec xin, Vec yin, PetscManagedScalar z, PetscDeviceContext dctx)
 {
-  PetscScalar    sum,work;
-
   PetscFunctionBegin;
-  PetscCall(VecDot_SeqKokkos(xin,yin,&work));
-  PetscCall(MPIU_Allreduce(&work,&sum,1,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)xin)));
-  *z   = sum;
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode VecMDot_MPIKokkos(Vec xin,PetscInt nv,const Vec y[],PetscScalar *z)
-{
-  PetscScalar    awork[128],*work = awork;
-
-  PetscFunctionBegin;
-  if (nv > 128) PetscCall(PetscMalloc1(nv,&work));
-  PetscCall(VecMDot_SeqKokkos(xin,nv,y,work));
-  PetscCall(MPIU_Allreduce(work,z,nv,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)xin)));
-  if (nv > 128) PetscCall(PetscFree(work));
+  PetscCall(VecXDot_MPIKokkos(xin,yin,z,dctx,VecDot_SeqKokkos));
   PetscFunctionReturn(0);
 }
 
 /* z = y^T x */
-PetscErrorCode VecTDot_MPIKokkos(Vec xin,Vec yin,PetscScalar *z)
+static PetscErrorCode VecTDot_MPIKokkos(Vec xin, Vec yin, PetscManagedScalar z, PetscDeviceContext dctx)
 {
-  PetscScalar    sum,work;
-
   PetscFunctionBegin;
-  PetscCall(VecTDot_SeqKokkos(xin,yin,&work));
-  PetscCall(MPIU_Allreduce(&work,&sum,1,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)xin)));
-  *z   = sum;
+  PetscCall(VecXDot_MPIKokkos(xin,yin,z,dctx,VecTDot_SeqKokkos));
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecMTDot_MPIKokkos(Vec xin,PetscInt nv,const Vec y[],PetscScalar *z)
+template <typename SeqFunctionType>
+static PetscErrorCode VecMXDot_MPIKokkos(Vec xin, PetscManagedInt nv, const Vec y[], PetscManagedScalar z, PetscDeviceContext dctx, SeqFunctionType&& VecMXDot_SeqKokkos)
 {
-  PetscScalar    awork[128],*work = awork;
+  PetscInt *nvptr;
 
   PetscFunctionBegin;
-  if (nv > 128) PetscCall(PetscMalloc1(nv,&work));
-  PetscCall(VecMTDot_SeqKokkos(xin,nv,y,work));
-  PetscCall(MPIU_Allreduce(work,z,nv,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)xin)));
-  if (nv > 128) PetscCall(PetscFree(work));
+  PetscCall(VecMXDot_SeqKokkos(xin,nv,y,z,dctx));
+  PetscCall(PetscManagedIntGetValues(dctx,nv,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&nvptr));
+  PetscCall(PetscDeviceContextAllReduceManagedScalar_Internal(dctx,z,nvptr,MPIU_SUM,(PetscObject)xin));
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecMax_MPIKokkos(Vec xin,PetscInt *idx,PetscReal *z)
+static PetscErrorCode VecMDot_MPIKokkos(Vec xin, PetscManagedInt nv, const Vec y[], PetscManagedScalar z, PetscDeviceContext dctx)
 {
-  PetscReal      work;
+  PetscFunctionBegin;
+  PetscCall(VecMXDot_MPIKokkos(xin,nv,y,z,dctx,VecMDot_SeqKokkos));
+  PetscFunctionReturn(0);
+}
 
+static PetscErrorCode VecMTDot_MPIKokkos(Vec xin, PetscManagedInt nv, const Vec y[], PetscManagedScalar z, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
+  PetscCall(VecMXDot_MPIKokkos(xin,nv,y,z,dctx,VecMTDot_SeqKokkos));
+  PetscFunctionReturn(0);
+}
+
+template <typename SeqFunctionType>
+static PetscErrorCode VecMinMax_MPIKokkos(Vec xin, PetscManagedInt idx, PetscManagedReal z, PetscDeviceContext dctx, SeqFunctionType&& VecMinMax_SeqKokkos, const MPI_Op ops[2])
+{
   PetscFunctionBegin;
   /* Find the local max */
-  PetscCall(VecMax_SeqKokkos(xin,idx,&work));
-#if defined(PETSC_HAVE_MPIUNI)
-  *z = work;
-#else
+  PetscCall(VecMinMax_SeqKokkos(xin,idx,z,dctx));
+  if (PetscDefined(HAVE_MPIUNI)) PetscFunctionReturn(0);
   /* Find the global max */
-  if (!idx) { /* User does not need idx */
-    PetscCall(MPIU_Allreduce(&work,z,1,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)xin)));
-  } else {
-    struct { PetscReal v; PetscInt i; } in,out;
+  if (idx) { /* User does not need idx */
+    PetscReal *zptr;
+    PetscInt  *idxptr;
 
-    in.v  = work;
-    in.i  = *idx + xin->map->rstart;
-    PetscCall(MPIU_Allreduce(&in,&out,1,MPIU_REAL_INT,MPIU_MAXLOC,PetscObjectComm((PetscObject)xin)));
-    *z    = out.v;
-    *idx  = out.i;
+    PetscCall(PetscManagedRealGetValues(dctx,z,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,PETSC_TRUE,&zptr));
+    PetscCall(PetscManagedIntGetValues(dctx,idx,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,PETSC_TRUE,&idxptr));
+    {
+      struct { PetscReal v; PetscInt i; } in{*zptr,*idxptr};
+
+      PetscCall(MPIU_Allreduce(MPI_IN_PLACE,&in,1,MPIU_REAL_INT,ops[0],PetscObjectComm((PetscObject)xin)));
+      *zptr   = in.v;
+      *idxptr = in.i;
+    }
+  } else {
+    constexpr auto one = PetscInt{1};
+
+    PetscCall(PetscDeviceContextAllReduceManagedReal_Internal(dctx,z,&one,ops[1],(PetscObject)xin));
   }
-#endif
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecMin_MPIKokkos(Vec xin,PetscInt *idx,PetscReal *z)
+PetscErrorCode VecMax_MPIKokkos(Vec xin, PetscManagedInt idx, PetscManagedReal z, PetscDeviceContext dctx)
 {
-  PetscReal      work;
+  const MPI_Op ops[] = {MPIU_MAXLOC,MPIU_MAX};
 
   PetscFunctionBegin;
-  /* Find the local Min */
-  PetscCall(VecMin_SeqKokkos(xin,idx,&work));
-#if defined(PETSC_HAVE_MPIUNI)
-  *z = work;
-#else
-  /* Find the global Min */
-  if (!idx) {
-    PetscCall(MPIU_Allreduce(&work,z,1,MPIU_REAL,MPIU_MIN,PetscObjectComm((PetscObject)xin)));
-  } else {
-    struct { PetscReal v; PetscInt i; } in,out;
-
-    in.v  = work;
-    in.i  = *idx + xin->map->rstart;
-    PetscCall(MPIU_Allreduce(&in,&out,1,MPIU_REAL_INT,MPIU_MINLOC,PetscObjectComm((PetscObject)xin)));
-    *z    = out.v;
-    *idx  = out.i;
-  }
-#endif
+  PetscCall(VecMinMax_MPIKokkos(xin,idx,z,dctx,VecMax_SeqKokkos,ops));
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecDuplicate_MPIKokkos(Vec win,Vec *vv)
+PetscErrorCode VecMin_MPIKokkos(Vec xin, PetscManagedInt idx, PetscManagedReal z, PetscDeviceContext dctx)
+{
+  const MPI_Op ops[] = {MPIU_MINLOC,MPIU_MIN};
+
+  PetscFunctionBegin;
+  PetscCall(VecMinMax_MPIKokkos(xin,idx,z,dctx,VecMin_SeqKokkos,ops));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecDuplicate_MPIKokkos(Vec win,Vec *vv, PetscDeviceContext dctx)
 {
   Vec            v;
   Vec_MPI        *vecmpi;
@@ -159,7 +164,7 @@ PetscErrorCode VecDuplicate_MPIKokkos(Vec win,Vec *vv)
 
   PetscFunctionBegin;
   /* Reuse VecDuplicate_MPI, which contains a lot of stuff */
-  PetscCall(VecDuplicate_MPI(win,&v)); /* after the call, v is a VECMPI, with data zero'ed */
+  PetscCall(VecDuplicate_MPI(win,&v,dctx)); /* after the call, v is a VECMPI, with data zero'ed */
   PetscCall(PetscObjectChangeTypeName((PetscObject)v,VECMPIKOKKOS));
   PetscCall(PetscMemcpy(v->ops,win->ops,sizeof(struct _VecOps)));
 
@@ -173,15 +178,21 @@ PetscErrorCode VecDuplicate_MPIKokkos(Vec win,Vec *vv)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecDotNorm2_MPIKokkos(Vec s,Vec t,PetscScalar *dp,PetscScalar *nm)
+PetscErrorCode VecDotNorm2_MPIKokkos(Vec s, Vec t, PetscManagedScalar dp, PetscManagedScalar nm, PetscDeviceContext dctx)
 {
-  PetscScalar    work[2],sum[2];
+  PetscScalar *dpptr,*nmptr;
 
   PetscFunctionBegin;
-  PetscCall(VecDotNorm2_SeqKokkos(s,t,work,work+1));
-  PetscCall(MPIU_Allreduce(&work,&sum,2,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)s)));
-  *dp  = sum[0];
-  *nm  = sum[1];
+  PetscCall(VecDotNorm2_SeqKokkos(s,t,dp,nm,dctx));
+  PetscCall(PetscManagedScalarGetValues(dctx,dp,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,PETSC_TRUE,&dpptr));
+  PetscCall(PetscManagedScalarGetValues(dctx,nm,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,PETSC_TRUE,&nmptr));
+  {
+    PetscScalar sum[] = {*dpptr,*nmptr};
+
+    PetscCall(MPIU_Allreduce(MPI_IN_PLACE,&sum,2,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)s)));
+    *dpptr = sum[0];
+    *nmptr = sum[1];
+  }
   PetscFunctionReturn(0);
 }
 
@@ -192,7 +203,7 @@ static PetscErrorCode VecGetSubVector_MPIKokkos(Vec x,IS is,Vec *y)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecSetPreallocationCOO_MPIKokkos(Vec x, PetscCount ncoo, const PetscInt coo_i[])
+static PetscErrorCode VecSetPreallocationCOO_MPIKokkos(Vec x, PetscCount ncoo, const PetscInt coo_i[], PetscDeviceContext dctx)
 {
   Vec_MPI                     *vecmpi = static_cast<Vec_MPI*>(x->data);
   Vec_Kokkos                  *veckok = static_cast<Vec_Kokkos*>(x->spptr);
@@ -200,12 +211,12 @@ static PetscErrorCode VecSetPreallocationCOO_MPIKokkos(Vec x, PetscCount ncoo, c
 
   PetscFunctionBegin;
   PetscCall(VecGetLocalSize(x,&m));
-  PetscCall(VecSetPreallocationCOO_MPI(x,ncoo,coo_i));
+  PetscCall(VecSetPreallocationCOO_MPI(x,ncoo,coo_i,dctx));
   PetscCallCXX(veckok->SetUpCOO(vecmpi,m));
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecSetValuesCOO_MPIKokkos(Vec x,const PetscScalar v[],InsertMode imode)
+static PetscErrorCode VecSetValuesCOO_MPIKokkos(Vec x,const PetscScalar v[],InsertMode imode,PetscDeviceContext)
 {
   Vec_MPI                     *vecmpi = static_cast<Vec_MPI*>(x->data);
   Vec_Kokkos                  *veckok = static_cast<Vec_Kokkos*>(x->spptr);
@@ -325,7 +336,7 @@ static PetscErrorCode VecSetOps_MPIKokkos(Vec v)
 
 .seealso: `VecCreate()`, `VecSetType()`, `VecSetFromOptions()`, `VecCreateMPIKokkosWithArray()`, `VECMPI`, `VecType`, `VecCreateMPI()`
 M*/
-PetscErrorCode VecCreate_MPIKokkos(Vec v)
+PetscErrorCode VecCreate_MPIKokkos(Vec v, PetscDeviceContext dctx)
 {
   Vec_MPI    *vecmpi;
   Vec_Kokkos *veckok;
@@ -333,7 +344,7 @@ PetscErrorCode VecCreate_MPIKokkos(Vec v)
   PetscFunctionBegin;
   PetscCall(PetscKokkosInitializeCheck());
   PetscCall(PetscLayoutSetUp(v->map));
-  PetscCall(VecCreate_MPI(v));  /* Calloc host array */
+  PetscCall(VecCreate_MPI(v,dctx));  /* Calloc host array */
 
   vecmpi = static_cast<Vec_MPI*>(v->data);
   PetscCall(PetscObjectChangeTypeName((PetscObject)v,VECMPIKOKKOS));
@@ -379,10 +390,11 @@ PetscErrorCode VecCreate_MPIKokkos(Vec v)
 @*/
 PetscErrorCode  VecCreateMPIKokkosWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,PetscInt N,const PetscScalar darray[],Vec *v)
 {
-  Vec            w;
-  Vec_Kokkos     *veckok;
-  Vec_MPI        *vecmpi;
-  PetscScalar    *harray;
+  Vec                 w;
+  Vec_Kokkos         *veckok;
+  Vec_MPI            *vecmpi;
+  PetscScalar        *harray;
+  PetscDeviceContext  dctx;
 
   PetscFunctionBegin;
   PetscCheck(n != PETSC_DECIDE,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must set local size of vector");
@@ -395,8 +407,8 @@ PetscErrorCode  VecCreateMPIKokkosWithArray(MPI_Comm comm,PetscInt bs,PetscInt n
 
   if (std::is_same<DefaultMemorySpace,Kokkos::HostSpace>::value) {harray = const_cast<PetscScalar*>(darray);}
   else PetscCall(PetscMalloc1(w->map->n,&harray)); /* If device is not the same as host, allocate the host array ourselves */
-
-  PetscCall(VecCreate_MPI_Private(w,PETSC_FALSE/*alloc*/,0/*nghost*/,harray)); /* Build a sequential vector with provided data */
+  PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
+  PetscCall(VecCreate_MPI_Private(w,PETSC_FALSE/*alloc*/,0/*nghost*/,harray,dctx)); /* Build a sequential vector with provided data */
   vecmpi = static_cast<Vec_MPI*>(w->data);
 
   if (!std::is_same<DefaultMemorySpace,Kokkos::HostSpace>::value) vecmpi->array_allocated = harray; /* The host array was allocated by petsc */

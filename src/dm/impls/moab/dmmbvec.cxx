@@ -9,7 +9,7 @@
 /* declare some private DMMoab specific overrides */
 static PetscErrorCode DMCreateVector_Moab_Private(DM dm,moab::Tag tag,const moab::Range* userrange,PetscBool is_global_vec,PetscBool destroy_tag,Vec *vec);
 static PetscErrorCode DMVecUserDestroy_Moab(void *user);
-static PetscErrorCode DMVecDuplicate_Moab(Vec x,Vec *y);
+static PetscErrorCode DMVecDuplicate_Moab(Vec x,Vec *y,PetscDeviceContext);
 #ifdef MOAB_HAVE_MPI
 static PetscErrorCode DMVecCreateTagName_Moab_Private(moab::Interface *mbiface,moab::ParallelComm *pcomm,char** tag_name);
 #else
@@ -607,7 +607,7 @@ PETSC_EXTERN PetscErrorCode DMCreateLocalVector_Moab(DM dm, Vec *lvec)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode DMVecDuplicate_Moab(Vec x, Vec *y)
+PetscErrorCode DMVecDuplicate_Moab(Vec x, Vec *y, PetscDeviceContext)
 {
   DM             dm;
   PetscContainer  moabdata;
