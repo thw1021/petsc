@@ -347,8 +347,8 @@ PetscErrorCode PetscDeviceInitializeDefaultDevice_Internal(PetscDeviceType type,
   PetscFunctionBegin;
   PetscValidDeviceType(type,1);
   if (PetscUnlikely(!PetscDeviceInitialized(type))) {
-    auto&          dev  = defaultDevices[type].first;
-    auto&          init = defaultDevices[type].second;
+    auto& dev  = defaultDevices[type].first;
+    auto& init = defaultDevices[type].second;
 
     PetscAssert(!dev,PETSC_COMM_SELF,PETSC_ERR_MEM,"Trying to overwrite existing default device of type %s",PetscDeviceTypes[type]);
     PetscCall(PetscDeviceCreate(type,defaultDeviceId,&dev));
