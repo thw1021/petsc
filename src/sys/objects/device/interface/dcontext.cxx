@@ -634,9 +634,9 @@ static auto nullContextsFinalizer = false;
 
 PetscErrorCode PetscDeviceContextGetNullContextForType_Internal(PetscDevice device, PetscDeviceContext *dctx)
 {
-  const auto     devid   = device->deviceId;
-  const auto     dtype   = device->type;
-  auto&          ctxlist = nullContexts[dtype];
+  const auto devid   = device->deviceId;
+  const auto dtype   = device->type;
+  auto&      ctxlist = nullContexts[dtype];
 
   PetscFunctionBegin;
   PetscValidDevice(device,1);
