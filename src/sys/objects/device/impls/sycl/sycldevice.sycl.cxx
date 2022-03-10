@@ -189,8 +189,6 @@ PetscErrorCode Device::finalize_() noexcept
 
 PetscErrorCode Device::getDevice(PetscDevice device, PetscInt id) const noexcept
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscCheck(defaultDevice_ != PETSC_SYCL_DEVICE_NONE,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Trying to retrieve a SYCL PetscDevice when it has been disabled");
   if (id == PETSC_DECIDE) id = defaultDevice_;
