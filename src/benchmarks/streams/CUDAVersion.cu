@@ -24,7 +24,7 @@ static char help[] = "Double-Precision STREAM Benchmark implementation in CUDA\n
 #include <petscconf.h>
 #include <petscsys.h>
 #include <petsctime.h>
-#include <petscdevice.h>
+#include <petscdevice_cuda.h>
 
 #define N        10000000
 #define NTIMES   10

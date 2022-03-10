@@ -338,6 +338,16 @@ PetscBool PetscDeviceInitialized(PetscDeviceType type)
   return static_cast<PetscBool>(PetscDeviceConfiguredFor_Internal(type) && defaultDevices[type].second);
 }
 
+/* Get the default PetscDevice for a particular type and constructs them if lazily initialized. */
+PetscErrorCode PetscDeviceGetDefaultForType_Internal(PetscDeviceType type, PetscDevice *device)
+{
+  PetscFunctionBegin;
+  PetscValidPointer(device,2);
+  PetscCall(PetscDeviceInitialize(type));
+  *device = defaultDevices[type].first;
+  PetscFunctionReturn(0);
+}
+
 /*
   Actual intialization function; any functions claiming to initialize PetscDevice or
   PetscDeviceContext will have to run through this one
@@ -347,8 +357,8 @@ PetscErrorCode PetscDeviceInitializeDefaultDevice_Internal(PetscDeviceType type,
   PetscFunctionBegin;
   PetscValidDeviceType(type,1);
   if (PetscUnlikely(!PetscDeviceInitialized(type))) {
-    auto&          dev  = defaultDevices[type].first;
-    auto&          init = defaultDevices[type].second;
+    auto& dev  = defaultDevices[type].first;
+    auto& init = defaultDevices[type].second;
 
     PetscAssert(!dev,PETSC_COMM_SELF,PETSC_ERR_MEM,"Trying to overwrite existing default device of type %s",PetscDeviceTypes[type]);
     PetscCall(PetscDeviceCreate(type,defaultDeviceId,&dev));
@@ -555,15 +565,5 @@ PetscErrorCode PetscDeviceInitializeFromOptions_Internal(MPI_Comm comm)
     PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
     PetscCall(PetscDeviceContextSetUp(dctx));
   }
-  PetscFunctionReturn(0);
-}
-
-/* Get the default PetscDevice for a particular type and constructs them if lazily initialized. */
-PetscErrorCode PetscDeviceGetDefaultForType_Internal(PetscDeviceType type, PetscDevice *device)
-{
-  PetscFunctionBegin;
-  PetscValidPointer(device,2);
-  PetscCall(PetscDeviceInitialize(type));
-  *device = defaultDevices[type].first;
   PetscFunctionReturn(0);
 }
