@@ -21,12 +21,9 @@ private:
 
 public:
   PETSC_NODISCARD static PetscErrorCode initialize(MPI_Comm,PetscInt*,PetscDeviceInitType*) noexcept;
-
-  PETSC_NODISCARD PetscErrorCode getDevice(PetscDevice,PetscInt) const noexcept;
-
-  PETSC_NODISCARD static PetscErrorCode configureDevice(PetscDevice) noexcept;
-
-  PETSC_NODISCARD static PetscErrorCode viewDevice(PetscDevice,PetscViewer) noexcept;
+  PETSC_NODISCARD        PetscErrorCode getDevice(PetscDevice,PetscInt)               const noexcept;
+  PETSC_NODISCARD static PetscErrorCode configureDevice(PetscDevice)                        noexcept;
+  PETSC_NODISCARD static PetscErrorCode viewDevice(PetscDevice,PetscViewer)                 noexcept;
 };
 
 } // namespace Host
