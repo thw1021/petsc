@@ -1,6 +1,27 @@
 
 #include <petsc/private/vecimpl.h>           /*I  "petscvec.h"   I*/
 
+PetscErrorCode VecCreateAsync(MPI_Comm comm, PetscDeviceContext PETSC_UNUSED dctx, Vec *vec)
+{
+  PetscFunctionBegin;
+  PetscValidPointer(vec,3);
+  PetscCall(VecInitializePackage());
+  *vec = NULL;
+
+  PetscCall(PetscHeaderCreate(*vec,VEC_CLASSID,"Vec","Vector","Vec",comm,VecDestroy,VecView));
+  PetscCall(PetscLayoutCreate(comm,&(*vec)->map));
+  (*vec)->array_gotten = PETSC_FALSE;
+  (*vec)->petscnative  = PETSC_FALSE;
+  (*vec)->offloadmask  = PETSC_OFFLOAD_UNALLOCATED;
+#if PetscDefined(HAVE_DEVICE)
+  (*vec)->minimum_bytes_pinned_memory = 0;
+  (*vec)->pinned_memory               = PETSC_FALSE;
+  (*vec)->boundtocpu                  = PETSC_TRUE;
+#endif
+  PetscCall(PetscStrallocpy(PETSCRANDER48,&(*vec)->defaultrandtype));
+  PetscFunctionReturn(0);
+}
+
 /*@
   VecCreate - Creates an empty vector object. The type can then be set with VecSetType(),
   or VecSetFromOptions().
@@ -23,27 +44,7 @@
 @*/
 PetscErrorCode  VecCreate(MPI_Comm comm, Vec *vec)
 {
-  Vec            v;
-
   PetscFunctionBegin;
-  PetscValidPointer(vec,2);
-  *vec = NULL;
-  PetscCall(VecInitializePackage());
-
-  PetscCall(PetscHeaderCreate(v, VEC_CLASSID, "Vec", "Vector", "Vec", comm, VecDestroy, VecView));
-
-  PetscCall(PetscLayoutCreate(comm,&v->map));
-  v->array_gotten = PETSC_FALSE;
-  v->petscnative  = PETSC_FALSE;
-  v->offloadmask  = PETSC_OFFLOAD_UNALLOCATED;
-#if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
-  v->minimum_bytes_pinned_memory = 0;
-  v->pinned_memory = PETSC_FALSE;
-#endif
-#if defined(PETSC_HAVE_DEVICE)
-  v->boundtocpu = PETSC_TRUE;
-#endif
-  PetscCall(PetscStrallocpy(PETSCRANDER48,&v->defaultrandtype));
-  *vec = v;
+  PetscCall(VecCreateAsync(comm,NULL,vec));
   PetscFunctionReturn(0);
 }
