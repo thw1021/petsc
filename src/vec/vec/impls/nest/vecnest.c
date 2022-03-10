@@ -1,5 +1,6 @@
 
 #include <../src/vec/vec/impls/nest/vecnestimpl.h>   /*I  "petscvec.h"   I*/
+#include <petscdevicetypes.h>
 
 /* check all blocks are filled */
 static PetscErrorCode VecAssemblyBegin_Nest(Vec v)
@@ -159,7 +160,7 @@ static PetscErrorCode VecDotNorm2_Nest(Vec x,Vec y,PetscScalar *dp, PetscScalar 
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecAXPY_Nest(Vec y,PetscScalar alpha,Vec x)
+static PetscErrorCode VecAXPY_Nest(Vec y,PetscManagedScalar alpha,Vec x,PetscDeviceContext PETSC_UNUSED dctx)
 {
   Vec_Nest       *bx = (Vec_Nest*)x->data;
   Vec_Nest       *by = (Vec_Nest*)y->data;
@@ -169,7 +170,7 @@ static PetscErrorCode VecAXPY_Nest(Vec y,PetscScalar alpha,Vec x)
   PetscFunctionBegin;
   nr = bx->nb;
   for (i=0; i<nr; i++) {
-    ierr = VecAXPY(by->v[i],alpha,bx->v[i]);CHKERRQ(ierr);
+    ierr = VecAXPYAsync(by->v[i],alpha,bx->v[i]);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }

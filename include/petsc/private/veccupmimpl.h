@@ -162,16 +162,14 @@ struct Vec_CUPMBase : Device::CUPM::Impl::BlasInterface<T>
 private:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode VecCUPMAllocateCheck_(Vec));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode VecIMPLAllocateCheck_(Vec));
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode GetHandleDispatch_(PetscDeviceContext *dctx, cupmBlasHandle_t *handle, cupmStream_t *stream))
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode GetHandleDispatch_(PetscDeviceContext dctx, cupmBlasHandle_t *handle, cupmStream_t *stream))
   {
-    PetscDeviceContext dctx_;
-    PetscErrorCode     ierr;
+    PetscErrorCode ierr;
 
     PetscFunctionBegin;
-    ierr = PetscDeviceContextGetCurrentContextAssertType_Internal(&dctx_,cupmDeviceTypeToPetscDeviceType());CHKERRQ(ierr);
-    if (handle) {ierr = PetscDeviceContextGetBLASHandle_Internal(dctx_,handle);CHKERRQ(ierr);}
-    if (stream) {ierr = PetscDeviceContextGetStreamHandle_Internal(dctx_,stream);CHKERRQ(ierr);}
-    if (dctx) *dctx = dctx_;
+    PetscCheckCompatibleDeviceTypes(cupmDeviceTypeToPetscDeviceType(),-1,dctx->device->type,1);
+    if (handle) {ierr = PetscDeviceContextGetBLASHandle_Internal(dctx,handle);CHKERRQ(ierr);}
+    if (stream) {ierr = PetscDeviceContextGetStreamHandle_Internal(dctx,stream);CHKERRQ(ierr);}
     PetscFunctionReturn(0);
   }
   PETSC_CXX_COMPAT_DECL(PetscErrorCode CheckPointerMatchesMemType_(const void *ptr, PetscMemType mtype))
@@ -323,19 +321,14 @@ public:
     PetscFunctionReturn(0);
   }
 
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode GetHandles_(PetscDeviceContext *dctx, cupmBlasHandle_t *handle = nullptr, cupmStream_t *stream = nullptr))
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode GetHandles_(PetscDeviceContext dctx, cupmBlasHandle_t *handle = nullptr, cupmStream_t *stream = nullptr))
   {
     return GetHandleDispatch_(dctx,handle,stream);
   }
 
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode GetHandles_(PetscDeviceContext *dctx, cupmStream_t *stream))
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode GetHandles_(PetscDeviceContext dctx, cupmStream_t *stream))
   {
     return GetHandles_(dctx,nullptr,stream); // other overload
-  }
-
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode GetHandles_(cupmStream_t *stream))
-  {
-    return GetHandles_(nullptr,nullptr,stream); // other overload
   }
 
   // RAII versions of the get/restore array routines. Determines constness of the pointer type,
