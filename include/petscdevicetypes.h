@@ -200,4 +200,84 @@ PETSC_EXTERN const char *const PetscDeviceContextJoinModes[];
 PetscDeviceContextDestroy(), PetscDeviceContextFork(), PetscDeviceContextJoin()
 S*/
 typedef struct _n_PetscDeviceContext *PetscDeviceContext;
+
+#if defined(__cplusplus)
+template <typename T>
+struct PetscManagedType
+{
+  T            *ptr;
+  PetscInt     n;
+  PetscMemType mtype;
+
+  PetscManagedType(T *_ptr = nullptr, PetscInt _n = 1, PetscMemType _mtype = PETSC_MEMTYPE_HOST) noexcept
+    : ptr(_ptr), n(_n), mtype(_mtype)
+  { }
+
+        T& operator[](std::size_t idx)       noexcept { return this->ptr[idx]; }
+  const T& operator[](std::size_t idx) const noexcept { return this->ptr[idx]; }
+
+  bool operator==(const T &b) const noexcept
+  {
+    return PetscMemTypeHost(this->mtype) ? (*this->ptr == b) : false;
+  }
+
+  bool operator!=(const T &b) const noexcept
+  {
+    return !(this == b);
+  }
+};
+
+using PetscManagedScalar = PetscManagedType<PetscScalar>;
+using PetscManagedReal   = PetscManagedType<PetscReal>;
+using PetscManagedInt    = PetscManagedType<PetscInt>;
+#else
+#define PETSC_MANAGED_TYPE_CDECL(name)          \
+  typedef struct PetscConcat(PetscManaged,name) \
+  {                                             \
+    PetscConcat(Petsc,name) *ptr;               \
+    PetscCount              n;                  \
+    PetscMemType            mtype;              \
+  } PetscConcat(PetscManaged,name)
+
+PETSC_MANAGED_TYPE_CDECL(Scalar);
+PETSC_MANAGED_TYPE_CDECL(Real);
+PETSC_MANAGED_TYPE_CDECL(Int);
+
+#undef PETSC_MANAGED_TYPE_CDECL
+#endif
+
+#define PETSC_MANAGED_TYPE_OPERATOR_DECL_(PetscManagedType,PetscType)                          \
+  static inline PetscBool PetscConcat(PetscManagedType,Eq)(PetscManagedType scal, PetscType val) \
+  {                                                                                            \
+    return PetscMemTypeHost(scal.mtype) ? (PetscBool)(*scal.ptr == val) : PETSC_FALSE;         \
+  }                                                                                            \
+  static inline PetscManagedType PetscConcat(PetscManagedType,Create)(PetscType *scal)         \
+  {                                                                                            \
+    PetscManagedType s = {                                                                     \
+      PetscDesignatedInitializer(ptr,scal),                                                    \
+      PetscDesignatedInitializer(mtype,PETSC_MEMTYPE_HOST)                                     \
+    };                                                                                         \
+    return s;                                                                                  \
+  }                                                                                            \
+  static inline PetscErrorCode PetscConcat(PetscManagedType,Set)(PetscManagedType scal, PetscDeviceContext dctx, PetscManagedType val) \
+  {                                                                                            \
+    PetscFunctionBegin;                                                                        \
+    if (PetscMemTypeHost(scal)) {                                                              \
+      if (n == 1) *scal.ptr = *val;                                                            \
+      else PetscCall(PetscArraycpy(scal.ptr,val,n));                                           \
+    } else {                                                                                   \
+      PetscCall(PetscDeviceArraycpy(dctx,scal.ptr,val,n));                                     \
+    }                                                                                          \
+    PetscFunctionReturn(0);                                                                    \
+  }
+
+#define PETSC_MANAGED_TYPE_OPERATOR_DECL(name)                                                 \
+  PETSC_MANAGED_TYPE_OPERATOR_DECL_(PetscConcat(PetscManaged,name),PetscConcat(Petsc,name))
+
+PETSC_MANAGED_TYPE_OPERATOR_DECL(Scalar);
+PETSC_MANAGED_TYPE_OPERATOR_DECL(Real);
+PETSC_MANAGED_TYPE_OPERATOR_DECL(Int);
+
+#undef PETSC_MANAGED_TYPE_OPERATOR_DECL
+
 #endif /* PETSCDEVICETYPES_H */

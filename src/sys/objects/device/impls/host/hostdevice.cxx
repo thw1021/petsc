@@ -11,9 +11,9 @@ namespace Host
 
 PetscErrorCode Device::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, PetscDeviceInitType *defaultInitType) noexcept
 {
-  auto           initType = std::make_pair(*defaultInitType,PETSC_FALSE);
-  auto           initId   = std::make_pair(*defaultDeviceId,PETSC_FALSE);
-  auto           initView = std::make_pair(PETSC_FALSE,PETSC_FALSE);
+  auto initType = std::make_pair(*defaultInitType,PETSC_FALSE);
+  auto initId   = std::make_pair(*defaultDeviceId,PETSC_FALSE);
+  auto initView = std::make_pair(PETSC_FALSE,PETSC_FALSE);
 
   PetscFunctionBegin;
   PetscCall(base_type::PetscOptionDeviceAll(comm,initType,initId,initView));
@@ -47,9 +47,8 @@ PetscErrorCode Device::configureDevice(PetscDevice) noexcept { return 0; }
 
 PetscErrorCode Device::viewDevice(PetscDevice device, PetscViewer viewer) noexcept
 {
-  const auto     vobj = PetscObjectCast(viewer);
-  PetscBool      iascii;
-  PetscErrorCode ierr;
+  const auto vobj = PetscObjectCast(viewer);
+  PetscBool  iascii;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare(vobj,PETSCVIEWERASCII,&iascii));
