@@ -60,14 +60,14 @@ typedef struct {
   PetscScalar *sendbuf,*recvbuf;  /* Buffers for remote values in VecSetValuesCOO() */
 } Vec_MPI;
 
-PETSC_INTERN PetscErrorCode VecDot_MPI(Vec,Vec,PetscScalar*);
-PETSC_INTERN PetscErrorCode VecMDot_MPI(Vec,PetscInt,const Vec[],PetscScalar*);
-PETSC_INTERN PetscErrorCode VecTDot_MPI(Vec,Vec,PetscScalar*);
-PETSC_INTERN PetscErrorCode VecMTDot_MPI(Vec,PetscInt,const Vec[],PetscScalar*);
-PETSC_INTERN PetscErrorCode VecNorm_MPI(Vec,NormType,PetscReal*);
-PETSC_INTERN PetscErrorCode VecMax_MPI(Vec,PetscInt*,PetscReal*);
-PETSC_INTERN PetscErrorCode VecMin_MPI(Vec,PetscInt*,PetscReal*);
-PETSC_INTERN PetscErrorCode VecDestroy_MPI(Vec);
+PETSC_INTERN PetscErrorCode VecDot_MPI(Vec,Vec,PetscManagedScalar,PetscDeviceContext);
+PETSC_INTERN PetscErrorCode VecMDot_MPI(Vec,PetscManagedInt,const Vec[],PetscManagedScalar,PetscDeviceContext);
+PETSC_INTERN PetscErrorCode VecTDot_MPI(Vec,Vec,PetscManagedScalar,PetscDeviceContext);
+PETSC_INTERN PetscErrorCode VecMTDot_MPI(Vec,PetscManagedInt,const Vec[],PetscManagedScalar,PetscDeviceContext);
+PETSC_INTERN PetscErrorCode VecNorm_MPI(Vec,NormType,PetscManagedReal,PetscDeviceContext);
+PETSC_INTERN PetscErrorCode VecMax_MPI(Vec,PetscManagedInt,PetscManagedReal,PetscDeviceContext);
+PETSC_INTERN PetscErrorCode VecMin_MPI(Vec,PetscManagedInt,PetscManagedReal,PetscDeviceContext);
+PETSC_INTERN PetscErrorCode VecDestroy_MPI(Vec,PetscDeviceContext);
 PETSC_INTERN PetscErrorCode VecView_MPI_Binary(Vec,PetscViewer);
 PETSC_INTERN PetscErrorCode VecView_MPI_Draw_LG(Vec,PetscViewer);
 PETSC_INTERN PetscErrorCode VecView_MPI_Socket(Vec,PetscViewer);
@@ -81,11 +81,11 @@ PETSC_INTERN PetscErrorCode VecSetValuesBlocked_MPI(Vec,PetscInt,const PetscInt 
 PETSC_INTERN PetscErrorCode VecAssemblyBegin_MPI(Vec);
 PETSC_INTERN PetscErrorCode VecAssemblyEnd_MPI(Vec);
 PETSC_INTERN PetscErrorCode VecAssemblyReset_MPI(Vec);
-PETSC_INTERN PetscErrorCode VecCreate_MPI_Private(Vec,PetscBool,PetscInt,const PetscScalar[]);
-PETSC_EXTERN PetscErrorCode VecCreate_MPI(Vec);
-PETSC_INTERN PetscErrorCode VecDuplicate_MPI(Vec,Vec*);
+PETSC_INTERN PetscErrorCode VecCreate_MPI_Private(Vec,PetscBool,PetscInt,const PetscScalar[],PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode VecCreate_MPI(Vec,PetscDeviceContext);
+PETSC_INTERN PetscErrorCode VecDuplicate_MPI(Vec,Vec*,PetscDeviceContext);
+PETSC_INTERN PetscErrorCode VecResetArray_MPI(Vec,PetscDeviceContext);
+PETSC_INTERN PetscErrorCode VecPlaceArray_MPI(Vec,const PetscScalar*,PetscDeviceContext);
 PETSC_INTERN PetscErrorCode VecSetPreallocationCOO_MPI(Vec,PetscCount,const PetscInt[]);
 PETSC_INTERN PetscErrorCode VecSetValuesCOO_MPI(Vec,const PetscScalar[],InsertMode);
-PETSC_INTERN PetscErrorCode VecResetArray_MPI(Vec);
-PETSC_INTERN PetscErrorCode VecPlaceArray_MPI(Vec,const PetscScalar*);
 #endif

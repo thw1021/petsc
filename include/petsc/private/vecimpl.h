@@ -20,91 +20,91 @@ PETSC_EXTERN MPI_Op MPIU_MINLOC;
 
 typedef struct _VecOps *VecOps;
 struct _VecOps {
-  PetscErrorCode (*duplicate)(Vec,Vec*);         /* get single vector */
+  PetscErrorCode (*duplicate)(Vec,Vec*,PetscDeviceContext);         /* get single vector */
   PetscErrorCode (*duplicatevecs)(Vec,PetscInt,Vec**);     /* get array of vectors */
   PetscErrorCode (*destroyvecs)(PetscInt,Vec[]);           /* free array of vectors */
-  PetscErrorCode (*dot)(Vec,Vec,PetscScalar*);             /* z = x^H * y */
-  PetscErrorCode (*mdot)(Vec,PetscInt,const Vec[],PetscScalar*); /* z[j] = x dot y[j] */
-  PetscErrorCode (*norm)(Vec,NormType,PetscReal*);        /* z = sqrt(x^H * x) */
-  PetscErrorCode (*tdot)(Vec,Vec,PetscScalar*);             /* x'*y */
-  PetscErrorCode (*mtdot)(Vec,PetscInt,const Vec[],PetscScalar*);/* z[j] = x dot y[j] */
-  PetscErrorCode (*scale)(Vec,PetscScalar);                 /* x = alpha * x   */
-  PetscErrorCode (*copy)(Vec,Vec);                     /* y = x */
-  PetscErrorCode (*set)(Vec,PetscScalar);                        /* y = alpha  */
-  PetscErrorCode (*swap)(Vec,Vec);                               /* exchange x and y */
-  PetscErrorCode (*axpy)(Vec,PetscScalar,Vec);                   /* y = y + alpha * x */
-  PetscErrorCode (*axpby)(Vec,PetscScalar,PetscScalar,Vec);      /* y = alpha * x + beta * y*/
-  PetscErrorCode (*maxpy)(Vec,PetscInt,const PetscScalar*,Vec*); /* y = y + alpha[j] x[j] */
-  PetscErrorCode (*aypx)(Vec,PetscScalar,Vec);                   /* y = x + alpha * y */
-  PetscErrorCode (*waxpy)(Vec,PetscScalar,Vec,Vec);         /* w = y + alpha * x */
-  PetscErrorCode (*axpbypcz)(Vec,PetscScalar,PetscScalar,PetscScalar,Vec,Vec);   /* z = alpha * x + beta *y + gamma *z*/
-  PetscErrorCode (*pointwisemult)(Vec,Vec,Vec);        /* w = x .* y */
-  PetscErrorCode (*pointwisedivide)(Vec,Vec,Vec);      /* w = x ./ y */
+  PetscErrorCode (*dot)(Vec,Vec,PetscManagedScalar,PetscDeviceContext);             /* z = x^H * y */
+  PetscErrorCode (*mdot)(Vec,PetscManagedInt,const Vec[],PetscManagedScalar,PetscDeviceContext); /* z[j] = x dot y[j] */
+  PetscErrorCode (*norm)(Vec,NormType,PetscManagedReal,PetscDeviceContext);        /* z = sqrt(x^H * x) */
+  PetscErrorCode (*tdot)(Vec,Vec,PetscManagedScalar,PetscDeviceContext);             /* x'*y */
+  PetscErrorCode (*mtdot)(Vec,PetscManagedInt,const Vec[],PetscManagedScalar,PetscDeviceContext);/* z[j] = x dot y[j] */
+  PetscErrorCode (*scale)(Vec,PetscManagedScalar,PetscDeviceContext);                 /* x = alpha * x   */
+  PetscErrorCode (*copy)(Vec,Vec,PetscDeviceContext);                     /* y = x */
+  PetscErrorCode (*set)(Vec,PetscManagedScalar,PetscDeviceContext);                        /* y = alpha  */
+  PetscErrorCode (*swap)(Vec,Vec,PetscDeviceContext);                               /* exchange x and y */
+  PetscErrorCode (*axpy)(Vec,PetscManagedScalar,Vec,PetscDeviceContext);                   /* y = y + alpha * x */
+  PetscErrorCode (*axpby)(Vec,PetscManagedScalar,PetscManagedScalar,Vec,PetscDeviceContext);      /* y = alpha * x + beta * y*/
+  PetscErrorCode (*maxpy)(Vec,PetscManagedInt,PetscManagedScalar,Vec*,PetscDeviceContext); /* y = y + alpha[j] x[j] */
+  PetscErrorCode (*aypx)(Vec,PetscManagedScalar,Vec,PetscDeviceContext);                   /* y = x + alpha * y */
+  PetscErrorCode (*waxpy)(Vec,PetscManagedScalar,Vec,Vec,PetscDeviceContext);         /* w = y + alpha * x */
+  PetscErrorCode (*axpbypcz)(Vec,PetscManagedScalar,PetscManagedScalar,PetscManagedScalar,Vec,Vec,PetscDeviceContext);   /* z = alpha * x + beta *y + gamma *z*/
+  PetscErrorCode (*pointwisemult)(Vec,Vec,Vec,PetscDeviceContext);        /* w = x .* y */
+  PetscErrorCode (*pointwisedivide)(Vec,Vec,Vec,PetscDeviceContext);      /* w = x ./ y */
   PetscErrorCode (*setvalues)(Vec,PetscInt,const PetscInt[],const PetscScalar[],InsertMode);
   PetscErrorCode (*assemblybegin)(Vec);                /* start global assembly */
   PetscErrorCode (*assemblyend)(Vec);                  /* end global assembly */
-  PetscErrorCode (*getarray)(Vec,PetscScalar**);            /* get data array */
+  PetscErrorCode (*getarray)(Vec,PetscScalar**,PetscDeviceContext);            /* get data array */
   PetscErrorCode (*getsize)(Vec,PetscInt*);
   PetscErrorCode (*getlocalsize)(Vec,PetscInt*);
-  PetscErrorCode (*restorearray)(Vec,PetscScalar**);        /* restore data array */
-  PetscErrorCode (*max)(Vec,PetscInt*,PetscReal*);      /* z = max(x); idx=index of max(x) */
-  PetscErrorCode (*min)(Vec,PetscInt*,PetscReal*);      /* z = min(x); idx=index of min(x) */
-  PetscErrorCode (*setrandom)(Vec,PetscRandom);         /* set y[j] = random numbers */
+  PetscErrorCode (*restorearray)(Vec,PetscScalar**,PetscDeviceContext);        /* restore data array */
+  PetscErrorCode (*max)(Vec,PetscManagedInt,PetscManagedReal,PetscDeviceContext);      /* z = max(x); idx=index of max(x) */
+  PetscErrorCode (*min)(Vec,PetscManagedInt,PetscManagedReal,PetscDeviceContext);      /* z = min(x); idx=index of min(x) */
+  PetscErrorCode (*setrandom)(Vec,PetscRandom,PetscDeviceContext);         /* set y[j] = random numbers */
   PetscErrorCode (*setoption)(Vec,VecOption,PetscBool);
   PetscErrorCode (*setvaluesblocked)(Vec,PetscInt,const PetscInt[],const PetscScalar[],InsertMode);
-  PetscErrorCode (*destroy)(Vec);
+  PetscErrorCode (*destroy)(Vec,PetscDeviceContext);
   PetscErrorCode (*view)(Vec,PetscViewer);
-  PetscErrorCode (*placearray)(Vec,const PetscScalar*);     /* place data array */
-  PetscErrorCode (*replacearray)(Vec,const PetscScalar*);     /* replace data array */
-  PetscErrorCode (*dot_local)(Vec,Vec,PetscScalar*);
-  PetscErrorCode (*tdot_local)(Vec,Vec,PetscScalar*);
-  PetscErrorCode (*norm_local)(Vec,NormType,PetscReal*);
-  PetscErrorCode (*mdot_local)(Vec,PetscInt,const Vec[],PetscScalar*);
-  PetscErrorCode (*mtdot_local)(Vec,PetscInt,const Vec[],PetscScalar*);
+  PetscErrorCode (*placearray)(Vec,const PetscScalar*,PetscDeviceContext);     /* place data array */
+  PetscErrorCode (*replacearray)(Vec,const PetscScalar*,PetscDeviceContext);     /* replace data array */
+  PetscErrorCode (*dot_local)(Vec,Vec,PetscManagedScalar,PetscDeviceContext);
+  PetscErrorCode (*tdot_local)(Vec,Vec,PetscManagedScalar,PetscDeviceContext);
+  PetscErrorCode (*norm_local)(Vec,NormType,PetscManagedReal,PetscDeviceContext);
+  PetscErrorCode (*mdot_local)(Vec,PetscManagedInt,const Vec[],PetscManagedScalar,PetscDeviceContext);
+  PetscErrorCode (*mtdot_local)(Vec,PetscManagedInt,const Vec[],PetscManagedScalar,PetscDeviceContext);
   PetscErrorCode (*load)(Vec,PetscViewer);
-  PetscErrorCode (*reciprocal)(Vec);
-  PetscErrorCode (*conjugate)(Vec);
+  PetscErrorCode (*reciprocal)(Vec,PetscDeviceContext);
+  PetscErrorCode (*conjugate)(Vec,PetscDeviceContext);
   PetscErrorCode (*setlocaltoglobalmapping)(Vec,ISLocalToGlobalMapping);
   PetscErrorCode (*setvalueslocal)(Vec,PetscInt,const PetscInt *,const PetscScalar *,InsertMode);
-  PetscErrorCode (*resetarray)(Vec);      /* vector points to its original array, i.e. undoes any VecPlaceArray() */
+  PetscErrorCode (*resetarray)(Vec,PetscDeviceContext);      /* vector points to its original array, i.e. undoes any VecPlaceArray() */
   PetscErrorCode (*setfromoptions)(PetscOptionItems*,Vec);
-  PetscErrorCode (*maxpointwisedivide)(Vec,Vec,PetscReal*);      /* m = max abs(x ./ y) */
-  PetscErrorCode (*pointwisemax)(Vec,Vec,Vec);
-  PetscErrorCode (*pointwisemaxabs)(Vec,Vec,Vec);
-  PetscErrorCode (*pointwisemin)(Vec,Vec,Vec);
+  PetscErrorCode (*maxpointwisedivide)(Vec,Vec,PetscManagedReal,PetscDeviceContext);      /* m = max abs(x ./ y) */
+  PetscErrorCode (*pointwisemax)(Vec,Vec,Vec,PetscDeviceContext);
+  PetscErrorCode (*pointwisemaxabs)(Vec,Vec,Vec,PetscDeviceContext);
+  PetscErrorCode (*pointwisemin)(Vec,Vec,Vec,PetscDeviceContext);
   PetscErrorCode (*getvalues)(Vec,PetscInt,const PetscInt[],PetscScalar[]);
-  PetscErrorCode (*sqrt)(Vec);
-  PetscErrorCode (*abs)(Vec);
-  PetscErrorCode (*exp)(Vec);
-  PetscErrorCode (*log)(Vec);
-  PetscErrorCode (*shift)(Vec,PetscScalar);
-  PetscErrorCode (*create)(Vec);
+  PetscErrorCode (*sqrt)(Vec,PetscDeviceContext);
+  PetscErrorCode (*abs)(Vec,PetscDeviceContext);
+  PetscErrorCode (*exp)(Vec,PetscDeviceContext);
+  PetscErrorCode (*log)(Vec,PetscDeviceContext);
+  PetscErrorCode (*shift)(Vec,PetscManagedScalar,PetscDeviceContext);
+  PetscErrorCode (*create)(Vec,PetscDeviceContext);
   PetscErrorCode (*stridegather)(Vec,PetscInt,Vec,InsertMode);
   PetscErrorCode (*stridescatter)(Vec,PetscInt,Vec,InsertMode);
-  PetscErrorCode (*dotnorm2)(Vec,Vec,PetscScalar*,PetscScalar*);
+  PetscErrorCode (*dotnorm2)(Vec,Vec,PetscManagedScalar,PetscManagedScalar,PetscDeviceContext);
   PetscErrorCode (*getsubvector)(Vec,IS,Vec*);
   PetscErrorCode (*restoresubvector)(Vec,IS,Vec*);
-  PetscErrorCode (*getarrayread)(Vec,const PetscScalar**);
-  PetscErrorCode (*restorearrayread)(Vec,const PetscScalar**);
+  PetscErrorCode (*getarrayread)(Vec,const PetscScalar**,PetscDeviceContext);
+  PetscErrorCode (*restorearrayread)(Vec,const PetscScalar**,PetscDeviceContext);
   PetscErrorCode (*stridesubsetgather)(Vec,PetscInt,const PetscInt[],const PetscInt[],Vec,InsertMode);
   PetscErrorCode (*stridesubsetscatter)(Vec,PetscInt,const PetscInt[],const PetscInt[],Vec,InsertMode);
   PetscErrorCode (*viewnative)(Vec,PetscViewer);
   PetscErrorCode (*loadnative)(Vec,PetscViewer);
-  PetscErrorCode (*getlocalvector)(Vec,Vec);
-  PetscErrorCode (*restorelocalvector)(Vec,Vec);
-  PetscErrorCode (*getlocalvectorread)(Vec,Vec);
-  PetscErrorCode (*restorelocalvectorread)(Vec,Vec);
-  PetscErrorCode (*bindtocpu)(Vec,PetscBool);
-  PetscErrorCode (*getarraywrite)(Vec,PetscScalar**);
-  PetscErrorCode (*restorearraywrite)(Vec,PetscScalar**);
-  PetscErrorCode (*getarrayandmemtype)(Vec,PetscScalar**,PetscMemType*);
-  PetscErrorCode (*restorearrayandmemtype)(Vec,PetscScalar**);
-  PetscErrorCode (*getarrayreadandmemtype)(Vec,const PetscScalar**,PetscMemType*);
-  PetscErrorCode (*restorearrayreadandmemtype)(Vec,const PetscScalar**);
-  PetscErrorCode (*getarraywriteandmemtype)(Vec,PetscScalar**,PetscMemType*);
-  PetscErrorCode (*restorearraywriteandmemtype)(Vec,PetscScalar**,PetscMemType*);
+  PetscErrorCode (*getlocalvector)(Vec,Vec,PetscDeviceContext);
+  PetscErrorCode (*restorelocalvector)(Vec,Vec,PetscDeviceContext);
+  PetscErrorCode (*getlocalvectorread)(Vec,Vec,PetscDeviceContext);
+  PetscErrorCode (*restorelocalvectorread)(Vec,Vec,PetscDeviceContext);
+  PetscErrorCode (*bindtocpu)(Vec,PetscBool,PetscDeviceContext);
+  PetscErrorCode (*getarraywrite)(Vec,PetscScalar**,PetscDeviceContext);
+  PetscErrorCode (*restorearraywrite)(Vec,PetscScalar**,PetscDeviceContext);
+  PetscErrorCode (*getarrayandmemtype)(Vec,PetscScalar**,PetscMemType*,PetscDeviceContext);
+  PetscErrorCode (*restorearrayandmemtype)(Vec,PetscScalar**,PetscDeviceContext);
+  PetscErrorCode (*getarrayreadandmemtype)(Vec,const PetscScalar**,PetscMemType*,PetscDeviceContext);
+  PetscErrorCode (*restorearrayreadandmemtype)(Vec,const PetscScalar**,PetscDeviceContext);
+  PetscErrorCode (*getarraywriteandmemtype)(Vec,PetscScalar**,PetscMemType*,PetscDeviceContext);
+  PetscErrorCode (*restorearraywriteandmemtype)(Vec,PetscScalar**,PetscMemType*,PetscDeviceContext);
   PetscErrorCode (*concatenate)(PetscInt,const Vec[],Vec*,IS*[]);
-  PetscErrorCode (*sum)(Vec,PetscScalar*);
+  PetscErrorCode (*sum)(Vec,PetscManagedScalar,PetscDeviceContext);
   PetscErrorCode (*setpreallocationcoo)(Vec,PetscCount,const PetscInt[]);
   PetscErrorCode (*setvaluescoo)(Vec,const PetscScalar[],InsertMode);
 };
@@ -294,7 +294,7 @@ static inline PetscErrorCode VecStashValuesBlocked_Private(VecStash *stash,Petsc
 
 PETSC_INTERN PetscErrorCode VecStrideGather_Default(Vec,PetscInt,Vec,InsertMode);
 PETSC_INTERN PetscErrorCode VecStrideScatter_Default(Vec,PetscInt,Vec,InsertMode);
-PETSC_INTERN PetscErrorCode VecReciprocal_Default(Vec);
+PETSC_INTERN PetscErrorCode VecReciprocal_Default(Vec,PetscDeviceContext);
 PETSC_INTERN PetscErrorCode VecStrideSubSetGather_Default(Vec,PetscInt,const PetscInt[],const PetscInt[],Vec,InsertMode);
 PETSC_INTERN PetscErrorCode VecStrideSubSetScatter_Default(Vec,PetscInt,const PetscInt[],const PetscInt[],Vec,InsertMode);
 

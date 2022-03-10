@@ -1,5 +1,6 @@
 
 #include <petsc/private/vecimpl.h>    /*I "petscvec.h"  I*/
+#include <petsc/private/deviceimpl.h>
 
 PetscFunctionList VecList              = NULL;
 PetscBool         VecRegisterAllCalled = PETSC_FALSE;
@@ -28,9 +29,10 @@ PetscBool         VecRegisterAllCalled = PETSC_FALSE;
 @*/
 PetscErrorCode VecSetType(Vec vec, VecType method)
 {
-  PetscErrorCode (*r)(Vec);
-  PetscBool      match;
-  PetscMPIInt    size;
+  PetscErrorCode (*r)(Vec,PetscDeviceContext);
+  PetscDeviceContext dctx = NULL;
+  PetscBool          match;
+  PetscMPIInt        size;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(vec, VEC_CLASSID,1);
@@ -76,10 +78,11 @@ PetscErrorCode VecSetType(Vec vec, VecType method)
     if (match) PetscFunctionReturn(0);
   }
 #endif
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   PetscCall(PetscFunctionListFind(VecList,method,&r));
   PetscCheck(r,PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown vector type: %s", method);
   if (vec->ops->destroy) {
-    PetscCall((*vec->ops->destroy)(vec));
+    PetscCall((*vec->ops->destroy)(vec,dctx));
     vec->ops->destroy = NULL;
   }
   PetscCall(PetscMemzero(vec->ops,sizeof(struct _VecOps)));
@@ -89,7 +92,7 @@ PetscErrorCode VecSetType(Vec vec, VecType method)
     vec->ops->create = r;
     vec->ops->load   = VecLoad_Default;
   } else {
-    PetscCall((*r)(vec));
+    PetscCall((*r)(vec,dctx));
   }
   PetscFunctionReturn(0);
 }
@@ -171,7 +174,7 @@ PetscErrorCode VecGetRootType_Private(Vec vec, VecType *vtype)
 
 .seealso: `VecRegisterAll()`, `VecRegisterDestroy()`
 @*/
-PetscErrorCode VecRegister(const char sname[], PetscErrorCode (*function)(Vec))
+PetscErrorCode VecRegister(const char sname[], PetscErrorCode (*function)(Vec,PetscDeviceContext))
 {
   PetscFunctionBegin;
   PetscCall(VecInitializePackage());

@@ -1,32 +1,23 @@
 
 #include <petscvec.h>
 #include <petsc/private/vecimpl.h>
-PETSC_EXTERN PetscErrorCode VecCreate_Seq(Vec);
-PETSC_EXTERN PetscErrorCode VecCreate_MPI(Vec);
-PETSC_EXTERN PetscErrorCode VecCreate_Standard(Vec);
-PETSC_EXTERN PetscErrorCode VecCreate_Shared(Vec);
+#include <petsc/private/veccupmimpl.h>
+
+PETSC_EXTERN PetscErrorCode VecCreate_MPI(Vec,PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode VecCreate_Standard(Vec,PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode VecCreate_Shared(Vec,PetscDeviceContext);
 #if defined(PETSC_HAVE_MPI_PROCESS_SHARED_MEMORY)
-PETSC_EXTERN PetscErrorCode VecCreate_Node(Vec);
+PETSC_EXTERN PetscErrorCode VecCreate_Node(Vec,PetscDeviceContext);
 #endif
 #if defined(PETSC_HAVE_VIENNACL)
-PETSC_EXTERN PetscErrorCode VecCreate_SeqViennaCL(Vec);
-PETSC_EXTERN PetscErrorCode VecCreate_MPIViennaCL(Vec);
-PETSC_EXTERN PetscErrorCode VecCreate_ViennaCL(Vec);
-#endif
-#if defined(PETSC_HAVE_CUDA)
-PETSC_EXTERN PetscErrorCode VecCreate_SeqCUDA(Vec);
-PETSC_EXTERN PetscErrorCode VecCreate_MPICUDA(Vec);
-PETSC_EXTERN PetscErrorCode VecCreate_CUDA(Vec);
+PETSC_EXTERN PetscErrorCode VecCreate_SeqViennaCL(Vec,PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode VecCreate_MPIViennaCL(Vec,PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode VecCreate_ViennaCL(Vec,PetscDeviceContext);
 #endif
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
-PETSC_EXTERN PetscErrorCode VecCreate_SeqKokkos(Vec);
-PETSC_EXTERN PetscErrorCode VecCreate_MPIKokkos(Vec);
-PETSC_EXTERN PetscErrorCode VecCreate_Kokkos(Vec);
-#endif
-#if defined(PETSC_HAVE_HIP)
-PETSC_EXTERN PetscErrorCode VecCreate_SeqHIP(Vec);
-PETSC_EXTERN PetscErrorCode VecCreate_MPIHIP(Vec);
-PETSC_EXTERN PetscErrorCode VecCreate_HIP(Vec);
+PETSC_INTERN PetscErrorCode VecCreate_SeqKokkos(Vec,PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode VecCreate_MPIKokkos(Vec,PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode VecCreate_Kokkos(Vec,PetscDeviceContext);
 #endif
 
 /*@C

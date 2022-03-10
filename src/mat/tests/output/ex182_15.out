@@ -13,5 +13,7 @@
 [1] MatCheckCompressedRow(): Found the ratio (num_zerorows 5)/(num_localrows 5) > 0.6. Use CompressedRow routines.
 [1] MatSeqAIJCheckInode(): Found 1 nodes of 5. Limit used: 5. Using Inode routines
 [1] MatSeqAIJCheckInode(): Found 5 nodes out of 5 rows. Not using Inode routines
+[1] PetscDeviceContextGetNullContextForDevice_Internal(): Initializing null PetscDeviceContext for device 0
+[1] PetscDeviceContextSetupGlobalContext_Private(): Initializing global PetscDeviceContext
 [1] PetscFinalize(): PetscFinalize() called
 [1] PetscInfoSetFile(): Opened PetscInfo file ex182info.1

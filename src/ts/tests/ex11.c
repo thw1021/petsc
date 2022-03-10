@@ -100,7 +100,7 @@ static PetscErrorCode PFCreate_Dummy(PF pf,void *ctx)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecCreate_Dummy(Vec vec)
+static PetscErrorCode VecCreate_Dummy(Vec vec, PetscDeviceContext dctx)
 {
   PetscFunctionBegin;
   PetscFunctionReturn(0);
