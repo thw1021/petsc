@@ -13,10 +13,17 @@ namespace Petsc
 namespace util
 {
 
+#if __cplusplus >= 201703L // C++17
+using std::void_t;
+#else // C++17
+template <class...> using void_t = void;
+#endif // C++17
+
 #if __cplusplus >= 201402L // C++14
 using std::enable_if_t;
 using std::conditional_t;
 using std::remove_const_t;
+using std::remove_cv_t;
 using std::add_const_t;
 using std::underlying_type_t;
 using std::remove_pointer_t;
@@ -25,21 +32,16 @@ using std::index_sequence;
 using std::make_index_sequence;
 using std::decay_t;
 using std::tuple_element_t;
-#if __cplusplus >= 201703L
-using std::void_t;
-#else // C++17
-template <class... T> using void_t = void;
-#endif // C++17
 #else // C++14
 template <bool B, class T = void>   using enable_if_t   = typename std::enable_if<B,T>::type;
 template <bool B, class T, class F> using conditional_t = typename std::conditional<B,T,F>::type;
 template <class T> using remove_const_t    = typename std::remove_const<T>::type;
+template <class T> using remove_cv_t       = typename std::remove_cv<T>::type;
 template <class T> using add_const_t       = typename std::add_const<T>::type;
 template <class T> using underlying_type_t = typename std::underlying_type<T>::type;
 template <class T> using remove_pointer_t  = typename std::remove_pointer<T>::type;
 template <class T> using add_pointer_t     = typename std::add_pointer<T>::type;
 template <class T> using decay_t           = typename std::decay<T>::type;
-template <class... T> using void_t = void;
 template <std::size_t I, class T> using tuple_element_t = typename std::tuple_element<I,T>::type;
 // index sequence only
 template <std::size_t... idx> struct index_sequence
@@ -65,7 +67,7 @@ struct index_sequence_impl<0U,rest...>
 } // namespace detail
 
 template <std::size_t N> using make_index_sequence = typename detail::index_sequence_impl<N>::type;
-#endif // c++14
+#endif // C++14
 
 namespace detail
 {
@@ -322,6 +324,24 @@ static inline constexpr PetscObject& PetscObjectCast(const T& object) noexcept
 //   ...
 // }
 #define PETSC_CXX_COMPAT_DEFN(...) inline __VA_ARGS__ noexcept
+
+template <typename T>
+PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscCxxObjectRegisterFinalize(T *obj, MPI_Comm comm = PETSC_COMM_SELF))
+{
+  const auto finalizer = [](void *ptr) {
+    PetscFunctionBegin;
+    PetscCall(static_cast<T*>(ptr)->finalize());
+    PetscFunctionReturn(0);
+  };
+  PetscContainer contain;
+
+  PetscFunctionBegin;
+  PetscCall(PetscContainerCreate(comm,&contain));
+  PetscCall(PetscContainerSetPointer(contain,obj));
+  PetscCall(PetscContainerSetUserDestroy(contain,finalizer));
+  PetscCall(PetscObjectRegisterDestroy(reinterpret_cast<PetscObject>(contain)));
+  PetscFunctionReturn(0);
+}
 
 } // namespace Petsc
 

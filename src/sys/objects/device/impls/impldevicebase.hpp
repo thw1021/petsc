@@ -47,7 +47,6 @@ protected:
   // options
   PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscOptionDeviceBasic(PetscOptionItems*,std::pair<PetscDeviceInitType,PetscBool>&,std::pair<PetscInt,PetscBool>&,std::pair<PetscBool,PetscBool>&));
 
-
   // option templates to follow, each one has two forms:
   // - A simple form returning only the value and flag. This gives no control over the message,
   //   arguments to the options query or otherwise
@@ -67,7 +66,6 @@ protected:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscOptionDeviceView(PetscOptionItems*,PetscBool*,PetscBool*));
   template <typename...T, util::enable_if_t<sizeof...(T)>=3,int> = 0>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscOptionDeviceView(PetscOptionItems*,T&&...));
-
 
 private:
   // base function for all options templates above, they basically just reformat the arguments,

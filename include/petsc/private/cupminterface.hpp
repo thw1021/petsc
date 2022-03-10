@@ -4,28 +4,7 @@
 #include <petsc/private/deviceimpl.h>
 #include <petsc/private/cpputil.hpp>
 #include <petsc/private/petscadvancedmacros.h>
-
-#if PetscDefined(HAVE_HIP)
-#  include <hip/hip_complex.h> // for hipComplex, hipDoubleComplex
-#endif
-
-#if PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)
-#  define PETSC_HAVE_CUPM 1
-#endif
-
-#if PetscDefined(HAVE_CUPM)
-#  define PETSC_HOST_DECL       __host__
-#  define PETSC_DEVICE_DECL     __device__ __forceinline__
-#  define PETSC_KERNEL_DECL     __global__
-#  define PETSC_SHAREDMEM_DECL  __shared__
-#else
-#  define PETSC_HOST_DECL
-#  define PETSC_DEVICE_DECL
-#  define PETSC_KERNEL_DECL
-#  define PETSC_SHAREDMEM_DECL
-#endif
-
-#define PETSC_HOSTDEVICE_DECL PETSC_HOST_DECL PETSC_DEVICE_DECL
+#include <petscdevice_cupm.h>
 
 #if defined(__cplusplus)
 #include <array>
@@ -62,13 +41,11 @@ namespace Impl
 // functions can also be wrapped inline:
 //
 // PetscCallCUPM(foo<int,char,bool>());
-#define PetscCallCUPM(...) do {                                         \
-    const cupmError_t cerr_p_ = __VA_ARGS__;                            \
-    if (PetscUnlikely(cerr_p_ != cupmSuccess)) {                        \
-      SETERRQ(PETSC_COMM_SELF,PETSC_ERR_GPU,"%s error %d (%s) : %s",    \
-              cupmName(),static_cast<PetscErrorCode>(cerr_p_),          \
-              cupmGetErrorName(cerr_p_),cupmGetErrorString(cerr_p_));   \
-    }                                                                   \
+#define PetscCallCUPM(...) do {                                                                \
+    const cupmError_t cerr_p_ = __VA_ARGS__;                                                   \
+    PetscCheck(cerr_p_ == cupmSuccess,PETSC_COMM_SELF,PETSC_ERR_GPU,"%s error %d (%s) : %s",   \
+               cupmName(),static_cast<PetscErrorCode>(cerr_p_),cupmGetErrorName(cerr_p_),      \
+               cupmGetErrorString(cerr_p_));                                                   \
   } while (0)
 
 // PETSC_CUPM_ALIAS_INTEGRAL_VALUE_EXACT() - declaration to alias a cuda/hip integral constant
@@ -146,7 +123,7 @@ namespace Impl
 //   return cudaMalloc(std::forward<T>(args)...);
 // }
 #define PETSC_CUPM_ALIAS_FUNCTION_EXACT(our_prefix,our_suffix,their_prefix,their_suffix) \
-  PETSC_ALIAS_FUNCTION(static constexpr PetscConcat(our_prefix,our_suffix),PetscConcat(their_prefix,their_suffix))
+  PETSC_ALIAS_FUNCTION(static PetscConcat(our_prefix,our_suffix),PetscConcat(their_prefix,their_suffix))
 
 // PETSC_CUPM_ALIAS_FUNCTION_COMMON() - declaration to alias a cuda/hip function
 //
@@ -227,7 +204,7 @@ namespace Impl
 //   return cudaMalloc(std::forward<T>(args)...);
 // }
 #define PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_EXACT(our_prefix,our_suffix,their_prefix,their_suffix,N) \
-  PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS(static constexpr PetscConcat(our_prefix,our_suffix),PetscConcat(their_prefix,their_suffix),N)
+  PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS(static PetscConcat(our_prefix,our_suffix),PetscConcat(their_prefix,their_suffix),N)
 
 // PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_COMMON() - declaration to alias a cuda/hip function but
 // discard the last N arguments
@@ -269,15 +246,11 @@ struct InterfaceBase
     return std::get<util::integral_value(T)>(DeviceTypes);
   }
 
-  PETSC_CXX_COMPAT_DECL(constexpr PetscDeviceType cupmDeviceTypeToPetscDeviceType())
-  {
-    return T == DeviceType::CUDA ? PETSC_DEVICE_CUDA : PETSC_DEVICE_HIP;
-  }
+  PETSC_CXX_COMPAT_DECL(constexpr auto cupmDeviceTypeToPetscDeviceType())
+  PETSC_DECLTYPE_AUTO_RETURNS(T == DeviceType::CUDA ? PETSC_DEVICE_CUDA : PETSC_DEVICE_HIP);
 
-  PETSC_CXX_COMPAT_DECL(constexpr PetscMemType cupmDeviceTypeToPetscMemType())
-  {
-    return T == DeviceType::CUDA ? PETSC_MEMTYPE_CUDA : PETSC_MEMTYPE_HIP;
-  }
+  PETSC_CXX_COMPAT_DECL(constexpr auto cupmDeviceTypeToPetscMemType())
+  PETSC_DECLTYPE_AUTO_RETURNS(T == DeviceType::CUDA ? PETSC_MEMTYPE_CUDA : PETSC_MEMTYPE_HIP);
 };
 
 // declare the base class static member variables
@@ -364,6 +337,7 @@ struct InterfaceImpl<DeviceType::CUDA> : InterfaceBase<DeviceType::CUDA>
   PETSC_CUPM_ALIAS_FUNCTION(StreamQuery);
   PETSC_CUPM_ALIAS_FUNCTION(StreamSynchronize);
   PETSC_CUPM_ALIAS_FUNCTION(DeviceSynchronize);
+  PETSC_CUPM_ALIAS_FUNCTION(GetSymbolAddress);
 
   // memory management
   PETSC_CUPM_ALIAS_FUNCTION(Free);
@@ -380,6 +354,38 @@ struct InterfaceImpl<DeviceType::CUDA> : InterfaceBase<DeviceType::CUDA>
   PETSC_CUPM_ALIAS_FUNCTION(MallocHost);
   PETSC_CUPM_ALIAS_FUNCTION(FreeHost);
   PETSC_CUPM_ALIAS_FUNCTION(MemsetAsync);
+
+#if PETSC_PKG_CUDA_VERSION_GE(10,0,0)
+  PETSC_CUPM_ALIAS_FUNCTION(LaunchHostFunc);
+#else
+private:
+  struct ctxwrapper
+  {
+    const cudaHostFn_t fn      = nullptr;
+    void *const        userctx = nullptr;
+  };
+
+  static CUDART_CB void wrapper(cudaStream_t,cudaError_t,void *ptr) noexcept
+  {
+    const auto wrappedctx = static_cast<ctxwrapper*>(ptr);
+
+    (*wrappedctx->fn)(wrappedctx->userctx);
+    try {
+      delete wrappedctx; // done with our callback wrapper, obliterate it
+    } catch (const std::exception &e) {
+      SETERRABORT(PETSC_COMM_SELF,PETSC_ERR_MEM,"%s",e.what());
+    }
+    return;
+  };
+
+public:
+  // reconfigure cudaStreamAddCallback() to act like cudaLaunchHostFunc(), unfortunately needs
+  // an extra layer of indirection
+  PETSC_CXX_COMPAT_DECL(cudaError_t cupmLaunchHostFunc(cudaStream_t stream, cudaHostFn_t fn, void *userData))
+  {
+    return cudaStreamAddCallback(stream,wrapper,new ctxwrapper{fn,userData},0);
+  }
+#endif
 
   // specific wrapper for device launch function, as the actual form is a C routine and doesn't
   // have variable arguments
@@ -463,9 +469,10 @@ struct InterfaceImpl<DeviceType::HIP> : InterfaceBase<DeviceType::HIP>
   PETSC_CUPM_ALIAS_FUNCTION(StreamQuery);
   PETSC_CUPM_ALIAS_FUNCTION(StreamSynchronize);
   PETSC_CUPM_ALIAS_FUNCTION(DeviceSynchronize);
+  PETSC_CUPM_ALIAS_FUNCTION(GetSymbolAddress);
 
   // memory management
-  PETSC_CUPM_ALIAS_FUNCTION(Free);
+   PETSC_CUPM_ALIAS_FUNCTION(Free);
   PETSC_CUPM_ALIAS_FUNCTION(Malloc);
   // HIP has no hipFreeAsync
   PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_COMMON(FreeAsync,Free,1);
@@ -478,6 +485,8 @@ struct InterfaceImpl<DeviceType::HIP> : InterfaceBase<DeviceType::HIP>
   // hipFreeHost is deprecated
   PETSC_CUPM_ALIAS_FUNCTION_COMMON(FreeHost,HostFree);
   PETSC_CUPM_ALIAS_FUNCTION(MemsetAsync);
+
+  PETSC_CUPM_ALIAS_FUNCTION(LaunchHostFunc);
 
   // kernel launching
   template <typename... KernelArgsT, typename FunctionT = void(*)(KernelArgsT...)>
@@ -553,6 +562,7 @@ struct InterfaceImpl<DeviceType::HIP> : InterfaceBase<DeviceType::HIP>
   using base_name::cupmStreamQuery;                                     \
   using base_name::cupmStreamSynchronize;                               \
   using base_name::cupmDeviceSynchronize;                               \
+  using base_name::cupmGetSymbolAddress;                                \
   using base_name::cupmFree;                                            \
   using base_name::cupmFreeAsync;                                       \
   using base_name::cupmMalloc;                                          \
@@ -562,6 +572,7 @@ struct InterfaceImpl<DeviceType::HIP> : InterfaceBase<DeviceType::HIP>
   using base_name::cupmMallocHost;                                      \
   using base_name::cupmFreeHost;                                        \
   using base_name::cupmMemsetAsync;                                     \
+  using base_name::cupmLaunchHostFunc;                                  \
   using base_name::cupmLaunchKernel
 
 template <DeviceType> struct PETSC_TEMPLATE_VISIBILITY_SINGLE_LIBRARY_INTERNAL Interface;
@@ -577,7 +588,13 @@ struct Interface : InterfaceImpl<T>
 
   // REVIEW ME: this needs to be cleaned up, it is unreadable
   PETSC_CXX_COMPAT_DECL(constexpr auto makeCupmScalar(PetscScalar s))
-  PETSC_DECLTYPE_AUTO_RETURNS(PetscIfPetscDefined(USE_COMPLEX,(cupmComplex_t{PetscRealPart(s),PetscImaginaryPart(s)}),static_cast<cupmReal_t>(s)));
+  PETSC_DECLTYPE_AUTO_RETURNS(
+    PetscIfPetscDefined(
+      USE_COMPLEX,
+      (cupmComplex_t{PetscRealPart(s),PetscImaginaryPart(s)}),
+      static_cast<cupmReal_t>(s)
+    )
+  );
 
   PETSC_CXX_COMPAT_DECL(constexpr auto cupmScalarCast(const PetscScalar *s))
   PETSC_DECLTYPE_AUTO_RETURNS(reinterpret_cast<const cupmScalar_t*>(s));
@@ -610,7 +627,7 @@ struct Interface : InterfaceImpl<T>
 #if (defined(CUDART_VERSION) && (CUDART_VERSION < 10000)) || defined(__HIP_PLATFORM_HCC__)
     const auto mtype = attr.memoryType;
 #else
-    if (PETSC_PKG_CUDA_VERSION_GE(11,0,0) && (T == DeviceType::CUDA)) CHKERRCUPM(cerr);
+    if (PETSC_PKG_CUDA_VERSION_GE(11,0,0) && (T == DeviceType::CUDA)) PetscCallCUPM(cerr);
     const auto mtype = attr.type;
 #endif // CUDART_VERSION && CUDART_VERSION < 10000 || __HIP_PLATFORM_HCC__
     *type = ((cerr == cupmSuccess) && (mtype == cupmMemoryTypeDevice)) ? cupmDeviceTypeToPetscMemType() : PETSC_MEMTYPE_HOST;
@@ -619,6 +636,19 @@ struct Interface : InterfaceImpl<T>
 #if defined(CUPM_DEFINED_PETSC_PKG_CUDA_VERSION_GE)
 #  undef PETSC_PKG_CUDA_VERSION_GE
 #endif
+
+  PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 cupmMemcpyKind_t PetscDeviceCopyModeToCUPMMemcpyKind(PetscDeviceCopyMode mode))
+  {
+    switch (mode) {
+    case PETSC_DEVICE_COPY_HTOH: return cupmMemcpyHostToHost;
+    case PETSC_DEVICE_COPY_HTOD: return cupmMemcpyHostToDevice;
+    case PETSC_DEVICE_COPY_DTOD: return cupmMemcpyDeviceToDevice;
+    case PETSC_DEVICE_COPY_DTOH: return cupmMemcpyDeviceToHost;
+    case PETSC_DEVICE_COPY_AUTO: return cupmMemcpyDefault;
+    }
+    PetscUnreachable();
+    return cupmMemcpyDefault;
+  }
 };
 
 #define PETSC_CUPM_INHERIT_INTERFACE_TYPEDEFS_USING(base_name,T)        \
@@ -629,15 +659,8 @@ struct Interface : InterfaceImpl<T>
   using base_name::makeCupmScalar;                                      \
   using base_name::cupmScalarCast;                                      \
   using base_name::cupmRealCast;                                        \
-  using base_name::cupmGetMemType
-
-#if PetscDefined(HAVE_CUDA)
-extern template struct Interface<DeviceType::CUDA>;
-#endif
-
-#if PetscDefined(HAVE_HIP)
-extern template struct Interface<DeviceType::HIP>;
-#endif
+  using base_name::cupmGetMemType;                                      \
+  using base_name::PetscDeviceCopyModeToCUPMMemcpyKind
 
 } // namespace Impl
 

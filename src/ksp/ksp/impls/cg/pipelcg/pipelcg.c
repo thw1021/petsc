@@ -1,5 +1,6 @@
 #include <petsc/private/kspimpl.h>
 #include <petsc/private/vecimpl.h>
+#include <petsc/private/deviceimpl.h>
 
 #define offset(j)      PetscMax(((j) - (2*l)), 0)
 #define shift(i,j)     ((i) - offset((j)))
@@ -329,17 +330,39 @@ static PetscErrorCode KSPSolve_InnerLoop_PIPELCG(KSP ksp)
     /* Compute and communicate the dot products */
     /* ---------------------------------------- */
     if (it < l) {
+      PetscDeviceContext dctx;
+
+      PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
       for (j = 0; j < it+2; ++j) {
-        PetscCall((*U[0]->ops->dot_local)(U[0],Z[l-j],&G(j,it+1))); /* dot-products (U[0],Z[j]) */
+        PetscManagedScalar gtmp;
+
+        // REVIEW ME: VecMDotBegin()?
+        PetscCall(PetscManageHostScalar(dctx,&G(j,it+1),1,&gtmp));
+        PetscCall((*U[0]->ops->dot_local)(U[0],Z[l-j],gtmp,dctx)); /* dot-products (U[0],Z[j]) */
+        PetscCall(PetscManagedHostScalarDestroy(dctx,&gtmp));
       }
+      PetscCall(PetscDeviceContextSynchronize(dctx));
       PetscCall(MPIPetsc_Iallreduce(MPI_IN_PLACE,&G(0,it+1),it+2,MPIU_SCALAR,MPIU_SUM,comm,&req(it+1)));
     } else if ((it >= l) && (it < max_it)) {
+      PetscDeviceContext dctx;
+      PetscManagedScalar guvtmp;
+
       middle = it-l+2;
       end = it+2;
-      PetscCall((*U[0]->ops->dot_local)(U[0],V[0],&G(it-l+1,it+1))); /* dot-product (U[0],V[0]) */
+      PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
+      PetscCall(PetscManageHostScalar(dctx,&G(it-l+1,it+1),1,&guvtmp));
+      // REVIEW ME: VecMDotBegin()?
+      PetscCall((*U[0]->ops->dot_local)(U[0],V[0],guvtmp,dctx)); /* dot-product (U[0],V[0]) */
+      PetscCall(PetscManagedHostScalarDestroy(dctx,&guvtmp));
       for (j = middle; j < end; ++j) {
-        PetscCall((*U[0]->ops->dot_local)(U[0],plcg->Z[it+1-j],&G(j,it+1))); /* dot-products (U[0],Z[j]) */
+        PetscManagedScalar  gtmp;
+
+        PetscCall(PetscManageHostScalar(dctx,&G(j,it+1),1,&gtmp));
+        PetscCall((*U[0]->ops->dot_local)(U[0],plcg->Z[it+1-j],gtmp,dctx)); /* dot-products (U[0],Z[j]) */
+        // ensure the host values are updated again
+        PetscCall(PetscManagedHostScalarDestroy(dctx,&gtmp));
       }
+      PetscCall(PetscDeviceContextSynchronize(dctx));
       PetscCall(MPIPetsc_Iallreduce(MPI_IN_PLACE,&G(it-l+1,it+1),l+1,MPIU_SCALAR,MPIU_SUM,comm,&req(it+1)));
     }
 
@@ -433,9 +456,7 @@ static PetscErrorCode KSPSolve_PIPELCG(KSP ksp)
   PetscFunctionBegin;
   comm = PetscObjectComm((PetscObject)ksp);
   PetscCall(PCGetDiagonalScale(ksp->pc,&diagonalscale));
-  if (diagonalscale) {
-    SETERRQ(comm,PETSC_ERR_SUP,"Krylov method %s does not support diagonal scaling",((PetscObject)ksp)->type_name);
-  }
+  PetscCheck(!diagonalscale,comm,PETSC_ERR_SUP,"Krylov method %s does not support diagonal scaling",((PetscObject)ksp)->type_name);
 
   x = ksp->vec_sol;
   b = ksp->vec_rhs;
@@ -471,7 +492,17 @@ static PetscErrorCode KSPSolve_PIPELCG(KSP ksp)
       PetscCall(KSPSolve_ReInitData_PIPELCG(ksp));
     }
 
-    PetscCall((*plcg->U[0]->ops->dot_local)(plcg->U[0],p,&G(0,0)));
+    {
+      PetscManagedScalar gtmp;
+      PetscDeviceContext dctx;
+
+      PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
+      PetscCall(PetscManageHostScalar(dctx,&G(0,0),1,&gtmp));
+      PetscCall((*plcg->U[0]->ops->dot_local)(plcg->U[0],p,gtmp,dctx));
+      PetscCall(PetscManagedHostScalarDestroy(dctx,&gtmp));
+      PetscCall(PetscDeviceContextSynchronize(dctx));
+    }
+
     PetscCall(MPIPetsc_Iallreduce(MPI_IN_PLACE,&G(0,0),1,MPIU_SCALAR,MPIU_SUM,comm,&req(0)));
     PetscCall(VecCopy(p,plcg->Z[l]));
 

@@ -515,8 +515,15 @@ struct BlasInterface : BlasInterfaceImpl<T>
     PetscMemType mtype;
 
     PetscFunctionBegin;
-    CHKERRQ(cupmGetMemType(ptr,&mtype));
-    CHKERRCUPMBLAS(cupmBlasSetPointerMode(handle,PetscMemTypeDevice(mtype) ? CUPMBLAS_POINTER_MODE_DEVICE : CUPMBLAS_POINTER_MODE_HOST));
+    PetscCall(cupmGetMemType(ptr,&mtype));
+    PetscCallCUPMBLAS(cupmBlasSetPointerMode(handle,PetscMemTypeDevice(mtype) ? CUPMBLAS_POINTER_MODE_DEVICE : CUPMBLAS_POINTER_MODE_HOST));
+    PetscFunctionReturn(0);
+  }
+
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode cupmBlasSetPointerModeFromPointer(cupmBlasHandle_t handle, const PetscManagedScalar ptr))
+  {
+    PetscFunctionBegin;
+    PetscCallCUPMBLAS(cupmBlasSetPointerMode(handle,ptr->dtype == PETSC_DEVICE_HOST ? CUPMBLAS_POINTER_MODE_HOST : CUPMBLAS_POINTER_MODE_DEVICE));
     PetscFunctionReturn(0);
   }
 };
