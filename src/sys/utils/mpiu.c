@@ -167,7 +167,7 @@ PetscErrorCode  PetscSequentialPhaseEnd(MPI_Comm comm,int ng)
 
 .seealso: PetscSplitOwnership()
 @*/
-PetscErrorCode PetscGlobalMinMaxInt(MPI_Comm comm, PetscInt minMaxVal[2], PetscInt minMaxValGlobal[2])
+PetscErrorCode PetscGlobalMinMaxInt(MPI_Comm comm, const PetscInt minMaxVal[2], PetscInt minMaxValGlobal[2])
 {
   PetscErrorCode ierr;
   PetscInt       sendbuf[3],recvbuf[3];
@@ -197,7 +197,7 @@ PetscErrorCode PetscGlobalMinMaxInt(MPI_Comm comm, PetscInt minMaxVal[2], PetscI
 
 .seealso: PetscSplitOwnership()
 @*/
-PetscErrorCode PetscGlobalMinMaxReal(MPI_Comm comm, PetscReal minMaxVal[2], PetscReal minMaxValGlobal[2])
+PetscErrorCode PetscGlobalMinMaxReal(MPI_Comm comm, const PetscReal minMaxVal[2], PetscReal minMaxValGlobal[2])
 {
   PetscBool      inplace = (PetscBool)(minMaxVal == minMaxValGlobal);
   PetscErrorCode ierr;
