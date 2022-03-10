@@ -27,16 +27,13 @@
 
 #if defined(PETSC_CLANG_STATIC_ANALYZER)
 template <typename T> void PetscValidDeviceType(T,int);
+template <typename T> void PetscCheckCompatibleDeviceTypes(T,int,T,int);
 template <typename T> void PetscValidDevice(T,int);
 template <typename T> void PetscCheckCompatibleDevices(T,int,T,int);
 template <typename T> void PetscValidStreamType(T,int);
 template <typename T> void PetscValidDeviceContext(T,int);
 template <typename T> void PetscCheckCompatibleDeviceContexts(T,int,T,int);
 #elif PetscDefined(USE_DEBUG) || PetscDefined(DEVICE_KEEP_ERROR_CHECKING_MACROS)
-/*
-  note any changes to these macros must be mirrored in
-  src/sys/objects/device/test/petscdevicecommon.h!
-*/
 
 #define PetscValidDeviceType(dtype,argno)                            do {                      \
     PetscDeviceType pvdt_dtype_ = PetscDeviceTypeCast(dtype);                                  \
@@ -59,6 +56,14 @@ template <typename T> void PetscCheckCompatibleDeviceContexts(T,int,T,int);
     }                                                                                          \
   } while (0)
 
+#define PetscCheckCompatibleDeviceTypes(dtype1,argno1,dtype2,argno2) do {                      \
+    PetscDeviceType pccdt_dtype1_ = PetscDeviceTypeCast(dtype1);                               \
+    PetscDeviceType pccdt_dtype2_ = PetscDeviceTypeCast(dtype2);                               \
+    PetscValidDeviceType(pccdt_dtype1_,1);                                                     \
+    PetscValidDeviceType(pccdt_dtype2_,2);                                                     \
+    PetscCheck(pccdt_dtype1_ == pccdt_dtype2_,PETSC_COMM_SELF,PETSC_ERR_ARG_NOTSAMETYPE,"PetscDeviceTypes are incompatible: Arguments #%d and #%d. Expected PetscDeviceType '%s' but has '%s' instead",argno1,argno2,PetscDeviceTypes[pccdt_dtype1_],PetscDeviceTypes[pccdt_dtype2_]); \
+} while (0)
+
 #define PetscValidDevice(dev,argno)                                  do {                      \
     PetscDevice pvd_dev_   = dev;                                                              \
     int         pvd_argno_ = (int)(argno);                                                     \
@@ -79,15 +84,14 @@ template <typename T> void PetscCheckCompatibleDeviceContexts(T,int,T,int);
   for now just checks strict equality, but this can be changed as some devices (i.e. kokkos and
   any cupm should be compatible once implemented)
 */
-#define PetscCheckCompatibleDevices(dev1,argno1,dev2,argno2)          do {              \
-    PetscDevice pccd_dev1_   = (dev1),        pccd_dev2_   = (dev2);                    \
-    int         pccd_argno1_ = (int)(argno1), pccd_argno2_ = (int)(argno2);             \
-    PetscValidDevice(pccd_dev1_,pccd_argno1_);                                          \
-    PetscValidDevice(pccd_dev2_,pccd_argno2_);                                          \
-    PetscCheck(                                                                         \
-      pccd_dev1_->type == pccd_dev2_->type,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,        \
-      "PetscDevices are incompatible: Arguments #%d and #%d",pccd_argno1_,pccd_argno2_  \
-    );                                                                                  \
+#define PetscCheckCompatibleDevices(dev1,argno1,dev2,argno2)          do {                     \
+    PetscDevice pccd_dev1_   = (dev1),        pccd_dev2_   = (dev2);                           \
+    int         pccd_argno1_ = (int)(argno1), pccd_argno2_ = (int)(argno2);                    \
+    PetscValidDevice(pccd_dev1_,pccd_argno1_);                                                 \
+    PetscValidDevice(pccd_dev2_,pccd_argno2_);                                                 \
+    PetscCheckCompatibleDeviceTypes(                                                           \
+      pccd_dev1_->type,pccd_argno1_,pccd_dev2_->type,pccd_argno2_                              \
+    );                                                                                         \
   } while (0)
 
 #define PetscValidStreamType(stype,argno)                             do {                     \
@@ -138,6 +142,7 @@ template <typename T> void PetscCheckCompatibleDeviceContexts(T,int,T,int);
 
 #else /* PetscDefined(USE_DEBUG) */
 #define PetscValidDeviceType(dtype,argno)
+#define PetscCheckCompatibleDeviceTypes(dtype1,argno1,dtype2,argno2)
 #define PetscValidDevice(dev,argno)
 #define PetscCheckCompatibleDevices(dev1,argno1,dev2,argno2)
 #define PetscValidStreamType(stype,argno)
@@ -283,14 +288,24 @@ static inline PetscErrorCode PetscDeviceContextGetNullContext_Internal(PetscDevi
   ierr = PetscDeviceContextGetNullContextForDevice_Internal(gdev,dctx);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
+
+static inline PetscErrorCode PetscDeviceContextGetOptionalNullContext_Internal(PetscDeviceContext *dctx)
+{
+  PetscFunctionBegin;
+  PetscValidPointer(dctx,1);
+  if (!*dctx) {PetscErrorCode ierr = PetscDeviceContextGetNullContext_Internal(dctx);CHKERRQ(ierr);}
+  PetscValidDeviceContext(*dctx,1);
+  PetscFunctionReturn(0);
+}
+
 /* note, only does assertion checking in debug mode */
 static inline PetscErrorCode PetscDeviceContextGetCurrentContextAssertType_Internal(PetscDeviceContext *dctx, PetscDeviceType type)
 {
   PetscFunctionBegin;
   PetscValidPointer(dctx,1);
   PetscValidDeviceType(type,2);
-  PetscCall(PetscDeviceContextGetCurrentContext(dctx));
-  PetscAssert((*dctx)->device->type == type,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Expected current global PetscDeviceContext (id %" PetscInt_FMT ") to have PetscDeviceType '%s' but has '%s' instead",(*dctx)->id,PetscDeviceTypes[type],PetscDeviceTypes[(*dctx)->device->type]);
+  ierr = PetscDeviceContextGetCurrentContext(dctx);CHKERRQ(ierr);
+  PetscCheckCompatibleDeviceTypes(type,1,(*dctx)->device->type,2);
   PetscFunctionReturn(0);
 }
 
@@ -348,6 +363,8 @@ static inline PetscErrorCode PetscDeviceContextEndTimer_Internal(PetscDeviceCont
 #define PetscDeviceContextSetDefaultDeviceForType_Internal(dctx,type)     0
 #define PetscDeviceContextSetDefaultDevice_Internal(dctx)                 0
 #define PetscDeviceContextGetCurrentContextAssertType_Internal(dctx,type) 0
+#define PetscDeviceContextGetNullContext_Internal(dctx)                   0
+#define PetscDeviceContextGetOptionalNullContext_Internal(dctx)           0
 #define PetscDeviceContextGetBLASHandle_Internal(dctx,handle)             0
 #define PetscDeviceContextGetSOLVERHandle_Internal(dctx,handle)           0
 #define PetscDeviceContextBeginTimer_Internal(dctx)                       0

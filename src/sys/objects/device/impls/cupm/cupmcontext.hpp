@@ -147,7 +147,6 @@ private:
   {
     const auto     dci    = impls_cast_(dctx);
     auto&          handle = solverhandles_[dctx->device->deviceId];
-    PetscErrorCode ierr;
 
     PetscFunctionBegin;
     PetscCall(create_handle_(handle));
@@ -159,7 +158,6 @@ private:
   template <typename TagType>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode initialize_handle_(PetscDeviceContext dctx))
   {
-    PetscErrorCode ierr;
 
     PetscFunctionBegin;
     PetscCall(check_current_device_(dctx));
@@ -214,7 +212,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::destroy(PetscDeviceContex
 {
   auto           dci = impls_cast_(dctx);
   cupmError_t    cerr;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!dci) PetscFunctionReturn(0);
@@ -247,7 +244,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::setUp(PetscDeviceContext 
 {
   const auto     dci = impls_cast_(dctx);
   cupmError_t    cerr;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCall(check_current_device_(dctx));
@@ -282,7 +278,6 @@ template <DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::query(PetscDeviceContext dctx, PetscBool *idle))
 {
   cupmError_t    cerr;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCall(check_current_device_(dctx));
@@ -301,7 +296,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::waitForContext(PetscDevic
 {
   const auto     dcib = impls_cast_(dctxb);
   cupmError_t    cerr;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCall(check_current_device_(dctxa,dctxb));
@@ -315,7 +309,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::synchronize(PetscDeviceCo
 {
   const auto     dci = impls_cast_(dctx);
   cupmError_t    cerr;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCall(check_current_device_(dctx));
@@ -329,8 +322,6 @@ template <DeviceType T>
 template <typename handle_t>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::getHandle(PetscDeviceContext dctx, void *handle))
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscCall(initialize_handle_<handle_t>(dctx));
   *static_cast<typename handle_t::type*>(handle) = impls_cast_(dctx)->get(handle_t{});
@@ -342,7 +333,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::beginTimer(PetscDeviceCon
 {
   const auto     dci = impls_cast_(dctx);
   cupmError_t    cerr;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCall(check_current_device_(dctx));
