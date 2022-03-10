@@ -2992,16 +2992,31 @@ static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat A,Vec xx,Vec yy,Vec zz
   PetscScalar                  *xarray,*zarray,*dptr,*beta,*xptr;
   cusparseOperation_t          opA = CUSPARSE_OPERATION_NON_TRANSPOSE;
   PetscBool                    compressed;
+  PetscDeviceContext           dctx;
+  PetscManagedScalar           zero,one;
 #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
   PetscInt                     nx,ny;
 #endif
 
   PetscFunctionBegin;
   PetscCheck(!herm || trans,PetscObjectComm((PetscObject)A),PETSC_ERR_GPU,"Hermitian and not transpose not supported");
+  PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
+  PetscCall(PetscManagedScalarCreateDefault(dctx,1,&zero));
+  {
+    constexpr auto zeroscal = PetscScalar{0.0};
+
+    PetscCall(PetscManagedScalarSetValues(dctx,zero,PETSC_MEMTYPE_HOST,&zeroscal,1));
+  }
   if (!a->nz) {
-    if (!yy) PetscCall(VecSeq_CUDA::set_async(zz,0));
-    else PetscCall(VecSeq_CUDA::copy_async(yy,zz));
+    if (yy) PetscCall(VecSeq_CUDA::copy_async(yy,zz,dctx));
+    else PetscCall(VecSeq_CUDA::set_async(zz,zero,dctx));
+    PetscCall(PetscManagedScalarDestroy(dctx,&zero));
     PetscFunctionReturn(0);
+  } else {
+    constexpr auto onescal = PetscScalar{1.0};
+
+    PetscCall(PetscManagedScalarCreateDefault(dctx,1,&one));
+    PetscCall(PetscManagedScalarSetValues(dctx,one,PETSC_MEMTYPE_HOST,&onescal,1));
   }
   /* The line below is necessary due to the operations that modify the matrix on the CPU (axpy, scale, etc) */
   PetscCall(MatSeqAIJCUSPARSECopyToGPU(A));
@@ -3124,14 +3139,16 @@ static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat A,Vec xx,Vec yy,Vec zz
     PetscCall(PetscLogGpuTimeEnd());
 
     if (opA == CUSPARSE_OPERATION_NON_TRANSPOSE) {
+      PetscDeviceContext dctx;
+
       if (yy) { /* MatMultAdd: zz = A*xx + yy */
         if (compressed) { /* A is compressed. We first copy yy to zz, then ScatterAdd the work vector to zz */
-          PetscCall(VecSeq_CUDA::copy_async(yy,zz)); /* zz = yy */
+          PetscCall(VecSeq_CUDA::copy_async(yy,zz,dctx)); /* zz = yy */
         } else if (zz != yy) { /* A is not compressed. zz already contains A*xx, and we just need to add yy */
-          PetscCall(VecSeq_CUDA::axpy_async(zz,1.0,yy)); /* zz += yy */
+          PetscCall(VecSeq_CUDA::axpy_async(zz,one,yy,dctx)); /* zz += yy */
         }
       } else if (compressed) { /* MatMult: zz = A*xx. A is compressed, so we zero zz first, then ScatterAdd the work vector to zz */
-        PetscCall(VecSeq_CUDA::set_async(zz,0));
+        PetscCall(VecSeq_CUDA::set_async(zz,zero,dctx));
       }
 
       /* ScatterAdd the result from work vector into the full vector when A is compressed */
@@ -3153,7 +3170,7 @@ static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat A,Vec xx,Vec yy,Vec zz
        #endif
         PetscCall(PetscLogGpuTimeEnd());
       }
-    } else if (yy && yy != zz) PetscCall(VecSeq_CUDA::axpy_async(zz,1.0,yy)); /* zz += yy */
+    } else if (yy && yy != zz) PetscCall(VecSeq_CUDA::axpy_async(zz,one,yy,dctx)); /* zz += yy */
     PetscCall(VecCUDARestoreArrayRead(xx,(const PetscScalar**)&xarray));
     if (yy == zz) PetscCall(VecCUDARestoreArray(zz,&zarray));
     else PetscCall(VecCUDARestoreArrayWrite(zz,&zarray));
@@ -3165,6 +3182,8 @@ static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat A,Vec xx,Vec yy,Vec zz
   } else {
     PetscCall(PetscLogGpuFlops(2.0*a->nz-a->nonzerorowcnt));
   }
+  PetscCall(PetscManagedScalarDestroy(dctx,&zero));
+  PetscCall(PetscManagedScalarDestroy(dctx,&one));
   PetscFunctionReturn(0);
 }
 

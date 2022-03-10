@@ -110,9 +110,9 @@ PetscErrorCode VecLoad_Binary(Vec vec, PetscViewer viewer)
 #if defined(PETSC_HAVE_HDF5)
 PetscErrorCode VecLoad_HDF5(Vec xin, PetscViewer viewer)
 {
-  hid_t          scalartype; /* scalar type (H5T_NATIVE_FLOAT or H5T_NATIVE_DOUBLE) */
-  PetscScalar    *x,*arr;
-  const char     *vecname;
+  hid_t        scalartype;      /* scalar type (H5T_NATIVE_FLOAT or H5T_NATIVE_DOUBLE) */
+  PetscScalar *x;
+  const char  *vecname;
 
   PetscFunctionBegin;
   PetscCheck(((PetscObject)xin)->name,PetscObjectComm((PetscObject)xin), PETSC_ERR_SUP, "Vec name must be set with PetscObjectSetName() before VecLoad()");
@@ -128,13 +128,19 @@ PetscErrorCode VecLoad_HDF5(Vec xin, PetscViewer viewer)
   PetscCall(PetscObjectGetName((PetscObject)xin, &vecname));
   PetscCall(PetscViewerHDF5Load(viewer,vecname,xin->map,scalartype,(void**)&x));
   PetscCall(VecSetUp(xin)); /* VecSetSizes might have not been called so ensure ops->create has been called */
-  if (!xin->ops->replacearray) {
-    PetscCall(VecGetArray(xin,&arr));
-    PetscCall(PetscArraycpy(arr,x,xin->map->n));
-    PetscCall(PetscFree(x));
-    PetscCall(VecRestoreArray(xin,&arr));
+  if (x) {
+    if (xin->ops->replacearray) {
+      PetscCall(VecReplaceArray(xin,x));
+    } else {
+      PetscScalar *arr;
+
+      PetscCall(VecGetArrayWrite(xin,&arr));
+      PetscCall(PetscArraycpy(arr,x,xin->map->n));
+      PetscCall(PetscFree(x));
+      PetscCall(VecRestoreArrayWrite(xin,&arr));
+    }
   } else {
-    PetscCall(VecReplaceArray(xin,x));
+    PetscAssert(xin->map->n == 0,PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED,"Loaded array of length 0 does not match local vector length %" PetscInt_FMT,xin->map->n);
   }
   PetscFunctionReturn(0);
 }
@@ -243,15 +249,13 @@ PetscErrorCode  VecLoad_Default(Vec newvec, PetscViewer viewer)
 @*/
 PetscErrorCode VecChop(Vec v, PetscReal tol)
 {
-  PetscScalar    *a;
-  PetscInt       n, i;
+  PetscScalar *a;
+  PetscInt     n;
 
   PetscFunctionBegin;
   PetscCall(VecGetLocalSize(v, &n));
   PetscCall(VecGetArray(v, &a));
-  for (i = 0; i < n; ++i) {
-    if (PetscAbsScalar(a[i]) < tol) a[i] = 0.0;
-  }
+  for (PetscInt i = 0; i < n; ++i) if (PetscAbsScalar(a[i]) < tol) a[i] = 0.0;
   PetscCall(VecRestoreArray(v, &a));
   PetscFunctionReturn(0);
 }
