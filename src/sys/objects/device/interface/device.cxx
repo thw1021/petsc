@@ -347,8 +347,8 @@ PetscErrorCode PetscDeviceInitializeDefaultDevice_Internal(PetscDeviceType type,
   PetscFunctionBegin;
   PetscValidDeviceType(type,1);
   if (PetscUnlikely(!PetscDeviceInitialized(type))) {
-    auto&          dev  = defaultDevices[type].first;
-    auto&          init = defaultDevices[type].second;
+    auto& dev  = defaultDevices[type].first;
+    auto& init = defaultDevices[type].second;
 
     PetscAssert(!dev,PETSC_COMM_SELF,PETSC_ERR_MEM,"Trying to overwrite existing default device of type %s",PetscDeviceTypes[type]);
     PetscCall(PetscDeviceCreate(type,defaultDeviceId,&dev));
@@ -493,7 +493,8 @@ PetscErrorCode PetscDeviceInitializeFromOptions_Internal(MPI_Comm comm)
   } else flg = PETSC_FALSE;
 
   {
-    PetscInt initIdx = flg ? PETSC_DEVICE_INIT_EAGER : PETSC_DEVICE_INIT_LAZY;
+    PetscInt       initIdx = flg ? PETSC_DEVICE_INIT_EAGER : PETSC_DEVICE_INIT_LAZY;
+    PetscErrorCode ierr;
 
     PetscOptionsBegin(comm,nullptr,"PetscDevice Options","Sys");
     PetscCall(PetscOptionsEList("-device_enable","How (or whether) to initialize PetscDevices","PetscDeviceInitialize()",PetscDeviceInitTypes,3,PetscDeviceInitTypes[initIdx],&initIdx,nullptr));
