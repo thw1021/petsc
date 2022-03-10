@@ -289,6 +289,7 @@ PETSC_EXTERN PetscErrorCode VecSet(Vec,PetscScalar);
 PETSC_EXTERN PetscErrorCode VecSetInf(Vec);
 PETSC_EXTERN PetscErrorCode VecSwap(Vec,Vec);
 PETSC_EXTERN PetscErrorCode VecAXPY(Vec,PetscScalar,Vec);
+PETSC_EXTERN PetscErrorCode VecAXPYAsync(Vec,PetscManagedScalar,Vec,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecAXPBY(Vec,PetscScalar,PetscScalar,Vec);
 PETSC_EXTERN PetscErrorCode VecMAXPY(Vec,PetscInt,const PetscScalar[],Vec[]);
 PETSC_EXTERN PetscErrorCode VecAYPX(Vec,PetscScalar,Vec);

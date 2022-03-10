@@ -533,6 +533,32 @@ PetscErrorCode  VecSet(Vec x,PetscScalar alpha)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode VecAXPYAsync(Vec y, PetscManagedScalar alpha, Vec x, PetscDeviceContext dctx)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(y,VEC_CLASSID,1);
+  PetscValidHeaderSpecific(x,VEC_CLASSID,3);
+  PetscValidType(y,1);
+  PetscValidType(x,3);
+  PetscCheckSameTypeAndComm(y,1,x,3);
+  VecCheckSameSize(y,1,x,3);
+  PetscCheck(x != y,PetscObjectComm((PetscObject)y),PETSC_ERR_ARG_IDN,"x and y cannot be the same vector");
+  ierr = VecSetErrorIfLocked(y,1);CHKERRQ(ierr);
+
+  if (!dctx) {ierr = PetscDeviceContextGetNullContext_Internal(&dctx);CHKERRQ(ierr);}
+  PetscValidDeviceContext(dctx,4);
+
+  ierr = VecLockReadPush(x);CHKERRQ(ierr);
+  ierr = PetscLogEventBegin(VEC_AXPY,x,y,0,0);CHKERRQ(ierr);
+  ierr = (*y->ops->axpy)(y,alpha,x,dctx);CHKERRQ(ierr);
+  ierr = PetscLogEventEnd(VEC_AXPY,x,y,0,0);CHKERRQ(ierr);
+  ierr = VecLockReadPop(x);CHKERRQ(ierr);
+  ierr = PetscObjectStateIncrease((PetscObject)y);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 /*@
    VecAXPY - Computes y = alpha x + y.
 
@@ -560,28 +586,15 @@ $    VecMAXPY(y,nv,alpha[],x[])           y = sum alpha[i] x[i] +      y
 
 .seealso:  VecAYPX(), VecMAXPY(), VecWAXPY(), VecAXPBYPCZ(), VecAXPBY()
 @*/
-PetscErrorCode  VecAXPY(Vec y,PetscScalar alpha,Vec x)
+PetscErrorCode VecAXPY(Vec y, PetscScalar alpha, Vec x)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(x,VEC_CLASSID,3);
-  PetscValidHeaderSpecific(y,VEC_CLASSID,1);
-  PetscValidType(x,3);
-  PetscValidType(y,1);
-  PetscCheckSameTypeAndComm(x,3,y,1);
-  VecCheckSameSize(x,3,y,1);
-  PetscCheckFalse(x == y,PetscObjectComm((PetscObject)x),PETSC_ERR_ARG_IDN,"x and y cannot be the same vector");
-  PetscValidLogicalCollectiveScalar(y,alpha,2);
-  if (alpha == (PetscScalar)0.0) PetscFunctionReturn(0);
-  ierr = VecSetErrorIfLocked(y,1);CHKERRQ(ierr);
+  if (alpha != (PetscScalar)0.0) {
+    PetscErrorCode ierr;
 
-  ierr = VecLockReadPush(x);CHKERRQ(ierr);
-  ierr = PetscLogEventBegin(VEC_AXPY,x,y,0,0);CHKERRQ(ierr);
-  ierr = (*y->ops->axpy)(y,alpha,x);CHKERRQ(ierr);
-  ierr = PetscLogEventEnd(VEC_AXPY,x,y,0,0);CHKERRQ(ierr);
-  ierr = VecLockReadPop(x);CHKERRQ(ierr);
-  ierr = PetscObjectStateIncrease((PetscObject)y);CHKERRQ(ierr);
+    PetscValidLogicalCollectiveScalar(y,alpha,2);
+    ierr = VecAXPYAsync(y,(PetscManagedScalar){&alpha,PETSC_MEMTYPE_HOST},x,NULL);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
