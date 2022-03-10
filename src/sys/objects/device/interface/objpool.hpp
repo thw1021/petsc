@@ -40,7 +40,6 @@ public:
 
   PETSC_NODISCARD PetscErrorCode create(value_type *obj) const noexcept
   {
-
     PetscFunctionBegin;
     PetscCall(PetscNew(obj));
     PetscFunctionReturn(0);
@@ -48,7 +47,6 @@ public:
 
   PETSC_NODISCARD PetscErrorCode destroy(value_type &obj) const noexcept
   {
-
     PetscFunctionBegin;
     PetscCall((*obj->ops->destroy)(obj));
     PetscCall(PetscHeaderDestroy(&obj));
@@ -57,7 +55,6 @@ public:
 
   PETSC_NODISCARD PetscErrorCode reset(value_type &obj) const noexcept
   {
-
     PetscFunctionBegin;
     PetscCall(this->destroy(obj));
     PetscCall(this->create(&obj));
@@ -137,10 +134,7 @@ public:
   { }
 
   // destructor
-  ~ObjectPool() noexcept
-  {
-    PetscCallAbort(PETSC_COMM_SELF,finalizer_());
-  }
+  ~ObjectPool() noexcept { PetscCallAbort(PETSC_COMM_SELF,finalizer_()); }
 
   // copy constructor
   ObjectPool(ObjectPool &other) noexcept(std::is_nothrow_copy_constructible<stack_type>::value)

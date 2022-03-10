@@ -100,7 +100,6 @@ template <typename D>
 template <typename...T, util::enable_if_t<sizeof...(T)>=3,int>>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceBase<D>::PetscOptionDeviceInitialize(PetscOptionItems *PetscOptionsObject, T&&... args))
 {
-
   PetscFunctionBegin;
   PetscCall(PetscOptionDevice(PetscOptionsEList_Private,PetscOptionsObject,"-device_enable_",std::forward<T>(args)...));
   PetscFunctionReturn(0);
@@ -110,7 +109,6 @@ template <typename D>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceBase<D>::PetscOptionDeviceInitialize(PetscOptionItems *PetscOptionsObject, PetscDeviceInitType *inittype, PetscBool *flag))
 {
   auto           type = static_cast<PetscInt>(util::integral_value(*inittype));
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCall(PetscOptionDeviceInitialize(PetscOptionsObject,"How (or whether) to initialize a device","PetscDeviceInitialize()",PetscDeviceInitTypes,3,PetscDeviceInitTypes[type],&type,flag));
@@ -122,8 +120,6 @@ template <typename D>
 template <typename...T, util::enable_if_t<sizeof...(T)>=3,int>>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceBase<D>::PetscOptionDeviceSelect(PetscOptionItems *PetscOptionsObject, T&&... args))
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscCall(PetscOptionDevice(PetscOptionsInt_Private,PetscOptionsObject,"-device_select_",std::forward<T>(args)...));
   PetscFunctionReturn(0);
@@ -132,8 +128,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceBase<D>::PetscOptionDeviceSelect(Pets
 template <typename D>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceBase<D>::PetscOptionDeviceSelect(PetscOptionItems *PetscOptionsObject, PetscInt *id, PetscBool *flag))
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscCall(PetscOptionDeviceSelect(PetscOptionsObject,"Which device to use. Pass " PetscStringize(PETSC_DECIDE) " to have PETSc decide or (given they exist) [0-" PetscStringize(PETSC_DEVICE_MAX_DEVICES) ") for a specific device","PetscDeviceCreate()",*id,id,flag,PETSC_DECIDE,PETSC_DEVICE_MAX_DEVICES));
   PetscFunctionReturn(0);
@@ -143,8 +137,6 @@ template <typename D>
 template <typename...T, util::enable_if_t<sizeof...(T)>=3,int>>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceBase<D>::PetscOptionDeviceView(PetscOptionItems *PetscOptionsObject, T&&... args))
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscCall(PetscOptionDevice(PetscOptionsBool_Private,PetscOptionsObject,"-device_view_",std::forward<T>(args)...));
   PetscFunctionReturn(0);
@@ -153,8 +145,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceBase<D>::PetscOptionDeviceView(PetscO
 template <typename D>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceBase<D>::PetscOptionDeviceView(PetscOptionItems *PetscOptionsObject, PetscBool *view, PetscBool *flag))
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscCall(PetscOptionDeviceView(PetscOptionsObject,"Display device information and assignments (forces eager initialization)","PetscDeviceView()",*view,view,flag));
   PetscFunctionReturn(0);
@@ -163,8 +153,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceBase<D>::PetscOptionDeviceView(PetscO
 template <typename D>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceBase<D>::PetscOptionDeviceBasic(PetscOptionItems *PetscOptionsObject, std::pair<PetscDeviceInitType,PetscBool> &initType, std::pair<PetscInt,PetscBool> &initId, std::pair<PetscBool,PetscBool> &initView))
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscCall(PetscOptionDeviceInitialize(PetscOptionsObject,&initType.first,&initType.second));
   PetscCall(PetscOptionDeviceSelect(PetscOptionsObject,&initId.first,&initId.second));

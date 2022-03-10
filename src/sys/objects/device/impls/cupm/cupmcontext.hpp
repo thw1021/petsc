@@ -73,8 +73,7 @@ private:
 
   PETSC_CXX_COMPAT_DECL(PetscErrorCode check_current_device_(PetscDeviceContext dctxl, PetscDeviceContext dctxr))
   {
-    const auto     devidl = dctxl->device->deviceId,devidr = dctxr->device->deviceId;
-    cupmError_t    cerr;
+    const auto devidl = dctxl->device->deviceId,devidr = dctxr->device->deviceId;
 
     PetscFunctionBegin;
     PetscCheck(devidl == devidr,PETSC_COMM_SELF,PETSC_ERR_GPU,"Device contexts must be on the same device; dctx A (id %" PetscInt_FMT " device id %" PetscInt_FMT ") dctx B (id %" PetscInt_FMT " device id %" PetscInt_FMT ")",dctxl->id,devidl,dctxr->id,devidr);
@@ -91,16 +90,12 @@ private:
   {
     PetscFunctionBegin;
     for (auto&& handle : blashandles_) {
-      if (handle) {
-        PetscCallCUPMBLAS(cupmBlasDestroy(handle));
-        handle     = nullptr;
-      }
+      if (handle) PetscCallCUPMBLAS(cupmBlasDestroy(handle));
+      handle = nullptr;
     }
     for (auto&& handle : solverhandles_) {
-      if (handle) {
-        PetscCall(cupmBlasInterface_t::DestroyHandle(handle));
-        handle    = nullptr;
-      }
+      if (handle) PetscCall(cupmBlasInterface_t::DestroyHandle(handle));
+      handle = nullptr;
     }
     initialized_ = false;
     PetscFunctionReturn(0);
@@ -125,10 +120,9 @@ private:
 
   PETSC_CXX_COMPAT_DECL(PetscErrorCode initialize_handle2_(blas_tag, PetscDeviceContext dctx))
   {
-    const auto      dci    = impls_cast_(dctx);
-    auto&           handle = blashandles_[dctx->device->deviceId];
-    cupmStream_t    stream;
-    cupmBlasError_t cberr;
+    const auto   dci    = impls_cast_(dctx);
+    auto&        handle = blashandles_[dctx->device->deviceId];
+    cupmStream_t stream;
 
     PetscFunctionBegin;
     PetscCall(create_handle_(handle));
@@ -145,9 +139,8 @@ private:
 
   PETSC_CXX_COMPAT_DECL(PetscErrorCode initialize_handle2_(solver_tag, PetscDeviceContext dctx))
   {
-    const auto     dci    = impls_cast_(dctx);
-    auto&          handle = solverhandles_[dctx->device->deviceId];
-    PetscErrorCode ierr;
+    const auto dci    = impls_cast_(dctx);
+    auto&      handle = solverhandles_[dctx->device->deviceId];
 
     PetscFunctionBegin;
     PetscCall(create_handle_(handle));
@@ -159,8 +152,6 @@ private:
   template <typename TagType>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode initialize_handle_(PetscDeviceContext dctx))
   {
-    PetscErrorCode ierr;
-
     PetscFunctionBegin;
     PetscCall(check_current_device_(dctx));
     PetscCall(initialize_handle2_(TagType{},dctx));
@@ -212,9 +203,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::initialize())
 template <DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::destroy(PetscDeviceContext dctx))
 {
-  auto           dci = impls_cast_(dctx);
-  cupmError_t    cerr;
-  PetscErrorCode ierr;
+  auto dci = impls_cast_(dctx);
 
   PetscFunctionBegin;
   if (!dci) PetscFunctionReturn(0);
@@ -245,9 +234,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::changeStreamType(PetscDev
 template <DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::setUp(PetscDeviceContext dctx))
 {
-  const auto     dci = impls_cast_(dctx);
-  cupmError_t    cerr;
-  PetscErrorCode ierr;
+  const auto dci = impls_cast_(dctx);
 
   PetscFunctionBegin;
   PetscCall(check_current_device_(dctx));
@@ -269,9 +256,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::setUp(PetscDeviceContext 
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Invalid PetscStreamType %s",PetscStreamTypes[util::integral_value(dctx->streamType)]);
     break;
   }
-  if (!dci->event) {
-    PetscCallCUPM(cupmEventCreateWithFlags(&dci->event,cupmEventDisableTiming));
-  }
+  if (!dci->event) PetscCallCUPM(cupmEventCreateWithFlags(&dci->event,cupmEventDisableTiming));
 #if PetscDefined(USE_DEBUG)
   dci->timerInUse = PETSC_FALSE;
 #endif
@@ -281,8 +266,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::setUp(PetscDeviceContext 
 template <DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::query(PetscDeviceContext dctx, PetscBool *idle))
 {
-  cupmError_t    cerr;
-  PetscErrorCode ierr;
+  cupmError_t cerr;
 
   PetscFunctionBegin;
   PetscCall(check_current_device_(dctx));
@@ -299,9 +283,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::query(PetscDeviceContext 
 template <DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::waitForContext(PetscDeviceContext dctxa, PetscDeviceContext dctxb))
 {
-  const auto     dcib = impls_cast_(dctxb);
-  cupmError_t    cerr;
-  PetscErrorCode ierr;
+  const auto dcib = impls_cast_(dctxb);
 
   PetscFunctionBegin;
   PetscCall(check_current_device_(dctxa,dctxb));
@@ -313,9 +295,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::waitForContext(PetscDevic
 template <DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::synchronize(PetscDeviceContext dctx))
 {
-  const auto     dci = impls_cast_(dctx);
-  cupmError_t    cerr;
-  PetscErrorCode ierr;
+  const auto dci = impls_cast_(dctx);
 
   PetscFunctionBegin;
   PetscCall(check_current_device_(dctx));
@@ -329,8 +309,6 @@ template <DeviceType T>
 template <typename handle_t>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::getHandle(PetscDeviceContext dctx, void *handle))
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscCall(initialize_handle_<handle_t>(dctx));
   *static_cast<typename handle_t::type*>(handle) = impls_cast_(dctx)->get(handle_t{});
@@ -340,9 +318,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::getHandle(PetscDeviceCont
 template <DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::beginTimer(PetscDeviceContext dctx))
 {
-  const auto     dci = impls_cast_(dctx);
-  cupmError_t    cerr;
-  PetscErrorCode ierr;
+  const auto dci = impls_cast_(dctx);
 
   PetscFunctionBegin;
   PetscCall(check_current_device_(dctx));
@@ -361,10 +337,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::beginTimer(PetscDeviceCon
 template <DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::endTimer(PetscDeviceContext dctx, PetscLogDouble *elapsed))
 {
-  const auto     dci = impls_cast_(dctx);
-  float          gtime;
-  cupmError_t    cerr;
-  PetscErrorCode ierr;
+  const auto dci = impls_cast_(dctx);
+  float      gtime;
 
   PetscFunctionBegin;
   PetscCall(check_current_device_(dctx));
