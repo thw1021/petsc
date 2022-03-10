@@ -284,7 +284,7 @@ static inline PetscErrorCode KSPSolve_HPDDM_Private(KSP ksp, const PetscScalar *
     }
     ierr = static_cast<PetscErrorCode>(HPDDM::IterativeMethod::solve(*data->op, down_b, down_x, n, PetscObjectComm((PetscObject)ksp)));CHKERRQ(ierr);
     ierr = PetscFree(down_b);CHKERRQ(ierr);
-    for (i = N; i-- > 0; ) x[i] = down_x[i];
+    for (i = N; i-- > 0;) x[i] = down_x[i];
   } else {
     ierr = static_cast<PetscErrorCode>(HPDDM::IterativeMethod::solve(*data->op, b, x, n, PetscObjectComm((PetscObject)ksp)));CHKERRQ(ierr);
   }
