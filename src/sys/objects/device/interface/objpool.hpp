@@ -134,10 +134,7 @@ public:
   { }
 
   // destructor
-  ~ObjectPool() noexcept
-  {
-    PetscCallAbort(PETSC_COMM_SELF,finalizer_());
-  }
+  ~ObjectPool() noexcept { PetscCallAbort(PETSC_COMM_SELF,finalizer_()); }
 
   // copy constructor
   ObjectPool(ObjectPool &other) noexcept(std::is_nothrow_copy_constructible<stack_type>::value)
