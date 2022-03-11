@@ -331,7 +331,7 @@ PetscErrorCode  PetscSortedRemoveDupsInt(PetscInt *n,PetscInt X[])
 
 .seealso: PetscSortInt(), PetscCheckDupsInt(), PetscSortRemoveDupsInt(), PetscSortedRemoveDupsInt()
 @*/
-PetscErrorCode  PetscSortedCheckDupsInt(PetscInt n,PetscInt X[],PetscBool *flg)
+PetscErrorCode  PetscSortedCheckDupsInt(PetscInt n,const PetscInt X[],PetscBool *flg)
 {
   PetscInt i;
 
