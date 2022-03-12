@@ -1178,6 +1178,7 @@ static PetscErrorCode DMPlexTransformSetCones(DMPlexTransform tr, DM rdm)
   ierr = DMViewFromOptions(rdm, NULL, "-rdm_view");CHKERRQ(ierr);
   ierr = DMPlexSymmetrize(rdm);CHKERRQ(ierr);
   ierr = DMPlexStratify(rdm);CHKERRQ(ierr);
+  ierr = DMPlexCheckFaces(rdm, 0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
