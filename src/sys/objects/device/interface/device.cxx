@@ -237,10 +237,10 @@ PetscErrorCode PetscDeviceView(PetscDevice device, PetscViewer viewer)
   Not collective
 
   Input Parameter:
-. device - The PetscDevice to view
+. device - The PetscDevice
 
   Output Parameter:
-- id - The device id
+. id - The device id
 
   Level: beginner
 
