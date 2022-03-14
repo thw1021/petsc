@@ -316,12 +316,6 @@ PetscErrorCode Device<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, P
   cerr = cupmGetDeviceCount(&ndev);
   // post-process the options and lay the groundwork for initialization if needs be
   if (PetscUnlikely((cerr == cupmErrorStubLibrary) || (cerr == cupmErrorNoDevice))) {
-    if (PetscUnlikely((initTypeCUPM == PETSC_DEVICE_INIT_EAGER) || (view && flg))) {
-      const auto name    = cupmGetErrorName(cerr);
-      const auto desc    = cupmGetErrorString(cerr);
-      const auto backend = cupmName();
-      SETERRQ(comm,PETSC_ERR_USER_INPUT,"Cannot eagerly initialize %s, as doing so results in %s error %d (%s) : %s",backend,backend,static_cast<PetscErrorCode>(cerr),name,desc);
-    }
     id   = -cerr;
     cerr = cupmGetLastError(); // reset error
     initTypeCUPM = PETSC_DEVICE_INIT_NONE;
