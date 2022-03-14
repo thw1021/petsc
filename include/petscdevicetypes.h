@@ -207,17 +207,24 @@ typedef struct PetscManagedScalar
   PetscMemType mtype;
 
 #if defined(__cplusplus)
-  PetscManagedScalar() noexcept : ptr(nullptr), mtype(PETSC_MEMTYPE_HOST) { }
+  PetscManagedScalar(PetscScalar *_ptr = nullptr, PetscMemType _mtype = PETSC_MEMTYPE_HOST) noexcept
+    : ptr(_ptr), mtype(_mtype)
+  { }
 
         PetscScalar& operator[](std::size_t idx)       noexcept { return ptr[idx]; }
   const PetscScalar& operator[](std::size_t idx) const noexcept { return ptr[idx]; }
 #endif
 } PetscManagedScalar;
 
+static inline PetscBool PetscManagedScalarEq(PetscManagedScalar scal, PetscScalar val)
+{
+  return PetscMemTypeHost(scal.mtype) ? (PetscBool)(*scal.ptr == val) : PETSC_FALSE;
+}
+
 #if defined(__cplusplus)
 bool operator==(const PetscManagedScalar &a, const PetscScalar &b) noexcept
 {
-  return PetscMemTypeHost(a.mtype) ? a[0] == b : false;
+  return PetscManagedScalarEq(a,b);
 }
 
 bool operator!=(const PetscManagedScalar &a, const PetscScalar &b) noexcept
