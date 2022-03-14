@@ -385,11 +385,20 @@ Unable to run hostname to check the network')
     self.compilers.CPPFLAGS += ' '+self.headers.toString(self.include)
     self.compilers.LIBS = self.libraries.toString(self.lib)+' '+self.compilers.LIBS
     self.framework.saveLog()
-    if self.checkLink('#include <mpi.h>\n', 'int flag;if (MPI_Finalized(&flag));\n'):
-      self.haveFinalized = 1
-      self.addDefine('HAVE_MPI_FINALIZED', 1)
-    if not self.checkLink('#include <mpi.h>\n', 'if (MPI_Allreduce(MPI_IN_PLACE,0,1,MPI_INT,MPI_SUM,MPI_COMM_SELF));\n'):
-      raise RuntimeError('PETSc requires MPI_IN_PLACE (introduced in MPI-2.0 in 1997). Please update or switch to MPI that supports MPI_IN_PLACE. Let us know at petsc-maint@mcs.anl.gov if this is not possible')
+    # Check for some of the MPI functions PETSc needs from MPI-2.0/2.1. Generally speaking, PETSc requires MPI-2.1 with exception of MPI multithreading and one-sided.
+    mainBody = '''
+      int a,b,c,d,flag,sendbuf[1]={1},recvbuf[1]={2};
+      MPI_Datatype newtype;
+      if (MPI_Allreduce(MPI_IN_PLACE,0,1,MPI_INT,MPI_SUM,MPI_COMM_SELF)) return 0;
+      if (MPI_Finalized(&flag)) return 0;
+      if (MPI_Type_dup(MPI_INT,&newtype)) return 0;
+      if (MPI_Exscan(sendbuf,recvbuf,1,MPI_INT,MPI_SUM,MPI_COMM_WORLD)) return 0;
+      if (MPI_Reduce_scatter(sendbuf,recvbuf,1,MPI_INT,MPI_SUM,MPI_COMM_WORLD)) return 0;
+      if (MPI_Type_get_envelope(MPI_INT,&a,&b,&c,&d)) return 0;
+    '''
+    if not self.checkLink('#include <mpi.h>\n', mainBody):
+      raise RuntimeError('Some functions from MPI-2.0 (1997) and MPI-2.1 (2008) are not available')
+
     if self.checkLink('#include <mpi.h>\n', 'int count=2; int blocklens[2]={0,1}; MPI_Aint indices[2]={0,1}; MPI_Datatype old_types[2]={MPI_INT,MPI_DOUBLE}; MPI_Datatype *newtype = 0;\n \
                                              if (MPI_Type_create_struct(count, blocklens, indices, old_types, newtype));\n'):
       self.haveTypeCreateStruct = 1
@@ -406,7 +415,7 @@ Unable to run hostname to check the network')
     else:
       self.haveCommSetErrhandler = 0
       self.framework.addDefine('MPI_Comm_set_errhandler(comm,p_errhandler)', 'MPI_Errhandler_set((comm),(p_errhandler))')
-    if self.checkLink('#include <mpi.h>\n', 'if (MPI_Reduce_local(0, 0, 0, MPI_INT, MPI_SUM));'):
+    if self.checkLink('#include <mpi.h>\n', 'if (MPI_Reduce_local(0, 0, 0, MPI_INT, MPI_SUM));'): # MPI_Reduce_local is in MPI-2.2
       self.haveReduceLocal = 1
       self.addDefine('HAVE_MPI_REDUCE_LOCAL',1)
     if self.checkLink('#include <mpi.h>\n', 'char version[MPI_MAX_LIBRARY_VERSION_STRING];int verlen;if (MPI_Get_library_version(version,&verlen));\n'):
@@ -537,8 +546,6 @@ Unable to run hostname to check the network')
     self.mpiexec = '${PETSC_DIR}/lib/petsc/bin/petsc-mpiexec.uni'
     self.mpiexecseq = '${PETSC_DIR}/lib/petsc/bin/petsc-mpiexec.uni'
     self.addMakeMacro('MPIEXEC','${PETSC_DIR}/lib/petsc/bin/petsc-mpiexec.uni')
-    self.addDefine('HAVE_MPI_TYPE_DUP', 1)
-    self.addDefine('HAVE_MPI_TYPE_GET_ENVELOPE', 1)
     self.framework.saveLog()
     self.framework.addDefine('MPI_Type_create_struct(count,lens,displs,types,newtype)', 'MPI_Type_struct((count),(lens),(displs),(types),(newtype))')
     self.framework.addDefine('MPI_Comm_create_errhandler(p_err_fun,p_errhandler)', 'MPI_Errhandler_create((p_err_fun),(p_errhandler))')
@@ -856,9 +863,9 @@ You may need to set the environmental variable HWLOC_COMPONENTS to -x86 to preve
     self.executeTest(self.PetscArchMPICheck)
     # deadlock AO tests ex1 with test 3
     if not (hasattr(self, 'isNecMPI')):
-      funcs = '''MPI_Type_get_envelope  MPI_Type_dup MPI_Init_thread MPI_Iallreduce MPI_Ibarrier MPI_Finalized MPI_Exscan MPI_Reduce_scatter MPI_Reduce_scatter_block'''.split()
+      funcs = '''MPI_Init_thread MPI_Iallreduce MPI_Ibarrier MPI_Reduce_scatter_block'''.split()
     else:
-      funcs = '''MPI_Type_get_envelope  MPI_Type_dup MPI_Init_thread MPI_Iallreduce MPI_Ibarrier MPI_Finalized MPI_Exscan MPI_Reduce_scatter'''.split()
+      funcs = '''MPI_Init_thread MPI_Iallreduce MPI_Ibarrier '''.split()
     found, missing = self.libraries.checkClassify(self.dlib, funcs)
     for f in found:
       self.addDefine('HAVE_' + f.upper(),1)
