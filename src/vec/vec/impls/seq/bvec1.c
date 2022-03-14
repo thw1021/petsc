@@ -75,7 +75,7 @@ PetscErrorCode VecAXPY_Seq(Vec yin,PetscManagedScalar alpha,Vec xin,PetscDeviceC
   PetscFunctionBegin;
   ierr = PetscBLASIntCast(yin->map->n,&bn);CHKERRQ(ierr);
   /* assume that the BLAS handles alpha == 1.0 efficiently since we have no fast code for it */
-  if (alpha != (PetscScalar)0.0) {
+  if (!PetscManagedScalarEq(alpha,0.0)) {
     ierr = VecGetArrayRead(xin,&xarray);CHKERRQ(ierr);
     ierr = VecGetArray(yin,&yarray);CHKERRQ(ierr);
     PetscStackCallBLAS("BLASaxpy",BLASaxpy_(&bn,&alpha,xarray,&one,yarray,&one));
