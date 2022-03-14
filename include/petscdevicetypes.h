@@ -24,7 +24,8 @@ $ xxxxyyy1 = 0000,0101 - SYCL memory
 
   Level: beginner
 
-  Notes: PETSC_MEMTYPE_KOKKOS depends on the KOKKOS backend configuration
+  Notes:
+  PETSC_MEMTYPE_KOKKOS depends on the KOKKOS backend configuration
 
 .seealso: VecGetArrayAndMemType(), PetscSFBcastWithMemTypeBegin(), PetscSFReduceWithMemTypeBegin()
 E*/
@@ -35,11 +36,11 @@ typedef enum {
   PETSC_MEMTYPE_NVSHMEM = 0x11,
   PETSC_MEMTYPE_HIP     = 0x03,
   PETSC_MEMTYPE_SYCL    = 0x05,
-#if defined(PETSC_HAVE_CUDA)
+#if PetscDefined(HAVE_CUDA)
   PETSC_MEMTYPE_KOKKOS  = PETSC_MEMTYPE_CUDA
-#elif defined(PETSC_HAVE_HIP)
+#elif PetscDefined(HAVE_HIP)
   PETSC_MEMTYPE_KOKKOS  = PETSC_MEMTYPE_HIP
-#elif defined(PETSC_HAVE_SYCL)
+#elif PetscDefined(HAVE_SYCL)
   PETSC_MEMTYPE_KOKKOS  = PETSC_MEMTYPE_SYCL
 #else
   PETSC_MEMTYPE_KOKKOS  = PETSC_MEMTYPE_HOST
