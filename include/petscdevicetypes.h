@@ -189,36 +189,67 @@ PetscDeviceContextDestroy(), PetscDeviceContextFork(), PetscDeviceContextJoin()
 S*/
 typedef struct _n_PetscDeviceContext *PetscDeviceContext;
 
-typedef struct PetscManagedScalar
+#if defined(__cplusplus)
+template <typename T>
+struct PetscManagedType
 {
-  PetscScalar  *ptr;
+  T            *ptr;
   PetscMemType mtype;
 
-#if defined(__cplusplus)
-  PetscManagedScalar(PetscScalar *_ptr = nullptr, PetscMemType _mtype = PETSC_MEMTYPE_HOST) noexcept
+  PetscManagedType(T *_ptr = nullptr, PetscMemType _mtype = PETSC_MEMTYPE_HOST) noexcept
     : ptr(_ptr), mtype(_mtype)
   { }
 
-        PetscScalar& operator[](std::size_t idx)       noexcept { return ptr[idx]; }
-  const PetscScalar& operator[](std::size_t idx) const noexcept { return ptr[idx]; }
+        T& operator[](std::size_t idx)       noexcept { return this->ptr[idx]; }
+  const T& operator[](std::size_t idx) const noexcept { return this->ptr[idx]; }
+
+  bool operator==(const T &b) const noexcept
+  {
+    return PetscMemTypeHost(this->mtype) ? (*this->ptr == b) : false;
+  }
+
+  bool operator!=(const T &b) const noexcept
+  {
+    return !(this == b);
+  }
+};
+
+using PetscManagedScalar = PetscManagedType<PetscScalar>;
+using PetscManagedReal   = PetscManagedType<PetscReal>;
+using PetscManagedInt    = PetscManagedType<PetscInt>;
+#else
+#define PETSC_MANAGED_TYPE_CDECL(name)          \
+  typedef struct PetscManaged ## name           \
+  {                                             \
+    Petsc ## name *ptr;                         \
+    PetscMemType  mtype;                        \
+  } PetscManaged ## name
+
+PETSC_MANAGED_TYPE_CDECL(Scalar);
+PETSC_MANAGED_TYPE_CDECL(Real);
+PETSC_MANAGED_TYPE_CDECL(Int);
+
+#undef PETSC_MANAGED_TYPE_CDECL
 #endif
-} PetscManagedScalar;
 
-static inline PetscBool PetscManagedScalarEq(PetscManagedScalar scal, PetscScalar val)
-{
-  return PetscMemTypeHost(scal.mtype) ? (PetscBool)(*scal.ptr == val) : PETSC_FALSE;
-}
+#define PETSC_MANAGED_TYPE_OPERATOR_DECL(name)                                                 \
+  static inline PetscBool PetscManaged ## name ## Eq(PetscManaged ## name scal, Petsc ## name val) \
+  {                                                                                            \
+    return PetscMemTypeHost(scal.mtype) ? (PetscBool)(*scal.ptr == val) : PETSC_FALSE;         \
+  }                                                                                            \
+  static inline PetscManaged ## name PetscManaged ## name ## Create(Petsc ## name *scal)       \
+  {                                                                                            \
+    PetscManaged ## name s = {                                                                 \
+      PetscDesignatedInitializer(ptr,scal),                                                    \
+      PetscDesignatedInitializer(mtype,PETSC_MEMTYPE_HOST)                                     \
+    };                                                                                         \
+    return s;                                                                                  \
+  }                                                                                            \
 
-#if defined(__cplusplus)
-bool operator==(const PetscManagedScalar &a, const PetscScalar &b) noexcept
-{
-  return PetscManagedScalarEq(a,b);
-}
+PETSC_MANAGED_TYPE_OPERATOR_DECL(Scalar);
+PETSC_MANAGED_TYPE_OPERATOR_DECL(Real);
+PETSC_MANAGED_TYPE_OPERATOR_DECL(Int);
 
-bool operator!=(const PetscManagedScalar &a, const PetscScalar &b) noexcept
-{
-  return !(a == b);
-}
-#endif
+#undef PETSC_MANAGED_TYPE_OPERATOR_DECL
 
 #endif /* PETSCDEVICETYPES_H */

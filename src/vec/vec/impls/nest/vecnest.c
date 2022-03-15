@@ -170,7 +170,7 @@ static PetscErrorCode VecAXPY_Nest(Vec y,PetscManagedScalar alpha,Vec x,PetscDev
   PetscFunctionBegin;
   nr = bx->nb;
   for (i=0; i<nr; i++) {
-    ierr = VecAXPYAsync(by->v[i],alpha,bx->v[i]);CHKERRQ(ierr);
+    ierr = VecAXPY(by->v[i],*alpha.ptr,bx->v[i]);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }

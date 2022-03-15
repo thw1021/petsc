@@ -5,33 +5,31 @@
 #include <petscsys.h>
 #include <../src/vec/vec/impls/mpi/pvecimpl.h>   /*I  "petscvec.h"   I*/
 
-PetscErrorCode VecDot_MPI(Vec xin,Vec yin,PetscScalar *z)
+PetscErrorCode VecDot_MPI(Vec xin, Vec yin, PetscManagedScalar z, PetscDeviceContext dctx)
 {
-  PetscScalar    sum,work;
+  PetscScalar    work;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = VecDot_Seq(xin,yin,&work);CHKERRQ(ierr);
-  ierr = MPIU_Allreduce(&work,&sum,1,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)xin));CHKERRMPI(ierr);
-  *z   = sum;
+  ierr = VecDot_Seq(xin,yin,PetscManagedScalarCreate(&work),dctx);CHKERRQ(ierr);
+  ierr = MPIU_Allreduce(&work,z.ptr,1,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)xin));CHKERRMPI(ierr);
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecTDot_MPI(Vec xin,Vec yin,PetscScalar *z)
+PetscErrorCode VecTDot_MPI(Vec xin, Vec yin, PetscManagedScalar z, PetscDeviceContext dctx)
 {
-  PetscScalar    sum,work;
+  PetscScalar    work;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = VecTDot_Seq(xin,yin,&work);CHKERRQ(ierr);
-  ierr = MPIU_Allreduce(&work,&sum,1,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)xin));CHKERRMPI(ierr);
-  *z   = sum;
+  ierr = VecTDot_Seq(xin,yin,PetscManagedScalarCreate(&work),dctx);CHKERRQ(ierr);
+  ierr = MPIU_Allreduce(&work,z.ptr,1,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)xin));CHKERRMPI(ierr);
   PetscFunctionReturn(0);
 }
 
 extern PetscErrorCode VecView_MPI_Draw(Vec,PetscViewer);
 
-PetscErrorCode VecPlaceArray_MPI(Vec vin,const PetscScalar *a)
+PetscErrorCode VecPlaceArray_MPI(Vec vin, const PetscScalar *a, PetscDeviceContext PETSC_UNUSED dctx)
 {
   PetscErrorCode ierr;
   Vec_MPI        *v = (Vec_MPI*)vin->data;
@@ -40,13 +38,11 @@ PetscErrorCode VecPlaceArray_MPI(Vec vin,const PetscScalar *a)
   PetscCheckFalse(v->unplacedarray,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"VecPlaceArray() was already called on this vector, without a call to VecResetArray()");
   v->unplacedarray = v->array;  /* save previous array so reset can bring it back */
   v->array         = (PetscScalar*)a;
-  if (v->localrep) {
-    ierr = VecPlaceArray(v->localrep,a);CHKERRQ(ierr);
-  }
+  if (v->localrep) {ierr = VecPlaceArray(v->localrep,a);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecDuplicate_MPI(Vec win,Vec *v)
+PetscErrorCode VecDuplicate_MPI(Vec win, Vec *v, PetscDeviceContext PETSC_UNUSED dctx)
 {
   PetscErrorCode ierr;
   Vec_MPI        *vw,*w = (Vec_MPI*)win->data;
@@ -69,9 +65,7 @@ PetscErrorCode VecDuplicate_MPI(Vec win,Vec *v)
     ierr = PetscLogObjectParent((PetscObject)*v,(PetscObject)vw->localrep);CHKERRQ(ierr);
 
     vw->localupdate = w->localupdate;
-    if (vw->localupdate) {
-      ierr = PetscObjectReference((PetscObject)vw->localupdate);CHKERRQ(ierr);
-    }
+    if (vw->localupdate) {ierr = PetscObjectReference((PetscObject)vw->localupdate);CHKERRQ(ierr);}
   }
 
   /* New vector should inherit stashing property of parent */
@@ -109,7 +103,7 @@ static PetscErrorCode VecSetOption_MPI(Vec V,VecOption op,PetscBool flag)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecResetArray_MPI(Vec vin)
+PetscErrorCode VecResetArray_MPI(Vec vin, PetscDeviceContext PETSC_UNUSED dctx)
 {
   Vec_MPI        *v = (Vec_MPI*)vin->data;
   PetscErrorCode ierr;
@@ -117,9 +111,7 @@ PetscErrorCode VecResetArray_MPI(Vec vin)
   PetscFunctionBegin;
   v->array         = v->unplacedarray;
   v->unplacedarray = NULL;
-  if (v->localrep) {
-    ierr = VecResetArray(v->localrep);CHKERRQ(ierr);
-  }
+  if (v->localrep) {ierr = VecResetArray(v->localrep);CHKERRQ(ierr);}
   PetscFunctionReturn(0);
 }
 
@@ -491,7 +483,7 @@ static struct _VecOps DvOps = {
     If alloc is true and array is NULL then this routine allocates the space, otherwise
     no space is allocated.
 */
-PetscErrorCode VecCreate_MPI_Private(Vec v,PetscBool alloc,PetscInt nghost,const PetscScalar array[])
+PetscErrorCode VecCreate_MPI_Private(Vec v, PetscBool alloc, PetscInt nghost, const PetscScalar array[], PetscDeviceContext PETSC_UNUSED dctx)
 {
   Vec_MPI        *s;
   PetscErrorCode ierr;
@@ -551,7 +543,7 @@ PetscErrorCode VecCreate_MPI(Vec vv)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = VecCreate_MPI_Private(vv,PETSC_TRUE,0,NULL);CHKERRQ(ierr);
+  ierr = VecCreate_MPI_Private(vv,PETSC_TRUE,0,NULL,NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

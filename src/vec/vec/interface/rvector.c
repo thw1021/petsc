@@ -35,6 +35,24 @@ PETSC_EXTERN PetscErrorCode VecValidValues(Vec vec,PetscInt argnum,PetscBool beg
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode VecMaxPointwiseDivideAsync(Vec x, Vec y, PetscManagedReal max, PetscDeviceContext dctx)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidHeaderSpecific(y,VEC_CLASSID,2);
+  //PetscValidRealPointer(max,3);
+  PetscValidType(x,1);
+  PetscValidType(y,2);
+  PetscCheckSameTypeAndComm(x,1,y,2);
+  VecCheckSameSize(x,1,y,2);
+  if (!dctx) {ierr = PetscDeviceContextGetNullContext_Internal(&dctx);CHKERRQ(ierr);}
+  PetscValidDeviceContext(dctx,4);
+  ierr = (*x->ops->maxpointwisedivide)(x,y,max,dctx);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 /*@
    VecMaxPointwiseDivide - Computes the maximum of the componentwise division max = max_i abs(x_i/y_i).
 
@@ -59,14 +77,28 @@ PetscErrorCode  VecMaxPointwiseDivide(Vec x,Vec y,PetscReal *max)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  ierr = VecMaxPointwiseDivideAsync(x,y,PetscManagedRealCreate(max),NULL);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecDotAsync(Vec x, Vec y, PetscManagedScalar val, PetscDeviceContext dctx)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
   PetscValidHeaderSpecific(y,VEC_CLASSID,2);
-  PetscValidRealPointer(max,3);
+  //PetscValidScalarPointer(val,3);
   PetscValidType(x,1);
   PetscValidType(y,2);
   PetscCheckSameTypeAndComm(x,1,y,2);
   VecCheckSameSize(x,1,y,2);
-  ierr = (*x->ops->maxpointwisedivide)(x,y,max);CHKERRQ(ierr);
+  if (!dctx) {ierr = PetscDeviceContextGetNullContext_Internal(&dctx);CHKERRQ(ierr);}
+  PetscValidDeviceContext(dctx,4);
+
+  ierr = PetscLogEventBegin(VEC_Dot,x,y,0,0);CHKERRQ(ierr);
+  ierr = (*x->ops->dot)(x,y,val,dctx);CHKERRQ(ierr);
+  ierr = PetscLogEventEnd(VEC_Dot,x,y,0,0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -106,17 +138,18 @@ PetscErrorCode  VecDot(Vec x,Vec y,PetscScalar *val)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  PetscValidHeaderSpecific(y,VEC_CLASSID,2);
-  PetscValidScalarPointer(val,3);
-  PetscValidType(x,1);
-  PetscValidType(y,2);
-  PetscCheckSameTypeAndComm(x,1,y,2);
-  VecCheckSameSize(x,1,y,2);
+  ierr = VecDotAsync(x,y,PetscManagedScalarCreate(val),NULL);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
 
-  ierr = PetscLogEventBegin(VEC_Dot,x,y,0,0);CHKERRQ(ierr);
-  ierr = (*x->ops->dot)(x,y,val);CHKERRQ(ierr);
-  ierr = PetscLogEventEnd(VEC_Dot,x,y,0,0);CHKERRQ(ierr);
+PetscErrorCode VecDotRealPartAsync(Vec x, Vec y, PetscManagedReal val, PetscDeviceContext dctx)
+{
+  PetscErrorCode ierr;
+  PetscScalar    fdot;
+
+  PetscFunctionBegin;
+  ierr = VecDotAsync(x,y,PetscManagedScalarCreate(&fdot),dctx);CHKERRQ(ierr);
+  val.ptr = PetscRealPart(fdot);
   PetscFunctionReturn(0);
 }
 
@@ -153,11 +186,36 @@ $    work load imbalance that causes certain processes to arrive much earlier th
 PetscErrorCode  VecDotRealPart(Vec x,Vec y,PetscReal *val)
 {
   PetscErrorCode ierr;
-  PetscScalar    fdot;
 
   PetscFunctionBegin;
-  ierr = VecDot(x,y,&fdot);CHKERRQ(ierr);
-  *val = PetscRealPart(fdot);
+  ierr = VecDotRealPartAsync(x,y,PetscManagedRealCreate(val),NULL);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecNormAsync(Vec x, NormType type, PetscManagedReal val, PetscDeviceContext dctx)
+{
+  PetscBool      flg;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
+  //PetscValidRealPointer(val,3);
+  if (!dctx) {ierr = PetscDeviceContextGetNullContext_Internal(&dctx);CHKERRQ(ierr);}
+  PetscValidDeviceContext(dctx,4);
+  /*
+   * Cached data?
+   */
+  if (type!=NORM_1_AND_2) {
+    ierr = PetscObjectComposedDataGetReal((PetscObject)x,NormIds[type],*val.ptr,flg);CHKERRQ(ierr);
+    if (flg) PetscFunctionReturn(0);
+  }
+  ierr = PetscLogEventBegin(VEC_Norm,x,0,0,0);CHKERRQ(ierr);
+  ierr = (*x->ops->norm)(x,type,val,dctx);CHKERRQ(ierr);
+  ierr = PetscLogEventEnd(VEC_Norm,x,0,0,0);CHKERRQ(ierr);
+  if (type!=NORM_1_AND_2) {
+    ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[type],*val.ptr);CHKERRQ(ierr);
+  }
   PetscFunctionReturn(0);
 }
 
@@ -199,27 +257,10 @@ $    work load imbalance that causes certain processes to arrive much earlier th
 
 PetscErrorCode  VecNorm(Vec x,NormType type,PetscReal *val)
 {
-  PetscBool      flg;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  PetscValidRealPointer(val,3);
-  PetscValidType(x,1);
-
-  /*
-   * Cached data?
-   */
-  if (type!=NORM_1_AND_2) {
-    ierr = PetscObjectComposedDataGetReal((PetscObject)x,NormIds[type],*val,flg);CHKERRQ(ierr);
-    if (flg) PetscFunctionReturn(0);
-  }
-  ierr = PetscLogEventBegin(VEC_Norm,x,0,0,0);CHKERRQ(ierr);
-  ierr = (*x->ops->norm)(x,type,val);CHKERRQ(ierr);
-  ierr = PetscLogEventEnd(VEC_Norm,x,0,0,0);CHKERRQ(ierr);
-  if (type!=NORM_1_AND_2) {
-    ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[type],*val);CHKERRQ(ierr);
-  }
+  ierr = VecNormAsync(x,type,PetscManagedRealCreate(val),NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
