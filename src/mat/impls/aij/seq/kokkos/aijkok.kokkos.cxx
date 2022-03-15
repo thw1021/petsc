@@ -57,8 +57,8 @@ PETSC_INTERN PetscErrorCode MatSeqAIJKokkosSyncDevice(Mat A)
   Mat_SeqAIJKokkos *aijkok = static_cast<Mat_SeqAIJKokkos*>(A->spptr);
 
   PetscFunctionBegin;
-  PetscCheckFalse(A->factortype != MAT_FACTOR_NONE,PetscObjectComm((PetscObject)A),PETSC_ERR_PLIB,"Cann't sync factorized matrix from host to device");
-  PetscCheckFalse(!aijkok,PETSC_COMM_WORLD,PETSC_ERR_PLIB,"Unexpected NULL (Mat_SeqAIJKokkos*)A->spptr");
+  PetscCheck(A->factortype == MAT_FACTOR_NONE,PetscObjectComm((PetscObject)A),PETSC_ERR_PLIB,"Cann't sync factorized matrix from host to device");
+  PetscCheck(aijkok,PETSC_COMM_WORLD,PETSC_ERR_PLIB,"Unexpected NULL (Mat_SeqAIJKokkos*)A->spptr");
   if (aijkok->a_dual.need_sync_device()) {
     aijkok->a_dual.sync_device();
     aijkok->transpose_updated = PETSC_FALSE; /* values of the transpose is out-of-date */
@@ -90,8 +90,8 @@ static PetscErrorCode MatSeqAIJKokkosSyncHost(Mat A)
   PetscFunctionBegin;
   PetscCheckTypeName(A,MATSEQAIJKOKKOS);
   /* We do not expect one needs factors on host  */
-  PetscCheckFalse(A->factortype != MAT_FACTOR_NONE,PetscObjectComm((PetscObject)A),PETSC_ERR_PLIB,"Cann't sync factorized matrix from device to host");
-  PetscCheckFalse(!aijkok,PetscObjectComm((PetscObject)A),PETSC_ERR_PLIB,"Missing AIJKOK");
+  PetscCheck(A->factortype == MAT_FACTOR_NONE,PetscObjectComm((PetscObject)A),PETSC_ERR_PLIB,"Cann't sync factorized matrix from device to host");
+  PetscCheck(aijkok,PetscObjectComm((PetscObject)A),PETSC_ERR_PLIB,"Missing AIJKOK");
   aijkok->a_dual.sync_host();
   PetscFunctionReturn(0);
 }
@@ -1011,9 +1011,8 @@ static PetscErrorCode MatAXPY_SeqAIJKokkos(Mat Y,PetscScalar alpha,Mat X,MatStru
 
 static PetscErrorCode MatSetPreallocationCOO_SeqAIJKokkos(Mat mat, PetscCount coo_n, const PetscInt coo_i[], const PetscInt coo_j[])
 {
-  PetscErrorCode            ierr;
-  Mat_SeqAIJKokkos          *akok;
-  Mat_SeqAIJ                *aseq;
+  Mat_SeqAIJKokkos *akok;
+  Mat_SeqAIJ       *aseq;
 
   PetscFunctionBegin;
   CHKERRQ(MatSetPreallocationCOO_SeqAIJ(mat,coo_n,coo_i,coo_j));

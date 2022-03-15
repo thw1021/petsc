@@ -1227,9 +1227,8 @@ PETSC_INTERN PetscErrorCode MatProductSetFromOptions_MPIAIJKokkos(Mat mat)
 
 static PetscErrorCode MatSetPreallocationCOO_MPIAIJKokkos(Mat mat, PetscCount coo_n, const PetscInt coo_i[], const PetscInt coo_j[])
 {
-  Mat_MPIAIJ                *mpiaij = (Mat_MPIAIJ*)mat->data;
-  Mat_MPIAIJKokkos          *mpikok;
-  PetscErrorCode            ierr;
+  Mat_MPIAIJ       *mpiaij = (Mat_MPIAIJ*)mat->data;
+  Mat_MPIAIJKokkos *mpikok;
 
   PetscFunctionBegin;
   CHKERRQ(MatSetPreallocationCOO_MPIAIJ(mat,coo_n,coo_i,coo_j));

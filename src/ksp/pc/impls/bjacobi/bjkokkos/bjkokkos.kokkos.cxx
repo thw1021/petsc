@@ -504,8 +504,8 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
           mbid = blkID;
         }
         if (h_metadata[blkID].reason < 0) {
-          ierr = PetscPrintf(PETSC_COMM_SELF, "ERROR reason=%s, its=%" PetscInt_FMT ". species %" PetscInt_FMT ", batch %" PetscInt_FMT "\n",
-                             KSPConvergedReasons[h_metadata[blkID].reason],h_metadata[blkID].its,blkID/batch_sz,blkID%batch_sz);CHKERRQ(ierr);
+          CHKERRQ(PetscPrintf(PETSC_COMM_SELF, "ERROR reason=%s, its=%" PetscInt_FMT ". species %" PetscInt_FMT ", batch %" PetscInt_FMT "\n",
+                              KSPConvergedReasons[h_metadata[blkID].reason],h_metadata[blkID].its,blkID/batch_sz,blkID%batch_sz));
         }
       }
     }
@@ -614,7 +614,7 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
         jac->monitor = flg;
         CHKERRQ(PetscViewerDestroy(&viewer));
         CHKERRQ(PetscOptionsGetInt(((PetscObject)jac->ksp)->options,((PetscObject)jac->ksp)->prefix,"-ksp_batch_target",&jac->batch_target,&flg));
-        PetscCheckFalse(jac->batch_target >= jac->num_dms,PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"-ksp_batch_target (%" PetscInt_FMT ") >= number of DMs (%" PetscInt_FMT ")",jac->batch_target,jac->num_dms);
+        PetscCheck(jac->batch_target < jac->num_dms,PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"-ksp_batch_target (%" PetscInt_FMT ") >= number of DMs (%" PetscInt_FMT ")",jac->batch_target,jac->num_dms);
         if (!jac->monitor && !flg) jac->batch_target = -1; // turn it off
       }
       // get blocks - jac->d_bid_eqOffset_k
@@ -632,9 +632,9 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
         CHKERRQ(PetscSectionGetNumFields(section, &Nf));
         jac->nBlocks += Nf;
 #if PCBJKOKKOS_VERBOSE_LEVEL <= 2
-        if (ii==0) { ierr = PetscInfo(pc,"%" PetscInt_FMT ") %" PetscInt_FMT " blocks (%" PetscInt_FMT " total)\n",ii,Nf,jac->nBlocks); }
+        if (ii==0) CHKERRQ(PetscInfo(pc,"%" PetscInt_FMT ") %" PetscInt_FMT " blocks (%" PetscInt_FMT " total)\n",ii,Nf,jac->nBlocks));
 #else
-        ierr = PetscInfo(pc,"%" PetscInt_FMT ") %" PetscInt_FMT " blocks (%" PetscInt_FMT " total)\n",ii,Nf,jac->nBlocks);
+        CHKERRQ(PetscInfo(pc,"%" PetscInt_FMT ") %" PetscInt_FMT " blocks (%" PetscInt_FMT " total)\n",ii,Nf,jac->nBlocks));
 #endif
         jac->dm_Nf[ii] = Nf;
       }
@@ -738,9 +738,9 @@ static PetscErrorCode PCView_BJKOKKOS(PC pc,PetscViewer viewer)
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
   if (iascii) {
     CHKERRQ(PetscViewerASCIIPrintf(viewer,"  Batched device linear solver: Krylov (KSP) method with Jacobi preconditioning\n"));
-    ierr = PetscViewerASCIIPrintf(viewer,"\t\tnwork = %" PetscInt_FMT ", rel tol = %e, abs tol = %e, div tol = %e, max it =%" PetscInt_FMT ", type = %s\n",jac->nwork,jac->ksp->rtol,
-                                  jac->ksp->abstol, jac->ksp->divtol, jac->ksp->max_it,
-                                  ((PetscObject)jac->ksp)->type_name);CHKERRQ(ierr);
+    CHKERRQ(PetscViewerASCIIPrintf(viewer,"\t\tnwork = %" PetscInt_FMT ", rel tol = %e, abs tol = %e, div tol = %e, max it =%" PetscInt_FMT ", type = %s\n",jac->nwork,jac->ksp->rtol,
+                                   jac->ksp->abstol, jac->ksp->divtol, jac->ksp->max_it,
+                                   ((PetscObject)jac->ksp)->type_name));
   }
   PetscFunctionReturn(0);
 }

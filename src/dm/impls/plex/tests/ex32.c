@@ -6,7 +6,7 @@ PetscErrorCode CheckMesh(DM dm)
 {
   PetscReal detJ, J[9];
   PetscReal vol;
-  PetscInt  dim, depth, d, cStart, cEnd, c;
+  PetscInt  dim, depth, cStart, cEnd, c;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetDimension(dm, &dim));
