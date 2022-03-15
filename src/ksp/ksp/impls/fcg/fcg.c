@@ -335,7 +335,7 @@ static PetscErrorCode KSPView_FCG(KSP ksp,PetscViewer viewer)
   Level: intermediate
 
   Options Database:
-. -ksp_fcg_mmax <N>
+. -ksp_fcg_mmax <N> - maximum number of previous directions
 
 .seealso: KSPFCG, KSPFCGGetTruncationType(), KSPFCGGetNprealloc()
 @*/
@@ -361,10 +361,10 @@ PetscErrorCode KSPFCGSetMmax(KSP ksp,PetscInt mmax)
 .  ksp - the Krylov space context
 
    Output Parameter:
-.  mmax - the maximum number of previous directons allowed for orthogonalization
+.  mmax - the maximum number of previous directions allowed for orthogonalization
 
   Options Database:
-. -ksp_fcg_mmax <N>
+. -ksp_fcg_mmax <N> - maximum number of previous directions
 
    Level: intermediate
 
