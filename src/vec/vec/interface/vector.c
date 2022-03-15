@@ -2,6 +2,7 @@
      Provides the interface functions for vector operations that do NOT have PetscScalar/PetscReal in the signature
    These are the vector functions the user calls.
 */
+#include "petsc/private/deviceimpl.h"
 #include <petsc/private/vecimpl.h>    /*I  "petscvec.h"   I*/
 
 /* Logging support */
@@ -173,6 +174,29 @@ PetscErrorCode  VecAssemblyEnd(Vec vec)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode VecPointwiseMaxAsync(Vec w, Vec x, Vec y, PetscDeviceContext dctx)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(w,VEC_CLASSID,1);
+  PetscValidHeaderSpecific(x,VEC_CLASSID,2);
+  PetscValidHeaderSpecific(y,VEC_CLASSID,3);
+  PetscValidType(w,1);
+  PetscValidType(x,2);
+  PetscValidType(y,3);
+  PetscCheckSameTypeAndComm(x,2,y,3);
+  PetscCheckSameTypeAndComm(y,3,w,1);
+  VecCheckSameSize(w,1,x,2);
+  VecCheckSameSize(w,1,y,3);
+  if (!dctx) {ierr = PetscDeviceContextGetNullContext_Internal(&dctx);CHKERRQ(ierr);}
+  PetscValidDeviceContext(dctx,4);
+  ierr = VecSetErrorIfLocked(w,1);CHKERRQ(ierr);
+  ierr = (*w->ops->pointwisemax)(w,x,y,dctx);CHKERRQ(ierr);
+  ierr = PetscObjectStateIncrease((PetscObject)w);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 /*@
    VecPointwiseMax - Computes the componentwise maximum w_i = max(x_i, y_i).
 
@@ -197,6 +221,15 @@ PetscErrorCode  VecPointwiseMax(Vec w,Vec x,Vec y)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  ierr = VecPointwiseMaxAsync(w,x,y,NULL);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecPointwiseMinAsync(Vec w, Vec x, Vec y, PetscDeviceContext dctx)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
   PetscValidHeaderSpecific(w,VEC_CLASSID,1);
   PetscValidHeaderSpecific(x,VEC_CLASSID,2);
   PetscValidHeaderSpecific(y,VEC_CLASSID,3);
@@ -207,8 +240,10 @@ PetscErrorCode  VecPointwiseMax(Vec w,Vec x,Vec y)
   PetscCheckSameTypeAndComm(y,3,w,1);
   VecCheckSameSize(w,1,x,2);
   VecCheckSameSize(w,1,y,3);
+  if (!dctx) {ierr = PetscDeviceContextGetNullContext_Internal(&dctx);CHKERRQ(ierr);}
+  PetscValidDeviceContext(dctx,4);
   ierr = VecSetErrorIfLocked(w,1);CHKERRQ(ierr);
-  ierr = (*w->ops->pointwisemax)(w,x,y);CHKERRQ(ierr);
+  ierr = (*w->ops->pointwisemin)(w,x,y,dctx);CHKERRQ(ierr);
   ierr = PetscObjectStateIncrease((PetscObject)w);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -237,6 +272,15 @@ PetscErrorCode  VecPointwiseMin(Vec w,Vec x,Vec y)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  ierr = VecPointwiseMinAsync(w,x,y,NULL);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecPointwiseMaxAbsAsync(Vec w, Vec x, Vec y, PetscDeviceContext dctx)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
   PetscValidHeaderSpecific(w,VEC_CLASSID,1);
   PetscValidHeaderSpecific(x,VEC_CLASSID,2);
   PetscValidHeaderSpecific(y,VEC_CLASSID,3);
@@ -247,8 +291,10 @@ PetscErrorCode  VecPointwiseMin(Vec w,Vec x,Vec y)
   PetscCheckSameTypeAndComm(y,3,w,1);
   VecCheckSameSize(w,1,x,2);
   VecCheckSameSize(w,1,y,3);
+  if (!dctx) {ierr = PetscDeviceContextGetNullContext_Internal(&dctx);CHKERRQ(ierr);}
+  PetscValidDeviceContext(dctx,4);
   ierr = VecSetErrorIfLocked(w,1);CHKERRQ(ierr);
-  ierr = (*w->ops->pointwisemin)(w,x,y);CHKERRQ(ierr);
+  ierr = (*w->ops->pointwisemaxabs)(w,x,y,dctx);CHKERRQ(ierr);
   ierr = PetscObjectStateIncrease((PetscObject)w);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -276,6 +322,15 @@ PetscErrorCode  VecPointwiseMaxAbs(Vec w,Vec x,Vec y)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  ierr = VecPointwiseMaxAbsAsync(w,x,y,NULL);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecPointwiseDivideAsync(Vec w, Vec x, Vec y, PetscDeviceContext dctx)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
   PetscValidHeaderSpecific(w,VEC_CLASSID,1);
   PetscValidHeaderSpecific(x,VEC_CLASSID,2);
   PetscValidHeaderSpecific(y,VEC_CLASSID,3);
@@ -286,8 +341,10 @@ PetscErrorCode  VecPointwiseMaxAbs(Vec w,Vec x,Vec y)
   PetscCheckSameTypeAndComm(y,3,w,1);
   VecCheckSameSize(w,1,x,2);
   VecCheckSameSize(w,1,y,3);
+  if (!dctx) {ierr = PetscDeviceContextGetNullContext_Internal(&dctx);CHKERRQ(ierr);}
+  PetscValidDeviceContext(dctx,4);
   ierr = VecSetErrorIfLocked(w,1);CHKERRQ(ierr);
-  ierr = (*w->ops->pointwisemaxabs)(w,x,y);CHKERRQ(ierr);
+  ierr = (*w->ops->pointwisedivide)(w,x,y,dctx);CHKERRQ(ierr);
   ierr = PetscObjectStateIncrease((PetscObject)w);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -315,19 +372,28 @@ PetscErrorCode  VecPointwiseDivide(Vec w,Vec x,Vec y)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(w,VEC_CLASSID,1);
-  PetscValidHeaderSpecific(x,VEC_CLASSID,2);
-  PetscValidHeaderSpecific(y,VEC_CLASSID,3);
-  PetscValidType(w,1);
-  PetscValidType(x,2);
-  PetscValidType(y,3);
-  PetscCheckSameTypeAndComm(x,2,y,3);
-  PetscCheckSameTypeAndComm(y,3,w,1);
-  VecCheckSameSize(w,1,x,2);
-  VecCheckSameSize(w,1,y,3);
-  ierr = VecSetErrorIfLocked(w,1);CHKERRQ(ierr);
-  ierr = (*w->ops->pointwisedivide)(w,x,y);CHKERRQ(ierr);
-  ierr = PetscObjectStateIncrease((PetscObject)w);CHKERRQ(ierr);
+  ierr = VecPointwiseDivideAsync(w,x,y,NULL);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecDuplicateAsync(Vec v, Vec *newv, PetscDeviceContext dctx)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
+  PetscValidPointer(newv,2);
+  PetscValidType(v,1);
+  if (!dctx) {ierr = PetscDeviceContextGetNullContext_Internal(&dctx);CHKERRQ(ierr);}
+  PetscValidDeviceContext(dctx,3);
+  ierr = (*v->ops->duplicate)(v,newv,dctx);CHKERRQ(ierr);
+#if PetscDefined(HAVE_VIENNACL) || PetscDefined(HAVE_CUDA)
+  if (v->boundtocpu && v->bindingpropagates) {
+    ierr = VecSetBindingPropagates(*newv,PETSC_TRUE);CHKERRQ(ierr);
+    ierr = VecBindToCPU(*newv,PETSC_TRUE);CHKERRQ(ierr);
+  }
+#endif
+  ierr = PetscObjectStateIncrease((PetscObject)*newv);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -358,17 +424,26 @@ PetscErrorCode  VecDuplicate(Vec v,Vec *newv)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
-  PetscValidPointer(newv,2);
-  PetscValidType(v,1);
-  ierr = (*v->ops->duplicate)(v,newv);CHKERRQ(ierr);
-#if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA)
-  if (v->boundtocpu && v->bindingpropagates) {
-    ierr = VecSetBindingPropagates(*newv,PETSC_TRUE);CHKERRQ(ierr);
-    ierr = VecBindToCPU(*newv,PETSC_TRUE);CHKERRQ(ierr);
-  }
-#endif
-  ierr = PetscObjectStateIncrease((PetscObject)*newv);CHKERRQ(ierr);
+  ierr = VecDuplicateAsync(v,newv,NULL);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecDestroyAsync(Vec *v, PetscDeviceContext PETSC_UNUSED dctx)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (!*v) PetscFunctionReturn(0);
+  PetscValidHeaderSpecific((*v),VEC_CLASSID,1);
+  if (--((PetscObject)(*v))->refct > 0) {*v = NULL; PetscFunctionReturn(0);}
+
+  ierr = PetscObjectSAWsViewOff((PetscObject)*v);CHKERRQ(ierr);
+  /* destroy the internal part */
+  if ((*v)->ops->destroy) {ierr = (*(*v)->ops->destroy)(*v);CHKERRQ(ierr);}
+  ierr = PetscFree((*v)->defaultrandtype);CHKERRQ(ierr);
+  /* destroy the external/common part */
+  ierr = PetscLayoutDestroy(&(*v)->map);CHKERRQ(ierr);
+  ierr = PetscHeaderDestroy(v);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -389,19 +464,7 @@ PetscErrorCode  VecDestroy(Vec *v)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  if (!*v) PetscFunctionReturn(0);
-  PetscValidHeaderSpecific((*v),VEC_CLASSID,1);
-  if (--((PetscObject)(*v))->refct > 0) {*v = NULL; PetscFunctionReturn(0);}
-
-  ierr = PetscObjectSAWsViewOff((PetscObject)*v);CHKERRQ(ierr);
-  /* destroy the internal part */
-  if ((*v)->ops->destroy) {
-    ierr = (*(*v)->ops->destroy)(*v);CHKERRQ(ierr);
-  }
-  ierr = PetscFree((*v)->defaultrandtype);CHKERRQ(ierr);
-  /* destroy the external/common part */
-  ierr = PetscLayoutDestroy(&(*v)->map);CHKERRQ(ierr);
-  ierr = PetscHeaderDestroy(v);CHKERRQ(ierr);
+  ierr = VecDestroyAsync(v,NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -879,6 +942,22 @@ PetscErrorCode VecDestroyVecs_Default(PetscInt m,Vec v[])
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode VecResetArrayAsync(Vec vec, PetscDeviceContext dctx)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(vec,VEC_CLASSID,1);
+  PetscValidType(vec,1);
+  if (!dctx) {ierr = PetscDeviceContextGetNullContext_Internal(&dctx);CHKERRQ(ierr);}
+  PetscValidDeviceContext(dctx,2);
+
+  PetscCheck(vec->ops->resetarray,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot reset array in this type of vector");
+  ierr = (*vec->ops->resetarray)(vec,dctx);CHKERRQ(ierr);
+  ierr = PetscObjectStateIncrease((PetscObject)vec);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 /*@
    VecResetArray - Resets a vector to use its default memory. Call this
    after the use of VecPlaceArray().
@@ -898,12 +977,7 @@ PetscErrorCode  VecResetArray(Vec vec)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(vec,VEC_CLASSID,1);
-  PetscValidType(vec,1);
-  if (vec->ops->resetarray) {
-    ierr = (*vec->ops->resetarray)(vec);CHKERRQ(ierr);
-  } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot reset array in this type of vector");
-  ierr = PetscObjectStateIncrease((PetscObject)vec);CHKERRQ(ierr);
+  ierr = VecResetArrayAsync(vec,NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -996,6 +1070,23 @@ PetscErrorCode  VecLoad(Vec vec, PetscViewer viewer)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode VecReciprocalAsync(Vec vec, PetscDeviceContext dctx)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(vec,VEC_CLASSID,1);
+  PetscValidType(vec,1);
+  PetscCheckFalse(vec->stash.insertmode != NOT_SET_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
+  PetscCheckFalse(!vec->ops->reciprocal,PETSC_COMM_SELF,PETSC_ERR_SUP,"Vector does not support reciprocal operation");
+  if (!dctx) {ierr = PetscDeviceContextGetNullContext_Internal(&dctx);CHKERRQ(ierr);}
+  PetscValidDeviceContext(dctx,2);
+  ierr = VecSetErrorIfLocked(vec,1);CHKERRQ(ierr);
+  ierr = (*vec->ops->reciprocal)(vec,dctx);CHKERRQ(ierr);
+  ierr = PetscObjectStateIncrease((PetscObject)vec);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 /*@
    VecReciprocal - Replaces each component of a vector by its reciprocal.
 
@@ -1017,13 +1108,7 @@ PetscErrorCode  VecReciprocal(Vec vec)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(vec,VEC_CLASSID,1);
-  PetscValidType(vec,1);
-  PetscCheckFalse(vec->stash.insertmode != NOT_SET_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
-  PetscCheckFalse(!vec->ops->reciprocal,PETSC_COMM_SELF,PETSC_ERR_SUP,"Vector does not support reciprocal operation");
-  ierr = VecSetErrorIfLocked(vec,1);CHKERRQ(ierr);
-  ierr = (*vec->ops->reciprocal)(vec);CHKERRQ(ierr);
-  ierr = PetscObjectStateIncrease((PetscObject)vec);CHKERRQ(ierr);
+  ierr = VecReciprocalAsync(vec,NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1109,6 +1194,25 @@ PetscErrorCode  VecStashSetInitialSize(Vec vec,PetscInt size,PetscInt bsize)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode VecConjugateAsync(Vec x, PetscDeviceContext dctx)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
+  PetscCheck(x->stash.insertmode == NOT_SET_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
+  ierr = VecSetErrorIfLocked(x,1);CHKERRQ(ierr);
+  if (PetscDefined(USE_COMPLEX)) {
+    if (!dctx) {ierr = PetscDeviceContextGetNullContext_Internal(&dctx);CHKERRQ(ierr);}
+    PetscValidDeviceContext(dctx,2);
+    ierr = (*x->ops->conjugate)(x,dctx);CHKERRQ(ierr);
+    /* we need to copy norms here */
+    ierr = PetscObjectStateIncrease((PetscObject)x);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
 /*@
    VecConjugate - Conjugates a vector.
 
@@ -1122,21 +1226,36 @@ PetscErrorCode  VecStashSetInitialSize(Vec vec,PetscInt size,PetscInt bsize)
 @*/
 PetscErrorCode  VecConjugate(Vec x)
 {
-#if defined(PETSC_USE_COMPLEX)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  PetscValidType(x,1);
-  PetscCheckFalse(x->stash.insertmode != NOT_SET_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
-  ierr = VecSetErrorIfLocked(x,1);CHKERRQ(ierr);
-  ierr = (*x->ops->conjugate)(x);CHKERRQ(ierr);
-  /* we need to copy norms here */
-  ierr = PetscObjectStateIncrease((PetscObject)x);CHKERRQ(ierr);
+  ierr = VecConjugateAsync(x,NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
-#else
-  return(0);
-#endif
+}
+
+PetscErrorCode VecPointwiseMultAsync(Vec w, Vec x, Vec y, PetscDeviceContext dctx)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(w,VEC_CLASSID,1);
+  PetscValidHeaderSpecific(x,VEC_CLASSID,2);
+  PetscValidHeaderSpecific(y,VEC_CLASSID,3);
+  PetscValidType(w,1);
+  PetscValidType(x,2);
+  PetscValidType(y,3);
+  PetscCheckSameTypeAndComm(x,2,y,3);
+  PetscCheckSameTypeAndComm(y,3,w,1);
+  VecCheckSameSize(w,1,x,2);
+  VecCheckSameSize(w,2,y,3);
+  if (!dctx) {ierr = PetscDeviceContextGetNullContext_Internal(&dctx);CHKERRQ(ierr);}
+  PetscValidDeviceContext(dctx,4);
+  ierr = VecSetErrorIfLocked(w,1);CHKERRQ(ierr);
+  ierr = PetscLogEventBegin(VEC_PointwiseMult,x,y,w,0);CHKERRQ(ierr);
+  ierr = (*w->ops->pointwisemult)(w,x,y,dctx);CHKERRQ(ierr);
+  ierr = PetscLogEventEnd(VEC_PointwiseMult,x,y,w,0);CHKERRQ(ierr);
+  ierr = PetscObjectStateIncrease((PetscObject)w);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
 }
 
 /*@
@@ -1162,21 +1281,38 @@ PetscErrorCode  VecPointwiseMult(Vec w,Vec x,Vec y)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(w,VEC_CLASSID,1);
-  PetscValidHeaderSpecific(x,VEC_CLASSID,2);
-  PetscValidHeaderSpecific(y,VEC_CLASSID,3);
-  PetscValidType(w,1);
-  PetscValidType(x,2);
-  PetscValidType(y,3);
-  PetscCheckSameTypeAndComm(x,2,y,3);
-  PetscCheckSameTypeAndComm(y,3,w,1);
-  VecCheckSameSize(w,1,x,2);
-  VecCheckSameSize(w,2,y,3);
-  ierr = VecSetErrorIfLocked(w,1);CHKERRQ(ierr);
-  ierr = PetscLogEventBegin(VEC_PointwiseMult,x,y,w,0);CHKERRQ(ierr);
-  ierr = (*w->ops->pointwisemult)(w,x,y);CHKERRQ(ierr);
-  ierr = PetscLogEventEnd(VEC_PointwiseMult,x,y,w,0);CHKERRQ(ierr);
-  ierr = PetscObjectStateIncrease((PetscObject)w);CHKERRQ(ierr);
+  ierr = VecPointwiseMultAsync(w,x,y,NULL);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecSetRandomAsync(Vec x, PetscRandom rctx, PetscDeviceContext dctx)
+{
+  PetscErrorCode ierr;
+  PetscRandom    randObj = NULL;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  if (rctx) PetscValidHeaderSpecific(rctx,PETSC_RANDOM_CLASSID,2);
+  PetscValidType(x,1);
+  PetscCheck(x->stash.insertmode == NOT_SET_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
+  ierr = VecSetErrorIfLocked(x,1);CHKERRQ(ierr);
+
+  if (!rctx) {
+    ierr = PetscRandomCreate(PetscObjectComm((PetscObject)x),&randObj);CHKERRQ(ierr);
+    ierr = PetscRandomSetType(randObj,x->defaultrandtype);CHKERRQ(ierr);
+    ierr = PetscRandomSetFromOptions(randObj);CHKERRQ(ierr);
+    rctx = randObj;
+  }
+
+  if (!dctx) {ierr = PetscDeviceContextGetNullContext_Internal(&dctx);CHKERRQ(ierr);}
+  PetscValidDeviceContext(dctx,3);
+
+  ierr = PetscLogEventBegin(VEC_SetRandom,x,rctx,0,0);CHKERRQ(ierr);
+  ierr = (*x->ops->setrandom)(x,rctx,dctx);CHKERRQ(ierr);
+  ierr = PetscLogEventEnd(VEC_SetRandom,x,rctx,0,0);CHKERRQ(ierr);
+
+  ierr = PetscRandomDestroy(&randObj);CHKERRQ(ierr);
+  ierr = PetscObjectStateIncrease((PetscObject)x);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1207,28 +1343,18 @@ PetscErrorCode  VecPointwiseMult(Vec w,Vec x,Vec y)
 PetscErrorCode  VecSetRandom(Vec x,PetscRandom rctx)
 {
   PetscErrorCode ierr;
-  PetscRandom    randObj = NULL;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  if (rctx) PetscValidHeaderSpecific(rctx,PETSC_RANDOM_CLASSID,2);
-  PetscValidType(x,1);
-  PetscCheckFalse(x->stash.insertmode != NOT_SET_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
-  ierr = VecSetErrorIfLocked(x,1);CHKERRQ(ierr);
+  ierr = VecSetRandomAsync(x,rctx,NULL);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
 
-  if (!rctx) {
-    ierr = PetscRandomCreate(PetscObjectComm((PetscObject)x),&randObj);CHKERRQ(ierr);
-    ierr = PetscRandomSetType(randObj,x->defaultrandtype);CHKERRQ(ierr);
-    ierr = PetscRandomSetFromOptions(randObj);CHKERRQ(ierr);
-    rctx = randObj;
-  }
+PetscErrorCode VecZeroEntriesAsync(Vec vec, PetscDeviceContext dctx)
+{
+  PetscErrorCode ierr;
 
-  ierr = PetscLogEventBegin(VEC_SetRandom,x,rctx,0,0);CHKERRQ(ierr);
-  ierr = (*x->ops->setrandom)(x,rctx);CHKERRQ(ierr);
-  ierr = PetscLogEventEnd(VEC_SetRandom,x,rctx,0,0);CHKERRQ(ierr);
-
-  ierr = PetscRandomDestroy(&randObj);CHKERRQ(ierr);
-  ierr = PetscObjectStateIncrease((PetscObject)x);CHKERRQ(ierr);
+  PetscFunctionBegin;
+  ierr = VecSetAsync(vec,0,dctx);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1249,7 +1375,7 @@ PetscErrorCode  VecZeroEntries(Vec vec)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = VecSet(vec,0);CHKERRQ(ierr);
+  ierr = VecZeroEntriesAsync(vec,NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1558,37 +1684,7 @@ PetscErrorCode  VecSetUp(Vec v)
   PetscFunctionReturn(0);
 }
 
-/*
-    These currently expose the PetscScalar/PetscReal in updating the
-    cached norm. If we push those down into the implementation these
-    will become independent of PetscScalar/PetscReal
-*/
-
-/*@
-   VecCopy - Copies a vector. y <- x
-
-   Logically Collective on Vec
-
-   Input Parameter:
-.  x - the vector
-
-   Output Parameter:
-.  y - the copy
-
-   Notes:
-   For default parallel PETSc vectors, both x and y must be distributed in
-   the same manner; local copies are done.
-
-   Developer Notes:
-   PetscCheckSameTypeAndComm(x,1,y,2) is not used on these vectors because we allow one
-   of the vectors to be sequential and one to be parallel so long as both have the same
-   local sizes. This is used in some internal functions in PETSc.
-
-   Level: beginner
-
-.seealso: VecDuplicate()
-@*/
-PetscErrorCode  VecCopy(Vec x,Vec y)
+PetscErrorCode VecCopyAsync(Vec x, Vec y, PetscDeviceContext dctx)
 {
   PetscBool      flgs[4];
   PetscReal      norms[4] = {0.0,0.0,0.0,0.0};
@@ -1602,7 +1698,10 @@ PetscErrorCode  VecCopy(Vec x,Vec y)
   PetscValidType(y,2);
   if (x == y) PetscFunctionReturn(0);
   VecCheckSameLocalSize(x,1,y,2);
-  PetscCheckFalse(x->stash.insertmode != NOT_SET_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
+  PetscCheck(x->stash.insertmode == NOT_SET_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
+  if (!dctx) {ierr = PetscDeviceContextGetNullContext_Internal(&dctx);CHKERRQ(ierr);}
+  PetscValidDeviceContext(dctx,3);
+
   ierr = VecSetErrorIfLocked(y,2);CHKERRQ(ierr);
 
 #if !defined(PETSC_USE_MIXED_PRECISION)
@@ -1642,10 +1741,10 @@ PetscErrorCode  VecCopy(Vec x,Vec y)
     ierr = VecRestoreArrayRead(x,&xx);CHKERRQ(ierr);
     ierr = VecRestoreArray(y,&yy);CHKERRQ(ierr);
   } else {
-    ierr = (*x->ops->copy)(x,y);CHKERRQ(ierr);
+    ierr = (*x->ops->copy)(x,y,dctx);CHKERRQ(ierr);
   }
 #else
-  ierr = (*x->ops->copy)(x,y);CHKERRQ(ierr);
+  ierr = (*x->ops->copy)(x,y,dctx);CHKERRQ(ierr);
 #endif
 
   ierr = PetscObjectStateIncrease((PetscObject)y);CHKERRQ(ierr);
@@ -1658,6 +1757,87 @@ PetscErrorCode  VecCopy(Vec x,Vec y)
 #endif
 
   ierr = PetscLogEventEnd(VEC_Copy,x,y,0,0);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+/*
+    These currently expose the PetscScalar/PetscReal in updating the
+    cached norm. If we push those down into the implementation these
+    will become independent of PetscScalar/PetscReal
+*/
+
+/*@
+   VecCopy - Copies a vector. y <- x
+
+   Logically Collective on Vec
+
+   Input Parameter:
+.  x - the vector
+
+   Output Parameter:
+.  y - the copy
+
+   Notes:
+   For default parallel PETSc vectors, both x and y must be distributed in
+   the same manner; local copies are done.
+
+   Developer Notes:
+   PetscCheckSameTypeAndComm(x,1,y,2) is not used on these vectors because we allow one
+   of the vectors to be sequential and one to be parallel so long as both have the same
+   local sizes. This is used in some internal functions in PETSc.
+
+   Level: beginner
+
+.seealso: VecDuplicate()
+@*/
+PetscErrorCode  VecCopy(Vec x,Vec y)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = VecCopyAsync(x,y,NULL);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecSwapAsync(Vec x, Vec y, PetscDeviceContext dctx)
+{
+  PetscReal      normxs[4]={0.0,0.0,0.0,0.0},normys[4]={0.0,0.0,0.0,0.0};
+  PetscBool      flgxs[4],flgys[4];
+  PetscErrorCode ierr;
+  PetscInt       i;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidHeaderSpecific(y,VEC_CLASSID,2);
+  PetscValidType(x,1);
+  PetscValidType(y,2);
+  PetscCheckSameTypeAndComm(x,1,y,2);
+  VecCheckSameSize(x,1,y,2);
+  PetscCheck(x->stash.insertmode == NOT_SET_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
+  PetscCheck(y->stash.insertmode == NOT_SET_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
+  if (!dctx) {ierr = PetscDeviceContextGetNullContext_Internal(&dctx);CHKERRQ(ierr);}
+  PetscValidDeviceContext(dctx,3);
+
+  ierr = VecSetErrorIfLocked(x,1);CHKERRQ(ierr);
+  ierr = VecSetErrorIfLocked(y,2);CHKERRQ(ierr);
+
+  ierr = PetscLogEventBegin(VEC_Swap,x,y,0,0);CHKERRQ(ierr);
+  for (i=0; i<4; i++) {
+    ierr = PetscObjectComposedDataGetReal((PetscObject)x,NormIds[i],normxs[i],flgxs[i]);CHKERRQ(ierr);
+    ierr = PetscObjectComposedDataGetReal((PetscObject)y,NormIds[i],normys[i],flgys[i]);CHKERRQ(ierr);
+  }
+  ierr = (*x->ops->swap)(x,y,dctx);CHKERRQ(ierr);
+  ierr = PetscObjectStateIncrease((PetscObject)x);CHKERRQ(ierr);
+  ierr = PetscObjectStateIncrease((PetscObject)y);CHKERRQ(ierr);
+  for (i=0; i<4; i++) {
+    if (flgxs[i]) {
+      ierr = PetscObjectComposedDataSetReal((PetscObject)y,NormIds[i],normxs[i]);CHKERRQ(ierr);
+    }
+    if (flgys[i]) {
+      ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[i],normys[i]);CHKERRQ(ierr);
+    }
+  }
+  ierr = PetscLogEventEnd(VEC_Swap,x,y,0,0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1674,40 +1854,10 @@ PetscErrorCode  VecCopy(Vec x,Vec y)
 @*/
 PetscErrorCode  VecSwap(Vec x,Vec y)
 {
-  PetscReal      normxs[4]={0.0,0.0,0.0,0.0},normys[4]={0.0,0.0,0.0,0.0};
-  PetscBool      flgxs[4],flgys[4];
   PetscErrorCode ierr;
-  PetscInt       i;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  PetscValidHeaderSpecific(y,VEC_CLASSID,2);
-  PetscValidType(x,1);
-  PetscValidType(y,2);
-  PetscCheckSameTypeAndComm(x,1,y,2);
-  VecCheckSameSize(x,1,y,2);
-  PetscCheckFalse(x->stash.insertmode != NOT_SET_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
-  PetscCheckFalse(y->stash.insertmode != NOT_SET_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
-  ierr = VecSetErrorIfLocked(x,1);CHKERRQ(ierr);
-  ierr = VecSetErrorIfLocked(y,2);CHKERRQ(ierr);
-
-  ierr = PetscLogEventBegin(VEC_Swap,x,y,0,0);CHKERRQ(ierr);
-  for (i=0; i<4; i++) {
-    ierr = PetscObjectComposedDataGetReal((PetscObject)x,NormIds[i],normxs[i],flgxs[i]);CHKERRQ(ierr);
-    ierr = PetscObjectComposedDataGetReal((PetscObject)y,NormIds[i],normys[i],flgys[i]);CHKERRQ(ierr);
-  }
-  ierr = (*x->ops->swap)(x,y);CHKERRQ(ierr);
-  ierr = PetscObjectStateIncrease((PetscObject)x);CHKERRQ(ierr);
-  ierr = PetscObjectStateIncrease((PetscObject)y);CHKERRQ(ierr);
-  for (i=0; i<4; i++) {
-    if (flgxs[i]) {
-      ierr = PetscObjectComposedDataSetReal((PetscObject)y,NormIds[i],normxs[i]);CHKERRQ(ierr);
-    }
-    if (flgys[i]) {
-      ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[i],normys[i]);CHKERRQ(ierr);
-    }
-  }
-  ierr = PetscLogEventEnd(VEC_Swap,x,y,0,0);CHKERRQ(ierr);
+  ierr = VecSwapAsync(x,y,NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -1888,6 +2038,27 @@ PetscErrorCode VecSetLayout(Vec x,PetscLayout map)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode VecSetInfAsync(Vec xin, PetscDeviceContext dctx)
+{
+  PetscInt       i,n = xin->map->n;
+  PetscScalar    *xx;
+  PetscScalar    zero=0.0,one=1.0,inf=one/zero;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (!dctx) {ierr = PetscDeviceContextGetNullContext_Internal(&dctx);CHKERRQ(ierr);}
+  PetscValidDeviceContext(dctx,2);
+
+  if (xin->ops->set) { /* can be called by a subset of processes, do not use collective routines */
+    ierr = (*xin->ops->set)(xin,inf,dctx);CHKERRQ(ierr);
+  } else {
+    ierr = VecGetArrayWrite(xin,&xx);CHKERRQ(ierr);
+    for (i=0; i<n; i++) xx[i] = inf;
+    ierr = VecRestoreArrayWrite(xin,&xx);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
 PetscErrorCode VecSetInf(Vec xin)
 {
   PetscInt       i,n = xin->map->n;
@@ -1906,6 +2077,25 @@ PetscErrorCode VecSetInf(Vec xin)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode VecBindToCPUAsync(Vec v, PetscBool flg, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
+  PetscValidLogicalCollectiveBool(v,flg,2);
+#if PetscDefined(HAVE_DEVICE)
+  if (v->boundtocpu == flg) PetscFunctionReturn(0);
+  v->boundtocpu = flg;
+  if (v->ops->bindtocpu) {
+    PetscErrorCode ierr;
+
+    if (!dctx) {ierr = PetscDeviceContextGetNullContext_Internal(&dctx);CHKERRQ(ierr);}
+    PetscValidDeviceContext(dctx,3);
+    ierr = (*v->ops->bindtocpu)(v,flg,dctx);CHKERRQ(ierr);
+  }
+#endif
+  PetscFunctionReturn(0);
+}
+
 /*@
      VecBindToCPU - marks a vector to temporarily stay on the CPU and perform computations on the CPU
 
@@ -1919,17 +2109,10 @@ PetscErrorCode VecSetInf(Vec xin)
 @*/
 PetscErrorCode VecBindToCPU(Vec v,PetscBool flg)
 {
+  PetscErrorCode ierr;
+
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
-  PetscValidLogicalCollectiveBool(v,flg,2);
-#if defined(PETSC_HAVE_DEVICE)
-  if (v->boundtocpu == flg) PetscFunctionReturn(0);
-  v->boundtocpu = flg;
-  if (v->ops->bindtocpu) {
-    PetscErrorCode ierr;
-    ierr = (*v->ops->bindtocpu)(v,flg);CHKERRQ(ierr);
-  }
-#endif
+  ierr = VecBindToCPUAsync(v,flg,NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 

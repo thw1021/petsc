@@ -34,7 +34,7 @@ PETSC_EXTERN PetscErrorCode VecCreate_Seq(Vec V)
 #if !defined(PETSC_USE_MIXED_PRECISION)
   ierr = PetscCalloc1(n,&array);CHKERRQ(ierr);
   ierr = PetscLogObjectMemory((PetscObject)V, n*sizeof(PetscScalar));CHKERRQ(ierr);
-  ierr = VecCreate_Seq_Private(V,array);CHKERRQ(ierr);
+  ierr = VecCreate_Seq_Private(V,array,NULL);CHKERRQ(ierr);
 
   s                  = (Vec_Seq*)V->data;
   s->array_allocated = array;
@@ -45,7 +45,7 @@ PETSC_EXTERN PetscErrorCode VecCreate_Seq(Vec V)
 
     ierr = PetscCalloc1(n,&aarray);CHKERRQ(ierr);
     ierr = PetscLogObjectMemory((PetscObject)V, n*sizeof(float));CHKERRQ(ierr);
-    ierr = VecCreate_Seq_Private(V,aarray);CHKERRQ(ierr);
+    ierr = VecCreate_Seq_Private(V,aarray,NULL);CHKERRQ(ierr);
 
     s                  = (Vec_Seq*)V->data;
     s->array_allocated = (PetscScalar*)aarray;
@@ -55,7 +55,7 @@ PETSC_EXTERN PetscErrorCode VecCreate_Seq(Vec V)
 
     ierr = PetscCalloc1(n,&aarray);CHKERRQ(ierr);
     ierr = PetscLogObjectMemory((PetscObject)V, n*sizeof(double));CHKERRQ(ierr);
-    ierr = VecCreate_Seq_Private(V,aarray);CHKERRQ(ierr);
+    ierr = VecCreate_Seq_Private(V,aarray,NULL);CHKERRQ(ierr);
 
     s                  = (Vec_Seq*)V->data;
     s->array_allocated = (PetscScalar*)aarray;

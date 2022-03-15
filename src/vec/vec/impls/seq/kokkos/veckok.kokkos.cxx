@@ -196,7 +196,7 @@ PetscErrorCode VecShift_SeqKokkos(Vec xin,PetscScalar shift)
 }
 
 /* y = alpha x + y */
-PetscErrorCode VecAXPY_SeqKokkos(Vec yin,PetscScalar alpha,Vec xin)
+PetscErrorCode VecAXPY_SeqKokkos(Vec yin,PetscManagedScalar alpha,Vec xin,PetscDeviceContext dctx)
 {
   PetscErrorCode               ierr;
   PetscBool                    xiskok,yiskok;
@@ -221,7 +221,7 @@ PetscErrorCode VecAXPY_SeqKokkos(Vec yin,PetscScalar alpha,Vec xin)
     ierr = PetscLogGpuTimeEnd();CHKERRQ(ierr);
     ierr = PetscLogGpuFlops(2.0*yin->map->n);CHKERRQ(ierr);
   } else {
-    ierr = VecAXPY_Seq(yin,alpha,xin);CHKERRQ(ierr);
+    ierr = VecAXPY_Seq(yin,alpha,xin,dctx);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }

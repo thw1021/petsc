@@ -321,7 +321,7 @@ public:
     PetscFunctionReturn(0);
   }
 
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode GetHandles_(PetscDeviceContext dctx, cupmBlasHandle_t *handle = nullptr, cupmStream_t *stream = nullptr))
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode GetHandles_(PetscDeviceContext dctx, cupmBlasHandle_t *handle, cupmStream_t *stream = nullptr))
   {
     return GetHandleDispatch_(dctx,handle,stream);
   }
@@ -361,25 +361,25 @@ public:
       return cupmScalarCast(const_cast<pointer_type>(this->ptr));
     }
 
-    vector_array(PetscDeviceContext, Vec v) noexcept : ptr(initialize_(v)), v_(v) { }
+    vector_array(PetscDeviceContext dctx, Vec v) noexcept : ptr(initialize_(dctx,v)), v_(v) { }
 
     ~vector_array() noexcept
     {
       // REVIEW ME: could just as well CHKERRABORT() here
       PetscFunctionBegin;
-      CHKERRCONTINUE((restorearray_async<MT,MA>(PetscRemoveConstCast(v_),nullptr)));
+      CHKERRCONTINUE((restorearray_async<MT,MA>(PetscRemoveConstCast(v_),nullptr,nullptr)));
       PetscFunctionReturnVoid();
     }
 
   private:
     const Vec v_;
 
-    PETSC_CXX_COMPAT_DECL(pointer_type initialize_(Vec v))
+    PETSC_CXX_COMPAT_DECL(pointer_type initialize_(PetscDeviceContext dctx, Vec v))
     {
       pointer_type array;
 
       PetscFunctionBegin;
-      CHKERRABORT(PETSC_COMM_SELF,(getarray_async<MT,MA>(v,&array)));
+      CHKERRABORT(PETSC_COMM_SELF,(getarray_async<MT,MA>(v,&array,dctx)));
       PetscFunctionReturn(array);
     }
   };
@@ -406,29 +406,29 @@ public:
 
   // accessors
   template <PetscMemType,MemoryAccess>
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode getarray_async(Vec,PetscScalar**));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode getarray_async(Vec,PetscScalar**,PetscDevicContext));
   template <PetscMemType,MemoryAccess>
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode restorearray_async(Vec,PetscScalar**));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode restorearray_async(Vec,PetscScalar**,PetscDeviceContext));
   template <MemoryAccess>
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode getarrayandmemtype_async(Vec,PetscScalar**,PetscMemType*));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode getarrayandmemtype_async(Vec,PetscScalar**,PetscMemType*,PetscDeviceContext));
   template <MemoryAccess>
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode restorearrayandmemtype_async(Vec,PetscScalar**));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode restorearrayandmemtype_async(Vec,PetscScalar**,PetscDeviceContext));
   template <PetscMemType>
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode replacearray_async(Vec,const PetscScalar*));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode replacearray_async(Vec,const PetscScalar*,PetscDeviceContext));
 
   // common ops shared between Seq and MPI
   PETSC_CXX_COMPAT_DECL(PetscErrorCode Create_CUPM(Vec));
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode Create_CUPMBase(MPI_Comm,PetscInt,PetscInt,PetscInt,Vec*,PetscBool,PetscLayout/*reference*/=nullptr));
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode Initialize_CUPMBase(Vec,PetscBool,PetscScalar*,PetscScalar*));
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode Destroy_CUPMBase(Vec));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode Create_CUPMBase(MPI_Comm,PetscInt,PetscInt,PetscInt,PetscDeviceContext,Vec*,PetscBool,PetscLayout/*reference*/=nullptr));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode Initialize_CUPMBase(Vec,PetscBool,PetscScalar*,PetscScalar*,PetscDeviceContext));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode Destroy_CUPMBase(Vec,PetscDeviceContext));
   template <typename SetupFunctionT = no_op>
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode Duplicate_CUPMBase(Vec,Vec*,SetupFunctionT&& = SetupFunctionT{}));
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode BindToCPU_CUPMBase(Vec,PetscBool));
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode GetArrays_CUPMBase(Vec,const PetscScalar**,const PetscScalar**,PetscOffloadMask*));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode Duplicate_CUPMBase(Vec,Vec*,PetscDeviceContext,SetupFunctionT&& = SetupFunctionT{}));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode BindToCPU_CUPMBase(Vec,PetscBool,PetscDeviceContext));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode GetArrays_CUPMBase(Vec,const PetscScalar**,const PetscScalar**,PetscOffloadMask*,PetscDeviceContext));
   template <PetscMemType,typename F>
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode ResetArray_CUPMBase(Vec,F&&));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode ResetArray_CUPMBase(Vec,F&&,PetscDeviceContext));
   template <PetscMemType,typename F>
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode PlaceArray_CUPMBase(Vec,const PetscScalar*,F&&));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode PlaceArray_CUPMBase(Vec,const PetscScalar*,F&&,PetscDeviceContext));
 
   // utility for using cupmHostAlloc()
   PETSC_CXX_COMPAT_DECL(auto UseCUPMHostAlloc(bool b))
@@ -601,17 +601,14 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::CopyToHost_(PetscDeviceC
 // v->ops->getarray[read|write] or VecCUPMGetArray[Read|Write]()
 template <Device::CUPM::DeviceType T, typename D>
 template <PetscMemType mtype, MemoryAccess access>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::getarray_async(Vec v, PetscScalar **a))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::getarray_async(Vec v, PetscScalar **a, PetscDeviceContext dctx))
 {
   STATIC_ASSERT_THAT_ONLY_PETSC_MEMTYPE_HOST_OR_DEVICE_IS_USED(mtype);
-  constexpr auto     hostmem = PetscMemTypeHost(mtype);
-  // silence buggy gcc warning: "dctx" may be used uninitialized in this function
-  PetscDeviceContext dctx = nullptr;
-  PetscErrorCode     ierr;
+  constexpr auto hostmem = PetscMemTypeHost(mtype);
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
-  ierr = GetHandles_(&dctx);CHKERRQ(ierr);
   if (access == MemoryAccess::WRITE) {
     ierr = (hostmem ? HostAllocateCheck_ : DeviceAllocateCheck_)(dctx,v);CHKERRQ(ierr);
   } else {
@@ -637,7 +634,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::getarray_async(Vec v, Pe
 // v->ops->restorearray[read|write] or VecCUPMRestoreArray[Read|Write]()
 template <Device::CUPM::DeviceType T, typename D>
 template <PetscMemType mtype, MemoryAccess access>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::restorearray_async(Vec v, PetscScalar **a))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::restorearray_async(Vec v, PetscScalar **a, PetscDeviceContext dctx))
 {
   STATIC_ASSERT_THAT_ONLY_PETSC_MEMTYPE_HOST_OR_DEVICE_IS_USED(mtype);
   PetscErrorCode ierr;
@@ -659,12 +656,12 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::restorearray_async(Vec v
 // v->ops->getarrayandmemtype
 template <Device::CUPM::DeviceType T, typename D>
 template <MemoryAccess access>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::getarrayandmemtype_async(Vec v, PetscScalar **a, PetscMemType *mtype))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::getarrayandmemtype_async(Vec v, PetscScalar **a, PetscMemType *mtype, PetscDeviceContext dctx))
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = getarray_async<PETSC_MEMTYPE_DEVICE,access>(v,a);CHKERRQ(ierr);
+  ierr = getarray_async<PETSC_MEMTYPE_DEVICE,access>(v,a,dctx);CHKERRQ(ierr);
   if (mtype) *mtype = (PetscDefined(HAVE_NVSHMEM) && VecCUPMCast(v)->nvshmem) ? PETSC_MEMTYPE_NVSHMEM : cupmDeviceTypeToPetscMemType();
   PetscFunctionReturn(0);
 }
@@ -672,19 +669,19 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::getarrayandmemtype_async
 // v->ops->restorearrayandmemtype
 template <Device::CUPM::DeviceType T, typename D>
 template <MemoryAccess access>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::restorearrayandmemtype_async(Vec v, PetscScalar **a))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::restorearrayandmemtype_async(Vec v, PetscScalar **a, PetscDeviceContext dctx))
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = restorearray_async<PETSC_MEMTYPE_DEVICE,access>(v,a);CHKERRQ(ierr);
+  ierr = restorearray_async<PETSC_MEMTYPE_DEVICE,access>(v,a,dctx);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
 // v->ops->replacearray or VecCUPMReplaceArray()
 template <Device::CUPM::DeviceType T, typename D>
 template <PetscMemType mtype>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::replacearray_async(Vec v, const PetscScalar *a))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::replacearray_async(Vec v, const PetscScalar *a, PetscDeviceContext dctx))
 {
   PetscErrorCode ierr;
 
@@ -696,10 +693,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::replacearray_async(Vec v
     const auto vimpl = VecIMPLCast(v);
 
     if (vimpl->array != vimpl->array_allocated) {
-      PetscDeviceContext dctx;
       // make sure the users array has the latest values.
       // REVIEW ME: why? we're about to free it
-      ierr = GetHandles_(&dctx);CHKERRQ(ierr);
       ierr = CopyToHost_(dctx,v);CHKERRQ(ierr);
     }
     if (vimpl->array_allocated) {
@@ -721,7 +716,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::replacearray_async(Vec v
         cupmStream_t stream;
         cupmError_t  cerr;
 
-        ierr = GetHandles_(&stream);CHKERRQ(ierr);
+        ierr = GetHandles_(dctx,&stream);CHKERRQ(ierr);
         cerr = cupmFreeAsync(vcu->device_array,stream);CHKERRCUPM(cerr);
       }
     case PETSC_USE_POINTER:
@@ -752,12 +747,12 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Create_CUPM(Vec v))
 
 // VecCreateCUPM()
 template <Device::CUPM::DeviceType T, typename D>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Create_CUPMBase(MPI_Comm comm, PetscInt bs, PetscInt n, PetscInt N, Vec *v, PetscBool call_set_type, PetscLayout reference))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Create_CUPMBase(MPI_Comm comm, PetscInt bs, PetscInt n, PetscInt N, PetscDeviceContext, Vec *v, PetscBool call_set_type, PetscLayout reference))
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  ierr = VecCreate(comm,v);CHKERRQ(ierr);
+  ierr = VecCreateAsync(comm,v);CHKERRQ(ierr);
   if (reference) {ierr = PetscLayoutReference(reference,&(*v)->map);CHKERRQ(ierr);}
   ierr = VecSetSizes(*v,n,N);CHKERRQ(ierr);
   if (bs) {ierr = VecSetBlockSize(*v,bs);CHKERRQ(ierr);}
@@ -767,23 +762,20 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Create_CUPMBase(MPI_Comm
 
 // VecCreateIMPL_CUPM()
 template <Device::CUPM::DeviceType T, typename D>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Initialize_CUPMBase(Vec v, PetscBool allocate_missing, PetscScalar *host_array, PetscScalar *device_array))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Initialize_CUPMBase(Vec v, PetscBool allocate_missing, PetscScalar *host_array, PetscScalar *device_array, PetscDeviceContext dctx))
 {
-  // silence buggy gcc warning: "dctx" may be used uninitialized in this function
-  PetscDeviceContext dctx = nullptr;
-  PetscErrorCode     ierr;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   ierr = PetscDeviceInitialize(cupmDeviceTypeToPetscDeviceType());CHKERRQ(ierr);
   ierr = PetscObjectChangeTypeName(PetscObjectCast(v),VECTYPE());CHKERRQ(ierr);
-  ierr = D::bindtocpu_async(v,PETSC_FALSE);CHKERRQ(ierr);
+  ierr = D::bindtocpu_async(v,PETSC_FALSE,dctx);CHKERRQ(ierr);
   if (device_array) {
     ierr = CheckPointerMatchesMemType_(device_array,cupmDeviceTypeToPetscMemType());CHKERRQ(ierr);
     ierr = VecCUPMAllocateCheck_(v);CHKERRQ(ierr);
     VecCUPMCast(v)->device_array  = device_array;
     VecCUPMCast(v)->ptr_ownership = PETSC_USE_POINTER;
   }
-  ierr = GetHandles_(&dctx);CHKERRQ(ierr);
   if (host_array) {
     ierr = CheckPointerMatchesMemType_(host_array,PETSC_MEMTYPE_HOST);CHKERRQ(ierr);
     ierr = HostAllocateCheck_(dctx,v);CHKERRQ(ierr);
@@ -792,6 +784,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Initialize_CUPMBase(Vec 
   if (allocate_missing) {
     ierr = DeviceAllocateCheck_(dctx,v);CHKERRQ(ierr);
     ierr = HostAllocateCheck_(dctx,v);CHKERRQ(ierr);
+    // REVIEW ME: junchao, is this needed with new calloc() branch? VecSet() will call
+    // set_async() for reference
     // calls device-version
     ierr = VecSet(v,0);CHKERRQ(ierr);
     // zero the host while device is underway
@@ -809,7 +803,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Initialize_CUPMBase(Vec 
 
 // v->ops->destroy
 template <Device::CUPM::DeviceType T, typename D>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Destroy_CUPMBase(Vec v))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Destroy_CUPMBase(Vec v, PetscDeviceContext dctx))
 {
   PetscErrorCode ierr;
 
@@ -824,7 +818,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Destroy_CUPMBase(Vec v))
         cupmStream_t stream;
         cupmError_t  cerr;
 
-        ierr = GetHandles_(&stream);CHKERRQ(ierr);
+        ierr = GetHandles_(dctx,&stream);CHKERRQ(ierr);
         cerr = cupmFreeAsync(vcu->device_array,stream);CHKERRCUPM(cerr);
       }
     case PETSC_USE_POINTER:
@@ -846,7 +840,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Destroy_CUPMBase(Vec v))
 // v->ops->duplicate
 template <Device::CUPM::DeviceType T, typename D>
 template <typename SetupFunctionT>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Duplicate_CUPMBase(Vec v, Vec *y, SetupFunctionT&& DerivedCreateIMPLCUPM_Async))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Duplicate_CUPMBase(Vec v, Vec *y, PetscDeviceContxt dctx, SetupFunctionT&& DerivedCreateIMPLCUPM_Async))
 {
   // if the derived setup is the default no_op then we should call VecSetType()
   constexpr auto call_set_type = static_cast<PetscBool>(std::is_same<SetupFunctionT,no_op>::value);
@@ -857,19 +851,14 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Duplicate_CUPMBase(Vec v
 
   PetscFunctionBegin;
   ierr = VecGetBlockSize(v,&bs);CHKERRQ(ierr);
-  ierr = Create_CUPMBase(PetscObjectComm(vobj),bs,map->n,map->N,y,call_set_type,map);CHKERRQ(ierr);
+  ierr = Create_CUPMBase(PetscObjectComm(vobj),bs,map->n,map->N,dctx,y,call_set_type,map);CHKERRQ(ierr);
   // Derived class can set up the remainder of the data structures here
-  ierr = DerivedCreateIMPLCUPM_Async(*y);CHKERRQ(ierr);
+  ierr = DerivedCreateIMPLCUPM_Async(*y,dctx);CHKERRQ(ierr);
   // If the other vector is bound to CPU then the memcpy of the ops struct will give the
   // duplicated vector the host "getarray" function which does not lazily allocate the array
   // (as it is assumed to always exist). So we force allocation here, before we overwrite the
   // ops
-  if (v->boundtocpu) {
-    PetscDeviceContext dctx;
-
-    ierr = GetHandles_(&dctx);CHKERRQ(ierr);
-    ierr = HostAllocateCheck_(dctx,*y);CHKERRQ(ierr);
-  }
+  if (v->boundtocpu) {ierr = HostAllocateCheck_(dctx,*y);CHKERRQ(ierr);}
   // in case the user has done some VecSetOps() tomfoolery
   ierr = PetscMemcpy((*y)->ops,v->ops,sizeof(*v->ops));CHKERRQ(ierr);
   {
@@ -888,21 +877,19 @@ template <PetscMemType mtype, typename F>
 // yes (probably Jed :)), ideal world these should be arguments not template parameters. But I
 // need to assign this function to a C compatible function pointer, so something like default
 // arguments don't work no? Stubs seem like overkill too...
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::ResetArray_CUPMBase(Vec v, F&& VecResetArray_IMPL))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::ResetArray_CUPMBase(Vec v, F&& VecResetArray_IMPL, PetscDeviceContext dctx))
 {
-  PetscDeviceContext dctx;
-  PetscErrorCode     ierr;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   STATIC_ASSERT_THAT_ONLY_PETSC_MEMTYPE_HOST_OR_DEVICE_IS_USED(mtype);
   PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
-  ierr = GetHandles_(&dctx);CHKERRQ(ierr);
   // REVIEW ME:
   // this is wildly inefficient but must be done if we assume that the placed array must have
   // correct values
   if (PetscMemTypeHost(mtype)) {
     ierr = CopyToHost_(dctx,v);CHKERRQ(ierr);
-    ierr = VecResetArray_IMPL(v);CHKERRQ(ierr);
+    ierr = VecResetArray_IMPL(v,dctx);CHKERRQ(ierr);
     v->offloadmask = PETSC_OFFLOAD_CPU;
   } else {
     const auto vimpl = VecIMPLCast(v);
@@ -919,25 +906,23 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::ResetArray_CUPMBase(Vec 
 // v->ops->placearray or VecCUPMPlaceArray()
 template <Device::CUPM::DeviceType T, typename D>
 template <PetscMemType mtype, typename F>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::PlaceArray_CUPMBase(Vec v, const PetscScalar *a, F&& VecPlaceArray_IMPL))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::PlaceArray_CUPMBase(Vec v, const PetscScalar *a, F&& VecPlaceArray_IMPL, PetscDeviceContext dctx))
 {
-  PetscDeviceContext dctx;
-  PetscErrorCode     ierr;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   STATIC_ASSERT_THAT_ONLY_PETSC_MEMTYPE_HOST_OR_DEVICE_IS_USED(mtype);
   PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
   ierr = CheckPointerMatchesMemType_(a,mtype);CHKERRQ(ierr);
-  ierr = GetHandles_(&dctx);CHKERRQ(ierr);
   if (PetscMemTypeHost(mtype)) {
     ierr = CopyToHost_(dctx,v);CHKERRQ(ierr);
-    ierr = VecPlaceArray_IMPL(v,a);CHKERRQ(ierr);
+    ierr = VecPlaceArray_IMPL(v,a,dctx);CHKERRQ(ierr);
     v->offloadmask = PETSC_OFFLOAD_CPU;
   } else {
     const auto vimpl = VecIMPLCast(v);
 
     PetscCheck(!vimpl->unplacedarray,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"VecPlaceArray() was already called on this vector, without a call to VecResetArray()");
-    ierr = getarray_async<mtype,MemoryAccess::READ_WRITE>(v,&vimpl->unplacedarray);CHKERRQ(ierr);
+    ierr = getarray_async<mtype,MemoryAccess::READ_WRITE>(v,&vimpl->unplacedarray,dctx);CHKERRQ(ierr);
     ierr = PetscObjectStateIncrease(PetscObjectCast(v));CHKERRQ(ierr);
     VecCUPMCast(v)->device_array = PetscRemoveConstCast(a);
     // offload mask set by getarray
@@ -973,18 +958,13 @@ PETSC_CXX_COMPAT_DECL(PetscErrorCode ChangeDefaultRandType(PetscRandomType targe
 
 // v->ops->bindtocpu
 template <Device::CUPM::DeviceType T, typename D>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::BindToCPU_CUPMBase(Vec v, PetscBool usehost))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::BindToCPU_CUPMBase(Vec v, PetscBool usehost, PetscDeviceContext dctx))
 {
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
   v->boundtocpu = usehost;
-  if (usehost) {
-    PetscDeviceContext dctx;
-
-    ierr = GetHandles_(&dctx);CHKERRQ(ierr);
-    ierr = CopyToHost_(dctx,v);CHKERRQ(ierr);
-  }
+  if (usehost) {ierr = CopyToHost_(dctx,v);CHKERRQ(ierr);}
   ierr = ChangeDefaultRandType(usehost ? PETSCRANDER48 : PETSCDEVICERAND(),&v->defaultrandtype);CHKERRQ(ierr);
   // set the base functions that are guaranteed to be the same for both
   v->ops->duplicate    = D::duplicate_async;
@@ -998,21 +978,21 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::BindToCPU_CUPMBase(Vec v
   VecSetOp_CUPM(getarraywrite    ,nullptr,getarray_async<PETSC_MEMTYPE_HOST,MemoryAccess::WRITE>);
   VecSetOp_CUPM(restorearraywrite,nullptr,restorearray_async<PETSC_MEMTYPE_HOST,MemoryAccess::WRITE>);
 
-  VecSetOp_CUPM(getarrayread,nullptr,[](Vec v, const PetscScalar **a)
+  VecSetOp_CUPM(getarrayread,nullptr,[](Vec v, const PetscScalar **a, PetscDeviceContext dctx)
   {
-    return getarray_async<PETSC_MEMTYPE_HOST,MemoryAccess::READ>(v,const_cast<PetscScalar**>(a));
+    return getarray_async<PETSC_MEMTYPE_HOST,MemoryAccess::READ>(v,const_cast<PetscScalar**>(a),dctx);
   });
-  VecSetOp_CUPM(restorearrayread,nullptr,[](Vec v, const PetscScalar **a)
+  VecSetOp_CUPM(restorearrayread,nullptr,[](Vec v, const PetscScalar **a, PetscDeviceContext dctx)
   {
-    return restorearray_async<PETSC_MEMTYPE_HOST,MemoryAccess::READ>(v,const_cast<PetscScalar**>(a));
+    return restorearray_async<PETSC_MEMTYPE_HOST,MemoryAccess::READ>(v,const_cast<PetscScalar**>(a),dctx);
   });
 
   VecSetOp_CUPM(getarrayandmemtype         ,nullptr,getarrayandmemtype_async<MemoryAccess::READ_WRITE>);
   VecSetOp_CUPM(restorearrayandmemtype     ,nullptr,restorearrayandmemtype_async<MemoryAccess::READ_WRITE>);
   VecSetOp_CUPM(getarraywriteandmemtype    ,nullptr,getarrayandmemtype_async<MemoryAccess::WRITE>);
-  VecSetOp_CUPM(restorearraywriteandmemtype,nullptr,[](Vec v,PetscScalar **a,PetscMemType*)
+  VecSetOp_CUPM(restorearraywriteandmemtype,nullptr,[](Vec v,PetscScalar **a,PetscMemType*,PetscDeviceContext dctx)
   {
-    return restorearrayandmemtype_async<MemoryAccess::WRITE>(v,a);
+    return restorearrayandmemtype_async<MemoryAccess::WRITE>(v,a,dctx);
   });
 
   // set the functions that are always sequential
@@ -1046,14 +1026,12 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::BindToCPU_CUPMBase(Vec v
 
 // Called from VecGetSubVector()
 template <Device::CUPM::DeviceType T, typename D>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::GetArrays_CUPMBase(Vec v, const PetscScalar **host_array, const PetscScalar **device_array, PetscOffloadMask *mask))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::GetArrays_CUPMBase(Vec v, const PetscScalar **host_array, const PetscScalar **device_array, PetscOffloadMask *mask, PetscDeviceContext dctx))
 {
-  PetscDeviceContext dctx;
-  PetscErrorCode     ierr;
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
-  ierr = GetHandles_(&dctx);CHKERRQ(ierr);
   if (host_array) {
     ierr = HostAllocateCheck_(dctx,v);CHKERRQ(ierr);
     *host_array = VecIMPLCast(v)->array;
@@ -1078,7 +1056,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::GetArrays_CUPMBase(Vec v
   using name::VecView_Debug;                                                    \
   /* utility */                                                                 \
   using typename name::Vec_CUPM;                                                \
-  using name::IsDeviceMemory;                                                   \
   using name::UseCUPMHostAlloc;                                                 \
   using name::GetHandles_;                                                      \
   using name::HostAllocateCheck_;                                               \
