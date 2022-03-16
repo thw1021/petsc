@@ -3,6 +3,7 @@
  */
 #include <petsc/private/matimpl.h>
 #include <../src/ksp/pc/impls/gamg/gamg.h>           /*I "petscpc.h" I*/
+#include <petsc/private/kspimpl.h>
 
 /*
    Produces a set of block column indices of the matrix row, one for each block represented in the original row
@@ -68,6 +69,7 @@ PetscErrorCode PCGAMGCreateGraph(Mat Amat, Mat *a_Gmat)
   PetscInt       Istart,Iend,Ii,jj,kk,ncols,nloc,NN,MM,bs;
   MPI_Comm       comm;
   Mat            Gmat;
+  PetscBool      ismpiaij,isseqaij;
 
   PetscFunctionBegin;
   ierr = PetscObjectGetComm((PetscObject)Amat,&comm);CHKERRQ(ierr);
@@ -75,22 +77,104 @@ PetscErrorCode PCGAMGCreateGraph(Mat Amat, Mat *a_Gmat)
   ierr = MatGetSize(Amat, &MM, &NN);CHKERRQ(ierr);
   ierr = MatGetBlockSize(Amat, &bs);CHKERRQ(ierr);
   nloc = (Iend-Istart)/bs;
-
+  ierr = PetscObjectBaseTypeCompare((PetscObject)Amat,MATSEQAIJ,&isseqaij);CHKERRQ(ierr);
+  ierr = PetscObjectBaseTypeCompare((PetscObject)Amat,MATMPIAIJ,&ismpiaij);CHKERRQ(ierr);
+  PetscCheckFalse(!isseqaij && !ismpiaij,PETSC_COMM_WORLD,PETSC_ERR_USER,"Require (MPI)AIJ matrix type");
   ierr = PetscLogEventBegin(petsc_gamg_setup_events[GRAPH],0,0,0,0);CHKERRQ(ierr);
 
   /* TODO GPU: these calls are potentially expensive if matrices are large and we want to use the GPU */
   /* A solution consists in providing a new API, MatAIJGetCollapsedAIJ, and each class can provide a fast
      implementation */
-  if (bs > 1) {
+  if (bs > 1 && (isseqaij || ((Mat_MPIAIJ*)Amat->data)->garray)) {
+    PetscInt  *d_nnz, *o_nnz;
+    Mat       a, b, c;
+    MatScalar *aa,val,AA[4096];
+    PetscInt  *aj,*ai,AJ[4096],nc;
+    ierr = PetscInfo(Amat,"New bs>1 PCGAMGCreateGraph. nloc=%D\n",nloc);CHKERRQ(ierr);
+    ierr = MatCreate(comm, &Gmat);CHKERRQ(ierr);
+    ierr = MatSetSizes(Gmat,nloc,nloc,PETSC_DETERMINE,PETSC_DETERMINE);CHKERRQ(ierr);
+    ierr = MatSetBlockSizes(Gmat, 1, 1);CHKERRQ(ierr);
+    ierr = MatSetType(Gmat, MATAIJ);CHKERRQ(ierr);
+    if (isseqaij) {
+      a = Amat; b = NULL;
+    }
+    else {
+      Mat_MPIAIJ *d = (Mat_MPIAIJ*)Amat->data;
+      a = d->A; b = d->B;
+    }
+    ierr = PetscMalloc2(nloc, &d_nnz,isseqaij ? 0 : nloc, &o_nnz);CHKERRQ(ierr);
+    for (c=a, kk=0 ; c && kk<2 ; c=b, kk++){
+      PetscInt *nnz = (c==a) ? d_nnz : o_nnz, nmax=0;
+      for (int brow=0,jj; brow < nloc*bs; brow += bs) { // block rows
+        ierr = MatGetRow(c,brow,&jj,NULL,NULL);CHKERRQ(ierr);
+        nnz[brow/bs] = jj/bs;
+        ierr = MatRestoreRow(c,brow,&jj,NULL,NULL);CHKERRQ(ierr);
+        if (nnz[brow/bs]>nmax) nmax = nnz[brow/bs];
+      }
+      PetscCheck(nmax<4096,PETSC_COMM_SELF,PETSC_ERR_USER,"Buffer %D too small %D.",nmax,4096);
+    }
+    ierr = MatSeqAIJSetPreallocation(Gmat,0,d_nnz);CHKERRQ(ierr);
+    ierr = MatMPIAIJSetPreallocation(Gmat,0,d_nnz,0,o_nnz);CHKERRQ(ierr);
+    ierr = PetscFree2(d_nnz,o_nnz);CHKERRQ(ierr);
+    // diag
+    for (int brow=0,n,grow; brow < nloc*bs; brow += bs) { // block rows
+      Mat_SeqAIJ *aseq  = (Mat_SeqAIJ*)a->data;
+      ai = aseq->i;
+      n  = ai[brow+1] - ai[brow];
+      aj = aseq->j + ai[brow];
+      for (int k=0; k<n; k += bs) { // block columns
+        AJ[k/bs] = aj[k]/bs + Istart/bs; // diag starts at (Istart,Istart)
+        val = 0;
+        for (int ii=0; ii<bs; ii++) { // rows in block
+          aa = aseq->a + ai[brow+ii] + k;
+          for (int jj=0; jj<bs; jj++) { // columns in block
+            val += PetscAbs(PetscRealPart(aa[jj])); // a sort of norm
+          }
+        }
+        AA[k/bs] = val;
+      }
+      grow = Istart/bs + brow/bs;
+      ierr = MatSetValues(Gmat,1,&grow,n/bs,AJ,AA,INSERT_VALUES);CHKERRQ(ierr);
+    }
+    // off-diag
+    if (ismpiaij) {
+      Mat_MPIAIJ        *aij = (Mat_MPIAIJ*)Amat->data;
+      const PetscScalar *vals;
+      const PetscInt    *idx, *garray = aij->garray;
+      PetscCheck(garray,PETSC_COMM_SELF,PETSC_ERR_USER,"No garray ?");
+      for (int brow=0,grow; brow < nloc*bs; brow += bs) { // block rows
+        ierr = MatGetRow(b,brow,&ncols,&idx,NULL);CHKERRQ(ierr);
+        for (int k=0,cidx=0; k<ncols; k += bs,cidx++) {
+          AA[k/bs] = 0;
+          AJ[cidx] = garray[idx[k]]/bs;
+        }
+        nc = ncols/bs;
+        ierr = MatRestoreRow(b,brow,&ncols,&idx,NULL);CHKERRQ(ierr);
+        for (int ii=0; ii<bs; ii++) { // rows in block
+          ierr = MatGetRow(b,brow+ii,&ncols,&idx,&vals);CHKERRQ(ierr);
+          for (int k=0; k<ncols; k += bs) {
+            for (int jj=0; jj<bs; jj++) { // cols in block
+              AA[k/bs] += PetscAbs(PetscRealPart(vals[k+jj]));
+            }
+          }
+          ierr = MatRestoreRow(b,brow+ii,&ncols,&idx,&vals);CHKERRQ(ierr);
+        }
+        grow = Istart/bs + brow/bs;
+        ierr = MatSetValues(Gmat,1,&grow,nc,AJ,AA,INSERT_VALUES);CHKERRQ(ierr);
+      }
+    }
+    ierr = MatAssemblyBegin(Gmat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+    ierr = MatAssemblyEnd(Gmat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+    ierr = MatViewFromOptions(Gmat, NULL, "-g_mat_view");CHKERRQ(ierr);
+  } else if (bs > 1) {
     const PetscScalar *vals;
     const PetscInt    *idx;
     PetscInt          *d_nnz, *o_nnz,*w0,*w1,*w2;
-    PetscBool         ismpiaij,isseqaij;
 
     /*
        Determine the preallocation needed for the scalar matrix derived from the vector matrix.
     */
-
+    ierr = PetscInfo(Amat,"OLD bs>1 PCGAMGCreateGraph\n");CHKERRQ(ierr);
     ierr = PetscObjectBaseTypeCompare((PetscObject)Amat,MATSEQAIJ,&isseqaij);CHKERRQ(ierr);
     ierr = PetscObjectBaseTypeCompare((PetscObject)Amat,MATMPIAIJ,&ismpiaij);CHKERRQ(ierr);
     ierr = PetscMalloc2(nloc, &d_nnz,isseqaij ? 0 : nloc, &o_nnz);CHKERRQ(ierr);
