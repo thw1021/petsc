@@ -105,7 +105,7 @@ PetscErrorCode PCGAMGCreateGraph(Mat Amat, Mat *a_Gmat)
     ierr = PetscMalloc2(nloc, &d_nnz,isseqaij ? 0 : nloc, &o_nnz);CHKERRQ(ierr);
     for (c=a, kk=0 ; c && kk<2 ; c=b, kk++){
       PetscInt *nnz = (c==a) ? d_nnz : o_nnz, nmax=0;
-      for (int brow=0,jj; brow < nloc*bs; brow += bs) { // block rows
+      for (PetscInt brow=0,jj; brow < nloc*bs; brow += bs) { // block rows
         ierr = MatGetRow(c,brow,&jj,NULL,NULL);CHKERRQ(ierr);
         nnz[brow/bs] = jj/bs;
         ierr = MatRestoreRow(c,brow,&jj,NULL,NULL);CHKERRQ(ierr);
@@ -117,7 +117,7 @@ PetscErrorCode PCGAMGCreateGraph(Mat Amat, Mat *a_Gmat)
     ierr = MatMPIAIJSetPreallocation(Gmat,0,d_nnz,0,o_nnz);CHKERRQ(ierr);
     ierr = PetscFree2(d_nnz,o_nnz);CHKERRQ(ierr);
     // diag
-    for (int brow=0,n,grow; brow < nloc*bs; brow += bs) { // block rows
+    for (PetscInt brow=0,n,grow; brow < nloc*bs; brow += bs) { // block rows
       Mat_SeqAIJ *aseq  = (Mat_SeqAIJ*)a->data;
       ai = aseq->i;
       n  = ai[brow+1] - ai[brow];
