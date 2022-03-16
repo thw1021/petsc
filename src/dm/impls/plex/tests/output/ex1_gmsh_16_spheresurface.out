@@ -8,3 +8,4 @@ Labels:
   depth: 3 strata with value/size (0 (61), 1 (160), 2 (99))
   celltype: 3 strata with value/size (0 (61), 1 (160), 3 (99))
   Cell Sets: 1 strata with value/size (1 (99))
+  Vertex Sets: 1 strata with value/size (0 (61))
