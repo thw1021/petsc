@@ -1088,7 +1088,7 @@ PetscErrorCode  VecStrideSubSetScatter_Default(Vec s,PetscInt nidx,const PetscIn
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecReciprocal_Default(Vec v)
+PetscErrorCode VecReciprocal_Default(Vec v, PetscDeviceContext PETSC_UNUSED dctx)
 {
   PetscErrorCode ierr;
   PetscInt       i,n;

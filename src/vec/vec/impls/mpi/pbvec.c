@@ -42,7 +42,7 @@ PetscErrorCode VecPlaceArray_MPI(Vec vin, const PetscScalar *a, PetscDeviceConte
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecDuplicate_MPI(Vec win, Vec *v, PetscDeviceContext PETSC_UNUSED dctx)
+PetscErrorCode VecDuplicate_MPI(Vec win, Vec *v, PetscDeviceContext dctx)
 {
   PetscErrorCode ierr;
   Vec_MPI        *vw,*w = (Vec_MPI*)win->data;
@@ -52,7 +52,7 @@ PetscErrorCode VecDuplicate_MPI(Vec win, Vec *v, PetscDeviceContext PETSC_UNUSED
   ierr = VecCreate(PetscObjectComm((PetscObject)win),v);CHKERRQ(ierr);
   ierr = PetscLayoutReference(win->map,&(*v)->map);CHKERRQ(ierr);
 
-  ierr = VecCreate_MPI_Private(*v,PETSC_TRUE,w->nghost,NULL);CHKERRQ(ierr);
+  ierr = VecCreate_MPI_Private(*v,PETSC_TRUE,w->nghost,NULL,dctx);CHKERRQ(ierr);
   vw   = (Vec_MPI*)(*v)->data;
   ierr = PetscMemcpy((*v)->ops,win->ops,sizeof(struct _VecOps));CHKERRQ(ierr);
 
@@ -615,7 +615,7 @@ PetscErrorCode  VecCreateMPIWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,Petsc
   ierr = VecCreate(comm,vv);CHKERRQ(ierr);
   ierr = VecSetSizes(*vv,n,N);CHKERRQ(ierr);
   ierr = VecSetBlockSize(*vv,bs);CHKERRQ(ierr);
-  ierr = VecCreate_MPI_Private(*vv,PETSC_FALSE,0,array);CHKERRQ(ierr);
+  ierr = VecCreate_MPI_Private(*vv,PETSC_FALSE,0,array,NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -668,7 +668,7 @@ PetscErrorCode  VecCreateGhostWithArray(MPI_Comm comm,PetscInt n,PetscInt N,Pets
   /* Create global representation */
   ierr = VecCreate(comm,vv);CHKERRQ(ierr);
   ierr = VecSetSizes(*vv,n,N);CHKERRQ(ierr);
-  ierr = VecCreate_MPI_Private(*vv,PETSC_TRUE,nghost,array);CHKERRQ(ierr);
+  ierr = VecCreate_MPI_Private(*vv,PETSC_TRUE,nghost,array,NULL);CHKERRQ(ierr);
   w    = (Vec_MPI*)(*vv)->data;
   /* Create local representation */
   ierr = VecGetArray(*vv,&larray);CHKERRQ(ierr);
@@ -787,7 +787,7 @@ PetscErrorCode  VecMPISetGhost(Vec vv,PetscInt nghost,const PetscInt ghosts[])
     N    = vv->map->N;
     ierr = (*vv->ops->destroy)(vv);CHKERRQ(ierr);
     ierr = VecSetSizes(vv,n,N);CHKERRQ(ierr);
-    ierr = VecCreate_MPI_Private(vv,PETSC_TRUE,nghost,NULL);CHKERRQ(ierr);
+    ierr = VecCreate_MPI_Private(vv,PETSC_TRUE,nghost,NULL,NULL);CHKERRQ(ierr);
     w    = (Vec_MPI*)(vv)->data;
     /* Create local representation */
     ierr = VecGetArray(vv,&larray);CHKERRQ(ierr);
@@ -875,7 +875,7 @@ PetscErrorCode  VecCreateGhostBlockWithArray(MPI_Comm comm,PetscInt bs,PetscInt 
   ierr = VecCreate(comm,vv);CHKERRQ(ierr);
   ierr = VecSetSizes(*vv,n,N);CHKERRQ(ierr);
   ierr = VecSetBlockSize(*vv,bs);CHKERRQ(ierr);
-  ierr = VecCreate_MPI_Private(*vv,PETSC_TRUE,nghost*bs,array);CHKERRQ(ierr);
+  ierr = VecCreate_MPI_Private(*vv,PETSC_TRUE,nghost*bs,array,NULL);CHKERRQ(ierr);
   w    = (Vec_MPI*)(*vv)->data;
   /* Create local representation */
   ierr = VecGetArray(*vv,&larray);CHKERRQ(ierr);

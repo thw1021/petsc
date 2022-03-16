@@ -58,7 +58,7 @@ static PetscErrorCode VecDestroy_Nest(Vec v)
 }
 
 /* supports nested blocks */
-static PetscErrorCode VecCopy_Nest(Vec x,Vec y)
+static PetscErrorCode VecCopy_Nest(Vec x, Vec y, PetscDeviceContext PETSC_UNUSED dctx)
 {
   Vec_Nest       *bx = (Vec_Nest*)x->data;
   Vec_Nest       *by = (Vec_Nest*)y->data;
@@ -75,7 +75,7 @@ static PetscErrorCode VecCopy_Nest(Vec x,Vec y)
 }
 
 /* supports nested blocks */
-static PetscErrorCode VecDuplicate_Nest(Vec x,Vec *y)
+static PetscErrorCode VecDuplicate_Nest(Vec x, Vec *y, PetscDeviceContext PETSC_UNUSED dctx)
 {
   Vec_Nest       *bx = (Vec_Nest*)x->data;
   Vec            Y;
@@ -98,7 +98,7 @@ static PetscErrorCode VecDuplicate_Nest(Vec x,Vec *y)
 }
 
 /* supports nested blocks */
-static PetscErrorCode VecDot_Nest(Vec x,Vec y,PetscScalar *val)
+static PetscErrorCode VecDot_Nest(Vec x, Vec y, PetscManagedScalar val, PetscDeviceContext PETSC_UNUSED dctx)
 {
   Vec_Nest       *bx = (Vec_Nest*)x->data;
   Vec_Nest       *by = (Vec_Nest*)y->data;
@@ -113,12 +113,12 @@ static PetscErrorCode VecDot_Nest(Vec x,Vec y,PetscScalar *val)
     ierr = VecDot(bx->v[i],by->v[i],&x_dot_y);CHKERRQ(ierr);
     _val = _val + x_dot_y;
   }
-  *val = _val;
+  *val.ptr = _val;
   PetscFunctionReturn(0);
 }
 
 /* supports nested blocks */
-static PetscErrorCode VecTDot_Nest(Vec x,Vec y,PetscScalar *val)
+static PetscErrorCode VecTDot_Nest(Vec x, Vec y, PetscManagedScalar val, PetscDeviceContext PETSC_UNUSED dctx)
 {
   Vec_Nest       *bx = (Vec_Nest*)x->data;
   Vec_Nest       *by = (Vec_Nest*)y->data;
@@ -133,11 +133,11 @@ static PetscErrorCode VecTDot_Nest(Vec x,Vec y,PetscScalar *val)
     ierr = VecTDot(bx->v[i],by->v[i],&x_dot_y);CHKERRQ(ierr);
     _val = _val + x_dot_y;
   }
-  *val = _val;
+  *val.ptr = _val;
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecDotNorm2_Nest(Vec x,Vec y,PetscScalar *dp, PetscScalar *nm)
+static PetscErrorCode VecDotNorm2_Nest(Vec x, Vec y, PetscManagedScalar dp, PetscManagedScalar nm, PetscDeviceContext PETSC_UNUSED dctx)
 {
   Vec_Nest       *bx = (Vec_Nest*)x->data;
   Vec_Nest       *by = (Vec_Nest*)y->data;
@@ -155,12 +155,12 @@ static PetscErrorCode VecDotNorm2_Nest(Vec x,Vec y,PetscScalar *dp, PetscScalar 
     _dp += x_dot_y;
     _nm += norm2_y;
   }
-  *dp = _dp;
-  *nm = _nm;
+  *dp.ptr = _dp;
+  *nm.ptr = _nm;
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecAXPY_Nest(Vec y,PetscManagedScalar alpha,Vec x,PetscDeviceContext PETSC_UNUSED dctx)
+static PetscErrorCode VecAXPY_Nest(Vec y, PetscManagedScalar alpha, Vec x, PetscDeviceContext PETSC_UNUSED dctx)
 {
   Vec_Nest       *bx = (Vec_Nest*)x->data;
   Vec_Nest       *by = (Vec_Nest*)y->data;
@@ -175,7 +175,7 @@ static PetscErrorCode VecAXPY_Nest(Vec y,PetscManagedScalar alpha,Vec x,PetscDev
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecAYPX_Nest(Vec y,PetscScalar alpha,Vec x)
+static PetscErrorCode VecAYPX_Nest(Vec y, PetscManagedScalar alpha, Vec x, PetscDeviceContext PETSC_UNUSED dctx)
 {
   Vec_Nest       *bx = (Vec_Nest*)x->data;
   Vec_Nest       *by = (Vec_Nest*)y->data;
@@ -185,12 +185,12 @@ static PetscErrorCode VecAYPX_Nest(Vec y,PetscScalar alpha,Vec x)
   PetscFunctionBegin;
   nr = bx->nb;
   for (i=0; i<nr; i++) {
-    ierr = VecAYPX(by->v[i],alpha,bx->v[i]);CHKERRQ(ierr);
+    ierr = VecAYPX(by->v[i],*alpha.ptr,bx->v[i]);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecAXPBY_Nest(Vec y,PetscScalar alpha,PetscScalar beta,Vec x)
+static PetscErrorCode VecAXPBY_Nest(Vec y, PetscManagedScalar alpha, PetscManagedScalar beta, Vec x, PetscDeviceContext PETSC_UNUSED dctx)
 {
   Vec_Nest       *bx = (Vec_Nest*)x->data;
   Vec_Nest       *by = (Vec_Nest*)y->data;
@@ -200,12 +200,12 @@ static PetscErrorCode VecAXPBY_Nest(Vec y,PetscScalar alpha,PetscScalar beta,Vec
   PetscFunctionBegin;
   nr = bx->nb;
   for (i=0; i<nr; i++) {
-    ierr = VecAXPBY(by->v[i],alpha,beta,bx->v[i]);CHKERRQ(ierr);
+    ierr = VecAXPBY(by->v[i],*alpha.ptr,*beta.ptr,bx->v[i]);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecAXPBYPCZ_Nest(Vec z,PetscScalar alpha,PetscScalar beta,PetscScalar gamma,Vec x,Vec y)
+static PetscErrorCode VecAXPBYPCZ_Nest(Vec z, PetscManagedScalar alpha, PetscManagedScalar beta, PetscManagedScalar gamma, Vec x, Vec y, PetscDeviceContext PETSC_UNUSED dctx)
 {
   Vec_Nest       *bx = (Vec_Nest*)x->data;
   Vec_Nest       *by = (Vec_Nest*)y->data;
@@ -216,12 +216,12 @@ static PetscErrorCode VecAXPBYPCZ_Nest(Vec z,PetscScalar alpha,PetscScalar beta,
   PetscFunctionBegin;
   nr = bx->nb;
   for (i=0; i<nr; i++) {
-    ierr = VecAXPBYPCZ(bz->v[i],alpha,beta,gamma,bx->v[i],by->v[i]);CHKERRQ(ierr);
+    ierr = VecAXPBYPCZ(bz->v[i],*alpha.ptr,*beta.ptr,*gamma.ptr,bx->v[i],by->v[i]);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecScale_Nest(Vec x,PetscScalar alpha)
+static PetscErrorCode VecScale_Nest(Vec x, PetscManagedScalar alpha, PetscDeviceContext PETSC_UNUSED dctx)
 {
   Vec_Nest       *bx = (Vec_Nest*)x->data;
   PetscInt       i,nr;
@@ -230,12 +230,12 @@ static PetscErrorCode VecScale_Nest(Vec x,PetscScalar alpha)
   PetscFunctionBegin;
   nr = bx->nb;
   for (i=0; i<nr; i++) {
-    ierr = VecScale(bx->v[i],alpha);CHKERRQ(ierr);
+    ierr = VecScale(bx->v[i],*alpha.ptr);CHKERRQ(ierr);
   }
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecPointwiseMult_Nest(Vec w,Vec x,Vec y)
+static PetscErrorCode VecPointwiseMult_Nest(Vec w, Vec x, Vec y, PetscDeviceContext PETSC_UNUSED dctx)
 {
   Vec_Nest       *bx = (Vec_Nest*)x->data;
   Vec_Nest       *by = (Vec_Nest*)y->data;
@@ -252,7 +252,7 @@ static PetscErrorCode VecPointwiseMult_Nest(Vec w,Vec x,Vec y)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecPointwiseDivide_Nest(Vec w,Vec x,Vec y)
+static PetscErrorCode VecPointwiseDivide_Nest(Vec w, Vec x, Vec y, PetscDeviceContext PETSC_UNUSED dctx)
 {
   Vec_Nest       *bx = (Vec_Nest*)x->data;
   Vec_Nest       *by = (Vec_Nest*)y->data;
