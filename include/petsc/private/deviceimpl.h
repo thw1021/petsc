@@ -290,6 +290,15 @@ static inline PetscErrorCode PetscDeviceContextGetNullContext_Internal(PetscDevi
   PetscFunctionReturn(0);
 }
 
+static inline PetscErrorCode PetscDeviceContextGetOptionalNullContext_Internal(PetscDeviceContext *dctx)
+{
+  PetscFunctionBegin;
+  PetscValidPointer(dctx,1);
+  if (!*dctx) {PetscErrorCode ierr = PetscDeviceContextGetNullContext_Internal(dctx);CHKERRQ(ierr);}
+  PetscValidDeviceContext(*dctx,1);
+  PetscFunctionReturn(0);
+}
+
 /* note, only does assertion checking in debug mode */
 static inline PetscErrorCode PetscDeviceContextGetCurrentContextAssertType_Internal(PetscDeviceContext *dctx, PetscDeviceType type)
 {
@@ -368,6 +377,7 @@ static inline PetscErrorCode PetscDeviceContextEndTimer_Internal(PetscDeviceCont
 #define PetscDeviceContextSetDefaultDevice_Internal(dctx)                 0
 #define PetscDeviceContextGetCurrentContextAssertType_Internal(dctx,type) 0
 #define PetscDeviceContextGetNullContext_Internal(dctx)                   0
+#define PetscDeviceContextGetOptionalNullContext_Internal(dctx)           0
 #define PetscDeviceContextGetBLASHandle_Internal(dctx,handle)             0
 #define PetscDeviceContextGetSOLVERHandle_Internal(dctx,handle)           0
 #define PetscDeviceContextBeginTimer_Internal(dctx)                       0

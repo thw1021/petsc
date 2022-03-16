@@ -104,7 +104,7 @@ struct _VecOps {
   PetscErrorCode (*getarraywriteandmemtype)(Vec,PetscScalar**,PetscMemType*);
   PetscErrorCode (*restorearraywriteandmemtype)(Vec,PetscScalar**,PetscMemType*);
   PetscErrorCode (*concatenate)(PetscInt,const Vec[],Vec*,IS*[]);
-  PetscErrorCode (*sum)(Vec,PetscScalar*);
+  PetscErrorCode (*sum)(Vec,PetscManagedScalar,PetscDeviceContext);
 };
 
 /*
