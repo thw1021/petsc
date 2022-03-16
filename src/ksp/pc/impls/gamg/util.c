@@ -90,7 +90,7 @@ PetscErrorCode PCGAMGCreateGraph(Mat Amat, Mat *a_Gmat)
     Mat       a, b, c;
     MatScalar *aa,val,AA[4096];
     PetscInt  *aj,*ai,AJ[4096],nc;
-    ierr = PetscInfo(Amat,"New bs>1 PCGAMGCreateGraph. nloc=%D\n",nloc);CHKERRQ(ierr);
+    ierr = PetscInfo(Amat,"New bs>1 PCGAMGCreateGraph. nloc=%" PetscInt_FMT "\n",nloc);CHKERRQ(ierr);
     ierr = MatCreate(comm, &Gmat);CHKERRQ(ierr);
     ierr = MatSetSizes(Gmat,nloc,nloc,PETSC_DETERMINE,PETSC_DETERMINE);CHKERRQ(ierr);
     ierr = MatSetBlockSizes(Gmat, 1, 1);CHKERRQ(ierr);
@@ -111,7 +111,7 @@ PetscErrorCode PCGAMGCreateGraph(Mat Amat, Mat *a_Gmat)
         ierr = MatRestoreRow(c,brow,&jj,NULL,NULL);CHKERRQ(ierr);
         if (nnz[brow/bs]>nmax) nmax = nnz[brow/bs];
       }
-      PetscCheck(nmax<4096,PETSC_COMM_SELF,PETSC_ERR_USER,"Buffer %D too small %D.",nmax,4096);
+      PetscCheck(nmax<4096,PETSC_COMM_SELF,PETSC_ERR_USER,"Buffer %" PetscInt_FMT " too small %" PetscInt_FMT ".",nmax,4096);
     }
     ierr = MatSeqAIJSetPreallocation(Gmat,0,d_nnz);CHKERRQ(ierr);
     ierr = MatMPIAIJSetPreallocation(Gmat,0,d_nnz,0,o_nnz);CHKERRQ(ierr);
@@ -388,7 +388,7 @@ PetscErrorCode PCGAMGFilterGraph(Mat *a_Gmat,PetscReal vfilter,PetscBool symm)
 #if defined(PETSC_USE_INFO)
   {
     double t1 = (!nnz0) ? 1. : 100.*(double)nnz1/(double)nnz0, t2 = (!nloc) ? 1. : (double)nnz0/(double)nloc;
-    ierr = PetscInfo(*a_Gmat,"\t %g%% nnz after filtering, with threshold %g, %g nnz ave. (N=%D)\n",t1,vfilter,t2,MM);CHKERRQ(ierr);
+    ierr = PetscInfo(*a_Gmat,"\t %g%% nnz after filtering, with threshold %g, %g nnz ave. (N=%" PetscInt_FMT ")\n",t1,vfilter,t2,MM);CHKERRQ(ierr);
   }
 #endif
   ierr    = MatDestroy(&Gmat);CHKERRQ(ierr);
@@ -477,7 +477,7 @@ PetscErrorCode PCGAMGHashTableAdd(PCGAMGHashTable *a_tab, PetscInt a_key, PetscI
   PetscInt kk,idx;
 
   PetscFunctionBegin;
-  PetscCheckFalse(a_key<0,PETSC_COMM_SELF,PETSC_ERR_USER,"Negative key %D.",a_key);
+  PetscCheckFalse(a_key<0,PETSC_COMM_SELF,PETSC_ERR_USER,"Negative key %" PetscInt_FMT ".",a_key);
   for (kk = 0, idx = GAMG_HASH(a_key); kk < a_tab->size; kk++, idx = (idx==(a_tab->size-1)) ? 0 : idx + 1) {
     if (a_tab->table[idx] == a_key) {
       /* exists */
