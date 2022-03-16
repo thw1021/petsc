@@ -9,3 +9,4 @@ Labels:
   celltype: 3 strata with value/size (0 (18), 1 (31), 3 (14))
   Cell Sets: 1 strata with value/size (7 (14))
   Face Sets: 3 strata with value/size (8 (1), 10 (1), 11 (2))
+  Vertex Sets: 1 strata with value/size (0 (18))
