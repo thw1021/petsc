@@ -397,7 +397,7 @@ Unable to run hostname to check the network')
       if (MPI_Reduce_scatter(sendbuf,recvbuf,1,MPI_INT,MPI_SUM,MPI_COMM_WORLD)) return 0;
       if (MPI_Type_get_envelope(MPI_INT,&a,&b,&c,&d)) return 0;
     '''):
-      raise RuntimeError('Some functions from MPI-2.0 (1997) and MPI-2.1 (2008) are not available')
+      raise RuntimeError('PETSc requires some of the MPI-2.0 (1997), MPI-2.1 (2008) functions - they are not available with the specified MPI library')
 
     if self.checkLink('#include <mpi.h>\n', 'int count=2; int blocklens[2]={0,1}; MPI_Aint indices[2]={0,1}; MPI_Datatype old_types[2]={MPI_INT,MPI_DOUBLE}; MPI_Datatype *newtype = 0;\n \
                                              if (MPI_Type_create_struct(count, blocklens, indices, old_types, newtype));\n'):
