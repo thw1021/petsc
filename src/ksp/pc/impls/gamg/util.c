@@ -81,7 +81,6 @@ PetscErrorCode PCGAMGCreateGraph(Mat Amat, Mat *a_Gmat)
   ierr = PetscObjectBaseTypeCompare((PetscObject)Amat,MATMPIAIJ,&ismpiaij);CHKERRQ(ierr);
   PetscCheckFalse(!isseqaij && !ismpiaij,PETSC_COMM_WORLD,PETSC_ERR_USER,"Require (MPI)AIJ matrix type");
   ierr = PetscLogEventBegin(petsc_gamg_setup_events[GRAPH],0,0,0,0);CHKERRQ(ierr);
-
   /* TODO GPU: these calls are potentially expensive if matrices are large and we want to use the GPU */
   /* A solution consists in providing a new API, MatAIJGetCollapsedAIJ, and each class can provide a fast
      implementation */
@@ -107,10 +106,11 @@ PetscErrorCode PCGAMGCreateGraph(Mat Amat, Mat *a_Gmat)
         ierr = MatGetRow(c,brow,&jj,&cols,NULL);CHKERRQ(ierr);
         nnz[brow/bs] = jj/bs;
         if (jj%bs) ok = 0;
-        j0 = cols[0];
+        if (cols) j0 = cols[0];
+        else j0 = 0;
         ierr = MatRestoreRow(c,brow,&jj,&cols,NULL);CHKERRQ(ierr);
         if (nnz[brow/bs]>nmax) nmax = nnz[brow/bs];
-        for (PetscInt ii=1; ii < bs; ii++) { // check for non-dense blocks
+        for (PetscInt ii=1; ii < bs && j0 ; ii++) { // check for non-dense blocks
           ierr = MatGetRow(c,brow+ii,&jj,&cols,NULL);CHKERRQ(ierr);
           if (jj%bs) ok = 0;
           if (j0 != cols[0]) ok = 0;
