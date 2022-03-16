@@ -85,16 +85,13 @@ PetscErrorCode PCGAMGCreateGraph(Mat Amat, Mat *a_Gmat)
   /* TODO GPU: these calls are potentially expensive if matrices are large and we want to use the GPU */
   /* A solution consists in providing a new API, MatAIJGetCollapsedAIJ, and each class can provide a fast
      implementation */
+  ierr = MatViewFromOptions(Amat, NULL, "-g_mat_view");CHKERRQ(ierr);
   if (bs > 1 && (isseqaij || ((Mat_MPIAIJ*)Amat->data)->garray)) {
     PetscInt  *d_nnz, *o_nnz;
     Mat       a, b, c;
     MatScalar *aa,val,AA[4096];
     PetscInt  *aj,*ai,AJ[4096],nc;
     ierr = PetscInfo(Amat,"New bs>1 PCGAMGCreateGraph. nloc=%" PetscInt_FMT "\n",nloc);CHKERRQ(ierr);
-    ierr = MatCreate(comm, &Gmat);CHKERRQ(ierr);
-    ierr = MatSetSizes(Gmat,nloc,nloc,PETSC_DETERMINE,PETSC_DETERMINE);CHKERRQ(ierr);
-    ierr = MatSetBlockSizes(Gmat, 1, 1);CHKERRQ(ierr);
-    ierr = MatSetType(Gmat, MATAIJ);CHKERRQ(ierr);
     if (isseqaij) {
       a = Amat; b = NULL;
     }
@@ -104,15 +101,33 @@ PetscErrorCode PCGAMGCreateGraph(Mat Amat, Mat *a_Gmat)
     }
     ierr = PetscMalloc2(nloc, &d_nnz,isseqaij ? 0 : nloc, &o_nnz);CHKERRQ(ierr);
     for (c=a, kk=0 ; c && kk<2 ; c=b, kk++){
-      PetscInt *nnz = (c==a) ? d_nnz : o_nnz, nmax=0;
-      for (PetscInt brow=0,jj; brow < nloc*bs; brow += bs) { // block rows
-        ierr = MatGetRow(c,brow,&jj,NULL,NULL);CHKERRQ(ierr);
+      PetscInt       *nnz = (c==a) ? d_nnz : o_nnz, nmax=0;
+      const PetscInt *cols;
+      for (PetscInt brow=0,jj,ok=1,j0; brow < nloc*bs; brow += bs) { // block rows
+        ierr = MatGetRow(c,brow,&jj,&cols,NULL);CHKERRQ(ierr);
         nnz[brow/bs] = jj/bs;
-        ierr = MatRestoreRow(c,brow,&jj,NULL,NULL);CHKERRQ(ierr);
+        if (jj%bs) ok = 0;
+        j0 = cols[0];
+        ierr = MatRestoreRow(c,brow,&jj,&cols,NULL);CHKERRQ(ierr);
         if (nnz[brow/bs]>nmax) nmax = nnz[brow/bs];
+        for (PetscInt ii=1; ii < bs; ii++) { // check for non-dense blocks
+          ierr = MatGetRow(c,brow+ii,&jj,&cols,NULL);CHKERRQ(ierr);
+          if (jj%bs) ok = 0;
+          if (j0 != cols[0]) ok = 0;
+          if (nnz[brow/bs] != jj/bs) ok = 0;
+          ierr = MatRestoreRow(c,brow+11,&jj,&cols,NULL);CHKERRQ(ierr);
+        }
+        if(!ok) {
+          ierr = PetscFree2(d_nnz,o_nnz);CHKERRQ(ierr);
+          goto old_bs;
+        }
       }
       PetscCheck(nmax<4096,PETSC_COMM_SELF,PETSC_ERR_USER,"Buffer %" PetscInt_FMT " too small %" PetscInt_FMT ".",nmax,4096);
     }
+    ierr = MatCreate(comm, &Gmat);CHKERRQ(ierr);
+    ierr = MatSetSizes(Gmat,nloc,nloc,PETSC_DETERMINE,PETSC_DETERMINE);CHKERRQ(ierr);
+    ierr = MatSetBlockSizes(Gmat, 1, 1);CHKERRQ(ierr);
+    ierr = MatSetType(Gmat, MATAIJ);CHKERRQ(ierr);
     ierr = MatSeqAIJSetPreallocation(Gmat,0,d_nnz);CHKERRQ(ierr);
     ierr = MatMPIAIJSetPreallocation(Gmat,0,d_nnz,0,o_nnz);CHKERRQ(ierr);
     ierr = PetscFree2(d_nnz,o_nnz);CHKERRQ(ierr);
@@ -140,24 +155,24 @@ PetscErrorCode PCGAMGCreateGraph(Mat Amat, Mat *a_Gmat)
     if (ismpiaij) {
       Mat_MPIAIJ        *aij = (Mat_MPIAIJ*)Amat->data;
       const PetscScalar *vals;
-      const PetscInt    *idx, *garray = aij->garray;
+      const PetscInt    *cols, *garray = aij->garray;
       PetscCheck(garray,PETSC_COMM_SELF,PETSC_ERR_USER,"No garray ?");
       for (PetscInt brow=0,grow; brow < nloc*bs; brow += bs) { // block rows
-        ierr = MatGetRow(b,brow,&ncols,&idx,NULL);CHKERRQ(ierr);
+        ierr = MatGetRow(b,brow,&ncols,&cols,NULL);CHKERRQ(ierr);
         for (int k=0,cidx=0; k<ncols; k += bs,cidx++) {
           AA[k/bs] = 0;
-          AJ[cidx] = garray[idx[k]]/bs;
+          AJ[cidx] = garray[cols[k]]/bs;
         }
         nc = ncols/bs;
-        ierr = MatRestoreRow(b,brow,&ncols,&idx,NULL);CHKERRQ(ierr);
+        ierr = MatRestoreRow(b,brow,&ncols,&cols,NULL);CHKERRQ(ierr);
         for (int ii=0; ii<bs; ii++) { // rows in block
-          ierr = MatGetRow(b,brow+ii,&ncols,&idx,&vals);CHKERRQ(ierr);
+          ierr = MatGetRow(b,brow+ii,&ncols,&cols,&vals);CHKERRQ(ierr);
           for (int k=0; k<ncols; k += bs) {
             for (int jj=0; jj<bs; jj++) { // cols in block
               AA[k/bs] += PetscAbs(PetscRealPart(vals[k+jj]));
             }
           }
-          ierr = MatRestoreRow(b,brow+ii,&ncols,&idx,&vals);CHKERRQ(ierr);
+          ierr = MatRestoreRow(b,brow+ii,&ncols,&cols,&vals);CHKERRQ(ierr);
         }
         grow = Istart/bs + brow/bs;
         ierr = MatSetValues(Gmat,1,&grow,nc,AJ,AA,INSERT_VALUES);CHKERRQ(ierr);
@@ -170,7 +185,7 @@ PetscErrorCode PCGAMGCreateGraph(Mat Amat, Mat *a_Gmat)
     const PetscScalar *vals;
     const PetscInt    *idx;
     PetscInt          *d_nnz, *o_nnz,*w0,*w1,*w2;
-
+old_bs:
     /*
        Determine the preallocation needed for the scalar matrix derived from the vector matrix.
     */
@@ -247,6 +262,7 @@ PetscErrorCode PCGAMGCreateGraph(Mat Amat, Mat *a_Gmat)
     }
     ierr = MatAssemblyBegin(Gmat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
     ierr = MatAssemblyEnd(Gmat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+    ierr = MatViewFromOptions(Gmat, NULL, "-g_mat_view");CHKERRQ(ierr);
   } else {
     /* just copy scalar matrix - abs() not taken here but scaled later */
     ierr = MatDuplicate(Amat, MAT_COPY_VALUES, &Gmat);CHKERRQ(ierr);
