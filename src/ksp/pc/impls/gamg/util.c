@@ -142,7 +142,7 @@ PetscErrorCode PCGAMGCreateGraph(Mat Amat, Mat *a_Gmat)
       const PetscScalar *vals;
       const PetscInt    *idx, *garray = aij->garray;
       PetscCheck(garray,PETSC_COMM_SELF,PETSC_ERR_USER,"No garray ?");
-      for (int brow=0,grow; brow < nloc*bs; brow += bs) { // block rows
+      for (PetscInt brow=0,grow; brow < nloc*bs; brow += bs) { // block rows
         ierr = MatGetRow(b,brow,&ncols,&idx,NULL);CHKERRQ(ierr);
         for (int k=0,cidx=0; k<ncols; k += bs,cidx++) {
           AA[k/bs] = 0;
