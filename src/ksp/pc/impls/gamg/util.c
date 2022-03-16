@@ -117,7 +117,7 @@ PetscErrorCode PCGAMGCreateGraph(Mat Amat, Mat *a_Gmat)
           if (nnz[brow/bs] != jj/bs) ok = 0;
           ierr = MatRestoreRow(c,brow+11,&jj,&cols,NULL);CHKERRQ(ierr);
         }
-        if(!ok) {
+        if (!ok) {
           ierr = PetscFree2(d_nnz,o_nnz);CHKERRQ(ierr);
           goto old_bs;
         }
