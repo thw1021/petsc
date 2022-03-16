@@ -107,10 +107,10 @@ PetscErrorCode PCGAMGCreateGraph(Mat Amat, Mat *a_Gmat)
         nnz[brow/bs] = jj/bs;
         if (jj%bs) ok = 0;
         if (cols) j0 = cols[0];
-        else j0 = 0;
+        else j0 = -1;
         ierr = MatRestoreRow(c,brow,&jj,&cols,NULL);CHKERRQ(ierr);
         if (nnz[brow/bs]>nmax) nmax = nnz[brow/bs];
-        for (PetscInt ii=1; ii < bs && j0 ; ii++) { // check for non-dense blocks
+        for (PetscInt ii=1; ii < bs && j0 != -1 ; ii++) { // check for non-dense blocks
           ierr = MatGetRow(c,brow+ii,&jj,&cols,NULL);CHKERRQ(ierr);
           if (jj%bs) ok = 0;
           if (j0 != cols[0]) ok = 0;
