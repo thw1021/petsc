@@ -292,7 +292,7 @@ static inline PetscErrorCode VecStashValuesBlocked_Private(VecStash *stash,Petsc
 
 PETSC_INTERN PetscErrorCode VecStrideGather_Default(Vec,PetscInt,Vec,InsertMode);
 PETSC_INTERN PetscErrorCode VecStrideScatter_Default(Vec,PetscInt,Vec,InsertMode);
-PETSC_INTERN PetscErrorCode VecReciprocal_Default(Vec);
+PETSC_INTERN PetscErrorCode VecReciprocal_Default(Vec,PetscDeviceContext);
 PETSC_INTERN PetscErrorCode VecStrideSubSetGather_Default(Vec,PetscInt,const PetscInt[],const PetscInt[],Vec,InsertMode);
 PETSC_INTERN PetscErrorCode VecStrideSubSetScatter_Default(Vec,PetscInt,const PetscInt[],const PetscInt[],Vec,InsertMode);
 
