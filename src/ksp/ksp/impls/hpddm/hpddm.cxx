@@ -241,7 +241,6 @@ static inline PetscErrorCode KSPSolve_HPDDM_Private(KSP ksp, const PetscScalar *
   HPDDM::downscaled_type<PetscScalar> *sgl[2];
   const PetscInt                      N = data->op->getDof() * n;
   PetscBool                           scale;
-  PetscErrorCode                      ierr;
 
   PetscFunctionBegin;
   CHKERRQ(PCGetDiagonalScale(ksp->pc, &scale));
