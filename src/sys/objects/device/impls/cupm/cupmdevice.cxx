@@ -333,13 +333,25 @@ PetscErrorCode Device<T>::initialize(MPI_Comm comm, PetscInt *defaultDeviceId, P
 
     ierr = PetscOptionsGetenv(comm,CUPM_VISIBLE_DEVICES<T>(),buf.data(),buf.size(),&found);CHKERRQ(ierr);
     if (found) {
-      for (auto it = buf.cbegin(); it != buf.cend(); ++it) {
-        if (!*it) continue;
+      auto empty = true;
+      auto it    = buf.cbegin();
+
+      while (it != buf.cend()) {
         // find out the first non-empty characters in buf are '-<some number>', which indicates
         // no devices should be visible so we can ignore the errors about not finding devices
-        ignoreCupmError = static_cast<PetscBool>((*it == '-') && (std::next(it) != buf.cend()) && isdigit(*std::next(it)));
-        break;
+        if (const auto chr = *it) {
+          empty = false;
+          if (chr == '-') {
+            const auto next = std::next(it);
+
+            ignoreCupmError = static_cast<PetscBool>(next != buf.cend() && isdigit(*next));
+            break;
+          }
+        }
+        ++it;
       }
+      // CUPM_VISIBLE_DEVICES is empty, so obviously no devices
+      if (it == buf.cend() && empty) ignoreCupmError = PETSC_TRUE;
     }
     id = PETSC_CUPM_DEVICE_NONE; // there are no devices anyway
     if (ignoreCupmError) {auto PETSC_UNUSED ignored = cupmGetLastError(); break;}
