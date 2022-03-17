@@ -11,6 +11,7 @@ if __name__ == '__main__':
   configure_options = [
     '--package-prefix-hash='+petsc_hash_pkgs,
     '--with-make-test-np=2',
+    '--download-scalapack',
     '--download-openmpi=1',
     '--download-hypre=1',
     '--download-hwloc=1',

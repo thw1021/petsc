@@ -15,11 +15,12 @@ configure_options = [
 
   '--with-clanguage=cxx',
   'CXXFLAGS=-Wall -Wwrite-strings -Wno-strict-aliasing -Wno-unknown-pragmas -fstack-protector -fvisibility=hidden -Wno-deprecated',
+  '--download-scalapack',
   '--with-scalar-type=complex',
   '--with-64-bit-indices=1',
 
   '--with-log=0',
-  '--with-info=0',  
+  '--with-info=0',
 
   '--download-hypre=1',
   '--download-mpich=1',

@@ -9,6 +9,7 @@ configure_options = [
   'FOPTFLAGS=-g -O',
   'CXXOPTFLAGS=-g -O',
   '--with-scalar-type=complex',
+  '--download-scalapack',
   '--with-precision=single',
   '--with-petsc4py=1',
    ]

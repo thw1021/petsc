@@ -10,6 +10,7 @@ configure_options = [
   '--download-mpich=1',
   '--download-mpich-device=ch3:sock',
   '--download-cmake=1',
+  '--download-scalapack=1',
   '--with-debugging=0',
   '--download-metis=1',
   '--download-suitesparse=1',

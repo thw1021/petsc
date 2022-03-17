@@ -23,6 +23,7 @@ if __name__ == '__main__':
     '--with-clanguage=c',
     '--download-kokkos',
     '--download-kokkos-kernels',
+    '--download-scalapack',
     '--download-hwloc',
     '--download-hypre',
     '--download-hypre-configure-arguments=--enable-unified-memory',

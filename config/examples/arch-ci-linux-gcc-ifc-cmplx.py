@@ -21,6 +21,7 @@ configure_options = [
   #'--download-mpich=1',
   #'--download-mpich-pm=gforker',
   '--with-mpi-dir='+mpich_install_dir,
+  '--download-scalapack',
   'LIBS=-L'+ifort_lib_dir+' -lifport -lifcoremt_pic -limf -lsvml -lm -lipgo -lirc -lpthread -L'+mpich_lib_dir+' -lmpifort -lmpi',
 
   'COPTFLAGS=-g -O',

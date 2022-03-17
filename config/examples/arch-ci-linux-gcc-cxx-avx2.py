@@ -16,6 +16,7 @@ if __name__ == '__main__':
     'CXXOPTFLAGS=-mavx2 -g -O',
     'FOPTFLAGS=-mavx2 -g -O',
     '--with-mpi-dir=/homes/petsc/soft/gcc-avx2/mpich-3.3b1',
+    '--download-scalapack',
     '--with-blaslapack-dir=/homes/petsc/soft/gcc-avx2/fblaslapack-3.4.2',
     '--with-memalign=64',
     '--download-metis=1',

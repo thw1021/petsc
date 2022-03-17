@@ -9,6 +9,8 @@ configure_options = [
   '--with-precision=single',
   '--with-debugging=0',
   '--download-mpich',
+  '--download-cmake',
+  '--download-scalapack',
   '--download-mpich-device=ch3:sock',
   ]
 

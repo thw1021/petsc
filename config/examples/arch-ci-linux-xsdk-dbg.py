@@ -7,6 +7,7 @@ configure_options = [
   '--package-prefix-hash='+petsc_hash_pkgs,
   '--download-xsdk',
   '--download-fblaslapack=1',
+  '--download-scalapack=1',
   '--download-mpich=1',
   '--download-cmake=1',
   '--with-clanguage=C++',
