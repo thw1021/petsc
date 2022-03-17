@@ -15,6 +15,7 @@ configure_options = [
   '--with-64-bit-indices=no',
   '--with-precision=double',
   '--download-mpich',
+    '--download-scalapack',
   '--download-fblaslapack',
 ]
 

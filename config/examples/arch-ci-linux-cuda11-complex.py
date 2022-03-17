@@ -15,6 +15,7 @@ if __name__ == '__main__':
     'FOPTFLAGS=-g -O',
     'CXXOPTFLAGS=-g -O',
     '--with-scalar-type=complex',
+    '--download-scalapack',
     '--with-precision=single',
     '--with-cuda-dir=/usr/local/cuda-11.0',
     '--with-mpi-f90module-visibility=0',

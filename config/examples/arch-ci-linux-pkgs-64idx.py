@@ -11,6 +11,7 @@ configure_options = [
   '--with-64-bit-indices=1',
   '--download-mpich=1', #openmpi gives errors of type: Error: There is no specific subroutine for the generic 'mpi_send'
   '--download-metis=1',
+  '--download-scalapack=1',
   '--download-parmetis=1',
   '--download-hwloc=1',
   '--download-pastix=1',

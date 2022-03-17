@@ -10,6 +10,8 @@ configure_options = [
   'FOPTFLAGS=-g -O',
   'CXXOPTFLAGS=-g -O',
   '--with-clanguage=cxx',
+  '--download-scalapack',
+  '--download-cmake',
   '--with-scalar-type=complex',
   '--with-64-bit-indices=1',
   '--download-mpich',

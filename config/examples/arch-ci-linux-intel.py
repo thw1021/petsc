@@ -28,6 +28,7 @@ if __name__ == '__main__':
     '--download-adblaslapack=1',
     '--download-kokkos',
     '--download-kokkos-cmake-arguments=-DKokkos_ENABLE_DEPRECATION_WARNINGS=OFF', # avoid warnings caused by broken [[deprecated]] in Intel compiler
+    '--download-scalapack',
     '--download-cmake', # need cmake-3.16+ to build Kokkos
     '--download-raja',
   ]

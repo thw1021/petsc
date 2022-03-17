@@ -4,6 +4,7 @@ import os
 
 configure_options = [
   '--with-mpi-dir=/Volumes/Scratch/svcpetsc/soft/mpich-3.4.3',
+  '--download-scalapack=1',
   ]
 
 if __name__ == '__main__':

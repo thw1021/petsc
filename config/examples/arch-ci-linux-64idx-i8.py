@@ -12,6 +12,7 @@ if __name__ == '__main__':
     '--package-prefix-hash='+petsc_hash_pkgs,
     '--with-64-bit-indices',
     'FFLAGS=-Wall -ffree-line-length-0 -Wno-unused-dummy-argument -fdefault-integer-8',
+    '--download-scalapack',
     '--with-mpi-dir=/nfs/gce/projects/petsc/soft/gcc-7.4.0/mpich-3.3.2',
     '--with-mpi-f90module-visibility=0',
   ]

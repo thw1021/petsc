@@ -16,6 +16,7 @@ if __name__ == '__main__':
     '--with-cxx=win32fe cl',
     '--with-fc=win32fe ifort',
     '--with-mpi-include=/cygdrive/c/PROGRA~2/INTELS~1/mpi/20172~1.187/intel64/include',
+    '--download-scalapack=1',
     '--with-mpi-lib=/cygdrive/c/PROGRA~2/INTELS~1/mpi/20172~1.187/intel64/lib/impi.lib',
     '--with-mpiexec=/cygdrive/c/PROGRA~2/INTELS~1/mpi/20172~1.187/intel64/bin/mpiexec -localonly',
     '--with-shared-libraries=0',

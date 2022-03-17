@@ -7,6 +7,7 @@ configure_options = [
   'COPTFLAGS=-O',
   'FOPTFLAGS=-O',
   'CXXOPTFLAGS=-O',
+  '--download-scalapack=1',
   '--with-visibility=0',
   'FFLAGS=-fno-backtrace -ffree-line-length-0',
   ]
