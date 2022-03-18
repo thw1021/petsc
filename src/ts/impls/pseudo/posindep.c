@@ -464,7 +464,7 @@ $         dt = current_dt*previous_fnorm/current_fnorm.
 .   ts - the timestep context
 
     Options Database Key:
-.    -ts_pseudo_increment_dt_from_initial_dt - set pseudo_increment_dt_from_initial_dt
+.    -ts_pseudo_increment_dt_from_initial_dt <true,false> - use the initial dt to determine increment
 
     Level: advanced
 

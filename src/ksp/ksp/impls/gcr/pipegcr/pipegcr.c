@@ -507,9 +507,6 @@ PetscErrorCode KSPPIPEGCRSetUnrollW(KSP ksp,PetscBool unroll_w)
 
   Level: intermediate
 
-  Options Database:
-. -ksp_pipegcr_unroll_w <bool> - uses unrolling
-
 .seealso: KSPPIPEGCR, KSPPIPEGCRGetTruncationType(), KSPPIPEGCRGetNprealloc(),KSPPIPEGCRSetUnrollW()
 @*/
 PetscErrorCode KSPPIPEGCRGetUnrollW(KSP ksp,PetscBool *unroll_w)
@@ -621,9 +618,6 @@ PetscErrorCode KSPPIPEGCRSetNprealloc(KSP ksp,PetscInt nprealloc)
 
    Output Parameter:
 .  nprealloc - the number of directions preallocated
-
-  Options Database:
-. -ksp_pipegcr_nprealloc <N> - number of directions preallocated
 
    Level: advanced
 

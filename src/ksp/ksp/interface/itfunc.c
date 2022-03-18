@@ -1671,7 +1671,7 @@ PetscErrorCode  KSPSetTolerances(KSP ksp,PetscReal rtol,PetscReal abstol,PetscRe
 -  flg - PETSC_TRUE indicates the guess is non-zero, PETSC_FALSE indicates the guess is zero
 
    Options database keys:
-.  -ksp_initial_guess_nonzero - use nonzero initial guess; this takes an optional truth value (0/1/no/yes/true/false)
+.  -ksp_initial_guess_nonzero <true,false> - use nonzero initial guess
 
    Level: beginner
 
@@ -1725,7 +1725,7 @@ PetscErrorCode  KSPGetInitialGuessNonzero(KSP ksp,PetscBool  *flag)
 -  flg - PETSC_TRUE indicates you want the error generated
 
    Options database keys:
-.  -ksp_error_if_not_converged - this takes an optional truth value (0/1/no/yes/true/false)
+.  -ksp_error_if_not_converged <true,false> - generate an error and stop the program
 
    Level: intermediate
 

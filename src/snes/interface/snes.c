@@ -22,7 +22,7 @@ PetscLogEvent SNES_Solve, SNES_Setup, SNES_FunctionEval, SNES_JacobianEval, SNES
 -  flg - PETSC_TRUE indicates you want the error generated
 
    Options database keys:
-.  -snes_error_if_not_converged - this takes an optional truth value (0/1/no/yes/true/false)
+.  -snes_error_if_not_converged <true,false> - cause an immediate error condition and stop the program if the solver does not converge
 
    Level: intermediate
 
@@ -1953,7 +1953,7 @@ PetscErrorCode  SNESSetInitialFunction(SNES snes, Vec f)
 -  normschedule - the frequency of norm computation
 
    Options Database Key:
-.  -snes_norm_schedule <none, always, initialonly, finalonly, initialfinalonly> - SNES Norm schedule
+.  -snes_norm_schedule <none, always, initialonly, finalonly, initialfinalonly> - set the schedule
 
    Notes:
    Only certain SNES methods support certain SNESNormSchedules.  Most require evaluation

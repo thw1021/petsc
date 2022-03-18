@@ -506,9 +506,6 @@ PetscErrorCode KSPPIPEFCGSetNprealloc(KSP ksp,PetscInt nprealloc)
    Output Parameter:
 .  nprealloc - the number of directions preallocated
 
-  Options Database:
-. -ksp_pipefcg_nprealloc <N> - number of directions preallocated
-
    Level: advanced
 
 .seealso: KSPPIPEFCG, KSPPIPEFCGGetTruncationType(), KSPPIPEFCGSetNprealloc()
