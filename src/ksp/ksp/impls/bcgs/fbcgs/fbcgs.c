@@ -162,7 +162,9 @@ static PetscErrorCode  KSPSolve_FBCGS(KSP ksp)
      KSPFBCGS - Implements flexible BiCGStab method.
 
    Options Database Keys:
-.   see KSPSolve()
+.vb
+    see KSPSolve()
+.ve
 
    Level: beginner
 
