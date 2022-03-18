@@ -6861,35 +6861,31 @@ PetscErrorCode DMProjectCoordinates(DM dm, PetscFE disc)
   if (!disc) PetscFunctionReturn(0);
   { // Check if the new space is the same as the old modulo quadrature
     PetscDualSpace dsOld, ds;
-    PetscInt sizeOld, size, dim;
-    const PetscInt *dofOld, *dof;
     ierr = PetscFEGetDualSpace(discOld, &dsOld);CHKERRQ(ierr);
     ierr = PetscFEGetDualSpace(disc, &ds);CHKERRQ(ierr);
-    ierr = PetscDualSpaceGetDimension(dsOld, &sizeOld);CHKERRQ(ierr);
-    ierr = PetscDualSpaceGetDimension(ds, &size);CHKERRQ(ierr);
-    if (size != sizeOld) {
-      same_space = PETSC_FALSE;
-    } else {
-      ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
-      ierr = PetscDualSpaceGetNumDof(dsOld, &dofOld);CHKERRQ(ierr);
-      ierr = PetscDualSpaceGetNumDof(ds, &dof);CHKERRQ(ierr);
-      for (PetscInt d=0; d<dim; d++) {
-        if (dof[d] != dofOld[d]) same_space = PETSC_FALSE;
-      }
-    }
+    ierr = PetscDualSpaceEqual(dsOld, ds, &same_space);CHKERRQ(ierr);
   }
   /* Make a fresh clone of the coordinate DM */
   ierr = DMClone(cdmOld, &cdmNew);CHKERRQ(ierr);
   ierr = DMSetField(cdmNew, 0, NULL, (PetscObject) disc);CHKERRQ(ierr);
   ierr = DMCreateDS(cdmNew);CHKERRQ(ierr);
   ierr = DMGetCoordinates(dm, &coordsOld);CHKERRQ(ierr);
-  if (same_space) {
+  if (same_space && 0) {
     ierr = PetscObjectReference((PetscObject)coordsOld);CHKERRQ(ierr);
     coordsNew = coordsOld;
   } else { // Project the coordinate vector from old to new space
     ierr = DMCreateGlobalVector(cdmNew, &coordsNew);CHKERRQ(ierr);
     ierr = DMCreateInterpolation(cdmOld, cdmNew, &matInterp, NULL);CHKERRQ(ierr);
     ierr = MatInterpolate(matInterp, coordsOld, coordsNew);CHKERRQ(ierr);
+    if (0) {
+      PetscReal norm;
+      Vec diff;
+      ierr = VecDuplicate(coordsNew, &diff);CHKERRQ(ierr);
+      ierr = VecWAXPY(diff, -1., coordsNew, coordsOld);CHKERRQ(ierr);
+      ierr = VecNorm(diff, NORM_MAX, &norm);CHKERRQ(ierr);
+      printf("norm %g\n", norm);
+      ierr = VecDestroy(&diff);CHKERRQ(ierr);
+    }
     ierr = MatDestroy(&matInterp);CHKERRQ(ierr);
   }
   /* Set new coordinate structures */
