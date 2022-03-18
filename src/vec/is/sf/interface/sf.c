@@ -2317,7 +2317,7 @@ PetscErrorCode PetscSFConcatenate(MPI_Comm comm, PetscInt nsfs, PetscSF sfs[], P
         PetscInt nr;
 
         ierr = PetscSFGetGraph(sfs[s], &nr, NULL, NULL, NULL);CHKERRQ(ierr);
-        PetscCheck(nr == nRoots, comm, PETSC_ERR_ARG_SIZ, "shareRoots = PETSC_TRUE but sfs[%D] has a different number of roots (%D) than sfs[0] (%D)", s, nr, nRoots);
+        PetscCheck(nr == nRoots, comm, PETSC_ERR_ARG_SIZ, "shareRoots = PETSC_TRUE but sfs[%" PetscInt_FMT "] has a different number of roots (%" PetscInt_FMT ") than sfs[0] (%" PetscInt_FMT ")", s, nr, nRoots);
       }
     }
   } else {
