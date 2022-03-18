@@ -1483,6 +1483,41 @@ PetscErrorCode PetscDualSpaceCreateInteriorDataDefault(PetscDualSpace sp, PetscQ
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode PetscDualSpaceEqual(PetscDualSpace A, PetscDualSpace B, PetscBool *equal)
+{
+  PetscErrorCode ierr;
+  PetscInt sizeA, sizeB, dimA, dimB;
+  const PetscInt *dofA, *dofB;
+
+  PetscFunctionBegin;
+  *equal = PETSC_TRUE;
+  ierr = PetscDualSpaceGetDimension(A, &sizeA);CHKERRQ(ierr);
+  ierr = PetscDualSpaceGetDimension(B, &sizeB);CHKERRQ(ierr);
+  if (sizeB != sizeA) {
+    *equal = PETSC_FALSE;
+    PetscFunctionReturn(0);
+  }
+  ierr = PetscDualSpaceGetDimension(A, &dimA);CHKERRQ(ierr);
+  ierr = PetscDualSpaceGetDimension(B, &dimB);CHKERRQ(ierr);
+  if (dimA != dimB) {
+    *equal = PETSC_FALSE;
+    PetscFunctionReturn(0);
+  }
+
+  ierr = PetscDualSpaceGetNumDof(A, &dofA);CHKERRQ(ierr);
+  ierr = PetscDualSpaceGetNumDof(B, &dofB);CHKERRQ(ierr);
+  for (PetscInt d=0; d<dimA; d++) {
+    if (dofA[d] != dofB[d]) {
+      *equal = PETSC_FALSE;
+      PetscFunctionReturn(0);
+    }
+  }
+  ierr = PetscDualSpaceViewFromOptions(A, NULL, "-A_ds_view");CHKERRQ(ierr);
+  ierr = PetscDualSpaceViewFromOptions(B, NULL, "-B_ds_view");CHKERRQ(ierr);
+  // TODO: Need to check that the dual space locations and matrices are equal
+  PetscFunctionReturn(0);
+}
+
 /*@C
   PetscDualSpaceApplyFVM - Apply a functional from the dual space basis to an input function by assuming a point evaluation functional at the cell centroid.
 
