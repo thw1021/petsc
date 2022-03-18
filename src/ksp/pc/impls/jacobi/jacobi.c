@@ -595,7 +595,7 @@ PetscErrorCode  PCJacobiSetFixDiagonal(PC pc,PetscBool flg)
 .  flg - the boolean flag
 
    Options Database Key:
-.  -pc_jacobi_fixdiagonal
+.  -pc_jacobi_fixdiagonal <bool> - Fix null terms on diagonal
 
    Level: intermediate
 
