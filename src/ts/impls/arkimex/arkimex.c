@@ -918,7 +918,7 @@ static PetscErrorCode TSInterpolate_ARKIMEX(TS ts,PetscReal itime,Vec X)
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  PetscCheck(Bt || !B,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSARKIMEX %s does not have an interpolation formula",ark->tableau->name);
+  PetscCheck(Bt && B,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSARKIMEX %s does not have an interpolation formula",ark->tableau->name);
   switch (ark->status) {
   case TS_STEP_INCOMPLETE:
   case TS_STEP_PENDING:
@@ -956,7 +956,7 @@ static PetscErrorCode TSExtrapolate_ARKIMEX(TS ts,PetscReal c,Vec X)
   PetscErrorCode  ierr;
 
   PetscFunctionBegin;
-  PetscCheck(Bt || !B,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSARKIMEX %s does not have an interpolation formula",ark->tableau->name);
+  PetscCheck(Bt && B,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSARKIMEX %s does not have an interpolation formula",ark->tableau->name);
   ierr = PetscCalloc2(s,&bt,s,&b);CHKERRQ(ierr);
   h = ts->time_step;
   h_prev = ts->ptime - ts->ptime_prev;
