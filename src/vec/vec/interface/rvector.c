@@ -47,8 +47,7 @@ PetscErrorCode VecMaxPointwiseDivideAsync(Vec x, Vec y, PetscManagedReal max, Pe
   PetscValidType(y,2);
   PetscCheckSameTypeAndComm(x,1,y,2);
   VecCheckSameSize(x,1,y,2);
-  if (!dctx) {ierr = PetscDeviceContextGetNullContext_Internal(&dctx);CHKERRQ(ierr);}
-  PetscValidDeviceContext(dctx,4);
+  ierr = PetscDeviceContextGetOptionalNullContext_Internal(&dctx);CHKERRQ(ierr);
   ierr = (*x->ops->maxpointwisedivide)(x,y,max,dctx);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -93,8 +92,7 @@ PetscErrorCode VecDotAsync(Vec x, Vec y, PetscManagedScalar val, PetscDeviceCont
   PetscValidType(y,2);
   PetscCheckSameTypeAndComm(x,1,y,2);
   VecCheckSameSize(x,1,y,2);
-  if (!dctx) {ierr = PetscDeviceContextGetNullContext_Internal(&dctx);CHKERRQ(ierr);}
-  PetscValidDeviceContext(dctx,4);
+  ierr = PetscDeviceContextGetOptionalNullContext_Internal(&dctx);CHKERRQ(ierr);
 
   ierr = PetscLogEventBegin(VEC_Dot,x,y,0,0);CHKERRQ(ierr);
   ierr = (*x->ops->dot)(x,y,val,dctx);CHKERRQ(ierr);
@@ -149,7 +147,7 @@ PetscErrorCode VecDotRealPartAsync(Vec x, Vec y, PetscManagedReal val, PetscDevi
 
   PetscFunctionBegin;
   ierr = VecDotAsync(x,y,PetscManagedScalarCreate(&fdot),dctx);CHKERRQ(ierr);
-  val.ptr = PetscRealPart(fdot);
+  *val.ptr = PetscRealPart(fdot);
   PetscFunctionReturn(0);
 }
 
@@ -201,8 +199,7 @@ PetscErrorCode VecNormAsync(Vec x, NormType type, PetscManagedReal val, PetscDev
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
   PetscValidType(x,1);
   //PetscValidRealPointer(val,3);
-  if (!dctx) {ierr = PetscDeviceContextGetNullContext_Internal(&dctx);CHKERRQ(ierr);}
-  PetscValidDeviceContext(dctx,4);
+  ierr = PetscDeviceContextGetOptionalNullContext_Internal(&dctx);CHKERRQ(ierr);
   /*
    * Cached data?
    */
@@ -351,6 +348,21 @@ PetscErrorCode  VecNormalize(Vec x,PetscReal *val)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode VecMaxAsync(Vec x, PetscManagedInt p, PetscManagedReal val, PetscDeviceContext dctx)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  //PetscValidRealPointer(val,3);
+  PetscValidType(x,1);
+  ierr = PetscDeviceContextGetOptionalNullContext_Internal(&dctx);CHKERRQ(ierr);
+  ierr = PetscLogEventBegin(VEC_Max,x,0,0,0);CHKERRQ(ierr);
+  ierr = (*x->ops->max)(x,p,val,dctx);CHKERRQ(ierr);
+  ierr = PetscLogEventEnd(VEC_Max,x,0,0,0);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
 /*@C
    VecMax - Determines the vector component with maximum real part and its location.
 
@@ -376,12 +388,22 @@ PetscErrorCode  VecMax(Vec x,PetscInt *p,PetscReal *val)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  ierr = VecMaxAsync(x,PetscManagedIntCreate(p),PetscManagedRealCreate(val),NULL);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecMinAsync(Vec x, PetscManagedInt p, PetscManagedReal val, PetscDeviceContext dctx)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  PetscValidRealPointer(val,3);
+  //PetscValidRealPointer(val,3);
   PetscValidType(x,1);
-  ierr = PetscLogEventBegin(VEC_Max,x,0,0,0);CHKERRQ(ierr);
-  ierr = (*x->ops->max)(x,p,val);CHKERRQ(ierr);
-  ierr = PetscLogEventEnd(VEC_Max,x,0,0,0);CHKERRQ(ierr);
+  ierr = PetscDeviceContextGetOptionalNullContext_Internal(&dctx);CHKERRQ(ierr);
+  ierr = PetscLogEventBegin(VEC_Min,x,0,0,0);CHKERRQ(ierr);
+  ierr = (*x->ops->min)(x,p,val,dctx);CHKERRQ(ierr);
+  ierr = PetscLogEventEnd(VEC_Min,x,0,0,0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -411,12 +433,27 @@ PetscErrorCode  VecMin(Vec x,PetscInt *p,PetscReal *val)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
+  ierr = VecMinAsync(x,PetscManagedIntCreate(p),PetscManagedRealCreate(val),NULL);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecTDotAsync(Vec x, Vec y, PetscManagedScalar val, PetscDeviceContext dctx)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  PetscValidRealPointer(val,3);
+  PetscValidHeaderSpecific(y,VEC_CLASSID,2);
+  //PetscValidScalarPointer(val,3);
   PetscValidType(x,1);
-  ierr = PetscLogEventBegin(VEC_Min,x,0,0,0);CHKERRQ(ierr);
-  ierr = (*x->ops->min)(x,p,val);CHKERRQ(ierr);
-  ierr = PetscLogEventEnd(VEC_Min,x,0,0,0);CHKERRQ(ierr);
+  PetscValidType(y,2);
+  PetscCheckSameTypeAndComm(x,1,y,2);
+  VecCheckSameSize(x,1,y,2);
+  ierr = PetscDeviceContextGetOptionalNullContext_Internal(&dctx);CHKERRQ(ierr);
+
+  ierr = PetscLogEventBegin(VEC_TDot,x,y,0,0);CHKERRQ(ierr);
+  ierr = (*x->ops->tdot)(x,y,val,dctx);CHKERRQ(ierr);
+  ierr = PetscLogEventEnd(VEC_TDot,x,y,0,0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -450,17 +487,38 @@ PetscErrorCode  VecTDot(Vec x,Vec y,PetscScalar *val)
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  PetscValidHeaderSpecific(y,VEC_CLASSID,2);
-  PetscValidScalarPointer(val,3);
-  PetscValidType(x,1);
-  PetscValidType(y,2);
-  PetscCheckSameTypeAndComm(x,1,y,2);
-  VecCheckSameSize(x,1,y,2);
+  ierr = VecTDotAsync(x,y,PetscManagedScalarCreate(val),NULL);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
 
-  ierr = PetscLogEventBegin(VEC_TDot,x,y,0,0);CHKERRQ(ierr);
-  ierr = (*x->ops->tdot)(x,y,val);CHKERRQ(ierr);
-  ierr = PetscLogEventEnd(VEC_TDot,x,y,0,0);CHKERRQ(ierr);
+PetscErrorCode VecScaleAsync(Vec x, PetscManagedScalar alpha, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
+  PetscCheck(x->stash.insertmode == NOT_SET_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
+  if (PetscManagedScalarEq(alpha,1)) {
+    PetscReal      norms[4] = {0.0,0.0,0.0, 0.0};
+    PetscBool      flgs[4];
+    PetscErrorCode ierr;
+
+    ierr = VecSetErrorIfLocked(x,1);CHKERRQ(ierr);
+    /* get current stashed norms */
+    for (PetscInt i = 0; i < 4; ++i) {
+      ierr = PetscObjectComposedDataGetReal((PetscObject)x,NormIds[i],norms[i],flgs[i]);CHKERRQ(ierr);
+    }
+    ierr = PetscDeviceContextGetOptionalNullContext_Internal(&dctx);CHKERRQ(ierr);
+    ierr = PetscLogEventBegin(VEC_Scale,x,0,0,0);CHKERRQ(ierr);
+    ierr = (*x->ops->scale)(x,alpha,dctx);CHKERRQ(ierr);
+    ierr = PetscLogEventEnd(VEC_Scale,x,0,0,0);CHKERRQ(ierr);
+    ierr = PetscObjectStateIncrease((PetscObject)x);CHKERRQ(ierr);
+    /* put the scaled stashed norms back into the Vec */
+    for (PetscInt i = 0; i < 4; ++i) {
+      if (flgs[i]) {
+        ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[i],PetscAbsScalar(*alpha.ptr)*norms[i]);CHKERRQ(ierr);
+      }
+    }
+  }
   PetscFunctionReturn(0);
 }
 
@@ -482,32 +540,47 @@ $      x[i] = alpha * x[i], for i=1,...,n.
 @*/
 PetscErrorCode  VecScale(Vec x, PetscScalar alpha)
 {
-  PetscReal      norms[4] = {0.0,0.0,0.0, 0.0};
-  PetscBool      flgs[4];
   PetscErrorCode ierr;
-  PetscInt       i;
+
+  PetscFunctionBegin;
+  ierr = VecScaleAsync(x,PetscManagedScalarCreate(&alpha),NULL);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecSetAsync(Vec x, PetscManagedScalar alpha, PetscDeviceContext dctx)
+{
+  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
   PetscValidType(x,1);
-  PetscCheckFalse(x->stash.insertmode != NOT_SET_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
-  ierr = PetscLogEventBegin(VEC_Scale,x,0,0,0);CHKERRQ(ierr);
-  if (alpha != (PetscScalar)1.0) {
-    ierr = VecSetErrorIfLocked(x,1);CHKERRQ(ierr);
-    /* get current stashed norms */
-    for (i=0; i<4; i++) {
-      ierr = PetscObjectComposedDataGetReal((PetscObject)x,NormIds[i],norms[i],flgs[i]);CHKERRQ(ierr);
-    }
-    ierr = (*x->ops->scale)(x,alpha);CHKERRQ(ierr);
-    ierr = PetscObjectStateIncrease((PetscObject)x);CHKERRQ(ierr);
-    /* put the scaled stashed norms back into the Vec */
-    for (i=0; i<4; i++) {
-      if (flgs[i]) {
-        ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[i],PetscAbsScalar(alpha)*norms[i]);CHKERRQ(ierr);
-      }
+  PetscCheck(x->stash.insertmode == NOT_SET_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"You cannot call this after you have called VecSetValues() but\n before you have called VecAssemblyBegin/End()");
+  ierr = VecSetErrorIfLocked(x,1);CHKERRQ(ierr);
+  ierr = PetscDeviceContextGetOptionalNullContext_Internal(&dctx);CHKERRQ(ierr);
+
+  ierr = PetscLogEventBegin(VEC_Set,x,0,0,0);CHKERRQ(ierr);
+  ierr = (*x->ops->set)(x,alpha,dctx);CHKERRQ(ierr);
+  ierr = PetscLogEventEnd(VEC_Set,x,0,0,0);CHKERRQ(ierr);
+  ierr = PetscObjectStateIncrease((PetscObject)x);CHKERRQ(ierr);
+
+  if (x->map->N == 0) {
+    ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[NORM_1],0.0l);CHKERRQ(ierr);
+    ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[NORM_INFINITY],0.0);CHKERRQ(ierr);
+    ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[NORM_2],0.0);CHKERRQ(ierr);
+    ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[NORM_FROBENIUS],0.0);CHKERRQ(ierr);
+  } else {
+    /*  norms can be simply set (if |alpha|*N not too large) */
+    const PetscInt N   = x->map->N;
+    PetscReal      val = PetscAbsScalar(*alpha.ptr);
+
+    ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[NORM_INFINITY],val);CHKERRQ(ierr);
+    if (val <= PETSC_MAX_REAL/N) {
+      ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[NORM_1],N*val);CHKERRQ(ierr);
+      val *= PetscSqrtReal((PetscReal)N);
+      ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[NORM_2],val);CHKERRQ(ierr);
+      ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[NORM_FROBENIUS],val);CHKERRQ(ierr);
     }
   }
-  ierr = PetscLogEventEnd(VEC_Scale,x,0,0,0);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -540,37 +613,11 @@ $     x[i] = alpha, for i=1,...,n,
 @*/
 PetscErrorCode  VecSet(Vec x,PetscScalar alpha)
 {
-  PetscReal      val;
   PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  PetscValidType(x,1);
-  PetscCheckFalse(x->stash.insertmode != NOT_SET_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"You cannot call this after you have called VecSetValues() but\n before you have called VecAssemblyBegin/End()");
   PetscValidLogicalCollectiveScalar(x,alpha,2);
-  ierr = VecSetErrorIfLocked(x,1);CHKERRQ(ierr);
-
-  ierr = PetscLogEventBegin(VEC_Set,x,0,0,0);CHKERRQ(ierr);
-  ierr = (*x->ops->set)(x,alpha);CHKERRQ(ierr);
-  ierr = PetscLogEventEnd(VEC_Set,x,0,0,0);CHKERRQ(ierr);
-  ierr = PetscObjectStateIncrease((PetscObject)x);CHKERRQ(ierr);
-
-  /*  norms can be simply set (if |alpha|*N not too large) */
-  val  = PetscAbsScalar(alpha);
-  if (x->map->N == 0) {
-    ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[NORM_1],0.0l);CHKERRQ(ierr);
-    ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[NORM_INFINITY],0.0);CHKERRQ(ierr);
-    ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[NORM_2],0.0);CHKERRQ(ierr);
-    ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[NORM_FROBENIUS],0.0);CHKERRQ(ierr);
-  } else if (val > PETSC_MAX_REAL/x->map->N) {
-    ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[NORM_INFINITY],val);CHKERRQ(ierr);
-  } else {
-    ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[NORM_1],x->map->N * val);CHKERRQ(ierr);
-    ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[NORM_INFINITY],val);CHKERRQ(ierr);
-    val  = PetscSqrtReal((PetscReal)x->map->N) * val;
-    ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[NORM_2],val);CHKERRQ(ierr);
-    ierr = PetscObjectComposedDataSetReal((PetscObject)x,NormIds[NORM_FROBENIUS],val);CHKERRQ(ierr);
-  }
+  ierr = VecSetAsync(x,PetscManagedScalarCreate(&alpha),NULL);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
@@ -587,10 +634,7 @@ PetscErrorCode VecAXPYAsync(Vec y, PetscManagedScalar alpha, Vec x, PetscDeviceC
   VecCheckSameSize(y,1,x,3);
   PetscCheck(x != y,PetscObjectComm((PetscObject)y),PETSC_ERR_ARG_IDN,"x and y cannot be the same vector");
   ierr = VecSetErrorIfLocked(y,1);CHKERRQ(ierr);
-
-  if (!dctx) {ierr = PetscDeviceContextGetNullContext_Internal(&dctx);CHKERRQ(ierr);}
-  PetscValidDeviceContext(dctx,4);
-
+  ierr = PetscDeviceContextGetOptionalNullContext_Internal(&dctx);CHKERRQ(ierr);
   ierr = VecLockReadPush(x);CHKERRQ(ierr);
   ierr = PetscLogEventBegin(VEC_AXPY,x,y,0,0);CHKERRQ(ierr);
   ierr = (*y->ops->axpy)(y,alpha,x,dctx);CHKERRQ(ierr);

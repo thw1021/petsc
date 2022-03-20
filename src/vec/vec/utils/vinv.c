@@ -1249,13 +1249,13 @@ PetscErrorCode VecDotNorm2Async(Vec s, Vec t, PetscManagedScalar dp, PetscManage
 {
   const PetscScalar *sx, *tx;
   PetscScalar       dpx = 0.0, nmx = 0.0,work[2],sum[2];
-  PetscInt          i, n;
+  PetscInt          n;
   PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(s, VEC_CLASSID,1);
   PetscValidHeaderSpecific(t, VEC_CLASSID,2);
-  PetscValidScalarPointer(dp,3);
+  //PetscValidScalarPointer(dp,3);
   //PetscValidRealPointer(nm,4);
   PetscValidType(s,1);
   PetscValidType(t,2);
@@ -1272,7 +1272,7 @@ PetscErrorCode VecDotNorm2Async(Vec s, Vec t, PetscManagedScalar dp, PetscManage
     ierr = VecGetArrayRead(s, &sx);CHKERRQ(ierr);
     ierr = VecGetArrayRead(t, &tx);CHKERRQ(ierr);
 
-    for (i = 0; i<n; i++) {
+    for (PetscInt i = 0; i < n; ++i) {
       dpx += sx[i]*PetscConj(tx[i]);
       nmx += tx[i]*PetscConj(tx[i]);
     }
