@@ -587,7 +587,7 @@ static PetscErrorCode TSMPRKSetSplits(TS ts)
   PetscFunctionBegin;
   ierr = TSRHSSplitGetSubTS(ts,"slow",&mprk->subts_slow);CHKERRQ(ierr);
   ierr = TSRHSSplitGetSubTS(ts,"fast",&mprk->subts_fast);CHKERRQ(ierr);
-  PetscCheck(mprk->subts_slow || !mprk->subts_fast,PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"Must set up the RHSFunctions for 'slow' and 'fast' components using TSRHSSplitSetRHSFunction() or calling TSSetRHSFunction() for each sub-TS");
+  PetscCheck(mprk->subts_slow && mprk->subts_fast,PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"Must set up the RHSFunctions for 'slow' and 'fast' components using TSRHSSplitSetRHSFunction() or calling TSSetRHSFunction() for each sub-TS");
 
   /* Only copy the DM */
   ierr = TSGetDM(ts,&dm);CHKERRQ(ierr);
