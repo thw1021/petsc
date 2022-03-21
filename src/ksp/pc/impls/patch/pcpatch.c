@@ -967,7 +967,7 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
   ierr = PetscHSetICreate(&cht);CHKERRQ(ierr);
 
   ierr = PCGetDM(pc, &dm);CHKERRQ(ierr);
-  PetscCheckFalse(!dm,PetscObjectComm((PetscObject) pc), PETSC_ERR_ARG_WRONGSTATE, "DM not yet set on patch PC");
+  PetscCheck(dm,PetscObjectComm((PetscObject) pc), PETSC_ERR_ARG_WRONGSTATE, "DM not yet set on patch PC");
   ierr = DMConvert(dm, DMPLEX, &plex);CHKERRQ(ierr);
   dm = plex;
   ierr = DMPlexGetChart(dm, &pStart, &pEnd);CHKERRQ(ierr);
@@ -1160,7 +1160,7 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
         }
         if (found0 && found1) break;
       }
-      PetscCheckFalse(!(found0 && found1),PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Didn't manage to find local point numbers for facet support");
+      PetscCheck(found0 && found1,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Didn't manage to find local point numbers for facet support");
     }
   }
   ierr = PetscHSetIDestroy(&ht);CHKERRQ(ierr);
@@ -1986,7 +1986,7 @@ PetscErrorCode PCPatchComputeFunction_Internal(PC pc, Vec x, Vec F, PetscInt poi
 
   PetscFunctionBegin;
   ierr = PetscLogEventBegin(PC_Patch_ComputeOp, pc, 0, 0, 0);CHKERRQ(ierr);
-  PetscCheckFalse(!patch->usercomputeop,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Must call PCPatchSetComputeOperator() to set user callback");
+  PetscCheck(patch->usercomputeop,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Must call PCPatchSetComputeOperator() to set user callback");
   ierr = ISGetIndices(patch->dofs, &dofsArray);CHKERRQ(ierr);
   ierr = ISGetIndices(patch->dofsWithAll, &dofsArrayWithAll);CHKERRQ(ierr);
   ierr = ISGetIndices(patch->cells, &cellsArray);CHKERRQ(ierr);
@@ -2077,7 +2077,7 @@ PetscErrorCode PCPatchComputeOperator_Internal(PC pc, Vec x, Mat mat, PetscInt p
   PetscFunctionBegin;
   ierr = PetscLogEventBegin(PC_Patch_ComputeOp, pc, 0, 0, 0);CHKERRQ(ierr);
   isNonlinear = patch->isNonlinear;
-  PetscCheckFalse(!patch->usercomputeop,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Must call PCPatchSetComputeOperator() to set user callback");
+  PetscCheck(patch->usercomputeop,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Must call PCPatchSetComputeOperator() to set user callback");
   if (withArtificial) {
     ierr = ISGetIndices(patch->dofsWithArtificial, &dofsArray);CHKERRQ(ierr);
   } else {
@@ -2211,7 +2211,7 @@ PetscErrorCode PCPatchComputeOperator_Internal(PC pc, Vec x, Mat mat, PetscInt p
     MatFactorInfo info;
     PetscBool     flg;
     ierr = PetscObjectTypeCompare((PetscObject)mat, MATSEQDENSE, &flg);CHKERRQ(ierr);
-    PetscCheckFalse(!flg,PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONGSTATE, "Invalid Mat type for dense inverse");
+    PetscCheck(flg,PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONGSTATE, "Invalid Mat type for dense inverse");
     ierr = MatFactorInfoInitialize(&info);CHKERRQ(ierr);
     ierr = MatLUFactor(mat, NULL, NULL, &info);CHKERRQ(ierr);
     ierr = MatSeqDenseInvertFactors_Private(mat);CHKERRQ(ierr);
@@ -2470,7 +2470,7 @@ static PetscErrorCode PCSetUp_PATCH_Linear(PC pc)
 
   PetscFunctionBegin;
   if (!pc->setupcalled) {
-    PetscCheckFalse(!patch->save_operators && patch->denseinverse,PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONGSTATE, "Can't have dense inverse without save operators");
+    PetscCheck(patch->save_operators || !patch->denseinverse,PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONGSTATE, "Can't have dense inverse without save operators");
     if (!patch->denseinverse) {
       ierr = PetscMalloc1(patch->npatch, &patch->solver);CHKERRQ(ierr);
       ierr = PCGetOptionsPrefix(pc, &prefix);CHKERRQ(ierr);
@@ -2560,7 +2560,7 @@ static PetscErrorCode PCSetUp_PATCH(PC pc)
       PetscInt     cStart, cEnd, c, Nf, f, numGlobalBcs = 0, *globalBcs, *Nb, **cellDofs;
 
       ierr = PCGetDM(pc, &dm);CHKERRQ(ierr);
-      PetscCheckFalse(!dm,PetscObjectComm((PetscObject) pc), PETSC_ERR_ARG_WRONG, "Must set DM for PCPATCH or call PCPatchSetDiscretisationInfo()");
+      PetscCheck(dm,PetscObjectComm((PetscObject) pc), PETSC_ERR_ARG_WRONG, "Must set DM for PCPATCH or call PCPatchSetDiscretisationInfo()");
       ierr = DMConvert(dm, DMPLEX, &plex);CHKERRQ(ierr);
       dm = plex;
       ierr = DMGetLocalSection(dm, &s);CHKERRQ(ierr);

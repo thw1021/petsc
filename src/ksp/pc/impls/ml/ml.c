@@ -243,7 +243,7 @@ static PetscErrorCode MatWrapML_SeqAIJ(ML_Operator *mlmat,MatReuse reuse,Mat *ne
   PetscScalar           *ml_vals=matdata->values,*aa;
 
   PetscFunctionBegin;
-  PetscCheckFalse(!mlmat->getrow,PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"mlmat->getrow = NULL");
+  PetscCheck(mlmat->getrow,PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"mlmat->getrow = NULL");
   if (m != n) { /* ML Pmat and Rmat are in CSR format. Pass array pointers into SeqAIJ matrix */
     if (reuse) {
       Mat_SeqAIJ *aij= (Mat_SeqAIJ*)(*newmat)->data;
@@ -335,7 +335,7 @@ static PetscErrorCode MatWrapML_MPIAIJ(ML_Operator *mlmat,MatReuse reuse,Mat *ne
   Mat            A;
 
   PetscFunctionBegin;
-  PetscCheckFalse(!mlmat->getrow,PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"mlmat->getrow = NULL");
+  PetscCheck(mlmat->getrow,PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"mlmat->getrow = NULL");
   n = mlmat->invec_leng;
   PetscCheckFalse(m != n,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"m %d must equal to n %d",m,n);
 
@@ -688,7 +688,7 @@ PetscErrorCode PCSetUp_ML(PC pc)
       PetscInt          i,j,mlocal,nvec,M;
       const Vec         *vecs;
 
-      PetscCheckFalse(!mnull,PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"Must provide explicit null space using MatSetNearNullSpace() to use user-specified null space");
+      PetscCheck(mnull,PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"Must provide explicit null space using MatSetNearNullSpace() to use user-specified null space");
       ierr = MatGetSize(A,&M,NULL);CHKERRQ(ierr);
       ierr = MatGetLocalSize(Aloc,&mlocal,NULL);CHKERRQ(ierr);
       ierr = MatNullSpaceGetVecs(mnull,&has_const,&nvec,&vecs);CHKERRQ(ierr);
@@ -733,7 +733,7 @@ PetscErrorCode PCSetUp_ML(PC pc)
   agg_object->cheap_minimizing_energy   = (int)pc_ml->EnergyMinimizationCheap;
 
   if (pc_ml->Aux) {
-    PetscCheckFalse(!pc_ml->dim,PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"Auxiliary matrix requires coordinates");
+    PetscCheck(pc_ml->dim,PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"Auxiliary matrix requires coordinates");
     ml_object->Amat[0].aux_data->threshold = pc_ml->AuxThreshold;
     ml_object->Amat[0].aux_data->enable    = 1;
     ml_object->Amat[0].aux_data->max_level = 10;
@@ -784,7 +784,7 @@ PetscErrorCode PCSetUp_ML(PC pc)
     if (!pc_ml->RepartitionType) {
       PetscInt i;
 
-      PetscCheckFalse(!pc_ml->dim,PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"ML Zoltan repartitioning requires coordinates");
+      PetscCheck(pc_ml->dim,PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"ML Zoltan repartitioning requires coordinates");
       PetscStackCall("ML_Repartition_Set_Partitioner",ML_Repartition_Set_Partitioner(ml_object,ML_USEZOLTAN));
       PetscStackCall("ML_Aggregate_Set_Dimensions",ML_Aggregate_Set_Dimensions(agg_object, pc_ml->dim));
 
@@ -1048,7 +1048,7 @@ PetscErrorCode PCSetFromOptions_ML(PetscOptionItems *PetscOptionsObject,PC pc)
     partindx = 1;
     ierr     = PetscOptionsEList("-pc_ml_repartitionType", "Repartitioning library to use","ML_Repartition_Set_Partitioner",part,2,part[1],&partindx,NULL);CHKERRQ(ierr);
     pc_ml->RepartitionType = partindx;
-    PetscCheckFalse(!partindx,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP_SYS,"ML not compiled with Zoltan");
+    PetscCheck(partindx,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP_SYS,"ML not compiled with Zoltan");
 #endif
     ierr = PetscOptionsBool("-pc_ml_Aux","Aggregate using auxiliary coordinate-based laplacian","None",pc_ml->Aux,&pc_ml->Aux,NULL);CHKERRQ(ierr);
     ierr = PetscOptionsReal("-pc_ml_AuxThreshold","Auxiliary smoother drop tol","None",pc_ml->AuxThreshold,&pc_ml->AuxThreshold,NULL);CHKERRQ(ierr);
