@@ -112,7 +112,7 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc,Mat Amat_fine,PetscInt cr_bs,
     ierr = MPI_Comm_rank(loccomm, &locrank);CHKERRMPI(ierr);
     s_nnodes = !locrank;
     ierr = MPI_Allreduce(&s_nnodes,&r_nnodes,1,MPIU_INT,MPI_SUM,comm);CHKERRMPI(ierr);
-    PetscCheckFalse(size%r_nnodes,PETSC_COMM_SELF,PETSC_ERR_PLIB,"odd number of nodes np=%D nnodes%D",size,r_nnodes);
+    PetscCheck((size%r_nnodes) == 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"odd number of nodes np=%D nnodes%D",size,r_nnodes);
     devCount = 0;
     cerr = cudaGetDeviceCount(&devCount);
     cudaGetLastError(); /* Reset the last error */
@@ -590,7 +590,7 @@ PetscErrorCode PCSetUp_GAMG(PC pc)
       ierr = PetscMalloc1(pc_gamg->data_sz, &pc_gamg->data);CHKERRQ(ierr);
       for (qq=0; qq<pc_gamg->data_sz; qq++) pc_gamg->data[qq] = pc_gamg->orig_data[qq];
     } else {
-      PetscCheckFalse(!pc_gamg->ops->createdefaultdata,comm,PETSC_ERR_PLIB,"'createdefaultdata' not set(?) need to support NULL data");
+      PetscCheck(pc_gamg->ops->createdefaultdata,comm,PETSC_ERR_PLIB,"'createdefaultdata' not set(?) need to support NULL data");
       ierr = pc_gamg->ops->createdefaultdata(pc,Pmat);CHKERRQ(ierr);
     }
   }
@@ -1464,7 +1464,7 @@ static PetscErrorCode PCGAMGSetType_GAMG(PC pc, PCGAMGType type)
   PetscFunctionBegin;
   pc_gamg->type = type;
   ierr = PetscFunctionListFind(GAMGList,type,&r);CHKERRQ(ierr);
-  PetscCheckFalse(!r,PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unknown GAMG type %s given",type);
+  PetscCheck(r,PETSC_COMM_SELF,PETSC_ERR_ARG_UNKNOWN_TYPE,"Unknown GAMG type %s given",type);
   if (pc_gamg->ops->destroy) {
     ierr = (*pc_gamg->ops->destroy)(pc);CHKERRQ(ierr);
     ierr = PetscMemzero(pc_gamg->ops,sizeof(struct _PCGAMGOps));CHKERRQ(ierr);
