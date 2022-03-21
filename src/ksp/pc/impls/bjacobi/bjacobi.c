@@ -53,7 +53,7 @@ static PetscErrorCode PCSetUp_BJacobi(PC pc)
     if (jac->g_lens) {
       /* check if the g_lens is has valid entries */
       for (i=0; i<jac->n; i++) {
-        PetscCheckFalse(!jac->g_lens[i],PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Zero block not allowed");
+        PetscCheck(jac->g_lens[i],PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Zero block not allowed");
         PetscCheckFalse(jac->g_lens[i]/bs*bs != jac->g_lens[i],PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Mat blocksize doesn't match block Jacobi layout");
       }
       if (size == 1) {
@@ -89,7 +89,7 @@ end_1:
       ierr         = PetscMalloc1(jac->n_local,&jac->l_lens);CHKERRQ(ierr);
       for (i=0; i<jac->n_local; i++) {
         jac->l_lens[i] = ((M/bs)/jac->n_local + (((M/bs) % jac->n_local) > i))*bs;
-        PetscCheckFalse(!jac->l_lens[i],PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Too many blocks given");
+        PetscCheck(jac->l_lens[i],PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Too many blocks given");
       }
     }
   } else if (jac->n < 0 && jac->n_local < 0) { /* no blocks given */
@@ -274,7 +274,7 @@ static PetscErrorCode  PCBJacobiGetSubKSP_BJacobi(PC pc,PetscInt *n_local,PetscI
   PC_BJacobi *jac = (PC_BJacobi*)pc->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(!pc->setupcalled,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONGSTATE,"Must call KSPSetUp() or PCSetUp() first");
+  PetscCheck(pc->setupcalled,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONGSTATE,"Must call KSPSetUp() or PCSetUp() first");
 
   if (n_local) *n_local = jac->n_local;
   if (first_local) *first_local = jac->first_local;
@@ -996,7 +996,7 @@ static PetscErrorCode PCSetUp_BJacobi_Multiblock(PC pc,Mat mat,Mat pmat)
   if (pc->useAmat) {
     PetscBool same;
     ierr = PetscObjectTypeCompare((PetscObject)mat,((PetscObject)pmat)->type_name,&same);CHKERRQ(ierr);
-    PetscCheckFalse(!same,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_INCOMP,"Matrices not of same type");
+    PetscCheck(same,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_INCOMP,"Matrices not of same type");
   }
 
   if (!pc->setupcalled) {

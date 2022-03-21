@@ -23,9 +23,9 @@ static PetscErrorCode PCBDDCMatTransposeMatSolve_SeqDense(Mat A,Mat B,Mat X)
   PetscFunctionBegin;
   ierr = PetscBLASIntCast(A->rmap->n,&m);CHKERRQ(ierr);
   ierr = PetscObjectTypeCompareAny((PetscObject)B,&flg,MATSEQDENSE,MATMPIDENSE,NULL);CHKERRQ(ierr);
-  PetscCheckFalse(!flg,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONG,"Matrix B must be MATDENSE matrix");
+  PetscCheck(flg,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONG,"Matrix B must be MATDENSE matrix");
   ierr = PetscObjectTypeCompareAny((PetscObject)X,&flg,MATSEQDENSE,MATMPIDENSE,NULL);CHKERRQ(ierr);
-  PetscCheckFalse(!flg,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONG,"Matrix X must be MATDENSE matrix");
+  PetscCheck(flg,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONG,"Matrix X must be MATDENSE matrix");
 
   ierr = MatGetSize(B,NULL,&n);CHKERRQ(ierr);
   ierr = PetscBLASIntCast(n,&nrhs);CHKERRQ(ierr);
@@ -480,7 +480,7 @@ static PetscErrorCode PCBDDCScalingSetUp_Deluxe_Private(PC pc)
   PetscErrorCode         ierr;
 
   PetscFunctionBegin;
-  PetscCheckFalse(!sub_schurs,PetscObjectComm((PetscObject)pc),PETSC_ERR_PLIB,"Missing PCBDDCSubSchurs");
+  PetscCheck(sub_schurs,PetscObjectComm((PetscObject)pc),PETSC_ERR_PLIB,"Missing PCBDDCSubSchurs");
   if (!sub_schurs->n_subs) PetscFunctionReturn(0);
 
   /* Allocate arrays for subproblems */
@@ -558,7 +558,7 @@ static PetscErrorCode PCBDDCScalingSetUp_Deluxe_Private(PC pc)
       ierr = MatDestroy(&X);CHKERRQ(ierr);
       if (deluxe_ctx->change) {
         Mat C,CY;
-        PetscCheckFalse(!deluxe_ctx->change_with_qr,PETSC_COMM_SELF,PETSC_ERR_SUP,"Only QR based change of basis");
+        PetscCheck(deluxe_ctx->change_with_qr,PETSC_COMM_SELF,PETSC_ERR_SUP,"Only QR based change of basis");
         ierr = KSPGetOperators(deluxe_ctx->change[i],&C,NULL);CHKERRQ(ierr);
         ierr = MatMatMult(C,Y,MAT_INITIAL_MATRIX,PETSC_DEFAULT,&CY);CHKERRQ(ierr);
         ierr = MatMatTransposeMult(CY,C,MAT_REUSE_MATRIX,PETSC_DEFAULT,&Y);CHKERRQ(ierr);
