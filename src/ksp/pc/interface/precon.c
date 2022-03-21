@@ -697,7 +697,7 @@ PetscErrorCode  PCApplyBAorAB(PC pc,PCSide side,Vec x,Vec y,Vec work)
   PetscCheckSameComm(pc,1,work,5);
   PetscCheck(x != y,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_IDN,"x and y must be different vectors");
   PetscCheck(side == PC_LEFT || side == PC_SYMMETRIC || side == PC_RIGHT,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Side must be right, left, or symmetric");
-  PetscCheck(!pc->diagonalscale || side == PC_SYMMETRIC,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Cannot include diagonal scaling with symmetric preconditioner application");
+  PetscCheck(!pc->diagonalscale || side != PC_SYMMETRIC,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Cannot include diagonal scaling with symmetric preconditioner application");
   if (pc->erroriffailure) {ierr = VecValidValues(x,3,PETSC_TRUE);CHKERRQ(ierr);}
 
   ierr = PCSetUp(pc);CHKERRQ(ierr);

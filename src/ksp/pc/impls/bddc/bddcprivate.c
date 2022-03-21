@@ -251,7 +251,7 @@ PetscErrorCode PCBDDCNedelecSupport(PC pc)
   }
 
   /* Sanity checks */
-  PetscCheck(order && !conforming,comm,PETSC_ERR_SUP,"Variable order and non-conforming spaces are not supported at the same time");
+  PetscCheck(order || conforming,comm,PETSC_ERR_SUP,"Variable order and non-conforming spaces are not supported at the same time");
   PetscCheck(!pcbddc->user_ChangeOfBasisMatrix,comm,PETSC_ERR_SUP,"Cannot generate Nedelec support with user defined change of basis");
   PetscCheck(!order || (ne%order == 0),PETSC_COMM_SELF,PETSC_ERR_USER,"The number of local edge dofs %D is not a multiple of the order %D",ne,order);
 
@@ -1298,7 +1298,7 @@ PetscErrorCode PCBDDCNedelecSupport(PC pc)
       ierr = MatGetSize(GKins,&nrc,&ncc);CHKERRQ(ierr);
       PetscCheck(ncc,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Constant function has not been generated for coarse edge %D",i);
       PetscCheck(ncc + nch == nrc,PETSC_COMM_SELF,PETSC_ERR_PLIB,"The sum of the number of columns of GKins %D and Gins %D does not match %D for coarse edge %D",ncc,nch,nrc,i);
-      PetscCheck(ncc == 1 || pcbddc->nedcG,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot generate the coarse discrete gradient for coarse edge %D with ncc %D",i,ncc);
+      PetscCheck(ncc == 1 || !pcbddc->nedcG,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot generate the coarse discrete gradient for coarse edge %D with ncc %D",i,ncc);
       ierr = MatDenseGetArrayRead(GKins,&data);CHKERRQ(ierr);
       ierr = MatSetValuesLocal(T,nrc,cols,ncc,cols+nch,data,INSERT_VALUES);CHKERRQ(ierr);
       ierr = MatDenseRestoreArrayRead(GKins,&data);CHKERRQ(ierr);
@@ -2858,7 +2858,7 @@ PetscErrorCode PCBDDCBenignDetectSaddlePoint(PC pc, PetscBool reuse, IS *zerodia
     ierr = MatISGetLocalToGlobalMapping(pc->pmat,&l2gmap,NULL);CHKERRQ(ierr);
     ierr = MatISGetLocalMat(pc->pmat,&A);CHKERRQ(ierr);
     ierr = MatGetLocalSize(A,&n,NULL);CHKERRQ(ierr);
-    PetscCheck(isused || (n = 0),PETSC_COMM_SELF,PETSC_ERR_USER,"Don't know how to extract div u dot p! Please provide the pressure field");
+    PetscCheck(isused || (n == 0),PETSC_COMM_SELF,PETSC_ERR_USER,"Don't know how to extract div u dot p! Please provide the pressure field");
     n_isused = 0;
     if (isused) {
       ierr = ISGetLocalSize(isused,&n_isused);CHKERRQ(ierr);
