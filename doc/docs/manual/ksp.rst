@@ -2083,7 +2083,7 @@ If the right hand side of linear system is not in the range of ``Amat``, that is
 orthogonal to the null space of ``Amat`` transpose, then the residual
 norm of the Krylov iteration will not converged to zero; it will converge to a non-zero value while the
 solution is converging to the least squares solution of the linear system. One can, if one desires,
-apply ```MatNullSpaceRmove()`` with the null space of ``Amat`` transpose to the right hand side before calling
+apply ```MatNullSpaceRemove()`` with the null space of ``Amat`` transpose to the right hand side before calling
 ``KSPSolve()``. Then the residual norm will converge to zero.
 
 
