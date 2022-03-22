@@ -164,7 +164,6 @@ PetscObjectGetDeviceId(PetscObject o, PetscInt *id)
 #if defined(PETSC_HAVE_DEVICE)
   PetscDeviceContext dctx;
   PetscDevice device;
-  PetscErrorCode ierr;
 #endif
   PetscFunctionBegin;
   PetscValidHeader(o,1);
@@ -183,7 +182,6 @@ PetscObjectGetDeviceId(PetscObject o, PetscInt *id)
 static inline PetscErrorCode
 VecGetCurrentMemType(Vec v, PetscMemType *m)
 {
-  PetscErrorCode ierr;
   PetscBool bound;
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
@@ -275,7 +273,6 @@ PetscErrorCode MatHasPreallocationAIJ(Mat A,PetscBool *aij,PetscBool *baij,Petsc
 static inline PetscErrorCode
 MatGetCurrentMemType(Mat A, PetscMemType *m)
 {
-  PetscErrorCode ierr;
   PetscBool bound;
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
