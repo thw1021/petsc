@@ -2081,9 +2081,9 @@ handle the null space during the solution process.
 
 If the right hand side of linear system is not in the range of ``Amat``, that is it is not
 orthogonal to the null space of ``Amat`` transpose, then the residual
-norm of the Krylov iteration will not converged to zero; it will converge to a non-zero value while the
+norm of the Krylov iteration will not converge to zero; it will converge to a non-zero value while the
 solution is converging to the least squares solution of the linear system. One can, if one desires,
-apply ```MatNullSpaceRemove()`` with the null space of ``Amat`` transpose to the right hand side before calling
+apply ``MatNullSpaceRemove()`` with the null space of ``Amat`` transpose to the right hand side before calling
 ``KSPSolve()``. Then the residual norm will converge to zero.
 
 
@@ -2094,7 +2094,7 @@ still detect a zero pivot. You can run with the additional options or
 A good choice for the ``dampingfactor`` is 1.e-10.
 
 If the matrix is non-symmetric and you wish to solve the transposed linear system
-you must provide the null space of the transposed matrix with `` MatSetTransposeNullSpace()``.
+you must provide the null space of the transposed matrix with ``MatSetTransposeNullSpace()``.
 
 .. _sec_externalsol:
 

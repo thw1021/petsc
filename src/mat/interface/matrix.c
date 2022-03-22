@@ -8593,7 +8593,7 @@ PetscErrorCode MatGetNullSpace(Mat mat, MatNullSpace *nullsp)
       Overwrites any previous null space that may have been attached. You can remove the null space from the matrix object by calling this routine with an nullsp of NULL
 
       For inconsistent singular systems (linear systems where the right hand side is not in the range of the operator) the KSP residuals will not converge to
-      to zero but the the linear system will still be solved in a least squares sense.
+      to zero but the linear system will still be solved in a least squares sense.
 
       The fundamental theorem of linear algebra (Gilbert Strang, Introduction to Applied Mathematics, page 72) states that
    the domain of a matrix A (from R^n to R^m (m rows, n columns) R^n = the direct sum of the null space of A, n(A), + the range of A^T, R(A^T).
@@ -8648,7 +8648,7 @@ PetscErrorCode MatGetTransposeNullSpace(Mat mat, MatNullSpace *nullsp)
 }
 
 /*@
-   MatSetTransposeNullSpace - attaches a the null space of a transpose of a matrix to the matrix
+   MatSetTransposeNullSpace - attaches the null space of a transpose of a matrix to the matrix
 
    Logically Collective on Mat
 
