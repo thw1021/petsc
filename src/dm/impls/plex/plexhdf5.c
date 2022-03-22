@@ -51,6 +51,11 @@ static PetscErrorCode DMPlexStorageVersionCheck_Private(DM dm, DMPlexStorageVers
         case 0: valid = PETSC_TRUE; break;
       }; break;
     }; break;
+    case 3: switch (version->minor) {
+      case 0: switch (version->subminor) {
+        case 0: valid = PETSC_TRUE; break;
+      }; break;
+    }; break;
   }
   PetscCheck(valid, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "DMPlexStorageVersion %d.%d.%d not supported", version->major, version->minor, version->subminor);
   PetscFunctionReturn(0);
@@ -98,7 +103,7 @@ static PetscErrorCode DMPlexStorageVersionGet_Private(DM dm, PetscViewer viewer,
 
   PetscFunctionBegin;
   //TODO string HDF5 attribute handling is terrible and should be redesigned
-  PetscCall(PetscStrallocpy("1.0.0", &defaultVersion));
+  PetscCall(PetscStrallocpy(DMPLEX_STORAGE_VERSION_FIRST, &defaultVersion));
   PetscCall(PetscViewerHDF5ReadAttribute(viewer, "/", ATTR_NAME, PETSC_STRING, &defaultVersion, &versionString));
   PetscCall(DMPlexStorageVersionParseString_Private(dm, versionString, version));
   PetscCall(DMPlexStorageVersionCheck_Private(dm, version));
