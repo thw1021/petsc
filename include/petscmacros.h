@@ -678,6 +678,14 @@ M*/
 M*/
 #define PetscUnlikelyDebug(cond) (PetscDefined(USE_DEBUG) && PetscUnlikely(cond))
 
+#if defined(PETSC_CLANG_STATIC_ANALYZER)
+// silence compiler warnings when using -pedantic, this is only used by the linter and it cares
+// not what ISO C allows
+#  define PetscMacroReturns_(retexpr,...) __extension__ ({ __VA_ARGS__; retexpr; })
+#else
+#  define PetscMacroReturns_(retexpr,...) retexpr; do { __VA_ARGS__; } while (0)
+#endif
+
 /*MC
   PetscExpandToNothing - Expands to absolutely nothing at all
 
@@ -746,8 +754,8 @@ M*/
   bar(FOO(x)); // ERROR, may not compile
   bar(ret);    // OK
 
-  if (FOO(x)) // ERROR, may not compile
-  if (ret)    // OK
+  if (FOO(x))  // ERROR, may not compile
+  if (ret)     // OK
 .ve
 
   Example usage:
@@ -768,7 +776,7 @@ M*/
 
   // if retexpr contains commas, must enclose it with braces
   #define MY_COMPLEX_RETEXPR_MACRO_1() PetscMacroReturns(x+=10,0,body...)
-  #define MY_COMPLEX_RETEXPR_MACRO_1() PetscMacroReturns((x+=10,0),body...)
+  #define MY_COMPLEX_RETEXPR_MACRO_2() PetscMacroReturns((x+=10,0),body...)
 
   int x = 10;
   int y = MY_COMPLEX_RETEXPR_MACRO_1(); // ERROR, y = x = 20 not 0
@@ -779,13 +787,7 @@ M*/
 
 .seealso: PetscExpand(), PetscConcat(), PetscStringize()
 MC*/
-#if defined(PETSC_CLANG_STATIC_ANALYZER)
-// silence compiler warnings when using -pedantic, this is only used by the linter and it cares
-// not what ISO C allows
-#  define PetscMacroReturns(retexpr,...) __extension__ ({ __VA_ARGS__; retexpr; })
-#else
-#  define PetscMacroReturns(retexpr,...) retexpr; do { __VA_ARGS__; } while (0)
-#endif
+#define PetscMacroReturns(retexpr,...) PetscMacroReturns_(retexpr,__VA_ARGS__)
 
 #define PetscMacroReturnStandard(...) PetscMacroReturns(0,__VA_ARGS__)
 
