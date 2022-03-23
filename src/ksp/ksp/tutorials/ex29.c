@@ -278,6 +278,6 @@ PetscErrorCode ComputeMatrix(KSP ksp,Mat J,Mat jac,void *ctx)
 
    test:
       suffix: 6
-      args: -pc_type svd -pc_svd_monitor_all_singular_values
+      args: -pc_type svd -pc_svd_monitor ::all
 
 TEST*/
