@@ -13,6 +13,7 @@ typedef struct {
   PetscInt    essrank;          /* essential rank of operator */
   VecScatter  left2red,right2red;
   Vec         leftred,rightred;
+  PetscBool   monitor_all_sing;
   PetscViewer monitor;
 } PC_SVD;
 
@@ -103,7 +104,20 @@ static PetscErrorCode PCSetUp_SVD(PC pc)
   if (jac->monitor) {
     ierr = PetscViewerASCIIAddTab(jac->monitor,((PetscObject)pc)->tablevel);CHKERRQ(ierr);
     ierr = PetscViewerASCIIPrintf(jac->monitor,"    SVD: condition number %14.12e, %D of %D singular values are (nearly) zero\n",(double)PetscRealPart(d[0]/d[n-1]),jac->nzero,n);CHKERRQ(ierr);
-    if (n >= 10) {              /* print 5 smallest and 5 largest */
+    if (jac->monitor_all_sing) {
+      ierr = PetscViewerASCIIPrintf(jac->monitor,"    SVD: singular values:\n");CHKERRQ(ierr);
+      for (i=0; i<n; i++) {
+        if (i%5==0) {
+            if (i!=0) {
+              ierr = PetscViewerASCIIPrintf(jac->monitor,"\n");CHKERRQ(ierr);
+            }
+            ierr = PetscViewerASCIIPrintf(jac->monitor,"        ");CHKERRQ(ierr);
+          }
+        ierr = PetscViewerASCIIPrintf(jac->monitor," %14.12e",(double)PetscRealPart(d[i]));CHKERRQ(ierr);
+      }
+      ierr = PetscViewerASCIIPrintf(jac->monitor,"\n");CHKERRQ(ierr);
+    }
+    else if (n >= 10) {              /* print 5 smallest and 5 largest */
       ierr = PetscViewerASCIIPrintf(jac->monitor,"    SVD: smallest singular values: %14.12e %14.12e %14.12e %14.12e %14.12e\n",(double)PetscRealPart(d[n-1]),(double)PetscRealPart(d[n-2]),(double)PetscRealPart(d[n-3]),(double)PetscRealPart(d[n-4]),(double)PetscRealPart(d[n-5]));CHKERRQ(ierr);
       ierr = PetscViewerASCIIPrintf(jac->monitor,"    SVD: largest singular values : %14.12e %14.12e %14.12e %14.12e %14.12e\n",(double)PetscRealPart(d[4]),(double)PetscRealPart(d[3]),(double)PetscRealPart(d[2]),(double)PetscRealPart(d[1]),(double)PetscRealPart(d[0]));CHKERRQ(ierr);
     } else {                    /* print all singular values */
@@ -313,11 +327,12 @@ static PetscErrorCode PCSetFromOptions_SVD(PetscOptionItems *PetscOptionsObject,
   ierr = PetscOptionsHead(PetscOptionsObject,"SVD options");CHKERRQ(ierr);
   ierr = PetscOptionsReal("-pc_svd_zero_sing","Singular values smaller than this treated as zero","None",jac->zerosing,&jac->zerosing,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsInt("-pc_svd_ess_rank","Essential rank of operator (0 to use entire operator)","None",jac->essrank,&jac->essrank,NULL);CHKERRQ(ierr);
+  ierr = PetscOptionsBool("-pc_svd_monitor_all_singular_values","Monitor all the singular values","None",PETSC_FALSE,&jac->monitor_all_sing,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-pc_svd_monitor","Monitor the conditioning, and extremal singular values","None",jac->monitor ? PETSC_TRUE : PETSC_FALSE,&flg,&set);CHKERRQ(ierr);
-  if (set) {                    /* Should make PCSVDSetMonitor() */
-    if (flg && !jac->monitor) {
+  if (set || jac->monitor_all_sing) {                    /* Should make PCSVDSetMonitor() */
+    if ((jac->monitor_all_sing || flg) && !jac->monitor) {
       ierr = PetscViewerASCIIOpen(PetscObjectComm((PetscObject)pc),"stdout",&jac->monitor);CHKERRQ(ierr);
-    } else if (!flg) {
+    } else if (!flg && !jac->monitor_all_sing) {
       ierr = PetscViewerDestroy(&jac->monitor);CHKERRQ(ierr);
     }
   }
@@ -358,7 +373,8 @@ static PetscErrorCode PCView_SVD(PC pc,PetscViewer viewer)
 
   Options Database:
 +  -pc_svd_zero_sing <rtol> - Singular values smaller than this are treated as zero
--  -pc_svd_monitor - Print information on the extreme singular values of the operator
+.  -pc_svd_monitor - Print information on the extreme singular values of the operator
+-  -pc_svd_monitor_all_singular_values - Print the condition number and all the extreme singular values of the operator
 
   Developer Note:
   This implementation automatically creates a redundant copy of the
@@ -379,8 +395,9 @@ PETSC_EXTERN PetscErrorCode PCCreate_SVD(PC pc)
      attach it to the PC object.
   */
   ierr          = PetscNewLog(pc,&jac);CHKERRQ(ierr);
-  jac->zerosing = 1.e-12;
-  pc->data      = (void*)jac;
+  jac->zerosing         = 1.e-12;
+  jac->monitor_all_sing = PETSC_FALSE;
+  pc->data              = (void*)jac;
 
   /*
       Set the pointers for the functions that are provided above.
