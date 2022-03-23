@@ -1026,7 +1026,7 @@ static PetscErrorCode GmshReadElements_v41(GmshFile *gmsh, GmshMesh *mesh)
     numVerts = GmshCellMap[cellType].numVerts;
     numNodes = GmshCellMap[cellType].numNodes;
     numTags  = PetscMin(4, entity->numTags);
-    if (entity->numTags > 4) PetscInfo(NULL, "Entity %d has more then %d physical tags, assigning only the first to elements", eid, 4);
+    if (entity->numTags > 4) PetscInfo(NULL, "Entity %d has more than %d physical tags, assigning only the first to elements", eid, 4);
     ierr = GmshReadSize(gmsh, &numBlockElements, 1);CHKERRQ(ierr);
     ierr = GmshBufferGet(gmsh, (1+numNodes)*numBlockElements, sizeof(PetscInt), &ibuf);CHKERRQ(ierr);
     ierr = GmshReadSize(gmsh, ibuf, (1+numNodes)*numBlockElements);CHKERRQ(ierr);
