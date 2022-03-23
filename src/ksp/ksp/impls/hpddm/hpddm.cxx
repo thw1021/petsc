@@ -252,9 +252,7 @@ static inline PetscErrorCode KSPSolve_HPDDM_Private(KSP ksp, const PetscScalar *
         CHKERRQ(PetscInfo(ksp, "Forcing KSPConvergedDefaultSetUIRNorm() since KSPConvergedDefault() cannot handle multiple norms\n"));
         ctx->initialrtol = PETSC_TRUE;
       }
-    } else {
-      CHKERRQ(PetscInfo(ksp, "Using a special \"converged\" callback, be careful, it is used in KSPHPDDM to track blocks of residuals\n"));
-    }
+    } else CHKERRQ(PetscInfo(ksp, "Using a special \"converged\" callback, be careful, it is used in KSPHPDDM to track blocks of residuals\n"));
   }
   /* initial guess is always nonzero with recycling methods if there is a deflation subspace available */
   if ((data->cntl[0] == HPDDM_KRYLOV_METHOD_GCRODR || data->cntl[0] == HPDDM_KRYLOV_METHOD_BGCRODR) && data->op->storage()) ksp->guess_zero = PETSC_FALSE;
@@ -279,9 +277,7 @@ static inline PetscErrorCode KSPSolve_HPDDM_Private(KSP ksp, const PetscScalar *
       x[0] = sgl[0][0];
     }
     CHKERRQ(PetscFree(sgl[0]));
-  } else {
-    CHKERRQ(static_cast<PetscErrorCode>(HPDDM::IterativeMethod::solve(*data->op, b, x, n, PetscObjectComm((PetscObject)ksp))));
-  }
+  } else CHKERRQ(static_cast<PetscErrorCode>(HPDDM::IterativeMethod::solve(*data->op, b, x, n, PetscObjectComm((PetscObject)ksp))));
   if (!ksp->reason) { /* KSPConvergedDefault() is still returning 0 (= KSP_CONVERGED_ITERATING) */
     if (ksp->its >= ksp->max_it) ksp->reason = KSP_DIVERGED_ITS;
     else ksp->reason = KSP_CONVERGED_RTOL; /* early exit by HPDDM, which only happens on breakdowns or convergence */
@@ -305,9 +301,8 @@ static PetscErrorCode KSPSolve_HPDDM(KSP ksp)
   CHKERRQ(PetscObjectTypeCompareAny((PetscObject)A, &flg, MATSEQKAIJ, MATMPIKAIJ, ""));
   CHKERRQ(VecGetArrayWrite(ksp->vec_sol, &x));
   CHKERRQ(VecGetArrayRead(ksp->vec_rhs, &b));
-  if (!flg) {
-    CHKERRQ(KSPSolve_HPDDM_Private(ksp, b, x, 1));
-  } else {
+  if (!flg) CHKERRQ(KSPSolve_HPDDM_Private(ksp, b, x, 1));
+  else {
     CHKERRQ(MatKAIJGetScaledIdentity(A, &flg));
     CHKERRQ(MatKAIJGetAIJ(A, &B));
     CHKERRQ(MatGetBlockSize(A, &n));
@@ -537,9 +532,7 @@ static PetscErrorCode KSPHPDDMSetType_HPDDM(KSP ksp, KSPHPDDMType type)
     if (flg) break;
   }
   PetscCheck(i != ALEN(KSPHPDDMTypes), PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown KSPHPDDMType %s", type);
-  if (data->cntl[0] != static_cast<char>(PETSC_DECIDE) && data->cntl[0] != i) {
-    CHKERRQ(KSPHPDDMReset_Private(ksp));
-  }
+  if (data->cntl[0] != static_cast<char>(PETSC_DECIDE) && data->cntl[0] != i) CHKERRQ(KSPHPDDMReset_Private(ksp));
   data->cntl[0] = i;
   PetscFunctionReturn(0);
 }
@@ -613,17 +606,13 @@ PETSC_EXTERN PetscErrorCode KSPCreate_HPDDM(KSP ksp)
   if (!i) data->cntl[0] = HPDDM_KRYLOV_METHOD_GMRES;
   else if (i == 1) data->cntl[0] = HPDDM_KRYLOV_METHOD_CG;
   else if (i == 2) data->cntl[0] = HPDDM_KRYLOV_METHOD_NONE;
-  if (data->cntl[0] != static_cast<char>(PETSC_DECIDE)) {
-    CHKERRQ(PetscInfo(ksp, "Using the previously set KSPType %s\n", common[i]));
-  }
+  if (data->cntl[0] != static_cast<char>(PETSC_DECIDE)) CHKERRQ(PetscInfo(ksp, "Using the previously set KSPType %s\n", common[i]));
   CHKERRQ(PetscObjectComposeFunction((PetscObject)ksp, "KSPHPDDMSetDeflationSpace_C", KSPHPDDMSetDeflationSpace_HPDDM));
   CHKERRQ(PetscObjectComposeFunction((PetscObject)ksp, "KSPHPDDMGetDeflationSpace_C", KSPHPDDMGetDeflationSpace_HPDDM));
   CHKERRQ(PetscObjectComposeFunction((PetscObject)ksp, "KSPHPDDMSetType_C", KSPHPDDMSetType_HPDDM));
   CHKERRQ(PetscObjectComposeFunction((PetscObject)ksp, "KSPHPDDMGetType_C", KSPHPDDMGetType_HPDDM));
 #if defined(PETSC_HAVE_SLEPC) && defined(PETSC_USE_SHARED_LIBRARIES)
-  if (!loadedDL) {
-    CHKERRQ(HPDDMLoadDL_Private(&loadedDL));
-  }
+  if (!loadedDL) CHKERRQ(HPDDMLoadDL_Private(&loadedDL));
 #endif
   data->precision = PETSC_KSPHPDDM_DEFAULT_PRECISION;
   PetscFunctionReturn(0);
