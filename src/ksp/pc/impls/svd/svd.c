@@ -129,17 +129,6 @@ static PetscErrorCode PCSetUp_SVD(PC pc)
   if (jac->essrank > 0) for (i=0; i<n-jac->nzero-jac->essrank; i++) d[i] = 0.0; /* Skip all but essrank eigenvalues */
   ierr = PetscInfo(pc,"Number of zero or nearly singular values %D\n",jac->nzero);CHKERRQ(ierr);
   ierr = VecRestoreArray(jac->diag,&d);CHKERRQ(ierr);
-#if defined(foo)
-  {
-    PetscViewer viewer;
-    ierr = PetscViewerBinaryOpen(PETSC_COMM_SELF,"joe",FILE_MODE_WRITE,&viewer);CHKERRQ(ierr);
-    ierr = MatView(jac->A,viewer);CHKERRQ(ierr);
-    ierr = MatView(jac->U,viewer);CHKERRQ(ierr);
-    ierr = MatView(jac->Vt,viewer);CHKERRQ(ierr);
-    ierr = VecView(jac->diag,viewer);CHKERRQ(ierr);
-    ierr = PetscViewerDestroy(viewer);CHKERRQ(ierr);
-  }
-#endif
   ierr = PetscFree(work);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
