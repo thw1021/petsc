@@ -138,13 +138,13 @@ PETSC_EXTERN PetscErrorCode DMAdaptMetric_Mmg_Plex(DM dm, Vec vertexMetric, DMLa
   CHKERRQ(VecRestoreArrayRead(vertexMetric, &met));
 
   /* Send mesh to Mmg and remesh */
-  ierr = DMPlexMetricGetVerbosity(dm, &verbosity);CHKERRQ(ierr);
-  ierr = DMPlexMetricGetGradationFactor(dm, &gradationFactor);CHKERRQ(ierr);
-  ierr = DMPlexMetricGetHausdorffNumber(dm, &hausdorffNumber);CHKERRQ(ierr);
-  ierr = DMPlexMetricNoInsertion(dm, &noInsert);CHKERRQ(ierr);
-  ierr = DMPlexMetricNoSwapping(dm, &noSwap);CHKERRQ(ierr);
-  ierr = DMPlexMetricNoMovement(dm, &noMove);CHKERRQ(ierr);
-  ierr = DMPlexMetricNoSurf(dm, &noSurf);CHKERRQ(ierr);
+  CHKERRQ(DMPlexMetricGetVerbosity(dm, &verbosity));
+  CHKERRQ(DMPlexMetricGetGradationFactor(dm, &gradationFactor));
+  CHKERRQ(DMPlexMetricGetHausdorffNumber(dm, &hausdorffNumber));
+  CHKERRQ(DMPlexMetricNoInsertion(dm, &noInsert));
+  CHKERRQ(DMPlexMetricNoSwapping(dm, &noSwap));
+  CHKERRQ(DMPlexMetricNoMovement(dm, &noMove));
+  CHKERRQ(DMPlexMetricNoSurf(dm, &noSurf));
   switch (dim) {
   case 2:
     ierr = MMG2D_Init_mesh(MMG5_ARG_start, MMG5_ARG_ppMesh, &mmg_mesh, MMG5_ARG_ppMet, &mmg_metric, MMG5_ARG_end);

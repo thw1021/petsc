@@ -22,8 +22,8 @@ const char *const PCHPDDMCoarseCorrectionTypes[] = { "DEFLATED", "ADDITIVE", "BA
 
 static PetscErrorCode PCReset_HPDDM(PC pc)
 {
-  PC_HPDDM       *data = (PC_HPDDM*)pc->data;
-  PetscInt       i;
+  PC_HPDDM *data = (PC_HPDDM*)pc->data;
+  PetscInt i;
 
   PetscFunctionBegin;
   if (data->levels) {
@@ -48,7 +48,7 @@ static PetscErrorCode PCReset_HPDDM(PC pc)
 
 static PetscErrorCode PCDestroy_HPDDM(PC pc)
 {
-  PC_HPDDM       *data = (PC_HPDDM*)pc->data;
+  PC_HPDDM *data = (PC_HPDDM*)pc->data;
 
   PetscFunctionBegin;
   CHKERRQ(PCReset_HPDDM(pc));
@@ -65,7 +65,7 @@ static PetscErrorCode PCDestroy_HPDDM(PC pc)
 
 static PetscErrorCode PCHPDDMSetAuxiliaryMat_HPDDM(PC pc, IS is, Mat A, PetscErrorCode (*setup)(Mat, PetscReal, Vec, Vec, PetscReal, IS, void*), void* setup_ctx)
 {
-  PC_HPDDM       *data = (PC_HPDDM*)pc->data;
+  PC_HPDDM *data = (PC_HPDDM*)pc->data;
 
   PetscFunctionBegin;
   if (is) {
@@ -147,7 +147,7 @@ PetscErrorCode PCHPDDMHasNeumannMat(PC pc, PetscBool has)
 
 static PetscErrorCode PCHPDDMSetRHSMat_HPDDM(PC pc, Mat B)
 {
-  PC_HPDDM       *data = (PC_HPDDM*)pc->data;
+  PC_HPDDM *data = (PC_HPDDM*)pc->data;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectReference((PetscObject)B));
@@ -271,7 +271,7 @@ static PetscErrorCode PCSetFromOptions_HPDDM(PetscOptionItems *PetscOptionsObjec
 
 static PetscErrorCode PCApply_HPDDM(PC pc, Vec x, Vec y)
 {
-  PC_HPDDM       *data = (PC_HPDDM*)pc->data;
+  PC_HPDDM *data = (PC_HPDDM*)pc->data;
 
   PetscFunctionBegin;
   CHKERRQ(PetscCitationsRegister(HPDDMCitation, &HPDDMCite));
@@ -285,7 +285,7 @@ static PetscErrorCode PCApply_HPDDM(PC pc, Vec x, Vec y)
 
 static PetscErrorCode PCMatApply_HPDDM(PC pc, Mat X, Mat Y)
 {
-  PC_HPDDM       *data = (PC_HPDDM*)pc->data;
+  PC_HPDDM *data = (PC_HPDDM*)pc->data;
 
   PetscFunctionBegin;
   CHKERRQ(PetscCitationsRegister(HPDDMCitation, &HPDDMCite));
@@ -351,13 +351,13 @@ static PetscErrorCode PCHPDDMGetComplexities(PC pc, PetscReal *gc, PetscReal *oc
 
 static PetscErrorCode PCView_HPDDM(PC pc, PetscViewer viewer)
 {
-  PC_HPDDM       *data = (PC_HPDDM*)pc->data;
-  PetscViewer    subviewer;
-  PetscSubcomm   subcomm;
-  PetscReal      oc, gc;
-  PetscInt       i, tabs;
-  PetscMPIInt    size, color, rank;
-  PetscBool      ascii;
+  PC_HPDDM     *data = (PC_HPDDM*)pc->data;
+  PetscViewer  subviewer;
+  PetscSubcomm subcomm;
+  PetscReal    oc, gc;
+  PetscInt     i, tabs;
+  PetscMPIInt  size, color, rank;
+  PetscBool    ascii;
 
   PetscFunctionBegin;
   CHKERRQ(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &ascii));
@@ -409,9 +409,9 @@ static PetscErrorCode PCView_HPDDM(PC pc, PetscViewer viewer)
 
 static PetscErrorCode PCPreSolve_HPDDM(PC pc, KSP ksp, Vec, Vec)
 {
-  PC_HPDDM       *data = (PC_HPDDM*)pc->data;
-  PetscBool      flg;
-  Mat            A;
+  PC_HPDDM  *data = (PC_HPDDM*)pc->data;
+  PetscBool flg;
+  Mat       A;
 
   PetscFunctionBegin;
   if (ksp) {
@@ -606,9 +606,7 @@ static PetscErrorCode PCHPDDMShellMatApply(PC pc, Mat X, Mat Y)
           CHKERRQ(PetscObjectReference((PetscObject)ctx->V[m + 1]));
         }
     }
-    if (ctx->V[1]) {
-      CHKERRQ(MatGetSize(ctx->V[1], NULL, &prev));
-    }
+    if (ctx->V[1]) CHKERRQ(MatGetSize(ctx->V[1], NULL, &prev));
     if (N != prev || !ctx->V[0]) {
       CHKERRQ(MatDestroy(ctx->V));
       CHKERRQ(VecGetLocalSize(ctx->v[0][0], &m));
@@ -701,8 +699,8 @@ static PetscErrorCode PCHPDDMShellDestroy(PC pc)
 
 static PetscErrorCode PCHPDDMSolve_Private(const PC_HPDDM_Level *ctx, PetscScalar *rhs, const unsigned short& mu)
 {
-  Mat            B, X;
-  PetscInt       n, N, j = 0;
+  Mat      B, X;
+  PetscInt n, N, j = 0;
 
   PetscFunctionBegin;
   CHKERRQ(KSPGetOperators(ctx->ksp, &B, NULL));
@@ -735,7 +733,7 @@ static PetscErrorCode PCHPDDMSolve_Private(const PC_HPDDM_Level *ctx, PetscScala
 
 static PetscErrorCode PCHPDDMSetUpNeumannOverlap_Private(PC pc)
 {
-  PC_HPDDM       *data = (PC_HPDDM*)pc->data;
+  PC_HPDDM *data = (PC_HPDDM*)pc->data;
 
   PetscFunctionBegin;
   if (data->setup) {
@@ -754,7 +752,7 @@ static PetscErrorCode PCHPDDMSetUpNeumannOverlap_Private(PC pc)
 
 static PetscErrorCode PCHPDDMCreateSubMatrices_Private(Mat mat, PetscInt n, const IS*, const IS*, MatReuse scall, Mat *submat[])
 {
-  Mat            A;
+  Mat A;
 
   PetscFunctionBegin;
   PetscCheck(n == 1, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "MatCreateSubMatrices() called to extract %" PetscInt_FMT " submatrices, which is different than 1", n);
@@ -770,7 +768,7 @@ static PetscErrorCode PCHPDDMCreateSubMatrices_Private(Mat mat, PetscInt n, cons
 
 static PetscErrorCode PCHPDDMCommunicationAvoidingPCASM_Private(PC pc, Mat C, PetscBool sorted)
 {
-  void           (*op)(void);
+  void (*op)(void);
 
   PetscFunctionBegin;
   /* previously-composed Mat */
@@ -830,7 +828,7 @@ static PetscErrorCode PCHPDDMPermute_Private(IS is, IS in_is, IS *out_is, Mat in
 
 static PetscErrorCode PCHPDDMDestroySubMatrices_Private(PetscBool flg, PetscBool algebraic, Mat *sub)
 {
-  IS             is;
+  IS is;
 
   PetscFunctionBegin;
   if (!flg) {
@@ -847,11 +845,11 @@ static PetscErrorCode PCHPDDMDestroySubMatrices_Private(PetscBool flg, PetscBool
 
 static PetscErrorCode PCHPDDMAlgebraicAuxiliaryMat_Private(Mat P, IS *is, Mat *sub[], PetscBool block)
 {
-  IS             icol[3], irow[2];
-  Mat            *M, Q;
-  PetscReal      *ptr;
-  PetscInt       *idx, p = 0, n;
-  PetscBool      flg;
+  IS        icol[3], irow[2];
+  Mat       *M, Q;
+  PetscReal *ptr;
+  PetscInt  *idx, p = 0, n;
+  PetscBool flg;
 
   PetscFunctionBegin;
   CHKERRQ(ISCreateStride(PETSC_COMM_SELF, P->cmap->N, 0, 1, icol + 2));
@@ -1080,9 +1078,7 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
         CHKERRQ(ISCreateStride(PETSC_COMM_SELF, P->rmap->n, P->rmap->rstart, 1, &data->is));
         CHKERRQ(MatIncreaseOverlap(P, 1, &data->is, 1));
         CHKERRQ(ISSort(data->is));
-      } else {
-        CHKERRQ(PetscInfo(pc, "Cannot assemble a fully-algebraic coarse operator with an assembled Pmat and -%spc_hpddm_levels_1_st_pc_type != mat and -%spc_hpddm_block_splitting != true\n", pcpre ? pcpre : "", pcpre ? pcpre : ""));
-      }
+      } else CHKERRQ(PetscInfo(pc, "Cannot assemble a fully-algebraic coarse operator with an assembled Pmat and -%spc_hpddm_levels_1_st_pc_type != mat and -%spc_hpddm_block_splitting != true\n", pcpre ? pcpre : "", pcpre ? pcpre : ""));
     }
   }
 
@@ -1503,7 +1499,7 @@ static PetscErrorCode PCHPDDMGetSTShareSubKSP_HPDDM(PC pc, PetscBool *share)
 
 PetscErrorCode HPDDMLoadDL_Private(PetscBool *found)
 {
-  char           lib[PETSC_MAX_PATH_LEN], dlib[PETSC_MAX_PATH_LEN], dir[PETSC_MAX_PATH_LEN];
+  char lib[PETSC_MAX_PATH_LEN], dlib[PETSC_MAX_PATH_LEN], dir[PETSC_MAX_PATH_LEN];
 
   PetscFunctionBegin;
   CHKERRQ(PetscStrcpy(dir, "${PETSC_LIB_DIR}"));
@@ -1569,8 +1565,8 @@ PetscErrorCode HPDDMLoadDL_Private(PetscBool *found)
 M*/
 PETSC_EXTERN PetscErrorCode PCCreate_HPDDM(PC pc)
 {
-  PC_HPDDM       *data;
-  PetscBool      found;
+  PC_HPDDM  *data;
+  PetscBool found;
 
   PetscFunctionBegin;
   if (!loadedSym) {
@@ -1606,8 +1602,8 @@ PETSC_EXTERN PetscErrorCode PCCreate_HPDDM(PC pc)
 @*/
 PetscErrorCode PCHPDDMInitializePackage(void)
 {
-  char           ename[32];
-  PetscInt       i;
+  char     ename[32];
+  PetscInt i;
 
   PetscFunctionBegin;
   if (PCHPDDMPackageInitialized) PetscFunctionReturn(0);

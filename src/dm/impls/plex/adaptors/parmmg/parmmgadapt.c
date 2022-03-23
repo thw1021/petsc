@@ -244,14 +244,14 @@ PETSC_EXTERN PetscErrorCode DMAdaptMetric_ParMmg_Plex(DM dm, Vec vertexMetric, D
   CHKERRQ(DMDestroy(&udm));
 
   /* Send the data to ParMmg and remesh */
-  ierr = DMPlexMetricNoInsertion(dm, &noInsert);CHKERRQ(ierr);
-  ierr = DMPlexMetricNoSwapping(dm, &noSwap);CHKERRQ(ierr);
-  ierr = DMPlexMetricNoMovement(dm, &noMove);CHKERRQ(ierr);
-  ierr = DMPlexMetricNoSurf(dm, &noSurf);CHKERRQ(ierr);
-  ierr = DMPlexMetricGetVerbosity(dm, &verbosity);CHKERRQ(ierr);
-  ierr = DMPlexMetricGetNumIterations(dm, &numIter);CHKERRQ(ierr);
-  ierr = DMPlexMetricGetGradationFactor(dm, &gradationFactor);CHKERRQ(ierr);
-  ierr = DMPlexMetricGetHausdorffNumber(dm, &hausdorffNumber);CHKERRQ(ierr);
+  CHKERRQ(DMPlexMetricNoInsertion(dm, &noInsert));
+  CHKERRQ(DMPlexMetricNoSwapping(dm, &noSwap));
+  CHKERRQ(DMPlexMetricNoMovement(dm, &noMove));
+  CHKERRQ(DMPlexMetricNoSurf(dm, &noSurf));
+  CHKERRQ(DMPlexMetricGetVerbosity(dm, &verbosity));
+  CHKERRQ(DMPlexMetricGetNumIterations(dm, &numIter));
+  CHKERRQ(DMPlexMetricGetGradationFactor(dm, &gradationFactor));
+  CHKERRQ(DMPlexMetricGetHausdorffNumber(dm, &hausdorffNumber));
   ierr = PMMG_Init_parMesh(PMMG_ARG_start, PMMG_ARG_ppParMesh, &parmesh, PMMG_ARG_pMesh, PMMG_ARG_pMet, PMMG_ARG_dim, 3, PMMG_ARG_MPIComm, comm, PMMG_ARG_end);
   ierr = PMMG_Set_meshSize(parmesh, numVertices, numCells, 0, numFaceTags, 0, 0);
   ierr = PMMG_Set_iparameter(parmesh, PMMG_IPARAM_APImode, PMMG_APIDISTRIB_nodes);

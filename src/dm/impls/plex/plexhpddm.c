@@ -110,8 +110,6 @@ PetscErrorCode DMCreateNeumannOverlap_Plex(DM dm, IS *ovl, Mat *J, PetscErrorCod
 
   /* special purpose setup function (composed in DMPlexSetSNESLocalFEM) */
   CHKERRQ(PetscObjectQueryFunction((PetscObject)dm, "MatComputeNeumannOverlap_C", setup));
-  if (*setup) {
-    CHKERRQ(PetscObjectCompose((PetscObject)*ovl, "_DM_Original_HPDDM", (PetscObject)dm));
-  }
+  if (*setup) CHKERRQ(PetscObjectCompose((PetscObject)*ovl, "_DM_Original_HPDDM", (PetscObject)dm));
   PetscFunctionReturn(0);
 }

@@ -30,9 +30,9 @@ static PetscBool loadedDL = PETSC_FALSE;
 
 static PetscErrorCode KSPSetFromOptions_HPDDM(PetscOptionItems *PetscOptionsObject, KSP ksp)
 {
-  KSP_HPDDM      *data = (KSP_HPDDM*)ksp->data;
-  PetscInt       i, j;
-  PetscMPIInt    size;
+  KSP_HPDDM   *data = (KSP_HPDDM*)ksp->data;
+  PetscInt    i, j;
+  PetscMPIInt size;
 
   PetscFunctionBegin;
   CHKERRQ(PetscOptionsHead(PetscOptionsObject, "KSPHPDDM options, cf. https://github.com/hpddm/hpddm"));
@@ -46,14 +46,11 @@ static PetscErrorCode KSPSetFromOptions_HPDDM(PetscOptionItems *PetscOptionsObje
   if (data->cntl[0] != HPDDM_KRYLOV_METHOD_NONE) {
     if (data->cntl[0] != HPDDM_KRYLOV_METHOD_BCG && data->cntl[0] != HPDDM_KRYLOV_METHOD_BFBCG) {
       i = (data->cntl[1] == static_cast<char>(PETSC_DECIDE) ? HPDDM_VARIANT_LEFT : data->cntl[1]);
-      if (ksp->pc_side_set == PC_SIDE_DEFAULT) {
-        CHKERRQ(PetscOptionsEList("-ksp_hpddm_variant", "Left, right, or variable preconditioning", "KSPHPDDM", HPDDMVariant, ALEN(HPDDMVariant), HPDDMVariant[HPDDM_VARIANT_LEFT], &i, NULL));
-      } else if (ksp->pc_side_set == PC_RIGHT) i = HPDDM_VARIANT_RIGHT;
+      if (ksp->pc_side_set == PC_SIDE_DEFAULT) CHKERRQ(PetscOptionsEList("-ksp_hpddm_variant", "Left, right, or variable preconditioning", "KSPHPDDM", HPDDMVariant, ALEN(HPDDMVariant), HPDDMVariant[HPDDM_VARIANT_LEFT], &i, NULL));
+      else if (ksp->pc_side_set == PC_RIGHT) i = HPDDM_VARIANT_RIGHT;
       else PetscCheck(ksp->pc_side_set != PC_SYMMETRIC, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Symmetric preconditioning not implemented");
       data->cntl[1] = i;
-      if (i > 0) {
-        CHKERRQ(KSPSetPCSide(ksp, PC_RIGHT));
-      }
+      if (i > 0) CHKERRQ(KSPSetPCSide(ksp, PC_RIGHT));
     }
     if (data->cntl[0] == HPDDM_KRYLOV_METHOD_BGMRES || data->cntl[0] == HPDDM_KRYLOV_METHOD_BGCRODR || data->cntl[0] == HPDDM_KRYLOV_METHOD_BFBCG) {
       data->rcntl[0] = (std::abs(data->rcntl[0] - static_cast<PetscReal>(PETSC_DECIDE)) < PETSC_SMALL ? -1.0 : data->rcntl[0]);
@@ -119,33 +116,25 @@ static PetscErrorCode KSPView_HPDDM(KSP ksp, PetscViewer viewer)
     CHKERRQ(PetscViewerASCIIPrintf(viewer, "HPDDM type: %s\n", KSPHPDDMTypes[std::min(static_cast<PetscInt>(data->cntl[0]), static_cast<PetscInt>(ALEN(KSPHPDDMTypes) - 1))]));
     CHKERRQ(PetscViewerASCIIPrintf(viewer, "precision: %s\n", KSPHPDDMPrecisionTypes[data->precision]));
     if (data->cntl[0] == HPDDM_KRYLOV_METHOD_BGMRES || data->cntl[0] == HPDDM_KRYLOV_METHOD_BGCRODR || data->cntl[0] == HPDDM_KRYLOV_METHOD_BFBCG) {
-      if (std::abs(data->rcntl[0] - static_cast<PetscReal>(PETSC_DECIDE)) < PETSC_SMALL) {
-        CHKERRQ(PetscViewerASCIIPrintf(viewer, "no deflation at restarts\n", PetscBools[array ? PETSC_TRUE : PETSC_FALSE]));
-      } else {
-        CHKERRQ(PetscViewerASCIIPrintf(viewer, "deflation tolerance: %g\n", data->rcntl[0]));
-      }
+      if (std::abs(data->rcntl[0] - static_cast<PetscReal>(PETSC_DECIDE)) < PETSC_SMALL) CHKERRQ(PetscViewerASCIIPrintf(viewer, "no deflation at restarts\n", PetscBools[array ? PETSC_TRUE : PETSC_FALSE]));
+      else CHKERRQ(PetscViewerASCIIPrintf(viewer, "deflation tolerance: %g\n", data->rcntl[0]));
     }
     if (data->cntl[0] == HPDDM_KRYLOV_METHOD_GCRODR || data->cntl[0] == HPDDM_KRYLOV_METHOD_BGCRODR) {
       CHKERRQ(PetscViewerASCIIPrintf(viewer, "deflation subspace attached? %s\n", PetscBools[array ? PETSC_TRUE : PETSC_FALSE]));
-      if (!PetscDefined(HAVE_SLEPC) || !PetscDefined(USE_SHARED_LIBRARIES) || data->cntl[0] == HPDDM_KRYLOV_METHOD_GCRODR) {
-        CHKERRQ(PetscViewerASCIIPrintf(viewer, "deflation target: %s\n", HPDDMRecycleTarget[static_cast<PetscInt>(data->cntl[3])]));
-      } else {
-        CHKERRQ(PetscViewerASCIIPrintf(viewer, "redistribution size: %d\n", static_cast<PetscMPIInt>(data->cntl[3])));
-      }
+      if (!PetscDefined(HAVE_SLEPC) || !PetscDefined(USE_SHARED_LIBRARIES) || data->cntl[0] == HPDDM_KRYLOV_METHOD_GCRODR) CHKERRQ(PetscViewerASCIIPrintf(viewer, "deflation target: %s\n", HPDDMRecycleTarget[static_cast<PetscInt>(data->cntl[3])]));
+      else CHKERRQ(PetscViewerASCIIPrintf(viewer, "redistribution size: %d\n", static_cast<PetscMPIInt>(data->cntl[3])));
     }
-    if (data->icntl[1] != static_cast<int>(PETSC_DECIDE)) {
-      CHKERRQ(PetscViewerASCIIPrintf(viewer, "  block size is %d\n", data->icntl[1]));
-    }
+    if (data->icntl[1] != static_cast<int>(PETSC_DECIDE)) CHKERRQ(PetscViewerASCIIPrintf(viewer, "  block size is %d\n", data->icntl[1]));
   }
   PetscFunctionReturn(0);
 }
 
 static PetscErrorCode KSPSetUp_HPDDM(KSP ksp)
 {
-  KSP_HPDDM      *data = (KSP_HPDDM*)ksp->data;
-  Mat            A;
-  PetscInt       n, bs;
-  PetscBool      match;
+  KSP_HPDDM *data = (KSP_HPDDM*)ksp->data;
+  Mat       A;
+  PetscInt  n, bs;
+  PetscBool match;
 
   PetscFunctionBegin;
   CHKERRQ(KSPGetOperators(ksp, &A, NULL));
@@ -163,9 +152,7 @@ static PetscErrorCode KSPSetUp_HPDDM(KSP ksp)
         data->cntl[1] = HPDDM_VARIANT_LEFT; /* left preconditioning by default */
         if (ksp->pc_side_set == PC_RIGHT) data->cntl[1] = HPDDM_VARIANT_RIGHT;
         else PetscCheck(ksp->pc_side_set != PC_SYMMETRIC, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Symmetric preconditioning not implemented");
-        if (data->cntl[1] > 0) {
-          CHKERRQ(KSPSetPCSide(ksp, PC_RIGHT));
-        }
+        if (data->cntl[1] > 0) CHKERRQ(KSPSetPCSide(ksp, PC_RIGHT));
       }
       if (data->cntl[0] == HPDDM_KRYLOV_METHOD_BGMRES || data->cntl[0] == HPDDM_KRYLOV_METHOD_BGCRODR || data->cntl[0] == HPDDM_KRYLOV_METHOD_BFBCG) {
         data->rcntl[0] = -1.0; /* no deflation by default */
@@ -210,7 +197,7 @@ static inline PetscErrorCode KSPHPDDMReset_Private(KSP ksp)
 
 static PetscErrorCode KSPReset_HPDDM(KSP ksp)
 {
-  KSP_HPDDM      *data = (KSP_HPDDM*)ksp->data;
+  KSP_HPDDM *data = (KSP_HPDDM*)ksp->data;
 
   PetscFunctionBegin;
   if (data->op) {
@@ -522,9 +509,9 @@ PetscErrorCode KSPHPDDMGetType(KSP ksp, KSPHPDDMType *type)
 
 static PetscErrorCode KSPHPDDMSetType_HPDDM(KSP ksp, KSPHPDDMType type)
 {
-  KSP_HPDDM      *data = (KSP_HPDDM*)ksp->data;
-  PetscInt       i;
-  PetscBool      flg = PETSC_FALSE;
+  KSP_HPDDM *data = (KSP_HPDDM*)ksp->data;
+  PetscInt  i;
+  PetscBool flg = PETSC_FALSE;
 
   PetscFunctionBegin;
   for (i = 0; i < static_cast<PetscInt>(ALEN(KSPHPDDMTypes)); ++i) {
@@ -581,10 +568,10 @@ static PetscErrorCode KSPHPDDMGetType_HPDDM(KSP ksp, KSPHPDDMType *type)
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_HPDDM(KSP ksp)
 {
-  KSP_HPDDM      *data;
-  PetscInt       i;
-  const char     *common[] = { KSPGMRES, KSPCG, KSPPREONLY };
-  PetscBool      flg = PETSC_FALSE;
+  KSP_HPDDM  *data;
+  PetscInt   i;
+  const char *common[] = { KSPGMRES, KSPCG, KSPPREONLY };
+  PetscBool  flg = PETSC_FALSE;
 
   PetscFunctionBegin;
   CHKERRQ(PetscNewLog(ksp, &data));

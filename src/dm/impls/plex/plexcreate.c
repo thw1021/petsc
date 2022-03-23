@@ -164,12 +164,11 @@ static PetscErrorCode DMPlexInterpolateInPlace_Internal(DM dm)
 @*/
 PetscErrorCode DMPlexCreateCoordinateSpace(DM dm, PetscInt degree, PetscPointFunc coordFunc)
 {
-  DM_Plex       *mesh = (DM_Plex *) dm->data;
-  DM             cdm;
-  PetscDS        cds;
-  PetscFE        fe;
-  PetscClassId   id;
-  PetscErrorCode ierr;
+  DM_Plex      *mesh = (DM_Plex *) dm->data;
+  DM            cdm;
+  PetscDS       cds;
+  PetscFE       fe;
+  PetscClassId  id;
 
   PetscFunctionBegin;
   CHKERRQ(DMGetCoordinateDM(dm, &cdm));
@@ -177,8 +176,9 @@ PetscErrorCode DMPlexCreateCoordinateSpace(DM dm, PetscInt degree, PetscPointFun
   CHKERRQ(PetscDSGetDiscretization(cds, 0, (PetscObject *) &fe));
   CHKERRQ(PetscObjectGetClassId((PetscObject) fe, &id));
   if (id != PETSCFE_CLASSID) {
-    PetscBool simplex;
-    PetscInt  dim, dE, qorder;
+    PetscBool      simplex;
+    PetscInt       dim, dE, qorder;
+    PetscErrorCode ierr;
 
     CHKERRQ(DMGetDimension(dm, &dim));
     CHKERRQ(DMGetCoordinateDim(dm, &dE));
@@ -3588,20 +3588,20 @@ static PetscErrorCode DMSetFromOptions_Plex(PetscOptionItems *PetscOptionsObject
     PetscInt     dim, Nf;
     PetscBool    distributed;
 
-    ierr = DMGetDimension(dm, &dim);CHKERRQ(ierr);
-    ierr = DMPlexIsDistributed(dm, &distributed);CHKERRQ(ierr);
-    ierr = DMGetCoordinateDM(dm, &cdm);CHKERRQ(ierr);
-    ierr = DMGetDS(cdm, &cds);CHKERRQ(ierr);
-    ierr = PetscDSGetNumFields(cds, &Nf);CHKERRQ(ierr);
+    CHKERRQ(DMGetDimension(dm, &dim));
+    CHKERRQ(DMPlexIsDistributed(dm, &distributed));
+    CHKERRQ(DMGetCoordinateDM(dm, &cdm));
+    CHKERRQ(DMGetDS(cdm, &cds));
+    CHKERRQ(PetscDSGetNumFields(cds, &Nf));
     if (Nf) {
-      ierr = PetscDSGetDiscretization(cds, 0, &obj);CHKERRQ(ierr);
-      ierr = PetscObjectGetClassId(obj, &id);CHKERRQ(ierr);
+      CHKERRQ(PetscDSGetDiscretization(cds, 0, &obj));
+      CHKERRQ(PetscObjectGetClassId(obj, &id));
     }
     if (dim == 1 && !distributed && id != PETSCFE_CLASSID) {
-      ierr = DMPlexGetOrdering1D(dm, &perm);CHKERRQ(ierr);
-      ierr = DMPlexPermute(dm, perm, &rdm);CHKERRQ(ierr);
-      ierr = DMPlexReplace_Static(dm, &rdm);CHKERRQ(ierr);
-      ierr = ISDestroy(&perm);CHKERRQ(ierr);
+      CHKERRQ(DMPlexGetOrdering1D(dm, &perm));
+      CHKERRQ(DMPlexPermute(dm, perm, &rdm));
+      CHKERRQ(DMPlexReplace_Static(dm, &rdm));
+      CHKERRQ(ISDestroy(&perm));
     }
   }
   /* Handle */

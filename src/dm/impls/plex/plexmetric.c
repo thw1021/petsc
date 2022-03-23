@@ -15,38 +15,38 @@ PetscErrorCode DMPlexMetricSetFromOptions(DM dm)
   PetscFunctionBegin;
   CHKERRQ(PetscObjectGetComm((PetscObject) dm, &comm));
   ierr = PetscOptionsBegin(comm, "", "Riemannian metric options", "DMPlexMetric");CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-dm_plex_metric_isotropic", "Is the metric isotropic?", "DMPlexMetricCreateIsotropic", isotropic, &isotropic, NULL);CHKERRQ(ierr);
-  ierr = DMPlexMetricSetIsotropic(dm, isotropic);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-dm_plex_metric_uniform", "Is the metric uniform?", "DMPlexMetricCreateUniform", uniform, &uniform, NULL);CHKERRQ(ierr);
-  ierr = DMPlexMetricSetUniform(dm, uniform);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-dm_plex_metric_restrict_anisotropy_first", "Should anisotropy be restricted before normalization?", "DMPlexNormalize", restrictAnisotropyFirst, &restrictAnisotropyFirst, NULL);CHKERRQ(ierr);
-  ierr = DMPlexMetricSetRestrictAnisotropyFirst(dm, restrictAnisotropyFirst);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-dm_plex_metric_no_insert", "Turn off node insertion and deletion", "DMAdaptMetric", noInsert, &noInsert, NULL);CHKERRQ(ierr);
-  ierr = DMPlexMetricSetNoInsertion(dm, noInsert);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-dm_plex_metric_no_swap", "Turn off facet swapping", "DMAdaptMetric", noSwap, &noSwap, NULL);CHKERRQ(ierr);
-  ierr = DMPlexMetricSetNoSwapping(dm, noSwap);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-dm_plex_metric_no_move", "Turn off facet node movement", "DMAdaptMetric", noMove, &noMove, NULL);CHKERRQ(ierr);
-  ierr = DMPlexMetricSetNoMovement(dm, noMove);CHKERRQ(ierr);
-  ierr = PetscOptionsBool("-dm_plex_metric_no_surf", "Turn off surface modification", "DMAdaptMetric", noSurf, &noSurf, NULL);CHKERRQ(ierr);
-  ierr = DMPlexMetricSetNoSurf(dm, noSurf);CHKERRQ(ierr);
-  ierr = PetscOptionsBoundedInt("-dm_plex_metric_num_iterations", "Number of ParMmg adaptation iterations", "DMAdaptMetric", numIter, &numIter, NULL, 0);CHKERRQ(ierr);
-  ierr = DMPlexMetricSetNumIterations(dm, numIter);CHKERRQ(ierr);
-  ierr = PetscOptionsRangeInt("-dm_plex_metric_verbosity", "Verbosity of metric-based mesh adaptation package (-1 = silent, 10 = maximum)", "DMAdaptMetric", verbosity, &verbosity, NULL, -1, 10);CHKERRQ(ierr);
-  ierr = DMPlexMetricSetVerbosity(dm, verbosity);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-dm_plex_metric_h_min", "Minimum tolerated metric magnitude", "DMPlexMetricEnforceSPD", h_min, &h_min, NULL);CHKERRQ(ierr);
-  ierr = DMPlexMetricSetMinimumMagnitude(dm, h_min);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-dm_plex_metric_h_max", "Maximum tolerated metric magnitude", "DMPlexMetricEnforceSPD", h_max, &h_max, NULL);CHKERRQ(ierr);
-  ierr = DMPlexMetricSetMaximumMagnitude(dm, h_max);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-dm_plex_metric_a_max", "Maximum tolerated anisotropy", "DMPlexMetricEnforceSPD", a_max, &a_max, NULL);CHKERRQ(ierr);
-  ierr = DMPlexMetricSetMaximumAnisotropy(dm, a_max);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-dm_plex_metric_p", "L-p normalization order", "DMPlexMetricNormalize", p, &p, NULL);CHKERRQ(ierr);
-  ierr = DMPlexMetricSetNormalizationOrder(dm, p);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-dm_plex_metric_target_complexity", "Target metric complexity", "DMPlexMetricNormalize", target, &target, NULL);CHKERRQ(ierr);
-  ierr = DMPlexMetricSetTargetComplexity(dm, target);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-dm_plex_metric_gradation_factor", "Metric gradation factor", "DMAdaptMetric", beta, &beta, NULL);CHKERRQ(ierr);
-  ierr = DMPlexMetricSetGradationFactor(dm, beta);CHKERRQ(ierr);
-  ierr = PetscOptionsReal("-dm_plex_metric_hausdorff_number", "Metric Hausdorff number", "DMAdaptMetric", hausd, &hausd, NULL);CHKERRQ(ierr);
-  ierr = DMPlexMetricSetHausdorffNumber(dm, hausd);CHKERRQ(ierr);
+  CHKERRQ(PetscOptionsBool("-dm_plex_metric_isotropic", "Is the metric isotropic?", "DMPlexMetricCreateIsotropic", isotropic, &isotropic, NULL));
+  CHKERRQ(DMPlexMetricSetIsotropic(dm, isotropic));
+  CHKERRQ(PetscOptionsBool("-dm_plex_metric_uniform", "Is the metric uniform?", "DMPlexMetricCreateUniform", uniform, &uniform, NULL));
+  CHKERRQ(DMPlexMetricSetUniform(dm, uniform));
+  CHKERRQ(PetscOptionsBool("-dm_plex_metric_restrict_anisotropy_first", "Should anisotropy be restricted before normalization?", "DMPlexNormalize", restrictAnisotropyFirst, &restrictAnisotropyFirst, NULL));
+  CHKERRQ(DMPlexMetricSetRestrictAnisotropyFirst(dm, restrictAnisotropyFirst));
+  CHKERRQ(PetscOptionsBool("-dm_plex_metric_no_insert", "Turn off node insertion and deletion", "DMAdaptMetric", noInsert, &noInsert, NULL));
+  CHKERRQ(DMPlexMetricSetNoInsertion(dm, noInsert));
+  CHKERRQ(PetscOptionsBool("-dm_plex_metric_no_swap", "Turn off facet swapping", "DMAdaptMetric", noSwap, &noSwap, NULL));
+  CHKERRQ(DMPlexMetricSetNoSwapping(dm, noSwap));
+  CHKERRQ(PetscOptionsBool("-dm_plex_metric_no_move", "Turn off facet node movement", "DMAdaptMetric", noMove, &noMove, NULL));
+  CHKERRQ(DMPlexMetricSetNoMovement(dm, noMove));
+  CHKERRQ(PetscOptionsBool("-dm_plex_metric_no_surf", "Turn off surface modification", "DMAdaptMetric", noSurf, &noSurf, NULL));
+  CHKERRQ(DMPlexMetricSetNoSurf(dm, noSurf));
+  CHKERRQ(PetscOptionsBoundedInt("-dm_plex_metric_num_iterations", "Number of ParMmg adaptation iterations", "DMAdaptMetric", numIter, &numIter, NULL, 0));
+  CHKERRQ(DMPlexMetricSetNumIterations(dm, numIter));
+  CHKERRQ(PetscOptionsRangeInt("-dm_plex_metric_verbosity", "Verbosity of metric-based mesh adaptation package (-1 = silent, 10 = maximum)", "DMAdaptMetric", verbosity, &verbosity, NULL, -1, 10));
+  CHKERRQ(DMPlexMetricSetVerbosity(dm, verbosity));
+  CHKERRQ(PetscOptionsReal("-dm_plex_metric_h_min", "Minimum tolerated metric magnitude", "DMPlexMetricEnforceSPD", h_min, &h_min, NULL));
+  CHKERRQ(DMPlexMetricSetMinimumMagnitude(dm, h_min));
+  CHKERRQ(PetscOptionsReal("-dm_plex_metric_h_max", "Maximum tolerated metric magnitude", "DMPlexMetricEnforceSPD", h_max, &h_max, NULL));
+  CHKERRQ(DMPlexMetricSetMaximumMagnitude(dm, h_max));
+  CHKERRQ(PetscOptionsReal("-dm_plex_metric_a_max", "Maximum tolerated anisotropy", "DMPlexMetricEnforceSPD", a_max, &a_max, NULL));
+  CHKERRQ(DMPlexMetricSetMaximumAnisotropy(dm, a_max));
+  CHKERRQ(PetscOptionsReal("-dm_plex_metric_p", "L-p normalization order", "DMPlexMetricNormalize", p, &p, NULL));
+  CHKERRQ(DMPlexMetricSetNormalizationOrder(dm, p));
+  CHKERRQ(PetscOptionsReal("-dm_plex_metric_target_complexity", "Target metric complexity", "DMPlexMetricNormalize", target, &target, NULL));
+  CHKERRQ(DMPlexMetricSetTargetComplexity(dm, target));
+  CHKERRQ(PetscOptionsReal("-dm_plex_metric_gradation_factor", "Metric gradation factor", "DMAdaptMetric", beta, &beta, NULL));
+  CHKERRQ(DMPlexMetricSetGradationFactor(dm, beta));
+  CHKERRQ(PetscOptionsReal("-dm_plex_metric_hausdorff_number", "Metric Hausdorff number", "DMAdaptMetric", hausd, &hausd, NULL));
+  CHKERRQ(DMPlexMetricSetHausdorffNumber(dm, hausd));
   ierr = PetscOptionsEnd();CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
@@ -391,12 +391,11 @@ PetscErrorCode DMPlexMetricNoMovement(DM dm, PetscBool *noMove)
 PetscErrorCode DMPlexMetricSetNoSurf(DM dm, PetscBool noSurf)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!plex->metricCtx) {
-    ierr = PetscNew(&plex->metricCtx);CHKERRQ(ierr);
-    ierr = DMPlexMetricSetFromOptions(dm);CHKERRQ(ierr);
+    CHKERRQ(PetscNew(&plex->metricCtx));
+    CHKERRQ(DMPlexMetricSetFromOptions(dm));
   }
   plex->metricCtx->noSurf = noSurf;
   PetscFunctionReturn(0);
@@ -421,12 +420,11 @@ PetscErrorCode DMPlexMetricSetNoSurf(DM dm, PetscBool noSurf)
 PetscErrorCode DMPlexMetricNoSurf(DM dm, PetscBool *noSurf)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!plex->metricCtx) {
-    ierr = PetscNew(&plex->metricCtx);CHKERRQ(ierr);
-    ierr = DMPlexMetricSetFromOptions(dm);CHKERRQ(ierr);
+    CHKERRQ(PetscNew(&plex->metricCtx));
+    CHKERRQ(DMPlexMetricSetFromOptions(dm));
   }
   *noSurf = plex->metricCtx->noSurf;
   PetscFunctionReturn(0);
@@ -780,12 +778,11 @@ PetscErrorCode DMPlexMetricGetGradationFactor(DM dm, PetscReal *beta)
 PetscErrorCode DMPlexMetricSetHausdorffNumber(DM dm, PetscReal hausd)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!plex->metricCtx) {
-    ierr = PetscNew(&plex->metricCtx);CHKERRQ(ierr);
-    ierr = DMPlexMetricSetFromOptions(dm);CHKERRQ(ierr);
+    CHKERRQ(PetscNew(&plex->metricCtx));
+    CHKERRQ(DMPlexMetricSetFromOptions(dm));
   }
   plex->metricCtx->hausdorffNumber = hausd;
   PetscFunctionReturn(0);
@@ -818,12 +815,11 @@ PetscErrorCode DMPlexMetricSetHausdorffNumber(DM dm, PetscReal hausd)
 PetscErrorCode DMPlexMetricGetHausdorffNumber(DM dm, PetscReal *hausd)
 {
   DM_Plex       *plex = (DM_Plex *) dm->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!plex->metricCtx) {
-    ierr = PetscNew(&plex->metricCtx);CHKERRQ(ierr);
-    ierr = DMPlexMetricSetFromOptions(dm);CHKERRQ(ierr);
+    CHKERRQ(PetscNew(&plex->metricCtx));
+    CHKERRQ(DMPlexMetricSetFromOptions(dm));
   }
   *hausd = plex->metricCtx->hausdorffNumber;
   PetscFunctionReturn(0);
