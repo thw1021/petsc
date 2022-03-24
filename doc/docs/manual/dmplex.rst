@@ -406,6 +406,7 @@ The load call is shorthand for the following sequence
 
    DMPlexTopologyView(dm, viewer);
    DMPlexCoordinatesView(dm, viewer);
+   DMPlexLabelsView(dm, viewer);
 
 If the *mesh name* is not explicitly set, the default name is used.
 In the above ``PETSC_VIEWER_HDF5_PETSC`` format was used to save the entire representation of the mesh.
