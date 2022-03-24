@@ -23,6 +23,7 @@ PetscErrorCode VecDestroy_MPI(Vec v)
   if (x->localrep) {
     ierr = VecDestroy(&x->localrep);CHKERRQ(ierr);
     ierr = VecScatterDestroy(&x->localupdate);CHKERRQ(ierr);
+    ierr = ISDestroy(&x->ghost);CHKERRQ(ierr);
   }
   ierr = VecAssemblyReset_MPI(v);CHKERRQ(ierr);
 
