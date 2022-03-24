@@ -505,22 +505,53 @@ int main(int argc, char **argv)
 /*TEST
 
   build:
-    requires: !complex
+    requires: !complex hdf5
 
   testset:
-    requires: p4est double
+    requires: double
     output_file: output/ex29_0.out
-    args: -number_spatial_vertices 1 -number_particles 100
+    args: -dm_landau_amr_levels_max 1 \
+          -dm_landau_amr_post_refine 0 \
+          -dm_landau_batch_size 1 \
+          -dm_landau_device_type cpu \
+          -dm_landau_n 1 \
+          -dm_landau_thermal_temps 1 \
+          -dm_preallocate_only false \
+          -ex29_dm_view hdf5:local3.h5 \
+          -ex29_vec_view hdf5:local3.h5::append \
+          -ftop_ksp_converged_reason \
+          -ftop_ksp_rtol 1e-14\
+          -ftop_ksp_type lsqr \
+          -ftop_pc_type bjacobi \
+          -ftop_sub_pc_factor_shift_type nonzero \
+          -ftop_sub_pc_type lu \
+          -ksp_type preonly \
+          -number_particles_per_dimension 10 \
+          -pc_type lu \
+          -petscspace_degree 3 \
+          -ptof_ksp_converged_reason \
+          -ptof_ksp_rtol 1e-14\
+          -snes_converged_reason \
+          -snes_monitor \
+          -snes_rtol 1e-14\
+          -snes_stol 1e-14\
+          -ts_dt 1 \
+          -ts_exact_final_time stepover \
+          -ts_max_snes_failures -1 \
+          -ts_max_steps 1 \
+          -ts_monitor \
+          -ts_type beuler
+
     test:
       suffix: cpu
-      args: -dm_landau_device_type cpu -ftop_ksp_type lsqr -ftop_pc_type bjacobi -ftop_sub_pc_type lu -ftop_sub_pc_factor_shift_type nonzero
+      args: -dm_landau_device_type cpu
     test:
       suffix: kokkos
       requires: kokkos_kernels
-      args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos  -ftop_ksp_type cg -ftop_pc_type jacobi
+      args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos
     test:
       suffix: cuda
       requires: cuda
-      args: -dm_landau_device_type cuda -dm_mat_type aijcusparse -dm_vec_type cuda -ftop_ksp_type cg -ftop_pc_type jacobi
+      args: -dm_landau_device_type cuda -dm_mat_type aijcusparse -dm_vec_type cuda
 
 TEST*/
