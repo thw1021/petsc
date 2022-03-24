@@ -276,7 +276,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt NUserV, const PetscInt a_Np, cons
       // make particles
       for (int tid=0; tid<numthreads; tid++) {
         const PetscInt b_id = b_id_0 + tid;
-        if ( (glb_b_id = global_batch_id + b_id) < NUserV) { // the ragged edge of the last batch
+        if ((glb_b_id = global_batch_id + b_id) < NUserV) { // the ragged edge of the last batch
           PetscInt Npp0 = a_Np + (glb_b_id%a_Np), NN; // fake user: number of particels in each dimension with add some load imbalance and diff (<2x)
           for (PetscInt grid=0 ; grid<ctx->num_grids ; grid++) { // add same particels for all grids
             const PetscReal kT_m = ctx->k*ctx->thermal_temps[ctx->species_offset[grid]]/ctx->masses[ctx->species_offset[grid]]/(ctx->v_0*ctx->v_0); /* theta = 2kT/mc^2 per species -- TODO */;
@@ -316,7 +316,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt NUserV, const PetscInt a_Np, cons
       PetscPragmaOMP(parallel for)
         for (int tid=0; tid<numthreads; tid++) {
           const PetscInt b_id = b_id_0 + tid;
-          if ( (glb_b_id = global_batch_id + b_id) < NUserV) { // the ragged edge of the last batch
+          if ((glb_b_id = global_batch_id + b_id) < NUserV) { // the ragged edge of the last batch
             //ierr = PetscInfo(pack,"Create swarms for 'glob' index %" PetscInt_FMT " create swarm\n",glb_b_id);CHKERRQ(ierr);
             for (PetscInt grid=0 ; grid<ctx->num_grids ; grid++) { // add same particels for all grids
               PetscErrorCode  ierr_t;
@@ -342,7 +342,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt NUserV, const PetscInt a_Np, cons
       PetscPragmaOMP(parallel for)
         for (int tid=0; tid<numthreads; tid++) {
           const PetscInt b_id = b_id_0 + tid;
-          if ( (glb_b_id = global_batch_id + b_id) < NUserV) {
+          if ((glb_b_id = global_batch_id + b_id) < NUserV) {
             for (PetscInt grid=0 ; grid<ctx->num_grids ; grid++) { // add same particels for all grids
               PetscErrorCode ierr_t;
               DM             dm = grid_dm[grid];
@@ -359,7 +359,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt NUserV, const PetscInt a_Np, cons
       PetscPragmaOMP(parallel for)
         for (int tid=0; tid<numthreads; tid++) {
           const PetscInt b_id = b_id_0 + tid;
-          if ( (glb_b_id = global_batch_id + b_id) < NUserV) {
+          if ((glb_b_id = global_batch_id + b_id) < NUserV) {
             for (PetscInt grid=0 ; grid<ctx->num_grids ; grid++) { // add same particels for all grids
               PetscErrorCode ierr_t;
               Vec            subX = globXArray[LAND_PACK_IDX(b_id,grid)], work = t_fhat[grid][tid];
@@ -375,7 +375,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt NUserV, const PetscInt a_Np, cons
       /* Cleanup */
       for (int tid=0; tid<numthreads; tid++) {
         const PetscInt b_id = b_id_0 + tid;
-        if ( (glb_b_id = global_batch_id + b_id) < NUserV) {
+        if ((glb_b_id = global_batch_id + b_id) < NUserV) {
           ierr = PetscInfo(pack,"Free for global batch %" PetscInt_FMT "\n",glb_b_id);CHKERRQ(ierr);
           for (PetscInt grid=0 ; grid<ctx->num_grids ; grid++) { // add same particels for all grids
             ierr = PetscFree3(xx_t[grid][tid],yy_t[grid][tid],wp_t[grid][tid]);CHKERRQ(ierr);
@@ -402,7 +402,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt NUserV, const PetscInt a_Np, cons
       PetscPragmaOMP(parallel for)
         for (int tid=0; tid<numthreads; tid++) {
           const PetscInt b_id = b_id_0 + tid;
-          if ( (glb_b_id = global_batch_id + b_id) < NUserV) {
+          if ((glb_b_id = global_batch_id + b_id) < NUserV) {
             for (PetscInt grid=0 ; grid<ctx->num_grids ; grid++) { // add same particels for all grids
               PetscErrorCode  ierr_t;
               PetscInfo(pack,"gridToParticles: global batch %" PetscInt_FMT ", local batch b=%" PetscInt_FMT ", grid g=%" PetscInt_FMT ", index(b,g) %" PetscInt_FMT "\n",global_batch_id,b_id,grid,LAND_PACK_IDX(b_id,grid));
@@ -416,7 +416,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt NUserV, const PetscInt a_Np, cons
       ierr = PetscInfo(pack,"Cleanup batches %" PetscInt_FMT " to %" PetscInt_FMT "\n",b_id_0,b_id_0+numthreads);CHKERRQ(ierr);
       for (int tid=0; tid<numthreads; tid++) {
         const PetscInt b_id = b_id_0 + tid;
-        if ( (glb_b_id = global_batch_id + b_id) < NUserV) {
+        if ((glb_b_id = global_batch_id + b_id) < NUserV) {
           for (PetscInt grid=0 ; grid<ctx->num_grids ; grid++) {
             PetscDataType dtype;
             PetscReal     *wp,*coords;
