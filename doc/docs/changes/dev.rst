@@ -65,6 +65,7 @@ Changes: Development
 - Change ``SETERRABORT()`` to be variadic
 - Add ``PetscCheck()`` and ``PetscAssert()`` for checking a boolean condition is true. The former is always enabled, while the latter is enabled only in debug builds.
 - ``PetscDevice`` initialization for CUDA and HIP will now respect ``CUDA_VISIBILE_DEVICES`` and ``HIP_VISIBLE_DEVICES`` environment variables respectively
+- Add ``PETSC_ATTRIBUTE_COLD`` to inform compilers that a function is unlikely to be called
 
 
 .. rubric:: PetscViewer:
