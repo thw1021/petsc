@@ -213,7 +213,7 @@ static PetscErrorCode maxwellian(PetscInt dim, const PetscReal x[], PetscReal kt
   u[0] = n*PetscPowReal(PETSC_PI*theta,-1.5)*(PetscExpReal(-v2/theta)) * 2.*PETSC_PI*x[1]; // radial term for 2D axi-sym.
   PetscFunctionReturn(0);
 }
-#define NUM_SOLVE_LOOPS 100
+#define NUM_SOLVE_LOOPS 0
 #define MAX_NUM_THRDS 12
 PetscErrorCode go()
 {
