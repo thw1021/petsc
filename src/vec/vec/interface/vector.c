@@ -99,11 +99,15 @@ PetscErrorCode  VecSetLocalToGlobalMapping(Vec x,ISLocalToGlobalMapping mapping)
 @*/
 PetscErrorCode VecGetLocalToGlobalMapping(Vec X,ISLocalToGlobalMapping *mapping)
 {
+  PetscErrorCode ierr;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(X,VEC_CLASSID,1);
   PetscValidType(X,1);
   PetscValidPointer(mapping,2);
-  *mapping = X->map->mapping;
+  if (X->ops->getlocaltoglobalmapping) {
+    ierr = (*X->ops->getlocaltoglobalmapping)(X,mapping);CHKERRQ(ierr);
+  } else *mapping = X->map->mapping;
   PetscFunctionReturn(0);
 }
 
