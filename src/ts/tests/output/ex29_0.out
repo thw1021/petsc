@@ -1,0 +1,35 @@
+masses:        e= 9.109e-31; ions in proton mass units:    0.000e+00  0.000e+00 ...
+charges:       e=-1.602e-19; charges in elementary units:  0.000e+00  0.000e+00
+n:             e:  1.000e+00                           i:  1.000e+00  0.000e+00
+thermal T (K): e= 1.160e+07 i= 0.000e+00  0.000e+00. v_0= 1.326e+07 ( 4.424e-02c) n_0= 1.000e+20 t_0= 5.787e-06, classical, Intuitive, 1 batched
+Domain radius (AMR levels) grid 0:  5.000e+00 (1) 
+Using default Plex order for all matrices
+0) FormLandau 32 IPs, 2 cells total, Nb=16, Nq=16, dim=2, Tab: Nb=16 Nf=1 Np=16 cdim=2 N=28
+Linear ptof_ solve converged due to CONVERGED_RTOL iterations 7
+  0) species-0: charge density= -1.6192618821816e+01 z-momentum=  2.6825014784449e-19 energy=  2.4113297999696e+04 -- 2 cells
+0 TS dt 1. time 0.
+    0 SNES Function norm 8.319203051364e-02 
+    1 SNES Function norm 1.017210615096e-02 
+    2 SNES Function norm 1.721713879897e-03 
+    3 SNES Function norm 2.888677617093e-04 
+    4 SNES Function norm 5.712066469147e-05 
+    5 SNES Function norm 1.071316844481e-05 
+    6 SNES Function norm 2.115064161952e-06 
+    7 SNES Function norm 4.051534006129e-07 
+    8 SNES Function norm 7.918792063628e-08 
+    9 SNES Function norm 1.525813343733e-08 
+   10 SNES Function norm 2.966373732049e-09 
+   11 SNES Function norm 5.729436312323e-10 
+   12 SNES Function norm 1.111189013072e-10 
+   13 SNES Function norm 2.148666935118e-11 
+   14 SNES Function norm 4.162867979358e-12 
+   15 SNES Function norm 8.053387908970e-13 
+   16 SNES Function norm 1.559777826400e-13 
+   17 SNES Function norm 3.013809014026e-14 
+   18 SNES Function norm 5.827319631208e-15 
+   19 SNES Function norm 1.139253667546e-15 
+   20 SNES Function norm 2.211289213222e-16 
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 20
+1 TS dt 1. time 1.
+  1) species-0: charge density= -1.6192618821816e+01 z-momentum= -2.6825014784449e-19 energy=  2.4113297999696e+04 -- 2 cells
+Linear ftop_ solve converged due to CONVERGED_RTOL iterations 4
