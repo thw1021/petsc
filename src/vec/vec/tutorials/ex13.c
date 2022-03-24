@@ -1,5 +1,5 @@
 
-static char help[] = "Demonstrates use of VecCreateGhost().\n\n";
+static char help[] = "Demonstrates use of VecGhostGetGhostIS().\n\n";
 
 /*T
    Concepts: vectors^assembling vectors;
@@ -23,14 +23,12 @@ T*/
 
 int main(int argc,char **argv)
 {
-  PetscMPIInt            rank,size;
-  PetscInt               nlocal = 6,nghost = 2,ifrom[2],i,rstart,rend;
-  PetscErrorCode         ierr;
-  PetscBool              flg,flg2,flg3,flg4,flg5;
-  PetscScalar            value,*array,*tarray=0;
-  Vec                    lx,gx,gxs;
-  IS                     ghost;
-  ISLocalToGlobalMapping mapping;
+  PetscMPIInt    rank,size;
+  PetscInt       nlocal = 6,nghost = 2,ifrom[2],i,rstart,rend;
+  PetscErrorCode ierr;
+  PetscBool      flg,flg2,flg3;
+  PetscScalar    value,*array,*tarray=0;
+  Vec            lx,gx,gxs;
 
   ierr = PetscInitialize(&argc,&argv,(char*)0,help);if (ierr) return ierr;
   ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRMPI(ierr);
@@ -143,18 +141,6 @@ int main(int argc,char **argv)
     ierr = VecGhostRestoreLocalForm(gx,&lx);CHKERRQ(ierr);
   }
 
-  ierr = PetscOptionsHasName(NULL,NULL,"-vecghostgetghostis",&flg4);CHKERRQ(ierr);
-  if (flg4) {
-    ierr = VecGhostGetGhostIS(gx,&ghost);CHKERRQ(ierr);
-    ierr = ISView(ghost,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
-  }
-  ierr = PetscOptionsHasName(NULL,NULL,"-getgtlmapping",&flg5);CHKERRQ(ierr);
-  if (flg5) {
-     ierr = VecGetLocalToGlobalMapping(gx,&mapping);CHKERRQ(ierr);
-     ierr = ISLocalToGlobalMappingView(mapping,NULL);CHKERRQ(ierr);
-  }
-
-
   ierr = VecDestroy(&gx);CHKERRQ(ierr);
 
   if (flg) {ierr = PetscFree(tarray);CHKERRQ(ierr);}
@@ -185,16 +171,6 @@ int main(int argc,char **argv)
        args: -minvalues
        output_file: output/ex9_2.out
        requires: !complex
-
-     test:
-       suffix: 5
-       nsize: 2
-       args: -vecghostgetghostis
-
-     test:
-       suffix: 6
-       nsize: 2
-       args: -getgtlmapping
 
 TEST*/
 
