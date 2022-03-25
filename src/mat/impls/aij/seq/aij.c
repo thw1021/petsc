@@ -4682,6 +4682,46 @@ PetscErrorCode  MatSeqAIJRestoreArrayWrite(Mat A,PetscScalar **array)
 }
 
 /*@C
+   MatSeqAIJGetCSRAndMemType - Get the CSR arrays and the memory type of the SEQAIJ matrix
+
+   Not Collective
+
+   Input Parameter:
+.  mat - a matrix of type MATSEQAIJ or its subclasses
+
+   Output Parameters:
++  i - row map array of the matrix
+.  j - column index array of the matrix
+.  a - data array of the matrix
+-  memtype - memory type of the arrays
+
+  Notes:
+   Any of the arrays can be NULL, in which case the corresponding value is not returned.
+   If mat is a device matrix, the arrays are on the device. Otherwise, they are on the host.
+   The data array 'a' is guaranteed to have the updated values of the matrix.
+
+   Level: intermediate
+
+.seealso: MatSeqAIJGetArray(), MatSeqAIJGetArrayRead()
+@*/
+PetscErrorCode MatSeqAIJGetCSRAndMemType(Mat mat,const PetscInt **i,const PetscInt **j,PetscScalar **a,PetscMemType *mtype)
+{
+  PetscErrorCode ierr;
+  Mat_SeqAIJ     *aij = (Mat_SeqAIJ*)mat->data;
+
+  PetscFunctionBegin;
+  if (aij->ops->getarraysandmemtype) {
+    ierr = (*aij->ops->getarraysandmemtype)(mat,i,j,a,mtype);CHKERRQ(ierr);
+  } else {
+    if (i) *i = aij->i;
+    if (j) *j = aij->j;
+    if (a) *a = aij->a;
+    if (mtype) *mtype = PETSC_MEMTYPE_HOST;
+  }
+  PetscFunctionReturn(0);
+}
+
+/*@C
    MatSeqAIJGetMaxRowNonzeros - returns the maximum number of nonzeros in any row
 
    Not Collective
