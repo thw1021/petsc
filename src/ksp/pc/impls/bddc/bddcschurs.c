@@ -288,12 +288,12 @@ static PetscErrorCode PCBDDCComputeExplicitSchur(Mat M, PetscBool issym, MatReus
 
   PetscFunctionBegin;
   ierr = MPI_Comm_size(PetscObjectComm((PetscObject)M),&size);CHKERRMPI(ierr);
-  PetscCheckFalse(size != 1,PETSC_COMM_SELF,PETSC_ERR_SUP,"Not for parallel matrices");
+  PetscCheck(size == 1,PETSC_COMM_SELF,PETSC_ERR_SUP,"Not for parallel matrices");
   if (reuse == MAT_REUSE_MATRIX) {
     PetscBool Sdense;
 
     ierr = PetscObjectTypeCompare((PetscObject)*S, MATSEQDENSE, &Sdense);CHKERRQ(ierr);
-    PetscCheckFalse(!Sdense,PetscObjectComm((PetscObject)M),PETSC_ERR_SUP,"S should dense");
+    PetscCheck(Sdense,PetscObjectComm((PetscObject)M),PETSC_ERR_SUP,"S should dense");
   }
   ierr = MatSchurComplementGetSubMatrices(M, NULL, NULL, &B, &C, &D);CHKERRQ(ierr);
   ierr = MatSchurComplementGetKSP(M, &ksp);CHKERRQ(ierr);
@@ -436,7 +436,7 @@ PetscErrorCode PCBDDCSubSchursSetUp(PCBDDCSubSchurs sub_schurs, Mat Ain, Mat Sin
   }
 
   /* preliminary checks */
-  PetscCheckFalse(!sub_schurs->schur_explicit && compute_Stilda,PetscObjectComm((PetscObject)sub_schurs->l2gmap),PETSC_ERR_SUP,"Adaptive selection of constraints requires MUMPS and/or MKL_PARDISO");
+  PetscCheck(sub_schurs->schur_explicit || !compute_Stilda,PetscObjectComm((PetscObject)sub_schurs->l2gmap),PETSC_ERR_SUP,"Adaptive selection of constraints requires MUMPS and/or MKL_PARDISO");
 
   if (benign_trick) sub_schurs->is_posdef = PETSC_FALSE;
 
@@ -521,7 +521,7 @@ PetscErrorCode PCBDDCSubSchursSetUp(PCBDDCSubSchurs sub_schurs, Mat Ain, Mat Sin
     const PetscInt*        idx_B;
     PetscInt               n_I,n_B,n_local_dofs,n_prev_added,j,layer,*local_numbering;
 
-    PetscCheckFalse(!xadj,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Cannot request layering without adjacency");
+    PetscCheck(xadj,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Cannot request layering without adjacency");
     /* get sizes */
     ierr = ISGetLocalSize(sub_schurs->is_I,&n_I);CHKERRQ(ierr);
     ierr = ISGetLocalSize(sub_schurs->is_B,&n_B);CHKERRQ(ierr);
@@ -1672,7 +1672,7 @@ PetscErrorCode PCBDDCSubSchursSetUp(PCBDDCSubSchurs sub_schurs, Mat Ain, Mat Sin
         Mat      S_tmp;
         PetscInt nd = 0;
 
-        PetscCheckFalse(!solver_S,PETSC_COMM_SELF,PETSC_ERR_PLIB,"This should not happen");
+        PetscCheck(solver_S,PETSC_COMM_SELF,PETSC_ERR_PLIB,"This should not happen");
         ierr = MatFactorGetSchurComplement(F,&S_tmp,NULL);CHKERRQ(ierr);
         if (use_potr) {
           PetscScalar *data;
@@ -1882,9 +1882,9 @@ PetscErrorCode PCBDDCSubSchursInit(PCBDDCSubSchurs sub_schurs, const char* prefi
 
   PetscFunctionBegin;
   ierr = ISSorted(is_I,&is_sorted);CHKERRQ(ierr);
-  PetscCheckFalse(!is_sorted,PetscObjectComm((PetscObject)is_I),PETSC_ERR_PLIB,"IS for I dofs should be shorted");
+  PetscCheck(is_sorted,PetscObjectComm((PetscObject)is_I),PETSC_ERR_PLIB,"IS for I dofs should be shorted");
   ierr = ISSorted(is_B,&is_sorted);CHKERRQ(ierr);
-  PetscCheckFalse(!is_sorted,PetscObjectComm((PetscObject)is_B),PETSC_ERR_PLIB,"IS for B dofs should be shorted");
+  PetscCheck(is_sorted,PetscObjectComm((PetscObject)is_B),PETSC_ERR_PLIB,"IS for B dofs should be shorted");
 
   /* reset any previous data */
   ierr = PCBDDCSubSchursReset(sub_schurs);CHKERRQ(ierr);

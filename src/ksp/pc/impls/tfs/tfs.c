@@ -101,7 +101,7 @@ static PetscErrorCode PCSetUp_TFS(PC pc)
   PetscFunctionBegin;
   PetscCheckFalse(A->cmap->N != A->rmap->N,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_SIZ,"matrix must be square");
   ierr = PetscObjectTypeCompare((PetscObject)pc->pmat,MATMPIAIJ,&ismpiaij);CHKERRQ(ierr);
-  PetscCheckFalse(!ismpiaij,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Currently only supports MPIAIJ matrices");
+  PetscCheck(ismpiaij,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Currently only supports MPIAIJ matrices");
 
   /* generate the local to global mapping */
   ncol = a->A->cmap->n + a->B->cmap->n;
