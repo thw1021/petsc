@@ -70,7 +70,7 @@ PetscErrorCode PCTFS_giop(PetscInt *vals, PetscInt *work, PetscInt n, PetscInt *
 
   PetscFunctionBegin;
   /* ok ... should have some data, work, and operator(s) */
-  PetscCheckFalse(!vals||!work||!oprs,PETSC_COMM_SELF,PETSC_ERR_PLIB,"PCTFS_giop() :: vals=%D, work=%D, oprs=%D",vals,work,oprs);
+  PetscCheck(vals && work && oprs,PETSC_COMM_SELF,PETSC_ERR_PLIB,"PCTFS_giop() :: vals=%D, work=%D, oprs=%D",vals,work,oprs);
 
   /* non-uniform should have at least two entries */
   PetscCheckFalse((oprs[0] == NON_UNIFORM)&&(n<2),PETSC_COMM_SELF,PETSC_ERR_PLIB,"PCTFS_giop() :: non_uniform and n=0,1?");
@@ -88,7 +88,7 @@ PetscErrorCode PCTFS_giop(PetscInt *vals, PetscInt *work, PetscInt n, PetscInt *
   if ((type=oprs[0])==NON_UNIFORM) oprs++;
 
   /* major league hack */
-  PetscCheckFalse(!(fp = (vfp) PCTFS_ivec_fct_addr(type)),PETSC_COMM_SELF,PETSC_ERR_PLIB,"PCTFS_giop() :: Could not retrieve function pointer!");
+  PetscCheck(fp = (vfp) PCTFS_ivec_fct_addr(type),PETSC_COMM_SELF,PETSC_ERR_PLIB,"PCTFS_giop() :: Could not retrieve function pointer!");
 
   /* all msgs will be of the same length */
   /* if not a hypercube must colapse partial dim */
@@ -148,7 +148,7 @@ PetscErrorCode PCTFS_grop(PetscScalar *vals, PetscScalar *work, PetscInt n, Pets
 
   PetscFunctionBegin;
   /* ok ... should have some data, work, and operator(s) */
-  PetscCheckFalse(!vals||!work||!oprs,PETSC_COMM_SELF,PETSC_ERR_PLIB,"PCTFS_grop() :: vals=%D, work=%D, oprs=%D",vals,work,oprs);
+  PetscCheck(vals && work && oprs,PETSC_COMM_SELF,PETSC_ERR_PLIB,"PCTFS_grop() :: vals=%D, work=%D, oprs=%D",vals,work,oprs);
 
   /* non-uniform should have at least two entries */
   PetscCheckFalse((oprs[0] == NON_UNIFORM)&&(n<2),PETSC_COMM_SELF,PETSC_ERR_PLIB,"PCTFS_grop() :: non_uniform and n=0,1?");
@@ -165,7 +165,7 @@ PetscErrorCode PCTFS_grop(PetscScalar *vals, PetscScalar *work, PetscInt n, Pets
   /* advance to list of n operations for custom */
   if ((type=oprs[0])==NON_UNIFORM) oprs++;
 
-  PetscCheckFalse(!(fp = (vfp) PCTFS_rvec_fct_addr(type)),PETSC_COMM_SELF,PETSC_ERR_PLIB,"PCTFS_grop() :: Could not retrieve function pointer!");
+  PetscCheck(fp = (vfp) PCTFS_rvec_fct_addr(type),PETSC_COMM_SELF,PETSC_ERR_PLIB,"PCTFS_grop() :: Could not retrieve function pointer!");
 
   /* all msgs will be of the same length */
   /* if not a hypercube must colapse partial dim */
@@ -225,7 +225,7 @@ PetscErrorCode PCTFS_grop_hc(PetscScalar *vals, PetscScalar *work, PetscInt n, P
 
   PetscFunctionBegin;
   /* ok ... should have some data, work, and operator(s) */
-  PetscCheckFalse(!vals||!work||!oprs,PETSC_COMM_SELF,PETSC_ERR_PLIB,"PCTFS_grop_hc() :: vals=%D, work=%D, oprs=%D",vals,work,oprs);
+  PetscCheck(vals && work && oprs,PETSC_COMM_SELF,PETSC_ERR_PLIB,"PCTFS_grop_hc() :: vals=%D, work=%D, oprs=%D",vals,work,oprs);
 
   /* non-uniform should have at least two entries */
   PetscCheckFalse((oprs[0] == NON_UNIFORM)&&(n<2),PETSC_COMM_SELF,PETSC_ERR_PLIB,"PCTFS_grop_hc() :: non_uniform and n=0,1?");
@@ -248,7 +248,7 @@ PetscErrorCode PCTFS_grop_hc(PetscScalar *vals, PetscScalar *work, PetscInt n, P
   /* advance to list of n operations for custom */
   if ((type=oprs[0])==NON_UNIFORM) oprs++;
 
-  PetscCheckFalse(!(fp = (vfp) PCTFS_rvec_fct_addr(type)),PETSC_COMM_SELF,PETSC_ERR_PLIB,"PCTFS_grop_hc() :: Could not retrieve function pointer!");
+  PetscCheck(fp = (vfp) PCTFS_rvec_fct_addr(type),PETSC_COMM_SELF,PETSC_ERR_PLIB,"PCTFS_grop_hc() :: Could not retrieve function pointer!");
 
   for (mask=1,edge=0; edge<dim; edge++,mask<<=1) {
     dest = PCTFS_my_id^mask;
@@ -315,7 +315,7 @@ PetscErrorCode PCTFS_ssgl_radd(PetscScalar *vals,  PetscScalar *work,  PetscInt 
       dest = edge_node[level-edge-1];
       type = MSGTAG6 + PCTFS_my_id + (PCTFS_num_nodes*edge);
       ierr = MPI_Comm_get_attr(MPI_COMM_WORLD,MPI_TAG_UB,&maxval,&flg);CHKERRMPI(ierr);
-      PetscCheckFalse(!flg,PETSC_COMM_SELF,PETSC_ERR_LIB,"MPI error: MPI_Comm_get_attr() is not returning a MPI_TAG_UB");
+      PetscCheck(flg,PETSC_COMM_SELF,PETSC_ERR_LIB,"MPI error: MPI_Comm_get_attr() is not returning a MPI_TAG_UB");
       PetscCheckFalse(*maxval <= type,PETSC_COMM_SELF,PETSC_ERR_PLIB,"MPI_TAG_UB for your current MPI implementation is not large enough to use PCTFS");
       if (PCTFS_my_id<dest) {
         ierr = MPI_Send(vals+segs[level-1-edge],stage_n,MPIU_SCALAR,dest,type,MPI_COMM_WORLD);CHKERRMPI(ierr);
@@ -340,7 +340,7 @@ PetscErrorCode PCTFS_giop_hc(PetscInt *vals, PetscInt *work, PetscInt n, PetscIn
 
   PetscFunctionBegin;
   /* ok ... should have some data, work, and operator(s) */
-  PetscCheckFalse(!vals||!work||!oprs,PETSC_COMM_SELF,PETSC_ERR_PLIB,"PCTFS_giop_hc() :: vals=%D, work=%D, oprs=%D",vals,work,oprs);
+  PetscCheck(vals && work && oprs,PETSC_COMM_SELF,PETSC_ERR_PLIB,"PCTFS_giop_hc() :: vals=%D, work=%D, oprs=%D",vals,work,oprs);
 
   /* non-uniform should have at least two entries */
   PetscCheckFalse((oprs[0] == NON_UNIFORM)&&(n<2),PETSC_COMM_SELF,PETSC_ERR_PLIB,"PCTFS_giop_hc() :: non_uniform and n=0,1?");
@@ -363,7 +363,7 @@ PetscErrorCode PCTFS_giop_hc(PetscInt *vals, PetscInt *work, PetscInt n, PetscIn
   /* advance to list of n operations for custom */
   if ((type=oprs[0])==NON_UNIFORM) oprs++;
 
-  PetscCheckFalse(!(fp = (vfp) PCTFS_ivec_fct_addr(type)),PETSC_COMM_SELF,PETSC_ERR_PLIB,"PCTFS_giop_hc() :: Could not retrieve function pointer!");
+  PetscCheck(fp = (vfp) PCTFS_ivec_fct_addr(type),PETSC_COMM_SELF,PETSC_ERR_PLIB,"PCTFS_giop_hc() :: Could not retrieve function pointer!");
 
   for (mask=1,edge=0; edge<dim; edge++,mask<<=1) {
     dest = PCTFS_my_id^mask;

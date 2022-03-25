@@ -151,11 +151,11 @@ PetscErrorCode PCTelescopeSetUp_CoarseDM(PC pc,PC_Telescope sred)
           if (dmfine_kspctx == dmfine_appctx) {
             dmcoarse_kspctx = dmcoarse_appctx;
             ierr = PetscInfo(pc,"PCTelescope: KSPSetComputeOperators using context from DM->ApplicationContext\n");CHKERRQ(ierr);
-            PetscCheckFalse(!dmcoarse_kspctx,PETSC_COMM_SELF,PETSC_ERR_USER,"Non NULL dmfine->kspctx == dmfine->appctx. NULL dmcoarse->appctx found. Likely this is an error");
+            PetscCheck(dmcoarse_kspctx,PETSC_COMM_SELF,PETSC_ERR_USER,"Non NULL dmfine->kspctx == dmfine->appctx. NULL dmcoarse->appctx found. Likely this is an error");
           } else if (dmfine_kspctx == dmfine_shellctx) {
             dmcoarse_kspctx = dmcoarse_shellctx;
             ierr = PetscInfo(pc,"PCTelescope: KSPSetComputeOperators using context from DMShell->Context\n");CHKERRQ(ierr);
-            PetscCheckFalse(!dmcoarse_kspctx,PETSC_COMM_SELF,PETSC_ERR_USER,"Non NULL dmfine->kspctx == dmfine.shell->ctx. NULL dmcoarse.shell->ctx found. Likely this is an error");
+            PetscCheck(dmcoarse_kspctx,PETSC_COMM_SELF,PETSC_ERR_USER,"Non NULL dmfine->kspctx == dmfine.shell->ctx. NULL dmcoarse.shell->ctx found. Likely this is an error");
           }
           ctx->dmksp_context_determined = dmcoarse_kspctx;
 
@@ -197,8 +197,8 @@ PetscErrorCode PCTelescopeSetUp_CoarseDM(PC pc,PC_Telescope sred)
     }
   }
 
-  PetscCheckFalse(!has_perm && has_kspcomputeoperators && !using_kspcomputeoperators,comm,PETSC_ERR_SUP,"No method to permute an operator was found on the parent DM. A method for KSPSetComputeOperators() was provided but it was requested to be ignored. Telescope setup cannot proceed");
-  PetscCheckFalse(!has_perm && !has_kspcomputeoperators,comm,PETSC_ERR_SUP,"No method to permute an operator was found on the parent DM. No method for KSPSetComputeOperators() was provided. Telescope setup cannot proceed");
+  PetscCheck(has_perm || !has_kspcomputeoperators || using_kspcomputeoperators,comm,PETSC_ERR_SUP,"No method to permute an operator was found on the parent DM. A method for KSPSetComputeOperators() was provided but it was requested to be ignored. Telescope setup cannot proceed");
+  PetscCheck(has_perm || has_kspcomputeoperators,comm,PETSC_ERR_SUP,"No method to permute an operator was found on the parent DM. No method for KSPSetComputeOperators() was provided. Telescope setup cannot proceed");
 
   {
     char dmfine_method[PETSC_MAX_PATH_LEN];
@@ -319,7 +319,7 @@ PetscErrorCode PCTelescopeMatNullSpaceCreate_CoarseDM(PC pc,PC_Telescope sred,Ma
 
           ierr = PetscSNPrintf(dmcoarse_method,sizeof(dmcoarse_method),"PCTelescopeGetCoarseDMNullSpaceUserContext");CHKERRQ(ierr);
           ierr = PetscObjectQueryFunction((PetscObject)ctx->dm_coarse,dmcoarse_method,&fp_get_coarsedm_context);CHKERRQ(ierr);
-          PetscCheckFalse(!context,PETSC_COMM_SELF,PETSC_ERR_SUP,"Propagation of user null-space removal method with non-NULL context requires the coarse DM be composed with a function named \"%s\"",dmcoarse_method);
+          PetscCheck(context,PETSC_COMM_SELF,PETSC_ERR_SUP,"Propagation of user null-space removal method with non-NULL context requires the coarse DM be composed with a function named \"%s\"",dmcoarse_method);
           ierr = MatNullSpaceSetFunction(sub_nullspace,nullspace->remove,context);CHKERRQ(ierr);
         }
       }
@@ -348,7 +348,7 @@ PetscErrorCode PCTelescopeMatNullSpaceCreate_CoarseDM(PC pc,PC_Telescope sred,Ma
 
           ierr = PetscSNPrintf(dmcoarse_method,sizeof(dmcoarse_method),"PCTelescopeGetCoarseDMNearNullSpaceUserContext");CHKERRQ(ierr);
           ierr = PetscObjectQueryFunction((PetscObject)ctx->dm_coarse,dmcoarse_method,&fp_get_coarsedm_context);CHKERRQ(ierr);
-          PetscCheckFalse(!context,PETSC_COMM_SELF,PETSC_ERR_SUP,"Propagation of user near null-space removal method with non-NULL context requires the coarse DM be composed with a function named \"%s\"",dmcoarse_method);
+          PetscCheck(context,PETSC_COMM_SELF,PETSC_ERR_SUP,"Propagation of user near null-space removal method with non-NULL context requires the coarse DM be composed with a function named \"%s\"",dmcoarse_method);
           ierr = MatNullSpaceSetFunction(sub_nearnullspace,nearnullspace->remove,context);CHKERRQ(ierr);
         }
       }
