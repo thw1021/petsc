@@ -2519,7 +2519,6 @@ PetscErrorCode PCBDDCBenignCheck(PC pc, IS zerodiag)
   ierr = PCBDDCBenignGetOrSetP0(pc,pcis->vec1_global,PETSC_TRUE);CHKERRQ(ierr);
   for (i=0;i<pcbddc->benign_n;i++) {
     PetscInt val = PetscRealPart(pcbddc->benign_p0[i]);
-    /* Surely this should not be using PetscGlobalRank */
     PetscCheck(val == -PetscGlobalRank-i,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Error testing PCBDDCBenignGetOrSetP0! Found %g at %D instead of %g",(double)PetscRealPart(pcbddc->benign_p0[i]),i,-PetscGlobalRank-i);
   }
   PetscFunctionReturn(0);
