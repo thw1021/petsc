@@ -1590,6 +1590,9 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
   PetscBT        btable;
   PetscPartitioner         part;
   DMNetworkComponentHeader header;
+#if defined(PETSC_HAVE_PARMETIS)
+  PetscBool success;
+#endif
 
   PetscFunctionBegin;
   PetscValidPointer(dm,1);
@@ -1613,6 +1616,10 @@ PetscErrorCode DMNetworkDistribute(DM *dm,PetscInt overlap)
   /* Distribute plex dm */
   ierr = DMPlexDistribute(oldDMnetwork->plex,overlap,&pointsf,&newDMnetwork->plex);CHKERRQ(ierr);
 
+  /* redistribute the plex vertices */
+#if defined(PETSC_HAVE_PARMETIS)
+  ierr = DMPlexRebalanceSharedPoints(newDMnetwork->plex,0,PETSC_TRUE,PETSC_TRUE,&success);CHKERRQ(ierr);
+#endif
   /* Distribute dof section */
   ierr = PetscSectionCreate(comm,&newDMnetwork->DofSection);CHKERRQ(ierr);
   ierr = PetscSFDistributeSection(pointsf,oldDMnetwork->DofSection,NULL,newDMnetwork->DofSection);CHKERRQ(ierr);

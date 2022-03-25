@@ -149,13 +149,12 @@ PetscErrorCode FormOperator(DM dmnetwork,Mat A,Vec b)
   PetscInt          lofst,lofst_to,lofst_fr,row[2],col[6];
   PetscBool         ghost;
   const PetscInt    *cone;
-  PetscScalar       *barr,val[6];
+  PetscScalar       val[6];
 
   PetscFunctionBegin;
   ierr = MatZeroEntries(A);CHKERRQ(ierr);
 
   ierr = VecSet(b,0.0);CHKERRQ(ierr);
-  ierr = VecGetArray(b,&barr);CHKERRQ(ierr);
 
   /*
     We define the current i as an "edge characteristic" and the voltage v as a "vertex characteristic".
@@ -175,7 +174,7 @@ PetscErrorCode FormOperator(DM dmnetwork,Mat A,Vec b)
     ierr = DMNetworkGetLocalVecOffset(dmnetwork,cone[1],ALL_COMPONENTS,&lofst_to);CHKERRQ(ierr);
 
     /* set rhs b for Branch equation */
-    barr[lofst] = branch->bat;
+    ierr = VecSetValuesLocal(b,1,&lofst,&branch->bat,ADD_VALUES);CHKERRQ(ierr);
 
     /* set Branch equation */
     row[0] = lofst;
@@ -211,19 +210,17 @@ PetscErrorCode FormOperator(DM dmnetwork,Mat A,Vec b)
     if (!ghost) {
       ierr = DMNetworkGetComponent(dmnetwork,v,0,NULL,(void**)&node,NULL);CHKERRQ(ierr);
       ierr = DMNetworkGetLocalVecOffset(dmnetwork,v,ALL_COMPONENTS,&lofst);CHKERRQ(ierr);
-
       if (node->gr) { /* a boundary node */
         row[0] = lofst;
         col[0] = lofst;   val[0] = 1;
         ierr = MatSetValuesLocal(A,1,row,1,col,val,ADD_VALUES);CHKERRQ(ierr);
       } else {       /* not a boundary node */
-        barr[lofst] += node->inj;
+        ierr = VecSetValuesLocal(b,1,&lofst,&node->inj,ADD_VALUES);CHKERRQ(ierr);
       }
     }
   }
-
-  ierr = VecRestoreArray(b,&barr);CHKERRQ(ierr);
-
+  ierr = VecAssemblyBegin(b);CHKERRQ(ierr);
+  ierr = VecAssemblyEnd(b);CHKERRQ(ierr);
   ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
   PetscFunctionReturn(0);
@@ -295,7 +292,7 @@ int main(int argc,char ** argv)
 
   /* Assembly system of equations */
   ierr = FormOperator(dmnetwork,A,b);CHKERRQ(ierr);
-
+  ierr = VecView(b, PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
   /* Solve linear system: A x = b */
   ierr = KSPCreate(PETSC_COMM_WORLD, &ksp);CHKERRQ(ierr);
   ierr = KSPSetOperators(ksp, A, A);CHKERRQ(ierr);
@@ -322,6 +319,7 @@ int main(int argc,char ** argv)
       args: -ksp_monitor_short
 
    test:
+      requires: parmetis
       suffix: 2
       nsize: 2
       args: -petscpartitioner_type simple -ksp_converged_reason

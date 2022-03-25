@@ -13,10 +13,11 @@ PetscInt PetscGCD(PetscInt a, PetscInt b) {
 
 PetscErrorCode DMCreateGlobalVector_Section_Private(DM dm,Vec *vec)
 {
-  PetscSection   gSection;
-  PetscInt       localSize, bs, blockSize = -1, pStart, pEnd, p;
-  PetscErrorCode ierr;
-  PetscInt       in[2],out[2];
+  PetscSection           gSection;
+  PetscInt               localSize, bs, blockSize = -1, pStart, pEnd, p;
+  PetscErrorCode         ierr;
+  PetscInt               in[2],out[2];
+  ISLocalToGlobalMapping ltog;
 
   PetscFunctionBegin;
   ierr = DMGetGlobalSection(dm, &gSection);CHKERRQ(ierr);
@@ -57,7 +58,8 @@ PetscErrorCode DMCreateGlobalVector_Section_Private(DM dm,Vec *vec)
   ierr = VecSetBlockSize(*vec, bs);CHKERRQ(ierr);
   ierr = VecSetType(*vec,dm->vectype);CHKERRQ(ierr);
   ierr = VecSetDM(*vec, dm);CHKERRQ(ierr);
-  /* ierr = VecSetLocalToGlobalMapping(*vec, dm->ltogmap);CHKERRQ(ierr); */
+  ierr = DMGetLocalToGlobalMapping(dm,&ltog);CHKERRQ(ierr);
+  ierr = VecSetLocalToGlobalMapping(*vec,ltog);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 
