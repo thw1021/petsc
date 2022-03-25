@@ -1867,6 +1867,7 @@ PetscErrorCode PCBDDCSubSchursSetUp(PCBDDCSubSchurs sub_schurs, Mat Ain, Mat Sin
   }
 
   /* free workspace */
+  if (matl_dbg_viewer) { ierr = PetscViewerFlush(matl_dbg_viewer);CHKERRQ(ierr); }
   ierr = PetscViewerDestroy(&matl_dbg_viewer);CHKERRQ(ierr);
   ierr = PetscFree2(Bwork,pivots);CHKERRQ(ierr);
   ierr = PetscCommDestroy(&comm_n);CHKERRQ(ierr);

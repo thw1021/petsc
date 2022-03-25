@@ -1825,6 +1825,11 @@ boundary:
       PetscReal      *coords;
       PetscInt       d,cdim,nl,nf,**ctxs;
       PetscErrorCode (**funcs)(PetscInt, PetscReal, const PetscReal *, PetscInt, PetscScalar *, void *);
+      /* debug coordinates */
+      PetscViewer       viewer;
+      PetscBool         flg;
+      PetscViewerFormat format;
+      const char        *prefix;
 
       ierr = DMGetCoordinateDim(dm,&cdim);CHKERRQ(ierr);
       ierr = DMGetLocalSection(dm,&section);CHKERRQ(ierr);
@@ -1836,12 +1841,23 @@ boundary:
       ierr = PetscMalloc1(nf,&ctxs[0]);CHKERRQ(ierr);
       for (d=0;d<nf;d++) funcs[d] = func_coords_private;
       for (d=1;d<nf;d++) ctxs[d] = ctxs[d-1] + 1;
+
+      /* debug coordinates */
+      ierr = PCGetOptionsPrefix(pc,&prefix);CHKERRQ(ierr);
+      ierr = PetscOptionsGetViewer(PetscObjectComm((PetscObject)vcoords),((PetscObject)vcoords)->options,prefix,"-pc_bddc_coords_vec_view",&viewer,&format,&flg);CHKERRQ(ierr);
+      if (flg) {
+        ierr = PetscViewerPushFormat(viewer,format);CHKERRQ(ierr);
+      }
       for (d=0;d<cdim;d++) {
         PetscInt          i;
         const PetscScalar *v;
+        char              name[16];
 
         for (i=0;i<nf;i++) ctxs[i][0] = d;
+        ierr = PetscSNPrintf(name,sizeof(name),"bddc_coords_%d",(int)d);CHKERRQ(ierr);
+        ierr = PetscObjectSetName((PetscObject)vcoords,name);CHKERRQ(ierr);
         ierr = DMProjectFunction(dm,0.0,funcs,(void**)ctxs,INSERT_VALUES,vcoords);CHKERRQ(ierr);
+        if (flg) { ierr = VecView(vcoords,viewer);CHKERRQ(ierr); }
         ierr = VecGetArrayRead(vcoords,&v);CHKERRQ(ierr);
         for (i=0;i<nl;i++) coords[i*cdim+d] = PetscRealPart(v[i]);
         ierr = VecRestoreArrayRead(vcoords,&v);CHKERRQ(ierr);
@@ -1851,6 +1867,10 @@ boundary:
       ierr = PetscFree(coords);CHKERRQ(ierr);
       ierr = PetscFree(ctxs[0]);CHKERRQ(ierr);
       ierr = PetscFree2(funcs,ctxs);CHKERRQ(ierr);
+      if (flg) {
+        ierr = PetscViewerPopFormat(viewer);CHKERRQ(ierr);
+        ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
+      }
     }
   }
   PetscFunctionReturn(0);
