@@ -613,7 +613,7 @@ PetscErrorCode MatDestroy_MPIAIJCUSPARSE(Mat A)
   }
   /* Free COO */
   PetscCall(MatResetPreallocationCOO_MPIAIJCUSPARSE(A));
-  PetscCallCXX(delete cusparseStruct;)
+  PetscCallCXX(delete cusparseStruct);
   PetscCall(PetscObjectComposeFunction((PetscObject)A,"MatMPIAIJSetPreallocation_C",NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A,"MatMPIAIJGetLocalMatMerge_C",NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A,"MatSetPreallocationCOO_C",NULL));
