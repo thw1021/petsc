@@ -535,7 +535,10 @@ static PetscErrorCode DMPlexTransformMapCoordinates_Extrude(DMPlexTransform tr, 
   if (ex->normalFunc) {
     PetscScalar n[3];
     PetscReal   x[3];
-    for (d = 0; d < ex->cdim; ++d) x[d] = PetscRealPart(in[d]);
+    for (d = 0; d < ex->cdim; ++d) {
+      x[d] = PetscRealPart(in[d]);
+      n[d] = normal[d];
+    }
     PetscCall((*ex->normalFunc)(ex->cdim, 0., x, r, n, NULL));
     for (d = 0; d < dEx; ++d) normal[d] = PetscRealPart(n[d]);
   }
