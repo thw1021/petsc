@@ -4848,6 +4848,11 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJ(Mat mat, PetscCount coo_n, const Pe
 
   seqaij->singlemalloc = PETSC_FALSE; /* Ai, Aj and Aa are not allocated in one big malloc */
   seqaij->free_a       = seqaij->free_ij = PETSC_TRUE; /* Let newmat own Ai, Aj and Aa */
+
+  /* Anyway, we need to mark the matrix as assembled, so I would rather call the canoical MatAssemblyBegin/End() */
+  ierr = MatAssemblyBegin(mat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+  ierr = MatAssemblyEnd(mat,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+
   /* Record COO fields */
   seqaij->coo_n        = coo_n;
   seqaij->Atot         = coo_n-nneg; /* Annz is seqaij->nz, so no need to record that again */
