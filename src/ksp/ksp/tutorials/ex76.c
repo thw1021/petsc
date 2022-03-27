@@ -101,9 +101,8 @@ int main(int argc,char **args)
     PetscCall(MatAssemblyBegin(P,MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(P,MAT_FINAL_ASSEMBLY));
     PetscCall(PetscObjectTypeCompare((PetscObject)a,MATSEQAIJ,&flg));
-    if (flg) {
-      PetscCall(MatPtAP(a,P,MAT_INITIAL_MATRIX,1.0,&X)); /* MatPtAP() is used to extend diagonal blocks with zeros on the overlap */
-    } else { /* workaround for MatPtAP() limitations with some types */
+    if (flg) PetscCall(MatPtAP(a,P,MAT_INITIAL_MATRIX,1.0,&X)); /* MatPtAP() is used to extend diagonal blocks with zeros on the overlap */
+    else { /* workaround for MatPtAP() limitations with some types */
       PetscCall(MatConvert(a,MATSEQAIJ,MAT_INITIAL_MATRIX,&c));
       PetscCall(MatPtAP(c,P,MAT_INITIAL_MATRIX,1.0,&X));
       PetscCall(MatDestroy(&c));
@@ -116,9 +115,20 @@ int main(int argc,char **args)
     PetscCall(MatDestroy(&B));
   }
 #endif
-  PetscCall(ISDestroy(&is));
   PetscCall(MatDestroy(&aux));
   PetscCall(KSPSetFromOptions(ksp));
+  PetscCall(PetscObjectTypeCompare((PetscObject)pc,PCASM,&flg));
+  if (flg) {
+    flg = PETSC_FALSE;
+    PetscCall(PetscOptionsGetBool(NULL,NULL,"-pc_hpddm_define_subdomains",&flg,NULL));
+    if (flg) {
+      IS rows;
+      PetscCall(MatGetOwnershipIS(A,&rows,NULL));
+      PetscCall(PCASMSetLocalSubdomains(pc,1,&is,&rows));
+      PetscCall(ISDestroy(&rows));
+    }
+  }
+  PetscCall(ISDestroy(&is));
   PetscCall(MatCreateVecs(A,&x,&b));
   PetscCall(VecSet(b,1.0));
   PetscCall(KSPSolve(ksp,b,x));
@@ -159,24 +169,20 @@ int main(int argc,char **args)
   }
   PetscCall(PetscObjectTypeCompare((PetscObject)pc,PCHPDDM,&flg));
 #if defined(PETSC_HAVE_HPDDM) && defined(PETSC_HAVE_DYNAMIC_LIBRARIES) && defined(PETSC_USE_SHARED_LIBRARIES)
-  if (flg) {
-    PetscCall(PCHPDDMGetSTShareSubKSP(pc,&flg));
-  }
+  if (flg) PetscCall(PCHPDDMGetSTShareSubKSP(pc,&flg));
 #endif
   if (flg && PetscDefined(USE_LOG)) {
     PetscCall(PetscLogEventRegister("MatLUFactorSym",PC_CLASSID,&event));
     PetscCall(PetscLogEventGetPerfInfo(PETSC_DETERMINE,event,&info1));
     PetscCall(PetscLogEventRegister("MatLUFactorNum",PC_CLASSID,&event));
     PetscCall(PetscLogEventGetPerfInfo(PETSC_DETERMINE,event,&info2));
-    if (info1.count || info2.count) {
-      PetscCheck(info2.count > info1.count,PETSC_COMM_SELF,PETSC_ERR_PLIB,"LU numerical factorization (%d) not called more times than LU symbolic factorization (%d), broken -pc_hpddm_levels_1_st_share_sub_ksp",info2.count,info1.count);
-    } else {
+    if (!info1.count && !info2.count) {
       PetscCall(PetscLogEventRegister("MatCholFctrSym",PC_CLASSID,&event));
       PetscCall(PetscLogEventGetPerfInfo(PETSC_DETERMINE,event,&info1));
       PetscCall(PetscLogEventRegister("MatCholFctrNum",PC_CLASSID,&event));
       PetscCall(PetscLogEventGetPerfInfo(PETSC_DETERMINE,event,&info2));
       PetscCheck(info2.count > info1.count,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Cholesky numerical factorization (%d) not called more times than Cholesky symbolic factorization (%d), broken -pc_hpddm_levels_1_st_share_sub_ksp",info2.count,info1.count);
-    }
+    } else PetscCheck(info2.count > info1.count,PETSC_COMM_SELF,PETSC_ERR_PLIB,"LU numerical factorization (%d) not called more times than LU symbolic factorization (%d), broken -pc_hpddm_levels_1_st_share_sub_ksp",info2.count,info1.count);
   }
   PetscCall(KSPDestroy(&ksp));
   PetscCall(MatDestroy(&A));
@@ -190,6 +196,12 @@ int main(int argc,char **args)
       requires: hpddm slepc datafilespath double !complex !defined(PETSC_USE_64BIT_INDICES) defined(PETSC_HAVE_DYNAMIC_LIBRARIES) defined(PETSC_USE_SHARED_LIBRARIES)
       nsize: 4
       args: -ksp_rtol 1e-3 -ksp_converged_reason -pc_type {{bjacobi hpddm}shared output} -pc_hpddm_coarse_sub_pc_type lu -sub_pc_type lu -options_left no -load_dir ${DATAFILESPATH}/matrices/hpddm/GENEO
+
+   test:
+      requires: hpddm slepc datafilespath double !complex !defined(PETSC_USE_64BIT_INDICES) defined(PETSC_HAVE_DYNAMIC_LIBRARIES) defined(PETSC_USE_SHARED_LIBRARIES)
+      suffix: define_subdomains
+      nsize: 4
+      args: -ksp_rtol 1e-3 -ksp_converged_reason -pc_type {{asm hpddm}shared output} -pc_hpddm_coarse_sub_pc_type lu -sub_pc_type lu -pc_hpddm_define_subdomains -options_left no -load_dir ${DATAFILESPATH}/matrices/hpddm/GENEO
 
    testset:
       requires: hpddm slepc datafilespath double !complex !defined(PETSC_USE_64BIT_INDICES) defined(PETSC_HAVE_DYNAMIC_LIBRARIES) defined(PETSC_USE_SHARED_LIBRARIES)
