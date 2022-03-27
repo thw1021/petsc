@@ -213,7 +213,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt NUserV, const PetscInt a_Np, cons
   KSP             t_ksp[LANDAU_MAX_GRIDS][MAX_NUM_THRDS];
   Vec             t_fhat[LANDAU_MAX_GRIDS][MAX_NUM_THRDS];
   PetscInt        nDMs, glb_b_id;
-  PetscErrorCode  ierr=0;
+  PetscErrorCode  ierr = 0;
 #if defined(PETSC_HAVE_OPENMP) && defined(PETSC_HAVE_THREADSAFETY)
   PetscInt        numthreads = PetscNumOMPThreads;
 #else
