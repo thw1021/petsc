@@ -82,7 +82,7 @@ PetscErrorCode gridToParticles(const DM dm, DM sw, Vec rhs, Vec work, Mat M_p, M
   PetscCall(KSPCreate(PETSC_COMM_SELF, &ksp));
   PetscCall(KSPSetOptionsPrefix(ksp, "ftop_"));
   PetscCall(KSPSetFromOptions(ksp));
-  PetscCall(PetscObjectTypeCompare((PetscObject)ksp,KSPLSQR,&is_lsqr);
+  PetscCall(PetscObjectTypeCompare((PetscObject)ksp,KSPLSQR,&is_lsqr));
   if (!is_lsqr) {
     PetscCall(MatGetLocalSize(M_p, &M, &N));
     if (N>M) {
@@ -109,7 +109,7 @@ PetscErrorCode gridToParticles(const DM dm, DM sw, Vec rhs, Vec work, Mat M_p, M
         PetscCall(MatGetRow(matshellctx->MpTrans,i,&nzl,&cols,&vals));
         for (int ii=0 ; ii<nzl ; ii++) dot += PetscSqr(vals[ii]);
         PetscCheck(dot!=0.0,PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Row %" PetscInt_FMT " is empty", i);
-        PetscCall(MatSetValue(D,i,i,dot,INSERT_VALUES);
+        PetscCall(MatSetValue(D,i,i,dot,INSERT_VALUES));
       }
       PetscCall(MatAssemblyBegin(D, MAT_FINAL_ASSEMBLY));
       PetscCall(MatAssemblyEnd(D, MAT_FINAL_ASSEMBLY));
@@ -124,7 +124,7 @@ PetscErrorCode gridToParticles(const DM dm, DM sw, Vec rhs, Vec work, Mat M_p, M
     PC        pc;
     PetscBool is_bjac;
     PetscCall(KSPGetPC(ksp,&pc));
-    PetscCall(PetscObjectTypeCompare((PetscObject)pc,PCBJACOBI,&is_bjac);
+    PetscCall(PetscObjectTypeCompare((PetscObject)pc,PCBJACOBI,&is_bjac));
     if (is_bjac) {
       PetscCall(DMSwarmCreateMassMatrixSquare(sw, dm, &PM_p));
       PetscCall(KSPSetOperators(ksp, M_p, PM_p));
@@ -148,7 +148,7 @@ PetscErrorCode gridToParticles(const DM dm, DM sw, Vec rhs, Vec work, Mat M_p, M
   PetscCall(KSPDestroy(&ksp));
   /* Visualize particle field */
   PetscCall(VecViewFromOptions(ff, NULL, "-weights_view"));
-  PetscCall(MatDestroy(&PM_p);
+  PetscCall(MatDestroy(&PM_p));
   PetscCall(DMSwarmDestroyGlobalVectorFromField(sw, "w_q", &ff));
 
   PetscFunctionReturn(0);
@@ -261,7 +261,6 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt NUserV, const PetscInt a_Np, cons
     PetscCall(DMCompositeGetAccessArray(pack, X, nDMs, NULL, globXArray));
     if (b_target >= global_batch_id && b_target < global_batch_id+ctx->batch_sz) {
       PetscCall(PetscObjectSetName((PetscObject)globXArray[LAND_PACK_IDX(b_target%ctx->batch_sz,g_target)], "rho"));
-      //PetscCall(VecViewFromOptions(globXArray[LAND_PACK_IDX(b_target%ctx->batch_sz,g_target)],NULL,"-ex29_vec_view"));
     }
     PetscCall(VecZeroEntries(X));
     // create fake particles
@@ -492,7 +491,7 @@ int main(int argc, char **argv)
   PetscCall(DMPlexLandauDestroyVelocitySpace(&pack));
   PetscCall(TSDestroy(&ts));
   PetscCall(VecDestroy(&X));
-  PetscCall(PetscFinalize();
+  PetscCall(PetscFinalize());
   return 0;
 }
 
