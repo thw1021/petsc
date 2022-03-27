@@ -190,8 +190,6 @@ PetscErrorCode DMPlexCreateCoordinateSpace(DM dm, PetscInt degree, PetscPointFun
     if (degree == PETSC_DECIDE) fe = NULL;
     else {
       PetscCall(PetscFECreateLagrange(PETSC_COMM_SELF, dim, dE, simplex, degree, qorder, &fe));
-      PetscCall(DMSetField(cdm, 0, NULL, (PetscObject) fe));
-      PetscCall(DMCreateDS(cdm));
     }
     PetscCall(DMProjectCoordinates(dm, fe));
     PetscCall(PetscFEDestroy(&fe));
