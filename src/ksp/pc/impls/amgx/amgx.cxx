@@ -51,14 +51,14 @@ static void print_callback(const char *msg, int length)
 
     if (rank == 0)
     {
-        printf("%s", msg);
+      PetscPrintf(PETSC_COMM_SELF,"%s", msg);
     }
 }
 
 // XXX Presumably PETSc has some routines that can be used instead here?
 PetscErrorCode print_error(char const* file, int const line, cudaError_t error)
 {
-    SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_SIG, "Error: %s:%d, code:%d, name: %s, reason: %s\n",file, line, error, cudaGetErrorName(error), cudaGetErrorString(error));
+    SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_SIG, "Error: %s:%d, code:%d, name: %s, reason: %s",file, line, error, cudaGetErrorName(error), cudaGetErrorString(error));
 }
 
 /** \brief A macro to check the returned CUDA error code.
@@ -151,13 +151,13 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
 
         if (!done)
         {
-            SETERRQ(amgx->comm, PETSC_ERR_PLIB, "MatGetRowIJ was not successful\n");
+            SETERRQ(amgx->comm, PETSC_ERR_PLIB, "MatGetRowIJ was not successful");
         }
         if (rawN != amgx->nLocalRows)
         {
             SETERRQ(amgx->comm, PETSC_ERR_PLIB,
                      "MatGetRowIJ disagrees with MatGetLocalSize "
-                     "rawN != nLocalRows %D %D\n", rawN, amgx->nLocalRows);
+                     "rawN != nLocalRows %D %D", rawN, amgx->nLocalRows);
         }
 
         PetscCall(MatSeqAIJGetArray(amgx->localA, &amgx->values));
@@ -202,7 +202,7 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
         {
             SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB,
                 "PETSc compiled with 64-bit integers. "
-                "AmgX backend does not currently support\n");
+                "AmgX backend does not currently support");
         }
 
         // Create the distribution and upload the matrix data
@@ -277,7 +277,7 @@ static PetscErrorCode PCApply_AMGX(PC pc, Vec b, Vec x)
     {
         SETERRQ(amgx->comm, PETSC_ERR_CONV_FAILED,
                  "AmgX solver failed to solve the system! "
-                 "The error code is %d.\n",
+                 "The error code is %d.",
                  status);
     }
 
@@ -366,7 +366,7 @@ static PetscErrorCode PCSetFromOptions_AMGX(PetscOptionItems *PetscOptionsObject
     if (!exists)
     {
         // XXX Fix
-        printf("Parameter -pc_amgx_json incorrect.\n");
+        PetscPrintf(PETSC_COMM_SELF,"Parameter -pc_amgx_json incorrect.\n");
 
         /* try to add prefix */
         char str[PETSC_MAX_PATH_LEN];
@@ -383,7 +383,7 @@ static PetscErrorCode PCSetFromOptions_AMGX(PetscOptionItems *PetscOptionsObject
     }
     else
     {
-        printf("As per -pc_amgx_json, found parameter file at %s.\n", amgx->filename);
+        PetscPrintf(PETSC_COMM_SELF,"As per -pc_amgx_json, found parameter file at %s.\n", amgx->filename);
     }
 
     PetscCall(PetscOptionsTail());
@@ -461,7 +461,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_AMGX(PC pc)
 #ifdef _WIN32
         amgx->lib_handle = amgx_libopen("amgxsh.dll");
 #else
-        printf("dynamic loading\n");
+        PetscPrintf(PETSC_COMM_SELF,"dynamic loading\n");
         amgx->lib_handle = amgx_libopen("libamgxsh.so");
 #endif
         if (amgx->lib_handle == NULL)
