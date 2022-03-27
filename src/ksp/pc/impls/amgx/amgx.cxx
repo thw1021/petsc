@@ -58,8 +58,7 @@ static void print_callback(const char *msg, int length)
 // XXX Presumably PETSc has some routines that can be used instead here?
 PetscErrorCode print_error(char const* file, int const line, cudaError_t error)
 {
-    SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_SIG, "Error: %s:%d, code:%d, name: %s, reason: %s\n",
-            file, line, error, cudaGetErrorName(error), cudaGetErrorString(error));
+    SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_SIG, "Error: %s:%d, code:%d, name: %s, reason: %s\n",file, line, error, cudaGetErrorName(error), cudaGetErrorString(error));
 }
 
 /** \brief A macro to check the returned CUDA error code.
