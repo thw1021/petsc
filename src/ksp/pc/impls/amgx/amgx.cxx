@@ -56,7 +56,7 @@ static void print_callback(const char *msg, int length)
 }
 
 // XXX Presumably PETSc has some routines that can be used instead here?
-PetscErrorCode print_error(char const* file, int const line, cudaError_t error) 
+PetscErrorCode print_error(char const* file, int const line, cudaError_t error)
 {
     SETERRQ5(PETSC_COMM_WORLD, PETSC_ERR_SIG, "Error: %s:%d, code:%d, name: %s, reason: %s\n",
               file, line, error, cudaGetErrorName(error), cudaGetErrorString(error));
@@ -110,13 +110,10 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
         AMGX_vector_create(&amgx->P, amgx->rsrc, AMGX_mode_dDDI);
         AMGX_vector_create(&amgx->RHS, amgx->rsrc, AMGX_mode_dDDI);
         AMGX_solver_create(&amgx->solver, amgx->rsrc, AMGX_mode_dDDI, amgx->cfg);
-
-        PetscErrorCode ierr = MatGetLocalSize(Pmat, &amgx->nLocalRows, NULL);
-        CHKERRQ(ierr);
+        PetscCall(MatGetLocalSize(Pmat, &amgx->nLocalRows, NULL));
 
         PetscInt bs;
-        ierr = MatGetBlockSize(Pmat, &bs);
-        CHKERRQ(ierr);
+        PetscCall(MatGetBlockSize(Pmat, &bs));
 
         // XXX This is probably true internally for global rows too, so perhaps
         // a check for that should be implemented
@@ -135,8 +132,7 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
 
         // Need some robust check to determine if the matrix is an AmgX matrix
         PetscBool isAmgXMatrix;
-        ierr = PetscObjectTypeCompare((PetscObject)Pmat, MATSEQAIJ, &isAmgXMatrix);
-        CHKERRQ(ierr);
+        PetscCall(PetscObjectTypeCompare((PetscObject)Pmat, MATSEQAIJ, &isAmgXMatrix));
 
         // At the present time, an AmgX matrix is a sequential matrix
         // Non-sequential/MPI matrices must be adapted to extract the local matrix
@@ -146,15 +142,13 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
         }
         else
         {
-            ierr = MatMPIAIJGetLocalMat(Pmat, MAT_INITIAL_MATRIX, &amgx->localA);
-            CHKERRQ(ierr);
+            PetscCall(MatMPIAIJGetLocalMat(Pmat, MAT_INITIAL_MATRIX, &amgx->localA));
         }
 
         // Extract the CSR data
         PetscInt rawN;
         PetscBool done;
-        ierr = MatGetRowIJ(amgx->localA, 0, PETSC_FALSE, PETSC_FALSE, &rawN, &rowOffsets, &colIndices, &done);
-        CHKERRQ(ierr);
+        PetscCall(MatGetRowIJ(amgx->localA, 0, PETSC_FALSE, PETSC_FALSE, &rawN, &rowOffsets, &colIndices, &done));
 
         if (!done)
         {
@@ -167,8 +161,7 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
                      "rawN != nLocalRows %D %D\n", rawN, amgx->nLocalRows);
         }
 
-        ierr = MatSeqAIJGetArray(amgx->localA, &amgx->values);
-        CHKERRQ(ierr);
+        PetscCall(MatSeqAIJGetArray(amgx->localA, &amgx->values));
 
         if (isAmgXMatrix)
         {
@@ -188,13 +181,11 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
 
         // Allocate space for some partition offsets
         PetscInt *partitionOffsets;
-        ierr = PetscMalloc1(amgx->nranks + 1, &partitionOffsets);
-        CHKERRQ(ierr);
+        PetscCall(PetscMalloc1(amgx->nranks + 1, &partitionOffsets));
 
         // Fetch the number of local rows per rank
         partitionOffsets[0] = 0; /* could use PetscLayoutGetRanges */
-        ierr = MPI_Allgather(&amgx->nLocalRows, sizeof(PetscInt), MPI_BYTE, &partitionOffsets[1], sizeof(PetscInt), MPI_BYTE, amgx->comm);
-        CHKERRQ(ierr);
+        PetscCall(MPI_Allgather(&amgx->nLocalRows, sizeof(PetscInt), MPI_BYTE, &partitionOffsets[1], sizeof(PetscInt), MPI_BYTE, amgx->comm));
 
         // Prefix sum to get offsets
         for (int i = 1; i <= amgx->nranks; i++)
@@ -226,12 +217,9 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
             rowOffsets, colIndices, amgx->values, NULL, dist);
 
         // Must happen AFTER AMGX_matrix_upload_distributed
-        ierr = PetscFree(partitionOffsets);
-        CHKERRQ(ierr);
-        AMGX_distribution_destroy(dist);
+        PetscCall(PetscFree(partitionOffsets));
 
-        ierr = MPI_Barrier(amgx->comm);
-        CHKERRQ(ierr);
+        PetscCall(MPI_Barrier(amgx->comm));
 
         AMGX_solver_setup(amgx->solver, amgx->A);
         AMGX_vector_bind(amgx->P, amgx->A);
@@ -268,22 +256,18 @@ static PetscErrorCode PCApply_AMGX(PC pc, Vec b, Vec x)
     PetscFunctionBegin;
 
     PetscInt n;
-    PetscErrorCode ierr = VecGetLocalSize(x, &n);
-    CHKERRQ(ierr);
+    PetscErrorCode PetscCall(VecGetLocalSize(x, &n));
 
     PetscScalar *unks;
-    ierr = VecGetArray(x, &unks);
-    CHKERRQ(ierr);
+    PetscCall(VecGetArray(x, &unks));
 
     const PetscScalar *rhs;
-    ierr = VecGetArrayRead(b, &rhs);
-    CHKERRQ(ierr);
+    PetscCall(VecGetArrayRead(b, &rhs));
 
     AMGX_vector_upload(amgx->P, n, 1, unks);
     AMGX_vector_upload(amgx->RHS, n, 1, rhs);
 
-    ierr = MPI_Barrier(amgx->comm);
-    CHKERRQ(ierr);
+    PetscCall(MPI_Barrier(amgx->comm));
 
     AMGX_solver_solve(amgx->solver, amgx->RHS, amgx->P);
 
@@ -300,10 +284,8 @@ static PetscErrorCode PCApply_AMGX(PC pc, Vec b, Vec x)
 
     AMGX_vector_download(amgx->P, unks);
 
-    ierr = VecRestoreArray(x, &unks);
-    CHKERRQ(ierr);
-    ierr = VecRestoreArrayRead(b, &rhs);
-    CHKERRQ(ierr);
+    PetscCall(VecRestoreArray(x, &unks));
+    PetscCall(VecRestoreArrayRead(b, &rhs));
 
     PetscFunctionReturn(0);
 }
@@ -335,13 +317,9 @@ static PetscErrorCode PCDestroy_AMGX(PC pc)
     PC_AMGX *amgx = (PC_AMGX *)pc->data;
 
     PetscFunctionBegin;
-
-    PetscErrorCode ierr;
-
     // XXX I am not sure it is a good idea to automatically call reset here
     // as it seems to be called internally by PETSc on destroy?
-    // ierr = PCReset(pc);
-    // CHKERRQ(ierr);
+    // PetscCall(PCReset(pc));
 
     /* decrease the number of instances, only the last instance need to destroy resource and finalizing AmgX */
     if (s_count == 1)
@@ -357,8 +335,7 @@ static PetscErrorCode PCDestroy_AMGX(PC pc)
         AMGX_SAFE_CALL(AMGX_config_destroy(amgx->cfg));
         AMGX_SAFE_CALL(AMGX_finalize_plugins());
         AMGX_SAFE_CALL(AMGX_finalize());
-        ierr = MPI_Comm_free(&amgx->comm);
-        CHKERRQ(ierr);
+        PetscCall(MPI_Comm_free(&amgx->comm));
 #ifdef AMGX_DYNAMIC_LOADING
         amgx_libclose(amgx->lib_handle);
 #endif
@@ -368,8 +345,7 @@ static PetscErrorCode PCDestroy_AMGX(PC pc)
         AMGX_SAFE_CALL(AMGX_config_destroy(amgx->cfg));
     }
     s_count -= 1;
-    ierr = PetscFree(amgx);
-    CHKERRQ(ierr);
+    PetscCall(PetscFree(amgx));
 
     PetscFunctionReturn(0);
 }
@@ -379,18 +355,14 @@ static PetscErrorCode PCSetFromOptions_AMGX(PetscOptionItems *PetscOptionsObject
     PC_AMGX *amgx = (PC_AMGX *)pc->data;
 
     PetscFunctionBegin;
-    PetscErrorCode ierr = PetscOptionsHead(PetscOptionsObject, "AMGX options");
-    CHKERRQ(ierr);
+    PetscErrorCode PetscCall(PetscOptionsHead(PetscOptionsObject, "AMGX options"));
 
-    ierr = PetscOptionsString("-pc_amgx_json", "AMGX parameter file (json)", "amgx.c", amgx->filename, amgx->filename, PETSC_MAX_PATH_LEN, NULL);
-    CHKERRQ(ierr);
+    PetscCall(PetscOptionsString("-pc_amgx_json", "AMGX parameter file (json)", "amgx.c", amgx->filename, amgx->filename, PETSC_MAX_PATH_LEN, NULL));
 
-    ierr = PetscStrreplace(PetscObjectComm((PetscObject)pc), amgx->filename, amgx->filename, PETSC_MAX_PATH_LEN);
-    CHKERRQ(ierr);
+    PetscCall(PetscStrreplace(PetscObjectComm((PetscObject)pc), amgx->filename, amgx->filename, PETSC_MAX_PATH_LEN));
 
     PetscBool exists;
-    ierr = PetscTestFile(amgx->filename, 'r', &exists);
-    CHKERRQ(ierr);
+    PetscCall(PetscTestFile(amgx->filename, 'r', &exists));
 
     if (!exists)
     {
@@ -399,14 +371,11 @@ static PetscErrorCode PCSetFromOptions_AMGX(PetscOptionItems *PetscOptionsObject
 
         /* try to add prefix */
         char str[PETSC_MAX_PATH_LEN];
-        ierr = PetscSNPrintf(str, PETSC_MAX_PATH_LEN - 1, "${PETSC_DIR}/share/petsc/amgx/%s", amgx->filename);
-        CHKERRQ(ierr);
+        PetscCall(PetscSNPrintf(str, PETSC_MAX_PATH_LEN - 1, "${PETSC_DIR}/share/petsc/amgx/%s", amgx->filename));
 
-        ierr = PetscStrreplace(PetscObjectComm((PetscObject)pc), str, amgx->filename, PETSC_MAX_PATH_LEN);
-        CHKERRQ(ierr);
+        PetscCall(PetscStrreplace(PetscObjectComm((PetscObject)pc), str, amgx->filename, PETSC_MAX_PATH_LEN));
 
-        ierr = PetscTestFile(amgx->filename, 'r', &exists);
-        CHKERRQ(ierr);
+        PetscCall(PetscTestFile(amgx->filename, 'r', &exists));
 
         if (!exists)
         {
@@ -418,20 +387,17 @@ static PetscErrorCode PCSetFromOptions_AMGX(PetscOptionItems *PetscOptionsObject
         printf("As per -pc_amgx_json, found parameter file at %s.\n", amgx->filename);
     }
 
-    ierr = PetscOptionsTail();
-    CHKERRQ(ierr);
+    PetscCall(PetscOptionsTail());
 
     PetscFunctionReturn(0);
 }
 
 static PetscErrorCode PCView_AMGX(PC pc, PetscViewer viewer)
 {
-    PetscErrorCode ierr;
     PetscBool iascii;
 
     PetscFunctionBegin;
-    ierr = PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii);
-    CHKERRQ(ierr);
+    PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
     if (iascii)
     {
         // Implement
@@ -478,8 +444,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_AMGX(PC pc)
     PC_AMGX *amgx;
 
     PetscFunctionBegin;
-    PetscErrorCode ierr = PetscNewLog(pc, &amgx);
-    CHKERRQ(ierr);
+    PetscErrorCode PetscCall(PetscNewLog(pc, &amgx));
     pc->ops->apply = PCApply_AMGX;
     pc->ops->setfromoptions = PCSetFromOptions_AMGX;
     pc->ops->setup = PCSetUp_AMGX;
@@ -519,8 +484,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_AMGX(PC pc)
     {
         MPI_Comm comm_in = PetscObjectComm((PetscObject)pc);
         /* This communicator is not yet known to this system, so we duplicate it and make an internal communicator */
-        ierr = MPI_Comm_dup(comm_in, &amgx->comm);
-        CHKERRQ(ierr);
+        PetscCall(MPI_Comm_dup(comm_in, &amgx->comm));
     }
 
     MPI_Comm_size(amgx->comm, &amgx->nranks);
@@ -536,11 +500,9 @@ PETSC_EXTERN PetscErrorCode PCCreate_AMGX(PC pc)
     }
 
     /* set a default path/filename, use -pc_amgx_json to set at runtime */
-    ierr = PetscSNPrintf(amgx->filename, PETSC_MAX_PATH_LEN - 1, "${PETSC_DIR}/share/petsc/amgx/AMG_CLASSICAL_AGGRESSIVE_L1_RT6.json");
-    CHKERRQ(ierr);
+    PetscCall(PetscSNPrintf(amgx->filename, PETSC_MAX_PATH_LEN - 1, "${PETSC_DIR}/share/petsc/amgx/AMG_CLASSICAL_AGGRESSIVE_L1_RT6.json"));
 
-    ierr = PetscStrreplace(PetscObjectComm((PetscObject)pc), amgx->filename, amgx->filename, PETSC_MAX_PATH_LEN);
-    CHKERRQ(ierr);
+    PetscCall(PetscStrreplace(PetscObjectComm((PetscObject)pc), amgx->filename, amgx->filename, PETSC_MAX_PATH_LEN));
 
     PetscFunctionReturn(0);
 }
