@@ -194,11 +194,11 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
 
         // Fetch the number of global rows
         int nGlobalRows = partitionOffsets[amgx->nranks];
-
+        
         // Determine if PETSc compiled in 64-bit mode
         int petsc32 = (sizeof(PetscInt) == 4);
 
-        if(!petsc32)
+        if (!petsc32)
         {
             SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB,
                 "PETSc compiled with 64-bit integers. "
