@@ -442,10 +442,10 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt NUserV, const PetscInt a_Np, cons
   PetscCall(PetscFree(globMpArray));
   // clean up mass matrices
   for (PetscInt grid=0 ; grid<ctx->num_grids ; grid++) { // add same particels for all grids
-    PetscCall(MatDestroy(&g_Mass[grid]);
+    PetscCall(MatDestroy(&g_Mass[grid]));
     for (int tid=0; tid<numthreads; tid++) {
-      PetscCall(VecDestroy(&t_fhat[grid][tid]);
-      PetscCall(KSPDestroy(&t_ksp[grid][tid]);
+      PetscCall(VecDestroy(&t_fhat[grid][tid]));
+      PetscCall(KSPDestroy(&t_ksp[grid][tid]));
     }
   }
   PetscCall(PetscInfo(pack,"Total number density: %20.12e (%20.12e); x-momentum = %20.12e (%20.12e); energy = %20.12e (%20.12e) error = %e, %D particles. Use %D threads\n", moments_1[0], moments_0[0], moments_1[1], moments_0[1], moments_1[2],  moments_0[2], (moments_1[2]-moments_0[2])/moments_0[2],a_Np,numthreads));
