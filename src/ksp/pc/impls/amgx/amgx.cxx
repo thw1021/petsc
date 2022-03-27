@@ -58,8 +58,8 @@ static void print_callback(const char *msg, int length)
 // XXX Presumably PETSc has some routines that can be used instead here?
 PetscErrorCode print_error(char const* file, int const line, cudaError_t error)
 {
-    SETERRQ5(PETSC_COMM_WORLD, PETSC_ERR_SIG, "Error: %s:%d, code:%d, name: %s, reason: %s\n",
-              file, line, error, cudaGetErrorName(error), cudaGetErrorString(error));
+    SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_SIG, "Error: %s:%d, code:%d, name: %s, reason: %s\n",
+            file, line, error, cudaGetErrorName(error), cudaGetErrorString(error));
 }
 
 /** \brief A macro to check the returned CUDA error code.
@@ -119,7 +119,7 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
         // a check for that should be implemented
         if (amgx->nLocalRows >= 2147483648)
         {
-            SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB,
+            SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB,
                 "AmgX restricted to int local rows but "
                 "nLocalRows = %D > max<int>", amgx->nLocalRows);
         }
@@ -156,7 +156,7 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
         }
         if (rawN != amgx->nLocalRows)
         {
-            SETERRQ2(amgx->comm, PETSC_ERR_PLIB,
+            SETERRQ(amgx->comm, PETSC_ERR_PLIB,
                      "MatGetRowIJ disagrees with MatGetLocalSize "
                      "rawN != nLocalRows %D %D\n", rawN, amgx->nLocalRows);
         }
@@ -174,7 +174,7 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
 
         if (amgx->nnz >= 2147483648)
         {
-            SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_PLIB,
+            SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB,
                 "AmgX restricted to int nnz but "
                 "nnz = %D > max<int>", amgx->nnz);
         }
@@ -276,7 +276,7 @@ static PetscErrorCode PCApply_AMGX(PC pc, Vec b, Vec x)
 
     if (status == AMGX_SOLVE_FAILED)
     {
-        SETERRQ1(amgx->comm, PETSC_ERR_CONV_FAILED,
+        SETERRQ(amgx->comm, PETSC_ERR_CONV_FAILED,
                  "AmgX solver failed to solve the system! "
                  "The error code is %d.\n",
                  status);
@@ -379,7 +379,7 @@ static PetscErrorCode PCSetFromOptions_AMGX(PetscOptionItems *PetscOptionsObject
 
         if (!exists)
         {
-            SETERRQ1(PetscObjectComm((PetscObject)pc), PETSC_ERR_PLIB, "input file not found (%s)", amgx->filename);
+            SETERRQ(PetscObjectComm((PetscObject)pc), PETSC_ERR_PLIB, "input file not found (%s)", amgx->filename);
         }
     }
     else
