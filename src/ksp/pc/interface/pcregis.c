@@ -125,7 +125,7 @@ PetscErrorCode  PCRegisterAll(void)
   PetscCall(PCRegister(PCPATCH        ,PCCreate_Patch));
   PetscCall(PCRegister(PCHMG          ,PCCreate_HMG));
 #if defined(PETSC_HAVE_AMGX)
-  PetscCall(PCRegister(PCAMGX         ,PCCreate_AMGx));
+  PetscCall(PCRegister(PCAMGX         ,PCCreate_AMGX));
 #endif
 #if defined(PETSC_HAVE_ML)
   PetscCall(PCRegister(PCML           ,PCCreate_ML));
