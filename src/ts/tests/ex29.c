@@ -460,6 +460,7 @@ int main(int argc, char **argv)
   TS             ts;
   Mat            J;
   LandauCtx      *ctx;
+  PetscErrorCode ierr;
 
   PetscCall(PetscInitialize(&argc, &argv, NULL,help));
   /* Create a mesh */
@@ -468,7 +469,7 @@ int main(int argc, char **argv)
   PetscCall(DMSetOutputSequenceNumber(pack, 0, 0.0));
   PetscCall(DMGetApplicationContext(pack, &ctx));
   // process args
-  PetscCall(PetscOptionsBegin(PETSC_COMM_SELF, "", "Collision Options", "DMPLEX"));
+  ierr = PetscOptionsBegin(PETSC_COMM_SELF, "", "Collision Options", "DMPLEX");PetscCall(ierr);
   PetscCall(PetscOptionsInt("-number_spatial_vertices", "Number of user spatial vertices to be batched for Landau", "ex29.c", nvert, &nvert, NULL));
   PetscCheck(nvert >= ctx->batch_sz, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Number of vertices %" PetscInt_FMT "should be <= batch size %" PetscInt_FMT,nvert,ctx->batch_sz);
   PetscCall(PetscOptionsInt("-number_particles_per_dimension", "Number of particles per grid, with slight modification per spatial vertex, in each dimension of base Cartesian grid", "ex29.c", Np, &Np, NULL));
@@ -476,7 +477,7 @@ int main(int argc, char **argv)
   PetscCheck(btarget < nvert, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Batch to view %" PetscInt_FMT " should be < number of vertices %" PetscInt_FMT,btarget,nvert);
   PetscCall(PetscOptionsInt("-view_grid_target", "Grid to view with diagnostics", "ex29.c", gtarget, &gtarget, NULL));
   PetscCheck(gtarget < ctx->num_grids, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Grid to view %" PetscInt_FMT " should be < number of grids %" PetscInt_FMT,gtarget,ctx->num_grids);
-  PetscCall(PetscOptionsEnd());
+  ierr = PetscOptionsEnd();PetscCall(ierr);
   /* Create timestepping solver context */
   PetscCall(TSCreate(PETSC_COMM_SELF,&ts));
   PetscCall(TSSetDM(ts,pack));
