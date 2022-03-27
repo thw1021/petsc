@@ -298,7 +298,7 @@ static PetscErrorCode DMPlexGetPointMFEMVertexIDs_Internal(DM dm, PetscInt p, Pe
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode GLVisCreateFE(PetscFE femIn,char name[32],PetscFE *fem)
+static PetscErrorCode GLVisCreateFE(PetscFE femIn,char name[32],PetscFE *fem,IS *perm)
 {
   DM              K;
   PetscSpace      P;
@@ -368,6 +368,18 @@ static PetscErrorCode GLVisCreateFE(PetscFE femIn,char name[32],PetscFE *fem)
   PetscCall(PetscFESetQuadrature(*fem,q));
   PetscCall(PetscFESetFaceQuadrature(*fem,fq));
   PetscCall(PetscFESetUp(*fem));
+
+  /* perm */
+  *perm = NULL;
+  if (isSimplex && dim == 3) {
+    PetscInt i, np,*pidx;
+
+    PetscCall(PetscDualSpaceGetDimension(Q,&np));
+    PetscCall(PetscMalloc1(np,&pidx));
+    for (i=0;i<np;i++) pidx[i] = i; /* XXX figure out the reordering */
+    PetscCall(ISCreateGeneral(PETSC_COMM_SELF,np,pidx,PETSC_OWN_POINTER,perm));
+  }
+
   /* Cleanup */
   PetscCall(PetscSpaceDestroy(&P));
   PetscCall(PetscDualSpaceDestroy(&Q));
@@ -383,7 +395,7 @@ static PetscErrorCode GLVisCreateFE(PetscFE femIn,char name[32],PetscFE *fem)
 static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
 {
   DMLabel              label;
-  PetscSection         coordSection,parentSection;
+  PetscSection         coordSection,parentSection,hoSection = NULL;
   Vec                  coordinates,hovec;
   const PetscScalar    *array;
   PetscInt             bf,p,sdim,dim,depth,novl,minl;
@@ -407,6 +419,7 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)viewer),&size));
   PetscCheckFalse(size > 1,PetscObjectComm((PetscObject)viewer),PETSC_ERR_SUP,"Use single sequential viewers for parallel visualization");
   PetscCall(DMGetDimension(dm,&dim));
+  PetscCall(DMPlexGetDepth(dm,&depth));
 
   /* get container: determines if a process visualizes is portion of the data or not */
   PetscCall(PetscObjectQuery((PetscObject)viewer,"_glvis_info_container",(PetscObject*)&glvis_container));
@@ -418,8 +431,7 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
     fmt     = glvis_info->fmt;
   }
 
-  /* Users can attach a coordinate vector to the DM in case they have a higher-order mesh
-     DMPlex does not currently support HO meshes, so there's no API for this */
+  /* Users can attach a coordinate vector to the DM in case they have a higher-order mesh */
   PetscCall(PetscObjectQuery((PetscObject)dm,"_glvis_mesh_coords",(PetscObject*)&hovec));
   PetscCall(PetscObjectReference((PetscObject)hovec));
   if (!hovec) {
@@ -436,8 +448,9 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
       Vec     vec;
       Mat     mat;
       char    name[32],fec_type[64];
+      IS      perm = NULL;
 
-      PetscCall(GLVisCreateFE(disc,name,&hodisc));
+      PetscCall(GLVisCreateFE(disc,name,&hodisc,&perm));
       PetscCall(DMClone(cdm,&hocdm));
       PetscCall(DMSetField(hocdm,0,NULL,(PetscObject)hodisc));
       PetscCall(PetscFEDestroy(&hodisc));
@@ -448,8 +461,10 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
       PetscCall(DMCreateInterpolation(cdm,hocdm,&mat,NULL));
       PetscCall(MatInterpolate(mat,vec,hovec));
       PetscCall(MatDestroy(&mat));
+      PetscCall(DMGetLocalSection(hocdm,&hoSection));
+      PetscCall(PetscSectionSetClosurePermutation(hoSection, (PetscObject)hocdm, depth, perm));
+      PetscCall(ISDestroy(&perm));
       PetscCall(DMDestroy(&hocdm));
-
       PetscCall(PetscSNPrintf(fec_type,sizeof(fec_type),"FiniteElementCollection: %s", name));
       PetscCall(PetscObjectSetName((PetscObject)hovec,fec_type));
     }
@@ -491,7 +506,6 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
 
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)dm),&size));
   PetscCheckFalse(enable_ncmesh && size > 1,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Not supported in parallel");
-  PetscCall(DMPlexGetDepth(dm,&depth));
   PetscCheckFalse(enable_boundary && depth >= 0 && dim != depth,PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Mesh must be interpolated. "
                                                              "Alternatively, run with -viewer_glvis_dm_plex_enable_boundary 0");
   PetscCheckFalse(enable_ncmesh && depth >= 0 && dim != depth,PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Mesh must be interpolated. "
@@ -646,7 +660,7 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
     }
   }
   /* if we have high-order coordinates in 3D, we need to specify the boundary */
-  if (hovec && dim == 3) enable_boundary = PETSC_TRUE;
+  //if (hovec && dim == 3) enable_boundary = PETSC_TRUE;
 
   /* header */
   PetscCall(PetscViewerASCIIPrintf(viewer,"MFEM mesh %s\n",enable_ncmesh ? "v1.1" : "v1.0"));
@@ -706,7 +720,7 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
     PetscCall(DMPlexGetMaxSizes(dm,NULL,&p));
     PetscCall(PetscMalloc1(p,&fcells));
     PetscCall(DMGetLabel(dm,"glvis_periodic_cut",&perLabel));
-    if (!perLabel && localized) { /* this periodic cut can be moved up to DMPlex setup */
+    if (!perLabel && periodic) { /* this periodic cut can be moved up to DMPlex setup */
       PetscCall(DMCreateLabel(dm,"glvis_periodic_cut"));
       PetscCall(DMGetLabel(dm,"glvis_periodic_cut",&perLabel));
       PetscCall(DMLabelSetDefaultValue(perLabel,1));
@@ -1065,14 +1079,12 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
     }
     PetscCheck(!vp,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Unexpected %D hanging vertices",vp);
   }
-  PetscCall(PetscBTDestroy(&pown));
   PetscCall(PetscBTDestroy(&vown));
 
   /* vertices */
   if (hovec) { /* higher-order meshes */
     const char *fec;
     PetscInt   i,n,s;
-
     PetscCall(PetscViewerASCIIPrintf(viewer,"\nvertices\n"));
     PetscCall(PetscViewerASCIIPrintf(viewer,"%D\n",vEnd-vStart));
     PetscCall(PetscViewerASCIIPrintf(viewer,"nodes\n"));
@@ -1081,16 +1093,37 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
     PetscCall(PetscViewerASCIIPrintf(viewer,"%s\n",fec));
     PetscCall(PetscViewerASCIIPrintf(viewer,"VDim: %D\n",sdim));
     PetscCall(PetscViewerASCIIPrintf(viewer,"Ordering: 1\n\n")); /*Ordering::byVDIM*/
-    PetscCall(VecGetArrayRead(hovec,&array));
-    PetscCall(VecGetLocalSize(hovec,&n));
-    PetscCheckFalse(n%sdim,PETSC_COMM_SELF,PETSC_ERR_USER,"Size of local coordinate vector %D incompatible with space dimension %D",n,sdim);
-    for (i=0;i<n/sdim;i++) {
-      for (s=0;s<sdim;s++) {
-        PetscCall(PetscViewerASCIIPrintf(viewer,fmt,(double) PetscRealPart(array[i*sdim+s])));
+    if (hoSection) {
+      DM cdm;
+
+      PetscCall(VecGetDM(hovec,&cdm));
+      for (p=cStart;p<cEnd;p++) {
+        PetscScalar *vals = NULL;
+        PetscInt    csize;
+
+        if (PetscUnlikely(pown && !PetscBTLookup(pown,p-cStart))) continue;
+        PetscCall(DMPlexVecGetClosure(cdm,hoSection,hovec,p,&csize,&vals));
+        PetscCheck(csize%sdim == 0,PETSC_COMM_SELF,PETSC_ERR_USER,"Size of closure %D incompatible with space dimension %D",csize,sdim);
+        for (i=0;i<csize/sdim;i++) {
+          for (s=0;s<sdim;s++) {
+            PetscCall(PetscViewerASCIIPrintf(viewer,fmt,(double) PetscRealPart(vals[i*sdim+s])));
+          }
+          PetscCall(PetscViewerASCIIPrintf(viewer,"\n"));
+        }
+        PetscCall(DMPlexVecRestoreClosure(cdm,hoSection,hovec,p,&csize,&vals));
       }
-      PetscCall(PetscViewerASCIIPrintf(viewer,"\n"));
+    } else {
+      PetscCall(VecGetArrayRead(hovec,&array));
+      PetscCall(VecGetLocalSize(hovec,&n));
+      PetscCheck(n%sdim == 0,PETSC_COMM_SELF,PETSC_ERR_USER,"Size of local coordinate vector %D incompatible with space dimension %D",n,sdim);
+      for (i=0;i<n/sdim;i++) {
+        for (s=0;s<sdim;s++) {
+          PetscCall(PetscViewerASCIIPrintf(viewer,fmt,(double) PetscRealPart(array[i*sdim+s])));
+        }
+        PetscCall(PetscViewerASCIIPrintf(viewer,"\n"));
+      }
+      PetscCall(VecRestoreArrayRead(hovec,&array));
     }
-    PetscCall(VecRestoreArrayRead(hovec,&array));
   } else {
     PetscCall(VecGetLocalSize(coordinates,&nvert));
     PetscCall(PetscViewerASCIIPrintf(viewer,"\nvertices\n"));
@@ -1108,6 +1141,7 @@ static PetscErrorCode DMPlexView_GLVis_ASCII(DM dm, PetscViewer viewer)
     }
     PetscCall(VecRestoreArrayRead(coordinates,&array));
   }
+  PetscCall(PetscBTDestroy(&pown));
   PetscCall(VecDestroy(&hovec));
   PetscFunctionReturn(0);
 }
