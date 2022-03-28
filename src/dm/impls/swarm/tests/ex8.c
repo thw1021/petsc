@@ -1,4 +1,4 @@
-static char help[] = "Tests for KS test\n\n";
+static char help[] = "Tests for particle initialization using the KS test\n\n";
 
 #include <petscdmswarm.h>
 #include <petscdmplex.h>
