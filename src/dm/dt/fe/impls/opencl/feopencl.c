@@ -536,6 +536,7 @@ static PetscErrorCode PetscFEIntegrateResidual_OpenCL(PetscDS prob, PetscFormKey
   PetscBool         useFieldDer = PETSC_TRUE;
   PetscBool         useF0       = PETSC_TRUE;
   PetscBool         useF1       = PETSC_TRUE;
+  PetscErrorCode    ierr;
   /* OpenCL variables */
   cl_program        ocl_prog;
   cl_kernel         ocl_kernel;
@@ -551,7 +552,6 @@ static PetscErrorCode PetscFEIntegrateResidual_OpenCL(PetscDS prob, PetscFormKey
   size_t            local_work_size[3], global_work_size[3];
   size_t            realSize, x, y, z;
   const PetscReal   *points, *weights;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscCall(PetscDSGetDiscretization(prob, field, (PetscObject *) &fem));
