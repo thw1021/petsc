@@ -508,7 +508,7 @@ int main(int argc, char **argv)
           -dm_landau_n 1 \
           -dm_landau_thermal_temps 1 \
           -ftop_ksp_converged_reason \
-          -ftop_ksp_rtol 1e-14\
+          -ftop_ksp_rtol 1e-9\
           -ftop_ksp_type lsqr \
           -ftop_pc_type bjacobi \
           -ftop_sub_pc_factor_shift_type nonzero \
@@ -518,7 +518,7 @@ int main(int argc, char **argv)
           -ptof_ksp_type cg \
           -ptof_pc_type jacobi \
           -ptof_ksp_converged_reason \
-          -ptof_ksp_rtol 1e-14\
+          -ptof_ksp_rtol 1e-9\
           -snes_converged_reason \
           -snes_monitor \
           -snes_rtol 1e-14\
