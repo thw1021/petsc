@@ -210,6 +210,7 @@ static PetscErrorCode DMSwarmCreateVectorFromField_Private(DM dm, const char fie
   PetscInt       bs, n;
   char           name[PETSC_MAX_PATH_LEN];
   PetscMPIInt    size;
+  PetscBool      iscuda,iskokkos;
 
   PetscFunctionBegin;
   if (!swarm->issetup) PetscCall(DMSetUp(dm));
@@ -218,10 +219,28 @@ static PetscErrorCode DMSwarmCreateVectorFromField_Private(DM dm, const char fie
   PetscCheckFalse(type != PETSC_REAL,PetscObjectComm((PetscObject) dm), PETSC_ERR_SUP, "Only valid for PETSC_REAL");
 
   PetscCallMPI(MPI_Comm_size(comm, &size));
+  PetscCall(PetscStrcmp(dm->vectype,VECKOKKOS,&iskokkos));
+  PetscCall(PetscStrcmp(dm->vectype,VECCUDA,&iscuda));
   if (size == 1) {
-    PetscCall(VecCreateSeqWithArray(comm, bs, n*bs, array, vec));
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+    if (iskokkos) PetscCall(VecCreateSeqKokkosWithArray(comm, bs, n*bs, array, vec));
+    else
+#endif
+#if defined(PETSC_HAVE_CUDA)
+      if (iscuda) PetscCall(VecCreateSeqCUDAWithArray(comm, bs, n*bs, array, vec));
+      else
+#endif
+        PetscCall(VecCreateSeqWithArray(comm, bs, n*bs, array, vec));
   } else {
-    PetscCall(VecCreateMPIWithArray(comm, bs, n*bs, PETSC_DETERMINE, array, vec));
+#if defined(PETSC_HAVE_KOKKOS_KERNELS)
+    if (iskokkos) PetscCall(VecCreateMPIKokkosWithArray(comm, bs, n*bs, PETSC_DETERMINE, array, vec));
+    else
+#endif
+#if defined(PETSC_HAVE_CUDA)
+      if (iscuda) PetscCall(VecCreateMPICUDAWithArray(comm, bs, n*bs, PETSC_DETERMINE, array, vec));
+      else
+#endif
+        PetscCall(VecCreateMPIWithArray(comm, bs, n*bs, PETSC_DETERMINE, array, vec));
   }
   PetscCall(PetscSNPrintf(name, PETSC_MAX_PATH_LEN-1, "DMSwarmSharedField_%s", fieldname));
   PetscCall(PetscObjectSetName((PetscObject) *vec, name));
