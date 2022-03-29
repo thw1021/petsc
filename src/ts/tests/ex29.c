@@ -292,7 +292,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt NUserV, const PetscInt a_Np, cons
             hp[0] = (hi[0] - lo[0])/Npi;
             hp[1] = (hi[1] - lo[1])/Npj;
             //PetscCall(PetscInfo(pack," lo = %14.7e, hi = %14.7e; hp = %14.7e, %14.7e; kT_m = %g; \n",lo[1],hi[1], hp[0], hp[1], kT_m)); // temp
-            vole = hp[0]*hp[1];
+            vole = hp[0]*hp[1]*ctx->n[grid]; // fix for multi-species
             PetscCall(PetscInfo(pack,"Vertex %" PetscInt_FMT ", grid %" PetscInt_FMT " with %" PetscInt_FMT " particles (diagnostic target = %" PetscInt_FMT ")\n",glb_b_id,grid,NN,b_target));
             for (int pj=0, pp=0 ; pj < Npj ; pj++) {
               for (int pi=0 ; pi < Npi ; pi++, pp++) {
@@ -304,7 +304,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt NUserV, const PetscInt a_Np, cons
                   //wp_t[grid][tid][pp] = vole;
                   //PetscCall(PetscInfo(pack,"%D) x = %14.7e, %14.7e, n = %14.7e, w = %14.7e\n", pp, x[0], x[1], vole, vole, wp_t[grid][tid][pp])); // temp
                   if (glb_b_id==b_target) {
-                    moments_0[0] += 2.0*PETSC_PI*x[0]*wp_t[grid][tid][pp]*ctx->n_0                  *ctx->charges[ctx->species_offset[grid]];
+                    moments_0[0] += 2.0*PETSC_PI*x[0]*wp_t[grid][tid][pp]*ctx->n_0                  *ctx->masses[ctx->species_offset[grid]];
                     moments_0[1] += 2.0*PETSC_PI*x[0]*wp_t[grid][tid][pp]*ctx->n_0*ctx->v_0         *ctx->masses[ctx->species_offset[grid]] * x[1]; // z-momentum
                     moments_0[2] +=     PETSC_PI*x[0]*wp_t[grid][tid][pp]*ctx->n_0*ctx->v_0*ctx->v_0*ctx->masses[ctx->species_offset[grid]] * (PetscSqr(x[0]) + PetscSqr(x[1]));
                   }
@@ -416,7 +416,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt NUserV, const PetscInt a_Np, cons
               PetscCall(DMSwarmGetField(sw, "DMSwarmPIC_coor", &bs, &dtype, (void**)&coords));
               PetscCall(DMSwarmGetLocalSize(sw,&npoints));
               for (int p=0;p<npoints;p++) {
-                moments_1[0] += 2.0*PETSC_PI*coords[p*2+0]*wp[p]*ctx->n_0                  *ctx->charges[ctx->species_offset[grid]];
+                moments_1[0] += 2.0*PETSC_PI*coords[p*2+0]*wp[p]*ctx->n_0                  *ctx->masses[ctx->species_offset[grid]];
                 moments_1[1] += 2.0*PETSC_PI*coords[p*2+0]*wp[p]*ctx->n_0*ctx->v_0         *ctx->masses[ctx->species_offset[grid]] * coords[p*2+1]; // z-momentum
                 moments_1[2] +=     PETSC_PI*coords[p*2+0]*wp[p]*ctx->n_0*ctx->v_0*ctx->v_0*ctx->masses[ctx->species_offset[grid]] * (PetscSqr(coords[p*2+0]) + PetscSqr(coords[p*2+1]));
               }
@@ -443,7 +443,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt NUserV, const PetscInt a_Np, cons
       PetscCall(KSPDestroy(&t_ksp[grid][tid]));
     }
   }
-  PetscCall(PetscInfo(ts,"Total number density: %20.12e (%20.12e); x-momentum = %20.12e (%20.12e); energy = %20.12e (%20.12e) error = %e, %D particles. Use %D threads\n", moments_1[0], moments_0[0], moments_1[1], moments_0[1], moments_1[2],  moments_0[2], (moments_1[2]-moments_0[2])/moments_0[2], nTargetP, numthreads));
+  PetscCall(PetscInfo(X,"Total number density: %20.12e (%20.12e); x-momentum = %20.12e (%20.12e); energy = %20.12e (%20.12e) error = %e, %D particles. Use %D threads\n", moments_1[0], moments_0[0], moments_1[1], moments_0[1], moments_1[2],  moments_0[2], (moments_1[2]-moments_0[2])/moments_0[2], nTargetP, numthreads));
   PetscFunctionReturn(0);
 }
 
@@ -499,36 +499,15 @@ int main(int argc, char **argv)
   testset:
     requires: double
     output_file: output/ex29_0.out
-    args: -dm_landau_type p4est -dm_landau_amr_levels_max 0 -info :ts -view_vertex_target 2\
-          -dm_landau_amr_post_refine 1 \
-          -petscspace_degree 3 \
-          -number_particles_per_dimension 10 \
-          -dm_landau_batch_size 2 \
-          -number_spatial_vertices 3 \
-          -dm_landau_n 1 \
-          -dm_landau_thermal_temps 1 \
-          -ftop_ksp_converged_reason \
-          -ftop_ksp_rtol 1e-9\
-          -ftop_ksp_type lsqr \
-          -ftop_pc_type bjacobi \
-          -ftop_sub_pc_factor_shift_type nonzero \
-          -ftop_sub_pc_type lu \
-          -ksp_type preonly \
-          -pc_type lu \
-          -ptof_ksp_type cg \
-          -ptof_pc_type jacobi \
-          -ptof_ksp_converged_reason \
-          -ptof_ksp_rtol 1e-9\
-          -snes_converged_reason \
-          -snes_monitor \
-          -snes_rtol 1e-14\
-          -snes_stol 1e-14\
-          -ts_dt 1 \
-          -ts_exact_final_time stepover \
-          -ts_max_snes_failures -1 \
-          -ts_max_steps 1 \
-          -ts_monitor \
-          -ts_type beuler
+    args: -petscspace_degree 3 -dm_landau_type p4est -dm_landau_num_species_grid 1,1,1 -dm_landau_amr_levels_max 0,0,0 -view_vertex_target 2 -view_grid_target 1 \
+          -dm_landau_amr_post_refine 1 -number_particles_per_dimension 10 \
+          -dm_landau_batch_size 2 -number_spatial_vertices 3 -dm_landau_batch_view_idx 1 \
+          -dm_landau_n 1.000018,1,1e-6 -dm_landau_thermal_temps 2,1,1 -dm_landau_ion_masses 2,180 -dm_landau_ion_charges 1,18 \
+          -ftop_ksp_converged_reason -ftop_ksp_rtol 1e-12 -ftop_ksp_type lsqr -ftop_pc_type bjacobi -ftop_sub_pc_factor_shift_type nonzero -ftop_sub_pc_type lu \
+          -ksp_type preonly -pc_type lu \
+          -ptof_ksp_type cg -ptof_pc_type jacobi -ptof_ksp_converged_reason -ptof_ksp_rtol 1e-12\
+          -snes_converged_reason -snes_monitor -snes_rtol 1e-14 -snes_stol 1e-14\
+          -ts_dt 0.01 -ts_rtol 1e-1 -ts_exact_final_time stepover -ts_max_snes_failures -1 -ts_max_steps 1 -ts_monitor -ts_type beuler -info :vec
 
     test:
       suffix: cpu

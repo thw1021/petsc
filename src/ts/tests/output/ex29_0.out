@@ -1,178 +1,68 @@
-masses:        e= 9.109e-31; ions in proton mass units:    0.000e+00  0.000e+00 ...
-charges:       e=-1.602e-19; charges in elementary units:  0.000e+00  0.000e+00
-n:             e:  1.000e+00                           i:  1.000e+00  0.000e+00
-thermal T (K): e= 1.160e+07 i= 0.000e+00  0.000e+00. v_0= 1.326e+07 ( 4.424e-02c) n_0= 1.000e+20 t_0= 5.787e-06, classical, Intuitive, 2 batched
-Domain radius (AMR levels) grid 0:  5.000e+00 (0) 
+masses:        e= 9.109e-31; ions in proton mass units:    2.000e+00  1.800e+02 ...
+charges:       e=-1.602e-19; charges in elementary units:  1.000e+00  1.800e+01
+n:             e:  1.000e+00                           i:  1.000e+00  1.000e-06
+thermal T (K): e= 2.321e+07 i= 1.160e+07  1.160e+07. v_0= 1.876e+07 ( 6.256e-02c) n_0= 1.000e+20 t_0= 1.637e-05, classical, Intuitive, 2 batched
+Domain radius (AMR levels) grid 0:  5.000e+00 (0) , 1:  5.835e-02 (0) , 2:  6.151e-03 (0) 
 Using default Plex order for all matrices
-0) FormLandau 128 IPs, 8 cells total, Nb=16, Nq=16, dim=2, Tab: Nb=16 Nf=1 Np=16 cdim=2 N=182
+[0] adaptToleranceFEM(): Phase:adaptToleranceFEM: Uniform refinement
+[0] adaptToleranceFEM(): 	Phase: adaptToleranceFEM: 8 cells, 128 total quadrature points
+[0] adaptToleranceFEM(): Phase:adaptToleranceFEM: Uniform refinement
+[0] adaptToleranceFEM(): 	Phase: adaptToleranceFEM: 8 cells, 128 total quadrature points
+[0] adaptToleranceFEM(): Phase:adaptToleranceFEM: Uniform refinement
+[0] adaptToleranceFEM(): 	Phase: adaptToleranceFEM: 8 cells, 128 total quadrature points
+0) FormLandau 384 IPs, 24 cells total, Nb=16, Nq=16, dim=2, Tab: Nb=16 Nf=3 Np=16 cdim=2 N=546
 Linear ptof_ solve converged due to CONVERGED_RTOL iterations 6
 Linear ptof_ solve converged due to CONVERGED_RTOL iterations 6
-  0) species-0: charge density= -1.6192618821816e+01 z-momentum=  3.0424386885410e-18 energy=  2.4113297999696e+04 -- 8 cells
-0 TS dt 1. time 0.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-    0 SNES Function norm 2.014548528672e-01 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-    1 SNES Function norm 1.485747684621e-02 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-    2 SNES Function norm 1.554572180288e-03 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-    3 SNES Function norm 1.483010388327e-04 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-    4 SNES Function norm 1.836419776955e-05 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-    5 SNES Function norm 3.560324697389e-06 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-    6 SNES Function norm 1.071271317278e-06 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-    7 SNES Function norm 3.421783723414e-07 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-    8 SNES Function norm 1.105888124391e-07 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-    9 SNES Function norm 3.572574407137e-08 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-   10 SNES Function norm 1.154590824691e-08 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-   11 SNES Function norm 3.731056422779e-09 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-   12 SNES Function norm 1.205733843579e-09 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-   13 SNES Function norm 3.896446662492e-10 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-   14 SNES Function norm 1.259185292416e-10 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-   15 SNES Function norm 4.069245204931e-11 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-   16 SNES Function norm 1.315045485175e-11 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-   17 SNES Function norm 4.249666163782e-12 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-   18 SNES Function norm 1.373287626209e-12 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-   19 SNES Function norm 4.439002824796e-13 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-   20 SNES Function norm 1.434836136698e-13 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-   21 SNES Function norm 4.635836960460e-14 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-   22 SNES Function norm 1.505964811870e-14 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-   23 SNES Function norm 4.941233621934e-15 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-   24 SNES Function norm 1.479047964313e-15 
-  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 24
-1 TS dt 1. time 1.
-  1) species-0: charge density= -1.6192618821816e+01 z-momentum=  3.0348417605258e-18 energy=  2.4113297999696e+04 -- 8 cells
+Linear ptof_ solve converged due to CONVERGED_RTOL iterations 6
+Linear ptof_ solve converged due to CONVERGED_RTOL iterations 6
+Linear ptof_ solve converged due to CONVERGED_RTOL iterations 6
+Linear ptof_ solve converged due to CONVERGED_RTOL iterations 6
+  0) species-0: charge density= -1.6162729305797e+01 z-momentum=  2.8415177621576e-18 energy=  4.8199770808866e+04
+  0) species-1: charge density=  1.6162438381906e+01 z-momentum= -1.6449374360989e-16 energy=  2.4099451614304e+04
+  0) species-2: charge density=  2.9092389087432e-04 z-momentum=  6.3311238019105e-22 energy=  2.4099451614304e-02
+	  0) Total: charge density= -3.0475134134983e-14, momentum= -1.6165159273535e-16, energy=  7.2299246522622e+04 (m_i[0]/m_e = 3670.94, 8 cells on electron grid)
+0 TS dt 0.01 time 0.
+    0 SNES Function norm 5.344593165923e-01 
+    1 SNES Function norm 2.969210895755e-03 
+    2 SNES Function norm 2.186312537783e-05 
+    3 SNES Function norm 1.561519091884e-07 
+    4 SNES Function norm 1.154563616497e-09 
+    5 SNES Function norm 8.465139954901e-12 
+    6 SNES Function norm 6.264138808547e-14 
+  Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 6
+1 TS dt 0.01 time 0.01
+  1) species-0: charge density= -1.6162729305797e+01 z-momentum=  3.0056367150436e-18 energy=  4.8199648394544e+04
+  1) species-1: charge density=  1.6162438381906e+01 z-momentum= -1.7560732427233e-16 energy=  2.4099574008313e+04
+  1) species-2: charge density=  2.9092389087432e-04 z-momentum=  6.2422099278470e-22 energy=  2.4119764471399e-02
+	  1) Total: charge density= -2.6922420456182e-14, momentum= -1.7260106333629e-16, energy=  7.2299246522622e+04 (m_i[0]/m_e = 3670.94, 8 cells on electron grid)
+Linear ftop_ solve converged due to CONVERGED_RTOL iterations 3
+Linear ftop_ solve converged due to CONVERGED_RTOL iterations 3
+Linear ftop_ solve converged due to CONVERGED_RTOL iterations 3
+Linear ftop_ solve converged due to CONVERGED_RTOL iterations 3
 Linear ftop_ solve converged due to CONVERGED_RTOL iterations 3
 Linear ftop_ solve converged due to CONVERGED_RTOL iterations 3
 Linear ptof_ solve converged due to CONVERGED_RTOL iterations 6
-  0) species-0: charge density= -1.6139644096532e+01 z-momentum= -1.3669231166529e-18 energy=  2.4088824894556e+04 -- 8 cells
-0 TS dt 1. time 0.
-[0] DMPlexLandauIFunction(): Skip forming Jacobian, has not changed (should check norm)
-    0 SNES Function norm 9.113305313070e-02 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-    1 SNES Function norm 1.042036184576e-03 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-    2 SNES Function norm 2.807639561987e-04 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-    3 SNES Function norm 8.643672600933e-05 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-    4 SNES Function norm 2.780118677429e-05 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-    5 SNES Function norm 8.923563606863e-06 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-    6 SNES Function norm 2.870490826329e-06 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-    7 SNES Function norm 9.229782758838e-07 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-    8 SNES Function norm 2.968308263182e-07 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-    9 SNES Function norm 9.545705474615e-08 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-   10 SNES Function norm 3.069833911947e-08 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-   11 SNES Function norm 9.872336317069e-09 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-   12 SNES Function norm 3.174869064249e-09 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-   13 SNES Function norm 1.021013273564e-09 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-   14 SNES Function norm 3.283499957408e-10 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-   15 SNES Function norm 1.055950809857e-10 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-   16 SNES Function norm 3.395866287118e-11 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-   17 SNES Function norm 1.092067228052e-11 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-   18 SNES Function norm 3.511965796703e-12 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-   19 SNES Function norm 1.129618227384e-12 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-   20 SNES Function norm 3.629674691560e-13 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-   21 SNES Function norm 1.167493551936e-13 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-   22 SNES Function norm 3.752708280417e-14 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-   23 SNES Function norm 1.223713902518e-14 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-   24 SNES Function norm 3.977440069266e-15 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-   25 SNES Function norm 1.268653192249e-15 
-[0] DMPlexLandauIJacobian(): Adding just mass to Jacobian t=1., shift=1.
-[0] DMPlexLandauIFunction(): Create Landau Jacobian t=1. 
-   26 SNES Function norm 4.208542470550e-16 
-  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 26
-1 TS dt 1. time 1.
-  1) species-0: charge density= -1.6139644096532e+01 z-momentum= -1.5220052333755e-18 energy=  2.4088824894556e+04 -- 8 cells
+Linear ptof_ solve converged due to CONVERGED_RTOL iterations 6
+Linear ptof_ solve converged due to CONVERGED_RTOL iterations 6
+  0) species-0: charge density= -0.0000000000000e+00 z-momentum=  0.0000000000000e+00 energy=  0.0000000000000e+00
+  0) species-1: charge density=  0.0000000000000e+00 z-momentum=  0.0000000000000e+00 energy=  0.0000000000000e+00
+  0) species-2: charge density=  0.0000000000000e+00 z-momentum=  0.0000000000000e+00 energy=  0.0000000000000e+00
+	  0) Total: charge density=  0.0000000000000e+00, momentum=  0.0000000000000e+00, energy=  0.0000000000000e+00 (m_i[0]/m_e = 3670.94, 8 cells on electron grid)
+0 TS dt 0.01 time 0.
+    0 SNES Function norm 2.495055633633e-01 
+    1 SNES Function norm 3.918103581341e-03 
+    2 SNES Function norm 2.792700757461e-05 
+    3 SNES Function norm 1.890182194085e-07 
+    4 SNES Function norm 1.368665022060e-09 
+    5 SNES Function norm 9.865143483004e-12 
+    6 SNES Function norm 6.964978056760e-14 
+  Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 6
+1 TS dt 0.01 time 0.01
+  1) species-0: charge density= -0.0000000000000e+00 z-momentum=  0.0000000000000e+00 energy=  0.0000000000000e+00
+  1) species-1: charge density=  0.0000000000000e+00 z-momentum=  0.0000000000000e+00 energy=  0.0000000000000e+00
+  1) species-2: charge density=  0.0000000000000e+00 z-momentum=  0.0000000000000e+00 energy=  0.0000000000000e+00
+	  1) Total: charge density=  0.0000000000000e+00, momentum=  0.0000000000000e+00, energy=  0.0000000000000e+00 (m_i[0]/m_e = 3670.94, 8 cells on electron grid)
 Linear ftop_ solve converged due to CONVERGED_RTOL iterations 3
-[0] go(): Total number density:  -1.613964409653e+01 ( -1.613964409653e+01); x-momentum =  -1.699387974570e-18 ( -3.002235857195e-20); energy =   2.408882489456e+04 (  2.408882489456e+04) error = 1.368273e-13, 288 particles. Use 1 threads
+Linear ftop_ solve converged due to CONVERGED_RTOL iterations 3
+Linear ftop_ solve converged due to CONVERGED_RTOL iterations 3
+[0] go(): Total number density:   3.369774668056e-07 (  3.369774668056e-07); x-momentum =  -8.750922403644e-17 (  6.455110808139e-18); energy =   7.226736597020e+04 (  7.226736597019e+04) error = 1.771987e-13, 288 particles. Use 1 threads
