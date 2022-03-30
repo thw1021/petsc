@@ -4,26 +4,24 @@
  */
 #include <petscsys.h>
 #include <../src/vec/vec/impls/mpi/pvecimpl.h>   /*I  "petscvec.h"   I*/
+#include <petsc/private/deviceimpl.h>
 
 PetscErrorCode VecDot_MPI(Vec xin, Vec yin, PetscManagedScalar z, PetscDeviceContext dctx)
 {
-  PetscScalar    work;
-
+  const PetscInt one = 1;
   PetscFunctionBegin;
-  PetscCall(VecDot_Seq(xin,yin,&work));
-  PetscCall(MPIU_Allreduce(&work,&sum,1,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)xin)));
-  *z   = sum;
+  PetscCall(VecDot_Seq(xin,yin,z,dctx));
+  PetscCall(PetscDeviceContextAllReduceManagedScalar_Internal(dctx,z,(PetscObject)xin,&one,MPIU_SUM));
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode VecTDot_MPI(Vec xin, Vec yin, PetscManagedScalar z, PetscDeviceContext dctx)
 {
-  PetscScalar    work;
+  const PetscInt one = 1;
 
   PetscFunctionBegin;
-  PetscCall(VecTDot_Seq(xin,yin,&work));
-  PetscCall(MPIU_Allreduce(&work,&sum,1,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)xin)));
-  *z   = sum;
+  PetscCall(VecTDot_Seq(xin,yin,z,dctx));
+  PetscCall(PetscDeviceContextAllReduceManagedScalar_Internal(dctx,z,(PetscObject)xin,&one,MPIU_SUM));
   PetscFunctionReturn(0);
 }
 
@@ -31,7 +29,7 @@ extern PetscErrorCode VecView_MPI_Draw(Vec,PetscViewer);
 
 PetscErrorCode VecPlaceArray_MPI(Vec vin, const PetscScalar *a, PetscDeviceContext PETSC_UNUSED dctx)
 {
-  Vec_MPI        *v = (Vec_MPI*)vin->data;
+  Vec_MPI *v = (Vec_MPI*)vin->data;
 
   PetscFunctionBegin;
   PetscCheck(!v->unplacedarray,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"VecPlaceArray() was already called on this vector, without a call to VecResetArray()");
