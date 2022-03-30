@@ -4,18 +4,6 @@
 #include <petsc/private/petscimpl.h>
 #include <petscdevice.h>
 
-#if defined(__NVCC__) || defined(__CUDACC__)
-#  define PETSC_USING_NVCC 1
-#endif
-
-#if defined(__HCC__) || (defined(__clang__) && defined(__HIP__))
-#  define PETSC_USING_HCC 1
-#endif
-
-#if PetscDefined(USING_HCC) && PetscDefined(USING_NVCC)
-#  error using both nvcc and hipcc at the same time?
-#endif
-
 /* type cast macros for some additional type-safety in C++ land */
 #if defined(__cplusplus)
 #  define PetscStreamTypeCast(...) static_cast<PetscStreamType>(__VA_ARGS__)
@@ -171,6 +159,13 @@ struct _n_PetscDevice {
   void             *data;     /* placeholder */
 };
 
+#define PetscManagedTypeOps_(PetscManagedType,PetscType,PetscTypeSuffix_L)                     \
+  PetscErrorCode (*destroymanaged ## PetscTypeSuffix_L)(PetscDeviceContext,PetscManagedType);  \
+  PetscErrorCode (*getmanagedvalues ## PetscTypeSuffix_L)(PetscDeviceContext,PetscManagedType,PetscMemType,PetscMemoryAccessMode,PetscType**); \
+  PetscErrorCode (*applyoperator ## PetscTypeSuffix_L)(PetscDeviceContext,PetscManagedType,PetscOperatorType,PetscMemType,const PetscType*,PetscManagedType)
+
+#define PetscManagedTypeOps(PetscTypeSuffix,PetscTypeSuffix_L) PetscManagedTypeOps_(PetscConcat(PetscManaged,PetscTypeSuffix),PetscConcat(Petsc,PetscTypeSuffix),PetscTypeSuffix_L)
+
 typedef struct _DeviceContextOps *DeviceContextOps;
 struct _DeviceContextOps {
   PetscErrorCode (*destroy)(PetscDeviceContext);
@@ -184,7 +179,15 @@ struct _DeviceContextOps {
   PetscErrorCode (*getstreamhandle)(PetscDeviceContext,void*);
   PetscErrorCode (*begintimer)(PetscDeviceContext);
   PetscErrorCode (*endtimer)(PetscDeviceContext,PetscLogDouble*);
+  PetscErrorCode (*arraycopy)(PetscDeviceContext,void*PETSC_RESTRICT,const void*PETSC_RESTRICT,size_t,PetscDeviceCopyMode);
+  PetscManagedTypeOps(Scalar,scalar);
+  PetscManagedTypeOps(Real,real);
+  PetscManagedTypeOps(Int,int);
+  PetscErrorCode (*launchhostfunction)(PetscDeviceContext,PetscHostFunction,void*);
 };
+
+#undef PetscManagedTypeOps
+#undef PetscManagedTypeOps_
 
 struct _n_PetscDeviceContext {
   struct _DeviceContextOps  ops[1];
@@ -355,6 +358,82 @@ static inline PetscErrorCode PetscDeviceContextEndTimer_Internal(PetscDeviceCont
   PetscCall((*dctx->ops->endtimer)(dctx,elapsed));
   PetscFunctionReturn(0);
 }
+
+typedef struct
+{
+  PetscObject     obj;
+  void           *ptr;
+  const PetscInt *n;
+  MPI_Datatype    dtype;
+  MPI_Op          op;
+} *AllReduceCtx;
+
+static inline PetscErrorCode PetscDeviceContextAllReduceCallback_Internal(PetscDeviceContext PETSC_UNUSED dctx, void *ctx)
+{
+  AllReduceCtx cast = (AllReduceCtx)ctx;
+  PetscObject  obj  = cast->obj;
+
+  PetscFunctionBegin;
+  PetscCall(MPIU_Allreduce(MPI_IN_PLACE,cast->ptr,*cast->n,cast->dtype,cast->op,PetscObjectComm(obj)));
+  PetscCall(PetscObjectDereference(obj));
+  PetscCall(PetscFree(cast));
+  PetscFunctionReturn(0);
+}
+
+static inline PetscErrorCode PetscDeviceContextAllReduceManagedType_Internal(PetscDeviceContext dctx, void *ptr, const PetscInt *n, MPI_Datatype dtype, MPI_Op op, PetscObject obj)
+{
+  PetscFunctionBegin;
+  PetscValidDeviceContext(dctx,1);
+  PetscValidIntPointer(n,3);
+  PetscValidHeader(obj,6);
+  if (1) {
+    PetscCall(PetscDeviceContextSynchronize(dctx));
+    PetscCall(MPIU_Allreduce(MPI_IN_PLACE,ptr,*n,dtype,op,PetscObjectComm(obj)));
+  } else {
+    AllReduceCtx ctx;
+    PetscCall(PetscMalloc1(1,&ctx));
+    PetscCall(PetscObjectReference(obj));
+    ctx->obj   = obj;
+    ctx->ptr   = ptr;
+    ctx->n     = n;
+    ctx->dtype = dtype;
+    ctx->op    = op;
+    PetscCall(PetscDeviceContextLaunchHostFunction(dctx,PetscDeviceContextAllReduceCallback_Internal,ctx));
+  }
+  PetscFunctionReturn(0);
+}
+
+static inline PetscErrorCode PetscDeviceContextAllReduceManagedScalar_Internal(PetscDeviceContext dctx, PetscManagedScalar scal, const PetscInt *n, MPI_Op op, PetscObject obj)
+{
+  PetscInt     nv;
+  PetscScalar *scalptr;
+
+  PetscFunctionBegin;
+  if (use_gpu_aware_mpi) {
+    // we do not care where the pointer is, MPI will figure that out
+    PetscCall(PetscManagedScalarGetPointerAndMemType(dctx,scal,PETSC_MEMORY_ACCESS_READ,&scalptr,PETSC_NULLPTR,n ? PETSC_NULLPTR : &nv));
+  } else {
+    PetscCall(PetscManagedScalarGetValues(dctx,scal,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,&scalptr,n ? PETSC_NULLPTR : &nv));
+  }
+  PetscCall(PetscDeviceContextAllReduceManagedType_Internal(dctx,scalptr,n ? n : &nv,MPIU_SCALAR,op,obj));
+  PetscFunctionReturn(0);
+}
+
+static inline PetscErrorCode PetscDeviceContextAllReduceManagedReal_Internal(PetscDeviceContext dctx, PetscManagedReal scal, const PetscInt *n, MPI_Op op, PetscObject obj)
+{
+  PetscInt   nv;
+  PetscReal *scalptr;
+
+  PetscFunctionBegin;
+  if (use_gpu_aware_mpi) {
+    // we do not care where the pointer is, MPI will figure that out
+    PetscCall(PetscManagedRealGetPointerAndMemType(dctx,scal,PETSC_MEMORY_ACCESS_READ,&scalptr,PETSC_NULLPTR,n ? PETSC_NULLPTR : &nv));
+  } else {
+    PetscCall(PetscManagedRealGetValues(dctx,scal,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,&scalptr,n ? PETSC_NULLPTR : &nv));
+  }
+  PetscCall(PetscDeviceContextAllReduceManagedType_Internal(dctx,scalptr,n ? n : &nv,MPIU_REAL,op,obj));
+  PetscFunctionReturn(0);
+}
 #else /* PETSC_HAVE_CXX for PetscDeviceContext Internal Functions */
 #define PetscDeviceContextSetRootDeviceType_Internal(type)                0
 #define PetscDeviceContextSetRootStreamType_Internal(type)                0
@@ -367,6 +446,9 @@ static inline PetscErrorCode PetscDeviceContextEndTimer_Internal(PetscDeviceCont
 #define PetscDeviceContextGetSOLVERHandle_Internal(dctx,handle)           0
 #define PetscDeviceContextBeginTimer_Internal(dctx)                       0
 #define PetscDeviceContextEndTimer_Internal(dctx,elapsed)                 0
+#define PetscDeviceContextAllReduceManagedScalar_Internal(d,s,o,n,op)     0
+#define PetscDeviceContextAllReduceManagedReal_Internal(d,s,o,n,op)       0
+#define PetscDeviceContextAllReduceManagedInt_Internal(d,s,o,n,op)        0
 #endif /* PETSC_HAVE_CXX for PetscDeviceContext Internal Functions */
 
 PETSC_INTERN PetscErrorCode PetscDeviceContextCreate_HOST(PetscDeviceContext);
@@ -380,38 +462,4 @@ PETSC_INTERN PetscErrorCode PetscDeviceContextCreate_HIP(PetscDeviceContext);
 #if PetscDefined(HAVE_SYCL)
 PETSC_INTERN PetscErrorCode PetscDeviceContextCreate_SYCL(PetscDeviceContext);
 #endif
-
-static inline PetscErrorCode PetscGetMemType(const void *ptr,PetscMemType *type)
-{
-  PetscFunctionBegin;
-  *type = PETSC_MEMTYPE_HOST;
-#if defined(PETSC_HAVE_CUDA)
-  if (PetscDeviceInitialized(PETSC_DEVICE_CUDA) && ptr) {
-    cudaError_t                  cerr;
-    struct cudaPointerAttributes attr;
-    enum cudaMemoryType          mtype;
-    cerr = cudaPointerGetAttributes(&attr,ptr); /* Do not check error since before CUDA 11.0, passing a host pointer returns cudaErrorInvalidValue */
-    if (cerr) cerr = cudaGetLastError(); /* If there was an error, return it and then reset it */
-    #if (CUDART_VERSION < 10000)
-      mtype = attr.memoryType;
-    #else
-      mtype = attr.type;
-    #endif
-    if (cerr == cudaSuccess && mtype == cudaMemoryTypeDevice) *type = PETSC_MEMTYPE_DEVICE;
-  }
-#endif
-
-#if defined(PETSC_HAVE_HIP)
-  if (PetscDeviceInitialized(PETSC_DEVICE_HIP) && ptr) {
-    hipError_t                   cerr;
-    struct hipPointerAttribute_t attr;
-    enum hipMemoryType           mtype;
-    cerr = hipPointerGetAttributes(&attr,ptr);
-    if (cerr) cerr = hipGetLastError();
-    mtype = attr.memoryType;
-    if (cerr == hipSuccess && mtype == hipMemoryTypeDevice) *type = PETSC_MEMTYPE_DEVICE;
-  }
-#endif
-  PetscFunctionReturn(0);
-}
 #endif /* PETSCDEVICEIMPL_H */

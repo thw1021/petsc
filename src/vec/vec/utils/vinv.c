@@ -1066,37 +1066,47 @@ PetscErrorCode  VecStrideSubSetScatter_Default(Vec s,PetscInt nidx,const PetscIn
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecReciprocal_Default(Vec v, PetscDeviceContext PETSC_UNUSED dctx)
+static PetscErrorCode VecApplyUnary_Private(Vec v, PetscDeviceContext dctx, PetscErrorCode(*const unary_op)(Vec,PetscDeviceContext), PetscScalar(*const UnaryFunc)(PetscScalar))
 {
-  PetscInt       i,n;
-  PetscScalar    *x;
-
   PetscFunctionBegin;
-  PetscCall(VecGetLocalSize(v,&n));
-  PetscCall(VecGetArray(v,&x));
-  for (i=0; i<n; i++) {
-    if (x[i] != (PetscScalar)0.0) x[i] = (PetscScalar)1.0/x[i];
+  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
+  if (unary_op) {
+    PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+    PetscValidFunction(unary_op,3);
+    PetscCall((*unary_op)(v,dctx));
+  } else {
+    PetscInt     n;
+    PetscScalar *x;
+
+    PetscValidFunction(UnaryFunc,4);
+    PetscCall(VecGetLocalSize(v,&n));
+    PetscCall(VecGetArray(v,&x));
+    for (PetscInt i = 0; i < n; ++i) x[i] = UnaryFunc(x[i]);
+    PetscCall(VecRestoreArray(v,&x));
   }
-  PetscCall(VecRestoreArray(v,&x));
   PetscFunctionReturn(0);
 }
+
+static PetscScalar PetscReciprocal_Fn(PetscScalar x)
+{
+  return x == ((PetscScalar)0.0) ? x : ((PetscScalar)1.0)/x;
+}
+
+PetscErrorCode VecReciprocal_Default(Vec v, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
+  PetscCall(VecApplyUnary_Private(v,dctx,NULL,PetscReciprocal_Fn));
+  PetscFunctionReturn(0);
+}
+
+static PetscScalar PetscExpScalar_Fn(PetscScalar x) { return PetscExpScalar(x); }
 
 PetscErrorCode VecExpAsync(Vec v, PetscDeviceContext dctx)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(v, VEC_CLASSID,1);
-  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
-  if (v->ops->exp) {
-    PetscCall((*v->ops->exp)(v,dctx));
-  } else {
-    PetscInt    n;
-    PetscScalar *x;
-
-    PetscCall(VecGetLocalSize(v, &n));
-    PetscCall(VecGetArray(v, &x));
-    for (PetscInt i = 0; i < n; ++i) x[i] = PetscExpScalar(x[i]);
-    PetscCall(VecRestoreArray(v, &x));
-  }
+  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
+  PetscCall(VecApplyUnary_Private(v,dctx,v->ops->exp,PetscExpScalar_Fn));
   PetscFunctionReturn(0);
 }
 
@@ -1123,22 +1133,13 @@ PetscErrorCode  VecExp(Vec v)
   PetscFunctionReturn(0);
 }
 
+static PetscScalar PetscLogScalar_Fn(PetscScalar x) { return PetscLogScalar(x); }
+
 PetscErrorCode VecLogAsync(Vec v, PetscDeviceContext dctx)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(v, VEC_CLASSID,1);
-  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
-  if (v->ops->log) {
-    PetscCall((*v->ops->log)(v,dctx));
-  } else {
-    PetscScalar *x;
-    PetscInt     n;
-
-    PetscCall(VecGetLocalSize(v, &n));
-    PetscCall(VecGetArray(v, &x));
-    for (PetscInt i = 0; i < n; ++i) x[i] = PetscLogScalar(x[i]);
-    PetscCall(VecRestoreArray(v, &x));
-  }
+  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
+  PetscCall(VecApplyUnary_Private(v,dctx,v->ops->log,PetscLogScalar_Fn));
   PetscFunctionReturn(0);
 }
 
@@ -1165,22 +1166,13 @@ PetscErrorCode  VecLog(Vec v)
   PetscFunctionReturn(0);
 }
 
+static PetscScalar PetscSqrtScalar_Fn(PetscScalar x) { return PetscSqrtReal(PetscAbsScalar(x)); }
+
 PetscErrorCode VecSqrtAbsAsync(Vec v, PetscDeviceContext dctx)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(v, VEC_CLASSID,1);
-  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
-  if (v->ops->sqrt) {
-    PetscCall((*v->ops->sqrt)(v,dctx));
-  } else {
-    PetscScalar *x;
-    PetscInt    n;
-
-    PetscCall(VecGetLocalSize(v, &n));
-    PetscCall(VecGetArray(v, &x));
-    for (PetscInt i = 0; i < n; ++i) x[i] = PetscSqrtReal(PetscAbsScalar(x[i]));
-    PetscCall(VecRestoreArray(v, &x));
-  }
+  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
+  PetscCall(VecApplyUnary_Private(v,dctx,v->ops->sqrt,PetscSqrtScalar_Fn));
   PetscFunctionReturn(0);
 }
 
@@ -1211,15 +1203,9 @@ PetscErrorCode  VecSqrtAbs(Vec v)
 
 PetscErrorCode VecDotNorm2Async(Vec s, Vec t, PetscManagedScalar dp, PetscManagedReal nm, PetscDeviceContext dctx)
 {
-  const PetscScalar *sx, *tx;
-  PetscScalar       dpx = 0.0, nmx = 0.0,work[2],sum[2];
-  PetscInt          n;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(s, VEC_CLASSID,1);
-  PetscValidHeaderSpecific(t, VEC_CLASSID,2);
-  //PetscValidScalarPointer(dp,3);
-  //PetscValidRealPointer(nm,4);
+  PetscValidHeaderSpecific(s,VEC_CLASSID,1);
+  PetscValidHeaderSpecific(t,VEC_CLASSID,2);
   PetscValidType(s,1);
   PetscValidType(t,2);
   PetscCheckSameTypeAndComm(s,1,t,2);
@@ -1228,26 +1214,32 @@ PetscErrorCode VecDotNorm2Async(Vec s, Vec t, PetscManagedScalar dp, PetscManage
 
   PetscCall(PetscLogEventBegin(VEC_DotNorm2,s,t,0,0));
   if (s->ops->dotnorm2) {
-    PetscCall((*s->ops->dotnorm2)(s,t,dp,PetscManagedScalarCreate(&dpx),dctx));
-    *nm.ptr = PetscRealPart(dpx);
+    PetscManagedScalar nmtmp;
+
+    PetscCall(PetscManagedScalarCreateDefault(dctx,1,&nmtmp));
+    PetscCall((*s->ops->dotnorm2)(s,t,dp,nmtmp,dctx));
+    // REVIEW ME
+    //*nm = PetscRealPart(dpx);
+    PetscCall(PetscManagedScalarDestroy(dctx,&nmtmp));
   } else {
-    PetscCall(VecGetLocalSize(s, &n));
-    PetscCall(VecGetArrayRead(s, &sx));
-    PetscCall(VecGetArrayRead(t, &tx));
+    const PetscScalar *sx,*tx;
+    PetscScalar        sum[2] = {(PetscScalar)0};
+    PetscInt           n;
 
+    PetscCall(VecGetLocalSize(s,&n));
+    PetscCall(VecGetArrayRead(s,&sx));
+    PetscCall(VecGetArrayRead(t,&tx));
     for (PetscInt i = 0; i < n; ++i) {
-      dpx += sx[i]*PetscConj(tx[i]);
-      nmx += tx[i]*PetscConj(tx[i]);
+      sum[0] += sx[i]*PetscConj(tx[i]);
+      sum[1] += tx[i]*PetscConj(tx[i]);
     }
-    work[0] = dpx;
-    work[1] = nmx;
+    PetscCall(VecRestoreArrayRead(t,&tx));
+    PetscCall(VecRestoreArrayRead(s,&sx));
 
-    PetscCallMPI(MPIU_Allreduce(work,sum,2,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)s)));
-    *dp.ptr = sum[0];
-    *nm.ptr = PetscRealPart(sum[1]);
-
-    PetscCall(VecRestoreArrayRead(t, &tx));
-    PetscCall(VecRestoreArrayRead(s, &sx));
+    PetscCall(MPIU_Allreduce(MPI_IN_PLACE,sum,2,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)s)));
+    PetscCall(PetscManagedScalarSetValues(dctx,dp,PETSC_MEMTYPE_HOST,sum,1));
+    sum[1] = PetscRealPart(sum[1]);
+    PetscCall(PetscManagedRealSetValues(dctx,nm,PETSC_MEMTYPE_HOST,(const PetscReal*)(sum+1),1));
     PetscCall(PetscLogFlops(4.0*n));
   }
   PetscCall(PetscLogEventEnd(VEC_DotNorm2,s,t,0,0));
@@ -1277,40 +1269,41 @@ PetscErrorCode VecDotNorm2Async(Vec s, Vec t, PetscManagedScalar dp, PetscManage
 @*/
 PetscErrorCode  VecDotNorm2(Vec s,Vec t,PetscScalar *dp, PetscReal *nm)
 {
+  PetscManagedScalar dpt;
+  PetscManagedReal   nmt;
+
   PetscFunctionBegin;
-  PetscCall(VecDotNorm2Async(s,t,PetscManagedScalarCreate(dp),PetscManagedRealCreate(nm),NULL));
+  PetscValidScalarPointer(dp,3);
+  PetscValidRealPointer(nm,4);
+  PetscCall(PetscManageHostScalar(NULL,dp,1,&dpt));
+  PetscCall(PetscManageHostReal(NULL,nm,1,&nmt));
+  PetscCall(VecDotNorm2Async(s,t,dpt,nmt,NULL));
+  PetscCall(PetscManagedScalarDestroy(NULL,&dpt));
+  PetscCall(PetscManagedRealDestroy(NULL,&nmt));
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode VecSumAsync(Vec v, PetscManagedScalar sum, PetscDeviceContext dctx)
 {
+  const PetscInt one = 1;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
-  //PetscValidScalarPointer(sum,2);
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
-  *sum.ptr = 0.0;
   if (v->ops->sum) {
     PetscCall((*v->ops->sum)(v,sum,dctx));
   } else {
     const PetscScalar *x;
-    PetscInt           n;
+    PetscScalar       tmp = 0;
+    PetscInt          n;
 
-    for (PetscInt i = 0; i<n; i++) {
-      dpx += sx[i]*PetscConj(tx[i]);
-      nmx += tx[i]*PetscConj(tx[i]);
-    }
-    work[0] = dpx;
-    work[1] = nmx;
-
-    PetscCall(MPIU_Allreduce(work,sum,2,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)s)));
-    *dp  = sum[0];
-    *nm  = PetscRealPart(sum[1]);
-
-    PetscCall(VecRestoreArrayRead(t, &tx));
-    PetscCall(VecRestoreArrayRead(s, &sx));
-    PetscCall(PetscLogFlops(4.0*n));
+    PetscCall(VecGetLocalSize(v,&n));
+    PetscCall(VecGetArrayRead(v,&x));
+    for (PetscInt i = 0; i < n; ++i) tmp += x[i];
+    PetscCall(VecRestoreArrayRead(v,&x));
+    PetscCall(PetscManagedScalarSetValues(dctx,sum,PETSC_MEMTYPE_HOST,&tmp,1));
   }
-  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE,sum.ptr,1,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)v)));
+  PetscCall(PetscDeviceContextAllReduceManagedScalar_Internal(dctx,sum,&one,MPIU_SUM,(PetscObject)v));
   PetscFunctionReturn(0);
 }
 
@@ -1331,22 +1324,29 @@ PetscErrorCode VecSumAsync(Vec v, PetscManagedScalar sum, PetscDeviceContext dct
 @*/
 PetscErrorCode  VecSum(Vec v,PetscScalar *sum)
 {
+  PetscManagedScalar stmp;
+
   PetscFunctionBegin;
-  PetscCall(VecSumAsync(v,PetscManagedScalarCreate(sum),NULL));
+  PetscValidScalarPointer(sum,2);
+  PetscCall(PetscManageHostScalar(NULL,sum,1,&stmp));
+  PetscCall(VecSumAsync(v,stmp,NULL));
+  PetscCall(PetscManagedScalarDestroy(NULL,&stmp));
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode VecMeanAsync(Vec v, PetscManagedScalar mean, PetscDeviceContext dctx)
 {
-  PetscInt       n;
+  PetscInt n;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
-  //PetscValidScalarPointer(mean,2);
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   PetscCall(VecGetSize(v,&n));
   PetscCall(VecSumAsync(v,mean,dctx));
-  *mean.ptr /= n;
+  {
+    const PetscScalar nscal = (PetscScalar)n; // explicit conversion needed since we will pass a pointer
+    PetscCall(PetscManagedScalarApplyOperator(dctx,mean,PETSC_OPERATOR_DIVIDE,PETSC_MEMTYPE_HOST,&nscal,NULL));
+  }
   PetscFunctionReturn(0);
 }
 
@@ -1367,22 +1367,38 @@ PetscErrorCode VecMeanAsync(Vec v, PetscManagedScalar mean, PetscDeviceContext d
 @*/
 PetscErrorCode  VecMean(Vec v,PetscScalar *mean)
 {
+  PetscManagedScalar scal;
+
   PetscFunctionBegin;
-  PetscCall(VecMeanAsync(v,PetscManagedScalarCreate(mean),NULL));
+  PetscValidScalarPointer(mean,2);
+  PetscCall(PetscManageHostScalar(NULL,mean,1,&scal));
+  PetscCall(VecMeanAsync(v,scal,NULL));
+  PetscCall(PetscManagedScalarDestroy(NULL,&scal));
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecImaginaryPartAsync(Vec v, PetscDeviceContext PETSC_UNUSED dctx)
+static PetscErrorCode VecInplaceMutate_Private(Vec v, PetscDeviceContext PETSC_UNUSED dctx, PetscScalar(*const func)(PetscScalar))
 {
-  PetscInt        n;
-  PetscScalar    *x;
+  PetscInt     n;
+  PetscScalar *x;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
+  PetscValidFunction(func,3);
   PetscCall(VecGetLocalSize(v,&n));
   PetscCall(VecGetArray(v,&x));
-  for (PetscInt i = 0; i < n; ++i) x[i] = PetscImaginaryPart(x[i]);
+  for (PetscInt i = 0; i < n; ++i) x[i] = func(x[i]);
   PetscCall(VecRestoreArray(v,&x));
+  PetscFunctionReturn(0);
+}
+
+// have to make a function since PetscImaginaryPart() is a macro
+static PetscScalar PetscImaginaryPart_Func(PetscScalar x) { return (PetscScalar)PetscImaginaryPart(x); }
+
+PetscErrorCode VecImaginaryPartAsync(Vec v, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
+  PetscCall(VecInplaceMutate_Private(v,dctx,PetscImaginaryPart_Func));
   PetscFunctionReturn(0);
 }
 
@@ -1405,17 +1421,13 @@ PetscErrorCode  VecImaginaryPart(Vec v)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecRealPartAsync(Vec v, PetscDeviceContext PETSC_UNUSED dctx)
-{
-  PetscInt        n;
-  PetscScalar    *x;
+// have to make a function since PetscRealPart() is a macro
+static PetscScalar PetscRealPart_Func(PetscScalar x) { return (PetscScalar)PetscRealPart(x); }
 
+PetscErrorCode VecRealPartAsync(Vec v, PetscDeviceContext dctx)
+{
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
-  PetscCall(VecGetLocalSize(v,&n));
-  PetscCall(VecGetArray(v,&x));
-  for (PetscInt i = 0; i < n; ++i) x[i] = PetscRealPart(x[i]);
-  PetscCall(VecRestoreArray(v,&x));
+  PetscCall(VecInplaceMutate_Private(v,dctx,PetscRealPart_Func));
   PetscFunctionReturn(0);
 }
 
@@ -1444,18 +1456,21 @@ PetscErrorCode VecShiftAsync(Vec v, PetscManagedScalar shift, PetscDeviceContext
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
   //PetscValidLogicalCollectiveScalar(v,shift,2);
   PetscCall(VecSetErrorIfLocked(v,1));
-  if (PetscManagedScalarEq(shift,0.0)) PetscFunctionReturn(0);
-
   if (v->ops->shift) {
     PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
     PetscCall((*v->ops->shift)(v,shift,dctx));
   } else {
     PetscInt     n;
-    PetscScalar *x;
+    PetscScalar *x,*shiftptr;
 
     PetscCall(VecGetLocalSize(v,&n));
-    PetscCall(VecGetArray(v,&x));
-    for (PetscInt i = 0; i < n; ++i) x[i] += *shift.ptr;
+    PetscCall(VecGetArrayWrite(v,&x));
+    PetscCall(PetscManagedScalarGetValues(dctx,shift,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,&shiftptr,NULL));
+    PetscCall(PetscDeviceContextSynchronize(dctx));
+    { // to make doubly sure the compiler knows that this value ain't changin'
+      const PetscScalar shiftv = *shiftptr;
+      for (PetscInt i = 0; i < n; ++i) x[i] += shiftv;
+    }
     PetscCall(VecRestoreArray(v,&x));
   }
   PetscFunctionReturn(0);
@@ -1477,27 +1492,28 @@ PetscErrorCode VecShiftAsync(Vec v, PetscManagedScalar shift, PetscDeviceContext
 PetscErrorCode  VecShift(Vec v,PetscScalar shift)
 {
   PetscFunctionBegin;
-  PetscCall(VecShiftAsync(v,PetscManagedScalarCreate(&shift),NULL));
+  if (shift != (PetscScalar)0) {
+    PetscManagedScalar scal;
+
+    PetscCall(PetscManageHostScalar(NULL,&shift,1,&scal));
+    PetscCall(VecShiftAsync(v,scal,NULL));
+    PetscCall(PetscManagedScalarDestroy(NULL,&scal));
+  }
   PetscFunctionReturn(0);
 }
+
+static PetscScalar PetscAbsScalar_Func(PetscScalar x) { return (PetscScalar)PetscAbsScalar(x); }
 
 PetscErrorCode VecAbsAsync(Vec v, PetscDeviceContext dctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
   PetscCall(VecSetErrorIfLocked(v,1));
-
   if (v->ops->abs) {
     PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
     PetscCall((*v->ops->abs)(v,dctx));
   } else {
-    PetscInt     n;
-    PetscScalar *x;
-
-    PetscCall(VecGetLocalSize(v,&n));
-    PetscCall(VecGetArray(v,&x));
-    for (PetscInt i = 0; i < n; ++i) x[i] = PetscAbsScalar(x[i]);
-    PetscCall(VecRestoreArray(v,&x));
+    PetscCall(VecInplaceMutate_Private(v,dctx,PetscAbsScalar_Func));
   }
   PetscFunctionReturn(0);
 }

@@ -8,7 +8,7 @@
 
 extern PetscErrorCode PetscSharedMalloc(MPI_Comm,PetscInt,PetscInt,void**);
 
-PetscErrorCode VecDuplicate_Shared(Vec win,Vec *v)
+PetscErrorCode VecDuplicate_Shared(Vec win,Vec *v,PetscDeviceContext dctx)
 {
   Vec_MPI        *w = (Vec_MPI*)win->data;
   PetscScalar    *array;
@@ -19,7 +19,7 @@ PetscErrorCode VecDuplicate_Shared(Vec win,Vec *v)
 
   PetscCall(VecCreate(PetscObjectComm((PetscObject)win),v));
   PetscCall(VecSetSizes(*v,win->map->n,win->map->N));
-  PetscCall(VecCreate_MPI_Private(*v,PETSC_FALSE,w->nghost,array));
+  PetscCall(VecCreate_MPI_Private(*v,PETSC_FALSE,w->nghost,array,dctx));
   PetscCall(PetscLayoutReference(win->map,&(*v)->map));
 
   /* New vector should inherit stashing property of parent */
@@ -42,7 +42,7 @@ PETSC_EXTERN PetscErrorCode VecCreate_Shared(Vec vv)
   PetscCall(PetscSplitOwnership(PetscObjectComm((PetscObject)vv),&vv->map->n,&vv->map->N));
   PetscCall(PetscSharedMalloc(PetscObjectComm((PetscObject)vv),vv->map->n*sizeof(PetscScalar),vv->map->N*sizeof(PetscScalar),(void**)&array));
 
-  PetscCall(VecCreate_MPI_Private(vv,PETSC_FALSE,0,array));
+  PetscCall(VecCreate_MPI_Private(vv,PETSC_FALSE,0,array,NULL));
   vv->ops->duplicate = VecDuplicate_Shared;
   PetscFunctionReturn(0);
 }

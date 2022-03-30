@@ -1,4 +1,5 @@
 #include <petsc/private/deviceimpl.h> /*I "petscdevice.h" I*/
+#include <petsc/private/cpputil.hpp>
 #include "objpool.hpp"
 #include <array>
 #include <vector>
@@ -27,19 +28,16 @@ struct PetscDeviceContextAllocator : Petsc::AllocatorBase<PetscDeviceContext>
 {
   static PetscInt PetscDeviceContextID;
 
-  PETSC_NODISCARD static PetscErrorCode create(PetscDeviceContext *dctx) noexcept
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode create(PetscDeviceContext *dctx))
   {
-    PetscDeviceContext dc;
-
     PetscFunctionBegin;
-    PetscCall(PetscNew(&dc));
-    dc->id         = PetscDeviceContextID++;
-    dc->streamType = PETSC_STREAM_DEFAULT_BLOCKING;
-    *dctx          = dc;
+    PetscCall(PetscNew(dctx));
+    (*dctx)->id         = PetscDeviceContextID++;
+    (*dctx)->streamType = PETSC_STREAM_DEFAULT_BLOCKING;
     PetscFunctionReturn(0);
   }
 
-  PETSC_NODISCARD static PetscErrorCode destroy(PetscDeviceContext dctx) noexcept
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode destroy(PetscDeviceContext dctx))
   {
     PetscFunctionBegin;
     PetscAssert(!dctx->numChildren,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Device context still has %" PetscInt_FMT " un-joined children, must call PetscDeviceContextJoin() with all children before destroying",dctx->numChildren);
@@ -50,7 +48,7 @@ struct PetscDeviceContextAllocator : Petsc::AllocatorBase<PetscDeviceContext>
     PetscFunctionReturn(0);
   }
 
-  PETSC_NODISCARD static PetscErrorCode reset(PetscDeviceContext dctx) noexcept
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode reset(PetscDeviceContext dctx))
   {
     PetscFunctionBegin;
     /* don't deallocate the child array, rather just zero it out */
@@ -61,7 +59,7 @@ struct PetscDeviceContextAllocator : Petsc::AllocatorBase<PetscDeviceContext>
     PetscFunctionReturn(0);
   }
 
-  PETSC_NODISCARD static constexpr PetscErrorCode finalize() noexcept { return 0; }
+  PETSC_CXX_COMPAT_DECL(constexpr PetscErrorCode finalize()) { return 0; }
 };
 /* an ID = 0 is invalid */
 PetscInt PetscDeviceContextAllocator::PetscDeviceContextID = 1;
@@ -628,6 +626,24 @@ PetscErrorCode PetscDeviceContextSynchronize(PetscDeviceContext dctx)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode PetscDeviceArrayCopy_(PetscDeviceContext dctx, void *PETSC_RESTRICT dest, const void *PETSC_RESTRICT src, std::size_t n, PetscDeviceCopyMode mode)
+{
+  PetscFunctionBegin;
+  PetscValidDeviceContext(dctx,1);
+  PetscCall((*dctx->ops->arraycopy)(dctx,dest,src,n,mode));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscDeviceContextLaunchHostFunction(PetscDeviceContext dctx, PetscHostFunction func, void *ctx)
+{
+  PetscFunctionBegin;
+  PetscValidDeviceContext(dctx,1);
+  PetscValidFunction(func,2);
+  if (ctx) PetscValidPointer(ctx,3);
+  PetscCall((*dctx->ops->launchhostfunction)(dctx,func,ctx));
+  PetscFunctionReturn(0);
+}
+
 /* each device needs a null context, and each device type needs a set of devices */
 static auto nullContexts          = std::array<std::vector<PetscDeviceContext>,PETSC_DEVICE_MAX>{ };
 static auto nullContextsFinalizer = false;
@@ -664,7 +680,7 @@ PetscErrorCode PetscDeviceContextGetNullContextForDevice_Internal(PetscDevice de
     PetscCall(PetscDeviceContextSetStreamType(*dctx,PETSC_STREAM_GLOBAL_BLOCKING));
     PetscCall(PetscDeviceContextSetDevice(*dctx,device));
     PetscCall(PetscDeviceContextSetUp(*dctx));
-    // would use ctxlist.cbegin() but GGC 4.8 can't handle const iterator insert!
+    // would use ctxlist.cbegin() but GCC 4.8 can't handle const iterator insert!
     CHKERRCXX(ctxlist.insert(std::next(ctxlist.begin(),devid),*dctx));
   } else *dctx = ctxlist[devid];
   PetscFunctionReturn(0);
