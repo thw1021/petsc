@@ -265,6 +265,7 @@ inline PetscErrorCode ObjectPool<T,Allocator>::get(value_type &obj) noexcept
   } else {
     PetscCallCXX(obj = std::move(stack_.top()));
     PetscCallCXX(stack_.pop());
+    PetscCall(this->allocator().reset(obj));
   }
   PetscFunctionReturn(0);
 }
@@ -275,7 +276,6 @@ inline PetscErrorCode ObjectPool<T,Allocator>::reclaim(value_type &&obj) noexcep
   PetscFunctionBegin;
   if (PetscLikely(registered_)) {
     // allows const allocator_t& to be used if allocator defines a const reset
-    PetscCall(this->allocator().reset(obj));
     PetscCallCXX(stack_.push(std::move(obj)));
   } else {
     // this is necessary if an object is "reclaimed" within another PetscFinalize() registered
