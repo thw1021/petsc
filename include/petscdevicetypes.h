@@ -201,50 +201,18 @@ PetscDeviceContextDestroy(), PetscDeviceContextFork(), PetscDeviceContextJoin()
 S*/
 typedef struct _n_PetscDeviceContext *PetscDeviceContext;
 
-#if defined(__cplusplus)
-template <typename T>
-struct PetscManagedType
-{
-  T            *ptr;
-  PetscInt     n;
-  PetscMemType mtype;
+typedef enum {
+  PETSC_DEVICE_COPY_HTOH,
+  PETSC_DEVICE_COPY_HTOD,
+  PETSC_DEVICE_COPY_DTOD,
+  PETSC_DEVICE_COPY_DTOH,
+  PETSC_DEVICE_COPY_AUTO,
+} PetscDeviceCopyMode;
 
-  PetscManagedType(T *_ptr = nullptr, PetscInt _n = 1, PetscMemType _mtype = PETSC_MEMTYPE_HOST) noexcept
-    : ptr(_ptr), n(_n), mtype(_mtype)
-  { }
+#define PetscManagedName PetscManagedScalar
+#define PetscManagedType PetscScalar
 
-        T& operator[](std::size_t idx)       noexcept { return this->ptr[idx]; }
-  const T& operator[](std::size_t idx) const noexcept { return this->ptr[idx]; }
-
-  bool operator==(const T &b) const noexcept
-  {
-    return PetscMemTypeHost(this->mtype) ? (*this->ptr == b) : false;
-  }
-
-  bool operator!=(const T &b) const noexcept
-  {
-    return !(this == b);
-  }
-};
-
-using PetscManagedScalar = PetscManagedType<PetscScalar>;
-using PetscManagedReal   = PetscManagedType<PetscReal>;
-using PetscManagedInt    = PetscManagedType<PetscInt>;
-#else
-#define PETSC_MANAGED_TYPE_CDECL(name)          \
-  typedef struct PetscConcat(PetscManaged,name) \
-  {                                             \
-    PetscConcat(Petsc,name) *ptr;               \
-    PetscCount              n;                  \
-    PetscMemType            mtype;              \
-  } PetscConcat(PetscManaged,name)
-
-PETSC_MANAGED_TYPE_CDECL(Scalar);
-PETSC_MANAGED_TYPE_CDECL(Real);
-PETSC_MANAGED_TYPE_CDECL(Int);
-
-#undef PETSC_MANAGED_TYPE_CDECL
-#endif
+#include "petscmanagedtype.h"
 
 #define PETSC_MANAGED_TYPE_OPERATOR_DECL_(PetscManagedType,PetscType)                          \
   static inline PetscBool PetscConcat(PetscManagedType,Eq)(PetscManagedType scal, PetscType val) \

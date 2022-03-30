@@ -1,4 +1,5 @@
 #include <petsc/private/deviceimpl.h> /*I "petscdevice.h" I*/
+#include <petsc/private/cpputil.hpp>
 #include "objpool.hpp"
 #include <array>
 #include <vector>
@@ -27,19 +28,16 @@ struct PetscDeviceContextAllocator : Petsc::AllocatorBase<PetscDeviceContext>
 {
   static PetscInt PetscDeviceContextID;
 
-  PETSC_NODISCARD static PetscErrorCode create(PetscDeviceContext *dctx) noexcept
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode create(PetscDeviceContext *dctx))
   {
-    PetscDeviceContext dc;
-
     PetscFunctionBegin;
-    PetscCall(PetscNew(&dc));
-    dc->id         = PetscDeviceContextID++;
-    dc->streamType = PETSC_STREAM_DEFAULT_BLOCKING;
-    *dctx          = dc;
+    PetscCall(PetscNew(dctx));
+    (*dctx)->id         = PetscDeviceContextID++;
+    (*dctx)->streamType = PETSC_STREAM_DEFAULT_BLOCKING;
     PetscFunctionReturn(0);
   }
 
-  PETSC_NODISCARD static PetscErrorCode destroy(PetscDeviceContext dctx) noexcept
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode destroy(PetscDeviceContext dctx))
   {
     PetscFunctionBegin;
     PetscAssert(!dctx->numChildren,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Device context still has %" PetscInt_FMT " un-joined children, must call PetscDeviceContextJoin() with all children before destroying",dctx->numChildren);
@@ -50,7 +48,7 @@ struct PetscDeviceContextAllocator : Petsc::AllocatorBase<PetscDeviceContext>
     PetscFunctionReturn(0);
   }
 
-  PETSC_NODISCARD static PetscErrorCode reset(PetscDeviceContext dctx) noexcept
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode reset(PetscDeviceContext dctx))
   {
     PetscFunctionBegin;
     /* don't deallocate the child array, rather just zero it out */
@@ -61,7 +59,7 @@ struct PetscDeviceContextAllocator : Petsc::AllocatorBase<PetscDeviceContext>
     PetscFunctionReturn(0);
   }
 
-  PETSC_NODISCARD static constexpr PetscErrorCode finalize() noexcept { return 0; }
+  PETSC_CXX_COMPAT_DECL(constexpr PetscErrorCode finalize()) { return 0; }
 };
 /* an ID = 0 is invalid */
 PetscInt PetscDeviceContextAllocator::PetscDeviceContextID = 1;
@@ -625,6 +623,124 @@ PetscErrorCode PetscDeviceContextSynchronize(PetscDeviceContext dctx)
   PetscValidDeviceContext(dctx,1);
   /* if it isn't setup there is nothing to sync on */
   if (dctx->setup) PetscCall((*dctx->ops->synchronize)(dctx));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscDeviceArrayCopy_(PetscDeviceContext dctx, void *PETSC_RESTRICT dest, const void *PETSC_RESTRICT src, std::size_t n, PetscDeviceCopyMode mode)
+{
+  PetscFunctionBegin;
+  PetscValidDeviceContext(dctx,1);
+  PetscCall((*dctx->ops->arraycopy)(dctx,dest,src,n,mode));
+  PetscFunctionReturn(0);
+}
+
+template <typename PetscManagedType>
+struct PetscManagedTypeAllocator : Petsc::AllocatorBase<PetscManagedType>
+{
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode create(PetscManagedType mscal))
+  {
+    using Petsc::util::integral_value;
+
+    PetscFunctionBegin;
+    PetscCall(PetscNew(mscal));
+    mscal->cmode = PETSC_OWN_POINTER;
+    static_assert(integral_value(PETSC_OWN_POINTER) != 0,"");
+    static_assert(integral_value(PETSC_MEMTYPE_HOST) == 0,"");
+    static_assert(integral_value(PETSC_OFFLOAD_UNALLOCATED) == 0,"");
+    PetscFunctionReturn(0);
+  }
+
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode destroy(PetscManagedType mscal))
+  {
+    PetscFunctionBegin;
+    PetscCall(PetscFree(mscal));
+    PetscFunctionReturn(0);
+  }
+
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode reset(PetscManagedType mscal))
+  {
+    PetscFunctionBegin;
+    mscal->host   = nullptr;
+    mscal->device = nullptr;
+    mscal->n      = 0;
+    mscal->mtype  = PETSC_MEMTYPE_HOST;
+    mscal->cmode  = PETSC_OWN_POINTER;
+    mscal->mask   = PETSC_OFFLOAD_UNALLOCATED;
+    PetscFunctionReturn(0);
+  }
+
+  PETSC_CXX_COMPAT_DECL(constexpr PetscErrorCode finalize()) { return 0; }
+};
+
+template <typename PetscType, typename PetscManagedType>
+using acquiremanagedtype_fptr = PetscErrorCode(*)(PetscDeviceContext,PetscType*,PetscType*,PetscInt,PetscCopyMode,PetscMemType,PetscOffloadMask,PetscManagedType);
+
+template <typename PT, typename PMT>
+static constexpr acquiremanagedtype_fptr<PT,PMT> get_acquire_func_ptr(PetscDeviceContext);
+
+template <>
+constexpr acquiremanagedtype_fptr<PetscScalar,PetscManagedScalar> get_acquire_func_ptr(PetscDeviceContext dctx)
+{
+  return dctx->ops->acquiremanagedscalar;
+}
+
+template <typename PetscManagedType>
+using releasemanagedtype_fptr = PetscErrorCode(*)(PetscDeviceContext,PetscManagedType);
+
+template <typename T>
+static constexpr releasemanagedtype_fptr<T> get_release_func_ptr(PetscDeviceContext);
+
+template <>
+constexpr releasemanagedtype_fptr<PetscManagedScalar> get_release_func_ptr(PetscDeviceContext dctx)
+{
+  return dctx->ops->releasemanagedscalar;
+}
+
+template <typename T>
+using PetscManagedTypePool = typename Petsc::ObjectPool<T,PetscManagedTypeAllocator<T>>;
+
+static auto PetscManagedScalarPool = PetscManagedTypePool<PetscManagedScalar>{ };
+
+template <typename PetscManagedType>
+static PetscErrorCode PetscDeviceContextDestroyManagedType_Private(PetscDeviceContext dctx, PetscManagedType *scal)
+{
+  PetscFunctionBegin;
+  PetscValidDeviceContext(dctx,1);
+  if (*scal) PetscFunctionReturn(0);
+  PetscCall((*get_release_func_ptr<PetscManagedType>(dctx))(dctx,*scal));
+  PetscCall(PetscManagedScalarPool.reclaim(std::move(*scal)));
+  *scal = nullptr;
+  PetscFunctionReturn(0);
+}
+
+template <typename PetscType, typename PetscManagedType>
+PetscErrorCode PetscDeviceContextCreateManagedType_Private(PetscDeviceContext dctx, PetscType *host_ptr, PetscType *device_ptr, PetscInt n, PetscCopyMode cmode, PetscMemType mtype, PetscOffloadMask mask, PetscManagedType *scal)
+{
+  static auto firstTime = true;
+
+  PetscFunctionBegin;
+  if (firstTime) {
+    // seed a few managed types
+    for (auto i = 0; i < 8; ++i) {
+      PetscManagedType tmp;
+
+      PetscCall(PetscManagedScalarPool.get(tmp));
+      PetscCall(PetscDeviceContextDestroyManagedType_Private(dctx,&tmp));
+    }
+    firstTime = false;
+  }
+  PetscCall(PetscManagedScalarPool.get(*scal));
+  PetscCall((*get_acquire_func_ptr<PetscType,PetscManagedType>(dctx))(dctx,host_ptr,device_ptr,n,cmode,mtype,mask,*scal));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscDeviceContextCreateManagedScalarArray(PetscDeviceContext dctx, PetscScalar *host_ptr, PetscScalar *device_ptr, PetscInt n, PetscCopyMode cmode, PetscMemType mtype, PetscOffloadMask mask, PetscManagedScalar *scal)
+{
+  PetscFunctionBegin;
+  PetscValidDeviceContext(dctx,1);
+  if (host_ptr && n) PetscValidScalarPointer(host_ptr,2);
+  PetscValidPointer(scal,8);
+  PetscCall(PetscDeviceContextCreateManagedType_Private(dctx,host_ptr,device_ptr,n,cmode,mtype,mask,scal));
   PetscFunctionReturn(0);
 }
 
