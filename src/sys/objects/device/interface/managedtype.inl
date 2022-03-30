@@ -1,0 +1,272 @@
+#ifdef DEBUG_MANAGED_TYPE_IMPL
+#  include <petsc/private/deviceimpl.h>
+#  include <petsc/private/cpputil.hpp>
+#  include "objpool.hpp"
+#  define PetscTypeSuffix   Scalar
+#  define PetscTypeSuffix_L scalar
+#endif
+
+#if !defined(PetscTypeSuffix)
+#  error "Must define PetscTypeSuffix"
+#endif
+
+#if !defined(PetscTypeSuffix_L)
+#  error "Must define PetscTypeSuffix_L"
+#endif
+
+#if !defined(PetscType)
+#  define PetscType PetscConcat(Petsc,PetscTypeSuffix)
+#endif
+
+#if !defined(PetscManagedType)
+#  define PetscManagedType PetscConcat(PetscManaged,PetscTypeSuffix)
+#endif
+
+#if defined(PetscConcat3)
+#  error "PetscConcat3 defined"
+#else
+#  define PetscConcat3(a,b,c) PetscConcat(PetscConcat(a,b),c)
+#endif
+
+#define PetscManagedTypeAllocator            PetscConcat(PetscManagedType,Allocator)
+#define PetscManagedTypePool                 PetscConcat(PetscManagedType,Pool)
+#define PetscValidTypePointer                PetscConcat3(PetscValid,PetscTypeSuffix,Pointer)
+
+#define releasemanagedtype                   PetscConcat(releasemanaged,PetscTypeSuffix_L)
+#define getmanagedvaluestype                 PetscConcat(getmanagedvalues,PetscTypeSuffix_L)
+#define applyoperatortype                    PetscConcat(applyoperator,PetscTypeSuffix_L)
+
+struct PetscManagedTypeAllocator : Petsc::AllocatorBase<PetscManagedType>
+{
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode create(PetscManagedType *mscal))
+  {
+    using Petsc::util::integral_value;
+
+    PetscFunctionBegin;
+    PetscCall(PetscNew(mscal));
+    (*mscal)->h_cmode = PETSC_OWN_POINTER;
+    (*mscal)->d_cmode = PETSC_OWN_POINTER;
+    static_assert(integral_value(PETSC_OWN_POINTER) != 0,"");
+    static_assert(integral_value(PETSC_OFFLOAD_UNALLOCATED) == 0,"");
+    PetscFunctionReturn(0);
+  }
+
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode destroy(PetscManagedType mscal))
+  {
+    PetscFunctionBegin;
+    PetscCall(PetscFree(mscal));
+    PetscFunctionReturn(0);
+  }
+
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode reset(PetscManagedType mscal))
+  {
+    PetscFunctionBegin;
+    mscal->n       = 0;
+    mscal->host    = nullptr;
+    mscal->device  = nullptr;
+    mscal->mask    = PETSC_OFFLOAD_UNALLOCATED;
+    mscal->h_cmode = PETSC_OWN_POINTER;
+    mscal->d_cmode = PETSC_OWN_POINTER;
+    PetscFunctionReturn(0);
+  }
+
+  PETSC_CXX_COMPAT_DECL(constexpr PetscErrorCode finalize()) { return 0; }
+};
+
+static auto PetscManagedTypePool = Petsc::ObjectPool<PetscManagedType,PetscManagedTypeAllocator>{};
+
+namespace
+{
+
+static PetscErrorCode CopyValues(PetscDeviceContext dctx, PetscManagedType scal, PetscOffloadMask mask, PetscOffloadMask src_mask, const PetscType *src_ptr)
+{
+  PetscDeviceCopyMode  mode;
+  PetscType           *ptr;
+  PetscInt             n;
+
+  // need to actually allocate the stuff
+  PetscFunctionBegin;
+  PetscCall(PetscDeviceContextGetManagedTypeValues(dctx,scal,PetscDetermineMemType(mask),PETSC_MEMORY_ACCESS_WRITE,&ptr,&n));
+  PetscCall(PetscOffloadMaskToDeviceCopyMode(mask,src_mask,&mode));
+  PetscCall(PetscDeviceArrayCopy(dctx,ptr,src_ptr,n,mode));
+  PetscFunctionReturn(0);
+}
+
+} // anonymous namespace
+
+#define PetscManagedTypeCreate               PetscConcat(PetscManagedType,Create)
+#define PetscManageHostType                  PetscConcat(PetscManageHost,PetscTypeSuffix)
+#define PetscManagedTypeCreateDefault        PetscConcat(PetscManagedTypeCreate,Default)
+#define PetscManagedTypeDestroy              PetscConcat(PetscManagedType,Destroy)
+#define PetscManagedTypeGetValues            PetscConcat(PetscManagedType,GetValues)
+#define PetscManagedTypeSetValues            PetscConcat(PetscManagedType,SetValues)
+#define PetscManagedTypeCopy                 PetscConcat(PetscManagedType,Copy)
+#define PetscManagedTypeApplyOperator        PetscConcat(PetscManagedType,ApplyOperator)
+#define PetscManagedTypeApplyManagedOperator PetscConcat(PetscManagedType,ApplyManagedOperator)
+
+PetscErrorCode PetscManagedTypeCreate(PetscDeviceContext dctx, PetscType *host_ptr, PetscType *device_ptr, PetscInt n, PetscCopyMode host_cmode, PetscCopyMode device_cmode, PetscOffloadMask mask, PetscManagedType *scal)
+{
+  PetscFunctionBegin;
+  if (host_ptr && n) PetscValidTypePointer(host_ptr,2);
+  PetscValidPointer(scal,8);
+  if (host_ptr && device_ptr) {
+    PetscAssert(mask != PETSC_OFFLOAD_UNALLOCATED,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Set both host and device pointer but offloadmask was PETSC_OFFLOAD_UNALLOCATED");
+    // this is the only instance in which we believe whatever the user has fed us
+  } else if (host_ptr) {
+    // clearly no device_ptr, so we own it
+    mask         = PETSC_OFFLOAD_CPU;
+    device_cmode = PETSC_OWN_POINTER;
+  } else if (device_ptr) {
+    // clearly no host_ptr, so we own it
+    mask       = PETSC_OFFLOAD_GPU;
+    host_cmode = PETSC_OWN_POINTER;
+  } else {
+    mask       = PETSC_OFFLOAD_UNALLOCATED;
+    host_cmode = device_cmode = PETSC_OWN_POINTER;
+  }
+
+  // finally get our pointer
+  PetscCall(PetscManagedTypePool.get(*scal));
+
+  // populate known quantities
+  (*scal)->n       = n;
+  (*scal)->mask    = mask;
+  (*scal)->h_cmode = host_cmode;
+  (*scal)->d_cmode = device_cmode;
+
+  if (host_cmode == PETSC_COPY_VALUES) {
+    PetscCall(CopyValues(dctx,*scal,mask,PETSC_OFFLOAD_CPU,host_ptr));
+  } else {
+    // own_pointer or use_pointer
+    (*scal)->host = host_ptr;
+  }
+
+  if (device_cmode == PETSC_COPY_VALUES) {
+    PetscCall(CopyValues(dctx,*scal,mask,PETSC_OFFLOAD_GPU,device_ptr));
+  } else {
+    // own_pointer or use_pointer
+    (*scal)->device = device_ptr;
+  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscManagedTypeDestroy(PetscDeviceContext dctx, PetscManagedType *scal)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  PetscValidDeviceContext(dctx,1);
+  if (*scal) PetscFunctionReturn(0);
+  PetscCall((*dctx->ops->releasemanagedtype)(dctx,*scal));
+  PetscCall(PetscManagedTypePool.reclaim(std::move(*scal)));
+  *scal = nullptr;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscManagedTypeGetValues(PetscDeviceContext dctx, PetscManagedType scal, PetscMemType mtype, PetscMemoryAccessMode mode, PetscType **ptr, PetscInt *n)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  PetscValidDeviceContext(dctx,1);
+  PetscValidPointer(scal,2);
+  PetscValidPointer(ptr,5);
+  if (n) PetscValidIntPointer(n,6);
+  PetscCall((*dctx->ops->getmanagedvaluestype)(dctx,scal,mtype,mode,ptr));
+  if (n) *n = scal->n;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscManagedTypeSetValues(PetscDeviceContext dctx, PetscManagedType scal, PetscMemType mtype, const PetscType *ptr, PetscInt n)
+{
+  // we want to move the data TO wherever the managed type has it, not the other way around
+  const auto  scalmtype = PetscOffloadMaskToMemType(scal->mask);
+  const auto  mode      = PetscMemTypeToDeviceCopyMode(scalmtype,mtype);
+  PetscType  *scalptr;
+  PetscInt    scaln;
+
+  PetscFunctionBegin;
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  if (PetscMemTypeHost(mtype)) PetscValidTypePointer(ptr,4);
+  PetscCall(PetscManagedTypeGetValues(dctx,scal,scalmtype,PETSC_MEMORY_ACCESS_WRITE,&scalptr,&scaln));
+  PetscAssert(n <= scaln,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Trying to write %" PetscInt_FMT " values to " PetscStringize(PetscManagedType) " but it only holds %" PetscInt_FMT " entries",n,scaln);
+  PetscCall(PetscDeviceArrayCopy(dctx,scalptr,ptr,n,mode));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscManagedTypeCopy(PetscDeviceContext dctx, PetscManagedType dest, PetscManagedType src)
+{
+  // prefer GPU if both
+  const auto           dmask = dest->mask == PETSC_OFFLOAD_BOTH ? PETSC_OFFLOAD_GPU : dest->mask;
+  const auto           mtype = PetscOffloadMaskToMemType(dmask);
+  PetscInt             dest_n,src_n;
+  PetscType           *dest_ptr,*src_ptr;
+  PetscDeviceCopyMode  mode;
+
+  PetscFunctionBegin;
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  PetscValidPointer(dest,2);
+  PetscValidPointer(src,3);
+  PetscCall(PetscOffloadMaskToDeviceCopyMode(dmask,src->mask,&mode));
+  PetscCall(PetscManagedTypeGetValues(dctx,dest,mtype,PETSC_MEMORY_ACCESS_WRITE,&dest_ptr,&dest_n));
+  PetscCall(PetscManagedTypeGetValues(dctx,src,mtype,PETSC_MEMORY_ACCESS_READ,&src_ptr,&src_n));
+  PetscAssert(dest_n >= src_n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Destination size %" PetscInt_FMT " not large enough for source size %" PetscInt_FMT,dest_n,src_n);
+  PetscCall(PetscDeviceArrayCopy(dctx,dest_ptr,src_ptr,dest_n,mode));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscManagedTypeApplyOperator(PetscDeviceContext dctx, PetscManagedType scal, PetscOperatorType otype, PetscMemType mtype, const PetscType *rhs, PetscManagedType ret)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  PetscValidPointer(scal,2);
+  if (PetscMemTypeHost(mtype)) PetscValidTypePointer(rhs,4);
+  if (PetscOffloadHost(scal->mask)) {
+    const auto  src_access = ret ? PETSC_MEMORY_ACCESS_READ : PETSC_MEMORY_ACCESS_READ_WRITE;
+    PetscType  *ptr,*retptr;
+    PetscInt    n;
+
+    PetscCall(PetscManagedTypeGetValues(dctx,scal,PETSC_MEMTYPE_HOST,src_access,&ptr,&n));
+    if (ret) {
+      PetscCall(PetscManagedTypeGetValues(dctx,ret,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_WRITE,&retptr,NULL));
+    } else {
+      // in place
+      retptr = ptr;
+    }
+
+    for (PetscInt i = 0; i < n; ++i) {
+      switch (otype) {
+      case PETSC_OPERATOR_PLUS:     retptr[i] = ptr[i]+(*rhs); break;
+      case PETSC_OPERATOR_MINUS:    retptr[i] = ptr[i]-(*rhs); break;
+      case PETSC_OPERATOR_MULTIPLY: retptr[i] = ptr[i]*(*rhs); break;
+      case PETSC_OPERATOR_DIVIDE:   retptr[i] = ptr[i]/(*rhs); break;
+      case PETSC_OPERATOR_EQUAL:    retptr[i] = *rhs;        break;
+      }
+    }
+  } else {
+    PetscCall((*dctx->ops->applyoperatortype)(dctx,scal,otype,rhs,ret));
+  }
+  PetscFunctionReturn(0);
+}
+
+#undef PetscType
+#undef PetscManagedType
+#undef PetscTypeSuffix
+#undef PetscTypeSuffix_L
+#undef PetscConcat3
+
+#undef PetscManagedTypeAllocator
+#undef PetscManagedTypePool
+#undef PetscValidTypePointer
+
+#undef releasemanagedtype
+#undef getmanagedvaluestype
+#undef applyoperatortype
+
+#undef PetscManagedTypeCreate
+#undef PetscManageHostType
+#undef PetscManagedTypeCreateDefault
+#undef PetscManagedTypeDestroy
+#undef PetscManagedTypeGetValeus
+#undef PetscManagedTypeSetValeus
+#undef PetscManagedTypeCopy
+#undef PetscManagedTypeApplyOperator
+#undef PetscManagedTypeApplyManagedOperator

@@ -1,0 +1,141 @@
+#ifndef PETSC_CUPM_THRUST_UTILITY_HPP
+#define PETSC_CUPM_THRUST_UTILITY_HPP
+
+#if defined(__cplusplus)
+
+#include <petsc/private/deviceimpl.h>
+#include <petsc/private/cupminterface.hpp>
+
+#include <thrust/device_ptr.h>
+#include <thrust/transform.h>
+
+namespace Petsc
+{
+
+namespace Device
+{
+
+namespace CUPM
+{
+
+namespace
+{
+
+#if PetscDefined(USING_NVCC)
+#  if !defined(THRUST_VERSION)
+#    error "THRUST_VERSION not defined!"
+#  endif
+#  if !PetscDefined(USE_DEBUG) && (THRUST_VERSION >= 101600)
+#    define thrust_call_par_on(func,s,...) func(thrust::cuda::par_nosync.on(s),__VA_ARGS__)
+#  else
+#    define thrust_call_par_on(func,s,...) func(thrust::cuda::par.on(s),__VA_ARGS__)
+#  endif
+#elif PetscDefined(USING_HCC) // rocThrust has no par_nosync
+#  define thrust_call_par_on(func,s,...)   func(thrust::hip::par.on(s),__VA_ARGS__)
+#else
+#  define thrust_call_par_on(func,s,...)   func(__VA_ARGS__)
+#endif
+
+struct PetscLogGpuTime_
+{
+  PetscLogGpuTime_()  noexcept { PetscCallAbort(PETSC_COMM_SELF,PetscLogGpuTimeBegin()); }
+  ~PetscLogGpuTime_() noexcept { PetscCallAbort(PETSC_COMM_SELF,PetscLogGpuTimeEnd());   }
+};
+
+#define THRUST_CALL(...) [&]{                   \
+    const auto timer = PetscLogGpuTime_{};      \
+    return thrust_call_par_on(__VA_ARGS__);     \
+  }()
+
+template <typename T, typename BinaryOperator>
+struct shift_operator
+{
+  const T              s;
+  const BinaryOperator op;
+
+  PETSC_HOSTDEVICE_DECL
+  auto operator()(T&& x) const PETSC_DECLTYPE_AUTO_RETURNS(op(std::forward<T>(x),s));
+};
+
+template <DeviceType DT, typename T, typename UnaryFuncT, typename StreamT = typename Impl::Interface<DT>::cupmStream_t>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustApplyPointwiseUnary(UnaryFuncT&& unary, StreamT stream, PetscInt n, T *xin, T *yin = nullptr))
+{
+  PetscFunctionBegin;
+  if (xin == yin || !yin) { // in-place
+    CHKERRTHRUST(
+      auto xptr = thrust::device_pointer_cast(xin);
+
+      THRUST_CALL(thrust::transform,stream,xptr,xptr+n,xptr,std::forward<UnaryFuncT>(unary));
+    );
+  } else {
+    CHKERRTHRUST(
+      auto xptr = thrust::device_pointer_cast(xin);
+      auto yptr = thrust::device_pointer_cast(yin);
+
+      THRUST_CALL(thrust::transform,stream,xptr,xptr+n,yptr,std::forward<UnaryFuncT>(unary));
+    );
+  }
+  PetscCall(PetscLogGpuFlops(n));
+  PetscFunctionReturn(0);
+}
+
+template <DeviceType DT, typename T, typename UnaryFuncT>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustApplyPointwiseUnary(UnaryFuncT&& unary, PetscDeviceContext dctx, PetscInt n, T *xin, T *yin = nullptr))
+{
+  typename Impl::Interface<DT>::cupmStream_t stream;
+
+  PetscFunctionBegin;
+  PetscCall(PetscDeviceContextGetStreamHandle_Internal(dctx,&stream));
+  PetscCall(pointwiseunary_async_(std::forward<UnaryFuncT>(unary),stream,xin,yin));
+  PetscFunctionReturn(0);
+}
+
+#define PetscCallCUPM_(...) do {                                        \
+    using      cupmError_t = typename Impl::Interface<DT>::cupmError_t; \
+    using      cupmName    = typename Impl::Interface<DT>::cupmName;    \
+    const auto cupmSuccess = Impl::Interface<DT>::cupmSuccess;          \
+    PetscCallCUPM(__VA_ARGS__);                                         \
+  } while (0)
+
+template <DeviceType DT, typename T, typename StreamT = typename Impl::Interface<DT>::cupmStream_t>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustSet(StreamT stream, PetscInt n, T *ptr, T&& val))
+{
+  using Impl::Interface<DT>::cupmMemsetAsync;
+  const auto size = n*sizeof(T);
+
+  PetscFunctionBegin;
+  if (val == T{0}) {
+    PetscCallCUPM_(cupmMemsetAsync(ptr,0,size,stream));
+  } else {
+    CHKERRTHRUST(
+      auto xptr = thrust::device_pointer_cast(ptr);
+
+      THRUST_CALL(thrust::fill,stream,xptr,xptr+n,std::forward<T>(val));
+    );
+    PetscCall(PetscLogCpuToGpu(size));
+  }
+  PetscFunctionReturn(0);
+}
+
+template <DeviceType DT, typename T>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustSet(PetscDeviceContext dctx, PetscInt n, T *ptr, T&& val))
+{
+  typename Impl::Interface<DT>::cupmStream_t stream;
+
+  PetscFunctionBegin;
+  PetscCall(PetscDeviceContextGetStreamHandle_Internal(dctx,&stream));
+  PetscCall(ThrustSet(stream,n,ptr,std::forward<T>(val)));
+  PetscFunctionReturn(0);
+}
+
+} // anonymous namespace
+
+} // namespace CUPM
+
+} // namespace Device
+
+} // namespace Petsc
+
+#endif // __cplusplus
+
+#endif // PETSC_CUPM_THRUST_UTILITY_HPP
