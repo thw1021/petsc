@@ -1296,7 +1296,7 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
       for (n = 1; n < data->N; ++n) {
         if (data->log_separate) PetscCall(PetscLogEventBegin(PC_HPDDM_SetUp[n], data->levels[n]->ksp, 0, 0, 0));
         /* method composed in the loaded symbol since there, SLEPc is used as well */
-        Call(PetscTryMethod(data->levels[0]->ksp, "PCHPDDMSetUp_Private_C", (Mat*, Mat*, PetscInt, PetscInt* const, PC_HPDDM_Level** const), (&P, &N, n, &data->N, data->levels));
+        PetscTryMethod(data->levels[0]->ksp, "PCHPDDMSetUp_Private_C", (Mat*, Mat*, PetscInt, PetscInt* const, PC_HPDDM_Level** const), (&P, &N, n, &data->N, data->levels));
         if (data->log_separate) PetscCall(PetscLogEventEnd(PC_HPDDM_SetUp[n], data->levels[n]->ksp, 0, 0, 0));
       }
       /* reset to NULL to avoid any faulty use */
