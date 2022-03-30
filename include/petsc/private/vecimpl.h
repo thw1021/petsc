@@ -24,17 +24,17 @@ struct _VecOps {
   PetscErrorCode (*duplicatevecs)(Vec,PetscInt,Vec**);     /* get array of vectors */
   PetscErrorCode (*destroyvecs)(PetscInt,Vec[]);           /* free array of vectors */
   PetscErrorCode (*dot)(Vec,Vec,PetscManagedScalar,PetscDeviceContext);             /* z = x^H * y */
-  PetscErrorCode (*mdot)(Vec,PetscInt,const Vec[],PetscManagedScalar,PetscDeviceContext); /* z[j] = x dot y[j] */
+  PetscErrorCode (*mdot)(Vec,PetscManagedInt,const Vec[],PetscManagedScalar,PetscDeviceContext); /* z[j] = x dot y[j] */
   PetscErrorCode (*norm)(Vec,NormType,PetscManagedReal,PetscDeviceContext);        /* z = sqrt(x^H * x) */
   PetscErrorCode (*tdot)(Vec,Vec,PetscManagedScalar,PetscDeviceContext);             /* x'*y */
-  PetscErrorCode (*mtdot)(Vec,PetscInt,const Vec[],PetscManagedScalar,PetscDeviceContext);/* z[j] = x dot y[j] */
+  PetscErrorCode (*mtdot)(Vec,PetscManagedInt,const Vec[],PetscManagedScalar,PetscDeviceContext);/* z[j] = x dot y[j] */
   PetscErrorCode (*scale)(Vec,PetscManagedScalar,PetscDeviceContext);                 /* x = alpha * x   */
   PetscErrorCode (*copy)(Vec,Vec,PetscDeviceContext);                     /* y = x */
   PetscErrorCode (*set)(Vec,PetscManagedScalar,PetscDeviceContext);                        /* y = alpha  */
   PetscErrorCode (*swap)(Vec,Vec,PetscDeviceContext);                               /* exchange x and y */
   PetscErrorCode (*axpy)(Vec,PetscManagedScalar,Vec,PetscDeviceContext);                   /* y = y + alpha * x */
   PetscErrorCode (*axpby)(Vec,PetscManagedScalar,PetscManagedScalar,Vec,PetscDeviceContext);      /* y = alpha * x + beta * y*/
-  PetscErrorCode (*maxpy)(Vec,PetscInt,const PetscManagedScalar*,Vec*,PetscDeviceContext); /* y = y + alpha[j] x[j] */
+  PetscErrorCode (*maxpy)(Vec,PetscManagedInt,PetscManagedScalar,Vec*,PetscDeviceContext); /* y = y + alpha[j] x[j] */
   PetscErrorCode (*aypx)(Vec,PetscManagedScalar,Vec,PetscDeviceContext);                   /* y = x + alpha * y */
   PetscErrorCode (*waxpy)(Vec,PetscManagedScalar,Vec,Vec,PetscDeviceContext);         /* w = y + alpha * x */
   PetscErrorCode (*axpbypcz)(Vec,PetscManagedScalar,PetscManagedScalar,PetscManagedScalar,Vec,Vec,PetscDeviceContext);   /* z = alpha * x + beta *y + gamma *z*/
@@ -59,8 +59,8 @@ struct _VecOps {
   PetscErrorCode (*dot_local)(Vec,Vec,PetscManagedScalar,PetscDeviceContext);
   PetscErrorCode (*tdot_local)(Vec,Vec,PetscManagedScalar,PetscDeviceContext);
   PetscErrorCode (*norm_local)(Vec,NormType,PetscManagedReal,PetscDeviceContext);
-  PetscErrorCode (*mdot_local)(Vec,PetscInt,const Vec[],PetscManagedScalar,PetscDeviceContext);
-  PetscErrorCode (*mtdot_local)(Vec,PetscInt,const Vec[],PetscManagedScalar,PetscDeviceContext);
+  PetscErrorCode (*mdot_local)(Vec,PetscManagedInt,const Vec[],PetscManagedScalar,PetscDeviceContext);
+  PetscErrorCode (*mtdot_local)(Vec,PetscManagedInt,const Vec[],PetscManagedScalar,PetscDeviceContext);
   PetscErrorCode (*load)(Vec,PetscViewer);
   PetscErrorCode (*reciprocal)(Vec,PetscDeviceContext);
   PetscErrorCode (*conjugate)(Vec,PetscDeviceContext);

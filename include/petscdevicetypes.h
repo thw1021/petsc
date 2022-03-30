@@ -2,6 +2,8 @@
 #define PETSCDEVICETYPES_H
 
 #include <petscmacros.h> /*I <petscdevicetypes.h> I*/
+#include <petscsystypes.h>
+#include <petscerror.h>
 
 /*E
   PetscMemType - Memory type of a pointer
@@ -54,6 +56,7 @@ typedef enum {
 #define PetscMemTypeNVSHMEM(m) ((m) == PETSC_MEMTYPE_NVSHMEM)
 
 #define PETSC_OFFLOAD_VECKOKKOS_DEPRECATED PETSC_OFFLOAD_VECKOKKOS PETSC_DEPRECATED_ENUM("Use PETSC_OFFLOAD_KOKKOS (since version 3.17.0)")
+
 /*E
   PetscOffloadMask - indicates which memory (CPU, GPU, or none) contains valid data
 
@@ -73,6 +76,10 @@ typedef enum {
   PETSC_OFFLOAD_VECKOKKOS_DEPRECATED = 0x100,
   PETSC_OFFLOAD_KOKKOS      = 0x100
 } PetscOffloadMask;
+
+#define PetscOffloadUnallocated(m) ((m)                       == PETSC_OFFLOAD_UNALLOCATED)
+#define PetscOffloadHost(m)        (((m) & PETSC_OFFLOAD_CPU) == PETSC_OFFLOAD_CPU)
+#define PetscOffloadDevice(m)      (((m) & PETSC_OFFLOAD_GPU) == PETSC_OFFLOAD_GPU)
 
 /*E
   PetscDeviceInitType - Initialization strategy for PetscDevice
@@ -200,83 +207,71 @@ PetscDeviceContextDestroy(), PetscDeviceContextFork(), PetscDeviceContextJoin()
 S*/
 typedef struct _n_PetscDeviceContext *PetscDeviceContext;
 
-#if defined(__cplusplus)
-template <typename T>
-struct PetscManagedType
+typedef enum {
+  PETSC_DEVICE_COPY_HTOH,
+  PETSC_DEVICE_COPY_DTOH,
+  PETSC_DEVICE_COPY_HTOD,
+  PETSC_DEVICE_COPY_DTOD,
+  PETSC_DEVICE_COPY_AUTO,
+} PetscDeviceCopyMode;
+
+typedef enum {
+  PETSC_MEMORY_ACCESS_READ,
+  PETSC_MEMORY_ACCESS_WRITE,
+  PETSC_MEMORY_ACCESS_READ_WRITE,
+} PetscMemoryAccessMode;
+
+typedef PetscErrorCode(*const PetscHostFunction)(PetscDeviceContext,void*);
+
+typedef enum {
+  PETSC_OPERATOR_PLUS,
+  PETSC_OPERATOR_MINUS,
+  PETSC_OPERATOR_MULTIPLY,
+  PETSC_OPERATOR_DIVIDE,
+  PETSC_OPERATOR_EQUAL
+} PetscOperatorType;
+
+PETSC_NODISCARD static inline PETSC_CONSTEXPR_14 PetscMemType PetscOffloadMaskToMemType(PetscOffloadMask mask)
 {
-  T            *ptr;
-  PetscInt     n;
-  PetscMemType mtype;
-
-  PetscManagedType(T *_ptr = nullptr, PetscInt _n = 1, PetscMemType _mtype = PETSC_MEMTYPE_HOST) noexcept
-    : ptr(_ptr), n(_n), mtype(_mtype)
-  { }
-
-        T& operator[](std::size_t idx)       noexcept { return this->ptr[idx]; }
-  const T& operator[](std::size_t idx) const noexcept { return this->ptr[idx]; }
-
-  bool operator==(const T &b) const noexcept
-  {
-    return PetscMemTypeHost(this->mtype) ? (*this->ptr == b) : false;
+  switch (mask) {
+  case PETSC_OFFLOAD_UNALLOCATED:
+  case PETSC_OFFLOAD_CPU:
+    return PETSC_MEMTYPE_HOST;
+  case PETSC_OFFLOAD_GPU:
+  case PETSC_OFFLOAD_BOTH:
+    return PETSC_MEMTYPE_DEVICE;
+  case PETSC_OFFLOAD_KOKKOS:
+    return PETSC_MEMTYPE_KOKKOS;
   }
+}
 
-  bool operator!=(const T &b) const noexcept
-  {
-    return !(this == b);
+PETSC_NODISCARD static inline PetscErrorCode PetscOffloadMaskToDeviceCopyMode(PetscOffloadMask dest, PetscOffloadMask src, PetscDeviceCopyMode *mode)
+{
+  PetscFunctionBegin;
+  PetscAssert(dest != PETSC_OFFLOAD_UNALLOCATED,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot copy to unallocated");
+  PetscAssert(src != PETSC_OFFLOAD_UNALLOCATED,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot copy from unallocated");
+
+  if (PetscOffloadDevice(dest)) {
+    *mode = PetscOffloadHost(src) ? PETSC_DEVICE_COPY_HTOH : PETSC_DEVICE_COPY_DTOH;
+  } else {
+    *mode = PetscOffloadHost(src) ? PETSC_DEVICE_COPY_HTOD : PETSC_DEVICE_COPY_DTOD;
   }
-};
+  PetscFunctionReturn(0);
+}
 
-using PetscManagedScalar = PetscManagedType<PetscScalar>;
-using PetscManagedReal   = PetscManagedType<PetscReal>;
-using PetscManagedInt    = PetscManagedType<PetscInt>;
-#else
-#define PETSC_MANAGED_TYPE_CDECL(name)          \
-  typedef struct PetscConcat(PetscManaged,name) \
-  {                                             \
-    PetscConcat(Petsc,name) *ptr;               \
-    PetscCount              n;                  \
-    PetscMemType            mtype;              \
-  } PetscConcat(PetscManaged,name)
-
-PETSC_MANAGED_TYPE_CDECL(Scalar);
-PETSC_MANAGED_TYPE_CDECL(Real);
-PETSC_MANAGED_TYPE_CDECL(Int);
-
-#undef PETSC_MANAGED_TYPE_CDECL
-#endif
-
-#define PETSC_MANAGED_TYPE_OPERATOR_DECL_(PetscManagedType,PetscType)                          \
-  static inline PetscBool PetscConcat(PetscManagedType,Eq)(PetscManagedType scal, PetscType val) \
-  {                                                                                            \
-    return PetscMemTypeHost(scal.mtype) ? (PetscBool)(*scal.ptr == val) : PETSC_FALSE;         \
-  }                                                                                            \
-  static inline PetscManagedType PetscConcat(PetscManagedType,Create)(PetscType *scal)         \
-  {                                                                                            \
-    PetscManagedType s = {                                                                     \
-      PetscDesignatedInitializer(ptr,scal),                                                    \
-      PetscDesignatedInitializer(mtype,PETSC_MEMTYPE_HOST)                                     \
-    };                                                                                         \
-    return s;                                                                                  \
-  }                                                                                            \
-  static inline PetscErrorCode PetscConcat(PetscManagedType,Set)(PetscManagedType scal, PetscDeviceContext dctx, PetscManagedType val) \
-  {                                                                                            \
-    PetscFunctionBegin;                                                                        \
-    if (PetscMemTypeHost(scal)) {                                                              \
-      if (n == 1) *scal.ptr = *val;                                                            \
-      else PetscCall(PetscArraycpy(scal.ptr,val,n));                                           \
-    } else {                                                                                   \
-      PetscCall(PetscDeviceArraycpy(dctx,scal.ptr,val,n));                                     \
-    }                                                                                          \
-    PetscFunctionReturn(0);                                                                    \
+PETSC_NODISCARD static inline PETSC_CONSTEXPR_14 PetscDeviceCopyMode PetscMemTypeToDeviceCopyMode(PetscMemType dest, PetscMemType src)
+{
+  if (PetscMemTypeHost(dest)) {
+    return PetscMemTypeHost(src)   ? PETSC_DEVICE_COPY_HTOH : PETSC_DEVICE_COPY_DTOH;
+  } else {
+    return PetscMemTypeDevice(src) ? PETSC_DEVICE_COPY_DTOD : PETSC_DEVICE_COPY_HTOD;
   }
+}
 
-#define PETSC_MANAGED_TYPE_OPERATOR_DECL(name)                                                 \
-  PETSC_MANAGED_TYPE_OPERATOR_DECL_(PetscConcat(PetscManaged,name),PetscConcat(Petsc,name))
-
-PETSC_MANAGED_TYPE_OPERATOR_DECL(Scalar);
-PETSC_MANAGED_TYPE_OPERATOR_DECL(Real);
-PETSC_MANAGED_TYPE_OPERATOR_DECL(Int);
-
-#undef PETSC_MANAGED_TYPE_OPERATOR_DECL
-
+#define PetscTypeSuffix Scalar
+#include "petscmanagedtype.inl"
+#define PetscTypeSuffix Real
+#include "petscmanagedtype.inl"
+#define PetscTypeSuffix Int
+#include "petscmanagedtype.inl"
 #endif /* PETSCDEVICETYPES_H */
