@@ -4,18 +4,6 @@
 #include <petsc/private/petscimpl.h>
 #include <petscdevice.h>
 
-#if defined(__NVCC__) || defined(__CUDACC__)
-#  define PETSC_USING_NVCC 1
-#endif
-
-#if defined(__HCC__) || (defined(__clang__) && defined(__HIP__))
-#  define PETSC_USING_HCC 1
-#endif
-
-#if PetscDefined(USING_HCC) && PetscDefined(USING_NVCC)
-#  error using both nvcc and hipcc at the same time?
-#endif
-
 /* type cast macros for some additional type-safety in C++ land */
 #if defined(__cplusplus)
 #  define PetscStreamTypeCast(...) static_cast<PetscStreamType>(__VA_ARGS__)
@@ -184,6 +172,14 @@ struct _DeviceContextOps {
   PetscErrorCode (*getstreamhandle)(PetscDeviceContext,void*);
   PetscErrorCode (*begintimer)(PetscDeviceContext);
   PetscErrorCode (*endtimer)(PetscDeviceContext,PetscLogDouble*);
+  PetscErrorCode (*arraycopy)(PetscDeviceContext,void*PETSC_RESTRICT,const void*PETSC_RESTRICT,size_t,PetscDeviceCopyMode);
+  PetscErrorCode (*releasemanagedscalar)(PetscDeviceContext,PetscManagedScalar);
+  PetscErrorCode (*getmanagedvaluesscalar)(PetscDeviceContext,PetscManagedScalar,PetscMemType,PetscMemoryAccessMode,PetscScalar**);
+  PetscErrorCode (*releasemanagedreal)(PetscDeviceContext,PetscManagedReal);
+  PetscErrorCode (*getmanagedvaluesreal)(PetscDeviceContext,PetscManagedReal,PetscMemType,PetscMemoryAccessMode,PetscReal**);
+  PetscErrorCode (*releasemanagedint)(PetscDeviceContext,PetscManagedInt);
+  PetscErrorCode (*getmanagedvaluesint)(PetscDeviceContext,PetscManagedInt,PetscMemType,PetscMemoryAccessMode,PetscInt**);
+  PetscErrorCode (*launchhostfunction)(PetscDeviceContext,PetscHostFunction,void*);
 };
 
 struct _n_PetscDeviceContext {
