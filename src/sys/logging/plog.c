@@ -1958,6 +1958,8 @@ PetscErrorCode  PetscLogView_Default(PetscViewer viewer)
 .  -log_view :filename.py:ascii_info_detail - Saves logging information from each process as a Python file
 .  -log_view :filename.xml:ascii_xml - Saves a summary of the logging information in a nested format (see below for how to view it)
 .  -log_view :filename.txt:ascii_flamegraph - Saves logging information in a format suitable for visualising as a Flame Graph (see below for how to view it)
+.  -log_view_memory - Also display memory usage in each event
+.  -log_view_gpu_time - Also display time in each event for GPU kernels (Note this may slow the computation)
 .  -log_all - Saves a file Log.rank for each MPI process with details of each step of the computation
 -  -log_trace [filename] - Displays a trace of what each process is doing
 
@@ -2225,7 +2227,27 @@ M*/
 #if PetscDefined(HAVE_DEVICE)
 #include <petsc/private/deviceimpl.h>
 
-/*-------------------------------------------- GPU event Functions ----------------------------------------------*/
+static PetscBool PetscLogGpuTimeFlag = PETSC_FALSE;
+
+/*@C
+     PetscLogGpuTime - turn on or off the logging of GPU time for GPU kernels
+
+  Input Parameter:
+.  log - log the GPU time
+
+  Notes:
+    Because the logging requires a device synchronization for each kernel turning on the timing of the
+    Gpu kernels can slow down the entire computation and should only be used when studying the performance
+    of operations on GPU such as vector operations and matrix-vector operations.
+
+.seealso: PetscLogView(), PetscLogGpuFlops(), PetscLogGpuTimeEnd(), PetscLogGpuTimeBegin()
+@*/
+PetscErrorCode PetscLogGpuTime(PetscBool log)
+{
+  PetscLogGpuTimeFlag = log;
+  return 0;
+}
+
 /*@C
   PetscLogGpuTimeBegin - Start timer for device
 
@@ -2243,12 +2265,12 @@ M*/
 
   Level: intermediate
 
-.seealso:  PetscLogView(), PetscLogGpuFlops(), PetscLogGpuTimeEnd()
+.seealso:  PetscLogView(), PetscLogGpuFlops(), PetscLogGpuTimeEnd(), PetscLogGpuTime()
 @*/
 PetscErrorCode PetscLogGpuTimeBegin(void)
 {
   PetscFunctionBegin;
-  if (!PetscLogPLB) PetscFunctionReturn(0);
+  if (!PetscLogPLB || !PetscLogGpuTimeFlag) PetscFunctionReturn(0);
   if (PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)) {
     PetscDeviceContext dctx;
 
@@ -2270,7 +2292,7 @@ PetscErrorCode PetscLogGpuTimeBegin(void)
 PetscErrorCode PetscLogGpuTimeEnd(void)
 {
   PetscFunctionBegin;
-  if (!PetscLogPLE) PetscFunctionReturn(0);
+  if (!PetscLogPLE || !PetscLogGpuTimeFlag) PetscFunctionReturn(0);
   if (PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)) {
     PetscDeviceContext dctx;
     PetscLogDouble     elapsed;
