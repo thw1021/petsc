@@ -43,6 +43,8 @@ struct DeviceContext
   { SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented"); }
   PETSC_CXX_COMPAT_DECL(PetscErrorCode endTimer(PetscDeviceContext,PetscLogDouble*))
   { SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented"); }
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode arrayCopy(PetscDeviceContext,void*PETSC_RESTRICT,const void*PETSC_RESTRICT,std::size_t,PetscDeviceCopyMode))
+  { SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented"); }
 
   const struct _DeviceContextOps ops = {
     destroy,
@@ -55,7 +57,8 @@ struct DeviceContext
     getSolverHandle,
     getStreamHandle,
     beginTimer,
-    endTimer
+    endTimer,
+    arrayCopy
   };
 };
 

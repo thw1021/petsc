@@ -4,18 +4,6 @@
 #include <petsc/private/petscimpl.h>
 #include <petscdevice.h>
 
-#if defined(__NVCC__) || defined(__CUDACC__)
-#  define PETSC_USING_NVCC 1
-#endif
-
-#if defined(__HCC__) || (defined(__clang__) && defined(__HIP__))
-#  define PETSC_USING_HCC 1
-#endif
-
-#if PetscDefined(USING_HCC) && PetscDefined(USING_NVCC)
-#  error using both nvcc and hipcc at the same time?
-#endif
-
 /* type cast macros for some additional type-safety in C++ land */
 #if defined(__cplusplus)
 #  define PetscStreamTypeCast(...) static_cast<PetscStreamType>(__VA_ARGS__)
@@ -171,6 +159,13 @@ struct _n_PetscDevice {
   void             *data;     /* placeholder */
 };
 
+#define PetscManagedTypeOps_(PetscManagedType,PetscType,PetscTypeSuffix_L)                     \
+  PetscErrorCode (*releasemanaged ## PetscTypeSuffix_L)(PetscDeviceContext,PetscManagedType);  \
+  PetscErrorCode (*getmanagedvalues ## PetscTypeSuffix_L)(PetscDeviceContext,PetscManagedType,PetscMemType,PetscMemoryAccessMode,PetscType**); \
+  PetscErrorCode (*applyoperator ## PetscTypeSuffix_L)(PetscDeviceContext,PetscManagedType,PetscOperatorType,const PetscType*,PetscManagedType)
+
+#define PetscManagedTypeOps(PetscTypeSuffix,PetscTypeSuffix_L) PetscManagedTypeOps_(PetscConcat(PetscManaged,PetscTypeSuffix),PetscConcat(Petsc,PetscTypeSuffix),PetscTypeSuffix_L)
+
 typedef struct _DeviceContextOps *DeviceContextOps;
 struct _DeviceContextOps {
   PetscErrorCode (*destroy)(PetscDeviceContext);
@@ -184,7 +179,15 @@ struct _DeviceContextOps {
   PetscErrorCode (*getstreamhandle)(PetscDeviceContext,void*);
   PetscErrorCode (*begintimer)(PetscDeviceContext);
   PetscErrorCode (*endtimer)(PetscDeviceContext,PetscLogDouble*);
+  PetscErrorCode (*arraycopy)(PetscDeviceContext,void*PETSC_RESTRICT,const void*PETSC_RESTRICT,size_t,PetscDeviceCopyMode);
+  PetscManagedTypeOps(Scalar,scalar);
+  PetscManagedTypeOps(Real,real);
+  PetscManagedTypeOps(Int,int);
+  PetscErrorCode (*launchhostfunction)(PetscDeviceContext,PetscHostFunction,void*);
 };
+
+#undef PetscManagedTypeOps
+#undef PetscManagedTypeOps_
 
 struct _n_PetscDeviceContext {
   struct _DeviceContextOps  ops[1];
@@ -412,6 +415,65 @@ static inline PetscErrorCode PetscGetMemType(const void *ptr,PetscMemType *type)
     if (cerr == hipSuccess && mtype == hipMemoryTypeDevice) *type = PETSC_MEMTYPE_DEVICE;
   }
 #endif
+  PetscFunctionReturn(0);
+}
+
+typedef struct
+{
+  PetscObject  obj;
+  void        *ptr;
+  PetscInt     n;
+  MPI_Datatype dtype;
+  MPI_Op       op;
+} *AllReduceCtx;
+
+static inline PetscErrorCode PetscDeviceContextAllReduceCallback_Internal(PetscDeviceContext PETSC_UNUSED dctx, void *ctx)
+{
+  AllReduceCtx cast = (AllReduceCtx)ctx;
+  PetscObject  obj  = cast->obj;
+
+  PetscFunctionBegin;
+  PetscCall(MPIU_Allreduce(MPI_IN_PLACE,cast->ptr,cast->n,cast->dtype,cast->op,PetscObjectComm(obj)));
+  PetscCall(PetscObjectDereference(obj));
+  PetscCall(PetscFree(cast));
+  PetscFunctionReturn(0);
+}
+
+static inline PetscErrorCode PetscDeviceContextAllReduceManagedType_Internal(PetscDeviceContext dctx, PetscObject obj, void *ptr, PetscInt n, MPI_Datatype dtype, MPI_Op op)
+{
+  AllReduceCtx ctx;
+
+  PetscFunctionBegin;
+  PetscValidDeviceContext(dctx,1);
+  PetscValidPointer(obj,2);
+  PetscCall(PetscMalloc1(1,&ctx));
+  PetscCall(PetscObjectReference(obj));
+  ctx->obj   = obj;
+  ctx->ptr   = ptr;
+  ctx->n     = n;
+  ctx->dtype = dtype;
+  ctx->op    = op;
+  PetscCall(PetscDeviceContextLaunchHostFunction(dctx,PetscDeviceContextAllReduceCallback_Internal,ctx));
+  PetscFunctionReturn(0);
+}
+
+static inline PetscErrorCode PetscDeviceContextAllReduceManagedScalar_Internal(PetscDeviceContext dctx, PetscManagedScalar scal, PetscObject obj, PetscInt n, MPI_Op op)
+{
+  PetscScalar *scalptr;
+
+  PetscFunctionBegin;
+  PetscCall(PetscManagedScalarGetValues(dctx,scal,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,&scalptr,n == PETSC_DECIDE ? &n : NULL));
+  PetscCall(PetscDeviceContextAllReduceManagedType_Internal(dctx,obj,scalptr,n,MPIU_SCALAR,op));
+  PetscFunctionReturn(0);
+}
+
+static inline PetscErrorCode PetscDeviceContextAllReduceManagedReal_Internal(PetscDeviceContext dctx, PetscManagedReal scal, PetscObject obj, PetscInt n, MPI_Op op)
+{
+  PetscReal *scalptr;
+
+  PetscFunctionBegin;
+  PetscCall(PetscManagedRealGetValues(dctx,scal,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,&scalptr,n == PETSC_DECIDE ? &n : NULL));
+  PetscCall(PetscDeviceContextAllReduceManagedType_Internal(dctx,obj,scalptr,n,MPIU_REAL,op));
   PetscFunctionReturn(0);
 }
 #endif /* PETSCDEVICEIMPL_H */
