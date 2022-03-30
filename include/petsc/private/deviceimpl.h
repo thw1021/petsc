@@ -184,6 +184,9 @@ struct _DeviceContextOps {
   PetscErrorCode (*getstreamhandle)(PetscDeviceContext,void*);
   PetscErrorCode (*begintimer)(PetscDeviceContext);
   PetscErrorCode (*endtimer)(PetscDeviceContext,PetscLogDouble*);
+  PetscErrorCode (*arraycopy)(PetscDeviceContext,void*PETSC_RESTRICT,const void*PETSC_RESTRICT,size_t,PetscDeviceCopyMode);
+  PetscErrorCode (*acquiremanagedscalar)(PetscDeviceContext,PetscScalar*,PetscScalar*,PetscInt,PetscCopyMode,PetscMemType,PetscOffloadMask,PetscManagedScalar);
+  PetscErrorCode (*releasemanagedscalar)(PetscDeviceContext,PetscManagedScalar);
 };
 
 struct _n_PetscDeviceContext {
