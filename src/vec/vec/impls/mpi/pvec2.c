@@ -4,27 +4,27 @@
 */
 #include <../src/vec/vec/impls/mpi/pvecimpl.h>
 #include <petscblaslapack.h>
+#include <petsc/private/deviceimpl.h>
 
-static PetscErrorCode VecMXDot_MPI(Vec xin, PetscInt nv, const Vec y[], PetscManagedScalar z, PetscDeviceContext dctx, PetscErrorCode (*VecMXDot_SeqFn)(Vec,PetscInt,const Vec[],PetscManagedScalar,PetscDeviceContext))
+static PetscErrorCode VecMXDot_MPI(Vec xin, PetscManagedInt nv, const Vec y[], PetscManagedScalar z, PetscDeviceContext dctx, PetscErrorCode (*const VecMXDot_SeqFn)(Vec,PetscManagedInt,const Vec[],PetscManagedScalar,PetscDeviceContext))
 {
-  PetscScalar    awork[128],*work = awork;
+  PetscInt *nvptr;
 
   PetscFunctionBegin;
-  if (nv > 128) PetscCall(PetscMalloc1(nv,&work));
-  PetscCall(VecMXDot_SeqFn(xin,nv,y,PetscManagedScalarCreate(work),dctx));
-  PetscCall(MPIU_Allreduce(work,z.ptr,nv,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)xin)));
-  if (nv > 128) PetscCall(PetscFree(work));
+  PetscCall(VecMXDot_SeqFn(xin,nv,y,z,dctx));
+  PetscCall(PetscManagedIntGetValues(dctx,nv,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,&nvptr,NULL));
+  PetscCall(PetscDeviceContextAllReduceManagedScalar_Internal(dctx,z,(PetscObject)xin,nvptr,MPIU_SUM));
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecMDot_MPI(Vec xin, PetscInt nv, const Vec y[], PetscManagedScalar z, PetscDeviceContext dctx)
+PetscErrorCode VecMDot_MPI(Vec xin, PetscManagedInt nv, const Vec y[], PetscManagedScalar z, PetscDeviceContext dctx)
 {
   PetscFunctionBegin;
   PetscCall(VecMXDot_MPI(xin,nv,y,z,dctx,VecMDot_Seq));
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecMTDot_MPI(Vec xin, PetscInt nv, const Vec y[], PetscManagedScalar z, PetscDeviceContext dctx)
+PetscErrorCode VecMTDot_MPI(Vec xin, PetscManagedInt nv, const Vec y[], PetscManagedScalar z, PetscDeviceContext dctx)
 {
   PetscFunctionBegin;
   PetscCall(VecMXDot_MPI(xin,nv,y,z,dctx,VecMTDot_Seq));
@@ -34,89 +34,91 @@ PetscErrorCode VecMTDot_MPI(Vec xin, PetscInt nv, const Vec y[], PetscManagedSca
 #include <../src/vec/vec/impls/seq/ftn-kernels/fnorm.h>
 PetscErrorCode VecNorm_MPI(Vec xin, NormType type, PetscManagedReal z, PetscDeviceContext dctx)
 {
-  PetscReal         sum,work = 0.0;
-  const PetscScalar *xx;
-  PetscInt          n   = xin->map->n;
-  PetscBLASInt      one = 1,bn = 0;
+  PetscReal *zptr;
+  PetscInt   zn = 1;
+  MPI_Op     op = MPIU_SUM;
 
   PetscFunctionBegin;
-  PetscCall(PetscBLASIntCast(n,&bn));
-  if (type == NORM_2 || type == NORM_FROBENIUS) {
+  switch (type) {
+  case NORM_2:
+  case NORM_FROBENIUS: {
+    const PetscInt     n = xin->map->n;
+    const PetscScalar *xx;
+    PetscReal          ztmp;
+    PetscBLASInt       one = 1,bn;
+
+    PetscCall(PetscBLASIntCast(n,&bn));
     PetscCall(VecGetArrayRead(xin,&xx));
-    work = PetscRealPart(BLASdot_(&bn,xx,&one,xx,&one));
+    PetscStackCallBLAS("BLASDot",ztmp = PetscRealPart(BLASdot_(&bn,xx,&one,xx,&one)));
     PetscCall(VecRestoreArrayRead(xin,&xx));
-    PetscCall(MPIU_Allreduce(&work,&sum,1,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)xin)));
-    *z.ptr = PetscSqrtReal(sum);
-    PetscCall(PetscLogFlops(2.0*xin->map->n));
-  } else if (type == NORM_1) {
-    /* Find the local part */
-    PetscCall(VecNorm_Seq(xin,NORM_1,PetscManagedRealCreate(&work),dctx));
-    /* Find the global max */
-    PetscCall(MPIU_Allreduce(&work,z.ptr,1,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)xin)));
-  } else if (type == NORM_INFINITY) {
-    /* Find the local max */
-    PetscCall(VecNorm_Seq(xin,NORM_INFINITY,PetscManagedRealCreate(&work),dctx));
-    /* Find the global max */
-    PetscCall(MPIU_Allreduce(&work,z.ptr,1,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)xin)));
-  } else if (type == NORM_1_AND_2) {
-    PetscReal temp[2];
-    PetscCall(VecNorm_Seq(xin,NORM_1,PetscManagedRealCreate(temp),dctx));
-    PetscCall(VecNorm_Seq(xin,NORM_2,PetscManagedRealCreate(temp+1),dctx));
-    temp[1] = temp[1]*temp[1];
-    PetscCall(MPIU_Allreduce(temp,z.ptr,2,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)xin)));
-    z.ptr[1] = PetscSqrtReal(z.ptr[1]);
+    PetscCall(PetscLogFlops(2*n));
+    PetscCall(PetscManagedRealSetValues(dctx,z,PETSC_MEMTYPE_HOST,&ztmp,1));
+  } break;
+  case NORM_1_AND_2:
+    PetscAssert(zn >= 2,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"NORM_1_AND_2 needs managed type of size >= 2, have %" PetscInt_FMT,zn);
+  case NORM_1:
+  case NORM_INFINITY:
+    PetscCall(VecNorm_Seq(xin,type,z,dctx));
+    if (type == NORM_INFINITY) {
+      op = MPIU_MAX;
+    } else if (type == NORM_1_AND_2) {
+      PetscCall(PetscManagedRealGetValues(dctx,z,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,&zptr,NULL));
+      PetscCall(PetscDeviceContextSynchronize(dctx));
+      zptr[1] *= zptr[1];
+      zn       = 2;
+    }
+    break;
+  }
+  PetscCall(PetscDeviceContextAllReduceManagedReal_Internal(dctx,z,(PetscObject)xin,&zn,op));
+  if (type == NORM_1 || type == NORM_FROBENIUS || type == NORM_1_AND_2) {
+    PetscCall(PetscManagedRealGetValues(dctx,z,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,&zptr,NULL));
+    PetscCall(PetscDeviceContextSynchronize(dctx));
+    zptr[type == NORM_1_AND_2] = PetscSqrtReal(zptr[type == NORM_1_AND_2]);
+  }
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode VecMinMax_MPI_Private(Vec xin, PetscManagedInt idx, PetscManagedReal z, PetscDeviceContext dctx, MPI_Op ops[2], PetscErrorCode(*const SeqFn)(Vec,PetscManagedInt,PetscManagedReal,PetscDeviceContext))
+{
+  PetscFunctionBegin;
+  /* Find the local min/max */
+  PetscCall(SeqFn(xin,idx,z,dctx));
+  if (PetscDefined(HAVE_MPIUNI)) PetscFunctionReturn(0);
+  /* Find the global min/max */
+  if (idx) {
+    PetscReal *zptr;
+    PetscInt  *idxptr;
+    struct { PetscReal v; PetscInt i; } in,out;
+
+    PetscCall(PetscManagedRealGetValues(dctx,z,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,&zptr,NULL));
+    PetscCall(PetscManagedIntGetValues(dctx,idx,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,&idxptr,NULL));
+    PetscCall(PetscDeviceContextSynchronize(dctx));
+    in.v = *zptr;
+    in.i = *idxptr + xin->map->rstart;
+    PetscCall(MPIU_Allreduce(&in,&out,1,MPIU_REAL_INT,ops[0],PetscObjectComm((PetscObject)xin)));
+    *zptr   = out.v;
+    *idxptr = out.i;
+  } else {
+    const PetscInt one = 1;
+    PetscCall(PetscDeviceContextAllReduceManagedReal_Internal(dctx,z,(PetscObject)xin,&one,ops[1]));
   }
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode VecMax_MPI(Vec xin, PetscManagedInt idx, PetscManagedReal z, PetscDeviceContext dctx)
 {
-  PetscReal      work;
+  MPI_Op ops[] = {MPIU_MAXLOC,MPIU_MAX};
 
   PetscFunctionBegin;
-  /* Find the local max */
-  PetscCall(VecMax_Seq(xin,idx,PetscManagedRealCreate(&work),dctx));
-#if defined(PETSC_HAVE_MPIUNI)
-  *z.ptr = work;
-#else
-  /* Find the global max */
-  if (!idx.ptr) {
-    PetscCall(MPIU_Allreduce(&work,z.ptr,1,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)xin)));
-  } else {
-    struct { PetscReal v; PetscInt i; } in,out;
-
-    in.v  = work;
-    in.i  = *idx.ptr + xin->map->rstart;
-    PetscCall(MPIU_Allreduce(&in,&out,1,MPIU_REAL_INT,MPIU_MAXLOC,PetscObjectComm((PetscObject)xin)));
-    *z.ptr   = out.v;
-    *idx.ptr = out.i;
-  }
-#endif
+  PetscCall(VecMinMax_MPI_Private(xin,idx,z,dctx,ops,VecMax_Seq));
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode VecMin_MPI(Vec xin, PetscManagedInt idx, PetscManagedReal z, PetscDeviceContext dctx)
 {
-  PetscReal      work;
+  MPI_Op ops[] = {MPIU_MINLOC,MPIU_MIN};
 
   PetscFunctionBegin;
-  /* Find the local Min */
-  PetscCall(VecMin_Seq(xin,idx,PetscManagedRealCreate(&work),dctx));
-#if defined(PETSC_HAVE_MPIUNI)
-  *z.ptr = work;
-#else
-  /* Find the global Min */
-  if (!idx.ptr) {
-    PetscCall(MPIU_Allreduce(&work,z.ptr,1,MPIU_REAL,MPIU_MIN,PetscObjectComm((PetscObject)xin)));
-  } else {
-    struct { PetscReal v; PetscInt i; } in,out;
-
-    in.v  = work;
-    in.i  = *idx.ptr + xin->map->rstart;
-    PetscCall(MPIU_Allreduce(&in,&out,1,MPIU_REAL_INT,MPIU_MINLOC,PetscObjectComm((PetscObject)xin)));
-    *z.ptr   = out.v;
-    *idx.ptr = out.i;
-  }
-#endif
+  PetscCall(VecMinMax_MPI_Private(xin,idx,z,dctx,ops,VecMin_Seq));
   PetscFunctionReturn(0);
 }

@@ -1212,7 +1212,7 @@ PetscErrorCode  VecPointwiseMult(Vec w,Vec x,Vec y)
 
 PetscErrorCode VecSetRandomAsync(Vec x, PetscRandom rctx, PetscDeviceContext dctx)
 {
-  PetscRandom    randObj = NULL;
+  PetscRandom randObj = NULL;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -1355,7 +1355,6 @@ PetscErrorCode  VecSetFromOptions(Vec vec)
 {
   PetscBool      flg;
   PetscInt       bind_below = 0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(vec,VEC_CLASSID,1);
@@ -1935,7 +1934,12 @@ PetscErrorCode VecSetInfAsync(Vec xin, PetscDeviceContext dctx)
   PetscValidDeviceContext(dctx,2);
 
   if (xin->ops->set) { /* can be called by a subset of processes, do not use collective routines */
-    PetscCall((*xin->ops->set)(xin,inf,dctx));
+    PetscManagedScalar tmp;
+
+    // REVIEW ME: need to make this device-friendly
+    PetscCall(PetscManageHostScalar(dctx,&inf,1,&tmp));
+    PetscCall((*xin->ops->set)(xin,tmp,dctx));
+    PetscCall(PetscManagedScalarDestroy(dctx,&tmp));
   } else {
     PetscCall(VecGetArrayWrite(xin,&xx));
     for (i=0; i<n; i++) xx[i] = inf;
