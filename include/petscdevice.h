@@ -286,6 +286,10 @@ PETSC_EXTERN PetscErrorCode PetscDeviceContextSynchronize(PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextGetCurrentContext(PetscDeviceContext*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextSetCurrentContext(PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextSetFromOptions(MPI_Comm,const char[],PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode PetscDeviceArrayCopy_(PetscDeviceContext,void*PETSC_RESTRICT,const void*PETSC_RESTRICT,size_t,PetscDeviceCopyMode);
+
+#define PetscDeviceArrayCopy(dctx,dest,src,n,mode) (!PetscDefined(HAVE_DEVICE) || (mode == PETSC_DEVICE_COPY_HTOH) ? PetscArraycpy(dest,src,n) : PetscDeviceArrayCopy_(dctx,dest,src,(size_t)(n)*sizeof(*(src)),mode))
+
 #endif /* PETSC_HAVE_CXX */
 
 #endif /* PETSCDEVICE_H */

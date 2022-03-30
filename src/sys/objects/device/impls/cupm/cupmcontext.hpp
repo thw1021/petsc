@@ -172,6 +172,9 @@ public:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode getHandle(PetscDeviceContext,void*));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode beginTimer(PetscDeviceContext));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode endTimer(PetscDeviceContext,PetscLogDouble*));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode arrayCopy(PetscDeviceContext,void*PETSC_RESTRICT,const void*PETSC_RESTRICT,std::size_t,PetscDeviceCopyMode));
+  template <typename PetscType, typename PetscManagedType>
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode createManagedScalar(PetscDeviceContext,PetscType*,PetscType*,PetscInt,PetscCopyMode,PetscMemType,PetscOffloadMask,PetscManagedType));
 
   const struct _DeviceContextOps ops = {
     destroy,
@@ -184,7 +187,9 @@ public:
     getHandle<solver_tag>,
     getHandle<stream_tag>,
     beginTimer,
-    endTimer
+    endTimer,
+    arrayCopy,
+    createManagedScalar<PetscScalar,PetscManagedScalar>
   };
 };
 
@@ -350,6 +355,27 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::endTimer(PetscDeviceConte
   PetscCallCUPM(cupmEventSynchronize(dci->end));
   PetscCallCUPM(cupmEventElapsedTime(&gtime,dci->begin,dci->end));
   *elapsed = static_cast<util::remove_pointer_t<decltype(elapsed)>>(gtime);
+  PetscFunctionReturn(0);
+}
+
+template <DeviceType T>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::arrayCopy(PetscDeviceContext dctx, void *PETSC_RESTRICT dest, const void *PETSC_RESTRICT src, std::size_t n, PetscDeviceCopyMode mode))
+{
+  PetscFunctionBegin;
+  if (PetscUnlikely(mode == PETSC_DEVICE_COPY_HTOH)) {
+    PetscCall(PetscMemcpy(dest,src,n));
+  } else {
+    PetscCallCUPM(cupmMemcpyAsync(dest,src,n,PetscDeviceCopyModeToCUPMMemcpyKind(mode),impls_cast_(dctx)->stream));
+  }
+  PetscFunctionReturn(0);
+}
+
+template <DeviceType T>
+template <typename PetscType, typename PetscManagedType>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::createManagedScalar(PetscDeviceContext dctx, PetscType *host_ptr, PetscType *device_ptr, PetscInt n, PetscCopyMode cmode, PetscMemType mtype, PetscOffloadMask mask, PetscManagedType scal))
+{
+  PetscFunctionBegin;
+
   PetscFunctionReturn(0);
 }
 

@@ -619,6 +619,19 @@ struct Interface : InterfaceImpl<T>
 #if defined(CUPM_DEFINED_PETSC_PKG_CUDA_VERSION_GE)
 #  undef PETSC_PKG_CUDA_VERSION_GE
 #endif
+
+  PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 cupmMemcpyKind_t PetscDeviceCopyModeToCUPMMemcpyKind(PetscDeviceCopyMode mode))
+  {
+    switch (mode) {
+    case PETSC_DEVICE_COPY_HTOH: return cupmMemcpyHostToHost;
+    case PETSC_DEVICE_COPY_HTOD: return cupmMemcpyHostToDevice;
+    case PETSC_DEVICE_COPY_DTOD: return cupmMemcpyDeviceToDevice;
+    case PETSC_DEVICE_COPY_DTOH: return cupmMemcpyDeviceToHost;
+    case PETSC_DEVICE_COPY_AUTO: return cupmMemcpyDefault;
+    }
+    PetscUnreachable();
+    return cupmMemcpyDefault;
+  }
 };
 
 #define PETSC_CUPM_INHERIT_INTERFACE_TYPEDEFS_USING(base_name,T)        \
@@ -629,7 +642,8 @@ struct Interface : InterfaceImpl<T>
   using base_name::makeCupmScalar;                                      \
   using base_name::cupmScalarCast;                                      \
   using base_name::cupmRealCast;                                        \
-  using base_name::cupmGetMemType
+  using base_name::cupmGetMemType;                                      \
+  using base_name::PetscDeviceCopyModeToCUPMMemcpyKind
 
 #if PetscDefined(HAVE_CUDA)
 extern template struct Interface<DeviceType::CUDA>;
