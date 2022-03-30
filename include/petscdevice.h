@@ -286,6 +286,28 @@ PETSC_EXTERN PetscErrorCode PetscDeviceContextSynchronize(PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextGetCurrentContext(PetscDeviceContext*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextSetCurrentContext(PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextSetFromOptions(MPI_Comm,const char[],PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode PetscDeviceArrayCopy_(PetscDeviceContext,void*PETSC_RESTRICT,const void*PETSC_RESTRICT,size_t,PetscDeviceCopyMode);
+PETSC_EXTERN PetscErrorCode PetscDeviceContextLaunchHostFunction(PetscDeviceContext,PetscHostFunction,void*);
+
+#define PetscDeviceArrayCopy(dctx,dest,src,n,mode) (!PetscDefined(HAVE_DEVICE) || (mode == PETSC_DEVICE_COPY_HTOH) ? PetscArraycpy(dest,src,n) : PetscDeviceArrayCopy_(dctx,dest,src,(size_t)(n)*sizeof(*(src)),mode))
+
+static inline PetscErrorCode PetscDetermineCopyMode(PetscOffloadMask dest, PetscOffloadMask src, PetscDeviceCopyMode *mode)
+{
+  const PetscBool dest_host = (PetscBool)(dest == PETSC_OFFLOAD_CPU);
+  const PetscBool src_host  = (PetscBool)(src  == PETSC_OFFLOAD_CPU);
+
+  PetscFunctionBegin;
+  PetscAssert(dest != PETSC_OFFLOAD_UNALLOCATED,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot copy to unallocated");
+  PetscAssert(src != PETSC_OFFLOAD_UNALLOCATED,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot copy from unallocated");
+
+  if (dest_host) {
+    *mode = src_host ? PETSC_DEVICE_COPY_HTOH : PETSC_DEVICE_COPY_DTOH;
+  } else {
+    *mode = src_host ? PETSC_DEVICE_COPY_HTOD : PETSC_DEVICE_COPY_DTOD;
+  }
+  PetscFunctionReturn(0);
+}
+
 #endif /* PETSC_HAVE_CXX */
 
 #endif /* PETSCDEVICE_H */

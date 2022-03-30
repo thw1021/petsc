@@ -7,9 +7,10 @@
 #include <../src/vec/vec/impls/dvecimpl.h>          /*I "petscvec.h" I*/
 #include <petscblaslapack.h>
 
-PetscErrorCode VecDot_Seq(Vec xin, Vec yin, PetscManagedScalar z, PetscDeviceContext PETSC_UNUSED dctx)
+PetscErrorCode VecDot_Seq(Vec xin, Vec yin, PetscManagedScalar z, PetscDeviceContext dctx)
 {
   const PetscScalar *ya,*xa;
+  PetscScalar       *zptr;
   PetscBLASInt      one = 1,bn = 0;
 
   PetscFunctionBegin;
@@ -17,7 +18,8 @@ PetscErrorCode VecDot_Seq(Vec xin, Vec yin, PetscManagedScalar z, PetscDeviceCon
   PetscCall(VecGetArrayRead(xin,&xa));
   PetscCall(VecGetArrayRead(yin,&ya));
   /* arguments ya, xa are reversed because BLAS complex conjugates the first argument, PETSc the second */
-  PetscStackCallBLAS("BLASdot",*z.ptr = BLASdot_(&bn,ya,&one,xa,&one));
+  PetscCall(PetscManagedScalarGetValues(dctx,z,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_WRITE,&zptr,NULL));
+  PetscStackCallBLAS("BLASdot",*zptr = BLASdot_(&bn,ya,&one,xa,&one));
   PetscCall(VecRestoreArrayRead(xin,&xa));
   PetscCall(VecRestoreArrayRead(yin,&ya));
   if (xin->map->n > 0) PetscCall(PetscLogFlops(2.0*xin->map->n-1));
@@ -27,13 +29,15 @@ PetscErrorCode VecDot_Seq(Vec xin, Vec yin, PetscManagedScalar z, PetscDeviceCon
 PetscErrorCode VecTDot_Seq(Vec xin, Vec yin, PetscManagedScalar z, PetscDeviceContext dctx)
 {
   const PetscScalar *ya,*xa;
+  PetscScalar       *zptr;
   PetscBLASInt      one = 1,bn = 0;
 
   PetscFunctionBegin;
   PetscCall(PetscBLASIntCast(xin->map->n,&bn));
   PetscCall(VecGetArrayRead(xin,&xa));
   PetscCall(VecGetArrayRead(yin,&ya));
-  PetscStackCallBLAS("BLASdot",*z.ptr = BLASdotu_(&bn,xa,&one,ya,&one));
+  PetscCall(PetscManagedScalarGetValues(dctx,z,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_WRITE,&zptr,NULL));
+  PetscStackCallBLAS("BLASdot",*zptr = BLASdotu_(&bn,xa,&one,ya,&one));
   PetscCall(VecRestoreArrayRead(xin,&xa));
   PetscCall(VecRestoreArrayRead(yin,&ya));
   if (xin->map->n > 0) PetscCall(PetscLogFlops(2.0*xin->map->n-1));

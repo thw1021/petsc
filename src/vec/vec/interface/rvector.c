@@ -70,8 +70,12 @@ PetscErrorCode VecMaxPointwiseDivideAsync(Vec x, Vec y, PetscManagedReal max, Pe
 @*/
 PetscErrorCode  VecMaxPointwiseDivide(Vec x,Vec y,PetscReal *max)
 {
+  PetscManagedReal tmp;
+
   PetscFunctionBegin;
-  PetscCall(VecMaxPointwiseDivideAsync(x,y,PetscManagedRealCreate(max),NULL));
+  PetscCall(PetscManageHostReal(NULL,max,1,&tmp));
+  PetscCall(VecMaxPointwiseDivideAsync(x,y,tmp,NULL));
+  PetscCall(PetscManagedRealDestroy(NULL,&tmp));
   PetscFunctionReturn(0);
 }
 
@@ -126,18 +130,55 @@ $     val = (x,y) = y^T x,
 @*/
 PetscErrorCode  VecDot(Vec x,Vec y,PetscScalar *val)
 {
+  PetscManagedScalar tmp;
+
   PetscFunctionBegin;
-  PetscCall(VecDotAsync(x,y,PetscManagedScalarCreate(val),NULL));
+  PetscCall(PetscManageHostScalar(NULL,val,1,&tmp));
+  PetscCall(VecDotAsync(x,y,tmp,NULL));
+  PetscCall(PetscManagedScalarDestroy(NULL,&tmp));
+  PetscFunctionReturn(0);
+}
+
+typedef struct RealScalar
+{
+  PetscReal   *real;
+  PetscScalar *scalar;
+} RealScalar;
+
+static PetscErrorCode VecDotRealPartAsync_RealPart(PetscDeviceContext PETSC_UNUSED dctx, void *ptr)
+{
+  RealScalar *ctx = (RealScalar*)ptr;
+
+  PetscFunctionBegin;
+  PetscValidPointer(ptr,2);
+  *ctx->real = PetscRealPart(*ctx->scalar);
+  PetscCall(PetscFree(ctx));
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode VecDotRealPartAsync(Vec x, Vec y, PetscManagedReal val, PetscDeviceContext dctx)
 {
-  PetscScalar    fdot;
-
   PetscFunctionBegin;
-  PetscCall(VecDotAsync(x,y,PetscManagedScalarCreate(&fdot),dctx));
-  *val.ptr = PetscRealPart(fdot);
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidHeaderSpecific(y,VEC_CLASSID,2);
+  PetscValidPointer(val,3);
+  if (!dctx) PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
+  PetscValidDeviceContext(dctx,4);
+  if (PetscDefined(USE_COMPLEX)) {
+    RealScalar         *ctx;
+    PetscManagedScalar  tmp;
+
+    PetscCall(PetscManagedScalarCreate(dctx,NULL,NULL,1,PETSC_OWN_POINTER,PETSC_OWN_POINTER,PETSC_OFFLOAD_UNALLOCATED,&tmp));
+    PetscCall(VecDotAsync(x,y,tmp,dctx));
+    PetscCall(PetscMalloc1(1,&ctx));
+    PetscCall(PetscManagedScalarGetValues(dctx,tmp,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,&ctx->scalar,NULL));
+    PetscCall(PetscManagedRealGetValues(dctx,val,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_WRITE,&ctx->real,NULL));
+    PetscCall(PetscDeviceContextLaunchHostFunction(dctx,VecDotRealPartAsync_RealPart,ctx));
+    PetscCall(PetscManagedScalarDestroy(dctx,&tmp));
+  } else {
+    // PetscReal is PetscScalar
+    PetscCall(VecDotAsync(x,y,(PetscManagedScalar)val,dctx));
+  }
   PetscFunctionReturn(0);
 }
 
@@ -173,8 +214,12 @@ $    work load imbalance that causes certain processes to arrive much earlier th
 @*/
 PetscErrorCode  VecDotRealPart(Vec x,Vec y,PetscReal *val)
 {
+  PetscManagedReal tmp;
+
   PetscFunctionBegin;
-  PetscCall(VecDotRealPartAsync(x,y,PetscManagedRealCreate(val),NULL));
+  PetscCall(PetscManageHostReal(NULL,val,1,&tmp));
+  PetscCall(VecDotRealPartAsync(x,y,tmp,NULL));
+  PetscCall(PetscManagedRealDestroy(NULL,&tmp));
   PetscFunctionReturn(0);
 }
 
@@ -246,8 +291,12 @@ PetscErrorCode VecNormAsync(Vec x, NormType type, PetscManagedReal val, PetscDev
 @*/
 PetscErrorCode  VecNorm(Vec x,NormType type,PetscReal *val)
 {
+  PetscManagedReal tmp;
+
   PetscFunctionBegin;
-  PetscCall(VecNormAsync(x,type,PetscManagedRealCreate(val),NULL));
+  PetscCall(PetscManageHostReal(NULL,val,1,&tmp));
+  PetscCall(VecNormAsync(x,type,tmp,NULL));
+  PetscCall(PetscManagedRealDestroy(NULL,&tmp));
   PetscFunctionReturn(0);
 }
 
@@ -291,6 +340,7 @@ PetscErrorCode  VecNormAvailable(Vec x,NormType type,PetscBool  *available,Petsc
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidBoolPointer(available,3);
   PetscValidRealPointer(val,4);
   PetscValidType(x,1);
 
@@ -370,8 +420,15 @@ PetscErrorCode VecMaxAsync(Vec x, PetscManagedInt p, PetscManagedReal val, Petsc
 @*/
 PetscErrorCode  VecMax(Vec x,PetscInt *p,PetscReal *val)
 {
+  PetscManagedReal tmpv;
+  PetscManagedInt  tmpp = NULL;
+
   PetscFunctionBegin;
-  PetscCall(VecMaxAsync(x,PetscManagedIntCreate(p),PetscManagedRealCreate(val),NULL));
+  if (p) PetscCall(PetscManageHostInt(NULL,p,1,&tmpp));
+  PetscCall(PetscManageHostReal(NULL,val,1,&tmpv));
+  PetscCall(VecMaxAsync(x,tmpp,tmpv,NULL));
+  PetscCall(PetscManagedRealDestroy(NULL,&tmpv));
+  if (p) PetscCall(PetscManagedIntDestroy(NULL,&tmpp));
   PetscFunctionReturn(0);
 }
 
@@ -411,8 +468,15 @@ PetscErrorCode VecMinAsync(Vec x, PetscManagedInt p, PetscManagedReal val, Petsc
 @*/
 PetscErrorCode  VecMin(Vec x,PetscInt *p,PetscReal *val)
 {
+  PetscManagedReal tmpv;
+  PetscManagedInt  tmpp = NULL;
+
   PetscFunctionBegin;
-  PetscCall(VecMinAsync(x,PetscManagedIntCreate(p),PetscManagedRealCreate(val),NULL));
+  if (p) PetscCall(PetscManageHostInt(NULL,p,1,&tmpp));
+  PetscCall(PetscManageHostReal(NULL,val,1,&tmpv));
+  PetscCall(VecMinAsync(x,tmpp,tmpv,NULL));
+  PetscCall(PetscManagedRealDestroy(NULL,&tmpv));
+  if (p) PetscCall(PetscManagedIntDestroy(NULL,&tmpp));
   PetscFunctionReturn(0);
 }
 
@@ -461,8 +525,12 @@ $     val = (x,y) = y^H x,
 @*/
 PetscErrorCode  VecTDot(Vec x,Vec y,PetscScalar *val)
 {
+  PetscManagedScalar tmp;
+
   PetscFunctionBegin;
-  PetscCall(VecTDotAsync(x,y,PetscManagedScalarCreate(val),NULL));
+  PetscCall(PetscManageHostScalar(NULL,val,1,&tmp));
+  PetscCall(VecTDotAsync(x,y,tmp,NULL));
+  PetscCall(PetscManagedScalarDestroy(NULL,&tmp));
   PetscFunctionReturn(0);
 }
 
@@ -514,8 +582,12 @@ $      x[i] = alpha * x[i], for i=1,...,n.
 @*/
 PetscErrorCode  VecScale(Vec x, PetscScalar alpha)
 {
+  PetscManagedScalar tmp;
+
   PetscFunctionBegin;
-  PetscCall(VecScaleAsync(x,PetscManagedScalarCreate(&alpha),NULL));
+  PetscCall(PetscManageHostScalar(NULL,&alpha,1,&tmp));
+  PetscCall(VecScaleAsync(x,tmp,NULL));
+  PetscCall(PetscManagedScalarDestroy(NULL,&tmp));
   PetscFunctionReturn(0);
 }
 
@@ -573,9 +645,13 @@ $     x[i] = alpha, for i=1,...,n,
 @*/
 PetscErrorCode  VecSet(Vec x,PetscScalar alpha)
 {
+  PetscManagedScalar tmp;
+
   PetscFunctionBegin;
   PetscValidLogicalCollectiveScalar(x,alpha,2);
-  PetscCall(VecSetAsync(x,PetscManagedScalarCreate(&alpha),NULL));
+  PetscCall(PetscManageHostScalar(NULL,&alpha,1,&tmp));
+  PetscCall(VecSetAsync(x,tmp,NULL));
+  PetscCall(PetscManagedScalarDestroy(NULL,&tmp));
   PetscFunctionReturn(0);
 }
 
@@ -631,8 +707,12 @@ PetscErrorCode VecAXPY(Vec y, PetscScalar alpha, Vec x)
 {
   PetscFunctionBegin;
   if (alpha != (PetscScalar)0.0) {
+    PetscManagedScalar tmp;
+
     PetscValidLogicalCollectiveScalar(y,alpha,2);
-    PetscCall(VecAXPYAsync(y,(PetscManagedScalar){&alpha,PETSC_MEMTYPE_HOST},x,NULL));
+    PetscCall(PetscManageHostScalar(NULL,&alpha,1,&tmp));
+    PetscCall(VecAXPYAsync(y,tmp,x,NULL));
+    PetscCall(PetscManagedScalarDestroy(NULL,&tmp));
   }
   PetscFunctionReturn(0);
 }
