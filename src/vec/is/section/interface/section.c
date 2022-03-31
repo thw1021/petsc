@@ -2057,7 +2057,8 @@ PetscErrorCode PetscSectionCreateSubmeshSection(PetscSection s, IS subpointMap, 
   Output Parameter:
 . subs - the subsection
 
-  Note: The point numbers remain the same, but the section offsets now refer to a new, smaller vector.
+  Note:
+  The point numbers remain the same, but the section offsets now refer to a new, smaller vector.
 
   Level: advanced
 
