@@ -945,6 +945,15 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char* prog,const char* 
   */
 #if defined(PETSC_USE_LOG)
   PetscCall(PetscLogInitialize());
+  if (PetscDefined(HAVE_DEVICE)) {
+    PetscBool      set = PETSC_FALSE;
+    PetscErrorCode ierr;
+
+    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Device Logging Options","Sys");PetscCall(ierr);
+    PetscCall(PetscOptionsBool("-enable_device_timers","Enable logging of device functions using (possibly synchronous) device timers","",PETSC_TRUE,&flg,&set));
+    ierr = PetscOptionsEnd();PetscCall(ierr);
+    if (!flg && set) PetscCall(PetscPushGpuLogger(7355608,NULL,NULL));
+  }
 #endif
 
   PetscCall(PetscCitationsInitialize());

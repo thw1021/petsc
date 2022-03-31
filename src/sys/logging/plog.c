@@ -2225,6 +2225,150 @@ M*/
 #if PetscDefined(HAVE_DEVICE)
 #include <petsc/private/deviceimpl.h>
 
+static PetscErrorCode PetscLogGpuTimeBegin_Default(void)
+{
+  PetscFunctionBegin;
+  if (!PetscLogPLB) PetscFunctionReturn(0);
+  if (PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)) {
+    PetscDeviceContext dctx;
+
+    PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
+    PetscCall(PetscDeviceContextBeginTimer_Internal(dctx));
+  } else {
+    PetscCall(PetscTimeSubtract(&petsc_gtime));
+  }
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode PetscLogGpuTimeEnd_Default(void)
+{
+  PetscFunctionBegin;
+  if (!PetscLogPLE) PetscFunctionReturn(0);
+  if (PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)) {
+    PetscDeviceContext dctx;
+    PetscLogDouble     elapsed;
+
+    PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
+    PetscCall(PetscDeviceContextEndTimer_Internal(dctx,&elapsed));
+    petsc_gtime += (elapsed/1000.0);
+  } else {
+    PetscCall(PetscTimeAdd(&petsc_gtime));
+  }
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode PetscLogGpuTimeBegin_Ignore(void) { return 0; }
+static PetscErrorCode PetscLogGpuTimeEnd_Ignore(void)   { return 0; }
+
+#define MaxGPULoggerStackSize 5
+static int       GPULoggerStackSize = 1;
+static PetscBool registered         = PETSC_FALSE;
+static PetscInt  LoggerLock         = PETSC_DEFAULT;
+static PetscErrorCode (*LogGPUBegin[MaxGPULoggerStackSize])(void) = {PetscLogGpuTimeBegin_Default};
+static PetscErrorCode (*LogGPUEnd[MaxGPULoggerStackSize])(void)   = {PetscLogGpuTimeEnd_Default};
+
+static PetscErrorCode PetscClearGpuLoggers_Private(void)
+{
+  PetscFunctionBegin;
+  LoggerLock = PETSC_DEFAULT;
+  while (GPULoggerStackSize > 1) PetscCall(PetscPopGpuLogger(PETSC_DEFAULT));
+  registered = PETSC_FALSE;
+  PetscFunctionReturn(0);
+}
+
+/*@C
+  PetscPushGpuLogger - Set the current PetscLogGpuTimeBegin/End routines
+
+  Not Collective
+
+  Input Parameters:
++ lock  - A nonnegative integer or PETSC_DEFAULT
+. begin - The routine to be called by PetscLogGpuTimeBegin() (may be NULL)
+- end   - The routine to be called by PetscLogGpuTimeEnd() (may be NULL)
+
+  Notes:
+  Passing a nonnegative integer as lock makes any subsequent calls to push or pop a logger that
+  does not use the same value for lock result in an error. This is useful to ensure that once
+  you have set your logger that no other routine can alter its state until you pop
+  it. PETSC_DEFAULT is used to indicate no lock, i.e. subsequent push/pop calls (with or
+  without a valid lock) will succeed.
+
+  If either begin or end are NULL, GPU logging is effectively ignored, and both
+  PetscLogGpuTimeBegin() and PetscLogGpuTimeEnd() return immediately. This is useful if you
+  would still like to accumulate the FLOPS counters but not pay the cost of synchronization
+  required for accurate GPU timings.
+
+  Developer Notes:
+  PetscFinalize() is the only routine that does not respect the lock, it will unconditionally
+  clear all pushed loggers. This saves users from having to remember their lock if they only
+  ever intend to push a logger.
+
+  level: beginner
+
+.seealso: PetscPopGpuLogger(), PetscLogGpuTimeBegin(), PetscLogGpuTimeEnd()
+@*/
+PetscErrorCode PetscPushGpuLogger(PetscInt lock, PetscErrorCode (*begin)(void), PetscErrorCode (*end)(void))
+{
+  PetscFunctionBegin;
+  if (PetscUnlikely(!registered)) {
+    registered = PETSC_TRUE;
+    PetscCall(PetscRegisterFinalize(PetscClearGpuLoggers_Private));
+  }
+  if (LoggerLock == PETSC_DEFAULT) {
+    /* no lock set, this may or may not set the lock */
+    LoggerLock = lock;
+  } else PetscCheck(lock == LoggerLock,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Attempted to push a GPU logger with incorrect lock %" PetscInt_FMT ", expected %" PetscInt_FMT,lock,LoggerLock);
+  PetscCheck(++GPULoggerStackSize < MaxGPULoggerStackSize,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Cannot push more than %d GPU loggers",MaxGPULoggerStackSize);
+  for (int i = GPULoggerStackSize; i > 0; --i) {
+    LogGPUBegin[i] = LogGPUBegin[i-1];
+    LogGPUEnd[i]   = LogGPUEnd[i-1];
+  }
+  LogGPUBegin[0] = begin ? begin : PetscLogGpuTimeBegin_Ignore;
+  LogGPUEnd[0]   = end   ? end   : PetscLogGpuTimeEnd_Ignore;
+  PetscFunctionReturn(0);
+}
+
+#undef MaxGPULoggerStackSize
+
+/*@C
+  PetscPopGpuLogger - Pop the current PetscLogGpuTimeBegin/End routines
+
+  Not Collective
+
+  Input Parameter:
+. lock - The same nonnegative integer passed to PetscPushGpuLogger()
+
+  Notes:
+  If PetscPushGpuLogger() was called with a nonnegative integer then any calls to this routine
+  not using the same integer will result in an error. See PetscPushGpuLogger() for further
+  discussion.
+
+  Successfully calling this routine (i.e. with matching lock if it was set) resets the lock,
+  allowing subsequent push/pop calls to succeed.
+
+  Developer Notes:
+  Defaults to the usual synchronizing GPU timers when the logger stack is empty.
+
+  level: beginner
+
+.seealso: PetscPushGpuLogger(), PetscLogGpuTimeBegin(), PetscLogGpuTimeEnd()
+@*/
+PetscErrorCode PetscPopGpuLogger(PetscInt lock)
+{
+  PetscFunctionBegin;
+  /* can't pop the default loggers */
+  if (GPULoggerStackSize == 1) PetscFunctionReturn(0);
+  PetscCheck(lock == LoggerLock,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Attempted to pop a GPU logger with incorrect lock %" PetscInt_FMT ", expected %" PetscInt_FMT,lock,LoggerLock);
+  /* got the magic password, can reset the lock */
+  LoggerLock = PETSC_DEFAULT;
+  --GPULoggerStackSize;
+  for (int i = 0; i < GPULoggerStackSize; ++i) {
+    LogGPUBegin[i] = LogGPUBegin[i+1];
+    LogGPUEnd[i]   = LogGPUEnd[i+1];
+  }
+  PetscFunctionReturn(0);
+}
+
 /*-------------------------------------------- GPU event Functions ----------------------------------------------*/
 /*@C
   PetscLogGpuTimeBegin - Start timer for device
@@ -2243,20 +2387,13 @@ M*/
 
   Level: intermediate
 
-.seealso:  PetscLogView(), PetscLogGpuFlops(), PetscLogGpuTimeEnd()
+.seealso:  PetscLogView(), PetscLogGpuFlops(), PetscLogGpuTimeEnd(), PetscPushGpuLogger(),
+PetscPopGpuLogger()
 @*/
 PetscErrorCode PetscLogGpuTimeBegin(void)
 {
   PetscFunctionBegin;
-  if (!PetscLogPLB) PetscFunctionReturn(0);
-  if (PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)) {
-    PetscDeviceContext dctx;
-
-    PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
-    PetscCall(PetscDeviceContextBeginTimer_Internal(dctx));
-  } else {
-    PetscCall(PetscTimeSubtract(&petsc_gtime));
-  }
+  PetscCall((*LogGPUBegin[0])());
   PetscFunctionReturn(0);
 }
 
@@ -2265,22 +2402,13 @@ PetscErrorCode PetscLogGpuTimeBegin(void)
 
   Level: intermediate
 
-.seealso:  PetscLogView(), PetscLogGpuFlops(), PetscLogGpuTimeBegin()
+.seealso:  PetscLogView(), PetscLogGpuFlops(), PetscLogGpuTimeBegin(), PetscPushGpuLogger(),
+PetscPopGpuLogger()
 @*/
 PetscErrorCode PetscLogGpuTimeEnd(void)
 {
   PetscFunctionBegin;
-  if (!PetscLogPLE) PetscFunctionReturn(0);
-  if (PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)) {
-    PetscDeviceContext dctx;
-    PetscLogDouble     elapsed;
-
-    PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
-    PetscCall(PetscDeviceContextEndTimer_Internal(dctx,&elapsed));
-    petsc_gtime += (elapsed/1000.0);
-  } else {
-    PetscCall(PetscTimeAdd(&petsc_gtime));
-  }
+  PetscCall((*LogGPUEnd[0])());
   PetscFunctionReturn(0);
 }
 #endif /* end of PETSC_HAVE_DEVICE */
