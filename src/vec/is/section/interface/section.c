@@ -2031,7 +2031,8 @@ PetscErrorCode PetscSectionCreateSubplexSection_Internal(PetscSection s, IS subp
   Output Parameter:
 . subs - the subsection
 
-  Note: The points are renumbered from 0, and the section offsets now refer to a new, smaller vector.
+  Note:
+  The points are renumbered from 0, and the section offsets now refer to a new, smaller vector.
 
   Level: advanced
 
