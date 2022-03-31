@@ -482,7 +482,7 @@ int main(int argc, char **argv)
   PetscCall(DMSetOutputSequenceNumber(pack, 0, 0.0));
   PetscCall(DMGetApplicationContext(pack, &ctx));
   PetscCheck(gtarget < ctx->num_grids, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Grid to view %" PetscInt_FMT " should be < number of grids %" PetscInt_FMT,gtarget,ctx->num_grids);
-  PetscCheck(nvert >= ctx->batch_sz, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Number of vertices %" PetscInt_FMT "should be <= batch size %" PetscInt_FMT,nvert,ctx->batch_sz);
+  PetscCheck(nvert >= ctx->batch_sz, PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Number of vertices %" PetscInt_FMT " should be <= batch size %" PetscInt_FMT,nvert,ctx->batch_sz);
   /* Create timestepping solver context */
   PetscCall(TSCreate(PETSC_COMM_SELF,&ts));
   PetscCall(TSSetDM(ts,pack));
@@ -538,7 +538,7 @@ int main(int argc, char **argv)
           -dm_landau_amr_post_refine 0 -number_particles_per_dimension 5 -dm_plex_hash_location \
           -dm_landau_batch_size 1 -number_spatial_vertices 1 -dm_landau_batch_view_idx 0 -view_vertex_target 0 -view_grid_target 0 \
           -dm_landau_n 1.000018,1,1e-6 -dm_landau_thermal_temps 2,1,1 -dm_landau_ion_masses 2,180 -dm_landau_ion_charges 1,18 \
-          -ftop_ksp_converged_reason -ftop_ksp_rtol 1e-12 -ftop_ksp_type lsqr -ftop_pc_type bjacobi -ftop_sub_pc_factor_shift_type nonzero -ftop_sub_pc_type lu \
+          -ftop_ksp_converged_reason -ftop_ksp_rtol 1e-12 -ftop_ksp_type cg -ftop_pc_type jacobi \
           -ksp_type preonly -pc_type lu \
           -ptof_ksp_type cg -ptof_pc_type jacobi -ptof_ksp_converged_reason -ptof_ksp_rtol 1e-14\
           -snes_converged_reason -snes_monitor -snes_rtol 1e-14 -snes_stol 1e-14\
