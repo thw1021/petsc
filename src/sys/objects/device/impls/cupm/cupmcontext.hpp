@@ -5,6 +5,7 @@
 #include <petsc/private/cupmblasinterface.hpp>
 
 #include <array>
+#include <vector>
 
 namespace Petsc
 {
@@ -23,6 +24,62 @@ namespace detail
 
 // for tag-based dispatch of handle retrieval
 template <typename T> struct HandleTag { using type = T; };
+
+template <DeviceType T, typename MemType, std::size_t pool_size = 100>
+struct SegmentedMemoryPool : Interface<T>
+{
+  PETSC_CUPM_INHERIT_INTERFACE_TYPEDEFS_USING(cupmInterface_t,T);
+
+  struct MemoryBlock
+  {
+    std::size_t start;
+    std::size_t size;
+    bool        open;
+  };
+
+  std::vector<MemoryBlock> blocks;
+
+  MemType *host_mem;
+  MemType *device_mem;
+
+  constexpr SegmentedMemoryPool() noexcept : host_mem(nullptr), device_mem(nullptr) { }
+
+  PetscErrorCode get(PetscInt size, MemType **host_ptr, MemType **device_ptr) noexcept
+  {
+    auto host_result   = host_mem;
+    auto device_result = device_mem;
+
+    PetscFunctionBegin;
+    PetscCheck(size < pool_size,PETSC_COMM_SELF,PETSC_ERR_MEM,"Cannot allocate pool larger than %zu elements",pool_size);
+    if (PetscUnlikely(!host_mem)) {
+      constexpr auto alloc_size = pool_size*sizeof(MemType);
+
+      // use host_mem as canary
+      PetscCallCUPM(cupmMallocHost(reinterpret_cast<void**>(&host_mem),alloc_size));
+      PetscCallCUPM(cupmMalloc(reinterpret_cast<void**>(&device_mem),alloc_size));
+    }
+
+    if (blocks.empty()) {
+      blocks.emplace_back(0,size,false);
+    } else {
+      bool found = false;
+      // first, search the blocks
+      for (auto& block : blocks) {
+        if (block.open && (block.size <= size)) {
+          found = true;
+          host_result   = host_mem+block.start;
+          device_result = device_mem+block.start;
+          // close the block again
+          block.open    = false;
+          break;
+        }
+      }
+    }
+    if (host_ptr)   *host_ptr   = host_result;
+    if (device_ptr) *device_ptr = device_result;
+    PetscFunctionReturn(0);
+  }
+};
 
 } // namespace detail
 
@@ -156,6 +213,13 @@ private:
     PetscCall(check_current_device_(dctx));
     PetscCall(initialize_handle2_(TagType{},dctx));
     PetscFunctionReturn(0);
+  }
+
+  template <typename ManagedType>
+  PETSC_CXX_COMPAT_DECL(ManagedType*& managed_pool(ManagedType))
+  {
+    static ManagedType *ptr;
+    return ptr;
   }
 
 public:
@@ -374,6 +438,8 @@ template <DeviceType T>
 template <typename PetscType, typename PetscManagedType>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::createManagedScalar(PetscDeviceContext dctx, PetscType *host_ptr, PetscType *device_ptr, PetscInt n, PetscCopyMode cmode, PetscMemType mtype, PetscOffloadMask mask, PetscManagedType scal))
 {
+  auto pool = managed_pool(PetscType{});
+
   PetscFunctionBegin;
 
   PetscFunctionReturn(0);

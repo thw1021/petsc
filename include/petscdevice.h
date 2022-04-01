@@ -290,6 +290,11 @@ PETSC_EXTERN PetscErrorCode PetscDeviceArrayCopy_(PetscDeviceContext,void*PETSC_
 
 #define PetscDeviceArrayCopy(dctx,dest,src,n,mode) (!PetscDefined(HAVE_DEVICE) || (mode == PETSC_DEVICE_COPY_HTOH) ? PetscArraycpy(dest,src,n) : PetscDeviceArrayCopy_(dctx,dest,src,(size_t)(n)*sizeof(*(src)),mode))
 
+#define PetscTypeSuffix Scalar
+#include "petscmanagedtype.h"
+#define PetscTypeSuffix Real
+#include "petscmanagedtype.h"
+
 #endif /* PETSC_HAVE_CXX */
 
 #endif /* PETSCDEVICE_H */

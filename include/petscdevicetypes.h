@@ -209,43 +209,4 @@ typedef enum {
   PETSC_DEVICE_COPY_AUTO,
 } PetscDeviceCopyMode;
 
-#define PetscManagedName PetscManagedScalar
-#define PetscManagedType PetscScalar
-
-#include "petscmanagedtype.h"
-
-#define PETSC_MANAGED_TYPE_OPERATOR_DECL_(PetscManagedType,PetscType)                          \
-  static inline PetscBool PetscConcat(PetscManagedType,Eq)(PetscManagedType scal, PetscType val) \
-  {                                                                                            \
-    return PetscMemTypeHost(scal.mtype) ? (PetscBool)(*scal.ptr == val) : PETSC_FALSE;         \
-  }                                                                                            \
-  static inline PetscManagedType PetscConcat(PetscManagedType,Create)(PetscType *scal)         \
-  {                                                                                            \
-    PetscManagedType s = {                                                                     \
-      PetscDesignatedInitializer(ptr,scal),                                                    \
-      PetscDesignatedInitializer(mtype,PETSC_MEMTYPE_HOST)                                     \
-    };                                                                                         \
-    return s;                                                                                  \
-  }                                                                                            \
-  static inline PetscErrorCode PetscConcat(PetscManagedType,Set)(PetscManagedType scal, PetscDeviceContext dctx, PetscManagedType val) \
-  {                                                                                            \
-    PetscFunctionBegin;                                                                        \
-    if (PetscMemTypeHost(scal)) {                                                              \
-      if (n == 1) *scal.ptr = *val;                                                            \
-      else PetscCall(PetscArraycpy(scal.ptr,val,n));                                           \
-    } else {                                                                                   \
-      PetscCall(PetscDeviceArraycpy(dctx,scal.ptr,val,n));                                     \
-    }                                                                                          \
-    PetscFunctionReturn(0);                                                                    \
-  }
-
-#define PETSC_MANAGED_TYPE_OPERATOR_DECL(name)                                                 \
-  PETSC_MANAGED_TYPE_OPERATOR_DECL_(PetscConcat(PetscManaged,name),PetscConcat(Petsc,name))
-
-PETSC_MANAGED_TYPE_OPERATOR_DECL(Scalar);
-PETSC_MANAGED_TYPE_OPERATOR_DECL(Real);
-PETSC_MANAGED_TYPE_OPERATOR_DECL(Int);
-
-#undef PETSC_MANAGED_TYPE_OPERATOR_DECL
-
 #endif /* PETSCDEVICETYPES_H */
