@@ -9,27 +9,28 @@ Using default Plex order for all matrices
 Linear ptof_ solve converged due to CONVERGED_RTOL iterations 5
 Linear ptof_ solve converged due to CONVERGED_RTOL iterations 5
 Linear ptof_ solve converged due to CONVERGED_RTOL iterations 5
-  0) species 0: density=-1.6723662400372e+01, x-momentum=-1.4415793893230e-17, y-momentum=-7.7176659740896e-18, z-momentum=-1.7782640493294e-19, energy=  4.3148931734715e+04
-  0) species 1: density= 1.6723361379867e+01, x-momentum=-7.1874904842537e-16, y-momentum=-4.0595381448434e-16, z-momentum= 7.6158839568251e-17, energy=  2.1574077533962e+04
-  0) species 2: density= 3.0102050483760e-04, x-momentum=-5.9020573634807e-21, y-momentum=-2.4658781073628e-21, z-momentum=-9.4841465667799e-23, energy=  2.1574077533962e-02
-	  0) Total: charge density= -2.6313044625137e-14, x-momentum= -7.3317074437597e-16, y-momentum= -4.1367394633654e-16, z-momentum=  7.5980918321853e-17, energy=  6.4723030842754e+04 (m_i[0]/m_e = 3670.94, 8 cells)
+  0) species 0: density=-1.6723662400372e+01, x-momentum=-1.2779790967847e-17, y-momentum=-4.7420374648784e-19, z-momentum=-2.0390761098977e-18, energy=  4.3148931734714e+04
+  0) species 1: density= 1.6723361379867e+01, x-momentum=-5.6643136928887e-16, y-momentum= 3.1959513033105e-17, z-momentum=-9.3158580543307e-17, energy=  2.1574077533961e+04
+  0) species 2: density= 3.0102050483760e-04, x-momentum=-4.2167974735375e-21, y-momentum= 7.6602722270145e-22, z-momentum=-5.3986680457055e-22, energy=  2.1574077533961e-02
+	  0) Total: charge density=  4.4741228950873e-14, x-momentum= -5.7921537705419e-16, y-momentum=  3.1486075313840e-17, z-momentum= -9.5198196520010e-17, energy=  6.4723030842753e+04 (m_i[0]/m_e = 3670.94, 8 cells)
 0 TS dt 0.01 time 0.
     0 SNES Function norm 6.059355371583e-01 
-    1 SNES Function norm 2.122330017343e-03 
-    2 SNES Function norm 3.083031950764e-05 
-    3 SNES Function norm 4.005921905990e-07 
-    4 SNES Function norm 5.210541058929e-09 
-    5 SNES Function norm 6.780956917080e-11 
-    6 SNES Function norm 8.661113332843e-13 
+    1 SNES Function norm 2.122330017346e-03 
+    2 SNES Function norm 3.083031950842e-05 
+    3 SNES Function norm 4.005921916928e-07 
+    4 SNES Function norm 5.210542500972e-09 
+    5 SNES Function norm 6.779747608943e-11 
+    6 SNES Function norm 8.833259469045e-13 
   Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 6
 1 TS dt 0.01 time 0.01
-  1) species 0: density=-1.6723662400372e+01, x-momentum=-1.4249822581960e-17, y-momentum=-8.0258984093066e-18, z-momentum=-1.3040603028416e-19, energy=  4.3149452407524e+04
-  1) species 1: density= 1.6723361379867e+01, x-momentum=-7.2486895517639e-16, y-momentum=-3.7467429109024e-16, z-momentum= 7.6158839568251e-17, energy=  2.1573557143146e+04
-  1) species 2: density= 3.0102050483760e-04, x-momentum=-6.0333763159438e-21, y-momentum=-2.5534240756715e-21, z-momentum= 2.1886492077184e-23, energy=  2.1292084719409e-02
-	  1) Total: charge density= -2.2760493576662e-14, x-momentum= -7.3912481113467e-16, y-momentum= -3.8270274292362e-16, z-momentum=  7.6028455424459e-17, energy=  6.4723030842755e+04 (m_i[0]/m_e = 3670.94, 8 cells)
+  1) species 0: density=-1.6723662400372e+01, x-momentum=-1.2696805312212e-17, y-momentum= 2.8452224789270e-19, z-momentum=-2.2880330768038e-18, energy=  4.3149452407524e+04
+  1) species 1: density= 1.6723361379867e+01, x-momentum=-5.4399171120180e-16, y-momentum= 5.5759150398184e-17, z-momentum=-7.7518818846256e-17, energy=  2.1573557143145e+04
+  1) species 2: density= 3.0102050483760e-04, x-momentum=-4.3991849075141e-21, y-momentum= 7.3684523326521e-22, z-momentum=-6.8577675175178e-22, energy=  2.1292084719409e-02
+	  1) Total: charge density=  3.7635910013489e-14, x-momentum= -5.5669291569891e-16, y-momentum=  5.6044409491310e-17, z-momentum= -7.9807537699811e-17, energy=  6.4723030842754e+04 (m_i[0]/m_e = 3670.94, 8 cells)
 Linear ftop_ solve converged due to CONVERGED_RTOL iterations 10
 Linear ftop_ solve converged due to CONVERGED_RTOL iterations 10
 Linear ftop_ solve converged due to CONVERGED_RTOL iterations 10
+<<<<<<< HEAD
 [0] go(): Total number density:   3.491648217616e-07 (  3.491648217616e-07); x-momentum =  -2.712249652106e-16 (  9.897217499839e-18); energy =   1.294460616855e+05 (  1.294460616855e+05) error = 1.304035e-14 (log10 of error = -13), 125 particles. Use 1 threads
 =======
 Linear ptof_ solve converged due to CONVERGED_RTOL iterations 4
@@ -93,3 +94,31 @@ Linear ftop_ solve converged due to CONVERGED_RTOL iterations 11
 Linear ftop_ solve converged due to CONVERGED_RTOL iterations 11
 [0] go(): Total number density:   3.491648217616e-07 (  3.491648217616e-07); x-momentum =  -8.250635277663e-15 (  9.897217499839e-18); energy =   1.294460616864e+05 (  1.294460616855e+05) error = 6.926225e-12 (log10 of error = -11), 125 particles. Use 1 threads
 >>>>>>> b6f8c14829 (fix ex30 test)
+=======
+[0] go(): Total number density:   3.491648217616e-07 (  3.491648217616e-07); x-momentum =  -7.884759501802e-15 (  9.897217499839e-18); energy =   1.294460616855e+05 (  1.294460616855e+05) error = 7.678069e-14 (log10 of error = -13), 125 particles. Use 1 threads
+Linear ptof_ solve converged due to CONVERGED_RTOL iterations 5
+Linear ptof_ solve converged due to CONVERGED_RTOL iterations 5
+Linear ptof_ solve converged due to CONVERGED_RTOL iterations 5
+  0) species 0: density=-1.6723662400372e+01, x-momentum=-1.2779790967847e-17, y-momentum=-4.7420374648784e-19, z-momentum=-2.0390761098977e-18, energy=  4.3148931734714e+04
+  0) species 1: density= 1.6723361379867e+01, x-momentum=-5.6643136928887e-16, y-momentum= 3.1959513033105e-17, z-momentum=-9.3158580543307e-17, energy=  2.1574077533961e+04
+  0) species 2: density= 3.0102050483760e-04, x-momentum=-4.2167974735375e-21, y-momentum= 7.6602722270145e-22, z-momentum=-5.3986680457055e-22, energy=  2.1574077533961e-02
+	  0) Total: charge density=  4.4741228950873e-14, x-momentum= -5.7921537705419e-16, y-momentum=  3.1486075313840e-17, z-momentum= -9.5198196520010e-17, energy=  6.4723030842753e+04 (m_i[0]/m_e = 3670.94, 8 cells)
+0 TS dt 0.01 time 0.
+    0 SNES Function norm 6.059355371583e-01 
+    1 SNES Function norm 2.122330017346e-03 
+    2 SNES Function norm 3.083031950842e-05 
+    3 SNES Function norm 4.005921916928e-07 
+    4 SNES Function norm 5.210542500972e-09 
+    5 SNES Function norm 6.779747608943e-11 
+    6 SNES Function norm 8.833259469045e-13 
+  Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 6
+1 TS dt 0.01 time 0.01
+  1) species 0: density=-1.6723662400372e+01, x-momentum=-1.2696805312212e-17, y-momentum= 2.8452224789270e-19, z-momentum=-2.2880330768038e-18, energy=  4.3149452407524e+04
+  1) species 1: density= 1.6723361379867e+01, x-momentum=-5.4399171120180e-16, y-momentum= 5.5759150398184e-17, z-momentum=-7.7518818846256e-17, energy=  2.1573557143145e+04
+  1) species 2: density= 3.0102050483760e-04, x-momentum=-4.3991849075141e-21, y-momentum= 7.3684523326521e-22, z-momentum=-6.8577675175178e-22, energy=  2.1292084719409e-02
+	  1) Total: charge density=  3.7635910013489e-14, x-momentum= -5.5669291569891e-16, y-momentum=  5.6044409491310e-17, z-momentum= -7.9807537699811e-17, energy=  6.4723030842754e+04 (m_i[0]/m_e = 3670.94, 8 cells)
+Linear ftop_ solve converged due to CONVERGED_RTOL iterations 10
+Linear ftop_ solve converged due to CONVERGED_RTOL iterations 10
+Linear ftop_ solve converged due to CONVERGED_RTOL iterations 10
+[0] go(): Total number density:   3.491648217616e-07 (  3.491648217616e-07); x-momentum =  -7.884759501802e-15 (  9.897217499839e-18); energy =   1.294460616855e+05 (  1.294460616855e+05) error = 7.678069e-14 (log10 of error = -13), 125 particles. Use 1 threads
+>>>>>>> 4e902f4d24 (added PETSC_USE_DMLANDAU_2D to fully support 2 and 3V versions of Landau)

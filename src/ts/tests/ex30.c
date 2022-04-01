@@ -380,6 +380,9 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt NUserV, const PetscInt a_Np, cons
         } // active
       }
     } // Landau
+    if (b_target >= global_batch_id && b_target < global_batch_id+ctx->batch_sz) {
+      PetscCall(VecViewFromOptions(globXArray[LAND_PACK_IDX(b_target%ctx->batch_sz,g_target)],NULL,"-ex29_vec_view"));
+    }
     PetscCall(DMCompositeRestoreAccessArray(pack, X, nDMs, NULL, globXArray));
     PetscCall(DMPlexLandauPrintNorms(X,0));
     // advance
@@ -388,9 +391,6 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt NUserV, const PetscInt a_Np, cons
     PetscCall(TSSolve(ts,X));
     PetscCall(DMPlexLandauPrintNorms(X,1));
     PetscCall(DMCompositeGetAccessArray(pack, X, nDMs, NULL, globXArray));
-    if (b_target >= global_batch_id && b_target < global_batch_id+ctx->batch_sz) {
-      PetscCall(VecViewFromOptions(globXArray[LAND_PACK_IDX(b_target%ctx->batch_sz,g_target)],NULL,"-ex29_vec_view"));
-    }
     // map back to particles
     for (PetscInt b_id_0 = 0 ; b_id_0 < ctx->batch_sz ; b_id_0 += numthreads) {
       PetscCall(PetscInfo(pack,"g2p: global batch %" PetscInt_FMT " of %" PetscInt_FMT ", Landau batch %" PetscInt_FMT " of %" PetscInt_FMT ": map back to particles\n",global_batch_id+1,NUserV,b_id_0+1,ctx->batch_sz));
@@ -458,13 +458,13 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt NUserV, const PetscInt a_Np, cons
 
 int main(int argc, char **argv)
 {
-  DM             pack;
-  Vec            X;
-  PetscInt       dim=2,nvert=1,Np=10,btarget=0,gtarget=0;
-  TS             ts;
-  Mat            J;
-  LandauCtx      *ctx;
-  PetscErrorCode ierr;
+  DM               pack;
+  Vec              X;
+  PetscInt         dim=2,nvert=1,Np=10,btarget=0,gtarget=0;
+  TS               ts;
+  Mat              J;
+  LandauCtx        *ctx;
+  PetscErrorCode   ierr;
 #if defined(PETSC_USE_LOG)
   PetscLogStage    stage;
 #endif
@@ -494,7 +494,7 @@ int main(int argc, char **argv)
   PetscCall(TSSetExactFinalTime(ts,TS_EXACTFINALTIME_STEPOVER));
   PetscCall(TSSetFromOptions(ts));
   PetscCall(PetscObjectSetName((PetscObject)X, "X"));
-  // do particle advance
+  // do particle advance, warmup
   PetscCall(go(ts,X,nvert,Np,dim,btarget,gtarget));
   PetscCall(MatZeroEntries(J)); // need to zero out so as to not reuse it in Landau's logic
   // hot
