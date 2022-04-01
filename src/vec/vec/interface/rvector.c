@@ -1,4 +1,4 @@
-/*
+
      Provides the interface functions for vector operations that have PetscScalar/PetscReal in the signature
    These are the vector functions the user calls.
 */
@@ -70,8 +70,12 @@ PetscErrorCode VecMaxPointwiseDivideAsync(Vec x, Vec y, PetscManagedReal max, Pe
 @*/
 PetscErrorCode  VecMaxPointwiseDivide(Vec x,Vec y,PetscReal *max)
 {
+  PetscManagedReal tmp;
+
   PetscFunctionBegin;
-  PetscCall(VecMaxPointwiseDivideAsync(x,y,PetscManagedRealCreate(max),NULL));
+  PetscCall(PetscManageHostReal(NULL,max,1,&tmp));
+  PetscCall(VecMaxPointwiseDivideAsync(x,y,tmp,NULL));
+  PetscCall(PetscManagedRealDestroy(NULL,&tmp));
   PetscFunctionReturn(0);
 }
 
@@ -647,8 +651,11 @@ PetscErrorCode VecAXPY(Vec y, PetscScalar alpha, Vec x)
 {
   PetscFunctionBegin;
   if (alpha != (PetscScalar)0.0) {
+    PetscManagedScalar scal;
+    PetscDeviceContext dctx;
 
     PetscValidLogicalCollectiveScalar(y,alpha,2);
+    PetscCall(PetscManageHostScalar(dctx,&alpha,1,&scal));
     PetscCall(VecAXPYAsync(y,(PetscManagedScalar){&alpha,PETSC_MEMTYPE_HOST},x,NULL));
   }
   PetscFunctionReturn(0);
