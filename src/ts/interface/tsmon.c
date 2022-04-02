@@ -1135,6 +1135,7 @@ PetscErrorCode TSMonitorSPSwarmSolution(TS ts, PetscInt step, PetscReal ptime, V
   const PetscScalar *yy;
   PetscReal         *y, *x;
   PetscInt           Np, p, dim = 2;
+  int                spdim;
 
   PetscFunctionBegin;
   if (step < 0) PetscFunctionReturn(0); /* -1 indicates interpolated solution */
@@ -1161,6 +1162,11 @@ PetscErrorCode TSMonitorSPSwarmSolution(TS ts, PetscInt step, PetscReal ptime, V
     PetscCall(PetscDrawSPReset(ctx->sp));
   }
   PetscCall(VecGetLocalSize(u, &Np));
+  PetscCall(PetscDrawSPGetDimension(ctx->sp, &spdim));
+  if (Np != spdim) {
+    PetscCall(PetscDrawSPSetDimension(ctx->sp, Np));
+    PetscCall(PetscDrawSPReset(ctx->sp));
+  }
   Np /= dim*2;
   PetscCall(VecGetArrayRead(u,&yy));
   PetscCall(PetscMalloc2(Np, &x, Np, &y));
