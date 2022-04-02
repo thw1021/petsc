@@ -58,6 +58,3 @@ testset:
     suffix: 2
     args: -ts_monitor -ts_time_span 0,0.3,0.6,1.0
 TEST*/
-
-
-
