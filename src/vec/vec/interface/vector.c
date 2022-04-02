@@ -262,7 +262,6 @@ PetscErrorCode  VecPointwiseMin(Vec w,Vec x,Vec y)
 
 PetscErrorCode VecPointwiseMaxAbsAsync(Vec w, Vec x, Vec y, PetscDeviceContext dctx)
 {
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(w,VEC_CLASSID,1);
   PetscValidHeaderSpecific(x,VEC_CLASSID,2);
@@ -309,7 +308,6 @@ PetscErrorCode  VecPointwiseMaxAbs(Vec w,Vec x,Vec y)
 
 PetscErrorCode VecPointwiseDivideAsync(Vec w, Vec x, Vec y, PetscDeviceContext dctx)
 {
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(w,VEC_CLASSID,1);
   PetscValidHeaderSpecific(x,VEC_CLASSID,2);
@@ -356,7 +354,6 @@ PetscErrorCode  VecPointwiseDivide(Vec w,Vec x,Vec y)
 
 PetscErrorCode VecDuplicateAsync(Vec v, Vec *newv, PetscDeviceContext dctx)
 {
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
   PetscValidPointer(newv,2);
@@ -894,7 +891,6 @@ PetscErrorCode VecDestroyVecs_Default(PetscInt m,Vec v[])
 
 PetscErrorCode VecResetArrayAsync(Vec vec, PetscDeviceContext dctx)
 {
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(vec,VEC_CLASSID,1);
   PetscValidType(vec,1);
@@ -1016,7 +1012,6 @@ PetscErrorCode  VecLoad(Vec vec, PetscViewer viewer)
 
 PetscErrorCode VecReciprocalAsync(Vec vec, PetscDeviceContext dctx)
 {
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(vec,VEC_CLASSID,1);
   PetscValidType(vec,1);
@@ -1135,7 +1130,6 @@ PetscErrorCode  VecStashSetInitialSize(Vec vec,PetscInt size,PetscInt bsize)
 
 PetscErrorCode VecConjugateAsync(Vec x, PetscDeviceContext dctx)
 {
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
   PetscValidType(x,1);
@@ -1172,7 +1166,6 @@ PetscErrorCode  VecConjugate(Vec x)
 
 PetscErrorCode VecPointwiseMultAsync(Vec w, Vec x, Vec y, PetscDeviceContext dctx)
 {
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(w,VEC_CLASSID,1);
   PetscValidHeaderSpecific(x,VEC_CLASSID,2);
@@ -1221,7 +1214,7 @@ PetscErrorCode  VecPointwiseMult(Vec w,Vec x,Vec y)
 
 PetscErrorCode VecSetRandomAsync(Vec x, PetscRandom rctx, PetscDeviceContext dctx)
 {
-  PetscRandom    randObj = NULL;
+  PetscRandom randObj = NULL;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -1283,7 +1276,6 @@ PetscErrorCode  VecSetRandom(Vec x,PetscRandom rctx)
 
 PetscErrorCode VecZeroEntriesAsync(Vec vec, PetscDeviceContext dctx)
 {
-
   PetscFunctionBegin;
   PetscCall(VecSetAsync(vec,0,dctx));
   PetscFunctionReturn(0);
@@ -1948,7 +1940,12 @@ PetscErrorCode VecSetInfAsync(Vec xin, PetscDeviceContext dctx)
   PetscValidDeviceContext(dctx,2);
 
   if (xin->ops->set) { /* can be called by a subset of processes, do not use collective routines */
-    PetscCall((*xin->ops->set)(xin,inf,dctx));
+    PetscManagedScalar tmp;
+
+    // REVIEW ME: need to make this device-friendly
+    PetscCall(PetscManageHostScalar(dctx,&inf,1,&tmp));
+    PetscCall((*xin->ops->set)(xin,tmp,dctx));
+    PetscCall(PetscManagedScalarDestroy(dctx,&tmp));
   } else {
     PetscCall(VecGetArrayWrite(xin,&xx));
     for (i=0; i<n; i++) xx[i] = inf;

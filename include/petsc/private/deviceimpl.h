@@ -185,12 +185,15 @@ struct _DeviceContextOps {
   PetscErrorCode (*begintimer)(PetscDeviceContext);
   PetscErrorCode (*endtimer)(PetscDeviceContext,PetscLogDouble*);
   PetscErrorCode (*arraycopy)(PetscDeviceContext,void*PETSC_RESTRICT,const void*PETSC_RESTRICT,size_t,PetscDeviceCopyMode);
-  PetscErrorCode (*acquiremanagedscalar)(PetscDeviceContext,PetscScalar*,PetscScalar*,PetscInt,PetscCopyMode,PetscMemType,PetscOffloadMask,PetscManagedScalar);
+  PetscErrorCode (*acquiremanagedscalar)(PetscDeviceContext,PetscManagedScalar);
   PetscErrorCode (*releasemanagedscalar)(PetscDeviceContext,PetscManagedScalar);
   PetscErrorCode (*getmanagedvaluesscalar)(PetscDeviceContext,PetscManagedScalar,PetscOffloadMask,PetscScalar**);
-  PetscErrorCode (*acquiremanagedreal)(PetscDeviceContext,PetscReal*,PetscReal*,PetscInt,PetscCopyMode,PetscMemType,PetscOffloadMask,PetscManagedReal);
+  PetscErrorCode (*acquiremanagedreal)(PetscDeviceContext,PetscManagedReal);
   PetscErrorCode (*releasemanagedreal)(PetscDeviceContext,PetscManagedReal);
   PetscErrorCode (*getmanagedvaluesreal)(PetscDeviceContext,PetscManagedReal,PetscOffloadMask,PetscReal**);
+  PetscErrorCode (*acquiremanagedint)(PetscDeviceContext,PetscManagedInt);
+  PetscErrorCode (*releasemanagedint)(PetscDeviceContext,PetscManagedInt);
+  PetscErrorCode (*getmanagedvaluesint)(PetscDeviceContext,PetscManagedInt,PetscOffloadMask,PetscInt**);
 };
 
 struct _n_PetscDeviceContext {
