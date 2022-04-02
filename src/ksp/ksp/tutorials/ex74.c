@@ -89,7 +89,6 @@ static PetscErrorCode Assemble_AdvDiff(MPI_Comm,UserContext*,Mat*);
 
 int main(int argc, char **argv)
 {
-  PetscErrorCode    ierr;
   Vec               u,uex,rhs,z;
   UserContext       ctxt;
   PetscInt          nstages,is,ie,matis,matie,*ix,*ix2;
@@ -113,7 +112,7 @@ int main(int argc, char **argv)
   ctxt.dt      = 0.0;
   ctxt.physics_type = PHYSICS_DIFFUSION;
 
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"IRK options","");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"IRK options","");
   PetscCall(PetscOptionsReal("-a","diffusion coefficient","<1.0>",ctxt.a,&ctxt.a,NULL));
   PetscCall(PetscOptionsInt ("-imax","grid size","<20>",ctxt.imax,&ctxt.imax,NULL));
   PetscCall(PetscOptionsReal("-xmin","xmin","<0.0>",ctxt.xmin,&ctxt.xmin,NULL));
@@ -124,7 +123,7 @@ int main(int argc, char **argv)
   nstages = 2;
   PetscCall(PetscOptionsInt ("-irk_nstages","Number of stages in IRK method","",nstages,&nstages,NULL));
   PetscCall(PetscOptionsEnum("-physics_type","Type of process to discretize","",PhysicsTypes,(PetscEnum)ctxt.physics_type,(PetscEnum*)&ctxt.physics_type,NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   /* allocate and initialize solution vector and exact solution */
   PetscCall(VecCreate(PETSC_COMM_WORLD,&u));
