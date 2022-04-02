@@ -387,7 +387,7 @@ PETSC_EXTERN PetscErrorCode TSGetMaxTime(TS,PetscReal*);
 PETSC_EXTERN PetscErrorCode TSSetExactFinalTime(TS,TSExactFinalTimeOption);
 PETSC_EXTERN PetscErrorCode TSGetExactFinalTime(TS,TSExactFinalTimeOption*);
 PETSC_EXTERN PetscErrorCode TSSetTimeSpan(TS,PetscInt,PetscReal*);
-PETSC_EXTERN PetscErrorCode TSGetTimeSpan(TS,PetscInt*,PetscReal**);
+PETSC_EXTERN PetscErrorCode TSGetTimeSpan(TS,PetscInt*,const PetscReal**);
 PETSC_EXTERN PetscErrorCode TSGetTimeSpanSolutions(TS,PetscInt*,Vec**);
 
 

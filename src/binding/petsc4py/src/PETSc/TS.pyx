@@ -449,7 +449,7 @@ cdef class TS(Object):
         CHKERR( TSSetTimeSpan(self.ts, nt, rtspan) )
 
     def getTimeSpan(self):
-        cdef PetscReal *rtspan = NULL
+        cdef const PetscReal *rtspan = NULL
         cdef PetscInt   nt = 0
         CHKERR( TSGetTimeSpan(self.ts, &nt, &rtspan) )
         cdef object tspan = array_r(nt, rtspan)

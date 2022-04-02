@@ -193,7 +193,7 @@ cdef extern from * nogil:
     int TSGetMaxTime(PetscTS,PetscReal*)
     int TSSetExactFinalTime(PetscTS,PetscTSExactFinalTimeOption)
     int TSSetTimeSpan(PetscTS,PetscInt,PetscReal*)
-    int TSGetTimeSpan(PetscTS,PetscInt*,PetscReal**)
+    int TSGetTimeSpan(PetscTS,PetscInt*,const PetscReal**)
     int TSGetTimeSpanSolutions(PetscTS,PetscInt*,PetscVec**)
 
     int TSSetConvergedReason(PetscTS,PetscTSConvergedReason)
