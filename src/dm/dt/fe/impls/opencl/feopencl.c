@@ -455,7 +455,6 @@ static PetscErrorCode PetscFEOpenCLGetIntegrationKernel(PetscFE fem, PetscBool u
   size_t          len;
   char            errMsg[8192];
   cl_int          err;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscCall(PetscFEGetSpatialDimension(fem, &dim));

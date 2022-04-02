@@ -164,7 +164,7 @@ Changes: 3.6
 
 .. rubric:: SYS:
 
--  PetscOptionsHead() now takes a PetscOptions argument.
+-  PetscOptionsHeadBegin() now takes a PetscOptions argument.
 -  PetscObjectAddOptionsHandler() now takes an event handler that
    includes a PetscOptions argument.
    PetscObjectProcessOptionsHandlers() requires this as input.
