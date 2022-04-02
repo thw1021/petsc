@@ -115,7 +115,6 @@ static  char help[]="";
 
 int main(int argc, char **argv)
 {
-  PetscErrorCode     ierr;
   Vec                x0;
   Tao                tao;
   AppCtx             user;
@@ -124,7 +123,7 @@ int main(int argc, char **argv)
 
   PetscCall(PetscInitialize(&argc, &argv, (char*)0,help));
   user.mx = 8;
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"elliptic example",NULL);PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"elliptic example",NULL);
   PetscCall(PetscOptionsInt("-mx","Number of grid points in each direction","",user.mx,&user.mx,NULL));
   user.ns = 6;
   PetscCall(PetscOptionsInt("-ns","Number of data samples (1<=ns<=8)","",user.ns,&user.ns,NULL));
@@ -142,7 +141,7 @@ int main(int argc, char **argv)
   user.use_lrc = PETSC_FALSE;
   PetscCall(PetscOptionsBool("-use_lrc","Use lrc matrix for Js","",user.use_lrc,&user.use_lrc,NULL));
   PetscCall(PetscOptionsInt("-ntests","Number of times to repeat TaoSolve","",ntests,&ntests,NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   user.m = user.ns*user.mx*user.mx*user.mx; /* number of constraints */
   user.nstate =  user.m;
