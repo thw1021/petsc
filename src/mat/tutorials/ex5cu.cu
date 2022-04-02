@@ -20,7 +20,6 @@ void assemble_on_gpu(PetscSplitCSRDataStructure d_mat, PetscInt start, PetscInt 
 {
   const PetscInt  inc = blockDim.x, my0 = threadIdx.x;
   PetscInt        i;
-  PetscErrorCode  ierr;
 
   for (i=start+my0; i<end+1; i+=inc) {
     PetscInt    js[] = {i-1, i}, nn = (i==N) ? 1 : 2; // negative indices are igored but >= N are not, so clip end
