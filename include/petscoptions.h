@@ -242,7 +242,7 @@ PETSC_EXTERN PetscErrorCode PetscOptionsEnd_Private(PetscOptionItems *);
 PETSC_EXTERN PetscErrorCode PetscOptionsHeadBegin(PetscOptionItems *,const char[]);
 
 #if defined(PETSC_CLANG_STATIC_ANALYZER)
-void PetscOptionsHeadBegin(PetscOptionItems*,const char[]);
+template <typename... T> void PetscOptionsHeadBegin(T...);
 void PetscOptionsHeadEnd(void);
 template <typename... T> PetscErrorCode PetscOptionsEnum(T...);
 template <typename... T> PetscErrorCode PetscOptionsInt(T...);
