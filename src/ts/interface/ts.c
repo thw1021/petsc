@@ -6311,7 +6311,7 @@ PetscErrorCode TSSetTimeSpan(TS ts,PetscInt n,PetscReal *span_times)
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
   TSGetTimeSpan - gets the time span.
 
   Not Collective
