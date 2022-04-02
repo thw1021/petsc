@@ -19,8 +19,6 @@ typedef struct {
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBeginUser;
   options->monitor            = PETSC_FALSE;
   options->error              = PETSC_FALSE;
@@ -28,12 +26,12 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->momentTol          = 100.0*PETSC_MACHINE_EPSILON;
   options->ostep              = 100;
 
-  ierr = PetscOptionsBegin(comm, "", "Vlasov Options", "DMPLEX");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "Vlasov Options", "DMPLEX");
   PetscCall(PetscOptionsInt("-output_step", "Number of time steps between output", "ex4.c", options->ostep, &options->ostep, PETSC_NULL));
   PetscCall(PetscOptionsBool("-monitor", "Flag to use the TS monitor", "ex4.c", options->monitor, &options->monitor, NULL));
   PetscCall(PetscOptionsBool("-error", "Flag to print the error", "ex4.c", options->error, &options->error, NULL));
   PetscCall(PetscOptionsInt("-particles_per_circle", "Number of particles per circle", "ex4.c", options->particlesPerCircle, &options->particlesPerCircle, NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   PetscFunctionReturn(0);
 }

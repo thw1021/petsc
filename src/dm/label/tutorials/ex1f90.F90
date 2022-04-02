@@ -42,7 +42,7 @@ contains
     character(len=PETSC_MAX_PATH_LEN):: labelName,IObuffer
     PetscInt                         :: numLabels,l
 
-    call DMGetNumLabels(dm, numLabels, ierr);PetscCall(ierr);
+    call DMGetNumLabels(dm, numLabels, ierr);
     write(IObuffer,*) 'Number of labels: ', numLabels, '\n'
     call PetscViewerASCIIPrintf(viewer, IObuffer, ierr);PetscCall(ierr)
     do l = 0, numLabels-1
