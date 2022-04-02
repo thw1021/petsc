@@ -1,0 +1,16 @@
+DM Object: box 4 MPI processes
+  type: plex
+box in 2 dimensions:
+  Number of 0-cells per rank: 36 36 36 36
+  Number of 1-cells per rank: 60 60 60 60
+  Number of 2-cells per rank: 25 25 25 25
+Labels:
+  depth: 3 strata with value/size (0 (36), 1 (60), 2 (25))
+  marker: 1 strata with value/size (1 (21))
+  Face Sets: 2 strata with value/size (1 (5), 4 (5))
+  celltype: 3 strata with value/size (0 (36), 1 (60), 4 (25))
+Time     Step Part     Energy
+Time     Step Part     Energy
+Time     Step Part     Energy
+L_2 convergence rate: 1.0
+Time     Step Part     Energy
