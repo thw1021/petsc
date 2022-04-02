@@ -739,15 +739,14 @@ PetscErrorCode DMSwarmComputeLocalSizeFromOptions(DM sw)
   PetscInt          N, Ns, dim;
   PetscBool         flg;
   const char       *prefix;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
-  ierr = PetscOptionsBegin(PetscObjectComm((PetscObject) sw), "", "DMSwarm Options", "DMSWARM");PetscCall(ierr);
+  PetscOptionsBegin(PetscObjectComm((PetscObject) sw), "", "DMSwarm Options", "DMSWARM");
   PetscCall(PetscOptionsInt("-dm_swarm_num_particles", "The target number of particles", "", N, &N, NULL));
   PetscCall(PetscOptionsInt("-dm_swarm_num_species", "The number of species", "DMSwarmSetNumSpecies", Ns, &Ns, &flg));
   if (flg) PetscCall(DMSwarmSetNumSpecies(sw, Ns));
   PetscCall(PetscOptionsEnum("-dm_swarm_density", "Method to compute particle density <constant, gaussian>", "", DTProbDensityTypes, (PetscEnum) den, (PetscEnum *) &den, NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   PetscCall(DMGetDimension(sw, &dim));
   PetscCall(PetscObjectGetOptionsPrefix((PetscObject) sw, &prefix));
