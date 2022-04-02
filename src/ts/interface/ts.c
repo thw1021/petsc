@@ -6316,7 +6316,7 @@ PetscErrorCode TSSetTimeSpan(TS ts,PetscInt n,PetscReal *span_times)
 
   Not Collective
 
-  Input Parameters:
+  Input Parameter:
 . ts - the time-stepper
 
   Output Parameters:
