@@ -46,7 +46,7 @@ Changes: 3.3
 -  MatSetUpPreallocation() and MatPreallocated() are removed, use
    MatSetUp()
 -  MatPreallocateSymmetricInitialize() is removed, use
-   MatPreallocateInitialize()
+   MatPreallocateBegin()
 -  MatCreateMPIAIJ(), MatCreateMPIBAIJ(), MatCreateMPISBAIJ(),
    MatCreateMPIDense() are now MatCreateAIJ(), MatCreateBAIJ(),
    MatCreateSBAIJ(), MatCreateDense(). Note that on a single process
