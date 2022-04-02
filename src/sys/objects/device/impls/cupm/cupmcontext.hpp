@@ -25,61 +25,146 @@ namespace detail
 // for tag-based dispatch of handle retrieval
 template <typename T> struct HandleTag { using type = T; };
 
-template <DeviceType T, typename MemType, std::size_t pool_size = 100>
-struct SegmentedMemoryPool : Interface<T>
+struct PETSC_TEMPLATE_VISIBILITY_INTERNAL MemoryBlock;
+
+struct MemoryBlock
 {
-  PETSC_CUPM_INHERIT_INTERFACE_TYPEDEFS_USING(cupmInterface_t,T);
+  using size_type = std::size_t;
 
-  struct MemoryBlock
-  {
-    std::size_t start;
-    std::size_t size;
-    bool        open;
-  };
+  size_type start;
+  size_type size;
+  bool      open;
 
-  std::vector<MemoryBlock> blocks;
-
-  MemType *host_mem;
-  MemType *device_mem;
-
-  constexpr SegmentedMemoryPool() noexcept : host_mem(nullptr), device_mem(nullptr) { }
-
-  PetscErrorCode get(PetscInt size, MemType **host_ptr, MemType **device_ptr) noexcept
-  {
-    auto host_result   = host_mem;
-    auto device_result = device_mem;
-
-    PetscFunctionBegin;
-    PetscCheck(size < pool_size,PETSC_COMM_SELF,PETSC_ERR_MEM,"Cannot allocate pool larger than %zu elements",pool_size);
-    if (PetscUnlikely(!host_mem)) {
-      constexpr auto alloc_size = pool_size*sizeof(MemType);
-
-      // use host_mem as canary
-      PetscCallCUPM(cupmMallocHost(reinterpret_cast<void**>(&host_mem),alloc_size));
-      PetscCallCUPM(cupmMalloc(reinterpret_cast<void**>(&device_mem),alloc_size));
-    }
-
-    if (blocks.empty()) {
-      blocks.emplace_back(0,size,false);
-    } else {
-      bool found = false;
-      // first, search the blocks
-      for (auto& block : blocks) {
-        if (block.open && (block.size <= size)) {
-          found = true;
-          host_result   = host_mem+block.start;
-          device_result = device_mem+block.start;
-          // close the block again
-          block.open    = false;
-          break;
-        }
-      }
-    }
-    if (host_ptr)   *host_ptr   = host_result;
-    if (device_ptr) *device_ptr = device_result;
-    PetscFunctionReturn(0);
-  }
+  constexpr MemoryBlock(size_type start_, size_type size_, bool open_ = false) noexcept
+    : start(start_), size(size_), open(open_)
+  { }
 };
+
+template <typename MemType, typename AllocType, typename FreeType, std::size_t PoolSize> class PETSC_TEMPLATE_VISIBILITY_INTERNAL SegmentedMemoryPool;
+
+template <typename MemType, typename AllocType, typename FreeType, std::size_t PoolSize>
+class SegmentedMemoryPool
+{
+  using BlocksType = std::vector<MemoryBlock>;
+  using size_type  = BlocksType::value_type::size_type;
+
+  const AllocType  allocate_;
+  const FreeType   destroy_;
+  BlocksType       blocks_;
+  MemType         *mem_pool_;
+
+public:
+  constexpr SegmentedMemoryPool(AllocType&& alloc, FreeType&& destroy) noexcept
+    : allocate_(std::forward<AllocType>(alloc)), destroy_(std::forward<FreeType>(destroy)),
+      blocks_(), mem_pool_(nullptr)
+  { }
+
+  PETSC_NODISCARD PetscErrorCode finalize() noexcept;
+  PETSC_NODISCARD PetscErrorCode initialize() noexcept;
+  PETSC_NODISCARD PetscErrorCode get(PetscInt,MemType**) noexcept;
+  PETSC_NODISCARD PetscErrorCode release(MemType**) noexcept;
+  PETSC_NODISCARD bool           owns_pointer(const MemType*) const noexcept;
+};
+
+template <typename MemType, typename AllocType, typename FreeType, std::size_t PoolSize>
+inline PetscErrorCode SegmentedMemoryPool<MemType,AllocType,FreeType,PoolSize>::finalize() noexcept
+{
+  PetscFunctionBegin;
+  PetscCall(destroy_(mem_pool_));
+  mem_pool_ = nullptr;
+  PetscCallCXX(blocks_.clear());
+  PetscFunctionReturn(0);
+}
+
+template <typename MemType, typename AllocType, typename FreeType, std::size_t PoolSize>
+inline PetscErrorCode SegmentedMemoryPool<MemType,AllocType,FreeType,PoolSize>::initialize() noexcept
+{
+  constexpr auto alloc_size = PoolSize*sizeof(MemType);
+  const     auto finalizer  = [](void *ptr) {
+    PetscFunctionBegin;
+    PetscCall(static_cast<decltype(this)>(ptr)->finalize());
+    PetscFunctionReturn(0);
+  };
+  PetscContainer contain;
+
+  PetscFunctionBegin;
+  PetscCall(allocate_(&mem_pool_,alloc_size));
+  PetscCall(PetscContainerCreate(PETSC_COMM_SELF,&contain));
+  PetscCall(PetscContainerSetPointer(contain,this));
+  PetscCall(PetscContainerSetUserDestroy(contain,finalizer));
+  PetscCall(PetscObjectRegisterDestroy(reinterpret_cast<PetscObject>(contain)));
+  PetscFunctionReturn(0);
+}
+
+template <typename MemType, typename AllocType, typename FreeType, std::size_t PoolSize>
+inline PetscErrorCode SegmentedMemoryPool<MemType,AllocType,FreeType,PoolSize>::get(PetscInt size, MemType **ptr) noexcept
+{
+  auto result = mem_pool_;
+
+  PetscFunctionBegin;
+  PetscAssert(size < PoolSize,PETSC_COMM_SELF,PETSC_ERR_MEM,"Cannot allocate pool larger than %zu elements",PoolSize);
+  // use host_mem as canary
+  if (PetscUnlikely(!mem_pool_)) PetscCall(initialize());
+
+  if (blocks_.empty()) {
+    PetscCallCXX(blocks_.emplace_back(0,size));
+  } else {
+    auto block_alloced = size_type{0};
+    // first, search the blocks
+    for (auto& block : blocks_) {
+      const auto bsize = block.size;
+
+      if (block.open && (bsize <= size)) {
+        // ok found open block of suitable size, claim it.
+        // could maybe have shared blocks in the future
+        result     = mem_pool_+bsize;
+        block.open = false;
+        break;
+      }
+      block_alloced += bsize;
+    }
+    // no open block found, need to make one
+    if (result == mem_pool_) {
+      // check that the pool has enough room
+      PetscCheck(block_alloced+size <= PoolSize,PETSC_COMM_SELF,PETSC_ERR_MEM,"Allocating block of size %zu would exceed maximum pool size %zu",size,PoolSize);
+      PetscCallCXX(blocks_.emplace_back(block_alloced,size));
+    }
+  }
+  if (ptr) *ptr = result;
+  PetscFunctionReturn(0);
+}
+
+template <typename MemType, typename AllocType, typename FreeType, std::size_t PoolSize>
+inline PetscErrorCode SegmentedMemoryPool<MemType,AllocType,FreeType,PoolSize>::release(MemType **ptr) noexcept
+{
+  const auto offset = *ptr-mem_pool_;
+
+  PetscFunctionBegin;
+  if (!this->owns_pointer(*ptr)) PetscFunctionReturn(0); // don't own it, bail
+
+  for (auto block = blocks_.begin(); block != blocks_.end(); ++block) {
+    if (block->start == offset) {
+      // ok, found ourselves
+      if (std::next(block) == blocks_.end()) {
+        // last element of the vector, just destroy it
+        PetscCallCXX(blocks_.pop_back());
+      } else {
+        // somewhere inside, so mark the block free again
+        block->open = true;
+      }
+      break;
+    }
+    PetscAssert(std::next(block) != blocks_.end(),PETSC_COMM_SELF,PETSC_ERR_PLIB,"Could not find block owning offset %zu in pool",offset);
+  }
+  *ptr = nullptr;
+  PetscFunctionReturn(0);
+}
+
+template <typename MemType, typename AllocType, typename FreeType, std::size_t PoolSize>
+inline bool SegmentedMemoryPool<MemType,AllocType,FreeType,PoolSize>::owns_pointer(const MemType *ptr) const noexcept
+{
+  return ptr >= mem_pool_ && ptr < std::next(mem_pool_,PoolSize);
+}
 
 } // namespace detail
 
@@ -215,11 +300,45 @@ private:
     PetscFunctionReturn(0);
   }
 
-  template <typename ManagedType>
-  PETSC_CXX_COMPAT_DECL(ManagedType*& managed_pool(ManagedType))
+  template <typename PetscType, typename AllocType, typename FreeType>
+  PETSC_CXX_COMPAT_DECL(auto managed_pool_(AllocType&& allocfn, FreeType&& freefn)) PETSC_DECLTYPE_AUTO_RETURNS(detail::SegmentedMemoryPool<PetscType,AllocType,FreeType,100>{std::forward<AllocType>(allocfn),std::forward<FreeType>(freefn)});
+
+  template <typename PetscType>
+  PETSC_CXX_COMPAT_DECL(auto managed_host_pool_())
+    -> decltype(managed_pool_<PetscType>([](PetscType**,std::size_t) {return 0;},[](PetscType*) {return 0;}))&
   {
-    static ManagedType *ptr;
-    return ptr;
+    static auto pool = managed_pool_<PetscType>(
+      [](PetscType **ptr, std::size_t n) {
+        PetscFunctionBegin;
+        PetscCallCUPM(cupmMallocHost(reinterpret_cast<void**>(ptr),n));
+        PetscFunctionReturn(0);
+      },
+      [](PetscType *ptr) {
+        PetscFunctionBegin;
+	PetscCallCUPM(cupmFreeHost(ptr));
+        PetscFunctionReturn(0);
+      }
+    );
+    return pool;
+  }
+
+  template <typename PetscType>
+  PETSC_CXX_COMPAT_DECL(auto managed_device_pool_())
+    -> decltype(managed_pool_<PetscType>([](PetscType**,std::size_t) {return 0;},[](PetscType*) {return 0;}))&
+  {
+    static auto pool = managed_pool_<PetscType>(
+      [](PetscType **ptr, std::size_t n) {
+        PetscFunctionBegin;
+        PetscCallCUPM(cupmMalloc(reinterpret_cast<void**>(ptr),n));
+        PetscFunctionReturn(0);
+      },
+      [](PetscType *ptr) {
+        PetscFunctionBegin;
+	PetscCallCUPM(cupmFree(ptr));
+        PetscFunctionReturn(0);
+      }
+    );
+    return pool;
   }
 
 public:
@@ -238,7 +357,11 @@ public:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode endTimer(PetscDeviceContext,PetscLogDouble*));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode arrayCopy(PetscDeviceContext,void*PETSC_RESTRICT,const void*PETSC_RESTRICT,std::size_t,PetscDeviceCopyMode));
   template <typename PetscType, typename PetscManagedType>
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode createManagedScalar(PetscDeviceContext,PetscType*,PetscType*,PetscInt,PetscCopyMode,PetscMemType,PetscOffloadMask,PetscManagedType));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode createManagedType(PetscDeviceContext,PetscManagedType));
+  template <typename PetscType, typename PetscManagedType>
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode destroyManagedType(PetscDeviceContext,PetscManagedType));
+  template <typename PetscType, typename PetscManagedType>
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode getManagedTypeValues(PetscDeviceContext,PetscManagedType,PetscOffloadMask,PetscType**));
 
   const struct _DeviceContextOps ops = {
     destroy,
@@ -253,7 +376,8 @@ public:
     beginTimer,
     endTimer,
     arrayCopy,
-    createManagedScalar<PetscScalar,PetscManagedScalar>
+    createManagedType<PetscScalar,PetscManagedScalar>,
+    destroyManagedType<PetscScalar,PetscManagedScalar>
   };
 };
 
@@ -436,12 +560,96 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::arrayCopy(PetscDeviceCont
 
 template <DeviceType T>
 template <typename PetscType, typename PetscManagedType>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::createManagedScalar(PetscDeviceContext dctx, PetscType *host_ptr, PetscType *device_ptr, PetscInt n, PetscCopyMode cmode, PetscMemType mtype, PetscOffloadMask mask, PetscManagedType scal))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::createManagedType(PetscDeviceContext dctx, PetscManagedType scal))
 {
-  auto pool = managed_pool(PetscType{});
+  const auto n = scal->n;
 
   PetscFunctionBegin;
+  if (!scal->host) PetscCall(managed_host_pool_<PetscType>().get(n,&scal->host));
+  if (!scal->device) PetscCall(managed_device_pool_<PetscType>().get(n,&scal->device));
+  PetscFunctionReturn(0);
+}
 
+template <DeviceType T>
+template <typename PetscType, typename PetscManagedType>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::destroyManagedType(PetscDeviceContext dctx, PetscManagedType scal))
+{
+  PetscFunctionBegin;
+  // try returning them to the pool
+  PetscCall(managed_host_pool_<PetscType>().release(&scal->host));
+  PetscCall(managed_device_pool_<PetscType>().release(&scal->device));
+  PetscFunctionReturn(0);
+}
+
+template <DeviceType T>
+template <typename PetscType, typename PetscManagedType>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::getManagedTypeValues(PetscDeviceContext dctx, PetscManagedType scal, PetscOffloadMask mask, PetscType **ptr))
+{
+  // sets ptr, and scal->mask!
+  const auto copyToDestination = [&](PetscType *&dest, const PetscType *src)
+  {
+    const auto device = dest == scal->device;
+    const auto n      = scal->n;
+
+    PetscFunctionBegin;
+    // first get the destination buffer
+    if (!dest) {
+      if (device) PetscCall(managed_device_pool_<PetscType>().get(n,&dest));
+      else PetscCall(managed_host_pool_<PetscType>().get(n,&dest));
+    }
+    // now see if we can copy the other
+    if (src) {
+      const auto kind = device ? cupmMemcpyHostToDevice : cupmMemcpyDeviceToHost;
+      PetscCallCUPM(cupmMemcpyAsync(dest,src,n*sizeof(PetscType),kind,impls_cast_(dctx)->stream));
+      // if we copied the other we are up to date on both
+      scal->mask = PETSC_OFFLOAD_BOTH;
+    } else {
+      scal->mask = device ? PETSC_OFFLOAD_GPU : PETSC_OFFLOAD_CPU;
+    }
+    *ptr = dest;
+    PetscFunctionReturn(0);
+  };
+
+  const auto smask = scal->mask;
+
+  PetscFunctionBegin;
+  PetscAssert(mask != smask,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Implementations should only be called if destination offloadmask (%d) != source offloadmask (%d)",static_cast<int>(mask),static_cast<int>(smask));
+  PetscAssert(smask != PETSC_OFFLOAD_BOTH,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Implementations should only be called if source offloadmask (%d) != PETSC_OFFLOAD_BOTH (%d)",static_cast<int>(smask),static_cast<int>(PETSC_OFFLOAD_BOTH));
+  switch (mask) {
+  case PETSC_OFFLOAD_CPU:
+    // must mean scal->mask is PETSC_OFFLOAD_GPU or unallocated
+    PetscCall(copyToDestination(scal->host,scal->device));
+    break;
+  case PETSC_OFFLOAD_GPU:
+    // must mean scal->mask is PETSC_OFFLOAD_CPU or unallocated
+    PetscCall(copyToDestination(scal->device,scal->host));
+    break;
+  case PETSC_OFFLOAD_BOTH:
+    // ok we have one or the other, but not both
+    if (smask == PETSC_OFFLOAD_UNALLOCATED) {
+      const auto n = scal->n;
+
+      // we have none of them, let's make sure
+      PetscAssert(!scal->host,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Have offloadmask PETSC_OFFLOAD_UNALLOCATED but have host pointer");
+      PetscAssert(!scal->device,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Have offloadmask PETSC_OFFLOAD_UNALLOCATED but have device pointer");
+
+      // get both
+      PetscCall(managed_device_pool_<PetscType>().get(n,&scal->host));
+      PetscCall(managed_device_pool_<PetscType>().get(n,&scal->device));
+      scal->mask = PETSC_OFFLOAD_BOTH;
+      *ptr       = scal->host;
+    } else if (scal->host) {
+      PetscCall(copyToDestination(scal->host,scal->device));
+    } else {
+      // presumably have device, let's check though
+      PetscAssert(scal->device,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Have offloadmask (%d) but neither host nor device pointer",static_cast<int>(smask));
+      PetscCall(copyToDestination(scal->device,scal->host));
+    }
+    break;
+  default:
+    PetscUnreachable();
+    break;
+  }
   PetscFunctionReturn(0);
 }
 

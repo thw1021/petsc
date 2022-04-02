@@ -203,10 +203,17 @@ typedef struct _n_PetscDeviceContext *PetscDeviceContext;
 
 typedef enum {
   PETSC_DEVICE_COPY_HTOH,
+  PETSC_DEVICE_COPY_DTOH,
   PETSC_DEVICE_COPY_HTOD,
   PETSC_DEVICE_COPY_DTOD,
-  PETSC_DEVICE_COPY_DTOH,
   PETSC_DEVICE_COPY_AUTO,
 } PetscDeviceCopyMode;
+
+#define PetscTypeSuffix Scalar
+#include "petscmanagedtype.h"
+#define PetscTypeSuffix Real
+#include "petscmanagedtype.h"
+#define PetscTypeSuffix Int
+#include "petscmanagedtype.h"
 
 #endif /* PETSCDEVICETYPES_H */
