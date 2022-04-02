@@ -3565,7 +3565,7 @@ PetscErrorCode  TSStep(TS ts)
     ts->steps++;
     ts->steprollback = PETSC_FALSE;
     ts->steprestart  = PETSC_FALSE;
-    if (ts->tspan && PetscIsCloseAtTol(ts->ptime,ts->tspan->span_times[ts->tspan->spanctr],10*PETSC_MACHINE_EPSILON,0) && ts->tspan->spanctr<ts->tspan->num_span_times) PetscCall(VecCopy(ts->vec_sol,ts->tspan->vecs_sol[ts->tspan->spanctr++]));
+    if (ts->tspan && PetscIsCloseAtTol(ts->ptime,ts->tspan->span_times[ts->tspan->spanctr],10*PETSC_MACHINE_EPSILON,0) && ts->tspan->spanctr < ts->tspan->num_span_times) PetscCall(VecCopy(ts->vec_sol,ts->tspan->vecs_sol[ts->tspan->spanctr++]));
   }
 
   if (!ts->reason) {
@@ -3891,7 +3891,7 @@ PetscErrorCode TSSolve(TS ts,Vec u)
     PetscReal maxdt;
     PetscReal dt = ts->time_step;
 
-    if (ts->tspan) maxdt = ts->tspan->span_times[ts->tspan->spanctr+1] - ts->ptime;
+    if (ts->tspan) maxdt = ts->tspan->span_times[ts->tspan->spanctr] - ts->ptime;
     else maxdt = ts->max_time - ts->ptime;
     ts->time_step = dt >= maxdt ? maxdt : (PetscIsCloseAtTol(dt,maxdt,10*PETSC_MACHINE_EPSILON,0) ? maxdt : dt);
   }
@@ -6311,12 +6311,12 @@ PetscErrorCode TSSetTimeSpan(TS ts,PetscInt n,PetscReal *span_times)
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
   TSGetTimeSpan - gets the time span.
 
   Not Collective
 
-  Input Parameters:
+  Input Parameter:
 . ts - the time-stepper
 
   Output Parameters:
@@ -6332,7 +6332,7 @@ PetscErrorCode TSGetTimeSpan(TS ts,PetscInt *n,const PetscReal **span_times)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
-  if (n) PetscValidPointer(n,2);
+  if (n) PetscValidIntPointer(n,2);
   if (span_times) PetscValidPointer(span_times,3);
   if (!ts->tspan) {
     if (n) *n = 0;
@@ -6364,7 +6364,7 @@ PetscErrorCode TSGetTimeSpanSolutions(TS ts,PetscInt *nsol,Vec **Sols)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts, TS_CLASSID,1);
-  if (nsol) PetscValidPointer(nsol,2);
+  if (nsol) PetscValidIntPointer(nsol,2);
   if (Sols) PetscValidPointer(Sols,3);
   if (!ts->tspan) {
     if (nsol) *nsol = 0;
