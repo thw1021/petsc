@@ -203,7 +203,6 @@ PetscErrorCode zero(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt 
 int main(int argc,char **args)
 {
   Mat                Amat;
-  PetscErrorCode     ierr;
   SNES               snes;
   KSP                ksp;
   MPI_Comm           comm;
@@ -233,7 +232,7 @@ int main(int argc,char **args)
   comm = PETSC_COMM_WORLD;
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
   /* options */
-  ierr = PetscOptionsBegin(comm,NULL,"3D bilinear Q1 elasticity options","");PetscCall(ierr);
+  PetscOptionsBegin(comm,NULL,"3D bilinear Q1 elasticity options","");
   {
     i = 3;
     PetscCall(PetscOptionsIntArray("-cells", "Number of (flux tube) processor in each dimension", "ex56.c", cells, &i, NULL));
@@ -249,7 +248,7 @@ int main(int argc,char **args)
     PetscCall(PetscOptionsBool("-attach_mat_nearnullspace","MatNearNullSpace API test (via MatSetNearNullSpace)","",attach_nearnullspace,&attach_nearnullspace,NULL));
     PetscCall(PetscOptionsInt("-run_type","0: twisting load on cantalever, 1: 3rd order accurate convergence test","",run_type,&run_type,NULL));
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscCall(PetscLogStageRegister("Mesh Setup", &stage[16]));
   for (iter=0 ; iter<max_conv_its ; iter++) {
     char str[] = "Solve 0";
@@ -335,9 +334,9 @@ int main(int argc,char **args)
 
   /* convert to p4est, and distribute */
 
-  ierr = PetscOptionsBegin(comm, "", "Mesh conversion options", "DMPLEX");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "Mesh conversion options", "DMPLEX");
   PetscCall(PetscOptionsFList("-dm_type","Convert DMPlex to another format (should not be Plex!)","ex56.c",DMList,DMPLEX,convType,256,&flg));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   if (flg) {
     DM newdm;
     PetscCall(DMConvert(dm,convType,&newdm));
@@ -514,8 +513,8 @@ int main(int argc,char **args)
   for (iter=1 ; iter<max_conv_its ; iter++) {
     if (run_type==1) err[iter] = 59.975208 - mdisp[iter];
     else             err[iter] = 171.038 - mdisp[iter];
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"[%d] %D) N=%12D, max displ=%9.7e, disp diff=%9.2e, error=%4.3e, rate=%3.2g\n",rank,iter,local_sizes[iter],(double)mdisp[iter],
-                       (double)(mdisp[iter]-mdisp[iter-1]),(double)err[iter],(double)(PetscLogReal(err[iter-1]/err[iter])/PetscLogReal(2.)));PetscCall(ierr);
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"[%d] %D) N=%12D, max displ=%9.7e, disp diff=%9.2e, error=%4.3e, rate=%3.2g\n",rank,iter,local_sizes[iter],(double)mdisp[iter],
+                          (double)(mdisp[iter]-mdisp[iter-1]),(double)err[iter],(double)(PetscLogReal(err[iter-1]/err[iter])/PetscLogReal(2.))));
   }
 
   PetscCall(PetscFinalize());
