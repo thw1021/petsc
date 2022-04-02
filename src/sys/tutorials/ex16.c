@@ -10,7 +10,6 @@ T*/
 #include <petscsys.h>
 int main(int argc,char **argv)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    rank,size;
 
   /*
@@ -28,7 +27,7 @@ int main(int argc,char **argv)
     Since PetscOptionsSetValue() is called before the PetscInitialize() we cannot call
     PetscCall() on the error code and just return it directly.
   */
-  ierr = PetscOptionsSetValue(NULL,"-no_signal_handler","true");if (ierr) return ierr;
+  PetscCall(PetscOptionsSetValue(NULL,"-no_signal_handler","true"));
   PetscCall(PetscInitialize(&argc,&argv,(char*)0,help));
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD,&size));
   PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD,&rank));

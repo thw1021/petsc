@@ -249,7 +249,6 @@ int main(int argc,char **argv)
   PetscMPIInt    size;
   PetscBool      monitor = PETSC_FALSE;
   SAMethod       sa = SA_GLOBAL;
-  PetscErrorCode ierr;
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Initialize program
@@ -261,11 +260,11 @@ int main(int argc,char **argv)
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Set runtime options
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"SA analysis options.","");PetscCall(ierr);{
+  PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"SA analysis options.","");{
   PetscCall(PetscOptionsGetBool(NULL,NULL,"-monitor",&monitor,NULL));
   PetscCall(PetscOptionsEnum("-sa_method","Sensitivity analysis method (track or global)","",SAMethods,(PetscEnum)sa,(PetscEnum*)&sa,NULL));
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   user.final_time = 0.1;
   user.max_steps  = 5;
@@ -414,8 +413,7 @@ int main(int argc,char **argv)
   }
 
   if (sa == SA_GLOBAL) {
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"\n sensitivity wrt  params: d[cost]/d[p], where p refers to \n\
-                    the interlaced vector made by combining mu1,mu2\n");PetscCall(ierr);
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n sensitivity wrt  params: d[cost]/d[p], where p refers to \nthe interlaced vector made by combining mu1,mu2\n"));
     PetscCall(VecView(user.mup,PETSC_VIEWER_STDOUT_WORLD));
   }
 
@@ -439,7 +437,7 @@ int main(int argc,char **argv)
   }
   PetscCall(TSDestroy(&ts));
   PetscCall(PetscFinalize());
-  return(ierr);
+  return(0);
 }
 
 /*TEST
