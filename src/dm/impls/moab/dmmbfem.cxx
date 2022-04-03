@@ -642,7 +642,7 @@ PetscErrorCode DMMoabFEMComputeBasis(const PetscInt dim, const PetscInt nverts, 
 
   /* Get the quadrature points and weights for the given quadrature rule */
   PetscCall(PetscQuadratureGetData(quadrature, &idim, NULL, &npoints, &quadpts, &quadwts));
-  PetscCheckFalse(idim != dim,PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "Dimension mismatch: provided (%D) vs quadrature (%D)",idim,dim);
+  PetscCheck(idim == dim,PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "Dimension mismatch: provided (%D) vs quadrature (%D)",idim,dim);
   if (jacobian_quadrature_weight_product) {
     PetscCall(PetscArraycpy(jacobian_quadrature_weight_product, quadwts, npoints));
   }
@@ -913,7 +913,7 @@ PetscErrorCode ComputeJacobian_Internal (const PetscInt dim, const PetscInt nver
     }
 
   }
-  PetscCheckFalse(volume < 1e-12,PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Element has zero volume: %g. Degenerate element or invalid connectivity", volume);
+  PetscCheck(volume >= 1e-12,PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Element has zero volume: %g. Degenerate element or invalid connectivity", volume);
   if (dvolume) *dvolume = volume;
   PetscFunctionReturn(0);
 }

@@ -35,8 +35,8 @@ PetscErrorCode DMDAGetWireBasketInterpolation(PC pc,DM da,PC_Exotic *exotic,Mat 
 
   PetscFunctionBegin;
   PetscCall(DMDAGetInfo(da,&dim,NULL,NULL,NULL,&mp,&np,&pp,&dof,NULL,NULL,NULL,NULL,NULL));
-  PetscCheckFalse(dof != 1,PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Only for single field problems");
-  PetscCheckFalse(dim != 3,PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Only coded for 3d problems");
+  PetscCheck(dof == 1,PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Only for single field problems");
+  PetscCheck(dim == 3,PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Only coded for 3d problems");
   PetscCall(DMDAGetCorners(da,NULL,NULL,NULL,&m,&n,&p));
   PetscCall(DMDAGetGhostCorners(da,&istart,&jstart,&kstart,&mwidth,&nwidth,&pwidth));
   istart = istart ? -1 : 0;
@@ -155,9 +155,9 @@ PetscErrorCode DMDAGetWireBasketInterpolation(PC pc,DM da,PC_Exotic *exotic,Mat 
       }
     }
   }
-  PetscCheckFalse(c != N,PETSC_COMM_SELF,PETSC_ERR_PLIB,"c != N");
-  PetscCheckFalse(cint != Nint,PETSC_COMM_SELF,PETSC_ERR_PLIB,"cint != Nint");
-  PetscCheckFalse(csurf != Nsurf,PETSC_COMM_SELF,PETSC_ERR_PLIB,"csurf != Nsurf");
+  PetscCheck(c == N,PETSC_COMM_SELF,PETSC_ERR_PLIB,"c != N");
+  PetscCheck(cint == Nint,PETSC_COMM_SELF,PETSC_ERR_PLIB,"cint != Nint");
+  PetscCheck(csurf == Nsurf,PETSC_COMM_SELF,PETSC_ERR_PLIB,"csurf != Nsurf");
   PetscCall(DMGetLocalToGlobalMapping(da,&ltg));
   PetscCall(ISLocalToGlobalMappingApply(ltg,N,II,II));
   PetscCall(ISLocalToGlobalMappingApply(ltg,Nint,IIint,IIint));
@@ -261,7 +261,7 @@ PetscErrorCode DMDAGetWireBasketInterpolation(PC pc,DM da,PC_Exotic *exotic,Mat 
     PetscCall(PetscTableAddCount(ht,globals[i]+1));
   }
   PetscCall(PetscTableGetCount(ht,&cnt));
-  PetscCheckFalse(cnt != Ntotal,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Hash table size %D not equal to total number coarse grid points %D",cnt,Ntotal);
+  PetscCheck(cnt == Ntotal,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Hash table size %D not equal to total number coarse grid points %D",cnt,Ntotal);
   PetscCall(PetscFree(globals));
   for (i=0; i<26; i++) {
     PetscCall(PetscTableFind(ht,gl[i]+1,&gl[i]));
@@ -341,8 +341,8 @@ PetscErrorCode DMDAGetFaceInterpolation(PC pc,DM da,PC_Exotic *exotic,Mat Agloba
 
   PetscFunctionBegin;
   PetscCall(DMDAGetInfo(da,&dim,NULL,NULL,NULL,&mp,&np,&pp,&dof,NULL,NULL,NULL,NULL,NULL));
-  PetscCheckFalse(dof != 1,PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Only for single field problems");
-  PetscCheckFalse(dim != 3,PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Only coded for 3d problems");
+  PetscCheck(dof == 1,PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Only for single field problems");
+  PetscCheck(dim == 3,PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Only coded for 3d problems");
   PetscCall(DMDAGetCorners(da,NULL,NULL,NULL,&m,&n,&p));
   PetscCall(DMDAGetGhostCorners(da,&istart,&jstart,&kstart,&mwidth,&nwidth,&pwidth));
   istart = istart ? -1 : 0;
@@ -433,9 +433,9 @@ PetscErrorCode DMDAGetFaceInterpolation(PC pc,DM da,PC_Exotic *exotic,Mat Agloba
       }
     }
   }
-  PetscCheckFalse(c != N,PETSC_COMM_SELF,PETSC_ERR_PLIB,"c != N");
-  PetscCheckFalse(cint != Nint,PETSC_COMM_SELF,PETSC_ERR_PLIB,"cint != Nint");
-  PetscCheckFalse(csurf != Nsurf,PETSC_COMM_SELF,PETSC_ERR_PLIB,"csurf != Nsurf");
+  PetscCheck(c == N,PETSC_COMM_SELF,PETSC_ERR_PLIB,"c != N");
+  PetscCheck(cint == Nint,PETSC_COMM_SELF,PETSC_ERR_PLIB,"cint != Nint");
+  PetscCheck(csurf == Nsurf,PETSC_COMM_SELF,PETSC_ERR_PLIB,"csurf != Nsurf");
   PetscCall(DMGetLocalToGlobalMapping(da,&ltg));
   PetscCall(ISLocalToGlobalMappingApply(ltg,N,II,II));
   PetscCall(ISLocalToGlobalMappingApply(ltg,Nint,IIint,IIint));
@@ -536,7 +536,7 @@ PetscErrorCode DMDAGetFaceInterpolation(PC pc,DM da,PC_Exotic *exotic,Mat Agloba
     PetscCall(PetscTableAddCount(ht,globals[i]+1));
   }
   PetscCall(PetscTableGetCount(ht,&cnt));
-  PetscCheckFalse(cnt != Ntotal,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Hash table size %D not equal to total number coarse grid points %D",cnt,Ntotal);
+  PetscCheck(cnt == Ntotal,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Hash table size %D not equal to total number coarse grid points %D",cnt,Ntotal);
   PetscCall(PetscFree(globals));
   for (i=0; i<6; i++) {
     PetscCall(PetscTableFind(ht,gl[i]+1,&gl[i]));

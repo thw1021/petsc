@@ -298,7 +298,7 @@ static PetscErrorCode xxt_generate(xxt_ADT xxt_handle)
   for (dim=i=j=0; i<m; i++) {
     /* time to move to the next level? */
     while (i==segs[dim]) {
-      PetscCheckFalse(dim==level,PETSC_COMM_SELF,PETSC_ERR_PLIB,"dim about to exceed level");
+      PetscCheck(dim!=level,PETSC_COMM_SELF,PETSC_ERR_PLIB,"dim about to exceed level");
       stages[dim++]=i;
       end         +=lnsep[dim];
     }
@@ -630,7 +630,7 @@ static PetscErrorCode det_separators(xxt_ADT xxt_handle)
           if ((!used[i])&&(lhs[i]!=0.0)) {
             ct++; nfo++;
 
-            PetscCheckFalse(nfo>n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"nfo about to exceed n");
+            PetscCheck(nfo<=n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"nfo about to exceed n");
 
             *--iptr = local2global[i];
             used[i] = edge;
@@ -649,7 +649,7 @@ static PetscErrorCode det_separators(xxt_ADT xxt_handle)
           if ((!used[i])&&(rhs[i]!=0.0)) {
             ct++; nfo++;
 
-            PetscCheckFalse(nfo>n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"nfo about to exceed n");
+            PetscCheck(nfo<=n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"nfo about to exceed n");
 
             *--iptr = local2global[i];
             used[i] = edge;

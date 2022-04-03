@@ -255,7 +255,7 @@ PetscErrorCode  PetscTableAddCountExpand(PetscTable ta,PetscInt key)
   }
 
   ta->tablesize = PetscIntMultTruncate(2,ta->tablesize);
-  PetscCheckFalse(tsize == ta->tablesize,PETSC_COMM_SELF,PETSC_ERR_SUP,"Table is as large as possible; ./configure with the option --with-64-bit-integers to run this large case");
+  PetscCheck(tsize != ta->tablesize,PETSC_COMM_SELF,PETSC_ERR_SUP,"Table is as large as possible; ./configure with the option --with-64-bit-integers to run this large case");
   PetscCall(PetscMalloc1(ta->tablesize,&ta->table));
   PetscCall(PetscCalloc1(ta->tablesize,&ta->keytable));
 

@@ -705,7 +705,7 @@ static PetscErrorCode MatStashSortCompress_Private(MatStash *stash,InsertMode in
       cnt++;
     }
   }
-  PetscCheckFalse(cnt != n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"MatStash n %" PetscInt_FMT ", but counted %" PetscInt_FMT " entries",n,cnt);
+  PetscCheck(cnt == n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"MatStash n %" PetscInt_FMT ", but counted %" PetscInt_FMT " entries",n,cnt);
   PetscCall(PetscSortIntWithArrayPair(n,row,col,perm));
   /* Scan through the rows, sorting each one, combining duplicates, and packing send buffers */
   for (rowstart=0,cnt=0,i=1; i<=n; i++) {
@@ -889,7 +889,7 @@ static PetscErrorCode MatStashScatterBegin_BTS(Mat mat,MatStash *stash,PetscInt 
       sendno++;
       rowstart = i;
     }
-    PetscCheckFalse(sendno != stash->nsendranks,stash->comm,PETSC_ERR_PLIB,"BTS counted %d sendranks, but %" PetscInt_FMT " sends",stash->nsendranks,sendno);
+    PetscCheck(sendno == stash->nsendranks,stash->comm,PETSC_ERR_PLIB,"BTS counted %d sendranks, but %" PetscInt_FMT " sends",stash->nsendranks,sendno);
   }
 
   /* Encode insertmode on the outgoing messages. If we want to support more than two options, we would need a new

@@ -1677,7 +1677,7 @@ static PetscErrorCode DMPlexCreateWedgeCylinderMesh_Internal(DM dm, PetscInt n, 
   PetscMPIInt    rank;
 
   PetscFunctionBegin;
-  PetscCheckFalse(n < 0,PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "Number of wedges %D cannot be negative", n);
+  PetscCheck(n >= 0,PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "Number of wedges %D cannot be negative", n);
   PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject) dm), &rank));
   PetscCall(DMSetDimension(dm, dim));
   /* Must create the celltype label here so that we do not automatically try to compute the types */
@@ -1856,7 +1856,7 @@ static PetscErrorCode DMPlexCreateSphereMesh_Internal(DM dm, PetscInt dim, Petsc
         for (j = 0, k = 0; j < numVerts; ++j) {
           if (PetscAbsReal(DiffNormReal(embedDim, &coordsIn[i*embedDim], &coordsIn[j*embedDim]) - edgeLen) < PETSC_SMALL) {graph[i*numVerts+j] = 1; ++k;}
         }
-        PetscCheckFalse(k != degree,PetscObjectComm((PetscObject) dm), PETSC_ERR_PLIB, "Invalid icosahedron, vertex %D degree %D != %D", i, k, degree);
+        PetscCheck(k == degree,PetscObjectComm((PetscObject) dm), PETSC_ERR_PLIB, "Invalid icosahedron, vertex %D degree %D != %D", i, k, degree);
       }
       /* Build Topology */
       PetscCall(DMPlexSetChart(dm, 0, numCells+numVerts));
@@ -2067,14 +2067,14 @@ static PetscErrorCode DMPlexCreateSphereMesh_Internal(DM dm, PetscInt dim, Petsc
           }
         }
       }
-      PetscCheckFalse(i != numVerts,PetscObjectComm((PetscObject) dm), PETSC_ERR_PLIB, "Invalid 600-cell, vertices %D != %D", i, numVerts);
+      PetscCheck(i == numVerts,PetscObjectComm((PetscObject) dm), PETSC_ERR_PLIB, "Invalid 600-cell, vertices %D != %D", i, numVerts);
       /* Construct graph */
       PetscCall(PetscCalloc1(numVerts * numVerts, &graph));
       for (i = 0; i < numVerts; ++i) {
         for (j = 0, k = 0; j < numVerts; ++j) {
           if (PetscAbsReal(DiffNormReal(embedDim, &coordsIn[i*embedDim], &coordsIn[j*embedDim]) - edgeLen) < PETSC_SMALL) {graph[i*numVerts+j] = 1; ++k;}
         }
-        PetscCheckFalse(k != degree,PetscObjectComm((PetscObject) dm), PETSC_ERR_PLIB, "Invalid 600-cell, vertex %D degree %D != %D", i, k, degree);
+        PetscCheck(k == degree,PetscObjectComm((PetscObject) dm), PETSC_ERR_PLIB, "Invalid 600-cell, vertex %D degree %D != %D", i, k, degree);
       }
       /* Build Topology */
       PetscCall(DMPlexSetChart(dm, 0, numCells+numVerts));
@@ -4024,7 +4024,7 @@ PetscErrorCode DMPlexBuildFromCellListParallel(DM dm, PetscInt numCells, PetscIn
     else { verticesAdj = *verticesAdjSaved; }
     PetscCall(PetscHSetIGetElems(vhash, &off, verticesAdj));
     PetscCall(PetscHSetIDestroy(&vhash));
-    PetscCheckFalse(off != numVerticesAdj,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Invalid number of local vertices %D should be %D", off, numVerticesAdj);
+    PetscCheck(off == numVerticesAdj,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Invalid number of local vertices %D should be %D", off, numVerticesAdj);
   }
   PetscCall(PetscSortInt(numVerticesAdj, verticesAdj));
   /* Create cones */
@@ -4040,7 +4040,7 @@ PetscErrorCode DMPlexBuildFromCellListParallel(DM dm, PetscInt numCells, PetscIn
       /* Positions within verticesAdj form 0-based local vertex numbering;
          we need to shift it by numCells to get correct DAG points (cells go first) */
       PetscCall(PetscFindInt(gv, numVerticesAdj, verticesAdj, &lv));
-      PetscCheckFalse(lv < 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Could not find global vertex %D in local connectivity", gv);
+      PetscCheck(lv >= 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Could not find global vertex %D in local connectivity", gv);
       cones[c*numCorners+p] = lv+numCells;
     }
   }
@@ -4263,7 +4263,7 @@ PetscErrorCode DMPlexBuildFromCellList(DM dm, PetscInt numCells, PetscInt numVer
     ++NVerticesInCells;
 
     if (numVertices == PETSC_DECIDE) numVertices = NVerticesInCells;
-    else PetscCheckFalse(numVertices < NVerticesInCells,PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "Specified number of vertices %D must be greater than or equal to the number of vertices in cells %D",numVertices,NVerticesInCells);
+    else PetscCheck(numVertices >= NVerticesInCells,PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "Specified number of vertices %D must be greater than or equal to the number of vertices in cells %D",numVertices,NVerticesInCells);
   }
   PetscCall(DMPlexSetChart(dm, 0, numCells+numVertices));
   for (c = 0; c < numCells; ++c) {
@@ -4440,7 +4440,7 @@ PetscErrorCode DMPlexCreateFromDAG(DM dm, PetscInt depth, const PetscInt numPoin
   PetscFunctionBegin;
   PetscCall(DMGetDimension(dm, &dim));
   PetscCall(DMGetCoordinateDim(dm, &dimEmbed));
-  PetscCheckFalse(dimEmbed < dim,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Embedding dimension %D cannot be less than intrinsic dimension %d",dimEmbed,dim);
+  PetscCheck(dimEmbed >= dim,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Embedding dimension %D cannot be less than intrinsic dimension %d",dimEmbed,dim);
   for (d = 0; d <= depth; ++d) pEnd += numPoints[d];
   PetscCall(DMPlexSetChart(dm, pStart, pEnd));
   for (p = pStart; p < pEnd; ++p) {
@@ -4531,7 +4531,7 @@ PetscErrorCode DMPlexCreateCellVertexFromFile(MPI_Comm comm, const char filename
   if (rank == 0) {
     PetscCall(PetscViewerRead(viewer, line, 4, NULL, PETSC_STRING));
     snum = sscanf(line, "%d %d %d %d", &Nc, &Nv, &Ncn, &Nl);
-    PetscCheckFalse(snum != 4,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Unable to parse cell-vertex file: %s", line);
+    PetscCheck(snum == 4,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Unable to parse cell-vertex file: %s", line);
   } else {
     Nc = Nv = Ncn = Nl = 0;
   }
@@ -4560,7 +4560,7 @@ PetscErrorCode DMPlexCreateCellVertexFromFile(MPI_Comm comm, const char filename
         case 8: snum = sscanf(line, format, &vbuf[0], &vbuf[1], &vbuf[2], &vbuf[3], &vbuf[4], &vbuf[5], &vbuf[6], &vbuf[7]);break;
         default: SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "No cell shape with %D vertices", Ncn);
       }
-      PetscCheckFalse(snum != Ncn,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Unable to parse cell-vertex file: %s", line);
+      PetscCheck(snum == Ncn,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Unable to parse cell-vertex file: %s", line);
       for (v = 0; v < Ncn; ++v) cone[v] = vbuf[v] + Nc;
       /* Hexahedra are inverted */
       if (Ncn == 8) {
@@ -4604,7 +4604,7 @@ PetscErrorCode DMPlexCreateCellVertexFromFile(MPI_Comm comm, const char filename
     for (v = 0; v < Nv; ++v) {
       PetscCall(PetscViewerRead(viewer, line, 3+Nl, NULL, PETSC_STRING));
       snum = sscanf(line, "%lg %lg %lg", &x[0], &x[1], &x[2]);
-      PetscCheckFalse(snum != 3,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Unable to parse cell-vertex file: %s", line);
+      PetscCheck(snum == 3,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Unable to parse cell-vertex file: %s", line);
       switch (Nl) {
         case 0: snum = 0;break;
         case 1: snum = sscanf(line, format, &val[0]);break;
@@ -4612,7 +4612,7 @@ PetscErrorCode DMPlexCreateCellVertexFromFile(MPI_Comm comm, const char filename
         case 3: snum = sscanf(line, format, &val[0], &val[1], &val[2]);break;
         default: SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Request support for %D labels", Nl);
       }
-      PetscCheckFalse(snum != Nl,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Unable to parse cell-vertex file: %s", line);
+      PetscCheck(snum == Nl,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Unable to parse cell-vertex file: %s", line);
       for (d = 0; d < cdim; ++d) coords[v*cdim+d] = x[d];
       for (l = 0; l < Nl; ++l) PetscCall(DMLabelSetValue(marker, v+Nc, val[l]));
     }

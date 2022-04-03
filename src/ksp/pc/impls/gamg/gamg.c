@@ -285,7 +285,7 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc,Mat Amat_fine,PetscInt cr_bs,
       PetscCall(PetscFree(newproc_idx));
     } else { /* simple aggregation of parts -- 'is_eq_newproc' */
       PetscInt targetPE;
-      PetscCheckFalse(new_size==nactive,PETSC_COMM_SELF,PETSC_ERR_PLIB,"new_size==nactive. Should not happen");
+      PetscCheck(new_size!=nactive,PETSC_COMM_SELF,PETSC_ERR_PLIB,"new_size==nactive. Should not happen");
       PetscCall(PetscInfo(pc,"%s: Number of equations (loc) %D with simple aggregation\n",((PetscObject)pc)->prefix,ncrs_eq));
       targetPE = (rank/rfactor)*expand_factor;
       PetscCall(ISCreateStride(comm, ncrs_eq, targetPE, 0, &is_eq_newproc));
@@ -1527,7 +1527,7 @@ PetscErrorCode PCSetFromOptions_GAMG(PetscOptionItems *PetscOptionsObject,PC pc)
     n = 2;
     PetscCall(PetscOptionsRealArray("-pc_gamg_eigenvalues","extreme eigenvalues for smoothed aggregation","PCGAMGSetEigenvalues",eminmax,&n,&flag));
     if (flag) {
-      PetscCheckFalse(n != 2,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_INCOMP,"-pc_gamg_eigenvalues: must specify 2 parameters, min and max eigenvalues");
+      PetscCheck(n == 2,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_INCOMP,"-pc_gamg_eigenvalues: must specify 2 parameters, min and max eigenvalues");
       PetscCall(PCGAMGSetEigenvalues(pc, eminmax[1], eminmax[0]));
     }
   }

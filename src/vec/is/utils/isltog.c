@@ -480,7 +480,7 @@ PetscErrorCode  ISLocalToGlobalMappingSetBlockSize(ISLocalToGlobalMapping mappin
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mapping,IS_LTOGM_CLASSID,1);
-  PetscCheckFalse(bs < 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Invalid block size %" PetscInt_FMT,bs);
+  PetscCheck(bs >= 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Invalid block size %" PetscInt_FMT,bs);
   if (bs == mapping->bs) PetscFunctionReturn(0);
   on  = mapping->n;
   obs = mapping->bs;
@@ -498,7 +498,7 @@ PetscErrorCode  ISLocalToGlobalMappingSetBlockSize(ISLocalToGlobalMapping mappin
     }
     if (oid[i*bs+j] < 0) cn++;
     if (cn) {
-      PetscCheckFalse(cn != bs,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Block sizes %" PetscInt_FMT " and %" PetscInt_FMT " are incompatible with the block indices: invalid number of negative entries in block %" PetscInt_FMT,bs,obs,cn);
+      PetscCheck(cn == bs,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Block sizes %" PetscInt_FMT " and %" PetscInt_FMT " are incompatible with the block indices: invalid number of negative entries in block %" PetscInt_FMT,bs,obs,cn);
       nid[i] = -1;
     } else {
       nid[i] = oid[i*bs]/bs;
@@ -1785,7 +1785,7 @@ PetscErrorCode ISLocalToGlobalMappingConcatenate(MPI_Comm comm,PetscInt n,const 
   PetscInt       i,cnt,m,*idx;
 
   PetscFunctionBegin;
-  PetscCheckFalse(n < 0,comm,PETSC_ERR_ARG_OUTOFRANGE,"Must have a non-negative number of mappings, given %" PetscInt_FMT,n);
+  PetscCheck(n >= 0,comm,PETSC_ERR_ARG_OUTOFRANGE,"Must have a non-negative number of mappings, given %" PetscInt_FMT,n);
   if (n > 0) PetscValidPointer(ltogs,3);
   for (i=0; i<n; i++) PetscValidHeaderSpecific(ltogs[i],IS_LTOGM_CLASSID,3);
   PetscValidPointer(ltogcat,4);

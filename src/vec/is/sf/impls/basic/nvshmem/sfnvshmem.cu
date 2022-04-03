@@ -192,7 +192,7 @@ PetscErrorCode PetscSFLinkNvshmemCheck(PetscSF sf,PetscMemType rootmtype,const v
     PetscInt allCuda = oneCuda; /* Assume the same for all ranks. But if not, in opt mode, return value <use_nvshmem> won't be collective! */
    #if defined(PETSC_USE_DEBUG)  /* Check in debug mode. Note MPI_Allreduce is expensive, so only in debug mode */
     PetscCallMPI(MPI_Allreduce(&oneCuda,&allCuda,1,MPIU_INT,MPI_LAND,comm));
-    PetscCheckFalse(allCuda != oneCuda,comm,PETSC_ERR_SUP,"root/leaf mtypes are inconsistent among ranks, which may lead to SF nvshmem failure in opt mode. Add -use_nvshmem 0 to disable it.");
+    PetscCheck(allCuda == oneCuda,comm,PETSC_ERR_SUP,"root/leaf mtypes are inconsistent among ranks, which may lead to SF nvshmem failure in opt mode. Add -use_nvshmem 0 to disable it.");
    #endif
     if (allCuda) {
       PetscCall(PetscNvshmemInitializeCheck());

@@ -23,7 +23,7 @@ PetscErrorCode MatIncreaseOverlap_MPIAIJ(Mat C,PetscInt imax,IS is[],PetscInt ov
   PetscInt       i;
 
   PetscFunctionBegin;
-  PetscCheckFalse(ov < 0,PetscObjectComm((PetscObject)C),PETSC_ERR_ARG_OUTOFRANGE,"Negative overlap specified");
+  PetscCheck(ov >= 0,PetscObjectComm((PetscObject)C),PETSC_ERR_ARG_OUTOFRANGE,"Negative overlap specified");
   for (i=0; i<ov; ++i) {
     PetscCall(MatIncreaseOverlap_MPIAIJ_Once(C,imax,is));
   }
@@ -35,7 +35,7 @@ PetscErrorCode MatIncreaseOverlap_MPIAIJ_Scalable(Mat C,PetscInt imax,IS is[],Pe
   PetscInt       i;
 
   PetscFunctionBegin;
-  PetscCheckFalse(ov < 0,PetscObjectComm((PetscObject)C),PETSC_ERR_ARG_OUTOFRANGE,"Negative overlap specified");
+  PetscCheck(ov >= 0,PetscObjectComm((PetscObject)C),PETSC_ERR_ARG_OUTOFRANGE,"Negative overlap specified");
   for (i=0; i<ov; ++i) {
     PetscCall(MatIncreaseOverlap_MPIAIJ_Once_Scalable(C,imax,is));
   }
@@ -492,7 +492,7 @@ static PetscErrorCode MatIncreaseOverlap_MPIAIJ_Once(Mat C,PetscInt imax,IS is[]
     len   = n[i];
     for (j=0; j<len; j++) {
       row = idx_i[j];
-      PetscCheckFalse(row < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Index set cannot have negative entries");
+      PetscCheck(row >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Index set cannot have negative entries");
       PetscCall(PetscLayoutFindOwner(C->rmap,row,&proc));
       w4[proc]++;
     }
@@ -1099,7 +1099,7 @@ PetscErrorCode MatCreateSubMatrix_MPIAIJ_All(Mat A,MatCreateSubMatrixOption flag
         jsendbuf[cnt++] = garray[*b_jsendbuf++];
       }
     }
-    PetscCheckFalse(cnt != sendcount,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Corrupted PETSc matrix: nz given %" PetscInt_FMT " actual nz %" PetscInt_FMT,sendcount,cnt);
+    PetscCheck(cnt == sendcount,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Corrupted PETSc matrix: nz given %" PetscInt_FMT " actual nz %" PetscInt_FMT,sendcount,cnt);
 
     /*--------------------------------------------------------------------
        Gather all column indices to all processors
@@ -1172,7 +1172,7 @@ PetscErrorCode MatCreateSubMatrix_MPIAIJ_All(Mat A,MatCreateSubMatrixOption flag
         b_sendj++;
       }
     }
-    PetscCheckFalse(cnt != sendcount,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Corrupted PETSc matrix: nz given %" PetscInt_FMT " actual nz %" PetscInt_FMT,sendcount,cnt);
+    PetscCheck(cnt == sendcount,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Corrupted PETSc matrix: nz given %" PetscInt_FMT " actual nz %" PetscInt_FMT,sendcount,cnt);
 
     /* -----------------------------------------------------------------
        Gather all numerical values to all processors
@@ -1240,7 +1240,7 @@ PetscErrorCode MatCreateSubMatrices_MPIAIJ_SingleIS_Local(Mat C,PetscInt ismax,c
   PetscFunctionBegin;
   PetscValidLogicalCollectiveInt(C,ismax,2);
   PetscValidLogicalCollectiveEnum(C,scall,5);
-  PetscCheckFalse(ismax != 1,PETSC_COMM_SELF,PETSC_ERR_SUP,"This routine only works when all processes have ismax=1");
+  PetscCheck(ismax == 1,PETSC_COMM_SELF,PETSC_ERR_SUP,"This routine only works when all processes have ismax=1");
   PetscCall(MatSeqAIJGetArrayRead(A,(const PetscScalar**)&a_a));
   PetscCall(MatSeqAIJGetArrayRead(B,(const PetscScalar**)&b_a));
   PetscCall(PetscObjectGetComm((PetscObject)C,&comm));
@@ -1439,7 +1439,7 @@ PetscErrorCode MatCreateSubMatrices_MPIAIJ_SingleIS_Local(Mat C,PetscInt ismax,c
       sbuf_aj_i = sbuf_aj[i];
       ct1       = 2*rbuf1_i[0] + 1;
       ct2       = 0;
-      /* max1=rbuf1_i[0]; PetscCheckFalse(max1 != 1,PETSC_COMM_SELF,PETSC_ERR_PLIB,"max1 %d != 1",max1); */
+      /* max1=rbuf1_i[0]; PetscCheck(max1 == 1,PETSC_COMM_SELF,PETSC_ERR_PLIB,"max1 %d != 1",max1); */
 
       kmax = rbuf1[i][2];
       for (k=0; k<kmax; k++,ct1++) { /* for each row */
@@ -1559,19 +1559,19 @@ PetscErrorCode MatCreateSubMatrices_MPIAIJ_SingleIS_Local(Mat C,PetscInt ismax,c
     for (i=0; i<nrqs; i++) {
       proc    = pa[i];
       sbuf1_i = sbuf1[proc];
-      /* jmax    = sbuf1_i[0]; PetscCheckFalse(jmax != 1,PETSC_COMM_SELF,PETSC_ERR_PLIB,"jmax !=1"); */
+      /* jmax    = sbuf1_i[0]; PetscCheck(jmax == 1,PETSC_COMM_SELF,PETSC_ERR_PLIB,"jmax !=1"); */
       ct1     = 2 + 1;
       ct2     = 0;
       rbuf2_i = rbuf2[i]; /* received length of C->j */
       rbuf3_i = rbuf3[i]; /* received C->j */
 
-      /* is_no  = sbuf1_i[2*j-1]; PetscCheckFalse(is_no != 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"is_no !=0"); */
+      /* is_no  = sbuf1_i[2*j-1]; PetscCheck(is_no == 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"is_no !=0"); */
       max1   = sbuf1_i[2];
       for (k=0; k<max1; k++,ct1++) {
 #if defined(PETSC_USE_CTABLE)
         PetscCall(PetscTableFind(rmap,sbuf1_i[ct1]+1,&row));
         row--;
-        PetscCheckFalse(row < 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"row not found in table");
+        PetscCheck(row >= 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"row not found in table");
 #else
         row = rmap[sbuf1_i[ct1]]; /* the row index in submat */
 #endif
@@ -1705,7 +1705,7 @@ PetscErrorCode MatCreateSubMatrices_MPIAIJ_SingleIS_Local(Mat C,PetscInt ismax,c
     sbuf_aa_i = sbuf_aa[i];
     ct1       = 2*rbuf1_i[0]+1;
     ct2       = 0;
-    /* max1=rbuf1_i[0]; PetscCheckFalse(max1 != 1,PETSC_COMM_SELF,PETSC_ERR_PLIB,"max1 !=1"); */
+    /* max1=rbuf1_i[0]; PetscCheck(max1 == 1,PETSC_COMM_SELF,PETSC_ERR_PLIB,"max1 !=1"); */
 
     kmax = rbuf1_i[2];
     for (k=0; k<kmax; k++,ct1++) {
@@ -1832,7 +1832,7 @@ PetscErrorCode MatCreateSubMatrices_MPIAIJ_SingleIS_Local(Mat C,PetscInt ismax,c
     PetscCallMPI(MPI_Waitany(nrqs,r_waits4,&idex,r_status4+i));
     proc    = pa[idex];
     sbuf1_i = sbuf1[proc];
-    /* jmax    = sbuf1_i[0]; PetscCheckFalse(jmax != 1,PETSC_COMM_SELF,PETSC_ERR_PLIB,"jmax %d != 1",jmax); */
+    /* jmax    = sbuf1_i[0]; PetscCheck(jmax == 1,PETSC_COMM_SELF,PETSC_ERR_PLIB,"jmax %d != 1",jmax); */
     ct1     = 2 + 1;
     ct2     = 0; /* count of received C->j */
     ct3     = 0; /* count of received C->j that will be inserted into submat */
@@ -1840,7 +1840,7 @@ PetscErrorCode MatCreateSubMatrices_MPIAIJ_SingleIS_Local(Mat C,PetscInt ismax,c
     rbuf3_i = rbuf3[idex]; /* int** received C->j from other processes */
     rbuf4_i = rbuf4[idex]; /* scalar** received C->a from other processes */
 
-    /* is_no = sbuf1_i[2*j-1]; PetscCheckFalse(is_no != 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"is_no !=0"); */
+    /* is_no = sbuf1_i[2*j-1]; PetscCheck(is_no == 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"is_no !=0"); */
     max1 = sbuf1_i[2];             /* num of rows */
     for (k=0; k<max1; k++,ct1++) { /* for each recved row */
       row = sbuf1_i[ct1]; /* row index of submat */
@@ -2498,7 +2498,7 @@ PetscErrorCode MatCreateSubMatrices_MPIAIJ_Local(Mat C,PetscInt ismax,const IS i
 #if defined(PETSC_USE_CTABLE)
             PetscCall(PetscTableFind(rmap_i,sbuf1_i[ct1]+1,&row));
             row--;
-            PetscCheckFalse(row < 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"row not found in table");
+            PetscCheck(row >= 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"row not found in table");
 #else
             row = rmap_i[sbuf1_i[ct1]]; /* the val in the new matrix to be */
 #endif
@@ -2875,7 +2875,7 @@ PetscErrorCode MatSetSeqMats_MPIAIJ(Mat C,IS rowemb,IS dcolemb,IS ocolemb,MatStr
     PetscCheck(seqaij,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Diagonal matrix is of wrong type");
     if (rowemb) {
       PetscCall(ISGetLocalSize(rowemb,&m));
-      PetscCheckFalse(m != A->rmap->n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Row IS of size %" PetscInt_FMT " is incompatible with diag matrix row size %" PetscInt_FMT,m,A->rmap->n);
+      PetscCheck(m == A->rmap->n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Row IS of size %" PetscInt_FMT " is incompatible with diag matrix row size %" PetscInt_FMT,m,A->rmap->n);
     } else {
       if (C->rmap->n != A->rmap->n) {
         SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Diag seq matrix is row-incompatible with the MPIAIJ matrix");
@@ -2883,9 +2883,9 @@ PetscErrorCode MatSetSeqMats_MPIAIJ(Mat C,IS rowemb,IS dcolemb,IS ocolemb,MatStr
     }
     if (dcolemb) {
       PetscCall(ISGetLocalSize(dcolemb,&n));
-      PetscCheckFalse(n != A->cmap->n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Diag col IS of size %" PetscInt_FMT " is incompatible with diag matrix col size %" PetscInt_FMT,n,A->cmap->n);
+      PetscCheck(n == A->cmap->n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Diag col IS of size %" PetscInt_FMT " is incompatible with diag matrix col size %" PetscInt_FMT,n,A->cmap->n);
     } else {
-      PetscCheckFalse(C->cmap->n != A->cmap->n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Diag seq matrix is col-incompatible with the MPIAIJ matrix");
+      PetscCheck(C->cmap->n == A->cmap->n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Diag seq matrix is col-incompatible with the MPIAIJ matrix");
     }
   }
   if (B) {
@@ -2893,7 +2893,7 @@ PetscErrorCode MatSetSeqMats_MPIAIJ(Mat C,IS rowemb,IS dcolemb,IS ocolemb,MatStr
     PetscCheck(seqaij,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Off-diagonal matrix is of wrong type");
     if (rowemb) {
       PetscCall(ISGetLocalSize(rowemb,&m));
-      PetscCheckFalse(m != B->rmap->n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Row IS of size %" PetscInt_FMT " is incompatible with off-diag matrix row size %" PetscInt_FMT,m,A->rmap->n);
+      PetscCheck(m == B->rmap->n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Row IS of size %" PetscInt_FMT " is incompatible with off-diag matrix row size %" PetscInt_FMT,m,A->rmap->n);
     } else {
       if (C->rmap->n != B->rmap->n) {
         SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Off-diag seq matrix is row-incompatible with the MPIAIJ matrix");
@@ -2901,7 +2901,7 @@ PetscErrorCode MatSetSeqMats_MPIAIJ(Mat C,IS rowemb,IS dcolemb,IS ocolemb,MatStr
     }
     if (ocolemb) {
       PetscCall(ISGetLocalSize(ocolemb,&n));
-      PetscCheckFalse(n != B->cmap->n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Off-diag col IS of size %" PetscInt_FMT " is incompatible with off-diag matrix col size %" PetscInt_FMT,n,B->cmap->n);
+      PetscCheck(n == B->cmap->n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Off-diag col IS of size %" PetscInt_FMT " is incompatible with off-diag matrix col size %" PetscInt_FMT,n,B->cmap->n);
     } else {
       PetscCheckFalse(C->cmap->N - C->cmap->n != B->cmap->n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Off-diag seq matrix is col-incompatible with the MPIAIJ matrix");
     }
@@ -3058,7 +3058,7 @@ PetscErrorCode MatCreateSubMatricesMPI_MPIXAIJ(Mat C,PetscInt ismax,const IS isr
 
   for (i = 0, cismax = 0; i < ismax; ++i) {
     PetscCallMPI(MPI_Comm_compare(((PetscObject)isrow[i])->comm,((PetscObject)iscol[i])->comm,&flag));
-    PetscCheckFalse(flag != MPI_IDENT,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Row and column index sets must have the same communicator");
+    PetscCheck(flag == MPI_IDENT,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Row and column index sets must have the same communicator");
     PetscCallMPI(MPI_Comm_size(((PetscObject)isrow[i])->comm, &size));
     if (size > 1) ++cismax;
   }

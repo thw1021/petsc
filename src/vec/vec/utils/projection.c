@@ -470,7 +470,7 @@ PetscErrorCode VecISAXPY(Vec vfull, IS is, PetscScalar alpha, Vec vreduced)
     PetscCall(ISGetIndices(is,&id));
     PetscCall(ISGetLocalSize(is,&n));
     PetscCall(VecGetLocalSize(vreduced,&m));
-    PetscCheckFalse(m != n,PETSC_COMM_SELF,PETSC_ERR_SUP,"IS local length not equal to Vec local length");
+    PetscCheck(m == n,PETSC_COMM_SELF,PETSC_ERR_SUP,"IS local length not equal to Vec local length");
     PetscCall(VecGetOwnershipRange(vfull,&rstart,&rend));
     y   -= rstart;
     if (alpha == 1.0) {
@@ -542,7 +542,7 @@ PetscErrorCode VecISCopy(Vec vfull, IS is, ScatterMode mode, Vec vreduced)
     PetscCall(ISGetLocalSize(is, &n));
     PetscCall(VecGetLocalSize(vreduced, &m));
     PetscCall(VecGetOwnershipRange(vfull, &rstart, &rend));
-    PetscCheckFalse(m != n,PETSC_COMM_SELF, PETSC_ERR_SUP, "IS local length %" PetscInt_FMT " not equal to Vec local length %" PetscInt_FMT, n, m);
+    PetscCheck(m == n,PETSC_COMM_SELF, PETSC_ERR_SUP, "IS local length %" PetscInt_FMT " not equal to Vec local length %" PetscInt_FMT, n, m);
     if (mode == SCATTER_FORWARD) {
       PetscScalar       *y;
       const PetscScalar *x;

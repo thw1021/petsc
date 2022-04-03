@@ -46,7 +46,7 @@ PetscErrorCode MatIncreaseOverlap_Normal(Mat A,PetscInt is_max,IS is[],PetscInt 
   Mat            pattern;
 
   PetscFunctionBegin;
-  PetscCheckFalse(ov < 0,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_OUTOFRANGE,"Negative overlap specified");
+  PetscCheck(ov >= 0,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_OUTOFRANGE,"Negative overlap specified");
   PetscCall(MatProductCreate(a->A,a->A,NULL,&pattern));
   PetscCall(MatProductSetType(pattern,MATPRODUCT_AtB));
   PetscCall(MatProductSetFromOptions(pattern));
@@ -91,7 +91,7 @@ PetscErrorCode MatPermute_Normal(Mat A,IS rowp,IS colp,Mat *B)
   IS             row;
 
   PetscFunctionBegin;
-  PetscCheckFalse(rowp != colp,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_INCOMP,"Row permutation and column permutation must be the same");
+  PetscCheck(rowp == colp,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_INCOMP,"Row permutation and column permutation must be the same");
   PetscCall(ISCreateStride(PetscObjectComm((PetscObject)Aa),Aa->rmap->n,Aa->rmap->rstart,1,&row));
   PetscCall(ISSetIdentity(row));
   PetscCall(MatPermute(Aa,row,colp,&C));

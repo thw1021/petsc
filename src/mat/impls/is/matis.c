@@ -367,9 +367,9 @@ static PetscErrorCode MatISScaleDisassembling_Private(Mat A)
 
   PetscFunctionBegin;
   PetscCall(MatGetRowIJ(matis->A,0,PETSC_FALSE,PETSC_FALSE,&m,&ii,&jj,&flg));
-  PetscCheckFalse(!flg,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot get IJ structure");
+  PetscCheck(flg,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot get IJ structure");
   PetscCall(ISLocalToGlobalMappingGetNodeInfo(matis->rmapping,&n,&ecount,&eneighs));
-  PetscCheckFalse(m != n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Unexpected %" PetscInt_FMT " != %" PetscInt_FMT,m,n);
+  PetscCheck(m == n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Unexpected %" PetscInt_FMT " != %" PetscInt_FMT,m,n);
   PetscCall(MatSeqAIJGetArray(matis->A,&aa));
   for (i=0;i<n;i++) {
     if (ecount[i] > 1) {
@@ -391,7 +391,7 @@ static PetscErrorCode MatISScaleDisassembling_Private(Mat A)
   PetscCall(ISLocalToGlobalMappingRestoreNodeInfo(matis->rmapping,&n,&ecount,&eneighs));
   PetscCall(MatSeqAIJRestoreArray(matis->A,&aa));
   PetscCall(MatRestoreRowIJ(matis->A,0,PETSC_FALSE,PETSC_FALSE,&m,&ii,&jj,&flg));
-  PetscCheckFalse(!flg,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot restore IJ structure");
+  PetscCheck(flg,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot restore IJ structure");
   PetscFunctionReturn(0);
 }
 
@@ -504,7 +504,7 @@ static PetscErrorCode MatMPIXAIJComputeLocalToGlobalMapping_Private(Mat A, ISLoc
           j++;
         }
       }
-      PetscCheckFalse(j != cnt,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Unexpected local count %" PetscInt_FMT " != %" PetscInt_FMT,j,cnt);
+      PetscCheck(j == cnt,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Unexpected local count %" PetscInt_FMT " != %" PetscInt_FMT,j,cnt);
 
       for (i = 0; i < gcnt; i++) {
         PetscCall(PetscObjectSetName((PetscObject)workis[i],"EXTENDED"));
@@ -531,7 +531,7 @@ static PetscErrorCode MatMPIXAIJComputeLocalToGlobalMapping_Private(Mat A, ISLoc
           j++;
         }
       }
-      PetscCheckFalse(j != cnt,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Unexpected local count %" PetscInt_FMT " != %" PetscInt_FMT,j,cnt);
+      PetscCheck(j == cnt,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Unexpected local count %" PetscInt_FMT " != %" PetscInt_FMT,j,cnt);
       PetscCall(PetscFree(vals));
       PetscCall(MatAssemblyBegin(A2,MAT_FINAL_ASSEMBLY));
       PetscCall(MatAssemblyEnd(A2,MAT_FINAL_ASSEMBLY));
@@ -901,7 +901,7 @@ PETSC_INTERN PetscErrorCode MatConvert_Nest_IS(Mat A,MatType type,MatReuse reuse
           PetscBool      same;
 
           PetscCall(ISLocalToGlobalMappingGetSize(rl2g,&n2));
-          PetscCheckFalse(n1 != n2,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot convert from MATNEST to MATIS! Matrix block (%" PetscInt_FMT ",%" PetscInt_FMT ") has invalid row l2gmap size %" PetscInt_FMT " != %" PetscInt_FMT,i,j,n1,n2);
+          PetscCheck(n1 == n2,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot convert from MATNEST to MATIS! Matrix block (%" PetscInt_FMT ",%" PetscInt_FMT ") has invalid row l2gmap size %" PetscInt_FMT " != %" PetscInt_FMT,i,j,n1,n2);
           PetscCall(ISLocalToGlobalMappingGetIndices(cl2g,&idxs1));
           PetscCall(ISLocalToGlobalMappingGetIndices(rl2g,&idxs2));
           PetscCall(PetscArraycmp(idxs1,idxs2,n1,&same));
@@ -935,7 +935,7 @@ PETSC_INTERN PetscErrorCode MatConvert_Nest_IS(Mat A,MatType type,MatReuse reuse
           PetscBool      same;
 
           PetscCall(ISLocalToGlobalMappingGetSize(rl2g,&n2));
-          PetscCheckFalse(n1 != n2,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot convert from MATNEST to MATIS! Matrix block (%" PetscInt_FMT ",%" PetscInt_FMT ") has invalid column l2gmap size %" PetscInt_FMT " != %" PetscInt_FMT,j,i,n1,n2);
+          PetscCheck(n1 == n2,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot convert from MATNEST to MATIS! Matrix block (%" PetscInt_FMT ",%" PetscInt_FMT ") has invalid column l2gmap size %" PetscInt_FMT " != %" PetscInt_FMT,j,i,n1,n2);
           PetscCall(ISLocalToGlobalMappingGetIndices(cl2g,&idxs1));
           PetscCall(ISLocalToGlobalMappingGetIndices(rl2g,&idxs2));
           PetscCall(PetscArraycmp(idxs1,idxs2,n1,&same));
@@ -1978,12 +1978,12 @@ general_assembly:
     PetscCall(MatGetBlockSizes(MT,&mrbs,&mcbs));
     PetscCall(MatGetSize(MT,&mrows,&mcols));
     PetscCall(MatGetLocalSize(MT,&mlrows,&mlcols));
-    PetscCheckFalse(mrows != rows,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot reuse matrix. Wrong number of rows (%" PetscInt_FMT " != %" PetscInt_FMT ")",rows,mrows);
-    PetscCheckFalse(mcols != cols,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot reuse matrix. Wrong number of cols (%" PetscInt_FMT " != %" PetscInt_FMT ")",cols,mcols);
-    PetscCheckFalse(mlrows != lrows,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot reuse matrix. Wrong number of local rows (%" PetscInt_FMT " != %" PetscInt_FMT ")",lrows,mlrows);
-    PetscCheckFalse(mlcols != lcols,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot reuse matrix. Wrong number of local cols (%" PetscInt_FMT " != %" PetscInt_FMT ")",lcols,mlcols);
-    PetscCheckFalse(mrbs != rbs,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot reuse matrix. Wrong row block size (%" PetscInt_FMT " != %" PetscInt_FMT ")",rbs,mrbs);
-    PetscCheckFalse(mcbs != cbs,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot reuse matrix. Wrong col block size (%" PetscInt_FMT " != %" PetscInt_FMT ")",cbs,mcbs);
+    PetscCheck(mrows == rows,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot reuse matrix. Wrong number of rows (%" PetscInt_FMT " != %" PetscInt_FMT ")",rows,mrows);
+    PetscCheck(mcols == cols,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot reuse matrix. Wrong number of cols (%" PetscInt_FMT " != %" PetscInt_FMT ")",cols,mcols);
+    PetscCheck(mlrows == lrows,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot reuse matrix. Wrong number of local rows (%" PetscInt_FMT " != %" PetscInt_FMT ")",lrows,mlrows);
+    PetscCheck(mlcols == lcols,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot reuse matrix. Wrong number of local cols (%" PetscInt_FMT " != %" PetscInt_FMT ")",lcols,mlcols);
+    PetscCheck(mrbs == rbs,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot reuse matrix. Wrong row block size (%" PetscInt_FMT " != %" PetscInt_FMT ")",rbs,mrbs);
+    PetscCheck(mcbs == cbs,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot reuse matrix. Wrong col block size (%" PetscInt_FMT " != %" PetscInt_FMT ")",cbs,mcbs);
     PetscCall(MatZeroEntries(MT));
   }
 

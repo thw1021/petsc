@@ -495,7 +495,7 @@ PetscErrorCode MatCreateComposite(MPI_Comm comm,PetscInt nmat,const Mat *mats,Ma
   PetscInt       m,n,M,N,i;
 
   PetscFunctionBegin;
-  PetscCheckFalse(nmat < 1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must pass in at least one matrix");
+  PetscCheck(nmat >= 1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must pass in at least one matrix");
   PetscValidPointer(mat,4);
 
   PetscCall(MatGetLocalSize(mats[0],PETSC_IGNORE,&n));
@@ -876,7 +876,7 @@ static PetscErrorCode MatCompositeGetMat_Composite(Mat mat,PetscInt i,Mat *Ai)
   PetscInt          k;
 
   PetscFunctionBegin;
-  PetscCheckFalse(i >= shell->nmat,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_OUTOFRANGE,"index out of range: %" PetscInt_FMT " >= %" PetscInt_FMT,i,shell->nmat);
+  PetscCheck(i < shell->nmat,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_OUTOFRANGE,"index out of range: %" PetscInt_FMT " >= %" PetscInt_FMT,i,shell->nmat);
   ilink = shell->head;
   for (k=0; k<i; k++) {
     ilink = ilink->next;

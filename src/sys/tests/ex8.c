@@ -148,7 +148,7 @@ int main(int argc,char **argv)
     PetscCall(PetscFree2(iranks,iperm));
   }
 
-  PetscCheckFalse(nto != nfrom,PETSC_COMM_SELF,PETSC_ERR_PLIB,"[%d] From ranks %d does not match To ranks %d",rank,nto,nfrom);
+  PetscCheck(nto == nfrom,PETSC_COMM_SELF,PETSC_ERR_PLIB,"[%d] From ranks %d does not match To ranks %d",rank,nto,nfrom);
   for (i=1; i<size; i*=2) {
     PetscMPIInt expected_rank = (rank-i+size)%size;
     PetscBool flg;

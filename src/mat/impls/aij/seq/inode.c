@@ -64,7 +64,7 @@ static PetscErrorCode MatGetRowIJ_SeqAIJ_Inode_Symmetric(Mat A,const PetscInt *i
   nslim_row = a->inode.node_count;
   m         = A->rmap->n;
   n         = A->cmap->n;
-  PetscCheckFalse(m != n,PETSC_COMM_SELF,PETSC_ERR_SUP,"MatGetRowIJ_SeqAIJ_Inode_Symmetric: Matrix should be square");
+  PetscCheck(m == n,PETSC_COMM_SELF,PETSC_ERR_SUP,"MatGetRowIJ_SeqAIJ_Inode_Symmetric: Matrix should be square");
   PetscCheckFalse(!a->inode.size,PETSC_COMM_SELF,PETSC_ERR_COR,"Missing Inode Structure");
 
   /* Use the row_inode as column_inode */
@@ -2709,8 +2709,8 @@ PetscErrorCode MatSOR_SeqAIJ_Inode(Mat A,Vec bb,PetscReal omega,MatSORType flag,
   PetscFunctionBegin;
   allowzeropivot = PetscNot(A->erroriffailure);
   PetscCheckFalse(!a->inode.size,PETSC_COMM_SELF,PETSC_ERR_COR,"Missing Inode Structure");
-  PetscCheckFalse(omega != 1.0,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support for omega != 1.0; use -mat_no_inode");
-  PetscCheckFalse(fshift != 0.0,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support for fshift != 0.0; use -mat_no_inode");
+  PetscCheck(omega == 1.0,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support for omega != 1.0; use -mat_no_inode");
+  PetscCheck(fshift == 0.0,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support for fshift != 0.0; use -mat_no_inode");
 
   if (!a->inode.ibdiagvalid) {
     if (!a->inode.ibdiag) {

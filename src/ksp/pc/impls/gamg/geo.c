@@ -271,7 +271,7 @@ static PetscErrorCode triangulateAndFormProl(IS selected_2,PetscInt data_stride,
         if (sel) fprintf(file, "%d %e %e\n",sid++,coords[jj],coords[data_stride + jj]);
       }
       fclose(file);
-      PetscCheckFalse(sid != nPlotPts,PETSC_COMM_SELF,PETSC_ERR_PLIB,"sid %D != nPlotPts %D",sid,nPlotPts);
+      PetscCheck(sid == nPlotPts,PETSC_COMM_SELF,PETSC_ERR_PLIB,"sid %D != nPlotPts %D",sid,nPlotPts);
       level++;
     }
   }
@@ -506,7 +506,7 @@ static PetscErrorCode getGIDsOnSquareGraph(PC pc, PetscInt nselected_1,const Pet
           crsGID[idx++]     = cgid;
         }
       }
-      PetscCheckFalse(idx != nselected_1,PETSC_COMM_SELF,PETSC_ERR_PLIB,"idx %D != nselected_1 %D",idx,nselected_1);
+      PetscCheck(idx == nselected_1,PETSC_COMM_SELF,PETSC_ERR_PLIB,"idx %D != nselected_1 %D",idx,nselected_1);
       PetscCall(VecRestoreArray(locState, &cpcol_state));
 
       if (a_selected_2 != NULL) { /* output */
@@ -716,7 +716,7 @@ PetscErrorCode PCGAMGProlongator_GEO(PC pc,Mat Amat,Mat Gmat,PetscCoarsenData *a
     PetscInt  *crsGID = NULL;
     Mat       Gmat2;
 
-    PetscCheckFalse(dim != data_cols,PETSC_COMM_SELF,PETSC_ERR_PLIB,"dim %D != data_cols %D",dim,data_cols);
+    PetscCheck(dim == data_cols,PETSC_COMM_SELF,PETSC_ERR_PLIB,"dim %D != data_cols %D",dim,data_cols);
     /* grow ghost data for better coarse grid cover of fine grid */
     PetscCall(PetscLogEventBegin(petsc_gamg_setup_events[SET5],0,0,0,0));
     /* messy method, squares graph and gets some data */

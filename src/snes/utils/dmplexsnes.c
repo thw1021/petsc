@@ -51,7 +51,7 @@ static PetscErrorCode SNESCorrectDiscretePressure_Private(SNES snes, PetscInt pf
   PetscCall(DMGetDS(dm, &ds));
   PetscCall(PetscDSSetObjective(ds, pfield, pressure_Private));
   PetscCall(MatNullSpaceGetVecs(nullspace, NULL, &Nv, &nullvecs));
-  PetscCheckFalse(Nv != 1,comm, PETSC_ERR_ARG_OUTOFRANGE, "Can only handle a single null vector for pressure, not %D", Nv);
+  PetscCheck(Nv == 1,comm, PETSC_ERR_ARG_OUTOFRANGE, "Can only handle a single null vector for pressure, not %D", Nv);
   PetscCall(VecDot(nullvecs[0], u, &pintd));
   PetscCheckFalse(PetscAbsScalar(pintd) > PETSC_SMALL,comm, PETSC_ERR_ARG_WRONG, "Discrete integral of pressure: %g", (double) PetscRealPart(pintd));
   PetscCall(PetscDSGetNumFields(ds, &Nf));
@@ -242,7 +242,7 @@ PetscErrorCode DMInterpolationGetDim(DMInterpolationInfo ctx, PetscInt *dim)
 PetscErrorCode DMInterpolationSetDof(DMInterpolationInfo ctx, PetscInt dof)
 {
   PetscFunctionBegin;
-  PetscCheckFalse(dof < 1,ctx->comm, PETSC_ERR_ARG_OUTOFRANGE, "Invalid number of components: %D", dof);
+  PetscCheck(dof >= 1,ctx->comm, PETSC_ERR_ARG_OUTOFRANGE, "Invalid number of components: %D", dof);
   ctx->dof = dof;
   PetscFunctionReturn(0);
 }
@@ -289,7 +289,7 @@ PetscErrorCode DMInterpolationGetDof(DMInterpolationInfo ctx, PetscInt *dof)
 PetscErrorCode DMInterpolationAddPoints(DMInterpolationInfo ctx, PetscInt n, PetscReal points[])
 {
   PetscFunctionBegin;
-  PetscCheckFalse(ctx->dim < 0,ctx->comm, PETSC_ERR_ARG_WRONGSTATE, "The spatial dimension has not been set");
+  PetscCheck(ctx->dim >= 0,ctx->comm, PETSC_ERR_ARG_WRONGSTATE, "The spatial dimension has not been set");
   PetscCheck(!ctx->points,ctx->comm, PETSC_ERR_ARG_WRONGSTATE, "Cannot add points multiple times yet");
   ctx->nInput = n;
 
@@ -335,7 +335,7 @@ PetscErrorCode DMInterpolationSetUp(DMInterpolationInfo ctx, DM dm, PetscBool re
   PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
-  PetscCheckFalse(ctx->dim < 0,comm, PETSC_ERR_ARG_WRONGSTATE, "The spatial dimension has not been set");
+  PetscCheck(ctx->dim >= 0,comm, PETSC_ERR_ARG_WRONGSTATE, "The spatial dimension has not been set");
   /* Locate points */
   n = ctx->nInput;
   if (!redundantPoints) {
@@ -552,7 +552,7 @@ static inline PetscErrorCode DMInterpolate_Triangle_Private(DMInterpolationInfo 
     PetscInt     d, f, comp;
 
     PetscCall(DMPlexComputeCellGeometryFEM(dm, c, NULL, v0, J, invJ, &detJ));
-    PetscCheckFalse(detJ <= 0.0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid determinant %g for element %D", (double)detJ, c);
+    PetscCheck(detJ > 0.0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid determinant %g for element %D", (double)detJ, c);
     PetscCall(DMPlexVecGetClosure(dm, NULL, xLocal, c, NULL, &x));
     for (comp = 0; comp < ctx->dof; ++comp) a[p*ctx->dof+comp] = x[0*ctx->dof+comp];
 
@@ -588,7 +588,7 @@ static inline PetscErrorCode DMInterpolate_Tetrahedron_Private(DMInterpolationIn
     PetscInt       d, f, comp;
 
     PetscCall(DMPlexComputeCellGeometryFEM(dm, c, NULL, v0, J, invJ, &detJ));
-    PetscCheckFalse(detJ <= 0.0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid determinant %g for element %D", (double)detJ, c);
+    PetscCheck(detJ > 0.0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid determinant %g for element %D", (double)detJ, c);
     PetscCall(DMPlexVecGetClosure(dm, NULL, xLocal, c, NULL, &x));
     for (comp = 0; comp < ctx->dof; ++comp) a[p*ctx->dof+comp] = x[0*ctx->dof+comp];
 
@@ -1087,8 +1087,8 @@ PetscErrorCode DMInterpolationEvaluate(DMInterpolationInfo ctx, DM dm, Vec x, Ve
         PetscCall(PetscTabulationDestroy(&T));
       }
       PetscCall(DMPlexVecRestoreClosure(dm, NULL, x, ctx->cells[p], &clSize, &xa));
-      PetscCheckFalse(coff != ctx->dof,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Total components %D != %D dof specified for interpolation", coff, ctx->dof);
-      PetscCheckFalse(foff != clSize,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Total FE space size %D != %D closure size", foff, clSize);
+      PetscCheck(coff == ctx->dof,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Total components %D != %D dof specified for interpolation", coff, ctx->dof);
+      PetscCheck(foff == clSize,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Total FE space size %D != %D closure size", foff, clSize);
     }
     PetscCall(VecRestoreArrayRead(ctx->coords, &coords));
     PetscCall(VecRestoreArrayWrite(v, &interpolant));
@@ -1296,7 +1296,7 @@ PetscErrorCode DMSNESComputeResidual(DM dm, Vec X, Vec F, void *user)
       for (m = 0; m < Nm; ++m) {
         PetscCall(PetscHMapFormGetKeys(ds->wf->form[resmap[m]], &off, reskeys));
       }
-      PetscCheckFalse(off != Nk,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Number of keys %D should be %D", off, Nk);
+      PetscCheck(off == Nk,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Number of keys %D should be %D", off, Nk);
       PetscCall(PetscFormKeySort(Nk, reskeys));
       for (k = 0, kp = 1; kp < Nk; ++kp) {
         if ((reskeys[k].label != reskeys[kp].label) || (reskeys[k].value != reskeys[kp].value)) {
@@ -1408,7 +1408,7 @@ PetscErrorCode DMSNESComputeJacobianAction(DM dm, Vec X, Vec Y, Vec F, void *use
       for (m = 0; m < Nm; ++m) {
         PetscCall(PetscHMapFormGetKeys(ds->wf->form[jacmap[m]], &off, jackeys));
       }
-      PetscCheckFalse(off != Nk,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Number of keys %D should be %D", off, Nk);
+      PetscCheck(off == Nk,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Number of keys %D should be %D", off, Nk);
       PetscCall(PetscFormKeySort(Nk, jackeys));
       for (k = 0, kp = 1; kp < Nk; ++kp) {
         if ((jackeys[k].label != jackeys[kp].label) || (jackeys[k].value != jackeys[kp].value)) {
@@ -1782,7 +1782,7 @@ PetscErrorCode DMSNESCheckResidual(SNES snes, DM dm, Vec u, PetscReal tol, Petsc
   PetscCall(SNESComputeFunction(snes, u, r));
   PetscCall(VecNorm(r, NORM_2, &res));
   if (tol >= 0.0) {
-    PetscCheckFalse(res > tol,comm, PETSC_ERR_ARG_WRONG, "L_2 Residual %g exceeds tolerance %g", (double) res, (double) tol);
+    PetscCheck(res <= tol,comm, PETSC_ERR_ARG_WRONG, "L_2 Residual %g exceeds tolerance %g", (double) res, (double) tol);
   } else if (residual) {
     *residual = res;
   } else {

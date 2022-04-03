@@ -32,7 +32,7 @@ static PetscErrorCode Petsc1DNodeFamilyCreate(PetscDTNodeType family, PetscReal 
   f->endpoints = endpoints;
   f->gaussJacobiExp = 0.;
   if (family == PETSCDTNODES_GAUSSJACOBI) {
-    PetscCheckFalse(gaussJacobiExp <= -1.,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Gauss-Jacobi exponent must be > -1.");
+    PetscCheck(gaussJacobiExp > -1.,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Gauss-Jacobi exponent must be > -1.");
     f->gaussJacobiExp = gaussJacobiExp;
   }
   f->refct = 1;
@@ -154,8 +154,8 @@ static PetscErrorCode Petsc1DNodeFamilyComputeSimplexNodes(Petsc1DNodeFamily f, 
   PetscInt      *tupwork;
 
   PetscFunctionBegin;
-  PetscCheckFalse(dim < 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Must have non-negative dimension");
-  PetscCheckFalse(degree < 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Must have non-negative degree");
+  PetscCheck(dim >= 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Must have non-negative dimension");
+  PetscCheck(degree >= 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Must have non-negative degree");
   if (!dim) PetscFunctionReturn(0);
   PetscCall(PetscCalloc1(dim+2, &tup));
   k = 0;
@@ -605,7 +605,7 @@ static PetscErrorCode PetscLagNodeIndicesPushForward(DM dm, PetscLagNodeIndices 
           break;
         }
       }
-      PetscCheckFalse(subi < 0,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Did not find matching coordinate");
+      PetscCheck(subi >= 0,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Did not find matching coordinate");
       /* that component in the vertp system becomes component i in the vert system for each dof */
       for (n = 0; n < nNodes; n++) pfNodeIdx[n * nodeIdxDim + i] = nodeIdx[n * subNodeIdxDim + subi];
     }
@@ -767,9 +767,9 @@ static PetscErrorCode PetscLagNodeIndicesMerge(PetscLagNodeIndices niA, PetscLag
   PetscFunctionBegin;
   PetscCall(PetscNew(&ni));
   ni->nodeIdxDim = nodeIdxDim = niA->nodeIdxDim;
-  PetscCheckFalse(niB->nodeIdxDim != nodeIdxDim,PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Cannot merge PetscLagNodeIndices with different nodeIdxDim");
+  PetscCheck(niB->nodeIdxDim == nodeIdxDim,PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Cannot merge PetscLagNodeIndices with different nodeIdxDim");
   ni->nodeVecDim = nodeVecDim = niA->nodeVecDim;
-  PetscCheckFalse(niB->nodeVecDim != nodeVecDim,PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Cannot merge PetscLagNodeIndices with different nodeVecDim");
+  PetscCheck(niB->nodeVecDim == nodeVecDim,PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Cannot merge PetscLagNodeIndices with different nodeVecDim");
   ni->nNodes = nNodes = niA->nNodes + niB->nNodes;
   ni->refct = 1;
   PetscCall(PetscMalloc1(nNodes * nodeIdxDim, &(ni->nodeIdx)));
@@ -1206,7 +1206,7 @@ static PetscErrorCode PetscQuadraturePointsMerge(PetscQuadrature quadA, PetscQua
   PetscFunctionBegin;
   PetscCall(PetscQuadratureGetData(quadA, &dimA, NULL, &nA, &pointsA, NULL));
   PetscCall(PetscQuadratureGetData(quadB, &dimB, NULL, &nB, &pointsB, NULL));
-  PetscCheckFalse(dimA != dimB,PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Quadrature points must be in the same dimension");
+  PetscCheck(dimA == dimB,PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Quadrature points must be in the same dimension");
   nJoint = nA;
   PetscCall(PetscMalloc1(nA, &aToJ));
   for (i = 0; i < nA; i++) aToJ[i] = i;
@@ -1688,7 +1688,7 @@ static PetscErrorCode PetscDualSpaceComputeFunctionalsFromAllData(PetscDualSpace
   PetscCall(MatGetSize(allMat, &nDofs, NULL));
   PetscCall(PetscDualSpaceGetSection(sp, &section));
   PetscCall(PetscSectionGetStorageSize(section, &spdim));
-  PetscCheckFalse(spdim != nDofs,PETSC_COMM_SELF, PETSC_ERR_PLIB, "incompatible all matrix size");
+  PetscCheck(spdim == nDofs,PETSC_COMM_SELF, PETSC_ERR_PLIB, "incompatible all matrix size");
   PetscCall(PetscMalloc1(nDofs, &(sp->functional)));
   PetscCall(PetscDualSpaceLagrangeGetUseMoments(sp, &useMoments));
   if (useMoments) {
@@ -1698,7 +1698,7 @@ static PetscErrorCode PetscDualSpaceComputeFunctionalsFromAllData(PetscDualSpace
     const PetscReal *weights;
     PetscScalar     *array;
 
-    PetscCheckFalse(nDofs != 1,PETSC_COMM_SELF, PETSC_ERR_SUP, "We do not yet support moments beyond P0, nDofs == %D", nDofs);
+    PetscCheck(nDofs == 1,PETSC_COMM_SELF, PETSC_ERR_SUP, "We do not yet support moments beyond P0, nDofs == %D", nDofs);
     PetscCall(PetscDualSpaceLagrangeGetMomentOrder(sp, &momentOrder));
     PetscCall(PetscDualSpaceLagrangeGetTensor(sp, &tensor));
     if (!tensor) PetscCall(PetscDTStroudConicalQuadrature(dim, Nc, PetscMax(momentOrder + 1,1), -1.0, 1.0, &(sp->functional[0])));
@@ -1929,7 +1929,7 @@ static PetscErrorCode DMPlexPointIsTensor(DM dm, PetscInt p, PetscBool *isTensor
 
   PetscFunctionBegin;
   PetscCall(DMPlexIsInterpolated(dm, &interpolated));
-  PetscCheckFalse(interpolated != DMPLEX_INTERPOLATED_FULL,PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "Only for interpolated DMPlex's");
+  PetscCheck(interpolated == DMPLEX_INTERPOLATED_FULL,PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "Only for interpolated DMPlex's");
   PetscCall(DMPlexPointIsTensor_Internal(dm, p, isTensor, endA, endB));
   PetscFunctionReturn(0);
 }
@@ -2100,7 +2100,7 @@ static PetscErrorCode PetscDualSpaceSetUp_Lagrange(PetscDualSpace sp)
   PetscCall(DMPlexGetChart(dm, &pStart, &pEnd));
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
   PetscCheckFalse(pStart != 0 || cStart != 0,PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_WRONGSTATE, "Expect DM with chart starting at zero and cells first");
-  PetscCheckFalse(cEnd != 1,PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_WRONGSTATE, "Use PETSCDUALSPACEREFINED for multi-cell reference meshes");
+  PetscCheck(cEnd == 1,PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_WRONGSTATE, "Use PETSCDUALSPACEREFINED for multi-cell reference meshes");
   PetscCall(DMPlexIsInterpolated(dm, &interpolated));
   if (interpolated != DMPLEX_INTERPOLATED_FULL) {
     PetscCall(DMPlexInterpolate(dm, &dmint));
@@ -2177,7 +2177,7 @@ static PetscErrorCode PetscDualSpaceSetUp_Lagrange(PetscDualSpace sp)
           PetscCall(DMPlexGetConeSize(dm, q, &coneSize));
           PetscCall(DMPlexGetCone(dm, q, &cone));
           for (c = 0; c < coneSize; c++) if (cone[c] == p) break;
-          PetscCheckFalse(c == coneSize,PetscObjectComm((PetscObject)dm), PETSC_ERR_PLIB, "cone/support mismatch");
+          PetscCheck(c != coneSize,PetscObjectComm((PetscObject)dm), PETSC_ERR_PLIB, "cone/support mismatch");
           PetscCall(PetscDualSpaceGetDM(qsp, &qdm));
           PetscCall(DMPlexGetCone(qdm, 0, &refCone));
           /* get the equivalent dual space from the support dual space */
@@ -2607,7 +2607,7 @@ PetscErrorCode PetscDualSpaceCreateInteriorSymmetryMatrix_Lagrange(PetscDualSpac
         for (d = 0; d < nodeIdxDim; d++) if (mind[d] != nind[d]) break;
         if (d < nodeIdxDim) break;
       }
-      PetscCheckFalse(m < nEnd,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Dofs with same index after symmetry not same block size");
+      PetscCheck(m >= nEnd,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Dofs with same index after symmetry not same block size");
     }
     groupSize = nEnd - n;
     /* each pushforward dof vector will be expressed in a basis of the unpermuted dofs */
@@ -2616,7 +2616,7 @@ PetscErrorCode PetscDualSpaceCreateInteriorSymmetryMatrix_Lagrange(PetscDualSpac
     maxGroupSize = PetscMax(maxGroupSize, nEnd - n);
     n = nEnd;
   }
-  PetscCheckFalse(maxGroupSize > nodeVecDim,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Dofs are not in blocks that can be solved");
+  PetscCheck(maxGroupSize <= nodeVecDim,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Dofs are not in blocks that can be solved");
   PetscCall(MatCreateSeqAIJ(PETSC_COMM_SELF, nNodes, nNodes, 0, nnz, &A));
   PetscCall(PetscFree(nnz));
   PetscCall(PetscMalloc3(maxGroupSize * nodeVecDim, &V, maxGroupSize * nodeVecDim, &W, nodeVecDim * 2, &work));
@@ -2656,7 +2656,7 @@ PetscErrorCode PetscDualSpaceCreateInteriorSymmetryMatrix_Lagrange(PetscDualSpac
       PetscBLASInt info;
 
       PetscStackCallBLAS("LAPACKgels",LAPACKgels_(&transpose,&bm,&bn,&bnrhs,V,&blda,W,&bldb,work,&blwork, &info));
-      PetscCheckFalse(info != 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Bad argument to GELS");
+      PetscCheck(info == 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Bad argument to GELS");
       /* repack */
       {
         PetscInt i, j;
@@ -2688,7 +2688,7 @@ PetscErrorCode PetscDualSpaceCreateInteriorSymmetryMatrix_Lagrange(PetscDualSpac
             res += PetscAbsScalar(W[i * nodeVecDim + j]);
           }
         }
-        PetscCheckFalse(res > PETSC_SMALL,PETSC_COMM_SELF,PETSC_ERR_LIB,"Dof block did not solve");
+        PetscCheck(res <= PETSC_SMALL,PETSC_COMM_SELF,PETSC_ERR_LIB,"Dof block did not solve");
       }
     }
     PetscCall(MatSetValues(A, groupSize, &permOrnt[n], groupSize, &perm[n], V, INSERT_VALUES));

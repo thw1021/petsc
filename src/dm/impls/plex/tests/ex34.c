@@ -129,7 +129,7 @@ static PetscErrorCode OrderHybridMesh(DM *dm)
 
   PetscFunctionBegin;
   PetscCall(DMGetDimension(*dm, &dim));
-  PetscCheckFalse(dim != 3,PetscObjectComm((PetscObject) *dm), PETSC_ERR_SUP, "No support for dimension %D", dim);
+  PetscCheck(dim == 3,PetscObjectComm((PetscObject) *dm), PETSC_ERR_SUP, "No support for dimension %D", dim);
   PetscCall(DMPlexGetChart(*dm, &pStart, &pEnd));
   PetscCall(PetscMalloc1(pEnd-pStart, &ind));
   for (p = 0; p < pEnd-pStart; ++p) ind[p] = p;

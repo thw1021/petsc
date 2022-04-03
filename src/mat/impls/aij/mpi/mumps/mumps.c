@@ -509,7 +509,7 @@ PetscErrorCode MatConvertToTriples_seqsbaij_seqsbaij(Mat A,PetscInt shift,MatReu
         nz++;
       }
     }
-    PetscCheckFalse(nz != aa->nz,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Different numbers of nonzeros %" PetscInt64_FMT " != %" PetscInt_FMT,nz,aa->nz);
+    PetscCheck(nz == aa->nz,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Different numbers of nonzeros %" PetscInt64_FMT " != %" PetscInt_FMT,nz,aa->nz);
   }
   if (reuse == MAT_INITIAL_MATRIX) mumps->nnz = nz;
   PetscFunctionReturn(0);
@@ -1023,7 +1023,7 @@ static PetscErrorCode MatMumpsSetUpDistRHSInfo(Mat A,PetscInt nrhs,const PetscSc
   PetscFunctionBegin;
   PetscCall(MatGetSize(A,&M,NULL));
   PetscCall(MatGetLocalSize(A,&m,NULL));
-  PetscCheckFalse(M > PETSC_MUMPS_INT_MAX,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"PetscInt too long for PetscMUMPSInt");
+  PetscCheck(M <= PETSC_MUMPS_INT_MAX,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"PetscInt too long for PetscMUMPSInt");
   if (ompsize == 1) {
     if (!mumps->irhs_loc) {
       mumps->nloc_rhs = m;
@@ -1161,7 +1161,7 @@ PetscErrorCode MatSolve_MUMPS(Mat A,Vec b,Vec x)
      This requires an extra call to PetscMUMPS_c and the computation of the factors for S
   */
   if (mumps->id.size_schur > 0 && (mumps->id.ICNTL(26) < 0 || mumps->id.ICNTL(26) > 2)) {
-    PetscCheckFalse(mumps->petsc_size > 1,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Parallel Schur complements not yet supported from PETSc");
+    PetscCheck(mumps->petsc_size <= 1,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Parallel Schur complements not yet supported from PETSc");
     second_solve = PETSC_TRUE;
     PetscCall(MatMumpsHandleSchur_Private(A,PETSC_FALSE));
   }
@@ -1248,10 +1248,10 @@ PetscErrorCode MatMatSolve_MUMPS(Mat A,Mat B,Mat X)
 
   PetscCall(PetscObjectTypeCompareAny((PetscObject)B,&denseB,MATSEQDENSE,MATMPIDENSE,NULL));
   if (denseB) {
-    PetscCheckFalse(B->rmap->n != X->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Matrix B and X must have same row distribution");
+    PetscCheck(B->rmap->n == X->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Matrix B and X must have same row distribution");
     mumps->id.ICNTL(20)= 0; /* dense RHS */
   } else { /* sparse B */
-    PetscCheckFalse(X == B,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_IDN,"X and B must be different matrices");
+    PetscCheck(X != B,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_IDN,"X and B must be different matrices");
     PetscCall(PetscObjectTypeCompare((PetscObject)B,MATTRANSPOSEMAT,&flgT));
     if (flgT) { /* input B is transpose of actural RHS matrix,
                  because mumps requires sparse compressed COLUMN storage! See MatMatTransposeSolve_MUMPS() */
@@ -1813,7 +1813,7 @@ PetscErrorCode PetscSetMUMPSFromOptions(Mat F, Mat A)
 
   PetscCall(PetscOptionsIntArray("-mat_mumps_view_info","request INFO local to each processor","",info,&ninfo,NULL));
   if (ninfo) {
-    PetscCheckFalse(ninfo > 80,PETSC_COMM_SELF,PETSC_ERR_USER,"number of INFO %" PetscInt_FMT " must <= 80",ninfo);
+    PetscCheck(ninfo <= 80,PETSC_COMM_SELF,PETSC_ERR_USER,"number of INFO %" PetscInt_FMT " must <= 80",ninfo);
     PetscCall(PetscMalloc1(ninfo,&mumps->info));
     mumps->ninfo = ninfo;
     for (i=0; i<ninfo; i++) {

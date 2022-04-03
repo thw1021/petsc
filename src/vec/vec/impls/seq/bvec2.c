@@ -321,7 +321,7 @@ PetscErrorCode VecView_Seq_ASCII(Vec xin,PetscViewer viewer)
         outputState = 3;
         doOutput = 1;
       } else if (outputState == 3) doOutput = 0;
-      else PetscCheckFalse(outputState == 4,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "Tried to output POINT_DATA again after intervening CELL_DATA");
+      else PetscCheck(outputState != 4,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "Tried to output POINT_DATA again after intervening CELL_DATA");
 
       if (doOutput) {
         PetscCall(PetscViewerASCIIPrintf(viewer, "POINT_DATA %" PetscInt_FMT "\n", n/bs));
@@ -334,7 +334,7 @@ PetscErrorCode VecView_Seq_ASCII(Vec xin,PetscViewer viewer)
         outputState = 4;
         doOutput = 1;
       } else if (outputState == 2) doOutput = 0;
-      else PetscCheckFalse(outputState == 3,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "Tried to output CELL_DATA again after intervening POINT_DATA");
+      else PetscCheck(outputState != 3,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "Tried to output CELL_DATA again after intervening POINT_DATA");
       else if (outputState == 4) doOutput = 0;
 
       if (doOutput) {
@@ -857,7 +857,7 @@ PetscErrorCode  VecCreateSeqWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,const
   PetscCall(VecSetSizes(*V,n,n));
   PetscCall(VecSetBlockSize(*V,bs));
   PetscCallMPI(MPI_Comm_size(comm,&size));
-  PetscCheckFalse(size > 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot create VECSEQ on more than one process");
+  PetscCheck(size <= 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot create VECSEQ on more than one process");
   PetscCall(VecCreate_Seq_Private(*V,array));
   PetscFunctionReturn(0);
 }

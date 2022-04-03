@@ -182,7 +182,7 @@ PetscErrorCode SNESFASGetCycleSNES(SNES snes,PetscInt level,SNES *lsnes)
     *lsnes = fas->next;
     fas    = (SNES_FAS*)(*lsnes)->data;
   }
-  PetscCheckFalse(fas->level != level,PetscObjectComm((PetscObject)snes),PETSC_ERR_PLIB,"SNESFAS level hierarchy corrupt");
+  PetscCheck(fas->level == level,PetscObjectComm((PetscObject)snes),PETSC_ERR_PLIB,"SNESFAS level hierarchy corrupt");
   PetscFunctionReturn(0);
 }
 

@@ -3524,7 +3524,7 @@ static PetscErrorCode DMPlexGetHybridAuxFields(DM dm, DM dmAux[], PetscDS dsAux[
 
       PetscCall(DMPlexGetSupport(dm, cone[s], &support));
       PetscCall(DMPlexGetSupportSize(dm, cone[s], &ssize));
-      PetscCheckFalse(ssize != 2,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Face %D from cell %D has support size %D != 2", cone[s], cell, ssize);
+      PetscCheck(ssize == 2,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Face %D from cell %D has support size %D != 2", cone[s], cell, ssize);
       if      (support[0] == cell) scell = support[1];
       else if (support[1] == cell) scell = support[0];
       else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Face %D does not have cell %D in its support", cone[s], cell);

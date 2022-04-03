@@ -60,7 +60,7 @@ PetscErrorCode  ISCompressIndicesGeneral(PetscInt n,PetscInt nkeys,PetscInt bs,P
         isz++;
       }
 #else
-      PetscCheckFalse(ival>Nbs,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"index greater than mat-dim");
+      PetscCheck(ival<=Nbs,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"index greater than mat-dim");
       if (!PetscBTLookupSet(table,ival)) nidx[isz++] = ival;
 #endif
     }
@@ -76,7 +76,7 @@ PetscErrorCode  ISCompressIndicesGeneral(PetscInt n,PetscInt nkeys,PetscInt bs,P
       nidx[tt] = gid1 - 1;
       j++;
     }
-    PetscCheckFalse(j != isz,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"table error: jj != isz");
+    PetscCheck(j == isz,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"table error: jj != isz");
     PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)is_in[i]),isz,nidx,PETSC_OWN_POINTER,(is_out+i)));
 #else
     PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)is_in[i]),isz,nidx,PETSC_COPY_VALUES,(is_out+i)));

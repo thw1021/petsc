@@ -41,7 +41,7 @@ static PetscErrorCode Test_3d_4x4x4_3x3x3(DM dmstag)
   {
     PetscInt nRanks[3],n[3],dim;
     PetscCall(DMGetDimension(dmstag,&dim));
-    PetscCheckFalse(dim != 3,PetscObjectComm((PetscObject)dmstag),PETSC_ERR_SUP,"This is a 3d test");
+    PetscCheck(dim == 3,PetscObjectComm((PetscObject)dmstag),PETSC_ERR_SUP,"This is a 3d test");
     PetscCall(DMStagGetNumRanks(dmstag,&nRanks[0],&nRanks[1],&nRanks[2]));
     for (i=0; i<3; ++i) PetscCheckFalse(nRanks[i] != 3,PetscObjectComm((PetscObject)dmstag),PETSC_ERR_SUP,"This test requires a 3x3x3 rank grid (run on 27 ranks)");
     PetscCall(DMStagGetGlobalSizes(dmstag,&n[0],&n[1],&n[2]));

@@ -126,7 +126,7 @@ PetscErrorCode  ISSum(IS is1,IS is2,IS *is3)
   PetscValidHeaderSpecific(is2,IS_CLASSID,2);
   PetscCall(PetscObjectGetComm((PetscObject)(is1),&comm));
   PetscCallMPI(MPI_Comm_size(comm,&size));
-  PetscCheckFalse(size>1,PETSC_COMM_SELF,PETSC_ERR_SUP,"Currently only for uni-processor IS");
+  PetscCheck(size<=1,PETSC_COMM_SELF,PETSC_ERR_SUP,"Currently only for uni-processor IS");
 
   PetscCall(ISSorted(is1,&f));
   PetscCheck(f,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Arg 1 is not sorted");
@@ -453,7 +453,7 @@ PetscErrorCode ISConcatenate(MPI_Comm comm, PetscInt len, const IS islist[], IS 
     PetscCall(ISCreateStride(comm, 0,0,0, isout));
     PetscFunctionReturn(0);
   }
-  PetscCheckFalse(len < 0,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Negative array length: %" PetscInt_FMT, len);
+  PetscCheck(len >= 0,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Negative array length: %" PetscInt_FMT, len);
   N = 0;
   for (i = 0; i < len; ++i) {
     if (islist[i]) {
@@ -587,7 +587,7 @@ PetscErrorCode ISPairToList(IS xis, IS yis, PetscInt *listlen, IS **islist)
   /* Extract, copy and sort the local indices and colors on the color. */
   PetscCall(ISGetLocalSize(coloris, &llen));
   PetscCall(ISGetLocalSize(indis,   &ilen));
-  PetscCheckFalse(llen != ilen,comm, PETSC_ERR_ARG_SIZ, "Incompatible IS sizes: %" PetscInt_FMT " and %" PetscInt_FMT, ilen, llen);
+  PetscCheck(llen == ilen,comm, PETSC_ERR_ARG_SIZ, "Incompatible IS sizes: %" PetscInt_FMT " and %" PetscInt_FMT, ilen, llen);
   PetscCall(ISGetIndices(coloris, &ccolors));
   PetscCall(ISGetIndices(indis, &cinds));
   PetscCall(PetscMalloc2(ilen,&inds,llen,&colors));

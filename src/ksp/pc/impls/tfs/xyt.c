@@ -322,7 +322,7 @@ static PetscErrorCode xyt_generate(xyt_ADT xyt_handle)
   for (dim=i=j=0; i<m; i++) {
     /* time to move to the next level? */
     while (i==segs[dim]) {
-      PetscCheckFalse(dim==level,PETSC_COMM_SELF,PETSC_ERR_PLIB,"dim about to exceed level");
+      PetscCheck(dim!=level,PETSC_COMM_SELF,PETSC_ERR_PLIB,"dim about to exceed level");
       stages[dim++]=i;
       end         +=lnsep[dim];
     }

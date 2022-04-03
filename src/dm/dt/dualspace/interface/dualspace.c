@@ -1097,8 +1097,8 @@ PetscErrorCode PetscDualSpaceApplyDefault(PetscDualSpace sp, PetscInt f, PetscRe
   PetscCall(PetscDualSpaceGetDM(sp, &dm));
   PetscCall(PetscDualSpaceGetFunctional(sp, f, &n));
   PetscCall(PetscQuadratureGetData(n, &dim, &qNc, &Nq, &points, &weights));
-  PetscCheckFalse(dim != cgeom->dim,PetscObjectComm((PetscObject) sp), PETSC_ERR_ARG_SIZ, "The quadrature spatial dimension %D != cell geometry dimension %D", dim, cgeom->dim);
-  PetscCheckFalse(qNc != Nc,PetscObjectComm((PetscObject) sp), PETSC_ERR_ARG_SIZ, "The quadrature components %D != function components %D", qNc, Nc);
+  PetscCheck(dim == cgeom->dim,PetscObjectComm((PetscObject) sp), PETSC_ERR_ARG_SIZ, "The quadrature spatial dimension %D != cell geometry dimension %D", dim, cgeom->dim);
+  PetscCheck(qNc == Nc,PetscObjectComm((PetscObject) sp), PETSC_ERR_ARG_SIZ, "The quadrature components %D != function components %D", qNc, Nc);
   PetscCall(DMGetWorkArray(dm, Nc, MPIU_SCALAR, &val));
   *value = 0.0;
   isAffine = cgeom->isAffine;
@@ -1287,7 +1287,7 @@ PetscErrorCode PetscDualSpaceCreateAllDataDefault(PetscDualSpace sp, PetscQuadra
 
     PetscCall(PetscDualSpaceGetFunctional(sp,f,&q));
     PetscCall(PetscQuadratureGetData(q,NULL,&fnc,&Np,&p,&w));
-    PetscCheckFalse(fnc != Nc,PETSC_COMM_SELF, PETSC_ERR_PLIB, "functional component mismatch");
+    PetscCheck(fnc == Nc,PETSC_COMM_SELF, PETSC_ERR_PLIB, "functional component mismatch");
     for (i = 0; i < Np * dim; i++) {
       points[offset* dim + i] = p[i];
     }
@@ -1544,7 +1544,7 @@ PetscErrorCode PetscDualSpaceApplyFVM(PetscDualSpace sp, PetscInt f, PetscReal t
   PetscCall(DMGetCoordinateDim(dm, &dimEmbed));
   PetscCall(PetscDualSpaceGetFunctional(sp, f, &n));
   PetscCall(PetscQuadratureGetData(n, NULL, &qNc, &Nq, &points, &weights));
-  PetscCheckFalse(qNc != Nc,PetscObjectComm((PetscObject) sp), PETSC_ERR_ARG_SIZ, "The quadrature components %D != function components %D", qNc, Nc);
+  PetscCheck(qNc == Nc,PetscObjectComm((PetscObject) sp), PETSC_ERR_ARG_SIZ, "The quadrature components %D != function components %D", qNc, Nc);
   PetscCall(DMGetWorkArray(dm, Nc, MPIU_SCALAR, &val));
   *value = 0.;
   for (q = 0; q < Nq; ++q) {
@@ -1897,7 +1897,7 @@ PetscErrorCode PetscDualSpaceTransformGradient(PetscDualSpace dsp, PetscDualSpac
   PetscValidPointer(fegeom, 4);
   PetscValidScalarPointer(vals, 7);
 #ifdef PETSC_USE_DEBUG
-  PetscCheckFalse(dE <= 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid embedding dimension %D", dE);
+  PetscCheck(dE > 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid embedding dimension %D", dE);
 #endif
   /* Transform gradient */
   if (dim == dE) {
@@ -2010,7 +2010,7 @@ PetscErrorCode PetscDualSpaceTransformHessian(PetscDualSpace dsp, PetscDualSpace
   PetscValidPointer(fegeom, 4);
   PetscValidScalarPointer(vals, 7);
 #ifdef PETSC_USE_DEBUG
-  PetscCheckFalse(dE <= 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid embedding dimension %D", dE);
+  PetscCheck(dE > 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid embedding dimension %D", dE);
 #endif
   /* Transform Hessian: J^{-T}_{ik} J^{-T}_{jl} H(f)_{kl} = J^{-T}_{ik} H(f)_{kl} J^{-1}_{lj} */
   if (dim == dE) {

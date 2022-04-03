@@ -18,9 +18,9 @@ int main(int argc,char **argv)
   /* test that PetscFormatConvertGetSize() correctly counts needed amount of space */
   PetscCall(PetscFormatConvertGetSize(formatstr,&sz));
   if (PetscDefined(USE_64BIT_INDICES)) {
-    PetscCheckFalse(sz != 29,PETSC_COMM_WORLD,PETSC_ERR_PLIB,"Format size %zu should be 29",sz);
+    PetscCheck(sz == 29,PETSC_COMM_WORLD,PETSC_ERR_PLIB,"Format size %zu should be 29",sz);
   } else {
-    PetscCheckFalse(sz != 27,PETSC_COMM_WORLD,PETSC_ERR_PLIB,"Format size %zu should be 27",sz);
+    PetscCheck(sz == 27,PETSC_COMM_WORLD,PETSC_ERR_PLIB,"Format size %zu should be 27",sz);
   }
   PetscCall(PetscMalloc1(sz,&newformatstr));
   PetscCall(PetscFormatConvert(formatstr,newformatstr));

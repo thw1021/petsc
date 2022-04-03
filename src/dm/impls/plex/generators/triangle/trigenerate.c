@@ -217,7 +217,7 @@ PETSC_EXTERN PetscErrorCode DMPlexGenerate_Triangle(DM boundary, PetscBool inter
           PetscInt        numEdges;
 
           PetscCall(DMPlexGetJoin(*dm, 2, vertices, &numEdges, &edges));
-          PetscCheckFalse(numEdges != 1,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Two vertices must cover only one edge, not %D", numEdges);
+          PetscCheck(numEdges == 1,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Two vertices must cover only one edge, not %D", numEdges);
           if (glabel)  PetscCall(DMLabelSetValue(glabel,  edges[0], out.edgemarkerlist[e]));
           if (glabel2) PetscCall(DMLabelSetValue(glabel2, edges[0], out.edgemarkerlist[e]));
           PetscCall(DMPlexRestoreJoin(*dm, 2, vertices, &numEdges, &edges));
@@ -396,7 +396,7 @@ PETSC_EXTERN PetscErrorCode DMPlexRefine_Triangle(DM dm, PetscReal *inmaxVolumes
           PetscInt        numEdges;
 
           PetscCall(DMPlexGetJoin(*dmRefined, 2, vertices, &numEdges, &edges));
-          PetscCheckFalse(numEdges != 1,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Two vertices must cover only one edge, not %D", numEdges);
+          PetscCheck(numEdges == 1,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Two vertices must cover only one edge, not %D", numEdges);
           if (rlabel) PetscCall(DMLabelSetValue(rlabel, edges[0], out.edgemarkerlist[e]));
           PetscCall(DMPlexRestoreJoin(*dmRefined, 2, vertices, &numEdges, &edges));
         }

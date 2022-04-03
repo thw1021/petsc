@@ -201,7 +201,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
   // get dynamic data (Eq is odd, for quench and Spitzer test) for CPU assembly and raw data for Jacobian GPU assembly. Get host numCells[], Nq (yuck)
   PetscCall(PetscFEGetQuadrature(ctx->fe[0], &quad));
   PetscCall(PetscQuadratureGetData(quad, NULL, NULL, &Nq, NULL, NULL)); Nb = Nq;
-  PetscCheckFalse(Nq >LANDAU_MAX_NQ,ctx->comm,PETSC_ERR_ARG_WRONG,"Order too high. Nq = %" PetscInt_FMT " > LANDAU_MAX_NQ (%" PetscInt_FMT ")",Nq,LANDAU_MAX_NQ);
+  PetscCheck(Nq <=LANDAU_MAX_NQ,ctx->comm,PETSC_ERR_ARG_WRONG,"Order too high. Nq = %" PetscInt_FMT " > LANDAU_MAX_NQ (%" PetscInt_FMT ")",Nq,LANDAU_MAX_NQ);
   // get metadata for collecting dynamic data
   for (PetscInt grid=0;grid<ctx->num_grids;grid++) {
     PetscInt cStart, cEnd;
@@ -1136,7 +1136,7 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem, Vec sol, PetscInt type, Pet
   PetscCall(DMLabelCreate(PETSC_COMM_SELF,"adapt",&adaptLabel));
   PetscCall(PetscFEGetQuadrature(fem, &quad));
   PetscCall(PetscQuadratureGetData(quad, NULL, NULL, &Nq, NULL, NULL));
-  PetscCheckFalse(Nq >LANDAU_MAX_NQ,ctx->comm,PETSC_ERR_ARG_WRONG,"Order too high. Nq = %" PetscInt_FMT " > LANDAU_MAX_NQ (%" PetscInt_FMT ")",Nq,LANDAU_MAX_NQ);
+  PetscCheck(Nq <=LANDAU_MAX_NQ,ctx->comm,PETSC_ERR_ARG_WRONG,"Order too high. Nq = %" PetscInt_FMT " > LANDAU_MAX_NQ (%" PetscInt_FMT ")",Nq,LANDAU_MAX_NQ);
   PetscCall(PetscDSGetDimensions(prob, &Nb));
   if (type==4) {
     for (c = cStart; c < cEnd; c++) {
@@ -2844,7 +2844,7 @@ PetscErrorCode DMPlexLandauIJacobian(TS ts, PetscReal time_dummy, Vec X, Vec U_t
   starttime = MPI_Wtime();
 #endif
   PetscCall(PetscInfo(ts, "Adding just mass to Jacobian t=%g, shift=%g\n",(double)time_dummy,(double)shift));
-  PetscCheckFalse(shift==0.0,ctx->comm, PETSC_ERR_PLIB, "zero shift");
+  PetscCheck(shift!=0.0,ctx->comm, PETSC_ERR_PLIB, "zero shift");
   PetscCheck(ctx->aux_bool,ctx->comm, PETSC_ERR_PLIB, "wrong state");
   if (!ctx->use_matrix_mass) {
     PetscCall(LandauFormJacobian_Internal(X,ctx->J,dim,shift,(void*)ctx));

@@ -76,7 +76,7 @@ PetscErrorCode MatGetOrdering_Flow_SeqAIJ(Mat mat,MatOrderingType type,IS *irow,
         }
       }
     }
-    PetscCheckFalse(current == newcurrent,PETSC_COMM_SELF,PETSC_ERR_PLIB,"newcurrent cannot be current");
+    PetscCheck(current != newcurrent,PETSC_COMM_SELF,PETSC_ERR_PLIB,"newcurrent cannot be current");
     current    = newcurrent;
     order[i+1] = current;
   }
@@ -148,7 +148,7 @@ PetscErrorCode MatLUFactorSymbolic_SeqAIJ_inplace(Mat B,Mat A,IS isrow,IS iscol,
   PetscBool          missing;
 
   PetscFunctionBegin;
-  PetscCheckFalse(A->rmap->N != A->cmap->N,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"matrix must be square");
+  PetscCheck(A->rmap->N == A->cmap->N,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"matrix must be square");
   PetscCall(MatMissingDiagonal(A,&missing,&i));
   PetscCheck(!missing,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Matrix is missing diagonal entry %" PetscInt_FMT,i);
 
@@ -299,7 +299,7 @@ PetscErrorCode MatLUFactorSymbolic_SeqAIJ(Mat B,Mat A,IS isrow,IS iscol,const Ma
   PetscBool          missing;
 
   PetscFunctionBegin;
-  PetscCheckFalse(A->rmap->N != A->cmap->N,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"matrix must be square");
+  PetscCheck(A->rmap->N == A->cmap->N,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"matrix must be square");
   PetscCall(MatMissingDiagonal(A,&missing,&i));
   PetscCheck(!missing,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Matrix is missing diagonal entry %" PetscInt_FMT,i);
 
@@ -792,7 +792,7 @@ PetscErrorCode MatLUFactorNumeric_SeqAIJ_InplaceWithPerm(Mat B,Mat A,const MatFa
   const MatScalar *aa=a->a,*vtmp;
 
   PetscFunctionBegin;
-  PetscCheckFalse(A != B,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"input and output matrix must have same address");
+  PetscCheck(A == B,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"input and output matrix must have same address");
 
   /* MatPivotSetUp(): initialize shift context sctx */
   PetscCall(PetscMemzero(&sctx,sizeof(FactorShiftCtx)));
@@ -1670,7 +1670,7 @@ PetscErrorCode MatILUFactorSymbolic_SeqAIJ(Mat fact,Mat A,IS isrow,IS iscol,cons
   PetscFreeSpaceList free_space_lvl=NULL,current_space_lvl=NULL;
 
   PetscFunctionBegin;
-  PetscCheckFalse(A->rmap->n != A->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must be square matrix, rows %" PetscInt_FMT " columns %" PetscInt_FMT,A->rmap->n,A->cmap->n);
+  PetscCheck(A->rmap->n == A->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must be square matrix, rows %" PetscInt_FMT " columns %" PetscInt_FMT,A->rmap->n,A->cmap->n);
   PetscCall(MatMissingDiagonal(A,&missing,&i));
   PetscCheck(!missing,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Matrix is missing diagonal entry %" PetscInt_FMT,i);
 
@@ -1846,7 +1846,7 @@ PetscErrorCode MatILUFactorSymbolic_SeqAIJ_inplace(Mat fact,Mat A,IS isrow,IS is
   PetscBool          missing;
 
   PetscFunctionBegin;
-  PetscCheckFalse(A->rmap->n != A->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must be square matrix, rows %" PetscInt_FMT " columns %" PetscInt_FMT,A->rmap->n,A->cmap->n);
+  PetscCheck(A->rmap->n == A->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must be square matrix, rows %" PetscInt_FMT " columns %" PetscInt_FMT,A->rmap->n,A->cmap->n);
   PetscCall(MatMissingDiagonal(A,&missing,&i));
   PetscCheck(!missing,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Matrix is missing diagonal entry %" PetscInt_FMT,i);
 
@@ -2360,7 +2360,7 @@ PetscErrorCode MatICCFactorSymbolic_SeqAIJ(Mat fact,Mat A,IS perm,const MatFacto
   IS                 iperm;
 
   PetscFunctionBegin;
-  PetscCheckFalse(A->rmap->n != A->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must be square matrix, rows %" PetscInt_FMT " columns %" PetscInt_FMT,A->rmap->n,A->cmap->n);
+  PetscCheck(A->rmap->n == A->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must be square matrix, rows %" PetscInt_FMT " columns %" PetscInt_FMT,A->rmap->n,A->cmap->n);
   PetscCall(MatMissingDiagonal(A,&missing,&d));
   PetscCheck(!missing,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Matrix is missing diagonal entry %" PetscInt_FMT,d);
   PetscCall(ISIdentity(perm,&perm_identity));
@@ -2460,7 +2460,7 @@ PetscErrorCode MatICCFactorSymbolic_SeqAIJ(Mat fact,Mat A,IS perm,const MatFacto
       }
 
       /* copy data into free_space and free_space_lvl, then initialize lnk */
-      PetscCheckFalse(nzk == 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Empty row %" PetscInt_FMT " in ICC matrix factor",k);
+      PetscCheck(nzk != 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Empty row %" PetscInt_FMT " in ICC matrix factor",k);
       PetscCall(PetscIncompleteLLClean(am,am,nzk,lnk,lnk_lvl,current_space->array,current_space_lvl->array,lnkbt));
 
       /* add the k-th row into il and jl */
@@ -2561,7 +2561,7 @@ PetscErrorCode MatICCFactorSymbolic_SeqAIJ_inplace(Mat fact,Mat A,IS perm,const 
   IS                 iperm;
 
   PetscFunctionBegin;
-  PetscCheckFalse(A->rmap->n != A->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must be square matrix, rows %" PetscInt_FMT " columns %" PetscInt_FMT,A->rmap->n,A->cmap->n);
+  PetscCheck(A->rmap->n == A->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must be square matrix, rows %" PetscInt_FMT " columns %" PetscInt_FMT,A->rmap->n,A->cmap->n);
   PetscCall(MatMissingDiagonal(A,&missing,&d));
   PetscCheck(!missing,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Matrix is missing diagonal entry %" PetscInt_FMT,d);
   PetscCall(ISIdentity(perm,&perm_identity));
@@ -2760,7 +2760,7 @@ PetscErrorCode MatCholeskyFactorSymbolic_SeqAIJ(Mat fact,Mat A,IS perm,const Mat
   IS                 iperm;
 
   PetscFunctionBegin;
-  PetscCheckFalse(A->rmap->n != A->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must be square matrix, rows %" PetscInt_FMT " columns %" PetscInt_FMT,A->rmap->n,A->cmap->n);
+  PetscCheck(A->rmap->n == A->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must be square matrix, rows %" PetscInt_FMT " columns %" PetscInt_FMT,A->rmap->n,A->cmap->n);
   PetscCall(MatMissingDiagonal(A,&missing,&i));
   PetscCheck(!missing,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Matrix is missing diagonal entry %" PetscInt_FMT,i);
 
@@ -2930,7 +2930,7 @@ PetscErrorCode MatCholeskyFactorSymbolic_SeqAIJ_inplace(Mat fact,Mat A,IS perm,c
   IS                 iperm;
 
   PetscFunctionBegin;
-  PetscCheckFalse(A->rmap->n != A->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must be square matrix, rows %" PetscInt_FMT " columns %" PetscInt_FMT,A->rmap->n,A->cmap->n);
+  PetscCheck(A->rmap->n == A->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must be square matrix, rows %" PetscInt_FMT " columns %" PetscInt_FMT,A->rmap->n,A->cmap->n);
   PetscCall(MatMissingDiagonal(A,&missing,&i));
   PetscCheck(!missing,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Matrix is missing diagonal entry %" PetscInt_FMT,i);
 
