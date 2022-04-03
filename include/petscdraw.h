@@ -354,7 +354,7 @@ PETSC_EXTERN PetscXIOErrorHandler PetscSetXIOErrorHandler(PetscXIOErrorHandler);
 M*/
 #define PetscDrawCollectiveBegin(draw) do {                                                 \
   jmp_buf                       _Petsc_jmpbuf;                                                 \
-  volatile PetscXIOErrorHandler _Petsc_xioerrhdl = NULL;                                       \
+  volatile PetscXIOErrorHandler _Petsc_xioerrhdl = PETSC_NULLPTR;                                       \
   PetscBool                     _Petsc_isdrawx,_Petsc_xioerr,_Petsc_xioerr_local=PETSC_FALSE;  \
   PetscCall(PetscObjectTypeCompare((PetscObject)(draw),PETSC_DRAW_X,&_Petsc_isdrawx));           \
   if (_Petsc_isdrawx) {                                                                        \
@@ -389,9 +389,9 @@ M*/
     the window without crashing the program.
 
   Developer Notes:
-    This only applies to X windows and so should have a more specific name such as PetscDrawXCollectiveBegin()
+    This only applies to X windows and so should have a more specific name such as PetscDrawXCollectiveEnd()
 
-.seealso: PetscDrawCollectiveEnd()
+.seealso: PetscDrawCollectiveBegin()
 M*/
 #define PetscDrawCollectiveEnd(draw)                                                           \
   if (_Petsc_isdrawx) {                                                                        \

@@ -442,7 +442,7 @@ zero. For the C/C++ interface, the error variable is the routine’s
 return value, while for the Fortran version, each PETSc routine has as
 its final argument an integer error variable.
 
-One should always chack these routine values as given below in the C/C++ and Fortran
+One should always check these routine values as given below in the C/C++ and Fortran
 formats, respectively:
 
 .. code-block:: c
@@ -517,9 +517,9 @@ PETSc has a small number of C/C++ only macros that do not return error codes. Th
    other code
    XXXEnd();
 
-and include ``PetscOptionsBegin()`` and ``PetscOptionsEnd()``; ``PetscObjectOptionsBegin()`` and ``PetscOptionsEnd()``;
-``PetscOptionsHeadBegin()`` and ``PetscOptionsHeadEnd()``; ``PetscDrawCollectiveBegin()`` and ``PetscDrawCollectiveEnd()``;
-``MatPreallocateEnd()`` and ``MatPreallocateBegin()``. These should not be checked for error codes.
+and include ``PetscOptionsBegin()``, ``PetscOptionsEnd()``, ``PetscObjectOptionsBegin()``, ``PetscOptionsEnd()``,
+``PetscOptionsHeadBegin()``, ``PetscOptionsHeadEnd()``, ``PetscDrawCollectiveBegin()``, ``PetscDrawCollectiveEnd()``,
+``MatPreallocateEnd()``, and ``MatPreallocateBegin()``. These should not be checked for error codes.
 
 PETSc also has a set of C/C++ only macros that return an object, or ``NULL`` if an error has been detected. These include
 ``PETSC_VIEWER_STDOUT_WORLD``, ``PETSC_VIEWER_DRAW_WORLD``, ``PETSC_VIEWER_STDOUT_(MPI_Comm)``, and ``PETSC_VIEWER_DRAW_(MPI_Comm)``.
