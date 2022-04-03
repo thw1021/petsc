@@ -141,12 +141,13 @@ PetscErrorCode  VecDot(Vec x,Vec y,PetscScalar *val)
 
 PetscErrorCode VecDotRealPartAsync(Vec x, Vec y, PetscManagedReal val, PetscDeviceContext dctx)
 {
-  PetscManagedScalar fdot;
+  PetscManagedReal fdot;
 
   PetscFunctionBegin;
-  PetscManageHostScalar(dctx,,1,&fdot)
+  PetscCall(PetscManagedRealCreate(dctx,NULL,NULL,1,PETSC_OWN_POINTER,PETSC_OWN_POINTER,PETSC_OFFLOAD_UNALLOCATED,&fdot));
   PetscCall(VecDotAsync(x,y,fdot,dctx));
   *val.ptr = PetscRealPart(fdot);
+  PetscCall(PetscManagedRealDestroy(dctx,&fdot));
   PetscFunctionReturn(0);
 }
 
