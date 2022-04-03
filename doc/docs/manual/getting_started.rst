@@ -520,6 +520,7 @@ PETSc has a small number of C/C++ only macros that do not return error codes. Th
 and include ``PetscOptionsBegin()``, ``PetscOptionsEnd()``, ``PetscObjectOptionsBegin()``, ``PetscOptionsEnd()``,
 ``PetscOptionsHeadBegin()``, ``PetscOptionsHeadEnd()``, ``PetscDrawCollectiveBegin()``, ``PetscDrawCollectiveEnd()``,
 ``MatPreallocateEnd()``, and ``MatPreallocateBegin()``. These should not be checked for error codes.
+Another class of functions with the ``Begin()`` and ``End()`` paradigm including ``PetscLogBegin()``, ``PetscLogEnd()``, ``MatAssemblyBegin()``, and ``MatAssemblyEnd()`` do return error codes that should be checked.
 
 PETSc also has a set of C/C++ only macros that return an object, or ``NULL`` if an error has been detected. These include
 ``PETSC_VIEWER_STDOUT_WORLD``, ``PETSC_VIEWER_DRAW_WORLD``, ``PETSC_VIEWER_STDOUT_(MPI_Comm)``, and ``PETSC_VIEWER_DRAW_(MPI_Comm)``.
