@@ -71,7 +71,7 @@ Mat_SeqSELL *Ain = (Mat_SeqSELL*)Amat->data; \
 PetscInt new_size=Ain->maxallocmat+8,*new_colidx; \
 datatype *new_val; \
 \
-PetscCheckFalse(NONEW == -2,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"New nonzero at (%" PetscInt_FMT ",%" PetscInt_FMT ") caused a malloc\nUse MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE) to turn off this check",ROW,COL); \
+PetscCheck(NONEW != -2,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"New nonzero at (%" PetscInt_FMT ",%" PetscInt_FMT ") caused a malloc\nUse MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE) to turn off this check",ROW,COL); \
 /* malloc new storage space */ \
 PetscCall(PetscMalloc2(BS2*new_size,&new_val,BS2*new_size,&new_colidx)); \
 \

@@ -254,7 +254,7 @@ PetscErrorCode MatMPIBAIJDiagonalScaleLocalSetUp(Mat inA,Vec scale)
       r_rmapo[i] = lindices[inA->rmap->mapping->indices[i]];
     }
   }
-  PetscCheckFalse(nt > no,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Hmm nt %" PetscInt_FMT " no %" PetscInt_FMT,nt,n);
+  PetscCheck(nt <= no,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Hmm nt %" PetscInt_FMT " no %" PetscInt_FMT,nt,n);
   PetscCall(PetscFree(lindices));
   PetscCall(PetscMalloc1(nt*bs+1,&uglyrmapo));
   for (i=0; i<inA->rmap->mapping->n; i++) {

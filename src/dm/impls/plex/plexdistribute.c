@@ -118,7 +118,7 @@ static PetscErrorCode DMPlexGetAdjacency_Cone_Internal(DM dm, PetscInt p, PetscI
       for (q = 0; q < numAdj || ((void)(adj[numAdj++] = support[s]),0); ++q) {
         if (support[s] == adj[q]) break;
       }
-      PetscCheckFalse(numAdj > maxAdjSize,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid mesh exceeded adjacency allocation (%D)", maxAdjSize);
+      PetscCheck(numAdj <= maxAdjSize,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid mesh exceeded adjacency allocation (%D)", maxAdjSize);
     }
   }
   *adjSize = numAdj;
@@ -144,7 +144,7 @@ static PetscErrorCode DMPlexGetAdjacency_Support_Internal(DM dm, PetscInt p, Pet
       for (q = 0; q < numAdj || ((void)(adj[numAdj++] = cone[c]),0); ++q) {
         if (cone[c] == adj[q]) break;
       }
-      PetscCheckFalse(numAdj > maxAdjSize,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid mesh exceeded adjacency allocation (%D)", maxAdjSize);
+      PetscCheck(numAdj <= maxAdjSize,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid mesh exceeded adjacency allocation (%D)", maxAdjSize);
     }
   }
   *adjSize = numAdj;
@@ -167,7 +167,7 @@ static PetscErrorCode DMPlexGetAdjacency_Transitive_Internal(DM dm, PetscInt p, 
       for (q = 0; q < numAdj || ((void)(adj[numAdj++] = closure[c]),0); ++q) {
         if (closure[c] == adj[q]) break;
       }
-      PetscCheckFalse(numAdj > maxAdjSize,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid mesh exceeded adjacency allocation (%D)", maxAdjSize);
+      PetscCheck(numAdj <= maxAdjSize,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid mesh exceeded adjacency allocation (%D)", maxAdjSize);
     }
     PetscCall(DMPlexRestoreTransitiveClosure(dm, star[s], (PetscBool)!useClosure, &closureSize, (PetscInt**) &closure));
   }
@@ -249,7 +249,7 @@ PetscErrorCode DMPlexGetAdjacency_Internal(DM dm, PetscInt p, PetscBool useCone,
           for (q = 0; q < numAdj || ((void)(orig[numAdj++] = anchors[aOff+s]),0); ++q) {
             if (anchors[aOff+s] == orig[q]) break;
           }
-          PetscCheckFalse(numAdj > maxAdjSize,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid mesh exceeded adjacency allocation (%D)", maxAdjSize);
+          PetscCheck(numAdj <= maxAdjSize,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid mesh exceeded adjacency allocation (%D)", maxAdjSize);
         }
       }
       else {

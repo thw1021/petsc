@@ -902,7 +902,7 @@ PetscErrorCode MatShellSetMatProductOperation(Mat A,MatProductType ptype,PetscEr
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
   PetscValidLogicalCollectiveEnum(A,ptype,2);
-  PetscCheckFalse(ptype == MATPRODUCT_ABC,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Not for product type %s",MatProductTypes[ptype]);
+  PetscCheck(ptype != MATPRODUCT_ABC,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Not for product type %s",MatProductTypes[ptype]);
   PetscCheck(numeric,PetscObjectComm((PetscObject)A),PETSC_ERR_USER,"Missing numeric routine, argument 4");
   PetscValidCharPointer(Btype,6);
   if (Ctype) PetscValidCharPointer(Ctype,7);

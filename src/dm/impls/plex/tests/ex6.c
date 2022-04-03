@@ -97,7 +97,7 @@ PetscErrorCode TestClear(DMLabel label, AppCtx *user)
     }
     PetscCall(DMLabelGetValue(label,p,&val));
     PetscCall(DMLabelHasPoint(label,p,&hasPoint));
-    PetscCheckFalse(val != defaultValue,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Expected default value %D after clearing point %D, got %D",defaultValue,p,val);
+    PetscCheck(val == defaultValue,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Expected default value %D after clearing point %D, got %D",defaultValue,p,val);
     PetscCheck(!hasPoint,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Label contains %D after clearing",p);
   }
   PetscFunctionReturn(0);

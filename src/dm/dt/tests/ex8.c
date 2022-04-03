@@ -25,13 +25,13 @@ int main(int argc, char **argv)
           PetscCheckFalse(btup[j] < 0,PETSC_COMM_SELF, PETSC_ERR_PLIB, "PetscDTIndexToBary, d = %D, n = %D, k = %D negative entry", d, n, k);
           sum += btup[j];
         }
-        PetscCheckFalse(sum != n,PETSC_COMM_SELF, PETSC_ERR_PLIB, "PetscDTIndexToBary, d = %D, n = %D, k = %D incorrect sum", d, n, k);
+        PetscCheck(sum == n,PETSC_COMM_SELF, PETSC_ERR_PLIB, "PetscDTIndexToBary, d = %D, n = %D, k = %D incorrect sum", d, n, k);
         PetscCall(PetscDTBaryToIndex(d + 1, n, btup, &kchk));
-        PetscCheckFalse(kchk != k,PETSC_COMM_SELF, PETSC_ERR_PLIB, "PetscDTBaryToIndex, d = %D, n = %D, k = %D mismatch", d, n, k);
+        PetscCheck(kchk == k,PETSC_COMM_SELF, PETSC_ERR_PLIB, "PetscDTBaryToIndex, d = %D, n = %D, k = %D mismatch", d, n, k);
         if (k) {
           j = d;
           while (j >= 0 && btup[j] == btupprev[j]) j--;
-          PetscCheckFalse(j < 0,PETSC_COMM_SELF, PETSC_ERR_PLIB, "PetscDTIndexToBary, d = %D, n = %D, k = %D equal to previous", d, n, k);
+          PetscCheck(j >= 0,PETSC_COMM_SELF, PETSC_ERR_PLIB, "PetscDTIndexToBary, d = %D, n = %D, k = %D equal to previous", d, n, k);
           PetscCheckFalse(btup[j] < btupprev[j],PETSC_COMM_SELF, PETSC_ERR_PLIB, "PetscDTIndexToBary, d = %D, n = %D, k = %D less to previous", d, n, k);
         } else {
           PetscCall(PetscArraycpy(btupprev, btup, d + 1));

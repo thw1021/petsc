@@ -529,7 +529,7 @@ static PetscErrorCode  KSPDGMRESSetRatio_DGMRES(KSP ksp,PetscReal ratio)
   KSP_DGMRES *dgmres = (KSP_DGMRES*) ksp->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(ratio <= 0,PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_OUTOFRANGE,"The relaxation parameter value must be positive");
+  PetscCheck(ratio > 0,PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_OUTOFRANGE,"The relaxation parameter value must be positive");
   dgmres->smv=ratio;
   PetscFunctionReturn(0);
 }
@@ -821,7 +821,7 @@ PetscErrorCode  KSPDGMRESComputeSchurForm_DGMRES(KSP ksp, PetscInt *neig)
     PetscReal    CondEig;         /* lower bound on the reciprocal condition number for the selected cluster of eigenvalues */
     PetscReal    CondSub;         /* estimated reciprocal condition number of the specified invariant subspace. */
     PetscStackCallBLAS("LAPACKtrsen",LAPACKtrsen_("B", "V", select, &bn, A, &ldA, Q, &ldQ, wr, wi, &NbrEig, &CondEig, &CondSub, work, &lwork, iwork, &liwork, &info));
-    PetscCheckFalse(info == 1,PetscObjectComm((PetscObject)ksp), PETSC_ERR_LIB, "UNABLE TO REORDER THE EIGENVALUES WITH THE LAPACK ROUTINE : ILL-CONDITIONED PROBLEM");
+    PetscCheck(info != 1,PetscObjectComm((PetscObject)ksp), PETSC_ERR_LIB, "UNABLE TO REORDER THE EIGENVALUES WITH THE LAPACK ROUTINE : ILL-CONDITIONED PROBLEM");
   }
   PetscCall(PetscFree(select));
 
@@ -1021,7 +1021,7 @@ static PetscErrorCode  KSPDGMRESImproveEig_DGMRES(KSP ksp, PetscInt neig)
     PetscBLASInt ijob  = 2;
     PetscBLASInt wantQ = 1, wantZ = 1;
     PetscStackCallBLAS("LAPACKtgsen",LAPACKtgsen_(&ijob, &wantQ, &wantZ, select, &N, AUAU, &ldA, AUU, &ldA, wr, wi, beta, Q, &N, Z, &N, &NbrEig, NULL, NULL, &(Dif[0]), work, &lwork, iwork, &liwork, &info));
-    PetscCheckFalse(info == 1,PetscObjectComm((PetscObject)ksp),PETSC_ERR_LIB, "Unable to reorder the eigenvalues with the LAPACK routine: ill-conditioned problem.");
+    PetscCheck(info != 1,PetscObjectComm((PetscObject)ksp),PETSC_ERR_LIB, "Unable to reorder the eigenvalues with the LAPACK routine: ill-conditioned problem.");
   }
   PetscCall(PetscFree(select));
 

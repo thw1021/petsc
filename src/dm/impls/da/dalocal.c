@@ -364,7 +364,7 @@ PetscErrorCode DMDASetVertexCoordinates(DM dm, PetscReal xl, PetscReal xu, Petsc
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1,DMDA);
   PetscCall(DMDAGetInfo(dm, &dim, &M, &N, &P, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL));
-  PetscCheckFalse(dim > 3,PetscObjectComm((PetscObject)dm),PETSC_ERR_PLIB,"The following code only works for dim <= 3");
+  PetscCheck(dim <= 3,PetscObjectComm((PetscObject)dm),PETSC_ERR_PLIB,"The following code only works for dim <= 3");
   h[0] = (xu - xl)/M;
   h[1] = (yu - yl)/N;
   h[2] = (zu - zl)/P;

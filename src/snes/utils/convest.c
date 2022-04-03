@@ -254,7 +254,7 @@ static PetscErrorCode PetscConvEstSetSNES_Private(PetscConvEst ce, PetscObject s
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetClassId(ce->solver, &id));
-  PetscCheckFalse(id != SNES_CLASSID,PetscObjectComm((PetscObject) ce), PETSC_ERR_ARG_WRONG, "Solver was not a SNES");
+  PetscCheck(id == SNES_CLASSID,PetscObjectComm((PetscObject) ce), PETSC_ERR_ARG_WRONG, "Solver was not a SNES");
   PetscCall(SNESGetDM((SNES) ce->solver, &ce->idm));
   PetscFunctionReturn(0);
 }

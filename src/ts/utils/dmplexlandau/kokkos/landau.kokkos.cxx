@@ -128,7 +128,7 @@ PetscErrorCode LandauKokkosStaticDataSet(DM plex, const PetscInt Nq, const Petsc
   PetscFunctionBegin;
   PetscCall(DMGetDimension(plex, &dim));
   PetscCall(DMGetDS(plex, &prob));
-  PetscCheckFalse(LANDAU_DIM != dim,PETSC_COMM_WORLD, PETSC_ERR_PLIB, "dim %D != LANDAU_DIM %d",dim,LANDAU_DIM);
+  PetscCheck(LANDAU_DIM == dim,PETSC_COMM_WORLD, PETSC_ERR_PLIB, "dim %D != LANDAU_DIM %d",dim,LANDAU_DIM);
   PetscCall(PetscDSGetTabulation(prob, &Tf));
   BB   = Tf[0]->T[0]; DD = Tf[0]->T[1];
   ip_offset[0] = ipf_offset[0] = elem_offset[0] = 0;
@@ -465,7 +465,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
   PetscCall(DMGetApplicationContext(plex[0], &ctx));
   PetscCheck(ctx,PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
   PetscCall(DMGetDimension(plex[0], &dim));
-  PetscCheckFalse(LANDAU_DIM != dim,PETSC_COMM_WORLD, PETSC_ERR_PLIB, "dim %D != LANDAU_DIM %d",dim,LANDAU_DIM);
+  PetscCheck(LANDAU_DIM == dim,PETSC_COMM_WORLD, PETSC_ERR_PLIB, "dim %D != LANDAU_DIM %d",dim,LANDAU_DIM);
   if (ctx->gpu_assembly) {
     PetscCall(PetscObjectQuery((PetscObject) JacP, "assembly_maps", (PetscObject *) &container));
     if (container) {

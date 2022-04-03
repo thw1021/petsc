@@ -73,8 +73,8 @@ static PetscErrorCode PetscPartitionerPartition_Simple_Grid(PetscPartitioner par
   PetscCallMPI(MPI_Comm_size(comm, &size));
   /* Check grid */
   for (i = 0; i < 3; ++i) Np *= nodes[i]*procs[i];
-  PetscCheckFalse(nparts != Np,comm, PETSC_ERR_ARG_INCOMP, "Number of partitions %D != %D grid size", nparts, Np);
-  PetscCheckFalse(nparts != size,comm, PETSC_ERR_ARG_INCOMP, "Number of partitions %D != %D processes", nparts, size);
+  PetscCheck(nparts == Np,comm, PETSC_ERR_ARG_INCOMP, "Number of partitions %D != %D grid size", nparts, Np);
+  PetscCheck(nparts == size,comm, PETSC_ERR_ARG_INCOMP, "Number of partitions %D != %D processes", nparts, size);
   PetscCheckFalse(numVertices % nparts,comm, PETSC_ERR_ARG_INCOMP, "Number of cells %D is not divisible by number of partitions %D", numVertices, nparts);
   for (i = 0; i < p->gridDim; ++i) cells[i] = nodes[i]*procs[i];
   Nr = numVertices / nparts;

@@ -57,7 +57,7 @@ PetscErrorCode PCTelescopeTestValidSubcomm(MPI_Comm comm_f,MPI_Comm comm_c,Petsc
   PetscMPIInt    *ranks_f,*ranks_c;
 
   PetscFunctionBegin;
-  PetscCheckFalse(comm_f == MPI_COMM_NULL,PETSC_COMM_SELF,PETSC_ERR_SUP,"comm_f cannot be MPI_COMM_NULL");
+  PetscCheck(comm_f != MPI_COMM_NULL,PETSC_COMM_SELF,PETSC_ERR_SUP,"comm_f cannot be MPI_COMM_NULL");
 
   PetscCallMPI(MPI_Comm_group(comm_f,&group_f));
   if (comm_c != MPI_COMM_NULL) {
@@ -526,7 +526,7 @@ static PetscErrorCode PCSetUp_Telescope(PC pc)
       PetscCall(DMGetCoarseDM(dm,&dm_coarse_partition));
       if (dm_coarse_partition) { cnt = 1; }
       PetscCallMPI(MPI_Allreduce(MPI_IN_PLACE,&cnt,1,MPI_INT,MPI_SUM,comm_fine));
-      PetscCheckFalse(cnt == 0,comm_fine,PETSC_ERR_SUP,"Zero instances of a coarse DM were found");
+      PetscCheck(cnt != 0,comm_fine,PETSC_ERR_SUP,"Zero instances of a coarse DM were found");
 
       PetscCallMPI(MPI_Comm_size(comm_fine,&csize_fine));
       if (dm_coarse_partition) {
@@ -659,7 +659,7 @@ static PetscErrorCode PCApplyRichardson_Telescope(PC pc,Vec x,Vec y,Vec w,PetscR
   scatter = sred->scatter;
   yred    = sred->yred;
 
-  PetscCheckFalse(its > 1,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"PCApplyRichardson_Telescope only supports max_it = 1");
+  PetscCheck(its <= 1,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"PCApplyRichardson_Telescope only supports max_it = 1");
   *reason = (PCRichardsonConvergedReason)0;
 
   if (!zeroguess) {
@@ -797,8 +797,8 @@ static PetscErrorCode PCTelescopeSetReductionFactor_Telescope(PC pc,PetscInt fac
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)pc),&size));
-  PetscCheckFalse(fact <= 0,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONG,"Reduction factor of telescoping PC %D must be positive",fact);
-  PetscCheckFalse(fact > size,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONG,"Reduction factor of telescoping PC %D must be <= comm.size",fact);
+  PetscCheck(fact > 0,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONG,"Reduction factor of telescoping PC %D must be positive",fact);
+  PetscCheck(fact <= size,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONG,"Reduction factor of telescoping PC %D must be <= comm.size",fact);
   red->redfactor = fact;
   PetscFunctionReturn(0);
 }

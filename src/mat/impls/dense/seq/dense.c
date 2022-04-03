@@ -1065,7 +1065,7 @@ static PetscErrorCode MatSOR_SeqDense(Mat A,Vec bb,PetscReal omega,MatSORType fl
   PetscCall(VecGetArray(xx,&x));
   PetscCall(VecGetArrayRead(bb,&b));
   its  = its*lits;
-  PetscCheckFalse(its <= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Relaxation requires global its %" PetscInt_FMT " and local its %" PetscInt_FMT " both positive",its,lits);
+  PetscCheck(its > 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Relaxation requires global its %" PetscInt_FMT " and local its %" PetscInt_FMT " both positive",its,lits);
   while (its--) {
     if (flag & SOR_FORWARD_SWEEP || flag & SOR_LOCAL_FORWARD_SWEEP) {
       for (i=0; i<m; i++) {
@@ -1366,8 +1366,8 @@ PetscErrorCode MatLoad_Dense_Binary(Mat mat,PetscViewer viewer)
     PetscCall(PetscViewerBinaryRead(viewer,header,4,NULL,PETSC_INT));
     PetscCheckFalse(header[0] != MAT_FILE_CLASSID,PetscObjectComm((PetscObject)viewer),PETSC_ERR_FILE_UNEXPECTED,"Not a matrix object in file");
     M = header[1]; N = header[2];
-    PetscCheckFalse(M < 0,PetscObjectComm((PetscObject)viewer),PETSC_ERR_FILE_UNEXPECTED,"Matrix row size (%" PetscInt_FMT ") in file is negative",M);
-    PetscCheckFalse(N < 0,PetscObjectComm((PetscObject)viewer),PETSC_ERR_FILE_UNEXPECTED,"Matrix column size (%" PetscInt_FMT ") in file is negative",N);
+    PetscCheck(M >= 0,PetscObjectComm((PetscObject)viewer),PETSC_ERR_FILE_UNEXPECTED,"Matrix row size (%" PetscInt_FMT ") in file is negative",M);
+    PetscCheck(N >= 0,PetscObjectComm((PetscObject)viewer),PETSC_ERR_FILE_UNEXPECTED,"Matrix column size (%" PetscInt_FMT ") in file is negative",N);
     nz = header[3];
     PetscCheckFalse(nz != MATRIX_BINARY_FORMAT_DENSE && nz < 0,PetscObjectComm((PetscObject)viewer),PETSC_ERR_FILE_UNEXPECTED,"Unknown matrix format %" PetscInt_FMT " in file",nz);
   } else {
@@ -3267,7 +3267,7 @@ PetscErrorCode MatCreate_SeqDense(Mat B)
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)B),&size));
-  PetscCheckFalse(size > 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Comm must be of size 1");
+  PetscCheck(size <= 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Comm must be of size 1");
 
   PetscCall(PetscNewLog(B,&b));
   PetscCall(PetscMemcpy(B->ops,&MatOps_Values,sizeof(struct _MatOps)));

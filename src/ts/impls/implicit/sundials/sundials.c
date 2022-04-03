@@ -329,8 +329,8 @@ PetscErrorCode TSSetUp_Sundials(TS ts)
   if (cvode->mindt > 0) {
     flag = CVodeSetMinStep(mem,(realtype)cvode->mindt);
     if (flag) {
-      PetscCheckFalse(flag == CV_MEM_NULL,PetscObjectComm((PetscObject)ts),PETSC_ERR_LIB,"CVodeSetMinStep() failed, cvode_mem pointer is NULL");
-      else PetscCheckFalse(flag == CV_ILL_INPUT,PetscObjectComm((PetscObject)ts),PETSC_ERR_LIB,"CVodeSetMinStep() failed, hmin is nonpositive or it exceeds the maximum allowable step size");
+      PetscCheck(flag != CV_MEM_NULL,PetscObjectComm((PetscObject)ts),PETSC_ERR_LIB,"CVodeSetMinStep() failed, cvode_mem pointer is NULL");
+      else PetscCheck(flag != CV_ILL_INPUT,PetscObjectComm((PetscObject)ts),PETSC_ERR_LIB,"CVodeSetMinStep() failed, hmin is nonpositive or it exceeds the maximum allowable step size");
       else SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_LIB,"CVodeSetMinStep() failed");
     }
   }

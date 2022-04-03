@@ -3208,7 +3208,7 @@ PetscErrorCode PCBDDCAdaptiveSelection(PC pc)
 #else
       PetscStackCallBLAS("LAPACKsygvx",LAPACKsygvx_(&B_itype,"V","V","L",&B_N,St,&B_N,S,&B_N,&zero,&thresh,&B_dummyint,&B_dummyint,&eps,&B_neigs,eigs,eigv,&B_N,&lwork,&B_lwork,B_iwork,B_ifail,&B_ierr));
 #endif
-      PetscCheckFalse(B_ierr != 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in query to SYGVX Lapack routine %d",(int)B_ierr);
+      PetscCheck(B_ierr == 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in query to SYGVX Lapack routine %d",(int)B_ierr);
       PetscCall(PetscFPTrapPop());
     } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Not yet implemented");
   }
@@ -3550,8 +3550,8 @@ PetscErrorCode PCBDDCAdaptiveSelection(PC pc)
         }
         PetscCall(PetscFPTrapPop());
         if (B_ierr) {
-          PetscCheckFalse(B_ierr < 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in SYGVX Lapack routine: illegal value for argument %d",-(int)B_ierr);
-          else PetscCheckFalse(B_ierr <= B_N,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in SYGVX Lapack routine: %d eigenvalues failed to converge",(int)B_ierr);
+          PetscCheck(B_ierr >= 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in SYGVX Lapack routine: illegal value for argument %d",-(int)B_ierr);
+          else PetscCheck(B_ierr > B_N,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in SYGVX Lapack routine: %d eigenvalues failed to converge",(int)B_ierr);
           else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in SYGVX Lapack routine: leading minor of order %d is not positive definite",(int)B_ierr-B_N-1);
         }
 
@@ -3605,8 +3605,8 @@ PetscErrorCode PCBDDCAdaptiveSelection(PC pc)
           B_neigs += B_neigs2;
         }
         if (B_ierr) {
-          PetscCheckFalse(B_ierr < 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in SYGVX Lapack routine: illegal value for argument %d",-(int)B_ierr);
-          else PetscCheckFalse(B_ierr <= B_N,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in SYGVX Lapack routine: %d eigenvalues failed to converge",(int)B_ierr);
+          PetscCheck(B_ierr >= 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in SYGVX Lapack routine: illegal value for argument %d",-(int)B_ierr);
+          else PetscCheck(B_ierr > B_N,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in SYGVX Lapack routine: %d eigenvalues failed to converge",(int)B_ierr);
           else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in SYGVX Lapack routine: leading minor of order %d is not positive definite",(int)B_ierr-B_N-1);
         }
         if (pcbddc->dbg_flag) {
@@ -3918,7 +3918,7 @@ PetscErrorCode PCBDDCSetUpCorrection(PC pc, PetscScalar **coarse_submat_vals_n)
   /* vertices in boundary numbering */
   PetscCall(PetscMalloc1(n_vertices,&idx_V_B));
   PetscCall(ISGlobalToLocalMappingApply(pcis->BtoNmap,IS_GTOLM_DROP,n_vertices,pcbddc->local_primal_ref_node,&i,idx_V_B));
-  PetscCheckFalse(i != n_vertices,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Error in boundary numbering for BDDC vertices! %D != %D",n_vertices,i);
+  PetscCheck(i == n_vertices,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Error in boundary numbering for BDDC vertices! %D != %D",n_vertices,i);
 
   /* Subdomain contribution (Non-overlapping) to coarse matrix  */
   PetscCall(PetscCalloc1(pcbddc->local_primal_size*pcbddc->local_primal_size,&coarse_submat_vals));
@@ -4496,7 +4496,7 @@ PetscErrorCode PCBDDCSetUpCorrection(PC pc, PetscScalar **coarse_submat_vals_n)
       if (PetscDefined(USE_DEBUG)) { /* The following VecSetValues() expects a sequential matrix */
         PetscMPIInt rank;
         PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)pcbddc->coarse_phi_B),&rank));
-        PetscCheckFalse(rank > 1,PetscObjectComm((PetscObject)pcbddc->coarse_phi_B),PETSC_ERR_PLIB,"Expected a sequential dense matrix");
+        PetscCheck(rank <= 1,PetscObjectComm((PetscObject)pcbddc->coarse_phi_B),PETSC_ERR_PLIB,"Expected a sequential dense matrix");
       }
       PetscCall(VecSetValues(v,1,&idx_V_B[i],&one,INSERT_VALUES));
       PetscCall(VecAssemblyBegin(v)); /* If v is on device, hope VecSetValues() eventually implemented by a host to device memcopy */
@@ -4512,7 +4512,7 @@ PetscErrorCode PCBDDCSetUpCorrection(PC pc, PetscScalar **coarse_submat_vals_n)
         if (PetscDefined(USE_DEBUG)) { /* The following VecSetValues() expects a sequential matrix */
           PetscMPIInt rank;
           PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)pcbddc->coarse_phi_D),&rank));
-          PetscCheckFalse(rank > 1,PetscObjectComm((PetscObject)pcbddc->coarse_phi_D),PETSC_ERR_PLIB,"Expected a sequential dense matrix");
+          PetscCheck(rank <= 1,PetscObjectComm((PetscObject)pcbddc->coarse_phi_D),PETSC_ERR_PLIB,"Expected a sequential dense matrix");
         }
         for (j=0;j<pcbddc->benign_n;j++) PetscCall(VecSetValues(v,1,&p0_lidx_I[j],&zero,INSERT_VALUES));
         PetscCall(VecAssemblyBegin(v));
@@ -6738,7 +6738,7 @@ PetscErrorCode PCBDDCConstraintsSetUp(PC pc)
     PetscCall(PetscBTCreate(pcis->n_B,&is_primal));
     PetscCall(PetscMalloc1(total_primal_vertices,&aux_primal_numbering_B));
     PetscCall(ISGlobalToLocalMappingApply(pcis->BtoNmap,IS_GTOLM_DROP,total_primal_vertices,pcbddc->local_primal_ref_node,&i,aux_primal_numbering_B));
-    PetscCheckFalse(i != total_primal_vertices,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Error in boundary numbering for BDDC vertices! %D != %D",total_primal_vertices,i);
+    PetscCheck(i == total_primal_vertices,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Error in boundary numbering for BDDC vertices! %D != %D",total_primal_vertices,i);
     for (i=0;i<total_primal_vertices;i++) {
       PetscCall(PetscBTSet(is_primal,aux_primal_numbering_B[i]));
     }
@@ -7600,7 +7600,7 @@ PetscErrorCode PCBDDCMatISSubassemble(Mat mat, IS is_sends, PetscInt n_subdomain
   PetscValidLogicalCollectiveInt(mat,nis,8);
   PetscValidLogicalCollectiveInt(mat,nvecs,10);
   if (nvecs) {
-    PetscCheckFalse(nvecs > 1,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Just 1 vector supported");
+    PetscCheck(nvecs <= 1,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Just 1 vector supported");
     PetscValidHeaderSpecific(nnsp_vec[0],VEC_CLASSID,11);
   }
   /* further checks */
@@ -8277,7 +8277,7 @@ PetscErrorCode PCBDDCSetUpCoarseSolver(PC pc,PetscScalar* coarse_submat_vals)
         PetscCall(ISGetLocalSize(pcbddc->nedclocal,&tsize));
         PetscCall(ISGetIndices(pcbddc->nedclocal,&idxs));
         PetscCall(ISGlobalToLocalMappingApply(tmap,IS_GTOLM_DROP,tsize,idxs,&nout,tidxs));
-        PetscCheckFalse(tsize != nout,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Failed when mapping coarse nedelec field! %D != %D",tsize,nout);
+        PetscCheck(tsize == nout,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Failed when mapping coarse nedelec field! %D != %D",tsize,nout);
         PetscCall(ISRestoreIndices(pcbddc->nedclocal,&idxs));
       }
       PetscCall(ISLocalToGlobalMappingApply(coarse_islg,nout,tidxs,tidxs2));
@@ -8301,7 +8301,7 @@ PetscErrorCode PCBDDCSetUpCoarseSolver(PC pc,PetscScalar* coarse_submat_vals)
       PetscCall(ISGetLocalSize(corners,&tsize));
       PetscCall(ISGetIndices(corners,&idxs));
       PetscCall(ISGlobalToLocalMappingApply(tmap,IS_GTOLM_DROP,tsize,idxs,&nout,tidxs));
-      PetscCheckFalse(tsize != nout,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Failed when mapping corners! %D != %D",tsize,nout);
+      PetscCheck(tsize == nout,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Failed when mapping corners! %D != %D",tsize,nout);
       PetscCall(ISRestoreIndices(corners,&idxs));
       PetscCall(PCBDDCGraphRestoreCandidatesIS(pcbddc->mat_graph,NULL,NULL,NULL,NULL,&corners));
       PetscCall(ISLocalToGlobalMappingApply(coarse_islg,nout,tidxs,tidxs2));

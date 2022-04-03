@@ -670,7 +670,7 @@ static PetscErrorCode VecRestoreArrayRead_Nest(Vec X,const PetscScalar **x)
 static PetscErrorCode VecConcatenate_Nest(PetscInt nx, const Vec X[], Vec *Y, IS *x_is[])
 {
   PetscFunctionBegin;
-  PetscCheckFalse(nx > 0,PetscObjectComm((PetscObject)(*X)), PETSC_ERR_SUP, "VecConcatenate() is not supported for VecNest");
+  PetscCheck(nx <= 0,PetscObjectComm((PetscObject)(*X)), PETSC_ERR_SUP, "VecConcatenate() is not supported for VecNest");
   PetscFunctionReturn(0);
 }
 
@@ -1041,16 +1041,16 @@ static PetscErrorCode VecSetUp_NestIS_Private(Vec V,PetscInt nb,IS is[])
     for (i=0; i<ctx->nb; i++) {
       PetscCall(ISGetSize(is[i],&M));
       PetscCall(VecGetSize(ctx->v[i],&N));
-      PetscCheckFalse(M != N,PetscObjectComm((PetscObject)V),PETSC_ERR_ARG_INCOMP,"In slot %" PetscInt_FMT ", IS of size %" PetscInt_FMT " is not compatible with Vec of size %" PetscInt_FMT,i,M,N);
+      PetscCheck(M == N,PetscObjectComm((PetscObject)V),PETSC_ERR_ARG_INCOMP,"In slot %" PetscInt_FMT ", IS of size %" PetscInt_FMT " is not compatible with Vec of size %" PetscInt_FMT,i,M,N);
       PetscCall(ISGetLocalSize(is[i],&m));
       PetscCall(VecGetLocalSize(ctx->v[i],&n));
-      PetscCheckFalse(m != n,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"In slot %" PetscInt_FMT ", IS of local size %" PetscInt_FMT " is not compatible with Vec of local size %" PetscInt_FMT,i,m,n);
+      PetscCheck(m == n,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"In slot %" PetscInt_FMT ", IS of local size %" PetscInt_FMT " is not compatible with Vec of local size %" PetscInt_FMT,i,m,n);
       if (PetscDefined(USE_DEBUG)) { /* This test can be expensive */
         PetscInt  start;
         PetscBool contiguous;
         PetscCall(ISContiguousLocal(is[i],offset,offset+n,&start,&contiguous));
         PetscCheck(contiguous,PetscObjectComm((PetscObject)V),PETSC_ERR_SUP,"Index set %" PetscInt_FMT " is not contiguous with layout of matching vector",i);
-        PetscCheckFalse(start != 0,PetscObjectComm((PetscObject)V),PETSC_ERR_SUP,"Index set %" PetscInt_FMT " introduces overlap or a hole",i);
+        PetscCheck(start == 0,PetscObjectComm((PetscObject)V),PETSC_ERR_SUP,"Index set %" PetscInt_FMT " introduces overlap or a hole",i);
       }
       PetscCall(PetscObjectReference((PetscObject)is[i]));
       ctx->is[i] = is[i];

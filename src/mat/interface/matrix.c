@@ -2252,13 +2252,13 @@ PetscErrorCode MatSetValuesBlockedLocal(Mat mat,PetscInt nrow,const PetscInt iro
     PetscInt irbs, rbs;
     PetscCall(MatGetBlockSizes(mat, &rbs, NULL));
     PetscCall(ISLocalToGlobalMappingGetBlockSize(mat->rmap->mapping,&irbs));
-    PetscCheckFalse(rbs != irbs,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Different row block sizes! mat %" PetscInt_FMT ", row l2g map %" PetscInt_FMT,rbs,irbs);
+    PetscCheck(rbs == irbs,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Different row block sizes! mat %" PetscInt_FMT ", row l2g map %" PetscInt_FMT,rbs,irbs);
   }
   if (PetscUnlikelyDebug(mat->cmap->mapping)) {
     PetscInt icbs, cbs;
     PetscCall(MatGetBlockSizes(mat,NULL,&cbs));
     PetscCall(ISLocalToGlobalMappingGetBlockSize(mat->cmap->mapping,&icbs));
-    PetscCheckFalse(cbs != icbs,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Different col block sizes! mat %" PetscInt_FMT ", col l2g map %" PetscInt_FMT,cbs,icbs);
+    PetscCheck(cbs == icbs,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Different col block sizes! mat %" PetscInt_FMT ", col l2g map %" PetscInt_FMT,cbs,icbs);
   }
   PetscCall(PetscLogEventBegin(MAT_SetValues,mat,0,0,0));
   if (mat->ops->setvaluesblockedlocal) {
@@ -2321,7 +2321,7 @@ PetscErrorCode MatMultDiagonalBlock(Mat mat,Vec x,Vec y)
 
   PetscCheck(mat->assembled,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled matrix");
   PetscCheck(!mat->factortype,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"Not for factored matrix");
-  PetscCheckFalse(x == y,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"x and y must be different vectors");
+  PetscCheck(x != y,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"x and y must be different vectors");
   MatCheckPreallocated(mat,1);
 
   PetscCheck(mat->ops->multdiagonalblock,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Matrix type %s does not have a multiply defined",((PetscObject)mat)->type_name);
@@ -2360,7 +2360,7 @@ PetscErrorCode MatMult(Mat mat,Vec x,Vec y)
   PetscValidHeaderSpecific(y,VEC_CLASSID,3);
   PetscCheck(mat->assembled,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled matrix");
   PetscCheck(!mat->factortype,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"Not for factored matrix");
-  PetscCheckFalse(x == y,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"x and y must be different vectors");
+  PetscCheck(x != y,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"x and y must be different vectors");
   PetscCheckFalse(mat->cmap->N != x->map->N,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec x: global dim %" PetscInt_FMT " %" PetscInt_FMT,mat->cmap->N,x->map->N);
   PetscCheckFalse(mat->rmap->N != y->map->N,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec y: global dim %" PetscInt_FMT " %" PetscInt_FMT,mat->rmap->N,y->map->N);
   PetscCheckFalse(mat->cmap->n != x->map->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Mat mat,Vec x: local dim %" PetscInt_FMT " %" PetscInt_FMT,mat->cmap->n,x->map->n);
@@ -2470,7 +2470,7 @@ PetscErrorCode MatMultHermitianTranspose(Mat mat,Vec x,Vec y)
 
   PetscCheck(mat->assembled,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled matrix");
   PetscCheck(!mat->factortype,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"Not for factored matrix");
-  PetscCheckFalse(x == y,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"x and y must be different vectors");
+  PetscCheck(x != y,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"x and y must be different vectors");
   PetscCheckFalse(mat->cmap->N != y->map->N,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec y: global dim %" PetscInt_FMT " %" PetscInt_FMT,mat->cmap->N,y->map->N);
   PetscCheckFalse(mat->rmap->N != x->map->N,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec x: global dim %" PetscInt_FMT " %" PetscInt_FMT,mat->rmap->N,x->map->N);
   PetscCheckFalse(mat->cmap->n != y->map->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Mat mat,Vec y: local dim %" PetscInt_FMT " %" PetscInt_FMT,mat->cmap->n,y->map->n);
@@ -2540,7 +2540,7 @@ PetscErrorCode MatMultAdd(Mat mat,Vec v1,Vec v2,Vec v3)
      PetscCheckFalse(mat->rmap->N != v3->map->N,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Mat mat,Vec v3: global dim %" PetscInt_FMT " %" PetscInt_FMT,mat->rmap->N,v3->map->N); */
   PetscCheckFalse(mat->rmap->n != v3->map->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Mat mat,Vec v3: local dim %" PetscInt_FMT " %" PetscInt_FMT,mat->rmap->n,v3->map->n);
   PetscCheckFalse(mat->rmap->n != v2->map->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Mat mat,Vec v2: local dim %" PetscInt_FMT " %" PetscInt_FMT,mat->rmap->n,v2->map->n);
-  PetscCheckFalse(v1 == v3,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_IDN,"v1 and v3 must be different vectors");
+  PetscCheck(v1 != v3,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_IDN,"v1 and v3 must be different vectors");
   MatCheckPreallocated(mat,1);
 
   PetscCheck(mat->ops->multadd,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"No MatMultAdd() for matrix type %s",((PetscObject)mat)->type_name);
@@ -2589,7 +2589,7 @@ PetscErrorCode MatMultTransposeAdd(Mat mat,Vec v1,Vec v2,Vec v3)
   PetscCheckFalse(mat->rmap->N != v1->map->N,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec v1: global dim %" PetscInt_FMT " %" PetscInt_FMT,mat->rmap->N,v1->map->N);
   PetscCheckFalse(mat->cmap->N != v2->map->N,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec v2: global dim %" PetscInt_FMT " %" PetscInt_FMT,mat->cmap->N,v2->map->N);
   PetscCheckFalse(mat->cmap->N != v3->map->N,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec v3: global dim %" PetscInt_FMT " %" PetscInt_FMT,mat->cmap->N,v3->map->N);
-  PetscCheckFalse(v1 == v3,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_IDN,"v1 and v3 must be different vectors");
+  PetscCheck(v1 != v3,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_IDN,"v1 and v3 must be different vectors");
   PetscCheck(op,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Mat type %s",((PetscObject)mat)->type_name);
   MatCheckPreallocated(mat,1);
 
@@ -2633,7 +2633,7 @@ PetscErrorCode MatMultHermitianTransposeAdd(Mat mat,Vec v1,Vec v2,Vec v3)
 
   PetscCheck(mat->assembled,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled matrix");
   PetscCheck(!mat->factortype,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"Not for factored matrix");
-  PetscCheckFalse(v1 == v3,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_IDN,"v1 and v3 must be different vectors");
+  PetscCheck(v1 != v3,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_IDN,"v1 and v3 must be different vectors");
   PetscCheckFalse(mat->rmap->N != v1->map->N,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec v1: global dim %" PetscInt_FMT " %" PetscInt_FMT,mat->rmap->N,v1->map->N);
   PetscCheckFalse(mat->cmap->N != v2->map->N,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec v2: global dim %" PetscInt_FMT " %" PetscInt_FMT,mat->cmap->N,v2->map->N);
   PetscCheckFalse(mat->cmap->N != v3->map->N,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec v3: global dim %" PetscInt_FMT " %" PetscInt_FMT,mat->cmap->N,v3->map->N);
@@ -3384,7 +3384,7 @@ PetscErrorCode MatSolve(Mat mat,Vec b,Vec x)
   PetscValidHeaderSpecific(x,VEC_CLASSID,3);
   PetscCheckSameComm(mat,1,b,2);
   PetscCheckSameComm(mat,1,x,3);
-  PetscCheckFalse(x == b,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_IDN,"x and b must be different vectors");
+  PetscCheck(x != b,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_IDN,"x and b must be different vectors");
   PetscCheckFalse(mat->cmap->N != x->map->N,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec x: global dim %" PetscInt_FMT " %" PetscInt_FMT,mat->cmap->N,x->map->N);
   PetscCheckFalse(mat->rmap->N != b->map->N,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec b: global dim %" PetscInt_FMT " %" PetscInt_FMT,mat->rmap->N,b->map->N);
   PetscCheckFalse(mat->rmap->n != b->map->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Mat mat,Vec b: local dim %" PetscInt_FMT " %" PetscInt_FMT,mat->rmap->n,b->map->n);
@@ -3538,7 +3538,7 @@ PetscErrorCode MatMatSolveTranspose(Mat A,Mat B,Mat X)
   PetscValidHeaderSpecific(X,MAT_CLASSID,3);
   PetscCheckSameComm(A,1,B,2);
   PetscCheckSameComm(A,1,X,3);
-  PetscCheckFalse(X == B,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_IDN,"X and B must be different matrices");
+  PetscCheck(X != B,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_IDN,"X and B must be different matrices");
   PetscCheckFalse(A->cmap->N != X->rmap->N,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_SIZ,"Mat A,Mat X: global dim %" PetscInt_FMT " %" PetscInt_FMT,A->cmap->N,X->rmap->N);
   PetscCheckFalse(A->rmap->N != B->rmap->N,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_SIZ,"Mat A,Mat B: global dim %" PetscInt_FMT " %" PetscInt_FMT,A->rmap->N,B->rmap->N);
   PetscCheckFalse(A->rmap->n != B->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Mat A,Mat B: local dim %" PetscInt_FMT " %" PetscInt_FMT,A->rmap->n,B->rmap->n);
@@ -3593,7 +3593,7 @@ PetscErrorCode MatMatTransposeSolve(Mat A,Mat Bt,Mat X)
   PetscCheckSameComm(A,1,Bt,2);
   PetscCheckSameComm(A,1,X,3);
 
-  PetscCheckFalse(X == Bt,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_IDN,"X and B must be different matrices");
+  PetscCheck(X != Bt,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_IDN,"X and B must be different matrices");
   PetscCheckFalse(A->cmap->N != X->rmap->N,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_SIZ,"Mat A,Mat X: global dim %" PetscInt_FMT " %" PetscInt_FMT,A->cmap->N,X->rmap->N);
   PetscCheckFalse(A->rmap->N != Bt->cmap->N,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_SIZ,"Mat A,Mat Bt: global dim %" PetscInt_FMT " %" PetscInt_FMT,A->rmap->N,Bt->cmap->N);
   PetscCheckFalse(X->cmap->N < Bt->rmap->N,PetscObjectComm((PetscObject)X),PETSC_ERR_ARG_SIZ,"Solution matrix must have same number of columns as row number of the rhs matrix");
@@ -3652,7 +3652,7 @@ PetscErrorCode MatForwardSolve(Mat mat,Vec b,Vec x)
   PetscValidHeaderSpecific(x,VEC_CLASSID,3);
   PetscCheckSameComm(mat,1,b,2);
   PetscCheckSameComm(mat,1,x,3);
-  PetscCheckFalse(x == b,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_IDN,"x and b must be different vectors");
+  PetscCheck(x != b,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_IDN,"x and b must be different vectors");
   PetscCheckFalse(mat->cmap->N != x->map->N,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec x: global dim %" PetscInt_FMT " %" PetscInt_FMT,mat->cmap->N,x->map->N);
   PetscCheckFalse(mat->rmap->N != b->map->N,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec b: global dim %" PetscInt_FMT " %" PetscInt_FMT,mat->rmap->N,b->map->N);
   PetscCheckFalse(mat->rmap->n != b->map->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Mat mat,Vec b: local dim %" PetscInt_FMT " %" PetscInt_FMT,mat->rmap->n,b->map->n);
@@ -3710,7 +3710,7 @@ PetscErrorCode MatBackwardSolve(Mat mat,Vec b,Vec x)
   PetscValidHeaderSpecific(x,VEC_CLASSID,3);
   PetscCheckSameComm(mat,1,b,2);
   PetscCheckSameComm(mat,1,x,3);
-  PetscCheckFalse(x == b,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_IDN,"x and b must be different vectors");
+  PetscCheck(x != b,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_IDN,"x and b must be different vectors");
   PetscCheckFalse(mat->cmap->N != x->map->N,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec x: global dim %" PetscInt_FMT " %" PetscInt_FMT,mat->cmap->N,x->map->N);
   PetscCheckFalse(mat->rmap->N != b->map->N,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec b: global dim %" PetscInt_FMT " %" PetscInt_FMT,mat->rmap->N,b->map->N);
   PetscCheckFalse(mat->rmap->n != b->map->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Mat mat,Vec b: local dim %" PetscInt_FMT " %" PetscInt_FMT,mat->rmap->n,b->map->n);
@@ -3764,7 +3764,7 @@ PetscErrorCode MatSolveAdd(Mat mat,Vec b,Vec y,Vec x)
   PetscCheckSameComm(mat,1,b,2);
   PetscCheckSameComm(mat,1,y,3);
   PetscCheckSameComm(mat,1,x,4);
-  PetscCheckFalse(x == b,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_IDN,"x and b must be different vectors");
+  PetscCheck(x != b,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_IDN,"x and b must be different vectors");
   PetscCheckFalse(mat->cmap->N != x->map->N,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec x: global dim %" PetscInt_FMT " %" PetscInt_FMT,mat->cmap->N,x->map->N);
   PetscCheckFalse(mat->rmap->N != b->map->N,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec b: global dim %" PetscInt_FMT " %" PetscInt_FMT,mat->rmap->N,b->map->N);
   PetscCheckFalse(mat->rmap->N != y->map->N,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec y: global dim %" PetscInt_FMT " %" PetscInt_FMT,mat->rmap->N,y->map->N);
@@ -3834,7 +3834,7 @@ PetscErrorCode MatSolveTranspose(Mat mat,Vec b,Vec x)
   PetscValidHeaderSpecific(x,VEC_CLASSID,3);
   PetscCheckSameComm(mat,1,b,2);
   PetscCheckSameComm(mat,1,x,3);
-  PetscCheckFalse(x == b,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_IDN,"x and b must be different vectors");
+  PetscCheck(x != b,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_IDN,"x and b must be different vectors");
   PetscCheckFalse(mat->rmap->N != x->map->N,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec x: global dim %" PetscInt_FMT " %" PetscInt_FMT,mat->rmap->N,x->map->N);
   PetscCheckFalse(mat->cmap->N != b->map->N,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec b: global dim %" PetscInt_FMT " %" PetscInt_FMT,mat->cmap->N,b->map->N);
   if (!mat->rmap->N && !mat->cmap->N) PetscFunctionReturn(0);
@@ -3893,7 +3893,7 @@ PetscErrorCode MatSolveTransposeAdd(Mat mat,Vec b,Vec y,Vec x)
   PetscCheckSameComm(mat,1,b,2);
   PetscCheckSameComm(mat,1,y,3);
   PetscCheckSameComm(mat,1,x,4);
-  PetscCheckFalse(x == b,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_IDN,"x and b must be different vectors");
+  PetscCheck(x != b,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_IDN,"x and b must be different vectors");
   PetscCheckFalse(mat->rmap->N != x->map->N,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec x: global dim %" PetscInt_FMT " %" PetscInt_FMT,mat->rmap->N,x->map->N);
   PetscCheckFalse(mat->cmap->N != b->map->N,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec b: global dim %" PetscInt_FMT " %" PetscInt_FMT,mat->cmap->N,b->map->N);
   PetscCheckFalse(mat->cmap->N != y->map->N,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec y: global dim %" PetscInt_FMT " %" PetscInt_FMT,mat->cmap->N,y->map->N);
@@ -3998,9 +3998,9 @@ PetscErrorCode MatSOR(Mat mat,Vec b,PetscReal omega,MatSORType flag,PetscReal sh
   PetscCheckFalse(mat->cmap->N != x->map->N,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec x: global dim %" PetscInt_FMT " %" PetscInt_FMT,mat->cmap->N,x->map->N);
   PetscCheckFalse(mat->rmap->N != b->map->N,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Mat mat,Vec b: global dim %" PetscInt_FMT " %" PetscInt_FMT,mat->rmap->N,b->map->N);
   PetscCheckFalse(mat->rmap->n != b->map->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Mat mat,Vec b: local dim %" PetscInt_FMT " %" PetscInt_FMT,mat->rmap->n,b->map->n);
-  PetscCheckFalse(its <= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Relaxation requires global its %" PetscInt_FMT " positive",its);
-  PetscCheckFalse(lits <= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Relaxation requires local its %" PetscInt_FMT " positive",lits);
-  PetscCheckFalse(b == x,PETSC_COMM_SELF,PETSC_ERR_ARG_IDN,"b and x vector cannot be the same");
+  PetscCheck(its > 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Relaxation requires global its %" PetscInt_FMT " positive",its);
+  PetscCheck(lits > 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Relaxation requires local its %" PetscInt_FMT " positive",lits);
+  PetscCheck(b != x,PETSC_COMM_SELF,PETSC_ERR_ARG_IDN,"b and x vector cannot be the same");
 
   MatCheckPreallocated(mat,1);
   PetscCall(PetscLogEventBegin(MAT_SOR,mat,b,x,0));
@@ -6930,7 +6930,7 @@ PetscErrorCode MatDestroyMatrices(PetscInt n,Mat *mat[])
 
   PetscFunctionBegin;
   if (!*mat) PetscFunctionReturn(0);
-  PetscCheckFalse(n < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Trying to destroy negative number of matrices %" PetscInt_FMT,n);
+  PetscCheck(n >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Trying to destroy negative number of matrices %" PetscInt_FMT,n);
   PetscValidPointer(mat,2);
 
   for (i=0; i<n; i++) {
@@ -6967,7 +6967,7 @@ PetscErrorCode MatDestroySubMatrices(PetscInt n,Mat *mat[])
   PetscFunctionBegin;
   if (!*mat) PetscFunctionReturn(0);
   /* mat[] is an array of length n+1, see MatCreateSubMatrices_xxx() */
-  PetscCheckFalse(n < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Trying to destroy negative number of matrices %" PetscInt_FMT,n);
+  PetscCheck(n >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Trying to destroy negative number of matrices %" PetscInt_FMT,n);
   PetscValidPointer(mat,2);
 
   mat0 = (*mat)[0];
@@ -7065,7 +7065,7 @@ PetscErrorCode MatIncreaseOverlap(Mat mat,PetscInt n,IS is[],PetscInt ov)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
   PetscValidType(mat,1);
-  PetscCheckFalse(n < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must have one or more domains, you have %" PetscInt_FMT,n);
+  PetscCheck(n >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must have one or more domains, you have %" PetscInt_FMT,n);
   if (n) {
     PetscValidPointer(is,3);
     PetscValidHeaderSpecific(*is,IS_CLASSID,3);
@@ -7118,7 +7118,7 @@ PetscErrorCode MatIncreaseOverlapSplit(Mat mat,PetscInt n,IS is[],PetscInt ov)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
   PetscValidType(mat,1);
-  PetscCheckFalse(n < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must have one or more domains, you have %" PetscInt_FMT,n);
+  PetscCheck(n >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must have one or more domains, you have %" PetscInt_FMT,n);
   if (n) {
     PetscValidPointer(is,3);
     PetscValidHeaderSpecific(*is,IS_CLASSID,3);
@@ -7251,10 +7251,10 @@ PetscErrorCode MatSetVariableBlockSizes(Mat mat,PetscInt nblocks,PetscInt *bsize
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
-  PetscCheckFalse(nblocks < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Number of local blocks must be great than or equal to zero");
+  PetscCheck(nblocks >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Number of local blocks must be great than or equal to zero");
   PetscCall(MatGetLocalSize(mat,&nlocal,NULL));
   for (i=0; i<nblocks; i++) ncnt += bsizes[i];
-  PetscCheckFalse(ncnt != nlocal,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Sum of local block sizes %" PetscInt_FMT " does not equal local size of matrix %" PetscInt_FMT,ncnt,nlocal);
+  PetscCheck(ncnt == nlocal,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Sum of local block sizes %" PetscInt_FMT " does not equal local size of matrix %" PetscInt_FMT,ncnt,nlocal);
   PetscCall(PetscFree(mat->bsizes));
   mat->nblocks = nblocks;
   PetscCall(PetscMalloc1(nblocks,&mat->bsizes));
@@ -7906,7 +7906,7 @@ PetscErrorCode MatCreateSubMatrix(Mat mat,IS isrow,IS iscol,MatReuse cll,Mat *ne
   if (cll == MAT_REUSE_MATRIX) PetscValidHeaderSpecific(*newmat,MAT_CLASSID,5);
   PetscValidType(mat,1);
   PetscCheck(!mat->factortype,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"Not for factored matrix");
-  PetscCheckFalse(cll == MAT_IGNORE_MATRIX,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"Cannot use MAT_IGNORE_MATRIX");
+  PetscCheck(cll != MAT_IGNORE_MATRIX,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"Cannot use MAT_IGNORE_MATRIX");
 
   MatCheckPreallocated(mat,1);
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)mat),&size));
@@ -8215,7 +8215,7 @@ PetscErrorCode MatMatInterpolateAdd(Mat A,Mat x,Mat w,Mat *y)
   PetscCall(MatGetSize(A,&M,&N));
   PetscCall(MatGetSize(x,&Mx,&Nx));
   if (N == Mx) trans = PETSC_FALSE;
-  else PetscCheckFalse(M != Mx,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Size mismatch: A %" PetscInt_FMT "x%" PetscInt_FMT ", X %" PetscInt_FMT "x%" PetscInt_FMT,M,N,Mx,Nx);
+  else PetscCheck(M == Mx,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Size mismatch: A %" PetscInt_FMT "x%" PetscInt_FMT ", X %" PetscInt_FMT "x%" PetscInt_FMT,M,N,Mx,Nx);
   Mo = trans ? N : M;
   if (*y) {
     PetscCall(MatGetSize(*y,&My,&Ny));
@@ -8643,7 +8643,7 @@ PetscErrorCode MatSolves(Mat mat,Vecs b,Vecs x)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
   PetscValidType(mat,1);
-  PetscCheckFalse(x == b,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_IDN,"x and b must be different vectors");
+  PetscCheck(x != b,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_IDN,"x and b must be different vectors");
   PetscCheck(mat->factortype,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"Unfactored matrix");
   if (!mat->rmap->N && !mat->cmap->N) PetscFunctionReturn(0);
 
@@ -9310,7 +9310,7 @@ PetscErrorCode MatPtAP(Mat A,Mat P,MatReuse scall,PetscReal fill,Mat *C)
 {
   PetscFunctionBegin;
   if (scall == MAT_REUSE_MATRIX) MatCheckProduct(*C,5);
-  PetscCheckFalse(scall == MAT_INPLACE_MATRIX,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Inplace product not supported");
+  PetscCheck(scall != MAT_INPLACE_MATRIX,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Inplace product not supported");
 
   if (scall == MAT_INITIAL_MATRIX) {
     PetscCall(MatProductCreate(A,P,NULL,C));
@@ -9368,7 +9368,7 @@ PetscErrorCode MatRARt(Mat A,Mat R,MatReuse scall,PetscReal fill,Mat *C)
 {
   PetscFunctionBegin;
   if (scall == MAT_REUSE_MATRIX) MatCheckProduct(*C,5);
-  PetscCheckFalse(scall == MAT_INPLACE_MATRIX,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Inplace product not supported");
+  PetscCheck(scall != MAT_INPLACE_MATRIX,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Inplace product not supported");
 
   if (scall == MAT_INITIAL_MATRIX) {
     PetscCall(MatProductCreate(A,R,NULL,C));
@@ -9394,7 +9394,7 @@ PetscErrorCode MatRARt(Mat A,Mat R,MatReuse scall,PetscReal fill,Mat *C)
 static PetscErrorCode MatProduct_Private(Mat A,Mat B,MatReuse scall,PetscReal fill,MatProductType ptype, Mat *C)
 {
   PetscFunctionBegin;
-  PetscCheckFalse(scall == MAT_INPLACE_MATRIX,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Inplace product not supported");
+  PetscCheck(scall != MAT_INPLACE_MATRIX,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Inplace product not supported");
 
   if (scall == MAT_INITIAL_MATRIX) {
     PetscCall(PetscInfo(A,"Calling MatProduct API with MAT_INITIAL_MATRIX and product type %s\n",MatProductTypes[ptype]));
@@ -9599,7 +9599,7 @@ PetscErrorCode MatMatMatMult(Mat A,Mat B,Mat C,MatReuse scall,PetscReal fill,Mat
 {
   PetscFunctionBegin;
   if (scall == MAT_REUSE_MATRIX) MatCheckProduct(*D,6);
-  PetscCheckFalse(scall == MAT_INPLACE_MATRIX,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Inplace product not supported");
+  PetscCheck(scall != MAT_INPLACE_MATRIX,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Inplace product not supported");
 
   if (scall == MAT_INITIAL_MATRIX) {
     PetscCall(MatProductCreate(A,B,C,D));
@@ -9784,7 +9784,7 @@ PetscErrorCode   MatGetMultiProcBlock(Mat mat, MPI_Comm subComm, MatReuse scall,
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)mat),&commsize));
   PetscCallMPI(MPI_Comm_size(subComm,&subCommSize));
-  PetscCheckFalse(subCommSize > commsize,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_OUTOFRANGE,"CommSize %d < SubCommZize %d",commsize,subCommSize);
+  PetscCheck(subCommSize <= commsize,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_OUTOFRANGE,"CommSize %d < SubCommZize %d",commsize,subCommSize);
 
   PetscCheckFalse(scall == MAT_REUSE_MATRIX && *subMat == mat,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"MAT_REUSE_MATRIX means reuse the matrix passed in as the final argument, not the original matrix");
   PetscCall(PetscLogEventBegin(MAT_GetMultiProcBlock,mat,0,0,0));
@@ -10336,7 +10336,7 @@ PetscErrorCode  MatGalerkin(Mat restrct, Mat dA, Mat interpolate, MatReuse reuse
   Vec            diag;
 
   PetscFunctionBegin;
-  PetscCheckFalse(reuse == MAT_INPLACE_MATRIX,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Inplace product not supported");
+  PetscCheck(reuse != MAT_INPLACE_MATRIX,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Inplace product not supported");
   /* Construct the coarse grid matrix */
   if (interpolate == restrct) {
     PetscCall(MatPtAP(dA,interpolate,reuse,fill,A));

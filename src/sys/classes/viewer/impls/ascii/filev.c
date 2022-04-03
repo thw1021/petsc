@@ -1035,6 +1035,6 @@ PetscErrorCode PetscViewerASCIIRead(PetscViewer viewer,void *data,PetscInt num,P
     else if (ret < 0) break; /* Proxy for EOF, need to check for it in configure */
   }
   if (count) *count = i;
-  else PetscCheckFalse(ret < 0,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Insufficient data, read only %" PetscInt_FMT " < %" PetscInt_FMT " items", i, num);
+  else PetscCheck(ret >= 0,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Insufficient data, read only %" PetscInt_FMT " < %" PetscInt_FMT " items", i, num);
   PetscFunctionReturn(0);
 }

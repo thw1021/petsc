@@ -80,7 +80,7 @@ int main(int argc,char **argv)
   PetscCall(MatSetBlockSize(A,2));
   PetscCall(MatIncreaseOverlap(A,1,is+1,1));
   PetscCall(ISGetBlockSize(is[1],&bs));
-  PetscCheckFalse(bs != 2,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Incorrect block size %" PetscInt_FMT " != 2",bs);
+  PetscCheck(bs == 2,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Incorrect block size %" PetscInt_FMT " != 2",bs);
   PetscCall(MatSetBlockSize(A,1));
   PetscCall(ISEqual(is[0],is[1],&flg));
   PetscCheck(flg,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Unequal index sets");

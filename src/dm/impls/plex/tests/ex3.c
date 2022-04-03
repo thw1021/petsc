@@ -332,7 +332,7 @@ static PetscErrorCode SetupSection(DM dm, AppCtx *user)
     MPI_Comm      comm = PetscObjectComm((PetscObject)dm);
 
     PetscCallMPI(MPI_Comm_size(comm,&size));
-    PetscCheckFalse(size > 1,comm,PETSC_ERR_SUP,"Local constraint test can only be performed in serial");
+    PetscCheck(size <= 1,comm,PETSC_ERR_SUP,"Local constraint test can only be performed in serial");
 
     /* we are going to test constraints by using them to enforce periodicity
      * in one direction, and comparing to the existing method of enforcing
@@ -402,7 +402,7 @@ static PetscErrorCode SetupSection(DM dm, AppCtx *user)
         PetscCall(PetscSectionGetDof(aSec,c,&cDof));
         if (cDof) {
           PetscInt cOff, a, aDof, aOff, j;
-          PetscCheckFalse(cDof != 1,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Found %d anchor points: should be just one",cDof);
+          PetscCheck(cDof == 1,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Found %d anchor points: should be just one",cDof);
 
           /* find the anchor point */
           PetscCall(PetscSectionGetOffset(aSec,c,&cOff));
@@ -416,7 +416,7 @@ static PetscErrorCode SetupSection(DM dm, AppCtx *user)
           PetscCall(PetscSectionGetDof(section,a,&aDof));
           PetscCall(PetscSectionGetOffset(section,a,&aOff));
 
-          PetscCheckFalse(cDof != aDof,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Point and anchor have different number of dofs: %d, %d",cDof,aDof);
+          PetscCheck(cDof == aDof,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Point and anchor have different number of dofs: %d, %d",cDof,aDof);
           PetscCheckFalse(cDof % numComp,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Point dofs not divisible by field components: %d, %d",cDof,numComp);
 
           /* put in a simple equality constraint */

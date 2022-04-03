@@ -400,7 +400,7 @@ static PetscErrorCode ISSetInfo_Internal(IS is, ISInfo info, ISInfoType type, IS
     }
     break;
   default:
-    PetscCheckFalse(type == IS_LOCAL,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Unknown IS property");
+    PetscCheck(type != IS_LOCAL,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Unknown IS property");
     else SETERRQ(PetscObjectComm((PetscObject)is), PETSC_ERR_ARG_OUTOFRANGE, "Unknown IS property");
   }
   PetscFunctionReturn(0);
@@ -1012,7 +1012,7 @@ PetscErrorCode  ISDestroy(IS *is)
   if ((*is)->complement) {
     PetscInt refcnt;
     PetscCall(PetscObjectGetReference((PetscObject)((*is)->complement), &refcnt));
-    PetscCheckFalse(refcnt > 1,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Nonlocal IS has not been restored");
+    PetscCheck(refcnt <= 1,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Nonlocal IS has not been restored");
     PetscCall(ISDestroy(&(*is)->complement));
   }
   if ((*is)->ops->destroy) {
@@ -1581,7 +1581,7 @@ PetscErrorCode  ISRestoreNonlocalIS(IS is, IS *complement)
   PetscValidPointer(complement,2);
   PetscCheckFalse(*complement != is->complement,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Complement IS being restored was not obtained with ISGetNonlocalIS()");
   PetscCall(PetscObjectGetReference((PetscObject)(is->complement), &refcnt));
-  PetscCheckFalse(refcnt <= 1,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Duplicate call to ISRestoreNonlocalIS() detected");
+  PetscCheck(refcnt > 1,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Duplicate call to ISRestoreNonlocalIS() detected");
   PetscCall(PetscObjectDereference((PetscObject)(is->complement)));
   PetscFunctionReturn(0);
 }
@@ -1885,7 +1885,7 @@ PetscErrorCode  ISSetBlockSize(IS is,PetscInt bs)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(is,IS_CLASSID,1);
   PetscValidLogicalCollectiveInt(is,bs,2);
-  PetscCheckFalse(bs < 1,PetscObjectComm((PetscObject)is),PETSC_ERR_ARG_OUTOFRANGE,"Block size %" PetscInt_FMT ", must be positive",bs);
+  PetscCheck(bs >= 1,PetscObjectComm((PetscObject)is),PETSC_ERR_ARG_OUTOFRANGE,"Block size %" PetscInt_FMT ", must be positive",bs);
   if (PetscDefined(USE_DEBUG)) {
     const PetscInt *indices;
     PetscInt       length,i,j;

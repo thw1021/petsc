@@ -600,7 +600,7 @@ PETSC_EXTERN PetscErrorCode VecCreate_Standard(Vec v)
 PetscErrorCode  VecCreateMPIWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,PetscInt N,const PetscScalar array[],Vec *vv)
 {
   PetscFunctionBegin;
-  PetscCheckFalse(n == PETSC_DECIDE,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must set local size of vector");
+  PetscCheck(n != PETSC_DECIDE,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must set local size of vector");
   PetscCall(PetscSplitOwnership(comm,&n,&N));
   PetscCall(VecCreate(comm,vv));
   PetscCall(VecSetSizes(*vv,n,N));
@@ -650,9 +650,9 @@ PetscErrorCode  VecCreateGhostWithArray(MPI_Comm comm,PetscInt n,PetscInt N,Pets
   PetscFunctionBegin;
   *vv = NULL;
 
-  PetscCheckFalse(n == PETSC_DECIDE,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must set local size");
-  PetscCheckFalse(nghost == PETSC_DECIDE,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must set local ghost size");
-  PetscCheckFalse(nghost < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Ghost length must be >= 0");
+  PetscCheck(n != PETSC_DECIDE,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must set local size");
+  PetscCheck(nghost != PETSC_DECIDE,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must set local ghost size");
+  PetscCheck(nghost >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Ghost length must be >= 0");
   PetscCall(PetscSplitOwnership(comm,&n,&N));
   /* Create global representation */
   PetscCall(VecCreate(comm,vv));
@@ -851,9 +851,9 @@ PetscErrorCode  VecCreateGhostBlockWithArray(MPI_Comm comm,PetscInt bs,PetscInt 
   PetscFunctionBegin;
   *vv = NULL;
 
-  PetscCheckFalse(n == PETSC_DECIDE,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must set local size");
-  PetscCheckFalse(nghost == PETSC_DECIDE,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must set local ghost size");
-  PetscCheckFalse(nghost < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Ghost length must be >= 0");
+  PetscCheck(n != PETSC_DECIDE,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must set local size");
+  PetscCheck(nghost != PETSC_DECIDE,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must set local ghost size");
+  PetscCheck(nghost >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Ghost length must be >= 0");
   PetscCheckFalse(n % bs,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local size must be a multiple of block size");
   PetscCall(PetscSplitOwnership(comm,&n,&N));
   /* Create global representation */

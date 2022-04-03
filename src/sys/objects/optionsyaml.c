@@ -237,7 +237,7 @@ PetscErrorCode PetscOptionsInsertFileYAML(MPI_Comm comm,PetscOptions options,con
       fseek(fd, 0, SEEK_END);
       yamlLength = (int)ftell(fd);
       fseek(fd, 0, SEEK_SET);
-      PetscCheckFalse(yamlLength < 0,PETSC_COMM_SELF, PETSC_ERR_FILE_OPEN, "Unable to query size of YAML file: %s", fname);
+      PetscCheck(yamlLength >= 0,PETSC_COMM_SELF, PETSC_ERR_FILE_OPEN, "Unable to query size of YAML file: %s", fname);
       PetscCall(PetscMalloc1(yamlLength+1, &yamlString));
       rd = fread(yamlString, 1, (size_t)yamlLength, fd);
       PetscCheckFalse(rd != (size_t)yamlLength,PETSC_COMM_SELF, PETSC_ERR_FILE_READ, "Unable to read entire YAML file: %s", fname);

@@ -689,7 +689,7 @@ static PetscErrorCode  KSPLGMRESSetAugDim_LGMRES(KSP ksp,PetscInt aug_dim)
   KSP_LGMRES *lgmres = (KSP_LGMRES*)ksp->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(aug_dim < 0,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Augmentation dimension must be positive");
+  PetscCheck(aug_dim >= 0,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Augmentation dimension must be positive");
   PetscCheckFalse(aug_dim > (lgmres->max_k -1),PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Augmentation dimension must be <= (restart size-1)");
   lgmres->aug_dim = aug_dim;
   PetscFunctionReturn(0);

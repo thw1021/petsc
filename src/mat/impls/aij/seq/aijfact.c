@@ -76,7 +76,7 @@ PetscErrorCode MatGetOrdering_Flow_SeqAIJ(Mat mat,MatOrderingType type,IS *irow,
         }
       }
     }
-    PetscCheckFalse(current == newcurrent,PETSC_COMM_SELF,PETSC_ERR_PLIB,"newcurrent cannot be current");
+    PetscCheck(current != newcurrent,PETSC_COMM_SELF,PETSC_ERR_PLIB,"newcurrent cannot be current");
     current    = newcurrent;
     order[i+1] = current;
   }
@@ -792,7 +792,7 @@ PetscErrorCode MatLUFactorNumeric_SeqAIJ_InplaceWithPerm(Mat B,Mat A,const MatFa
   const MatScalar *aa=a->a,*vtmp;
 
   PetscFunctionBegin;
-  PetscCheckFalse(A != B,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"input and output matrix must have same address");
+  PetscCheck(A == B,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"input and output matrix must have same address");
 
   /* MatPivotSetUp(): initialize shift context sctx */
   PetscCall(PetscMemzero(&sctx,sizeof(FactorShiftCtx)));
@@ -2460,7 +2460,7 @@ PetscErrorCode MatICCFactorSymbolic_SeqAIJ(Mat fact,Mat A,IS perm,const MatFacto
       }
 
       /* copy data into free_space and free_space_lvl, then initialize lnk */
-      PetscCheckFalse(nzk == 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Empty row %" PetscInt_FMT " in ICC matrix factor",k);
+      PetscCheck(nzk != 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Empty row %" PetscInt_FMT " in ICC matrix factor",k);
       PetscCall(PetscIncompleteLLClean(am,am,nzk,lnk,lnk_lvl,current_space->array,current_space_lvl->array,lnkbt));
 
       /* add the k-th row into il and jl */

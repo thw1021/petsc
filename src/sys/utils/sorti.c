@@ -1042,7 +1042,7 @@ PetscErrorCode  PetscProcessTree(PetscInt n,const PetscBool mask[],const PetscIn
     PetscCall(PetscArraycpy(idbylevel+tcnt,workid,cnt));
     tcnt += cnt;
   }
-  PetscCheckFalse(tcnt != nmask,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Inconsistent count of unmasked nodes");
+  PetscCheck(tcnt == nmask,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Inconsistent count of unmasked nodes");
   PetscCall(PetscFree2(workid,workparentid));
 
   /* for each node list its column */

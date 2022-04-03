@@ -191,7 +191,7 @@ PetscErrorCode JunctionCreateJacobian(DM dm,PetscInt v,Mat *Jin,Mat *J[])
   PetscFunctionBegin;
   /* Get array size of Jv */
   PetscCall(DMNetworkGetSupportingEdges(dm,v,&nedges,&edges));
-  PetscCheckFalse(nedges <= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"%d vertex, nedges %d",v,nedges);
+  PetscCheck(nedges > 0,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"%d vertex, nedges %d",v,nedges);
 
   /* two Jacobians for each connected edge: J(v,e) and J(v,vc); adding J(v,v), total 2*nedges+1 Jacobians */
   PetscCall(PetscCalloc1(2*nedges+1,&Jv));

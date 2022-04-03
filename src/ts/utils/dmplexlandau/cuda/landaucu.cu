@@ -73,7 +73,7 @@ PetscErrorCode LandauCUDAStaticDataSet(DM plex, const PetscInt Nq, const PetscIn
   PetscFunctionBegin;
   PetscCall(DMGetDimension(plex, &dim));
   PetscCall(DMGetDS(plex, &prob));
-  PetscCheckFalse(LANDAU_DIM != dim,PETSC_COMM_WORLD, PETSC_ERR_PLIB, "dim %D != LANDAU_DIM %d",dim,LANDAU_DIM);
+  PetscCheck(LANDAU_DIM == dim,PETSC_COMM_WORLD, PETSC_ERR_PLIB, "dim %D != LANDAU_DIM %d",dim,LANDAU_DIM);
   PetscCall(PetscDSGetTabulation(prob, &Tf));
   BB   = Tf[0]->T[0]; DD = Tf[0]->T[1];
   Nf = h_ip_offset[0] = h_ipf_offset[0] = h_elem_offset[0] = 0;

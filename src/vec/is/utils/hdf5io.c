@@ -220,7 +220,7 @@ PetscErrorCode PetscViewerHDF5Load(PetscViewer viewer, const char *name, PetscLa
 #if defined(PETSC_USE_COMPLEX)
   if (!h->complexVal) {
     H5T_class_t clazz = H5Tget_class(datatype);
-    PetscCheckFalse(clazz == H5T_FLOAT,PetscObjectComm((PetscObject)viewer),PETSC_ERR_SUP,"Dataset %s/%s is marked as real but PETSc is configured for complex scalars. The conversion is not yet implemented. Configure with --with-scalar-type=real to read this dataset", group ? group : "",name);
+    PetscCheck(clazz != H5T_FLOAT,PetscObjectComm((PetscObject)viewer),PETSC_ERR_SUP,"Dataset %s/%s is marked as real but PETSc is configured for complex scalars. The conversion is not yet implemented. Configure with --with-scalar-type=real to read this dataset", group ? group : "",name);
   }
 #else
   PetscCheck(!h->complexVal,PetscObjectComm((PetscObject)viewer),PETSC_ERR_SUP,"Dataset %s/%s is marked as complex but PETSc is configured for real scalars. Configure with --with-scalar-type=complex to read this dataset", group ? group : "",name);

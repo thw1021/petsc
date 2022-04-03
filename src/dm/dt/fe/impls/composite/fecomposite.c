@@ -56,7 +56,7 @@ static PetscErrorCode PetscFESetUp_Composite(PetscFE fem)
       for (k = 0; k < dof; k++) cmp->embedding[s*spdim+sd++] = off + k;
     }
     PetscCall(DMPlexRestoreTransitiveClosure(K, s, PETSC_TRUE, &closureSize, &closure));
-    PetscCheckFalse(sd != spdim,PetscObjectComm((PetscObject) fem), PETSC_ERR_PLIB, "Subelement %d has %d dual basis vectors != %d", s, sd, spdim);
+    PetscCheck(sd == spdim,PetscObjectComm((PetscObject) fem), PETSC_ERR_PLIB, "Subelement %d has %d dual basis vectors != %d", s, sd, spdim);
   }
   PetscCall(DMRestoreWorkArray(K, dim, MPIU_REAL, &subpoint));
   /* Construct the change of basis from prime basis to nodal basis for each subelement */

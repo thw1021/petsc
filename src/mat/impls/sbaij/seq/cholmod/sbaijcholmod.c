@@ -61,7 +61,7 @@ PetscErrorCode  CholmodStart(Mat F)
 #define CHOLMOD_OPTION_SIZE_T(name,help) do {                            \
     PetscReal tmp = (PetscInt)c->name;                                   \
     PetscCall(PetscOptionsReal("-mat_cholmod_" #name,help,"None",tmp,&tmp,NULL)); \
-    PetscCheckFalse(tmp < 0,PetscObjectComm((PetscObject)F),PETSC_ERR_ARG_OUTOFRANGE,"value must be positive"); \
+    PetscCheck(tmp >= 0,PetscObjectComm((PetscObject)F),PETSC_ERR_ARG_OUTOFRANGE,"value must be positive"); \
     c->name = (size_t)tmp;                                               \
 } while (0)
 
@@ -530,7 +530,7 @@ PETSC_INTERN PetscErrorCode MatGetFactor_seqsbaij_cholmod(Mat A,MatFactorType ft
 
   PetscFunctionBegin;
   PetscCall(MatGetBlockSize(A,&bs));
-  PetscCheckFalse(bs != 1,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"CHOLMOD only supports block size=1, given %" PetscInt_FMT,bs);
+  PetscCheck(bs == 1,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"CHOLMOD only supports block size=1, given %" PetscInt_FMT,bs);
 #if defined(PETSC_USE_COMPLEX)
   PetscCheck(A->hermitian,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Only for Hermitian matrices");
 #endif

@@ -244,8 +244,8 @@ static PetscErrorCode MatSetMPIAIJKokkosWithSplitSeqAIJKokkosMatrices(Mat mat,Ma
   PetscCall(MatGetLocalSize(B,&Bm,&Bn));
 
   PetscCheckFalse(m != Am || m != Bm,PETSC_COMM_SELF,PETSC_ERR_PLIB,"local number of rows do not match");
-  PetscCheckFalse(n != An,PETSC_COMM_SELF,PETSC_ERR_PLIB,"local number of columns do not match");
-  PetscCheckFalse(N != Bn,PETSC_COMM_SELF,PETSC_ERR_PLIB,"global number of columns do not match");
+  PetscCheck(n == An,PETSC_COMM_SELF,PETSC_ERR_PLIB,"local number of columns do not match");
+  PetscCheck(N == Bn,PETSC_COMM_SELF,PETSC_ERR_PLIB,"global number of columns do not match");
   PetscCheckFalse(mpiaij->A || mpiaij->B,PETSC_COMM_SELF,PETSC_ERR_PLIB,"A, B of the MPIAIJ matrix are not empty");
   mpiaij->A = A;
   mpiaij->B = B;
@@ -523,7 +523,7 @@ static PetscErrorCode MatSeqAIJKokkosReduce(Mat A,MatReuse reuse,PetscBool local
     PetscCall(PetscSFGetLeafRanks(ownerSF,&niranks,&iranks,&ioffset,&rows)); /* recv info: iranks[] will send rows to me */
     PetscCall(PetscSFGetRootRanks(ownerSF,&nranks,&ranks,&roffset,NULL/*rmine*/,NULL/*rremote*/)); /* send info */
     PetscCall(PetscSFGetGraph(ownerSF,&nroots,&nleaves,NULL,NULL));
-    PetscCheckFalse(nleaves != Am,PETSC_COMM_SELF,PETSC_ERR_PLIB,"ownerSF's nleaves(%" PetscInt_FMT ") != row size of A(%" PetscInt_FMT ")",nleaves,Am);
+    PetscCheck(nleaves == Am,PETSC_COMM_SELF,PETSC_ERR_PLIB,"ownerSF's nleaves(%" PetscInt_FMT ") != row size of A(%" PetscInt_FMT ")",nleaves,Am);
     Cm    = nroots;
     nrows = ioffset[niranks]; /* # of rows to be received. Might receive same row (each is partial) from different senders */
 

@@ -201,7 +201,7 @@ PetscErrorCode PetscSubcommSetTypeGeneral(PetscSubcomm psubcomm,PetscMPIInt colo
 
   PetscFunctionBegin;
   PetscCheck(psubcomm,PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"PetscSubcomm is not created. Call PetscSubcommCreate()");
-  PetscCheckFalse(nsubcomm < 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"number of subcommunicators %d is incorrect. Call PetscSubcommSetNumber()",nsubcomm);
+  PetscCheck(nsubcomm >= 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"number of subcommunicators %d is incorrect. Call PetscSubcommSetNumber()",nsubcomm);
 
   PetscCallMPI(MPI_Comm_split(comm,color,subrank,&subcomm));
 

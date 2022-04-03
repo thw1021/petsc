@@ -671,7 +671,7 @@ PetscErrorCode VecScatterCreate(Vec x,IS ix,Vec y,IS iy,VecScatter *newsf)
   PetscCallMPI(MPI_Comm_size(ycomm,&ycommsize));
   if (xcommsize > 1 && ycommsize > 1) {
     PetscCallMPI(MPI_Comm_compare(xcomm,ycomm,&result));
-    PetscCheckFalse(result == MPI_UNEQUAL,PETSC_COMM_SELF,PETSC_ERR_ARG_NOTSAMECOMM,"VecScatterCreate: parallel vectors x and y must have identical/congruent/similar communicators");
+    PetscCheck(result != MPI_UNEQUAL,PETSC_COMM_SELF,PETSC_ERR_ARG_NOTSAMECOMM,"VecScatterCreate: parallel vectors x and y must have identical/congruent/similar communicators");
   }
   bs = 1; /* default, no blocking */
 
@@ -712,7 +712,7 @@ PetscErrorCode VecScatterCreate(Vec x,IS ix,Vec y,IS iy,VecScatter *newsf)
   PetscCall(ISGetLocalSize(iy,&iysize));
   PetscCall(VecGetSize(x,&xlen));
   PetscCall(VecGetSize(y,&ylen));
-  PetscCheckFalse(ixsize != iysize,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Scatter sizes of ix and iy don't match locally ix=%" PetscInt_FMT " iy=%" PetscInt_FMT,ixsize,iysize);
+  PetscCheck(ixsize == iysize,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Scatter sizes of ix and iy don't match locally ix=%" PetscInt_FMT " iy=%" PetscInt_FMT,ixsize,iysize);
   PetscCall(ISGetMinMax(ix,&min,&max));
   PetscCheckFalse(min < 0 || max >= xlen,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Scatter indices in ix are out of range");
   PetscCall(ISGetMinMax(iy,&min,&max));
@@ -943,7 +943,7 @@ PetscErrorCode VecScatterCreate(Vec x,IS ix,Vec y,IS iy,VecScatter *newsf)
     while (i < n) {
       if (yindices_sorted[i] >= yrange[j+1]) { /* If i-th index is out of rank j's bound */
         do {j++;} while (yindices_sorted[i] >= yrange[j+1] && j < ycommsize); /* Increase j until i-th index falls in rank j's bound */
-        PetscCheckFalse(j == ycommsize,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Index %" PetscInt_FMT " not owned by any process, upper bound %" PetscInt_FMT,yindices_sorted[i],yrange[ycommsize]);
+        PetscCheck(j != ycommsize,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Index %" PetscInt_FMT " not owned by any process, upper bound %" PetscInt_FMT,yindices_sorted[i],yrange[ycommsize]);
       }
       i++;
       if (!slens[j]++) nsend++;

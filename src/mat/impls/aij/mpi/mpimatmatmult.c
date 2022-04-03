@@ -606,7 +606,7 @@ static PetscErrorCode MatMatMultNumeric_MPIAIJ_MPIDense(Mat A,Mat B,Mat C)
     PetscInt  BN=B->cmap->N,n=contents->workB->cmap->n,i;
     PetscBool ccpu;
 
-    PetscCheckFalse(n <= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Column block size %" PetscInt_FMT " must be positive",n);
+    PetscCheck(n > 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Column block size %" PetscInt_FMT " must be positive",n);
     /* Prevent from unneeded copies back and forth from the GPU
        when getting and restoring the submatrix
        We need a proper GPU code for AIJ * dense in parallel */

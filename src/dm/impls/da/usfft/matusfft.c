@@ -163,10 +163,10 @@ PetscErrorCode  MatCreateSeqUSFFT(Vec sampleCoords, DMDA freqDA, Mat *A)
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)inda, &comm));
   PetscCallMPI(MPI_Comm_size(comm, &size));
-  PetscCheckFalse(size > 1,comm,PETSC_ERR_USER, "Parallel DMDA (in) not yet supported by USFFT");
+  PetscCheck(size <= 1,comm,PETSC_ERR_USER, "Parallel DMDA (in) not yet supported by USFFT");
   PetscCall(PetscObjectGetComm((PetscObject)outda, &comm));
   PetscCallMPI(MPI_Comm_size(comm, &size));
-  PetscCheckFalse(size > 1,comm,PETSC_ERR_USER, "Parallel DMDA (out) not yet supported by USFFT");
+  PetscCheck(size <= 1,comm,PETSC_ERR_USER, "Parallel DMDA (out) not yet supported by USFFT");
   PetscCall(MatCreate(comm,A));
   PetscCall(PetscNewLog(*A,&usfft));
   (*A)->data   = (void*)usfft;
@@ -174,8 +174,8 @@ PetscErrorCode  MatCreateSeqUSFFT(Vec sampleCoords, DMDA freqDA, Mat *A)
   usfft->outda = outda;
   /* inda */
   PetscCall(DMDAGetInfo(usfft->inda, &ndim, dim+0, dim+1, dim+2, NULL, NULL, NULL, &dof, NULL, NULL, NULL));
-  PetscCheckFalse(ndim <= 0,PETSC_COMM_SELF,PETSC_ERR_USER,"ndim %d must be > 0",ndim);
-  PetscCheckFalse(dof <= 0,PETSC_COMM_SELF,PETSC_ERR_USER,"dof %d must be > 0",dof);
+  PetscCheck(ndim > 0,PETSC_COMM_SELF,PETSC_ERR_USER,"ndim %d must be > 0",ndim);
+  PetscCheck(dof > 0,PETSC_COMM_SELF,PETSC_ERR_USER,"dof %d must be > 0",dof);
   usfft->ndim   = ndim;
   usfft->dof    = dof;
   usfft->freqDA = freqDA;

@@ -4376,7 +4376,7 @@ PetscErrorCode MatSeqAIJCUSPARSEMergeMats(Mat A,Mat B,MatReuse reuse,Mat* C)
   PetscCheckTypeName(A,MATSEQAIJCUSPARSE);
   PetscCheckTypeName(B,MATSEQAIJCUSPARSE);
   PetscCheck(A->rmap->n == B->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Invalid number or rows %" PetscInt_FMT " != %" PetscInt_FMT,A->rmap->n,B->rmap->n);
-  PetscCheckFalse(reuse == MAT_INPLACE_MATRIX,PETSC_COMM_SELF,PETSC_ERR_SUP,"MAT_INPLACE_MATRIX not supported");
+  PetscCheck(reuse != MAT_INPLACE_MATRIX,PETSC_COMM_SELF,PETSC_ERR_SUP,"MAT_INPLACE_MATRIX not supported");
   PetscCheckFalse(Acusp->format == MAT_CUSPARSE_ELL || Acusp->format == MAT_CUSPARSE_HYB,PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented");
   PetscCheckFalse(Bcusp->format == MAT_CUSPARSE_ELL || Bcusp->format == MAT_CUSPARSE_HYB,PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented");
   if (reuse == MAT_INITIAL_MATRIX) {

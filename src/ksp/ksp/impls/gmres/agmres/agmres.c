@@ -145,7 +145,7 @@ PetscErrorCode KSPComputeShifts_GMRES(KSP ksp)
   /* Now, compute the Shifts values */
   PetscCall(PetscMalloc2(max_k,&Rshift,max_k,&Ishift));
   PetscCall(KSPComputeEigenvalues(kspgmres, max_k, Rshift, Ishift, &m));
-  PetscCheckFalse(m < max_k,PetscObjectComm((PetscObject)ksp),PETSC_ERR_PLIB, "Unable to compute the Shifts for the Newton basis");
+  PetscCheck(m >= max_k,PetscObjectComm((PetscObject)ksp),PETSC_ERR_PLIB, "Unable to compute the Shifts for the Newton basis");
   else {
     PetscCall(KSPAGMRESLejaOrdering(Rshift, Ishift, agmres->Rshift, agmres->Ishift, max_k));
 

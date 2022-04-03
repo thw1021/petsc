@@ -502,9 +502,9 @@ static PetscErrorCode DMPlexTransformMapCoordinates_Extrude(DMPlexTransform tr, 
   PetscInt                 dim, dEx = ex->cdimEx, cStart, cEnd, d;
 
   PetscFunctionBeginHot;
-  PetscCheckFalse(pct != DM_POLYTOPE_POINT,PETSC_COMM_SELF,PETSC_ERR_SUP,"Not for parent point type %s",DMPolytopeTypes[pct]);
+  PetscCheck(pct == DM_POLYTOPE_POINT,PETSC_COMM_SELF,PETSC_ERR_SUP,"Not for parent point type %s",DMPolytopeTypes[pct]);
   PetscCheckFalse(ct  != DM_POLYTOPE_POINT,PETSC_COMM_SELF,PETSC_ERR_SUP,"Not for refined point type %s",DMPolytopeTypes[ct]);
-  PetscCheckFalse(Nv != 1,PETSC_COMM_SELF,PETSC_ERR_SUP,"Vertices should be produced from a single vertex, not %D",Nv);
+  PetscCheck(Nv == 1,PETSC_COMM_SELF,PETSC_ERR_SUP,"Vertices should be produced from a single vertex, not %D",Nv);
   PetscCheckFalse(dE != ex->cdim,PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Coordinate dim %D != %D original dimension", dE, ex->cdim);
 
   PetscCall(DMPlexTransformGetDM(tr, &dm));
@@ -683,7 +683,7 @@ PetscErrorCode DMPlexTransformExtrudeSetThickness(DMPlexTransform tr, PetscReal 
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 1);
-  PetscCheckFalse(thickness <= 0.,PetscObjectComm((PetscObject) tr), PETSC_ERR_ARG_OUTOFRANGE, "Height of layers %g must be positive", (double) thickness);
+  PetscCheck(thickness > 0.,PetscObjectComm((PetscObject) tr), PETSC_ERR_ARG_OUTOFRANGE, "Height of layers %g must be positive", (double) thickness);
   ex->thickness = thickness;
   PetscFunctionReturn(0);
 }
@@ -896,7 +896,7 @@ PetscErrorCode DMPlexTransformExtrudeSetThicknesses(DMPlexTransform tr, PetscInt
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 1);
-  PetscCheckFalse(Nth <= 0,PetscObjectComm((PetscObject) tr), PETSC_ERR_ARG_OUTOFRANGE, "Number of thicknesses %D must be positive", Nth);
+  PetscCheck(Nth > 0,PetscObjectComm((PetscObject) tr), PETSC_ERR_ARG_OUTOFRANGE, "Number of thicknesses %D must be positive", Nth);
   ex->Nth = PetscMin(Nth, ex->layers);
   PetscCall(PetscFree(ex->thicknesses));
   PetscCall(PetscMalloc1(ex->Nth, &ex->thicknesses));

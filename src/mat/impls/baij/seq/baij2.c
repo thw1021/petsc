@@ -22,7 +22,7 @@ PetscErrorCode MatIncreaseOverlap_SeqBAIJ(Mat A,PetscInt is_max,IS is[],PetscInt
   aj = a->j;
   bs = A->rmap->bs;
 
-  PetscCheckFalse(ov < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Negative overlap specified");
+  PetscCheck(ov >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Negative overlap specified");
 
   PetscCall(PetscBTCreate(m,&table));
   PetscCall(PetscMalloc1(m+1,&nidx));
@@ -2819,7 +2819,7 @@ PetscErrorCode MatDiagonalScale_SeqBAIJ(Mat A,Vec ll,Vec rr)
   if (ll) {
     PetscCall(VecGetArrayRead(ll,&l));
     PetscCall(VecGetLocalSize(ll,&lm));
-    PetscCheckFalse(lm != m,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Left scaling vector wrong length");
+    PetscCheck(lm == m,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Left scaling vector wrong length");
     for (i=0; i<mbs; i++) { /* for each block row */
       M  = ai[i+1] - ai[i];
       li = l + i*bs;
@@ -2837,7 +2837,7 @@ PetscErrorCode MatDiagonalScale_SeqBAIJ(Mat A,Vec ll,Vec rr)
   if (rr) {
     PetscCall(VecGetArrayRead(rr,&r));
     PetscCall(VecGetLocalSize(rr,&rn));
-    PetscCheckFalse(rn != n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Right scaling vector wrong length");
+    PetscCheck(rn == n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Right scaling vector wrong length");
     for (i=0; i<mbs; i++) { /* for each block row */
       iai = ai[i];
       M   = ai[i+1] - iai;

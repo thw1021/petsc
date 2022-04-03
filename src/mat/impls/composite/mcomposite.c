@@ -495,7 +495,7 @@ PetscErrorCode MatCreateComposite(MPI_Comm comm,PetscInt nmat,const Mat *mats,Ma
   PetscInt       m,n,M,N,i;
 
   PetscFunctionBegin;
-  PetscCheckFalse(nmat < 1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must pass in at least one matrix");
+  PetscCheck(nmat >= 1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must pass in at least one matrix");
   PetscValidPointer(mat,4);
 
   PetscCall(MatGetLocalSize(mats[0],PETSC_IGNORE,&n));

@@ -378,7 +378,7 @@ static PetscErrorCode PCFieldSplitSetRuntimeSplits_Private(PC pc)
       PetscCall(PCFieldSplitSetFields(pc,splitname,nfields,ifields,ifields));
     } else {
       PetscCheck(nfields && nfields_col,PETSC_COMM_SELF,PETSC_ERR_USER,"Cannot list zero fields");
-      PetscCheckFalse(nfields != nfields_col,PETSC_COMM_SELF,PETSC_ERR_USER,"Number of row and column fields must match");
+      PetscCheck(nfields == nfields_col,PETSC_COMM_SELF,PETSC_ERR_USER,"Number of row and column fields must match");
       PetscCall(PCFieldSplitSetFields(pc,splitname,nfields,ifields,ifields_col));
     }
   }
@@ -426,7 +426,7 @@ static PetscErrorCode PCFieldSplitSetDefaults(PC pc)
         PetscCall(PetscSNPrintf(optionname, sizeof(optionname), "-pc_fieldsplit_%D_fields", i));
         PetscCall(PetscOptionsGetIntArray(((PetscObject)pc)->options,((PetscObject)pc)->prefix, optionname, ifields, &nfields, &flg));
         if (!flg) break;
-        PetscCheckFalse(numFields > 128,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Cannot currently support %d > 128 fields", numFields);
+        PetscCheck(numFields <= 128,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Cannot currently support %d > 128 fields", numFields);
         PetscCall(DMCreateSubDM(pc->dm, nfields, ifields, &compField, &subdm[i]));
         if (nfields == 1) {
           PetscCall(PCFieldSplitSetIS(pc, fieldNames[ifields[0]], compField));
@@ -818,7 +818,7 @@ static PetscErrorCode PCSetUp_FieldSplit(PC pc)
     char        lscname[256];
     PetscObject LSC_L;
 
-    PetscCheckFalse(nsplit != 2,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_INCOMP,"To use Schur complement preconditioner you must have exactly 2 fields");
+    PetscCheck(nsplit == 2,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_INCOMP,"To use Schur complement preconditioner you must have exactly 2 fields");
 
     /* If pc->mat is SPD, don't scale by -1 the Schur complement */
     if (jac->schurscale == (PetscScalar)-1.0) {
@@ -1034,7 +1034,7 @@ static PetscErrorCode PCSetUp_FieldSplit(PC pc)
     IS          ccis;
     PetscInt    rstart,rend;
 
-    PetscCheckFalse(nsplit != 2,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_INCOMP,"To use GKB preconditioner you must have exactly 2 fields");
+    PetscCheck(nsplit == 2,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_INCOMP,"To use GKB preconditioner you must have exactly 2 fields");
 
     ilink = jac->head;
 
@@ -1936,7 +1936,7 @@ PetscErrorCode  PCFieldSplitSetFields(PC pc,const char splitname[],PetscInt n,co
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidCharPointer(splitname,2);
-  PetscCheckFalse(n < 1,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Provided number of fields %D in split \"%s\" not positive",n,splitname);
+  PetscCheck(n >= 1,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Provided number of fields %D in split \"%s\" not positive",n,splitname);
   PetscValidIntPointer(fields,4);
   PetscTryMethod(pc,"PCFieldSplitSetFields_C",(PC,const char[],PetscInt,const PetscInt*,const PetscInt*),(pc,splitname,n,fields,fields_col));
   PetscFunctionReturn(0);
@@ -2154,7 +2154,7 @@ PetscErrorCode PCFieldSplitGetIS(PC pc,const char splitname[],IS *is)
 PetscErrorCode PCFieldSplitGetISByIndex(PC pc,PetscInt index,IS *is)
 {
   PetscFunctionBegin;
-  PetscCheckFalse(index < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Negative field %D requested",index);
+  PetscCheck(index >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Negative field %D requested",index);
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidPointer(is,3);
   {
@@ -2785,7 +2785,7 @@ static PetscErrorCode  PCFieldSplitSetBlockSize_FieldSplit(PC pc,PetscInt bs)
   PC_FieldSplit *jac = (PC_FieldSplit*)pc->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(bs < 1,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Blocksize must be positive, you gave %D",bs);
+  PetscCheck(bs >= 1,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Blocksize must be positive, you gave %D",bs);
   PetscCheckFalse(jac->bs > 0 && jac->bs != bs,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONGSTATE,"Cannot change fieldsplit blocksize from %D to %D after it has been set",jac->bs,bs);
   jac->bs = bs;
   PetscFunctionReturn(0);

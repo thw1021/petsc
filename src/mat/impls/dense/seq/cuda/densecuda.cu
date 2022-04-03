@@ -366,8 +366,8 @@ PETSC_EXTERN PetscErrorCode MatSeqDenseCUDAInvertFactors_Private(Mat A)
   } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"Not implemented");
 #if defined(PETSC_USE_DEBUG)
   PetscCallCUDA(cudaMemcpy(&info, dA->d_fact_info, sizeof(PetscCuBLASInt), cudaMemcpyDeviceToHost));
-  PetscCheckFalse(info > 0,PETSC_COMM_SELF,PETSC_ERR_MAT_CH_ZRPVT,"Bad factorization: leading minor of order %d is zero",info);
-  PetscCheckFalse(info < 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Wrong argument to cuSolver %d",-info);
+  PetscCheck(info <= 0,PETSC_COMM_SELF,PETSC_ERR_MAT_CH_ZRPVT,"Bad factorization: leading minor of order %d is zero",info);
+  PetscCheck(info >= 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Wrong argument to cuSolver %d",-info);
 #endif
   PetscCall(PetscLogGpuFlops(1.0*n*n*n/3.0));
   A->ops->solve          = NULL;
@@ -562,8 +562,8 @@ static PetscErrorCode MatSolve_SeqDenseCUDA_Internal_LU(Mat A, PetscScalar *x, P
   PetscCall(MatDenseCUDARestoreArrayRead(A,&da));
   if (PetscDefined(USE_DEBUG)) {
     PetscCallCUDA(cudaMemcpy(&info, dA->d_fact_info, sizeof(PetscCuBLASInt), cudaMemcpyDeviceToHost));
-    PetscCheckFalse(info > 0,PETSC_COMM_SELF,PETSC_ERR_MAT_CH_ZRPVT,"Bad factorization: zero pivot in row %d",info-1);
-    else PetscCheckFalse(info < 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Wrong argument to cuSolver %d",-info);
+    PetscCheck(info <= 0,PETSC_COMM_SELF,PETSC_ERR_MAT_CH_ZRPVT,"Bad factorization: zero pivot in row %d",info-1);
+    else PetscCheck(info >= 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Wrong argument to cuSolver %d",-info);
   }
   PetscCall(PetscLogGpuFlops(nrhs*(2.0*m*m - m)));
   PetscFunctionReturn(0);
@@ -592,8 +592,8 @@ static PetscErrorCode MatSolve_SeqDenseCUDA_Internal_Cholesky(Mat A, PetscScalar
   PetscCall(MatDenseCUDARestoreArrayRead(A,&da));
   if (PetscDefined(USE_DEBUG)) {
     PetscCallCUDA(cudaMemcpy(&info, dA->d_fact_info, sizeof(PetscCuBLASInt), cudaMemcpyDeviceToHost));
-    PetscCheckFalse(info > 0,PETSC_COMM_SELF,PETSC_ERR_MAT_CH_ZRPVT,"Bad factorization: zero pivot in row %d",info-1);
-    else PetscCheckFalse(info < 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Wrong argument to cuSolver %d",-info);
+    PetscCheck(info <= 0,PETSC_COMM_SELF,PETSC_ERR_MAT_CH_ZRPVT,"Bad factorization: zero pivot in row %d",info-1);
+    else PetscCheck(info >= 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Wrong argument to cuSolver %d",-info);
   }
   PetscCall(PetscLogGpuFlops(nrhs*(2.0*m*m - m)));
   PetscFunctionReturn(0);
@@ -764,8 +764,8 @@ static PetscErrorCode MatLUFactor_SeqDenseCUDA(Mat A,IS rperm,IS cperm,const Mat
   PetscCall(MatDenseCUDARestoreArray(A,&da));
 #if defined(PETSC_USE_DEBUG)
   PetscCallCUDA(cudaMemcpy(&info, dA->d_fact_info, sizeof(PetscCuBLASInt), cudaMemcpyDeviceToHost));
-  PetscCheckFalse(info > 0,PETSC_COMM_SELF,PETSC_ERR_MAT_LU_ZRPVT,"Bad factorization: zero pivot in row %d",info-1);
-  else PetscCheckFalse(info < 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Wrong argument to cuSolver %d",-info);
+  PetscCheck(info <= 0,PETSC_COMM_SELF,PETSC_ERR_MAT_LU_ZRPVT,"Bad factorization: zero pivot in row %d",info-1);
+  else PetscCheck(info >= 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Wrong argument to cuSolver %d",-info);
 #endif
   A->factortype = MAT_FACTOR_LU;
   PetscCall(PetscLogGpuFlops(2.0*n*n*m/3.0));
@@ -813,8 +813,8 @@ static PetscErrorCode MatCholeskyFactor_SeqDenseCUDA(Mat A,IS perm,const MatFact
     PetscCall(MatDenseCUDARestoreArray(A,&da));
 #if defined(PETSC_USE_DEBUG)
     PetscCallCUDA(cudaMemcpy(&info, dA->d_fact_info, sizeof(PetscCuBLASInt), cudaMemcpyDeviceToHost));
-    PetscCheckFalse(info > 0,PETSC_COMM_SELF,PETSC_ERR_MAT_CH_ZRPVT,"Bad factorization: zero pivot in row %d",info-1);
-    else PetscCheckFalse(info < 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Wrong argument to cuSolver %d",-info);
+    PetscCheck(info <= 0,PETSC_COMM_SELF,PETSC_ERR_MAT_CH_ZRPVT,"Bad factorization: zero pivot in row %d",info-1);
+    else PetscCheck(info >= 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Wrong argument to cuSolver %d",-info);
 #endif
     A->factortype = MAT_FACTOR_CHOLESKY;
     PetscCall(PetscLogGpuFlops(1.0*n*n*n/3.0));
@@ -881,7 +881,7 @@ static PetscErrorCode MatQRFactor_SeqDenseCUDA(Mat A,IS col,const MatFactorInfo 
   PetscCall(MatDenseCUDARestoreArray(A,&da));
 #if defined(PETSC_USE_DEBUG)
   PetscCallCUDA(cudaMemcpy(&info, dA->d_fact_info, sizeof(PetscCuBLASInt), cudaMemcpyDeviceToHost));
-  PetscCheckFalse(info < 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Wrong argument to cuSolver %d",-info);
+  PetscCheck(info >= 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Wrong argument to cuSolver %d",-info);
 #endif
   A->factortype = MAT_FACTOR_QR;
   a->rank = min;

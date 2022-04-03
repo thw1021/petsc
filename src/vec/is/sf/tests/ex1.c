@@ -17,7 +17,7 @@ static PetscErrorCode CheckGraphNotSet(PetscSF sf)
   PetscCheck(!sf->graphset,PETSC_COMM_SELF,PETSC_ERR_PLIB,"SF graph is set");
   PetscCall(PetscSFGetGraph(sf,&nroots,&nleaves,&ilocal,&iremote));
   PetscCheckFalse(nroots  >= 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"SF graph is set");
-  PetscCheckFalse(nleaves >= 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"SF graph is set");
+  PetscCheck(nleaves < 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"SF graph is set");
   PetscCheck(!ilocal,PETSC_COMM_SELF,PETSC_ERR_PLIB,"SF graph is set");
   PetscCheck(!iremote,PETSC_COMM_SELF,PETSC_ERR_PLIB,"SF graph is set");
   PetscCheckFalse(sf->minleaf != PETSC_MAX_INT,PETSC_COMM_SELF,PETSC_ERR_PLIB,"SF minimum leaf is not PETSC_MAX_INT");
@@ -40,7 +40,7 @@ static PetscErrorCode CheckGraphEmpty(PetscSF sf)
   PetscCheck(!iremote,PETSC_COMM_SELF,PETSC_ERR_PLIB,"SF graph is not empty");
   PetscCall(PetscSFGetLeafRange(sf,&minleaf,&maxleaf));
   PetscCheckFalse(minleaf !=  0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"SF minimum leaf is not 0");
-  PetscCheckFalse(maxleaf != -1,PETSC_COMM_SELF,PETSC_ERR_PLIB,"SF maximum leaf is not -1");
+  PetscCheck(maxleaf == -1,PETSC_COMM_SELF,PETSC_ERR_PLIB,"SF maximum leaf is not -1");
   PetscFunctionReturn(0);
 }
 

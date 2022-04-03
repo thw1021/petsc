@@ -82,7 +82,7 @@ PetscErrorCode MatCreateColmap_MPISELL_Private(Mat mat)
     }  \
     if (value == 0.0 && ignorezeroentries) {low1 = 0; high1 = nrow1;goto a_noinsert;} \
     if (nonew == 1) {low1 = 0; high1 = nrow1; goto a_noinsert;} \
-    PetscCheckFalse(nonew == -1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Inserting a new nonzero at global row/column (%" PetscInt_FMT ", %" PetscInt_FMT ") into matrix", orow, ocol); \
+    PetscCheck(nonew != -1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Inserting a new nonzero at global row/column (%" PetscInt_FMT ", %" PetscInt_FMT ") into matrix", orow, ocol); \
     MatSeqXSELLReallocateSELL(A,am,1,nrow1,a->sliidx,row/8,row,col,a->colidx,a->val,cp1,vp1,nonew,MatScalar); \
     /* shift up all the later entries in this row */ \
     for (ii=nrow1-1; ii>=_i; ii--) { \
@@ -116,7 +116,7 @@ PetscErrorCode MatCreateColmap_MPISELL_Private(Mat mat)
     } \
     if (value == 0.0 && ignorezeroentries) {low2 = 0; high2 = nrow2; goto b_noinsert;} \
     if (nonew == 1) {low2 = 0; high2 = nrow2; goto b_noinsert;} \
-    PetscCheckFalse(nonew == -1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Inserting a new nonzero at global row/column (%" PetscInt_FMT ", %" PetscInt_FMT ") into matrix", orow, ocol); \
+    PetscCheck(nonew != -1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Inserting a new nonzero at global row/column (%" PetscInt_FMT ", %" PetscInt_FMT ") into matrix", orow, ocol); \
     MatSeqXSELLReallocateSELL(B,bm,1,nrow2,b->sliidx,row/8,row,col,b->colidx,b->val,cp2,vp2,nonew,MatScalar); \
     /* shift up all the later entries in this row */ \
     for (ii=nrow2-1; ii>=_i; ii--) { \
@@ -200,7 +200,7 @@ PetscErrorCode MatSetValues_MPISELL(Mat mat,PetscInt m,const PetscInt im[],Petsc
               nrow2  = b->rlen[row];
               low2   = 0;
               high2  = nrow2;
-            } else PetscCheckFalse(col < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Inserting a new nonzero at global row/column (%" PetscInt_FMT ", %" PetscInt_FMT ") into matrix", im[i], in[j]);
+            } else PetscCheck(col >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Inserting a new nonzero at global row/column (%" PetscInt_FMT ", %" PetscInt_FMT ") into matrix", im[i], in[j]);
           } else col = in[j];
           MatSetValue_SeqSELL_Private(B,row,col,value,addv,im[i],in[j],cp2,vp2,lastcol2,low2,high2); /* set one value */
         }

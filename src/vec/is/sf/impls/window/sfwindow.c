@@ -386,7 +386,7 @@ static PetscErrorCode PetscSFGetWindow(PetscSF sf,MPI_Datatype unit,void *array,
   PetscCallMPI(MPI_Type_get_extent(unit,&lb,&bytes));
   PetscCallMPI(MPI_Type_get_true_extent(unit,&lb_true,&bytes_true));
   PetscCheckFalse(lb != 0 || lb_true != 0,PetscObjectComm((PetscObject)sf),PETSC_ERR_SUP,"No support for unit type with nonzero lower bound, write petsc-maint@mcs.anl.gov if you want this feature");
-  PetscCheckFalse(bytes != bytes_true,PetscObjectComm((PetscObject)sf),PETSC_ERR_SUP,"No support for unit type with modified extent, write petsc-maint@mcs.anl.gov if you want this feature");
+  PetscCheck(bytes == bytes_true,PetscObjectComm((PetscObject)sf),PETSC_ERR_SUP,"No support for unit type with modified extent, write petsc-maint@mcs.anl.gov if you want this feature");
   if (w->flavor != PETSCSF_WINDOW_FLAVOR_CREATE) reuse = PETSC_TRUE;
   for (link=w->wins; reuse && link; link=link->next) {
     PetscBool winok = PETSC_FALSE;
@@ -818,7 +818,7 @@ static PetscErrorCode PetscSFBcastBegin_Window(PetscSF sf,MPI_Datatype unit,Pets
   MPI_Win            win;
 
   PetscFunctionBegin;
-  PetscCheckFalse(op != MPI_REPLACE,PetscObjectComm((PetscObject)sf), PETSC_ERR_SUP, "PetscSFBcastBegin_Window with op!=MPI_REPLACE has not been implemented");
+  PetscCheck(op == MPI_REPLACE,PetscObjectComm((PetscObject)sf), PETSC_ERR_SUP, "PetscSFBcastBegin_Window with op!=MPI_REPLACE has not been implemented");
   PetscCall(PetscSFGetRootRanks(sf,&nranks,&ranks,NULL,NULL,NULL));
   PetscCall(PetscSFWindowGetDataTypes(sf,unit,&mine,&remote));
   PetscCall(PetscSFGetWindow(sf,unit,(void*)rootdata,w->sync,PETSC_TRUE,MPI_MODE_NOPUT|MPI_MODE_NOPRECEDE,MPI_MODE_NOPUT,0,&target_disp,&reqs,&win));

@@ -250,8 +250,8 @@ static PetscErrorCode PetscSFCheckGraphValid_Private(PetscSF sf)
     const PetscInt remote = iremote[i].index;
     const PetscInt leaf = ilocal ? ilocal[i] : i;
     PetscCheckFalse(rank < 0 || rank >= size,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Provided rank (%" PetscInt_FMT ") for remote %" PetscInt_FMT " is invalid, should be in [0, %d)",rank,i,size);
-    PetscCheckFalse(remote < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Provided index (%" PetscInt_FMT ") for remote %" PetscInt_FMT " is invalid, should be >= 0",remote,i);
-    PetscCheckFalse(leaf < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Provided location (%" PetscInt_FMT ") for leaf %" PetscInt_FMT " is invalid, should be >= 0",leaf,i);
+    PetscCheck(remote >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Provided index (%" PetscInt_FMT ") for remote %" PetscInt_FMT " is invalid, should be >= 0",remote,i);
+    PetscCheck(leaf >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Provided location (%" PetscInt_FMT ") for leaf %" PetscInt_FMT " is invalid, should be >= 0",leaf,i);
   }
   PetscFunctionReturn(0);
 }
@@ -434,7 +434,7 @@ PetscErrorCode PetscSFSetGraph(PetscSF sf,PetscInt nroots,PetscInt nleaves,Petsc
   if (nleaves > 0 && ilocal) PetscValidIntPointer(ilocal,4);
   if (nleaves > 0) PetscValidPointer(iremote,6);
   PetscCheckFalse(nroots  < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"nroots %" PetscInt_FMT ", cannot be negative",nroots);
-  PetscCheckFalse(nleaves < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"nleaves %" PetscInt_FMT ", cannot be negative",nleaves);
+  PetscCheck(nleaves >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"nleaves %" PetscInt_FMT ", cannot be negative",nleaves);
   PetscCheck(localmode  >= PETSC_COPY_VALUES && localmode  <= PETSC_USE_POINTER,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Wrong localmode %d",localmode);
   PetscCheck(remotemode >= PETSC_COPY_VALUES && remotemode <= PETSC_USE_POINTER,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Wrong remotemode %d",remotemode);
 
@@ -1065,7 +1065,7 @@ PetscErrorCode PetscSFSetUpRanks(PetscSF sf,MPI_Group dgroup)
       }
       orank = sf->remote[i].rank;
     }
-    PetscCheckFalse(irank < 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Could not find rank %" PetscInt_FMT " in array",sf->remote[i].rank);
+    PetscCheck(irank >= 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Could not find rank %" PetscInt_FMT " in array",sf->remote[i].rank);
     sf->rmine[sf->roffset[irank] + rcount[irank]]   = sf->mine ? sf->mine[i] : i;
     sf->rremote[sf->roffset[irank] + rcount[irank]] = sf->remote[i].index;
     rcount[irank]++;
@@ -1606,7 +1606,7 @@ PetscErrorCode PetscSFFetchAndOpBegin(PetscSF sf,MPI_Datatype unit,void *rootdat
   PetscCall(PetscGetMemType(rootdata,&rootmtype));
   PetscCall(PetscGetMemType(leafdata,&leafmtype));
   PetscCall(PetscGetMemType(leafupdate,&leafupdatemtype));
-  PetscCheckFalse(leafmtype != leafupdatemtype,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support for leafdata and leafupdate in different memory types");
+  PetscCheck(leafmtype == leafupdatemtype,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support for leafdata and leafupdate in different memory types");
   PetscCall((*sf->ops->FetchAndOpBegin)(sf,unit,rootmtype,rootdata,leafmtype,leafdata,leafupdate,op));
   PetscCall(PetscLogEventEnd(PETSCSF_FetchAndOpBegin,sf,0,0,0));
   PetscFunctionReturn(0);
@@ -1642,7 +1642,7 @@ PetscErrorCode PetscSFFetchAndOpWithMemTypeBegin(PetscSF sf,MPI_Datatype unit,Pe
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
   PetscCall(PetscSFSetUp(sf));
   PetscCall(PetscLogEventBegin(PETSCSF_FetchAndOpBegin,sf,0,0,0));
-  PetscCheckFalse(leafmtype != leafupdatemtype,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support for leafdata and leafupdate in different memory types");
+  PetscCheck(leafmtype == leafupdatemtype,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support for leafdata and leafupdate in different memory types");
   PetscCall((*sf->ops->FetchAndOpBegin)(sf,unit,rootmtype,rootdata,leafmtype,leafdata,leafupdate,op));
   PetscCall(PetscLogEventEnd(PETSCSF_FetchAndOpBegin,sf,0,0,0));
   PetscFunctionReturn(0);
@@ -1790,7 +1790,7 @@ PetscErrorCode PetscSFComputeMultiRootOriginalNumbering(PetscSF sf, const PetscI
       (*multiRootsOrigNumbering)[k] = i;
     }
   }
-  PetscCheckFalse(k != nmroots,PETSC_COMM_SELF,PETSC_ERR_PLIB,"sanity check fail");
+  PetscCheck(k == nmroots,PETSC_COMM_SELF,PETSC_ERR_PLIB,"sanity check fail");
   if (nMultiRoots) *nMultiRoots = nmroots;
   PetscFunctionReturn(0);
 }
@@ -1924,7 +1924,7 @@ static PetscErrorCode PetscSFCheckLeavesUnique_Private(PetscSF sf)
       PetscCall(PetscHSetIAdd(seen,leaf));
     }
     PetscCall(PetscHSetIGetSize(seen,&n));
-    PetscCheckFalse(n != nleaves,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Provided leaves have repeated values: all leaves must be unique");
+    PetscCheck(n == nleaves,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Provided leaves have repeated values: all leaves must be unique");
     PetscCall(PetscHSetIDestroy(&seen));
   }
   PetscFunctionReturn(0);

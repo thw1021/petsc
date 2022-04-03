@@ -2079,7 +2079,7 @@ static PetscErrorCode PetscFVComputeGradient_LeastSquares(PetscFV fvm, PetscInt 
 
   PetscFunctionBegin;
   if (numFaces > maxFaces) {
-    PetscCheckFalse(maxFaces < 0,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Reconstruction has not been initialized, call PetscFVLeastSquaresSetMaxFaces()");
+    PetscCheck(maxFaces >= 0,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Reconstruction has not been initialized, call PetscFVLeastSquaresSetMaxFaces()");
     SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of input faces %D > %D maxfaces", numFaces, maxFaces);
   }
   PetscCall(PetscFVGetSpatialDimension(fvm, &dim));

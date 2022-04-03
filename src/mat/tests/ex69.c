@@ -43,9 +43,9 @@ int main(int argc,char **argv)
   PetscCall(PetscOptionsGetInt(NULL,NULL,"-l",&l,NULL));
   PetscCall(PetscOptionsGetInt(NULL,NULL,"-test",&test,NULL));
   PetscCall(PetscOptionsGetBool(NULL,NULL,"-use_shell",&use_shell,NULL));
-  PetscCheckFalse(k < 0,PETSC_COMM_WORLD,PETSC_ERR_USER,"k %" PetscInt_FMT " must be positive",k);
-  PetscCheckFalse(l < 0,PETSC_COMM_WORLD,PETSC_ERR_USER,"l %" PetscInt_FMT " must be positive",l);
-  PetscCheckFalse(l > k,PETSC_COMM_WORLD,PETSC_ERR_USER,"l %" PetscInt_FMT " must be smaller or equal than k %" PetscInt_FMT,l,k);
+  PetscCheck(k >= 0,PETSC_COMM_WORLD,PETSC_ERR_USER,"k %" PetscInt_FMT " must be positive",k);
+  PetscCheck(l >= 0,PETSC_COMM_WORLD,PETSC_ERR_USER,"l %" PetscInt_FMT " must be positive",l);
+  PetscCheck(l <= k,PETSC_COMM_WORLD,PETSC_ERR_USER,"l %" PetscInt_FMT " must be smaller or equal than k %" PetscInt_FMT,l,k);
 
   /* sparse matrix */
   PetscCall(MatCreate(PETSC_COMM_WORLD,&A));

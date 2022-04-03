@@ -297,7 +297,7 @@ PetscErrorCode PetscViewerVTKFWrite(PetscViewer viewer,FILE *fp,const void *data
 #endif
 
   PetscFunctionBegin;
-  PetscCheckFalse(n < 0,PetscObjectComm((PetscObject)viewer),PETSC_ERR_ARG_OUTOFRANGE,"Trying to write a negative amount of data %" PetscInt_FMT,n);
+  PetscCheck(n >= 0,PetscObjectComm((PetscObject)viewer),PETSC_ERR_ARG_OUTOFRANGE,"Trying to write a negative amount of data %" PetscInt_FMT,n);
   if (!n) PetscFunctionReturn(0);
   PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)viewer),&rank));
   if (rank == 0) {
@@ -317,7 +317,7 @@ PetscErrorCode PetscViewerVTKFWrite(PetscViewer viewer,FILE *fp,const void *data
     bytes = PetscVTKIntCast(dsize*n);
 
     count = fwrite(&bytes,sizeof(int),1,fp);
-    PetscCheckFalse(count != 1,PETSC_COMM_SELF,PETSC_ERR_FILE_WRITE,"Error writing byte count");
+    PetscCheck(count == 1,PETSC_COMM_SELF,PETSC_ERR_FILE_WRITE,"Error writing byte count");
     count = fwrite(data,dsize,(size_t)n,fp);
     PetscCheckFalse((PetscInt)count != n,PETSC_COMM_SELF,PETSC_ERR_FILE_WRITE,"Wrote %" PetscInt_FMT "/%" PetscInt_FMT " array members of size %d",(PetscInt)count,n,dsize);
 #if defined(PETSC_USE_REAL___FLOAT128)

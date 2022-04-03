@@ -8,7 +8,7 @@ PetscErrorCode SNESNGMRESUpdateSubspace_Private(SNES snes,PetscInt ivec,PetscInt
   Vec            *Xdot   = ngmres->Xdot;
 
   PetscFunctionBegin;
-  PetscCheckFalse(ivec > l,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE,"Cannot update vector %D with space size %D!",ivec,l);
+  PetscCheck(ivec <= l,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE,"Cannot update vector %D with space size %D!",ivec,l);
   PetscCall(VecCopy(F,Fdot[ivec]));
   PetscCall(VecCopy(X,Xdot[ivec]));
 

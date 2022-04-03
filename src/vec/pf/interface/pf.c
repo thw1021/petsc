@@ -132,7 +132,7 @@ PetscErrorCode  PFApplyVec(PF pf,Vec x,Vec y)
   PetscValidHeaderSpecific(y,VEC_CLASSID,3);
   if (x) {
     PetscValidHeaderSpecific(x,VEC_CLASSID,2);
-    PetscCheckFalse(x == y,PETSC_COMM_SELF,PETSC_ERR_ARG_IDN,"x and y must be different vectors");
+    PetscCheck(x != y,PETSC_COMM_SELF,PETSC_ERR_ARG_IDN,"x and y must be different vectors");
   } else {
     PetscScalar *xx;
     PetscInt    lsize;
@@ -200,7 +200,7 @@ PetscErrorCode  PFApply(PF pf,PetscInt n,const PetscScalar *x,PetscScalar *y)
   PetscValidHeaderSpecific(pf,PF_CLASSID,1);
   PetscValidScalarPointer(x,3);
   PetscValidScalarPointer(y,4);
-  PetscCheckFalse(x == y,PETSC_COMM_SELF,PETSC_ERR_ARG_IDN,"x and y must be different arrays");
+  PetscCheck(x != y,PETSC_COMM_SELF,PETSC_ERR_ARG_IDN,"x and y must be different arrays");
   PetscCheck(pf->ops->apply,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"No function has been provided for this PF");
 
   PetscCall((*pf->ops->apply)(pf->data,n,x,y));

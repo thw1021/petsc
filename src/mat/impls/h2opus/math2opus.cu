@@ -890,7 +890,7 @@ static PetscErrorCode MatAssemblyEnd_H2OPUS(Mat A, MatAssemblyType assemblytype)
     }
     kernel = PETSC_TRUE;
   } else {
-    PetscCheckFalse(size > 1,comm,PETSC_ERR_SUP,"Construction from sampling not supported in parallel");
+    PetscCheck(size <= 1,comm,PETSC_ERR_SUP,"Construction from sampling not supported in parallel");
     buildHMatrixStructure(*a->hmatrix,a->ptcloud,a->leafsize,adm);
   }
   PetscCall(MatSetUpMultiply_H2OPUS(A));
@@ -1010,7 +1010,7 @@ static PetscErrorCode MatZeroEntries_H2OPUS(Mat A)
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)A),&size));
-  PetscCheckFalse(size > 1,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Not yet supported");
+  PetscCheck(size <= 1,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Not yet supported");
   else {
     a->hmatrix->clearData();
 #if defined(PETSC_H2OPUS_USE_GPU)
@@ -1588,10 +1588,10 @@ PetscErrorCode MatCreateH2OpusFromKernel(MPI_Comm comm, PetscInt m, PetscInt n, 
 #endif
 
   PetscFunctionBegin;
-  PetscCheckFalse(m != n,PETSC_COMM_SELF,PETSC_ERR_SUP,"Different row and column local sizes are not supported");
+  PetscCheck(m == n,PETSC_COMM_SELF,PETSC_ERR_SUP,"Different row and column local sizes are not supported");
   PetscCall(MatCreate(comm,&A));
   PetscCall(MatSetSizes(A,m,n,M,N));
-  PetscCheckFalse(M != N,comm,PETSC_ERR_SUP,"Rectangular matrices are not supported");
+  PetscCheck(M == N,comm,PETSC_ERR_SUP,"Rectangular matrices are not supported");
   PetscCall(MatSetType(A,MATH2OPUS));
   PetscCall(MatBindToCPU(A,iscpu));
   PetscCall(MatH2OpusSetCoords_H2OPUS(A,spacedim,coords,cdist,kernel,kernelctx));
@@ -1831,7 +1831,7 @@ PetscErrorCode MatH2OpusLowRankUpdate(Mat A, Mat U, Mat V, PetscScalar s)
     PetscSF           usf,vsf;
 
     PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)A),&size));
-    PetscCheckFalse(size > 1,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Not yet implemented in parallel");
+    PetscCheck(size <= 1,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Not yet implemented in parallel");
     PetscCall(PetscLogEventBegin(MAT_H2Opus_LR,A,0,0,0));
     PetscCall(PetscObjectBaseTypeCompareAny((PetscObject)U,&flg,MATSEQDENSE,MATMPIDENSE,""));
     PetscCheck(flg,PetscObjectComm((PetscObject)U),PETSC_ERR_SUP,"Not for U of type %s",((PetscObject)U)->type_name);

@@ -432,7 +432,7 @@ static PetscErrorCode PCBDDCScalingSetUp_Deluxe(PC pc)
 
         PetscCall(ISGetIndices(sub_schurs->is_vertices,&idxs));
         PetscCall(ISGlobalToLocalMappingApply(pcis->BtoNmap,IS_GTOLM_DROP,n_com,idxs,&nmap,deluxe_ctx->idx_simple_B));
-        PetscCheckFalse(nmap != n_com,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Error when mapping simply scaled dofs (is_vertices)! %D != %D",nmap,n_com);
+        PetscCheck(nmap == n_com,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Error when mapping simply scaled dofs (is_vertices)! %D != %D",nmap,n_com);
         PetscCall(ISRestoreIndices(sub_schurs->is_vertices,&idxs));
       }
       if (sub_schurs->is_dir) {
@@ -441,7 +441,7 @@ static PetscErrorCode PCBDDCScalingSetUp_Deluxe(PC pc)
 
         PetscCall(ISGetIndices(sub_schurs->is_dir,&idxs));
         PetscCall(ISGlobalToLocalMappingApply(pcis->BtoNmap,IS_GTOLM_DROP,n_dir,idxs,&nmap,deluxe_ctx->idx_simple_B+n_com));
-        PetscCheckFalse(nmap != n_dir,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Error when mapping simply scaled dofs (sub_schurs->is_dir)! %D != %D",nmap,n_dir);
+        PetscCheck(nmap == n_dir,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Error when mapping simply scaled dofs (sub_schurs->is_dir)! %D != %D",nmap,n_dir);
         PetscCall(ISRestoreIndices(sub_schurs->is_dir,&idxs));
       }
       PetscCall(PetscSortInt(deluxe_ctx->n_simple,deluxe_ctx->idx_simple_B));

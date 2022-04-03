@@ -1195,7 +1195,7 @@ PetscErrorCode KSPMatSolve(KSP ksp, Mat B, Mat X)
     PetscCall(MatAssemblyBegin(X, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(X, MAT_FINAL_ASSEMBLY));
   }
-  PetscCheckFalse(B == X,PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_IDN, "B and X must be different matrices");
+  PetscCheck(B != X,PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_IDN, "B and X must be different matrices");
   PetscCall(KSPGetOperators(ksp, &A, &P));
   PetscCall(MatGetLocalSize(B, NULL, &n2));
   PetscCall(MatGetLocalSize(X, NULL, &n1));
@@ -1216,7 +1216,7 @@ PetscErrorCode KSPMatSolve(KSP ksp, Mat B, Mat X)
     PetscCall(KSPGetMatSolveBatchSize(ksp, &Bbn));
     /* by default, do a single solve with all columns */
     if (Bbn == PETSC_DECIDE) Bbn = N2;
-    else PetscCheckFalse(Bbn < 1,PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_OUTOFRANGE, "KSPMatSolve() batch size %D must be positive", Bbn);
+    else PetscCheck(Bbn >= 1,PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_OUTOFRANGE, "KSPMatSolve() batch size %D must be positive", Bbn);
     PetscCall(PetscInfo(ksp, "KSP type %s solving using batches of width at most %D\n", ((PetscObject)ksp)->type_name, Bbn));
     /* if -ksp_matsolve_batch_size is greater than the actual number of columns, do a single solve with all columns */
     if (Bbn >= N2) {
@@ -1610,15 +1610,15 @@ PetscErrorCode  KSPSetTolerances(KSP ksp,PetscReal rtol,PetscReal abstol,PetscRe
     ksp->rtol = rtol;
   }
   if (abstol != PETSC_DEFAULT) {
-    PetscCheckFalse(abstol < 0.0,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Absolute tolerance %g must be non-negative",(double)abstol);
+    PetscCheck(abstol >= 0.0,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Absolute tolerance %g must be non-negative",(double)abstol);
     ksp->abstol = abstol;
   }
   if (dtol != PETSC_DEFAULT) {
-    PetscCheckFalse(dtol < 0.0,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Divergence tolerance %g must be larger than 1.0",(double)dtol);
+    PetscCheck(dtol >= 0.0,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Divergence tolerance %g must be larger than 1.0",(double)dtol);
     ksp->divtol = dtol;
   }
   if (maxits != PETSC_DEFAULT) {
-    PetscCheckFalse(maxits < 0,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Maximum number of iterations %D must be non-negative",maxits);
+    PetscCheck(maxits >= 0,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Maximum number of iterations %D must be non-negative",maxits);
     ksp->max_it = maxits;
   }
   PetscFunctionReturn(0);

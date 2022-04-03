@@ -330,7 +330,7 @@ PetscErrorCode MatCreateColmap_MPIAIJ_Private(Mat mat)
       }  \
       if (value == 0.0 && ignorezeroentries && row != col) {low1 = 0; high1 = nrow1;goto a_noinsert;} \
       if (nonew == 1) {low1 = 0; high1 = nrow1; goto a_noinsert;}                \
-      PetscCheckFalse(nonew == -1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Inserting a new nonzero at global row/column (%" PetscInt_FMT ", %" PetscInt_FMT ") into matrix", orow, ocol); \
+      PetscCheck(nonew != -1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Inserting a new nonzero at global row/column (%" PetscInt_FMT ", %" PetscInt_FMT ") into matrix", orow, ocol); \
       MatSeqXAIJReallocateAIJ(A,am,1,nrow1,row,col,rmax1,aa,ai,aj,rp1,ap1,aimax,nonew,MatScalar); \
       N = nrow1++ - 1; a->nz++; high1++; \
       /* shift up all the later entries in this row */ \
@@ -366,7 +366,7 @@ PetscErrorCode MatCreateColmap_MPIAIJ_Private(Mat mat)
     }                                                     \
     if (value == 0.0 && ignorezeroentries) {low2 = 0; high2 = nrow2; goto b_noinsert;} \
     if (nonew == 1) {low2 = 0; high2 = nrow2; goto b_noinsert;}                        \
-    PetscCheckFalse(nonew == -1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Inserting a new nonzero at global row/column (%" PetscInt_FMT ", %" PetscInt_FMT ") into matrix", orow, ocol); \
+    PetscCheck(nonew != -1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Inserting a new nonzero at global row/column (%" PetscInt_FMT ", %" PetscInt_FMT ") into matrix", orow, ocol); \
     MatSeqXAIJReallocateAIJ(B,bm,1,nrow2,row,col,rmax2,ba,bi,bj,rp2,ap2,bimax,nonew,MatScalar); \
     N = nrow2++ - 1; b->nz++; high2++;                    \
     /* shift up all the later entries in this row */      \
@@ -1225,7 +1225,7 @@ PetscErrorCode MatView_MPIAIJ_Binary(Mat mat,PetscViewer viewer)
     for (; jb<B->i[i+1]; jb++)
       colidxs[cnt++] = garray[B->j[jb]];
   }
-  PetscCheckFalse(cnt != nz,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Internal PETSc error: cnt = %" PetscInt_FMT " nz = %" PetscInt_FMT,cnt,nz);
+  PetscCheck(cnt == nz,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Internal PETSc error: cnt = %" PetscInt_FMT " nz = %" PetscInt_FMT,cnt,nz);
   PetscCall(PetscViewerBinaryWriteAll(viewer,colidxs,nz,PETSC_DETERMINE,PETSC_DETERMINE,PETSC_INT));
   PetscCall(PetscFree(colidxs));
 
@@ -1245,7 +1245,7 @@ PetscErrorCode MatView_MPIAIJ_Binary(Mat mat,PetscViewer viewer)
   }
   PetscCall(MatSeqAIJRestoreArrayRead(aij->A,&aa));
   PetscCall(MatSeqAIJRestoreArrayRead(aij->B,&ba));
-  PetscCheckFalse(cnt != nz,PETSC_COMM_SELF,PETSC_ERR_LIB,"Internal PETSc error: cnt = %" PetscInt_FMT " nz = %" PetscInt_FMT,cnt,nz);
+  PetscCheck(cnt == nz,PETSC_COMM_SELF,PETSC_ERR_LIB,"Internal PETSc error: cnt = %" PetscInt_FMT " nz = %" PetscInt_FMT,cnt,nz);
   PetscCall(PetscViewerBinaryWriteAll(viewer,matvals,nz,PETSC_DETERMINE,PETSC_DETERMINE,PETSC_SCALAR));
   PetscCall(PetscFree(matvals));
 
@@ -2981,9 +2981,9 @@ PetscErrorCode MatLoad_MPIAIJ_Binary(Mat mat, PetscViewer viewer)
   PetscCall(PetscViewerBinaryRead(viewer,header,4,NULL,PETSC_INT));
   PetscCheckFalse(header[0] != MAT_FILE_CLASSID,PetscObjectComm((PetscObject)viewer),PETSC_ERR_FILE_UNEXPECTED,"Not a matrix object in file");
   M  = header[1]; N = header[2]; nz = header[3];
-  PetscCheckFalse(M < 0,PetscObjectComm((PetscObject)viewer),PETSC_ERR_FILE_UNEXPECTED,"Matrix row size (%" PetscInt_FMT ") in file is negative",M);
-  PetscCheckFalse(N < 0,PetscObjectComm((PetscObject)viewer),PETSC_ERR_FILE_UNEXPECTED,"Matrix column size (%" PetscInt_FMT ") in file is negative",N);
-  PetscCheckFalse(nz < 0,PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED,"Matrix stored in special format on disk, cannot load as MPIAIJ");
+  PetscCheck(M >= 0,PetscObjectComm((PetscObject)viewer),PETSC_ERR_FILE_UNEXPECTED,"Matrix row size (%" PetscInt_FMT ") in file is negative",M);
+  PetscCheck(N >= 0,PetscObjectComm((PetscObject)viewer),PETSC_ERR_FILE_UNEXPECTED,"Matrix column size (%" PetscInt_FMT ") in file is negative",N);
+  PetscCheck(nz >= 0,PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED,"Matrix stored in special format on disk, cannot load as MPIAIJ");
 
   /* set block sizes from the viewer's .info file */
   PetscCall(MatLoad_Binary_BlockSizes(mat,viewer));
@@ -3003,7 +3003,7 @@ PetscErrorCode MatLoad_MPIAIJ_Binary(Mat mat, PetscViewer viewer)
   PetscCall(PetscViewerBinaryReadAll(viewer,rowidxs+1,m,PETSC_DECIDE,M,PETSC_INT));
   rowidxs[0] = 0; for (i=0; i<m; i++) rowidxs[i+1] += rowidxs[i];
   PetscCall(MPIU_Allreduce(&rowidxs[m],&sum,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)viewer)));
-  PetscCheckFalse(sum != nz,PetscObjectComm((PetscObject)viewer),PETSC_ERR_FILE_UNEXPECTED,"Inconsistent matrix data in file: nonzeros = %" PetscInt_FMT ", sum-row-lengths = %" PetscInt_FMT,nz,sum);
+  PetscCheck(sum == nz,PetscObjectComm((PetscObject)viewer),PETSC_ERR_FILE_UNEXPECTED,"Inconsistent matrix data in file: nonzeros = %" PetscInt_FMT ", sum-row-lengths = %" PetscInt_FMT,nz,sum);
   /* read in column indices and matrix values */
   PetscCall(PetscMalloc2(rowidxs[m],&colidxs,rowidxs[m],&matvals));
   PetscCall(PetscViewerBinaryReadAll(viewer,colidxs,rowidxs[m],PETSC_DETERMINE,PETSC_DETERMINE,PETSC_INT));
@@ -3324,7 +3324,7 @@ PetscErrorCode MatCreateSubMatrix_MPIAIJ(Mat mat,IS isrow,IS iscol,MatReuse call
         PetscCall(ISGetSeqIS_Private(mat,iscol,&iscol_local));
         PetscCall(ISGetLocalSize(iscol_local,&n)); /* local size of iscol_local = global columns of newmat */
         PetscCall(ISGetSize(iscol,&i));
-        PetscCheckFalse(n != i,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"n %" PetscInt_FMT " != size of iscol %" PetscInt_FMT,n,i);
+        PetscCheck(n == i,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"n %" PetscInt_FMT " != size of iscol %" PetscInt_FMT,n,i);
 
         PetscCall(ISSorted(iscol_local,&sorted));
         if (sorted) {
@@ -3612,7 +3612,7 @@ PetscErrorCode MatCreateSubMatrix_MPIAIJ_SameRowDist(Mat mat,IS isrow,IS iscol,I
   } else { /* call == MAT_REUSE_MATRIX */
     M    = *newmat;
     PetscCall(MatGetLocalSize(M,&i,NULL));
-    PetscCheckFalse(i != m,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Previous matrix must be same size/layout as request");
+    PetscCheck(i == m,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Previous matrix must be same size/layout as request");
     PetscCall(MatZeroEntries(M));
     /*
          The next two lines are needed so we may call MatSetValues_MPIAIJ() below directly,
@@ -3758,7 +3758,7 @@ PetscErrorCode MatCreateSubMatrix_MPIAIJ_nonscalable(Mat mat,IS isrow,IS iscol,P
 
     M    = *newmat;
     PetscCall(MatGetLocalSize(M,&ml,&nl));
-    PetscCheckFalse(ml != m,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Previous matrix must be same size/layout as request");
+    PetscCheck(ml == m,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Previous matrix must be same size/layout as request");
     PetscCall(MatZeroEntries(M));
     /*
          The next two lines are needed so we may call MatSetValues_MPIAIJ() below directly,
@@ -3818,7 +3818,7 @@ PetscErrorCode MatMPIAIJSetPreallocationCSR_MPIAIJ(Mat B,const PetscInt Ii[],con
     for (i=0; i<m; i++) {
       nnz = Ii[i+1]- Ii[i];
       JJ  = J + Ii[i];
-      PetscCheckFalse(nnz < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Local row %" PetscInt_FMT " has a negative %" PetscInt_FMT " number of columns",i,nnz);
+      PetscCheck(nnz >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Local row %" PetscInt_FMT " has a negative %" PetscInt_FMT " number of columns",i,nnz);
       PetscCheckFalse(nnz && (JJ[0] < 0),PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Row %" PetscInt_FMT " starts with negative column index %" PetscInt_FMT,i,JJ[0]);
       PetscCheckFalse(nnz && (JJ[nnz-1] >= B->cmap->N),PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Row %" PetscInt_FMT " ends with too large a column index %" PetscInt_FMT " (max allowed %" PetscInt_FMT ")",i,JJ[nnz-1],B->cmap->N);
     }
@@ -4098,7 +4098,7 @@ PetscErrorCode MatCreateMPIAIJWithArrays(MPI_Comm comm,PetscInt m,PetscInt n,Pet
 {
   PetscFunctionBegin;
   PetscCheckFalse(i && i[0],PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"i (row indices) must start with 0");
-  PetscCheckFalse(m < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"local number of rows (m) cannot be PETSC_DECIDE, or negative");
+  PetscCheck(m >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"local number of rows (m) cannot be PETSC_DECIDE, or negative");
   PetscCall(MatCreate(comm,mat));
   PetscCall(MatSetSizes(*mat,m,n,M,N));
   /* PetscCall(MatSetBlockSizes(M,bs,cbs)); */
@@ -4143,7 +4143,7 @@ PetscErrorCode MatUpdateMPIAIJWithArrays(Mat mat,PetscInt m,PetscInt n,PetscInt 
 
   PetscFunctionBegin;
   PetscCheckFalse(Ii[0],PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"i (row indices) must start with 0");
-  PetscCheckFalse(m < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"local number of rows (m) cannot be PETSC_DECIDE, or negative");
+  PetscCheck(m >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"local number of rows (m) cannot be PETSC_DECIDE, or negative");
   PetscCheckFalse(m != mat->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Local number of rows cannot change from call to MatUpdateMPIAIJWithArrays()");
   PetscCheckFalse(n != mat->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Local number of columns cannot change from call to MatUpdateMPIAIJWithArrays()");
 
@@ -4437,7 +4437,7 @@ PetscErrorCode MatCreateMPIMatConcatenateSeqMat_MPIAIJ(MPI_Comm comm,Mat inmat,P
     }
     /* Check sum(n) = N */
     PetscCall(MPIU_Allreduce(&n,&sum,1,MPIU_INT,MPI_SUM,comm));
-    PetscCheckFalse(sum != N,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Sum of local columns %" PetscInt_FMT " != global columns %" PetscInt_FMT,sum,N);
+    PetscCheck(sum == N,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Sum of local columns %" PetscInt_FMT " != global columns %" PetscInt_FMT,sum,N);
 
     PetscCallMPI(MPI_Scan(&m, &rstart,1,MPIU_INT,MPI_SUM,comm));
     rstart -= m;
@@ -6642,7 +6642,7 @@ PetscErrorCode MatCreateMPIAIJWithSplitArrays(MPI_Comm comm,PetscInt m,PetscInt 
   Mat_MPIAIJ     *maij;
 
   PetscFunctionBegin;
-  PetscCheckFalse(m < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"local number of rows (m) cannot be PETSC_DECIDE, or negative");
+  PetscCheck(m >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"local number of rows (m) cannot be PETSC_DECIDE, or negative");
   PetscCheckFalse(i[0],PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"i (row indices) must start with 0");
   PetscCheckFalse(oi[0],PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"oi (row indices) must start with 0");
   PetscCall(MatCreate(comm,mat));

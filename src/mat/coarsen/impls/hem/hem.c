@@ -775,7 +775,7 @@ static PetscErrorCode heavyEdgeMatchAgg(IS perm,Mat a_Gmat,PetscCoarsenData **a_
           PetscCallMPI(MPI_Iprobe(MPI_ANY_SOURCE, tag1, comm, &flag, &status));
           if (!flag) break;
           PetscCallMPI(MPI_Get_count(&status, MPIU_INT, &count));
-          PetscCheckFalse(count > BF_SZ,PETSC_COMM_SELF,PETSC_ERR_SUP,"buffer too small for receive: %d",count);
+          PetscCheck(count <= BF_SZ,PETSC_COMM_SELF,PETSC_ERR_SUP,"buffer too small for receive: %d",count);
           proc = status.MPI_SOURCE;
           /* receive request tag1 [n, proc, n*[gid1,lid0] ] */
           PetscCallMPI(MPI_Recv(rbuff, count, MPIU_INT, proc, tag1, comm, &status));

@@ -395,7 +395,7 @@ int main(int argc, char **argv) {
     PetscCall(VecLoad(tmpVec, viewer));
     PetscCall(VecAXPY(UA, -1.0, tmpVec));
     PetscCall(VecNorm(UA, NORM_INFINITY, &norm));
-    PetscCheckFalse(norm > PETSC_SQRT_MACHINE_EPSILON,PetscObjectComm((PetscObject) dm), PETSC_ERR_PLIB, "UAlpha ||Vin - Vout|| = %g", (double) norm);
+    PetscCheck(norm <= PETSC_SQRT_MACHINE_EPSILON,PetscObjectComm((PetscObject) dm), PETSC_ERR_PLIB, "UAlpha ||Vin - Vout|| = %g", (double) norm);
     PetscCall(DMRestoreGlobalVector(dmUA, &tmpVec));
 
     /* same thing with the UA2 Vec obtained from the superDM */
@@ -409,7 +409,7 @@ int main(int argc, char **argv) {
     PetscCall(VecLoad(tmpVec,viewer));
     PetscCall(VecAXPY(UA2, -1.0, tmpVec));
     PetscCall(VecNorm(UA2, NORM_INFINITY, &norm));
-    PetscCheckFalse(norm > PETSC_SQRT_MACHINE_EPSILON,PetscObjectComm((PetscObject) dm), PETSC_ERR_PLIB, "UAlpha2 ||Vin - Vout|| = %g", (double) norm);
+    PetscCheck(norm <= PETSC_SQRT_MACHINE_EPSILON,PetscObjectComm((PetscObject) dm), PETSC_ERR_PLIB, "UAlpha2 ||Vin - Vout|| = %g", (double) norm);
     PetscCall(DMRestoreGlobalVector(dmUA2, &tmpVec));
 
     /* Building and saving Sigma
@@ -463,7 +463,7 @@ int main(int argc, char **argv) {
     PetscCall(VecLoad(tmpVec,viewer));
     PetscCall(VecAXPY(S, -1.0, tmpVec));
     PetscCall(VecNorm(S, NORM_INFINITY, &norm));
-    PetscCheckFalse(norm > PETSC_SQRT_MACHINE_EPSILON,PetscObjectComm((PetscObject) dm), PETSC_ERR_PLIB, "Sigma ||Vin - Vout|| = %g", (double) norm);
+    PetscCheck(norm <= PETSC_SQRT_MACHINE_EPSILON,PetscObjectComm((PetscObject) dm), PETSC_ERR_PLIB, "Sigma ||Vin - Vout|| = %g", (double) norm);
     PetscCall(DMRestoreGlobalVector(dmS, &tmpVec));
   }
   PetscCall(PetscViewerDestroy(&viewer));

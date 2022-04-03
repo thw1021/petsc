@@ -180,7 +180,7 @@ static PetscErrorCode PCSetCoordinates_AGG(PC pc, PetscInt ndm, PetscInt a_nloc,
   PetscCall(MatGetBlockSize(mat, &ndf)); /* this does not work for Stokes */
   if (coords && ndf==1) pc_gamg->data_cell_cols = 1; /* scalar w/ coords and SA (not needed) */
   else if (coords) {
-    PetscCheckFalse(ndm > ndf,PETSC_COMM_SELF,PETSC_ERR_PLIB,"degrees of motion %D > block size %D",ndm,ndf);
+    PetscCheck(ndm <= ndf,PETSC_COMM_SELF,PETSC_ERR_PLIB,"degrees of motion %D > block size %D",ndm,ndf);
     pc_gamg->data_cell_cols = (ndm==2 ? 3 : 6); /* displacement elasticity */
     if (ndm != ndf) {
       PetscCheckFalse(pc_gamg->data_cell_cols != ndf,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Don't know how to create null space for ndm=%D, ndf=%D.  Use MatSetNearNullSpace().",ndm,ndf);
@@ -388,7 +388,7 @@ static PetscErrorCode smoothAggs(PC pc,Mat Gmat_2, Mat Gmat_1,PetscCoarsenData *
               SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"found node %D times???",hav);
             }
           } else {            /* I'm stealing this local, owned by a ghost */
-            PetscCheckFalse(sgid != -1,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Mat has an un-symmetric graph. Use '-%spc_gamg_sym_graph true' to symmetrize the graph or '-%spc_gamg_threshold -1' if the matrix is structurally symmetric.",((PetscObject)pc)->prefix ? ((PetscObject)pc)->prefix : "",((PetscObject)pc)->prefix ? ((PetscObject)pc)->prefix : "");
+            PetscCheck(sgid == -1,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Mat has an un-symmetric graph. Use '-%spc_gamg_sym_graph true' to symmetrize the graph or '-%spc_gamg_threshold -1' if the matrix is structurally symmetric.",((PetscObject)pc)->prefix ? ((PetscObject)pc)->prefix : "",((PetscObject)pc)->prefix ? ((PetscObject)pc)->prefix : "");
             PetscCall(PetscCDAppendID(aggs_2, lid, lidj+my0));
           }
         }
@@ -699,7 +699,7 @@ static PetscErrorCode formProl0(PetscCoarsenData *agg_llists,PetscInt bs,PetscIn
         if (gid1 >= my0 && gid1 < Iend) flid = gid1 - my0;
         else {
           PetscCall(PCGAMGHashTableFind(&fgid_flid, gid1, &flid));
-          PetscCheckFalse(flid < 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Cannot find gid1 in table");
+          PetscCheck(flid >= 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Cannot find gid1 in table");
         }
         /* copy in B_i matrix - column oriented */
         data = &data_in[flid*bs];
@@ -725,7 +725,7 @@ static PetscErrorCode formProl0(PetscCoarsenData *agg_llists,PetscInt bs,PetscIn
       PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
       PetscStackCallBLAS("LAPACKgeqrf",LAPACKgeqrf_(&Mdata, &N, qqc, &LDA, TAU, WORK, &LWORK, &INFO));
       PetscCall(PetscFPTrapPop());
-      PetscCheckFalse(INFO != 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"xGEQRF error");
+      PetscCheck(INFO == 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"xGEQRF error");
       /* get R - column oriented - output B_{i+1} */
       {
         PetscReal *data = &out_data[clid*nSAvec];
@@ -740,7 +740,7 @@ static PetscErrorCode formProl0(PetscCoarsenData *agg_llists,PetscInt bs,PetscIn
 
       /* get Q - row oriented */
       PetscStackCallBLAS("LAPACKorgqr",LAPACKorgqr_(&Mdata, &N, &N, qqc, &LDA, TAU, WORK, &LWORK, &INFO));
-      PetscCheckFalse(INFO != 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"xORGQR error arg %d",-INFO);
+      PetscCheck(INFO == 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"xORGQR error arg %d",-INFO);
 
       for (ii = 0; ii < M; ii++) {
         for (jj = 0; jj < N; jj++) {
@@ -843,7 +843,7 @@ static PetscErrorCode PCGAMGCoarsen_AGG(PC a_pc,Mat *a_Gmat1,PetscCoarsenData **
   PetscCall(PetscObjectGetComm((PetscObject)Gmat1,&comm));
   PetscCall(MatGetLocalSize(Gmat1, &n, &m));
   PetscCall(MatGetBlockSize(Gmat1, &bs));
-  PetscCheckFalse(bs != 1,PETSC_COMM_SELF,PETSC_ERR_PLIB,"bs %D must be 1",bs);
+  PetscCheck(bs == 1,PETSC_COMM_SELF,PETSC_ERR_PLIB,"bs %D must be 1",bs);
   nloc = n/bs;
 
   if (pc_gamg->current_level < pc_gamg_agg->square_graph) {
@@ -931,7 +931,7 @@ static PetscErrorCode PCGAMGProlongator_AGG(PC pc,Mat Amat,Mat Gmat,PetscCoarsen
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)Amat,&comm));
-  PetscCheckFalse(col_bs < 1,comm,PETSC_ERR_PLIB,"Column bs cannot be less than 1");
+  PetscCheck(col_bs >= 1,comm,PETSC_ERR_PLIB,"Column bs cannot be less than 1");
   PetscCall(PetscLogEventBegin(PC_GAMGProlongator_AGG,0,0,0,0));
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCall(MatGetOwnershipRange(Amat, &Istart, &Iend));
@@ -1144,7 +1144,7 @@ static PetscErrorCode PCGAMGOptProlongator_AGG(PC pc,Mat Amat,Mat *a_P)
     PetscCall(VecDestroy(&diag));
 
     /* TODO: Set a PCFailedReason and exit the building of the AMG preconditioner */
-    PetscCheckFalse(emax == 0.0,PetscObjectComm((PetscObject)pc),PETSC_ERR_PLIB,"Computed maximum singular value as zero");
+    PetscCheck(emax != 0.0,PetscObjectComm((PetscObject)pc),PETSC_ERR_PLIB,"Computed maximum singular value as zero");
     /* TODO: Document the 1.4 and don't hardwire it in this routine */
     alpha = -1.4/emax;
 

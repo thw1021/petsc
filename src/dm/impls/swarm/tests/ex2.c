@@ -108,7 +108,7 @@ static PetscErrorCode PerturbVertices(DM dm, AppCtx *user)
   for (d = 0; d < cdim; ++d) hh[d] = (user->L[d])/PetscPowReal(cEnd, 1./cdim);
   PetscCall(VecGetLocalSize(coordinates, &N));
   PetscCall(VecGetBlockSize(coordinates, &bs));
-  PetscCheckFalse(bs != cdim,PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_SIZ, "Coordinate vector has wrong block size %D != %D", bs, cdim);
+  PetscCheck(bs == cdim,PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_SIZ, "Coordinate vector has wrong block size %D != %D", bs, cdim);
   PetscCall(VecGetArray(coordinates, &coords));
   for (p = 0; p < N; p += cdim) {
     PetscScalar *coord = &coords[p], value;

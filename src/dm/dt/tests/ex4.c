@@ -42,7 +42,7 @@ static PetscErrorCode CheckSymmetry(PetscInt dim, PetscInt order, PetscBool tens
 
     PetscCall(PetscDualSpaceGetFunctional(sp,i,&q));
     PetscCall(PetscQuadratureGetData(q,NULL,&Nc,&numPoints,&points,&weights));
-    PetscCheckFalse(Nc != 1,PETSC_COMM_SELF,PETSC_ERR_SUP,"Only support scalar quadrature, not %D components",Nc);
+    PetscCheck(Nc == 1,PETSC_COMM_SELF,PETSC_ERR_SUP,"Only support scalar quadrature, not %D components",Nc);
     for (j = 0; j < dim; j++) vals[dim * i + j] = valsCopy2[dim * i + j] = (PetscScalar) points[j];
   }
   PetscCall(PetscDualSpaceGetNumDof(sp,&numDofs));

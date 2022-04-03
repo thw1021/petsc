@@ -532,9 +532,9 @@ PetscErrorCode DMMoabCreateBoxMesh(MPI_Comm comm, PetscInt dim, PetscBool useSim
   n = pow(npts, dim);
 
   /* do some error checking */
-  PetscCheckFalse(n < 2,PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Number of points must be >= 2.");
-  PetscCheckFalse(global_size > n,PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Number of processors must be less than or equal to number of elements.");
-  PetscCheckFalse(nghost < 0,PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Number of ghost layers cannot be negative.");
+  PetscCheck(n >= 2,PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Number of points must be >= 2.");
+  PetscCheck(global_size <= n,PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Number of processors must be less than or equal to number of elements.");
+  PetscCheck(nghost >= 0,PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Number of ghost layers cannot be negative.");
 
   /* Create the basic DMMoab object and keep the default parameters created by DM impls */
   PetscCall(DMMoabCreateMoab(comm, NULL, NULL, NULL, dm));

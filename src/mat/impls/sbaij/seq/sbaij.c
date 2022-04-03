@@ -245,7 +245,7 @@ PetscErrorCode MatSetOption_SeqSBAIJ(Mat A,MatOption op,PetscBool flg)
   case MAT_HERMITIAN:
 #if defined(PETSC_USE_COMPLEX)
     if (flg) { /* disable transpose ops */
-      PetscCheckFalse(bs > 1,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support for Hermitian with block size greater than 1");
+      PetscCheck(bs <= 1,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support for Hermitian with block size greater than 1");
       A->ops->multtranspose    = NULL;
       A->ops->multtransposeadd = NULL;
       A->symmetric             = PETSC_FALSE;
@@ -710,7 +710,7 @@ PetscErrorCode MatSetValuesBlocked_SeqSBAIJ(Mat A,PetscInt m,const PetscInt im[]
         }
       }
       if (nonew == 1) goto noinsert2;
-      PetscCheckFalse(nonew == -1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Inserting a new block index nonzero block (%" PetscInt_FMT ", %" PetscInt_FMT ") in the matrix", row, col);
+      PetscCheck(nonew != -1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Inserting a new block index nonzero block (%" PetscInt_FMT ", %" PetscInt_FMT ") in the matrix", row, col);
       MatSeqXAIJReallocateAIJ(A,a->mbs,bs2,nrow,row,col,rmax,aa,ai,aj,rp,ap,imax,nonew,MatScalar);
       N = nrow++ - 1; high++;
       /* shift up all the later entries in this row */
@@ -988,7 +988,7 @@ PetscErrorCode MatSetValues_SeqSBAIJ(Mat A,PetscInt m,const PetscInt im[],PetscI
         }
 
         if (nonew == 1) goto noinsert1;
-        PetscCheckFalse(nonew == -1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Inserting a new nonzero (%" PetscInt_FMT ", %" PetscInt_FMT ") in the matrix", row, col);
+        PetscCheck(nonew != -1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Inserting a new nonzero (%" PetscInt_FMT ", %" PetscInt_FMT ") in the matrix", row, col);
         MatSeqXAIJReallocateAIJ(A,a->mbs,bs2,nrow,brow,bcol,rmax,aa,ai,aj,rp,ap,imax,nonew,MatScalar);
 
         N = nrow++ - 1; high++;
@@ -1573,7 +1573,7 @@ static PetscErrorCode  MatSeqSBAIJSetPreallocation_SeqSBAIJ(Mat B,PetscInt bs,Pe
   }
 
   if (nz == PETSC_DEFAULT || nz == PETSC_DECIDE) nz = 3;
-  PetscCheckFalse(nz < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"nz cannot be less than 0: value %" PetscInt_FMT,nz);
+  PetscCheck(nz >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"nz cannot be less than 0: value %" PetscInt_FMT,nz);
   if (nnz) {
     for (i=0; i<mbs; i++) {
       PetscCheckFalse(nnz[i] < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"nnz cannot be less than 0: local row %" PetscInt_FMT " value %" PetscInt_FMT,i,nnz[i]);
@@ -1701,7 +1701,7 @@ PetscErrorCode MatSeqSBAIJSetPreallocationCSR_SeqSBAIJ(Mat B,PetscInt bs,const P
   PetscBool      roworiented = ((Mat_SeqSBAIJ*)B->data)->roworiented;
 
   PetscFunctionBegin;
-  PetscCheckFalse(bs < 1,PetscObjectComm((PetscObject)B),PETSC_ERR_ARG_OUTOFRANGE,"Invalid block size specified, must be positive but it is %" PetscInt_FMT,bs);
+  PetscCheck(bs >= 1,PetscObjectComm((PetscObject)B),PETSC_ERR_ARG_OUTOFRANGE,"Invalid block size specified, must be positive but it is %" PetscInt_FMT,bs);
   PetscCall(PetscLayoutSetBlockSize(B->rmap,bs));
   PetscCall(PetscLayoutSetBlockSize(B->cmap,bs));
   PetscCall(PetscLayoutSetUp(B->rmap));
@@ -1713,7 +1713,7 @@ PetscErrorCode MatSeqSBAIJSetPreallocationCSR_SeqSBAIJ(Mat B,PetscInt bs,const P
   PetscCall(PetscMalloc1(m+1,&nnz));
   for (i=0; i<m; i++) {
     nz = ii[i+1] - ii[i];
-    PetscCheckFalse(nz < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Row %" PetscInt_FMT " has a negative number of columns %" PetscInt_FMT,i,nz);
+    PetscCheck(nz >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Row %" PetscInt_FMT " has a negative number of columns %" PetscInt_FMT,i,nz);
     anz = 0;
     for (j=0; j<nz; j++) {
       /* count only values on the diagonal or above */
@@ -1932,7 +1932,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqSBAIJ(Mat B)
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)B),&size));
-  PetscCheckFalse(size > 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Comm must be of size 1");
+  PetscCheck(size <= 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Comm must be of size 1");
 
   PetscCall(PetscNewLog(B,&b));
   B->data = (void*)b;
@@ -2316,7 +2316,7 @@ PetscErrorCode  MatCreateSeqSBAIJWithArrays(MPI_Comm comm,PetscInt bs,PetscInt m
   Mat_SeqSBAIJ   *sbaij;
 
   PetscFunctionBegin;
-  PetscCheckFalse(bs != 1,PETSC_COMM_SELF,PETSC_ERR_SUP,"block size %" PetscInt_FMT " > 1 is not supported yet",bs);
+  PetscCheck(bs == 1,PETSC_COMM_SELF,PETSC_ERR_SUP,"block size %" PetscInt_FMT " > 1 is not supported yet",bs);
   PetscCheckFalse(m > 0 && i[0],PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"i (row indices) must start with 0");
 
   PetscCall(MatCreate(comm,mat));

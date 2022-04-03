@@ -293,7 +293,7 @@ PetscErrorCode MatFactorSetSchurIS_MKL_PARDISO(Mat F, IS is)
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)F),&csize));
-  PetscCheckFalse(csize > 1,PETSC_COMM_SELF,PETSC_ERR_SUP,"MKL_PARDISO parallel Schur complements not yet supported from PETSc");
+  PetscCheck(csize <= 1,PETSC_COMM_SELF,PETSC_ERR_SUP,"MKL_PARDISO parallel Schur complements not yet supported from PETSc");
   PetscCall(ISSorted(is,&sorted));
   if (!sorted) {
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"IS for MKL_PARDISO Schur complements needs to be sorted");
@@ -540,7 +540,7 @@ PetscErrorCode MatMatSolve_MKL_PARDISO(Mat A,Mat B,Mat X)
     PetscCall(MatDenseGetArrayRead(B,&barray));
     PetscCall(MatDenseGetArrayWrite(X,&xarray));
 
-    PetscCheckFalse(barray == xarray,PETSC_COMM_SELF,PETSC_ERR_SUP,"B and X cannot share the same memory location");
+    PetscCheck(barray != xarray,PETSC_COMM_SELF,PETSC_ERR_SUP,"B and X cannot share the same memory location");
     if (!mat_mkl_pardiso->schur) mat_mkl_pardiso->phase = JOB_SOLVE_ITERATIVE_REFINEMENT;
     else mat_mkl_pardiso->phase = JOB_SOLVE_FORWARD_SUBSTITUTION;
 

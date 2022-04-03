@@ -209,10 +209,10 @@ PetscErrorCode DMSwarmDataExTopologyAddNeighbour(DMSwarmDataEx d,const PetscMPII
   else PetscCheckFalse(d->topology_status != DEOBJECT_INITIALIZED,d->comm, PETSC_ERR_ARG_WRONGSTATE, "Topology must be initialised. Call DMSwarmDataExTopologyInitialize() first");
 
   /* error on negative entries */
-  PetscCheckFalse(proc_id < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Trying to set proc neighbour with a rank < 0");
+  PetscCheck(proc_id >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Trying to set proc neighbour with a rank < 0");
   /* error on ranks larger than number of procs in communicator */
   PetscCallMPI(MPI_Comm_size(d->comm,&size));
-  PetscCheckFalse(proc_id >= size,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Trying to set proc neighbour %d with a rank >= size %d",proc_id,size);
+  PetscCheck(proc_id < size,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Trying to set proc neighbour %d with a rank >= size %d",proc_id,size);
   if (d->n_neighbour_procs == 0) PetscCall(PetscMalloc1(1, &d->neighbour_procs));
   /* check for proc_id */
   found = 0;
@@ -424,7 +424,7 @@ PetscErrorCode DMSwarmDataExAddToSendCount(DMSwarmDataEx de,const PetscMPIInt pr
   else PetscCheckFalse(de->message_lengths_status != DEOBJECT_INITIALIZED, de->comm, PETSC_ERR_ORDER, "Message lengths must be defined. Call DMSwarmDataExInitializeSendCount() first");
 
   PetscCall(_DMSwarmDataExConvertProcIdToLocalIndex( de, proc_id, &local_val));
-  PetscCheckFalse(local_val == -1, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG,"Proc %d is not a valid neighbour rank", (int)proc_id);
+  PetscCheck(local_val != -1, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG,"Proc %d is not a valid neighbour rank", (int)proc_id);
 
   de->messages_to_be_sent[local_val] = de->messages_to_be_sent[local_val] + count;
   PetscFunctionReturn(0);
@@ -525,7 +525,7 @@ PetscErrorCode DMSwarmDataExPackData(DMSwarmDataEx de,PetscMPIInt proc_id,PetscI
 
   PetscCheck(de->send_message, de->comm, PETSC_ERR_ORDER, "send_message is not initialized. Call DMSwarmDataExPackInitialize() first");
   PetscCall(_DMSwarmDataExConvertProcIdToLocalIndex( de, proc_id, &local));
-  PetscCheckFalse(local == -1, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "proc_id %d is not registered neighbour", (int)proc_id);
+  PetscCheck(local != -1, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "proc_id %d is not registered neighbour", (int)proc_id);
   PetscCheckFalse(n+de->pack_cnt[local] > de->messages_to_be_sent[local], PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Trying to pack too many entries to be sent to proc %d. Space requested = %D: Attempt to insert %D",
               (int)proc_id, de->messages_to_be_sent[local], n+de->pack_cnt[local]);
 

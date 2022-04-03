@@ -354,7 +354,7 @@ PetscErrorCode PetscSectionSetNumFields(PetscSection s, PetscInt numFields)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(s, PETSC_SECTION_CLASSID, 1);
-  PetscCheckFalse(numFields <= 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "The number of fields %" PetscInt_FMT " must be positive", numFields);
+  PetscCheck(numFields > 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "The number of fields %" PetscInt_FMT " must be positive", numFields);
   PetscCall(PetscSectionReset(s));
 
   s->numFields = numFields;
@@ -1287,8 +1287,8 @@ PetscErrorCode PetscSectionCreateGlobalSection(PetscSection s, PetscSF sf, Petsc
   /* Must allocate for all points visible to SF, which may be more than this section */
   if (nroots >= 0) {             /* nroots < 0 means that the graph has not been set, only happens in serial */
     PetscCall(PetscSFGetLeafRange(sf, NULL, &maxleaf));
-    PetscCheckFalse(nroots < pEnd,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "SF roots %" PetscInt_FMT " < pEnd %" PetscInt_FMT, nroots, pEnd);
-    PetscCheckFalse(maxleaf >= nroots,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Max local leaf %" PetscInt_FMT " >= nroots %" PetscInt_FMT, maxleaf, nroots);
+    PetscCheck(nroots >= pEnd,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "SF roots %" PetscInt_FMT " < pEnd %" PetscInt_FMT, nroots, pEnd);
+    PetscCheck(maxleaf < nroots,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Max local leaf %" PetscInt_FMT " >= nroots %" PetscInt_FMT, maxleaf, nroots);
     PetscCall(PetscMalloc2(nroots,&neg,nlocal,&recv));
     PetscCall(PetscArrayzero(neg,nroots));
   }
@@ -1751,7 +1751,7 @@ PetscErrorCode PetscSectionCreateSubsection(PetscSection s, PetscInt len, const 
   PetscValidIntPointer(fields, 3);
   PetscValidPointer(subs, 4);
   PetscCall(PetscSectionGetNumFields(s, &nF));
-  PetscCheckFalse(len > nF,PetscObjectComm((PetscObject) s), PETSC_ERR_ARG_WRONG, "Number of requested fields %" PetscInt_FMT " greater than number of fields %" PetscInt_FMT, len, nF);
+  PetscCheck(len <= nF,PetscObjectComm((PetscObject) s), PETSC_ERR_ARG_WRONG, "Number of requested fields %" PetscInt_FMT " greater than number of fields %" PetscInt_FMT, len, nF);
   PetscCall(PetscSectionCreate(PetscObjectComm((PetscObject) s), subs));
   PetscCall(PetscSectionSetNumFields(*subs, len));
   for (f = 0; f < len; ++f) {
@@ -2590,7 +2590,7 @@ PetscErrorCode PetscSectionPermute(PetscSection section, IS permutation, PetscSe
   PetscCall(ISGetIndices(permutation, &perm));
   PetscCall(PetscSectionGetChart(s, &pStart, &pEnd));
   PetscCall(PetscSectionSetChart(sNew, pStart, pEnd));
-  PetscCheckFalse(numPoints < pEnd,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Permutation size %" PetscInt_FMT " is less than largest Section point %" PetscInt_FMT, numPoints, pEnd);
+  PetscCheck(numPoints >= pEnd,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Permutation size %" PetscInt_FMT " is less than largest Section point %" PetscInt_FMT, numPoints, pEnd);
   for (p = pStart; p < pEnd; ++p) {
     PetscInt dof, cdof;
 

@@ -271,7 +271,7 @@ static PetscErrorCode PhysicsCharacteristic_Shallow(void *vctx,PetscInt m,const 
 static PetscErrorCode PhysicsSample_Shallow(void *vctx,PetscInt initial,FVBCType bctype,PetscReal xmin,PetscReal xmax,PetscReal t,PetscReal x,PetscReal *u)
 {
   PetscFunctionBeginUser;
-  PetscCheckFalse(t > 0,PETSC_COMM_SELF,PETSC_ERR_SUP,"Exact solutions not implemented for t > 0");
+  PetscCheck(t <= 0,PETSC_COMM_SELF,PETSC_ERR_SUP,"Exact solutions not implemented for t > 0");
   switch (initial) {
     case 0:
       u[0] = (x < 0) ? 2 : 1; /* Standard Dam Break Problem */

@@ -157,9 +157,9 @@ static PetscErrorCode MatCreateSubMatrices_MPIAdj_Private(Mat mat,PetscInt n,con
       PetscCall(PetscObjectGetComm((PetscObject)irow[i],&scomm_row));
       PetscCall(PetscObjectGetComm((PetscObject)icol[i],&scomm_col));
       PetscCallMPI(MPI_Comm_compare(scomm_row,scomm_col,&issame));
-      PetscCheckFalse(issame != MPI_IDENT,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"row index set must have the same comm as the col index set");
+      PetscCheck(issame == MPI_IDENT,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"row index set must have the same comm as the col index set");
       PetscCallMPI(MPI_Comm_compare(scomm_row,PETSC_COMM_SELF,&issame));
-      PetscCheckFalse(issame == MPI_IDENT,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP," can not use PETSC_COMM_SELF as comm when extracting a parallel submatrix");
+      PetscCheck(issame != MPI_IDENT,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP," can not use PETSC_COMM_SELF as comm when extracting a parallel submatrix");
     } else {
       scomm_row = PETSC_COMM_SELF;
     }
@@ -191,7 +191,7 @@ static PetscErrorCode MatCreateSubMatrices_MPIAdj_Private(Mat mat,PetscInt n,con
        Mat_MPIAdj         *sa  = (Mat_MPIAdj*)((sadj)->data);
        PetscCall(PetscObjectGetComm((PetscObject)sadj,&scomm_mat));
        PetscCallMPI(MPI_Comm_compare(scomm_row,scomm_mat,&issame));
-       PetscCheckFalse(issame != MPI_IDENT,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"submatrix  must have the same comm as the col index set");
+       PetscCheck(issame == MPI_IDENT,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"submatrix  must have the same comm as the col index set");
        PetscCall(PetscArraycpy(sa->i,sxadj,irow_n+1));
        PetscCall(PetscArraycpy(sa->j,sadjncy,sxadj[irow_n]));
        if (svalues) PetscCall(PetscArraycpy(sa->values,svalues,sxadj[irow_n]));
@@ -232,7 +232,7 @@ static PetscErrorCode MatView_MPIAdj_ASCII(Mat A,PetscViewer viewer)
   PetscCall(PetscViewerGetFormat(viewer,&format));
   if (format == PETSC_VIEWER_ASCII_INFO) {
     PetscFunctionReturn(0);
-  } else PetscCheckFalse(format == PETSC_VIEWER_ASCII_MATLAB,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"MATLAB format not supported");
+  } else PetscCheck(format != PETSC_VIEWER_ASCII_MATLAB,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"MATLAB format not supported");
   else {
     PetscCall(PetscViewerASCIIUseTabs(viewer,PETSC_FALSE));
     PetscCall(PetscViewerASCIIPushSynchronized(viewer));
