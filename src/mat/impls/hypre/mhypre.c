@@ -1744,7 +1744,7 @@ static PetscErrorCode MatMissingDiagonal_HYPRE(Mat A, PetscBool *missing, PetscI
   PetscInt           rst;
 
   PetscFunctionBegin;
-  PetscCheckFalse(A->rmap->n != A->cmap->n,PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented with non-square diagonal blocks");
+  PetscCheck(A->rmap->n == A->cmap->n,PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented with non-square diagonal blocks");
   PetscCall(MatGetOwnershipRange(A,&rst,NULL));
   PetscCall(MatHYPREGetParCSR_HYPRE(A,&parcsr));
   if (missing) *missing = PETSC_FALSE;

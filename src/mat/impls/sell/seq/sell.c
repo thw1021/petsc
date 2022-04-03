@@ -918,7 +918,7 @@ PetscErrorCode MatGetDiagonal_SeqSELL(Mat A,Vec v)
 
   PetscFunctionBegin;
   PetscCall(VecGetLocalSize(v,&n));
-  PetscCheckFalse(n != A->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Nonconforming matrix and vector");
+  PetscCheck(n == A->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Nonconforming matrix and vector");
 
   if (A->factortype == MAT_FACTOR_ILU || A->factortype == MAT_FACTOR_LU) {
     PetscInt *diag=a->diag;
@@ -955,7 +955,7 @@ PetscErrorCode MatDiagonalScale_SeqSELL(Mat A,Vec ll,Vec rr)
     /* The local size is used so that VecMPI can be passed to this routine
        by MatDiagonalScale_MPISELL */
     PetscCall(VecGetLocalSize(ll,&m));
-    PetscCheckFalse(m != A->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Left scaling vector wrong length");
+    PetscCheck(m == A->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Left scaling vector wrong length");
     PetscCall(VecGetArrayRead(ll,&l));
     for (i=0; i<a->totalslices; i++) { /* loop over slices */
       if (i == a->totalslices-1 && (A->rmap->n & 0x07)) { /* if last slice has padding rows */
@@ -973,7 +973,7 @@ PetscErrorCode MatDiagonalScale_SeqSELL(Mat A,Vec ll,Vec rr)
   }
   if (rr) {
     PetscCall(VecGetLocalSize(rr,&n));
-    PetscCheckFalse(n != A->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Right scaling vector wrong length");
+    PetscCheck(n == A->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Right scaling vector wrong length");
     PetscCall(VecGetArrayRead(rr,&r));
     for (i=0; i<a->totalslices; i++) { /* loop over slices */
       if (i == a->totalslices-1 && (A->rmap->n & 0x07)) { /* if last slice has padding rows */

@@ -588,7 +588,7 @@ static PetscErrorCode MatCreateSubMatrix_BlockMat(Mat A,IS isrow,IS iscol,MatReu
   PetscCall(PetscObjectTypeCompare((PetscObject)iscol,ISSTRIDE,&stride));
   PetscCheck(stride,PETSC_COMM_SELF,PETSC_ERR_SUP,"Only for stride indices");
   PetscCall(ISStrideGetInfo(iscol,&first,&step));
-  PetscCheckFalse(step != A->rmap->bs,PETSC_COMM_SELF,PETSC_ERR_SUP,"Can only select one entry from each block");
+  PetscCheck(step == A->rmap->bs,PETSC_COMM_SELF,PETSC_ERR_SUP,"Can only select one entry from each block");
 
   PetscCall(ISGetLocalSize(isrow,&nrows));
   ncols = nrows;
