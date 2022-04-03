@@ -995,7 +995,7 @@ PetscErrorCode PetscOptionsPrefixPush(PetscOptions options,const char prefix[])
   PetscFunctionBegin;
   PetscValidCharPointer(prefix,2);
   options = options ? options : defaultoptions;
-  PetscCheckFalse(options->prefixind >= MAXPREFIXES,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Maximum depth of prefix stack %d exceeded, recompile \n src/sys/objects/options.c with larger value for MAXPREFIXES",MAXPREFIXES);
+  PetscCheck(options->prefixind < MAXPREFIXES,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Maximum depth of prefix stack %d exceeded, recompile \n src/sys/objects/options.c with larger value for MAXPREFIXES",MAXPREFIXES);
   key[0] = '-'; /* keys must start with '-' */
   PetscCall(PetscStrncpy(key+1,prefix,sizeof(key)-1));
   PetscCall(PetscOptionsValidKey(key,&valid));
@@ -1027,7 +1027,7 @@ PetscErrorCode PetscOptionsPrefixPop(PetscOptions options)
 
   PetscFunctionBegin;
   options = options ? options : defaultoptions;
-  PetscCheckFalse(options->prefixind < 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"More prefixes popped than pushed");
+  PetscCheck(options->prefixind >= 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"More prefixes popped than pushed");
   options->prefixind--;
   offset = options->prefixind ? options->prefixstack[options->prefixind-1] : 0;
   options->prefix[offset] = 0;
@@ -1977,7 +1977,7 @@ PetscErrorCode PetscOptionsMonitorSet(PetscErrorCode (*monitor)(const char name[
 
   PetscFunctionBegin;
   if (options->monitorCancel) PetscFunctionReturn(0);
-  PetscCheckFalse(options->numbermonitors >= MAXOPTIONSMONITORS,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Too many PetscOptions monitors set");
+  PetscCheck(options->numbermonitors < MAXOPTIONSMONITORS,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Too many PetscOptions monitors set");
   options->monitor[options->numbermonitors]          = monitor;
   options->monitordestroy[options->numbermonitors]   = monitordestroy;
   options->monitorcontext[options->numbermonitors++] = (void*)mctx;

@@ -737,7 +737,7 @@ PetscErrorCode LandauCUDAJacobian(DM plex[], const PetscInt Nq, const PetscInt b
   PetscCall(DMGetApplicationContext(plex[0], &ctx));
   PetscCheck(ctx,PETSC_COMM_SELF, PETSC_ERR_PLIB, "no context");
   PetscCall(DMGetDimension(plex[0], &dim));
-  PetscCheckFalse(dim!=LANDAU_DIM,PETSC_COMM_SELF, PETSC_ERR_PLIB, "LANDAU_DIM %D != dim %d",LANDAU_DIM,dim);
+  PetscCheck(dim==LANDAU_DIM,PETSC_COMM_SELF, PETSC_ERR_PLIB, "LANDAU_DIM %D != dim %d",LANDAU_DIM,dim);
   if (ctx->gpu_assembly) {
     PetscCall(PetscObjectQuery((PetscObject) JacP, "assembly_maps", (PetscObject *) &container));
     if (container) { // not here first call
@@ -915,7 +915,7 @@ PetscErrorCode LandauCUDAJacobian(DM plex[], const PetscInt Nq, const PetscInt b
         PetscCall(MatGetSize(B, &nloc, NULL));
         for (int i=0 ; i<nloc ; i++) {
           PetscCall(MatGetRow(B,i,&nzl,&cols,&vals));
-          PetscCheckFalse(nzl>1024,PetscObjectComm((PetscObject) B), PETSC_ERR_PLIB, "Row too big: %D",nzl);
+          PetscCheck(nzl<=1024,PetscObjectComm((PetscObject) B), PETSC_ERR_PLIB, "Row too big: %D",nzl);
           for (int j=0; j<nzl; j++) colbuf[j] = cols[j] + moffset;
           row = i + moffset;
           PetscCall(MatSetValues(JacP,1,&row,nzl,colbuf,vals,ADD_VALUES));

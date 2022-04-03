@@ -2413,7 +2413,7 @@ static PetscErrorCode DMPforestGetTransferSF_Point(DM coarse, DM fine, PetscSF *
   pforestF = (DM_Forest_pforest*) ((DM_Forest*) fine->data)->data;
   p4estC   = pforestC->forest;
   p4estF   = pforestF->forest;
-  PetscCheckFalse(pforestC->topo != pforestF->topo,PetscObjectComm((PetscObject)coarse),PETSC_ERR_ARG_INCOMP,"DM's must have the same base DM");
+  PetscCheck(pforestC->topo == pforestF->topo,PetscObjectComm((PetscObject)coarse),PETSC_ERR_ARG_INCOMP,"DM's must have the same base DM");
   comm = PetscObjectComm((PetscObject)coarse);
   PetscCallMPI(MPI_Comm_rank(comm,&rank));
   PetscCallMPI(MPI_Comm_size(comm,&size));
@@ -2961,7 +2961,7 @@ static PetscErrorCode DMPforestGetTransferSF_Internal(DM coarse, DM fine, const 
   PetscFunctionBegin;
   pforestC = (DM_Forest_pforest*) ((DM_Forest*) coarse->data)->data;
   pforestF = (DM_Forest_pforest*) ((DM_Forest*) fine->data)->data;
-  PetscCheckFalse(pforestC->topo != pforestF->topo,PetscObjectComm((PetscObject)coarse),PETSC_ERR_ARG_INCOMP,"DM's must have the same base DM");
+  PetscCheck(pforestC->topo == pforestF->topo,PetscObjectComm((PetscObject)coarse),PETSC_ERR_ARG_INCOMP,"DM's must have the same base DM");
   comm = PetscObjectComm((PetscObject)coarse);
   PetscCallMPI(MPI_Comm_rank(comm,&rank));
 

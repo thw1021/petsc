@@ -1006,9 +1006,9 @@ PetscErrorCode PetscFEComputeTabulation(PetscFE fem, PetscInt npoints, const Pet
     PetscCall(PetscDualSpaceGetDimension(Q, &Nb));
     PetscCall(PetscFEGetNumComponents(fem, &Nc));
     PetscCheckFalse(T->K    != (!cdim ? 0 : K),PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Tabulation K %D must match requested K %D", T->K, !cdim ? 0 : K);
-    PetscCheckFalse(T->Nb   != Nb,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Tabulation Nb %D must match requested Nb %D", T->Nb, Nb);
-    PetscCheckFalse(T->Nc   != Nc,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Tabulation Nc %D must match requested Nc %D", T->Nc, Nc);
-    PetscCheckFalse(T->cdim != cdim,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Tabulation cdim %D must match requested cdim %D", T->cdim, cdim);
+    PetscCheck(T->Nb   == Nb,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Tabulation Nb %D must match requested Nb %D", T->Nb, Nb);
+    PetscCheck(T->Nc   == Nc,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Tabulation Nc %D must match requested Nc %D", T->Nc, Nc);
+    PetscCheck(T->cdim == cdim,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Tabulation cdim %D must match requested cdim %D", T->cdim, cdim);
   }
   T->Nr = 1;
   T->Np = npoints;

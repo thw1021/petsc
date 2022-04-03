@@ -377,7 +377,7 @@ static PetscErrorCode MatLoad_BlockMat(Mat newmat, PetscViewer viewer)
           nextcol = PetscMin(nextcol,ii[j][0]/bs);
         }
       }
-      PetscCheckFalse(cnt >= amat->maxnz,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Number of blocks found greater than expected %" PetscInt_FMT,cnt);
+      PetscCheck(cnt < amat->maxnz,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Number of blocks found greater than expected %" PetscInt_FMT,cnt);
       if (!flg || currentcol >= i) {
         amat->j[cnt] = currentcol;
         PetscCall(MatCreateSeqAIJ(PETSC_COMM_SELF,bs,bs,0,llens,amat->a+cnt++));

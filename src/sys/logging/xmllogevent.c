@@ -381,7 +381,7 @@ static PetscErrorCode PetscLogEventEndNested(NestedEventId nstEvent, int t, Pets
   PetscFunctionBegin;
   /* Find the nested event */
   PetscCall(PetscLogEventFindNestedTimer(nstEvent, &entry));
-  PetscCheckFalse(entry>=nNestedEvents,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "Logging event %d larger than number of events %d",entry,nNestedEvents);
+  PetscCheck(entry<nNestedEvents,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "Logging event %d larger than number of events %d",entry,nNestedEvents);
   PetscCheckFalse(nestedEvents[entry].nstEvent != nstEvent,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "Logging event %d had unbalanced begin/end pairs does not match %d",entry,nstEvent);
   dftEventsSorted = nestedEvents[entry].dftEventsSorted;
   nParents        = nestedEvents[entry].nParents;
@@ -389,7 +389,7 @@ static PetscErrorCode PetscLogEventEndNested(NestedEventId nstEvent, int t, Pets
   /* Find the current default timer among the 'dftEvents' of this event */
   PetscCall(PetscLogEventFindDefaultTimer( dftParentActive, dftEventsSorted, nParents, &pentry));
 
-  PetscCheckFalse(pentry>=nParents,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "Entry %d is larger than number of parents %d",pentry,nParents);
+  PetscCheck(pentry<nParents,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "Entry %d is larger than number of parents %d",pentry,nParents);
   PetscCheckFalse(dftEventsSorted[pentry] != dftParentActive,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "Active parent is %d, but we seem to be closing %d",dftParentActive,dftEventsSorted[pentry]);
 
   /* Stop the default timer and update the dftParentActive */

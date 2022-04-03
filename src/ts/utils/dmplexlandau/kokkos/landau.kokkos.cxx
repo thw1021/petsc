@@ -876,7 +876,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
         PetscCall(MatGetSize(B, &nloc, NULL));
         for (int i=0 ; i<nloc ; i++) {
           PetscCall(MatGetRow(B,i,&nzl,&cols,&vals));
-          PetscCheckFalse(nzl>1024,PetscObjectComm((PetscObject) B), PETSC_ERR_PLIB, "Row too big: %D",nzl);
+          PetscCheck(nzl<=1024,PetscObjectComm((PetscObject) B), PETSC_ERR_PLIB, "Row too big: %D",nzl);
           for (int j=0; j<nzl; j++) colbuf[j] = cols[j] + moffset;
           row = i + moffset;
           PetscCall(MatSetValues(JacP,1,&row,nzl,colbuf,vals,ADD_VALUES));

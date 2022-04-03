@@ -767,9 +767,9 @@ static PetscErrorCode PetscLagNodeIndicesMerge(PetscLagNodeIndices niA, PetscLag
   PetscFunctionBegin;
   PetscCall(PetscNew(&ni));
   ni->nodeIdxDim = nodeIdxDim = niA->nodeIdxDim;
-  PetscCheckFalse(niB->nodeIdxDim != nodeIdxDim,PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Cannot merge PetscLagNodeIndices with different nodeIdxDim");
+  PetscCheck(niB->nodeIdxDim == nodeIdxDim,PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Cannot merge PetscLagNodeIndices with different nodeIdxDim");
   ni->nodeVecDim = nodeVecDim = niA->nodeVecDim;
-  PetscCheckFalse(niB->nodeVecDim != nodeVecDim,PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Cannot merge PetscLagNodeIndices with different nodeVecDim");
+  PetscCheck(niB->nodeVecDim == nodeVecDim,PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Cannot merge PetscLagNodeIndices with different nodeVecDim");
   ni->nNodes = nNodes = niA->nNodes + niB->nNodes;
   ni->refct = 1;
   PetscCall(PetscMalloc1(nNodes * nodeIdxDim, &(ni->nodeIdx)));

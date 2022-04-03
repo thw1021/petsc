@@ -113,7 +113,7 @@ int main(int argc,char **args)
     for (i=rstart; i<rend; i++) {
       PetscCall(MatGetRow(A,i,&nzA,&idxA,&vA));
       PetscCall(MatGetRow(B,i,&nzB,&idxB,&vB));
-      PetscCheckFalse(nzA!=nzB,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Error MatGetRow %" PetscInt_FMT, nzA-nzB);
+      PetscCheck(nzA==nzB,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Error MatGetRow %" PetscInt_FMT, nzA-nzB);
       PetscCall(PetscSortIntWithScalarArray(nzB,(PetscInt*)idxB,(PetscScalar*)vB));
       PetscCall(PetscArraycmp(idxA,idxB,nzA,&flg));
       PetscCheck(flg,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Error MatGetRow %" PetscInt_FMT " (indices)",i);

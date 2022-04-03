@@ -126,7 +126,7 @@ PetscErrorCode  ISSum(IS is1,IS is2,IS *is3)
   PetscValidHeaderSpecific(is2,IS_CLASSID,2);
   PetscCall(PetscObjectGetComm((PetscObject)(is1),&comm));
   PetscCallMPI(MPI_Comm_size(comm,&size));
-  PetscCheckFalse(size>1,PETSC_COMM_SELF,PETSC_ERR_SUP,"Currently only for uni-processor IS");
+  PetscCheck(size<=1,PETSC_COMM_SELF,PETSC_ERR_SUP,"Currently only for uni-processor IS");
 
   PetscCall(ISSorted(is1,&f));
   PetscCheck(f,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Arg 1 is not sorted");

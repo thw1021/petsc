@@ -117,7 +117,7 @@ PetscErrorCode  KSPComputeEigenvalues(KSP ksp,PetscInt n,PetscReal r[],PetscReal
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
   if (n) PetscValidRealPointer(r,3);
   if (n) PetscValidRealPointer(c,4);
-  PetscCheckFalse(n<0,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Requested < 0 Eigenvalues");
+  PetscCheck(n>=0,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Requested < 0 Eigenvalues");
   PetscValidIntPointer(neig,5);
   PetscCheck(ksp->calc_sings,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_WRONGSTATE,"Eigenvalues not requested before KSPSetUp()");
 
@@ -522,7 +522,7 @@ PetscErrorCode  KSPConvergedReasonViewSet(KSP ksp,PetscErrorCode (*f)(KSP,void*)
     PetscCall(PetscMonitorCompare((PetscErrorCode (*)(void))f,vctx,reasonviewdestroy,(PetscErrorCode (*)(void))ksp->reasonview[i],ksp->reasonviewcontext[i],ksp->reasonviewdestroy[i],&identical));
     if (identical) PetscFunctionReturn(0);
   }
-  PetscCheckFalse(ksp->numberreasonviews >= MAXKSPREASONVIEWS,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Too many KSP reasonview set");
+  PetscCheck(ksp->numberreasonviews < MAXKSPREASONVIEWS,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Too many KSP reasonview set");
   ksp->reasonview[ksp->numberreasonviews]          = f;
   ksp->reasonviewdestroy[ksp->numberreasonviews]   = reasonviewdestroy;
   ksp->reasonviewcontext[ksp->numberreasonviews++] = (void*)vctx;
@@ -2145,7 +2145,7 @@ PetscErrorCode  KSPMonitorSet(KSP ksp,PetscErrorCode (*monitor)(KSP,PetscInt,Pet
     PetscCall(PetscMonitorCompare((PetscErrorCode (*)(void))monitor,mctx,monitordestroy,(PetscErrorCode (*)(void))ksp->monitor[i],ksp->monitorcontext[i],ksp->monitordestroy[i],&identical));
     if (identical) PetscFunctionReturn(0);
   }
-  PetscCheckFalse(ksp->numbermonitors >= MAXKSPMONITORS,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Too many KSP monitors set");
+  PetscCheck(ksp->numbermonitors < MAXKSPMONITORS,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Too many KSP monitors set");
   ksp->monitor[ksp->numbermonitors]          = monitor;
   ksp->monitordestroy[ksp->numbermonitors]   = monitordestroy;
   ksp->monitorcontext[ksp->numbermonitors++] = (void*)mctx;

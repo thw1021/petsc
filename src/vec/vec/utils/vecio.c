@@ -160,7 +160,7 @@ PetscErrorCode VecLoad_ADIOS(Vec xin, PetscViewer viewer)
   PetscCall(PetscObjectGetName((PetscObject) xin, &vecname));
 
   v    = adios_inq_var(adios->adios_fp, vecname);
-  PetscCheckFalse(v->ndim != 1,PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED, "Vector in file is not of dimension 1 (%" PetscInt_FMT ")", v->ndim);
+  PetscCheck(v->ndim == 1,PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED, "Vector in file is not of dimension 1 (%" PetscInt_FMT ")", v->ndim);
   Nfile = (PetscInt) v->dims[0];
 
   /* Set Vec sizes,blocksize,and type if not already set */

@@ -284,7 +284,7 @@ PetscErrorCode testLagrange(PetscHashLag lagTable, DM K, PetscInt dim, PetscInt 
       } else if (intMat) {
         PetscCall(PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_SELF, "Interior data is the same as all data\n"));
         PetscCheck(intNodes == allNodes,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Interior nodes should be the same as all nodes");
-        PetscCheckFalse(lag->intNodeIndices != lag->allNodeIndices,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Interior node indices should be the same as all node indices");
+        PetscCheck(lag->intNodeIndices == lag->allNodeIndices,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Interior node indices should be the same as all node indices");
       }
     }
     if (dim <= 2 && spintdim) {

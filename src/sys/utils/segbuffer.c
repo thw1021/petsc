@@ -270,7 +270,7 @@ PetscErrorCode PetscSegBufferUnuse(PetscSegBuffer seg,size_t unused)
 
   PetscFunctionBegin;
   head = seg->head;
-  PetscCheckFalse(head->used < unused,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Attempt to return more unused entries (%zu) than previously gotten (%zu)",unused,head->used);
+  PetscCheck(head->used >= unused,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Attempt to return more unused entries (%zu) than previously gotten (%zu)",unused,head->used);
   head->used -= unused;
   PetscFunctionReturn(0);
 }

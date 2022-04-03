@@ -136,7 +136,7 @@ PetscErrorCode PCBDDCScalingExtension(PC pc, Vec local_interface_vector, Vec glo
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidHeaderSpecific(local_interface_vector,VEC_CLASSID,2);
   PetscValidHeaderSpecific(global_vector,VEC_CLASSID,3);
-  PetscCheckFalse(local_interface_vector == pcbddc->work_scaling,PETSC_COMM_SELF,PETSC_ERR_SUP,"Local vector cannot be pcbddc->work_scaling!");
+  PetscCheck(local_interface_vector != pcbddc->work_scaling,PETSC_COMM_SELF,PETSC_ERR_SUP,"Local vector cannot be pcbddc->work_scaling!");
   PetscUseMethod(pc,"PCBDDCScalingExtension_C",(PC,Vec,Vec),(pc,local_interface_vector,global_vector));
   PetscFunctionReturn(0);
 }
@@ -228,7 +228,7 @@ PetscErrorCode PCBDDCScalingRestriction(PC pc, Vec global_vector, Vec local_inte
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidHeaderSpecific(global_vector,VEC_CLASSID,2);
   PetscValidHeaderSpecific(local_interface_vector,VEC_CLASSID,3);
-  PetscCheckFalse(local_interface_vector == pcbddc->work_scaling,PETSC_COMM_SELF,PETSC_ERR_SUP,"Local vector cannot be pcbddc->work_scaling!");
+  PetscCheck(local_interface_vector != pcbddc->work_scaling,PETSC_COMM_SELF,PETSC_ERR_SUP,"Local vector cannot be pcbddc->work_scaling!");
   PetscUseMethod(pc,"PCBDDCScalingRestriction_C",(PC,Vec,Vec),(pc,global_vector,local_interface_vector));
   PetscFunctionReturn(0);
 }
@@ -474,7 +474,7 @@ static PetscErrorCode PCBDDCScalingSetUp_Deluxe_Private(PC pc)
     deluxe_ctx->seq_n = sub_schurs->n_subs;
     PetscCall(PetscCalloc5(deluxe_ctx->seq_n,&deluxe_ctx->seq_scctx,deluxe_ctx->seq_n,&deluxe_ctx->seq_work1,deluxe_ctx->seq_n,&deluxe_ctx->seq_work2,deluxe_ctx->seq_n,&deluxe_ctx->seq_mat,deluxe_ctx->seq_n,&deluxe_ctx->seq_mat_inv_sum));
     newsetup = PETSC_TRUE;
-  } else PetscCheckFalse(deluxe_ctx->seq_n != sub_schurs->n_subs,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Number of deluxe subproblems %D is different from the sub_schurs %D",deluxe_ctx->seq_n,sub_schurs->n_subs);
+  } else PetscCheck(deluxe_ctx->seq_n == sub_schurs->n_subs,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Number of deluxe subproblems %D is different from the sub_schurs %D",deluxe_ctx->seq_n,sub_schurs->n_subs);
 
   /* the change of basis is just a reference to sub_schurs->change (if any) */
   deluxe_ctx->change         = sub_schurs->change;

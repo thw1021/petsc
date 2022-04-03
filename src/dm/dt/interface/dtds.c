@@ -681,7 +681,7 @@ PetscErrorCode PetscDSGetCoordinateDimension(PetscDS prob, PetscInt *dimEmbed)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(prob, PETSCDS_CLASSID, 1);
   PetscValidIntPointer(dimEmbed, 2);
-  PetscCheckFalse(prob->dimEmbed < 0,PetscObjectComm((PetscObject) prob), PETSC_ERR_ARG_WRONGSTATE, "No coordinate dimension set for this DS");
+  PetscCheck(prob->dimEmbed >= 0,PetscObjectComm((PetscObject) prob), PETSC_ERR_ARG_WRONGSTATE, "No coordinate dimension set for this DS");
   *dimEmbed = prob->dimEmbed;
   PetscFunctionReturn(0);
 }
@@ -2948,7 +2948,7 @@ PetscErrorCode PetscDSGetFieldIndex(PetscDS prob, PetscObject disc, PetscInt *f)
   PetscValidIntPointer(f, 3);
   *f = -1;
   for (g = 0; g < prob->Nf; ++g) {if (disc == prob->disc[g]) break;}
-  PetscCheckFalse(g == prob->Nf,PetscObjectComm((PetscObject) prob), PETSC_ERR_ARG_WRONG, "Field not found in PetscDS.");
+  PetscCheck(g != prob->Nf,PetscObjectComm((PetscObject) prob), PETSC_ERR_ARG_WRONG, "Field not found in PetscDS.");
   *f = g;
   PetscFunctionReturn(0);
 }

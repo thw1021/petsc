@@ -1965,13 +1965,13 @@ PetscErrorCode MatDiagonalScale_MPIAIJ(Mat mat,Vec ll,Vec rr)
   PetscCall(MatGetLocalSize(mat,&s2,&s3));
   if (rr) {
     PetscCall(VecGetLocalSize(rr,&s1));
-    PetscCheckFalse(s1!=s3,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"right vector non-conforming local size");
+    PetscCheck(s1==s3,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"right vector non-conforming local size");
     /* Overlap communication with computation. */
     PetscCall(VecScatterBegin(aij->Mvctx,rr,aij->lvec,INSERT_VALUES,SCATTER_FORWARD));
   }
   if (ll) {
     PetscCall(VecGetLocalSize(ll,&s1));
-    PetscCheckFalse(s1!=s2,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"left vector non-conforming local size");
+    PetscCheck(s1==s2,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"left vector non-conforming local size");
     PetscCall((*b->ops->diagonalscale)(b,ll,NULL));
   }
   /* scale  the diagonal block */
@@ -5493,7 +5493,7 @@ PetscErrorCode MatGetBrowsOfAcols_MPIXAIJ(Mat A,Mat P,PetscInt dof,MatReuse reus
     }
     PetscCall(ISCreateGeneral(comm,a->B->cmap->n,mapping,PETSC_OWN_POINTER,&map));
     PetscCall(PetscHMapIGetSize(hamp,&htsize));
-    PetscCheckFalse(htsize!=count,comm,PETSC_ERR_ARG_INCOMP," Size of hash map %" PetscInt_FMT " is inconsistent with count %" PetscInt_FMT " ",htsize,count);
+    PetscCheck(htsize==count,comm,PETSC_ERR_ARG_INCOMP," Size of hash map %" PetscInt_FMT " is inconsistent with count %" PetscInt_FMT " ",htsize,count);
     PetscCall(PetscCalloc1(htsize,&rowindices));
     off = 0;
     PetscCall(PetscHMapIGetKeys(hamp,&off,rowindices));

@@ -198,7 +198,7 @@ PetscErrorCode JunctionCreateJacobian(DM dm,PetscInt v,Mat *Jin,Mat *J[])
 
   /* Create dense zero block for this vertex: J[0] = Jacobian(v,v) */
   PetscCall(DMNetworkGetComponent(dm,v,-1,NULL,NULL,&M));
-  PetscCheckFalse(M !=2,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"M != 2",M);
+  PetscCheck(M ==2,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"M != 2",M);
   PetscCall(PetscMalloc3(M,&rows,M,&cols,M*M,&zeros));
   PetscCall(PetscArrayzero(zeros,M*M));
   for (i=0; i<M; i++) rows[i] = i;

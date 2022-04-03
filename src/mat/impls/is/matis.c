@@ -367,7 +367,7 @@ static PetscErrorCode MatISScaleDisassembling_Private(Mat A)
 
   PetscFunctionBegin;
   PetscCall(MatGetRowIJ(matis->A,0,PETSC_FALSE,PETSC_FALSE,&m,&ii,&jj,&flg));
-  PetscCheckFalse(!flg,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot get IJ structure");
+  PetscCheck(flg,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot get IJ structure");
   PetscCall(ISLocalToGlobalMappingGetNodeInfo(matis->rmapping,&n,&ecount,&eneighs));
   PetscCheck(m == n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Unexpected %" PetscInt_FMT " != %" PetscInt_FMT,m,n);
   PetscCall(MatSeqAIJGetArray(matis->A,&aa));
@@ -391,7 +391,7 @@ static PetscErrorCode MatISScaleDisassembling_Private(Mat A)
   PetscCall(ISLocalToGlobalMappingRestoreNodeInfo(matis->rmapping,&n,&ecount,&eneighs));
   PetscCall(MatSeqAIJRestoreArray(matis->A,&aa));
   PetscCall(MatRestoreRowIJ(matis->A,0,PETSC_FALSE,PETSC_FALSE,&m,&ii,&jj,&flg));
-  PetscCheckFalse(!flg,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot restore IJ structure");
+  PetscCheck(flg,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot restore IJ structure");
   PetscFunctionReturn(0);
 }
 

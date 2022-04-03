@@ -177,7 +177,7 @@ static inline PetscErrorCode DMLabelLookupStratum(DMLabel label, PetscInt value,
   if (PetscDefined(USE_DEBUG)) { /* Check strata hash map consistency */
     PetscInt len, loc = -1;
     PetscCall(PetscHMapIGetSize(label->hmap, &len));
-    PetscCheckFalse(len != label->numStrata,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Inconsistent strata hash map size");
+    PetscCheck(len == label->numStrata,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Inconsistent strata hash map size");
     if (label->numStrata <= DMLABEL_LOOKUP_THRESHOLD) {
       PetscCall(PetscHMapIGet(label->hmap, value, &loc));
     } else {

@@ -60,7 +60,7 @@ PetscErrorCode  ISCompressIndicesGeneral(PetscInt n,PetscInt nkeys,PetscInt bs,P
         isz++;
       }
 #else
-      PetscCheckFalse(ival>Nbs,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"index greater than mat-dim");
+      PetscCheck(ival<=Nbs,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"index greater than mat-dim");
       if (!PetscBTLookupSet(table,ival)) nidx[isz++] = ival;
 #endif
     }

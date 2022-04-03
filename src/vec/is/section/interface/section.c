@@ -3321,7 +3321,7 @@ PetscErrorCode PetscSectionGetFieldPointSyms(PetscSection section, PetscInt fiel
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(section,PETSC_SECTION_CLASSID,1);
-  PetscCheckFalse(field > section->numFields,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"field %" PetscInt_FMT " greater than number of fields (%" PetscInt_FMT ") in section",field,section->numFields);
+  PetscCheck(field <= section->numFields,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"field %" PetscInt_FMT " greater than number of fields (%" PetscInt_FMT ") in section",field,section->numFields);
   PetscCall(PetscSectionGetPointSyms(section->field[field],numPoints,points,perms,rots));
   PetscFunctionReturn(0);
 }
@@ -3351,7 +3351,7 @@ PetscErrorCode PetscSectionRestoreFieldPointSyms(PetscSection section, PetscInt 
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(section,PETSC_SECTION_CLASSID,1);
-  PetscCheckFalse(field > section->numFields,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"field %" PetscInt_FMT " greater than number of fields (%" PetscInt_FMT ") in section",field,section->numFields);
+  PetscCheck(field <= section->numFields,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"field %" PetscInt_FMT " greater than number of fields (%" PetscInt_FMT ") in section",field,section->numFields);
   PetscCall(PetscSectionRestorePointSyms(section->field[field],numPoints,points,perms,rots));
   PetscFunctionReturn(0);
 }

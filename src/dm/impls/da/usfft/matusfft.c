@@ -186,8 +186,8 @@ PetscErrorCode  MatCreateSeqUSFFT(Vec sampleCoords, DMDA freqDA, Mat *A)
 
   /* outda */
   PetscCall(DMDAGetInfo(usfft->outda, &ndim, dim+0, dim+1, dim+2, NULL, NULL, NULL, &dof, NULL, NULL, NULL));
-  PetscCheckFalse(ndim != usfft->ndim,PETSC_COMM_SELF,PETSC_ERR_USER,"in and out DMDA dimensions must match: %d != %d",usfft->ndim, ndim);
-  PetscCheckFalse(dof != usfft->dof,PETSC_COMM_SELF,PETSC_ERR_USER,"in and out DMDA dof must match: %d != %d",usfft->dof, dof);
+  PetscCheck(ndim == usfft->ndim,PETSC_COMM_SELF,PETSC_ERR_USER,"in and out DMDA dimensions must match: %d != %d",usfft->ndim, ndim);
+  PetscCheck(dof == usfft->dof,PETSC_COMM_SELF,PETSC_ERR_USER,"in and out DMDA dof must match: %d != %d",usfft->dof, dof);
   /* Store output dimensions */
   /* NB: we reverse the DMDA dimensions, since the DMDA ordering (natural on x-y-z, with x varying the fastest)
      is the order opposite of that assumed by FFTW: z varying the fastest */

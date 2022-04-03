@@ -509,7 +509,7 @@ PetscErrorCode MatConvertToTriples_seqsbaij_seqsbaij(Mat A,PetscInt shift,MatReu
         nz++;
       }
     }
-    PetscCheckFalse(nz != aa->nz,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Different numbers of nonzeros %" PetscInt64_FMT " != %" PetscInt_FMT,nz,aa->nz);
+    PetscCheck(nz == aa->nz,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Different numbers of nonzeros %" PetscInt64_FMT " != %" PetscInt_FMT,nz,aa->nz);
   }
   if (reuse == MAT_INITIAL_MATRIX) mumps->nnz = nz;
   PetscFunctionReturn(0);
@@ -1161,7 +1161,7 @@ PetscErrorCode MatSolve_MUMPS(Mat A,Vec b,Vec x)
      This requires an extra call to PetscMUMPS_c and the computation of the factors for S
   */
   if (mumps->id.size_schur > 0 && (mumps->id.ICNTL(26) < 0 || mumps->id.ICNTL(26) > 2)) {
-    PetscCheckFalse(mumps->petsc_size > 1,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Parallel Schur complements not yet supported from PETSc");
+    PetscCheck(mumps->petsc_size <= 1,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Parallel Schur complements not yet supported from PETSc");
     second_solve = PETSC_TRUE;
     PetscCall(MatMumpsHandleSchur_Private(A,PETSC_FALSE));
   }

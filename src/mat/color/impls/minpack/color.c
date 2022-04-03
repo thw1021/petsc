@@ -56,7 +56,7 @@ static PetscErrorCode MatColoringApply_SL(MatColoring mc,ISColoring *iscoloring)
   PetscBool       flg1,flg2;
 
   PetscFunctionBegin;
-  PetscCheckFalse(mc->dist != 2,PETSC_COMM_SELF,PETSC_ERR_SUP,"SL may only do distance 2 coloring");
+  PetscCheck(mc->dist == 2,PETSC_COMM_SELF,PETSC_ERR_SUP,"SL may only do distance 2 coloring");
   /* this is ugly way to get blocksize but cannot call MatGetBlockSize() because AIJ can have bs > 1 */
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)mat,MATSEQBAIJ,&flg1));
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)mat,MATMPIBAIJ,&flg2));
@@ -166,7 +166,7 @@ static PetscErrorCode MatColoringApply_LF(MatColoring mc,ISColoring *iscoloring)
   PetscBool       flg1,flg2;
 
   PetscFunctionBegin;
-  PetscCheckFalse(mc->dist != 2,PETSC_COMM_SELF,PETSC_ERR_SUP,"LF may only do distance 2 coloring");
+  PetscCheck(mc->dist == 2,PETSC_COMM_SELF,PETSC_ERR_SUP,"LF may only do distance 2 coloring");
   /* this is ugly way to get blocksize but cannot call MatGetBlockSize() because AIJ can have bs > 1 */
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)mat,MATSEQBAIJ,&flg1));
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)mat,MATMPIBAIJ,&flg2));
@@ -275,7 +275,7 @@ static PetscErrorCode MatColoringApply_ID(MatColoring mc,ISColoring *iscoloring)
   PetscBool       flg1,flg2;
 
   PetscFunctionBegin;
-  PetscCheckFalse(mc->dist != 2,PETSC_COMM_SELF,PETSC_ERR_SUP,"IDO may only do distance 2 coloring");
+  PetscCheck(mc->dist == 2,PETSC_COMM_SELF,PETSC_ERR_SUP,"IDO may only do distance 2 coloring");
   /* this is ugly way to get blocksize but cannot call MatGetBlockSize() because AIJ can have bs > 1 */
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)mat,MATSEQBAIJ,&flg1));
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)mat,MATMPIBAIJ,&flg2));

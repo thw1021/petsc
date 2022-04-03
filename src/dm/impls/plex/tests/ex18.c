@@ -297,7 +297,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscCall(PetscOptionsString("-filename", "The mesh file", "ex18.c", options->filename, options->filename, sizeof(options->filename), NULL));
   PetscCall(PetscOptionsBoundedInt("-rotate_interface_0", "Rotation (relative orientation) of interface on rank 0; implies -interpolate create -distribute 0", "ex18.c", options->ornt[0], &options->ornt[0], &options->testOrientIF,0));
   PetscCall(PetscOptionsBoundedInt("-rotate_interface_1", "Rotation (relative orientation) of interface on rank 1; implies -interpolate create -distribute 0", "ex18.c", options->ornt[1], &options->ornt[1], &flg2,0));
-  PetscCheckFalse(flg2 != options->testOrientIF,comm, PETSC_ERR_ARG_OUTOFRANGE, "neither or both -rotate_interface_0 -rotate_interface_1 must be set");
+  PetscCheck(flg2 == options->testOrientIF,comm, PETSC_ERR_ARG_OUTOFRANGE, "neither or both -rotate_interface_0 -rotate_interface_1 must be set");
   if (options->testOrientIF) {
     PetscInt i;
     for (i=0; i<2; i++) {

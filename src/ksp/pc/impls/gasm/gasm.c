@@ -683,7 +683,7 @@ static PetscErrorCode PCMatApply_GASM(PC pc,Mat Xin,Mat Yout)
   ScatterMode    forward = SCATTER_FORWARD,reverse = SCATTER_REVERSE;
 
   PetscFunctionBegin;
-  PetscCheckFalse(osm->n != 1,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Not yet implemented");
+  PetscCheck(osm->n == 1,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Not yet implemented");
   PetscCall(MatGetSize(Xin,NULL,&N));
   if (osm->pctoouter) {
     PetscCall(VecGetLocalSize(osm->pcx,&m));
@@ -1065,7 +1065,7 @@ static PetscErrorCode  PCGASMGetSubKSP_GASM(PC pc,PetscInt *n,PetscInt *first,KS
   PC_GASM        *osm = (PC_GASM*)pc->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(osm->n < 1,PetscObjectComm((PetscObject)pc),PETSC_ERR_ORDER,"Need to call PCSetUp() on PC (or KSPSetUp() on the outer KSP object) before calling here");
+  PetscCheck(osm->n >= 1,PetscObjectComm((PetscObject)pc),PETSC_ERR_ORDER,"Need to call PCSetUp() on PC (or KSPSetUp() on the outer KSP object) before calling here");
 
   if (n) *n = osm->n;
   if (first) {

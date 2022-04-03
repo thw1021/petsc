@@ -113,8 +113,8 @@ static PetscErrorCode DMPlexGetVTKConnectivity(DM dm, PetscBool localized, Piece
     types[countcell] = celltype;
     countcell++;
   }
-  PetscCheckFalse(countcell != piece->ncells,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Inconsistent cell count");
-  PetscCheckFalse(countconn != piece->nconn,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Inconsistent connectivity count");
+  PetscCheck(countcell == piece->ncells,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Inconsistent cell count");
+  PetscCheck(countconn == piece->nconn,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Inconsistent connectivity count");
   *oconn    = conn;
   *ooffsets = offsets;
   *otypes   = types;

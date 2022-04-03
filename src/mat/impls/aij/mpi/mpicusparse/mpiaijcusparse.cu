@@ -830,7 +830,7 @@ PetscErrorCode MatCUSPARSEGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure *B
     PetscCheckFalse(!A->nooffprocentries && !aij->donotstash,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Device assembly does not currently support offproc values insertion. Use MatSetOption(A,MAT_NO_OFF_PROC_ENTRIES,PETSC_TRUE) or MatSetOption(A,MAT_IGNORE_OFF_PROC_ENTRIES,PETSC_TRUE)");
     cusparsestructA = (Mat_SeqAIJCUSPARSE*)aij->A->spptr;
     Mat_SeqAIJCUSPARSE *cusparsestructB = (Mat_SeqAIJCUSPARSE*)aij->B->spptr;
-    PetscCheckFalse(cusparsestructA->format!=MAT_CUSPARSE_CSR,PETSC_COMM_SELF,PETSC_ERR_SUP,"Device Mat A needs MAT_CUSPARSE_CSR");
+    PetscCheck(cusparsestructA->format==MAT_CUSPARSE_CSR,PETSC_COMM_SELF,PETSC_ERR_SUP,"Device Mat A needs MAT_CUSPARSE_CSR");
     if (cusparsestructB->format==MAT_CUSPARSE_CSR) {
       PetscCall(MatSeqAIJCUSPARSECopyToGPU(aij->A));
       PetscCall(MatSeqAIJCUSPARSECopyToGPU(aij->B));

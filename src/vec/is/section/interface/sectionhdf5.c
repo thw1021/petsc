@@ -284,8 +284,8 @@ PetscErrorCode PetscSectionLoad_HDF5_Internal(PetscSection s, PetscViewer viewer
   PetscCall(PetscViewerHDF5ReadAttribute(viewer, NULL, "numFields", PETSC_INT, NULL, (void *)&numFields));
   if (s->pStart < 0 && s->pEnd < 0) n = PETSC_DECIDE;
   else {
-    PetscCheckFalse(s->pStart != 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "s->pStart must be 0 (got %" PetscInt_FMT ")", s->pStart);
-    PetscCheckFalse(s->pEnd < 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "s->pEnd must be >= 0, (got %" PetscInt_FMT ")", s->pEnd);
+    PetscCheck(s->pStart == 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "s->pStart must be 0 (got %" PetscInt_FMT ")", s->pStart);
+    PetscCheck(s->pEnd >= 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "s->pEnd must be >= 0, (got %" PetscInt_FMT ")", s->pEnd);
     n = s->pEnd;
   }
   if (numFields > 0) PetscCall(PetscSectionSetNumFields(s, numFields));

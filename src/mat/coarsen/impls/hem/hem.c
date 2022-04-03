@@ -115,7 +115,7 @@ PetscErrorCode PetscCDIntNdGetID(const PetscCDIntNd *a_this, PetscInt *a_gid)
 PetscErrorCode PetscCDGetHeadPos(const PetscCoarsenData *ail, PetscInt a_idx, PetscCDIntNd **pos)
 {
   PetscFunctionBegin;
-  PetscCheckFalse(a_idx>=ail->size,PETSC_COMM_SELF,PETSC_ERR_PLIB,"a_idx >= ail->size: a_idx=%" PetscInt_FMT ".",a_idx);
+  PetscCheck(a_idx<ail->size,PETSC_COMM_SELF,PETSC_ERR_PLIB,"a_idx >= ail->size: a_idx=%" PetscInt_FMT ".",a_idx);
   *pos = ail->array[a_idx];
   PetscFunctionReturn(0);
 }
@@ -138,7 +138,7 @@ PetscErrorCode PetscCDAppendID(PetscCoarsenData *ail, PetscInt a_idx, PetscInt a
 
   PetscFunctionBegin;
   PetscCall(PetscCDGetNewNode(ail, &n, a_id));
-  PetscCheckFalse(a_idx>=ail->size,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Index %" PetscInt_FMT " out of range.",a_idx);
+  PetscCheck(a_idx<ail->size,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Index %" PetscInt_FMT " out of range.",a_idx);
   if (!(n2=ail->array[a_idx])) ail->array[a_idx] = n;
   else {
     do {
@@ -161,7 +161,7 @@ PetscErrorCode PetscCDAppendNode(PetscCoarsenData *ail, PetscInt a_idx,  PetscCD
   PetscCDIntNd *n2;
 
   PetscFunctionBegin;
-  PetscCheckFalse(a_idx>=ail->size,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Index %" PetscInt_FMT " out of range.",a_idx);
+  PetscCheck(a_idx<ail->size,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Index %" PetscInt_FMT " out of range.",a_idx);
   if (!(n2=ail->array[a_idx])) ail->array[a_idx] = a_n;
   else {
     do {
@@ -184,7 +184,7 @@ PetscErrorCode PetscCDRemoveNextNode(PetscCoarsenData *ail, PetscInt a_idx,  Pet
   PetscCDIntNd *del;
 
   PetscFunctionBegin;
-  PetscCheckFalse(a_idx>=ail->size,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Index %" PetscInt_FMT " out of range.",a_idx);
+  PetscCheck(a_idx<ail->size,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Index %" PetscInt_FMT " out of range.",a_idx);
   PetscCheck(a_last->next,PETSC_COMM_SELF,PETSC_ERR_PLIB,"a_last should have a next");
   del          = a_last->next;
   a_last->next = del->next;
@@ -222,9 +222,9 @@ PetscErrorCode PetscCDAppendRemove(PetscCoarsenData *ail, PetscInt a_destidx, Pe
   PetscCDIntNd *n;
 
   PetscFunctionBegin;
-  PetscCheckFalse(a_srcidx>=ail->size,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Index %" PetscInt_FMT " out of range.",a_srcidx);
-  PetscCheckFalse(a_destidx>=ail->size,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Index %" PetscInt_FMT " out of range.",a_destidx);
-  PetscCheckFalse(a_destidx==a_srcidx,PETSC_COMM_SELF,PETSC_ERR_PLIB,"a_destidx==a_srcidx %" PetscInt_FMT ".",a_destidx);
+  PetscCheck(a_srcidx<ail->size,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Index %" PetscInt_FMT " out of range.",a_srcidx);
+  PetscCheck(a_destidx<ail->size,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Index %" PetscInt_FMT " out of range.",a_destidx);
+  PetscCheck(a_destidx!=a_srcidx,PETSC_COMM_SELF,PETSC_ERR_PLIB,"a_destidx==a_srcidx %" PetscInt_FMT ".",a_destidx);
   n = ail->array[a_destidx];
   if (!n) ail->array[a_destidx] = ail->array[a_srcidx];
   else {
@@ -247,7 +247,7 @@ PetscErrorCode PetscCDRemoveAll(PetscCoarsenData *ail, PetscInt a_idx)
   PetscCDIntNd *rem,*n1;
 
   PetscFunctionBegin;
-  PetscCheckFalse(a_idx>=ail->size,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Index %" PetscInt_FMT " out of range.",a_idx);
+  PetscCheck(a_idx<ail->size,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Index %" PetscInt_FMT " out of range.",a_idx);
   rem               = ail->array[a_idx];
   ail->array[a_idx] = NULL;
   if (!(n1=ail->extra_nodes)) ail->extra_nodes = rem;
@@ -266,7 +266,7 @@ PetscErrorCode PetscCDSizeAt(const PetscCoarsenData *ail, PetscInt a_idx, PetscI
   PetscInt     sz = 0;
 
   PetscFunctionBegin;
-  PetscCheckFalse(a_idx>=ail->size,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Index %" PetscInt_FMT " out of range.",a_idx);
+  PetscCheck(a_idx<ail->size,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Index %" PetscInt_FMT " out of range.",a_idx);
   n1 = ail->array[a_idx];
   while (n1) {
     n1 = n1->next;
@@ -281,7 +281,7 @@ PetscErrorCode PetscCDSizeAt(const PetscCoarsenData *ail, PetscInt a_idx, PetscI
 PetscErrorCode PetscCDEmptyAt(const PetscCoarsenData *ail, PetscInt a_idx, PetscBool *a_e)
 {
   PetscFunctionBegin;
-  PetscCheckFalse(a_idx>=ail->size,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Index %" PetscInt_FMT " out of range.",a_idx);
+  PetscCheck(a_idx<ail->size,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Index %" PetscInt_FMT " out of range.",a_idx);
   *a_e = (PetscBool)(ail->array[a_idx]==NULL);
   PetscFunctionReturn(0);
 }
@@ -795,7 +795,7 @@ static PetscErrorCode heavyEdgeMatchAgg(IS perm,Mat a_Gmat,PetscCoarsenData **a_
           PetscCall(PetscMalloc(count2*sizeof(PetscInt) + sizeof(MPI_Request), &sbuff));
           request          = (MPI_Request*)sbuff;
           sreqs2[nSend2++] = request; /* cache request */
-          PetscCheckFalse(nSend2==REQ_BF_SIZE,PETSC_COMM_SELF,PETSC_ERR_SUP,"buffer too small for requests: %" PetscInt_FMT,nSend2);
+          PetscCheck(nSend2!=REQ_BF_SIZE,PETSC_COMM_SELF,PETSC_ERR_SUP,"buffer too small for requests: %" PetscInt_FMT,nSend2);
           pt2 = sbuff = (PetscInt*)(request+1);
           pt  = rbuff;
           n   = *pt++; kk = *pt++;

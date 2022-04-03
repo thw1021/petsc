@@ -87,7 +87,7 @@ PetscInt PCTFS_len_bit_mask(PetscInt num_items)
 {
   PetscInt rt_val, tmp;
 
-  PetscCheckFalse(num_items<0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Value Sent To PCTFS_len_bit_mask() Must be >= 0!");
+  PetscCheck(num_items>=0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Value Sent To PCTFS_len_bit_mask() Must be >= 0!");
 
   rt_val = PetscCeilInt(num_items,BYTE);
   /* make multiple of sizeof PetscInt */

@@ -757,7 +757,7 @@ static PetscErrorCode VecNestGetSubVecs_Private(Vec x,PetscInt m,const PetscInt 
   if (!m) PetscFunctionReturn(0);
   for (i=0; i<m; i++) {
     row = idxm[i];
-    PetscCheckFalse(row >= b->nb,PetscObjectComm((PetscObject)x),PETSC_ERR_ARG_OUTOFRANGE,"Row too large: row %" PetscInt_FMT " max %" PetscInt_FMT,row,b->nb-1);
+    PetscCheck(row < b->nb,PetscObjectComm((PetscObject)x),PETSC_ERR_ARG_OUTOFRANGE,"Row too large: row %" PetscInt_FMT " max %" PetscInt_FMT,row,b->nb-1);
     vec[i] = b->v[row];
   }
   PetscFunctionReturn(0);
@@ -843,7 +843,7 @@ static PetscErrorCode  VecNestSetSubVec_Private(Vec X,PetscInt idxm,Vec x)
   PetscInt       N=0;
 
   /* check if idxm < bx->nb */
-  PetscCheckFalse(idxm >= bx->nb,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Out of range index value %" PetscInt_FMT " maximum %" PetscInt_FMT,idxm,bx->nb);
+  PetscCheck(idxm < bx->nb,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Out of range index value %" PetscInt_FMT " maximum %" PetscInt_FMT,idxm,bx->nb);
 
   PetscFunctionBegin;
   PetscCall(VecDestroy(&bx->v[idxm]));       /* destroy the existing vector */
@@ -1014,7 +1014,7 @@ static PetscErrorCode VecSetUp_Nest_Private(Vec V,PetscInt nb,Vec x[])
   if (ctx->setup_called) PetscFunctionReturn(0);
 
   ctx->nb = nb;
-  PetscCheckFalse(ctx->nb < 0,PetscObjectComm((PetscObject)V),PETSC_ERR_ARG_WRONG,"Cannot create VECNEST with < 0 blocks.");
+  PetscCheck(ctx->nb >= 0,PetscObjectComm((PetscObject)V),PETSC_ERR_ARG_WRONG,"Cannot create VECNEST with < 0 blocks.");
 
   /* Create space */
   PetscCall(PetscMalloc1(ctx->nb,&ctx->v));

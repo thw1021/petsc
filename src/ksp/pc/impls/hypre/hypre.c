@@ -714,12 +714,12 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PetscOptionItems *PetscOp
   }
   PetscCall(PetscOptionsInt("-pc_hypre_boomeramg_max_levels","Number of levels (of grids) allowed","None",jac->maxlevels,&jac->maxlevels,&flg));
   if (flg) {
-    PetscCheckFalse(jac->maxlevels < 2,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Number of levels %d must be at least two",jac->maxlevels);
+    PetscCheck(jac->maxlevels >= 2,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Number of levels %d must be at least two",jac->maxlevels);
     PetscStackCallStandard(HYPRE_BoomerAMGSetMaxLevels,jac->hsolver,jac->maxlevels);
   }
   PetscCall(PetscOptionsInt("-pc_hypre_boomeramg_max_iter","Maximum iterations used PER hypre call","None",jac->maxiter,&jac->maxiter,&flg));
   if (flg) {
-    PetscCheckFalse(jac->maxiter < 1,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Number of iterations %d must be at least one",jac->maxiter);
+    PetscCheck(jac->maxiter >= 1,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Number of iterations %d must be at least one",jac->maxiter);
     PetscStackCallStandard(HYPRE_BoomerAMGSetMaxIter,jac->hsolver,jac->maxiter);
   }
   PetscCall(PetscOptionsReal("-pc_hypre_boomeramg_tol","Convergence tolerance PER hypre call (0.0 = use a fixed number of iterations)","None",jac->tol,&jac->tol,&flg));
@@ -744,7 +744,7 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PetscOptionItems *PetscOp
 
   PetscCall(PetscOptionsInt("-pc_hypre_boomeramg_P_max","Max elements per row for interpolation operator (0=unlimited)","None",jac->pmax,&jac->pmax,&flg));
   if (flg) {
-    PetscCheckFalse(jac->pmax < 0,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"P_max %D must be greater than or equal to zero",jac->pmax);
+    PetscCheck(jac->pmax >= 0,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"P_max %D must be greater than or equal to zero",jac->pmax);
     PetscStackCallStandard(HYPRE_BoomerAMGSetPMaxElmts,jac->hsolver,jac->pmax);
   }
 
@@ -753,7 +753,7 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PetscOptionItems *PetscOp
 
   PetscCall(PetscOptionsInt("-pc_hypre_boomeramg_agg_num_paths","Number of paths for aggressive coarsening","None",jac->agg_num_paths,&jac->agg_num_paths,&flg));
   if (flg) {
-    PetscCheckFalse(jac->agg_num_paths < 1,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Number of paths %D must be greater than or equal to 1",jac->agg_num_paths);
+    PetscCheck(jac->agg_num_paths >= 1,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Number of paths %D must be greater than or equal to 1",jac->agg_num_paths);
     PetscStackCallStandard(HYPRE_BoomerAMGSetNumPaths,jac->hsolver,jac->agg_num_paths);
   }
 

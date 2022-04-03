@@ -1895,10 +1895,10 @@ static PetscErrorCode DMPlexComputeCellGeometryFEM_FE(DM dm, PetscFE fe, PetscIn
     PetscReal        detJt;
 
 #if defined(PETSC_USE_DEBUG)
-    PetscCheckFalse(Nq != T->Np,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Np %D != %D", Nq, T->Np);
-    PetscCheckFalse(pdim != T->Nb,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Nb %D != %D", pdim, T->Nb);
-    PetscCheckFalse(dim != T->Nc,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Nc %D != %D", dim, T->Nc);
-    PetscCheckFalse(cdim != T->cdim,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "cdim %D != %D", cdim, T->cdim);
+    PetscCheck(Nq == T->Np,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Np %D != %D", Nq, T->Np);
+    PetscCheck(pdim == T->Nb,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Nb %D != %D", pdim, T->Nb);
+    PetscCheck(dim == T->Nc,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Nc %D != %D", dim, T->Nc);
+    PetscCheck(cdim == T->cdim,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "cdim %D != %D", cdim, T->cdim);
 #endif
     if (v) {
       PetscCall(PetscArrayzero(v, Nq*cdim));

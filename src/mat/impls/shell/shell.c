@@ -685,7 +685,7 @@ static PetscErrorCode MatProductNumeric_Shell_X(Mat D)
 
         PetscCall(MatShellGetContext(shell->axpy,&X));
         PetscCall(PetscObjectStateGet((PetscObject)X,&axpy_state));
-        PetscCheckFalse(shell->axpy_state != axpy_state,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Invalid AXPY state: cannot modify the X matrix passed to MatAXPY(Y,a,X,...)");
+        PetscCheck(shell->axpy_state == axpy_state,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Invalid AXPY state: cannot modify the X matrix passed to MatAXPY(Y,a,X,...)");
         if (!mdata->axpy) {
           str  = DIFFERENT_NONZERO_PATTERN;
           PetscCall(MatProductCreate(shell->axpy,B,NULL,&mdata->axpy));
@@ -1053,7 +1053,7 @@ PetscErrorCode MatMult_Shell(Mat A,Vec x,Vec y)
 
     PetscCall(MatShellGetContext(shell->axpy,&X));
     PetscCall(PetscObjectStateGet((PetscObject)X,&axpy_state));
-    PetscCheckFalse(shell->axpy_state != axpy_state,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Invalid AXPY state: cannot modify the X matrix passed to MatAXPY(Y,a,X,...)");
+    PetscCheck(shell->axpy_state == axpy_state,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Invalid AXPY state: cannot modify the X matrix passed to MatAXPY(Y,a,X,...)");
 
     PetscCall(MatCreateVecs(shell->axpy,shell->axpy_right ? NULL : &shell->axpy_right,shell->axpy_left ? NULL : &shell->axpy_left));
     PetscCall(VecCopy(x,shell->axpy_right));
@@ -1106,7 +1106,7 @@ PetscErrorCode MatMultTranspose_Shell(Mat A,Vec x,Vec y)
 
     PetscCall(MatShellGetContext(shell->axpy,&X));
     PetscCall(PetscObjectStateGet((PetscObject)X,&axpy_state));
-    PetscCheckFalse(shell->axpy_state != axpy_state,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Invalid AXPY state: cannot modify the X matrix passed to MatAXPY(Y,a,X,...)");
+    PetscCheck(shell->axpy_state == axpy_state,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Invalid AXPY state: cannot modify the X matrix passed to MatAXPY(Y,a,X,...)");
     PetscCall(MatCreateVecs(shell->axpy,shell->axpy_right ? NULL : &shell->axpy_right,shell->axpy_left ? NULL : &shell->axpy_left));
     PetscCall(VecCopy(x,shell->axpy_left));
     PetscCall(MatMultTranspose(shell->axpy,shell->axpy_left,shell->axpy_right));
@@ -1159,7 +1159,7 @@ PetscErrorCode MatGetDiagonal_Shell(Mat A,Vec v)
 
     PetscCall(MatShellGetContext(shell->axpy,&X));
     PetscCall(PetscObjectStateGet((PetscObject)X,&axpy_state));
-    PetscCheckFalse(shell->axpy_state != axpy_state,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Invalid AXPY state: cannot modify the X matrix passed to MatAXPY(Y,a,X,...)");
+    PetscCheck(shell->axpy_state == axpy_state,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Invalid AXPY state: cannot modify the X matrix passed to MatAXPY(Y,a,X,...)");
     PetscCall(MatCreateVecs(shell->axpy,NULL,shell->axpy_left ? NULL : &shell->axpy_left));
     PetscCall(MatGetDiagonal(shell->axpy,shell->axpy_left));
     PetscCall(VecAXPY(v,shell->axpy_vscale,shell->axpy_left));

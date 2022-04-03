@@ -102,7 +102,7 @@ end_1:
       for (i=0; i<jac->n_local; i++) jac->l_lens[i] = bs*((M/bs)/jac->n_local + (((M/bs) % jac->n_local) > i));
     }
   }
-  PetscCheckFalse(jac->n_local < 1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of blocks is less than number of processors");
+  PetscCheck(jac->n_local >= 1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of blocks is less than number of processors");
 
   /* -------------------------
       Determines mat and pmat
@@ -1204,7 +1204,7 @@ static PetscErrorCode PCSetUp_BJacobi_Multiproc(PC pc)
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)pc,&comm));
-  PetscCheckFalse(jac->n_local > 1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Only a single block in a subcommunicator is supported");
+  PetscCheck(jac->n_local <= 1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Only a single block in a subcommunicator is supported");
   jac->n_local = 1; /* currently only a single block is supported for a subcommunicator */
   if (!pc->setupcalled) {
     wasSetup  = PETSC_FALSE;

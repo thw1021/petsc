@@ -830,7 +830,7 @@ static PetscErrorCode TSSolve_GLLE(TS ts)
     }
   }
 
-  PetscCheckFalse(gl->current_scheme < 0,PETSC_COMM_SELF,PETSC_ERR_ORDER,"A starting scheme has not been provided");
+  PetscCheck(gl->current_scheme >= 0,PETSC_COMM_SELF,PETSC_ERR_ORDER,"A starting scheme has not been provided");
 
   for (k=0,final_step=PETSC_FALSE,finish=PETSC_FALSE; k<ts->max_steps && !finish; k++) {
     PetscInt          j,r,s,next_scheme = 0,rejections;

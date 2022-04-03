@@ -40,7 +40,7 @@ PetscErrorCode MatIncreaseOverlap_SeqBAIJ(Mat A,PetscInt is_max,IS is[],PetscInt
     /* Enter these into the temp arrays i.e mark table[row], enter row into new index */
     for (j=0; j<n; ++j) {
       ival = idx[j]/bs; /* convert the indices into block indices */
-      PetscCheckFalse(ival>=m,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"index greater than mat-dim");
+      PetscCheck(ival<m,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"index greater than mat-dim");
       if (!PetscBTLookupSet(table,ival)) nidx[isz++] = ival;
     }
     PetscCall(ISRestoreIndices(is[i],&idx));

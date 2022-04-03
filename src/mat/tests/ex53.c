@@ -151,7 +151,7 @@ int main(int argc,char **args)
       while (cols2[j] != cols1[i]) i++;
       PetscCheckFalse(v1[i] != v2[j],PETSC_COMM_SELF,PETSC_ERR_PLIB,"MatGetRow() failed - vals incorrect.");
     }
-    PetscCheckFalse(j<ncols2,PETSC_COMM_SELF,PETSC_ERR_PLIB,"MatGetRow() failed - cols incorrect");
+    PetscCheck(j>=ncols2,PETSC_COMM_SELF,PETSC_ERR_PLIB,"MatGetRow() failed - cols incorrect");
 
     PetscCall(MatRestoreRow(A,row,&ncols1,&cols1,&v1));
     PetscCall(MatRestoreRow(B,row,&ncols2,&cols2,&v2));

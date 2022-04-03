@@ -585,7 +585,7 @@ PetscErrorCode DMMoabCreateBoxMesh(MPI_Comm comm, PetscInt dim, PetscBool useSim
 
   PetscCall(DMMBUtil_InitializeOptions(genCtx, dim, useSimplex, global_rank, global_size, bounds, nele));
 
-  //PetscCheckFalse(nele<nprocs,PETSC_COMM_WORLD,PETSC_ERR_ARG_OUTOFRANGE,"The dimensional discretization size should be greater or equal to number of processors: %D < %D",nele,nprocs);
+  //PetscCheck(nele>=nprocs,PETSC_COMM_WORLD,PETSC_ERR_ARG_OUTOFRANGE,"The dimensional discretization size should be greater or equal to number of processors: %D < %D",nele,nprocs);
 
   if (genCtx.adjEnts) genCtx.keep_skins = true; /* do not delete anything - consumes more memory */
 

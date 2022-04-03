@@ -285,7 +285,7 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc,Mat Amat_fine,PetscInt cr_bs,
       PetscCall(PetscFree(newproc_idx));
     } else { /* simple aggregation of parts -- 'is_eq_newproc' */
       PetscInt targetPE;
-      PetscCheckFalse(new_size==nactive,PETSC_COMM_SELF,PETSC_ERR_PLIB,"new_size==nactive. Should not happen");
+      PetscCheck(new_size!=nactive,PETSC_COMM_SELF,PETSC_ERR_PLIB,"new_size==nactive. Should not happen");
       PetscCall(PetscInfo(pc,"%s: Number of equations (loc) %D with simple aggregation\n",((PetscObject)pc)->prefix,ncrs_eq));
       targetPE = (rank/rfactor)*expand_factor;
       PetscCall(ISCreateStride(comm, ncrs_eq, targetPE, 0, &is_eq_newproc));

@@ -1710,7 +1710,7 @@ PetscErrorCode DMPlexIsInterpolated(DM dm, DMPlexInterpolatedFlag *interpolated)
     DMPlexInterpolatedFlag flg;
 
     PetscCall(DMPlexIsInterpolated_Internal(dm, &flg));
-    PetscCheckFalse(flg != plex->interpolated,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Stashed DMPlexInterpolatedFlag %s is inconsistent with current %s", DMPlexInterpolatedFlags[plex->interpolated], DMPlexInterpolatedFlags[flg]);
+    PetscCheck(flg == plex->interpolated,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Stashed DMPlexInterpolatedFlag %s is inconsistent with current %s", DMPlexInterpolatedFlags[plex->interpolated], DMPlexInterpolatedFlags[flg]);
   }
   *interpolated = plex->interpolated;
   PetscFunctionReturn(0);

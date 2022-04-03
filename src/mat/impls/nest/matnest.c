@@ -893,7 +893,7 @@ static PetscErrorCode MatCreateVecs_Nest(Mat A,Vec *right,Vec *left)
           break;
         }
       }
-      PetscCheckFalse(i==bA->nr,PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_WRONG, "Mat(Nest) contains a null column.");
+      PetscCheck(i!=bA->nr,PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_WRONG, "Mat(Nest) contains a null column.");
     }
     PetscCall(VecCreateNest(comm,bA->nc,bA->isglobal.col,R,right));
     /* hand back control to the nest vector */
@@ -914,7 +914,7 @@ static PetscErrorCode MatCreateVecs_Nest(Mat A,Vec *right,Vec *left)
           break;
         }
       }
-      PetscCheckFalse(j==bA->nc,PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_WRONG, "Mat(Nest) contains a null row.");
+      PetscCheck(j!=bA->nc,PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_WRONG, "Mat(Nest) contains a null row.");
     }
 
     PetscCall(VecCreateNest(comm,bA->nr,bA->isglobal.row,L,left));
@@ -1077,8 +1077,8 @@ PetscErrorCode MatNestGetSubMat_Nest(Mat A,PetscInt idxm,PetscInt jdxm,Mat *mat)
   Mat_Nest *bA = (Mat_Nest*)A->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(idxm >= bA->nr,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_OUTOFRANGE,"Row too large: row %" PetscInt_FMT " max %" PetscInt_FMT,idxm,bA->nr-1);
-  PetscCheckFalse(jdxm >= bA->nc,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_OUTOFRANGE,"Col too large: row %" PetscInt_FMT " max %" PetscInt_FMT,jdxm,bA->nc-1);
+  PetscCheck(idxm < bA->nr,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_OUTOFRANGE,"Row too large: row %" PetscInt_FMT " max %" PetscInt_FMT,idxm,bA->nr-1);
+  PetscCheck(jdxm < bA->nc,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_OUTOFRANGE,"Col too large: row %" PetscInt_FMT " max %" PetscInt_FMT,jdxm,bA->nc-1);
   *mat = bA->m[idxm][jdxm];
   PetscFunctionReturn(0);
 }
@@ -1114,8 +1114,8 @@ PetscErrorCode MatNestSetSubMat_Nest(Mat A,PetscInt idxm,PetscInt jdxm,Mat mat)
   PetscInt       m,n,M,N,mi,ni,Mi,Ni;
 
   PetscFunctionBegin;
-  PetscCheckFalse(idxm >= bA->nr,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_OUTOFRANGE,"Row too large: row %" PetscInt_FMT " max %" PetscInt_FMT,idxm,bA->nr-1);
-  PetscCheckFalse(jdxm >= bA->nc,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_OUTOFRANGE,"Col too large: row %" PetscInt_FMT " max %" PetscInt_FMT,jdxm,bA->nc-1);
+  PetscCheck(idxm < bA->nr,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_OUTOFRANGE,"Row too large: row %" PetscInt_FMT " max %" PetscInt_FMT,idxm,bA->nr-1);
+  PetscCheck(jdxm < bA->nc,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_OUTOFRANGE,"Col too large: row %" PetscInt_FMT " max %" PetscInt_FMT,jdxm,bA->nc-1);
   PetscCall(MatGetLocalSize(mat,&m,&n));
   PetscCall(MatGetSize(mat,&M,&N));
   PetscCall(ISGetLocalSize(bA->isglobal.row[idxm],&mi));

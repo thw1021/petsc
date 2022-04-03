@@ -433,7 +433,7 @@ PetscErrorCode PetscSFSetGraph(PetscSF sf,PetscInt nroots,PetscInt nleaves,Petsc
   PetscValidHeaderSpecific(sf,PETSCSF_CLASSID,1);
   if (nleaves > 0 && ilocal) PetscValidIntPointer(ilocal,4);
   if (nleaves > 0) PetscValidPointer(iremote,6);
-  PetscCheckFalse(nroots  < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"nroots %" PetscInt_FMT ", cannot be negative",nroots);
+  PetscCheck(nroots  >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"nroots %" PetscInt_FMT ", cannot be negative",nroots);
   PetscCheck(nleaves >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"nleaves %" PetscInt_FMT ", cannot be negative",nleaves);
   PetscCheck(localmode  >= PETSC_COPY_VALUES && localmode  <= PETSC_USE_POINTER,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Wrong localmode %d",localmode);
   PetscCheck(remotemode >= PETSC_COPY_VALUES && remotemode <= PETSC_USE_POINTER,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Wrong remotemode %d",remotemode);
@@ -1095,7 +1095,7 @@ PetscErrorCode PetscSFGetGroups(PetscSF sf,MPI_Group *incoming,MPI_Group *outgoi
   MPI_Group      group = MPI_GROUP_NULL;
 
   PetscFunctionBegin;
-  PetscCheckFalse(sf->nranks < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscSFSetUpRanks() before obtaining groups");
+  PetscCheck(sf->nranks >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call PetscSFSetUpRanks() before obtaining groups");
   if (sf->ingroup == MPI_GROUP_NULL) {
     PetscInt       i;
     const PetscInt *indegree;

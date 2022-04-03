@@ -1127,7 +1127,7 @@ static PetscErrorCode PCPatchCreateCellPatches(PC pc)
     PetscCheck(ifn == ifdof,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Number of interior facets in patch %D is %D, but should be %D", v, ifn, ifdof);
     PetscCheck(efn == efdof,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Number of exterior facets in patch %D is %D, but should be %D", v, efn, efdof);
     PetscCheck(cn == cdof,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Number of cells in patch %D is %D, but should be %D", v, cn, cdof);
-    PetscCheckFalse(n  != dof,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Number of points in patch %D is %D, but should be %D", v, n, dof);
+    PetscCheck(n  == dof,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Number of points in patch %D is %D, but should be %D", v, n, dof);
 
     for (ifn = 0; ifn < ifdof; ifn++) {
       PetscInt  cell0 = intFacetsToPatchCell[2*(ifoff + ifn)];
@@ -1664,7 +1664,7 @@ static PetscErrorCode PCPatchCreateCellPatchDiscretisationInfo(PC pc)
   if (patch->combined) {
     PetscInt numFields;
     PetscCall(PetscSectionGetNumFields(patch->dofSection[0], &numFields));
-    PetscCheckFalse(numFields != patch->nsubspaces,PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONG, "Mismatch between number of section fields %D and number of subspaces %D", numFields, patch->nsubspaces);
+    PetscCheck(numFields == patch->nsubspaces,PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONG, "Mismatch between number of section fields %D and number of subspaces %D", numFields, patch->nsubspaces);
     PetscCall(PetscSectionGetChart(patch->dofSection[0], &pStart, &pEnd));
     PetscCall(PetscSectionSetChart(patch->patchSection, pStart, pEnd));
     for (p = pStart; p < pEnd; ++p) {

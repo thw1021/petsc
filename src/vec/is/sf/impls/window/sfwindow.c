@@ -602,7 +602,7 @@ static PetscErrorCode PetscSFRestoreWindow(PetscSF sf,MPI_Datatype unit,void *ar
   for (p=&w->wins; *p; p=&(*p)->next) {
     link = *p;
     if (*win == link->win) {
-      PetscCheckFalse(array != link->paddr,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Matched window, but not array");
+      PetscCheck(array == link->paddr,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Matched window, but not array");
       if (epoch != link->epoch) {
         PetscCheck(!epoch,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"No epoch to end");
         else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Restoring window without ending epoch");

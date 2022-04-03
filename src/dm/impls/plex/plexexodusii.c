@@ -127,7 +127,7 @@ static PetscErrorCode PetscViewerFileSetName_ExodusII(PetscViewer viewer, const 
   EXO_mode += EX_ALL_INT64_API;
   #endif
   exo->exoid = ex_open_par(name,EXO_mode,&CPU_word_size,&IO_word_size,&EXO_version,PETSC_COMM_WORLD,mpi_info);
-  PetscCheckFalse(exo->exoid < 0,PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_open_par failed for %s", name);
+  PetscCheck(exo->exoid >= 0,PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_open_par failed for %s", name);
   PetscFunctionReturn(0);
 }
 
@@ -367,7 +367,7 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
         CPU_word_size = sizeof(PetscReal);
         IO_word_size  = sizeof(PetscReal);
         exo->exoid = ex_create(exo->filename, EXO_mode, &CPU_word_size, &IO_word_size);
-        PetscCheckFalse(exo->exoid < 0,PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_create failed for %s", exo->filename);
+        PetscCheck(exo->exoid >= 0,PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_create failed for %s", exo->filename);
 
       break;
     default:
@@ -745,7 +745,7 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
   CPU_word_size = sizeof(PetscReal);
   IO_word_size  = sizeof(PetscReal);
   exo->exoid = ex_open_par(exo->filename,EXO_mode,&CPU_word_size,&IO_word_size,&EXO_version,comm,MPI_INFO_NULL);
-  PetscCheckFalse(exo->exoid < 0,PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_open_par failed for %s", exo->filename);
+  PetscCheck(exo->exoid >= 0,PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_open_par failed for %s", exo->filename);
   PetscFunctionReturn(0);
 }
 

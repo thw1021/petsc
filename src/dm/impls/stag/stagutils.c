@@ -1445,7 +1445,7 @@ PetscErrorCode DMStagVecGetArray(DM dm,Vec vec,void *array)
   PetscValidHeaderSpecific(vec,VEC_CLASSID,2);
   PetscCall(DMGetDimension(dm,&dim));
   PetscCall(VecGetLocalSize(vec,&nLocal));
-  PetscCheckFalse(nLocal != stag->entriesGhost,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Vector local size %D is not compatible with DMStag local size %D",nLocal,stag->entriesGhost);
+  PetscCheck(nLocal == stag->entriesGhost,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Vector local size %D is not compatible with DMStag local size %D",nLocal,stag->entriesGhost);
   switch (dim) {
     case 1:
       PetscCall(VecGetArray2d(vec,stag->nGhost[0],stag->entriesPerElement,stag->startGhost[0],0,(PetscScalar***)array));
@@ -1493,7 +1493,7 @@ PetscErrorCode DMStagVecGetArrayRead(DM dm,Vec vec,void *array)
   PetscValidHeaderSpecific(vec,VEC_CLASSID,2);
   PetscCall(DMGetDimension(dm,&dim));
   PetscCall(VecGetLocalSize(vec,&nLocal));
-  PetscCheckFalse(nLocal != stag->entriesGhost,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Vector local size %D is not compatible with DMStag local size %D",nLocal,stag->entriesGhost);
+  PetscCheck(nLocal == stag->entriesGhost,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Vector local size %D is not compatible with DMStag local size %D",nLocal,stag->entriesGhost);
   switch (dim) {
     case 1:
       PetscCall(VecGetArray2dRead(vec,stag->nGhost[0],stag->entriesPerElement,stag->startGhost[0],0,(PetscScalar***)array));
@@ -1536,7 +1536,7 @@ PetscErrorCode DMStagVecRestoreArray(DM dm,Vec vec,void *array)
   PetscValidHeaderSpecific(vec,VEC_CLASSID,2);
   PetscCall(DMGetDimension(dm,&dim));
   PetscCall(VecGetLocalSize(vec,&nLocal));
-  PetscCheckFalse(nLocal != stag->entriesGhost,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Vector local size %D is not compatible with DMStag local size %D",nLocal,stag->entriesGhost);
+  PetscCheck(nLocal == stag->entriesGhost,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Vector local size %D is not compatible with DMStag local size %D",nLocal,stag->entriesGhost);
   switch (dim) {
     case 1:
       PetscCall(VecRestoreArray2d(vec,stag->nGhost[0],stag->entriesPerElement,stag->startGhost[0],0,(PetscScalar***)array));
@@ -1579,7 +1579,7 @@ PetscErrorCode DMStagVecRestoreArrayRead(DM dm,Vec vec,void *array)
   PetscValidHeaderSpecific(vec,VEC_CLASSID,2);
   PetscCall(DMGetDimension(dm,&dim));
   PetscCall(VecGetLocalSize(vec,&nLocal));
-  PetscCheckFalse(nLocal != stag->entriesGhost,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Vector local size %D is not compatible with DMStag local size %D",nLocal,stag->entriesGhost);
+  PetscCheck(nLocal == stag->entriesGhost,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Vector local size %D is not compatible with DMStag local size %D",nLocal,stag->entriesGhost);
   switch (dim) {
     case 1:
       PetscCall(VecRestoreArray2dRead(vec,stag->nGhost[0],stag->entriesPerElement,stag->startGhost[0],0,(PetscScalar***)array));

@@ -180,7 +180,7 @@ static PetscErrorCode SNESMultiblockSetDefaults(SNES snes)
       PetscCall(ISDestroy(&is2));
     } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Must provide at least two sets of fields to SNES multiblock");
   }
-  PetscCheckFalse(mb->numBlocks < 2,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unhandled case, must have at least two blocks");
+  PetscCheck(mb->numBlocks >= 2,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unhandled case, must have at least two blocks");
   PetscFunctionReturn(0);
 }
 
@@ -700,7 +700,7 @@ PetscErrorCode SNESMultiblockGetSubSNES_Default(SNES snes, PetscInt *n, SNES **s
     (*subsnes)[cnt++] = blocks->snes;
     blocks            = blocks->next;
   }
-  PetscCheckFalse(cnt != mb->numBlocks,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Corrupt SNESMULTIBLOCK object: number of blocks in linked list %D does not match number in object %D", cnt, mb->numBlocks);
+  PetscCheck(cnt == mb->numBlocks,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Corrupt SNESMULTIBLOCK object: number of blocks in linked list %D does not match number in object %D", cnt, mb->numBlocks);
 
   if (n) *n = mb->numBlocks;
   PetscFunctionReturn(0);

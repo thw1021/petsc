@@ -2236,7 +2236,7 @@ static PetscErrorCode WritePVTU(AppCtx *user,const char *fname,PetscBool base64)
   PetscCheck(bs == 4,PETSC_COMM_WORLD,PETSC_ERR_ARG_INCOMP,"expected block size 4, got %" PetscInt_FMT,bs);
   PetscCall(VecGetSize(Xloc,&nloc));
   PetscCheckFalse(nloc/bs != nvertices,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"expected nloc/bs=%" PetscInt_FMT " to match nvertices=%" PetscInt_FMT,nloc/bs,nvertices);
-  PetscCheckFalse(nvertices != grid->nvertices,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"expected nvertices=%" PetscInt_FMT " to match grid->nvertices=%" PetscInt_FMT,nvertices,grid->nvertices);
+  PetscCheck(nvertices == grid->nvertices,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"expected nvertices=%" PetscInt_FMT " to match grid->nvertices=%" PetscInt_FMT,nvertices,grid->nvertices);
   PetscCall(VecCreateSeq(PETSC_COMM_SELF,nvertices,&Xploc));
 
   PetscCall(VecCreate(PETSC_COMM_SELF,&Xuloc));

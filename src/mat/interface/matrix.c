@@ -1415,7 +1415,7 @@ PetscErrorCode MatSetValuesRow(Mat mat,PetscInt row,const PetscScalar v[])
   PetscValidType(mat,1);
   MatCheckPreallocated(mat,1);
   PetscValidScalarPointer(v,3);
-  PetscCheckFalse(mat->insertmode == ADD_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Cannot mix add and insert values");
+  PetscCheck(mat->insertmode != ADD_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Cannot mix add and insert values");
   PetscCheck(!mat->factortype,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for factored matrix");
   mat->insertmode = INSERT_VALUES;
 
@@ -1770,7 +1770,7 @@ PetscErrorCode MatSetValuesBlocked(Mat mat,PetscInt m,const PetscInt idxm[],Pets
   PetscValidIntPointer(idxn,5);
   MatCheckPreallocated(mat,1);
   if (mat->insertmode == NOT_SET_VALUES) mat->insertmode = addv;
-  else PetscCheckFalse(mat->insertmode != addv,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Cannot mix add values and insert values");
+  else PetscCheck(mat->insertmode == addv,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Cannot mix add values and insert values");
   if (PetscDefined(USE_DEBUG)) {
     PetscCheck(!mat->factortype,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for factored matrix");
     PetscCheck(mat->ops->setvaluesblocked || mat->ops->setvalues,PETSC_COMM_SELF,PETSC_ERR_SUP,"Mat type %s",((PetscObject)mat)->type_name);
@@ -2149,7 +2149,7 @@ PetscErrorCode MatSetValuesLocal(Mat mat,PetscInt nrow,const PetscInt irow[],Pet
   PetscValidIntPointer(irow,3);
   PetscValidIntPointer(icol,5);
   if (mat->insertmode == NOT_SET_VALUES) mat->insertmode = addv;
-  else PetscCheckFalse(mat->insertmode != addv,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Cannot mix add values and insert values");
+  else PetscCheck(mat->insertmode == addv,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Cannot mix add values and insert values");
   if (PetscDefined(USE_DEBUG)) {
     PetscCheck(!mat->factortype,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for factored matrix");
     PetscCheck(mat->ops->setvalueslocal || mat->ops->setvalues,PETSC_COMM_SELF,PETSC_ERR_SUP,"Mat type %s",((PetscObject)mat)->type_name);
@@ -2238,7 +2238,7 @@ PetscErrorCode MatSetValuesBlockedLocal(Mat mat,PetscInt nrow,const PetscInt iro
   PetscValidIntPointer(irow,3);
   PetscValidIntPointer(icol,5);
   if (mat->insertmode == NOT_SET_VALUES) mat->insertmode = addv;
-  else PetscCheckFalse(mat->insertmode != addv,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Cannot mix add values and insert values");
+  else PetscCheck(mat->insertmode == addv,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Cannot mix add values and insert values");
   if (PetscDefined(USE_DEBUG)) {
     PetscCheck(!mat->factortype,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for factored matrix");
     PetscCheckFalse(!mat->ops->setvaluesblockedlocal && !mat->ops->setvaluesblocked && !mat->ops->setvalueslocal && !mat->ops->setvalues,PETSC_COMM_SELF,PETSC_ERR_SUP,"Mat type %s",((PetscObject)mat)->type_name);
@@ -5762,7 +5762,7 @@ PetscErrorCode MatZeroEntries(Mat mat)
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
   PetscValidType(mat,1);
   PetscCheck(!mat->factortype,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"Not for factored matrix");
-  PetscCheckFalse(mat->insertmode != NOT_SET_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for matrices where you have set values but not yet assembled");
+  PetscCheck(mat->insertmode == NOT_SET_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for matrices where you have set values but not yet assembled");
   PetscCheck(mat->ops->zeroentries,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Mat type %s",((PetscObject)mat)->type_name);
   MatCheckPreallocated(mat,1);
 
@@ -6682,7 +6682,7 @@ PetscErrorCode MatILUFactorSymbolic(Mat fact,Mat mat,IS row,IS col,const MatFact
   if (col) PetscValidHeaderSpecific(col,IS_CLASSID,4);
   PetscValidPointer(info,5);
   PetscValidPointer(fact,1);
-  PetscCheckFalse(info->levels < 0,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_OUTOFRANGE,"Levels of fill negative %" PetscInt_FMT,(PetscInt)info->levels);
+  PetscCheck(info->levels >= 0,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_OUTOFRANGE,"Levels of fill negative %" PetscInt_FMT,(PetscInt)info->levels);
   PetscCheckFalse(info->fill < 1.0,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_OUTOFRANGE,"Expected fill less than 1.0 %g",(double)info->fill);
   if (!fact->ops->ilufactorsymbolic) {
     MatSolverType stype;
@@ -6742,7 +6742,7 @@ PetscErrorCode MatICCFactorSymbolic(Mat fact,Mat mat,IS perm,const MatFactorInfo
   PetscValidPointer(info,4);
   PetscValidPointer(fact,1);
   PetscCheck(!mat->factortype,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"Not for factored matrix");
-  PetscCheckFalse(info->levels < 0,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_OUTOFRANGE,"Levels negative %" PetscInt_FMT,(PetscInt) info->levels);
+  PetscCheck(info->levels >= 0,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_OUTOFRANGE,"Levels negative %" PetscInt_FMT,(PetscInt) info->levels);
   PetscCheckFalse(info->fill < 1.0,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_OUTOFRANGE,"Expected fill less than 1.0 %g",(double)info->fill);
   if (!(fact)->ops->iccfactorsymbolic) {
     MatSolverType stype;

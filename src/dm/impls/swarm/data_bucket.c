@@ -220,7 +220,7 @@ PetscErrorCode DMSwarmDataFieldZeroBlock(DMSwarmDataField df,const PetscInt star
   PetscFunctionBegin;
   PetscCheck(start <= end,PETSC_COMM_SELF,PETSC_ERR_USER,"Cannot zero a block of entries if start(%D) > end(%D)",start,end);
   PetscCheck(start >= 0,PETSC_COMM_SELF,PETSC_ERR_USER,"Cannot zero a block of entries if start(%D) < 0",start);
-  PetscCheckFalse(end > df->L,PETSC_COMM_SELF,PETSC_ERR_USER,"Cannot zero a block of entries if end(%D) >= array size(%D)",end,df->L);
+  PetscCheck(end <= df->L,PETSC_COMM_SELF,PETSC_ERR_USER,"Cannot zero a block of entries if end(%D) >= array size(%D)",end,df->L);
   PetscCall(PetscMemzero((((char*)df->data)+start*df->atomic_size), (end-start)*df->atomic_size));
   PetscFunctionReturn(0);
 }
@@ -234,7 +234,7 @@ PetscErrorCode DMSwarmDataBucketSetSizes(DMSwarmDataBucket db,const PetscInt L,c
   PetscBool      any_active_fields;
 
   PetscFunctionBegin;
-  PetscCheckFalse(db->finalised == PETSC_FALSE,PETSC_COMM_SELF,PETSC_ERR_USER,"You must call DMSwarmDataBucketFinalize() before DMSwarmDataBucketSetSizes()");
+  PetscCheck(db->finalised != PETSC_FALSE,PETSC_COMM_SELF,PETSC_ERR_USER,"You must call DMSwarmDataBucketFinalize() before DMSwarmDataBucketSetSizes()");
   PetscCall(DMSwarmDataBucketQueryForActiveFields(db,&any_active_fields));
   PetscCheck(!any_active_fields,PETSC_COMM_SELF,PETSC_ERR_USER,"Cannot safely re-size as at least one DMSwarmDataField is currently being accessed");
 
@@ -332,8 +332,8 @@ PetscErrorCode DMSwarmDataFieldAccessPoint(const DMSwarmDataField gfield,const P
   /* debug mode */
   /* check point is valid */
   PetscCheck(pid >= 0,PETSC_COMM_SELF,PETSC_ERR_USER,"index must be >= 0");
-  PetscCheckFalse(pid >= gfield->L,PETSC_COMM_SELF,PETSC_ERR_USER,"index must be < %D",gfield->L);
-  PetscCheckFalse(gfield->active == PETSC_FALSE,PETSC_COMM_SELF,PETSC_ERR_USER,"Field \"%s\" is not active. You must call DMSwarmDataFieldGetAccess() before point data can be retrivied",gfield->name);
+  PetscCheck(pid < gfield->L,PETSC_COMM_SELF,PETSC_ERR_USER,"index must be < %D",gfield->L);
+  PetscCheck(gfield->active != PETSC_FALSE,PETSC_COMM_SELF,PETSC_ERR_USER,"Field \"%s\" is not active. You must call DMSwarmDataFieldGetAccess() before point data can be retrivied",gfield->name);
 #endif
   *ctx_p = DMSWARM_DATAFIELD_point_access(gfield->data,pid,gfield->atomic_size);
   PetscFunctionReturn(0);
@@ -347,11 +347,11 @@ PetscErrorCode DMSwarmDataFieldAccessPointOffset(const DMSwarmDataField gfield,c
   /* check point is valid */
   /* PetscCheck(offset >= 0,PETSC_COMM_SELF,PETSC_ERR_USER,"offset must be >= 0");*/
   /* Note compiler realizes this can never happen with an unsigned PetscInt */
-  PetscCheckFalse(offset >= gfield->atomic_size,PETSC_COMM_SELF,PETSC_ERR_USER,"offset must be < %zu",gfield->atomic_size);
+  PetscCheck(offset < gfield->atomic_size,PETSC_COMM_SELF,PETSC_ERR_USER,"offset must be < %zu",gfield->atomic_size);
   /* check point is valid */
   PetscCheck(pid >= 0,PETSC_COMM_SELF,PETSC_ERR_USER,"index must be >= 0");
-  PetscCheckFalse(pid >= gfield->L,PETSC_COMM_SELF,PETSC_ERR_USER,"index must be < %D",gfield->L);
-  PetscCheckFalse(gfield->active == PETSC_FALSE,PETSC_COMM_SELF,PETSC_ERR_USER,"Field \"%s\" is not active. You must call DMSwarmDataFieldGetAccess() before point data can be retrivied",gfield->name);
+  PetscCheck(pid < gfield->L,PETSC_COMM_SELF,PETSC_ERR_USER,"index must be < %D",gfield->L);
+  PetscCheck(gfield->active != PETSC_FALSE,PETSC_COMM_SELF,PETSC_ERR_USER,"Field \"%s\" is not active. You must call DMSwarmDataFieldGetAccess() before point data can be retrivied",gfield->name);
 #endif
   *ctx_p = DMSWARM_DATAFIELD_point_access_offset(gfield->data,pid,gfield->atomic_size,offset);
   PetscFunctionReturn(0);
@@ -360,7 +360,7 @@ PetscErrorCode DMSwarmDataFieldAccessPointOffset(const DMSwarmDataField gfield,c
 PetscErrorCode DMSwarmDataFieldRestoreAccess(DMSwarmDataField gfield)
 {
   PetscFunctionBegin;
-  PetscCheckFalse(gfield->active == PETSC_FALSE,PETSC_COMM_SELF,PETSC_ERR_USER,"Field \"%s\" is not active. You must call DMSwarmDataFieldGetAccess()", gfield->name);
+  PetscCheck(gfield->active != PETSC_FALSE,PETSC_COMM_SELF,PETSC_ERR_USER,"Field \"%s\" is not active. You must call DMSwarmDataFieldGetAccess()", gfield->name);
   gfield->active = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
@@ -369,7 +369,7 @@ PetscErrorCode DMSwarmDataFieldVerifyAccess(const DMSwarmDataField gfield,const 
 {
   PetscFunctionBegin;
 #if defined(DMSWARM_DATAFIELD_POINT_ACCESS_GUARD)
-  PetscCheckFalse(gfield->atomic_size != size,PETSC_COMM_SELF,PETSC_ERR_USER,"Field \"%s\" must be mapped to %zu bytes, your intended structure is %zu bytes in length.",gfield->name, gfield->atomic_size, size);
+  PetscCheck(gfield->atomic_size == size,PETSC_COMM_SELF,PETSC_ERR_USER,"Field \"%s\" must be mapped to %zu bytes, your intended structure is %zu bytes in length.",gfield->name, gfield->atomic_size, size);
 #endif
   PetscFunctionReturn(0);
 }
@@ -446,7 +446,7 @@ PetscErrorCode DMSwarmDataFieldInsertPoint(const DMSwarmDataField field,const Pe
 #if defined(DMSWARM_DATAFIELD_POINT_ACCESS_GUARD)
   /* check point is valid */
   PetscCheck(index >= 0,PETSC_COMM_SELF,PETSC_ERR_USER,"index must be >= 0");
-  PetscCheckFalse(index >= field->L,PETSC_COMM_SELF,PETSC_ERR_USER,"index must be < %D",field->L);
+  PetscCheck(index < field->L,PETSC_COMM_SELF,PETSC_ERR_USER,"index must be < %D",field->L);
 #endif
   PetscCall(PetscMemcpy(DMSWARM_DATAFIELD_point_access(field->data,index,field->atomic_size), ctx, field->atomic_size));
   PetscFunctionReturn(0);
@@ -462,7 +462,7 @@ PetscErrorCode DMSwarmDataBucketRemovePointAtIndex(const DMSwarmDataBucket db,co
 #if defined(DMSWARM_DATAFIELD_POINT_ACCESS_GUARD)
   /* check point is valid */
   PetscCheck(index >= 0,PETSC_COMM_SELF,PETSC_ERR_USER,"index must be >= 0");
-  PetscCheckFalse(index >= db->allocated,PETSC_COMM_SELF,PETSC_ERR_USER,"index must be < %D",db->L+db->buffer);
+  PetscCheck(index < db->allocated,PETSC_COMM_SELF,PETSC_ERR_USER,"index must be < %D",db->L+db->buffer);
 #endif
   PetscCall(DMSwarmDataBucketQueryForActiveFields(db,&any_active_fields));
   PetscCheck(!any_active_fields,PETSC_COMM_SELF,PETSC_ERR_USER,"Cannot safely remove point as at least one DMSwarmDataField is currently being accessed");
@@ -491,10 +491,10 @@ PetscErrorCode DMSwarmDataFieldCopyPoint(const PetscInt pid_x,const DMSwarmDataF
 #if defined(DMSWARM_DATAFIELD_POINT_ACCESS_GUARD)
   /* check point is valid */
   PetscCheck(pid_x >= 0,PETSC_COMM_SELF,PETSC_ERR_USER,"(IN) index must be >= 0");
-  PetscCheckFalse(pid_x >= field_x->L,PETSC_COMM_SELF,PETSC_ERR_USER,"(IN) index must be < %D",field_x->L);
+  PetscCheck(pid_x < field_x->L,PETSC_COMM_SELF,PETSC_ERR_USER,"(IN) index must be < %D",field_x->L);
   PetscCheck(pid_y >= 0,PETSC_COMM_SELF,PETSC_ERR_USER,"(OUT) index must be >= 0");
-  PetscCheckFalse(pid_y >= field_y->L,PETSC_COMM_SELF,PETSC_ERR_USER,"(OUT) index must be < %D",field_y->L);
-  PetscCheckFalse(field_y->atomic_size != field_x->atomic_size,PETSC_COMM_SELF,PETSC_ERR_USER,"atomic size must match");
+  PetscCheck(pid_y < field_y->L,PETSC_COMM_SELF,PETSC_ERR_USER,"(OUT) index must be < %D",field_y->L);
+  PetscCheck(field_y->atomic_size == field_x->atomic_size,PETSC_COMM_SELF,PETSC_ERR_USER,"atomic size must match");
 #endif
   PetscCall(PetscMemcpy(DMSWARM_DATAFIELD_point_access(field_y->data,pid_y,field_y->atomic_size),DMSWARM_DATAFIELD_point_access(field_x->data,pid_x,field_x->atomic_size),field_y->atomic_size));
   PetscFunctionReturn(0);
@@ -507,7 +507,7 @@ PetscErrorCode DMSwarmDataFieldZeroPoint(const DMSwarmDataField field,const Pets
 #if defined(DMSWARM_DATAFIELD_POINT_ACCESS_GUARD)
   /* check point is valid */
   PetscCheck(index >= 0,PETSC_COMM_SELF,PETSC_ERR_USER,"index must be >= 0");
-  PetscCheckFalse(index >= field->L,PETSC_COMM_SELF,PETSC_ERR_USER,"index must be < %D",field->L);
+  PetscCheck(index < field->L,PETSC_COMM_SELF,PETSC_ERR_USER,"index must be < %D",field->L);
 #endif
   PetscCall(PetscMemzero(DMSWARM_DATAFIELD_point_access(field->data,index,field->atomic_size), field->atomic_size));
   PetscFunctionReturn(0);
@@ -521,7 +521,7 @@ PetscErrorCode DMSwarmDataBucketZeroPoint(const DMSwarmDataBucket db,const Petsc
   PetscFunctionBegin;
   /* check point is valid */
   PetscCheck(index >= 0,PETSC_COMM_SELF,PETSC_ERR_USER,"index must be >= 0");
-  PetscCheckFalse(index >= db->allocated,PETSC_COMM_SELF,PETSC_ERR_USER,"index must be < %D",db->allocated);
+  PetscCheck(index < db->allocated,PETSC_COMM_SELF,PETSC_ERR_USER,"index must be < %D",db->allocated);
   for (f = 0; f < db->nfields; ++f) {
     DMSwarmDataField field = db->field[f];
     PetscCall(DMSwarmDataFieldZeroPoint(field,index));

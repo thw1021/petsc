@@ -4240,7 +4240,7 @@ PetscErrorCode PCBDDCSetUpCorrection(PC pc, PetscScalar **coarse_submat_vals_n)
         PetscCall(PetscMalloc1(pcbddc->benign_n,&idxs_p0));
         PetscCall(ISLocalToGlobalMappingCreateIS(pcbddc->is_R_local,&RtoN));
         PetscCall(ISGlobalToLocalMappingApply(RtoN,IS_GTOLM_DROP,pcbddc->benign_n,pcbddc->benign_p0_lidx,&n,idxs_p0));
-        PetscCheckFalse(n != pcbddc->benign_n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Error in R numbering for benign p0! %D != %D",n,pcbddc->benign_n);
+        PetscCheck(n == pcbddc->benign_n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Error in R numbering for benign p0! %D != %D",n,pcbddc->benign_n);
         PetscCall(ISLocalToGlobalMappingDestroy(&RtoN));
         PetscCall(ISCreateGeneral(PETSC_COMM_SELF,n,idxs_p0,PETSC_OWN_POINTER,&is_p0));
         PetscCall(MatCreateSubMatrix(A_RV,is_p0,NULL,MAT_INITIAL_MATRIX,&A_RV_bcorr));
@@ -8905,7 +8905,7 @@ PetscErrorCode PCBDDCComputePrimalNumbering(PC pc,PetscInt* coarse_size_n,PetscI
   PetscCall(ISDestroy(&subset));
   PetscCall(ISDestroy(&subset_mult));
   PetscCall(ISGetLocalSize(subset_n,&local_size));
-  PetscCheckFalse(local_size != pcbddc->local_primal_size,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Invalid number of local primal indices computed %D != %D",local_size,pcbddc->local_primal_size);
+  PetscCheck(local_size == pcbddc->local_primal_size,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Invalid number of local primal indices computed %D != %D",local_size,pcbddc->local_primal_size);
   PetscCall(PetscMalloc1(local_size,&local_primal_indices));
   PetscCall(ISGetIndices(subset_n,&t_local_primal_indices));
   PetscCall(PetscArraycpy(local_primal_indices,t_local_primal_indices,local_size));

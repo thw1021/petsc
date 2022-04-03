@@ -292,7 +292,7 @@ PetscErrorCode MatLUFactorSymbolic_SeqAIJCUSPARSEBAND(Mat B,Mat A,IS isrow,IS is
   }
   PetscCall(ISRestoreIndices(isicol,&ic));
   /* only support structurally symmetric, but it might work */
-  PetscCheckFalse(bwL!=bwU,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Only symmetric structure supported (now) W_L=%" PetscInt_FMT " W_U=%" PetscInt_FMT,bwL,bwU);
+  PetscCheck(bwL==bwU,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Only symmetric structure supported (now) W_L=%" PetscInt_FMT " W_U=%" PetscInt_FMT,bwL,bwU);
   PetscCall(MatSeqAIJCUSPARSETriFactors_Reset(&cusparseTriFactors));
   nzBcsr = n + (2*n-1)*bwU - bwU*bwU;
   b->maxnz = b->nz = nzBcsr;

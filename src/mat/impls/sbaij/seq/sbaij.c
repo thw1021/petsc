@@ -391,7 +391,7 @@ PetscErrorCode MatView_SeqSBAIJ_ASCII(Mat A,PetscViewer viewer)
   } else {
     PetscCall(PetscViewerASCIIUseTabs(viewer,PETSC_FALSE));
     if (A->factortype) { /* for factored matrix */
-      PetscCheckFalse(bs>1,PETSC_COMM_SELF,PETSC_ERR_SUP,"matrix is factored with bs>1. Not implemented yet");
+      PetscCheck(bs<=1,PETSC_COMM_SELF,PETSC_ERR_SUP,"matrix is factored with bs>1. Not implemented yet");
 
       diag=a->diag;
       for (i=0; i<a->mbs; i++) { /* for row block i */
@@ -1019,7 +1019,7 @@ PetscErrorCode MatICCFactor_SeqSBAIJ(Mat inA,IS row,const MatFactorInfo *info)
   PetscBool      row_identity;
 
   PetscFunctionBegin;
-  PetscCheckFalse(info->levels != 0,PETSC_COMM_SELF,PETSC_ERR_SUP,"Only levels=0 is supported for in-place icc");
+  PetscCheck(info->levels == 0,PETSC_COMM_SELF,PETSC_ERR_SUP,"Only levels=0 is supported for in-place icc");
   PetscCall(ISIdentity(row,&row_identity));
   PetscCheck(row_identity,PETSC_COMM_SELF,PETSC_ERR_SUP,"Matrix reordering is not supported");
   PetscCheckFalse(inA->rmap->bs != 1,PETSC_COMM_SELF,PETSC_ERR_SUP,"Matrix block size %" PetscInt_FMT " is not supported",inA->rmap->bs); /* Need to replace MatCholeskyFactorSymbolic_SeqSBAIJ_MSR()! */
@@ -1113,8 +1113,8 @@ PetscErrorCode MatCopy_SeqSBAIJ(Mat A,Mat B,MatStructure str)
     Mat_SeqSBAIJ *b = (Mat_SeqSBAIJ*)B->data;
 
     PetscCheckFalse(a->i[a->mbs] != b->i[b->mbs],PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Number of nonzeros in two matrices are different");
-    PetscCheckFalse(a->mbs != b->mbs,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Number of rows in two matrices are different");
-    PetscCheckFalse(a->bs2 != b->bs2,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Different block size");
+    PetscCheck(a->mbs == b->mbs,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Number of rows in two matrices are different");
+    PetscCheck(a->bs2 == b->bs2,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Different block size");
     PetscCall(PetscArraycpy(b->a,a->a,a->bs2*a->i[a->mbs]));
     PetscCall(PetscObjectStateIncrease((PetscObject)B));
   } else {
@@ -1518,7 +1518,7 @@ PetscErrorCode  MatStoreValues_SeqSBAIJ(Mat mat)
   PetscInt       nz   = aij->i[mat->rmap->N]*mat->rmap->bs*aij->bs2;
 
   PetscFunctionBegin;
-  PetscCheckFalse(aij->nonew != 1,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Must call MatSetOption(A,MAT_NEW_NONZERO_LOCATIONS,PETSC_FALSE);first");
+  PetscCheck(aij->nonew == 1,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Must call MatSetOption(A,MAT_NEW_NONZERO_LOCATIONS,PETSC_FALSE);first");
 
   /* allocate space for values if not already there */
   if (!aij->saved_values) {
@@ -1536,7 +1536,7 @@ PetscErrorCode  MatRetrieveValues_SeqSBAIJ(Mat mat)
   PetscInt       nz = aij->i[mat->rmap->N]*mat->rmap->bs*aij->bs2;
 
   PetscFunctionBegin;
-  PetscCheckFalse(aij->nonew != 1,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Must call MatSetOption(A,MAT_NEW_NONZERO_LOCATIONS,PETSC_FALSE);first");
+  PetscCheck(aij->nonew == 1,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Must call MatSetOption(A,MAT_NEW_NONZERO_LOCATIONS,PETSC_FALSE);first");
   PetscCheck(aij->saved_values,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Must call MatStoreValues(A);first");
 
   /* copy values over */

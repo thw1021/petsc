@@ -70,8 +70,8 @@ PetscErrorCode SNESNGMRESFormCombinedSolution_Private(SNES snes,PetscInt ivec,Pe
     PetscStackCallBLAS("LAPACKgelss",LAPACKgelss_(&ngmres->m,&ngmres->n,&ngmres->nrhs,ngmres->h,&ngmres->lda,ngmres->beta,&ngmres->ldb,ngmres->s,&ngmres->rcond,&ngmres->rank,ngmres->work,&ngmres->lwork,&ngmres->info));
 #endif
     PetscCall(PetscFPTrapPop());
-    PetscCheckFalse(ngmres->info < 0,PetscObjectComm((PetscObject)snes),PETSC_ERR_LIB,"Bad argument to GELSS");
-    PetscCheckFalse(ngmres->info > 0,PetscObjectComm((PetscObject)snes),PETSC_ERR_LIB,"SVD failed to converge");
+    PetscCheck(ngmres->info >= 0,PetscObjectComm((PetscObject)snes),PETSC_ERR_LIB,"Bad argument to GELSS");
+    PetscCheck(ngmres->info <= 0,PetscObjectComm((PetscObject)snes),PETSC_ERR_LIB,"SVD failed to converge");
   }
   for (i=0; i<l; i++) {
     PetscCheckFalse(PetscIsInfOrNanScalar(beta[i]),PetscObjectComm((PetscObject)snes),PETSC_ERR_LIB,"SVD generated inconsistent output");

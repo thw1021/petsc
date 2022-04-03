@@ -275,7 +275,7 @@ PetscErrorCode TSSetUp_Sundials(TS ts)
   PetscBool      pcnone;
 
   PetscFunctionBegin;
-  PetscCheckFalse(ts->exact_final_time == TS_EXACTFINALTIME_MATCHSTEP,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support for exact final time option 'MATCHSTEP' when using Sundials");
+  PetscCheck(ts->exact_final_time != TS_EXACTFINALTIME_MATCHSTEP,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support for exact final time option 'MATCHSTEP' when using Sundials");
 
   /* get the vector size */
   PetscCall(VecGetSize(ts->vec_sol,&glosize));

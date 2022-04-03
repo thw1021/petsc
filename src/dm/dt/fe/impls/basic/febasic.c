@@ -404,7 +404,7 @@ PetscErrorCode PetscFEIntegrateResidual_Basic(PetscDS ds, PetscFormKey key, Pets
   PetscCall(PetscQuadratureGetData(quad, &qdim, &qNc, &Nq, &quadPoints, &quadWeights));
   PetscCheck(qNc == 1,PETSC_COMM_SELF, PETSC_ERR_SUP, "Only supports scalar quadrature, not %D components", qNc);
   dE = cgeom->dimEmbed;
-  PetscCheckFalse(cgeom->dim != qdim,PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "FEGeom dim %D != %D quadrature dim", cgeom->dim, qdim);
+  PetscCheck(cgeom->dim == qdim,PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "FEGeom dim %D != %D quadrature dim", cgeom->dim, qdim);
   for (e = 0; e < Ne; ++e) {
     PetscFEGeom fegeom;
 
@@ -501,7 +501,7 @@ PetscErrorCode PetscFEIntegrateBdResidual_Basic(PetscDS ds, PetscWeakForm wf, Pe
   dE = fgeom->dimEmbed;
   /* TODO FIX THIS */
   fgeom->dim = dim-1;
-  PetscCheckFalse(fgeom->dim != qdim,PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "FEGeom dim %D != %D quadrature dim", fgeom->dim, qdim);
+  PetscCheck(fgeom->dim == qdim,PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "FEGeom dim %D != %D quadrature dim", fgeom->dim, qdim);
   for (e = 0; e < Ne; ++e) {
     PetscFEGeom    fegeom, cgeom;
     const PetscInt face = fgeom->face[e][0];
@@ -615,7 +615,7 @@ static PetscErrorCode PetscFEIntegrateHybridResidual_Basic(PetscDS ds, PetscForm
   PetscCall(PetscQuadratureGetData(quad, &qdim, &qNc, &Nq, &quadPoints, &quadWeights));
   PetscCheck(qNc == 1,PETSC_COMM_SELF, PETSC_ERR_SUP, "Only supports scalar quadrature, not %D components", qNc);
   dE = fgeom->dimEmbed;
-  PetscCheckFalse(fgeom->dim != qdim,PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "FEGeom dim %D != %D quadrature dim", fgeom->dim, qdim);
+  PetscCheck(fgeom->dim == qdim,PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "FEGeom dim %D != %D quadrature dim", fgeom->dim, qdim);
   for (e = 0; e < Ne; ++e) {
     PetscFEGeom    fegeom;
     const PetscInt face = fgeom->face[e][0];

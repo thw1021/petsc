@@ -289,7 +289,7 @@ PetscErrorCode DMInterpolationGetDof(DMInterpolationInfo ctx, PetscInt *dof)
 PetscErrorCode DMInterpolationAddPoints(DMInterpolationInfo ctx, PetscInt n, PetscReal points[])
 {
   PetscFunctionBegin;
-  PetscCheckFalse(ctx->dim < 0,ctx->comm, PETSC_ERR_ARG_WRONGSTATE, "The spatial dimension has not been set");
+  PetscCheck(ctx->dim >= 0,ctx->comm, PETSC_ERR_ARG_WRONGSTATE, "The spatial dimension has not been set");
   PetscCheck(!ctx->points,ctx->comm, PETSC_ERR_ARG_WRONGSTATE, "Cannot add points multiple times yet");
   ctx->nInput = n;
 
@@ -335,7 +335,7 @@ PetscErrorCode DMInterpolationSetUp(DMInterpolationInfo ctx, DM dm, PetscBool re
   PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
-  PetscCheckFalse(ctx->dim < 0,comm, PETSC_ERR_ARG_WRONGSTATE, "The spatial dimension has not been set");
+  PetscCheck(ctx->dim >= 0,comm, PETSC_ERR_ARG_WRONGSTATE, "The spatial dimension has not been set");
   /* Locate points */
   n = ctx->nInput;
   if (!redundantPoints) {
@@ -1087,7 +1087,7 @@ PetscErrorCode DMInterpolationEvaluate(DMInterpolationInfo ctx, DM dm, Vec x, Ve
         PetscCall(PetscTabulationDestroy(&T));
       }
       PetscCall(DMPlexVecRestoreClosure(dm, NULL, x, ctx->cells[p], &clSize, &xa));
-      PetscCheckFalse(coff != ctx->dof,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Total components %D != %D dof specified for interpolation", coff, ctx->dof);
+      PetscCheck(coff == ctx->dof,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Total components %D != %D dof specified for interpolation", coff, ctx->dof);
       PetscCheck(foff == clSize,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Total FE space size %D != %D closure size", foff, clSize);
     }
     PetscCall(VecRestoreArrayRead(ctx->coords, &coords));

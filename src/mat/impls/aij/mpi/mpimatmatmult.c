@@ -555,7 +555,7 @@ PetscErrorCode MatMPIDenseScatter(Mat A,Mat B,PetscInt Bbidx,Mat C,Mat *outworkB
 
   PetscCall(MatDenseGetArrayRead(B,&b));
   PetscCall(MatDenseGetLDA(B,&blda));
-  PetscCheckFalse(blda != contents->blda,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot reuse an input matrix with lda %" PetscInt_FMT " != %" PetscInt_FMT,blda,contents->blda);
+  PetscCheck(blda == contents->blda,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot reuse an input matrix with lda %" PetscInt_FMT " != %" PetscInt_FMT,blda,contents->blda);
   PetscCall(MatDenseGetArray(workB,&rvalues));
 
   /* Post recv, use MPI derived data type to save memory */

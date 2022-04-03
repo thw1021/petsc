@@ -137,7 +137,7 @@ static PetscErrorCode PetscFECreateTabulation_Composite(PetscFE fem, PetscInt np
       PetscCall(DMPolytopeInCellTest(ct, subpoint, &inside));
       if (inside) {subpoints[p] = s; break;}
     }
-    PetscCheckFalse(s >= cmp->numSubelements,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Point %d was not found in any subelement", p);
+    PetscCheck(s < cmp->numSubelements,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Point %d was not found in any subelement", p);
   }
   PetscCall(DMRestoreWorkArray(dm, dim, MPIU_REAL, &subpoint));
   /* Evaluate the prime basis functions at all points */

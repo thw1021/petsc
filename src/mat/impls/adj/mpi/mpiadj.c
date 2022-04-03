@@ -180,7 +180,7 @@ static PetscErrorCode MatCreateSubMatrices_MPIAdj_Private(Mat mat,PetscInt n,con
     for (j=0; j<irow_n; j++) {
       for (k=sxadj[j]; k<sxadj[j+1]; k++) {
         PetscCall(PetscFindInt(sadjncy[k],nindx,indices,&loc));
-        PetscCheckFalse(loc<0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"can not find col %" PetscInt_FMT,sadjncy[k]);
+        PetscCheck(loc>=0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"can not find col %" PetscInt_FMT,sadjncy[k]);
         sadjncy[k] = loc;
       }
     }

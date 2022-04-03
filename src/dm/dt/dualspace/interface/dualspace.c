@@ -1097,7 +1097,7 @@ PetscErrorCode PetscDualSpaceApplyDefault(PetscDualSpace sp, PetscInt f, PetscRe
   PetscCall(PetscDualSpaceGetDM(sp, &dm));
   PetscCall(PetscDualSpaceGetFunctional(sp, f, &n));
   PetscCall(PetscQuadratureGetData(n, &dim, &qNc, &Nq, &points, &weights));
-  PetscCheckFalse(dim != cgeom->dim,PetscObjectComm((PetscObject) sp), PETSC_ERR_ARG_SIZ, "The quadrature spatial dimension %D != cell geometry dimension %D", dim, cgeom->dim);
+  PetscCheck(dim == cgeom->dim,PetscObjectComm((PetscObject) sp), PETSC_ERR_ARG_SIZ, "The quadrature spatial dimension %D != cell geometry dimension %D", dim, cgeom->dim);
   PetscCheck(qNc == Nc,PetscObjectComm((PetscObject) sp), PETSC_ERR_ARG_SIZ, "The quadrature components %D != function components %D", qNc, Nc);
   PetscCall(DMGetWorkArray(dm, Nc, MPIU_SCALAR, &val));
   *value = 0.0;

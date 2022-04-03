@@ -567,7 +567,7 @@ static PetscErrorCode PCFieldSplitSetDefaults(PC pc)
     } else SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Must provide at least two sets of fields to PCFieldSplit()");
   }
 
-  PetscCheckFalse(jac->nsplits < 2,PetscObjectComm((PetscObject)pc),PETSC_ERR_PLIB,"Unhandled case, must have at least two fields, not %d", jac->nsplits);
+  PetscCheck(jac->nsplits >= 2,PetscObjectComm((PetscObject)pc),PETSC_ERR_PLIB,"Unhandled case, must have at least two fields, not %d", jac->nsplits);
   PetscFunctionReturn(0);
 }
 
@@ -1655,7 +1655,7 @@ static PetscErrorCode PCSetFromOptions_FieldSplit(PetscOptionItems *PetscOptions
     PetscCall(PetscOptionsReal("-pc_fieldsplit_gkb_tol","The tolerance for the lower bound stopping criterion","PCFieldSplitGKBTol",jac->gkbtol,&jac->gkbtol,NULL));
     PetscCall(PetscOptionsInt("-pc_fieldsplit_gkb_delay","The delay value for lower bound criterion","PCFieldSplitGKBDelay",jac->gkbdelay,&jac->gkbdelay,NULL));
     PetscCall(PetscOptionsReal("-pc_fieldsplit_gkb_nu","Parameter in augmented Lagrangian approach","PCFieldSplitGKBNu",jac->gkbnu,&jac->gkbnu,NULL));
-    PetscCheckFalse(jac->gkbnu < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"nu cannot be less than 0: value %f",jac->gkbnu);
+    PetscCheck(jac->gkbnu >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"nu cannot be less than 0: value %f",jac->gkbnu);
     PetscCall(PetscOptionsInt("-pc_fieldsplit_gkb_maxit","Maximum allowed number of iterations","PCFieldSplitGKBMaxit",jac->gkbmaxit,&jac->gkbmaxit,NULL));
     PetscCall(PetscOptionsBool("-pc_fieldsplit_gkb_monitor","Prints number of GKB iterations and error","PCFieldSplitGKB",jac->gkbmonitor,&jac->gkbmonitor,NULL));
   }
@@ -1730,7 +1730,7 @@ static PetscErrorCode  PCFieldSplitSchurGetSubKSP_FieldSplit(PC pc,PetscInt *n,K
     PetscInt nn;
 
     PetscCheck(jac->schur,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONGSTATE,"Must call KSPSetUp() or PCSetUp() before calling PCFieldSplitSchurGetSubKSP()");
-    PetscCheckFalse(jac->nsplits != 2,PetscObjectComm((PetscObject)pc),PETSC_ERR_PLIB,"Unexpected number of splits %D != 2",jac->nsplits);
+    PetscCheck(jac->nsplits == 2,PetscObjectComm((PetscObject)pc),PETSC_ERR_PLIB,"Unexpected number of splits %D != 2",jac->nsplits);
     nn   = jac->nsplits + (jac->kspupper != jac->head->ksp ? 1 : 0);
     PetscCall(PetscMalloc1(nn,subksp));
     (*subksp)[0] = jac->head->ksp;
@@ -1767,7 +1767,7 @@ static PetscErrorCode  PCFieldSplitGetSubKSP_FieldSplit(PC pc,PetscInt *n,KSP **
     (*subksp)[cnt++] = ilink->ksp;
     ilink            = ilink->next;
   }
-  PetscCheckFalse(cnt != jac->nsplits,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Corrupt PCFIELDSPLIT object: number of splits in linked list %D does not match number in object %D",cnt,jac->nsplits);
+  PetscCheck(cnt == jac->nsplits,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Corrupt PCFIELDSPLIT object: number of splits in linked list %D does not match number in object %D",cnt,jac->nsplits);
   if (n) *n = jac->nsplits;
   PetscFunctionReturn(0);
 }
@@ -2161,7 +2161,7 @@ PetscErrorCode PCFieldSplitGetISByIndex(PC pc,PetscInt index,IS *is)
     PC_FieldSplit     *jac  = (PC_FieldSplit*) pc->data;
     PC_FieldSplitLink ilink = jac->head;
     PetscInt          i     = 0;
-    PetscCheckFalse(index >= jac->nsplits,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Field %D requested but only %D exist",index,jac->nsplits);
+    PetscCheck(index < jac->nsplits,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Field %D requested but only %D exist",index,jac->nsplits);
 
     while (i < index) {
       ilink = ilink->next;
@@ -2388,7 +2388,7 @@ PetscErrorCode  PCFieldSplitSchurGetS(PC pc,Mat *S)
   PetscCall(PetscStrcmp(t,PCFIELDSPLIT,&isfs));
   PetscCheck(isfs,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Expected PC of type PCFIELDSPLIT, got %s instead",t);
   jac = (PC_FieldSplit*)pc->data;
-  PetscCheckFalse(jac->type != PC_COMPOSITE_SCHUR,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Expected PCFIELDSPLIT of type SCHUR, got %D instead",jac->type);
+  PetscCheck(jac->type == PC_COMPOSITE_SCHUR,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Expected PCFIELDSPLIT of type SCHUR, got %D instead",jac->type);
   if (S) *S = jac->schur;
   PetscFunctionReturn(0);
 }
@@ -2419,7 +2419,7 @@ PetscErrorCode  PCFieldSplitSchurRestoreS(PC pc,Mat *S)
   PetscCall(PetscStrcmp(t,PCFIELDSPLIT,&isfs));
   PetscCheck(isfs,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Expected PC of type PCFIELDSPLIT, got %s instead",t);
   jac = (PC_FieldSplit*)pc->data;
-  PetscCheckFalse(jac->type != PC_COMPOSITE_SCHUR,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Expected PCFIELDSPLIT of type SCHUR, got %D instead",jac->type);
+  PetscCheck(jac->type == PC_COMPOSITE_SCHUR,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Expected PCFIELDSPLIT of type SCHUR, got %D instead",jac->type);
   PetscCheck(S && (*S == jac->schur),PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"MatSchurComplement restored is not the same as gotten");
   PetscFunctionReturn(0);
 }
@@ -2567,7 +2567,7 @@ PetscErrorCode  PCFieldSplitGetSchurBlocks(PC pc,Mat *A00,Mat *A01,Mat *A10, Mat
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
-  PetscCheckFalse(jac->type != PC_COMPOSITE_SCHUR,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONG, "FieldSplit is not using a Schur complement approach.");
+  PetscCheck(jac->type == PC_COMPOSITE_SCHUR,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONG, "FieldSplit is not using a Schur complement approach.");
   if (A00) *A00 = jac->pmat[0];
   if (A01) *A01 = jac->B;
   if (A10) *A10 = jac->C;

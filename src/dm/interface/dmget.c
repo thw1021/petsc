@@ -364,7 +364,7 @@ PetscErrorCode DMGetNamedGlobalVector(DM dm,const char *name,Vec *X)
     if (match) {
       DM vdm;
 
-      PetscCheckFalse(link->status != DMVEC_STATUS_IN,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Vec name '%s' already checked out",name);
+      PetscCheck(link->status == DMVEC_STATUS_IN,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Vec name '%s' already checked out",name);
       PetscCall(VecGetDM(link->X,&vdm));
       PetscCheck(!vdm,PetscObjectComm((PetscObject)vdm),PETSC_ERR_LIB,"Invalid vector");
       PetscCall(VecSetDM(link->X,dm));
@@ -416,7 +416,7 @@ PetscErrorCode DMRestoreNamedGlobalVector(DM dm,const char *name,Vec *X)
       DM vdm;
 
       PetscCall(VecGetDM(*X,&vdm));
-      PetscCheckFalse(link->status != DMVEC_STATUS_OUT,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Vec name '%s' was not checked out",name);
+      PetscCheck(link->status == DMVEC_STATUS_OUT,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Vec name '%s' was not checked out",name);
       PetscCheckFalse(link->X != *X,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_INCOMP,"Attempt to restore Vec name '%s', but Vec does not match the cache",name);
       PetscCheck(vdm == dm,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Invalid vector");
 
@@ -500,7 +500,7 @@ PetscErrorCode DMGetNamedLocalVector(DM dm,const char *name,Vec *X)
     if (match) {
       DM vdm;
 
-      PetscCheckFalse(link->status != DMVEC_STATUS_IN,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Vec name '%s' already checked out",name);
+      PetscCheck(link->status == DMVEC_STATUS_IN,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Vec name '%s' already checked out",name);
       PetscCall(VecGetDM(link->X,&vdm));
       PetscCheck(!vdm,PetscObjectComm((PetscObject)vdm),PETSC_ERR_LIB,"Invalid vector");
       PetscCall(VecSetDM(link->X,dm));
@@ -552,7 +552,7 @@ PetscErrorCode DMRestoreNamedLocalVector(DM dm,const char *name,Vec *X)
       DM vdm;
 
       PetscCall(VecGetDM(*X,&vdm));
-      PetscCheckFalse(link->status != DMVEC_STATUS_OUT,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Vec name '%s' was not checked out",name);
+      PetscCheck(link->status == DMVEC_STATUS_OUT,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Vec name '%s' was not checked out",name);
       PetscCheckFalse(link->X != *X,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_INCOMP,"Attempt to restore Vec name '%s', but Vec does not match the cache",name);
       PetscCheck(vdm == dm,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Invalid vector");
 

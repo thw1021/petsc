@@ -238,8 +238,8 @@ PetscErrorCode go()
 
   PetscFunctionBeginUser;
 #if defined(PETSC_HAVE_OPENMP) && defined(PETSC_HAVE_THREADSAFETY)
-  PetscCheckFalse(numthreads>MAX_NUM_THRDS,PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Too many threads %D > %D", numthreads, MAX_NUM_THRDS);
-  PetscCheckFalse(numthreads<=0,PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "No threads %D > %D ", numthreads,  MAX_NUM_THRDS);
+  PetscCheck(numthreads<=MAX_NUM_THRDS,PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Too many threads %D > %D", numthreads, MAX_NUM_THRDS);
+  PetscCheck(numthreads>0,PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "No threads %D > %D ", numthreads,  MAX_NUM_THRDS);
 #endif
   if (target >= numthreads) target = numthreads-1;
   PetscCall(PetscLogEventRegister("Create Swarm", DM_CLASSID, &swarm_create_ev));

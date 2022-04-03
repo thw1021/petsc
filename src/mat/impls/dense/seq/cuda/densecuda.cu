@@ -343,7 +343,7 @@ PETSC_EXTERN PetscErrorCode MatSeqDenseCUDAInvertFactors_Private(Mat A)
   PetscCall(PetscCUSOLVERDnGetHandle(&handle));
   PetscCall(PetscCuBLASIntCast(A->cmap->n,&n));
   PetscCall(PetscCuBLASIntCast(a->lda,&lda));
-  PetscCheckFalse(A->factortype == MAT_FACTOR_LU,PETSC_COMM_SELF,PETSC_ERR_LIB,"cusolverDngetri not implemented");
+  PetscCheck(A->factortype != MAT_FACTOR_LU,PETSC_COMM_SELF,PETSC_ERR_LIB,"cusolverDngetri not implemented");
   if (A->factortype == MAT_FACTOR_CHOLESKY) {
     if (!dA->d_fact_ipiv) { /* spd */
       PetscCuBLASInt il;
@@ -391,7 +391,7 @@ static PetscErrorCode MatSolve_SeqDenseCUDA_Internal(Mat A, Vec xx, Vec yy, Pets
   PetscBool        xiscuda, yiscuda, aiscuda;
 
   PetscFunctionBegin;
-  PetscCheckFalse(A->factortype == MAT_FACTOR_NONE,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Matrix must be factored to solve");
+  PetscCheck(A->factortype != MAT_FACTOR_NONE,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Matrix must be factored to solve");
   PetscCall(PetscCuBLASIntCast(A->rmap->n,&m));
   PetscCall(PetscCuBLASIntCast(A->cmap->n,&k));
   PetscCall(PetscObjectTypeCompare((PetscObject)xx,VECSEQCUDA,&xiscuda));
@@ -463,7 +463,7 @@ static PetscErrorCode MatMatSolve_SeqDenseCUDA_Internal(Mat A, Mat B, Mat X, Pet
   PetscCuBLASInt    nrhs=0,m=0,k=0,ldb=0,ldx=0,ldy=0;
 
   PetscFunctionBegin;
-  PetscCheckFalse(A->factortype == MAT_FACTOR_NONE,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Matrix must be factored to solve");
+  PetscCheck(A->factortype != MAT_FACTOR_NONE,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Matrix must be factored to solve");
   PetscCall(PetscCuBLASIntCast(A->rmap->n,&m));
   PetscCall(PetscCuBLASIntCast(A->cmap->n,&k));
   PetscCall(MatGetSize(B,NULL,&n));

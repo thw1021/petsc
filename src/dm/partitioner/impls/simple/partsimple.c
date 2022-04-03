@@ -50,7 +50,7 @@ static PetscErrorCode PetscPartitionerSetFromOptions_Simple(PetscOptionItems *Pe
   if (flg) {
     p->useGrid = PETSC_TRUE;
     if (p->gridDim < 0) p->gridDim = num;
-    else PetscCheckFalse(p->gridDim != num,PetscObjectComm((PetscObject) part), PETSC_ERR_ARG_INCOMP, "Process grid dimension %D != %D node grid dimension", num, p->gridDim);
+    else PetscCheck(p->gridDim == num,PetscObjectComm((PetscObject) part), PETSC_ERR_ARG_INCOMP, "Process grid dimension %D != %D node grid dimension", num, p->gridDim);
   }
   PetscCall(PetscOptionsTail());
   PetscFunctionReturn(0);

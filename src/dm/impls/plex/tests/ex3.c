@@ -462,7 +462,7 @@ static PetscErrorCode TestFEJacobian(DM dm, AppCtx *user)
     PetscDS      ds;
 
     PetscCall(DMGetDimension(dm, &dim));
-    PetscCheckFalse(user->numComponents != dim,PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "The number of components %d must be equal to the dimension %d for this test", user->numComponents, dim);
+    PetscCheck(user->numComponents == dim,PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "The number of components %d must be equal to the dimension %d for this test", user->numComponents, dim);
     PetscCall(DMGetDS(dm,&ds));
     PetscCall(PetscDSSetJacobian(ds,0,0,NULL,NULL,NULL,symmetric_gradient_inner_product));
     PetscCall(DMCreateMatrix(dm,&E));

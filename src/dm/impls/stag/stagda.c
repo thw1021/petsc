@@ -31,7 +31,7 @@ static PetscErrorCode DMStagCreateCompatibleDMDA(DM dm,DMStagStencilLocation loc
       break;
     case DMSTAG_LEFT:
     case DMSTAG_RIGHT:
-      PetscCheckFalse(dim<1,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Incompatible dim (%d) and loc(%s) combination",dim,DMStagStencilLocations[loc]);
+      PetscCheck(dim>=1,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Incompatible dim (%d) and loc(%s) combination",dim,DMStagStencilLocations[loc]);
       l[0][stag->nRanks[0]-1] += 1; /* extra vertex in direction 0 on last rank in dimension 0 */
       N[0] += 1;
       break;

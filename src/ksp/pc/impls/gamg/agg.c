@@ -183,11 +183,11 @@ static PetscErrorCode PCSetCoordinates_AGG(PC pc, PetscInt ndm, PetscInt a_nloc,
     PetscCheck(ndm <= ndf,PETSC_COMM_SELF,PETSC_ERR_PLIB,"degrees of motion %D > block size %D",ndm,ndf);
     pc_gamg->data_cell_cols = (ndm==2 ? 3 : 6); /* displacement elasticity */
     if (ndm != ndf) {
-      PetscCheckFalse(pc_gamg->data_cell_cols != ndf,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Don't know how to create null space for ndm=%D, ndf=%D.  Use MatSetNearNullSpace().",ndm,ndf);
+      PetscCheck(pc_gamg->data_cell_cols == ndf,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Don't know how to create null space for ndm=%D, ndf=%D.  Use MatSetNearNullSpace().",ndm,ndf);
     }
   } else pc_gamg->data_cell_cols = ndf; /* no data, force SA with constant null space vectors */
   pc_gamg->data_cell_rows = ndatarows = ndf;
-  PetscCheckFalse(pc_gamg->data_cell_cols <= 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"pc_gamg->data_cell_cols %D <= 0",pc_gamg->data_cell_cols);
+  PetscCheck(pc_gamg->data_cell_cols > 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"pc_gamg->data_cell_cols %D <= 0",pc_gamg->data_cell_cols);
   arrsz = nloc*pc_gamg->data_cell_rows*pc_gamg->data_cell_cols;
 
   if (!pc_gamg->data || (pc_gamg->data_sz != arrsz)) {

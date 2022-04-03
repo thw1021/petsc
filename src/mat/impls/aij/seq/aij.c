@@ -2726,7 +2726,7 @@ PetscErrorCode MatILUFactor_SeqAIJ(Mat inA,IS row,IS col,const MatFactorInfo *in
   PetscBool      row_identity,col_identity;
 
   PetscFunctionBegin;
-  PetscCheckFalse(info->levels != 0,PETSC_COMM_SELF,PETSC_ERR_SUP,"Only levels=0 supported for in-place ilu");
+  PetscCheck(info->levels == 0,PETSC_COMM_SELF,PETSC_ERR_SUP,"Only levels=0 supported for in-place ilu");
 
   PetscCall(ISIdentity(row,&row_identity));
   PetscCall(ISIdentity(col,&col_identity));

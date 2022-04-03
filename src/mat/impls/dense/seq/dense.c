@@ -815,8 +815,8 @@ PetscErrorCode MatLUFactor_SeqDense(Mat A,IS row,IS col,const MatFactorInfo *min
   PetscStackCallBLAS("LAPACKgetrf",LAPACKgetrf_(&m,&n,mat->v,&mat->lda,mat->pivots,&info));
   PetscCall(PetscFPTrapPop());
 
-  PetscCheckFalse(info<0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Bad argument to LU factorization");
-  PetscCheckFalse(info>0,PETSC_COMM_SELF,PETSC_ERR_MAT_LU_ZRPVT,"Bad LU factorization");
+  PetscCheck(info>=0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Bad argument to LU factorization");
+  PetscCheck(info<=0,PETSC_COMM_SELF,PETSC_ERR_MAT_LU_ZRPVT,"Bad LU factorization");
 
   A->ops->solve             = MatSolve_SeqDense_LU;
   A->ops->matsolve          = MatMatSolve_SeqDense_LU;
@@ -1054,7 +1054,7 @@ static PetscErrorCode MatSOR_SeqDense(Mat A,Vec bb,PetscReal omega,MatSORType fl
 
   PetscFunctionBegin;
 #if defined(PETSC_HAVE_CUDA)
-  PetscCheckFalse(A->offloadmask == PETSC_OFFLOAD_GPU,PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented");
+  PetscCheck(A->offloadmask != PETSC_OFFLOAD_GPU,PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented");
 #endif
   if (shift == -1) shift = 0.0; /* negative shift indicates do not error on zero diagonal; this code never zeros on zero diagonal */
   PetscCall(PetscBLASIntCast(m,&bm));

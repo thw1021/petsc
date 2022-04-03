@@ -4322,7 +4322,7 @@ PetscErrorCode VecLockReadPush(Vec x)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  PetscCheckFalse(x->lock < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Vector is already locked for exclusive write access but you want to read it");
+  PetscCheck(x->lock >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Vector is already locked for exclusive write access but you want to read it");
   x->lock++;
   PetscFunctionReturn(0);
 }
@@ -4344,7 +4344,7 @@ PetscErrorCode VecLockReadPop(Vec x)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
   x->lock--;
-  PetscCheckFalse(x->lock < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Vector has been unlocked from read-only access too many times");
+  PetscCheck(x->lock >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Vector has been unlocked from read-only access too many times");
   PetscFunctionReturn(0);
 }
 
@@ -4383,8 +4383,8 @@ PetscErrorCode VecLockWriteSet_Private(Vec x,PetscBool flg)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
   if (flg) {
-    PetscCheckFalse(x->lock > 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Vector is already locked for read-only access but you want to write it");
-    else PetscCheckFalse(x->lock < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Vector is already locked for exclusive write access but you want to write it");
+    PetscCheck(x->lock <= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Vector is already locked for read-only access but you want to write it");
+    else PetscCheck(x->lock >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Vector is already locked for exclusive write access but you want to write it");
     else x->lock = -1;
   } else {
     PetscCheckFalse(x->lock != -1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Vector is not locked for exclusive write access but you want to unlock it from that");
