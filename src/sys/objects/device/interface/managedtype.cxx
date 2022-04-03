@@ -50,7 +50,7 @@ public:
 private:
   using acquiremanagedtype_fptr   = PetscErrorCode(*)(PetscDeviceContext,PetscManagedType);
   using releasemanagedtype_fptr   = PetscErrorCode(*)(PetscDeviceContext,PetscManagedType);
-  using getmanagedvaluestype_fptr = PetscErrorCode(*)(PetscDeviceContext,PetscManagedType,PetscOffloadMask,PetscType**);
+  using getmanagedvaluestype_fptr = PetscErrorCode(*)(PetscDeviceContext,PetscManagedType,PetscOffloadMask,PetscMemoryAccessMode,PetscType**);
 
   PETSC_CXX_COMPAT_DECL(constexpr acquiremanagedtype_fptr acquire_func_ptr(PetscDeviceContext));
   PETSC_CXX_COMPAT_DECL(constexpr releasemanagedtype_fptr release_func_ptr(PetscDeviceContext));
@@ -61,7 +61,7 @@ private:
 public:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode destroy(PetscDeviceContext,PetscManagedType*));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode create(PetscDeviceContext,PetscType*,PetscType*,PetscInt,PetscCopyMode,PetscCopyMode,PetscOffloadMask,PetscManagedType*));
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode getvalues(PetscDeviceContext,PetscManagedType,PetscOffloadMask,PetscType**,PetscInt*));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode getvalues(PetscDeviceContext,PetscManagedType,PetscOffloadMask,PetscMemoryAccessMode,PetscType**,PetscInt*));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode copy(PetscDeviceContext,PetscManagedType,PetscManagedType));
 };
 
@@ -110,7 +110,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<PetscType,PetscManaged
 }
 
 template <typename PetscType, typename PetscManagedType>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<PetscType,PetscManagedType>::getvalues(PetscDeviceContext dctx, PetscManagedType scal, PetscOffloadMask mask, PetscType **ptr, PetscInt *n))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<PetscType,PetscManagedType>::getvalues(PetscDeviceContext dctx, PetscManagedType scal, PetscOffloadMask mask, PetscMemoryAccessMode mode, PetscType **ptr, PetscInt *n))
 {
   const auto smask = scal->mask;
 
@@ -128,7 +128,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<PetscType,PetscManaged
     *ptr = mask == PETSC_OFFLOAD_GPU ? scal->device : scal->host;
     if (smask != PETSC_OFFLOAD_BOTH) scal->mask = mask;
   } else {
-    PetscCall((*getvalues_func_ptr(dctx))(dctx,scal,mask,ptr));
+    PetscCall((*getvalues_func_ptr(dctx))(dctx,scal,mask,mode,ptr));
   }
   if (n) *n = scal->n;
   PetscFunctionReturn(0);

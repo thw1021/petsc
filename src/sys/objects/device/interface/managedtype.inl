@@ -53,10 +53,10 @@ PetscErrorCode PetscDeviceContextDestroyManagedTypeArray(PetscDeviceContext dctx
 }
 
 #define PetscDeviceContextGetManagedTypeValues PetscConcat3(PetscDeviceContextGetManaged,PetscTypeSuffix,Values)
-PetscErrorCode PetscDeviceContextGetManagedTypeValues(PetscDeviceContext dctx, PetscManagedType scal, PetscOffloadMask mask, PetscType **ptr, PetscInt *n)
+PetscErrorCode PetscDeviceContextGetManagedTypeValues(PetscDeviceContext dctx, PetscManagedType scal, PetscMemType mtype, PetscMemoryAccessMode mode, PetscType **ptr, PetscInt *n)
 {
   PetscFunctionBegin;
-  PetscCall(PetscManagedTypeImpl<PetscType,PetscManagedType>::getvalues(dctx,scal,mask,ptr,n));
+  PetscCall(PetscManagedTypeImpl<PetscType,PetscManagedType>::getvalues(dctx,scal,mask,mode,ptr,n));
   PetscFunctionReturn(0);
 }
 
