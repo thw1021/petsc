@@ -357,8 +357,6 @@ public:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode endTimer(PetscDeviceContext,PetscLogDouble*));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode arrayCopy(PetscDeviceContext,void*PETSC_RESTRICT,const void*PETSC_RESTRICT,std::size_t,PetscDeviceCopyMode));
   template <typename PetscType, typename PetscManagedType>
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode createManagedType(PetscDeviceContext,PetscManagedType));
-  template <typename PetscType, typename PetscManagedType>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode destroyManagedType(PetscDeviceContext,PetscManagedType));
   template <typename PetscType, typename PetscManagedType>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode getManagedTypeValues(PetscDeviceContext,PetscManagedType,PetscMemType,PetscMemoryAccessMode,PetscType**));
@@ -376,7 +374,6 @@ public:
     beginTimer,
     endTimer,
     arrayCopy,
-    createManagedType<PetscScalar,PetscManagedScalar>,
     destroyManagedType<PetscScalar,PetscManagedScalar>
   };
 };
@@ -562,12 +559,6 @@ template <DeviceType T>
 template <typename PetscType, typename PetscManagedType>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::createManagedType(PetscDeviceContext dctx, PetscManagedType scal))
 {
-  const auto n = scal->n;
-
-  PetscFunctionBegin;
-  if (!scal->host) PetscCall(managed_host_pool_<PetscType>().get(n,&scal->host));
-  if (!scal->device) PetscCall(managed_device_pool_<PetscType>().get(n,&scal->device));
-  PetscFunctionReturn(0);
 }
 
 template <DeviceType T>
@@ -585,25 +576,26 @@ template <DeviceType T>
 template <typename PetscType, typename PetscManagedType>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::getManagedTypeValues(PetscDeviceContext dctx, PetscManagedType scal, PetscMemType mtype, PetscMemoryAccessMode mode, PetscType **ptr))
 {
-  const auto n        = scal->n;
-  const auto xfersize = n*sizeof(PetscType);
-  const auto stream   = impls_cast_(dctx)->stream;
+  const auto       n        = scal->n;
+  const auto       xfersize = n*sizeof(PetscType);
+  const auto       stream   = impls_cast_(dctx)->stream;
+  PetscOffloadMask mask;
 
   PetscFunctionBegin;
   switch (mtype) {
-  case PETSC_MEMTYPE_HOST:{
+  case PETSC_MEMTYPE_HOST: {
     const auto src  = scal->device;
     auto&      dest = scal->host;
 
     // read or write, get a pointer if we don't have one yet
     if (!dest) PetscCall(managed_host_pool_<PetscType>().get(n,&dest));
-    scal->mask = PETSC_OFFLOAD_CPU;
+    mask = PETSC_OFFLOAD_CPU;
     // if we want any kind of read (read or read_write) and we have valid SRC, we need to copy
     // it now
     if (mode != PETSC_MEMORY_ACCESS_WRITE && src) {
       PetscCallCUPM(cupmMemcpyAsync(dest,src,xfersize,cupmMemcpyDeviceToHost,stream));
       // if read-only then update the offloadmask
-      if (mode == PETSC_MEMORY_ACCESS_READ) scal->mask = PETSC_OFFLOAD_BOTH;
+      if (mode == PETSC_MEMORY_ACCESS_READ) mask = PETSC_OFFLOAD_BOTH;
     }
   } break;
   case PETSC_MEMTYPE_DEVICE: {
@@ -611,16 +603,17 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::getManagedTypeValues(Pets
     auto&      dest = scal->device;
 
     if (!dest) PetscCall(managed_device_pool_<PetscType>().get(n,&dest));
-    scal->mask = PETSC_OFFLOAD_GPU;
+    mask = PETSC_OFFLOAD_GPU;
     if (mode != PETSC_MEMORY_ACCESS_WRITE && src) {
       PetscCallCUPM(cupmMemcpyAsync(dest,src,xfersize,cupmMemcpyHostToDevice,stream));
-      if (mode == PETSC_MEMORY_ACCESS_READ) scal->mask = PETSC_OFFLOAD_BOTH;
+      if (mode == PETSC_MEMORY_ACCESS_READ) mask = PETSC_OFFLOAD_BOTH;
     }
   } break;
   default:
-    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Unhandled memtype %d",static_cast<int>(mtype));
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscMemType must be either PETSC_MEMTYPE_HOST (%d) or PETSC_MEMTYPE_DEVICE (%d) not %d",static_cast<int>(PETSC_MEMTYPE_HOST),static_cast<int>(PETSC_MEMTYPE_DEVICE),static_cast<int>(mtype));
     break;
   }
+  scal->mask = mask;
   PetscFunctionReturn(0);
 }
 
