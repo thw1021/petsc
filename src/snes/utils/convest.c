@@ -309,7 +309,7 @@ static PetscErrorCode PetscConvEstGetConvRateSNES_Private(PetscConvEst ce, Petsc
   void          *ctx;
 
   PetscFunctionBegin;
-  PetscCheckFalse(ce->r != 2.0,PetscObjectComm((PetscObject) ce), PETSC_ERR_SUP, "Only refinement factor 2 is currently supported (not %g)", (double) ce->r);
+  PetscCheck(ce->r == 2.0,PetscObjectComm((PetscObject) ce), PETSC_ERR_SUP, "Only refinement factor 2 is currently supported (not %g)", (double) ce->r);
   PetscCall(DMGetDimension(ce->idm, &dim));
   PetscCall(DMGetApplicationContext(ce->idm, &ctx));
   PetscCall(DMPlexSetRefinementUniform(ce->idm, PETSC_TRUE));

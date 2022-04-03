@@ -1503,7 +1503,7 @@ PetscErrorCode DMSetup_Swarm(DM dm)
   PetscCheck(swarm->db->nfields > 2,PetscObjectComm((PetscObject)dm),PETSC_ERR_USER,"At least one field user must be registered via DMSwarmRegisterXXX()");
 
   /* check local sizes were set */
-  PetscCheckFalse(swarm->db->L == -1,PetscObjectComm((PetscObject)dm),PETSC_ERR_USER,"Local sizes must be set via DMSwarmSetLocalSizes()");
+  PetscCheck(swarm->db->L != -1,PetscObjectComm((PetscObject)dm),PETSC_ERR_USER,"Local sizes must be set via DMSwarmSetLocalSizes()");
 
   /* initialize values in pid and rank placeholders */
   /* TODO: [pid - use MPI_Scan] */

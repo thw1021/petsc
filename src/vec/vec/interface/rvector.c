@@ -4387,7 +4387,7 @@ PetscErrorCode VecLockWriteSet_Private(Vec x,PetscBool flg)
     else PetscCheck(x->lock >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Vector is already locked for exclusive write access but you want to write it");
     else x->lock = -1;
   } else {
-    PetscCheckFalse(x->lock != -1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Vector is not locked for exclusive write access but you want to unlock it from that");
+    PetscCheck(x->lock == -1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Vector is not locked for exclusive write access but you want to unlock it from that");
     x->lock = 0;
   }
   PetscFunctionReturn(0);

@@ -96,7 +96,7 @@ PetscErrorCode gridToParticles(const DM dm, DM sw, PetscReal *moments, Vec rhs, 
         PetscScalar dot = 0;
         PetscCall(MatGetRow(matshellctx->MpTrans,i,&nzl,&cols,&vals));
         for (int ii=0 ; ii<nzl ; ii++) dot += PetscSqr(vals[ii]);
-        PetscCheckFalse(dot==0.0,PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Row %D is empty", i);
+        PetscCheck(dot!=0.0,PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Row %D is empty", i);
         PetscCall(MatSetValue(D,i,i,dot,INSERT_VALUES));
       }
       PetscCall(MatAssemblyBegin(D, MAT_FINAL_ASSEMBLY));

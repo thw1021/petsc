@@ -2844,7 +2844,7 @@ PetscErrorCode DMPlexLandauIJacobian(TS ts, PetscReal time_dummy, Vec X, Vec U_t
   starttime = MPI_Wtime();
 #endif
   PetscCall(PetscInfo(ts, "Adding just mass to Jacobian t=%g, shift=%g\n",(double)time_dummy,(double)shift));
-  PetscCheckFalse(shift==0.0,ctx->comm, PETSC_ERR_PLIB, "zero shift");
+  PetscCheck(shift!=0.0,ctx->comm, PETSC_ERR_PLIB, "zero shift");
   PetscCheck(ctx->aux_bool,ctx->comm, PETSC_ERR_PLIB, "wrong state");
   if (!ctx->use_matrix_mass) {
     PetscCall(LandauFormJacobian_Internal(X,ctx->J,dim,shift,(void*)ctx));

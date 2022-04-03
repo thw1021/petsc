@@ -47,7 +47,7 @@ static PetscErrorCode CheckGraphEmpty(PetscSF sf)
 static PetscErrorCode CheckRanksNotSet(PetscSF sf)
 {
   PetscFunctionBegin;
-  PetscCheckFalse(sf->nranks != -1,PETSC_COMM_SELF,PETSC_ERR_PLIB,"SF ranks are set");
+  PetscCheck(sf->nranks == -1,PETSC_COMM_SELF,PETSC_ERR_PLIB,"SF ranks are set");
   PetscCheck(sf->ranks  == NULL,PETSC_COMM_SELF,PETSC_ERR_PLIB,"SF ranks are set");
   PetscFunctionReturn(0);
 }
