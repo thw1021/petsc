@@ -50,19 +50,27 @@ PETSC_EXTERN PetscErrorCode PetscDeviceContextCreateManagedTypeArray(PetscDevice
 #define PetscDeviceContextDestroyManagedTypeArray PetscConcat3(PetscDeviceContextDestroyManaged,PetscTypeSuffix,Array)
 PETSC_EXTERN PetscErrorCode PetscDeviceContextDestroyManagedTypeArray(PetscDeviceContext,PetscManagedType*);
 #define PetscDeviceContextGetManagedTypeValues PetscConcat3(PetscDeviceContextGetManaged,PetscTypeSuffix,Values)
-PETSC_EXTERN PetscErrorCode PetscDeviceContextGetManagedTypeValues(PetscDeviceContext,PetscManagedType,PetscOffloadMask,PetscType**,PetscInt*);
+PETSC_EXTERN PetscErrorCode PetscDeviceContextGetManagedTypeValues(PetscDeviceContext,PetscManagedType,PetscMemType,PetscMemoryAccessMode,PetscType**,PetscInt*);
 
-#define PetscManageHostType PetscConcat(PetscManageHost,PetscTypeSuffix)
-static inline PetscErrorCode PetscManageHostType(PetscDeviceContext dctx, PetscType *host_ptr, PetscInt n, PetscManagedType *scal)
+#define PetscManagedTypeCreate PetscConcat3(PetscManaged,PetscTypeSuffix,Create)
+static inline PetscErrorCode PetscManagedTypeCreate(PetscDeviceContext dctx, PetscType *host_ptr, PetscType *device_ptr, PetscInt n, PetscCopyMode host_cmode, PetscCopyMode device_cmode, PetscOffloadMask mask, PetscManagedType *scal)
 {
   PetscFunctionBegin;
   if (PetscDefined(HAVE_DEVICE)) {
-    PetscCall(PetscDeviceContextCreateManagedTypeArray(dctx,host_ptr,PETSC_NULLPTR,n,PETSC_USE_POINTER,PETSC_OWN_POINTER,PETSC_OFFLOAD_CPU,scal));
+    PetscCall(PetscDeviceContextCreateManagedTypeArray(dctx,host_ptr,device_ptr,n,host_cmode,device_cmode,mask,scal));
   } else {
     // have to cast here since otherwise compilers (rightfully!) complain about assigning
     // pointer to struct to a pointer to scalar type when PETSC_HAVE_DEVICE is defined
     *scal = (PetscManagedType)host_ptr;
   }
+  PetscFunctionReturn(0);
+}
+
+#define PetscManageHostType PetscConcat(PetscManageHost,PetscTypeSuffix)
+static inline PetscErrorCode PetscManageHostType(PetscDeviceContext dctx, PetscType *host_ptr, PetscInt n, PetscManagedType *scal)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscManagedTypeCreate(dctx,host_ptr,PETSC_NULLPTR,n,PETSC_USE_POINTER,PETSC_OWN_POINTER,PETSC_OFFLOAD_CPU,scal));
   PetscFunctionReturn(0);
 }
 
@@ -76,11 +84,11 @@ static inline PetscErrorCode PetscManagedTypeDestroy(PetscDeviceContext dctx, Pe
 }
 
 #define PetscManagedTypeGetValues PetscConcat(PetscManagedType,GetValues)
-static inline PetscErrorCode PetscManagedTypeGetValues(PetscDeviceContext dctx, PetscManagedType scal, PetscOffloadMask mask, PetscType **ptr, PetscInt *n)
+static inline PetscErrorCode PetscManagedTypeGetValues(PetscDeviceContext dctx, PetscManagedType scal, PetscMemType mtype, PetscMemoryAccessMode mode, PetscType **ptr, PetscInt *n)
 {
   PetscFunctionBegin;
   if (PetscDefined(HAVE_DEVICE)) {
-    PetscCall(PetscDeviceContextGetManagedTypeValues(dctx,scal,mask,ptr,n));
+    PetscCall(PetscDeviceContextGetManagedTypeValues(dctx,scal,mtype,mode,ptr,n));
   } else {
     // have to cast here since otherwise compilers (rightfully!) complain about assigning
     // pointer to struct to a pointer to scalar type when PETSC_HAVE_DEVICE is defined
@@ -108,6 +116,7 @@ static inline PetscErrorCode PetscManagedTypeCopy(PetscDeviceContext dctx, Petsc
 #undef PetscDeviceContextGetManagedTypeValues
 
 #undef PetscManageHostType
+#undef PetscManagedTypeCreate
 #undef PetscManagedTypeDestroy
 #undef PetscManagedTypeGetValeus
 #undef PetscManagedTypeCopy

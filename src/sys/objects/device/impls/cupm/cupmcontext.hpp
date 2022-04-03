@@ -361,7 +361,7 @@ public:
   template <typename PetscType, typename PetscManagedType>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode destroyManagedType(PetscDeviceContext,PetscManagedType));
   template <typename PetscType, typename PetscManagedType>
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode getManagedTypeValues(PetscDeviceContext,PetscManagedType,PetscOffloadMask,PetscType**));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode getManagedTypeValues(PetscDeviceContext,PetscManagedType,PetscMemType,PetscMemoryAccessMode,PetscType**));
 
   const struct _DeviceContextOps ops = {
     destroy,
@@ -583,77 +583,121 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::destroyManagedType(PetscD
 
 template <DeviceType T>
 template <typename PetscType, typename PetscManagedType>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::getManagedTypeValues(PetscDeviceContext dctx, PetscManagedType scal, PetscOffloadMask mask, PetscType **ptr))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::getManagedTypeValues(PetscDeviceContext dctx, PetscManagedType scal, PetscMemType mtype, PetscMemoryAccessMode mode, PetscType **ptr))
 {
-  // sets ptr, and scal->mask!
-  const auto copyToDestination = [&](PetscType *&dest, const PetscType *src)
-  {
-    const auto device = dest == scal->device;
-    const auto n      = scal->n;
-
-    PetscFunctionBegin;
-    // first get the destination buffer
-    if (!dest) {
-      if (device) PetscCall(managed_device_pool_<PetscType>().get(n,&dest));
-      else PetscCall(managed_host_pool_<PetscType>().get(n,&dest));
-    }
-    // now see if we can copy the other
-    if (src) {
-      const auto kind = device ? cupmMemcpyHostToDevice : cupmMemcpyDeviceToHost;
-      PetscCallCUPM(cupmMemcpyAsync(dest,src,n*sizeof(PetscType),kind,impls_cast_(dctx)->stream));
-      // if we copied the other we are up to date on both
-      scal->mask = PETSC_OFFLOAD_BOTH;
-    } else {
-      scal->mask = device ? PETSC_OFFLOAD_GPU : PETSC_OFFLOAD_CPU;
-    }
-    *ptr = dest;
-    PetscFunctionReturn(0);
-  };
-
-  const auto smask = scal->mask;
+  const auto n        = scal->n;
+  const auto xfersize = n*sizeof(PetscType);
+  const auto stream   = impls_cast_(dctx)->stream;
 
   PetscFunctionBegin;
-  PetscAssert(mask != smask,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Implementations should only be called if destination offloadmask (%d) != source offloadmask (%d)",static_cast<int>(mask),static_cast<int>(smask));
-  PetscAssert(smask != PETSC_OFFLOAD_BOTH,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Implementations should only be called if source offloadmask (%d) != PETSC_OFFLOAD_BOTH (%d)",static_cast<int>(smask),static_cast<int>(PETSC_OFFLOAD_BOTH));
-  switch (mask) {
-  case PETSC_OFFLOAD_CPU:
-    // must mean scal->mask is PETSC_OFFLOAD_GPU or unallocated
-    PetscCall(copyToDestination(scal->host,scal->device));
-    break;
-  case PETSC_OFFLOAD_GPU:
-    // must mean scal->mask is PETSC_OFFLOAD_CPU or unallocated
-    PetscCall(copyToDestination(scal->device,scal->host));
-    break;
-  case PETSC_OFFLOAD_BOTH:
-    // ok we have one or the other, but not both
-    if (smask == PETSC_OFFLOAD_UNALLOCATED) {
-      const auto n = scal->n;
+  switch (mtype) {
+  case PETSC_MEMTYPE_HOST:{
+    const auto src  = scal->device;
+    auto&      dest = scal->host;
 
-      // we have none of them, let's make sure
-      PetscAssert(!scal->host,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Have offloadmask PETSC_OFFLOAD_UNALLOCATED but have host pointer");
-      PetscAssert(!scal->device,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Have offloadmask PETSC_OFFLOAD_UNALLOCATED but have device pointer");
-
-      // get both
-      PetscCall(managed_device_pool_<PetscType>().get(n,&scal->host));
-      PetscCall(managed_device_pool_<PetscType>().get(n,&scal->device));
-      scal->mask = PETSC_OFFLOAD_BOTH;
-      *ptr       = scal->host;
-    } else if (scal->host) {
-      PetscCall(copyToDestination(scal->host,scal->device));
-    } else {
-      // presumably have device, let's check though
-      PetscAssert(scal->device,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Have offloadmask (%d) but neither host nor device pointer",static_cast<int>(smask));
-      PetscCall(copyToDestination(scal->device,scal->host));
+    // read or write, get a pointer if we don't have one yet
+    if (!dest) PetscCall(managed_host_pool_<PetscType>().get(n,&dest));
+    scal->mask = PETSC_OFFLOAD_CPU;
+    // if we want any kind of read (read or read_write) and we have valid SRC, we need to copy
+    // it now
+    if (mode != PETSC_MEMORY_ACCESS_WRITE && src) {
+      PetscCallCUPM(cupmMemcpyAsync(dest,src,xfersize,cupmMemcpyDeviceToHost,stream));
+      // if read-only then update the offloadmask
+      if (mode == PETSC_MEMORY_ACCESS_READ) scal->mask = PETSC_OFFLOAD_BOTH;
     }
-    break;
+  } break;
+  case PETSC_MEMTYPE_DEVICE: {
+    const auto src  = scal->host;
+    auto&      dest = scal->device;
+
+    if (!dest) PetscCall(managed_device_pool_<PetscType>().get(n,&dest));
+    scal->mask = PETSC_OFFLOAD_GPU;
+    if (mode != PETSC_MEMORY_ACCESS_WRITE && src) {
+      PetscCallCUPM(cupmMemcpyAsync(dest,src,xfersize,cupmMemcpyHostToDevice,stream));
+      if (mode == PETSC_MEMORY_ACCESS_READ) scal->mask = PETSC_OFFLOAD_BOTH;
+    }
+  } break;
   default:
-    PetscUnreachable();
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Unhandled memtype %d",static_cast<int>(mtype));
     break;
   }
   PetscFunctionReturn(0);
 }
 
+// template <DeviceType T>
+// template <typename PetscType, typename PetscManagedType>
+// PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::getManagedTypeValues(PetscDeviceContext dctx, PetscManagedType scal, PetscMemType mtype, PetscMemoryAccessMode mode, PetscType **ptr))
+// {
+//   // sets ptr, and scal->mask!
+//   const auto copyToDestination = [&](PetscType *&dest, const PetscType *src)
+//   {
+//     const auto device = dest == scal->device;
+//     const auto n      = scal->n;
+
+//     PetscFunctionBegin;
+//     // first get the destination buffer
+//     if (!dest) {
+//       if (device) PetscCall(managed_device_pool_<PetscType>().get(n,&dest));
+//       else PetscCall(managed_host_pool_<PetscType>().get(n,&dest));
+//     }
+//     // now see if we can copy the other
+//     if (src) {
+//       const auto kind = device ? cupmMemcpyHostToDevice : cupmMemcpyDeviceToHost;
+//       PetscCallCUPM(cupmMemcpyAsync(dest,src,n*sizeof(PetscType),kind,impls_cast_(dctx)->stream));
+//       // if we copied the other we are up to date on both
+//       scal->mask = PETSC_OFFLOAD_BOTH;
+//     } else {
+//       scal->mask = device ? PETSC_OFFLOAD_GPU : PETSC_OFFLOAD_CPU;
+//     }
+//     *ptr = dest;
+//     PetscFunctionReturn(0);
+//   };
+
+//   const auto smask = scal->mask;
+
+//   PetscFunctionBegin;
+//   PetscAssert(mtype != smask,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Implementations should only be called if destination offloadmask (%d) != source offloadmask (%d)",static_cast<int>(mtype),static_cast<int>(smask));
+//   PetscAssert(smask != PETSC_OFFLOAD_BOTH,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Implementations should only be called if source offloadmask (%d) != PETSC_OFFLOAD_BOTH (%d)",static_cast<int>(smask),static_cast<int>(PETSC_OFFLOAD_BOTH));
+//   switch (mtype) {
+//   case PETSC_OFFLOAD_CPU:
+//     // must mean scal->mask is PETSC_OFFLOAD_GPU or unallocated
+//     PetscCall(copyToDestination(scal->host,scal->device));
+//     break;
+//   case PETSC_OFFLOAD_GPU:
+//     // must mean scal->mask is PETSC_OFFLOAD_CPU or unallocated
+//     PetscCall(copyToDestination(scal->device,scal->host));
+//     break;
+//   case PETSC_OFFLOAD_BOTH:
+//     // ok we have one or the other, but not both
+//     if (smask == PETSC_OFFLOAD_UNALLOCATED) {
+//       const auto n = scal->n;
+
+//       // we have none of them, let's make sure
+//       PetscAssert(!scal->host,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Have offloadmask PETSC_OFFLOAD_UNALLOCATED but have host pointer");
+//       PetscAssert(!scal->device,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Have offloadmask PETSC_OFFLOAD_UNALLOCATED but have device pointer");
+
+//       // get both
+//       PetscCall(managed_device_pool_<PetscType>().get(n,&scal->host));
+//       PetscCall(managed_device_pool_<PetscType>().get(n,&scal->device));
+//       scal->mask = PETSC_OFFLOAD_BOTH;
+//       *ptr       = scal->host;
+//     } else if (scal->host) {
+//       PetscCall(copyToDestination(scal->host,scal->device));
+//     } else {
+//       // presumably have device, let's check though
+//       PetscAssert(scal->device,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Have offloadmask (%d) but neither host nor device pointer",static_cast<int>(smask));
+//       PetscCall(copyToDestination(scal->device,scal->host));
+//     }
+//     break;
+//   default:
+//     PetscUnreachable();
+//     break;
+//   }
+//   PetscFunctionReturn(0);
+// }
+
 // initialize the static member variables
+
 template <DeviceType T> bool DeviceContext<T>::initialized_ = false;
 
 template <DeviceType T>

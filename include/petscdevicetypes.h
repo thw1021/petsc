@@ -209,6 +209,12 @@ typedef enum {
   PETSC_DEVICE_COPY_AUTO,
 } PetscDeviceCopyMode;
 
+typedef enum {
+  PETSC_MEMORY_ACCESS_READ,
+  PETSC_MEMORY_ACCESS_WRITE,
+  PETSC_MEMORY_ACCESS_READ_WRITE,
+} PetscMemoryAccessMode;
+
 #define PetscTypeSuffix Scalar
 #include "petscmanagedtype.h"
 #define PetscTypeSuffix Real
