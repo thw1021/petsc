@@ -19,6 +19,8 @@ Changes: Development
 
 .. rubric:: PetscDraw:
 
+- Add ``PetscDrawSPGetDimension()``
+
 .. rubric:: AO:
 
 .. rubric:: IS:
@@ -53,6 +55,8 @@ Changes: Development
 
 .. rubric:: DMSwarm:
 
+- Add ``DMSwarmGetCoordinateFunction()``, ``DMSwarmSetCoordinateFunction()``, ``DMSwarmGetVelocityFunction()``, ``DMSwarmSetVelocityFunction()`` to allow flexible layout of particles
+
 .. rubric:: DMPlex:
 
 .. rubric:: FE/FV:
@@ -62,5 +66,7 @@ Changes: Development
 .. rubric:: DMStag:
 
 .. rubric:: DT:
+
+- Add probability distributions ``PetscPDFGaussian3D()``, ``PetscPDFSampleGaussian3D()``, ``PetscPDFConstant2D()``, ``PetscCDFConstant2D()``, ``PetscPDFSampleConstant2D()``, ``PetscPDFConstant3D()``, ``PetscCDFConstant3D()``, ``PetscPDFSampleConstant3D()``
 
 .. rubric:: Fortran:
