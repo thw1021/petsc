@@ -240,15 +240,16 @@ PETSC_EXTERN void MPIAPI PetscSum_Local(void *in,void *out,PetscMPIInt *cnt,MPI_
     for (i=0; i<count; i++) xout[i] += xin[i];
   }
 #endif
-  else {
-    (*PetscErrorPrintf)("Can only handle MPIU_REAL or MPIU_COMPLEX data types");
+  else if (*datatype == MPIU_INT) {
+    PetscInt *xin = (PetscInt*)in,*xout = (PetscInt*)out;
+    for (i=0; i<count; i++) xout[i] += xin[i];
+  } else {
+    (*PetscErrorPrintf)("Can only handle MPIU_REAL, MPIU_COMPLEX or MPIU_INT data types");
     PETSCABORT(MPI_COMM_SELF,PETSC_ERR_ARG_WRONG);
   }
   PetscFunctionReturnVoid();
 }
-#endif
 
-#if defined(PETSC_USE_REAL___FLOAT128) || defined(PETSC_USE_REAL___FP16)
 MPI_Op MPIU_MAX = 0;
 MPI_Op MPIU_MIN = 0;
 
@@ -269,8 +270,11 @@ PETSC_EXTERN void MPIAPI PetscMax_Local(void *in,void *out,PetscMPIInt *cnt,MPI_
     }
   }
 #endif
-  else {
-    (*PetscErrorPrintf)("Can only handle MPIU_REAL or MPIU_COMPLEX data types");
+  else if (*datatype == MPIU_INT) {
+    PetscInt *xin = (PetscInt*)in,*xout = (PetscInt*)out;
+    for (i=0; i<count; i++) xout[i] = PetscMax(xout[i],xin[i]);
+  } else {
+    (*PetscErrorPrintf)("Can only handle MPIU_REAL, MPIU_COMPLEX or MPIU_INT data types");
     PETSCABORT(MPI_COMM_SELF,PETSC_ERR_ARG_WRONG);
   }
   PetscFunctionReturnVoid();
@@ -293,8 +297,11 @@ PETSC_EXTERN void MPIAPI PetscMin_Local(void *in,void *out,PetscMPIInt *cnt,MPI_
     }
   }
 #endif
-  else {
-    (*PetscErrorPrintf)("Can only handle MPIU_REAL or MPIU_SCALAR data (i.e. double or complex) types");
+  else if (*datatype == MPIU_INT) {
+    PetscInt *xin = (PetscInt*)in,*xout = (PetscInt*)out;
+    for (i=0; i<count; i++) xout[i] = PetscMin(xout[i],xin[i]);
+  } else {
+    (*PetscErrorPrintf)("Can only handle MPIU_REAL, MPIU_COMPLEX or MPIU_INT data types");
     PETSCABORT(MPI_COMM_SELF,PETSC_ERR_ARG_WRONG);
   }
   PetscFunctionReturnVoid();
