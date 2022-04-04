@@ -46,7 +46,8 @@ Changes: Development
 .. rubric:: SNESLineSearch:
 
 .. rubric:: TS:
-- Added ``TSSetTimeSpan(),TSGetTimeSpan(),TSGetTimeSpanSolutions()`` to support time span
+
+- Add ``TSSetTimeSpan()``, ``TSGetTimeSpan()`` and ``TSGetTimeSpanSolutions()`` to support time span
 
 .. rubric:: TAO:
 
