@@ -713,6 +713,7 @@ int main(int argc, char **argv)
     args: -run_type hex_curved
   test:
     suffix: 3
+    requires: broken
     args: -transform
   test:
     suffix: 4
