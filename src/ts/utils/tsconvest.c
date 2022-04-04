@@ -50,15 +50,16 @@ static PetscErrorCode PetscConvEstComputeErrorTS_Private(PetscConvEst ce, PetscI
 static PetscErrorCode PetscConvEstGetConvRateTS_Temporal_Private(PetscConvEst ce, PetscReal alpha[])
 {
   TS             ts = (TS) ce->solver;
-  Vec            u;
+  Vec            u, u0;
   PetscReal     *dt, *x, *y, slope, intercept;
   PetscInt       Ns, oNs, Nf = ce->Nf, f, Nr = ce->Nr, r;
 
   PetscFunctionBegin;
-  PetscCall(TSGetSolution(ts, &u));
   PetscCall(PetscMalloc1(Nr+1, &dt));
   PetscCall(TSGetTimeStep(ts, &dt[0]));
   PetscCall(TSGetMaxSteps(ts, &oNs));
+  PetscCall(TSGetSolution(ts, &u0));
+  PetscCall(PetscObjectReference((PetscObject) u0));
   Ns   = oNs;
   for (r = 0; r <= Nr; ++r) {
     if (r > 0) {
@@ -69,8 +70,10 @@ static PetscErrorCode PetscConvEstGetConvRateTS_Temporal_Private(PetscConvEst ce
     PetscCall(TSSetStepNumber(ts, 0));
     PetscCall(TSSetTimeStep(ts, dt[r]));
     PetscCall(TSSetMaxSteps(ts, Ns));
+    PetscCall(TSGetSolution(ts, &u));
     PetscCall(PetscConvEstComputeInitialGuess(ce, r, NULL, u));
-    PetscCall(TSSolve(ts, u));
+    PetscCall(TSSolve(ts, NULL));
+    PetscCall(TSGetSolution(ts, &u));
     PetscCall(PetscLogEventBegin(ce->event, ce, 0, 0, 0));
     PetscCall(PetscConvEstComputeError(ce, r, ce->idm, u, &ce->errors[r*Nf]));
     PetscCall(PetscLogEventEnd(ce->event, ce, 0, 0, 0));
@@ -97,12 +100,15 @@ static PetscErrorCode PetscConvEstGetConvRateTS_Temporal_Private(PetscConvEst ce
     PetscCall(PetscFree2(x, y));
   }
   /* Reset solver */
+  PetscCall(TSReset(ts));
   PetscCall(TSSetConvergedReason(ts, TS_CONVERGED_ITERATING));
   PetscCall(TSSetTime(ts, 0.0));
   PetscCall(TSSetStepNumber(ts, 0));
   PetscCall(TSSetTimeStep(ts, dt[0]));
   PetscCall(TSSetMaxSteps(ts, oNs));
-  PetscCall(PetscConvEstComputeInitialGuess(ce, 0, NULL, u));
+  PetscCall(TSSetSolution(ts, u0));
+  PetscCall(PetscConvEstComputeInitialGuess(ce, 0, NULL, u0));
+  PetscCall(VecDestroy(&u0));
   PetscCall(PetscFree(dt));
   PetscFunctionReturn(0);
 }
@@ -167,6 +173,8 @@ static PetscErrorCode PetscConvEstGetConvRateTS_Spatial_Private(PetscConvEst ce,
     PetscCall(DMViewFromOptions(dm[r], NULL, "-conv_dm_view"));
     /* Create solution */
     PetscCall(DMCreateGlobalVector(dm[r], &u));
+    PetscCall(TSSetSolution(ts, u));
+    PetscCall(VecDestroy(&u));
     PetscCall(DMGetField(dm[r], 0, NULL, &disc));
     PetscCall(PetscObjectGetName(disc, &uname));
     PetscCall(PetscObjectSetName((PetscObject) u, uname));
@@ -180,8 +188,10 @@ static PetscErrorCode PetscConvEstGetConvRateTS_Spatial_Private(PetscConvEst ce,
     PetscCall(TSSetStepNumber(ts, 0));
     PetscCall(TSSetFromOptions(ts));
     /* Create initial guess */
+    PetscCall(TSGetSolution(ts, &u));
     PetscCall(PetscConvEstComputeInitialGuess(ce, r, dm[r], u));
-    PetscCall(TSSolve(ts, u));
+    PetscCall(TSSolve(ts, NULL));
+    PetscCall(TSGetSolution(ts, &u));
     PetscCall(PetscLogEventBegin(ce->event, ce, 0, 0, 0));
     PetscCall(PetscConvEstComputeError(ce, r, dm[r], u, &ce->errors[r*Nf]));
     PetscCall(PetscLogEventEnd(ce->event, ce, 0, 0, 0));
@@ -211,7 +221,6 @@ static PetscErrorCode PetscConvEstGetConvRateTS_Spatial_Private(PetscConvEst ce,
       PetscCall(PCMGGetLevels(pc, &oldnlev));
     }
     /* Cleanup */
-    PetscCall(VecDestroy(&u));
     PetscCall(PetscLogStagePop());
   }
   for (r = 1; r <= Nr; ++r) {
