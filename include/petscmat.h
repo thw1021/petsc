@@ -1168,7 +1168,7 @@ M*/
 M*/
 #define MatPreallocateEnd(dnz,onz) PetscCall(PetscFree2(dnz,onz));} while (0)
 
-#define MatPreallocateFinalize(...) PETSC_DEPRECATED_MACRO("GCC warning \"Use MatPreallocateEnd() (since version 3.17)\"") MatPreallocateEnd(__VA_ARGS__)
+#define MatPreallocateFinalize(...) PETSC_DEPRECATED_MACRO("GCC warning \"Use MatPreallocateEnd() (since version 3.18)\"") MatPreallocateEnd(__VA_ARGS__)
 
 /* Routines unique to particular data structures */
 PETSC_EXTERN PetscErrorCode MatShellGetContext(Mat,void *);
