@@ -447,7 +447,7 @@ formats, respectively:
 
 .. code-block:: c
 
-   PetscCall(PetscFunction(Args));
+   ?(PetscFunction(Args));
 
 or
 
@@ -517,7 +517,7 @@ PETSc has a small number of C/C++ only macros that do not return error codes. Th
    other code
    XXXEnd();
 
-and include ``PetscOptionsBegin()``, ``PetscOptionsEnd()``, ``PetscObjectOptionsBegin()``, ``PetscOptionsEnd()``,
+and include ``PetscOptionsBegin()``, ``PetscOptionsEnd()``, ``PetscObjectOptionsBegin()``, 
 ``PetscOptionsHeadBegin()``, ``PetscOptionsHeadEnd()``, ``PetscDrawCollectiveBegin()``, ``PetscDrawCollectiveEnd()``,
 ``MatPreallocateEnd()``, and ``MatPreallocateBegin()``. These should not be checked for error codes.
 Another class of functions with the ``Begin()`` and ``End()`` paradigm including ``PetscLogBegin()``, ``PetscLogEnd()``, ``MatAssemblyBegin()``, and ``MatAssemblyEnd()`` do return error codes that should be checked.

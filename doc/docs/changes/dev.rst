@@ -4,7 +4,7 @@ Changes: Development
 
 Changes you should make for main and version 3.18 so that it is portable to previous versions of PETSc
 
-- Remove the error handling from uses of  ``PetscOptionsBegin()``, ``PetscOptionsEnd()``, ``PetscObjectOptionsBegin()``, ``PetscOptionsHead()``, ``PetscOptionsTail()``
+- Remove the error handling from uses of  ``PetscOptionsBegin()``, ``PetscOptionsEnd()``, ``PetscObjectOptionsBegin()``, ``PetscOptionsHead()``,  and ``PetscOptionsTail()``
 - Remove the error handling from uses of ``PetscDrawCollectiveBegin()`` and ``PetscDrawCollectiveEnd()``
 - Remove the error handling from uses of ``MatPreallocateInitialize()`` and ``MatPreallocateFinalize()``
 
@@ -12,7 +12,7 @@ Changes you should make for main and version 3.18 so that is not portable to pre
 In addition to the changes above
 
 - Change  ``PetscOptionsHead()`` and ``PetscOptionsTail()`` to  ``PetscOptionsHeadBegin()`` and ``PetscOptionsHeadEnd()``
-- Change ``MatPreallocateInitialize()`` and ``MatPreallocateFinalize()`` to ``MatPreallocateEnd()`` and ``MatPreallocateBegin()``
+- Change ``MatPreallocateInitialize()`` and ``MatPreallocateFinalize()`` to ``MatPreallocateBegin()`` and ``MatPreallocateEnd()``
 
 ..
    STYLE GUIDELINES:
@@ -24,7 +24,7 @@ In addition to the changes above
 .. rubric:: General:
 
 - Change ``PetscOptionsBegin()``, ``PetscOptionsEnd()``, and ``PetscObjectOptionsBegin()`` to not return an error code
-- Change ``PetscOptionsHead()``, ``PetscOptionsTail()``, to ``PetscOptionsHeadBegin()`` and ``PetscOptionsHeadBegin()`` and to not return an error code
+- Change ``PetscOptionsHead()``, ``PetscOptionsTail()``, to ``PetscOptionsHeadBegin()`` and ``PetscOptionsHeadEnd()`` and to not return an error code
 
 .. rubric:: Configure/Build:
 
