@@ -332,7 +332,7 @@ template <typename... T> PetscErrorCode PetscOptionsDeprecatedNoObject(T...);
 M*/
 #define PetscOptionsHeadEnd() do {if (PetscOptionsObject->count != 1) PetscFunctionReturn(0);} while (0)
 
-#define PetscOptionsTail(...) PETSC_DEPRECATED_MACRO("GCC warning \"Use PetscOptionsHeadEnd() (since version 3.17)\"") PetscOptionsHeadEnd(__VA_ARGS__)
+#define PetscOptionsTail(...) PETSC_DEPRECATED_MACRO("GCC warning \"Use PetscOptionsHeadEnd() (since version 3.18)\"") PetscOptionsHeadEnd(__VA_ARGS__)
 
 #define PetscOptionsEnum(a,b,c,d,e,f,g) PetscOptionsEnum_Private(PetscOptionsObject,a,b,c,d,e,f,g)
 #define PetscOptionsInt(a,b,c,d,e,f) PetscOptionsInt_Private(PetscOptionsObject,a,b,c,d,e,f,PETSC_MIN_INT,PETSC_MAX_INT)
