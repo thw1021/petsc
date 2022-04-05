@@ -452,4 +452,6 @@ PETSC_EXTERN PetscErrorCode PCHPDDMGetSTShareSubKSP(PC,PetscBool*);
 PETSC_EXTERN PetscErrorCode PCHPDDMFinalizePackage(void);
 PETSC_EXTERN PetscErrorCode PCHPDDMInitializePackage(void);
 
+PETSC_EXTERN PetscErrorCode PCGetAmgXResources(PC pc, void* rsrc_in);
+
 #endif /* PETSCPC_H */
