@@ -68,6 +68,7 @@ void create_tridiagonal_batched_matrices(const int nnz, const int BlkSize,
   r_host(0) = 0;
 
   int current_col = 0;
+  double h = 1.0/(double)(BlkSize-1), h2 = h*h;
 
   for (int i = 0; i < BlkSize; ++i) {
     r_host(i + 1) = r_host(i) + (i == 0 || i == (BlkSize - 1) ? 2 : 3);
@@ -75,13 +76,13 @@ void create_tridiagonal_batched_matrices(const int nnz, const int BlkSize,
   for (int i = 0; i < nnz; ++i) {
     if (i % 3 == 0) {
       for (int l = 0; l < N; ++l) {
-        D_host(l, i) = typename VectorViewType::value_type(2.0);
+        D_host(l, i) = typename VectorViewType::value_type(2.0/h2);
       }
       c_host(i) = current_col;
       ++current_col;
     } else {
       for (int l = 0; l < N; ++l) {
-        D_host(l, i) = typename VectorViewType::value_type(-1.0);
+        D_host(l, i) = typename VectorViewType::value_type(-1.0/h2);
       }
       c_host(i) = current_col;
       if (i % 3 == 1)
@@ -127,18 +128,6 @@ void getInvDiagFromCRS(const VType &V, const IntType &r,
   }
 
   Kokkos::deep_copy(diag, diag_values_host);
-
-/*
-  std::ofstream myfile;
-  myfile.open("a-diag.txt");
-
-
-  for (size_t i = 0; i < BlkSize; ++i) {
-    myfile << std::setprecision (15) << i+1 << " " << diag_values_host(0, i) << std::endl;
-  }
-
-  myfile.close();
-  */
 }
 
 #include "KokkosBatched_Spmv.hpp"
@@ -304,16 +293,13 @@ struct Functor_TestBatchedTeamVectorGMRES {
 
 int test_GMRES()
 {
-  using layout = Kokkos::LayoutLeft;
+  using layout = Kokkos::LayoutRight;
   using IntView          = Kokkos::View<int *, layout, exec_space>;
   using AMatrixValueView = Kokkos::View<double **, layout, exec_space>;
   using XYType           = Kokkos::View<double **, layout, exec_space>;
 
-  std::string name_A = "A.mm";
-  std::string name_B = "B.mm";
-
   int N, Blk, nnz, ncols;
-  Blk = 10;
+  Blk = 11;
   N = 4;
   nnz = (Blk - 2) * 3 + 2 * 2;
 
@@ -330,7 +316,7 @@ int test_GMRES()
   // Replace y by ones:
   Kokkos::deep_copy(y, 1.);
   // Replace x by zeros:
-  // Kokkos::deep_copy(x, 0.);
+  Kokkos::deep_copy(x, 0.);
   getInvDiagFromCRS(values, rowOffsets, colIndices, diag);
 
   using ScalarType = typename AMatrixValueView::non_const_value_type;
@@ -348,7 +334,7 @@ int test_GMRES()
   using KrylovHandleType = KokkosBatched::KrylovHandle<Norm2DViewType, IntViewType, Scalar3DViewType>;
   
   const int N_team = 10;
-  const int n_iterations = 15;
+  const int n_iterations = 200;
   
   const int team_size = -1;
   const int vector_length = -1;
@@ -375,6 +361,13 @@ int test_GMRES()
     std::cout << "All the systems have converged." << std::endl;
   else
     std::cout << "There is at least one system that did not convegre." << std::endl;
+
+  double *arr = values.data();
+  for (size_t i = 0; i < nnz; ++i) {
+    std::cout << std::setprecision (5) << arr[i] << " " ;
+  }
+  std::cout << std::setprecision (15) << std::endl << x(0, (Blk/2)) << std::endl;
+
   return 0;
 }
 
