@@ -393,6 +393,7 @@ class Package(config.base.Configure):
     '''Special case if --package-prefix-hash then even self.publicInstall == 0 are installed in the prefix location'''
     self.confDir    = self.installDirProvider.confDir  # private install location; $PETSC_DIR/$PETSC_ARCH for PETSc
     self.packageDir = self.getDir()
+    self.setupDownload()
     if not self.packageDir: self.packageDir = self.downLoad()
     self.updateGitDir()
     self.updatehgDir()
@@ -734,23 +735,30 @@ If the problem persists, please send your configure.log to petsc-maint@mcs.anl.g
       prefetch = 0
       if self.gitcommit.startswith('origin/'):
         prefetch = 1
+        fetchblob = self.gitcommit.replace('origin/','')
       else:
         try:
           config.base.Configure.executeShellCommand([self.sourceControl.git, 'cat-file', '-e', self.gitcommit+'^{commit}'], cwd=self.packageDir, log = self.log)
+          gitcommit_hash,err,ret = config.base.Configure.executeShellCommand([self.sourceControl.git, 'rev-parse', self.gitcommit], cwd=self.packageDir, log = self.log)
         except:
           prefetch = 1
+          fetchblob = self.gitcommit
       if prefetch:
-        try:
-          config.base.Configure.executeShellCommand([self.sourceControl.git, 'fetch'], cwd=self.packageDir, log = self.log)
-        except:
-          raise RuntimeError('Unable to fetch '+self.gitcommit+' in repository '+self.packageDir+
-                             '.\nTo use previous git snapshot - use: --download-'+self.package+'-commit=HEAD')
-      try:
-        gitcommit_hash,err,ret = config.base.Configure.executeShellCommand([self.sourceControl.git, 'rev-parse', self.gitcommit], cwd=self.packageDir, log = self.log)
-      except:
-        raise RuntimeError('Unable to locate commit: '+self.gitcommit+' in repository: '+self.packageDir+'.\n\
-If its a commit/tag that is not found - perhaps the repo URL changed. If so, delete '+self.packageDir+' and rerun configure.\n\
-If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
+        fetched = 0
+        self.logPrintBox('Attempting a "git fetch" commit/branch/tag: %s from git repos: %s' % (str(self.gitcommit) , str(self.git_urls)))
+        for git_url in self.git_urls:
+          import retrieval
+          git_url = retrieval.removePrefix(git_url,'git://')
+          try:
+            config.base.Configure.executeShellCommand([self.sourceControl.git, 'fetch', '--tags', git_url, fetchblob], cwd=self.packageDir, log = self.log)
+            gitcommit_hash,err,ret = config.base.Configure.executeShellCommand([self.sourceControl.git, 'rev-parse', 'FETCH_HEAD'], cwd=self.packageDir, log = self.log)
+            fetched = 1
+            break
+          except:
+            continue
+        if not fetched:
+          raise RuntimeError('The above "git fetch" failed! Check if the specified "commit/branch/tag" is present in the remote git repo.\n\
+To use currently downloaded (local) git snapshot - use: --download-'+self.package+'-commit=HEAD')
       if self.gitcommit != 'HEAD':
         try:
           config.base.Configure.executeShellCommand([self.sourceControl.git, '-c', 'user.name=petsc-configure', '-c', 'user.email=petsc@configure', 'stash'], cwd=self.packageDir, log = self.log)
@@ -804,25 +812,25 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
       self.logPrint('  '+str(pkgdirs))
       return
 
-  def downLoad(self):
-    '''Downloads a package; using hg or ftp; opens it in the with-packages-build-dir directory'''
-    import retrieval
-
+  def setupDownload(self):
     if self.havePETSc:
       isClone = self.petscclone.isClone
     else:
       isClone = True
 
-    retriever = retrieval.Retriever(self.sourceControl, argDB = self.argDB)
-    retriever.setup()
-    retriever.saveLog()
-    self.logPrint('Downloading '+self.name)
     # check if its http://ftp.mcs - and add ftp://ftp.mcs as fallback
     download_urls = []
     git_urls      = []
     for url in self.download:
-      if url.startswith("git://"):
+      import retrieval
+      parsed = retrieval.urlParse(url)
+      if (parsed[0] == 'git') or (parsed[0] == 'ssh' and parsed[2].endswith('.git')) or (parsed[0] == 'https' and parsed[2].endswith('.git')):
         git_urls.append(url)
+      elif os.path.isdir(self.sourceControl.git,url,self.log):
+        if self.isDirectoryGitRepo(url):
+          git_urls.append(url)
+        else:
+          download_urls.append(url)
       else:
         download_urls.append(url)
       if url.find('http://ftp.mcs.anl.gov') >=0:
@@ -836,6 +844,17 @@ If its a remote branch, use: origin/'+self.gitcommit+' for commit.')
           download_urls = git_urls+download_urls
         else:
           download_urls = download_urls+git_urls
+    self.git_urls = git_urls
+    self.download_urls = download_urls
+
+  def downLoad(self):
+    '''Downloads a package; using hg or ftp; opens it in the with-packages-build-dir directory'''
+    import retrieval
+
+    retriever = retrieval.Retriever(self.sourceControl, argDB = self.argDB)
+    retriever.setup()
+    retriever.saveLog()
+    self.logPrint('Downloading '+self.name)
     # now attempt to download each url until any one succeeds.
     err =''
     for url in download_urls:

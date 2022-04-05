@@ -17,21 +17,30 @@ import shutil
 # Fix parsing for nonstandard schemes
 urlparse_local.uses_netloc.extend(['bk', 'ssh', 'svn'])
 
+def removePrefix(url,prefix):
+  '''Replacement for str.removeprefix() supported only since Python 3.9'''
+  if url.startswith(prefix):
+    return url[len(prefix):]
+  return url
+
+def urlParse(url):
+  return urlparse_local.urlparse(url)
+
+def isDirectoryGitRepo(git, directory, log):
+  from config.base import Configure
+  for loc in ['.git','']:
+    cmd = '%s rev-parse --resolve-git-dir  %s'  % (git, os.path.join(directory,loc))
+    (output, error, ret) = Configure.executeShellCommand(cmd, checkCommand = Configure.passCheckCommand, log = log)
+    if not ret:
+      return True
+  return False
+
 class Retriever(logger.Logger):
   def __init__(self, sourceControl, clArgs = None, argDB = None):
     logger.Logger.__init__(self, clArgs, argDB)
     self.sourceControl = sourceControl
     self.stamp = None
     return
-
-  def isDirectoryGitRepo(self, directory):
-    from config.base import Configure
-    for loc in ['.git','']:
-      cmd = '%s rev-parse --resolve-git-dir  %s'  % (self.sourceControl.git, os.path.join(directory,loc))
-      (output, error, ret) = Configure.executeShellCommand(cmd, checkCommand = Configure.passCheckCommand, log = self.log)
-      if not ret:
-        return True
-    return False
 
   @staticmethod
   def removeTarget(t):
@@ -54,17 +63,10 @@ Unable to download package %s from: %s
   --download-%s=/yourselectedlocation%s
     ''' % (package.upper(), url, slashFilename, package, slashFilename)
 
-  @staticmethod
-  def removePrefix(url,prefix):
-    '''Replacement for str.removeprefix() supported only since Python 3.9'''
-    if url.startswith(prefix):
-      return url[len(prefix):]
-    return url
-
   def genericRetrieve(self, url, root, package, submodules):
     '''Fetch package from version control repository or tarfile indicated by URL and extract it into root'''
 
-    parsed = urlparse_local.urlparse(url)
+    parsed = urlParse(url)
     if parsed[0] == 'dir':
       f = self.dirRetrieve
     elif parsed[0] == 'link':
@@ -80,7 +82,7 @@ Unable to download package %s from: %s
     elif parsed[0] == 'ssh' and parsed[1].startswith('hg@'):
       f = self.hgRetrieve
     elif os.path.isdir(url):
-      if self.isDirectoryGitRepo(url):
+      if self.isDirectoryGitRepo(self.sourceControl.git,url,self.log):
         f = self.gitRetrieve
       else:
         f = self.dirRetrieve
@@ -145,7 +147,7 @@ Unable to download package %s from: %s
       raise RuntimeError('Unable to clone '+package+'\n'+err+failureMessage)
 
   def tarballRetrieve(self, url, root, package, submodules):
-    parsed = urlparse_local.urlparse(url)
+    parsed = urlParse(url)
     filename = os.path.basename(parsed[2])
     localFile = os.path.join(root,'_d_'+filename)
     self.logPrint('Retrieving %s as tarball to %s' % (url,localFile) , 3, 'install')
