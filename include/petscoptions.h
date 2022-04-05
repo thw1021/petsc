@@ -298,7 +298,7 @@ template <typename... T> PetscErrorCode PetscOptionsDeprecatedNoObject(T...);
   }\
 } while (0)
 
-#define PetscOptionsHead(...) PETSC_DEPRECATED_MACRO("GCC warning \"Use PetscOptionsHeadBegin() (since version 3.17)\"") PetscOptionsHeadBegin(__VA_ARGS__)
+#define PetscOptionsHead(...) PETSC_DEPRECATED_MACRO("GCC warning \"Use PetscOptionsHeadBegin() (since version 3.18)\"") PetscOptionsHeadBegin(__VA_ARGS__)
 
 /*MC
      PetscOptionsHeadEnd - Ends a section of options begun with PetscOptionsHeadBegin()
