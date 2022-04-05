@@ -878,7 +878,7 @@ M*/
   PetscCallMPI(MPI_Scan(&__nrows,&__rstart,1,MPIU_INT,MPI_SUM,comm));                             \
   __rstart -= __nrows
 
-#define MatPreallocateInitialize(...) PETSC_DEPRECATED_MACRO("GCC warning \"Use MatPreallocateBegin() (since version 3.17)\"") MatPreallocateBegin(__VA_ARGS__)
+#define MatPreallocateInitialize(...) PETSC_DEPRECATED_MACRO("GCC warning \"Use MatPreallocateBegin() (since version 3.18)\"") MatPreallocateBegin(__VA_ARGS__)
 
 /*MC
    MatPreallocateSetLocal - Indicates the locations (rows and columns) in the matrix where nonzeros will be
