@@ -2,7 +2,7 @@
 #define PETSCDEVICETYPES_H
 
 /* for PETSC_HAVE_CUDA/HIP/KOKKOS etc */
-#include <petscsys.h> /*I petscsys.h I*/
+#include <petscsys.h>
 
 /*E
   PetscMemType - Memory type of a pointer
@@ -215,11 +215,13 @@ typedef enum {
   PETSC_MEMORY_ACCESS_READ_WRITE,
 } PetscMemoryAccessMode;
 
+typedef PetscErrorCode(*const PetscHostFunction)(PetscDeviceContext,void*);
+
 #define PetscTypeSuffix Scalar
-#include "petscmanagedtype.h"
+#include "petscmanagedtype.inl"
 #define PetscTypeSuffix Real
-#include "petscmanagedtype.h"
+#include "petscmanagedtype.inl"
 #define PetscTypeSuffix Int
-#include "petscmanagedtype.h"
+#include "petscmanagedtype.inl"
 
 #endif /* PETSCDEVICETYPES_H */

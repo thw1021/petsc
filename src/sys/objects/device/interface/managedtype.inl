@@ -85,12 +85,12 @@ PetscErrorCode PetscDeviceContextCreateManagedTypeArray(PetscDeviceContext dctx,
     PetscAssert(mask != PETSC_OFFLOAD_UNALLOCATED,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Set both host and device pointer but offloadmask was PETSC_OFFLOAD_UNALLOCATED");
     // this is the only instance in which we believe whatever the user has fed us
   } else if (host_ptr) {
-    mask         = PETSC_OFFLOAD_CPU;
     // clearly no device_ptr, so we own it
+    mask         = PETSC_OFFLOAD_CPU;
     device_cmode = PETSC_OWN_POINTER;
   } else if (device_ptr) {
-    mask       = PETSC_OFFLOAD_GPU;
     // clearly no host_ptr, so we own it
+    mask       = PETSC_OFFLOAD_GPU;
     host_cmode = PETSC_OWN_POINTER;
   } else {
     mask       = PETSC_OFFLOAD_UNALLOCATED;
@@ -99,7 +99,26 @@ PetscErrorCode PetscDeviceContextCreateManagedTypeArray(PetscDeviceContext dctx,
 
   PetscCall(PetscManagedTypePool.get(*scal));
   (*scal)->n       = n;
-  (*scal)->host    = host_ptr;
+  switch (host_cmode) {
+  case PETSC_OWN_POINTER:
+  case PETSC_USE_POINTER:
+    (*scal)->host = host_ptr;
+    break;
+  case PETSC_COPY_VALUES:
+    PetscCall(PetscMalloc1(n,&((*scal)->host)));
+    PetscArraycpy((*scal)->host,host_ptr,n);
+    break;
+  }
+  switch (device_cmode) {
+  case PETSC_OWN_POINTER:
+  case PETSC_USE_POINTER:
+    (*scal)->device = device_ptr;
+    break;
+  case PETSC_COPY_VALUES:
+    PetscCall(PetscMalloc1(n,&((*scal)->host)));
+    PetscArraycpy((*scal)->host,host_ptr,n);
+    break;
+  }
   (*scal)->device  = device_ptr;
   (*scal)->mask    = mask;
   (*scal)->h_cmode = host_cmode;

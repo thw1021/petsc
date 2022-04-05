@@ -634,6 +634,16 @@ PetscErrorCode PetscDeviceArrayCopy_(PetscDeviceContext dctx, void *PETSC_RESTRI
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode PetscDeviceContextLaunchHostFunction(PetscDeviceContext dctx, PetscHostFunction func, void *ctx)
+{
+  PetscFunctionBegin;
+  PetscValidDeviceContext(dctx,1);
+  PetscValidFunction(func,2);
+  if (ctx) PetscValidPointer(ctx,3);
+  PetscCall((*dctx->ops->launchhostfunction)(dctx,func,ctx));
+  PetscFunctionReturn(0);
+}
+
 /* each device needs a null context, and each device type needs a set of devices */
 static auto nullContexts          = std::array<std::vector<PetscDeviceContext>,PETSC_DEVICE_MAX>{ };
 static auto nullContextsFinalizer = false;

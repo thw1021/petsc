@@ -287,6 +287,7 @@ PETSC_EXTERN PetscErrorCode PetscDeviceContextGetCurrentContext(PetscDeviceConte
 PETSC_EXTERN PetscErrorCode PetscDeviceContextSetCurrentContext(PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextSetFromOptions(MPI_Comm,const char[],PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode PetscDeviceArrayCopy_(PetscDeviceContext,void*PETSC_RESTRICT,const void*PETSC_RESTRICT,size_t,PetscDeviceCopyMode);
+PETSC_EXTERN PetscErrorCode PetscDeviceContextLaunchHostFunction(PetscDeviceContext,PetscHostFunction,void*);
 
 #define PetscDeviceArrayCopy(dctx,dest,src,n,mode) (!PetscDefined(HAVE_DEVICE) || (mode == PETSC_DEVICE_COPY_HTOH) ? PetscArraycpy(dest,src,n) : PetscDeviceArrayCopy_(dctx,dest,src,(size_t)(n)*sizeof(*(src)),mode))
 

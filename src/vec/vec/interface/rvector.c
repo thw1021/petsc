@@ -139,15 +139,46 @@ PetscErrorCode  VecDot(Vec x,Vec y,PetscScalar *val)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecDotRealPartAsync(Vec x, Vec y, PetscManagedReal val, PetscDeviceContext dctx)
+typedef struct RealScalar
 {
-  PetscManagedReal fdot;
+  PetscReal   *real;
+  PetscScalar *scalar;
+} RealScalar;
+
+static PetscErrorCode VecDotRealPartAsync_RealPart(PetscDeviceContext PETSC_UNUSED dctx, void *ptr)
+{
+  RealScalar *ctx = (RealScalar*)ptr;
 
   PetscFunctionBegin;
-  PetscCall(PetscManagedRealCreate(dctx,NULL,NULL,1,PETSC_OWN_POINTER,PETSC_OWN_POINTER,PETSC_OFFLOAD_UNALLOCATED,&fdot));
-  PetscCall(VecDotAsync(x,y,fdot,dctx));
-  *val.ptr = PetscRealPart(fdot);
-  PetscCall(PetscManagedRealDestroy(dctx,&fdot));
+  PetscValidPointer(ptr,2);
+  *ctx->real = PetscRealPart(*ctx->scalar);
+  PetscCall(PetscFree(ctx));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecDotRealPartAsync(Vec x, Vec y, PetscManagedReal val, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidHeaderSpecific(y,VEC_CLASSID,2);
+  PetscValidPointer(val,3);
+  if (!dctx) PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
+  PetscValidDeviceContext(dctx,4);
+  if (PetscDefined(USE_COMPLEX)) {
+    RealScalar         *ctx;
+    PetscManagedScalar  tmp;
+
+    PetscCall(PetscManagedScalarCreate(dctx,NULL,NULL,1,PETSC_OWN_POINTER,PETSC_OWN_POINTER,PETSC_OFFLOAD_UNALLOCATED,&tmp));
+    PetscCall(VecDotAsync(x,y,tmp,dctx));
+    PetscCall(PetscMalloc1(1,&ctx));
+    PetscCall(PetscManagedScalarGetValues(dctx,tmp,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,&ctx->scalar,NULL));
+    PetscCall(PetscManagedRealGetValues(dctx,val,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_WRITE,&ctx->real,NULL));
+    PetscCall(PetscDeviceContextLaunchHostFunction(dctx,VecDotRealPartAsync_RealPart,ctx));
+    PetscCall(PetscManagedScalarDestroy(dctx,&tmp));
+  } else {
+    // PetscReal is PetscScalar
+    PetscCall(VecDotAsync(x,y,(PetscManagedScalar)val,dctx));
+  }
   PetscFunctionReturn(0);
 }
 

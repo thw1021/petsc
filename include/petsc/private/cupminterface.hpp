@@ -5,6 +5,18 @@
 #include <petsc/private/cpputil.hpp>
 #include <petsc/private/petscadvancedmacros.h>
 
+#if defined(__NVCC__) || defined(__CUDACC__)
+#  define PETSC_USING_NVCC 1
+#endif
+
+#if defined(__HCC__) || (defined(__clang__) && defined(__HIP__))
+#  define PETSC_USING_HCC 1
+#endif
+
+#if PetscDefined(USING_HCC) && PetscDefined(USING_NVCC)
+#  error using both nvcc and hipcc at the same time?
+#endif
+
 #if PetscDefined(HAVE_HIP)
 #  include <hip/hip_complex.h> // for hipComplex, hipDoubleComplex
 #endif
@@ -26,6 +38,12 @@
 #endif
 
 #define PETSC_HOSTDEVICE_DECL PETSC_HOST_DECL PETSC_DEVICE_DECL
+
+#if PetscDefined(USING_NVCC)
+#  define CUPM_CALLBACK_FN CUDART_CB
+#else
+#  define CUPM_CALLBACK_FN
+#endif
 
 #if defined(__cplusplus)
 #include <array>
@@ -62,13 +80,11 @@ namespace Impl
 // functions can also be wrapped inline:
 //
 // PetscCallCUPM(foo<int,char,bool>());
-#define PetscCallCUPM(...) do {                                         \
-    const cupmError_t cerr_p_ = __VA_ARGS__;                            \
-    if (PetscUnlikely(cerr_p_ != cupmSuccess)) {                        \
-      SETERRQ(PETSC_COMM_SELF,PETSC_ERR_GPU,"%s error %d (%s) : %s",    \
-              cupmName(),static_cast<PetscErrorCode>(cerr_p_),          \
-              cupmGetErrorName(cerr_p_),cupmGetErrorString(cerr_p_));   \
-    }                                                                   \
+#define PetscCallCUPM(...) do {                                                                \
+    const cupmError_t cerr_p_ = __VA_ARGS__;                                                   \
+    PetscCheck(cerr_p_ == cupmSuccess,PETSC_COMM_SELF,PETSC_ERR_GPU,"%s error %d (%s) : %s",   \
+               cupmName(),static_cast<PetscErrorCode>(cerr_p_),cupmGetErrorName(cerr_p_),      \
+               cupmGetErrorString(cerr_p_));                                                   \
   } while (0)
 
 // PETSC_CUPM_ALIAS_INTEGRAL_VALUE_EXACT() - declaration to alias a cuda/hip integral constant
@@ -381,6 +397,38 @@ struct InterfaceImpl<DeviceType::CUDA> : InterfaceBase<DeviceType::CUDA>
   PETSC_CUPM_ALIAS_FUNCTION(FreeHost);
   PETSC_CUPM_ALIAS_FUNCTION(MemsetAsync);
 
+#if PETSC_PKG_CUDA_VERSION_GE(10,0,0)
+  PETSC_CUPM_ALIAS_FUNCTION(LaunchHostFunc);
+#else
+private:
+  struct ctxwrapper
+  {
+    const cudaHostFn_t fn      = nullptr;
+    void *const        userctx = nullptr;
+  };
+
+  static CUDART_CB void wrapper(cudaStream_t,cudaError_t,void *ptr) noexcept
+  {
+    const auto wrappedctx = static_cast<ctxwrapper*>(ptr);
+
+    (*wrappedctx->fn)(wrappedctx->userctx);
+    try {
+      delete wrappedctx; // done with our callback wrapper, obliterate it
+    } catch (const std::exception &e) {
+      SETERRABORT(PETSC_COMM_SELF,PETSC_ERR_MEM,"%s",e.what());
+    }
+    return;
+  };
+
+public:
+  // reconfigure cudaStreamAddCallback() to act like cudaLaunchHostFunc(), unfortunately needs
+  // an extra layer of indirection
+  PETSC_CXX_COMPAT_DECL(cudaError_t cupmLaunchHostFunc(cudaStream_t stream, cudaHostFn_t fn, void *userData))
+  {
+    return cudaStreamAddCallback(stream,wrapper,new ctxwrapper{fn,userData},0);
+  }
+#endif
+
   // specific wrapper for device launch function, as the actual form is a C routine and doesn't
   // have variable arguments
   template <typename... KernelArgsT, typename FunctionT = void(*)(KernelArgsT...)>
@@ -479,6 +527,8 @@ struct InterfaceImpl<DeviceType::HIP> : InterfaceBase<DeviceType::HIP>
   PETSC_CUPM_ALIAS_FUNCTION_COMMON(FreeHost,HostFree);
   PETSC_CUPM_ALIAS_FUNCTION(MemsetAsync);
 
+  PETSC_CUPM_ALIAS_FUNCTION(LaunchHostFunc);
+
   // kernel launching
   template <typename... KernelArgsT, typename FunctionT = void(*)(KernelArgsT...)>
   PETSC_CXX_COMPAT_DECL(hipError_t cupmLaunchKernel(FunctionT func, dim3 gridDim, dim3 blockDim, std::size_t sharedMem, hipStream_t stream, KernelArgsT&&... kernelArgs))
@@ -562,6 +612,7 @@ struct InterfaceImpl<DeviceType::HIP> : InterfaceBase<DeviceType::HIP>
   using base_name::cupmMallocHost;                                      \
   using base_name::cupmFreeHost;                                        \
   using base_name::cupmMemsetAsync;                                     \
+  using base_name::cupmLaunchHostFunc;                                  \
   using base_name::cupmLaunchKernel
 
 template <DeviceType> struct PETSC_TEMPLATE_VISIBILITY_SINGLE_LIBRARY_INTERNAL Interface;
