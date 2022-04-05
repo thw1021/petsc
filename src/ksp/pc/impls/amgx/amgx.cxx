@@ -12,6 +12,7 @@
 
 #include <petsc/private/pcimpl.h>   /*I "petscpc.h" I*/
 #include <amgx_c.h>
+#include <limits>
 #include "cuda_runtime.h"
 
 /*
@@ -21,17 +22,18 @@ typedef struct {
     AMGX_solver_handle solver;
     AMGX_config_handle cfg;
     AMGX_resources_handle rsrc;
+    bool rsrc_init = false;
 
     AMGX_matrix_handle A;
     AMGX_vector_handle P;
     AMGX_vector_handle RHS;
 
     MPI_Comm comm;
-    int rank;
-    int nranks;
-    int devID;
+    int rank = 0;
+    int nranks = 0;
+    int devID = 0;
 
-    void *lib_handle;
+    void *lib_handle = 0;
     char filename[PETSC_MAX_PATH_LEN];
 
     // Cached state for re-setup
@@ -97,18 +99,24 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
 
     if (!pc->setupcalled)
     {
-        // Read configuration file and set exception handling
-        AMGX_SAFE_CALL(AMGX_config_create_from_file(&amgx->cfg, amgx->filename));
-
-        /* switch on internal error handling (no need to use AMGX_SAFE_CALL after this point) */
-        AMGX_SAFE_CALL(AMGX_config_add_parameters(&amgx->cfg, "exception_handling=1"));
-
         // Initialise resources and matrices
-        AMGX_resources_create(&amgx->rsrc, amgx->cfg, &amgx->comm, 1, &amgx->devID);
+        if(!amgx->rsrc_init)
+        {
+            // Read configuration file and set exception handling
+            AMGX_SAFE_CALL(AMGX_config_create_from_file(&amgx->cfg, amgx->filename));
+
+            /* switch on internal error handling (no need to use AMGX_SAFE_CALL after this point) */
+            AMGX_SAFE_CALL(AMGX_config_add_parameters(&amgx->cfg, "exception_handling=1"));
+
+            printf("resources in pcsetup_amgx\n");
+            AMGX_resources_create(&amgx->rsrc, amgx->cfg, &amgx->comm, 1, &amgx->devID);
+        }
+
         AMGX_matrix_create(&amgx->A, amgx->rsrc, AMGX_mode_dDDI);
         AMGX_vector_create(&amgx->P, amgx->rsrc, AMGX_mode_dDDI);
         AMGX_vector_create(&amgx->RHS, amgx->rsrc, AMGX_mode_dDDI);
         AMGX_solver_create(&amgx->solver, amgx->rsrc, AMGX_mode_dDDI, amgx->cfg);
+
         PetscCall(MatGetLocalSize(Pmat, &amgx->nLocalRows, NULL));
 
         PetscInt bs;
@@ -116,7 +124,7 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
 
         // XXX This is probably true internally for global rows too, so perhaps
         // a check for that should be implemented
-        if (amgx->nLocalRows >= 2147483648)
+        if (amgx->nLocalRows >= std::numeric_limits<int>::max())
         {
             SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB,
                 "AmgX restricted to int local rows but "
@@ -171,11 +179,10 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
             amgx->nnz = rowOffsets[amgx->nLocalRows];
         }
 
-        if (amgx->nnz >= 2147483648)
+        if (amgx->nnz >= std::numeric_limits<int>::max())
         {
             SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB,
-                "AmgX restricted to int nnz but "
-                "nnz = %D > max<int>", amgx->nnz);
+                    "Support for 64-bit integer nnz not yet implemented, nnz = %ld", amgx->nnz);
         }
 
         // Allocate space for some partition offsets
@@ -255,7 +262,7 @@ static PetscErrorCode PCApply_AMGX(PC pc, Vec b, Vec x)
     PetscFunctionBegin;
 
     PetscInt n;
-    PetscErrorCode PetscCall(VecGetLocalSize(x, &n));
+    PetscCall(VecGetLocalSize(x, &n));
 
     PetscScalar *unks;
     PetscCall(VecGetArray(x, &unks));
@@ -324,16 +331,18 @@ static PetscErrorCode PCDestroy_AMGX(PC pc)
     if (s_count == 1)
     {
         /* can put this in a PCAMGXInitializePackage method */
-        if (!amgx->rsrc)
+        if (amgx->rsrc == nullptr)
         {
             SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "s_rsrc == NULL");
         }
 
         AMGX_resources_destroy(amgx->rsrc);
+
         /* destroy config (need to use AMGX_SAFE_CALL after this point) */
         AMGX_SAFE_CALL(AMGX_config_destroy(amgx->cfg));
         AMGX_SAFE_CALL(AMGX_finalize_plugins());
         AMGX_SAFE_CALL(AMGX_finalize());
+
         PetscCall(MPI_Comm_free(&amgx->comm));
 #ifdef AMGX_DYNAMIC_LOADING
         amgx_libclose(amgx->lib_handle);
@@ -354,7 +363,7 @@ static PetscErrorCode PCSetFromOptions_AMGX(PetscOptionItems *PetscOptionsObject
     PC_AMGX *amgx = (PC_AMGX *)pc->data;
 
     PetscFunctionBegin;
-    PetscErrorCode PetscCall(PetscOptionsHead(PetscOptionsObject, "AMGX options"));
+    PetscCall(PetscOptionsHead(PetscOptionsObject, "AMGX options"));
 
     PetscCall(PetscOptionsString("-pc_amgx_json", "AMGX parameter file (json)", "amgx.c", amgx->filename, amgx->filename, PETSC_MAX_PATH_LEN, NULL));
 
@@ -443,7 +452,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_AMGX(PC pc)
     PC_AMGX *amgx;
 
     PetscFunctionBegin;
-    PetscErrorCode PetscCall(PetscNewLog(pc, &amgx));
+    PetscCall(PetscNewLog(pc, &amgx));
     pc->ops->apply = PCApply_AMGX;
     pc->ops->setfromoptions = PCSetFromOptions_AMGX;
     pc->ops->setup = PCSetUp_AMGX;
@@ -503,6 +512,25 @@ PETSC_EXTERN PetscErrorCode PCCreate_AMGX(PC pc)
 
     PetscCall(PetscStrreplace(PetscObjectComm((PetscObject)pc), amgx->filename, amgx->filename, PETSC_MAX_PATH_LEN));
 
+    PetscFunctionReturn(0);
+}
+
+PETSC_EXTERN PetscErrorCode PCGetAmgXResources(PC pc, void* rsrc_out)
+{
+    PC_AMGX *amgx = (PC_AMGX *)pc->data;
+
+    if(!amgx->rsrc_init)
+    {
+        // Read configuration file and set exception handling
+        AMGX_SAFE_CALL(AMGX_config_create_from_file(&amgx->cfg, amgx->filename));
+
+        /* switch on internal error handling (no need to use AMGX_SAFE_CALL after this point) */
+        AMGX_SAFE_CALL(AMGX_config_add_parameters(&amgx->cfg, "exception_handling=1"));
+
+        AMGX_resources_create(&amgx->rsrc, amgx->cfg, &amgx->comm, 1, &amgx->devID);
+    }
+
+    *((AMGX_resources_handle*)rsrc_out) = amgx->rsrc;
     PetscFunctionReturn(0);
 }
 
