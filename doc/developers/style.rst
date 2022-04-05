@@ -184,7 +184,7 @@ C Formatting
       PetscOptionsEnd();
 
 
-   As a rule, always try to wrap the function first, only if this fails to compile may you
+   As a rule, always try to wrap the function first, if this fails to compile you do
    not need to add the error checking.
 
 #. Indentation for ``if`` statements *must* be done as follows.
