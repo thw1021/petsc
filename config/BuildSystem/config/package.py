@@ -826,8 +826,8 @@ To use currently downloaded (local) git snapshot - use: --download-'+self.packag
       parsed = retrieval.urlParse(url)
       if (parsed[0] == 'git') or (parsed[0] == 'ssh' and parsed[2].endswith('.git')) or (parsed[0] == 'https' and parsed[2].endswith('.git')):
         git_urls.append(url)
-      elif os.path.isdir(self.sourceControl.git,url,self.log):
-        if self.isDirectoryGitRepo(url):
+      elif os.path.isdir(url):
+        if retrieval.isDirectoryGitRepo(self.sourceControl.git,url,self.log):
           git_urls.append(url)
         else:
           download_urls.append(url)
@@ -857,7 +857,7 @@ To use currently downloaded (local) git snapshot - use: --download-'+self.packag
     self.logPrint('Downloading '+self.name)
     # now attempt to download each url until any one succeeds.
     err =''
-    for url in download_urls:
+    for url in self.download_urls:
       if url.startswith('git://'):
         if not self.gitcommit: raise RuntimeError(self.PACKAGE+': giturl specified but commit not set')
         if not self.gitPreReqCheck():

@@ -82,7 +82,7 @@ Unable to download package %s from: %s
     elif parsed[0] == 'ssh' and parsed[1].startswith('hg@'):
       f = self.hgRetrieve
     elif os.path.isdir(url):
-      if self.isDirectoryGitRepo(self.sourceControl.git,url,self.log):
+      if isDirectoryGitRepo(self.sourceControl.git,url,self.log):
         f = self.gitRetrieve
       else:
         f = self.dirRetrieve
@@ -92,7 +92,7 @@ Unable to download package %s from: %s
 
   def dirRetrieve(self, url, root, package, submodules):
     self.logPrint('Retrieving %s as directory' % url, 3, 'install')
-    d = self.removePrefix(url, 'dir://')
+    d = removePrefix(url, 'dir://')
     if not os.path.isdir(d): raise RuntimeError('URL %s is not a directory' % url)
 
     t = os.path.join(root,os.path.basename(d))
@@ -101,7 +101,7 @@ Unable to download package %s from: %s
 
   def linkRetrieve(self, url, root, package, submodules):
     self.logPrint('Retrieving %s as link' % url, 3, 'install')
-    d = self.removePrefix(url, 'link://')
+    d = removePrefix(url, 'link://')
     if not os.path.isdir(d): raise RuntimeError('URL %s is not pointing to a directory' % url)
 
     t = os.path.join(root,os.path.basename(d))
@@ -112,8 +112,8 @@ Unable to download package %s from: %s
     self.logPrint('Retrieving %s as git repo' % url, 3, 'install')
     if not hasattr(self.sourceControl, 'git'):
       raise RuntimeError('self.sourceControl.git not set')
-    d = self.removePrefix(url, 'git://')
-    if os.path.isdir(d) and not self.isDirectoryGitRepo(d):
+    d = removePrefix(url, 'git://')
+    if os.path.isdir(d) and not isDirectoryGitRepo(self.sourceControl.git,d,self.log):
       raise RuntimeError('URL %s is a directory but not a git repository' % url)
 
     newgitrepo = os.path.join(root,'git.'+package)
@@ -134,7 +134,7 @@ Unable to download package %s from: %s
     self.logPrint('Retrieving %s as hg repo' % url, 3, 'install')
     if not hasattr(self.sourceControl, 'hg'):
       raise RuntimeError('self.sourceControl.hg not set')
-    d = self.removePrefix(url, 'hg://')
+    d = removePrefix(url, 'hg://')
 
     newgitrepo = os.path.join(root,'hg.'+package)
     self.removeTarget(newgitrepo)
