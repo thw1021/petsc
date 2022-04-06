@@ -1437,7 +1437,8 @@ static PetscErrorCode PetscWeakFormViewTable_Ascii(PetscWeakForm wf, PetscViewer
       if (keys[i].label) {
         if (showPointer) PetscCall(PetscViewerASCIIPrintf(viewer, "(%s:%p, %" PetscInt_FMT ") ", names[i], keys[i].label, keys[i].value));
         else             PetscCall(PetscViewerASCIIPrintf(viewer, "(%s, %" PetscInt_FMT ") ", names[i], keys[i].value));
-      } else PetscCall(PetscViewerASCIIPrintf(viewer, ""));
+      }
+      // PETSC_ATTR_FMT_ALL_THE_REST REVIEW ME
       PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_FALSE));
       if (splitField) PetscCall(PetscViewerASCIIPrintf(viewer, "(%" PetscInt_FMT ", %" PetscInt_FMT ") ", keys[i].field/Nf, keys[i].field%Nf));
       else            PetscCall(PetscViewerASCIIPrintf(viewer, "(%" PetscInt_FMT ") ", keys[i].field));
