@@ -201,8 +201,8 @@ PetscErrorCode testLagrange(PetscHashLag lagTable, DM K, PetscInt dim, PetscInt 
   PetscCall(PetscDualSpaceSetUp(sp));
   PetscCall(PetscDualSpaceGetDimension(sp, &spdim));
   PetscCall(PetscDualSpaceGetInteriorDimension(sp, &spintdim));
-  PetscCheck(spdim == exspdim,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Expected dual space dimension %" PetscInt_FMT ", got %" PetscInt_FMT "", exspdim, spdim);
-  PetscCheck(spintdim == exspintdim,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Expected dual space interior dimension %" PetscInt_FMT ", got %" PetscInt_FMT "", exspintdim, spintdim);
+  PetscCheck(spdim == exspdim,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Expected dual space dimension %" PetscInt_FMT ", got %" PetscInt_FMT, exspdim, spdim);
+  PetscCheck(spintdim == exspintdim,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Expected dual space interior dimension %" PetscInt_FMT ", got %" PetscInt_FMT, exspintdim, spintdim);
   key.dim = dim;
   key.formDegree = formDegree;
   PetscCall(PetscDualSpaceGetOrder(sp, &key.order));

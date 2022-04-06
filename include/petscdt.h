@@ -134,7 +134,7 @@ static inline PetscErrorCode PetscDTFactorial(PetscInt n, PetscReal *factorial)
 
   PetscFunctionBegin;
   *factorial = -1.0;
-  PetscCheck(n >= 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Factorial called with negative number %" PetscInt_FMT "", n);
+  PetscCheck(n >= 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Factorial called with negative number %" PetscInt_FMT, n);
   for (PetscInt i = 1; i < n+1; ++i) f *= (PetscReal)i;
   *factorial = f;
   PetscFunctionReturn(0);
