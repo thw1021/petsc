@@ -186,9 +186,9 @@ static PetscErrorCode PCView_BJacobi(PC pc,PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERDRAW,&isdraw));
   if (iascii) {
     if (pc->useAmat) {
-      PetscCall(PetscViewerASCIIPrintf(viewer,"  using Amat local matrix, number of blocks = %D\n",jac->n));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"  using Amat local matrix, number of blocks = %" PetscInt_FMT "\n",jac->n));
     }
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  number of blocks = %D\n",jac->n));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  number of blocks = %" PetscInt_FMT "\n",jac->n));
     PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)pc),&rank));
     PetscCall(PetscViewerGetFormat(viewer,&format));
     if (format != PETSC_VIEWER_ASCII_INFO_DETAIL) {
@@ -227,12 +227,12 @@ static PetscErrorCode PCView_BJacobi(PC pc,PetscViewer viewer)
       PetscCall(MPIU_Allreduce(&jac->n_local,&n_global,1,MPIU_INT,MPI_MAX,PetscObjectComm((PetscObject)pc)));
       PetscCall(PetscViewerASCIIPushSynchronized(viewer));
       PetscCall(PetscViewerASCIIPrintf(viewer,"  Local solver information for each block is in the following KSP and PC objects:\n"));
-      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] number of local blocks = %D, first local block number = %D\n",
+      ierr = PetscViewerASCIISynchronizedPrintf(viewer,"[%d] number of local blocks = %" PetscInt_FMT ", first local block number = %" PetscInt_FMT "\n",
                                                 rank,jac->n_local,jac->first_local);PetscCall(ierr);
       PetscCall(PetscViewerASCIIPushTab(viewer));
       PetscCall(PetscViewerGetSubViewer(viewer,PETSC_COMM_SELF,&sviewer));
       for (i=0; i<jac->n_local; i++) {
-        PetscCall(PetscViewerASCIISynchronizedPrintf(viewer,"[%d] local block number %D\n",rank,i));
+        PetscCall(PetscViewerASCIISynchronizedPrintf(viewer,"[%d] local block number %" PetscInt_FMT "\n",rank,i));
         PetscCall(KSPView(jac->ksp[i],sviewer));
         PetscCall(PetscViewerASCIISynchronizedPrintf(viewer,"- - - - - - - - - - - - - - - - - -\n"));
       }
@@ -242,7 +242,7 @@ static PetscErrorCode PCView_BJacobi(PC pc,PetscViewer viewer)
       PetscCall(PetscViewerASCIIPopSynchronized(viewer));
     }
   } else if (isstring) {
-    PetscCall(PetscViewerStringSPrintf(viewer," blks=%D",jac->n));
+    PetscCall(PetscViewerStringSPrintf(viewer," blks=%" PetscInt_FMT,jac->n));
     PetscCall(PetscViewerGetSubViewer(viewer,PETSC_COMM_SELF,&sviewer));
     if (jac->ksp) PetscCall(KSPView(jac->ksp[0],sviewer));
     PetscCall(PetscViewerRestoreSubViewer(viewer,PETSC_COMM_SELF,&sviewer));
@@ -253,7 +253,7 @@ static PetscErrorCode PCView_BJacobi(PC pc,PetscViewer viewer)
 
     PetscCall(PetscViewerDrawGetDraw(viewer,0,&draw));
     PetscCall(PetscDrawGetCurrentPoint(draw,&x,&y));
-    PetscCall(PetscSNPrintf(str,25,"Number blocks %D",jac->n));
+    PetscCall(PetscSNPrintf(str,25,"Number blocks %" PetscInt_FMT,jac->n));
     PetscCall(PetscDrawStringBoxed(draw,x,y,PETSC_DRAW_RED,PETSC_DRAW_BLACK,str,NULL,&h));
     bottom = y - h;
     PetscCall(PetscDrawPushCurrentPoint(draw,x,bottom));

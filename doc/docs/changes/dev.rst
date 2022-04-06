@@ -11,6 +11,9 @@ Changes: Development
 
 .. rubric:: General:
 
+- Add ``PETSC_ATTRIBUTE_FORMAT`` to enable compile-time ``printf()``-style format specifier checking and apply it any PETSc functions taking a format string
+- Deprecate the use of ``%D`` for printing ``PetscInt`` in favor of ``%" PetscInt_FMT "``. Compilers may emit warnings which users can suppress by defining ``PETSC_SKIP_ATTRIBUTE_FORMAT`` prior to all PETSc header-file inclusions; though they are encouraged to switch to the new style instead.
+
 .. rubric:: Configure/Build:
 
 .. rubric:: Sys:
