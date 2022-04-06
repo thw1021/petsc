@@ -44,7 +44,7 @@ int main(int argc,char **args)
   PetscCall(MatLoad(A,fd));
   PetscCall(PetscViewerDestroy(&fd));
   PetscCall(MatGetLocalSize(A,&m,&n));
-  PetscCheck(m == n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ, "This example is not intended for rectangular matrices (%D, %D)", m, n);
+  PetscCheck(m == n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ, "This example is not intended for rectangular matrices (%" PetscInt_FMT ", %" PetscInt_FMT ")", m, n);
 
   /* Create rhs vector of all ones */
   PetscCall(VecCreate(PETSC_COMM_WORLD,&b));
@@ -133,14 +133,14 @@ int main(int argc,char **args)
   PetscCall(MatMult(A,x,u));
   PetscCall(VecAXPY(u,-1.0,b));
   PetscCall(VecNorm(u,NORM_2,&norm));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Number of iterations = %3D\n",its));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Number of iterations = %3" PetscInt_FMT "\n",its));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Residual norm %g\n",(double)norm));
   flg  = PETSC_FALSE;
   PetscCall(PetscOptionsGetBool(NULL,NULL, "-ksp_reason", &flg,NULL));
   if (flg) {
     KSPConvergedReason reason;
     PetscCall(KSPGetConvergedReason(ksp,&reason));
-    PetscPrintf(PETSC_COMM_WORLD,"KSPConvergedReason: %D\n", reason);
+    PetscPrintf(PETSC_COMM_WORLD,"KSPConvergedReason: %" PetscInt_FMT "\n", reason);
   }
 
   /* Free work space.*/

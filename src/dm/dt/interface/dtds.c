@@ -138,7 +138,7 @@ static PetscErrorCode PetscDSView_Ascii(PetscDS ds, PetscViewer viewer)
   PetscCall(PetscViewerGetFormat(viewer, &format));
   PetscCall(PetscViewerASCIIPrintf(viewer, "Discrete System with %d fields\n", Nf));
   PetscCall(PetscViewerASCIIPushTab(viewer));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "  cell total dim %D total comp %D\n", ds->totDim, ds->totComp));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "  cell total dim %" PetscInt_FMT " total comp %" PetscInt_FMT "\n", ds->totDim, ds->totComp));
   if (ds->isCohesive) PetscCall(PetscViewerASCIIPrintf(viewer, "  cohesive cell\n"));
   for (f = 0; f < Nf; ++f) {
     DSBoundary      b;
@@ -162,16 +162,16 @@ static PetscErrorCode PetscDSView_Ascii(PetscDS ds, PetscViewer viewer)
       PetscCall(PetscFVGetQuadrature((PetscFV) obj, &q));
       PetscCall(PetscViewerASCIIPrintf(viewer, " FVM"));
     }
-    else SETERRQ(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Unknown discretization type for field %D", f);
-    if (Nc > 1) PetscCall(PetscViewerASCIIPrintf(viewer, " %D components", Nc));
-    else        PetscCall(PetscViewerASCIIPrintf(viewer, " %D component ", Nc));
+    else SETERRQ(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Unknown discretization type for field %" PetscInt_FMT, f);
+    if (Nc > 1) PetscCall(PetscViewerASCIIPrintf(viewer, " %" PetscInt_FMT " components", Nc));
+    else        PetscCall(PetscViewerASCIIPrintf(viewer, " %" PetscInt_FMT " component ", Nc));
     if (ds->implicit[f]) PetscCall(PetscViewerASCIIPrintf(viewer, " (implicit)"));
     else                 PetscCall(PetscViewerASCIIPrintf(viewer, " (explicit)"));
     if (q) {
       PetscCall(PetscQuadratureGetData(q, NULL, &Nqc, &Nq, NULL, NULL));
-      PetscCall(PetscViewerASCIIPrintf(viewer, " (Nq %D Nqc %D)", Nq, Nqc));
+      PetscCall(PetscViewerASCIIPrintf(viewer, " (Nq %" PetscInt_FMT " Nqc %" PetscInt_FMT ")", Nq, Nqc));
     }
-    PetscCall(PetscViewerASCIIPrintf(viewer, " %D-jet", ds->jetDegree[f]));
+    PetscCall(PetscViewerASCIIPrintf(viewer, " %" PetscInt_FMT "-jet", ds->jetDegree[f]));
     PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
     PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_TRUE));
     PetscCall(PetscViewerASCIIPushTab(viewer));
@@ -193,7 +193,7 @@ static PetscErrorCode PetscDSView_Ascii(PetscDS ds, PetscViewer viewer)
         PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_FALSE));
         for (c = 0; c < b->Nc; ++c) {
           if (c > 0) PetscCall(PetscViewerASCIIPrintf(viewer, ", "));
-          PetscCall(PetscViewerASCIIPrintf(viewer, "%D", b->comps[c]));
+          PetscCall(PetscViewerASCIIPrintf(viewer, "%" PetscInt_FMT, b->comps[c]));
         }
         PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
         PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_TRUE));
@@ -202,7 +202,7 @@ static PetscErrorCode PetscDSView_Ascii(PetscDS ds, PetscViewer viewer)
       PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_FALSE));
       for (i = 0; i < b->Nv; ++i) {
         if (i > 0) PetscCall(PetscViewerASCIIPrintf(viewer, ", "));
-        PetscCall(PetscViewerASCIIPrintf(viewer, "%D", b->values[i]));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "%" PetscInt_FMT, b->values[i]));
       }
       PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
       PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_TRUE));
@@ -224,7 +224,7 @@ static PetscErrorCode PetscDSView_Ascii(PetscDS ds, PetscViewer viewer)
   }
   PetscCall(PetscDSGetConstants(ds, &numConstants, &constants));
   if (numConstants) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "%D constants\n", numConstants));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "%" PetscInt_FMT " constants\n", numConstants));
     PetscCall(PetscViewerASCIIPushTab(viewer));
     for (f = 0; f < numConstants; ++f) PetscCall(PetscViewerASCIIPrintf(viewer, "%g\n", (double) PetscRealPart(constants[f])));
     PetscCall(PetscViewerASCIIPopTab(viewer));
@@ -703,7 +703,7 @@ PetscErrorCode PetscDSSetCoordinateDimension(PetscDS prob, PetscInt dimEmbed)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(prob, PETSCDS_CLASSID, 1);
-  PetscCheck(dimEmbed >= 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Coordinate dimension must be non-negative, not %D", dimEmbed);
+  PetscCheck(dimEmbed >= 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Coordinate dimension must be non-negative, not %" PetscInt_FMT, dimEmbed);
   prob->dimEmbed = dimEmbed;
   PetscFunctionReturn(0);
 }
@@ -3196,7 +3196,7 @@ PetscErrorCode PetscDSGetComponentOffsetsCohesive(PetscDS ds, PetscInt s, PetscI
   PetscValidHeaderSpecific(ds, PETSCDS_CLASSID, 1);
   PetscValidPointer(offsets, 3);
   PetscCheck(ds->isCohesive,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Cohesive offsets are only valid for a cohesive DS");
-  PetscCheck(!(s < 0) && !(s > 2),PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Cohesive side %D is not in [0, 2]", s);
+  PetscCheck(!(s < 0) && !(s > 2),PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Cohesive side %" PetscInt_FMT " is not in [0, 2]", s);
   PetscCall(PetscDSSetUp(ds));
   *offsets = ds->offCohesive[s];
   PetscFunctionReturn(0);
@@ -3224,7 +3224,7 @@ PetscErrorCode PetscDSGetComponentDerivativeOffsetsCohesive(PetscDS ds, PetscInt
   PetscValidHeaderSpecific(ds, PETSCDS_CLASSID, 1);
   PetscValidPointer(offsets, 3);
   PetscCheck(ds->isCohesive,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Cohesive offsets are only valid for a cohesive DS");
-  PetscCheck(!(s < 0) && !(s > 2),PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Cohesive side %D is not in [0, 2]", s);
+  PetscCheck(!(s < 0) && !(s > 2),PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Cohesive side %" PetscInt_FMT " is not in [0, 2]", s);
   PetscCall(PetscDSSetUp(ds));
   *offsets = ds->offDerCohesive[s];
   PetscFunctionReturn(0);
@@ -3397,9 +3397,9 @@ PetscErrorCode PetscDSAddBoundary(PetscDS ds, DMBoundaryConditionType type, cons
     PetscInt  c;
 
     PetscCall(PetscDSGetComponents(ds, &fcomps));
-    PetscCheck(Nc <= fcomps[field],PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_OUTOFRANGE, "Number of constrained components %D > %D components for field %D", Nc, fcomps[field], field);
+    PetscCheck(Nc <= fcomps[field],PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_OUTOFRANGE, "Number of constrained components %" PetscInt_FMT " > %" PetscInt_FMT " components for field %" PetscInt_FMT, Nc, fcomps[field], field);
     for (c = 0; c < Nc; ++c) {
-      PetscCheckFalse(comps[c] < 0 || comps[c] >= fcomps[field],PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_OUTOFRANGE, "Constrained component[%D] %D not in [0, %D) components for field %D", c, comps[c], fcomps[field], field);
+      PetscCheckFalse(comps[c] < 0 || comps[c] >= fcomps[field],PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_OUTOFRANGE, "Constrained component[%" PetscInt_FMT "] %" PetscInt_FMT " not in [0, %" PetscInt_FMT ") components for field %" PetscInt_FMT, c, comps[c], fcomps[field], field);
     }
   }
   PetscCall(PetscNew(&b));
@@ -3896,7 +3896,7 @@ PetscErrorCode PetscDSSelectEquations(PetscDS prob, PetscInt numFields, const Pe
   PetscValidHeaderSpecific(newprob, PETSCDS_CLASSID, 4);
   PetscCall(PetscDSGetNumFields(prob, &Nf));
   PetscCall(PetscDSGetNumFields(newprob, &Nfn));
-  PetscCheck(numFields <= Nfn,PetscObjectComm((PetscObject) prob), PETSC_ERR_ARG_SIZ, "Number of fields %D to transfer must not be greater then the total number of fields %D", numFields, Nfn);
+  PetscCheck(numFields <= Nfn,PetscObjectComm((PetscObject) prob), PETSC_ERR_ARG_SIZ, "Number of fields %" PetscInt_FMT " to transfer must not be greater then the total number of fields %" PetscInt_FMT, numFields, Nfn);
   for (fn = 0; fn < numFields; ++fn) {
     const PetscInt   f = fields ? fields[fn] : fn;
     PetscPointFunc   obj;
@@ -3956,7 +3956,7 @@ PetscErrorCode PetscDSCopyEquations(PetscDS prob, PetscDS newprob)
   PetscValidHeaderSpecific(newprob, PETSCDS_CLASSID, 2);
   PetscCall(PetscDSGetNumFields(prob, &Nf));
   PetscCall(PetscDSGetNumFields(newprob, &Ng));
-  PetscCheck(Nf == Ng,PetscObjectComm((PetscObject) prob), PETSC_ERR_ARG_SIZ, "Number of fields must match %D != %D", Nf, Ng);
+  PetscCheck(Nf == Ng,PetscObjectComm((PetscObject) prob), PETSC_ERR_ARG_SIZ, "Number of fields must match %" PetscInt_FMT " != %" PetscInt_FMT, Nf, Ng);
   PetscCall(PetscDSGetWeakForm(prob, &wf));
   PetscCall(PetscDSGetWeakForm(newprob, &newwf));
   PetscCall(PetscWeakFormCopy(wf, newwf));
@@ -4035,7 +4035,7 @@ PetscErrorCode PetscDSGetHeightSubspace(PetscDS prob, PetscInt height, PetscDS *
   if (height == 0) {*subprob = prob; PetscFunctionReturn(0);}
   PetscCall(PetscDSGetNumFields(prob, &Nf));
   PetscCall(PetscDSGetSpatialDimension(prob, &dim));
-  PetscCheck(height <= dim,PetscObjectComm((PetscObject) prob), PETSC_ERR_ARG_OUTOFRANGE, "DS can only handle height in [0, %D], not %D", dim, height);
+  PetscCheck(height <= dim,PetscObjectComm((PetscObject) prob), PETSC_ERR_ARG_OUTOFRANGE, "DS can only handle height in [0, %" PetscInt_FMT "], not %" PetscInt_FMT, dim, height);
   if (!prob->subprobs) PetscCall(PetscCalloc1(dim, &prob->subprobs));
   if (!prob->subprobs[height-1]) {
     PetscInt cdim;
@@ -4070,7 +4070,7 @@ PetscErrorCode PetscDSGetDiscType_Internal(PetscDS ds, PetscInt f, PetscDiscType
   PetscValidPointer(disctype, 3);
   *disctype = PETSC_DISC_NONE;
   PetscCall(PetscDSGetNumFields(ds, &Nf));
-  PetscCheck(f < Nf,PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_SIZ, "Field %D must be in [0, %D)", f, Nf);
+  PetscCheck(f < Nf,PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_SIZ, "Field %" PetscInt_FMT " must be in [0, %" PetscInt_FMT ")", f, Nf);
   PetscCall(PetscDSGetDiscretization(ds, f, &obj));
   if (obj) {
     PetscCall(PetscObjectGetClassId(obj, &id));

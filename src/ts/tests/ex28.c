@@ -133,7 +133,7 @@ static PetscErrorCode SetInitialConditions(DM dmSw, Vec u)
   PetscCall(DMSwarmGetCellDM(dmSw, &dm));
   PetscCall(DMGetDimension(dm, &dim));
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
-  PetscCheck(n == (cEnd-cStart)*Np,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "TS solution local size %D != %D nm particles", n, (cEnd-cStart)*Np);
+  PetscCheck(n == (cEnd-cStart)*Np,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "TS solution local size %" PetscInt_FMT " != %" PetscInt_FMT " nm particles", n, (cEnd-cStart)*Np);
   PetscCall(DMSwarmGetField(dmSw, "w_q", NULL, NULL, (void **) &vals));
   PetscCall(VecGetArray(u, &initialConditions));
   for (c = cStart; c < cEnd; ++c) {

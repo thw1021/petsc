@@ -236,7 +236,7 @@ int main(int argc,char **argv)
   PetscCall(SNESGetIterationNumber(snes,&its));
   PetscCall(SNESGetConvergedReason(snes,&reason));
 
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%s Number of nonlinear iterations = %D\n",SNESConvergedReasons[reason],its));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%s Number of nonlinear iterations = %" PetscInt_FMT "\n",SNESConvergedReasons[reason],its));
 
   if (write_output) {
     PetscViewer viewer;

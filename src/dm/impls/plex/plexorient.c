@@ -39,7 +39,7 @@ PetscErrorCode DMPlexOrientPoint(DM dm, PetscInt p, PetscInt o)
     nO   = DMPolytopeTypeGetNumArrangments(ft)/2;
     newcone[c] = cone[arr[c*2+0]];
     newornt[c] = DMPolytopeTypeComposeOrientation(ft, arr[c*2+1], ornt[arr[c*2+0]]);
-    PetscCheck(!newornt[c] || !(newornt[c] >= nO || newornt[c] < -nO),PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid orientation %D not in [%D,%D) for %s %D", newornt[c], -nO, nO, DMPolytopeTypes[ft], cone[c]);
+    PetscCheck(!newornt[c] || !(newornt[c] >= nO || newornt[c] < -nO),PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid orientation %" PetscInt_FMT " not in [%" PetscInt_FMT ",%" PetscInt_FMT ") for %s %" PetscInt_FMT, newornt[c], -nO, nO, DMPolytopeTypes[ft], cone[c]);
   }
   PetscCall(DMPlexSetCone(dm, p, newcone));
   PetscCall(DMPlexSetConeOrientation(dm, p, newornt));
@@ -330,7 +330,8 @@ PetscErrorCode DMPlexOrient(DM dm)
 
       if      (o < 0) match[off] = PETSC_TRUE;
       else if (o > 0) match[off] = PETSC_FALSE;
-      else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Invalid face %d (%d, %d) neighbor: %d comp: %d", face, rorntComp[face], lorntComp[face], neighbors[comp][n], comp);
+      // PETSC_ATTR_FMT_ALL_THE_REST REVIEW ME
+      else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Invalid face %" PetscInt_FMT " (%" PetscInt_FMT ", %" PetscInt_FMT ") neighbor: %d comp: %d", face, rorntComp[face].rank, lorntComp[face].rank, neighbors[comp][n], comp);
       nrankComp[off].rank  = rpoints[neighbors[comp][n]].rank;
       nrankComp[off].index = lorntComp[lpoints[neighbors[comp][n]]].index;
     }

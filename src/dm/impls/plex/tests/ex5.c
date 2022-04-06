@@ -685,8 +685,8 @@ static PetscErrorCode CreateDiscretization(DM dm, AppCtx *user)
   for (f = 1; f < Ncf; ++f) {
     char name[256], opt[256];
 
-    PetscCall(PetscSNPrintf(name, 256, "fault field %D", f));
-    PetscCall(PetscSNPrintf(opt,  256, "faultfield_%D_", f));
+    PetscCall(PetscSNPrintf(name, 256, "fault field %" PetscInt_FMT, f));
+    PetscCall(PetscSNPrintf(opt,  256, "faultfield_%" PetscInt_FMT "_", f));
     PetscCall(PetscFECreateDefault(PETSC_COMM_SELF, dim-1, dim, user->cellSimplex, opt, PETSC_DETERMINE, &fe));
     PetscCall(PetscFESetName(fe, name));
     PetscCall(DMAddField(dm, fault, (PetscObject) fe));

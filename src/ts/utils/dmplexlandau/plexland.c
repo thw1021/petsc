@@ -257,7 +257,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
           PetscCall(VecDestroy(&locX2));
         }
       }
-      PetscCheck(cellClosure_it-cellClosure == cellClosure_sz*ctx->batch_sz,PETSC_COMM_SELF, PETSC_ERR_PLIB, "iteration wrong %" PetscInt_FMT " != cellClosure_sz = %" PetscInt_FMT,cellClosure_it-cellClosure,cellClosure_sz*ctx->batch_sz);
+      PetscCheck(cellClosure_it-cellClosure == cellClosure_sz*ctx->batch_sz,PETSC_COMM_SELF, PETSC_ERR_PLIB, "iteration wrong %" PetscCount_FMT " != cellClosure_sz = %" PetscInt_FMT,(PetscCount)(cellClosure_it-cellClosure),cellClosure_sz*ctx->batch_sz);
       PetscCall(DMCompositeRestoreLocalAccessArray(pack, a_X, nDMs, NULL, locXArray));
       PetscCall(DMCompositeRestoreAccessArray(pack, a_X, nDMs, NULL, globXArray));
       PetscCall(PetscFree(locXArray));
@@ -1404,11 +1404,11 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   nm = LANDAU_MAX_SPECIES-1;
   PetscCall(PetscOptionsRealArray("-dm_landau_ion_masses", "Mass of each species in units of proton mass [i_0=2,i_1=40...]", "plexland.c", &ctx->masses[1], &nm, &flg));
   if (flg && nm != ctx->num_species-1) {
-    SETERRQ(ctx->comm,PETSC_ERR_ARG_WRONG,"num ion masses %" PetscInt_FMT " != num species %" PetscInt_FMT "",nm,ctx->num_species-1);
+    SETERRQ(ctx->comm,PETSC_ERR_ARG_WRONG,"num ion masses %" PetscInt_FMT " != num species %" PetscInt_FMT,nm,ctx->num_species-1);
   }
   nm = LANDAU_MAX_SPECIES;
   PetscCall(PetscOptionsRealArray("-dm_landau_n", "Number density of each species = n_s * n_0", "plexland.c", ctx->n, &nm, &flg));
-  PetscCheckFalse(flg && nm != ctx->num_species,ctx->comm,PETSC_ERR_ARG_WRONG,"wrong num n: %" PetscInt_FMT " != num species %" PetscInt_FMT "",nm,ctx->num_species);
+  PetscCheckFalse(flg && nm != ctx->num_species,ctx->comm,PETSC_ERR_ARG_WRONG,"wrong num n: %" PetscInt_FMT " != num species %" PetscInt_FMT,nm,ctx->num_species);
   for (ii=0;ii<LANDAU_MAX_SPECIES;ii++) ctx->masses[ii] *= 1.6720e-27; /* scale by proton mass kg */
   ctx->masses[0] = 9.10938356e-31; /* electron mass kg (should be about right already) */
   ctx->m_0 = ctx->masses[0]; /* arbitrary reference mass, electrons */
@@ -2505,7 +2505,7 @@ PetscErrorCode DMPlexLandauPrintNorms(Vec X, PetscInt stepi)
         zmomentumtot += zmomentum[ii];
         energytot  += energy[ii];
         densitytot += density[ii];
-        PetscCall(PetscPrintf(ctx->comm, "%3D) species-%" PetscInt_FMT ": charge density= %20.13e z-momentum= %20.13e energy= %20.13e",stepi,ii,PetscRealPart(density[ii]),PetscRealPart(zmomentum[ii]),PetscRealPart(energy[ii])));
+        PetscCall(PetscPrintf(ctx->comm, "%3" PetscInt_FMT ") species-%" PetscInt_FMT ": charge density= %20.13e z-momentum= %20.13e energy= %20.13e",stepi,ii,PetscRealPart(density[ii]),PetscRealPart(zmomentum[ii]),PetscRealPart(energy[ii])));
       } else { /* 2/3Xloc + 3V */
         PetscCall(PetscDSSetObjective(prob, 0, &f0_s_den));
         PetscCall(DMPlexComputeIntegralFEM(ctx->plex[grid],Xloc,tt,ctx));

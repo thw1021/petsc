@@ -408,7 +408,7 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
     // get x
     PetscCall(VecGetArrayAndMemType(xout,&glb_xdata,&mtype));
 #if defined(PETSC_HAVE_CUDA)
-    PetscCheck(PetscMemTypeDevice(mtype),PetscObjectComm((PetscObject) pc),PETSC_ERR_ARG_WRONG,"No GPU data for x %" PetscInt_FMT " != %" PetscInt_FMT "",mtype,PETSC_MEMTYPE_DEVICE);
+    PetscCheck(PetscMemTypeDevice(mtype),PetscObjectComm((PetscObject) pc),PETSC_ERR_ARG_WRONG,"No GPU data for x %" PetscInt_FMT " != %" PetscInt_FMT,mtype,PETSC_MEMTYPE_DEVICE);
 #endif
     PetscCall(VecGetArrayReadAndMemType(bvec,&glb_bdata,&mtype));
 #if defined(PETSC_HAVE_CUDA)
@@ -480,9 +480,9 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
     for (PetscInt dmIdx=0, s=0, head=0 ; dmIdx < jac->num_dms; dmIdx += batch_sz) {
       for (PetscInt f=0, idx=head ; f < jac->dm_Nf[dmIdx] ; f++,s++,idx++) {
 #if PCBJKOKKOS_VERBOSE_LEVEL >= 4
-        PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%2D:", s));
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%2" PetscInt_FMT ":", s));
         for (int bid=0 ; bid<batch_sz ; bid++) {
-         PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%3D ", h_metadata[idx + bid*jac->dm_Nf[dmIdx]].its));
+         PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%3" PetscInt_FMT " ", h_metadata[idx + bid*jac->dm_Nf[dmIdx]].its));
         }
         PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n"));
 #else
@@ -490,7 +490,7 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
         for (int bid=0 ; bid<batch_sz ; bid++) {
           if (h_metadata[idx + bid*jac->dm_Nf[dmIdx]].its > count) count = h_metadata[idx + bid*jac->dm_Nf[dmIdx]].its;
         }
-        PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%3D ", count));
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%3" PetscInt_FMT " ", count));
 #endif
       }
       head += batch_sz*jac->dm_Nf[dmIdx];

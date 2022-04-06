@@ -469,7 +469,7 @@ static PetscErrorCode TSEIMEXSetMaxRows_EIMEX(TS ts,PetscInt nrows)
   PetscInt       i;
 
   PetscFunctionBegin;
-  PetscCheck(nrows >= 0 && nrows <= 100,((PetscObject)ts)->comm,PETSC_ERR_ARG_OUTOFRANGE,"Max number of rows (current value %D) should be an integer number between 1 and 100",nrows);
+  PetscCheck(nrows >= 0 && nrows <= 100,((PetscObject)ts)->comm,PETSC_ERR_ARG_OUTOFRANGE,"Max number of rows (current value %" PetscInt_FMT ") should be an integer number between 1 and 100",nrows);
   PetscCall(PetscFree(ext->N));
   ext->max_rows = nrows;
   PetscCall(PetscMalloc1(nrows,&ext->N));

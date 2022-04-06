@@ -194,7 +194,7 @@ static PetscErrorCode Monitor(TS ts, PetscInt step, PetscReal t, Vec U, void *ct
       const PetscReal v  = PetscRealPart(u[p*2+1]);
       const PetscReal E  = 0.5*(v*v + PetscSqr(omega)*x*x);
       const PetscReal mE = 0.5*(v*v + PetscSqr(omega)*x*x - PetscSqr(omega)*dt*x*v);
-      PetscCall(PetscPrintf(comm, "%.6lf %4D %4D %10.4lf %10.4lf\n", t, step, p, (double) E, (double) mE));
+      PetscCall(PetscPrintf(comm, "%.6lf %4" PetscInt_FMT " %4" PetscInt_FMT " %10.4lf %10.4lf\n", t, step, p, (double) E, (double) mE));
     }
     PetscCall(VecRestoreArrayRead(U, &u));
   }
@@ -243,7 +243,7 @@ static PetscErrorCode ComputeError(TS ts, Vec U, Vec E)
     const PetscReal ex =  x0*PetscCosReal(omega*t);
     const PetscReal ev = -x0*omega*PetscSinReal(omega*t);
 
-    if (user->error) PetscCall(PetscPrintf(comm, "p%D error [%.2g %.2g] sol [%.6lf %.6lf] exact [%.6lf %.6lf] energy/exact energy %g / %g\n", p, (double) PetscAbsReal(x-ex), (double) PetscAbsReal(v-ev), (double) x, (double) v, (double) ex, (double) ev, 0.5*(v*v + PetscSqr(omega)*x*x), (double) 0.5*PetscSqr(omega*x0)));
+    if (user->error) PetscCall(PetscPrintf(comm, "p%" PetscInt_FMT " error [%.2g %.2g] sol [%.6lf %.6lf] exact [%.6lf %.6lf] energy/exact energy %g / %g\n", p, (double) PetscAbsReal(x-ex), (double) PetscAbsReal(v-ev), (double) x, (double) v, (double) ex, (double) ev, 0.5*(v*v + PetscSqr(omega)*x*x), (double) 0.5*PetscSqr(omega*x0)));
     e[p*2+0] = x - ex;
     e[p*2+1] = v - ev;
   }

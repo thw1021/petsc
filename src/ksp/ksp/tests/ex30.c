@@ -301,7 +301,7 @@ int main(int argc,char **args)
         }
         PetscCall(VecAXPY(b2,-1.0,b));
         PetscCall(VecNorm(b2,NORM_2,&rnorm));
-        PetscCall(PetscPrintf(PETSC_COMM_WORLD,"  Number of iterations = %3D\n",its));
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD,"  Number of iterations = %3" PetscInt_FMT "\n",its));
         PetscCall(PetscPrintf(PETSC_COMM_WORLD,"  Residual norm %g\n",(double)rnorm));
       }
       if (ckerror && !trans) {    /* Check error for each rhs */
@@ -329,7 +329,7 @@ int main(int argc,char **args)
       PetscCall(PetscViewerStringOpen(PETSC_COMM_WORLD,kspinfo,sizeof(kspinfo),&viewer));
       PetscCall(KSPView(ksp,viewer));
       PetscCall(PetscStrrchr(file[PetscPreLoadIt],'/',&matrixname));
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%-8.8s %3D %2.0e %s \n", matrixname,its,rnorm,kspinfo));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%-8.8s %3" PetscInt_FMT " %2.0e %s \n", matrixname,its,rnorm,kspinfo));
 
       /*
         Destroy the viewer
@@ -364,7 +364,7 @@ int main(int argc,char **args)
     if (flg) {
       KSPConvergedReason reason;
       PetscCall(KSPGetConvergedReason(ksp,&reason));
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD,"KSPConvergedReason: %D\n", reason));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD,"KSPConvergedReason: %" PetscInt_FMT "\n", reason));
     }
 
   }   /* while (num_numfac--) */

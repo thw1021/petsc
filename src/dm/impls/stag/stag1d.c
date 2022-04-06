@@ -111,10 +111,10 @@ PETSC_INTERN PetscErrorCode DMSetUp_Stag_1d(DM dm)
   PetscCallMPI(MPI_Comm_rank(comm,&rank));
 
   /* Check Global size */
-  PetscCheck(stag->N[0] >= 1,comm,PETSC_ERR_ARG_OUTOFRANGE,"Global grid size of %D < 1 specified",stag->N[0]);
+  PetscCheck(stag->N[0] >= 1,comm,PETSC_ERR_ARG_OUTOFRANGE,"Global grid size of %" PetscInt_FMT " < 1 specified",stag->N[0]);
 
   /* Local sizes */
-  PetscCheck(stag->N[0] >= size,comm,PETSC_ERR_ARG_OUTOFRANGE,"More ranks (%d) than elements (%D) specified",size,stag->N[0]);
+  PetscCheck(stag->N[0] >= size,comm,PETSC_ERR_ARG_OUTOFRANGE,"More ranks (%d) than elements (%" PetscInt_FMT ") specified",size,stag->N[0]);
   if (!stag->l[0]) {
     /* Divide equally, giving an extra elements to higher ranks */
     PetscCall(PetscMalloc1(stag->nRanks[0],&stag->l[0]));
@@ -123,7 +123,7 @@ PETSC_INTERN PetscErrorCode DMSetUp_Stag_1d(DM dm)
   {
     PetscInt Nchk = 0;
     for (j=0; j<size; ++j) Nchk += stag->l[0][j];
-    PetscCheck(Nchk == stag->N[0],comm,PETSC_ERR_ARG_OUTOFRANGE,"Sum of specified local sizes (%D) is not equal to global size (%D)",Nchk,stag->N[0]);
+    PetscCheck(Nchk == stag->N[0],comm,PETSC_ERR_ARG_OUTOFRANGE,"Sum of specified local sizes (%" PetscInt_FMT ") is not equal to global size (%" PetscInt_FMT ")",Nchk,stag->N[0]);
   }
   stag->n[0] = stag->l[0][rank];
 

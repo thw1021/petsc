@@ -672,7 +672,7 @@ PetscErrorCode  VecView_MPI_DA(Vec xin,PetscViewer viewer)
       PetscCall(VecView_MPI_Draw_DA1d(xin,viewer));
     } else if (dim == 2) {
       PetscCall(VecView_MPI_Draw_DA2d(xin,viewer));
-    } else SETERRQ(PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Cannot graphically view vector associated with this dimensional DMDA %D",dim);
+    } else SETERRQ(PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Cannot graphically view vector associated with this dimensional DMDA %" PetscInt_FMT,dim);
   } else if (isvtk) {           /* Duplicate the Vec */
     Vec Y;
     PetscCall(VecDuplicate(xin,&Y));
@@ -752,7 +752,7 @@ PetscErrorCode  VecView_MPI_DA(Vec xin,PetscViewer viewer)
       for (n=0; n<dof; n++) {
         PetscCall(DMDAGetFieldName(da,n,&fieldname));
         if (!fieldname || !fieldname[0]) {
-          PetscCall(PetscSNPrintf(fieldbuf,sizeof fieldbuf,"field%D",n));
+          PetscCall(PetscSNPrintf(fieldbuf,sizeof fieldbuf,"field%" PetscInt_FMT,n));
           fieldname = fieldbuf;
         }
         if (dim == 1) { PetscCall(PetscFPrintf(comm,info,"#$$ Set.%s.%s = squeeze(tmp(%d,:))';\n",name,fieldname,n+1)); }
@@ -836,10 +836,10 @@ PetscErrorCode VecLoad_HDF5_DA(Vec xin, PetscViewer viewer)
     if (dd->w == 1 && dims[dofInd] == 1) dim2 = PETSC_TRUE;
 
     /* Special error message for the case where dof does not match the input file */
-    else PetscCheck(dd->w == (PetscInt) dims[dofInd],PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED, "Number of dofs in file is %D, not %D as expected",(PetscInt)dims[dofInd],dd->w);
+    else PetscCheck(dd->w == (PetscInt) dims[dofInd],PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED, "Number of dofs in file is %" PetscInt_FMT ", not %" PetscInt_FMT " as expected",(PetscInt)dims[dofInd],dd->w);
 
   /* Other cases where rdim != dim cannot be handled currently */
-  } else PetscCheck(rdim == dim,PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED, "Dimension of array in file is %d, not %d as expected with dof = %D",rdim,dim,dd->w);
+  } else PetscCheck(rdim == dim,PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED, "Dimension of array in file is %d, not %d as expected with dof = %" PetscInt_FMT,rdim,dim,dd->w);
 
   /* Set up the hyperslab size */
   dim = 0;
@@ -925,7 +925,7 @@ PetscErrorCode VecLoad_Binary_DA(Vec xin, PetscViewer viewer)
   PetscCall(PetscInfo(xin,"Loading vector from natural ordering into DMDA\n"));
   PetscCall(PetscOptionsGetInt(NULL,((PetscObject)xin)->prefix,"-vecload_block_size",&bs,&flag));
   if (flag && bs != dd->w) {
-    PetscCall(PetscInfo(xin,"Block size in file %D not equal to DMDA's dof %D\n",bs,dd->w));
+    PetscCall(PetscInfo(xin,"Block size in file %" PetscInt_FMT " not equal to DMDA's dof %" PetscInt_FMT "\n",bs,dd->w));
   }
   PetscFunctionReturn(0);
 }

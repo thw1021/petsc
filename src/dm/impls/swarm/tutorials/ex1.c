@@ -36,7 +36,7 @@ int main(int argc, char **argv)
   PetscCall(DMGetBoundingBox(dm, lo, hi));
   for (i=0;i<dim;i++) {
     h[i] = (hi[i] - lo[i])/faces[i];
-    PetscCall(PetscPrintf(PETSC_COMM_SELF," lo = %g hi = %g n = %D h = %g\n",lo[i],hi[i],faces[i],h[i]));
+    PetscCall(PetscPrintf(PETSC_COMM_SELF," lo = %g hi = %g n = %" PetscInt_FMT " h = %g\n",lo[i],hi[i],faces[i],h[i]));
   }
 
   PetscCall(PetscFECreateDefault(PETSC_COMM_SELF, dim, Nc, PETSC_FALSE, "", PETSC_DECIDE, &fe));

@@ -488,7 +488,7 @@ static PetscErrorCode PetscFEOpenCLCalculateGrid(PetscFE fem, PetscInt N, PetscI
     *y = Nblocks / *x;
     if (*x * *y == (size_t)Nblocks) break;
   }
-  PetscCheck(*x * *y == (size_t)Nblocks,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Could not find partition for %D with block size %D", N, blockSize);
+  PetscCheck(*x * *y == (size_t)Nblocks,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Could not find partition for %" PetscInt_FMT " with block size %" PetscInt_FMT, N, blockSize);
   PetscFunctionReturn(0);
 }
 
@@ -560,7 +560,7 @@ static PetscErrorCode PetscFEIntegrateResidual_OpenCL(PetscDS prob, PetscFormKey
   PetscCall(PetscFEGetSpatialDimension(fem, &dim));
   PetscCall(PetscFEGetQuadrature(fem, &q));
   PetscCall(PetscQuadratureGetData(q, NULL, &qNc, &N_q, &points, &weights));
-  PetscCheck(qNc == 1,PETSC_COMM_SELF, PETSC_ERR_SUP, "Only supports scalar quadrature, not %D components", qNc);
+  PetscCheck(qNc == 1,PETSC_COMM_SELF, PETSC_ERR_SUP, "Only supports scalar quadrature, not %" PetscInt_FMT " components", qNc);
   PetscCall(PetscFEGetDimension(fem, &N_b));
   PetscCall(PetscFEGetNumComponents(fem, &N_comp));
   PetscCall(PetscDSGetResidual(prob, field, &f0_func, &f1_func));

@@ -111,7 +111,7 @@ static PetscErrorCode CheckPoint(DM dm, Vec u, PetscInt point, AppCtx *user)
   PetscCall(VecGetArrayRead(u, &array));
   PetscCall(DMPlexPointLocalRead(dm, point, array, &a));
   PetscCall(PetscSectionGetDof(s, point, &dof));
-  PetscCall(PetscPrintf(PETSC_COMM_SELF, "Point %D: ", point));
+  PetscCall(PetscPrintf(PETSC_COMM_SELF, "Point %" PetscInt_FMT ": ", point));
   for (d = 0; d < dof; ++d) {
     if (d > 0) PetscCall(PetscPrintf(PETSC_COMM_SELF, ", "));
     PetscCall(PetscPrintf(PETSC_COMM_SELF, "%2.0f", (double) PetscRealPart(a[d])));
@@ -132,9 +132,9 @@ static PetscErrorCode ReadData2D(DM dm, Vec u, AppCtx *user)
     PetscInt     closureSize, ki, kj, f, c, foff = 0;
 
     PetscCall(DMPlexVecGetClosure(dm, NULL, u, cell, &closureSize, &closure));
-    PetscCall(PetscPrintf(PETSC_COMM_SELF, "Cell %D\n", cell));
+    PetscCall(PetscPrintf(PETSC_COMM_SELF, "Cell %" PetscInt_FMT "\n", cell));
     for (f = 0; f < user->Nf; ++f) {
-      PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Field %D\n", f));
+      PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Field %" PetscInt_FMT "\n", f));
       for (kj = user->k[f]; kj >= 0; --kj) {
         for (ki = 0; ki <= user->k[f]; ++ki) {
           if (ki > 0) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  "));
@@ -165,9 +165,9 @@ static PetscErrorCode ReadData3D(DM dm, Vec u, AppCtx *user)
     PetscInt     closureSize, ki, kj, kk, f, c, foff = 0;
 
     PetscCall(DMPlexVecGetClosure(dm, NULL, u, cell, &closureSize, &closure));
-    PetscCall(PetscPrintf(PETSC_COMM_SELF, "Cell %D\n", cell));
+    PetscCall(PetscPrintf(PETSC_COMM_SELF, "Cell %" PetscInt_FMT "\n", cell));
     for (f = 0; f < user->Nf; ++f) {
-      PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Field %D\n", f));
+      PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Field %" PetscInt_FMT "\n", f));
       for (kk = user->k[f]; kk >= 0; --kk) {
         for (kj = user->k[f]; kj >= 0; --kj) {
           for (ki = 0; ki <= user->k[f]; ++ki) {

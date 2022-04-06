@@ -112,7 +112,7 @@ int main(int argc,char **argv)
   Jtype = 0;
   PetscCall(PetscOptionsGetInt(NULL,NULL, "-Jtype",&Jtype,NULL));
   if (Jtype == 0) { /* use user provided Jacobian evaluation routine */
-    PetscCheck(user.nstencilpts == 5,PETSC_COMM_WORLD,PETSC_ERR_SUP,"user Jacobian routine FormIJacobian() does not support nstencilpts=%D",user.nstencilpts);
+    PetscCheck(user.nstencilpts == 5,PETSC_COMM_WORLD,PETSC_ERR_SUP,"user Jacobian routine FormIJacobian() does not support nstencilpts=%" PetscInt_FMT,user.nstencilpts);
     PetscCall(TSSetIJacobian(ts,J,J,FormIJacobian,&user));
   } else { /* use finite difference Jacobian J as preconditioner and '-snes_mf_operator' for Mat*vec */
     PetscCall(TSGetSNES(ts,&snes));
