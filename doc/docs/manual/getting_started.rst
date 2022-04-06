@@ -454,12 +454,12 @@ or
 .. code-block:: fortran
 
    ! within the main program
-   ierr = PetscFunction(Args,ierr);CHKERRA(ierr);
+   call PetscFunction(Args,ierr);CHKERRA(ierr);
 
 .. code-block:: fortran
 
    ! within any subroutine
-   ierr = PetscFunction(Args,ierr);CHKERRQ(ierr);
+   call PetscFunction(Args,ierr);CHKERRQ(ierr);
 
 
 The PETSc macro ``PetscCall(PetscFunction(Args))`` checks the return code of the function
