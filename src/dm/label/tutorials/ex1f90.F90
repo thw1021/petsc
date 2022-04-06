@@ -42,29 +42,29 @@ contains
     character(len=PETSC_MAX_PATH_LEN):: labelName,IObuffer
     PetscInt                         :: numLabels,l
 
-    call DMGetNumLabels(dm, numLabels, ierr);PetscCall(ierr);
+    call DMGetNumLabels(dm, numLabels, ierr);SETERRQ(ierr);
     write(IObuffer,*) 'Number of labels: ', numLabels, '\n'
-    call PetscViewerASCIIPrintf(viewer, IObuffer, ierr);PetscCall(ierr)
+    call PetscViewerASCIIPrintf(viewer, IObuffer, ierr);SETERRQ(ierr)
     do l = 0, numLabels-1
-      call DMGetLabelName(dm, l, labelName, ierr);PetscCall(ierr)
+      call DMGetLabelName(dm, l, labelName, ierr);SETERRQ(ierr)
       write(IObuffer,*) 'label ',l,' name: ',trim(labelName),'\n'
-      call PetscViewerASCIIPrintf(viewer, IObuffer, ierr);PetscCall(ierr)
+      call PetscViewerASCIIPrintf(viewer, IObuffer, ierr);SETERRQ(ierr)
 
-      call PetscViewerASCIIPrintf(viewer, "IS of values\n", ierr);PetscCall(ierr)
-      call DMGetLabel(dm, labelName, label, ierr);PetscCall(ierr)
-      call DMLabelGetValueIS(label, labelIS, ierr);PetscCall(ierr)
-!      call PetscViewerASCIIPushTab(viewer,ierr);PetscCall(ierr)
-      call ISView(labelIS, viewer, ierr);PetscCall(ierr)
-!      call PetscViewerASCIIPopTab(viewer,ierr);PetscCall(ierr)
-      call ISDestroy(labelIS, ierr);PetscCall(ierr)
-      call PetscViewerASCIIPrintf(viewer, "\n", ierr);PetscCall(ierr)
+      call PetscViewerASCIIPrintf(viewer, "IS of values\n", ierr);SETERRQ(ierr)
+      call DMGetLabel(dm, labelName, label, ierr);SETERRQ(ierr)
+      call DMLabelGetValueIS(label, labelIS, ierr);SETERRQ(ierr)
+!      call PetscViewerASCIIPushTab(viewer,ierr);SETERRQ(ierr)
+      call ISView(labelIS, viewer, ierr);SETERRQ(ierr)
+!      call PetscViewerASCIIPopTab(viewer,ierr);SETERRQ(ierr)
+      call ISDestroy(labelIS, ierr);SETERRQ(ierr)
+      call PetscViewerASCIIPrintf(viewer, "\n", ierr);SETERRQ(ierr)
     end do
 
-    call PetscViewerASCIIPrintf(viewer,"\n\nCell Set label IS\n",ierr);PetscCall(ierr)
-    call DMGetLabel(dm, "Cell Sets", label, ierr);PetscCall(ierr)
-    call DMLabelGetValueIS(label, labelIS, ierr);PetscCall(ierr)
-    call ISView(labelIS, viewer, ierr);PetscCall(ierr)
-    call ISDestroy(labelIS, ierr);PetscCall(ierr)
+    call PetscViewerASCIIPrintf(viewer,"\n\nCell Set label IS\n",ierr);SETERRQ(ierr)
+    call DMGetLabel(dm, "Cell Sets", label, ierr);SETERRQ(ierr)
+    call DMLabelGetValueIS(label, labelIS, ierr);SETERRQ(ierr)
+    call ISView(labelIS, viewer, ierr);SETERRQ(ierr)
+    call ISDestroy(labelIS, ierr);SETERRQ(ierr)
   end subroutine viewLabels
 end program ex1F90
 
