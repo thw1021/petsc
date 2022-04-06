@@ -249,7 +249,7 @@ static PetscErrorCode PostStep(TS ts)
     PetscCall(DMPlexComputeIntegralFEM(plex,X,tt,ctx));
     den = tt[0];
     PetscCall(DMDestroy(&plex));
-    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "%D) total perturbed mass = %g\n", stepi, (double) PetscRealPart(den)));
+    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "%" PetscInt_FMT ") total perturbed mass = %g\n", stepi, (double) PetscRealPart(den)));
   }
   PetscFunctionReturn(0);
 }
@@ -388,9 +388,9 @@ static PetscErrorCode SetupEquilibriumFields(DM dm, DM dmAux, AppCtx *ctx)
     PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERHDF5,&isHDF5));
     PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERVTK,&isVTK));
     if (isHDF5) {
-      PetscCall(PetscSNPrintf(buf, 256, "uEquilibrium-%dD.h5", dim));
+      PetscCall(PetscSNPrintf(buf, 256, "uEquilibrium-%" PetscInt_FMT "D.h5", dim));
     } else if (isVTK) {
-      PetscCall(PetscSNPrintf(buf, 256, "uEquilibrium-%dD.vtu", dim));
+      PetscCall(PetscSNPrintf(buf, 256, "uEquilibrium-%" PetscInt_FMT "D.vtu", dim));
       PetscCall(PetscViewerPushFormat(viewer,PETSC_VIEWER_VTK_VTU));
     }
     PetscCall(PetscViewerFileSetMode(viewer,FILE_MODE_WRITE));

@@ -217,7 +217,7 @@ PetscErrorCode ex3_1(void)
   dt = 0.1;
   for (tk=1; tk<20; tk++) {
     char prefix[PETSC_MAX_PATH_LEN];
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Step %D \n",tk));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Step %" PetscInt_FMT " \n",tk));
     /* push points */
     PetscCall(DMSwarmGetLocalSize(dms,&nlocal));
     PetscCall(DMSwarmGetField(dms,DMSwarmPICField_coor,&bs,NULL,(void**)&array));

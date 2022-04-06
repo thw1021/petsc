@@ -267,7 +267,7 @@ int main(int argc, char **argv) {
     PetscCall(DMLabelHasStratum(bdLabel, 2, &hasTag));
     PetscCheck(hasTag,comm, PETSC_ERR_ARG_OUTOFRANGE, "Adapted mesh does not have face tag 2");
     PetscCall(DMLabelGetNumValues(bdLabel, &size));
-    PetscCheck(size == 2,comm, PETSC_ERR_ARG_OUTOFRANGE, "Adapted mesh has the wrong number of face tags (got %d, expected 2)", size);
+    PetscCheck(size == 2,comm, PETSC_ERR_ARG_OUTOFRANGE, "Adapted mesh has the wrong number of face tags (got %" PetscInt_FMT ", expected 2)", size);
 
     PetscCall(DMGetLabel(dmAdapt, "Cell Sets", &rgLabel));
     PetscCall(DMLabelHasStratum(rgLabel, 3, &hasTag));
@@ -275,7 +275,7 @@ int main(int argc, char **argv) {
     PetscCall(DMLabelHasStratum(rgLabel, 4, &hasTag));
     PetscCheck(hasTag,comm, PETSC_ERR_ARG_OUTOFRANGE, "Adapted mesh does not have cell tag 4");
     PetscCall(DMLabelGetNumValues(rgLabel, &size));
-    PetscCheck(size == 2,comm, PETSC_ERR_ARG_OUTOFRANGE, "Adapted mesh has the wrong number of cell tags (got %d, expected 2)", size);
+    PetscCheck(size == 2,comm, PETSC_ERR_ARG_OUTOFRANGE, "Adapted mesh has the wrong number of cell tags (got %" PetscInt_FMT ", expected 2)", size);
   }
 
   /* Clean up */

@@ -41,7 +41,7 @@ PetscErrorCode RunTest(void)
 
   if (test) {
     PetscCall(KSPGetTotalIterations(ksp,&its));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Number of KSP iterations = %D\n", its));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Number of KSP iterations = %" PetscInt_FMT "\n", its));
   } else {
     PetscCall(VecDuplicate(b,&r));
     PetscCall(MatMult(A,x,r));

@@ -1430,8 +1430,8 @@ static PetscErrorCode THIDAVecView_VTK_XML(THI thi,DM pack,Vec X,const char file
         y3 = (Node*)x;
         y2 = (PetscScalar(*)[PRMNODE_SIZE])x2;
       }
-      PetscCall(PetscViewerASCIIPrintf(viewer3,"    <Piece Extent=\"%D %D %D %D %D %D\">\n",zs,zs+zm-1,ys,ys+ym-1,xs,xs+xm-1));
-      PetscCall(PetscViewerASCIIPrintf(viewer2,"    <Piece Extent=\"%d %d %D %D %D %D\">\n",0,0,ys,ys+ym-1,xs,xs+xm-1));
+      PetscCall(PetscViewerASCIIPrintf(viewer3,"    <Piece Extent=\"%" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT "\">\n",zs,zs+zm-1,ys,ys+ym-1,xs,xs+xm-1));
+      PetscCall(PetscViewerASCIIPrintf(viewer2,"    <Piece Extent=\"%d %d %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT "\">\n",0,0,ys,ys+ym-1,xs,xs+xm-1));
 
       PetscCall(PetscViewerASCIIPrintf(viewer3,"      <Points>\n"));
       PetscCall(PetscViewerASCIIPrintf(viewer2,"      <Points>\n"));
@@ -1466,7 +1466,7 @@ static PetscErrorCode THIDAVecView_VTK_XML(THI thi,DM pack,Vec X,const char file
 
         PetscCall(PetscViewerASCIIPrintf(viewer3,"        <DataArray type=\"Int32\" Name=\"rank\" NumberOfComponents=\"1\" format=\"ascii\">\n"));
         for (i=0; i<nn; i+=dof) {
-          PetscCall(PetscViewerASCIIPrintf(viewer3,"%D\n",r));
+          PetscCall(PetscViewerASCIIPrintf(viewer3,"%" PetscInt_FMT "\n",r));
         }
         PetscCall(PetscViewerASCIIPrintf(viewer3,"        </DataArray>\n"));
         PetscCall(PetscViewerASCIIPrintf(viewer3,"      </PointData>\n"));
@@ -1516,7 +1516,7 @@ static PetscErrorCode THITSMonitor(TS ts,PetscInt step,PetscReal t,Vec X,void *c
 
   PetscFunctionBeginUser;
   if (step < 0) PetscFunctionReturn(0); /* negative one is used to indicate an interpolated solution */
-  PetscCall(PetscPrintf(PetscObjectComm((PetscObject)ts),"%3D: t=%g\n",step,(double)t));
+  PetscCall(PetscPrintf(PetscObjectComm((PetscObject)ts),"%3" PetscInt_FMT ": t=%g\n",step,(double)t));
   if (thi->monitor_interval && step % thi->monitor_interval) PetscFunctionReturn(0);
   PetscCall(TSGetDM(ts,&pack));
   PetscCall(PetscSNPrintf(filename3,sizeof(filename3),"%s-3d-%03d.vts",thi->monitor_basename,step));
@@ -1599,7 +1599,7 @@ int main(int argc,char *argv[])
     PetscInt  Mx,My,Mz;
     PetscCall(DMCompositeGetEntries(pack,&da3,&da2));
     PetscCall(DMDAGetInfo(da3,0, &Mz,&My,&Mx, 0,0,0, 0,0,0,0,0,0));
-    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)thi),"Level %D domain size (m) %8.2g x %8.2g x %8.2g, num elements %3d x %3d x %3d (%8d), size (m) %g x %g x %g\n",i,Lx,Ly,Lz,Mx,My,Mz,Mx*My*Mz,Lx/Mx,Ly/My,1000./(Mz-1)));
+    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)thi),"Level %" PetscInt_FMT " domain size (m) %8.2g x %8.2g x %8.2g, num elements %3d x %3d x %3d (%8d), size (m) %g x %g x %g\n",i,Lx,Ly,Lz,Mx,My,Mz,Mx*My*Mz,Lx/Mx,Ly/My,1000./(Mz-1)));
   }
 
   PetscCall(DMCreateGlobalVector(pack,&X));
@@ -1621,7 +1621,7 @@ int main(int argc,char *argv[])
   PetscCall(TSSolve(ts,X));
   PetscCall(TSGetSolveTime(ts,&ftime));
   PetscCall(TSGetStepNumber(ts,&steps));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Steps %D  final time %g\n",steps,(double)ftime));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Steps %" PetscInt_FMT "  final time %g\n",steps,(double)ftime));
 
   if (0) PetscCall(THISolveStatistics(thi,ts,0,"Full"));
 

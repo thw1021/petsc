@@ -95,7 +95,7 @@ PetscErrorCode main(int argc,char **argv)
   PetscCall(PetscOptionsGetBool(NULL,NULL,"-test_lmvm",&test_lmvm,&flg));
 
   PetscCall(PetscPrintf(PETSC_COMM_SELF,"\n---- Elastic-Plastic Torsion Problem -----\n"));
-  PetscCall(PetscPrintf(PETSC_COMM_SELF,"mx: %D     my: %D   \n\n",mx,my));
+  PetscCall(PetscPrintf(PETSC_COMM_SELF,"mx: %" PetscInt_FMT "     my: %" PetscInt_FMT "   \n\n",mx,my));
   user.ndim = mx * my; user.mx = mx; user.my = my;
   user.hx = one/(mx+1); user.hy = one/(my+1);
 

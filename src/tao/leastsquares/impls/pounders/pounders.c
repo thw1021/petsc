@@ -717,7 +717,7 @@ static PetscErrorCode TaoSolve_POUNDERS(Tao tao)
   /* (Column oriented for blas calls) */
   ii=0;
 
-  PetscCall(PetscInfo(tao,"Build matrix: %D\n",(PetscInt)mfqP->size));
+  PetscCall(PetscInfo(tao,"Build matrix: %" PetscInt_FMT "\n",(PetscInt)mfqP->size));
   if (1 == mfqP->size) {
     PetscCall(VecGetArrayRead(mfqP->Xhist[mfqP->minindex],&xmint));
     for (i=0;i<mfqP->n;i++) mfqP->xmin[i] = xmint[i];
@@ -788,7 +788,7 @@ static PetscErrorCode TaoSolve_POUNDERS(Tao tao)
   /* D (nxn) Fdiff (nxm)  => G (nxm) */
   blasncopy = blasn;
   PetscStackCallBLAS("LAPACKgesv",LAPACKgesv_(&blasn,&blasm,mfqP->Disp,&blasnpmax,mfqP->iwork,mfqP->Fdiff,&blasncopy,&info));
-  PetscCall(PetscInfo(tao,"Linear solve return: %D\n",(PetscInt)info));
+  PetscCall(PetscInfo(tao,"Linear solve return: %" PetscInt_FMT "\n",(PetscInt)info));
 
   PetscCall(pounders_update_res(tao));
 
@@ -939,7 +939,7 @@ static PetscErrorCode TaoSolve_POUNDERS(Tao tao)
     }
 
     /* Update the quadratic model */
-    PetscCall(PetscInfo(tao,"Get Quad, size: %D, points: %D\n",mfqP->n,mfqP->nmodelpoints));
+    PetscCall(PetscInfo(tao,"Get Quad, size: %" PetscInt_FMT ", points: %" PetscInt_FMT "\n",mfqP->n,mfqP->nmodelpoints));
     PetscCall(getquadpounders(mfqP));
     PetscCall(VecGetArrayRead(mfqP->Fhist[mfqP->minindex],&fmin));
     PetscStackCallBLAS("BLAScopy",BLAScopy_(&blasm,fmin,&ione,mfqP->C,&ione));
@@ -1217,7 +1217,7 @@ static PetscErrorCode TaoView_POUNDERS(Tao tao, PetscViewer viewer)
   if (isascii) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "initial delta: %g\n",(double)mfqP->delta0));
     PetscCall(PetscViewerASCIIPrintf(viewer, "final delta: %g\n",(double)mfqP->delta));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "model points: %D\n",mfqP->nmodelpoints));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "model points: %" PetscInt_FMT "\n",mfqP->nmodelpoints));
     if (mfqP->usegqt) {
       PetscCall(PetscViewerASCIIPrintf(viewer, "subproblem solver: gqt\n"));
     } else {

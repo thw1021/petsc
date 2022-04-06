@@ -1125,8 +1125,9 @@ static PetscErrorCode LAPACKsyevFail(PetscInt dim, PetscScalar Mpos[])
     if (i == 0) PetscPrintf(PETSC_COMM_SELF, "    [[");
     else        PetscPrintf(PETSC_COMM_SELF, "     [");
     for (j = 0; j < dim; ++j) {
-      if (j < dim-1) PetscPrintf(PETSC_COMM_SELF, "%15.8e, ", Mpos[i*dim+j]);
-      else           PetscPrintf(PETSC_COMM_SELF, "%15.8e", Mpos[i*dim+j]);
+      // PETSC_ATTR_FMT_ALL_THE_REST REVIEW ME
+      if (j < dim-1) PetscPrintf(PETSC_COMM_SELF, "%15.8e, ", (double)PetscAbsScalar(Mpos[i*dim+j]));
+      else           PetscPrintf(PETSC_COMM_SELF, "%15.8e", (double)PetscAbsScalar(Mpos[i*dim+j]));
     }
     if (i < dim-1) PetscPrintf(PETSC_COMM_SELF, "]\n");
     else           PetscPrintf(PETSC_COMM_SELF, "]]\n");
@@ -1490,7 +1491,7 @@ PetscErrorCode DMPlexMetricAverage(DM dm, PetscInt numMetrics, PetscReal weights
 
   PetscFunctionBegin;
   PetscCall(PetscLogEventBegin(DMPLEX_MetricAverage,0,0,0,0));
-  PetscCheck(numMetrics >= 1,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Cannot average %d < 1 metrics", numMetrics);
+  PetscCheck(numMetrics >= 1,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Cannot average %" PetscInt_FMT " < 1 metrics", numMetrics);
   PetscCall(DMPlexMetricCreate(dm, 0, metricAvg));
   PetscCall(VecSet(*metricAvg, 0.0));
   PetscCall(VecGetSize(*metricAvg, &m));
@@ -1724,7 +1725,7 @@ PetscErrorCode DMPlexMetricIntersection(DM dm, PetscInt numMetrics, Vec metrics[
 
   PetscFunctionBegin;
   PetscCall(PetscLogEventBegin(DMPLEX_MetricIntersection,0,0,0,0));
-  PetscCheck(numMetrics >= 1,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Cannot intersect %d < 1 metrics", numMetrics);
+  PetscCheck(numMetrics >= 1,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Cannot intersect %" PetscInt_FMT " < 1 metrics", numMetrics);
 
   /* Copy over the first metric */
   PetscCall(DMPlexMetricCreate(dm, 0, metricInt));

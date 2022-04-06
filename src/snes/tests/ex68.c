@@ -151,7 +151,7 @@ int main(int argc, char **argv)
     PetscCall(ConstructProblem2(A, b));
     break;
   default:
-    SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "Invalid problem number %d", problem);
+    SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "Invalid problem number %" PetscInt_FMT, problem);
   }
 
   PetscCall(SNESCreate(PETSC_COMM_WORLD, &snes));
@@ -170,7 +170,7 @@ int main(int argc, char **argv)
     PetscCall(CheckProblem2(A, b, u));
     break;
   default:
-    SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "Invalid problem number %d", problem);
+    SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "Invalid problem number %" PetscInt_FMT, problem);
   }
 
   if (A != J) {
