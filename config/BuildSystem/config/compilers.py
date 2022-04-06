@@ -386,6 +386,20 @@ class Configure(config.base.Configure):
         self.addDefine('HAVE_RTLD_GLOBAL', 1)
     return
 
+  def checkExecutableExportFlag(self):
+    '''Checks for the flag that allows executables to export symbols to dlsym()'''
+    # Right now, we just check some compilers, but we should make a test trying to load a symbol from the executable
+    # Discussion: https://stackoverflow.com/questions/6292473/how-to-call-function-in-executable-from-my-library/6298434#6298434
+    compiler = self.setCompilers.getCompiler('C')
+    if self.setCompilers.isClang(compiler, self.log):
+      self.addDefine('HAVE_EXECUTABLE_EXPORT', 1)
+    elif self.isGNU(compiler, self.log):
+      flag = '-export-dynamic'
+      if self.setCompilers.checkCompilerFlag(flag):
+        self.addDefine('HAVE_EXECUTABLE_EXPORT', 1)
+        self.addMakeMacro('EXEFLAGS', flag)
+    return
+
   def checkCxxOptionalExtensions(self):
     '''Check whether the C++ compiler (IBM xlC, OSF5) need special flag for .c files which contain C++'''
     self.setCompilers.saveLog()
@@ -1413,6 +1427,7 @@ Otherwise you need a different combination of C, C++, and Fortran compilers")
       if self.argDB['with-clib-autodetect']:
         self.executeTest(self.checkCLibraries)
       self.executeTest(self.checkDependencyGenerationFlag)
+      self.executeTest(self.checkExecutableExportFlag)
     else:
       self.isGCC = 0
 
