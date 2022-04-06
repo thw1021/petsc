@@ -293,7 +293,7 @@ PetscErrorCode ComputeRHS_MOAB(KSP ksp, Vec b, void *ptr)
 
     /* Get connectivity information: */
     PetscCall(DMMoabGetElementConnectivity(dm, ehandle, &nconn, &connect));
-    PetscCheckFalse(nconn != 4 && nconn != 8,PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "Only HEX8/TET4 element bases are supported in the current example. n(Connectivity)=%D.", nconn);
+    PetscCheckFalse(nconn != 4 && nconn != 8,PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "Only HEX8/TET4 element bases are supported in the current example. n(Connectivity)=%" PetscInt_FMT ".", nconn);
 
     /* get the coordinates of the element vertices */
     PetscCall(DMMoabGetVertexCoordinates(dm, nconn, connect, vpos));
@@ -391,7 +391,7 @@ PetscErrorCode ComputeMatrix_MOAB(KSP ksp, Mat J, Mat jac, void *ctx)
 
     /* Get connectivity information: */
     PetscCall(DMMoabGetElementConnectivity(dm, ehandle, &nconn, &connect));
-    PetscCheckFalse(nconn != 4 && nconn != 8,PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "Only HEX8/TET4 element bases are supported in the current example. n(Connectivity)=%D.", nconn);
+    PetscCheckFalse(nconn != 4 && nconn != 8,PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "Only HEX8/TET4 element bases are supported in the current example. n(Connectivity)=%" PetscInt_FMT ".", nconn);
 
     /* get the coordinates of the element vertices */
     PetscCall(DMMoabGetVertexCoordinates(dm, nconn, connect, vpos));

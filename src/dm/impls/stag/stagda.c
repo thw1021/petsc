@@ -130,7 +130,7 @@ static PetscErrorCode DMStagDMDAGetExtraPoints(DM dm,DMStagStencilLocation locCa
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm,DM_CLASSID,1,DMSTAG);
   PetscCall(DMGetDimension(dm,&dim));
-  PetscCheck(dim <= DMSTAG_MAX_DIM,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Not implemented for %D dimensions",dim);
+  PetscCheck(dim <= DMSTAG_MAX_DIM,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Not implemented for %" PetscInt_FMT " dimensions",dim);
   PetscCall(DMStagGetCorners(dm,NULL,NULL,NULL,NULL,NULL,NULL,&nExtra[0],&nExtra[1],&nExtra[2]));
   for (d=0; d<dim; ++d) extraPoint[d] = 0;
   switch (locCanonical) {
@@ -172,7 +172,7 @@ static PetscErrorCode DMStagMigrateVecDMDA(DM dm,Vec vec,DMStagStencilLocation l
   PetscValidHeaderSpecific(vecTo,VEC_CLASSID,6);
   PetscCall(DMGetDimension(dm,&dim));
   PetscCall(DMDAGetDof(dmTo,&dofToMax));
-  PetscCheck(-c <= dofToMax,PetscObjectComm((PetscObject)dmTo),PETSC_ERR_ARG_OUTOFRANGE,"Invalid negative component value. Must be >= -%D",dofToMax);
+  PetscCheck(-c <= dofToMax,PetscObjectComm((PetscObject)dmTo),PETSC_ERR_ARG_OUTOFRANGE,"Invalid negative component value. Must be >= -%" PetscInt_FMT "",dofToMax);
   PetscCall(DMStagGetCorners(dm,&start[0],&start[1],&start[2],&n[0],&n[1],&n[2],NULL,NULL,NULL));
   PetscCall(DMStagDMDAGetExtraPoints(dm,loc,extraPoint));
   PetscCall(DMStagGetLocationDOF(dm,loc,&dof));
@@ -424,7 +424,7 @@ PetscErrorCode DMStagVecSplitToDMDA(DM dm,Vec vec,DMStagStencilLocation loc,Pets
   PetscValidHeaderSpecific(vec,VEC_CLASSID,2);
   PetscCall(DMGetDimension(dm,&dim));
   PetscCall(DMStagGetLocationDOF(dm,loc,&locdof));
-  PetscCheck(c < locdof,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Location %s has %D dof, but component %D requested",DMStagStencilLocations[loc],locdof,c);
+  PetscCheck(c < locdof,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Location %s has %" PetscInt_FMT " dof, but component %" PetscInt_FMT " requested",DMStagStencilLocations[loc],locdof,c);
   PetscCall(DMStagStencilLocationCanonicalize(loc,&locCanonical));
   PetscCall(DMStagCreateCompatibleDMDA(dm,locCanonical,c,pda));
   da = *pda;

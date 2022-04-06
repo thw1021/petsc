@@ -249,7 +249,7 @@ static PetscErrorCode PostStep(TS ts)
     PetscCall(DMPlexComputeIntegralFEM(plex,X,tt,ctx));
     den = tt[0];
     PetscCall(DMDestroy(&plex));
-    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "%D) total perturbed mass = %g\n", stepi, (double) PetscRealPart(den)));
+    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "%" PetscInt_FMT ") total perturbed mass = %g\n", stepi, (double) PetscRealPart(den)));
   }
   PetscFunctionReturn(0);
 }

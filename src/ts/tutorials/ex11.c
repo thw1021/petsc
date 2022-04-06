@@ -1219,7 +1219,7 @@ static PetscErrorCode MonitorVTK(TS ts,PetscInt stepnum,PetscReal time,Vec X,voi
     }
     PetscCall(PetscFree4(fmin,fmax,fintegral,ftmp));
 
-    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)ts),"% 3D  time %8.4g  |x| %8.4g  %s\n",stepnum,(double)time,(double)xnorm,ftable ? ftable : ""));
+    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)ts),"% 3" PetscInt_FMT "  time %8.4g  |x| %8.4g  %s\n",stepnum,(double)time,(double)xnorm,ftable ? ftable : ""));
     PetscCall(PetscFree(ftable));
   }
   if (user->vtkInterval < 1) PetscFunctionReturn(0);
@@ -1227,7 +1227,7 @@ static PetscErrorCode MonitorVTK(TS ts,PetscInt stepnum,PetscReal time,Vec X,voi
     if (stepnum == -1) {        /* Final time is not multiple of normal time interval, write it anyway */
       PetscCall(TSGetStepNumber(ts,&stepnum));
     }
-    PetscCall(PetscSNPrintf(filename,sizeof filename,"%s-%03D.vtu",user->outputBasename,stepnum));
+    PetscCall(PetscSNPrintf(filename,sizeof filename,"%s-%03" PetscInt_FMT ".vtu",user->outputBasename,stepnum));
     PetscCall(OutputVTK(dm,filename,&viewer));
     PetscCall(VecView(X,viewer));
     PetscCall(PetscViewerDestroy(&viewer));
@@ -1338,7 +1338,7 @@ static PetscErrorCode adaptToleranceFVM(PetscFV fvm, TS ts, Vec sol, VecTagger r
   }
   PetscCall(DMLabelDestroy(&adaptLabel));
   if (adaptedDM) {
-    PetscCall(PetscInfo(ts, "Adapted mesh, marking %D cells for refinement, and %D cells for coarsening\n", nRefine, nCoarsen));
+    PetscCall(PetscInfo(ts, "Adapted mesh, marking %" PetscInt_FMT " cells for refinement, and %" PetscInt_FMT " cells for coarsening\n", nRefine, nCoarsen));
     if (tsNew) PetscCall(initializeTS(adaptedDM, user, tsNew));
     if (solNew) {
       PetscCall(DMCreateGlobalVector(adaptedDM, solNew));
@@ -1589,7 +1589,7 @@ int main(int argc, char **argv)
       TS             tsNew = NULL;
 
       PetscCall(PetscMemoryGetCurrentUsage(&bytes));
-      PetscCall(PetscInfo(ts, "refinement loop %D: memory used %g\n", adaptIter, bytes));
+      PetscCall(PetscInfo(ts, "refinement loop %" PetscInt_FMT ": memory used %g\n", adaptIter, bytes));
       PetscCall(DMViewFromOptions(dm, NULL, "-initial_dm_view"));
       PetscCall(VecViewFromOptions(X, NULL, "-initial_vec_view"));
 #if 0
@@ -1683,7 +1683,7 @@ int main(int argc, char **argv)
       PetscLogDouble bytes;
 
       PetscCall(PetscMemoryGetCurrentUsage(&bytes));
-      PetscCall(PetscInfo(ts, "AMR time step loop %D: memory used %g\n", adaptIter, bytes));
+      PetscCall(PetscInfo(ts, "AMR time step loop %" PetscInt_FMT ": memory used %g\n", adaptIter, bytes));
       PetscCall(PetscFVSetLimiter(fvm,noneLimiter));
       PetscCall(adaptToleranceFVM(fvm,ts,X,refineTag,coarsenTag,user,&tsNew,&solNew));
       PetscCall(PetscFVSetLimiter(fvm,limiter));
@@ -1717,7 +1717,7 @@ int main(int argc, char **argv)
     }
   }
   PetscCall(TSGetConvergedReason(ts,&reason));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%s at time %g after %D steps\n",TSConvergedReasons[reason],(double)ftime,nsteps));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%s at time %g after %" PetscInt_FMT " steps\n",TSConvergedReasons[reason],(double)ftime,nsteps));
   PetscCall(TSDestroy(&ts));
 
   PetscCall(VecTaggerDestroy(&refineTag));

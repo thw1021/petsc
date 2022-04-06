@@ -27,7 +27,7 @@ static PetscErrorCode PCView_Redistribute(PC pc,PetscViewer viewer)
   if (iascii) {
     PetscCall(MPIU_Allreduce(&red->dcnt,&ncnt,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)pc)));
     PetscCall(MatGetSize(pc->pmat,&N,NULL));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"    Number rows eliminated %D Percentage rows eliminated %g\n",ncnt,100.0*((PetscReal)ncnt)/((PetscReal)N)));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"    Number rows eliminated %" PetscInt_FMT " Percentage rows eliminated %g\n",ncnt,100.0*((PetscReal)ncnt)/((PetscReal)N)));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  Redistribute preconditioner: \n"));
     PetscCall(KSPView(red->ksp,viewer));
   } else if (isstring) {
@@ -188,7 +188,7 @@ static PetscErrorCode PCSetUp_Redistribute(PC pc)
         slen += n;
         count--;
       }
-      PetscCheck(slen == recvtotal,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Total message lengths %D not expected %D",slen,recvtotal);
+      PetscCheck(slen == recvtotal,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Total message lengths %" PetscInt_FMT " not expected %" PetscInt_FMT "",slen,recvtotal);
       PetscCall(ISCreateGeneral(comm,slen,rvalues,PETSC_COPY_VALUES,&red->is));
 
       /* free all work space */

@@ -611,14 +611,14 @@ static PetscErrorCode KSPView_AGMRES(KSP ksp,PetscViewer viewer)
   if (iascii) {
     PetscCall(PetscViewerASCIIPrintf(viewer, " restart=%d using %s\n", agmres->max_k, cstr));
     PetscCall(PetscViewerASCIIPrintf(viewer, " %s\n", Nstr));
-    PetscCall(PetscViewerASCIIPrintf(viewer, " Number of matvecs : %D\n", agmres->matvecs));
+    PetscCall(PetscViewerASCIIPrintf(viewer, " Number of matvecs : %" PetscInt_FMT "\n", agmres->matvecs));
     if (agmres->force) PetscCall(PetscViewerASCIIPrintf (viewer, " Adaptive strategy is used: FALSE\n"));
     else PetscViewerASCIIPrintf(viewer, " Adaptive strategy is used: TRUE\n");
     if (agmres->DeflPrecond) {
       PetscCall(PetscViewerASCIIPrintf(viewer, " STRATEGY OF DEFLATION: PRECONDITIONER \n"));
-      PetscCall(PetscViewerASCIIPrintf(viewer, "  Frequency of extracted eigenvalues = %D\n", agmres->neig));
-      PetscCall(PetscViewerASCIIPrintf(viewer, "  Total number of extracted eigenvalues = %D\n", agmres->r));
-      PetscCall(PetscViewerASCIIPrintf(viewer, "  Maximum number of eigenvalues set to be extracted = %D\n", agmres->max_neig));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "  Frequency of extracted eigenvalues = %" PetscInt_FMT "\n", agmres->neig));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "  Total number of extracted eigenvalues = %" PetscInt_FMT "\n", agmres->r));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "  Maximum number of eigenvalues set to be extracted = %" PetscInt_FMT "\n", agmres->max_neig));
     } else {
       if (agmres->ritz) sprintf(ritzvec, "Ritz vectors");
       else sprintf(ritzvec, "Harmonic Ritz vectors");
@@ -628,7 +628,7 @@ static PetscErrorCode KSPView_AGMRES(KSP ksp,PetscViewer viewer)
     PetscCall(PetscViewerASCIIPrintf(viewer, " Minimum relaxation parameter for the adaptive strategy(smv)  = %g\n", agmres->smv));
     PetscCall(PetscViewerASCIIPrintf(viewer, " Maximum relaxation parameter for the adaptive strategy(bgv)  = %g\n", agmres->bgv));
   } else if (isstring) {
-    PetscCall(PetscViewerStringSPrintf(viewer,"%s restart %D",cstr,agmres->max_k));
+    PetscCall(PetscViewerStringSPrintf(viewer,"%s restart %" PetscInt_FMT "",cstr,agmres->max_k));
   }
   PetscFunctionReturn(0);
 }

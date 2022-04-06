@@ -20,7 +20,7 @@
 
 /* placeholder defines */
 #if PetscHasAttribute(format)
-#  define PETSC_ATTRIBUTE_FORMAT(strIdx,vaArgIdx)
+#  define PETSC_ATTRIBUTE_FORMAT(strIdx,vaArgIdx) __attribute__((format(printf,strIdx,vaArgIdx)))
 #else
 #  define PETSC_ATTRIBUTE_FORMAT(strIdx,vaArgIdx)
 #endif

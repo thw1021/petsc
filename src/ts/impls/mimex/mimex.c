@@ -294,7 +294,7 @@ static PetscErrorCode TSView_Mimex(TS ts,PetscViewer viewer)
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii));
   if (iascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  Version = %D\n", mimex->version));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Version = %" PetscInt_FMT "\n", mimex->version));
   }
   PetscFunctionReturn(0);
 }

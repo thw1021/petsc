@@ -455,7 +455,7 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
     case DEFORM_NONE:  break;
     case DEFORM_SHEAR: PetscCall(DMPlexShearGeometry(*dm, DM_X, NULL));break;
     case DEFORM_STEP:  PetscCall(DMPlexDistortGeometry(*dm));break;
-    default: SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "Invalid deformation type: %s (%D)", deformTypes[PetscMin(user->deform, NUM_DEFORM_TYPES)], user->deform);
+    default: SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "Invalid deformation type: %s (%" PetscInt_FMT ")", deformTypes[PetscMin(user->deform, NUM_DEFORM_TYPES)], user->deform);
   }
   PetscCall(DMSetApplicationContext(*dm, user));
   PetscCall(DMViewFromOptions(*dm, NULL, "-dm_view"));
@@ -485,7 +485,7 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
     switch (dim) {
     case 2: exact = quadratic_2d_u;break;
     case 3: exact = quadratic_3d_u;break;
-    default: SETERRQ(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Invalid dimension: %D", dim);
+    default: SETERRQ(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Invalid dimension: %" PetscInt_FMT "", dim);
     }
     break;
   case SOL_VLAP_QUADRATIC:
@@ -494,7 +494,7 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
     switch (dim) {
     case 2: exact = quadratic_2d_u;break;
     case 3: exact = quadratic_3d_u;break;
-    default: SETERRQ(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Invalid dimension: %D", dim);
+    default: SETERRQ(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Invalid dimension: %" PetscInt_FMT "", dim);
     }
     break;
   case SOL_ELAS_QUADRATIC:
@@ -503,7 +503,7 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
     switch (dim) {
     case 2: exact = quadratic_2d_u;break;
     case 3: exact = quadratic_3d_u;break;
-    default: SETERRQ(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Invalid dimension: %D", dim);
+    default: SETERRQ(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Invalid dimension: %" PetscInt_FMT "", dim);
     }
     break;
   case SOL_VLAP_TRIG:
@@ -512,7 +512,7 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
     switch (dim) {
     case 2: exact = trig_2d_u;break;
     case 3: exact = trig_3d_u;break;
-    default: SETERRQ(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Invalid dimension: %D", dim);
+    default: SETERRQ(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Invalid dimension: %" PetscInt_FMT "", dim);
     }
     break;
   case SOL_ELAS_TRIG:
@@ -521,7 +521,7 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
     switch (dim) {
     case 2: exact = trig_2d_u;break;
     case 3: exact = trig_3d_u;break;
-    default: SETERRQ(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Invalid dimension: %D", dim);
+    default: SETERRQ(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Invalid dimension: %" PetscInt_FMT "", dim);
     }
     break;
   case SOL_ELAS_AXIAL_DISP:
@@ -544,7 +544,7 @@ static PetscErrorCode SetupPrimalProblem(DM dm, AppCtx *user)
     PetscCall(PetscDSSetJacobian(ds, 0, 0, NULL, NULL, NULL, g3_elas_uu));
     exact = zero; /* No exact solution available */
     break;
-  default: SETERRQ(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Invalid solution type: %s (%D)", solutionTypes[PetscMin(user->solType, NUM_SOLUTION_TYPES)], user->solType);
+  default: SETERRQ(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Invalid solution type: %s (%" PetscInt_FMT ")", solutionTypes[PetscMin(user->solType, NUM_SOLUTION_TYPES)], user->solType);
   }
   PetscCall(PetscDSSetExactSolution(ds, 0, exact, user));
   PetscCall(DMGetLabel(dm, "marker", &label));

@@ -108,7 +108,7 @@ static PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal t,Vec X,void *ctx)
     PetscCall(VecDuplicate(X,&interpolatedX));
     PetscCall(TSInterpolate(ts,user->next_output,interpolatedX));
     PetscCall(VecGetArrayRead(interpolatedX,&x));
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"[%.1f] %D TS %.6f (dt = %.6f) X % 12.6e % 12.6e\n",
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"[%.1f] %" PetscInt_FMT " TS %.6f (dt = %.6f) X % 12.6e % 12.6e\n",
                        user->next_output,step,t,dt,(double)PetscRealPart(x[0]),
                        (double)PetscRealPart(x[1]));PetscCall(ierr);
     PetscCall(VecRestoreArrayRead(interpolatedX,&x));
@@ -197,7 +197,7 @@ int main(int argc,char **argv)
   PetscCall(TSSolve(ts,x));
   PetscCall(TSGetSolveTime(ts,&ftime));
   PetscCall(TSGetStepNumber(ts,&steps));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"steps %D, ftime %g\n",steps,(double)ftime));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"steps %" PetscInt_FMT ", ftime %g\n",steps,(double)ftime));
   PetscCall(VecView(x,PETSC_VIEWER_STDOUT_WORLD));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

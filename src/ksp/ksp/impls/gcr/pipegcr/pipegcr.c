@@ -245,7 +245,7 @@ static PetscErrorCode KSPSolve_PIPEGCR_cycle(KSP ksp)
     /* check breakdown of eta = (s,s) */
     if (*eta < 0.) {
       pipegcr->norm_breakdown = PETSC_TRUE;
-      PetscCall(PetscInfo(ksp,"Restart due to square root breakdown at it = \n",ksp->its));
+      PetscCall(PetscInfo(ksp,"Restart due to square root breakdown at it = %" PetscInt_FMT "\n",ksp->its));
       break;
     } else {
       alpha= gamma/(*eta);                                  /* alpha = gamma/etai */
@@ -362,13 +362,13 @@ static PetscErrorCode KSPView_PIPEGCR(KSP ksp, PetscViewer viewer)
   } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Undefined FCD truncation strategy");
 
   if (isascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  max previous directions = %D\n",pipegcr->mmax));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  preallocated %D directions\n",PetscMin(pipegcr->nprealloc,pipegcr->mmax+1)));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  max previous directions = %" PetscInt_FMT "\n",pipegcr->mmax));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  preallocated %" PetscInt_FMT " directions\n",PetscMin(pipegcr->nprealloc,pipegcr->mmax+1)));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  %s\n",truncstr));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  w unrolling = %D \n", pipegcr->unroll_w));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  restarts performed = %D \n", pipegcr->n_restarts));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  w unrolling = %" PetscInt_FMT " \n", pipegcr->unroll_w));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  restarts performed = %" PetscInt_FMT " \n", pipegcr->n_restarts));
   } else if (isstring) {
-    PetscCall(PetscViewerStringSPrintf(viewer, "max previous directions = %D, preallocated %D directions, %s truncation strategy", pipegcr->mmax,pipegcr->nprealloc,truncstr));
+    PetscCall(PetscViewerStringSPrintf(viewer, "max previous directions = %" PetscInt_FMT ", preallocated %" PetscInt_FMT " directions, %s truncation strategy", pipegcr->mmax,pipegcr->nprealloc,truncstr));
   }
   PetscFunctionReturn(0);
 }

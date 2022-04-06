@@ -78,7 +78,7 @@ int main(int argc, char **argv)
       DM          dm;
       PetscViewer v;
 
-      PetscCall(PetscPrintf(comm, "Begin cycle %D\n", i));
+      PetscCall(PetscPrintf(comm, "Begin cycle %" PetscInt_FMT "\n", i));
 
       /* Load data from XDMF into dm in parallel */
       /* We could also use
@@ -121,7 +121,7 @@ int main(int argc, char **argv)
       PetscCall(PetscViewerDestroy(&v));
       PetscCall(DMDestroy(&dm));
 
-      PetscCall(PetscPrintf(comm, "End   cycle %D\n--------\n",i));
+      PetscCall(PetscPrintf(comm, "End   cycle %" PetscInt_FMT "\n--------\n",i));
     }
     PetscCallMPI(MPI_Comm_free(&comm));
     PetscCallMPI(MPI_Barrier(PETSC_COMM_WORLD));

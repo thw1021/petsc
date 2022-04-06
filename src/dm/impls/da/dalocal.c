@@ -511,7 +511,7 @@ PetscErrorCode  DMDAGetArray(DM da,PetscBool ghosted,void *vptr)
     break;
   }
   default:
-    SETERRQ(PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Dimension %D not supported",da->dim);
+    SETERRQ(PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Dimension %" PetscInt_FMT " not supported",da->dim);
   }
 
 done:

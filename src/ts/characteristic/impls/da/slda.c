@@ -12,9 +12,9 @@ PetscErrorCode CharacteristicView_DA(Characteristic c, PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii));
   PetscCall(PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERSTRING, &isstring));
   if (iascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  DMDA: dummy=%D\n", da->dummy));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  DMDA: dummy=%" PetscInt_FMT "\n", da->dummy));
   } else if (isstring) {
-    PetscCall(PetscViewerStringSPrintf(viewer,"dummy %D", da->dummy));
+    PetscCall(PetscViewerStringSPrintf(viewer,"dummy %" PetscInt_FMT "", da->dummy));
   }
   PetscFunctionReturn(0);
 }
