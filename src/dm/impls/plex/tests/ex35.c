@@ -41,7 +41,7 @@ static PetscErrorCode EstimateMemory(DM dm, PetscLogDouble *est)
     PetscCall(DMPlexGetConeSize(dm, p, &csize));
     coneMem += csize;
   }
-  PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cone mem:        %" PetscInt_FMT " %" PetscInt_FMT " (%" PetscInt_FMT ")\n", (PetscInt)coneMem*sizeof(PetscInt), (PetscInt)coneSecMem*sizeof(PetscInt), (PetscInt)coneMem*sizeof(PetscInt)));
+  PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Cone mem:        %" PetscInt_FMT " %" PetscInt_FMT " (%" PetscInt_FMT ")\n", (PetscInt)(coneMem*sizeof(PetscInt)), (PetscInt)(coneSecMem*sizeof(PetscInt)), (PetscInt)(coneMem*sizeof(PetscInt))));
   imem += 2*coneMem + coneSecMem;
   /* Supports:       4 Nc + 3 Nf + 2 Ne ints + Nc+Nf+Ne ints */
   for (d = 0; d <= depth; ++d) supportSecMem += 2*Nd[d];
@@ -51,7 +51,7 @@ static PetscErrorCode EstimateMemory(DM dm, PetscLogDouble *est)
     PetscCall(DMPlexGetSupportSize(dm, p, &ssize));
     supportMem += ssize;
   }
-  PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Support mem:     %" PetscInt_FMT " %" PetscInt_FMT "\n", (PetscInt)supportMem*sizeof(PetscInt), (PetscInt)supportSecMem*sizeof(PetscInt)));
+  PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Support mem:     %" PetscInt_FMT " %" PetscInt_FMT "\n", (PetscInt)(supportMem*sizeof(PetscInt)), (PetscInt)(supportSecMem*sizeof(PetscInt))));
   imem += supportMem + supportSecMem;
   *est = ((PetscLogDouble) imem)*sizeof(PetscInt) + ((PetscLogDouble) rmem)*sizeof(PetscReal);
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "  Estimated memory %" PetscInt_FMT "\n", (PetscInt) *est));

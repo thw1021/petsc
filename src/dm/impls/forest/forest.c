@@ -1384,7 +1384,7 @@ PetscErrorCode DMForestSetWeightCapacity(DM dm, PetscReal capacity)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   PetscCheck(!dm->setupcalled,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Cannot change the weight capacity after setup");
-  PetscCheck(capacity >= 0.,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Cannot have negative weight capacity; %f",capacity);
+  PetscCheck(capacity >= 0.,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Cannot have negative weight capacity; %g",(double)capacity);
   forest->weightCapacity = capacity;
   PetscFunctionReturn(0);
 }
