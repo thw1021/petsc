@@ -606,7 +606,7 @@ static PetscErrorCode DMAdaptorAdapt_Sequence_Private(DMAdaptor adaptor, Vec inx
       PetscCall(VecRestoreArrayRead(locX, &pointSols));
       PetscCall(VecRestoreArray(errVec, &errArray));
       PetscCall(PetscGlobalMinMaxReal(PetscObjectComm((PetscObject) adaptor), minMaxInd, minMaxIndGlobal));
-      PetscCall(PetscInfo(adaptor, "DMAdaptor: error indicator range (%E, %E)\n", minMaxIndGlobal[0], minMaxIndGlobal[1]));
+      PetscCall(PetscInfo(adaptor, "DMAdaptor: error indicator range (%g, %g)\n", (double)minMaxIndGlobal[0], (double)minMaxIndGlobal[1]));
       /*     Compute IS from VecTagger */
       PetscCall(VecTaggerComputeIS(adaptor->refineTag, errVec, &refineIS,NULL));
       PetscCall(VecTaggerComputeIS(adaptor->coarsenTag, errVec, &coarsenIS,NULL));
@@ -695,7 +695,7 @@ static PetscErrorCode DMAdaptorAdapt_Sequence_Private(DMAdaptor adaptor, Vec inx
         PetscMPIInt rank, size;
         PetscCallMPI(MPI_Comm_rank(comm, &size));
         PetscCallMPI(MPI_Comm_rank(comm, &rank));
-        PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%d] N_orig: %" PetscInt_FMT " N_adapt: %g\n", rank, vEnd - vStart, N));
+        PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%d] N_orig: %" PetscInt_FMT " N_adapt: %g\n", rank, vEnd - vStart, (double)N));
       }
       PetscCall(DMPlexMetricSetTargetComplexity(dmMetric, (PetscReal) N));
       if (higherOrder) {

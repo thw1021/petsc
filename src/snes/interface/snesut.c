@@ -609,7 +609,7 @@ PetscErrorCode SNESMonitorDefaultField(SNES snes, PetscInt its, PetscReal fgnorm
     PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " SNES Function norm %14.12e [", its, (double) fgnorm));
     for (f = 0; f < Nf; ++f) {
       if (f) PetscCall(PetscViewerASCIIPrintf(viewer, ", "));
-      PetscCall(PetscViewerASCIIPrintf(viewer, "%14.12e", res[f]));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "%14.12e", (double)res[f]));
     }
     PetscCall(PetscViewerASCIIPrintf(viewer, "] \n"));
     PetscCall(PetscViewerASCIISubtractTab(viewer, tablevel));

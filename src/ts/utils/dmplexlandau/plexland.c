@@ -651,7 +651,7 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
         if (loc_elem==-1) {
           PetscCall(PetscPrintf(ctx->comm,"CPU Element matrix\n"));
           for (int d = 0; d < totDim; ++d) {
-            for (int f = 0; f < totDim; ++f) PetscCall(PetscPrintf(ctx->comm," %12.5e",  PetscRealPart(elemMat[d*totDim + f])));
+            for (int f = 0; f < totDim; ++f) PetscCall(PetscPrintf(ctx->comm," %12.5e",  (double)PetscRealPart(elemMat[d*totDim + f])));
             PetscCall(PetscPrintf(ctx->comm,"\n"));
           }
           exit(12);
@@ -1156,17 +1156,17 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem, Vec sol, PetscInt type, Pet
           minRad = r;
           nr     = 0;
           rCellIdx[nr++]= c;
-          PetscCall(PetscInfo(sol, "\t\tPhase: adaptToleranceFEM Found first inner r=%e, cell %" PetscInt_FMT ", qp %" PetscInt_FMT "/%" PetscInt_FMT "\n", r, c, qj+1, Nq));
+          PetscCall(PetscInfo(sol, "\t\tPhase: adaptToleranceFEM Found first inner r=%e, cell %" PetscInt_FMT ", qp %" PetscInt_FMT "/%" PetscInt_FMT "\n", (double)r, c, qj+1, Nq));
         } else if ((r-minRad) < PETSC_SQRT_MACHINE_EPSILON*100. && nr < nrmax) {
           for (k=0;k<nr;k++) if (c == rCellIdx[k]) break;
           if (k==nr) {
             rCellIdx[nr++]= c;
-            PetscCall(PetscInfo(sol, "\t\t\tPhase: adaptToleranceFEM Found another inner r=%e, cell %" PetscInt_FMT ", qp %" PetscInt_FMT "/%" PetscInt_FMT ", d=%e\n", r, c, qj+1, Nq, r-minRad));
+            PetscCall(PetscInfo(sol, "\t\t\tPhase: adaptToleranceFEM Found another inner r=%e, cell %" PetscInt_FMT ", qp %" PetscInt_FMT "/%" PetscInt_FMT ", d=%e\n", (double)r, c, qj+1, Nq, (double)(r-minRad)));
           }
         }
         if (ctx->sphere) {
           if ((tt=r-ctx->e_radius) > 0) {
-            PetscCall(PetscInfo(sol, "\t\t\t %" PetscInt_FMT " cell r=%g\n",c,tt));
+            PetscCall(PetscInfo(sol, "\t\t\t %" PetscInt_FMT " cell r=%g\n",c,(double)tt));
             if (tt < eMinRad - PETSC_SQRT_MACHINE_EPSILON*100.) {
               eMinRad = tt;
               eMaxIdx = 0;
@@ -1193,14 +1193,14 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem, Vec sol, PetscInt type, Pet
     if (ctx->sphere) {
       for (c = 0; c < eMaxIdx; c++) {
         PetscCall(DMLabelSetValue(adaptLabel, eCellIdx[c], DM_ADAPT_REFINE));
-        PetscCall(PetscInfo(sol, "\t\tPhase:%s: refine sphere e cell %" PetscInt_FMT " r=%g\n","adaptToleranceFEM",eCellIdx[c],eMinRad));
+        PetscCall(PetscInfo(sol, "\t\tPhase:%s: refine sphere e cell %" PetscInt_FMT " r=%g\n","adaptToleranceFEM",eCellIdx[c],(double)eMinRad));
       }
       for (c = 0; c < iMaxIdx; c++) {
         PetscCall(DMLabelSetValue(adaptLabel, iCellIdx[c], DM_ADAPT_REFINE));
-        PetscCall(PetscInfo(sol, "\t\tPhase:%s: refine sphere i cell %" PetscInt_FMT " r=%g\n","adaptToleranceFEM",iCellIdx[c],iMinRad));
+        PetscCall(PetscInfo(sol, "\t\tPhase:%s: refine sphere i cell %" PetscInt_FMT " r=%g\n","adaptToleranceFEM",iCellIdx[c],(double)iMinRad));
       }
     }
-    PetscCall(PetscInfo(sol, "Phase:%s: Adaptive refine origin cells %" PetscInt_FMT ",%" PetscInt_FMT " r=%g\n","adaptToleranceFEM",rCellIdx[0],rCellIdx[1],minRad));
+    PetscCall(PetscInfo(sol, "Phase:%s: Adaptive refine origin cells %" PetscInt_FMT ",%" PetscInt_FMT " r=%g\n","adaptToleranceFEM",rCellIdx[0],rCellIdx[1],(double)minRad));
   } else if (type==0 || type==1 || type==3) { /* refine along r=0 axis */
     PetscScalar  *coef = NULL;
     Vec          coords;
@@ -1444,7 +1444,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
       if (ctx->radius[grid] == 0) ctx->radius[grid] = 0.75;
       else ctx->radius[grid] = -ctx->radius[grid];
       ctx->radius[grid] = ctx->radius[grid]*SPEED_OF_LIGHT/ctx->v_0; // use any species on grid to normalize (v_0 same for all on grid)
-      PetscCall(PetscInfo(dummy, "Change domain radius to %g for grid %" PetscInt_FMT "\n",ctx->radius[grid],grid));
+      PetscCall(PetscInfo(dummy, "Change domain radius to %g for grid %" PetscInt_FMT "\n",(double)ctx->radius[grid],grid));
     }
     ctx->radius[grid] *= v0_grid[grid]/ctx->v_0; // scale domain by thermal radius relative to v_0
   }
@@ -1477,7 +1477,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
     ctx->i_radius[0] = 1.5*PetscSqrtReal(8*ctx->k*ctx->thermal_temps[1]/ctx->masses[1]/PETSC_PI)/ctx->v_0; // need to correct for ion grid domain
   }
   if (flg) PetscCheck(ctx->num_grids == nt,ctx->comm,PETSC_ERR_ARG_WRONG,"-dm_landau_i_radius: %" PetscInt_FMT " != num_species = %" PetscInt_FMT,nt,ctx->num_grids);
-  if (ctx->sphere) PetscCheck(ctx->e_radius > ctx->i_radius[0],ctx->comm,PETSC_ERR_ARG_WRONG,"bad radii: %g < %g < %g",ctx->i_radius[0],ctx->e_radius,ctx->radius[0]);
+  if (ctx->sphere) PetscCheck(ctx->e_radius > ctx->i_radius[0],ctx->comm,PETSC_ERR_ARG_WRONG,"bad radii: %g < %g < %g",(double)ctx->i_radius[0],(double)ctx->e_radius,(double)ctx->radius[0]);
   /* processing options */
   PetscCall(PetscOptionsBool("-dm_landau_gpu_assembly", "Assemble Jacobian on GPU", "plexland.c", ctx->gpu_assembly, &ctx->gpu_assembly, NULL));
   if (ctx->deviceType == LANDAU_CPU || ctx->deviceType == LANDAU_KOKKOS) { // make Kokkos
@@ -1490,11 +1490,11 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
 
   for (ii=ctx->num_species;ii<LANDAU_MAX_SPECIES;ii++) ctx->masses[ii] = ctx->thermal_temps[ii]  = ctx->charges[ii] = 0;
   if (ctx->verbose > 0) {
-    PetscCall(PetscPrintf(ctx->comm, "masses:        e=%10.3e; ions in proton mass units:   %10.3e %10.3e ...\n",ctx->masses[0],ctx->masses[1]/1.6720e-27,ctx->num_species>2 ? ctx->masses[2]/1.6720e-27 : 0));
-    PetscCall(PetscPrintf(ctx->comm, "charges:       e=%10.3e; charges in elementary units: %10.3e %10.3e\n", ctx->charges[0],-ctx->charges[1]/ctx->charges[0],ctx->num_species>2 ? -ctx->charges[2]/ctx->charges[0] : 0));
-    PetscCall(PetscPrintf(ctx->comm, "n:             e: %10.3e                           i: %10.3e %10.3e\n", ctx->n[0],ctx->n[1],ctx->num_species>2 ? ctx->n[2] : 0));
-    PetscCall(PetscPrintf(ctx->comm, "thermal T (K): e=%10.3e i=%10.3e %10.3e. v_0=%10.3e (%10.3ec) n_0=%10.3e t_0=%10.3e, %s, %s, %" PetscInt_FMT " batched\n", ctx->thermal_temps[0], ctx->thermal_temps[1], (ctx->num_species>2) ? ctx->thermal_temps[2] : 0, ctx->v_0, ctx->v_0/SPEED_OF_LIGHT, ctx->n_0, ctx->t_0, ctx->use_relativistic_corrections ? "relativistic" : "classical", ctx->use_energy_tensor_trick ? "Use trick" : "Intuitive",ctx->batch_sz));
-    PetscCall(PetscPrintf(ctx->comm, "Domain radius (AMR levels) grid %d: %10.3e (%" PetscInt_FMT ") ",0,ctx->radius[0],ctx->numAMRRefine[0]));
+    PetscCall(PetscPrintf(ctx->comm, "masses:        e=%10.3e; ions in proton mass units:   %10.3e %10.3e ...\n",(double)ctx->masses[0],(double)(ctx->masses[1]/1.6720e-27),(double)(ctx->num_species>2 ? ctx->masses[2]/1.6720e-27 : 0)));
+    PetscCall(PetscPrintf(ctx->comm, "charges:       e=%10.3e; charges in elementary units: %10.3e %10.3e\n", (double)ctx->charges[0],(double)(-ctx->charges[1]/ctx->charges[0]),(double)(ctx->num_species>2 ? -ctx->charges[2]/ctx->charges[0] : 0)));
+    PetscCall(PetscPrintf(ctx->comm, "n:             e: %10.3e                           i: %10.3e %10.3e\n", (double)ctx->n[0],(double)ctx->n[1],(double)(ctx->num_species>2 ? ctx->n[2] : 0)));
+    PetscCall(PetscPrintf(ctx->comm, "thermal T (K): e=%10.3e i=%10.3e %10.3e. v_0=%10.3e (%10.3ec) n_0=%10.3e t_0=%10.3e, %s, %s, %" PetscInt_FMT " batched\n", (double)ctx->thermal_temps[0], (double)ctx->thermal_temps[1], (double)((ctx->num_species>2) ? ctx->thermal_temps[2] : 0), (double)ctx->v_0, (double)(ctx->v_0/SPEED_OF_LIGHT), (double)ctx->n_0, (double)ctx->t_0, ctx->use_relativistic_corrections ? "relativistic" : "classical", ctx->use_energy_tensor_trick ? "Use trick" : "Intuitive",ctx->batch_sz));
+    PetscCall(PetscPrintf(ctx->comm, "Domain radius (AMR levels) grid %d: %10.3e (%" PetscInt_FMT ") ",0,(double)ctx->radius[0],ctx->numAMRRefine[0]));
     for (ii=1;ii<ctx->num_grids;ii++) PetscCall(PetscPrintf(ctx->comm, ", %" PetscInt_FMT ": %10.3e (%" PetscInt_FMT ") ",ii,ctx->radius[ii],ctx->numAMRRefine[ii]));
     PetscCall(PetscPrintf(ctx->comm,"\n"));
     if (ctx->jacobian_field_major_order) {
@@ -1675,13 +1675,13 @@ static PetscErrorCode CreateStaticGPUData(PetscInt dim, IS grid_batch_is_inv[], 
                   if (PetscAbs(sum-1.0) > 10*PETSC_MACHINE_EPSILON) { // debug
                     int       d,f;
                     PetscReal tmp = 0;
-                    PetscCall(PetscPrintf(PETSC_COMM_SELF,"\t\t%d.%d.%d) ERROR total I = %22.16e (LANDAU_MAX_Q_FACE=%d, #face=%d)\n",eidx,q,fieldA,sum,LANDAU_MAX_Q_FACE,maps[grid].num_face));
+                    PetscCall(PetscPrintf(PETSC_COMM_SELF,"\t\t%d.%d.%d) ERROR total I = %22.16e (LANDAU_MAX_Q_FACE=%d, #face=%d)\n",eidx,q,fieldA,(double)sum,LANDAU_MAX_Q_FACE,maps[grid].num_face));
                     for (d = 0, tmp = 0; d < numindices; ++d) {
                       if (tmp!=0 && PetscAbs(tmp-1.0) > 10*PETSC_MACHINE_EPSILON) PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%3d) %3" PetscInt_FMT ": ",d,indices[d]));
                       for (f = 0; f < numindices; ++f) {
                         tmp += PetscRealPart(elMat[d*numindices + f]);
                       }
-                      if (tmp!=0) PetscCall(PetscPrintf(ctx->comm," | %22.16e\n",tmp));
+                      if (tmp!=0) PetscCall(PetscPrintf(ctx->comm," | %22.16e\n",(double)tmp));
                     }
                   }
                   maps[grid].num_reduced++;
@@ -2504,7 +2504,7 @@ PetscErrorCode DMPlexLandauPrintNorms(Vec X, PetscInt stepi)
         zmomentumtot += zmomentum[ii];
         energytot  += energy[ii];
         densitytot += density[ii];
-        PetscCall(PetscPrintf(ctx->comm, "%3" PetscInt_FMT ") species-%" PetscInt_FMT ": charge density= %20.13e z-momentum= %20.13e energy= %20.13e",stepi,ii,PetscRealPart(density[ii]),PetscRealPart(zmomentum[ii]),PetscRealPart(energy[ii])));
+        PetscCall(PetscPrintf(ctx->comm, "%3" PetscInt_FMT ") species-%" PetscInt_FMT ": charge density= %20.13e z-momentum= %20.13e energy= %20.13e",stepi,ii,(double)PetscRealPart(density[ii]),(double)PetscRealPart(zmomentum[ii]),(double)PetscRealPart(energy[ii])));
       } else { /* 2/3Xloc + 3V */
         PetscCall(PetscDSSetObjective(prob, 0, &f0_s_den));
         PetscCall(DMPlexComputeIntegralFEM(ctx->plex[grid],Xloc,tt,ctx));
@@ -2585,7 +2585,7 @@ PetscErrorCode DMPlexLandauPrintNorms(Vec X, PetscInt stepi)
           PetscCall(DMPlexComputeIntegralFEM(ctx->plex[grid],Xloc,tt,ctx));
           energy[ii]    = 0.5*tt[0]*ctx->n_0*ctx->v_0*ctx->v_0*ctx->masses[ii];
         }
-        PetscCall(PetscPrintf(ctx->comm, "%3" PetscInt_FMT ") species %" PetscInt_FMT ": density=%20.13e, x-momentum=%20.13e, y-momentum=%20.13e, z-momentum=%20.13e, energy=%21.13e",stepi,ii,PetscRealPart(density[ii]),PetscRealPart(xmomentum[ii]),PetscRealPart(ymomentum[ii]),PetscRealPart(zmomentum[ii]),PetscRealPart(energy[ii])));
+        PetscCall(PetscPrintf(ctx->comm, "%3" PetscInt_FMT ") species %" PetscInt_FMT ": density=%20.13e, x-momentum=%20.13e, y-momentum=%20.13e, z-momentum=%20.13e, energy=%21.13e",stepi,ii,(double)PetscRealPart(density[ii]),(double)PetscRealPart(xmomentum[ii]),(double)PetscRealPart(ymomentum[ii]),(double)PetscRealPart(zmomentum[ii]),(double)PetscRealPart(energy[ii])));
         xmomentumtot += xmomentum[ii];
         ymomentumtot += ymomentum[ii];
         zmomentumtot += zmomentum[ii];
@@ -2767,7 +2767,7 @@ PetscErrorCode DMPlexLandauIFunction(TS ts, PetscReal time_dummy, Vec X, Vec X_t
   PetscCall(DMGetDimension(pack, &dim));
   PetscCall(PetscObjectStateGet((PetscObject)ctx->J,&state));
   if (state != ctx->norm_state) {
-    PetscCall(PetscInfo(ts, "Create Landau Jacobian t=%g J.state %" PetscInt64_FMT " --> %" PetscInt64_FMT "\n",time_dummy, ctx->norm_state, state));
+    PetscCall(PetscInfo(ts, "Create Landau Jacobian t=%g J.state %" PetscInt64_FMT " --> %" PetscInt64_FMT "\n",(double)time_dummy, ctx->norm_state, state));
     PetscCall(MatZeroEntries(ctx->J));
     PetscCall(LandauFormJacobian_Internal(X,ctx->J,dim,0.0,(void*)ctx));
     PetscCall(MatViewFromOptions(ctx->J, NULL, "-dm_landau_jacobian_view"));

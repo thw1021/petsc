@@ -4494,7 +4494,7 @@ PetscErrorCode  SNESConvergedReasonView(SNES snes,PetscViewer viewer)
       PetscCall(DMComputeL2Diff(dm, 0.0, exactSol, exactCtx, u, &error));
       PetscCall(PetscFree2(exactSol, exactCtx));
       if (error < 1.0e-11) PetscCall(PetscViewerASCIIPrintf(viewer, "L_2 Error: < 1.0e-11\n"));
-      else                 PetscCall(PetscViewerASCIIPrintf(viewer, "L_2 Error: %g\n", error));
+      else                 PetscCall(PetscViewerASCIIPrintf(viewer, "L_2 Error: %g\n", (double)error));
     }
     if (snes->reason > 0 && format != PETSC_VIEWER_FAILED) {
       if (((PetscObject) snes)->prefix) {
@@ -5201,7 +5201,7 @@ PetscErrorCode  SNESTestLocalMin(SNES snes)
       PetscCall(VecSetValue(uh,i,value,ADD_VALUES));
       PetscCall(SNESComputeFunction(snes,uh,fh));
       PetscCall(VecNorm(fh,NORM_2,&norm));
-      PetscCall(PetscPrintf(PetscObjectComm((PetscObject)snes),"       j norm %" PetscInt_FMT " %18.16e\n",j,norm));
+      PetscCall(PetscPrintf(PetscObjectComm((PetscObject)snes),"       j norm %" PetscInt_FMT " %18.16e\n",j,(double)norm));
       value = -value;
       PetscCall(VecSetValue(uh,i,value,ADD_VALUES));
     }
