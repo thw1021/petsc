@@ -129,9 +129,9 @@ PetscErrorCode SNESView_NGMRES(SNES snes,PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject) viewer,PETSCVIEWERASCII,&iascii));
   if (iascii) {
     PetscCall(PetscViewerASCIIPrintf(viewer,"  Number of stored past updates: %" PetscInt_FMT "\n", ngmres->msize));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Residual selection: gammaA=%1.0e, gammaC=%1.0e\n",ngmres->gammaA,ngmres->gammaC));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Difference restart: epsilonB=%1.0e, deltaB=%1.0e\n",ngmres->epsilonB,ngmres->deltaB));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Restart on F_M residual increase: %s\n",ngmres->restart_fm_rise?"TRUE":"FALSE"));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Residual selection: gammaA=%1.0e, gammaC=%1.0e\n",(double)ngmres->gammaA,(double)ngmres->gammaC));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Difference restart: epsilonB=%1.0e, deltaB=%1.0e\n",(double)ngmres->epsilonB,(double)ngmres->deltaB));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Restart on F_M residual increase: %s\n",PetscBools[ngmres->restart_fm_rise]));
   }
   PetscFunctionReturn(0);
 }

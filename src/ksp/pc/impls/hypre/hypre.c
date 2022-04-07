@@ -542,7 +542,7 @@ static PetscErrorCode PCView_HYPRE_Pilut(PC pc,PetscViewer viewer)
   if (iascii) {
     PetscCall(PetscViewerASCIIPrintf(viewer,"  HYPRE Pilut preconditioning\n"));
     if (jac->maxiter != PETSC_DEFAULT) {
-      PetscCall(PetscViewerASCIIPrintf(viewer,"    maximum number of iterations %d\n",jac->maxiter));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"    maximum number of iterations %" PetscInt_FMT "\n",jac->maxiter));
     } else {
       PetscCall(PetscViewerASCIIPrintf(viewer,"    default maximum number of iterations \n"));
     }
@@ -552,7 +552,7 @@ static PetscErrorCode PCView_HYPRE_Pilut(PC pc,PetscViewer viewer)
       PetscCall(PetscViewerASCIIPrintf(viewer,"    default drop tolerance \n"));
     }
     if (jac->factorrowsize != PETSC_DEFAULT) {
-      PetscCall(PetscViewerASCIIPrintf(viewer,"    factor row size %d\n",jac->factorrowsize));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"    factor row size %" PetscInt_FMT "\n",jac->factorrowsize));
     } else {
       PetscCall(PetscViewerASCIIPrintf(viewer,"    default factor row size \n"));
     }
@@ -599,7 +599,7 @@ static PetscErrorCode PCView_HYPRE_Euclid(PC pc,PetscViewer viewer)
   if (iascii) {
     PetscCall(PetscViewerASCIIPrintf(viewer,"  HYPRE Euclid preconditioning\n"));
     if (jac->eu_level != PETSC_DEFAULT) {
-      PetscCall(PetscViewerASCIIPrintf(viewer,"    factorization levels %d\n",jac->eu_level));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"    factorization levels %" PetscInt_FMT "\n",jac->eu_level));
     } else {
       PetscCall(PetscViewerASCIIPrintf(viewer,"    default factorization levels \n"));
     }
@@ -714,12 +714,12 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PetscOptionItems *PetscOp
   }
   PetscCall(PetscOptionsInt("-pc_hypre_boomeramg_max_levels","Number of levels (of grids) allowed","None",jac->maxlevels,&jac->maxlevels,&flg));
   if (flg) {
-    PetscCheck(jac->maxlevels >= 2,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Number of levels %d must be at least two",jac->maxlevels);
+    PetscCheck(jac->maxlevels >= 2,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Number of levels %" PetscInt_FMT " must be at least two",jac->maxlevels);
     PetscStackCallStandard(HYPRE_BoomerAMGSetMaxLevels,jac->hsolver,jac->maxlevels);
   }
   PetscCall(PetscOptionsInt("-pc_hypre_boomeramg_max_iter","Maximum iterations used PER hypre call","None",jac->maxiter,&jac->maxiter,&flg));
   if (flg) {
-    PetscCheck(jac->maxiter >= 1,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Number of iterations %d must be at least one",jac->maxiter);
+    PetscCheck(jac->maxiter >= 1,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Number of iterations %" PetscInt_FMT " must be at least one",jac->maxiter);
     PetscStackCallStandard(HYPRE_BoomerAMGSetMaxIter,jac->hsolver,jac->maxiter);
   }
   PetscCall(PetscOptionsReal("-pc_hypre_boomeramg_tol","Convergence tolerance PER hypre call (0.0 = use a fixed number of iterations)","None",jac->tol,&jac->tol,&flg));
@@ -896,7 +896,7 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PetscOptionItems *PetscOp
     if (n == 2) {
       indx =  (int)PetscAbsReal(twodbl[1]);
       PetscStackCallStandard(HYPRE_BoomerAMGSetLevelRelaxWt,jac->hsolver,twodbl[0],indx);
-    } else SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Relax weight level: you must provide 2 values separated by a comma (and no space), you provided %d",n);
+    } else SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Relax weight level: you must provide 2 values separated by a comma (and no space), you provided %" PetscInt_FMT,n);
   }
 
   /* Outer relaxation Weight */
@@ -913,7 +913,7 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PetscOptionItems *PetscOp
     if (n == 2) {
       indx =  (int)PetscAbsReal(twodbl[1]);
       PetscStackCallStandard(HYPRE_BoomerAMGSetLevelOuterWt,jac->hsolver, twodbl[0], indx);
-    } else SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Relax weight outer level: You must provide 2 values separated by a comma (and no space), you provided %d",n);
+    } else SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Relax weight outer level: You must provide 2 values separated by a comma (and no space), you provided %" PetscInt_FMT,n);
   }
 
   /* the Relax Order */
@@ -1171,7 +1171,7 @@ static PetscErrorCode PCView_HYPRE_ParaSails(PC pc,PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
   if (iascii) {
     PetscCall(PetscViewerASCIIPrintf(viewer,"  HYPRE ParaSails preconditioning\n"));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"    nlevels %d\n",jac->nlevels));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"    nlevels %" PetscInt_FMT "\n",jac->nlevels));
     PetscCall(PetscViewerASCIIPrintf(viewer,"    threshold %g\n",(double)jac->threshold));
     PetscCall(PetscViewerASCIIPrintf(viewer,"    filter %g\n",(double)jac->filter));
     PetscCall(PetscViewerASCIIPrintf(viewer,"    load balance %g\n",(double)jac->loadbal));
@@ -1180,7 +1180,7 @@ static PetscErrorCode PCView_HYPRE_ParaSails(PC pc,PetscViewer viewer)
     if (!jac->symt) symt = "nonsymmetric matrix and preconditioner";
     else if (jac->symt == 1) symt = "SPD matrix and preconditioner";
     else if (jac->symt == 2) symt = "nonsymmetric matrix but SPD preconditioner";
-    else SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONG,"Unknown HYPRE ParaSails symmetric option %d",jac->symt);
+    else SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONG,"Unknown HYPRE ParaSails symmetric option %" PetscInt_FMT,jac->symt);
     PetscCall(PetscViewerASCIIPrintf(viewer,"    %s\n",symt));
   }
   PetscFunctionReturn(0);
@@ -1251,38 +1251,38 @@ static PetscErrorCode PCView_HYPRE_AMS(PC pc,PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
   if (iascii) {
     PetscCall(PetscViewerASCIIPrintf(viewer,"  HYPRE AMS preconditioning\n"));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"    subspace iterations per application %d\n",jac->as_max_iter));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"    subspace cycle type %d\n",jac->ams_cycle_type));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"    subspace iteration tolerance %g\n",jac->as_tol));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"    smoother type %d\n",jac->as_relax_type));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"    number of smoothing steps %d\n",jac->as_relax_times));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"    smoother weight %g\n",jac->as_relax_weight));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"    smoother omega %g\n",jac->as_omega));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"    subspace iterations per application %" PetscInt_FMT "\n",jac->as_max_iter));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"    subspace cycle type %" PetscInt_FMT "\n",jac->ams_cycle_type));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"    subspace iteration tolerance %g\n",(double)jac->as_tol));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"    smoother type %" PetscInt_FMT "\n",jac->as_relax_type));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"    number of smoothing steps %" PetscInt_FMT "\n",jac->as_relax_times));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"    smoother weight %g\n",(double)jac->as_relax_weight));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"    smoother omega %g\n",(double)jac->as_omega));
     if (jac->alpha_Poisson) {
       PetscCall(PetscViewerASCIIPrintf(viewer,"    vector Poisson solver (passed in by user)\n"));
     } else {
       PetscCall(PetscViewerASCIIPrintf(viewer,"    vector Poisson solver (computed) \n"));
     }
-    PetscCall(PetscViewerASCIIPrintf(viewer,"        boomerAMG coarsening type %d\n",jac->as_amg_alpha_opts[0]));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"        boomerAMG levels of aggressive coarsening %d\n",jac->as_amg_alpha_opts[1]));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"        boomerAMG relaxation type %d\n",jac->as_amg_alpha_opts[2]));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"        boomerAMG interpolation type %d\n",jac->as_amg_alpha_opts[3]));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"        boomerAMG max nonzero elements in interpolation rows %d\n",jac->as_amg_alpha_opts[4]));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"        boomerAMG strength threshold %g\n",jac->as_amg_alpha_theta));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"        boomerAMG coarsening type %" PetscInt_FMT "\n",jac->as_amg_alpha_opts[0]));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"        boomerAMG levels of aggressive coarsening %" PetscInt_FMT "\n",jac->as_amg_alpha_opts[1]));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"        boomerAMG relaxation type %" PetscInt_FMT "\n",jac->as_amg_alpha_opts[2]));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"        boomerAMG interpolation type %" PetscInt_FMT "\n",jac->as_amg_alpha_opts[3]));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"        boomerAMG max nonzero elements in interpolation rows %" PetscInt_FMT "\n",jac->as_amg_alpha_opts[4]));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"        boomerAMG strength threshold %g\n",(double)jac->as_amg_alpha_theta));
     if (!jac->ams_beta_is_zero) {
       if (jac->beta_Poisson) {
         PetscCall(PetscViewerASCIIPrintf(viewer,"    scalar Poisson solver (passed in by user)\n"));
       } else {
         PetscCall(PetscViewerASCIIPrintf(viewer,"    scalar Poisson solver (computed) \n"));
       }
-      PetscCall(PetscViewerASCIIPrintf(viewer,"        boomerAMG coarsening type %d\n",jac->as_amg_beta_opts[0]));
-      PetscCall(PetscViewerASCIIPrintf(viewer,"        boomerAMG levels of aggressive coarsening %d\n",jac->as_amg_beta_opts[1]));
-      PetscCall(PetscViewerASCIIPrintf(viewer,"        boomerAMG relaxation type %d\n",jac->as_amg_beta_opts[2]));
-      PetscCall(PetscViewerASCIIPrintf(viewer,"        boomerAMG interpolation type %d\n",jac->as_amg_beta_opts[3]));
-      PetscCall(PetscViewerASCIIPrintf(viewer,"        boomerAMG max nonzero elements in interpolation rows %d\n",jac->as_amg_beta_opts[4]));
-      PetscCall(PetscViewerASCIIPrintf(viewer,"        boomerAMG strength threshold %g\n",jac->as_amg_beta_theta));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"        boomerAMG coarsening type %" PetscInt_FMT "\n",jac->as_amg_beta_opts[0]));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"        boomerAMG levels of aggressive coarsening %" PetscInt_FMT "\n",jac->as_amg_beta_opts[1]));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"        boomerAMG relaxation type %" PetscInt_FMT "\n",jac->as_amg_beta_opts[2]));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"        boomerAMG interpolation type %" PetscInt_FMT "\n",jac->as_amg_beta_opts[3]));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"        boomerAMG max nonzero elements in interpolation rows %" PetscInt_FMT "\n",jac->as_amg_beta_opts[4]));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"        boomerAMG strength threshold %g\n",(double)jac->as_amg_beta_theta));
       if (jac->ams_beta_is_zero_part) {
-        PetscCall(PetscViewerASCIIPrintf(viewer,"        compatible subspace projection frequency %d (-1 HYPRE uses default)\n",jac->ams_proj_freq));
+        PetscCall(PetscViewerASCIIPrintf(viewer,"        compatible subspace projection frequency %" PetscInt_FMT " (-1 HYPRE uses default)\n",jac->ams_proj_freq));
       }
     } else {
       PetscCall(PetscViewerASCIIPrintf(viewer,"    scalar Poisson solver not used (zero-conductivity everywhere) \n"));
@@ -1354,28 +1354,28 @@ static PetscErrorCode PCView_HYPRE_ADS(PC pc,PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
   if (iascii) {
     PetscCall(PetscViewerASCIIPrintf(viewer,"  HYPRE ADS preconditioning\n"));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"    subspace iterations per application %d\n",jac->as_max_iter));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"    subspace cycle type %d\n",jac->ads_cycle_type));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"    subspace iteration tolerance %g\n",jac->as_tol));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"    smoother type %d\n",jac->as_relax_type));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"    number of smoothing steps %d\n",jac->as_relax_times));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"    smoother weight %g\n",jac->as_relax_weight));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"    smoother omega %g\n",jac->as_omega));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"    subspace iterations per application %" PetscInt_FMT "\n",jac->as_max_iter));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"    subspace cycle type %" PetscInt_FMT "\n",jac->ads_cycle_type));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"    subspace iteration tolerance %g\n",(double)jac->as_tol));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"    smoother type %" PetscInt_FMT "\n",jac->as_relax_type));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"    number of smoothing steps %" PetscInt_FMT "\n",jac->as_relax_times));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"    smoother weight %g\n",(double)jac->as_relax_weight));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"    smoother omega %g\n",(double)jac->as_omega));
     PetscCall(PetscViewerASCIIPrintf(viewer,"    AMS solver using boomerAMG\n"));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"        subspace cycle type %d\n",jac->ams_cycle_type));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"        coarsening type %d\n",jac->as_amg_alpha_opts[0]));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"        levels of aggressive coarsening %d\n",jac->as_amg_alpha_opts[1]));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"        relaxation type %d\n",jac->as_amg_alpha_opts[2]));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"        interpolation type %d\n",jac->as_amg_alpha_opts[3]));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"        max nonzero elements in interpolation rows %d\n",jac->as_amg_alpha_opts[4]));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"        strength threshold %g\n",jac->as_amg_alpha_theta));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"        subspace cycle type %" PetscInt_FMT "\n",jac->ams_cycle_type));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"        coarsening type %" PetscInt_FMT "\n",jac->as_amg_alpha_opts[0]));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"        levels of aggressive coarsening %" PetscInt_FMT "\n",jac->as_amg_alpha_opts[1]));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"        relaxation type %" PetscInt_FMT "\n",jac->as_amg_alpha_opts[2]));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"        interpolation type %" PetscInt_FMT "\n",jac->as_amg_alpha_opts[3]));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"        max nonzero elements in interpolation rows %" PetscInt_FMT "\n",jac->as_amg_alpha_opts[4]));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"        strength threshold %g\n",(double)jac->as_amg_alpha_theta));
     PetscCall(PetscViewerASCIIPrintf(viewer,"    vector Poisson solver using boomerAMG\n"));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"        coarsening type %d\n",jac->as_amg_beta_opts[0]));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"        levels of aggressive coarsening %d\n",jac->as_amg_beta_opts[1]));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"        relaxation type %d\n",jac->as_amg_beta_opts[2]));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"        interpolation type %d\n",jac->as_amg_beta_opts[3]));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"        max nonzero elements in interpolation rows %d\n",jac->as_amg_beta_opts[4]));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"        strength threshold %g\n",jac->as_amg_beta_theta));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"        coarsening type %" PetscInt_FMT "\n",jac->as_amg_beta_opts[0]));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"        levels of aggressive coarsening %" PetscInt_FMT "\n",jac->as_amg_beta_opts[1]));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"        relaxation type %" PetscInt_FMT "\n",jac->as_amg_beta_opts[2]));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"        interpolation type %" PetscInt_FMT "\n",jac->as_amg_beta_opts[3]));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"        max nonzero elements in interpolation rows %" PetscInt_FMT "\n",jac->as_amg_beta_opts[4]));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"        strength threshold %g\n",(double)jac->as_amg_beta_theta));
   }
   PetscFunctionReturn(0);
 }
@@ -2331,12 +2331,12 @@ PetscErrorCode PCView_PFMG(PC pc,PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
   if (iascii) {
     PetscCall(PetscViewerASCIIPrintf(viewer,"  HYPRE PFMG preconditioning\n"));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"    max iterations %d\n",ex->its));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"    max iterations %" PetscInt_FMT "\n",ex->its));
     PetscCall(PetscViewerASCIIPrintf(viewer,"    tolerance %g\n",ex->tol));
     PetscCall(PetscViewerASCIIPrintf(viewer,"    relax type %s\n",PFMGRelaxType[ex->relax_type]));
     PetscCall(PetscViewerASCIIPrintf(viewer,"    RAP type %s\n",PFMGRAPType[ex->rap_type]));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"    number pre-relax %d post-relax %d\n",ex->num_pre_relax,ex->num_post_relax));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"    max levels %d\n",ex->max_levels));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"    number pre-relax %" PetscInt_FMT " post-relax %" PetscInt_FMT "\n",ex->num_pre_relax,ex->num_post_relax));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"    max levels %" PetscInt_FMT "\n",ex->max_levels));
   }
   PetscFunctionReturn(0);
 }
@@ -2534,10 +2534,10 @@ PetscErrorCode PCView_SysPFMG(PC pc,PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
   if (iascii) {
     PetscCall(PetscViewerASCIIPrintf(viewer,"  HYPRE SysPFMG preconditioning\n"));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  max iterations %d\n",ex->its));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  max iterations %" PetscInt_FMT "\n",ex->its));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  tolerance %g\n",ex->tol));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  relax type %s\n",PFMGRelaxType[ex->relax_type]));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  number pre-relax %d post-relax %d\n",ex->num_pre_relax,ex->num_post_relax));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  number pre-relax %" PetscInt_FMT " post-relax %" PetscInt_FMT "\n",ex->num_pre_relax,ex->num_post_relax));
   }
   PetscFunctionReturn(0);
 }
