@@ -487,7 +487,7 @@ static PetscErrorCode TestFEJacobian(DM dm, AppCtx *user)
       PetscCall(DMLocalToGlobalEnd(dm,localRes,ADD_VALUES,res));
       PetscCall(VecNorm(res,NORM_2,&resNorm));
       if (resNorm > PETSC_SMALL) {
-        PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm),"Symmetric gradient action null space vector %" PetscInt_FMT " residual: %E\n",i,resNorm));
+        PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm),"Symmetric gradient action null space vector %" PetscInt_FMT " residual: %E\n",i,(double)resNorm));
       }
     }
     PetscCall(VecDestroy(&localRes));
@@ -636,7 +636,7 @@ static PetscErrorCode TestFVGrad(DM dm, AppCtx *user)
   if (allVecMaxDiff < fvTol) {
     PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm),"Finite volume gradient reconstruction: PASS\n"));
   } else {
-    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm),"Finite volume gradient reconstruction: FAIL at tolerance %g with max difference %g\n",fvTol,allVecMaxDiff));
+    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm),"Finite volume gradient reconstruction: FAIL at tolerance %g with max difference %g\n",(double)fvTol,(double)allVecMaxDiff));
   }
   PetscCall(DMRestoreLocalVector(dmgrad,&locGrad));
   PetscCall(DMRestoreGlobalVector(dmgrad,&grad));

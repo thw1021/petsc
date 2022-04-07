@@ -414,7 +414,7 @@ int main(int argc,char **args)
     if (flg) {
       KSPConvergedReason reason;
       PetscCall(KSPGetConvergedReason(ksp,&reason));
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD,"KSPConvergedReason: %" PetscInt_FMT "\n", reason));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD,"KSPConvergedReason: %s\n", KSPConvergedReasons[reason]));
     }
 
   }   /* while (num_numfac--) */

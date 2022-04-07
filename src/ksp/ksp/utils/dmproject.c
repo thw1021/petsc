@@ -381,7 +381,7 @@ PetscErrorCode DMAdaptInterpolator(DM dmc, DM dmf, Mat In, KSP smoother, PetscIn
     PetscCheck(info >= 0,PETSC_COMM_SELF, PETSC_ERR_LIB, "Bad argument to GELSS");
     PetscCheck(info <= 0,PETSC_COMM_SELF, PETSC_ERR_LIB, "SVD failed to converge");
     if (debug) {
-      PetscCall(PetscPrintf(PETSC_COMM_SELF, "rank %d rcond %g\n", irank, (double) rcond));
+      PetscCall(PetscPrintf(PETSC_COMM_SELF, "rank %" PetscBLASInt_FMT " rcond %g\n", irank, (double) rcond));
 #if defined(PETSC_USE_COMPLEX)
       {
         PetscScalar *tmp;

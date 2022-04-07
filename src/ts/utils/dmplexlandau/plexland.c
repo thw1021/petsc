@@ -109,7 +109,7 @@ static PetscErrorCode LandauGPUMapsDestroy(void *ptr)
 #elif defined(PETSC_HAVE_CUDA)
     if (maps[0].deviceType == LANDAU_CUDA) {
       PetscCall(LandauCUDADestroyMatMaps(maps, maps[0].numgrids));
-    } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "maps->deviceType %" PetscInt_FMT " ?????",maps->deviceType);
+    } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "maps->deviceType %d ?????",maps->deviceType);
 #endif
   }
   // free host data
