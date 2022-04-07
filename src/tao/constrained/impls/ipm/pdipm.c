@@ -843,9 +843,7 @@ PetscErrorCode TaoSolve_PDIPM(Tao tao)
   PetscCall(TaoMonitor(tao,tao->niter,pdipm->obj,tao->residual,tao->cnorm,pdipm->mu));
   PetscCall(VecDestroy(&dummy));
   PetscCall((*tao->ops->convergencetest)(tao,tao->cnvP));
-  if (tao->reason) {
-    PetscCall(SNESSetConvergedReason(pdipm->snes,SNES_CONVERGED_FNORM_ABS));
-  }
+  if (tao->reason) PetscCall(SNESSetConvergedReason(pdipm->snes,SNES_CONVERGED_FNORM_ABS));
 
   while (tao->reason == TAO_CONTINUE_ITERATING) {
     SNESConvergedReason reason;
@@ -854,7 +852,7 @@ PetscErrorCode TaoSolve_PDIPM(Tao tao)
     /* Check SNES convergence */
     PetscCall(SNESGetConvergedReason(pdipm->snes,&reason));
     if (reason < 0) {
-      PetscCall(PetscPrintf(PetscObjectComm((PetscObject)pdipm->snes),"SNES solve did not converged due to reason %" PetscInt_FMT "\n",reason));
+      PetscCall(PetscPrintf(PetscObjectComm((PetscObject)pdipm->snes),"SNES solve did not converged due to reason %s\n",SNESConvergedReasons[reason]));
     }
 
     /* Check TAO convergence */

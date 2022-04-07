@@ -1495,7 +1495,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
     PetscCall(PetscPrintf(ctx->comm, "n:             e: %10.3e                           i: %10.3e %10.3e\n", (double)ctx->n[0],(double)ctx->n[1],(double)(ctx->num_species>2 ? ctx->n[2] : 0)));
     PetscCall(PetscPrintf(ctx->comm, "thermal T (K): e=%10.3e i=%10.3e %10.3e. v_0=%10.3e (%10.3ec) n_0=%10.3e t_0=%10.3e, %s, %s, %" PetscInt_FMT " batched\n", (double)ctx->thermal_temps[0], (double)ctx->thermal_temps[1], (double)((ctx->num_species>2) ? ctx->thermal_temps[2] : 0), (double)ctx->v_0, (double)(ctx->v_0/SPEED_OF_LIGHT), (double)ctx->n_0, (double)ctx->t_0, ctx->use_relativistic_corrections ? "relativistic" : "classical", ctx->use_energy_tensor_trick ? "Use trick" : "Intuitive",ctx->batch_sz));
     PetscCall(PetscPrintf(ctx->comm, "Domain radius (AMR levels) grid %d: %10.3e (%" PetscInt_FMT ") ",0,(double)ctx->radius[0],ctx->numAMRRefine[0]));
-    for (ii=1;ii<ctx->num_grids;ii++) PetscCall(PetscPrintf(ctx->comm, ", %" PetscInt_FMT ": %10.3e (%" PetscInt_FMT ") ",ii,ctx->radius[ii],ctx->numAMRRefine[ii]));
+    for (ii=1;ii<ctx->num_grids;ii++) PetscCall(PetscPrintf(ctx->comm, ", %" PetscInt_FMT ": %10.3e (%" PetscInt_FMT ") ",ii,(double)ctx->radius[ii],ctx->numAMRRefine[ii]));
     PetscCall(PetscPrintf(ctx->comm,"\n"));
     if (ctx->jacobian_field_major_order) {
       PetscCall(PetscPrintf(ctx->comm,"Using field major order for GPU Jacobian\n"));

@@ -374,12 +374,12 @@ int main(int argc, char **argv)
     PetscReal error = PetscAbsReal(area - ctx.areaExact);
     PetscReal tol   = PETSC_SMALL;
 
-    PetscCall(PetscPrintf(comm,   "Exact mesh surface area    : % .*f\n", fabs(ctx.areaExact - round(ctx.areaExact)) > 1E-15 ? 14 : 1, (double) ctx.areaExact));
-    PetscCall(PetscPrintf(comm,   "Computed mesh surface area : % .*f\n", fabs(area          - round(area))          > 1E-15 ? 14 : 1, (double) area));
+    PetscCall(PetscPrintf(comm,   "Exact mesh surface area    : % .*f\n", PetscAbsReal(ctx.areaExact - round(ctx.areaExact)) > 1E-15 ? 14 : 1, (double) ctx.areaExact));
+    PetscCall(PetscPrintf(comm,   "Computed mesh surface area : % .*f\n", PetscAbsScalar(area          - round(area))          > 1E-15 ? 14 : 1, (double)PetscRealPart(area)));
     if (error > tol) {
-      PetscCall(PetscPrintf(comm, "Area error                 : % .14f\n", (double) error));
+      PetscCall(PetscPrintf(comm, "Area error                 : % .14g\n", (double) error));
     } else {
-      PetscCall(PetscPrintf(comm, "Area verifies!\n", (double) error));
+      PetscCall(PetscPrintf(comm, "Area verifies!\n", error));
     }
   }
 
