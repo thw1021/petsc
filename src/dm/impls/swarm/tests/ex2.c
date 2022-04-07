@@ -490,7 +490,7 @@ static PetscErrorCode InterpolateGradient(DM dm, Vec locX, Vec locC)
 
       PetscCall(PetscFVGetQuadrature(fv, &quad));
       PetscCall(PetscFVGetNumComponents(fv, &Nc));
-    } else SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Unknown discretization type for field %d", field);
+    } else SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Unknown discretization type for field %" PetscInt_FMT, field);
     numComponents += Nc;
   }
   PetscCall(PetscQuadratureGetData(quad, NULL, &qNc, &Nq, &quadPoints, &quadWeights));
@@ -522,11 +522,11 @@ static PetscErrorCode InterpolateGradient(DM dm, Vec locX, Vec locC)
         PetscCall(PetscObjectGetClassId(obj, &id));
         if (id == PETSCFE_CLASSID)      {PetscCall(PetscFEGetNumComponents((PetscFE) obj, &Nc));PetscCall(PetscFEGetDimension((PetscFE) obj, &Nb));}
         else if (id == PETSCFV_CLASSID) {PetscCall(PetscFVGetNumComponents((PetscFV) obj, &Nc));Nb = 1;}
-        else SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Unknown discretization type for field %d", field);
+        else SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Unknown discretization type for field %" PetscInt_FMT, field);
         for (q = 0; q < Nq; ++q) {
           PetscCheck(fegeom.detJ[q] > 0.0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid determinant %g for element %" PetscInt_FMT ", quadrature points %" PetscInt_FMT, (double)fegeom.detJ[q], cell, q);
-          if (id == PETSCFE_CLASSID)      PetscCall(PetscFEInterpolateGradient_Static((PetscFE) obj, 1, &x[fieldOffset], &fegeom, q, interpolant));
-          else SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Unknown discretization type for field %d", field);
+          if (id == PETSCFE_CLASSID) PetscCall(PetscFEInterpolateGradient_Static((PetscFE) obj, 1, &x[fieldOffset], &fegeom, q, interpolant));
+          else SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Unknown discretization type for field %" PetscInt_FMT, field);
           for (fc = 0; fc < Nc; ++fc) {
             const PetscReal wt = quadWeights[q*qNc+qc+fc];
 

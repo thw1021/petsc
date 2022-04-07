@@ -379,7 +379,7 @@ int main(int argc, char **argv)
     if (error > tol) {
       PetscCall(PetscPrintf(comm, "Area error                 : % .14g\n", (double) error));
     } else {
-      PetscCall(PetscPrintf(comm, "Area verifies!\n", error));
+      PetscCall(PetscPrintf(comm, "Area verifies!\n"));
     }
   }
 

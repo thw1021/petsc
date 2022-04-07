@@ -237,7 +237,7 @@ PetscErrorCode ex3_1(void)
     /* migrate points */
     PetscCall(DMSwarmMigrate(dms,PETSC_TRUE));
     /* view points */
-    PetscCall(PetscSNPrintf(prefix,PETSC_MAX_PATH_LEN-1,"step%d",tk));
+    PetscCall(PetscSNPrintf(prefix,PETSC_MAX_PATH_LEN-1,"step%" PetscInt_FMT,tk));
     /* should use the regular SwarmView() api, not one for a particular type */
     PetscCall(SwarmViewGP(dms,prefix));
   }
