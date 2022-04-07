@@ -316,11 +316,11 @@ PetscErrorCode PCBDDCScalingSetUp(PC pc)
         PetscCall(VecNorm(B0_Bv,NORM_INFINITY,&errorl));
       }
       PetscCallMPI(MPI_Allreduce(&errorl,&error,1,MPIU_REAL,MPI_SUM,PetscObjectComm((PetscObject)pc)));
-      PetscCall(PetscViewerASCIIPrintf(viewer,"Error benign extension %1.14e\n",error));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"Error benign extension %1.14e\n",(double)error));
     }
     PetscCall(VecAXPY(pcis->vec1_global,-1.0,vec2_global));
     PetscCall(VecNorm(pcis->vec1_global,NORM_INFINITY,&error));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"Error scaling extension %1.14e\n",error));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"Error scaling extension %1.14e\n",(double)error));
     PetscCall(VecDestroy(&vec2_global));
 
     /* restriction -> from parallel to local */
@@ -333,7 +333,7 @@ PetscErrorCode PCBDDCScalingSetUp(PC pc)
     PetscCall(VecScatterBegin(pcis->global_to_B,pcis->vec1_B,pcis->vec1_global,ADD_VALUES,SCATTER_REVERSE));
     PetscCall(VecScatterEnd(pcis->global_to_B,pcis->vec1_B,pcis->vec1_global,ADD_VALUES,SCATTER_REVERSE));
     PetscCall(VecNorm(pcis->vec1_global,NORM_INFINITY,&error));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"Error scaling restriction %1.14e\n",error));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"Error scaling restriction %1.14e\n",(double)error));
     PetscCall(MatDestroy(&B0_B));
     PetscCall(VecDestroy(&B0_Bv));
     PetscCall(VecDestroy(&B0_Bv2));

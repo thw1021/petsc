@@ -187,9 +187,9 @@ static PetscErrorCode PCView_BDDC(PC pc,PetscViewer viewer)
     PetscCall(PetscViewerASCIIPrintf(viewer,"  Number of dofs' layers for the computation of principal minors: %" PetscInt_FMT "\n",pcbddc->sub_schurs_layers));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  Use user CSR graph to compute successive layers: %d\n",pcbddc->sub_schurs_use_useradj));
     if (pcbddc->adaptive_threshold[1] != pcbddc->adaptive_threshold[0]) {
-      PetscCall(PetscViewerASCIIPrintf(viewer,"  Adaptive constraint selection thresholds (active %d, userdefined %d): %g,%g\n",pcbddc->adaptive_selection,pcbddc->adaptive_userdefined,pcbddc->adaptive_threshold[0],pcbddc->adaptive_threshold[1]));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"  Adaptive constraint selection thresholds (active %d, userdefined %d): %g,%g\n",pcbddc->adaptive_selection,pcbddc->adaptive_userdefined,(double)pcbddc->adaptive_threshold[0],(double)pcbddc->adaptive_threshold[1]));
     } else {
-      PetscCall(PetscViewerASCIIPrintf(viewer,"  Adaptive constraint selection threshold (active %d, userdefined %d): %g\n",pcbddc->adaptive_selection,pcbddc->adaptive_userdefined,pcbddc->adaptive_threshold[0]));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"  Adaptive constraint selection threshold (active %d, userdefined %d): %g\n",pcbddc->adaptive_selection,pcbddc->adaptive_userdefined,(double)pcbddc->adaptive_threshold[0]));
     }
     PetscCall(PetscViewerASCIIPrintf(viewer,"  Min constraints / connected component: %" PetscInt_FMT "\n",pcbddc->adaptive_nmin));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  Max constraints / connected component: %" PetscInt_FMT "\n",pcbddc->adaptive_nmax));

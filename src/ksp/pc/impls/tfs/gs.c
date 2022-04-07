@@ -522,7 +522,7 @@ static PetscErrorCode get_ngh_buf(PCTFS_gs_id *gs)
   buf_size = PetscMin(msg_buf,i);
 
   /* can we do it? */
-  PetscCheck(p_mask_size<=buf_size,PETSC_COMM_SELF,PETSC_ERR_PLIB,"get_ngh_buf() :: buf<pms :: %d>%d",p_mask_size,buf_size);
+  PetscCheck(p_mask_size<=buf_size,PETSC_COMM_SELF,PETSC_ERR_PLIB,"get_ngh_buf() :: buf<pms :: %" PetscInt_FMT ">%" PetscInt_FMT,p_mask_size,buf_size);
 
   /* get PCTFS_giop buf space ... make *only* one malloc */
   buf1 = (PetscInt*) malloc(buf_size<<1);

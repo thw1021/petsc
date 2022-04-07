@@ -783,6 +783,7 @@ PetscErrorCode TSTrajectorySetFiletemplate(TSTrajectory tj,const char filetempla
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tj,TSTRAJECTORY_CLASSID,1);
+  PetscValidCharPointer(filetemplate,2);
   PetscCheck(!tj->dirfiletemplate,PetscObjectComm((PetscObject)tj),PETSC_ERR_ARG_WRONGSTATE,"Cannot set filetemplate after TSTrajectory has been setup");
 
   PetscCheck(filetemplate[0],PetscObjectComm((PetscObject)tj),PETSC_ERR_USER,"-ts_trajectory_file_template requires a file name template, e.g. filename-%%06" PetscInt_FMT ".bin");
@@ -790,7 +791,7 @@ PetscErrorCode TSTrajectorySetFiletemplate(TSTrajectory tj,const char filetempla
   PetscCall(PetscStrstr(filetemplate,"%",(char**)&ptr));
   PetscCheck(ptr,PetscObjectComm((PetscObject)tj),PETSC_ERR_USER,"-ts_trajectory_file_template requires a file name template, e.g. filename-%%06" PetscInt_FMT ".bin");
   for (ptr++; ptr && *ptr; ptr++) {
-    PetscCall(PetscStrchr("DdiouxX",*ptr,(char**)&ptr2));
+    PetscCall(PetscStrchr(PetscInt_FMT "DiouxX",*ptr,(char**)&ptr2));
     PetscCheck(ptr2 || (*ptr >= '0' && *ptr <= '9'),PetscObjectComm((PetscObject)tj),PETSC_ERR_USER,"Invalid file template argument to -ts_trajectory_file_template, should look like filename-%%06" PetscInt_FMT ".bin");
     if (ptr2) break;
   }

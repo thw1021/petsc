@@ -470,9 +470,7 @@ PetscErrorCode  TSSetSaveTrajectory(TS ts)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
-  if (!ts->trajectory) {
-    PetscCall(TSTrajectoryCreate(PetscObjectComm((PetscObject)ts),&ts->trajectory));
-  }
+  if (!ts->trajectory) PetscCall(TSTrajectoryCreate(PetscObjectComm((PetscObject)ts),&ts->trajectory));
   PetscFunctionReturn(0);
 }
 

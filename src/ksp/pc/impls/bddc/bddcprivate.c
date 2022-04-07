@@ -3610,15 +3610,15 @@ PetscErrorCode PCBDDCAdaptiveSelection(PC pc)
           else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"Error in SYGVX Lapack routine: leading minor of order %d is not positive definite",(int)B_ierr-B_N-1);
         }
         if (pcbddc->dbg_flag) {
-          PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"   -> Got %d eigs\n",B_neigs));
+          PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"   -> Got %" PetscBLASInt_FMT " eigs\n",B_neigs));
           for (j=0;j<B_neigs;j++) {
             if (eigs[j] == 0.0) {
               PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"     Inf\n"));
             } else {
               if (pcbddc->use_deluxe_scaling) {
-                PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"     %1.6e\n",eigs[j+eigs_start]));
+                PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"     %1.6e\n",(double)eigs[j+eigs_start]));
               } else {
-                PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"     %1.6e\n",1./eigs[j+eigs_start]));
+                PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"     %1.6e\n",(double)(1./eigs[j+eigs_start])));
               }
             }
           }
@@ -3637,9 +3637,9 @@ PetscErrorCode PCBDDCAdaptiveSelection(PC pc)
 #if defined(PETSC_USE_COMPLEX)
             PetscReal r = PetscRealPart(eigv[(ii+eigs_start)*subset_size+j]);
             PetscReal c = PetscImaginaryPart(eigv[(ii+eigs_start)*subset_size+j]);
-            PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"       %1.4e + %1.4e i\n",r,c));
+            PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"       %1.4e + %1.4e i\n",(double)r,(double)c));
 #else
-            PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"       %1.4e\n",eigv[(ii+eigs_start)*subset_size+j]));
+            PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"       %1.4e\n",(double)(eigv[(ii+eigs_start)*subset_size+j])));
 #endif
           }
         }
@@ -3664,9 +3664,9 @@ PetscErrorCode PCBDDCAdaptiveSelection(PC pc)
 #if defined(PETSC_USE_COMPLEX)
             PetscReal r = PetscRealPart(pcbddc->adaptive_constraints_data[ii*subset_size+j+pcbddc->adaptive_constraints_data_ptr[cum]]);
             PetscReal c = PetscImaginaryPart(pcbddc->adaptive_constraints_data[ii*subset_size+j+pcbddc->adaptive_constraints_data_ptr[cum]]);
-            PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"       %1.4e + %1.4e i\n",r,c));
+            PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"       %1.4e + %1.4e i\n",(double)r,(double)c));
 #else
-            PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"       %1.4e\n",pcbddc->adaptive_constraints_data[ii*subset_size+j+pcbddc->adaptive_constraints_data_ptr[cum]]));
+            PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"       %1.4e\n",(double)PetscRealPart(pcbddc->adaptive_constraints_data[ii*subset_size+j+pcbddc->adaptive_constraints_data_ptr[cum]])));
 #endif
           }
         }
@@ -4854,7 +4854,7 @@ PetscErrorCode PCBDDCSetUpCorrection(PC pc, PetscScalar **coarse_submat_vals_n)
     PetscCall(MatAXPY(TM1,m_one,coarse_sub_mat,DIFFERENT_NONZERO_PATTERN));
     PetscCall(MatNorm(TM1,NORM_FROBENIUS,&real_value));
     PetscCall(PetscViewerASCIIPushSynchronized(pcbddc->dbg_viewer));
-    PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"Subdomain %04d          matrix error % 1.14e\n",PetscGlobalRank,real_value));
+    PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"Subdomain %04d          matrix error % 1.14e\n",PetscGlobalRank,(double)real_value));
 
     /* check constraints */
     PetscCall(ISCreateStride(PETSC_COMM_SELF,pcbddc->local_primal_size-pcbddc->benign_n,0,1,&is_dummy));
@@ -4874,13 +4874,13 @@ PetscErrorCode PCBDDCSetUpCorrection(PC pc, PetscScalar **coarse_submat_vals_n)
     PetscCall(VecSet(mones,-1.0));
     PetscCall(MatDiagonalSet(CPHI,mones,ADD_VALUES));
     PetscCall(MatNorm(CPHI,NORM_FROBENIUS,&real_value));
-    PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"Subdomain %04d phi constraints error % 1.14e\n",PetscGlobalRank,real_value));
+    PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"Subdomain %04d phi constraints error % 1.14e\n",PetscGlobalRank,(double)real_value));
     if (!pcbddc->symmetric_primal) {
       PetscCall(MatMatMult(C_B,coarse_psi_B,MAT_REUSE_MATRIX,1.0,&CPHI));
       PetscCall(VecSet(mones,-1.0));
       PetscCall(MatDiagonalSet(CPHI,mones,ADD_VALUES));
       PetscCall(MatNorm(CPHI,NORM_FROBENIUS,&real_value));
-      PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"Subdomain %04d psi constraints error % 1.14e\n",PetscGlobalRank,real_value));
+      PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"Subdomain %04d psi constraints error % 1.14e\n",PetscGlobalRank,(double)real_value));
     }
     PetscCall(MatDestroy(&C_B));
     PetscCall(MatDestroy(&CPHI));
@@ -5092,9 +5092,9 @@ PetscErrorCode PCBDDCComputeLocalMatrix(PC pc, Mat ChangeOfBasisMatrix)
       PetscCall(MPIU_Allreduce(&lerror,&error,1,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)pc)));
       if (error > PETSC_SMALL) {
         if (!pcbddc->user_ChangeOfBasisMatrix || pcbddc->current_level) {
-          SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_PLIB,"Error global vs local change on I: %1.6e",error);
+          SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_PLIB,"Error global vs local change on I: %1.6e",(double)error);
         } else {
-          SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"Error global vs local change on I: %1.6e",error);
+          SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"Error global vs local change on I: %1.6e",(double)error);
         }
       }
     }
@@ -5104,9 +5104,9 @@ PetscErrorCode PCBDDCComputeLocalMatrix(PC pc, Mat ChangeOfBasisMatrix)
     PetscCall(VecNorm(x,NORM_INFINITY,&error));
     if (error > PETSC_SMALL) {
       if (!pcbddc->user_ChangeOfBasisMatrix || pcbddc->current_level) {
-        SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_PLIB,"Error global vs local change on N: %1.6e",error);
+        SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_PLIB,"Error global vs local change on N: %1.6e",(double)error);
       } else {
-        SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"Error global vs local change on N: %1.6e",error);
+        SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_USER,"Error global vs local change on N: %1.6e",(double)error);
       }
     }
     PetscCall(VecDestroy(&x));
@@ -5718,7 +5718,7 @@ PetscErrorCode PCBDDCSetUpLocalSolvers(PC pc, PetscBool dirichlet, PetscBool neu
       PetscCall(KSPCheckSolve(pcbddc->ksp_D,pc,pcis->vec2_D));
       PetscCall(VecAXPY(pcis->vec1_D,m_one,pcis->vec2_D));
       PetscCall(VecNorm(pcis->vec1_D,NORM_INFINITY,&value));
-      PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"Subdomain %04d infinity error for Dirichlet solve (%s) = % 1.14e \n",PetscGlobalRank,((PetscObject)(pcbddc->ksp_D))->prefix,value));
+      PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"Subdomain %04d infinity error for Dirichlet solve (%s) = % 1.14e \n",PetscGlobalRank,((PetscObject)(pcbddc->ksp_D))->prefix,(double)value));
       PetscCall(PetscViewerFlush(pcbddc->dbg_viewer));
     }
     if (neumann) { /* Neumann */
@@ -5728,7 +5728,7 @@ PetscErrorCode PCBDDCSetUpLocalSolvers(PC pc, PetscBool dirichlet, PetscBool neu
       PetscCall(KSPCheckSolve(pcbddc->ksp_R,pc,pcbddc->vec2_R));
       PetscCall(VecAXPY(pcbddc->vec1_R,m_one,pcbddc->vec2_R));
       PetscCall(VecNorm(pcbddc->vec1_R,NORM_INFINITY,&value));
-      PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"Subdomain %04d infinity error for Neumann solve (%s) = % 1.14e\n",PetscGlobalRank,((PetscObject)(pcbddc->ksp_R))->prefix,value));
+      PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"Subdomain %04d infinity error for Neumann solve (%s) = % 1.14e\n",PetscGlobalRank,((PetscObject)(pcbddc->ksp_R))->prefix,(double)value));
       PetscCall(PetscViewerFlush(pcbddc->dbg_viewer));
     }
   }
@@ -6852,10 +6852,10 @@ PetscErrorCode PCBDDCConstraintsSetUp(PC pc)
               for (jj=0;jj<size_of_constraint;jj++) {
                 for (ii=0;ii<primal_dofs;ii++) {
                   if (ii != jj && PetscAbsScalar(dbg_work[size_of_constraint*primal_dofs+jj*primal_dofs+ii]) > 1.e-12) {
-                    PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"\tQr basis function %" PetscInt_FMT " is not orthogonal to constraint %" PetscInt_FMT " (%1.14e)!\n",jj,ii,PetscAbsScalar(dbg_work[size_of_constraint*primal_dofs+jj*primal_dofs+ii])));
+                    PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"\tQr basis function %" PetscInt_FMT " is not orthogonal to constraint %" PetscInt_FMT " (%1.14e)!\n",jj,ii,(double)PetscAbsScalar(dbg_work[size_of_constraint*primal_dofs+jj*primal_dofs+ii])));
                   }
                   if (ii == jj && PetscAbsScalar(dbg_work[size_of_constraint*primal_dofs+jj*primal_dofs+ii]-(PetscReal)1) > 1.e-12) {
-                    PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"\tQr basis function %" PetscInt_FMT " is not unitary w.r.t constraint %" PetscInt_FMT " (%1.14e)!\n",jj,ii,PetscAbsScalar(dbg_work[size_of_constraint*primal_dofs+jj*primal_dofs+ii])));
+                    PetscCall(PetscViewerASCIISynchronizedPrintf(pcbddc->dbg_viewer,"\tQr basis function %" PetscInt_FMT " is not unitary w.r.t constraint %" PetscInt_FMT " (%1.14e)!\n",jj,ii,(double)PetscAbsScalar(dbg_work[size_of_constraint*primal_dofs+jj*primal_dofs+ii])));
                   }
                 }
               }
@@ -6958,7 +6958,7 @@ PetscErrorCode PCBDDCConstraintsSetUp(PC pc)
         PetscCall(VecAXPY(x,-1.0,x_change));
         PetscCall(VecNorm(x,NORM_INFINITY,&error));
         if (error > PETSC_SMALL) {
-          SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_PLIB,"Error global vs local change on N: %1.6e",error);
+          SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_PLIB,"Error global vs local change on N: %1.6e",(double)error);
         }
         PetscCall(VecDestroy(&x));
         PetscCall(VecDestroy(&x_change));
@@ -8840,8 +8840,8 @@ PetscErrorCode PCBDDCSetUpCoarseSolver(PC pc,PetscScalar* coarse_submat_vals)
         PetscCall(PetscViewerASCIIPrintf(dbg_viewer,"Coarse problem details (use estimates %d)\n",pcbddc->use_coarse_estimates));
         PetscCall(PetscObjectPrintClassNamePrefixType((PetscObject)(pcbddc->coarse_ksp),dbg_viewer));
         PetscCall(PetscObjectPrintClassNamePrefixType((PetscObject)(check_pc),dbg_viewer));
-        PetscCall(PetscViewerASCIIPrintf(dbg_viewer,"Coarse problem exact infty_error   : %1.6e\n",infty_error));
-        PetscCall(PetscViewerASCIIPrintf(dbg_viewer,"Coarse problem residual infty_error: %1.6e\n",abs_infty_error));
+        PetscCall(PetscViewerASCIIPrintf(dbg_viewer,"Coarse problem exact infty_error   : %1.6e\n",(double)infty_error));
+        PetscCall(PetscViewerASCIIPrintf(dbg_viewer,"Coarse problem residual infty_error: %1.6e\n",(double)abs_infty_error));
         if (CoarseNullSpace) {
           PetscCall(PetscViewerASCIIPrintf(dbg_viewer,"Coarse problem is singular\n"));
         }
@@ -8852,9 +8852,9 @@ PetscErrorCode PCBDDCSetUpCoarseSolver(PC pc,PetscScalar* coarse_submat_vals)
           PetscCall(KSPGetIterationNumber(check_ksp,&its));
           PetscCall(KSPGetConvergedReason(check_ksp,&reason));
           PetscCall(KSPComputeExtremeSingularValues(check_ksp,&lambda_max_s,&lambda_min_s));
-          PetscCall(PetscViewerASCIIPrintf(dbg_viewer,"Coarse problem eigenvalues (estimated with %" PetscInt_FMT " iterations of %s, conv reason %d): %1.6e %1.6e (%1.6e %1.6e)\n",its,check_ksp_type,reason,lambda_min,lambda_max,lambda_min_s,lambda_max_s));
+          PetscCall(PetscViewerASCIIPrintf(dbg_viewer,"Coarse problem eigenvalues (estimated with %" PetscInt_FMT " iterations of %s, conv reason %d): %1.6e %1.6e (%1.6e %1.6e)\n",its,check_ksp_type,reason,(double)lambda_min,(double)lambda_max,(double)lambda_min_s,(double)lambda_max_s));
           for (i=0;i<neigs;i++) {
-            PetscCall(PetscViewerASCIIPrintf(dbg_viewer,"%1.6e %1.6ei\n",eigs_r[i],eigs_c[i]));
+            PetscCall(PetscViewerASCIIPrintf(dbg_viewer,"%1.6e %1.6ei\n",(double)eigs_r[i],(double)eigs_c[i]));
           }
         }
         PetscCall(PetscViewerFlush(dbg_viewer));
@@ -8962,7 +8962,7 @@ PetscErrorCode PCBDDCComputePrimalNumbering(PC pc,PetscInt* coarse_size_n,PetscI
     PetscCall(VecScatterBegin(matis->rctx,pcis->vec1_N,pcis->vec1_global,ADD_VALUES,SCATTER_REVERSE));
     PetscCall(VecScatterEnd(matis->rctx,pcis->vec1_N,pcis->vec1_global,ADD_VALUES,SCATTER_REVERSE));
     PetscCall(VecSum(pcis->vec1_global,&coarsesum));
-    PetscCall(PetscViewerASCIIPrintf(pcbddc->dbg_viewer,"Size of coarse problem is %" PetscInt_FMT " (%lf)\n",coarse_size,PetscRealPart(coarsesum)));
+    PetscCall(PetscViewerASCIIPrintf(pcbddc->dbg_viewer,"Size of coarse problem is %" PetscInt_FMT " (%lf)\n",coarse_size,(double)PetscRealPart(coarsesum)));
     if (pcbddc->dbg_flag > 1 || set_error_reduced) {
       PetscInt *gidxs;
 
@@ -9342,9 +9342,9 @@ PetscErrorCode PCBDDCCheckOperator(PC pc)
     PetscCall(VecCopy(pcis->vec1_B,pcis->vec2_B));
     PetscCall(VecAXPY(pcis->vec1_B,-1.0,vec_check_B));
     PetscCall(VecNorm(pcis->vec1_B,NORM_INFINITY,&norm));
-    PetscCall(PetscPrintf(PETSC_COMM_SELF,"[%d] BDDC local error is %1.4e\n",PetscGlobalRank,norm));
+    PetscCall(PetscPrintf(PETSC_COMM_SELF,"[%d] BDDC local error is %1.4e\n",PetscGlobalRank,(double)norm));
     for (i=0;i<pcbddc->benign_n;i++) {
-      PetscCall(PetscPrintf(PETSC_COMM_SELF,"[%d] BDDC p0[%" PetscInt_FMT "] error is %1.4e\n",PetscGlobalRank,i,PetscAbsScalar(pcbddc->benign_p0[i]-p0_check[i])));
+      PetscCall(PetscPrintf(PETSC_COMM_SELF,"[%d] BDDC p0[%" PetscInt_FMT "] error is %1.4e\n",PetscGlobalRank,i,(double)PetscAbsScalar(pcbddc->benign_p0[i]-p0_check[i])));
     }
     PetscCall(PetscFree(p0_check));
     PetscCall(VecDestroy(&vec_scale_P));
