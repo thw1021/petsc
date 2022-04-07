@@ -122,12 +122,12 @@ static PetscErrorCode KSPView_PIPELCG(KSP ksp,PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERSTRING,&isstring));
   if (iascii) {
     PetscCall(PetscViewerASCIIPrintf(viewer,"  Pipeline depth: %" PetscInt_FMT "\n", plcg->l));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Minimal eigenvalue estimate %g\n",plcg->lmin));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Maximal eigenvalue estimate %g\n",plcg->lmax));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Minimal eigenvalue estimate %g\n",(double)plcg->lmin));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Maximal eigenvalue estimate %g\n",(double)plcg->lmax));
   } else if (isstring) {
     PetscCall(PetscViewerStringSPrintf(viewer,"  Pipeline depth: %" PetscInt_FMT "\n", plcg->l));
-    PetscCall(PetscViewerStringSPrintf(viewer,"  Minimal eigenvalue estimate %g\n",plcg->lmin));
-    PetscCall(PetscViewerStringSPrintf(viewer,"  Maximal eigenvalue estimate %g\n",plcg->lmax));
+    PetscCall(PetscViewerStringSPrintf(viewer,"  Minimal eigenvalue estimate %g\n",(double)plcg->lmin));
+    PetscCall(PetscViewerStringSPrintf(viewer,"  Maximal eigenvalue estimate %g\n",(double)plcg->lmax));
   }
   PetscFunctionReturn(0);
 }
