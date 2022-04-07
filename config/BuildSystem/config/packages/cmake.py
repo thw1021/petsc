@@ -14,7 +14,7 @@ class Configure(config.package.GNUPackage):
     self.linkedbypetsc      = 0
     self.executablename     = 'cmake'
     self.useddirectly       = 0
-    self.maxminCmakeVersion= (2,0,0)  # minimum CMake version needed by all active packages
+    self.maxminCmakeVersion = (2,0,0) # minimum CMake version needed by all active packages
     return
 
   def setupHelp(self, help):
@@ -102,7 +102,7 @@ class Configure(config.package.GNUPackage):
         else:
           self.log.write('cmake version found '+self.foundversion+'\n')
           if self.versionToTuple(self.foundversion) < self.maxminCmakeVersion:
-            raise RuntimeError('A package requires cmake version '+str(self.maxminCmakeVersion)+' use --download-cmake')
+            raise RuntimeError('A package requires CMake version '+str(self.maxminCmakeVersion)+' use --download-cmake')
           return
       gver = None
       try:
@@ -117,7 +117,7 @@ class Configure(config.package.GNUPackage):
         else:
           self.log.write('cmake version found '+self.foundversion+'\n')
           if self.versionToTuple(self.foundversion) < self.maxminCmakeVersion:
-            raise RuntimeError('A package requires cmake version '+str(self.maxminCmakeVersion)+' use --download-cmake')
+            raise RuntimeError('A package requires CMake version '+str(self.maxminCmakeVersion)+' use --download-cmake')
           return
         self.log.write('cmake version check failed\n')
     else:
