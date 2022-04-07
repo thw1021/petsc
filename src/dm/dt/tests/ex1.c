@@ -38,10 +38,10 @@ static PetscErrorCode CheckQuadrature_Basics(PetscInt npoints, PetscReal alpha, 
 
   PetscFunctionBegin;
   for (i = 1; i < npoints; i++) {
-    PetscCheck(x[i] > x[i-1],PETSC_COMM_SELF,PETSC_ERR_PLIB,"Quadrature points not monotonically increasing, %" PetscInt_FMT " points, alpha = %g, beta = %g, i = %" PetscInt_FMT ", x[i] = %g, x[i-1] = %g",npoints, (double) alpha, (double) beta, i, x[i], x[i-1]);
+    PetscCheck(x[i] > x[i-1],PETSC_COMM_SELF,PETSC_ERR_PLIB,"Quadrature points not monotonically increasing, %" PetscInt_FMT " points, alpha = %g, beta = %g, i = %" PetscInt_FMT ", x[i] = %g, x[i-1] = %g",npoints, (double) alpha, (double) beta, i, (double)x[i], (double)x[i-1]);
   }
   for (i = 0; i < npoints; i++) {
-    PetscCheck(w[i] > 0.,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Quadrature weight not positive, %" PetscInt_FMT " points, alpha = %g, beta = %g, i = %" PetscInt_FMT ", w[i] = %g",npoints, (double) alpha, (double) beta, i, w[i]);
+    PetscCheck(w[i] > 0.,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Quadrature weight not positive, %" PetscInt_FMT " points, alpha = %g, beta = %g, i = %" PetscInt_FMT ", w[i] = %g",npoints, (double) alpha, (double) beta, i, (double)w[i]);
   }
   PetscFunctionReturn(0);
 }
@@ -124,7 +124,7 @@ static PetscErrorCode CheckJacobiQuadrature(PetscInt npoints, PetscReal alpha, P
       wdiff = PetscAbsReal(w[i] - w2[i]);
       xtol = eps * (1. + PetscMin(PetscAbsReal(x[i]),1. - PetscAbsReal(x[i])));
       wtol = eps * (1. + w[i]);
-      PetscCall(PetscInfo(NULL,"npoints %" PetscInt_FMT ", alpha %g, beta %g, i %" PetscInt_FMT ", xdiff/xtol %g, wdiff/wtol %g\n", npoints, (double) alpha, (double) beta, i, (double) xdiff/xtol, (double) wdiff/wtol));
+      PetscCall(PetscInfo(NULL,"npoints %" PetscInt_FMT ", alpha %g, beta %g, i %" PetscInt_FMT ", xdiff/xtol %g, wdiff/wtol %g\n", npoints, (double) alpha, (double) beta, i, (double)(xdiff/xtol), (double)(wdiff/wtol)));
       PetscCheck(xdiff <= xtol,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Mismatch quadrature point: %" PetscInt_FMT " points, alpha = %g, beta = %g, i = %" PetscInt_FMT ", xdiff = %g", npoints, (double) alpha, (double) beta, i, (double) xdiff);
       PetscCheck(wdiff <= wtol,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Mismatch quadrature weight: %" PetscInt_FMT " points, alpha = %g, beta = %g, i = %" PetscInt_FMT ", wdiff = %g", npoints, (double) alpha, (double) beta, i, (double) wdiff);
     }
