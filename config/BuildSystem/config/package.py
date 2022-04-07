@@ -740,7 +740,7 @@ If the problem persists, please send your configure.log to petsc-maint@mcs.anl.g
         try:
           config.base.Configure.executeShellCommand([self.sourceControl.git, 'cat-file', '-e', self.gitcommit+'^{commit}'], cwd=self.packageDir, log = self.log)
           gitcommit_hash,err,ret = config.base.Configure.executeShellCommand([self.sourceControl.git, 'rev-parse', self.gitcommit], cwd=self.packageDir, log = self.log)
-          # check if origin/branch exists - if so warn user that we are using local branch
+          # check if origin/branch exists - if so warn user that we are using the remote branch
           try:
             rbranch = 'origin/'+self.gitcommit
             config.base.Configure.executeShellCommand([self.sourceControl.git, 'cat-file', '-e', rbranch+'^{commit}'], cwd=self.packageDir, log = self.log)
