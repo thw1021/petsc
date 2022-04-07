@@ -397,7 +397,7 @@ PetscErrorCode PCGAMGFilterGraph(Mat *a_Gmat,PetscReal vfilter,PetscBool symm)
 #if defined(PETSC_USE_INFO)
   {
     double t1 = (!nnz0) ? 1. : 100.*(double)nnz1/(double)nnz0, t2 = (!nloc) ? 1. : (double)nnz0/(double)nloc;
-    PetscCall(PetscInfo(*a_Gmat,"\t %g%% nnz after filtering, with threshold %g, %g nnz ave. (N=%" PetscInt_FMT ")\n",t1,vfilter,t2,MM));
+    PetscCall(PetscInfo(*a_Gmat,"\t %g%% nnz after filtering, with threshold %g, %g nnz ave. (N=%" PetscInt_FMT ")\n",t1,(double)vfilter,t2,MM));
   }
 #endif
   PetscCall(MatDestroy(&Gmat));

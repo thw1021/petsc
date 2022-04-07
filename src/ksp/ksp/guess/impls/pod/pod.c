@@ -385,7 +385,7 @@ complete_request:
   if (pod->monitor) {
     PetscCall(PetscPrintf(PetscObjectComm((PetscObject)guess),"  KSPGuessPOD: basis %" PetscBLASInt_FMT ", energy fractions = ",pod->nen));
     for (i=pod->n-1;i>=0;i--) {
-      PetscCall(PetscPrintf(PetscObjectComm((PetscObject)guess),"%1.6e (%d) ",pod->eigs[i]/toten,i >= pod->st ? 1 : 0));
+      PetscCall(PetscPrintf(PetscObjectComm((PetscObject)guess),"%1.6e (%d) ",(double)(pod->eigs[i]/toten),i >= pod->st ? 1 : 0));
     }
     PetscCall(PetscPrintf(PetscObjectComm((PetscObject)guess),"\n"));
     if (PetscDefined(USE_DEBUG)) {
@@ -445,7 +445,7 @@ static PetscErrorCode KSPGuessView_POD(KSPGuess guess,PetscViewer viewer)
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isascii));
   if (isascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer,"Max size %" PetscInt_FMT ", tolerance %g, Ainner %d\n",pod->maxn,pod->tol,pod->Aspd));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"Max size %" PetscInt_FMT ", tolerance %g, Ainner %d\n",pod->maxn,(double)pod->tol,pod->Aspd));
   }
   PetscFunctionReturn(0);
 }

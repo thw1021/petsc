@@ -1484,7 +1484,7 @@ static PetscErrorCode PCView_GAMG(PC pc,PetscViewer viewer)
     PetscCall((*pc_gamg->ops->view)(pc,viewer));
   }
   PetscCall(PCMGGetGridComplexity(pc,&gc,&oc));
-  PetscCall(PetscViewerASCIIPrintf(viewer,"      Complexity:    grid = %g    operator = %g\n",gc,oc));
+  PetscCall(PetscViewerASCIIPrintf(viewer,"      Complexity:    grid = %g    operator = %g\n",(double)gc,(double)oc));
   PetscFunctionReturn(0);
 }
 
