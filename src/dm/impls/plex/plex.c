@@ -296,8 +296,8 @@ static PetscErrorCode VecView_Plex_Local_Draw_2D(Vec v, PetscViewer viewer)
       PetscInt nmax = 2;
 
       PetscCall(PetscViewerDrawGetDraw(viewer, w, &draw));
-      if (Nc > 1) PetscCall(PetscSNPrintf(title, sizeof(title), "%s:%s_%" PetscInt_FMT " Step: %" PetscInt_FMT " Time: %.4g", name, fname, comp, step, time));
-      else        PetscCall(PetscSNPrintf(title, sizeof(title), "%s:%s Step: %" PetscInt_FMT " Time: %.4g", name, fname, step, time));
+      if (Nc > 1) PetscCall(PetscSNPrintf(title, sizeof(title), "%s:%s_%" PetscInt_FMT " Step: %" PetscInt_FMT " Time: %.4g", name, fname, comp, step, (double)time));
+      else        PetscCall(PetscSNPrintf(title, sizeof(title), "%s:%s Step: %" PetscInt_FMT " Time: %.4g", name, fname, step, (double)time));
       PetscCall(PetscDrawSetTitle(draw, title));
 
       /* TODO Get max and min only for this component */
@@ -8605,7 +8605,7 @@ PetscErrorCode DMPlexCheckGeometry(DM dm)
     if (unsplit) continue;
     PetscCall(DMPlexComputeCellGeometryFEM(dm, c, NULL, NULL, J, NULL, &detJ));
     PetscCheckFalse(detJ < -PETSC_SMALL || (detJ <= 0.0 && !ignoreZeroVol),PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Mesh cell %" PetscInt_FMT " of type %s is inverted, |J| = %g", c, DMPolytopeTypes[ct], (double) detJ);
-    PetscCall(PetscInfo(dm, "Cell %" PetscInt_FMT " FEM Volume %g\n", c, (double) detJ*refVol));
+    PetscCall(PetscInfo(dm, "Cell %" PetscInt_FMT " FEM Volume %g\n", c, (double)(detJ*refVol)));
     if (depth > 1 && !periodic) {
       PetscCall(DMPlexComputeCellGeometryFVM(dm, c, &vol, NULL, NULL));
       PetscCheckFalse(vol < -PETSC_SMALL || (vol <= 0.0 && !ignoreZeroVol),PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Mesh cell %" PetscInt_FMT " of type %s is inverted, vol = %g", c, DMPolytopeTypes[ct], (double) vol);

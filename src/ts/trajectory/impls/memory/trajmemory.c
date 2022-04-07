@@ -873,10 +873,10 @@ static PetscErrorCode printwhattodo2(PetscViewer viewer,PetscRevolveInt whattodo
 
   switch(whattodo) {
     case 1:
-      PetscCall(PetscViewerASCIIPrintf(viewer,"[Top Level] Advance from stride %" PetscInt_FMT " to stride %" PetscInt_FMT "\n",rctx->oldcapo+shift,rctx->capo+shift));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"[Top Level] Advance from stride %d to stride %d\n",rctx->oldcapo+shift,rctx->capo+shift));
       break;
     case 2:
-      PetscCall(PetscViewerASCIIPrintf(viewer,"[Top Level] Store in checkpoint number %" PetscInt_FMT "\n",rctx->check));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"[Top Level] Store in checkpoint number %d\n",rctx->check));
       break;
     case 3:
       PetscCall(PetscViewerASCIIPrintf(viewer,"[Top Level] First turn: Initialize adjoints and reverse first stride\n"));
@@ -885,13 +885,13 @@ static PetscErrorCode printwhattodo2(PetscViewer viewer,PetscRevolveInt whattodo
       PetscCall(PetscViewerASCIIPrintf(viewer,"[Top Level] Forward and reverse one stride\n"));
       break;
     case 5:
-      PetscCall(PetscViewerASCIIPrintf(viewer,"[Top Level] Restore in checkpoint number %" PetscInt_FMT "\n",rctx->check));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"[Top Level] Restore in checkpoint number %d\n",rctx->check));
       break;
     case 7:
-      PetscCall(PetscViewerASCIIPrintf(viewer,"[Top Level] Store in top-level checkpoint number %" PetscInt_FMT "\n",rctx->check));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"[Top Level] Store in top-level checkpoint number %d\n",rctx->check));
       break;
     case 8:
-      PetscCall(PetscViewerASCIIPrintf(viewer,"[Top Level] Restore in top-level checkpoint number %" PetscInt_FMT "\n",rctx->check));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"[Top Level] Restore in top-level checkpoint number %d\n",rctx->check));
       break;
     case -1:
       PetscCall(PetscViewerASCIIPrintf(viewer,"[Top Level] Error!"));
@@ -1408,7 +1408,7 @@ static PetscErrorCode TSTrajectoryMemoryGet_TLTR(TSTrajectory tj,TS ts,TJSchedul
       PetscCall(ApplyRevolve(tj->monitor,tjsch->stype,tjsch->rctx2,rtotal_steps,rstepnum,rstepnum,PETSC_TRUE,&tjsch->store_stride));
       if (tj->monitor) {
         PetscCall(PetscViewerASCIIAddTab(tj->monitor,((PetscObject)tj)->tablevel));
-        PetscCall(PetscViewerASCIIPrintf(tj->monitor,"[Top Level] Skip the stride from %" PetscInt_FMT " to %" PetscInt_FMT " (stage values already checkpointed)\n",tjsch->rctx2->oldcapo,tjsch->rctx2->oldcapo+1));
+        PetscCall(PetscViewerASCIIPrintf(tj->monitor,"[Top Level] Skip the stride from %d to %d (stage values already checkpointed)\n",tjsch->rctx2->oldcapo,tjsch->rctx2->oldcapo+1));
         PetscCall(PetscViewerASCIISubtractTab(tj->monitor,((PetscObject)tj)->tablevel));
       }
       if (!tjsch->rctx2->reverseonestep && tjsch->rctx2->stepsleft > 0) tjsch->rctx2->stepsleft--;
