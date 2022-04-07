@@ -711,7 +711,6 @@ Now rerun configure''' % (self.installDirProvider.dir, '--download-'+self.packag
   def gitPreReqCheck(self):
     '''Some packages may need addition prerequisites if the package comes from a git repository'''
     return 1
-
   def updatehgDir(self):
     '''Checkout the correct hash'''
     if hasattr(self.sourceControl, 'hg') and (self.packageDir == os.path.join(self.externalPackagesDir,'hg.'+self.package)):
@@ -756,10 +755,8 @@ To use the local branch (manually checkout local branch and) - rerun configure w
           fetchblob = self.gitcommit
       if prefetch:
         fetched = 0
-        self.logPrintBox('Attempting a "git fetch" commit/branch/tag: %s from git repos: %s' % (str(self.gitcommit) , str(self.git_urls)))
-        for git_url in self.git_urls:
-          import retrieval
-          git_url = retrieval.removePrefix(git_url,'git://')
+        self.logPrintBox('Attempting a "git fetch" commit/branch/tag: %s from git repos: %s' % (str(self.gitcommit) , str(self.retriever.git_urls)))
+        for git_url in self.retriever.git_urls:
           try:
             config.base.Configure.executeShellCommand([self.sourceControl.git, 'fetch', '--tags', git_url, fetchblob], cwd=self.packageDir, log = self.log)
             gitcommit_hash,err,ret = config.base.Configure.executeShellCommand([self.sourceControl.git, 'rev-parse', 'FETCH_HEAD'], cwd=self.packageDir, log = self.log)
@@ -824,73 +821,38 @@ To use currently downloaded (local) git snapshot - use: --download-'+self.packag
       return
 
   def setupDownload(self):
-    if self.havePETSc:
-      isClone = self.petscclone.isClone
-    else:
-      isClone = True
-
-    # check if its http://ftp.mcs - and add ftp://ftp.mcs as fallback
-    download_urls = []
-    git_urls      = []
-    for url in self.download:
-      import retrieval
-      parsed = retrieval.urlParse(url)
-      if (parsed[0] == 'git') or (parsed[0] == 'ssh' and parsed[2].endswith('.git')) or (parsed[0] == 'https' and parsed[2].endswith('.git')):
-        git_urls.append(url)
-      elif os.path.isdir(url):
-        if retrieval.isDirectoryGitRepo(self.sourceControl.git,url,self.log):
-          git_urls.append(url)
-        else:
-          download_urls.append(url)
-      else:
-        download_urls.append(url)
-      if url.find('http://ftp.mcs.anl.gov') >=0:
-        download_urls.append(url.replace('http://','ftp://'))
-        download_urls.append(url.replace('http://ftp.mcs.anl.gov/pub/petsc/','https://www.mcs.anl.gov/petsc/mirror/'))
-      # prefer giturl from a petsc gitclone, and tarball urls from a petsc tarball.
-      if git_urls:
-        if not hasattr(self.sourceControl, 'git'):
-          self.logPrint('Git not found - skipping giturls: '+str(git_urls)+'\n')
-        elif isClone or 'with-git' in self.framework.clArgDB:
-          download_urls = git_urls+download_urls
-        else:
-          download_urls = download_urls+git_urls
-    self.git_urls = git_urls
-    self.download_urls = download_urls
+    import retrieval
+    self.retriever = retrieval.Retriever(self.sourceControl, argDB = self.argDB)
+    self.retriever.setup()
+    self.retriever.setupURLs(self.name,self.download,self.gitsubmodules)
 
   def downLoad(self):
     '''Downloads a package; using hg or ftp; opens it in the with-packages-build-dir directory'''
-    import retrieval
-
-    retriever = retrieval.Retriever(self.sourceControl, argDB = self.argDB)
-    retriever.setup()
-    retriever.saveLog()
+    self.retriever.saveLog()
     self.logPrint('Downloading '+self.name)
     # now attempt to download each url until any one succeeds.
     err =''
-    for url in self.download_urls:
-      if url.startswith('git://'):
-        if not self.gitcommit: raise RuntimeError(self.PACKAGE+': giturl specified but commit not set')
+    for url in self.retriever.generateURLs():
         if not self.gitPreReqCheck():
           err += 'Git prerequisite check failed for url: '+url+'\n'
           self.logPrint('Git prerequisite check failed - required for url: '+url+'\n')
           continue
       self.logPrintBox('Trying to download '+url+' for '+self.PACKAGE)
       try:
-        retriever.genericRetrieve(url, self.externalPackagesDir, self.package, self.gitsubmodules)
-        self.logWrite(retriever.restoreLog())
-        retriever.saveLog()
+        self.retriever.genericRetrieve(url, self.externalPackagesDir)
+        self.logWrite(self.retriever.restoreLog())
+        self.retriever.saveLog()
         pkgdir = self.getDir()
         if not pkgdir:
           raise RuntimeError('Could not locate downloaded package ' +self.PACKAGE +' in '+self.externalPackagesDir)
         self.framework.actions.addArgument(self.PACKAGE, 'Download', 'Downloaded '+self.PACKAGE+' into '+pkgdir)
-        retriever.restoreLog()
+        self.retriever.restoreLog()
         self.downloaded = 1
         return pkgdir
       except RuntimeError as e:
         self.logPrint('ERROR: '+str(e))
         err += str(e)
-    self.logWrite(retriever.restoreLog())
+    self.logWrite(self.retriever.restoreLog())
     raise RuntimeError('Error during download/extract/detection of '+self.PACKAGE+':\n'+err)
 
   def Install(self):
