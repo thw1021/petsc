@@ -226,7 +226,7 @@ PetscErrorCode go(TS ts, Vec X, const PetscInt NUserV, const PetscInt a_Np, cons
   PetscReal       moments_0[3], moments_1[3], dt_init;
 
   PetscFunctionBeginUser;
-  PetscCheck(numthreads<=MAX_NUM_THRDS,PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Too many threads %" PetscInt_FMT " > %" PetscInt_FMT "", numthreads, MAX_NUM_THRDS);
+  PetscCheck(numthreads<=MAX_NUM_THRDS,PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Too many threads %" PetscInt_FMT " > %" PetscInt_FMT, numthreads, MAX_NUM_THRDS);
   PetscCheck(numthreads>0,PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Number threads %" PetscInt_FMT " > %" PetscInt_FMT " ", numthreads,  MAX_NUM_THRDS);
   PetscCall(TSGetDM(ts,&pack));
   PetscCall(DMGetApplicationContext(pack, &ctx));

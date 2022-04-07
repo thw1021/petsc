@@ -55,12 +55,12 @@ static PetscErrorCode ProcessOptions(AppCtx *options)
     len  = options->numFields;
     PetscCall(PetscMalloc1(len, &options->numComponents));
     PetscCall(PetscOptionsIntArray("-num_components", "The number of components per field", "ex9.c", options->numComponents, &len, &flg));
-    PetscCheck(!flg || !(len != options->numFields),PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Length of components array is %" PetscInt_FMT " should be %" PetscInt_FMT "", len, options->numFields);
+    PetscCheck(!flg || !(len != options->numFields),PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Length of components array is %" PetscInt_FMT " should be %" PetscInt_FMT, len, options->numFields);
   }
   len  = (options->dim+1) * PetscMax(1, options->numFields);
   PetscCall(PetscMalloc1(len, &options->numDof));
   PetscCall(PetscOptionsIntArray("-num_dof", "The dof signature for the section", "ex9.c", options->numDof, &len, &flg));
-  PetscCheckFalse(flg && (len != (options->dim+1) * PetscMax(1, options->numFields)),PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Length of dof array is %" PetscInt_FMT " should be %" PetscInt_FMT "", len, (options->dim+1) * PetscMax(1, options->numFields));
+  PetscCheckFalse(flg && (len != (options->dim+1) * PetscMax(1, options->numFields)),PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Length of dof array is %" PetscInt_FMT " should be %" PetscInt_FMT, len, (options->dim+1) * PetscMax(1, options->numFields));
 
   /* We are specifying the scalar dof, so augment it for multiple components */
   {
@@ -202,7 +202,7 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *newdm)
     }
     break;
   default:
-    SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "Cannot make meshes for dimension %" PetscInt_FMT "", dim);
+    SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "Cannot make meshes for dimension %" PetscInt_FMT, dim);
   }
   if (user->refinementLimit > 0.0) {
     DM rdm;

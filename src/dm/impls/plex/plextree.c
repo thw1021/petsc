@@ -1004,7 +1004,7 @@ static PetscErrorCode DMPlexSetTree_Internal(DM dm, PetscSection parentSection, 
 
         PetscCall(DMPlexGetTreeChildren(dm,p,&numChildren,&children));
         if (numChildren) {
-          PetscCheck(numChildren == cNumChildren,PetscObjectComm((PetscObject)dm),PETSC_ERR_PLIB,"All parent points in a stratum should have the same number of children: %" PetscInt_FMT " != %" PetscInt_FMT "", numChildren, cNumChildren);
+          PetscCheck(numChildren == cNumChildren,PetscObjectComm((PetscObject)dm),PETSC_ERR_PLIB,"All parent points in a stratum should have the same number of children: %" PetscInt_FMT " != %" PetscInt_FMT, numChildren, cNumChildren);
           PetscCall(DMSetLabelValue(dm,"canonical",p,canon));
           for (i = 0; i < numChildren; i++) {
             PetscCall(DMSetLabelValue(dm,"canonical",children[i],cChildren[i]));

@@ -1545,7 +1545,7 @@ static PetscErrorCode DMPlexConstructCohesiveCells_Internal(DM dm, DMLabel label
         PetscCall(DMLabelGetValue(label, coldp, &val));
         if (val == dep-1) {
           PetscCall(PetscFindInt(coldp, numSplitPoints[dep-1], splitPoints[dep-1], &cp));
-          PetscCheck(cp >= 0,comm, PETSC_ERR_ARG_WRONG, "Point %" PetscInt_FMT " is not a split point of dimension %" PetscInt_FMT "", oldp, dep-1);
+          PetscCheck(cp >= 0,comm, PETSC_ERR_ARG_WRONG, "Point %" PetscInt_FMT " is not a split point of dimension %" PetscInt_FMT, oldp, dep-1);
           csplitp  = pMaxNew[dep-1] + cp;
           PetscCall(DMPlexInsertCone(sdm, newp, c, csplitp));
           /* replaced = PETSC_TRUE; */
@@ -2999,7 +2999,7 @@ static PetscErrorCode DMPlexCreateSubmesh_Uninterpolated(DM dm, DMLabel vertexLa
         PetscCall(PetscSectionGetOffset(coordSection, vertex, &off));
         PetscCall(PetscSectionGetDof(subCoordSection, subvertex, &sdof));
         PetscCall(PetscSectionGetOffset(subCoordSection, subvertex, &soff));
-        PetscCheck(dof == sdof,comm, PETSC_ERR_PLIB, "Coordinate dimension %" PetscInt_FMT " on subvertex %" PetscInt_FMT ", vertex %" PetscInt_FMT " should be %" PetscInt_FMT "", sdof, subvertex, vertex, dof);
+        PetscCheck(dof == sdof,comm, PETSC_ERR_PLIB, "Coordinate dimension %" PetscInt_FMT " on subvertex %" PetscInt_FMT ", vertex %" PetscInt_FMT " should be %" PetscInt_FMT, sdof, subvertex, vertex, dof);
         for (d = 0; d < dof; ++d) subCoords[soff+d] = coords[off+d];
       }
       PetscCall(VecRestoreArray(coordinates,    &coords));
@@ -3222,7 +3222,7 @@ static PetscErrorCode DMPlexCreateSubmeshGeneric_Interpolated(DM dm, DMLabel lab
           ++coneSizeNew;
         }
       }
-      PetscCheck(coneSizeNew == subconeSize,comm, PETSC_ERR_PLIB, "Number of cone points located %" PetscInt_FMT " does not match subcone size %" PetscInt_FMT "", coneSizeNew, subconeSize);
+      PetscCheck(coneSizeNew == subconeSize,comm, PETSC_ERR_PLIB, "Number of cone points located %" PetscInt_FMT " does not match subcone size %" PetscInt_FMT, coneSizeNew, subconeSize);
       PetscCall(DMPlexSetCone(subdm, subpoint, coneNew));
       PetscCall(DMPlexSetConeOrientation(subdm, subpoint, orntNew));
       if (fornt < 0) PetscCall(DMPlexOrientPoint(subdm, subpoint, fornt));
@@ -3275,7 +3275,7 @@ static PetscErrorCode DMPlexCreateSubmeshGeneric_Interpolated(DM dm, DMLabel lab
       PetscCall(PetscSectionGetOffset(coordSection, vertex, &off));
       PetscCall(PetscSectionGetDof(subCoordSection, subvertex, &sdof));
       PetscCall(PetscSectionGetOffset(subCoordSection, subvertex, &soff));
-      PetscCheck(dof == sdof,comm, PETSC_ERR_PLIB, "Coordinate dimension %" PetscInt_FMT " on subvertex %" PetscInt_FMT ", vertex %" PetscInt_FMT " should be %" PetscInt_FMT "", sdof, subvertex, vertex, dof);
+      PetscCheck(dof == sdof,comm, PETSC_ERR_PLIB, "Coordinate dimension %" PetscInt_FMT " on subvertex %" PetscInt_FMT ", vertex %" PetscInt_FMT " should be %" PetscInt_FMT, sdof, subvertex, vertex, dof);
       for (d = 0; d < dof; ++d) subCoords[soff+d] = coords[off+d];
     }
     PetscCall(VecRestoreArray(coordinates,    &coords));
@@ -3348,11 +3348,11 @@ static PetscErrorCode DMPlexCreateSubmeshGeneric_Interpolated(DM dm, DMLabel lab
         slocalPoints[sl]        = subpoint;
         sremotePoints[sl].rank  = newLocalPoints[point].rank;
         sremotePoints[sl].index = newLocalPoints[point].index;
-        PetscCheck(sremotePoints[sl].rank  >= 0,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid remote rank for local point %" PetscInt_FMT "", point);
-        PetscCheck(sremotePoints[sl].index >= 0,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid remote subpoint for local point %" PetscInt_FMT "", point);
+        PetscCheck(sremotePoints[sl].rank  >= 0,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid remote rank for local point %" PetscInt_FMT, point);
+        PetscCheck(sremotePoints[sl].index >= 0,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid remote subpoint for local point %" PetscInt_FMT, point);
         ++sl;
       }
-      PetscCheckFalse(sl + ll != numSubleaves,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Mismatch in number of subleaves %" PetscInt_FMT " + %" PetscInt_FMT " != %" PetscInt_FMT "", sl, ll, numSubleaves);
+      PetscCheckFalse(sl + ll != numSubleaves,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Mismatch in number of subleaves %" PetscInt_FMT " + %" PetscInt_FMT " != %" PetscInt_FMT, sl, ll, numSubleaves);
       PetscCall(PetscFree2(newLocalPoints,newOwners));
       PetscCall(PetscSFSetGraph(sfPointSub, numSubroots, sl, slocalPoints, PETSC_OWN_POINTER, sremotePoints, PETSC_OWN_POINTER));
     }
@@ -3488,7 +3488,7 @@ static PetscErrorCode DMPlexCreateCohesiveSubmesh_Uninterpolated(DM dm, PetscBoo
       for (negsubcell = 0; negsubcell < numSubCells; ++negsubcell) {
         if (subCells[negsubcell] == cells[p]) break;
       }
-      PetscCheck(negsubcell != numSubCells,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Could not find negative face neighbor for cohesive cell %" PetscInt_FMT "", cell);
+      PetscCheck(negsubcell != numSubCells,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Could not find negative face neighbor for cohesive cell %" PetscInt_FMT, cell);
       PetscCall(DMPlexSetCone(subdm, negsubcell, &newFacePoint));
     }
     PetscCall(DMPlexRestoreJoin(dm, nFV, cone, &numCells, &cells));
@@ -3541,7 +3541,7 @@ static PetscErrorCode DMPlexCreateCohesiveSubmesh_Uninterpolated(DM dm, PetscBoo
       PetscCall(PetscSectionGetOffset(coordSection, vertex, &off));
       PetscCall(PetscSectionGetDof(subCoordSection, subvertex, &sdof));
       PetscCall(PetscSectionGetOffset(subCoordSection, subvertex, &soff));
-      PetscCheck(dof == sdof,comm, PETSC_ERR_PLIB, "Coordinate dimension %" PetscInt_FMT " on subvertex %" PetscInt_FMT ", vertex %" PetscInt_FMT " should be %" PetscInt_FMT "", sdof, subvertex, vertex, dof);
+      PetscCheck(dof == sdof,comm, PETSC_ERR_PLIB, "Coordinate dimension %" PetscInt_FMT " on subvertex %" PetscInt_FMT ", vertex %" PetscInt_FMT " should be %" PetscInt_FMT, sdof, subvertex, vertex, dof);
       for (d = 0; d < dof; ++d) subCoords[soff+d] = coords[off+d];
     }
     PetscCall(VecRestoreArray(coordinates,    &coords));
@@ -3578,7 +3578,7 @@ static PetscErrorCode DMPlexCreateCohesiveSubmesh_Uninterpolated(DM dm, PetscBoo
         const PetscInt point    = localPoints[l];
         const PetscInt subPoint = DMPlexFilterPoint_Internal(point, firstSubVertex, numSubVertices, subVertices);
 
-        PetscCheck(!(point < vStart) || !(point >= vEnd),PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Should not be mapping anything but vertices, %" PetscInt_FMT "", point);
+        PetscCheck(!(point < vStart) || !(point >= vEnd),PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Should not be mapping anything but vertices, %" PetscInt_FMT, point);
         if (subPoint < 0) continue;
         newLocalPoints[point-pStart].rank  = rank;
         newLocalPoints[point-pStart].index = subPoint;
@@ -3611,12 +3611,12 @@ static PetscErrorCode DMPlexCreateCohesiveSubmesh_Uninterpolated(DM dm, PetscBoo
         slocalPoints[sl]        = subPoint;
         sremotePoints[sl].rank  = newLocalPoints[point].rank;
         sremotePoints[sl].index = newLocalPoints[point].index;
-        PetscCheck(sremotePoints[sl].rank  >= 0,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid remote rank for local point %" PetscInt_FMT "", point);
-        PetscCheck(sremotePoints[sl].index >= 0,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid remote subpoint for local point %" PetscInt_FMT "", point);
+        PetscCheck(sremotePoints[sl].rank  >= 0,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid remote rank for local point %" PetscInt_FMT, point);
+        PetscCheck(sremotePoints[sl].index >= 0,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid remote subpoint for local point %" PetscInt_FMT, point);
         ++sl;
       }
       PetscCall(PetscFree2(newLocalPoints,newOwners));
-      PetscCheckFalse(sl + ll != numSubLeaves,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Mismatch in number of subleaves %" PetscInt_FMT " + %" PetscInt_FMT " != %" PetscInt_FMT "", sl, ll, numSubLeaves);
+      PetscCheckFalse(sl + ll != numSubLeaves,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Mismatch in number of subleaves %" PetscInt_FMT " + %" PetscInt_FMT " != %" PetscInt_FMT, sl, ll, numSubLeaves);
       PetscCall(PetscSFSetGraph(sfPointSub, numSubRoots, sl, slocalPoints, PETSC_OWN_POINTER, sremotePoints, PETSC_OWN_POINTER));
     }
   }
@@ -3776,7 +3776,7 @@ static PetscErrorCode DMPlexCreateSubpointIS_Internal(DM dm, IS *subpointIS)
     PetscInt  pStart, pEnd, p, off;
 
     PetscCall(DMPlexGetChart(dm, &pStart, &pEnd));
-    PetscCheck(!pStart,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Submeshes must start the point numbering at 0, not %" PetscInt_FMT "", pStart);
+    PetscCheck(!pStart,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Submeshes must start the point numbering at 0, not %" PetscInt_FMT, pStart);
     PetscCall(PetscMalloc1(pEnd, &points));
     PetscCall(DMGetWorkArray(dm, depth+1, MPIU_INT, &depths));
     depths[0] = depth;
@@ -3789,7 +3789,7 @@ static PetscErrorCode DMPlexCreateSubpointIS_Internal(DM dm, IS *subpointIS)
       PetscCall(DMPlexGetDepthStratum(dm, dep, &depStart, &depEnd));
       PetscCall(DMLabelGetStratumSize(spmap, dep, &n));
       if (((d < 2) && (depth > 1)) || (d == 1)) { /* Only check vertices and cells for now since the map is broken for others */
-        PetscCheck(n == depEnd-depStart,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "The number of mapped submesh points %" PetscInt_FMT " at depth %" PetscInt_FMT " should be %" PetscInt_FMT "", n, dep, depEnd-depStart);
+        PetscCheck(n == depEnd-depStart,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "The number of mapped submesh points %" PetscInt_FMT " at depth %" PetscInt_FMT " should be %" PetscInt_FMT, n, dep, depEnd-depStart);
       } else {
         if (!n) {
           if (d == 0) {
@@ -3813,7 +3813,7 @@ static PetscErrorCode DMPlexCreateSubpointIS_Internal(DM dm, IS *subpointIS)
       }
     }
     PetscCall(DMRestoreWorkArray(dm, depth+1, MPIU_INT, &depths));
-    PetscCheck(off == pEnd,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "The number of mapped submesh points %" PetscInt_FMT " should be %" PetscInt_FMT "", off, pEnd);
+    PetscCheck(off == pEnd,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "The number of mapped submesh points %" PetscInt_FMT " should be %" PetscInt_FMT, off, pEnd);
     PetscCall(ISCreateGeneral(PETSC_COMM_SELF, pEnd, points, PETSC_OWN_POINTER, subpointIS));
     PetscCall(PetscObjectStateGet((PetscObject) spmap, &mesh->subpointState));
   }

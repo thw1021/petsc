@@ -25,11 +25,11 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
     len  = options->Nf;
     PetscCall(PetscMalloc1(len, &options->Nc));
     PetscCall(PetscOptionsIntArray("-num_components", "The number of components per field", "ex6.c", options->Nc, &len, &flg));
-    PetscCheck(!flg || !(len != options->Nf),PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Length of components array is %" PetscInt_FMT " should be %" PetscInt_FMT "", len, options->Nf);
+    PetscCheck(!flg || !(len != options->Nf),PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Length of components array is %" PetscInt_FMT " should be %" PetscInt_FMT, len, options->Nf);
     len  = options->Nf;
     PetscCall(PetscMalloc1(len, &options->k));
     PetscCall(PetscOptionsIntArray("-order", "The spectral order per field", "ex6.c", options->k, &len, &flg));
-    PetscCheck(!flg || !(len != options->Nf),PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Length of order array is %" PetscInt_FMT " should be %" PetscInt_FMT "", len, options->Nf);
+    PetscCheck(!flg || !(len != options->Nf),PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Length of order array is %" PetscInt_FMT " should be %" PetscInt_FMT, len, options->Nf);
   }
   ierr = PetscOptionsEnd();PetscCall(ierr);
   PetscFunctionReturn(0);
