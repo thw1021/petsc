@@ -217,7 +217,7 @@ PetscErrorCode DMTSSetBoundaryLocal(DM dm, PetscErrorCode (*func)(DM, PetscReal,
 }
 
 /*@C
-  DMTSGetIFunctionLocal - get the local implicit function evaluation function. This function is called with local vector
+  DMTSGetIFunctionLocal - get the local implicit function evaluation function. This function is called with a local vector
       containing the local vector information PLUS ghost point information. It should compute a result for all local
       elements and DMTS will automatically accumulate the overlapping values.
 
