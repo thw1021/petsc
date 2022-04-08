@@ -699,13 +699,13 @@ PetscErrorCode PreCheckFunction(SNESLineSearch linesearch,Vec X,Vec Y,PetscBool 
     PetscCall(VecCopy(Y,Ylast));
     PetscCall(VecScale(Y,alpha));
     if (precheck->monitor) {
-      PetscCall(PetscViewerASCIIPrintf(precheck->monitor,"Angle %E degrees less than threshold %g, corrected step by alpha=%g\n",(double)(theta*180./PETSC_PI),(double)precheck->angle,(double)alpha));
+      PetscCall(PetscViewerASCIIPrintf(precheck->monitor,"Angle %g degrees less than threshold %g, corrected step by alpha=%g\n",(double)(theta*180./PETSC_PI),(double)precheck->angle,(double)alpha));
     }
   } else {
     PetscCall(VecCopy(Y,Ylast));
     *changed = PETSC_FALSE;
     if (precheck->monitor) {
-      PetscCall(PetscViewerASCIIPrintf(precheck->monitor,"Angle %E degrees exceeds threshold %g, no correction applied\n",(double)(theta*180./PETSC_PI),(double)precheck->angle));
+      PetscCall(PetscViewerASCIIPrintf(precheck->monitor,"Angle %g degrees exceeds threshold %g, no correction applied\n",(double)(theta*180./PETSC_PI),(double)precheck->angle));
     }
   }
   PetscFunctionReturn(0);

@@ -236,7 +236,7 @@ static PetscErrorCode CheckDistribution(DM dm, PetscReal m, PetscReal n, PetscRe
   PetscCall(DMGetBoundingBox(dm, &vmin, &vmax));
   /* Check analytic over entire line */
   neq  = ComputeCDF(m, n, T, vmin, vmax);
-  PetscCheck(PetscAbsReal(neq - n) <= PETSC_SMALL,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Int f %g != %g mass (%g)", neq, n, neq-n);
+  PetscCheck(PetscAbsReal(neq - n) <= PETSC_SMALL,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Int f %g != %g mass (%g)", (double)neq, (double)n, (double)(neq-n));
   /* Check analytic over cells */
   PetscCall(DMGetCoordinatesLocal(dm, &coordsLocal));
   PetscCall(DMGetCoordinateSection(dm, &coordSection));
@@ -249,7 +249,7 @@ static PetscErrorCode CheckDistribution(DM dm, PetscReal m, PetscReal n, PetscRe
     neq += ComputeCDF(m, n, T, vcoords[0], vcoords[1]);
     PetscCall(DMPlexVecRestoreClosure(dm, coordSection, coordsLocal, c, NULL, &vcoords));
   }
-  PetscCheck(PetscAbsReal(neq - n) <= PETSC_SMALL,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Cell Int f %g != %g mass (%g)", neq, n, neq-n);
+  PetscCheck(PetscAbsReal(neq - n) <= PETSC_SMALL,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Cell Int f %g != %g mass (%g)", (double)neq, (double)n, (double)(neq-n));
   /* Check quadrature over entire line */
   PetscCall(PetscMalloc2(Nq, &xq, Nq, &wq));
   PetscCall(PetscDTGaussQuadrature(100, vmin, vmax, xq, wq));
@@ -257,20 +257,20 @@ static PetscErrorCode CheckDistribution(DM dm, PetscReal m, PetscReal n, PetscRe
   for (q = 0; q < Nq; ++q) {
     neq += ComputePDF(m, n, T, &xq[q])*wq[q];
   }
-  PetscCheck(PetscAbsReal(neq - n) <= PETSC_SMALL,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Int f %g != %g mass (%g)", neq, n, neq-n);
+  PetscCheck(PetscAbsReal(neq - n) <= PETSC_SMALL,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Int f %g != %g mass (%g)", (double)neq, (double)n, (double)(neq-n));
   /* Check omemnts with quadrature */
   veq  = 0.0;
   for (q = 0; q < Nq; ++q) {
     veq += xq[q]*ComputePDF(m, n, T, &xq[q])*wq[q];
   }
   veq /= neq;
-  PetscCheck(PetscAbsReal(veq - v[0]) <= PETSC_SMALL,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Int v f %g != %g velocity (%g)", veq, v[0], veq-v[0]);
+  PetscCheck(PetscAbsReal(veq - v[0]) <= PETSC_SMALL,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Int v f %g != %g velocity (%g)", (double)veq, (double)v[0], (double)(veq-v[0]));
   Teq  = 0.0;
   for (q = 0; q < Nq; ++q) {
     Teq += PetscSqr(xq[q])*ComputePDF(m, n, T, &xq[q])*wq[q];
   }
   Teq = Teq * m/neq - PetscSqr(veq);
-  PetscCheck(PetscAbsReal(Teq - T) <= PETSC_SMALL,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Int v^2 f %g != %g temperature (%g)", Teq, T, Teq-T);
+  PetscCheck(PetscAbsReal(Teq - T) <= PETSC_SMALL,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Int v^2 f %g != %g temperature (%g)", (double)Teq, (double)T, (double)(Teq-T));
   PetscCall(PetscFree2(xq, wq));
   PetscFunctionReturn(0);
 }

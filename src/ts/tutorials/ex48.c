@@ -207,7 +207,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
     options->kx = 0;
     options->DeltaPrime = -2.0;
   }
-  PetscCall(PetscPrintf(comm, "DeltaPrime=%g\n",options->DeltaPrime));
+  PetscCall(PetscPrintf(comm, "DeltaPrime=%g\n",(double)options->DeltaPrime));
 
   PetscFunctionReturn(0);
 }
@@ -521,7 +521,7 @@ int main(int argc, char **argv)
   PetscCall(TSGetTime(ts, &t));
   PetscCall(DMComputeL2Diff(dm, t, ctx.initialFuncs, (void **)ctxarr, u, &L2error));
   if (L2error < 1.0e-11) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "L_2 Error: < 1.0e-11\n"));
-  else                   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "L_2 Error: %g\n", L2error));
+  else                   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "L_2 Error: %g\n", (double)L2error));
   PetscCall(VecDestroy(&u));
   PetscCall(VecDestroy(&r));
   PetscCall(TSDestroy(&ts));

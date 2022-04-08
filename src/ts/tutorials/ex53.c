@@ -1248,7 +1248,7 @@ static PetscErrorCode cryer_3d_eps(PetscInt dim, PetscReal time, const PetscReal
                   + 5.0 * (1.0 - nu)*(1.0 - 2.0*nu)*PetscPowRealInt(R_star, 2)*x_n*PetscSinReal(PetscSqrtReal(x_n))) * PetscExpReal(-x_n * tstar));
       }
     }
-    if (PetscAbsReal(divA_n) > 1e3) PetscPrintf(PETSC_COMM_SELF, "(%g, %g, %g) divA_n: %g\n", x[0], x[1], x[2], divA_n);
+    if (PetscAbsReal(divA_n) > 1e3) PetscPrintf(PETSC_COMM_SELF, "(%g, %g, %g) divA_n: %g\n", (double)x[0], (double)x[1], (double)x[2], (double)divA_n);
     u[0] = PetscRealPart(u_inf)/R_0 * (3.0 - divA_n);
   }
   return 0;
@@ -2152,7 +2152,7 @@ static PetscErrorCode SolutionMonitor(TS ts, PetscInt steps, PetscReal time, Vec
       }
     }
     PetscCall(DMComputeL2FieldDiff(dm, time, exacts, ectxs, u, err));
-    PetscCall(PetscPrintf(PetscObjectComm((PetscObject) ts), "Time: %g L_2 Error: [", time));
+    PetscCall(PetscPrintf(PetscObjectComm((PetscObject) ts), "Time: %g L_2 Error: [", (double)time));
     for (f = 0; f < Nf; ++f) {
       if (f) PetscCall(PetscPrintf(PetscObjectComm((PetscObject) ts), ", "));
       PetscCall(PetscPrintf(PetscObjectComm((PetscObject) ts), "%g", (double) err[f]));

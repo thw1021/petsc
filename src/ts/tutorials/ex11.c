@@ -1332,7 +1332,7 @@ static PetscErrorCode adaptToleranceFVM(PetscFV fvm, TS ts, Vec sol, VecTagger r
   PetscCallMPI(MPI_Allreduce(minMaxInd,minMaxIndGlobal,2,MPIU_REAL,MPI_MIN,PetscObjectComm((PetscObject)dm)));
   minInd = minMaxIndGlobal[0];
   maxInd = -minMaxIndGlobal[1];
-  PetscCall(PetscInfo(ts, "error indicator range (%E, %E)\n", minInd, maxInd));
+  PetscCall(PetscInfo(ts, "error indicator range (%E, %E)\n", (double)minInd, (double)maxInd));
   if (nRefine || nCoarsen) { /* at least one cell is over the refinement threshold */
     PetscCall(DMAdaptLabel(dm,adaptLabel,&adaptedDM));
   }
@@ -1589,7 +1589,7 @@ int main(int argc, char **argv)
       TS             tsNew = NULL;
 
       PetscCall(PetscMemoryGetCurrentUsage(&bytes));
-      PetscCall(PetscInfo(ts, "refinement loop %" PetscInt_FMT ": memory used %g\n", adaptIter, bytes));
+      PetscCall(PetscInfo(ts, "refinement loop %" PetscInt_FMT ": memory used %g\n", adaptIter, (double)bytes));
       PetscCall(DMViewFromOptions(dm, NULL, "-initial_dm_view"));
       PetscCall(VecViewFromOptions(X, NULL, "-initial_vec_view"));
 #if 0
@@ -1605,9 +1605,9 @@ int main(int argc, char **argv)
         PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERHDF5,&isHDF5));
         PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERVTK,&isVTK));
         if (isHDF5) {
-          PetscCall(PetscSNPrintf(buf, 256, "ex11-initial-%d.h5", adaptIter));
+          PetscCall(PetscSNPrintf(buf, 256, "ex11-initial-%" PetscInt_FMT ".h5", adaptIter));
         } else if (isVTK) {
-          PetscCall(PetscSNPrintf(buf, 256, "ex11-initial-%d.vtu", adaptIter));
+          PetscCall(PetscSNPrintf(buf, 256, "ex11-initial-%" PetscInt_FMT ".vtu", adaptIter));
           PetscCall(PetscViewerPushFormat(viewer,PETSC_VIEWER_VTK_VTU));
         }
         PetscCall(PetscViewerFileSetMode(viewer,FILE_MODE_WRITE));

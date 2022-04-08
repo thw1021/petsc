@@ -214,7 +214,7 @@ int main(int argc,char **argv)
         PetscCall(VecGetArrayRead(max,&bmax));
         PetscCall(PetscPrintf(PETSC_COMM_SELF,"Species - maximum mass fraction\n"));
         for (i=1; i<user.Nspec; i++) {
-          if (bmax[i] > .01) PetscCall(PetscPrintf(PETSC_COMM_SELF,"%s %g\n",names[i],bmax[i]));
+          if (bmax[i] > .01) PetscCall(PetscPrintf(PETSC_COMM_SELF,"%s %g\n",names[i],(double)bmax[i]));
         }
         PetscCall(VecRestoreArrayRead(max,&bmax));
       }

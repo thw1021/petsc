@@ -180,7 +180,7 @@ static PetscErrorCode CreateParticles(DM dm, DM *sw, AppCtx *user)
   if (user->epsilon < 0.) user->epsilon = 0.64*pow(user->h, 1.98);
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-param_view", &view, NULL));
   if (view) {
-    PetscCall(PetscPrintf(PETSC_COMM_SELF, "N: %" PetscInt_FMT " L: %g h: %g eps: %g\n", user->N, user->L, user->h, user->epsilon));
+    PetscCall(PetscPrintf(PETSC_COMM_SELF, "N: %" PetscInt_FMT " L: %g h: %g eps: %g\n", user->N, (double)user->L, (double)user->h, (double)user->epsilon));
   }
   PetscCall(DMSwarmSetType(*sw, DMSWARM_PIC));
   PetscCall(DMSwarmSetCellDM(*sw, dm));
