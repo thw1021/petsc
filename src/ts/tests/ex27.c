@@ -298,7 +298,7 @@ static PetscErrorCode ComputeGradS(PetscInt dim, PetscInt Np, const PetscReal vp
       for (i = 0, vc_l[0] = init; i < nx; ++i, vc_l[0] += h) {
         PetscReal sum = 0.0;
 
-        if (dbg) PetscCall(PetscPrintf(PETSC_COMM_SELF, "(%" PetscInt_FMT " %" PetscInt_FMT ") vc_l: %g %g\n", i, j, vc_l[0], vc_l[1]));
+        if (dbg) PetscCall(PetscPrintf(PETSC_COMM_SELF, "(%" PetscInt_FMT " %" PetscInt_FMT ") vc_l: %g %g\n", i, j, (double)vc_l[0], (double)vc_l[1]));
         /* \log \sum_k \psi(v - v_k)  */
         for (q = 0; q < Np; ++q) sum += Gaussian(dim, &velocity[q*dim], epsilon, vc_l);
         sum = PetscLogReal(sum);

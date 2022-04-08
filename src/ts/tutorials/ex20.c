@@ -89,7 +89,6 @@ static PetscErrorCode IJacobian(TS ts,PetscReal t,Vec X,Vec Xdot,PetscReal a,Mat
 /* Monitor timesteps and use interpolation to output at integer multiples of 0.1 */
 static PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal t,Vec X,void *ctx)
 {
-  PetscErrorCode    ierr;
   const PetscScalar *x;
   PetscReal         tfinal, dt;
   User              user = (User)ctx;
@@ -103,9 +102,9 @@ static PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal t,Vec X,void *ctx)
     PetscCall(VecDuplicate(X,&interpolatedX));
     PetscCall(TSInterpolate(ts,user->next_output,interpolatedX));
     PetscCall(VecGetArrayRead(interpolatedX,&x));
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"[%.1f] %" PetscInt_FMT " TS %.6f (dt = %.6f) X % 12.6e % 12.6e\n",
-                       user->next_output,step,t,dt,(double)PetscRealPart(x[0]),
-                       (double)PetscRealPart(x[1]));PetscCall(ierr);
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"[%.1f] %" PetscInt_FMT " TS %.6f (dt = %.6f) X % 12.6e % 12.6e\n",
+                          (double)user->next_output,step,(double)t,(double)dt,
+                          (double)PetscRealPart(x[0]),(double)PetscRealPart(x[1])));
     PetscCall(VecRestoreArrayRead(interpolatedX,&x));
     PetscCall(VecDestroy(&interpolatedX));
     user->next_output += 0.1;

@@ -720,7 +720,7 @@ static PetscErrorCode PhysicsBoundary_Euler_Wall(PetscReal time, const PetscReal
   }
   if (eu->type == EULER_LINEAR_WAVE) { /* debug */
 #if 0
-    PetscPrintf(PETSC_COMM_WORLD,"%s coord=%g,%g\n",PETSC_FUNCTION_NAME,c[0],c[1]);
+    PetscPrintf(PETSC_COMM_WORLD,"%s coord=%g,%g\n",PETSC_FUNCTION_NAME,(double)c[0],(double)c[1]);
 #endif
   }
   PetscFunctionReturn(0);

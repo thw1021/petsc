@@ -441,7 +441,7 @@ int main(int argc,char **argv)
   */
   PetscCall(VecGetArray(x,&xx));
   for (inode = 0; inode < user.Nvlocal; inode++) {
-    PetscCall(PetscFPrintf(PETSC_COMM_SELF,fptr1,"Initial Solution at node %" PetscInt_FMT " is %f \n",inode,xx[inode]));
+    PetscCall(PetscFPrintf(PETSC_COMM_SELF,fptr1,"Initial Solution at node %" PetscInt_FMT " is %f \n",inode,(double)PetscRealPart(xx[inode])));
   }
   PetscCall(VecRestoreArray(x,&xx));
 
@@ -461,7 +461,7 @@ int main(int argc,char **argv)
 
   PetscCall(VecGetArray(x,&xx));
   for (inode = 0; inode < user.Nvlocal; inode++) {
-    PetscCall(PetscFPrintf(PETSC_COMM_SELF,fptr1,"Solution at node %" PetscInt_FMT " is %f \n",inode,xx[inode]));
+    PetscCall(PetscFPrintf(PETSC_COMM_SELF,fptr1,"Solution at node %" PetscInt_FMT " is %f \n",inode,(double)PetscRealPart(xx[inode])));
   }
   PetscCall(VecRestoreArray(x,&xx));
   fclose(fptr1);

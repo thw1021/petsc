@@ -309,7 +309,7 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, voi
   }
   v /= n;
   T  = E*m/n - v*v;
-  PetscCall(PetscInfo(ts, "Time %.2f: mass %.4f velocity: %+.4f temperature: %.4f\n", t, n, v, T));
+  PetscCall(PetscInfo(ts, "Time %.2f: mass %.4f velocity: %+.4f temperature: %.4f\n", (double)t, (double)n, (double)v, (double)T));
   PetscCall(CheckDistribution(plex, m, n, T, &v));
   /*
      Begin cellwise evaluation of the collision operator. Essentially, penalize the weights of the particles
@@ -340,7 +340,7 @@ static PetscErrorCode RHSFunctionParticles(TS ts, PetscReal t, Vec U, Vec R, voi
     eqE += ComputeCDF(m, n, T, vcoords[0], vcoords[1])*m2;
     PetscCall(DMPlexVecRestoreClosure(plex, coordSection, coordsLocal, p, NULL, &vcoords));
   }
-  PetscCall(PetscInfo(ts, "Time %.2f: mass update %.8f velocity update: %+.8f energy update: %.8f (%.8f, %.8f)\n", t, cn, cv, cE, pE, eqE));
+  PetscCall(PetscInfo(ts, "Time %.2f: mass update %.8f velocity update: %+.8f energy update: %.8f (%.8f, %.8f)\n", (double)t, (double)cn, (double)cv, (double)cE, (double)pE, (double)eqE));
   PetscCall(DMSwarmRestoreField(dmSw, DMSwarmPICField_coor, NULL, NULL, (void **) &coords));
   PetscCall(VecRestoreArrayRead(U, &u));
   PetscCall(VecRestoreArray(R, &r));

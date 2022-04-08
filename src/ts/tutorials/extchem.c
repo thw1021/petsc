@@ -301,7 +301,7 @@ PetscErrorCode FormInitialSolution(TS ts,Vec X,void *ctx)
   for (i=0; i<smax; i++) {
     int ispec = TC_getSpos(names[i], strlen(names[i]));
     PetscCheck(ispec >= 0,PETSC_COMM_SELF,PETSC_ERR_USER,"Could not find species %s",names[i]);
-    PetscCall(PetscPrintf(PETSC_COMM_SELF,"Species %d: %s %g\n",i,names[i],molefracs[i]));
+    PetscCall(PetscPrintf(PETSC_COMM_SELF,"Species %" PetscInt_FMT ": %s %g\n",i,names[i],(double)molefracs[i]));
     x[1+ispec] = molefracs[i];
   }
   for (i=0; i<smax; i++) {
@@ -370,7 +370,7 @@ PetscErrorCode MonitorMassConservation(TS ts,PetscInt step,PetscReal time,Vec x,
   PetscCall(VecGetArrayRead(x,&T));
   mass -= PetscAbsScalar(T[0]);
   PetscCall(VecRestoreArrayRead(x,&T));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Timestep %" PetscInt_FMT " time %g percent mass lost or gained %g\n",step,(double)time,(double)100.*(1.0 - mass)));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Timestep %" PetscInt_FMT " time %g percent mass lost or gained %g\n",step,(double)time,(double)(100.*(1.0 - mass))));
   PetscFunctionReturn(0);
 }
 
@@ -381,7 +381,7 @@ PetscErrorCode MonitorTempature(TS ts,PetscInt step,PetscReal time,Vec x,void* c
 
   PetscFunctionBegin;
   PetscCall(VecGetArrayRead(x,&T));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Timestep %" PetscInt_FMT " time %g temperature %g\n",step,(double)time,(double)T[0]*user->Tini));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Timestep %" PetscInt_FMT " time %g temperature %g\n",step,(double)time,(double)(T[0]*user->Tini)));
   PetscCall(VecRestoreArrayRead(x,&T));
   PetscFunctionReturn(0);
 }
@@ -400,7 +400,7 @@ PETSC_UNUSED PetscErrorCode PrintSpecies(User user,Vec molef)
   PetscCall(VecGetArrayRead(molef,&mof));
   PetscCall(PetscSortRealWithPermutation(n,mof,idx));
   for (i=0; i<n; i++) {
-    PetscCall(PetscPrintf(PETSC_COMM_SELF,"%6s %g\n",user->snames[idx[n-i-1]],mof[idx[n-i-1]]));
+    PetscCall(PetscPrintf(PETSC_COMM_SELF,"%6s %g\n",user->snames[idx[n-i-1]],(double)PetscRealPart(mof[idx[n-i-1]])));
   }
   PetscCall(PetscFree(idx));
   PetscCall(VecRestoreArrayRead(molef,&mof));

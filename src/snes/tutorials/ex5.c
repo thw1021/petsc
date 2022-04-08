@@ -620,7 +620,7 @@ PetscErrorCode FormFunctionMatlab(SNES snes,Vec X,Vec F,void *ptr)
   PetscCall(DMGlobalToLocalBegin(da,X,INSERT_VALUES,localX));
   PetscCall(DMGlobalToLocalEnd(da,X,INSERT_VALUES,localX));
   PetscCall(PetscMatlabEnginePut(PETSC_MATLAB_ENGINE_(comm),(PetscObject)localX));
-  PetscCall(PetscMatlabEngineEvaluate(PETSC_MATLAB_ENGINE_(comm),"localF=ex5m(localX,%18.16e,%18.16e,%18.16e)",hx,hy,lambda));
+  PetscCall(PetscMatlabEngineEvaluate(PETSC_MATLAB_ENGINE_(comm),"localF=ex5m(localX,%18.16e,%18.16e,%18.16e)",(double)hx,(double)hy,(double)lambda));
   PetscCall(PetscMatlabEngineGet(PETSC_MATLAB_ENGINE_(comm),(PetscObject)localF));
 
   /*

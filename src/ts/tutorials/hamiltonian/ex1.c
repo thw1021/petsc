@@ -184,7 +184,7 @@ int main(int argc,char **argv)
   PetscCall(TSGetSolveTime(ts,&ftime));
   PetscCall(VecView(U,PETSC_VIEWER_STDOUT_WORLD));
 
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"The exact solution at time %.6lf is [%g %g]\n",(double)ftime,(double)0.2*PetscCosReal(user.omega*ftime),(double)-0.2*user.omega*PetscSinReal(user.omega*ftime)));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"The exact solution at time %.6lf is [%g %g]\n",(double)ftime,(double)(0.2*PetscCosReal(user.omega*ftime)),(double)(-0.2*user.omega*PetscSinReal(user.omega*ftime))));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Free work space.  All PETSc objects should be destroyed when they
