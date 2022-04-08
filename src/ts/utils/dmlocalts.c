@@ -224,7 +224,7 @@ PetscErrorCode DMTSSetBoundaryLocal(DM dm, PetscErrorCode (*func)(DM, PetscReal,
   Logically Collective
 
   Input Parameter:
-. dm   - DM to associate callback with
+. dm   - DM from which to obtain the local function and context
 
   Output Parameters:
 + func - local function evaluation
