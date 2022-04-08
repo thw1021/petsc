@@ -177,7 +177,7 @@ int main(int argc, char **argv) {
     PetscCall(VecNorm(metric, NORM_2, &norm));
     PetscCall(VecNorm(metricComb, NORM_2, &errornorm));
     errornorm /= norm;
-    PetscCall(PetscPrintf(comm, "Metric average L2 error: %.4f%%\n", 100*errornorm));
+    PetscCall(PetscPrintf(comm, "Metric average L2 error: %.4f%%\n", (double)(100*errornorm)));
     PetscCheck(errornorm <= tol,comm, PETSC_ERR_ARG_OUTOFRANGE, "Metric average test failed");
     PetscCall(VecDestroy(&metricComb));
 
@@ -187,7 +187,7 @@ int main(int argc, char **argv) {
       PetscCall(VecAXPY(metricComb, -1, metric1));
       PetscCall(VecNorm(metricComb, NORM_2, &errornorm));
       errornorm /= norm;
-      PetscCall(PetscPrintf(comm, "Metric intersection L2 error: %.4f%%\n", 100*errornorm));
+      PetscCall(PetscPrintf(comm, "Metric intersection L2 error: %.4f%%\n", (double)(100*errornorm)));
       PetscCheck(errornorm <= tol,comm, PETSC_ERR_ARG_OUTOFRANGE, "Metric intersection test failed");
     }
     PetscCall(VecDestroy(&metric1));
@@ -206,12 +206,12 @@ int main(int argc, char **argv) {
       PetscCall(VecNorm(err, NORM_2, &errornorm));
       PetscCall(VecDestroy(&err));
       errornorm /= norm;
-      PetscCall(PetscPrintf(comm, "Metric determinant L2 error: %.4f%%\n", 100*errornorm));
+      PetscCall(PetscPrintf(comm, "Metric determinant L2 error: %.4f%%\n", (double)(100*errornorm)));
       PetscCheck(errornorm <= tol,comm, PETSC_ERR_ARG_OUTOFRANGE, "Determinant is not unit");
       PetscCall(VecAXPY(metric1, -1, metric));
       PetscCall(VecNorm(metric1, NORM_2, &errornorm));
       errornorm /= norm;
-      PetscCall(PetscPrintf(comm, "Metric SPD enforcement L2 error: %.4f%%\n", 100*errornorm));
+      PetscCall(PetscPrintf(comm, "Metric SPD enforcement L2 error: %.4f%%\n", (double)(100*errornorm)));
       PetscCheck(errornorm <= tol,comm, PETSC_ERR_ARG_OUTOFRANGE, "Metric SPD enforcement test failed");
     }
     PetscCall(VecDestroy(&metric1));
@@ -241,7 +241,7 @@ int main(int argc, char **argv) {
       PetscCall(VecAXPY(metric2, -1, metric1));
       PetscCall(VecNorm(metric2, NORM_2, &errornorm));
       errornorm /= norm;
-      PetscCall(PetscPrintf(comm, "Metric normalization L2 error: %.4f%%\n", 100*errornorm));
+      PetscCall(PetscPrintf(comm, "Metric normalization L2 error: %.4f%%\n", (double)(100*errornorm)));
       PetscCheck(errornorm <= tol,comm, PETSC_ERR_ARG_OUTOFRANGE, "Metric normalization test failed");
     }
     PetscCall(VecCopy(metric1, metric));

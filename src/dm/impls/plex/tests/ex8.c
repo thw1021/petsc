@@ -690,9 +690,9 @@ int main(int argc, char **argv)
       PetscCall(PetscPrintf(PETSC_COMM_SELF, "Cell %4" PetscInt_FMT ": Centroid (", c));
       for (d = 0; d < dim; ++d) {
         if (d > 0) PetscCall(PetscPrintf(PETSC_COMM_SELF, ", "));
-        PetscCall(PetscPrintf(PETSC_COMM_SELF, "%12.2g", cg->centroid[d]));
+        PetscCall(PetscPrintf(PETSC_COMM_SELF, "%12.2g", (double)cg->centroid[d]));
       }
-      PetscCall(PetscPrintf(PETSC_COMM_SELF, ") Vol %12.2g\n", cg->volume));
+      PetscCall(PetscPrintf(PETSC_COMM_SELF, ") Vol %12.2g\n", (double)cg->volume));
     }
     PetscCall(VecRestoreArrayRead(cellgeom, &cgeom));
     PetscCall(VecDestroy(&cellgeom));
