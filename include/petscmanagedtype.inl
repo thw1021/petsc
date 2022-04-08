@@ -20,7 +20,7 @@
 #  define PetscConcat3(a,b,c) PetscConcat(PetscConcat(a,b),c)
 #endif
 
-#if PetscDefined(HAVE_DEVICE)
+#if PetscDefined(USE_DEVICE)
 #define _n_PetscManagedType PetscConcat(_n_,PetscManagedType)
 struct _n_PetscManagedType
 {
@@ -29,7 +29,8 @@ struct _n_PetscManagedType
   PetscType        *device;
   PetscMemType      mtype;
   PetscOffloadMask  mask;
-  PetscCopyMode     h_cmode,d_cmode;
+  PetscCopyMode     d_cmode;
+  PetscCopyMode     h_cmode;
 };
 
 typedef struct _n_PetscManagedType *PetscManagedType;
