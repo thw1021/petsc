@@ -206,7 +206,7 @@ int main(int argc,char **argv)
     PetscCall(VecNorm(e, NORM_2, &errorl2));
     PetscCall(VecNorm(e, NORM_INFINITY, &errorinf));
     PetscCall(VecGetSize(e, &N));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "N: %" PetscInt_FMT " error L2 %g inf %g\n", N, (double) errorl2/PetscSqrtReal((PetscReal)N), (double) errorinf));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "N: %" PetscInt_FMT " error L2 %g inf %g\n", N, (double)(errorl2/PetscSqrtReal((PetscReal)N)), (double) errorinf));
     PetscCall(VecDestroy(&e));
     PetscCall(PetscLogEventSetDof(SNES_Solve, 0, N));
     PetscCall(PetscLogEventSetError(SNES_Solve, 0, errorl2/PetscSqrtReal(N)));

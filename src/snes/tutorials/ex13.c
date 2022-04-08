@@ -501,7 +501,7 @@ int main(int argc, char **argv)
       PetscCall(VecPointwiseDivide(errorEst, errorEst, errorL2));
       PetscCall(PetscObjectSetName((PetscObject) errorEst, "Error ratio"));
       PetscCall(VecViewFromOptions(errorEst, NULL, "-error_ratio_view"));
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "N: %" PetscInt_FMT " L2 error: %g Error Ratio: %g/%g = %g\n", N, (double) errorL2Norm, (double) errorEstTot, (double) PetscSqrtReal(errorL2Tot), (double) errorEstTot/PetscSqrtReal(errorL2Tot)));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "N: %" PetscInt_FMT " L2 error: %g Error Ratio: %g/%g = %g\n", N, (double) errorL2Norm, (double) errorEstTot, (double) PetscSqrtReal(errorL2Tot), (double)(errorEstTot/PetscSqrtReal(errorL2Tot))));
       PetscCall(DMRestoreGlobalVector(dmErr, &errorEst));
       PetscCall(DMRestoreGlobalVector(dmErr, &errorL2));
       PetscCall(DMDestroy(&dmErr));
