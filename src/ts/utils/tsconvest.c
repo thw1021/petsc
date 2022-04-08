@@ -182,9 +182,9 @@ static PetscErrorCode PetscConvEstGetConvRateTS_Spatial_Private(PetscConvEst ce,
       PetscCall(DMTSGetIFunctionLocal(dm[r-1], &ifunc, &fctx));
       PetscCall(DMTSGetIJacobianLocal(dm[r-1], &ijac,  &jctx));
       PetscCall(DMTSGetRHSFunctionLocal(dm[r-1], &rhsfunc, &rctx));
-      if (ifunc) {PetscCall(DMTSSetIFunctionLocal(dm[r], ifunc, fctx));}
-      if (ijac) {PetscCall(DMTSSetIJacobianLocal(dm[r], ijac, jctx));}
-      if (rhsfunc) {PetscCall(DMTSSetRHSFunctionLocal(dm[r], rhsfunc, rctx));}
+      if (ifunc) PetscCall(DMTSSetIFunctionLocal(dm[r], ifunc, fctx));
+      if (ijac) PetscCall(DMTSSetIJacobianLocal(dm[r], ijac, jctx));
+      if (rhsfunc) PetscCall(DMTSSetRHSFunctionLocal(dm[r], rhsfunc, rctx));
     }
     PetscCall(TSSetTime(ts, 0.0));
     PetscCall(TSSetStepNumber(ts, 0));
