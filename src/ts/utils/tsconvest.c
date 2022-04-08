@@ -259,9 +259,9 @@ static PetscErrorCode PetscConvEstGetConvRateTS_Spatial_Private(PetscConvEst ce,
   }
   PetscCall(TSSetDM(ts, ce->idm));
   PetscCall(DMTSSetBoundaryLocal(ce->idm, DMPlexTSComputeBoundary, ctx));
-  if (ifunc) {PetscCall(DMTSSetIFunctionLocal(ce->idm, ifunc, fctx));}
-  if (ijac) {PetscCall(DMTSSetIJacobianLocal(ce->idm, ijac, jctx));}
-  if (rhsfunc) {PetscCall(DMTSSetRHSFunctionLocal(ce->idm, rhsfunc, rctx));}
+  if (ifunc) PetscCall(DMTSSetIFunctionLocal(ce->idm, ifunc, fctx));
+  if (ijac) PetscCall(DMTSSetIJacobianLocal(ce->idm, ijac, jctx));
+  if (rhsfunc) PetscCall(DMTSSetRHSFunctionLocal(ce->idm, rhsfunc, rctx));
   PetscCall(TSSetConvergedReason(ts, TS_CONVERGED_ITERATING));
   PetscCall(TSSetTime(ts, 0.0));
   PetscCall(TSSetStepNumber(ts, 0));
