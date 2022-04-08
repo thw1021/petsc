@@ -7,7 +7,7 @@ FPPFLAGS        =
 LOCDIR          = src/sys/objects/device/tests/
 EXAMPLESC       = ex1.c ex2.c ex3.c
 EXAMPLESCU      = ex1cu.cu ex2cu.cu
-EXAMPLESHIP     = ex1hip.hip.cpp ex2hip.hip.cpp
+EXAMPLESHIP     = ex1hip.hip.cxx ex2hip.hip.cxx
 MANSEC          = Sys
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

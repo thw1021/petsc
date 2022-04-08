@@ -5,7 +5,7 @@ ALL: lib
 CFLAGS   =
 FFLAGS   =
 SOURCEC  =
-SOURCEHIP = mhiphost.hip.cpp
+SOURCEHIP = mhiphost.hip.cxx
 SOURCEF  =
 SOURCEH  =
 MANSEC   = Sys

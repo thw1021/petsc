@@ -3,10 +3,10 @@ ALL: lib
 
 CFLAGS   =
 FFLAGS   =
-SOURCEC  = 
-SOURCEHIP = vechip2.hip.cpp vechip.hip.cpp
+SOURCEC  =
+SOURCEHIP = vechip2.hip.cxx vechip.hip.cxx
 SOURCEF  =
-SOURCEH  = 
+SOURCEH  =
 LIBBASE  = libpetscvec
 MANSEC   = Vec
 LOCDIR   = src/vec/vec/impls/seq/seqhip/

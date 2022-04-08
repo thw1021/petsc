@@ -2,7 +2,7 @@
  Implementation of the sequential hip vectors.
 
  This file contains the code that can be compiled with a C
- compiler.  The companion file vechip2.hip.cpp contains the code that
+ compiler.  The companion file vechip2.hip.cxx contains the code that
  must be compiled with hipcc compiler.
  */
 

@@ -230,7 +230,7 @@ getautoconfargs:
 #
 #
 
-.SUFFIXES: .F  .F90 .f90 ${SUFFIXES} .PETSc .C .cc .cpp .cxx .r .rm .so .html .ad .m .tex .make  .fig .svg .eps .pdf .jpg .png .dvi .ps .F95 .f95 .fiat .cu .hip.cpp .kokkos.cxx .raja.cxx *.sycl.cxx
+.SUFFIXES: .F  .F90 .f90 ${SUFFIXES} .PETSc .C .cc .cpp .cxx .r .rm .so .html .ad .m .tex .make  .fig .svg .eps .pdf .jpg .png .dvi .ps .F95 .f95 .fiat .cu .hip.cxx .hip.cpp .kokkos.cxx .kokkos.cpp .raja.cxx .raja.cpp .sycl.cxx .sycl.cpp
 
 #
 #
@@ -293,16 +293,16 @@ getautoconfargs:
 .cu.o:
 	${PETSC_CUCOMPILE_SINGLE} `pwd`/$<
 
-.hip.cpp.o:
+.hip.cxx.o .hip.cpp.o:
 	${PETSC_HIPCOMPILE_SINGLE} `pwd`/$<
 
-.kokkos.cxx.o:
+.kokkos.cxx.o .kokkos.cpp.o:
 	${PETSC_KOKKOSCOMPILE_SINGLE} `pwd`/$<
 
-.sycl.cxx.o:
+.sycl.cxx.o .sycl.cpp.o:
 	${PETSC_SYCLCOMPILE_SINGLE} `pwd`/$<
 
-.raja.cxx.o:
+.raja.cxx.o .raja.cpp.o:
 	${PETSC_RAJACOMPILE_SINGLE} `pwd`/$<
 
 .F.o .F90.o .F95.o:
@@ -316,7 +316,7 @@ getautoconfargs:
 .cpp.rm .cxx.rm .cc.rm .C.rm .F.rm .F90.rm .f.rm .c.rm .cu.rm:
 	-@${RM} $* *.o $*.mon.* gmon.out mon.out
 	-@${RM} *.exe *.ilk *.pdb *.tds
-.cu.PETSc .hip.cpp.PETSc .kokkos.cxx.PETSc .c.PETSc .cxx.PETSc:
+.cu.PETSc .hip.cxx.PETSc .kokkos.cxx.PETSc .c.PETSc .cxx.PETSc:
 	-+@${OMAKE}  PETSC_ARCH=${PETSC_ARCH}  $* > trashz 2>&1
 	-@grep -v clog trashz | grep -v "information sections" | \
           grep -v "warning C4003: not enough actual parameters for macro 'PETSC_PASTE3_" | \

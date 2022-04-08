@@ -1,9 +1,9 @@
 #requirespackage 'PETSC_HAVE_HIP'
 ALL: lib
 
-CFLAGS   = 
+CFLAGS   =
 FFLAGS   =
-SOURCEHIP = mpihip.hip.cpp
+SOURCEHIP = mpihip.hip.cxx
 SOURCEF  =
 SOURCEH  =
 LIBBASE  = libpetscvec

@@ -4,7 +4,7 @@ ALL: lib
 CFLAGS   =
 FFLAGS   =
 SOURCEC  =
-SOURCEHIP = sfhip.hip.cpp
+SOURCEHIP = sfhip.hip.cxx
 SOURCEF  =
 SOURCEH  =
 LIBBASE  = libpetscvec
