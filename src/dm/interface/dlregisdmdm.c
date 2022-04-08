@@ -141,10 +141,10 @@ PetscErrorCode DMInitializePackage(void)
   PetscCall(PetscLogEventRegister("DMSwarmSort",            DM_CLASSID,&DMSWARM_Sort));
   PetscCall(PetscLogEventRegister("DMSwarmSetSizes",        DM_CLASSID,&DMSWARM_SetSizes));
 
-  PetscCall(PetscLogEventRegister("DMNtComponentSetUp",        DM_CLASSID,&DMNetwork_ComponentSetUp));
+  PetscCall(PetscLogEventRegister("DMNtComponentSetUp",     DM_CLASSID,&DMNetwork_ComponentSetUp));
   PetscCall(PetscLogEventRegister("DMNtLayoutSetUp",        DM_CLASSID,&DMNetwork_LayoutSetUp));
-  PetscCall(PetscLogEventRegister("DMNtSetUp",        DM_CLASSID,&DMNetwork_SetUpNetwork));
-  PetscCall(PetscLogEventRegister("DMNtDistribute",        DM_CLASSID,&DMNetwork_Distribute));
+  PetscCall(PetscLogEventRegister("DMNtSetUp",              DM_CLASSID,&DMNetwork_SetUpNetwork));
+  PetscCall(PetscLogEventRegister("DMNtDistribute",         DM_CLASSID,&DMNetwork_Distribute));
   /* Process Info */
   {
     PetscClassId  classids[1];
