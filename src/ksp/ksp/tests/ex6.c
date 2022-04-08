@@ -118,7 +118,7 @@ int main(int argc,char **args)
     PetscCall(PetscViewerStringOpen(PETSC_COMM_WORLD,kspinfo,sizeof(kspinfo),&viewer));
     PetscCall(KSPView(ksp,viewer));
     PetscCall(PetscStrrchr(file,'/',&matrixname));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%-8.8s %3" PetscInt_FMT " %2.0e %s \n",matrixname,its,norm,kspinfo));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%-8.8s %3" PetscInt_FMT " %2.0e %s \n",matrixname,its,(double)norm,kspinfo));
     PetscCall(PetscViewerDestroy(&viewer));
   } else {
     PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Number of iterations = %3" PetscInt_FMT "\n",its));
