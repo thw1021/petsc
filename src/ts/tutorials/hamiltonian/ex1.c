@@ -97,7 +97,7 @@ static PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal t,Vec U,void *ctx)
     PetscCall(VecGetArrayRead(U,&u));
     menergy = (u[1]*u[1]+user->omega*user->omega*u[0]*u[0]-user->omega*user->omega*dt*u[0]*u[1])/2.;
     energy = (u[1]*u[1]+user->omega*user->omega*u[0]*u[0])/2.;
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"At time %.6lf, Energy = %8g, Modified Energy = %8g\n",t,(double)energy,(double)menergy));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"At time %.6lf, Energy = %8g, Modified Energy = %8g\n",(double)t,(double)energy,(double)menergy));
     PetscCall(VecRestoreArrayRead(U,&u));
   }
   PetscFunctionReturn(0);
