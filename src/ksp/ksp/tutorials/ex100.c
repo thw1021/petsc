@@ -47,7 +47,7 @@ PetscErrorCode RunTest(void)
     PetscCall(MatMult(A,x,r));
     PetscCall(VecAYPX(r,-1,b));
     PetscCall(VecNorm(r,NORM_2,&rnorm));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"error norm = %g\n",rnorm));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"error norm = %g\n",(double)rnorm));
     PetscCall(VecDestroy(&r));
   }
 

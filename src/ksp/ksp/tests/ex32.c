@@ -96,7 +96,7 @@ int main(int argc,char **argv)
     PetscCall(MatMult(A,x,b1));
     PetscCall(VecAXPY(b1,-1.0,b));
     PetscCall(VecNorm(b1,NORM_2,&norm));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Final residual %g\n",norm));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Final residual %g\n",(double)norm));
     PetscCall(VecDestroy(&b1));
   }
 

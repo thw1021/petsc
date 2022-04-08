@@ -325,7 +325,7 @@ int main(int argc,char **args)
       PetscCall(PetscViewerStringOpen(PETSC_COMM_WORLD,kspinfo,sizeof(kspinfo),&viewer));
       PetscCall(KSPView(ksp,viewer));
       PetscCall(PetscStrrchr(file[PetscPreLoadIt],'/',&matrixname));
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%-8.8s %3" PetscInt_FMT " %2.0e %s \n", matrixname,its,rnorm,kspinfo));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%-8.8s %3" PetscInt_FMT " %2.0e %s \n", matrixname,its,(double)rnorm,kspinfo));
 
       /*
         Destroy the viewer

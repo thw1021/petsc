@@ -18,8 +18,8 @@ PetscErrorCode printMumpsMemoryInfo(Mat F)
   PetscFunctionBeginUser;
   PetscCall(MatMumpsGetInfog(F,16,&maxMem));
   PetscCall(MatMumpsGetInfog(F,17,&sumMem));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\n MUMPS INFOG(16) :: Max memory in MB = %d", maxMem));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\n MUMPS INFOG(17) :: Sum memory in MB = %d \n", sumMem));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\n MUMPS INFOG(16) :: Max memory in MB = %" PetscInt_FMT, maxMem));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\n MUMPS INFOG(17) :: Sum memory in MB = %" PetscInt_FMT "\n", sumMem));
   PetscFunctionReturn(0);
 }
 #endif
