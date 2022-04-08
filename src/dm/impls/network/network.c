@@ -1375,11 +1375,11 @@ PetscErrorCode DMNetworkComponentSetUp(DM dm)
   DMNetworkComponentGenericDataType *componentdataarray;
 
   PetscFunctionBegin;
+  PetscCall(PetscLogEventBegin(DMNetwork_ComponentSetUp,0,0,0,0));
   PetscCall(PetscSectionSetUp(network->DataSection));
   PetscCall(PetscSectionGetStorageSize(network->DataSection,&arr_size));
   /* arr_size+1 fixes pipeline test of opensolaris-misc for src/dm/tests/ex10.c -- Do not know why */
   PetscCall(PetscCalloc1(arr_size+1,&network->componentdataarray));
-  PetscCall(PetscLogEventBegin(DMNetwork_ComponentSetUp,0,0,0,0));
   componentdataarray = network->componentdataarray;
   for (p = network->pStart; p < network->pEnd; p++) {
     PetscCall(PetscSectionGetOffset(network->DataSection,p,&offsetp));
