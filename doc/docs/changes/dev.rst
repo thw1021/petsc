@@ -57,6 +57,8 @@ Changes: Development
 
 .. rubric:: DMPlex:
 
+- Add ``DMLabelPropagateBegin()``, ``DMLabelPropagatePush()``, and ``DMLabelPropagateEnd()``
+
 .. rubric:: FE/FV:
 
 .. rubric:: DMNetwork:
