@@ -17,9 +17,9 @@ The dict fieldNames holds key value pairs for the fields of problems.  This is
 """
 filePath = {}
 filePath['absoluteGraphs'] = '/home/arcowie/research/graphs/'
-filePath['absoluteData']   = '/home/arcowie/research/data/poission/'
+#filePath['absoluteData']   = '/home/arcowie/petsc/data/poission/'
 #filePath['absoluteData']   = '/home/arcowie/research/data/ex13/'
-#filePath['absoluteData']   = '/home/arcowie/research/data/chrest/'
+filePath['absoluteData']   = '/home/arcowie/research/data/chrest/'
 
 
 fieldNames = {}
