@@ -597,7 +597,7 @@ PetscErrorCode DMTSSetTransientVariable(DM dm,TSTransientVariable tvar,void *ctx
 
    Level: advanced
 
-.seealso: DMTSSetTransientVariable(), DMTSGetIFunction(), DMTSGetIJacobian()
+.seealso: DMTSSetTransientVariable(), DMTSion(), DMTSGetIJacobian()
 @*/
 PetscErrorCode DMTSGetTransientVariable(DM dm,TSTransientVariable *tvar,void *ctx)
 {
