@@ -355,7 +355,7 @@ PetscErrorCode DMTSSetIJacobianLocal(DM dm, PetscErrorCode (*func)(DM, PetscReal
   Logically Collective
 
   Input Parameter:
-. dm   - DM to associate callback with
+. dm   - DM to obtain function and context from
 
   Output Parameters:
 + func - local function evaluation
