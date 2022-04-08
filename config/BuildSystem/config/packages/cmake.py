@@ -102,7 +102,7 @@ class Configure(config.package.GNUPackage):
         else:
           self.log.write('cmake version found '+self.foundversion+'\n')
           if self.versionToTuple(self.foundversion) < self.maxminCmakeVersion:
-            raise RuntimeError('A package requires CMake version '+str(self.maxminCmakeVersion)+' use --download-cmake')
+            raise RuntimeError('A package requires CMake version '+'.'.join(map(str, self.maxminCmakeVersion))+' (detected version is '+'.'.join(map(str, self.versionToTuple(self.foundversion)))+'): use --download-cmake')
           return
       gver = None
       try:
@@ -117,7 +117,7 @@ class Configure(config.package.GNUPackage):
         else:
           self.log.write('cmake version found '+self.foundversion+'\n')
           if self.versionToTuple(self.foundversion) < self.maxminCmakeVersion:
-            raise RuntimeError('A package requires CMake version '+str(self.maxminCmakeVersion)+' use --download-cmake')
+            raise RuntimeError('A package requires CMake version '+'.'.join(map(str, self.maxminCmakeVersion))+' (detected version is '+'.'.join(map(str, self.versionToTuple(self.foundversion)))+'): use --download-cmake')
           return
         self.log.write('cmake version check failed\n')
     else:
