@@ -242,8 +242,8 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, PetscInt stepi, PetscReal time, 
   PetscCall(TSGetConvergedReason(ts,&reason));
   PetscCall(TSGetConvergedReason(ts,&reason));
   if ((rectx->plotting) || stepi == 0 || reason || rectx->pulse_start == time + 0.98*dt) {
-    PetscCall(PetscPrintf(ctx->comm, "testSpitzer: %4" PetscInt_FMT ") time=%11.4e n_e= %10.3e E= %10.3e J= %10.3e J_re= %10.3e %.3g%% Te_kev= %10.3e Z_eff=%g E/J to eta ratio= %g (diff=%g) %s %s spit_eta=%g\n",stepi,time,n_e/ctx->n_0,ctx->Ez,J,J_re,100*J_re/J, Te_kev,Z,ratio,old_ratio-ratio, rectx->use_spitzer_eta ? "using Spitzer eta*J E" : "constant E",rectx->pulse_start != time + 0.98*dt ? "normal" : "transition",spit_eta));
-    PetscCheckFalse(rectx->pulse_start == time + 0.98*dt,PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"Spitzer complete ratio=%g",ratio);
+    PetscCall(PetscPrintf(ctx->comm, "testSpitzer: %4" PetscInt_FMT ") time=%11.4e n_e= %10.3e E= %10.3e J= %10.3e J_re= %10.3e %.3g%% Te_kev= %10.3e Z_eff=%g E/J to eta ratio= %g (diff=%g) %s %s spit_eta=%g\n",stepi,(double)time,(double)(n_e/ctx->n_0),(double)ctx->Ez,(double)J,(double)J_re,(double)(100*J_re/J),(double)Te_kev,(double)Z,(double)ratio,(double)(old_ratio-ratio), rectx->use_spitzer_eta ? "using Spitzer eta*J E" : "constant E",rectx->pulse_start != time + 0.98*dt ? "normal" : "transition",(double)spit_eta));
+    PetscCheck(rectx->pulse_start != (time + 0.98*dt),PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"Spitzer complete ratio=%g",(double)ratio);
   }
   old_ratio = ratio;
   PetscFunctionReturn(0);
@@ -318,7 +318,7 @@ static PetscErrorCode testStable(TS ts, Vec X, PetscInt stepi, PetscReal time, P
     PetscCall(DMPlexComputeIntegralFEM(plex,X2,tt,NULL));
     lpm1 = PetscPowReal(PetscRealPart(tt[0]),1./ppp);
   }
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%s %" PetscInt_FMT ") time=%10.3e n-%d norm electrons/max=%20.13e ions/max=%20.13e\n", "----",stepi,time,(int)ppp,ediff/lpm0,idiff/lpm1));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%s %" PetscInt_FMT ") time=%10.3e n-%d norm electrons/max=%20.13e ions/max=%20.13e\n", "----",stepi,(double)time,(int)ppp,(double)(ediff/lpm0),(double)(idiff/lpm1)));
   /* view */
   PetscCall(VecCopy(X2,X));
   PetscCall(VecDestroy(&X2));
@@ -407,7 +407,7 @@ static PetscErrorCode FormSource(TS ts, PetscReal ftime, Vec X_dummmy, Vec F, vo
       dne_dt = new_imp_rate*rectx->Ne_ion /* *ctx->t_0 */;
       tilda_ns[0] = dne_dt;        tilda_ns[rectx->imp_idx] = dni_dt;
       temps[0]    = rectx->T_cold;    temps[rectx->imp_idx] = rectx->T_cold;
-      PetscCall(PetscInfo(ctx->plex[0], "\tHave new_imp_rate= %10.3e time= %10.3e de/dt= %10.3e di/dt= %10.3e ***\n",new_imp_rate,ftime,dne_dt,dni_dt));
+      PetscCall(PetscInfo(ctx->plex[0], "\tHave new_imp_rate= %10.3e time= %10.3e de/dt= %10.3e di/dt= %10.3e ***\n",(double)new_imp_rate,(double)ftime,(double)dne_dt,(double)dni_dt));
       PetscCall(DMCompositeGetAccessArray(pack, F, ctx->num_grids*ctx->batch_sz, NULL, globFarray));
       for (PetscInt grid=0 ; grid<ctx->num_grids ; grid++) {
         /* add it */
@@ -617,7 +617,7 @@ static PetscErrorCode ProcessREOptions(REctx *rectx, const LandauCtx *ctx, DM dm
   PetscCall(PetscOptionsReal("-ex2_ion_potential","Potential to ionize impurity (should be array) in ev","none",rectx->ion_potential,&rectx->ion_potential, NULL));
   PetscCall(PetscOptionsReal("-ex2_inductance","Inductance E feild","none",rectx->L,&rectx->L, NULL));
   PetscCall(PetscOptionsBool("-ex2_connor_e_field_units","Scale Ex but Connor-Hastie E_c","none",Connor_E,&Connor_E, NULL));
-  PetscCall(PetscInfo(dm_dummy, "Num electrons from ions=%g, T_cold=%10.3e, ion potential=%10.3e, E_z=%10.3e v_0=%10.3e\n",rectx->Ne_ion,rectx->T_cold,rectx->ion_potential,ctx->Ez,ctx->v_0));
+  PetscCall(PetscInfo(dm_dummy, "Num electrons from ions=%g, T_cold=%10.3e, ion potential=%10.3e, E_z=%10.3e v_0=%10.3e\n",(double)rectx->Ne_ion,(double)rectx->T_cold,(double)rectx->ion_potential,(double)ctx->Ez,(double)ctx->v_0));
   ierr = PetscOptionsEnd();PetscCall(ierr);
   /* get impurity source rate function */
   PetscCall(PetscFunctionListFind(plist,pname,&rectx->impuritySrcRate));
