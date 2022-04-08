@@ -417,7 +417,7 @@ PetscErrorCode MyKSPMonitor(KSP ksp,PetscInt n,PetscReal rnorm,void *dummy)
   */
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"iteration %" PetscInt_FMT " solution vector:\n",n));
   PetscCall(VecView(x,PETSC_VIEWER_STDOUT_WORLD));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"iteration %" PetscInt_FMT " KSP Residual norm %14.12e \n",n,rnorm));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"iteration %" PetscInt_FMT " KSP Residual norm %14.12e \n",n,(double)rnorm));
   return 0;
 }
 
