@@ -168,7 +168,7 @@ static PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal t,Vec X,void *ctx)
     PetscCall(VecDuplicate(X,&interpolatedX));
     PetscCall(TSInterpolate(ts,user->next_output,interpolatedX));
     PetscCall(VecGetArrayRead(interpolatedX,&x));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"[%.1f] %" PetscInt_FMT " TS %.6f (dt = %.6f) X % 12.6e % 12.6e\n",user->next_output,step,t,dt,(double)PetscRealPart(x[0]),(double)PetscRealPart(x[1])));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"[%.1f] %" PetscInt_FMT " TS %.6f (dt = %.6f) X % 12.6e % 12.6e\n",(double)user->next_output,step,(double)t,(double)dt,(double)PetscRealPart(x[0]),(double)PetscRealPart(x[1])));
     PetscCall(VecRestoreArrayRead(interpolatedX,&x));
     PetscCall(VecDestroy(&interpolatedX));
 
