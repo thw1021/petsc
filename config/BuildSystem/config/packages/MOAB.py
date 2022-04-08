@@ -43,10 +43,6 @@ class Configure(config.package.GNUPackage):
     self.odeps          = [self.szlib,self.eigen,self.hdf5,self.netcdf,self.metis,self.parmetis,self.ptscotch,self.zoltan]
     return
 
-  def gitPreReqCheck(self):
-    '''MOAB from the git repository needs the GNU autotools'''
-    return self.programs.autoreconf and self.programs.libtoolize
-
   def formGNUConfigureArgs(self):
     '''Add MOAB specific configure arguments'''
     args = config.package.GNUPackage.formGNUConfigureArgs(self)
