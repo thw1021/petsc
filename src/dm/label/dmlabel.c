@@ -2007,11 +2007,12 @@ $ markPoint(DMLabel label, PetscInt p, PetscInt val, void *ctx);
 PetscErrorCode DMLabelPropagatePush(DMLabel label, PetscSF pointSF, PetscErrorCode (*markPoint)(DMLabel, PetscInt, PetscInt, void *), void *ctx)
 {
   PetscInt      *valArray = label->propArray;
-  PetscMPIInt    size;
+  PetscMPIInt    size, Nr;
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject) pointSF), &size));
-  if (size > 1) {
+  PetscCall(PetscSFGetGraph(pointSF, &Nr, NULL, NULL, NULL));
+  if (size > 1 && Nr >= 0) {
     /* Communicate marked edges
        The current implementation allocates an array the size of the number of root. We put the label values into the
        array, and then call PetscSFReduce()+PetscSFBcast() to make the marks consistent.
