@@ -821,7 +821,7 @@ To use currently downloaded (local) git snapshot - use: --download-'+self.packag
     import retrieval
     self.retriever = retrieval.Retriever(self.sourceControl, argDB = self.argDB)
     self.retriever.setup()
-    self.retriever.setupURLs(self.name,self.download,self.gitsubmodules)
+    self.retriever.setupURLs(self.package,self.download,self.gitsubmodules)
 
   def downLoad(self):
     '''Downloads a package; using hg or ftp; opens it in the with-packages-build-dir directory'''
