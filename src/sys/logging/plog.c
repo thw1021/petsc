@@ -1475,7 +1475,6 @@ PetscErrorCode  PetscLogView_Default(PetscViewer viewer)
   PetscLogDouble     min, max, tot, ratio, avg, x, y;
   PetscLogDouble     minf, maxf, totf, ratf, mint, maxt, tott, ratt, ratC, totm, totml, totr, mal, malmax, emalmax;
   #if defined(PETSC_HAVE_DEVICE)
-  PetscStageLog      stageLog;
   PetscLogEvent      KSP_Solve, SNES_Solve, TS_Step, TAO_Solve;  /* These need to be fixed to be some events registered with certain objects */
   PetscLogDouble     cct, gct, csz, gsz, gmaxt, gflops, gflopr, fracgflops;
   #endif
@@ -1727,7 +1726,6 @@ PetscErrorCode  PetscLogView_Default(PetscViewer viewer)
 
   #if defined(PETSC_HAVE_DEVICE)
   /* this indirect way of accessing these values is needed when PETSc is build with multiple libraries since the symbols are not in libpetscsys */
-  PetscCall(PetscLogGetStageLog(&stageLog));
   PetscCall(PetscEventRegLogGetEvent(stageLog->eventLog, "TAOSolve", &TAO_Solve));
   PetscCall(PetscEventRegLogGetEvent(stageLog->eventLog, "TSStep", &TS_Step));
   PetscCall(PetscEventRegLogGetEvent(stageLog->eventLog, "SNESSolve", &SNES_Solve));
