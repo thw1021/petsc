@@ -1457,12 +1457,6 @@ static PetscErrorCode PetscLogViewWarnGpuTime(MPI_Comm comm,FILE *fd)
 #endif
  }
 
-/* These need to be fixed to be some events registered with certain objects */
-PETSC_EXTERN PetscLogEvent KSP_Solve;
-PETSC_EXTERN PetscLogEvent SNES_Solve;
-PETSC_EXTERN PetscLogEvent TS_Step;
-PETSC_EXTERN PetscLogEvent TAO_Solve;
-
 PetscErrorCode  PetscLogView_Default(PetscViewer viewer)
 {
   FILE               *fd;
@@ -1481,6 +1475,8 @@ PetscErrorCode  PetscLogView_Default(PetscViewer viewer)
   PetscLogDouble     min, max, tot, ratio, avg, x, y;
   PetscLogDouble     minf, maxf, totf, ratf, mint, maxt, tott, ratt, ratC, totm, totml, totr, mal, malmax, emalmax;
   #if defined(PETSC_HAVE_DEVICE)
+  PetscStageLog      stageLog;
+  PetscLogEvent      KSP_Solve, SNES_Solve, TS_Step, TAO_Solve;  /* These need to be fixed to be some events registered with certain objects */
   PetscLogDouble     cct, gct, csz, gsz, gmaxt, gflops, gflopr, fracgflops;
   #endif
   PetscMPIInt        minC, maxC;
@@ -1728,6 +1724,15 @@ PetscErrorCode  PetscLogView_Default(PetscViewer viewer)
   PetscCall(PetscFPrintf(comm, fd,"---------------------------------------"));
   #endif
   PetscCall(PetscFPrintf(comm, fd,"\n"));
+
+  #if defined(PETSC_HAVE_DEVICE)
+  /* this indirect way of accessing these values is needed when PETSc is build with multiple libraries since the symbols are not in libpetscsys */
+  PetscCall(PetscLogGetStageLog(&stageLog));
+  PetscCall(PetscEventRegLogGetEvent(stageLog->eventLog, "TAOSolve", &TAO_Solve));
+  PetscCall(PetscEventRegLogGetEvent(stageLog->eventLog, "TSStep", &TS_Step));
+  PetscCall(PetscEventRegLogGetEvent(stageLog->eventLog, "SNESSolve", &SNES_Solve));
+  PetscCall(PetscEventRegLogGetEvent(stageLog->eventLog, "KSPSolve", &KSP_Solve));
+  #endif
 
   /* Problem: The stage name will not show up unless the stage executed on proc 1 */
   for (stage = 0; stage < numStages; stage++) {
