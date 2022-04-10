@@ -42,7 +42,6 @@ class Retriever(logger.Logger):
   def setupURLs(self,packagename,urls,gitsubmodules):
     self.packagename = packagename
     self.gitsubmodules = gitsubmodules
-    print(packagename,urls,gitsubmodules)
     for url in urls:
       parsed = urlParse(url)
       if self.isGitURL(url):
@@ -109,7 +108,7 @@ Unable to download package %s from: %s
 
   def isDirectoryGitRepo(self, directory):
     if not hasattr(self.sourceControl, 'git'):
-      print('git not found in self.sourceControl')
+      self.logPrint('git not found in self.sourceControl')
       return False
     from config.base import Configure
     for loc in ['.git','']:
