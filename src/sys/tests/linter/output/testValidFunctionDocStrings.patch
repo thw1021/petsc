@@ -1,0 +1,237 @@
+@@ -32,5 +32,6 @@
+ }
+ 
+-/*@C Lorem ipsum dolor sit amet
++/*@C 
++  Lorem ipsum dolor sit amet
+   someOtherFunctionName - Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+   eiusmod tempor incididunt ut labore et dolore magna aliqua. Excepteur sint occaecat cupidatat
+@@ -42,5 +42,5 @@
+   Not Collective, Synchronous
+ 
+-   Input Parameters:
++  Input Parameters:
+ + viewer - a PetscViewer
+ 
+@@ -43,5 +43,5 @@
+ 
+    Input Parameters:
+-+ viewer - a PetscViewer
++. viewer - a PetscViewer
+ 
+   Output Parameter:
+@@ -46,5 +46,5 @@
+ 
+   Output Parameter:
+-- y          - a pointer
+++ y - a pointer
+ + cnd           - a boolean
+ . z - a nonexistent parameter
+@@ -47,5 +47,5 @@
+   Output Parameter:
+ - y          - a pointer
+-+ cnd           - a boolean
++. cnd           - a boolean
+ . z - a nonexistent parameter
+ 
+@@ -48,5 +48,5 @@
+ - y          - a pointer
+ + cnd           - a boolean
+-. z - a nonexistent parameter
++- z - a nonexistent parameter
+ 
+   level: Lorem ipsum dolor sit amet
+@@ -50,5 +50,5 @@
+ . z - a nonexistent parameter
+ 
+-  level: Lorem ipsum dolor sit amet
++  Level: Lorem ipsum dolor sit amet
+ 
+   Level:
+@@ -53,5 +53,5 @@
+ 
+   Level:
+-  Beginner
++  beginner
+ 
+   Developer Notes:
+@@ -71,5 +71,5 @@
+   References: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+ 
+-.seealso:                                                  testNonExistentFunction(), testNonExistentType,
++.seealso: testNonExistentFunction(), testNonExistentType,
+ testIllFormedFunctionDocString(), testNonExistentFunction(), testIllFormedMinimalDocString()
+ @*/
+@@ -72,5 +72,5 @@
+ 
+ .seealso:                                                  testNonExistentFunction(), testNonExistentType,
+-testIllFormedFunctionDocString(), testNonExistentFunction(), testIllFormedMinimalDocString()
++testIllFormedMinimalDocString()
+ @*/
+ 
+@@ -74,5 +74,4 @@
+ testIllFormedFunctionDocString(), testNonExistentFunction(), testIllFormedMinimalDocString()
+ @*/
+-
+ PetscErrorCode testIllFormedFunctionDocString(PetscViewer viewer, PetscInt x, PetscScalar *y, PetscBool cond)
+ {
+@@ -83,9 +83,4 @@
+   Not Collective, Synchronous
+ 
+-  input parms:
+-. foo
+-
+-  Output params:
+-+ bar -
+ 
+   References:
+@@ -91,5 +91,6 @@
+   References:
+   Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+-   .seealso: testNonExistentFunction(), testNonExistentType,testNonExistentFunction()
++
++  .seealso: testNonExistentFunction(), testNonExistentType
+ */
+ PetscErrorCode testIllFormedMinimalDocString(void)
+@@ -99,5 +99,5 @@
+ 
+ /*@C
+-  testTerbleSpelingDocstring - Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
++  testTerribleSpellingDocString - Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+   eiusmod tempor incididunt ut labore et dolore magna aliqua.
+ 
+@@ -102,5 +102,5 @@
+   eiusmod tempor incididunt ut labore et dolore magna aliqua.
+ 
+-  input prametirs:
++  Input Parameters:
+ + viewer - a PetsViewer
+ - x - a PetscInt
+@@ -104,5 +104,5 @@
+   input prametirs:
+ + viewer - a PetsViewer
+-- x - a PetscInt
++- x      - a PetscInt
+ 
+   output Psrammmetrs:
+@@ -106,5 +106,5 @@
+ - x - a PetscInt
+ 
+-  output Psrammmetrs:
++  Output Parameters:
+ . y - a PetscScalar pointer
+ 
+@@ -109,5 +109,5 @@
+ . y - a PetscScalar pointer
+ 
+-  optnS dtaaSE:
++  Options Database:
+ - -option_a     - foo
+ - -option_b [filename][:[~]<foo,bar,baz>[:[~]bop]] - descr
+@@ -110,5 +110,5 @@
+ 
+   optnS dtaaSE:
+-- -option_a     - foo
+++ -option_a                                        - foo
+ - -option_b [filename][:[~]<foo,bar,baz>[:[~]bop]] - descr
+   lvl: itnmediate
+@@ -112,5 +112,6 @@
+ - -option_a     - foo
+ - -option_b [filename][:[~]<foo,bar,baz>[:[~]bop]] - descr
+-  lvl: itnmediate
++
++  Level: intermediate
+ 
+ .zeeakso:
+@@ -114,5 +114,5 @@
+   lvl: itnmediate
+ 
+-.zeeakso:
++.seealso:
+ C@*/
+ PetscErrorCode testTerribleSpellingDocString(PetscViewer viewer, PetscInt x, PetscScalar *y)
+@@ -121,5 +121,6 @@
+ }
+ 
+-/*@ asdadsadasdas
++/*@C 
++  asdadsadasdas
+   testCustomFortranInterfaceDocString - Lorem ipsum dolor sit amet, consectetur adipiscing elit
+ 
+@@ -125,5 +125,5 @@
+ 
+   Input Parameters:
+-+ string -  a char pointer
+++ string       - a char pointer
+ - function_ptr - a function pointer
+ 
+@@ -169,5 +169,5 @@
+   testAllParamsUndocumented - lorem
+ 
+-  Level: beginner developer
++  Level: developer
+ 
+   Example Usage:
+@@ -188,5 +188,5 @@
+   testParameterGrouping ipsum
+ 
+-  Input parameters:
++  Input Parameters:
+ - a,b - some params
+ + nonExistentParam - this param does not exist
+@@ -189,5 +189,5 @@
+ 
+   Input parameters:
+-- a,b - some params
+++ a,b - some params
+ + nonExistentParam - this param does not exist
+ . ... - variadic arguments
+@@ -190,5 +190,5 @@
+   Input parameters:
+ - a,b - some params
+-+ nonExistentParam - this param does not exist
++. nonExistentParam - this param does not exist
+ . ... - variadic arguments
+ 
+@@ -191,5 +191,5 @@
+ - a,b - some params
+ + nonExistentParam - this param does not exist
+-. ... - variadic arguments
++- ... - variadic arguments
+ 
+   Level dev
+@@ -195,5 +195,5 @@
+   Level dev
+ 
+-.see also: testStaticFunction()
++.seealso: testStaticFunction()
+ @*/
+ PetscErrorCode testParameterGrouping(PetscInt a, PetscInt b,...)
+@@ -210,5 +210,5 @@
+   int a_code_block;
+ .ve
+-- beta - a beta
++- beta  - a beta
+ 
+   Level: beginner
+@@ -225,5 +225,5 @@
+ 
+   Input Parameters:
+-+ alpha, an alpha
+++ alpha - an alpha
+ - beta = a beta
+ 
+@@ -226,5 +226,5 @@
+   Input Parameters:
+ + alpha, an alpha
+-- beta = a beta
++- beta  - a beta
+ 
+   Level: beginner
+@@ -281,5 +281,5 @@
+ 
+   Output Parameter:
+-. baz -                 a baz
++. baz - a baz
+ 
+   Level: beginner
