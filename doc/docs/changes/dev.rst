@@ -24,6 +24,7 @@ Changes: Development
 .. rubric:: AO:
 
 .. rubric:: IS:
+- Add ``ISShift()``
 
 - Add ``PetscSectionCreateSubdomainSection()``
 
