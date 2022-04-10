@@ -829,10 +829,10 @@ To use currently downloaded (local) git snapshot - use: --download-'+self.packag
     self.logPrint('Downloading '+self.name)
     # now attempt to download each url until any one succeeds.
     err =''
-    for url in self.retriever.generateURLs():
+    for proto, url in self.retriever.generateURLs():
       self.logPrintBox('Trying to download '+url+' for '+self.PACKAGE)
       try:
-        self.retriever.genericRetrieve(url, self.externalPackagesDir)
+        self.retriever.genericRetrieve(proto, url, self.externalPackagesDir)
         self.logWrite(self.retriever.restoreLog())
         self.retriever.saveLog()
         pkgdir = self.getDir()

@@ -35,7 +35,7 @@ class Retriever(logger.Logger):
     self.hg_urls = []
     self.dir_urls = []
     self.link_urls = []
-    self.tar_urls = []
+    self.tarball_urls = []
     self.stamp = None
     return
 
@@ -56,34 +56,42 @@ class Retriever(logger.Logger):
         # use https://ftp.mcs instead of ftp://ftp.mcs or http://ftp.mcs
         url.replace('ftp://ftp.mcs.anl.gov','https://ftp.mcs.anl.gov')
         url.replace('http://ftp.mcs.anl.gov','https://ftp.mcs.anl.gov')
-        self.tar_urls.append(url)
+        self.tarball_urls.append(url)
         # add in mirror URL
         if url.find('https://ftp.mcs.anl.gov') >=0:
           url.replace('http://ftp.mcs.anl.gov/pub/petsc/','https://www.mcs.anl.gov/petsc/mirror/')
-          self.tar_urls.append(url)
+          self.tarball_urls.append(url)
+
+  def genericRetrieve(self,proto,url,root):
+    if proto == 'git':
+      return self.gitRetrieve(url,root)
+    elif proto == 'hg':
+      return self.hgRetrieve(url,root)
+    elif proto == 'dir':
+      return self.dirRetrieve(url,root)
+    elif proto == 'link':
+      self.linkRetrieve(url,root)
+    elif proto == 'tarball':
+      self.tarballRetrieve(url,root)
+
 
   def generateURLs(self):
     if hasattr(self.sourceControl, 'git'):
-      self.genericRetrieve = self.gitRetrieve
       for url in self.git_urls:
-        yield(url)
+        yield('git',url)
     else:
       self.logPrint('Git not found - skipping giturls: '+str(self.git_urls)+'\n')
     if hasattr(self.sourceControl, 'hg'):
-      self.genericRetrieve = self.hgRetrieve
       for url in self.hg_urls:
-        yield(url)
+        yield('hg',url)
     else:
       self.logPrint('Hg not found - skipping hgurls: '+str(self.hg_urls)+'\n')
-    self.genericRetrieve = self.dirRetrieve
     for url in self.dir_urls:
-      yield(url)
-    self.genericRetrieve = self.linkRetrieve
+      yield('dir',url)
     for url in self.link_urls:
-      yield(url)
-    self.genericRetrieve = self.tarballRetrieve
-    for url in self.tar_urls:
-      yield(url)
+      yield'link',(url)
+    for url in self.tarball_urls:
+      yield('tarball',url)
 
   @staticmethod
   def removeTarget(t):
