@@ -53,14 +53,10 @@ class Retriever(logger.Logger):
       elif parsed[0] == 'link':
         self.link_urls.append(removePrefix(url,'link://'))
       else:
-        # use https://ftp.mcs instead of ftp://ftp.mcs or http://ftp.mcs
-        url = url.replace('ftp://ftp.mcs.anl.gov','https://ftp.mcs.anl.gov')
-        url = url.replace('http://ftp.mcs.anl.gov','https://ftp.mcs.anl.gov')
-        self.tarball_urls.append(url)
-        # add in mirror URL
-        if url.find('https://ftp.mcs.anl.gov') >=0:
-          url = url.replace('https://ftp.mcs.anl.gov/pub/petsc/','https://www.mcs.anl.gov/petsc/mirror/')
-          self.tarball_urls.append(url)
+        # check for ftp.mcs.anl.gov - and use https://,www.mcs.anl.gov,ftp://
+        if url.find('ftp.mcs.anl.gov'):
+          https_url = url.replace('http://','https://').replace('ftp://','http://')
+          self.tarball_urls.extend([https_url,https_url.replace('ftp.mcs.anl.gov/pub/petsc/','www.mcs.anl.gov/petsc/mirror/'),https_url.replace('https://','ftp')])
 
   def genericRetrieve(self,proto,url,root):
     if proto == 'git':
