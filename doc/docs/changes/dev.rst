@@ -62,6 +62,8 @@ In addition to the changes above
 
 .. rubric:: KSP:
 
+- Deprecate ``KSPHPDDMGetDeflationSpace()`` (resp. ``KSPHPDDMSetDeflationSpace()``) in favor of ``KSPHPDDMGetDeflationMat()`` (resp. ``KSPHPDDMSetDeflationMat()``)
+
 .. rubric:: SNES:
 
 .. rubric:: SNESLineSearch:
