@@ -8,7 +8,6 @@ class Configure(config.package.Package):
     self.functionsCxx     = [1,'namespace Box {class Box{public: Box();};}','Box::Box *nb = new Box::Box()'] 
     self.includedir       = 'include'
     self.includes         = ['CH_config.H']
-    self.downloadonWindows= 0
     self.hastestsdatafiles= 1
     self.downloaddirnames  = ['petsc-pkg-chombo-3.2']
     return
