@@ -178,8 +178,8 @@ petsc4py-pip:
   tags:
     - gce-stage2
   variables:
-    PETSC_CONFIGURE_OPTIONS="--with-mpi=0 --with-fc=0"
-    CFLAGS=-O0
+    PETSC_CONFIGURE_OPTIONS: --with-mpi=0 --with-fc=0
+    CFLAGS: -O0
   script:
     python3 -m venv pip-builds
     source pip-builds/bin/activate
