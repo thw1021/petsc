@@ -733,12 +733,31 @@ linux-pgi:
     TEST_ARCH: arch-ci-linux-pgi
     LOAD_MODULES: hpc_sdk/20.9
 
+# If the Nag license server fails then ${PETSC_DIR}/naglicenseproblem is created and the job is marked as passed (though it failed).
+# All other failures still result in a failed job. Since there is no way to skip steps in the script: the later lines will execute with
+# garbage and quickly fail if an earlier line fails.
 linux-nagfor:
   extends:
     - .stage-3
     - .linux_test_nofflags
   tags:
     - gce-nfs, linux-mcpu
+  script:
+    - rm -f naglicenseproblem
+    - if [ -d ${HOME}/petsc-hash-pkgs/ ]; then find ${HOME}/petsc-hash-pkgs/ -maxdepth 1 -mindepth 1 -type d -mtime +25 -exec rm -rf {} \; ; fi
+    - printf "PATH:$PATH\n"
+    - printf "PYTHONPATH:$PYTHONPATH\n"
+    - printf "PETSC_OPTIONS:$PETSC_OPTIONS\n"
+    - if [ ! -z ${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME+x} ]; then printf "CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME\n" ;fi
+    - printf "./config/examples/${TEST_ARCH}.py\n"
+    - cat ./config/examples/${TEST_ARCH}.py
+    - ./config/examples/${TEST_ARCH}.py || if [ ! -f naglicenseproblem ]; then false; fi
+    - make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" || if [ ! -f naglicenseproblem ]; then false; fi
+    - make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" check || if [ ! -f naglicenseproblem ]; then false; fi
+    - make updatedatafiles
+    - if [ -z ${DISABLE_PETSC4PY_TESTS+x} ]; then if [ -z ${ENABLE_PETSC4PY_LDPRELOAD+x} ]; then echo "NOT using LD_PRELOAD"; make petsc4pytest; else echo "using LD_PRELOAD"; LD_PRELOAD=${PWD}/${TEST_ARCH}/lib/libpetsc.so make petsc4pytest; fi; fi || if [ ! -f naglicenseproblem ]; then false; fi
+    - if [ -z ${DISABLE_TESTS+x} ]; then make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" cleantest allgtests-tap TIMEOUT=${TIMEOUT}  ${TEST_OPTS}; fi || if [ ! -f naglicenseproblem ]; then false; fi
+    - if [ ! -z ${RUN_GCOV+x} ]; then make gcov; fi || if [ ! -f naglicenseproblem ]; then false; fi
   variables:
     LOAD_MODULES: nag/6.1
     TEST_ARCH: arch-ci-linux-nagfor
