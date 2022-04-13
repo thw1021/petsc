@@ -49,7 +49,7 @@ def runnagfor(args):
       break;
     time.sleep(30)
   if (output+error).find('Cannot connect to licence server') > -1:
-    Path(os.path.join(os.environ['PETSC_DIR'],'naglicenseproblem')).touch()
+    Path(os.path.join(os.path.realpath(__file__),'..','..','..','naglicenseproblem')).touch()
   return (output,error,status)
 
 if __name__ == '__main__':
