@@ -77,7 +77,8 @@ typedef struct {
 typedef Kokkos::DefaultExecutionSpace exec_space;
 
 template <class XType>
-void writeArrayToMM(std::string name, const XType x) {
+void writeArrayToMM(std::string name, const XType x)
+{
   std::ofstream myfile;
   myfile.open(name);
 
@@ -101,7 +102,8 @@ void writeArrayToMM(std::string name, const XType x) {
 
 template <class VType, class IntType>
 void writeCRSToMM(std::string name, const VType &V, const IntType &r,
-                   const IntType &c) {
+                   const IntType &c)
+{
   std::ofstream myfile;
   myfile.open(name);
 
@@ -218,7 +220,8 @@ struct Functor_TestBatchedTeamVectorGMRES {
 
     KokkosBatched::TeamVectorGMRES<MemberType>::template invoke<Operator, VectorViewType, PrecOperator, KrylovHandleType>(member, A, b, x, P, _handle);
   }
-  inline double run() {
+  inline double run()
+  {
     typedef typename ValuesViewType::value_type value_type;
     std::string name("KokkosBatched::Test::TeamVectorGMRES");
     Kokkos::Timer timer;
@@ -627,7 +630,7 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
     PetscScalar       *glb_xdata=NULL;
     PetscReal         rtol = jac->ksp->rtol, atol = jac->ksp->abstol, dtol = jac->ksp->divtol;
     const PetscScalar *glb_idiag =jac->d_idiag_k->data(), *glb_bdata=NULL;
-    const PetscInt    *glb_Aai = aijkok->i_device_data(), *glb_Aaj = aijkok->j_device_data(), *d_bid_eqOffset = jac->d_bid_eqOffset_k->data();;
+    const PetscInt    *glb_Aai = aijkok->i_device_data(), *glb_Aaj = aijkok->j_device_data(), *d_bid_eqOffset = jac->d_bid_eqOffset_k->data();
     const PetscScalar *glb_Aaa = aijkok->a_device_data();
     const PetscInt    *d_isicol = jac->d_isicol_k->data(), *d_isrow = jac->d_isrow_k->data();
     PCFailedReason    pcreason;
