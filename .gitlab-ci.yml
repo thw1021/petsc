@@ -750,11 +750,11 @@ linux-nagfor:
     - printf "./config/examples/${TEST_ARCH}.py\n"
     - cat ./config/examples/${TEST_ARCH}.py
     - ./config/examples/${TEST_ARCH}.py || if [ ! -f naglicenseproblem ]; then false; fi
-    - make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" || if [ -f naglicenseproblem ]; then exit(126); fi
-    - make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" check || if [ -f naglicenseproblem ]; then exit(126); fi
+    - make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" || if [ -f naglicenseproblem ]; then exit 126; fi
+    - make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" check || if [ -f naglicenseproblem ]; then exit 126; fi
     - make updatedatafiles
-    - if [ -z ${DISABLE_PETSC4PY_TESTS+x} ]; then if [ -z ${ENABLE_PETSC4PY_LDPRELOAD+x} ]; then echo "NOT using LD_PRELOAD"; make petsc4pytest; else echo "using LD_PRELOAD"; LD_PRELOAD=${PWD}/${TEST_ARCH}/lib/libpetsc.so make petsc4pytest; fi; fi || if [ -f naglicenseproblem ]; then exit(126); fi
-    - if [ -z ${DISABLE_TESTS+x} ]; then make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" cleantest allgtests-tap TIMEOUT=${TIMEOUT}  ${TEST_OPTS}; fi || if [ -f naglicenseproblem ]; then exit(126); fi
+    - if [ -z ${DISABLE_PETSC4PY_TESTS+x} ]; then if [ -z ${ENABLE_PETSC4PY_LDPRELOAD+x} ]; then echo "NOT using LD_PRELOAD"; make petsc4pytest; else echo "using LD_PRELOAD"; LD_PRELOAD=${PWD}/${TEST_ARCH}/lib/libpetsc.so make petsc4pytest; fi; fi || if [ -f naglicenseproblem ]; then exit 126; fi
+    - if [ -z ${DISABLE_TESTS+x} ]; then make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" cleantest allgtests-tap TIMEOUT=${TIMEOUT}  ${TEST_OPTS}; fi || if [ -f naglicenseproblem ]; then exit 126; fi
     - if [ ! -z ${RUN_GCOV+x} ]; then make gcov; fi || if [ ! -f naglicenseproblem ]; then false; fi
   variables:
     LOAD_MODULES: nag/6.1
