@@ -24,6 +24,10 @@ class Configure(config.package.GNUPackage):
     self.odeps          = [self.hdf5,self.netcdf,self.zlib]
     return
 
+  def gitPreReqCheck(self):
+    '''ADIOS from the git repository needs the GNU autotools'''
+    return self.programs.autoreconf and self.programs.libtoolize
+
   def formGNUConfigureArgs(self):
     '''Add ADIOS specific configure arguments'''
     args = config.package.GNUPackage.formGNUConfigureArgs(self)

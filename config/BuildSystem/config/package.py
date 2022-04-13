@@ -708,6 +708,9 @@ Now rerun configure''' % (self.installDirProvider.dir, '--download-'+self.packag
         return 1
     return 0
 
+  def gitPreReqCheck(self):
+    '''Some packages may need addition prerequisites if the package comes from a git repository'''
+    return 1
   def updatehgDir(self):
     '''Checkout the correct hash'''
     if hasattr(self.sourceControl, 'hg') and (self.packageDir == os.path.join(self.externalPackagesDir,'hg.'+self.package)):
@@ -821,7 +824,7 @@ To use currently downloaded (local) git snapshot - use: --download-'+self.packag
     import retrieval
     self.retriever = retrieval.Retriever(self.sourceControl, argDB = self.argDB)
     self.retriever.setup()
-    self.retriever.setupURLs(self.package,self.download,self.gitsubmodules)
+    self.retriever.setupURLs(self.package,self.download,self.gitsubmodules,self.gitPreReqCheck())
 
   def downLoad(self):
     '''Downloads a package; using hg or ftp; opens it in the with-packages-build-dir directory'''

@@ -30,7 +30,8 @@ class Retriever(logger.Logger):
   def __init__(self, sourceControl, clArgs = None, argDB = None):
     logger.Logger.__init__(self, clArgs, argDB)
     self.sourceControl = sourceControl
-    self.git_submodules = []
+    self.gitsubmodules = []
+    self.gitprereq = 1
     self.git_urls = []
     self.hg_urls = []
     self.dir_urls = []
@@ -39,9 +40,10 @@ class Retriever(logger.Logger):
     self.stamp = None
     return
 
-  def setupURLs(self,packagename,urls,gitsubmodules):
+  def setupURLs(self,packagename,urls,gitsubmodules,gitprereq):
     self.packagename = packagename
     self.gitsubmodules = gitsubmodules
+    self.gitprereq = gitprereq
     for url in urls:
       parsed = urlParse(url)
       if self.isGitURL(url):
@@ -72,11 +74,11 @@ class Retriever(logger.Logger):
 
 
   def generateURLs(self):
-    if hasattr(self.sourceControl, 'git'):
+    if hasattr(self.sourceControl, 'git') and self.gitprereq:
       for url in self.git_urls:
         yield('git',url)
     else:
-      self.logPrint('Git not found - skipping giturls: '+str(self.git_urls)+'\n')
+      self.logPrint('Git not found or gitprereq check failed! skipping giturls: '+str(self.git_urls)+'\n')
     if hasattr(self.sourceControl, 'hg'):
       for url in self.hg_urls:
         yield('hg',url)
