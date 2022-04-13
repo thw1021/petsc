@@ -139,7 +139,7 @@ PetscErrorCode  VecDot(Vec x,Vec y,PetscScalar *val)
   PetscFunctionReturn(0);
 }
 
-typedef struct RealScalar
+typedef struct
 {
   PetscReal   *real;
   PetscScalar *scalar;
@@ -168,7 +168,7 @@ PetscErrorCode VecDotRealPartAsync(Vec x, Vec y, PetscManagedReal val, PetscDevi
     RealScalar         *ctx;
     PetscManagedScalar  tmp;
 
-    PetscCall(PetscManagedScalarCreate(dctx,NULL,NULL,1,PETSC_OWN_POINTER,PETSC_OWN_POINTER,PETSC_OFFLOAD_UNALLOCATED,&tmp));
+    PetscCall(PetscManagedScalarCreateDefault(dctx,1,&tmp));
     PetscCall(VecDotAsync(x,y,tmp,dctx));
     PetscCall(PetscMalloc1(1,&ctx));
     PetscCall(PetscManagedScalarGetValues(dctx,tmp,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,&ctx->scalar,NULL));
