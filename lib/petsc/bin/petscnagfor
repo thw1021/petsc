@@ -35,6 +35,9 @@ from pathlib import Path
 #
 def runnagfor(args):
   if not isinstance(args, list): args = args.strip().split(' ')
+  # test the case where no license is avaiable
+  Path(os.path.join(os.environ['PETSC_DIR'],'naglicenseproblem')).touch()
+  return ("fake output","fake error",0)
   for i in range(1,4):
     try:
       sub = subprocess.Popen(args, stdout=subprocess.PIPE,stderr=subprocess.PIPE)
