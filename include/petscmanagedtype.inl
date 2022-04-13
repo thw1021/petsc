@@ -1,4 +1,4 @@
-#ifdef DEBUG_MANAGED_TYPE_IMPL
+#ifndef DEBUG_MANAGED_TYPE_IMPL
 #  include <petscdevicetypes.h>
 #endif
 
@@ -20,7 +20,7 @@
 #  define PetscConcat3(a,b,c) PetscConcat(PetscConcat(a,b),c)
 #endif
 
-#if PetscDefined(USE_DEVICE)
+#if PetscDefined(HAVE_DEVICE)
 #define _n_PetscManagedType PetscConcat(_n_,PetscManagedType)
 struct _n_PetscManagedType
 {
@@ -44,16 +44,20 @@ typedef PetscType *PetscManagedType;
 #define PetscDeviceContextDestroyManagedTypeArray PetscConcat3(PetscDeviceContextDestroyManaged,PetscTypeSuffix,Array)
 #define PetscDeviceContextGetManagedTypeValues    PetscConcat3(PetscDeviceContextGetManaged,PetscTypeSuffix,Values)
 #define PetscDeviceContextCopyManagedType         PetscConcat(PetscDeviceContextCopyManaged,PetscTypeSuffix)
+#define PetscDeviceContextApplyOperatorManagedType PetscConcat(PetscDeviceContextApplyOperatorManaged,PetscTypeSuffix)
 #define PetscManagedTypeCreate                    PetscConcat(PetscManagedType,Create)
 #define PetscManageHostType                       PetscConcat(PetscManageHost,PetscTypeSuffix)
+#define PetscManagedTypeCreateDefault             PetscConcat(PetscManagedTypeCreate,Default)
 #define PetscManagedTypeDestroy                   PetscConcat(PetscManagedType,Destroy)
 #define PetscManagedTypeGetValues                 PetscConcat(PetscManagedType,GetValues)
 #define PetscManagedTypeCopy                      PetscConcat(PetscManagedType,Copy)
+#define PetscManagedTypeApplyOperator             PetscConcat(PetscManagedType,ApplyOperator)
 
 PETSC_EXTERN PetscErrorCode PetscDeviceContextCreateManagedTypeArray(PetscDeviceContext,PetscType*,PetscType*,PetscInt,PetscCopyMode,PetscCopyMode,PetscOffloadMask,PetscManagedType*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextDestroyManagedTypeArray(PetscDeviceContext,PetscManagedType*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextGetManagedTypeValues(PetscDeviceContext,PetscManagedType,PetscMemType,PetscMemoryAccessMode,PetscType**,PetscInt*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextCopyManagedType(PetscDeviceContext,PetscManagedType,PetscManagedType);
+PETSC_EXTERN PetscErrorCode PetscDeviceContextApplyOperatorManagedType(PetscDeviceContext,PetscManagedType,PetscOperatorType,PetscType,PetscManagedType);
 
 static inline PetscErrorCode PetscManagedTypeCreate(PetscDeviceContext dctx, PetscType *host_ptr, PetscType *device_ptr, PetscInt n, PetscCopyMode host_cmode, PetscCopyMode device_cmode, PetscOffloadMask mask, PetscManagedType *scal)
 {
@@ -72,6 +76,13 @@ static inline PetscErrorCode PetscManageHostType(PetscDeviceContext dctx, PetscT
 {
   PetscFunctionBegin;
   PetscCall(PetscManagedTypeCreate(dctx,host_ptr,PETSC_NULLPTR,n,PETSC_USE_POINTER,PETSC_OWN_POINTER,PETSC_OFFLOAD_CPU,scal));
+  PetscFunctionReturn(0);
+}
+
+static inline PetscErrorCode PetscManagedTypeCreateDefault(PetscDeviceContext dctx, PetscInt n, PetscManagedType *scal)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscManagedTypeCreate(dctx,PETSC_NULLPTR,PETSC_NULLPTR,n,PETSC_OWN_POINTER,PETSC_OWN_POINTER,PETSC_OFFLOAD_UNALLOCATED,scal));
   PetscFunctionReturn(0);
 }
 
@@ -108,6 +119,13 @@ static inline PetscErrorCode PetscManagedTypeCopy(PetscDeviceContext dctx, Petsc
   PetscFunctionReturn(0);
 }
 
+static inline PetscErrorCode PetscManagedTypeApplyOperator(PetscDeviceContext dctx, PetscManagedType scal, PetscOperatorType otype, PetscType rhs, PetscManagedType ret)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscDeviceContextApplyOperatorManagedType(dctx,scal,otype,rhs,ret));
+  PetscFunctionReturn(0);
+}
+
 #undef PetscConcat3
 #undef PetscDeviceContextCreateManagedTypeArray
 #undef PetscDeviceContextDestroyManagedTypeArray
@@ -116,9 +134,11 @@ static inline PetscErrorCode PetscManagedTypeCopy(PetscDeviceContext dctx, Petsc
 
 #undef PetscManagedTypeCreate
 #undef PetscManageHostType
+#undef PetscManagedTypeCreateDefault
 #undef PetscManagedTypeDestroy
 #undef PetscManagedTypeGetValeus
 #undef PetscManagedTypeCopy
+#undef PetscManagedTypeApplyOperator
 
 #undef PetscTypeSuffix
 #undef PetscManagedType

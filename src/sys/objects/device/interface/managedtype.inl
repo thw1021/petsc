@@ -1,5 +1,6 @@
-#ifdef DEBUG_MANAGED_TYPE_IMPL
-#  include <petscdevicetypes.h>
+#ifndef DEBUG_MANAGED_TYPE_IMPL
+#  include <petsc/private/deviceimpl.h>
+#  include <petsc/private/cpputil.hpp>
 #  include "objpool.hpp"
 #  define PetscTypeSuffix   Scalar
 #  define PetscTypeSuffix_L scalar
@@ -36,6 +37,8 @@
 #define getmanagedvaluestype                      PetscConcat(getmanagedvalues,PetscTypeSuffix_L)
 #define PetscDeviceContextGetManagedTypeValues    PetscConcat3(PetscDeviceContextGetManaged,PetscTypeSuffix,Values)
 #define PetscDeviceContextCopyManagedType         PetscConcat(PetscDeviceContextCopyManaged,PetscTypeSuffix)
+#define applyoperatortype                         PetscConcat(applyoperator,PetscTypeSuffix_L)
+#define PetscDeviceContextApplyOperatorManagedType PetscConcat(PetscDeviceContextApplyOperatorManaged,PetscTypeSuffix)
 
 struct PetscManagedTypeAllocator : Petsc::AllocatorBase<PetscManagedType>
 {
@@ -76,6 +79,25 @@ struct PetscManagedTypeAllocator : Petsc::AllocatorBase<PetscManagedType>
 
 static auto PetscManagedTypePool = Petsc::ObjectPool<PetscManagedType,PetscManagedTypeAllocator>{};
 
+namespace
+{
+
+PetscErrorCode CopyValues(PetscDeviceContext dctx, PetscManagedType scal, PetscOffloadMask mask, PetscOffloadMask src_mask, const PetscType *src_ptr)
+{
+  PetscDeviceCopyMode  mode;
+  PetscType           *ptr;
+  PetscInt             n;
+
+  // need to actually allocate the stuff
+  PetscFunctionBegin;
+  PetscCall(PetscDeviceContextGetManagedTypeValues(dctx,scal,PetscDetermineMemType(mask),PETSC_MEMORY_ACCESS_WRITE,&ptr,&n));
+  PetscCall(PetscDetermineCopyMode(mask,src_mask,&mode));
+  PetscCall(PetscDeviceArrayCopy(dctx,ptr,src_ptr,n,mode));
+  PetscFunctionReturn(0);
+}
+
+} // anonymous namespace
+
 PetscErrorCode PetscDeviceContextCreateManagedTypeArray(PetscDeviceContext dctx, PetscType *host_ptr, PetscType *device_ptr, PetscInt n, PetscCopyMode host_cmode, PetscCopyMode device_cmode, PetscOffloadMask mask, PetscManagedType *scal)
 {
   PetscFunctionBegin;
@@ -97,35 +119,30 @@ PetscErrorCode PetscDeviceContextCreateManagedTypeArray(PetscDeviceContext dctx,
     host_cmode = device_cmode = PETSC_OWN_POINTER;
   }
 
+  // finally get our pointer
   PetscCall(PetscManagedTypePool.get(*scal));
+
+  // populate known quantities
   (*scal)->n       = n;
-  switch (host_cmode) {
-  case PETSC_OWN_POINTER:
-  case PETSC_USE_POINTER:
-    (*scal)->host = host_ptr;
-    break;
-  case PETSC_COPY_VALUES:
-    PetscCall(PetscMalloc1(n,&((*scal)->host)));
-    PetscArraycpy((*scal)->host,host_ptr,n);
-    break;
-  }
-  switch (device_cmode) {
-  case PETSC_OWN_POINTER:
-  case PETSC_USE_POINTER:
-    (*scal)->device = device_ptr;
-    break;
-  case PETSC_COPY_VALUES:
-    PetscCall(PetscMalloc1(n,&((*scal)->host)));
-    PetscArraycpy((*scal)->host,host_ptr,n);
-    break;
-  }
-  (*scal)->device  = device_ptr;
   (*scal)->mask    = mask;
   (*scal)->h_cmode = host_cmode;
   (*scal)->d_cmode = device_cmode;
+
+  if (host_cmode == PETSC_COPY_VALUES) {
+    PetscCall(CopyValues(dctx,*scal,mask,PETSC_OFFLOAD_CPU,host_ptr));
+  } else {
+    // own_pointer or use_pointer
+    (*scal)->host = host_ptr;
+  }
+
+  if (device_cmode == PETSC_COPY_VALUES) {
+    PetscCall(CopyValues(dctx,*scal,mask,PETSC_OFFLOAD_GPU,device_ptr));
+  } else {
+    // own_pointer or use_pointer
+    (*scal)->device = device_ptr;
+  }
   PetscFunctionReturn(0);
 }
-
 
 PetscErrorCode PetscDeviceContextDestroyManagedTypeArray(PetscDeviceContext dctx, PetscManagedType *scal)
 {
@@ -152,25 +169,57 @@ PetscErrorCode PetscDeviceContextGetManagedTypeValues(PetscDeviceContext dctx, P
   PetscFunctionReturn(0);
 }
 
-
 PetscErrorCode PetscDeviceContextCopyManagedType(PetscDeviceContext dctx, PetscManagedType dest, PetscManagedType src)
 {
   // prefer GPU if both
   const auto           dmask = dest->mask == PETSC_OFFLOAD_BOTH ? PETSC_OFFLOAD_GPU : dest->mask;
+  const auto           mtype = PetscDetermineMemType(dmask);
   PetscInt             dest_n,src_n;
   PetscType           *dest_ptr,*src_ptr;
   PetscDeviceCopyMode  mode;
 
   PetscFunctionBegin;
-  if (!dctx) PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
-  PetscValidDeviceContext(dctx,1);
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   PetscValidPointer(dest,2);
   PetscValidPointer(src,3);
   PetscCall(PetscDetermineCopyMode(dmask,src->mask,&mode));
-  PetscCall(PetscDeviceContextGetManagedTypeValues(dctx,dest,dmask,&dest_ptr,&dest_n));
-  PetscCall(PetscDeviceContextGetManagedTypeValeus(dctx,src,dmask,&src_ptr,&src_n));
+  PetscCall(PetscDeviceContextGetManagedTypeValues(dctx,dest,mtype,PETSC_MEMORY_ACCESS_WRITE,&dest_ptr,&dest_n));
+  PetscCall(PetscDeviceContextGetManagedTypeValues(dctx,src,mtype,PETSC_MEMORY_ACCESS_READ,&src_ptr,&src_n));
   PetscAssert(dest_n >= src_n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Destination size %" PetscInt_FMT " not large enough for source size %" PetscInt_FMT,dest_n,src_n);
   PetscCall(PetscDeviceArrayCopy(dctx,dest_ptr,src_ptr,dest_n,mode));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscDeviceContextApplyOperatorManagedType(PetscDeviceContext dctx, PetscManagedType scal, PetscOperatorType otype, PetscType rhs, PetscManagedType ret)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  PetscValidPointer(scal,2);
+  if (PetscOffloadHost(scal->mask)) {
+    const auto  src_access = ret ? PETSC_MEMORY_ACCESS_READ : PETSC_MEMORY_ACCESS_READ_WRITE;
+    PetscType  *ptr,*retptr;
+    PetscInt    n;
+
+    PetscCall(PetscDeviceContextGetManagedTypeValues(dctx,scal,PETSC_MEMTYPE_HOST,src_access,&ptr,&n));
+    if (ret) {
+      PetscCall(PetscDeviceContextGetManagedTypeValues(dctx,ret,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_WRITE,&retptr,NULL));
+    } else {
+      // in place
+      retptr = ptr;
+    }
+
+    for (PetscInt i = 0; i < n; ++i) {
+      switch (otype) {
+      case PETSC_OPERATOR_PLUS:     retptr[i] = ptr[i]+rhs; break;
+      case PETSC_OPERATOR_MINUS:    retptr[i] = ptr[i]-rhs; break;
+      case PETSC_OPERATOR_MULTIPLY: retptr[i] = ptr[i]*rhs; break;
+      case PETSC_OPERATOR_DIVIDE:   retptr[i] = ptr[i]/rhs; break;
+      case PETSC_OPERATOR_EQUAL:    retptr[i] = rhs;        break;
+      }
+    }
+  } else {
+    PetscCall((*dctx->ops->applyoperatortype)(dctx,scal,otype,rhs,ret));
+  }
   PetscFunctionReturn(0);
 }
 
@@ -189,3 +238,5 @@ PetscErrorCode PetscDeviceContextCopyManagedType(PetscDeviceContext dctx, PetscM
 #undef getmanagedvaluestype
 #undef PetscDeviceContextGetManagedTypeValues
 #undef PetscDeviceContextCopyManagedType
+#undef PetscDeviceContextApplyOperatorManagedType
+#undef applyoperatortype

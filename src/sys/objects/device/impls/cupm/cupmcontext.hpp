@@ -3,6 +3,7 @@
 
 #include <petsc/private/deviceimpl.h>
 #include <petsc/private/cupmblasinterface.hpp>
+#include "cupmthrustutility.hpp"
 
 #include <array>
 #include <vector>
@@ -360,6 +361,8 @@ public:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode destroyManagedType(PetscDeviceContext,PetscManagedType));
   template <typename PetscType, typename PetscManagedType>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode getManagedTypeValues(PetscDeviceContext,PetscManagedType,PetscMemType,PetscMemoryAccessMode,PetscType**));
+  template <typename PetscType, typename PetscManagedType>
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode applyOperatorType(PetscDeviceContext,PetscManagedType,PetscOperatorType,PetscType,PetscManagedType));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode launchHostFunction(PetscDeviceContext,PetscHostFunction,void*));
 
   const struct _DeviceContextOps ops = {
@@ -377,11 +380,13 @@ public:
     arrayCopy,
     destroyManagedType<PetscScalar,PetscManagedScalar>,
     getManagedTypeValues<PetscScalar,PetscManagedScalar>,
+    applyOperatorType<PetscScalar,PetscManagedScalar>,
     destroyManagedType<PetscReal,PetscManagedReal>,
     getManagedTypeValues<PetscReal,PetscManagedReal>,
+    applyOperatorType<PetscReal,PetscManagedReal>,
     destroyManagedType<PetscInt,PetscManagedInt>,
     getManagedTypeValues<PetscInt,PetscManagedInt>,
-
+    applyOperatorType<PetscInt,PetscManagedInt>,
   };
 };
 
@@ -615,6 +620,44 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::getManagedTypeValues(Pets
     break;
   }
   scal->mask = mask;
+  PetscFunctionReturn(0);
+}
+
+template <DeviceType T>
+template <typename PetscType, typename PetscManagedType>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::applyOperatorType(PetscDeviceContext dctx, PetscManagedType scal, PetscOperatorType otype, PetscType rhs, PetscManagedType ret))
+{
+  auto         stream = impls_cast_(dctx)->stream;
+  const auto   src_access = ret ? PETSC_MEMORY_ACCESS_READ : PETSC_MEMORY_ACCESS_READ_WRITE;
+  PetscScalar *ptr,*retptr;
+  PetscInt     n;
+
+  PetscFunctionBegin;
+  PetscCall(getManagedTypeValues(dctx,scal,PETSC_MEMTYPE_DEVICE,src_access,&ptr,&n));
+  if (ret) {
+    PetscCall(getManagedTypeValues(dctx,ret,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_WRITE,&retptr,nullptr));
+  } else {
+    // in place
+    retptr = ptr;
+  }
+
+  switch (otype) {
+  case PETSC_OPERATOR_PLUS:
+    PetscCall(ThrustApplyPointwiseUnary<T>(shift_operator<PetscType,thrust::plus<PetscType>>{},stream,n,ptr,retptr));
+    break;
+  case PETSC_OPERATOR_MINUS:
+    PetscCall(ThrustApplyPointwiseUnary<T>(shift_operator<PetscType,thrust::minus<PetscType>>{},stream,n,ptr,retptr));
+    break;
+  case PETSC_OPERATOR_MULTIPLY:
+    PetscCall(ThrustApplyPointwiseUnary<T>(shift_operator<PetscType,thrust::multiplies<PetscType>>{},stream,n,ptr,retptr));
+    break;
+  case PETSC_OPERATOR_DIVIDE:
+    PetscCall(ThrustApplyPointwiseUnary<T>(shift_operator<PetscType,thrust::divides<PetscType>>{},stream,n,ptr,retptr));
+    break;
+  case PETSC_OPERATOR_EQUAL:
+    PetscCall(ThrustSet(stream,n,retptr,rhs));
+    break;
+  }
   PetscFunctionReturn(0);
 }
 

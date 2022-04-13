@@ -159,6 +159,13 @@ struct _n_PetscDevice {
   void             *data;     /* placeholder */
 };
 
+#define PetscManagedTypeOps_(PetscManagedType,PetscType,PetscTypeSuffix_L)                     \
+  PetscErrorCode (*releasemanaged ## PetscTypeSuffix_L)(PetscDeviceContext,PetscManagedType);  \
+  PetscErrorCode (*getmanagedvalues ## PetscTypeSuffix_L)(PetscDeviceContext,PetscManagedType,PetscMemType,PetscMemoryAccessMode,PetscType**); \
+  PetscErrorCode (*applyoperator ## PetscTypeSuffix_L)(PetscDeviceContext,PetscManagedType,PetscOperatorType,PetscType,PetscManagedType)
+
+#define PetscManagedTypeOps(PetscTypeSuffix,PetscTypeSuffix_L) PetscManagedTypeOps_(PetscConcat(PetscManaged,PetscTypeSuffix),PetscConcat(Petsc,PetscTypeSuffix),PetscTypeSuffix_L)
+
 typedef struct _DeviceContextOps *DeviceContextOps;
 struct _DeviceContextOps {
   PetscErrorCode (*destroy)(PetscDeviceContext);
@@ -173,14 +180,14 @@ struct _DeviceContextOps {
   PetscErrorCode (*begintimer)(PetscDeviceContext);
   PetscErrorCode (*endtimer)(PetscDeviceContext,PetscLogDouble*);
   PetscErrorCode (*arraycopy)(PetscDeviceContext,void*PETSC_RESTRICT,const void*PETSC_RESTRICT,size_t,PetscDeviceCopyMode);
-  PetscErrorCode (*releasemanagedscalar)(PetscDeviceContext,PetscManagedScalar);
-  PetscErrorCode (*getmanagedvaluesscalar)(PetscDeviceContext,PetscManagedScalar,PetscMemType,PetscMemoryAccessMode,PetscScalar**);
-  PetscErrorCode (*releasemanagedreal)(PetscDeviceContext,PetscManagedReal);
-  PetscErrorCode (*getmanagedvaluesreal)(PetscDeviceContext,PetscManagedReal,PetscMemType,PetscMemoryAccessMode,PetscReal**);
-  PetscErrorCode (*releasemanagedint)(PetscDeviceContext,PetscManagedInt);
-  PetscErrorCode (*getmanagedvaluesint)(PetscDeviceContext,PetscManagedInt,PetscMemType,PetscMemoryAccessMode,PetscInt**);
+  PetscManagedTypeOps(Scalar,scalar);
+  PetscManagedTypeOps(Real,real);
+  PetscManagedTypeOps(Int,int);
   PetscErrorCode (*launchhostfunction)(PetscDeviceContext,PetscHostFunction,void*);
 };
+
+#undef PetscManagedTypeOps
+#undef PetscManagedTypeOps_
 
 struct _n_PetscDeviceContext {
   struct _DeviceContextOps  ops[1];
