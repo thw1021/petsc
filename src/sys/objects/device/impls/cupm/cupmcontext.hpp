@@ -253,7 +253,7 @@ private:
     for (auto i = 0; i < 3; ++i) {
       auto cberr = cupmBlasCreate(&handle);
       if (PetscLikely(cberr == CUPMBLAS_STATUS_SUCCESS)) break;
-      if (PetscUnlikely(cberr != CUPMBLAS_STATUS_ALLOC_FAILED) && (cberr != CUPMBLAS_STATUS_NOT_INITIALIZED)) CHKERRCUPMBLAS(cberr);
+      if (PetscUnlikely(cberr != CUPMBLAS_STATUS_ALLOC_FAILED) && (cberr != CUPMBLAS_STATUS_NOT_INITIALIZED)) PetscCallCUPMBLAS(cberr);
       if (i != 2) {PetscCall(PetscSleep(3));continue;}
       PetscCheck(cberr == CUPMBLAS_STATUS_SUCCESS,PETSC_COMM_SELF,PETSC_ERR_GPU_RESOURCE,"Unable to initialize %s",cupmBlasName());
     }
@@ -507,7 +507,7 @@ template <typename handle_t>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::getHandle(PetscDeviceContext dctx, void *handle))
 {
   PetscFunctionBegin;
-  PetscCall(initialize_handle_(handle_t{},dctx));
+  PetscCall(initialize_handle_<handle_t>(dctx));
   *static_cast<typename handle_t::type*>(handle) = impls_cast_(dctx)->get(handle_t{});
   PetscFunctionReturn(0);
 }
