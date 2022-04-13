@@ -434,7 +434,7 @@ PetscErrorCode PetscSFSetGraph(PetscSF sf,PetscInt nroots,PetscInt nleaves,Petsc
   if (nleaves > 0) PetscValidPointer(iremote,6);
   PetscCheck(nroots  >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"nroots %" PetscInt_FMT ", cannot be negative",nroots);
   PetscCheck(nleaves >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"nleaves %" PetscInt_FMT ", cannot be negative",nleaves);
-  /* enums may be handled as unsigned by some compilers, NVHPC for example, the int caste
+  /* enums may be handled as unsigned by some compilers, NVHPC for example, the int cast
    * below is to prevent NVHPC from warning about meaningless comparison of unsigned with zero */
   PetscCheck((int)localmode  >= PETSC_COPY_VALUES && localmode  <= PETSC_USE_POINTER,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Wrong localmode %d",localmode);
   PetscCheck((int)remotemode >= PETSC_COPY_VALUES && remotemode <= PETSC_USE_POINTER,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Wrong remotemode %d",remotemode);

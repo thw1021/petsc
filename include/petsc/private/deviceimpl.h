@@ -14,7 +14,7 @@ template <typename T> void PetscCheckCompatibleDeviceContexts(T,int,T,int);
 #elif PetscDefined(USE_DEBUG)
 /* note any changes to these macros must be mirrored in
  * src/sys/objects/device/test/petscdevicetestcommon.h! */
-/* enums may be handled as unsigned by some compilers, NVHPC for example, the int caste
+/* enums may be handled as unsigned by some compilers, NVHPC for example, the int cast
  * below is to prevent NVHPC from warning about meaningless comparison of unsigned with zero */
 #define PetscValidDeviceType(_p_dev_type__,_p_arg__) do {                                      \
     PetscCheck(                                                                               \
@@ -69,7 +69,7 @@ template <typename T> void PetscCheckCompatibleDeviceContexts(T,int,T,int);
     );                                                                                  \
   } while (0)
 
-/* enums may be handled as unsigned by some compilers, NVHPC for example, the int caste
+/* enums may be handled as unsigned by some compilers, NVHPC for example, the int cast
  * below is to prevent NVHPC from warning about meaningless comparison of unsigned with zero */
 #define PetscValidStreamType(_p_strm_type__,_p_arg__)  do {                                    \
     PetscCheck(                                                                               \
