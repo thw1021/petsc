@@ -45,10 +45,10 @@ def runnagfor(args):
     except:
       print('petscnagfor: Unable to run process with job: '+' '.join(args))
       exit(1)
-    if (output+error).find('No licences currently available') == -1:
+    if (output+error).find('Cannot connect to licence server') == -1:
       break;
     time.sleep(30)
-  if (output+error).find('No licences currently available') > -1:
+  if (output+error).find('Cannot connect to licence server') > -1:
     Path(os.path.join(os.path.dirname(__file__),'..','..','..','naglicenseproblem')).touch()
   return (output,error,status)
 
