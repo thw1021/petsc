@@ -755,6 +755,7 @@ linux-nagfor:
   variables:
     LOAD_MODULES: nag/6.1
     TEST_ARCH: arch-ci-linux-nagfor
+    NAG_KUSARI_FILE: lic-vmw-01.cels.anl.gov:27031
   allow_failure:
     exit_codes: 126
 
