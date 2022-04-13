@@ -99,7 +99,6 @@ void writeArrayToMM(std::string name, const XType x)
   myfile.close();
 }
 
-
 template <class VType, class IntType>
 void writeCRSToMM(std::string name, const VType &V, const IntType &r,
                    const IntType &c)
@@ -132,7 +131,6 @@ void writeCRSToMM(std::string name, const VType &V, const IntType &r,
 
   myfile.close();
 }
-
 
 template <typename DeviceType, typename ValuesViewType, typename IntView,
           typename VectorViewType, typename KrylovHandleType>
@@ -264,7 +262,6 @@ struct Functor_TestBatchedTeamVectorGMRES {
     size_t bytes_3D_1 = ViewType3D::shmem_size(_N_team, _X.extent(1), maximum_iteration);
     size_t bytes_3D_2 = ViewType3D::shmem_size(_N_team, maximum_iteration+1, maximum_iteration);
     size_t bytes_3D_3 = ViewType3D::shmem_size(_N_team, 2, maximum_iteration);
-
 
     size_t bytes_int = bytes_row_ptr + bytes_col_idc;
     size_t bytes_diag = bytes_2D_1;
