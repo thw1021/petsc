@@ -10,6 +10,7 @@
       implicit none
       MPI_Comm comm
       PetscMPIInt ierr,nierr
+      foobar-error
 
       call MPI_Abort(comm,ierr,nierr)
 
