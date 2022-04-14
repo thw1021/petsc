@@ -737,7 +737,7 @@ PetscErrorCode MatInvertBlockDiagonal_SeqKAIJ(Mat A,const PetscScalar **values)
   PetscScalar       *diag,aval,*v_work;
 
   PetscFunctionBegin;
-  PetscCheckFalse(p != q,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"MATKAIJ: Block size must be square to calculate inverse.");
+  PetscCheck(p == q,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"MATKAIJ: Block size must be square to calculate inverse.");
   PetscCheckFalse((!S) && (!T) && (!b->isTI),PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"MATKAIJ: Cannot invert a zero matrix.");
 
   dof  = p;
@@ -842,7 +842,6 @@ static PetscErrorCode MatConvert_KAIJ_AIJ(Mat A,MatType newtype,MatReuse reuse,M
 
 PetscErrorCode MatSOR_SeqKAIJ(Mat A,Vec bb,PetscReal omega,MatSORType flag,PetscReal fshift,PetscInt its,PetscInt lits,Vec xx)
 {
-  PetscErrorCode    ierr;
   Mat_SeqKAIJ       *kaij = (Mat_SeqKAIJ*) A->data;
   Mat_SeqAIJ        *a = (Mat_SeqAIJ*)kaij->AIJ->data;
   const PetscScalar *aa = a->a, *T = kaij->T, *v;
@@ -854,10 +853,10 @@ PetscErrorCode MatSOR_SeqKAIJ(Mat A,Vec bb,PetscReal omega,MatSORType flag,Petsc
   PetscFunctionBegin;
   its = its*lits;
   PetscCheckFalse(flag & SOR_EISENSTAT,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support yet for Eisenstat");
-  PetscCheckFalse(its <= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Relaxation requires global its %" PetscInt_FMT " and local its %" PetscInt_FMT " both positive",its,lits);
+  PetscCheck(its > 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Relaxation requires global its %" PetscInt_FMT " and local its %" PetscInt_FMT " both positive",its,lits);
   PetscCheck(!fshift,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support for diagonal shift");
-  PetscCheckFalse((flag & SOR_APPLY_UPPER) || (flag & SOR_APPLY_LOWER),PETSC_COMM_SELF,PETSC_ERR_SUP,"No support for applying upper or lower triangular parts");
-  PetscCheckFalse(p != q,PETSC_COMM_SELF,PETSC_ERR_SUP,"MatSOR for KAIJ: No support for non-square dense blocks");
+  PetscCheck(!(flag & SOR_APPLY_UPPER) && !(flag & SOR_APPLY_LOWER),PETSC_COMM_SELF,PETSC_ERR_SUP,"No support for applying upper or lower triangular parts");
+  PetscCheck(p == q,PETSC_COMM_SELF,PETSC_ERR_SUP,"MatSOR for KAIJ: No support for non-square dense blocks");
   else        {bs = p; bs2 = bs*bs; }
 
   if (!m) PetscFunctionReturn(0);
@@ -876,7 +875,7 @@ PetscErrorCode MatSOR_SeqKAIJ(Mat A,Vec bb,PetscReal omega,MatSORType flag,Petsc
   t     = kaij->sor.t;
   arr   = kaij->sor.arr;
 
-  ierr = VecGetArray(xx,&x);    PetscCall(ierr);
+  PetscCall( VecGetArray(xx,&x));
   PetscCall(VecGetArrayRead(bb,&b));
 
   if (flag & SOR_ZERO_INITIAL_GUESS) {
@@ -1122,7 +1121,7 @@ PetscErrorCode MatSOR_SeqKAIJ(Mat A,Vec bb,PetscReal omega,MatSORType flag,Petsc
     }
   }
 
-  ierr = VecRestoreArray(xx,&x);    PetscCall(ierr);
+  PetscCall(VecRestoreArray(xx,&x));
   PetscCall(VecRestoreArrayRead(bb,&b));
   PetscFunctionReturn(0);
 }

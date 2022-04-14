@@ -229,7 +229,6 @@ PetscErrorCode PetscFESetFromOptions(PetscFE fem)
   const char    *defaultType;
   char           name[256];
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fem, PETSCFE_CLASSID, 1);
@@ -240,7 +239,7 @@ PetscErrorCode PetscFESetFromOptions(PetscFE fem)
   }
   if (!PetscFERegisterAllCalled) PetscCall(PetscFERegisterAll());
 
-  ierr = PetscObjectOptionsBegin((PetscObject) fem);PetscCall(ierr);
+  PetscObjectOptionsBegin((PetscObject) fem);
   PetscCall(PetscOptionsFList("-petscfe_type", "Finite element space", "PetscFESetType", PetscFEList, defaultType, name, 256, &flg));
   if (flg) {
     PetscCall(PetscFESetType(fem, name));
@@ -254,7 +253,7 @@ PetscErrorCode PetscFESetFromOptions(PetscFE fem)
   }
   /* process any options handlers added with PetscObjectAddOptionsHandler() */
   PetscCall(PetscObjectProcessOptionsHandlers(PetscOptionsObject,(PetscObject) fem));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscCall(PetscFEViewFromOptions(fem, NULL, "-petscfe_view"));
   PetscFunctionReturn(0);
 }
@@ -649,7 +648,7 @@ PetscErrorCode PetscFESetQuadrature(PetscFE fem, PetscQuadrature q)
   if (q == fem->quadrature) PetscFunctionReturn(0);
   PetscCall(PetscFEGetNumComponents(fem, &Nc));
   PetscCall(PetscQuadratureGetNumComponents(q, &qNc));
-  PetscCheckFalse((qNc != 1) && (Nc != qNc),PetscObjectComm((PetscObject) fem), PETSC_ERR_ARG_SIZ, "FE components %D != Quadrature components %D and non-scalar quadrature", Nc, qNc);
+  PetscCheck(!(qNc != 1) || !(Nc != qNc),PetscObjectComm((PetscObject) fem), PETSC_ERR_ARG_SIZ, "FE components %D != Quadrature components %D and non-scalar quadrature", Nc, qNc);
   PetscCall(PetscTabulationDestroy(&fem->T));
   PetscCall(PetscTabulationDestroy(&fem->Tc));
   PetscCall(PetscObjectReference((PetscObject) q));
@@ -703,7 +702,7 @@ PetscErrorCode PetscFESetFaceQuadrature(PetscFE fem, PetscQuadrature q)
   PetscValidHeaderSpecific(fem, PETSCFE_CLASSID, 1);
   PetscCall(PetscFEGetNumComponents(fem, &Nc));
   PetscCall(PetscQuadratureGetNumComponents(q, &qNc));
-  PetscCheckFalse((qNc != 1) && (Nc != qNc),PetscObjectComm((PetscObject) fem), PETSC_ERR_ARG_SIZ, "FE components %D != Quadrature components %D and non-scalar quadrature", Nc, qNc);
+  PetscCheck(!(qNc != 1) || !(Nc != qNc),PetscObjectComm((PetscObject) fem), PETSC_ERR_ARG_SIZ, "FE components %D != Quadrature components %D and non-scalar quadrature", Nc, qNc);
   PetscCall(PetscTabulationDestroy(&fem->Tf));
   PetscCall(PetscQuadratureDestroy(&fem->faceQuadrature));
   fem->faceQuadrature = q;
@@ -1005,10 +1004,10 @@ PetscErrorCode PetscFEComputeTabulation(PetscFE fem, PetscInt npoints, const Pet
     PetscCall(DMGetDimension(dm, &cdim));
     PetscCall(PetscDualSpaceGetDimension(Q, &Nb));
     PetscCall(PetscFEGetNumComponents(fem, &Nc));
-    PetscCheckFalse(T->K    != (!cdim ? 0 : K),PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Tabulation K %D must match requested K %D", T->K, !cdim ? 0 : K);
-    PetscCheckFalse(T->Nb   != Nb,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Tabulation Nb %D must match requested Nb %D", T->Nb, Nb);
-    PetscCheckFalse(T->Nc   != Nc,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Tabulation Nc %D must match requested Nc %D", T->Nc, Nc);
-    PetscCheckFalse(T->cdim != cdim,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Tabulation cdim %D must match requested cdim %D", T->cdim, cdim);
+    PetscCheck(T->K    == (!cdim ? 0 : K),PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Tabulation K %D must match requested K %D", T->K, !cdim ? 0 : K);
+    PetscCheck(T->Nb   == Nb,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Tabulation Nb %D must match requested Nb %D", T->Nb, Nb);
+    PetscCheck(T->Nc   == Nc,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Tabulation Nc %D must match requested Nc %D", T->Nc, Nc);
+    PetscCheck(T->cdim == cdim,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Tabulation cdim %D must match requested cdim %D", T->cdim, cdim);
   }
   T->Nr = 1;
   T->Np = npoints;
@@ -1789,7 +1788,6 @@ static PetscErrorCode PetscFECreate_Internal(MPI_Comm comm, PetscInt dim, PetscI
   PetscInt        quadPointsPerEdge;
   PetscBool       tensor;
   char            name[64];
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   if (prefix) PetscValidCharPointer(prefix, 5);
@@ -1869,9 +1867,9 @@ static PetscErrorCode PetscFECreate_Internal(MPI_Comm comm, PetscInt dim, PetscI
   /* Create quadrature (with specified order if given) */
   qorder = qorder >= 0 ? qorder : degree;
   if (setFromOptions) {
-    ierr = PetscObjectOptionsBegin((PetscObject)*fem);PetscCall(ierr);
+    PetscObjectOptionsBegin((PetscObject)*fem);
     PetscCall(PetscOptionsBoundedInt("-petscfe_default_quadrature_order","Quadrature order is one less than quadrature points per edge","PetscFECreateDefault",qorder,&qorder,NULL,0));
-    ierr = PetscOptionsEnd();PetscCall(ierr);
+    PetscOptionsEnd();
   }
   quadPointsPerEdge = PetscMax(qorder + 1,1);
   switch (ct) {

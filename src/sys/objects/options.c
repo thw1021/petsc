@@ -303,7 +303,7 @@ PetscErrorCode PetscOptionsValidKey(const char key[],PetscBool *valid)
 
 .seealso: PetscOptionsSetValue(), PetscOptionsView(), PetscOptionsHasName(), PetscOptionsGetInt(),
           PetscOptionsGetReal(), PetscOptionsGetString(), PetscOptionsGetIntArray(), PetscOptionsBool(),
-          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHead(),
+          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHeadBegin(),
           PetscOptionsStringArray(),PetscOptionsRealArray(), PetscOptionsScalar(),
           PetscOptionsBoolGroupBegin(), PetscOptionsBoolGroup(), PetscOptionsBoolGroupEnd(),
           PetscOptionsFList(), PetscOptionsEList(), PetscOptionsInsertFile()
@@ -450,7 +450,7 @@ static PetscErrorCode PetscOptionsInsertFilePetsc(MPI_Comm comm,PetscOptions opt
 
     fd   = fopen(fname,"r");
     PetscCall(PetscTestDirectory(fname,'r',&isdir));
-    PetscCheckFalse(isdir && require,PETSC_COMM_SELF,PETSC_ERR_USER,"Specified options file %s is a directory",fname);
+    PetscCheck(!isdir || !require,PETSC_COMM_SELF,PETSC_ERR_USER,"Specified options file %s is a directory",fname);
     if (fd && !isdir) {
       PetscSegBuffer vseg,aseg;
       PetscCall(PetscSegBufferCreate(1,4000,&vseg));
@@ -504,7 +504,7 @@ static PetscErrorCode PetscOptionsInsertFilePetsc(MPI_Comm comm,PetscOptions opt
           if (alias) {
             PetscCall(PetscOptionsValidKey(tokens[1],&valid));
             PetscCheck(valid,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Error in options file %s line %" PetscInt_FMT ": invalid aliased option %s",fname,line,tokens[1]);
-            PetscCheckFalse(!tokens[2],PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Error in options file %s line %" PetscInt_FMT ": alias missing for %s",fname,line,tokens[1]);
+            PetscCheck(tokens[2],PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Error in options file %s line %" PetscInt_FMT ": alias missing for %s",fname,line,tokens[1]);
             PetscCall(PetscOptionsValidKey(tokens[2],&valid));
             PetscCheck(valid,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Error in options file %s line %" PetscInt_FMT ": invalid aliasee option %s",fname,line,tokens[2]);
             PetscCall(PetscStrlen(tokens[1],&len));
@@ -606,7 +606,7 @@ destroy:
 
 .seealso: PetscOptionsSetValue(), PetscOptionsView(), PetscOptionsHasName(), PetscOptionsGetInt(),
           PetscOptionsGetReal(), PetscOptionsGetString(), PetscOptionsGetIntArray(), PetscOptionsBool(),
-          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHead(),
+          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHeadBegin(),
           PetscOptionsStringArray(),PetscOptionsRealArray(), PetscOptionsScalar(),
           PetscOptionsBoolGroupBegin(), PetscOptionsBoolGroup(), PetscOptionsBoolGroupEnd(),
           PetscOptionsFList(), PetscOptionsEList()
@@ -671,7 +671,7 @@ PetscErrorCode PetscOptionsInsertArgs(PetscOptions options,int argc,char *args[]
       PetscCall(PetscOptionsInsertStringYAML(options,eargs[1]));
       eargs += 2; left -= 2;
     } else if (ispush) {
-      PetscCheckFalse(left <= 1,PETSC_COMM_SELF,PETSC_ERR_USER,"Missing prefix for -prefix_push option");
+      PetscCheck(left > 1,PETSC_COMM_SELF,PETSC_ERR_USER,"Missing prefix for -prefix_push option");
       PetscCheckFalse(eargs[1][0] == '-',PETSC_COMM_SELF,PETSC_ERR_USER,"Missing prefix for -prefix_push option (prefixes cannot start with '-')");
       PetscCall(PetscOptionsPrefixPush(options,eargs[1]));
       eargs += 2; left -= 2;
@@ -815,7 +815,7 @@ PetscErrorCode PetscOptionsInsert(PetscOptions options,int *argc,char ***args,co
   PetscBool      skipPetscrc = PETSC_FALSE, skipPetscrcSet = PETSC_FALSE;
 
   PetscFunctionBegin;
-  PetscCheckFalse(hasArgs && !(args && *args),comm,PETSC_ERR_ARG_NULL,"*argc > 1 but *args not given");
+  PetscCheck(!hasArgs || (args && *args),comm,PETSC_ERR_ARG_NULL,"*argc > 1 but *args not given");
   PetscCallMPI(MPI_Comm_rank(comm,&rank));
 
   if (!options) {
@@ -995,7 +995,7 @@ PetscErrorCode PetscOptionsPrefixPush(PetscOptions options,const char prefix[])
   PetscFunctionBegin;
   PetscValidCharPointer(prefix,2);
   options = options ? options : defaultoptions;
-  PetscCheckFalse(options->prefixind >= MAXPREFIXES,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Maximum depth of prefix stack %d exceeded, recompile \n src/sys/objects/options.c with larger value for MAXPREFIXES",MAXPREFIXES);
+  PetscCheck(options->prefixind < MAXPREFIXES,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Maximum depth of prefix stack %d exceeded, recompile \n src/sys/objects/options.c with larger value for MAXPREFIXES",MAXPREFIXES);
   key[0] = '-'; /* keys must start with '-' */
   PetscCall(PetscStrncpy(key+1,prefix,sizeof(key)-1));
   PetscCall(PetscOptionsValidKey(key,&valid));
@@ -1003,7 +1003,7 @@ PetscErrorCode PetscOptionsPrefixPush(PetscOptions options,const char prefix[])
   PetscCheck(valid,PETSC_COMM_SELF,PETSC_ERR_USER,"Given prefix \"%s\" not valid (the first character must be a letter%s, do not include leading '-')",prefix,options->prefixind?" or digit":"");
   start = options->prefixind ? options->prefixstack[options->prefixind-1] : 0;
   PetscCall(PetscStrlen(prefix,&n));
-  PetscCheckFalse(n+1 > sizeof(options->prefix)-start,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Maximum prefix length %zu exceeded",sizeof(options->prefix));
+  PetscCheck(n+1 <= sizeof(options->prefix)-start,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Maximum prefix length %zu exceeded",sizeof(options->prefix));
   PetscCall(PetscArraycpy(options->prefix+start,prefix,n+1));
   options->prefixstack[options->prefixind++] = start+n;
   PetscFunctionReturn(0);
@@ -1027,7 +1027,7 @@ PetscErrorCode PetscOptionsPrefixPop(PetscOptions options)
 
   PetscFunctionBegin;
   options = options ? options : defaultoptions;
-  PetscCheckFalse(options->prefixind < 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"More prefixes popped than pushed");
+  PetscCheck(options->prefixind >= 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"More prefixes popped than pushed");
   options->prefixind--;
   offset = options->prefixind ? options->prefixstack[options->prefixind-1] : 0;
   options->prefix[offset] = 0;
@@ -1100,7 +1100,7 @@ PetscErrorCode PetscOptionsClear(PetscOptions options)
 
 .seealso: PetscOptionsGetInt(), PetscOptionsGetReal(),OptionsHasName(),
           PetscOptionsGetString(), PetscOptionsGetIntArray(), PetscOptionsGetRealArray(),PetscOptionsBool(),
-          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHead(),
+          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHeadBegin(),
           PetscOptionsStringArray(),PetscOptionsRealArray(), PetscOptionsScalar(),
           PetscOptionsBoolGroupBegin(), PetscOptionsBoolGroup(), PetscOptionsBoolGroupEnd(),
           PetscOptionsFList(), PetscOptionsEList()
@@ -1121,7 +1121,7 @@ PetscErrorCode PetscOptionsSetAlias(PetscOptions options,const char newname[],co
   PetscCheck(valid,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Invalid aliasee option %s",oldname);
 
   n = options->Naliases;
-  PetscCheckFalse(n >= MAXALIASES,PETSC_COMM_SELF,PETSC_ERR_MEM,"You have defined to many PETSc options aliases, limit %d recompile \n  src/sys/objects/options.c with larger value for MAXALIASES",MAXALIASES);
+  PetscCheck(n < MAXALIASES,PETSC_COMM_SELF,PETSC_ERR_MEM,"You have defined to many PETSc options aliases, limit %d recompile \n  src/sys/objects/options.c with larger value for MAXALIASES",MAXALIASES);
 
   newname++; oldname++;
   PetscCall(PetscStrlen(newname,&len));
@@ -1351,7 +1351,7 @@ PetscErrorCode PetscOptionsFindPair(PetscOptions options,const char pre[],const 
 
   PetscFunctionBegin;
   options = options ? options : defaultoptions;
-  PetscCheckFalse(pre && PetscUnlikely(pre[0] == '-'),PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Prefix cannot begin with '-': Instead %s",pre);
+  PetscCheck(!pre || !PetscUnlikely(pre[0] == '-'),PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Prefix cannot begin with '-': Instead %s",pre);
   PetscCheckFalse(name[0] != '-',PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Name must begin with '-': Instead %s",name);
 
   name++; /* skip starting dash */
@@ -1383,7 +1383,7 @@ PetscErrorCode PetscOptionsFindPair(PetscOptions options,const char pre[],const 
     PetscCheck(!ret,PETSC_COMM_SELF,PETSC_ERR_MEM,"Hash table allocation failed");
     for (i=0; i<options->N; i++) {
       it = kh_put(HO,ht,options->names[i],&ret);
-      PetscCheckFalse(ret != 1,PETSC_COMM_SELF,PETSC_ERR_MEM,"Hash table allocation failed");
+      PetscCheck(ret == 1,PETSC_COMM_SELF,PETSC_ERR_MEM,"Hash table allocation failed");
       kh_val(ht,it) = i;
     }
     options->ht = ht;
@@ -1547,7 +1547,7 @@ PETSC_EXTERN PetscErrorCode PetscOptionsFindPairPrefix_Private(PetscOptions opti
 
 .seealso: PetscOptionsGetInt(), PetscOptionsGetReal(),OptionsHasName(),
           PetscOptionsGetString(), PetscOptionsGetIntArray(), PetscOptionsGetRealArray(), PetscOptionsBool(),
-          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHead(),
+          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHeadBegin(),
           PetscOptionsStringArray(),PetscOptionsRealArray(), PetscOptionsScalar(),
           PetscOptionsBoolGroupBegin(), PetscOptionsBoolGroup(), PetscOptionsBoolGroupEnd(),
           PetscOptionsFList(), PetscOptionsEList()
@@ -1559,7 +1559,7 @@ PetscErrorCode PetscOptionsReject(PetscOptions options,const char pre[],const ch
   PetscFunctionBegin;
   PetscCall(PetscOptionsHasName(options,pre,name,&flag));
   if (flag) {
-    PetscCheckFalse(mess && mess[0],PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Program has disabled option: -%s%s with %s",pre?pre:"",name+1,mess);
+    PetscCheck(!mess || !mess[0],PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Program has disabled option: -%s%s with %s",pre?pre:"",name+1,mess);
     else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Program has disabled option: -%s%s",pre?pre:"",name+1);
   }
   PetscFunctionReturn(0);
@@ -1619,7 +1619,7 @@ PetscErrorCode PetscOptionsHasHelpIntro_Internal(PetscOptions options,PetscBool 
 
 .seealso: PetscOptionsGetInt(), PetscOptionsGetReal(),
           PetscOptionsGetString(), PetscOptionsGetIntArray(), PetscOptionsGetRealArray(), PetscOptionsBool(),
-          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHead(),
+          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHeadBegin(),
           PetscOptionsStringArray(),PetscOptionsRealArray(), PetscOptionsScalar(),
           PetscOptionsBoolGroupBegin(), PetscOptionsBoolGroup(), PetscOptionsBoolGroupEnd(),
           PetscOptionsFList(), PetscOptionsEList()
@@ -1977,7 +1977,7 @@ PetscErrorCode PetscOptionsMonitorSet(PetscErrorCode (*monitor)(const char name[
 
   PetscFunctionBegin;
   if (options->monitorCancel) PetscFunctionReturn(0);
-  PetscCheckFalse(options->numbermonitors >= MAXOPTIONSMONITORS,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Too many PetscOptions monitors set");
+  PetscCheck(options->numbermonitors < MAXOPTIONSMONITORS,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Too many PetscOptions monitors set");
   options->monitor[options->numbermonitors]          = monitor;
   options->monitordestroy[options->numbermonitors]   = monitordestroy;
   options->monitorcontext[options->numbermonitors++] = (void*)mctx;
@@ -2194,7 +2194,7 @@ PetscErrorCode PetscOptionsStringToScalar(const char name[],PetscScalar *a)
 
 .seealso: PetscOptionsGetReal(), PetscOptionsHasName(), PetscOptionsGetString(),
           PetscOptionsGetIntArray(), PetscOptionsGetRealArray(), PetscOptionsGetInt(), PetscOptionsBool(),
-          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHead(),
+          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHeadBegin(),
           PetscOptionsStringArray(),PetscOptionsRealArray(), PetscOptionsScalar(),
           PetscOptionsBoolGroupBegin(), PetscOptionsBoolGroup(), PetscOptionsBoolGroupEnd(),
           PetscOptionsFList(), PetscOptionsEList()
@@ -2244,7 +2244,7 @@ PetscErrorCode PetscOptionsGetBool(PetscOptions options,const char pre[],const c
 
 .seealso: PetscOptionsGetInt(), PetscOptionsGetReal(),
           PetscOptionsHasName(), PetscOptionsGetIntArray(), PetscOptionsGetRealArray(), PetscOptionsBool(),
-          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHead(),
+          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHeadBegin(),
           PetscOptionsStringArray(),PetscOptionsRealArray(), PetscOptionsScalar(),
           PetscOptionsBoolGroupBegin(), PetscOptionsBoolGroup(), PetscOptionsBoolGroupEnd(),
           PetscOptionsFList(), PetscOptionsEList()
@@ -2315,7 +2315,7 @@ PetscErrorCode PetscOptionsGetEList(PetscOptions options,const char pre[],const 
 .seealso: PetscOptionsGetReal(), PetscOptionsHasName(), PetscOptionsGetString(), PetscOptionsGetInt(),
           PetscOptionsGetIntArray(), PetscOptionsGetRealArray(), PetscOptionsBool()
           PetscOptionsInt(), PetscOptionsString(), PetscOptionsReal(), PetscOptionsBool(),
-          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHead(),
+          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHeadBegin(),
           PetscOptionsStringArray(),PetscOptionsRealArray(), PetscOptionsScalar(),
           PetscOptionsBoolGroupBegin(), PetscOptionsBoolGroup(), PetscOptionsBoolGroupEnd(),
           PetscOptionsFList(), PetscOptionsEList(), PetscOptionsGetEList(), PetscOptionsEnum()
@@ -2328,9 +2328,9 @@ PetscErrorCode PetscOptionsGetEnum(PetscOptions options,const char pre[],const c
   PetscFunctionBegin;
   PetscValidCharPointer(opt,3);
   while (list[ntext++]) {
-    PetscCheckFalse(ntext > 50,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"List argument appears to be wrong or have more than 50 entries");
+    PetscCheck(ntext <= 50,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"List argument appears to be wrong or have more than 50 entries");
   }
-  PetscCheckFalse(ntext < 3,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"List argument must have at least two entries: typename and type prefix");
+  PetscCheck(ntext >= 3,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"List argument must have at least two entries: typename and type prefix");
   ntext -= 3;
   PetscCall(PetscOptionsGetEList(options,pre,opt,list,ntext,&tval,&fset));
   /* with PETSC_USE_64BIT_INDICES sizeof(PetscInt) != sizeof(PetscEnum) */
@@ -2362,7 +2362,7 @@ PetscErrorCode PetscOptionsGetEnum(PetscOptions options,const char pre[],const c
 .seealso: PetscOptionsGetReal(), PetscOptionsHasName(), PetscOptionsGetString(),
           PetscOptionsGetIntArray(), PetscOptionsGetRealArray(), PetscOptionsBool()
           PetscOptionsInt(), PetscOptionsString(), PetscOptionsReal(), PetscOptionsBool(),
-          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHead(),
+          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHeadBegin(),
           PetscOptionsStringArray(),PetscOptionsRealArray(), PetscOptionsScalar(),
           PetscOptionsBoolGroupBegin(), PetscOptionsBoolGroup(), PetscOptionsBoolGroupEnd(),
           PetscOptionsFList(), PetscOptionsEList()
@@ -2412,7 +2412,7 @@ PetscErrorCode PetscOptionsGetInt(PetscOptions options,const char pre[],const ch
 
 .seealso: PetscOptionsGetInt(), PetscOptionsHasName(),
           PetscOptionsGetString(), PetscOptionsGetIntArray(), PetscOptionsGetRealArray(),PetscOptionsBool(),
-          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHead(),
+          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHeadBegin(),
           PetscOptionsStringArray(),PetscOptionsRealArray(), PetscOptionsScalar(),
           PetscOptionsBoolGroupBegin(), PetscOptionsBoolGroup(), PetscOptionsBoolGroupEnd(),
           PetscOptionsFList(), PetscOptionsEList()
@@ -2465,7 +2465,7 @@ PetscErrorCode PetscOptionsGetReal(PetscOptions options,const char pre[],const c
 
 .seealso: PetscOptionsGetInt(), PetscOptionsHasName(),
           PetscOptionsGetString(), PetscOptionsGetIntArray(), PetscOptionsGetRealArray(), PetscOptionsBool(),
-          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHead(),
+          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHeadBegin(),
           PetscOptionsStringArray(),PetscOptionsRealArray(), PetscOptionsScalar(),
           PetscOptionsBoolGroupBegin(), PetscOptionsBoolGroup(), PetscOptionsBoolGroupEnd(),
           PetscOptionsFList(), PetscOptionsEList()
@@ -2535,7 +2535,7 @@ PetscErrorCode PetscOptionsGetScalar(PetscOptions options,const char pre[],const
 
 .seealso: PetscOptionsGetInt(), PetscOptionsGetReal(),
           PetscOptionsHasName(), PetscOptionsGetIntArray(), PetscOptionsGetRealArray(), PetscOptionsBool(),
-          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHead(),
+          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHeadBegin(),
           PetscOptionsStringArray(),PetscOptionsRealArray(), PetscOptionsScalar(),
           PetscOptionsBoolGroupBegin(), PetscOptionsBoolGroup(), PetscOptionsBoolGroupEnd(),
           PetscOptionsFList(), PetscOptionsEList()
@@ -2593,7 +2593,7 @@ char *PetscOptionsGetStringMatlab(PetscOptions options,const char pre[],const ch
 
 .seealso: PetscOptionsGetInt(), PetscOptionsHasName(),
           PetscOptionsGetString(), PetscOptionsGetRealArray(), PetscOptionsBool(),
-          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHead(),
+          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHeadBegin(),
           PetscOptionsStringArray(),PetscOptionsRealArray(), PetscOptionsScalar(),
           PetscOptionsBoolGroupBegin(), PetscOptionsBoolGroup(), PetscOptionsBoolGroupEnd(),
           PetscOptionsFList(), PetscOptionsEList()
@@ -2655,7 +2655,7 @@ PetscErrorCode PetscOptionsGetBoolArray(PetscOptions options,const char pre[],co
 .seealso: PetscOptionsGetReal(), PetscOptionsHasName(), PetscOptionsGetString(), PetscOptionsGetInt(),
           PetscOptionsGetEnum(), PetscOptionsGetIntArray(), PetscOptionsGetRealArray(), PetscOptionsBool()
           PetscOptionsInt(), PetscOptionsString(), PetscOptionsReal(), PetscOptionsBool(), PetscOptionsName(),
-          PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHead(), PetscOptionsStringArray(),PetscOptionsRealArray(),
+          PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHeadBegin(), PetscOptionsStringArray(),PetscOptionsRealArray(),
           PetscOptionsScalar(), PetscOptionsBoolGroupBegin(), PetscOptionsBoolGroup(), PetscOptionsBoolGroupEnd(),
           PetscOptionsFList(), PetscOptionsEList(), PetscOptionsGetEList(), PetscOptionsEnum()
 @*/
@@ -2720,7 +2720,7 @@ PetscErrorCode PetscOptionsGetEnumArray(PetscOptions options,const char pre[],co
 
 .seealso: PetscOptionsGetInt(), PetscOptionsHasName(),
           PetscOptionsGetString(), PetscOptionsGetRealArray(), PetscOptionsBool(),
-          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHead(),
+          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHeadBegin(),
           PetscOptionsStringArray(),PetscOptionsRealArray(), PetscOptionsScalar(),
           PetscOptionsBoolGroupBegin(), PetscOptionsBoolGroup(), PetscOptionsBoolGroupEnd(),
           PetscOptionsFList(), PetscOptionsEList()
@@ -2763,12 +2763,12 @@ PetscErrorCode PetscOptionsGetIntArray(PetscOptions options,const char pre[],con
             value[j] = 0;
 
             PetscCall(PetscOptionsStringToInt(value+j+1,&inc));
-            PetscCheckFalse(inc <= 0,PETSC_COMM_SELF,PETSC_ERR_USER,"Error in %" PetscInt_FMT "-th array entry,%s cannot have negative increment",n,value+j+1);
+            PetscCheck(inc > 0,PETSC_COMM_SELF,PETSC_ERR_USER,"Error in %" PetscInt_FMT "-th array entry,%s cannot have negative increment",n,value+j+1);
             break;
           }
         }
         PetscCall(PetscOptionsStringToInt(value+i+1,&end));
-        PetscCheckFalse(end <= start,PETSC_COMM_SELF,PETSC_ERR_USER,"Error in %" PetscInt_FMT "-th array entry, %s-%s cannot have decreasing list",n,value,value+i+1);
+        PetscCheck(end > start,PETSC_COMM_SELF,PETSC_ERR_USER,"Error in %" PetscInt_FMT "-th array entry, %s-%s cannot have decreasing list",n,value,value+i+1);
         nvalues = (end-start)/inc + (end-start)%inc;
         PetscCheckFalse(n + nvalues  > *nmax,PETSC_COMM_SELF,PETSC_ERR_USER,"Error in %" PetscInt_FMT "-th array entry, not enough space left in array (%" PetscInt_FMT ") to contain entire range from %" PetscInt_FMT " to %" PetscInt_FMT,n,*nmax-n,start,end);
         for (;start<end; start+=inc) {
@@ -2810,7 +2810,7 @@ PetscErrorCode PetscOptionsGetIntArray(PetscOptions options,const char pre[],con
 
 .seealso: PetscOptionsGetInt(), PetscOptionsHasName(),
           PetscOptionsGetString(), PetscOptionsGetIntArray(), PetscOptionsBool(),
-          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHead(),
+          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHeadBegin(),
           PetscOptionsStringArray(),PetscOptionsRealArray(), PetscOptionsScalar(),
           PetscOptionsBoolGroupBegin(), PetscOptionsBoolGroup(), PetscOptionsBoolGroupEnd(),
           PetscOptionsFList(), PetscOptionsEList()
@@ -2863,7 +2863,7 @@ PetscErrorCode PetscOptionsGetRealArray(PetscOptions options,const char pre[],co
 
 .seealso: PetscOptionsGetInt(), PetscOptionsHasName(),
           PetscOptionsGetString(), PetscOptionsGetIntArray(), PetscOptionsBool(),
-          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHead(),
+          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHeadBegin(),
           PetscOptionsStringArray(),PetscOptionsRealArray(), PetscOptionsScalar(),
           PetscOptionsBoolGroupBegin(), PetscOptionsBoolGroup(), PetscOptionsBoolGroupEnd(),
           PetscOptionsFList(), PetscOptionsEList()
@@ -2925,7 +2925,7 @@ PetscErrorCode PetscOptionsGetScalarArray(PetscOptions options,const char pre[],
 
 .seealso: PetscOptionsGetInt(), PetscOptionsGetReal(),
           PetscOptionsHasName(), PetscOptionsGetIntArray(), PetscOptionsGetRealArray(), PetscOptionsBool(),
-          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHead(),
+          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHeadBegin(),
           PetscOptionsStringArray(),PetscOptionsRealArray(), PetscOptionsScalar(),
           PetscOptionsBoolGroupBegin(), PetscOptionsBoolGroup(), PetscOptionsBoolGroupEnd(),
           PetscOptionsFList(), PetscOptionsEList()

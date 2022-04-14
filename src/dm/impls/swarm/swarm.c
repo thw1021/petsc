@@ -123,7 +123,7 @@ PetscErrorCode DMSwarmVectorDefineField(DM dm,const char fieldname[])
   PetscCall(DMSwarmGetField(dm,fieldname,&bs,&type,(void**)&array));
 
   /* Check all fields are of type PETSC_REAL or PETSC_SCALAR */
-  PetscCheckFalse(type != PETSC_REAL,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Only valid for PETSC_REAL");
+  PetscCheck(type == PETSC_REAL,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Only valid for PETSC_REAL");
   PetscCall(PetscSNPrintf(swarm->vec_field_name,PETSC_MAX_PATH_LEN-1,"%s",fieldname));
   swarm->vec_field_set = PETSC_TRUE;
   swarm->vec_field_bs = bs;
@@ -142,7 +142,7 @@ PetscErrorCode DMCreateGlobalVector_Swarm(DM dm,Vec *vec)
   PetscFunctionBegin;
   if (!swarm->issetup) PetscCall(DMSetUp(dm));
   PetscCheck(swarm->vec_field_set,PetscObjectComm((PetscObject)dm),PETSC_ERR_USER,"Must call DMSwarmVectorDefineField first");
-  PetscCheckFalse(swarm->vec_field_nlocal != swarm->db->L,PetscObjectComm((PetscObject)dm),PETSC_ERR_USER,"DMSwarm sizes have changed since last call to VectorDefineField first"); /* Stale data */
+  PetscCheck(swarm->vec_field_nlocal == swarm->db->L,PetscObjectComm((PetscObject)dm),PETSC_ERR_USER,"DMSwarm sizes have changed since last call to VectorDefineField first"); /* Stale data */
 
   PetscCall(PetscSNPrintf(name,PETSC_MAX_PATH_LEN-1,"DMSwarmField_%s",swarm->vec_field_name));
   PetscCall(VecCreate(PetscObjectComm((PetscObject)dm),&x));
@@ -167,7 +167,7 @@ PetscErrorCode DMCreateLocalVector_Swarm(DM dm,Vec *vec)
   PetscFunctionBegin;
   if (!swarm->issetup) PetscCall(DMSetUp(dm));
   PetscCheck(swarm->vec_field_set,PetscObjectComm((PetscObject)dm),PETSC_ERR_USER,"Must call DMSwarmVectorDefineField first");
-  PetscCheckFalse(swarm->vec_field_nlocal != swarm->db->L,PetscObjectComm((PetscObject)dm),PETSC_ERR_USER,"DMSwarm sizes have changed since last call to VectorDefineField first");
+  PetscCheck(swarm->vec_field_nlocal == swarm->db->L,PetscObjectComm((PetscObject)dm),PETSC_ERR_USER,"DMSwarm sizes have changed since last call to VectorDefineField first");
 
   PetscCall(PetscSNPrintf(name,PETSC_MAX_PATH_LEN-1,"DMSwarmField_%s",swarm->vec_field_name));
   PetscCall(VecCreate(PETSC_COMM_SELF,&x));
@@ -191,13 +191,14 @@ static PetscErrorCode DMSwarmDestroyVectorFromField_Private(DM dm, const char fi
   PetscFunctionBegin;
   PetscCall(VecGetLocalSize(*vec, &nlocal));
   PetscCall(VecGetBlockSize(*vec, &bs));
-  PetscCheckFalse(nlocal/bs != swarm->db->L,PetscObjectComm((PetscObject)dm),PETSC_ERR_USER,"DMSwarm sizes have changed since vector was created - cannot ensure pointers are valid");
+  PetscCheck(nlocal/bs == swarm->db->L,PetscObjectComm((PetscObject)dm),PETSC_ERR_USER,"DMSwarm sizes have changed since vector was created - cannot ensure pointers are valid");
   PetscCall(DMSwarmDataBucketGetDMSwarmDataFieldByName(swarm->db, fieldname, &gfield));
   /* check vector is an inplace array */
   PetscCall(PetscSNPrintf(name, PETSC_MAX_PATH_LEN-1, "DMSwarm_VecFieldInPlace_%s", fieldname));
   PetscCall(PetscObjectQueryFunction((PetscObject) *vec, name, &fptr));
   PetscCheck(fptr,PetscObjectComm((PetscObject) dm), PETSC_ERR_USER, "Vector being destroyed was not created from DMSwarm field(%s)", fieldname);
   PetscCall(DMSwarmDataFieldRestoreAccess(gfield));
+  PetscCall(VecResetArray(*vec));
   PetscCall(VecDestroy(vec));
   PetscFunctionReturn(0);
 }
@@ -210,19 +211,25 @@ static PetscErrorCode DMSwarmCreateVectorFromField_Private(DM dm, const char fie
   PetscInt       bs, n;
   char           name[PETSC_MAX_PATH_LEN];
   PetscMPIInt    size;
+  PetscBool      iscuda,iskokkos;
 
   PetscFunctionBegin;
   if (!swarm->issetup) PetscCall(DMSetUp(dm));
   PetscCall(DMSwarmDataBucketGetSizes(swarm->db, &n, NULL, NULL));
   PetscCall(DMSwarmGetField(dm, fieldname, &bs, &type, (void **) &array));
-  PetscCheckFalse(type != PETSC_REAL,PetscObjectComm((PetscObject) dm), PETSC_ERR_SUP, "Only valid for PETSC_REAL");
+  PetscCheck(type == PETSC_REAL,PetscObjectComm((PetscObject) dm), PETSC_ERR_SUP, "Only valid for PETSC_REAL");
 
   PetscCallMPI(MPI_Comm_size(comm, &size));
-  if (size == 1) {
-    PetscCall(VecCreateSeqWithArray(comm, bs, n*bs, array, vec));
-  } else {
-    PetscCall(VecCreateMPIWithArray(comm, bs, n*bs, PETSC_DETERMINE, array, vec));
-  }
+  PetscCall(PetscStrcmp(dm->vectype,VECKOKKOS,&iskokkos));
+  PetscCall(PetscStrcmp(dm->vectype,VECCUDA,&iscuda));
+  PetscCall(VecCreate(comm,vec));
+  PetscCall(VecSetSizes(*vec,n*bs,PETSC_DETERMINE));
+  PetscCall(VecSetBlockSize(*vec,bs));
+  if (iskokkos) PetscCall(VecSetType(*vec,VECKOKKOS));
+  else if (iscuda) PetscCall(VecSetType(*vec,VECCUDA));
+  else PetscCall(VecSetType(*vec,VECSTANDARD));
+  PetscCall(VecPlaceArray(*vec,array));
+
   PetscCall(PetscSNPrintf(name, PETSC_MAX_PATH_LEN-1, "DMSwarmSharedField_%s", fieldname));
   PetscCall(PetscObjectSetName((PetscObject) *vec, name));
 
@@ -345,7 +352,7 @@ static PetscErrorCode DMSwarmComputeMassMatrix_Private(DM dmc, DM dmf, Mat mass,
 
     PetscCall(PetscDSGetDiscretization(prob, field, &obj));
     PetscCall(PetscFEGetNumComponents((PetscFE) obj, &Nc));
-    PetscCheckFalse(Nc != 1,PetscObjectComm((PetscObject) dmf), PETSC_ERR_SUP, "Can only interpolate a scalar field from particles, Nc = %D", Nc);
+    PetscCheck(Nc == 1,PetscObjectComm((PetscObject) dmf), PETSC_ERR_SUP, "Can only interpolate a scalar field from particles, Nc = %D", Nc);
     PetscCall(DMSwarmGetField(dmc, DMSwarmPICField_coor, NULL, NULL, (void **) &coords));
     for (cell = cStart; cell < cEnd; ++cell) {
       PetscInt *findices  , *cindices;
@@ -549,7 +556,7 @@ static PetscErrorCode DMSwarmComputeMassMatrixSquare_Private(DM dmc, DM dmf, Mat
 
     PetscCall(PetscDSGetDiscretization(prob, field, &obj));
     PetscCall(PetscFEGetNumComponents((PetscFE) obj, &Nc));
-    PetscCheckFalse(Nc != 1,PetscObjectComm((PetscObject) dmf), PETSC_ERR_SUP, "Can only interpolate a scalar field from particles, Nc = %D", Nc);
+    PetscCheck(Nc == 1,PetscObjectComm((PetscObject) dmf), PETSC_ERR_SUP, "Can only interpolate a scalar field from particles, Nc = %D", Nc);
     PetscCall(DMSwarmGetField(dmc, DMSwarmPICField_coor, NULL, NULL, (void **) &coords));
     for (cell = cStart; cell < cEnd; ++cell) {
       PetscInt *findices  , *cindices;
@@ -953,11 +960,11 @@ PetscErrorCode DMSwarmRegisterPetscDatatypeField(DM dm,const char fieldname[],Pe
   PetscCheck(swarm->field_registration_initialized,PetscObjectComm((PetscObject)dm),PETSC_ERR_USER,"Must call DMSwarmInitializeFieldRegister() first");
   PetscCheck(!swarm->field_registration_finalized,PetscObjectComm((PetscObject)dm),PETSC_ERR_USER,"Cannot register additional fields after calling DMSwarmFinalizeFieldRegister() first");
 
-  PetscCheckFalse(type == PETSC_OBJECT,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Valid for {char,short,int,long,float,double}");
-  PetscCheckFalse(type == PETSC_FUNCTION,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Valid for {char,short,int,long,float,double}");
-  PetscCheckFalse(type == PETSC_STRING,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Valid for {char,short,int,long,float,double}");
-  PetscCheckFalse(type == PETSC_STRUCT,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Valid for {char,short,int,long,float,double}");
-  PetscCheckFalse(type == PETSC_DATATYPE_UNKNOWN,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Valid for {char,short,int,long,float,double}");
+  PetscCheck(type != PETSC_OBJECT,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Valid for {char,short,int,long,float,double}");
+  PetscCheck(type != PETSC_FUNCTION,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Valid for {char,short,int,long,float,double}");
+  PetscCheck(type != PETSC_STRING,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Valid for {char,short,int,long,float,double}");
+  PetscCheck(type != PETSC_STRUCT,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Valid for {char,short,int,long,float,double}");
+  PetscCheck(type != PETSC_DATATYPE_UNKNOWN,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Valid for {char,short,int,long,float,double}");
 
   PetscCall(PetscDataTypeGetSize(type, &size));
   /* Load a specific data type into data bucket, specifying textual name and its size in bytes */
@@ -1368,8 +1375,8 @@ PetscErrorCode DMSwarmSetUpPIC(DM dm)
   PetscFunctionBegin;
   PetscCall(DMSwarmSetNumSpecies(dm, 1));
   PetscCall(DMGetDimension(dm,&dim));
-  PetscCheckFalse(dim < 1,PetscObjectComm((PetscObject)dm),PETSC_ERR_USER,"Dimension must be 1,2,3 - found %D",dim);
-  PetscCheckFalse(dim > 3,PetscObjectComm((PetscObject)dm),PETSC_ERR_USER,"Dimension must be 1,2,3 - found %D",dim);
+  PetscCheck(dim >= 1,PetscObjectComm((PetscObject)dm),PETSC_ERR_USER,"Dimension must be 1,2,3 - found %D",dim);
+  PetscCheck(dim <= 3,PetscObjectComm((PetscObject)dm),PETSC_ERR_USER,"Dimension must be 1,2,3 - found %D",dim);
   PetscCall(DMSwarmRegisterPetscDatatypeField(dm,DMSwarmPICField_coor,dim,PETSC_DOUBLE));
   PetscCall(DMSwarmRegisterPetscDatatypeField(dm,DMSwarmPICField_cellid,1,PETSC_INT));
   PetscFunctionReturn(0);
@@ -1500,10 +1507,10 @@ PetscErrorCode DMSetup_Swarm(DM dm)
   PetscCall(DMSwarmFinalizeFieldRegister(dm));
 
   /* check some fields were registered */
-  PetscCheckFalse(swarm->db->nfields <= 2,PetscObjectComm((PetscObject)dm),PETSC_ERR_USER,"At least one field user must be registered via DMSwarmRegisterXXX()");
+  PetscCheck(swarm->db->nfields > 2,PetscObjectComm((PetscObject)dm),PETSC_ERR_USER,"At least one field user must be registered via DMSwarmRegisterXXX()");
 
   /* check local sizes were set */
-  PetscCheckFalse(swarm->db->L == -1,PetscObjectComm((PetscObject)dm),PETSC_ERR_USER,"Local sizes must be set via DMSwarmSetLocalSizes()");
+  PetscCheck(swarm->db->L != -1,PetscObjectComm((PetscObject)dm),PETSC_ERR_USER,"Local sizes must be set via DMSwarmSetLocalSizes()");
 
   /* initialize values in pid and rank placeholders */
   /* TODO: [pid - use MPI_Scan] */
@@ -1563,6 +1570,55 @@ PetscErrorCode DMSwarmView_Draw(DM dm, PetscViewer viewer)
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode DMView_Swarm_Ascii(DM dm, PetscViewer viewer)
+{
+  PetscViewerFormat format;
+  PetscInt         *sizes;
+  PetscInt          dim, Np, maxSize = 17;
+  MPI_Comm          comm;
+  PetscMPIInt       rank, size, p;
+  const char       *name;
+
+  PetscFunctionBegin;
+  PetscCall(PetscViewerGetFormat(viewer, &format));
+  PetscCall(DMGetDimension(dm, &dim));
+  PetscCall(DMSwarmGetLocalSize(dm, &Np));
+  PetscCall(PetscObjectGetComm((PetscObject) dm, &comm));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+  PetscCall(PetscObjectGetName((PetscObject) dm, &name));
+  if (name) PetscCall(PetscViewerASCIIPrintf(viewer, "%s in %D dimension%s:\n", name, dim, dim == 1 ? "" : "s"));
+  else      PetscCall(PetscViewerASCIIPrintf(viewer, "Swarm in %D dimension%s:\n", dim, dim == 1 ? "" : "s"));
+  if (size < maxSize) PetscCall(PetscCalloc1(size, &sizes));
+  else                PetscCall(PetscCalloc1(3,    &sizes));
+  if (size < maxSize) {
+    PetscCallMPI(MPI_Gather(&Np, 1, MPIU_INT, sizes, 1, MPIU_INT, 0, comm));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Number of particles per rank:"));
+    for (p = 0; p < size; ++p) {
+      if (rank == 0) PetscCall(PetscViewerASCIIPrintf(viewer, " %" PetscInt_FMT, sizes[p]));
+    }
+  } else {
+    PetscInt locMinMax[2] = {Np, Np};
+
+    PetscCall(PetscGlobalMinMaxInt(comm, locMinMax, sizes));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Min/Max of particles per rank: %" PetscInt_FMT "/%" PetscInt_FMT, sizes[0], sizes[1]));
+  }
+  PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
+  PetscCall(PetscFree(sizes));
+  if (format == PETSC_VIEWER_ASCII_INFO) {
+    PetscInt *cell;
+
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Cells containing each particle:\n"));
+    PetscCall(PetscViewerASCIIPushSynchronized(viewer));
+    PetscCall(DMSwarmGetField(dm, DMSwarmPICField_cellid, NULL, NULL, (void**) &cell));
+    for (p = 0; p < Np; ++p) PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "  p%" PetscInt_FMT ": %" PetscInt_FMT "\n", p, cell[p]));
+    PetscCall(PetscViewerFlush(viewer));
+    PetscCall(PetscViewerASCIIPopSynchronized(viewer));
+    PetscCall(DMSwarmRestoreField(dm, DMSwarmPICField_cellid, NULL, NULL, (void**) &cell));
+  }
+  PetscFunctionReturn(0);
+}
+
 PetscErrorCode DMView_Swarm(DM dm, PetscViewer viewer)
 {
   DM_Swarm       *swarm = (DM_Swarm*)dm->data;
@@ -1582,7 +1638,14 @@ PetscErrorCode DMView_Swarm(DM dm, PetscViewer viewer)
 #endif
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERDRAW,  &isdraw));
   if (iascii) {
-    PetscCall(DMSwarmDataBucketView(PetscObjectComm((PetscObject)dm),swarm->db,NULL,DATABUCKET_VIEW_STDOUT));
+    PetscViewerFormat format;
+
+    PetscCall(PetscViewerGetFormat(viewer, &format));
+    switch (format) {
+      case PETSC_VIEWER_ASCII_INFO_DETAIL:
+        PetscCall(DMSwarmDataBucketView(PetscObjectComm((PetscObject) dm), swarm->db, NULL, DATABUCKET_VIEW_STDOUT));break;
+      default: PetscCall(DMView_Swarm_Ascii(dm, viewer));
+    }
   } else PetscCheck(!ibinary,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"NO Binary support");
 #if defined(PETSC_HAVE_HDF5)
   else if (ishdf5) {

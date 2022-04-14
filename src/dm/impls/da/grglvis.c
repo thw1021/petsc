@@ -140,7 +140,6 @@ static PetscErrorCode DMDASampleGLVisFields_Private(PetscObject oX, PetscInt nf,
 PETSC_INTERN PetscErrorCode DMSetUpGLVisViewer_DMDA(PetscObject oda, PetscViewer viewer)
 {
   DM             da = (DM)oda,daview;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectQuery(oda,"GLVisGraphicsDMDAGhosted",(PetscObject*)&daview));
@@ -154,9 +153,9 @@ PETSC_INTERN PetscErrorCode DMSetUpGLVisViewer_DMDA(PetscObject oda, PetscViewer
 
     PetscCall(PetscNew(&dactx));
     dactx->ll = PETSC_TRUE; /* default to match elements layout obtained by DMDAGetElements */
-    ierr = PetscOptionsBegin(PetscObjectComm(oda),oda->prefix,"GLVis PetscViewer DMDA Options","PetscViewer");PetscCall(ierr);
+    PetscOptionsBegin(PetscObjectComm(oda),oda->prefix,"GLVis PetscViewer DMDA Options","PetscViewer");
     PetscCall(PetscOptionsBool("-viewer_glvis_dm_da_ll","Left-looking subdomain view",NULL,dactx->ll,&dactx->ll,NULL));
-    ierr = PetscOptionsEnd();PetscCall(ierr);
+    PetscOptionsEnd();
     /* Create a properly ghosted DMDA to visualize the mesh and the fields associated with */
     PetscCall(DMDAGetInfo(da,&dim,&M,&N,&P,&m,&n,&p,&dof,&s,NULL,NULL,NULL,NULL));
     PetscCall(DMDAGetOwnershipRanges(da,&lx,&ly,&lz));
@@ -226,7 +225,7 @@ PETSC_INTERN PetscErrorCode DMSetUpGLVisViewer_DMDA(PetscObject oda, PetscViewer
           while (1) {
             PetscInt degd = 1;
             for (i=0;i<dim;i++) degd *= (deg+1);
-            PetscCheckFalse(degd > cdof,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cell dofs %D",cdof);
+            PetscCheck(degd <= cdof,PETSC_COMM_SELF,PETSC_ERR_SUP,"Cell dofs %D",cdof);
             if (degd == cdof) break;
             deg++;
           }
@@ -269,13 +268,13 @@ PETSC_INTERN PetscErrorCode DMSetUpGLVisViewer_DMDA(PetscObject oda, PetscViewer
     for (i=0;i<dof;i++) bss[i] = 1;
     nf = dof;
 
-    ierr = PetscOptionsBegin(PetscObjectComm(oda),oda->prefix,"GLVis PetscViewer DMDA Field options","PetscViewer");PetscCall(ierr);
+    PetscOptionsBegin(PetscObjectComm(oda),oda->prefix,"GLVis PetscViewer DMDA Field options","PetscViewer");
     PetscCall(PetscOptionsIntArray("-viewer_glvis_dm_da_bs","Block sizes for subfields; enable vector representation",NULL,bss,&nf,&bsset));
-    ierr = PetscOptionsEnd();PetscCall(ierr);
+    PetscOptionsEnd();
     if (bsset) {
       PetscInt t;
       for (i=0,t=0;i<nf;i++) t += bss[i];
-      PetscCheckFalse(t != dof,PetscObjectComm(oda),PETSC_ERR_USER,"Sum of block sizes %D should equal %D",t,dof);
+      PetscCheck(t == dof,PetscObjectComm(oda),PETSC_ERR_USER,"Sum of block sizes %D should equal %D",t,dof);
     } else nf = dof;
 
     for (i=0,s=0;i<nf;i++) {
@@ -345,7 +344,7 @@ static PetscErrorCode DMDAView_GLVis_ASCII(DM dm, PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isascii));
   PetscCheck(isascii,PetscObjectComm((PetscObject)viewer),PETSC_ERR_SUP,"Viewer must be of type VIEWERASCII");
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)viewer),&size));
-  PetscCheckFalse(size > 1,PetscObjectComm((PetscObject)viewer),PETSC_ERR_SUP,"Use single sequential viewers for parallel visualization");
+  PetscCheck(size <= 1,PetscObjectComm((PetscObject)viewer),PETSC_ERR_SUP,"Use single sequential viewers for parallel visualization");
   PetscCall(DMGetDimension(dm,&dim));
 
   /* get container: determines if a process visualizes is portion of the data or not */

@@ -91,13 +91,12 @@ int main(int argc, char **argv)
   PetscBool      verbose = PETSC_FALSE;
   PetscRandom    rand;
   PetscViewer    viewer;
-  PetscErrorCode ierr;
 
   PetscCall(PetscInitialize(&argc,&argv,NULL,help));
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"","Options for exterior algebra tests","none");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,"","Options for exterior algebra tests","none");
   PetscCall(PetscOptionsIntArray("-N", "Up to 5 vector space dimensions to test","ex7.c",n,&numTests,NULL));
   PetscCall(PetscOptionsBool("-verbose", "Verbose test output","ex7.c",verbose,&verbose,NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscCall(PetscRandomCreate(PETSC_COMM_SELF, &rand));
   PetscCall(PetscRandomSetInterval(rand, -1., 1.));
   PetscCall(PetscRandomSetFromOptions(rand));
@@ -153,7 +152,7 @@ int main(int argc, char **argv)
 
         PetscCall(PetscDTEnumSplit(N, k, j, subset, &isOdd));
         PetscCall(PetscDTPermIndex(N, subset, &kCheck, &isOddCheck));
-        PetscCheckFalse(isOddCheck != isOdd,PETSC_COMM_SELF, PETSC_ERR_PLIB, "PetscDTEnumSplit sign does not mmatch PetscDTPermIndex sign");
+        PetscCheck(isOddCheck == isOdd,PETSC_COMM_SELF, PETSC_ERR_PLIB, "PetscDTEnumSplit sign does not mmatch PetscDTPermIndex sign");
         if (verbose) {
           PetscInt l;
 
@@ -168,7 +167,7 @@ int main(int argc, char **argv)
           PetscCall(PetscPrintf(PETSC_COMM_WORLD, ", %s\n", isOdd ? "odd" : "even"));
         }
         PetscCall(PetscDTSubsetIndex(N, k, subset, &jCheck));
-        PetscCheckFalse(jCheck != j,PETSC_COMM_WORLD, PETSC_ERR_PLIB, "jCheck (%D) != j (%D)", jCheck, j);
+        PetscCheck(jCheck == j,PETSC_COMM_WORLD, PETSC_ERR_PLIB, "jCheck (%D) != j (%D)", jCheck, j);
       }
       PetscCall(PetscViewerASCIIPopTab(viewer));
       PetscCall(PetscFree(subset));

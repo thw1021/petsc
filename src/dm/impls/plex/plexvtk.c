@@ -195,7 +195,7 @@ static PetscErrorCode DMPlexVTKWriteCells_ASCII(DM dm, FILE *fp, PetscInt *total
       PetscCall(DMPlexRestoreTransitiveClosure(dm, c, PETSC_TRUE, &closureSize, &closure));
       PetscCall(DMPlexReorderCell(dm, c, localVertices+k-nC));
     }
-    PetscCheckFalse(k != numSend,PETSC_COMM_SELF,PETSC_ERR_PLIB, "Invalid number of vertices to send %D should be %D", k, numSend);
+    PetscCheck(k == numSend,PETSC_COMM_SELF,PETSC_ERR_PLIB, "Invalid number of vertices to send %D should be %D", k, numSend);
     PetscCallMPI(MPI_Send(&numSend, 1, MPIU_INT, 0, tag, comm));
     PetscCallMPI(MPI_Send(localVertices, numSend, MPIU_INT, 0, tag, comm));
     PetscCall(PetscFree(localVertices));
@@ -497,7 +497,7 @@ static PetscErrorCode DMPlexVTKWriteAll_ASCII(DM dm, PetscViewer viewer)
     PetscCall(DMPlexGetDepthLabel(dm, &label));
     PetscCall(DMLabelGetStratumIS(label, 0, &vStratumIS));
     PetscCall(DMGetCoordinateSection(dm, &section));                                 /* This section includes all points */
-    PetscCall(PetscSectionCreateSubmeshSection(section, vStratumIS, &coordSection)); /* This one includes just vertices */
+    PetscCall(PetscSectionCreateSubdomainSection(section, vStratumIS, &coordSection)); /* This one includes just vertices */
     PetscCall(PetscSectionCreateGlobalSection(coordSection, dm->sf, PETSC_FALSE, PETSC_FALSE, &globalCoordSection));
     PetscCall(PetscSectionGetPointLayout(comm, globalCoordSection, &vLayout));
     PetscCall(PetscLayoutGetSize(vLayout, &totVertices));

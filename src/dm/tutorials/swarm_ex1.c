@@ -18,10 +18,11 @@ PetscErrorCode ex1_1(void)
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD,&size));
   PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD,&rank));
-  PetscCheckFalse((size > 1) && (size != 4),PETSC_COMM_WORLD,PETSC_ERR_SUP,"Must be run wuth 4 MPI ranks");
+  PetscCheck(!(size > 1) || !(size != 4),PETSC_COMM_WORLD,PETSC_ERR_SUP,"Must be run wuth 4 MPI ranks");
 
   PetscCall(DMCreate(PETSC_COMM_WORLD,&dms));
   PetscCall(DMSetType(dms,DMSWARM));
+  PetscCall(PetscObjectSetName((PetscObject) dms, "Particles"));
 
   PetscCall(DMSwarmInitializeFieldRegister(dms));
   PetscCall(DMSwarmRegisterPetscDatatypeField(dms,"viscosity",1,PETSC_REAL));
@@ -105,6 +106,7 @@ PetscErrorCode ex1_2(void)
   PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD,&rank));
   PetscCall(DMCreate(PETSC_COMM_WORLD,&dms));
   PetscCall(DMSetType(dms,DMSWARM));
+  PetscCall(PetscObjectSetName((PetscObject) dms, "Particles"));
   PetscCall(DMSwarmInitializeFieldRegister(dms));
 
   PetscCall(DMSwarmRegisterPetscDatatypeField(dms,"viscosity",1,PETSC_REAL));
@@ -201,6 +203,7 @@ PetscErrorCode ex1_3(void)
   PetscCall(DMDAGetCorners(dmcell,&is,&js,NULL,&ni,&nj,NULL));
   PetscCall(DMCreate(PETSC_COMM_WORLD,&dms));
   PetscCall(DMSetType(dms,DMSWARM));
+  PetscCall(PetscObjectSetName((PetscObject) dms, "Particles"));
   PetscCall(DMSwarmSetCellDM(dms,dmcell));
 
   /* load in data types */
@@ -363,6 +366,7 @@ PetscErrorCode ex1_4(void)
   PetscCall(DMDAGetCorners(dmcell,&is,&js,NULL,&ni,&nj,NULL));
   PetscCall(DMCreate(PETSC_COMM_WORLD,&dms));
   PetscCall(DMSetType(dms,DMSWARM));
+  PetscCall(PetscObjectSetName((PetscObject) dms, "Particles"));
 
   /* load in data types */
   PetscCall(DMSwarmInitializeFieldRegister(dms));

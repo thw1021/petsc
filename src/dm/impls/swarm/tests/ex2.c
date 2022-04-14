@@ -51,7 +51,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
   char           fstring[PETSC_MAX_PATH_LEN] = "linear";
   PetscBool      flag;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   options->particlesPerCell = 1;
@@ -61,7 +60,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->momentTol        = 100.*PETSC_MACHINE_EPSILON;
   options->useBlockDiagPrec = PETSC_FALSE;
 
-  ierr = PetscOptionsBegin(comm, "", "L2 Projection Options", "DMPLEX");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "L2 Projection Options", "DMPLEX");
   PetscCall(PetscOptionsInt("-k", "Mode number of test", "ex2.c", options->k, &options->k, NULL));
   PetscCall(PetscOptionsInt("-particlesPerCell", "Number of particles per cell", "ex2.c", options->particlesPerCell, &options->particlesPerCell, NULL));
   PetscCall(PetscOptionsReal("-particle_perturbation", "Relative perturbation of particles (0,1)", "ex2.c", options->particleRelDx, &options->particleRelDx, NULL));
@@ -82,7 +81,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   }
   PetscCall(PetscOptionsReal("-moment_tol", "Tolerance for moment checks", "ex2.c", options->momentTol, &options->momentTol, NULL));
   PetscCall(PetscOptionsBool("-block_diag_prec", "Use the block diagonal of the normal equations to precondition the particle projection", "ex2.c", options->useBlockDiagPrec, &options->useBlockDiagPrec, NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   PetscFunctionReturn(0);
 }
@@ -108,7 +107,7 @@ static PetscErrorCode PerturbVertices(DM dm, AppCtx *user)
   for (d = 0; d < cdim; ++d) hh[d] = (user->L[d])/PetscPowReal(cEnd, 1./cdim);
   PetscCall(VecGetLocalSize(coordinates, &N));
   PetscCall(VecGetBlockSize(coordinates, &bs));
-  PetscCheckFalse(bs != cdim,PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_SIZ, "Coordinate vector has wrong block size %D != %D", bs, cdim);
+  PetscCheck(bs == cdim,PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_SIZ, "Coordinate vector has wrong block size %D != %D", bs, cdim);
   PetscCall(VecGetArray(coordinates, &coords));
   for (p = 0; p < N; p += cdim) {
     PetscScalar *coord = &coords[p], value;
@@ -494,7 +493,7 @@ static PetscErrorCode InterpolateGradient(DM dm, Vec locX, Vec locC)
     numComponents += Nc;
   }
   PetscCall(PetscQuadratureGetData(quad, NULL, &qNc, &Nq, &quadPoints, &quadWeights));
-  PetscCheckFalse((qNc != 1) && (qNc != numComponents),PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_SIZ, "Quadrature components %D != %D field components", qNc, numComponents);
+  PetscCheck(!(qNc != 1) || !(qNc != numComponents),PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_SIZ, "Quadrature components %D != %D field components", qNc, numComponents);
   PetscCall(PetscMalloc6(coordDim*numComponents*2,&gradsum,coordDim*numComponents,&interpolant,coordDim*Nq,&coords,Nq,&fegeom.detJ,coordDim*coordDim*Nq,&fegeom.J,coordDim*coordDim*Nq,&fegeom.invJ));
   PetscCall(DMPlexGetDepthStratum(dm, 0, &vStart, &vEnd));
   PetscCall(DMPlexGetSimplexOrBoxCells(dm, 0, &cStart, &cEnd));

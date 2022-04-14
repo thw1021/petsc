@@ -386,6 +386,9 @@ PETSC_EXTERN PetscErrorCode TSSetMaxTime(TS,PetscReal);
 PETSC_EXTERN PetscErrorCode TSGetMaxTime(TS,PetscReal*);
 PETSC_EXTERN PetscErrorCode TSSetExactFinalTime(TS,TSExactFinalTimeOption);
 PETSC_EXTERN PetscErrorCode TSGetExactFinalTime(TS,TSExactFinalTimeOption*);
+PETSC_EXTERN PetscErrorCode TSSetTimeSpan(TS,PetscInt,PetscReal*);
+PETSC_EXTERN PetscErrorCode TSGetTimeSpan(TS,PetscInt*,const PetscReal**);
+PETSC_EXTERN PetscErrorCode TSGetTimeSpanSolutions(TS,PetscInt*,Vec**);
 
 PETSC_EXTERN PETSC_DEPRECATED_FUNCTION("Use TSSetTime[Step]() (since version 3.8)")      PetscErrorCode TSSetInitialTimeStep(TS,PetscReal,PetscReal);
 PETSC_EXTERN PETSC_DEPRECATED_FUNCTION("Use TSSetMax{Steps|Time}() (since version 3.8)") PetscErrorCode TSSetDuration(TS,PetscInt,PetscReal);
@@ -559,8 +562,11 @@ PETSC_EXTERN PetscErrorCode DMTSCheckResidual(TS, DM, PetscReal, Vec, Vec, Petsc
 PETSC_EXTERN PetscErrorCode DMTSCheckJacobian(TS, DM, PetscReal, Vec, Vec, PetscReal, PetscBool *, PetscReal *);
 PETSC_EXTERN PetscErrorCode DMTSCheckFromOptions(TS, Vec);
 
+PETSC_EXTERN PetscErrorCode DMTSGetIFunctionLocal(DM,PetscErrorCode (**)(DM,PetscReal,Vec,Vec,Vec,void*),void**);
 PETSC_EXTERN PetscErrorCode DMTSSetIFunctionLocal(DM,PetscErrorCode (*)(DM,PetscReal,Vec,Vec,Vec,void*),void*);
+PETSC_EXTERN PetscErrorCode DMTSGetIJacobianLocal(DM,PetscErrorCode (**)(DM,PetscReal,Vec,Vec,PetscReal,Mat,Mat,void*),void**);
 PETSC_EXTERN PetscErrorCode DMTSSetIJacobianLocal(DM,PetscErrorCode (*)(DM,PetscReal,Vec,Vec,PetscReal,Mat,Mat,void*),void*);
+PETSC_EXTERN PetscErrorCode DMTSGetRHSFunctionLocal(DM,PetscErrorCode (**)(DM,PetscReal,Vec,Vec,void*),void**);
 PETSC_EXTERN PetscErrorCode DMTSSetRHSFunctionLocal(DM,PetscErrorCode (*)(DM,PetscReal,Vec,Vec,void*),void*);
 PETSC_EXTERN PetscErrorCode DMTSCreateRHSMassMatrix(DM);
 PETSC_EXTERN PetscErrorCode DMTSCreateRHSMassMatrixLumped(DM);

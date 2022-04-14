@@ -5,7 +5,6 @@ static char help[] = "Tests DMSLICED operations\n\n";
 int main(int argc,char *argv[])
 {
   char           mat_type[256] = MATAIJ; /* default matrix type */
-  PetscErrorCode ierr;
   MPI_Comm       comm;
   PetscMPIInt    rank,size;
   DM             slice;
@@ -21,12 +20,12 @@ int main(int argc,char *argv[])
   PetscCallMPI(MPI_Comm_size(comm,&size));
   PetscCallMPI(MPI_Comm_rank(comm,&rank));
 
-  ierr = PetscOptionsBegin(comm,0,"Options for DMSliced test",0);PetscCall(ierr);
+  PetscOptionsBegin(comm,0,"Options for DMSliced test",0);
   {
     PetscCall(PetscOptionsInt("-n","Global number of nodes","",N,&N,NULL));
     PetscCall(PetscOptionsInt("-bs","Block size (1 or 2)","",bs,&bs,NULL));
     if (bs != 1) {
-      PetscCheckFalse(bs != 2,PETSC_COMM_WORLD,PETSC_ERR_SUP,"Block size must be 1 or 2");
+      PetscCheck(bs == 2,PETSC_COMM_WORLD,PETSC_ERR_SUP,"Block size must be 1 or 2");
       PetscCall(PetscOptionsReal("-alpha","Inverse time step for wave operator","",alpha,&alpha,NULL));
       PetscCall(PetscOptionsReal("-K","Bulk modulus of compressibility","",K,&K,NULL));
       PetscCall(PetscOptionsReal("-rho0","Reference density","",rho0,&rho0,NULL));
@@ -36,7 +35,7 @@ int main(int argc,char *argv[])
     }
     PetscCall(PetscOptionsString("-sliced_mat_type","Matrix type to use (aij or baij)","",mat_type,mat_type,sizeof(mat_type),NULL));
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   /* Split ownership, set up periodic grid in 1D */
   n         = PETSC_DECIDE;
@@ -70,7 +69,7 @@ int main(int argc,char *argv[])
 
   PetscCall(VecGhostGetLocalForm(x,&lf));
   PetscCall(VecGetSize(lf,&m));
-  PetscCheckFalse(m != (n+2)*bs,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"size of local form %D, expected %D",m,(n+2)*bs);
+  PetscCheck(m == (n+2)*bs,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"size of local form %D, expected %D",m,(n+2)*bs);
   PetscCall(VecGetArray(lf,&xx));
   for (i=0; i<n; i++) {
     PetscInt        row[2],col[9],im,ip;

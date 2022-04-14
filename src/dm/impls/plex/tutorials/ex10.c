@@ -8,14 +8,12 @@ typedef struct {
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBeginUser;
   options->adapt = PETSC_FALSE;
 
-  ierr = PetscOptionsBegin(comm, "", "Meshing Interpolation Test Options", "DMPLEX");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "Meshing Interpolation Test Options", "DMPLEX");
   PetscCall(PetscOptionsBool("-adapt", "Flag for adaptation of the surface mesh", "ex10.c", options->adapt, &options->adapt, NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -109,7 +107,7 @@ static PetscErrorCode AdaptMesh(DM *dm, AppCtx *ctx)
       PetscCall(DMLabelGetValue(label, c, &value));
       if (value < 0) continue;
       PetscCall(PetscFindInt(value, Nv, values, &vidx));
-      PetscCheckFalse(vidx < 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Value %D for cell %D does not exist in label", value, c);
+      PetscCheck(vidx >= 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Value %D for cell %D does not exist in label", value, c);
       if (volume > volConst[vidx])        {PetscCall(DMLabelSetValue(adaptLabel, c, DM_ADAPT_REFINE));  ++nAdaptLoc[0];}
       if (volume < volConst[vidx]*ratio) {PetscCall(DMLabelSetValue(adaptLabel, c, DM_ADAPT_COARSEN)); ++nAdaptLoc[1];}
     }

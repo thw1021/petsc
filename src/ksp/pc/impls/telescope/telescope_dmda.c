@@ -50,7 +50,7 @@ static PetscErrorCode _DMDADetermineRankFromGlobalIJK(PetscInt dim,PetscInt i,Pe
         break;
       }
     }
-    PetscCheckFalse(pi == -1,PETSC_COMM_SELF,PETSC_ERR_USER,"[dmda-ijk] pi cannot be determined : range %D, val %D",Mp,i);
+    PetscCheck(pi != -1,PETSC_COMM_SELF,PETSC_ERR_USER,"[dmda-ijk] pi cannot be determined : range %D, val %D",Mp,i);
     *_pi = pi;
   }
 
@@ -61,7 +61,7 @@ static PetscErrorCode _DMDADetermineRankFromGlobalIJK(PetscInt dim,PetscInt i,Pe
         break;
       }
     }
-    PetscCheckFalse(pj == -1,PETSC_COMM_SELF,PETSC_ERR_USER,"[dmda-ijk] pj cannot be determined : range %D, val %D",Np,j);
+    PetscCheck(pj != -1,PETSC_COMM_SELF,PETSC_ERR_USER,"[dmda-ijk] pj cannot be determined : range %D, val %D",Np,j);
     *_pj = pj;
   }
 
@@ -72,7 +72,7 @@ static PetscErrorCode _DMDADetermineRankFromGlobalIJK(PetscInt dim,PetscInt i,Pe
         break;
       }
     }
-    PetscCheckFalse(pk == -1,PETSC_COMM_SELF,PETSC_ERR_USER,"[dmda-ijk] pk cannot be determined : range %D, val %D",Pp,k);
+    PetscCheck(pk != -1,PETSC_COMM_SELF,PETSC_ERR_USER,"[dmda-ijk] pk cannot be determined : range %D, val %D",Pp,k);
     *_pk = pk;
   }
 
@@ -178,7 +178,7 @@ static PetscErrorCode PCTelescopeSetUp_dmda_repart_coors2d(PC_Telescope sred,DM 
         c = c + 2;
       }
     }
-    PetscCheckFalse(c != Ml*Nl*2,PETSC_COMM_SELF,PETSC_ERR_PLIB,"c %D should equal 2 * Ml %D * Nl %D",c,Ml,Nl);
+    PetscCheck(c == Ml*Nl*2,PETSC_COMM_SELF,PETSC_ERR_PLIB,"c %D should equal 2 * Ml %D * Nl %D",c,Ml,Nl);
   }
 
   /* generate scatter */
@@ -503,7 +503,6 @@ PetscErrorCode PCTelescopeSetUp_dmda_repart(PC pc,PC_Telescope sred,PC_Telescope
 
 PetscErrorCode PCTelescopeSetUp_dmda_permutation_3d(PC pc,PC_Telescope sred,PC_Telescope_DMDACtx *ctx)
 {
-  PetscErrorCode ierr;
   DM             dm;
   MPI_Comm       comm;
   Mat            Pscalar,P;
@@ -548,17 +547,17 @@ PetscErrorCode PCTelescopeSetUp_dmda_permutation_3d(PC pc,PC_Telescope sred,PC_T
         PetscInt    lenI_re[3];
 
         location = (i - startI[0]) + (j - startI[1])*lenI[0] + (k - startI[2])*lenI[0]*lenI[1];
-        ierr = _DMDADetermineRankFromGlobalIJK(3,i,j,k,   ctx->Mp_re,ctx->Np_re,ctx->Pp_re,
-                                               ctx->start_i_re,ctx->start_j_re,ctx->start_k_re,
-                                               ctx->range_i_re,ctx->range_j_re,ctx->range_k_re,
-                                               &rank_reI[0],&rank_reI[1],&rank_reI[2],&rank_ijk_re);PetscCall(ierr);
+        PetscCall(_DMDADetermineRankFromGlobalIJK(3,i,j,k,   ctx->Mp_re,ctx->Np_re,ctx->Pp_re,
+                                                  ctx->start_i_re,ctx->start_j_re,ctx->start_k_re,
+                                                  ctx->range_i_re,ctx->range_j_re,ctx->range_k_re,
+                                                  &rank_reI[0],&rank_reI[1],&rank_reI[2],&rank_ijk_re));
         PetscCall(_DMDADetermineGlobalS0(3,rank_ijk_re, ctx->Mp_re,ctx->Np_re,ctx->Pp_re, ctx->range_i_re,ctx->range_j_re,ctx->range_k_re, &s0_re));
         ii = i - ctx->start_i_re[ rank_reI[0] ];
-        PetscCheckFalse(ii < 0,PETSC_COMM_SELF,PETSC_ERR_USER,"[dmdarepart-perm3d] index error ii");
+        PetscCheck(ii >= 0,PETSC_COMM_SELF,PETSC_ERR_USER,"[dmdarepart-perm3d] index error ii");
         jj = j - ctx->start_j_re[ rank_reI[1] ];
-        PetscCheckFalse(jj < 0,PETSC_COMM_SELF,PETSC_ERR_USER,"[dmdarepart-perm3d] index error jj");
+        PetscCheck(jj >= 0,PETSC_COMM_SELF,PETSC_ERR_USER,"[dmdarepart-perm3d] index error jj");
         kk = k - ctx->start_k_re[ rank_reI[2] ];
-        PetscCheckFalse(kk < 0,PETSC_COMM_SELF,PETSC_ERR_USER,"[dmdarepart-perm3d] index error kk");
+        PetscCheck(kk >= 0,PETSC_COMM_SELF,PETSC_ERR_USER,"[dmdarepart-perm3d] index error kk");
         lenI_re[0] = ctx->range_i_re[ rank_reI[0] ];
         lenI_re[1] = ctx->range_j_re[ rank_reI[1] ];
         lenI_re[2] = ctx->range_k_re[ rank_reI[2] ];
@@ -578,7 +577,6 @@ PetscErrorCode PCTelescopeSetUp_dmda_permutation_3d(PC pc,PC_Telescope sred,PC_T
 
 PetscErrorCode PCTelescopeSetUp_dmda_permutation_2d(PC pc,PC_Telescope sred,PC_Telescope_DMDACtx *ctx)
 {
-  PetscErrorCode ierr;
   DM             dm;
   MPI_Comm       comm;
   Mat            Pscalar,P;
@@ -619,17 +617,17 @@ PetscErrorCode PCTelescopeSetUp_dmda_permutation_2d(PC pc,PC_Telescope sred,PC_T
       PetscInt    lenI_re[3];
 
       location = (i - startI[0]) + (j - startI[1])*lenI[0];
-      ierr = _DMDADetermineRankFromGlobalIJK(2,i,j,0,   ctx->Mp_re,ctx->Np_re,ctx->Pp_re,
-                                             ctx->start_i_re,ctx->start_j_re,ctx->start_k_re,
-                                             ctx->range_i_re,ctx->range_j_re,ctx->range_k_re,
-                                             &rank_reI[0],&rank_reI[1],NULL,&rank_ijk_re);PetscCall(ierr);
+      PetscCall(_DMDADetermineRankFromGlobalIJK(2,i,j,0,   ctx->Mp_re,ctx->Np_re,ctx->Pp_re,
+                                                ctx->start_i_re,ctx->start_j_re,ctx->start_k_re,
+                                                ctx->range_i_re,ctx->range_j_re,ctx->range_k_re,
+                                                &rank_reI[0],&rank_reI[1],NULL,&rank_ijk_re));
 
       PetscCall(_DMDADetermineGlobalS0(2,rank_ijk_re, ctx->Mp_re,ctx->Np_re,ctx->Pp_re, ctx->range_i_re,ctx->range_j_re,ctx->range_k_re, &s0_re));
 
       ii = i - ctx->start_i_re[ rank_reI[0] ];
-      PetscCheckFalse(ii < 0,PETSC_COMM_SELF,PETSC_ERR_USER,"[dmdarepart-perm2d] index error ii");
+      PetscCheck(ii >= 0,PETSC_COMM_SELF,PETSC_ERR_USER,"[dmdarepart-perm2d] index error ii");
       jj = j - ctx->start_j_re[ rank_reI[1] ];
-      PetscCheckFalse(jj < 0,PETSC_COMM_SELF,PETSC_ERR_USER,"[dmdarepart-perm2d] index error jj");
+      PetscCheck(jj >= 0,PETSC_COMM_SELF,PETSC_ERR_USER,"[dmdarepart-perm2d] index error jj");
 
       lenI_re[0] = ctx->range_i_re[ rank_reI[0] ];
       lenI_re[1] = ctx->range_j_re[ rank_reI[1] ];
@@ -977,7 +975,7 @@ PetscErrorCode PCApplyRichardson_Telescope_dmda(PC pc,Vec x,Vec y,Vec w,PetscRea
   perm    = ctx->permutation;
   xp      = ctx->xp;
 
-  PetscCheckFalse(its > 1,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"PCApplyRichardson_Telescope_dmda only supports max_it = 1");
+  PetscCheck(its <= 1,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"PCApplyRichardson_Telescope_dmda only supports max_it = 1");
   *reason = (PCRichardsonConvergedReason)0;
 
   if (!zeroguess) {

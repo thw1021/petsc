@@ -108,15 +108,13 @@ PetscErrorCode DMAdaptorDestroy(DMAdaptor *adaptor)
 @*/
 PetscErrorCode DMAdaptorSetFromOptions(DMAdaptor adaptor)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = PetscOptionsBegin(PetscObjectComm((PetscObject) adaptor), "", "DM Adaptor Options", "DMAdaptor");PetscCall(ierr);
+  PetscOptionsBegin(PetscObjectComm((PetscObject) adaptor), "", "DM Adaptor Options", "DMAdaptor");
   PetscCall(PetscOptionsBool("-adaptor_monitor", "Monitor the adaptation process", "DMAdaptorMonitor", adaptor->monitor, &adaptor->monitor, NULL));
   PetscCall(PetscOptionsInt("-adaptor_sequence_num", "Number of adaptations to generate an optimal grid", "DMAdaptorSetSequenceLength", adaptor->numSeq, &adaptor->numSeq, NULL));
   PetscCall(PetscOptionsInt("-adaptor_target_num", "Set the target number of vertices N_adapt, -1 for automatic determination", "DMAdaptor", adaptor->Nadapt, &adaptor->Nadapt, NULL));
   PetscCall(PetscOptionsReal("-adaptor_refinement_factor", "Set r such that N_adapt = r^dim N_orig", "DMAdaptor", adaptor->refinementFactor, &adaptor->refinementFactor, NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscCall(VecTaggerSetFromOptions(adaptor->refineTag));
   PetscCall(VecTaggerSetFromOptions(adaptor->coarsenTag));
   PetscFunctionReturn(0);
@@ -544,7 +542,7 @@ static PetscErrorCode DMAdaptorAdapt_Sequence_Private(DMAdaptor adaptor, Vec inx
   PetscCall(DMGetApplicationContext(adaptor->idm, &ctx));
   PetscCall(DMGetDS(adaptor->idm, &prob));
   PetscCall(PetscDSGetNumFields(prob, &numFields));
-  PetscCheckFalse(numFields == 0,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Number of fields is zero!");
+  PetscCheck(numFields != 0,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Number of fields is zero!");
 
   /* Adapt until nothing changes */
   /* Adapt for a specified number of iterates */
@@ -646,7 +644,7 @@ static PetscErrorCode DMAdaptorAdapt_Sequence_Private(DMAdaptor adaptor, Vec inx
       /*     Setup finite element spaces */
       PetscCall(DMClone(dm, &dmGrad));
       PetscCall(DMClone(dm, &dmHess));
-      PetscCheckFalse(numFields > 1,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Adaptation with multiple fields not yet considered");  // TODO
+      PetscCheck(numFields <= 1,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Adaptation with multiple fields not yet considered");  // TODO
       for (f = 0; f < numFields; ++f) {
         PetscFE         fe, feGrad, feHess;
         PetscDualSpace  Q;
@@ -658,7 +656,7 @@ static PetscErrorCode DMAdaptorAdapt_Sequence_Private(DMAdaptor adaptor, Vec inx
 
         PetscCall(PetscDSGetDiscretization(prob, f, (PetscObject *) &fe));
         PetscCall(PetscFEGetNumComponents(fe, &Nc));
-        PetscCheckFalse(Nc > 1,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Adaptation with multiple components not yet considered");  // TODO
+        PetscCheck(Nc <= 1,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Adaptation with multiple components not yet considered");  // TODO
         PetscCall(PetscFEGetBasisSpace(fe, &space));
         PetscCall(PetscSpaceGetDegree(space, NULL, &p));
         if (p > 1) higherOrder = PETSC_TRUE;

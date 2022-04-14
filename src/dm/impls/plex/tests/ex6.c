@@ -12,8 +12,6 @@ typedef struct {
 
 PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   options->debug     = 0;
   options->pStart    = 0;
@@ -21,12 +19,12 @@ PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->numStrata = 5;
   options->fill      = 0.10;
 
-  ierr = PetscOptionsBegin(comm, "", "Meshing Problem Options", "DMPLEX");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "Meshing Problem Options", "DMPLEX");
   PetscCall(PetscOptionsBoundedInt("-debug", "The debugging level", "ex6.c", options->debug, &options->debug, NULL,0));
   PetscCall(PetscOptionsBoundedInt("-num_strata", "The number of label values", "ex6.c", options->numStrata, &options->numStrata, NULL,0));
   PetscCall(PetscOptionsBoundedInt("-pend", "The label point limit", "ex6.c", options->pEnd, &options->pEnd, NULL,0));
   PetscCall(PetscOptionsReal("-fill", "The percentage of label chart to set", "ex6.c", options->fill, &options->fill, NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -75,7 +73,7 @@ PetscErrorCode TestLookup(DMLabel label, AppCtx *user)
     PetscCheckFalse(((val >= 0) && !has) || ((val < 0) && has),PETSC_COMM_SELF, PETSC_ERR_PLIB, "Label value %D does not match contains check %D for point %D", val, (PetscInt) has, p);
     if (has) ++n;
   }
-  PetscCheckFalse(n != user->size,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid number of label points detected %D does not match number set %D", n, user->size);
+  PetscCheck(n == user->size,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid number of label points detected %D does not match number set %D", n, user->size);
   /* Also put in timing code */
   PetscFunctionReturn(0);
 }
@@ -97,7 +95,7 @@ PetscErrorCode TestClear(DMLabel label, AppCtx *user)
     }
     PetscCall(DMLabelGetValue(label,p,&val));
     PetscCall(DMLabelHasPoint(label,p,&hasPoint));
-    PetscCheckFalse(val != defaultValue,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Expected default value %D after clearing point %D, got %D",defaultValue,p,val);
+    PetscCheck(val == defaultValue,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Expected default value %D after clearing point %D, got %D",defaultValue,p,val);
     PetscCheck(!hasPoint,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Label contains %D after clearing",p);
   }
   PetscFunctionReturn(0);
