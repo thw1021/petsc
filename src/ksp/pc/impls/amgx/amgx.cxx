@@ -1,4 +1,3 @@
-
 /*  --------------------------------------------------------------------
 
      This file implements a MAGx preconditioner in PETSc as part of PC.
@@ -25,8 +24,8 @@ typedef struct {
     bool rsrc_init = false;
 
     AMGX_matrix_handle A;
-    AMGX_vector_handle P;
-    AMGX_vector_handle RHS;
+    AMGX_vector_handle sol;
+    AMGX_vector_handle rhs;
 
     MPI_Comm comm;
     int rank = 0;
@@ -53,7 +52,7 @@ static void print_callback(const char *msg, int length)
 
     if (rank == 0)
     {
-      PetscPrintf(PETSC_COMM_SELF,"%s", msg);
+        PetscPrintf(PETSC_COMM_SELF,"%s", msg);
     }
 }
 
@@ -108,13 +107,14 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
             /* switch on internal error handling (no need to use AMGX_SAFE_CALL after this point) */
             AMGX_SAFE_CALL(AMGX_config_add_parameters(&amgx->cfg, "exception_handling=1"));
 
-            printf("resources in pcsetup_amgx\n");
             AMGX_resources_create(&amgx->rsrc, amgx->cfg, &amgx->comm, 1, &amgx->devID);
+
+            amgx->rsrc_init = true;
         }
 
         AMGX_matrix_create(&amgx->A, amgx->rsrc, AMGX_mode_dDDI);
-        AMGX_vector_create(&amgx->P, amgx->rsrc, AMGX_mode_dDDI);
-        AMGX_vector_create(&amgx->RHS, amgx->rsrc, AMGX_mode_dDDI);
+        AMGX_vector_create(&amgx->sol, amgx->rsrc, AMGX_mode_dDDI);
+        AMGX_vector_create(&amgx->rhs, amgx->rsrc, AMGX_mode_dDDI);
         AMGX_solver_create(&amgx->solver, amgx->rsrc, AMGX_mode_dDDI, amgx->cfg);
 
         PetscCall(MatGetLocalSize(Pmat, &amgx->nLocalRows, NULL));
@@ -131,19 +131,12 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
                 "nLocalRows = %D > max<int>", amgx->nLocalRows);
         }
 
-        const PetscInt *colIndices;
-
         // BUG If PetscInt is 64-bit and int is 32-bit this will lead to a
         // bug, as passed through to AmgX as PetscInt, but expects int
-        const PetscInt *rowOffsets;
-
-        // Need some robust check to determine if the matrix is an AmgX matrix
-        PetscBool isAmgXMatrix;
-        PetscCall(PetscObjectTypeCompare((PetscObject)Pmat, MATSEQAIJ, &isAmgXMatrix));
 
         // At the present time, an AmgX matrix is a sequential matrix
         // Non-sequential/MPI matrices must be adapted to extract the local matrix
-        if (isAmgXMatrix || amgx->nranks == 1)
+        if (amgx->nranks == 1)
         {
             amgx->localA = Pmat;
         }
@@ -155,12 +148,15 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
         // Extract the CSR data
         PetscInt rawN;
         PetscBool done;
+        const PetscInt *colIndices;
+        const PetscInt *rowOffsets;
         PetscCall(MatGetRowIJ(amgx->localA, 0, PETSC_FALSE, PETSC_FALSE, &rawN, &rowOffsets, &colIndices, &done));
 
         if (!done)
         {
             SETERRQ(amgx->comm, PETSC_ERR_PLIB, "MatGetRowIJ was not successful");
         }
+
         if (rawN != amgx->nLocalRows)
         {
             SETERRQ(amgx->comm, PETSC_ERR_PLIB,
@@ -170,14 +166,7 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
 
         PetscCall(MatSeqAIJGetArray(amgx->localA, &amgx->values));
 
-        if (isAmgXMatrix)
-        {
-            CHECK(cudaMemcpy(&amgx->nnz, &rowOffsets[amgx->nLocalRows], sizeof(PetscInt), cudaMemcpyDefault));
-        }
-        else
-        {
-            amgx->nnz = rowOffsets[amgx->nLocalRows];
-        }
+        amgx->nnz = rowOffsets[amgx->nLocalRows];
 
         if (amgx->nnz >= std::numeric_limits<int>::max())
         {
@@ -222,14 +211,16 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
             amgx->A, nGlobalRows, (int)amgx->nLocalRows, (int)amgx->nnz, bs, bs,
             rowOffsets, colIndices, amgx->values, NULL, dist);
 
+        PetscCall(MatRestoreRowIJ(amgx->localA, 0, PETSC_FALSE, PETSC_FALSE, &rawN, &rowOffsets, &colIndices, &done));
+
         // Must happen AFTER AMGX_matrix_upload_distributed
         PetscCall(PetscFree(partitionOffsets));
 
         PetscCall(MPI_Barrier(amgx->comm));
 
         AMGX_solver_setup(amgx->solver, amgx->A);
-        AMGX_vector_bind(amgx->P, amgx->A);
-        AMGX_vector_bind(amgx->RHS, amgx->A);
+        AMGX_vector_bind(amgx->sol, amgx->A);
+        AMGX_vector_bind(amgx->rhs, amgx->A);
     }
     else
     {
@@ -261,21 +252,29 @@ static PetscErrorCode PCApply_AMGX(PC pc, Vec b, Vec x)
 
     PetscFunctionBegin;
 
-    PetscInt n;
-    PetscCall(VecGetLocalSize(x, &n));
+    PetscBool is_dev_ptrs;
+    PetscCall(PetscObjectTypeCompare((PetscObject)x, VECSEQCUDA, &is_dev_ptrs));
 
-    PetscScalar *unks;
-    PetscCall(VecGetArray(x, &unks));
-
+    PetscScalar *sol;
     const PetscScalar *rhs;
-    PetscCall(VecGetArrayRead(b, &rhs));
 
-    AMGX_vector_upload(amgx->P, n, 1, unks);
-    AMGX_vector_upload(amgx->RHS, n, 1, rhs);
+    if(is_dev_ptrs)
+    {
+        PetscCall(VecCUDAGetArrayWrite(x, &sol));
+        PetscCall(VecCUDAGetArrayRead(b, &rhs));
+    }
+    else
+    {
+        PetscCall(VecGetArray(x, &sol));
+        PetscCall(VecGetArrayRead(b, &rhs));
+    }
+
+    AMGX_vector_upload(amgx->sol, amgx->nLocalRows, 1, sol);
+    AMGX_vector_upload(amgx->rhs, amgx->nLocalRows, 1, rhs);
 
     PetscCall(MPI_Barrier(amgx->comm));
 
-    AMGX_solver_solve(amgx->solver, amgx->RHS, amgx->P);
+    AMGX_solver_solve(amgx->solver, amgx->rhs, amgx->sol);
 
     AMGX_SOLVE_STATUS status;
     AMGX_solver_get_status(amgx->solver, &status);
@@ -288,10 +287,18 @@ static PetscErrorCode PCApply_AMGX(PC pc, Vec b, Vec x)
                  status);
     }
 
-    AMGX_vector_download(amgx->P, unks);
+    AMGX_vector_download(amgx->sol, sol);
 
-    PetscCall(VecRestoreArray(x, &unks));
-    PetscCall(VecRestoreArrayRead(b, &rhs));
+    if(is_dev_ptrs)
+    {
+        PetscCall(VecCUDARestoreArrayWrite(x, &sol));
+        PetscCall(VecCUDARestoreArrayRead(b, &rhs));
+    }
+    else
+    {
+        PetscCall(VecRestoreArray(x, &sol));
+        PetscCall(VecRestoreArrayRead(b, &rhs));
+    }
 
     PetscFunctionReturn(0);
 }
@@ -304,8 +311,8 @@ static PetscErrorCode PCReset_AMGX(PC pc)
     PetscFunctionBegin;
     AMGX_solver_destroy(amgx->solver);
     AMGX_matrix_destroy(amgx->A);
-    AMGX_vector_destroy(amgx->P);
-    AMGX_vector_destroy(amgx->RHS);
+    AMGX_vector_destroy(amgx->sol);
+    AMGX_vector_destroy(amgx->rhs);
     PetscFunctionReturn(0);
 }
 
@@ -323,9 +330,6 @@ static PetscErrorCode PCDestroy_AMGX(PC pc)
     PC_AMGX *amgx = (PC_AMGX *)pc->data;
 
     PetscFunctionBegin;
-    // XXX I am not sure it is a good idea to automatically call reset here
-    // as it seems to be called internally by PETSc on destroy?
-    // PetscCall(PCReset(pc));
 
     /* decrease the number of instances, only the last instance need to destroy resource and finalizing AmgX */
     if (s_count == 1)
@@ -470,7 +474,6 @@ PETSC_EXTERN PetscErrorCode PCCreate_AMGX(PC pc)
 #ifdef _WIN32
         amgx->lib_handle = amgx_libopen("amgxsh.dll");
 #else
-        PetscPrintf(PETSC_COMM_SELF,"dynamic loading\n");
         amgx->lib_handle = amgx_libopen("libamgxsh.so");
 #endif
         if (amgx->lib_handle == NULL)
@@ -528,6 +531,8 @@ PETSC_EXTERN PetscErrorCode PCGetAmgXResources(PC pc, void* rsrc_out)
         AMGX_SAFE_CALL(AMGX_config_add_parameters(&amgx->cfg, "exception_handling=1"));
 
         AMGX_resources_create(&amgx->rsrc, amgx->cfg, &amgx->comm, 1, &amgx->devID);
+
+        amgx->rsrc_init = true;
     }
 
     *((AMGX_resources_handle*)rsrc_out) = amgx->rsrc;
