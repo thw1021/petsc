@@ -8,7 +8,7 @@
 #define veccreateseqwitharray1_  veccreateseqwitharray1
 #endif
 
-PETSC_EXTERN void veccreateseqwitharray0_(MPI_Comm *comm,PetscInt32 *bs,PetscInt *n,PetscScalar *s,Vec *V,PetscErrorCode *ierr)
+PETSC_EXTERN void veccreateseqwitharray0_(MPI_Comm *comm,int *bs,PetscInt *n,PetscScalar *s,Vec *V,PetscErrorCode *ierr)
 {
   CHKFORTRANNULLSCALAR(s);
   *ierr = VecCreateSeqWithArray(MPI_Comm_f2c(*(MPI_Fint*)&*comm),*bs,*n,s,V);
