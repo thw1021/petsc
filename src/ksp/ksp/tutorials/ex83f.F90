@@ -45,7 +45,7 @@
 
       ja(1) = 0
       a(1)  = 1.0
-      do i=2,n
+      do i=2,n-1
          ja(2+3*(i-2))   = i-2
          a(2+3*(i-2))    = -1.0;
          ja(2+3*(i-2)+1) = i-1
@@ -71,7 +71,7 @@
       call KSPSolve(ksp,rhs,solution,ierr);CHKERRA(ierr);
 
 !     Keep the same size and nonzero structure of the matrix but change its numerical entries
-      do i=2,n
+      do i=2,n-1
          a(2+3*(i-2)+1)  = 4.0;
       enddo
       call PetscObjectStateIncrease(J,ierr);CHKERRA(ierr);
