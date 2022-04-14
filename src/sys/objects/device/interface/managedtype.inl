@@ -36,6 +36,7 @@
 #define PetscDeviceContextDestroyManagedTypeArray PetscConcat3(PetscDeviceContextDestroyManaged,PetscTypeSuffix,Array)
 #define getmanagedvaluestype                      PetscConcat(getmanagedvalues,PetscTypeSuffix_L)
 #define PetscDeviceContextGetManagedTypeValues    PetscConcat3(PetscDeviceContextGetManaged,PetscTypeSuffix,Values)
+#define PetscDeviceContextSetManagedTypeValues    PetscConcat3(PetscDeviceContextSetManaged,PetscTypeSuffix,Values)
 #define PetscDeviceContextCopyManagedType         PetscConcat(PetscDeviceContextCopyManaged,PetscTypeSuffix)
 #define applyoperatortype                         PetscConcat(applyoperator,PetscTypeSuffix_L)
 #define PetscDeviceContextApplyOperatorManagedType PetscConcat(PetscDeviceContextApplyOperatorManaged,PetscTypeSuffix)
@@ -91,7 +92,7 @@ PetscErrorCode CopyValues(PetscDeviceContext dctx, PetscManagedType scal, PetscO
   // need to actually allocate the stuff
   PetscFunctionBegin;
   PetscCall(PetscDeviceContextGetManagedTypeValues(dctx,scal,PetscDetermineMemType(mask),PETSC_MEMORY_ACCESS_WRITE,&ptr,&n));
-  PetscCall(PetscDetermineCopyMode(mask,src_mask,&mode));
+  PetscCall(PetscOffloadMaskToDeviceCopyMode(mask,src_mask,&mode));
   PetscCall(PetscDeviceArrayCopy(dctx,ptr,src_ptr,n,mode));
   PetscFunctionReturn(0);
 }
@@ -147,7 +148,7 @@ PetscErrorCode PetscDeviceContextCreateManagedTypeArray(PetscDeviceContext dctx,
 PetscErrorCode PetscDeviceContextDestroyManagedTypeArray(PetscDeviceContext dctx, PetscManagedType *scal)
 {
   PetscFunctionBegin;
-  if (!dctx) PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   PetscValidDeviceContext(dctx,1);
   if (*scal) PetscFunctionReturn(0);
   PetscCall((*dctx->ops->releasemanagedtype)(dctx,*scal));
@@ -159,13 +160,30 @@ PetscErrorCode PetscDeviceContextDestroyManagedTypeArray(PetscDeviceContext dctx
 PetscErrorCode PetscDeviceContextGetManagedTypeValues(PetscDeviceContext dctx, PetscManagedType scal, PetscMemType mtype, PetscMemoryAccessMode mode, PetscType **ptr, PetscInt *n)
 {
   PetscFunctionBegin;
-  if (!dctx) PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   PetscValidDeviceContext(dctx,1);
   PetscValidPointer(scal,2);
   PetscValidPointer(ptr,5);
   if (n) PetscValidIntPointer(n,6);
   PetscCall((*dctx->ops->getmanagedvaluestype)(dctx,scal,mtype,mode,ptr));
   if (n) *n = scal->n;
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscDeviceContextSetManagedTypeValues(PetscDeviceContext dctx, PetscManagedType scal, PetscMemType mtype, const PetscType *ptr, PetscInt n)
+{
+  // we want to move the data TO wherever the managed type has it, not the other way around
+  const auto  scalmtype = PetscDetermineMemType(scal->mask);
+  const auto  mode      = PetscMemTypeToDeviceCopyMode(scalmtype,mtype);
+  PetscType  *scalptr;
+  PetscInt    scaln;
+
+  PetscFunctionBegin;
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  if (PetscMemTypeHost(mtype)) PetscValidTypePointer(ptr,4);
+  PetscCall(PetscManagedTypeGetValues(dctx,scal,scalmtype,PETSC_MEMORY_ACCESS_WRITE,&scalptr,&scaln));
+  PetscAssert(n <= scaln,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Trying to write %" PetscInt_FMT " values to " PetscStringize(PetscManagedType) " but it only holds " PetscInt_FMT " entries",n,scaln);
+  PetscCall(PetscDeviceArrayCopy(dctx,scalptr,ptr,n,mode));
   PetscFunctionReturn(0);
 }
 
@@ -182,7 +200,7 @@ PetscErrorCode PetscDeviceContextCopyManagedType(PetscDeviceContext dctx, PetscM
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   PetscValidPointer(dest,2);
   PetscValidPointer(src,3);
-  PetscCall(PetscDetermineCopyMode(dmask,src->mask,&mode));
+  PetscCall(PetscOffloadMaskToDeviceCopyMode(dmask,src->mask,&mode));
   PetscCall(PetscDeviceContextGetManagedTypeValues(dctx,dest,mtype,PETSC_MEMORY_ACCESS_WRITE,&dest_ptr,&dest_n));
   PetscCall(PetscDeviceContextGetManagedTypeValues(dctx,src,mtype,PETSC_MEMORY_ACCESS_READ,&src_ptr,&src_n));
   PetscAssert(dest_n >= src_n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Destination size %" PetscInt_FMT " not large enough for source size %" PetscInt_FMT,dest_n,src_n);
