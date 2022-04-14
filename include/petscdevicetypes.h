@@ -55,6 +55,7 @@ typedef enum {
 #define PetscMemTypeNVSHMEM(m) ((m) == PETSC_MEMTYPE_NVSHMEM)
 
 #define PETSC_OFFLOAD_VECKOKKOS_DEPRECATED PETSC_OFFLOAD_VECKOKKOS PETSC_DEPRECATED_ENUM("Use PETSC_OFFLOAD_KOKKOS (since version 3.17.0)")
+
 /*E
   PetscOffloadMask - indicates which memory (CPU, GPU, or none) contains valid data
 
@@ -78,20 +79,6 @@ typedef enum {
 #define PetscOffloadUnallocated(m) ((m)         == PETSC_OFFLOAD_UNALLOCATED)
 #define PetscOffloadHost(m)        (((m) & 0x1) == PETSC_OFFLOAD_CPU)
 #define PetscOffloadDevice(m)      (((m) & 0x2) == PETSC_OFFLOAD_GPU)
-
-PETSC_NODISCARD static inline PETSC_CONSTEXPR_14 PetscMemType PetscDetermineMemType(PetscOffloadMask mask)
-{
-  switch (mask) {
-  case PETSC_OFFLOAD_UNALLOCATED:
-  case PETSC_OFFLOAD_CPU:
-    return PETSC_MEMTYPE_HOST;
-  case PETSC_OFFLOAD_GPU:
-  case PETSC_OFFLOAD_BOTH:
-    return PETSC_MEMTYPE_DEVICE;
-  case PETSC_OFFLOAD_KOKKOS:
-    return PETSC_MEMTYPE_KOKKOS;
-  }
-}
 
 /*E
   PetscDeviceInitType - Initialization strategy for PetscDevice
@@ -227,20 +214,6 @@ typedef enum {
   PETSC_DEVICE_COPY_AUTO,
 } PetscDeviceCopyMode;
 
-static inline PetscErrorCode PetscDetermineCopyMode(PetscOffloadMask dest, PetscOffloadMask src, PetscDeviceCopyMode *mode)
-{
-  PetscFunctionBegin;
-  PetscAssert(dest != PETSC_OFFLOAD_UNALLOCATED,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot copy to unallocated");
-  PetscAssert(src != PETSC_OFFLOAD_UNALLOCATED,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot copy from unallocated");
-
-  if (PetscOffloadDevice(dest)) {
-    *mode = PetscOffloadHost(src) ? PETSC_DEVICE_COPY_HTOH : PETSC_DEVICE_COPY_DTOH;
-  } else {
-    *mode = PetscOffloadHost(src) ? PETSC_DEVICE_COPY_HTOD : PETSC_DEVICE_COPY_DTOD;
-  }
-  PetscFunctionReturn(0);
-}
-
 typedef enum {
   PETSC_MEMORY_ACCESS_READ,
   PETSC_MEMORY_ACCESS_WRITE,
@@ -257,11 +230,47 @@ typedef enum {
   PETSC_OPERATOR_EQUAL
 } PetscOperatorType;
 
+PETSC_NODISCARD static inline PETSC_CONSTEXPR_14 PetscMemType PetscDetermineMemType(PetscOffloadMask mask)
+{
+  switch (mask) {
+  case PETSC_OFFLOAD_UNALLOCATED:
+  case PETSC_OFFLOAD_CPU:
+    return PETSC_MEMTYPE_HOST;
+  case PETSC_OFFLOAD_GPU:
+  case PETSC_OFFLOAD_BOTH:
+    return PETSC_MEMTYPE_DEVICE;
+  case PETSC_OFFLOAD_KOKKOS:
+    return PETSC_MEMTYPE_KOKKOS;
+  }
+}
+
+PETSC_NODISCARD static inline PetscErrorCode PetscOffloadMaskToDeviceCopyMode(PetscOffloadMask dest, PetscOffloadMask src, PetscDeviceCopyMode *mode)
+{
+  PetscFunctionBegin;
+  PetscAssert(dest != PETSC_OFFLOAD_UNALLOCATED,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot copy to unallocated");
+  PetscAssert(src != PETSC_OFFLOAD_UNALLOCATED,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot copy from unallocated");
+
+  if (PetscOffloadDevice(dest)) {
+    *mode = PetscOffloadHost(src) ? PETSC_DEVICE_COPY_HTOH : PETSC_DEVICE_COPY_DTOH;
+  } else {
+    *mode = PetscOffloadHost(src) ? PETSC_DEVICE_COPY_HTOD : PETSC_DEVICE_COPY_DTOD;
+  }
+  PetscFunctionReturn(0);
+}
+
+PETSC_NODISCARD static inline PETSC_CONSTEXPR_14 PetscDeviceCopyMode PetscMemTypeToDeviceCopyMode(PetscMemType dest, PetscMemType src)
+{
+  if (PetscMemTypeHost(dest)) {
+    return PetscMemTypeHost(src)   ? PETSC_DEVICE_COPY_HTOH : PETSC_DEVICE_COPY_DTOH;
+  } else {
+    return PetscMemTypeDevice(src) ? PETSC_DEVICE_COPY_DTOD : PETSC_DEVICE_COPY_HTOD;
+  }
+}
+
 #define PetscTypeSuffix Scalar
 #include "petscmanagedtype.inl"
 #define PetscTypeSuffix Real
 #include "petscmanagedtype.inl"
 #define PetscTypeSuffix Int
 #include "petscmanagedtype.inl"
-
 #endif /* PETSCDEVICETYPES_H */
