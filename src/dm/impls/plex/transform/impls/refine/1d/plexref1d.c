@@ -55,7 +55,7 @@ static PetscErrorCode DMPlexTransformCellTransform_1D(DMPlexTransform tr, DMPoly
   PetscInt       val;
 
   PetscFunctionBeginHot;
-  PetscCheckFalse(p < 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Point argument is invalid");
+  PetscCheck(p >= 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Point argument is invalid");
   PetscCall(DMLabelGetValue(trType, p, &val));
   if (rt) *rt = val;
   switch (source) {
@@ -79,7 +79,7 @@ static PetscErrorCode DMPlexTransformSetFromOptions_1D(PetscOptionItems *PetscOp
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 2);
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"DMPlex Options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"DMPlex Options");
   PetscCall(PetscOptionsIntArray("-dm_plex_transform_1d_ref_cell", "Mark cells for refinement", "", cells, &n, &flg));
   if (flg) {
     DMLabel active;
@@ -89,7 +89,7 @@ static PetscErrorCode DMPlexTransformSetFromOptions_1D(PetscOptionItems *PetscOp
     PetscCall(DMPlexTransformSetActive(tr, active));
     PetscCall(DMLabelDestroy(&active));
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 

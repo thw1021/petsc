@@ -1251,14 +1251,13 @@ static PetscErrorCode VecSetTypeFromOptions_Private(PetscOptionItems *PetscOptio
 @*/
 PetscErrorCode  VecSetFromOptions(Vec vec)
 {
-  PetscErrorCode ierr;
   PetscBool      flg;
   PetscInt       bind_below = 0;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(vec,VEC_CLASSID,1);
 
-  ierr = PetscObjectOptionsBegin((PetscObject)vec);PetscCall(ierr);
+  PetscObjectOptionsBegin((PetscObject)vec);
   /* Handle vector type options */
   PetscCall(VecSetTypeFromOptions_Private(PetscOptionsObject,vec));
 
@@ -1273,7 +1272,7 @@ PetscErrorCode  VecSetFromOptions(Vec vec)
 
   /* process any options handlers added with PetscObjectAddOptionsHandler() */
   PetscCall(PetscObjectProcessOptionsHandlers(PetscOptionsObject,(PetscObject)vec));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -1303,7 +1302,7 @@ PetscErrorCode  VecSetSizes(Vec v, PetscInt n, PetscInt N)
     PetscValidLogicalCollectiveInt(v,N,3);
     PetscCheck(n <= N,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local size %" PetscInt_FMT " cannot be larger than global size %" PetscInt_FMT,n,N);
   }
-  PetscCheckFalse((v->map->n >= 0 || v->map->N >= 0) && (v->map->n != n || v->map->N != N),PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot change/reset vector sizes to %" PetscInt_FMT " local %" PetscInt_FMT " global after previously setting them to %" PetscInt_FMT " local %" PetscInt_FMT " global",n,N,v->map->n,v->map->N);
+  PetscCheck(!(v->map->n >= 0 || v->map->N >= 0) || !(v->map->n != n || v->map->N != N),PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot change/reset vector sizes to %" PetscInt_FMT " local %" PetscInt_FMT " global after previously setting them to %" PetscInt_FMT " local %" PetscInt_FMT " global",n,N,v->map->n,v->map->N);
   v->map->n = n;
   v->map->N = N;
   if (v->ops->create) {

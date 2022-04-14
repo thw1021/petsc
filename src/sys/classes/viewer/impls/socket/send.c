@@ -139,7 +139,7 @@ PetscErrorCode  PetscOpenSocket(const char hostname[],int portnum,int *t)
         sleep((unsigned) 1);
       } else if (errno == ECONNREFUSED) {
         refcnt++;
-        PetscCheckFalse(refcnt > 5,PETSC_COMM_SELF,PETSC_ERR_SYS,"Connection refused by remote host %s port %d",hostname,portnum);
+        PetscCheck(refcnt <= 5,PETSC_COMM_SELF,PETSC_ERR_SYS,"Connection refused by remote host %s port %d",hostname,portnum);
         PetscCall(PetscInfo(NULL,"Connection refused in attaching socket, trying again\n"));
         sleep((unsigned) 1);
       } else {
@@ -319,7 +319,7 @@ static PetscErrorCode PetscViewerSetFromOptions_Socket(PetscOptionItems *PetscOp
        These options are not processed here, they are processed in PetscViewerSocketSetConnection(), they
     are listed here for the GUI to display
   */
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Socket PetscViewer Options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Socket PetscViewer Options");
   PetscCall(PetscOptionsGetenv(PetscObjectComm((PetscObject)v),"PETSC_VIEWER_SOCKET_PORT",sdef,16,&tflg));
   if (tflg) {
     PetscCall(PetscOptionsStringToInt(sdef,&def));
@@ -331,7 +331,7 @@ static PetscErrorCode PetscViewerSetFromOptions_Socket(PetscOptionItems *PetscOp
   if (!tflg) {
     PetscCall(PetscGetHostName(sdef,sizeof(sdef)));
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 

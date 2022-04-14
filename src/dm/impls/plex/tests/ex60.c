@@ -35,7 +35,6 @@ int main(int argc, char **argv) {
   DMLabel         bdLabel = NULL, rgLabel = NULL;
   MPI_Comm        comm;
   PetscBool       uniform = PETSC_FALSE, isotropic = PETSC_FALSE, noTagging = PETSC_FALSE;
-  PetscErrorCode  ierr;
   PetscInt        dim;
   PetscReal       scaling = 1.0;
   Vec             metric;
@@ -43,9 +42,9 @@ int main(int argc, char **argv) {
   /* Set up */
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   comm = PETSC_COMM_WORLD;
-  ierr = PetscOptionsBegin(comm, "", "Mesh adaptation options", "DMPLEX");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "Mesh adaptation options", "DMPLEX");
   PetscCall(PetscOptionsBool("-noTagging", "Should tag preservation testing be turned off?", "ex60.c", noTagging, &noTagging, NULL));
-  ierr = PetscOptionsEnd();
+  PetscOptionsEnd();
 
   /* Create box mesh */
   PetscCall(DMCreate(comm, &dm));
@@ -178,7 +177,7 @@ int main(int argc, char **argv) {
     PetscCall(VecNorm(metricComb, NORM_2, &errornorm));
     errornorm /= norm;
     PetscCall(PetscPrintf(comm, "Metric average L2 error: %.4f%%\n", 100*errornorm));
-    PetscCheckFalse(errornorm > tol,comm, PETSC_ERR_ARG_OUTOFRANGE, "Metric average test failed");
+    PetscCheck(errornorm <= tol,comm, PETSC_ERR_ARG_OUTOFRANGE, "Metric average test failed");
     PetscCall(VecDestroy(&metricComb));
 
     /* Test metric intersection */
@@ -188,7 +187,7 @@ int main(int argc, char **argv) {
       PetscCall(VecNorm(metricComb, NORM_2, &errornorm));
       errornorm /= norm;
       PetscCall(PetscPrintf(comm, "Metric intersection L2 error: %.4f%%\n", 100*errornorm));
-      PetscCheckFalse(errornorm > tol,comm, PETSC_ERR_ARG_OUTOFRANGE, "Metric intersection test failed");
+      PetscCheck(errornorm <= tol,comm, PETSC_ERR_ARG_OUTOFRANGE, "Metric intersection test failed");
     }
     PetscCall(VecDestroy(&metric1));
     PetscCall(VecDestroy(&metric2));
@@ -207,12 +206,12 @@ int main(int argc, char **argv) {
       PetscCall(VecDestroy(&err));
       errornorm /= norm;
       PetscCall(PetscPrintf(comm, "Metric determinant L2 error: %.4f%%\n", 100*errornorm));
-      PetscCheckFalse(errornorm > tol,comm, PETSC_ERR_ARG_OUTOFRANGE, "Determinant is not unit");
+      PetscCheck(errornorm <= tol,comm, PETSC_ERR_ARG_OUTOFRANGE, "Determinant is not unit");
       PetscCall(VecAXPY(metric1, -1, metric));
       PetscCall(VecNorm(metric1, NORM_2, &errornorm));
       errornorm /= norm;
       PetscCall(PetscPrintf(comm, "Metric SPD enforcement L2 error: %.4f%%\n", 100*errornorm));
-      PetscCheckFalse(errornorm > tol,comm, PETSC_ERR_ARG_OUTOFRANGE, "Metric SPD enforcement test failed");
+      PetscCheck(errornorm <= tol,comm, PETSC_ERR_ARG_OUTOFRANGE, "Metric SPD enforcement test failed");
     }
     PetscCall(VecDestroy(&metric1));
     PetscCall(VecGetDM(determinant, &dmDet));
@@ -242,7 +241,7 @@ int main(int argc, char **argv) {
       PetscCall(VecNorm(metric2, NORM_2, &errornorm));
       errornorm /= norm;
       PetscCall(PetscPrintf(comm, "Metric normalization L2 error: %.4f%%\n", 100*errornorm));
-      PetscCheckFalse(errornorm > tol,comm, PETSC_ERR_ARG_OUTOFRANGE, "Metric normalization test failed");
+      PetscCheck(errornorm <= tol,comm, PETSC_ERR_ARG_OUTOFRANGE, "Metric normalization test failed");
     }
     PetscCall(VecCopy(metric1, metric));
     PetscCall(VecDestroy(&metric2));
@@ -267,7 +266,7 @@ int main(int argc, char **argv) {
     PetscCall(DMLabelHasStratum(bdLabel, 2, &hasTag));
     PetscCheck(hasTag,comm, PETSC_ERR_ARG_OUTOFRANGE, "Adapted mesh does not have face tag 2");
     PetscCall(DMLabelGetNumValues(bdLabel, &size));
-    PetscCheckFalse(size != 2,comm, PETSC_ERR_ARG_OUTOFRANGE, "Adapted mesh has the wrong number of face tags (got %d, expected 2)", size);
+    PetscCheck(size == 2,comm, PETSC_ERR_ARG_OUTOFRANGE, "Adapted mesh has the wrong number of face tags (got %d, expected 2)", size);
 
     PetscCall(DMGetLabel(dmAdapt, "Cell Sets", &rgLabel));
     PetscCall(DMLabelHasStratum(rgLabel, 3, &hasTag));
@@ -275,7 +274,7 @@ int main(int argc, char **argv) {
     PetscCall(DMLabelHasStratum(rgLabel, 4, &hasTag));
     PetscCheck(hasTag,comm, PETSC_ERR_ARG_OUTOFRANGE, "Adapted mesh does not have cell tag 4");
     PetscCall(DMLabelGetNumValues(rgLabel, &size));
-    PetscCheckFalse(size != 2,comm, PETSC_ERR_ARG_OUTOFRANGE, "Adapted mesh has the wrong number of cell tags (got %d, expected 2)", size);
+    PetscCheck(size == 2,comm, PETSC_ERR_ARG_OUTOFRANGE, "Adapted mesh has the wrong number of cell tags (got %d, expected 2)", size);
   }
 
   /* Clean up */

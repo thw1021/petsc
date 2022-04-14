@@ -36,7 +36,7 @@ static PetscErrorCode KSPSetUp_AGMRES(KSP ksp)
   PetscInt        lwork   = PetscMax(8 * N + 16, 4 * neig * (N - neig));
 
   PetscFunctionBegin;
-  PetscCheckFalse(ksp->pc_side == PC_SYMMETRIC,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"no symmetric preconditioning for KSPAGMRES");
+  PetscCheck(ksp->pc_side != PC_SYMMETRIC,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"no symmetric preconditioning for KSPAGMRES");
   N     = MAXKSPSIZE;
   /* Preallocate space during the call to KSPSetup_GMRES for the Krylov basis */
   agmres->q_preallocate = PETSC_TRUE; /* No allocation on the fly */
@@ -145,7 +145,7 @@ PetscErrorCode KSPComputeShifts_GMRES(KSP ksp)
   /* Now, compute the Shifts values */
   PetscCall(PetscMalloc2(max_k,&Rshift,max_k,&Ishift));
   PetscCall(KSPComputeEigenvalues(kspgmres, max_k, Rshift, Ishift, &m));
-  PetscCheckFalse(m < max_k,PetscObjectComm((PetscObject)ksp),PETSC_ERR_PLIB, "Unable to compute the Shifts for the Newton basis");
+  PetscCheck(m >= max_k,PetscObjectComm((PetscObject)ksp),PETSC_ERR_PLIB, "Unable to compute the Shifts for the Newton basis");
   else {
     PetscCall(KSPAGMRESLejaOrdering(Rshift, Ishift, agmres->Rshift, agmres->Ishift, max_k));
 
@@ -641,7 +641,7 @@ static PetscErrorCode KSPSetFromOptions_AGMRES(PetscOptionItems *PetscOptionsObj
 
   PetscFunctionBegin;
   PetscCall(KSPSetFromOptions_DGMRES(PetscOptionsObject,ksp));  /* Set common options from DGMRES and GMRES */
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"KSP AGMRES Options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"KSP AGMRES Options");
   PetscCall(PetscOptionsInt("-ksp_agmres_eigen", "Number of eigenvalues to deflate", "KSPDGMRESSetEigen", agmres->neig, &neig, &flg));
   if (flg) {
     PetscCall(KSPDGMRESSetEigen_DGMRES(ksp, neig));
@@ -654,7 +654,7 @@ static PetscErrorCode KSPSetFromOptions_AGMRES(PetscOptionItems *PetscOptionsObj
   PetscCall(PetscOptionsBool("-ksp_agmres_ritz", "Compute the Ritz vectors instead of the Harmonic Ritz vectors ", "KSPGMRESHarmonic",agmres->ritz,&agmres->ritz ,&flg));
   PetscCall(PetscOptionsReal("-ksp_agmres_MinRatio", "Relaxation parameter in the adaptive strategy; smallest multiple of the remaining number of steps allowed", "KSPGMRESSetMinRatio", agmres->smv, &agmres->smv, NULL));
   PetscCall(PetscOptionsReal("-ksp_agmres_MaxRatio", "Relaxation parameter in the adaptive strategy; Largest multiple of the remaining number of steps allowed", "KSPGMRESSetMaxRatio",agmres->bgv,&agmres->bgv, &flg));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 

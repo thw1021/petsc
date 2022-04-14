@@ -96,7 +96,7 @@ static PetscErrorCode PCApply_SAVIENNACL(PC pc,Vec x,Vec y)
   /*how to apply a certain fixed number of iterations?*/
   PetscCall(PetscObjectTypeCompare((PetscObject)x,VECSEQVIENNACL,&flg1));
   PetscCall(PetscObjectTypeCompare((PetscObject)y,VECSEQVIENNACL,&flg2));
-  PetscCheckFalse(!(flg1 && flg2),PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP, "Currently only handles ViennaCL vectors");
+  PetscCheck((flg1 && flg2),PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP, "Currently only handles ViennaCL vectors");
   if (!sac->SAVIENNACL) {
     PetscCall(PCSetUp_SAVIENNACL(pc));
   }
@@ -148,8 +148,8 @@ static PetscErrorCode PCDestroy_SAVIENNACL(PC pc)
 static PetscErrorCode PCSetFromOptions_SAVIENNACL(PetscOptionItems *PetscOptionsObject,PC pc)
 {
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"SAVIENNACL options"));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadBegin(PetscOptionsObject,"SAVIENNACL options");
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 

@@ -25,7 +25,6 @@ int main(int argc,char **args)
 {
   Mat            A,A_save,B,C,P,C1,R;
   PetscViewer    viewer;
-  PetscErrorCode ierr;
   PetscMPIInt    size,rank;
   PetscInt       i,j,*idxn,PM,PN = PETSC_DECIDE,rstart,rend;
   PetscReal      norm;
@@ -46,7 +45,7 @@ int main(int argc,char **args)
   PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD,&rank));
 
   /*  Load the matrices A_save and B */
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"","","");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,"","","");
   PetscCall(PetscOptionsBool("-test_rart","Test MatRARt","",Test_MatRARt,&Test_MatRARt,NULL));
   PetscCall(PetscOptionsInt("-PN","Number of columns of P","",PN,&PN,NULL));
   PetscCall(PetscOptionsInt("-mcheck","Number of matmult checks","",mcheck,&mcheck,NULL));
@@ -55,7 +54,7 @@ int main(int argc,char **args)
   PetscCall(PetscOptionsString("-fB","Path for matrix B","",file[1],file[1],sizeof(file[1]),&flg));
   PetscCall(PetscOptionsFList("-A_mat_type","Matrix type","MatSetType",MatList,deft,A_mattype,256,&flgA));
   PetscCall(PetscOptionsFList("-B_mat_type","Matrix type","MatSetType",MatList,deft,B_mattype,256,&flgB));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD,file[0],FILE_MODE_READ,&viewer));
   PetscCall(MatCreate(PETSC_COMM_WORLD,&A_save));
@@ -204,7 +203,7 @@ int main(int argc,char **args)
       /* Compare P^T*B and R*B */
       PetscCall(MatMatMult(R,B,MAT_INITIAL_MATRIX,PETSC_DEFAULT,&C1));
       PetscCall(MatNormDifference(C,C1,&norm));
-      PetscCheckFalse(norm > PETSC_SMALL,PETSC_COMM_WORLD,PETSC_ERR_PLIB,"Error in MatTransposeMatMult(): %g",(double)norm);
+      PetscCheck(norm <= PETSC_SMALL,PETSC_COMM_WORLD,PETSC_ERR_PLIB,"Error in MatTransposeMatMult(): %g",(double)norm);
       PetscCall(MatDestroy(&C1));
 
       /* Test MatDuplicate() of C=P^T*B */
@@ -232,7 +231,7 @@ int main(int argc,char **args)
       /* Check */
       PetscCall(MatMatMult(B,P,MAT_INITIAL_MATRIX,PETSC_DEFAULT,&C1));
       PetscCall(MatNormDifference(C,C1,&norm));
-      PetscCheckFalse(norm > PETSC_SMALL,PETSC_COMM_WORLD,PETSC_ERR_PLIB,"Error in MatMatTransposeMult() %g",(double)norm);
+      PetscCheck(norm <= PETSC_SMALL,PETSC_COMM_WORLD,PETSC_ERR_PLIB,"Error in MatMatTransposeMult() %g",(double)norm);
       PetscCall(MatDestroy(&C1));
       PetscCall(MatDestroy(&C));
     }
@@ -298,7 +297,7 @@ int main(int argc,char **args)
         PetscCall(MatRARt(A,R,MAT_REUSE_MATRIX,2.0,&RARt));
 
         PetscCall(MatNormDifference(C,RARt,&norm));
-        PetscCheckFalse(norm > PETSC_SMALL,PETSC_COMM_SELF,PETSC_ERR_PLIB,"|PtAP - RARt| = %g",(double)norm);
+        PetscCheck(norm <= PETSC_SMALL,PETSC_COMM_SELF,PETSC_ERR_PLIB,"|PtAP - RARt| = %g",(double)norm);
       } else {
         PetscCall(PetscPrintf(PETSC_COMM_WORLD,"MatRARt not supported\n"));
       }
@@ -456,7 +455,7 @@ int main(int argc,char **args)
      suffix: 14_mpiaijcusparse_seq_cpu
      nsize: 1
      requires: cuda !complex double !defined(PETSC_USE_64BIT_INDICES)
-     args: -A_mat_type mpiaijcusparse -B_mat_type mpiaijcusparse -mat_form_explicit_transpose -fA ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system -fB ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system -AB_mat_product_algorithm_backend_cpu -matmatmult_backend_cpu -PtAP_mat_product_algorithm_backend_cpu -matptap_backend_cpu
+     args: -A_mat_type mpiaijcusparse -B_mat_type mpiaijcusparse -mat_form_explicit_transpose -fA ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system -fB ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system -AB_mat_product_algorithm_backend_cpu -matmatmult_backend_cpu -PtAP_mat_product_algorithm_backend_cpu -matptap_backend_cpu -test_rart 0
      output_file: output/ex62_1.out
 
    test:
@@ -470,7 +469,7 @@ int main(int argc,char **args)
      suffix: 14_mpiaijcusparse_cpu
      nsize: 3
      requires: cuda !complex double !defined(PETSC_USE_64BIT_INDICES)
-     args: -A_mat_type mpiaijcusparse -B_mat_type mpiaijcusparse -mat_form_explicit_transpose -fA ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system -fB ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system -AB_mat_product_algorithm_backend_cpu -matmatmult_backend_cpu -PtAP_mat_product_algorithm_backend_cpu -matptap_backend_cpu
+     args: -A_mat_type mpiaijcusparse -B_mat_type mpiaijcusparse -mat_form_explicit_transpose -fA ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system -fB ${wPETSC_DIR}/share/petsc/datafiles/matrices/tiny_system -AB_mat_product_algorithm_backend_cpu -matmatmult_backend_cpu -PtAP_mat_product_algorithm_backend_cpu -matptap_backend_cpu -test_rart 0
      output_file: output/ex62_1.out
 
    test:

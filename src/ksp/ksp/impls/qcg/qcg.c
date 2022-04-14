@@ -22,7 +22,7 @@ PetscErrorCode  KSPQCGSetTrustRegionRadius(KSP ksp,PetscReal delta)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
-  PetscCheckFalse(delta < 0.0,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Tolerance must be non-negative");
+  PetscCheck(delta >= 0.0,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Tolerance must be non-negative");
   PetscTryMethod(ksp,"KSPQCGSetTrustRegionRadius_C",(KSP,PetscReal),(ksp,delta));
   PetscFunctionReturn(0);
 }
@@ -121,9 +121,9 @@ PetscErrorCode KSPSolve_QCG(KSP ksp)
   X        = ksp->vec_sol;
   B        = ksp->vec_rhs;
 
-  PetscCheckFalse(pcgP->delta <= dzero,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Input error: delta <= 0");
+  PetscCheck(pcgP->delta > dzero,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Input error: delta <= 0");
   PetscCall(KSPGetPCSide(ksp,&side));
-  PetscCheckFalse(side != PC_SYMMETRIC,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Requires symmetric preconditioner!");
+  PetscCheck(side == PC_SYMMETRIC,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Requires symmetric preconditioner!");
 
   /* Initialize variables */
   PetscCall(VecSet(W,0.0));  /* W = 0 */
@@ -320,10 +320,10 @@ PetscErrorCode KSPSetFromOptions_QCG(PetscOptionItems *PetscOptionsObject,KSP ks
   PetscBool      flg;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"KSP QCG Options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"KSP QCG Options");
   PetscCall(PetscOptionsReal("-ksp_qcg_trustregionradius","Trust Region Radius","KSPQCGSetTrustRegionRadius",cgP->delta,&delta,&flg));
   if (flg) PetscCall(KSPQCGSetTrustRegionRadius(ksp,delta));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 

@@ -444,7 +444,7 @@ PetscErrorCode VecWhichInactive(Vec VecLow, Vec V, Vec D, Vec VecHigh, PetscBool
 
   Level: advanced
 
-.seealso:  VecAXPY(), VecGetOwnershipRange()
+.seealso: VecISCopy(), VecISSet(), VecAXPY()
 @*/
 PetscErrorCode VecISAXPY(Vec vfull, IS is, PetscScalar alpha, Vec vreduced)
 {
@@ -470,7 +470,7 @@ PetscErrorCode VecISAXPY(Vec vfull, IS is, PetscScalar alpha, Vec vreduced)
     PetscCall(ISGetIndices(is,&id));
     PetscCall(ISGetLocalSize(is,&n));
     PetscCall(VecGetLocalSize(vreduced,&m));
-    PetscCheckFalse(m != n,PETSC_COMM_SELF,PETSC_ERR_SUP,"IS local length not equal to Vec local length");
+    PetscCheck(m == n,PETSC_COMM_SELF,PETSC_ERR_SUP,"IS local length not equal to Vec local length");
     PetscCall(VecGetOwnershipRange(vfull,&rstart,&rend));
     y   -= rstart;
     if (alpha == 1.0) {
@@ -515,7 +515,7 @@ PetscErrorCode VecISAXPY(Vec vfull, IS is, PetscScalar alpha, Vec vreduced)
 
   Level: advanced
 
-.seealso:  VecAXPY(), VecGetOwnershipRange()
+.seealso: VecISSet(), VecISAXPY(), VecCopy()
 @*/
 PetscErrorCode VecISCopy(Vec vfull, IS is, ScatterMode mode, Vec vreduced)
 {
@@ -542,7 +542,7 @@ PetscErrorCode VecISCopy(Vec vfull, IS is, ScatterMode mode, Vec vreduced)
     PetscCall(ISGetLocalSize(is, &n));
     PetscCall(VecGetLocalSize(vreduced, &m));
     PetscCall(VecGetOwnershipRange(vfull, &rstart, &rend));
-    PetscCheckFalse(m != n,PETSC_COMM_SELF, PETSC_ERR_SUP, "IS local length %" PetscInt_FMT " not equal to Vec local length %" PetscInt_FMT, n, m);
+    PetscCheck(m == n,PETSC_COMM_SELF, PETSC_ERR_SUP, "IS local length %" PetscInt_FMT " not equal to Vec local length %" PetscInt_FMT, n, m);
     if (mode == SCATTER_FORWARD) {
       PetscScalar       *y;
       const PetscScalar *x;
@@ -617,7 +617,7 @@ PetscErrorCode ISComplementVec(IS S, Vec V, IS *T)
 
    Level: advanced
 
-.seealso: VecSet(), VecGetOwnershipRange()
+.seealso: VecISCopy(), VecISAXPY(), VecSet()
 @*/
 PetscErrorCode VecISSet(Vec V,IS S, PetscScalar c)
 {
@@ -867,7 +867,7 @@ PetscErrorCode VecStepMax(Vec X, Vec DX, PetscReal *step)
   PetscCall(VecGetArrayRead(X,&xx));
   PetscCall(VecGetArrayRead(DX,&dx));
   for (i=0;i<nn;++i) {
-    PetscCheckFalse(PetscRealPart(xx[i]) < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Vector must be positive");
+    PetscCheck(PetscRealPart(xx[i]) >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Vector must be positive");
     else if (PetscRealPart(dx[i])<0) stepmax=PetscMin(stepmax,PetscRealPart(-xx[i]/dx[i]));
   }
   PetscCall(VecRestoreArrayRead(X,&xx));

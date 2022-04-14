@@ -121,16 +121,15 @@ int main(int argc, char **argv)
   PetscRandom    randCtx;
   PetscInt       dim, dimC, isSimplex, isFE, numTests = 10;
   PetscReal      perturb = 0.1, tol = 10. * PETSC_SMALL;
-  PetscErrorCode ierr;
 
   PetscCall(PetscInitialize(&argc,&argv,NULL,help));
   PetscCall(PetscRandomCreate(PETSC_COMM_SELF,&randCtx));
   PetscCall(PetscRandomSetInterval(randCtx,-1.,1.));
   PetscCall(PetscRandomSetFromOptions(randCtx));
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"ex21",NULL);PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"ex21",NULL);
   PetscCall(PetscOptionsReal("-vertex_perturbation","scale of random vertex distortion",NULL,perturb,&perturb,NULL));
   PetscCall(PetscOptionsBoundedInt("-num_test_points","number of points to test",NULL,numTests,&numTests,NULL,0));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   for (dim = 1; dim <= 3; dim++) {
     for (dimC = dim; dimC <= PetscMin(3,dim + 1); dimC++) {
       for (isSimplex = 0; isSimplex < 2; isSimplex++) {
@@ -186,7 +185,7 @@ int main(int argc, char **argv)
               PetscInt nDof;
 
               PetscCall(PetscSectionGetDof(sec,p,&nDof));
-              PetscCheckFalse(nDof % dim,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Coordinate section point %D has %D dofs != 0 mod %D",p,nDof,dim);
+              PetscCheck(nDof % dim == 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Coordinate section point %D has %D dofs != 0 mod %D",p,nDof,dim);
               PetscCall(PetscSectionSetDof(newSec,p,(nDof/dim)*dimC));
               PetscCall(PetscSectionSetFieldDof(newSec,p,0,(nDof/dim)*dimC));
             }

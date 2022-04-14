@@ -57,8 +57,8 @@ static PetscErrorCode PetscViewerView_ExodusII(PetscViewer v, PetscViewer viewer
 static PetscErrorCode PetscViewerSetFromOptions_ExodusII(PetscOptionItems *PetscOptionsObject, PetscViewer v)
 {
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject, "ExodusII PetscViewer Options"));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadBegin(PetscOptionsObject, "ExodusII PetscViewer Options");
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -127,7 +127,7 @@ static PetscErrorCode PetscViewerFileSetName_ExodusII(PetscViewer viewer, const 
   EXO_mode += EX_ALL_INT64_API;
   #endif
   exo->exoid = ex_open_par(name,EXO_mode,&CPU_word_size,&IO_word_size,&EXO_version,PETSC_COMM_WORLD,mpi_info);
-  PetscCheckFalse(exo->exoid < 0,PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_open_par failed for %s", name);
+  PetscCheck(exo->exoid >= 0,PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_open_par failed for %s", name);
   PetscFunctionReturn(0);
 }
 
@@ -333,8 +333,6 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
   PetscInt        nodesTetP2[4]  = {4,6,0,0};
   PetscInt        nodesHexP1[4]  = {8,0,0,0};
   PetscInt        nodesHexP2[4]  = {8,12,6,1};
-  PetscErrorCode  ierr;
-
   int             CPU_word_size, IO_word_size, EXO_mode;
   float           EXO_version;
 
@@ -367,7 +365,7 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
         CPU_word_size = sizeof(PetscReal);
         IO_word_size  = sizeof(PetscReal);
         exo->exoid = ex_create(exo->filename, EXO_mode, &CPU_word_size, &IO_word_size);
-        PetscCheckFalse(exo->exoid < 0,PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_create failed for %s", exo->filename);
+        PetscCheck(exo->exoid >= 0,PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_create failed for %s", exo->filename);
 
       break;
     default:
@@ -669,9 +667,7 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
         elem_list_size += fsSize;
         PetscCall(ISDestroy(&stratumIS));
       }
-      ierr = PetscMalloc3(num_fs, &elem_ind,
-                          elem_list_size, &elem_list,
-                          elem_list_size, &side_list);PetscCall(ierr);
+      PetscCall(PetscMalloc3(num_fs, &elem_ind,elem_list_size, &elem_list,elem_list_size, &side_list));
       elem_ind[0] = 0;
       for (fs=0; fs<num_fs; ++fs) {
         PetscCall(DMLabelGetStratumIS(fsLabel, fsIdx[fs], &stratumIS));
@@ -745,7 +741,7 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
   CPU_word_size = sizeof(PetscReal);
   IO_word_size  = sizeof(PetscReal);
   exo->exoid = ex_open_par(exo->filename,EXO_mode,&CPU_word_size,&IO_word_size,&EXO_version,comm,MPI_INFO_NULL);
-  PetscCheckFalse(exo->exoid < 0,PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_open_par failed for %s", exo->filename);
+  PetscCheck(exo->exoid >= 0,PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_open_par failed for %s", exo->filename);
   PetscFunctionReturn(0);
 }
 
@@ -1325,7 +1321,7 @@ PetscErrorCode DMPlexCreateExodusFromFile(MPI_Comm comm, const char filename[], 
 #if defined(PETSC_HAVE_EXODUSII)
   if (rank == 0) {
     exoid = ex_open(filename, EX_READ, &CPU_word_size, &IO_word_size, &version);
-    PetscCheckFalse(exoid <= 0,PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_open(\"%s\",...) did not return a valid file ID", filename);
+    PetscCheck(exoid > 0,PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_open(\"%s\",...) did not return a valid file ID", filename);
   }
   PetscCall(DMPlexCreateExodus(comm, exoid, interpolate, dm));
   if (rank == 0) {PetscStackCallStandard(ex_close,exoid);}
@@ -1602,12 +1598,12 @@ PetscErrorCode DMPlexCreateExodus(MPI_Comm comm, PetscInt exoid, PetscBool inter
         PetscInt       faceSize = fs_vertex_count_list[f], numFaces;
         PetscInt       faceVertices[4], v;
 
-        PetscCheckFalse(faceSize > 4,comm, PETSC_ERR_ARG_WRONG, "ExodusII side cannot have %d > 4 vertices", faceSize);
+        PetscCheck(faceSize <= 4,comm, PETSC_ERR_ARG_WRONG, "ExodusII side cannot have %d > 4 vertices", faceSize);
         for (v = 0; v < faceSize; ++v, ++voff) {
           faceVertices[v] = fs_vertex_list[voff]+numCells-1;
         }
         PetscCall(DMPlexGetFullJoin(*dm, faceSize, faceVertices, &numFaces, &faces));
-        PetscCheckFalse(numFaces != 1,comm, PETSC_ERR_ARG_WRONG, "Invalid ExodusII side %d in set %d maps to %d faces", f, fs, numFaces);
+        PetscCheck(numFaces == 1,comm, PETSC_ERR_ARG_WRONG, "Invalid ExodusII side %d in set %d maps to %d faces", f, fs, numFaces);
         PetscCall(DMSetLabelValue_Fast(*dm, &faceSets, "Face Sets", faces[0], fs_id[fs]));
         /* Only add the label if one has been detected for this side set. */
         if (!fs_name_err) {

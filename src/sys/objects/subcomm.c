@@ -23,14 +23,13 @@ static PetscErrorCode PetscSubcommCreate_interlaced(PetscSubcomm);
 @*/
 PetscErrorCode PetscSubcommSetFromOptions(PetscSubcomm psubcomm)
 {
-  PetscErrorCode   ierr;
   PetscSubcommType type;
   PetscBool        flg;
 
   PetscFunctionBegin;
   PetscCheck(psubcomm,PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"Must call PetscSubcommCreate firt");
 
-  ierr = PetscOptionsBegin(psubcomm->parent,psubcomm->subcommprefix,"Options for PetscSubcomm",NULL);PetscCall(ierr);
+  PetscOptionsBegin(psubcomm->parent,psubcomm->subcommprefix,"Options for PetscSubcomm",NULL);
   PetscCall(PetscOptionsEnum("-psubcomm_type",NULL,NULL,PetscSubcommTypes,(PetscEnum)psubcomm->type,(PetscEnum*)&type,&flg));
   if (flg && psubcomm->type != type) {
     /* free old structures */
@@ -55,7 +54,7 @@ PetscErrorCode PetscSubcommSetFromOptions(PetscSubcomm psubcomm)
   if (flg) {
     PetscCall(PetscSubcommView(psubcomm,PETSC_VIEWER_STDOUT_(psubcomm->parent)));
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -169,7 +168,7 @@ PetscErrorCode  PetscSubcommSetType(PetscSubcomm psubcomm,PetscSubcommType subco
 {
   PetscFunctionBegin;
   PetscCheck(psubcomm,PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"PetscSubcomm is not created. Call PetscSubcommCreate()");
-  PetscCheckFalse(psubcomm->n < 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"number of subcommunicators %d is incorrect. Call PetscSubcommSetNumber()",psubcomm->n);
+  PetscCheck(psubcomm->n >= 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"number of subcommunicators %d is incorrect. Call PetscSubcommSetNumber()",psubcomm->n);
 
   if (subcommtype == PETSC_SUBCOMM_CONTIGUOUS) {
     PetscCall(PetscSubcommCreate_contiguous(psubcomm));
@@ -201,7 +200,7 @@ PetscErrorCode PetscSubcommSetTypeGeneral(PetscSubcomm psubcomm,PetscMPIInt colo
 
   PetscFunctionBegin;
   PetscCheck(psubcomm,PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"PetscSubcomm is not created. Call PetscSubcommCreate()");
-  PetscCheckFalse(nsubcomm < 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"number of subcommunicators %d is incorrect. Call PetscSubcommSetNumber()",nsubcomm);
+  PetscCheck(nsubcomm >= 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"number of subcommunicators %d is incorrect. Call PetscSubcommSetNumber()",nsubcomm);
 
   PetscCallMPI(MPI_Comm_split(comm,color,subrank,&subcomm));
 

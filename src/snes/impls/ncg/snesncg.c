@@ -37,7 +37,7 @@ static PetscErrorCode SNESSetUp_NCG(SNES snes)
 {
   PetscFunctionBegin;
   PetscCall(SNESSetWorkVecs(snes,2));
-  PetscCheckFalse(snes->npcside== PC_RIGHT,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE, "SNESNCG only supports left preconditioning");
+  PetscCheck(snes->npcside!= PC_RIGHT,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE, "SNESNCG only supports left preconditioning");
   if (snes->functype == SNES_FUNCTION_DEFAULT) snes->functype = SNES_FUNCTION_UNPRECONDITIONED;
   PetscFunctionReturn(0);
 }
@@ -125,14 +125,14 @@ static PetscErrorCode SNESSetFromOptions_NCG(PetscOptionItems *PetscOptionsObjec
   SNESLineSearch linesearch;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"SNES NCG options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"SNES NCG options");
   PetscCall(PetscOptionsBool("-snes_ncg_monitor","Monitor the beta values used in the NCG iterations","SNES",ncg->monitor ? PETSC_TRUE : PETSC_FALSE, &debug, NULL));
   if (debug) {
     ncg->monitor = PETSC_VIEWER_STDOUT_(PetscObjectComm((PetscObject)snes));
   }
   PetscCall(PetscOptionsEnum("-snes_ncg_type","NCG Beta type used","SNESNCGSetType",SNESNCGTypes,(PetscEnum)ncg->type,(PetscEnum*)&ncgtype,NULL));
   PetscCall(SNESNCGSetType(snes, ncgtype));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   if (!snes->linesearch) {
     PetscCall(SNESGetLineSearch(snes, &linesearch));
     if (!((PetscObject)linesearch)->type_name) {

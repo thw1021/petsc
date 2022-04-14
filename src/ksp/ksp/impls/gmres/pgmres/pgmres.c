@@ -206,7 +206,7 @@ static PetscErrorCode KSPSolve_PGMRES(KSP ksp)
   PetscBool      guess_zero = ksp->guess_zero;
 
   PetscFunctionBegin;
-  PetscCheckFalse(ksp->calc_sings && !pgmres->Rsvd,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ORDER,"Must call KSPSetComputeSingularValues() before KSPSetUp() is called");
+  PetscCheck(!ksp->calc_sings || pgmres->Rsvd,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ORDER,"Must call KSPSetComputeSingularValues() before KSPSetUp() is called");
   PetscCall(PetscObjectSAWsTakeAccess((PetscObject)ksp));
   ksp->its = 0;
   PetscCall(PetscObjectSAWsGrantAccess((PetscObject)ksp));
@@ -417,8 +417,8 @@ PetscErrorCode KSPSetFromOptions_PGMRES(PetscOptionItems *PetscOptionsObject,KSP
 {
   PetscFunctionBegin;
   PetscCall(KSPSetFromOptions_GMRES(PetscOptionsObject,ksp));
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"KSP pipelined GMRES Options"));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadBegin(PetscOptionsObject,"KSP pipelined GMRES Options");
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 

@@ -57,7 +57,7 @@ FILE                      *PetscInfoFile = NULL;
 PetscErrorCode PetscInfoEnabled(PetscClassId classid, PetscBool *enabled)
 {
   PetscFunctionBegin;
-  PetscCheckFalse(classid < PETSC_SMALLEST_CLASSID,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Classid (current: %d) must be equal to or greater than PETSC_SMALLEST_CLASSID", classid);
+  PetscCheck(classid >= PETSC_SMALLEST_CLASSID,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Classid (current: %d) must be equal to or greater than PETSC_SMALLEST_CLASSID", classid);
   *enabled = (PetscBool) (PetscLogPrintInfo && PetscInfoFlags[classid - PETSC_SMALLEST_CLASSID]);
   PetscFunctionReturn(0);
 }
@@ -429,7 +429,7 @@ PetscErrorCode PetscInfoDestroy(void)
     PetscCall(PetscFClose(MPI_COMM_SELF, PetscInfoFile));
   }
   PetscCall(PetscFree(PetscInfoFilename));
-  for (i=0; i<sizeof(PetscInfoFlags)/sizeof(PetscInfoFlags[0]); i++) PetscInfoFlags[i] = 1;
+  for (i=0; i<PETSC_STATIC_ARRAY_LENGTH(PetscInfoFlags); i++) PetscInfoFlags[i] = 1;
   PetscInfoClassesLocked = PETSC_FALSE;
   PetscInfoInvertClasses = PETSC_FALSE;
   PetscInfoClassesSet = PETSC_FALSE;

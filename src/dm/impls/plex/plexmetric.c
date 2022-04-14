@@ -8,13 +8,12 @@ PetscErrorCode DMPlexMetricSetFromOptions(DM dm)
   MPI_Comm       comm;
   PetscBool      isotropic = PETSC_FALSE, uniform = PETSC_FALSE, restrictAnisotropyFirst = PETSC_FALSE;
   PetscBool      noInsert = PETSC_FALSE, noSwap = PETSC_FALSE, noMove = PETSC_FALSE, noSurf = PETSC_FALSE;
-  PetscErrorCode ierr;
   PetscInt       verbosity = -1, numIter = 3;
   PetscReal      h_min = 1.0e-30, h_max = 1.0e+30, a_max = 1.0e+05, p = 1.0, target = 1000.0, beta = 1.3, hausd = 0.01;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject) dm, &comm));
-  ierr = PetscOptionsBegin(comm, "", "Riemannian metric options", "DMPlexMetric");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "Riemannian metric options", "DMPlexMetric");
   PetscCall(PetscOptionsBool("-dm_plex_metric_isotropic", "Is the metric isotropic?", "DMPlexMetricCreateIsotropic", isotropic, &isotropic, NULL));
   PetscCall(DMPlexMetricSetIsotropic(dm, isotropic));
   PetscCall(PetscOptionsBool("-dm_plex_metric_uniform", "Is the metric uniform?", "DMPlexMetricCreateUniform", uniform, &uniform, NULL));
@@ -47,7 +46,7 @@ PetscErrorCode DMPlexMetricSetFromOptions(DM dm)
   PetscCall(DMPlexMetricSetGradationFactor(dm, beta));
   PetscCall(PetscOptionsReal("-dm_plex_metric_hausdorff_number", "Metric Hausdorff number", "DMAdaptMetric", hausd, &hausd, NULL));
   PetscCall(DMPlexMetricSetHausdorffNumber(dm, hausd));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -450,7 +449,7 @@ PetscErrorCode DMPlexMetricSetMinimumMagnitude(DM dm, PetscReal h_min)
     PetscCall(PetscNew(&plex->metricCtx));
     PetscCall(DMPlexMetricSetFromOptions(dm));
   }
-  PetscCheckFalse(h_min <= 0.0,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Metric magnitudes must be positive, not %.4e", h_min);
+  PetscCheck(h_min > 0.0,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Metric magnitudes must be positive, not %.4e", h_min);
   plex->metricCtx->h_min = h_min;
   PetscFunctionReturn(0);
 }
@@ -501,7 +500,7 @@ PetscErrorCode DMPlexMetricSetMaximumMagnitude(DM dm, PetscReal h_max)
     PetscCall(PetscNew(&plex->metricCtx));
     PetscCall(DMPlexMetricSetFromOptions(dm));
   }
-  PetscCheckFalse(h_max <= 0.0,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Metric magnitudes must be positive, not %.4e", h_max);
+  PetscCheck(h_max > 0.0,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Metric magnitudes must be positive, not %.4e", h_max);
   plex->metricCtx->h_max = h_max;
   PetscFunctionReturn(0);
 }
@@ -554,7 +553,7 @@ PetscErrorCode DMPlexMetricSetMaximumAnisotropy(DM dm, PetscReal a_max)
     PetscCall(PetscNew(&plex->metricCtx));
     PetscCall(DMPlexMetricSetFromOptions(dm));
   }
-  PetscCheckFalse(a_max < 1.0,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Anisotropy must be at least one, not %.4e", a_max);
+  PetscCheck(a_max >= 1.0,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Anisotropy must be at least one, not %.4e", a_max);
   plex->metricCtx->a_max = a_max;
   PetscFunctionReturn(0);
 }
@@ -605,7 +604,7 @@ PetscErrorCode DMPlexMetricSetTargetComplexity(DM dm, PetscReal targetComplexity
     PetscCall(PetscNew(&plex->metricCtx));
     PetscCall(DMPlexMetricSetFromOptions(dm));
   }
-  PetscCheckFalse(targetComplexity <= 0.0,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Metric complexity must be positive");
+  PetscCheck(targetComplexity > 0.0,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Metric complexity must be positive");
   plex->metricCtx->targetComplexity = targetComplexity;
   PetscFunctionReturn(0);
 }
@@ -656,7 +655,7 @@ PetscErrorCode DMPlexMetricSetNormalizationOrder(DM dm, PetscReal p)
     PetscCall(PetscNew(&plex->metricCtx));
     PetscCall(DMPlexMetricSetFromOptions(dm));
   }
-  PetscCheckFalse(p < 1.0,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Normalization order must be one or greater");
+  PetscCheck(p >= 1.0,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Normalization order must be one or greater");
   plex->metricCtx->p = p;
   PetscFunctionReturn(0);
 }
@@ -1412,7 +1411,7 @@ PetscErrorCode DMPlexMetricNormalize(DM dm, Vec metricIn, PetscBool restrictSize
     PetscCall(DMPlexComputeIntegralFEM(dmDet, determinant, &integral, NULL));
   }
   realIntegral = PetscRealPart(integral);
-  PetscCheckFalse(realIntegral < 1.0e-30,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Global metric normalization factor should be strictly positive, not %.4e Is the input metric positive-definite?", realIntegral);
+  PetscCheck(realIntegral >= 1.0e-30,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Global metric normalization factor should be strictly positive, not %.4e Is the input metric positive-definite?", realIntegral);
   factGlob = PetscPowReal(target/realIntegral, 2.0/dim);
 
   /* Apply local scaling */
@@ -1421,7 +1420,7 @@ PetscErrorCode DMPlexMetricNormalize(DM dm, Vec metricIn, PetscBool restrictSize
     PetscCall(DMPlexMetricGetMaximumMagnitude(dm, &h_max));
     h_min = PetscMax(h_min, 1.0e-30);
     h_max = PetscMin(h_max, 1.0e+30);
-    PetscCheckFalse(h_min >= h_max,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Incompatible min/max metric magnitudes (%.4e not smaller than %.4e)", h_min, h_max);
+    PetscCheck(h_min < h_max,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Incompatible min/max metric magnitudes (%.4e not smaller than %.4e)", h_min, h_max);
   }
   if (restrictAnisotropy && !restrictAnisotropyFirst) {
     PetscCall(DMPlexMetricGetMaximumAnisotropy(dm, &a_max));
@@ -1733,7 +1732,7 @@ PetscErrorCode DMPlexMetricIntersection(DM dm, PetscInt numMetrics, Vec metrics[
   PetscCall(VecGetSize(*metricInt, &m));
   for (i = 0; i < numMetrics; ++i) {
     PetscCall(VecGetSize(metrics[i], &n));
-    PetscCheckFalse(m != n,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Intersecting different metric types not implemented");
+    PetscCheck(m == n,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Intersecting different metric types not implemented");
   }
 
   /* Intersect subsequent metrics in turn */
