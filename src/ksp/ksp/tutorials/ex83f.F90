@@ -1,13 +1,17 @@
 !
-!     Creates a tridiagonal sparse matrix explicitly in Fortran with the CSR format
-!     Solves a linear system with it
+!     Creates a tridiagonal sparse matrix explicitly in Fortran and solves a linear system with it
+!
+!     The matrix is provided in two sparse formats
+!       Compressed sparse row: ia(), ja(), and a()
+!       Entry triples:  rows(), cols(), and a()
+!
       program main
 #include <petsc/finclude/petscksp.h>
       use petscksp
       implicit none
 
       PetscInt i,n,nz
-      PetscBool flg
+      PetscBool flg,equal
       PetscErrorCode ierr
       PetscInt,ALLOCATABLE :: ia(:)
       PetscInt,ALLOCATABLE :: ja(:)
@@ -15,7 +19,10 @@
       PetscScalar,ALLOCATABLE :: x(:)
       PetscScalar,ALLOCATABLE :: b(:)
 
-      Mat J
+      PetscInt,ALLOCATABLE :: rows(:)
+      PetscInt,ALLOCATABLE :: cols(:)
+
+      Mat J,Jt
       Vec rhs,solution
       KSP ksp
       PC pc
@@ -30,6 +37,7 @@
 
 !     Fill the sparse matrix representation
       ALLOCATE (ia(n+1),ja(nz),a(nz))
+      ALLOCATE (rows(nz),cols(nz))
 
       do i=1,n
         b(i) = 1.0
@@ -44,19 +52,31 @@
       ia(n+1) = ia(n) + 1
 
       ja(1) = 0
+      rows(1) = 0; cols(1) = 0
       a(1)  = 1.0
       do i=2,n-1
          ja(2+3*(i-2))   = i-2
+         rows(2+3*(i-2)) = i-1; cols(2+3*(i-2)) = i-2
          a(2+3*(i-2))    = -1.0;
          ja(2+3*(i-2)+1) = i-1
+         rows(2+3*(i-2)+1) = i-1; cols(2+3*(i-2)+1) = i-1
          a(2+3*(i-2)+1)  = 2.0;
          ja(2+3*(i-2)+2) = i
+         rows(2+3*(i-2)+2) = i-1; cols(2+3*(i-2)+2) = i
          a(2+3*(i-2)+2)  = -1.0;
       enddo
       ja(nz) = n-1
+      rows(nz) = n-1; cols(nz) = n-1
       a(nz) = 1.0
 
       call MatCreateSeqAIJWithArrays(PETSC_COMM_SELF,n,n,ia,ja,a,J,ierr);CHKERRA(ierr);
+      call MatCreateSeqAIJFromTriple(PETSC_COMM_SELF,n,n,rows,cols,a,Jt,nz,PETSC_FALSE,ierr);CHKERRA(ierr);
+      call MatEqual(J,Jt,equal,ierr);CHKERRA(ierr);
+      if (equal .neqv. PETSC_TRUE) then
+         SETERRA(PETSC_COMM_SELF,PETSC_ERR_PLIB,'Matrices should be equal')
+      endif
+      call MatDestroy(Jt,ierr);CHKERRA(ierr);
+
       call VecCreateSeqWithArray(PETSC_COMM_SELF,1,n,b,rhs,ierr);CHKERRA(ierr);
       call VecCreateSeqWithArray(PETSC_COMM_SELF,1,n,x,solution,ierr);CHKERRA(ierr);
 
