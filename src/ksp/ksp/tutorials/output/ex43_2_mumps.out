@@ -54,6 +54,7 @@ PC Object: (stokes_) 1 MPI processes
                 ICNTL(12) (efficiency control):                         1 
                 ICNTL(13) (sequential factorization of the root node):  0 
                 ICNTL(14) (percentage of estimated workspace increase): 20 
+                ICNTL(15) (compression of the input matrix):            -2 
                 ICNTL(18) (input mat struct):                           0 
                 ICNTL(19) (Schur complement info):                      0 
                 ICNTL(20) (RHS sparse pattern):                         0 

@@ -3,12 +3,12 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.version          = '5.4.1'
+    self.version          = '5.5.0'
     self.minversion       = '5.2.1'
     self.versionname      = 'MUMPS_VERSION'
     self.requiresversion  = 1
-    self.gitcommit        = 'v'+self.version+'-p1'
-    self.download         = ['git://https://bitbucket.org/petsc/pkg-mumps.git',
+    self.gitcommit        = 'v'+self.version
+    self.download         = ['http://mumps.enseeiht.fr/MUMPS_'+self.version+'.tar.gz',
                              'https://bitbucket.org/petsc/pkg-mumps/get/'+self.gitcommit+'.tar.gz']
     self.downloaddirnames = ['petsc-pkg-mumps','MUMPS']
     self.liblist          = [['libcmumps.a','libdmumps.a','libsmumps.a','libzmumps.a','libmumps_common.a','libpord.a'],
