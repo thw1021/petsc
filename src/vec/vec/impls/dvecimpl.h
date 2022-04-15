@@ -12,7 +12,7 @@
 #include <petsc/private/vecimpl.h>
 
 typedef struct {
-  VECHEADER
+  VECHEADER;
 } Vec_Seq;
 
 PETSC_INTERN PetscErrorCode VecMDot_Seq(Vec,PetscInt,const Vec[],PetscManagedScalar,PetscDeviceContext);
@@ -54,5 +54,4 @@ PETSC_INTERN PetscErrorCode VecPointwiseDivide_Seq(Vec,Vec,Vec,PetscDeviceContex
 
 PETSC_EXTERN PetscErrorCode VecCreate_Seq(Vec);
 PETSC_INTERN PetscErrorCode VecCreate_Seq_Private(Vec,const PetscScalar[],PetscDeviceContext);
-
 #endif

@@ -4,16 +4,13 @@
 */
 #include <../src/vec/vec/impls/mpi/pvecimpl.h>
 #include <petscblaslapack.h>
+#include <petsc/private/deviceimpl.h>
 
 static PetscErrorCode VecMXDot_MPI(Vec xin, PetscInt nv, const Vec y[], PetscManagedScalar z, PetscDeviceContext dctx, PetscErrorCode (*VecMXDot_SeqFn)(Vec,PetscInt,const Vec[],PetscManagedScalar,PetscDeviceContext))
 {
-  PetscScalar    awork[128],*work = awork;
-
   PetscFunctionBegin;
-  if (nv > 128) PetscCall(PetscMalloc1(nv,&work));
-  PetscCall(VecMXDot_SeqFn(xin,nv,y,PetscManagedScalarCreate(work),dctx));
-  PetscCall(MPIU_Allreduce(work,z.ptr,nv,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)xin)));
-  if (nv > 128) PetscCall(PetscFree(work));
+  PetscCall(VecMXDot_SeqFn(xin,nv,y,z,dctx));
+  PetscCall(PetscDeviceContextAllReduceManagedScalar_Internal(dctx,z,(PetscObject)xin,nv,MPIU_SUM));
   PetscFunctionReturn(0);
 }
 
