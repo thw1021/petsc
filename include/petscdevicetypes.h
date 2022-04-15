@@ -230,7 +230,7 @@ typedef enum {
   PETSC_OPERATOR_EQUAL
 } PetscOperatorType;
 
-PETSC_NODISCARD static inline PETSC_CONSTEXPR_14 PetscMemType PetscDetermineMemType(PetscOffloadMask mask)
+PETSC_NODISCARD static inline PETSC_CONSTEXPR_14 PetscMemType PetscOffloadMaskToMemType(PetscOffloadMask mask)
 {
   switch (mask) {
   case PETSC_OFFLOAD_UNALLOCATED:
