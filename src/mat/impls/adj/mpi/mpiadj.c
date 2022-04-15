@@ -776,7 +776,7 @@ PetscErrorCode MatMPIAdjCreateNonemptySubcommMat(Mat A,Mat *B)
 
   Level: beginner
 
-.seealso: `MatCreateMPIAdj`
+.seealso: `MatCreateMPIAdj()`
 M*/
 
 PETSC_EXTERN PetscErrorCode MatCreate_MPIAdj(Mat B)
