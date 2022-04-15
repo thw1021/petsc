@@ -54,6 +54,7 @@ typedef PetscType *PetscManagedType;
 #define PetscManagedTypeSetValues                 PetscConcat(PetscManagedType,SetValues)
 #define PetscManagedTypeCopy                      PetscConcat(PetscManagedType,Copy)
 #define PetscManagedTypeApplyOperator             PetscConcat(PetscManagedType,ApplyOperator)
+#define PetscManagedTypeApplyManagedOperator      PetscConcat(PetscManagedType,ApplyManagedOperator)
 
 PETSC_EXTERN PetscErrorCode PetscDeviceContextCreateManagedTypeArray(PetscDeviceContext,PetscType*,PetscType*,PetscInt,PetscCopyMode,PetscCopyMode,PetscOffloadMask,PetscManagedType*);
 PETSC_EXTERN PetscErrorCode PetscDeviceContextDestroyManagedTypeArray(PetscDeviceContext,PetscManagedType*);
@@ -136,6 +137,17 @@ static inline PetscErrorCode PetscManagedTypeApplyOperator(PetscDeviceContext dc
   PetscFunctionReturn(0);
 }
 
+static inline PetscErrorCode PetscManagedTypeApplyManagedOperator(PetscDeviceContext dctx, PetscManagedType scal, PetscOperatorType otype, PetscManagedType rhs, PetscManagedType ret)
+{
+  PetscType *rhsptr;
+
+  PetscFunctionBegin;
+  static_assert(0,"NEED TO IMPLEMENT APPLY MANAGED OPERATOR PROPERLY");
+  PetscCall(PetscManagedTypeGetValues(dctx,rhs,PetscOffloadMaskToMemType(rhs->mask),PETSC_MEMORY_ACCESS_READ,&rhsptr,PETSC_NULLPTR));
+  PetscCall(PetscDeviceContextApplyOperatorManagedType(dctx,scal,otype,rhs,ret));
+  PetscFunctionReturn(0);
+}
+
 #undef PetscConcat3
 #undef PetscDeviceContextCreateManagedTypeArray
 #undef PetscDeviceContextDestroyManagedTypeArray
@@ -151,6 +163,7 @@ static inline PetscErrorCode PetscManagedTypeApplyOperator(PetscDeviceContext dc
 #undef PetscManagedTypeSetValeus
 #undef PetscManagedTypeCopy
 #undef PetscManagedTypeApplyOperator
+#undef PetscManagedTypeApplyMaangedOperator
 
 #undef PetscTypeSuffix
 #undef PetscManagedType

@@ -650,31 +650,32 @@ PetscErrorCode VecAYPX_Seq(Vec yin, PetscManagedScalar alpha, Vec xin, PetscDevi
    void ?zaxpy(int*,PetscScalar*,PetscScalar*,int*,PetscScalar*,int*,PetscScalar*,int*);
 */
 
-PetscErrorCode VecWAXPY_Seq(Vec win, PetscManagedScalar alpha, Vec xin, Vec yin, PetscDeviceContext PETSC_UNUSED dctx)
+PetscErrorCode VecWAXPY_Seq(Vec win, PetscManagedScalar alpha, Vec xin, Vec yin, PetscDeviceContext dctx)
 {
-  PetscInt           i,n = win->map->n;
-  PetscScalar        *ww;
-  const PetscScalar  *yy,*xx;
+  const PetscInt     n = win->map->n;
+  PetscScalar       *ww,*aptr;
+  const PetscScalar *yy,*xx;
 
   PetscFunctionBegin;
   PetscCall(VecGetArrayRead(xin,&xx));
   PetscCall(VecGetArrayRead(yin,&yy));
   PetscCall(VecGetArray(win,&ww));
-  if (PetscManagedScalarEq(alpha,1.0)) {
+  PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,&aptr,NULL));
+  if (*aptr == (PetscScalar)1.0) {
     PetscCall(PetscLogFlops(n));
     /* could call BLAS axpy after call to memcopy, but may be slower */
-    for (i=0; i<n; i++) ww[i] = yy[i] + xx[i];
-  } else if (PetscManagedScalarEq(alpha,-1.0)) {
+    for (PetscInt i = 0; i < n; ++i) ww[i] = yy[i] + xx[i];
+  } else if (*aptr == (PetscScalar)-1.0) {
     PetscCall(PetscLogFlops(n));
-    for (i=0; i<n; i++) ww[i] = yy[i] - xx[i];
-  } else if (PetscManagedScalarEq(alpha,0.0)) {
+    for (PetscInt i = 0; i < n; ++i) ww[i] = yy[i] - xx[i];
+  } else if (*aptr == (PetscScalar)0.0) {
     PetscCall(PetscArraycpy(ww,yy,n));
   } else {
-    PetscScalar oalpha = *alpha.ptr;
+    PetscScalar oalpha = *aptr;
 #if defined(PETSC_USE_FORTRAN_KERNEL_WAXPY)
     fortranwaxpy_(&n,&oalpha,xx,yy,ww);
 #else
-    for (i=0; i<n; i++) ww[i] = yy[i] + oalpha * xx[i];
+    for (PetscInt i = 0; i < n; ++i) ww[i] = yy[i] + oalpha * xx[i];
 #endif
     PetscCall(PetscLogFlops(2.0*n));
   }
