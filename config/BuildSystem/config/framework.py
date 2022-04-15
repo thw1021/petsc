@@ -52,12 +52,7 @@ import re
 import sys
 import platform
 import pickle
-
-try:
-  from hashlib import md5 as new_md5
-except ImportError:
-  from md5 import new as new_md5 # novermin
-
+from hashlib import md5 as new_md5
 
 class Framework(config.base.Configure, script.LanguageProcessor):
   '''This needs to manage configure information in itself just as Builder manages it for configurations'''
