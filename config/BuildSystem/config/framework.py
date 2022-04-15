@@ -51,9 +51,6 @@ import os
 import re
 import sys
 import platform
-# workaround for python2.2 which does not have pathsep
-if not hasattr(os.path,'pathsep'): os.path.pathsep=':'
-
 import pickle
 
 try:

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """Classes to represent arbitrary sets (including sets of sets).
 
 This module implements sets using dictionaries whose values are

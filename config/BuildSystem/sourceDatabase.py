@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 '''A source code database
 
     SourceDB is a database of file information used to determine whether files
