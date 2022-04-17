@@ -557,11 +557,10 @@ PetscErrorCode VecSet_Seq(Vec xin, PetscManagedScalar alpha, PetscDeviceContext 
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecMAXPY_Seq(Vec xin, PetscInt nv, PetscManagedScalar alpha, Vec *y, PetscDeviceContext PETSC_UNUSED dctx)
+PetscErrorCode VecMAXPY_Seq(Vec xin, PetscInt nv, PetscManagedScalar alpha, Vec *y, PetscDeviceContext dctx)
 {
   const PetscInt     j_rem = nv&0x3, n = xin->map->n;
   const PetscScalar *yptr[4];
-  PetscInt           inc = j_rem;
   PetscScalar       *xx,*aptr;
 
 #if defined(PETSC_HAVE_PRAGMA_DISJOINT)
@@ -572,29 +571,22 @@ PetscErrorCode VecMAXPY_Seq(Vec xin, PetscInt nv, PetscManagedScalar alpha, Vec 
   PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,&aptr,NULL));
   PetscCall(PetscLogFlops(nv*2.0*n));
   PetscCall(VecGetArray(xin,&xx));
+  for (PetscInt i = 0; i < j_rem; ++i) PetscCall(VecGetArrayRead(y[i],yptr+i));
   switch (j_rem) {
   case 3:
-    for (PetscInt i = 0; i < inc; ++i) PetscCall(VecGetArrayRead(y[i],yptr+i));
     PetscKernelAXPY3(xx,aptr[0],aptr[1],aptr[2],yptr[0],yptr[1],yptr[2],n);
-    for (PetscInt i = 0; i < inc; ++i) PetscCall(VecRestoreArrayRead(y[i],yptr+i));
-    aptr += inc; y += inc;
     break;
   case 2:
-    for (PetscInt i = 0; i < inc; ++i) PetscCall(VecGetArrayRead(y[i],yptr+i));
     PetscKernelAXPY2(xx,aptr[0],aptr[1],yptr[0],yptr[1],n);
-    for (PetscInt i = 0; i < inc; ++i) PetscCall(VecRestoreArrayRead(y[i],yptr+i));
-    aptr += inc; y += inc;
     break;
   case 1:
-    for (PetscInt i = 0; i < inc; ++i) PetscCall(VecGetArrayRead(y[i],yptr+i));
     PetscKernelAXPY(xx,aptr[0],yptr[0],n);
-    for (PetscInt i = 0; i < inc; ++i) PetscCall(VecRestoreArrayRead(y[i],yptr+i));
-    aptr += inc; y += inc;
   default:
     break;
   }
-  inc = 4;
-  for (PetscInt j = j_rem; j < nv; j += inc, aptr += inc, y += inc) {
+  for (PetscInt i = 0; i < j_rem; ++i) PetscCall(VecRestoreArrayRead(y[i],yptr+i));
+  aptr += j_rem; y += j_rem;
+  for (PetscInt j = j_rem,inc = 4; j < nv; j += inc, aptr += inc, y += inc) {
     for (PetscInt i = 0; i < inc; ++i) PetscCall(VecGetArrayRead(y[i],yptr+i));
     PetscKernelAXPY4(xx,aptr[0],aptr[1],aptr[2],aptr[3],yptr[0],yptr[1],yptr[2],yptr[3],n);
     for (PetscInt i = 0; i < inc; ++i) PetscCall(VecRestoreArrayRead(y[i],yptr+i));

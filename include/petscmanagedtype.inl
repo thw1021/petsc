@@ -31,6 +31,7 @@ struct _n_PetscManagedType
   PetscOffloadMask  mask;
   PetscCopyMode     d_cmode;
   PetscCopyMode     h_cmode;
+  PetscBool         locked;
 };
 
 typedef struct _n_PetscManagedType *PetscManagedType;
@@ -50,6 +51,8 @@ typedef PetscType *PetscManagedType;
 #define PetscManagedTypeCopy                 PetscConcat(PetscManagedType,Copy)
 #define PetscManagedTypeApplyOperator        PetscConcat(PetscManagedType,ApplyOperator)
 #define PetscManagedTypeApplyManagedOperator PetscConcat(PetscManagedType,ApplyManagedOperator)
+#define PetscManagedTypeGetSubRange          PetscConcat(PetscManagedType,GetSubRange)
+#define PetscManagedTypeRestoreSubRange      PetscConcat(PetscManagedType,RestoreSubRange)
 
 PETSC_EXTERN PetscErrorCode PetscManagedTypeCreate(PetscDeviceContext,PetscType*,PetscType*,PetscInt,PetscCopyMode,PetscCopyMode,PetscOffloadMask,PetscManagedType*);
 PETSC_EXTERN PetscErrorCode PetscManagedTypeDestroy(PetscDeviceContext,PetscManagedType*);
@@ -58,6 +61,8 @@ PETSC_EXTERN PetscErrorCode PetscManagedTypeSetValues(PetscDeviceContext,PetscMa
 PETSC_EXTERN PetscErrorCode PetscManagedTypeCopy(PetscDeviceContext,PetscManagedType,PetscManagedType);
 PETSC_EXTERN PetscErrorCode PetscManagedTypeApplyOperator(PetscDeviceContext,PetscManagedType,PetscOperatorType,PetscMemType,const PetscType*,PetscManagedType);
 PETSC_EXTERN PetscErrorCode PetscManagedTypeApplyManagedOperator(PetscDeviceContext,PetscManagedType,PetscOperatorType,PetscManagedType,PetscManagedType);
+PETSC_EXTERN PetscErrorCode PetscManagedTypeGetSubRange(PetscDeviceContext,PetscManagedType,PetscInt,PetscInt,PetscManagedType*);
+PETSC_EXTERN PetscErrorCode PetscManagedTypeRestoreSubRange(PetscDeviceContext,PetscManagedType,PetscManagedType*);
 
 static inline PetscErrorCode PetscManageHostType(PetscDeviceContext dctx, PetscType *host_ptr, PetscInt n, PetscManagedType *scal)
 {
@@ -90,6 +95,8 @@ static inline PetscErrorCode PetscManagedTypeCreateDefault(PetscDeviceContext dc
 #undef PetscManagedTypeCopy
 #undef PetscManagedTypeApplyOperator
 #undef PetscManagedTypeApplyManagedOperator
+#undef PetscManagedTypeGetSubRange
+#undef PetscManagedTypeRestoreSubRange
 
 #undef PetscTypeSuffix
 #undef PetscManagedType

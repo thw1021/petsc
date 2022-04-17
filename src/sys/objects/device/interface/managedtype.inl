@@ -1,4 +1,4 @@
-#ifdef DEBUG_MANAGED_TYPE_IMPL
+#ifndef DEBUG_MANAGED_TYPE_IMPL
 #  include <petsc/private/deviceimpl.h>
 #  include <petsc/private/cpputil.hpp>
 #  include "objpool.hpp"
@@ -67,6 +67,7 @@ struct PetscManagedTypeAllocator : Petsc::AllocatorBase<PetscManagedType>
     mscal->mask    = PETSC_OFFLOAD_UNALLOCATED;
     mscal->h_cmode = PETSC_OWN_POINTER;
     mscal->d_cmode = PETSC_OWN_POINTER;
+    mscal->locked  = PETSC_FALSE;
     PetscFunctionReturn(0);
   }
 
@@ -103,6 +104,8 @@ static PetscErrorCode CopyValues(PetscDeviceContext dctx, PetscManagedType scal,
 #define PetscManagedTypeCopy                 PetscConcat(PetscManagedType,Copy)
 #define PetscManagedTypeApplyOperator        PetscConcat(PetscManagedType,ApplyOperator)
 #define PetscManagedTypeApplyManagedOperator PetscConcat(PetscManagedType,ApplyManagedOperator)
+#define PetscManagedTypeGetSubRange          PetscConcat(PetscManagedType,GetSubRange)
+#define PetscManagedTypeRestoreSubRange      PetscConcat(PetscManagedType,RestoreSubRange)
 
 PetscErrorCode PetscManagedTypeCreate(PetscDeviceContext dctx, PetscType *host_ptr, PetscType *device_ptr, PetscInt n, PetscCopyMode host_cmode, PetscCopyMode device_cmode, PetscOffloadMask mask, PetscManagedType *scal)
 {
@@ -170,6 +173,7 @@ PetscErrorCode PetscManagedTypeGetValues(PetscDeviceContext dctx, PetscManagedTy
   PetscValidPointer(scal,2);
   PetscValidPointer(ptr,5);
   if (n) PetscValidIntPointer(n,6);
+  PetscAssert(!scal->locked,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Object is locked, perhaps a subrange was not yet restored?");
   PetscCall((*dctx->ops->getmanagedvaluestype)(dctx,scal,mtype,mode,ptr));
   if (n) *n = scal->n;
   PetscFunctionReturn(0);
@@ -186,6 +190,7 @@ PetscErrorCode PetscManagedTypeSetValues(PetscDeviceContext dctx, PetscManagedTy
   PetscFunctionBegin;
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   if (PetscMemTypeHost(mtype)) PetscValidTypePointer(ptr,4);
+  PetscAssert(!scal->locked,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Object is locked, perhaps a subrange was not yet restored?");
   PetscCall(PetscManagedTypeGetValues(dctx,scal,scalmtype,PETSC_MEMORY_ACCESS_WRITE,&scalptr,&scaln));
   PetscAssert(n <= scaln,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Trying to write %" PetscInt_FMT " values to " PetscStringize(PetscManagedType) " but it only holds %" PetscInt_FMT " entries",n,scaln);
   PetscCall(PetscDeviceArrayCopy(dctx,scalptr,ptr,n,mode));
@@ -247,6 +252,43 @@ PetscErrorCode PetscManagedTypeApplyOperator(PetscDeviceContext dctx, PetscManag
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode PetscManagedTypeGetSubRange(PetscDeviceContext dctx, PetscManagedType in, PetscInt begin, PetscInt end, PetscManagedType *out)
+{
+  const auto  size = end-begin;
+  PetscType  *tmp;
+
+  PetscFunctionBegin;
+  PetscAssert(!in->locked,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Input managed object already has a sub-range checked out");
+  PetscAssert(size > 0,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Cannot extract a subrange of negative size %" PetscInt_FMT,size);
+  PetscAssert(begin+size < in->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Trying to extract a subrange of [%" PetscInt_FMT ",%" PetscInt_FMT ") from managed type of size %" PetscInt_FMT,begin,end,in->n);
+  if (!in->host) PetscCall(PetscManagedTypeGetValues(dctx,in,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,&tmp,nullptr));
+  if (!in->device) PetscCall(PetscManagedTypeGetValues(dctx,in,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_READ_WRITE,&tmp,nullptr));
+  in->locked = PETSC_TRUE;
+  PetscCall(PetscManagedTypeCreate(dctx,in->device+begin,in->device+begin,size,PETSC_USE_POINTER,PETSC_USE_POINTER,in->mask,out));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscManagedTypeRestoreSubRange(PetscDeviceContext dctx, PetscManagedType in, PetscManagedType *out)
+{
+  PetscFunctionBegin;
+  PetscAssert(in->locked,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Input managed object did not have a sub-range checked out");
+  in->locked = PETSC_FALSE;
+  if (PetscDefined(USE_DEBUG)) {
+    const auto check_ownership = [&](const PetscType *begin, const PetscType *needle)
+    {
+      const auto end = begin+in->n;
+
+      PetscFunctionBegin;
+      PetscAssert(std::find(begin,end,needle) != end,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Sub-range does not belong to input managed type");
+      PetscFunctionReturn(0);
+    };
+    PetscCall(check_ownership(in->host,(*out)->host));
+    PetscCall(check_ownership(in->device,(*out)->device));
+  }
+  PetscCall(PetscManagedTypeDestroy(dctx,out));
+  PetscFunctionReturn(0);
+}
+
 #undef PetscType
 #undef PetscManagedType
 #undef PetscTypeSuffix
@@ -270,3 +312,5 @@ PetscErrorCode PetscManagedTypeApplyOperator(PetscDeviceContext dctx, PetscManag
 #undef PetscManagedTypeCopy
 #undef PetscManagedTypeApplyOperator
 #undef PetscManagedTypeApplyManagedOperator
+#undef PetscManagedTypeGetSubRange
+#undef PetscManagedTypeRestoreSubRange
