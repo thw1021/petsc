@@ -37,7 +37,7 @@ PetscErrorCode VecNorm_MPI(Vec xin, NormType type, PetscManagedReal z, PetscDevi
 
   PetscFunctionBegin;
   PetscCall(PetscManagedRealGetValues(dctx,z,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_WRITE,&zptr,&zn));
-  PetscAssert(zn >= 1,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"%s() needs managed type of size >= 1, have " PetscInt_FMT,PETSC_FUNCTION_NAME,zn);
+  PetscAssert(zn >= 1,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"%s() needs managed type of size >= 1, have %" PetscInt_FMT,PETSC_FUNCTION_NAME,zn);
   switch (type) {
   case NORM_2:
   case NORM_FROBENIUS: {
@@ -52,7 +52,7 @@ PetscErrorCode VecNorm_MPI(Vec xin, NormType type, PetscManagedReal z, PetscDevi
     PetscCall(PetscLogFlops(2*n));
   } break;
   case NORM_1_AND_2:
-    PetscAssert(zn >= 2,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"NORM_1_AND_2 needs managed type of size >= 2, have " PetscInt_FMT,zn);
+    PetscAssert(zn >= 2,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"NORM_1_AND_2 needs managed type of size >= 2, have %" PetscInt_FMT,zn);
   case NORM_1:
   case NORM_INFINITY:
     PetscCall(VecNorm_Seq(xin,type,z,dctx));

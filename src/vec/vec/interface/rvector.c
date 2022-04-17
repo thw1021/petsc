@@ -323,7 +323,7 @@ PetscErrorCode  VecNorm(Vec x,NormType type,PetscReal *val)
   PetscManagedReal tmp;
 
   PetscFunctionBegin;
-  PetscCall(PetscManageHostReal(NULL,val,1,&tmp));
+  PetscCall(PetscManageHostReal(NULL,val,1+(type == NORM_1_AND_2),&tmp));
   PetscCall(VecNormAsync(x,type,tmp,NULL));
   PetscCall(PetscManagedRealDestroy(NULL,&tmp));
   PetscFunctionReturn(0);
@@ -618,8 +618,8 @@ PetscErrorCode VecScaleAsync(Vec x, PetscManagedScalar alpha, PetscDeviceContext
 
   PetscCall(PetscObjectReference(xobj));
   ctx->obj = xobj;
-  /* get current stashed norms */
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  /* get current stashed norms */
   PetscCall(PetscDeviceContextLaunchHostFunction(dctx,VecScaleAsync_ComposedDataGetReal_Private,ctx));
 
   PetscCall(PetscLogEventBegin(VEC_Scale,x,0,0,0));
@@ -671,15 +671,15 @@ static PetscErrorCode VecSetAsync_SetNorms_Private(PetscDeviceContext PETSC_UNUS
   PetscFunctionBegin;
   if (n == 0) {
     PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_1],0.0l));
-    PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_INFINITY],0.0));
     PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_2],0.0));
     PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_FROBENIUS],0.0));
+    PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_INFINITY],0.0));
   } else if (val > (PETSC_MAX_REAL/n)) {
     PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_INFINITY],val));
   } else {
     PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_1],n*val));
     PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_INFINITY],val));
-    val *= PetscSqrtReal((PetscReal)n) * val;
+    val *= PetscSqrtReal((PetscReal)n);
     PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_2],val));
     PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_FROBENIUS],val));
   }
@@ -703,6 +703,9 @@ PetscErrorCode VecSetAsync(Vec x, PetscManagedScalar alpha, PetscDeviceContext d
   PetscCall(PetscObjectStateIncrease((PetscObject)x));
 
   PetscCall(PetscMalloc1(1,&ctx));
+  PetscCall(PetscObjectReference((PetscObject)x));
+  ctx->obj = (PetscObject)x;
+  PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,&ctx->scal,NULL));
   PetscCall(PetscDeviceContextLaunchHostFunction(dctx,VecSetAsync_SetNorms_Private,ctx));
   PetscFunctionReturn(0);
 }
@@ -1317,12 +1320,9 @@ PetscErrorCode VecMTDotAsync(Vec x, PetscManagedInt nv, const Vec y[], PetscMana
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-
-  if (!nv) PetscFunctionReturn(0);
+  PetscValidType(x,1);
   PetscValidPointer(y,3);
   PetscValidHeaderSpecific(*y,VEC_CLASSID,3);
-
-  PetscValidType(x,1);
   PetscValidType(*y,3);
   PetscCheckSameTypeAndComm(x,1,*y,3);
   VecCheckSameSize(x,1,*y,3);
@@ -1363,17 +1363,19 @@ $      val = (x,y) = y^H x,
 @*/
 PetscErrorCode  VecMTDot(Vec x,PetscInt nv,const Vec y[],PetscScalar val[])
 {
-  PetscManagedScalar vtmp;
-  PetscManagedInt    nvtmp;
-
   PetscFunctionBegin;
   PetscValidLogicalCollectiveInt(x,nv,2);
-  PetscValidScalarPointer(val,4);
-  PetscCall(PetscManageHostScalar(NULL,val,nv,&vtmp));
-  PetscCall(PetscManageHostInt(NULL,&nv,1,&nvtmp));
-  PetscCall(VecMTDotAsync(x,nvtmp,y,vtmp,NULL));
-  PetscCall(PetscManagedScalarDestroy(NULL,&vtmp));
-  PetscCall(PetscManagedIntDestroy(NULL,&nvtmp));
+  if (nv) {
+    PetscManagedScalar vtmp;
+    PetscManagedInt    nvtmp;
+
+    PetscValidScalarPointer(val,4);
+    PetscCall(PetscManageHostScalar(NULL,val,nv,&vtmp));
+    PetscCall(PetscManageHostInt(NULL,&nv,1,&nvtmp));
+    PetscCall(VecMTDotAsync(x,nvtmp,y,vtmp,NULL));
+    PetscCall(PetscManagedScalarDestroy(NULL,&vtmp));
+    PetscCall(PetscManagedIntDestroy(NULL,&nvtmp));
+  }
   PetscFunctionReturn(0);
 }
 
