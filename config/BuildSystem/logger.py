@@ -245,8 +245,6 @@ class Logger(args.ArgumentProcessor):
     if prefix is None:
       prefix = ' '*2
 
-    if 'Warning: You have a version of GNU' in msg:
-      import ipdb; ipdb.set_trace()
     if rmDir:
       rmDir = center_wrap(title,self.logStripDirectory(msg),width=self.dividerLength-2,initial_indent=prefix,subsequent_indent=prefix)
     msg = center_wrap(title,msg,width=self.dividerLength-2,initial_indent=prefix,subsequent_indent=prefix)

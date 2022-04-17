@@ -165,7 +165,7 @@ class Configure(config.package.Package):
     if self.argDB['with-batch']:
       if self.argDB['with-shared-libraries']:
         if not 'known-mpi-shared-libraries' in self.argDB:
-          self.logPrintBox('Warning: Cannot verify that MPI is a shared library - in \
+          self.logPrintWarning('Cannot verify that MPI is a shared library - in \
 batch-mode! If MPI is a static library but linked into multiple shared \
 libraries that the application uses, sometimes compiles work - \
 but one might get run-time errors. If you know that the MPI library is \
@@ -355,10 +355,10 @@ shared libraries and run with --known-mpi-shared-libraries=1')
                     self.logPrint("Exception: while running traceroute skipping traceroute check\n")
 
               if not hostnameworks:
-                self.logPrintBox('Warning: mpiexec may not work on your system due to network issues. \
+                self.logPrintWarning('mpiexec may not work on your system due to network issues. \
 Perhaps you have VPN running whose network settings may not work with mpiexec or your network is misconfigured')
           else:
-            self.logPrintBox('Warning: mpiexec may not work on your system due to network issues. \
+            self.logPrintWarning('mpiexec may not work on your system due to network issues. \
 Unable to run hostname to check the network')
           self.logPrintDivider()
 
@@ -864,7 +864,7 @@ Unable to run hostname to check the network')
       self.logWrite('Setting environmental variable to work around buggy HWLOC\nhttps://github.com/open-mpi/hwloc/issues/290\n')
       os.environ['HWLOC_COMPONENTS'] = '-x86'
       self.addDefine('HAVE_HWLOC_SOLARIS_BUG',1)
-      self.logPrintBox('Warning: This MPI implementation may have a bug in it that causes programs to hang. \
+      self.logPrintWarning('This MPI implementation may have a bug in it that causes programs to hang. \
 You may need to set the environmental variable HWLOC_COMPONENTS to -x86 to prevent such hangs. warning message')
     self.executeTest(self.configureMPI2) #depends on checkMPIDistro
     self.executeTest(self.configureMPI3) #depends on checkMPIDistro

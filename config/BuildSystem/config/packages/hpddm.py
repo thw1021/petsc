@@ -97,10 +97,9 @@ class Configure(config.package.Package):
           self.addMakeRule('hpddm-install','')
           return self.installDir
       else:
-        self.logPrintBox('Warning: Skipping PCHPDDM installation, \
-remove --with-shared-libraries=0')
+        self.logPrintWarning('Skipping PCHPDDM installation, remove --with-shared-libraries=0')
     else:
-      self.logPrintBox('Warning: Compiling HPDDM without SLEPc, \
+      self.logPrintWarning('Compiling HPDDM without SLEPc, \
 PCHPDDM won\'t be available, unless reconfiguring with --download-slepc')
     self.addMakeRule('hpddm-build','')
     self.addMakeRule('hpddm-install','')
