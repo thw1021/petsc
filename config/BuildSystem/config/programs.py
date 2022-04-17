@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+
 import config.base
 
 import os
