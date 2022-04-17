@@ -50,14 +50,14 @@ static PetscErrorCode VecDestroy_Nest(Vec v)
 /* supports nested blocks */
 static PetscErrorCode VecCopy_Nest(Vec x, Vec y, PetscDeviceContext dctx)
 {
-  Vec_Nest       *bx = (Vec_Nest*)x->data;
-  Vec_Nest       *by = (Vec_Nest*)y->data;
-  const PetscInt nr = bx->nb;
+  Vec_Nest       *bx  = (Vec_Nest*)x->data;
+  Vec            *bxv = bx->v,*byv = ((Vec_Nest*)y->data)->v;
+  const PetscInt  nr  = bx->nb;
 
   PetscFunctionBegin;
   PetscCheckTypeName(y,VECNEST);
   VecNestCheckCompatible2(x,1,y,2);
-  for (PetscInt i = 0; i < nr; ++i) PetscCall(VecCopyAsync(bx->v[i],by->v[i],dctx));
+  for (PetscInt i = 0; i < nr; ++i) PetscCall(VecCopyAsync(bxv[i],byv[i],dctx));
   PetscFunctionReturn(0);
 }
 
@@ -65,12 +65,12 @@ static PetscErrorCode VecCopy_Nest(Vec x, Vec y, PetscDeviceContext dctx)
 static PetscErrorCode VecDuplicate_Nest(Vec x, Vec *y, PetscDeviceContext dctx)
 {
   Vec_Nest       *bx = (Vec_Nest*)x->data;
-  Vec            *sub;
+  Vec            *sub,*bxv = bx->v;
   const PetscInt  nr = bx->nb;
 
   PetscFunctionBegin;
   PetscCall(PetscMalloc1(nr,&sub));
-  for (PetscInt i = 0; i < nr; ++i) PetscCall(VecDuplicateAsync(bx->v[i],sub+i,dctx));
+  for (PetscInt i = 0; i < nr; ++i) PetscCall(VecDuplicateAsync(bxv[i],sub+i,dctx));
   PetscCall(VecCreateNest(PetscObjectComm((PetscObject)x),nr,bx->is,sub,y));
   for (PetscInt i = 0; i < nr; ++i) PetscCall(VecDestroyAsync(sub+i,dctx));
   PetscCall(PetscFree(sub));
@@ -81,9 +81,8 @@ static PetscErrorCode VecDuplicate_Nest(Vec x, Vec *y, PetscDeviceContext dctx)
 static PetscErrorCode VecDot_Nest(Vec x, Vec y, PetscManagedScalar val, PetscDeviceContext dctx)
 {
   Vec_Nest       *bx   = (Vec_Nest*)x->data;
-  Vec_Nest       *by   = (Vec_Nest*)y->data;
+  Vec            *bxv  = bx->v,*byv = ((Vec_Nest*)y->data)->v;
   const PetscInt  nr   = bx->nb;
-  Vec            *bxv  = bx->v,*byv = by->v;
   PetscScalar     _val = 0.0;
 
   PetscFunctionBegin;
@@ -98,11 +97,10 @@ static PetscErrorCode VecDot_Nest(Vec x, Vec y, PetscManagedScalar val, PetscDev
 }
 
 /* supports nested blocks */
-static PetscErrorCode VecTDot_Nest(Vec x, Vec y, PetscManagedScalar val, PetscDeviceContext PETSC_UNUSED dctx)
+static PetscErrorCode VecTDot_Nest(Vec x, Vec y, PetscManagedScalar val, PetscDeviceContext dctx)
 {
   Vec_Nest       *bx   = (Vec_Nest*)x->data;
-  Vec_Nest       *by   = (Vec_Nest*)y->data;
-  Vec            *bxv  = bx->v,*byv = by->v;
+  Vec            *bxv  = bx->v,*byv = ((Vec_Nest*)y->data)->v;
   const PetscInt  nr   = bx->nb;
   PetscScalar     _val = 0.0;
 
@@ -117,11 +115,10 @@ static PetscErrorCode VecTDot_Nest(Vec x, Vec y, PetscManagedScalar val, PetscDe
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecDotNorm2_Nest(Vec x, Vec y, PetscManagedScalar dp, PetscManagedScalar nm, PetscDeviceContext PETSC_UNUSED dctx)
+static PetscErrorCode VecDotNorm2_Nest(Vec x, Vec y, PetscManagedScalar dp, PetscManagedScalar nm, PetscDeviceContext dctx)
 {
   Vec_Nest       *bx  = (Vec_Nest*)x->data;
-  Vec_Nest       *by  = (Vec_Nest*)y->data;
-  Vec            *bxv = bx->v,*byv = by->v;
+  Vec            *bxv = bx->v,*byv = ((Vec_Nest*)y->data)->v;
   const PetscInt  nr  = bx->nb;
   PetscScalar     _dp = 0.0;
   PetscReal       _nm = 0.0;
@@ -143,37 +140,35 @@ static PetscErrorCode VecDotNorm2_Nest(Vec x, Vec y, PetscManagedScalar dp, Pets
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecAZPZ_Nest_Private(Vec y, PetscManagedScalar alpha, Vec x, PetscDeviceContext dctx, PetscErrorCode(*VecAZPZAsync_Fn)(Vec,PetscManagedScalar,Vec,PetscDeviceContext))
+static PetscErrorCode VecAZPZ_Nest_Private(Vec x, PetscManagedScalar alpha, Vec y, PetscDeviceContext dctx, PetscErrorCode(*VecAZPZAsync_Fn)(Vec,PetscManagedScalar,Vec,PetscDeviceContext))
 {
   Vec_Nest       *bx  = (Vec_Nest*)x->data;
-  Vec_Nest       *by  = (Vec_Nest*)y->data;
-  Vec            *bxv = bx->v,*byv = by->v;
+  Vec            *bxv = bx->v,*byv = ((Vec_Nest*)y->data)->v;
   const PetscInt  nr  = bx->nb;
 
   PetscFunctionBegin;
-  for (PetscInt i = 0; i < nr; ++i) PetscCall(VecAZPZAsync_Fn(byv[i],alpha,bxv[i],dctx));
+  for (PetscInt i = 0; i < nr; ++i) PetscCall(VecAZPZAsync_Fn(bxv[i],alpha,byv[i],dctx));
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecAXPY_Nest(Vec y, PetscManagedScalar alpha, Vec x, PetscDeviceContext dctx)
+static PetscErrorCode VecAXPY_Nest(Vec x, PetscManagedScalar alpha, Vec y, PetscDeviceContext dctx)
 {
   PetscFunctionBegin;
-  PetscCall(VecAZPZ_Nest_Private(y,alpha,x,dctx,VecAXPYAsync));
+  PetscCall(VecAZPZ_Nest_Private(x,alpha,y,dctx,VecAXPYAsync));
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecAYPX_Nest(Vec y, PetscManagedScalar alpha, Vec x, PetscDeviceContext dctx)
+static PetscErrorCode VecAYPX_Nest(Vec x, PetscManagedScalar alpha, Vec y, PetscDeviceContext dctx)
 {
   PetscFunctionBegin;
-  PetscCall(VecAZPZ_Nest_Private(y,alpha,x,dctx,VecAYPXAsync));
+  PetscCall(VecAZPZ_Nest_Private(x,alpha,y,dctx,VecAYPXAsync));
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecAXPBY_Nest(Vec y, PetscManagedScalar alpha, PetscManagedScalar beta, Vec x, PetscDeviceContext dctx)
+static PetscErrorCode VecAXPBY_Nest(Vec x, PetscManagedScalar alpha, PetscManagedScalar beta, Vec y, PetscDeviceContext dctx)
 {
   Vec_Nest       *bx  = (Vec_Nest*)x->data;
-  Vec_Nest       *by  = (Vec_Nest*)y->data;
-  Vec            *bxv = bx->v,*byv = by->v;
+  Vec            *bxv = bx->v,*byv = ((Vec_Nest*)y->data)->v;
   const PetscInt  nr  = bx->nb;
 
   PetscFunctionBegin;
@@ -184,9 +179,7 @@ static PetscErrorCode VecAXPBY_Nest(Vec y, PetscManagedScalar alpha, PetscManage
 static PetscErrorCode VecAXPBYPCZ_Nest(Vec z, PetscManagedScalar alpha, PetscManagedScalar beta, PetscManagedScalar gamma, Vec x, Vec y, PetscDeviceContext dctx)
 {
   Vec_Nest       *bx  = (Vec_Nest*)x->data;
-  Vec_Nest       *by  = (Vec_Nest*)y->data;
-  Vec_Nest       *bz  = (Vec_Nest*)z->data;
-  Vec            *bxv = bx->v,*byv = by->v,*bzv = bz->v;
+  Vec            *bxv = bx->v,*byv = ((Vec_Nest*)y->data)->v,*bzv = ((Vec_Nest*)z->data)->v;
   const PetscInt  nr  = bx->nb;
 
   PetscFunctionBegin;
@@ -207,11 +200,9 @@ static PetscErrorCode VecScale_Nest(Vec x, PetscManagedScalar alpha, PetscDevice
 
 static PetscErrorCode VecPointwiseApply_Nest(Vec w, Vec x, Vec y, PetscDeviceContext dctx, PetscErrorCode (*const VecPointwiseApply_Fn)(Vec,Vec,Vec,PetscDeviceContext))
 {
-  Vec_Nest       *bx = (Vec_Nest*)x->data;
-  Vec_Nest       *by = (Vec_Nest*)y->data;
   Vec_Nest       *bw = (Vec_Nest*)w->data;
-  Vec            *bwv = bw->v,*bxv = bx->v,*byv = by->v;
-  const PetscInt  nr = bx->nb;
+  Vec            *bwv = bw->v,*bxv = ((Vec_Nest*)x->data)->v,*byv = ((Vec_Nest*)y->data)->v;
+  const PetscInt  nr = bw->nb;
 
   PetscFunctionBegin;
   VecNestCheckCompatible3(w,1,x,2,y,3);
@@ -280,15 +271,28 @@ static PetscErrorCode VecNorm_Nest(Vec xin, NormType type, PetscManagedReal z, P
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecMAXPY_Nest(Vec y, PetscInt nv, PetscManagedScalar *alpha, Vec *x, PetscDeviceContext dctx)
+static PetscErrorCode VecMAXPY_Nest(Vec y, PetscManagedInt nv, PetscManagedScalar alpha, Vec *x, PetscDeviceContext dctx)
 {
+  PetscInt *nvptr;
+
   PetscFunctionBegin;
+  PetscCall(PetscManagedIntGetValues(dctx,nv,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,&nvptr,NULL));
   /* Do axpy on each vector, v */
-  for (PetscInt v = 0; v < nv; ++v) PetscCall(VecAXPYAsync(y,alpha[v],x[v]));
+  {
+    const PetscInt nvval = *nvptr;
+    for (PetscInt v = 0; v < nvval; ++v) {
+      PetscManagedScalar tmp;
+
+      PetscCall(PetscManagedScalarGetSubRange(dctx,alpha,v,v+1,&tmp));
+      PetscCall(VecAXPYAsync(y,tmp,x[v],dctx));
+      PetscCall(PetscManagedScalarRestoreSubRange(dctx,alpha,&tmp));
+    }
+  }
+
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecMDot_Nest(Vec x, PetscManagedInt nv, const Vec y[], PetscManagedScalar val, PetscDeviceContext dctx)
+static PetscErrorCode VecMXDot_Nest_Private(Vec x, PetscManagedInt nv, const Vec y[], PetscManagedScalar val, PetscDeviceContext dctx, PetscErrorCode(*const VecDotFunc)(Vec,Vec,PetscManagedScalar,PetscDeviceContext))
 {
   PetscInt *nvptr;
 
@@ -299,18 +303,25 @@ static PetscErrorCode VecMDot_Nest(Vec x, PetscManagedInt nv, const Vec y[], Pet
     for (PetscInt j = 0; j < nvval; ++j) {
       PetscManagedScalar tmp;
 
-      PetscCall(PetscManagedScalarCreateSubRange(dctx,val,j,j+1,&tmp));
-      PetscCall(VecDotAsync(x,y[j],tmp,dctx));
-      PetscCall(PetscManagedScalarDestroy(dctx,&tmp));
+      PetscCall(PetscManagedScalarGetSubRange(dctx,val,j,j+1,&tmp));
+      PetscCall(VecDotFunc(x,y[j],tmp,dctx));
+      PetscCall(PetscManagedScalarRestoreSubRange(dctx,val,&tmp));
     }
   }
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecMTDot_Nest(Vec x, PetscInt nv, const Vec y[], PetscManagedScalar *val)
+static PetscErrorCode VecMDot_Nest(Vec x, PetscManagedInt nv, const Vec y[], PetscManagedScalar val, PetscDeviceContext dctx)
 {
   PetscFunctionBegin;
-  for (PetscInt j = 0; j < nv; ++j) PetscCall(VecTDot(x,y[j],&val[j]));
+  PetscCall(VecMXDot_Nest_Private(x,nv,y,val,dctx,VecDotAsync));
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode VecMTDot_Nest(Vec x, PetscManagedInt nv, const Vec y[], PetscManagedScalar val, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
+  PetscCall(VecMXDot_Nest_Private(x,nv,y,val,dctx,VecTDotAsync));
   PetscFunctionReturn(0);
 }
 
@@ -338,33 +349,28 @@ static PetscErrorCode VecConjugate_Nest(Vec x, PetscDeviceContext dctx)
 
 static PetscErrorCode VecSwap_Nest(Vec x,Vec y)
 {
-  Vec_Nest       *bx = (Vec_Nest*)x->data;
-  Vec_Nest       *by = (Vec_Nest*)y->data;
-  PetscInt       i,nr;
+  Vec_Nest       *bx  = (Vec_Nest*)x->data;
+  Vec_Nest       *by  = (Vec_Nest*)y->data;
+  Vec            *bxv = bx->v,*byv = by->v;
+  const PetscInt  nr  = bx->nb;
 
   PetscFunctionBegin;
   VecNestCheckCompatible2(x,1,y,2);
-  nr = bx->nb;
-  for (i=0; i<nr; i++) {
-    PetscCall(VecSwap(bx->v[i],by->v[i]));
-  }
+  for (PetscInt i = 0; i < nr; ++i) PetscCall(VecSwap(bxv[i],byv[i]));
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecWAXPY_Nest(Vec w,PetscScalar alpha,Vec x,Vec y)
+static PetscErrorCode VecWAXPY_Nest(Vec w, PetscManagedScalar alpha, Vec x, Vec y, PetscDeviceContext dctx)
 {
   Vec_Nest       *bx = (Vec_Nest*)x->data;
   Vec_Nest       *by = (Vec_Nest*)y->data;
   Vec_Nest       *bw = (Vec_Nest*)w->data;
-  PetscInt       i,nr;
+  Vec            *bxv = bx->v,*byv = by->v,*bwv = bw->v;
+  const PetscInt  nr  = bx->nb;
 
   PetscFunctionBegin;
   VecNestCheckCompatible3(w,1,x,3,y,4);
-
-  nr = bx->nb;
-  for (i=0; i<nr; i++) {
-    PetscCall(VecWAXPY(bw->v[i],alpha,bx->v[i],by->v[i]));
-  }
+  for (PetscInt i = 0; i < nr; ++i) PetscCall(VecWAXPYAsync(bwv[i],alpha,bxv[i],byv[i],dctx));
   PetscFunctionReturn(0);
 }
 
