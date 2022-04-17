@@ -15,11 +15,11 @@ typedef struct {
   VECHEADER;
 } Vec_Seq;
 
-PETSC_INTERN PetscErrorCode VecMDot_Seq(Vec,PetscInt,const Vec[],PetscManagedScalar,PetscDeviceContext);
-PETSC_INTERN PetscErrorCode VecMTDot_Seq(Vec,PetscInt,const Vec[],PetscManagedScalar,PetscDeviceContext);
+PETSC_INTERN PetscErrorCode VecMDot_Seq(Vec,PetscManagedInt,const Vec[],PetscManagedScalar,PetscDeviceContext);
+PETSC_INTERN PetscErrorCode VecMTDot_Seq(Vec,PetscManagedInt,const Vec[],PetscManagedScalar,PetscDeviceContext);
 PETSC_INTERN PetscErrorCode VecMin_Seq(Vec,PetscManagedInt,PetscManagedReal,PetscDeviceContext);
 PETSC_INTERN PetscErrorCode VecSet_Seq(Vec,PetscManagedScalar,PetscDeviceContext);
-PETSC_INTERN PetscErrorCode VecMAXPY_Seq(Vec,PetscInt,PetscManagedScalar,Vec*,PetscDeviceContext);
+PETSC_INTERN PetscErrorCode VecMAXPY_Seq(Vec,PetscManagedInt,PetscManagedScalar,Vec*,PetscDeviceContext);
 PETSC_INTERN PetscErrorCode VecAYPX_Seq(Vec,PetscManagedScalar,Vec,PetscDeviceContext);
 PETSC_INTERN PetscErrorCode VecWAXPY_Seq(Vec,PetscManagedScalar,Vec,Vec,PetscDeviceContext);
 PETSC_INTERN PetscErrorCode VecAXPBYPCZ_Seq(Vec,PetscManagedScalar,PetscManagedScalar,PetscManagedScalar,Vec,Vec,PetscDeviceContext);
