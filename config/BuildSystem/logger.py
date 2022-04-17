@@ -253,7 +253,6 @@ class Logger(args.ArgumentProcessor):
     self.logPrint(msg, debugLevel = debugLevel, debugSection = debugSection, rmDir = rmDir, indent = indent, comm = comm, forceNewLine = True)
     self.logPrintDivider(debugLevel = debugLevel, debugSection = debugSection, forceNewLine = True)
     self.logPrint('', debugLevel = debugLevel, debugSection = debugSection)
-    import ipdb; ipdb.set_trace()
     return
 
   def logStripDirectory(self,msg):
