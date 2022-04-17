@@ -865,7 +865,7 @@ Unable to run hostname to check the network')
       os.environ['HWLOC_COMPONENTS'] = '-x86'
       self.addDefine('HAVE_HWLOC_SOLARIS_BUG',1)
       self.logPrintWarning('This MPI implementation may have a bug in it that causes programs to hang. \
-You may need to set the environmental variable HWLOC_COMPONENTS to -x86 to prevent such hangs. warning message')
+You may need to set the environmental variable HWLOC_COMPONENTS to -x86 to prevent such hangs')
     self.executeTest(self.configureMPI2) #depends on checkMPIDistro
     self.executeTest(self.configureMPI3) #depends on checkMPIDistro
     self.executeTest(self.configureMPI4)
