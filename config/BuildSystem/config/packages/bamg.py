@@ -79,8 +79,8 @@ class Configure(config.package.Package):
     else:
       self.addMakeRule('bamg-build','')
       self.addMakeRule('bamg-install','')
-      self.logPrintBox('***** WARNING: Skipping BAMG installation,\n\
-remove --with-shared-libraries=0 *****')
+      self.logPrintBox('Warning: Skipping BAMG installation, \
+remove --with-shared-libraries=0')
     return self.installDir
 
   def alternateConfigureLibrary(self):
