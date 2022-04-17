@@ -245,14 +245,17 @@ class Logger(args.ArgumentProcessor):
     if prefix is None:
       prefix = ' '*2
 
+    if 'Warning: You have a version of GNU' in msg:
+      import ipdb; ipdb.set_trace()
     if rmDir:
       rmDir = center_wrap(title,self.logStripDirectory(msg),width=self.dividerLength-2,initial_indent=prefix,subsequent_indent=prefix)
     msg = center_wrap(title,msg,width=self.dividerLength-2,initial_indent=prefix,subsequent_indent=prefix)
     self.logClear()
     self.logPrintDivider(debugLevel = debugLevel, debugSection = debugSection, forceNewLine = True)
-    self.logPrint(msg, debugLevel = debugLevel, debugSection = debugSection, rmDir = rmDir, indent = indent, forceNewLine = True)
+    self.logPrint(msg, debugLevel = debugLevel, debugSection = debugSection, rmDir = rmDir, indent = indent, comm = comm, forceNewLine = True)
     self.logPrintDivider(debugLevel = debugLevel, debugSection = debugSection, forceNewLine = True)
     self.logPrint('', debugLevel = debugLevel, debugSection = debugSection)
+    import ipdb; ipdb.set_trace()
     return
 
   def logStripDirectory(self,msg):
@@ -287,7 +290,7 @@ class Logger(args.ArgumentProcessor):
             else:
               msg = self.logStripDirectory(msg)
           for ms in msg.splitlines():
-            f.write(right_pad_string(ms,self.linewidth-1))
+            f.write(right_pad_string(ms,self.linewidth))
         else:
           if not debugSection is None and not debugSection == 'screen' and len(msg):
             f.write(str(debugSection))
