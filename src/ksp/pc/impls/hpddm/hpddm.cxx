@@ -1236,7 +1236,7 @@ static PetscErrorCode PCSetUp_HPDDM(PC pc)
           PetscCall(ISDestroy(&uis));
           data->share = PETSC_FALSE;
           PetscCheck(size == -1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Number of subdomain solver %" PetscInt_FMT " != 1", size);
-          else PetscCall(PetscInfo(pc, "Cannot share subdomain KSP between SLEPc and PETSc since PCASMGetSubKSP() not found in fine-level PC\n"));
+         PetscCall(PetscInfo(pc, "Cannot share subdomain KSP between SLEPc and PETSc since PCASMGetSubKSP() not found in fine-level PC\n"));
         } else {
           const char *matpre;
           PetscBool  cmp[2];
