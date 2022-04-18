@@ -8,7 +8,6 @@ banner_line   = banner_sep*banner_length
 if sys.version_info < (3,4):
   print(banner_line)
   print(banner_sep+'Python version 3.4+ is required to run ./configure'.center(banner_length-2)+banner_sep)
-  print(banner_sep+'Try: "python3 ./configure" or "python2.7 ./configure"'.center(banner_length-2)+banner_sep)
   print(banner_line)
   sys.exit(4)
 
