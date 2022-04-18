@@ -605,20 +605,18 @@ static PetscErrorCode VecScaleAsync_ComposedDataSetReal_Private(PetscDeviceConte
 
 PetscErrorCode VecScaleAsync(Vec x, PetscManagedScalar alpha, PetscDeviceContext dctx)
 {
-  VSA_Ctx     ctx;
-  PetscObject xobj;
+  VSA_Ctx ctx;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
   PetscValidType(x,1);
   PetscCheck(x->stash.insertmode == NOT_SET_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
-
-  PetscCall(VecSetErrorIfLocked(x,1));
-  PetscCall(PetscMalloc1(1,&ctx));
-
-  PetscCall(PetscObjectReference(xobj));
-  ctx->obj = xobj;
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  PetscCall(VecSetErrorIfLocked(x,1));
+
+  PetscCall(PetscMalloc1(1,&ctx));
+  PetscCall(PetscObjectReference((PetscObject)x));
+  ctx->obj = (PetscObject)x;
   /* get current stashed norms */
   PetscCall(PetscDeviceContextLaunchHostFunction(dctx,VecScaleAsync_ComposedDataGetReal_Private,ctx));
 
@@ -1379,6 +1377,24 @@ PetscErrorCode  VecMTDot(Vec x,PetscInt nv,const Vec y[],PetscScalar val[])
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode VecMDotAsync(Vec x, PetscManagedInt nv, const Vec y[], PetscManagedScalar val, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
+  PetscValidPointer(y,3);
+  PetscValidHeaderSpecific(*y,VEC_CLASSID,3);
+  PetscValidType(*y,3);
+  PetscCheckSameTypeAndComm(x,1,*y,3);
+  VecCheckSameSize(x,1,*y,3);
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+
+  PetscCall(PetscLogEventBegin(VEC_MDot,x,*y,0,0));
+  PetscCall((*x->ops->mdot)(x,nv,y,val,dctx));
+  PetscCall(PetscLogEventEnd(VEC_MDot,x,*y,0,0));
+  PetscFunctionReturn(0);
+}
+
 /*@
    VecMDot - Computes vector multiple dot products.
 
@@ -1410,19 +1426,39 @@ PetscErrorCode  VecMDot(Vec x,PetscInt nv,const Vec y[],PetscScalar val[])
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
   PetscValidLogicalCollectiveInt(x,nv,2);
-  if (!nv) PetscFunctionReturn(0);
-  PetscCheck(nv >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of vectors (given %" PetscInt_FMT ") cannot be negative",nv);
-  PetscValidPointer(y,3);
-  PetscValidHeaderSpecific(*y,VEC_CLASSID,3);
-  PetscValidScalarPointer(val,4);
-  PetscValidType(x,1);
-  PetscValidType(*y,3);
-  PetscCheckSameTypeAndComm(x,1,*y,3);
-  VecCheckSameSize(x,1,*y,3);
+  if (nv) {
+    PetscManagedInt    nvtmp;
+    PetscManagedScalar valtmp;
 
-  PetscCall(PetscLogEventBegin(VEC_MDot,x,*y,0,0));
-  PetscCall((*x->ops->mdot)(x,nv,y,val));
-  PetscCall(PetscLogEventEnd(VEC_MDot,x,*y,0,0));
+    PetscCheck(nv > 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of vectors (given %" PetscInt_FMT ") cannot be negative",nv);
+    PetscValidPointer(y,3);
+    PetscValidScalarPointer(val,4);
+    PetscCall(PetscManageHostInt(NULL,&nv,1,&nvtmp));
+    PetscCall(PetscManageHostScalar(NULL,val,nv,&valtmp));
+    PetscCall(VecMDotAsync(x,nvtmp,y,valtmp,NULL));
+    PetscCall(PetscManagedScalarDestroy(NULL,&valtmp));
+    PetscCall(PetscManagedIntDestroy(NULL,&nvtmp));
+  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecMAXPYAsync(Vec y, PetscManagedInt nv, PetscManagedScalar alpha, Vec x[], PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(y,VEC_CLASSID,1);
+  PetscValidType(y,1);
+  PetscValidPointer(x,4);
+  PetscValidHeaderSpecific(*x,VEC_CLASSID,4);
+  PetscValidType(*x,4);
+  PetscCheckSameTypeAndComm(y,1,*x,4);
+  VecCheckSameSize(y,1,*x,4);
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+
+  PetscCall(VecSetErrorIfLocked(y,1));
+  PetscCall(PetscLogEventBegin(VEC_MAXPY,*x,y,0,0));
+  PetscCall((*y->ops->maxpy)(y,nv,alpha,x,dctx));
+  PetscCall(PetscLogEventEnd(VEC_MAXPY,*x,y,0,0));
+  PetscCall(PetscObjectStateIncrease((PetscObject)y));
   PetscFunctionReturn(0);
 }
 
@@ -1446,29 +1482,30 @@ PetscErrorCode  VecMDot(Vec x,PetscInt nv,const Vec y[],PetscScalar val[])
 @*/
 PetscErrorCode  VecMAXPY(Vec y,PetscInt nv,const PetscScalar alpha[],Vec x[])
 {
-  PetscInt       i;
-  PetscBool      nonzero;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(y,VEC_CLASSID,1);
   PetscValidLogicalCollectiveInt(y,nv,2);
-  if (!nv) PetscFunctionReturn(0);
-  PetscCheck(nv >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of vectors (given %" PetscInt_FMT ") cannot be negative",nv);
-  PetscValidScalarPointer(alpha,3);
-  PetscValidPointer(x,4);
-  PetscValidHeaderSpecific(*x,VEC_CLASSID,4);
-  PetscValidType(y,1);
-  PetscValidType(*x,4);
-  PetscCheckSameTypeAndComm(y,1,*x,4);
-  VecCheckSameSize(y,1,*x,4);
-  for (i=0; i<nv; i++) PetscValidLogicalCollectiveScalar(y,alpha[i],3);
-  for (i=0, nonzero = PETSC_FALSE; i<nv && !nonzero; i++) nonzero = (PetscBool)(nonzero || alpha[i] != (PetscScalar)0.0);
-  if (!nonzero) PetscFunctionReturn(0);
   PetscCall(VecSetErrorIfLocked(y,1));
-  PetscCall(PetscLogEventBegin(VEC_MAXPY,*x,y,0,0));
-  PetscCall((*y->ops->maxpy)(y,nv,alpha,x));
-  PetscCall(PetscLogEventEnd(VEC_MAXPY,*x,y,0,0));
-  PetscCall(PetscObjectStateIncrease((PetscObject)y));
+  if (nv) {
+    PetscCheck(nv > 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of vectors (given %" PetscInt_FMT ") cannot be negative",nv);
+    PetscValidScalarPointer(alpha,3);
+    for (PetscInt i = 0; i < nv; ++i) PetscValidLogicalCollectiveScalar(y,alpha[i],3);
+    /*
+      march through alpha sequentially and find first nonzero entry. If alpha[i] is zero,
+      decrement nv, and bump alpha and x up
+     */
+    for (PetscInt i = 0; i < nv; ++i, --nv, ++alpha, ++x) { if (alpha[i] != (PetscScalar)0.0) break; }
+    if (nv) {
+      PetscManagedInt    nvtmp;
+      PetscManagedScalar alphatmp;
+
+      PetscCall(PetscManageHostInt(NULL,&nv,1,&nvtmp));
+      PetscCall(PetscManageHostScalar(NULL,(PetscScalar*)alpha,nv,&alphatmp));
+      PetscCall(VecMAXPYAsync(y,nvtmp,alphatmp,x,NULL));
+      PetscCall(PetscManagedScalarDestroy(NULL,&alphatmp));
+      PetscCall(PetscManagedIntDestroy(NULL,&nvtmp));
+    }
+  }
   PetscFunctionReturn(0);
 }
 
