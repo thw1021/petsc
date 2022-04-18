@@ -129,6 +129,7 @@ PETSC_EXTERN PetscErrorCode VecViewFromOptions(Vec,PetscObject,const char[]);
 
 PETSC_EXTERN PetscErrorCode VecSetUp(Vec);
 PETSC_EXTERN PetscErrorCode VecDestroy(Vec*);
+PETSC_EXTERN PetscErrorCode VecDestroyAsync(Vec*,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecZeroEntries(Vec);
 PETSC_EXTERN PetscErrorCode VecSetOptionsPrefix(Vec,const char[]);
 PETSC_EXTERN PetscErrorCode VecAppendOptionsPrefix(Vec,const char[]);
@@ -137,11 +138,17 @@ PETSC_EXTERN PetscErrorCode VecGetOptionsPrefix(Vec,const char*[]);
 PETSC_EXTERN PetscErrorCode VecSetSizes(Vec,PetscInt,PetscInt);
 
 PETSC_EXTERN PetscErrorCode VecDotNorm2(Vec,Vec,PetscScalar*,PetscReal*);
+PETSC_EXTERN PetscErrorCode VecDotNorm2Async(Vec,Vec,PetscManagedScalar,PetscManagedReal,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecDot(Vec,Vec,PetscScalar*);
+PETSC_EXTERN PetscErrorCode VecDotAsync(Vec,Vec,PetscManagedScalar,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecDotRealPart(Vec,Vec,PetscReal*);
+PETSC_EXTERN PetscErrorCode VecDotRealPartAsync(Vec,Vec,PetscManagedReal,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecTDot(Vec,Vec,PetscScalar*);
+PETSC_EXTERN PetscErrorCode VecTDotAsync(Vec,Vec,PetscManagedScalar,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecMDot(Vec,PetscInt,const Vec[],PetscScalar[]);
+PETSC_EXTERN PetscErrorCode VecMDotAsync(Vec,PetscManagedInt,const Vec[],PetscManagedScalar,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecMTDot(Vec,PetscInt,const Vec[],PetscScalar[]);
+PETSC_EXTERN PetscErrorCode VecMTDotAsync(Vec,PetscManagedInt,const Vec[],PetscManagedScalar,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecGetSubVector(Vec,IS,Vec*);
 PETSC_EXTERN PetscErrorCode VecRestoreSubVector(Vec,IS,Vec*);
 PETSC_EXTERN PetscErrorCode VecConcatenate(PetscInt,const Vec[],Vec*,IS*[]);
@@ -662,8 +669,11 @@ PETSC_EXTERN PetscErrorCode VecGhostUpdateBegin(Vec,InsertMode,ScatterMode);
 PETSC_EXTERN PetscErrorCode VecGhostUpdateEnd(Vec,InsertMode,ScatterMode);
 
 PETSC_EXTERN PetscErrorCode VecConjugate(Vec);
+PETSC_EXTERN PetscErrorCode VecConjugateAsync(Vec,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecImaginaryPart(Vec);
+PETSC_EXTERN PetscErrorCode VecImaginaryPartAsync(Vec,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecRealPart(Vec);
+PETSC_EXTERN PetscErrorCode VecRealPartAsync(Vec,PetscDeviceContext);
 
 PETSC_EXTERN PetscErrorCode VecScatterCreateToAll(Vec,VecScatter*,Vec*);
 PETSC_EXTERN PetscErrorCode VecScatterCreateToZero(Vec,VecScatter*,Vec*);
