@@ -17,19 +17,6 @@ The command line options are:\n\
   -start <st>, where <st> =0 for zero vector, <st> >0 for random start, and <st> <0 \n\
                for an average of the boundary conditions\n\n";
 
-/*T
-   Concepts: TAO^Solving a bound constrained minimization problem
-   Routines: TaoCreate();
-   Routines: TaoSetType(); TaoSetObjectiveAndGradient();
-   Routines: TaoSetHessian();
-   Routines: TaoSetSolution();
-   Routines: TaoSetVariableBounds();
-   Routines: TaoSetFromOptions();
-   Routines: TaoSolve(); TaoView();
-   Routines: TaoDestroy();
-   Processors: n
-T*/
-
 /*
    User-defined application context - contains data needed by the
    application-provided call-back routines, FormFunctionGradient(),
@@ -87,7 +74,7 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsGetInt(NULL,NULL,"-bmy",&user.bmy,&flg));
 
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n---- Minimum Surface Area With Plate Problem -----\n"));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"mx:%D, my:%D, bmx:%D, bmy:%D, height:%g\n",user.mx,user.my,user.bmx,user.bmy,(double)user.bheight));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"mx:%" PetscInt_FMT ", my:%" PetscInt_FMT ", bmx:%" PetscInt_FMT ", bmy:%" PetscInt_FMT ", height:%g\n",user.mx,user.my,user.bmx,user.bmy,(double)user.bheight));
 
   /* Calculate any derived values from parameters */
   N    = user.mx*user.my;

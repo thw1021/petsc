@@ -41,7 +41,6 @@ F*/
 #include <petscblaslapack.h>
 
 #define DIM 2                   /* Geometric dimension */
-#define ALEN(a) (sizeof(a)/sizeof((a)[0]))
 
 static PetscFunctionList PhysicsList;
 
@@ -263,7 +262,6 @@ static PetscErrorCode PhysicsFunctional_Advect(Model mod,PetscReal time,const Pe
   Physics        phys    = (Physics)ctx;
   Physics_Advect *advect = (Physics_Advect*)phys->data;
   PetscScalar    yexact[1];
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   PetscCall(PhysicsSolution_Advect(mod,time,x,yexact,phys));
@@ -274,14 +272,13 @@ static PetscErrorCode PhysicsFunctional_Advect(Model mod,PetscReal time,const Pe
 static PetscErrorCode PhysicsCreate_Advect(PetscDS prob, Model mod,Physics phys,PetscOptions *PetscOptionsObject)
 {
   Physics_Advect *advect;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   phys->field_desc = PhysicsFields_Advect;
   phys->riemann = (RiemannFunction) PhysicsRiemann_Advect;
   PetscCall(PetscNew(&advect));
   phys->data = advect;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Advect options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Advect options");
   {
     PetscInt two = 2,dof = 1;
     advect->soltype = ADVECT_SOL_TILTED;
@@ -311,15 +308,15 @@ static PetscErrorCode PhysicsCreate_Advect(PetscDS prob, Model mod,Physics phys,
     } break;
     }
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   {
     const PetscInt inflowids[] = {100,200,300},outflowids[] = {101};
     DMLabel        label;
 
     PetscCall(DMGetLabel(dm, "Face Sets", &label));
     /* Register "canned" boundary conditions and defaults for where to apply. */
-    PetscCall(PetscDSAddBoundary(prob, PETSC_TRUE, "inflow",  label, ALEN(inflowids),  inflowids,  0, 0, NULL, (void (*)()) PhysicsBoundary_Advect_Inflow,  NULL,  phys, NULL));
-    PetscCall(PetscDSAddBoundary(prob, PETSC_TRUE, "outflow", label, ALEN(outflowids), outflowids, 0, 0, NULL, (void (*)()) PhysicsBoundary_Advect_Outflow, NULL, phys, NULL));
+    PetscCall(PetscDSAddBoundary(prob, PETSC_TRUE, "inflow",  label, PETSC_STATIC_ARRAY_LENGTH(inflowids),  inflowids,  0, 0, NULL, (void (*)()) PhysicsBoundary_Advect_Inflow,  NULL,  phys, NULL));
+    PetscCall(PetscDSAddBoundary(prob, PETSC_TRUE, "outflow", label, PETSC_STATIC_ARRAY_LENGTH(outflowids), outflowids, 0, 0, NULL, (void (*)()) PhysicsBoundary_Advect_Outflow, NULL, phys, NULL));
     /* Initial/transient solution with default boundary conditions */
     PetscCall(ModelSolutionSetDefault(mod,PhysicsSolution_Advect,phys));
     /* Register "canned" functionals */
@@ -432,19 +429,18 @@ static PetscErrorCode PhysicsFunctional_SW(Model mod,PetscReal time,const PetscR
 static PetscErrorCode PhysicsCreate_SW(PetscDS prob, Model mod,Physics phys,PetscOptions *PetscOptionsObject)
 {
   Physics_SW     *sw;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   phys->field_desc = PhysicsFields_SW;
   phys->riemann = (RiemannFunction) PhysicsRiemann_SW;
   PetscCall(PetscNew(&sw));
   phys->data    = sw;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"SW options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"SW options");
   {
     sw->gravity = 1.0;
     PetscCall(PetscOptionsReal("-sw_gravity","Gravitational constant","",sw->gravity,&sw->gravity,NULL));
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   phys->maxspeed = PetscSqrtReal(2.0*sw->gravity); /* Mach 1 for depth of 2 */
 
   {
@@ -452,7 +448,7 @@ static PetscErrorCode PhysicsCreate_SW(PetscDS prob, Model mod,Physics phys,Pets
     DMLabel        label;
 
     PetscCall(DMGetLabel(dm, "Face Sets", &label));
-    PetscCall(PetscDSAddBoundary(prob, PETSC_TRUE, "wall", label, ALEN(wallids), wallids, 0, 0, NULL, (void (*)()) PhysicsBoundary_SW_Wall, NULL, phys, NULL));
+    PetscCall(PetscDSAddBoundary(prob, PETSC_TRUE, "wall", label, PETSC_STATIC_ARRAY_LENGTH(wallids), wallids, 0, 0, NULL, (void (*)()) PhysicsBoundary_SW_Wall, NULL, phys, NULL));
     PetscCall(ModelSolutionSetDefault(mod,PhysicsSolution_SW,phys));
     PetscCall(ModelFunctionalRegister(mod,"Height",&sw->functional.Height,PhysicsFunctional_SW,phys));
     PetscCall(ModelFunctionalRegister(mod,"Speed",&sw->functional.Speed,PhysicsFunctional_SW,phys));
@@ -601,21 +597,20 @@ static PetscErrorCode PhysicsFunctional_Euler(Model mod,PetscReal time,const Pet
 static PetscErrorCode PhysicsCreate_Euler(PetscDS prob, Model mod,Physics phys,PetscOptions *PetscOptionsObject)
 {
   Physics_Euler   *eu;
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginUser;
   phys->field_desc = PhysicsFields_Euler;
   phys->riemann = (RiemannFunction) PhysicsRiemann_Euler_Rusanov;
   PetscCall(PetscNew(&eu));
   phys->data    = eu;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Euler options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Euler options");
   {
     eu->pars[0] = 3.0;
     eu->pars[1] = 1.67;
     PetscCall(PetscOptionsReal("-eu_f","Degrees of freedom","",eu->pars[0],&eu->pars[0],NULL));
     PetscCall(PetscOptionsReal("-eu_gamma","Heat capacity ratio","",eu->pars[1],&eu->pars[1],NULL));
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   eu->pressure = Pressure_PG;
   eu->sound    = SpeedOfSound_PG;
   phys->maxspeed = 1.0;
@@ -624,7 +619,7 @@ static PetscErrorCode PhysicsCreate_Euler(PetscDS prob, Model mod,Physics phys,P
     DMLabel        label;
 
     PetscCall(DMGetLabel(dm, "Face Sets", &label));
-    PetscCall(PetscDSAddBoundary(prob, PETSC_TRUE, "wall", label, ALEN(wallids), wallids, 0, 0, NULL, (void (*)()) PhysicsBoundary_Euler_Wall, NULL, phys, NULL));
+    PetscCall(PetscDSAddBoundary(prob, PETSC_TRUE, "wall", label, PETSC_STATIC_ARRAY_LENGTH(wallids), wallids, 0, 0, NULL, (void (*)()) PhysicsBoundary_Euler_Wall, NULL, phys, NULL));
     PetscCall(ModelSolutionSetDefault(mod,PhysicsSolution_Euler,phys));
     PetscCall(ModelFunctionalRegister(mod,"Speed",&eu->monitor.Speed,PhysicsFunctional_Euler,phys));
     PetscCall(ModelFunctionalRegister(mod,"Energy",&eu->monitor.Energy,PhysicsFunctional_Euler,phys));
@@ -644,7 +639,6 @@ PetscErrorCode ConstructCellBoundary(DM dm, User user)
   PetscInt       numRegions, innerRegion, numCells, c;
   PetscInt       cStart, cEnd, cEndInterior, fStart, fEnd;
   PetscBool      hasLabel;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
@@ -722,7 +716,6 @@ PetscErrorCode SplitFaces(DM *dmSplit, const char labelName[], User user)
   PetscInt       dim, depth, maxConeSize, maxSupportSize, numLabels, numGhostCells;
   PetscInt       numFS, fs, pStart, pEnd, p, cEnd, cEndInterior, vStart, vEnd, v, fStart, fEnd, newf, d, l;
   PetscBool      hasLabel;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   PetscCall(DMHasLabel(dm, labelName, &hasLabel));
@@ -918,7 +911,6 @@ PetscErrorCode CreatePartitionVec(DM dm, DM *dmCell, Vec *partition)
   PetscScalar    *part;
   PetscInt       cStart, cEnd, c;
   PetscMPIInt    rank;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   PetscCall(DMGetCoordinateSection(dm, &coordSection));
@@ -960,7 +952,6 @@ PetscErrorCode CreateMassMatrix(DM dm, Vec *massMatrix, User user)
   PetscScalar       *m;
   const PetscScalar *fgeom, *cgeom, *coords;
   PetscInt          vStart, vEnd, v;
-  PetscErrorCode    ierr;
 
   PetscFunctionBeginUser;
   PetscCall(DMConvert(dm, DMPLEX, &plex));
@@ -1033,7 +1024,6 @@ PetscErrorCode SetUpLocalSpace(DM dm, User user)
   PetscSection   stateSection;
   Physics        phys;
   PetscInt       dof = user->model->physics->dof, *cind, d, stateSize, cStart, cEnd, cEndInterior, c, i;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
@@ -1080,11 +1070,10 @@ PetscErrorCode SetUpLocalSpace(DM dm, User user)
 PetscErrorCode SetUpBoundaries(DM dm, User user)
 {
   Model          mod = user->model;
-  PetscErrorCode ierr;
   BoundaryLink   b;
 
   PetscFunctionBeginUser;
-  ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)dm),NULL,"Boundary condition options","");PetscCall(ierr);
+  PetscOptionsBegin(PetscObjectComm((PetscObject)dm),NULL,"Boundary condition options","");
   for (b = mod->boundary; b; b=b->next) {
     char      optname[512];
     PetscInt  ids[512],len = 512;
@@ -1100,7 +1089,7 @@ PetscErrorCode SetUpBoundaries(DM dm, User user)
       PetscCall(PetscArraycpy(b->ids,ids,len));
     }
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 #endif
@@ -1116,7 +1105,6 @@ static PetscErrorCode ModelSolutionSetDefault(Model mod,SolutionFunction func,vo
 
 static PetscErrorCode ModelFunctionalRegister(Model mod,const char *name,PetscInt *offset,FunctionalFunction func,void *ctx)
 {
-  PetscErrorCode ierr;
   FunctionalLink link,*ptr;
   PetscInt       lastoffset = -1;
 
@@ -1135,13 +1123,12 @@ static PetscErrorCode ModelFunctionalRegister(Model mod,const char *name,PetscIn
 
 static PetscErrorCode ModelFunctionalSetFromOptions(Model mod,PetscOptions *PetscOptionsObject)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j;
   FunctionalLink link;
   char           *names[256];
 
   PetscFunctionBeginUser;
-  mod->numMonitored = ALEN(names);
+  mod->numMonitored = PETSC_STATIC_ARRAY_LENGTH(names);
   PetscCall(PetscOptionsStringArray("-monitor","list of functionals to monitor","",names,&mod->numMonitored,NULL));
   /* Create list of functionals that will be computed somehow */
   PetscCall(PetscMalloc1(mod->numMonitored,&mod->functionalMonitored));
@@ -1179,7 +1166,6 @@ next_name:
 
 static PetscErrorCode FunctionalLinkDestroy(FunctionalLink *link)
 {
-  PetscErrorCode ierr;
   FunctionalLink l,next;
 
   PetscFunctionBeginUser;
@@ -1202,7 +1188,6 @@ PetscErrorCode SetInitialCondition(DM dm, Vec X, User user)
   const PetscScalar *cgeom;
   PetscScalar       *x;
   PetscInt           cStart, cEnd, c;
-  PetscErrorCode     ierr;
 
   PetscFunctionBeginUser;
   PetscCall(DMConvert(dm, DMPLEX, &plex));
@@ -1227,8 +1212,6 @@ PetscErrorCode SetInitialCondition(DM dm, Vec X, User user)
 
 static PetscErrorCode OutputVTK(DM dm, const char *filename, PetscViewer *viewer)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBeginUser;
   PetscCall(PetscViewerCreate(PetscObjectComm((PetscObject)dm), viewer));
   PetscCall(PetscViewerSetType(*viewer, PETSCVIEWERVTK));
@@ -1243,7 +1226,6 @@ static PetscErrorCode MonitorVTK(TS ts,PetscInt stepnum,PetscReal time,Vec X,voi
   PetscViewer    viewer;
   char           filename[PETSC_MAX_PATH_LEN],*ftable = NULL;
   PetscReal      xnorm;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   PetscCall(PetscObjectSetName((PetscObject) X, "solution"));
@@ -1328,7 +1310,7 @@ static PetscErrorCode MonitorVTK(TS ts,PetscInt stepnum,PetscReal time,Vec X,voi
     }
     PetscCall(PetscFree4(fmin,fmax,fintegral,ftmp));
 
-    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)ts),"% 3D  time %8.4g  |x| %8.4g  %s\n",stepnum,(double)time,(double)xnorm,ftable ? ftable : ""));
+    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)ts),"% 3" PetscInt_FMT "  time %8.4g  |x| %8.4g  %s\n",stepnum,(double)time,(double)xnorm,ftable ? ftable : ""));
     PetscCall(PetscFree(ftable));
   }
   if (user->vtkInterval < 1) PetscFunctionReturn(0);
@@ -1336,7 +1318,7 @@ static PetscErrorCode MonitorVTK(TS ts,PetscInt stepnum,PetscReal time,Vec X,voi
     if (stepnum == -1) {        /* Final time is not multiple of normal time interval, write it anyway */
       PetscCall(TSGetStepNumber(ts,&stepnum));
     }
-    PetscCall(PetscSNPrintf(filename,sizeof filename,"ex11-%03D.vtu",stepnum));
+    PetscCall(PetscSNPrintf(filename,sizeof filename,"ex11-%03" PetscInt_FMT ".vtu",stepnum));
     PetscCall(OutputVTK(dm,filename,&viewer));
     PetscCall(VecView(X,viewer));
     PetscCall(PetscViewerDestroy(&viewer));
@@ -1346,8 +1328,6 @@ static PetscErrorCode MonitorVTK(TS ts,PetscInt stepnum,PetscReal time,Vec X,voi
 
 static PetscErrorCode OutputBIN(DM dm, const char *filename, PetscViewer *viewer)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBeginUser;
   PetscCall(PetscViewerCreate(PetscObjectComm((PetscObject)dm), viewer));
   PetscCall(PetscViewerSetType(*viewer, PETSCVIEWERBINARY));
@@ -1363,7 +1343,6 @@ static PetscErrorCode TestMonitor(DM dm, const char *filename, Vec X, PetscReal 
   PetscBool      equal;
   PetscReal      timeread;
   PetscViewer    viewer;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename,FILE_MODE_READ,&viewer));
@@ -1394,7 +1373,6 @@ static PetscErrorCode MonitorBIN(TS ts,PetscInt stepnum,PetscReal time,Vec X,voi
   DM             dm;
   PetscViewer    viewer;
   char           filename[PETSC_MAX_PATH_LEN];
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   PetscCall(VecGetDM(X,&dm));
@@ -1426,7 +1404,6 @@ int main(int argc, char **argv)
   PetscBool         vtkCellGeom, splitFaces;
   PetscInt          overlap, f;
   char              filename[PETSC_MAX_PATH_LEN] = "sevenside.exo";
-  PetscErrorCode    ierr;
 
   PetscCall(PetscInitialize(&argc, &argv, (char*) 0, help));
   comm = PETSC_COMM_WORLD;
@@ -1444,7 +1421,7 @@ int main(int argc, char **argv)
   PetscCall(PetscFunctionListAdd(&PhysicsList,"sw"              ,PhysicsCreate_SW));
   PetscCall(PetscFunctionListAdd(&PhysicsList,"euler"           ,PhysicsCreate_Euler));
 
-  ierr = PetscOptionsBegin(comm,NULL,"Unstructured Finite Volume Mesh Options","");PetscCall(ierr);
+  PetscOptionsBegin(comm,NULL,"Unstructured Finite Volume Mesh Options","");
   {
     cfl  = 0.9 * 4; /* default SSPRKS2 with s=5 stages is stable for CFL number s-1 */
     PetscCall(PetscOptionsReal("-ufv_cfl","CFL number per step","",cfl,&cfl,NULL));
@@ -1458,12 +1435,12 @@ int main(int argc, char **argv)
     vtkCellGeom = PETSC_FALSE;
     PetscCall(PetscOptionsBool("-ufv_vtk_cellgeom","Write cell geometry (for debugging)","",vtkCellGeom,&vtkCellGeom,NULL));
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscCall(DMPlexCreateExodusFromFile(comm, filename, PETSC_TRUE, &dm));
   PetscCall(DMViewFromOptions(dm, NULL, "-dm_view"));
   PetscCall(DMGetDimension(dm, &dim));
 
-  ierr = PetscOptionsBegin(comm,NULL,"Unstructured Finite Volume Physics Options","");PetscCall(ierr);
+  PetscOptionsBegin(comm,NULL,"Unstructured Finite Volume Physics Options","");
   {
     PetscDS          prob;
     PetscErrorCode (*physcreate)(PetscDS,Model,Physics);
@@ -1483,7 +1460,7 @@ int main(int argc, char **argv)
     PetscCheck(phys->dof > 0,comm,PETSC_ERR_ARG_WRONGSTATE,"Physics '%s' did not set dof",physname);
     PetscCall(ModelFunctionalSetFromOptions(mod,PetscOptionsObject));
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   {
     DM dmDist;
 
@@ -1554,7 +1531,7 @@ int main(int argc, char **argv)
   PetscCall(TSGetSolveTime(ts,&ftime));
   PetscCall(TSGetStepNumber(ts,&nsteps));
   PetscCall(TSGetConvergedReason(ts,&reason));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%s at time %g after %D steps\n",TSConvergedReasons[reason],(double)ftime,nsteps));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%s at time %g after %" PetscInt_FMT " steps\n",TSConvergedReasons[reason],(double)ftime,nsteps));
   PetscCall(TSDestroy(&ts));
 
   PetscCall(PetscFunctionListDestroy(&PhysicsList));

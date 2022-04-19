@@ -119,7 +119,7 @@ PetscErrorCode MatAssemblyEnd_Preallocator(Mat A, MatAssemblyType type)
     }
   }
   PetscCall(MatStashScatterEnd_Private(&A->stash));
-  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE,&p->nooffproc,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)A)));
+  PetscCall(MPIU_Allreduce(MPI_IN_PLACE,&p->nooffproc,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)A)));
   PetscFunctionReturn(0);
 }
 
@@ -166,7 +166,7 @@ PetscErrorCode MatPreallocatorPreallocate_Preallocator(Mat mat, PetscBool fill, 
       rowstarts[i+1] = rowstarts[i] + p->dnz[i] + p->onz[i];
       maxrow = PetscMax(maxrow, p->dnz[i] + p->onz[i]);
     }
-    PetscCheckFalse(rowstarts[rEnd-rStart] != n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Hash claims %" PetscInt_FMT " entries, but dnz+onz counts %" PetscInt_FMT,n,rowstarts[rEnd-rStart]);
+    PetscCheck(rowstarts[rEnd-rStart] == n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Hash claims %" PetscInt_FMT " entries, but dnz+onz counts %" PetscInt_FMT,n,rowstarts[rEnd-rStart]);
 
     PetscHashIterBegin(p->ht,hi);
     for (PetscInt i=0; !PetscHashIterAtEnd(p->ht,hi); i++) {
@@ -231,7 +231,7 @@ PetscErrorCode MatPreallocatorPreallocate(Mat mat, PetscBool fill, Mat A)
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
   PetscValidLogicalCollectiveBool(mat,fill,2);
   PetscValidHeaderSpecific(A,MAT_CLASSID,3);
-  PetscCall(PetscUseMethod(mat,"MatPreallocatorPreallocate_C",(Mat,PetscBool,Mat),(mat,fill,A)));
+  PetscUseMethod(mat,"MatPreallocatorPreallocate_C",(Mat,PetscBool,Mat),(mat,fill,A));
   PetscFunctionReturn(0);
 }
 

@@ -29,7 +29,7 @@ static PetscErrorCode MatView_Elemental(Mat A,PetscViewer viewer)
     if (format == PETSC_VIEWER_ASCII_INFO) {
       /* call elemental viewing function */
       PetscCall(PetscViewerASCIIPrintf(viewer,"Elemental run parameters:\n"));
-      PetscCall(PetscViewerASCIIPrintf(viewer,"  allocated entries=%d\n",(*a->emat).AllocatedMemory()));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"  allocated entries=%zu\n",(*a->emat).AllocatedMemory()));
       PetscCall(PetscViewerASCIIPrintf(viewer,"  grid height=%d, grid width=%d\n",(*a->emat).Grid().Height(),(*a->emat).Grid().Width()));
       if (format == PETSC_VIEWER_ASCII_FACTOR_INFO) {
         /* call elemental viewing function */
@@ -68,14 +68,14 @@ static PetscErrorCode MatGetInfo_Elemental(Mat A,MatInfoType flag,MatInfo *info)
     info->nz_allocated   = (*a->emat).AllocatedMemory(); /* locally allocated */
     info->nz_used        = info->nz_allocated;
   } else if (flag == MAT_GLOBAL_MAX) {
-    //PetscCallMPI(MPIU_Allreduce(isend,irecv,5,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)matin)));
+    //PetscCall(MPIU_Allreduce(isend,irecv,5,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)matin)));
     /* see MatGetInfo_MPIAIJ() for getting global info->nz_allocated! */
     //SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP," MAT_GLOBAL_MAX not written yet");
   } else if (flag == MAT_GLOBAL_SUM) {
     //SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP," MAT_GLOBAL_SUM not written yet");
     info->nz_allocated   = (*a->emat).AllocatedMemory(); /* locally allocated */
     info->nz_used        = info->nz_allocated; /* assume Elemental does accurate allocation */
-    //PetscCallMPI(MPIU_Allreduce(isend,irecv,1,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)A)));
+    //PetscCall(MPIU_Allreduce(isend,irecv,1,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)A)));
     //PetscPrintf(PETSC_COMM_SELF,"    ... [%d] locally allocated %g\n",rank,info->nz_allocated);
   }
 
@@ -133,7 +133,7 @@ static PetscErrorCode MatSetValues_Elemental(Mat A,PetscInt nr,const PetscInt *r
         PetscCheckFalse(crank < 0 || cidx < 0 || ecol < 0,PetscObjectComm((PetscObject)A),PETSC_ERR_PLIB,"Incorrect col translation");
         if (!a->emat->IsLocal(erow,ecol)) { /* off-proc entry */
           /* printf("Will later remotely update (%d,%d)\n",erow,ecol); */
-          PetscCheckFalse(imode != ADD_VALUES,PETSC_COMM_SELF,PETSC_ERR_SUP,"Only ADD_VALUES to off-processor entry is supported");
+          PetscCheck(imode == ADD_VALUES,PETSC_COMM_SELF,PETSC_ERR_SUP,"Only ADD_VALUES to off-processor entry is supported");
           ++numQueues;
           continue;
         }
@@ -175,7 +175,7 @@ static PetscErrorCode MatSetValues_Elemental(Mat A,PetscInt nr,const PetscInt *r
         PetscCheckFalse(rrank < 0 || ridx < 0 || erow < 0,PetscObjectComm((PetscObject)A),PETSC_ERR_PLIB,"Incorrect row translation");
         if (!a->emat->IsLocal(erow,ecol)) { /* off-proc entry */
           /* printf("Will later remotely update (%d,%d)\n",erow,ecol); */
-          PetscCheckFalse(imode != ADD_VALUES,PETSC_COMM_SELF,PETSC_ERR_SUP,"Only ADD_VALUES to off-processor entry is supported");
+          PetscCheck(imode == ADD_VALUES,PETSC_COMM_SELF,PETSC_ERR_SUP,"Only ADD_VALUES to off-processor entry is supported");
           ++numQueues;
           continue;
         }
@@ -1362,11 +1362,9 @@ PETSC_EXTERN PetscErrorCode MatCreate_Elemental(Mat A)
   PetscCall(PetscCommDuplicate(cxxcomm.comm,&icomm,NULL));
   PetscCallMPI(MPI_Comm_get_attr(icomm,Petsc_Elemental_keyval,(void**)&commgrid,(int*)&flg));
   if (!flg) {
-    PetscErrorCode ierr;
-
     PetscCall(PetscNewLog(A,&commgrid));
 
-    ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)A),((PetscObject)A)->prefix,"Elemental Options","Mat");PetscCall(ierr);
+    PetscOptionsBegin(PetscObjectComm((PetscObject)A),((PetscObject)A)->prefix,"Elemental Options","Mat");
     /* displayed default grid sizes (CommSize,1) are set by us arbitrarily until El::Grid() is called */
     PetscCall(PetscOptionsInt("-mat_elemental_grid_height","Grid Height","None",El::mpi::Size(cxxcomm),&optv1,&flg1));
     if (flg1) {
@@ -1382,7 +1380,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_Elemental(Mat A)
     a->pivoting    = 1;
     PetscCall(PetscOptionsInt("-mat_elemental_pivoting","Pivoting","None",a->pivoting,&a->pivoting,NULL));
 
-    ierr = PetscOptionsEnd();PetscCall(ierr);
+    PetscOptionsEnd();
   } else {
     commgrid->grid_refct++;
   }

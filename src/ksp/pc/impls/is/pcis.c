@@ -31,7 +31,7 @@ PetscErrorCode PCISSetUseStiffnessScaling(PC pc, PetscBool use)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidLogicalCollectiveBool(pc,use,2);
-  PetscCall(PetscTryMethod(pc,"PCISSetUseStiffnessScaling_C",(PC,PetscBool),(pc,use)));
+  PetscTryMethod(pc,"PCISSetUseStiffnessScaling_C",(PC,PetscBool),(pc,use));
   PetscFunctionReturn(0);
 }
 
@@ -53,7 +53,7 @@ static PetscErrorCode PCISSetSubdomainDiagonalScaling_IS(PC pc, Vec scaling_fact
       PetscCall(VecDestroy(&pcis->D));
       PetscCall(VecDuplicate(pcis->vec1_B,&pcis->D));
       PetscCall(VecCopy(pcis->vec1_B,pcis->D));
-    } else PetscCheckFalse(sn != pcis->n_B,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Invalid size for scaling vector. Expected %D (or full %D), found %D",pcis->n_B,pcis->n,sn);
+    } else PetscCheck(sn == pcis->n_B,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Invalid size for scaling vector. Expected %" PetscInt_FMT " (or full %" PetscInt_FMT "), found %" PetscInt_FMT,pcis->n_B,pcis->n,sn);
   }
   PetscFunctionReturn(0);
 }
@@ -79,7 +79,7 @@ PetscErrorCode PCISSetSubdomainDiagonalScaling(PC pc, Vec scaling_factors)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidHeaderSpecific(scaling_factors,VEC_CLASSID,2);
-  PetscCall(PetscTryMethod(pc,"PCISSetSubdomainDiagonalScaling_C",(PC,Vec),(pc,scaling_factors)));
+  PetscTryMethod(pc,"PCISSetSubdomainDiagonalScaling_C",(PC,Vec),(pc,scaling_factors));
   PetscFunctionReturn(0);
 }
 
@@ -116,7 +116,7 @@ PetscErrorCode PCISSetSubdomainScalingFactor(PC pc, PetscScalar scal)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
-  PetscCall(PetscTryMethod(pc,"PCISSetSubdomainScalingFactor_C",(PC,PetscScalar),(pc,scal)));
+  PetscTryMethod(pc,"PCISSetSubdomainScalingFactor_C",(PC,PetscScalar),(pc,scal));
   PetscFunctionReturn(0);
 }
 
@@ -129,7 +129,6 @@ PetscErrorCode  PCISSetUp(PC pc, PetscBool computematrices, PetscBool computesol
   PC_IS          *pcis  = (PC_IS*)(pc->data);
   Mat_IS         *matis;
   MatReuse       reuse;
-  PetscErrorCode ierr;
   PetscBool      flg,issbaij;
 
   PetscFunctionBegin;
@@ -234,7 +233,7 @@ PetscErrorCode  PCISSetUp(PC pc, PetscBool computematrices, PetscBool computesol
       PetscCall(VecDestroy(&pcis->D));
       PetscCall(VecDuplicate(pcis->vec1_B,&pcis->D));
       PetscCall(VecCopy(pcis->vec1_B,pcis->D));
-    } else PetscCheckFalse(sn != pcis->n_B,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Invalid size for scaling vector. Expected %D (or full %D), found %D",pcis->n_B,pcis->n,sn);
+    } else PetscCheck(sn == pcis->n_B,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Invalid size for scaling vector. Expected %" PetscInt_FMT " (or full %" PetscInt_FMT "), found %" PetscInt_FMT,pcis->n_B,pcis->n,sn);
   }
 
   /*
@@ -363,8 +362,7 @@ PetscErrorCode  PCISSetUp(PC pc, PetscBool computematrices, PetscBool computesol
 
       PetscCall(PetscOptionsGetBool(((PetscObject)pc_ctx)->options,((PetscObject)pc_ctx)->prefix,"-pc_is_remove_nullspace_fixed",&remove_nullspace_fixed,NULL));
 
-      ierr = PetscOptionsGetReal(((PetscObject)pc_ctx)->options,((PetscObject)pc_ctx)->prefix,"-pc_is_set_damping_factor_floating",
-                              &floating_factor,&set_damping_factor_floating);PetscCall(ierr);
+      PetscCall(PetscOptionsGetReal(((PetscObject)pc_ctx)->options,((PetscObject)pc_ctx)->prefix,"-pc_is_set_damping_factor_floating",&floating_factor,&set_damping_factor_floating));
       if (!set_damping_factor_floating) floating_factor = 0.0;
       PetscCall(PetscOptionsGetBool(((PetscObject)pc_ctx)->options,((PetscObject)pc_ctx)->prefix,"-pc_is_set_damping_factor_floating",&set_damping_factor_floating,NULL));
       if (!set_damping_factor_floating) floating_factor = 1.e-12;
@@ -595,9 +593,9 @@ PetscErrorCode  PCISApplyInvSchur(PC pc, Vec b, Vec x, Vec vec1_N, Vec vec2_N)
       average = average / ((PetscReal)pcis->n);
       PetscCall(PetscViewerASCIIPushSynchronized(viewer));
       if (pcis->pure_neumann) {
-        PetscCall(PetscViewerASCIISynchronizedPrintf(viewer,"Subdomain %04d is floating. Average = % 1.14e\n",PetscGlobalRank,PetscAbsScalar(average)));
+        PetscCall(PetscViewerASCIISynchronizedPrintf(viewer,"Subdomain %04d is floating. Average = % 1.14e\n",PetscGlobalRank,(double)PetscAbsScalar(average)));
       } else {
-        PetscCall(PetscViewerASCIISynchronizedPrintf(viewer,"Subdomain %04d is fixed.    Average = % 1.14e\n",PetscGlobalRank,PetscAbsScalar(average)));
+        PetscCall(PetscViewerASCIISynchronizedPrintf(viewer,"Subdomain %04d is fixed.    Average = % 1.14e\n",PetscGlobalRank,(double)PetscAbsScalar(average)));
       }
       PetscCall(PetscViewerFlush(viewer));
       PetscCall(PetscViewerASCIIPopSynchronized(viewer));

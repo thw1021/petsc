@@ -4,13 +4,6 @@ static char help[] = "Solve a small system and a large system through preloading
   -permute <natural,rcm,nd,...> : solve system in permuted indexing\n\
   -f0 <small_sys_binary> -f1 <large_sys_binary> \n\n";
 
-/*T
-   Concepts: KSP^basic parallel example
-   Concepts: Mat^loading a binary matrix and vector;
-   Concepts: PetscLog^preloading executable
-   Processors: n
-T*/
-
 /*
   Include "petscksp.h" so that we can use KSP solvers.  Note that this file
   automatically includes:
@@ -34,7 +27,7 @@ PetscErrorCode CheckResult(KSP *ksp, Mat *A, Vec *b, Vec *x, IS *rowperm)
   PetscInt          its;
   PetscFunctionBegin;
   PetscCall(KSPGetTotalIterations(*ksp,&its));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Number of iterations = %d\n",its));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Number of iterations = %" PetscInt_FMT "\n",its));
 
   PetscCall(KSPGetResidualNorm(*ksp,&norm));
   if (norm < 1.e-12) {
@@ -95,7 +88,7 @@ PetscErrorCode CreateSystem(const char filename[PETSC_MAX_PATH_LEN], RHSType rhs
   PetscCall(MatGetLocalSize(A,NULL,&n1));
   PetscCall(VecGetLocalSize(b,&n2));
   same = (n1 == n2)? PETSC_TRUE : PETSC_FALSE;
-  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE,&same,1,MPIU_BOOL,MPI_LAND,PETSC_COMM_WORLD));
+  PetscCall(MPIU_Allreduce(MPI_IN_PLACE,&same,1,MPIU_BOOL,MPI_LAND,PETSC_COMM_WORLD));
 
   if (!same) { /* create a new vector b by padding the old one */
     PetscCall(VecCreate(PETSC_COMM_WORLD,&b2));
@@ -140,7 +133,6 @@ PetscErrorCode CreateSystem(const char filename[PETSC_MAX_PATH_LEN], RHSType rhs
  */
 int main(int argc,char **args)
 {
-  PetscErrorCode    ierr;
   Vec               x,b;
   Mat               A;           /* linear system matrix */
   KSP               ksp;         /* Krylov subspace method context */
@@ -151,7 +143,7 @@ int main(int argc,char **args)
 
   PetscCall(PetscInitialize(&argc,&args,(char*)0,help));
 
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Preloading example options","");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Preloading example options","");
   {
     /*
        Determine files from which we read the two linear systems
@@ -173,7 +165,7 @@ int main(int argc,char **args)
 
     PetscCall(PetscOptionsEnum("-rhs","Right hand side","",RHSTypes,(PetscEnum)rhstype,(PetscEnum*)&rhstype,NULL));
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   /*
     To use preloading, one usually has code like the following:

@@ -1,14 +1,6 @@
 
 static char help[] ="Solves the time independent Bratu problem using pseudo-timestepping.";
 
-/*
-   Concepts: TS^pseudo-timestepping
-   Concepts: TS^pseudo-timestepping
-   Concepts: TS^nonlinear problems
-   Processors: 1
-
-*/
-
 /* ------------------------------------------------------------------------
 
     This code demonstrates how one may solve a nonlinear problem
@@ -166,7 +158,7 @@ int main(int argc,char **argv)
   */
   PetscCall(TSGetStepNumber(ts,&its));
 
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Number of pseudo timesteps = %D final time %4.2e\n",its,(double)ftime));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Number of pseudo timesteps = %" PetscInt_FMT " final time %4.2e\n",its,(double)ftime));
 
   /*
      Free the data structures constructed above

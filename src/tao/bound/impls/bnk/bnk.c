@@ -310,7 +310,6 @@ PetscErrorCode TaoBNKComputeHessian(Tao tao)
 
 PetscErrorCode TaoBNKEstimateActiveSet(Tao tao, PetscInt asType)
 {
-  PetscErrorCode ierr;
   TAO_BNK        *bnk = (TAO_BNK *)tao->data;
   PetscBool      hessComputed, diagExists;
 
@@ -349,8 +348,8 @@ PetscErrorCode TaoBNKEstimateActiveSet(Tao tao, PetscInt asType)
       }
     }
     PetscCall(VecScale(bnk->W, -1.0));
-    ierr = TaoEstimateActiveBounds(tao->solution, tao->XL, tao->XU, bnk->unprojected_gradient, bnk->W, bnk->Xwork, bnk->as_step, &bnk->as_tol,
-                                   &bnk->active_lower, &bnk->active_upper, &bnk->active_fixed, &bnk->active_idx, &bnk->inactive_idx);PetscCall(ierr);
+    PetscCall(TaoEstimateActiveBounds(tao->solution, tao->XL, tao->XU, bnk->unprojected_gradient, bnk->W, bnk->Xwork, bnk->as_step, &bnk->as_tol,
+                                      &bnk->active_lower, &bnk->active_upper, &bnk->active_fixed, &bnk->active_idx, &bnk->inactive_idx));
     break;
 
   default:
@@ -1148,7 +1147,7 @@ PetscErrorCode TaoSetFromOptions_BNK(PetscOptionItems *PetscOptionsObject,Tao ta
   TAO_BNK        *bnk = (TAO_BNK *)tao->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Newton-Krylov method for bound constrained optimization"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Newton-Krylov method for bound constrained optimization");
   PetscCall(PetscOptionsEList("-tao_bnk_init_type", "radius initialization type", "", BNK_INIT, BNK_INIT_TYPES, BNK_INIT[bnk->init_type], &bnk->init_type, NULL));
   PetscCall(PetscOptionsEList("-tao_bnk_update_type", "radius update type", "", BNK_UPDATE, BNK_UPDATE_TYPES, BNK_UPDATE[bnk->update_type], &bnk->update_type, NULL));
   PetscCall(PetscOptionsEList("-tao_bnk_as_type", "active set estimation method", "", BNK_AS, BNK_AS_TYPES, BNK_AS[bnk->as_type], &bnk->as_type, NULL));
@@ -1200,7 +1199,7 @@ PetscErrorCode TaoSetFromOptions_BNK(PetscOptionItems *PetscOptionsObject,Tao ta
   PetscCall(PetscOptionsReal("-tao_bnk_as_tol", "(developer) initial tolerance used when estimating actively bounded variables", "", bnk->as_tol, &bnk->as_tol,NULL));
   PetscCall(PetscOptionsReal("-tao_bnk_as_step", "(developer) step length used when estimating actively bounded variables", "", bnk->as_step, &bnk->as_step,NULL));
   PetscCall(PetscOptionsInt("-tao_bnk_max_cg_its", "number of BNCG iterations to take for each Newton step", "", bnk->max_cg_its, &bnk->max_cg_its,NULL));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
 
   PetscCall(TaoSetOptionsPrefix(bnk->bncg,((PetscObject)(tao))->prefix));
   PetscCall(TaoAppendOptionsPrefix(bnk->bncg,"tao_bnk_cg_"));
@@ -1226,23 +1225,23 @@ PetscErrorCode TaoView_BNK(Tao tao, PetscViewer viewer)
     PetscCall(PetscViewerASCIIPushTab(viewer));
     if (bnk->M) {
       PetscCall(MatLMVMGetRejectCount(bnk->M,&nrejects));
-      PetscCall(PetscViewerASCIIPrintf(viewer, "Rejected BFGS updates: %D\n",nrejects));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "Rejected BFGS updates: %" PetscInt_FMT "\n",nrejects));
     }
-    PetscCall(PetscViewerASCIIPrintf(viewer, "CG steps: %D\n", bnk->tot_cg_its));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "Newton steps: %D\n", bnk->newt));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "CG steps: %" PetscInt_FMT "\n", bnk->tot_cg_its));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Newton steps: %" PetscInt_FMT "\n", bnk->newt));
     if (bnk->M) {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "BFGS steps: %D\n", bnk->bfgs));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "BFGS steps: %" PetscInt_FMT "\n", bnk->bfgs));
     }
-    PetscCall(PetscViewerASCIIPrintf(viewer, "Scaled gradient steps: %D\n", bnk->sgrad));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "Gradient steps: %D\n", bnk->grad));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Scaled gradient steps: %" PetscInt_FMT "\n", bnk->sgrad));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Gradient steps: %" PetscInt_FMT "\n", bnk->grad));
     PetscCall(PetscViewerASCIIPrintf(viewer, "KSP termination reasons:\n"));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  atol: %D\n", bnk->ksp_atol));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  rtol: %D\n", bnk->ksp_rtol));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  ctol: %D\n", bnk->ksp_ctol));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  negc: %D\n", bnk->ksp_negc));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  dtol: %D\n", bnk->ksp_dtol));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  iter: %D\n", bnk->ksp_iter));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  othr: %D\n", bnk->ksp_othr));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  atol: %" PetscInt_FMT "\n", bnk->ksp_atol));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  rtol: %" PetscInt_FMT "\n", bnk->ksp_rtol));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  ctol: %" PetscInt_FMT "\n", bnk->ksp_ctol));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  negc: %" PetscInt_FMT "\n", bnk->ksp_negc));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  dtol: %" PetscInt_FMT "\n", bnk->ksp_dtol));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  iter: %" PetscInt_FMT "\n", bnk->ksp_iter));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  othr: %" PetscInt_FMT "\n", bnk->ksp_othr));
     PetscCall(PetscViewerASCIIPopTab(viewer));
   }
   PetscFunctionReturn(0);

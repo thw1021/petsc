@@ -126,7 +126,7 @@ PetscErrorCode  ISSum(IS is1,IS is2,IS *is3)
   PetscValidHeaderSpecific(is2,IS_CLASSID,2);
   PetscCall(PetscObjectGetComm((PetscObject)(is1),&comm));
   PetscCallMPI(MPI_Comm_size(comm,&size));
-  PetscCheckFalse(size>1,PETSC_COMM_SELF,PETSC_ERR_SUP,"Currently only for uni-processor IS");
+  PetscCheck(size<=1,PETSC_COMM_SELF,PETSC_ERR_SUP,"Currently only for uni-processor IS");
 
   PetscCall(ISSorted(is1,&f));
   PetscCheck(f,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Arg 1 is not sorted");
@@ -251,7 +251,7 @@ PetscErrorCode ISExpand(IS is1,IS is2,IS *isout)
   if (is2) PetscValidHeaderSpecific(is2,IS_CLASSID,2);
   PetscValidPointer(isout,3);
 
-  PetscCheckFalse(!is1 && !is2,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Both arguments cannot be NULL");
+  PetscCheck(is1 || is2,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Both arguments cannot be NULL");
   if (!is1) {PetscCall(ISDuplicate(is2, isout));PetscFunctionReturn(0);}
   if (!is2) {PetscCall(ISDuplicate(is1, isout));PetscFunctionReturn(0);}
   PetscCall(ISGetIndices(is1,&i1));
@@ -348,7 +348,7 @@ PetscErrorCode ISIntersect(IS is1,IS is2,IS *isout)
     n2  = ntemp;
   }
   PetscCall(ISSorted(is1,&lsorted));
-  PetscCallMPI(MPIU_Allreduce(&lsorted,&sorted,1,MPIU_BOOL,MPI_LAND,comm));
+  PetscCall(MPIU_Allreduce(&lsorted,&sorted,1,MPIU_BOOL,MPI_LAND,comm));
   if (!sorted) {
     PetscCall(ISDuplicate(is1,&is1sorted));
     PetscCall(ISSort(is1sorted));
@@ -359,7 +359,7 @@ PetscErrorCode ISIntersect(IS is1,IS is2,IS *isout)
     PetscCall(ISGetIndices(is1,&i1));
   }
   PetscCall(ISSorted(is2,&lsorted));
-  PetscCallMPI(MPIU_Allreduce(&lsorted,&sorted,1,MPIU_BOOL,MPI_LAND,comm));
+  PetscCall(MPIU_Allreduce(&lsorted,&sorted,1,MPIU_BOOL,MPI_LAND,comm));
   if (!sorted) {
     PetscCall(ISDuplicate(is2,&is2sorted));
     PetscCall(ISSort(is2sorted));
@@ -453,7 +453,7 @@ PetscErrorCode ISConcatenate(MPI_Comm comm, PetscInt len, const IS islist[], IS 
     PetscCall(ISCreateStride(comm, 0,0,0, isout));
     PetscFunctionReturn(0);
   }
-  PetscCheckFalse(len < 0,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Negative array length: %" PetscInt_FMT, len);
+  PetscCheck(len >= 0,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Negative array length: %" PetscInt_FMT, len);
   N = 0;
   for (i = 0; i < len; ++i) {
     if (islist[i]) {
@@ -587,7 +587,7 @@ PetscErrorCode ISPairToList(IS xis, IS yis, PetscInt *listlen, IS **islist)
   /* Extract, copy and sort the local indices and colors on the color. */
   PetscCall(ISGetLocalSize(coloris, &llen));
   PetscCall(ISGetLocalSize(indis,   &ilen));
-  PetscCheckFalse(llen != ilen,comm, PETSC_ERR_ARG_SIZ, "Incompatible IS sizes: %" PetscInt_FMT " and %" PetscInt_FMT, ilen, llen);
+  PetscCheck(llen == ilen,comm, PETSC_ERR_ARG_SIZ, "Incompatible IS sizes: %" PetscInt_FMT " and %" PetscInt_FMT, ilen, llen);
   PetscCall(ISGetIndices(coloris, &ccolors));
   PetscCall(ISGetIndices(indis, &cinds));
   PetscCall(PetscMalloc2(ilen,&inds,llen,&colors));
@@ -604,8 +604,8 @@ PetscErrorCode ISPairToList(IS xis, IS yis, PetscInt *listlen, IS **islist)
     lhigh = PetscMax(lhigh,colors[lstart]);
     ++lcount;
   }
-  PetscCallMPI(MPIU_Allreduce(&llow,&low,1,MPI_INT,MPI_MIN,comm));
-  PetscCallMPI(MPIU_Allreduce(&lhigh,&high,1,MPI_INT,MPI_MAX,comm));
+  PetscCall(MPIU_Allreduce(&llow,&low,1,MPI_INT,MPI_MIN,comm));
+  PetscCall(MPIU_Allreduce(&lhigh,&high,1,MPI_INT,MPI_MAX,comm));
   *listlen = 0;
   if (low <= high) {
     if (lcount > 0) {
@@ -633,11 +633,11 @@ PetscErrorCode ISPairToList(IS xis, IS yis, PetscInt *listlen, IS **islist)
           while (lend < llen && colors[lend] == colors[lstart]) ++lend;
         }
         /* Now check whether the identified color segment matches l. */
-        PetscCheckFalse(colors[lstart] < l,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Locally owned color %" PetscInt_FMT " at location %" PetscInt_FMT " is < than the next global color %" PetscInt_FMT, colors[lstart], lcount, l);
+        PetscCheck(colors[lstart] >= l,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Locally owned color %" PetscInt_FMT " at location %" PetscInt_FMT " is < than the next global color %" PetscInt_FMT, colors[lstart], lcount, l);
       }
       color = (PetscMPIInt)(colors[lstart] == l);
       /* Check whether a proper subcommunicator exists. */
-      PetscCallMPI(MPIU_Allreduce(&color,&subsize,1,MPI_INT,MPI_SUM,comm));
+      PetscCall(MPIU_Allreduce(&color,&subsize,1,MPI_INT,MPI_SUM,comm));
 
       if (subsize == 1) subcomm = PETSC_COMM_SELF;
       else if (subsize == size) subcomm = comm;

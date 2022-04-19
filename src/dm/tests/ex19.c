@@ -10,7 +10,6 @@ static char help[] = "Tests DMDA with variable multiple degrees of freedom per n
 
 PetscErrorCode doit(DM da,Vec global)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,k,M,N,dof;
 
   PetscCall(DMDAGetInfo(da,0,&M,&N,0,0,0,0,&dof,0,0,0,0,0));
@@ -20,7 +19,7 @@ PetscErrorCode doit(DM da,Vec global)
     for (i=0; i<N; i++) {
       for (j=0; j<M; j++) {
         for (k=0; k<dof; k++) {
-          PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%D %D %g\n",i,j,(double)mystruct[i][j].inside[0]));
+          PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%" PetscInt_FMT " %" PetscInt_FMT " %g\n",i,j,(double)mystruct[i][j].inside[0]));
 
           mystruct[i][j].inside[1] = 2.1;
         }
@@ -34,7 +33,6 @@ PetscErrorCode doit(DM da,Vec global)
 int main(int argc,char **argv)
 {
   PetscInt       dof = 2,M = 3,N = 3,m = PETSC_DECIDE,n = PETSC_DECIDE;
-  PetscErrorCode ierr;
   DM             da;
   Vec            global,local;
 

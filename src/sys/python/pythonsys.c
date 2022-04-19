@@ -36,7 +36,7 @@ static PetscErrorCode PetscPythonFindLibraryName(const char pythonexe[],const ch
   PetscCall(PetscStrlcat(command,attempt,sizeof(command)));
 #if defined(PETSC_HAVE_POPEN)
   PetscCall(PetscPOpen(PETSC_COMM_SELF,NULL,command,"r",&fp));
-  PetscCheckFalse(!fgets(pythonlib,pl,fp),PETSC_COMM_SELF,PETSC_ERR_PLIB,"Python: bad output from executable: %s\nRunning: %s",pythonexe,command);
+  PetscCheck(fgets(pythonlib,pl,fp),PETSC_COMM_SELF,PETSC_ERR_PLIB,"Python: bad output from executable: %s\nRunning: %s",pythonexe,command);
   PetscCall(PetscPClose(PETSC_COMM_SELF,fp));
 #else
   SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"Python: Aborted due to missing popen()");
@@ -51,7 +51,7 @@ static PetscErrorCode PetscPythonFindLibraryName(const char pythonexe[],const ch
 static PetscErrorCode PetscPythonFindLibrary(const char pythonexe[],char pythonlib[],size_t pl)
 {
   const char     cmdline1[] = "-c 'import os, sysconfig; print(os.path.join(sysconfig.get_config_var(\"LIBDIR\"),sysconfig.get_config_var(\"LDLIBRARY\")))'";
-  const char     cmdline2[] = "-c 'import os, sysconfig; import sys;print(os.path.join(sysconfig.get_config_var(\"LIBDIR\"),\"libpython\"+sys.version[:3]+\".dylib\"))'";
+  const char     cmdline2[] = "-c 'import os, sysconfig; print(os.path.join(sysconfig.get_path(\"stdlib\"),os.path.pardir,\"libpython\"+sysconfig.get_python_version()+\".dylib\"))'";
   const char     cmdline3[] = "-c 'import os, sysconfig; print(os.path.join(sysconfig.get_config_var(\"LIBPL\"),sysconfig.get_config_var(\"LDLIBRARY\")))'";
   const char     cmdline4[] = "-c 'import sysconfig; print(sysconfig.get_config_var(\"LIBPYTHON\"))'";
   const char     cmdline5[] = "-c 'import os, sysconfig; import sys;print(os.path.join(sysconfig.get_config_var(\"LIBDIR\"),\"libpython\"+sys.version[:3]+\".so\"))'";

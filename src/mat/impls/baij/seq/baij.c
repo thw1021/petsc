@@ -1638,8 +1638,7 @@ static PetscErrorCode MatView_SeqBAIJ_Draw_Zoom(PetscDraw draw,void *Aa)
   /* loop over matrix elements drawing boxes */
 
   if (format != PETSC_VIEWER_DRAW_CONTOUR) {
-    PetscErrorCode ierr;
-    ierr = PetscDrawCollectiveBegin(draw);PetscCall(ierr);
+    PetscDrawCollectiveBegin(draw);
     /* Blue for negative, Cyan for zero and  Red for positive */
     color = PETSC_DRAW_BLUE;
     for (i=0,row=0; i<mbs; i++,row+=bs) {
@@ -1683,13 +1682,12 @@ static PetscErrorCode MatView_SeqBAIJ_Draw_Zoom(PetscDraw draw,void *Aa)
         }
       }
     }
-    ierr = PetscDrawCollectiveEnd(draw);PetscCall(ierr);
+    PetscDrawCollectiveEnd(draw);
   } else {
     /* use contour shading to indicate magnitude of values */
     /* first determine max of all nonzero values */
     PetscReal      minv = 0.0, maxv = 0.0;
     PetscDraw      popup;
-    PetscErrorCode ierr;
 
     for (i=0; i<a->nz*a->bs2; i++) {
       if (PetscAbsScalar(a->a[i]) > maxv) maxv = PetscAbsScalar(a->a[i]);
@@ -1698,7 +1696,7 @@ static PetscErrorCode MatView_SeqBAIJ_Draw_Zoom(PetscDraw draw,void *Aa)
     PetscCall(PetscDrawGetPopup(draw,&popup));
     PetscCall(PetscDrawScalePopup(popup,0.0,maxv));
 
-    ierr = PetscDrawCollectiveBegin(draw);PetscCall(ierr);
+    PetscDrawCollectiveBegin(draw);
     for (i=0,row=0; i<mbs; i++,row+=bs) {
       for (j=a->i[i]; j<a->i[i+1]; j++) {
         y_l = A->rmap->N - row - 1.0; y_r = y_l + 1.0;
@@ -1713,7 +1711,7 @@ static PetscErrorCode MatView_SeqBAIJ_Draw_Zoom(PetscDraw draw,void *Aa)
         }
       }
     }
-    ierr = PetscDrawCollectiveEnd(draw);PetscCall(ierr);
+    PetscDrawCollectiveEnd(draw);
   }
   PetscFunctionReturn(0);
 }
@@ -2334,7 +2332,7 @@ PetscErrorCode  MatSeqBAIJSetColumnIndices(Mat mat,PetscInt *indices)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
   PetscValidIntPointer(indices,2);
-  PetscCall(PetscUseMethod(mat,"MatSeqBAIJSetColumnIndices_C",(Mat,PetscInt*),(mat,indices)));
+  PetscUseMethod(mat,"MatSeqBAIJSetColumnIndices_C",(Mat,PetscInt*),(mat,indices));
   PetscFunctionReturn(0);
 }
 
@@ -2819,7 +2817,6 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqBAIJ_SeqSBAIJ(Mat, MatType,MatReuse,Ma
 PetscErrorCode  MatSeqBAIJSetPreallocation_SeqBAIJ(Mat B,PetscInt bs,PetscInt nz,PetscInt *nnz)
 {
   Mat_SeqBAIJ    *b;
-  PetscErrorCode ierr;
   PetscInt       i,mbs,nbs,bs2;
   PetscBool      flg = PETSC_FALSE,skipallocation = PETSC_FALSE,realalloc = PETSC_FALSE;
 
@@ -2853,9 +2850,9 @@ PetscErrorCode  MatSeqBAIJSetPreallocation_SeqBAIJ(Mat B,PetscInt bs,PetscInt nz
   }
 
   b    = (Mat_SeqBAIJ*)B->data;
-  ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)B),NULL,"Optimize options for SEQBAIJ matrix 2 ","Mat");PetscCall(ierr);
+  PetscOptionsBegin(PetscObjectComm((PetscObject)B),NULL,"Optimize options for SEQBAIJ matrix 2 ","Mat");
   PetscCall(PetscOptionsBool("-mat_no_unroll","Do not optimize for block size (slow)",NULL,flg,&flg,NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   if (!flg) {
     switch (bs) {
@@ -3115,7 +3112,7 @@ PetscErrorCode MatSeqBAIJSetPreallocationCSR_SeqBAIJ(Mat B,PetscInt bs,const Pet
 PetscErrorCode MatSeqBAIJGetArray(Mat A,PetscScalar **array)
 {
   PetscFunctionBegin;
-  PetscCall(PetscUseMethod(A,"MatSeqBAIJGetArray_C",(Mat,PetscScalar**),(A,array)));
+  PetscUseMethod(A,"MatSeqBAIJGetArray_C",(Mat,PetscScalar**),(A,array));
   PetscFunctionReturn(0);
 }
 
@@ -3135,7 +3132,7 @@ PetscErrorCode MatSeqBAIJGetArray(Mat A,PetscScalar **array)
 PetscErrorCode MatSeqBAIJRestoreArray(Mat A,PetscScalar **array)
 {
   PetscFunctionBegin;
-  PetscCall(PetscUseMethod(A,"MatSeqBAIJRestoreArray_C",(Mat,PetscScalar**),(A,array)));
+  PetscUseMethod(A,"MatSeqBAIJRestoreArray_C",(Mat,PetscScalar**),(A,array));
   PetscFunctionReturn(0);
 }
 
@@ -3529,7 +3526,7 @@ PetscErrorCode  MatSeqBAIJSetPreallocation(Mat B,PetscInt bs,PetscInt nz,const P
   PetscValidHeaderSpecific(B,MAT_CLASSID,1);
   PetscValidType(B,1);
   PetscValidLogicalCollectiveInt(B,bs,2);
-  PetscCall(PetscTryMethod(B,"MatSeqBAIJSetPreallocation_C",(Mat,PetscInt,PetscInt,const PetscInt[]),(B,bs,nz,nnz)));
+  PetscTryMethod(B,"MatSeqBAIJSetPreallocation_C",(Mat,PetscInt,PetscInt,const PetscInt[]),(B,bs,nz,nnz));
   PetscFunctionReturn(0);
 }
 
@@ -3563,7 +3560,7 @@ PetscErrorCode  MatSeqBAIJSetPreallocationCSR(Mat B,PetscInt bs,const PetscInt i
   PetscValidHeaderSpecific(B,MAT_CLASSID,1);
   PetscValidType(B,1);
   PetscValidLogicalCollectiveInt(B,bs,2);
-  PetscCall(PetscTryMethod(B,"MatSeqBAIJSetPreallocationCSR_C",(Mat,PetscInt,const PetscInt[],const PetscInt[],const PetscScalar[]),(B,bs,i,j,v)));
+  PetscTryMethod(B,"MatSeqBAIJSetPreallocationCSR_C",(Mat,PetscInt,const PetscInt[],const PetscInt[],const PetscScalar[]),(B,bs,i,j,v));
   PetscFunctionReturn(0);
 }
 

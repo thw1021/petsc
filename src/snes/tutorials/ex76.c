@@ -328,18 +328,16 @@ static void g3_wT(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
   PetscInt       sol;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   options->solType   = SOL_QUADRATIC;
   options->showError = PETSC_FALSE;
-
-  ierr = PetscOptionsBegin(comm, "", "Stokes Problem Options", "DMPLEX");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "Stokes Problem Options", "DMPLEX");
   sol = options->solType;
   PetscCall(PetscOptionsEList("-sol_type", "The solution type", "ex62.c", solTypes, NUM_SOL_TYPES, solTypes[options->solType], &sol, NULL));
   options->solType = (SolType) sol;
   PetscCall(PetscOptionsBool("-show_error", "Output the error for verification", "ex62.c", options->showError, &options->showError, NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -376,7 +374,7 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
     PetscCall(DMGetCoordinates(*dm, &coordinates));
     PetscCall(VecGetLocalSize(coordinates, &N));
     PetscCall(VecGetBlockSize(coordinates, &bs));
-    PetscCheck(bs == cdim,comm, PETSC_ERR_ARG_WRONG, "Invalid coordinate blocksize %D != embedding dimension %D", bs, cdim);
+    PetscCheck(bs == cdim,comm, PETSC_ERR_ARG_WRONG, "Invalid coordinate blocksize %" PetscInt_FMT " != embedding dimension %" PetscInt_FMT, bs, cdim);
     PetscCall(VecGetArray(coordinates, &coords));
     PetscCall(PetscBagGetData(user->bag, (void **) &param));
     theta = param->theta;
@@ -422,7 +420,7 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
     exactFuncs[1] = quadratic_p;
     exactFuncs[2] = quadratic_T;
     break;
-   default: SETERRQ(PetscObjectComm((PetscObject) prob), PETSC_ERR_ARG_WRONG, "Unsupported solution type: %s (%D)", solTypes[PetscMin(user->solType, NUM_SOL_TYPES)], user->solType);
+   default: SETERRQ(PetscObjectComm((PetscObject) prob), PETSC_ERR_ARG_WRONG, "Unsupported solution type: %s (%d)", solTypes[PetscMin(user->solType, NUM_SOL_TYPES)], user->solType);
   }
 
   PetscCall(PetscDSSetResidual(prob, 1, f0_q, NULL));
@@ -519,7 +517,7 @@ static PetscErrorCode CreatePressureNullSpace(DM dm, PetscInt ofield, PetscInt n
   PetscErrorCode (*funcs[3])(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar *, void *) = {zero, zero, zero};
 
   PetscFunctionBeginUser;
-  PetscCheck(ofield == 1,PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "Nullspace must be for pressure field at index 1, not %D", ofield);
+  PetscCheck(ofield == 1,PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "Nullspace must be for pressure field at index 1, not %" PetscInt_FMT, ofield);
   funcs[nfield] = constant;
   PetscCall(DMCreateGlobalVector(dm, &vec));
   PetscCall(DMProjectFunction(dm, 0.0, funcs, NULL, INSERT_ALL_VALUES, vec));

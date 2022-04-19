@@ -657,7 +657,7 @@ static PetscErrorCode KKTAddShifts(Tao tao,SNES snes,Vec X)
 
   if (npos < pdipm->Nx+pdipm->Nci) {
     pdipm->deltaw = PetscMax(pdipm->lastdeltaw/3, 1.e-4*PETSC_MACHINE_EPSILON);
-    PetscCall(PetscInfo(tao,"Test reduced deltaw=%g; previous MatInertia: nneg %D, nzero %D, npos %D(<%D)\n",(double)pdipm->deltaw,nneg,nzero,npos,pdipm->Nx+pdipm->Nci));
+    PetscCall(PetscInfo(tao,"Test reduced deltaw=%g; previous MatInertia: nneg %" PetscInt_FMT ", nzero %" PetscInt_FMT ", npos %" PetscInt_FMT "(<%" PetscInt_FMT ")\n",(double)pdipm->deltaw,nneg,nzero,npos,pdipm->Nx+pdipm->Nci));
     PetscCall(TaoSNESJacobian_PDIPM(snes,X, pdipm->K, pdipm->K, tao));
     PetscCall(PCSetUp(pc));
     PetscCall(MatGetInertia(Factor,&nneg,&nzero,&npos));
@@ -665,7 +665,7 @@ static PetscErrorCode KKTAddShifts(Tao tao,SNES snes,Vec X)
     if (npos < pdipm->Nx+pdipm->Nci) {
       pdipm->deltaw = pdipm->lastdeltaw; /* in case reduction update does not help, this prevents that step from impacting increasing update */
       while (npos < pdipm->Nx+pdipm->Nci && pdipm->deltaw <= 1./PETSC_SMALL) { /* increase deltaw */
-        PetscCall(PetscInfo(tao,"  deltaw=%g fails, MatInertia: nneg %D, nzero %D, npos %D(<%D)\n",(double)pdipm->deltaw,nneg,nzero,npos,pdipm->Nx+pdipm->Nci));
+        PetscCall(PetscInfo(tao,"  deltaw=%g fails, MatInertia: nneg %" PetscInt_FMT ", nzero %" PetscInt_FMT ", npos %" PetscInt_FMT "(<%" PetscInt_FMT ")\n",(double)pdipm->deltaw,nneg,nzero,npos,pdipm->Nx+pdipm->Nci));
         pdipm->deltaw = PetscMin(8*pdipm->deltaw,PetscPowReal(10,20));
         PetscCall(TaoSNESJacobian_PDIPM(snes,X, pdipm->K, pdipm->K, tao));
         PetscCall(PCSetUp(pc));
@@ -686,7 +686,7 @@ static PetscErrorCode KKTAddShifts(Tao tao,SNES snes,Vec X)
     } else {
       pdipm->deltac = pdipm->deltac*PetscPowReal(pdipm->mu,.25);
     }
-    PetscCall(PetscInfo(tao,"Updated deltac=%g, MatInertia: nneg %D, nzero %D(!=0), npos %D\n",(double)pdipm->deltac,nneg,nzero,npos));
+    PetscCall(PetscInfo(tao,"Updated deltac=%g, MatInertia: nneg %" PetscInt_FMT ", nzero %" PetscInt_FMT "(!=0), npos %" PetscInt_FMT "\n",(double)pdipm->deltac,nneg,nzero,npos));
     PetscCall(TaoSNESJacobian_PDIPM(snes,X, pdipm->K, pdipm->K, tao));
     PetscCall(PCSetUp(pc));
     PetscCall(MatGetInertia(Factor,&nneg,&nzero,&npos));
@@ -843,9 +843,7 @@ PetscErrorCode TaoSolve_PDIPM(Tao tao)
   PetscCall(TaoMonitor(tao,tao->niter,pdipm->obj,tao->residual,tao->cnorm,pdipm->mu));
   PetscCall(VecDestroy(&dummy));
   PetscCall((*tao->ops->convergencetest)(tao,tao->cnvP));
-  if (tao->reason) {
-    PetscCall(SNESSetConvergedReason(pdipm->snes,SNES_CONVERGED_FNORM_ABS));
-  }
+  if (tao->reason) PetscCall(SNESSetConvergedReason(pdipm->snes,SNES_CONVERGED_FNORM_ABS));
 
   while (tao->reason == TAO_CONTINUE_ITERATING) {
     SNESConvergedReason reason;
@@ -854,7 +852,7 @@ PetscErrorCode TaoSolve_PDIPM(Tao tao)
     /* Check SNES convergence */
     PetscCall(SNESGetConvergedReason(pdipm->snes,&reason));
     if (reason < 0) {
-      PetscCall(PetscPrintf(PetscObjectComm((PetscObject)pdipm->snes),"SNES solve did not converged due to reason %D\n",reason));
+      PetscCall(PetscPrintf(PetscObjectComm((PetscObject)pdipm->snes),"SNES solve did not converged due to reason %s\n",SNESConvergedReasons[reason]));
     }
 
     /* Check TAO convergence */
@@ -879,7 +877,7 @@ PetscErrorCode TaoView_PDIPM(Tao tao,PetscViewer viewer)
   PetscFunctionBegin;
   tao->constrained = PETSC_TRUE;
   PetscCall(PetscViewerASCIIPushTab(viewer));
-  PetscCall(PetscViewerASCIIPrintf(viewer,"Number of prime=%D, Number of dual=%D\n",pdipm->Nx+pdipm->Nci,pdipm->Nce + pdipm->Nci));
+  PetscCall(PetscViewerASCIIPrintf(viewer,"Number of prime=%" PetscInt_FMT ", Number of dual=%" PetscInt_FMT "\n",pdipm->Nx+pdipm->Nci,pdipm->Nce + pdipm->Nci));
   if (pdipm->kkt_pd) {
     PetscCall(PetscViewerASCIIPrintf(viewer,"KKT shifts deltaw=%g, deltac=%g\n",(double)pdipm->deltaw,(double)pdipm->deltac));
   }
@@ -898,7 +896,6 @@ PetscErrorCode TaoView_PDIPM(Tao tao,PetscViewer viewer)
 PetscErrorCode TaoSetup_PDIPM(Tao tao)
 {
   TAO_PDIPM         *pdipm = (TAO_PDIPM*)tao->data;
-  PetscErrorCode    ierr;
   MPI_Comm          comm;
   PetscMPIInt       size;
   PetscInt          row,col,Jcrstart,Jcrend,k,tmp,nc,proc,*nh_all,*ng_all;
@@ -1130,7 +1127,7 @@ PetscErrorCode TaoSetup_PDIPM(Tao tao)
   }
   PetscCall(MatTranspose(pdipm->Jci_xb,MAT_INITIAL_MATRIX,&Jci_xb_trans));
 
-  ierr = MatPreallocateInitialize(comm,pdipm->n,pdipm->n,dnz,onz);PetscCall(ierr);
+  MatPreallocateBegin(comm,pdipm->n,pdipm->n,dnz,onz);
 
   /* 1st row block of KKT matrix: [Wxx; gradCe'; -gradCi'; 0] */
   PetscCall(TaoPDIPMEvaluateFunctionsAndJacobians(tao,pdipm->x));
@@ -1302,7 +1299,7 @@ PetscErrorCode TaoSetup_PDIPM(Tao tao)
   PetscCall(MatSetFromOptions(J));
   PetscCall(MatSeqAIJSetPreallocation(J,0,dnz));
   PetscCall(MatMPIAIJSetPreallocation(J,0,dnz,0,onz));
-  ierr = MatPreallocateFinalize(dnz,onz);PetscCall(ierr);
+  MatPreallocateEnd(dnz,onz);
   pdipm->K = J;
 
   /* (8) Insert constant entries to  K */
@@ -1499,14 +1496,14 @@ PetscErrorCode TaoSetFromOptions_PDIPM(PetscOptionItems *PetscOptionsObject,Tao 
   TAO_PDIPM      *pdipm = (TAO_PDIPM*)tao->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"PDIPM method for constrained optimization"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"PDIPM method for constrained optimization");
   PetscCall(PetscOptionsReal("-tao_pdipm_push_init_slack","parameter to push initial slack variables away from bounds",NULL,pdipm->push_init_slack,&pdipm->push_init_slack,NULL));
   PetscCall(PetscOptionsReal("-tao_pdipm_push_init_lambdai","parameter to push initial (inequality) dual variables away from bounds",NULL,pdipm->push_init_lambdai,&pdipm->push_init_lambdai,NULL));
   PetscCall(PetscOptionsBool("-tao_pdipm_solve_reduced_kkt","Solve reduced KKT system using Schur-complement",NULL,pdipm->solve_reduced_kkt,&pdipm->solve_reduced_kkt,NULL));
   PetscCall(PetscOptionsReal("-tao_pdipm_mu_update_factor","Update scalar for barrier parameter (mu) update",NULL,pdipm->mu_update_factor,&pdipm->mu_update_factor,NULL));
   PetscCall(PetscOptionsBool("-tao_pdipm_symmetric_kkt","Solve non reduced symmetric KKT system",NULL,pdipm->solve_symmetric_kkt,&pdipm->solve_symmetric_kkt,NULL));
   PetscCall(PetscOptionsBool("-tao_pdipm_kkt_shift_pd","Add shifts to make KKT matrix positive definite",NULL,pdipm->kkt_pd,&pdipm->kkt_pd,NULL));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 

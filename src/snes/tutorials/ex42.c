@@ -1,10 +1,6 @@
 
 static char help[] = "Newton's method to solve a two-variable system that comes from the Rosenbrock function.\n\n";
 
-/*T
-   Concepts: SNES^basic example
-T*/
-
 /*
    Include "petscsnes.h" so that we can use SNES solvers.  Note that this
    file automatically includes:
@@ -93,7 +89,7 @@ int main(int argc,char **argv)
      report the reason if the iteration did not converge so that the tests are
      reproducible.
   */
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%s number of SNES iterations = %D\n",reason>0 ? "CONVERGED" : SNESConvergedReasons[reason],its));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%s number of SNES iterations = %" PetscInt_FMT "\n",reason>0 ? "CONVERGED" : SNESConvergedReasons[reason],its));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Free work space.  All PETSc objects should be destroyed when they

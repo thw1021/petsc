@@ -30,7 +30,7 @@ PetscErrorCode  SNESShellSetSolve(SNES snes,PetscErrorCode (*solve)(SNES,Vec))
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
-  PetscCall(PetscTryMethod(snes,"SNESShellSetSolve_C",(SNES,PetscErrorCode (*)(SNES,Vec)),(snes,solve)));
+  PetscTryMethod(snes,"SNESShellSetSolve_C",(SNES,PetscErrorCode (*)(SNES,Vec)),(snes,solve));
   PetscFunctionReturn(0);
 }
 
@@ -57,7 +57,7 @@ PetscErrorCode SNESSetUp_Shell(SNES snes)
 PetscErrorCode SNESSetFromOptions_Shell(PetscOptionItems *PetscOptionsObject,SNES snes)
 {
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"SNES Shell options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"SNES Shell options");
   PetscFunctionReturn(0);
 }
 

@@ -43,7 +43,7 @@ static PetscErrorCode PetscViewerSetFromOptions_HDF5(PetscOptionItems *PetscOpti
   PetscViewer_HDF5 *hdf5 = (PetscViewer_HDF5*)v->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"HDF5 PetscViewer Options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"HDF5 PetscViewer Options");
   PetscCall(PetscOptionsBool("-viewer_hdf5_base_dimension2","1d Vectors get 2 dimensions in HDF5","PetscViewerHDF5SetBaseDimension2",hdf5->basedimension2,&hdf5->basedimension2,NULL));
   PetscCall(PetscOptionsBool("-viewer_hdf5_sp_output","Force data to be written in single precision","PetscViewerHDF5SetSPOutput",hdf5->spoutput,&hdf5->spoutput,NULL));
   PetscCall(PetscOptionsBool("-viewer_hdf5_collective","Enable collective transfer mode","PetscViewerHDF5SetCollective",flg,&flg,&set));
@@ -51,7 +51,7 @@ static PetscErrorCode PetscViewerSetFromOptions_HDF5(PetscOptionItems *PetscOpti
   flg  = PETSC_FALSE;
   PetscCall(PetscOptionsBool("-viewer_hdf5_default_timestepping","Set default timestepping state","PetscViewerHDF5SetDefaultTimestepping",flg,&flg,&set));
   if (set) PetscCall(PetscViewerHDF5SetDefaultTimestepping(v,flg));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -169,7 +169,7 @@ PetscErrorCode PetscViewerHDF5SetBaseDimension2(PetscViewer viewer,PetscBool flg
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
-  PetscCall(PetscTryMethod(viewer,"PetscViewerHDF5SetBaseDimension2_C",(PetscViewer,PetscBool),(viewer,flg)));
+  PetscTryMethod(viewer,"PetscViewerHDF5SetBaseDimension2_C",(PetscViewer,PetscBool),(viewer,flg));
   PetscFunctionReturn(0);
 }
 
@@ -240,7 +240,7 @@ PetscErrorCode PetscViewerHDF5SetSPOutput(PetscViewer viewer,PetscBool flg)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
-  PetscCall(PetscTryMethod(viewer,"PetscViewerHDF5SetSPOutput_C",(PetscViewer,PetscBool),(viewer,flg)));
+  PetscTryMethod(viewer,"PetscViewerHDF5SetSPOutput_C",(PetscViewer,PetscBool),(viewer,flg));
   PetscFunctionReturn(0);
 }
 
@@ -323,7 +323,7 @@ PetscErrorCode PetscViewerHDF5SetCollective(PetscViewer viewer,PetscBool flg)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
   PetscValidLogicalCollectiveBool(viewer,flg,2);
-  PetscCall(PetscTryMethod(viewer,"PetscViewerHDF5SetCollective_C",(PetscViewer,PetscBool),(viewer,flg)));
+  PetscTryMethod(viewer,"PetscViewerHDF5SetCollective_C",(PetscViewer,PetscBool),(viewer,flg));
   PetscFunctionReturn(0);
 }
 
@@ -370,7 +370,7 @@ PetscErrorCode PetscViewerHDF5GetCollective(PetscViewer viewer,PetscBool *flg)
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
   PetscValidBoolPointer(flg,2);
 
-  PetscCall(PetscUseMethod(viewer,"PetscViewerHDF5GetCollective_C",(PetscViewer,PetscBool*),(viewer,flg)));
+  PetscUseMethod(viewer,"PetscViewerHDF5GetCollective_C",(PetscViewer,PetscBool*),(viewer,flg));
   PetscFunctionReturn(0);
 }
 
@@ -439,7 +439,6 @@ static PetscErrorCode PetscViewerSetUp_HDF5(PetscViewer viewer)
 {
   /*
   PetscViewer_HDF5 *hdf5 = (PetscViewer_HDF5*) viewer->data;
-  PetscErrorCode   ierr;
   */
 
   PetscFunctionBegin;
@@ -487,7 +486,7 @@ PetscErrorCode PetscViewerHDF5SetDefaultTimestepping(PetscViewer viewer, PetscBo
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 1);
-  PetscCall(PetscTryMethod(viewer, "PetscViewerHDF5SetDefaultTimestepping_C", (PetscViewer,PetscBool), (viewer,flg)));
+  PetscTryMethod(viewer, "PetscViewerHDF5SetDefaultTimestepping_C", (PetscViewer,PetscBool), (viewer,flg));
   PetscFunctionReturn(0);
 }
 
@@ -513,7 +512,7 @@ PetscErrorCode PetscViewerHDF5GetDefaultTimestepping(PetscViewer viewer, PetscBo
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 1);
-  PetscCall(PetscUseMethod(viewer, "PetscViewerHDF5GetDefaultTimestepping_C", (PetscViewer,PetscBool*), (viewer,flg)));
+  PetscUseMethod(viewer, "PetscViewerHDF5GetDefaultTimestepping_C", (PetscViewer,PetscBool*), (viewer,flg));
   PetscFunctionReturn(0);
 }
 
@@ -1197,7 +1196,7 @@ PetscErrorCode PetscViewerHDF5ReadAttribute(PetscViewer viewer, const char paren
           PetscCall(PetscStrallocpy(*(char**)defaultValue, (char**)value));
         } else {
           size_t len;
-          PetscStackCallHDF5Return(len,H5Tget_size,(dtype));
+          PetscStackCallHDF5ReturnNoCheck(len,H5Tget_size,(dtype));
           PetscCall(PetscMemcpy(value, defaultValue, len));
         }
       }
@@ -1212,7 +1211,7 @@ PetscErrorCode PetscViewerHDF5ReadAttribute(PetscViewer viewer, const char paren
     size_t len;
     hid_t  atype;
     PetscStackCallHDF5Return(atype,H5Aget_type,(attribute));
-    PetscStackCallHDF5Return(len,H5Tget_size,(atype));
+    PetscStackCallHDF5ReturnNoCheck(len,H5Tget_size,(atype));
     PetscCall(PetscMalloc((len+1) * sizeof(char), value));
     PetscStackCallHDF5(H5Tset_size,(dtype, len+1));
     PetscStackCallHDF5(H5Aread,(attribute, dtype, *(char**)value));

@@ -22,7 +22,6 @@ typedef struct {
 
 PetscErrorCode ComputeSolution(DM da,PetscGLL *gll,Vec u)
 {
-  PetscErrorCode ierr;
   PetscInt       j,xs,xn;
   PetscScalar    *uu,*xx;
   PetscReal      xd;
@@ -49,7 +48,6 @@ PetscErrorCode ComputeSolution(DM da,PetscGLL *gll,Vec u)
 */
 PetscErrorCode ComputeRhs(DM da,PetscGLL *gll,Vec b)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,xs,xn,n = gll->n;
   PetscScalar    *bb,*xx;
   PetscReal      xd;
@@ -90,7 +88,6 @@ PetscErrorCode ComputeRhs(DM da,PetscGLL *gll,Vec b)
 */
 int main(int argc,char **args)
 {
-  PetscErrorCode ierr;
   PetscGLL       gll;
   PetscInt       N = 80,n,q = 8,xs,xn,j,l;
   PetscReal      **A;
@@ -201,7 +198,7 @@ int main(int argc,char **args)
     PetscCall(PetscGaussLobattoLegendreIntegrate(gll.n,gll.nodes,gll.weights,f,&norm));
     PetscCall(VecRestoreArray(x,&f));
     norm = PetscSqrtReal(norm);
-    PetscCall(PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_WORLD,"L^2 norm of the error %D %g\n",n,(double)norm));
+    PetscCall(PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_WORLD,"L^2 norm of the error %" PetscInt_FMT " %g\n",n,(double)norm));
     PetscCheck(n <= 10 || norm <= 1.e-8,PETSC_COMM_WORLD,PETSC_ERR_PLIB,"Slower convergence than expected");
     xc   = (PetscReal)n;
     yc   = PetscLog10Real(norm);

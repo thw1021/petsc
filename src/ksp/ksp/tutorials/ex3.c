@@ -4,12 +4,6 @@ matrix assembly, the matrix is intentionally laid out across processors\n\
 differently from the way it is assembled.  Input arguments are:\n\
   -m <size> : problem size\n\n";
 
-/*T
-   Concepts: KSP^basic parallel example
-   Concepts: Matrices^inserting elements by blocks
-   Processors: n
-T*/
-
 /*
   Include "petscksp.h" so that we can use KSP solvers.  Note that this file
   automatically includes:
@@ -160,7 +154,7 @@ int main(int argc,char **args)
   PetscCall(VecAXPY(u,-1.0,ustar));
   PetscCall(VecNorm(u,NORM_2,&norm));
   PetscCall(KSPGetIterationNumber(ksp,&its));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g Iterations %D\n",(double)(norm*h),its));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g Iterations %" PetscInt_FMT "\n",(double)(norm*h),its));
 
   /*
      Free work space.  All PETSc objects should be destroyed when they

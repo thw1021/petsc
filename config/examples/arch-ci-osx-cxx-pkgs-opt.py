@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 petsc_hash_pkgs=os.path.join(os.getenv('HOME'),'petsc-hash-pkgs')
@@ -26,6 +26,7 @@ configure_options = [
   '--download-cmake=1',
   '--download-metis=1',
   '--download-parmetis=1',
+  '--download-bison=1',
   '--download-ptscotch=1',
   '--download-triangle=1',
   '--download-superlu=1',

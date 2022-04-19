@@ -444,7 +444,7 @@ PetscErrorCode VecWhichInactive(Vec VecLow, Vec V, Vec D, Vec VecHigh, PetscBool
 
   Level: advanced
 
-.seealso:  VecAXPY(), VecGetOwnershipRange()
+.seealso: VecISCopy(), VecISSet(), VecAXPY()
 @*/
 PetscErrorCode VecISAXPY(Vec vfull, IS is, PetscScalar alpha, Vec vreduced)
 {
@@ -470,7 +470,7 @@ PetscErrorCode VecISAXPY(Vec vfull, IS is, PetscScalar alpha, Vec vreduced)
     PetscCall(ISGetIndices(is,&id));
     PetscCall(ISGetLocalSize(is,&n));
     PetscCall(VecGetLocalSize(vreduced,&m));
-    PetscCheckFalse(m != n,PETSC_COMM_SELF,PETSC_ERR_SUP,"IS local length not equal to Vec local length");
+    PetscCheck(m == n,PETSC_COMM_SELF,PETSC_ERR_SUP,"IS local length not equal to Vec local length");
     PetscCall(VecGetOwnershipRange(vfull,&rstart,&rend));
     y   -= rstart;
     if (alpha == 1.0) {
@@ -515,7 +515,7 @@ PetscErrorCode VecISAXPY(Vec vfull, IS is, PetscScalar alpha, Vec vreduced)
 
   Level: advanced
 
-.seealso:  VecAXPY(), VecGetOwnershipRange()
+.seealso: VecISSet(), VecISAXPY(), VecCopy()
 @*/
 PetscErrorCode VecISCopy(Vec vfull, IS is, ScatterMode mode, Vec vreduced)
 {
@@ -542,7 +542,7 @@ PetscErrorCode VecISCopy(Vec vfull, IS is, ScatterMode mode, Vec vreduced)
     PetscCall(ISGetLocalSize(is, &n));
     PetscCall(VecGetLocalSize(vreduced, &m));
     PetscCall(VecGetOwnershipRange(vfull, &rstart, &rend));
-    PetscCheckFalse(m != n,PETSC_COMM_SELF, PETSC_ERR_SUP, "IS local length %" PetscInt_FMT " not equal to Vec local length %" PetscInt_FMT, n, m);
+    PetscCheck(m == n,PETSC_COMM_SELF, PETSC_ERR_SUP, "IS local length %" PetscInt_FMT " not equal to Vec local length %" PetscInt_FMT, n, m);
     if (mode == SCATTER_FORWARD) {
       PetscScalar       *y;
       const PetscScalar *x;
@@ -617,7 +617,7 @@ PetscErrorCode ISComplementVec(IS S, Vec V, IS *T)
 
    Level: advanced
 
-.seealso: VecSet(), VecGetOwnershipRange()
+.seealso: VecISCopy(), VecISAXPY(), VecSet()
 @*/
 PetscErrorCode VecISSet(Vec V,IS S, PetscScalar c)
 {
@@ -752,7 +752,7 @@ PetscErrorCode VecStepMaxBounded(Vec X, Vec DX, Vec XL, Vec XU, PetscReal *stepm
   PetscCall(VecRestoreArrayRead(XL,&xl));
   PetscCall(VecRestoreArrayRead(XU,&xu));
   PetscCall(VecRestoreArrayRead(DX,&dx));
-  PetscCallMPI(MPIU_Allreduce(&localmax,stepmax,1,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)X)));
+  PetscCall(MPIU_Allreduce(&localmax,stepmax,1,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)X)));
   PetscFunctionReturn(0);
 }
 
@@ -821,15 +821,15 @@ PetscErrorCode VecStepBoundInfo(Vec X, Vec DX, Vec XL, Vec XU, PetscReal *boundm
   PetscCall(PetscObjectGetComm((PetscObject)X,&comm));
 
   if (boundmin) {
-    PetscCallMPI(MPIU_Allreduce(&localmin,boundmin,1,MPIU_REAL,MPIU_MIN,comm));
+    PetscCall(MPIU_Allreduce(&localmin,boundmin,1,MPIU_REAL,MPIU_MIN,comm));
     PetscCall(PetscInfo(X,"Step Bound Info: Closest Bound: %20.19e\n",(double)*boundmin));
   }
   if (wolfemin) {
-    PetscCallMPI(MPIU_Allreduce(&localwolfemin,wolfemin,1,MPIU_REAL,MPIU_MIN,comm));
+    PetscCall(MPIU_Allreduce(&localwolfemin,wolfemin,1,MPIU_REAL,MPIU_MIN,comm));
     PetscCall(PetscInfo(X,"Step Bound Info: Wolfe: %20.19e\n",(double)*wolfemin));
   }
   if (boundmax) {
-    PetscCallMPI(MPIU_Allreduce(&localmax,boundmax,1,MPIU_REAL,MPIU_MAX,comm));
+    PetscCall(MPIU_Allreduce(&localmax,boundmax,1,MPIU_REAL,MPIU_MAX,comm));
     if (*boundmax < 0) *boundmax=PETSC_INFINITY;
     PetscCall(PetscInfo(X,"Step Bound Info: Max: %20.19e\n",(double)*boundmax));
   }
@@ -867,12 +867,12 @@ PetscErrorCode VecStepMax(Vec X, Vec DX, PetscReal *step)
   PetscCall(VecGetArrayRead(X,&xx));
   PetscCall(VecGetArrayRead(DX,&dx));
   for (i=0;i<nn;++i) {
-    PetscCheckFalse(PetscRealPart(xx[i]) < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Vector must be positive");
+    PetscCheck(PetscRealPart(xx[i]) >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Vector must be positive");
     else if (PetscRealPart(dx[i])<0) stepmax=PetscMin(stepmax,PetscRealPart(-xx[i]/dx[i]));
   }
   PetscCall(VecRestoreArrayRead(X,&xx));
   PetscCall(VecRestoreArrayRead(DX,&dx));
-  PetscCallMPI(MPIU_Allreduce(&stepmax,step,1,MPIU_REAL,MPIU_MIN,PetscObjectComm((PetscObject)X)));
+  PetscCall(MPIU_Allreduce(&stepmax,step,1,MPIU_REAL,MPIU_MIN,PetscObjectComm((PetscObject)X)));
   PetscFunctionReturn(0);
 }
 

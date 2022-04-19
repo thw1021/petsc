@@ -108,7 +108,7 @@ static PetscErrorCode KSPSetUp_Chebyshev(KSP ksp)
         }
         PetscCall(PCGetFailedReason(ksp->pc,&pcreason));
         ksp->reason = KSP_DIVERGED_PC_FAILED;
-        PetscCall(PetscInfo(ksp,"Eigen estimator failed: %s %s at iteration %D",KSPConvergedReasons[reason],PCFailedReasons[pcreason],its));
+        PetscCall(PetscInfo(ksp,"Eigen estimator failed: %s %s at iteration %" PetscInt_FMT,KSPConvergedReasons[reason],PCFailedReasons[pcreason],its));
         PetscFunctionReturn(0);
       } else if (reason == KSP_CONVERGED_RTOL || reason == KSP_CONVERGED_ATOL) {
         PetscCall(PetscInfo(ksp,"Eigen estimator converged prematurely. Should not happen except for small or low rank problem\n"));
@@ -160,8 +160,8 @@ static PetscErrorCode KSPChebyshevSetEigenvalues_Chebyshev(KSP ksp,PetscReal ema
   KSP_Chebyshev  *chebyshevP = (KSP_Chebyshev*)ksp->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(emax <= emin,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_INCOMP,"Maximum eigenvalue must be larger than minimum: max %g min %g",(double)emax,(double)emin);
-  PetscCheckFalse(emax*emin <= 0.0,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_INCOMP,"Both eigenvalues must be of the same sign: max %g min %g",(double)emax,(double)emin);
+  PetscCheck(emax > emin,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_INCOMP,"Maximum eigenvalue must be larger than minimum: max %g min %g",(double)emax,(double)emin);
+  PetscCheck(emax*emin > 0.0,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_INCOMP,"Both eigenvalues must be of the same sign: max %g min %g",(double)emax,(double)emin);
   chebyshevP->emax = emax;
   chebyshevP->emin = emin;
 
@@ -244,7 +244,7 @@ PetscErrorCode  KSPChebyshevSetEigenvalues(KSP ksp,PetscReal emax,PetscReal emin
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
   PetscValidLogicalCollectiveReal(ksp,emax,2);
   PetscValidLogicalCollectiveReal(ksp,emin,3);
-  PetscCall(PetscTryMethod(ksp,"KSPChebyshevSetEigenvalues_C",(KSP,PetscReal,PetscReal),(ksp,emax,emin)));
+  PetscTryMethod(ksp,"KSPChebyshevSetEigenvalues_C",(KSP,PetscReal,PetscReal),(ksp,emax,emin));
   PetscFunctionReturn(0);
 }
 
@@ -289,7 +289,7 @@ PetscErrorCode KSPChebyshevEstEigSet(KSP ksp,PetscReal a,PetscReal b,PetscReal c
   PetscValidLogicalCollectiveReal(ksp,b,3);
   PetscValidLogicalCollectiveReal(ksp,c,4);
   PetscValidLogicalCollectiveReal(ksp,d,5);
-  PetscCall(PetscTryMethod(ksp,"KSPChebyshevEstEigSet_C",(KSP,PetscReal,PetscReal,PetscReal,PetscReal),(ksp,a,b,c,d)));
+  PetscTryMethod(ksp,"KSPChebyshevEstEigSet_C",(KSP,PetscReal,PetscReal,PetscReal,PetscReal),(ksp,a,b,c,d));
   PetscFunctionReturn(0);
 }
 
@@ -316,7 +316,7 @@ PetscErrorCode KSPChebyshevEstEigSetUseNoisy(KSP ksp,PetscBool use)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
-  PetscCall(PetscTryMethod(ksp,"KSPChebyshevEstEigSetUseNoisy_C",(KSP,PetscBool),(ksp,use)));
+  PetscTryMethod(ksp,"KSPChebyshevEstEigSetUseNoisy_C",(KSP,PetscBool),(ksp,use));
   PetscFunctionReturn(0);
 }
 
@@ -341,7 +341,7 @@ PetscErrorCode KSPChebyshevEstEigGetKSP(KSP ksp, KSP *kspest)
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
   PetscValidPointer(kspest,2);
   *kspest = NULL;
-  PetscCall(PetscTryMethod(ksp,"KSPChebyshevEstEigGetKSP_C",(KSP,KSP*),(ksp,kspest)));
+  PetscTryMethod(ksp,"KSPChebyshevEstEigGetKSP_C",(KSP,KSP*),(ksp,kspest));
   PetscFunctionReturn(0);
 }
 
@@ -363,11 +363,11 @@ static PetscErrorCode KSPSetFromOptions_Chebyshev(PetscOptionItems *PetscOptions
   PetscBool      flgeig, flgest;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"KSP Chebyshev Options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"KSP Chebyshev Options");
   PetscCall(PetscOptionsInt("-ksp_chebyshev_esteig_steps","Number of est steps in Chebyshev","",cheb->eststeps,&cheb->eststeps,NULL));
   PetscCall(PetscOptionsRealArray("-ksp_chebyshev_eigenvalues","extreme eigenvalues","KSPChebyshevSetEigenvalues",eminmax,&neigarg,&flgeig));
   if (flgeig) {
-    PetscCheckFalse(neigarg != 2,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_INCOMP,"-ksp_chebyshev_eigenvalues: must specify 2 parameters, min and max eigenvalues");
+    PetscCheck(neigarg == 2,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_INCOMP,"-ksp_chebyshev_eigenvalues: must specify 2 parameters, min and max eigenvalues");
     PetscCall(KSPChebyshevSetEigenvalues(ksp, eminmax[1], eminmax[0]));
   }
   PetscCall(PetscOptionsRealArray("-ksp_chebyshev_esteig","estimate eigenvalues using a Krylov method, then use this transform for Chebyshev eigenvalue bounds","KSPChebyshevEstEigSet",tform,&nestarg,&flgest));
@@ -395,7 +395,7 @@ static PetscErrorCode KSPSetFromOptions_Chebyshev(PetscOptionItems *PetscOptions
     PetscCall(PetscOptionsBool("-ksp_chebyshev_esteig_noisy","Use noisy right hand side for estimate","KSPChebyshevEstEigSetUseNoisy",cheb->usenoisy,&cheb->usenoisy,NULL));
     PetscCall(KSPSetFromOptions(cheb->kspest));
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 

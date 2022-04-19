@@ -16,7 +16,6 @@
  step_accepted = false
 
  while niter <= max_it
-    niter += 1
 
     if needH
       If max_cg_steps > 0
@@ -82,8 +81,9 @@
         end
       end
 
-      check convergence at pg_{k+1}
     end
+    check convergence at pg_{k+1}
+    niter += 1
 
  end
 */
@@ -93,7 +93,7 @@ PetscErrorCode TaoSolve_BNTR(Tao tao)
   TAO_BNK                      *bnk = (TAO_BNK *)tao->data;
   KSPConvergedReason           ksp_reason;
 
-  PetscReal                    oldTrust, prered, actred, steplen, resnorm;
+  PetscReal                    oldTrust, prered, actred, steplen = 0.0, resnorm;
   PetscBool                    cgTerminate, needH = PETSC_TRUE, stepAccepted, shift = PETSC_FALSE;
   PetscInt                     stepType, nDiff;
 
@@ -109,7 +109,6 @@ PetscErrorCode TaoSolve_BNTR(Tao tao)
     if (tao->ops->update) {
       PetscCall((*tao->ops->update)(tao, tao->niter, tao->user_update));
     }
-    ++tao->niter;
 
     if (needH && bnk->inactive_idx) {
       /* Take BNCG steps (if enabled) to trade-off Hessian evaluations for more gradient evaluations */
@@ -184,15 +183,15 @@ PetscErrorCode TaoSolve_BNTR(Tao tao)
           tao->reason = TAO_DIVERGED_TR_REDUCTION;
         }
       }
-
-      /*  Check for termination */
-      PetscCall(VecFischer(tao->solution, bnk->unprojected_gradient, tao->XL, tao->XU, bnk->W));
-      PetscCall(VecNorm(bnk->W, NORM_2, &resnorm));
-      PetscCheck(!PetscIsInfOrNanReal(resnorm),PetscObjectComm((PetscObject)tao),PETSC_ERR_USER, "User provided compute function generated Inf or NaN");
-      PetscCall(TaoLogConvergenceHistory(tao, bnk->f, resnorm, 0.0, tao->ksp_its));
-      PetscCall(TaoMonitor(tao, tao->niter, bnk->f, resnorm, 0.0, steplen));
-      PetscCall((*tao->ops->convergencetest)(tao, tao->cnvP));
     }
+    /*  Check for termination */
+    PetscCall(VecFischer(tao->solution, bnk->unprojected_gradient, tao->XL, tao->XU, bnk->W));
+    PetscCall(VecNorm(bnk->W, NORM_2, &resnorm));
+    PetscCheck(!PetscIsInfOrNanReal(resnorm),PetscObjectComm((PetscObject)tao),PETSC_ERR_USER, "User provided compute function generated Inf or NaN");
+    ++tao->niter;
+    PetscCall(TaoLogConvergenceHistory(tao, bnk->f, resnorm, 0.0, tao->ksp_its));
+    PetscCall(TaoMonitor(tao, tao->niter, bnk->f, resnorm, 0.0, steplen));
+    PetscCall((*tao->ops->convergencetest)(tao, tao->cnvP));
   }
   PetscFunctionReturn(0);
 }

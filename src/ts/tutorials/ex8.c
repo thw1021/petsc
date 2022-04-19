@@ -170,7 +170,6 @@ static PetscErrorCode CESolution(PetscReal t,Vec X,void *ctx)
 
 static PetscErrorCode CECreate(Problem p)
 {
-  PetscErrorCode ierr;
   CECtx          *ce;
 
   PetscFunctionBeginUser;
@@ -186,11 +185,11 @@ static PetscErrorCode CECreate(Problem p)
   p->hasexact   = PETSC_TRUE;
 
   ce->lambda = 10;
-  ierr       = PetscOptionsBegin(p->comm,NULL,"CE options","");PetscCall(ierr);
+  PetscOptionsBegin(p->comm,NULL,"CE options","");
   {
     PetscCall(PetscOptionsReal("-problem_ce_lambda","Parameter controlling stiffness: xdot + lambda*(x - cos(t))","",ce->lambda,&ce->lambda,NULL));
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -297,7 +296,7 @@ static PetscErrorCode MonitorError(TS ts,PetscInt step,PetscReal t,Vec x,void *c
   if (step < 0) {
     PetscCall(PetscPrintf(mon->comm,"Interpolated final solution "));
   }
-  PetscCall(PetscPrintf(mon->comm,"step %4D t=%12.8e h=% 8.2e  |x|=%9.2e  |x_e|=%9.2e  |x-x_e|=%9.2e\n",step,(double)t,(double)h,(double)nrm_x,(double)nrm_exact,(double)nrm_diff));
+  PetscCall(PetscPrintf(mon->comm,"step %4" PetscInt_FMT " t=%12.8e h=% 8.2e  |x|=%9.2e  |x_e|=%9.2e  |x-x_e|=%9.2e\n",step,(double)t,(double)h,(double)nrm_x,(double)nrm_exact,(double)nrm_diff));
   PetscFunctionReturn(0);
 }
 
@@ -314,7 +313,6 @@ int main(int argc,char **argv)
   PetscInt          steps,nonlinits,linits,snesfails,rejects;
   PetscReal         ftime;
   MonitorCtx        mon;
-  PetscErrorCode    ierr;
   PetscMPIInt       size;
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -333,14 +331,14 @@ int main(int argc,char **argv)
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     Set runtime options
     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Timestepping benchmark options","");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Timestepping benchmark options","");
   {
     PetscCall(PetscOptionsFList("-problem_type","Name of problem to run","",plist,pname,pname,sizeof(pname),NULL));
     use_monitor = PETSC_FALSE;
     PetscCall(PetscOptionsBool("-monitor_error","Display errors relative to exact solutions","",use_monitor,&use_monitor,NULL));
     PetscCall(PetscOptionsBool("-monitor_result","Display result","",use_result,&use_result,NULL));
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   /* Create the new problem */
   PetscCall(PetscNew(&problem));
@@ -407,7 +405,7 @@ int main(int argc,char **argv)
   PetscCall(TSGetSNESIterations(ts,&nonlinits));
   PetscCall(TSGetKSPIterations(ts,&linits));
   if (use_result) {
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"steps %D (%D rejected, %D SNES fails), ftime %g, nonlinits %D, linits %D\n",steps,rejects,snesfails,(double)ftime,nonlinits,linits));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"steps %" PetscInt_FMT " (%" PetscInt_FMT " rejected, %" PetscInt_FMT " SNES fails), ftime %g, nonlinits %" PetscInt_FMT ", linits %" PetscInt_FMT "\n",steps,rejects,snesfails,(double)ftime,nonlinits,linits));
   }
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

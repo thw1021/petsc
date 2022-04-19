@@ -14,16 +14,14 @@ typedef struct {
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBeginUser;
   options->filename[0] = '\0';
   options->volumeMesh  = PETSC_TRUE;
 
-  ierr = PetscOptionsBegin(comm, "", "EGADSPlex Problem Options", "EGADSLite");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "EGADSPlex Problem Options", "EGADSLite");
   PetscCall(PetscOptionsString("-filename", "The CAD file", "ex37.c", options->filename, options->filename, sizeof(options->filename), NULL));
   PetscCall(PetscOptionsBool("-volume_mesh", "Create a volume mesh", "ex37.c", options->volumeMesh, &options->volumeMesh, NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -34,7 +32,6 @@ static PetscErrorCode ComputeVolume(DM dm)
   double         surface = 0., volume = 0., vol;
   PetscInt       dim, pStart, pEnd, p, pid;
   const char    *name;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   PetscCall(DMGetDimension(dm, &dim));
@@ -69,7 +66,6 @@ int main(int argc, char *argv[])
 {
   DM             surface, dm;
   AppCtx         ctx;
-  PetscErrorCode ierr;
 
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   PetscCall(ProcessOptions(PETSC_COMM_WORLD, &ctx));

@@ -363,10 +363,10 @@ int main(int argc, char *argv[])
 
   PetscCall(PetscInitialize(&argc, &argv, 0, help));
 
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "", "STREAM Benchmark Options", "STREAM");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD, "", "STREAM Benchmark Options", "STREAM");
   PetscCall(PetscOptionsBoundedInt("-device", "Specify the CUDA device to be used", "STREAM", device, &device, NULL,0));
   PetscCall(PetscOptionsBool("-double",    "Also run double precision tests",   "STREAM", runDouble, &runDouble, NULL));
-  ierr = PetscOptionsEnd();
+  PetscOptionsEnd();
 
   ierr = setupStream(device, runDouble, cpuTiming);
   if (ierr) {
@@ -382,7 +382,6 @@ int main(int argc, char *argv[])
 PetscErrorCode setupStream(PetscInt deviceNum, PetscBool runDouble, PetscBool cpuTiming)
 {
   PetscInt       iNumThreadsPerBlock = 128;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   // Check device
@@ -433,7 +432,6 @@ PetscErrorCode runStream(const PetscInt iNumThreadsPerBlock, PetscBool bDontUseG
   int            k;
   float          times[8][NTIMES];
   float          scalar;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* Allocate memory on device */
@@ -650,7 +648,6 @@ PetscErrorCode runStreamDouble(const PetscInt iNumThreadsPerBlock, PetscBool bDo
   int            k;
   float          times[8][NTIMES];
   double         scalar;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* Allocate memory on device */

@@ -91,15 +91,12 @@ PetscErrorCode SNESSetUp_NGMRES(SNES snes)
 PetscErrorCode SNESSetFromOptions_NGMRES(PetscOptionItems *PetscOptionsObject,SNES snes)
 {
   SNES_NGMRES    *ngmres = (SNES_NGMRES*) snes->data;
-  PetscErrorCode ierr;
   PetscBool      debug = PETSC_FALSE;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"SNES NGMRES options"));
-  ierr = PetscOptionsEnum("-snes_ngmres_select_type","Select type","SNESNGMRESSetSelectType",SNESNGMRESSelectTypes,
-                          (PetscEnum)ngmres->select_type,(PetscEnum*)&ngmres->select_type,NULL);PetscCall(ierr);
-  ierr = PetscOptionsEnum("-snes_ngmres_restart_type","Restart type","SNESNGMRESSetRestartType",SNESNGMRESRestartTypes,
-                          (PetscEnum)ngmres->restart_type,(PetscEnum*)&ngmres->restart_type,NULL);PetscCall(ierr);
+  PetscOptionsHeadBegin(PetscOptionsObject,"SNES NGMRES options");
+  PetscCall(PetscOptionsEnum("-snes_ngmres_select_type","Select type","SNESNGMRESSetSelectType",SNESNGMRESSelectTypes,(PetscEnum)ngmres->select_type,(PetscEnum*)&ngmres->select_type,NULL));
+  PetscCall(PetscOptionsEnum("-snes_ngmres_restart_type","Restart type","SNESNGMRESSetRestartType",SNESNGMRESRestartTypes,(PetscEnum)ngmres->restart_type,(PetscEnum*)&ngmres->restart_type,NULL));
   PetscCall(PetscOptionsBool("-snes_ngmres_candidate", "Use candidate storage",              "SNES",ngmres->candidate,&ngmres->candidate,NULL));
   PetscCall(PetscOptionsBool("-snes_ngmres_approxfunc","Linearly approximate the function", "SNES",ngmres->approxfunc,&ngmres->approxfunc,NULL));
   PetscCall(PetscOptionsInt("-snes_ngmres_m",          "Number of directions",               "SNES",ngmres->msize,&ngmres->msize,NULL));
@@ -115,7 +112,7 @@ PetscErrorCode SNESSetFromOptions_NGMRES(PetscOptionItems *PetscOptionsObject,SN
   PetscCall(PetscOptionsReal("-snes_ngmres_deltaB",    "Difference residual selection constant", "SNES",ngmres->deltaB,&ngmres->deltaB,NULL));
   PetscCall(PetscOptionsBool("-snes_ngmres_single_reduction", "Aggregate reductions",  "SNES",ngmres->singlereduction,&ngmres->singlereduction,NULL));
   PetscCall(PetscOptionsBool("-snes_ngmres_restart_fm_rise", "Restart on F_M residual rise",  "SNESNGMRESSetRestartFmRise",ngmres->restart_fm_rise,&ngmres->restart_fm_rise,NULL));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   if ((ngmres->gammaA > ngmres->gammaC) && (ngmres->gammaC > 2.)) ngmres->gammaC = ngmres->gammaA;
   PetscFunctionReturn(0);
 }
@@ -128,10 +125,10 @@ PetscErrorCode SNESView_NGMRES(SNES snes,PetscViewer viewer)
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject) viewer,PETSCVIEWERASCII,&iascii));
   if (iascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Number of stored past updates: %d\n", ngmres->msize));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Residual selection: gammaA=%1.0e, gammaC=%1.0e\n",ngmres->gammaA,ngmres->gammaC));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Difference restart: epsilonB=%1.0e, deltaB=%1.0e\n",ngmres->epsilonB,ngmres->deltaB));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Restart on F_M residual increase: %s\n",ngmres->restart_fm_rise?"TRUE":"FALSE"));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Number of stored past updates: %" PetscInt_FMT "\n", ngmres->msize));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Residual selection: gammaA=%1.0e, gammaC=%1.0e\n",(double)ngmres->gammaA,(double)ngmres->gammaC));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Difference restart: epsilonB=%1.0e, deltaB=%1.0e\n",(double)ngmres->epsilonB,(double)ngmres->deltaB));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Restart on F_M residual increase: %s\n",PetscBools[ngmres->restart_fm_rise]));
   }
   PetscFunctionReturn(0);
 }
@@ -277,7 +274,7 @@ PetscErrorCode SNESSolve_NGMRES(SNES snes)
       else restart_count = 0;
     } else if (ngmres->restart_type == SNES_NGMRES_RESTART_PERIODIC) {
       if (k_restart > ngmres->restart_periodic) {
-        if (ngmres->monitor) PetscCall(PetscViewerASCIIPrintf(ngmres->monitor,"periodic restart after %D iterations\n",k_restart));
+        if (ngmres->monitor) PetscCall(PetscViewerASCIIPrintf(ngmres->monitor,"periodic restart after %" PetscInt_FMT " iterations\n",k_restart));
         restart_count = ngmres->restart_it;
       }
     }
@@ -287,7 +284,7 @@ PetscErrorCode SNESSolve_NGMRES(SNES snes)
     /* restart after restart conditions have persisted for a fixed number of iterations */
     if (restart_count >= ngmres->restart_it) {
       if (ngmres->monitor) {
-        PetscCall(PetscViewerASCIIPrintf(ngmres->monitor,"Restarted at iteration %d\n",k_restart));
+        PetscCall(PetscViewerASCIIPrintf(ngmres->monitor,"Restarted at iteration %" PetscInt_FMT "\n",k_restart));
       }
       restart_count = 0;
       k_restart     = 1;
@@ -409,7 +406,7 @@ PetscErrorCode SNESNGMRESSetRestartType(SNES snes,SNESNGMRESRestartType rtype)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
-  PetscCall(PetscTryMethod(snes,"SNESNGMRESSetRestartType_C",(SNES,SNESNGMRESRestartType),(snes,rtype)));
+  PetscTryMethod(snes,"SNESNGMRESSetRestartType_C",(SNES,SNESNGMRESRestartType),(snes,rtype));
   PetscFunctionReturn(0);
 }
 
@@ -441,7 +438,7 @@ PetscErrorCode SNESNGMRESSetSelectType(SNES snes,SNESNGMRESSelectType stype)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
-  PetscCall(PetscTryMethod(snes,"SNESNGMRESSetSelectType_C",(SNES,SNESNGMRESSelectType),(snes,stype)));
+  PetscTryMethod(snes,"SNESNGMRESSetSelectType_C",(SNES,SNESNGMRESSelectType),(snes,stype));
   PetscFunctionReturn(0);
 }
 

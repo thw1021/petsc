@@ -35,7 +35,7 @@ PetscErrorCode SNESDestroy_NRichardson(SNES snes)
 PetscErrorCode SNESSetUp_NRichardson(SNES snes)
 {
   PetscFunctionBegin;
-  PetscCheckFalse(snes->npcside== PC_RIGHT,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"NRichardson only supports left preconditioning");
+  PetscCheck(snes->npcside!= PC_RIGHT,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"NRichardson only supports left preconditioning");
   if (snes->functype == SNES_FUNCTION_DEFAULT) snes->functype = SNES_FUNCTION_UNPRECONDITIONED;
   PetscFunctionReturn(0);
 }
@@ -51,8 +51,8 @@ PetscErrorCode SNESSetUp_NRichardson(SNES snes)
 static PetscErrorCode SNESSetFromOptions_NRichardson(PetscOptionItems *PetscOptionsObject,SNES snes)
 {
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"SNES Richardson options"));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadBegin(PetscOptionsObject,"SNES Richardson options");
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -209,7 +209,7 @@ PetscErrorCode SNESSolve_NRichardson(SNES snes)
     }
   }
   if (i == maxits+1) {
-    PetscCall(PetscInfo(snes, "Maximum number of iterations has been reached: %D\n", maxits));
+    PetscCall(PetscInfo(snes, "Maximum number of iterations has been reached: %" PetscInt_FMT "\n", maxits));
     if (!snes->reason) snes->reason = SNES_DIVERGED_MAX_IT;
   }
   PetscFunctionReturn(0);

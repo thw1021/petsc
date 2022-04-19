@@ -488,7 +488,7 @@ PetscErrorCode PCMGSetLevels(PC pc,PetscInt levels,MPI_Comm *comms)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   if (comms) PetscValidPointer(comms,3);
-  PetscCall(PetscTryMethod(pc,"PCMGSetLevels_C",(PC,PetscInt,MPI_Comm*),(pc,levels,comms)));
+  PetscTryMethod(pc,"PCMGSetLevels_C",(PC,PetscInt,MPI_Comm*),(pc,levels,comms));
   PetscFunctionReturn(0);
 }
 
@@ -661,7 +661,7 @@ PetscErrorCode PCSetFromOptions_MG(PetscOptionItems *PetscOptionsObject,PC pc)
 
   PetscFunctionBegin;
   levels = PetscMax(mg->nlevels,1);
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Multigrid options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Multigrid options");
   PetscCall(PetscOptionsInt("-pc_mg_levels","Number of Levels","PCMGSetLevels",levels,&levels,&flg));
   if (!flg && !mg->levels && pc->dm) {
     PetscCall(DMGetRefineLevel(pc->dm,&levels));
@@ -745,11 +745,11 @@ PetscErrorCode PCSetFromOptions_MG(PetscOptionItems *PetscOptionsObject,PC pc)
     }
 #endif
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   /* Check option consistency */
   PetscCall(PCMGGetGalerkin(pc, &gtype));
   PetscCall(PCMGGetAdaptInterpolation(pc, &flg));
-  PetscCheckFalse(flg && (gtype >= PC_MG_GALERKIN_NONE),PetscObjectComm((PetscObject) pc), PETSC_ERR_ARG_INCOMP, "Must use Galerkin coarse operators when adapting the interpolator");
+  PetscCheck(!flg || !(gtype >= PC_MG_GALERKIN_NONE),PetscObjectComm((PetscObject) pc), PETSC_ERR_ARG_INCOMP, "Must use Galerkin coarse operators when adapting the interpolator");
   PetscFunctionReturn(0);
 }
 
@@ -772,9 +772,9 @@ PetscErrorCode PCView_MG(PC pc,PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERDRAW,&isdraw));
   if (iascii) {
     const char *cyclename = levels ? (mglevels[0]->cycles == PC_MG_CYCLE_V ? "v" : "w") : "unknown";
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  type is %s, levels=%D cycles=%s\n", PCMGTypes[mg->am],levels,cyclename));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  type is %s, levels=%" PetscInt_FMT " cycles=%s\n", PCMGTypes[mg->am],levels,cyclename));
     if (mg->am == PC_MG_MULTIPLICATIVE) {
-      PetscCall(PetscViewerASCIIPrintf(viewer,"    Cycles per PCApply=%d\n",mg->cyclesperpcapply));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"    Cycles per PCApply=%" PetscInt_FMT "\n",mg->cyclesperpcapply));
     }
     if (mg->galerkin == PC_MG_GALERKIN_BOTH) {
       PetscCall(PetscViewerASCIIPrintf(viewer,"    Using Galerkin computed coarse grid matrices\n"));
@@ -791,10 +791,10 @@ PetscErrorCode PCView_MG(PC pc,PetscViewer viewer)
       PetscCall((*mg->view)(pc,viewer));
     }
     for (i=0; i<levels; i++) {
-      if (!i) {
-        PetscCall(PetscViewerASCIIPrintf(viewer,"Coarse grid solver -- level -------------------------------\n",i));
+      if (i) {
+        PetscCall(PetscViewerASCIIPrintf(viewer,"Down solver (pre-smoother) on level %" PetscInt_FMT " -------------------------------\n",i));
       } else {
-        PetscCall(PetscViewerASCIIPrintf(viewer,"Down solver (pre-smoother) on level %D -------------------------------\n",i));
+        PetscCall(PetscViewerASCIIPrintf(viewer,"Coarse grid solver -- level %" PetscInt_FMT " -------------------------------\n",i));
       }
       PetscCall(PetscViewerASCIIPushTab(viewer));
       PetscCall(KSPView(mglevels[i]->smoothd,viewer));
@@ -802,13 +802,13 @@ PetscErrorCode PCView_MG(PC pc,PetscViewer viewer)
       if (i && mglevels[i]->smoothd == mglevels[i]->smoothu) {
         PetscCall(PetscViewerASCIIPrintf(viewer,"Up solver (post-smoother) same as down solver (pre-smoother)\n"));
       } else if (i) {
-        PetscCall(PetscViewerASCIIPrintf(viewer,"Up solver (post-smoother) on level %D -------------------------------\n",i));
+        PetscCall(PetscViewerASCIIPrintf(viewer,"Up solver (post-smoother) on level %" PetscInt_FMT " -------------------------------\n",i));
         PetscCall(PetscViewerASCIIPushTab(viewer));
         PetscCall(KSPView(mglevels[i]->smoothu,viewer));
         PetscCall(PetscViewerASCIIPopTab(viewer));
       }
       if (i && mglevels[i]->cr) {
-        PetscCall(PetscViewerASCIIPrintf(viewer,"CR solver on level %D -------------------------------\n",i));
+        PetscCall(PetscViewerASCIIPrintf(viewer,"CR solver on level %" PetscInt_FMT " -------------------------------\n",i));
         PetscCall(PetscViewerASCIIPushTab(viewer));
         PetscCall(KSPView(mglevels[i]->cr,viewer));
         PetscCall(PetscViewerASCIIPopTab(viewer));
@@ -1168,6 +1168,9 @@ PetscErrorCode PCSetUp_MG(PC pc)
       if (mglevels[i]->smoothd->setupstage != KSP_SETUP_NEW) mglevels[i]->smoothd->setupstage = KSP_SETUP_NEWMATRIX;
     }
   }
+  // We got here (PCSetUp_MG) because the matrix has changed, which means the smoother needs to be set up again (e.g.,
+  // new diagonal for Jacobi). Setting it here allows it to be logged under PCSetUp rather than deep inside a PCApply.
+  if (mglevels[n-1]->smoothd->setupstage != KSP_SETUP_NEW) mglevels[n-1]->smoothd->setupstage = KSP_SETUP_NEWMATRIX;
 
   for (i=1; i<n; i++) {
     if (mglevels[i]->smoothu == mglevels[i]->smoothd || mg->am == PC_MG_FULL || mg->am == PC_MG_KASKADE || mg->cyclesperpcapply > 1) {
@@ -1297,7 +1300,7 @@ PetscErrorCode PCMGGetLevels(PC pc,PetscInt *levels)
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidIntPointer(levels,2);
   *levels = 0;
-  PetscCall(PetscTryMethod(pc,"PCMGGetLevels_C",(PC,PetscInt*),(pc,levels)));
+  PetscTryMethod(pc,"PCMGGetLevels_C",(PC,PetscInt*),(pc,levels));
   PetscFunctionReturn(0);
 }
 
@@ -1504,7 +1507,7 @@ PetscErrorCode PCMGSetGalerkin(PC pc,PCMGGalerkinType use)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
-  PetscCall(PetscTryMethod(pc,"PCMGSetGalerkin_C",(PC,PCMGGalerkinType),(pc,use)));
+  PetscTryMethod(pc,"PCMGSetGalerkin_C",(PC,PCMGGalerkinType),(pc,use));
   PetscFunctionReturn(0);
 }
 
@@ -1594,7 +1597,7 @@ PetscErrorCode PCMGSetAdaptInterpolation(PC pc, PetscBool adapt)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
-  PetscCall(PetscTryMethod(pc,"PCMGSetAdaptInterpolation_C",(PC,PetscBool),(pc,adapt)));
+  PetscTryMethod(pc,"PCMGSetAdaptInterpolation_C",(PC,PetscBool),(pc,adapt));
   PetscFunctionReturn(0);
 }
 
@@ -1619,7 +1622,7 @@ PetscErrorCode PCMGGetAdaptInterpolation(PC pc, PetscBool *adapt)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
   PetscValidBoolPointer(adapt, 2);
-  PetscCall(PetscUseMethod(pc,"PCMGGetAdaptInterpolation_C",(PC,PetscBool*),(pc,adapt)));
+  PetscUseMethod(pc,"PCMGGetAdaptInterpolation_C",(PC,PetscBool*),(pc,adapt));
   PetscFunctionReturn(0);
 }
 
@@ -1644,7 +1647,7 @@ PetscErrorCode PCMGSetAdaptCR(PC pc, PetscBool cr)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
-  PetscCall(PetscTryMethod(pc,"PCMGSetAdaptCR_C",(PC,PetscBool),(pc,cr)));
+  PetscTryMethod(pc,"PCMGSetAdaptCR_C",(PC,PetscBool),(pc,cr));
   PetscFunctionReturn(0);
 }
 
@@ -1669,7 +1672,7 @@ PetscErrorCode PCMGGetAdaptCR(PC pc, PetscBool *cr)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
   PetscValidBoolPointer(cr, 2);
-  PetscCall(PetscUseMethod(pc,"PCMGGetAdaptCR_C",(PC,PetscBool*),(pc,cr)));
+  PetscUseMethod(pc,"PCMGGetAdaptCR_C",(PC,PetscBool*),(pc,cr));
   PetscFunctionReturn(0);
 }
 

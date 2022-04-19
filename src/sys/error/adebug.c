@@ -205,10 +205,9 @@ PetscErrorCode  PetscWaitOnError()
 PetscErrorCode PetscAttachDebugger(void)
 {
 #if !defined(PETSC_CANNOT_START_DEBUGGER) && defined(PETSC_HAVE_FORK)
-  int            child    =0;
-  PetscReal      sleeptime=0;
-  PetscErrorCode ierr;
-  char           program[PETSC_MAX_PATH_LEN],display[256],hostname[64];
+  int       child     = 0;
+  PetscReal sleeptime = 0;
+  char      program[PETSC_MAX_PATH_LEN],display[256],hostname[64];
 #endif
 
   PetscFunctionBegin;
@@ -218,13 +217,11 @@ PetscErrorCode PetscAttachDebugger(void)
   (*PetscErrorPrintf)("On Windows use Developer Studio(MSDEV)\n");
   PETSCABORT(PETSC_COMM_WORLD,PETSC_ERR_SUP_SYS);
 #else
-  ierr = PetscGetDisplay(display,sizeof(display));
-  if (PetscUnlikely(ierr)) {
+  if (PetscUnlikely(PetscGetDisplay(display,sizeof(display)))) {
     (*PetscErrorPrintf)("Cannot determine display\n");
     PetscFunctionReturn(PETSC_ERR_SYS);
   }
-  PetscCall(PetscGetProgramName(program,sizeof(program)));
-  if (PetscUnlikely(ierr)) {
+  if (PetscUnlikely(PetscGetProgramName(program,sizeof(program)))) {
     (*PetscErrorPrintf)("Cannot determine program name\n");
     PetscFunctionReturn(PETSC_ERR_SYS);
   }
@@ -244,8 +241,7 @@ PetscErrorCode PetscAttachDebugger(void)
     in the debugger goes to the correct process.
   */
 #if !defined(PETSC_DO_NOT_SWAP_CHILD_FOR_DEBUGGER)
-  if (child) child = 0;
-  else       child = (int)getppid();
+  child = child ? 0 : (int)getppid();
 #endif
 
   if (child) { /* I am the parent, will run the debugger */
@@ -315,7 +311,12 @@ PetscErrorCode PetscAttachDebugger(void)
         PetscCall(PetscStrncmp(DebugTerminal,"Terminal",8,&cmp));
         if (cmp) {
           char command[1024];
-          PetscCall(PetscSNPrintf(command,sizeof(command),"osascript -e 'tell app \"Terminal\" to do script \"lldb  -p %s  %s \"'\n",pid,program));
+          if (islldb) PetscCall(PetscSNPrintf(command,sizeof(command),"osascript -e 'tell app \"Terminal\" to do script \"lldb  -p %s \"'\n",pid));
+          else {
+            char fullprogram[PETSC_MAX_PATH_LEN];
+            PetscCall(PetscGetFullPath(program,fullprogram,sizeof(fullprogram)));
+            PetscCall(PetscSNPrintf(command,sizeof(command),"osascript -e 'tell app \"Terminal\" to do script \"%s  %s %s \"'\n",PetscDebugger,fullprogram,pid));
+          }
           PetscCall(PetscPOpen(PETSC_COMM_SELF,NULL,command,"r",NULL));
           exit(0);
         }

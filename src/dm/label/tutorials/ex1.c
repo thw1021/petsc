@@ -12,12 +12,12 @@ PetscErrorCode ViewLabels(DM dm, PetscViewer viewer)
   PetscFunctionBegin;
   /* query the number and name of labels*/
   PetscCall(DMGetNumLabels(dm, &numLabels));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "Number of labels: %d\n", numLabels));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "Number of labels: %" PetscInt_FMT "\n", numLabels));
   for (l = 0; l < numLabels; ++l) {
     IS labelIS, tmpIS;
 
     PetscCall(DMGetLabelName(dm, l, &labelName));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "Label %d: name: %s\n", l, labelName));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Label %" PetscInt_FMT ": name: %s\n", l, labelName));
     PetscCall(PetscViewerASCIIPrintf(viewer, "IS of values\n"));
     PetscCall(DMGetLabel(dm, labelName, &label));
     PetscCall(DMLabelGetValueIS(label, &labelIS));
@@ -119,14 +119,13 @@ PetscErrorCode CreateMesh(const char name[], DM *newdm)
   DM             dm, dmDist;
   char           filename[PETSC_MAX_PATH_LEN]="";
   PetscBool      interpolate = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* initialize and get options */
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "DMLabel ex1 Options", "DMLabel");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "DMLabel ex1 Options", "DMLabel");
   PetscCall(PetscOptionsString("-i", "filename to read", "ex1.c", filename, filename, sizeof(filename), NULL));
   PetscCall(PetscOptionsBool("-interpolate", "Generate intermediate mesh elements", "ex1.c", interpolate, &interpolate, NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   /* create and distribute DM */
   PetscCall(DMPlexCreateFromFile(PETSC_COMM_WORLD, filename, "ex1_plex", interpolate, &dm));

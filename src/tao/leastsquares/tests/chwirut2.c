@@ -24,20 +24,6 @@ Reference:     Chwirut, D., NIST (197?).
 static char help[]="Finds the nonlinear least-squares solution to the model \n\
             y = exp[-b1*x]/(b2+b3*x)  +  e \n";
 
-/*T
-   Concepts: TAO^Solving a system of nonlinear equations, nonlinear least squares
-   Routines: TaoCreate();
-   Routines: TaoSetType();
-   Routines: TaoSetResidualRoutine();
-   Routines: TaoSetJacobianRoutine();
-   Routines: TaoSetSolution();
-   Routines: TaoSetFromOptions();
-   Routines: TaoSetConvergenceHistory(); TaoGetConvergenceHistory();
-   Routines: TaoSolve();
-   Routines: TaoView(); TaoDestroy();
-   Processors: 1
-T*/
-
 #define NOBSERVATIONS 214
 #define NPARAMETERS 3
 
@@ -76,7 +62,7 @@ int main(int argc,char **argv)
 
   PetscCall(PetscInitialize(&argc,&argv,(char *)0,help));
   PetscCall(PetscOptionsGetInt(NULL,NULL,"-wtype",&wtype,&flg));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"wtype=%d\n",wtype));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"wtype=%" PetscInt_FMT "\n",wtype));
   /* Allocate vectors */
   PetscCall(VecCreateSeq(MPI_COMM_SELF,NPARAMETERS,&x));
   PetscCall(VecCreateSeq(MPI_COMM_SELF,NOBSERVATIONS,&f));

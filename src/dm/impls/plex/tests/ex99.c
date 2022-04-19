@@ -63,7 +63,6 @@ static PetscErrorCode CheckIntegral(DM dm, PetscReal integral, PetscReal tol)
   Vec            u;
   PetscReal      rval;
   PetscScalar    result;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   PetscCall(DMGetGlobalVector(dm, &u));
@@ -71,8 +70,8 @@ static PetscErrorCode CheckIntegral(DM dm, PetscReal integral, PetscReal tol)
   PetscCall(DMRestoreGlobalVector(dm, &u));
   rval = PetscRealPart(result);
   if (integral > 0 && PetscAbsReal(integral - rval) > tol) {
-    ierr = PetscPrintf(PetscObjectComm((PetscObject) dm), "Calculated value %g != %g actual value (error %g > %g tol)\n",
-                       (double) rval, (double) integral, (double) PetscAbsReal(integral - rval), (double) tol);PetscCall(ierr);
+    PetscCall(PetscPrintf(PetscObjectComm((PetscObject) dm), "Calculated value %g != %g actual value (error %g > %g tol)\n",
+                          (double) rval, (double) integral, (double) PetscAbsReal(integral - rval), (double) tol));
   }
   PetscFunctionReturn(0);
 }
@@ -106,8 +105,8 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsGetString(NULL, NULL, "-gmsh", gmsh, sizeof(gmsh), NULL));
   PetscCall(PetscOptionsGetString(NULL, NULL, "-dir", geodir, sizeof(geodir), NULL));
   PetscCall(PetscOptionsGetString(NULL, NULL, "-out", outdir, sizeof(outdir), NULL));
-  PetscCall(PetscOptionsGetEList(NULL, NULL, "-msh", mshlist, (int)(sizeof(mshlist)/sizeof(mshlist[0])), &msh, NULL));
-  PetscCall(PetscOptionsGetEList(NULL, NULL, "-fmt", fmtlist, (int)(sizeof(fmtlist)/sizeof(fmtlist[0])), &fmt, NULL));
+  PetscCall(PetscOptionsGetEList(NULL, NULL, "-msh", mshlist, PETSC_STATIC_ARRAY_LENGTH(mshlist), &msh, NULL));
+  PetscCall(PetscOptionsGetEList(NULL, NULL, "-fmt", fmtlist, PETSC_STATIC_ARRAY_LENGTH(fmtlist), &fmt, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-bin", &bin, NULL));
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-dim", &dim, NULL));
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-order", &order, NULL));

@@ -195,7 +195,6 @@ PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   const char    *bcTypes[2]  = {"neumann", "dirichlet"};
   const char    *runTypes[2] = {"full", "test"};
   PetscInt       bc, run;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   options->runType      = RUN_FULL;
@@ -204,7 +203,7 @@ PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->showSolution = PETSC_TRUE;
   options->showError    = PETSC_FALSE;
 
-  ierr = PetscOptionsBegin(comm, "", "Stokes Problem Options", "DMPLEX");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "Stokes Problem Options", "DMPLEX");
   run  = options->runType;
   PetscCall(PetscOptionsEList("-run_type", "The run type", "ex62.c", runTypes, 2, runTypes[options->runType], &run, NULL));
   options->runType = (RunType) run;
@@ -215,7 +214,7 @@ PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscCall(PetscOptionsBool("-show_initial", "Output the initial guess for verification", "ex62.c", options->showInitial, &options->showInitial, NULL));
   PetscCall(PetscOptionsBool("-show_solution", "Output the solution for verification", "ex62.c", options->showSolution, &options->showSolution, NULL));
   PetscCall(PetscOptionsBool("-show_error", "Output the error for verification", "ex62.c", options->showError, &options->showError, NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -224,7 +223,6 @@ PetscErrorCode DMVecViewLocal(DM dm, Vec v, PetscViewer viewer)
   Vec            lv;
   PetscInt       p;
   PetscMPIInt    rank, size;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)dm), &rank));
@@ -243,8 +241,6 @@ PetscErrorCode DMVecViewLocal(DM dm, Vec v, PetscViewer viewer)
 
 PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBeginUser;
   PetscCall(DMCreate(comm, dm));
   PetscCall(DMSetType(*dm, DMPLEX));
@@ -256,7 +252,6 @@ PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
 PetscErrorCode SetupProblem(DM dm, AppCtx *user)
 {
   PetscDS        prob;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   PetscCall(DMGetDS(dm, &prob));
@@ -289,7 +284,6 @@ PetscErrorCode SetupDiscretization(DM dm, AppCtx *user)
   PetscDS         ds;
   DMLabel         label;
   MPI_Comm        comm;
-  PetscErrorCode  ierr;
 
   PetscFunctionBeginUser;
   /* Create finite element */
@@ -319,7 +313,6 @@ PetscErrorCode CreatePressureNullSpace(DM dm, AppCtx *user, Vec *v, MatNullSpace
 {
   Vec              vec;
   PetscErrorCode (*funcs[2])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void* ctx) = {zero_vector, constant_p};
-  PetscErrorCode   ierr;
 
   PetscFunctionBeginUser;
   PetscCall(DMGetGlobalVector(dm, &vec));
@@ -363,7 +356,6 @@ int main(int argc, char **argv)
   PetscInt      *materials;
   const PetscInt particlesPerCell = 1;
   PetscInt       cStart, cEnd, c, d, bs;
-  PetscErrorCode ierr;
 
   PetscCall(PetscInitialize(&argc, &argv, NULL,help));
   PetscCall(ProcessOptions(PETSC_COMM_WORLD, &user));
@@ -433,7 +425,7 @@ int main(int argc, char **argv)
     }
     PetscCall(SNESSolve(snes, NULL, u));
     PetscCall(SNESGetIterationNumber(snes, &its));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Number of SNES iterations = %D\n", its));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Number of SNES iterations = %" PetscInt_FMT "\n", its));
     PetscCall(DMComputeL2Diff(dm, 0.0, user.exactFuncs, NULL, u, &error));
     PetscCall(DMComputeL2FieldDiff(dm, 0.0, user.exactFuncs, NULL, u, ferrors));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "L_2 Error: %.3g [%.3g, %.3g]\n", (double)error, (double)ferrors[0], (double)ferrors[1]));
@@ -515,7 +507,7 @@ int main(int argc, char **argv)
       PetscCall(DMSwarmVectorDefineField(sdm, DMSwarmPICField_coor));
       PetscCall(DMCreateGlobalVector(sdm, &pvel));
       PetscCall(DMSwarmGetLocalSize(sdm, &Np));
-      PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "Timestep: %D Np: %D\n", tn, Np));
+      PetscCall(PetscSynchronizedPrintf(PETSC_COMM_WORLD, "Timestep: %" PetscInt_FMT " Np: %" PetscInt_FMT "\n", tn, Np));
       PetscCall(PetscSynchronizedFlush(PETSC_COMM_WORLD, NULL));
       /* Interpolate velocity */
       PetscCall(DMInterpolationCreate(PETSC_COMM_SELF, &ictx));

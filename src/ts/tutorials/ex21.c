@@ -7,12 +7,6 @@ timestepping.  Runtime options include:\n\
   -ul   : lower bound\n\
   -uh  : upper bound\n\n";
 
-/*
-   Concepts: TS^time-dependent nonlinear problems
-   Concepts: TS^Variational inequality nonlinear solver
-   Processors: n
-*/
-
 /* ------------------------------------------------------------------------
 
    This is a variation of ex2.c to solve the PDE
@@ -439,7 +433,7 @@ PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal time,Vec u,void *ctx)
      PetscPrintf() causes only the first processor in this
      communicator to print the timestep information.
   */
-  PetscCall(PetscPrintf(appctx->comm,"Timestep %D: time = %g,2-norm error = %g, max norm error = %g\n",step,(double)time,(double)en2s,(double)enmax));
+  PetscCall(PetscPrintf(appctx->comm,"Timestep %" PetscInt_FMT ": time = %g,2-norm error = %g, max norm error = %g\n",step,(double)time,(double)en2s,(double)enmax));
 
   /*
      Print debugging information if desired

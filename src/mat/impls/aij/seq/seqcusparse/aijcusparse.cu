@@ -92,45 +92,6 @@ static PetscErrorCode MatSeqAIJCopySubArray_SeqAIJCUSPARSE(Mat,PetscInt,const Pe
 static PetscErrorCode MatSetPreallocationCOO_SeqAIJCUSPARSE(Mat,PetscCount,const PetscInt[],const PetscInt[]);
 static PetscErrorCode MatSetValuesCOO_SeqAIJCUSPARSE(Mat,const PetscScalar[],InsertMode);
 
-PetscErrorCode MatCUSPARSESetStream(Mat A,const cudaStream_t stream)
-{
-  Mat_SeqAIJCUSPARSE *cusparsestruct = (Mat_SeqAIJCUSPARSE*)A->spptr;
-
-  PetscFunctionBegin;
-  PetscCheck(cusparsestruct,PETSC_COMM_SELF,PETSC_ERR_COR,"Missing spptr");
-  cusparsestruct->stream = stream;
-  PetscCallCUSPARSE(cusparseSetStream(cusparsestruct->handle,cusparsestruct->stream));
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode MatCUSPARSESetHandle(Mat A,const cusparseHandle_t handle)
-{
-  Mat_SeqAIJCUSPARSE *cusparsestruct = (Mat_SeqAIJCUSPARSE*)A->spptr;
-
-  PetscFunctionBegin;
-  PetscCheck(cusparsestruct,PETSC_COMM_SELF,PETSC_ERR_COR,"Missing spptr");
-  if (cusparsestruct->handle != handle) {
-    if (cusparsestruct->handle) {
-      PetscCallCUSPARSE(cusparseDestroy(cusparsestruct->handle));
-    }
-    cusparsestruct->handle = handle;
-  }
-  PetscCallCUSPARSE(cusparseSetPointerMode(cusparsestruct->handle, CUSPARSE_POINTER_MODE_DEVICE));
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode MatCUSPARSEClearHandle(Mat A)
-{
-  Mat_SeqAIJCUSPARSE *cusparsestruct = (Mat_SeqAIJCUSPARSE*)A->spptr;
-  PetscBool          flg;
-
-  PetscFunctionBegin;
-  PetscCall(PetscObjectTypeCompare((PetscObject)A,MATSEQAIJCUSPARSE,&flg));
-  if (!flg || !cusparsestruct) PetscFunctionReturn(0);
-  if (cusparsestruct->handle) cusparsestruct->handle = 0;
-  PetscFunctionReturn(0);
-}
-
 PetscErrorCode MatFactorGetSolverType_seqaij_cusparse(Mat A,MatSolverType *type)
 {
   PetscFunctionBegin;
@@ -231,7 +192,7 @@ PetscErrorCode MatCUSPARSESetFormat(Mat A,MatCUSPARSEFormatOperation op,MatCUSPA
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID,1);
-  PetscCall(PetscTryMethod(A,"MatCUSPARSESetFormat_C",(Mat,MatCUSPARSEFormatOperation,MatCUSPARSEStorageFormat),(A,op,format)));
+  PetscTryMethod(A,"MatCUSPARSESetFormat_C",(Mat,MatCUSPARSEFormatOperation,MatCUSPARSEStorageFormat),(A,op,format));
   PetscFunctionReturn(0);
 }
 
@@ -266,7 +227,7 @@ PetscErrorCode MatCUSPARSESetUseCPUSolve(Mat A,PetscBool use_cpu)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID,1);
-  PetscCall(PetscTryMethod(A,"MatCUSPARSESetUseCPUSolve_C",(Mat,PetscBool),(A,use_cpu)));
+  PetscTryMethod(A,"MatCUSPARSESetUseCPUSolve_C",(Mat,PetscBool),(A,use_cpu));
   PetscFunctionReturn(0);
 }
 
@@ -327,42 +288,41 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSE(Mat B,Mat A,const MatFac
 
 static PetscErrorCode MatSetFromOptions_SeqAIJCUSPARSE(PetscOptionItems *PetscOptionsObject,Mat A)
 {
-  PetscErrorCode           ierr;
   MatCUSPARSEStorageFormat format;
   PetscBool                flg;
   Mat_SeqAIJCUSPARSE       *cusparsestruct = (Mat_SeqAIJCUSPARSE*)A->spptr;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"SeqAIJCUSPARSE options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"SeqAIJCUSPARSE options");
   if (A->factortype == MAT_FACTOR_NONE) {
-    ierr = PetscOptionsEnum("-mat_cusparse_mult_storage_format","sets storage format of (seq)aijcusparse gpu matrices for SpMV",
-                            "MatCUSPARSESetFormat",MatCUSPARSEStorageFormats,(PetscEnum)cusparsestruct->format,(PetscEnum*)&format,&flg);PetscCall(ierr);
+    PetscCall(PetscOptionsEnum("-mat_cusparse_mult_storage_format","sets storage format of (seq)aijcusparse gpu matrices for SpMV",
+                               "MatCUSPARSESetFormat",MatCUSPARSEStorageFormats,(PetscEnum)cusparsestruct->format,(PetscEnum*)&format,&flg));
     if (flg) PetscCall(MatCUSPARSESetFormat(A,MAT_CUSPARSE_MULT,format));
 
-    ierr = PetscOptionsEnum("-mat_cusparse_storage_format","sets storage format of (seq)aijcusparse gpu matrices for SpMV and TriSolve",
-                            "MatCUSPARSESetFormat",MatCUSPARSEStorageFormats,(PetscEnum)cusparsestruct->format,(PetscEnum*)&format,&flg);PetscCall(ierr);
+    PetscCall(PetscOptionsEnum("-mat_cusparse_storage_format","sets storage format of (seq)aijcusparse gpu matrices for SpMV and TriSolve",
+                               "MatCUSPARSESetFormat",MatCUSPARSEStorageFormats,(PetscEnum)cusparsestruct->format,(PetscEnum*)&format,&flg));
     if (flg) PetscCall(MatCUSPARSESetFormat(A,MAT_CUSPARSE_ALL,format));
     PetscCall(PetscOptionsBool("-mat_cusparse_use_cpu_solve","Use CPU (I)LU solve","MatCUSPARSESetUseCPUSolve",cusparsestruct->use_cpu_solve,&cusparsestruct->use_cpu_solve,&flg));
     if (flg) PetscCall(MatCUSPARSESetUseCPUSolve(A,cusparsestruct->use_cpu_solve));
 #if PETSC_PKG_CUDA_VERSION_GE(11,0,0)
-    ierr = PetscOptionsEnum("-mat_cusparse_spmv_alg","sets cuSPARSE algorithm used in sparse-mat dense-vector multiplication (SpMV)",
-                            "cusparseSpMVAlg_t",MatCUSPARSESpMVAlgorithms,(PetscEnum)cusparsestruct->spmvAlg,(PetscEnum*)&cusparsestruct->spmvAlg,&flg);PetscCall(ierr);
+    PetscCall(PetscOptionsEnum("-mat_cusparse_spmv_alg","sets cuSPARSE algorithm used in sparse-mat dense-vector multiplication (SpMV)",
+                               "cusparseSpMVAlg_t",MatCUSPARSESpMVAlgorithms,(PetscEnum)cusparsestruct->spmvAlg,(PetscEnum*)&cusparsestruct->spmvAlg,&flg));
     /* If user did use this option, check its consistency with cuSPARSE, since PetscOptionsEnum() sets enum values based on their position in MatCUSPARSESpMVAlgorithms[] */
 #if PETSC_PKG_CUDA_VERSION_GE(11,2,0)
     PetscCheckFalse(flg && CUSPARSE_SPMV_CSR_ALG1 != 2,PETSC_COMM_SELF,PETSC_ERR_SUP,"cuSPARSE enum cusparseSpMVAlg_t has been changed but PETSc has not been updated accordingly");
 #else
     PetscCheckFalse(flg && CUSPARSE_CSRMV_ALG1 != 2,PETSC_COMM_SELF,PETSC_ERR_SUP,"cuSPARSE enum cusparseSpMVAlg_t has been changed but PETSc has not been updated accordingly");
 #endif
-    ierr = PetscOptionsEnum("-mat_cusparse_spmm_alg","sets cuSPARSE algorithm used in sparse-mat dense-mat multiplication (SpMM)",
-                            "cusparseSpMMAlg_t",MatCUSPARSESpMMAlgorithms,(PetscEnum)cusparsestruct->spmmAlg,(PetscEnum*)&cusparsestruct->spmmAlg,&flg);PetscCall(ierr);
+    PetscCall(PetscOptionsEnum("-mat_cusparse_spmm_alg","sets cuSPARSE algorithm used in sparse-mat dense-mat multiplication (SpMM)",
+                               "cusparseSpMMAlg_t",MatCUSPARSESpMMAlgorithms,(PetscEnum)cusparsestruct->spmmAlg,(PetscEnum*)&cusparsestruct->spmmAlg,&flg));
     PetscCheckFalse(flg && CUSPARSE_SPMM_CSR_ALG1 != 4,PETSC_COMM_SELF,PETSC_ERR_SUP,"cuSPARSE enum cusparseSpMMAlg_t has been changed but PETSc has not been updated accordingly");
 
-    ierr = PetscOptionsEnum("-mat_cusparse_csr2csc_alg","sets cuSPARSE algorithm used in converting CSR matrices to CSC matrices",
-                            "cusparseCsr2CscAlg_t",MatCUSPARSECsr2CscAlgorithms,(PetscEnum)cusparsestruct->csr2cscAlg,(PetscEnum*)&cusparsestruct->csr2cscAlg,&flg);PetscCall(ierr);
+    PetscCall(PetscOptionsEnum("-mat_cusparse_csr2csc_alg","sets cuSPARSE algorithm used in converting CSR matrices to CSC matrices",
+                               "cusparseCsr2CscAlg_t",MatCUSPARSECsr2CscAlgorithms,(PetscEnum)cusparsestruct->csr2cscAlg,(PetscEnum*)&cusparsestruct->csr2cscAlg,&flg));
     PetscCheckFalse(flg && CUSPARSE_CSR2CSC_ALG1 != 1,PETSC_COMM_SELF,PETSC_ERR_SUP,"cuSPARSE enum cusparseCsr2CscAlg_t has been changed but PETSc has not been updated accordingly");
    #endif
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -1249,7 +1209,7 @@ static PetscErrorCode MatSeqAIJCUSPARSEFormExplicitTranspose(Mat A)
   matstruct = (Mat_SeqAIJCUSPARSEMultStruct*)cusparsestruct->mat;
   PetscCheck(matstruct,PETSC_COMM_SELF,PETSC_ERR_GPU,"Missing mat struct");
   matstructT = (Mat_SeqAIJCUSPARSEMultStruct*)cusparsestruct->matTranspose;
-  PetscCheckFalse(A->transupdated && !matstructT,PETSC_COMM_SELF,PETSC_ERR_GPU,"Missing matTranspose struct");
+  PetscCheck(!A->transupdated || matstructT,PETSC_COMM_SELF,PETSC_ERR_GPU,"Missing matTranspose struct");
   if (A->transupdated) PetscFunctionReturn(0);
   PetscCall(PetscLogEventBegin(MAT_CUSPARSEGenerateTranspose,A,0,0,0));
   PetscCall(PetscLogGpuTimeBegin());
@@ -1822,6 +1782,37 @@ static PetscErrorCode MatSeqAIJRestoreArrayWrite_SeqAIJCUSPARSE(Mat A,PetscScala
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode MatSeqAIJGetCSRAndMemType_SeqAIJCUSPARSE(Mat A,const PetscInt **i,const PetscInt **j,PetscScalar **a,PetscMemType *mtype)
+{
+  Mat_SeqAIJCUSPARSE           *cusp;
+  CsrMatrix                    *matrix;
+
+  PetscFunctionBegin;
+  PetscCall(MatSeqAIJCUSPARSECopyToGPU(A));
+  PetscCheck(A->factortype == MAT_FACTOR_NONE, PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONGSTATE,"Not for factored matrix");
+  cusp = static_cast<Mat_SeqAIJCUSPARSE*>(A->spptr);
+  PetscCheck(cusp != NULL,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONGSTATE,"cusp is NULL");
+  matrix = (CsrMatrix*)cusp->mat->mat;
+
+  if (i) {
+   #if !defined(PETSC_USE_64BIT_INDICES)
+    *i = matrix->row_offsets->data().get();
+   #else
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"cuSparse does not supported 64-bit indices");
+   #endif
+  }
+  if (j) {
+   #if !defined(PETSC_USE_64BIT_INDICES)
+    *j = matrix->column_indices->data().get();
+   #else
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"cuSparse does not supported 64-bit indices");
+   #endif
+  }
+  if (a) *a = matrix->values->data().get();
+  if (mtype) *mtype = PETSC_MEMTYPE_CUDA;
+  PetscFunctionReturn(0);
+}
+
 PETSC_INTERN PetscErrorCode MatSeqAIJCUSPARSECopyToGPU(Mat A)
 {
   Mat_SeqAIJCUSPARSE           *cusparsestruct = (Mat_SeqAIJCUSPARSE*)A->spptr;
@@ -1838,7 +1829,7 @@ PETSC_INTERN PetscErrorCode MatSeqAIJCUSPARSECopyToGPU(Mat A)
       CsrMatrix *matrix;
       matrix = (CsrMatrix*)cusparsestruct->mat->mat;
 
-      PetscCheckFalse(a->nz && !a->a,PETSC_COMM_SELF,PETSC_ERR_GPU,"Missing CSR values");
+      PetscCheck(!a->nz || a->a,PETSC_COMM_SELF,PETSC_ERR_GPU,"Missing CSR values");
       PetscCall(PetscLogEventBegin(MAT_CUSPARSECopyToGPU,A,0,0,0));
       matrix->values->assign(a->a, a->a+a->nz);
       PetscCallCUDA(WaitForCUDA());
@@ -1864,10 +1855,10 @@ PETSC_INTERN PetscErrorCode MatSeqAIJCUSPARSECopyToGPU(Mat A)
           ii   = a->i;
           ridx = NULL;
         }
-        PetscCheckFalse(!ii,PETSC_COMM_SELF,PETSC_ERR_GPU,"Missing CSR row data");
+        PetscCheck(ii,PETSC_COMM_SELF,PETSC_ERR_GPU,"Missing CSR row data");
         if (!a->a) { nnz = ii[m]; both = PETSC_FALSE; }
         else nnz = a->nz;
-        PetscCheckFalse(nnz && !a->j,PETSC_COMM_SELF,PETSC_ERR_GPU,"Missing CSR column data");
+        PetscCheck(!nnz || a->j,PETSC_COMM_SELF,PETSC_ERR_GPU,"Missing CSR column data");
 
         /* create cusparse matrix */
         cusparsestruct->nrows = m;
@@ -2246,7 +2237,7 @@ static PetscErrorCode MatProductSymbolic_SeqAIJCUSPARSE_SeqDENSECUDA(Mat C)
   PetscCall(PetscObjectTypeCompare((PetscObject)A,MATSEQAIJCUSPARSE,&flg));
   PetscCheck(flg,PetscObjectComm((PetscObject)C),PETSC_ERR_GPU,"Not for type %s",((PetscObject)A)->type_name);
   cusp = (Mat_SeqAIJCUSPARSE*)A->spptr;
-  PetscCheckFalse(cusp->format != MAT_CUSPARSE_CSR,PetscObjectComm((PetscObject)C),PETSC_ERR_GPU,"Only for MAT_CUSPARSE_CSR format");
+  PetscCheck(cusp->format == MAT_CUSPARSE_CSR,PetscObjectComm((PetscObject)C),PETSC_ERR_GPU,"Only for MAT_CUSPARSE_CSR format");
   switch (product->type) {
   case MATPRODUCT_AB:
     m = A->rmap->n;
@@ -2330,7 +2321,7 @@ static PetscErrorCode MatProductNumeric_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
   if (mmdata->reusesym) { /* this happens when api_user is true, meaning that the matrix values have been already computed in the MatProductSymbolic phase */
     mmdata->reusesym = PETSC_FALSE;
     Ccusp = (Mat_SeqAIJCUSPARSE*)C->spptr;
-    PetscCheckFalse(Ccusp->format != MAT_CUSPARSE_CSR,PetscObjectComm((PetscObject)C),PETSC_ERR_GPU,"Only for MAT_CUSPARSE_CSR format");
+    PetscCheck(Ccusp->format == MAT_CUSPARSE_CSR,PetscObjectComm((PetscObject)C),PETSC_ERR_GPU,"Only for MAT_CUSPARSE_CSR format");
     Cmat = Ccusp->mat;
     PetscCheck(Cmat,PetscObjectComm((PetscObject)C),PETSC_ERR_GPU,"Missing C mult struct for product type %s",MatProductTypes[C->product->type]);
     Ccsr = (CsrMatrix*)Cmat->mat;
@@ -2347,9 +2338,9 @@ static PetscErrorCode MatProductNumeric_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
   Acusp = (Mat_SeqAIJCUSPARSE*)A->spptr;
   Bcusp = (Mat_SeqAIJCUSPARSE*)B->spptr;
   Ccusp = (Mat_SeqAIJCUSPARSE*)C->spptr;
-  PetscCheckFalse(Acusp->format != MAT_CUSPARSE_CSR,PetscObjectComm((PetscObject)C),PETSC_ERR_GPU,"Only for MAT_CUSPARSE_CSR format");
-  PetscCheckFalse(Bcusp->format != MAT_CUSPARSE_CSR,PetscObjectComm((PetscObject)C),PETSC_ERR_GPU,"Only for MAT_CUSPARSE_CSR format");
-  PetscCheckFalse(Ccusp->format != MAT_CUSPARSE_CSR,PetscObjectComm((PetscObject)C),PETSC_ERR_GPU,"Only for MAT_CUSPARSE_CSR format");
+  PetscCheck(Acusp->format == MAT_CUSPARSE_CSR,PetscObjectComm((PetscObject)C),PETSC_ERR_GPU,"Only for MAT_CUSPARSE_CSR format");
+  PetscCheck(Bcusp->format == MAT_CUSPARSE_CSR,PetscObjectComm((PetscObject)C),PETSC_ERR_GPU,"Only for MAT_CUSPARSE_CSR format");
+  PetscCheck(Ccusp->format == MAT_CUSPARSE_CSR,PetscObjectComm((PetscObject)C),PETSC_ERR_GPU,"Only for MAT_CUSPARSE_CSR format");
   PetscCall(MatSeqAIJCUSPARSECopyToGPU(A));
   PetscCall(MatSeqAIJCUSPARSECopyToGPU(B));
 
@@ -2473,8 +2464,8 @@ static PetscErrorCode MatProductSymbolic_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
   PetscCall(MatSeqAIJCUSPARSECopyToGPU(B));
   Acusp = (Mat_SeqAIJCUSPARSE*)A->spptr; /* Access spptr after MatSeqAIJCUSPARSECopyToGPU, not before */
   Bcusp = (Mat_SeqAIJCUSPARSE*)B->spptr;
-  PetscCheckFalse(Acusp->format != MAT_CUSPARSE_CSR,PetscObjectComm((PetscObject)C),PETSC_ERR_GPU,"Only for MAT_CUSPARSE_CSR format");
-  PetscCheckFalse(Bcusp->format != MAT_CUSPARSE_CSR,PetscObjectComm((PetscObject)C),PETSC_ERR_GPU,"Only for MAT_CUSPARSE_CSR format");
+  PetscCheck(Acusp->format == MAT_CUSPARSE_CSR,PetscObjectComm((PetscObject)C),PETSC_ERR_GPU,"Only for MAT_CUSPARSE_CSR format");
+  PetscCheck(Bcusp->format == MAT_CUSPARSE_CSR,PetscObjectComm((PetscObject)C),PETSC_ERR_GPU,"Only for MAT_CUSPARSE_CSR format");
 
   ptype = product->type;
   if (A->symmetric && ptype == MATPRODUCT_AtB) {
@@ -2833,7 +2824,6 @@ PETSC_INTERN PetscErrorCode MatProductSetFromOptions_SeqAIJ_SeqDense(Mat);
 static PetscErrorCode MatProductSetFromOptions_SeqAIJCUSPARSE(Mat mat)
 {
   Mat_Product    *product = mat->product;
-  PetscErrorCode ierr;
   PetscBool      isdense = PETSC_FALSE,Biscusp = PETSC_FALSE,Ciscusp = PETSC_TRUE;
 
   PetscFunctionBegin;
@@ -2853,57 +2843,57 @@ static PetscErrorCode MatProductSetFromOptions_SeqAIJCUSPARSE(Mat mat)
     switch (product->type) {
     case MATPRODUCT_AB:
       if (product->api_user) {
-        ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)mat),((PetscObject)mat)->prefix,"MatMatMult","Mat");PetscCall(ierr);
+        PetscOptionsBegin(PetscObjectComm((PetscObject)mat),((PetscObject)mat)->prefix,"MatMatMult","Mat");
         PetscCall(PetscOptionsBool("-matmatmult_backend_cpu","Use CPU code","MatMatMult",usecpu,&usecpu,NULL));
-        ierr = PetscOptionsEnd();PetscCall(ierr);
+        PetscOptionsEnd();
       } else {
-        ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)mat),((PetscObject)mat)->prefix,"MatProduct_AB","Mat");PetscCall(ierr);
+        PetscOptionsBegin(PetscObjectComm((PetscObject)mat),((PetscObject)mat)->prefix,"MatProduct_AB","Mat");
         PetscCall(PetscOptionsBool("-mat_product_algorithm_backend_cpu","Use CPU code","MatMatMult",usecpu,&usecpu,NULL));
-        ierr = PetscOptionsEnd();PetscCall(ierr);
+        PetscOptionsEnd();
       }
       break;
     case MATPRODUCT_AtB:
       if (product->api_user) {
-        ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)mat),((PetscObject)mat)->prefix,"MatTransposeMatMult","Mat");PetscCall(ierr);
+        PetscOptionsBegin(PetscObjectComm((PetscObject)mat),((PetscObject)mat)->prefix,"MatTransposeMatMult","Mat");
         PetscCall(PetscOptionsBool("-mattransposematmult_backend_cpu","Use CPU code","MatTransposeMatMult",usecpu,&usecpu,NULL));
-        ierr = PetscOptionsEnd();PetscCall(ierr);
+        PetscOptionsEnd();
       } else {
-        ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)mat),((PetscObject)mat)->prefix,"MatProduct_AtB","Mat");PetscCall(ierr);
+        PetscOptionsBegin(PetscObjectComm((PetscObject)mat),((PetscObject)mat)->prefix,"MatProduct_AtB","Mat");
         PetscCall(PetscOptionsBool("-mat_product_algorithm_backend_cpu","Use CPU code","MatTransposeMatMult",usecpu,&usecpu,NULL));
-        ierr = PetscOptionsEnd();PetscCall(ierr);
+        PetscOptionsEnd();
       }
       break;
     case MATPRODUCT_PtAP:
       if (product->api_user) {
-        ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)mat),((PetscObject)mat)->prefix,"MatPtAP","Mat");PetscCall(ierr);
+        PetscOptionsBegin(PetscObjectComm((PetscObject)mat),((PetscObject)mat)->prefix,"MatPtAP","Mat");
         PetscCall(PetscOptionsBool("-matptap_backend_cpu","Use CPU code","MatPtAP",usecpu,&usecpu,NULL));
-        ierr = PetscOptionsEnd();PetscCall(ierr);
+        PetscOptionsEnd();
       } else {
-        ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)mat),((PetscObject)mat)->prefix,"MatProduct_PtAP","Mat");PetscCall(ierr);
+        PetscOptionsBegin(PetscObjectComm((PetscObject)mat),((PetscObject)mat)->prefix,"MatProduct_PtAP","Mat");
         PetscCall(PetscOptionsBool("-mat_product_algorithm_backend_cpu","Use CPU code","MatPtAP",usecpu,&usecpu,NULL));
-        ierr = PetscOptionsEnd();PetscCall(ierr);
+        PetscOptionsEnd();
       }
       break;
     case MATPRODUCT_RARt:
       if (product->api_user) {
-        ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)mat),((PetscObject)mat)->prefix,"MatRARt","Mat");PetscCall(ierr);
+        PetscOptionsBegin(PetscObjectComm((PetscObject)mat),((PetscObject)mat)->prefix,"MatRARt","Mat");
         PetscCall(PetscOptionsBool("-matrart_backend_cpu","Use CPU code","MatRARt",usecpu,&usecpu,NULL));
-        ierr = PetscOptionsEnd();PetscCall(ierr);
+        PetscOptionsEnd();
       } else {
-        ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)mat),((PetscObject)mat)->prefix,"MatProduct_RARt","Mat");PetscCall(ierr);
+        PetscOptionsBegin(PetscObjectComm((PetscObject)mat),((PetscObject)mat)->prefix,"MatProduct_RARt","Mat");
         PetscCall(PetscOptionsBool("-mat_product_algorithm_backend_cpu","Use CPU code","MatRARt",usecpu,&usecpu,NULL));
-        ierr = PetscOptionsEnd();PetscCall(ierr);
+        PetscOptionsEnd();
       }
       break;
     case MATPRODUCT_ABC:
       if (product->api_user) {
-        ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)mat),((PetscObject)mat)->prefix,"MatMatMatMult","Mat");PetscCall(ierr);
+        PetscOptionsBegin(PetscObjectComm((PetscObject)mat),((PetscObject)mat)->prefix,"MatMatMatMult","Mat");
         PetscCall(PetscOptionsBool("-matmatmatmult_backend_cpu","Use CPU code","MatMatMatMult",usecpu,&usecpu,NULL));
-        ierr = PetscOptionsEnd();PetscCall(ierr);
+        PetscOptionsEnd();
       } else {
-        ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)mat),((PetscObject)mat)->prefix,"MatProduct_ABC","Mat");PetscCall(ierr);
+        PetscOptionsBegin(PetscObjectComm((PetscObject)mat),((PetscObject)mat)->prefix,"MatProduct_ABC","Mat");
         PetscCall(PetscOptionsBool("-mat_product_algorithm_backend_cpu","Use CPU code","MatMatMatMult",usecpu,&usecpu,NULL));
-        ierr = PetscOptionsEnd();PetscCall(ierr);
+        PetscOptionsEnd();
       }
       break;
     default:
@@ -3007,7 +2997,7 @@ static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat A,Vec xx,Vec yy,Vec zz
 #endif
 
   PetscFunctionBegin;
-  PetscCheckFalse(herm && !trans,PetscObjectComm((PetscObject)A),PETSC_ERR_GPU,"Hermitian and not transpose not supported");
+  PetscCheck(!herm || trans,PetscObjectComm((PetscObject)A),PETSC_ERR_GPU,"Hermitian and not transpose not supported");
   if (!a->nz) {
     if (!yy) PetscCall(VecSet_SeqCUDA(zz,0));
     else PetscCall(VecCopy_SeqCUDA(yy,zz));
@@ -3485,13 +3475,15 @@ static PetscErrorCode MatBindToCPU_SeqAIJCUSPARSE(Mat A,PetscBool flg)
     a->ops->restorearrayread          = MatSeqAIJRestoreArrayRead_SeqAIJCUSPARSE;
     a->ops->getarraywrite             = MatSeqAIJGetArrayWrite_SeqAIJCUSPARSE;
     a->ops->restorearraywrite         = MatSeqAIJRestoreArrayWrite_SeqAIJCUSPARSE;
+    a->ops->getcsrandmemtype          = MatSeqAIJGetCSRAndMemType_SeqAIJCUSPARSE;
+
     PetscCall(PetscObjectComposeFunction((PetscObject)A,"MatSeqAIJCopySubArray_C",MatSeqAIJCopySubArray_SeqAIJCUSPARSE));
     PetscCall(PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_seqaijcusparse_seqdensecuda_C",MatProductSetFromOptions_SeqAIJCUSPARSE));
     PetscCall(PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_seqaijcusparse_seqdense_C",MatProductSetFromOptions_SeqAIJCUSPARSE));
     PetscCall(PetscObjectComposeFunction((PetscObject)A,"MatSetPreallocationCOO_C",MatSetPreallocationCOO_SeqAIJCUSPARSE));
     PetscCall(PetscObjectComposeFunction((PetscObject)A,"MatSetValuesCOO_C",MatSetValuesCOO_SeqAIJCUSPARSE));
     PetscCall(PetscObjectComposeFunction((PetscObject)A,"MatProductSetFromOptions_seqaijcusparse_seqaijcusparse_C",MatProductSetFromOptions_SeqAIJCUSPARSE));
-  }
+   }
   A->boundtocpu = flg;
   if (flg && a->inode.size) {
     a->inode.use = PETSC_TRUE;
@@ -4382,7 +4374,7 @@ PetscErrorCode MatSeqAIJCUSPARSEMergeMats(Mat A,Mat B,MatReuse reuse,Mat* C)
   PetscCheckTypeName(A,MATSEQAIJCUSPARSE);
   PetscCheckTypeName(B,MATSEQAIJCUSPARSE);
   PetscCheck(A->rmap->n == B->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Invalid number or rows %" PetscInt_FMT " != %" PetscInt_FMT,A->rmap->n,B->rmap->n);
-  PetscCheckFalse(reuse == MAT_INPLACE_MATRIX,PETSC_COMM_SELF,PETSC_ERR_SUP,"MAT_INPLACE_MATRIX not supported");
+  PetscCheck(reuse != MAT_INPLACE_MATRIX,PETSC_COMM_SELF,PETSC_ERR_SUP,"MAT_INPLACE_MATRIX not supported");
   PetscCheckFalse(Acusp->format == MAT_CUSPARSE_ELL || Acusp->format == MAT_CUSPARSE_HYB,PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented");
   PetscCheckFalse(Bcusp->format == MAT_CUSPARSE_ELL || Bcusp->format == MAT_CUSPARSE_HYB,PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented");
   if (reuse == MAT_INITIAL_MATRIX) {
@@ -4612,13 +4604,13 @@ PetscErrorCode MatSeqAIJCUSPARSEMergeMats(Mat A,Mat B,MatReuse reuse,Mat* C)
     Ccusp->nonzerostate = (*C)->nonzerostate;
     (*C)->preallocated  = PETSC_TRUE;
   } else {
-    PetscCheckFalse((*C)->rmap->n != B->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Invalid number or rows %" PetscInt_FMT " != %" PetscInt_FMT,(*C)->rmap->n,B->rmap->n);
+    PetscCheck((*C)->rmap->n == B->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Invalid number or rows %" PetscInt_FMT " != %" PetscInt_FMT,(*C)->rmap->n,B->rmap->n);
     c = (Mat_SeqAIJ*)(*C)->data;
     if (c->nz) {
       Ccusp = (Mat_SeqAIJCUSPARSE*)(*C)->spptr;
       PetscCheck(Ccusp->cooPerm,PETSC_COMM_SELF,PETSC_ERR_COR,"Missing cooPerm");
       PetscCheckFalse(Ccusp->format == MAT_CUSPARSE_ELL || Ccusp->format == MAT_CUSPARSE_HYB,PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented");
-      PetscCheckFalse(Ccusp->nonzerostate != (*C)->nonzerostate,PETSC_COMM_SELF,PETSC_ERR_COR,"Wrong nonzerostate");
+      PetscCheck(Ccusp->nonzerostate == (*C)->nonzerostate,PETSC_COMM_SELF,PETSC_ERR_COR,"Wrong nonzerostate");
       PetscCall(MatSeqAIJCUSPARSECopyToGPU(A));
       PetscCall(MatSeqAIJCUSPARSECopyToGPU(B));
       PetscCheck(Acusp->mat,PETSC_COMM_SELF,PETSC_ERR_COR,"Missing Mat_SeqAIJCUSPARSEMultStruct");

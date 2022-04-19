@@ -2,11 +2,6 @@
 static char help[] = "Newton method to solve u'' + u^{2} = f, sequentially.\n\
 This example tests PCVPBJacobiSetBlocks().\n\n";
 
-/*T
-   Concepts: SNES^basic uniprocessor example
-   Processors: 1
-T*/
-
 /*
    Include "petscsnes.h" so that we can use SNES solvers.  Note that this
    file automatically includes:
@@ -115,7 +110,7 @@ int main(int argc,char **argv)
      the option -snes_view
   */
   PetscCall(SNESGetTolerances(snes,&abstol,&rtol,&stol,&maxit,&maxf));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"atol=%g, rtol=%g, stol=%g, maxit=%D, maxf=%D\n",(double)abstol,(double)rtol,(double)stol,maxit,maxf));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"atol=%g, rtol=%g, stol=%g, maxit=%" PetscInt_FMT ", maxf=%" PetscInt_FMT "\n",(double)abstol,(double)rtol,(double)stol,maxit,maxf));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Initialize application:
@@ -143,7 +138,7 @@ int main(int argc,char **argv)
   PetscCall(FormInitialGuess(x));
   PetscCall(SNESSolve(snes,NULL,x));
   PetscCall(SNESGetIterationNumber(snes,&its));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"number of SNES iterations = %D\n\n",its));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"number of SNES iterations = %" PetscInt_FMT "\n\n",its));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Check solution and clean up
@@ -154,7 +149,7 @@ int main(int argc,char **argv)
   */
   PetscCall(VecAXPY(x,none,U));
   PetscCall(VecNorm(x,NORM_2,&norm));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g, Iterations %D\n",(double)norm,its));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g, Iterations %" PetscInt_FMT "\n",(double)norm,its));
 
   /*
      Free work space.  All PETSc objects should be destroyed when they

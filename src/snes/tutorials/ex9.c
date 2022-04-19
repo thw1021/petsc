@@ -72,7 +72,6 @@ extern PetscErrorCode FormJacobianLocal(DMDALocalInfo*,PetscReal**,Mat,Mat,void*
 
 int main(int argc,char **argv)
 {
-  PetscErrorCode      ierr;
   SNES                snes;
   DM                  da, da_after;
   Vec                 u, u_exact;
@@ -81,11 +80,9 @@ int main(int argc,char **argv)
 
   PetscCall(PetscInitialize(&argc,&argv,(char*)0,help));
 
-  ierr = DMDACreate2d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,
-                      DMDA_STENCIL_STAR,5,5, /* 5x5 coarse grid; override with -da_grid_x,_y */
-                      PETSC_DECIDE,PETSC_DECIDE,
-                      1,1,  /* dof=1 and s = 1 (stencil extends out one cell) */
-                      NULL,NULL,&da);PetscCall(ierr);
+  PetscCall(DMDACreate2d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DMDA_STENCIL_STAR,5,5, /* 5x5 coarse grid; override with -da_grid_x,_y */
+                         PETSC_DECIDE,PETSC_DECIDE, 1,1,  /* dof=1 and s = 1 (stencil extends out one cell) */
+                         NULL,NULL,&da));
   PetscCall(DMSetFromOptions(da));
   PetscCall(DMSetUp(da));
   PetscCall(DMDASetUniformCoordinates(da,-2.0,2.0,-2.0,2.0,0.0,1.0));
@@ -115,7 +112,7 @@ int main(int argc,char **argv)
   PetscCall(VecNorm(u,NORM_1,&error1));
   error1 /= (PetscReal)info.mx * (PetscReal)info.my; /* average error */
   PetscCall(VecNorm(u,NORM_INFINITY,&errorinf));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"errors on %D x %D grid:  av |u-uexact|  = %.3e,  |u-uexact|_inf = %.3e\n",info.mx,info.my,(double)error1,(double)errorinf));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"errors on %" PetscInt_FMT " x %" PetscInt_FMT " grid:  av |u-uexact|  = %.3e,  |u-uexact|_inf = %.3e\n",info.mx,info.my,(double)error1,(double)errorinf));
   PetscCall(VecDestroy(&u_exact));
   PetscCall(SNESDestroy(&snes));
   PetscCall(DMDestroy(&da));

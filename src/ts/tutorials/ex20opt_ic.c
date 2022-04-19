@@ -1,12 +1,6 @@
 static char help[] = "Solves a ODE-constrained optimization problem -- finding the optimal initial conditions for the van der Pol equation.\n";
 
 /*
-  Concepts: TS^time-dependent nonlinear problems
-  Concepts: TS^van der Pol equation DAE equivalent
-  Concepts: TS^Optimization using adjoint sensitivity analysis
-  Processors: 1
-*/
-/*
   Notes:
   This code demonstrates how to solve an ODE-constrained optimization problem with TAO, TSAdjoint and TS.
   The nonlinear problem is written in an ODE equivalent form.
@@ -169,9 +163,9 @@ static PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal t,Vec U,void *ctx)
     PetscCall(VecDuplicate(U,&interpolatedU));
     PetscCall(TSInterpolate(ts,user->next_output,interpolatedU));
     PetscCall(VecGetArrayRead(interpolatedU,&u));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"[%g] %D TS %g (dt = %g) X %g %g\n",
-                        (double)user->next_output,step,(double)t,(double)dt,(double)PetscRealPart(u[0]),
-                        (double)PetscRealPart(u[1])));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"[%g] %" PetscInt_FMT " TS %g (dt = %g) X %g %g\n",
+                          (double)user->next_output,step,(double)t,(double)dt,(double)PetscRealPart(u[0]),
+                          (double)PetscRealPart(u[1])));
     PetscCall(VecRestoreArrayRead(interpolatedU,&u));
     PetscCall(VecDestroy(&interpolatedU));
     user->next_output += 0.1;

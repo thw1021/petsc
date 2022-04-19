@@ -156,7 +156,7 @@ PetscErrorCode VecView_MPI_ASCII(Vec xin,PetscViewer viewer)
           outputState = 3;
           doOutput    = 1;
         } else if (outputState == 3) doOutput = 0;
-        else PetscCheckFalse(outputState == 4,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "Tried to output POINT_DATA again after intervening CELL_DATA");
+        else PetscCheck(outputState != 4,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "Tried to output POINT_DATA again after intervening CELL_DATA");
 
         if (doOutput) {
           PetscCall(PetscViewerASCIIPrintf(viewer, "POINT_DATA %" PetscInt_FMT "\n", xin->map->N/bs));
@@ -169,7 +169,7 @@ PetscErrorCode VecView_MPI_ASCII(Vec xin,PetscViewer viewer)
           outputState = 4;
           doOutput    = 1;
         } else if (outputState == 2) doOutput = 0;
-        else PetscCheckFalse(outputState == 3,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "Tried to output CELL_DATA again after intervening POINT_DATA");
+        else PetscCheck(outputState != 3,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "Tried to output CELL_DATA again after intervening POINT_DATA");
         else if (outputState == 4) doOutput = 0;
 
         if (doOutput) {
@@ -447,7 +447,6 @@ PetscErrorCode  VecView_MPI_Draw(Vec xin,PetscViewer viewer)
   PetscBool         isnull;
   PetscDrawAxis     axis;
   const PetscScalar *xarray;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscCall(PetscViewerDrawGetDraw(viewer,0,&draw));
@@ -480,14 +479,14 @@ PetscErrorCode  VecView_MPI_Draw(Vec xin,PetscViewer viewer)
   if (rank) { /* receive value from right */
     PetscCallMPI(MPI_Recv(&tmp,1,MPIU_REAL,rank-1,tag,PetscObjectComm((PetscObject)xin),&status));
   }
-  ierr = PetscDrawCollectiveBegin(draw);PetscCall(ierr);
+  PetscDrawCollectiveBegin(draw);
   if (rank) {
     PetscCall(PetscDrawLine(draw,(PetscReal)start-1,tmp,(PetscReal)start,PetscRealPart(xarray[0]),PETSC_DRAW_RED));
   }
   for (i=1; i<xin->map->n; i++) {
     PetscCall(PetscDrawLine(draw,(PetscReal)(i-1+start),PetscRealPart(xarray[i-1]),(PetscReal)(i+start),PetscRealPart(xarray[i]),PETSC_DRAW_RED));
   }
-  ierr = PetscDrawCollectiveEnd(draw);PetscCall(ierr);
+  PetscDrawCollectiveEnd(draw);
   PetscCall(VecRestoreArrayRead(xin,&xarray));
 
   PetscCall(PetscDrawFlush(draw));
@@ -951,8 +950,8 @@ PetscErrorCode VecAssemblyBegin_MPI(Vec xin)
   PetscCall(PetscObjectGetComm((PetscObject)xin,&comm));
   if (xin->stash.donotstash) PetscFunctionReturn(0);
 
-  PetscCallMPI(MPIU_Allreduce((PetscEnum*)&xin->stash.insertmode,(PetscEnum*)&addv,1,MPIU_ENUM,MPI_BOR,comm));
-  PetscCheckFalse(addv == (ADD_VALUES|INSERT_VALUES),comm,PETSC_ERR_ARG_NOTSAMETYPE,"Some processors inserted values while others added");
+  PetscCall(MPIU_Allreduce((PetscEnum*)&xin->stash.insertmode,(PetscEnum*)&addv,1,MPIU_ENUM,MPI_BOR,comm));
+  PetscCheck(addv != (ADD_VALUES|INSERT_VALUES),comm,PETSC_ERR_ARG_NOTSAMETYPE,"Some processors inserted values while others added");
   xin->stash.insertmode = addv; /* in case this processor had no cache */
   xin->bstash.insertmode = addv; /* Block stash implicitly tracks InsertMode of scalar stash */
 

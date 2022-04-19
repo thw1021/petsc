@@ -34,13 +34,11 @@ static PetscErrorCode cubic(PetscInt dim, PetscReal time, const PetscReal x[], P
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBeginUser;
   options->Nr = 1;
-  ierr = PetscOptionsBegin(comm, "", "1D Refinement Options", "DMPLEX");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "1D Refinement Options", "DMPLEX");
   PetscCall(PetscOptionsInt("-num_refine", "Refine cycles", "ex46.c", options->Nr, &options->Nr, NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -79,7 +77,7 @@ static PetscErrorCode SetupDiscretization(DM dm, AppCtx *user)
   case 1: user->funcs[0] = linear;break;
   case 2: user->funcs[0] = quadratic;break;
   case 3: user->funcs[0] = cubic;break;
-  default: SETERRQ(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "Could not determine function to test for degree %D", deg);
+  default: SETERRQ(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "Could not determine function to test for degree %" PetscInt_FMT, deg);
   }
   PetscCall(PetscFEDestroy(&fe));
   PetscFunctionReturn(0);

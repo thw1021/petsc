@@ -2,14 +2,6 @@
 static char help[] = "Solves a linear system in parallel with KSP and DM.\n\
 Compare this to ex2 which solves the same problem without a DM.\n\n";
 
-/*T
-   Concepts: KSP^basic parallel example;
-   Concepts: KSP^Laplacian, 2d
-   Concepts: DM^using distributed arrays;
-   Concepts: Laplacian, 2d
-   Processors: n
-T*/
-
 /*
   Include "petscdmda.h" so that we can use distributed arrays (DMDAs).
   Include "petscksp.h" so that we can use KSP solvers.  Note that this file
@@ -173,7 +165,7 @@ int main(int argc,char **argv)
      print statement from all processes that share a communicator.
      An alternative is PetscFPrintf(), which prints to a file.
   */
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g iterations %D\n",(double)norm,its));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g iterations %" PetscInt_FMT "\n",(double)norm,its));
 
   /*
      Free work space.  All PETSc objects should be destroyed when they

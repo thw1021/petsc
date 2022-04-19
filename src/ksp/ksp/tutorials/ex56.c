@@ -15,7 +15,6 @@ PetscErrorCode elem_3d_elast_v_25(PetscScalar *);
 int main(int argc,char **args)
 {
   Mat            Amat;
-  PetscErrorCode ierr;
   PetscInt       m,nn,M,Istart,Iend,i,j,k,ii,jj,kk,ic,ne=4,id;
   PetscReal      x,y,z,h,*coords,soft_alpha=1.e-3;
   PetscBool      two_solves=PETSC_FALSE,test_nonzero_cols=PETSC_FALSE,use_nearnullspace=PETSC_FALSE,test_late_bs=PETSC_FALSE;
@@ -32,10 +31,10 @@ int main(int argc,char **args)
   PetscCallMPI(MPI_Comm_rank(comm, &mype));
   PetscCallMPI(MPI_Comm_size(comm, &npe));
 
-  ierr = PetscOptionsBegin(comm,NULL,"3D bilinear Q1 elasticity options","");PetscCall(ierr);
+  PetscOptionsBegin(comm,NULL,"3D bilinear Q1 elasticity options","");
   {
     char nestring[256];
-    PetscCall(PetscSNPrintf(nestring,sizeof nestring,"number of elements in each direction, ne+1 must be a multiple of %D (sizes^{1/3})",(PetscInt)(PetscPowReal((PetscReal)npe,1./3.) + .5)));
+    PetscCall(PetscSNPrintf(nestring,sizeof nestring,"number of elements in each direction, ne+1 must be a multiple of %" PetscInt_FMT " (sizes^{1/3})",(PetscInt)(PetscPowReal((PetscReal)npe,1./3.) + .5)));
     PetscCall(PetscOptionsInt("-ne",nestring,"",ne,&ne,NULL));
     PetscCall(PetscOptionsBool("-log_stages","Log stages of solve separately","",log_stages,&log_stages,NULL));
     PetscCall(PetscOptionsReal("-alpha","material coefficient inside circle","",soft_alpha,&soft_alpha,NULL));
@@ -44,7 +43,7 @@ int main(int argc,char **args)
     PetscCall(PetscOptionsBool("-use_mat_nearnullspace","MatNearNullSpace API test","",use_nearnullspace,&use_nearnullspace,NULL));
     PetscCall(PetscOptionsBool("-test_late_bs","","",test_late_bs,&test_late_bs,NULL));
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   if (log_stages) {
     PetscCall(PetscLogStageRegister("Setup", &stage[0]));
@@ -54,7 +53,7 @@ int main(int argc,char **args)
     PetscCall(PetscLogStageRegister("3rd Setup", &stage[4]));
     PetscCall(PetscLogStageRegister("3rd Solve", &stage[5]));
   } else {
-    for (i=0; i<(PetscInt)(sizeof(stage)/sizeof(stage[0])); i++) stage[i] = -1;
+    for (i=0; i<(PetscInt)PETSC_STATIC_ARRAY_LENGTH(stage); i++) stage[i] = -1;
   }
 
   h = 1./ne; nn = ne+1;
@@ -83,7 +82,7 @@ int main(int argc,char **args)
     PetscInt       *d_nnz, *o_nnz,osz[4]={0,9,15,19},nbc;
     PetscScalar    vv[24], v2[24];
     PetscCheck(npe == NP*NP*NP,comm,PETSC_ERR_ARG_WRONG, "npe=%d: npe^{1/3} must be integer",npe);
-    PetscCheck(nn == NP*(nn/NP),comm,PETSC_ERR_ARG_WRONG, "-ne %d: (ne+1)%(npe^{1/3}) must equal zero",ne);
+    PetscCheck(nn == NP*(nn/NP),comm,PETSC_ERR_ARG_WRONG, "-ne %" PetscInt_FMT ": (ne+1)%%(npe^{1/3}) must equal zero",ne);
 
     /* count nnz */
     PetscCall(PetscMalloc1(m+1, &d_nnz));
@@ -102,7 +101,7 @@ int main(int argc,char **args)
         }
       }
     }
-    PetscCheck(ic == m,PETSC_COMM_SELF,PETSC_ERR_PLIB,"ic %D does not equal m %D",ic,m);
+    PetscCheck(ic == m,PETSC_COMM_SELF,PETSC_ERR_PLIB,"ic %" PetscInt_FMT " does not equal m %" PetscInt_FMT,ic,m);
 
     /* create stiffness matrix */
     PetscCall(MatCreate(comm,&Amat));
@@ -122,7 +121,7 @@ int main(int argc,char **args)
 
     PetscCall(MatGetOwnershipRange(Amat,&Istart,&Iend));
 
-    PetscCheck(m == Iend - Istart,PETSC_COMM_SELF,PETSC_ERR_PLIB,"m %D does not equal Iend %D - Istart %D",m,Iend,Istart);
+    PetscCheck(m == Iend - Istart,PETSC_COMM_SELF,PETSC_ERR_PLIB,"m %" PetscInt_FMT " does not equal Iend %" PetscInt_FMT " - Istart %" PetscInt_FMT,m,Iend,Istart);
     /* generate element matrices */
     {
       PetscBool hasData = PETSC_TRUE;

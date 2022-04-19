@@ -14,8 +14,6 @@ F*/
 
 #include <petsc/private/dmpleximpl.h> /* For DotD */
 
-#define ALEN(a) (sizeof(a)/sizeof((a)[0]))
-
 typedef enum {VEL_ZERO, VEL_CONSTANT, VEL_HARMONIC, VEL_SHEAR} VelocityDistribution;
 
 typedef enum {ZERO, CONSTANT, GAUSSIAN, TILTED, DELTA} PorosityDistribution;
@@ -70,7 +68,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   const char    *porosityDist[5]  = {"zero", "constant", "gaussian", "tilted", "delta"};
   PetscInt       vd, pd, d;
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   options->useFV        = PETSC_FALSE;
@@ -82,7 +79,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->source[1]    = 0.5;
   options->source[2]    = 0.5;
 
-  ierr = PetscOptionsBegin(comm, "", "Magma Dynamics Options", "DMPLEX");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "Magma Dynamics Options", "DMPLEX");
   PetscCall(PetscOptionsBool("-use_fv", "Use the finite volume method for advection", "ex18.c", options->useFV, &options->useFV, NULL));
   vd   = options->velocityDist;
   PetscCall(PetscOptionsEList("-velocity_dist","Velocity distribution type","ex18.c",velocityDist,4,velocityDist[options->velocityDist],&vd,NULL));
@@ -93,8 +90,8 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscCall(PetscOptionsReal("-inflow_state", "The inflow state", "ex18.c", options->inflowState, &options->inflowState, NULL));
   d    = 2;
   PetscCall(PetscOptionsRealArray("-source_loc", "The source location", "ex18.c", options->source, &d, &flg));
-  PetscCheck(!flg || d == 2,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Must give dim coordinates for the source location, not %d", d);
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscCheck(!flg || d == 2,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Must give dim coordinates for the source location, not %" PetscInt_FMT, d);
+  PetscOptionsEnd();
 
   PetscFunctionReturn(0);
 }
@@ -104,11 +101,10 @@ static PetscErrorCode ProcessMonitorOptions(MPI_Comm comm, AppCtx *options)
   Functional     func;
   char          *names[256];
   PetscInt       f;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
-  ierr = PetscOptionsBegin(comm, "", "Simulation Monitor Options", "DMPLEX");PetscCall(ierr);
-  options->numMonitorFuncs = ALEN(names);
+  PetscOptionsBegin(comm, "", "Simulation Monitor Options", "DMPLEX");
+  options->numMonitorFuncs = PETSC_STATIC_ARRAY_LENGTH(names);
   PetscCall(PetscOptionsStringArray("-monitor", "List of functionals to monitor", "", names, &options->numMonitorFuncs, NULL));
   PetscCall(PetscMalloc1(options->numMonitorFuncs, &options->monitorFuncs));
   for (f = 0; f < options->numMonitorFuncs; ++f) {
@@ -132,7 +128,7 @@ static PetscErrorCode ProcessMonitorOptions(MPI_Comm comm, AppCtx *options)
       if (func->func == call->func && func->ctx == call->ctx) options->maxMonitorFunc = PetscMax(options->maxMonitorFunc, func->offset);
     }
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -371,7 +367,6 @@ static PetscErrorCode constant_x_2d(PetscInt dim, PetscReal time, const PetscRea
   u[0] = x[0];
   u[1] = x[1] + t;
 #if 0
-  PetscErrorCode  ierr;
   PetscCall(DMLocalizeCoordinate(globalUser->dm, u, PETSC_FALSE, u));
 #else
   u[1] = u[1] - (int) PetscRealPart(u[1]);
@@ -662,7 +657,7 @@ static PetscErrorCode SetupBC(DM dm, AppCtx *user)
         break;
       }
       break;
-    default: SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_SUP, "Dimension %D not supported", dim);
+    default: SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_SUP, "Dimension %" PetscInt_FMT " not supported", dim);
   }
   exactFuncs[0] = user->initialGuess[0];
   exactFuncs[1] = user->initialGuess[1];
@@ -689,10 +684,10 @@ static PetscErrorCode SetupBC(DM dm, AppCtx *user)
           break;
         case VEL_SHEAR:
           exactFuncs[0] = shear_bc; break;
-        default: SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid dimension %d", dim);
+        default: SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid dimension %" PetscInt_FMT, dim);
       }
       break;
-    default: SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_SUP, "Dimension %D not supported", dim);
+    default: SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_SUP, "Dimension %" PetscInt_FMT " not supported", dim);
   }
   {
     PetscBool isImplicit = PETSC_FALSE;
@@ -719,8 +714,8 @@ static PetscErrorCode SetupBC(DM dm, AppCtx *user)
   if (label && user->useFV) {
     const PetscInt inflowids[] = {100,200,300}, outflowids[] = {101};
 
-    PetscCall(DMAddBoundary(dm, DM_BC_NATURAL_RIEMANN, "inflow",  label,  ALEN(inflowids),  inflowids, 1, 0, NULL, (void (*)(void)) advect_inflow, NULL, user, NULL));
-    PetscCall(DMAddBoundary(dm, DM_BC_NATURAL_RIEMANN, "outflow", label, ALEN(outflowids), outflowids, 1, 0, NULL, (void (*)(void)) advect_outflow, NULL, user, NULL));
+    PetscCall(DMAddBoundary(dm, DM_BC_NATURAL_RIEMANN, "inflow",  label,  PETSC_STATIC_ARRAY_LENGTH(inflowids),  inflowids, 1, 0, NULL, (void (*)(void)) advect_inflow, NULL, user, NULL));
+    PetscCall(DMAddBoundary(dm, DM_BC_NATURAL_RIEMANN, "outflow", label, PETSC_STATIC_ARRAY_LENGTH(outflowids), outflowids, 1, 0, NULL, (void (*)(void)) advect_outflow, NULL, user, NULL));
   }
   PetscFunctionReturn(0);
 }
@@ -1029,7 +1024,7 @@ static PetscErrorCode MonitorFunctionals(TS ts, PetscInt stepnum, PetscReal time
     }
     PetscCall(PetscFree4(fmin, fmax, fint, ftmp));
     PetscCall(PetscFree3(fdm, fv, fx));
-    PetscCall(PetscPrintf(PetscObjectComm((PetscObject) ts), "% 3D  time %8.4g  |x| (", stepnum, (double) time));
+    PetscCall(PetscPrintf(PetscObjectComm((PetscObject) ts), "% 3" PetscInt_FMT "  time %8.4g  |x| (", stepnum, (double) time));
     for (f = 0; f < Nf; ++f) {
       if (f > 0) PetscCall(PetscPrintf(PetscObjectComm((PetscObject) ts), ", "));
       PetscCall(PetscPrintf(PetscObjectComm((PetscObject) ts), "%8.4g", (double) xnorms[f*2+0]));
@@ -1111,7 +1106,7 @@ int main(int argc, char **argv)
     PetscCall(TSGetSolveTime(ts, &ftime));
     PetscCall(TSGetStepNumber(ts, &nsteps));
     PetscCall(TSGetConvergedReason(ts, &reason));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%s at time %g after %D steps\n", TSConvergedReasons[reason], (double) ftime, nsteps));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%s at time %g after %" PetscInt_FMT " steps\n", TSConvergedReasons[reason], (double) ftime, nsteps));
   }
 
   PetscCall(VecDestroy(&u));

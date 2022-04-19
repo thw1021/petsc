@@ -24,7 +24,7 @@ PetscErrorCode  KSPGLTRGetMinEig(KSP ksp, PetscReal *e_min)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
-  PetscCall(PetscUseMethod(ksp,"KSPGLTRGetMinEig_C",(KSP,PetscReal*),(ksp,e_min)));
+  PetscUseMethod(ksp,"KSPGLTRGetMinEig_C",(KSP,PetscReal*),(ksp,e_min));
   PetscFunctionReturn(0);
 }
 
@@ -44,7 +44,7 @@ PetscErrorCode  KSPGLTRGetLambda(KSP ksp, PetscReal *lambda)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
-  PetscCall(PetscUseMethod(ksp,"KSPGLTRGetLambda_C",(KSP,PetscReal*),(ksp,lambda)));
+  PetscUseMethod(ksp,"KSPGLTRGetLambda_C",(KSP,PetscReal*),(ksp,lambda));
   PetscFunctionReturn(0);
 }
 
@@ -82,7 +82,7 @@ static PetscErrorCode KSPCGSolve_GLTR(KSP ksp)
 
   PetscCall(PCGetDiagonalScale(ksp->pc, &diagonalscale));
   PetscCheck(!diagonalscale,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP, "Krylov method %s does not support diagonal scaling", ((PetscObject)ksp)->type_name);
-  PetscCheckFalse(cg->radius < 0.0,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE, "Input error: radius < 0");
+  PetscCheck(cg->radius >= 0.0,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE, "Input error: radius < 0");
 
   /***************************************************************************/
   /* Get the workspace vectors and initialize variables                      */
@@ -562,7 +562,7 @@ static PetscErrorCode KSPCGSolve_GLTR(KSP ksp)
 
     if (ksp->its >= max_cg_its) {
       ksp->reason = KSP_DIVERGED_ITS;
-      PetscCall(PetscInfo(ksp, "KSPCGSolve_GLTR: iterlim: its=%D\n", ksp->its));
+      PetscCall(PetscInfo(ksp, "KSPCGSolve_GLTR: iterlim: its=%" PetscInt_FMT "\n", ksp->its));
       break;
     }
 
@@ -1294,7 +1294,7 @@ static PetscErrorCode KSPCGSetFromOptions_GLTR(PetscOptionItems *PetscOptionsObj
   KSPCG_GLTR       *cg = (KSPCG_GLTR*)ksp->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"KSP GLTR options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"KSP GLTR options");
 
   PetscCall(PetscOptionsReal("-ksp_cg_radius", "Trust Region Radius", "KSPCGSetRadius", cg->radius, &cg->radius, NULL));
 
@@ -1307,7 +1307,7 @@ static PetscErrorCode KSPCGSetFromOptions_GLTR(PetscOptionItems *PetscOptionsObj
   PetscCall(PetscOptionsInt("-ksp_cg_gltr_max_lanczos_its", "Maximum Lanczos Iters", "", cg->max_lanczos_its, &cg->max_lanczos_its, NULL));
   PetscCall(PetscOptionsInt("-ksp_cg_gltr_max_newton_its", "Maximum Newton Iters", "", cg->max_newton_its, &cg->max_newton_its, NULL));
 
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 

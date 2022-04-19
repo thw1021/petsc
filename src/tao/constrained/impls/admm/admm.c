@@ -528,21 +528,18 @@ static PetscErrorCode TaoSolve_ADMM(Tao tao)
 static PetscErrorCode TaoSetFromOptions_ADMM(PetscOptionItems *PetscOptionsObject,Tao tao)
 {
   TAO_ADMM       *am = (TAO_ADMM*)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"ADMM problem that solves f(x) in a form of f(x) + g(z) subject to x - z = 0. Norm 1 and 2 are supported. Different subsolver routines can be selected. "));
+  PetscOptionsHeadBegin(PetscOptionsObject,"ADMM problem that solves f(x) in a form of f(x) + g(z) subject to x - z = 0. Norm 1 and 2 are supported. Different subsolver routines can be selected. ");
   PetscCall(PetscOptionsReal("-tao_admm_regularizer_coefficient","regularizer constant","",am->lambda,&am->lambda,NULL));
   PetscCall(PetscOptionsReal("-tao_admm_spectral_penalty","Constant for Augmented Lagrangian term.","",am->mu,&am->mu,NULL));
   PetscCall(PetscOptionsReal("-tao_admm_relaxation_parameter","x relaxation parameter for Z update.","",am->gamma,&am->gamma,NULL));
   PetscCall(PetscOptionsReal("-tao_admm_tolerance_update_factor","ADMM dynamic tolerance update factor.","",am->tol,&am->tol,NULL));
   PetscCall(PetscOptionsReal("-tao_admm_spectral_penalty_update_factor","ADMM spectral penalty update curvature safeguard value.","",am->orthval,&am->orthval,NULL));
   PetscCall(PetscOptionsReal("-tao_admm_minimum_spectral_penalty","Set ADMM minimum spectral penalty.","",am->mumin,&am->mumin,NULL));
-  ierr = PetscOptionsEnum("-tao_admm_dual_update","Lagrangian dual update policy","TaoADMMUpdateType",
-                          TaoADMMUpdateTypes,(PetscEnum)am->update,(PetscEnum*)&am->update,NULL);PetscCall(ierr);
-  ierr = PetscOptionsEnum("-tao_admm_regularizer_type","ADMM regularizer update rule","TaoADMMRegularizerType",
-                          TaoADMMRegularizerTypes,(PetscEnum)am->regswitch,(PetscEnum*)&am->regswitch,NULL);PetscCall(ierr);
-  PetscCall(PetscOptionsTail());
+  PetscCall(PetscOptionsEnum("-tao_admm_dual_update","Lagrangian dual update policy","TaoADMMUpdateType",TaoADMMUpdateTypes,(PetscEnum)am->update,(PetscEnum*)&am->update,NULL));
+  PetscCall(PetscOptionsEnum("-tao_admm_regularizer_type","ADMM regularizer update rule","TaoADMMRegularizerType",TaoADMMRegularizerTypes,(PetscEnum)am->regswitch,(PetscEnum*)&am->regswitch,NULL));
+  PetscOptionsHeadEnd();
   PetscCall(TaoSetFromOptions(am->subsolverX));
   if (am->regswitch != TAO_ADMM_REGULARIZER_SOFT_THRESH) {
     PetscCall(TaoSetFromOptions(am->subsolverZ));
@@ -1342,7 +1339,7 @@ PetscErrorCode TaoADMMSetRegularizerType(Tao tao, TaoADMMRegularizerType type)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
   PetscValidLogicalCollectiveEnum(tao,type,2);
-  PetscCall(PetscTryMethod(tao,"TaoADMMSetRegularizerType_C",(Tao,TaoADMMRegularizerType),(tao,type)));
+  PetscTryMethod(tao,"TaoADMMSetRegularizerType_C",(Tao,TaoADMMRegularizerType),(tao,type));
   PetscFunctionReturn(0);
 }
 
@@ -1365,7 +1362,7 @@ PetscErrorCode TaoADMMGetRegularizerType(Tao tao, TaoADMMRegularizerType *type)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
-  PetscCall(PetscUseMethod(tao,"TaoADMMGetRegularizerType_C",(Tao,TaoADMMRegularizerType*),(tao,type)));
+  PetscUseMethod(tao,"TaoADMMGetRegularizerType_C",(Tao,TaoADMMRegularizerType*),(tao,type));
   PetscFunctionReturn(0);
 }
 
@@ -1387,7 +1384,7 @@ PetscErrorCode TaoADMMSetUpdateType(Tao tao, TaoADMMUpdateType type)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
   PetscValidLogicalCollectiveEnum(tao,type,2);
-  PetscCall(PetscTryMethod(tao,"TaoADMMSetUpdateType_C",(Tao,TaoADMMUpdateType),(tao,type)));
+  PetscTryMethod(tao,"TaoADMMSetUpdateType_C",(Tao,TaoADMMUpdateType),(tao,type));
   PetscFunctionReturn(0);
 }
 
@@ -1410,6 +1407,6 @@ PetscErrorCode TaoADMMGetUpdateType(Tao tao, TaoADMMUpdateType *type)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
-  PetscCall(PetscUseMethod(tao,"TaoADMMGetUpdateType_C",(Tao,TaoADMMUpdateType*),(tao,type)));
+  PetscUseMethod(tao,"TaoADMMGetUpdateType_C",(Tao,TaoADMMUpdateType*),(tao,type));
   PetscFunctionReturn(0);
 }

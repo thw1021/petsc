@@ -54,24 +54,24 @@ PetscErrorCode VecNorm_MPICUDA(Vec xin,NormType type,PetscReal *z)
   if (type == NORM_2 || type == NORM_FROBENIUS) {
     PetscCall(VecNorm_SeqCUDA(xin,NORM_2,&work));
     work *= work;
-    PetscCallMPI(MPIU_Allreduce(&work,&sum,1,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)xin)));
+    PetscCall(MPIU_Allreduce(&work,&sum,1,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)xin)));
     *z    = PetscSqrtReal(sum);
   } else if (type == NORM_1) {
     /* Find the local part */
     PetscCall(VecNorm_SeqCUDA(xin,NORM_1,&work));
     /* Find the global max */
-    PetscCallMPI(MPIU_Allreduce(&work,z,1,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)xin)));
+    PetscCall(MPIU_Allreduce(&work,z,1,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)xin)));
   } else if (type == NORM_INFINITY) {
     /* Find the local max */
     PetscCall(VecNorm_SeqCUDA(xin,NORM_INFINITY,&work));
     /* Find the global max */
-    PetscCallMPI(MPIU_Allreduce(&work,z,1,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)xin)));
+    PetscCall(MPIU_Allreduce(&work,z,1,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)xin)));
   } else if (type == NORM_1_AND_2) {
     PetscReal temp[2];
     PetscCall(VecNorm_SeqCUDA(xin,NORM_1,temp));
     PetscCall(VecNorm_SeqCUDA(xin,NORM_2,temp+1));
     temp[1] = temp[1]*temp[1];
-    PetscCallMPI(MPIU_Allreduce(temp,z,2,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)xin)));
+    PetscCall(MPIU_Allreduce(temp,z,2,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)xin)));
     z[1] = PetscSqrtReal(z[1]);
   }
   PetscFunctionReturn(0);
@@ -83,7 +83,7 @@ PetscErrorCode VecDot_MPICUDA(Vec xin,Vec yin,PetscScalar *z)
 
   PetscFunctionBegin;
   PetscCall(VecDot_SeqCUDA(xin,yin,&work));
-  PetscCallMPI(MPIU_Allreduce(&work,&sum,1,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)xin)));
+  PetscCall(MPIU_Allreduce(&work,&sum,1,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)xin)));
   *z   = sum;
   PetscFunctionReturn(0);
 }
@@ -94,7 +94,7 @@ PetscErrorCode VecTDot_MPICUDA(Vec xin,Vec yin,PetscScalar *z)
 
   PetscFunctionBegin;
   PetscCall(VecTDot_SeqCUDA(xin,yin,&work));
-  PetscCallMPI(MPIU_Allreduce(&work,&sum,1,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)xin)));
+  PetscCall(MPIU_Allreduce(&work,&sum,1,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)xin)));
   *z   = sum;
   PetscFunctionReturn(0);
 }
@@ -108,7 +108,7 @@ PetscErrorCode VecMDot_MPICUDA(Vec xin,PetscInt nv,const Vec y[],PetscScalar *z)
     PetscCall(PetscMalloc1(nv,&work));
   }
   PetscCall(VecMDot_SeqCUDA(xin,nv,y,work));
-  PetscCallMPI(MPIU_Allreduce(work,z,nv,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)xin)));
+  PetscCall(MPIU_Allreduce(work,z,nv,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)xin)));
   if (nv > 128) {
     PetscCall(PetscFree(work));
   }
@@ -173,7 +173,7 @@ PetscErrorCode VecDotNorm2_MPICUDA(Vec s,Vec t,PetscScalar *dp,PetscScalar *nm)
 
   PetscFunctionBegin;
   PetscCall(VecDotNorm2_SeqCUDA(s,t,work,work+1));
-  PetscCallMPI(MPIU_Allreduce(&work,&sum,2,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)s)));
+  PetscCall(MPIU_Allreduce(&work,&sum,2,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)s)));
   *dp  = sum[0];
   *nm  = sum[1];
   PetscFunctionReturn(0);
@@ -233,7 +233,6 @@ PetscErrorCode VecCreate_CUDA(Vec v)
  @*/
  PetscErrorCode VecCreateMPICUDA(MPI_Comm comm,PetscInt n,PetscInt N,Vec *v)
  {
-
    PetscFunctionBegin;
    PetscCall(VecCreate(comm,v));
    PetscCall(VecSetSizes(*v,n,N));
@@ -277,7 +276,7 @@ PetscErrorCode VecCreate_CUDA(Vec v)
 PetscErrorCode  VecCreateMPICUDAWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,PetscInt N,const PetscScalar array[],Vec *vv)
 {
   PetscFunctionBegin;
-  PetscCheckFalse(n == PETSC_DECIDE,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must set local size of vector");
+  PetscCheck(n != PETSC_DECIDE,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must set local size of vector");
   PetscCall(PetscDeviceInitialize(PETSC_DEVICE_CUDA));
   PetscCall(VecCreate(comm,vv));
   PetscCall(VecSetSizes(*vv,n,N));
@@ -353,13 +352,13 @@ PetscErrorCode VecMax_MPICUDA(Vec xin,PetscInt *idx,PetscReal *z)
   *z = work;
 #else
   if (!idx) {
-    PetscCallMPI(MPIU_Allreduce(&work,z,1,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)xin)));
+    PetscCall(MPIU_Allreduce(&work,z,1,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)xin)));
   } else {
     struct { PetscReal v; PetscInt i; } in,out;
 
     in.v  = work;
     in.i  = *idx + xin->map->rstart;
-    PetscCallMPI(MPIU_Allreduce(&in,&out,1,MPIU_REAL_INT,MPIU_MAXLOC,PetscObjectComm((PetscObject)xin)));
+    PetscCall(MPIU_Allreduce(&in,&out,1,MPIU_REAL_INT,MPIU_MAXLOC,PetscObjectComm((PetscObject)xin)));
     *z    = out.v;
     *idx  = out.i;
   }
@@ -377,13 +376,13 @@ PetscErrorCode VecMin_MPICUDA(Vec xin,PetscInt *idx,PetscReal *z)
   *z = work;
 #else
   if (!idx) {
-    PetscCallMPI(MPIU_Allreduce(&work,z,1,MPIU_REAL,MPIU_MIN,PetscObjectComm((PetscObject)xin)));
+    PetscCall(MPIU_Allreduce(&work,z,1,MPIU_REAL,MPIU_MIN,PetscObjectComm((PetscObject)xin)));
   } else {
     struct { PetscReal v; PetscInt i; } in,out;
 
     in.v  = work;
     in.i  = *idx + xin->map->rstart;
-    PetscCallMPI(MPIU_Allreduce(&in,&out,1,MPIU_REAL_INT,MPIU_MINLOC,PetscObjectComm((PetscObject)xin)));
+    PetscCall(MPIU_Allreduce(&in,&out,1,MPIU_REAL_INT,MPIU_MINLOC,PetscObjectComm((PetscObject)xin)));
     *z    = out.v;
     *idx  = out.i;
   }
@@ -491,7 +490,6 @@ PetscErrorCode VecBindToCPU_MPICUDA(Vec V,PetscBool bind)
 
 PetscErrorCode VecCreate_MPICUDA_Private(Vec vv,PetscBool alloc,PetscInt nghost,const PetscScalar array[])
 {
-  PetscErrorCode ierr;
   Vec_CUDA       *veccuda;
 
   PetscFunctionBegin;
@@ -520,11 +518,11 @@ PetscErrorCode VecCreate_MPICUDA_Private(Vec vv,PetscBool alloc,PetscInt nghost,
 
       /* Need to parse command line for minimum size to use for pinned memory allocations on host here.
          Note: This same code duplicated in VecCreate_SeqCUDA_Private() and VecCUDAAllocateCheck(). Is there a good way to avoid this? */
-      ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)vv),((PetscObject)vv)->prefix,"VECCUDA Options","Vec");PetscCall(ierr);
+      PetscOptionsBegin(PetscObjectComm((PetscObject)vv),((PetscObject)vv)->prefix,"VECCUDA Options","Vec");
       pinned_memory_min = vv->minimum_bytes_pinned_memory;
       PetscCall(PetscOptionsReal("-vec_pinned_memory_min","Minimum size (in bytes) for an allocation to use pinned memory on host","VecSetPinnedMemoryMin",pinned_memory_min,&pinned_memory_min,&flag));
       if (flag) vv->minimum_bytes_pinned_memory = pinned_memory_min;
-      ierr = PetscOptionsEnd();PetscCall(ierr);
+      PetscOptionsEnd();
     }
     veccuda = (Vec_CUDA*)vv->spptr;
     veccuda->GPUarray = (PetscScalar*)array;

@@ -391,19 +391,18 @@ static PetscErrorCode KSPGuessSetFromOptions_Fischer(KSPGuess guess)
   KSPGuessFischer *ITG = (KSPGuessFischer *)guess->data;
   PetscInt        nmax = 2, model[2];
   PetscBool       flg;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   model[0] = ITG->method;
   model[1] = ITG->maxl;
-  ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)guess),((PetscObject)guess)->prefix,"Fischer guess options","KSPGuess");PetscCall(ierr);
+  PetscOptionsBegin(PetscObjectComm((PetscObject)guess),((PetscObject)guess)->prefix,"Fischer guess options","KSPGuess");
   PetscCall(PetscOptionsIntArray("-ksp_guess_fischer_model","Model type and dimension of basis","KSPGuessFischerSetModel",model,&nmax,&flg));
   if (flg) {
     PetscCall(KSPGuessFischerSetModel(guess,model[0],model[1]));
   }
   PetscCall(PetscOptionsReal("-ksp_guess_fischer_tol","Tolerance to determine rank via ratio of singular values","KSPGuessSetTolerance",ITG->tol,&ITG->tol,NULL));
   PetscCall(PetscOptionsBool("-ksp_guess_fischer_monitor","Monitor the guess",NULL,ITG->monitor,&ITG->monitor,NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -424,7 +423,7 @@ static PetscErrorCode KSPGuessView_Fischer(KSPGuess guess,PetscViewer viewer)
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isascii));
   if (isascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer,"Model %D, size %D\n",itg->method,itg->maxl));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"Model %" PetscInt_FMT ", size %" PetscInt_FMT "\n",itg->method,itg->maxl));
   }
   PetscFunctionReturn(0);
 }
@@ -451,7 +450,7 @@ PetscErrorCode  KSPGuessFischerSetModel(KSPGuess guess,PetscInt model,PetscInt s
   PetscFunctionBegin;
   PetscValidHeaderSpecific(guess,KSPGUESS_CLASSID,1);
   PetscValidLogicalCollectiveInt(guess,model,2);
-  PetscCall(PetscTryMethod(guess,"KSPGuessFischerSetModel_C",(KSPGuess,PetscInt,PetscInt),(guess,model,size)));
+  PetscTryMethod(guess,"KSPGuessFischerSetModel_C",(KSPGuess,PetscInt,PetscInt),(guess,model,size));
   PetscFunctionReturn(0);
 }
 

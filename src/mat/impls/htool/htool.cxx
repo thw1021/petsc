@@ -2,7 +2,6 @@
 #include <petscblaslapack.h>
 #include <set>
 
-#define ALEN(a) (sizeof(a)/sizeof((a)[0]))
 const char *const MatHtoolCompressorTypes[] = { "sympartialACA", "fullACA", "SVD" };
 const char *const MatHtoolClusteringTypes[] = { "PCARegular", "PCAGeometric", "BoundingBox1Regular", "BoundingBox1Geometric" };
 const char HtoolCitation[] = "@article{marchand2020two,\n"
@@ -382,7 +381,7 @@ static PetscErrorCode MatSetFromOptions_Htool(PetscOptionItems *PetscOptionsObje
   PetscBool      flg;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Htool options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Htool options");
   PetscCall(PetscOptionsInt("-mat_htool_min_cluster_size","Minimal leaf size in cluster tree",NULL,a->bs[0],a->bs,NULL));
   PetscCall(PetscOptionsInt("-mat_htool_max_block_size","Maximal number of coefficients in a dense block",NULL,a->bs[1],a->bs + 1,NULL));
   PetscCall(PetscOptionsReal("-mat_htool_epsilon","Relative error in Frobenius norm when approximating a block",NULL,a->epsilon,&a->epsilon,NULL));
@@ -390,12 +389,12 @@ static PetscErrorCode MatSetFromOptions_Htool(PetscOptionItems *PetscOptionsObje
   PetscCall(PetscOptionsInt("-mat_htool_min_target_depth","Minimal cluster tree depth associated with the rows",NULL,a->depth[0],a->depth,NULL));
   PetscCall(PetscOptionsInt("-mat_htool_min_source_depth","Minimal cluster tree depth associated with the columns",NULL,a->depth[1],a->depth + 1,NULL));
   n = 0;
-  PetscCall(PetscOptionsEList("-mat_htool_compressor","Type of compression","MatHtoolCompressorType",MatHtoolCompressorTypes,ALEN(MatHtoolCompressorTypes),MatHtoolCompressorTypes[MAT_HTOOL_COMPRESSOR_SYMPARTIAL_ACA],&n,&flg));
+  PetscCall(PetscOptionsEList("-mat_htool_compressor","Type of compression","MatHtoolCompressorType",MatHtoolCompressorTypes,PETSC_STATIC_ARRAY_LENGTH(MatHtoolCompressorTypes),MatHtoolCompressorTypes[MAT_HTOOL_COMPRESSOR_SYMPARTIAL_ACA],&n,&flg));
   if (flg) a->compressor = MatHtoolCompressorType(n);
   n = 0;
-  PetscCall(PetscOptionsEList("-mat_htool_clustering","Type of clustering","MatHtoolClusteringType",MatHtoolClusteringTypes,ALEN(MatHtoolClusteringTypes),MatHtoolClusteringTypes[MAT_HTOOL_CLUSTERING_PCA_REGULAR],&n,&flg));
+  PetscCall(PetscOptionsEList("-mat_htool_clustering","Type of clustering","MatHtoolClusteringType",MatHtoolClusteringTypes,PETSC_STATIC_ARRAY_LENGTH(MatHtoolClusteringTypes),MatHtoolClusteringTypes[MAT_HTOOL_CLUSTERING_PCA_REGULAR],&n,&flg));
   if (flg) a->clustering = MatHtoolClusteringType(n);
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -587,7 +586,7 @@ PETSC_EXTERN PetscErrorCode MatHtoolGetHierarchicalMat(Mat A,const htool::Virtua
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
   PetscValidPointer(hmatrix,2);
-  PetscCall(PetscTryMethod(A,"MatHtoolGetHierarchicalMat_C",(Mat,const htool::VirtualHMatrix<PetscScalar>**),(A,hmatrix)));
+  PetscTryMethod(A,"MatHtoolGetHierarchicalMat_C",(Mat,const htool::VirtualHMatrix<PetscScalar>**),(A,hmatrix));
   PetscFunctionReturn(0);
 }
 
@@ -621,7 +620,7 @@ PETSC_EXTERN PetscErrorCode MatHtoolSetKernel(Mat A,MatHtoolKernel kernel,void *
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
   if (!kernelctx) PetscValidFunction(kernel,2);
   if (!kernel)    PetscValidPointer(kernelctx,3);
-  PetscCall(PetscTryMethod(A,"MatHtoolSetKernel_C",(Mat,MatHtoolKernel,void*),(A,kernel,kernelctx)));
+  PetscTryMethod(A,"MatHtoolSetKernel_C",(Mat,MatHtoolKernel,void*),(A,kernel,kernelctx));
   PetscFunctionReturn(0);
 }
 
@@ -655,7 +654,7 @@ PETSC_EXTERN PetscErrorCode MatHtoolGetPermutationSource(Mat A,IS* is)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
   if (!is) PetscValidPointer(is,2);
-  PetscCall(PetscTryMethod(A,"MatHtoolGetPermutationSource_C",(Mat,IS*),(A,is)));
+  PetscTryMethod(A,"MatHtoolGetPermutationSource_C",(Mat,IS*),(A,is));
   PetscFunctionReturn(0);
 }
 
@@ -689,7 +688,7 @@ PETSC_EXTERN PetscErrorCode MatHtoolGetPermutationTarget(Mat A,IS* is)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
   if (!is) PetscValidPointer(is,2);
-  PetscCall(PetscTryMethod(A,"MatHtoolGetPermutationTarget_C",(Mat,IS*),(A,is)));
+  PetscTryMethod(A,"MatHtoolGetPermutationTarget_C",(Mat,IS*),(A,is));
   PetscFunctionReturn(0);
 }
 
@@ -718,7 +717,7 @@ PETSC_EXTERN PetscErrorCode MatHtoolUsePermutation(Mat A,PetscBool use)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
   PetscValidLogicalCollectiveBool(A,use,2);
-  PetscCall(PetscTryMethod(A,"MatHtoolUsePermutation_C",(Mat,PetscBool),(A,use)));
+  PetscTryMethod(A,"MatHtoolUsePermutation_C",(Mat,PetscBool),(A,use));
   PetscFunctionReturn(0);
 }
 
@@ -877,11 +876,11 @@ PetscErrorCode MatCreateHtoolFromKernel(MPI_Comm comm,PetscInt m,PetscInt n,Pets
   a->kernelctx = kernelctx;
   PetscCall(PetscCalloc1(A->rmap->N*spacedim,&a->gcoords_target));
   PetscCall(PetscArraycpy(a->gcoords_target+A->rmap->rstart*spacedim,coords_target,A->rmap->n*spacedim));
-  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE,a->gcoords_target,A->rmap->N*spacedim,MPIU_REAL,MPI_SUM,PetscObjectComm((PetscObject)A))); /* global target coordinates */
+  PetscCall(MPIU_Allreduce(MPI_IN_PLACE,a->gcoords_target,A->rmap->N*spacedim,MPIU_REAL,MPI_SUM,PetscObjectComm((PetscObject)A))); /* global target coordinates */
   if (coords_target != coords_source) {
     PetscCall(PetscCalloc1(A->cmap->N*spacedim,&a->gcoords_source));
     PetscCall(PetscArraycpy(a->gcoords_source+A->cmap->rstart*spacedim,coords_source,A->cmap->n*spacedim));
-    PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE,a->gcoords_source,A->cmap->N*spacedim,MPIU_REAL,MPI_SUM,PetscObjectComm((PetscObject)A))); /* global source coordinates */
+    PetscCall(MPIU_Allreduce(MPI_IN_PLACE,a->gcoords_source,A->cmap->N*spacedim,MPIU_REAL,MPI_SUM,PetscObjectComm((PetscObject)A))); /* global source coordinates */
   } else a->gcoords_source = a->gcoords_target;
   PetscCall(PetscCalloc2(A->cmap->N,&a->work_source,A->rmap->N,&a->work_target));
   *B = A;

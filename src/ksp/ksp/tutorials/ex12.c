@@ -5,13 +5,6 @@ Input parameters include:\n\
   -m <mesh_x>       : number of mesh points in x-direction\n\
   -n <mesh_y>       : number of mesh points in y-direction\n\n";
 
-/*T
-   Concepts: KSP^solving a system of linear equations
-   Concepts: KSP^Laplacian, 2d
-   Concepts: PC^registering preconditioners
-   Processors: n
-T*/
-
 /*
    Demonstrates registering a new preconditioner (PC) type.
 
@@ -181,7 +174,7 @@ int main(int argc,char **args)
      Print convergence information.  PetscPrintf() produces a single
      print statement from all processes that share a communicator.
   */
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g iterations %D\n",(double)norm,its));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g iterations %" PetscInt_FMT "\n",(double)norm,its));
 
   /*
      Free work space.  All PETSc objects should be destroyed when they

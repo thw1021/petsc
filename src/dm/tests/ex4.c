@@ -53,11 +53,11 @@ int main(int argc,char **argv)
   flg  = PETSC_FALSE;
   PetscCall(PetscOptionsGetBool(NULL,NULL,"-distribute",&flg,NULL));
   if (flg) {
-    PetscCheckFalse(m == PETSC_DECIDE,PETSC_COMM_WORLD,PETSC_ERR_USER_INPUT,"Must set -m option with -distribute option");
+    PetscCheck(m != PETSC_DECIDE,PETSC_COMM_WORLD,PETSC_ERR_USER_INPUT,"Must set -m option with -distribute option");
     PetscCall(PetscMalloc1(m,&lx));
     for (i=0; i<m-1; i++) { lx[i] = 4;}
     lx[m-1] = M - 4*(m-1);
-    PetscCheckFalse(n == PETSC_DECIDE,PETSC_COMM_WORLD,PETSC_ERR_USER_INPUT,"Must set -n option with -distribute option");
+    PetscCheck(n != PETSC_DECIDE,PETSC_COMM_WORLD,PETSC_ERR_USER_INPUT,"Must set -n option with -distribute option");
     PetscCall(PetscMalloc1(n,&ly));
     for (i=0; i<n-1; i++) { ly[i] = 2;}
     ly[n-1] = N - 2*(n-1);
@@ -148,7 +148,7 @@ int main(int argc,char **argv)
         iloc = w*((j-Ys)*Xm + i-Xs);
         for (l=0; l<w; l++) {
           if (iglobal[kk] != ltog[iloc+l]) {
-            PetscCall(PetscFPrintf(PETSC_COMM_SELF,stdout,"[%d] Problem with mapping: j=%D, i=%D, l=%D, petsc1=%D, petsc2=%D\n",rank,j,i,l,ltog[iloc+l],iglobal[kk]));
+            PetscCall(PetscFPrintf(PETSC_COMM_SELF,stdout,"[%d] Problem with mapping: j=%" PetscInt_FMT ", i=%" PetscInt_FMT ", l=%" PetscInt_FMT ", petsc1=%" PetscInt_FMT ", petsc2=%" PetscInt_FMT "\n",rank,j,i,l,ltog[iloc+l],iglobal[kk]));
           }
           kk++;
         }

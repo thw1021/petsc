@@ -1,11 +1,6 @@
 static const char help[] = "Newton's method to solve a two-variable system, sequentially.\n"
                            "The same problem is solved twice - i) fully assembled system + ii) block system\n\n";
 
-/*T
-Concepts: SNES^basic uniprocessor example, block objects
-Processors: 1
-T*/
-
 /*
 Include "petscsnes.h" so that we can use SNES solvers.  Note that this
 file automatically includes:
@@ -156,7 +151,7 @@ static PetscErrorCode assembled_system(void)
     PetscCall(SNESGetFunction(snes,&f,0,0));
     PetscCall(VecView(r,PETSC_VIEWER_STDOUT_WORLD));
   }
-  PetscCall(PetscPrintf(PETSC_COMM_SELF,"number of SNES iterations = %D\n\n",its));
+  PetscCall(PetscPrintf(PETSC_COMM_SELF,"number of SNES iterations = %" PetscInt_FMT "\n\n",its));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   Free work space.  All PETSc objects should be destroyed when they
@@ -492,7 +487,7 @@ static PetscErrorCode block_system(void)
     PetscCall(VecView(r,PETSC_VIEWER_STDOUT_WORLD));
   }
 
-  PetscCall(PetscPrintf(PETSC_COMM_SELF,"number of SNES iterations = %D\n\n",its));
+  PetscCall(PetscPrintf(PETSC_COMM_SELF,"number of SNES iterations = %" PetscInt_FMT "\n\n",its));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   Free work space.  All PETSc objects should be destroyed when they

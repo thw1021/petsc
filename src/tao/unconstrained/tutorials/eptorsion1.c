@@ -38,17 +38,6 @@ The command line options are:\n\
   -my <yg>, where <yg> = number of grid points in the 2nd coordinate direction\n\
   -par <param>, where <param> = angle of twist per unit length\n\n";
 
-/*T
-   Concepts: TAO^Solving an unconstrained minimization problem
-   Routines: TaoCreate(); TaoSetType();
-   Routines: TaoSetSolution();
-   Routines: TaoSetObjectiveAndGradient();
-   Routines: TaoSetHessian(); TaoSetFromOptions();
-   Routines: TaoGetKSP(); TaoSolve();
-   Routines: TaoDestroy();
-   Processors: 1
-T*/
-
 /*
    User-defined application context - contains data needed by the
    application-provided call-back routines, FormFunction(),
@@ -106,7 +95,7 @@ PetscErrorCode main(int argc,char **argv)
   PetscCall(PetscOptionsGetBool(NULL,NULL,"-test_lmvm",&test_lmvm,&flg));
 
   PetscCall(PetscPrintf(PETSC_COMM_SELF,"\n---- Elastic-Plastic Torsion Problem -----\n"));
-  PetscCall(PetscPrintf(PETSC_COMM_SELF,"mx: %D     my: %D   \n\n",mx,my));
+  PetscCall(PetscPrintf(PETSC_COMM_SELF,"mx: %" PetscInt_FMT "     my: %" PetscInt_FMT "   \n\n",mx,my));
   user.ndim = mx * my; user.mx = mx; user.my = my;
   user.hx = one/(mx+1); user.hy = one/(my+1);
 
@@ -165,7 +154,7 @@ PetscErrorCode main(int argc,char **argv)
     PetscCall(MatSolve(M, out, out2));
     PetscCall(VecAXPY(out2, -1.0, in));
     PetscCall(VecNorm(out2, NORM_2, &mult_solve_dist));
-    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)tao), "error between MatMult and MatSolve: %e\n", mult_solve_dist));
+    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)tao), "error between MatMult and MatSolve: %e\n", (double)mult_solve_dist));
     PetscCall(VecDestroy(&in));
     PetscCall(VecDestroy(&out));
     PetscCall(VecDestroy(&out2));

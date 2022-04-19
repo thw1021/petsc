@@ -46,15 +46,15 @@ static PetscErrorCode DMView_DA_1d(DM da,PetscViewer viewer)
       }
       PetscCall(PetscFree(nz));
       navg = navg/size;
-      PetscCall(PetscViewerASCIIPrintf(viewer,"  Load Balance - Grid Points: Min %D  avg %D  max %D\n",nmin,navg,nmax));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"  Load Balance - Grid Points: Min %" PetscInt_FMT "  avg %" PetscInt_FMT "  max %" PetscInt_FMT "\n",nmin,navg,nmax));
       PetscFunctionReturn(0);
     }
     if (format != PETSC_VIEWER_ASCII_VTK_DEPRECATED && format != PETSC_VIEWER_ASCII_VTK_CELL_DEPRECATED && format != PETSC_VIEWER_ASCII_GLVIS) {
       DMDALocalInfo info;
       PetscCall(DMDAGetLocalInfo(da,&info));
       PetscCall(PetscViewerASCIIPushSynchronized(viewer));
-      PetscCall(PetscViewerASCIISynchronizedPrintf(viewer,"Processor [%d] M %D m %D w %D s %D\n",rank,dd->M,dd->m,dd->w,dd->s));
-      PetscCall(PetscViewerASCIISynchronizedPrintf(viewer,"X range of indices: %D %D\n",info.xs,info.xs+info.xm));
+      PetscCall(PetscViewerASCIISynchronizedPrintf(viewer,"Processor [%d] M %" PetscInt_FMT " m %" PetscInt_FMT " w %" PetscInt_FMT " s %" PetscInt_FMT "\n",rank,dd->M,dd->m,dd->w,dd->s));
+      PetscCall(PetscViewerASCIISynchronizedPrintf(viewer,"X range of indices: %" PetscInt_FMT " %" PetscInt_FMT "\n",info.xs,info.xs+info.xm));
       PetscCall(PetscViewerFlush(viewer));
       PetscCall(PetscViewerASCIIPopSynchronized(viewer));
     } else if (format == PETSC_VIEWER_ASCII_GLVIS) {
@@ -68,7 +68,6 @@ static PetscErrorCode DMView_DA_1d(DM da,PetscViewer viewer)
     PetscInt       base;
     char           node[10];
     PetscBool      isnull;
-    PetscErrorCode ierr;
 
     PetscCall(PetscViewerDrawGetDraw(viewer,0,&draw));
     PetscCall(PetscDrawIsNull(draw,&isnull));
@@ -78,7 +77,7 @@ static PetscErrorCode DMView_DA_1d(DM da,PetscViewer viewer)
     PetscCall(PetscDrawClear(draw));
     PetscCall(PetscDrawSetCoordinates(draw,xmin,ymin,xmax,ymax));
 
-    ierr = PetscDrawCollectiveBegin(draw);PetscCall(ierr);
+    PetscDrawCollectiveBegin(draw);
     /* first processor draws all node lines */
     if (rank == 0) {
       PetscInt xmin_tmp;
@@ -90,11 +89,11 @@ static PetscErrorCode DMView_DA_1d(DM da,PetscViewer viewer)
       PetscCall(PetscDrawLine(draw,xmin,ymin,xmax,ymin,PETSC_DRAW_BLACK));
       PetscCall(PetscDrawLine(draw,xmin,ymax,xmax,ymax,PETSC_DRAW_BLACK));
     }
-    ierr = PetscDrawCollectiveEnd(draw);PetscCall(ierr);
+    PetscDrawCollectiveEnd(draw);
     PetscCall(PetscDrawFlush(draw));
     PetscCall(PetscDrawPause(draw));
 
-    ierr = PetscDrawCollectiveBegin(draw);PetscCall(ierr);
+    PetscDrawCollectiveBegin(draw);
     /* draw my box */
     ymin = 0; ymax = 0.3; xmin = dd->xs / dd->w; xmax = (dd->xe / dd->w)  - 1;
     PetscCall(PetscDrawLine(draw,xmin,ymin,xmax,ymin,PETSC_DRAW_RED));
@@ -107,7 +106,7 @@ static PetscErrorCode DMView_DA_1d(DM da,PetscViewer viewer)
       PetscCall(PetscSNPrintf(node,sizeof(node),"%d",(int)base++));
       PetscCall(PetscDrawString(draw,x,ymin,PETSC_DRAW_RED,node));
     }
-    ierr = PetscDrawCollectiveEnd(draw);PetscCall(ierr);
+    PetscDrawCollectiveEnd(draw);
     PetscCall(PetscDrawFlush(draw));
     PetscCall(PetscDrawPause(draw));
     PetscCall(PetscDrawSave(draw));
@@ -152,8 +151,8 @@ PetscErrorCode  DMSetUp_DA_1D(DM da)
 
   if (s > 0) {
     /* if not communicating data then should be ok to have nothing on some processes */
-    PetscCheck(M >= m,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"More processes than data points! %D %D",m,M);
-    PetscCheck((M-1) >= s || size <= 1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Array is too small for stencil! %D %D",M-1,s);
+    PetscCheck(M >= m,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"More processes than data points! %" PetscInt_FMT " %" PetscInt_FMT,m,M);
+    PetscCheck((M-1) >= s || size <= 1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Array is too small for stencil! %" PetscInt_FMT " %" PetscInt_FMT,M-1,s);
   }
 
   /*
@@ -187,14 +186,14 @@ PetscErrorCode  DMSetUp_DA_1D(DM da)
     /* verify that data user provided is consistent */
     left = xs;
     for (i=rank; i<size; i++) left += lx[i];
-    PetscCheck(left == M,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Sum of lx across processors not equal to M %D %D",left,M);
+    PetscCheck(left == M,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Sum of lx across processors not equal to M %" PetscInt_FMT " %" PetscInt_FMT,left,M);
   }
 
   /*
    check if the scatter requires more than one process neighbor or wraps around
    the domain more than once
   */
-  PetscCheck((x >= s) || ((M <= 1) && (bx != DM_BOUNDARY_PERIODIC)),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Local x-width of domain x %D is smaller than stencil width s %D",x,s);
+  PetscCheck((x >= s) || ((M <= 1) && (bx != DM_BOUNDARY_PERIODIC)),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Local x-width of domain x %" PetscInt_FMT " is smaller than stencil width s %" PetscInt_FMT,x,s);
 
   xe  = xs + x;
 

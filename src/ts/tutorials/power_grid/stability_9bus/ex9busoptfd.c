@@ -115,7 +115,6 @@ PetscErrorCode ri2dq(PetscScalar Fr,PetscScalar Fi,PetscScalar delta,PetscScalar
 
 PetscErrorCode SetInitialGuess(Vec X,Userctx *user)
 {
-  PetscErrorCode ierr;
   Vec            Xgen,Xnet;
   PetscScalar    *xgen,*xnet;
   PetscInt       i,idx=0;
@@ -200,7 +199,6 @@ PetscErrorCode SetInitialGuess(Vec X,Userctx *user)
 /* Computes F = [-f(x,y);g(x,y)] */
 PetscErrorCode ResidualFunction(SNES snes,Vec X, Vec F, Userctx *user)
 {
-  PetscErrorCode ierr;
   Vec            Xgen,Xnet,Fgen,Fnet;
   PetscScalar    *xgen,*xnet,*fgen,*fnet;
   PetscInt       i,idx=0;
@@ -322,7 +320,6 @@ PetscErrorCode ResidualFunction(SNES snes,Vec X, Vec F, Userctx *user)
  */
 PetscErrorCode IFunction(TS ts,PetscReal t, Vec X, Vec Xdot, Vec F, Userctx *user)
 {
-  PetscErrorCode    ierr;
   SNES              snes;
   PetscScalar       *f;
   const PetscScalar *xdot;
@@ -356,7 +353,6 @@ PetscErrorCode IFunction(TS ts,PetscReal t, Vec X, Vec Xdot, Vec F, Userctx *use
 */
 PetscErrorCode AlgFunction(SNES snes, Vec X, Vec F, void *ctx)
 {
-  PetscErrorCode ierr;
   Userctx        *user=(Userctx*)ctx;
   PetscScalar    *f;
   PetscInt       i;
@@ -379,7 +375,6 @@ PetscErrorCode AlgFunction(SNES snes, Vec X, Vec F, void *ctx)
 
 PetscErrorCode PreallocateJacobian(Mat J, Userctx *user)
 {
-  PetscErrorCode ierr;
   PetscInt       *d_nnz;
   PetscInt       i,idx=0,start=0;
   PetscInt       ncols;
@@ -428,7 +423,6 @@ PetscErrorCode PreallocateJacobian(Mat J, Userctx *user)
 */
 PetscErrorCode ResidualJacobian(SNES snes,Vec X,Mat J,Mat B,void *ctx)
 {
-  PetscErrorCode    ierr;
   Userctx           *user=(Userctx*)ctx;
   Vec               Xgen,Xnet;
   PetscScalar       *xgen,*xnet;
@@ -659,7 +653,6 @@ PetscErrorCode ResidualJacobian(SNES snes,Vec X,Mat J,Mat B,void *ctx)
 */
 PetscErrorCode AlgJacobian(SNES snes,Vec X,Mat A,Mat B,void *ctx)
 {
-  PetscErrorCode ierr;
   Userctx        *user=(Userctx*)ctx;
 
   PetscFunctionBegin;
@@ -676,7 +669,6 @@ PetscErrorCode AlgJacobian(SNES snes,Vec X,Mat A,Mat B,void *ctx)
 
 PetscErrorCode IJacobian(TS ts,PetscReal t,Vec X,Vec Xdot,PetscReal a,Mat A,Mat B,Userctx *user)
 {
-  PetscErrorCode ierr;
   SNES           snes;
   PetscScalar    atmp = (PetscScalar) a;
   PetscInt       i,row;
@@ -709,7 +701,6 @@ PetscErrorCode IJacobian(TS ts,PetscReal t,Vec X,Vec Xdot,PetscReal a,Mat A,Mat 
 
 static PetscErrorCode CostIntegrand(TS ts,PetscReal t,Vec U,Vec R,Userctx *user)
 {
-  PetscErrorCode    ierr;
   PetscScalar       *r;
   const PetscScalar *u;
   PetscInt          idx;
@@ -740,7 +731,6 @@ static PetscErrorCode CostIntegrand(TS ts,PetscReal t,Vec U,Vec R,Userctx *user)
 
 static PetscErrorCode MonitorUpdateQ(TS ts,PetscInt stepnum,PetscReal time,Vec X,void *ctx0)
 {
-  PetscErrorCode ierr;
   Vec            C,*Y;
   PetscInt       Nr;
   PetscReal      h,theta;
@@ -767,7 +757,6 @@ int main(int argc,char **argv)
   Userctx            user;
   Vec                p;
   PetscScalar        *x_ptr;
-  PetscErrorCode     ierr;
   PetscMPIInt        size;
   PetscInt           i;
   KSP                ksp;
@@ -798,7 +787,7 @@ int main(int argc,char **argv)
   PetscCall(PetscFree(idx2));
 
   /* Set run time options */
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Transient stability fault options","");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Transient stability fault options","");
   {
     user.tfaulton  = 1.0;
     user.tfaultoff = 1.2;
@@ -819,7 +808,7 @@ int main(int argc,char **argv)
     PetscCall(PetscOptionsInt("-pow","","",user.pow,&user.pow,NULL));
 
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   /* Create DMs for generator and network subsystems */
   PetscCall(DMDACreate1d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,user.neqs_gen,1,1,NULL,&user.dmgen));
@@ -907,7 +896,6 @@ PetscErrorCode FormFunction(Tao tao,Vec P,PetscReal *f,void *ctx0)
 {
   TS             ts;
   SNES           snes_alg;
-  PetscErrorCode ierr;
   Userctx        *ctx = (Userctx*)ctx0;
   Vec            X;
   Mat            J;

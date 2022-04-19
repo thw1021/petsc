@@ -29,20 +29,19 @@ int main(int argc, char **argv)
   Vec               x; /*solution vector*/
   Mat               A; /*Jacobian*/
   PetscInt          steps,mx;
-  PetscErrorCode    ierr;
   PetscReal         ftime;
   AppCtx            user;       /* user-defined work context */
 
   PetscCall(PetscInitialize(&argc,&argv,NULL,help));
 
   /* Initialize user application context */
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Allen-Cahn equation","");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Allen-Cahn equation","");
   user.param = 9e-4;
   user.xleft = -1.;
   user.xright = 2.;
   user.mx = 400;
   PetscCall(PetscOptionsReal("-eps","parameter","",user.param,&user.param,NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
    Set runtime options
@@ -89,7 +88,7 @@ int main(int argc, char **argv)
   PetscCall(TSSolve(ts,x));
   PetscCall(TSGetTime(ts,&ftime));
   PetscCall(TSGetStepNumber(ts,&steps));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"eps %g, steps %D, ftime %g\n",(double)user.param,steps,(double)ftime));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"eps %g, steps %" PetscInt_FMT ", ftime %g\n",(double)user.param,steps,(double)ftime));
   /*   PetscCall(VecView(x,PETSC_VIEWER_STDOUT_WORLD));*/
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

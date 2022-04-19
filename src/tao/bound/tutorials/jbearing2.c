@@ -21,20 +21,6 @@ The command line options are:\n\
   -my <yg>, where <yg> = number of grid points in the 2nd coordinate direction\n\
  \n";
 
-/*T
-   Concepts: TAO^Solving a bound constrained minimization problem
-   Routines: TaoCreate();
-   Routines: TaoSetType(); TaoSetObjectiveAndGradient();
-   Routines: TaoSetHessian();
-   Routines: TaoSetVariableBounds();
-   Routines: TaoSetMonitor(); TaoSetConvergenceTest();
-   Routines: TaoSetSolution();
-   Routines: TaoSetFromOptions();
-   Routines: TaoSolve();
-   Routines: TaoDestroy();
-   Processors: n
-T*/
-
 /*
    User-defined application context - contains data needed by the
    application-provided call-back routines, FormFunctionGradient(),
@@ -88,7 +74,7 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsGetBool(NULL,NULL,"-test_getdiagonal",&testgetdiag,NULL));
 
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n---- Journal Bearing Problem SHB-----\n"));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"mx: %D,  my: %D,  ecc: %g \n\n",user.nx,user.ny,(double)user.ecc));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"mx: %" PetscInt_FMT ",  my: %" PetscInt_FMT ",  ecc: %g \n\n",user.nx,user.ny,(double)user.ecc));
 
   /* Let Petsc determine the grid division */
   Nx = PETSC_DECIDE; Ny = PETSC_DECIDE;
@@ -431,7 +417,7 @@ PetscErrorCode Monitor(Tao tao, void *ctx)
   PetscFunctionBegin;
   PetscCall(TaoGetSolutionStatus(tao, &its, &f, &gnorm, &cnorm, &xdiff, &reason));
   if (!(its%5)) {
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"iteration=%D\tf=%g\n",its,(double)f));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"iteration=%" PetscInt_FMT "\tf=%g\n",its,(double)f));
   }
   PetscFunctionReturn(0);
 }

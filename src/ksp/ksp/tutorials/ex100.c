@@ -41,13 +41,13 @@ PetscErrorCode RunTest(void)
 
   if (test) {
     PetscCall(KSPGetTotalIterations(ksp,&its));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Number of KSP iterations = %D\n", its));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Number of KSP iterations = %" PetscInt_FMT "\n", its));
   } else {
     PetscCall(VecDuplicate(b,&r));
     PetscCall(MatMult(A,x,r));
     PetscCall(VecAYPX(r,-1,b));
     PetscCall(VecNorm(r,NORM_2,&rnorm));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"error norm = %g\n",rnorm));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"error norm = %g\n",(double)rnorm));
     PetscCall(VecDestroy(&r));
   }
 
@@ -67,11 +67,6 @@ PetscErrorCode RunTest(void)
 /* ------------------------------------------------------- */
 
 static char help[] = "Python-implemented Mat/KSP/PC.\n\n";
-
-/*
-#define PYTHON_EXE "python2.5"
-#define PYTHON_LIB "/usr/lib/libpython2.5"
-*/
 
 #if !defined(PYTHON_EXE)
 #define PYTHON_EXE 0

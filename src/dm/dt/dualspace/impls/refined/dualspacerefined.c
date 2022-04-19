@@ -26,7 +26,7 @@ PetscErrorCode PetscDualSpaceRefinedSetCellSpaces(PetscDualSpace sp, const Petsc
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
   PetscValidPointer(cellSpaces,2);
   PetscCheck(!sp->setupcalled,PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_WRONGSTATE, "Cannot change cell spaces after setup is called");
-  PetscCall(PetscTryMethod(sp, "PetscDualSpaceRefinedSetCellSpaces_C", (PetscDualSpace,const PetscDualSpace []),(sp,cellSpaces)));
+  PetscTryMethod(sp, "PetscDualSpaceRefinedSetCellSpaces_C", (PetscDualSpace,const PetscDualSpace []),(sp,cellSpaces));
   PetscFunctionReturn(0);
 }
 
@@ -79,8 +79,8 @@ static PetscErrorCode PetscDualSpaceSetUp_Refined(PetscDualSpace sp)
   for (c = cStart; c < cEnd; c++) {
     if (sp->pointSpaces[c-pStart]) {
       PetscInt ccStart, ccEnd;
-      PetscCheckFalse(sp->pointSpaces[c-pStart]->k != sp->k,PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_INCOMP, "All cell spaces must have the same form degree as the refined dual space");
-      PetscCheckFalse(sp->pointSpaces[c-pStart]->Nc != sp->Nc,PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_INCOMP, "All cell spaces must have the same number of components as the refined dual space");
+      PetscCheck(sp->pointSpaces[c-pStart]->k == sp->k,PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_INCOMP, "All cell spaces must have the same form degree as the refined dual space");
+      PetscCheck(sp->pointSpaces[c-pStart]->Nc == sp->Nc,PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_INCOMP, "All cell spaces must have the same number of components as the refined dual space");
       PetscCall(DMPlexGetHeightStratum(sp->pointSpaces[c-pStart]->dm, 0, &ccStart, &ccEnd));
       PetscCheckFalse(ccEnd - ccStart != 1,PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_INCOMP, "All cell spaces must have a single cell themselves");
     }
@@ -142,9 +142,9 @@ static PetscErrorCode PetscDualSpaceRefinedView_Ascii(PetscDualSpace sp, PetscVi
     PetscCall(PetscViewerASCIIPushTab(viewer));
     for (c = cStart; c < cEnd; c++) {
       if (!sp->pointSpaces[c-pStart]) {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "Cell space %D not set yet\n", c));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "Cell space %" PetscInt_FMT " not set yet\n", c));
       } else {
-        PetscCall(PetscViewerASCIIPrintf(viewer, "Cell space %D:ot set yet\n", c));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "Cell space %" PetscInt_FMT ":ot set yet\n", c));
         PetscCall(PetscViewerASCIIPushTab(viewer));
         PetscCall(PetscDualSpaceView(sp->pointSpaces[c-pStart],viewer));
         PetscCall(PetscViewerASCIIPopTab(viewer));

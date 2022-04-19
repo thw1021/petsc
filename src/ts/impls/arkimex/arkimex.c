@@ -667,7 +667,7 @@ static PetscErrorCode TSEvaluateStep_ARKIMEX(TS ts,PetscInt order,Vec X,PetscBoo
   }
 unavailable:
   if (done) *done = PETSC_FALSE;
-  else SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"ARKIMEX '%s' of order %D cannot evaluate step at order %D. Consider using -ts_adapt_type none or a different method that has an embedded estimate.",tab->name,tab->order,order);
+  else SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"ARKIMEX '%s' of order %" PetscInt_FMT " cannot evaluate step at order %" PetscInt_FMT ". Consider using -ts_adapt_type none or a different method that has an embedded estimate.",tab->name,tab->order,order);
   PetscFunctionReturn(0);
 }
 
@@ -889,7 +889,7 @@ static PetscErrorCode TSStep_ARKIMEX(TS ts)
     ts->reject++; accept = PETSC_FALSE;
     if (!ts->reason && ++rejections > ts->max_reject && ts->max_reject >= 0) {
       ts->reason = TS_DIVERGED_STEP_REJECTED;
-      PetscCall(PetscInfo(ts,"Step=%D, step rejections %D greater than current TS allowed, stopping solve\n",ts->steps,rejections));
+      PetscCall(PetscInfo(ts,"Step=%" PetscInt_FMT ", step rejections %" PetscInt_FMT " greater than current TS allowed, stopping solve\n",ts->steps,rejections));
     }
   }
   PetscFunctionReturn(0);
@@ -1158,7 +1158,7 @@ static PetscErrorCode TSSetFromOptions_ARKIMEX(PetscOptionItems *PetscOptionsObj
   TS_ARKIMEX     *ark = (TS_ARKIMEX*)ts->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"ARKIMEX ODE solver options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"ARKIMEX ODE solver options");
   {
     ARKTableauLink link;
     PetscInt       count,choice;
@@ -1176,7 +1176,7 @@ static PetscErrorCode TSSetFromOptions_ARKIMEX(PetscOptionItems *PetscOptionsObj
     ark->imex = (PetscBool) !flg;
     PetscCall(PetscOptionsBool("-ts_arkimex_initial_guess_extrapolate","Extrapolate the initial guess for the stage solution from stage values of the previous time step","",ark->extrapolate,&ark->extrapolate,NULL));
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -1246,7 +1246,7 @@ PetscErrorCode TSARKIMEXSetType(TS ts,TSARKIMEXType arktype)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
   PetscValidCharPointer(arktype,2);
-  PetscCall(PetscTryMethod(ts,"TSARKIMEXSetType_C",(TS,TSARKIMEXType),(ts,arktype)));
+  PetscTryMethod(ts,"TSARKIMEXSetType_C",(TS,TSARKIMEXType),(ts,arktype));
   PetscFunctionReturn(0);
 }
 
@@ -1269,7 +1269,7 @@ PetscErrorCode TSARKIMEXGetType(TS ts,TSARKIMEXType *arktype)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
-  PetscCall(PetscUseMethod(ts,"TSARKIMEXGetType_C",(TS,TSARKIMEXType*),(ts,arktype)));
+  PetscUseMethod(ts,"TSARKIMEXGetType_C",(TS,TSARKIMEXType*),(ts,arktype));
   PetscFunctionReturn(0);
 }
 
@@ -1291,7 +1291,7 @@ PetscErrorCode TSARKIMEXSetFullyImplicit(TS ts,PetscBool flg)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
   PetscValidLogicalCollectiveBool(ts,flg,2);
-  PetscCall(PetscTryMethod(ts,"TSARKIMEXSetFullyImplicit_C",(TS,PetscBool),(ts,flg)));
+  PetscTryMethod(ts,"TSARKIMEXSetFullyImplicit_C",(TS,PetscBool),(ts,flg));
   PetscFunctionReturn(0);
 }
 
@@ -1315,7 +1315,7 @@ PetscErrorCode TSARKIMEXGetFullyImplicit(TS ts,PetscBool *flg)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
   PetscValidBoolPointer(flg,2);
-  PetscCall(PetscUseMethod(ts,"TSARKIMEXGetFullyImplicit_C",(TS,PetscBool*),(ts,flg)));
+  PetscUseMethod(ts,"TSARKIMEXGetFullyImplicit_C",(TS,PetscBool*),(ts,flg));
   PetscFunctionReturn(0);
 }
 

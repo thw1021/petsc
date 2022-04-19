@@ -10,7 +10,6 @@ extern PetscErrorCode PetscSharedMalloc(MPI_Comm,PetscInt,PetscInt,void**);
 
 PetscErrorCode VecDuplicate_Shared(Vec win,Vec *v)
 {
-  PetscErrorCode ierr;
   Vec_MPI        *w = (Vec_MPI*)win->data;
   PetscScalar    *array;
 
@@ -37,7 +36,6 @@ PetscErrorCode VecDuplicate_Shared(Vec win,Vec *v)
 
 PETSC_EXTERN PetscErrorCode VecCreate_Shared(Vec vv)
 {
-  PetscErrorCode ierr;
   PetscScalar    *array;
 
   PetscFunctionBegin;
@@ -83,8 +81,6 @@ static PetscMPIInt Petsc_ShmComm_keyval = MPI_KEYVAL_INVALID;
 */
 static PetscErrorCode Petsc_DeleteShared(MPI_Comm comm,PetscInt keyval,void *attr_val,void *extra_state)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscCall(PetscFree(attr_val));
   PetscFunctionReturn(MPI_SUCCESS);
@@ -108,7 +104,6 @@ ipcrm to remove the shared memory in use.
 */
 PetscErrorCode PetscSharedMalloc(MPI_Comm comm,PetscInt llen,PetscInt len,void **result)
 {
-  PetscErrorCode ierr;
   PetscInt       shift;
   PetscMPIInt    rank,flag;
   int            *arena,id,key = 0;
@@ -151,7 +146,7 @@ PETSC_EXTERN PetscErrorCode VecCreate_Shared(Vec vv)
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)vv),&size));
-  PetscCheckFalse(size > 1,PETSC_COMM_SELF,PETSC_ERR_SUP_SYS,"No supported for shared memory vector objects on this machine");
+  PetscCheck(size <= 1,PETSC_COMM_SELF,PETSC_ERR_SUP_SYS,"No supported for shared memory vector objects on this machine");
   PetscCall(VecCreate_Seq(vv));
   PetscFunctionReturn(0);
 }

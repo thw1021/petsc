@@ -20,7 +20,6 @@ typedef struct {
 
 PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
-  PetscErrorCode ierr;
   PetscBool      flg;
 
   PetscFunctionBegin;
@@ -34,7 +33,7 @@ PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->input_file[0]     = '\0';
   PetscCall(PetscStrcpy(options->output_file,"ex2.h5m"));
 
-  ierr = PetscOptionsBegin(comm, "", "Meshing Problem Options", "DMMOAB");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "Meshing Problem Options", "DMMOAB");
   PetscCall(PetscOptionsBool("-debug", "Enable debug messages", "ex2.cxx", options->debug, &options->debug, NULL));
   PetscCall(PetscOptionsBool("-interlace", "Use interlaced arrangement for the field data", "ex2.cxx", options->interlace, &options->interlace, NULL));
   PetscCall(PetscOptionsBool("-simplex", "Create simplices instead of tensor product elements", "ex2.cxx", options->simplex, &options->simplex, NULL));
@@ -43,9 +42,9 @@ PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscCall(PetscOptionsString("-meshfile", "The input mesh file", "ex2.cxx", options->input_file, options->input_file, sizeof(options->input_file), NULL));
   PetscCall(PetscOptionsString("-io", "Write out the mesh and solution that is defined on it (Default H5M format)", "ex2.cxx", options->output_file, options->output_file, sizeof(options->output_file), &options->write_output));
   PetscCall(PetscOptionsStringArray("-fields", "The list of names of the field variables", "ex2.cxx", options->fieldnames,&options->nfields, &flg));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
-  if (options->debug) PetscCall(PetscPrintf(comm, "Total number of fields: %D.\n",options->nfields));
+  if (options->debug) PetscCall(PetscPrintf(comm, "Total number of fields: %" PetscInt_FMT ".\n",options->nfields));
   if (!flg) { /* if no field names were given by user, assign a default */
     options->nfields = 1;
     PetscCall(PetscStrallocpy("TestEX2Var",&options->fieldnames[0]));
@@ -71,7 +70,7 @@ PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user)
   }
   else {
     if (user->debug) {
-      PetscCall(PetscPrintf(comm, "Creating a %D-dimensional structured %s mesh of %Dx%Dx%D in memory and creating a DM object.\n",user->dim,(user->simplex?"simplex":"regular"),user->nele,user->nele,user->nele));
+      PetscCall(PetscPrintf(comm, "Creating a %" PetscInt_FMT "-dimensional structured %s mesh of %" PetscInt_FMT "x%" PetscInt_FMT "x%" PetscInt_FMT " in memory and creating a DM object.\n",user->dim,(user->simplex?"simplex":"regular"),user->nele,user->nele,user->nele));
     }
     PetscCall(DMMoabCreateBoxMesh(comm, user->dim, user->simplex, NULL, user->nele, 1, &user->dm));
   }
@@ -79,7 +78,7 @@ PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user)
   if (user->debug) {
     PetscPrintf(comm, "Setting field names to DM: \n");
     for (i=0; i<user->nfields; i++)
-      PetscPrintf(comm, "\t Field{%D} = %s.\n",i,user->fieldnames[i]);
+      PetscPrintf(comm, "\t Field{%" PetscInt_FMT "} = %s.\n",i,user->fieldnames[i]);
   }
   PetscCall(DMMoabSetFieldNames(user->dm, user->nfields, (const char**)user->fieldnames));
   PetscCall(PetscObjectSetName((PetscObject)user->dm, "Structured Mesh"));

@@ -631,7 +631,7 @@ PetscErrorCode DMSwarmPICInsertPointsCellwise(DM dm,DM dmc,PetscInt e,PetscInt n
           min_sep = sep;
         }
       }
-      PetscCheck(nearest_neighour != -1,PETSC_COMM_SELF,PETSC_ERR_USER,"Cell %D is empty - cannot initialize using nearest neighbours",e);
+      PetscCheck(nearest_neighour != -1,PETSC_COMM_SELF,PETSC_ERR_USER,"Cell %" PetscInt_FMT " is empty - cannot initialize using nearest neighbours",e);
       nnlist[q] = nearest_neighour;
     }
     PetscCall(DMSwarmRestoreField(dm,DMSwarmPICField_cellid,NULL,NULL,(void**)&swarm_cellid));
@@ -713,7 +713,7 @@ PetscErrorCode MaterialPoint_PopulateCell(DM dm_vp,DM dm_mpoint)
   }
   PetscCallMPI(MPI_Allreduce(&cnt,&cnt_g,1,MPIU_INT,MPI_SUM,PETSC_COMM_WORLD));
   if (cnt_g > 0) {
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD,".... ....pop cont: adjusted %D cells\n",cnt_g));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,".... ....pop cont: adjusted %" PetscInt_FMT " cells\n",cnt_g));
   }
 
   PetscCall(DMSwarmSortRestoreAccess(dm_mpoint));
@@ -938,6 +938,7 @@ static PetscErrorCode SolveTimeDepStokes(PetscInt mx,PetscInt my)
   PetscCall(DMCreate(PETSC_COMM_WORLD,&dms_quadrature));
   PetscCall(DMSetType(dms_quadrature,DMSWARM));
   PetscCall(DMSetDimension(dms_quadrature,2));
+  PetscCall(PetscObjectSetName((PetscObject) dms_quadrature, "Quadrature Swarm"));
 
   /* Register fields for viscosity and density on the quadrature points */
   PetscCall(DMSwarmRegisterPetscDatatypeField(dms_quadrature,"eta_q",1,PETSC_REAL));
@@ -949,6 +950,7 @@ static PetscErrorCode SolveTimeDepStokes(PetscInt mx,PetscInt my)
   PetscCall(DMCreate(PETSC_COMM_WORLD,&dms_mpoint));
   PetscCall(DMSetType(dms_mpoint,DMSWARM));
   PetscCall(DMSetDimension(dms_mpoint,2));
+  PetscCall(PetscObjectSetName((PetscObject) dms_mpoint, "Material Point Swarm"));
 
   /* Configure the material point swarm to be of type Particle-In-Cell */
   PetscCall(DMSwarmSetType(dms_mpoint,DMSWARM_PIC));
@@ -1248,10 +1250,10 @@ static PetscErrorCode SolveTimeDepStokes(PetscInt mx,PetscInt my)
       PetscViewer viewer;
 
       PetscCall(PetscPrintf(PETSC_COMM_WORLD,".... write XDMF, VTS\n"));
-      PetscCall(PetscSNPrintf(filename,PETSC_MAX_PATH_LEN-1,"step%.4D_coeff_dms.xmf",tk));
+      PetscCall(PetscSNPrintf(filename,PETSC_MAX_PATH_LEN-1,"step%.4" PetscInt_FMT "_coeff_dms.xmf",tk));
       PetscCall(DMSwarmViewXDMF(dms_mpoint,filename));
 
-      PetscCall(PetscSNPrintf(filename,PETSC_MAX_PATH_LEN-1,"step%.4D_vp_dm.vts",tk));
+      PetscCall(PetscSNPrintf(filename,PETSC_MAX_PATH_LEN-1,"step%.4" PetscInt_FMT "_vp_dm.vts",tk));
       PetscCall(PetscViewerCreate(PETSC_COMM_WORLD,&viewer));
       PetscCall(PetscViewerSetType(viewer,PETSCVIEWERVTK));
       PetscCall(PetscViewerFileSetMode(viewer,FILE_MODE_WRITE));
@@ -1260,7 +1262,7 @@ static PetscErrorCode SolveTimeDepStokes(PetscInt mx,PetscInt my)
       PetscCall(PetscViewerDestroy(&viewer));
     }
     time += dt;
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"step %D : time %1.2e \n",tk,(double)time));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"step %" PetscInt_FMT " : time %1.2e \n",tk,(double)time));
   }
 
   PetscCall(KSPDestroy(&ksp));

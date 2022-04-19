@@ -4,12 +4,6 @@ illustrates setting a user-defined shell preconditioner and using the\n\
 Input parameters include:\n\
   -user_defined_pc : Activate a user-defined preconditioner\n\n";
 
-/*T
-   Concepts: KSP^basic parallel example
-   Concepts: PC^setting a user-defined shell preconditioner
-   Processors: n
-T*/
-
 /*
   Include "petscksp.h" so that we can use KSP solvers.  Note that this file
   automatically includes:
@@ -50,7 +44,6 @@ int main(int argc,char **args)
   SampleShellPC  *shell;    /* user-defined preconditioner context */
   PetscScalar    v,one = 1.0,none = -1.0;
   PetscInt       i,j,Ii,J,Istart,Iend,m = 8,n = 7,its;
-  PetscErrorCode ierr;
   PetscBool      user_defined_pc = PETSC_FALSE;
 
   PetscCall(PetscInitialize(&argc,&args,(char*)0,help));
@@ -145,8 +138,7 @@ int main(int argc,char **args)
        to set various options.
   */
   PetscCall(KSPGetPC(ksp,&pc));
-  ierr = KSPSetTolerances(ksp,1.e-7,PETSC_DEFAULT,PETSC_DEFAULT,
-                          PETSC_DEFAULT);PetscCall(ierr);
+  PetscCall(KSPSetTolerances(ksp,1.e-7,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT));
 
   /*
      Set a user-defined "shell" preconditioner if desired
@@ -203,7 +195,7 @@ int main(int argc,char **args)
   PetscCall(VecAXPY(x,none,u));
   PetscCall(VecNorm(x,NORM_2,&norm));
   PetscCall(KSPGetIterationNumber(ksp,&its));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g iterations %D\n",(double)norm,its));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g iterations %" PetscInt_FMT "\n",(double)norm,its));
 
   /*
      Free work space.  All PETSc objects should be destroyed when they

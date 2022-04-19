@@ -401,15 +401,15 @@ M*/
 PetscTraceBackErrorHandler(), PetscPushErrorHandler(), PetscError(), CHKMEMQ
 M*/
 #if defined(PETSC_CLANG_STATIC_ANALYZER)
-void PetscCallMPI(PetscErrorCode);
+void PetscCallMPI(PetscMPIInt);
 #else
 #define PetscCallMPI(...) do {                                                                 \
     PetscMPIInt _7_errorcode = __VA_ARGS__;                                                    \
     if (PetscUnlikely(_7_errorcode)) {                                                         \
       char        _7_errorstring[MPI_MAX_ERROR_STRING];                                        \
       PetscMPIInt _7_resultlen;                                                                \
-      MPI_Error_string(_7_errorcode,(char*)_7_errorstring,&_7_resultlen); (void)_7_resultlen;  \
-      SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MPI,"MPI error %d %s",(int)_7_errorcode,_7_errorstring); \
+      MPI_Error_string(_7_errorcode,(char*)_7_errorstring,&_7_resultlen); \
+      SETERRQ(PETSC_COMM_SELF,PETSC_ERR_MPI,"MPI error %d %s Ignore the following value %d",(int)_7_errorcode,_7_errorstring,_7_resultlen); \
     }                                                                                          \
   } while (0)
 #endif

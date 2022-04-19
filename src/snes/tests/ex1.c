@@ -6,11 +6,6 @@ This example also illustrates the use of matrix coloring.  Runtime options inclu
   -mx <xg>, where <xg> = number of grid points in the x-direction\n\
   -my <yg>, where <yg> = number of grid points in the y-direction\n\n";
 
-/*T
-   Concepts: SNES^sequential Bratu example
-   Processors: 1
-T*/
-
 /* ------------------------------------------------------------------------
 
     Solid Fuel Ignition (SFI) problem.  This problem is modeled by
@@ -242,7 +237,7 @@ int main(int argc,char **argv)
   PetscCall(FormInitialGuess(&user,x));
   PetscCall(SNESSolve(snes,NULL,x));
   PetscCall(SNESGetIterationNumber(snes,&its));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Number of SNES iterations = %D\n",its));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Number of SNES iterations = %" PetscInt_FMT "\n",its));
 
   /*
      Print the convergence history.  This is intended just to demonstrate
@@ -251,7 +246,7 @@ int main(int argc,char **argv)
   PetscCall(PetscOptionsHasName(NULL,NULL,"-print_history",&flg));
   if (flg) {
     for (i=0; i<its+1; i++) {
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD,"iteration %D: Linear iterations %D Function norm = %g\n",i,hist_its[i],(double)history[i]));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD,"iteration %" PetscInt_FMT ": Linear iterations %" PetscInt_FMT " Function norm = %g\n",i,hist_its[i],(double)history[i]));
     }
   }
 

@@ -32,16 +32,14 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
   const char    *runTypes[2] = {"full", "test"};
   PetscInt       run;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   options->runType = RUN_FULL;
-
-  ierr = PetscOptionsBegin(comm, "", "Inverse Problem Options", "DMPLEX");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "Inverse Problem Options", "DMPLEX");
   run  = options->runType;
   PetscCall(PetscOptionsEList("-run_type", "The run type", "ex1.c", runTypes, 2, runTypes[options->runType], &run, NULL));
   options->runType = (RunType) run;
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -283,11 +281,11 @@ int main(int argc, char **argv)
     PetscCall(VecViewFromOptions(u, NULL, "-initial_vec_view"));
     PetscCall(DMComputeL2Diff(dm, 0.0, exactFuncs, NULL, u, &error));
     if (error < 1.0e-11) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Initial L_2 Error: < 1.0e-11\n"));
-    else                 PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Initial L_2 Error: %g\n", error));
+    else                 PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Initial L_2 Error: %g\n", (double)error));
     PetscCall(SNESSolve(snes, NULL, u));
     PetscCall(DMComputeL2Diff(dm, 0.0, exactFuncs, NULL, u, &error));
     if (error < 1.0e-11) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Final L_2 Error: < 1.0e-11\n"));
-    else                 PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Final L_2 Error: %g\n", error));
+    else                 PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Final L_2 Error: %g\n", (double)error));
   }
   PetscCall(VecViewFromOptions(u, NULL, "-sol_vec_view"));
 

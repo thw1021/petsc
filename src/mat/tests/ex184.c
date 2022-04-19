@@ -3,17 +3,12 @@ static char help[] = "Example of inverting a block diagonal matrix.\n"
 
 #include <petscmat.h>
 
-/*T
-    Concepts: Mat
-T*/
-
 int main(int argc, char **args)
 {
     Mat            A,A_inv;
     PetscMPIInt    rank,size;
     PetscInt       M,m,bs,rstart,rend,j,x,y;
     PetscInt*      dnnz;
-    PetscErrorCode ierr;
     PetscScalar    *v;
     Vec            X, Y;
     PetscReal      norm;
@@ -22,12 +17,12 @@ int main(int argc, char **args)
     PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD,&size));
     PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD,&rank));
 
-    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"ex184","Mat");PetscCall(ierr);
+    PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"ex184","Mat");
     M=8;
     PetscCall(PetscOptionsGetInt(NULL,NULL,"-mat_size",&M,NULL));
     bs=3;
     PetscCall(PetscOptionsGetInt(NULL,NULL,"-mat_block_size",&bs,NULL));
-    ierr = PetscOptionsEnd();PetscCall(ierr);
+    PetscOptionsEnd();
 
     PetscCall(MatCreate(PETSC_COMM_WORLD, &A));
     PetscCall(MatSetFromOptions(A));

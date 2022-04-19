@@ -6,8 +6,6 @@
 
 PetscErrorCode PetscNvshmemInitializeCheck(void)
 {
-  PetscErrorCode   ierr;
-
   PetscFunctionBegin;
   if (!PetscNvshmemInitialized) { /* Note NVSHMEM does not provide a routine to check whether it is initialized */
     nvshmemx_init_attr_t attr;
@@ -22,23 +20,19 @@ PetscErrorCode PetscNvshmemInitializeCheck(void)
 
 PetscErrorCode PetscNvshmemMalloc(size_t size, void** ptr)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscCall(PetscNvshmemInitializeCheck());
   *ptr = nvshmem_malloc(size);
-  PetscCheckFalse(!*ptr,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"nvshmem_malloc() failed to allocate %zu bytes",size);
+  PetscCheck(*ptr,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"nvshmem_malloc() failed to allocate %zu bytes",size);
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode PetscNvshmemCalloc(size_t size, void**ptr)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscCall(PetscNvshmemInitializeCheck());
   *ptr = nvshmem_calloc(size,1);
-  PetscCheckFalse(!*ptr,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"nvshmem_calloc() failed to allocate %zu bytes",size);
+  PetscCheck(*ptr,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"nvshmem_calloc() failed to allocate %zu bytes",size);
   PetscFunctionReturn(0);
 }
 
@@ -59,7 +53,6 @@ PetscErrorCode PetscNvshmemFinalize(void)
 /* Free nvshmem related fields in the SF */
 PetscErrorCode PetscSFReset_Basic_NVSHMEM(PetscSF sf)
 {
-  PetscErrorCode    ierr;
   PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
 
   PetscFunctionBegin;
@@ -80,7 +73,6 @@ PetscErrorCode PetscSFReset_Basic_NVSHMEM(PetscSF sf)
 /* Set up NVSHMEM related fields for an SF of type SFBASIC (only after PetscSFSetup_Basic() already set up dependant fields */
 static PetscErrorCode PetscSFSetUp_Basic_NVSHMEM(PetscSF sf)
 {
-  PetscErrorCode ierr;
   cudaError_t    cerr;
   PetscSF_Basic  *bas = (PetscSF_Basic*)sf->data;
   PetscInt       i,nRemoteRootRanks,nRemoteLeafRanks;
@@ -105,7 +97,7 @@ static PetscErrorCode PetscSFSetUp_Basic_NVSHMEM(PetscSF sf)
   stmp[2] = nRemoteLeafRanks;
   stmp[3] = bas->rootbuflen[PETSCSF_REMOTE];
 
-  PetscCallMPI(MPIU_Allreduce(stmp,rtmp,4,MPIU_INT,MPI_MAX,comm));
+  PetscCall(MPIU_Allreduce(stmp,rtmp,4,MPIU_INT,MPI_MAX,comm));
 
   sf->nRemoteRootRanksMax   = rtmp[0];
   sf->leafbuflen_rmax       = rtmp[1];
@@ -166,7 +158,6 @@ static PetscErrorCode PetscSFSetUp_Basic_NVSHMEM(PetscSF sf)
 
 PetscErrorCode PetscSFLinkNvshmemCheck(PetscSF sf,PetscMemType rootmtype,const void *rootdata,PetscMemType leafmtype,const void *leafdata,PetscBool *use_nvshmem)
 {
-  PetscErrorCode   ierr;
   MPI_Comm         comm;
   PetscBool        isBasic;
   PetscMPIInt      result = MPI_UNEQUAL;
@@ -201,7 +192,7 @@ PetscErrorCode PetscSFLinkNvshmemCheck(PetscSF sf,PetscMemType rootmtype,const v
     PetscInt allCuda = oneCuda; /* Assume the same for all ranks. But if not, in opt mode, return value <use_nvshmem> won't be collective! */
    #if defined(PETSC_USE_DEBUG)  /* Check in debug mode. Note MPI_Allreduce is expensive, so only in debug mode */
     PetscCallMPI(MPI_Allreduce(&oneCuda,&allCuda,1,MPIU_INT,MPI_LAND,comm));
-    PetscCheckFalse(allCuda != oneCuda,comm,PETSC_ERR_SUP,"root/leaf mtypes are inconsistent among ranks, which may lead to SF nvshmem failure in opt mode. Add -use_nvshmem 0 to disable it.");
+    PetscCheck(allCuda == oneCuda,comm,PETSC_ERR_SUP,"root/leaf mtypes are inconsistent among ranks, which may lead to SF nvshmem failure in opt mode. Add -use_nvshmem 0 to disable it.");
    #endif
     if (allCuda) {
       PetscCall(PetscNvshmemInitializeCheck());
@@ -347,7 +338,6 @@ __global__ static void GetDataFromRemotelyAccessible(PetscInt nsrcranks,PetscMPI
 /* Start communication -- Get data in the given direction */
 PetscErrorCode PetscSFLinkGetDataBegin_NVSHMEM(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
 {
-  PetscErrorCode    ierr;
   cudaError_t       cerr;
   PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
 
@@ -442,7 +432,6 @@ PetscErrorCode PetscSFLinkGetDataBegin_NVSHMEM(PetscSF sf,PetscSFLink link,Petsc
 */
 PetscErrorCode PetscSFLinkGetDataEnd_NVSHMEM(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
 {
-  PetscErrorCode    ierr;
   cudaError_t       cerr;
   PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
   uint64_t          *srcsig;
@@ -522,7 +511,6 @@ __global__ static void WaitSignalsFromLocallyAccessible(PetscInt ndstranks,Petsc
 /* Put data in the given direction  */
 PetscErrorCode PetscSFLinkPutDataBegin_NVSHMEM(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
 {
-  PetscErrorCode    ierr;
   cudaError_t       cerr;
   PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
   PetscInt          ndstranks,nLocallyAccessible = 0;
@@ -615,7 +603,6 @@ __global__ static void PutDataEnd(PetscInt nsrcranks,PetscInt ndstranks,PetscMPI
 /* Finish the communication -- A receiver waits until it can access its receive buffer */
 PetscErrorCode PetscSFLinkPutDataEnd_NVSHMEM(PetscSF sf,PetscSFLink link,PetscSFDirection direction)
 {
-  PetscErrorCode    ierr;
   cudaError_t       cerr;
   PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
   PetscMPIInt       *dstranks;
@@ -678,7 +665,6 @@ PetscErrorCode PetscSFLinkSendSignalsToAllowPuttingData_NVSHMEM(PetscSF sf,Petsc
 /* Destructor when the link uses nvshmem for communication */
 static PetscErrorCode PetscSFLinkDestroy_NVSHMEM(PetscSF sf,PetscSFLink link)
 {
-  PetscErrorCode    ierr;
   cudaError_t       cerr;
 
   PetscFunctionBegin;
@@ -698,7 +684,6 @@ static PetscErrorCode PetscSFLinkDestroy_NVSHMEM(PetscSF sf,PetscSFLink link)
 
 PetscErrorCode PetscSFLinkCreate_NVSHMEM(PetscSF sf,MPI_Datatype unit,PetscMemType rootmtype,const void *rootdata,PetscMemType leafmtype,const void *leafdata,MPI_Op op,PetscSFOperation sfop,PetscSFLink *mylink)
 {
-  PetscErrorCode    ierr;
   cudaError_t       cerr;
   PetscSF_Basic     *bas = (PetscSF_Basic*)sf->data;
   PetscSFLink       *p,link;
@@ -809,7 +794,6 @@ found:
 #if defined(PETSC_USE_REAL_SINGLE)
 PetscErrorCode PetscNvshmemSum(PetscInt count,float *dst,const float *src)
 {
-  PetscErrorCode    ierr;
   PetscMPIInt       num; /* Assume nvshmem's int is MPI's int */
 
   PetscFunctionBegin;
@@ -820,7 +804,6 @@ PetscErrorCode PetscNvshmemSum(PetscInt count,float *dst,const float *src)
 
 PetscErrorCode PetscNvshmemMax(PetscInt count,float *dst,const float *src)
 {
-  PetscErrorCode    ierr;
   PetscMPIInt       num;
 
   PetscFunctionBegin;
@@ -831,7 +814,6 @@ PetscErrorCode PetscNvshmemMax(PetscInt count,float *dst,const float *src)
 #elif defined(PETSC_USE_REAL_DOUBLE)
 PetscErrorCode PetscNvshmemSum(PetscInt count,double *dst,const double *src)
 {
-  PetscErrorCode    ierr;
   PetscMPIInt       num;
 
   PetscFunctionBegin;
@@ -842,7 +824,6 @@ PetscErrorCode PetscNvshmemSum(PetscInt count,double *dst,const double *src)
 
 PetscErrorCode PetscNvshmemMax(PetscInt count,double *dst,const double *src)
 {
-  PetscErrorCode    ierr;
   PetscMPIInt       num;
 
   PetscFunctionBegin;

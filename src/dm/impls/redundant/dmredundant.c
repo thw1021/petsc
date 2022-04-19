@@ -171,7 +171,7 @@ static PetscErrorCode DMView_Redundant(DM dm,PetscViewer viewer)
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
   if (iascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer,"redundant: rank=%D N=%D\n",red->rank,red->N));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"redundant: rank=%d N=%" PetscInt_FMT "\n",red->rank,red->N));
   }
   PetscFunctionReturn(0);
 }
@@ -239,8 +239,8 @@ static PetscErrorCode DMCreateInterpolation_Redundant(DM dmc,DM dmf,Mat *P,Vec *
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_compare(PetscObjectComm((PetscObject)dmc),PetscObjectComm((PetscObject)dmf),&flag));
   PetscCheckFalse(flag != MPI_CONGRUENT && flag != MPI_IDENT,PetscObjectComm((PetscObject)dmf),PETSC_ERR_SUP,"cannot change communicators");
-  PetscCheckFalse(redc->rank != redf->rank,PetscObjectComm((PetscObject)dmf),PETSC_ERR_ARG_INCOMP,"Owning rank does not match");
-  PetscCheckFalse(redc->N != redf->N,PetscObjectComm((PetscObject)dmf),PETSC_ERR_ARG_INCOMP,"Global size does not match");
+  PetscCheck(redc->rank == redf->rank,PetscObjectComm((PetscObject)dmf),PETSC_ERR_ARG_INCOMP,"Owning rank does not match");
+  PetscCheck(redc->N == redf->N,PetscObjectComm((PetscObject)dmf),PETSC_ERR_ARG_INCOMP,"Global size does not match");
   PetscCall(MatCreate(PetscObjectComm((PetscObject)dmc),P));
   PetscCall(MatSetSizes(*P,redc->n,redc->n,redc->N,redc->N));
   PetscCall(MatSetType(*P,MATAIJ));
@@ -275,7 +275,7 @@ PetscErrorCode DMRedundantSetSize(DM dm,PetscMPIInt rank,PetscInt N)
   PetscValidType(dm,1);
   PetscValidLogicalCollectiveMPIInt(dm,rank,2);
   PetscValidLogicalCollectiveInt(dm,N,3);
-  PetscCall(PetscTryMethod(dm,"DMRedundantSetSize_C",(DM,PetscMPIInt,PetscInt),(dm,rank,N)));
+  PetscTryMethod(dm,"DMRedundantSetSize_C",(DM,PetscMPIInt,PetscInt),(dm,rank,N));
   PetscFunctionReturn(0);
 }
 
@@ -300,7 +300,7 @@ PetscErrorCode DMRedundantGetSize(DM dm,PetscMPIInt *rank,PetscInt *N)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   PetscValidType(dm,1);
-  PetscCall(PetscUseMethod(dm,"DMRedundantGetSize_C",(DM,PetscMPIInt*,PetscInt*),(dm,rank,N)));
+  PetscUseMethod(dm,"DMRedundantGetSize_C",(DM,PetscMPIInt*,PetscInt*),(dm,rank,N));
   PetscFunctionReturn(0);
 }
 

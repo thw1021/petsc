@@ -42,17 +42,6 @@ The command line options are:\n\
   -my <yg>, where <yg> = number of grid points in the 2nd coordinate direction\n\
   -par <param>, where <param> = angle of twist per unit length\n\n";
 
-/*T
-   Concepts: TAO^Solving an unconstrained minimization problem
-   Routines: TaoCreate(); TaoSetType();
-   Routines: TaoSetSolution();
-   Routines: TaoSetObjectiveAndGradient();
-   Routines: TaoSetHessian(); TaoSetFromOptions();
-   Routines: TaoSolve();
-   Routines: TaoDestroy();
-   Processors: n
-T*/
-
 /*
    User-defined application context - contains data needed by the
    application-provided call-back routines, FormFunction() and
@@ -95,7 +84,7 @@ int main(int argc, char **argv)
     PetscCall(PetscOptionsGetInt(NULL,NULL,"-mx",&user.mx,&flg));
 
     PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n---- Elastic-Plastic Torsion Problem -----\n"));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"mx: %D     my: %D   \n\n",user.mx,user.my));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"mx: %" PetscInt_FMT "     my: %" PetscInt_FMT "   \n\n",user.mx,user.my));
 
     /* Set up distributed array */
     PetscCall(DMDACreate2d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DMDA_STENCIL_STAR,user.mx,user.my,Nx,Ny,1,1,NULL,NULL,&user.dm));

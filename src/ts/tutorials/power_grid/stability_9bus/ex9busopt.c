@@ -948,7 +948,7 @@ PetscErrorCode ComputeSensiP(Vec lambda,Vec mu,Vec *DICDP,Userctx *user)
   for (i=0;i<3;i++) {
     PetscCall(VecDot(lambda,DICDP[i],&sensip));
     sensip = sensip+y[i];
-    /* PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n sensitivity wrt %D th parameter: %g \n",i,(double)sensip)); */
+    /* PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n sensitivity wrt %" PetscInt_FMT " th parameter: %g \n",i,(double)sensip)); */
      y[i] = sensip;
   }
   PetscCall(VecRestoreArray(mu,&y));
@@ -960,7 +960,6 @@ int main(int argc,char **argv)
   Userctx            user;
   Vec                p;
   PetscScalar        *x_ptr;
-  PetscErrorCode     ierr;
   PetscMPIInt        size;
   PetscInt           i;
   PetscViewer        Xview,Ybusview;
@@ -990,7 +989,7 @@ int main(int argc,char **argv)
   PetscCall(PetscFree(idx2));
 
   /* Set run time options */
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Transient stability fault options","");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Transient stability fault options","");
   {
     user.tfaulton  = 1.0;
     user.tfaultoff = 1.2;
@@ -1011,7 +1010,7 @@ int main(int argc,char **argv)
     PetscCall(PetscOptionsInt("-pow","","",user.pow,&user.pow,NULL));
 
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   /* Create DMs for generator and network subsystems */
   PetscCall(DMDACreate1d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,user.neqs_gen,1,1,NULL,&user.dmgen));

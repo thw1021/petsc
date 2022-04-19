@@ -18,13 +18,6 @@
 #include <petscfix.h>
 #include <petscmacros.h>
 
-/* placeholder defines */
-#if PetscHasAttribute(format)
-#  define PETSC_ATTRIBUTE_FORMAT(strIdx,vaArgIdx)
-#else
-#  define PETSC_ATTRIBUTE_FORMAT(strIdx,vaArgIdx)
-#endif
-
 #if defined(PETSC_DESIRE_FEATURE_TEST_MACROS)
 /*
    Feature test macros must be included before headers defined by IEEE Std 1003.1-2001
@@ -1612,7 +1605,7 @@ static inline PetscErrorCode PetscMemcpy(void *a,const void *b,size_t n)
 #if defined(PETSC_USE_DEBUG)
     PetscCheck(!((al > bl && (al - bl) < nl) || (bl - al) < nl),PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Memory regions overlap: either use PetscMemmov()\n\
               or make sure your copy regions and lengths are correct. \n\
-              Length (bytes) %ld first address %ld second address %ld",nl,al,bl);
+              Length (bytes) %zu first address %zu second address %zu",nl,al,bl);
 #endif
 #if (defined(PETSC_PREFER_DCOPY_FOR_MEMCPY) || defined(PETSC_PREFER_COPY_FOR_MEMCPY) || defined(PETSC_PREFER_FORTRAN_FORMEMCPY))
    if (!(a % sizeof(PetscScalar)) && !(n % sizeof(PetscScalar))) {
@@ -2613,8 +2606,6 @@ static inline unsigned int PetscStrHash(const char *str)
   return hash;
 }
 
-#define PetscMacroReturnStandardMPI(...) PetscMacroReturns(MPI_SUCCESS,__VA_ARGS__)
-
 /*MC
    MPIU_Allreduce - a PETSc replacement for MPI_Allreduce() that tries to determine if the call from all the MPI processes occur from the
                     same place in the PETSc code. This helps to detect bugs where different MPI processes follow different code paths
@@ -2641,13 +2632,13 @@ static inline unsigned int PetscStrHash(const char *str)
 
      This is defined as a macro that can return error codes internally so it cannot be used in a subroutine that returns void.
 
-     The error code this returns should be checked with PetscCallMPI()
+     The error code this returns should be checked with PetscCall() even though it looks like an MPI function because it always returns PETSc error codes
 
    Level: developer
 
 .seealso: MPI_Allreduce()
 M*/
-#define MPIU_Allreduce(a,b,c,d,e,fcomm) PetscMacroReturnStandardMPI(                           \
+#define MPIU_Allreduce(a,b,c,d,e,fcomm) PetscMacroReturnStandard(                           \
     PetscMPIInt a_b1[6],a_b2[6];                                                               \
     int         _mpiu_allreduce_c_int = (int)c;                                                \
     a_b1[0] = -(PetscMPIInt)__LINE__;                          a_b1[1] = -a_b1[0];             \
@@ -2660,7 +2651,7 @@ M*/
     PetscCallMPI(MPI_Allreduce((a),(b),(c),d,e,(fcomm)));                                         \
   )
 #else
-#define MPIU_Allreduce(a,b,c,d,e,fcomm) MPI_Allreduce((a),(b),(c),d,e,(fcomm))
+#define MPIU_Allreduce(a,b,c,d,e,fcomm) PetscMacroReturnStandard(PetscCallMPI(MPI_Allreduce((a),(b),(c),d,e,(fcomm))))
 #endif
 
 #if defined(PETSC_HAVE_MPI_PROCESS_SHARED_MEMORY)

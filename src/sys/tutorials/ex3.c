@@ -6,14 +6,6 @@ following options to generate logging information:  -log, -log_view,\n\
 so this monitoring is intended solely for users to employ in application\n\
 codes.\n\n";
 
-/*T
-   Concepts: PetscLog^user-defined event profiling
-   Concepts: profiling^user-defined event
-   Concepts: PetscLog^activating/deactivating events for profiling
-   Concepts: profiling^activating/deactivating events
-   Processors: n
-T*/
-
 /*
   Include "petscsys.h" so that we can use PETSc profiling routines.
 */
@@ -38,7 +30,7 @@ int main(int argc,char **argv)
   */
   PetscCall(PetscLogEventRegister("User event",PETSC_VIEWER_CLASSID,&USER_EVENT));
   PetscCall(PetscLogEventGetId("User event",&check_USER_EVENT));
-  PetscCheckFalse(USER_EVENT != check_USER_EVENT,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Event Ids do not match");
+  PetscCheck(USER_EVENT == check_USER_EVENT,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Event Ids do not match");
 
   PetscCall(PetscLogEventBegin(USER_EVENT,0,0,0,0));
   icount = 0;

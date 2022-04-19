@@ -5,13 +5,6 @@ Input parameters include:\n\
   -m <mesh_x>       : number of mesh points in x-direction\n\
   -n <mesh_y>       : number of mesh points in y-direction\n\n";
 
-/*T
-   Concepts: KSP^basic parallel example;
-   Concepts: KSP^Laplacian, 2d
-   Concepts: Laplacian, 2d
-   Processors: n
-T*/
-
 /*
   Include "petscksp.h" so that we can use KSP solvers.
 */
@@ -182,7 +175,7 @@ int main(int argc,char **args)
      print statement from all processes that share a communicator.
      An alternative is PetscFPrintf(), which prints to a file.
   */
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g iterations %D\n",(double)norm,its));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g iterations %" PetscInt_FMT "\n",(double)norm,its));
 
   /*
      Free work space.  All PETSc objects should be destroyed when they

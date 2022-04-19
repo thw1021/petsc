@@ -54,11 +54,11 @@ static PetscErrorCode PetscPartitionerSetFromOptions_Shell(PetscOptionItems *Pet
   PetscBool      random = PETSC_FALSE, set;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject, "PetscPartitioner Shell Options"));
+  PetscOptionsHeadBegin(PetscOptionsObject, "PetscPartitioner Shell Options");
   PetscCall(PetscPartitionerShellGetRandom(part, &random));
   PetscCall(PetscOptionsBool("-petscpartitioner_shell_random", "Use a random partition", "PetscPartitionerView", PETSC_FALSE, &random, &set));
   if (set) PetscCall(PetscPartitionerShellSetRandom(part, random));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -97,9 +97,9 @@ static PetscErrorCode PetscPartitionerPartition_Shell(PetscPartitioner part, Pet
   }
   PetscCheck(p->section,PetscObjectComm((PetscObject) part), PETSC_ERR_ARG_WRONG, "Shell partitioner information not provided. Please call PetscPartitionerShellSetPartition()");
   PetscCall(PetscSectionGetChart(p->section, NULL, &np));
-  PetscCheckFalse(nparts != np,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of requested partitions %d != configured partitions %d", nparts, np);
+  PetscCheck(nparts == np,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of requested partitions %" PetscInt_FMT " != configured partitions %" PetscInt_FMT, nparts, np);
   PetscCall(ISGetLocalSize(p->partition, &np));
-  PetscCheckFalse(numVertices != np,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of input vertices %d != configured vertices %d", numVertices, np);
+  PetscCheck(numVertices == np,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of input vertices %" PetscInt_FMT " != configured vertices %" PetscInt_FMT, numVertices, np);
   PetscCall(PetscSectionCopy(p->section, partSection));
   *partition = p->partition;
   PetscCall(PetscObjectReference((PetscObject) p->partition));

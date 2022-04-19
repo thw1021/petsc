@@ -40,7 +40,6 @@ F*/
 #include <petscts.h>
 
 #define DIM 2                   /* Geometric dimension */
-#define ALEN(a) (sizeof(a)/sizeof((a)[0]))
 
 static PetscFunctionList PhysicsList, PhysicsRiemannList_SW;
 
@@ -285,8 +284,8 @@ static PetscErrorCode SetUpBC_Advect(DM dm, PetscDS prob, Physics phys)
   PetscFunctionBeginUser;
   /* Register "canned" boundary conditions and defaults for where to apply. */
   PetscCall(DMGetLabel(dm, "Face Sets", &label));
-  PetscCall(PetscDSAddBoundary(prob, DM_BC_NATURAL_RIEMANN, "inflow",  label, ALEN(inflowids),  inflowids,  0, 0, NULL, (void (*)(void)) PhysicsBoundary_Advect_Inflow, NULL,  phys, NULL));
-  PetscCall(PetscDSAddBoundary(prob, DM_BC_NATURAL_RIEMANN, "outflow", label, ALEN(outflowids), outflowids, 0, 0, NULL, (void (*)(void)) PhysicsBoundary_Advect_Outflow, NULL, phys, NULL));
+  PetscCall(PetscDSAddBoundary(prob, DM_BC_NATURAL_RIEMANN, "inflow",  label, PETSC_STATIC_ARRAY_LENGTH(inflowids),  inflowids,  0, 0, NULL, (void (*)(void)) PhysicsBoundary_Advect_Inflow, NULL,  phys, NULL));
+  PetscCall(PetscDSAddBoundary(prob, DM_BC_NATURAL_RIEMANN, "outflow", label, PETSC_STATIC_ARRAY_LENGTH(outflowids), outflowids, 0, 0, NULL, (void (*)(void)) PhysicsBoundary_Advect_Outflow, NULL, phys, NULL));
   PetscFunctionReturn(0);
 }
 
@@ -301,7 +300,7 @@ static PetscErrorCode PhysicsCreate_Advect(Model mod,Physics phys,PetscOptionIte
   phys->data       = advect;
   mod->setupbc = SetUpBC_Advect;
 
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Advect options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Advect options");
   {
     PetscInt two = 2,dof = 1;
     advect->soltype = ADVECT_SOL_TILTED;
@@ -332,7 +331,7 @@ static PetscErrorCode PhysicsCreate_Advect(Model mod,Physics phys,PetscOptionIte
     } break;
     }
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   /* Initial/transient solution with default boundary conditions */
   PetscCall(ModelSolutionSetDefault(mod,PhysicsSolution_Advect,phys));
   /* Register "canned" functionals */
@@ -518,7 +517,7 @@ static PetscErrorCode SetUpBC_SW(DM dm, PetscDS prob,Physics phys)
 
   PetscFunctionBeginUser;
   PetscCall(DMGetLabel(dm, "Face Sets", &label));
-  PetscCall(PetscDSAddBoundary(prob, DM_BC_NATURAL_RIEMANN, "wall", label, ALEN(wallids), wallids, 0, 0, NULL, (void (*)(void)) PhysicsBoundary_SW_Wall, NULL, phys, NULL));
+  PetscCall(PetscDSAddBoundary(prob, DM_BC_NATURAL_RIEMANN, "wall", label, PETSC_STATIC_ARRAY_LENGTH(wallids), wallids, 0, 0, NULL, (void (*)(void)) PhysicsBoundary_SW_Wall, NULL, phys, NULL));
   PetscFunctionReturn(0);
 }
 
@@ -536,7 +535,7 @@ static PetscErrorCode PhysicsCreate_SW(Model mod,Physics phys,PetscOptionItems *
   PetscFunctionListAdd(&PhysicsRiemannList_SW, "rusanov", PhysicsRiemann_SW_Rusanov);
   PetscFunctionListAdd(&PhysicsRiemannList_SW, "hll", PhysicsRiemann_SW_HLL);
 
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"SW options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"SW options");
   {
     void (*PhysicsRiemann_SW)(PetscInt, PetscInt, const PetscReal *, const PetscReal *, const PetscScalar *, const PetscScalar *, PetscInt, const PetscScalar, PetscScalar *, Physics);
     sw->gravity = 1.0;
@@ -545,7 +544,7 @@ static PetscErrorCode PhysicsCreate_SW(Model mod,Physics phys,PetscOptionItems *
     PetscCall(PetscFunctionListFind(PhysicsRiemannList_SW,sw_riemann,&PhysicsRiemann_SW));
     phys->riemann = (PetscRiemannFunc) PhysicsRiemann_SW;
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   phys->maxspeed = PetscSqrtReal(2.0*sw->gravity); /* Mach 1 for depth of 2 */
 
   PetscCall(ModelSolutionSetDefault(mod,PhysicsSolution_SW,phys));
@@ -721,7 +720,7 @@ static PetscErrorCode PhysicsBoundary_Euler_Wall(PetscReal time, const PetscReal
   }
   if (eu->type == EULER_LINEAR_WAVE) { /* debug */
 #if 0
-    PetscPrintf(PETSC_COMM_WORLD,"%s coord=%g,%g\n",PETSC_FUNCTION_NAME,c[0],c[1]);
+    PetscPrintf(PETSC_COMM_WORLD,"%s coord=%g,%g\n",PETSC_FUNCTION_NAME,(double)c[0],(double)c[1]);
 #endif
   }
   PetscFunctionReturn(0);
@@ -735,8 +734,8 @@ static void PhysicsRiemann_Euler_Godunov( PetscInt dim, PetscInt Nf, const Petsc
   PetscReal       cL,cR,speed,velL,velR,nn[DIM],s2;
   PetscInt        i;
   PetscErrorCode  ierr;
-  PetscFunctionBeginUser;
 
+  PetscFunctionBeginUser;
   for (i=0,s2=0.; i<DIM; i++) {
     nn[i] = n[i];
     s2 += nn[i]*nn[i];
@@ -790,11 +789,11 @@ static PetscErrorCode SetUpBC_Euler(DM dm, PetscDS prob,Physics phys)
   PetscCall(DMGetLabel(dm, "Face Sets", &label));
   if (eu->type == EULER_LINEAR_WAVE) {
     const PetscInt wallids[] = {100,101};
-    PetscCall(PetscDSAddBoundary(prob, DM_BC_NATURAL_RIEMANN, "wall", label, ALEN(wallids), wallids, 0, 0, NULL, (void (*)(void)) PhysicsBoundary_Euler_Wall, NULL, phys, NULL));
+    PetscCall(PetscDSAddBoundary(prob, DM_BC_NATURAL_RIEMANN, "wall", label, PETSC_STATIC_ARRAY_LENGTH(wallids), wallids, 0, 0, NULL, (void (*)(void)) PhysicsBoundary_Euler_Wall, NULL, phys, NULL));
   }
   else {
     const PetscInt wallids[] = {100,101,200,300};
-    PetscCall(PetscDSAddBoundary(prob, DM_BC_NATURAL_RIEMANN, "wall", label, ALEN(wallids), wallids, 0, 0, NULL, (void (*)(void)) PhysicsBoundary_Euler_Wall, NULL, phys, NULL));
+    PetscCall(PetscDSAddBoundary(prob, DM_BC_NATURAL_RIEMANN, "wall", label, PETSC_STATIC_ARRAY_LENGTH(wallids), wallids, 0, 0, NULL, (void (*)(void)) PhysicsBoundary_Euler_Wall, NULL, phys, NULL));
   }
   PetscFunctionReturn(0);
 }
@@ -809,7 +808,7 @@ static PetscErrorCode PhysicsCreate_Euler(Model mod,Physics phys,PetscOptionItem
   PetscCall(PetscNew(&eu));
   phys->data    = eu;
   mod->setupbc = SetUpBC_Euler;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Euler options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Euler options");
   {
     PetscReal alpha;
     char type[64] = "linear_wave";
@@ -823,7 +822,7 @@ static PetscErrorCode PhysicsCreate_Euler(Model mod,Physics phys,PetscOptionItem
     PetscCall(PetscOptionsReal("-eu_rho2","Density right of discontinuity","",eu->pars[EULER_PAR_RHOR],&eu->pars[EULER_PAR_RHOR],NULL));
     alpha = 60.;
     PetscCall(PetscOptionsReal("-eu_alpha","Angle of discontinuity","",alpha,&alpha,NULL));
-    PetscCheck(alpha>0. && alpha<=90.,PETSC_COMM_WORLD,PETSC_ERR_SUP,"Alpha bust be > 0 and <= 90 (%g)",alpha);
+    PetscCheck(alpha>0. && alpha<=90.,PETSC_COMM_WORLD,PETSC_ERR_SUP,"Alpha bust be > 0 and <= 90 (%g)",(double)alpha);
     eu->pars[EULER_PAR_ITANA] = 1./PetscTanReal( alpha * PETSC_PI / 180.0);
     PetscCall(PetscOptionsString("-eu_type","Type of Euler test","",type,type,sizeof(type),NULL));
     PetscCall(PetscStrcmp(type,"linear_wave", &is));
@@ -854,7 +853,7 @@ static PetscErrorCode PhysicsCreate_Euler(Model mod,Physics phys,PetscOptionItem
       }
     }
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   eu->sound = SpeedOfSound_PG;
   phys->maxspeed = 0.; /* will get set in solution */
   PetscCall(ModelSolutionSetDefault(mod,PhysicsSolution_Euler,phys));
@@ -1033,7 +1032,7 @@ static PetscErrorCode ModelFunctionalSetFromOptions(Model mod,PetscOptionItems *
   char           *names[256];
 
   PetscFunctionBeginUser;
-  mod->numMonitored = ALEN(names);
+  mod->numMonitored = PETSC_STATIC_ARRAY_LENGTH(names);
   PetscCall(PetscOptionsStringArray("-monitor","list of functionals to monitor","",names,&mod->numMonitored,NULL));
   /* Create list of functionals that will be computed somehow */
   PetscCall(PetscMalloc1(mod->numMonitored,&mod->functionalMonitored));
@@ -1220,7 +1219,7 @@ static PetscErrorCode MonitorVTK(TS ts,PetscInt stepnum,PetscReal time,Vec X,voi
     }
     PetscCall(PetscFree4(fmin,fmax,fintegral,ftmp));
 
-    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)ts),"% 3D  time %8.4g  |x| %8.4g  %s\n",stepnum,(double)time,(double)xnorm,ftable ? ftable : ""));
+    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)ts),"% 3" PetscInt_FMT "  time %8.4g  |x| %8.4g  %s\n",stepnum,(double)time,(double)xnorm,ftable ? ftable : ""));
     PetscCall(PetscFree(ftable));
   }
   if (user->vtkInterval < 1) PetscFunctionReturn(0);
@@ -1228,7 +1227,7 @@ static PetscErrorCode MonitorVTK(TS ts,PetscInt stepnum,PetscReal time,Vec X,voi
     if (stepnum == -1) {        /* Final time is not multiple of normal time interval, write it anyway */
       PetscCall(TSGetStepNumber(ts,&stepnum));
     }
-    PetscCall(PetscSNPrintf(filename,sizeof filename,"%s-%03D.vtu",user->outputBasename,stepnum));
+    PetscCall(PetscSNPrintf(filename,sizeof filename,"%s-%03" PetscInt_FMT ".vtu",user->outputBasename,stepnum));
     PetscCall(OutputVTK(dm,filename,&viewer));
     PetscCall(VecView(X,viewer));
     PetscCall(PetscViewerDestroy(&viewer));
@@ -1333,13 +1332,13 @@ static PetscErrorCode adaptToleranceFVM(PetscFV fvm, TS ts, Vec sol, VecTagger r
   PetscCallMPI(MPI_Allreduce(minMaxInd,minMaxIndGlobal,2,MPIU_REAL,MPI_MIN,PetscObjectComm((PetscObject)dm)));
   minInd = minMaxIndGlobal[0];
   maxInd = -minMaxIndGlobal[1];
-  PetscCall(PetscInfo(ts, "error indicator range (%E, %E)\n", minInd, maxInd));
+  PetscCall(PetscInfo(ts, "error indicator range (%E, %E)\n", (double)minInd, (double)maxInd));
   if (nRefine || nCoarsen) { /* at least one cell is over the refinement threshold */
     PetscCall(DMAdaptLabel(dm,adaptLabel,&adaptedDM));
   }
   PetscCall(DMLabelDestroy(&adaptLabel));
   if (adaptedDM) {
-    PetscCall(PetscInfo(ts, "Adapted mesh, marking %D cells for refinement, and %D cells for coarsening\n", nRefine, nCoarsen));
+    PetscCall(PetscInfo(ts, "Adapted mesh, marking %" PetscInt_FMT " cells for refinement, and %" PetscInt_FMT " cells for coarsening\n", nRefine, nCoarsen));
     if (tsNew) PetscCall(initializeTS(adaptedDM, user, tsNew));
     if (solNew) {
       PetscCall(DMCreateGlobalVector(adaptedDM, solNew));
@@ -1375,7 +1374,6 @@ int main(int argc, char **argv)
   PetscInt          adaptInterval;
   char              physname[256]  = "advect";
   VecTagger         refineTag = NULL, coarsenTag = NULL;
-  PetscErrorCode    ierr;
 
   PetscCall(PetscInitialize(&argc, &argv, (char*) 0, help));
   comm = PETSC_COMM_WORLD;
@@ -1394,7 +1392,7 @@ int main(int argc, char **argv)
   PetscCall(PetscFunctionListAdd(&PhysicsList,"sw"              ,PhysicsCreate_SW));
   PetscCall(PetscFunctionListAdd(&PhysicsList,"euler"           ,PhysicsCreate_Euler));
 
-  ierr = PetscOptionsBegin(comm,NULL,"Unstructured Finite Volume Mesh Options","");PetscCall(ierr);
+  PetscOptionsBegin(comm,NULL,"Unstructured Finite Volume Mesh Options","");
   {
     cfl  = 0.9 * 4; /* default SSPRKS2 with s=5 stages is stable for CFL number s-1 */
     PetscCall(PetscOptionsReal("-ufv_cfl","CFL number per step","",cfl,&cfl,NULL));
@@ -1409,7 +1407,7 @@ int main(int argc, char **argv)
     PetscCall(PetscOptionsBool("-ufv_use_amr","use local adaptive mesh refinement","",useAMR,&useAMR,NULL));
     PetscCall(PetscOptionsInt("-ufv_adapt_interval","time steps between AMR","",adaptInterval,&adaptInterval,NULL));
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   if (useAMR) {
     VecTaggerBox refineBox, coarsenBox;
@@ -1434,7 +1432,7 @@ int main(int argc, char **argv)
     PetscCall(PetscObjectViewFromOptions((PetscObject)coarsenTag,NULL,"-tag_view"));
   }
 
-  ierr = PetscOptionsBegin(comm,NULL,"Unstructured Finite Volume Physics Options","");PetscCall(ierr);
+  PetscOptionsBegin(comm,NULL,"Unstructured Finite Volume Physics Options","");
   {
     PetscErrorCode (*physcreate)(Model,Physics,PetscOptionItems*);
     PetscCall(PetscOptionsFList("-physics","Physics module to solve","",PhysicsList,physname,physname,sizeof physname,NULL));
@@ -1446,7 +1444,7 @@ int main(int argc, char **argv)
     PetscCheck(phys->dof > 0,comm,PETSC_ERR_ARG_WRONGSTATE,"Physics '%s' did not set dof",physname);
     PetscCall(ModelFunctionalSetFromOptions(mod,PetscOptionsObject));
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   /* Create mesh */
   {
@@ -1461,11 +1459,11 @@ int main(int argc, char **argv)
       PetscInt  cells[3] = {1, 1, 1}, n = 3;
       PetscBool flg2, skew = PETSC_FALSE;
       PetscInt nret2 = 2*DIM;
-      ierr = PetscOptionsBegin(comm,NULL,"Rectangular mesh options","");PetscCall(ierr);
+      PetscOptionsBegin(comm,NULL,"Rectangular mesh options","");
       PetscCall(PetscOptionsRealArray("-grid_bounds","bounds of the mesh in each direction (i.e., x_min,x_max,y_min,y_max","",mod->bounds,&nret2,&flg2));
       PetscCall(PetscOptionsBool("-grid_skew_60","Skew grid for 60 degree shock mesh","",skew,&skew,NULL));
       PetscCall(PetscOptionsIntArray("-dm_plex_box_faces", "Number of faces along each dimension", "", cells, &n, NULL));
-      ierr = PetscOptionsEnd();PetscCall(ierr);
+      PetscOptionsEnd();
       /* TODO Rewrite this with Mark, and remove grid_bounds at that time */
       if (flg2) {
         PetscInt dimEmbed, i;
@@ -1535,7 +1533,7 @@ int main(int argc, char **argv)
         for (j = 0; j < newDof; j++) {
           char     compName[256]  = "Unknown";
 
-          PetscCall(PetscSNPrintf(compName,sizeof(compName),"%s_%d",phys->field_desc[f].name,j));
+          PetscCall(PetscSNPrintf(compName,sizeof(compName),"%s_%" PetscInt_FMT,phys->field_desc[f].name,j));
           PetscCall(PetscFVSetComponentName(fvm,dof+j,compName));
         }
       }
@@ -1554,9 +1552,9 @@ int main(int argc, char **argv)
     char      convType[256];
     PetscBool flg;
 
-    ierr = PetscOptionsBegin(comm, "", "Mesh conversion options", "DMPLEX");PetscCall(ierr);
+    PetscOptionsBegin(comm, "", "Mesh conversion options", "DMPLEX");
     PetscCall(PetscOptionsFList("-dm_type","Convert DMPlex to another format","ex12",DMList,DMPLEX,convType,256,&flg));
-    ierr = PetscOptionsEnd();PetscCall(ierr);
+    PetscOptionsEnd();
     if (flg) {
       DM dmConv;
 
@@ -1590,7 +1588,7 @@ int main(int argc, char **argv)
       TS             tsNew = NULL;
 
       PetscCall(PetscMemoryGetCurrentUsage(&bytes));
-      PetscCall(PetscInfo(ts, "refinement loop %D: memory used %g\n", adaptIter, bytes));
+      PetscCall(PetscInfo(ts, "refinement loop %" PetscInt_FMT ": memory used %g\n", adaptIter, (double)bytes));
       PetscCall(DMViewFromOptions(dm, NULL, "-initial_dm_view"));
       PetscCall(VecViewFromOptions(X, NULL, "-initial_vec_view"));
 #if 0
@@ -1606,9 +1604,9 @@ int main(int argc, char **argv)
         PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERHDF5,&isHDF5));
         PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERVTK,&isVTK));
         if (isHDF5) {
-          PetscCall(PetscSNPrintf(buf, 256, "ex11-initial-%d.h5", adaptIter));
+          PetscCall(PetscSNPrintf(buf, 256, "ex11-initial-%" PetscInt_FMT ".h5", adaptIter));
         } else if (isVTK) {
-          PetscCall(PetscSNPrintf(buf, 256, "ex11-initial-%d.vtu", adaptIter));
+          PetscCall(PetscSNPrintf(buf, 256, "ex11-initial-%" PetscInt_FMT ".vtu", adaptIter));
           PetscCall(PetscViewerPushFormat(viewer,PETSC_VIEWER_VTK_VTU));
         }
         PetscCall(PetscViewerFileSetMode(viewer,FILE_MODE_WRITE));
@@ -1684,7 +1682,7 @@ int main(int argc, char **argv)
       PetscLogDouble bytes;
 
       PetscCall(PetscMemoryGetCurrentUsage(&bytes));
-      PetscCall(PetscInfo(ts, "AMR time step loop %D: memory used %g\n", adaptIter, bytes));
+      PetscCall(PetscInfo(ts, "AMR time step loop %" PetscInt_FMT ": memory used %g\n", adaptIter, bytes));
       PetscCall(PetscFVSetLimiter(fvm,noneLimiter));
       PetscCall(adaptToleranceFVM(fvm,ts,X,refineTag,coarsenTag,user,&tsNew,&solNew));
       PetscCall(PetscFVSetLimiter(fvm,limiter));
@@ -1718,7 +1716,7 @@ int main(int argc, char **argv)
     }
   }
   PetscCall(TSGetConvergedReason(ts,&reason));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%s at time %g after %D steps\n",TSConvergedReasons[reason],(double)ftime,nsteps));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%s at time %g after %" PetscInt_FMT " steps\n",TSConvergedReasons[reason],(double)ftime,nsteps));
   PetscCall(TSDestroy(&ts));
 
   PetscCall(VecTaggerDestroy(&refineTag));

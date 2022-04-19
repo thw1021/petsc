@@ -160,7 +160,7 @@ PetscErrorCode PetscSpaceView(PetscSpace sp, PetscViewer v)
   PetscCall(PetscObjectPrintClassNamePrefixType((PetscObject)sp,v));
   PetscCall(PetscObjectTypeCompare((PetscObject) v, PETSCVIEWERASCII, &iascii));
   PetscCall(PetscViewerASCIIPushTab(v));
-  if (iascii) PetscCall(PetscViewerASCIIPrintf(v, "Space in %D variables with %D components, size %D\n", sp->Nv, sp->Nc, pdim));
+  if (iascii) PetscCall(PetscViewerASCIIPrintf(v, "Space in %" PetscInt_FMT " variables with %" PetscInt_FMT " components, size %" PetscInt_FMT "\n", sp->Nv, sp->Nc, pdim));
   if (sp->ops->view) PetscCall((*sp->ops->view)(sp, v));
   PetscCall(PetscViewerASCIIPopTab(v));
   PetscFunctionReturn(0);
@@ -188,7 +188,6 @@ PetscErrorCode PetscSpaceSetFromOptions(PetscSpace sp)
   const char    *defaultType;
   char           name[256];
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCSPACE_CLASSID, 1);
@@ -199,7 +198,7 @@ PetscErrorCode PetscSpaceSetFromOptions(PetscSpace sp)
   }
   if (!PetscSpaceRegisterAllCalled) PetscCall(PetscSpaceRegisterAll());
 
-  ierr = PetscObjectOptionsBegin((PetscObject) sp);PetscCall(ierr);
+  PetscObjectOptionsBegin((PetscObject) sp);
   PetscCall(PetscOptionsFList("-petscspace_type", "Linear space", "PetscSpaceSetType", PetscSpaceList, defaultType, name, 256, &flg));
   if (flg) {
     PetscCall(PetscSpaceSetType(sp, name));
@@ -218,7 +217,7 @@ PetscErrorCode PetscSpaceSetFromOptions(PetscSpace sp)
   }
   /* process any options handlers added with PetscObjectAddOptionsHandler() */
   PetscCall(PetscObjectProcessOptionsHandlers(PetscOptionsObject,(PetscObject) sp));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscCall(PetscSpaceViewFromOptions(sp, NULL, "-petscspace_view"));
   PetscFunctionReturn(0);
 }

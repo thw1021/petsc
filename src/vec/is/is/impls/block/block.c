@@ -315,17 +315,12 @@ static PetscErrorCode ISDuplicate_Block(IS is,IS *newIS)
 static PetscErrorCode ISCopy_Block(IS is,IS isy)
 {
   IS_Block       *is_block = (IS_Block*)is->data,*isy_block = (IS_Block*)isy->data;
-  PetscInt       bs, n, N, bsy, ny, Ny;
+  PetscInt       bs, n;
 
   PetscFunctionBegin;
   PetscCall(PetscLayoutGetBlockSize(is->map, &bs));
   PetscCall(PetscLayoutGetLocalSize(is->map, &n));
-  PetscCall(PetscLayoutGetSize(is->map, &N));
-  PetscCall(PetscLayoutGetBlockSize(isy->map, &bsy));
-  PetscCall(PetscLayoutGetLocalSize(isy->map, &ny));
-  PetscCall(PetscLayoutGetSize(isy->map, &Ny));
-  PetscCheckFalse(n != ny || N != Ny || bs != bsy,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Index sets incompatible");
-  PetscCall(PetscArraycpy(isy_block->idx,is_block->idx,(n/bs)));
+  PetscCall(PetscArraycpy(isy_block->idx, is_block->idx, n/bs));
   PetscFunctionReturn(0);
 }
 
@@ -335,7 +330,7 @@ static PetscErrorCode ISOnComm_Block(IS is,MPI_Comm comm,PetscCopyMode mode,IS *
   PetscInt       bs, n;
 
   PetscFunctionBegin;
-  PetscCheckFalse(mode == PETSC_OWN_POINTER,comm,PETSC_ERR_ARG_WRONG,"Cannot use PETSC_OWN_POINTER");
+  PetscCheck(mode != PETSC_OWN_POINTER,comm,PETSC_ERR_ARG_WRONG,"Cannot use PETSC_OWN_POINTER");
   PetscCall(PetscLayoutGetBlockSize(is->map, &bs));
   PetscCall(PetscLayoutGetLocalSize(is->map, &n));
   PetscCall(ISCreateBlock(comm,bs,n/bs,sub->idx,mode,newis));
@@ -431,7 +426,7 @@ PetscErrorCode  ISBlockSetIndices(IS is,PetscInt bs,PetscInt n,const PetscInt id
 {
   PetscFunctionBegin;
   PetscCall(ISClearInfoCache(is,PETSC_FALSE));
-  PetscCall(PetscUseMethod(is,"ISBlockSetIndices_C",(IS,PetscInt,PetscInt,const PetscInt[],PetscCopyMode),(is,bs,n,idx,mode)));
+  PetscUseMethod(is,"ISBlockSetIndices_C",(IS,PetscInt,PetscInt,const PetscInt[],PetscCopyMode),(is,bs,n,idx,mode));
   PetscFunctionReturn(0);
 }
 
@@ -442,8 +437,8 @@ static PetscErrorCode  ISBlockSetIndices_Block(IS is,PetscInt bs,PetscInt n,cons
   PetscLayout    map;
 
   PetscFunctionBegin;
-  PetscCheckFalse(bs < 1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"block size < 1");
-  PetscCheckFalse(n < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"length < 0");
+  PetscCheck(bs >= 1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"block size < 1");
+  PetscCheck(n >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"length < 0");
   if (n) PetscValidIntPointer(idx,4);
 
   PetscCall(PetscLayoutCreateFromSizes(PetscObjectComm((PetscObject)is),n*bs,is->map->N,bs,&map));
@@ -514,8 +509,8 @@ PetscErrorCode  ISCreateBlock(MPI_Comm comm,PetscInt bs,PetscInt n,const PetscIn
 {
   PetscFunctionBegin;
   PetscValidPointer(is,6);
-  PetscCheckFalse(bs < 1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"block size < 1");
-  PetscCheckFalse(n < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"length < 0");
+  PetscCheck(bs >= 1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"block size < 1");
+  PetscCheck(n >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"length < 0");
   if (n) PetscValidIntPointer(idx,4);
 
   PetscCall(ISCreate(comm,is));
@@ -557,7 +552,7 @@ static PetscErrorCode  ISBlockRestoreIndices_Block(IS is,const PetscInt *idx[])
 PetscErrorCode  ISBlockGetIndices(IS is,const PetscInt *idx[])
 {
   PetscFunctionBegin;
-  PetscCall(PetscUseMethod(is,"ISBlockGetIndices_C",(IS,const PetscInt*[]),(is,idx)));
+  PetscUseMethod(is,"ISBlockGetIndices_C",(IS,const PetscInt*[]),(is,idx));
   PetscFunctionReturn(0);
 }
 
@@ -579,7 +574,7 @@ PetscErrorCode  ISBlockGetIndices(IS is,const PetscInt *idx[])
 PetscErrorCode  ISBlockRestoreIndices(IS is,const PetscInt *idx[])
 {
   PetscFunctionBegin;
-  PetscCall(PetscUseMethod(is,"ISBlockRestoreIndices_C",(IS,const PetscInt*[]),(is,idx)));
+  PetscUseMethod(is,"ISBlockRestoreIndices_C",(IS,const PetscInt*[]),(is,idx));
   PetscFunctionReturn(0);
 }
 
@@ -601,7 +596,7 @@ PetscErrorCode  ISBlockRestoreIndices(IS is,const PetscInt *idx[])
 PetscErrorCode  ISBlockGetLocalSize(IS is,PetscInt *size)
 {
   PetscFunctionBegin;
-  PetscCall(PetscUseMethod(is,"ISBlockGetLocalSize_C",(IS,PetscInt*),(is,size)));
+  PetscUseMethod(is,"ISBlockGetLocalSize_C",(IS,PetscInt*),(is,size));
   PetscFunctionReturn(0);
 }
 
@@ -634,7 +629,7 @@ static PetscErrorCode  ISBlockGetLocalSize_Block(IS is,PetscInt *size)
 PetscErrorCode  ISBlockGetSize(IS is,PetscInt *size)
 {
   PetscFunctionBegin;
-  PetscCall(PetscUseMethod(is,"ISBlockGetSize_C",(IS,PetscInt*),(is,size)));
+  PetscUseMethod(is,"ISBlockGetSize_C",(IS,PetscInt*),(is,size));
   PetscFunctionReturn(0);
 }
 

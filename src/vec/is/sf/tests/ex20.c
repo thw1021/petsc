@@ -36,8 +36,6 @@ static const char help[] = "PetscSF Ping-pong test to measure MPI latency\n\n";
 
 static inline PetscErrorCode PetscMallocWithMemType(PetscMemType mtype,size_t size,void** ptr)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   if (PetscMemTypeHost(mtype)) {
     #if defined(PETSC_HAVE_GETPAGESIZE)
@@ -71,8 +69,6 @@ static inline PetscErrorCode PetscFreeWithMemType_Private(PetscMemType mtype,voi
 
 static inline PetscErrorCode PetscMemcpyFromHostWithMemType(PetscMemType mtype,void* dst, const void *src, size_t n)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   if (PetscMemTypeHost(mtype)) PetscCall(PetscMemcpy(dst,src,n));
 #if defined(PETSC_HAVE_CUDA)
@@ -85,7 +81,6 @@ static inline PetscErrorCode PetscMemcpyFromHostWithMemType(PetscMemType mtype,v
 
 int main(int argc,char **argv)
 {
-  PetscErrorCode    ierr;
   PetscSF           sf[64];
   PetscLogDouble    t_start=0,t_end=0,time[64];
   PetscInt          i,j,n,nroots,nleaves,niter=100,nskip=10;
@@ -202,7 +197,7 @@ int main(int argc,char **argv)
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\t##  PetscSF Ping-pong test on %s ##\n  Message(Bytes) \t\tLatency(us)\n", mtype==PETSC_MEMTYPE_HOST? "Host" : "Device"));
   for (n=1,j=0; n<=maxn; n*=2,j++) {
     PetscCall(PetscSFDestroy(&sf[j]));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%16D \t %16.4f\n",sizeof(PetscScalar)*n,time[j]));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%16" PetscInt_FMT " \t %16.4f\n",sizeof(PetscScalar)*n,time[j]));
   }
 
   PetscCall(PetscFree2(pbuf,ebuf));

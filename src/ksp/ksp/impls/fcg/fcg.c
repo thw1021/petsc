@@ -57,7 +57,7 @@ static PetscErrorCode    KSPSetUp_FCG(KSP ksp)
 
   /* If the requested number of preallocated vectors is greater than mmax reduce nprealloc */
   if (fcg->nprealloc > fcg->mmax+1) {
-    PetscCall(PetscInfo(NULL,"Requested nprealloc=%d is greater than m_max+1=%d. Resetting nprealloc = m_max+1.\n",fcg->nprealloc, fcg->mmax+1));
+    PetscCall(PetscInfo(NULL,"Requested nprealloc=%" PetscInt_FMT " is greater than m_max+1=%" PetscInt_FMT ". Resetting nprealloc = m_max+1.\n",fcg->nprealloc, fcg->mmax+1));
   }
 
   /* Preallocate additional work vectors */
@@ -250,7 +250,7 @@ static PetscErrorCode KSPSolve_FCG(KSP ksp)
 
     if (eigs) {
       if (i > 0) {
-        PetscCheckFalse(ksp->max_it != stored_max_it,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"Can not change maxit AND calculate eigenvalues");
+        PetscCheck(ksp->max_it == stored_max_it,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"Can not change maxit AND calculate eigenvalues");
         e[i] = PetscSqrtReal(PetscAbsScalar(beta/betaold))/alphaold;
         d[i] = PetscSqrtReal(PetscAbsScalar(beta/betaold))*e[i] + 1.0/alpha;
       } else {
@@ -305,11 +305,11 @@ static PetscErrorCode KSPView_FCG(KSP ksp,PetscViewer viewer)
   else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Undefined FCG truncation strategy");
 
   if (iascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  m_max=%D\n",fcg->mmax));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  preallocated %D directions\n",PetscMin(fcg->nprealloc,fcg->mmax+1)));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  m_max=%" PetscInt_FMT "\n",fcg->mmax));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  preallocated %" PetscInt_FMT " directions\n",PetscMin(fcg->nprealloc,fcg->mmax+1)));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  %s\n",truncstr));
   } else if (isstring) {
-    PetscCall(PetscViewerStringSPrintf(viewer,"m_max %D nprealloc %D %s",fcg->mmax,fcg->nprealloc,truncstr));
+    PetscCall(PetscViewerStringSPrintf(viewer,"m_max %" PetscInt_FMT " nprealloc %" PetscInt_FMT " %s",fcg->mmax,fcg->nprealloc,truncstr));
   }
   PetscFunctionReturn(0);
 }
@@ -393,7 +393,7 @@ PetscErrorCode KSPFCGSetNprealloc(KSP ksp,PetscInt nprealloc)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
   PetscValidLogicalCollectiveInt(ksp,nprealloc,2);
-  PetscCheckFalse(nprealloc > fcg->mmax+1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Cannot preallocate more than m_max+1 vectors");
+  PetscCheck(nprealloc <= fcg->mmax+1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Cannot preallocate more than m_max+1 vectors");
   fcg->nprealloc = nprealloc;
   PetscFunctionReturn(0);
 }
@@ -485,7 +485,7 @@ static PetscErrorCode KSPSetFromOptions_FCG(PetscOptionItems *PetscOptionsObject
   PetscBool      flg;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"KSP FCG Options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"KSP FCG Options");
   PetscCall(PetscOptionsInt("-ksp_fcg_mmax","Maximum number of search directions to store","KSPFCGSetMmax",fcg->mmax,&mmax,&flg));
   if (flg) {
     PetscCall(KSPFCGSetMmax(ksp,mmax));
@@ -495,7 +495,7 @@ static PetscErrorCode KSPSetFromOptions_FCG(PetscOptionItems *PetscOptionsObject
     PetscCall(KSPFCGSetNprealloc(ksp,nprealloc));
   }
   PetscCall(PetscOptionsEnum("-ksp_fcg_truncation_type","Truncation approach for directions","KSPFCGSetTruncationType",KSPFCDTruncationTypes,(PetscEnum)fcg->truncstrat,(PetscEnum*)&fcg->truncstrat,NULL));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 

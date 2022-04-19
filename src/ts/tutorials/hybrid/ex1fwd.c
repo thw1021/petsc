@@ -39,7 +39,7 @@ PetscErrorCode MyMonitor(TS ts,PetscInt stepnum,PetscReal time,Vec U,void *ctx)
     PetscCall(TSForwardGetSensitivities(ts,&nump,&sp));
     PetscCall(MatDenseGetColumn(sp,2,&u));
     f = fopen("fwd_sp.out", "a");
-    PetscCall(PetscFPrintf(PETSC_COMM_WORLD,f,"%20.15lf %20.15lf %20.15lf\n",time,u[0],u[1]));
+    PetscCall(PetscFPrintf(PETSC_COMM_WORLD,f,"%20.15lf %20.15lf %20.15lf\n",(double)time,(double)PetscRealPart(u[0]),(double)PetscRealPart(u[1])));
     PetscCall(MatDenseRestoreColumn(sp,&u));
     fclose(f);
   }
@@ -214,7 +214,6 @@ int main(int argc,char **argv)
   Vec            U;             /* solution will be stored here */
   Mat            A;             /* Jacobian matrix */
   Mat            Ap;            /* Jacobian dfdp */
-  PetscErrorCode ierr;
   PetscMPIInt    size;
   PetscInt       n = 2;
   PetscScalar    *u;
@@ -234,13 +233,13 @@ int main(int argc,char **argv)
   app.lambda2 = 0.36;
   app.print_time = 1./256.;
   tend = 0.125;
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"ex1fwd options","");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"ex1fwd options","");
   {
     PetscCall(PetscOptionsReal("-lambda1","","",app.lambda1,&app.lambda1,NULL));
     PetscCall(PetscOptionsReal("-lambda2","","",app.lambda2,&app.lambda2,NULL));
     PetscCall(PetscOptionsReal("-tend","","",tend,&tend,NULL));
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     Create necessary matrix and vectors
@@ -315,7 +314,7 @@ int main(int argc,char **argv)
   PetscCall(MatDestroy(&Ap));
   PetscCall(MatDestroy(&sp));
   PetscCall(PetscFinalize());
-  return(ierr);
+  return(0);
 }
 
 /*TEST

@@ -501,7 +501,6 @@ PetscErrorCode DMMBUtil_InitializeOptions(DMMoabMeshGeneratorCtx& genCtx, PetscI
 @*/
 PetscErrorCode DMMoabCreateBoxMesh(MPI_Comm comm, PetscInt dim, PetscBool useSimplex, const PetscReal* bounds, PetscInt nele, PetscInt nghost, DM *dm)
 {
-  PetscErrorCode         ierr;
   moab::ErrorCode        merr;
   PetscInt               a, b, c, n, global_size, global_rank;
   DM_Moab               *dmmoab;
@@ -532,9 +531,9 @@ PetscErrorCode DMMoabCreateBoxMesh(MPI_Comm comm, PetscInt dim, PetscBool useSim
   n = pow(npts, dim);
 
   /* do some error checking */
-  PetscCheckFalse(n < 2,PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Number of points must be >= 2.");
-  PetscCheckFalse(global_size > n,PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Number of processors must be less than or equal to number of elements.");
-  PetscCheckFalse(nghost < 0,PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Number of ghost layers cannot be negative.");
+  PetscCheck(n >= 2,PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Number of points must be >= 2.");
+  PetscCheck(global_size <= n,PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Number of processors must be less than or equal to number of elements.");
+  PetscCheck(nghost >= 0,PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Number of ghost layers cannot be negative.");
 
   /* Create the basic DMMoab object and keep the default parameters created by DM impls */
   PetscCall(DMMoabCreateMoab(comm, NULL, NULL, NULL, dm));
@@ -566,7 +565,7 @@ PetscErrorCode DMMoabCreateBoxMesh(MPI_Comm comm, PetscInt dim, PetscBool useSim
   genCtx.blockSizeElementXYZ[1] = 0;
   genCtx.blockSizeElementXYZ[2] = 0;
 
-  ierr = PetscOptionsBegin(comm, "", "DMMoab Creation Options", "DMMOAB");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "DMMoab Creation Options", "DMMOAB");
   /* Handle DMMoab spatial resolution */
   PetscCall(PetscOptionsInt("-dmb_grid_x", "Number of grid points in x direction", "DMMoabSetSizes", genCtx.blockSizeElementXYZ[0], &genCtx.blockSizeElementXYZ[0], &genCtx.usrxyzgrid));
   if (dim > 1) PetscCall(PetscOptionsInt("-dmb_grid_y", "Number of grid points in y direction", "DMMoabSetSizes", genCtx.blockSizeElementXYZ[1], &genCtx.blockSizeElementXYZ[1], &genCtx.usrxyzgrid));
@@ -581,11 +580,11 @@ PetscErrorCode DMMoabCreateBoxMesh(MPI_Comm comm, PetscInt dim, PetscBool useSim
   PetscCall(PetscOptionsInt("-dmb_refine_x", "Number of refinement blocks in x direction", "DMMoabSetRefinement", genCtx.A, &genCtx.A, &genCtx.usrrefgrid));
   if (dim > 1) PetscCall(PetscOptionsInt("-dmb_refine_y", "Number of refinement blocks in y direction", "DMMoabSetRefinement", genCtx.B, &genCtx.B, &genCtx.usrrefgrid));
   if (dim > 2) PetscCall(PetscOptionsInt("-dmb_refine_z", "Number of refinement blocks in z direction", "DMMoabSetRefinement", genCtx.C, &genCtx.C, &genCtx.usrrefgrid));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   PetscCall(DMMBUtil_InitializeOptions(genCtx, dim, useSimplex, global_rank, global_size, bounds, nele));
 
-  //PetscCheckFalse(nele<nprocs,PETSC_COMM_WORLD,PETSC_ERR_ARG_OUTOFRANGE,"The dimensional discretization size should be greater or equal to number of processors: %D < %D",nele,nprocs);
+  //PetscCheck(nele>=nprocs,PETSC_COMM_WORLD,PETSC_ERR_ARG_OUTOFRANGE,"The dimensional discretization size should be greater or equal to number of processors: %" PetscInt_FMT " < %" PetscInt_FMT,nele,nprocs);
 
   if (genCtx.adjEnts) genCtx.keep_skins = true; /* do not delete anything - consumes more memory */
 
@@ -874,7 +873,7 @@ PetscErrorCode DMMoabLoadFromFile(MPI_Comm comm, PetscInt dim, PetscInt nghost, 
   merr = pcomm->collective_sync_partition();MBERR("Collective sync failed", merr);
 #endif
 
-  PetscCall(PetscInfo(*dm, "MOAB file '%s' was successfully loaded. Found %D vertices and %D elements.\n", filename, verts.size(), elems.size()));
+  PetscCall(PetscInfo(*dm, "MOAB file '%s' was successfully loaded. Found %zu vertices and %zu elements.\n", filename, verts.size(), elems.size()));
   PetscCall(PetscFree(readopts));
   PetscFunctionReturn(0);
 }

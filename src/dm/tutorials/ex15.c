@@ -123,12 +123,12 @@ PetscErrorCode HeaderlessBinaryReadCheck(DM dm,const char name[])
             v = PetscAbsScalar(test_value-buffer[index]);
 #if defined(PETSC_USE_COMPLEX)
             if ((PetscRealPart(v) > 1.0e-10) || (PetscImaginaryPart(v) > 1.0e-10)) {
-              PetscCall(PetscPrintf(PETSC_COMM_SELF,"ERROR: Difference > 1.0e-10 occurred (delta = (%+1.12e,%+1.12e) [loc %D,%D,%D(%D)])\n",(double)PetscRealPart(test_value),(double)PetscImaginaryPart(test_value),i,j,k,d));
+              PetscCall(PetscPrintf(PETSC_COMM_SELF,"ERROR: Difference > 1.0e-10 occurred (delta = (%+1.12e,%+1.12e) [loc %" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT "(%" PetscInt_FMT ")])\n",(double)PetscRealPart(test_value),(double)PetscImaginaryPart(test_value),i,j,k,d));
               dataverified = PETSC_FALSE;
             }
 #else
             if (PetscRealPart(v) > 1.0e-10) {
-              PetscCall(PetscPrintf(PETSC_COMM_SELF,"ERROR: Difference > 1.0e-10 occurred (delta = %+1.12e [loc %D,%D,%D(%D)])\n",(double)PetscRealPart(test_value),i,j,k,d));
+              PetscCall(PetscPrintf(PETSC_COMM_SELF,"ERROR: Difference > 1.0e-10 occurred (delta = %+1.12e [loc %" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT "(%" PetscInt_FMT ")])\n",(double)PetscRealPart(test_value),i,j,k,d));
               dataverified = PETSC_FALSE;
             }
 #endif
@@ -157,11 +157,11 @@ PetscErrorCode VecCompare(Vec a,Vec b)
   PetscCall(VecMax(b,&locmax[1],&max[1]));
 
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"VecCompare\n"));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"  min(a)   = %+1.2e [loc %D]\n",(double)min[0],locmin[0]));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"  max(a)   = %+1.2e [loc %D]\n",(double)max[0],locmax[0]));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"  min(a)   = %+1.2e [loc %" PetscInt_FMT "]\n",(double)min[0],locmin[0]));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"  max(a)   = %+1.2e [loc %" PetscInt_FMT "]\n",(double)max[0],locmax[0]));
 
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"  min(b)   = %+1.2e [loc %D]\n",(double)min[1],locmin[1]));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"  max(b)   = %+1.2e [loc %D]\n",(double)max[1],locmax[1]));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"  min(b)   = %+1.2e [loc %" PetscInt_FMT "]\n",(double)min[1],locmin[1]));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"  max(b)   = %+1.2e [loc %" PetscInt_FMT "]\n",(double)max[1],locmax[1]));
 
   PetscCall(VecDuplicate(a,&ref));
   PetscCall(VecCopy(a,ref));
@@ -182,13 +182,12 @@ PetscErrorCode TestDMDAVec(PetscBool usempiio)
   DM             dm;
   Vec            x_ref,x_test;
   PetscBool      skipheader = PETSC_TRUE;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   if (!usempiio) PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%s\n",PETSC_FUNCTION_NAME));
   else PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%s [using mpi-io]\n",PETSC_FUNCTION_NAME));
-  ierr = DMDACreate3d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DMDA_STENCIL_BOX,DMDA_I,DMDA_J,DMDA_K,PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,
-                        3,2,NULL,NULL,NULL,&dm);PetscCall(ierr);
+  PetscCall(DMDACreate3d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DMDA_STENCIL_BOX,DMDA_I,DMDA_J,DMDA_K,PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,
+                         3,2,NULL,NULL,NULL,&dm));
   PetscCall(DMSetFromOptions(dm));
   PetscCall(DMSetUp(dm));
 

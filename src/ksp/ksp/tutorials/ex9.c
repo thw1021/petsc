@@ -4,13 +4,6 @@ Also, this example illustrates the repeated\n\
 solution of linear systems, while reusing matrix, vector, and solver data\n\
 structures throughout the process.  Note the various stages of event logging.\n\n";
 
-/*T
-   Concepts: KSP^repeatedly solving linear systems;
-   Concepts: PetscLog^profiling multiple stages of code;
-   Concepts: PetscLog^user-defined event profiling;
-   Processors: n
-T*/
-
 /*
   Include "petscksp.h" so that we can use KSP solvers.  Note that this file
   automatically includes:
@@ -389,7 +382,7 @@ PetscErrorCode CheckError(Vec u,Vec x,Vec b,PetscInt its,PetscReal tol,PetscLogE
   PetscCall(VecAXPY(b,none,u));
   PetscCall(VecNorm(b,NORM_2,&norm));
   if (norm > tol) {
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g, Iterations %D\n",(double)norm,its));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g, Iterations %" PetscInt_FMT "\n",(double)norm,its));
   }
   PetscCall(PetscLogEventEnd(CHECK_ERROR,u,x,b,0));
   return 0;
@@ -422,9 +415,9 @@ PetscErrorCode MyKSPMonitor(KSP ksp,PetscInt n,PetscReal rnorm,void *dummy)
         data from multiple processors so that the output
         is not jumbled.
   */
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"iteration %D solution vector:\n",n));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"iteration %" PetscInt_FMT " solution vector:\n",n));
   PetscCall(VecView(x,PETSC_VIEWER_STDOUT_WORLD));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"iteration %D KSP Residual norm %14.12e \n",n,rnorm));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"iteration %" PetscInt_FMT " KSP Residual norm %14.12e \n",n,(double)rnorm));
   return 0;
 }
 

@@ -196,11 +196,11 @@ static PetscErrorCode TaoSetFromOptions_LMVM(PetscOptionItems *PetscOptionsObjec
   TAO_LMVM       *lm = (TAO_LMVM *)tao->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Limited-memory variable-metric method for unconstrained optimization"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Limited-memory variable-metric method for unconstrained optimization");
   PetscCall(PetscOptionsBool("-tao_lmvm_recycle","enable recycling of the BFGS matrix between subsequent TaoSolve() calls","",lm->recycle,&lm->recycle,NULL));
   PetscCall(TaoLineSearchSetFromOptions(tao->linesearch));
   PetscCall(MatSetFromOptions(lm->M));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -214,11 +214,11 @@ static PetscErrorCode TaoView_LMVM(Tao tao, PetscViewer viewer)
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
   if (isascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  Gradient steps: %D\n", lm->grad));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Gradient steps: %" PetscInt_FMT "\n", lm->grad));
     if (lm->recycle) {
       PetscCall(PetscViewerASCIIPrintf(viewer, "  Recycle: on\n"));
       recycled_its = lm->bfgs + lm->grad;
-      PetscCall(PetscViewerASCIIPrintf(viewer, "  Total recycled iterations: %D\n", recycled_its));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "  Total recycled iterations: %" PetscInt_FMT "\n", recycled_its));
     }
   }
   PetscFunctionReturn(0);

@@ -157,9 +157,9 @@ static PetscErrorCode MatCreateSubMatrices_MPIAdj_Private(Mat mat,PetscInt n,con
       PetscCall(PetscObjectGetComm((PetscObject)irow[i],&scomm_row));
       PetscCall(PetscObjectGetComm((PetscObject)icol[i],&scomm_col));
       PetscCallMPI(MPI_Comm_compare(scomm_row,scomm_col,&issame));
-      PetscCheckFalse(issame != MPI_IDENT,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"row index set must have the same comm as the col index set");
+      PetscCheck(issame == MPI_IDENT,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"row index set must have the same comm as the col index set");
       PetscCallMPI(MPI_Comm_compare(scomm_row,PETSC_COMM_SELF,&issame));
-      PetscCheckFalse(issame == MPI_IDENT,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP," can not use PETSC_COMM_SELF as comm when extracting a parallel submatrix");
+      PetscCheck(issame != MPI_IDENT,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP," can not use PETSC_COMM_SELF as comm when extracting a parallel submatrix");
     } else {
       scomm_row = PETSC_COMM_SELF;
     }
@@ -180,7 +180,7 @@ static PetscErrorCode MatCreateSubMatrices_MPIAdj_Private(Mat mat,PetscInt n,con
     for (j=0; j<irow_n; j++) {
       for (k=sxadj[j]; k<sxadj[j+1]; k++) {
         PetscCall(PetscFindInt(sadjncy[k],nindx,indices,&loc));
-        PetscCheckFalse(loc<0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"can not find col %" PetscInt_FMT,sadjncy[k]);
+        PetscCheck(loc>=0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"can not find col %" PetscInt_FMT,sadjncy[k]);
         sadjncy[k] = loc;
       }
     }
@@ -191,7 +191,7 @@ static PetscErrorCode MatCreateSubMatrices_MPIAdj_Private(Mat mat,PetscInt n,con
        Mat_MPIAdj         *sa  = (Mat_MPIAdj*)((sadj)->data);
        PetscCall(PetscObjectGetComm((PetscObject)sadj,&scomm_mat));
        PetscCallMPI(MPI_Comm_compare(scomm_row,scomm_mat,&issame));
-       PetscCheckFalse(issame != MPI_IDENT,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"submatrix  must have the same comm as the col index set");
+       PetscCheck(issame == MPI_IDENT,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"submatrix  must have the same comm as the col index set");
        PetscCall(PetscArraycpy(sa->i,sxadj,irow_n+1));
        PetscCall(PetscArraycpy(sa->j,sadjncy,sxadj[irow_n]));
        if (svalues) PetscCall(PetscArraycpy(sa->values,svalues,sxadj[irow_n]));
@@ -232,7 +232,7 @@ static PetscErrorCode MatView_MPIAdj_ASCII(Mat A,PetscViewer viewer)
   PetscCall(PetscViewerGetFormat(viewer,&format));
   if (format == PETSC_VIEWER_ASCII_INFO) {
     PetscFunctionReturn(0);
-  } else PetscCheckFalse(format == PETSC_VIEWER_ASCII_MATLAB,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"MATLAB format not supported");
+  } else PetscCheck(format != PETSC_VIEWER_ASCII_MATLAB,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"MATLAB format not supported");
   else {
     PetscCall(PetscViewerASCIIUseTabs(viewer,PETSC_FALSE));
     PetscCall(PetscViewerASCIIPushSynchronized(viewer));
@@ -360,7 +360,7 @@ static PetscErrorCode MatEqual_MPIAdj(Mat A,Mat B,PetscBool * flg)
   /* if a->j are the same */
   PetscCall(PetscMemcmp(a->j,b->j,(a->nz)*sizeof(PetscInt),&flag));
 
-  PetscCallMPI(MPIU_Allreduce(&flag,flg,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)A)));
+  PetscCall(MPIU_Allreduce(&flag,flg,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)A)));
   PetscFunctionReturn(0);
 }
 
@@ -623,12 +623,12 @@ static PetscErrorCode  MatMPIAdjSetPreallocation_MPIAdj(Mat B,PetscInt *i,PetscI
   PetscCall(PetscLayoutSetUp(B->cmap));
   if (values) useedgeweights = PETSC_TRUE; else useedgeweights = PETSC_FALSE;
   /* Make everybody knows if they are using edge weights or not */
-  PetscCallMPI(MPIU_Allreduce((int*)&useedgeweights,(int*)&b->useedgeweights,1,MPI_INT,MPI_MAX,PetscObjectComm((PetscObject)B)));
+  PetscCall(MPIU_Allreduce((int*)&useedgeweights,(int*)&b->useedgeweights,1,MPI_INT,MPI_MAX,PetscObjectComm((PetscObject)B)));
 
   if (PetscDefined(USE_DEBUG)) {
     PetscInt ii;
 
-    PetscCheckFalse(i[0] != 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"First i[] index must be zero, instead it is %" PetscInt_FMT,i[0]);
+    PetscCheck(i[0] == 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"First i[] index must be zero, instead it is %" PetscInt_FMT,i[0]);
     for (ii=1; ii<B->rmap->n; ii++) {
       PetscCheckFalse(i[ii] < 0 || i[ii] < i[ii-1],PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"i[%" PetscInt_FMT "]=%" PetscInt_FMT " index is out of range: i[%" PetscInt_FMT "]=%" PetscInt_FMT,ii,i[ii],ii-1,i[ii-1]);
     }
@@ -710,7 +710,7 @@ PetscErrorCode  MatMPIAdjToSeq_MPIAdj(Mat A,Mat *B)
   PetscCall(MatGetSize(A,&M,&N));
   PetscCall(MatGetLocalSize(A,&m,NULL));
   nz   = adj->nz;
-  PetscCheckFalse(adj->i[m] != nz,PETSC_COMM_SELF,PETSC_ERR_PLIB,"nz %" PetscInt_FMT " not correct i[m] %" PetscInt_FMT,nz,adj->i[m]);
+  PetscCheck(adj->i[m] == nz,PETSC_COMM_SELF,PETSC_ERR_PLIB,"nz %" PetscInt_FMT " not correct i[m] %" PetscInt_FMT,nz,adj->i[m]);
   PetscCallMPI(MPI_Allreduce(&nz,&NZ,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)A)));
 
   PetscCall(PetscMPIIntCast(nz,&mnz));
@@ -766,7 +766,7 @@ PetscErrorCode MatMPIAdjCreateNonemptySubcommMat(Mat A,Mat *B)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
-  PetscCall(PetscUseMethod(A,"MatMPIAdjCreateNonemptySubcommMat_C",(Mat,Mat*),(A,B)));
+  PetscUseMethod(A,"MatMPIAdjCreateNonemptySubcommMat_C",(Mat,Mat*),(A,B));
   PetscFunctionReturn(0);
 }
 
@@ -814,7 +814,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPIAdj(Mat B)
 PetscErrorCode  MatMPIAdjToSeq(Mat A,Mat *B)
 {
   PetscFunctionBegin;
-  PetscCall(PetscUseMethod(A,"MatMPIAdjToSeq_C",(Mat,Mat*),(A,B)));
+  PetscUseMethod(A,"MatMPIAdjToSeq_C",(Mat,Mat*),(A,B));
   PetscFunctionReturn(0);
 }
 
@@ -837,7 +837,7 @@ PetscErrorCode  MatMPIAdjToSeq(Mat A,Mat *B)
 PetscErrorCode  MatMPIAdjSetPreallocation(Mat B,PetscInt *i,PetscInt *j,PetscInt *values)
 {
   PetscFunctionBegin;
-  PetscCall(PetscTryMethod(B,"MatMPIAdjSetPreallocation_C",(Mat,PetscInt*,PetscInt*,PetscInt*),(B,i,j,values)));
+  PetscTryMethod(B,"MatMPIAdjSetPreallocation_C",(Mat,PetscInt*,PetscInt*,PetscInt*),(B,i,j,values));
   PetscFunctionReturn(0);
 }
 

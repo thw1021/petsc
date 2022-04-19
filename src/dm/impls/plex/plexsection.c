@@ -218,7 +218,7 @@ static PetscErrorCode DMPlexCreateSectionBCDof(DM dm, PetscInt numBC, const Pets
         /* We assume that a point may have multiple "nodes", which are collections of Nc dofs,
            and that those dofs are numbered n*Nc+c */
         if (Nf) {
-          PetscCheckFalse(numConst % Nc,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Point %D has %D dof which is not divisible by %D field components", p, numConst, Nc);
+          PetscCheck(numConst % Nc == 0,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Point %" PetscInt_FMT " has %" PetscInt_FMT " dof which is not divisible by %" PetscInt_FMT " field components", p, numConst, Nc);
           numConst = (numConst/Nc) * cNc;
         } else {
           numConst = PetscMin(numConst, cNc);
@@ -451,7 +451,7 @@ PetscErrorCode DMCreateLocalSection_Plex(DM dm)
     PetscCall(PetscObjectGetClassId(obj, &id));
     if (id == PETSCFE_CLASSID)      {isFE[f] = PETSC_TRUE;}
     else if (id == PETSCFV_CLASSID) {isFE[f] = PETSC_FALSE;}
-    else SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Unknown discretization type for field %D", f);
+    else SETERRQ(PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Unknown discretization type for field %" PetscInt_FMT, f);
   }
   /* Allocate boundary point storage for FEM boundaries */
   PetscCall(DMGetNumDS(dm, &Nds));
@@ -461,7 +461,7 @@ PetscErrorCode DMCreateLocalSection_Plex(DM dm)
 
     PetscCall(DMGetRegionNumDS(dm, s, NULL, NULL, &dsBC));
     PetscCall(PetscDSGetNumBoundary(dsBC, &numBd));
-    PetscCheckFalse(!Nf && numBd,PetscObjectComm((PetscObject)dm), PETSC_ERR_PLIB, "number of fields is zero and number of boundary conditions is nonzero (this should never happen)");
+    PetscCheck(Nf || !numBd,PetscObjectComm((PetscObject)dm), PETSC_ERR_PLIB, "number of fields is zero and number of boundary conditions is nonzero (this should never happen)");
     for (bd = 0; bd < numBd; ++bd) {
       PetscInt                field;
       DMBoundaryConditionType type;

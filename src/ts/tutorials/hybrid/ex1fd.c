@@ -186,7 +186,6 @@ int main(int argc,char **argv)
   Vec            U;             /* solution will be stored here */
   Mat            A;             /* Jacobian matrix */
   Mat            Ap;            /* dfdp */
-  PetscErrorCode ierr;
   PetscMPIInt    size;
   PetscInt       n = 2;
   PetscScalar    *u;
@@ -206,12 +205,12 @@ int main(int argc,char **argv)
   app.mode = 1;
   app.lambda1 = 2.75;
   app.lambda2 = 0.36;
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"ex1 options","");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"ex1 options","");
   {
     PetscCall(PetscOptionsReal("-lambda1","","",app.lambda1,&app.lambda1,NULL));
     PetscCall(PetscOptionsReal("-lambda2","","",app.lambda2,&app.lambda2,NULL));
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     Create necessary matrix and vectors
@@ -280,7 +279,7 @@ int main(int argc,char **argv)
   PetscCall(VecGetArray(U,&u));
   sensi[0] = (u[0]-tmp[0])/delta;
   sensi[1] = (u[1]-tmp[1])/delta;
-  PetscCall(PetscPrintf(PETSC_COMM_SELF,"d x1(tf) /d x1(t0) = %f d x2(tf) / d x1(t0) = %f \n",sensi[0],sensi[1]));
+  PetscCall(PetscPrintf(PETSC_COMM_SELF,"d x1(tf) /d x1(t0) = %f d x2(tf) / d x1(t0) = %f \n",(double)sensi[0],(double)sensi[1]));
   u[0] = 0;
   u[1] = 1+delta;
   PetscCall(VecRestoreArray(U,&u));
@@ -290,7 +289,7 @@ int main(int argc,char **argv)
   PetscCall(VecGetArray(U,&u));
   sensi[0] = (u[0]-tmp[0])/delta;
   sensi[1] = (u[1]-tmp[1])/delta;
-  PetscCall(PetscPrintf(PETSC_COMM_SELF,"d x1(tf) /d x2(t0) = %f d x2(tf) / d x2(t0) = %f \n",sensi[0],sensi[1]));
+  PetscCall(PetscPrintf(PETSC_COMM_SELF,"d x1(tf) /d x2(t0) = %f d x2(tf) / d x2(t0) = %f \n",(double)sensi[0],(double)sensi[1]));
   u[0] = 0;
   u[1] = 1;
   app.lambda1 = app.lambda1+delta;
@@ -301,7 +300,7 @@ int main(int argc,char **argv)
   PetscCall(VecGetArray(U,&u));
   sensi[0] = (u[0]-tmp[0])/delta;
   sensi[1] = (u[1]-tmp[1])/delta;
-  PetscCall(PetscPrintf(PETSC_COMM_SELF,"Final gradients: d x1(tf) /d p = %f d x2(tf) / d p = %f \n",sensi[0],sensi[1]));
+  PetscCall(PetscPrintf(PETSC_COMM_SELF,"Final gradients: d x1(tf) /d p = %f d x2(tf) / d p = %f \n",(double)sensi[0],(double)sensi[1]));
   PetscCall(VecRestoreArray(U,&u));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

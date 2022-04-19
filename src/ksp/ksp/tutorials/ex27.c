@@ -1,10 +1,5 @@
 
 static char help[] = "Reads a PETSc matrix and vector from a file and solves the normal equations.\n\n";
-/*T
-   Concepts: KSP^solving a linear system
-   Concepts: Normal equations
-   Processors: n
-T*/
 
 /*
   Include "petscksp.h" so that we can use KSP solvers.  Note that this file
@@ -140,7 +135,7 @@ int main(int argc,char **args)
     PetscCall(MatSetFromOptions(A));
     PetscCall(MatLoad(A,fd));
     PetscCall(MatGetLocalSize(A,&m1,&n1));
-    PetscCheck(m1 == m && n1 == n,PETSC_COMM_WORLD,PETSC_ERR_PLIB,"resulting sizes differ from requested ones: %D %D != %D %D",m1,n1,m,n);
+    PetscCheck(m1 == m && n1 == n,PETSC_COMM_WORLD,PETSC_ERR_PLIB,"resulting sizes differ from requested ones: %" PetscInt_FMT " %" PetscInt_FMT " != %" PetscInt_FMT " %" PetscInt_FMT,m1,n1,m,n);
   }
   PetscCall(MatGetLocalSize(A,&m,&n));
 
@@ -260,7 +255,7 @@ int main(int argc,char **args)
   PetscCall(KSPGetIterationNumber(ksp,&its));
   PetscCall(KSPGetType(ksp,&ksptype));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"KSP type: %s\n",ksptype));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Number of iterations = %3D\n",its));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Number of iterations = %3" PetscInt_FMT "\n",its));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Residual norm %g\n",(double)norm));
 
   /*

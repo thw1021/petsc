@@ -9,21 +9,20 @@ typedef struct {
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
-  PetscMPIInt    size;
-  PetscInt       n;
-  PetscErrorCode ierr;
+  PetscMPIInt size;
+  PetscInt    n;
 
   PetscFunctionBeginUser;
   options->metric  = PETSC_FALSE;
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCall(PetscCalloc1(size, &options->refcell));
-  n    = size;
+  n = size;
 
-  ierr = PetscOptionsBegin(comm, "", "Parallel Mesh Adaptation Options", "DMPLEX");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "Parallel Mesh Adaptation Options", "DMPLEX");
   PetscCall(PetscOptionsBool("-metric", "Flag for metric refinement", "ex41.c", options->metric, &options->metric, NULL));
   PetscCall(PetscOptionsIntArray("-refcell", "The cell to be refined", "ex41.c", options->refcell, &n, NULL));
-  PetscCheckFalse(n && n != size,comm, PETSC_ERR_ARG_SIZ, "Only gave %D cells to refine, must give one for all %D processes", n, size);
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  if (n) PetscCheck(n == size,comm, PETSC_ERR_ARG_SIZ, "Only gave %" PetscInt_FMT " cells to refine, must give one for all %d processes", n, size);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 

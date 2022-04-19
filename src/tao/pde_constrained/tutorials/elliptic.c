@@ -1,22 +1,5 @@
 #include <petsc/private/taoimpl.h>
 
-/*T
-   Concepts: TAO^Solving a system of nonlinear equations, nonlinear least squares
-   Routines: TaoCreate();
-   Routines: TaoSetType();
-   Routines: TaoSetSolution();
-   Routines: TaoSetObjective();
-   Routines: TaoSetGradient();
-   Routines: TaoSetConstraintsRoutine();
-   Routines: TaoSetJacobianStateRoutine();
-   Routines: TaoSetJacobianDesignRoutine();
-   Routines: TaoSetStateDesignIS();
-   Routines: TaoSetFromOptions();
-   Routines: TaoSolve();
-   Routines: TaoDestroy();
-   Processors: n
-T*/
-
 typedef struct {
   PetscInt n; /* Number of total variables */
   PetscInt m; /* Number of constraints */
@@ -115,7 +98,6 @@ static  char help[]="";
 
 int main(int argc, char **argv)
 {
-  PetscErrorCode     ierr;
   Vec                x0;
   Tao                tao;
   AppCtx             user;
@@ -124,7 +106,7 @@ int main(int argc, char **argv)
 
   PetscCall(PetscInitialize(&argc, &argv, (char*)0,help));
   user.mx = 8;
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"elliptic example",NULL);PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"elliptic example",NULL);
   PetscCall(PetscOptionsInt("-mx","Number of grid points in each direction","",user.mx,&user.mx,NULL));
   user.ns = 6;
   PetscCall(PetscOptionsInt("-ns","Number of data samples (1<=ns<=8)","",user.ns,&user.ns,NULL));
@@ -142,7 +124,7 @@ int main(int argc, char **argv)
   user.use_lrc = PETSC_FALSE;
   PetscCall(PetscOptionsBool("-use_lrc","Use lrc matrix for Js","",user.use_lrc,&user.use_lrc,NULL));
   PetscCall(PetscOptionsInt("-ntests","Number of times to repeat TaoSolve","",ntests,&ntests,NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   user.m = user.ns*user.mx*user.mx*user.mx; /* number of constraints */
   user.nstate =  user.m;
@@ -177,13 +159,13 @@ int main(int argc, char **argv)
   PetscCall(PetscLogStagePush(user.stages[1]));
   for (i=0; i<ntests; i++) {
     PetscCall(TaoSolve(tao));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"KSP Iterations = %D\n",user.ksp_its));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"KSP Iterations = %" PetscInt_FMT "\n",user.ksp_its));
     PetscCall(VecCopy(x0,user.x));
   }
   PetscCall(PetscLogStagePop());
   PetscCall(PetscBarrier((PetscObject)user.x));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"KSP iterations within initialization: "));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%D\n",user.ksp_its_initial));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%" PetscInt_FMT "\n",user.ksp_its_initial));
 
   PetscCall(TaoDestroy(&tao));
   PetscCall(VecDestroy(&x0));

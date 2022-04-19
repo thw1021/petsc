@@ -12,17 +12,14 @@ typedef struct {
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBeginUser;
   options->dim  = 2;
   options->dim_inp = 2;
   options->Np   = 100;
-
-  ierr = PetscOptionsBegin(comm, "", "Test of colorized scatter plot", "");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "Test of colorized scatter plot", "");
   PetscCall(PetscOptionsInt("-Np", "Number of particles", "ex35.c", options->Np, &options->Np, PETSC_NULL));
   PetscCall(PetscOptionsInt("-dim", "Number of dimensions", "ex35.c", options->dim_inp, &options->dim_inp, PETSC_NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -142,7 +139,7 @@ int main(int argc, char **argv)
     PetscCall(VecDestroy(&subvecvx));
     PetscCall(VecDestroy(&subvecvy));
     PetscCall(VecDestroy(&randVec));
-  } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Do not support dimension %D", dim);
+  } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Do not support dimension %" PetscInt_FMT, dim);
 
   PetscCall(PetscDrawCreate(comm, NULL, "monitor_particle_positions", 0,0,400,300, &positionDraw));
   PetscCall(PetscDrawSetFromOptions(positionDraw));

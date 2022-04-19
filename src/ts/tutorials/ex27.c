@@ -1,11 +1,5 @@
 static char help[] = "Time-Dependent Reactive Flow example in 2D with Darcy Flow";
 
-/*T
-   Concepts: Solving a multicomponent time-dependent reactive flow system
-   Concepts: DMDA with timestepping
-   Processors: n
-T*/
-
 /*
 
 This example solves the elementary chemical reaction:
@@ -73,7 +67,6 @@ extern PetscErrorCode ReactingFlowPostCheck(SNESLineSearch,Vec,Vec,Vec,PetscBool
 
 PetscErrorCode SetFromOptions(AppCtx * ctx)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j;
 
   PetscFunctionBeginUser;
@@ -125,7 +118,6 @@ int main(int argc,char **argv)
   SNESLineSearch linesearch;
   Vec            x;
   AppCtx         ctx;
-  PetscErrorCode ierr;
   DM             da;
 
   PetscCall(PetscInitialize(&argc,&argv,(char*)0,help));
@@ -170,13 +162,11 @@ int main(int argc,char **argv)
 PetscErrorCode FormInitialGuess(DM da,AppCtx *ctx,Vec X)
 {
   PetscInt       i,j,l,Mx,My,xs,ys,xm,ym;
-  PetscErrorCode ierr;
   Field          **x;
 
   PetscFunctionBeginUser;
-  ierr = DMDAGetInfo(da,PETSC_IGNORE,&Mx,&My,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,
-                     PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE);
-
+  PetscCall(DMDAGetInfo(da,PETSC_IGNORE,&Mx,&My,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,
+                        PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE));
   PetscCall(DMDAVecGetArray(da,X,&x));
   PetscCall(DMDAGetCorners(da,&xs,&ys,NULL,&xm,&ym,NULL));
 
@@ -198,7 +188,6 @@ PetscErrorCode FormInitialGuess(DM da,AppCtx *ctx,Vec X)
 
 PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info,PetscScalar ptime,Field **x,Field **xt,Field **f,AppCtx *ctx)
 {
-  PetscErrorCode ierr;
   PetscInt       i,j,l,m;
   PetscReal      hx,hy,dhx,dhy,hxdhy,hydhx,scale;
   PetscScalar    u,uxx,uyy;
@@ -296,7 +285,6 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info,PetscScalar ptime,Field **
 PetscErrorCode ReactingFlowPostCheck(SNESLineSearch linesearch, Vec X, Vec Y, Vec W, PetscBool *changed_y, PetscBool *changed_w, void *vctx)
 {
   PetscInt       i,j,l,Mx,My,xs,ys,xm,ym;
-  PetscErrorCode ierr;
   Field          **x;
   SNES           snes;
   DM             da;
@@ -310,8 +298,8 @@ PetscErrorCode ReactingFlowPostCheck(SNESLineSearch linesearch, Vec X, Vec Y, Ve
   *changed_w = PETSC_TRUE;
   PetscCall(SNESLineSearchGetSNES(linesearch, &snes));
   PetscCall(SNESGetDM(snes,&da));
-  ierr = DMDAGetInfo(da,PETSC_IGNORE,&Mx,&My,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,
-                     PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE);
+  PetscCall(DMDAGetInfo(da,PETSC_IGNORE,&Mx,&My,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,
+                        PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE));
   PetscCall(DMDAVecGetArray(da,W,&x));
   PetscCall(DMDAGetCorners(da,&xs,&ys,NULL,&xm,&ym,NULL));
   for (j=ys; j<ys+ym; j++) {
@@ -329,7 +317,6 @@ PetscErrorCode FormIFunction(TS ts,PetscReal ptime,Vec X,Vec Xdot,Vec F,void *us
 {
   DMDALocalInfo  info;
   Field          **u,**udot,**fu;
-  PetscErrorCode ierr;
   Vec            localX;
   DM             da;
 

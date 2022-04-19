@@ -453,9 +453,9 @@ static PetscErrorCode DMPlexTransformMapCoordinates_BL(DMPlexTransform tr, DMPol
   PetscFunctionBeginHot;
   switch (pct) {
     case DM_POLYTOPE_POINT_PRISM_TENSOR:
-      PetscCheckFalse(ct != DM_POLYTOPE_POINT,PETSC_COMM_SELF, PETSC_ERR_SUP, "Not for target point type %s", DMPolytopeTypes[ct]);
-      PetscCheckFalse(Nv != 2,PETSC_COMM_SELF, PETSC_ERR_SUP, "Number of parent vertices %D != 2", Nv);
-      PetscCheckFalse(r >= bl->n || r < 0,PETSC_COMM_SELF, PETSC_ERR_SUP, "Invalid replica %D, must be in [0, %D)", r, bl->n);
+      PetscCheck(ct == DM_POLYTOPE_POINT,PETSC_COMM_SELF, PETSC_ERR_SUP, "Not for target point type %s", DMPolytopeTypes[ct]);
+      PetscCheck(Nv == 2,PETSC_COMM_SELF, PETSC_ERR_SUP, "Number of parent vertices %" PetscInt_FMT " != 2", Nv);
+      PetscCheckFalse(r >= bl->n || r < 0,PETSC_COMM_SELF, PETSC_ERR_SUP, "Invalid replica %" PetscInt_FMT ", must be in [0, %" PetscInt_FMT ")", r, bl->n);
       for (d = 0; d < dE; ++d) out[d] = in[d] + bl->h[r] * (in[d + dE] - in[d]);
       break;
     default: PetscCall(DMPlexTransformMapCoordinatesBarycenter_Internal(tr, pct, ct, p, r, Nv, dE, in, out));
@@ -471,7 +471,7 @@ static PetscErrorCode DMPlexTransformSetFromOptions_BL(PetscOptionItems *PetscOp
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tr, DMPLEXTRANSFORM_CLASSID, 2);
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"DMPlexTransform Boundary Layer Options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"DMPlexTransform Boundary Layer Options");
   PetscCall(PetscOptionsBoundedInt("-dm_plex_transform_bl_splits", "Number of divisions of a cell", "", bl->n, &bl->n, NULL, 1));
   PetscCall(PetscOptionsReal("-dm_plex_transform_bl_height_factor", "Factor increase for height at each division", "", bl->r, &bl->r, NULL));
   PetscCall(PetscOptionsIntArray("-dm_plex_transform_bl_ref_cell", "Mark cells for refinement", "", cells, &n, &flg));
@@ -483,7 +483,7 @@ static PetscErrorCode DMPlexTransformSetFromOptions_BL(PetscOptionItems *PetscOp
     PetscCall(DMPlexTransformSetActive(tr, active));
     PetscCall(DMLabelDestroy(&active));
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 

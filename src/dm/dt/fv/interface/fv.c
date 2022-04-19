@@ -179,7 +179,6 @@ PetscErrorCode PetscLimiterSetFromOptions(PetscLimiter lim)
   const char    *defaultType;
   char           name[256];
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(lim, PETSCLIMITER_CLASSID, 1);
@@ -187,7 +186,7 @@ PetscErrorCode PetscLimiterSetFromOptions(PetscLimiter lim)
   else                                 defaultType = ((PetscObject) lim)->type_name;
   PetscCall(PetscLimiterRegisterAll());
 
-  ierr = PetscObjectOptionsBegin((PetscObject) lim);PetscCall(ierr);
+  PetscObjectOptionsBegin((PetscObject) lim);
   PetscCall(PetscOptionsFList("-petsclimiter_type", "Finite volume slope limiter", "PetscLimiterSetType", PetscLimiterList, defaultType, name, 256, &flg));
   if (flg) {
     PetscCall(PetscLimiterSetType(lim, name));
@@ -197,7 +196,7 @@ PetscErrorCode PetscLimiterSetFromOptions(PetscLimiter lim)
   if (lim->ops->setfromoptions) PetscCall((*lim->ops->setfromoptions)(lim));
   /* process any options handlers added with PetscObjectAddOptionsHandler() */
   PetscCall(PetscObjectProcessOptionsHandlers(PetscOptionsObject,(PetscObject) lim));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscCall(PetscLimiterViewFromOptions(lim, NULL, "-petsclimiter_view"));
   PetscFunctionReturn(0);
 }
@@ -1052,7 +1051,6 @@ PetscErrorCode PetscFVSetFromOptions(PetscFV fvm)
   const char    *defaultType;
   char           name[256];
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
@@ -1060,7 +1058,7 @@ PetscErrorCode PetscFVSetFromOptions(PetscFV fvm)
   else                                 defaultType = ((PetscObject) fvm)->type_name;
   PetscCall(PetscFVRegisterAll());
 
-  ierr = PetscObjectOptionsBegin((PetscObject) fvm);PetscCall(ierr);
+  PetscObjectOptionsBegin((PetscObject) fvm);
   PetscCall(PetscOptionsFList("-petscfv_type", "Finite volume discretization", "PetscFVSetType", PetscFVList, defaultType, name, 256, &flg));
   if (flg) {
     PetscCall(PetscFVSetType(fvm, name));
@@ -1073,7 +1071,7 @@ PetscErrorCode PetscFVSetFromOptions(PetscFV fvm)
   /* process any options handlers added with PetscObjectAddOptionsHandler() */
   PetscCall(PetscObjectProcessOptionsHandlers(PetscOptionsObject,(PetscObject) fvm));
   PetscCall(PetscLimiterSetFromOptions(fvm->limiter));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscCall(PetscFVViewFromOptions(fvm, NULL, "-petscfv_view"));
   PetscFunctionReturn(0);
 }
@@ -1784,10 +1782,10 @@ static PetscErrorCode PetscFVView_Upwind_Ascii(PetscFV fv, PetscViewer viewer)
   PetscCall(PetscFVGetNumComponents(fv, &Nc));
   PetscCall(PetscViewerGetFormat(viewer, &format));
   PetscCall(PetscViewerASCIIPrintf(viewer, "Upwind Finite Volume:\n"));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "  num components: %d\n", Nc));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "  num components: %" PetscInt_FMT "\n", Nc));
   for (c = 0; c < Nc; c++) {
     if (fv->componentNames[c]) {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "    component %d: %s\n", c, fv->componentNames[c]));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "    component %" PetscInt_FMT ": %s\n", c, fv->componentNames[c]));
     }
   }
   PetscFunctionReturn(0);
@@ -1897,10 +1895,10 @@ static PetscErrorCode PetscFVView_LeastSquares_Ascii(PetscFV fv, PetscViewer vie
   PetscCall(PetscFVGetNumComponents(fv, &Nc));
   PetscCall(PetscViewerGetFormat(viewer, &format));
   PetscCall(PetscViewerASCIIPrintf(viewer, "Finite Volume with Least Squares Reconstruction:\n"));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "  num components: %d\n", Nc));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "  num components: %" PetscInt_FMT "\n", Nc));
   for (c = 0; c < Nc; c++) {
     if (fv->componentNames[c]) {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "    component %d: %s\n", c, fv->componentNames[c]));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "    component %" PetscInt_FMT ": %s\n", c, fv->componentNames[c]));
     }
   }
   PetscFunctionReturn(0);
@@ -2022,7 +2020,7 @@ static PetscErrorCode PetscFVLeastSquaresPseudoInverseSVD_Static(PetscInt m,Pets
 #endif
   PetscCheck(!info,PETSC_COMM_SELF,PETSC_ERR_LIB,"xGELSS error");
   /* The following check should be turned into a diagnostic as soon as someone wants to do this intentionally */
-  PetscCheckFalse(irank < PetscMin(M,N),PETSC_COMM_SELF,PETSC_ERR_USER,"Rank deficient least squares fit, indicates an isolated cell with two colinear points");
+  PetscCheck(irank >= PetscMin(M,N),PETSC_COMM_SELF,PETSC_ERR_USER,"Rank deficient least squares fit, indicates an isolated cell with two colinear points");
   PetscFunctionReturn(0);
 }
 
@@ -2032,7 +2030,6 @@ static PetscErrorCode PetscFVLeastSquaresDebugCell_Static(PetscFV fvm, PetscInt 
   PetscReal       grad[2] = {0, 0};
   const PetscInt *faces;
   PetscInt        numFaces, f;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscCall(DMPlexGetConeSize(dm, cell, &numFaces));
@@ -2080,8 +2077,8 @@ static PetscErrorCode PetscFVComputeGradient_LeastSquares(PetscFV fvm, PetscInt 
 
   PetscFunctionBegin;
   if (numFaces > maxFaces) {
-    PetscCheckFalse(maxFaces < 0,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Reconstruction has not been initialized, call PetscFVLeastSquaresSetMaxFaces()");
-    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of input faces %D > %D maxfaces", numFaces, maxFaces);
+    PetscCheck(maxFaces >= 0,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Reconstruction has not been initialized, call PetscFVLeastSquaresSetMaxFaces()");
+    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of input faces %" PetscInt_FMT " > %" PetscInt_FMT " maxfaces", numFaces, maxFaces);
   }
   PetscCall(PetscFVGetSpatialDimension(fvm, &dim));
   for (f = 0; f < numFaces; ++f) {
@@ -2216,6 +2213,6 @@ PetscErrorCode PetscFVLeastSquaresSetMaxFaces(PetscFV fvm, PetscInt maxFaces)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
-  PetscCall(PetscTryMethod(fvm, "PetscFVLeastSquaresSetMaxFaces_C", (PetscFV,PetscInt), (fvm,maxFaces)));
+  PetscTryMethod(fvm, "PetscFVLeastSquaresSetMaxFaces_C", (PetscFV,PetscInt), (fvm,maxFaces));
   PetscFunctionReturn(0);
 }

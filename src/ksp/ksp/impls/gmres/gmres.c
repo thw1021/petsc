@@ -229,7 +229,7 @@ PetscErrorCode KSPSolve_GMRES(KSP ksp)
   PetscInt       N = gmres->max_k + 1;
 
   PetscFunctionBegin;
-  PetscCheckFalse(ksp->calc_sings && !gmres->Rsvd,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ORDER,"Must call KSPSetComputeSingularValues() before KSPSetUp() is called");
+  PetscCheck(!ksp->calc_sings || gmres->Rsvd,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ORDER,"Must call KSPSetComputeSingularValues() before KSPSetUp() is called");
 
   PetscCall(PetscObjectSAWsTakeAccess((PetscObject)ksp));
   ksp->its = 0;
@@ -351,7 +351,7 @@ static PetscErrorCode KSPGMRESBuildSoln(PetscScalar *nrs,Vec vs,Vec vdest,KSP ks
     PetscCheck(!ksp->errorifnotconverged,PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"You reached the break down in GMRES; HH(it,it) = 0");
     else ksp->reason = KSP_DIVERGED_BREAKDOWN;
 
-    PetscCall(PetscInfo(ksp,"Likely your matrix or preconditioner is singular. HH(it,it) is identically zero; it = %D GRS(it) = %g\n",it,(double)PetscAbsScalar(*GRS(it))));
+    PetscCall(PetscInfo(ksp,"Likely your matrix or preconditioner is singular. HH(it,it) is identically zero; it = %" PetscInt_FMT " GRS(it) = %g\n",it,(double)PetscAbsScalar(*GRS(it))));
     PetscFunctionReturn(0);
   }
   for (ii=1; ii<=it; ii++) {
@@ -359,10 +359,10 @@ static PetscErrorCode KSPGMRESBuildSoln(PetscScalar *nrs,Vec vs,Vec vdest,KSP ks
     tt = *GRS(k);
     for (j=k+1; j<=it; j++) tt = tt - *HH(k,j) * nrs[j];
     if (*HH(k,k) == 0.0) {
-      PetscCheck(!ksp->errorifnotconverged,PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"Likely your matrix or preconditioner is singular. HH(k,k) is identically zero; k = %D",k);
+      PetscCheck(!ksp->errorifnotconverged,PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"Likely your matrix or preconditioner is singular. HH(k,k) is identically zero; k = %" PetscInt_FMT,k);
       else {
         ksp->reason = KSP_DIVERGED_BREAKDOWN;
-        PetscCall(PetscInfo(ksp,"Likely your matrix or preconditioner is singular. HH(k,k) is identically zero; k = %D\n",k));
+        PetscCall(PetscInfo(ksp,"Likely your matrix or preconditioner is singular. HH(k,k) is identically zero; k = %" PetscInt_FMT "\n",k));
         PetscFunctionReturn(0);
       }
     }
@@ -519,10 +519,10 @@ PetscErrorCode KSPView_GMRES(KSP ksp,PetscViewer viewer)
     cstr = "unknown orthogonalization";
   }
   if (iascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  restart=%D, using %s\n",gmres->max_k,cstr));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  restart=%" PetscInt_FMT ", using %s\n",gmres->max_k,cstr));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  happy breakdown tolerance %g\n",(double)gmres->haptol));
   } else if (isstring) {
-    PetscCall(PetscViewerStringSPrintf(viewer,"%s restart %D",cstr,gmres->max_k));
+    PetscCall(PetscViewerStringSPrintf(viewer,"%s restart %" PetscInt_FMT,cstr,gmres->max_k));
   }
   PetscFunctionReturn(0);
 }
@@ -569,14 +569,13 @@ PetscErrorCode  KSPGMRESMonitorKrylov(KSP ksp,PetscInt its,PetscReal fgnorm,void
 
 PetscErrorCode KSPSetFromOptions_GMRES(PetscOptionItems *PetscOptionsObject,KSP ksp)
 {
-  PetscErrorCode ierr;
   PetscInt       restart;
   PetscReal      haptol,breakdowntol;
   KSP_GMRES      *gmres = (KSP_GMRES*)ksp->data;
   PetscBool      flg;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"KSP GMRES Options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"KSP GMRES Options");
   PetscCall(PetscOptionsInt("-ksp_gmres_restart","Number of Krylov search directions","KSPGMRESSetRestart",gmres->max_k,&restart,&flg));
   if (flg) PetscCall(KSPGMRESSetRestart(ksp,restart));
   PetscCall(PetscOptionsReal("-ksp_gmres_haptol","Tolerance for exact convergence (happy ending)","KSPGMRESSetHapTol",gmres->haptol,&haptol,&flg));
@@ -590,8 +589,8 @@ PetscErrorCode KSPSetFromOptions_GMRES(PetscOptionItems *PetscOptionsObject,KSP 
   if (flg) PetscCall(KSPGMRESSetOrthogonalization(ksp,KSPGMRESClassicalGramSchmidtOrthogonalization));
   PetscCall(PetscOptionsBoolGroupEnd("-ksp_gmres_modifiedgramschmidt","Modified Gram-Schmidt (slow,more stable)","KSPGMRESSetOrthogonalization",&flg));
   if (flg) PetscCall(KSPGMRESSetOrthogonalization(ksp,KSPGMRESModifiedGramSchmidtOrthogonalization));
-  ierr = PetscOptionsEnum("-ksp_gmres_cgs_refinement_type","Type of iterative refinement for classical (unmodified) Gram-Schmidt","KSPGMRESSetCGSRefinementType",
-                          KSPGMRESCGSRefinementTypes,(PetscEnum)gmres->cgstype,(PetscEnum*)&gmres->cgstype,&flg);PetscCall(ierr);
+  PetscCall(PetscOptionsEnum("-ksp_gmres_cgs_refinement_type","Type of iterative refinement for classical (unmodified) Gram-Schmidt","KSPGMRESSetCGSRefinementType",
+                             KSPGMRESCGSRefinementTypes,(PetscEnum)gmres->cgstype,(PetscEnum*)&gmres->cgstype,&flg));
   flg  = PETSC_FALSE;
   PetscCall(PetscOptionsBool("-ksp_gmres_krylov_monitor","Plot the Krylov directions","KSPMonitorSet",flg,&flg,NULL));
   if (flg) {
@@ -599,7 +598,7 @@ PetscErrorCode KSPSetFromOptions_GMRES(PetscOptionItems *PetscOptionsObject,KSP 
     PetscCall(PetscViewersCreate(PetscObjectComm((PetscObject)ksp),&viewers));
     PetscCall(KSPMonitorSet(ksp,KSPGMRESMonitorKrylov,viewers,(PetscErrorCode (*)(void**))PetscViewersDestroy));
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -608,7 +607,7 @@ PetscErrorCode  KSPGMRESSetHapTol_GMRES(KSP ksp,PetscReal tol)
   KSP_GMRES *gmres = (KSP_GMRES*)ksp->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(tol < 0.0,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Tolerance must be non-negative");
+  PetscCheck(tol >= 0.0,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Tolerance must be non-negative");
   gmres->haptol = tol;
   PetscFunctionReturn(0);
 }
@@ -622,7 +621,7 @@ PetscErrorCode  KSPGMRESSetBreakdownTolerance_GMRES(KSP ksp,PetscReal tol)
     gmres->breakdowntol = 0.1;
     PetscFunctionReturn(0);
   }
-  PetscCheckFalse(tol < 0.0,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Breakdown tolerance must be non-negative");
+  PetscCheck(tol >= 0.0,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Breakdown tolerance must be non-negative");
   gmres->breakdowntol = tol;
   PetscFunctionReturn(0);
 }
@@ -641,7 +640,7 @@ PetscErrorCode  KSPGMRESSetRestart_GMRES(KSP ksp,PetscInt max_k)
   KSP_GMRES      *gmres = (KSP_GMRES*)ksp->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(max_k < 1,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Restart must be positive");
+  PetscCheck(max_k >= 1,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Restart must be positive");
   if (!ksp->setupstage) {
     gmres->max_k = max_k;
   } else if (gmres->max_k != max_k) {
@@ -718,7 +717,7 @@ PetscErrorCode  KSPGMRESSetCGSRefinementType(KSP ksp,KSPGMRESCGSRefinementType t
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
   PetscValidLogicalCollectiveEnum(ksp,type,2);
-  PetscCall(PetscTryMethod(ksp,"KSPGMRESSetCGSRefinementType_C",(KSP,KSPGMRESCGSRefinementType),(ksp,type)));
+  PetscTryMethod(ksp,"KSPGMRESSetCGSRefinementType_C",(KSP,KSPGMRESCGSRefinementType),(ksp,type));
   PetscFunctionReturn(0);
 }
 
@@ -746,7 +745,7 @@ PetscErrorCode  KSPGMRESGetCGSRefinementType(KSP ksp,KSPGMRESCGSRefinementType *
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
-  PetscCall(PetscUseMethod(ksp,"KSPGMRESGetCGSRefinementType_C",(KSP,KSPGMRESCGSRefinementType*),(ksp,type)));
+  PetscUseMethod(ksp,"KSPGMRESGetCGSRefinementType_C",(KSP,KSPGMRESCGSRefinementType*),(ksp,type));
   PetscFunctionReturn(0);
 }
 
@@ -773,7 +772,7 @@ PetscErrorCode  KSPGMRESSetRestart(KSP ksp, PetscInt restart)
   PetscFunctionBegin;
   PetscValidLogicalCollectiveInt(ksp,restart,2);
 
-  PetscCall(PetscTryMethod(ksp,"KSPGMRESSetRestart_C",(KSP,PetscInt),(ksp,restart)));
+  PetscTryMethod(ksp,"KSPGMRESSetRestart_C",(KSP,PetscInt),(ksp,restart));
   PetscFunctionReturn(0);
 }
 
@@ -797,7 +796,7 @@ PetscErrorCode  KSPGMRESSetRestart(KSP ksp, PetscInt restart)
 PetscErrorCode  KSPGMRESGetRestart(KSP ksp, PetscInt *restart)
 {
   PetscFunctionBegin;
-  PetscCall(PetscUseMethod(ksp,"KSPGMRESGetRestart_C",(KSP,PetscInt*),(ksp,restart)));
+  PetscUseMethod(ksp,"KSPGMRESGetRestart_C",(KSP,PetscInt*),(ksp,restart));
   PetscFunctionReturn(0);
 }
 
@@ -825,7 +824,7 @@ PetscErrorCode  KSPGMRESSetHapTol(KSP ksp,PetscReal tol)
 {
   PetscFunctionBegin;
   PetscValidLogicalCollectiveReal(ksp,tol,2);
-  PetscCall(PetscTryMethod((ksp),"KSPGMRESSetHapTol_C",(KSP,PetscReal),((ksp),(tol))));
+  PetscTryMethod((ksp),"KSPGMRESSetHapTol_C",(KSP,PetscReal),((ksp),(tol)));
   PetscFunctionReturn(0);
 }
 
@@ -852,7 +851,7 @@ PetscErrorCode  KSPGMRESSetBreakdownTolerance(KSP ksp,PetscReal tol)
 {
   PetscFunctionBegin;
   PetscValidLogicalCollectiveReal(ksp,tol,2);
-  PetscCall(PetscTryMethod((ksp),"KSPGMRESSetBreakdownTolerance_C",(KSP,PetscReal),(ksp,tol)));
+  PetscTryMethod((ksp),"KSPGMRESSetBreakdownTolerance_C",(KSP,PetscReal),(ksp,tol));
   PetscFunctionReturn(0);
 }
 

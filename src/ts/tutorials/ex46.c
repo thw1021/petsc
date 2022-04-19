@@ -235,14 +235,12 @@ static void g3_uu(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBeginUser;
   options->mms = 1;
 
-  ierr = PetscOptionsBegin(comm, "", "Navier-Stokes Equation Options", "DMPLEX");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "Navier-Stokes Equation Options", "DMPLEX");
   PetscCall(PetscOptionsInt("-mms", "The manufactured solution to use", "ex46.c", options->mms, &options->mms, NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -290,10 +288,10 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *ctx)
       PetscCall(PetscDSSetExactSolution(ds, 1, mms2_p_2d, ctx));
       PetscCall(DMAddBoundary(dm, DM_BC_ESSENTIAL, "wall", label, 1, &id, 0, 0, NULL, (void (*)(void)) mms2_u_2d, NULL, ctx, NULL));
       break;
-    default: SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid MMS %D", ctx->mms);
+    default: SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid MMS %" PetscInt_FMT, ctx->mms);
     }
     break;
-  default: SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid dimension %D", dim);
+  default: SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Invalid dimension %" PetscInt_FMT, dim);
   }
   PetscFunctionReturn(0);
 }

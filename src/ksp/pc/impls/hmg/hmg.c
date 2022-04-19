@@ -24,9 +24,9 @@ static PetscErrorCode PCHMGExtractSubMatrix_Private(Mat pmat,Mat *submat,MatReus
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)pmat,&comm));
-  PetscCheckFalse(component>=blocksize,comm,PETSC_ERR_ARG_INCOMP,"Component %D should be less than block size %D ",component,blocksize);
+  PetscCheck(component<blocksize,comm,PETSC_ERR_ARG_INCOMP,"Component %" PetscInt_FMT " should be less than block size %" PetscInt_FMT " ",component,blocksize);
   PetscCall(MatGetOwnershipRange(pmat,&rstart,&rend));
-  PetscCheckFalse((rend-rstart)%blocksize != 0,comm,PETSC_ERR_ARG_INCOMP,"Block size %D is inconsistent for [%D, %D) ",blocksize,rstart,rend);
+  PetscCheck((rend-rstart)%blocksize == 0,comm,PETSC_ERR_ARG_INCOMP,"Block size %" PetscInt_FMT " is inconsistent for [%" PetscInt_FMT ", %" PetscInt_FMT ") ",blocksize,rstart,rend);
   PetscCall(ISCreateStride(comm,(rend-rstart)/blocksize,rstart+component,blocksize,&isrow));
   PetscCall(MatCreateSubMatrix(pmat,isrow,isrow,reuse,submat));
   PetscCall(ISDestroy(&isrow));
@@ -93,7 +93,6 @@ static PetscErrorCode PCHMGExpandInterpolation_Private(Mat subinterp, Mat *inter
 
 PetscErrorCode PCSetUp_HMG(PC pc)
 {
-  PetscErrorCode     ierr;
   Mat                PA, submat;
   PC_MG              *mg   = (PC_MG*)pc->data;
   PC_HMG             *hmg   = (PC_HMG*) mg->innerctx;
@@ -212,9 +211,9 @@ PetscErrorCode PCSetUp_HMG(PC pc)
   PetscCall(PCMGSetGalerkin(pc,hmg->subcoarsening ? PC_MG_GALERKIN_PMAT:PC_MG_GALERKIN_NONE));
   PetscCall(PCSetDM(pc,NULL));
   PetscCall(PCSetUseAmat(pc,PETSC_FALSE));
-  ierr = PetscObjectOptionsBegin((PetscObject)pc);PetscCall(ierr);
+  PetscObjectOptionsBegin((PetscObject)pc);
   PetscCall(PCSetFromOptions_MG(PetscOptionsObject,pc)); /* should be called in PCSetFromOptions_HMG(), but cannot be called prior to PCMGSetLevels() */
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscCall(PCSetUp_MG(pc));
   PetscFunctionReturn(0);
 }
@@ -248,7 +247,7 @@ PetscErrorCode PCView_HMG(PC pc,PetscViewer viewer)
   if (iascii) {
     PetscCall(PetscViewerASCIIPrintf(viewer," Reuse interpolation: %s\n",hmg->reuseinterp? "true":"false"));
     PetscCall(PetscViewerASCIIPrintf(viewer," Use subspace coarsening: %s\n",hmg->subcoarsening? "true":"false"));
-    PetscCall(PetscViewerASCIIPrintf(viewer," Coarsening component: %D \n",hmg->component));
+    PetscCall(PetscViewerASCIIPrintf(viewer," Coarsening component: %" PetscInt_FMT " \n",hmg->component));
     PetscCall(PetscViewerASCIIPrintf(viewer," Use MatMAIJ: %s \n",hmg->usematmaij? "true":"false"));
     PetscCall(PetscViewerASCIIPrintf(viewer," Inner PC type: %s \n",hmg->innerpctype));
   }
@@ -262,12 +261,12 @@ PetscErrorCode PCSetFromOptions_HMG(PetscOptionItems *PetscOptionsObject,PC pc)
   PC_HMG         *hmg = (PC_HMG*) mg->innerctx;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"HMG"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"HMG");
   PetscCall(PetscOptionsBool("-pc_hmg_reuse_interpolation","Reuse the interpolation operators when possible (cheaper, weaker when matrix entries change a lot)","PCHMGSetReuseInterpolation",hmg->reuseinterp,&hmg->reuseinterp,NULL));
   PetscCall(PetscOptionsBool("-pc_hmg_use_subspace_coarsening","Use the subspace coarsening to compute the interpolations","PCHMGSetUseSubspaceCoarsening",hmg->subcoarsening,&hmg->subcoarsening,NULL));
   PetscCall(PetscOptionsBool("-pc_hmg_use_matmaij","Use MatMAIJ store interpolation for saving memory","PCHMGSetInnerPCType",hmg->usematmaij,&hmg->usematmaij,NULL));
   PetscCall(PetscOptionsInt("-pc_hmg_coarsening_component","Which component is chosen for the subspace-based coarsening algorithm","PCHMGSetCoarseningComponent",hmg->component,&hmg->component,NULL));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -303,7 +302,7 @@ PetscErrorCode PCHMGSetReuseInterpolation(PC pc, PetscBool reuse)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
-  PetscCall(PetscUseMethod(pc,"PCHMGSetReuseInterpolation_C",(PC,PetscBool),(pc,reuse)));
+  PetscUseMethod(pc,"PCHMGSetReuseInterpolation_C",(PC,PetscBool),(pc,reuse));
   PetscFunctionReturn(0);
 }
 
@@ -339,7 +338,7 @@ PetscErrorCode PCHMGSetUseSubspaceCoarsening(PC pc, PetscBool subspace)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
-  PetscCall(PetscUseMethod(pc,"PCHMGSetUseSubspaceCoarsening_C",(PC,PetscBool),(pc,subspace)));
+  PetscUseMethod(pc,"PCHMGSetUseSubspaceCoarsening_C",(PC,PetscBool),(pc,subspace));
   PetscFunctionReturn(0);
 }
 
@@ -375,7 +374,7 @@ PetscErrorCode PCHMGSetInnerPCType(PC pc, PCType type)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
-  PetscCall(PetscUseMethod(pc,"PCHMGSetInnerPCType_C",(PC,PCType),(pc,type)));
+  PetscUseMethod(pc,"PCHMGSetInnerPCType_C",(PC,PCType),(pc,type));
   PetscFunctionReturn(0);
 }
 
@@ -411,7 +410,7 @@ PetscErrorCode PCHMGSetCoarseningComponent(PC pc, PetscInt component)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
-  PetscCall(PetscUseMethod(pc,"PCHMGSetCoarseningComponent_C",(PC,PetscInt),(pc,component)));
+  PetscUseMethod(pc,"PCHMGSetCoarseningComponent_C",(PC,PetscInt),(pc,component));
   PetscFunctionReturn(0);
 }
 
@@ -447,7 +446,7 @@ PetscErrorCode PCHMGUseMatMAIJ(PC pc, PetscBool usematmaij)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
-  PetscCall(PetscUseMethod(pc,"PCHMGUseMatMAIJ_C",(PC,PetscBool),(pc,usematmaij)));
+  PetscUseMethod(pc,"PCHMGUseMatMAIJ_C",(PC,PetscBool),(pc,usematmaij));
   PetscFunctionReturn(0);
 }
 
@@ -468,8 +467,6 @@ PetscErrorCode PCHMGUseMatMAIJ(PC pc, PetscBool usematmaij)
     of angle and energy. Each variable, in fact, corresponds to the same PDEs but with different material properties.
 
    Level: beginner
-
-   Concepts: Hybrid of ASM and MG, Subspace Coarsening
 
     References:
 .   * - Fande Kong, Yaqi Wang, Derek R Gaston, Cody J Permann, Andrew E Slaughter, Alexander D Lindsay, Richard C Martineau, A highly parallel multilevel

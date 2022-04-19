@@ -459,7 +459,7 @@ static PetscErrorCode VecDuplicate_FFTW_bout(Vec bout, Vec *bout_new)
 PetscErrorCode MatCreateVecsFFTW(Mat A,Vec *x,Vec *y,Vec *z)
 {
   PetscFunctionBegin;
-  PetscCall(PetscUseMethod(A,"MatCreateVecsFFTW_C",(Mat,Vec*,Vec*,Vec*),(A,x,y,z)));
+  PetscUseMethod(A,"MatCreateVecsFFTW_C",(Mat,Vec*,Vec*,Vec*),(A,x,y,z));
   PetscFunctionReturn(0);
 }
 
@@ -726,7 +726,7 @@ PetscErrorCode  MatCreateVecsFFTW_FFTW(Mat A,Vec *fin,Vec *fout,Vec *bout)
 PetscErrorCode VecScatterPetscToFFTW(Mat A,Vec x,Vec y)
 {
   PetscFunctionBegin;
-  PetscCall(PetscUseMethod(A,"VecScatterPetscToFFTW_C",(Mat,Vec,Vec),(A,x,y)));
+  PetscUseMethod(A,"VecScatterPetscToFFTW_C",(Mat,Vec,Vec),(A,x,y));
   PetscFunctionReturn(0);
 }
 
@@ -959,7 +959,7 @@ PetscErrorCode VecScatterPetscToFFTW_FFTW(Mat A,Vec x,Vec y)
 PetscErrorCode VecScatterFFTWToPetsc(Mat A,Vec x,Vec y)
 {
   PetscFunctionBegin;
-  PetscCall(PetscUseMethod(A,"VecScatterFFTWToPetsc_C",(Mat,Vec,Vec),(A,x,y)));
+  PetscUseMethod(A,"VecScatterFFTWToPetsc_C",(Mat,Vec,Vec),(A,x,y));
   PetscFunctionReturn(0);
 }
 
@@ -1182,7 +1182,6 @@ PETSC_EXTERN PetscErrorCode MatCreate_FFTW(Mat A)
   PetscInt       p_flag,partial_dim=1,ctr;
   PetscMPIInt    size,rank;
   ptrdiff_t      *pdim;
-  PetscErrorCode ierr;
 #if !defined(PETSC_USE_COMPLEX)
   PetscInt       tot_dim;
 #endif
@@ -1325,9 +1324,9 @@ PETSC_EXTERN PetscErrorCode MatCreate_FFTW(Mat A)
   PetscCall(PetscObjectComposeFunction((PetscObject)A,"VecScatterFFTWToPetsc_C",VecScatterFFTWToPetsc_FFTW));
 
   /* get runtime options */
-  ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)A),((PetscObject)A)->prefix,"FFTW Options","Mat");PetscCall(ierr);
+  PetscOptionsBegin(PetscObjectComm((PetscObject)A),((PetscObject)A)->prefix,"FFTW Options","Mat");
   PetscCall(PetscOptionsEList("-mat_fftw_plannerflags","Planner Flags","None",plans,4,plans[0],&p_flag,&flg));
   if (flg) fftw->p_flag = iplans[p_flag];
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }

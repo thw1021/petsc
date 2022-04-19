@@ -1113,7 +1113,7 @@ static PetscErrorCode TSSetFromOptions_MPRK(PetscOptionItems *PetscOptionsObject
   TS_MPRK        *mprk = (TS_MPRK*)ts->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"PRK ODE solver options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"PRK ODE solver options");
   {
     MPRKTableauLink link;
     PetscInt        count,choice;
@@ -1126,7 +1126,7 @@ static PetscErrorCode TSSetFromOptions_MPRK(PetscOptionItems *PetscOptionsObject
     if (flg) PetscCall(TSMPRKSetType(ts,namelist[choice]));
     PetscCall(PetscFree(namelist));
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -1145,7 +1145,7 @@ static PetscErrorCode TSView_MPRK(TS ts,PetscViewer viewer)
     PetscInt    i;
     PetscCall(TSMPRKGetType(ts,&mprktype));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  MPRK type %s\n",mprktype));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Order: %D\n",tab->order));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Order: %" PetscInt_FMT "\n",tab->order));
 
     PetscCall(PetscFormatRealArray(fbuf,sizeof(fbuf),"% 8.6f",tab->s,tab->cf));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  Abscissa cf = %s\n",fbuf));
@@ -1214,7 +1214,7 @@ PetscErrorCode TSMPRKSetType(TS ts,TSMPRKType mprktype)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
   PetscValidCharPointer(mprktype,2);
-  PetscCall(PetscTryMethod(ts,"TSMPRKSetType_C",(TS,TSMPRKType),(ts,mprktype)));
+  PetscTryMethod(ts,"TSMPRKSetType_C",(TS,TSMPRKType),(ts,mprktype));
   PetscFunctionReturn(0);
 }
 
@@ -1237,7 +1237,7 @@ PetscErrorCode TSMPRKGetType(TS ts,TSMPRKType *mprktype)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
-  PetscCall(PetscUseMethod(ts,"TSMPRKGetType_C",(TS,TSMPRKType*),(ts,mprktype)));
+  PetscUseMethod(ts,"TSMPRKGetType_C",(TS,TSMPRKType*),(ts,mprktype));
   PetscFunctionReturn(0);
 }
 

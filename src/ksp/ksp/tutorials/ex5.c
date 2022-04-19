@@ -6,12 +6,6 @@ also uses multiple profiling stages.  Input arguments are\n\
   -m <size> : problem size\n\
   -mat_nonsym : use nonsymmetric matrix (default is symmetric)\n\n";
 
-/*T
-   Concepts: KSP^repeatedly solving linear systems;
-   Concepts: PetscLog^profiling multiple stages of code;
-   Processors: n
-T*/
-
 /*
   Include "petscksp.h" so that we can use KSP solvers.  Note that this file
   automatically includes:
@@ -201,7 +195,7 @@ int main(int argc,char **args)
   PetscCall(VecNorm(x,NORM_2,&norm));
   PetscCall(KSPGetIterationNumber(ksp,&its));
   if (!testscaledMat || norm > 1.e-7) {
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g, Iterations %D\n",(double)norm,its));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g, Iterations %" PetscInt_FMT "\n",(double)norm,its));
   }
 
   /* -------------- Stage 1: Solve Second System ---------------------- */
@@ -309,7 +303,7 @@ int main(int argc,char **args)
   PetscCall(VecNorm(x,NORM_2,&norm));
   PetscCall(KSPGetIterationNumber(ksp,&its));
   if (!testscaledMat || norm > 1.e-7) {
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g, Iterations %D\n",(double)norm,its));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g, Iterations %" PetscInt_FMT "\n",(double)norm,its));
   }
 
   /*

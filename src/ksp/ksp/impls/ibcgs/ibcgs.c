@@ -137,7 +137,7 @@ static PetscErrorCode  KSPSolve_IBCGS(KSP ksp)
     betan = deltan/omegan_1;
     taun  = sigman_1 + betan*taun_1  - deltan*pin_1;
     if (taun == 0.0) {
-      PetscCheck(!ksp->errorifnotconverged,PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"KSPSolve has not converged due to taun is zero, iteration %D",ksp->its);
+      PetscCheck(!ksp->errorifnotconverged,PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"KSPSolve has not converged due to taun is zero, iteration %" PetscInt_FMT,ksp->its);
       else {
         ksp->reason = KSP_DIVERGED_NANORINF;
         PetscFunctionReturn(0);
@@ -206,15 +206,15 @@ static PetscErrorCode  KSPSolve_IBCGS(KSP ksp)
     PetscCall(PetscLogEventBegin(VEC_ReduceCommunication,0,0,0,0));
 #if defined(PETSC_HAVE_MPI_LONG_DOUBLE) && !defined(PETSC_USE_COMPLEX) && (defined(PETSC_USE_REAL_SINGLE) || defined(PETSC_USE_REAL_DOUBLE))
     if (ksp->lagnorm && ksp->its > 1) {
-      PetscCallMPI(MPIU_Allreduce(insums,outsums,7,MPI_LONG_DOUBLE,MPI_SUM,PetscObjectComm((PetscObject)ksp)));
+      PetscCall(MPIU_Allreduce(insums,outsums,7,MPI_LONG_DOUBLE,MPI_SUM,PetscObjectComm((PetscObject)ksp)));
     } else {
-      PetscCallMPI(MPIU_Allreduce(insums,outsums,6,MPI_LONG_DOUBLE,MPI_SUM,PetscObjectComm((PetscObject)ksp)));
+      PetscCall(MPIU_Allreduce(insums,outsums,6,MPI_LONG_DOUBLE,MPI_SUM,PetscObjectComm((PetscObject)ksp)));
     }
 #else
     if (ksp->lagnorm && ksp->its > 1 && ksp->normtype != KSP_NORM_NONE) {
-      PetscCallMPI(MPIU_Allreduce(insums,outsums,7,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)ksp)));
+      PetscCall(MPIU_Allreduce(insums,outsums,7,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)ksp)));
     } else {
-      PetscCallMPI(MPIU_Allreduce(insums,outsums,6,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)ksp)));
+      PetscCall(MPIU_Allreduce(insums,outsums,6,MPIU_SCALAR,MPIU_SUM,PetscObjectComm((PetscObject)ksp)));
     }
 #endif
     PetscCall(PetscLogEventEnd(VEC_ReduceCommunication,0,0,0,0));
@@ -227,14 +227,14 @@ static PetscErrorCode  KSPSolve_IBCGS(KSP ksp)
     if (ksp->lagnorm && ksp->its > 1 && ksp->normtype != KSP_NORM_NONE) rnorm = PetscSqrtReal(PetscRealPart(outsums[6]));
 
     if (kappan == 0.0) {
-      PetscCheck(!ksp->errorifnotconverged,PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"KSPSolve has not converged due to kappan is zero, iteration %D",ksp->its);
+      PetscCheck(!ksp->errorifnotconverged,PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"KSPSolve has not converged due to kappan is zero, iteration %" PetscInt_FMT,ksp->its);
       else {
         ksp->reason = KSP_DIVERGED_NANORINF;
         PetscFunctionReturn(0);
       }
     }
     if (thetan == 0.0) {
-      PetscCheck(!ksp->errorifnotconverged,PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"KSPSolve has not converged due to thetan is zero, iteration %D",ksp->its);
+      PetscCheck(!ksp->errorifnotconverged,PetscObjectComm((PetscObject)ksp),PETSC_ERR_NOT_CONVERGED,"KSPSolve has not converged due to thetan is zero, iteration %" PetscInt_FMT,ksp->its);
       else {
         ksp->reason = KSP_DIVERGED_NANORINF;
         PetscFunctionReturn(0);
@@ -260,7 +260,7 @@ static PetscErrorCode  KSPSolve_IBCGS(KSP ksp)
 
     if (!ksp->lagnorm && ksp->chknorm < ksp->its && ksp->normtype != KSP_NORM_NONE) {
       PetscCall(PetscLogEventBegin(VEC_ReduceCommunication,0,0,0,0));
-      PetscCallMPI(MPIU_Allreduce(&rnormin,&rnorm,1,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)ksp)));
+      PetscCall(MPIU_Allreduce(&rnormin,&rnorm,1,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)ksp)));
       PetscCall(PetscLogEventEnd(VEC_ReduceCommunication,0,0,0,0));
       rnorm = PetscSqrtReal(rnorm);
     }

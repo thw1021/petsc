@@ -583,10 +583,10 @@ PetscErrorCode MatSetValuesBlocked_MPISBAIJ(Mat mat,PetscInt m,const PetscInt im
 #if defined(PETSC_USE_CTABLE)
             { PetscInt data;
               PetscCall(PetscTableFind(baij->colmap,in[j]+1,&data));
-              PetscCheckFalse((data - 1) % bs,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Incorrect colmap");
+              PetscCheck((data - 1) % bs == 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Incorrect colmap");
             }
 #else
-            PetscCheckFalse((baij->colmap[in[j]] - 1) % bs,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Incorrect colmap");
+            PetscCheck((baij->colmap[in[j]] - 1) % bs == 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Incorrect colmap");
 #endif
 #endif
 #if defined(PETSC_USE_CTABLE)
@@ -672,7 +672,7 @@ PetscErrorCode MatNorm_MPISBAIJ(Mat mat,NormType type,PetscReal *norm)
       *lnorm2 = (*lnorm2)*(*lnorm2); lnorm2++;            /* squar power of norm(A) */
       PetscCall(MatNorm(baij->B,type,lnorm2));
       *lnorm2 = (*lnorm2)*(*lnorm2); lnorm2--;             /* squar power of norm(B) */
-      PetscCallMPI(MPIU_Allreduce(lnorm2,sum,2,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)mat)));
+      PetscCall(MPIU_Allreduce(lnorm2,sum,2,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)mat)));
       *norm   = PetscSqrtReal(sum[0] + 2*sum[1]);
       PetscCall(PetscFree(lnorm2));
     } else if (type == NORM_INFINITY || type == NORM_1) { /* max row/column sum */
@@ -720,7 +720,7 @@ PetscErrorCode MatNorm_MPISBAIJ(Mat mat,NormType type,PetscReal *norm)
         }
         PetscCall(PetscLogFlops(nz*bs*bs));
       }
-      PetscCallMPI(MPIU_Allreduce(rsum,rsum2,mat->cmap->N,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)mat)));
+      PetscCall(MPIU_Allreduce(rsum,rsum2,mat->cmap->N,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)mat)));
       *norm = 0.0;
       for (col=0; col<mat->cmap->N; col++) {
         if (rsum2[col] > *norm) *norm = rsum2[col];
@@ -823,7 +823,7 @@ PetscErrorCode MatAssemblyEnd_MPISBAIJ(Mat mat,MatAssemblyType mode)
      no processor disassembled thus we can skip this stuff
   */
   if (!((Mat_SeqBAIJ*)baij->B->data)->nonew) {
-    PetscCallMPI(MPIU_Allreduce(&mat->was_assembled,&other_disassembled,1,MPIU_BOOL,MPI_PROD,PetscObjectComm((PetscObject)mat)));
+    PetscCall(MPIU_Allreduce(&mat->was_assembled,&other_disassembled,1,MPIU_BOOL,MPI_PROD,PetscObjectComm((PetscObject)mat)));
     if (mat->was_assembled && !other_disassembled) {
       PetscCall(MatDisAssemble_MPISBAIJ(mat));
     }
@@ -842,7 +842,7 @@ PetscErrorCode MatAssemblyEnd_MPISBAIJ(Mat mat,MatAssemblyType mode)
   /* if no new nonzero locations are allowed in matrix then only set the matrix state the first time through */
   if ((!mat->was_assembled && mode == MAT_FINAL_ASSEMBLY) || !((Mat_SeqBAIJ*)(baij->A->data))->nonew) {
     PetscObjectState state = baij->A->nonzerostate + baij->B->nonzerostate;
-    PetscCallMPI(MPIU_Allreduce(&state,&mat->nonzerostate,1,MPIU_INT64,MPI_SUM,PetscObjectComm((PetscObject)mat)));
+    PetscCall(MPIU_Allreduce(&state,&mat->nonzerostate,1,MPIU_INT64,MPI_SUM,PetscObjectComm((PetscObject)mat)));
   }
   PetscFunctionReturn(0);
 }
@@ -1175,7 +1175,7 @@ PetscErrorCode MatGetDiagonal_MPISBAIJ(Mat A,Vec v)
   Mat_MPISBAIJ *a = (Mat_MPISBAIJ*)A->data;
 
   PetscFunctionBegin;
-  /* PetscCheckFalse(a->rmap->N != a->cmap->N,PETSC_COMM_SELF,PETSC_ERR_SUP,"Supports only square matrix where A->A is diag block"); */
+  /* PetscCheck(a->rmap->N == a->cmap->N,PETSC_COMM_SELF,PETSC_ERR_SUP,"Supports only square matrix where A->A is diag block"); */
   PetscCall(MatGetDiagonal(a->A,v));
   PetscFunctionReturn(0);
 }
@@ -1442,7 +1442,7 @@ PetscErrorCode MatGetInfo_MPISBAIJ(Mat matin,MatInfoType flag,MatInfo *info)
     info->memory       = isend[3];
     info->mallocs      = isend[4];
   } else if (flag == MAT_GLOBAL_MAX) {
-    PetscCallMPI(MPIU_Allreduce(isend,irecv,5,MPIU_PETSCLOGDOUBLE,MPI_MAX,PetscObjectComm((PetscObject)matin)));
+    PetscCall(MPIU_Allreduce(isend,irecv,5,MPIU_PETSCLOGDOUBLE,MPI_MAX,PetscObjectComm((PetscObject)matin)));
 
     info->nz_used      = irecv[0];
     info->nz_allocated = irecv[1];
@@ -1450,7 +1450,7 @@ PetscErrorCode MatGetInfo_MPISBAIJ(Mat matin,MatInfoType flag,MatInfo *info)
     info->memory       = irecv[3];
     info->mallocs      = irecv[4];
   } else if (flag == MAT_GLOBAL_SUM) {
-    PetscCallMPI(MPIU_Allreduce(isend,irecv,5,MPIU_PETSCLOGDOUBLE,MPI_SUM,PetscObjectComm((PetscObject)matin)));
+    PetscCall(MPIU_Allreduce(isend,irecv,5,MPIU_PETSCLOGDOUBLE,MPI_SUM,PetscObjectComm((PetscObject)matin)));
 
     info->nz_used      = irecv[0];
     info->nz_allocated = irecv[1];
@@ -1617,7 +1617,7 @@ PetscErrorCode MatEqual_MPISBAIJ(Mat A,Mat B,PetscBool  *flag)
   if (flg) {
     PetscCall(MatEqual(b,d,&flg));
   }
-  PetscCallMPI(MPIU_Allreduce(&flg,flag,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)A)));
+  PetscCall(MPIU_Allreduce(&flg,flag,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)A)));
   PetscFunctionReturn(0);
 }
 
@@ -2082,7 +2082,6 @@ M*/
 PETSC_EXTERN PetscErrorCode MatCreate_MPISBAIJ(Mat B)
 {
   Mat_MPISBAIJ   *b;
-  PetscErrorCode ierr;
   PetscBool      flg = PETSC_FALSE;
 
   PetscFunctionBegin;
@@ -2170,7 +2169,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPISBAIJ(Mat B)
 #endif
 
   PetscCall(PetscObjectChangeTypeName((PetscObject)B,MATMPISBAIJ));
-  ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)B),NULL,"Options for loading MPISBAIJ matrix 1","Mat");PetscCall(ierr);
+  PetscOptionsBegin(PetscObjectComm((PetscObject)B),NULL,"Options for loading MPISBAIJ matrix 1","Mat");
   PetscCall(PetscOptionsBool("-mat_use_hash_table","Use hash table to save memory in constructing matrix","MatSetOption",flg,&flg,NULL));
   if (flg) {
     PetscReal fact = 1.39;
@@ -2180,7 +2179,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPISBAIJ(Mat B)
     PetscCall(MatMPIBAIJSetHashTableFactor(B,fact));
     PetscCall(PetscInfo(B,"Hash table Factor used %5.2g\n",(double)fact));
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -2287,7 +2286,7 @@ PetscErrorCode  MatMPISBAIJSetPreallocation(Mat B,PetscInt bs,PetscInt d_nz,cons
   PetscValidHeaderSpecific(B,MAT_CLASSID,1);
   PetscValidType(B,1);
   PetscValidLogicalCollectiveInt(B,bs,2);
-  PetscCall(PetscTryMethod(B,"MatMPISBAIJSetPreallocation_C",(Mat,PetscInt,PetscInt,const PetscInt[],PetscInt,const PetscInt[]),(B,bs,d_nz,d_nnz,o_nz,o_nnz)));
+  PetscTryMethod(B,"MatMPISBAIJSetPreallocation_C",(Mat,PetscInt,PetscInt,const PetscInt[],PetscInt,const PetscInt[]),(B,bs,d_nz,d_nnz,o_nz,o_nnz));
   PetscFunctionReturn(0);
 }
 
@@ -2831,13 +2830,12 @@ PetscErrorCode  MatCreateMPISBAIJWithArrays(MPI_Comm comm,PetscInt bs,PetscInt m
 PetscErrorCode  MatMPISBAIJSetPreallocationCSR(Mat B,PetscInt bs,const PetscInt i[],const PetscInt j[], const PetscScalar v[])
 {
   PetscFunctionBegin;
-  PetscCall(PetscTryMethod(B,"MatMPISBAIJSetPreallocationCSR_C",(Mat,PetscInt,const PetscInt[],const PetscInt[],const PetscScalar[]),(B,bs,i,j,v)));
+  PetscTryMethod(B,"MatMPISBAIJSetPreallocationCSR_C",(Mat,PetscInt,const PetscInt[],const PetscInt[],const PetscScalar[]),(B,bs,i,j,v));
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode MatCreateMPIMatConcatenateSeqMat_MPISBAIJ(MPI_Comm comm,Mat inmat,PetscInt n,MatReuse scall,Mat *outmat)
 {
-  PetscErrorCode ierr;
   PetscInt       m,N,i,rstart,nnz,Ii,bs,cbs;
   PetscInt       *indx;
   PetscScalar    *values;
@@ -2858,7 +2856,7 @@ PetscErrorCode MatCreateMPIMatConcatenateSeqMat_MPISBAIJ(MPI_Comm comm,Mat inmat
     nbs = n/cbs;
 
     PetscCall(PetscMalloc1(rmax,&bindx));
-    ierr = MatPreallocateInitialize(comm,mbs,nbs,dnz,onz);PetscCall(ierr); /* inline function, output __end and __rstart are used below */
+    MatPreallocateBegin(comm,mbs,nbs,dnz,onz); /* inline function, output __end and __rstart are used below */
 
     PetscCallMPI(MPI_Comm_rank(comm,&rank));
     PetscCallMPI(MPI_Comm_rank(comm,&size));
@@ -2867,7 +2865,7 @@ PetscErrorCode MatCreateMPIMatConcatenateSeqMat_MPISBAIJ(MPI_Comm comm,Mat inmat
       PetscCheck(__end == Nbs,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Sum of local block columns %" PetscInt_FMT " != global block columns %" PetscInt_FMT,__end,Nbs);
     }
 
-    rstart = __rstart; /* block rstart of *outmat; see inline function MatPreallocateInitialize */
+    rstart = __rstart; /* block rstart of *outmat; see inline function MatPreallocateBegin */
     PetscCall(MatSetOption(inmat,MAT_GETROW_UPPERTRIANGULAR,PETSC_TRUE));
     for (i=0; i<mbs; i++) {
       PetscCall(MatGetRow_SeqSBAIJ(inmat,i*bs,&nnz,&indx,NULL)); /* non-blocked nnz and indx */
@@ -2885,7 +2883,7 @@ PetscErrorCode MatCreateMPIMatConcatenateSeqMat_MPISBAIJ(MPI_Comm comm,Mat inmat
     PetscCall(MatSetType(*outmat,MATSBAIJ));
     PetscCall(MatSeqSBAIJSetPreallocation(*outmat,bs,0,dnz));
     PetscCall(MatMPISBAIJSetPreallocation(*outmat,bs,0,dnz,0,onz));
-    ierr = MatPreallocateFinalize(dnz,onz);PetscCall(ierr);
+    MatPreallocateEnd(dnz,onz);
   }
 
   /* numeric phase */

@@ -89,7 +89,6 @@ int main(int argc,char **argv)
   Vec               X;          /* solution vector */
   Mat               J;          /* Jacobian matrix */
   PetscInt          steps,ncells,xs,xm,i;
-  PetscErrorCode    ierr;
   PetscReal         ftime,dt;
   char              chemfile[PETSC_MAX_PATH_LEN] = "chem.inp",thermofile[PETSC_MAX_PATH_LEN] = "therm.dat";
   struct _User      user;
@@ -99,7 +98,7 @@ int main(int argc,char **argv)
   Vec               lambda;     /* used with TSAdjoint for sensitivities */
 
   PetscCall(PetscInitialize(&argc,&argv,(char*)0,help));
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Chemistry solver options","");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Chemistry solver options","");
   PetscCall(PetscOptionsString("-chem","CHEMKIN input file","",chemfile,chemfile,sizeof(chemfile),NULL));
   PetscCall(PetscOptionsString("-thermo","NASA thermo input file","",thermofile,thermofile,sizeof(thermofile),NULL));
   user.pressure = 1.01325e5;    /* Pascal */
@@ -113,7 +112,7 @@ int main(int argc,char **argv)
   PetscCall(PetscOptionsBool("-diffusion","Have diffusion","",user.diffusion,&user.diffusion,NULL));
   user.reactions = PETSC_TRUE;
   PetscCall(PetscOptionsBool("-reactions","Have reactions","",user.reactions,&user.reactions,NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   PetscCallTC(TC_initChem(chemfile, thermofile, 0, 1.0));
   user.Nspec = TC_getNspec();
@@ -199,7 +198,7 @@ int main(int argc,char **argv)
   PetscCall(TSGetSolveTime(ts,&ftime));
   PetscCall(TSGetStepNumber(ts,&steps));
   PetscCall(TSGetConvergedReason(ts,&reason));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%s at time %g after %D steps\n",TSConvergedReasons[reason],(double)ftime,steps));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%s at time %g after %" PetscInt_FMT " steps\n",TSConvergedReasons[reason],(double)ftime,steps));
 
   {
     Vec                max;
@@ -214,7 +213,7 @@ int main(int argc,char **argv)
         PetscCall(VecGetArrayRead(max,&bmax));
         PetscCall(PetscPrintf(PETSC_COMM_SELF,"Species - maximum mass fraction\n"));
         for (i=1; i<user.Nspec; i++) {
-          if (bmax[i] > .01) PetscCall(PetscPrintf(PETSC_COMM_SELF,"%s %g\n",names[i],bmax[i]));
+          if (bmax[i] > .01) PetscCall(PetscPrintf(PETSC_COMM_SELF,"%s %g\n",names[i],(double)bmax[i]));
         }
         PetscCall(VecRestoreArrayRead(max,&bmax));
       }
@@ -241,7 +240,6 @@ int main(int argc,char **argv)
 static PetscErrorCode FormDiffusionFunction(TS ts,PetscReal t,Vec X,Vec F,void *ptr)
 {
   User              user = (User)ptr;
-  PetscErrorCode    ierr;
   PetscScalar       **f;
   const PetscScalar **x;
   DM                dm;
@@ -277,7 +275,6 @@ static PetscErrorCode FormDiffusionFunction(TS ts,PetscReal t,Vec X,Vec F,void *
 static PetscErrorCode FormDiffusionJacobian(TS ts,PetscReal t,Vec X,Mat Amat,Mat Pmat,void *ptr)
 {
   User              user = (User)ptr;
-  PetscErrorCode    ierr;
   DM                dm;
   PetscInt          i,xs,xm,j,dof;
   PetscReal         idx,values[3];
@@ -309,7 +306,6 @@ static PetscErrorCode FormDiffusionJacobian(TS ts,PetscReal t,Vec X,Mat Amat,Mat
 static PetscErrorCode FormRHSFunction(TS ts,PetscReal t,Vec X,Vec F,void *ptr)
 {
   User              user = (User)ptr;
-  PetscErrorCode    ierr;
   PetscScalar       **f;
   const PetscScalar **x;
   DM                dm;
@@ -343,7 +339,6 @@ static PetscErrorCode FormRHSFunction(TS ts,PetscReal t,Vec X,Vec F,void *ptr)
 static PetscErrorCode FormRHSJacobian(TS ts,PetscReal t,Vec X,Mat Amat,Mat Pmat,void *ptr)
 {
   User              user = (User)ptr;
-  PetscErrorCode    ierr;
   const PetscScalar **x;
   PetscInt          M = user->Nspec+1,i,j,xs,xm;
   DM                dm;
@@ -386,7 +381,6 @@ static PetscErrorCode FormRHSJacobian(TS ts,PetscReal t,Vec X,Mat Amat,Mat Pmat,
 PetscErrorCode FormInitialSolution(TS ts,Vec X,void *ctx)
 {
   PetscScalar    **x,*xc;
-  PetscErrorCode ierr;
   struct {const char *name; PetscReal massfrac;} initial[] = {
     {"CH4", 0.0948178320887},
     {"O2", 0.189635664177},
@@ -405,10 +399,10 @@ PetscErrorCode FormInitialSolution(TS ts,Vec X,void *ctx)
   PetscCall(DMDAVecGetArrayDOF(dm,X,&x));
   for (i=xs; i<xs+xm; i++) {
     x[i][0] = 1.0 + .05*PetscSinScalar(2.*PETSC_PI*xc[i]);  /* Non-dimensionalized by user->Tini */
-    for (j=0; j<sizeof(initial)/sizeof(initial[0]); j++) {
+    for (j=0; j<PETSC_STATIC_ARRAY_LENGTH(initial); j++) {
       int ispec = TC_getSpos(initial[j].name, strlen(initial[j].name));
       PetscCheck(ispec >= 0,PETSC_COMM_SELF,PETSC_ERR_USER,"Could not find species %s",initial[j].name);
-      PetscCall(PetscPrintf(PETSC_COMM_SELF,"Species %d: %s %g\n",j,initial[j].name,initial[j].massfrac));
+      PetscCall(PetscPrintf(PETSC_COMM_SELF,"Species %d: %s %g\n",j,initial[j].name,(double)initial[j].massfrac));
       x[i][1+ispec] = initial[j].massfrac;
     }
   }
@@ -428,7 +422,6 @@ typedef struct {
 static PetscErrorCode FormMoleFraction(UserLGCtx *ctx,Vec massf,Vec *molef)
 {
   User              user = ctx->user;
-  PetscErrorCode    ierr;
   PetscReal         *M,tM=0;
   PetscInt          i,n = user->Nspec+1;
   PetscScalar       *mof;
@@ -453,8 +446,6 @@ static PetscErrorCode FormMoleFraction(UserLGCtx *ctx,Vec massf,Vec *molef)
 
 static PetscErrorCode MonitorCellDestroy(UserLGCtx *uctx)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscCall(PetscFree(uctx));
   PetscFunctionReturn(0);
@@ -465,7 +456,6 @@ static PetscErrorCode MonitorCellDestroy(UserLGCtx *uctx)
 */
 static PetscErrorCode MonitorCell(TS ts,User user,PetscInt cell)
 {
-  PetscErrorCode ierr;
   TSMonitorLGCtx ctx;
   char           **snames;
   UserLGCtx      *uctx;

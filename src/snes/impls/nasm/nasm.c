@@ -178,7 +178,7 @@ static PetscErrorCode SNESSetFromOptions_NASM(PetscOptionItems *PetscOptionsObje
   SNES_NASM         *nasm = (SNES_NASM*)snes->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Nonlinear Additive Schwarz options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Nonlinear Additive Schwarz options");
   PetscCall(PetscOptionsEnum("-snes_nasm_type","Type of restriction/extension","",SNESNASMTypes,(PetscEnum)nasm->type,(PetscEnum*)&asmtype,&flg));
   if (flg) PetscCall(SNESNASMSetType(snes,asmtype));
   flg    = PETSC_FALSE;
@@ -193,7 +193,7 @@ static PetscErrorCode SNESSetFromOptions_NASM(PetscOptionItems *PetscOptionsObje
     PetscCall(PetscLogEventRegister("SNESNASMSubSolve",((PetscObject)snes)->classid,&nasm->eventsubsolve));
     PetscCall(PetscLogEventRegister("SNESNASMRestrict",((PetscObject)snes)->classid,&nasm->eventrestrictinterp));
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -214,9 +214,9 @@ static PetscErrorCode SNESView_NASM(SNES snes, PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERSTRING,&isstring));
   PetscCallMPI(MPI_Comm_rank(comm,&rank));
   PetscCallMPI(MPI_Comm_size(comm,&size));
-  PetscCallMPI(MPIU_Allreduce(&nasm->n,&N,1,MPIU_INT,MPI_SUM,comm));
+  PetscCall(MPIU_Allreduce(&nasm->n,&N,1,MPIU_INT,MPI_SUM,comm));
   if (iascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  total subdomain blocks = %D\n",N));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  total subdomain blocks = %" PetscInt_FMT "\n",N));
     PetscCall(PetscViewerGetFormat(viewer,&format));
     if (format != PETSC_VIEWER_ASCII_INFO_DETAIL) {
       if (nasm->subsnes) {
@@ -236,7 +236,7 @@ static PetscErrorCode SNESView_NASM(SNES snes, PetscViewer viewer)
     } else {
       /* print the solver on each block */
       PetscCall(PetscViewerASCIIPushSynchronized(viewer));
-      PetscCall(PetscViewerASCIISynchronizedPrintf(viewer,"  [%d] number of local blocks = %D\n",(int)rank,nasm->n));
+      PetscCall(PetscViewerASCIISynchronizedPrintf(viewer,"  [%d] number of local blocks = %" PetscInt_FMT "\n",(int)rank,nasm->n));
       PetscCall(PetscViewerFlush(viewer));
       PetscCall(PetscViewerASCIIPopSynchronized(viewer));
       PetscCall(PetscViewerASCIIPrintf(viewer,"  Local solver information for each block is in the following SNES objects:\n"));
@@ -245,7 +245,7 @@ static PetscErrorCode SNESView_NASM(SNES snes, PetscViewer viewer)
       PetscCall(PetscViewerGetSubViewer(viewer,PETSC_COMM_SELF,&sviewer));
       for (i=0; i<nasm->n; i++) {
         PetscCall(VecGetLocalSize(nasm->x[i],&bsz));
-        PetscCall(PetscViewerASCIIPrintf(sviewer,"[%d] local block number %D, size = %D\n",(int)rank,i,bsz));
+        PetscCall(PetscViewerASCIIPrintf(sviewer,"[%d] local block number %" PetscInt_FMT ", size = %" PetscInt_FMT "\n",(int)rank,i,bsz));
         PetscCall(SNESView(nasm->subsnes[i],sviewer));
         PetscCall(PetscViewerASCIIPrintf(sviewer,"- - - - - - - - - - - - - - - - - -\n"));
       }
@@ -254,7 +254,7 @@ static PetscErrorCode SNESView_NASM(SNES snes, PetscViewer viewer)
       PetscCall(PetscViewerASCIIPopTab(viewer));
     }
   } else if (isstring) {
-    PetscCall(PetscViewerStringSPrintf(viewer," blocks=%D,type=%s",N,SNESNASMTypes[nasm->type]));
+    PetscCall(PetscViewerStringSPrintf(viewer," blocks=%" PetscInt_FMT ",type=%s",N,SNESNASMTypes[nasm->type]));
     PetscCall(PetscViewerGetSubViewer(viewer,PETSC_COMM_SELF,&sviewer));
     if (nasm->subsnes && rank == 0) PetscCall(SNESView(nasm->subsnes[0],sviewer));
     PetscCall(PetscViewerRestoreSubViewer(viewer,PETSC_COMM_SELF,&sviewer));
@@ -313,7 +313,7 @@ static PetscErrorCode SNESNASMSetType_NASM(SNES snes,PCASMType type)
 PetscErrorCode SNESNASMGetType(SNES snes,PCASMType *type)
 {
   PetscFunctionBegin;
-  PetscCall(PetscUseMethod(snes,"SNESNASMGetType_C",(SNES,PCASMType*),(snes,type)));
+  PetscUseMethod(snes,"SNESNASMGetType_C",(SNES,PCASMType*),(snes,type));
   PetscFunctionReturn(0);
 }
 
@@ -575,7 +575,7 @@ static PetscErrorCode SNESNASMSetDamping_NASM(SNES snes,PetscReal dmp)
 PetscErrorCode SNESNASMGetDamping(SNES snes,PetscReal *dmp)
 {
   PetscFunctionBegin;
-  PetscCall(PetscUseMethod(snes,"SNESNASMGetDamping_C",(SNES,PetscReal*),(snes,dmp)));
+  PetscUseMethod(snes,"SNESNASMGetDamping_C",(SNES,PetscReal*),(snes,dmp));
   PetscFunctionReturn(0);
 }
 
@@ -806,7 +806,7 @@ static PetscErrorCode SNESSolve_NASM(SNES snes)
   }
   if (normschedule == SNES_NORM_ALWAYS) {
     if (i == snes->max_its) {
-      PetscCall(PetscInfo(snes,"Maximum number of iterations has been reached: %D\n",snes->max_its));
+      PetscCall(PetscInfo(snes,"Maximum number of iterations has been reached: %" PetscInt_FMT "\n",snes->max_its));
       if (!snes->reason) snes->reason = SNES_DIVERGED_MAX_IT;
     }
   } else if (!snes->reason) snes->reason = SNES_CONVERGED_ITS; /* NASM is meant to be used as a preconditioner */

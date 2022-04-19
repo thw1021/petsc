@@ -21,9 +21,9 @@ static PetscErrorCode MatColoringSetFromOptions_JP(PetscOptionItems *PetscOption
   MC_JP          *jp = (MC_JP*)mc->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"JP options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"JP options");
   PetscCall(PetscOptionsBool("-mat_coloring_jp_local","Do an initial coloring of local columns","",jp->local,&jp->local,NULL));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -46,7 +46,7 @@ static PetscErrorCode MCJPGreatestWeight_Private(MatColoring mc,const PetscReal 
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)G,MATSEQAIJ,&isSeq));
   PetscCall(PetscObjectTypeCompare((PetscObject)G,MATMPIAIJ,&isMPI));
-  PetscCheckFalse(!isSeq && !isMPI,PetscObjectComm((PetscObject)G),PETSC_ERR_ARG_WRONGSTATE,"MatColoringDegrees requires an MPI/SEQAIJ Matrix");
+  PetscCheck(isSeq || isMPI,PetscObjectComm((PetscObject)G),PETSC_ERR_ARG_WRONGSTATE,"MatColoringDegrees requires an MPI/SEQAIJ Matrix");
 
   /* get the inner matrix structure */
   oG = NULL;
@@ -152,7 +152,7 @@ static PetscErrorCode MCJPInitialLocalColor_Private(MatColoring mc,PetscInt *lpe
   n=e-s;
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)G,MATSEQAIJ,&isSeq));
   PetscCall(PetscObjectTypeCompare((PetscObject)G,MATMPIAIJ,&isMPI));
-  PetscCheckFalse(!isSeq && !isMPI,PetscObjectComm((PetscObject)G),PETSC_ERR_ARG_WRONGSTATE,"MatColoringDegrees requires an MPI/SEQAIJ Matrix");
+  PetscCheck(isSeq || isMPI,PetscObjectComm((PetscObject)G),PETSC_ERR_ARG_WRONGSTATE,"MatColoringDegrees requires an MPI/SEQAIJ Matrix");
 
   /* get the inner matrix structure */
   oG = NULL;
@@ -294,7 +294,7 @@ static PetscErrorCode MCJPMinColor_Private(MatColoring mc,ISColoringValue maxcol
   maskbase = 0;
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)G,MATSEQAIJ,&isSeq));
   PetscCall(PetscObjectTypeCompare((PetscObject)G,MATMPIAIJ,&isMPI));
-  PetscCheckFalse(!isSeq && !isMPI,PetscObjectComm((PetscObject)G),PETSC_ERR_ARG_WRONGSTATE,"MatColoringDegrees requires an MPI/SEQAIJ Matrix");
+  PetscCheck(isSeq || isMPI,PetscObjectComm((PetscObject)G),PETSC_ERR_ARG_WRONGSTATE,"MatColoringDegrees requires an MPI/SEQAIJ Matrix");
 
   /* get the inner matrix structure */
   oG = NULL;
@@ -441,8 +441,8 @@ static PetscErrorCode MatColoringApply_JP(MatColoring mc,ISColoring *iscoloring)
         if (color[i] > maxcolor_local) maxcolor_local = color[i];
       }
     }
-    PetscCallMPI(MPIU_Allreduce(&nadded,&nadded_total,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)mc)));
-    PetscCallMPI(MPIU_Allreduce(&maxcolor_local,&maxcolor_global,1,MPIU_INT,MPI_MAX,PetscObjectComm((PetscObject)mc)));
+    PetscCall(MPIU_Allreduce(&nadded,&nadded_total,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)mc)));
+    PetscCall(MPIU_Allreduce(&maxcolor_local,&maxcolor_global,1,MPIU_INT,MPI_MAX,PetscObjectComm((PetscObject)mc)));
   }
   round = 0;
   while (nadded_total < ntotal) {
@@ -462,9 +462,9 @@ static PetscErrorCode MatColoringApply_JP(MatColoring mc,ISColoring *iscoloring)
         nadded++;
       }
     }
-    PetscCallMPI(MPIU_Allreduce(&maxcolor_local,&maxcolor_global,1,MPIU_INT,MPI_MAX,PetscObjectComm((PetscObject)mc)));
-    PetscCallMPI(MPIU_Allreduce(&nadded,&nadded_total,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)mc)));
-    PetscCheckFalse(nadded_total == nadded_total_old,PetscObjectComm((PetscObject)mc),PETSC_ERR_NOT_CONVERGED,"JP didn't make progress");
+    PetscCall(MPIU_Allreduce(&maxcolor_local,&maxcolor_global,1,MPIU_INT,MPI_MAX,PetscObjectComm((PetscObject)mc)));
+    PetscCall(MPIU_Allreduce(&nadded,&nadded_total,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)mc)));
+    PetscCheck(nadded_total != nadded_total_old,PetscObjectComm((PetscObject)mc),PETSC_ERR_NOT_CONVERGED,"JP didn't make progress");
     nadded_total_old = nadded_total;
     round++;
   }

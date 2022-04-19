@@ -20,8 +20,6 @@ typedef struct {
 
 PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   options->dim               = 2;
   options->overlap           = 0;
@@ -31,7 +29,7 @@ PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->final_ref         = PETSC_FALSE;
   options->final_diagnostics = PETSC_TRUE;
 
-  ierr = PetscOptionsBegin(comm, "", "Meshing Problem Options", "DMPLEX");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "Meshing Problem Options", "DMPLEX");
   PetscCall(PetscOptionsRangeInt("-dim", "The topological mesh dimension", "ex1.c", options->dim, &options->dim, NULL,1,3));
   PetscCall(PetscOptionsBoundedInt("-overlap", "The cell overlap for partitioning", "ex1.c", options->overlap, &options->overlap, NULL,0));
   PetscCall(PetscOptionsBool("-test_p4est_seq", "Test p4est with sequential base DM", "ex1.c", options->testp4est[0], &options->testp4est[0], NULL));
@@ -39,7 +37,7 @@ PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscCall(PetscOptionsBool("-test_redistribute", "Test redistribution", "ex1.c", options->redistribute, &options->redistribute, NULL));
   PetscCall(PetscOptionsBool("-final_ref", "Run uniform refinement on the final mesh", "ex1.c", options->final_ref, &options->final_ref, NULL));
   PetscCall(PetscOptionsBool("-final_diagnostics", "Run diagnostics on the final mesh", "ex1.c", options->final_diagnostics, &options->final_diagnostics, NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   PetscCall(PetscLogEventRegister("CreateMesh", DM_CLASSID, &options->createMeshEvent));
   PetscCall(PetscLogStageRegister("MeshLoad",       &options->stages[STAGE_LOAD]));
@@ -207,7 +205,7 @@ PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
       PetscCall(PetscSFSetUp(sf));
       PetscCall(DMGetNeighbors(distributedMesh, &nranks, NULL));
       PetscCallMPI(MPI_Allreduce(MPI_IN_PLACE, &nranks, 1, MPIU_INT, MPI_MIN, PetscObjectComm((PetscObject)*dm)));
-      PetscCall(PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_(PetscObjectComm((PetscObject)*dm)), "Minimum number of neighbors: %D\n", nranks));
+      PetscCall(PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_(PetscObjectComm((PetscObject)*dm)), "Minimum number of neighbors: %" PetscInt_FMT "\n", nranks));
       PetscCall(DMDestroy(dm));
       *dm  = distributedMesh;
     }
@@ -224,7 +222,7 @@ PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
     if (overlapMesh) {
       PetscInt overlap;
       PetscCall(DMPlexGetOverlap(overlapMesh, &overlap));
-      PetscCall(PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_WORLD, "Overlap: %D\n", overlap));
+      PetscCall(PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_WORLD, "Overlap: %" PetscInt_FMT "\n", overlap));
       PetscCall(DMDestroy(dm));
       *dm = overlapMesh;
     }
@@ -912,14 +910,14 @@ int main(int argc, char **argv)
   test:
     suffix: ref_bl_2_tri
     requires: triangle
-    args: -dm_plex_box_faces 5,3 -dm_view -dm_plex_check_all 0 -ref_dm_refine 1 -ref_dm_plex_transform_type refine_boundary_layer -dm_extrude 3 -final_diagnostics -ref_dm_plex_transform_bl_splits 4
+    args: -dm_coord_space 0 -dm_plex_box_faces 5,3 -dm_view -dm_plex_check_all 0 -ref_dm_refine 1 -ref_dm_plex_transform_type refine_boundary_layer -dm_extrude 3 -final_diagnostics -ref_dm_plex_transform_bl_splits 4
   test:
     suffix: ref_bl_3_quad
     args: -dm_plex_simplex 0 -dm_plex_box_faces 5,1 -dm_view -dm_plex_check_all 0 -ref_dm_refine 1 -ref_dm_plex_transform_type refine_boundary_layer -dm_extrude 3 -final_diagnostics -ref_dm_plex_transform_bl_splits 4
   test:
     suffix: ref_bl_spheresurface_extruded
     nsize : 4
-    args: -dm_extrude 3 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/surfacesphere_bin.msh -dm_plex_gmsh_spacedim 3 -dm_plex_check_all -dm_view -dist_dm_distribute -petscpartitioner_type simple -final_diagnostics -ref_dm_refine 1 -ref_dm_plex_transform_type refine_boundary_layer -ref_dm_plex_transform_bl_splits 2
+    args: -dm_coord_space 0 -dm_extrude 3 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/surfacesphere_bin.msh -dm_plex_gmsh_spacedim 3 -dm_plex_check_all -dm_view -dist_dm_distribute -petscpartitioner_type simple -final_diagnostics -ref_dm_refine 1 -ref_dm_plex_transform_type refine_boundary_layer -ref_dm_plex_transform_bl_splits 2
   test:
     suffix: ref_bl_3d_hyb
     nsize : 4

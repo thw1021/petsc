@@ -12,7 +12,6 @@ class Configure(config.package.GNUPackage):
     self.gitcommit         = 'v'+self.minversion+'-p4'
     self.download          = ['git://https://bitbucket.org/petsc/pkg-sowing.git','https://bitbucket.org/petsc/pkg-sowing/get/'+self.gitcommit+'.tar.gz']
     self.downloaddirnames  = ['petsc-pkg-sowing']
-    self.complex           = 1
     self.downloadonWindows = 1
     self.publicInstall     = 0  # always install in PETSC_DIR/PETSC_ARCH (not --prefix) since this is not used by users
     self.parallelMake      = 0  # sowing does not support make -j np
@@ -121,7 +120,10 @@ Perhaps the installation has been corrupted or changed, remove the directory '+o
 and run configure again\n')
 
       self.checkBfortVersion()
-      self.buildFortranStubs()
+      if (self.petscclone.isClone and hasattr(self.compilers, 'FC') and self.framework.argDB['with-fortran-bindings']):
+        self.buildFortranStubs()
+      else:
+        self.logPrintBox('Sowing: Skipping fortran stub generation! Reason: Not a clone of PETSc or no Fortran compiler or fortran-bindings disabled')
     else:
       self.logPrint("Not a clone of PETSc or no Fortran compiler or fortran-bindings disabled, don't need Sowing\n")
     return

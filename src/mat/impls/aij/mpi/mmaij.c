@@ -229,7 +229,7 @@ PetscErrorCode MatMPIAIJDiagonalScaleLocalSetUp(Mat inA,Vec scale)
       r_rmapd[i] = inA->rmap->mapping->indices[i] + 1;
     }
   }
-  PetscCheckFalse(nt != n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Hmm nt %" PetscInt_FMT " n %" PetscInt_FMT,nt,n);
+  PetscCheck(nt == n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Hmm nt %" PetscInt_FMT " n %" PetscInt_FMT,nt,n);
   PetscCall(PetscMalloc1(n+1,&auglyrmapd));
   for (i=0; i<inA->rmap->mapping->n; i++) {
     if (r_rmapd[i]) {
@@ -252,7 +252,7 @@ PetscErrorCode MatMPIAIJDiagonalScaleLocalSetUp(Mat inA,Vec scale)
       r_rmapo[i] = lindices[inA->rmap->mapping->indices[i]];
     }
   }
-  PetscCheckFalse(nt > no,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Hmm nt %" PetscInt_FMT " no %" PetscInt_FMT,nt,n);
+  PetscCheck(nt <= no,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Hmm nt %" PetscInt_FMT " no %" PetscInt_FMT,nt,n);
   PetscCall(PetscFree(lindices));
   PetscCall(PetscMalloc1(nt+1,&auglyrmapo));
   for (i=0; i<inA->rmap->mapping->n; i++) {
@@ -270,7 +270,7 @@ PetscErrorCode MatMPIAIJDiagonalScaleLocal(Mat A,Vec scale)
   /* This routine should really be abandoned as it duplicates MatDiagonalScaleLocal */
 
   PetscFunctionBegin;
-  PetscCall(PetscTryMethod(A,"MatDiagonalScaleLocal_C",(Mat,Vec),(A,scale)));
+  PetscTryMethod(A,"MatDiagonalScaleLocal_C",(Mat,Vec),(A,scale));
   PetscFunctionReturn(0);
 }
 

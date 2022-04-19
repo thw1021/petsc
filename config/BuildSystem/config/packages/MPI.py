@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 from __future__ import generators
 import config.base
 import config.package
@@ -42,7 +41,6 @@ class Configure(config.package.Package):
     self.liblist          = liblist_mpich + liblist_lam + liblist_msmpi + liblist_other + liblist_single
     # defaults to --with-mpi=yes
     self.required         = 1
-    self.complex          = 1
     self.isPOE            = 0
     self.usingMPIUni      = 0
     self.shared           = 0
@@ -394,7 +392,7 @@ Unable to run hostname to check the network')
       if (MPI_Finalized(&flag)) return 0;
       if (MPI_Type_dup(MPI_INT,&newtype)) return 0;
       if (MPI_Exscan(sendbuf,recvbuf,1,MPI_INT,MPI_SUM,MPI_COMM_WORLD)) return 0;
-      if (MPI_Reduce_scatter(sendbuf,recvbuf,1,MPI_INT,MPI_SUM,MPI_COMM_WORLD)) return 0;
+      if (MPI_Reduce_scatter(sendbuf,recvbuf,sendbuf,MPI_INT,MPI_SUM,MPI_COMM_WORLD)) return 0;
       if (MPI_Type_get_envelope(MPI_INT,&a,&b,&c,&d)) return 0;
     '''):
       raise RuntimeError('PETSc requires some of the MPI-2.0 (1997), MPI-2.1 (2008) functions - they are not available with the specified MPI library')

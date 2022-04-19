@@ -1,8 +1,3 @@
-/*T
-   Concepts: KSP^solving a system of linear equations
-   Concepts: KSP^Laplacian, 2d
-   Processors: n
-T*/
 
 /*
 This example was derived from src/ksp/ksp/tutorials ex29.c
@@ -50,12 +45,11 @@ PetscErrorCode UserContextCreate(MPI_Comm comm,UserContext **ctx)
   UserContext    *user;
   const char     *bcTypes[2] = {"dirichlet","neumann"};
   PetscInt       bc;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   PetscCall(PetscCalloc1(1,&user));
   user->comm = comm;
-  ierr = PetscOptionsBegin(comm, "", "Options for the inhomogeneous Poisson equation", "DMqq");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "Options for the inhomogeneous Poisson equation", "DMqq");
   user->rho = 1.0;
   PetscCall(PetscOptionsReal("-rho", "The conductivity", "ex29.c", user->rho, &user->rho, NULL));
   user->nu = 0.1;
@@ -63,7 +57,7 @@ PetscErrorCode UserContextCreate(MPI_Comm comm,UserContext **ctx)
   bc = (PetscInt)DIRICHLET;
   PetscCall(PetscOptionsEList("-bc_type","Type of boundary condition","ex29.c",bcTypes,2,bcTypes[0],&bc,NULL));
   user->bcType = (BCType)bc;
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   *ctx = user;
   PetscFunctionReturn(0);
 }
@@ -104,14 +98,14 @@ PetscErrorCode CommHierarchyCreate(MPI_Comm comm,PetscInt n,PetscInt number[],Pe
     PetscMPIInt size;
 
     PetscCallMPI(MPI_Comm_size(comm,&size));
-    PetscCall(PetscPrintf(comm,"level[%D] size %d\n",n,(int)size));
+    PetscCall(PetscPrintf(comm,"level[%" PetscInt_FMT "] size %d\n",n,(int)size));
     for (k=n-1; k>=0; k--) {
       if (pscommlist[k]) {
         MPI_Comm comm_k = PetscSubcommChild(pscommlist[k]);
 
         if (pscommlist[k]->color == 0) {
           PetscCallMPI(MPI_Comm_size(comm_k,&size));
-          PetscCall(PetscPrintf(comm_k,"level[%D] size %d\n",k,(int)size));
+          PetscCall(PetscPrintf(comm_k,"level[%" PetscInt_FMT "] size %d\n",k,(int)size));
         }
       }
     }
@@ -137,7 +131,7 @@ static PetscErrorCode _DMDADetermineRankFromGlobalIJ_2d(PetscInt i,PetscInt j,Pe
         break;
       }
     }
-    PetscCheck(pi != -1,PETSC_COMM_SELF,PETSC_ERR_USER,"[dmda-ij] pi cannot be determined : range %D, val %D",Mp,i);
+    PetscCheck(pi != -1,PETSC_COMM_SELF,PETSC_ERR_USER,"[dmda-ij] pi cannot be determined : range %" PetscInt_FMT ", val %" PetscInt_FMT,Mp,i);
     *_pi = (PetscMPIInt)pi;
   }
 
@@ -148,7 +142,7 @@ static PetscErrorCode _DMDADetermineRankFromGlobalIJ_2d(PetscInt i,PetscInt j,Pe
         break;
       }
     }
-    PetscCheck(pj != -1,PETSC_COMM_SELF,PETSC_ERR_USER,"[dmda-ij] pj cannot be determined : range %D, val %D",Np,j);
+    PetscCheck(pj != -1,PETSC_COMM_SELF,PETSC_ERR_USER,"[dmda-ij] pj cannot be determined : range %" PetscInt_FMT ", val %" PetscInt_FMT,Np,j);
     *_pj = (PetscMPIInt)pj;
   }
 
@@ -180,7 +174,6 @@ static PetscErrorCode _DMDADetermineGlobalS0_2d(PetscMPIInt rank_re,PetscInt Mp_
 /* adapted from src/ksp/pc/impls/telescope/telescope_dmda.c */
 static PetscErrorCode DMDACreatePermutation_2d(DM dmrepart,DM dmf,Mat *mat)
 {
-  PetscErrorCode ierr;
   PetscInt       k,sum,Mp_re = 0,Np_re = 0;
   PetscInt       nx,ny,sr,er,Mr,ndof;
   PetscInt       i,j,location,startI[2],endI[2],lenI[2];
@@ -259,10 +252,10 @@ static PetscErrorCode DMDACreatePermutation_2d(DM dmrepart,DM dmf,Mat *mat)
       PetscInt    lenI_re[] = {0,0};
 
       location = (i - startI[0]) + (j - startI[1])*lenI[0];
-      ierr = _DMDADetermineRankFromGlobalIJ_2d(i,j,Mp_re,Np_re,
-                                             start_i_re,start_j_re,
-                                             range_i_re,range_j_re,
-                                             &rank_reI[0],&rank_reI[1],&rank_ijk_re);PetscCall(ierr);
+      PetscCall(_DMDADetermineRankFromGlobalIJ_2d(i,j,Mp_re,Np_re,
+                                                  start_i_re,start_j_re,
+                                                  range_i_re,range_j_re,
+                                                  &rank_reI[0],&rank_reI[1],&rank_ijk_re));
 
       PetscCall(_DMDADetermineGlobalS0_2d(rank_ijk_re,Mp_re,Np_re,range_i_re,range_j_re,&s0_re));
 
@@ -364,21 +357,21 @@ PetscErrorCode DMCreateMatrix_ShellDA(DM dm,Mat *A)
   PetscCallMPI(MPI_Comm_size(comm,&size));
   PetscCall(DMCreateMatrix(da,A));
   PetscCall(MatGetSize(*A,&M,&N));
-  PetscCall(PetscPrintf(comm,"[size %D] DMCreateMatrix_ShellDA (%D x %D)\n",(PetscInt)size,M,N));
+  PetscCall(PetscPrintf(comm,"[size %" PetscInt_FMT "] DMCreateMatrix_ShellDA (%" PetscInt_FMT " x %" PetscInt_FMT ")\n",(PetscInt)size,M,N));
 
   PetscCall(DMGetApplicationContext(dm,&ctx));
   if (ctx->bcType == NEUMANN) {
     MatNullSpace nullspace = NULL;
-    PetscCall(PetscPrintf(comm,"[size %D] DMCreateMatrix_ShellDA: using neumann bcs\n",(PetscInt)size));
+    PetscCall(PetscPrintf(comm,"[size %" PetscInt_FMT "] DMCreateMatrix_ShellDA: using neumann bcs\n",(PetscInt)size));
 
     PetscCall(MatGetNullSpace(*A,&nullspace));
     if (!nullspace) {
-      PetscCall(PetscPrintf(comm,"[size %D] DMCreateMatrix_ShellDA: operator does not have nullspace - attaching\n",(PetscInt)size));
+      PetscCall(PetscPrintf(comm,"[size %" PetscInt_FMT "] DMCreateMatrix_ShellDA: operator does not have nullspace - attaching\n",(PetscInt)size));
       PetscCall(MatNullSpaceCreate(comm,PETSC_TRUE,0,0,&nullspace));
       PetscCall(MatSetNullSpace(*A,nullspace));
       PetscCall(MatNullSpaceDestroy(&nullspace));
     } else {
-      PetscCall(PetscPrintf(comm,"[size %D] DMCreateMatrix_ShellDA: operator already has a nullspace\n",(PetscInt)size));
+      PetscCall(PetscPrintf(comm,"[size %" PetscInt_FMT "] DMCreateMatrix_ShellDA: operator already has a nullspace\n",(PetscInt)size));
     }
   }
   PetscFunctionReturn(0);
@@ -671,7 +664,7 @@ PetscErrorCode HierarchyCreate(PetscInt *_nd,PetscInt *_nref,MPI_Comm **_cl,DM *
   set = PETSC_FALSE;
   PetscCall(PetscOptionsGetIntArray(NULL,NULL,"-level_comm_red_factor",number,&found,&set));
   if (set) {
-    PetscCheck(found == ncoarsen,PETSC_COMM_WORLD,PETSC_ERR_USER,"Expected %D values for -level_comm_red_factor. Found %D",ncoarsen,found);
+    PetscCheck(found == ncoarsen,PETSC_COMM_WORLD,PETSC_ERR_USER,"Expected %" PetscInt_FMT " values for -level_comm_red_factor. Found %" PetscInt_FMT,ncoarsen,found);
   }
 
   PetscCall(PetscMalloc1(ncoarsen+1,&pscommlist));
@@ -718,7 +711,7 @@ PetscErrorCode HierarchyCreate(PetscInt *_nd,PetscInt *_nref,MPI_Comm **_cl,DM *
       PetscCall(DMSetUp(dmroot));
       PetscCall(DMDASetUniformCoordinates(dmroot,0,1,0,1,0,0));
       PetscCall(DMDASetFieldName(dmroot,0,"Pressure"));
-      PetscCall(PetscSNPrintf(name,PETSC_MAX_PATH_LEN-1,"root-decomp-%D",d));
+      PetscCall(PetscSNPrintf(name,PETSC_MAX_PATH_LEN-1,"root-decomp-%" PetscInt_FMT,d));
       PetscCall(PetscObjectSetName((PetscObject)dmroot,name));
       /*PetscCall(DMView(dmroot,PETSC_VIEWER_STDOUT_(commlist[d])));*/
     }
@@ -729,7 +722,7 @@ PetscErrorCode HierarchyCreate(PetscInt *_nd,PetscInt *_nref,MPI_Comm **_cl,DM *
 
       if (commlist[d] != MPI_COMM_NULL) {
         PetscCall(DMRefine(dalist[d*levelrefs + (k-1)],MPI_COMM_NULL,&dmref));
-        PetscCall(PetscSNPrintf(name,PETSC_MAX_PATH_LEN-1,"ref%D-decomp-%D",k,d));
+        PetscCall(PetscSNPrintf(name,PETSC_MAX_PATH_LEN-1,"ref%" PetscInt_FMT "-decomp-%" PetscInt_FMT,k,d));
         PetscCall(PetscObjectSetName((PetscObject)dmref,name));
         PetscCall(DMDAGetInfo(dmref,NULL,&nx,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL));
         /*PetscCall(DMView(dmref,PETSC_VIEWER_STDOUT_(commlist[d])));*/
@@ -749,7 +742,7 @@ PetscErrorCode HierarchyCreate(PetscInt *_nd,PetscInt *_nref,MPI_Comm **_cl,DM *
       for (k=0; k<levelrefs; k++) {
         PetscCall(DMShellCreate_ShellDA(dalist[d*levelrefs + k],&dmlist[d*levelrefs + k]));
         PetscCall(DMSetApplicationContext(dmlist[d*levelrefs + k],ctx));
-        PetscCall(PetscSNPrintf(name,PETSC_MAX_PATH_LEN-1,"level%D-decomp-%D",k,d));
+        PetscCall(PetscSNPrintf(name,PETSC_MAX_PATH_LEN-1,"level%" PetscInt_FMT "-decomp-%" PetscInt_FMT,k,d));
         PetscCall(PetscObjectSetName((PetscObject)dmlist[d*levelrefs + k],name));
       }
     }

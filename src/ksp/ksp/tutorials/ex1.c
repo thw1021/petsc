@@ -1,11 +1,6 @@
 
 static char help[] = "Solves a tridiagonal linear system with KSP.\n\n";
 
-/*T
-   Concepts: KSP^solving a system of linear equations
-   Processors: 1
-T*/
-
 /*
   Include "petscksp.h" so that we can use KSP solvers.  Note that this file
   automatically includes:
@@ -134,7 +129,7 @@ int main(int argc,char **args)
   PetscCall(VecAXPY(x,-1.0,u));
   PetscCall(VecNorm(x,NORM_2,&norm));
   PetscCall(KSPGetIterationNumber(ksp,&its));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g, Iterations %D\n",(double)norm,its));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g, Iterations %" PetscInt_FMT "\n",(double)norm,its));
 
   /*
      Free work space.  All PETSc objects should be destroyed when they

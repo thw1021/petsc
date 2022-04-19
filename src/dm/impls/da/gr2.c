@@ -31,7 +31,6 @@ PetscErrorCode VecView_MPI_Draw_DA2d_Zoom(PetscDraw draw,void *ctx)
   PetscInt          m,n,i,j,k,dof,id,c1,c2,c3,c4;
   PetscReal         min,max,x1,x2,x3,x4,y_1,y2,y3,y4;
   const PetscScalar *xy,*v;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   m    = zctx->m;
@@ -44,7 +43,7 @@ PetscErrorCode VecView_MPI_Draw_DA2d_Zoom(PetscDraw draw,void *ctx)
   max  = zctx->max;
 
   /* PetscDraw the contour plot patch */
-  ierr = PetscDrawCollectiveBegin(draw);PetscCall(ierr);
+  PetscDrawCollectiveBegin(draw);
   for (j=0; j<n-1; j++) {
     for (i=0; i<m-1; i++) {
       id   = i+j*m;
@@ -108,7 +107,7 @@ PetscErrorCode VecView_MPI_Draw_DA2d_Zoom(PetscDraw draw,void *ctx)
       PetscCall(PetscDrawString(draw,xmin - .05*(xmax - xmin),ymax,PETSC_DRAW_BLACK,value));
     }
   }
-  ierr = PetscDrawCollectiveEnd(draw);PetscCall(ierr);
+  PetscDrawCollectiveEnd(draw);
   PetscFunctionReturn(0);
 }
 
@@ -600,8 +599,8 @@ static PetscErrorCode DMDAArrayMPIIO(DM da,PetscViewer viewer,Vec xin,PetscBool 
       PetscCall(PetscViewerBinaryRead(viewer,tr,2,NULL,PETSC_INT));
       type = tr[0];
       rows = tr[1];
-      PetscCheckFalse(type != VEC_FILE_CLASSID,PetscObjectComm((PetscObject)da),PETSC_ERR_ARG_WRONG,"Not vector next in file");
-      PetscCheckFalse(rows != vecrows,PetscObjectComm((PetscObject)da),PETSC_ERR_ARG_SIZ,"Vector in file not same size as DMDA vector");
+      PetscCheck(type == VEC_FILE_CLASSID,PetscObjectComm((PetscObject)da),PETSC_ERR_ARG_WRONG,"Not vector next in file");
+      PetscCheck(rows == vecrows,PetscObjectComm((PetscObject)da),PETSC_ERR_ARG_SIZ,"Vector in file not same size as DMDA vector");
     }
   } else {
     tr[0] = VEC_FILE_CLASSID;
@@ -672,7 +671,7 @@ PetscErrorCode  VecView_MPI_DA(Vec xin,PetscViewer viewer)
       PetscCall(VecView_MPI_Draw_DA1d(xin,viewer));
     } else if (dim == 2) {
       PetscCall(VecView_MPI_Draw_DA2d(xin,viewer));
-    } else SETERRQ(PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Cannot graphically view vector associated with this dimensional DMDA %D",dim);
+    } else SETERRQ(PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Cannot graphically view vector associated with this dimensional DMDA %" PetscInt_FMT,dim);
   } else if (isvtk) {           /* Duplicate the Vec */
     Vec Y;
     PetscCall(VecDuplicate(xin,&Y));
@@ -745,19 +744,19 @@ PetscErrorCode  VecView_MPI_DA(Vec xin,PetscViewer viewer)
       PetscCall(DMDAGetInfo(da,&dim,&ni,&nj,&nk,&pi,&pj,&pk,&dof,NULL,NULL,NULL,NULL,NULL));
       PetscCall(PetscFPrintf(comm,info,"#--- begin code written by PetscViewerBinary for MATLAB format ---#\n"));
       PetscCall(PetscFPrintf(comm,info,"#$$ tmp = PetscBinaryRead(fd); \n"));
-      if (dim == 1) { PetscCall(PetscFPrintf(comm,info,"#$$ tmp = reshape(tmp,%d,%d);\n",dof,ni)); }
-      if (dim == 2) { PetscCall(PetscFPrintf(comm,info,"#$$ tmp = reshape(tmp,%d,%d,%d);\n",dof,ni,nj)); }
-      if (dim == 3) { PetscCall(PetscFPrintf(comm,info,"#$$ tmp = reshape(tmp,%d,%d,%d,%d);\n",dof,ni,nj,nk)); }
+      if (dim == 1) { PetscCall(PetscFPrintf(comm,info,"#$$ tmp = reshape(tmp,%" PetscInt_FMT ",%" PetscInt_FMT ");\n",dof,ni)); }
+      if (dim == 2) { PetscCall(PetscFPrintf(comm,info,"#$$ tmp = reshape(tmp,%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT ");\n",dof,ni,nj)); }
+      if (dim == 3) { PetscCall(PetscFPrintf(comm,info,"#$$ tmp = reshape(tmp,%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT ");\n",dof,ni,nj,nk)); }
 
       for (n=0; n<dof; n++) {
         PetscCall(DMDAGetFieldName(da,n,&fieldname));
         if (!fieldname || !fieldname[0]) {
-          PetscCall(PetscSNPrintf(fieldbuf,sizeof fieldbuf,"field%D",n));
+          PetscCall(PetscSNPrintf(fieldbuf,sizeof fieldbuf,"field%" PetscInt_FMT,n));
           fieldname = fieldbuf;
         }
-        if (dim == 1) { PetscCall(PetscFPrintf(comm,info,"#$$ Set.%s.%s = squeeze(tmp(%d,:))';\n",name,fieldname,n+1)); }
-        if (dim == 2) { PetscCall(PetscFPrintf(comm,info,"#$$ Set.%s.%s = squeeze(tmp(%d,:,:))';\n",name,fieldname,n+1)); }
-        if (dim == 3) { PetscCall(PetscFPrintf(comm,info,"#$$ Set.%s.%s = permute(squeeze(tmp(%d,:,:,:)),[2 1 3]);\n",name,fieldname,n+1));}
+        if (dim == 1) { PetscCall(PetscFPrintf(comm,info,"#$$ Set.%s.%s = squeeze(tmp(%" PetscInt_FMT ",:))';\n",name,fieldname,n+1)); }
+        if (dim == 2) { PetscCall(PetscFPrintf(comm,info,"#$$ Set.%s.%s = squeeze(tmp(%" PetscInt_FMT ",:,:))';\n",name,fieldname,n+1)); }
+        if (dim == 3) { PetscCall(PetscFPrintf(comm,info,"#$$ Set.%s.%s = permute(squeeze(tmp(%" PetscInt_FMT ",:,:,:)),[2 1 3]);\n",name,fieldname,n+1));}
       }
       PetscCall(PetscFPrintf(comm,info,"#$$ clear tmp; \n"));
       PetscCall(PetscFPrintf(comm,info,"#--- end code written by PetscViewerBinary for MATLAB format ---#\n\n"));
@@ -836,10 +835,10 @@ PetscErrorCode VecLoad_HDF5_DA(Vec xin, PetscViewer viewer)
     if (dd->w == 1 && dims[dofInd] == 1) dim2 = PETSC_TRUE;
 
     /* Special error message for the case where dof does not match the input file */
-    else PetscCheckFalse(dd->w != (PetscInt) dims[dofInd],PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED, "Number of dofs in file is %D, not %D as expected",(PetscInt)dims[dofInd],dd->w);
+    else PetscCheck(dd->w == (PetscInt) dims[dofInd],PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED, "Number of dofs in file is %" PetscInt_FMT ", not %" PetscInt_FMT " as expected",(PetscInt)dims[dofInd],dd->w);
 
   /* Other cases where rdim != dim cannot be handled currently */
-  } else PetscCheckFalse(rdim != dim,PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED, "Dimension of array in file is %d, not %d as expected with dof = %D",rdim,dim,dd->w);
+  } else PetscCheck(rdim == dim,PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED, "Dimension of array in file is %d, not %d as expected with dof = %" PetscInt_FMT,rdim,dim,dd->w);
 
   /* Set up the hyperslab size */
   dim = 0;
@@ -925,7 +924,7 @@ PetscErrorCode VecLoad_Binary_DA(Vec xin, PetscViewer viewer)
   PetscCall(PetscInfo(xin,"Loading vector from natural ordering into DMDA\n"));
   PetscCall(PetscOptionsGetInt(NULL,((PetscObject)xin)->prefix,"-vecload_block_size",&bs,&flag));
   if (flag && bs != dd->w) {
-    PetscCall(PetscInfo(xin,"Block size in file %D not equal to DMDA's dof %D\n",bs,dd->w));
+    PetscCall(PetscInfo(xin,"Block size in file %" PetscInt_FMT " not equal to DMDA's dof %" PetscInt_FMT "\n",bs,dd->w));
   }
   PetscFunctionReturn(0);
 }

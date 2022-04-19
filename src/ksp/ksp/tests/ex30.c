@@ -20,10 +20,6 @@ It is copied and intended to move dirty codes from ksp/tutorials/ex10.c and simp
    ./ex30 -f0 $D/small -mat_sigma -3.999999999999999 -ksp_type fgmres -pc_type lu -pc_factor_mat_solver_type petsc -pc_factor_shift_type NONZERO -pc_factor_shift_amount 1.e-5 -ckerror
  \n\n";
 */
-/*T
-   Concepts: KSP solving a linear system
-   Processors: n
-T*/
 
 #include <petscksp.h>
 
@@ -301,7 +297,7 @@ int main(int argc,char **args)
         }
         PetscCall(VecAXPY(b2,-1.0,b));
         PetscCall(VecNorm(b2,NORM_2,&rnorm));
-        PetscCall(PetscPrintf(PETSC_COMM_WORLD,"  Number of iterations = %3D\n",its));
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD,"  Number of iterations = %3" PetscInt_FMT "\n",its));
         PetscCall(PetscPrintf(PETSC_COMM_WORLD,"  Residual norm %g\n",(double)rnorm));
       }
       if (ckerror && !trans) {    /* Check error for each rhs */
@@ -329,7 +325,7 @@ int main(int argc,char **args)
       PetscCall(PetscViewerStringOpen(PETSC_COMM_WORLD,kspinfo,sizeof(kspinfo),&viewer));
       PetscCall(KSPView(ksp,viewer));
       PetscCall(PetscStrrchr(file[PetscPreLoadIt],'/',&matrixname));
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%-8.8s %3D %2.0e %s \n", matrixname,its,rnorm,kspinfo));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%-8.8s %3" PetscInt_FMT " %2.0e %s \n", matrixname,its,(double)rnorm,kspinfo));
 
       /*
         Destroy the viewer
@@ -364,7 +360,7 @@ int main(int argc,char **args)
     if (flg) {
       KSPConvergedReason reason;
       PetscCall(KSPGetConvergedReason(ksp,&reason));
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD,"KSPConvergedReason: %D\n", reason));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD,"KSPConvergedReason: %s\n", KSPConvergedReasons[reason]));
     }
 
   }   /* while (num_numfac--) */

@@ -62,7 +62,7 @@ PetscErrorCode TSMonitor(TS ts,PetscInt step,PetscReal ptime,Vec u)
 .seealso: PetscOptionsGetViewer(), PetscOptionsGetReal(), PetscOptionsHasName(), PetscOptionsGetString(),
           PetscOptionsGetIntArray(), PetscOptionsGetRealArray(), PetscOptionsBool()
           PetscOptionsInt(), PetscOptionsString(), PetscOptionsReal(), PetscOptionsBool(),
-          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHead(),
+          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHeadBegin(),
           PetscOptionsStringArray(),PetscOptionsRealArray(), PetscOptionsScalar(),
           PetscOptionsBoolGroupBegin(), PetscOptionsBoolGroup(), PetscOptionsBoolGroupEnd(),
           PetscOptionsFList(), PetscOptionsEList()
@@ -189,9 +189,9 @@ PetscErrorCode TSMonitorDefault(TS ts,PetscInt step,PetscReal ptime,Vec v,PetscV
   if (iascii) {
     PetscCall(PetscViewerASCIIAddTab(viewer,((PetscObject)ts)->tablevel));
     if (step == -1) { /* this indicates it is an interpolated solution */
-      PetscCall(PetscViewerASCIIPrintf(viewer,"Interpolated solution at time %g between steps %D and %D\n",(double)ptime,ts->steps-1,ts->steps));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"Interpolated solution at time %g between steps %" PetscInt_FMT " and %" PetscInt_FMT "\n",(double)ptime,ts->steps-1,ts->steps));
     } else {
-      PetscCall(PetscViewerASCIIPrintf(viewer,"%D TS dt %g time %g%s",step,(double)ts->time_step,(double)ptime,ts->steprollback ? " (r)\n" : "\n"));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"%" PetscInt_FMT " TS dt %g time %g%s",step,(double)ts->time_step,(double)ptime,ts->steprollback ? " (r)\n" : "\n"));
     }
     PetscCall(PetscViewerASCIISubtractTab(viewer,((PetscObject)ts)->tablevel));
   } else if (ibinary) {
@@ -235,7 +235,7 @@ PetscErrorCode TSMonitorExtreme(TS ts,PetscInt step,PetscReal ptime,Vec v,PetscV
     PetscCall(VecMax(v,NULL,&max));
     PetscCall(VecMin(v,NULL,&min));
     PetscCall(PetscViewerASCIIAddTab(viewer,((PetscObject)ts)->tablevel));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"%D TS dt %g time %g%s max %g min %g\n",step,(double)ts->time_step,(double)ptime,ts->steprollback ? " (r)" : "",(double)max,(double)min));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"%" PetscInt_FMT " TS dt %g time %g%s max %g min %g\n",step,(double)ts->time_step,(double)ptime,ts->steprollback ? " (r)" : "",(double)max,(double)min));
     PetscCall(PetscViewerASCIISubtractTab(viewer,((PetscObject)ts)->tablevel));
   }
   PetscCall(PetscViewerPopFormat(viewer));
@@ -474,7 +474,6 @@ PetscErrorCode  TSMonitorDrawSolutionPhase(TS ts,PetscInt step,PetscReal ptime,V
   PetscReal         U0,U1,xl,yl,xr,yr,h;
   char              time[32];
   const PetscScalar *U;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)ts),&size));
@@ -496,7 +495,7 @@ PetscErrorCode  TSMonitorDrawSolutionPhase(TS ts,PetscInt step,PetscReal ptime,V
   PetscCall(VecRestoreArrayRead(u,&U));
   if ((U0 < xl) || (U1 < yl) || (U0 > xr) || (U1 > yr)) PetscFunctionReturn(0);
 
-  ierr = PetscDrawCollectiveBegin(draw);PetscCall(ierr);
+  PetscDrawCollectiveBegin(draw);
   PetscCall(PetscDrawPoint(draw,U0,U1,PETSC_DRAW_BLACK));
   if (ictx->showtimestepandtime) {
     PetscCall(PetscDrawGetCoordinates(draw,&xl,&yl,&xr,&yr));
@@ -504,7 +503,7 @@ PetscErrorCode  TSMonitorDrawSolutionPhase(TS ts,PetscInt step,PetscReal ptime,V
     h    = yl + .95*(yr - yl);
     PetscCall(PetscDrawStringCentered(draw,.5*(xl+xr),h,PETSC_DRAW_BLACK,time));
   }
-  ierr = PetscDrawCollectiveEnd(draw);PetscCall(ierr);
+  PetscDrawCollectiveEnd(draw);
   PetscCall(PetscDrawFlush(draw));
   PetscCall(PetscDrawPause(draw));
   PetscCall(PetscDrawSave(draw));
@@ -670,7 +669,7 @@ PetscErrorCode  TSMonitorSolution(TS ts,PetscInt step,PetscReal ptime,Vec u,Pets
 .  step - current time-step
 .  ptime - current time
 .  u - current state
--  filenametemplate - string containing a format specifier for the integer time step (e.g. %03D)
+-  filenametemplate - string containing a format specifier for the integer time step (e.g. %03" PetscInt_FMT ")
 
    Level: intermediate
 
@@ -702,7 +701,7 @@ PetscErrorCode TSMonitorSolutionVTK(TS ts,PetscInt step,PetscReal ptime,Vec u,vo
    Collective on TS
 
    Input Parameters:
-.  filenametemplate - string containing a format specifier for the integer time step (e.g. %03D)
+.  filenametemplate - string containing a format specifier for the integer time step (e.g. %03" PetscInt_FMT ")
 
    Level: intermediate
 
@@ -768,7 +767,7 @@ PetscErrorCode  TSMonitorLGSolution(TS ts,PetscInt step,PetscReal ptime,Vec u,vo
         PetscCall(PetscMalloc1(n+1,&names));
         for (i=0; i<n; i++) {
           PetscCall(PetscMalloc1(5,&names[i]));
-          PetscCall(PetscSNPrintf(names[i],5,"%D",i));
+          PetscCall(PetscSNPrintf(names[i],5,"%" PetscInt_FMT,i));
         }
         names[n] = NULL;
         ctx->names = names;
@@ -1131,9 +1130,9 @@ PetscErrorCode  TSMonitorLGError(TS ts,PetscInt step,PetscReal ptime,Vec u,void 
 PetscErrorCode TSMonitorSPSwarmSolution(TS ts, PetscInt step, PetscReal ptime, Vec u, void *dctx)
 {
   TSMonitorSPCtx     ctx = (TSMonitorSPCtx) dctx;
+  PetscDraw          draw;
   DM                 dm, cdm;
   const PetscScalar *yy;
-  PetscReal         *y, *x;
   PetscInt           Np, p, dim = 2;
 
   PetscFunctionBegin;
@@ -1141,9 +1140,10 @@ PetscErrorCode TSMonitorSPSwarmSolution(TS ts, PetscInt step, PetscReal ptime, V
   if (!step) {
     PetscDrawAxis axis;
     PetscReal     dmboxlower[2], dmboxupper[2];
+
     PetscCall(TSGetDM(ts, &dm));
     PetscCall(DMGetDimension(dm, &dim));
-    PetscCheck(dim == 2,PETSC_COMM_SELF, PETSC_ERR_SUP, "Monitor only supports two dimensional fields");
+    PetscCheck(dim == 2, PETSC_COMM_SELF, PETSC_ERR_SUP, "Monitor only supports two dimensional fields");
     PetscCall(DMSwarmGetCellDM(dm, &cdm));
     PetscCall(DMGetBoundingBox(cdm, dmboxlower, dmboxupper));
     PetscCall(VecGetLocalSize(u, &Np));
@@ -1157,37 +1157,34 @@ PetscErrorCode TSMonitorSPSwarmSolution(TS ts, PetscInt step, PetscReal ptime, V
       PetscCall(PetscDrawAxisSetLimits(axis, dmboxlower[0], dmboxupper[0], dmboxlower[1], dmboxupper[1]));
     }
     PetscCall(PetscDrawAxisSetHoldLimits(axis, PETSC_TRUE));
-    PetscCall(PetscDrawSPSetDimension(ctx->sp, Np));
     PetscCall(PetscDrawSPReset(ctx->sp));
   }
   PetscCall(VecGetLocalSize(u, &Np));
   Np /= dim*2;
-  PetscCall(VecGetArrayRead(u,&yy));
-  PetscCall(PetscMalloc2(Np, &x, Np, &y));
-  /* get points from solution vector */
-  for (p = 0; p < Np; ++p) {
-    if (ctx->phase) {
-      x[p] = PetscRealPart(yy[p*dim*2]);
-      y[p] = PetscRealPart(yy[p*dim*2 + dim]);
-    } else {
-      x[p] = PetscRealPart(yy[p*dim*2]);
-      y[p] = PetscRealPart(yy[p*dim*2 + 1]);
-    }
-  }
-  PetscCall(VecRestoreArrayRead(u,&yy));
   if (((ctx->howoften > 0) && (!(step % ctx->howoften))) || ((ctx->howoften == -1) && ts->reason)) {
-    PetscDraw draw;
     PetscCall(PetscDrawSPGetDraw(ctx->sp, &draw));
     if ((ctx->retain == 0) || (ctx->retain > 0 && !(step % ctx->retain))) {
       PetscCall(PetscDrawClear(draw));
     }
     PetscCall(PetscDrawFlush(draw));
     PetscCall(PetscDrawSPReset(ctx->sp));
-    PetscCall(PetscDrawSPAddPoint(ctx->sp, x, y));
+    PetscCall(VecGetArrayRead(u, &yy));
+    for (p = 0; p < Np; ++p) {
+      PetscReal x, y;
+
+      if (ctx->phase) {
+        x = PetscRealPart(yy[p*dim*2]);
+        y = PetscRealPart(yy[p*dim*2 + dim]);
+      } else {
+        x = PetscRealPart(yy[p*dim*2]);
+        y = PetscRealPart(yy[p*dim*2 + 1]);
+      }
+      PetscCall(PetscDrawSPAddPoint(ctx->sp, &x, &y));
+    }
+    PetscCall(VecRestoreArrayRead(u, &yy));
     PetscCall(PetscDrawSPDraw(ctx->sp, PETSC_FALSE));
     PetscCall(PetscDrawSPSave(ctx->sp));
   }
-  PetscCall(PetscFree2(x, y));
   PetscFunctionReturn(0);
 }
 
@@ -1490,8 +1487,8 @@ PetscErrorCode TSDMSwarmMonitorMoments(TS ts, PetscInt step, PetscReal t, Vec U,
   PetscCall(VecRestoreArrayRead(U, &u));
   for (d = 0; d < dim; ++d) totMom[d] *= m;
   totE *= 0.5*m;
-  PetscCall(PetscPrintf(comm, "Step %4D Total Energy: %10.8lf", step, (double) totE));
-  for (d = 0; d < dim; ++d) PetscCall(PetscPrintf(comm, "    Total Momentum %c: %10.8lf", 'x'+d, (double) totMom[d]));
+  PetscCall(PetscPrintf(comm, "Step %4" PetscInt_FMT " Total Energy: %10.8lf", step, (double) totE));
+  for (d = 0; d < dim; ++d) PetscCall(PetscPrintf(comm, "    Total Momentum %c: %10.8lf", (char)('x'+d), (double) totMom[d]));
   PetscCall(PetscPrintf(comm, "\n"));
   PetscFunctionReturn(0);
 }

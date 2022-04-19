@@ -23,11 +23,6 @@ Without -user_set_subdomains, the general PCGASM options are meaningful:\n\
    of the GASM preconditioner.
 */
 
-/*T
-   Concepts: KSP^Additive Schwarz Method (GASM) with user-defined subdomains
-   Processors: n
-T*/
-
 /*
   Include "petscksp.h" so that we can use KSP solvers.  Note that this file
   automatically includes:
@@ -51,7 +46,6 @@ int main(int argc,char **args)
   PetscInt       Nsub;                   /* number of subdomains */
   PetscInt       m,n;                    /* mesh dimensions in x- and y- directions */
   PetscInt       M,N;                    /* number of subdomains in x- and y- directions */
-  PetscErrorCode ierr;
   PetscMPIInt    size;
   PetscBool      flg=PETSC_FALSE;
   PetscBool      user_set_subdomains=PETSC_FALSE;
@@ -59,7 +53,7 @@ int main(int argc,char **args)
 
   PetscCall(PetscInitialize(&argc,&args,(char*)0,help));
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD,&size));
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"ex62","PCGASM");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"ex62","PCGASM");
   m = 15;
   PetscCall(PetscOptionsInt("-M", "Number of mesh points in the x-direction","PCGASMCreateSubdomains2D",m,&m,NULL));
   n = 17;
@@ -72,7 +66,7 @@ int main(int argc,char **args)
   PetscCall(PetscOptionsInt("-Ndomains","Number of subdomain tiles in the y-direction","PCGASMSetSubdomains2D",N,&N,NULL));
   overlap = 1;
   PetscCall(PetscOptionsInt("-overlap","Size of tile overlap.","PCGASMSetSubdomains2D",overlap,&overlap,NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   /* -------------------------------------------------------------------
          Compute the matrix and right-hand-side vector that define
@@ -159,15 +153,15 @@ int main(int argc,char **args)
     PetscCall(PetscOptionsGetBool(NULL,NULL,"-subdomain_view",&flg,NULL));
     if (flg) {
       PetscInt i;
-      PetscCall(PetscPrintf(PETSC_COMM_SELF,"Nmesh points: %D x %D; subdomain partition: %D x %D; overlap: %D; Nsub: %D\n",m,n,M,N,overlap,Nsub));
+      PetscCall(PetscPrintf(PETSC_COMM_SELF,"Nmesh points: %" PetscInt_FMT " x %" PetscInt_FMT "; subdomain partition: %" PetscInt_FMT " x %" PetscInt_FMT "; overlap: %" PetscInt_FMT "; Nsub: %" PetscInt_FMT "\n",m,n,M,N,overlap,Nsub));
       PetscCall(PetscPrintf(PETSC_COMM_SELF,"Outer IS:\n"));
       for (i=0; i<Nsub; i++) {
-        PetscCall(PetscPrintf(PETSC_COMM_SELF,"  outer IS[%D]\n",i));
+        PetscCall(PetscPrintf(PETSC_COMM_SELF,"  outer IS[%" PetscInt_FMT "]\n",i));
         PetscCall(ISView(outeris[i],PETSC_VIEWER_STDOUT_SELF));
       }
       PetscCall(PetscPrintf(PETSC_COMM_SELF,"Inner IS:\n"));
       for (i=0; i<Nsub; i++) {
-        PetscCall(PetscPrintf(PETSC_COMM_SELF,"  inner IS[%D]\n",i));
+        PetscCall(PetscPrintf(PETSC_COMM_SELF,"  inner IS[%" PetscInt_FMT "]\n",i));
         PetscCall(ISView(inneris[i],PETSC_VIEWER_STDOUT_SELF));
       }
     }

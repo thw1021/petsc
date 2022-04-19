@@ -737,7 +737,7 @@ PetscErrorCode TSRosWRegister(TSRosWType name,PetscInt order,PetscInt s,const Pe
   }
   case 6: PetscCall(PetscKernel_A_gets_inverse_A_6(GammaInv,0,PETSC_FALSE,NULL)); break;
   case 7: PetscCall(PetscKernel_A_gets_inverse_A_7(GammaInv,0,PETSC_FALSE,NULL)); break;
-  default: SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented for %D stages",s);
+  default: SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented for %" PetscInt_FMT " stages",s);
   }
   for (i=0; i<s*s; i++) t->GammaInv[i] = PetscRealPart(GammaInv[i]);
   PetscCall(PetscFree(GammaInv));
@@ -925,7 +925,7 @@ static PetscErrorCode TSEvaluateStep_RosW(TS ts,PetscInt order,Vec U,PetscBool *
   }
   unavailable:
   if (done) *done = PETSC_FALSE;
-  else SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"Rosenbrock-W '%s' of order %D cannot evaluate step at order %D. Consider using -ts_adapt_type none or a different method that has an embedded estimate.",tab->name,tab->order,order);
+  else SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"Rosenbrock-W '%s' of order %" PetscInt_FMT " cannot evaluate step at order %" PetscInt_FMT ". Consider using -ts_adapt_type none or a different method that has an embedded estimate.",tab->name,tab->order,order);
   PetscFunctionReturn(0);
 }
 
@@ -1049,7 +1049,7 @@ static PetscErrorCode TSStep_RosW(TS ts)
     ts->reject++; accept = PETSC_FALSE;
     if (!ts->reason && ++rejections > ts->max_reject && ts->max_reject >= 0) {
       ts->reason = TS_DIVERGED_STEP_REJECTED;
-      PetscCall(PetscInfo(ts,"Step=%D, step rejections %D greater than current TS allowed, stopping solve\n",ts->steps,rejections));
+      PetscCall(PetscInfo(ts,"Step=%" PetscInt_FMT ", step rejections %" PetscInt_FMT " greater than current TS allowed, stopping solve\n",ts->steps,rejections));
     }
   }
   PetscFunctionReturn(0);
@@ -1359,7 +1359,7 @@ static PetscErrorCode TSSetFromOptions_RosW(PetscOptionItems *PetscOptionsObject
   SNES           snes;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"RosW ODE solver options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"RosW ODE solver options");
   {
     RosWTableauLink link;
     PetscInt        count,choice;
@@ -1375,7 +1375,7 @@ static PetscErrorCode TSSetFromOptions_RosW(PetscOptionItems *PetscOptionsObject
 
     PetscCall(PetscOptionsBool("-ts_rosw_recompute_jacobian","Recompute the Jacobian at each stage","TSRosWSetRecomputeJacobian",ros->recompute_jacobian,&ros->recompute_jacobian,NULL));
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   /* Rosenbrock methods are linearly implicit, so set that unless the user has specifically asked for something else */
   PetscCall(TSGetSNES(ts,&snes));
   if (!((PetscObject)snes)->type_name) {
@@ -1442,7 +1442,7 @@ PetscErrorCode TSRosWSetType(TS ts,TSRosWType roswtype)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
   PetscValidCharPointer(roswtype,2);
-  PetscCall(PetscTryMethod(ts,"TSRosWSetType_C",(TS,TSRosWType),(ts,roswtype)));
+  PetscTryMethod(ts,"TSRosWSetType_C",(TS,TSRosWType),(ts,roswtype));
   PetscFunctionReturn(0);
 }
 
@@ -1465,7 +1465,7 @@ PetscErrorCode TSRosWGetType(TS ts,TSRosWType *rostype)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
-  PetscCall(PetscUseMethod(ts,"TSRosWGetType_C",(TS,TSRosWType*),(ts,rostype)));
+  PetscUseMethod(ts,"TSRosWGetType_C",(TS,TSRosWType*),(ts,rostype));
   PetscFunctionReturn(0);
 }
 
@@ -1486,7 +1486,7 @@ PetscErrorCode TSRosWSetRecomputeJacobian(TS ts,PetscBool flg)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
-  PetscCall(PetscTryMethod(ts,"TSRosWSetRecomputeJacobian_C",(TS,PetscBool),(ts,flg)));
+  PetscTryMethod(ts,"TSRosWSetRecomputeJacobian_C",(TS,PetscBool),(ts,flg));
   PetscFunctionReturn(0);
 }
 

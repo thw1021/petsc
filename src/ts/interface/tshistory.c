@@ -7,7 +7,7 @@
   do {                                                                  \
     PetscInt b1[2],b2[2];                                               \
     b1[0] = -b; b1[1] = b;                                              \
-    PetscCallMPI(MPIU_Allreduce(b1,b2,2,MPIU_INT,MPI_MAX,a)); \
+    PetscCall(MPIU_Allreduce(b1,b2,2,MPIU_INT,MPI_MAX,a)); \
     PetscCheck(-b2[0] == b2[1],a,PETSC_ERR_ARG_WRONG,"Int value must be same on all processes, argument # %d",c); \
   } while (0)
 
@@ -15,7 +15,7 @@
   do {                                                                  \
     PetscMPIInt b1[2],b2[2];                                            \
     b1[0] = -(PetscMPIInt)b; b1[1] = (PetscMPIInt)b;                    \
-    PetscCallMPI(MPIU_Allreduce(b1,b2,2,MPI_INT,MPI_MAX,a)); \
+    PetscCall(MPIU_Allreduce(b1,b2,2,MPI_INT,MPI_MAX,a)); \
     PetscCheck(-b2[0] == b2[1],a,PETSC_ERR_ARG_WRONG,"Bool value must be same on all processes, argument # %d",c); \
   } while (0)
 
@@ -91,7 +91,7 @@ PetscErrorCode TSHistoryGetTime(TSHistory tsh, PetscBool backward, PetscInt step
     PetscCall(PetscSortRealWithArrayInt(tsh->n,tsh->hist,tsh->hist_id));
     tsh->sorted = PETSC_TRUE;
   }
-  PetscCheck(step >= 0 && step < (PetscInt)tsh->n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Given time step %D does not match any in history [0,%D]",step,(PetscInt)tsh->n);
+  PetscCheck(step >= 0 && step < (PetscInt)tsh->n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Given time step %" PetscInt_FMT " does not match any in history [0,%" PetscInt_FMT "]",step,(PetscInt)tsh->n);
   if (!backward) *t = tsh->hist[step];
   else           *t = tsh->hist[tsh->n-step-1];
   PetscFunctionReturn(0);
@@ -107,7 +107,7 @@ PetscErrorCode TSHistoryGetTimeStep(TSHistory tsh, PetscBool backward, PetscInt 
     PetscCall(PetscSortRealWithArrayInt(tsh->n,tsh->hist,tsh->hist_id));
     tsh->sorted = PETSC_TRUE;
   }
-  PetscCheck(step >= 0 && step <= (PetscInt)tsh->n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Given time step %D does not match any in history [0,%D]",step,(PetscInt)tsh->n);
+  PetscCheck(step >= 0 && step <= (PetscInt)tsh->n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Given time step %" PetscInt_FMT " does not match any in history [0,%" PetscInt_FMT "]",step,(PetscInt)tsh->n);
   if (!backward) *dt = tsh->hist[PetscMin(step+1,(PetscInt)tsh->n-1)] - tsh->hist[PetscMin(step,(PetscInt)tsh->n-1)];
   else           *dt = tsh->hist[PetscMax((PetscInt)tsh->n-step-1,0)] - tsh->hist[PetscMax((PetscInt)tsh->n-step-2,0)];
   PetscFunctionReturn(0);

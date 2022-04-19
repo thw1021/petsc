@@ -4,7 +4,7 @@ import os
 class Configure(config.package.CMakePackage):
   def __init__(self, framework):
     config.package.CMakePackage.__init__(self, framework)
-    self.gitcommit        = '1ec0d1ee961cd86d69b950ff8525729cc9a3a60f' # develop of 2022-01-26
+    self.gitcommit        = '989ca926ea7bf82c5606d30828ade4ca63cfece5' # release-candidate-3.6.0 of 2022-03-11
     self.minversion       = '3.5.00'
     self.versionname      = 'KOKKOS_VERSION'
     self.download         = ['git://https://github.com/kokkos/kokkos.git']
@@ -16,11 +16,11 @@ class Configure(config.package.CMakePackage):
     self.functionsCxx     = [1,'namespace Kokkos {void initialize(int&,char*[]);}','int one = 1;char* args[1];Kokkos::initialize(one,args);']
     self.minCxxVersion    = 'c++14'
     self.buildLanguages   = ['Cxx'] # Depending on if cuda, hip or sycl is avaiable, it will be modified.
-    self.downloadonWindows= 0
     self.hastests         = 1
     self.requiresrpath    = 1
     self.precisions       = ['single','double']
     self.devicePackage    = 1
+    self.minCmakeVersion  = (3,16,0)
     return
 
   def __str__(self):
@@ -72,6 +72,11 @@ class Configure(config.package.CMakePackage):
   def formCMakeConfigureArgs(self):
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
     args.append('-DUSE_XSDK_DEFAULTS=YES')
+
+    # always use C/C++'s alignment (i.e., sizeof(RealType)) for complex,
+    # instead of Kokkos's default "alignas(2 * sizeof(RealType))"
+    args.append('-DKokkos_ENABLE_COMPLEX_ALIGN=OFF')
+
     if not self.compilerFlags.debugging:
       args.append('-DXSDK_ENABLE_DEBUG=NO')
 

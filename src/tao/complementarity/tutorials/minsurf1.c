@@ -17,13 +17,6 @@ The command line options are:\n\
   -my <yg>, where <yg> = number of grid points in the 2nd coordinate direction\n\
   -start <st>, where <st> =0 for zero vector, and an average of the boundary conditions otherwise \n\n";
 
-/*T
-   Concepts: TAO^Solving a complementarity problem
-   Routines: TaoCreate(); TaoDestroy();
-
-   Processors: 1
-T*/
-
 /*
    User-defined application context - contains data needed by the
    application-provided call-back routines, FormFunctionGradient(),
@@ -68,7 +61,7 @@ int main(int argc, char **argv)
   N = user.mx*user.my;
 
   PetscCall(PetscPrintf(PETSC_COMM_SELF,"\n---- Minimum Surface Area Problem -----\n"));
-  PetscCall(PetscPrintf(PETSC_COMM_SELF,"mx:%D, my:%D\n", user.mx,user.my));
+  PetscCall(PetscPrintf(PETSC_COMM_SELF,"mx:%" PetscInt_FMT ", my:%" PetscInt_FMT "\n", user.mx,user.my));
 
   /* Create appropriate vectors and matrices */
   PetscCall(VecCreateSeq(MPI_COMM_SELF, N, &x));

@@ -592,6 +592,16 @@ class Configure(config.base.Configure):
       return found
 
   @staticmethod
+  def isARM(log):
+    '''Returns true if system is processor-type is ARM'''
+    (output, error, status) = config.base.Configure.executeShellCommand('uname -p', log = log)
+    if not status:
+      found = (output.lower().strip() == 'arm')
+      if found:
+        if log: log.write('Detected ARM processor\n\n')
+      return found
+
+  @staticmethod
   def isDarwinCatalina(log):
     '''Returns true if system is Darwin/MacOSX Version Catalina or higher'''
     import platform
@@ -1284,6 +1294,10 @@ class Configure(config.base.Configure):
       self.executeShellCommand(self.CC+' --version', log = self.log)
     except:
       pass
+    (output, error, status) = config.base.Configure.executeShellCommand(compiler+' -v | head -n 20', log = self.log)
+    output = output + error
+    if '(gcc version 4.8.5 compatibility)' in output:
+       self.logPrintBox('Warning: Intel compiler being used with gcc 4.8.5 compatibility, failures may occur.\nRecommend having a newer gcc version in your path.')
     if os.path.basename(self.CC).startswith('mpi'):
        self.logPrint('Since MPI c compiler starts with mpi, force searches for other compilers to only look for MPI compilers\n')
        self.argDB['with-mpi-compilers'] = 1

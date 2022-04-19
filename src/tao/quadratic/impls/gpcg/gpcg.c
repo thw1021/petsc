@@ -32,9 +32,9 @@ static PetscErrorCode TaoSetFromOptions_GPCG(PetscOptionItems *PetscOptionsObjec
   PetscBool      flg;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Gradient Projection, Conjugate Gradient method for bound constrained optimization"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Gradient Projection, Conjugate Gradient method for bound constrained optimization");
   PetscCall(PetscOptionsInt("-tao_gpcg_maxpgits","maximum number of gradient projections per GPCG iterate",NULL,gpcg->maxgpits,&gpcg->maxgpits,&flg));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscCall(KSPSetFromOptions(tao->ksp));
   PetscCall(TaoLineSearchSetFromOptions(tao->linesearch));
   PetscFunctionReturn(0);
@@ -49,7 +49,7 @@ static PetscErrorCode TaoView_GPCG(Tao tao, PetscViewer viewer)
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isascii));
   if (isascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer,"Total PG its: %D,",gpcg->total_gp_its));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"Total PG its: %" PetscInt_FMT ",",gpcg->total_gp_its));
     PetscCall(PetscViewerASCIIPrintf(viewer,"PG tolerance: %g \n",(double)gpcg->pg_ftol));
   }
   PetscCall(TaoLineSearchView(tao->linesearch,viewer));

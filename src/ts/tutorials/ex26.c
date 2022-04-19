@@ -42,13 +42,6 @@ The flow can be driven with the lid or with bouyancy or both:\n\
       See also https://lists.mcs.anl.gov/pipermail/petsc-dev/2010-March/002362.html
 */
 
-/*T
-   Concepts: TS^solving a system of nonlinear equations (parallel multicomponent example);
-   Concepts: DMDA^using distributed arrays;
-   Concepts: TS^multicomponent
-   Concepts: TS^differential-algebraic equation
-   Processors: n
-T*/
 /* ------------------------------------------------------------------------
 
     We thank David E. Keyes for contributing the driven cavity discretization
@@ -120,7 +113,6 @@ int main(int argc,char **argv)
 {
   AppCtx            user;             /* user-defined work context */
   PetscInt          mx,my,steps;
-  PetscErrorCode    ierr;
   TS                ts;
   DM                da;
   Vec               X;
@@ -134,8 +126,7 @@ int main(int argc,char **argv)
   PetscCall(DMSetUp(da));
   PetscCall(TSSetDM(ts,(DM)da));
 
-  ierr = DMDAGetInfo(da,0,&mx,&my,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,
-                     PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE);PetscCall(ierr);
+  PetscCall(DMDAGetInfo(da,0,&mx,&my,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE,PETSC_IGNORE));
   /*
      Problem parameters (velocity of lid, prandtl, and grashof numbers)
   */
@@ -145,13 +136,13 @@ int main(int argc,char **argv)
   user.parabolic   = PETSC_FALSE;
   user.cfl_initial = 50.;
 
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Driven cavity/natural convection options","");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Driven cavity/natural convection options","");
   PetscCall(PetscOptionsReal("-lidvelocity","Lid velocity, related to Reynolds number","",user.lidvelocity,&user.lidvelocity,NULL));
   PetscCall(PetscOptionsReal("-prandtl","Ratio of viscous to thermal diffusivity","",user.prandtl,&user.prandtl,NULL));
   PetscCall(PetscOptionsReal("-grashof","Ratio of bouyant to viscous forces","",user.grashof,&user.grashof,NULL));
   PetscCall(PetscOptionsBool("-parabolic","Relax incompressibility to make the system parabolic instead of differential-algebraic","",user.parabolic,&user.parabolic,NULL));
   PetscCall(PetscOptionsReal("-cfl_initial","Advective CFL for the first time step","",user.cfl_initial,&user.cfl_initial,NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   PetscCall(DMDASetFieldName(da,0,"x-velocity"));
   PetscCall(DMDASetFieldName(da,1,"y-velocity"));
@@ -174,7 +165,7 @@ int main(int argc,char **argv)
   PetscCall(TSSetTimeStep(ts,user.cfl_initial/(user.lidvelocity*mx)));
   PetscCall(TSSetFromOptions(ts));
 
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%Dx%D grid, lid velocity = %g, prandtl # = %g, grashof # = %g\n",mx,my,(double)user.lidvelocity,(double)user.prandtl,(double)user.grashof));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%" PetscInt_FMT "x%" PetscInt_FMT " grid, lid velocity = %g, prandtl # = %g, grashof # = %g\n",mx,my,(double)user.lidvelocity,(double)user.prandtl,(double)user.grashof));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Solve the nonlinear system
@@ -188,7 +179,7 @@ int main(int argc,char **argv)
   PetscCall(TSGetStepNumber(ts,&steps));
   PetscCall(TSGetConvergedReason(ts,&reason));
 
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%s at time %g after %D steps\n",TSConvergedReasons[reason],(double)ftime,steps));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%s at time %g after %" PetscInt_FMT " steps\n",TSConvergedReasons[reason],(double)ftime,steps));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Free work space.  All PETSc objects should be destroyed when they
@@ -399,13 +390,13 @@ PetscErrorCode FormIFunctionLocal(DMDALocalInfo *info,PetscReal ptime,Field **x,
 /*TEST
 
     test:
-      args: -da_grid_x 20 -da_grid_y 20 -lidvelocity 100 -grashof 1e3 -ts_max_steps 100 -ts_rtol 1e-3 -ts_atol 1e-3 -ts_type rosw -ts_rosw_type ra3pw -ts_monitor -ts_monitor_solution_vtk 'foo-%03D.vts'
+      args: -da_grid_x 20 -da_grid_y 20 -lidvelocity 100 -grashof 1e3 -ts_max_steps 100 -ts_rtol 1e-3 -ts_atol 1e-3 -ts_type rosw -ts_rosw_type ra3pw -ts_monitor -ts_monitor_solution_vtk 'foo-%03d.vts'
       requires: !complex !single
 
     test:
       suffix: 2
       nsize: 4
-      args: -da_grid_x 20 -da_grid_y 20 -lidvelocity 100 -grashof 1e3 -ts_max_steps 100 -ts_rtol 1e-3 -ts_atol 1e-3 -ts_type rosw -ts_rosw_type ra3pw -ts_monitor -ts_monitor_solution_vtk 'foo-%03D.vts'
+      args: -da_grid_x 20 -da_grid_y 20 -lidvelocity 100 -grashof 1e3 -ts_max_steps 100 -ts_rtol 1e-3 -ts_atol 1e-3 -ts_type rosw -ts_rosw_type ra3pw -ts_monitor -ts_monitor_solution_vtk 'foo-%03d.vts'
       requires: !complex !single
 
     test:

@@ -20,7 +20,7 @@ PetscErrorCode SNESVISetComputeVariableBounds(SNES snes, PetscErrorCode (*comput
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
   PetscCall(PetscObjectQueryFunction((PetscObject)snes,"SNESVISetComputeVariableBounds_C",&f));
-  if (f) PetscCall(PetscUseMethod(snes,"SNESVISetComputeVariableBounds_C",(SNES,PetscErrorCode (*)(SNES,Vec,Vec)),(snes,compute)));
+  if (f) PetscUseMethod(snes,"SNESVISetComputeVariableBounds_C",(SNES,PetscErrorCode (*)(SNES,Vec,Vec)),(snes,compute));
   else PetscCall(SNESVISetComputeVariableBounds_VI(snes,compute));
   PetscFunctionReturn(0);
 }
@@ -88,15 +88,15 @@ PetscErrorCode  SNESMonitorVI(SNES snes,PetscInt its,PetscReal fgnorm,void *dumm
   PetscCall(VecRestoreArrayRead(snes->xl,&xl));
   PetscCall(VecRestoreArrayRead(snes->xu,&xu));
   PetscCall(VecRestoreArrayRead(snes->vec_sol,&x));
-  PetscCallMPI(MPIU_Allreduce(&rnorm,&fnorm,1,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)snes)));
-  PetscCallMPI(MPIU_Allreduce(act,fact,2,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)snes)));
-  PetscCallMPI(MPIU_Allreduce(act_bound,fact_bound,2,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)snes)));
+  PetscCall(MPIU_Allreduce(&rnorm,&fnorm,1,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)snes)));
+  PetscCall(MPIU_Allreduce(act,fact,2,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)snes)));
+  PetscCall(MPIU_Allreduce(act_bound,fact_bound,2,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)snes)));
   fnorm = PetscSqrtReal(fnorm);
 
   PetscCall(PetscViewerASCIIAddTab(viewer,((PetscObject)snes)->tablevel));
   if (snes->ntruebounds) tmp = ((double)(fact[0]+fact[1]))/((double)snes->ntruebounds);
   else tmp = 0.0;
-  PetscCall(PetscViewerASCIIPrintf(viewer,"%3D SNES VI Function norm %g Active lower constraints %D/%D upper constraints %D/%D Percent of total %g Percent of bounded %g\n",its,(double)fnorm,fact[0],fact_bound[0],fact[1],fact_bound[1],((double)(fact[0]+fact[1]))/((double)N),tmp));
+  PetscCall(PetscViewerASCIIPrintf(viewer,"%3" PetscInt_FMT " SNES VI Function norm %g Active lower constraints %" PetscInt_FMT "/%" PetscInt_FMT " upper constraints %" PetscInt_FMT "/%" PetscInt_FMT " Percent of total %g Percent of bounded %g\n",its,(double)fnorm,fact[0],fact_bound[0],fact[1],fact_bound[1],((double)(fact[0]+fact[1]))/((double)N),tmp));
 
   PetscCall(PetscViewerASCIISubtractTab(viewer,((PetscObject)snes)->tablevel));
   PetscFunctionReturn(0);
@@ -192,7 +192,7 @@ PetscErrorCode SNESConvergedDefault_VI(SNES snes,PetscInt it,PetscReal xnorm,Pet
     PetscCall(PetscInfo(snes,"Converged due to function norm %g < %g\n",(double)fnorm,(double)snes->abstol));
     *reason = SNES_CONVERGED_FNORM_ABS;
   } else if (snes->nfuncs >= snes->max_funcs && snes->max_funcs >= 0) {
-    PetscCall(PetscInfo(snes,"Exceeded maximum number of function evaluations: %D > %D\n",snes->nfuncs,snes->max_funcs));
+    PetscCall(PetscInfo(snes,"Exceeded maximum number of function evaluations: %" PetscInt_FMT " > %" PetscInt_FMT "\n",snes->nfuncs,snes->max_funcs));
     *reason = SNES_DIVERGED_FUNCTION_COUNT;
   }
 
@@ -317,7 +317,7 @@ PetscErrorCode SNESVIComputeInactiveSetFnorm(SNES snes,Vec F,Vec X, PetscReal *f
   PetscCall(VecRestoreArrayRead(snes->xl,&xl));
   PetscCall(VecRestoreArrayRead(snes->xu,&xu));
   PetscCall(VecRestoreArrayRead(X,&x));
-  PetscCallMPI(MPIU_Allreduce(&rnorm,fnorm,1,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)snes)));
+  PetscCall(MPIU_Allreduce(&rnorm,fnorm,1,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)snes)));
   *fnorm = PetscSqrtReal(*fnorm);
   PetscFunctionReturn(0);
 }
@@ -435,7 +435,7 @@ PetscErrorCode SNESVISetVariableBounds(SNES snes, Vec xl, Vec xu)
   PetscValidHeaderSpecific(xl,VEC_CLASSID,2);
   PetscValidHeaderSpecific(xu,VEC_CLASSID,3);
   PetscCall(PetscObjectQueryFunction((PetscObject)snes,"SNESVISetVariableBounds_C",&f));
-  if (f) PetscCall(PetscUseMethod(snes,"SNESVISetVariableBounds_C",(SNES,Vec,Vec),(snes,xl,xu)));
+  if (f) PetscUseMethod(snes,"SNESVISetVariableBounds_C",(SNES,Vec,Vec),(snes,xl,xu));
   else PetscCall(SNESVISetVariableBounds_VI(snes, xl, xu));
   snes->usersetbounds = PETSC_TRUE;
   PetscFunctionReturn(0);
@@ -454,8 +454,8 @@ PetscErrorCode SNESVISetVariableBounds_VI(SNES snes,Vec xl,Vec xu)
     PetscCall(VecGetSize(xl,&xlN));
     PetscCall(VecGetSize(xu,&xuN));
     PetscCall(VecGetSize(snes->vec_func,&N));
-    PetscCheck(xlN == N,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Incompatible vector lengths lower bound = %D solution vector = %D",xlN,N);
-    PetscCheck(xuN == N,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Incompatible vector lengths: upper bound = %D solution vector = %D",xuN,N);
+    PetscCheck(xlN == N,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Incompatible vector lengths lower bound = %" PetscInt_FMT " solution vector = %" PetscInt_FMT,xlN,N);
+    PetscCheck(xuN == N,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Incompatible vector lengths: upper bound = %" PetscInt_FMT " solution vector = %" PetscInt_FMT,xuN,N);
   }
   PetscCall(PetscObjectReference((PetscObject)xl));
   PetscCall(PetscObjectReference((PetscObject)xu));
@@ -468,7 +468,7 @@ PetscErrorCode SNESVISetVariableBounds_VI(SNES snes,Vec xl,Vec xu)
   PetscCall(VecGetArrayRead(xu,&xxu));
   for (i=0; i<n; i++) cnt += ((xxl[i] != PETSC_NINFINITY) || (xxu[i] != PETSC_INFINITY));
 
-  PetscCallMPI(MPIU_Allreduce(&cnt,&snes->ntruebounds,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)snes)));
+  PetscCall(MPIU_Allreduce(&cnt,&snes->ntruebounds,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)snes)));
   PetscCall(VecRestoreArrayRead(xl,&xxl));
   PetscCall(VecRestoreArrayRead(xu,&xxu));
   PetscFunctionReturn(0);
@@ -479,7 +479,7 @@ PetscErrorCode SNESSetFromOptions_VI(PetscOptionItems *PetscOptionsObject,SNES s
   PetscBool      flg = PETSC_FALSE;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"SNES VI options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"SNES VI options");
   PetscCall(PetscOptionsReal("-snes_vi_zero_tolerance","Tolerance for considering x[] value to be on a bound","None",snes->vizerotolerance,&snes->vizerotolerance,NULL));
   PetscCall(PetscOptionsBool("-snes_vi_monitor","Monitor all non-active variables","SNESMonitorResidual",flg,&flg,NULL));
   if (flg) {
@@ -490,6 +490,6 @@ PetscErrorCode SNESSetFromOptions_VI(PetscOptionItems *PetscOptionsObject,SNES s
   if (flg) {
     PetscCall(SNESMonitorSet(snes,SNESVIMonitorResidual,PETSC_VIEWER_DRAW_(PetscObjectComm((PetscObject)snes)),NULL));
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }

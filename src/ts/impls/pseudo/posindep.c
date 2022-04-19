@@ -150,7 +150,7 @@ static PetscErrorCode TSStep_Pseudo(TS ts)
   }
   if (reject >= ts->max_reject) {
     ts->reason = TS_DIVERGED_STEP_REJECTED;
-    PetscCall(PetscInfo(ts,"Step=%D, step rejections %D greater than current TS allowed, stopping solve\n",ts->steps,reject));
+    PetscCall(PetscInfo(ts,"Step=%" PetscInt_FMT ", step rejections %" PetscInt_FMT " greater than current TS allowed, stopping solve\n",ts->steps,reject));
     PetscFunctionReturn(0);
   }
 
@@ -165,12 +165,12 @@ static PetscErrorCode TSStep_Pseudo(TS ts)
   }
   if (pseudo->fnorm < pseudo->fatol) {
     ts->reason = TS_CONVERGED_PSEUDO_FATOL;
-    PetscCall(PetscInfo(ts,"Step=%D, converged since fnorm %g < fatol %g\n",ts->steps,pseudo->fnorm,pseudo->frtol));
+    PetscCall(PetscInfo(ts,"Step=%" PetscInt_FMT ", converged since fnorm %g < fatol %g\n",ts->steps,(double)pseudo->fnorm,(double)pseudo->frtol));
     PetscFunctionReturn(0);
   }
   if (pseudo->fnorm/pseudo->fnorm_initial < pseudo->frtol) {
     ts->reason = TS_CONVERGED_PSEUDO_FRTOL;
-    PetscCall(PetscInfo(ts,"Step=%D, converged since fnorm %g / fnorm_initial %g < frtol %g\n",ts->steps,pseudo->fnorm,pseudo->fnorm_initial,pseudo->fatol));
+    PetscCall(PetscInfo(ts,"Step=%" PetscInt_FMT ", converged since fnorm %g / fnorm_initial %g < frtol %g\n",ts->steps,(double)pseudo->fnorm,(double)pseudo->fnorm_initial,(double)pseudo->fatol));
     PetscFunctionReturn(0);
   }
   PetscFunctionReturn(0);
@@ -297,7 +297,7 @@ static PetscErrorCode TSPseudoMonitorDefault(TS ts,PetscInt step,PetscReal ptime
     PetscCall(VecNorm(pseudo->func,NORM_2,&pseudo->fnorm));
   }
   PetscCall(PetscViewerASCIIAddTab(viewer,((PetscObject)ts)->tablevel));
-  PetscCall(PetscViewerASCIIPrintf(viewer,"TS %D dt %g time %g fnorm %g\n",step,(double)ts->time_step,(double)ptime,(double)pseudo->fnorm));
+  PetscCall(PetscViewerASCIIPrintf(viewer,"TS %" PetscInt_FMT " dt %g time %g fnorm %g\n",step,(double)ts->time_step,(double)ptime,(double)pseudo->fnorm));
   PetscCall(PetscViewerASCIISubtractTab(viewer,((PetscObject)ts)->tablevel));
   PetscFunctionReturn(0);
 }
@@ -309,7 +309,7 @@ static PetscErrorCode TSSetFromOptions_Pseudo(PetscOptionItems *PetscOptionsObje
   PetscViewer    viewer;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Pseudo-timestepping options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Pseudo-timestepping options");
   PetscCall(PetscOptionsBool("-ts_monitor_pseudo","Monitor convergence","",flg,&flg,NULL));
   if (flg) {
     PetscCall(PetscViewerASCIIOpen(PetscObjectComm((PetscObject)ts),"stdout",&viewer));
@@ -322,7 +322,7 @@ static PetscErrorCode TSSetFromOptions_Pseudo(PetscOptionItems *PetscOptionsObje
   PetscCall(PetscOptionsReal("-ts_pseudo_max_dt","Maximum value for dt","TSPseudoSetMaxTimeStep",pseudo->dt_max,&pseudo->dt_max,NULL));
   PetscCall(PetscOptionsReal("-ts_pseudo_fatol","Tolerance for norm of function","",pseudo->fatol,&pseudo->fatol,NULL));
   PetscCall(PetscOptionsReal("-ts_pseudo_frtol","Relative tolerance for norm of function","",pseudo->frtol,&pseudo->frtol,NULL));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -376,7 +376,7 @@ PetscErrorCode  TSPseudoSetVerifyTimeStep(TS ts,PetscErrorCode (*dt)(TS,Vec,void
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
-  PetscCall(PetscTryMethod(ts,"TSPseudoSetVerifyTimeStep_C",(TS,PetscErrorCode (*)(TS,Vec,void*,PetscReal*,PetscBool*),void*),(ts,dt,ctx)));
+  PetscTryMethod(ts,"TSPseudoSetVerifyTimeStep_C",(TS,PetscErrorCode (*)(TS,Vec,void*,PetscReal*,PetscBool*),void*),(ts,dt,ctx));
   PetscFunctionReturn(0);
 }
 
@@ -402,7 +402,7 @@ PetscErrorCode  TSPseudoSetTimeStepIncrement(TS ts,PetscReal inc)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
   PetscValidLogicalCollectiveReal(ts,inc,2);
-  PetscCall(PetscTryMethod(ts,"TSPseudoSetTimeStepIncrement_C",(TS,PetscReal),(ts,inc)));
+  PetscTryMethod(ts,"TSPseudoSetTimeStepIncrement_C",(TS,PetscReal),(ts,inc));
   PetscFunctionReturn(0);
 }
 
@@ -428,7 +428,7 @@ PetscErrorCode  TSPseudoSetMaxTimeStep(TS ts,PetscReal maxdt)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
   PetscValidLogicalCollectiveReal(ts,maxdt,2);
-  PetscCall(PetscTryMethod(ts,"TSPseudoSetMaxTimeStep_C",(TS,PetscReal),(ts,maxdt)));
+  PetscTryMethod(ts,"TSPseudoSetMaxTimeStep_C",(TS,PetscReal),(ts,maxdt));
   PetscFunctionReturn(0);
 }
 
@@ -455,7 +455,7 @@ PetscErrorCode  TSPseudoIncrementDtFromInitialDt(TS ts)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
-  PetscCall(PetscTryMethod(ts,"TSPseudoIncrementDtFromInitialDt_C",(TS),(ts)));
+  PetscTryMethod(ts,"TSPseudoIncrementDtFromInitialDt_C",(TS),(ts));
   PetscFunctionReturn(0);
 }
 
@@ -490,7 +490,7 @@ PetscErrorCode  TSPseudoSetTimeStep(TS ts,PetscErrorCode (*dt)(TS,PetscReal*,voi
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
-  PetscCall(PetscTryMethod(ts,"TSPseudoSetTimeStep_C",(TS,PetscErrorCode (*)(TS,PetscReal*,void*),void*),(ts,dt,ctx)));
+  PetscTryMethod(ts,"TSPseudoSetTimeStep_C",(TS,PetscErrorCode (*)(TS,PetscReal*,void*),void*),(ts,dt,ctx));
   PetscFunctionReturn(0);
 }
 

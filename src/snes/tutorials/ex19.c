@@ -13,13 +13,6 @@ The flow can be driven with the lid or with bouyancy or both:\n\
       See src/ksp/ksp/tutorials/ex45.c
 */
 
-/*T
-   Concepts: SNES^solving a system of nonlinear equations (parallel multicomponent example);
-   Concepts: DMDA^using distributed arrays;
-   Concepts: multicomponent
-   Processors: n
-T*/
-
 /*F-----------------------------------------------------------------------
 
     We thank David E. Keyes for contributing the driven cavity discretization within this example code.
@@ -158,7 +151,7 @@ int main(int argc,char **argv)
   PetscCall(SNESSolve(snes,NULL,x));
 
   PetscCall(SNESGetIterationNumber(snes,&its));
-  PetscCall(PetscPrintf(comm,"Number of SNES iterations = %D\n", its));
+  PetscCall(PetscPrintf(comm,"Number of SNES iterations = %" PetscInt_FMT "\n", its));
 
   /*
      Visualize solution

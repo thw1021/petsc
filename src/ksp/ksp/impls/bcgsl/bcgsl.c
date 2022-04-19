@@ -439,7 +439,7 @@ PetscErrorCode  KSPBCGSLSetEll(KSP ksp, PetscInt ell)
   KSP_BCGSL      *bcgsl = (KSP_BCGSL*)ksp->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(ell < 1,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE, "KSPBCGSLSetEll: second argument must be positive");
+  PetscCheck(ell >= 1,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE, "KSPBCGSLSetEll: second argument must be positive");
   PetscValidLogicalCollectiveInt(ksp,ell,2);
 
   if (!ksp->setupstage) bcgsl->ell = ell;
@@ -464,8 +464,8 @@ PetscErrorCode KSPView_BCGSL(KSP ksp, PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
 
   if (isascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  Ell = %D\n", bcgsl->ell));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  Delta = %lg\n", bcgsl->delta));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Ell = %" PetscInt_FMT "\n", bcgsl->ell));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Delta = %g\n", (double)bcgsl->delta));
   }
   PetscFunctionReturn(0);
 }
@@ -481,7 +481,7 @@ PetscErrorCode KSPSetFromOptions_BCGSL(PetscOptionItems *PetscOptionsObject,KSP 
   /* PetscOptionsBegin/End are called in KSPSetFromOptions. They
      don't need to be called here.
   */
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"KSP BiCGStab(L) Options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"KSP BiCGStab(L) Options");
 
   /* Set number of search directions */
   PetscCall(PetscOptionsInt("-ksp_bcgsl_ell","Number of Krylov search directions","KSPBCGSLSetEll",bcgsl->ell,&this_ell,&flg));
@@ -509,7 +509,7 @@ PetscErrorCode KSPSetFromOptions_BCGSL(PetscOptionItems *PetscOptionsObject,KSP 
   flg  = bcgsl->pinv;
   PetscCall(PetscOptionsBool("-ksp_bcgsl_pinv", "Polynomial correction via pseudoinverse", "KSPBCGSLSetUsePseudoinverse",flg,&flg,NULL));
   PetscCall(KSPBCGSLSetUsePseudoinverse(ksp,flg));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 

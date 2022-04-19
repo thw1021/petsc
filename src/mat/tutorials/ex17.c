@@ -1,11 +1,5 @@
 static char help[] = "Example of using graph partitioning with a matrix in which some procs have empty ownership\n\n";
 
-/*T
-   Concepts: Mat^mat partitioning
-   Concepts: Mat^image segmentation
-   Processors: n
-T*/
-
 #include <petscmat.h>
 
 int main(int argc, char **args)
@@ -15,7 +9,6 @@ int main(int argc, char **args)
   IS              is;
   PetscInt        i,m,N,rstart,rend,nemptyranks,*emptyranks,nbigranks,*bigranks;
   PetscMPIInt     rank,size;
-  PetscErrorCode  ierr;
 
   PetscCall(PetscInitialize(&argc,&args,(char*)0,help));
   PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD,&rank));
@@ -25,10 +18,10 @@ int main(int argc, char **args)
   nbigranks   = 10;
   PetscCall(PetscMalloc2(nemptyranks,&emptyranks,nbigranks,&bigranks));
 
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Partitioning example options",NULL);PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Partitioning example options",NULL);
   PetscCall(PetscOptionsIntArray("-emptyranks","Ranks to be skipped by partition","",emptyranks,&nemptyranks,NULL));
   PetscCall(PetscOptionsIntArray("-bigranks","Ranks to be overloaded","",bigranks,&nbigranks,NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   m = 1;
   for (i=0; i<nemptyranks; i++) if (rank == emptyranks[i]) m = 0;

@@ -22,7 +22,7 @@ static PetscErrorCode testOrthogonality(PetscInt dim, PetscInt deg)
       PetscReal exact = (i == j) ? 1. : 0.;
 
       for (k = 0; k < npoints; k++) integral += weights[k] * p[i * npoints + k] * p[j * npoints + k];
-      PetscCheckFalse(PetscAbsReal(integral - exact) > PETSC_SMALL,PETSC_COMM_SELF, PETSC_ERR_PLIB, "<P[%D], P[%D]> = %g != delta_{%D,%D}", i, j, (double) integral, i, j);
+      PetscCheck(PetscAbsReal(integral - exact) <= PETSC_SMALL,PETSC_COMM_SELF, PETSC_ERR_PLIB, "<P[%" PetscInt_FMT "], P[%" PetscInt_FMT "]> = %g != delta_{%" PetscInt_FMT ",%" PetscInt_FMT "}", i, j, (double) integral, i, j);
     }
   }
   PetscCall(PetscFree(p));
@@ -163,7 +163,7 @@ static PetscErrorCode testDerivativesLegendre(PetscInt dim, PetscInt deg, PetscI
     PetscReal scale = 1. + PetscAbsReal(lgndre_jet[i]) + PetscAbsReal(pkd_jet[i]);
     PetscReal tol = 10. * PETSC_SMALL * scale;
 
-    PetscCheckFalse(PetscAbsReal(diff) > tol,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Jet mismatch between PKD and tensor Legendre bases: error %g at tolerance %g", (double) diff, (double) tol);
+    PetscCheck(PetscAbsReal(diff) <= tol,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Jet mismatch between PKD and tensor Legendre bases: error %g at tolerance %g", (double) diff, (double) tol);
   }
 
   PetscCall(PetscFree2(degtup,ktup));
@@ -180,17 +180,16 @@ static PetscErrorCode testDerivativesLegendre(PetscInt dim, PetscInt deg, PetscI
 int main(int argc, char **argv)
 {
   PetscInt       dim, deg, k;
-  PetscErrorCode ierr;
 
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   dim = 3;
   deg = 4;
   k = 3;
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"","Options for PetscDTPKDEval() tests","none");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,"","Options for PetscDTPKDEval() tests","none");
   PetscCall(PetscOptionsInt("-dim", "Dimension of the simplex","ex9.c",dim,&dim,NULL));
   PetscCall(PetscOptionsInt("-degree", "The degree of the polynomial space","ex9.c",deg,&deg,NULL));
   PetscCall(PetscOptionsInt("-k", "The number of derivatives to use in the taylor test","ex9.c",k,&k,NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscCall(testOrthogonality(dim, deg));
   PetscCall(testDerivativesLegendre(dim, deg, k));
   PetscCall(PetscFinalize());

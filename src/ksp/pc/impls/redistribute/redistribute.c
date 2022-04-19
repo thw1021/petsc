@@ -25,9 +25,9 @@ static PetscErrorCode PCView_Redistribute(PC pc,PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERSTRING,&isstring));
   if (iascii) {
-    PetscCallMPI(MPIU_Allreduce(&red->dcnt,&ncnt,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)pc)));
+    PetscCall(MPIU_Allreduce(&red->dcnt,&ncnt,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)pc)));
     PetscCall(MatGetSize(pc->pmat,&N,NULL));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"    Number rows eliminated %D Percentage rows eliminated %g\n",ncnt,100.0*((PetscReal)ncnt)/((PetscReal)N)));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"    Number rows eliminated %" PetscInt_FMT " Percentage rows eliminated %g\n",ncnt,(double)(100.0*((PetscReal)ncnt)/((PetscReal)N))));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  Redistribute preconditioner: \n"));
     PetscCall(KSPView(red->ksp,viewer));
   } else if (isstring) {
@@ -112,13 +112,13 @@ static PetscErrorCode PCSetUp_Redistribute(PC pc)
 
     /* create PetscLayout for load-balanced non-diagonal rows on each process */
     PetscCall(PetscLayoutCreate(comm,&nmap));
-    PetscCallMPI(MPIU_Allreduce(&cnt,&ncnt,1,MPIU_INT,MPI_SUM,comm));
+    PetscCall(MPIU_Allreduce(&cnt,&ncnt,1,MPIU_INT,MPI_SUM,comm));
     PetscCall(PetscLayoutSetSize(nmap,ncnt));
     PetscCall(PetscLayoutSetBlockSize(nmap,1));
     PetscCall(PetscLayoutSetUp(nmap));
 
     PetscCall(MatGetSize(pc->pmat,&NN,NULL));
-    PetscCall(PetscInfo(pc,"Number of diagonal rows eliminated %d, percentage eliminated %g\n",NN-ncnt,((PetscReal)(NN-ncnt))/((PetscReal)(NN))));
+    PetscCall(PetscInfo(pc,"Number of diagonal rows eliminated %" PetscInt_FMT ", percentage eliminated %g\n",NN-ncnt,(double)(((PetscReal)(NN-ncnt))/((PetscReal)(NN)))));
 
     if (size > 1) {
       /* the following block of code assumes MPI can send messages to self, which is not supported for MPI-uni hence we need to handle the size 1 case as a special case */
@@ -188,7 +188,7 @@ static PetscErrorCode PCSetUp_Redistribute(PC pc)
         slen += n;
         count--;
       }
-      PetscCheckFalse(slen != recvtotal,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Total message lengths %D not expected %D",slen,recvtotal);
+      PetscCheck(slen == recvtotal,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Total message lengths %" PetscInt_FMT " not expected %" PetscInt_FMT,slen,recvtotal);
       PetscCall(ISCreateGeneral(comm,slen,rvalues,PETSC_COPY_VALUES,&red->is));
 
       /* free all work space */

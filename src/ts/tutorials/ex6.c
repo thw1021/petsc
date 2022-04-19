@@ -6,17 +6,6 @@ Input parameters include:\n\
   -debug              : Activate debugging printouts\n\
   -nox                : Deactivate x-window graphics\n\n";
 
-/*
-   Concepts: TS^time-dependent linear problems
-   Concepts: TS^heat equation
-   Concepts: TS^diffusion equation
-   Routines: TSCreate(); TSSetSolution(); TSSetRHSJacobian(), TSSetIJacobian();
-   Routines: TSSetTimeStep(); TSSetMaxTime(); TSMonitorSet();
-   Routines: TSSetFromOptions(); TSStep(); TSDestroy();
-   Routines: TSSetTimeStep(); TSGetTimeStep();
-   Processors: 1
-*/
-
 /* ------------------------------------------------------------------------
 
    This program solves the one-dimensional heat equation (also called the
@@ -388,7 +377,7 @@ PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal crtime,Vec u,void *ctx)
 
   PetscCall(TSGetTimeStep(ts,&dt));
   if (norm_2 > 1.e-2) {
-    PetscCall(PetscPrintf(PETSC_COMM_SELF,"Timestep %D: step size = %g, time = %g, 2-norm error = %g, max norm error = %g\n",step,(double)dt,(double)crtime,(double)norm_2,(double)norm_max));
+    PetscCall(PetscPrintf(PETSC_COMM_SELF,"Timestep %" PetscInt_FMT ": step size = %g, time = %g, 2-norm error = %g, max norm error = %g\n",step,(double)dt,(double)crtime,(double)norm_2,(double)norm_max));
   }
   appctx->norm_2   += norm_2;
   appctx->norm_max += norm_max;

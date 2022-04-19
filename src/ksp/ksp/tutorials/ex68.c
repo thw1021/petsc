@@ -12,7 +12,6 @@
 */
 PetscErrorCode ComputeSolution(PetscInt n,PetscReal *nodes,PetscReal *weights,Vec x)
 {
-  PetscErrorCode ierr;
   PetscInt       i,m;
   PetscScalar    *xx;
   PetscReal      xd;
@@ -34,7 +33,6 @@ PetscErrorCode ComputeSolution(PetscInt n,PetscReal *nodes,PetscReal *weights,Ve
 */
 PetscErrorCode ComputeRhs(PetscInt n,PetscReal *nodes,PetscReal *weights,Vec b)
 {
-  PetscErrorCode ierr;
   PetscInt       i,m;
   PetscScalar    *bb;
   PetscReal      xd;
@@ -52,7 +50,6 @@ PetscErrorCode ComputeRhs(PetscInt n,PetscReal *nodes,PetscReal *weights,Vec b)
 
 int main(int argc,char **args)
 {
-  PetscErrorCode ierr;
   PetscReal      *nodes;
   PetscReal      *weights;
   PetscInt       N = 80,n;
@@ -113,7 +110,7 @@ int main(int argc,char **args)
     PetscCall(PetscGaussLobattoLegendreIntegrate(n,nodes,weights,f,&norm));
     PetscCall(VecRestoreArray(x,&f));
     norm = PetscSqrtReal(norm);
-    PetscCall(PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_SELF,"L^2 norm of the error %D %g\n",n,(double)norm));
+    PetscCall(PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_SELF,"L^2 norm of the error %" PetscInt_FMT " %g\n",n,(double)norm));
     xc   = (PetscReal)n;
     yc   = PetscLog10Real(norm);
     PetscCall(PetscDrawLGAddPoint(lg,&xc,&yc));

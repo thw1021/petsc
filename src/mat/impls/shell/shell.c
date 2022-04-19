@@ -268,7 +268,7 @@ PetscErrorCode  MatShellGetContext(Mat mat,void *ctx)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
   PetscValidPointer(ctx,2);
-  PetscCall(PetscUseMethod(mat,"MatShellGetContext_C",(Mat,void*),(mat,ctx)));
+  PetscUseMethod(mat,"MatShellGetContext_C",(Mat,void*),(mat,ctx));
   PetscFunctionReturn(0);
 }
 
@@ -557,7 +557,7 @@ static PetscErrorCode MatProductNumeric_Shell_X(Mat D)
     PetscBool      useBmdata = PETSC_FALSE, newB = PETSC_TRUE;
 
     if (shell->managescalingshifts) {
-      PetscCheckFalse(shell->zcols || shell->zrows,PetscObjectComm((PetscObject)D),PETSC_ERR_SUP,"MatProduct not supported with zeroed rows/columns");
+      PetscCheck(!shell->zcols && !shell->zrows,PetscObjectComm((PetscObject)D),PETSC_ERR_SUP,"MatProduct not supported with zeroed rows/columns");
       if (shell->right || shell->left) {
         useBmdata = PETSC_TRUE;
         if (!mdata->B) {
@@ -685,7 +685,7 @@ static PetscErrorCode MatProductNumeric_Shell_X(Mat D)
 
         PetscCall(MatShellGetContext(shell->axpy,&X));
         PetscCall(PetscObjectStateGet((PetscObject)X,&axpy_state));
-        PetscCheckFalse(shell->axpy_state != axpy_state,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Invalid AXPY state: cannot modify the X matrix passed to MatAXPY(Y,a,X,...)");
+        PetscCheck(shell->axpy_state == axpy_state,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Invalid AXPY state: cannot modify the X matrix passed to MatAXPY(Y,a,X,...)");
         if (!mdata->axpy) {
           str  = DIFFERENT_NONZERO_PATTERN;
           PetscCall(MatProductCreate(shell->axpy,B,NULL,&mdata->axpy));
@@ -902,11 +902,11 @@ PetscErrorCode MatShellSetMatProductOperation(Mat A,MatProductType ptype,PetscEr
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
   PetscValidLogicalCollectiveEnum(A,ptype,2);
-  PetscCheckFalse(ptype == MATPRODUCT_ABC,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Not for product type %s",MatProductTypes[ptype]);
+  PetscCheck(ptype != MATPRODUCT_ABC,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Not for product type %s",MatProductTypes[ptype]);
   PetscCheck(numeric,PetscObjectComm((PetscObject)A),PETSC_ERR_USER,"Missing numeric routine, argument 4");
   PetscValidCharPointer(Btype,6);
   if (Ctype) PetscValidCharPointer(Ctype,7);
-  PetscCall(PetscTryMethod(A,"MatShellSetMatProductOperation_C",(Mat,MatProductType,PetscErrorCode(*)(Mat,Mat,Mat,void**),PetscErrorCode(*)(Mat,Mat,Mat,void*),PetscErrorCode(*)(void*),MatType,MatType),(A,ptype,symbolic,numeric,destroy,Btype,Ctype)));
+  PetscTryMethod(A,"MatShellSetMatProductOperation_C",(Mat,MatProductType,PetscErrorCode(*)(Mat,Mat,Mat,void**),PetscErrorCode(*)(Mat,Mat,Mat,void*),PetscErrorCode(*)(void*),MatType,MatType),(A,ptype,symbolic,numeric,destroy,Btype,Ctype));
   PetscFunctionReturn(0);
 }
 
@@ -1053,7 +1053,7 @@ PetscErrorCode MatMult_Shell(Mat A,Vec x,Vec y)
 
     PetscCall(MatShellGetContext(shell->axpy,&X));
     PetscCall(PetscObjectStateGet((PetscObject)X,&axpy_state));
-    PetscCheckFalse(shell->axpy_state != axpy_state,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Invalid AXPY state: cannot modify the X matrix passed to MatAXPY(Y,a,X,...)");
+    PetscCheck(shell->axpy_state == axpy_state,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Invalid AXPY state: cannot modify the X matrix passed to MatAXPY(Y,a,X,...)");
 
     PetscCall(MatCreateVecs(shell->axpy,shell->axpy_right ? NULL : &shell->axpy_right,shell->axpy_left ? NULL : &shell->axpy_left));
     PetscCall(VecCopy(x,shell->axpy_right));
@@ -1106,7 +1106,7 @@ PetscErrorCode MatMultTranspose_Shell(Mat A,Vec x,Vec y)
 
     PetscCall(MatShellGetContext(shell->axpy,&X));
     PetscCall(PetscObjectStateGet((PetscObject)X,&axpy_state));
-    PetscCheckFalse(shell->axpy_state != axpy_state,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Invalid AXPY state: cannot modify the X matrix passed to MatAXPY(Y,a,X,...)");
+    PetscCheck(shell->axpy_state == axpy_state,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Invalid AXPY state: cannot modify the X matrix passed to MatAXPY(Y,a,X,...)");
     PetscCall(MatCreateVecs(shell->axpy,shell->axpy_right ? NULL : &shell->axpy_right,shell->axpy_left ? NULL : &shell->axpy_left));
     PetscCall(VecCopy(x,shell->axpy_left));
     PetscCall(MatMultTranspose(shell->axpy,shell->axpy_left,shell->axpy_right));
@@ -1159,7 +1159,7 @@ PetscErrorCode MatGetDiagonal_Shell(Mat A,Vec v)
 
     PetscCall(MatShellGetContext(shell->axpy,&X));
     PetscCall(PetscObjectStateGet((PetscObject)X,&axpy_state));
-    PetscCheckFalse(shell->axpy_state != axpy_state,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Invalid AXPY state: cannot modify the X matrix passed to MatAXPY(Y,a,X,...)");
+    PetscCheck(shell->axpy_state == axpy_state,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Invalid AXPY state: cannot modify the X matrix passed to MatAXPY(Y,a,X,...)");
     PetscCall(MatCreateVecs(shell->axpy,NULL,shell->axpy_left ? NULL : &shell->axpy_left));
     PetscCall(MatGetDiagonal(shell->axpy,shell->axpy_left));
     PetscCall(VecAXPY(v,shell->axpy_vscale,shell->axpy_left));
@@ -1800,7 +1800,7 @@ PetscErrorCode  MatShellSetContext(Mat mat,void *ctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
-  PetscCall(PetscTryMethod(mat,"MatShellSetContext_C",(Mat,void*),(mat,ctx)));
+  PetscTryMethod(mat,"MatShellSetContext_C",(Mat,void*),(mat,ctx));
   PetscFunctionReturn(0);
 }
 
@@ -1822,7 +1822,7 @@ PetscErrorCode  MatShellSetContext(Mat mat,void *ctx)
 PetscErrorCode  MatShellSetVecType(Mat mat,VecType vtype)
 {
   PetscFunctionBegin;
-  PetscCall(PetscTryMethod(mat,"MatShellSetVecType_C",(Mat,VecType),(mat,vtype)));
+  PetscTryMethod(mat,"MatShellSetVecType_C",(Mat,VecType),(mat,vtype));
   PetscFunctionReturn(0);
 }
 
@@ -1843,7 +1843,7 @@ PetscErrorCode MatShellSetManageScalingShifts(Mat A)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
-  PetscCall(PetscTryMethod(A,"MatShellSetManageScalingShifts_C",(Mat),(A)));
+  PetscTryMethod(A,"MatShellSetManageScalingShifts_C",(Mat),(A));
   PetscFunctionReturn(0);
 }
 
@@ -2032,7 +2032,7 @@ PetscErrorCode MatShellSetOperation(Mat mat,MatOperation op,void (*g)(void))
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
-  PetscCall(PetscTryMethod(mat,"MatShellSetOperation_C",(Mat,MatOperation,void (*)(void)),(mat,op,g)));
+  PetscTryMethod(mat,"MatShellSetOperation_C",(Mat,MatOperation,void (*)(void)),(mat,op,g));
   PetscFunctionReturn(0);
 }
 
@@ -2072,7 +2072,7 @@ PetscErrorCode MatShellGetOperation(Mat mat,MatOperation op,void(**g)(void))
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
-  PetscCall(PetscUseMethod(mat,"MatShellGetOperation_C",(Mat,MatOperation,void (**)(void)),(mat,op,g)));
+  PetscUseMethod(mat,"MatShellGetOperation_C",(Mat,MatOperation,void (**)(void)),(mat,op,g));
   PetscFunctionReturn(0);
 }
 

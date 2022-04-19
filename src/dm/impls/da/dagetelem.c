@@ -380,7 +380,7 @@ PetscErrorCode  DMDAGetElements(DM dm,PetscInt *nel,PetscInt *nen,const PetscInt
   PetscValidPointer(e,4);
   PetscCall(PetscObjectTypeCompare((PetscObject)dm,DMDA,&isda));
   PetscCheck(isda,PetscObjectComm((PetscObject)dm),PETSC_ERR_USER,"Not for DM type %s",((PetscObject)dm)->type_name);
-  PetscCheckFalse(dd->stencil_type == DMDA_STENCIL_STAR,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DMDAGetElements() requires you use a stencil type of DMDA_STENCIL_BOX");
+  PetscCheck(dd->stencil_type != DMDA_STENCIL_STAR,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DMDAGetElements() requires you use a stencil type of DMDA_STENCIL_BOX");
   PetscCall(DMGetDimension(dm, &dim));
   if (dd->e) {
     *nel = dd->ne;
@@ -396,7 +396,7 @@ PetscErrorCode  DMDAGetElements(DM dm,PetscInt *nel,PetscInt *nen,const PetscInt
     PetscCall(DMDAGetElements_2D(dm,nel,nen,e));
   } else if (dim==3) {
     PetscCall(DMDAGetElements_3D(dm,nel,nen,e));
-  } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"DMDA dimension not 1, 2, or 3, it is %D",dim);
+  } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"DMDA dimension not 1, 2, or 3, it is %" PetscInt_FMT,dim);
   PetscFunctionReturn(0);
 }
 
@@ -429,7 +429,7 @@ PetscErrorCode  DMDAGetSubdomainCornersIS(DM dm,IS *is)
   PetscValidPointer(is,2);
   PetscCall(PetscObjectTypeCompare((PetscObject)dm,DMDA,&isda));
   PetscCheck(isda,PetscObjectComm((PetscObject)dm),PETSC_ERR_USER,"Not for DM type %s",((PetscObject)dm)->type_name);
-  PetscCheckFalse(dd->stencil_type == DMDA_STENCIL_STAR,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DMDAGetElement() requires you use a stencil type of DMDA_STENCIL_BOX");
+  PetscCheck(dd->stencil_type != DMDA_STENCIL_STAR,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DMDAGetElement() requires you use a stencil type of DMDA_STENCIL_BOX");
   if (!dd->ecorners) { /* compute elements if not yet done */
     const PetscInt *e;
     PetscInt       nel,nen;

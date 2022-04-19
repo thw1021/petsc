@@ -70,7 +70,7 @@ PetscErrorCode MatSTRUMPACKSetReordering(Mat F,MatSTRUMPACKReordering reordering
   PetscFunctionBegin;
   PetscValidHeaderSpecific(F,MAT_CLASSID,1);
   PetscValidLogicalCollectiveEnum(F,reordering,2);
-  PetscCall(PetscTryMethod(F,"MatSTRUMPACKSetReordering_C",(Mat,MatSTRUMPACKReordering),(F,reordering)));
+  PetscTryMethod(F,"MatSTRUMPACKSetReordering_C",(Mat,MatSTRUMPACKReordering),(F,reordering));
   PetscFunctionReturn(0);
 }
 
@@ -107,7 +107,7 @@ PetscErrorCode MatSTRUMPACKSetColPerm(Mat F,PetscBool cperm)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(F,MAT_CLASSID,1);
   PetscValidLogicalCollectiveBool(F,cperm,2);
-  PetscCall(PetscTryMethod(F,"MatSTRUMPACKSetColPerm_C",(Mat,PetscBool),(F,cperm)));
+  PetscTryMethod(F,"MatSTRUMPACKSetColPerm_C",(Mat,PetscBool),(F,cperm));
   PetscFunctionReturn(0);
 }
 
@@ -144,7 +144,7 @@ PetscErrorCode MatSTRUMPACKSetHSSRelTol(Mat F,PetscReal rtol)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(F,MAT_CLASSID,1);
   PetscValidLogicalCollectiveReal(F,rtol,2);
-  PetscCall(PetscTryMethod(F,"MatSTRUMPACKSetHSSRelTol_C",(Mat,PetscReal),(F,rtol)));
+  PetscTryMethod(F,"MatSTRUMPACKSetHSSRelTol_C",(Mat,PetscReal),(F,rtol));
   PetscFunctionReturn(0);
 }
 
@@ -181,7 +181,7 @@ PetscErrorCode MatSTRUMPACKSetHSSAbsTol(Mat F,PetscReal atol)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(F,MAT_CLASSID,1);
   PetscValidLogicalCollectiveReal(F,atol,2);
-  PetscCall(PetscTryMethod(F,"MatSTRUMPACKSetHSSAbsTol_C",(Mat,PetscReal),(F,atol)));
+  PetscTryMethod(F,"MatSTRUMPACKSetHSSAbsTol_C",(Mat,PetscReal),(F,atol));
   PetscFunctionReturn(0);
 }
 
@@ -218,7 +218,7 @@ PetscErrorCode MatSTRUMPACKSetHSSMaxRank(Mat F,PetscInt hssmaxrank)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(F,MAT_CLASSID,1);
   PetscValidLogicalCollectiveInt(F,hssmaxrank,2);
-  PetscCall(PetscTryMethod(F,"MatSTRUMPACKSetHSSMaxRank_C",(Mat,PetscInt),(F,hssmaxrank)));
+  PetscTryMethod(F,"MatSTRUMPACKSetHSSMaxRank_C",(Mat,PetscInt),(F,hssmaxrank));
   PetscFunctionReturn(0);
 }
 
@@ -255,7 +255,7 @@ PetscErrorCode MatSTRUMPACKSetHSSLeafSize(Mat F,PetscInt leaf_size)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(F,MAT_CLASSID,1);
   PetscValidLogicalCollectiveInt(F,leaf_size,2);
-  PetscCall(PetscTryMethod(F,"MatSTRUMPACKSetHSSLeafSize_C",(Mat,PetscInt),(F,leaf_size)));
+  PetscTryMethod(F,"MatSTRUMPACKSetHSSLeafSize_C",(Mat,PetscInt),(F,leaf_size));
   PetscFunctionReturn(0);
 }
 
@@ -292,7 +292,7 @@ PetscErrorCode MatSTRUMPACKSetHSSMinSepSize(Mat F,PetscInt hssminsize)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(F,MAT_CLASSID,1);
   PetscValidLogicalCollectiveInt(F,hssminsize,2);
-  PetscCall(PetscTryMethod(F,"MatSTRUMPACKSetHSSMinSepSize_C",(Mat,PetscInt),(F,hssminsize)));
+  PetscTryMethod(F,"MatSTRUMPACKSetHSSMinSepSize_C",(Mat,PetscInt),(F,hssminsize));
   PetscFunctionReturn(0);
 }
 
@@ -459,7 +459,6 @@ static PetscErrorCode MatGetFactor_aij_strumpack(Mat A,MatFactorType ftype,Mat *
   const STRUMPACK_PRECISION     prec = table[(sizeof(PetscInt)==8)?0:1][(PETSC_SCALAR==PETSC_COMPLEX)?0:1][(PETSC_REAL==PETSC_FLOAT)?0:1];
   const char *const             STRUMPACKNDTypes[] = {"NATURAL","METIS","PARMETIS","SCOTCH","PTSCOTCH","RCM","STRUMPACKNDTypes","",0};
   const char *const             SolverTypes[] = {"AUTO","NONE","REFINE","PREC_GMRES","GMRES","PREC_BICGSTAB","BICGSTAB","SolverTypes","",0};
-  PetscErrorCode                ierr;
 
   PetscFunctionBegin;
   /* Create the factorization matrix */
@@ -491,7 +490,7 @@ static PetscErrorCode MatGetFactor_aij_strumpack(Mat A,MatFactorType ftype,Mat *
   PetscCall(PetscObjectTypeCompare((PetscObject)A,MATSEQAIJ,&flg));
   iface = flg ? STRUMPACK_MT : STRUMPACK_MPI_DIST;
 
-  ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)A),((PetscObject)A)->prefix,"STRUMPACK Options","Mat");PetscCall(ierr);
+  PetscOptionsBegin(PetscObjectComm((PetscObject)A),((PetscObject)A)->prefix,"STRUMPACK Options","Mat");
 
   verb = PetscLogPrintInfo ? PETSC_TRUE : PETSC_FALSE;
   PetscCall(PetscOptionsBool("-mat_strumpack_verbose","Print STRUMPACK information","None",verb,&verb,NULL));
@@ -543,7 +542,7 @@ static PetscErrorCode MatGetFactor_aij_strumpack(Mat A,MatFactorType ftype,Mat *
   PetscCall(PetscOptionsEnum("-mat_strumpack_iterative_solver","Select iterative solver from STRUMPACK","None",SolverTypes,(PetscEnum)itcurrent,(PetscEnum*)&itsolver,&set));
   if (set) PetscStackCall("STRUMPACK_set_Krylov_solver",STRUMPACK_set_Krylov_solver(*S,itsolver));
 
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   *F = B;
   PetscFunctionReturn(0);

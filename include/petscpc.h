@@ -229,7 +229,7 @@ PETSC_EXTERN PetscErrorCode PCRedundantSetNumber(PC,PetscInt);
 PETSC_EXTERN PetscErrorCode PCRedundantSetScatter(PC,VecScatter,VecScatter);
 PETSC_EXTERN PetscErrorCode PCRedundantGetOperators(PC,Mat*,Mat*);
 
-PETSC_EXTERN PetscErrorCode PCSPAISetEpsilon(PC,double);
+PETSC_EXTERN PetscErrorCode PCSPAISetEpsilon(PC,PetscReal);
 PETSC_EXTERN PetscErrorCode PCSPAISetNBSteps(PC,PetscInt);
 PETSC_EXTERN PetscErrorCode PCSPAISetMax(PC,PetscInt);
 PETSC_EXTERN PetscErrorCode PCSPAISetMaxNew(PC,PetscInt);
@@ -449,9 +449,10 @@ PETSC_EXTERN PetscErrorCode PCHPDDMHasNeumannMat(PC,PetscBool);
 PETSC_EXTERN PetscErrorCode PCHPDDMSetCoarseCorrectionType(PC,PCHPDDMCoarseCorrectionType);
 PETSC_EXTERN PetscErrorCode PCHPDDMGetCoarseCorrectionType(PC,PCHPDDMCoarseCorrectionType*);
 PETSC_EXTERN PetscErrorCode PCHPDDMGetSTShareSubKSP(PC,PetscBool*);
+PETSC_EXTERN PetscErrorCode PCHPDDMSetDeflationMat(PC,IS,Mat);
 PETSC_EXTERN PetscErrorCode PCHPDDMFinalizePackage(void);
 PETSC_EXTERN PetscErrorCode PCHPDDMInitializePackage(void);
 
-PETSC_EXTERN PetscErrorCode PCGetAmgXResources(PC,void*);
+PETSC_EXTERN PetscErrorCode PCAmgXGetResources(PC,void*);
 
 #endif /* PETSCPC_H */

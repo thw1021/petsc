@@ -36,6 +36,7 @@ static PetscErrorCode TSAdaptSetDefaultType(TSAdapt adapt,TSAdaptType default_ty
 +  -ts_type <type> - TSEULER, TSBEULER, TSSUNDIALS, TSPSEUDO, TSCN, TSRK, TSTHETA, TSALPHA, TSGLLE, TSSSP, TSGLEE, TSBSYMP, TSIRK
 .  -ts_save_trajectory - checkpoint the solution at each time-step
 .  -ts_max_time <time> - maximum time to compute to
+.  -ts_time_span <t0,...tf> - sets the time span, solutions are computed and stored for each indicated time
 .  -ts_max_steps <steps> - maximum number of time-steps to take
 .  -ts_init_time <time> - initial time to start computation
 .  -ts_final_time <time> - final time to compute to (deprecated: use -ts_max_time)
@@ -64,7 +65,7 @@ static PetscErrorCode TSAdaptSetDefaultType(TSAdapt adapt,TSAdaptType default_ty
 .  -ts_monitor_draw_solution_phase  <xleft,yleft,xright,yright> - Monitor solution graphically with phase diagram, requires problem with exactly 2 degrees of freedom
 .  -ts_monitor_draw_error - Monitor error graphically, requires use to have provided TSSetSolutionFunction()
 .  -ts_monitor_solution [ascii binary draw][:filename][:viewerformat] - monitors the solution at each timestep
-.  -ts_monitor_solution_vtk <filename.vts,filename.vtu> - Save each time step to a binary file, use filename-%%03D.vts (filename-%%03D.vtu)
+.  -ts_monitor_solution_vtk <filename.vts,filename.vtu> - Save each time step to a binary file, use filename-%%03" PetscInt_FMT ".vts (filename-%%03" PetscInt_FMT ".vtu)
 -  -ts_monitor_envelope - determine maximum and minimum value of each component of the solution over the solution time
 
    Notes:
@@ -84,9 +85,9 @@ static PetscErrorCode TSAdaptSetDefaultType(TSAdapt adapt,TSAdaptType default_ty
 PetscErrorCode  TSSetFromOptions(TS ts)
 {
   PetscBool              opt,flg,tflg;
-  PetscErrorCode         ierr;
   char                   monfilename[PETSC_MAX_PATH_LEN];
-  PetscReal              time_step;
+  PetscReal              time_step,tspan[100];
+  PetscInt               nt = PETSC_STATIC_ARRAY_LENGTH(tspan);
   TSExactFinalTimeOption eftopt;
   char                   dir[16];
   TSIFunction            ifun;
@@ -99,7 +100,7 @@ PetscErrorCode  TSSetFromOptions(TS ts)
   PetscCall(TSRegisterAll());
   PetscCall(TSGetIFunction(ts,NULL,&ifun,NULL));
 
-  ierr = PetscObjectOptionsBegin((PetscObject)ts);PetscCall(ierr);
+  PetscObjectOptionsBegin((PetscObject)ts);
   if (((PetscObject)ts)->type_name) defaultType = ((PetscObject)ts)->type_name;
   else defaultType = ifun ? TSBEULER : TSEULER;
   PetscCall(PetscOptionsFList("-ts_type","TS method","TSSetType",TSList,defaultType,typeName,256,&opt));
@@ -112,6 +113,8 @@ PetscErrorCode  TSSetFromOptions(TS ts)
   /* Handle generic TS options */
   PetscCall(PetscOptionsDeprecated("-ts_final_time","-ts_max_time","3.10",NULL));
   PetscCall(PetscOptionsReal("-ts_max_time","Maximum time to run to","TSSetMaxTime",ts->max_time,&ts->max_time,NULL));
+  PetscCall(PetscOptionsRealArray("-ts_time_span","Time span","TSSetTimeSpan",tspan,&nt,&flg));
+  if (flg) PetscCall(TSSetTimeSpan(ts,nt,tspan));
   PetscCall(PetscOptionsInt("-ts_max_steps","Maximum number of time steps","TSSetMaxSteps",ts->max_steps,&ts->max_steps,NULL));
   PetscCall(PetscOptionsReal("-ts_init_time","Initial time","TSSetTime",ts->ptime,&ts->ptime,NULL));
   PetscCall(PetscOptionsReal("-ts_dt","Initial time step","TSSetTimeStep",ts->time_step,&time_step,&flg));
@@ -231,13 +234,16 @@ PetscErrorCode  TSSetFromOptions(TS ts)
   if (opt) {
     TSMonitorSPCtx  ctx;
     PetscInt        howoften = 1, retain = 0;
-    PetscBool       phase = PETSC_TRUE;
+    PetscBool       phase = PETSC_TRUE, create = PETSC_TRUE;
 
-    PetscCall(PetscOptionsInt("-ts_monitor_sp_swarm","Display particles phase from the DMSwarm", "TSMonitorSPSwarm", howoften, &howoften, NULL));
-    PetscCall(PetscOptionsInt("-ts_monitor_sp_swarm_retain", "Retain n points plotted to show trajectory, -1 for all points", "TSMonitorSPSwarm", retain, &retain, NULL));
-    PetscCall(PetscOptionsBool("-ts_monitor_sp_swarm_phase", "Plot in phase space rather than coordinate space", "TSMonitorSPSwarm", phase, &phase, NULL));
-    PetscCall(TSMonitorSPCtxCreate(PetscObjectComm((PetscObject) ts), NULL, NULL, PETSC_DECIDE, PETSC_DECIDE, 300, 300, howoften, retain, phase, &ctx));
-    PetscCall(TSMonitorSet(ts, TSMonitorSPSwarmSolution, ctx, (PetscErrorCode (*)(void**))TSMonitorSPCtxDestroy));
+    for (PetscInt i = 0; i < ts->numbermonitors; ++i) if (ts->monitor[i] == TSMonitorSPSwarmSolution) {create = PETSC_FALSE;break;}
+    if (create) {
+      PetscCall(PetscOptionsInt("-ts_monitor_sp_swarm","Display particles phase from the DMSwarm", "TSMonitorSPSwarm", howoften, &howoften, NULL));
+      PetscCall(PetscOptionsInt("-ts_monitor_sp_swarm_retain", "Retain n points plotted to show trajectory, -1 for all points", "TSMonitorSPSwarm", retain, &retain, NULL));
+      PetscCall(PetscOptionsBool("-ts_monitor_sp_swarm_phase", "Plot in phase space rather than coordinate space", "TSMonitorSPSwarm", phase, &phase, NULL));
+      PetscCall(TSMonitorSPCtxCreate(PetscObjectComm((PetscObject) ts), NULL, NULL, PETSC_DECIDE, PETSC_DECIDE, 300, 300, howoften, retain, phase, &ctx));
+      PetscCall(TSMonitorSet(ts, TSMonitorSPSwarmSolution, ctx, (PetscErrorCode (*)(void**))TSMonitorSPCtxDestroy));
+    }
   }
   opt  = PETSC_FALSE;
   PetscCall(PetscOptionsName("-ts_monitor_draw_solution","Monitor solution graphically","TSMonitorDrawSolution",&opt));
@@ -289,17 +295,17 @@ PetscErrorCode  TSSetFromOptions(TS ts)
   }
 
   opt  = PETSC_FALSE;
-  PetscCall(PetscOptionsString("-ts_monitor_solution_vtk","Save each time step to a binary file, use filename-%%03D.vts","TSMonitorSolutionVTK",NULL,monfilename,sizeof(monfilename),&flg));
+  PetscCall(PetscOptionsString("-ts_monitor_solution_vtk","Save each time step to a binary file, use filename-%%03" PetscInt_FMT ".vts","TSMonitorSolutionVTK",NULL,monfilename,sizeof(monfilename),&flg));
   if (flg) {
     const char *ptr,*ptr2;
     char       *filetemplate;
-    PetscCheck(monfilename[0],PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"-ts_monitor_solution_vtk requires a file template, e.g. filename-%%03D.vts");
+    PetscCheck(monfilename[0],PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"-ts_monitor_solution_vtk requires a file template, e.g. filename-%%03" PetscInt_FMT ".vts");
     /* Do some cursory validation of the input. */
     PetscCall(PetscStrstr(monfilename,"%",(char**)&ptr));
-    PetscCheck(ptr,PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"-ts_monitor_solution_vtk requires a file template, e.g. filename-%%03D.vts");
+    PetscCheck(ptr,PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"-ts_monitor_solution_vtk requires a file template, e.g. filename-%%03" PetscInt_FMT ".vts");
     for (ptr++; ptr && *ptr; ptr++) {
       PetscCall(PetscStrchr("DdiouxX",*ptr,(char**)&ptr2));
-      PetscCheck(ptr2 || (*ptr >= '0' && *ptr <= '9'),PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"Invalid file template argument to -ts_monitor_solution_vtk, should look like filename-%%03D.vts");
+      PetscCheck(ptr2 || (*ptr >= '0' && *ptr <= '9'),PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"Invalid file template argument to -ts_monitor_solution_vtk, should look like filename-%%03" PetscInt_FMT ".vts");
       if (ptr2) break;
     }
     PetscCall(PetscStrallocpy(monfilename,&filetemplate));
@@ -398,7 +404,7 @@ PetscErrorCode  TSSetFromOptions(TS ts)
 
   /* process any options handlers added with PetscObjectAddOptionsHandler() */
   PetscCall(PetscObjectProcessOptionsHandlers(PetscOptionsObject,(PetscObject)ts));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   if (ts->trajectory) {
     PetscCall(TSTrajectorySetFromOptions(ts->trajectory,ts));
@@ -466,9 +472,7 @@ PetscErrorCode  TSSetSaveTrajectory(TS ts)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
-  if (!ts->trajectory) {
-    PetscCall(TSTrajectoryCreate(PetscObjectComm((PetscObject)ts),&ts->trajectory));
-  }
+  if (!ts->trajectory) PetscCall(TSTrajectoryCreate(PetscObjectComm((PetscObject)ts),&ts->trajectory));
   PetscFunctionReturn(0);
 }
 
@@ -565,7 +569,7 @@ PetscErrorCode  TSComputeRHSJacobian(TS ts,PetscReal t,Vec U,Mat A,Mat B)
 
   if (ts->rhsjacobian.time == t && (ts->problem_type == TS_LINEAR || (ts->rhsjacobian.Xid == Uid && ts->rhsjacobian.Xstate == Ustate)) && (rhsfunction != TSComputeRHSFunctionLinear)) PetscFunctionReturn(0);
 
-  PetscCheck(ts->rhsjacobian.shift == 0.0 || !ts->rhsjacobian.reuse,PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"Should not call TSComputeRHSJacobian() on a shifted matrix (shift=%lf) when RHSJacobian is reusable.",ts->rhsjacobian.shift);
+  PetscCheck(ts->rhsjacobian.shift == 0.0 || !ts->rhsjacobian.reuse,PetscObjectComm((PetscObject)ts),PETSC_ERR_USER,"Should not call TSComputeRHSJacobian() on a shifted matrix (shift=%lf) when RHSJacobian is reusable.",(double)ts->rhsjacobian.shift);
   if (rhsjacobianfunc) {
     PetscCall(PetscLogEventBegin(TS_JacobianEval,ts,U,A,B));
     PetscStackPush("TS user Jacobian function");
@@ -2043,33 +2047,33 @@ PetscErrorCode  TSView(TS ts,PetscViewer viewer)
       PetscCall(PetscViewerASCIIPopTab(viewer));
     }
     if (ts->max_steps < PETSC_MAX_INT) {
-      PetscCall(PetscViewerASCIIPrintf(viewer,"  maximum steps=%D\n",ts->max_steps));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"  maximum steps=%" PetscInt_FMT "\n",ts->max_steps));
     }
     if (ts->max_time < PETSC_MAX_REAL) {
       PetscCall(PetscViewerASCIIPrintf(viewer,"  maximum time=%g\n",(double)ts->max_time));
     }
     if (ts->ifuncs) {
-      PetscCall(PetscViewerASCIIPrintf(viewer,"  total number of I function evaluations=%D\n",ts->ifuncs));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"  total number of I function evaluations=%" PetscInt_FMT "\n",ts->ifuncs));
     }
     if (ts->ijacs) {
-      PetscCall(PetscViewerASCIIPrintf(viewer,"  total number of I Jacobian evaluations=%D\n",ts->ijacs));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"  total number of I Jacobian evaluations=%" PetscInt_FMT "\n",ts->ijacs));
     }
     if (ts->rhsfuncs) {
-      PetscCall(PetscViewerASCIIPrintf(viewer,"  total number of RHS function evaluations=%D\n",ts->rhsfuncs));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"  total number of RHS function evaluations=%" PetscInt_FMT "\n",ts->rhsfuncs));
     }
     if (ts->rhsjacs) {
-      PetscCall(PetscViewerASCIIPrintf(viewer,"  total number of RHS Jacobian evaluations=%D\n",ts->rhsjacs));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"  total number of RHS Jacobian evaluations=%" PetscInt_FMT "\n",ts->rhsjacs));
     }
     if (ts->usessnes) {
       PetscBool lin;
       if (ts->problem_type == TS_NONLINEAR) {
-        PetscCall(PetscViewerASCIIPrintf(viewer,"  total number of nonlinear solver iterations=%D\n",ts->snes_its));
+        PetscCall(PetscViewerASCIIPrintf(viewer,"  total number of nonlinear solver iterations=%" PetscInt_FMT "\n",ts->snes_its));
       }
-      PetscCall(PetscViewerASCIIPrintf(viewer,"  total number of linear solver iterations=%D\n",ts->ksp_its));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"  total number of linear solver iterations=%" PetscInt_FMT "\n",ts->ksp_its));
       PetscCall(PetscObjectTypeCompareAny((PetscObject)ts->snes,&lin,SNESKSPONLY,SNESKSPTRANSPOSEONLY,""));
-      PetscCall(PetscViewerASCIIPrintf(viewer,"  total number of %slinear solve failures=%D\n",lin ? "" : "non",ts->num_snes_failures));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"  total number of %slinear solve failures=%" PetscInt_FMT "\n",lin ? "" : "non",ts->num_snes_failures));
     }
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  total number of rejected steps=%D\n",ts->reject));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  total number of rejected steps=%" PetscInt_FMT "\n",ts->reject));
     if (ts->vrtol) {
       PetscCall(PetscViewerASCIIPrintf(viewer,"  using vector of relative error tolerances, "));
     } else {
@@ -2652,6 +2656,11 @@ PetscErrorCode  TSSetUp(TS ts)
     } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call TSSetSolution() first");
   }
 
+  if (ts->tspan) {
+    if (!ts->tspan->vecs_sol) {
+      PetscCall(VecDuplicateVecs(ts->vec_sol,ts->tspan->num_span_times,&ts->tspan->vecs_sol));
+    }
+  }
   if (!ts->Jacp && ts->Jacprhs) { /* IJacobianP shares the same matrix with RHSJacobianP if only RHSJacobianP is provided */
     PetscCall(PetscObjectReference((PetscObject)ts->Jacprhs));
     ts->Jacp = ts->Jacprhs;
@@ -2774,6 +2783,11 @@ PetscErrorCode  TSReset(TS ts)
   }
   ts->tsrhssplit = NULL;
   ts->num_rhs_splits = 0;
+  if (ts->tspan) {
+    PetscCall(PetscFree(ts->tspan->span_times));
+    PetscCall(VecDestroyVecs(ts->tspan->num_span_times,&ts->tspan->vecs_sol));
+    PetscCall(PetscFree(ts->tspan));
+  }
   ts->setupcalled = PETSC_FALSE;
   PetscFunctionReturn(0);
 }
@@ -3487,7 +3501,7 @@ PetscErrorCode TSInterpolate(TS ts,PetscReal t,Vec U)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
   PetscValidHeaderSpecific(U,VEC_CLASSID,3);
-  PetscCheck(t >= ts->ptime_prev && t <= ts->ptime,PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_OUTOFRANGE,"Requested time %g not in last time steps [%g,%g]",t,(double)ts->ptime_prev,(double)ts->ptime);
+  PetscCheck(t >= ts->ptime_prev && t <= ts->ptime,PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_OUTOFRANGE,"Requested time %g not in last time steps [%g,%g]",(double)t,(double)ts->ptime_prev,(double)ts->ptime);
   PetscCheck(ts->ops->interpolate,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"%s does not provide interpolation",((PetscObject)ts)->type_name);
   PetscCall((*ts->ops->interpolate)(ts,t,U));
   PetscFunctionReturn(0);
@@ -3516,20 +3530,18 @@ PetscErrorCode TSInterpolate(TS ts,PetscReal t,Vec U)
 @*/
 PetscErrorCode  TSStep(TS ts)
 {
-  PetscErrorCode   ierr;
   static PetscBool cite = PETSC_FALSE;
   PetscReal        ptime;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
-  ierr = PetscCitationsRegister("@article{tspaper,\n"
-                                "  title         = {{PETSc/TS}: A Modern Scalable {DAE/ODE} Solver Library},\n"
-                                "  author        = {Abhyankar, Shrirang and Brown, Jed and Constantinescu, Emil and Ghosh, Debojyoti and Smith, Barry F. and Zhang, Hong},\n"
-                                "  journal       = {arXiv e-preprints},\n"
-                                "  eprint        = {1806.01437},\n"
-                                "  archivePrefix = {arXiv},\n"
-                                "  year          = {2018}\n}\n",&cite);PetscCall(ierr);
-
+  PetscCall(PetscCitationsRegister("@article{tspaper,\n"
+                                   "  title         = {{PETSc/TS}: A Modern Scalable {DAE/ODE} Solver Library},\n"
+                                   "  author        = {Abhyankar, Shrirang and Brown, Jed and Constantinescu, Emil and Ghosh, Debojyoti and Smith, Barry F. and Zhang, Hong},\n"
+                                   "  journal       = {arXiv e-preprints},\n"
+                                   "  eprint        = {1806.01437},\n"
+                                   "  archivePrefix = {arXiv},\n"
+                                   "  year          = {2018}\n}\n",&cite));
   PetscCall(TSSetUp(ts));
   PetscCall(TSTrajectorySetUp(ts->trajectory,ts));
 
@@ -3551,6 +3563,7 @@ PetscErrorCode  TSStep(TS ts)
     ts->steps++;
     ts->steprollback = PETSC_FALSE;
     ts->steprestart  = PETSC_FALSE;
+    if (ts->tspan && PetscIsCloseAtTol(ts->ptime,ts->tspan->span_times[ts->tspan->spanctr],10*PETSC_MACHINE_EPSILON,0) && ts->tspan->spanctr < ts->tspan->num_span_times) PetscCall(VecCopy(ts->vec_sol,ts->tspan->vecs_sol[ts->tspan->spanctr++]));
   }
 
   if (!ts->reason) {
@@ -3845,6 +3858,12 @@ PetscErrorCode TSSolve(TS ts,Vec u)
   PetscCheck(ts->max_time < PETSC_MAX_REAL || ts->max_steps != PETSC_MAX_INT,PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_WRONGSTATE,"You must call TSSetMaxTime() or TSSetMaxSteps(), or use -ts_max_time <time> or -ts_max_steps <steps>");
   PetscCheck(ts->exact_final_time != TS_EXACTFINALTIME_UNSPECIFIED,PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_WRONGSTATE,"You must call TSSetExactFinalTime() or use -ts_exact_final_time <stepover,interpolate,matchstep> before calling TSSolve()");
   PetscCheck(ts->exact_final_time != TS_EXACTFINALTIME_MATCHSTEP || ts->adapt,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"Since TS is not adaptive you cannot use TS_EXACTFINALTIME_MATCHSTEP, suggest TS_EXACTFINALTIME_INTERPOLATE");
+  PetscCheck(!(ts->tspan && ts->exact_final_time != TS_EXACTFINALTIME_MATCHSTEP),PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"You must use TS_EXACTFINALTIME_MATCHSTEP when using time span");
+
+  if (ts->tspan && PetscIsCloseAtTol(ts->ptime,ts->tspan->span_times[0],10*PETSC_MACHINE_EPSILON,0)) { /* starting point in time span */
+    PetscCall(VecCopy(ts->vec_sol,ts->tspan->vecs_sol[0]));
+    ts->tspan->spanctr = 1;
+  }
 
   if (ts->forward_solve) {
     PetscCall(TSForwardSetUp(ts));
@@ -3865,11 +3884,13 @@ PetscErrorCode TSSolve(TS ts,Vec u)
     ts->rhsjacobian.time  = PETSC_MIN_REAL;
   }
 
-  /* make sure initial time step does not overshoot final time */
+  /* make sure initial time step does not overshoot final time or the next point in tspan */
   if (ts->exact_final_time == TS_EXACTFINALTIME_MATCHSTEP) {
-    PetscReal maxdt = ts->max_time-ts->ptime;
+    PetscReal maxdt;
     PetscReal dt = ts->time_step;
 
+    if (ts->tspan) maxdt = ts->tspan->span_times[ts->tspan->spanctr] - ts->ptime;
+    else maxdt = ts->max_time - ts->ptime;
     ts->time_step = dt >= maxdt ? maxdt : (PetscIsCloseAtTol(dt,maxdt,10*PETSC_MACHINE_EPSILON,0) ? maxdt : dt);
   }
   ts->reason = TS_CONVERGED_ITERATING;
@@ -5085,7 +5106,7 @@ PetscErrorCode TSErrorWeightedNorm2(TS ts,Vec U,Vec Y,PetscReal *norm,PetscReal 
   err_loc[4] = (PetscReal)na_loc;
   err_loc[5] = (PetscReal)nr_loc;
 
-  PetscCallMPI(MPIU_Allreduce(err_loc,err_glb,6,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)ts)));
+  PetscCall(MPIU_Allreduce(err_loc,err_glb,6,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)ts)));
 
   gsum   = err_glb[0];
   gsuma  = err_glb[1];
@@ -5244,7 +5265,7 @@ PetscErrorCode TSErrorWeightedNormInfinity(TS ts,Vec U,Vec Y,PetscReal *norm,Pet
   err_loc[0] = max;
   err_loc[1] = maxa;
   err_loc[2] = maxr;
-  PetscCallMPI(MPIU_Allreduce(err_loc,err_glb,3,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)ts)));
+  PetscCall(MPIU_Allreduce(err_loc,err_glb,3,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)ts)));
   gmax   = err_glb[0];
   gmaxa  = err_glb[1];
   gmaxr  = err_glb[2];
@@ -5448,7 +5469,7 @@ PetscErrorCode TSErrorWeightedENorm2(TS ts,Vec E,Vec U,Vec Y,PetscReal *norm,Pet
   err_loc[4] = (PetscReal)na_loc;
   err_loc[5] = (PetscReal)nr_loc;
 
-  PetscCallMPI(MPIU_Allreduce(err_loc,err_glb,6,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)ts)));
+  PetscCall(MPIU_Allreduce(err_loc,err_glb,6,MPIU_REAL,MPIU_SUM,PetscObjectComm((PetscObject)ts)));
 
   gsum   = err_glb[0];
   gsuma  = err_glb[1];
@@ -5611,7 +5632,7 @@ PetscErrorCode TSErrorWeightedENormInfinity(TS ts,Vec E,Vec U,Vec Y,PetscReal *n
   err_loc[0] = max;
   err_loc[1] = maxa;
   err_loc[2] = maxr;
-  PetscCallMPI(MPIU_Allreduce(err_loc,err_glb,3,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)ts)));
+  PetscCall(MPIU_Allreduce(err_loc,err_glb,3,MPIU_REAL,MPIU_MAX,PetscObjectComm((PetscObject)ts)));
   gmax   = err_glb[0];
   gmaxa  = err_glb[1];
   gmaxr  = err_glb[2];
@@ -5704,7 +5725,7 @@ PetscErrorCode TSGetCFLTime(TS ts,PetscReal *cfltime)
 {
   PetscFunctionBegin;
   if (ts->cfltime < 0) {
-    PetscCallMPI(MPIU_Allreduce(&ts->cfltime_local,&ts->cfltime,1,MPIU_REAL,MPIU_MIN,PetscObjectComm((PetscObject)ts)));
+    PetscCall(MPIU_Allreduce(&ts->cfltime_local,&ts->cfltime,1,MPIU_REAL,MPIU_MIN,PetscObjectComm((PetscObject)ts)));
   }
   *cfltime = ts->cfltime;
   PetscFunctionReturn(0);
@@ -6239,5 +6260,116 @@ PetscErrorCode TSSetMatStructure(TS ts,MatStructure str)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
   ts->axpy_pattern = str;
+  PetscFunctionReturn(0);
+}
+
+/*@
+  TSSetTimeSpan - sets the time span. The solution will be computed and stored for each time requested.
+
+  Collective on ts
+
+  Input Parameters:
++ ts - the time-stepper
+. n - number of the time points (>=2)
+- span_times - array of the time points. The first element and the last element are the initial time and the final time respectively.
+
+  Options Database Keys:
+. -ts_time_span <t0,...tf> - Sets the time span
+
+  Level: beginner
+
+  Notes:
+  The elements in tspan must be all increasing. They correspond to the intermediate points for time integration.
+  TS_EXACTFINALTIME_MATCHSTEP must be used to make the last time step in each sub-interval match the intermediate points specified.
+  The intermediate solutions are saved in a vector array that can be accessed with TSGetSolutions(). Thus using time span may
+  pressure the memory system when using a large number of span points.
+
+.seealso: TSGetTimeSpan(),TSGetSolutions()
+ @*/
+PetscErrorCode TSSetTimeSpan(TS ts,PetscInt n,PetscReal *span_times)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ts,TS_CLASSID,1);
+  PetscCheck(n >= 2,PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_WRONG,"Minimum time span size is 2 but %" PetscInt_FMT " is provided",n);
+  if (ts->tspan && n != ts->tspan->num_span_times) {
+    PetscCall(PetscFree(ts->tspan->span_times));
+    PetscCall(VecDestroyVecs(ts->tspan->num_span_times,&ts->tspan->vecs_sol));
+    PetscCall(PetscMalloc1(n,&ts->tspan->span_times));
+  }
+  if (!ts->tspan) {
+    TSTimeSpan tspan;
+    PetscCall(PetscNew(&tspan));
+    PetscCall(PetscMalloc1(n,&tspan->span_times));
+    ts->tspan = tspan;
+  }
+  ts->tspan->num_span_times = n;
+  PetscCall(PetscArraycpy(ts->tspan->span_times,span_times,n));
+  PetscCall(TSSetTime(ts,ts->tspan->span_times[0]));
+  PetscCall(TSSetMaxTime(ts,ts->tspan->span_times[n-1]));
+  PetscFunctionReturn(0);
+}
+
+/*@C
+  TSGetTimeSpan - gets the time span.
+
+  Not Collective
+
+  Input Parameter:
+. ts - the time-stepper
+
+  Output Parameters:
++ n - number of the time points (>=2)
+- span_times - array of the time points. The first element and the last element are the initial time and the final time respectively. The values are valid until the TS object is destroyed.
+
+  Level: beginner
+  Notes: Both n and span_times can be NULL.
+
+.seealso: TSSetTimeSpan(),TSGetSolutions()
+ @*/
+PetscErrorCode TSGetTimeSpan(TS ts,PetscInt *n,const PetscReal **span_times)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ts,TS_CLASSID,1);
+  if (n) PetscValidIntPointer(n,2);
+  if (span_times) PetscValidPointer(span_times,3);
+  if (!ts->tspan) {
+    if (n) *n = 0;
+    if (span_times) *span_times = NULL;
+  } else {
+    if (n) *n = ts->tspan->num_span_times;
+    if (span_times) *span_times = ts->tspan->span_times;
+  }
+  PetscFunctionReturn(0);
+}
+
+/*@
+   TSGetTimeSpanSolutions - Get the number of solutions and the solutions at the time points specified by the time span.
+
+   Input Parameter:
+.  ts - the TS context obtained from TSCreate()
+
+   Output Parameters:
++  nsol - the number of solutions
+-  Sols - the solution vectors
+
+   Level: beginner
+
+   Notes: Both nsol and Sols can be NULL.
+
+.seealso: TSSetTimeSpan()
+@*/
+PetscErrorCode TSGetTimeSpanSolutions(TS ts,PetscInt *nsol,Vec **Sols)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ts, TS_CLASSID,1);
+  if (nsol) PetscValidIntPointer(nsol,2);
+  if (Sols) PetscValidPointer(Sols,3);
+  if (!ts->tspan) {
+    if (nsol) *nsol = 0;
+    if (Sols) *Sols = NULL;
+  } else {
+    if (nsol) *nsol = ts->tspan->num_span_times;
+    if (Sols) *Sols = ts->tspan->vecs_sol;
+  }
   PetscFunctionReturn(0);
 }

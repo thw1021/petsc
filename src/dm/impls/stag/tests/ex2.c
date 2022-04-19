@@ -19,7 +19,7 @@ int main(int argc,char **argv)
       PetscCall(DMStagCreate3d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,elx,ely,elz,PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,dof[0],dof[1],dof[2],dof[3],DMSTAG_STENCIL_BOX,1,NULL,NULL,NULL,&dmstag));
       break;
     default:
-      SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"No support for dimension %D",dim);
+      SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"No support for dimension %" PetscInt_FMT,dim);
   }
   PetscCall(DMSetFromOptions(dmstag));
   PetscCall(DMSetUp(dmstag));
@@ -41,11 +41,11 @@ static PetscErrorCode Test_3d_4x4x4_3x3x3(DM dmstag)
   {
     PetscInt nRanks[3],n[3],dim;
     PetscCall(DMGetDimension(dmstag,&dim));
-    PetscCheckFalse(dim != 3,PetscObjectComm((PetscObject)dmstag),PETSC_ERR_SUP,"This is a 3d test");
+    PetscCheck(dim == 3,PetscObjectComm((PetscObject)dmstag),PETSC_ERR_SUP,"This is a 3d test");
     PetscCall(DMStagGetNumRanks(dmstag,&nRanks[0],&nRanks[1],&nRanks[2]));
-    for (i=0; i<3; ++i) PetscCheckFalse(nRanks[i] != 3,PetscObjectComm((PetscObject)dmstag),PETSC_ERR_SUP,"This test requires a 3x3x3 rank grid (run on 27 ranks)");
+    for (i=0; i<3; ++i) PetscCheck(nRanks[i] == 3,PetscObjectComm((PetscObject)dmstag),PETSC_ERR_SUP,"This test requires a 3x3x3 rank grid (run on 27 ranks)");
     PetscCall(DMStagGetGlobalSizes(dmstag,&n[0],&n[1],&n[2]));
-    for (i=0; i<3; ++i) PetscCheckFalse(n[i] != 4,PetscObjectComm((PetscObject)dmstag),PETSC_ERR_SUP,"This test requires a 4x4x4 element grid");
+    for (i=0; i<3; ++i) PetscCheck(n[i] == 4,PetscObjectComm((PetscObject)dmstag),PETSC_ERR_SUP,"This test requires a 4x4x4 element grid");
   }
 
   /* Populate global vector by converting the global index number to a scalar value. */
@@ -921,7 +921,7 @@ static PetscErrorCode Test_3d_4x4x4_3x3x3(DM dmstag)
       if (arrLocal[i] != arrLocalExpected[i]) {
         ++nerr;
           if (nerr <= maxErrPerRank) {
-            PetscCall(PetscPrintf(PETSC_COMM_SELF,"[%d] Entry %D has value %g instead of the expected %g\n",rank,i,(double)PetscRealPart(arrLocal[i]),(double)PetscRealPart(arrLocalExpected[i])));
+            PetscCall(PetscPrintf(PETSC_COMM_SELF,"[%d] Entry %" PetscInt_FMT " has value %g instead of the expected %g\n",rank,i,(double)PetscRealPart(arrLocal[i]),(double)PetscRealPart(arrLocalExpected[i])));
             if (nerr == maxErrPerRank + 1) {
               PetscCall(PetscPrintf(PETSC_COMM_SELF,"[%d] Skipping additional errors on this rank\n",rank));
             }
@@ -929,7 +929,7 @@ static PetscErrorCode Test_3d_4x4x4_3x3x3(DM dmstag)
       }
     }
     if (nerr > 0) {
-      PetscCall(PetscPrintf(PETSC_COMM_SELF,"[%d] %D incorrect values on this rank\n",rank,nerr));
+      PetscCall(PetscPrintf(PETSC_COMM_SELF,"[%d] %" PetscInt_FMT " incorrect values on this rank\n",rank,nerr));
     }
     PetscCall(VecRestoreArrayRead(vecLocal,&arrLocal));
     PetscCall(PetscFree(arrLocalExpected));

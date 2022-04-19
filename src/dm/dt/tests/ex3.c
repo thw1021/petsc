@@ -148,12 +148,11 @@ int main(int argc, char **argv)
     };
   void          (*funcs[14])(const PetscReal[], void *, PetscReal *) = {func1, func2, func3, func4, func5, func6, func7, func8, func9, func10, func11, func12, func13, func14};
   PetscInt        f;
-  PetscErrorCode  ierr;
 
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"","Test Options","none");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,"","Test Options","none");
   PetscCall(PetscOptionsBoundedInt("-digits", "The number of significant digits for the integral","ex3.c",digits,&digits,NULL,1));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   /* Integrate each function */
   for (f = 0; f < 14; ++f) {
@@ -166,7 +165,7 @@ int main(int argc, char **argv)
 #endif
     PetscCall(PetscDTTanhSinhIntegrate(funcs[f], bounds[f*2+0], bounds[f*2+1], digits, NULL, &integral));
     if (PetscAbsReal(integral - analytic[f]) > PetscMax(epsilon, PetscPowRealInt(10.0, -digits)) || PetscIsInfOrNanScalar(integral - analytic[f])) {
-      PetscCall(PetscPrintf(PETSC_COMM_SELF, "The integral of func%2d is wrong: %g (%g)\n", f+1, (double)integral, (double) PetscAbsReal(integral - analytic[f])));
+      PetscCall(PetscPrintf(PETSC_COMM_SELF, "The integral of func%2" PetscInt_FMT " is wrong: %g (%g)\n", f+1, (double)integral, (double) PetscAbsReal(integral - analytic[f])));
     }
   }
 #if defined(PETSC_HAVE_MPFR)

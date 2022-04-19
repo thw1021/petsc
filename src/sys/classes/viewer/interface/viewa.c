@@ -41,6 +41,7 @@ const char *const PetscViewerFormats[] = {
   "NOFORMAT",
   "LOAD_BALANCE",
   "FAILED",
+  "ALL",
   "PetscViewerFormat",
   "PETSC_VIEWER_",
   NULL
@@ -148,7 +149,7 @@ PetscErrorCode  PetscViewerPushFormat(PetscViewer viewer,PetscViewerFormat forma
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
   PetscValidLogicalCollectiveEnum(viewer,format,2);
-  PetscCheckFalse(viewer->iformat > PETSCVIEWERFORMATPUSHESMAX-1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Too many PetscViewerPushFormat(), perhaps you forgot PetscViewerPopFormat()?");
+  PetscCheck(viewer->iformat <= PETSCVIEWERFORMATPUSHESMAX-1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Too many PetscViewerPushFormat(), perhaps you forgot PetscViewerPopFormat()?");
 
   viewer->formats[viewer->iformat++] = viewer->format;
   viewer->format                     = format;

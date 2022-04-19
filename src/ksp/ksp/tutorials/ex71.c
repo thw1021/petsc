@@ -92,7 +92,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
   const char    *pdeTypes[2] = {"Poisson", "Elasticity"};
   PetscInt       n,pde;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   options->pde       = PDE_POISSON;
@@ -111,7 +110,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->random_initial_guess = PETSC_FALSE;
   options->random_real = PETSC_FALSE;
 
-  ierr = PetscOptionsBegin(comm,NULL,"Problem Options",NULL);PetscCall(ierr);
+  PetscOptionsBegin(comm,NULL,"Problem Options",NULL);
   pde  = options->pde;
   PetscCall(PetscOptionsEList("-pde_type","The PDE type",__FILE__,pdeTypes,2,pdeTypes[options->pde],&pde,NULL));
   options->pde = (PDEType)pde;
@@ -124,7 +123,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscCall(PetscOptionsBool("-use_composite_pc","Multiplicative composite with BDDC + Richardson/Jacobi",__FILE__,options->use_composite_pc,&options->use_composite_pc,NULL));
   PetscCall(PetscOptionsBool("-random_initial_guess","Solve A x = 0 with random initial guess, instead of A x = b with random b",__FILE__,options->random_initial_guess,&options->random_initial_guess,NULL));
   PetscCall(PetscOptionsBool("-random_real","Use real-valued b (or x, if -random_initial_guess) instead of default scalar type",__FILE__,options->random_real,&options->random_real,NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   for (n=options->dim;n<3;n++) options->cells[n] = 0;
   if (options->per[0]) options->dirbc = PETSC_FALSE;
@@ -143,7 +142,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
     case 3:
       options->elemMat = elast_3D_emat;
       break;
-    default: SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Unsupported dimension %D",options->dim);
+    default: SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Unsupported dimension %" PetscInt_FMT,options->dim);
     }
     break;
   case PDE_POISSON:
@@ -158,10 +157,10 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
     case 3:
       options->elemMat = poiss_3D_emat;
       break;
-    default: SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Unsupported dimension %D",options->dim);
+    default: SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Unsupported dimension %" PetscInt_FMT,options->dim);
     }
     break;
-  default: SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Unsupported PDE %D",options->pde);
+  default: SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Unsupported PDE %d",options->pde);
   }
   PetscFunctionReturn(0);
 }
@@ -186,32 +185,31 @@ int main(int argc,char **args)
 #if defined(PETSC_USE_LOG)
   PetscLogStage          stages[2];
 #endif
-  PetscErrorCode         ierr;
 
   PetscCall(PetscInitialize(&argc,&args,(char*)0,help));
   PetscCall(ProcessOptions(PETSC_COMM_WORLD,&user));
   for (i=0; i<3; i++) nodes[i] = user.cells[i] + !user.per[i];
   switch (user.dim) {
   case 3:
-    ierr = DMDACreate3d(PETSC_COMM_WORLD,user.per[0] ? DM_BOUNDARY_PERIODIC : DM_BOUNDARY_NONE,
-                                         user.per[1] ? DM_BOUNDARY_PERIODIC : DM_BOUNDARY_NONE,
-                                         user.per[2] ? DM_BOUNDARY_PERIODIC : DM_BOUNDARY_NONE,
-                                         DMDA_STENCIL_BOX,nodes[0],nodes[1],nodes[2],
-                                         PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,user.dof,
-                                         1,PETSC_NULL,PETSC_NULL,PETSC_NULL,&da);PetscCall(ierr);
+    PetscCall(DMDACreate3d(PETSC_COMM_WORLD,user.per[0] ? DM_BOUNDARY_PERIODIC : DM_BOUNDARY_NONE,
+                           user.per[1] ? DM_BOUNDARY_PERIODIC : DM_BOUNDARY_NONE,
+                           user.per[2] ? DM_BOUNDARY_PERIODIC : DM_BOUNDARY_NONE,
+                           DMDA_STENCIL_BOX,nodes[0],nodes[1],nodes[2],
+                           PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,user.dof,
+                           1,PETSC_NULL,PETSC_NULL,PETSC_NULL,&da));
     break;
   case 2:
-    ierr = DMDACreate2d(PETSC_COMM_WORLD,user.per[0] ? DM_BOUNDARY_PERIODIC : DM_BOUNDARY_NONE,
-                                         user.per[1] ? DM_BOUNDARY_PERIODIC : DM_BOUNDARY_NONE,
-                                         DMDA_STENCIL_BOX,nodes[0],nodes[1],
-                                         PETSC_DECIDE,PETSC_DECIDE,user.dof,
-                                         1,PETSC_NULL,PETSC_NULL,&da);PetscCall(ierr);
+    PetscCall(DMDACreate2d(PETSC_COMM_WORLD,user.per[0] ? DM_BOUNDARY_PERIODIC : DM_BOUNDARY_NONE,
+                           user.per[1] ? DM_BOUNDARY_PERIODIC : DM_BOUNDARY_NONE,
+                           DMDA_STENCIL_BOX,nodes[0],nodes[1],
+                           PETSC_DECIDE,PETSC_DECIDE,user.dof,
+                           1,PETSC_NULL,PETSC_NULL,&da));
     break;
   case 1:
-    ierr = DMDACreate1d(PETSC_COMM_WORLD,user.per[0] ? DM_BOUNDARY_PERIODIC : DM_BOUNDARY_NONE,
-                        nodes[0],user.dof,1,PETSC_NULL,&da);PetscCall(ierr);
+    PetscCall(DMDACreate1d(PETSC_COMM_WORLD,user.per[0] ? DM_BOUNDARY_PERIODIC : DM_BOUNDARY_NONE,
+                           nodes[0],user.dof,1,PETSC_NULL,&da));
     break;
-  default: SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Unsupported dimension %D",user.dim);
+  default: SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Unsupported dimension %" PetscInt_FMT,user.dim);
   }
 
   PetscCall(PetscLogStageRegister("KSPSetUp",&stages[0]));
@@ -232,7 +230,7 @@ int main(int argc,char **args)
     case 1:
       user.cells[0] = M - !user.per[0];
       break;
-    default: SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Unsupported dimension %D",user.dim);
+    default: SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Unsupported dimension %" PetscInt_FMT,user.dim);
     }
   }
   PetscCall(DMDASetUniformCoordinates(da,0.0,1.0*user.cells[0],0.0,1.0*user.cells[1],0.0,1.0*user.cells[2]));

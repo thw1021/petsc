@@ -1,10 +1,6 @@
 
 static char help[] = "Test procedural KSPSetFromOptions() or at runtime; Test PCREDUNDANT.\n\n";
 
-/*T
-   Concepts: KSP^basic parallel example;
-   Processors: n
-T*/
 #include <petscksp.h>
 
 int main(int argc,char **args)
@@ -129,7 +125,7 @@ int main(int argc,char **args)
   PetscCall(VecAXPY(x,-1.0,u));
   PetscCall(VecNorm(x,NORM_2,&norm));
   PetscCall(KSPGetIterationNumber(ksp,&its));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g, Iterations %D\n",(double)norm,its));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g, Iterations %" PetscInt_FMT "\n",(double)norm,its));
 
   /* Free work space. */
   PetscCall(VecDestroy(&x)); PetscCall(VecDestroy(&u));

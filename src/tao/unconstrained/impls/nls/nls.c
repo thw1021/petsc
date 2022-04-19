@@ -743,7 +743,7 @@ static PetscErrorCode TaoSetFromOptions_NLS(PetscOptionItems *PetscOptionsObject
   TAO_NLS        *nlsP = (TAO_NLS *)tao->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Newton line search method for unconstrained optimization"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Newton line search method for unconstrained optimization");
   PetscCall(PetscOptionsEList("-tao_nls_init_type", "radius initialization type", "", NLS_INIT, NLS_INIT_TYPES, NLS_INIT[nlsP->init_type], &nlsP->init_type, NULL));
   PetscCall(PetscOptionsEList("-tao_nls_update_type", "radius update type", "", NLS_UPDATE, NLS_UPDATE_TYPES, NLS_UPDATE[nlsP->update_type], &nlsP->update_type, NULL));
   PetscCall(PetscOptionsReal("-tao_nls_sval", "perturbation starting value", "", nlsP->sval, &nlsP->sval,NULL));
@@ -791,7 +791,7 @@ static PetscErrorCode TaoSetFromOptions_NLS(PetscOptionItems *PetscOptionsObject
   PetscCall(PetscOptionsReal("-tao_nls_min_radius", "lower bound on initial radius", "", nlsP->min_radius, &nlsP->min_radius,NULL));
   PetscCall(PetscOptionsReal("-tao_nls_max_radius", "upper bound on radius", "", nlsP->max_radius, &nlsP->max_radius,NULL));
   PetscCall(PetscOptionsReal("-tao_nls_epsilon", "tolerance used when computing actual and predicted reduction", "", nlsP->epsilon, &nlsP->epsilon,NULL));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscCall(TaoLineSearchSetFromOptions(tao->linesearch));
   PetscCall(KSPSetFromOptions(tao->ksp));
   PetscFunctionReturn(0);
@@ -807,17 +807,17 @@ static PetscErrorCode TaoView_NLS(Tao tao, PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isascii));
   if (isascii) {
     PetscCall(PetscViewerASCIIPushTab(viewer));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "Newton steps: %D\n", nlsP->newt));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "BFGS steps: %D\n", nlsP->bfgs));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "Gradient steps: %D\n", nlsP->grad));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Newton steps: %" PetscInt_FMT "\n", nlsP->newt));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "BFGS steps: %" PetscInt_FMT "\n", nlsP->bfgs));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Gradient steps: %" PetscInt_FMT "\n", nlsP->grad));
 
-    PetscCall(PetscViewerASCIIPrintf(viewer, "nls ksp atol: %D\n", nlsP->ksp_atol));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "nls ksp rtol: %D\n", nlsP->ksp_rtol));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "nls ksp ctol: %D\n", nlsP->ksp_ctol));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "nls ksp negc: %D\n", nlsP->ksp_negc));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "nls ksp dtol: %D\n", nlsP->ksp_dtol));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "nls ksp iter: %D\n", nlsP->ksp_iter));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "nls ksp othr: %D\n", nlsP->ksp_othr));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "nls ksp atol: %" PetscInt_FMT "\n", nlsP->ksp_atol));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "nls ksp rtol: %" PetscInt_FMT "\n", nlsP->ksp_rtol));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "nls ksp ctol: %" PetscInt_FMT "\n", nlsP->ksp_ctol));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "nls ksp negc: %" PetscInt_FMT "\n", nlsP->ksp_negc));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "nls ksp dtol: %" PetscInt_FMT "\n", nlsP->ksp_dtol));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "nls ksp iter: %" PetscInt_FMT "\n", nlsP->ksp_iter));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "nls ksp othr: %" PetscInt_FMT "\n", nlsP->ksp_othr));
     PetscCall(PetscViewerASCIIPopTab(viewer));
   }
   PetscFunctionReturn(0);

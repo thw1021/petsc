@@ -179,7 +179,6 @@ typedef struct  {
 
 PetscErrorCode MatDestroy_LUSOL(Mat A)
 {
-  PetscErrorCode ierr;
   Mat_LUSOL      *lusol=(Mat_LUSOL*)A->spptr;
 
   PetscFunctionBegin;
@@ -209,7 +208,6 @@ PetscErrorCode MatSolve_LUSOL(Mat A,Vec b,Vec x)
   double         *xx;
   const double   *bb;
   int            mode=5;
-  PetscErrorCode ierr;
   int            i,m,n,nnz,status;
 
   PetscFunctionBegin;
@@ -237,7 +235,6 @@ PetscErrorCode MatLUFactorNumeric_LUSOL(Mat F,Mat A,const MatFactorInfo *info)
 {
   Mat_SeqAIJ     *a;
   Mat_LUSOL      *lusol = (Mat_LUSOL*)F->spptr;
-  PetscErrorCode ierr;
   int            m, n, nz, nnz, status;
   int            i, rs, re;
   int            factorizations;
@@ -246,7 +243,7 @@ PetscErrorCode MatLUFactorNumeric_LUSOL(Mat F,Mat A,const MatFactorInfo *info)
   PetscCall(MatGetSize(A,&m,&n));
   a    = (Mat_SeqAIJ*)A->data;
 
-  PetscCheckFalse(m != lusol->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"factorization struct inconsistent");
+  PetscCheck(m == lusol->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"factorization struct inconsistent");
 
   factorizations = 0;
   do {
@@ -342,7 +339,6 @@ PetscErrorCode MatLUFactorSymbolic_LUSOL(Mat F,Mat A, IS r, IS c,const MatFactor
   /*     F  - matrix storing the factorization;                           */
   /************************************************************************/
   Mat_LUSOL      *lusol;
-  PetscErrorCode ierr;
   int            i, m, n, nz, nnz;
 
   PetscFunctionBegin;
@@ -394,19 +390,18 @@ PetscErrorCode MatLUFactorSymbolic_LUSOL(Mat F,Mat A, IS r, IS c,const MatFactor
   lusol->nnz    = nnz;
   lusol->luroom = 1.75;
 
-  ierr = PetscMalloc(sizeof(int)*n,&lusol->ip);
-  ierr = PetscMalloc(sizeof(int)*n,&lusol->iq);
-  ierr = PetscMalloc(sizeof(int)*n,&lusol->lenc);
-  ierr = PetscMalloc(sizeof(int)*n,&lusol->lenr);
-  ierr = PetscMalloc(sizeof(int)*n,&lusol->locc);
-  ierr = PetscMalloc(sizeof(int)*n,&lusol->locr);
-  ierr = PetscMalloc(sizeof(int)*n,&lusol->iploc);
-  ierr = PetscMalloc(sizeof(int)*n,&lusol->iqloc);
-  ierr = PetscMalloc(sizeof(int)*n,&lusol->ipinv);
-  ierr = PetscMalloc(sizeof(int)*n,&lusol->iqinv);
-  ierr = PetscMalloc(sizeof(double)*n,&lusol->mnsw);
-  ierr = PetscMalloc(sizeof(double)*n,&lusol->mnsv);
-
+  PetscCall(PetscMalloc(sizeof(int)*n,&lusol->ip));
+  PetscCall(PetscMalloc(sizeof(int)*n,&lusol->iq));
+  PetscCall(PetscMalloc(sizeof(int)*n,&lusol->lenc));
+  PetscCall(PetscMalloc(sizeof(int)*n,&lusol->lenr));
+  PetscCall(PetscMalloc(sizeof(int)*n,&lusol->locc));
+  PetscCall(PetscMalloc(sizeof(int)*n,&lusol->locr));
+  PetscCall(PetscMalloc(sizeof(int)*n,&lusol->iploc));
+  PetscCall(PetscMalloc(sizeof(int)*n,&lusol->iqloc));
+  PetscCall(PetscMalloc(sizeof(int)*n,&lusol->ipinv));
+  PetscCall(PetscMalloc(sizeof(int)*n,&lusol->iqinv));
+  PetscCall(PetscMalloc(sizeof(double)*n,&lusol->mnsw));
+  PetscCall(PetscMalloc(sizeof(double)*n,&lusol->mnsv));
   PetscCall(PetscMalloc3(nnz,&lusol->data,nnz,&lusol->indc,nnz,&lusol->indr));
 
   lusol->CleanUpLUSOL     = PETSC_TRUE;
@@ -425,7 +420,6 @@ PETSC_EXTERN PetscErrorCode MatGetFactor_seqaij_lusol(Mat A,MatFactorType ftype,
 {
   Mat            B;
   Mat_LUSOL      *lusol;
-  PetscErrorCode ierr;
   int            m, n;
 
   PetscFunctionBegin;
@@ -453,8 +447,6 @@ PETSC_EXTERN PetscErrorCode MatGetFactor_seqaij_lusol(Mat A,MatFactorType ftype,
 
 PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_Lusol(void)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscCall(MatSolverTypeRegister(MATSOLVERLUSOL,MATSEQAIJ,        MAT_FACTOR_LU,MatGetFactor_seqaij_lusol));
   PetscFunctionReturn(0);

@@ -10,14 +10,12 @@ typedef struct {
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBeginUser;
   options->its = 1;
 
-  ierr = PetscOptionsBegin(comm, "", "FE Injection Options", "PETSCFE");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "FE Injection Options", "PETSCFE");
   PetscCall(PetscOptionsInt("-its", "The number of replications for timing", "ex1.c", options->its, &options->its, NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -113,7 +111,7 @@ PetscErrorCode CellRangeGetFEGeom(IS cellIS, DMField coordField, PetscQuadrature
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetId((PetscObject) quad, &id));
-  PetscCall(PetscSNPrintf(composeStr, 32, "CellRangeGetFEGeom_%x\n", id));
+  PetscCall(PetscSNPrintf(composeStr, 32, "CellRangeGetFEGeom_%" PetscInt64_FMT "\n", id));
   PetscCall(PetscObjectQuery((PetscObject) cellIS, composeStr, (PetscObject *) &container));
   if (container) {
     PetscCall(PetscContainerGetPointer(container, (void **) geom));

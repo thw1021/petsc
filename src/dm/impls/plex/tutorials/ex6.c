@@ -12,26 +12,25 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
   PetscInt       len;
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   options->Nf = 0;
   options->Nc = NULL;
   options->k  = NULL;
 
-  ierr = PetscOptionsBegin(comm, "", "SEM Problem Options", "DMPLEX");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "SEM Problem Options", "DMPLEX");
   PetscCall(PetscOptionsBoundedInt("-num_fields", "The number of fields", "ex6.c", options->Nf, &options->Nf, NULL,0));
   if (options->Nf) {
     len  = options->Nf;
     PetscCall(PetscMalloc1(len, &options->Nc));
     PetscCall(PetscOptionsIntArray("-num_components", "The number of components per field", "ex6.c", options->Nc, &len, &flg));
-    PetscCheckFalse(flg && (len != options->Nf),PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Length of components array is %d should be %d", len, options->Nf);
+    PetscCheck(!flg || !(len != options->Nf),PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Length of components array is %" PetscInt_FMT " should be %" PetscInt_FMT, len, options->Nf);
     len  = options->Nf;
     PetscCall(PetscMalloc1(len, &options->k));
     PetscCall(PetscOptionsIntArray("-order", "The spectral order per field", "ex6.c", options->k, &len, &flg));
-    PetscCheckFalse(flg && (len != options->Nf),PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Length of order array is %d should be %d", len, options->Nf);
+    PetscCheck(!flg || !(len != options->Nf),PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Length of order array is %" PetscInt_FMT " should be %" PetscInt_FMT, len, options->Nf);
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -111,7 +110,7 @@ static PetscErrorCode CheckPoint(DM dm, Vec u, PetscInt point, AppCtx *user)
   PetscCall(VecGetArrayRead(u, &array));
   PetscCall(DMPlexPointLocalRead(dm, point, array, &a));
   PetscCall(PetscSectionGetDof(s, point, &dof));
-  PetscCall(PetscPrintf(PETSC_COMM_SELF, "Point %D: ", point));
+  PetscCall(PetscPrintf(PETSC_COMM_SELF, "Point %" PetscInt_FMT ": ", point));
   for (d = 0; d < dof; ++d) {
     if (d > 0) PetscCall(PetscPrintf(PETSC_COMM_SELF, ", "));
     PetscCall(PetscPrintf(PETSC_COMM_SELF, "%2.0f", (double) PetscRealPart(a[d])));
@@ -132,9 +131,9 @@ static PetscErrorCode ReadData2D(DM dm, Vec u, AppCtx *user)
     PetscInt     closureSize, ki, kj, f, c, foff = 0;
 
     PetscCall(DMPlexVecGetClosure(dm, NULL, u, cell, &closureSize, &closure));
-    PetscCall(PetscPrintf(PETSC_COMM_SELF, "Cell %D\n", cell));
+    PetscCall(PetscPrintf(PETSC_COMM_SELF, "Cell %" PetscInt_FMT "\n", cell));
     for (f = 0; f < user->Nf; ++f) {
-      PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Field %D\n", f));
+      PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Field %" PetscInt_FMT "\n", f));
       for (kj = user->k[f]; kj >= 0; --kj) {
         for (ki = 0; ki <= user->k[f]; ++ki) {
           if (ki > 0) PetscCall(PetscPrintf(PETSC_COMM_SELF, "  "));
@@ -165,9 +164,9 @@ static PetscErrorCode ReadData3D(DM dm, Vec u, AppCtx *user)
     PetscInt     closureSize, ki, kj, kk, f, c, foff = 0;
 
     PetscCall(DMPlexVecGetClosure(dm, NULL, u, cell, &closureSize, &closure));
-    PetscCall(PetscPrintf(PETSC_COMM_SELF, "Cell %D\n", cell));
+    PetscCall(PetscPrintf(PETSC_COMM_SELF, "Cell %" PetscInt_FMT "\n", cell));
     for (f = 0; f < user->Nf; ++f) {
-      PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Field %D\n", f));
+      PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Field %" PetscInt_FMT "\n", f));
       for (kk = user->k[f]; kk >= 0; --kk) {
         for (kj = user->k[f]; kj >= 0; --kj) {
           for (ki = 0; ki <= user->k[f]; ++ki) {

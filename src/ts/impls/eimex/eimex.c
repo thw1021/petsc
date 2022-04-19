@@ -74,14 +74,12 @@ static PetscErrorCode TSStep_EIMEX(TS ts)
   TS_EIMEX        *ext = (TS_EIMEX*)ts->data;
   const PetscInt  ns = ext->nstages;
   Vec             *T=ext->T, Y=ext->Y;
-
   SNES            snes;
   PetscInt        i,j;
   PetscBool       accept = PETSC_FALSE;
-  PetscErrorCode  ierr;
   PetscReal       alpha,local_error,local_error_a,local_error_r;
-  PetscFunctionBegin;
 
+  PetscFunctionBegin;
   PetscCall(TSGetSNES(ts,&snes));
   PetscCall(SNESSetType(snes,"ksponly"));
   ext->status = TS_STEP_INCOMPLETE;
@@ -97,7 +95,7 @@ static PetscErrorCode TSStep_EIMEX(TS ts)
   for (i=1;i<ns;i++) {
     for (j=i;j<ns;j++) {
       alpha = -(PetscReal)ext->N[j]/ext->N[j-i];
-      ierr  = VecAXPBYPCZ(T[Map(j,i,ns)],alpha,1.0,0,T[Map(j,i-1,ns)],T[Map(j-1,i-1,ns)]);/* T[j][i]=alpha*T[j][i-1]+T[j-1][i-1] */PetscCall(ierr);
+      PetscCall(VecAXPBYPCZ(T[Map(j,i,ns)],alpha,1.0,0,T[Map(j,i-1,ns)],T[Map(j-1,i-1,ns)]));/* T[j][i]=alpha*T[j][i-1]+T[j-1][i-1] */
       alpha = 1.0/(1.0 + alpha);
       PetscCall(VecScale(T[Map(j,i,ns)],alpha));
     }
@@ -128,7 +126,7 @@ static PetscErrorCode TSStep_EIMEX(TS ts)
             /*extrapolation for the newly added stage*/
             for (i=1;i<ext->nstages;i++) {
               alpha = -(PetscReal)ext->N[ext->nstages-1]/ext->N[ext->nstages-1-i];
-              ierr  = VecAXPBYPCZ(T[Map(ext->nstages-1,i,ext->nstages)],alpha,1.0,0,T[Map(ext->nstages-1,i-1,ext->nstages)],T[Map(ext->nstages-1-1,i-1,ext->nstages)]);/*T[ext->nstages-1][i]=alpha*T[ext->nstages-1][i-1]+T[ext->nstages-1-1][i-1]*/PetscCall(ierr);
+              PetscCall(VecAXPBYPCZ(T[Map(ext->nstages-1,i,ext->nstages)],alpha,1.0,0,T[Map(ext->nstages-1,i-1,ext->nstages)],T[Map(ext->nstages-1-1,i-1,ext->nstages)]));/*T[ext->nstages-1][i]=alpha*T[ext->nstages-1][i-1]+T[ext->nstages-1-1][i-1]*/
               alpha = 1.0/(1.0 + alpha);
               PetscCall(VecScale(T[Map(ext->nstages-1,i,ext->nstages)],alpha));
             }
@@ -377,7 +375,7 @@ static PetscErrorCode TSSetFromOptions_EIMEX(PetscOptionItems *PetscOptionsObjec
   PetscFunctionBegin;
   tindex[0] = TSEIMEXDefault;
   tindex[1] = TSEIMEXDefault;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"EIMEX ODE solver options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"EIMEX ODE solver options");
   {
     PetscBool flg;
     PetscCall(PetscOptionsInt("-ts_eimex_max_rows","Define the maximum number of rows used","TSEIMEXSetMaxRows",nrows,&nrows,&flg)); /* default value 3 */
@@ -390,7 +388,7 @@ static PetscErrorCode TSSetFromOptions_EIMEX(PetscOptionItems *PetscOptionsObjec
     }
     PetscCall(PetscOptionsBool("-ts_eimex_order_adapt","Solve the problem with adaptive order","TSEIMEXSetOrdAdapt",ext->ord_adapt,&ext->ord_adapt,NULL));
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -417,7 +415,7 @@ PetscErrorCode TSEIMEXSetMaxRows(TS ts, PetscInt nrows)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
-  PetscCall(PetscTryMethod(ts,"TSEIMEXSetMaxRows_C",(TS,PetscInt),(ts,nrows)));
+  PetscTryMethod(ts,"TSEIMEXSetMaxRows_C",(TS,PetscInt),(ts,nrows));
   PetscFunctionReturn(0);
 }
 
@@ -438,7 +436,7 @@ PetscErrorCode TSEIMEXSetRowCol(TS ts, PetscInt row, PetscInt col)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
-  PetscCall(PetscTryMethod(ts,"TSEIMEXSetRowCol_C",(TS,PetscInt, PetscInt),(ts,row,col)));
+  PetscTryMethod(ts,"TSEIMEXSetRowCol_C",(TS,PetscInt, PetscInt),(ts,row,col));
   PetscFunctionReturn(0);
 }
 
@@ -459,7 +457,7 @@ PetscErrorCode TSEIMEXSetOrdAdapt(TS ts, PetscBool flg)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
-  PetscCall(PetscTryMethod(ts,"TSEIMEXSetOrdAdapt_C",(TS,PetscBool),(ts,flg)));
+  PetscTryMethod(ts,"TSEIMEXSetOrdAdapt_C",(TS,PetscBool),(ts,flg));
   PetscFunctionReturn(0);
 }
 
@@ -469,7 +467,7 @@ static PetscErrorCode TSEIMEXSetMaxRows_EIMEX(TS ts,PetscInt nrows)
   PetscInt       i;
 
   PetscFunctionBegin;
-  PetscCheck(nrows >= 0 && nrows <= 100,((PetscObject)ts)->comm,PETSC_ERR_ARG_OUTOFRANGE,"Max number of rows (current value %D) should be an integer number between 1 and 100",nrows);
+  PetscCheck(nrows >= 0 && nrows <= 100,((PetscObject)ts)->comm,PETSC_ERR_ARG_OUTOFRANGE,"Max number of rows (current value %" PetscInt_FMT ") should be an integer number between 1 and 100",nrows);
   PetscCall(PetscFree(ext->N));
   ext->max_rows = nrows;
   PetscCall(PetscMalloc1(nrows,&ext->N));
@@ -482,9 +480,9 @@ static PetscErrorCode TSEIMEXSetRowCol_EIMEX(TS ts,PetscInt row,PetscInt col)
   TS_EIMEX *ext = (TS_EIMEX*)ts->data;
 
   PetscFunctionBegin;
-  PetscCheck(row >= 1 && col >= 1,((PetscObject)ts)->comm,PETSC_ERR_ARG_OUTOFRANGE,"The row or column index (current value %d,%d) should not be less than 1 ",row,col);
-  PetscCheck(row <= ext->max_rows && col <= ext->max_rows,((PetscObject)ts)->comm,PETSC_ERR_ARG_OUTOFRANGE,"The row or column index (current value %d,%d) exceeds the maximum number of rows %d",row,col,ext->max_rows);
-  PetscCheck(col <= row,((PetscObject)ts)->comm,PETSC_ERR_ARG_OUTOFRANGE,"The column index (%d) exceeds the row index (%d)",col,row);
+  PetscCheck(row >= 1 && col >= 1,((PetscObject)ts)->comm,PETSC_ERR_ARG_OUTOFRANGE,"The row or column index (current value %" PetscInt_FMT ",%" PetscInt_FMT ") should not be less than 1 ",row,col);
+  PetscCheck(row <= ext->max_rows && col <= ext->max_rows,((PetscObject)ts)->comm,PETSC_ERR_ARG_OUTOFRANGE,"The row or column index (current value %" PetscInt_FMT ",%" PetscInt_FMT ") exceeds the maximum number of rows %" PetscInt_FMT,row,col,ext->max_rows);
+  PetscCheck(col <= row,((PetscObject)ts)->comm,PETSC_ERR_ARG_OUTOFRANGE,"The column index (%" PetscInt_FMT ") exceeds the row index (%" PetscInt_FMT ")",col,row);
 
   ext->row_ind = row - 1;
   ext->col_ind = col - 1; /* Array index in C starts from 0 */

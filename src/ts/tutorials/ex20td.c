@@ -6,13 +6,6 @@ global : track parameters at all timesteps together \n\
 Choose one of the two at runtime by -sa_method {track,global}. \n";
 
 /*
-  Concepts: TS^adjoint for time dependent parameters
-  Concepts: TS^Customized adjoint monitor based sensitivity tracking
-  Concepts: TS^All at once approach to sensitivity tracking
-  Processors: 1
-*/
-
-/*
    Simple example to demonstrate TSAdjoint capabilities for time dependent params
    without integral cost terms using either a tracking or global method.
 
@@ -201,7 +194,7 @@ PetscErrorCode RHSJacobianP_global(TS ts,PetscReal t,Vec U,Mat A,void *ctx)
 PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal t,Vec U,void *ctx)
 {
   PetscFunctionBeginUser;
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n Solution at time %e is \n", t));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n Solution at time %e is \n", (double)t));
   PetscCall(VecView(U,PETSC_VIEWER_STDOUT_WORLD));
   PetscFunctionReturn(0);
 }
@@ -249,7 +242,6 @@ int main(int argc,char **argv)
   PetscMPIInt    size;
   PetscBool      monitor = PETSC_FALSE;
   SAMethod       sa = SA_GLOBAL;
-  PetscErrorCode ierr;
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Initialize program
@@ -261,11 +253,11 @@ int main(int argc,char **argv)
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Set runtime options
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"SA analysis options.","");PetscCall(ierr);{
+  PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"SA analysis options.","");{
   PetscCall(PetscOptionsGetBool(NULL,NULL,"-monitor",&monitor,NULL));
   PetscCall(PetscOptionsEnum("-sa_method","Sensitivity analysis method (track or global)","",SAMethods,(PetscEnum)sa,(PetscEnum*)&sa,NULL));
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   user.final_time = 0.1;
   user.max_steps  = 5;
@@ -414,8 +406,7 @@ int main(int argc,char **argv)
   }
 
   if (sa == SA_GLOBAL) {
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"\n sensitivity wrt  params: d[cost]/d[p], where p refers to \n\
-                    the interlaced vector made by combining mu1,mu2\n");PetscCall(ierr);
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n sensitivity wrt  params: d[cost]/d[p], where p refers to \nthe interlaced vector made by combining mu1,mu2\n"));
     PetscCall(VecView(user.mup,PETSC_VIEWER_STDOUT_WORLD));
   }
 
@@ -439,7 +430,7 @@ int main(int argc,char **argv)
   }
   PetscCall(TSDestroy(&ts));
   PetscCall(PetscFinalize());
-  return(ierr);
+  return(0);
 }
 
 /*TEST

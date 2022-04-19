@@ -98,7 +98,7 @@ static PetscErrorCode test(PetscInt dim, PetscInt deg, PetscInt form, PetscInt j
 
     PetscStackCallBLAS("LAPACKgesvd",LAPACKgesvd_("N","N",&n,&n,Mcopy,&n,S,NULL,&n,NULL,&n,work,&lwork,&lierr));
     PetscReal cond = S[0] / S[Nbpt - 1];
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "dimension %D, degree %D, form %D: condition number %g\n", dim, deg, form, (double) cond));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "dimension %" PetscInt_FMT ", degree %" PetscInt_FMT ", form %" PetscInt_FMT ": condition number %g\n", dim, deg, form, (double) cond));
     PetscCall(PetscFree(work));
     PetscCall(PetscFree(S));
   }
@@ -139,7 +139,7 @@ static PetscErrorCode test(PetscInt dim, PetscInt deg, PetscInt form, PetscInt j
   frob_err = PetscSqrtReal(frob_err);
 
   if (frob_err > PETSC_SMALL) {
-    SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "dimension %D, degree %D, form %D: trimmed projection error %g", dim, deg, form, (double) frob_err);
+    SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "dimension %" PetscInt_FMT ", degree %" PetscInt_FMT ", form %" PetscInt_FMT ": trimmed projection error %g", dim, deg, form, (double) frob_err);
   }
 
   // P trimmed is also supposed to contain the polynomials of one degree less: construction M_moment[0:sub,:] * M_trimmed^{-1} * M_moments[0:sub,:]^T should be the identity matrix
@@ -153,7 +153,7 @@ static PetscErrorCode test(PetscInt dim, PetscInt deg, PetscInt form, PetscInt j
   PetscCall(MatShift(Mm1, -1.));
   PetscCall(MatNorm(Mm1, NORM_FROBENIUS, &frob_err));
   if (frob_err > PETSC_SMALL) {
-    SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "dimension %D, degree %D, form %D: trimmed reverse projection error %g", dim, deg, form, (double) frob_err);
+    SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "dimension %" PetscInt_FMT ", degree %" PetscInt_FMT ", form %" PetscInt_FMT ": trimmed reverse projection error %g", dim, deg, form, (double) frob_err);
   }
   PetscCall(MatDestroy(&Mm1));
   PetscCall(MatDestroy(&AinvB));
@@ -255,7 +255,7 @@ static PetscErrorCode test(PetscInt dim, PetscInt deg, PetscInt form, PetscInt j
     PetscCall(MatAXPY(prod, -1., mat_koszul, SAME_NONZERO_PATTERN));
     PetscCall(MatNorm(prod, NORM_FROBENIUS, &frob_err));
     if (frob_err > PETSC_SMALL) {
-      SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "dimension %D, degree %D, forms (%D, %D): koszul projection error %g", dim, deg, form, form < 0 ? (form-1):(form+1), (double) frob_err);
+      SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "dimension %" PetscInt_FMT ", degree %" PetscInt_FMT ", forms (%" PetscInt_FMT ", %" PetscInt_FMT "): koszul projection error %g", dim, deg, form, form < 0 ? (form-1):(form+1), (double) frob_err);
     }
 
     PetscCall(MatDestroy(&prod));
@@ -298,7 +298,7 @@ static PetscErrorCode test(PetscInt dim, PetscInt deg, PetscInt form, PetscInt j
   frob_err = PetscSqrtReal(frob_err);
 
   if (frob_err > PETSC_SMALL) {
-    SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "dimension %D, degree %D, form %D: jet error %g", dim, deg, form, (double) frob_err);
+    SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_PLIB, "dimension %" PetscInt_FMT ", degree %" PetscInt_FMT ", form %" PetscInt_FMT ": jet error %g", dim, deg, form, (double) frob_err);
   }
 
   PetscCall(PetscFree(M_moment_real));
@@ -319,15 +319,14 @@ int main(int argc, char **argv)
   PetscInt       max_deg = 4;
   PetscInt       k       = 3;
   PetscBool      cond    = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"","Options for PetscDTPTrimmedEvalJet() tests","none");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,"","Options for PetscDTPTrimmedEvalJet() tests","none");
   PetscCall(PetscOptionsInt("-max_dim", "Maximum dimension of the simplex",__FILE__,max_dim,&max_dim,NULL));
   PetscCall(PetscOptionsInt("-max_degree", "Maximum degree of the trimmed polynomial space",__FILE__,max_deg,&max_deg,NULL));
   PetscCall(PetscOptionsInt("-max_jet", "The number of derivatives to test",__FILE__,k,&k,NULL));
   PetscCall(PetscOptionsBool("-cond", "Compute the condition numbers of the mass matrices of the bases",__FILE__,cond,&cond,NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   for (PetscInt dim = 2; dim <= max_dim; dim++) {
     for (PetscInt deg = 1; deg <= max_deg; deg++) {
       for (PetscInt form = -dim+1; form <= dim; form++) {

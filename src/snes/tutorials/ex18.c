@@ -11,13 +11,6 @@ options are:\n\
   -tright <tr>, where <tr> indicates the right Diriclet BC \n\
   -beta <beta>, where <beta> indicates the exponent in T \n\n";
 
-/*T
-   Concepts: SNES^solving a system of nonlinear equations
-   Concepts: DMDA^using distributed arrays
-   Concepts: multigrid;
-   Processors: n
-T*/
-
 /*
 
     This example models the partial differential equation
@@ -102,8 +95,8 @@ int main(int argc,char **argv)
   PetscCall(SNESGetIterationNumber(snes,&its));
   PetscCall(SNESGetLinearSolveIterations(snes,&lits));
   litspit = ((PetscReal)lits)/((PetscReal)its);
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Number of SNES iterations = %D\n",its));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Number of Linear iterations = %D\n",lits));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Number of SNES iterations = %" PetscInt_FMT "\n",its));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Number of Linear iterations = %" PetscInt_FMT "\n",lits));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Average Linear its / SNES = %e\n",(double)litspit));
 
   PetscCall(DMDestroy(&da));

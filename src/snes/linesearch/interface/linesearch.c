@@ -427,7 +427,7 @@ PetscErrorCode SNESLineSearchPreCheck(SNESLineSearch linesearch,Vec X,Vec Y,Pets
 }
 
 /*@
-   SNESLineSearchPostCheck - Prepares the line search for being applied.
+   SNESLineSearchPostCheck - Hook to modify step direction or updated solution after a successful linesearch
 
    Logically Collective on SNESLineSearch
 
@@ -708,7 +708,7 @@ PetscErrorCode  SNESLineSearchGetDefaultMonitor(SNESLineSearch linesearch, Petsc
 .seealso: PetscOptionsGetViewer(), PetscOptionsGetReal(), PetscOptionsHasName(), PetscOptionsGetString(),
           PetscOptionsGetIntArray(), PetscOptionsGetRealArray(), PetscOptionsBool()
           PetscOptionsInt(), PetscOptionsString(), PetscOptionsReal(), PetscOptionsBool(),
-          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHead(),
+          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHeadBegin(),
           PetscOptionsStringArray(),PetscOptionsRealArray(), PetscOptionsScalar(),
           PetscOptionsBoolGroupBegin(), PetscOptionsBoolGroup(), PetscOptionsBoolGroupEnd(),
           PetscOptionsFList(), PetscOptionsEList()
@@ -765,7 +765,6 @@ PetscErrorCode  SNESLineSearchMonitorSetFromOptions(SNESLineSearch ls,const char
 @*/
 PetscErrorCode SNESLineSearchSetFromOptions(SNESLineSearch linesearch)
 {
-  PetscErrorCode    ierr;
   const char        *deft = SNESLINESEARCHBASIC;
   char              type[256];
   PetscBool         flg, set;
@@ -774,7 +773,7 @@ PetscErrorCode SNESLineSearchSetFromOptions(SNESLineSearch linesearch)
   PetscFunctionBegin;
   PetscCall(SNESLineSearchRegisterAll());
 
-  ierr = PetscObjectOptionsBegin((PetscObject)linesearch);PetscCall(ierr);
+  PetscObjectOptionsBegin((PetscObject)linesearch);
   if (((PetscObject)linesearch)->type_name) deft = ((PetscObject)linesearch)->type_name;
   PetscCall(PetscOptionsFList("-snes_linesearch_type","Linesearch type","SNESLineSearchSetType",SNESLineSearchList,deft,type,256,&flg));
   if (flg) {
@@ -809,8 +808,7 @@ PetscErrorCode SNESLineSearchSetFromOptions(SNESLineSearch linesearch)
     if (flg) {
       linesearch->precheck_picard_angle = 10.; /* correction only active if angle is less than 10 degrees */
 
-      ierr = PetscOptionsReal("-snes_linesearch_precheck_picard_angle","Maximum angle at which to activate the correction",
-                              "none",linesearch->precheck_picard_angle,&linesearch->precheck_picard_angle,NULL);PetscCall(ierr);
+      PetscCall(PetscOptionsReal("-snes_linesearch_precheck_picard_angle","Maximum angle at which to activate the correction","none",linesearch->precheck_picard_angle,&linesearch->precheck_picard_angle,NULL));
       PetscCall(SNESLineSearchSetPreCheck(linesearch,SNESLineSearchPreCheckPicard,&linesearch->precheck_picard_angle));
     } else {
       PetscCall(SNESLineSearchSetPreCheck(linesearch,NULL,NULL));
@@ -824,7 +822,7 @@ PetscErrorCode SNESLineSearchSetFromOptions(SNESLineSearch linesearch)
   }
 
   PetscCall(PetscObjectProcessOptionsHandlers(PetscOptionsObject,(PetscObject)linesearch));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -862,16 +860,16 @@ PetscErrorCode SNESLineSearchView(SNESLineSearch linesearch, PetscViewer viewer)
     }
     PetscCall(PetscViewerASCIIPrintf(viewer,"  maxstep=%e, minlambda=%e\n", (double)linesearch->maxstep,(double)linesearch->steptol));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  tolerances: relative=%e, absolute=%e, lambda=%e\n", (double)linesearch->rtol,(double)linesearch->atol,(double)linesearch->ltol));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  maximum iterations=%D\n", linesearch->max_its));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  maximum iterations=%" PetscInt_FMT "\n", linesearch->max_its));
     if (linesearch->ops->precheck) {
       if (linesearch->ops->precheck == SNESLineSearchPreCheckPicard) {
-        PetscCall(PetscViewerASCIIPrintf(viewer,"  using precheck step to speed up Picard convergence\n", linesearch->max_its));
+        PetscCall(PetscViewerASCIIPrintf(viewer,"  using precheck step to speed up Picard convergence\n"));
       } else {
-        PetscCall(PetscViewerASCIIPrintf(viewer,"  using user-defined precheck step\n", linesearch->max_its));
+        PetscCall(PetscViewerASCIIPrintf(viewer,"  using user-defined precheck step\n"));
       }
     }
     if (linesearch->ops->postcheck) {
-      PetscCall(PetscViewerASCIIPrintf(viewer,"  using user-defined postcheck step\n", linesearch->max_its));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"  using user-defined postcheck step\n"));
     }
   }
   PetscFunctionReturn(0);
@@ -1176,7 +1174,7 @@ PetscErrorCode  SNESLineSearchSetTolerances(SNESLineSearch linesearch,PetscReal 
   }
 
   if (max_its != PETSC_DEFAULT) {
-    PetscCheck(max_its >= 0,PetscObjectComm((PetscObject)linesearch),PETSC_ERR_ARG_OUTOFRANGE,"Maximum number of iterations %D must be non-negative",max_its);
+    PetscCheck(max_its >= 0,PetscObjectComm((PetscObject)linesearch),PETSC_ERR_ARG_OUTOFRANGE,"Maximum number of iterations %" PetscInt_FMT " must be non-negative",max_its);
     linesearch->max_its = max_its;
   }
   PetscFunctionReturn(0);

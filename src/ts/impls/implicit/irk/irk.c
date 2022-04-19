@@ -362,7 +362,7 @@ static PetscErrorCode TSStep_IRK(TS ts)
     ts->reject++; accept = PETSC_FALSE;
     if (!ts->reason && ++rejections > ts->max_reject && ts->max_reject >= 0) {
       ts->reason = TS_DIVERGED_STEP_REJECTED;
-      PetscCall(PetscInfo(ts,"Step=%D, step rejections %D greater than current TS allowed, stopping solve\n",ts->steps,rejections));
+      PetscCall(PetscInfo(ts,"Step=%" PetscInt_FMT ", step rejections %" PetscInt_FMT " greater than current TS allowed, stopping solve\n",ts->steps,rejections));
     }
   }
   PetscFunctionReturn(0);
@@ -643,7 +643,7 @@ static PetscErrorCode TSSetFromOptions_IRK(PetscOptionItems *PetscOptionsObject,
   char           tname[256] = TSIRKGAUSS;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"IRK ODE solver options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"IRK ODE solver options");
   {
     PetscBool flg1,flg2;
     PetscCall(PetscOptionsInt("-ts_irk_nstages","Stages of the IRK method","TSIRKSetNumStages",irk->nstages,&irk->nstages,&flg1));
@@ -652,7 +652,7 @@ static PetscErrorCode TSSetFromOptions_IRK(PetscOptionItems *PetscOptionsObject,
       PetscCall(TSIRKSetType(ts,tname));
     }
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -716,7 +716,7 @@ PetscErrorCode TSIRKSetType(TS ts,TSIRKType irktype)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
   PetscValidCharPointer(irktype,2);
-  PetscCall(PetscTryMethod(ts,"TSIRKSetType_C",(TS,TSIRKType),(ts,irktype)));
+  PetscTryMethod(ts,"TSIRKSetType_C",(TS,TSIRKType),(ts,irktype));
   PetscFunctionReturn(0);
 }
 
@@ -739,7 +739,7 @@ PetscErrorCode TSIRKGetType(TS ts,TSIRKType *irktype)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
-  PetscCall(PetscUseMethod(ts,"TSIRKGetType_C",(TS,TSIRKType*),(ts,irktype)));
+  PetscUseMethod(ts,"TSIRKGetType_C",(TS,TSIRKType*),(ts,irktype));
   PetscFunctionReturn(0);
 }
 
@@ -763,7 +763,7 @@ PetscErrorCode TSIRKSetNumStages(TS ts,PetscInt nstages)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
-  PetscCall(PetscTryMethod(ts,"TSIRKSetNumStages_C",(TS,PetscInt),(ts,nstages)));
+  PetscTryMethod(ts,"TSIRKSetNumStages_C",(TS,PetscInt),(ts,nstages));
   PetscFunctionReturn(0);
 }
 
@@ -785,7 +785,7 @@ PetscErrorCode TSIRKGetNumStages(TS ts,PetscInt *nstages)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
   PetscValidIntPointer(nstages,2);
-  PetscCall(PetscTryMethod(ts,"TSIRKGetNumStages_C",(TS,PetscInt*),(ts,nstages)));
+  PetscTryMethod(ts,"TSIRKGetNumStages_C",(TS,PetscInt*),(ts,nstages));
   PetscFunctionReturn(0);
 }
 
@@ -820,7 +820,7 @@ static PetscErrorCode TSIRKSetNumStages_IRK(TS ts,PetscInt nstages)
   TS_IRK *irk = (TS_IRK*)ts->data;
 
   PetscFunctionBegin;
-  PetscCheck(nstages>0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"input argument, %d, out of range",nstages);
+  PetscCheck(nstages>0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"input argument, %" PetscInt_FMT ", out of range",nstages);
   irk->nstages = nstages;
   PetscFunctionReturn(0);
 }

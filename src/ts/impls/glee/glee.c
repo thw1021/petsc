@@ -363,7 +363,6 @@ PetscErrorCode TSGLEERegisterAll(void)
 @*/
 PetscErrorCode TSGLEERegisterDestroy(void)
 {
-  PetscErrorCode ierr;
   GLEETableauLink link;
 
   PetscFunctionBegin;
@@ -371,13 +370,13 @@ PetscErrorCode TSGLEERegisterDestroy(void)
     GLEETableau t = &link->tab;
     GLEETableauList = link->next;
     PetscCall(PetscFree5(t->A,t->B,t->U,t->V,t->c));
-    ierr = PetscFree2(t->S,t->F);               PetscCall(ierr);
-    ierr = PetscFree (t->Fembed);               PetscCall(ierr);
-    ierr = PetscFree (t->Ferror);               PetscCall(ierr);
-    ierr = PetscFree (t->Serror);               PetscCall(ierr);
-    ierr = PetscFree (t->binterp);              PetscCall(ierr);
-    ierr = PetscFree (t->name);                 PetscCall(ierr);
-    ierr = PetscFree (link);                    PetscCall(ierr);
+    PetscCall(PetscFree2(t->S,t->F));
+    PetscCall(PetscFree (t->Fembed));
+    PetscCall(PetscFree (t->Ferror));
+    PetscCall(PetscFree (t->Serror));
+    PetscCall(PetscFree (t->binterp));
+    PetscCall(PetscFree (t->name));
+    PetscCall(PetscFree (link));
   }
   TSGLEERegisterAllCalled = PETSC_FALSE;
   PetscFunctionReturn(0);
@@ -560,7 +559,7 @@ static PetscErrorCode TSEvaluateStep_GLEE(TS ts,PetscInt order,Vec X,PetscBool *
     PetscFunctionReturn(0);
   }
   if (done) *done = PETSC_FALSE;
-  else SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"GLEE '%s' of order %D cannot evaluate step at order %D",tab->name,tab->order,order);
+  else SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"GLEE '%s' of order %" PetscInt_FMT " cannot evaluate step at order %" PetscInt_FMT,tab->name,tab->order,order);
   PetscFunctionReturn(0);
 }
 
@@ -867,7 +866,7 @@ static PetscErrorCode TSSetFromOptions_GLEE(PetscOptionItems *PetscOptionsObject
   char           gleetype[256];
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"GLEE ODE solver options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"GLEE ODE solver options");
   {
     GLEETableauLink link;
     PetscInt        count,choice;
@@ -882,7 +881,7 @@ static PetscErrorCode TSSetFromOptions_GLEE(PetscOptionItems *PetscOptionsObject
     PetscCall(TSGLEESetType(ts,flg ? namelist[choice] : gleetype));
     PetscCall(PetscFree(namelist));
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -940,7 +939,7 @@ PetscErrorCode TSGLEESetType(TS ts,TSGLEEType gleetype)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
   PetscValidCharPointer(gleetype,2);
-  PetscCall(PetscTryMethod(ts,"TSGLEESetType_C",(TS,TSGLEEType),(ts,gleetype)));
+  PetscTryMethod(ts,"TSGLEESetType_C",(TS,TSGLEEType),(ts,gleetype));
   PetscFunctionReturn(0);
 }
 
@@ -963,7 +962,7 @@ PetscErrorCode TSGLEEGetType(TS ts,TSGLEEType *gleetype)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
-  PetscCall(PetscUseMethod(ts,"TSGLEEGetType_C",(TS,TSGLEEType*),(ts,gleetype)));
+  PetscUseMethod(ts,"TSGLEEGetType_C",(TS,TSGLEEType*),(ts,gleetype));
   PetscFunctionReturn(0);
 }
 
@@ -1020,7 +1019,7 @@ PetscErrorCode TSGetSolutionComponents_GLEE(TS ts,PetscInt *n,Vec *Y)
   else {
     if ((*n >= 0) && (*n < tab->r)) {
       PetscCall(VecCopy(glee->Y[*n],*Y));
-    } else SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_OUTOFRANGE,"Second argument (%d) out of range[%d,%d].",*n,0,tab->r-1);
+    } else SETERRQ(PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_OUTOFRANGE,"Second argument (%" PetscInt_FMT ") out of range[0,%" PetscInt_FMT "].",*n,tab->r-1);
   }
   PetscFunctionReturn(0);
 }
@@ -1072,7 +1071,7 @@ PetscErrorCode TSSetTimeError_GLEE(TS ts,Vec X)
   Vec             *Y    = glee->Y;
 
   PetscFunctionBegin;
-  PetscCheck(r == 2,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSSetTimeError_GLEE not supported for '%s' with r=%D.",tab->name,tab->r);
+  PetscCheck(r == 2,PetscObjectComm((PetscObject)ts),PETSC_ERR_SUP,"TSSetTimeError_GLEE not supported for '%s' with r=%" PetscInt_FMT ".",tab->name,tab->r);
   for (i=1; i<r; i++) {
     PetscCall(VecCopy(ts->vec_sol,Y[i]));
     PetscCall(VecAXPBY(Y[i],S[0],S[1],X));

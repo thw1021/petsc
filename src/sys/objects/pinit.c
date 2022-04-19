@@ -211,7 +211,7 @@ PetscErrorCode  PetscMaxSum(MPI_Comm comm,const PetscInt sizes[],PetscInt *max,P
     PetscCallMPI(MPI_Comm_size(comm,&size));
     PetscCallMPI(MPI_Comm_rank(comm,&rank));
     PetscCall(PetscMalloc1(size,&work));
-    PetscCallMPI(MPIU_Allreduce((void*)sizes,work,size,MPIU_2INT,MPIU_MAXSUM_OP,comm));
+    PetscCall(MPIU_Allreduce((void*)sizes,work,size,MPIU_2INT,MPIU_MAXSUM_OP,comm));
     *max = work[rank].max;
     *sum = work[rank].sum;
     PetscCall(PetscFree(work));
@@ -388,8 +388,29 @@ PetscErrorCode PetscCitationsInitialize(void)
 {
   PetscFunctionBegin;
   PetscCall(PetscSegBufferCreate(1,10000,&PetscCitationsList));
-  PetscCall(PetscCitationsRegister("@TechReport{petsc-user-ref,\n  Author = {Satish Balay and Shrirang Abhyankar and Mark F. Adams and Jed Brown \n            and Peter Brune and Kris Buschelman and Lisandro Dalcin and\n            Victor Eijkhout and William D. Gropp and Dmitry Karpeyev and\n            Dinesh Kaushik and Matthew G. Knepley and Dave A. May and Lois Curfman McInnes\n            and Richard Tran Mills and Todd Munson and Karl Rupp and Patrick Sanan\n            and Barry F. Smith and Stefano Zampini and Hong Zhang and Hong Zhang},\n  Title = {{PETS}c Users Manual},\n  Number = {ANL-95/11 - Revision 3.11},\n  Institution = {Argonne National Laboratory},\n  Year = {2019}\n}\n",NULL));
-  PetscCall(PetscCitationsRegister("@InProceedings{petsc-efficient,\n  Author = {Satish Balay and William D. Gropp and Lois Curfman McInnes and Barry F. Smith},\n  Title = {Efficient Management of Parallelism in Object Oriented Numerical Software Libraries},\n  Booktitle = {Modern Software Tools in Scientific Computing},\n  Editor = {E. Arge and A. M. Bruaset and H. P. Langtangen},\n  Pages = {163--202},\n  Publisher = {Birkh{\\\"{a}}user Press},\n  Year = {1997}\n}\n",NULL));
+
+  PetscCall(PetscCitationsRegister("@TechReport{petsc-user-ref,\n\
+  Author = {Satish Balay and Shrirang Abhyankar and Mark~F. Adams and Steven Benson and Jed Brown\n\
+    and Peter Brune and Kris Buschelman and Emil Constantinescu and Lisandro Dalcin and Alp Dener\n\
+    and Victor Eijkhout and William~D. Gropp and V\'{a}clav Hapla and Tobin Isaac and Pierre Jolivet\n\
+    and Dmitry Karpeev and Dinesh Kaushik and Matthew~G. Knepley and Fande Kong and Scott Kruger\n\
+    and Dave~A. May and Lois Curfman McInnes and Richard Tran Mills and Lawrence Mitchell and Todd Munson\n\
+    and Jose~E. Roman and Karl Rupp and Patrick Sanan and Jason Sarich and Barry~F. Smith\n\
+    and Stefano Zampini and Hong Zhang and Hong Zhang and Junchao Zhang},\n\
+  Title = {{PETSc/TAO} Users Manual},\n\
+  Number = {ANL-21/39 - Revision 3.17},\n\
+  Institution = {Argonne National Laboratory},\n\
+  Year = {2022}\n}\n",NULL));
+
+  PetscCall(PetscCitationsRegister("@InProceedings{petsc-efficient,\n\
+  Author = {Satish Balay and William D. Gropp and Lois Curfman McInnes and Barry F. Smith},\n\
+  Title = {Efficient Management of Parallelism in Object Oriented Numerical Software Libraries},\n\
+  Booktitle = {Modern Software Tools in Scientific Computing},\n\
+  Editor = {E. Arge and A. M. Bruaset and H. P. Langtangen},\n\
+  Pages = {163--202},\n\
+  Publisher = {Birkh{\\\"{a}}user Press},\n\
+  Year = {1997}\n}\n",NULL));
+
   PetscFunctionReturn(0);
 }
 
@@ -970,7 +991,6 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char* prog,const char* 
   {
     PetscBool       omp_view_flag;
     char           *threads = getenv("OMP_NUM_THREADS");
-    PetscErrorCode  ierr;
 
     if (threads) {
       PetscCall(PetscInfo(NULL,"Number of OpenMP threads %s (as given by OMP_NUM_THREADS)\n",threads));
@@ -979,10 +999,10 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char* prog,const char* 
       PetscNumOMPThreads = (PetscInt) omp_get_max_threads();
       PetscCall(PetscInfo(NULL,"Number of OpenMP threads %" PetscInt_FMT " (as given by omp_get_max_threads())\n",PetscNumOMPThreads));
     }
-    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"OpenMP options","Sys");PetscCall(ierr);
+    PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"OpenMP options","Sys");
     PetscCall(PetscOptionsInt("-omp_num_threads","Number of OpenMP threads to use (can also use environmental variable OMP_NUM_THREADS","None",PetscNumOMPThreads,&PetscNumOMPThreads,&flg));
     PetscCall(PetscOptionsName("-omp_view","Display OpenMP number of threads",NULL,&omp_view_flag));
-    ierr = PetscOptionsEnd();PetscCall(ierr);
+    PetscOptionsEnd();
     if (flg) {
       PetscCall(PetscInfo(NULL,"Number of OpenMP theads %" PetscInt_FMT " (given by -omp_num_threads)\n",PetscNumOMPThreads));
       omp_set_num_threads((int)PetscNumOMPThreads);
@@ -1115,7 +1135,8 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char* prog,const char* 
 .  -log_trace [filename] - Print traces of all PETSc calls to the screen (useful to determine where a program
         hangs without running in the debugger).  See PetscLogTraceBegin().
 .  -log_view [:filename:format] - Prints summary of flop and timing information to screen or file, see PetscLogView().
-.  -log_view_memory - Includes in the summary from -log_view the memory used in each method, see PetscLogView().
+.  -log_view_memory - Includes in the summary from -log_view the memory used in each event, see PetscLogView().
+.  -log_view_gpu_time - Includes in the summary from -log_view the time used in each GPU kernel, see PetscLogView().
 .  -log_summary [filename] - (Deprecated, use -log_view) Prints summary of flop and timing information to screen. If the filename is specified the
         summary is written to the file.  See PetscLogView().
 .  -log_exclude: <vec,mat,pc,ksp,snes> - excludes subset of object classes from logging
@@ -1167,7 +1188,7 @@ $       call PetscInitialize(file,ierr)
    If your main program is C but you call Fortran code that also uses PETSc you need to call PetscInitializeFortran() soon after
    calling PetscInitialize().
 
-.seealso: PetscFinalize(), PetscInitializeFortran(), PetscGetArgs(), PetscInitializeNoArguments()
+.seealso: PetscFinalize(), PetscInitializeFortran(), PetscGetArgs(), PetscInitializeNoArguments(), PetscLogGpuTime()
 
 @*/
 PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const char help[])

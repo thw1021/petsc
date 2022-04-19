@@ -23,7 +23,7 @@ static PetscErrorCode CheckValuesAIJ(Mat A)
     for (j=0; j<N; j++) {
       PetscCall(MatGetValue(A,i,j,&val));
       v = MakeValue(i,j,M); w = PetscRealPart(val);
-      PetscCheckFalse(PetscAbsReal(v-w) > 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Matrix entry (%" PetscInt_FMT ",%" PetscInt_FMT ") should be %g, got %g",i,j,(double)v,(double)w);
+      PetscCheck(PetscAbsReal(v-w) <= 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Matrix entry (%" PetscInt_FMT ",%" PetscInt_FMT ") should be %g, got %g",i,j,(double)v,(double)w);
     }
   }
   PetscFunctionReturn(0);
@@ -34,19 +34,13 @@ int main(int argc,char **args)
   Mat            A;
   PetscInt       M = 11,N = 13;
   PetscInt       rstart,rend,i,j;
-  PetscErrorCode ierr;
   PetscViewer    view;
 
   PetscCall(PetscInitialize(&argc,&args,NULL,help));
   /*
       Create a parallel AIJ matrix shared by all processors
   */
-  ierr = MatCreateAIJ(PETSC_COMM_WORLD,
-                      PETSC_DECIDE,PETSC_DECIDE,
-                      M,N,
-                      PETSC_DECIDE,NULL,
-                      PETSC_DECIDE,NULL,
-                      &A);PetscCall(ierr);
+  PetscCall(MatCreateAIJ(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,M,N,PETSC_DECIDE,NULL,PETSC_DECIDE,NULL,&A));
 
   /*
       Set values into the matrix

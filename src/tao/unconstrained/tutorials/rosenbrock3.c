@@ -10,18 +10,6 @@ minimize the extended Rosenbrock function: \n\
 or the chained Rosenbrock function:\n\
    sum_{i=0}^{n-1} alpha*(x_{i+1} - x_i^2)^2 + (1 - x_i)^2\n";
 
-/*T
-   Concepts: TAO^Solving an unconstrained minimization problem
-   Routines: TaoCreate();
-   Routines: TaoSetType(); TaoSetObjectiveAndGradient();
-   Routines: TaoSetHessian();
-   Routines: TaoSetSolution();
-   Routines: TaoSetFromOptions();
-   Routines: TaoSolve();
-   Routines: TaoDestroy();
-   Processors: 1
-T*/
-
 /*
    User-defined application context - contains data needed by the
    application-provided call-back routines that evaluate the function,
@@ -110,7 +98,7 @@ int main(int argc,char **argv)
   PetscCheck(reason == TAO_CONVERGED_GATOL,PETSC_COMM_SELF, PETSC_ERR_NOT_CONVERGED, "Solution failed to converge!");
   PetscCall(TaoGetIterationNumber(tao, &oneshot_its));
   PetscCall(PetscPrintf(PETSC_COMM_SELF, "-----------------------\n"));
-  PetscCall(PetscPrintf(PETSC_COMM_SELF, "recycled its: %D | oneshot its: %D\n", recycled_its, oneshot_its));
+  PetscCall(PetscPrintf(PETSC_COMM_SELF, "recycled its: %" PetscInt_FMT " | oneshot its: %" PetscInt_FMT "\n", recycled_its, oneshot_its));
   PetscCheck(recycled_its == oneshot_its,PETSC_COMM_SELF, PETSC_ERR_NOT_CONVERGED, "Recycled solution does not match oneshot solution!");
 
   PetscCall(TaoDestroy(&tao));

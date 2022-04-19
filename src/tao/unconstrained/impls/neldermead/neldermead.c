@@ -86,13 +86,13 @@ static PetscErrorCode TaoSetFromOptions_NM(PetscOptionItems *PetscOptionsObject,
   TAO_NelderMead *nm = (TAO_NelderMead*)tao->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Nelder-Mead options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Nelder-Mead options");
   PetscCall(PetscOptionsReal("-tao_nm_lamda","initial step length","",nm->lamda,&nm->lamda,NULL));
   PetscCall(PetscOptionsReal("-tao_nm_mu","mu","",nm->mu_oc,&nm->mu_oc,NULL));
   nm->mu_ic = -nm->mu_oc;
   nm->mu_r = nm->mu_oc*2.0;
   nm->mu_e = nm->mu_oc*4.0;
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -106,11 +106,11 @@ static PetscErrorCode TaoView_NM(Tao tao,PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&isascii));
   if (isascii) {
     PetscCall(PetscViewerASCIIPushTab(viewer));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"expansions: %D\n",nm->nexpand));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"reflections: %D\n",nm->nreflect));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"inside contractions: %D\n",nm->nincontract));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"outside contractionss: %D\n",nm->noutcontract));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"Shrink steps: %D\n",nm->nshrink));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"expansions: %" PetscInt_FMT "\n",nm->nexpand));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"reflections: %" PetscInt_FMT "\n",nm->nreflect));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"inside contractions: %" PetscInt_FMT "\n",nm->nincontract));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"outside contractionss: %" PetscInt_FMT "\n",nm->noutcontract));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"Shrink steps: %" PetscInt_FMT "\n",nm->nshrink));
     PetscCall(PetscViewerASCIIPopTab(viewer));
   }
   PetscFunctionReturn(0);

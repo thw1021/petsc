@@ -11,13 +11,11 @@ typedef struct {
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   options->test = 0;
-  ierr = PetscOptionsBegin(comm, "", "Zero-sized DMPlexGetCellFields Test Options", "DMPLEX");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "Zero-sized DMPlexGetCellFields Test Options", "DMPLEX");
   PetscCall(PetscOptionsBoundedInt("-test", "Test to run", FILENAME, options->test, &options->test, NULL,0));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -214,7 +212,7 @@ int main(int argc, char **argv)
     case 6: PetscCall(test6(dm, &options)); break;
     case 7: PetscCall(test7(dm, &options)); break;
     case 8: PetscCall(test8(dm, &options)); break;
-    default: SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "No such test: %D", options.test);
+    default: SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "No such test: %" PetscInt_FMT, options.test);
   }
 
   PetscCall(DMDestroy(&dm));

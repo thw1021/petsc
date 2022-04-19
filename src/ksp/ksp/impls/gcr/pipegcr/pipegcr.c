@@ -78,7 +78,7 @@ static PetscErrorCode KSPSolve_PIPEGCR_cycle(KSP ksp)
   PetscFunctionBegin;
   /* !!PS We have not checked these routines for use with complex numbers. The inner products
      are likely not defined correctly for that case */
-  PetscCheckFalse(PetscDefined(USE_COMPLEX) && !PetscDefined(SKIP_COMPLEX),PETSC_COMM_WORLD,PETSC_ERR_SUP,"PIPEFGMRES has not been implemented for use with complex scalars");
+  PetscCheck(!PetscDefined(USE_COMPLEX) || PetscDefined(SKIP_COMPLEX),PETSC_COMM_WORLD,PETSC_ERR_SUP,"PIPEFGMRES has not been implemented for use with complex scalars");
 
   PetscCall(KSPGetOperators(ksp, &A, &B));
   x = ksp->vec_sol;
@@ -245,7 +245,7 @@ static PetscErrorCode KSPSolve_PIPEGCR_cycle(KSP ksp)
     /* check breakdown of eta = (s,s) */
     if (*eta < 0.) {
       pipegcr->norm_breakdown = PETSC_TRUE;
-      PetscCall(PetscInfo(ksp,"Restart due to square root breakdown at it = \n",ksp->its));
+      PetscCall(PetscInfo(ksp,"Restart due to square root breakdown at it = %" PetscInt_FMT "\n",ksp->its));
       break;
     } else {
       alpha= gamma/(*eta);                                  /* alpha = gamma/etai */
@@ -362,13 +362,13 @@ static PetscErrorCode KSPView_PIPEGCR(KSP ksp, PetscViewer viewer)
   } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Undefined FCD truncation strategy");
 
   if (isascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  max previous directions = %D\n",pipegcr->mmax));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  preallocated %D directions\n",PetscMin(pipegcr->nprealloc,pipegcr->mmax+1)));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  max previous directions = %" PetscInt_FMT "\n",pipegcr->mmax));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  preallocated %" PetscInt_FMT " directions\n",PetscMin(pipegcr->nprealloc,pipegcr->mmax+1)));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  %s\n",truncstr));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  w unrolling = %D \n", pipegcr->unroll_w));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  restarts performed = %D \n", pipegcr->n_restarts));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  w unrolling = %s \n", PetscBools[pipegcr->unroll_w]));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  restarts performed = %" PetscInt_FMT " \n", pipegcr->n_restarts));
   } else if (isstring) {
-    PetscCall(PetscViewerStringSPrintf(viewer, "max previous directions = %D, preallocated %D directions, %s truncation strategy", pipegcr->mmax,pipegcr->nprealloc,truncstr));
+    PetscCall(PetscViewerStringSPrintf(viewer, "max previous directions = %" PetscInt_FMT ", preallocated %" PetscInt_FMT " directions, %s truncation strategy", pipegcr->mmax,pipegcr->nprealloc,truncstr));
   }
   PetscFunctionReturn(0);
 }
@@ -399,7 +399,7 @@ static PetscErrorCode KSPSetUp_PIPEGCR(KSP ksp)
   PetscCall(PetscMalloc3(pipegcr->mmax+2,&(pipegcr->dots),pipegcr->mmax+1,&(pipegcr->etas),pipegcr->mmax+2,&(pipegcr->redux)));
   /* If the requested number of preallocated vectors is greater than mmax reduce nprealloc */
   if (pipegcr->nprealloc > pipegcr->mmax+1) {
-    PetscCall(PetscInfo(NULL,"Requested nprealloc=%d is greater than m_max+1=%d. Resetting nprealloc = m_max+1.\n",pipegcr->nprealloc, pipegcr->mmax+1));
+    PetscCall(PetscInfo(NULL,"Requested nprealloc=%" PetscInt_FMT " is greater than m_max+1=%" PetscInt_FMT ". Resetting nprealloc = m_max+1.\n",pipegcr->nprealloc, pipegcr->mmax+1));
   }
 
   /* Preallocate additional work vectors */
@@ -691,14 +691,14 @@ static PetscErrorCode KSPSetFromOptions_PIPEGCR(PetscOptionItems *PetscOptionsOb
   PetscBool      flg;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"KSP PIPEGCR options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"KSP PIPEGCR options");
   PetscCall(PetscOptionsInt("-ksp_pipegcr_mmax","Number of search directions to storue","KSPPIPEGCRSetMmax",pipegcr->mmax,&mmax,&flg));
   if (flg) PetscCall(KSPPIPEGCRSetMmax(ksp,mmax));
   PetscCall(PetscOptionsInt("-ksp_pipegcr_nprealloc","Number of directions to preallocate","KSPPIPEGCRSetNprealloc",pipegcr->nprealloc,&nprealloc,&flg));
   if (flg) PetscCall(KSPPIPEGCRSetNprealloc(ksp,nprealloc));
   PetscCall(PetscOptionsEnum("-ksp_pipegcr_truncation_type","Truncation approach for directions","KSPFCGSetTruncationType",KSPFCDTruncationTypes,(PetscEnum)pipegcr->truncstrat,(PetscEnum*)&pipegcr->truncstrat,NULL));
   PetscCall(PetscOptionsBool("-ksp_pipegcr_unroll_w","Use unrolling of w","KSPPIPEGCRSetUnrollW",pipegcr->unroll_w,&pipegcr->unroll_w,NULL));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -748,7 +748,7 @@ static PetscErrorCode  KSPPIPEGCRSetModifyPC_PIPEGCR(KSP ksp,KSPPIPEGCRModifyPCF
 PetscErrorCode  KSPPIPEGCRSetModifyPC(KSP ksp,PetscErrorCode (*function)(KSP,PetscInt,PetscReal,void*),void *data,PetscErrorCode (*destroy)(void*))
 {
   PetscFunctionBegin;
-  PetscCall(PetscUseMethod(ksp,"KSPPIPEGCRSetModifyPC_C",(KSP,PetscErrorCode (*)(KSP,PetscInt,PetscReal,void*),void *data,PetscErrorCode (*)(void*)),(ksp,function,data,destroy)));
+  PetscUseMethod(ksp,"KSPPIPEGCRSetModifyPC_C",(KSP,PetscErrorCode (*)(KSP,PetscInt,PetscReal,void*),void *data,PetscErrorCode (*)(void*)),(ksp,function,data,destroy));
   PetscFunctionReturn(0);
 }
 

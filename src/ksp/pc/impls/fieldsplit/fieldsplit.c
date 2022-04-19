@@ -105,9 +105,9 @@ static PetscErrorCode PCView_FieldSplit(PC pc,PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERDRAW,&isdraw));
   if (iascii) {
     if (jac->bs > 0) {
-      PetscCall(PetscViewerASCIIPrintf(viewer,"  FieldSplit with %s composition: total splits = %D, blocksize = %D\n",PCCompositeTypes[jac->type],jac->nsplits,jac->bs));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"  FieldSplit with %s composition: total splits = %" PetscInt_FMT ", blocksize = %" PetscInt_FMT "\n",PCCompositeTypes[jac->type],jac->nsplits,jac->bs));
     } else {
-      PetscCall(PetscViewerASCIIPrintf(viewer,"  FieldSplit with %s composition: total splits = %D\n",PCCompositeTypes[jac->type],jac->nsplits));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"  FieldSplit with %s composition: total splits = %" PetscInt_FMT "\n",PCCompositeTypes[jac->type],jac->nsplits));
     }
     if (pc->useAmat) {
       PetscCall(PetscViewerASCIIPrintf(viewer,"  using Amat (not Pmat) as operator for blocks\n"));
@@ -121,18 +121,18 @@ static PetscErrorCode PCView_FieldSplit(PC pc,PetscViewer viewer)
     PetscCall(PetscViewerASCIIPrintf(viewer,"  Solver info for each split is in the following KSP objects:\n"));
     for (i=0; i<jac->nsplits; i++) {
       if (ilink->fields) {
-        PetscCall(PetscViewerASCIIPrintf(viewer,"Split number %D Fields ",i));
+        PetscCall(PetscViewerASCIIPrintf(viewer,"Split number %" PetscInt_FMT " Fields ",i));
         PetscCall(PetscViewerASCIIUseTabs(viewer,PETSC_FALSE));
         for (j=0; j<ilink->nfields; j++) {
           if (j > 0) {
             PetscCall(PetscViewerASCIIPrintf(viewer,","));
           }
-          PetscCall(PetscViewerASCIIPrintf(viewer," %D",ilink->fields[j]));
+          PetscCall(PetscViewerASCIIPrintf(viewer," %" PetscInt_FMT,ilink->fields[j]));
         }
         PetscCall(PetscViewerASCIIPrintf(viewer,"\n"));
         PetscCall(PetscViewerASCIIUseTabs(viewer,PETSC_TRUE));
       } else {
-        PetscCall(PetscViewerASCIIPrintf(viewer,"Split number %D Defined by IS\n",i));
+        PetscCall(PetscViewerASCIIPrintf(viewer,"Split number %" PetscInt_FMT " Defined by IS\n",i));
       }
       PetscCall(KSPView(ilink->ksp,viewer));
       ilink = ilink->next;
@@ -172,7 +172,7 @@ static PetscErrorCode PCView_FieldSplit_Schur(PC pc,PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERDRAW,&isdraw));
   if (iascii) {
     if (jac->bs > 0) {
-      PetscCall(PetscViewerASCIIPrintf(viewer,"  FieldSplit with Schur preconditioner, blocksize = %D, factorization %s\n",jac->bs,PCFieldSplitSchurFactTypes[jac->schurfactorization]));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"  FieldSplit with Schur preconditioner, blocksize = %" PetscInt_FMT ", factorization %s\n",jac->bs,PCFieldSplitSchurFactTypes[jac->schurfactorization]));
     } else {
       PetscCall(PetscViewerASCIIPrintf(viewer,"  FieldSplit with Schur preconditioner, factorization %s\n",PCFieldSplitSchurFactTypes[jac->schurfactorization]));
     }
@@ -206,18 +206,18 @@ static PetscErrorCode PCView_FieldSplit_Schur(PC pc,PetscViewer viewer)
     PetscCall(PetscViewerASCIIPushTab(viewer));
     for (i=0; i<jac->nsplits; i++) {
       if (ilink->fields) {
-        PetscCall(PetscViewerASCIIPrintf(viewer,"Split number %D Fields ",i));
+        PetscCall(PetscViewerASCIIPrintf(viewer,"Split number %" PetscInt_FMT " Fields ",i));
         PetscCall(PetscViewerASCIIUseTabs(viewer,PETSC_FALSE));
         for (j=0; j<ilink->nfields; j++) {
           if (j > 0) {
             PetscCall(PetscViewerASCIIPrintf(viewer,","));
           }
-          PetscCall(PetscViewerASCIIPrintf(viewer," %D",ilink->fields[j]));
+          PetscCall(PetscViewerASCIIPrintf(viewer," %" PetscInt_FMT,ilink->fields[j]));
         }
         PetscCall(PetscViewerASCIIPrintf(viewer,"\n"));
         PetscCall(PetscViewerASCIIUseTabs(viewer,PETSC_TRUE));
       } else {
-        PetscCall(PetscViewerASCIIPrintf(viewer,"Split number %D Defined by IS\n",i));
+        PetscCall(PetscViewerASCIIPrintf(viewer,"Split number %" PetscInt_FMT " Defined by IS\n",i));
       }
       ilink = ilink->next;
     }
@@ -296,9 +296,9 @@ static PetscErrorCode PCView_FieldSplit_GKB(PC pc,PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERDRAW,&isdraw));
   if (iascii) {
     if (jac->bs > 0) {
-      PetscCall(PetscViewerASCIIPrintf(viewer,"  FieldSplit with %s composition: total splits = %D, blocksize = %D\n",PCCompositeTypes[jac->type],jac->nsplits,jac->bs));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"  FieldSplit with %s composition: total splits = %" PetscInt_FMT ", blocksize = %" PetscInt_FMT "\n",PCCompositeTypes[jac->type],jac->nsplits,jac->bs));
     } else {
-      PetscCall(PetscViewerASCIIPrintf(viewer,"  FieldSplit with %s composition: total splits = %D\n",PCCompositeTypes[jac->type],jac->nsplits));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"  FieldSplit with %s composition: total splits = %" PetscInt_FMT "\n",PCCompositeTypes[jac->type],jac->nsplits));
     }
     if (pc->useAmat) {
       PetscCall(PetscViewerASCIIPrintf(viewer,"  using Amat (not Pmat) as operator for blocks\n"));
@@ -310,23 +310,23 @@ static PetscErrorCode PCView_FieldSplit_GKB(PC pc,PetscViewer viewer)
       PetscCall(PetscViewerASCIIPrintf(viewer,"  using Amat (not Pmat) as operator for off-diagonal blocks\n"));
     }
 
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Stopping tolerance=%.1e, delay in error estimate=%D, maximum iterations=%D\n",jac->gkbtol,jac->gkbdelay,jac->gkbmaxit));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Stopping tolerance=%.1e, delay in error estimate=%" PetscInt_FMT ", maximum iterations=%" PetscInt_FMT "\n",(double)jac->gkbtol,jac->gkbdelay,jac->gkbmaxit));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  Solver info for H = A00 + nu*A01*A01' matrix:\n"));
     PetscCall(PetscViewerASCIIPushTab(viewer));
 
     if (ilink->fields) {
-      PetscCall(PetscViewerASCIIPrintf(viewer,"Split number %D Fields ",0));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"Split number 0 Fields "));
       PetscCall(PetscViewerASCIIUseTabs(viewer,PETSC_FALSE));
       for (j=0; j<ilink->nfields; j++) {
         if (j > 0) {
           PetscCall(PetscViewerASCIIPrintf(viewer,","));
         }
-        PetscCall(PetscViewerASCIIPrintf(viewer," %D",ilink->fields[j]));
+        PetscCall(PetscViewerASCIIPrintf(viewer," %" PetscInt_FMT,ilink->fields[j]));
       }
       PetscCall(PetscViewerASCIIPrintf(viewer,"\n"));
       PetscCall(PetscViewerASCIIUseTabs(viewer,PETSC_TRUE));
     } else {
-        PetscCall(PetscViewerASCIIPrintf(viewer,"Split number %D Defined by IS\n",0));
+        PetscCall(PetscViewerASCIIPrintf(viewer,"Split number 0 Defined by IS\n"));
     }
     PetscCall(KSPView(ilink->ksp,viewer));
 
@@ -365,9 +365,9 @@ static PetscErrorCode PCFieldSplitSetRuntimeSplits_Private(PC pc)
   PetscCall(PetscMalloc1(jac->bs,&ifields));
   PetscCall(PetscMalloc1(jac->bs,&ifields_col));
   for (i=0,flg=PETSC_TRUE;; i++) {
-    PetscCall(PetscSNPrintf(splitname,sizeof(splitname),"%D",i));
-    PetscCall(PetscSNPrintf(optionname,sizeof(optionname),"-pc_fieldsplit_%D_fields",i));
-    PetscCall(PetscSNPrintf(optionname_col,sizeof(optionname_col),"-pc_fieldsplit_%D_fields_col",i));
+    PetscCall(PetscSNPrintf(splitname,sizeof(splitname),"%" PetscInt_FMT,i));
+    PetscCall(PetscSNPrintf(optionname,sizeof(optionname),"-pc_fieldsplit_%" PetscInt_FMT "_fields",i));
+    PetscCall(PetscSNPrintf(optionname_col,sizeof(optionname_col),"-pc_fieldsplit_%" PetscInt_FMT "_fields_col",i));
     nfields     = jac->bs;
     nfields_col = jac->bs;
     PetscCall(PetscOptionsGetIntArray(((PetscObject)pc)->options,((PetscObject)pc)->prefix,optionname,ifields,&nfields,&flg));
@@ -378,7 +378,7 @@ static PetscErrorCode PCFieldSplitSetRuntimeSplits_Private(PC pc)
       PetscCall(PCFieldSplitSetFields(pc,splitname,nfields,ifields,ifields));
     } else {
       PetscCheck(nfields && nfields_col,PETSC_COMM_SELF,PETSC_ERR_USER,"Cannot list zero fields");
-      PetscCheckFalse(nfields != nfields_col,PETSC_COMM_SELF,PETSC_ERR_USER,"Number of row and column fields must match");
+      PetscCheck(nfields == nfields_col,PETSC_COMM_SELF,PETSC_ERR_USER,"Number of row and column fields must match");
       PetscCall(PCFieldSplitSetFields(pc,splitname,nfields,ifields,ifields_col));
     }
   }
@@ -423,15 +423,15 @@ static PetscErrorCode PCFieldSplitSetDefaults(PC pc)
         char     optionname[128], splitname[8];
         PetscInt nfields = numFields;
 
-        PetscCall(PetscSNPrintf(optionname, sizeof(optionname), "-pc_fieldsplit_%D_fields", i));
+        PetscCall(PetscSNPrintf(optionname, sizeof(optionname), "-pc_fieldsplit_%" PetscInt_FMT "_fields", i));
         PetscCall(PetscOptionsGetIntArray(((PetscObject)pc)->options,((PetscObject)pc)->prefix, optionname, ifields, &nfields, &flg));
         if (!flg) break;
-        PetscCheckFalse(numFields > 128,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Cannot currently support %d > 128 fields", numFields);
+        PetscCheck(numFields <= 128,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Cannot currently support %" PetscInt_FMT " > 128 fields", numFields);
         PetscCall(DMCreateSubDM(pc->dm, nfields, ifields, &compField, &subdm[i]));
         if (nfields == 1) {
           PetscCall(PCFieldSplitSetIS(pc, fieldNames[ifields[0]], compField));
         } else {
-          PetscCall(PetscSNPrintf(splitname, sizeof(splitname), "%D", i));
+          PetscCall(PetscSNPrintf(splitname, sizeof(splitname), "%" PetscInt_FMT, i));
           PetscCall(PCFieldSplitSetIS(pc, splitname, compField));
         }
         PetscCall(ISDestroy(&compField));
@@ -547,7 +547,7 @@ static PetscErrorCode PCFieldSplitSetDefaults(PC pc)
           } else {
             for (i=0; i<jac->bs; i++) {
               char splitname[8];
-              PetscCall(PetscSNPrintf(splitname,sizeof(splitname),"%D",i));
+              PetscCall(PetscSNPrintf(splitname,sizeof(splitname),"%" PetscInt_FMT,i));
               PetscCall(PCFieldSplitSetFields(pc,splitname,1,&i,&i));
             }
             jac->defaultsplit = PETSC_TRUE;
@@ -567,7 +567,7 @@ static PetscErrorCode PCFieldSplitSetDefaults(PC pc)
     } else SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Must provide at least two sets of fields to PCFieldSplit()");
   }
 
-  PetscCheckFalse(jac->nsplits < 2,PetscObjectComm((PetscObject)pc),PETSC_ERR_PLIB,"Unhandled case, must have at least two fields, not %d", jac->nsplits);
+  PetscCheck(jac->nsplits >= 2,PetscObjectComm((PetscObject)pc),PETSC_ERR_PLIB,"Unhandled case, must have at least two fields, not %" PetscInt_FMT, jac->nsplits);
   PetscFunctionReturn(0);
 }
 
@@ -818,7 +818,7 @@ static PetscErrorCode PCSetUp_FieldSplit(PC pc)
     char        lscname[256];
     PetscObject LSC_L;
 
-    PetscCheckFalse(nsplit != 2,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_INCOMP,"To use Schur complement preconditioner you must have exactly 2 fields");
+    PetscCheck(nsplit == 2,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_INCOMP,"To use Schur complement preconditioner you must have exactly 2 fields");
 
     /* If pc->mat is SPD, don't scale by -1 the Schur complement */
     if (jac->schurscale == (PetscScalar)-1.0) {
@@ -1034,7 +1034,7 @@ static PetscErrorCode PCSetUp_FieldSplit(PC pc)
     IS          ccis;
     PetscInt    rstart,rend;
 
-    PetscCheckFalse(nsplit != 2,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_INCOMP,"To use GKB preconditioner you must have exactly 2 fields");
+    PetscCheck(nsplit == 2,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_INCOMP,"To use GKB preconditioner you must have exactly 2 fields");
 
     ilink = jac->head;
 
@@ -1251,9 +1251,9 @@ static PetscErrorCode PCApply_FieldSplit(PC pc,Vec x,Vec y)
   if (jac->type == PC_COMPOSITE_ADDITIVE) {
     if (jac->defaultsplit) {
       PetscCall(VecGetBlockSize(x,&bs));
-      PetscCheckFalse(jac->bs > 0 && bs != jac->bs,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONGSTATE,"Blocksize of x vector %D does not match fieldsplit blocksize %D",bs,jac->bs);
+      PetscCheckFalse(jac->bs > 0 && bs != jac->bs,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONGSTATE,"Blocksize of x vector %" PetscInt_FMT " does not match fieldsplit blocksize %" PetscInt_FMT,bs,jac->bs);
       PetscCall(VecGetBlockSize(y,&bs));
-      PetscCheckFalse(jac->bs > 0 && bs != jac->bs,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONGSTATE,"Blocksize of y vector %D does not match fieldsplit blocksize %D",bs,jac->bs);
+      PetscCheckFalse(jac->bs > 0 && bs != jac->bs,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONGSTATE,"Blocksize of y vector %" PetscInt_FMT " does not match fieldsplit blocksize %" PetscInt_FMT,bs,jac->bs);
       PetscCall(VecStrideGatherAll(x,jac->x,INSERT_VALUES));
       while (ilink) {
         PetscCall(PetscLogEventBegin(ilink->event,ilink->ksp,ilink->x,ilink->y,NULL));
@@ -1335,7 +1335,7 @@ static PetscErrorCode PCApply_FieldSplit(PC pc,Vec x,Vec y)
         PetscCall(VecScatterEnd(ilink->sctx,ilink->y,y,ADD_VALUES,SCATTER_REVERSE));
       }
     }
-  } else SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Unsupported or unknown composition",(int) jac->type);
+  } else SETERRQ(PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Unsupported or unknown composition %d",(int) jac->type);
   PetscFunctionReturn(0);
 }
 
@@ -1396,7 +1396,7 @@ static PetscErrorCode PCApply_FieldSplit_GKB(PC pc,Vec x,Vec y)
   PetscCall(MatMult(jac->H,u,Hu));                          /* alpha = u'*H*u      */
   PetscCall(VecDot(Hu,u,&alpha));
   KSPCheckDot(ksp,alpha);
-  PetscCheckFalse(PetscRealPart(alpha) <= 0.0,PETSC_COMM_SELF,PETSC_ERR_NOT_CONVERGED,"GKB preconditioner diverged, H is not positive definite");
+  PetscCheck(PetscRealPart(alpha) > 0.0,PETSC_COMM_SELF,PETSC_ERR_NOT_CONVERGED,"GKB preconditioner diverged, H is not positive definite");
   alpha = PetscSqrtReal(PetscAbsScalar(alpha));
   PetscCall(VecScale(u,1.0/alpha));
   PetscCall(VecAXPBY(d,1.0/alpha,0.0,v));                       /* v = nu/beta *c      */
@@ -1411,7 +1411,7 @@ static PetscErrorCode PCApply_FieldSplit_GKB(PC pc,Vec x,Vec y)
 
   iterGKB = 1; lowbnd = 2*jac->gkbtol;
   if (jac->gkbmonitor) {
-      PetscCall(PetscViewerASCIIPrintf(jac->gkbviewer,"%3D GKB Lower bound estimate %14.12e\n",iterGKB,lowbnd));
+    PetscCall(PetscViewerASCIIPrintf(jac->gkbviewer,"%3" PetscInt_FMT " GKB Lower bound estimate %14.12e\n",iterGKB,(double)lowbnd));
   }
 
   while (iterGKB < jac->gkbmaxit && lowbnd > jac->gkbtol) {
@@ -1431,7 +1431,7 @@ static PetscErrorCode PCApply_FieldSplit_GKB(PC pc,Vec x,Vec y)
     PetscCall(MatMult(jac->H,u,Hu));                      /* alpha = u'*H*u            */
     PetscCall(VecDot(Hu,u,&alpha));
     KSPCheckDot(ksp,alpha);
-    PetscCheckFalse(PetscRealPart(alpha) <= 0.0,PETSC_COMM_SELF,PETSC_ERR_NOT_CONVERGED,"GKB preconditioner diverged, H is not positive definite");
+    PetscCheck(PetscRealPart(alpha) > 0.0,PETSC_COMM_SELF,PETSC_ERR_NOT_CONVERGED,"GKB preconditioner diverged, H is not positive definite");
     alpha = PetscSqrtReal(PetscAbsScalar(alpha));
     PetscCall(VecScale(u,1.0/alpha));
 
@@ -1458,7 +1458,7 @@ static PetscErrorCode PCApply_FieldSplit_GKB(PC pc,Vec x,Vec y)
       vecz[jac->gkbdelay-j-1] = vecz[jac->gkbdelay-j-2];
     }
     if (jac->gkbmonitor) {
-      PetscCall(PetscViewerASCIIPrintf(jac->gkbviewer,"%3D GKB Lower bound estimate %14.12e\n",iterGKB,lowbnd));
+      PetscCall(PetscViewerASCIIPrintf(jac->gkbviewer,"%3" PetscInt_FMT " GKB Lower bound estimate %14.12e\n",iterGKB,(double)lowbnd));
     }
   }
 
@@ -1490,9 +1490,9 @@ static PetscErrorCode PCApplyTranspose_FieldSplit(PC pc,Vec x,Vec y)
   if (jac->type == PC_COMPOSITE_ADDITIVE) {
     if (jac->defaultsplit) {
       PetscCall(VecGetBlockSize(x,&bs));
-      PetscCheckFalse(jac->bs > 0 && bs != jac->bs,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONGSTATE,"Blocksize of x vector %D does not match fieldsplit blocksize %D",bs,jac->bs);
+      PetscCheckFalse(jac->bs > 0 && bs != jac->bs,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONGSTATE,"Blocksize of x vector %" PetscInt_FMT " does not match fieldsplit blocksize %" PetscInt_FMT,bs,jac->bs);
       PetscCall(VecGetBlockSize(y,&bs));
-      PetscCheckFalse(jac->bs > 0 && bs != jac->bs,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONGSTATE,"Blocksize of y vector %D does not match fieldsplit blocksize %D",bs,jac->bs);
+      PetscCheckFalse(jac->bs > 0 && bs != jac->bs,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONGSTATE,"Blocksize of y vector %" PetscInt_FMT " does not match fieldsplit blocksize %" PetscInt_FMT,bs,jac->bs);
       PetscCall(VecStrideGatherAll(x,jac->x,INSERT_VALUES));
       while (ilink) {
         PetscCall(PetscLogEventBegin(ilink->event,ilink->ksp,ilink->x,ilink->y,NULL));
@@ -1622,7 +1622,7 @@ static PetscErrorCode PCSetFromOptions_FieldSplit(PetscOptionItems *PetscOptions
   PCCompositeType ctype;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"FieldSplit options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"FieldSplit options");
   PetscCall(PetscOptionsBool("-pc_fieldsplit_dm_splits","Whether to use DMCreateFieldDecomposition() for splits","PCFieldSplitSetDMSplits",jac->dm_splits,&jac->dm_splits,NULL));
   PetscCall(PetscOptionsInt("-pc_fieldsplit_block_size","Blocksize that defines number of fields","PCFieldSplitSetBlockSize",jac->bs,&bs,&flg));
   if (flg) {
@@ -1655,11 +1655,11 @@ static PetscErrorCode PCSetFromOptions_FieldSplit(PetscOptionItems *PetscOptions
     PetscCall(PetscOptionsReal("-pc_fieldsplit_gkb_tol","The tolerance for the lower bound stopping criterion","PCFieldSplitGKBTol",jac->gkbtol,&jac->gkbtol,NULL));
     PetscCall(PetscOptionsInt("-pc_fieldsplit_gkb_delay","The delay value for lower bound criterion","PCFieldSplitGKBDelay",jac->gkbdelay,&jac->gkbdelay,NULL));
     PetscCall(PetscOptionsReal("-pc_fieldsplit_gkb_nu","Parameter in augmented Lagrangian approach","PCFieldSplitGKBNu",jac->gkbnu,&jac->gkbnu,NULL));
-    PetscCheckFalse(jac->gkbnu < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"nu cannot be less than 0: value %f",jac->gkbnu);
+    PetscCheck(jac->gkbnu >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"nu cannot be less than 0: value %g",(double)jac->gkbnu);
     PetscCall(PetscOptionsInt("-pc_fieldsplit_gkb_maxit","Maximum allowed number of iterations","PCFieldSplitGKBMaxit",jac->gkbmaxit,&jac->gkbmaxit,NULL));
     PetscCall(PetscOptionsBool("-pc_fieldsplit_gkb_monitor","Prints number of GKB iterations and error","PCFieldSplitGKB",jac->gkbmonitor,&jac->gkbmonitor,NULL));
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -1678,15 +1678,15 @@ static PetscErrorCode  PCFieldSplitSetFields_FieldSplit(PC pc,const char splitna
     PetscFunctionReturn(0);
   }
   for (i=0; i<n; i++) {
-    PetscCheckFalse(fields[i] >= jac->bs,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Field %D requested but only %D exist",fields[i],jac->bs);
-    PetscCheckFalse(fields[i] < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Negative field %D requested",fields[i]);
+    PetscCheck(fields[i] < jac->bs,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Field %" PetscInt_FMT " requested but only %" PetscInt_FMT " exist",fields[i],jac->bs);
+    PetscCheck(fields[i] >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Negative field %" PetscInt_FMT " requested",fields[i]);
   }
   PetscCall(PetscNew(&ilink));
   if (splitname) {
     PetscCall(PetscStrallocpy(splitname,&ilink->splitname));
   } else {
     PetscCall(PetscMalloc1(3,&ilink->splitname));
-    PetscCall(PetscSNPrintf(ilink->splitname,2,"%s",jac->nsplits));
+    PetscCall(PetscSNPrintf(ilink->splitname,2,"%" PetscInt_FMT,jac->nsplits));
   }
   ilink->event = jac->nsplits < 5 ? KSP_Solve_FS_0 + jac->nsplits : KSP_Solve_FS_0 + 4; /* Any split great than 4 gets logged in the 4th split */
   PetscCall(PetscMalloc1(n,&ilink->fields));
@@ -1730,7 +1730,7 @@ static PetscErrorCode  PCFieldSplitSchurGetSubKSP_FieldSplit(PC pc,PetscInt *n,K
     PetscInt nn;
 
     PetscCheck(jac->schur,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONGSTATE,"Must call KSPSetUp() or PCSetUp() before calling PCFieldSplitSchurGetSubKSP()");
-    PetscCheckFalse(jac->nsplits != 2,PetscObjectComm((PetscObject)pc),PETSC_ERR_PLIB,"Unexpected number of splits %D != 2",jac->nsplits);
+    PetscCheck(jac->nsplits == 2,PetscObjectComm((PetscObject)pc),PETSC_ERR_PLIB,"Unexpected number of splits %" PetscInt_FMT " != 2",jac->nsplits);
     nn   = jac->nsplits + (jac->kspupper != jac->head->ksp ? 1 : 0);
     PetscCall(PetscMalloc1(nn,subksp));
     (*subksp)[0] = jac->head->ksp;
@@ -1767,7 +1767,7 @@ static PetscErrorCode  PCFieldSplitGetSubKSP_FieldSplit(PC pc,PetscInt *n,KSP **
     (*subksp)[cnt++] = ilink->ksp;
     ilink            = ilink->next;
   }
-  PetscCheckFalse(cnt != jac->nsplits,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Corrupt PCFIELDSPLIT object: number of splits in linked list %D does not match number in object %D",cnt,jac->nsplits);
+  PetscCheck(cnt == jac->nsplits,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Corrupt PCFIELDSPLIT object: number of splits in linked list %" PetscInt_FMT " does not match number in object %" PetscInt_FMT,cnt,jac->nsplits);
   if (n) *n = jac->nsplits;
   PetscFunctionReturn(0);
 }
@@ -1787,7 +1787,7 @@ PetscErrorCode  PCFieldSplitRestrictIS(PC pc,IS isy)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidHeaderSpecific(isy,IS_CLASSID,2);
-  PetscCall(PetscTryMethod(pc,"PCFieldSplitRestrictIS_C",(PC,IS),(pc,isy)));
+  PetscTryMethod(pc,"PCFieldSplitRestrictIS_C",(PC,IS),(pc,isy));
   PetscFunctionReturn(0);
 }
 
@@ -1867,7 +1867,7 @@ static PetscErrorCode  PCFieldSplitSetIS_FieldSplit(PC pc,const char splitname[]
     PetscCall(PetscStrallocpy(splitname,&ilink->splitname));
   } else {
     PetscCall(PetscMalloc1(8,&ilink->splitname));
-    PetscCall(PetscSNPrintf(ilink->splitname,7,"%D",jac->nsplits));
+    PetscCall(PetscSNPrintf(ilink->splitname,7,"%" PetscInt_FMT,jac->nsplits));
   }
   ilink->event  = jac->nsplits < 5 ? KSP_Solve_FS_0 + jac->nsplits : KSP_Solve_FS_0 + 4; /* Any split great than 4 gets logged in the 4th split */
   PetscCall(PetscObjectReference((PetscObject)is));
@@ -1936,9 +1936,9 @@ PetscErrorCode  PCFieldSplitSetFields(PC pc,const char splitname[],PetscInt n,co
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidCharPointer(splitname,2);
-  PetscCheckFalse(n < 1,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Provided number of fields %D in split \"%s\" not positive",n,splitname);
+  PetscCheck(n >= 1,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Provided number of fields %" PetscInt_FMT " in split \"%s\" not positive",n,splitname);
   PetscValidIntPointer(fields,4);
-  PetscCall(PetscTryMethod(pc,"PCFieldSplitSetFields_C",(PC,const char[],PetscInt,const PetscInt*,const PetscInt*),(pc,splitname,n,fields,fields_col)));
+  PetscTryMethod(pc,"PCFieldSplitSetFields_C",(PC,const char[],PetscInt,const PetscInt*,const PetscInt*),(pc,splitname,n,fields,fields_col));
   PetscFunctionReturn(0);
 }
 
@@ -2089,7 +2089,7 @@ PetscErrorCode  PCFieldSplitSetIS(PC pc,const char splitname[],IS is)
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   if (splitname) PetscValidCharPointer(splitname,2);
   PetscValidHeaderSpecific(is,IS_CLASSID,3);
-  PetscCall(PetscTryMethod(pc,"PCFieldSplitSetIS_C",(PC,const char[],IS),(pc,splitname,is)));
+  PetscTryMethod(pc,"PCFieldSplitSetIS_C",(PC,const char[],IS),(pc,splitname,is));
   PetscFunctionReturn(0);
 }
 
@@ -2154,14 +2154,14 @@ PetscErrorCode PCFieldSplitGetIS(PC pc,const char splitname[],IS *is)
 PetscErrorCode PCFieldSplitGetISByIndex(PC pc,PetscInt index,IS *is)
 {
   PetscFunctionBegin;
-  PetscCheckFalse(index < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Negative field %D requested",index);
+  PetscCheck(index >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Negative field %" PetscInt_FMT " requested",index);
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidPointer(is,3);
   {
     PC_FieldSplit     *jac  = (PC_FieldSplit*) pc->data;
     PC_FieldSplitLink ilink = jac->head;
     PetscInt          i     = 0;
-    PetscCheckFalse(index >= jac->nsplits,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Field %D requested but only %D exist",index,jac->nsplits);
+    PetscCheck(index < jac->nsplits,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Field %" PetscInt_FMT " requested but only %" PetscInt_FMT " exist",index,jac->nsplits);
 
     while (i < index) {
       ilink = ilink->next;
@@ -2192,7 +2192,7 @@ PetscErrorCode  PCFieldSplitSetBlockSize(PC pc,PetscInt bs)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidLogicalCollectiveInt(pc,bs,2);
-  PetscCall(PetscTryMethod(pc,"PCFieldSplitSetBlockSize_C",(PC,PetscInt),(pc,bs)));
+  PetscTryMethod(pc,"PCFieldSplitSetBlockSize_C",(PC,PetscInt),(pc,bs));
   PetscFunctionReturn(0);
 }
 
@@ -2234,7 +2234,7 @@ PetscErrorCode  PCFieldSplitGetSubKSP(PC pc,PetscInt *n,KSP *subksp[])
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   if (n) PetscValidIntPointer(n,2);
-  PetscCall(PetscUseMethod(pc,"PCFieldSplitGetSubKSP_C",(PC,PetscInt*,KSP **),(pc,n,subksp)));
+  PetscUseMethod(pc,"PCFieldSplitGetSubKSP_C",(PC,PetscInt*,KSP **),(pc,n,subksp));
   PetscFunctionReturn(0);
 }
 
@@ -2276,7 +2276,7 @@ PetscErrorCode  PCFieldSplitSchurGetSubKSP(PC pc,PetscInt *n,KSP *subksp[])
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   if (n) PetscValidIntPointer(n,2);
-  PetscCall(PetscUseMethod(pc,"PCFieldSplitSchurGetSubKSP_C",(PC,PetscInt*,KSP **),(pc,n,subksp)));
+  PetscUseMethod(pc,"PCFieldSplitSchurGetSubKSP_C",(PC,PetscInt*,KSP **),(pc,n,subksp));
   PetscFunctionReturn(0);
 }
 
@@ -2325,7 +2325,7 @@ PetscErrorCode PCFieldSplitSetSchurPre(PC pc,PCFieldSplitSchurPreType ptype,Mat 
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
-  PetscCall(PetscTryMethod(pc,"PCFieldSplitSetSchurPre_C",(PC,PCFieldSplitSchurPreType,Mat),(pc,ptype,pre)));
+  PetscTryMethod(pc,"PCFieldSplitSetSchurPre_C",(PC,PCFieldSplitSchurPreType,Mat),(pc,ptype,pre));
   PetscFunctionReturn(0);
 }
 
@@ -2353,7 +2353,7 @@ PetscErrorCode PCFieldSplitGetSchurPre(PC pc,PCFieldSplitSchurPreType *ptype,Mat
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
-  PetscCall(PetscUseMethod(pc,"PCFieldSplitGetSchurPre_C",(PC,PCFieldSplitSchurPreType*,Mat*),(pc,ptype,pre)));
+  PetscUseMethod(pc,"PCFieldSplitGetSchurPre_C",(PC,PCFieldSplitSchurPreType*,Mat*),(pc,ptype,pre));
   PetscFunctionReturn(0);
 }
 
@@ -2388,7 +2388,7 @@ PetscErrorCode  PCFieldSplitSchurGetS(PC pc,Mat *S)
   PetscCall(PetscStrcmp(t,PCFIELDSPLIT,&isfs));
   PetscCheck(isfs,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Expected PC of type PCFIELDSPLIT, got %s instead",t);
   jac = (PC_FieldSplit*)pc->data;
-  PetscCheckFalse(jac->type != PC_COMPOSITE_SCHUR,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Expected PCFIELDSPLIT of type SCHUR, got %D instead",jac->type);
+  PetscCheck(jac->type == PC_COMPOSITE_SCHUR,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Expected PCFIELDSPLIT of type SCHUR, got %d instead",jac->type);
   if (S) *S = jac->schur;
   PetscFunctionReturn(0);
 }
@@ -2419,7 +2419,7 @@ PetscErrorCode  PCFieldSplitSchurRestoreS(PC pc,Mat *S)
   PetscCall(PetscStrcmp(t,PCFIELDSPLIT,&isfs));
   PetscCheck(isfs,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Expected PC of type PCFIELDSPLIT, got %s instead",t);
   jac = (PC_FieldSplit*)pc->data;
-  PetscCheckFalse(jac->type != PC_COMPOSITE_SCHUR,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Expected PCFIELDSPLIT of type SCHUR, got %D instead",jac->type);
+  PetscCheck(jac->type == PC_COMPOSITE_SCHUR,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Expected PCFIELDSPLIT of type SCHUR, got %d instead",jac->type);
   PetscCheck(S && (*S == jac->schur),PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"MatSchurComplement restored is not the same as gotten");
   PetscFunctionReturn(0);
 }
@@ -2496,7 +2496,7 @@ PetscErrorCode  PCFieldSplitSetSchurFactType(PC pc,PCFieldSplitSchurFactType fty
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
-  PetscCall(PetscTryMethod(pc,"PCFieldSplitSetSchurFactType_C",(PC,PCFieldSplitSchurFactType),(pc,ftype)));
+  PetscTryMethod(pc,"PCFieldSplitSetSchurFactType_C",(PC,PCFieldSplitSchurFactType),(pc,ftype));
   PetscFunctionReturn(0);
 }
 
@@ -2530,7 +2530,7 @@ PetscErrorCode PCFieldSplitSetSchurScale(PC pc,PetscScalar scale)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidLogicalCollectiveScalar(pc,scale,2);
-  PetscCall(PetscTryMethod(pc,"PCFieldSplitSetSchurScale_C",(PC,PetscScalar),(pc,scale)));
+  PetscTryMethod(pc,"PCFieldSplitSetSchurScale_C",(PC,PetscScalar),(pc,scale));
   PetscFunctionReturn(0);
 }
 
@@ -2567,7 +2567,7 @@ PetscErrorCode  PCFieldSplitGetSchurBlocks(PC pc,Mat *A00,Mat *A01,Mat *A10, Mat
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
-  PetscCheckFalse(jac->type != PC_COMPOSITE_SCHUR,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONG, "FieldSplit is not using a Schur complement approach.");
+  PetscCheck(jac->type == PC_COMPOSITE_SCHUR,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONG, "FieldSplit is not using a Schur complement approach.");
   if (A00) *A00 = jac->pmat[0];
   if (A01) *A01 = jac->B;
   if (A10) *A10 = jac->C;
@@ -2603,7 +2603,7 @@ PetscErrorCode PCFieldSplitSetGKBTol(PC pc,PetscReal tolerance)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidLogicalCollectiveReal(pc,tolerance,2);
-  PetscCall(PetscTryMethod(pc,"PCFieldSplitSetGKBTol_C",(PC,PetscReal),(pc,tolerance)));
+  PetscTryMethod(pc,"PCFieldSplitSetGKBTol_C",(PC,PetscReal),(pc,tolerance));
   PetscFunctionReturn(0);
 }
 
@@ -2638,7 +2638,7 @@ PetscErrorCode PCFieldSplitSetGKBMaxit(PC pc,PetscInt maxit)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidLogicalCollectiveInt(pc,maxit,2);
-  PetscCall(PetscTryMethod(pc,"PCFieldSplitSetGKBMaxit_C",(PC,PetscInt),(pc,maxit)));
+  PetscTryMethod(pc,"PCFieldSplitSetGKBMaxit_C",(PC,PetscInt),(pc,maxit));
   PetscFunctionReturn(0);
 }
 
@@ -2680,7 +2680,7 @@ PetscErrorCode PCFieldSplitSetGKBDelay(PC pc,PetscInt delay)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidLogicalCollectiveInt(pc,delay,2);
-  PetscCall(PetscTryMethod(pc,"PCFieldSplitSetGKBDelay_C",(PC,PetscInt),(pc,delay)));
+  PetscTryMethod(pc,"PCFieldSplitSetGKBDelay_C",(PC,PetscInt),(pc,delay));
   PetscFunctionReturn(0);
 }
 
@@ -2723,7 +2723,7 @@ PetscErrorCode PCFieldSplitSetGKBNu(PC pc,PetscReal nu)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidLogicalCollectiveReal(pc,nu,2);
-  PetscCall(PetscTryMethod(pc,"PCFieldSplitSetGKBNu_C",(PC,PetscReal),(pc,nu)));
+  PetscTryMethod(pc,"PCFieldSplitSetGKBNu_C",(PC,PetscReal),(pc,nu));
   PetscFunctionReturn(0);
 }
 
@@ -2785,8 +2785,8 @@ static PetscErrorCode  PCFieldSplitSetBlockSize_FieldSplit(PC pc,PetscInt bs)
   PC_FieldSplit *jac = (PC_FieldSplit*)pc->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(bs < 1,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Blocksize must be positive, you gave %D",bs);
-  PetscCheckFalse(jac->bs > 0 && jac->bs != bs,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONGSTATE,"Cannot change fieldsplit blocksize from %D to %D after it has been set",jac->bs,bs);
+  PetscCheck(bs >= 1,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Blocksize must be positive, you gave %" PetscInt_FMT,bs);
+  PetscCheckFalse(jac->bs > 0 && jac->bs != bs,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONGSTATE,"Cannot change fieldsplit blocksize from %" PetscInt_FMT " to %" PetscInt_FMT " after it has been set",jac->bs,bs);
   jac->bs = bs;
   PetscFunctionReturn(0);
 }
@@ -2853,7 +2853,7 @@ PetscErrorCode  PCFieldSplitSetType(PC pc,PCCompositeType type)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
-  PetscCall(PetscTryMethod(pc,"PCFieldSplitSetType_C",(PC,PCCompositeType),(pc,type)));
+  PetscTryMethod(pc,"PCFieldSplitSetType_C",(PC,PCCompositeType),(pc,type));
   PetscFunctionReturn(0);
 }
 

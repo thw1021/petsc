@@ -8,13 +8,6 @@ Input parameters include:\n\
   -m <mesh_x>       : number of mesh points in x-direction\n\
   -n <mesh_y>       : number of mesh points in y-direction\n\n";
 
-/*T
-   Concepts: KSP^repeatedly solving linear systems;
-   Concepts: KSP^Laplacian, 2d
-   Concepts: Laplacian, 2d
-   Processors: n
-T*/
-
 /*
   Include "petscksp.h" so that we can use KSP solvers.  Note that this file
   automatically includes:
@@ -169,7 +162,7 @@ int main(int argc,char **args)
        Print convergence information.  PetscPrintf() produces a single
        print statement from all processes that share a communicator.
     */
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g System %D: iterations %D\n",(double)norm,k,its));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g System %" PetscInt_FMT ": iterations %" PetscInt_FMT "\n",(double)norm,k,its));
   }
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
