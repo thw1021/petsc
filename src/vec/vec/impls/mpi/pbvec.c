@@ -8,17 +8,20 @@
 
 PetscErrorCode VecDot_MPI(Vec xin, Vec yin, PetscManagedScalar z, PetscDeviceContext dctx)
 {
+  const PetscInt one = 1;
   PetscFunctionBegin;
   PetscCall(VecDot_Seq(xin,yin,z,dctx));
-  PetscCall(PetscDeviceContextAllReduceManagedScalar_Internal(dctx,z,(PetscObject)xin,1,MPIU_SUM));
+  PetscCall(PetscDeviceContextAllReduceManagedScalar_Internal(dctx,z,(PetscObject)xin,&one,MPIU_SUM));
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode VecTDot_MPI(Vec xin, Vec yin, PetscManagedScalar z, PetscDeviceContext dctx)
 {
+  const PetscInt one = 1;
+
   PetscFunctionBegin;
   PetscCall(VecTDot_Seq(xin,yin,z,dctx));
-  PetscCall(PetscDeviceContextAllReduceManagedScalar_Internal(dctx,z,(PetscObject)xin,1,MPIU_SUM));
+  PetscCall(PetscDeviceContextAllReduceManagedScalar_Internal(dctx,z,(PetscObject)xin,&one,MPIU_SUM));
   PetscFunctionReturn(0);
 }
 

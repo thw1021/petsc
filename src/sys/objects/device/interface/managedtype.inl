@@ -101,6 +101,7 @@ static PetscErrorCode CopyValues(PetscDeviceContext dctx, PetscManagedType scal,
 #define PetscManagedTypeDestroy              PetscConcat(PetscManagedType,Destroy)
 #define PetscManagedTypeGetValues            PetscConcat(PetscManagedType,GetValues)
 #define PetscManagedTypeSetValues            PetscConcat(PetscManagedType,SetValues)
+#define PetscManagedTypeGetPointerAndMemType PetscConcat(PetscManagedType,GetPointerAndMemType)
 #define PetscManagedTypeCopy                 PetscConcat(PetscManagedType,Copy)
 #define PetscManagedTypeApplyOperator        PetscConcat(PetscManagedType,ApplyOperator)
 #define PetscManagedTypeApplyManagedOperator PetscConcat(PetscManagedType,ApplyManagedOperator)
@@ -110,6 +111,7 @@ static PetscErrorCode CopyValues(PetscDeviceContext dctx, PetscManagedType scal,
 PetscErrorCode PetscManagedTypeCreate(PetscDeviceContext dctx, PetscType *host_ptr, PetscType *device_ptr, PetscInt n, PetscCopyMode host_cmode, PetscCopyMode device_cmode, PetscOffloadMask mask, PetscManagedType *scal)
 {
   PetscFunctionBegin;
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   if (host_ptr && n) PetscValidTypePointer(host_ptr,2);
   PetscValidPointer(scal,8);
   if (host_ptr && device_ptr) {
@@ -156,9 +158,8 @@ PetscErrorCode PetscManagedTypeCreate(PetscDeviceContext dctx, PetscType *host_p
 PetscErrorCode PetscManagedTypeDestroy(PetscDeviceContext dctx, PetscManagedType *scal)
 {
   PetscFunctionBegin;
+  if (!*scal) PetscFunctionReturn(0);
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
-  PetscValidDeviceContext(dctx,1);
-  if (*scal) PetscFunctionReturn(0);
   PetscCall((*dctx->ops->releasemanagedtype)(dctx,*scal));
   PetscCall(PetscManagedTypePool.reclaim(std::move(*scal)));
   *scal = nullptr;
@@ -169,52 +170,76 @@ PetscErrorCode PetscManagedTypeGetValues(PetscDeviceContext dctx, PetscManagedTy
 {
   PetscFunctionBegin;
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
-  PetscValidDeviceContext(dctx,1);
   PetscValidPointer(scal,2);
   PetscValidPointer(ptr,5);
-  if (n) PetscValidIntPointer(n,6);
+  if (n) {
+    PetscValidIntPointer(n,6);
+    *n = scal->n;
+  }
   PetscAssert(!scal->locked,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Object is locked, perhaps a subrange was not yet restored?");
   PetscCall((*dctx->ops->getmanagedvaluestype)(dctx,scal,mtype,mode,ptr));
-  if (n) *n = scal->n;
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode PetscManagedTypeSetValues(PetscDeviceContext dctx, PetscManagedType scal, PetscMemType mtype, const PetscType *ptr, PetscInt n)
 {
-  // we want to move the data TO wherever the managed type has it, not the other way around
-  const auto  scalmtype = PetscOffloadMaskToMemType(scal->mask);
-  const auto  mode      = PetscMemTypeToDeviceCopyMode(scalmtype,mtype);
-  PetscType  *scalptr;
-  PetscInt    scaln;
-
   PetscFunctionBegin;
-  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   if (PetscMemTypeHost(mtype)) PetscValidTypePointer(ptr,4);
   PetscAssert(!scal->locked,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Object is locked, perhaps a subrange was not yet restored?");
-  PetscCall(PetscManagedTypeGetValues(dctx,scal,scalmtype,PETSC_MEMORY_ACCESS_WRITE,&scalptr,&scaln));
-  PetscAssert(n <= scaln,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Trying to write %" PetscInt_FMT " values to " PetscStringize(PetscManagedType) " but it only holds %" PetscInt_FMT " entries",n,scaln);
-  PetscCall(PetscDeviceArrayCopy(dctx,scalptr,ptr,n,mode));
+  if (n) {
+    PetscMemType  scalmtype;
+    PetscType    *scalptr;
+    PetscInt      scaln;
+
+    PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+    PetscCall(PetscManagedTypeGetPointerAndMemType(dctx,scal,PETSC_MEMORY_ACCESS_WRITE,&scalptr,&scalmtype,&scaln));
+    PetscAssert(n <= scaln,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Trying to write %" PetscInt_FMT " values to " PetscStringize(PetscManagedType) " but it only holds %" PetscInt_FMT " entries",n,scaln);
+    PetscCall(PetscDeviceArrayCopy(dctx,scalptr,ptr,n,PetscMemTypeToDeviceCopyMode(scalmtype,mtype)));
+  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscManagedTypeGetPointerAndMemType(PetscDeviceContext dctx, PetscManagedType scal, PetscMemoryAccessMode mode, PetscType **ptr, PetscMemType *mtype, PetscInt *n)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  PetscAssert(!scal->locked,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Object is locked, perhaps a subrange was not yet restored?");
+  PetscValidPointer(ptr,4);
+  if (mtype) PetscValidPointer(mtype,5);
+  if (n) {
+    PetscValidIntPointer(n,6);
+    *n = scal->n;
+  }
+  switch (scal->mask) {
+  case PETSC_OFFLOAD_CPU:
+    *ptr = scal->host;
+    if (mtype) *mtype = PETSC_MEMTYPE_HOST;
+    break;
+  case PETSC_OFFLOAD_UNALLOCATED:
+    PetscCall(PetscManagedTypeGetValues(dctx,scal,PETSC_MEMTYPE_DEVICE,mode,ptr,nullptr));
+  case PETSC_OFFLOAD_BOTH:
+  case PETSC_OFFLOAD_GPU:
+    *ptr = scal->device; // technically set it twice if unallocated
+    if (mtype) *mtype = PETSC_MEMTYPE_DEVICE;
+    break;
+  }
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode PetscManagedTypeCopy(PetscDeviceContext dctx, PetscManagedType dest, PetscManagedType src)
 {
-  // prefer GPU if both
-  const auto           dmask = dest->mask == PETSC_OFFLOAD_BOTH ? PETSC_OFFLOAD_GPU : dest->mask;
-  const auto           mtype = PetscOffloadMaskToMemType(dmask);
-  PetscInt             dest_n,src_n;
-  PetscType           *dest_ptr,*src_ptr;
-  PetscDeviceCopyMode  mode;
+  PetscMemType  dmtype,smtype;
+  PetscInt      dest_n,src_n;
+  PetscType    *dest_ptr,*src_ptr;
 
   PetscFunctionBegin;
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   PetscValidPointer(dest,2);
   PetscValidPointer(src,3);
-  PetscCall(PetscOffloadMaskToDeviceCopyMode(dmask,src->mask,&mode));
-  PetscCall(PetscManagedTypeGetValues(dctx,dest,mtype,PETSC_MEMORY_ACCESS_WRITE,&dest_ptr,&dest_n));
-  PetscCall(PetscManagedTypeGetValues(dctx,src,mtype,PETSC_MEMORY_ACCESS_READ,&src_ptr,&src_n));
+  PetscCall(PetscManagedTypeGetPointerAndMemType(dctx,dest,PETSC_MEMORY_ACCESS_WRITE,&dest_ptr,&dmtype,&dest_n));
+  PetscCall(PetscManagedTypeGetPointerAndMemType(dctx,src,PETSC_MEMORY_ACCESS_READ,&src_ptr,&smtype,&src_n));
   PetscAssert(dest_n >= src_n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Destination size %" PetscInt_FMT " not large enough for source size %" PetscInt_FMT,dest_n,src_n);
-  PetscCall(PetscDeviceArrayCopy(dctx,dest_ptr,src_ptr,dest_n,mode));
+  PetscCall(PetscDeviceArrayCopy(dctx,dest_ptr,src_ptr,dest_n,PetscMemTypeToDeviceCopyMode(dmtype,smtype)));
   PetscFunctionReturn(0);
 }
 
@@ -224,14 +249,15 @@ PetscErrorCode PetscManagedTypeApplyOperator(PetscDeviceContext dctx, PetscManag
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   PetscValidPointer(scal,2);
   if (PetscMemTypeHost(mtype)) PetscValidTypePointer(rhs,4);
-  if (PetscOffloadHost(scal->mask)) {
+  if (PetscOffloadHost(scal->mask) && PetscMemTypeHost(mtype)) {
     const auto  src_access = ret ? PETSC_MEMORY_ACCESS_READ : PETSC_MEMORY_ACCESS_READ_WRITE;
+    const auto  rhsv       = *rhs;
     PetscType  *ptr,*retptr;
     PetscInt    n;
 
     PetscCall(PetscManagedTypeGetValues(dctx,scal,PETSC_MEMTYPE_HOST,src_access,&ptr,&n));
     if (ret) {
-      PetscCall(PetscManagedTypeGetValues(dctx,ret,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_WRITE,&retptr,NULL));
+      PetscCall(PetscManagedTypeGetValues(dctx,ret,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_WRITE,&retptr,nullptr));
     } else {
       // in place
       retptr = ptr;
@@ -239,11 +265,11 @@ PetscErrorCode PetscManagedTypeApplyOperator(PetscDeviceContext dctx, PetscManag
 
     for (PetscInt i = 0; i < n; ++i) {
       switch (otype) {
-      case PETSC_OPERATOR_PLUS:     retptr[i] = ptr[i]+(*rhs); break;
-      case PETSC_OPERATOR_MINUS:    retptr[i] = ptr[i]-(*rhs); break;
-      case PETSC_OPERATOR_MULTIPLY: retptr[i] = ptr[i]*(*rhs); break;
-      case PETSC_OPERATOR_DIVIDE:   retptr[i] = ptr[i]/(*rhs); break;
-      case PETSC_OPERATOR_EQUAL:    retptr[i] = *rhs;        break;
+      case PETSC_OPERATOR_PLUS:     retptr[i] = ptr[i]+rhsv; break;
+      case PETSC_OPERATOR_MINUS:    retptr[i] = ptr[i]-rhsv; break;
+      case PETSC_OPERATOR_MULTIPLY: retptr[i] = ptr[i]*rhsv; break;
+      case PETSC_OPERATOR_DIVIDE:   retptr[i] = ptr[i]/rhsv; break;
+      case PETSC_OPERATOR_EQUAL:    retptr[i] = rhsv;        break;
       }
     }
   } else {
@@ -258,6 +284,7 @@ PetscErrorCode PetscManagedTypeGetSubRange(PetscDeviceContext dctx, PetscManaged
   PetscType  *tmp;
 
   PetscFunctionBegin;
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   PetscAssert(!in->locked,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Input managed object already has a sub-range checked out");
   PetscAssert(size > 0,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Cannot extract a subrange of negative size %" PetscInt_FMT,size);
   PetscAssert(begin+size < in->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Trying to extract a subrange of [%" PetscInt_FMT ",%" PetscInt_FMT ") from managed type of size %" PetscInt_FMT,begin,end,in->n);
@@ -271,6 +298,7 @@ PetscErrorCode PetscManagedTypeGetSubRange(PetscDeviceContext dctx, PetscManaged
 PetscErrorCode PetscManagedTypeRestoreSubRange(PetscDeviceContext dctx, PetscManagedType in, PetscManagedType *out)
 {
   PetscFunctionBegin;
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   PetscAssert(in->locked,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Input managed object did not have a sub-range checked out");
   in->locked = PETSC_FALSE;
   if (PetscDefined(USE_DEBUG)) {
@@ -309,6 +337,7 @@ PetscErrorCode PetscManagedTypeRestoreSubRange(PetscDeviceContext dctx, PetscMan
 #undef PetscManagedTypeDestroy
 #undef PetscManagedTypeGetValeus
 #undef PetscManagedTypeSetValeus
+#undef PetscManagedTypeGetPointerAndMemType
 #undef PetscManagedTypeCopy
 #undef PetscManagedTypeApplyOperator
 #undef PetscManagedTypeApplyManagedOperator

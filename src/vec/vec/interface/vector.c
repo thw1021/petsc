@@ -1355,7 +1355,6 @@ PetscErrorCode  VecSetFromOptions(Vec vec)
 {
   PetscBool      flg;
   PetscInt       bind_below = 0;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(vec,VEC_CLASSID,1);

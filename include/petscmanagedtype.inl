@@ -48,6 +48,7 @@ typedef PetscType *PetscManagedType;
 #define PetscManagedTypeDestroy              PetscConcat(PetscManagedType,Destroy)
 #define PetscManagedTypeGetValues            PetscConcat(PetscManagedType,GetValues)
 #define PetscManagedTypeSetValues            PetscConcat(PetscManagedType,SetValues)
+#define PetscManagedTypeGetPointerAndMemType PetscConcat(PetscManagedType,GetPointerAndMemType)
 #define PetscManagedTypeCopy                 PetscConcat(PetscManagedType,Copy)
 #define PetscManagedTypeApplyOperator        PetscConcat(PetscManagedType,ApplyOperator)
 #define PetscManagedTypeApplyManagedOperator PetscConcat(PetscManagedType,ApplyManagedOperator)
@@ -58,6 +59,7 @@ PETSC_EXTERN PetscErrorCode PetscManagedTypeCreate(PetscDeviceContext,PetscType*
 PETSC_EXTERN PetscErrorCode PetscManagedTypeDestroy(PetscDeviceContext,PetscManagedType*);
 PETSC_EXTERN PetscErrorCode PetscManagedTypeGetValues(PetscDeviceContext,PetscManagedType,PetscMemType, PetscMemoryAccessMode,PetscType**,PetscInt*);
 PETSC_EXTERN PetscErrorCode PetscManagedTypeSetValues(PetscDeviceContext,PetscManagedType,PetscMemType,const PetscType*,PetscInt);
+PETSC_EXTERN PetscErrorCode PetscManagedTypeGetPointerAndMemType(PetscDeviceContext,PetscManagedType,PetscMemoryAccessMode,PetscType**,PetscMemType*,PetscInt*);
 PETSC_EXTERN PetscErrorCode PetscManagedTypeCopy(PetscDeviceContext,PetscManagedType,PetscManagedType);
 PETSC_EXTERN PetscErrorCode PetscManagedTypeApplyOperator(PetscDeviceContext,PetscManagedType,PetscOperatorType,PetscMemType,const PetscType*,PetscManagedType);
 PETSC_EXTERN PetscErrorCode PetscManagedTypeApplyManagedOperator(PetscDeviceContext,PetscManagedType,PetscOperatorType,PetscManagedType,PetscManagedType);
@@ -92,6 +94,7 @@ static inline PetscErrorCode PetscManagedTypeCreateDefault(PetscDeviceContext dc
 #undef PetscManagedTypeDestroy
 #undef PetscManagedTypeGetValeus
 #undef PetscManagedTypeSetValeus
+#undef PetscManagedTypeGetPointerAndMemType
 #undef PetscManagedTypeCopy
 #undef PetscManagedTypeApplyOperator
 #undef PetscManagedTypeApplyManagedOperator
