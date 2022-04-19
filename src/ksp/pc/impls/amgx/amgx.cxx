@@ -149,22 +149,13 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
 
         PetscCheck(done, amgx->comm, PETSC_ERR_PLIB, "MatGetRowIJ was not successful");
 
-        if (rawN != amgx->nLocalRows)
-        {
-            SETERRQ(amgx->comm, PETSC_ERR_PLIB,
-                     "MatGetRowIJ disagrees with MatGetLocalSize "
-                     "rawN != nLocalRows %D %D", rawN, amgx->nLocalRows);
-        }
+        PetscCheck(rawN == amgx->nLocalRows, amgx->comm, PETSC_ERR_PLIB,"MatGetRowIJ disagrees with MatGetLocalSize rawN != nLocalRows %D %D", rawN, amgx->nLocalRows);
 
         PetscCall(MatSeqAIJGetArray(amgx->localA, &amgx->values));
 
         amgx->nnz = rowOffsets[amgx->nLocalRows];
 
-        if (amgx->nnz >= std::numeric_limits<int>::max())
-        {
-            SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB,
-                    "Support for 64-bit integer nnz not yet implemented, nnz = %ld", amgx->nnz);
-        }
+        PetscCheck(amgx->nnz < std::numeric_limits<int>::max(),PETSC_COMM_SELF, PETSC_ERR_PLIB, "Support for 64-bit integer nnz not yet implemented, nnz = %ld", amgx->nnz);
 
         // Allocate space for some partition offsets
         PetscInt *partitionOffsets;
@@ -186,12 +177,7 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
         // Determine if PETSc compiled in 64-bit mode
         int petsc32 = (sizeof(PetscInt) == 4);
 
-        if (!petsc32)
-        {
-            SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB,
-                "PETSc compiled with 64-bit integers. "
-                "AmgX backend does not currently support");
-        }
+        PetscCheck(petsc32, PETSC_COMM_SELF, PETSC_ERR_PLIB, "PETSc compiled with 64-bit integers. AmgX backend does not currently support");
 
         // Create the distribution and upload the matrix data
         AMGX_distribution_handle dist;
@@ -271,13 +257,7 @@ static PetscErrorCode PCApply_AMGX(PC pc, Vec b, Vec x)
     AMGX_SOLVE_STATUS status;
     AMGX_solver_get_status(amgx->solver, &status);
 
-    if (status == AMGX_SOLVE_FAILED)
-    {
-        SETERRQ(amgx->comm, PETSC_ERR_CONV_FAILED,
-                "AmgX solver failed to solve the system! "
-                "The error code is %d.",
-                status);
-    }
+    PetscCheck(status != AMGX_SOLVE_FAILED, amgx->comm, PETSC_ERR_CONV_FAILED, "AmgX solver failed to solve the system! The error code is %d.", status);
 
     AMGX_vector_download(amgx->sol, x_);
 
@@ -332,10 +312,7 @@ static PetscErrorCode PCDestroy_AMGX(PC pc)
     if (s_count == 1)
     {
         /* can put this in a PCAMGXInitializePackage method */
-        if (amgx->rsrc == nullptr)
-        {
-            SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "s_rsrc == NULL");
-        }
+        PetscCheck(amgx->rsrc != nullptr, PETSC_COMM_SELF, PETSC_ERR_PLIB, "s_rsrc == NULL");
 
         AMGX_resources_destroy(amgx->rsrc);
 
@@ -344,7 +321,7 @@ static PetscErrorCode PCDestroy_AMGX(PC pc)
         AMGX_SAFE_CALL(AMGX_finalize_plugins());
         AMGX_SAFE_CALL(AMGX_finalize());
 
-        PetscCall(MPI_Comm_free(&amgx->comm));
+        PetscCallMPI(MPI_Comm_free(&amgx->comm));
 #ifdef AMGX_DYNAMIC_LOADING
         amgx_libclose(amgx->lib_handle);
 #endif
@@ -386,10 +363,7 @@ static PetscErrorCode PCSetFromOptions_AMGX(PetscOptionItems *PetscOptionsObject
 
         PetscCall(PetscTestFile(amgx->filename, 'r', &exists));
 
-        if (!exists)
-        {
-            SETERRQ(PetscObjectComm((PetscObject)pc), PETSC_ERR_PLIB, "input file not found (%s)", amgx->filename);
-        }
+        PetscCheck(exists,PetscObjectComm((PetscObject)pc), PETSC_ERR_PLIB, "input file not found (%s)", amgx->filename);
     }
     else
     {
@@ -492,8 +466,8 @@ PETSC_EXTERN PetscErrorCode PCCreate_AMGX(PC pc)
     /* This communicator is not yet known to this system, so we duplicate it and make an internal communicator */
     PetscCallMPI(MPI_Comm_dup(PetscObjectComm((PetscObject)pc), &amgx->comm));
 
-    MPI_Comm_size(amgx->comm, &amgx->nranks);
-    MPI_Comm_rank(amgx->comm, &amgx->rank);
+    PetscCallMPI(MPI_Comm_size(amgx->comm, &amgx->nranks));
+    PetscCallMPI(MPI_Comm_rank(amgx->comm, &amgx->rank));
 
     {
         // XXX This should be handled by the calling application?
