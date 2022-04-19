@@ -348,7 +348,7 @@ osx-m1:
   variables:
     TEST_ARCH: arch-ci-osx-m1
     PETSC_OPTIONS: -check_pointer_intensity 0 -error_output_stdout -nox -nox_warning -malloc_dump
-    INIT_SCRIPT: /home/svcpetsc/bin/cython3setup.sh
+    INIT_SCRIPT: /Volumes/Scratch/svcpetsc/soft/py3venv/cython3setup.sh
 
 freebsd-cxx-cmplx-64idx-dbg:
   extends:
