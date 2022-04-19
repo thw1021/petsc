@@ -6,7 +6,7 @@ class Configure(config.package.CMakePackage):
     config.package.CMakePackage.__init__(self, framework)
     self.version          = ''
     self.versionname      = ''
-    self.gitcommit         = 'main'
+    self.gitcommit        = 'origin/main'
     self.download         = ['git://https://github.com/NVIDIA/AMGX']
     self.functions        = []
     self.includes         = ['amgx_c.h']
