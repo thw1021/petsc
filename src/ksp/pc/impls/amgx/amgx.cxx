@@ -136,13 +136,13 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
 
         // At the present time, an AmgX matrix is a sequential matrix
         // Non-sequential/MPI matrices must be adapted to extract the local matrix
-        if (amgx->nranks == 1)
+        if (amgx->nranks > 1)
         {
-            amgx->localA = Pmat;
+            PetscCall(MatMPIAIJGetLocalMat(Pmat, MAT_INITIAL_MATRIX, &amgx->localA));
         }
         else
         {
-            PetscCall(MatMPIAIJGetLocalMat(Pmat, MAT_INITIAL_MATRIX, &amgx->localA));
+            amgx->localA = Pmat;
         }
 
         // Extract the CSR data
@@ -252,29 +252,29 @@ static PetscErrorCode PCApply_AMGX(PC pc, Vec b, Vec x)
 
     PetscFunctionBegin;
 
+    PetscScalar *x_;
+    PetscScalar *b_;
+
     PetscBool is_dev_ptrs;
     PetscCall(PetscObjectTypeCompare((PetscObject)x, VECSEQCUDA, &is_dev_ptrs));
 
-    PetscScalar *sol;
-    const PetscScalar *rhs;
-
     if(is_dev_ptrs)
     {
-        PetscCall(VecCUDAGetArrayWrite(x, &sol));
-        PetscCall(VecCUDAGetArrayRead(b, &rhs));
+        PetscCall(VecCUDAGetArray(x, &x_));
+        PetscCall(VecCUDAGetArray(b, &b_));
     }
     else
     {
-        PetscCall(VecGetArray(x, &sol));
-        PetscCall(VecGetArrayRead(b, &rhs));
+        PetscCall(VecGetArray(x, &x_));
+        PetscCall(VecGetArray(b, &b_));
     }
 
-    AMGX_vector_upload(amgx->sol, amgx->nLocalRows, 1, sol);
-    AMGX_vector_upload(amgx->rhs, amgx->nLocalRows, 1, rhs);
+    AMGX_vector_upload(amgx->sol, amgx->nLocalRows, 1, x_);
+    AMGX_vector_upload(amgx->rhs, amgx->nLocalRows, 1, b_);
 
     PetscCall(MPI_Barrier(amgx->comm));
 
-    AMGX_solver_solve(amgx->solver, amgx->rhs, amgx->sol);
+    AMGX_solver_solve_with_0_initial_guess(amgx->solver, amgx->rhs, amgx->sol);
 
     AMGX_SOLVE_STATUS status;
     AMGX_solver_get_status(amgx->solver, &status);
@@ -282,22 +282,22 @@ static PetscErrorCode PCApply_AMGX(PC pc, Vec b, Vec x)
     if (status == AMGX_SOLVE_FAILED)
     {
         SETERRQ(amgx->comm, PETSC_ERR_CONV_FAILED,
-                 "AmgX solver failed to solve the system! "
-                 "The error code is %d.",
-                 status);
+                "AmgX solver failed to solve the system! "
+                "The error code is %d.",
+                status);
     }
 
-    AMGX_vector_download(amgx->sol, sol);
+    AMGX_vector_download(amgx->sol, x_);
 
     if(is_dev_ptrs)
     {
-        PetscCall(VecCUDARestoreArrayWrite(x, &sol));
-        PetscCall(VecCUDARestoreArrayRead(b, &rhs));
+        PetscCall(VecCUDARestoreArray(x, &x_));
+        PetscCall(VecCUDARestoreArray(b, &b_));
     }
     else
     {
-        PetscCall(VecRestoreArray(x, &sol));
-        PetscCall(VecRestoreArrayRead(b, &rhs));
+        PetscCall(VecRestoreArray(x, &x_));
+        PetscCall(VecRestoreArray(b, &b_));
     }
 
     PetscFunctionReturn(0);
@@ -307,6 +307,12 @@ static PetscErrorCode PCApply_AMGX(PC pc, Vec b, Vec x)
 static PetscErrorCode PCReset_AMGX(PC pc)
 {
     PC_AMGX *amgx = (PC_AMGX *)pc->data;
+
+    if(pc->setupcalled)
+    {
+        PetscBool done;
+        PetscCall(MatSeqAIJRestoreArray(amgx->localA, &amgx->values));
+    }
 
     PetscFunctionBegin;
     AMGX_solver_destroy(amgx->solver);
