@@ -33,7 +33,7 @@ struct {
     int devID = 0;
 
     void *lib_handle = 0;
-    char filename[PETSC_MAX_PATH_LEN];
+    std::string cfg_contents;
 
     // Cached state for re-setup
     PetscInt nnz;
@@ -102,7 +102,7 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
         if (!amgx->rsrc_init)
         {
             // Read configuration file and set exception handling
-            AMGX_SAFE_CALL(AMGX_config_create_from_file(&amgx->cfg, amgx->filename));
+            AMGX_SAFE_CALL(AMGX_config_create(&amgx->cfg, amgx->cfg_contents.c_str()));
 
             /* switch on internal error handling (no need to use AMGX_SAFE_CALL after this point) */
             AMGX_SAFE_CALL(AMGX_config_add_parameters(&amgx->cfg, "exception_handling=1"));
@@ -364,39 +364,23 @@ static PetscErrorCode PCSetFromOptions_AMGX(PetscOptionItems *PetscOptionsObject
     PC_AMGX *amgx = (PC_AMGX *)pc->data;
 
     PetscFunctionBegin;
-    PetscCall(PetscOptionsHead(PetscOptionsObject, "AMGX options"));
+    //PetscCall(PetscOptionsHead(PetscOptionsObject, "AMGX options"));
 
-    PetscCall(PetscOptionsString("-pc_amgx_json", "AMGX parameter file (json)", "amgx.c", amgx->filename, amgx->filename, PETSC_MAX_PATH_LEN, NULL));
+    // XXX The parameterisation can look something like this:
+    amgx->cfg_contents = "config_version=2,";
+    amgx->cfg_contents += "determinism_flag=1,";
+    amgx->cfg_contents += "solver(amg)=AMG,";
+    amgx->cfg_contents += "amg:algorithm=AGGREGATION,";
+    amgx->cfg_contents += "amg:smoother=BLOCK_JACOBI,";
+    amgx->cfg_contents += "amg:presweeps=1,";
+    amgx->cfg_contents += "amg:postsweeps=1,";
+    amgx->cfg_contents += "amg:selector=SIZE_2,";
+    amgx->cfg_contents += "amg:coarse_solver=DENSE_LU_SOLVER,";
+    amgx->cfg_contents += "amg:monitor_residual=1,";
+    amgx->cfg_contents += "amg:max_levels=100,";
+    amgx->cfg_contents += "amg:max_iters=1";
 
-    PetscCall(PetscStrreplace(PetscObjectComm((PetscObject)pc), amgx->filename, amgx->filename, PETSC_MAX_PATH_LEN));
-
-    PetscBool exists;
-    PetscCall(PetscTestFile(amgx->filename, 'r', &exists));
-
-    if (!exists)
-    {
-        // XXX Fix
-        PetscPrintf(PETSC_COMM_SELF,"Parameter -pc_amgx_json incorrect.\n");
-
-        /* try to add prefix */
-        char str[PETSC_MAX_PATH_LEN];
-        PetscCall(PetscSNPrintf(str, PETSC_MAX_PATH_LEN - 1, "${PETSC_DIR}/share/petsc/amgx/%s", amgx->filename));
-
-        PetscCall(PetscStrreplace(PetscObjectComm((PetscObject)pc), str, amgx->filename, PETSC_MAX_PATH_LEN));
-
-        PetscCall(PetscTestFile(amgx->filename, 'r', &exists));
-
-        if (!exists)
-        {
-            SETERRQ(PetscObjectComm((PetscObject)pc), PETSC_ERR_PLIB, "input file not found (%s)", amgx->filename);
-        }
-    }
-    else
-    {
-        PetscPrintf(PETSC_COMM_SELF,"As per -pc_amgx_json, found parameter file at %s.\n", amgx->filename);
-    }
-
-    PetscCall(PetscOptionsTail());
+    //PetscCall(PetscOptionsTail());
 
     PetscFunctionReturn(0);
 }
@@ -489,6 +473,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_AMGX(PC pc)
         AMGX_SAFE_CALL(AMGX_register_print_callback(&print_callback));
         AMGX_SAFE_CALL(AMGX_install_signal_handler());
     }
+
     /* This communicator is not yet known to this system, so we duplicate it and make an internal communicator */
     PetscCallMPI(MPI_Comm_dup(PetscObjectComm((PetscObject)pc), &amgx->comm));
 
@@ -504,11 +489,6 @@ PETSC_EXTERN PetscErrorCode PCCreate_AMGX(PC pc)
         cudaSetDevice(amgx->devID);
     }
 
-    /* set a default path/filename, use -pc_amgx_json to set at runtime */
-    PetscCall(PetscSNPrintf(amgx->filename, PETSC_MAX_PATH_LEN - 1, "${PETSC_DIR}/share/petsc/amgx/AMG_CLASSICAL_AGGRESSIVE_L1_RT6.json"));
-
-    PetscCall(PetscStrreplace(PetscObjectComm((PetscObject)pc), amgx->filename, amgx->filename, PETSC_MAX_PATH_LEN));
-
     PetscFunctionReturn(0);
 }
 
@@ -520,7 +500,7 @@ PETSC_EXTERN PetscErrorCode PCGetAmgXResources(PC pc, void* rsrc_out)
     if (!amgx->rsrc_init)
     {
         // Read configuration file and set exception handling
-        AMGX_SAFE_CALL(AMGX_config_create_from_file(&amgx->cfg, amgx->filename));
+        AMGX_SAFE_CALL(AMGX_config_create(&amgx->cfg, amgx->cfg_contents.c_str()));
 
         /* switch on internal error handling (no need to use AMGX_SAFE_CALL after this point) */
         AMGX_SAFE_CALL(AMGX_config_add_parameters(&amgx->cfg, "exception_handling=1"));
