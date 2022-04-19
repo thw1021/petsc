@@ -99,7 +99,7 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
     if (!pc->setupcalled)
     {
         // Initialise resources and matrices
-        if(!amgx->rsrc_init)
+        if (!amgx->rsrc_init)
         {
             // Read configuration file and set exception handling
             AMGX_SAFE_CALL(AMGX_config_create_from_file(&amgx->cfg, amgx->filename));
@@ -258,7 +258,7 @@ static PetscErrorCode PCApply_AMGX(PC pc, Vec b, Vec x)
     PetscBool is_dev_ptrs;
     PetscCall(PetscObjectTypeCompare((PetscObject)x, VECSEQCUDA, &is_dev_ptrs));
 
-    if(is_dev_ptrs)
+    if (is_dev_ptrs)
     {
         PetscCall(VecCUDAGetArray(x, &x_));
         PetscCall(VecCUDAGetArray(b, &b_));
@@ -289,7 +289,7 @@ static PetscErrorCode PCApply_AMGX(PC pc, Vec b, Vec x)
 
     AMGX_vector_download(amgx->sol, x_);
 
-    if(is_dev_ptrs)
+    if (is_dev_ptrs)
     {
         PetscCall(VecCUDARestoreArray(x, &x_));
         PetscCall(VecCUDARestoreArray(b, &b_));
@@ -308,7 +308,7 @@ static PetscErrorCode PCReset_AMGX(PC pc)
 {
     PC_AMGX *amgx = (PC_AMGX *)pc->data;
 
-    if(pc->setupcalled)
+    if (pc->setupcalled)
     {
         PetscBool done;
         PetscCall(MatSeqAIJRestoreArray(amgx->localA, &amgx->values));
@@ -528,7 +528,7 @@ PETSC_EXTERN PetscErrorCode PCGetAmgXResources(PC pc, void* rsrc_out)
 {
     PC_AMGX *amgx = (PC_AMGX *)pc->data;
 
-    if(!amgx->rsrc_init)
+    if (!amgx->rsrc_init)
     {
         // Read configuration file and set exception handling
         AMGX_SAFE_CALL(AMGX_config_create_from_file(&amgx->cfg, amgx->filename));
