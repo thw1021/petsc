@@ -244,6 +244,8 @@ static PetscErrorCode PCApply_AMGX(PC pc, Vec b, Vec x)
   AMGX_SOLVE_STATUS status;
   AMGX_solver_get_status(amgx->solver, &status);
 
+  // needs some thought
+  if (status == AMGX_SOLVE_FAILED) PetscCall(PCSetErrorIfFailure(pc, PETSC_TRUE));
   PetscCheck(status != AMGX_SOLVE_FAILED, amgx->comm, PETSC_ERR_CONV_FAILED, "AmgX solver failed to solve the system! The error code is %d.", status);
 
   AMGX_vector_download(amgx->sol, x_);
@@ -460,7 +462,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_AMGX(PC pc)
   PetscFunctionReturn(0);
 }
 
-PETSC_EXTERN PetscErrorCode PCGetAmgXResources(PC pc, void* rsrc_out)
+PETSC_EXTERN PetscErrorCode PCAmgXGetResources(PC pc, void* rsrc_out)
 {
   PC_AMGX *amgx = (PC_AMGX *)pc->data;
 
