@@ -1,6 +1,6 @@
 /*  --------------------------------------------------------------------
 
-     This file implements a MAGx preconditioner in PETSc as part of PC.
+     This file implements a AMGx preconditioner in PETSc as part of PC.
 
     -------------------------------------------------------------------- */
 
@@ -17,7 +17,7 @@
 /*
    Private context (data structure) for the AMGX preconditioner.
 */
-typedef struct {
+struct {
     AMGX_solver_handle solver;
     AMGX_config_handle cfg;
     AMGX_resources_handle rsrc;
@@ -124,12 +124,7 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
 
         // XXX This is probably true internally for global rows too, so perhaps
         // a check for that should be implemented
-        if (amgx->nLocalRows >= std::numeric_limits<int>::max())
-        {
-            SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB,
-                "AmgX restricted to int local rows but "
-                "nLocalRows = %D > max<int>", amgx->nLocalRows);
-        }
+        PetscCheck(amgx->nLocalRows < std::numeric_limits<int>::max(),PETSC_COMM_SELF,PETSC_ERR_PLIB,"AmgX restricted to int local rows but nLocalRows = %" PetscInt_FMT " > max<int>", amgx->nLocalRows);
 
         // BUG If PetscInt is 64-bit and int is 32-bit this will lead to a
         // bug, as passed through to AmgX as PetscInt, but expects int
@@ -152,10 +147,7 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
         const PetscInt *rowOffsets;
         PetscCall(MatGetRowIJ(amgx->localA, 0, PETSC_FALSE, PETSC_FALSE, &rawN, &rowOffsets, &colIndices, &done));
 
-        if (!done)
-        {
-            SETERRQ(amgx->comm, PETSC_ERR_PLIB, "MatGetRowIJ was not successful");
-        }
+        PetscCheck(done, amgx->comm, PETSC_ERR_PLIB, "MatGetRowIJ was not successful");
 
         if (rawN != amgx->nLocalRows)
         {
@@ -180,7 +172,7 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
 
         // Fetch the number of local rows per rank
         partitionOffsets[0] = 0; /* could use PetscLayoutGetRanges */
-        PetscCall(MPI_Allgather(&amgx->nLocalRows, sizeof(PetscInt), MPI_BYTE, &partitionOffsets[1], sizeof(PetscInt), MPI_BYTE, amgx->comm));
+        PetscCallMPI(MPIU_Allgather(&amgx->nLocalRows, sizeof(amgx->nLocalRows), MPI_BYTE, partitionOffsets+1, sizeof(*partitionOffsets), MPI_BYTE, amgx->comm));
 
         // Prefix sum to get offsets
         for (int i = 1; i <= amgx->nranks; i++)
@@ -216,7 +208,7 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
         // Must happen AFTER AMGX_matrix_upload_distributed
         PetscCall(PetscFree(partitionOffsets));
 
-        PetscCall(MPI_Barrier(amgx->comm));
+        PetscCallMPI(MPI_Barrier(amgx->comm));
 
         AMGX_solver_setup(amgx->solver, amgx->A);
         AMGX_vector_bind(amgx->sol, amgx->A);
@@ -272,7 +264,7 @@ static PetscErrorCode PCApply_AMGX(PC pc, Vec b, Vec x)
     AMGX_vector_upload(amgx->sol, amgx->nLocalRows, 1, x_);
     AMGX_vector_upload(amgx->rhs, amgx->nLocalRows, 1, b_);
 
-    PetscCall(MPI_Barrier(amgx->comm));
+    PetscCallMPI(MPI_Barrier(amgx->comm));
 
     AMGX_solver_solve_with_0_initial_guess(amgx->solver, amgx->rhs, amgx->sol);
 
@@ -310,7 +302,6 @@ static PetscErrorCode PCReset_AMGX(PC pc)
 
     if (pc->setupcalled)
     {
-        PetscBool done;
         PetscCall(MatSeqAIJRestoreArray(amgx->localA, &amgx->values));
     }
 
@@ -498,11 +489,8 @@ PETSC_EXTERN PetscErrorCode PCCreate_AMGX(PC pc)
         AMGX_SAFE_CALL(AMGX_register_print_callback(&print_callback));
         AMGX_SAFE_CALL(AMGX_install_signal_handler());
     }
-    {
-        MPI_Comm comm_in = PetscObjectComm((PetscObject)pc);
-        /* This communicator is not yet known to this system, so we duplicate it and make an internal communicator */
-        PetscCall(MPI_Comm_dup(comm_in, &amgx->comm));
-    }
+    /* This communicator is not yet known to this system, so we duplicate it and make an internal communicator */
+    PetscCallMPI(MPI_Comm_dup(PetscObjectComm((PetscObject)pc), &amgx->comm));
 
     MPI_Comm_size(amgx->comm, &amgx->nranks);
     MPI_Comm_rank(amgx->comm, &amgx->rank);
@@ -528,6 +516,7 @@ PETSC_EXTERN PetscErrorCode PCGetAmgXResources(PC pc, void* rsrc_out)
 {
     PC_AMGX *amgx = (PC_AMGX *)pc->data;
 
+    PetscFunctionBegin;
     if (!amgx->rsrc_init)
     {
         // Read configuration file and set exception handling
