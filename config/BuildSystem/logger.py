@@ -206,16 +206,14 @@ class Logger(args.ArgumentProcessor):
 
   def logBack(self):
     '''Backup the current line if we are not scrolling output'''
-    if not self.out is None and self.linewidth > 0:
+    if self.out is not None and self.linewidth > 0:
       self.out.write('\r')
     return
 
   def logClear(self):
     '''Clear the current line if we are not scrolling output'''
-    if not self.out is None and self.linewidth > 0:
-      self.out.write('\r')
-      self.out.write(''.join([' '] * self.linewidth))
-      self.out.write('\r')
+    if self.out is not None and self.linewidth > 0:
+      self.out.write((' '*self.linewidth).join(('\r','\r')))
     return
 
   def logPrintDivider(self, single = False, **kwargs):
@@ -273,21 +271,18 @@ class Logger(args.ArgumentProcessor):
   def logWrite(self, msg, debugLevel = -1, debugSection = None, forceScroll = 0, rmDir = 1):
     '''Write the message to the log streams'''
     '''Generally goes to the file but not the screen'''
-    def right_pad_string(string,length):
-      return string.ljust(length)[:length]
-
     if not msg: return
     for writeAll, f in enumerate([self.out, self.log]):
       if self.checkWrite(f, debugLevel, debugSection, writeAll):
         if not forceScroll and not writeAll and self.linewidth > 0:
-          self.logBack()
+          self.logClear()
           if rmDir:
             if isinstance(rmDir,str):
               msg = rmDir
             else:
               msg = self.logStripDirectory(msg)
           for ms in msg.splitlines():
-            f.write(right_pad_string(ms,self.linewidth))
+            f.write(ms[:self.linewidth])
         else:
           if not debugSection is None and not debugSection == 'screen' and len(msg):
             f.write(str(debugSection))
