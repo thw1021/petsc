@@ -13,6 +13,7 @@ class Configure(config.package.CMakePackage):
     self.liblist          = [['libamgx.a']]
     self.precisions       = ['double']
     self.cxx              = 1
+    self.requires32bitint = 1
     return
 
   def setupDependencies(self, framework):
@@ -24,7 +25,8 @@ class Configure(config.package.CMakePackage):
 
   def formCMakeConfigureArgs(self):
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
-    self.framework.pushLanguage('C++')
-    args.append('-DCUDA_NVCC_FLAGS="-ccbin '+self.framework.getCompiler()+'"')
-    self.framework.popLanguage()
+    with self.Language('CUDA'):
+      args.append('-DCMAKE_CUDA_COMPILER="'+self.getCompiler()+'"')
+    with self.Language('C++'):
+      args.append('\'-DCUDA_NVCC_FLAGS=-ccbin '+self.framework.getCompiler()+'\'')
     return args
