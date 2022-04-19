@@ -453,6 +453,6 @@ PETSC_EXTERN PetscErrorCode PCHPDDMSetDeflationMat(PC,IS,Mat);
 PETSC_EXTERN PetscErrorCode PCHPDDMFinalizePackage(void);
 PETSC_EXTERN PetscErrorCode PCHPDDMInitializePackage(void);
 
-PETSC_EXTERN PetscErrorCode PCGetAmgXResources(PC pc, void* rsrc_in);
+PETSC_EXTERN PetscErrorCode PCGetAmgXResources(PC,void*);
 
 #endif /* PETSCPC_H */
