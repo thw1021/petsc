@@ -1297,7 +1297,7 @@ class Configure(config.base.Configure):
     (output, error, status) = config.base.Configure.executeShellCommand(compiler+' -v | head -n 20', log = self.log)
     output = output + error
     if '(gcc version 4.8.5 compatibility)' in output:
-       self.logPrintBox('Warning: Intel compiler being used with gcc 4.8.5 compatibility, failures may occur.\nRecommend having a newer gcc version in your path.')
+       self.logPrintWarning('Intel compiler being used with gcc 4.8.5 compatibility, failures may occur. Recommend having a newer gcc version in your path.')
     if os.path.basename(self.CC).startswith('mpi'):
        self.logPrint('Since MPI c compiler starts with mpi, force searches for other compilers to only look for MPI compilers\n')
        self.argDB['with-mpi-compilers'] = 1
@@ -2585,14 +2585,14 @@ if (dlclose(handle)) {
     ignoreEnv = ['CFLAGS','CXXFLAGS','FCFLAGS','FFLAGS','F90FLAGS','CPP','CPPFLAGS','CXXPP','CXXPPFLAGS','LDFLAGS','LIBS','MPI_DIR','RM','MAKEFLAGS','AR','RANLIB']
     for envVal in ignoreEnvCompilers + ignoreEnv:
       if envVal in os.environ:
-        msg = 'Warning: Found environment variable: %s=%s. ' % (envVal, os.environ[envVal])
+        msg = 'Found environment variable: %s=%s. ' % (envVal, os.environ[envVal])
         if envVal in self.framework.clArgDB or (envVal in ignoreEnvCompilers and 'with-'+envVal.lower() in self.framework.clArgDB):
-          self.logPrintBox(msg+'Ignoring it, since its also set on command line')
+          self.logPrintWarning(msg+'Ignoring it, since its also set on command line')
           del os.environ[envVal]
         elif self.argDB['with-environment-variables']:
-          self.logPrintBox(msg+'Using it! Use "./configure --disable-environment-variables" to NOT use the environmental variables')
+          self.logPrintWarning(msg+'Using it! Use "./configure --disable-environment-variables" to NOT use the environmental variables')
         else:
-          self.logPrintBox (msg+'Ignoring it! Use "./configure %s=$%s" if you really want to use this value' % (envVal,envVal))
+          self.logPrintWarning(msg+'Ignoring it! Use "./configure %s=$%s" if you really want to use this value' % (envVal,envVal))
           del os.environ[envVal]
     return
 

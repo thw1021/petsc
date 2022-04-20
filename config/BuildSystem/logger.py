@@ -227,7 +227,7 @@ class Logger(args.ArgumentProcessor):
       def center_line(line):
         return line.center(self.dividerLength).rstrip()
 
-      wrapped = textwrap.wrap(textwrap.dedent(text),**kwargs)
+      wrapped = textwrap.wrap(textwrap.dedent(text),break_on_hyphens=False, break_long_words=False,**kwargs)
       if len(wrapped) == 1:
         # center-justify single lines, and remove the bogus prefix
         wrapped[0] = center_line(wrapped[0].lstrip())
@@ -245,7 +245,7 @@ class Logger(args.ArgumentProcessor):
     msg = center_wrap(title,msg,width=self.dividerLength-2,initial_indent=prefix,subsequent_indent=prefix)
     self.logClear()
     self.logPrintDivider(debugLevel = debugLevel, debugSection = debugSection, forceNewLine = True)
-    self.logPrint(msg, debugLevel = debugLevel, debugSection = debugSection, rmDir = rmDir, indent = indent, comm = comm, forceNewLine = True)
+    self.logPrint(msg, debugLevel = debugLevel, debugSection = debugSection, rmDir = rmDir, forceNewLine = True, forceScroll = True, indent = 0)
     self.logPrintDivider(debugLevel = debugLevel, debugSection = debugSection, forceNewLine = True)
     self.logPrint('', debugLevel = debugLevel, debugSection = debugSection)
     return
@@ -271,20 +271,22 @@ class Logger(args.ArgumentProcessor):
     if not msg: return
     for writeAll, f in enumerate([self.out, self.log]):
       if self.checkWrite(f, debugLevel, debugSection, writeAll):
+        if rmDir:
+          if isinstance(rmDir,str):
+            clean_msg = rmDir
+          else:
+            clean_msg = self.logStripDirectory(msg)
+        else:
+          clean_msg = msg
         if not forceScroll and not writeAll and self.linewidth > 0:
           self.logClear()
-          if rmDir:
-            if isinstance(rmDir,str):
-              msg = rmDir
-            else:
-              msg = self.logStripDirectory(msg)
-          for ms in msg.splitlines():
+          for ms in clean_msg.splitlines():
             f.write(ms[:self.linewidth])
         else:
           if not debugSection is None and not debugSection == 'screen' and len(msg):
             f.write(str(debugSection))
             f.write(': ')
-          f.write(msg)
+          f.write(msg if writeAll else clean_msg)
         if hasattr(f, 'flush'):
           f.flush()
     return
