@@ -1664,7 +1664,7 @@ PetscErrorCode DMPlexRebalanceSharedPoints(DM dm, PetscInt entityDepth, PetscBoo
   PetscInt    *firstVertices, *renumbering;
   PetscInt    failed, failedGlobal;
   MPI_Comm    comm;
-  Mat         A, Apre;
+  Mat         A;
   const char *prefix = NULL;
   PetscViewer       viewer;
   PetscViewerFormat format;
@@ -1682,7 +1682,6 @@ PetscErrorCode DMPlexRebalanceSharedPoints(DM dm, PetscInt entityDepth, PetscBoo
                                                                                 PetscLogEventRegister("o10",DM_CLASSID,&o10);
                                                                                 PetscLogEventRegister("o11",DM_CLASSID,&o11);
                     
-    parallel = PETSC_FALSE;
   PetscFunctionBegin;
   if (success) *success = PETSC_FALSE;
   PetscCall(PetscObjectGetComm((PetscObject) dm, &comm));
@@ -1781,13 +1780,13 @@ PetscErrorCode DMPlexRebalanceSharedPoints(DM dm, PetscInt entityDepth, PetscBoo
   PetscCall(PetscSFBcastEnd(sf, MPIU_INT, globalNumbersOfLocalOwnedVertices, leafGlobalNumbers,MPI_REPLACE));
   PetscCall(PetscLogEventEnd(o3, dm, 0, 0, 0));
   
-  /* Now start building the data structure for ParMETIS */
+  /* Build the data structure for ParMETIS/Metis */
 
    PetscCall(PetscLogEventBegin(o4, dm, 0, 0, 0));
-  PetscCall(MatCreate(comm, &Apre));
-  PetscCall(MatSetType(Apre, MATPREALLOCATOR));
-  PetscCall(MatSetSizes(Apre, 1+numNonExclusivelyOwned, 1+numNonExclusivelyOwned, cumSumVertices[size], cumSumVertices[size]));
-  PetscCall(MatSetUp(Apre));
+  PetscCall(MatCreate(comm, &A));
+  PetscCall(MatSetType(A, MATMPIADJ));
+  PetscCall(MatSetSizes(A, 1+numNonExclusivelyOwned, 1+numNonExclusivelyOwned, cumSumVertices[size], cumSumVertices[size]));
+  //  PetscCall(MatSetUp(A));
 
   idx = cumSumVertices[rank];
   for (i=0; i<pEnd-pStart; i++) {
@@ -1795,43 +1794,17 @@ PetscErrorCode DMPlexRebalanceSharedPoints(DM dm, PetscInt entityDepth, PetscBoo
       if (isNonExclusivelyOwned[i]) jdx = globalNumbersOfLocalOwnedVertices[i];
       else if (isLeaf[i]) jdx = leafGlobalNumbers[i];
       else continue;
-      PetscCall(MatSetValue(Apre, idx, jdx, 1, INSERT_VALUES));
-      PetscCall(MatSetValue(Apre, jdx, idx, 1, INSERT_VALUES));
-    }
-  }
-
-  PetscCall(MatAssemblyBegin(Apre, MAT_FINAL_ASSEMBLY));
-  PetscCall(MatAssemblyEnd(Apre, MAT_FINAL_ASSEMBLY));
-   PetscCall(PetscLogEventEnd(o4, dm, 0, 0, 0));
-
-    PetscCall(PetscLogEventBegin(o5, dm, 0, 0, 0));
-  PetscCall(MatCreate(comm, &A));
-  PetscCall(MatSetType(A, MATMPIADJ));
-  PetscCall(MatSetSizes(A, 1+numNonExclusivelyOwned, 1+numNonExclusivelyOwned, cumSumVertices[size], cumSumVertices[size]));
-  //  PetscCall(MatSetOption(A,MAT_USE_INODES,PETSC_FALSE));
-  PetscCall(MatPreallocatorPreallocate(Apre, PETSC_TRUE, A));
-  PetscCall(MatSetOption(A,MAT_SYMMETRIC,PETSC_TRUE));
-            PetscCall(MatDestroy(&Apre));
-    PetscCall(PetscLogEventEnd(o5, dm, 0, 0, 0));
-    
-#if defined(foo)
-  for (i=0; i<pEnd-pStart; i++) {
-    if (toBalance[i]) {
-      idx = cumSumVertices[rank];
-      if (isNonExclusivelyOwned[i]) jdx = globalNumbersOfLocalOwnedVertices[i];
-      else if (isLeaf[i]) jdx = leafGlobalNumbers[i];
-      else continue;
       PetscCall(MatSetValue(A, idx, jdx, 1, INSERT_VALUES));
       PetscCall(MatSetValue(A, jdx, idx, 1, INSERT_VALUES));
     }
   }
-
-    PetscCall(PetscLogEventEnd(o5, dm, 0, 0, 0));
-    PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
-  PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
-  #endif
-  PetscCall(PetscFree(leafGlobalNumbers));
   PetscCall(PetscFree(globalNumbersOfLocalOwnedVertices));
+  PetscCall(PetscFree(leafGlobalNumbers));
+
+  PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
+  PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
+   PetscCall(PetscLogEventEnd(o4, dm, 0, 0, 0));
+
 
         PetscCall(PetscLogEventBegin(o11, dm, 0, 0, 0));
     
@@ -1914,6 +1887,7 @@ PetscCall(PetscLogEventEnd(MAT_Partitioning,0,0,0,0));
     PetscInt *partGlobal;
 
     PetscCall(PetscLogEventBegin(o9,0,0,0,0));
+    /* TODO: Since the matrix is only needed on rank 0 don't get it on all ranks as below */
     PetscCall(MatCreateRedundantMatrix(A, size, MPI_COMM_NULL, MAT_INITIAL_MATRIX, &As));
 
     PetscInt *numExclusivelyOwnedAll;
