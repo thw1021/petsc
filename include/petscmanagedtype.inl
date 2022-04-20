@@ -27,7 +27,7 @@ struct _n_PetscManagedType
   PetscInt          n;
   PetscType        *host;
   PetscType        *device;
-  PetscMemType      mtype;
+  PetscDeviceType   dtype;
   PetscOffloadMask  mask;
   PetscCopyMode     d_cmode;
   PetscCopyMode     h_cmode;

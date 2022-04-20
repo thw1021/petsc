@@ -520,9 +520,9 @@ PetscErrorCode VecNormBeginAsync(Vec x, NormType ntype, PetscManagedReal PETSC_U
   }
   sr->invecs[sr->numopsbegin] = (void*)x;
 
-  PetscCall(PetscManageHostReal(dctx,lresult,sizeof(lresult)/sizeof(*lresult),&tmp));
+  PetscCall(PetscManageHostReal(dctx,lresult,2,&tmp));
   PetscCall(PetscLogEventBegin(VEC_ReduceArithmetic,0,0,0,0));
-  PetscCall((*x->ops->norm_local)(x,ntype,result,dctx));
+  PetscCall((*x->ops->norm_local)(x,ntype,tmp,dctx));
   PetscCall(PetscLogEventEnd(VEC_ReduceArithmetic,0,0,0,0));
   // REVIEW ME: can do this better
   PetscCall(PetscDeviceContextSynchronize(dctx));
