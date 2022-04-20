@@ -12,12 +12,58 @@
 #include <petsc/private/pcimpl.h>   /*I "petscpc.h" I*/
 #include <amgx_c.h>
 #include <limits>
+#include <vector>
+#include <map>
 #include "cuda_runtime.h"
+
+enum class AmgXSmoother { PCG, PCGF, PBiCGStab, GMRES, FGMRES, JacobiL1,
+  BlockJacobi, GS, MulticolorGS, MulticolorILU, MulticolorDILU, NoSolver };
+enum class AmgXAMGMethod { Classical, Aggregation };
+enum class AmgXSelector { Size2, Size4, Size8, MultiPairwise, PMIS, HMIS };
+
+struct AmgXControlMap
+{
+  static const std::map<std::string, AmgXSmoother> Smoothers;
+  static const std::map<std::string, AmgXAMGMethod> AMGMethods;
+  static const std::map<std::string, AmgXSelector> Selectors;
+};
+
+const std::map<std::string, AmgXAMGMethod> AmgXControlMap::AMGMethods = 
+{
+  { "CLASSICAL", AmgXAMGMethod::Classical },
+  { "AGGREGATION", AmgXAMGMethod::Aggregation }
+};
+
+const std::map<std::string, AmgXSmoother> AmgXControlMap::Smoothers = 
+{
+  { "PCG", AmgXSmoother::PCG },
+  { "PCGF", AmgXSmoother::PCGF },
+  { "PBICGSTAB", AmgXSmoother::PBiCGStab },
+  { "GMRES", AmgXSmoother::GMRES },
+  { "FGMRES", AmgXSmoother::FGMRES },
+  { "JACOBI_L1", AmgXSmoother::JacobiL1 },
+  { "BLOCK_JACOBI", AmgXSmoother::BlockJacobi },
+  { "GS", AmgXSmoother::GS },
+  { "MULTICOLOR_GS", AmgXSmoother::MulticolorGS },
+  { "MULTICOLOR_ILU", AmgXSmoother::MulticolorILU },
+  { "MULTICOLOR_DILU", AmgXSmoother::MulticolorDILU },
+  { "NOSOLVER", AmgXSmoother::NoSolver }
+};
+
+const std::map<std::string, AmgXSelector> AmgXControlMap::Selectors = 
+{
+  { "SIZE_2", AmgXSelector::Size2 },
+  { "SIZE_4", AmgXSelector::Size4 },
+  { "SIZE_8", AmgXSelector::Size8 },
+  { "MULTI_PAIRWISE", AmgXSelector::MultiPairwise },
+  { "PMIS", AmgXSelector::PMIS },
+  { "HMIS", AmgXSelector::HMIS }
+};
 
 /*
    Private context (data structure) for the AMGX preconditioner.
 */
-struct {
+struct PC_AMGX {
   AMGX_solver_handle solver;
   AMGX_config_handle cfg;
   AMGX_resources_handle rsrc;
@@ -33,14 +79,24 @@ struct {
   int devID = 0;
 
   void *lib_handle = 0;
-  char filename[PETSC_MAX_PATH_LEN];
+  std::string cfg_contents;
 
   // Cached state for re-setup
   PetscInt nnz;
   PetscInt nLocalRows;
+  PetscInt nGlobalRows;
+  PetscInt bSize;
   Mat localA;
   PetscScalar *values;
-} PC_AMGX;
+
+  // Control parameters
+  AmgXSmoother smoother;
+  AmgXAMGMethod amg_method;
+  AmgXSelector selector;
+  PetscInt presweeps;
+  PetscInt postsweeps;
+  PetscInt max_levels;
+};
 
 static PetscInt s_count = 0;
 
@@ -98,7 +154,7 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
     // Initialise resources and matrices
     if (!amgx->rsrc_init) {
       // Read configuration file and set exception handling
-      AMGX_SAFE_CALL(AMGX_config_create_from_file(&amgx->cfg, amgx->filename));
+      AMGX_SAFE_CALL(AMGX_config_create(&amgx->cfg, amgx->cfg_contents.c_str()));
 
       /* switch on internal error handling (no need to use AMGX_SAFE_CALL after this point) */
       AMGX_SAFE_CALL(AMGX_config_add_parameters(&amgx->cfg, "exception_handling=1"));
@@ -113,15 +169,6 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
     AMGX_vector_create(&amgx->rhs, amgx->rsrc, AMGX_mode_dDDI);
     AMGX_solver_create(&amgx->solver, amgx->rsrc, AMGX_mode_dDDI, amgx->cfg);
 
-    PetscCall(MatGetLocalSize(Pmat, &amgx->nLocalRows, NULL));
-
-    PetscInt bs;
-    PetscCall(MatGetBlockSize(Pmat, &bs));
-
-    // XXX This is probably true internally for global rows too, so perhaps
-    // a check for that should be implemented
-    PetscCheck(amgx->nLocalRows < std::numeric_limits<int>::max(),PETSC_COMM_SELF,PETSC_ERR_PLIB,"AmgX restricted to int local rows but nLocalRows = %" PetscInt_FMT " > max<int>", amgx->nLocalRows);
-
     // BUG If PetscInt is 64-bit and int is 32-bit this will lead to a
     // bug, as passed through to AmgX as PetscInt, but expects int
 
@@ -134,29 +181,26 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
     }
 
     // Extract the CSR data
-    PetscInt rawN;
     PetscBool done;
     const PetscInt *colIndices;
     const PetscInt *rowOffsets;
-    PetscCall(MatGetRowIJ(amgx->localA, 0, PETSC_FALSE, PETSC_FALSE, &rawN, &rowOffsets, &colIndices, &done));
-
+    PetscCall(MatGetRowIJ(amgx->localA, 0, PETSC_FALSE, PETSC_FALSE, &amgx->nLocalRows, &rowOffsets, &colIndices, &done));
     PetscCheck(done, amgx->comm, PETSC_ERR_PLIB, "MatGetRowIJ was not successful");
 
-    PetscCheck(rawN == amgx->nLocalRows, amgx->comm, PETSC_ERR_PLIB,"MatGetRowIJ disagrees with MatGetLocalSize rawN != nLocalRows %D %D", rawN, amgx->nLocalRows);
+    PetscCheck(amgx->nLocalRows < std::numeric_limits<int>::max(), PETSC_COMM_SELF,PETSC_ERR_PLIB, "AmgX restricted to int local rows but nLocalRows = %" PetscInt_FMT " > max<int>", amgx->nLocalRows);
 
     PetscCall(MatSeqAIJGetArray(amgx->localA, &amgx->values));
 
     amgx->nnz = rowOffsets[amgx->nLocalRows];
 
-    PetscCheck(amgx->nnz < std::numeric_limits<int>::max(),PETSC_COMM_SELF, PETSC_ERR_PLIB, "Support for 64-bit integer nnz not yet implemented, nnz = %ld", amgx->nnz);
+    PetscCheck(amgx->nnz < std::numeric_limits<int>::max(), PETSC_COMM_SELF, PETSC_ERR_PLIB, "Support for 64-bit integer nnz not yet implemented, nnz = %" PetscInt_FMT ".", amgx->nnz);
 
     // Allocate space for some partition offsets
-    PetscInt *partitionOffsets;
-    PetscCall(PetscMalloc1(amgx->nranks + 1, &partitionOffsets));
+    std::vector<PetscInt> partitionOffsets(amgx->nranks + 1);
 
     // Fetch the number of local rows per rank
     partitionOffsets[0] = 0; /* could use PetscLayoutGetRanges */
-    PetscCallMPI(MPIU_Allgather(&amgx->nLocalRows, sizeof(amgx->nLocalRows), MPI_BYTE, partitionOffsets+1, sizeof(*partitionOffsets), MPI_BYTE, amgx->comm));
+    PetscCallMPI(MPI_Allgather(&amgx->nLocalRows, sizeof(amgx->nLocalRows), MPI_BYTE, partitionOffsets.data()+1, sizeof(amgx->nLocalRows), MPI_BYTE, amgx->comm));
 
     // Prefix sum to get offsets
     for (int i = 1; i <= amgx->nranks; i++) {
@@ -164,10 +208,12 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
     }
 
     // Fetch the number of global rows
-    int nGlobalRows = partitionOffsets[amgx->nranks];
+    amgx->nGlobalRows = partitionOffsets[amgx->nranks];
+
+    PetscCall(MatGetBlockSize(Pmat, &amgx->bSize));
 
     // Determine if PETSc compiled in 64-bit mode
-    int petsc32 = (sizeof(PetscInt) == 4);
+    bool petsc32 = (sizeof(PetscInt) == sizeof(int32_t));
 
     PetscCheck(petsc32, PETSC_COMM_SELF, PETSC_ERR_PLIB, "PETSc compiled with 64-bit integers. AmgX backend does not currently support");
 
@@ -175,22 +221,19 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
     AMGX_distribution_handle dist;
     AMGX_distribution_create(&dist, amgx->cfg);
     AMGX_distribution_set_32bit_colindices(dist, petsc32);
-    AMGX_distribution_set_partition_data(dist, AMGX_DIST_PARTITION_OFFSETS, partitionOffsets);
+    AMGX_distribution_set_partition_data(dist, AMGX_DIST_PARTITION_OFFSETS, partitionOffsets.data());
 
-    AMGX_matrix_upload_distributed(
-            amgx->A, nGlobalRows, (int)amgx->nLocalRows, (int)amgx->nnz, bs, bs,
-            rowOffsets, colIndices, amgx->values, NULL, dist);
-
-    PetscCall(MatRestoreRowIJ(amgx->localA, 0, PETSC_FALSE, PETSC_FALSE, &rawN, &rowOffsets, &colIndices, &done));
-
-    // Must happen AFTER AMGX_matrix_upload_distributed
-    PetscCall(PetscFree(partitionOffsets));
+    AMGX_matrix_upload_distributed(amgx->A, amgx->nGlobalRows, (int)amgx->nLocalRows, (int)amgx->nnz, amgx->bSize, amgx->bSize, rowOffsets, colIndices, amgx->values, NULL, dist);
 
     PetscCallMPI(MPI_Barrier(amgx->comm));
 
     AMGX_solver_setup(amgx->solver, amgx->A);
     AMGX_vector_bind(amgx->sol, amgx->A);
     AMGX_vector_bind(amgx->rhs, amgx->A);
+
+    int nlr = 0;
+    PetscCall(MatRestoreRowIJ(amgx->localA, 0, PETSC_FALSE, PETSC_FALSE, &nlr, &rowOffsets, &colIndices, &done));
+
   } else {
     // The fast path after the initial setup phase
     AMGX_matrix_replace_coefficients(amgx->A, amgx->nLocalRows, amgx->nnz, amgx->values, NULL);
@@ -318,25 +361,101 @@ static PetscErrorCode PCDestroy_AMGX(PC pc)
   PetscFunctionReturn(0);
 }
 
+template <class T>
+std::string map_reverse_lookup(const std::map<std::string, T>& map, const T& key)
+{
+  for(auto const& m : map) {
+    if(m.second == key) {
+      return m.first;
+    }
+  }
+
+  return "";
+}
+
 static PetscErrorCode PCSetFromOptions_AMGX(PetscOptionItems *PetscOptionsObject,PC pc)
 {
+  PetscFunctionBegin;
+
   PC_AMGX *amgx = (PC_AMGX *)pc->data;
 
-  PetscFunctionBegin;
+  // XXX Where should the defaults go?
+  amgx->selector = AmgXSelector::PMIS;
+  amgx->smoother = AmgXSmoother::BlockJacobi;
+  amgx->amg_method = AmgXAMGMethod::Classical;
+  amgx->presweeps = 1;
+  amgx->postsweeps = 1;
+  amgx->max_levels = 100;
+
+  constexpr int MAX_PARAM_LEN = 128;
+
+  PetscOptionsHeadBegin(PetscOptionsObject, "AmgX options");
 
   // XXX The parameterisation can look something like this:
   amgx->cfg_contents = "config_version=2,";
   amgx->cfg_contents += "determinism_flag=1,";
   amgx->cfg_contents += "solver(amg)=AMG,";
-  amgx->cfg_contents += "amg:algorithm=AGGREGATION,";
-  amgx->cfg_contents += "amg:smoother=BLOCK_JACOBI,";
-  amgx->cfg_contents += "amg:presweeps=1,";
-  amgx->cfg_contents += "amg:postsweeps=1,";
-  amgx->cfg_contents += "amg:selector=SIZE_2,";
-  amgx->cfg_contents += "amg:coarse_solver=DENSE_LU_SOLVER,";
-  amgx->cfg_contents += "amg:monitor_residual=1,";
+
+  char option[MAX_PARAM_LEN];
+
+  // Set method
+  std::string def_amg_method = map_reverse_lookup(AmgXControlMap::AMGMethods, amgx->amg_method);
+  PetscCall(PetscStrcpy(option, def_amg_method.c_str()));
+  PetscCall(PetscOptionsString("-pc_amgx_amg_method", "AmgX AMG Method", "", option, option, MAX_PARAM_LEN, NULL));
+  PetscCheck(AmgXControlMap::AMGMethods.count(option) == 1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "AMG Method %s not registered for AmgX.", option);
+  amgx->amg_method = AmgXControlMap::AMGMethods.at(option);
+  amgx->cfg_contents += "amg:algorithm=" + std::string(option) + ",";
+
+  // Set smoother
+  std::string def_smoother = map_reverse_lookup(AmgXControlMap::Smoothers, amgx->smoother);
+  PetscCall(PetscStrcpy(option, def_smoother.c_str()));
+  PetscCall(PetscOptionsString("-pc_amgx_smoother", "AmgX Smoother", "", option, option, MAX_PARAM_LEN, NULL));
+  PetscCheck(AmgXControlMap::Smoothers.count(option) == 1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Smoother %s not registered for AmgX.", option);
+  amgx->smoother = AmgXControlMap::Smoothers.at(option);
+  amgx->cfg_contents += "amg:smoother=" + std::string(option) + ",";
+
+  // Set presweeps
+  PetscCall(PetscOptionsInt("-pc_amgx_presweeps", "AmgX AMG Presweep Count", "", amgx->presweeps, &amgx->presweeps, NULL));
+  amgx->cfg_contents += "amg:presweeps=" + std::to_string(amgx->presweeps) + ",";
+
+  // Set postsweeps
+  PetscCall(PetscOptionsInt("-pc_amgx_postsweeps", "AmgX AMG Postsweep Count", "", amgx->postsweeps, &amgx->postsweeps, NULL));
+  amgx->cfg_contents += "amg:postsweeps=" + std::to_string(amgx->postsweeps) + ",";
+
+  // Set max levels
+  PetscCall(PetscOptionsInt("-pc_amgx_max_levels", "AmgX AMG Max Level Count", "", amgx->max_levels, &amgx->max_levels, NULL));
   amgx->cfg_contents += "amg:max_levels=100,";
+
+  // Set selector
+  std::string def_selector = map_reverse_lookup(AmgXControlMap::Selectors, amgx->selector);
+  PetscCall(PetscStrcpy(option, def_selector.c_str()));
+  PetscCall(PetscOptionsString("-pc_amgx_selector", "AmgX Selector", "", option, option, MAX_PARAM_LEN, NULL));
+  PetscCheck(AmgXControlMap::Selectors.count(option) == 1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Selector %s not registered for AmgX.", option);
+
+  // Double check that the user has selected an appropriate selector for the AMG method
+  if(amgx->amg_method == AmgXAMGMethod::Classical)
+  {
+    PetscCheck(amgx->selector == AmgXSelector::PMIS || amgx->selector == AmgXSelector::HMIS, amgx->comm, PETSC_ERR_PLIB, "Chosen selector is not used for AmgX Classical AMG: selector=%s", option);
+
+    amgx->cfg_contents += "amg:interpolator=D2,";
+  }
+  else if(amgx->amg_method == AmgXAMGMethod::Aggregation)
+  {
+    PetscCheck(amgx->selector == AmgXSelector::Size2 || amgx->selector == AmgXSelector::Size4 || amgx->selector == AmgXSelector::Size8 || amgx->selector == AmgXSelector::MultiPairwise, amgx->comm, PETSC_ERR_PLIB, "Chosen selector is not used for AmgX Aggregation AMG");
+  }
+  amgx->selector = AmgXControlMap::Selectors.at(option);
+  amgx->cfg_contents += "amg:selector=" + std::string(option) + ",";
+
+  // Set coarse solver
+  amgx->cfg_contents += "amg:coarse_solver=DENSE_LU_SOLVER,";
+
+  // Set max iterations
   amgx->cfg_contents += "amg:max_iters=1";
+
+  // Set other parameters
+  amgx->cfg_contents += "amg:monitor_residual=0,";
+
+  PetscOptionsHeadEnd();
 
   PetscFunctionReturn(0);
 }
@@ -403,6 +522,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_AMGX(PC pc)
   s_count += 1;
 
   if (s_count == 1) {
+
     /* can put this in a PCAMGXFinalizePackage method */
     /* load the library (if it was dynamically loaded) */
 #ifdef AMGX_DYNAMIC_LOADING
@@ -441,11 +561,6 @@ PETSC_EXTERN PetscErrorCode PCCreate_AMGX(PC pc)
     cudaSetDevice(amgx->devID);
   }
 
-  /* set a default path/filename, use -pc_amgx_json to set at runtime */
-  PetscCall(PetscSNPrintf(amgx->filename, PETSC_MAX_PATH_LEN - 1, "${PETSC_DIR}/share/petsc/amgx/AMG_CLASSICAL_AGGRESSIVE_L1_RT6.json"));
-
-  PetscCall(PetscStrreplace(PetscObjectComm((PetscObject)pc), amgx->filename, amgx->filename, PETSC_MAX_PATH_LEN));
-
   PetscFunctionReturn(0);
 }
 
@@ -456,7 +571,7 @@ PETSC_EXTERN PetscErrorCode PCAmgXGetResources(PC pc, void* rsrc_out)
   PetscFunctionBegin;
   if (!amgx->rsrc_init) {
     // Read configuration file and set exception handling
-    AMGX_SAFE_CALL(AMGX_config_create_from_file(&amgx->cfg, amgx->filename));
+    AMGX_SAFE_CALL(AMGX_config_create(&amgx->cfg, amgx->cfg_contents.c_str()));
 
     /* switch on internal error handling (no need to use AMGX_SAFE_CALL after this point) */
     AMGX_SAFE_CALL(AMGX_config_add_parameters(&amgx->cfg, "exception_handling=1"));
