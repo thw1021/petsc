@@ -276,10 +276,11 @@ int main(int argc,char **args)
     /* a simple geometric nested dissection implementation, which     */
     /* requires passing the grid dimensions to strumpack.             */
     ierr = MatSTRUMPACKSetReordering(F,MAT_STRUMPACK_GEOMETRIC);CHKERRQ(ierr);
-    ierr = MatSTRUMPACKSetGeometricNx(F,n);CHKERRQ(ierr);
-    ierr = MatSTRUMPACKSetGeometricNy(F,m);CHKERRQ(ierr);
+    ierr = MatSTRUMPACKSetGeometricNxyz(F,n,m,PETSC_DECIDE);CHKERRQ(ierr);
+    /* ierr = MatSTRUMPACKSetGeometricNx(F,n);CHKERRQ(ierr); */
+    /* ierr = MatSTRUMPACKSetGeometricNy(F,m);CHKERRQ(ierr); */
     /* These are optional, since the defaults are 1.                  */
-    ierr = MatSTRUMPACKSetGeometricNz(F,1);CHKERRQ(ierr);
+    /* ierr = MatSTRUMPACKSetGeometricNz(F,1);CHKERRQ(ierr); */
     ierr = MatSTRUMPACKSetGeometricComponents(F,1);CHKERRQ(ierr);
     ierr = MatSTRUMPACKSetGeometricWidth(F,1);CHKERRQ(ierr);
 
