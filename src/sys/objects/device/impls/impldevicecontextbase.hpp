@@ -1,0 +1,171 @@
+#ifndef PETSC_IMPLDEVICECONTEXTBASE_HPP
+#define PETSC_IMPLDEVICECONTEXTBASE_HPP
+
+#include <petsc/private/deviceimpl.h>
+#include <vector>
+
+namespace Petsc
+{
+
+namespace Device
+{
+
+namespace Impl
+{
+
+struct PETSC_TEMPLATE_VISIBILITY_INTERNAL MemoryBlock;
+
+struct MemoryBlock
+{
+  using size_type = std::size_t;
+
+  size_type start;
+  size_type size;
+  bool      open;
+
+  constexpr MemoryBlock(size_type start_, size_type size_, bool open_ = false) noexcept
+    : start(start_), size(size_), open(open_)
+  { }
+};
+
+template <typename MemType, typename AllocType, typename FreeType, std::size_t PoolSize> class PETSC_TEMPLATE_VISIBILITY_INTERNAL SegmentedMemoryPool;
+
+template <typename MemType, typename AllocType, typename FreeType, std::size_t PoolSize>
+class SegmentedMemoryPool
+{
+  using BlocksType = std::vector<MemoryBlock>;
+  using size_type  = BlocksType::value_type::size_type;
+
+  const AllocType  allocate_;
+  const FreeType   destroy_;
+  BlocksType       blocks_;
+  MemType         *mem_pool_;
+
+public:
+  constexpr SegmentedMemoryPool(AllocType&& alloc, FreeType&& destroy) noexcept
+    : allocate_(std::forward<AllocType>(alloc)), destroy_(std::forward<FreeType>(destroy)),
+      blocks_(), mem_pool_(nullptr)
+  { }
+
+  PETSC_NODISCARD PetscErrorCode finalize() noexcept;
+  PETSC_NODISCARD PetscErrorCode initialize() noexcept;
+  PETSC_NODISCARD PetscErrorCode get(PetscInt,MemType**) noexcept;
+  PETSC_NODISCARD PetscErrorCode release(MemType**) noexcept;
+  PETSC_NODISCARD bool           owns_pointer(const MemType*) const noexcept;
+};
+
+template <typename MemType, typename AllocType, typename FreeType, std::size_t PoolSize>
+inline PetscErrorCode SegmentedMemoryPool<MemType,AllocType,FreeType,PoolSize>::finalize() noexcept
+{
+  PetscFunctionBegin;
+  PetscCall(destroy_(mem_pool_));
+  mem_pool_ = nullptr;
+  PetscCallCXX(blocks_.clear());
+  PetscFunctionReturn(0);
+}
+
+template <typename MemType, typename AllocType, typename FreeType, std::size_t PoolSize>
+inline PetscErrorCode SegmentedMemoryPool<MemType,AllocType,FreeType,PoolSize>::initialize() noexcept
+{
+  const auto finalizer = [](void *ptr) {
+    PetscFunctionBegin;
+    PetscCall(static_cast<decltype(this)>(ptr)->finalize());
+    PetscFunctionReturn(0);
+  };
+  PetscContainer contain;
+
+  PetscFunctionBegin;
+  PetscCall(allocate_(&mem_pool_,PoolSize));
+  PetscCall(PetscContainerCreate(PETSC_COMM_SELF,&contain));
+  PetscCall(PetscContainerSetPointer(contain,this));
+  PetscCall(PetscContainerSetUserDestroy(contain,finalizer));
+  PetscCall(PetscObjectRegisterDestroy(reinterpret_cast<PetscObject>(contain)));
+  PetscFunctionReturn(0);
+}
+
+template <typename MemType, typename AllocType, typename FreeType, std::size_t PoolSize>
+inline PetscErrorCode SegmentedMemoryPool<MemType,AllocType,FreeType,PoolSize>::get(PetscInt size, MemType **ptr) noexcept
+{
+  PetscFunctionBegin;
+  PetscAssert(size < PoolSize,PETSC_COMM_SELF,PETSC_ERR_MEM,"Cannot allocate pool larger than %zu elements",PoolSize);
+  // use host_mem as canary
+  if (PetscUnlikely(!mem_pool_)) PetscCall(initialize());
+  {
+    auto result = mem_pool_;
+
+    if (blocks_.empty()) {
+      PetscCallCXX(blocks_.emplace_back(0,size));
+    } else {
+      auto block_alloced = size_type{0};
+      // first, search the blocks
+      for (auto& block : blocks_) {
+        const auto bsize = block.size;
+
+        if (block.open && (bsize <= size)) {
+          // ok found open block of suitable size, claim it.
+          // could maybe have shared blocks in the future
+          result     = mem_pool_+bsize;
+          block.open = false;
+          break;
+        }
+        block_alloced += bsize;
+      }
+      // no open block found, need to make one
+      if (result == mem_pool_) {
+        // check that the pool has enough room
+        PetscCheck(block_alloced+size <= PoolSize,PETSC_COMM_SELF,PETSC_ERR_MEM,"Allocating block of size %" PetscInt_FMT " would exceed maximum pool size %zu",size,PoolSize);
+        PetscCallCXX(blocks_.emplace_back(block_alloced,size));
+      }
+    }
+    *ptr = result;
+  }
+  PetscFunctionReturn(0);
+}
+
+template <typename MemType, typename AllocType, typename FreeType, std::size_t PoolSize>
+inline PetscErrorCode SegmentedMemoryPool<MemType,AllocType,FreeType,PoolSize>::release(MemType **ptr) noexcept
+{
+  const auto offset = *ptr-mem_pool_;
+
+  PetscFunctionBegin;
+  if (!this->owns_pointer(*ptr)) PetscFunctionReturn(0); // don't own it, bail
+
+  for (auto block = blocks_.begin(); block != blocks_.end(); ++block) {
+    if (block->start == offset) {
+      // ok, found ourselves
+      if (std::next(block) == blocks_.end()) {
+        // last element of the vector, just destroy it
+        PetscCallCXX(blocks_.pop_back());
+      } else {
+        // somewhere inside, so mark the block free again
+        block->open = true;
+      }
+      break;
+    }
+    PetscAssert(std::next(block) != blocks_.end(),PETSC_COMM_SELF,PETSC_ERR_PLIB,"Could not find block owning offset %zu in pool",offset);
+  }
+  *ptr = nullptr;
+  PetscFunctionReturn(0);
+}
+
+template <typename MemType, typename AllocType, typename FreeType, std::size_t PoolSize>
+inline bool SegmentedMemoryPool<MemType,AllocType,FreeType,PoolSize>::owns_pointer(const MemType *ptr) const noexcept
+{
+  return ptr >= mem_pool_ && ptr < std::next(mem_pool_,PoolSize);
+}
+
+template <typename MemType, std::size_t PoolSize = 200, typename AllocType, typename FreeType>
+SegmentedMemoryPool<MemType,AllocType,FreeType,PoolSize> make_segmented_memory_pool(AllocType&& alloc, FreeType&& freefn)
+{
+  return SegmentedMemoryPool<MemType,AllocType,FreeType,PoolSize>{
+    std::forward<AllocType>(alloc),std::forward<FreeType>(freefn)
+  };
+}
+
+} // namespace Impl
+
+} // namespace Device
+
+} // namespace Petsc
+
+#endif // PETSC_IMPLDEVICECONTEXTBASE_HPP

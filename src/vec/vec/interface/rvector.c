@@ -260,7 +260,6 @@ PetscErrorCode VecNormAsync(Vec x, NormType type, PetscManagedReal scal, PetscDe
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
   PetscValidType(x,1);
-  //PetscValidRealPointer(val,3);
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   /* Cached data? */
   if (type != NORM_1_AND_2) {
@@ -715,6 +714,7 @@ PetscErrorCode VecSetAsync(Vec x, PetscManagedScalar alpha, PetscDeviceContext d
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
   PetscValidType(x,1);
   PetscCheck(x->stash.insertmode == NOT_SET_VALUES,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Not for unassembled vector");
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
 
   PetscCall(PetscLogEventBegin(VEC_Set,x,0,0,0));
   PetscCall((*x->ops->set)(x,alpha,dctx));
@@ -840,7 +840,7 @@ PetscErrorCode VecAXPY(Vec y, PetscScalar alpha, Vec x)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecAXPBYAsnc(Vec y, PetscManagedScalar alpha, PetscManagedScalar beta, Vec x, PetscDeviceContext dctx)
+PetscErrorCode VecAXPBYAsync(Vec y, PetscManagedScalar alpha, PetscManagedScalar beta, Vec x, PetscDeviceContext dctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(y,VEC_CLASSID,1);
@@ -890,7 +890,7 @@ PetscErrorCode  VecAXPBY(Vec y,PetscScalar alpha,PetscScalar beta,Vec x)
 
     PetscCall(PetscManageHostScalar(NULL,&alpha,1,&atmp));
     PetscCall(PetscManageHostScalar(NULL,&beta,1,&btmp));
-    PetscCall(VecAXPBYAsnc(y,atmp,btmp,x,NULL));
+    PetscCall(VecAXPBYAsync(y,atmp,btmp,x,NULL));
     PetscCall(PetscManagedScalarDestroy(NULL,&atmp));
     PetscCall(PetscManagedScalarDestroy(NULL,&btmp));
   }
