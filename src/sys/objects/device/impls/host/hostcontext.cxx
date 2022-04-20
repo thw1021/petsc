@@ -35,7 +35,6 @@ private:
     PetscFunctionReturn(0);
   }
 
-
   template <typename PetscType>
   PETSC_CXX_COMPAT_DECL(auto managed_pool_()) -> decltype(Petsc::Device::Impl::make_segmented_memory_pool<PetscType>(malloc_wrapper<PetscType>,free_wrapper<PetscType>))&
   {
