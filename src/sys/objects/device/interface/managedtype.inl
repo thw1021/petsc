@@ -47,7 +47,7 @@ struct PetscManagedTypeAllocator : Petsc::AllocatorBase<PetscManagedType>
     (*mscal)->h_cmode = PETSC_OWN_POINTER;
     (*mscal)->d_cmode = PETSC_OWN_POINTER;
     static_assert(integral_value(PETSC_OWN_POINTER)         != 0,"");
-    static_assert(integral_value(PETSC_MEMTYPE_HOST)        == 0,"");
+    static_assert(integral_value(PETSC_DEVICE_HOST)         == 0,"");
     static_assert(integral_value(PETSC_OFFLOAD_UNALLOCATED) == 0,"");
     static_assert(integral_value(PETSC_FALSE)               == 0,"");
     PetscFunctionReturn(0);
@@ -211,17 +211,31 @@ PetscErrorCode PetscManagedTypeGetPointerAndMemType(PetscDeviceContext dctx, Pet
   }
   switch (scal->mask) {
   case PETSC_OFFLOAD_CPU:
+  UNALLOCATED_PREFER_HOST:
     *ptr = scal->host;
     if (mtype) *mtype = PETSC_MEMTYPE_HOST;
     break;
-  case PETSC_OFFLOAD_UNALLOCATED:
-    PetscCall(PetscManagedTypeGetValues(dctx,scal,PETSC_MEMTYPE_DEVICE,mode,ptr,nullptr));
   case PETSC_OFFLOAD_BOTH:
   case PETSC_OFFLOAD_GPU:
-    *ptr = scal->device; // technically set it twice if unallocated
+  UNALLOCATED_PREFER_DEVICE:
+    *ptr = scal->device;
     if (mtype) *mtype = PETSC_MEMTYPE_DEVICE;
     break;
+  case PETSC_OFFLOAD_UNALLOCATED: {
+    const auto prefer_host = dctx->device->type == PETSC_DEVICE_HOST;
+    PetscCall(PetscManagedTypeGetValues(dctx,scal,prefer_host ? PETSC_MEMTYPE_HOST : PETSC_MEMTYPE_DEVICE,mode,ptr,nullptr));
+    if (prefer_host) {
+      goto UNALLOCATED_PREFER_HOST;
+    } else {
+      goto UNALLOCATED_PREFER_DEVICE;
+    }
+    PetscUnreachable();
+  } break;
   }
+  if (!*ptr) {
+    __builtin_dump_struct(scal,&printf);
+  }
+  PetscAssert(*ptr,PETSC_COMM_SELF,PETSC_ERR_PLIB,PetscStringize(PetscManagedType) " returned a null pointer for memtype %s as values",mtype ? (PetscMemTypeHost(*mtype) ? "host" : "device") : "unknown");
   PetscFunctionReturn(0);
 }
 
@@ -266,7 +280,7 @@ PetscErrorCode PetscManagedTypeApplyOperator(PetscDeviceContext dctx, PetscManag
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   PetscValidPointer(scal,2);
   if (PetscMemTypeHost(mtype)) PetscValidTypePointer(rhs,4);
-  if (PetscOffloadHost(scal->mask) && PetscMemTypeHost(mtype)) {
+  if ((PetscOffloadHost(scal->mask) || PetscOffloadUnallocated(scal->mask)) && PetscMemTypeHost(mtype)) {
     const auto  src_access = ret ? PETSC_MEMORY_ACCESS_READ : PETSC_MEMORY_ACCESS_READ_WRITE;
     const auto  rhsv       = *rhs;
     PetscType  *ptr,*retptr;

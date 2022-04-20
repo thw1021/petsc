@@ -1273,8 +1273,15 @@ PetscErrorCode  VecSetRandom(Vec x,PetscRandom rctx)
 
 PetscErrorCode VecZeroEntriesAsync(Vec vec, PetscDeviceContext dctx)
 {
+  const PetscScalar  scalzero = 0.0;
+  PetscManagedScalar zero;
+
   PetscFunctionBegin;
-  PetscCall(VecSetAsync(vec,0,dctx));
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  PetscCall(PetscManagedScalarCreateDefault(dctx,1,&zero));
+  PetscCall(PetscManagedScalarSetValues(dctx,zero,PETSC_MEMTYPE_HOST,&scalzero,1));
+  PetscCall(VecSetAsync(vec,zero,dctx));
+  PetscCall(PetscManagedScalarDestroy(dctx,&zero));
   PetscFunctionReturn(0);
 }
 

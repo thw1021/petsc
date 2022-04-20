@@ -189,57 +189,44 @@ PetscErrorCode VecSwap_Seq(Vec xin, Vec yin, PetscDeviceContext PETSC_UNUSED dct
 PetscErrorCode VecNorm_Seq(Vec xin, NormType type, PetscManagedReal z, PetscDeviceContext dctx)
 {
   const PetscScalar *xx;
-  PetscScalar       *zptr;
-  const PetscInt     n   = xin->map->n;
-  PetscInt           zn;
+  const PetscInt     n = xin->map->n;
+  PetscReal          ztmp[2];
   PetscBLASInt       one = 1, bn = 0;
 
   PetscFunctionBegin;
   PetscCall(PetscBLASIntCast(n,&bn));
-  PetscCall(PetscManagedRealGetValues(dctx,z,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_WRITE,&zptr,&zn));
-  PetscAssert(zn >= 1,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"%s() needs managed type of size >= 1, have %" PetscInt_FMT,PETSC_FUNCTION_NAME,zn);
+  PetscCall(VecGetArrayRead(xin,&xx));
   if (type == NORM_2 || type == NORM_FROBENIUS) {
-    PetscCall(VecGetArrayRead(xin,&xx));
     NORM_1_AND_2_DOING_NORM_2:
 #if defined(PETSC_USE_REAL___FP16)
-    PetscStackCallBLAS("BLASnrm2",*zptr = BLASnrm2_(&bn,xx,&one));
+    PetscStackCallBLAS("BLASnrm2",ztmp[type == NORM_1_AND_2] = BLASnrm2_(&bn,xx,&one));
 #else
-    PetscStackCallBLAS("BLASdot",*zptr  = PetscRealPart(BLASdot_(&bn,xx,&one,xx,&one)));
-    *zptr = PetscSqrtReal(*zptr);
+    PetscStackCallBLAS("BLASdot",ztmp[type == NORM_1_AND_2]  = PetscSqrtReal(PetscRealPart(BLASdot_(&bn,xx,&one,xx,&one))));
 #endif
-    PetscCall(VecRestoreArrayRead(xin,&xx));
     PetscCall(PetscLogFlops(PetscMax(2.0*n-1,0.0)));
   } else if (type == NORM_INFINITY) {
-    PetscReal max = 0.0;
-
-    PetscCall(VecGetArrayRead(xin,&xx));
     for (PetscInt i = 0; i < n; ++i) {
       const PetscReal tmp = PetscAbsScalar(xx[i]);
-      if (tmp > max) max = tmp;
+
+      if (tmp > ztmp[0]) ztmp[0] = tmp;
       /* check special case of tmp == NaN */
-      if (tmp != tmp) {max = tmp; break;}
+      else if (tmp != tmp) {ztmp[0] = tmp; break;}
     }
-    PetscCall(VecRestoreArrayRead(xin,&xx));
-    *zptr = max;
   } else if (type == NORM_1 || type == NORM_1_AND_2) {
-    PetscCall(VecGetArrayRead(xin,&xx));
 #if defined(PETSC_USE_COMPLEX)
     /* BLASasum() returns the nonstandard 1 norm of the 1 norm of the complex entries so we provide a custom loop instead */
-    *zptr = 0.0;
-    for (PetscInt i = 0; i < n; ++i) *zptr += PetscAbsScalar(xx[i]);
+    ztmp[0] = 0.0;
+    for (PetscInt i = 0; i < n; ++i) ztmp[0] += PetscAbsScalar(xx[i]);
 #else
-    PetscStackCallBLAS("BLASasum",*zptr = BLASasum_(&bn,xx,&one));
+    PetscStackCallBLAS("BLASasum",ztmp[0] = BLASasum_(&bn,xx,&one));
 #endif
     PetscCall(PetscLogFlops(PetscMax(n-1.0,0.0)));
     /* slight reshuffle so we can skip getting the array again (but still log the flops) if we
        do norm2 after this */
-    if (type == NORM_1_AND_2) {
-      PetscAssert(zn >= 2,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"NORM_1_AND_2 needs managed type of size >= 2, have %" PetscInt_FMT,zn);
-      ++zptr;
-      goto NORM_1_AND_2_DOING_NORM_2;
-    }
-    PetscCall(VecRestoreArrayRead(xin,&xx));
+    if (type == NORM_1_AND_2) goto NORM_1_AND_2_DOING_NORM_2;
   }
+  PetscCall(VecRestoreArrayRead(xin,&xx));
+  PetscCall(PetscManagedRealSetValues(dctx,z,PETSC_MEMTYPE_HOST,ztmp,1+(type == NORM_1_AND_2)));
   PetscFunctionReturn(0);
 }
 
