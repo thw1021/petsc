@@ -29,6 +29,7 @@ static PetscErrorCode MatDestroy_STRUMPACK(Mat A)
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatFactorGetSolverType_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatSTRUMPACKSetReordering_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatSTRUMPACKSetColPerm_C",NULL);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)A,"MatSTRUMPACKSetGeometricNxyz_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatSTRUMPACKSetGeometricNx_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatSTRUMPACKSetGeometricNy_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatSTRUMPACKSetGeometricNz_C",NULL);CHKERRQ(ierr);
@@ -317,6 +318,10 @@ static PetscErrorCode MatSTRUMPACKSetGeometricNx_STRUMPACK(Mat F,PetscInt nx)
   STRUMPACK_SparseSolver *S = (STRUMPACK_SparseSolver*)F->spptr;
 
   PetscFunctionBegin;
+  if (nx < 1) {
+    if (nx == PETSC_DECIDE || nx == PETSC_DEFAULT) nx = 1;
+    else SETERRQ(PetscObjectComm((PetscObject)F),PETSC_ERR_ARG_OUTOFRANGE,"nx < 1");
+  }
   PetscStackCall("STRUMPACK_set_nx", STRUMPACK_set_nx(*S,nx));
   PetscFunctionReturn(0);
 }
@@ -325,6 +330,10 @@ static PetscErrorCode MatSTRUMPACKSetGeometricNy_STRUMPACK(Mat F,PetscInt ny)
   STRUMPACK_SparseSolver *S = (STRUMPACK_SparseSolver*)F->spptr;
 
   PetscFunctionBegin;
+  if (ny < 1) {
+    if (ny == PETSC_DECIDE || ny == PETSC_DEFAULT) ny = 1;
+    else SETERRQ(PetscObjectComm((PetscObject)F),PETSC_ERR_ARG_OUTOFRANGE,"ny < 1");
+  }
   PetscStackCall("STRUMPACK_set_ny", STRUMPACK_set_ny(*S,ny));
   PetscFunctionReturn(0);
 }
@@ -333,7 +342,21 @@ static PetscErrorCode MatSTRUMPACKSetGeometricNz_STRUMPACK(Mat F,PetscInt nz)
   STRUMPACK_SparseSolver *S = (STRUMPACK_SparseSolver*)F->spptr;
 
   PetscFunctionBegin;
+  if (nz < 1) {
+    if (nz == PETSC_DECIDE || nz == PETSC_DEFAULT) nz = 1;
+    else SETERRQ(PetscObjectComm((PetscObject)F),PETSC_ERR_ARG_OUTOFRANGE,"nz < 1");
+  }
   PetscStackCall("STRUMPACK_set_nz", STRUMPACK_set_nz(*S,nz));
+  PetscFunctionReturn(0);
+}
+static PetscErrorCode MatSTRUMPACKSetGeometricNxyz_STRUMPACK(Mat F,PetscInt nx,PetscInt ny,PetscInt nz)
+{
+  PetscErrorCode          ierr;
+
+  PetscFunctionBegin;
+  ierr = MatSTRUMPACKSetGeometricNz_STRUMPACK(F,nx);CHKERRQ(ierr);
+  ierr = MatSTRUMPACKSetGeometricNz_STRUMPACK(F,ny);CHKERRQ(ierr);
+  ierr = MatSTRUMPACKSetGeometricNz_STRUMPACK(F,nz);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 static PetscErrorCode MatSTRUMPACKSetGeometricComponents_STRUMPACK(Mat F,PetscInt nc)
@@ -353,6 +376,39 @@ static PetscErrorCode MatSTRUMPACKSetGeometricWidth_STRUMPACK(Mat F,PetscInt w)
   PetscFunctionReturn(0);
 }
 
+/*@
+  MatSTRUMPACKSetGeometricNx - Set STRUMPACK mesh x, y and z dimensions, for use with GEOMETRIC ordering.
+   Logically Collective on Mat
+
+   If the mesh is two (or one) dimensional one can use 1, PETSC_DECIDE or PETSC_DEFAULT
+   for the missing z (and y) dimensions.
+
+   Input Parameters:
++  F - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
+-  nx - x dimension of the mesh
+-  ny - y dimension of the mesh
+-  nz - z dimension of the mesh
+
+
+   Level: beginner
+
+   References:
+.      STRUMPACK manual
+
+.seealso: MatGetFactor()
+@*/
+PetscErrorCode MatSTRUMPACKSetGeometricNxyz(Mat F,PetscInt nx,PetscInt ny,PetscInt nz)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(F,MAT_CLASSID,1);
+  PetscValidLogicalCollectiveInt(F,nx,2);
+  PetscValidLogicalCollectiveInt(F,ny,2);
+  PetscValidLogicalCollectiveInt(F,nz,2);
+  ierr = PetscTryMethod(F,"MatSTRUMPACKSetGeometricNxyz_C",(Mat,PetscInt,PetscInt,PetscInt),(F,nx,ny,nz));CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
 /*@
   MatSTRUMPACKSetGeometricNx - Set STRUMPACK mesh x dimension, for use with GEOMETRIC ordering.
 
@@ -855,6 +911,7 @@ static PetscErrorCode MatGetFactor_aij_strumpack(Mat A,MatFactorType ftype,Mat *
   ierr = PetscObjectComposeFunction((PetscObject)B,"MatFactorGetSolverType_C",MatFactorGetSolverType_aij_strumpack);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)B,"MatSTRUMPACKSetReordering_C",MatSTRUMPACKSetReordering_STRUMPACK);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)B,"MatSTRUMPACKSetColPerm_C",MatSTRUMPACKSetColPerm_STRUMPACK);CHKERRQ(ierr);
+  ierr = PetscObjectComposeFunction((PetscObject)B,"MatSTRUMPACKSetGeometricNxyz_C",MatSTRUMPACKSetGeometricNxyz_STRUMPACK);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)B,"MatSTRUMPACKSetGeometricNx_C",MatSTRUMPACKSetGeometricNx_STRUMPACK);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)B,"MatSTRUMPACKSetGeometricNy_C",MatSTRUMPACKSetGeometricNy_STRUMPACK);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)B,"MatSTRUMPACKSetGeometricNz_C",MatSTRUMPACKSetGeometricNz_STRUMPACK);CHKERRQ(ierr);
