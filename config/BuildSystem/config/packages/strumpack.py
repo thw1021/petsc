@@ -65,11 +65,6 @@ class Configure(config.package.CMakePackage):
     args.append('-DTPL_METIS_LIBRARIES="'+self.libraries.toString(self.metis.lib)+'"')
     args.append('-DTPL_METIS_INCLUDE_DIRS="'+self.headers.toStringNoDupes(self.metis.include)[2:]+'"')
 
-    if self.sharedLibraries:
-      args.append('-DBUILD_SHARED_LIBS=ON')
-    else:
-      args.append('-DBUILD_SHARED_LIBS=OFF')
-
     if self.parmetis.found:
       args.append('-DTPL_ENABLE_PARMETIS=ON')
       args.append('-DTPL_PARMETIS_LIBRARIES="'+self.libraries.toString(self.parmetis.lib)+'"')
