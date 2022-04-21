@@ -4,7 +4,7 @@ import os
 class Configure(config.package.CMakePackage):
   def __init__(self, framework):
     config.package.CMakePackage.__init__(self, framework)
-    self.version          = '3.1.1'
+    self.version          = '6.3.1'
     self.versionname      = 'STRUMPACK_VERSION_MAJOR.STRUMPACK_VERSION_MINOR.STRUMPACK_VERSION_PATCH'
     self.versioninclude   = 'StrumpackConfig.hpp'
     self.gitcommit        = 'v'+self.version
@@ -15,6 +15,25 @@ class Configure(config.package.CMakePackage):
     self.buildLanguages   = ['Cxx','FC']
     self.hastests         = 1
     self.minCmakeVersion  = (3,2,0)
+    return
+
+  def __str__(self):
+    output  = config.package.CMakePackage.__str__(self)
+    if hasattr(self,'system'): output += '  Backend: '+self.system+'\n'
+    return output
+
+  def setupHelp(self, help):
+    config.package.Package.setupHelp(self,help)
+    import nargs
+    help.addArgument('STRUMPACK', '-with-strumpack-tpl-slate=<root dir>', nargs.ArgDir(None, None, 'Specify the root directory of the SLATE (and BLAS++, LAPACK++) installation'))
+    help.addArgument('STRUMPACK', '-with-strumpack-tpl-slate-lib=<libraries: e.g. [/Users/..../libslate.a,...]>', nargs.ArgLibrary(None, None, 'Indicate the library(s) containing SLATE, BLAS++, LAPACK++'))
+    # help.addArgument('STRUMPACK', '-with-strumpack-tpl-slate-include=<dir>', nargs.ArgDir(None, None, 'Path to SLATE, BLAS++, LAPACK++ headers'))
+    help.addArgument('STRUMPACK', '-with-strumpack-tpl-zfp=<root dir>', nargs.ArgDir(None, None, 'Specify the root directory of the ZFP installation'))
+    help.addArgument('STRUMPACK', '-with-strumpack-tpl-zfp-lib=<libraries: e.g. [/Users/..../libzfp.a,...]>', nargs.ArgLibrary(None, None, 'Indicate the library(s) containing ZFP'))
+    # help.addArgument('STRUMPACK', '-with-strumpack-tpl-zfp-include=<dir>', nargs.ArgDir(None, None, 'Path to ZFP headers'))
+    help.addArgument('STRUMPACK', '-with-strumpack-tpl-butterflypack=<root dir>', nargs.ArgDir(None, None, 'Specify the root directory of the ButterflyPACK installation'))
+    help.addArgument('STRUMPACK', '-with-strumpack-tpl-butterflypack-lib=<libraries: e.g. [/Users/..../libdbutterflypack.so,...]>', nargs.ArgLibrary(None, None, 'Indicate the library(s) containing ButterflyPACK'))
+    # help.addArgument('STRUMPACK', '-with-strumpack-tpl-butterflypack-include=<dir>', nargs.ArgDir(None, None, 'Path to ButterflyPACK headers'))
     return
 
   def setupDependencies(self, framework):
@@ -28,8 +47,10 @@ class Configure(config.package.CMakePackage):
     self.ptscotch       = framework.require('config.packages.PTScotch',self)
     self.mpi            = framework.require('config.packages.MPI',self)
     self.openmp         = framework.require('config.packages.openmp',self)
+    self.cuda           = framework.require('config.packages.cuda',self)
+    self.hip            = framework.require('config.packages.hip',self)
     self.deps           = [self.mpi,self.blasLapack,self.scalapack,self.metis]
-    self.odeps          = [self.parmetis,self.ptscotch,self.openmp]
+    self.odeps          = [self.parmetis,self.ptscotch,self.openmp,self.cuda,self.hip]
     return
 
   def formCMakeConfigureArgs(self):
@@ -53,13 +74,52 @@ class Configure(config.package.CMakePackage):
       args.append('-DTPL_ENABLE_SCOTCH=ON')
       args.append('-DTPL_SCOTCH_LIBRARIES="'+self.libraries.toString(self.ptscotch.lib)+'"')
       args.append('-DTPL_SCOTCH_INCLUDE_DIRS="'+self.headers.toStringNoDupes(self.ptscotch.include)[2:]+'"')
+      args.append('-DTPL_ENABLE_PTSCOTCH=ON')
+      args.append('-DTPL_PTSCOTCH_LIBRARIES="'+self.libraries.toString(self.ptscotch.lib)+'"')
+      args.append('-DTPL_PTSCOTCH_INCLUDE_DIRS="'+self.headers.toStringNoDupes(self.ptscotch.include)[2:]+'"')
     else:
       args.append('-DTPL_ENABLE_SCOTCH=OFF')
+      args.append('-DTPL_ENABLE_PTSCOTCH=OFF')
 
     if self.openmp.found:
       args.append('-DSTRUMPACK_USE_OPENMP=ON')
     else:
       args.append('-DSTRUMPACK_USE_OPENMP=OFF')
+
+    if self.cuda.found:
+      args.append('-DSTRUMPACK_USE_CUDA=ON')
+      self.system = 'CUDA'
+
+      with self.Language('CUDA'):
+        args.append('-DCMAKE_CUDA_COMPILER='+self.getCompiler())
+
+      if hasattr(self.cuda, 'cudaArch'):
+        generation = 'sm_'+self.cuda.cudaArch
+      else:
+        raise RuntimeError('You must set --with-cuda-arch=60, 70, 75, 80 etc.')
+      args.append('-DCUDA_ARCH='+generation)
+
+    elif self.hip.found:
+      args.append('-DSTRUMPACK_USE_CUDA=OFF')
+      args.append('-DSTRUMPACK_USE_HIP=ON')
+      self.system = 'HIP'
+
+    # TODO other dependencies: CombBLAS?
+
+    if 'with-strumpack-tpl-zfp' in self.argDB:
+      args.append('-DTPL_ZFP_PREFIX='+self.argDB['with-strumpack-tpl-zfp'])
+    if 'with-strumpack-tpl-zfp-lib' in self.argDB:
+      self.liblist.append(self.argDB['with-strumpack-tpl-zfp-lib'])
+
+    if 'with-strumpack-tpl-butterflypack' in self.argDB:
+      args.append('-DTPL_BUTTERFLYPACK_PREFIX='+self.argDB['with-strumpack-tpl-butterflypack'])
+    if 'with-strumpack-tpl-butterflypack-lib' in self.argDB:
+      self.liblist.append(self.argDB['with-strumpack-tpl-butterflypack-lib'])
+
+    if 'with-strumpack-tpl-slate' in self.argDB:
+      args.append('-Dslate_ROOT='+self.argDB['with-strumpack-tpl-slate'])
+    if 'with-strumpack-tpl-slate-lib' in self.argDB:
+      self.liblist.append(self.argDB['with-strumpack-tpl-slate-lib'])
 
     return args
 
