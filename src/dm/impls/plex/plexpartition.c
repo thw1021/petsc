@@ -1622,7 +1622,7 @@ static PetscErrorCode DMPlexViewDistribution(MPI_Comm comm, PetscInt n, PetscInt
 
 
 PETSC_EXTERN PetscLogEvent MAT_Partitioning;
-PetscLogEvent o1,o2,o3,o4,o5,o6,o7,o8,o9,o10,o11;
+PetscLogEvent o1,o2,o3,RebalBuildGraph,o5,o6,o7,o8,o9,RebalPartition,o11;
 
 
 /*@
@@ -1673,13 +1673,13 @@ PetscErrorCode DMPlexRebalanceSharedPoints(DM dm, PetscInt entityDepth, PetscBoo
   PetscLogEventRegister("o1",DM_CLASSID,&o1);
     PetscLogEventRegister("o2",DM_CLASSID,&o2);
       PetscLogEventRegister("o3",DM_CLASSID,&o3);
-        PetscLogEventRegister("o4",DM_CLASSID,&o4);
+        PetscLogEventRegister("RebalBuildGraph",DM_CLASSID,&RebalBuildGraph);
           PetscLogEventRegister("o5",DM_CLASSID,&o5);
                     PetscLogEventRegister("o6",DM_CLASSID,&o6);
                                         PetscLogEventRegister("o7",DM_CLASSID,&o7);
                     PetscLogEventRegister("o8",DM_CLASSID,&o8);
                                         PetscLogEventRegister("o9",DM_CLASSID,&o9);
-                                                                                PetscLogEventRegister("o10",DM_CLASSID,&o10);
+                                                                                PetscLogEventRegister("RebalPartition",DM_CLASSID,&RebalPartition);
                                                                                 PetscLogEventRegister("o11",DM_CLASSID,&o11);
                     
   PetscFunctionBegin;
@@ -1782,7 +1782,7 @@ PetscErrorCode DMPlexRebalanceSharedPoints(DM dm, PetscInt entityDepth, PetscBoo
   
   /* Build the data structure for ParMETIS/Metis */
 
-   PetscCall(PetscLogEventBegin(o4, dm, 0, 0, 0));
+   PetscCall(PetscLogEventBegin(RebalBuildGraph, dm, 0, 0, 0));
   PetscCall(MatCreate(comm, &A));
   PetscCall(MatSetType(A, MATMPIADJ));
   PetscCall(MatSetSizes(A, 1+numNonExclusivelyOwned, 1+numNonExclusivelyOwned, cumSumVertices[size], cumSumVertices[size]));
@@ -1803,7 +1803,7 @@ PetscErrorCode DMPlexRebalanceSharedPoints(DM dm, PetscInt entityDepth, PetscBoo
 
   PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
-   PetscCall(PetscLogEventEnd(o4, dm, 0, 0, 0));
+   PetscCall(PetscLogEventEnd(RebalBuildGraph, dm, 0, 0, 0));
 
 
         PetscCall(PetscLogEventBegin(o11, dm, 0, 0, 0));
@@ -1888,16 +1888,15 @@ PetscCall(PetscLogEventEnd(MAT_Partitioning,0,0,0,0));
     PetscInt *partGlobal;
     PetscInt *numExclusivelyOwnedAll;
 
-    PetscCall(PetscLogEventBegin(o9,0,0,0,0));
-    /* TODO: Since the matrix is only needed on rank 0 don't get it on all ranks  */
-    PetscCall(MatCreateRedundantMatrix(A, size, MPI_COMM_NULL, MAT_INITIAL_MATRIX, &As));
+    PetscCall(MatGetSize(A, &numRows, NULL));
+    PetscCall(MatMPIAdjToSeqRankZero(A, &As));
 
     PetscCall(PetscMalloc1(size, &numExclusivelyOwnedAll));
     numExclusivelyOwnedAll[rank] = numExclusivelyOwned;
     PetscCallMPI(MPI_Allgather(MPI_IN_PLACE,0,MPI_DATATYPE_NULL,numExclusivelyOwnedAll,1,MPIU_INT,comm));
 
-    PetscCall(MatGetSize(As, &numRows, NULL));
-    PetscCall(PetscMalloc1(numRows, &partGlobal));
+      PetscCall(PetscLogEventBegin(RebalPartition,0,0,0,0));
+      PetscCall(PetscMalloc1(numRows, &partGlobal));
     if (rank == 0) {
       const PetscInt *adjncy_g, *xadj_g;
       PetscInt       *vtxwgt_g;
@@ -1914,7 +1913,6 @@ PetscCall(PetscLogEventEnd(MAT_Partitioning,0,0,0,0));
           if (ncon>1) vtxwgt_g[2*j+1] = 0;
         }
       }
-      PetscCall(PetscLogEventEnd(o9,0,0,0,0));
 
       /* TODO: Use MatPartitioner to provide the partitioning instead of hardwiring Metis */
       PetscCall(PetscMalloc1(64, &options));
@@ -1922,18 +1920,18 @@ PetscCall(PetscLogEventEnd(MAT_Partitioning,0,0,0,0));
       PetscCheck(ierr == METIS_OK,PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in METIS_SetDefaultOptions()");
       options[METIS_OPTION_CONTIG] = 1;
       PetscStackPush("METIS_PartGraphKway");
-      PetscCall(PetscLogEventBegin(MAT_Partitioning,0,0,0,0));
+
       ierr = METIS_PartGraphKway(&numRows, &ncon, (idx_t *)xadj_g, (idx_t *)adjncy_g, vtxwgt_g, NULL, NULL, &nparts, tpwgts, ubvec, options, &edgecut, partGlobal);
-      PetscCall(PetscLogEventEnd(MAT_Partitioning,0,0,0,0));
       PetscStackPop;
       PetscCheck(ierr == METIS_OK,PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in METIS_PartGraphKway()");
       PetscCall(PetscFree(options));
       PetscCall(PetscFree(vtxwgt_g));
       PetscCall(MatRestoreRowIJ(As,PETSC_FALSE,PETSC_FALSE,PETSC_FALSE,&numRows,&xadj_g,&adjncy_g,&done));
+      PetscCall(MatDestroy(&As));
     }
     PetscCall(PetscFree(numExclusivelyOwnedAll));
 
-    PetscCall(PetscLogEventBegin(o10, dm, 0, 0, 0));
+
     /* Now scatter the parts array. */
     {
       PetscMPIInt *counts, *mpiCumSumVertices;
@@ -1948,11 +1946,10 @@ PetscCall(PetscLogEventEnd(MAT_Partitioning,0,0,0,0));
       PetscCallMPI(MPI_Scatterv(partGlobal, counts, mpiCumSumVertices, MPIU_INT, part, counts[rank], MPIU_INT, 0, comm));
       PetscCall(PetscFree(counts));
       PetscCall(PetscFree(mpiCumSumVertices));
-    PetscCall(PetscLogEventEnd(o10, dm, 0, 0, 0));
     }
+      PetscCall(PetscLogEventEnd(RebalPartition,0,0,0,0));
 
     PetscCall(PetscFree(partGlobal));
-    PetscCall(MatDestroy(&As));
   }
 
   PetscCall(MatDestroy(&A));

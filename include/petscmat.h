@@ -1202,6 +1202,7 @@ PETSC_EXTERN PetscErrorCode MatMPIAIJSetPreallocationCSR(Mat,const PetscInt[],co
 PETSC_EXTERN PetscErrorCode MatMPIBAIJSetPreallocationCSR(Mat,PetscInt,const PetscInt[],const PetscInt[],const PetscScalar[]);
 PETSC_EXTERN PetscErrorCode MatMPIAdjSetPreallocation(Mat,PetscInt[],PetscInt[],PetscInt[]);
 PETSC_EXTERN PetscErrorCode MatMPIAdjToSeq(Mat,Mat*);
+PETSC_EXTERN PetscErrorCode MatMPIAdjToSeqRankZero(Mat,Mat*);
 PETSC_EXTERN PetscErrorCode MatMPIDenseSetPreallocation(Mat,PetscScalar[]);
 PETSC_EXTERN PetscErrorCode MatSeqDenseSetPreallocation(Mat,PetscScalar[]);
 PETSC_EXTERN PetscErrorCode MatMPIAIJGetSeqAIJ(Mat,Mat*,Mat*,const PetscInt*[]);
