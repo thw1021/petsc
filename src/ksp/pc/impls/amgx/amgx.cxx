@@ -66,13 +66,13 @@ const std::map<std::string, AmgXSelector> AmgXControlMap::Selectors =
   { "HMIS", AmgXSelector::HMIS }
 };
 
-const std::map<std::string, AmgXCoarseSolver> AmgXControlMap::CoarseSolvers = 
+const std::map<std::string, AmgXCoarseSolver> AmgXControlMap::CoarseSolvers =
 {
   { "DENSE_LU_SOLVER", AmgXCoarseSolver::DenseLU },
   { "NOSOLVER", AmgXCoarseSolver::NoSolver }
 };
 
-const std::map<std::string, AmgXAMGCycle> AmgXControlMap::AMGCycles = 
+const std::map<std::string, AmgXAMGCycle> AmgXControlMap::AMGCycles =
 {
   { "V", AmgXAMGCycle::V },
   { "W", AmgXAMGCycle::W },
@@ -501,7 +501,7 @@ static PetscErrorCode PCSetFromOptions_AMGX(PetscOptionItems *PetscOptionsObject
   // Set aggressive_levels
   PetscCall(PetscOptionsInt("-pc_amgx_aggressive_levels", "AmgX AMG Presweep Count", "", amgx->aggressive_levels, &amgx->aggressive_levels, NULL));
 
-  if(amgx->aggressive_levels > 0) {
+  if (amgx->aggressive_levels > 0) {
     amgx->cfg_contents += "amg:aggressive_levels=" + std::to_string(amgx->aggressive_levels) + ",";
   }
 
