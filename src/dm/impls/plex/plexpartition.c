@@ -1643,64 +1643,56 @@ PetscLogEvent o1,o2,o3,RebalBuildGraph,o5,o6,o7,RebalRewriteSF,RebalGatherGraph,
 PetscErrorCode DMPlexRebalanceSharedPoints(DM dm, PetscInt entityDepth, PetscBool useInitialGuess, PetscBool parallel, PetscBool *success)
 {
 #if defined(PETSC_HAVE_PARMETIS)
-  PetscSF     sf;
-  PetscInt    ierr, i, j, idx, jdx;
-  PetscInt    eBegin, eEnd, nroots, nleafs, pStart, pEnd;
-  const       PetscInt *degrees, *ilocal;
-  const       PetscSFNode *iremote;
-  PetscBool   *toBalance, *isLeaf, *isExclusivelyOwned, *isNonExclusivelyOwned;
-  PetscInt    numExclusivelyOwned, numNonExclusivelyOwned;
-  PetscMPIInt rank, size;
-  PetscInt    *globalNumbersOfLocalOwnedVertices, *leafGlobalNumbers;
-  const       PetscInt *cumSumVertices;
-  PetscInt    offset, counter;
-  PetscInt    lenadjncy;
-  PetscInt    *xadj, *adjncy, *vtxwgt;
-  PetscInt    *adjwgt = NULL;
-  PetscInt    *part, *options;
-  PetscInt    nparts, wgtflag, numflag, ncon, edgecut;
-  real_t      *ubvec;
-  PetscInt    *firstVertices, *renumbering;
-  PetscInt    failed, failedGlobal;
-  MPI_Comm    comm;
-  Mat         A;
-  const char *prefix = NULL;
+  PetscSF           sf;
+  PetscInt          ierr, i, j, idx, jdx;
+  PetscInt          eBegin, eEnd, nroots, nleafs, pStart, pEnd;
+  const PetscInt    *degrees, *ilocal;
+  const PetscSFNode *iremote;
+  PetscBool         *toBalance, *isLeaf, *isExclusivelyOwned, *isNonExclusivelyOwned;
+  PetscInt          numExclusivelyOwned, numNonExclusivelyOwned;
+  PetscMPIInt       rank, size;
+  PetscInt          *globalNumbersOfLocalOwnedVertices, *leafGlobalNumbers;
+  const PetscInt    *cumSumVertices;
+  PetscInt          offset, counter;
+  PetscInt          lenadjncy;
+  PetscInt          *xadj, *adjncy, *vtxwgt;
+  PetscInt          *adjwgt = NULL;
+  PetscInt          *part, *options;
+  PetscInt          nparts, wgtflag, numflag, ncon, edgecut;
+  real_t            *ubvec;
+  PetscInt          *firstVertices, *renumbering;
+  PetscInt          failed, failedGlobal;
+  MPI_Comm          comm;
+  Mat               A;
+  const char        *prefix = NULL;
   PetscViewer       viewer;
   PetscViewerFormat format;
-  PetscLayout layout;
+  PetscLayout       layout;
+  real_t            *tpwgts;
+  PetscMPIInt       *counts, *mpiCumSumVertices;
+  PetscInt          *pointsToRewrite;
+  PetscInt          numRows;
+  PetscBool         done;
 
-  PetscLogEventRegister("o1",DM_CLASSID,&o1);
-    PetscLogEventRegister("o2",DM_CLASSID,&o2);
-      PetscLogEventRegister("o3",DM_CLASSID,&o3);
-        PetscLogEventRegister("RebalBuildGraph",DM_CLASSID,&RebalBuildGraph);
-          PetscLogEventRegister("o5",DM_CLASSID,&o5);
-                    PetscLogEventRegister("o6",DM_CLASSID,&o6);
-                                        PetscLogEventRegister("o7",DM_CLASSID,&o7);
-                    PetscLogEventRegister("RebalRewriteSF",DM_CLASSID,&RebalRewriteSF);
-                                        PetscLogEventRegister("RebalGatherGraph",DM_CLASSID,&RebalGatherGraph);
-                                                                                PetscLogEventRegister("RebalPartition",DM_CLASSID,&RebalPartition);
-                                                                                PetscLogEventRegister("o11",DM_CLASSID,&o11);
-                    
   PetscFunctionBegin;
+  PetscLogEventRegister("RebalBuildGraph",DM_CLASSID,&RebalBuildGraph);
+  PetscLogEventRegister("RebalRewriteSF",DM_CLASSID,&RebalRewriteSF);
+  PetscLogEventRegister("RebalGatherGraph",DM_CLASSID,&RebalGatherGraph);
+  PetscLogEventRegister("RebalPartition",DM_CLASSID,&RebalPartition);
   if (success) *success = PETSC_FALSE;
   PetscCall(PetscObjectGetComm((PetscObject) dm, &comm));
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
   PetscCallMPI(MPI_Comm_size(comm, &size));
   if (size==1) PetscFunctionReturn(0);
 
+  PetscCall(PetscOptionsGetViewer(comm,((PetscObject)dm)->options, prefix,"-dm_rebalance_partition_monitor",&viewer,&format,NULL));
+  if (viewer)PetscCall(PetscViewerPushFormat(viewer,format));
+
   PetscCall(PetscLogEventBegin(DMPLEX_RebalanceSharedPoints, dm, 0, 0, 0));
-
-  PetscCall(PetscOptionsGetViewer(comm,((PetscObject)dm)->options, prefix,"-dm_rebalance_partition_view",&viewer,&format,NULL));
-  if (viewer) {
-    PetscCall(PetscViewerPushFormat(viewer,format));
-  }
-
-  PetscCall(PetscLogEventBegin(o1, dm, 0, 0, 0));
-  /* Figure out all points in the plex that we are interested in balancing. */
+  /* Determine all points in the plex that we are interested in balancing. */
   PetscCall(DMPlexGetDepthStratum(dm, entityDepth, &eBegin, &eEnd));
   PetscCall(DMPlexGetChart(dm, &pStart, &pEnd));
   PetscCall(PetscMalloc1(pEnd-pStart, &toBalance));
-
   for (i=0; i<pEnd-pStart; i++) {
     toBalance[i] = (PetscBool)(i>=eBegin && i<eEnd);
   }
@@ -1721,18 +1713,16 @@ PetscErrorCode DMPlexRebalanceSharedPoints(DM dm, PetscInt entityDepth, PetscBoo
     isLeaf[i] = PETSC_FALSE;
   }
 
-  /* start by marking all the leafs */
+  /* mark all the leafs */
   for (i=0; i<nleafs; i++) {
     isLeaf[ilocal[i]-pStart] = PETSC_TRUE;
   }
-  PetscCall(PetscLogEventEnd(o1, dm, 0, 0, 0));
-  
+
   /* for an owned point, we can figure out whether another processor sees it or
    * not by calculating its degree */
   PetscCall(PetscLogEventBegin(o2, dm, 0, 0, 0));
   PetscCall(PetscSFComputeDegreeBegin(sf, &degrees));
   PetscCall(PetscSFComputeDegreeEnd(sf, &degrees));
-
   numExclusivelyOwned = 0;
   numNonExclusivelyOwned = 0;
   for (i=0; i<pEnd-pStart; i++) {
@@ -1749,17 +1739,13 @@ PetscErrorCode DMPlexRebalanceSharedPoints(DM dm, PetscInt entityDepth, PetscBoo
     }
   }
 
-  /* We are going to build a graph with one vertex per core representing the
+  /* Build a graph with one vertex per core representing the
    * exclusively owned points and then one vertex per nonExclusively owned
    * point. */
-
   PetscCall(PetscLayoutCreate(comm, &layout));
   PetscCall(PetscLayoutSetLocalSize(layout, 1 + numNonExclusivelyOwned));
   PetscCall(PetscLayoutSetUp(layout));
   PetscCall(PetscLayoutGetRanges(layout, &cumSumVertices));
-  PetscCall(PetscLogEventEnd(o2, dm, 0, 0, 0));
-
-    PetscCall(PetscLogEventBegin(o3, dm, 0, 0, 0));
   PetscCall(PetscMalloc1(pEnd-pStart, &globalNumbersOfLocalOwnedVertices));
   for (i=0; i<pEnd-pStart; i++) {globalNumbersOfLocalOwnedVertices[i] = pStart - 1;}
   offset = cumSumVertices[rank];
@@ -1778,15 +1764,12 @@ PetscErrorCode DMPlexRebalanceSharedPoints(DM dm, PetscInt entityDepth, PetscBoo
   PetscCall(PetscSFBcastBegin(sf, MPIU_INT, globalNumbersOfLocalOwnedVertices, leafGlobalNumbers,MPI_REPLACE));
   PetscCall(PetscSFBcastEnd(sf, MPIU_INT, globalNumbersOfLocalOwnedVertices, leafGlobalNumbers,MPI_REPLACE));
   PetscCall(PetscLogEventEnd(o3, dm, 0, 0, 0));
-  
-  /* Build the data structure for ParMETIS/Metis */
 
-   PetscCall(PetscLogEventBegin(RebalBuildGraph, dm, 0, 0, 0));
+  /* Build the graph for partitioning */
+  PetscCall(PetscLogEventBegin(RebalBuildGraph, dm, 0, 0, 0));
   PetscCall(MatCreate(comm, &A));
   PetscCall(MatSetType(A, MATMPIADJ));
   PetscCall(MatSetSizes(A, 1+numNonExclusivelyOwned, 1+numNonExclusivelyOwned, cumSumVertices[size], cumSumVertices[size]));
-  //  PetscCall(MatSetUp(A));
-
   idx = cumSumVertices[rank];
   for (i=0; i<pEnd-pStart; i++) {
     if (toBalance[i]) {
@@ -1799,27 +1782,21 @@ PetscErrorCode DMPlexRebalanceSharedPoints(DM dm, PetscInt entityDepth, PetscBoo
   }
   PetscCall(PetscFree(globalNumbersOfLocalOwnedVertices));
   PetscCall(PetscFree(leafGlobalNumbers));
-
   PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
-   PetscCall(PetscLogEventEnd(RebalBuildGraph, dm, 0, 0, 0));
+  PetscCall(PetscLogEventEnd(RebalBuildGraph, dm, 0, 0, 0));
 
-
-    
-  nparts = size;
+  nparts  = size;
   wgtflag = 2;
   numflag = 0;
-  ncon = 2;
-  real_t *tpwgts;
+  ncon    = 2;
   PetscCall(PetscMalloc1(ncon * nparts, &tpwgts));
   for (i=0; i<ncon*nparts; i++) {
     tpwgts[i] = 1./(nparts);
   }
-
   PetscCall(PetscMalloc1(ncon, &ubvec));
   ubvec[0] = 1.01;
   ubvec[1] = 1.01;
-  
 
   PetscCall(PetscMalloc1(cumSumVertices[rank+1]-cumSumVertices[rank], &part));
   PetscCall(PetscMalloc1(ncon*(1 + numNonExclusivelyOwned), &vtxwgt));
@@ -1829,13 +1806,17 @@ PetscErrorCode DMPlexRebalanceSharedPoints(DM dm, PetscInt entityDepth, PetscBoo
     vtxwgt[ncon*(i+1)] = 1;
     if (ncon>1) vtxwgt[ncon*(i+1)+1] = 0;
   }
-  
+
   if (viewer) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "Attempt rebalancing of shared points of depth %" PetscInt_FMT " on interface of mesh distribution.\n", entityDepth));
     PetscCall(PetscViewerASCIIPrintf(viewer, "Size of generated auxiliary graph: %" PetscInt_FMT "\n", cumSumVertices[size]));
   }
   /* TODO: Drop the parallel/sequential choice here and just use MatPartioner for much more flexibility */
+  if (parallel) parallel = PETSC_FALSE;
   if (parallel) {
+#if defined foo
+    Turned off because broken, did not produce good partitioning compared to sequential version
+
     /* TODO: remove making this extra copy of the adjacency grap to pass to Parmetis */
     lenadjncy = 0;
     for (i=0; i<1+numNonExclusivelyOwned; i++) {
@@ -1866,45 +1847,43 @@ PetscErrorCode DMPlexRebalanceSharedPoints(DM dm, PetscInt entityDepth, PetscBoo
     if (useInitialGuess) {
       if (viewer) PetscCall(PetscViewerASCIIPrintf(viewer, "Using current distribution of points as initial guess.\n"));
       PetscStackPush("ParMETIS_V3_RefineKway");
-PetscCall(PetscLogEventBegin(MAT_Partitioning,0,0,0,0));
+      PetscCall(PetscLogEventBegin(MAT_Partitioning,0,0,0,0));
       ierr = ParMETIS_V3_RefineKway((PetscInt*)cumSumVertices, xadj, adjncy, vtxwgt, adjwgt, &wgtflag, &numflag, &ncon, &nparts, tpwgts, ubvec, options, &edgecut, part, &comm);
-PetscCall(PetscLogEventEnd(MAT_Partitioning,0,0,0,0));
- PetscCheck(ierr == METIS_OK,PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in ParMETIS_V3_RefineKway()");
+      PetscCall(PetscLogEventEnd(MAT_Partitioning,0,0,0,0));
+      PetscCheck(ierr == METIS_OK,PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in ParMETIS_V3_RefineKway()");
       PetscStackPop;
     } else {
       PetscStackPush("ParMETIS_V3_PartKway");
-PetscCall(PetscLogEventBegin(MAT_Partitioning,0,0,0,0));
- ierr = ParMETIS_V3_PartKway((PetscInt*)cumSumVertices, xadj, adjncy, vtxwgt, adjwgt, &wgtflag, &numflag, &ncon, &nparts, tpwgts, ubvec, options, &edgecut, part, &comm);
-PetscCall(PetscLogEventEnd(MAT_Partitioning,0,0,0,0));
- PetscStackPop;
+      PetscCall(PetscLogEventBegin(MAT_Partitioning,0,0,0,0));
+      ierr = ParMETIS_V3_PartKway((PetscInt*)cumSumVertices, xadj, adjncy, vtxwgt, adjwgt, &wgtflag, &numflag, &ncon, &nparts, tpwgts, ubvec, options, &edgecut, part, &comm);
+      PetscCall(PetscLogEventEnd(MAT_Partitioning,0,0,0,0));
+      PetscStackPop;
       PetscCheck(ierr == METIS_OK,PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in ParMETIS_V3_PartKway()");
     }
     PetscCall(PetscFree(options));
-  PetscCall(PetscFree(xadj));
-  PetscCall(PetscFree(adjncy));
+    PetscCall(PetscFree(xadj));
+    PetscCall(PetscFree(adjncy));
+#endif
   } else {
     if (viewer) PetscCall(PetscViewerASCIIPrintf(viewer, "Using METIS to partition graph.\n"));
     Mat      As;
-    PetscInt numRows;
     PetscInt *partGlobal;
     PetscInt *numExclusivelyOwnedAll;
 
     PetscCall(MatGetSize(A, &numRows, NULL));
     PetscCall(PetscLogEventBegin(RebalGatherGraph, dm, 0, 0, 0));
     PetscCall(MatMPIAdjToSeqRankZero(A, &As));
-    PetscCall(MatDestroy(&A));
     PetscCall(PetscLogEventEnd(RebalGatherGraph, dm, 0, 0, 0));
 
     PetscCall(PetscMalloc1(size, &numExclusivelyOwnedAll));
     numExclusivelyOwnedAll[rank] = numExclusivelyOwned;
     PetscCallMPI(MPI_Allgather(MPI_IN_PLACE,0,MPI_DATATYPE_NULL,numExclusivelyOwnedAll,1,MPIU_INT,comm));
 
-    PetscCall(PetscLogEventBegin(RebalPartition,0,0,0,0));
     PetscCall(PetscMalloc1(numRows, &partGlobal));
+    PetscCall(PetscLogEventBegin(RebalPartition,0,0,0,0));
     if (rank == 0) {
       const PetscInt *adjncy_g, *xadj_g;
       PetscInt       *vtxwgt_g;
-      PetscBool      done;
 
       PetscCall(MatGetRowIJ(As,PETSC_FALSE,PETSC_FALSE,PETSC_FALSE,&numRows,&xadj_g,&adjncy_g,&done));
       PetscCall(PetscMalloc1(2*numRows, &vtxwgt_g));
@@ -1934,35 +1913,27 @@ PetscCall(PetscLogEventEnd(MAT_Partitioning,0,0,0,0));
     }
     PetscCall(PetscFree(numExclusivelyOwnedAll));
 
-
-    /* Now scatter the parts array. */
-    {
-      PetscMPIInt *counts, *mpiCumSumVertices;
-      PetscCall(PetscMalloc1(size, &counts));
-      PetscCall(PetscMalloc1(size+1, &mpiCumSumVertices));
-      for (i=0; i<size; i++) {
-        PetscCall(PetscMPIIntCast(cumSumVertices[i+1] - cumSumVertices[i], &(counts[i])));
-      }
-      for (i=0; i<=size; i++) {
-        PetscCall(PetscMPIIntCast(cumSumVertices[i], &(mpiCumSumVertices[i])));
-      }
-      PetscCallMPI(MPI_Scatterv(partGlobal, counts, mpiCumSumVertices, MPIU_INT, part, counts[rank], MPIU_INT, 0, comm));
-      PetscCall(PetscFree(counts));
-      PetscCall(PetscFree(mpiCumSumVertices));
+    /* scatter the partitioning information to ranks */
+    PetscCall(PetscMalloc1(size, &counts));
+    PetscCall(PetscMalloc1(size+1, &mpiCumSumVertices));
+    for (i=0; i<size; i++) {
+      PetscCall(PetscMPIIntCast(cumSumVertices[i+1] - cumSumVertices[i], &(counts[i])));
     }
-      PetscCall(PetscLogEventEnd(RebalPartition,0,0,0,0));
-
+    for (i=0; i<=size; i++) {
+      PetscCall(PetscMPIIntCast(cumSumVertices[i], &(mpiCumSumVertices[i])));
+    }
+    PetscCallMPI(MPI_Scatterv(partGlobal, counts, mpiCumSumVertices, MPIU_INT, part, counts[rank], MPIU_INT, 0, comm));
+    PetscCall(PetscFree(counts));
+    PetscCall(PetscFree(mpiCumSumVertices));
+    PetscCall(PetscLogEventEnd(RebalPartition,0,0,0,0));
     PetscCall(PetscFree(partGlobal));
   }
-
   PetscCall(PetscFree(ubvec));
   PetscCall(PetscFree(tpwgts));
+  PetscCall(PetscLayoutDestroy(&layout));
 
-  /* Now rename the result so that the vertex resembling the exclusively owned points stays on the same rank */
-
-    PetscCall(PetscLogEventBegin(o6, dm, 0, 0, 0));
-  PetscCall(PetscMalloc1(size, &firstVertices));
-  PetscCall(PetscMalloc1(size, &renumbering));
+  /* Rename the result so that the vertex resembling the exclusively owned points stays on the same rank */
+  PetscCall(PetscMalloc2(size, &firstVertices,size, &renumbering));
   firstVertices[rank] = part[0];
   PetscCallMPI(MPI_Allgather(MPI_IN_PLACE,0,MPI_DATATYPE_NULL,firstVertices,1,MPIU_INT,comm));
   for (i=0; i<size; i++) {
@@ -1971,17 +1942,13 @@ PetscCall(PetscLogEventEnd(MAT_Partitioning,0,0,0,0));
   for (i=0; i<cumSumVertices[rank+1]-cumSumVertices[rank]; i++) {
     part[i] = renumbering[part[i]];
   }
+  PetscCall(PetscFree2(firstVertices,renumbering));
+
   /* Check if the renumbering worked (this can fail when ParMETIS gives fewer partitions than there are processes) */
   failed = (PetscInt)(part[0] != rank);
   PetscCallMPI(MPI_Allreduce(&failed, &failedGlobal, 1, MPIU_INT, MPI_SUM, comm));
-
-  PetscCall(PetscFree(firstVertices));
-  PetscCall(PetscFree(renumbering));
-
-  PetscCall(PetscLogEventEnd(o6, dm, 0, 0, 0));
   if (failedGlobal > 0) {
-    PetscCheck(failedGlobal <= 0,PetscObjectComm((PetscObject)dm),PETSC_ERR_LIB,"Metis/Parmetis returned a bad partion");
-    PetscCall(PetscLayoutDestroy(&layout));
+    PetscCheck(failedGlobal <= 0,comm,PETSC_ERR_LIB,"Metis/Parmetis returned a bad partion");
     PetscCall(PetscFree(vtxwgt));
     PetscCall(PetscFree(toBalance));
     PetscCall(PetscFree(isLeaf));
@@ -1992,12 +1959,11 @@ PetscCall(PetscLogEventEnd(MAT_Partitioning,0,0,0,0));
       PetscCall(PetscViewerPopFormat(viewer));
       PetscCall(PetscViewerDestroy(&viewer));
     }
-
     PetscCall(PetscLogEventEnd(DMPLEX_RebalanceSharedPoints, dm, 0, 0, 0));
     PetscFunctionReturn(0);
   }
 
-    /*Let's check how well we did distributing points*/
+  /* Check how well we did distributing points*/
   if (viewer) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "Comparing number of owned entities of depth %" PetscInt_FMT " on each process before rebalancing, after rebalancing, and after consistency checks.\n", entityDepth));
     PetscCall(PetscViewerASCIIPrintf(viewer, "Initial.     "));
@@ -2006,10 +1972,8 @@ PetscCall(PetscLogEventEnd(MAT_Partitioning,0,0,0,0));
     PetscCall(DMPlexViewDistribution(comm, cumSumVertices[rank+1]-cumSumVertices[rank], ncon, vtxwgt, part, viewer));
   }
 
-#if defined(foo)
-  Can one really skip this, the problem is it requires keeping the copy of the parallel graph until this point when it would
-    be better to free that memory earlier
-  /* Now check that every vertex is owned by a process that it is actually connected to. */
+  /* Check that every vertex is owned by a process that it is actually connected to. */
+  PetscCall(MatGetRowIJ(A,PETSC_FALSE,PETSC_FALSE,PETSC_FALSE,&numRows,(const PetscInt**)&xadj,(const PetscInt**)&adjncy,&done));
   for (i=1; i<=numNonExclusivelyOwned; i++) {
     PetscInt loc = 0;
     PetscCall(PetscFindInt(cumSumVertices[part[i]], xadj[i+1]-xadj[i], &adjncy[xadj[i]], &loc));
@@ -2018,34 +1982,30 @@ PetscCall(PetscLogEventEnd(MAT_Partitioning,0,0,0,0));
       part[i] = rank;
     }
   }
-#endif
+  PetscCall(MatRestoreRowIJ(A,PETSC_FALSE,PETSC_FALSE,PETSC_FALSE,&numRows,(const PetscInt**)&xadj,(const PetscInt**)&adjncy,&done));
+  PetscCall(MatDestroy(&A));
 
-  /* Let's see how significant the influences of the previous fixing up step was.*/
+  /* See how significant the influences of the previous fixing up step was.*/
   if (viewer) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "After.       "));
     PetscCall(DMPlexViewDistribution(comm, cumSumVertices[rank+1]-cumSumVertices[rank], ncon, vtxwgt, part, viewer));
   }
-
-  PetscCall(PetscLayoutDestroy(&layout));
   PetscCall(PetscFree(vtxwgt));
 
   PetscCall(PetscLogEventBegin(RebalRewriteSF, dm, 0, 0, 0));
-    /* Almost done, now rewrite the SF to reflect the new ownership. */
-  {
-    PetscInt *pointsToRewrite;
-    PetscCall(PetscMalloc1(numNonExclusivelyOwned, &pointsToRewrite));
-    counter = 0;
-    for (i=0; i<pEnd-pStart; i++) {
-      if (toBalance[i]) {
-        if (isNonExclusivelyOwned[i]) {
-          pointsToRewrite[counter] = i + pStart;
-          counter++;
-        }
+  /* Rewrite the SF to reflect the new ownership. */
+  PetscCall(PetscMalloc1(numNonExclusivelyOwned, &pointsToRewrite));
+  counter = 0;
+  for (i=0; i<pEnd-pStart; i++) {
+    if (toBalance[i]) {
+      if (isNonExclusivelyOwned[i]) {
+        pointsToRewrite[counter] = i + pStart;
+        counter++;
       }
     }
-    PetscCall(DMPlexRewriteSF(dm, numNonExclusivelyOwned, pointsToRewrite, part+1, degrees));
-    PetscCall(PetscFree(pointsToRewrite));
   }
+  PetscCall(DMPlexRewriteSF(dm, numNonExclusivelyOwned, pointsToRewrite, part+1, degrees));
+  PetscCall(PetscFree(pointsToRewrite));
   PetscCall(PetscLogEventEnd(RebalRewriteSF, dm, 0, 0, 0));
 
   PetscCall(PetscFree(toBalance));
