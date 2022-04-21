@@ -54,6 +54,8 @@ static PetscErrorCode MatSTRUMPACKSetReordering_STRUMPACK(Mat F,MatSTRUMPACKReor
 /*@
   MatSTRUMPACKSetReordering - Set STRUMPACK fill-reducing reordering
 
+   Logically Collective on Mat
+
    Input Parameters:
 +  F - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
 -  reordering - the code to be used to find the fill-reducing reordering
@@ -102,7 +104,7 @@ static PetscErrorCode MatSTRUMPACKSetColPerm_STRUMPACK(Mat F,PetscBool cperm)
    Level: beginner
 
    References:
-.  * - STRUMPACK manual
+.  * - STRUMPACK documentation: https://portal.nersc.gov/project/sparse/strumpack/master/
 
 .seealso: MatGetFactor()
 @*/
@@ -127,6 +129,7 @@ static PetscErrorCode MatSTRUMPACKSetGPU_STRUMPACK(Mat F,PetscBool gpu)
 
 /*@
   MatSTRUMPACKSetGPU - Set whether STRUMPACK should enable GPU acceleration (not supported for all compression types)
+
    Logically Collective on Mat
 
    Input Parameters:
@@ -139,7 +142,7 @@ static PetscErrorCode MatSTRUMPACKSetGPU_STRUMPACK(Mat F,PetscBool gpu)
    Level: beginner
 
    References:
-.      STRUMPACK manual
+.  * - STRUMPACK documentation: https://portal.nersc.gov/project/sparse/strumpack/master/
 
 .seealso: MatGetFactor()
 @*/
@@ -176,7 +179,7 @@ static PetscErrorCode MatSTRUMPACKSetCompression_STRUMPACK(Mat F,MatSTRUMPACKCom
    Level: beginner
 
    References:
-.      STRUMPACK manual
+.  * - STRUMPACK documentation: https://portal.nersc.gov/project/sparse/strumpack/master/
 
 .seealso: MatGetFactor()
 @*/
@@ -213,7 +216,7 @@ static PetscErrorCode MatSTRUMPACKSetCompRelTol_STRUMPACK(Mat F,PetscReal rtol)
    Level: beginner
 
    References:
-.  * - STRUMPACK manual
+.  * - STRUMPACK documentation: https://portal.nersc.gov/project/sparse/strumpack/master/
 
 .seealso: MatGetFactor()
 @*/
@@ -250,7 +253,7 @@ static PetscErrorCode MatSTRUMPACKSetCompAbsTol_STRUMPACK(Mat F,PetscReal atol)
    Level: beginner
 
    References:
-.  * - STRUMPACK manual
+.  * - STRUMPACK documentation: https://portal.nersc.gov/project/sparse/strumpack/master/
 
 .seealso: MatGetFactor()
 @*/
@@ -287,7 +290,7 @@ static PetscErrorCode MatSTRUMPACKSetCompLeafSize_STRUMPACK(Mat F,PetscInt leaf_
    Level: beginner
 
    References:
-.  * - STRUMPACK manual
+.  * - STRUMPACK documentation: https://portal.nersc.gov/project/sparse/strumpack/master/
 
 .seealso: MatGetFactor()
 @*/
@@ -341,6 +344,7 @@ static PetscErrorCode MatSTRUMPACKSetGeometricWidth_STRUMPACK(Mat F,PetscInt w)
 
 /*@
   MatSTRUMPACKSetGeometricNxyz - Set STRUMPACK mesh x, y and z dimensions, for use with GEOMETRIC ordering.
+
    Logically Collective on Mat
 
    If the mesh is two (or one) dimensional one can use 1, PETSC_DECIDE or PETSC_DEFAULT
@@ -356,7 +360,7 @@ static PetscErrorCode MatSTRUMPACKSetGeometricWidth_STRUMPACK(Mat F,PetscInt w)
    Level: beginner
 
    References:
-.      STRUMPACK manual
+.  * - STRUMPACK documentation: https://portal.nersc.gov/project/sparse/strumpack/master/
 
 .seealso: MatGetFactor()
 @*/
@@ -372,6 +376,7 @@ PetscErrorCode MatSTRUMPACKSetGeometricNxyz(Mat F,PetscInt nx,PetscInt ny,PetscI
 }
 /*@
   MatSTRUMPACKSetGeometricComponents - Set STRUMPACK number of degrees of freedom per mesh point, for use with GEOMETRIC ordering.
+
    Logically Collective on Mat
 
    Input Parameters:
@@ -384,7 +389,7 @@ PetscErrorCode MatSTRUMPACKSetGeometricNxyz(Mat F,PetscInt nx,PetscInt ny,PetscI
    Level: beginner
 
    References:
-.      STRUMPACK manual
+.  * - STRUMPACK documentation: https://portal.nersc.gov/project/sparse/strumpack/master/
 
 .seealso: MatGetFactor()
 @*/
@@ -398,6 +403,7 @@ PetscErrorCode MatSTRUMPACKSetGeometricComponents(Mat F,PetscInt nc)
 }
 /*@
   MatSTRUMPACKSetGeometricWidth - Set STRUMPACK width of the separator, for use with GEOMETRIC ordering.
+
    Logically Collective on Mat
 
    Input Parameters:
@@ -410,7 +416,7 @@ PetscErrorCode MatSTRUMPACKSetGeometricComponents(Mat F,PetscInt nc)
    Level: beginner
 
    References:
-.      STRUMPACK manual
+.  * - STRUMPACK documentation: https://portal.nersc.gov/project/sparse/strumpack/master/
 
 .seealso: MatGetFactor()
 @*/
@@ -434,6 +440,7 @@ static PetscErrorCode MatSTRUMPACKSetCompMinSepSize_STRUMPACK(Mat F,PetscInt min
 
 /*@
   MatSTRUMPACKSetCompMinSepSize - Set STRUMPACK minimum separator size for low-rank approximation
+
    Logically Collective on Mat
 
    Input Parameters:
@@ -446,7 +453,7 @@ static PetscErrorCode MatSTRUMPACKSetCompMinSepSize_STRUMPACK(Mat F,PetscInt min
    Level: beginner
 
    References:
-.      STRUMPACK manual
+.  * - STRUMPACK documentation: https://portal.nersc.gov/project/sparse/strumpack/master/
 
 .seealso: MatGetFactor()
 @*/
@@ -470,6 +477,7 @@ static PetscErrorCode MatSTRUMPACKSetCompLossyPrecision_STRUMPACK(Mat F,PetscInt
 
 /*@
   MatSTRUMPACKSetCompLossyPrecision - Set STRUMPACK precision for lossy compression (requires ZFP support)
+
    Logically Collective on Mat
 
    Input Parameters:
@@ -482,7 +490,7 @@ static PetscErrorCode MatSTRUMPACKSetCompLossyPrecision_STRUMPACK(Mat F,PetscInt
    Level: beginner
 
    References:
-.      STRUMPACK manual
+.  * - STRUMPACK documentation: https://portal.nersc.gov/project/sparse/strumpack/master/
 
 .seealso: MatGetFactor()
 @*/
@@ -519,7 +527,7 @@ static PetscErrorCode MatSTRUMPACKSetCompButterflyLevels_STRUMPACK(Mat F,PetscIn
    Level: beginner
 
    References:
-.  * - STRUMPACK manual
+.  * - STRUMPACK documentation: https://portal.nersc.gov/project/sparse/strumpack/master/
 
 .seealso: MatGetFactor()
 @*/
@@ -628,7 +636,7 @@ static PetscErrorCode MatLUFactorNumeric_STRUMPACK(Mat F,Mat A,const MatFactorIn
   } else if (isseqaij) {
     PetscCall(PetscObjectReference((PetscObject)A));
     Aloc = A;
-  } else SETERRQ1(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Not for type %s",((PetscObject)A)->type_name);
+  } else SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Not for type %s",((PetscObject)A)->type_name);
 
   PetscCall(MatGetRowIJ(Aloc,0,PETSC_FALSE,PETSC_FALSE,&dummy,&ai,&aj,&flg));
   PetscCheck(flg,PETSC_COMM_SELF,PETSC_ERR_SUP,"GetRowIJ failed");
@@ -651,7 +659,7 @@ static PetscErrorCode MatLUFactorNumeric_STRUMPACK(Mat F,Mat A,const MatFactorIn
     PetscCall(PetscFree(dist));
   } else if (isseqaij) {
     PetscStackCall("STRUMPACK_set_csr_matrix",STRUMPACK_set_csr_matrix(*S,&M,ai,aj,av,0));
-  } else SETERRQ1(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Not for type %s",((PetscObject)A)->type_name);
+  } else SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Not for type %s",((PetscObject)A)->type_name);
 
   PetscCall(MatRestoreRowIJ(Aloc,0,PETSC_FALSE,PETSC_FALSE,&dummy,&ai,&aj,&flg));
   PetscCheck(flg,PETSC_COMM_SELF,PETSC_ERR_SUP,"RestoreRowIJ failed");
