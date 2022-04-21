@@ -278,42 +278,39 @@ int main(int argc,char **args)
   */
   flg_strumpack_ilu = PETSC_FALSE;
   flg_strumpack     = PETSC_FALSE;
-  ierr = PetscOptionsGetBool(NULL,NULL,"-use_strumpack_lu",&flg_strumpack,NULL);CHKERRQ(ierr);
-  ierr = PetscOptionsGetBool(NULL,NULL,"-use_strumpack_ilu",&flg_strumpack_ilu,NULL);CHKERRQ(ierr);
+  PetscCall(PetscOptionsGetBool(NULL,NULL,"-use_strumpack_lu",&flg_strumpack,NULL));
+  PetscCall(PetscOptionsGetBool(NULL,NULL,"-use_strumpack_ilu",&flg_strumpack_ilu,NULL));
   if (flg_strumpack || flg_strumpack_ilu) {
-    ierr = KSPSetType(ksp,KSPPREONLY);CHKERRQ(ierr);
-    ierr = KSPGetPC(ksp,&pc);CHKERRQ(ierr);
-    if (flg_strumpack) {
-      ierr = PCSetType(pc,PCLU);CHKERRQ(ierr);
-    } else if (flg_strumpack_ilu) {
-      ierr = PCSetType(pc,PCILU);CHKERRQ(ierr);
-    }
-    ierr = PCFactorSetMatSolverType(pc,MATSOLVERSTRUMPACK);CHKERRQ(ierr);
-    ierr = PCFactorSetUpMatSolverType(pc);CHKERRQ(ierr); /* call MatGetFactor() to create F */
-    ierr = PCFactorGetMatrix(pc,&F);CHKERRQ(ierr);
+    PetscCall(KSPSetType(ksp,KSPPREONLY));
+    PetscCall(KSPGetPC(ksp,&pc));
+    if (flg_strumpack) PetscCall(PCSetType(pc,PCLU));
+    else if (flg_strumpack_ilu) PetscCall(PCSetType(pc,PCILU));
+    PetscCall(PCFactorSetMatSolverType(pc,MATSOLVERSTRUMPACK));
+    PetscCall(PCFactorSetUpMatSolverType(pc)); /* call MatGetFactor() to create F */
+    PetscCall(PCFactorGetMatrix(pc,&F));
 
     /* Set the fill-reducing reordering, MAT_STRUMPACK_METIS is       */
     /* always supported, but is sequential. Parallel alternatives are */
     /* MAT_STRUMPACK_PARMETIS and MAT_STRUMPACK_PTSCOTCH, but         */
     /* strumpack needs to be configured with support for these.       */
-    /*ierr = MatSTRUMPACKSetReordering(F,MAT_STRUMPACK_METIS);CHKERRQ(ierr);*/
+    /*PetscCall(MatSTRUMPACKSetReordering(F,MAT_STRUMPACK_METIS));*/
     /* However, since this is a problem on a regular grid, we can use */
     /* a simple geometric nested dissection implementation, which     */
     /* requires passing the grid dimensions to strumpack.             */
-    ierr = MatSTRUMPACKSetReordering(F,MAT_STRUMPACK_GEOMETRIC);CHKERRQ(ierr);
-    ierr = MatSTRUMPACKSetGeometricNxyz(F,n,m,PETSC_DECIDE);CHKERRQ(ierr);
+    PetscCall(MatSTRUMPACKSetReordering(F,MAT_STRUMPACK_GEOMETRIC));
+    PetscCall(MatSTRUMPACKSetGeometricNxyz(F,n,m,PETSC_DECIDE));
     /* These are optional, defaults are 1                             */
-    ierr = MatSTRUMPACKSetGeometricComponents(F,1);CHKERRQ(ierr);
-    ierr = MatSTRUMPACKSetGeometricWidth(F,1);CHKERRQ(ierr);
+    PetscCall(MatSTRUMPACKSetGeometricComponents(F,1));
+    PetscCall(MatSTRUMPACKSetGeometricWidth(F,1));
 
     /* Since this is a simple discretization, the diagonal is always  */
     /* nonzero, and there is no need for the extra MC64 permutation.  */
-    ierr = MatSTRUMPACKSetColPerm(F,PETSC_FALSE);CHKERRQ(ierr);
+    PetscCall(MatSTRUMPACKSetColPerm(F,PETSC_FALSE));
 
     if (flg_strumpack_ilu) {
       /* The compression tolerance used when doing low-rank compression */
       /* in the preconditioner. This is problem specific!               */
-      ierr = MatSTRUMPACKSetCompRelTol(F,1.e-3);CHKERRQ(ierr);
+      PetscCall(MatSTRUMPACKSetCompRelTol(F,1.e-3));
 
       /* Set a small minimum (dense) matrix size for compression to     */
       /* demonstrate the preconditioner on small problems.              */
@@ -321,12 +318,12 @@ int main(int argc,char **args)
       /* This size corresponds to the size of separators in the graph.  */
       /* For instance on an m x n mesh, the top level separator is of   */
       /* size m (if m <= n)                                             */
-      /*ierr = MatSTRUMPACKSetCompMinSepSize(F,15);CHKERRQ(ierr);*/
+      /*PetscCall(MatSTRUMPACKSetCompMinSepSize(F,15));*/
 
       /* Set the size of the diagonal blocks (the leafs) in the HSS     */
       /* approximation. The default value should be better for real     */
       /* problems. This is mostly for illustration on a small problem.  */
-      /*ierr = MatSTRUMPACKSetCompLeafSize(F,4);CHKERRQ(ierr);*/
+      /*PetscCall(MatSTRUMPACKSetCompLeafSize(F,4));*/
     }
   }
 #endif
