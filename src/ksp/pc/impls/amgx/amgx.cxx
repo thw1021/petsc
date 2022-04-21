@@ -28,13 +28,13 @@ struct AmgXControlMap
   static const std::map<std::string, AmgXSelector> Selectors;
 };
 
-const std::map<std::string, AmgXAMGMethod> AmgXControlMap::AMGMethods = 
+const std::map<std::string, AmgXAMGMethod> AmgXControlMap::AMGMethods =
 {
   { "CLASSICAL", AmgXAMGMethod::Classical },
   { "AGGREGATION", AmgXAMGMethod::Aggregation }
 };
 
-const std::map<std::string, AmgXSmoother> AmgXControlMap::Smoothers = 
+const std::map<std::string, AmgXSmoother> AmgXControlMap::Smoothers =
 {
   { "PCG", AmgXSmoother::PCG },
   { "PCGF", AmgXSmoother::PCGF },
@@ -50,7 +50,7 @@ const std::map<std::string, AmgXSmoother> AmgXControlMap::Smoothers =
   { "NOSOLVER", AmgXSmoother::NoSolver }
 };
 
-const std::map<std::string, AmgXSelector> AmgXControlMap::Selectors = 
+const std::map<std::string, AmgXSelector> AmgXControlMap::Selectors =
 {
   { "SIZE_2", AmgXSelector::Size2 },
   { "SIZE_4", AmgXSelector::Size4 },
@@ -364,8 +364,8 @@ static PetscErrorCode PCDestroy_AMGX(PC pc)
 template <class T>
 std::string map_reverse_lookup(const std::map<std::string, T>& map, const T& key)
 {
-  for(auto const& m : map) {
-    if(m.second == key) {
+  for (auto const& m : map) {
+    if (m.second == key) {
       return m.first;
     }
   }
@@ -433,14 +433,11 @@ static PetscErrorCode PCSetFromOptions_AMGX(PetscOptionItems *PetscOptionsObject
   PetscCheck(AmgXControlMap::Selectors.count(option) == 1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Selector %s not registered for AmgX.", option);
 
   // Double check that the user has selected an appropriate selector for the AMG method
-  if(amgx->amg_method == AmgXAMGMethod::Classical)
-  {
+  if (amgx->amg_method == AmgXAMGMethod::Classical) {
     PetscCheck(amgx->selector == AmgXSelector::PMIS || amgx->selector == AmgXSelector::HMIS, amgx->comm, PETSC_ERR_PLIB, "Chosen selector is not used for AmgX Classical AMG: selector=%s", option);
 
     amgx->cfg_contents += "amg:interpolator=D2,";
-  }
-  else if(amgx->amg_method == AmgXAMGMethod::Aggregation)
-  {
+  } else if (amgx->amg_method == AmgXAMGMethod::Aggregation) {
     PetscCheck(amgx->selector == AmgXSelector::Size2 || amgx->selector == AmgXSelector::Size4 || amgx->selector == AmgXSelector::Size8 || amgx->selector == AmgXSelector::MultiPairwise, amgx->comm, PETSC_ERR_PLIB, "Chosen selector is not used for AmgX Aggregation AMG");
   }
   amgx->selector = AmgXControlMap::Selectors.at(option);
