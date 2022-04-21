@@ -1856,6 +1856,7 @@ PetscErrorCode DMPlexRebalanceSharedPoints(DM dm, PetscInt entityDepth, PetscBoo
     PetscCall(PetscViewerASCIIPrintf(viewer, "Attempt rebalancing of shared points of depth %" PetscInt_FMT " on interface of mesh distribution.\n", entityDepth));
     PetscCall(PetscViewerASCIIPrintf(viewer, "Size of generated auxiliary graph: %" PetscInt_FMT "\n", cumSumVertices[size]));
   }
+  /* TODO: Drop the parallel/sequential choice here and just use MatPartioner for much more flexibility */
   if (parallel) {
     PetscCall(PetscMalloc1(4, &options));
     options[0] = 1;
@@ -1882,15 +1883,15 @@ PetscCall(PetscLogEventEnd(MAT_Partitioning,0,0,0,0));
     PetscCall(PetscFree(options));
   } else {
     if (viewer) PetscCall(PetscViewerASCIIPrintf(viewer, "Using METIS to partition graph.\n"));
-    Mat As;
+    Mat      As;
     PetscInt numRows;
     PetscInt *partGlobal;
+    PetscInt *numExclusivelyOwnedAll;
 
     PetscCall(PetscLogEventBegin(o9,0,0,0,0));
-    /* TODO: Since the matrix is only needed on rank 0 don't get it on all ranks as below */
+    /* TODO: Since the matrix is only needed on rank 0 don't get it on all ranks  */
     PetscCall(MatCreateRedundantMatrix(A, size, MPI_COMM_NULL, MAT_INITIAL_MATRIX, &As));
 
-    PetscInt *numExclusivelyOwnedAll;
     PetscCall(PetscMalloc1(size, &numExclusivelyOwnedAll));
     numExclusivelyOwnedAll[rank] = numExclusivelyOwned;
     PetscCallMPI(MPI_Allgather(MPI_IN_PLACE,0,MPI_DATATYPE_NULL,numExclusivelyOwnedAll,1,MPIU_INT,comm));
@@ -1898,29 +1899,12 @@ PetscCall(PetscLogEventEnd(MAT_Partitioning,0,0,0,0));
     PetscCall(MatGetSize(As, &numRows, NULL));
     PetscCall(PetscMalloc1(numRows, &partGlobal));
     if (rank == 0) {
-      PetscInt *adjncy_g, *xadj_g, *vtxwgt_g;
-      lenadjncy = 0;
+      const PetscInt *adjncy_g, *xadj_g;
+      PetscInt       *vtxwgt_g;
+      PetscBool      done;
 
-      for (i=0; i<numRows; i++) {
-        PetscInt temp=0;
-        PetscCall(MatGetRow(As, i, &temp, NULL, NULL));
-        lenadjncy += temp;
-        PetscCall(MatRestoreRow(As, i, &temp, NULL, NULL));
-      }
-      PetscCall(PetscMalloc1(lenadjncy, &adjncy_g));
+      PetscCall(MatGetRowIJ(As,PETSC_FALSE,PETSC_FALSE,PETSC_FALSE,&numRows,&xadj_g,&adjncy_g,&done));
       lenxadj = 1 + numRows;
-      PetscCall(PetscMalloc1(lenxadj, &xadj_g));
-      xadj_g[0] = 0;
-      counter = 0;
-      for (i=0; i<numRows; i++) {
-        PetscInt        temp=0;
-        const PetscInt *cols;
-        PetscCall(MatGetRow(As, i, &temp, &cols, NULL));
-        PetscCall(PetscArraycpy(&adjncy_g[counter], cols, temp));
-        counter += temp;
-        xadj_g[i+1] = counter;
-        PetscCall(MatRestoreRow(As, i, &temp, &cols, NULL));
-      }
       PetscCall(PetscMalloc1(2*numRows, &vtxwgt_g));
       for (i=0; i<size; i++) {
         vtxwgt_g[ncon*cumSumVertices[i]] = numExclusivelyOwnedAll[i];
@@ -1931,20 +1915,21 @@ PetscCall(PetscLogEventEnd(MAT_Partitioning,0,0,0,0));
         }
       }
       PetscCall(PetscLogEventEnd(o9,0,0,0,0));
+
+      /* TODO: Use MatPartitioner to provide the partitioning instead of hardwiring Metis */
       PetscCall(PetscMalloc1(64, &options));
       ierr = METIS_SetDefaultOptions(options); /* initialize all defaults */
       PetscCheck(ierr == METIS_OK,PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in METIS_SetDefaultOptions()");
       options[METIS_OPTION_CONTIG] = 1;
       PetscStackPush("METIS_PartGraphKway");
       PetscCall(PetscLogEventBegin(MAT_Partitioning,0,0,0,0));
-      ierr = METIS_PartGraphKway(&numRows, &ncon, xadj_g, adjncy_g, vtxwgt_g, NULL, NULL, &nparts, tpwgts, ubvec, options, &edgecut, partGlobal);
+      ierr = METIS_PartGraphKway(&numRows, &ncon, (idx_t *)xadj_g, (idx_t *)adjncy_g, vtxwgt_g, NULL, NULL, &nparts, tpwgts, ubvec, options, &edgecut, partGlobal);
       PetscCall(PetscLogEventEnd(MAT_Partitioning,0,0,0,0));
       PetscStackPop;
       PetscCheck(ierr == METIS_OK,PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in METIS_PartGraphKway()");
       PetscCall(PetscFree(options));
-      PetscCall(PetscFree(xadj_g));
-      PetscCall(PetscFree(adjncy_g));
       PetscCall(PetscFree(vtxwgt_g));
+      PetscCall(MatRestoreRowIJ(As,PETSC_FALSE,PETSC_FALSE,PETSC_FALSE,&numRows,&xadj_g,&adjncy_g,&done));
     }
     PetscCall(PetscFree(numExclusivelyOwnedAll));
 
