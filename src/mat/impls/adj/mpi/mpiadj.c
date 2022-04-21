@@ -199,7 +199,7 @@ static PetscErrorCode MatCreateSubMatrices_MPIAdj_Private(Mat mat,PetscInt n,con
        if (svalues) PetscCall(PetscArraycpy(sa->values,svalues,sxadj[irow_n]));
        PetscCall(PetscFree(sxadj));
        PetscCall(PetscFree(sadjncy));
-       if (svalues) PetscCall(PetscFree(svalues));
+       PetscCall(PetscFree(svalues));
     }
   }
   PetscCall(PetscFree(indices));
