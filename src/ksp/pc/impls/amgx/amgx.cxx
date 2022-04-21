@@ -33,13 +33,13 @@ struct AmgXControlMap
   static const std::map<std::string, AmgXAMGCycle> AMGCycles;
 };
 
-const std::map<std::string, AmgXAMGMethod> AmgXControlMap::AMGMethods = 
+const std::map<std::string, AmgXAMGMethod> AmgXControlMap::AMGMethods =
 {
   { "CLASSICAL", AmgXAMGMethod::Classical },
   { "AGGREGATION", AmgXAMGMethod::Aggregation }
 };
 
-const std::map<std::string, AmgXSmoother> AmgXControlMap::Smoothers = 
+const std::map<std::string, AmgXSmoother> AmgXControlMap::Smoothers =
 {
   { "PCG", AmgXSmoother::PCG },
   { "PCGF", AmgXSmoother::PCGF },
@@ -56,7 +56,7 @@ const std::map<std::string, AmgXSmoother> AmgXControlMap::Smoothers =
   { "NOSOLVER", AmgXSmoother::NoSolver }
 };
 
-const std::map<std::string, AmgXSelector> AmgXControlMap::Selectors = 
+const std::map<std::string, AmgXSelector> AmgXControlMap::Selectors =
 {
   { "SIZE_2", AmgXSelector::Size2 },
   { "SIZE_4", AmgXSelector::Size4 },
@@ -394,8 +394,8 @@ static PetscErrorCode PCDestroy_AMGX(PC pc)
 template <class T>
 std::string map_reverse_lookup(const std::map<std::string, T>& map, const T& key)
 {
-  for(auto const& m : map) {
-    if(m.second == key) {
+  for (auto const& m : map) {
+    if (m.second == key) {
       return m.first;
     }
   }
@@ -457,13 +457,10 @@ static PetscErrorCode PCSetFromOptions_AMGX(PetscOptionItems *PetscOptionsObject
   amgx->smoother = AmgXControlMap::Smoothers.at(option);
   amgx->cfg_contents += "amg:smoother(smooth)=" + std::string(option) + ",";
 
-  if(amgx->smoother == AmgXSmoother::JacobiL1 || amgx->smoother == AmgXSmoother::BlockJacobi)
-  {
+  if (amgx->smoother == AmgXSmoother::JacobiL1 || amgx->smoother == AmgXSmoother::BlockJacobi) {
       PetscCall(PetscOptionsScalar("-pc_amgx_jacobi_relaxation_factor", "AmgX AMG Jacobi Relaxation Factor", "", amgx->jacobi_relaxation_factor, &amgx->jacobi_relaxation_factor, NULL));
       amgx->cfg_contents += "smooth:relaxation_factor=" + std::to_string(amgx->jacobi_relaxation_factor) + ",";
-  }
-  else if(amgx->smoother == AmgXSmoother::GS || amgx->smoother == AmgXSmoother::MulticolorGS)
-  {
+  } else if (amgx->smoother == AmgXSmoother::GS || amgx->smoother == AmgXSmoother::MulticolorGS) {
       PetscCall(PetscOptionsScalar("-pc_amgx_gs_symmetric", "AmgX AMG Gauss Seidel Symmetric", "", amgx->gs_symmetric, &amgx->gs_symmetric, NULL));
       amgx->cfg_contents += "smooth:symmetric_GS=" + std::to_string(amgx->gs_symmetric) + ",";
   }
@@ -475,11 +472,11 @@ static PetscErrorCode PCSetFromOptions_AMGX(PetscOptionItems *PetscOptionsObject
   PetscCheck(AmgXControlMap::Selectors.count(option) == 1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Selector %s not registered for AmgX.", option);
 
   // Double check that the user has selected an appropriate selector for the AMG method
-  if(amgx->amg_method == AmgXAMGMethod::Classical) {
+  if (amgx->amg_method == AmgXAMGMethod::Classical) {
     PetscCheck(amgx->selector == AmgXSelector::PMIS || amgx->selector == AmgXSelector::HMIS, amgx->comm, PETSC_ERR_PLIB, "Chosen selector is not used for AmgX Classical AMG: selector=%s", option);
 
     amgx->cfg_contents += "amg:interpolator=D2,";
-  } else if(amgx->amg_method == AmgXAMGMethod::Aggregation) {
+  } else if (amgx->amg_method == AmgXAMGMethod::Aggregation) {
     PetscCheck(amgx->selector == AmgXSelector::Size2 || amgx->selector == AmgXSelector::Size4 || amgx->selector == AmgXSelector::Size8 || amgx->selector == AmgXSelector::MultiPairwise, amgx->comm, PETSC_ERR_PLIB, "Chosen selector is not used for AmgX Aggregation AMG");
   }
   amgx->selector = AmgXControlMap::Selectors.at(option);
@@ -522,8 +519,7 @@ static PetscErrorCode PCSetFromOptions_AMGX(PetscOptionItems *PetscOptionsObject
   // Set output control parameters
   PetscCall(PetscOptionsBool("-pc_amgx_print_grid_stats", "AmgX Print Grid Stats", "", amgx->print_grid_stats, &amgx->print_grid_stats, NULL));
 
-  if(amgx->print_grid_stats)
-  {
+  if (amgx->print_grid_stats) {
     amgx->cfg_contents += "amg:print_grid_stats=1,";
   }
 
@@ -599,7 +595,8 @@ PETSC_EXTERN PetscErrorCode PCCreate_AMGX(PC pc)
   pc->ops->destroy = PCDestroy_AMGX;
   pc->ops->reset = PCReset_AMGX;
   pc->data = (void *)amgx;
-  s_count += 1;
+
+  s_count++;
 
   if (s_count == 1) {
 
@@ -631,15 +628,6 @@ PETSC_EXTERN PetscErrorCode PCCreate_AMGX(PC pc)
 
   PetscCallMPI(MPI_Comm_size(amgx->comm, &amgx->nranks));
   PetscCallMPI(MPI_Comm_rank(amgx->comm, &amgx->rank));
-
-  {
-    // XXX This should be handled by the calling application?
-    // Assumes equal device count per node
-    int dcount;
-    cudaGetDeviceCount(&dcount);
-    amgx->devID = amgx->rank % dcount;
-    cudaSetDevice(amgx->devID);
-  }
 
   PetscFunctionReturn(0);
 }
