@@ -13,19 +13,24 @@
 #include <amgx_c.h>
 #include <limits>
 #include <vector>
+#include <algorithm>
 #include <map>
 #include "cuda_runtime.h"
 
 enum class AmgXSmoother { PCG, PCGF, PBiCGStab, GMRES, FGMRES, JacobiL1,
-  BlockJacobi, GS, MulticolorGS, MulticolorILU, MulticolorDILU, NoSolver };
+  BlockJacobi, GS, MulticolorGS, MulticolorILU, MulticolorDILU, ChebyshevPoly, NoSolver };
 enum class AmgXAMGMethod { Classical, Aggregation };
 enum class AmgXSelector { Size2, Size4, Size8, MultiPairwise, PMIS, HMIS };
+enum class AmgXCoarseSolver { DenseLU, NoSolver };
+enum class AmgXAMGCycle { V, W, F, CG, CGF };
 
 struct AmgXControlMap
 {
-  static const std::map<std::string, AmgXSmoother> Smoothers;
   static const std::map<std::string, AmgXAMGMethod> AMGMethods;
+  static const std::map<std::string, AmgXSmoother> Smoothers;
   static const std::map<std::string, AmgXSelector> Selectors;
+  static const std::map<std::string, AmgXCoarseSolver> CoarseSolvers;
+  static const std::map<std::string, AmgXAMGCycle> AMGCycles;
 };
 
 const std::map<std::string, AmgXAMGMethod> AmgXControlMap::AMGMethods = 
@@ -47,6 +52,7 @@ const std::map<std::string, AmgXSmoother> AmgXControlMap::Smoothers =
   { "MULTICOLOR_GS", AmgXSmoother::MulticolorGS },
   { "MULTICOLOR_ILU", AmgXSmoother::MulticolorILU },
   { "MULTICOLOR_DILU", AmgXSmoother::MulticolorDILU },
+  { "CHEBYSHEV_POLY", AmgXSmoother::ChebyshevPoly },
   { "NOSOLVER", AmgXSmoother::NoSolver }
 };
 
@@ -58,6 +64,21 @@ const std::map<std::string, AmgXSelector> AmgXControlMap::Selectors =
   { "MULTI_PAIRWISE", AmgXSelector::MultiPairwise },
   { "PMIS", AmgXSelector::PMIS },
   { "HMIS", AmgXSelector::HMIS }
+};
+
+const std::map<std::string, AmgXCoarseSolver> AmgXControlMap::CoarseSolvers = 
+{
+  { "DENSE_LU_SOLVER", AmgXCoarseSolver::DenseLU },
+  { "NOSOLVER", AmgXCoarseSolver::NoSolver }
+};
+
+const std::map<std::string, AmgXAMGCycle> AmgXControlMap::AMGCycles = 
+{
+  { "V", AmgXAMGCycle::V },
+  { "W", AmgXAMGCycle::W },
+  { "F", AmgXAMGCycle::F },
+  { "CG", AmgXAMGCycle::CG },
+  { "CGF", AmgXAMGCycle::CGF }
 };
 
 /*
@@ -89,13 +110,22 @@ struct PC_AMGX {
   Mat localA;
   PetscScalar *values;
 
-  // Control parameters
+  // AMG Control parameters
   AmgXSmoother smoother;
   AmgXAMGMethod amg_method;
   AmgXSelector selector;
+  AmgXCoarseSolver coarse_solver;
+  AmgXAMGCycle amg_cycle;
   PetscInt presweeps;
   PetscInt postsweeps;
   PetscInt max_levels;
+  PetscInt aggressive_levels;
+  PetscScalar strength_threshold;
+  PetscBool print_grid_stats;
+
+  // Smoother control parameters
+  PetscScalar jacobi_relaxation_factor;
+  PetscScalar gs_symmetric;
 };
 
 static PetscInt s_count = 0;
@@ -379,24 +409,29 @@ static PetscErrorCode PCSetFromOptions_AMGX(PetscOptionItems *PetscOptionsObject
 
   PC_AMGX *amgx = (PC_AMGX *)pc->data;
 
-  // XXX Where should the defaults go?
+  // Set the defaults
   amgx->selector = AmgXSelector::PMIS;
   amgx->smoother = AmgXSmoother::BlockJacobi;
   amgx->amg_method = AmgXAMGMethod::Classical;
+  amgx->coarse_solver = AmgXCoarseSolver::DenseLU;
+  amgx->amg_cycle = AmgXAMGCycle::V;
   amgx->presweeps = 1;
   amgx->postsweeps = 1;
   amgx->max_levels = 100;
+  amgx->strength_threshold = 0.5;
+  amgx->aggressive_levels = 0;
+  amgx->jacobi_relaxation_factor = 0.9;
+  amgx->gs_symmetric = PETSC_FALSE;
+  amgx->print_grid_stats = PETSC_FALSE;
 
   constexpr int MAX_PARAM_LEN = 128;
+  char option[MAX_PARAM_LEN];
 
   PetscOptionsHeadBegin(PetscOptionsObject, "AmgX options");
 
-  // XXX The parameterisation can look something like this:
   amgx->cfg_contents = "config_version=2,";
   amgx->cfg_contents += "determinism_flag=1,";
   amgx->cfg_contents += "solver(amg)=AMG,";
-
-  char option[MAX_PARAM_LEN];
 
   // Set method
   std::string def_amg_method = map_reverse_lookup(AmgXControlMap::AMGMethods, amgx->amg_method);
@@ -406,13 +441,49 @@ static PetscErrorCode PCSetFromOptions_AMGX(PetscOptionItems *PetscOptionsObject
   amgx->amg_method = AmgXControlMap::AMGMethods.at(option);
   amgx->cfg_contents += "amg:algorithm=" + std::string(option) + ",";
 
+  // Set cycle
+  std::string def_amg_cycle = map_reverse_lookup(AmgXControlMap::AMGCycles, amgx->amg_cycle);
+  PetscCall(PetscStrcpy(option, def_amg_cycle.c_str()));
+  PetscCall(PetscOptionsString("-pc_amgx_amg_cycle", "AmgX AMG Cycle", "", option, option, MAX_PARAM_LEN, NULL));
+  PetscCheck(AmgXControlMap::AMGCycles.count(option) == 1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "AMG Cycle %s not registered for AmgX.", option);
+  amgx->amg_cycle = AmgXControlMap::AMGCycles.at(option);
+  amgx->cfg_contents += "amg:cycle=" + std::string(option) + ",";
+
   // Set smoother
   std::string def_smoother = map_reverse_lookup(AmgXControlMap::Smoothers, amgx->smoother);
   PetscCall(PetscStrcpy(option, def_smoother.c_str()));
   PetscCall(PetscOptionsString("-pc_amgx_smoother", "AmgX Smoother", "", option, option, MAX_PARAM_LEN, NULL));
   PetscCheck(AmgXControlMap::Smoothers.count(option) == 1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Smoother %s not registered for AmgX.", option);
   amgx->smoother = AmgXControlMap::Smoothers.at(option);
-  amgx->cfg_contents += "amg:smoother=" + std::string(option) + ",";
+  amgx->cfg_contents += "amg:smoother(smooth)=" + std::string(option) + ",";
+
+  if(amgx->smoother == AmgXSmoother::JacobiL1 || amgx->smoother == AmgXSmoother::BlockJacobi)
+  {
+      PetscCall(PetscOptionsScalar("-pc_amgx_jacobi_relaxation_factor", "AmgX AMG Jacobi Relaxation Factor", "", amgx->jacobi_relaxation_factor, &amgx->jacobi_relaxation_factor, NULL));
+      amgx->cfg_contents += "smooth:relaxation_factor=" + std::to_string(amgx->jacobi_relaxation_factor) + ",";
+  }
+  else if(amgx->smoother == AmgXSmoother::GS || amgx->smoother == AmgXSmoother::MulticolorGS)
+  {
+      PetscCall(PetscOptionsScalar("-pc_amgx_gs_symmetric", "AmgX AMG Gauss Seidel Symmetric", "", amgx->gs_symmetric, &amgx->gs_symmetric, NULL));
+      amgx->cfg_contents += "smooth:symmetric_GS=" + std::to_string(amgx->gs_symmetric) + ",";
+  }
+
+  // Set selector
+  std::string def_selector = map_reverse_lookup(AmgXControlMap::Selectors, amgx->selector);
+  PetscCall(PetscStrcpy(option, def_selector.c_str()));
+  PetscCall(PetscOptionsString("-pc_amgx_selector", "AmgX Selector", "", option, option, MAX_PARAM_LEN, NULL));
+  PetscCheck(AmgXControlMap::Selectors.count(option) == 1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Selector %s not registered for AmgX.", option);
+
+  // Double check that the user has selected an appropriate selector for the AMG method
+  if(amgx->amg_method == AmgXAMGMethod::Classical) {
+    PetscCheck(amgx->selector == AmgXSelector::PMIS || amgx->selector == AmgXSelector::HMIS, amgx->comm, PETSC_ERR_PLIB, "Chosen selector is not used for AmgX Classical AMG: selector=%s", option);
+
+    amgx->cfg_contents += "amg:interpolator=D2,";
+  } else if(amgx->amg_method == AmgXAMGMethod::Aggregation) {
+    PetscCheck(amgx->selector == AmgXSelector::Size2 || amgx->selector == AmgXSelector::Size4 || amgx->selector == AmgXSelector::Size8 || amgx->selector == AmgXSelector::MultiPairwise, amgx->comm, PETSC_ERR_PLIB, "Chosen selector is not used for AmgX Aggregation AMG");
+  }
+  amgx->selector = AmgXControlMap::Selectors.at(option);
+  amgx->cfg_contents += "amg:selector=" + std::string(option) + ",";
 
   // Set presweeps
   PetscCall(PetscOptionsInt("-pc_amgx_presweeps", "AmgX AMG Presweep Count", "", amgx->presweeps, &amgx->presweeps, NULL));
@@ -426,34 +497,37 @@ static PetscErrorCode PCSetFromOptions_AMGX(PetscOptionItems *PetscOptionsObject
   PetscCall(PetscOptionsInt("-pc_amgx_max_levels", "AmgX AMG Max Level Count", "", amgx->max_levels, &amgx->max_levels, NULL));
   amgx->cfg_contents += "amg:max_levels=100,";
 
-  // Set selector
-  std::string def_selector = map_reverse_lookup(AmgXControlMap::Selectors, amgx->selector);
-  PetscCall(PetscStrcpy(option, def_selector.c_str()));
-  PetscCall(PetscOptionsString("-pc_amgx_selector", "AmgX Selector", "", option, option, MAX_PARAM_LEN, NULL));
-  PetscCheck(AmgXControlMap::Selectors.count(option) == 1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Selector %s not registered for AmgX.", option);
+  // Set strength threshold
+  PetscCall(PetscOptionsScalar("-pc_amgx_strength_threshold", "AmgX AMG Strength Threshold", "", amgx->strength_threshold, &amgx->strength_threshold, NULL));
+  amgx->cfg_contents += "amg:strength_threshold=" + std::to_string(amgx->strength_threshold) + ",";
 
-  // Double check that the user has selected an appropriate selector for the AMG method
-  if(amgx->amg_method == AmgXAMGMethod::Classical)
-  {
-    PetscCheck(amgx->selector == AmgXSelector::PMIS || amgx->selector == AmgXSelector::HMIS, amgx->comm, PETSC_ERR_PLIB, "Chosen selector is not used for AmgX Classical AMG: selector=%s", option);
+  // Set aggressive_levels
+  PetscCall(PetscOptionsInt("-pc_amgx_aggressive_levels", "AmgX AMG Presweep Count", "", amgx->aggressive_levels, &amgx->aggressive_levels, NULL));
 
-    amgx->cfg_contents += "amg:interpolator=D2,";
+  if(amgx->aggressive_levels > 0) {
+    amgx->cfg_contents += "amg:aggressive_levels=" + std::to_string(amgx->aggressive_levels) + ",";
   }
-  else if(amgx->amg_method == AmgXAMGMethod::Aggregation)
-  {
-    PetscCheck(amgx->selector == AmgXSelector::Size2 || amgx->selector == AmgXSelector::Size4 || amgx->selector == AmgXSelector::Size8 || amgx->selector == AmgXSelector::MultiPairwise, amgx->comm, PETSC_ERR_PLIB, "Chosen selector is not used for AmgX Aggregation AMG");
-  }
-  amgx->selector = AmgXControlMap::Selectors.at(option);
-  amgx->cfg_contents += "amg:selector=" + std::string(option) + ",";
 
   // Set coarse solver
-  amgx->cfg_contents += "amg:coarse_solver=DENSE_LU_SOLVER,";
+  std::string def_coarse_solver = map_reverse_lookup(AmgXControlMap::CoarseSolvers, amgx->coarse_solver);
+  PetscCall(PetscStrcpy(option, def_coarse_solver.c_str()));
+  PetscCall(PetscOptionsString("-pc_amgx_coarse_solver", "AmgX CoarseSolver", "", option, option, MAX_PARAM_LEN, NULL));
+  PetscCheck(AmgXControlMap::CoarseSolvers.count(option) == 1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "CoarseSolver %s not registered for AmgX.", option);
+  amgx->coarse_solver = AmgXControlMap::CoarseSolvers.at(option);
+  amgx->cfg_contents += "amg:coarse_solver=" + std::string(option) + ",";
 
   // Set max iterations
-  amgx->cfg_contents += "amg:max_iters=1";
+  amgx->cfg_contents += "amg:max_iters=1,";
 
-  // Set other parameters
-  amgx->cfg_contents += "amg:monitor_residual=0,";
+  // Set output control parameters
+  PetscCall(PetscOptionsBool("-pc_amgx_print_grid_stats", "AmgX Print Grid Stats", "", amgx->print_grid_stats, &amgx->print_grid_stats, NULL));
+
+  if(amgx->print_grid_stats)
+  {
+    amgx->cfg_contents += "amg:print_grid_stats=1,";
+  }
+
+  amgx->cfg_contents += "amg:monitor_residual=0";
 
   PetscOptionsHeadEnd();
 
@@ -462,13 +536,19 @@ static PetscErrorCode PCSetFromOptions_AMGX(PetscOptionItems *PetscOptionsObject
 
 static PetscErrorCode PCView_AMGX(PC pc, PetscViewer viewer)
 {
+  PetscFunctionBegin;
+
+  PC_AMGX *amgx = (PC_AMGX *)pc->data;
+
   PetscBool iascii;
 
-  PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
   if (iascii) {
-    // Implement
+    std::string output_cfg(amgx->cfg_contents);
+    std::replace(output_cfg.begin(), output_cfg.end(), ',', '\n');
+    PetscCall(PetscViewerASCIIPrintf(viewer, "\n%s\n", output_cfg.c_str()));
   }
+
   PetscFunctionReturn(0);
 }
 
