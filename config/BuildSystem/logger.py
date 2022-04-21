@@ -227,7 +227,7 @@ class Logger(args.ArgumentProcessor):
       def center_line(line):
         return line.center(self.dividerLength).rstrip()
 
-      wrapped = textwrap.wrap(textwrap.dedent(text),**kwargs)
+      wrapped = textwrap.wrap(textwrap.dedent(text),break_on_hyphens=False, break_long_words=False,**kwargs)
       if len(wrapped) == 1:
         # center-justify single lines, and remove the bogus prefix
         wrapped[0] = center_line(wrapped[0].lstrip())
