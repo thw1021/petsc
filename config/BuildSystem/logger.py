@@ -214,6 +214,7 @@ class Logger(args.ArgumentProcessor):
     return
 
   def logPrintDivider(self, single = False, **kwargs):
+    kwargs.setdefault('rmDir',False)
     divider = ('-' if single else '=')*self.dividerLength
     return self.logPrint(divider, **kwargs)
 
@@ -227,7 +228,15 @@ class Logger(args.ArgumentProcessor):
       def center_line(line):
         return line.center(self.dividerLength).rstrip()
 
-      wrapped = textwrap.wrap(textwrap.dedent(text),break_on_hyphens=False, break_long_words=False,**kwargs)
+      argdict = dict(
+        break_on_hyphens=False,
+        break_long_words=False,
+        width=self.dividerLength-2,
+        initial_indent=prefix,
+        subsequent_indent=prefix
+      )
+      argdict.update(kwargs)
+      wrapped = textwrap.wrap(textwrap.dedent(text),**argdict)
       if len(wrapped) == 1:
         # center-justify single lines, and remove the bogus prefix
         wrapped[0] = center_line(wrapped[0].lstrip())
@@ -241,8 +250,8 @@ class Logger(args.ArgumentProcessor):
       prefix = ' '*2
 
     if rmDir:
-      rmDir = center_wrap(title,self.logStripDirectory(msg),width=self.dividerLength-2,initial_indent=prefix,subsequent_indent=prefix)
-    msg = center_wrap(title,msg,width=self.dividerLength-2,initial_indent=prefix,subsequent_indent=prefix)
+      rmDir = center_wrap(title,self.logStripDirectory(msg))
+    msg = center_wrap(title,msg)
     self.logClear()
     self.logPrintDivider(debugLevel = debugLevel, debugSection = debugSection, forceNewLine = True)
     self.logPrint(msg, debugLevel = debugLevel, debugSection = debugSection, rmDir = rmDir, forceNewLine = True, forceScroll = True, indent = 0)
