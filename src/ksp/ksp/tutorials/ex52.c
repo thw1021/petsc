@@ -274,7 +274,8 @@ int main(int argc,char **args)
        are equivalent to these procedural calls
 
     We refer to the STRUMPACK manual for more info on
-    how to tune the preconditioner.
+    how to tune the preconditioner, see for instance:
+     https://portal.nersc.gov/project/sparse/strumpack/master/prec.html
   */
   flg_strumpack_ilu = PETSC_FALSE;
   flg_strumpack     = PETSC_FALSE;

@@ -65,7 +65,7 @@ static PetscErrorCode MatSTRUMPACKSetReordering_STRUMPACK(Mat F,MatSTRUMPACKReor
    Level: beginner
 
    References:
-.  * - STRUMPACK manual
+.  * - STRUMPACK documentation: https://portal.nersc.gov/project/sparse/strumpack/master/
 
 .seealso: MatGetFactor()
 @*/
