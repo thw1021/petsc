@@ -1943,9 +1943,6 @@ typedef enum {MAT_STRUMPACK_NATURAL=0,
               MAT_STRUMPACK_GEOMETRIC=6} MatSTRUMPACKReordering;
 PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetReordering(Mat,MatSTRUMPACKReordering);
 PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetGeometricNxyz(Mat,PetscInt,PetscInt,PetscInt);
-PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetGeometricNx(Mat,PetscInt);
-PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetGeometricNy(Mat,PetscInt);
-PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetGeometricNz(Mat,PetscInt);
 PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetGeometricComponents(Mat,PetscInt);
 PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetGeometricWidth(Mat,PetscInt);
 PETSC_EXTERN PetscErrorCode MatSTRUMPACKSetColPerm(Mat,PetscBool);

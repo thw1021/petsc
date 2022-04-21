@@ -240,15 +240,14 @@ int main(int argc,char **args)
           '-pc_type lu/ilu \
            -pc_factor_mat_solver_type strumpack \
            -mat_strumpack_reordering GEOMETRIC \
-           -mat_strumpack_geometric_nx n \
-           -mat_strumpack_geometric_ny m \
+           -mat_strumpack_geometric_xyz n,m \
            -mat_strumpack_colperm 0 \
            -mat_strumpack_compression_rel_tol 1.e-3 \
            -mat_strumpack_compression_min_sep_size 15 \
            -mat_strumpack_leaf_size 4'
        are equivalent to these procedural calls
 
-    We refer to the STRUMPACK-sparse manual, section 5, for more info on
+    We refer to the STRUMPACK manual for more info on
     how to tune the preconditioner.
   */
   flg_strumpack_ilu = PETSC_FALSE;
@@ -277,10 +276,7 @@ int main(int argc,char **args)
     /* requires passing the grid dimensions to strumpack.             */
     ierr = MatSTRUMPACKSetReordering(F,MAT_STRUMPACK_GEOMETRIC);CHKERRQ(ierr);
     ierr = MatSTRUMPACKSetGeometricNxyz(F,n,m,PETSC_DECIDE);CHKERRQ(ierr);
-    /* ierr = MatSTRUMPACKSetGeometricNx(F,n);CHKERRQ(ierr); */
-    /* ierr = MatSTRUMPACKSetGeometricNy(F,m);CHKERRQ(ierr); */
-    /* These are optional, since the defaults are 1.                  */
-    /* ierr = MatSTRUMPACKSetGeometricNz(F,1);CHKERRQ(ierr); */
+    /* These are optional, defaults are 1                             */
     ierr = MatSTRUMPACKSetGeometricComponents(F,1);CHKERRQ(ierr);
     ierr = MatSTRUMPACKSetGeometricWidth(F,1);CHKERRQ(ierr);
 

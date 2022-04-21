@@ -31,9 +31,6 @@ static PetscErrorCode MatDestroy_STRUMPACK(Mat A)
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatSTRUMPACKSetReordering_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatSTRUMPACKSetColPerm_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatSTRUMPACKSetGeometricNxyz_C",NULL);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatSTRUMPACKSetGeometricNx_C",NULL);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatSTRUMPACKSetGeometricNy_C",NULL);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)A,"MatSTRUMPACKSetGeometricNz_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatSTRUMPACKSetGeometricComponents_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatSTRUMPACKSetGeometricWidth_C",NULL);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)A,"MatSTRUMPACKSetGPU_C",NULL);CHKERRQ(ierr);
@@ -319,7 +316,7 @@ PetscErrorCode MatSTRUMPACKSetCompLeafSize(Mat F,PetscInt leaf_size)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode MatSTRUMPACKSetGeometricNx_STRUMPACK(Mat F,PetscInt nx)
+static PetscErrorCode MatSTRUMPACKSetGeometricNxyz_STRUMPACK(Mat F,PetscInt nx,PetscInt ny,PetscInt nz)
 {
   STRUMPACK_SparseSolver *S = (STRUMPACK_SparseSolver*)F->spptr;
 
@@ -329,40 +326,16 @@ static PetscErrorCode MatSTRUMPACKSetGeometricNx_STRUMPACK(Mat F,PetscInt nx)
     else SETERRQ(PetscObjectComm((PetscObject)F),PETSC_ERR_ARG_OUTOFRANGE,"nx < 1");
   }
   PetscStackCall("STRUMPACK_set_nx", STRUMPACK_set_nx(*S,nx));
-  PetscFunctionReturn(0);
-}
-static PetscErrorCode MatSTRUMPACKSetGeometricNy_STRUMPACK(Mat F,PetscInt ny)
-{
-  STRUMPACK_SparseSolver *S = (STRUMPACK_SparseSolver*)F->spptr;
-
-  PetscFunctionBegin;
   if (ny < 1) {
     if (ny == PETSC_DECIDE || ny == PETSC_DEFAULT) ny = 1;
     else SETERRQ(PetscObjectComm((PetscObject)F),PETSC_ERR_ARG_OUTOFRANGE,"ny < 1");
   }
   PetscStackCall("STRUMPACK_set_ny", STRUMPACK_set_ny(*S,ny));
-  PetscFunctionReturn(0);
-}
-static PetscErrorCode MatSTRUMPACKSetGeometricNz_STRUMPACK(Mat F,PetscInt nz)
-{
-  STRUMPACK_SparseSolver *S = (STRUMPACK_SparseSolver*)F->spptr;
-
-  PetscFunctionBegin;
   if (nz < 1) {
     if (nz == PETSC_DECIDE || nz == PETSC_DEFAULT) nz = 1;
     else SETERRQ(PetscObjectComm((PetscObject)F),PETSC_ERR_ARG_OUTOFRANGE,"nz < 1");
   }
   PetscStackCall("STRUMPACK_set_nz", STRUMPACK_set_nz(*S,nz));
-  PetscFunctionReturn(0);
-}
-static PetscErrorCode MatSTRUMPACKSetGeometricNxyz_STRUMPACK(Mat F,PetscInt nx,PetscInt ny,PetscInt nz)
-{
-  PetscErrorCode          ierr;
-
-  PetscFunctionBegin;
-  ierr = MatSTRUMPACKSetGeometricNz_STRUMPACK(F,nx);CHKERRQ(ierr);
-  ierr = MatSTRUMPACKSetGeometricNz_STRUMPACK(F,ny);CHKERRQ(ierr);
-  ierr = MatSTRUMPACKSetGeometricNz_STRUMPACK(F,nz);CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 static PetscErrorCode MatSTRUMPACKSetGeometricComponents_STRUMPACK(Mat F,PetscInt nc)
@@ -383,7 +356,7 @@ static PetscErrorCode MatSTRUMPACKSetGeometricWidth_STRUMPACK(Mat F,PetscInt w)
 }
 
 /*@
-  MatSTRUMPACKSetGeometricNx - Set STRUMPACK mesh x, y and z dimensions, for use with GEOMETRIC ordering.
+  MatSTRUMPACKSetGeometricNxyz - Set STRUMPACK mesh x, y and z dimensions, for use with GEOMETRIC ordering.
    Logically Collective on Mat
 
    If the mesh is two (or one) dimensional one can use 1, PETSC_DECIDE or PETSC_DEFAULT
@@ -413,90 +386,6 @@ PetscErrorCode MatSTRUMPACKSetGeometricNxyz(Mat F,PetscInt nx,PetscInt ny,PetscI
   PetscValidLogicalCollectiveInt(F,ny,2);
   PetscValidLogicalCollectiveInt(F,nz,2);
   ierr = PetscTryMethod(F,"MatSTRUMPACKSetGeometricNxyz_C",(Mat,PetscInt,PetscInt,PetscInt),(F,nx,ny,nz));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-/*@
-  MatSTRUMPACKSetGeometricNx - Set STRUMPACK mesh x dimension, for use with GEOMETRIC ordering.
-   Logically Collective on Mat
-
-   Input Parameters:
-+  F - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
--  nx - x dimension of the mesh
-
-  Options Database:
-.   -mat_strumpack_geometric_nx <1>           - Mesh x dimension, for geometric nested dissection ordering (None)
-
-   Level: beginner
-
-   References:
-.      STRUMPACK manual
-
-.seealso: MatGetFactor()
-@*/
-PetscErrorCode MatSTRUMPACKSetGeometricNx(Mat F,PetscInt nx)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(F,MAT_CLASSID,1);
-  PetscValidLogicalCollectiveInt(F,nx,2);
-  ierr = PetscTryMethod(F,"MatSTRUMPACKSetGeometricNx_C",(Mat,PetscInt),(F,nx));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-/*@
-  MatSTRUMPACKSetGeometricNy - Set STRUMPACK mesh y dimension, for use with GEOMETRIC ordering.
-   Logically Collective on Mat
-
-   Input Parameters:
-+  F - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
--  ny - y dimension of the mesh
-
-  Options Database:
-.   -mat_strumpack_geometric_ny <1>           - Mesh y dimension, for geometric nested dissection ordering (None)
-
-   Level: beginner
-
-   References:
-.      STRUMPACK manual
-
-.seealso: MatGetFactor()
-@*/
-PetscErrorCode MatSTRUMPACKSetGeometricNy(Mat F,PetscInt ny)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(F,MAT_CLASSID,1);
-  PetscValidLogicalCollectiveInt(F,ny,2);
-  ierr = PetscTryMethod(F,"MatSTRUMPACKSetGeometricNy_C",(Mat,PetscInt),(F,ny));CHKERRQ(ierr);
-  PetscFunctionReturn(0);
-}
-/*@
-  MatSTRUMPACKSetGeometricNz - Set STRUMPACK mesh z dimension, for use with GEOMETRIC ordering.
-   Logically Collective on Mat
-
-   Input Parameters:
-+  F - the factored matrix obtained by calling MatGetFactor() from PETSc-STRUMPACK interface
--  nz - z dimension of the mesh
-
-  Options Database:
-.   -mat_strumpack_geometric_nz <1>           - Mesh z dimension, for geometric nested dissection ordering (None)
-
-   Level: beginner
-
-   References:
-.      STRUMPACK manual
-
-.seealso: MatGetFactor()
-@*/
-PetscErrorCode MatSTRUMPACKSetGeometricNz(Mat F,PetscInt nz)
-{
-  PetscErrorCode ierr;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(F,MAT_CLASSID,1);
-  PetscValidLogicalCollectiveInt(F,nz,2);
-  ierr = PetscTryMethod(F,"MatSTRUMPACKSetGeometricNz_C",(Mat,PetscInt),(F,nz));CHKERRQ(ierr);
   PetscFunctionReturn(0);
 }
 /*@
@@ -866,10 +755,8 @@ static PetscErrorCode MatFactorGetSolverType_aij_strumpack(Mat A,MatSolverType *
 . -mat_strumpack_compression_butterfly_levels - Number of levels in the hierarchically off-diagonal matrix for which to use butterfly, when using pctype ilu, (BLR_)HODLR compression (None)
 . -mat_strumpack_gpu                          - Enable GPU acceleration in numerical factorization (not supported for all compression types) (None)
 . -mat_strumpack_colperm <TRUE>               - Permute matrix to make diagonal nonzeros (None)
-. -mat_strumpack_reordering <METIS>           - Sparsity reducing matrix reordering (choose one of) NATURAL METIS PARMETIS SCOTCH PTSCOTCH RCM (None)
-. -mat_strumpack_geometric_nx <1>             - Mesh x dimension, for geometric nested dissection ordering (None)
-. -mat_strumpack_geometric_ny <1>             - Mesh y dimension, for geometric nested dissection ordering (None)
-. -mat_strumpack_geometric_nz <1>             - Mesh z dimension, for geometric nested dissection ordering (None)
+. -mat_strumpack_reordering <METIS>           - Sparsity reducing matrix reordering (choose one of) NATURAL METIS PARMETIS SCOTCH PTSCOTCH RCM GEOMETRIC (None)
+. -mat_strumpack_geometric_xyz <1,1,1>        - Mesh x,y,z dimensions, for use with GEOMETRIC ordering (None)
 . -mat_strumpack_geometric_components <1>     - Number of components per mesh point, for geometric nested dissection ordering (None)
 . -mat_strumpack_geometric_width <1>          - Width of the separator of the mesh, for geometric nested dissection ordering (None)
 . -mat_strumpack_metis_nodeNDP                - Use METIS_NodeNDP instead of METIS_NodeND, for a more balanced tree (None)
@@ -890,7 +777,7 @@ static PetscErrorCode MatGetFactor_aij_strumpack(Mat A,MatFactorType ftype,Mat *
   PetscInt                      M=A->rmap->N,N=A->cmap->N;
   PetscBool                     verb,flg,set;
   PetscReal                     ctol;
-  PetscInt                      min_sep_size,leaf_size,lossy_prec,bfly_lvls,nx,ny,nz,nc,w;
+  PetscInt                      min_sep_size,leaf_size,lossy_prec,bfly_lvls,nxyz[3],nrdims,nc,w;
   STRUMPACK_SparseSolver        *S;
   STRUMPACK_INTERFACE           iface;
   STRUMPACK_REORDERING_STRATEGY ndcurrent,ndvalue;
@@ -927,9 +814,6 @@ static PetscErrorCode MatGetFactor_aij_strumpack(Mat A,MatFactorType ftype,Mat *
   ierr = PetscObjectComposeFunction((PetscObject)B,"MatSTRUMPACKSetReordering_C",MatSTRUMPACKSetReordering_STRUMPACK);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)B,"MatSTRUMPACKSetColPerm_C",MatSTRUMPACKSetColPerm_STRUMPACK);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)B,"MatSTRUMPACKSetGeometricNxyz_C",MatSTRUMPACKSetGeometricNxyz_STRUMPACK);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)B,"MatSTRUMPACKSetGeometricNx_C",MatSTRUMPACKSetGeometricNx_STRUMPACK);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)B,"MatSTRUMPACKSetGeometricNy_C",MatSTRUMPACKSetGeometricNy_STRUMPACK);CHKERRQ(ierr);
-  ierr = PetscObjectComposeFunction((PetscObject)B,"MatSTRUMPACKSetGeometricNz_C",MatSTRUMPACKSetGeometricNz_STRUMPACK);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)B,"MatSTRUMPACKSetGeometricComponents_C",MatSTRUMPACKSetGeometricComponents_STRUMPACK);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)B,"MatSTRUMPACKSetGeometricWidth_C",MatSTRUMPACKSetGeometricWidth_STRUMPACK);CHKERRQ(ierr);
   ierr = PetscObjectComposeFunction((PetscObject)B,"MatSTRUMPACKSetGPU_C",MatSTRUMPACKSetGPU_STRUMPACK);CHKERRQ(ierr);
@@ -1018,12 +902,17 @@ static PetscErrorCode MatGetFactor_aij_strumpack(Mat A,MatFactorType ftype,Mat *
 
   /* geometric ordering, for a regular 1D/2D/3D mesh in the natural ordering, */
   /* with nc DOF's per gridpoint, and possibly a wider stencil                */
-  ierr = PetscOptionsInt("-mat_strumpack_geometric_nx","Mesh x dimension, for geometric nested dissection ordering","None",1,&nx,&set);CHKERRQ(ierr);
-  if (set) PetscStackCall("STRUMPACK_set_nx",STRUMPACK_set_nx(*S,(int)nx));
-  ierr = PetscOptionsInt("-mat_strumpack_geometric_ny","Mesh y dimension, for geometric nested dissection ordering","None",1,&ny,&set);CHKERRQ(ierr);
-  if (set) PetscStackCall("STRUMPACK_set_ny",STRUMPACK_set_ny(*S,(int)ny));
-  ierr = PetscOptionsInt("-mat_strumpack_geometric_nz","Mesh z dimension, for geometric nested dissection ordering","None",1,&nz,&set);CHKERRQ(ierr);
-  if (set) PetscStackCall("STRUMPACK_set_nz",STRUMPACK_set_nz(*S,(int)nz));
+  nrdims = 3;
+  nxyz[0] = nxyz[1] = nxyz[2] = 1;
+  ierr = PetscOptionsIntArray("-mat_strumpack_geometric_xyz","Mesh sizes nx,ny,nz (Use 1 for default)","",nxyz,&nrdims,&set);CHKERRQ(ierr);
+  if (set) {
+    if (nrdims < 1 || nrdims > 3) {
+      SETERRQ(PetscObjectComm((PetscObject)F),PETSC_ERR_ARG_OUTOFRANGE,"'-mat_strumpack_geometrix_xyz' requires 1, 2, or 3 values.");
+    }
+    PetscStackCall("STRUMPACK_set_nx",STRUMPACK_set_nx(*S,(int)nxyz[0]));
+    PetscStackCall("STRUMPACK_set_ny",STRUMPACK_set_ny(*S,(int)nxyz[1]));
+    PetscStackCall("STRUMPACK_set_nz",STRUMPACK_set_nz(*S,(int)nxyz[2]));
+  }
   ierr = PetscOptionsInt("-mat_strumpack_geometric_components","Number of components per mesh point, for geometric nested dissection ordering","None",1,&nc,&set);CHKERRQ(ierr);
   if (set) PetscStackCall("STRUMPACK_set_components",STRUMPACK_set_components(*S,(int)nc));
   ierr = PetscOptionsInt("-mat_strumpack_geometric_width","Width of the separator (for instance a 1D 3-point wide stencil needs a 1 point wide separator, a 1D 5-point stencil needs a 2 point wide separator), for geometric nested dissection ordering","None",1,&w,&set);CHKERRQ(ierr);
