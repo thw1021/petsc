@@ -160,7 +160,7 @@ struct _n_PetscDevice {
 };
 
 #define PetscManagedTypeOps_(PetscManagedType,PetscType,PetscTypeSuffix_L)                     \
-  PetscErrorCode (*releasemanaged ## PetscTypeSuffix_L)(PetscDeviceContext,PetscManagedType);  \
+  PetscErrorCode (*destroymanaged ## PetscTypeSuffix_L)(PetscDeviceContext,PetscManagedType);  \
   PetscErrorCode (*getmanagedvalues ## PetscTypeSuffix_L)(PetscDeviceContext,PetscManagedType,PetscMemType,PetscMemoryAccessMode,PetscType**); \
   PetscErrorCode (*applyoperator ## PetscTypeSuffix_L)(PetscDeviceContext,PetscManagedType,PetscOperatorType,const PetscType*,PetscManagedType)
 

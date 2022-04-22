@@ -123,9 +123,7 @@ private:
   stack_type stack_;
   bool       registered_ = false;
 
-  PETSC_NODISCARD        PetscErrorCode registerFinalize_()     noexcept;
-  PETSC_NODISCARD        PetscErrorCode finalizer_()            noexcept;
-  PETSC_NODISCARD static PetscErrorCode staticFinalizer_(void*) noexcept;
+  PETSC_NODISCARD PetscErrorCode registerFinalize_() noexcept;
 
 public:
   // default constructor
@@ -134,7 +132,7 @@ public:
   { }
 
   // destructor
-  ~ObjectPool() noexcept { PetscCallAbort(PETSC_COMM_SELF,finalizer_()); }
+  ~ObjectPool() noexcept { PetscCallAbort(PETSC_COMM_SELF,finalize()); }
 
   // copy constructor
   ObjectPool(ObjectPool &other) noexcept(std::is_nothrow_copy_constructible<stack_type>::value)
@@ -168,6 +166,8 @@ public:
   // the pool, note this only accepts r-value references. The pool takes ownership of all
   // managed objects.
   PETSC_NODISCARD PetscErrorCode reclaim(value_type&&) noexcept;
+
+  PETSC_NODISCARD PetscErrorCode finalize()            noexcept;
 
   // operators
   template <typename T_, class A_>
@@ -214,7 +214,7 @@ inline PetscBool operator<=(const ObjectPool<T,Allocator> &l, const ObjectPool<T
 }
 
 template <typename T, class Allocator>
-inline PetscErrorCode ObjectPool<T,Allocator>::finalizer_() noexcept
+inline PetscErrorCode ObjectPool<T,Allocator>::finalize() noexcept
 {
   PetscFunctionBegin;
   while (!stack_.empty()) {
@@ -229,29 +229,12 @@ inline PetscErrorCode ObjectPool<T,Allocator>::finalizer_() noexcept
 }
 
 template <typename T, class Allocator>
-inline PetscErrorCode ObjectPool<T,Allocator>::staticFinalizer_(void *obj) noexcept
-{
-  PetscFunctionBegin;
-  PetscCall(static_cast<ObjectPool<T,Allocator>*>(obj)->finalizer_());
-  PetscFunctionReturn(0);
-}
-
-template <typename T, class Allocator>
 inline PetscErrorCode ObjectPool<T,Allocator>::registerFinalize_() noexcept
 {
-  PetscContainer contain;
-
   PetscFunctionBegin;
   if (PetscLikely(registered_)) PetscFunctionReturn(0);
-  /* use a PetscContainer as a form of thunk, it holds not only a pointer to this but
-     also the pointer to the static member function, which just converts the thunk back
-     to this. none of this would be needed if PetscRegisterFinalize() just took a void*
-     itself though...  */
-  PetscCall(PetscContainerCreate(PETSC_COMM_SELF,&contain));
-  PetscCall(PetscContainerSetPointer(contain,this));
-  PetscCall(PetscContainerSetUserDestroy(contain,staticFinalizer_));
-  PetscCall(PetscObjectRegisterDestroy(reinterpret_cast<PetscObject>(contain)));
   registered_ = true;
+  PetscCall(PetscCxxObjectRegisterFinalize(this));
   PetscFunctionReturn(0);
 }
 

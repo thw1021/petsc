@@ -166,7 +166,7 @@ PetscErrorCode  VecAssemblyEnd(Vec vec)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecPointwiseApplyAsync_Private(Vec w, Vec x, Vec y, PetscDeviceContext dctx, PetscLogEvent event, PetscErrorCode(*pointwise_op)(Vec,Vec,Vec,PetscDeviceContext))
+static PetscErrorCode VecPointwiseApplyAsync_Private(Vec w, Vec x, Vec y, PetscDeviceContext dctx, PetscLogEvent event, PetscErrorCode(*const pointwise_op)(Vec,Vec,Vec,PetscDeviceContext))
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(w,VEC_CLASSID,1);
@@ -180,7 +180,7 @@ static PetscErrorCode VecPointwiseApplyAsync_Private(Vec w, Vec x, Vec y, PetscD
   VecCheckSameSize(w,1,x,2);
   VecCheckSameSize(w,1,y,3);
   PetscCall(VecSetErrorIfLocked(w,1));
-  PetscValidFunction(pointwise_op,5);
+  PetscValidFunction(pointwise_op,6);
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
 
   if (event) PetscCall(PetscLogEventBegin(event,x,y,w,0));
@@ -370,7 +370,7 @@ PetscErrorCode VecDuplicateAsync(Vec v, Vec *newv, PetscDeviceContext dctx)
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
 
   PetscCall((*v->ops->duplicate)(v,newv,dctx));
-#if PetscDefined(HAVE_VIENNACL) || PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)
+#if PetscDefined(HAVE_DEVICE)
   if (v->boundtocpu && v->bindingpropagates) {
     PetscCall(VecSetBindingPropagates(*newv,PETSC_TRUE));
     PetscCall(VecBindToCPU(*newv,PETSC_TRUE));

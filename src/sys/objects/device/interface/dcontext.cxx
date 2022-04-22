@@ -680,7 +680,7 @@ PetscErrorCode PetscDeviceContextGetNullContextForDevice_Internal(PetscDevice de
     PetscCall(PetscDeviceContextSetStreamType(*dctx,PETSC_STREAM_GLOBAL_BLOCKING));
     PetscCall(PetscDeviceContextSetDevice(*dctx,device));
     PetscCall(PetscDeviceContextSetUp(*dctx));
-    // would use ctxlist.cbegin() but GGC 4.8 can't handle const iterator insert!
+    // would use ctxlist.cbegin() but GCC 4.8 can't handle const iterator insert!
     CHKERRCXX(ctxlist.insert(std::next(ctxlist.begin(),devid),*dctx));
   } else *dctx = ctxlist[devid];
   PetscFunctionReturn(0);

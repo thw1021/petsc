@@ -96,6 +96,17 @@ PetscErrorCode VecDotAsync(Vec x, Vec y, PetscManagedScalar val, PetscDeviceCont
   PetscFunctionReturn(0);
 }
 
+#define PetscWithManagedScalar(ptr_name__,ptr_size__,scal_name__,dctx_name__,...) do {         \
+    PetscManagedScalar scal_name__;                                                            \
+                                                                                               \
+    PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx_name__));                \
+    PetscCall(PetscManageHostScalar(dctx_name__,ptr_name__,ptr_size__,&scal_name__));          \
+    __VA_ARGS__;                                                                               \
+    PetscCall(PetscManagedScalarEnsureOffload(dctx_name__,scal_name__,PETSC_OFFLOAD_CPU));     \
+    PetscCall(PetscDeviceContextSynchronize(dctx_name__));                                     \
+    PetscCall(PetscManagedScalarDestroy(dctx_name__,&scal_name__));                            \
+  } while (0)
+
 /*@
    VecDot - Computes the vector dot product.
 
@@ -127,18 +138,6 @@ $     val = (x,y) = y^T x,
 
 .seealso: VecMDot(), VecTDot(), VecNorm(), VecDotBegin(), VecDotEnd(), VecDotRealPart()
 @*/
-#define PetscWithManagedScalar(ptr_name__,ptr_size__,scal_name__,dctx_name__,...) do {         \
-    PetscManagedScalar scal_name__;                                                            \
-    PetscScalar        *with_managed_scalar_dummy_ptr_;                                        \
-                                                                                               \
-    PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx_name__));                \
-    PetscCall(PetscManageHostScalar(dctx_name__,ptr_name__,ptr_size__,&scal_name__));          \
-    __VA_ARGS__;                                                                               \
-    PetscCall(PetscManagedScalarGetValues(dctx_name__,scal_name__,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,&with_managed_scalar_dummy_ptr_,NULL)); \
-    PetscCall(PetscDeviceContextSynchronize(dctx_name__));                                     \
-    PetscCall(PetscManagedScalarDestroy(dctx_name__,&scal_name__));                            \
-  } while (0)
-
 PetscErrorCode  VecDot(Vec x,Vec y,PetscScalar *val)
 {
   //PetscManagedScalar tmp;

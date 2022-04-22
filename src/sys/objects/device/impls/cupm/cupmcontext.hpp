@@ -428,11 +428,7 @@ template <DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::arrayCopy(PetscDeviceContext dctx, void *PETSC_RESTRICT dest, const void *PETSC_RESTRICT src, std::size_t n, PetscDeviceCopyMode mode))
 {
   PetscFunctionBegin;
-  if (PetscUnlikely(mode == PETSC_DEVICE_COPY_HTOH)) {
-    PetscCall(PetscMemcpy(dest,src,n));
-  } else {
-    PetscCallCUPM(cupmMemcpyAsync(dest,src,n,PetscDeviceCopyModeToCUPMMemcpyKind(mode),impls_cast_(dctx)->stream));
-  }
+  PetscCallCUPM(cupmMemcpyAsync(dest,src,n,PetscDeviceCopyModeToCUPMMemcpyKind(mode),impls_cast_(dctx)->stream));
   PetscFunctionReturn(0);
 }
 
