@@ -18,29 +18,6 @@
 #  define PetscType PetscConcat(Petsc,PetscTypeSuffix)
 #endif
 
-#if defined(PetscConcat3)
-#  error "PetscConcat3 defined"
-#else
-#  define PetscConcat3(a,b,c) PetscConcat(PetscConcat(a,b),c)
-#endif
-
-#define _n_PetscManagedType PetscConcat(_n_,PetscManagedType)
-struct _n_PetscManagedType
-{
-  PetscType        *host;
-#if PetscDefined(HAVE_CXX)
-  PetscType        *device;
-  PetscDeviceType   dtype;
-  PetscOffloadMask  mask;
-  PetscCopyMode     d_cmode;
-#endif
-  PetscCopyMode     h_cmode;
-  PetscInt          n;
-  PetscBool         locked;
-};
-typedef struct _n_PetscManagedType *PetscManagedType;
-#undef _n_PetscManagedType
-
 // real implementations found in src/sys/objects/device/interface/managedtype.cxx
 #define PetscManagedTypeCreate               PetscConcat(PetscManagedType,Create)
 #define PetscManagedTypeCreateDefault        PetscConcat(PetscManagedTypeCreate,Default)
@@ -60,14 +37,35 @@ typedef struct _n_PetscManagedType *PetscManagedType;
 #define PETSC_NO_DEVICE_UNUSED PetscIfPetscDefined(HAVE_CXX,,PETSC_UNUSED)
 #define PETSC_MANAGED_TYPE_DECL_OR_STUB(FunctionDecl,...) PetscIfPetscDefined(HAVE_CXX,PETSC_EXTERN FunctionDecl,static inline FunctionDecl __VA_ARGS__)
 
+#define _n_PetscManagedType PetscConcat(_n_,PetscManagedType)
+struct _n_PetscManagedType
+{
+  PetscType        *host;
+#if PetscDefined(HAVE_CXX)
+  PetscType        *device;
+  PetscDeviceType   dtype;
+  PetscOffloadMask  mask;
+  PetscCopyMode     d_cmode;
+#endif
+  PetscCopyMode     h_cmode;
+  PetscInt          n;
+  PetscBool         locked;
+};
+typedef struct _n_PetscManagedType *PetscManagedType;
+#undef _n_PetscManagedType
+
 PETSC_MANAGED_TYPE_DECL_OR_STUB(
   PetscErrorCode PetscManagedTypeCreate(PetscDeviceContext PETSC_NO_DEVICE_UNUSED dctx, PetscType *host_ptr, PetscType PETSC_NO_DEVICE_UNUSED *device_ptr, PetscInt n, PetscCopyMode h_cmode, PetscCopyMode PETSC_NO_DEVICE_UNUSED d_cmode, PetscOffloadMask PETSC_NO_DEVICE_UNUSED mask, PetscManagedType *scal),
   {
     PetscFunctionBegin;
     PetscCall(PetscNew(scal));
     if (h_cmode == PETSC_COPY_VALUES) {
-      PetscCall(PetscMalloc1(n,&((*scal)->host)));
-      PetscCall(PetscArraycpy((*scal)->host,host_ptr,n));
+      PetscType *ptr;
+
+      // (*scal)->host is a void*, so need to use intermediate variable with proper type
+      PetscCall(PetscMalloc1(n,&ptr));
+      PetscCall(PetscArraycpy(ptr,host_ptr,n));
+      (*scal)->host = ptr;
       h_cmode = PETSC_OWN_POINTER;
     } else {
       (*scal)->host = host_ptr;
@@ -219,6 +217,5 @@ static inline PetscErrorCode PetscManagedTypeCreateDefault(PetscDeviceContext dc
 #undef PetscManagedTypeRestoreSubRange
 
 #undef PetscTypeSuffix
-#undef PetscManagedType
 #undef PetscType
-#undef PetscConcat3
+#undef PetscManagedType
