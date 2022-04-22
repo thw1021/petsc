@@ -5,6 +5,7 @@
 */
 #include <../src/vec/vec/impls/dvecimpl.h>
 #include <petsc/private/kernels/petscaxpy.h>
+#include <petscdevice.h>
 
 #if defined(PETSC_USE_FORTRAN_KERNEL_MDOT)
 #include <../src/vec/vec/impls/seq/ftn-kernels/fmdot.h>
@@ -494,22 +495,20 @@ PetscErrorCode VecMTDot_Seq(Vec xin, PetscManagedInt nv, const Vec yin[], PetscM
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecMinMax_Seq(Vec xin, PetscManagedInt idx, PetscManagedReal z, PetscDeviceContext dctx, PetscReal minit, PetscBool(*const cmp)(PetscReal,PetscReal))
+static PetscErrorCode VecMinMax_Seq(Vec xin, PetscManagedInt idx, PetscManagedReal z, PetscDeviceContext dctx, PetscReal minmax, PetscBool(*const cmp)(PetscReal,PetscReal))
 {
-  const PetscInt n      = xin->map->n;
-  PetscReal      minmax = minit;
-  PetscInt       j      = -1;
+  const PetscInt n = xin->map->n;
+  PetscInt       j = -1;
 
   PetscFunctionBegin;
   if (n) {
     const PetscScalar *xx;
-    PetscReal          tmp;
 
     PetscCall(VecGetArrayRead(xin,&xx));
-    minmax = PetscRealPart(xx[0]);
-    j      = 0;
+    minmax = PetscRealPart(xx[(j = 0)]);
     for (PetscInt i = 1; i < n; ++i) {
-      if (cmp(minmax,(tmp = PetscRealPart(xx[i])))) { j = i; minmax = tmp; }
+      const PetscReal tmp = PetscRealPart(xx[i]);
+      if (cmp(tmp,minmax)) { j = i; minmax = tmp; }
     }
     PetscCall(VecRestoreArrayRead(xin,&xx));
   }
@@ -542,6 +541,7 @@ PetscErrorCode VecSet_Seq(Vec xin, PetscManagedScalar alpha, PetscDeviceContext 
 
   PetscFunctionBegin;
   PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,&aptr,NULL));
+  PetscCall(PetscDeviceContextSynchronize(dctx));
   {
     const PetscScalar  aval = *aptr;
     const PetscInt     n    = xin->map->n;
@@ -560,20 +560,21 @@ PetscErrorCode VecSet_Seq(Vec xin, PetscManagedScalar alpha, PetscDeviceContext 
 
 PetscErrorCode VecMAXPY_Seq(Vec xin, PetscManagedInt nvt, PetscManagedScalar alpha, Vec *y, PetscDeviceContext dctx)
 {
-  PetscInt *nvptr;
+  PetscInt    *nvptr;
+  PetscScalar *aptr;
+
+  PetscFunctionBegin;
+  PetscCall(PetscManagedIntGetValues(dctx,nvt,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,&nvptr,NULL));
+  PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,&aptr,NULL));
+  PetscCall(PetscDeviceContextSynchronize(dctx));
+  {
+    const PetscInt     nv = *nvptr,j_rem = nv&0x3,n = xin->map->n;
+    const PetscScalar *yptr[4];
+    PetscScalar       *xx;
 
 #if defined(PETSC_HAVE_PRAGMA_DISJOINT)
 #pragma disjoint(*xx,**yptr,*aptr)
 #endif
-
-  PetscFunctionBegin;
-  PetscCall(PetscManagedIntGetValues(dctx,nvt,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,&nvptr,NULL));
-  {
-    const PetscInt     nv = *nvptr,j_rem = nv&0x3,n = xin->map->n;
-    const PetscScalar *yptr[4];
-    PetscScalar       *xx,*aptr;
-
-    PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,&aptr,NULL));
     PetscCall(PetscLogFlops(nv*2.0*n));
     PetscCall(VecGetArray(xin,&xx));
     for (PetscInt i = 0; i < j_rem; ++i) PetscCall(VecGetArrayRead(y[i],yptr+i));
@@ -609,6 +610,7 @@ PetscErrorCode VecAYPX_Seq(Vec yin, PetscManagedScalar alpha, Vec xin, PetscDevi
 
   PetscFunctionBegin;
   PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,&aptr,NULL));
+  PetscCall(PetscDeviceContextSynchronize(dctx));
   {
     const PetscScalar aval = *aptr;
 
@@ -693,10 +695,10 @@ PetscErrorCode VecMaxPointwiseDivide_Seq(Vec xin, Vec yin, PetscManagedReal max,
   PetscCall(VecGetArrayRead(xin,&xx));
   PetscCall(VecGetArrayRead(yin,&yy));
   for (PetscInt i = 0; i < n; ++i) {
-    if (yy[i] != (PetscScalar)0.0) {
-      m = PetscMax(PetscAbsScalar(xx[i]/yy[i]),m);
-    } else {
+    if (yy[i] == (PetscScalar)0.0) {
       m = PetscMax(PetscAbsScalar(xx[i]),m);
+    } else {
+      m = PetscMax(PetscAbsScalar(xx[i]/yy[i]),m);
     }
   }
   PetscCall(VecRestoreArrayRead(xin,&xx));

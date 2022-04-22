@@ -141,7 +141,7 @@ $     val = (x,y) = y^T x,
 PetscErrorCode  VecDot(Vec x,Vec y,PetscScalar *val)
 {
   //PetscManagedScalar tmp;
-  PetscDeviceContext dctx;
+  PetscDeviceContext dctx = NULL;
 
   PetscFunctionBegin;
   PetscValidScalarPointer(val,3);
@@ -221,20 +221,19 @@ PetscErrorCode  VecDotRealPart(Vec x,Vec y,PetscReal *val)
 
 PetscErrorCode VecNormAsync(Vec x, NormType type, PetscManagedReal scal, PetscDeviceContext dctx)
 {
+  PetscBool flg;
+  PetscReal rval;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
   PetscValidType(x,1);
+  PetscValidPointer(scal,3);
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   /* Cached data? */
-  if (type != NORM_1_AND_2) {
-    PetscBool flg;
-    PetscReal rval;
-
-    PetscCall(VecNormAvailable(x,type,&flg,&rval));
-    if (flg) {
-      PetscCall(PetscManagedRealSetValues(dctx,scal,PETSC_MEMTYPE_HOST,&rval,1));
-      PetscFunctionReturn(0);
-    }
+  PetscCall(VecNormAvailable(x,type,&flg,&rval));
+  if (flg) {
+    PetscCall(PetscManagedRealSetValues(dctx,scal,PETSC_MEMTYPE_HOST,&rval,1));
+    PetscFunctionReturn(0);
   }
 
   PetscCall(PetscLogEventBegin(VEC_Norm,x,0,0,0));
@@ -286,10 +285,14 @@ PetscErrorCode VecNormAsync(Vec x, NormType type, PetscManagedReal scal, PetscDe
 @*/
 PetscErrorCode  VecNorm(Vec x,NormType type,PetscReal *val)
 {
+  PetscBool        flg;
   PetscManagedReal tmp;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
   PetscValidRealPointer(val,3);
+  PetscCall(VecNormAvailable(x,type,&flg,val));
+  if (flg) PetscFunctionReturn(0);
   PetscCall(PetscManageHostReal(NULL,val,1+(type == NORM_1_AND_2),&tmp));
   PetscCall(VecNormAsync(x,type,tmp,NULL));
   PetscCall(PetscManagedRealDestroy(NULL,&tmp));
@@ -403,7 +406,7 @@ static PetscErrorCode VecMinMax_Private(Vec x, PetscInt *p, PetscReal *val, Pets
 {
   PetscManagedReal   tmpv;
   PetscManagedInt    tmpp = NULL;
-  PetscDeviceContext dctx;
+  PetscDeviceContext dctx = NULL;
 
   PetscFunctionBegin;
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
@@ -584,25 +587,26 @@ $      x[i] = alpha * x[i], for i=1,...,n.
 @*/
 PetscErrorCode VecScale(Vec x, PetscScalar alpha)
 {
-  const PetscObject xobj = (PetscObject)x;
-  PetscReal         norms[4];
-  PetscBool         flags[4];
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  /* get current stashed norms */
-  for (PetscInt i = 0; i < 4; ++i) PetscCall(PetscObjectComposedDataGetReal(xobj,NormIds[i],norms[i],flags[i]));
-
-  {
+  if (alpha != (PetscScalar)1.0) {
+    const PetscObject  xobj = (PetscObject)x;
+    PetscReal          norms[4];
+    PetscBool          flags[4];
     PetscManagedScalar tmp;
 
+    /* get current stashed norms */
+    for (PetscInt i = 0; i < 4; ++i) {
+      PetscCall(PetscObjectComposedDataGetReal(xobj,NormIds[i],norms[i],flags[i]));
+    }
     PetscCall(PetscManageHostScalar(NULL,&alpha,1,&tmp));
     PetscCall(VecScaleAsync(x,tmp,NULL));
     PetscCall(PetscManagedScalarDestroy(NULL,&tmp));
-  }
-
-  for (PetscInt i = 0; i < 4; ++i) {
-    if (flags[i]) PetscCall(PetscObjectComposedDataSetReal(xobj,NormIds[i],PetscAbsScalar(alpha)*norms[i]));
+    for (PetscInt i = 0; i < 4; ++i) {
+      if (flags[i]) {
+        PetscCall(PetscObjectComposedDataSetReal(xobj,NormIds[i],PetscAbsScalar(alpha)*norms[i]));
+      }
+    }
   }
   PetscFunctionReturn(0);
 }
@@ -659,22 +663,22 @@ PetscErrorCode  VecSet(Vec x,PetscScalar alpha)
   PetscCall(PetscManageHostScalar(NULL,&alpha,1,&tmp));
   PetscCall(VecSetAsync(x,tmp,NULL));
   PetscCall(PetscManagedScalarDestroy(NULL,&tmp));
-
   {
-    const PetscInt    n   = x->map->n;
+    const PetscInt    N   = x->map->N;
     const PetscObject obj = (PetscObject)x;
 
-    if (n == 0) {
+    alpha = PetscAbsScalar(alpha);
+    if (N == 0) {
       PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_1],0.0l));
       PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_2],0.0));
       PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_FROBENIUS],0.0));
       PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_INFINITY],0.0));
-    } else if (alpha > (PETSC_MAX_REAL/n)) {
+    } else if (alpha > (PETSC_MAX_REAL/N)) {
       PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_INFINITY],alpha));
     } else {
-      PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_1],n*alpha));
+      PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_1],N*alpha));
       PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_INFINITY],alpha));
-      alpha *= PetscSqrtReal((PetscReal)n);
+      alpha *= PetscSqrtReal((PetscReal)N);
       PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_2],alpha));
       PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_FROBENIUS],alpha));
     }

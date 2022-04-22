@@ -42,10 +42,11 @@ PetscErrorCode VecNorm_MPI(Vec xin, NormType type, PetscManagedReal z, PetscDevi
   switch (type) {
   case NORM_2:
   case NORM_FROBENIUS: {
-    const PetscInt     n = xin->map->n;
-    const PetscScalar *xx;
-    PetscReal          ztmp;
-    PetscBLASInt       one = 1,bn;
+    const PetscInt      n   = xin->map->n;
+    const PetscBLASInt  one = 1;
+    const PetscScalar  *xx;
+    PetscReal           ztmp;
+    PetscBLASInt        bn;
 
     PetscCall(PetscBLASIntCast(n,&bn));
     PetscCall(VecGetArrayRead(xin,&xx));
@@ -55,7 +56,6 @@ PetscErrorCode VecNorm_MPI(Vec xin, NormType type, PetscManagedReal z, PetscDevi
     PetscCall(PetscManagedRealSetValues(dctx,z,PETSC_MEMTYPE_HOST,&ztmp,1));
   } break;
   case NORM_1_AND_2:
-    PetscAssert(zn >= 2,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"NORM_1_AND_2 needs managed type of size >= 2, have %" PetscInt_FMT,zn);
   case NORM_1:
   case NORM_INFINITY:
     PetscCall(VecNorm_Seq(xin,type,z,dctx));
@@ -70,7 +70,7 @@ PetscErrorCode VecNorm_MPI(Vec xin, NormType type, PetscManagedReal z, PetscDevi
     break;
   }
   PetscCall(PetscDeviceContextAllReduceManagedReal_Internal(dctx,z,(PetscObject)xin,&zn,op));
-  if (type == NORM_1 || type == NORM_FROBENIUS || type == NORM_1_AND_2) {
+  if (type == NORM_2 || type == NORM_FROBENIUS || type == NORM_1_AND_2) {
     PetscCall(PetscManagedRealGetValues(dctx,z,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,&zptr,NULL));
     PetscCall(PetscDeviceContextSynchronize(dctx));
     zptr[type == NORM_1_AND_2] = PetscSqrtReal(zptr[type == NORM_1_AND_2]);
@@ -78,11 +78,11 @@ PetscErrorCode VecNorm_MPI(Vec xin, NormType type, PetscManagedReal z, PetscDevi
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecMinMax_MPI_Private(Vec xin, PetscManagedInt idx, PetscManagedReal z, PetscDeviceContext dctx, MPI_Op ops[2], PetscErrorCode(*const SeqFn)(Vec,PetscManagedInt,PetscManagedReal,PetscDeviceContext))
+static PetscErrorCode VecMinMax_MPI_Private(Vec xin, PetscManagedInt idx, PetscManagedReal z, PetscDeviceContext dctx, MPI_Op ops[2], PetscErrorCode(*const VecMinMax_Seq)(Vec,PetscManagedInt,PetscManagedReal,PetscDeviceContext))
 {
   PetscFunctionBegin;
   /* Find the local min/max */
-  PetscCall(SeqFn(xin,idx,z,dctx));
+  PetscCall(VecMinMax_Seq(xin,idx,z,dctx));
   if (PetscDefined(HAVE_MPIUNI)) PetscFunctionReturn(0);
   /* Find the global min/max */
   if (idx) {
@@ -93,8 +93,8 @@ static PetscErrorCode VecMinMax_MPI_Private(Vec xin, PetscManagedInt idx, PetscM
     PetscCall(PetscManagedRealGetValues(dctx,z,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,&zptr,NULL));
     PetscCall(PetscManagedIntGetValues(dctx,idx,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,&idxptr,NULL));
     PetscCall(PetscDeviceContextSynchronize(dctx));
-    in.v = *zptr;
-    in.i = *idxptr + xin->map->rstart;
+    in.v = zptr[0];
+    in.i = idxptr[0] + xin->map->rstart;
     PetscCall(MPIU_Allreduce(&in,&out,1,MPIU_REAL_INT,ops[0],PetscObjectComm((PetscObject)xin)));
     *zptr   = out.v;
     *idxptr = out.i;

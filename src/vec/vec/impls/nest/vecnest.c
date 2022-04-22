@@ -380,33 +380,29 @@ static PetscErrorCode VecMinMax_Nest_Recursive(Vec x, PetscInt *cnt, PetscInt *p
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)x,VECNEST,&isnest));
   if (isnest) {
-    const PetscInt count = *cnt;
-    PetscReal      vtmp  = *val,ptmp = *p,entry_val;
-    PetscInt       entry_loc,len;
-
-    /* Not nest */
-    PetscCall((*VecFun)(x,p ? &entry_loc : NULL,&entry_val));
-    if ((*cmp)(entry_val,vtmp)) {
-      vtmp = entry_val;
-      if (p) ptmp = entry_loc+count;
-    }
-    PetscCall(VecGetSize(x,&len));
-    *cnt += len;
-    *val = vtmp;
-    if (p) *p = ptmp;
-  } else {
-    /* Otherwise we have a nest */
     const Vec_Nest *bx  = (Vec_Nest*)x->data;
     const Vec      *bxv = bx->v;
     const PetscInt  nr  = bx->nb;
 
     /* now descend recursively */
     for (PetscInt i = 0; i < nr; ++i) PetscCall(VecMinMax_Nest_Recursive(bxv[i],cnt,p,val,VecFun,cmp));
+  } else {
+    PetscReal entry_val;
+    PetscInt  entry_loc,len;
+
+    /* not nest */
+    PetscCall(VecFun(x,p ? &entry_loc : NULL,&entry_val));
+    if (cmp(entry_val,*val)) {
+      *val = entry_val;
+      if (p) *p = entry_loc+(*cnt);
+    }
+    PetscCall(VecGetSize(x,&len));
+    *cnt += len;
   }
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecMinMax_Nest_Private(Vec x, PetscReal minit, PetscErrorCode(*const VecFun)(Vec,PetscInt*,PetscReal*), PetscBool(*const cmp)(PetscScalar,PetscScalar), PetscManagedInt p, PetscManagedReal m, PetscDeviceContext dctx)
+static PetscErrorCode VecMinMax_Nest_Private(Vec x, PetscManagedInt p, PetscManagedReal m, PetscDeviceContext dctx, PetscReal minit, PetscErrorCode(*const VecFun)(Vec,PetscInt*,PetscReal*), PetscBool(*const cmp)(PetscScalar,PetscScalar))
 {
   PetscInt ptmp = 0,cnt = 0;
 
@@ -423,7 +419,7 @@ static PetscBool PetscScalarGT(PetscScalar l, PetscScalar r)  { return (PetscBoo
 static PetscErrorCode VecMax_Nest(Vec x, PetscManagedInt p, PetscManagedReal max, PetscDeviceContext dctx)
 {
   PetscFunctionBegin;
-  PetscCall(VecMinMax_Nest_Private(x,PETSC_MIN_REAL,VecMax,PetscScalarGT,p,max,dctx));
+  PetscCall(VecMinMax_Nest_Private(x,p,max,dctx,PETSC_MIN_REAL,VecMax,PetscScalarGT));
   PetscFunctionReturn(0);
 }
 
@@ -432,7 +428,7 @@ static PetscBool PetscScalarLT(PetscScalar l, PetscScalar r) { return (PetscBool
 static PetscErrorCode VecMin_Nest(Vec x, PetscManagedInt p, PetscManagedReal min, PetscDeviceContext dctx)
 {
   PetscFunctionBegin;
-  PetscCall(VecMinMax_Nest_Private(x,PETSC_MAX_REAL,VecMin,PetscScalarLT,p,min,dctx));
+  PetscCall(VecMinMax_Nest_Private(x,p,min,dctx,PETSC_MAX_REAL,VecMin,PetscScalarLT));
   PetscFunctionReturn(0);
 }
 

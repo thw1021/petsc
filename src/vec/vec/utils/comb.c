@@ -524,6 +524,7 @@ PetscErrorCode VecNormBeginAsync(Vec x, NormType ntype, PetscManagedReal PETSC_U
   PetscCall(PetscLogEventBegin(VEC_ReduceArithmetic,0,0,0,0));
   PetscCall((*x->ops->norm_local)(x,ntype,tmp,dctx));
   PetscCall(PetscLogEventEnd(VEC_ReduceArithmetic,0,0,0,0));
+  PetscCall(PetscManagedRealDestroy(dctx,&tmp));
   // REVIEW ME: can do this better
   PetscCall(PetscDeviceContextSynchronize(dctx));
 
@@ -621,7 +622,7 @@ PetscErrorCode  VecNormEnd(Vec x,NormType ntype,PetscReal *result)
 
   PetscFunctionBegin;
   PetscValidRealPointer(result,3);
-  PetscCall(PetscManageHostReal(NULL,result,1,&scal));
+  PetscCall(PetscManageHostReal(NULL,result,1+(ntype == NORM_1_AND_2),&scal));
   PetscCall(VecNormEndAsync(x,ntype,scal,NULL));
   PetscCall(PetscManagedRealDestroy(NULL,&scal));
   PetscFunctionReturn(0);
