@@ -268,6 +268,20 @@ PETSC_NODISCARD static inline PETSC_CONSTEXPR_14 PetscDeviceCopyMode PetscMemTyp
   }
 }
 
+typedef struct _n_PetscManagedTypeBase
+{
+  void             *host;
+#if PetscDefined(HAVE_CXX)
+  void             *device;
+  PetscDeviceType   dtype;
+  PetscOffloadMask  mask;
+  PetscCopyMode     d_cmode;
+#endif
+  PetscCopyMode     h_cmode;
+  PetscInt          n;
+  PetscBool         locked;
+} _n_PetscManagedTypeBase;
+
 #define PetscTypeSuffix Scalar
 #include "petscmanagedtype.inl"
 #define PetscTypeSuffix Real

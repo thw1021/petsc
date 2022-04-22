@@ -2,6 +2,7 @@
 #define PETSC_IMPLDEVICECONTEXTBASE_HPP
 
 #include <petsc/private/deviceimpl.h>
+#include <petsc/private/cpputil.hpp>
 #include <vector>
 
 namespace Petsc
@@ -19,16 +20,19 @@ struct MemoryBlock
 {
   using size_type = std::size_t;
 
-  size_type start;
-  size_type size;
-  bool      open;
+  const size_type start;
+  const size_type size;
+  bool            open;
 
   constexpr MemoryBlock(size_type start_, size_type size_, bool open_ = false) noexcept
     : start(start_), size(size_), open(open_)
   { }
+
+  constexpr MemoryBlock(size_type size_) noexcept : MemoryBlock(0,size_) { }
 };
 
-template <typename MemType, typename AllocType, typename FreeType, std::size_t PoolSize> class PETSC_TEMPLATE_VISIBILITY_INTERNAL SegmentedMemoryPool;
+template <typename MemType, typename AllocType, typename FreeType, std::size_t PoolSize>
+class PETSC_TEMPLATE_VISIBILITY_INTERNAL SegmentedMemoryPool;
 
 template <typename MemType, typename AllocType, typename FreeType, std::size_t PoolSize>
 class SegmentedMemoryPool
@@ -67,19 +71,9 @@ inline PetscErrorCode SegmentedMemoryPool<MemType,AllocType,FreeType,PoolSize>::
 template <typename MemType, typename AllocType, typename FreeType, std::size_t PoolSize>
 inline PetscErrorCode SegmentedMemoryPool<MemType,AllocType,FreeType,PoolSize>::initialize() noexcept
 {
-  const auto finalizer = [](void *ptr) {
-    PetscFunctionBegin;
-    PetscCall(static_cast<decltype(this)>(ptr)->finalize());
-    PetscFunctionReturn(0);
-  };
-  PetscContainer contain;
-
   PetscFunctionBegin;
   PetscCall(allocate_(&mem_pool_,PoolSize));
-  PetscCall(PetscContainerCreate(PETSC_COMM_SELF,&contain));
-  PetscCall(PetscContainerSetPointer(contain,this));
-  PetscCall(PetscContainerSetUserDestroy(contain,finalizer));
-  PetscCall(PetscObjectRegisterDestroy(reinterpret_cast<PetscObject>(contain)));
+  PetscCall(PetscCxxObjectRegisterFinalize(this));
   PetscFunctionReturn(0);
 }
 
@@ -94,7 +88,7 @@ inline PetscErrorCode SegmentedMemoryPool<MemType,AllocType,FreeType,PoolSize>::
     auto result = mem_pool_;
 
     if (blocks_.empty()) {
-      PetscCallCXX(blocks_.emplace_back(0,size));
+      PetscCallCXX(blocks_.emplace_back(size));
     } else {
       auto block_alloced = size_type{0};
       // first, search the blocks
@@ -155,12 +149,10 @@ inline bool SegmentedMemoryPool<MemType,AllocType,FreeType,PoolSize>::owns_point
 }
 
 template <typename MemType, std::size_t PoolSize = 200, typename AllocType, typename FreeType>
-SegmentedMemoryPool<MemType,AllocType,FreeType,PoolSize> make_segmented_memory_pool(AllocType&& alloc, FreeType&& freefn)
-{
-  return SegmentedMemoryPool<MemType,AllocType,FreeType,PoolSize>{
-    std::forward<AllocType>(alloc),std::forward<FreeType>(freefn)
-  };
-}
+static inline auto make_segmented_memory_pool(AllocType&& alloc, FreeType&& freefn)
+  PETSC_DECLTYPE_NOEXCEPT_AUTO_RETURNS(SegmentedMemoryPool<MemType,AllocType,FreeType,PoolSize>{
+      std::forward<AllocType>(alloc),std::forward<FreeType>(freefn)
+    });
 
 } // namespace Impl
 
