@@ -4,6 +4,8 @@
 #include <petsc/private/deviceimpl.h>
 #include <petsc/private/cpputil.hpp>
 #include <petsc/private/petscadvancedmacros.h>
+#include <petscdevice_cuda.h>
+#include <petscdevice_hip.h>
 
 #if defined(__NVCC__) || defined(__CUDACC__)
 #  define PETSC_USING_NVCC 1

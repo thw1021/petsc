@@ -455,7 +455,9 @@ PETSC_EXTERN PetscErrorCode VecGetArray1dRead(Vec,PetscInt,PetscInt,PetscScalar*
 PETSC_EXTERN PetscErrorCode VecRestoreArray1dRead(Vec,PetscInt,PetscInt,PetscScalar*[]);
 
 PETSC_EXTERN PetscErrorCode VecPlaceArray(Vec,const PetscScalar[]);
+PETSC_EXTERN PetscErrorCode VecPlaceArrayAsync(Vec,const PetscScalar[],PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecResetArray(Vec);
+PETSC_EXTERN PetscErrorCode VecResetArrayAsync(Vec,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecReplaceArray(Vec,const PetscScalar[]);
 
 PETSC_EXTERN PetscErrorCode VecGetArrays(const Vec[],PetscInt,PetscScalar**[]);

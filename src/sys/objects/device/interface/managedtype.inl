@@ -96,7 +96,7 @@ PetscErrorCode PetscManagedTypeApplyOperator(PetscDeviceContext dctx, PetscManag
   return PetscManagedTypeImpl::apply_operator(dctx,scal,otype,mtype,rhs,ret);
 }
 
-PetscErrorCode _n_PetscManagedTypeGetSubRange(PetscDeviceContext dctx, PetscManagedType in, PetscInt begin, PetscInt len, PetscManagedType *out)
+PetscErrorCode PetscManagedTypeGetSubRange(PetscDeviceContext dctx, PetscManagedType in, PetscInt begin, PetscInt len, PetscManagedType *out)
 {
   return PetscManagedTypeImpl::get_sub_range(dctx,in,begin,len,out);
 }
