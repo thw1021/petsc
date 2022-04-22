@@ -382,8 +382,6 @@ static inline PetscErrorCode PetscDeviceContextAllReduceCallback_Internal(PetscD
 
 static inline PetscErrorCode PetscDeviceContextAllReduceManagedType_Internal(PetscDeviceContext dctx, PetscObject obj, void *ptr, const PetscInt *n, MPI_Datatype dtype, MPI_Op op)
 {
-  AllReduceCtx ctx;
-
   PetscFunctionBegin;
   PetscValidDeviceContext(dctx,1);
   PetscValidHeader(obj,2);
@@ -393,6 +391,7 @@ static inline PetscErrorCode PetscDeviceContextAllReduceManagedType_Internal(Pet
     PetscCall(PetscDeviceContextSynchronize(dctx));
     PetscCall(MPIU_Allreduce(MPI_IN_PLACE,ptr,*n,dtype,op,PetscObjectComm(obj)));
   } else {
+    AllReduceCtx ctx;
     PetscCall(PetscMalloc1(1,&ctx));
     PetscCall(PetscObjectReference(obj));
     ctx->obj   = obj;

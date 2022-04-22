@@ -6,28 +6,33 @@
 #include <../src/vec/vec/impls/mpi/pvecimpl.h>   /*I  "petscvec.h"   I*/
 #include <petsc/private/deviceimpl.h>
 
-PetscErrorCode VecDot_MPI(Vec xin, Vec yin, PetscManagedScalar z, PetscDeviceContext dctx)
+static PetscErrorCode VecXDot_MPI_Private(Vec xin, Vec yin, PetscManagedScalar z, PetscDeviceContext dctx, PetscErrorCode(*const VecXDot_Seq)(Vec,Vec,PetscManagedScalar,PetscDeviceContext))
 {
   const PetscInt one = 1;
+
   PetscFunctionBegin;
-  PetscCall(VecDot_Seq(xin,yin,z,dctx));
+  PetscCall((*VecXDot_Seq)(xin,yin,z,dctx));
   PetscCall(PetscDeviceContextAllReduceManagedScalar_Internal(dctx,z,(PetscObject)xin,&one,MPIU_SUM));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecDot_MPI(Vec xin, Vec yin, PetscManagedScalar z, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
+  PetscCall(VecXDot_MPI_Private(xin,yin,z,dctx,VecDot_Seq));
   PetscFunctionReturn(0);
 }
 
 PetscErrorCode VecTDot_MPI(Vec xin, Vec yin, PetscManagedScalar z, PetscDeviceContext dctx)
 {
-  const PetscInt one = 1;
-
   PetscFunctionBegin;
-  PetscCall(VecTDot_Seq(xin,yin,z,dctx));
-  PetscCall(PetscDeviceContextAllReduceManagedScalar_Internal(dctx,z,(PetscObject)xin,&one,MPIU_SUM));
+  PetscCall(VecXDot_MPI_Private(xin,yin,z,dctx,VecTDot_Seq));
   PetscFunctionReturn(0);
 }
 
 extern PetscErrorCode VecView_MPI_Draw(Vec,PetscViewer);
 
-PetscErrorCode VecPlaceArray_MPI(Vec vin, const PetscScalar *a, PetscDeviceContext PETSC_UNUSED dctx)
+PetscErrorCode VecPlaceArray_MPI(Vec vin, const PetscScalar *a, PetscDeviceContext dctx)
 {
   Vec_MPI *v = (Vec_MPI*)vin->data;
 
@@ -35,7 +40,7 @@ PetscErrorCode VecPlaceArray_MPI(Vec vin, const PetscScalar *a, PetscDeviceConte
   PetscCheck(!v->unplacedarray,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"VecPlaceArray() was already called on this vector, without a call to VecResetArray()");
   v->unplacedarray = v->array;  /* save previous array so reset can bring it back */
   v->array         = (PetscScalar*)a;
-  if (v->localrep) PetscCall(VecPlaceArray(v->localrep,a));
+  if (v->localrep) PetscCall(VecPlaceArrayAsync(v->localrep,a,dctx));
   PetscFunctionReturn(0);
 }
 
@@ -98,14 +103,14 @@ static PetscErrorCode VecSetOption_MPI(Vec V,VecOption op,PetscBool flag)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecResetArray_MPI(Vec vin, PetscDeviceContext PETSC_UNUSED dctx)
+PetscErrorCode VecResetArray_MPI(Vec vin, PetscDeviceContext dctx)
 {
   Vec_MPI        *v = (Vec_MPI*)vin->data;
 
   PetscFunctionBegin;
   v->array         = v->unplacedarray;
   v->unplacedarray = NULL;
-  if (v->localrep) PetscCall(VecResetArray(v->localrep));
+  if (v->localrep) PetscCall(VecResetArrayAsync(v->localrep,dctx));
   PetscFunctionReturn(0);
 }
 
