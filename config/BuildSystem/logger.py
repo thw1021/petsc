@@ -256,7 +256,6 @@ class Logger(args.ArgumentProcessor):
     self.logPrintDivider(debugLevel = debugLevel, debugSection = debugSection, forceNewLine = True)
     self.logPrint(msg, debugLevel = debugLevel, debugSection = debugSection, rmDir = rmDir, forceNewLine = True, forceScroll = True, indent = 0)
     self.logPrintDivider(debugLevel = debugLevel, debugSection = debugSection, forceNewLine = True)
-    self.logPrint('', debugLevel = debugLevel, debugSection = debugSection)
     return
 
   def logStripDirectory(self,msg):
