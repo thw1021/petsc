@@ -4,48 +4,7 @@
 #include <petsc/private/deviceimpl.h>
 #include <petsc/private/cpputil.hpp>
 #include <petsc/private/petscadvancedmacros.h>
-#include <petscdevice_cuda.h>
-#include <petscdevice_hip.h>
-
-#if defined(__NVCC__) || defined(__CUDACC__)
-#  define PETSC_USING_NVCC 1
-#endif
-
-#if defined(__HCC__) || (defined(__clang__) && defined(__HIP__))
-#  define PETSC_USING_HCC 1
-#endif
-
-#if PetscDefined(USING_HCC) && PetscDefined(USING_NVCC)
-#  error using both nvcc and hipcc at the same time?
-#endif
-
-#if PetscDefined(HAVE_HIP)
-#  include <hip/hip_complex.h> // for hipComplex, hipDoubleComplex
-#endif
-
-#if PetscDefined(HAVE_CUDA) || PetscDefined(HAVE_HIP)
-#  define PETSC_HAVE_CUPM 1
-#endif
-
-#if PetscDefined(HAVE_CUPM)
-#  define PETSC_HOST_DECL       __host__
-#  define PETSC_DEVICE_DECL     __device__ __forceinline__
-#  define PETSC_KERNEL_DECL     __global__
-#  define PETSC_SHAREDMEM_DECL  __shared__
-#else
-#  define PETSC_HOST_DECL
-#  define PETSC_DEVICE_DECL
-#  define PETSC_KERNEL_DECL
-#  define PETSC_SHAREDMEM_DECL
-#endif
-
-#define PETSC_HOSTDEVICE_DECL PETSC_HOST_DECL PETSC_DEVICE_DECL
-
-#if PetscDefined(USING_NVCC)
-#  define CUPM_CALLBACK_FN CUDART_CB
-#else
-#  define CUPM_CALLBACK_FN
-#endif
+#include <petscdevice_cupm.h>
 
 #if defined(__cplusplus)
 #include <array>

@@ -1,7 +1,11 @@
 #ifndef PETSCDEVICE_HIP_H
 #define PETSCDEVICE_HIP_H
 
-#include <petscsys.h>
+#include <petscdevice.h>
+
+#if defined(__HCC__) || (defined(__clang__) && defined(__HIP__))
+#  define PETSC_USING_HCC 1
+#endif
 
 #if PetscDefined(HAVE_HIP)
 #include <hip/hip_runtime.h>
@@ -11,6 +15,7 @@
 #else // __HIP_PLATFORM_HCC__
 #include <rocsolver.h>
 #endif // __HIP_PLATFORM_NVCC__
+#include <hip/hip_complex.h> // for hipComplex, hipDoubleComplex
 
 // REMOVE ME
 #define WaitForHIP() hipDeviceSynchronize()

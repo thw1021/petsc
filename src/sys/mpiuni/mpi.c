@@ -10,7 +10,7 @@
 #include <petsc/private/petscimpl.h> /* for PetscCUPMInitialized */
 
 #if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
-#include <petscdevice.h>
+#include <petscdevice_cupm.h>
 #endif
 
 #define MPI_SUCCESS 0
