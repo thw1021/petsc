@@ -1,8 +1,12 @@
 #ifndef PETSCDEVICE_CUDA_H
 #define PETSCDEVICE_CUDA_H
 
-#include <petscsys.h>
+#include <petscdevice.h>
 #include <petscpkg_version.h>
+
+#if defined(__NVCC__) || defined(__CUDACC__)
+#  define PETSC_USING_NVCC 1
+#endif
 
 #if PetscDefined(HAVE_CUDA)
 #include <cuda.h>
@@ -138,5 +142,4 @@ PETSC_EXTERN cudaStream_t   PetscDefaultCudaStream; // The default stream used b
 PETSC_EXTERN PetscErrorCode PetscCUBLASGetHandle(cublasHandle_t*);
 PETSC_EXTERN PetscErrorCode PetscCUSOLVERDnGetHandle(cusolverDnHandle_t*);
 #endif // PETSC_HAVE_CUDA
-
 #endif // PETSCDEVICE_CUDA_H

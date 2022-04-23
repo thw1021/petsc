@@ -13,6 +13,7 @@
 #include <petsc/private/matimpl.h>
 #include <petsc/private/vecimpl.h>
 #include <petsc/private/deviceimpl.h>
+#include <petscdevice_cuda.h>
 #include <petscsf.h>
 
 /* math2opusutils */

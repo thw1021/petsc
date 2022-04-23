@@ -2,14 +2,7 @@
 #include <petsc/private/hashseti.h>
 #include <petsc/private/viewerimpl.h>
 #include <petscctable.h>
-
-#if defined(PETSC_HAVE_CUDA)
-  #include <cuda_runtime.h>
-#endif
-
-#if defined(PETSC_HAVE_HIP)
-  #include <hip/hip_runtime.h>
-#endif
+#include <petscdevice_cupm.h>
 
 #if defined(PETSC_CLANG_STATIC_ANALYZER)
 void PetscSFCheckGraphSet(PetscSF,int);
