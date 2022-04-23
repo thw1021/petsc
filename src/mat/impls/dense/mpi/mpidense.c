@@ -1599,8 +1599,6 @@ PetscErrorCode MatCreateMPIMatConcatenateSeqMat_MPIDense(MPI_Comm comm,Mat inmat
   /* numeric phase */
   mat = (Mat_MPIDense*)(*outmat)->data;
   PetscCall(MatCopy(inmat,mat->A,SAME_NONZERO_PATTERN));
-  PetscCall(MatAssemblyBegin(*outmat,MAT_FINAL_ASSEMBLY));
-  PetscCall(MatAssemblyEnd(*outmat,MAT_FINAL_ASSEMBLY));
   PetscFunctionReturn(0);
 }
 
