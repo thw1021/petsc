@@ -389,7 +389,7 @@ PetscErrorCode MatAssemblyEnd_MPIDense(Mat mat,MatAssemblyType mode)
       }
     }
     PetscCall(MatStashScatterEnd_Private(&mat->stash));
-    if (mode == MAT_FINAL_ASSEMBLY) PetscCall(MPIU_Allreduce(MPI_IN_PLACE,&mat->was_assembled,1,MPIU_BOOL,MPI_LOR,PetscObjectComm((PetscObject)mat)));
+    if (mode == MAT_FINAL_ASSEMBLY) PetscCall(MPIU_Allreduce(MPI_IN_PLACE,&mat->was_assembled,1,MPIU_BOOL,MPI_LAND,PetscObjectComm((PetscObject)mat)));
   }
 
   PetscCall(MatAssemblyBegin(mdn->A,mode));
