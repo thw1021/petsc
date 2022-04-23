@@ -252,9 +252,9 @@ PETSC_NODISCARD static inline PetscErrorCode PetscOffloadMaskToDeviceCopyMode(Pe
   PetscAssert(src != PETSC_OFFLOAD_UNALLOCATED,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot copy from unallocated");
 
   if (PetscOffloadDevice(dest)) {
-    *mode = PetscOffloadHost(src) ? PETSC_DEVICE_COPY_HTOH : PETSC_DEVICE_COPY_DTOH;
-  } else {
     *mode = PetscOffloadHost(src) ? PETSC_DEVICE_COPY_HTOD : PETSC_DEVICE_COPY_DTOD;
+  } else {
+    *mode = PetscOffloadHost(src) ? PETSC_DEVICE_COPY_HTOH : PETSC_DEVICE_COPY_DTOH;
   }
   PetscFunctionReturn(0);
 }
