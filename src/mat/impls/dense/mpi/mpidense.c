@@ -2365,25 +2365,12 @@ PetscErrorCode MatDenseCUDARestoreArray(Mat A, PetscScalar **a)
 @*/
 PetscErrorCode  MatCreateDense(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt M,PetscInt N,PetscScalar *data,Mat *A)
 {
-  PetscMPIInt    size;
-
   PetscFunctionBegin;
   PetscCall(MatCreate(comm,A));
   PetscCall(MatSetSizes(*A,m,n,M,N));
-  PetscCallMPI(MPI_Comm_size(comm,&size));
-  if (size > 1) {
-    PetscBool havedata = (PetscBool)!!data;
-
-    PetscCall(MatSetType(*A,MATMPIDENSE));
-    PetscCall(MatMPIDenseSetPreallocation(*A,data));
-    PetscCall(MPIU_Allreduce(MPI_IN_PLACE,&havedata,1,MPIU_BOOL,MPI_LOR,comm));
-    if (havedata) {  /* user provided data array, so no need to assemble */
-      PetscCall(MatSetUpMultiply_MPIDense(*A));
-    }
-  } else {
-    PetscCall(MatSetType(*A,MATSEQDENSE));
-    PetscCall(MatSeqDenseSetPreallocation(*A,data));
-  }
+  PetscCall(MatSetType(*A,MATDENSE));
+  PetscCall(MatSeqDenseSetPreallocation(*A,data));
+  PetscCall(MatMPIDenseSetPreallocation(*A,data));
   PetscFunctionReturn(0);
 }
 
@@ -2413,23 +2400,13 @@ PetscErrorCode  MatCreateDense(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt M,Pe
 @*/
 PetscErrorCode  MatCreateDenseCUDA(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt M,PetscInt N,PetscScalar *data,Mat *A)
 {
-  PetscMPIInt    size;
-
   PetscFunctionBegin;
   PetscCall(MatCreate(comm,A));
   PetscValidLogicalCollectiveBool(*A,!!data,6);
   PetscCall(MatSetSizes(*A,m,n,M,N));
-  PetscCallMPI(MPI_Comm_size(comm,&size));
-  if (size > 1) {
-    PetscCall(MatSetType(*A,MATMPIDENSECUDA));
-    PetscCall(MatMPIDenseCUDASetPreallocation(*A,data));
-    if (data) {  /* user provided data array, so no need to assemble */
-      PetscCall(MatSetUpMultiply_MPIDense(*A));
-    }
-  } else {
-    PetscCall(MatSetType(*A,MATSEQDENSECUDA));
-    PetscCall(MatSeqDenseCUDASetPreallocation(*A,data));
-  }
+  PetscCall(MatSetType(*A,MATDENSECUDA));
+  PetscCall(MatSeqDenseCUDASetPreallocation(*A,data));
+  PetscCall(MatMPIDenseCUDASetPreallocation(*A,data));
   PetscFunctionReturn(0);
 }
 #endif
