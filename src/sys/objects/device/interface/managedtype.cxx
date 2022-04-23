@@ -2,6 +2,9 @@
 #include <petsc/private/cpputil.hpp>
 #include "objpool.hpp"
 
+#include <cstring> // std::memset
+#include <type_traits> // std::is_trivially_copyable
+
 template <typename T>
 struct PetscManagedTypeAllocator : Petsc::AllocatorBase<T>
 {
@@ -29,7 +32,10 @@ struct PetscManagedTypeAllocator : Petsc::AllocatorBase<T>
 
   PETSC_CXX_COMPAT_DECL(PetscErrorCode reset(T mscal))
   {
+    using Petsc::util::remove_pointer_t;
+
     PetscFunctionBegin;
+    static_assert(std::is_trivially_copyable<remove_pointer_t<T>>::value,"");
     PetscCallCXX(std::memset(mscal,0,sizeof(*mscal)));
     mscal->h_cmode = PETSC_OWN_POINTER;
     mscal->d_cmode = PETSC_OWN_POINTER;
@@ -229,6 +235,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::get_pointer_and
       goto UNALLOCATED_PREFER_DEVICE;
     }
   } break;
+  case PETSC_OFFLOAD_KOKKOS:
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"No support yet for PETSC_OFFLOAD_KOKKOS");
   }
   PetscAssert(*ptr,PETSC_COMM_SELF,PETSC_ERR_PLIB,PetscStringize(PetscManagedType) " returned a null pointer for memtype %s as values",mtype ? (PetscMemTypeHost(*mtype) ? "host" : "device") : "unknown");
   PetscFunctionReturn(0);
