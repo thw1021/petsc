@@ -81,7 +81,8 @@ template <typename MemType, typename AllocType, typename FreeType, std::size_t P
 inline PetscErrorCode SegmentedMemoryPool<MemType,AllocType,FreeType,PoolSize>::get(PetscInt size, MemType **ptr) noexcept
 {
   PetscFunctionBegin;
-  PetscAssert(size < PoolSize,PETSC_COMM_SELF,PETSC_ERR_MEM,"Cannot allocate pool larger than %zu elements",PoolSize);
+  PetscAssert(size >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Cannot retrieve negative (%" PetscInt_FMT ") memory from the pool",size);
+  PetscAssert(static_cast<decltype(PoolSize)>(size) < PoolSize,PETSC_COMM_SELF,PETSC_ERR_MEM,"Cannot allocate pool larger than %zu elements",PoolSize);
   // use host_mem as canary
   if (PetscUnlikely(!mem_pool_)) PetscCall(initialize());
   {
@@ -95,7 +96,7 @@ inline PetscErrorCode SegmentedMemoryPool<MemType,AllocType,FreeType,PoolSize>::
       for (auto& block : blocks_) {
         const auto bsize = block.size;
 
-        if (block.open && (bsize <= size)) {
+        if (block.open && (bsize <= static_cast<size_type>(size))) {
           // ok found open block of suitable size, claim it.
           // could maybe have shared blocks in the future
           result     = mem_pool_+bsize;
@@ -107,7 +108,7 @@ inline PetscErrorCode SegmentedMemoryPool<MemType,AllocType,FreeType,PoolSize>::
       // no open block found, need to make one
       if (result == mem_pool_) {
         // check that the pool has enough room
-        PetscCheck(block_alloced+size <= PoolSize,PETSC_COMM_SELF,PETSC_ERR_MEM,"Allocating block of size %" PetscInt_FMT " would exceed maximum pool size %zu",size,PoolSize);
+        PetscCheck(static_cast<decltype(PoolSize)>(block_alloced+size) <= PoolSize,PETSC_COMM_SELF,PETSC_ERR_MEM,"Allocating block of size %" PetscInt_FMT " would exceed maximum pool size %zu",size,PoolSize);
         PetscCallCXX(blocks_.emplace_back(block_alloced,size));
       }
     }
@@ -125,7 +126,7 @@ inline PetscErrorCode SegmentedMemoryPool<MemType,AllocType,FreeType,PoolSize>::
   if (!this->owns_pointer(*ptr)) PetscFunctionReturn(0); // don't own it, bail
 
   for (auto block = blocks_.begin(); block != blocks_.end(); ++block) {
-    if (block->start == offset) {
+    if (block->start == static_cast<size_type>(offset)) {
       // ok, found ourselves
       if (std::next(block) == blocks_.end()) {
         // last element of the vector, just destroy it
