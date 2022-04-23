@@ -186,6 +186,27 @@ class Logger(args.ArgumentProcessor):
       return True
     return False
 
+  def checkANSIEscapeSequences(self, ostream):
+    """
+    Return True if the stream supports ANSI escape sequences, False otherwise
+    """
+    try:
+      return self._ansi_esc_seq_cache[ostream]
+    except KeyError:
+      pass # have not processed this stream before
+    except AttributeError:
+      # have never done this before
+      self._ansi_esc_seq_cache = {}
+
+    is_a_tty = hasattr(ostream,'isatty') and ostream.isatty()
+    return self._ansi_esc_seq_cache.setdefault(ostream,is_a_tty and (
+      sys.platform != 'win32' or os.environ.get('TERM','').startswith(('xterm','ANSI')) or
+      # Windows Terminal supports VT codes.
+      'WT_SESSION' in os.environ or
+      # Microsoft Visual Studio Code's built-in terminal supports colors.
+      os.environ.get('TERM_PROGRAM') == 'vscode'
+    ))
+
   def logIndent(self, debugLevel = -1, debugSection = None, comm = None):
     '''Write the proper indentation to the log streams'''
     import traceback
@@ -209,13 +230,23 @@ class Logger(args.ArgumentProcessor):
 
   def logClear(self):
     '''Clear the current line if we are not scrolling output'''
-    if self.out is not None and self.linewidth > 0:
-      self.out.write((' '*self.linewidth).join(('\r','\r')))
+    out,lw = self.out,self.linewidth
+    if out is not None and lw > 0:
+      out.write('\r\033[K' if self.checkANSIEscapeSequences(out) else ' '*lw)
+      try:
+        out.flush()
+      except AttributeError:
+        pass
     return
 
-  def logPrintDivider(self, single = False, **kwargs):
+  def logPrintDivider(self, single = False, length = None, **kwargs):
+    if length is None:
+      length = self.dividerLength
     kwargs.setdefault('rmDir',False)
-    divider = ('-' if single else '=')*self.dividerLength
+    # kwargs.setdefault('indent',False)
+    kwargs.setdefault('forceScroll',False)
+    kwargs.setdefault('forceNewLine',True)
+    divider = ('-' if single else '=')*length
     return self.logPrint(divider, **kwargs)
 
   def logPrintWarning(self, msg, title = None, **kwargs):
@@ -224,19 +255,18 @@ class Logger(args.ArgumentProcessor):
     return self.logPrintBox(msg,title='***** {} *****'.format(title),**kwargs)
 
   def logPrintBox(self, msg, debugLevel = -1, debugSection = 'screen', indent = 1, comm = None, rmDir = 1, prefix = None, title = None):
-    def center_wrap(banner,text,**kwargs):
+    def center_wrap(banner,text,length = None,**kwargs):
       def center_line(line):
-        return line.center(self.dividerLength).rstrip()
+        return line.center(length).rstrip()
 
-      argdict = dict(
-        break_on_hyphens=False,
-        break_long_words=False,
-        width=self.dividerLength-2,
-        initial_indent=prefix,
-        subsequent_indent=prefix
-      )
-      argdict.update(kwargs)
-      wrapped = textwrap.wrap(textwrap.dedent(text),**argdict)
+      if length is None:
+        length = self.dividerLength
+      kwargs.setdefault('break_on_hyphens',False)
+      kwargs.setdefault('break_long_words',False)
+      kwargs.setdefault('width',length-2)
+      kwargs.setdefault('initial_indent',prefix)
+      kwargs.setdefault('subsequent_indent',prefix)
+      wrapped = textwrap.wrap(textwrap.dedent(text),**kwargs)
       if len(wrapped) == 1:
         # center-justify single lines, and remove the bogus prefix
         wrapped[0] = center_line(wrapped[0].lstrip())
@@ -253,9 +283,9 @@ class Logger(args.ArgumentProcessor):
       rmDir = center_wrap(title,self.logStripDirectory(msg))
     msg = center_wrap(title,msg)
     self.logClear()
-    self.logPrintDivider(debugLevel = debugLevel, debugSection = debugSection, forceNewLine = True)
+    self.logPrintDivider(debugLevel = debugLevel, debugSection = debugSection)
     self.logPrint(msg, debugLevel = debugLevel, debugSection = debugSection, rmDir = rmDir, forceNewLine = True, forceScroll = True, indent = 0)
-    self.logPrintDivider(debugLevel = debugLevel, debugSection = debugSection, forceNewLine = True)
+    self.logPrintDivider(debugLevel = debugLevel, debugSection = debugSection)
     return
 
   def logStripDirectory(self,msg):
