@@ -3,7 +3,7 @@
 
 #include "../../interface/hostdevice.hpp"
 #include "../impldevicecontextbase.hpp"
-#include <iostream>
+
 namespace Petsc
 {
 
@@ -71,8 +71,8 @@ public:
   { SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented"); }
   PETSC_CXX_COMPAT_DECL(PetscErrorCode endTimer(PetscDeviceContext,PetscLogDouble*))
   { SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented"); }
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode arrayCopy(PetscDeviceContext,void*PETSC_RESTRICT,const void*PETSC_RESTRICT,std::size_t,PetscDeviceCopyMode))
-  { SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Not implemented"); }
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode arrayCopy(PetscDeviceContext,void*PETSC_RESTRICT,const void*PETSC_RESTRICT,std::size_t,PetscDeviceCopyMode));
+
   template <typename PetscType, typename PetscManagedType>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode destroyManagedType(PetscDeviceContext,PetscManagedType));
   template <typename PetscType, typename PetscManagedType>
@@ -106,6 +106,14 @@ public:
     launchHostFunction
   };
 };
+
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext::arrayCopy(PetscDeviceContext, void *PETSC_RESTRICT dest, const void *PETSC_RESTRICT src, std::size_t n, PetscDeviceCopyMode mode))
+{
+  PetscFunctionBegin;
+  PetscCheck(mode == PETSC_DEVICE_COPY_HTOH,PETSC_COMM_SELF,PETSC_ERR_SUP,"Host device context can only copy host-to-host");
+  PetscCall(PetscMemcpy(dest,src,n));
+  PetscFunctionReturn(0);
+}
 
 template <typename PetscType, typename PetscManagedType>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext::destroyManagedType(PetscDeviceContext, PetscManagedType scal))
