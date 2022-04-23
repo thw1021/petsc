@@ -389,6 +389,7 @@ PetscErrorCode MatAssemblyEnd_MPIDense(Mat mat,MatAssemblyType mode)
       }
     }
     PetscCall(MatStashScatterEnd_Private(&mat->stash));
+    if (mode == MAT_FINAL_ASSEMBLY) PetscCall(MPIU_Allreduce(MPI_IN_PLACE,&mat->was_assembled,1,MPIU_BOOL,MPI_LOR,PetscObjectComm((PetscObject)mat)));
   }
 
   PetscCall(MatAssemblyBegin(mdn->A,mode));
@@ -1275,6 +1276,7 @@ PetscErrorCode MatMPIDenseCUDASetPreallocation(Mat A, PetscScalar *d_data)
   PetscCall(MatSetType(d->A,MATSEQDENSECUDA));
   PetscCall(MatSeqDenseCUDASetPreallocation(d->A,d_data));
   A->preallocated = PETSC_TRUE;
+  A->assembled = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
 #endif
@@ -1471,6 +1473,7 @@ PetscErrorCode  MatMPIDenseSetPreallocation_MPIDense(Mat mat,PetscScalar *data)
   PetscCall(MatSetType(a->A,iscuda ? MATSEQDENSECUDA : MATSEQDENSE));
   PetscCall(MatSeqDenseSetPreallocation(a->A,data));
   mat->preallocated = PETSC_TRUE;
+  mat->assembled = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
 
@@ -2376,7 +2379,6 @@ PetscErrorCode  MatCreateDense(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt M,Pe
     PetscCall(MPIU_Allreduce(MPI_IN_PLACE,&havedata,1,MPIU_BOOL,MPI_LOR,comm));
     if (havedata) {  /* user provided data array, so no need to assemble */
       PetscCall(MatSetUpMultiply_MPIDense(*A));
-      (*A)->assembled = PETSC_TRUE;
     }
   } else {
     PetscCall(MatSetType(*A,MATSEQDENSE));
@@ -2423,7 +2425,6 @@ PetscErrorCode  MatCreateDenseCUDA(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt 
     PetscCall(MatMPIDenseCUDASetPreallocation(*A,data));
     if (data) {  /* user provided data array, so no need to assemble */
       PetscCall(MatSetUpMultiply_MPIDense(*A));
-      (*A)->assembled = PETSC_TRUE;
     }
   } else {
     PetscCall(MatSetType(*A,MATSEQDENSECUDA));
