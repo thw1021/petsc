@@ -243,6 +243,8 @@ PETSC_NODISCARD static inline PETSC_CONSTEXPR_14 PetscMemType PetscOffloadMaskTo
   case PETSC_OFFLOAD_KOKKOS:
     return PETSC_MEMTYPE_KOKKOS;
   }
+  PetscUnreachable();
+  return PETSC_MEMTYPE_HOST;
 }
 
 PETSC_NODISCARD static inline PetscErrorCode PetscOffloadMaskToDeviceCopyMode(PetscOffloadMask dest, PetscOffloadMask src, PetscDeviceCopyMode *mode)
