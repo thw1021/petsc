@@ -270,19 +270,11 @@ PETSC_NODISCARD static inline PETSC_CONSTEXPR_14 PetscDeviceCopyMode PetscMemTyp
   }
 }
 
-typedef struct _n_PetscManagedTypeBase
+typedef struct
 {
-  void             *host;
-#if PetscDefined(HAVE_CXX)
-  void             *device;
-  PetscDeviceType   dtype;
-  PetscOffloadMask  mask;
-  PetscCopyMode     d_cmode;
-#endif
-  PetscCopyMode     h_cmode;
-  PetscInt          n;
-  PetscBool         locked;
-} _n_PetscManagedTypeBase;
+  unsigned int locked  : 1; // 1 = locked,  0 = unlocked
+  unsigned int tainted : 1; // 1 = tainted, 0 = untainted
+} PetscManagedTypeState;
 
 #define PetscTypeSuffix Scalar
 #include "petscmanagedtype.inl"

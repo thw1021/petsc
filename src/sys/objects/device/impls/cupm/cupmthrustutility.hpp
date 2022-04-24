@@ -59,11 +59,11 @@ struct PetscLogGpuTime_
 template <typename T, typename UnaryOperator>
 struct shift_operator
 {
-  const T             s;
-  const UnaryOperator op;
+  const T             *s;
+  const UnaryOperator  op;
 
   PETSC_HOSTDEVICE_DECL
-  auto operator()(T&& x) const PETSC_DECLTYPE_AUTO_RETURNS(op(std::forward<T>(x),s));
+  auto operator()(T&& x) const PETSC_DECLTYPE_AUTO_RETURNS(op(std::forward<T>(x),*s));
 };
 
 template <typename T, typename BinaryOperator>
