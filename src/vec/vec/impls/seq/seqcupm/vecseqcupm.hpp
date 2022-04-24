@@ -5,6 +5,7 @@
 
 #include <petsc/private/veccupmimpl.h>   /*I <petscvec.h> I*/
 #include <petsc/private/randomimpl.h>      // for _p_PetscRandom
+#include "../src/sys/objects/device/impls/cupm/cupmthrustutility.hpp"
 
 #include <thrust/device_ptr.h>
 #include <thrust/transform.h>
@@ -66,8 +67,8 @@ private:
   template <typename UnaryFuncT>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode pointwiseunary_async_(UnaryFuncT&&,PetscDeviceContext,Vec,Vec/*out*/=nullptr));
   // mdot dispatchers
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode mdot_async_(UseComplexTag<true>,Vec,PetscInt,const Vec[],PetscManagedScalar,PetscDeviceContext));
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode mdot_async_(UseComplexTag<false>,Vec,PetscInt,const Vec[],PetscManagedScalar,PetscDeviceContext));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode mdot_async_(UseComplexTag<true>,Vec,PetscManagedInt,const Vec[],PetscManagedScalar,PetscDeviceContext));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode mdot_async_(UseComplexTag<false>,Vec,PetscManagedInt,const Vec[],PetscManagedScalar,PetscDeviceContext));
   // dispatcher for the actual kernels for mdot when NOT configured for complex, called by
   // mdot_async_(use_complex_tag<false>,...)
   template <int>
@@ -89,9 +90,9 @@ public:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode pointwisemult_async(Vec,Vec,Vec,PetscDeviceContext));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode reciprocal_async(Vec,PetscDeviceContext));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode waxpy_async(Vec,PetscManagedScalar,Vec,Vec,PetscDeviceContext));
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode maxpy_async(Vec,PetscInt,const PetscManagedScalar*,Vec*,PetscDeviceContext));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode maxpy_async(Vec,PetscManagedInt,PetscManagedScalar,Vec*,PetscDeviceContext));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode dot_async(Vec,Vec,PetscManagedScalar,PetscDeviceContext));
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode mdot_async(Vec,PetscInt,const Vec[],PetscManagedScalar,PetscDeviceContext));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode mdot_async(Vec,PetscManagedInt,const Vec[],PetscManagedScalar,PetscDeviceContext));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode set_async(Vec,PetscManagedScalar,PetscDeviceContext));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode scale_async(Vec,PetscManagedScalar,PetscDeviceContext));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode tdot_async(Vec,Vec,PetscManagedScalar,PetscDeviceContext));
@@ -128,63 +129,12 @@ public:
 // ================================================================================== //
 //                                  array accessors                                   //
 
-#define CHKERRTHRUST(...)  do {                                                 \
-    try {                                                                       \
-      __VA_ARGS__;                                                              \
-    } catch (const thrust::system_error& ex) {                                  \
-      SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"Thrust error: %s",ex.what());      \
-    }                                                                           \
-  } while (0)
-
-namespace
-{
-
-struct PetscLogGpuTime_
-{
-  /* lets hope barry doesn't notice these */
-  PetscLogGpuTime_()  noexcept { PetscCallAbort(PETSC_COMM_SELF,PetscLogGpuTimeBegin()); }
-  ~PetscLogGpuTime_() noexcept { PetscCallAbort(PETSC_COMM_SELF,PetscLogGpuTimeEnd());   }
-};
-
-} // anonymous namespace
-
-#if PetscDefined(USING_NVCC)
-#  if !defined(THRUST_VERSION)
-#    error "THRUST_VERSION not defined!"
-#  endif
-#  if !PetscDefined(USE_DEBUG) && (THRUST_VERSION >= 101600)
-#    define thrust_call_par_on(func,s,...) func(thrust::cuda::par_nosync.on(s),__VA_ARGS__)
-#  else
-#    define thrust_call_par_on(func,s,...) func(thrust::cuda::par.on(s),__VA_ARGS__)
-#  endif
-#elif PetscDefined(USING_HCC) // rocThrust has no par_nosync
-#  define thrust_call_par_on(func,s,...)   func(thrust::hip::par.on(s),__VA_ARGS__)
-#else
-#  define thrust_call_par_on(func,s,...)   func(__VA_ARGS__)
-#endif
-
-#define THRUST_CALL(...) [&]{                   \
-    const auto timer = PetscLogGpuTime_{};      \
-    return thrust_call_par_on(__VA_ARGS__);     \
-  }()
-
 template <Device::CUPM::DeviceType T>
 template <typename BinaryFuncT>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::pointwisebinary_async_(BinaryFuncT&& binary, PetscDeviceContext dctx, Vec win, Vec xin, Vec yin))
 {
-  const auto   n = xin->map->n;
-  cupmStream_t stream;
-
   PetscFunctionBegin;
-  PetscCall(GetHandles_(dctx,&stream));
-  CHKERRTHRUST(
-    auto xptr = thrust::device_pointer_cast(DeviceArrayRead(dctx,xin).ptr);
-    auto yptr = thrust::device_pointer_cast(DeviceArrayRead(dctx,yin).ptr);
-    auto wptr = thrust::device_pointer_cast(DeviceArrayWrite(dctx,win).ptr);
-
-    THRUST_CALL(thrust::transform,stream,xptr,xptr+n,yptr,wptr,std::forward<BinaryFuncT>(binary));
-  );
-  PetscCall(PetscLogGpuFlops(n));
+  PetscCall(ThrustApplyPointwiseBinary<T>);(dctx,std::forward<BinaryFuncT>(binary),win->map->n,DeviceArrayRead(dctx,xin),DeviceArrayRead(dctx,yin),DeviceArrayWrite(dctx,win))
   PetscFunctionReturn(0);
 }
 
@@ -192,26 +142,10 @@ template <Device::CUPM::DeviceType T>
 template <typename UnaryFuncT>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::pointwiseunary_async_(UnaryFuncT&& unary, PetscDeviceContext dctx, Vec xin, Vec yin))
 {
-  const auto   n = xin->map->n;
-  cupmStream_t stream;
+  const auto inplace = !yin || (xin == yin);
 
   PetscFunctionBegin;
-  PetscCall(GetHandles_(dctx,&stream));
-  if (xin == yin || !yin) { // in-place
-    CHKERRTHRUST(
-      auto xptr = thrust::device_pointer_cast(DeviceArrayReadWrite(dctx,xin).ptr);
-
-      THRUST_CALL(thrust::transform,stream,xptr,xptr+n,xptr,std::forward<UnaryFuncT>(unary));
-    );
-  } else {
-    CHKERRTHRUST(
-      auto xptr = thrust::device_pointer_cast(DeviceArrayRead(dctx,xin).ptr);
-      auto yptr = thrust::device_pointer_cast(DeviceArrayWrite(dctx,yin).ptr);
-
-      THRUST_CALL(thrust::transform,stream,xptr,xptr+n,yptr,std::forward<UnaryFuncT>(unary));
-    );
-  }
-  PetscCall(PetscLogGpuFlops(n));
+  PetscCall(ThrustApplyPointwiseUnary<T>(dctx,std::forward<UnaryFuncT>(unary),xin->map->n,(inplace ? DeviceArrayReadWrite : DeviceArrayRead)(dctx,xin),inplace ? DeviceArrayWrite(dctx,yin) : nullptr));
   PetscFunctionReturn(0);
 }
 
@@ -225,7 +159,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::createseqcupm_async_(Vec v,
   PetscCheck(size <= 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must create VecSeq on communicator of size 1, have size %d",size);
   // REVIEW ME: remove me
   PetscCheck(!VecIMPLCast(v),PETSC_COMM_SELF,PETSC_ERR_PLIB,"Creating VecSeq for the second time!");
-  PetscCall(VecCreate_Seq_Private(v,host_array));
+  PetscCall(VecCreate_Seq_Private(v,host_array,dctx));
   PetscCall(Initialize_CUPMBase(v,PETSC_FALSE,host_array,device_array,dctx));
   PetscFunctionReturn(0);
 }
