@@ -622,7 +622,7 @@ struct Interface : InterfaceImpl<T>
 #if (defined(CUDART_VERSION) && (CUDART_VERSION < 10000)) || defined(__HIP_PLATFORM_HCC__)
     const auto mtype = attr.memoryType;
 #else
-    if (PETSC_PKG_CUDA_VERSION_GE(11,0,0) && (T == DeviceType::CUDA)) CHKERRCUPM(cerr);
+    if (PETSC_PKG_CUDA_VERSION_GE(11,0,0) && (T == DeviceType::CUDA)) PetscCallCUPM(cerr);
     const auto mtype = attr.type;
 #endif // CUDART_VERSION && CUDART_VERSION < 10000 || __HIP_PLATFORM_HCC__
     *type = ((cerr == cupmSuccess) && (mtype == cupmMemoryTypeDevice)) ? cupmDeviceTypeToPetscMemType() : PETSC_MEMTYPE_HOST;
