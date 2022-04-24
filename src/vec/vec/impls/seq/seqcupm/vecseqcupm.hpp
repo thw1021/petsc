@@ -538,7 +538,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::reciprocal_async(Vec xin, P
 }
 
 template <Device::CUPM::DeviceType T>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::waxpy_async(Vec win, PetscMangedScalar alpha, Vec xin, Vec yin, PetscDeviceContext dctx))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::waxpy_async(Vec win, PetscManagedScalar alpha, Vec xin, Vec yin, PetscDeviceContext dctx))
 {
   PetscFunctionBegin;
   if (alpha == PetscScalar(0.0)) {
@@ -830,18 +830,23 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async(Vec xin, PetscIn
 template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::set_async(Vec xin, PetscManagedScalar alpha, PetscDeviceContext dctx))
 {
-  const auto   n = xin->map->n;
-  cupmStream_t stream;
+  const auto    n = xin->map->n;
+  PetscMemType  mtype;
+  PetscScalar  *ptr;
+  cupmStream_t  stream;
 
   PetscFunctionBegin;
   PetscCall(GetHandles_(dctx,&stream));
-  if (alpha == PetscScalar(0)) {
+  PetscCall(PetscManagedScalarGetPointerAndMemType(dctx,alpha,PETSC_MEMORY_ACCESS_READ,&mtype,&ptr));
+  // REVIEW ME: could be unsafe (mtype is updated synchronously by the host, whilst the value
+  // may still be in flight, but maybe race condition is better than stream-sync)
+  if (PetscMemTypeHost(mtype) && (*ptr == PetscScalar{0})) {
     PetscCallCUPM(cupmMemsetAsync(DeviceArrayWrite(dctx,xin).ptr,0,n*sizeof(PetscScalar),stream));
   } else {
     CHKERRTHRUST(
       auto xptr = thrust::device_pointer_cast(DeviceArrayWrite(dctx,xin).ptr);
 
-      THRUST_CALL(thrust::fill,stream,xptr,xptr+n,*alpha.ptr);
+      THRUST_CALL(thrust::fill,stream,xptr,xptr+n,*ptr);
     );
     PetscCall(PetscLogCpuToGpuScalar(sizeof(*alpha.ptr)));
   }
