@@ -14,8 +14,6 @@ namespace Device
 namespace Impl
 {
 
-struct PETSC_TEMPLATE_VISIBILITY_INTERNAL MemoryBlock;
-
 struct MemoryBlock
 {
   using size_type = std::size_t;
@@ -30,9 +28,6 @@ struct MemoryBlock
 
   constexpr MemoryBlock(size_type size_) noexcept : MemoryBlock(0,size_) { }
 };
-
-template <typename MemType, typename AllocType, typename FreeType, std::size_t PoolSize>
-class PETSC_TEMPLATE_VISIBILITY_INTERNAL SegmentedMemoryPool;
 
 template <typename MemType, typename AllocType, typename FreeType, std::size_t PoolSize>
 class SegmentedMemoryPool
@@ -72,8 +67,10 @@ template <typename MemType, typename AllocType, typename FreeType, std::size_t P
 inline PetscErrorCode SegmentedMemoryPool<MemType,AllocType,FreeType,PoolSize>::initialize() noexcept
 {
   PetscFunctionBegin;
-  PetscCall(allocate_(&mem_pool_,PoolSize));
-  PetscCall(PetscCxxObjectRegisterFinalize(this));
+  if (PetscUnlikely(!mem_pool_)) {
+    PetscCall(allocate_(&mem_pool_,PoolSize));
+    PetscCall(PetscCxxObjectRegisterFinalize(this));
+  }
   PetscFunctionReturn(0);
 }
 
@@ -83,8 +80,7 @@ inline PetscErrorCode SegmentedMemoryPool<MemType,AllocType,FreeType,PoolSize>::
   PetscFunctionBegin;
   PetscAssert(size >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Cannot retrieve negative (%" PetscInt_FMT ") memory from the pool",size);
   PetscAssert(static_cast<decltype(PoolSize)>(size) < PoolSize,PETSC_COMM_SELF,PETSC_ERR_MEM,"Cannot allocate pool larger than %zu elements",PoolSize);
-  // use host_mem as canary
-  if (PetscUnlikely(!mem_pool_)) PetscCall(initialize());
+  PetscCall(initialize());
   {
     auto result = mem_pool_;
 
@@ -146,14 +142,15 @@ inline PetscErrorCode SegmentedMemoryPool<MemType,AllocType,FreeType,PoolSize>::
 template <typename MemType, typename AllocType, typename FreeType, std::size_t PoolSize>
 inline bool SegmentedMemoryPool<MemType,AllocType,FreeType,PoolSize>::owns_pointer(const MemType *ptr) const noexcept
 {
-  return ptr >= mem_pool_ && ptr < std::next(mem_pool_,PoolSize);
+  // if we have no mem_pool_ then we don't own any pointers
+  return mem_pool_ && ((ptr >= mem_pool_) && (ptr < std::next(mem_pool_,PoolSize)));
 }
 
 template <typename MemType, std::size_t PoolSize = 200, typename AllocType, typename FreeType>
 static inline auto make_segmented_memory_pool(AllocType&& alloc, FreeType&& freefn)
-  PETSC_DECLTYPE_NOEXCEPT_AUTO_RETURNS(SegmentedMemoryPool<MemType,AllocType,FreeType,PoolSize>{
-      std::forward<AllocType>(alloc),std::forward<FreeType>(freefn)
-    });
+PETSC_DECLTYPE_NOEXCEPT_AUTO_RETURNS(SegmentedMemoryPool<MemType,AllocType,FreeType,PoolSize>{
+  std::forward<AllocType>(alloc),std::forward<FreeType>(freefn)
+});
 
 } // namespace Impl
 

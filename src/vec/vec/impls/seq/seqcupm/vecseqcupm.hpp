@@ -499,20 +499,25 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::waxpy_async(Vec win, PetscM
 }
 
 template <Device::CUPM::DeviceType T>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::maxpy_async(Vec xin, PetscInt nv, const PetscManagedScalar *alpha, Vec *y, PetscDeviceContext dctx))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::maxpy_async(Vec xin, PetscManagedInt nv, PetscManagedScalar alpha, Vec *y, PetscDeviceContext dctx))
 {
-  const auto       n = xin->map->n;
-  cupmBlasHandle_t cupmBlasHandle;
+  const auto        n = xin->map->n;
+  cupmBlasHandle_t  cupmBlasHandle;
+  PetscScalar      *aptr;
+  PetscInt         *nvptr;
 
   PetscFunctionBegin;
   PetscCall(GetHandles_(dctx,&cupmBlasHandle));
+  PetscCall(PetscManagedIntGetValues(dctx,nv,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,&nvptr,nullptr));
+  PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_READ,&aptr,nullptr));
   {
+    const auto nvval  = *nvptr;
     const auto xarray = DeviceArrayReadWrite(dctx,xin);
 
-    PetscCall(cupmBlasSetPointerModeFromPointer(cupmBlasHandle,alpha));
+    PetscCallCUPMBLAS(cupmBlasSetPointerMode(cupmBlasHandle,CUPMBLAS_POINTER_MODE_DEVICE));
     PetscCall(PetscLogGpuTimeBegin());
-    for (decltype(nv) j = 0; j < nv; ++j) {
-      PetscCallCUPMBLAS(cupmBlasXaxpy(cupmBlasHandle,n,cupmScalarCast(alpha[j].ptr),DeviceArrayRead(dctx,y[j]),1,xarray,1));
+    for (PetscInt j = 0; j < nvval; ++j) {
+      PetscCallCUPMBLAS(cupmBlasXaxpy(cupmBlasHandle,n,cupmScalarCast(aptr++),DeviceArrayRead(dctx,y[j]),1,xarray,1));
     }
     PetscCall(PetscLogGpuTimeEnd());
   }

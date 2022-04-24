@@ -337,16 +337,16 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::setUp(PetscDeviceContext 
 template <DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::query(PetscDeviceContext dctx, PetscBool *idle))
 {
-  cupmError_t cerr;
-
   PetscFunctionBegin;
   PetscCall(check_current_device_(dctx));
-  cerr = cupmStreamQuery(impls_cast_(dctx)->stream);
-  if (cerr == cupmSuccess) *idle = PETSC_TRUE;
-  else {
-    // somethings gone wrong
-    if (PetscUnlikely(cerr != cupmErrorNotReady)) PetscCallCUPM(cerr);
-    *idle = PETSC_FALSE;
+  {
+    const auto cerr = cupmStreamQuery(impls_cast_(dctx)->stream);
+    if (cerr == cupmSuccess) *idle = PETSC_TRUE;
+    else {
+      // somethings gone wrong
+      if (PetscUnlikely(cerr != cupmErrorNotReady)) PetscCallCUPM(cerr);
+      *idle = PETSC_FALSE;
+    }
   }
   PetscFunctionReturn(0);
 }
@@ -447,46 +447,41 @@ template <DeviceType T>
 template <typename PetscType, typename PetscManagedType>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::getManagedTypeValues(PetscDeviceContext dctx, PetscManagedType scal, PetscMemType mtype, PetscMemoryAccessMode mode, PetscType **ptr))
 {
-  const auto       n        = scal->n;
-  const auto       xfersize = n*sizeof(PetscType);
-  const auto       stream   = impls_cast_(dctx)->stream;
-  PetscOffloadMask mask;
+  const auto n               = scal->n;
+  const auto update_and_copy = [&](PetscType *dest, const PetscType *src, PetscOffloadMask default_mask, cupmMemcpyKind_t direction)
+  {
+    PetscFunctionBegin;
+    scal->mask = default_mask;
+    // if we want any kind of read (read or read_write) and we have valid SRC, we need to copy
+    // it now
+    if ((mode != PETSC_MEMORY_ACCESS_WRITE) && src) {
+      PetscCallCUPM(cupmMemcpyAsync(dest,src,n*sizeof(*src),direction,impls_cast_(dctx)->stream));
+      // if read-only then update the offloadmask
+      if (mode == PETSC_MEMORY_ACCESS_READ) scal->mask = PETSC_OFFLOAD_BOTH;
+    }
+    *ptr = dest;
+    PetscFunctionReturn(0);
+  };
 
   PetscFunctionBegin;
   switch (mtype) {
   case PETSC_MEMTYPE_HOST: {
-    const auto src  = scal->device;
-    auto&      dest = scal->host;
+    auto& dest = scal->host;
 
     // read or write, get a pointer if we don't have one yet
     if (!dest) PetscCall(managed_host_pool_<PetscType>().get(n,&dest));
-    mask = PETSC_OFFLOAD_CPU;
-    // if we want any kind of read (read or read_write) and we have valid SRC, we need to copy
-    // it now
-    if (mode != PETSC_MEMORY_ACCESS_WRITE && src) {
-      PetscCallCUPM(cupmMemcpyAsync(dest,src,xfersize,cupmMemcpyDeviceToHost,stream));
-      // if read-only then update the offloadmask
-      if (mode == PETSC_MEMORY_ACCESS_READ) mask = PETSC_OFFLOAD_BOTH;
-    }
-    *ptr = dest;
+    PetscCall(update_and_copy(dest,scal->device,PETSC_OFFLOAD_CPU,cupmMemcpyDeviceToHost));
   } break;
   case PETSC_MEMTYPE_DEVICE: {
-    const auto src  = scal->host;
-    auto&      dest = scal->device;
+    auto& dest = scal->device;
 
     if (!dest) PetscCall(managed_device_pool_<PetscType>().get(n,&dest));
-    mask = PETSC_OFFLOAD_GPU;
-    if (mode != PETSC_MEMORY_ACCESS_WRITE && src) {
-      PetscCallCUPM(cupmMemcpyAsync(dest,src,xfersize,cupmMemcpyHostToDevice,stream));
-      if (mode == PETSC_MEMORY_ACCESS_READ) mask = PETSC_OFFLOAD_BOTH;
-    }
-    *ptr = dest;
+    PetscCall(update_and_copy(dest,scal->host,PETSC_OFFLOAD_GPU,cupmMemcpyHostToDevice));
   } break;
   default:
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscMemType must be either PETSC_MEMTYPE_HOST (%d) or PETSC_MEMTYPE_DEVICE (%d) not %d",static_cast<int>(PETSC_MEMTYPE_HOST),static_cast<int>(PETSC_MEMTYPE_DEVICE),static_cast<int>(mtype));
     break;
   }
-  scal->mask = mask;
   PetscFunctionReturn(0);
 }
 
@@ -510,16 +505,16 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::applyOperatorType(PetscDe
 
   switch (otype) {
   case PETSC_OPERATOR_PLUS:
-    PetscCall(ThrustApplyPointwiseUnary<T>(make_shift_operator(*rhs,thrust::plus<PetscType>{ }),stream,n,ptr,retptr));
+    PetscCall(ThrustApplyPointwiseUnary<T>(stream,make_shift_operator(*rhs,thrust::plus<PetscType>{ }),n,ptr,retptr));
     break;
   case PETSC_OPERATOR_MINUS:
-    PetscCall(ThrustApplyPointwiseUnary<T>(make_shift_operator(*rhs,thrust::minus<PetscType>{ }),stream,n,ptr,retptr));
+    PetscCall(ThrustApplyPointwiseUnary<T>(stream,make_shift_operator(*rhs,thrust::minus<PetscType>{ }),n,ptr,retptr));
     break;
   case PETSC_OPERATOR_MULTIPLY:
-    PetscCall(ThrustApplyPointwiseUnary<T>(make_shift_operator(*rhs,thrust::multiplies<PetscType>{ }),stream,n,ptr,retptr));
+    PetscCall(ThrustApplyPointwiseUnary<T>(stream,make_shift_operator(*rhs,thrust::multiplies<PetscType>{ }),n,ptr,retptr));
     break;
   case PETSC_OPERATOR_DIVIDE:
-    PetscCall(ThrustApplyPointwiseUnary<T>(make_shift_operator(*rhs,thrust::divides<PetscType>{ }),stream,n,ptr,retptr));
+    PetscCall(ThrustApplyPointwiseUnary<T>(stream,make_shift_operator(*rhs,thrust::divides<PetscType>{ }),n,ptr,retptr));
     break;
   case PETSC_OPERATOR_EQUAL:
     PetscCall(ThrustSet<T>(stream,n,retptr,rhs));
