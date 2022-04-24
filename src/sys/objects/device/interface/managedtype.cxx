@@ -63,9 +63,11 @@ struct PetscManagedTypeImpl
   PETSC_CXX_COMPAT_DECL(PetscErrorCode apply_operator(PetscDeviceContext,ManagedType,PetscOperatorType,PetscMemType,const PetscType*,ManagedType=nullptr));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode get_sub_range(PetscDeviceContext,ManagedType,PetscInt,PetscInt,ManagedType*));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode restore_sub_range(PetscDeviceContext,ManagedType,ManagedType*));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode query(ManagedType,PetscType,PetscBool*,PetscBool*));
 
 private:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode copy_values(PetscDeviceContext,ManagedType,PetscOffloadMask,PetscOffloadMask,const PetscType*));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode check_lock(ManagedType,bool = false));
 };
 
 template <typename T, typename MT>
@@ -83,6 +85,18 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::copy_values(Pet
   PetscCall(get_values(dctx,scal,PetscOffloadMaskToMemType(mask),PETSC_MEMORY_ACCESS_WRITE,&ptr,&n));
   PetscCall(PetscOffloadMaskToDeviceCopyMode(mask,src_mask,&mode));
   PetscCall(PetscDeviceArrayCopy(dctx,ptr,src_ptr,n,mode));
+  PetscFunctionReturn(0);
+}
+
+template <typename T, typename MT>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::check_lock(ManagedType scal, bool v))
+{
+  const auto  lock      = scal->state.locked;
+  const auto  val       = static_cast<decltype(lock)>(v);
+  const char *strings[] = {"unlocked","locked"};
+
+  PetscFunctionBegin;
+  PetscAssert(lock == val,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Managed type object is %s expected it to be %s",strings[lock],strings[val]);
   PetscFunctionReturn(0);
 }
 
@@ -173,13 +187,15 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::get_values(Pets
   PetscFunctionBegin;
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   PetscValidPointer(scal,2);
+  PetscCall(check_lock(scal));
   PetscValidPointer(ptr,5);
   if (n) {
     PetscValidIntPointer(n,6);
     *n = scal->n;
   }
-  PetscAssert(!scal->locked,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Object is locked, perhaps a subrange was not yet restored?");
   PetscCall((*get_managed_values_fn<ManagedType,T>(dctx))(dctx,scal,mtype,mode,ptr));
+  // if user intends to write to device in any capacity then we are tainted
+  if (PetscMemTypeDevice(mtype) && (mode != PETSC_MEMORY_ACCESS_READ)) scal->state.tainted = 1;
   PetscFunctionReturn(0);
 }
 
@@ -188,7 +204,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::set_values(Pets
 {
   PetscFunctionBegin;
   if (PetscMemTypeHost(mtype)) PetscValidPointer(ptr,4);
-  PetscAssert(!scal->locked,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Object is locked, perhaps a subrange was not yet restored?");
+  PetscValidPointer(scal,2);
+  PetscCall(check_lock(scal));
   if (n) {
     PetscMemType  scalmtype;
     PetscType    *scalptr;
@@ -213,7 +230,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::get_pointer_and
 
   PetscFunctionBegin;
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
-  PetscAssert(!scal->locked,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Object is locked, perhaps a subrange was not yet restored?");
+  PetscCall(check_lock(scal));
   PetscValidPointer(ptr,4);
   if (mtype) PetscValidPointer(mtype,5);
   if (n) {
@@ -290,6 +307,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::apply_operator(
   PetscFunctionBegin;
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   PetscValidPointer(scal,2);
+  PetscCall(check_lock(scal));
   if (PetscMemTypeHost(mtype)) PetscValidPointer(rhs,5);
   if ((PetscOffloadHost(scal->mask) || PetscOffloadUnallocated(scal->mask)) && PetscMemTypeHost(mtype)) {
     const auto  src_access = ret ? PETSC_MEMORY_ACCESS_READ : PETSC_MEMORY_ACCESS_READ_WRITE;
@@ -329,13 +347,16 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::get_sub_range(P
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   PetscValidPointer(in,2);
   PetscValidPointer(out,5);
-  PetscAssert(!in->locked,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Input managed object already has a sub-range checked out");
+  PetscCall(check_lock(in));
   PetscAssert(len > 0,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Cannot extract a subrange of negative size %" PetscInt_FMT,len);
   PetscAssert(begin+len < in->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Trying to extract a subrange of [%" PetscInt_FMT ",%" PetscInt_FMT ") from managed type of size %" PetscInt_FMT,begin,begin+len,in->n);
   if (!in->host)   PetscCall(get_values(dctx,in,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,&tmp));
   if (!in->device) PetscCall(get_values(dctx,in,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_READ_WRITE,&tmp));
-  in->locked = PETSC_TRUE;
   PetscCall(create(dctx,in->host+begin,in->device+begin,len,PETSC_USE_POINTER,PETSC_USE_POINTER,in->mask,out));
+  // copy state over to the subrange
+  (*out)->state = in->state;
+  // but lock ourselves
+  in->state.locked = 1;
   PetscFunctionReturn(0);
 }
 
@@ -345,10 +366,10 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::restore_sub_ran
   PetscFunctionBegin;
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   PetscValidPointer(in,2);
+  PetscCall(check_lock(in,true)); // assert that we are locked
   PetscValidPointer(out,3);
   PetscValidPointer(*out,3);
-  PetscAssert(in->locked,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Input managed object did not have a sub-range checked out");
-  in->locked = PETSC_FALSE;
+  PetscCall(check_lock(*out)); // the restored obj can't also have an outstanding subrange
   if (PetscDefined(USE_DEBUG)) {
     const auto check_ownership = [&](const PetscType *begin, const PetscType *needle)
     {
@@ -364,8 +385,41 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::restore_sub_ran
     PetscCall(check_ownership(in->host,(*out)->host));
     PetscCall(check_ownership(in->device,(*out)->device));
   }
-  in->mask = (*out)->mask;
+  // update our state (which includes unlocking since check_lock(*out) passed)
+  in->state = (*out)->state;
   PetscCall(destroy(dctx,out));
+  PetscFunctionReturn(0);
+}
+
+template <typename T, typename MT>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::query(ManagedType scal, PetscType val, PetscBool *known, PetscBool *equal))
+{
+  PetscFunctionBegin;
+  PetscValidPointer(scal,1);
+  PetscValidBoolPointer(known,3);
+  PetscValidBoolPointer(equal,4);
+  *equal = PETSC_FALSE; // assume not equal
+  {
+    const auto& state = scal->state;
+
+    if (state.locked) {
+      // if we are locked then the subrange could be doing any number of things to the data
+      // right now
+      *known = PETSC_FALSE;
+    } else if (scal->mask == PETSC_OFFLOAD_UNALLOCATED) {
+      // unallocated? clearly not "equal" to anything
+      *known = PETSC_TRUE;
+    } else {
+      *known = state.tainted ? PETSC_FALSE : PETSC_TRUE;
+      if (const auto host = scal->host) {
+        const auto n     = scal->n;
+        auto       eqcnt = 0;
+
+        for (auto i = 0; i < n; ++i) eqcnt += val == host[i];
+        *equal = (PetscBool)(eqcnt == n);
+      }
+    }
+  }
   PetscFunctionReturn(0);
 }
 
