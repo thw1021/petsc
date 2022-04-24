@@ -413,7 +413,10 @@ static PetscErrorCode VecMinMax_Nest_Private(Vec x, PetscManagedInt p, PetscMana
   PetscFunctionReturn(0);
 }
 
-static PetscBool PetscScalarGT(PetscScalar l, PetscScalar r)  { return (PetscBool)(l > r); }
+static PetscBool PetscScalarGT(PetscScalar l, PetscScalar r)
+{
+  return (PetscBool)(PetscAbsScalar(l) > PetscAbsScalar(r));
+}
 
 /* supports nested blocks */
 static PetscErrorCode VecMax_Nest(Vec x, PetscManagedInt p, PetscManagedReal max, PetscDeviceContext dctx)
@@ -423,7 +426,10 @@ static PetscErrorCode VecMax_Nest(Vec x, PetscManagedInt p, PetscManagedReal max
   PetscFunctionReturn(0);
 }
 
-static PetscBool PetscScalarLT(PetscScalar l, PetscScalar r) { return (PetscBool)(l < r); }
+static PetscBool PetscScalarLT(PetscScalar l, PetscScalar r)
+{
+  return (PetscBool)(PetscAbsScalar(l) < PetscAbsScalar(r));
+}
 
 static PetscErrorCode VecMin_Nest(Vec x, PetscManagedInt p, PetscManagedReal min, PetscDeviceContext dctx)
 {

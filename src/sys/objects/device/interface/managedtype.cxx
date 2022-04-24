@@ -89,21 +89,21 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::copy_values(Pet
 template <typename T>
 auto destroy_managed_type_fn(PetscDeviceContext) noexcept -> PetscErrorCode(*)(PetscDeviceContext,T)
 {
-  PetscUnreachable();
+  static_assert(!std::is_same<T,T>::value,"This template should never be called");
   return nullptr;
 }
 
 template <typename MT, typename T>
 auto get_managed_values_fn(PetscDeviceContext) noexcept -> PetscErrorCode(*)(PetscDeviceContext,MT,PetscMemType,PetscMemoryAccessMode,T**)
 {
-  PetscUnreachable();
+  static_assert(!std::is_same<T,T>::value,"This template should never be called");
   return nullptr;
 }
 
 template <typename MT, typename T>
 auto apply_operator_fn(PetscDeviceContext) noexcept -> PetscErrorCode(*)(PetscDeviceContext,MT,PetscOperatorType,const T*,MT)
 {
-  PetscUnreachable();
+  static_assert(!std::is_same<T,T>::value,"This template should never be called");
   return nullptr;
 }
 
@@ -205,6 +205,12 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::set_values(Pets
 template <typename T, typename MT>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::get_pointer_and_mem_type(PetscDeviceContext dctx, ManagedType scal, PetscMemoryAccessMode mode, PetscType **ptr, PetscMemType *mtype, PetscInt *n))
 {
+  const auto assign = [&](PetscType *ptr_arg, PetscMemType mtype_arg)
+  {
+    *ptr = ptr_arg;
+    if (mtype) *mtype = mtype_arg;
+  };
+
   PetscFunctionBegin;
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   PetscAssert(!scal->locked,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Object is locked, perhaps a subrange was not yet restored?");
@@ -217,14 +223,12 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::get_pointer_and
   switch (scal->mask) {
   case PETSC_OFFLOAD_CPU:
   UNALLOCATED_PREFER_HOST:
-    *ptr = scal->host;
-    if (mtype) *mtype = PETSC_MEMTYPE_HOST;
+    assign(scal->host,PETSC_MEMTYPE_HOST);
     break;
   case PETSC_OFFLOAD_BOTH:
   case PETSC_OFFLOAD_GPU:
   UNALLOCATED_PREFER_DEVICE:
-    *ptr = scal->device;
-    if (mtype) *mtype = PETSC_MEMTYPE_DEVICE;
+    assign(scal->device,PETSC_MEMTYPE_DEVICE);
     break;
   case PETSC_OFFLOAD_UNALLOCATED: {
     const auto prefer_host = dctx->device->type == PETSC_DEVICE_HOST;
@@ -264,18 +268,19 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::ensure_offload(
 template <typename T, typename MT>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::copy(PetscDeviceContext dctx, ManagedType dest, ManagedType src))
 {
-  PetscMemType  dmtype,smtype;
-  PetscInt      dest_n = 0,src_n = 0; // silence overzealous gcc
-  PetscType    *dest_ptr,*src_ptr;
+  // initialize to silence overzealous gcc, at least we can use auto now
+  auto       dest_mtype = PETSC_MEMTYPE_DEVICE,src_mtype = PETSC_MEMTYPE_DEVICE;
+  PetscInt   dest_n = 0,src_n = 0;
+  PetscType *dest_ptr,*src_ptr;
 
   PetscFunctionBegin;
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   PetscValidPointer(dest,2);
   PetscValidPointer(src,3);
-  PetscCall(get_pointer_and_mem_type(dctx,dest,PETSC_MEMORY_ACCESS_WRITE,&dest_ptr,&dmtype,&dest_n));
-  PetscCall(get_pointer_and_mem_type(dctx,src,PETSC_MEMORY_ACCESS_READ,&src_ptr,&smtype,&src_n));
+  PetscCall(get_pointer_and_mem_type(dctx,dest,PETSC_MEMORY_ACCESS_WRITE,&dest_ptr,&dest_mtype,&dest_n));
+  PetscCall(get_pointer_and_mem_type(dctx,src,PETSC_MEMORY_ACCESS_READ,&src_ptr,&src_mtype,&src_n));
   PetscAssert(dest_n >= src_n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Destination size %" PetscInt_FMT " not large enough for source size %" PetscInt_FMT,dest_n,src_n);
-  PetscCall(PetscDeviceArrayCopy(dctx,dest_ptr,src_ptr,dest_n,PetscMemTypeToDeviceCopyMode(dmtype,smtype)));
+  PetscCall(PetscDeviceArrayCopy(dctx,dest_ptr,src_ptr,dest_n,PetscMemTypeToDeviceCopyMode(dest_mtype,src_mtype)));
   PetscFunctionReturn(0);
 }
 
