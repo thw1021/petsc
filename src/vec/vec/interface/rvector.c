@@ -664,23 +664,23 @@ PetscErrorCode  VecSet(Vec x,PetscScalar alpha)
   PetscCall(VecSetAsync(x,tmp,NULL));
   PetscCall(PetscManagedScalarDestroy(NULL,&tmp));
   {
-    const PetscInt    N   = x->map->N;
-    const PetscObject obj = (PetscObject)x;
+    const PetscInt    N     = x->map->N;
+    const PetscObject obj   = (PetscObject)x;
+    PetscReal         areal = PetscAbsScalar(alpha);
 
-    alpha = PetscAbsScalar(alpha);
     if (N == 0) {
       PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_1],0.0l));
       PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_2],0.0));
       PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_FROBENIUS],0.0));
       PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_INFINITY],0.0));
-    } else if (alpha > (PETSC_MAX_REAL/N)) {
-      PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_INFINITY],alpha));
+    } else if (areal > (PETSC_MAX_REAL/N)) {
+      PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_INFINITY],areal));
     } else {
-      PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_1],N*alpha));
-      PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_INFINITY],alpha));
-      alpha *= PetscSqrtReal((PetscReal)N);
-      PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_2],alpha));
-      PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_FROBENIUS],alpha));
+      PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_1],N*areal));
+      PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_INFINITY],areal));
+      areal *= PetscSqrtReal((PetscReal)N);
+      PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_2],areal));
+      PetscCall(PetscObjectComposedDataSetReal(obj,NormIds[NORM_FROBENIUS],areal));
     }
   }
   PetscFunctionReturn(0);
