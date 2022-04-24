@@ -290,7 +290,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::apply_operator(
     const auto  src_access = ret ? PETSC_MEMORY_ACCESS_READ : PETSC_MEMORY_ACCESS_READ_WRITE;
     const auto  rhsv       = *rhs;
     PetscType  *ptr,*retptr;
-    PetscInt    n;
+    PetscInt    n = 0; // silence overzealous gcc
 
     PetscCall(get_values(dctx,scal,PETSC_MEMTYPE_HOST,src_access,&ptr,&n));
     if (ret) {
