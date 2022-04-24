@@ -103,9 +103,9 @@ public:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode dotnorm2_async(Vec,Vec,PetscManagedScalar,PetscManagedScalar,PetscDeviceContext));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode destroy_async(Vec,PetscDeviceContext));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode conjugate_async(Vec,PetscDeviceContext));
-  template <MemoryAccess>
+  template <PetscMemoryAccessMode>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode getlocalvector_async(Vec,Vec,PetscDeviceContext));
-  template <MemoryAccess>
+  template <PetscMemoryAccessMode>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode restorelocalvector_async(Vec,Vec,PetscDeviceContext));
   template <PetscMemType>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode resetarray_async(Vec,PetscDeviceContext));
@@ -314,7 +314,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::bindtocpu_async(Vec v, Pets
 
 // v->ops->getlocalvector or v->ops->getlocalvectorread
 template <Device::CUPM::DeviceType T>
-template <MemoryAccess access>
+template <PetscMemoryAccessMode access>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::getlocalvector_async(Vec v, Vec w, PetscDeviceContext dctx))
 {
   PetscBool wisseqcupm;
@@ -351,7 +351,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::getlocalvector_async(Vec v,
     PetscCall(PetscObjectStateIncrease(PetscObjectCast(w)));
   } else {
     const auto arrayptr = &VecIMPLCast(w)->array;
-    if (access == MemoryAccess::READ) {
+    if (access == PETSC_MEMORY_ACCESS_READ) {
       PetscCall(VecGetArrayRead(v,const_cast<const PetscScalar**>(arrayptr)));
     } else {
       PetscCall(VecGetArray(v,arrayptr));
@@ -364,7 +364,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::getlocalvector_async(Vec v,
 
 // v->ops->restorelocalvector or v->ops->restorelocalvectorread
 template <Device::CUPM::DeviceType T>
-template <MemoryAccess access>
+template <PetscMemoryAccessMode access>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::restorelocalvector_async(Vec v, Vec w, PetscDeviceContext dctx))
 {
   PetscBool wisseqcupm;
@@ -382,7 +382,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::restorelocalvector_async(Ve
     w->offloadmask   = PETSC_OFFLOAD_UNALLOCATED;
   } else {
     auto array = &VecIMPLCast(w)->array;
-    if (access == MemoryAccess::READ) {
+    if (access == PETSC_MEMORY_ACCESS_READ) {
       PetscCall(VecRestoreArrayRead(v,const_cast<const PetscScalar**>(array)));
     } else {
       PetscCall(VecRestoreArray(v,array));

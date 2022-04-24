@@ -76,7 +76,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::copy_values(Pet
 {
   PetscDeviceCopyMode  mode;
   PetscType           *ptr;
-  PetscInt             n;
+  PetscInt             n = 0; // silence overzealous gcc
 
   // need to actually allocate the stuff
   PetscFunctionBegin;
@@ -265,7 +265,7 @@ template <typename T, typename MT>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::copy(PetscDeviceContext dctx, ManagedType dest, ManagedType src))
 {
   PetscMemType  dmtype,smtype;
-  PetscInt      dest_n,src_n;
+  PetscInt      dest_n = 0,src_n = 0; // silence overzealous gcc
   PetscType    *dest_ptr,*src_ptr;
 
   PetscFunctionBegin;
