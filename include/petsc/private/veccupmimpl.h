@@ -325,7 +325,7 @@ public:
 
   // RAII versions of the get/restore array routines. Determines constness of the pointer type,
   // holds the pointer itself provides the implicit conversion operator
-  template <PetscMemType MT, MemoryAccess MA, typename ValueType = PetscScalar>
+  template <PetscMemType MT, PetscMemoryAccessMode MA, typename ValueType = PetscScalar>
   struct vector_array
   {
     static const auto memory_type = MT;
@@ -398,7 +398,7 @@ public:
 
   // accessors
   template <PetscMemType,PetscMemoryAccessMode>
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode getarray_async(Vec,PetscScalar**,PetscDevicContext));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode getarray_async(Vec,PetscScalar**,PetscDeviceContext));
   template <PetscMemType,PetscMemoryAccessMode>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode restorearray_async(Vec,PetscScalar**,PetscDeviceContext));
   template <PetscMemoryAccessMode>
@@ -441,15 +441,14 @@ const PetscMemoryAccessMode Vec_CUPMBase<T,D>::vector_array<MT,MA,VT>::access_ty
 
 PETSC_CXX_COMPAT_DECL(PetscErrorCode VecCUPMCheckMinimumPinnedMemory_Internal(Vec v))
 {
-  auto           mem = static_cast<PetscInt>(v->minimum_bytes_pinned_memory);
-  PetscBool      flg;
-  PetscErrorCode ierr;
+  auto      mem = static_cast<PetscInt>(v->minimum_bytes_pinned_memory);
+  PetscBool flg;
 
   PetscFunctionBegin;
-  ierr = PetscObjectOptionsBegin(PetscObjectCast(v));CHKERRQ(ierr);
+  PetscObjectOptionsBegin(PetscObjectCast(v));
   PetscCall(PetscOptionsRangeInt("-vec_pinned_memory_min","Minimum size (in bytes) for an allocation to use pinned memory on host","VecSetPinnedMemoryMin",mem,&mem,&flg,0,std::numeric_limits<decltype(mem)>::max()));
   if (flg) v->minimum_bytes_pinned_memory = mem;
-  ierr = PetscOptionsEnd();CHKERRQ(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -800,7 +799,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Destroy_CUPMBase(Vec v, 
 // v->ops->duplicate
 template <Device::CUPM::DeviceType T, typename D>
 template <typename SetupFunctionT>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Duplicate_CUPMBase(Vec v, Vec *y, PetscDeviceContxt dctx, SetupFunctionT&& DerivedCreateIMPLCUPM_Async))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Duplicate_CUPMBase(Vec v, Vec *y, PetscDeviceContext dctx, SetupFunctionT&& DerivedCreateIMPLCUPM_Async))
 {
   // if the derived setup is the default no_op then we should call VecSetType()
   constexpr auto call_set_type = static_cast<PetscBool>(std::is_same<SetupFunctionT,no_op>::value);
