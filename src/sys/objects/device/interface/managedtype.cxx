@@ -6,8 +6,9 @@
 #include <type_traits> // std::is_trivially_copyable
 
 template <typename T>
-struct PetscManagedTypeAllocator : Petsc::AllocatorBase<T>
+class PetscManagedTypeAllocator : public Petsc::AllocatorBase<T>
 {
+public:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode create(T *mscal))
   {
     using Petsc::util::integral_value;
@@ -46,13 +47,17 @@ struct PetscManagedTypeAllocator : Petsc::AllocatorBase<T>
 };
 
 template <typename PT, typename MT>
-struct PetscManagedTypeImpl
+class PetscManagedTypeImpl
 {
   using PetscType   = PT;
   using ManagedType = MT;
   using PoolType    = Petsc::ObjectPool<ManagedType,PetscManagedTypeAllocator<ManagedType>>;
   static PoolType pool;
 
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode copy_values(PetscDeviceContext,ManagedType,PetscOffloadMask,PetscOffloadMask,const PetscType*));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode check_lock(ManagedType,bool = false));
+
+public:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode create(PetscDeviceContext,PetscType*,PetscType*,PetscInt,PetscCopyMode,PetscCopyMode,PetscOffloadMask,ManagedType*));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode destroy(PetscDeviceContext,ManagedType*));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode get_values(PetscDeviceContext,ManagedType,PetscMemType,PetscMemoryAccessMode,PetscType**,PetscInt* = nullptr));
@@ -64,10 +69,6 @@ struct PetscManagedTypeImpl
   PETSC_CXX_COMPAT_DECL(PetscErrorCode get_sub_range(PetscDeviceContext,ManagedType,PetscInt,PetscInt,ManagedType*));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode restore_sub_range(PetscDeviceContext,ManagedType,ManagedType*));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode query(ManagedType,PetscType,PetscBool*,PetscBool*));
-
-private:
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode copy_values(PetscDeviceContext,ManagedType,PetscOffloadMask,PetscOffloadMask,const PetscType*));
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode check_lock(ManagedType,bool = false));
 };
 
 template <typename T, typename MT>
@@ -100,25 +101,25 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::check_lock(Mana
   PetscFunctionReturn(0);
 }
 
-template <typename T>
-auto destroy_managed_type_fn(PetscDeviceContext) noexcept -> PetscErrorCode(*)(PetscDeviceContext,T)
+template <typename T = void>
+PetscErrorCode destroy_managed_type_fn(PetscDeviceContext,...) noexcept
 {
   static_assert(!std::is_same<T,T>::value,"This template should never be called");
-  return nullptr;
+  return 0;
 }
 
-template <typename MT, typename T>
-auto get_managed_values_fn(PetscDeviceContext) noexcept -> PetscErrorCode(*)(PetscDeviceContext,MT,PetscMemType,PetscMemoryAccessMode,T**)
+template <typename T = void>
+PetscErrorCode get_managed_values_fn(PetscDeviceContext,...) noexcept
 {
   static_assert(!std::is_same<T,T>::value,"This template should never be called");
-  return nullptr;
+  return 0;
 }
 
-template <typename MT, typename T>
-auto apply_operator_fn(PetscDeviceContext) noexcept -> PetscErrorCode(*)(PetscDeviceContext,MT,PetscOperatorType,const T*,MT)
+template <typename T = void>
+PetscErrorCode apply_operator_fn(PetscDeviceContext,...) noexcept
 {
   static_assert(!std::is_same<T,T>::value,"This template should never be called");
-  return nullptr;
+  return 0;
 }
 
 template <typename T, typename MT>
@@ -175,7 +176,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::destroy(PetscDe
   PetscFunctionBegin;
   if (!*scal) PetscFunctionReturn(0);
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
-  PetscCall((*destroy_managed_type_fn<ManagedType>(dctx))(dctx,*scal));
+  PetscCall(destroy_managed_type_fn(dctx,*scal));
   PetscCall(pool.reclaim(std::move(*scal)));
   *scal = nullptr;
   PetscFunctionReturn(0);
@@ -193,7 +194,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::get_values(Pets
     PetscValidIntPointer(n,6);
     *n = scal->n;
   }
-  PetscCall((*get_managed_values_fn<ManagedType,T>(dctx))(dctx,scal,mtype,mode,ptr));
+  PetscCall(get_managed_values_fn(dctx,scal,mtype,mode,ptr));
   // if user intends to write to device in any capacity then we are tainted
   if (PetscMemTypeDevice(mtype) && (mode != PETSC_MEMORY_ACCESS_READ)) scal->state.tainted = 1;
   PetscFunctionReturn(0);
@@ -333,7 +334,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::apply_operator(
       }
     }
   } else {
-    PetscCall((*apply_operator_fn<ManagedType,T>(dctx))(dctx,scal,otype,rhs,ret));
+    PetscCall(apply_operator_fn(dctx,scal,otype,mtype,rhs,ret));
   }
   PetscFunctionReturn(0);
 }

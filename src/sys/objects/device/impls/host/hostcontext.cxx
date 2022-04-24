@@ -78,7 +78,7 @@ public:
   template <typename PetscType, typename PetscManagedType>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode getManagedTypeValues(PetscDeviceContext,PetscManagedType,PetscMemType,PetscMemoryAccessMode,PetscType**));
   template <typename PetscType, typename PetscManagedType>
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode applyOperatorType(PetscDeviceContext,PetscManagedType,PetscOperatorType,const PetscType*,PetscManagedType));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode applyOperatorType(PetscDeviceContext,PetscManagedType,PetscOperatorType,PetscMemType,const PetscType*,PetscManagedType));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode launchHostFunction(PetscDeviceContext,PetscHostFunction,void*));
 
   const struct _DeviceContextOps ops = {
@@ -141,7 +141,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext::getManagedTypeValues(PetscDe
 }
 
 template <typename PetscType, typename PetscManagedType>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext::applyOperatorType(PetscDeviceContext dctx, PetscManagedType scal, PetscOperatorType otype, const PetscType *rhs, PetscManagedType ret))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext::applyOperatorType(PetscDeviceContext, PetscManagedType scal, PetscOperatorType, PetscMemType, const PetscType*, PetscManagedType))
 {
   PetscFunctionBegin;
   // we should never get here

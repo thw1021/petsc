@@ -26,16 +26,17 @@
 #define getmanagedvaluestype PetscConcat(getmanagedvalues,PetscTypeSuffix_L)
 #define applyoperatortype    PetscConcat(applyoperator,PetscTypeSuffix_L)
 
-template <> auto destroy_managed_type_fn(PetscDeviceContext dctx) noexcept
-PETSC_DECLTYPE_AUTO_RETURNS(dctx->ops->destroymanagedtype);
+template <typename... T>
+auto destroy_managed_type_fn(PetscDeviceContext dctx, T&&... rest) noexcept
+PETSC_DECLTYPE_AUTO_RETURNS((*dctx->ops->destroymanagedtype)(dctx,std::forward<T>(rest)...));
 
-template <>
-auto get_managed_values_fn(PetscDeviceContext dctx) noexcept
-PETSC_DECLTYPE_AUTO_RETURNS(dctx->ops->getmanagedvaluestype);
+template <typename... T>
+auto get_managed_values_fn(PetscDeviceContext dctx, T&&... rest) noexcept
+PETSC_DECLTYPE_AUTO_RETURNS((*dctx->ops->getmanagedvaluestype)(dctx,std::forward<T>(rest)...));
 
-template <>
-auto apply_operator_fn(PetscDeviceContext dctx) noexcept
-PETSC_DECLTYPE_AUTO_RETURNS(dctx->ops->applyoperatortype);
+template <typename... T>
+auto apply_operator_fn(PetscDeviceContext dctx, T&&... rest) noexcept
+PETSC_DECLTYPE_AUTO_RETURNS((*dctx->ops->applyoperatortype)(dctx,std::forward<T>(rest)...));
 
 #undef destroymanagedtype
 #undef getmanagedvaluestype

@@ -162,7 +162,7 @@ struct _n_PetscDevice {
 #define PetscManagedTypeOps_(PetscManagedType,PetscType,PetscTypeSuffix_L)                     \
   PetscErrorCode (*destroymanaged ## PetscTypeSuffix_L)(PetscDeviceContext,PetscManagedType);  \
   PetscErrorCode (*getmanagedvalues ## PetscTypeSuffix_L)(PetscDeviceContext,PetscManagedType,PetscMemType,PetscMemoryAccessMode,PetscType**); \
-  PetscErrorCode (*applyoperator ## PetscTypeSuffix_L)(PetscDeviceContext,PetscManagedType,PetscOperatorType,const PetscType*,PetscManagedType)
+  PetscErrorCode (*applyoperator ## PetscTypeSuffix_L)(PetscDeviceContext,PetscManagedType,PetscOperatorType,PetscMemType,const PetscType*,PetscManagedType)
 
 #define PetscManagedTypeOps(PetscTypeSuffix,PetscTypeSuffix_L) PetscManagedTypeOps_(PetscConcat(PetscManaged,PetscTypeSuffix),PetscConcat(Petsc,PetscTypeSuffix),PetscTypeSuffix_L)
 
