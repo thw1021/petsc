@@ -63,50 +63,68 @@ struct PetscLogGpuTimer
 template <typename T, typename BinaryOperator>
 struct shift_operator
 {
-  const T              *s;
-  const BinaryOperator  op;
+  const T *const       s;
+  const BinaryOperator op;
 
-  PETSC_HOSTDEVICE_DECL
-  auto operator()(T&& x) const PETSC_DECLTYPE_AUTO_RETURNS(op(std::forward<T>(x),*s));
+  PETSC_HOSTDEVICE_DECL auto operator()(T x) const PETSC_DECLTYPE_AUTO_RETURNS(op(std::move(x),*s));
 };
 
 template <typename T, typename BinaryOperator>
-static inline auto make_shift_operator(T&& s, BinaryOperator&& op)
+static inline auto make_shift_operator(T *s, BinaryOperator&& op)
 PETSC_DECLTYPE_NOEXCEPT_AUTO_RETURNS(
-  shift_operator<T,BinaryOperator>{std::forward<T>(s),std::forward<BinaryOperator>(op)}
+  shift_operator<T,BinaryOperator>{s,std::forward<BinaryOperator>(op)}
 );
 
-// actual implementation that calls thrust
+// actual implementation that calls thrust, 2 argument version
 template <
   DeviceType DT,
   typename T,
   typename FunctorType,
   typename StreamType = typename Impl::Interface<DT>::cupmStream_t
   >
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustApplyPointwise(StreamType stream, FunctorType&& functor, PetscInt n, T *xin, T *yin = nullptr, T *zin = nullptr))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustApplyPointwise(StreamType stream, FunctorType&& functor, PetscInt n, T *xin, T *yin = nullptr))
 {
-  auto xptr = thrust::device_pointer_cast(xin);
+  const auto xptr = thrust::device_pointer_cast(xin);
 
   PetscFunctionBegin;
   if (yin && (yin != xin)) {
-    auto yptr = thrust::device_pointer_cast(yin);
+    const auto yptr = thrust::device_pointer_cast(yin);
 
-    if (zin) {
-      PetscAssert((xin != zin) && (zin != yin),PETSC_COMM_SELF,PETSC_ERR_PLIB,"Must have disjoint pointers when passing all three!");
-      CHKERRTHRUST(
-        THRUST_CALL(
-          thrust::transform,
-          stream,xptr,xptr+n,yptr,thrust::device_pointer_cast(zin),std::forward<FunctorType>(functor)
-        )
-      );
-    } else {
-      CHKERRTHRUST(THRUST_CALL(thrust::transform,stream,xptr,xptr+n,yptr,std::forward<FunctorType>(functor)));
-    }
+    CHKERRTHRUST(THRUST_CALL(thrust::transform,stream,xptr,xptr+n,yptr,std::forward<FunctorType>(functor)));
   } else {
-    PetscAssert(!zin,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Cannot pass zin and not yin");
     CHKERRTHRUST(THRUST_CALL(thrust::transform,stream,xptr,xptr+n,xptr,std::forward<FunctorType>(functor)));
   }
   PetscCall(PetscLogGpuFlops(n));
+  PetscFunctionReturn(0);
+}
+
+// actual implementation that calls thrust, 3 argument version
+template <
+  DeviceType DT,
+  typename T,
+  typename FunctorType,
+  typename StreamType = typename Impl::Interface<DT>::cupmStream_t
+  >
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustApplyPointwise(StreamType stream, FunctorType&& functor, PetscInt n, T *xin, T *yin, T *zin))
+{
+  PetscFunctionBegin;
+  if (zin) {
+    const auto xptr = thrust::device_pointer_cast(xin);
+
+    PetscAssert((xin != yin) && (xin != zin) && (zin != yin),PETSC_COMM_SELF,PETSC_ERR_PLIB,"Must have disjoint pointers when passing all three!");
+    CHKERRTHRUST(
+      THRUST_CALL(
+        thrust::transform,stream,
+        xptr,xptr+n,
+        thrust::device_pointer_cast(yin),
+        thrust::device_pointer_cast(zin),
+        std::forward<FunctorType>(functor)
+      )
+    );
+    PetscCall(PetscLogGpuFlops(n));
+  } else {
+    PetscCall(ThrustApplyPointwise(stream,std::forward<FunctorType>(functor),n,xin,yin));
+  }
   PetscFunctionReturn(0);
 }
 

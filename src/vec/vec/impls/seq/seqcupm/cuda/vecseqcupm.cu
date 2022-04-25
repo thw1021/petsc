@@ -13,7 +13,7 @@ static const auto VecSeq_CUDA = VecSeq_CUPM<Petsc::Device::CUPM::DeviceType::CUD
 PetscErrorCode VecCreate_SeqCUDA(Vec v)
 {
   PetscFunctionBegin;
-  PetscCall(VecSeq_CUDA.create_async(v));
+  PetscCall(VecSeq_CUDA.create_async(v,nullptr));
   PetscFunctionReturn(0);
 }
 
@@ -44,7 +44,7 @@ PetscErrorCode VecCreateSeqCUDA(MPI_Comm comm, PetscInt n, Vec *v)
 {
   PetscFunctionBegin;
   PetscValidPointer(v,3);
-  PetscCall(VecSeq_CUDA.createseqcupm_async(comm,0,n,v,PETSC_TRUE));
+  PetscCall(VecSeq_CUDA.createseqcupm_async(comm,0,n,nullptr,v,PETSC_TRUE));
   PetscFunctionReturn(0);
 }
 
@@ -88,7 +88,7 @@ PetscErrorCode VecCreateSeqCUDAWithArrays(MPI_Comm comm, PetscInt bs, PetscInt n
   PetscFunctionBegin;
   if (n && cpuarray) PetscValidScalarPointer(cpuarray,4);
   PetscValidPointer(v,6);
-  PetscCall(VecSeq_CUDA.createseqcupmwithbotharrays_async(comm,bs,n,cpuarray,gpuarray,v));
+  PetscCall(VecSeq_CUDA.createseqcupmwithbotharrays_async(comm,bs,n,cpuarray,gpuarray,nullptr,v));
   PetscFunctionReturn(0);
 }
 
@@ -173,7 +173,7 @@ PetscErrorCode VecCUDAGetArray(Vec v, PetscScalar **a)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
   PetscValidPointer(a,2);
-  PetscCall(VecSeq_CUDA.getarray_async<PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_READ_WRITE>(v,a));
+  PetscCall(VecSeq_CUDA.getarray_async<PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_READ_WRITE>(v,a,nullptr));
   PetscFunctionReturn(0);
 }
 

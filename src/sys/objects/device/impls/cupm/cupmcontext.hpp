@@ -516,16 +516,16 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::applyOperatorType(PetscDe
   // REVIEW ME: need to somehow handle having rhs be host or device memory!
   switch (otype) {
   case PETSC_OPERATOR_PLUS:
-    PetscCall(ThrustApplyPointwiseUnary<T>(stream,make_shift_operator(rhs,thrust::plus<PetscType>{ }),n,ptr,retptr));
+    PetscCall(ThrustApplyPointwise<T>(stream,make_shift_operator(rhs,thrust::plus<PetscType>{}),n,ptr,retptr));
     break;
   case PETSC_OPERATOR_MINUS:
-    PetscCall(ThrustApplyPointwiseUnary<T>(stream,make_shift_operator(rhs,thrust::minus<PetscType>{ }),n,ptr,retptr));
+    PetscCall(ThrustApplyPointwise<T>(stream,make_shift_operator(rhs,thrust::minus<PetscType>{}),n,ptr,retptr));
     break;
   case PETSC_OPERATOR_MULTIPLY:
-    PetscCall(ThrustApplyPointwiseUnary<T>(stream,make_shift_operator(rhs,thrust::multiplies<PetscType>{ }),n,ptr,retptr));
+    PetscCall(ThrustApplyPointwise<T>(stream,make_shift_operator(rhs,thrust::multiplies<PetscType>{}),n,ptr,retptr));
     break;
   case PETSC_OPERATOR_DIVIDE:
-    PetscCall(ThrustApplyPointwiseUnary<T>(stream,make_shift_operator(rhs,thrust::divides<PetscType>{ }),n,ptr,retptr));
+    PetscCall(ThrustApplyPointwise<T>(stream,make_shift_operator(rhs,thrust::divides<PetscType>{}),n,ptr,retptr));
     break;
   case PETSC_OPERATOR_EQUAL:
     PetscCall(ThrustSet<T>(stream,n,retptr,rhs));

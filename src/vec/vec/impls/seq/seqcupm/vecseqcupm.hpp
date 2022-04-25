@@ -67,8 +67,8 @@ private:
   template <typename UnaryFuncT>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode pointwiseunary_async_(UnaryFuncT&&,PetscDeviceContext,Vec,Vec/*out*/=nullptr));
   // mdot dispatchers
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode mdot_async_(UseComplexTag<true>,Vec,PetscManagedInt,const Vec[],PetscManagedScalar,PetscDeviceContext));
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode mdot_async_(UseComplexTag<false>,Vec,PetscManagedInt,const Vec[],PetscManagedScalar,PetscDeviceContext));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode mdot_async_(UseComplexTag<true>,Vec,PetscInt,const Vec[],PetscManagedScalar,PetscDeviceContext));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode mdot_async_(UseComplexTag<false>,Vec,PetscInt,const Vec[],PetscManagedScalar,PetscDeviceContext));
   // dispatcher for the actual kernels for mdot when NOT configured for complex, called by
   // mdot_async_(use_complex_tag<false>,...)
   template <int>
@@ -134,7 +134,7 @@ template <typename BinaryFuncT>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::pointwisebinary_async_(BinaryFuncT&& binary, PetscDeviceContext dctx, Vec win, Vec xin, Vec yin))
 {
   PetscFunctionBegin;
-  PetscCall(ThrustApplyPointwiseBinary<T>);(dctx,std::forward<BinaryFuncT>(binary),win->map->n,DeviceArrayRead(dctx,xin),DeviceArrayRead(dctx,yin),DeviceArrayWrite(dctx,win))
+  PetscCall(ThrustApplyPointwiseBinary<T>(dctx,std::forward<BinaryFuncT>(binary),win->map->n,DeviceArrayRead(dctx,xin),DeviceArrayRead(dctx,yin),DeviceArrayWrite(dctx,win)));
   PetscFunctionReturn(0);
 }
 
