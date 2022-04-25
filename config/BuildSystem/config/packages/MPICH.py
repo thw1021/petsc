@@ -52,6 +52,8 @@ class Configure(config.package.GNUPackage):
     if self.hwloc.found:
       args.append('--with-hwloc="'+self.hwloc.directory+'"')
       args.append('--with-hwloc-prefix="'+self.hwloc.directory+'"')
+    else:
+      args.append('--disable-hwloc')
     # make sure MPICH does not build with optimization for debug version of PETSc, so we can debug through MPICH
     if self.compilerFlags.debugging:
       args.append("--enable-fast=no")
