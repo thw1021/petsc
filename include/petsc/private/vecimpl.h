@@ -52,7 +52,7 @@ struct _VecOps {
   PetscErrorCode (*setrandom)(Vec,PetscRandom,PetscDeviceContext);         /* set y[j] = random numbers */
   PetscErrorCode (*setoption)(Vec,VecOption,PetscBool);
   PetscErrorCode (*setvaluesblocked)(Vec,PetscInt,const PetscInt[],const PetscScalar[],InsertMode);
-  PetscErrorCode (*destroy)(Vec);
+  PetscErrorCode (*destroy)(Vec,PetscDeviceContext);
   PetscErrorCode (*view)(Vec,PetscViewer);
   PetscErrorCode (*placearray)(Vec,const PetscScalar*,PetscDeviceContext);     /* place data array */
   PetscErrorCode (*replacearray)(Vec,const PetscScalar*,PetscDeviceContext);     /* replace data array */
@@ -78,7 +78,7 @@ struct _VecOps {
   PetscErrorCode (*exp)(Vec,PetscDeviceContext);
   PetscErrorCode (*log)(Vec,PetscDeviceContext);
   PetscErrorCode (*shift)(Vec,PetscManagedScalar,PetscDeviceContext);
-  PetscErrorCode (*create)(Vec);
+  PetscErrorCode (*create)(Vec,PetscDeviceContext);
   PetscErrorCode (*stridegather)(Vec,PetscInt,Vec,InsertMode);
   PetscErrorCode (*stridescatter)(Vec,PetscInt,Vec,InsertMode);
   PetscErrorCode (*dotnorm2)(Vec,Vec,PetscManagedScalar,PetscManagedScalar,PetscDeviceContext);

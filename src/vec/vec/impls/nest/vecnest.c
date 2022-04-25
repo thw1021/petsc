@@ -5,35 +5,38 @@
 /* check all blocks are filled */
 static PetscErrorCode VecAssemblyBegin_Nest(Vec v)
 {
-  Vec_Nest       *vs = (Vec_Nest*)v->data;
-  const PetscInt  nr = vs->nb;
+  Vec_Nest       *vs  = (Vec_Nest*)v->data;
+  Vec            *vsv = vs->v;
+  const PetscInt  nr  = vs->nb;
 
   PetscFunctionBegin;
   for (PetscInt i = 0; i < nr; ++i) {
-    PetscCheck(vs->v[i],PetscObjectComm((PetscObject)v),PETSC_ERR_SUP,"Nest  vector cannot contain NULL blocks");
-    PetscCall(VecAssemblyBegin(vs->v[i]));
+    PetscCheck(vsv[i],PetscObjectComm((PetscObject)v),PETSC_ERR_SUP,"Nest vector cannot contain NULL blocks");
+    PetscCall(VecAssemblyBegin(vsv[i]));
   }
   PetscFunctionReturn(0);
 }
 
 static PetscErrorCode VecAssemblyEnd_Nest(Vec v)
 {
-  Vec_Nest       *vs = (Vec_Nest*)v->data;
-  const PetscInt  nr = vs->nb;
+  Vec_Nest       *vs  = (Vec_Nest*)v->data;
+  Vec            *vsv = vs->v;
+  const PetscInt  nr  = vs->nb;
 
   PetscFunctionBegin;
-  for (PetscInt i = 0; i < nr; ++i) PetscCall(VecAssemblyEnd(vs->v[i]));
+  for (PetscInt i = 0; i < nr; ++i) PetscCall(VecAssemblyEnd(vsv[i]));
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecDestroy_Nest(Vec v)
+static PetscErrorCode VecDestroy_Nest(Vec v, PetscDeviceContext dctx)
 {
   Vec_Nest       *vs = (Vec_Nest*)v->data;
+  Vec            *vsv = vs->v;
   const PetscInt  nr = vs->nb;
 
   PetscFunctionBegin;
-  if (vs->v) {
-    for (PetscInt i = 0; i < nr; ++i) PetscCall(VecDestroy(vs->v+i));
+  if (vsv) {
+    for (PetscInt i = 0; i < nr; ++i) PetscCall(VecDestroyAsync(dctx,vsv+i));
     PetscCall(PetscFree(vs->v));
   }
   for (PetscInt i = 0; i < nr; ++i) PetscCall(ISDestroy(vs->is+i));
@@ -72,46 +75,42 @@ static PetscErrorCode VecDuplicate_Nest(Vec x, Vec *y, PetscDeviceContext dctx)
   PetscCall(PetscMalloc1(nr,&sub));
   for (PetscInt i = 0; i < nr; ++i) PetscCall(VecDuplicateAsync(bxv[i],sub+i,dctx));
   PetscCall(VecCreateNest(PetscObjectComm((PetscObject)x),nr,bx->is,sub,y));
-  for (PetscInt i = 0; i < nr; ++i) PetscCall(VecDestroyAsync(sub+i,dctx));
+  for (PetscInt i = 0; i < nr; ++i) PetscCall(VecDestroyAsync(dctx,sub+i));
   PetscCall(PetscFree(sub));
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode VecXDot_Nest(Vec x, Vec y, PetscManagedScalar scal, PetscDeviceContext dctx, PetscErrorCode(*const VecXDot_Fn)(Vec,Vec,PetscScalar*))
+{
+  Vec_Nest       *bx  = (Vec_Nest*)x->data;
+  Vec            *bxv = bx->v,*byv = ((Vec_Nest*)y->data)->v;
+  const PetscInt  nr  = bx->nb;
+  PetscScalar     tmp = 0.0;
+
+  PetscFunctionBegin;
+  for (PetscInt i = 0; i < nr; ++i) {
+    PetscScalar x_dot_y;
+
+    PetscCall(VecXDot_Fn(bxv[i],byv[i],&x_dot_y));
+    tmp += x_dot_y;
+  }
+  PetscCall(PetscManagedScalarSetValues(dctx,scal,PETSC_MEMTYPE_HOST,&tmp,1));
   PetscFunctionReturn(0);
 }
 
 /* supports nested blocks */
 static PetscErrorCode VecDot_Nest(Vec x, Vec y, PetscManagedScalar val, PetscDeviceContext dctx)
 {
-  Vec_Nest       *bx   = (Vec_Nest*)x->data;
-  Vec            *bxv  = bx->v,*byv = ((Vec_Nest*)y->data)->v;
-  const PetscInt  nr   = bx->nb;
-  PetscScalar     _val = 0.0;
-
   PetscFunctionBegin;
-  for (PetscInt i = 0; i < nr; ++i) {
-    PetscScalar x_dot_y;
-
-    PetscCall(VecDot(bxv[i],byv[i],&x_dot_y));
-    _val += x_dot_y;
-  }
-  PetscCall(PetscManagedScalarSetValues(dctx,val,PETSC_MEMTYPE_HOST,&_val,1));
+  PetscCall(VecXDot_Nest(x,y,val,dctx,VecDot));
   PetscFunctionReturn(0);
 }
 
 /* supports nested blocks */
 static PetscErrorCode VecTDot_Nest(Vec x, Vec y, PetscManagedScalar val, PetscDeviceContext dctx)
 {
-  Vec_Nest       *bx   = (Vec_Nest*)x->data;
-  Vec            *bxv  = bx->v,*byv = ((Vec_Nest*)y->data)->v;
-  const PetscInt  nr   = bx->nb;
-  PetscScalar     _val = 0.0;
-
   PetscFunctionBegin;
-  for (PetscInt i = 0; i < nr; ++i) {
-    PetscScalar x_dot_y;
-
-    PetscCall(VecTDot(bxv[i],byv[i],&x_dot_y));
-    _val += x_dot_y;
-  }
-  PetscCall(PetscManagedScalarSetValues(dctx,val,PETSC_MEMTYPE_HOST,&_val,1));
+  PetscCall(VecXDot_Nest(x,y,val,dctx,VecTDot));
   PetscFunctionReturn(0);
 }
 

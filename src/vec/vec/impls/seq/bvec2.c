@@ -658,13 +658,13 @@ PetscErrorCode VecSetValuesBlocked_Seq(Vec xin,PetscInt ni,const PetscInt ix[],c
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecDestroy_Seq(Vec v)
+PetscErrorCode VecDestroy_Seq(Vec v, PetscDeviceContext PETSC_UNUSED dctx)
 {
-  Vec_Seq        *vs = (Vec_Seq*)v->data;
+  Vec_Seq *vs = (Vec_Seq*)v->data;
 
   PetscFunctionBegin;
 #if defined(PETSC_USE_LOG)
-  PetscLogObjectState((PetscObject)v,"Length=%" PetscInt_FMT,v->map->n);
+  PetscCall(PetscLogObjectState((PetscObject)v,"Length=%" PetscInt_FMT,v->map->n));
 #endif
   if (vs) PetscCall(PetscFree(vs->array_allocated));
   PetscCall(PetscFree(v->data));

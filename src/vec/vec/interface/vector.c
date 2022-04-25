@@ -409,16 +409,19 @@ PetscErrorCode  VecDuplicate(Vec v,Vec *newv)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecDestroyAsync(Vec *v, PetscDeviceContext PETSC_UNUSED dctx)
+PetscErrorCode VecDestroyAsync(PetscDeviceContext dctx, Vec *v)
 {
   PetscFunctionBegin;
   if (!*v) PetscFunctionReturn(0);
-  PetscValidHeaderSpecific((*v),VEC_CLASSID,1);
+  PetscValidHeaderSpecific((*v),VEC_CLASSID,2);
   if (--((PetscObject)(*v))->refct > 0) {*v = NULL; PetscFunctionReturn(0);}
 
   PetscCall(PetscObjectSAWsViewOff((PetscObject)*v));
   /* destroy the internal part */
-  if ((*v)->ops->destroy) PetscCall((*(*v)->ops->destroy)(*v));
+  if ((*v)->ops->destroy) {
+    PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+    PetscCall((*(*v)->ops->destroy)(*v,dctx));
+  }
   PetscCall(PetscFree((*v)->defaultrandtype));
   /* destroy the external/common part */
   PetscCall(PetscLayoutDestroy(&(*v)->map));
@@ -441,7 +444,7 @@ PetscErrorCode VecDestroyAsync(Vec *v, PetscDeviceContext PETSC_UNUSED dctx)
 PetscErrorCode  VecDestroy(Vec *v)
 {
   PetscFunctionBegin;
-  PetscCall(VecDestroyAsync(v,NULL));
+  PetscCall(VecDestroyAsync(NULL,v));
   PetscFunctionReturn(0);
 }
 
@@ -1374,7 +1377,10 @@ PetscErrorCode  VecSetSizes(Vec v, PetscInt n, PetscInt N)
   v->map->n = n;
   v->map->N = N;
   if (v->ops->create) {
-    PetscCall((*v->ops->create)(v));
+    PetscDeviceContext dctx;
+
+    PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
+    PetscCall((*v->ops->create)(v,dctx));
     v->ops->create = NULL;
   }
   PetscFunctionReturn(0);
@@ -1554,7 +1560,7 @@ PetscErrorCode  VecSetUp(Vec v)
 PetscErrorCode VecCopyAsync(Vec x, Vec y, PetscDeviceContext dctx)
 {
   PetscBool flgs[4];
-  PetscReal norms[4] = {0.0,0.0,0.0,0.0};
+  PetscReal norms[4] = {0.0};
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -1658,7 +1664,7 @@ PetscErrorCode  VecCopy(Vec x,Vec y)
 
 PetscErrorCode VecSwapAsync(Vec x, Vec y, PetscDeviceContext dctx)
 {
-  PetscReal normxs[4] = {0.0},normys[4]={0.0};
+  PetscReal normxs[4] = {0.0},normys[4] = {0.0};
   PetscBool flgxs[4],flgys[4];
 
   PetscFunctionBegin;

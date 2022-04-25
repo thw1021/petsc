@@ -117,6 +117,7 @@ PETSC_EXTERN PetscErrorCode VecInitializePackage(void);
 PETSC_EXTERN PetscErrorCode VecFinalizePackage(void);
 
 PETSC_EXTERN PetscErrorCode VecCreate(MPI_Comm,Vec*);
+PETSC_EXTERN PetscErrorCode VecCreateAsync(MPI_Comm,PetscDeviceContext,Vec*);
 PETSC_EXTERN PetscErrorCode VecCreateSeq(MPI_Comm,PetscInt,Vec*);
 PETSC_EXTERN PetscErrorCode VecCreateMPI(MPI_Comm,PetscInt,PetscInt,Vec*);
 PETSC_EXTERN PetscErrorCode VecCreateSeqWithArray(MPI_Comm,PetscInt,PetscInt,const PetscScalar[],Vec*);
@@ -129,7 +130,7 @@ PETSC_EXTERN PetscErrorCode VecViewFromOptions(Vec,PetscObject,const char[]);
 
 PETSC_EXTERN PetscErrorCode VecSetUp(Vec);
 PETSC_EXTERN PetscErrorCode VecDestroy(Vec*);
-PETSC_EXTERN PetscErrorCode VecDestroyAsync(Vec*,PetscDeviceContext);
+PETSC_EXTERN PetscErrorCode VecDestroyAsync(PetscDeviceContext,Vec*);
 PETSC_EXTERN PetscErrorCode VecZeroEntries(Vec);
 PETSC_EXTERN PetscErrorCode VecSetOptionsPrefix(Vec,const char[]);
 PETSC_EXTERN PetscErrorCode VecAppendOptionsPrefix(Vec,const char[]);

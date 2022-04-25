@@ -20,7 +20,7 @@ extern PetscErrorCode VecCreate_Seq_Private(Vec,const float*);
 extern PetscErrorCode VecCreate_Seq_Private(Vec,const double*);
 #endif
 
-PETSC_EXTERN PetscErrorCode VecCreate_Seq(Vec V)
+PETSC_EXTERN PetscErrorCode VecCreate_Seq(Vec V, PetscDeviceContext PETSC_UNUSED dctx)
 {
   Vec_Seq        *s;
   PetscScalar    *array;

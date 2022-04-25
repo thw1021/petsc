@@ -529,10 +529,10 @@ PetscErrorCode VecCreate_MPI_Private(Vec v, PetscBool alloc, PetscInt nghost, co
 .seealso: VecCreate(), VecSetType(), VecSetFromOptions(), VecCreateMPIWithArray(), VECMPI, VecType, VecCreateMPI(), VecCreateMPI()
 M*/
 
-PetscErrorCode VecCreate_MPI(Vec vv)
+PetscErrorCode VecCreate_MPI(Vec vv, PetscDeviceContext dctx)
 {
   PetscFunctionBegin;
-  PetscCall(VecCreate_MPI_Private(vv,PETSC_TRUE,0,NULL,NULL));
+  PetscCall(VecCreate_MPI_Private(vv,PETSC_TRUE,0,NULL,dctx));
   PetscFunctionReturn(0);
 }
 
@@ -765,9 +765,9 @@ PetscErrorCode  VecMPISetGhost(Vec vv,PetscInt nghost,const PetscInt ghosts[])
     MPI_Comm               comm;
 
     PetscCall(PetscObjectGetComm((PetscObject)vv,&comm));
-    n    = vv->map->n;
-    N    = vv->map->N;
-    PetscCall((*vv->ops->destroy)(vv));
+    n = vv->map->n;
+    N = vv->map->N;
+    PetscCall((*vv->ops->destroy)(vv,NULL));
     PetscCall(VecSetSizes(vv,n,N));
     PetscCall(VecCreate_MPI_Private(vv,PETSC_TRUE,nghost,NULL,NULL));
     w    = (Vec_MPI*)(vv)->data;

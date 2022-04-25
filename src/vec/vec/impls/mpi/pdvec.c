@@ -7,20 +7,20 @@
 #include <petsc/private/glvisviewerimpl.h>
 #include <petsc/private/glvisvecimpl.h>
 
-PetscErrorCode VecDestroy_MPI(Vec v)
+PetscErrorCode VecDestroy_MPI(Vec v, PetscDeviceContext dctx)
 {
-  Vec_MPI        *x = (Vec_MPI*)v->data;
+  Vec_MPI *x = (Vec_MPI*)v->data;
 
   PetscFunctionBegin;
 #if defined(PETSC_USE_LOG)
-  PetscLogObjectState((PetscObject)v,"Length=%" PetscInt_FMT,v->map->N);
+  PetscCall(PetscLogObjectState((PetscObject)v,"Length=%" PetscInt_FMT,v->map->N));
 #endif
   if (!x) PetscFunctionReturn(0);
   PetscCall(PetscFree(x->array_allocated));
 
   /* Destroy local representation of vector if it exists */
   if (x->localrep) {
-    PetscCall(VecDestroy(&x->localrep));
+    PetscCall(VecDestroyAsync(dctx,&x->localrep));
     PetscCall(VecScatterDestroy(&x->localupdate));
   }
   PetscCall(VecAssemblyReset_MPI(v));

@@ -35,7 +35,7 @@ PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecAXPY_Seq(Vec,PetscManagedScalar,Ve
 PETSC_INTERN PetscErrorCode VecAXPBY_Seq(Vec,PetscManagedScalar,PetscManagedScalar,Vec,PetscDeviceContext);
 PETSC_INTERN PetscErrorCode VecMax_Seq(Vec,PetscManagedInt,PetscManagedReal,PetscDeviceContext);
 PETSC_INTERN PetscErrorCode VecNorm_Seq(Vec,NormType,PetscManagedReal,PetscDeviceContext);
-PETSC_INTERN PetscErrorCode VecDestroy_Seq(Vec);
+PETSC_INTERN PetscErrorCode VecDestroy_Seq(Vec,PetscDeviceContext);
 PETSC_INTERN PetscErrorCode VecDuplicate_Seq(Vec,Vec*,PetscDeviceContext);
 PETSC_INTERN PetscErrorCode VecSetOption_Seq(Vec,VecOption,PetscBool);
 PETSC_INTERN PetscErrorCode VecGetValues_Seq(Vec,PetscInt,const PetscInt*,PetscScalar*);
@@ -52,6 +52,6 @@ PETSC_INTERN PetscErrorCode VecPointwiseMaxAbs_Seq(Vec,Vec,Vec,PetscDeviceContex
 PETSC_INTERN PetscErrorCode VecPointwiseMin_Seq(Vec,Vec,Vec,PetscDeviceContext);
 PETSC_INTERN PetscErrorCode VecPointwiseDivide_Seq(Vec,Vec,Vec,PetscDeviceContext);
 
-PETSC_EXTERN PetscErrorCode VecCreate_Seq(Vec);
+PETSC_EXTERN PetscErrorCode VecCreate_Seq(Vec,PetscDeviceContext);
 PETSC_INTERN PetscErrorCode VecCreate_Seq_Private(Vec,const PetscScalar[],PetscDeviceContext);
 #endif

@@ -140,14 +140,14 @@ PetscErrorCode PetscSharedMalloc(MPI_Comm comm,PetscInt llen,PetscInt len,void *
 
 #else
 
-PETSC_EXTERN PetscErrorCode VecCreate_Shared(Vec vv)
+PETSC_EXTERN PetscErrorCode VecCreate_Shared(Vec vv, PetscDeviceContext dctx)
 {
   PetscMPIInt    size;
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)vv),&size));
   PetscCheck(size <= 1,PETSC_COMM_SELF,PETSC_ERR_SUP_SYS,"No supported for shared memory vector objects on this machine");
-  PetscCall(VecCreate_Seq(vv));
+  PetscCall(VecCreate_Seq(vv,dctx));
   PetscFunctionReturn(0);
 }
 
