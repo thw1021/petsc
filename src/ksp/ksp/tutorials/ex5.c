@@ -303,7 +303,7 @@ int main(int argc,char **args)
   PetscCall(VecAXPY(x,none,u));
   PetscCall(VecNorm(x,NORM_2,&norm));
   PetscCall(KSPGetIterationNumber(ksp,&its));
-  if (!testscaledMat || norm/bnorm > 1.e-5) {
+  if (!testscaledMat || norm/bnorm > PETSC_SMALL) {
     PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g divided by norm of b, Iterations %" PetscInt_FMT "\n",(double)norm/(double)bnorm,its));
   }
 

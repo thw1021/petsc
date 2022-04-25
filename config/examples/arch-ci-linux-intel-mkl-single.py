@@ -24,7 +24,6 @@ if __name__ == '__main__':
     '--download-superlu_dist',
     '--download-metis',
     '--download-parmetis',
-    '--download-ptscotch'
     '--download-superlu_dist'    
   ]
   configure.petsc_configure(configure_options)

@@ -57,7 +57,6 @@ class Configure(config.package.CMakePackage):
     config.package.Package.configureLibrary(self)
 
   def formCMakeConfigureArgs(self):
-    if self.versionToTuple(self.cmake.foundversion) < (3,18,1): raise RuntimeError("Requires cmake version 3.18.1 or higher: use --download-cmake")
     self.configureMKL()
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
     if self.openmp.found:
