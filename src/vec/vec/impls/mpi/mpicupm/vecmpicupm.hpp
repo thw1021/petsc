@@ -48,7 +48,7 @@ public:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode norm_async(Vec,NormType,PetscManagedReal,PetscDeviceContext));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode dot_async(Vec,Vec,PetscManagedScalar,PetscDeviceContext));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode tdot_async(Vec,Vec,PetscManagedScalar,PetscDeviceContext));
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode mdot_async(Vec,PetscInt,const Vec[],PetscManagedScalar*,PetscDeviceContext));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode mdot_async(Vec,PetscManagedInt,const Vec[],PetscManagedScalar,PetscDeviceContext));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode dotnorm2_async(Vec,Vec,PetscManagedScalar,PetscManagedScalar,PetscDeviceContext));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode max_async(Vec,PetscManagedInt,PetscManagedReal,PetscDeviceContext));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode min_async(Vec,PetscManagedInt,PetscManagedReal,PetscDeviceContext));
@@ -60,7 +60,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::creatempicupm_async_(Vec v,
   PetscFunctionBegin;
   // REVIEW ME: remove me
   PetscCheck(!VecIMPLCast(v),PETSC_COMM_SELF,PETSC_ERR_PLIB,"Creating VecMPI for the second time!");
-  PetscCall(VecCreate_MPI_Private(v,PETSC_FALSE,nghost,nullptr));
+  PetscCall(VecCreate_MPI_Private(v,PETSC_FALSE,nghost,nullptr,dctx));
   PetscCall(Initialize_CUPMBase(v,allocate_missing,host_array,device_array,dctx));
   PetscFunctionReturn(0);
 }
@@ -138,7 +138,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::destroy_async(Vec v, PetscD
 {
   PetscFunctionBegin;
   PetscCall(Destroy_CUPMBase(v,dctx));
-  PetscCall(VecDestroy_MPI(v,dctx));
+  PetscCall(VecDestroy_MPI(v));
   PetscFunctionReturn(0);
 }
 
@@ -189,71 +189,73 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::placearray_async(Vec v, con
 template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::norm_async(Vec v, NormType type, PetscManagedReal z, PetscDeviceContext dctx))
 {
-  PetscReal  work[2]  = {0};
-  const auto bothNorm = type == NORM_1_AND_2;
-  const auto norm2    = bothNorm || type == NORM_2 || type == NORM_FROBENIUS;
-  const auto count    = bothNorm ? 2 : 1;
-  const auto op       = type == NORM_INFINITY ? MPIU_MAX : MPIU_SUM;
+  const auto  bothNorm = type == NORM_1_AND_2;
+  const auto  norm2    = bothNorm || (type == NORM_2) || (type == NORM_FROBENIUS);
+  const auto  count    = bothNorm ? 2 : 1;
+  const auto  op       = type == NORM_INFINITY ? MPIU_MAX : MPIU_SUM;
+  PetscReal  *zptr;
 
   PetscFunctionBegin;
-  PetscCall(VecSeq_T::norm_async(v,type,work,dctx));
-  if (norm2) work[bothNorm] *= work[bothNorm];
-  PetscCallMPI(MPIU_Allreduce(work,z.ptr,count,MPIU_REAL,op,PetscObjectComm(PetscObjectCast(v))));
-  if (norm2) z[bothNorm] = PetscSqrtReal(z[bothNorm]);
+  PetscCall(VecSeq_T::norm_async(v,type,z,dctx));
+  // implicit sync
+  PetscCall(PetscManagedRealGetHostValuesSafe(dctx,z,PETSC_MEMORY_ACCESS_READ,&zptr,nullptr));
+  if (norm2) zptr[bothNorm] *= zptr[bothNorm];
+  PetscCall(MPIU_Allreduce(MPI_IN_PLACE,zptr,count,MPIU_REAL,op,PetscObjectComm(PetscObjectCast(v))));
+  if (norm2) zptr[bothNorm] = PetscSqrtReal(zptr[bothNorm]);
   PetscFunctionReturn(0);
 }
 
 template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::dot_async(Vec x, Vec y, PetscManagedScalar z, PetscDeviceContext dctx))
 {
-  PetscScalar work;
+  constexpr auto one = PetscInt{1};
 
   PetscFunctionBegin;
-  PetscCall(VecSeq_T::dot_async(x,y,&work,dctx));
-  PetscCallMPI(MPIU_Allreduce(&work,z.ptr,1,MPIU_SCALAR,MPIU_SUM,PetscObjectComm(PetscObjectCast(x))));
+  PetscCall(VecSeq_T::dot_async(x,y,z,dctx));
+  PetscCall(PetscDeviceContextAllReduceManagedScalar_Internal(dctx,z,&one,MPIU_SUM,PetscObjectComm(PetscObjectCast(x))));
   PetscFunctionReturn(0);
 }
 
 template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::tdot_async(Vec x, Vec y, PetscManagedScalar z, PetscDeviceContext dctx))
 {
-  PetscScalar work;
+  constexpr auto one = PetscInt{1};
 
   PetscFunctionBegin;
-  PetscCall(VecSeq_T::tdot_async(x,y,&work,dctx));
-  PetscCallMPI(MPIU_Allreduce(&work,z.ptr,1,MPIU_SCALAR,MPIU_SUM,PetscObjectComm(PetscObjectCast(x))));
+  PetscCall(VecSeq_T::tdot_async(x,y,z,dctx));
+  PetscCall(PetscDeviceContextAllReduceManagedScalar_Internal(dctx,z,&one,MPIU_SUM,PetscObjectComm(PetscObjectCast(x))));
   PetscFunctionReturn(0);
 }
 
 template <Device::CUPM::DeviceType T>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::mdot_async(Vec x, PetscInt nv, const Vec y[], PetscManagedScalar *z, PetscDeviceContext dctx))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::mdot_async(Vec x, PetscManagedInt nv, const Vec y[], PetscManagedScalar z, PetscDeviceContext dctx))
 {
-  auto       stackwork = std::array<PetscScalar,128>{},stackwork2 = std::array<PetscScalar,128>{};
-  // needed to silence warning: comparison between signed and unsigned integer expressions
-  const auto allocate  = stackwork.size() < static_cast<decltype(stackwork.size())>(nv);
-  auto       work      = stackwork.data(), work2 = stackwork2.data();
+  PetscInt *nvptr;
 
   PetscFunctionBegin;
-  if (allocate) PetscCall(PetscMalloc2(nv,&work,nv,&work2));
-  PetscCall(VecSeq_T::mdot_async(x,nv,y,work,dctx));
-  PetscCall(PetscDeviceContextSynchronize(dctx));
-  PetscCallMPI(MPIU_Allreduce(work,work2,nv,MPIU_SCALAR,MPIU_SUM,PetscObjectComm(PetscObjectCast(x))));
-  for (auto i = PetscInt{0}; i < nv; ++i) *(z[i].ptr) = work2[i];
-  if (allocate) PetscCall(PetscFree2(work,work2));
+  PetscCall(VecSeq_T::mdot_async(x,nv,y,z,dctx));
+  // implicit sync
+  PetscCall(PetscManagedIntGetHostValuesSafe(dctx,nv,PETSC_MEMORY_ACCESS_READ,&nvptr,nullptr));
+  PetscCall(PetscDeviceContextAllReduceManagedScalar_Internal(dctx,z,(PetscObject)x,nvptr,MPIU_SUM));
   PetscFunctionReturn(0);
 }
 
 template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::dotnorm2_async(Vec x, Vec y, PetscManagedScalar dp, PetscManagedScalar nm, PetscDeviceContext dctx))
 {
-  PetscScalar work[2],sum[2];
+  PetscScalar *dpptr,*nmptr;
 
   PetscFunctionBegin;
-  PetscCall(VecSeq_T::dotnorm2_async(x,y,work,work+1,dctx));
-  PetscCall(PetscDeviceContextSynchronize(dctx));
-  PetscCallMPI(MPIU_Allreduce(&work,&sum,2,MPIU_SCALAR,MPIU_SUM,PetscObjectComm(PetscObjectCast(x))));
-  *dp.ptr = sum[0];
-  *nm.ptr = sum[1];
+  PetscCall(VecSeq_T::dotnorm2_async(x,y,dp,nm,dctx));
+  // implicit sync
+  PetscCall(PetscManagedScalarGetHostValuesSafe(dctx,dp,PETSC_MEMORY_ACCESS_READ_WRITE,&dpptr,nullptr));
+  PetscCall(PetscManagedScalarGetHostValuesSafe(dctx,nm,PETSC_MEMORY_ACCESS_READ_WRITE,&nmptr,nullptr));
+  {
+    PetscScalar sum[2] = {*dpptr,*nmptr};
+    PetscCall(MPIU_Allreduce(MPI_IN_PLACE,&sum,2,MPIU_SCALAR,MPIU_SUM,PetscObjectComm(PetscObjectCast(x))));
+    *dpptr = sum[0];
+    *nmptr = sum[1];
+  }
   PetscFunctionReturn(0);
 }
 
@@ -261,25 +263,29 @@ template <Device::CUPM::DeviceType T>
 template <typename SeqFunction>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::minmax_async_(Vec x, PetscManagedInt idx, PetscManagedReal z, SeqFunction seqfn, MPI_Op idxOp, MPI_Op noIdxOp, PetscDeviceContext dctx))
 {
-  PetscReal work;
-
   PetscFunctionBegin;
-  PetscCall(seqfn(x,idx,&work));
-  PetscCall(PetscDeviceContextSynchronize(dctx));
-  if (PetscDefined(HAVE_MPIUNI)) {
-    *z.ptr = work;
-  } else {
+  PetscCall(seqfn(x,idx,z,dctx));
+  if (!PetscDefined(HAVE_MPIUNI)) {
     const auto comm = PetscObjectComm(PetscObjectCast(x));
 
-    if (idx.ptr) {
-      struct { PetscReal v; PetscInt i; } in,out;
+    if (idx) {
+      PetscReal *zptr;
+      PetscInt  *idxptr;
 
-      in.v  = work;
-      in.i  = *idx.ptr + x->map->rstart;
-      PetscCallMPI(MPIU_Allreduce(&in,&out,1,MPIU_REAL_INT,idxOp,comm));
-      *z.ptr   = out.v;
-      *idx.ptr = out.i;
-    } else PetscCallMPI(MPIU_Allreduce(&work,z.ptr,1,MPIU_REAL,noIdxOp,comm));
+      // implicit sync
+      PetscCall(PetscManagedRealGetHostValuesSafe(dctx,z,PETSC_MEMORY_ACCESS_READ_WRITE,&zptr,nullptr));
+      PetscCall(PetscManagedIntGetHostValuesSafe(dctx,idx,PETSC_MEMORY_ACCESS_READ_WRITE,&idxptr,nullptr));
+      {
+        struct { PetscReal v; PetscInt i; } tmp = {*zptr,*idxptr+x->map->rstart};
+        PetscCall(MPIU_Allreduce(MPI_IN_PLACE,&tmp,1,MPIU_REAL_INT,idxOp,comm));
+        *zptr   = tmp.v;
+        *idxptr = tmp.i;
+      }
+    } else {
+      constexpr auto one = PetscInt{1};
+
+      PetscCall(PetscDeviceContextAllReduceManagedReal_Internal(dctx,z,&one,noIdxOp,comm));
+    }
   }
   PetscFunctionReturn(0);
 }

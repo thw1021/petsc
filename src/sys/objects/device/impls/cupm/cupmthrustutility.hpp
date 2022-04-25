@@ -1,11 +1,10 @@
 #ifndef PETSC_CUPM_THRUST_UTILITY_HPP
 #define PETSC_CUPM_THRUST_UTILITY_HPP
 
-#if defined(__cplusplus)
-
 #include <petsc/private/deviceimpl.h>
 #include <petsc/private/cupminterface.hpp>
 
+#if defined(__cplusplus)
 #include <thrust/device_ptr.h>
 #include <thrust/transform.h>
 
@@ -18,7 +17,7 @@ namespace Device
 namespace CUPM
 {
 
-namespace
+namespace Impl
 {
 
 #if PetscDefined(USING_NVCC)
@@ -48,7 +47,7 @@ struct PetscLogGpuTimer
 } // namespace detail
 
 #define THRUST_CALL(...) [&]{                                                   \
-    const auto timer = ::Petsc::Device::CUPM::detail::PetscLogGpuTimer{};       \
+    const auto timer = ::Petsc::Device::CUPM::Impl::detail::PetscLogGpuTimer{}; \
     return thrust_call_par_on(__VA_ARGS__);                                     \
   }()
 
@@ -76,93 +75,55 @@ PETSC_DECLTYPE_NOEXCEPT_AUTO_RETURNS(
 );
 
 // actual implementation that calls thrust, 2 argument version
-template <
-  DeviceType DT,
-  typename T,
-  typename FunctorType,
-  typename StreamType = typename Impl::Interface<DT>::cupmStream_t
-  >
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustApplyPointwise(StreamType stream, FunctorType&& functor, PetscInt n, T *xin, T *yin = nullptr))
+template <DeviceType DT, typename FunctorType, typename T>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustApplyPointwise(typename Interface<DT>::cupmStream_t stream, FunctorType&& functor, PetscInt n, T *xinout, T *yin = nullptr))
 {
-  const auto xptr = thrust::device_pointer_cast(xin);
+  const auto xptr = thrust::device_pointer_cast(xinout);
+  const auto retptr = (yin && (yin != xinout)) ? thrust::device_pointer_cast(yin) : xptr;
 
   PetscFunctionBegin;
-  if (yin && (yin != xin)) {
-    const auto yptr = thrust::device_pointer_cast(yin);
-
-    CHKERRTHRUST(THRUST_CALL(thrust::transform,stream,xptr,xptr+n,yptr,std::forward<FunctorType>(functor)));
-  } else {
-    CHKERRTHRUST(THRUST_CALL(thrust::transform,stream,xptr,xptr+n,xptr,std::forward<FunctorType>(functor)));
-  }
+  CHKERRTHRUST(THRUST_CALL(thrust::transform,stream,xptr,xptr+n,retptr,std::forward<FunctorType>(functor)));
   PetscCall(PetscLogGpuFlops(n));
   PetscFunctionReturn(0);
 }
 
 // actual implementation that calls thrust, 3 argument version
-template <
-  DeviceType DT,
-  typename T,
-  typename FunctorType,
-  typename StreamType = typename Impl::Interface<DT>::cupmStream_t
-  >
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustApplyPointwise(StreamType stream, FunctorType&& functor, PetscInt n, T *xin, T *yin, T *zin))
+template <DeviceType DT, typename FunctorType, typename T>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustApplyPointwise(typename Interface<DT>::cupmStream_t stream, FunctorType&& functor, PetscInt n, const T *xin, const T *yin, T *zin))
 {
-  PetscFunctionBegin;
-  if (zin) {
-    const auto xptr = thrust::device_pointer_cast(xin);
+  const auto xptr = thrust::device_pointer_cast(xin);
 
-    PetscAssert((xin != yin) && (xin != zin) && (zin != yin),PETSC_COMM_SELF,PETSC_ERR_PLIB,"Must have disjoint pointers when passing all three!");
-    CHKERRTHRUST(
-      THRUST_CALL(
-        thrust::transform,stream,
-        xptr,xptr+n,
-        thrust::device_pointer_cast(yin),
-        thrust::device_pointer_cast(zin),
-        std::forward<FunctorType>(functor)
-      )
-    );
-    PetscCall(PetscLogGpuFlops(n));
-  } else {
-    PetscCall(ThrustApplyPointwise(stream,std::forward<FunctorType>(functor),n,xin,yin));
-  }
+  PetscFunctionBegin;
+  PetscAssert((xin != yin) && (xin != zin) && (zin != yin),PETSC_COMM_SELF,PETSC_ERR_PLIB,"Must have disjoint pointers when passing all three!");
+  CHKERRTHRUST(
+    THRUST_CALL(
+      thrust::transform,stream,
+      xptr,xptr+n,
+      thrust::device_pointer_cast(yin),
+      thrust::device_pointer_cast(zin),
+      std::forward<FunctorType>(functor)
+    )
+  );
+  PetscCall(PetscLogGpuFlops(n));
   PetscFunctionReturn(0);
 }
 
 // serves as setup to the real implementation above
-template <
-  DeviceType DT,
-  typename ...Args,
-  typename StreamType   = typename Impl::Interface<DT>::cupmStream_t,
-  typename FunctionType = PetscErrorCode(*)(StreamType,Args...)
-  >
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustApplyPointwise(PetscDeviceContext dctx, FunctionType&& ThrustApplyFunction, Args&&... rest))
+template <DeviceType T, typename... Args>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustApplyPointwise(PetscDeviceContext dctx, Args&&... rest))
 {
-  StreamType stream;
+  typename Interface<T>::cupmStream_t stream;
 
   PetscFunctionBegin;
+  static_assert(sizeof...(Args) <= 5,"");
+  PetscValidDeviceContext(dctx,1);
   PetscCall(PetscDeviceContextGetStreamHandle_Internal(dctx,&stream));
-  PetscCall(ThrustApplyFunction(stream,std::forward<Args>(rest)...));
-  PetscFunctionReturn(0);
-}
-
-template <DeviceType DT, typename T, typename UnaryFunctionType = T(T)>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustApplyPointwiseUnary(PetscDeviceContext dctx, UnaryFunctionType&& unary, PetscInt n, T *xin, T *yin = nullptr))
-{
-  PetscFunctionBegin;
-  PetscCall(ThrustApplyPointwise<DT>(dctx,ThrustApplyPointwiseUnary,std::forward<UnaryFunctionType>(unary),xin,yin));
-  PetscFunctionReturn(0);
-}
-
-template <DeviceType DT, typename T, typename BinaryFunctionType = T(T,T)>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustApplyPointwiseBinary(PetscDeviceContext dctx, BinaryFunctionType&& binary, PetscInt n, T *xin, T *yin, T *zin))
-{
-  PetscFunctionBegin;
-  PetscCall(ThrustApplyPointwise<DT>(dctx,ThrustApplyPointwiseBinary,std::forward<BinaryFunctionType>(binary),xin,yin,zin));
+  PetscCall(ThrustApplyPointwise<T>(stream,std::forward<Args>(rest)...));
   PetscFunctionReturn(0);
 }
 
 #define PetscCallCUPM_(...) do {                                                               \
-    using      interface          = Impl::Interface<DT>;                                       \
+    using      interface          = Interface<DT>;                                             \
     using      cupmError_t        = typename interface::cupmError_t;                           \
     const auto cupmName           = [](             ){ return interface::cupmName          ( ); }; \
     const auto cupmGetErrorName   = [](cupmError_t e){ return interface::cupmGetErrorName  (e); }; \
@@ -171,19 +132,24 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustApplyPointwiseBinary(PetscDeviceConte
     PetscCallCUPM(__VA_ARGS__);                                                                \
   } while (0)
 
-template <DeviceType DT, typename T, typename StreamT = typename Impl::Interface<DT>::cupmStream_t>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustSet(StreamT stream, PetscInt n, T *ptr, const T *val))
+template <DeviceType DT, typename T>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustSet(typename Interface<DT>::cupmStream_t stream, PetscInt n, T *ptr, const T *val))
 {
   const auto size = n*sizeof(T);
 
   PetscFunctionBegin;
+  PetscValidPointer(val,4);
   if (*val == T{0}) {
-    PetscCallCUPM_(Impl::Interface<DT>::cupmMemsetAsync(ptr,0,size,stream));
+    PetscCallCUPM_(Interface<DT>::cupmMemsetAsync(ptr,0,size,stream));
   } else {
     auto xptr = thrust::device_pointer_cast(ptr);
 
     CHKERRTHRUST(THRUST_CALL(thrust::fill,stream,xptr,xptr+n,*val));
-    PetscCall(PetscLogCpuToGpu(size));
+    if (std::is_same<util::remove_cv_t<T>,PetscScalar>::value) {
+      PetscCall(PetscLogCpuToGpuScalar(size));
+    } else {
+      PetscCall(PetscLogCpuToGpu(size));
+    }
   }
   PetscFunctionReturn(0);
 }
@@ -193,15 +159,16 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustSet(StreamT stream, PetscInt n, T *pt
 template <DeviceType DT, typename T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustSet(PetscDeviceContext dctx, PetscInt n, T *ptr, const T *val))
 {
-  typename Impl::Interface<DT>::cupmStream_t stream;
+  typename Interface<DT>::cupmStream_t stream;
 
   PetscFunctionBegin;
+  PetscValidDeviceContext(dctx,1);
   PetscCall(PetscDeviceContextGetStreamHandle_Internal(dctx,&stream));
   PetscCall(ThrustSet(stream,n,ptr,val));
   PetscFunctionReturn(0);
 }
 
-} // anonymous namespace
+} // namespace Impl
 
 } // namespace CUPM
 

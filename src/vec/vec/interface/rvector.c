@@ -1650,8 +1650,8 @@ PetscErrorCode  VecGetSubVector(Vec X,IS is,Vec *Y)
   if (X->ops->getsubvector) {
     PetscCall((*X->ops->getsubvector)(X,is,&Z));
   } else { /* Default implementation currently does no caching */
-    PetscBool   contig;
-    PetscInt    n,N,start,bs;
+    PetscBool contig;
+    PetscInt  n,N,start,bs;
 
     PetscCall(ISGetLocalSize(is,&n));
     PetscCall(ISGetSize(is,&N));
@@ -1660,17 +1660,19 @@ PetscErrorCode  VecGetSubVector(Vec X,IS is,Vec *Y)
       const PetscScalar *x;
       PetscInt          state = 0;
       PetscBool         isstd,iscuda,iship;
+      PetscDeviceContext dctx;
 
       PetscCall(PetscObjectTypeCompareAny((PetscObject)X,&isstd,VECSEQ,VECMPI,VECSTANDARD,""));
       PetscCall(PetscObjectTypeCompareAny((PetscObject)X,&iscuda,VECSEQCUDA,VECMPICUDA,""));
       PetscCall(PetscObjectTypeCompareAny((PetscObject)X,&iship,VECSEQHIP,VECMPIHIP,""));
+      if (iscuda || iship) PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
       if (iscuda) {
 #if defined(PETSC_HAVE_CUDA)
         const PetscScalar *x_d;
         PetscMPIInt       size;
         PetscOffloadMask  flg;
 
-        PetscCall(VecCUDAGetArrays_Private(X,&x,&x_d,&flg));
+        PetscCall(VecCUDAGetArrays_Private(X,&x,&x_d,&flg,dctx));
         PetscCheck(flg != PETSC_OFFLOAD_UNALLOCATED,PETSC_COMM_SELF,PETSC_ERR_SUP,"Not for PETSC_OFFLOAD_UNALLOCATED");
         PetscCheckFalse(n && !x && !x_d,PETSC_COMM_SELF,PETSC_ERR_SUP,"Missing vector data");
         if (x) x += start;
@@ -1689,7 +1691,7 @@ PetscErrorCode  VecGetSubVector(Vec X,IS is,Vec *Y)
         PetscMPIInt       size;
         PetscOffloadMask  flg;
 
-        PetscCall(VecHIPGetArrays_Private(X,&x,&x_d,&flg));
+        PetscCall(VecHIPGetArrays_Private(X,&x,&x_d,&flg,dctx));
         PetscCheck(flg != PETSC_OFFLOAD_UNALLOCATED,PETSC_COMM_SELF,PETSC_ERR_SUP,"Not for PETSC_OFFLOAD_UNALLOCATED");
         PetscCheckFalse(n && !x && !x_d,PETSC_COMM_SELF,PETSC_ERR_SUP,"Missing vector data");
         if (x) x += start;
