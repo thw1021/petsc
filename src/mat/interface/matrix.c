@@ -1374,7 +1374,7 @@ PetscErrorCode MatSetValues(Mat mat,PetscInt m,const PetscInt idxm[],PetscInt n,
    MatSetValues() uses 0-based row and column numbers in Fortran
    as well as in C.
 
-   Negative indices may be passed in idxm and idxn, these rows and columns are
+   Negative indices may be passed in ism and isn, these rows and columns are
    simply ignored. This allows easily inserting element stiffness matrices
    with homogeneous Dirchlet boundary conditions that you don't want represented
    in the matrix.
