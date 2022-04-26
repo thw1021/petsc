@@ -439,12 +439,12 @@ public:
 };
 
 template <Device::CUPM::DeviceType T, typename D>
-template <PetscMemType MT, PetscMemoryAccessMode MA, typename VT>
-const PetscMemType Vec_CUPMBase<T,D>::vector_array<MT,MA,VT>::memory_type;
+template <PetscMemType MT, PetscMemoryAccessMode MA>
+const PetscMemType Vec_CUPMBase<T,D>::vector_array<MT,MA>::memory_type;
 
 template <Device::CUPM::DeviceType T, typename D>
-template <PetscMemType MT, PetscMemoryAccessMode MA, typename VT>
-const PetscMemoryAccessMode Vec_CUPMBase<T,D>::vector_array<MT,MA,VT>::access_type;
+template <PetscMemType MT, PetscMemoryAccessMode MA>
+const PetscMemoryAccessMode Vec_CUPMBase<T,D>::vector_array<MT,MA>::access_type;
 
 PETSC_CXX_COMPAT_DECL(PetscErrorCode VecCUPMCheckMinimumPinnedMemory_Internal(Vec v))
 {
@@ -482,7 +482,7 @@ template <Device::CUPM::DeviceType T, typename D>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::VecIMPLAllocateCheck_(Vec v))
 {
   PetscFunctionBegin;
-  PetscCall(VecAllocateCheck_(v,v->data,VecIMPLCast));
+  PetscCall(VecAllocateCheck_(v,v->data,VecIMPLCast<D>));
   PetscFunctionReturn(0);
 }
 

@@ -4,7 +4,7 @@
 #include <petsc/private/veccupmimpl.h>  /*I <petscvec.h> I*/
 #include <../src/vec/vec/impls/seq/seqcupm/vecseqcupm.hpp>
 #include <../src/vec/vec/impls/mpi/pvecimpl.h>
-#include <petsc/private/sfimpl.h> // for _p_VecScatter
+#include <petsc/private/sfimpl.h> // for vec->localupdate (_p_VecScatter) in duplicate()
 
 namespace Petsc
 {
@@ -25,7 +25,8 @@ struct VecMPI_CUPM : Vec_CUPMBase<T,VecMPI_CUPM<T>>
   using VecSeq_T = VecSeq_CUPM<T>;
 
 private:
-  PETSC_CXX_COMPAT_DECL(constexpr auto VecIMPLCast_(Vec v)) PETSC_DECLTYPE_AUTO_RETURNS(static_cast<Vec_MPI*>(v->data));
+  PETSC_CXX_COMPAT_DECL(constexpr auto VecIMPLCast_(Vec v))
+  PETSC_DECLTYPE_AUTO_RETURNS(static_cast<Vec_MPI*>(v->data));
   PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 auto VECTYPE_()) PETSC_DECLTYPE_AUTO_RETURNS(VECMPICUPM());
 
   PETSC_CXX_COMPAT_DECL(PetscErrorCode creatempicupm_async_(Vec,PetscDeviceContext,PetscBool/*allocate_missing*/=PETSC_TRUE,PetscInt/*nghost*/=0,PetscScalar*/*host_array*/=nullptr,PetscScalar*/*device_array*/=nullptr));
@@ -116,18 +117,18 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::duplicate_async(Vec v, Vec 
   PetscCall(Duplicate_CUPMBase(v,y,dctx,[=](Vec z, PetscDeviceContext dctx){return creatempicupm_async_(z,dctx,PETSC_FALSE,nghost);}));
 
   /* save local representation of the parallel vector (and scatter) if it exists */
-  if (const auto locrep = vimpl->localrep) {
+  if (const auto& locrep = vimpl->localrep) {
     const auto   ops   = locrep->ops;
     const auto   yimpl = VecIMPLCast(*y);
     PetscScalar *array;
 
-    PetscCall(VecGetArray(*y,&array));
+    PetscCall(VecGetArrayAsync(*y,&array,dctx));
     PetscCall(VecCreateSeqWithArray(PETSC_COMM_SELF,1,v->map->n+nghost,array,&yimpl->localrep));
     PetscCall(PetscMemcpy(yimpl->localrep->ops,ops,sizeof(*ops)));
-    PetscCall(VecRestoreArray(*y,&array));
+    PetscCall(VecRestoreArrayAsync(*y,&array,dctx));
     PetscCall(PetscLogObjectParent(PetscObjectCast(*y),PetscObjectCast(yimpl->localrep)));
     yimpl->localupdate = vimpl->localupdate;
-    if (yimpl->localupdate) PetscCall(PetscObjectReference(PetscObjectCast(yimpl->localupdate)));
+    if (auto &scatter = yimpl->localupdate) PetscCall(PetscObjectReference(PetscObjectCast(scatter)));
   }
   PetscFunctionReturn(0);
 }
@@ -198,7 +199,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::norm_async(Vec v, NormType 
   PetscFunctionBegin;
   PetscCall(VecSeq_T::norm_async(v,type,z,dctx));
   // implicit sync
-  PetscCall(PetscManagedRealGetHostValuesSafe(dctx,z,PETSC_MEMORY_ACCESS_READ,&zptr,nullptr));
+  PetscCall(PetscManagedRealGetValues(dctx,z,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&zptr,nullptr));
   if (norm2) zptr[bothNorm] *= zptr[bothNorm];
   PetscCall(MPIU_Allreduce(MPI_IN_PLACE,zptr,count,MPIU_REAL,op,PetscObjectComm(PetscObjectCast(v))));
   if (norm2) zptr[bothNorm] = PetscSqrtReal(zptr[bothNorm]);
@@ -235,7 +236,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::mdot_async(Vec x, PetscMana
   PetscFunctionBegin;
   PetscCall(VecSeq_T::mdot_async(x,nv,y,z,dctx));
   // implicit sync
-  PetscCall(PetscManagedIntGetHostValuesSafe(dctx,nv,PETSC_MEMORY_ACCESS_READ,&nvptr,nullptr));
+  PetscCall(PetscManagedIntGetValues(dctx,nv,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&nvptr,nullptr));
   PetscCall(PetscDeviceContextAllReduceManagedScalar_Internal(dctx,z,nvptr,MPIU_SUM,PetscObjectCast(x)));
   PetscFunctionReturn(0);
 }
@@ -248,8 +249,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::dotnorm2_async(Vec x, Vec y
   PetscFunctionBegin;
   PetscCall(VecSeq_T::dotnorm2_async(x,y,dp,nm,dctx));
   // implicit sync
-  PetscCall(PetscManagedScalarGetHostValuesSafe(dctx,dp,PETSC_MEMORY_ACCESS_READ_WRITE,&dpptr,nullptr));
-  PetscCall(PetscManagedScalarGetHostValuesSafe(dctx,nm,PETSC_MEMORY_ACCESS_READ_WRITE,&nmptr,nullptr));
+  PetscCall(PetscManagedScalarGetValues(dctx,dp,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,PETSC_TRUE,&dpptr,nullptr));
+  PetscCall(PetscManagedScalarGetValues(dctx,nm,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,PETSC_TRUE,&nmptr,nullptr));
   {
     PetscScalar sum[2] = {*dpptr,*nmptr};
     PetscCall(MPIU_Allreduce(MPI_IN_PLACE,&sum,2,MPIU_SCALAR,MPIU_SUM,PetscObjectComm(PetscObjectCast(x))));
@@ -273,8 +274,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::minmax_async_(Vec x, PetscM
       PetscInt  *idxptr;
 
       // implicit sync
-      PetscCall(PetscManagedRealGetHostValuesSafe(dctx,z,PETSC_MEMORY_ACCESS_READ_WRITE,&zptr,nullptr));
-      PetscCall(PetscManagedIntGetHostValuesSafe(dctx,idx,PETSC_MEMORY_ACCESS_READ_WRITE,&idxptr,nullptr));
+      PetscCall(PetscManagedRealGetValues(dctx,z,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,PETSC_TRUE,&zptr,nullptr));
+      PetscCall(PetscManagedIntGetValues(dctx,idx,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,PETSC_TRUE,&idxptr,nullptr));
       {
         struct { PetscReal v; PetscInt i; } tmp = {*zptr,*idxptr+x->map->rstart};
         PetscCall(MPIU_Allreduce(MPI_IN_PLACE,&tmp,1,MPIU_REAL_INT,idxOp,PetscObjectComm(obj)));

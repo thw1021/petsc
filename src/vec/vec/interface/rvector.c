@@ -1283,11 +1283,54 @@ static PetscErrorCode VecMXDotAsync_Private(Vec x, PetscManagedInt nv, const Vec
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode VecMDotAsync(Vec x, PetscManagedInt nv, const Vec y[], PetscManagedScalar vals, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscCall(VecMXDotAsync_Private(x,nv,y,vals,dctx,VEC_MDot,x->ops->mdot));
+  PetscFunctionReturn(0);
+}
+
 PetscErrorCode VecMTDotAsync(Vec x, PetscManagedInt nv, const Vec y[], PetscManagedScalar vals, PetscDeviceContext dctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
   PetscCall(VecMXDotAsync_Private(x,nv,y,vals,dctx,VEC_MTDot,x->ops->mtdot));
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode VecMXDot_Private(Vec x, PetscInt nv, const Vec y[], PetscScalar vals[], PetscErrorCode(*const VecMXDotAsyncFunction)(Vec,PetscManagedInt,const Vec*,PetscManagedScalar,PetscDeviceContext))
+{
+  PetscFunctionBegin;
+  // some of these checks are repeated in the final dispatcher, but need to be done here to
+  // safely use x as a PetscObject
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidLogicalCollectiveInt(x,nv,2);
+  PetscCheck(nv > 0,PetscObjectComm((PetscObject)x),PETSC_ERR_ARG_OUTOFRANGE,"Number of vectors (given %" PetscInt_FMT ") cannot be negative",nv);
+  if (nv) {
+    PetscManagedInt    nvtmp;
+    PetscManagedScalar valtmp;
+    PetscDeviceContext dctx;
+
+    PetscValidPointer(y,3);
+    for (PetscInt i = 0; i < nv; ++i) {
+      // do these checks here since the async version may not safely know the size of nv
+      // without a sync
+      PetscValidHeaderSpecific(y[i],VEC_CLASSID,3);
+      PetscValidType(y[i],3);
+      PetscCheckSameTypeAndComm(x,1,y[i],3);
+      VecCheckSameSize(x,1,y[i],3);
+    }
+    PetscValidScalarPointer(vals,4);
+    PetscValidFunction(VecMXDotAsyncFunction,5);
+
+    PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
+    PetscCall(PetscManageHostInt(dctx,&nv,1,&nvtmp));
+    PetscCall(PetscManageHostScalar(dctx,vals,nv,&valtmp));
+    PetscCall(VecMXDotAsyncFunction(x,nvtmp,y,valtmp,dctx));
+    PetscCall(PetscManagedScalarDestroy(dctx,&valtmp));
+    PetscCall(PetscManagedIntDestroy(dctx,&nvtmp));
+  }
   PetscFunctionReturn(0);
 }
 
@@ -1321,26 +1364,7 @@ $      val = (x,y) = y^H x,
 PetscErrorCode  VecMTDot(Vec x,PetscInt nv,const Vec y[],PetscScalar val[])
 {
   PetscFunctionBegin;
-  PetscValidLogicalCollectiveInt(x,nv,2);
-  if (nv) {
-    PetscManagedScalar vtmp;
-    PetscManagedInt    nvtmp;
-
-    PetscValidScalarPointer(val,4);
-    PetscCall(PetscManageHostScalar(NULL,val,nv,&vtmp));
-    PetscCall(PetscManageHostInt(NULL,&nv,1,&nvtmp));
-    PetscCall(VecMTDotAsync(x,nvtmp,y,vtmp,NULL));
-    PetscCall(PetscManagedScalarDestroy(NULL,&vtmp));
-    PetscCall(PetscManagedIntDestroy(NULL,&nvtmp));
-  }
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode VecMDotAsync(Vec x, PetscManagedInt nv, const Vec y[], PetscManagedScalar vals, PetscDeviceContext dctx)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  PetscCall(VecMXDotAsync_Private(x,nv,y,vals,dctx,VEC_MDot,x->ops->mdot));
+  PetscCall(VecMXDot_Private(x,nv,y,val,VecMTDotAsync));
   PetscFunctionReturn(0);
 }
 
@@ -1373,21 +1397,7 @@ $     val = (x,y) = y^T x,
 PetscErrorCode  VecMDot(Vec x,PetscInt nv,const Vec y[],PetscScalar val[])
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  PetscValidLogicalCollectiveInt(x,nv,2);
-  if (nv) {
-    PetscManagedInt    nvtmp;
-    PetscManagedScalar valtmp;
-
-    PetscCheck(nv > 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of vectors (given %" PetscInt_FMT ") cannot be negative",nv);
-    PetscValidPointer(y,3);
-    PetscValidScalarPointer(val,4);
-    PetscCall(PetscManageHostInt(NULL,&nv,1,&nvtmp));
-    PetscCall(PetscManageHostScalar(NULL,val,nv,&valtmp));
-    PetscCall(VecMDotAsync(x,nvtmp,y,valtmp,NULL));
-    PetscCall(PetscManagedScalarDestroy(NULL,&valtmp));
-    PetscCall(PetscManagedIntDestroy(NULL,&nvtmp));
-  }
+  PetscCall(VecMXDot_Private(x,nv,y,val,VecMDotAsync));
   PetscFunctionReturn(0);
 }
 
@@ -1438,7 +1448,16 @@ PetscErrorCode  VecMAXPY(Vec y,PetscInt nv,const PetscScalar alpha[],Vec x[])
   if (nv) {
     PetscCheck(nv > 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of vectors (given %" PetscInt_FMT ") cannot be negative",nv);
     PetscValidScalarPointer(alpha,3);
-    for (PetscInt i = 0; i < nv; ++i) PetscValidLogicalCollectiveScalar(y,alpha[i],3);
+    PetscValidPointer(x,4);
+    for (PetscInt i = 0; i < nv; ++i) {
+      PetscValidLogicalCollectiveScalar(y,alpha[i],3);
+      // do these checks on x here since we may know the size of nv in the async version
+      PetscValidHeaderSpecific(x[i],VEC_CLASSID,4);
+      PetscValidType(x[i],4);
+      PetscCheckSameTypeAndComm(y,1,x[i],4);
+      VecCheckSameSize(y,1,x[i],4);
+    }
+
     /*
       march through alpha sequentially and find first nonzero entry. If alpha[i] is zero,
       decrement nv, and bump alpha and x up
@@ -1447,12 +1466,14 @@ PetscErrorCode  VecMAXPY(Vec y,PetscInt nv,const PetscScalar alpha[],Vec x[])
     if (nv) {
       PetscManagedInt    nvtmp;
       PetscManagedScalar alphatmp;
+      PetscDeviceContext dctx;
 
-      PetscCall(PetscManageHostInt(NULL,&nv,1,&nvtmp));
-      PetscCall(PetscManageHostScalar(NULL,(PetscScalar*)alpha,nv,&alphatmp));
-      PetscCall(VecMAXPYAsync(y,nvtmp,alphatmp,x,NULL));
-      PetscCall(PetscManagedScalarDestroy(NULL,&alphatmp));
-      PetscCall(PetscManagedIntDestroy(NULL,&nvtmp));
+      PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
+      PetscCall(PetscManageHostInt(dctx,&nv,1,&nvtmp));
+      PetscCall(PetscManageHostScalar(dctx,(PetscScalar*)alpha,nv,&alphatmp));
+      PetscCall(VecMAXPYAsync(y,nvtmp,alphatmp,x,dctx));
+      PetscCall(PetscManagedScalarDestroy(dctx,&alphatmp));
+      PetscCall(PetscManagedIntDestroy(dctx,&nvtmp));
     }
   }
   PetscFunctionReturn(0);
@@ -1862,6 +1883,27 @@ PetscErrorCode  VecRestoreSubVector(Vec X,IS is,Vec *Y)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode VecGetLocalVectorReadAsync(Vec v, Vec w, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
+  PetscValidHeaderSpecific(w,VEC_CLASSID,2);
+  VecCheckSameLocalSize(v,1,w,2);
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  if (v->ops->getlocalvectorread) {
+    PetscCall((*v->ops->getlocalvectorread)(v,w,dctx));
+  } else {
+    PetscScalar *a;
+
+    PetscCall(VecGetArrayReadAsync(v,(const PetscScalar**)&a,dctx));
+    PetscCall(VecPlaceArrayAsync(w,a,dctx));
+  }
+  PetscCall(PetscObjectStateIncrease((PetscObject)w));
+  PetscCall(VecLockReadPush(v));
+  PetscCall(VecLockReadPush(w));
+  PetscFunctionReturn(0);
+}
+
 /*@
    VecGetLocalVectorRead - Maps the local portion of a vector into a
    vector.  You must call VecRestoreLocalVectorRead() when the local
@@ -1895,21 +1937,29 @@ PetscErrorCode  VecRestoreSubVector(Vec X,IS is,Vec *Y)
 @*/
 PetscErrorCode VecGetLocalVectorRead(Vec v,Vec w)
 {
-  PetscScalar    *a;
+  PetscFunctionBegin;
+  PetscCall(VecGetLocalVectorAsync(v,w,NULL));
+  PetscFunctionReturn(0);
+}
 
+PetscErrorCode VecRestoreLocalVectorReadAsync(Vec v, Vec w, PetscDeviceContext dctx)
+{
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
   PetscValidHeaderSpecific(w,VEC_CLASSID,2);
-  VecCheckSameLocalSize(v,1,w,2);
-  if (v->ops->getlocalvectorread) {
-    PetscCall((*v->ops->getlocalvectorread)(v,w));
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  if (v->ops->restorelocalvectorread) {
+    PetscCall((*v->ops->restorelocalvectorread)(v,w,dctx));
   } else {
-    PetscCall(VecGetArrayRead(v,(const PetscScalar**)&a));
-    PetscCall(VecPlaceArray(w,a));
+    PetscScalar *a;
+
+    PetscCall(VecGetArrayReadAsync(w,(const PetscScalar**)&a,dctx));
+    PetscCall(VecRestoreArrayReadAsync(v,(const PetscScalar**)&a,dctx));
+    PetscCall(VecResetArrayAsync(w,dctx));
   }
+  PetscCall(VecLockReadPop(v));
+  PetscCall(VecLockReadPop(w));
   PetscCall(PetscObjectStateIncrease((PetscObject)w));
-  PetscCall(VecLockReadPush(v));
-  PetscCall(VecLockReadPush(w));
   PetscFunctionReturn(0);
 }
 
@@ -1929,20 +1979,26 @@ PetscErrorCode VecGetLocalVectorRead(Vec v,Vec w)
 @*/
 PetscErrorCode VecRestoreLocalVectorRead(Vec v,Vec w)
 {
-  PetscScalar    *a;
+  PetscFunctionBegin;
+  PetscCall(VecRestoreLocalVectorReadAsync(v,w,NULL));
+  PetscFunctionReturn(0);
+}
 
+PetscErrorCode VecGetLocalVectorAsync(Vec v, Vec w, PetscDeviceContext dctx)
+{
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
   PetscValidHeaderSpecific(w,VEC_CLASSID,2);
-  if (v->ops->restorelocalvectorread) {
-    PetscCall((*v->ops->restorelocalvectorread)(v,w));
+  VecCheckSameLocalSize(v,1,w,2);
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  if (v->ops->getlocalvector) {
+    PetscCall((*v->ops->getlocalvector)(v,w,dctx));
   } else {
-    PetscCall(VecGetArrayRead(w,(const PetscScalar**)&a));
-    PetscCall(VecRestoreArrayRead(v,(const PetscScalar**)&a));
-    PetscCall(VecResetArray(w));
+    PetscScalar *a;
+
+    PetscCall(VecGetArrayAsync(v,&a,dctx));
+    PetscCall(VecPlaceArrayAsync(w,a,dctx));
   }
-  PetscCall(VecLockReadPop(v));
-  PetscCall(VecLockReadPop(w));
   PetscCall(PetscObjectStateIncrease((PetscObject)w));
   PetscFunctionReturn(0);
 }
@@ -1976,19 +2032,28 @@ PetscErrorCode VecRestoreLocalVectorRead(Vec v,Vec w)
 @*/
 PetscErrorCode VecGetLocalVector(Vec v,Vec w)
 {
-  PetscScalar    *a;
+  PetscFunctionBegin;
+  PetscCall(VecGetLocalVectorAsync(v,w,NULL));
+  PetscFunctionReturn(0);
+}
 
+PetscErrorCode VecRestoreLocalVectorAsync(Vec v, Vec w, PetscDeviceContext dctx)
+{
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
   PetscValidHeaderSpecific(w,VEC_CLASSID,2);
-  VecCheckSameLocalSize(v,1,w,2);
-  if (v->ops->getlocalvector) {
-    PetscCall((*v->ops->getlocalvector)(v,w));
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  if (v->ops->restorelocalvector) {
+    PetscCall((*v->ops->restorelocalvector)(v,w,dctx));
   } else {
-    PetscCall(VecGetArray(v,&a));
-    PetscCall(VecPlaceArray(w,a));
+    PetscScalar *a;
+
+    PetscCall(VecGetArrayAsync(w,&a,dctx));
+    PetscCall(VecRestoreArrayAsync(v,&a,dctx));
+    PetscCall(VecResetArrayAsync(w,dctx));
   }
   PetscCall(PetscObjectStateIncrease((PetscObject)w));
+  PetscCall(PetscObjectStateIncrease((PetscObject)v));
   PetscFunctionReturn(0);
 }
 
@@ -2008,20 +2073,8 @@ PetscErrorCode VecGetLocalVector(Vec v,Vec w)
 @*/
 PetscErrorCode VecRestoreLocalVector(Vec v,Vec w)
 {
-  PetscScalar    *a;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
-  PetscValidHeaderSpecific(w,VEC_CLASSID,2);
-  if (v->ops->restorelocalvector) {
-    PetscCall((*v->ops->restorelocalvector)(v,w));
-  } else {
-    PetscCall(VecGetArray(w,&a));
-    PetscCall(VecRestoreArray(v,&a));
-    PetscCall(VecResetArray(w));
-  }
-  PetscCall(PetscObjectStateIncrease((PetscObject)w));
-  PetscCall(PetscObjectStateIncrease((PetscObject)v));
+  PetscCall(VecRestoreLocalVectorAsync(v,w,NULL));
   PetscFunctionReturn(0);
 }
 

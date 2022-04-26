@@ -545,21 +545,37 @@ typedef enum {VEC_IGNORE_OFF_PROC_ENTRIES,VEC_IGNORE_NEGATIVE_INDICES,VEC_SUBSET
 PETSC_EXTERN PetscErrorCode VecSetOption(Vec,VecOption,PetscBool);
 
 PETSC_EXTERN PetscErrorCode VecGetArray(Vec,PetscScalar**);
+PETSC_EXTERN PetscErrorCode VecGetArrayAsync(Vec,PetscScalar**,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecGetArrayWrite(Vec,PetscScalar**);
+PETSC_EXTERN PetscErrorCode VecGetArrayWriteAsync(Vec,PetscScalar**,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecGetArrayRead(Vec,const PetscScalar**);
+PETSC_EXTERN PetscErrorCode VecGetArrayReadAsync(Vec,const PetscScalar**,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecRestoreArray(Vec,PetscScalar**);
+PETSC_EXTERN PetscErrorCode VecRestoreArrayAsync(Vec,PetscScalar**,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecRestoreArrayWrite(Vec,PetscScalar**);
+PETSC_EXTERN PetscErrorCode VecRestoreArrayWriteAsync(Vec,PetscScalar**,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecRestoreArrayRead(Vec,const PetscScalar**);
+PETSC_EXTERN PetscErrorCode VecRestoreArrayReadAsync(Vec,const PetscScalar**,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecGetLocalVector(Vec,Vec);
+PETSC_EXTERN PetscErrorCode VecGetLocalVectorAsync(Vec,Vec,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecRestoreLocalVector(Vec,Vec);
+PETSC_EXTERN PetscErrorCode VecRestoreLocalVectorAsync(Vec,Vec,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecGetLocalVectorRead(Vec,Vec);
+PETSC_EXTERN PetscErrorCode VecGetLocalVectorReadAsync(Vec,Vec,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecRestoreLocalVectorRead(Vec,Vec);
+PETSC_EXTERN PetscErrorCode VecRestoreLocalVectorReadAsync(Vec,Vec,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecGetArrayAndMemType(Vec,PetscScalar**,PetscMemType*);
+PETSC_EXTERN PetscErrorCode VecGetArrayAndMemTypeAsync(Vec,PetscScalar**,PetscMemType*,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecRestoreArrayAndMemType(Vec,PetscScalar**);
+PETSC_EXTERN PetscErrorCode VecRestoreArrayAndMemTypeAsync(Vec,PetscScalar**,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecGetArrayReadAndMemType(Vec,const PetscScalar**,PetscMemType*);
+PETSC_EXTERN PetscErrorCode VecGetArrayReadAndMemTypeAsync(Vec,const PetscScalar**,PetscMemType*,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecRestoreArrayReadAndMemType(Vec,const PetscScalar**);
+PETSC_EXTERN PetscErrorCode VecRestoreArrayReadAndMemTypeAsync(Vec,const PetscScalar**,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecGetArrayWriteAndMemType(Vec,PetscScalar**,PetscMemType*);
+PETSC_EXTERN PetscErrorCode VecGetArrayWriteAndMemTypeAsync(Vec,PetscScalar**,PetscMemType*,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecRestoreArrayWriteAndMemType(Vec,PetscScalar**);
+PETSC_EXTERN PetscErrorCode VecRestoreArrayWriteAndMemTypeAsync(Vec,PetscScalar**,PetscDeviceContext);
 
 /*@C
    VecGetArrayPair - Accesses a pair of pointers for two vectors that may be common. When not common the first is read only
