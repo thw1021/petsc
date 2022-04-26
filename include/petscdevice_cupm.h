@@ -14,19 +14,22 @@
 #  define PETSC_HAVE_CUPM 1
 #endif
 
-#if PetscDefined(HAVE_CUPM)
+#if PetscDefined(HAVE_CUPM) && (PetscDefined(USING_NVCC) || PetscDefined(USING_HCC))
 #  define PETSC_HOST_DECL       __host__
 #  define PETSC_DEVICE_DECL     __device__
 #  define PETSC_KERNEL_DECL     __global__
 #  define PETSC_SHAREDMEM_DECL  __shared__
+#  define PETSC_FORCEINLINE     __forceinline__
 #else
 #  define PETSC_HOST_DECL
 #  define PETSC_DEVICE_DECL
 #  define PETSC_KERNEL_DECL
 #  define PETSC_SHAREDMEM_DECL
+#  define PETSC_FORCEINLINE     inline
 #endif
 
-#define PETSC_HOSTDEVICE_DECL PETSC_HOST_DECL PETSC_DEVICE_DECL
+#define PETSC_HOSTDEVICE_DECL        PETSC_HOST_DECL PETSC_DEVICE_DECL
+#define PETSC_HOSTDEVICE_INLINE_DECL PETSC_HOSTDEVICE_DECL PETSC_FORCEINLINE
 
 #if PetscDefined(USING_NVCC)
 #  define CUPM_CALLBACK_FN CUDART_CB
@@ -69,5 +72,4 @@ static inline PetscErrorCode PetscGetMemType(const void *ptr, PetscMemType *type
 #endif
   PetscFunctionReturn(0);
 }
-
 #endif // PETSCDEVICE_CUPM_H

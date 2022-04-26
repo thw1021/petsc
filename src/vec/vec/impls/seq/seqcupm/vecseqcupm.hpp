@@ -287,9 +287,9 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::getlocalvector_async(Vec v,
   } else {
     const auto arrayptr = &VecIMPLCast(w)->array;
     if (access == PETSC_MEMORY_ACCESS_READ) {
-      PetscCall(VecGetArrayRead(v,const_cast<const PetscScalar**>(arrayptr)));
+      PetscCall(VecGetArrayReadAsync(v,const_cast<const PetscScalar**>(arrayptr),dctx));
     } else {
-      PetscCall(VecGetArray(v,arrayptr));
+      PetscCall(VecGetArrayAsync(v,arrayptr,dctx));
     }
     w->offloadmask = PETSC_OFFLOAD_CPU;
     if (wisseqcupm) PetscCall(DeviceAllocateCheck_(dctx,w));
@@ -318,9 +318,9 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::restorelocalvector_async(Ve
   } else {
     auto array = &VecIMPLCast(w)->array;
     if (access == PETSC_MEMORY_ACCESS_READ) {
-      PetscCall(VecRestoreArrayRead(v,const_cast<const PetscScalar**>(array)));
+      PetscCall(VecRestoreArrayReadAsync(v,const_cast<const PetscScalar**>(array),dctx));
     } else {
-      PetscCall(VecRestoreArray(v,array));
+      PetscCall(VecRestoreArrayAsync(v,array,dctx));
     }
     if (w->spptr && wisseqcupm) {
       cupmStream_t stream;
@@ -461,7 +461,7 @@ namespace detail
 
 struct reciprocal
 {
-  PETSC_HOSTDEVICE_DECL PetscScalar operator()(PetscScalar s) const
+  PETSC_HOSTDEVICE_INLINE_DECL PetscScalar operator()(PetscScalar s) const
   {
     // yes all of this verbosity is needed because sometimes PetscScalar is a thrust::complex
     // and then it matter whether we do s ? true : false vs s == 0, as well as whether we wrap
@@ -518,6 +518,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::maxpy_async(Vec xin, PetscM
   PetscScalar      *aptr;
 
   PetscFunctionBegin;
+  // implicit sync
   PetscCall(PetscManagedIntGetValues(dctx,nv,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&nvptr,nullptr));
   PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_READ,PETSC_FALSE,&aptr,nullptr));
   PetscCall(GetHandles_(dctx,&cupmBlasHandle));
@@ -557,7 +558,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::dot_async(Vec xin, Vec yin,
 namespace kernels
 {
 
-PETSC_HOSTDEVICE_DECL static PetscInt EntriesPerGroup(PetscInt size)
+PETSC_HOSTDEVICE_INLINE_DECL static PetscInt EntriesPerGroup(PetscInt size)
 {
   const auto group_entries = (size-1)/gridDim.x+1;
   // for very small vectors, a group should still do some work
@@ -763,6 +764,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async(Vec xin, PetscMa
     const auto      n    = xin->map->n;
     PetscInt       *nvptr;
 
+    // implicity sync
     PetscCall(PetscManagedIntGetValues(dctx,nv,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&nvptr,nullptr));
     PetscCheck(nvptr[0] > 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Number of vectors provided to %s %" PetscInt_FMT " not positive",PETSC_FUNCTION_NAME,nvptr[0]);
 
@@ -791,11 +793,11 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::set_async(Vec xin, PetscMan
   if (known && equal /* alpha = 0 */) {
     PetscCallCUPM(cupmMemsetAsync(DeviceArrayWrite(dctx,xin).ptr,0,n*sizeof(PetscScalar),stream));
   } else {
-    const auto   xptr = DeviceArrayWrite(dctx,xin);
     PetscScalar *ptr;
 
+    // implicit sync
     PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&ptr,nullptr));
-    PetscCall(Device::CUPM::Impl::ThrustSet<T>(stream,n,xptr.ptr,ptr));
+    PetscCall(Device::CUPM::Impl::ThrustSet<T>(stream,n,DeviceArrayWrite(dctx,xin).ptr,ptr));
   }
   PetscFunctionReturn(0);
 }
@@ -903,11 +905,11 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::copy_async(Vec xin, Vec yin
       // not great
       PetscScalar *yarray;
 
-      PetscCall(VecGetArrayWrite(yin,&yarray));
+      PetscCall(VecGetArrayWriteAsync(yin,&yarray,dctx));
       PetscCall(PetscLogGpuTimeBegin());
       PetscCallCUPM(cupmMemcpyAsync(yarray,DeviceArrayRead(dctx,xin).ptr,nbytes,mode,stream));
       PetscCall(PetscLogGpuTimeEnd());
-      PetscCall(VecRestoreArrayWrite(yin,&yarray));
+      PetscCall(VecRestoreArrayWriteAsync(yin,&yarray,dctx));
     } break;
     case cupmMemcpyHostToHost:   {
       // the worst case
@@ -1081,7 +1083,7 @@ namespace detail
 
 struct conjugate
 {
-  PETSC_HOSTDEVICE_DECL PetscScalar operator()(PetscScalar x) const { return PetscConj(x); }
+  PETSC_HOSTDEVICE_INLINE_DECL PetscScalar operator()(PetscScalar x) const { return PetscConj(x); }
 };
 
 } // namespace detail
@@ -1099,13 +1101,13 @@ namespace detail
 
 struct real_part
 {
-  PETSC_HOSTDEVICE_DECL
+  PETSC_HOSTDEVICE_INLINE_DECL
   thrust::tuple<PetscReal,PetscInt> operator()(const thrust::tuple<PetscScalar,PetscInt>& x) const
   {
     return thrust::make_tuple(PetscRealPart(x.get<0>()),x.get<1>());
   }
 
-  PETSC_HOSTDEVICE_DECL PetscReal operator()(PetscScalar x) const { return PetscRealPart(x); }
+  PETSC_HOSTDEVICE_INLINE_DECL PetscReal operator()(PetscScalar x) const { return PetscRealPart(x); }
 };
 
 template <typename Operator>
@@ -1113,7 +1115,7 @@ struct tuple_compare
 {
   using tuple_type = thrust::tuple<PetscReal,PetscInt>;
 
-  PETSC_HOSTDEVICE_DECL tuple_type operator()(const tuple_type& x, const tuple_type& y) const
+  PETSC_HOSTDEVICE_INLINE_DECL tuple_type operator()(const tuple_type& x, const tuple_type& y) const
   {
     if (Operator{}(y.get<0>(),x.get<0>())) {
       // if y is strictly greater/less than x, return y

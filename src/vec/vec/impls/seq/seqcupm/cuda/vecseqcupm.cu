@@ -10,10 +10,10 @@ using namespace Petsc::Vector::CUPM::Impl;
 
 static const auto VecSeq_CUDA = VecSeq_CUPM<Petsc::Device::CUPM::DeviceType::CUDA>{};
 
-PetscErrorCode VecCreate_SeqCUDA(Vec v)
+PetscErrorCode VecCreate_SeqCUDA(Vec v, PetscDeviceContex dctx)
 {
   PetscFunctionBegin;
-  PetscCall(VecSeq_CUDA.create_async(v,nullptr));
+  PetscCall(VecSeq_CUDA.create_async(v,dctx));
   PetscFunctionReturn(0);
 }
 
