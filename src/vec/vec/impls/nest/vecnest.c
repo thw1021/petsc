@@ -372,7 +372,7 @@ static PetscErrorCode VecWAXPY_Nest(Vec w, PetscManagedScalar alpha, Vec x, Vec 
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecMinMax_Nest_Recursive(Vec x, PetscInt *cnt, PetscInt *p, PetscReal *val, PetscErrorCode(*const VecFun)(Vec,PetscInt*,PetscReal*), PetscBool(*const cmp)(PetscScalar,PetscScalar))
+static PetscErrorCode VecMinMax_Nest_Recursive(Vec x, PetscInt *cnt, PetscInt *p, PetscReal *val, PetscErrorCode(*const VecFun)(Vec,PetscInt*,PetscReal*), PetscBool(*const cmp)(PetscReal,PetscReal))
 {
   PetscBool isnest;
 
@@ -401,7 +401,7 @@ static PetscErrorCode VecMinMax_Nest_Recursive(Vec x, PetscInt *cnt, PetscInt *p
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecMinMax_Nest_Private(Vec x, PetscManagedInt p, PetscManagedReal m, PetscDeviceContext dctx, PetscReal minit, PetscErrorCode(*const VecFun)(Vec,PetscInt*,PetscReal*), PetscBool(*const cmp)(PetscScalar,PetscScalar))
+static PetscErrorCode VecMinMax_Nest_Private(Vec x, PetscManagedInt p, PetscManagedReal m, PetscDeviceContext dctx, PetscReal minit, PetscErrorCode(*const VecFun)(Vec,PetscInt*,PetscReal*), PetscBool(*const cmp)(PetscReal,PetscReal))
 {
   PetscInt ptmp = 0,cnt = 0;
 

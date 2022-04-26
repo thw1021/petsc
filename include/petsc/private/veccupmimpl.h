@@ -153,6 +153,8 @@ struct Vec_CUPMBase : Device::CUPM::Impl::BlasInterface<T>
   PETSC_CUPMBLAS_INHERIT_INTERFACE_TYPEDEFS_USING(cupmBlasInterface_t,T);
 
 private:
+  template <typename CastFunctionType>
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode VecAllocateCheck_(Vec,void*&,CastFunctionType&&));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode VecCUPMAllocateCheck_(Vec));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode VecIMPLAllocateCheck_(Vec));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode GetHandleDispatch_(PetscDeviceContext dctx, cupmBlasHandle_t *handle, cupmStream_t *stream))
@@ -325,13 +327,13 @@ public:
 
   // RAII versions of the get/restore array routines. Determines constness of the pointer type,
   // holds the pointer itself provides the implicit conversion operator
-  template <PetscMemType MT, PetscMemoryAccessMode MA, typename ValueType = PetscScalar>
+  template <PetscMemType MT, PetscMemoryAccessMode MA>
   struct vector_array
   {
     static const auto memory_type = MT;
     static const auto access_type = MA;
 
-    using value_type              = ValueType;
+    using value_type              = PetscScalar;
     using pointer_type            = value_type*;
     using const_pointer_type      = const value_type*;
     using cupm_pointer_type       = cupmScalar_t*;
@@ -340,8 +342,9 @@ public:
     // PetscScalar *const
     const pointer_type ptr;
 
-    //operator const_pointer_type() const noexcept { return const_cast<const_pointer_type>(this->ptr); }
-    operator pointer_type()       const noexcept { return const_cast<pointer_type>(this->ptr);       }
+    pointer_type data() const noexcept { return ptr; }
+
+    operator pointer_type() const noexcept { return const_cast<pointer_type>(this->ptr); }
 
     // in case pointer_type == cupmscalar_pointer_type we don't want this overload to exist, so
     // we make a dummy template parameter to allow SFINAE to nix it for us
@@ -353,15 +356,6 @@ public:
     {
       return cupmScalarCast(const_cast<pointer_type>(this->ptr));
     }
-
-    // template <
-    //   typename U = pointer_type,
-    //   typename = util::enable_if_t<!std::is_same<U,cupm_pointer_type>::value>
-    // >
-    // operator const_cupm_pointer_type() const noexcept
-    // {
-    //   return cupmScalarCast(const_cast<const_pointer_type>(this->ptr));
-    // }
 
     vector_array(PetscDeviceContext dctx, Vec v) noexcept
       : ptr(initialize_(dctx,v)), dctx_(dctx), v_(v)
@@ -466,44 +460,29 @@ PETSC_CXX_COMPAT_DECL(PetscErrorCode VecCUPMCheckMinimumPinnedMemory_Internal(Ve
 }
 
 template <Device::CUPM::DeviceType T, typename D>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::VecIMPLAllocateCheck_(Vec v))
+template <typename CastFunctionType>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::VecAllocateCheck_(Vec v, void *&dest, CastFunctionType&& cast))
 {
-  auto          vimpl = VecIMPLCast(v);
-  cupmBlasInt_t bn;
-
   PetscFunctionBegin;
-  if (PetscLikely(vimpl)) PetscFunctionReturn(0);
-  PetscCall(PetscNewLog(PetscObjectCast(v),&vimpl));
-  v->data = vimpl;
-  // do a cast to blasint check because if blasint cant hold the size, then any subsequent
-  // cupmblas calls can't use it either. Doing this now this means we don't have to check
-  // during every function
-  PetscCall(CUPMBlasIntCast(v->map->n,&bn));
+  if (PetscUnlikely(!dest)) {
+    auto          impl = cast(v);
+    cupmBlasInt_t bn;
+
+    PetscCall(PetscNewLog(PetscObjectCast(v),&impl));
+    dest = impl;
+    // do a cast to blasint check because if blasint cant hold the size, then any subsequent
+    // cupmblas calls can't use it either. Doing this now this means we don't have to check
+    // during every function
+    PetscCall(CUPMBlasIntCast(v->map->n,&bn));
+  }
   PetscFunctionReturn(0);
 }
 
 template <Device::CUPM::DeviceType T, typename D>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::HostAllocateCheck_(PetscDeviceContext, Vec v))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::VecIMPLAllocateCheck_(Vec v))
 {
   PetscFunctionBegin;
-  PetscCall(VecIMPLAllocateCheck_(v));
-  const auto vimpl = VecIMPLCast(v);
-  if (PetscLikely(vimpl->array_allocated)) PetscFunctionReturn(0);
-  else {
-    const auto n      = v->map->n;
-    const auto nbytes = n*sizeof(*vimpl->array_allocated);
-
-    PetscCall(VecCUPMCheckMinimumPinnedMemory_Internal(v));
-    {
-      const auto useit = UseCUPMHostAlloc(nbytes > v->minimum_bytes_pinned_memory);
-
-      v->pinned_memory = static_cast<decltype(v->pinned_memory)>(useit.value());
-      PetscCall(PetscMalloc1(n,&vimpl->array_allocated));
-    }
-    PetscCall(PetscLogObjectMemory(PetscObjectCast(v),nbytes));
-    if (!vimpl->array) vimpl->array = vimpl->array_allocated;
-    if (v->offloadmask == PETSC_OFFLOAD_UNALLOCATED) v->offloadmask = PETSC_OFFLOAD_CPU;
-  }
+  PetscCall(VecAllocateCheck_(v,v->data,VecIMPLCast));
   PetscFunctionReturn(0);
 }
 
@@ -513,17 +492,32 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::HostAllocateCheck_(Petsc
 template <Device::CUPM::DeviceType T, typename D>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::VecCUPMAllocateCheck_(Vec v))
 {
-  auto          vcu = VecCUPMCast(v);
-  cupmBlasInt_t bn;
-
   PetscFunctionBegin;
-  if (PetscLikely(vcu)) PetscFunctionReturn(0);
-  PetscCall(PetscNewLog(PetscObjectCast(v),&vcu));
-  v->spptr = vcu;
-  // do a cast to blasint check because if blasint cant hold the size, then any subsequent
-  // cupmblas calls can't use it either. Doing this now this means we don't have to check
-  // during every function
-  PetscCall(CUPMBlasIntCast(v->map->n,&bn));
+  PetscCall(VecAllocateCheck_(v,v->spptr,VecCUPMCast));
+  PetscFunctionReturn(0);
+}
+
+template <Device::CUPM::DeviceType T, typename D>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::HostAllocateCheck_(PetscDeviceContext, Vec v))
+{
+  PetscFunctionBegin;
+  PetscCall(VecIMPLAllocateCheck_(v));
+  if (auto& alloc = VecIMPLCast(v)->array_allocated) PetscFunctionReturn(0);
+  else {
+    const auto n      = v->map->n;
+    const auto nbytes = n*sizeof(*alloc);
+
+    PetscCall(VecCUPMCheckMinimumPinnedMemory_Internal(v));
+    {
+      const auto useit = UseCUPMHostAlloc(nbytes > v->minimum_bytes_pinned_memory);
+
+      v->pinned_memory = static_cast<decltype(v->pinned_memory)>(useit.value());
+      PetscCall(PetscMalloc1(n,&alloc));
+    }
+    PetscCall(PetscLogObjectMemory(PetscObjectCast(v),nbytes));
+    if (!VecIMPLCast(v)->array) VecIMPLCast(v)->array = alloc;
+    if (v->offloadmask == PETSC_OFFLOAD_UNALLOCATED) v->offloadmask = PETSC_OFFLOAD_CPU;
+  }
   PetscFunctionReturn(0);
 }
 

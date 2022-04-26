@@ -312,8 +312,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::restorelocalvector_async(Ve
     v->offloadmask   = w->offloadmask;
     v->pinned_memory = w->pinned_memory;
     v->spptr         = w->spptr;
-    w->data          = nullptr;
-    w->spptr         = nullptr;
+    w->data          = nullptr; // these assignments are __critical__, as w may persist
+    w->spptr         = nullptr; // after this call returns and shouldn't share data with v!
     w->offloadmask   = PETSC_OFFLOAD_UNALLOCATED;
   } else {
     auto array = &VecIMPLCast(w)->array;
@@ -704,9 +704,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<f
     // do these now while memcpy is in flight
     PetscCall(PetscLogFlops(nwork));
     PetscCall(PetscLogGpuToCpuScalar(nbytes));
-    PetscCall(PetscManagedScalarGetHostValuesSafe(dctx,z,PETSC_MEMORY_ACCESS_WRITE,&zptr,nullptr));
-    // REVIEW ME: need to hard sync here...
-    PetscCall(PetscDeviceContextSynchronize(dctx));
+    // implicit sync
+    PetscCall(PetscManagedScalarGetValues(dctx,z,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_WRITE,PETSC_TRUE,&zptr,nullptr));
     // sum group results into z
     for (auto j = PetscInt{0}; j < nv1; ++j) {
       // zptr is already zeroed out
@@ -764,7 +763,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async(Vec xin, PetscMa
     const auto      n    = xin->map->n;
     PetscInt       *nvptr;
 
-    PetscCall(PetscManagedIntGetHostValuesSafe(dctx,nv,PETSC_MEMORY_ACCESS_READ,&nvptr,nullptr));
+    PetscCall(PetscManagedIntGetValues(dctx,nv,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&nvptr,nullptr));
     PetscCheck(nvptr[0] > 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Number of vectors provided to %s %" PetscInt_FMT " not positive",PETSC_FUNCTION_NAME,nvptr[0]);
 
     // z will always need to be zeroed first, either for a quick return or for summing later on
@@ -795,7 +794,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::set_async(Vec xin, PetscMan
     const auto   xptr = DeviceArrayWrite(dctx,xin);
     PetscScalar *ptr;
 
-    PetscCall(PetscManagedScalarGetHostValuesSafe(dctx,alpha,PETSC_MEMORY_ACCESS_READ,&ptr,nullptr));
+    PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&ptr,nullptr));
     PetscCall(Device::CUPM::Impl::ThrustSet<T>(stream,n,xptr.ptr,ptr));
   }
   PetscFunctionReturn(0);
