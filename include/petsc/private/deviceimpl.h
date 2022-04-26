@@ -413,7 +413,7 @@ static inline PetscErrorCode PetscDeviceContextAllReduceManagedScalar_Internal(P
     // we do not care where the pointer is, MPI will figure that out
     PetscCall(PetscManagedScalarGetPointerAndMemType(dctx,scal,PETSC_MEMORY_ACCESS_READ,&scalptr,PETSC_NULLPTR,n ? PETSC_NULLPTR : &nv));
   } else {
-    PetscCall(PetscManagedScalarGetValues(dctx,scal,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,&scalptr,n ? PETSC_NULLPTR : &nv));
+    PetscCall(PetscManagedScalarGetValues(dctx,scal,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&scalptr,n ? PETSC_NULLPTR : &nv));
   }
   PetscCall(PetscDeviceContextAllReduceManagedType_Internal(dctx,scalptr,n ? n : &nv,MPIU_SCALAR,op,obj));
   PetscFunctionReturn(0);
@@ -429,7 +429,7 @@ static inline PetscErrorCode PetscDeviceContextAllReduceManagedReal_Internal(Pet
     // we do not care where the pointer is, MPI will figure that out
     PetscCall(PetscManagedRealGetPointerAndMemType(dctx,scal,PETSC_MEMORY_ACCESS_READ,&scalptr,PETSC_NULLPTR,n ? PETSC_NULLPTR : &nv));
   } else {
-    PetscCall(PetscManagedRealGetValues(dctx,scal,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,&scalptr,n ? PETSC_NULLPTR : &nv));
+    PetscCall(PetscManagedRealGetValues(dctx,scal,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&scalptr,n ? PETSC_NULLPTR : &nv));
   }
   PetscCall(PetscDeviceContextAllReduceManagedType_Internal(dctx,scalptr,n ? n : &nv,MPIU_REAL,op,obj));
   PetscFunctionReturn(0);

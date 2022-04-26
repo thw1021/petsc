@@ -379,7 +379,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::aypx_async(Vec yin, PetscMa
 
     PetscCall(PetscManagedScalarEqual(alpha,1.0,&known,&equal));
     alphaIsOne = static_cast<decltype(alphaIsOne)>(known && equal);
-    PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_READ,&aptr,nullptr));
+    PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_READ,PETSC_FALSE,&aptr,nullptr));
     PetscCall(GetHandles_(dctx,&cupmBlasHandle));
     {
       const auto calpha = cupmScalarCast(aptr);
@@ -417,7 +417,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::axpy_async(Vec yin, PetscMa
     PetscScalar     *aptr;
     cupmBlasHandle_t cupmBlasHandle;
 
-    PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_READ,&aptr,nullptr));
+    PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_READ,PETSC_FALSE,&aptr,nullptr));
     PetscCall(GetHandles_(dctx,&cupmBlasHandle));
     PetscCallCUPMBLAS(cupmBlasSetPointerMode(cupmBlasHandle,CUPMBLAS_POINTER_MODE_DEVICE));
     PetscCall(PetscLogGpuTimeBegin());
@@ -487,7 +487,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::waxpy_async(Vec win, PetscM
 
   PetscFunctionBegin;
   PetscCall(PetscManagedScalarEqual(alpha,0.0,&known,&equal));
-  if (known && equal) {
+  if (known && equal /* alpha = 0 */) {
     PetscCall(copy_async(yin,win,dctx));
   } else {
     const auto        n      = win->map->n;
@@ -496,11 +496,11 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::waxpy_async(Vec win, PetscM
     cupmStream_t      stream;
     PetscScalar      *aptr;
 
-    PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_READ,&aptr,nullptr));
+    PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_READ,PETSC_FALSE,&aptr,nullptr));
     PetscCall(GetHandles_(dctx,&cupmBlasHandle,&stream));
     PetscCallCUPMBLAS(cupmBlasSetPointerMode(cupmBlasHandle,CUPMBLAS_POINTER_MODE_DEVICE));
     PetscCall(PetscLogGpuTimeBegin());
-    PetscCallCUPM(cupmMemcpyAsync(warray.ptr,DeviceArrayRead(dctx,yin).ptr,n*sizeof(typename decltype(warray)::value_type),cupmMemcpyDeviceToDevice,stream));
+    PetscCallCUPM(cupmMemcpyAsync(warray.ptr,DeviceArrayRead(dctx,yin).ptr,n*sizeof(*warray.ptr),cupmMemcpyDeviceToDevice,stream));
     PetscCallCUPMBLAS(cupmBlasXaxpy(cupmBlasHandle,n,cupmScalarCast(aptr),DeviceArrayRead(dctx,xin),1,warray,1));
     PetscCall(PetscLogGpuTimeEnd());
     PetscCall(PetscLogGpuFlops(2*n));
@@ -518,8 +518,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::maxpy_async(Vec xin, PetscM
   PetscScalar      *aptr;
 
   PetscFunctionBegin;
-  PetscCall(PetscManagedIntGetHostValuesSafe(dctx,nv,PETSC_MEMORY_ACCESS_READ,&nvptr,nullptr));
-  PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_READ,&aptr,nullptr));
+  PetscCall(PetscManagedIntGetValues(dctx,nv,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&nvptr,nullptr));
+  PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_READ,PETSC_FALSE,&aptr,nullptr));
   PetscCall(GetHandles_(dctx,&cupmBlasHandle));
   PetscCallCUPMBLAS(cupmBlasSetPointerMode(cupmBlasHandle,CUPMBLAS_POINTER_MODE_DEVICE));
   PetscCall(PetscLogGpuTimeBegin());
@@ -540,7 +540,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::dot_async(Vec xin, Vec yin,
 
   PetscFunctionBegin;
   PetscCall(GetHandles_(dctx,&cupmBlasHandle));
-  PetscCall(PetscManagedScalarGetValues(dctx,z,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_WRITE,&zptr,nullptr));
+  PetscCall(PetscManagedScalarGetValues(dctx,z,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_WRITE,PETSC_FALSE,&zptr,nullptr));
   // arguments y, x are reversed because BLAS complex conjugates the first argument, PETSc the
   // second
   PetscCall(cupmBlasSetPointerMode(cupmBlasHandle,CUPMBLAS_POINTER_MODE_DEVICE));
@@ -657,7 +657,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<f
     PetscCall(PetscLogGpuTimeBegin());
     // REVIEW ME: Can fork-join here, but should probably only have a single-sized kernel then
     // REVIEW ME: Should probably try and load-balance these. Consider the case where nv = 9;
-    // it is very likely to be better to do 4+5 rather and 8+1
+    // it is very likely better to do 4+5 rather and 8+1
     while (yidx < nv)
     {
       switch (nv-yidx) {
@@ -699,7 +699,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<f
     auto         h_results  = stackarray.data();
     PetscScalar *zptr;
 
-    if (allocate) PetscCall(PetscMalloc1(nwork,&h_results));
+    if (allocate) PetscCallCUPM(cupmMallocHost(reinterpret_cast<void**>(&h_results),nwork*sizeof(PetscScalar)));
     PetscCallCUPM(cupmMemcpyAsync(h_results,d_results,nbytes,cupmMemcpyDeviceToHost,stream));
     // do these now while memcpy is in flight
     PetscCall(PetscLogFlops(nwork));
@@ -712,7 +712,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<f
       // zptr is already zeroed out
       for (auto i = j*MDOT_WORKGROUP_NUM; i < (j+1)*MDOT_WORKGROUP_NUM; ++i) zptr[j] += h_results[i];
     }
-    if (allocate) PetscCall(PetscFree(h_results));
+    if (allocate) PetscCallCUPM(cupmFreeHost(h_results));
   }
   // free these here, we will already have synchronized
   PetscCallCUPM(cupmFreeAsync(d_results,stream));
@@ -734,7 +734,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<t
   PetscDeviceContext *subctx;
 
   PetscFunctionBegin;
-  PetscCall(PetscManagedScalarGetValues(dctx,z,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_WRITE,&zptr,nullptr));
+  PetscCall(PetscManagedScalarGetValues(dctx,z,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_WRITE,PETSC_FALSE,&zptr,nullptr));
   PetscCall(PetscDeviceContextFork(dctx,n_sub,&subctx));
   PetscCall(PetscLogGpuTimeBegin());
   for (decltype(nv) i = 0; i < nv; ++i) {
@@ -819,7 +819,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::scale_async(Vec xin, PetscM
 
     PetscCall(GetHandles_(dctx,&cupmBlasHandle));
     PetscCallCUPMBLAS(cupmBlasSetPointerMode(cupmBlasHandle,CUPMBLAS_POINTER_MODE_DEVICE));
-    PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_READ,&aptr,nullptr));
+    PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_READ,PETSC_FALSE,&aptr,nullptr));
     PetscCall(PetscLogGpuTimeBegin());
     PetscCallCUPMBLAS(cupmBlasXscal(cupmBlasHandle,n,cupmScalarCast(aptr),DeviceArrayReadWrite(dctx,xin),1));
     PetscCall(PetscLogGpuTimeEnd());
@@ -838,7 +838,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::tdot_async(Vec xin, Vec yin
   PetscFunctionBegin;
   PetscCall(GetHandles_(dctx,&cupmBlasHandle));
   PetscCall(cupmBlasSetPointerMode(cupmBlasHandle,CUPMBLAS_POINTER_MODE_DEVICE));
-  PetscCall(PetscManagedScalarGetValues(dctx,z,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_WRITE,&zptr,nullptr));
+  PetscCall(PetscManagedScalarGetValues(dctx,z,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_WRITE,PETSC_FALSE,&zptr,nullptr));
   PetscCall(PetscLogGpuTimeBegin());
   PetscCallCUPMBLAS(cupmBlasXdotu(cupmBlasHandle,n,DeviceArrayRead(dctx,xin),1,DeviceArrayRead(dctx,yin),1,cupmScalarCast(zptr)));
   PetscCall(PetscLogGpuTimeEnd());
@@ -968,7 +968,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::axpby_async(Vec yin, PetscM
 
     PetscCall(PetscManagedScalarEqual(beta,0.0,&known,&equal));
     betaIsZero = static_cast<decltype(betaIsZero)>(known && equal);
-    PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_READ,&aptr,nullptr));
+    PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_READ,PETSC_FALSE,&aptr,nullptr));
     {
       const auto       calpha = cupmScalarCast(aptr);
       cupmBlasHandle_t cupmBlasHandle;
@@ -989,7 +989,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::axpby_async(Vec yin, PetscM
         const auto   yarray = DeviceArrayReadWrite(dctx,yin);
         PetscScalar *bptr;
 
-        PetscCall(PetscManagedScalarGetValues(dctx,beta,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_READ,&bptr,nullptr));
+        PetscCall(PetscManagedScalarGetValues(dctx,beta,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_READ,PETSC_FALSE,&bptr,nullptr));
         PetscCall(PetscLogGpuTimeBegin());
         PetscCallCUPMBLAS(cupmBlasXscal(cupmBlasHandle,n,cupmScalarCast(bptr),yarray,1));
         PetscCallCUPMBLAS(cupmBlasXaxpy(cupmBlasHandle,n,calpha,xarray,1,yarray,1));
@@ -1028,7 +1028,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::norm_async(Vec xin, NormTyp
     PetscCall(GetHandles_(dctx,&cupmBlasHandle));
     // in case NORM_INFINITY we may technically undo this, but cleaner this way
     PetscCallCUPMBLAS(cupmBlasSetPointerMode(cupmBlasHandle,CUPMBLAS_POINTER_MODE_DEVICE));
-    PetscCall(PetscManagedRealGetValues(dctx,z,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_WRITE,&zptr,nullptr));
+    PetscCall(PetscManagedRealGetValues(dctx,z,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_WRITE,PETSC_FALSE,&zptr,nullptr));
     PetscCall(PetscLogGpuTimeBegin());
     switch (type) {
     case NORM_1_AND_2:
@@ -1103,7 +1103,7 @@ struct real_part
   PETSC_HOSTDEVICE_DECL
   thrust::tuple<PetscReal,PetscInt> operator()(const thrust::tuple<PetscScalar,PetscInt>& x) const
   {
-    return {PetscRealPart(x.get<0>()),x.get<1>()};
+    return thrust::make_tuple(PetscRealPart(x.get<0>()),x.get<1>());
   }
 
   PETSC_HOSTDEVICE_DECL PetscReal operator()(PetscScalar x) const { return PetscRealPart(x); }
@@ -1230,26 +1230,14 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::sum_async(Vec v, PetscManag
   PetscFunctionReturn(0);
 }
 
-namespace detail
-{
-
-struct shifter
-{
-  const PetscScalar *s;
-
-  PETSC_HOSTDEVICE_DECL PetscScalar operator()(PetscScalar x) const { return x+(*s); }
-};
-
-} // namespace detail
-
 template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::shift_async(Vec v, PetscManagedScalar shift, PetscDeviceContext dctx))
 {
   PetscScalar *ptr;
 
   PetscFunctionBegin;
-  PetscCall(PetscManagedScalarGetValues(dctx,shift,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_READ,&ptr,nullptr));
-  PetscCall(pointwiseunary_async_(detail::shifter{ptr},dctx,v));
+  PetscCall(PetscManagedScalarGetValues(dctx,shift,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_READ,PETSC_FALSE,&ptr,nullptr));
+  PetscCall(pointwiseunary_async_(Device::CUPM::Impl::make_shift_operator(ptr,thrust::plus<PetscScalar>{}),dctx,v));
   PetscFunctionReturn(0);
 }
 

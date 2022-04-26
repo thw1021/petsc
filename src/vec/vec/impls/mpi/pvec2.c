@@ -12,7 +12,7 @@ static PetscErrorCode VecMXDot_MPI(Vec xin, PetscManagedInt nv, const Vec y[], P
 
   PetscFunctionBegin;
   PetscCall(VecMXDot_SeqFn(xin,nv,y,z,dctx));
-  PetscCall(PetscManagedIntGetValues(dctx,nv,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,&nvptr,NULL));
+  PetscCall(PetscManagedIntGetValues(dctx,nv,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&nvptr,NULL));
   PetscCall(PetscDeviceContextAllReduceManagedScalar_Internal(dctx,z,nvptr,MPIU_SUM,(PetscObject)xin));
   PetscFunctionReturn(0);
 }
@@ -62,8 +62,7 @@ PetscErrorCode VecNorm_MPI(Vec xin, NormType type, PetscManagedReal z, PetscDevi
     if (type == NORM_INFINITY) {
       op = MPIU_MAX;
     } else if (type == NORM_1_AND_2) {
-      PetscCall(PetscManagedRealGetValues(dctx,z,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,&zptr,NULL));
-      PetscCall(PetscDeviceContextSynchronize(dctx));
+      PetscCall(PetscManagedRealGetValues(dctx,z,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,PETSC_TRUE,&zptr,NULL));
       zptr[1] *= zptr[1];
       zn       = 2;
     }
@@ -71,8 +70,7 @@ PetscErrorCode VecNorm_MPI(Vec xin, NormType type, PetscManagedReal z, PetscDevi
   }
   PetscCall(PetscDeviceContextAllReduceManagedReal_Internal(dctx,z,&zn,op,(PetscObject)xin));
   if (type == NORM_2 || type == NORM_FROBENIUS || type == NORM_1_AND_2) {
-    PetscCall(PetscManagedRealGetValues(dctx,z,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,&zptr,NULL));
-    PetscCall(PetscDeviceContextSynchronize(dctx));
+    PetscCall(PetscManagedRealGetValues(dctx,z,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,PETSC_TRUE,&zptr,NULL));
     zptr[type == NORM_1_AND_2] = PetscSqrtReal(zptr[type == NORM_1_AND_2]);
   }
   PetscFunctionReturn(0);
@@ -90,9 +88,8 @@ static PetscErrorCode VecMinMax_MPI_Private(Vec xin, PetscManagedInt idx, PetscM
     PetscInt  *idxptr;
     struct { PetscReal v; PetscInt i; } in,out;
 
-    PetscCall(PetscManagedRealGetValues(dctx,z,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,&zptr,NULL));
-    PetscCall(PetscManagedIntGetValues(dctx,idx,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,&idxptr,NULL));
-    PetscCall(PetscDeviceContextSynchronize(dctx));
+    PetscCall(PetscManagedRealGetValues(dctx,z,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,PETSC_TRUE,&zptr,NULL));
+    PetscCall(PetscManagedIntGetValues(dctx,idx,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,PETSC_TRUE,&idxptr,NULL));
     in.v = zptr[0];
     in.i = idxptr[0] + xin->map->rstart;
     PetscCall(MPIU_Allreduce(&in,&out,1,MPIU_REAL_INT,ops[0],PetscObjectComm((PetscObject)xin)));

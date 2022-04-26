@@ -1465,8 +1465,7 @@ PetscErrorCode VecShiftAsync(Vec v, PetscManagedScalar shift, PetscDeviceContext
 
     PetscCall(VecGetLocalSize(v,&n));
     PetscCall(VecGetArrayWrite(v,&x));
-    PetscCall(PetscManagedScalarGetValues(dctx,shift,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,&shiftptr,NULL));
-    PetscCall(PetscDeviceContextSynchronize(dctx));
+    PetscCall(PetscManagedScalarGetValues(dctx,shift,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&shiftptr,NULL));
     { // to make doubly sure the compiler knows that this value ain't changin'
       const PetscScalar shiftv = *shiftptr;
       for (PetscInt i = 0; i < n; ++i) x[i] += shiftv;

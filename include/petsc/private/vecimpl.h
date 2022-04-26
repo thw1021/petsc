@@ -43,10 +43,10 @@ struct _VecOps {
   PetscErrorCode (*setvalues)(Vec,PetscInt,const PetscInt[],const PetscScalar[],InsertMode);
   PetscErrorCode (*assemblybegin)(Vec);                /* start global assembly */
   PetscErrorCode (*assemblyend)(Vec);                  /* end global assembly */
-  PetscErrorCode (*getarray)(Vec,PetscScalar**);            /* get data array */
+  PetscErrorCode (*getarray)(Vec,PetscScalar**,PetscDeviceContext);            /* get data array */
   PetscErrorCode (*getsize)(Vec,PetscInt*);
   PetscErrorCode (*getlocalsize)(Vec,PetscInt*);
-  PetscErrorCode (*restorearray)(Vec,PetscScalar**);        /* restore data array */
+  PetscErrorCode (*restorearray)(Vec,PetscScalar**,PetscDeviceContext);        /* restore data array */
   PetscErrorCode (*max)(Vec,PetscManagedInt,PetscManagedReal,PetscDeviceContext);      /* z = max(x); idx=index of max(x) */
   PetscErrorCode (*min)(Vec,PetscManagedInt,PetscManagedReal,PetscDeviceContext);      /* z = min(x); idx=index of min(x) */
   PetscErrorCode (*setrandom)(Vec,PetscRandom,PetscDeviceContext);         /* set y[j] = random numbers */
@@ -84,8 +84,8 @@ struct _VecOps {
   PetscErrorCode (*dotnorm2)(Vec,Vec,PetscManagedScalar,PetscManagedScalar,PetscDeviceContext);
   PetscErrorCode (*getsubvector)(Vec,IS,Vec*);
   PetscErrorCode (*restoresubvector)(Vec,IS,Vec*);
-  PetscErrorCode (*getarrayread)(Vec,const PetscScalar**);
-  PetscErrorCode (*restorearrayread)(Vec,const PetscScalar**);
+  PetscErrorCode (*getarrayread)(Vec,const PetscScalar**,PetscDeviceContext);
+  PetscErrorCode (*restorearrayread)(Vec,const PetscScalar**,PetscDeviceContext);
   PetscErrorCode (*stridesubsetgather)(Vec,PetscInt,const PetscInt[],const PetscInt[],Vec,InsertMode);
   PetscErrorCode (*stridesubsetscatter)(Vec,PetscInt,const PetscInt[],const PetscInt[],Vec,InsertMode);
   PetscErrorCode (*viewnative)(Vec,PetscViewer);
@@ -95,14 +95,14 @@ struct _VecOps {
   PetscErrorCode (*getlocalvectorread)(Vec,Vec);
   PetscErrorCode (*restorelocalvectorread)(Vec,Vec);
   PetscErrorCode (*bindtocpu)(Vec,PetscBool,PetscDeviceContext);
-  PetscErrorCode (*getarraywrite)(Vec,PetscScalar**);
-  PetscErrorCode (*restorearraywrite)(Vec,PetscScalar**);
-  PetscErrorCode (*getarrayandmemtype)(Vec,PetscScalar**,PetscMemType*);
-  PetscErrorCode (*restorearrayandmemtype)(Vec,PetscScalar**);
-  PetscErrorCode (*getarrayreadandmemtype)(Vec,const PetscScalar**,PetscMemType*);
-  PetscErrorCode (*restorearrayreadandmemtype)(Vec,const PetscScalar**);
-  PetscErrorCode (*getarraywriteandmemtype)(Vec,PetscScalar**,PetscMemType*);
-  PetscErrorCode (*restorearraywriteandmemtype)(Vec,PetscScalar**,PetscMemType*);
+  PetscErrorCode (*getarraywrite)(Vec,PetscScalar**,PetscDeviceContext);
+  PetscErrorCode (*restorearraywrite)(Vec,PetscScalar**,PetscDeviceContext);
+  PetscErrorCode (*getarrayandmemtype)(Vec,PetscScalar**,PetscMemType*,PetscDeviceContext);
+  PetscErrorCode (*restorearrayandmemtype)(Vec,PetscScalar**,PetscDeviceContext);
+  PetscErrorCode (*getarrayreadandmemtype)(Vec,const PetscScalar**,PetscMemType*,PetscDeviceContext);
+  PetscErrorCode (*restorearrayreadandmemtype)(Vec,const PetscScalar**,PetscDeviceContext);
+  PetscErrorCode (*getarraywriteandmemtype)(Vec,PetscScalar**,PetscMemType*,PetscDeviceContext);
+  PetscErrorCode (*restorearraywriteandmemtype)(Vec,PetscScalar**,PetscMemType*,PetscDeviceContext);
   PetscErrorCode (*concatenate)(PetscInt,const Vec[],Vec*,IS*[]);
   PetscErrorCode (*sum)(Vec,PetscManagedScalar,PetscDeviceContext);
 };

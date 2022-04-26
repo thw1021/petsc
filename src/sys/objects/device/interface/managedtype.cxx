@@ -60,7 +60,7 @@ class PetscManagedTypeImpl
 public:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode create(PetscDeviceContext,PetscType*,PetscType*,PetscInt,PetscCopyMode,PetscCopyMode,PetscOffloadMask,ManagedType*));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode destroy(PetscDeviceContext,ManagedType*));
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode get_values(PetscDeviceContext,ManagedType,PetscMemType,PetscMemoryAccessMode,PetscType**,PetscInt* = nullptr));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode get_values(PetscDeviceContext,ManagedType,PetscMemType,PetscMemoryAccessMode,PetscBool,PetscType**,PetscInt* = nullptr));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode set_values(PetscDeviceContext,ManagedType,PetscMemType,const PetscType*,PetscInt));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode get_pointer_and_mem_type(PetscDeviceContext,ManagedType,PetscMemoryAccessMode,PetscType**,PetscMemType* = nullptr,PetscInt* = nullptr));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode ensure_offload(PetscDeviceContext,ManagedType,PetscOffloadMask));
@@ -83,7 +83,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::copy_values(Pet
 
   // need to actually allocate the stuff
   PetscFunctionBegin;
-  PetscCall(get_values(dctx,scal,PetscOffloadMaskToMemType(mask),PETSC_MEMORY_ACCESS_WRITE,&ptr,&n));
+  PetscCall(get_values(dctx,scal,PetscOffloadMaskToMemType(mask),PETSC_MEMORY_ACCESS_WRITE,PETSC_FALSE,&ptr,&n));
   PetscCall(PetscOffloadMaskToDeviceCopyMode(mask,src_mask,&mode));
   PetscCall(PetscDeviceArrayCopy(dctx,ptr,src_ptr,n,mode));
   PetscFunctionReturn(0);
@@ -183,7 +183,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::destroy(PetscDe
 }
 
 template <typename T, typename MT>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::get_values(PetscDeviceContext dctx, ManagedType scal, PetscMemType mtype, PetscMemoryAccessMode mode, PetscType **ptr, PetscInt *n))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::get_values(PetscDeviceContext dctx, ManagedType scal, PetscMemType mtype, PetscMemoryAccessMode mode, PetscBool sync, PetscType **ptr, PetscInt *n))
 {
   PetscFunctionBegin;
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
@@ -197,6 +197,10 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::get_values(Pets
   PetscCall(get_managed_values_fn(dctx,scal,mtype,mode,ptr));
   // if user intends to write to device in any capacity then we are tainted
   if (PetscMemTypeDevice(mtype) && (mode != PETSC_MEMORY_ACCESS_READ)) scal->state.tainted = 1;
+  if (sync) {
+    if (PetscMemTypeHost(mtype)) scal->state.tainted = 0; // only way to reset this state
+    PetscCall(PetscDeviceContextSynchronize(dctx));
+  }
   PetscFunctionReturn(0);
 }
 
@@ -250,7 +254,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::get_pointer_and
     break;
   case PETSC_OFFLOAD_UNALLOCATED: {
     const auto prefer_host = dctx->device->type == PETSC_DEVICE_HOST;
-    PetscCall(get_values(dctx,scal,prefer_host ? PETSC_MEMTYPE_HOST : PETSC_MEMTYPE_DEVICE,mode,ptr,nullptr));
+    PetscCall(get_values(dctx,scal,prefer_host ? PETSC_MEMTYPE_HOST : PETSC_MEMTYPE_DEVICE,mode,PETSC_FALSE,ptr,nullptr));
     if (prefer_host) {
       goto UNALLOCATED_PREFER_HOST;
     } else {
@@ -270,14 +274,21 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::ensure_offload(
   PetscFunctionBegin;
   PetscValidPointer(scal,2);
   if (scal->mask != omask) {
-    PetscType *ptr;
+    const auto OffloadAndSync = [&](PetscMemType mtype)
+    {
+      PetscType PETSC_UNUSED *ptr;
+
+      PetscFunctionBegin;
+      PetscCall(get_values(dctx,scal,mtype,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&ptr));
+      PetscFunctionReturn(0);
+    };
 
     PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
-    if (PetscOffloadDevice(omask) || omask == PETSC_OFFLOAD_BOTH) {
-      PetscCall(get_values(dctx,scal,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_READ,&ptr));
-    }
     if (PetscOffloadHost(omask) || omask == PETSC_OFFLOAD_BOTH) {
-      PetscCall(get_values(dctx,scal,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,&ptr));
+      PetscCall(OffloadAndSync(PETSC_MEMTYPE_HOST));
+    }
+    if (PetscOffloadDevice(omask) || omask == PETSC_OFFLOAD_BOTH) {
+      PetscCall(OffloadAndSync(PETSC_MEMTYPE_DEVICE));
     }
   }
   PetscFunctionReturn(0);
@@ -316,9 +327,9 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::apply_operator(
     PetscType  *ptr,*retptr;
     PetscInt    n = 0; // silence overzealous gcc
 
-    PetscCall(get_values(dctx,scal,PETSC_MEMTYPE_HOST,src_access,&ptr,&n));
+    PetscCall(get_values(dctx,scal,PETSC_MEMTYPE_HOST,src_access,PETSC_TRUE,&ptr,&n));
     if (ret) {
-      PetscCall(get_values(dctx,ret,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_WRITE,&retptr));
+      PetscCall(get_values(dctx,ret,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_WRITE,PETSC_TRUE,&retptr));
     } else {
       // in place
       retptr = ptr;
@@ -351,8 +362,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::get_sub_range(P
   PetscCall(check_lock(in));
   PetscAssert(len > 0,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Cannot extract a subrange of negative size %" PetscInt_FMT,len);
   PetscAssert(begin+len < in->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Trying to extract a subrange of [%" PetscInt_FMT ",%" PetscInt_FMT ") from managed type of size %" PetscInt_FMT,begin,begin+len,in->n);
-  if (!in->host)   PetscCall(get_values(dctx,in,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,&tmp));
-  if (!in->device) PetscCall(get_values(dctx,in,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_READ_WRITE,&tmp));
+  if (!in->host)   PetscCall(get_values(dctx,in,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,PETSC_FALSE,&tmp));
+  if (!in->device) PetscCall(get_values(dctx,in,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_READ_WRITE,PETSC_FALSE,&tmp));
   PetscCall(create(dctx,in->host+begin,in->device+begin,len,PETSC_USE_POINTER,PETSC_USE_POINTER,in->mask,out));
   // copy state over to the subrange
   (*out)->state = in->state;

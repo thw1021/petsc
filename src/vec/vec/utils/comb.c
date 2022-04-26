@@ -652,9 +652,8 @@ static PetscErrorCode VecMXDotBegin_Private(Vec x, PetscManagedInt nv, const Vec
   PetscCheck(sr->state == STATE_BEGIN,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Called before all VecxxxEnd() called");
   PetscCheck(op_local,PETSC_COMM_SELF,PETSC_ERR_SUP,"Vector does not support local mdots");
 
-  PetscCall(PetscManagedIntGetValues(dctx,nv,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,&nvptr,NULL));
-  // have to hard-sync here to get the value out
-  PetscCall(PetscDeviceContextSynchronize(dctx));
+  // implicit sync
+  PetscCall(PetscManagedIntGetValues(dctx,nv,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&nvptr,NULL));
   nvval = *nvptr;
   for (PetscInt i = 0; i < nvval; ++i) {
     if (sr->numopsbegin+i >= sr->maxops) PetscCall(PetscSplitReductionExtend(sr));
@@ -724,7 +723,7 @@ PetscErrorCode VecMDotEndAsync(Vec x, PetscManagedInt nv, const Vec y[], PetscMa
   PetscCheck(sr->numopsend < sr->numopsbegin,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecxxxEnd() more times then VecxxxBegin()");
   PetscCheck(!x || (void*)x == sr->invecs[sr->numopsend],PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecxxxEnd() in a different order or with a different vector than VecxxxBegin()");
   PetscCheck(sr->reducetype[sr->numopsend] == PETSC_SR_REDUCE_SUM,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecDotEnd() on a reduction started with VecNormBegin()");
-  PetscCall(PetscManagedIntGetValues(dctx,nv,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,&nvptr,NULL));
+  PetscCall(PetscManagedIntGetValues(dctx,nv,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&nvptr,NULL));
   PetscCall(PetscManagedScalarSetValues(dctx,result,PETSC_MEMTYPE_HOST,sr->gvalues+sr->numopsend,*nvptr));
   sr->numopsend += *nvptr;
 

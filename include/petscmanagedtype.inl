@@ -25,7 +25,6 @@
 #define PetscManageDeviceType                PetscConcat(PetscManageDevice,PetscTypeSuffix)
 #define PetscManagedTypeDestroy              PetscConcat(PetscManagedType,Destroy)
 #define PetscManagedTypeGetValues            PetscConcat(PetscManagedType,GetValues)
-#define PetscManagedTypeGetHostValuesSafe    PetscConcat(PetscManagedType,GetHostValuesSafe)
 #define PetscManagedTypeSetValues            PetscConcat(PetscManagedType,SetValues)
 #define PetscManagedTypeGetPointerAndMemType PetscConcat(PetscManagedType,GetPointerAndMemType)
 #define PetscManagedTypeEnsureOffload        PetscConcat(PetscManagedType,EnsureOffload)
@@ -88,20 +87,11 @@ PetscErrorCode PetscManagedTypeDestroy(PetscDeviceContext PETSC_NO_DEVICE_UNUSED
 );
 
 PETSC_MANAGED_TYPE_DECL_OR_STUB(
-PetscErrorCode PetscManagedTypeGetValues(PetscDeviceContext PETSC_NO_DEVICE_UNUSED dctx, PetscManagedType scal, PetscMemType PETSC_NO_DEVICE_UNUSED mtype, PetscMemoryAccessMode PETSC_NO_DEVICE_UNUSED amode, PetscType **ptr, PetscInt *n),
+PetscErrorCode PetscManagedTypeGetValues(PetscDeviceContext PETSC_NO_DEVICE_UNUSED dctx, PetscManagedType scal, PetscMemType PETSC_NO_DEVICE_UNUSED mtype, PetscMemoryAccessMode PETSC_NO_DEVICE_UNUSED amode, PetscBool PETSC_NO_DEVICE_UNUSED sync, PetscType **ptr, PetscInt *n),
 {
   PetscFunctionBegin;
   *ptr = scal->host;
   if (n) *n = scal->n;
-  PetscFunctionReturn(0);
-}
-);
-
-PETSC_MANAGED_TYPE_DECL_OR_STUB(
-PetscErrorCode PetscManagedTypeGetHostValuesSafe(PetscDeviceContext dctx, PetscManagedType scal, PetscMemoryAccessMode amode, PetscType **ptr, PetscInt *n),
-{
-  PetscFunctionBegin;
-  PetscCall(PetscManagedTypeGetValues(dctx,scal,PETSC_MEMTYPE_HOST,amode,ptr,n));
   PetscFunctionReturn(0);
 }
 );
@@ -229,7 +219,6 @@ static inline PetscErrorCode PetscManagedTypeCreateDefault(PetscDeviceContext dc
 #undef PetscManagedTypeCreateDefault
 #undef PetscManagedTypeDestroy
 #undef PetscManagedTypeGetValues
-#undef PetscManagedTypeGetHostValuesSafe
 #undef PetscManagedTypeSetValues
 #undef PetscManagedTypeGetPointerAndMemType
 #undef PetscManagedTypeEnsureOffload

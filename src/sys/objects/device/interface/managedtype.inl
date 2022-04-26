@@ -47,7 +47,6 @@ PETSC_DECLTYPE_AUTO_RETURNS((*dctx->ops->applyoperatortype)(dctx,std::forward<T>
 #define PetscManagedTypeCreateDefault        PetscConcat(PetscManagedTypeCreate,Default)
 #define PetscManagedTypeDestroy              PetscConcat(PetscManagedType,Destroy)
 #define PetscManagedTypeGetValues            PetscConcat(PetscManagedType,GetValues)
-#define PetscManagedTypeGetHostValuesSafe    PetscConcat(PetscManagedType,GetHostValuesSafe)
 #define PetscManagedTypeSetValues            PetscConcat(PetscManagedType,SetValues)
 #define PetscManagedTypeGetPointerAndMemType PetscConcat(PetscManagedType,GetPointerAndMemType)
 #define PetscManagedTypeEnsureOffload        PetscConcat(PetscManagedType,EnsureOffload)
@@ -69,21 +68,9 @@ PetscErrorCode PetscManagedTypeDestroy(PetscDeviceContext dctx, PetscManagedType
   return PetscManagedTypeImpl::destroy(dctx,scal);
 }
 
-PetscErrorCode PetscManagedTypeGetValues(PetscDeviceContext dctx, PetscManagedType scal, PetscMemType mtype, PetscMemoryAccessMode mode, PetscType **ptr, PetscInt *n)
+PetscErrorCode PetscManagedTypeGetValues(PetscDeviceContext dctx, PetscManagedType scal, PetscMemType mtype, PetscMemoryAccessMode mode, PetscBool sync, PetscType **ptr, PetscInt *n)
 {
-  return PetscManagedTypeImpl::get_values(dctx,scal,mtype,mode,ptr,n);
-}
-
-PetscErrorCode PetscManagedTypeGetHostValuesSafe(PetscDeviceContext dctx, PetscManagedType scal, PetscMemoryAccessMode amode, PetscType **ptr, PetscInt *n)
-{
-  PetscFunctionBegin;
-  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
-  PetscCall(PetscManagedTypeGetValues(dctx,scal,PETSC_MEMTYPE_HOST,amode,ptr,n));
-  if (scal->state.tainted) {
-    scal->state.tainted = 0; // this is the only way to reset this state
-    PetscCall(PetscDeviceContextSynchronize(dctx));
-  }
-  PetscFunctionReturn(0);
+  return PetscManagedTypeImpl::get_values(dctx,scal,mtype,mode,sync,ptr,n);
 }
 
 PetscErrorCode PetscManagedTypeSetValues(PetscDeviceContext dctx, PetscManagedType scal, PetscMemType mtype, const PetscType *ptr, PetscInt n)
@@ -132,7 +119,6 @@ PetscErrorCode PetscManagedTypeEqual(PetscManagedType scal, PetscType val, Petsc
 #undef PetscManagedTypeCreateDefault
 #undef PetscManagedTypeDestroy
 #undef PetscManagedTypeGetValues
-#undef PetscManagedTypeGetHostValuesSafe
 #undef PetscManagedTypeSetValues
 #undef PetscManagedTypeGetPointerAndMemType
 #undef PetscManagedTypeEnsureOffload

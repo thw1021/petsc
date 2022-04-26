@@ -2025,6 +2025,23 @@ PetscErrorCode VecRestoreLocalVector(Vec v,Vec w)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode VecGetArrayAsync(Vec x, PetscScalar **a, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidPointer(a,2);
+  PetscCall(VecSetErrorIfLocked(x,1));
+  if (x->ops->getarray) {
+    /* The if-else order matters! VECNEST, VECCUDA etc should have ops->getarray while VECCUDA
+       etc are petscnative */
+    PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+    PetscCall((*x->ops->getarray)(x,a,dctx));
+  } else if (x->petscnative) { /* VECSTANDARD */
+    *a = *((PetscScalar**)x->data);
+  } else SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_SUP,"Cannot get array for vector type \"%s\"",((PetscObject)x)->type_name);
+  PetscFunctionReturn(0);
+}
+
 /*@C
    VecGetArray - Returns a pointer to a contiguous array that contains this
    processor's portion of the vector data. For the standard PETSc
@@ -2068,13 +2085,23 @@ $       call VecRestoreArray(x,x_array,i_x,ierr)
 PetscErrorCode VecGetArray(Vec x,PetscScalar **a)
 {
   PetscFunctionBegin;
+  PetscCall(VecGetArrayAsync(x,a,NULL));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecRestoreArrayAsync(Vec x, PetscScalar **a, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  PetscCall(VecSetErrorIfLocked(x,1));
-  if (x->ops->getarray) { /* The if-else order matters! VECNEST, VECCUDA etc should have ops->getarray while VECCUDA etc are petscnative */
-    PetscCall((*x->ops->getarray)(x,a));
+  if (a) PetscValidPointer(a,2);
+  if (x->ops->restorearray) { /* VECNEST, VECCUDA etc */
+    PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+    PetscCall((*x->ops->restorearray)(x,a,dctx));
   } else if (x->petscnative) { /* VECSTANDARD */
-    *a = *((PetscScalar**)x->data);
-  } else SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_SUP,"Cannot get array for vector type \"%s\"",((PetscObject)x)->type_name);
+    /* nothing */
+  } else SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_SUP,"Cannot restore array for vector type \"%s\"",((PetscObject)x)->type_name);
+  if (a) *a = NULL;
+  PetscCall(PetscObjectStateIncrease((PetscObject)x));
   PetscFunctionReturn(0);
 }
 
@@ -2095,16 +2122,24 @@ PetscErrorCode VecGetArray(Vec x,PetscScalar **a)
 PetscErrorCode VecRestoreArray(Vec x,PetscScalar **a)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  if (x->ops->restorearray) { /* VECNEST, VECCUDA etc */
-    PetscCall((*x->ops->restorearray)(x,a));
-  } else if (x->petscnative) { /* VECSTANDARD */
-    /* nothing */
-  } else SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_SUP,"Cannot restore array for vector type \"%s\"",((PetscObject)x)->type_name);
-  if (a) *a = NULL;
-  PetscCall(PetscObjectStateIncrease((PetscObject)x));
+  PetscCall(VecRestoreArrayAsync(x,a,NULL));
   PetscFunctionReturn(0);
 }
+
+PetscErrorCode VecGetArrayReadAsync(Vec x, const PetscScalar **a, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidPointer(a,2);
+  if (x->ops->getarray) { /* VECNEST, VECCUDA, VECKOKKOS etc */
+    PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+    PetscCall((*x->ops->getarray)(x,(PetscScalar**)a,dctx));
+  } else if (x->petscnative) { /* VECSTANDARD */
+    *a = *((PetscScalar**)x->data);
+  } else SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_SUP,"Cannot get array read for vector type \"%s\"",((PetscObject)x)->type_name);
+  PetscFunctionReturn(0);
+}
+
 /*@C
    VecGetArrayRead - Get read-only pointer to contiguous array containing this processor's portion of the vector data.
 
@@ -2132,12 +2167,23 @@ PetscErrorCode VecRestoreArray(Vec x,PetscScalar **a)
 PetscErrorCode VecGetArrayRead(Vec x,const PetscScalar **a)
 {
   PetscFunctionBegin;
+  PetscCall(VecGetArrayReadAsync(x,a,NULL));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecRestoreArrayReadAsync(Vec x, const PetscScalar **a, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  if (x->ops->getarray) { /* VECNEST, VECCUDA, VECKOKKOS etc */
-    PetscCall((*x->ops->getarray)(x,(PetscScalar**)a));
-  } else if (x->petscnative) { /* VECSTANDARD */
-    *a = *((PetscScalar**)x->data);
-  } else SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_SUP,"Cannot get array read for vector type \"%s\"",((PetscObject)x)->type_name);
+  if (a) PetscValidPointer(a,2);
+  if (x->petscnative) { /* VECSTANDARD, VECCUDA, VECKOKKOS etc */
+    /* nothing */
+  } else if (x->ops->restorearrayread) { /* VECNEST */
+    PetscCall((*x->ops->restorearrayread)(x,a,dctx));
+  } else { /* No one? */
+    PetscCall((*x->ops->restorearray)(x,(PetscScalar**)a,dctx));
+  }
+  if (a) *a = NULL;
   PetscFunctionReturn(0);
 }
 
@@ -2157,15 +2203,22 @@ PetscErrorCode VecGetArrayRead(Vec x,const PetscScalar **a)
 PetscErrorCode VecRestoreArrayRead(Vec x,const PetscScalar **a)
 {
   PetscFunctionBegin;
+  PetscCall(VecRestoreArrayReadAsync(x,a,NULL));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecGetArrayWriteAsync(Vec x, PetscScalar **a, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  if (x->petscnative) { /* VECSTANDARD, VECCUDA, VECKOKKOS etc */
-    /* nothing */
-  } else if (x->ops->restorearrayread) { /* VECNEST */
-    PetscCall((*x->ops->restorearrayread)(x,a));
-  } else { /* No one? */
-    PetscCall((*x->ops->restorearray)(x,(PetscScalar**)a));
+  PetscValidPointer(a,2);
+  PetscCall(VecSetErrorIfLocked(x,1));
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  if (x->ops->getarraywrite) {
+    PetscCall((*x->ops->getarraywrite)(x,a,dctx));
+  } else {
+    PetscCall(VecGetArrayAsync(x,a,dctx));
   }
-  if (a) *a = NULL;
   PetscFunctionReturn(0);
 }
 
@@ -2193,13 +2246,23 @@ PetscErrorCode VecRestoreArrayRead(Vec x,const PetscScalar **a)
 PetscErrorCode VecGetArrayWrite(Vec x,PetscScalar **a)
 {
   PetscFunctionBegin;
+  PetscCall(VecGetArrayWriteAsync(x,a,NULL));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecRestoreArrayWriteAsync(Vec x, PetscScalar **a, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  PetscCall(VecSetErrorIfLocked(x,1));
-  if (x->ops->getarraywrite) {
-    PetscCall((*x->ops->getarraywrite)(x,a));
-  } else {
-    PetscCall(VecGetArray(x,a));
+  if (a) PetscValidPointer(a,2);
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  if (x->ops->restorearraywrite) {
+    PetscCall((*x->ops->restorearraywrite)(x,a,dctx));
+  } else if (x->ops->restorearray) {
+    PetscCall((*x->ops->restorearray)(x,a,dctx));
   }
+  if (a) *a = NULL;
+  PetscCall(PetscObjectStateIncrease((PetscObject)x));
   PetscFunctionReturn(0);
 }
 
@@ -2220,14 +2283,7 @@ PetscErrorCode VecGetArrayWrite(Vec x,PetscScalar **a)
 PetscErrorCode VecRestoreArrayWrite(Vec x,PetscScalar **a)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  if (x->ops->restorearraywrite) {
-    PetscCall((*x->ops->restorearraywrite)(x,a));
-  } else if (x->ops->restorearray) {
-    PetscCall((*x->ops->restorearray)(x,a));
-  }
-  if (a) *a = NULL;
-  PetscCall(PetscObjectStateIncrease((PetscObject)x));
+  PetscCall(VecRestoreArrayWriteAsync(x,a,NULL));
   PetscFunctionReturn(0);
 }
 
@@ -2311,6 +2367,24 @@ PetscErrorCode  VecRestoreArrays(const Vec x[],PetscInt n,PetscScalar **a[])
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode VecGetArrayAndMemTypeAsync(Vec x, PetscScalar **a, PetscMemType *mtype, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
+  PetscValidPointer(a,2);
+  if (mtype) PetscValidPointer(mtype,3);
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  PetscCall(VecSetErrorIfLocked(x,1));
+  if (x->ops->getarrayandmemtype) { /* VECCUDA, VECKOKKOS etc */
+    PetscCall((*x->ops->getarrayandmemtype)(x,a,mtype,dctx));
+  } else { /* VECSTANDARD, VECNEST, VECVIENNACL */
+    PetscCall(VecGetArrayAsync(x,a,dctx));
+    if (mtype) *mtype = PETSC_MEMTYPE_HOST;
+  }
+  PetscFunctionReturn(0);
+}
+
 /*@C
    VecGetArrayAndMemType - Like VecGetArray(), but if this is a standard device vector (e.g., VECCUDA), the returned pointer will be a device
    pointer to the device memory that contains this processor's portion of the vector data. Device data is guaranteed to have the latest value.
@@ -2335,19 +2409,25 @@ PetscErrorCode  VecRestoreArrays(const Vec x[],PetscInt n,PetscScalar **a[])
 @*/
 PetscErrorCode VecGetArrayAndMemType(Vec x,PetscScalar **a,PetscMemType *mtype)
 {
-  PetscMemType   omtype;
+  PetscFunctionBegin;
+  PetscCall(VecGetArrayAndMemTypeAsync(x,a,mtype,NULL));
+  PetscFunctionReturn(0);
+}
 
+PetscErrorCode VecRestoreArrayAndMemTypeAsync(Vec x, PetscScalar **a, PetscDeviceContext dctx)
+{
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
   PetscValidType(x,1);
-  PetscCall(VecSetErrorIfLocked(x,1));
-  if (x->ops->getarrayandmemtype) { /* VECCUDA, VECKOKKOS etc */
-    PetscCall((*x->ops->getarrayandmemtype)(x,a,&omtype));
-  } else { /* VECSTANDARD, VECNEST, VECVIENNACL */
-    PetscCall(VecGetArray(x,a));
-    omtype = PETSC_MEMTYPE_HOST;
-  }
-  if (mtype) *mtype = omtype;
+  if (a) PetscValidPointer(a,2);
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  if (x->ops->restorearrayandmemtype) { /* VECCUDA, VECKOKKOS etc */
+    PetscCall((*x->ops->restorearrayandmemtype)(x,a,dctx));
+  } else if (x->ops->restorearray) { /* VECNEST, VECVIENNACL */
+    PetscCall((*x->ops->restorearray)(x,a,dctx));
+  } /* VECSTANDARD does nothing */
+  if (a) *a = NULL;
+  PetscCall(PetscObjectStateIncrease((PetscObject)x));
   PetscFunctionReturn(0);
 }
 
@@ -2368,15 +2448,32 @@ PetscErrorCode VecGetArrayAndMemType(Vec x,PetscScalar **a,PetscMemType *mtype)
 PetscErrorCode VecRestoreArrayAndMemType(Vec x,PetscScalar **a)
 {
   PetscFunctionBegin;
+  PetscCall(VecRestoreArrayAndMemTypeAsync(x,a,NULL));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecGetArrayReadAndMemTypeAsync(Vec x, const PetscScalar **a, PetscMemType *mtype, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
   PetscValidType(x,1);
-  if (x->ops->restorearrayandmemtype) { /* VECCUDA, VECKOKKOS etc */
-    PetscCall((*x->ops->restorearrayandmemtype)(x,a));
-  } else if (x->ops->restorearray) { /* VECNEST, VECVIENNACL */
-    PetscCall((*x->ops->restorearray)(x,a));
-  } /* VECSTANDARD does nothing */
-  if (a) *a = NULL;
-  PetscCall(PetscObjectStateIncrease((PetscObject)x));
+  PetscValidPointer(a,2);
+  if (mtype) {
+    PetscValidPointer(mtype,3);
+    *mtype = PETSC_MEMTYPE_HOST; // common case
+  }
+#if defined(PETSC_USE_DEBUG) // ????????????????????????????????????????????????????????
+  PetscCheck(!x->ops->getarrayreadandmemtype,PetscObjectComm((PetscObject)x),PETSC_ERR_SUP,"Not expected vector type \"%s\" has ops->getarrayreadandmemtype",((PetscObject)x)->type_name);
+#endif
+
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  if (x->ops->getarrayandmemtype) { /* VECCUDA, VECKOKKOS etc, though they are also petscnative */
+    PetscCall((*x->ops->getarrayandmemtype)(x,(PetscScalar**)a,mtype,dctx));
+  } else if (x->ops->getarray) { /* VECNEST, VECVIENNACL */
+    PetscCall((*x->ops->getarray)(x,(PetscScalar**)a,dctx));
+  } else if (x->petscnative) { /* VECSTANDARD */
+    *a = *((PetscScalar**)x->data);
+  } else SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_SUP,"Cannot get array read in place for vector type \"%s\"",((PetscObject)x)->type_name);
   PetscFunctionReturn(0);
 }
 
@@ -2401,25 +2498,24 @@ PetscErrorCode VecRestoreArrayAndMemType(Vec x,PetscScalar **a)
 @*/
 PetscErrorCode VecGetArrayReadAndMemType(Vec x,const PetscScalar **a,PetscMemType *mtype)
 {
-  PetscMemType   omtype;
+  PetscFunctionBegin;
+  PetscCall(VecGetArrayReadAndMemTypeAsync(x,a,mtype,NULL));
+  PetscFunctionReturn(0);
+}
 
+PetscErrorCode VecRestoreArrayReadAndMemTypeAsync(Vec x, const PetscScalar **a, PetscDeviceContext dctx)
+{
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
   PetscValidType(x,1);
- #if defined(PETSC_USE_DEBUG)
-  PetscCheck(!x->ops->getarrayreadandmemtype,PetscObjectComm((PetscObject)x),PETSC_ERR_SUP,"Not expected vector type \"%s\" has ops->getarrayreadandmemtype",((PetscObject)x)->type_name);
- #endif
-
-  if (x->ops->getarrayandmemtype) { /* VECCUDA, VECKOKKOS etc, though they are also petscnative */
-    PetscCall((*x->ops->getarrayandmemtype)(x,(PetscScalar**)a,&omtype));
-  } else if (x->ops->getarray) { /* VECNEST, VECVIENNACL */
-    PetscCall((*x->ops->getarray)(x,(PetscScalar**)a));
-    omtype = PETSC_MEMTYPE_HOST;
-  } else if (x->petscnative) { /* VECSTANDARD */
-    *a = *((PetscScalar**)x->data);
-    omtype = PETSC_MEMTYPE_HOST;
-  } else SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_SUP,"Cannot get array read in place for vector type \"%s\"",((PetscObject)x)->type_name);
-  if (mtype) *mtype = omtype;
+  if (a) PetscValidPointer(a,2);
+  if (x->petscnative) { /* VECSTANDARD, VECCUDA, VECKOKKOS, VECVIENNACL etc */
+    /* nothing */
+  } else if (x->ops->restorearrayread) { /* VECNEST */
+    PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+    PetscCall((*x->ops->restorearrayread)(x,a,dctx));
+  } else SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_SUP,"Cannot restore array read in place for vector type \"%s\"",((PetscObject)x)->type_name);
+  if (a) *a = NULL;
   PetscFunctionReturn(0);
 }
 
@@ -2439,14 +2535,27 @@ PetscErrorCode VecGetArrayReadAndMemType(Vec x,const PetscScalar **a,PetscMemTyp
 PetscErrorCode VecRestoreArrayReadAndMemType(Vec x,const PetscScalar **a)
 {
   PetscFunctionBegin;
+  PetscCall(VecRestoreArrayReadAndMemTypeAsync(x,a,NULL));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecGetArrayWriteAndMemTypeAsync(Vec x, PetscScalar **a, PetscMemType *mtype, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
   PetscValidType(x,1);
-  if (x->petscnative) { /* VECSTANDARD, VECCUDA, VECKOKKOS, VECVIENNACL etc */
-    /* nothing */
-  } else if (x->ops->restorearrayread) { /* VECNEST */
-    PetscCall((*x->ops->restorearrayread)(x,a));
-  } else SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_SUP,"Cannot restore array read in place for vector type \"%s\"",((PetscObject)x)->type_name);
-  if (a) *a = NULL;
+  PetscValidPointer(a,2);
+  if (mtype) {
+    PetscValidPointer(mtype,3);
+    *mtype = PETSC_MEMTYPE_HOST; // common case
+  }
+  if (x->ops->getarraywriteandmemtype) { /* VECCUDA, VECHIP, VECKOKKOS etc, though they are also petscnative */
+    PetscCall((*x->ops->getarrayandmemtype)(x,a,mtype,dctx));
+  } else if (x->ops->getarraywrite) { /* VECNEST, VECVIENNACL */
+    PetscCall((*x->ops->getarraywrite)(x,a,dctx));
+  } else if (x->petscnative) { /* VECSTANDARD */
+    *a = *((PetscScalar**)x->data);
+  } else SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_SUP,"Cannot get array read in place for vector type \"%s\"",((PetscObject)x)->type_name);
   PetscFunctionReturn(0);
 }
 
@@ -2472,21 +2581,8 @@ PetscErrorCode VecRestoreArrayReadAndMemType(Vec x,const PetscScalar **a)
 @*/
 PetscErrorCode VecGetArrayWriteAndMemType(Vec x,PetscScalar **a,PetscMemType *mtype)
 {
-  PetscMemType   omtype;
-
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  PetscValidType(x,1);
-  if (x->ops->getarraywriteandmemtype) { /* VECCUDA, VECHIP, VECKOKKOS etc, though they are also petscnative */
-    PetscCall((*x->ops->getarrayandmemtype)(x,a,&omtype));
-  } else if (x->ops->getarraywrite) { /* VECNEST, VECVIENNACL */
-    PetscCall((*x->ops->getarraywrite)(x,a));
-    omtype = PETSC_MEMTYPE_HOST;
-  } else if (x->petscnative) { /* VECSTANDARD */
-    *a = *((PetscScalar**)x->data);
-    omtype = PETSC_MEMTYPE_HOST;
-  } else SETERRQ(PetscObjectComm((PetscObject)x),PETSC_ERR_SUP,"Cannot get array read in place for vector type \"%s\"",((PetscObject)x)->type_name);
-  if (mtype) *mtype = omtype;
+  PetscCall(VecGetArrayWriteAndMemTypeAsync(x,a,mtype,NULL));
   PetscFunctionReturn(0);
 }
 
