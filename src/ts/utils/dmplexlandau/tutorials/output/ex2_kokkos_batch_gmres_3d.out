@@ -1,0 +1,22 @@
+masses:        e= 9.109e-31; ions in proton mass units:    2.000e+00  0.000e+00 ...
+charges:       e=-1.602e-19; charges in elementary units:  1.000e+00  0.000e+00
+n:             e:  1.000e+00                           i:  1.000e+00  0.000e+00
+thermal T (K): e= 2.321e+07 i= 1.160e+07  0.000e+00. v_0= 1.876e+07 ( 6.256e-02c) n_0= 1.000e+20 t_0= 1.637e-05, classical, Intuitive, 1 batched
+Domain radius (AMR levels) grid 0:  5.000e+00 (1) , 1:  5.835e-02 (1) 
+Using default Plex order for all matrices
+0) FormLandau 3456 IPs, 128 cells total, Nb=27, Nq=27, dim=3, Tab: Nb=27 Nf=2 Np=27 cdim=3 N=1458
+0 TS dt 0.1 time 0.
+  0) species 0: density=-1.4698620107662e+01, x-momentum=-3.0503856415844e-20, y-momentum= 1.0982965708641e-19, z-momentum= 1.6549338833594e-19, energy=  5.0600784900793e+04
+  0) species 1: density= 1.4698620107662e+01, x-momentum=-1.4027587775407e-18, y-momentum=-1.5004471084002e-19, z-momentum= 6.8052191848956e-18, energy=  2.5300392450396e+04
+	  0) Total: charge density=  0.0000000000000e+00, x-momentum= -1.4332626339566e-18, y-momentum= -4.0215053753609e-20, z-momentum=  6.9707125732315e-18, energy=  7.5901177351189e+04 (m_i[0]/m_e = 3670.94, 64 cells)
+  Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 7
+  Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 6
+  Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 6
+1 TS dt 0.114721 time 0.1
+  1) species 0: density=-1.4698620107662e+01, x-momentum=-7.1455629162369e-20, y-momentum=-1.1743644638678e-19, z-momentum= 9.7092884247737e-20, energy=  5.0600406348907e+04
+  1) species 1: density= 1.4698620107662e+01, x-momentum=-8.6041474631136e-19, y-momentum=-4.9868362470535e-18, z-momentum= 7.5239521300507e-18, energy=  2.5300771002291e+04
+	  1) Total: charge density= -8.8817841970013e-15, x-momentum= -9.3187037547373e-19, y-momentum= -5.1042726934403e-18, z-momentum=  7.6210450142985e-18, energy=  7.5901177351198e+04 (m_i[0]/m_e = 3670.94, 64 cells)
+0 TS dt 0.1 time 0.
+  0) species 0: density=-1.4698620107662e+01, x-momentum=-3.0503856415844e-20, y-momentum= 1.0982965708641e-19, z-momentum= 1.6549338833594e-19, energy=  5.0600784900793e+04
+  0) species 1: density= 1.4698620107662e+01, x-momentum=-1.4027587775407e-18, y-momentum=-1.5004471084002e-19, z-momentum= 6.8052191848956e-18, energy=  2.5300392450396e+04
+	  0) Total: charge density=  0.0000000000000e+00, x-momentum= -1.4332626339566e-18, y-momentum= -4.0215053753609e-20, z-momentum=  6.9707125732315e-18, energy=  7.5901177351189e+04 (m_i[0]/m_e = 3670.94, 64 cells)

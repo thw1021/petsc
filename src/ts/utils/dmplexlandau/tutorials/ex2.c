@@ -773,7 +773,7 @@ int main(int argc, char **argv)
     test:
       suffix: kokkos_batch
       requires: kokkos_kernels
-      args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type preonly -pc_type bjkokkos -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_pc_type jacobi
+      args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type preonly -pc_type bjkokkos -pc_bjkokkos_ksp_type bicg -pc_bjkokkos_pc_type jacobi
     test:
       suffix: kokkos_batch_gmres
       requires: kokkos_kernels
@@ -781,6 +781,11 @@ int main(int argc, char **argv)
     test:
       suffix: kokkos_batch_coo
       requires: kokkos_kernels
-      args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type preonly -pc_type bjkokkos -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_pc_type jacobi -dm_landau_coo_assembly
+      args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type preonly -pc_type bjkokkos -pc_bjkokkos_ksp_type bicg -pc_bjkokkos_pc_type jacobi -dm_landau_coo_assembly
+
+  test:
+    requires: p4est !complex double kokkos_kernels cuda !defined(PETSC_USE_DMLANDAU_2D)
+    suffix: kokkos_batch_gmres_3d
+    args: -dim 3 -dm_landau_num_species_grid 1,1 -petscspace_degree 2 -petscspace_poly_tensor 1 -dm_landau_type p8est -dm_landau_ion_masses 2 -dm_landau_ion_charges 1 -dm_landau_thermal_temps 2,1 -dm_landau_n 1,1 -ts_monitor -snes_rtol 1.e-10 -snes_stol 1.e-12 -snes_converged_reason -snes_max_it 20 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-3 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 0 -ts_adapt_scale_solve_failed 0.75 -ts_adapt_time_step_increase_delay 5 -dm_landau_amr_levels_max 1,1 -dm_landau_gpu_assembly true -dm_landau_batch_size 1  -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type preonly -pc_type bjkokkos -pc_bjkokkos_ksp_type gmres -pc_bjkokkos_pc_type jacobi
 
 TEST*/

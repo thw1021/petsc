@@ -205,7 +205,7 @@ struct Functor_TestBatchedTeamVectorGMRES {
     using Operator = KokkosBatched::CrsMatrix<ValuesViewType, ScratchPadIntViewType>;
 
     ScratchPadIntViewType r(member.team_scratch(0), _r.extent(1));
-    ScratchPadIntViewType c(member.team_scratch(0), _c.extent(1));
+    ScratchPadIntViewType c(member.team_scratch(1), _c.extent(1));
 
     TeamVectorCopy1D::invoke(member, Kokkos::subview(_r,graphID, Kokkos::ALL), r);
     TeamVectorCopy1D::invoke(member, Kokkos::subview(_c,graphID, Kokkos::ALL), c);
@@ -262,12 +262,12 @@ struct Functor_TestBatchedTeamVectorGMRES {
     size_t bytes_2D_1 = ViewType2D::shmem_size(_N_team, _X.extent(1));
     size_t bytes_2D_2 = ViewType2D::shmem_size(_N_team, maximum_iteration+1);
 
-    size_t bytes_int = bytes_row_ptr + bytes_col_idc;
     size_t bytes_diag = bytes_2D_1;
     size_t bytes_tmp = 2 * bytes_2D_1 + 2 * bytes_1D + bytes_2D_2;
 
-    policy.set_scratch_size(0, Kokkos::PerTeam(bytes_tmp + bytes_diag + bytes_int));
-    PetscInfo(pc,"%d scratch memory = %d + %d + bytes_2D_2=%d + %d + %d. maximum_iteration = %d\n", bytes_tmp + bytes_diag + bytes_int, 2 * bytes_2D_1, 2 * bytes_1D, bytes_2D_2, bytes_diag, bytes_int, maximum_iteration);
+    policy.set_scratch_size(0, Kokkos::PerTeam(bytes_tmp + bytes_diag + bytes_row_ptr));
+    policy.set_scratch_size(1, Kokkos::PerTeam(bytes_col_idc));
+    PetscInfo(pc,"%d scratch memory(0) = %d + %d + bytes_2D_2=%d + %d + %d. scratch memory(1) = %d. maximum_iteration = %d\n", bytes_tmp + bytes_diag + bytes_row_ptr, 2 * bytes_2D_1, 2 * bytes_1D, bytes_2D_2, bytes_diag, bytes_row_ptr, bytes_col_idc, maximum_iteration);
     exec_space().fence();
     timer.reset();
     Kokkos::parallel_for(name.c_str(), policy, *this);
@@ -302,6 +302,7 @@ static PetscErrorCode  PCBJKOKKOSCreateKSP_BJKOKKOS(PC pc)
   jac->monitor      = PETSC_FALSE;
   jac->batch_target = 0;
   jac->nsolves_team = 1;
+  jac->ksp->max_it = 50; // this is realy for GMRES w/o restarts
   PetscFunctionReturn(0);
 }
 
@@ -799,30 +800,30 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
         // assume species major - clone from Kokkos solvers
 #if PCBJKOKKOS_VERBOSE_LEVEL >= 1
 #if PCBJKOKKOS_VERBOSE_LEVEL >= 2
-        PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Iterations\n"));
+        PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A),"Iterations\n"));
 #else
-        PetscCall(PetscPrintf(PETSC_COMM_WORLD,"max iterations per species (gmres) :"));
+        PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A),"max iterations per species (gmres) :"));
 #endif
         for (PetscInt dmIdx=0, s=0, head=0 ; dmIdx < jac->num_dms; dmIdx += batch_sz) {
           for (PetscInt f=0, idx=head ; f < jac->dm_Nf[dmIdx] ; f++,s++,idx++) {
 #if PCBJKOKKOS_VERBOSE_LEVEL >= 2
-            PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%2D:", s));
+            PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A),"%2D:", s));
             for (int bid=0 ; bid<batch_sz ; bid++) {
-              PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%3D ", handle.get_iteration_host(idx + bid*jac->dm_Nf[dmIdx])));
+              PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A),"%3D ", handle.get_iteration_host(idx + bid*jac->dm_Nf[dmIdx])));
             }
-            PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n"));
+            PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A),"\n"));
 #else
-            PetscInt count=0, ii;
+            int count=0, ii;
             for (int bid=0 ; bid<batch_sz ; bid++) {
               if ((ii=handle.get_iteration_host(idx + bid*jac->dm_Nf[dmIdx])) > count) count = ii;
             }
-            PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%3D ", count));
+            PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A),"%3d", count));
 #endif
           }
           head += batch_sz*jac->dm_Nf[dmIdx];
         }
 #if PCBJKOKKOS_VERBOSE_LEVEL < 2
-        PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n"));
+        PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A),"\n"));
 #endif
 #endif
         PetscInt count=0, mbid=0;
@@ -830,18 +831,18 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
           //PetscCall(PetscLogGpuFlops((PetscLogDouble)h_metadata[blkID].flops));
           if (jac->reason) { // -pc_bjkokkos_ksp_converged_reason
             if (jac->batch_target==blkID) {
-              PetscCall(PetscPrintf(PETSC_COMM_SELF,  "    Linear solve %s in %d iterations, batch %" PetscInt_FMT ", species %" PetscInt_FMT "\n", handle.is_converged_host(blkID) ? "converged" : "diverged", handle.get_iteration_host(blkID), blkID%batch_sz, blkID/batch_sz));
+              PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A),  "    Linear solve %s in %d iterations, batch %" PetscInt_FMT ", species %" PetscInt_FMT "\n", handle.is_converged_host(blkID) ? "converged" : "diverged", handle.get_iteration_host(blkID), blkID%batch_sz, blkID/batch_sz));
             } else if (jac->batch_target==-1 && handle.get_iteration_host(blkID) > count) {
               count = handle.get_iteration_host(blkID);
               mbid = blkID;
             }
             if (!handle.is_converged_host(blkID)) {
-              PetscCall(PetscPrintf(PETSC_COMM_SELF, "ERROR species %" PetscInt_FMT ", batch %" PetscInt_FMT " did not converge with %" PetscInt_FMT " iterations\n",blkID/batch_sz,blkID%batch_sz));
+              PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "ERROR species %" PetscInt_FMT ", batch %" PetscInt_FMT " did not converge with %" PetscInt_FMT " iterations\n",blkID/batch_sz,blkID%batch_sz,handle.get_iteration_host(blkID)));
             }
           }
         }
         if (jac->batch_target==-1 && jac->reason) {
-          PetscCall(PetscPrintf(PETSC_COMM_SELF,  "    Linear solve %s in %d iteration, batch %" PetscInt_FMT ", specie %" PetscInt_FMT "\n", handle.is_converged_host(mbid) ? "converged" : "diverged",count,mbid%batch_sz,mbid/batch_sz));
+          PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A),  "    Linear solve %s in %d iteration, batch %" PetscInt_FMT ", specie %" PetscInt_FMT "\n", handle.is_converged_host(mbid) ? "converged" : "diverged",count,mbid%batch_sz,mbid/batch_sz));
         }
       }
       // return error code
@@ -905,28 +906,28 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
 #endif
       // assume species major
 #if PCBJKOKKOS_VERBOSE_LEVEL < 4
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD,"max iterations per species (%s) :",ksp_type_idx==BATCH_KSP_BICG_IDX ? "bicg" : "tfqmr"));
+      PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A),"max iterations per species (%s) :",ksp_type_idx==BATCH_KSP_BICG_IDX ? "bicg" : "tfqmr"));
 #endif
       for (PetscInt dmIdx=0, s=0, head=0 ; dmIdx < jac->num_dms; dmIdx += batch_sz) {
         for (PetscInt f=0, idx=head ; f < jac->dm_Nf[dmIdx] ; f++,s++,idx++) {
 #if PCBJKOKKOS_VERBOSE_LEVEL >= 4
-        PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%2" PetscInt_FMT ":", s));
+        PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A),"%2" PetscInt_FMT ":", s));
         for (int bid=0 ; bid<batch_sz ; bid++) {
-         PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%3" PetscInt_FMT " ", h_metadata[idx + bid*jac->dm_Nf[dmIdx]].its));
+         PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A),"%3" PetscInt_FMT " ", h_metadata[idx + bid*jac->dm_Nf[dmIdx]].its));
         }
-        PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n"));
+        PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A),"\n"));
 #else
         PetscInt count=0;
         for (int bid=0 ; bid<batch_sz ; bid++) {
           if (h_metadata[idx + bid*jac->dm_Nf[dmIdx]].its > count) count = h_metadata[idx + bid*jac->dm_Nf[dmIdx]].its;
         }
-        PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%3" PetscInt_FMT " ", count));
+        PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A),"%3" PetscInt_FMT " ", count));
 #endif
         }
         head += batch_sz*jac->dm_Nf[dmIdx];
       }
 #if PCBJKOKKOS_VERBOSE_LEVEL < 4
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD,"\n"));
+      PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A),"\n"));
 #endif
 #endif
       PetscInt count=0, mbid=0;
@@ -934,19 +935,19 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
         PetscCall(PetscLogGpuFlops((PetscLogDouble)h_metadata[blkID].flops));
         if (jac->reason) { // -pc_bjkokkos_ksp_converged_reason
           if (jac->batch_target==blkID) {
-            PetscCall(PetscPrintf(PETSC_COMM_SELF,  "    Linear solve converged due to %s iterations %d, batch %" PetscInt_FMT ", species %" PetscInt_FMT "\n", KSPConvergedReasons[h_metadata[blkID].reason], h_metadata[blkID].its, blkID%batch_sz, blkID/batch_sz));
+            PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A),  "    Linear solve converged due to %s iterations %d, batch %" PetscInt_FMT ", species %" PetscInt_FMT "\n", KSPConvergedReasons[h_metadata[blkID].reason], h_metadata[blkID].its, blkID%batch_sz, blkID/batch_sz));
           } else if (jac->batch_target==-1 && h_metadata[blkID].its > count) {
             count = h_metadata[blkID].its;
             mbid = blkID;
           }
           if (h_metadata[blkID].reason < 0) {
-            PetscCall(PetscPrintf(PETSC_COMM_SELF, "ERROR reason=%s, its=%" PetscInt_FMT ". species %" PetscInt_FMT ", batch %" PetscInt_FMT "\n",
+            PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "ERROR reason=%s, its=%" PetscInt_FMT ". species %" PetscInt_FMT ", batch %" PetscInt_FMT "\n",
                                   KSPConvergedReasons[h_metadata[blkID].reason],h_metadata[blkID].its,blkID/batch_sz,blkID%batch_sz));
           }
         }
       }
       if (jac->batch_target==-1 && jac->reason) {
-        PetscCall(PetscPrintf(PETSC_COMM_SELF,  "    Linear solve converged due to %s iterations %d, batch %" PetscInt_FMT ", specie %" PetscInt_FMT "\n", KSPConvergedReasons[h_metadata[mbid].reason], h_metadata[mbid].its,mbid%batch_sz,mbid/batch_sz));
+        PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A),"    Linear solve converged due to %s iterations %d, batch %" PetscInt_FMT ", specie %" PetscInt_FMT "\n", KSPConvergedReasons[h_metadata[mbid].reason], h_metadata[mbid].its,mbid%batch_sz,mbid/batch_sz));
       }
       {
         int errsum;
