@@ -337,6 +337,7 @@ struct InterfaceImpl<DeviceType::CUDA> : InterfaceBase<DeviceType::CUDA>
   PETSC_CUPM_ALIAS_FUNCTION(StreamQuery);
   PETSC_CUPM_ALIAS_FUNCTION(StreamSynchronize);
   PETSC_CUPM_ALIAS_FUNCTION(DeviceSynchronize);
+  PETSC_CUPM_ALIAS_FUNCTION(GetSymbolAddress);
 
   // memory management
   PETSC_CUPM_ALIAS_FUNCTION(Free);
@@ -468,6 +469,7 @@ struct InterfaceImpl<DeviceType::HIP> : InterfaceBase<DeviceType::HIP>
   PETSC_CUPM_ALIAS_FUNCTION(StreamQuery);
   PETSC_CUPM_ALIAS_FUNCTION(StreamSynchronize);
   PETSC_CUPM_ALIAS_FUNCTION(DeviceSynchronize);
+  PETSC_CUPM_ALIAS_FUNCTION(GetSymbolAddress);
 
   // memory management
   PETSC_CUPM_ALIAS_FUNCTION(Free);
@@ -560,6 +562,7 @@ struct InterfaceImpl<DeviceType::HIP> : InterfaceBase<DeviceType::HIP>
   using base_name::cupmStreamQuery;                                     \
   using base_name::cupmStreamSynchronize;                               \
   using base_name::cupmDeviceSynchronize;                               \
+  using base_name::cupmGetSymbolAddress;                                \
   using base_name::cupmFree;                                            \
   using base_name::cupmFreeAsync;                                       \
   using base_name::cupmMalloc;                                          \

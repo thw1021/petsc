@@ -449,7 +449,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::destroyManagedType(PetscD
     PetscMemType mtype;
 
     // if the pointer is managed memory we need to call cupmFree() on it
-    PetscCallCUPM(cupmGetMemType(host_ptr,&mtype));
+    PetscCall(cupmGetMemType(host_ptr,&mtype));
     if (PetscMemTypeDevice(mtype)) {
       PetscCallCUPM(cupmFreeAsync(host_ptr,stream));
       host_ptr = nullptr;
@@ -473,25 +473,30 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::getManagedTypeValues(Pets
   const auto n               = scal->n;
   const auto update_and_copy = [&](PetscType *dest, const PetscType *src, PetscOffloadMask default_mask, cupmMemcpyKind_t direction)
   {
-    PetscFunctionBegin;
-    scal->mask = default_mask;
-    // if we want any kind of read (read or read_write) and we have valid SRC, we need to copy
-    // it now
-    if ((mode != PETSC_MEMORY_ACCESS_WRITE) && src) {
-      const auto size = n*sizeof(*src);
+    auto& mask = scal->mask;
 
-      PetscCallCUPM(cupmMemcpyAsync(dest,src,n*sizeof(*src),direction,impls_cast_(dctx)->stream));
-      switch (direction) {
-      case cupmMemcpyDeviceToHost:
-        PetscCall(PetscLogGpuToCpu(size));
-        break;
-      case cupmMemcpyHostToDevice:
-        PetscCall(PetscLogCpuToGpu(size));
-      default:
-        break;
+    PetscFunctionBegin;
+    // no need to do anything if we already match the desired offload
+    if (mask != default_mask && mask != PETSC_OFFLOAD_BOTH) {
+      mask = default_mask;
+      // if we want any kind of read (read or read_write) and we have valid SRC, we need to copy
+      // it now
+      if ((mode != PETSC_MEMORY_ACCESS_WRITE) && src) {
+        const auto size = n*sizeof(*src);
+
+        PetscCallCUPM(cupmMemcpyAsync(dest,src,size,direction,impls_cast_(dctx)->stream));
+        switch (direction) {
+        case cupmMemcpyDeviceToHost:
+          PetscCall(PetscLogGpuToCpu(size));
+          break;
+        case cupmMemcpyHostToDevice:
+          PetscCall(PetscLogCpuToGpu(size));
+        default:
+          break;
+        }
+        // if read-only then update the offloadmask
+        if (mode == PETSC_MEMORY_ACCESS_READ) mask = PETSC_OFFLOAD_BOTH;
       }
-      // if read-only then update the offloadmask
-      if (mode == PETSC_MEMORY_ACCESS_READ) scal->mask = PETSC_OFFLOAD_BOTH;
     }
     *ptr = dest;
     PetscFunctionReturn(0);

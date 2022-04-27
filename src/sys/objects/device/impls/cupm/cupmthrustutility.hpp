@@ -74,16 +74,22 @@ PETSC_DECLTYPE_NOEXCEPT_AUTO_RETURNS(
   shift_operator<T,BinaryOperator>{s,std::forward<BinaryOperator>(op)}
 );
 
+#define PetscValidDevicePointer(ptr,argno) PetscAssert(ptr,PETSC_COMM_SELF,PETSC_ERR_POINTER,"Null device pointer for " PetscStringize(ptr) " Argument #%d",argno);
+
 // actual implementation that calls thrust, 2 argument version
 template <DeviceType DT, typename FunctorType, typename T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustApplyPointwise(typename Interface<DT>::cupmStream_t stream, FunctorType&& functor, PetscInt n, T *xinout, T *yin = nullptr))
 {
-  const auto xptr = thrust::device_pointer_cast(xinout);
-  const auto retptr = (yin && (yin != xinout)) ? thrust::device_pointer_cast(yin) : xptr;
-
   PetscFunctionBegin;
-  CHKERRTHRUST(THRUST_CALL(thrust::transform,stream,xptr,xptr+n,retptr,std::forward<FunctorType>(functor)));
-  PetscCall(PetscLogGpuFlops(n));
+  PetscAssert(n >= 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"n %" PetscInt_FMT " must be >= 0",n);
+  PetscValidDevicePointer(xinout,4);
+  if (PetscLikely(n)) {
+    const auto xptr = thrust::device_pointer_cast(xinout);
+    const auto retptr = (yin && (yin != xinout)) ? thrust::device_pointer_cast(yin) : xptr;
+
+    CHKERRTHRUST(THRUST_CALL(thrust::transform,stream,xptr,xptr+n,retptr,std::forward<FunctorType>(functor)));
+    PetscCall(PetscLogGpuFlops(n));
+  }
   PetscFunctionReturn(0);
 }
 
@@ -91,20 +97,26 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustApplyPointwise(typename Interface<DT>
 template <DeviceType DT, typename FunctorType, typename T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustApplyPointwise(typename Interface<DT>::cupmStream_t stream, FunctorType&& functor, PetscInt n, const T *xin, const T *yin, T *zin))
 {
-  const auto xptr = thrust::device_pointer_cast(xin);
-
   PetscFunctionBegin;
+  PetscAssert(n >= 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"n %" PetscInt_FMT " must be >= 0",n);
+  PetscValidDevicePointer(xin,4);
+  PetscValidDevicePointer(yin,5);
+  PetscValidDevicePointer(zin,6);
   PetscAssert((xin != yin) && (xin != zin) && (zin != yin),PETSC_COMM_SELF,PETSC_ERR_PLIB,"Must have disjoint pointers when passing all three!");
-  CHKERRTHRUST(
-    THRUST_CALL(
-      thrust::transform,stream,
-      xptr,xptr+n,
-      thrust::device_pointer_cast(yin),
-      thrust::device_pointer_cast(zin),
-      std::forward<FunctorType>(functor)
-    )
-  );
-  PetscCall(PetscLogGpuFlops(n));
+  if (PetscLikely(n)) {
+    const auto xptr = thrust::device_pointer_cast(xin);
+
+    CHKERRTHRUST(
+      THRUST_CALL(
+        thrust::transform,stream,
+        xptr,xptr+n,
+        thrust::device_pointer_cast(yin),
+        thrust::device_pointer_cast(zin),
+        std::forward<FunctorType>(functor)
+      )
+    );
+    PetscCall(PetscLogGpuFlops(n));
+  }
   PetscFunctionReturn(0);
 }
 

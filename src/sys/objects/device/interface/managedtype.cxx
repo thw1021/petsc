@@ -6,9 +6,8 @@
 #include <type_traits> // std::is_trivially_copyable
 
 template <typename T>
-class PetscManagedTypeAllocator : public Petsc::AllocatorBase<T>
+struct PetscManagedTypeAllocator : Petsc::AllocatorBase<T>
 {
-public:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode create(T *mscal))
   {
     using Petsc::util::integral_value;
@@ -104,21 +103,21 @@ template <typename T = void>
 PetscErrorCode destroy_managed_type_fn(PetscDeviceContext,...) noexcept
 {
   static_assert(!std::is_same<T,T>::value,"This template should never be called");
-  return 0;
+  return PETSC_ERR_PLIB;
 }
 
 template <typename T = void>
 PetscErrorCode get_managed_values_fn(PetscDeviceContext,...) noexcept
 {
   static_assert(!std::is_same<T,T>::value,"This template should never be called");
-  return 0;
+  return PETSC_ERR_PLIB;
 }
 
 template <typename T = void>
 PetscErrorCode apply_operator_fn(PetscDeviceContext,...) noexcept
 {
   static_assert(!std::is_same<T,T>::value,"This template should never be called");
-  return 0;
+  return PETSC_ERR_PLIB;
 }
 
 template <typename T, typename MT>
@@ -195,7 +194,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::get_values(Pets
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   PetscValidPointer(scal,2);
   PetscCall(check_lock(scal));
-  PetscValidPointer(ptr,5);
+  PetscValidPointer(ptr,6);
   PetscCall(get_managed_values_fn(dctx,scal,mtype,mode,ptr));
   // if user intends to write to device in any capacity then we are tainted
   if (PetscMemTypeDevice(mtype) && (mode != PETSC_MEMORY_ACCESS_READ)) scal->state.tainted = 1;
@@ -203,6 +202,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::get_values(Pets
     if (PetscMemTypeHost(mtype)) scal->state.tainted = 0; // only way to reset this state
     PetscCall(PetscDeviceContextSynchronize(dctx));
   }
+  PetscAssert(*ptr,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Returned null pointer for mtype %d",mtype);
   PetscFunctionReturn(0);
 }
 
@@ -270,7 +270,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::ensure_offload(
 {
   PetscFunctionBegin;
   PetscValidPointer(scal,2);
-  if (scal->mask != omask) {
+  if ((scal->mask != PETSC_OFFLOAD_BOTH) && (scal->mask != omask)) {
     const auto OffloadToMemType = [&](PetscMemType mtype)
     {
       PetscType PETSC_UNUSED *ptr;
@@ -302,9 +302,10 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::copy(PetscDevic
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   PetscValidPointer(dest,2);
   PetscValidPointer(src,3);
+  PetscCheckCompatibleDeviceTypes(dest->dtype,2,src->dtype,3);
+  PetscAssert(dest->n >= src->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Destination size %" PetscInt_FMT " not large enough for source size %" PetscInt_FMT,dest->n,src->n);
   PetscCall(get_pointer_and_mem_type(dctx,dest,PETSC_MEMORY_ACCESS_WRITE,&dest_ptr,&dest_mtype));
   PetscCall(get_pointer_and_mem_type(dctx,src,PETSC_MEMORY_ACCESS_READ,&src_ptr,&src_mtype));
-  PetscAssert(dest->n >= src->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Destination size %" PetscInt_FMT " not large enough for source size %" PetscInt_FMT,dest->n,src->n);
   PetscCall(PetscDeviceArrayCopy(dctx,dest_ptr,src_ptr,dest->n,PetscMemTypeToDeviceCopyMode(dest_mtype,src_mtype)));
   PetscFunctionReturn(0);
 }
