@@ -23,6 +23,7 @@
 #define PetscManagedTypeCreateDefault        PetscConcat(PetscManagedTypeCreate,Default)
 #define PetscManageHostType                  PetscConcat(PetscManageHost,PetscTypeSuffix)
 #define PetscManageDeviceType                PetscConcat(PetscManageDevice,PetscTypeSuffix)
+#define PetscManagedHostTypeDestroy          PetscConcat(PetscConcat(PetscManagedHost,PetscTypeSuffix),Destroy)
 #define PetscManagedTypeDestroy              PetscConcat(PetscManagedType,Destroy)
 #define PetscManagedTypeGetValues            PetscConcat(PetscManagedType,GetValues)
 #define PetscManagedTypeSetValues            PetscConcat(PetscManagedType,SetValues)
@@ -116,7 +117,10 @@ PetscErrorCode PetscManagedTypeGetPointerAndMemType(PetscDeviceContext dctx, Pet
 );
 
 PETSC_MANAGED_TYPE_DECL_OR_STUB(
-PetscErrorCode PetscManagedTypeEnsureOffload(PetscDeviceContext PETSC_NO_DEVICE_UNUSED dctx, PetscManagedType PETSC_NO_DEVICE_UNUSED scal, PetscOffloadMask PETSC_NO_DEVICE_UNUSED mask), { return 0; }
+PetscErrorCode PetscManagedTypeEnsureOffload(PetscDeviceContext PETSC_NO_DEVICE_UNUSED dctx, PetscManagedType PETSC_NO_DEVICE_UNUSED scal, PetscOffloadMask PETSC_NO_DEVICE_UNUSED mask),
+{
+  return 0;
+}
 );
 
 PETSC_MANAGED_TYPE_DECL_OR_STUB(
@@ -217,6 +221,14 @@ static inline PetscErrorCode PetscManagedTypeGetSize(PetscManagedType scal, Pets
   PetscFunctionReturn(0);
 }
 
+static inline PetscErrorCode PetscManagedHostTypeDestroy(PetscDeviceContext dctx, PetscManagedType *scal)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscManagedTypeEnsureOffload(dctx,*scal,PETSC_OFFLOAD_CPU));
+  PetscCall(PetscManagedTypeDestroy(dctx,scal));
+  PetscFunctionReturn(0);
+}
+
 #undef PETSC_NO_DEVICE_UNUSED
 #undef PETSC_MANAGED_TYPE_DECL_OR_STUB
 
@@ -225,6 +237,7 @@ static inline PetscErrorCode PetscManagedTypeGetSize(PetscManagedType scal, Pets
 #undef PetscManageDeviceType
 #undef PetscManagedTypeCreateDefault
 #undef PetscManagedTypeDestroy
+#undef PetscManagedHostTypeDestroy
 #undef PetscManagedTypeGetValues
 #undef PetscManagedTypeSetValues
 #undef PetscManagedTypeGetPointerAndMemType

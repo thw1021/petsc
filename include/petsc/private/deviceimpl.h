@@ -449,6 +449,30 @@ static inline PetscErrorCode PetscDeviceContextAllReduceManagedReal_Internal(Pet
 #define PetscDeviceContextAllReduceManagedInt_Internal(d,s,o,n,op)        0
 #endif /* PETSC_HAVE_CXX for PetscDeviceContext Internal Functions */
 
+#define PetscWrapHostTypeAndDctx(Type,ptr_name__,ptr_size__,scal_name__,dctx_name__,...) do {  \
+    PetscManaged ## Type scal_name__;                                                          \
+                                                                                               \
+    PetscCall(PetscManageHost ## Type(dctx_name__,ptr_name__,ptr_size__,&scal_name__));        \
+    __VA_ARGS__;                                                                               \
+    PetscCall(PetscManagedHost ## Type ## Destroy(dctx_name__,scal_name__));                   \
+  } while (0)
+
+#define PetscWrapHostType(Type,ptr_name__,ptr_size__,scal_name__,...) do {              \
+    PetscDeviceContext dctx;                                                            \
+                                                                                        \
+    PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));                        \
+    PetscWrapHostTypeAndDctx(Type,ptr_name__,ptr_size__,scal_name__,dctx,__VA_ARGS__);  \
+} while (0)
+
+#define PetscWrapHostScalar(ptr_name,ptr_size,scal_name,...)            \
+  PetscWrapHostType(Scalar,ptr_name,ptr_size,scal_name,__VA_ARGS__)
+
+#define PetscWrapHostReal(ptr_name,ptr_size,scal_name,...)              \
+  PetscWrapHostType(Real,ptr_name,ptr_size,scal_name,__VA_ARGS__)
+
+#define PetscWrapHostInt(ptr_name,ptr_size,scal_name,...)               \
+  PetscWrapHostType(Int,ptr_name,ptr_size,scal_name,__VA_ARGS__)
+
 PETSC_INTERN PetscErrorCode PetscDeviceContextCreate_HOST(PetscDeviceContext);
 
 #if PetscDefined(HAVE_CUDA)
