@@ -15,17 +15,19 @@
 #endif
 
 #if PetscDefined(HAVE_CUPM) && (PetscDefined(USING_NVCC) || PetscDefined(USING_HCC))
-#  define PETSC_HOST_DECL       __host__
-#  define PETSC_DEVICE_DECL     __device__
-#  define PETSC_KERNEL_DECL     __global__
-#  define PETSC_SHAREDMEM_DECL  __shared__
-#  define PETSC_FORCEINLINE     __forceinline__
+#  define PETSC_HOST_DECL      __host__
+#  define PETSC_DEVICE_DECL    __device__
+#  define PETSC_KERNEL_DECL    __global__
+#  define PETSC_SHAREDMEM_DECL __shared__
+#  define PETSC_FORCEINLINE    __forceinline__
+#  define PETSC_CONSTMEM_DECL  __constant__
 #else
 #  define PETSC_HOST_DECL
 #  define PETSC_DEVICE_DECL
 #  define PETSC_KERNEL_DECL
 #  define PETSC_SHAREDMEM_DECL
-#  define PETSC_FORCEINLINE     inline
+#  define PETSC_FORCEINLINE    inline
+#  define PETSC_CONSTMEM_DECL
 #endif
 
 #define PETSC_HOSTDEVICE_DECL        PETSC_HOST_DECL PETSC_DEVICE_DECL

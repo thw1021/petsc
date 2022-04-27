@@ -661,9 +661,9 @@ PetscErrorCode PetscDeviceContextGetNullContextForDevice_Internal(PetscDevice de
     const auto finalizer = []
     {
       PetscFunctionBegin;
-      for (auto&& dvec : nullContexts) {
-        for (auto&& dctx : dvec) PetscCall(PetscDeviceContextDestroy(&dctx));
-        dvec.clear();
+      for (auto& dvec : nullContexts) {
+        for (auto dctx : dvec) PetscCall(PetscDeviceContextDestroy(&dctx));
+        PetscCallCXX(dvec.clear());
       }
       nullContextsFinalizer = false;
       PetscFunctionReturn(0);

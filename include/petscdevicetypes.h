@@ -250,6 +250,7 @@ PETSC_NODISCARD static inline PETSC_CONSTEXPR_14 PetscMemType PetscOffloadMaskTo
 PETSC_NODISCARD static inline PetscErrorCode PetscOffloadMaskToDeviceCopyMode(PetscOffloadMask dest, PetscOffloadMask src, PetscDeviceCopyMode *mode)
 {
   PetscFunctionBegin;
+  *mode = PETSC_DEVICE_COPY_AUTO;
   PetscAssert(dest != PETSC_OFFLOAD_UNALLOCATED,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot copy to unallocated");
   PetscAssert(src != PETSC_OFFLOAD_UNALLOCATED,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot copy from unallocated");
 

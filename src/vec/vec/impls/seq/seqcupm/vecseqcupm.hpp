@@ -353,6 +353,17 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::restorelocalvector_async(Ve
 // ================================================================================== //
 //                                   compute methods                                  //
 
+namespace detail
+{
+
+// REVIEW ME:
+// 1. find a way to not have this be a global variable. problem is that you cant attach device
+//    memory spaces to class member variables (static or otherwise) or inside host functions...
+// 2. allocating and de-allocating this one demand seems dumb too...
+static PETSC_CONSTMEM_DECL PETSC_DEVICE_DECL PetscScalar GlobalDeviceOne = 1.0;
+
+} // namespace detail
+
 template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::aypx_async(Vec yin, PetscManagedScalar alpha, Vec xin, PetscDeviceContext dctx))
 {
@@ -378,20 +389,21 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::aypx_async(Vec yin, PetscMa
     alphaIsOne = static_cast<decltype(alphaIsOne)>(known && equal);
     PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_READ,PETSC_FALSE,&aptr));
     PetscCall(GetHandles_(dctx,&cupmBlasHandle));
+    PetscCallCUPMBLAS(cupmBlasSetPointerMode(cupmBlasHandle,CUPMBLAS_POINTER_MODE_DEVICE));
     {
       const auto calpha = cupmScalarCast(aptr);
       const auto yarray = DeviceArrayReadWrite(dctx,yin);
       const auto xarray = DeviceArrayRead(dctx,xin);
 
-      PetscCallCUPMBLAS(cupmBlasSetPointerMode(cupmBlasHandle,CUPMBLAS_POINTER_MODE_DEVICE));
       PetscCall(PetscLogGpuTimeBegin());
       if (alphaIsOne) {
         PetscCallCUPMBLAS(cupmBlasXaxpy(cupmBlasHandle,n,calpha,xarray,1,yarray,1));
       } else {
-        const auto sone = makeCupmScalar(1.0);
+        cupmScalar_t *d_one;
 
+        PetscCallCUPM(cupmGetSymbolAddress(reinterpret_cast<void**>(&d_one),detail::GlobalDeviceOne));
         PetscCallCUPMBLAS(cupmBlasXscal(cupmBlasHandle,n,calpha,yarray,1));
-        PetscCallCUPMBLAS(cupmBlasXaxpy(cupmBlasHandle,n,&sone,xarray,1,yarray,1));
+        PetscCallCUPMBLAS(cupmBlasXaxpy(cupmBlasHandle,n,d_one,xarray,1,yarray,1));
       }
       PetscCall(PetscLogGpuTimeEnd());
     }
@@ -435,7 +447,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::pointwisedivide_async(Vec w
     PetscCall(VecPointwiseDivide_Seq(win,xin,yin,dctx));
   } else {
     // note order of arguments! xin and yin are read, win is written!
-    PetscCall(pointwisebinary_async_(thrust::divides<PetscScalar>(),dctx,xin,yin,win));
+    PetscCall(pointwisebinary_async_(thrust::divides<PetscScalar>{},dctx,xin,yin,win));
   }
   PetscFunctionReturn(0);
 }
@@ -448,7 +460,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::pointwisemult_async(Vec win
     PetscCall(VecPointwiseMult_Seq(win,xin,yin,dctx));
   } else {
     // note order of arguments! xin and yin are read, win is written!
-    PetscCall(pointwisebinary_async_(thrust::multiplies<PetscScalar>(),dctx,xin,yin,win));
+    PetscCall(pointwisebinary_async_(thrust::multiplies<PetscScalar>{},dctx,xin,yin,win));
   }
   PetscFunctionReturn(0);
 }
@@ -706,7 +718,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<f
     PetscCall(PetscManagedScalarGetValues(dctx,z,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_WRITE,PETSC_TRUE,&zptr));
     // sum group results into z
     for (auto j = PetscInt{0}; j < nv1; ++j) {
-      // zptr is already zeroed out
+      zptr[j] = 0;
       for (auto i = j*MDOT_WORKGROUP_NUM; i < (j+1)*MDOT_WORKGROUP_NUM; ++i) zptr[j] += h_results[i];
     }
     if (allocate) PetscCallCUPM(cupmFreeHost(h_results));
@@ -756,23 +768,20 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async(Vec xin, PetscMa
   PetscCall(PetscManagedIntEqual(nv,1,&known,&equal));
   if (PetscUnlikely(known && equal) /* nv = 1 */) {
     PetscCall(dot_async(xin,PetscRemoveConstCast(yin[0]),z,dctx));
-  } else {
-    constexpr auto  zero = PetscScalar{0};
-    const auto      n    = xin->map->n;
-    PetscInt       *nvptr;
+  } else if (const auto n = xin->map->n) {
+    PetscInt *nvptr;
 
     // implicity sync
     PetscCall(PetscManagedIntGetValues(dctx,nv,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&nvptr));
     PetscCheck(nvptr[0] > 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Number of vectors provided to %s %" PetscInt_FMT " not positive",PETSC_FUNCTION_NAME,nvptr[0]);
 
-    // z will always need to be zeroed first, either for a quick return or for summing later on
+    PetscCall(mdot_async_(UseComplexTag<PetscDefined(USE_COMPLEX)>{},xin,nvptr[0],yin,z,dctx));
+    // REVIEW ME: double count of flops??
+    PetscCall(PetscLogGpuFlops(PetscMax(nvptr[0]*(2.0*n-1),0.0)));
+  } else {
+    constexpr auto zero = PetscScalar{0};
+
     PetscCall(PetscManagedScalarApplyOperator(dctx,z,PETSC_OPERATOR_EQUAL,PETSC_MEMTYPE_HOST,&zero,nullptr));
-    // nothing to do if x has no entries
-    if (n) {
-      PetscCall(mdot_async_(UseComplexTag<PetscDefined(USE_COMPLEX)>{},xin,nvptr[0],yin,z,dctx));
-      // REVIEW ME: double count of flops??
-      PetscCall(PetscLogGpuFlops(PetscMax(nvptr[0]*(2.0*n-1),0.0)));
-    }
   }
   PetscFunctionReturn(0);
 }
