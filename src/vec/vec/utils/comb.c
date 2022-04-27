@@ -332,6 +332,8 @@ static PetscErrorCode VecXDotBeginAsync(Vec x, Vec y, PetscManagedScalar PETSC_U
   PetscCall(PetscLogEventBegin(VEC_ReduceArithmetic,0,0,0,0));
   PetscCall((*op_local)(x,y,tmp,dctx));
   PetscCall(PetscLogEventEnd(VEC_ReduceArithmetic,0,0,0,0));
+  // ensure that the host gets the data back
+  PetscCall(PetscManagedScalarEnsureOffload(dctx,tmp,PETSC_OFFLOAD_CPU));
   PetscCall(PetscManagedScalarDestroy(dctx,&tmp));
   PetscFunctionReturn(0);
 }
@@ -378,18 +380,20 @@ PetscErrorCode VecDotEndAsync(Vec x, Vec y, PetscManagedScalar result, PetscDevi
   PetscValidHeaderSpecific(y,VEC_CLASSID,2);
   PetscCall(PetscObjectGetComm((PetscObject)x,&comm));
   PetscCall(PetscSplitReductionGet(comm,&sr));
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  // sync for MPI
+  PetscCall(PetscDeviceContextSynchronize(dctx));
   PetscCall(PetscSplitReductionEnd(sr));
+  PetscCall(PetscManagedScalarSetValues(dctx,result,PETSC_MEMTYPE_HOST,sr->gvalues+sr->numopsend,1));
 
   PetscCheck(sr->numopsend < sr->numopsbegin,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecxxxEnd() more times then VecxxxBegin()");
   PetscCheck(!x || (void*)x == sr->invecs[sr->numopsend],PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecxxxEnd() in a different order or with a different vector than VecxxxBegin()");
   PetscCheck(sr->reducetype[sr->numopsend] == PETSC_SR_REDUCE_SUM,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecDotEnd() on a reduction started with VecNormBegin()");
-  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
 
-  PetscCall(PetscManagedScalarSetValues(dctx,result,PETSC_MEMTYPE_HOST,sr->gvalues+sr->numopsend++,1));
   /*
      We are finished getting all the results so reset to no outstanding requests
   */
-  if (sr->numopsend == sr->numopsbegin) {
+  if (++(sr->numopsend) == sr->numopsbegin) {
     sr->state       = STATE_BEGIN;
     sr->numopsend   = 0;
     sr->numopsbegin = 0;
@@ -499,12 +503,11 @@ PetscErrorCode  VecTDotEnd(Vec x,Vec y,PetscScalar *result)
 
 /* -------------------------------------------------------------------------*/
 
-PetscErrorCode VecNormBeginAsync(Vec x, NormType ntype, PetscManagedReal PETSC_UNUSED result, PetscDeviceContext dctx)
+PetscErrorCode VecNormBeginAsync(Vec x, NormType ntype, PetscManagedReal result, PetscDeviceContext dctx)
 {
   PetscSplitReduction *sr;
-  PetscReal           lresult[2];
-  PetscManagedReal    tmp;
-  MPI_Comm            comm;
+  PetscReal           *resptr;
+  MPI_Comm             comm;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
@@ -520,20 +523,18 @@ PetscErrorCode VecNormBeginAsync(Vec x, NormType ntype, PetscManagedReal PETSC_U
   }
   sr->invecs[sr->numopsbegin] = (void*)x;
 
-  PetscCall(PetscManageHostReal(dctx,lresult,2,&tmp));
   PetscCall(PetscLogEventBegin(VEC_ReduceArithmetic,0,0,0,0));
-  PetscCall((*x->ops->norm_local)(x,ntype,tmp,dctx));
+  PetscCall((*x->ops->norm_local)(x,ntype,result,dctx));
   PetscCall(PetscLogEventEnd(VEC_ReduceArithmetic,0,0,0,0));
-  PetscCall(PetscManagedRealDestroy(dctx,&tmp));
-  // REVIEW ME: can do this better
-  PetscCall(PetscDeviceContextSynchronize(dctx));
 
-  if (ntype == NORM_2) lresult[0] *= lresult[0];
+  // implicit sync, can likely do this better without a sync necessary
+  PetscCall(PetscManagedRealGetValues(dctx,result,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&resptr,NULL));
+
   sr->reducetype[sr->numopsbegin] = ntype == NORM_MAX ? PETSC_SR_REDUCE_MAX : PETSC_SR_REDUCE_SUM;
-  sr->lvalues[sr->numopsbegin++]  = lresult[0];
+  sr->lvalues[sr->numopsbegin++]  = ntype == NORM_2 ? PetscSqr(resptr[0]) : resptr[0];
   if (ntype == NORM_1_AND_2) {
     sr->reducetype[sr->numopsbegin] = PETSC_SR_REDUCE_SUM;
-    sr->lvalues[sr->numopsbegin++]  = lresult[1]*lresult[1];
+    sr->lvalues[sr->numopsbegin++]  = resptr[1]*resptr[1];
   }
   PetscFunctionReturn(0);
 }
@@ -556,13 +557,18 @@ PetscErrorCode VecNormBeginAsync(Vec x, NormType ntype, PetscManagedReal PETSC_U
 @*/
 PetscErrorCode  VecNormBegin(Vec x,NormType ntype,PetscReal *result)
 {
+  PetscManagedReal   tmp;
+  PetscDeviceContext dctx;
+
   PetscFunctionBegin;
   PetscValidRealPointer(result,3);
-  PetscCall(VecNormBeginAsync(x,ntype,NULL,NULL));
+  PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
+  PetscCall(PetscManageHostReal(dctx,result,1+(ntype == NORM_1_AND_2),&tmp));
+  PetscCall(VecNormBeginAsync(x,ntype,tmp,dctx));
+  PetscCall(PetscManagedRealDestroy(dctx,&tmp));
   PetscFunctionReturn(0);
 }
 
-// REVIEW ME: broken, assumes host only
 PetscErrorCode VecNormEndAsync(Vec x, NormType ntype, PetscManagedReal result, PetscDeviceContext dctx)
 {
   PetscSplitReduction *sr;
@@ -575,6 +581,8 @@ PetscErrorCode VecNormEndAsync(Vec x, NormType ntype, PetscManagedReal result, P
 
   PetscCall(PetscObjectGetComm((PetscObject)x,&comm));
   PetscCall(PetscSplitReductionGet(comm,&sr));
+  // sync for MPI
+  PetscCall(PetscDeviceContextSynchronize(dctx));
   PetscCall(PetscSplitReductionEnd(sr));
 
   PetscCheck(sr->numopsend < sr->numopsbegin,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecxxxEnd() more times then VecxxxBegin()");
@@ -584,8 +592,7 @@ PetscErrorCode VecNormEndAsync(Vec x, NormType ntype, PetscManagedReal result, P
   tmp[0] = PetscRealPart(sr->gvalues[sr->numopsend++]);
   if (ntype == NORM_2) tmp[0] = PetscSqrtReal(tmp[0]);
   if (ntype == NORM_1_AND_2) {
-    tmp[1] = PetscRealPart(sr->gvalues[sr->numopsend++]);
-    tmp[1] = PetscSqrtReal(tmp[1]);
+    tmp[1] = PetscSqrtReal(PetscRealPart(sr->gvalues[sr->numopsend++]));
   } else {
     PetscCall(PetscObjectComposedDataSetReal((PetscObject)x,NormIds[ntype],tmp[0]));
   }

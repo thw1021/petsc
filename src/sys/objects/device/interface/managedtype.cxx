@@ -274,21 +274,21 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::ensure_offload(
   PetscFunctionBegin;
   PetscValidPointer(scal,2);
   if (scal->mask != omask) {
-    const auto OffloadAndSync = [&](PetscMemType mtype)
+    const auto OffloadToMemType = [&](PetscMemType mtype)
     {
       PetscType PETSC_UNUSED *ptr;
 
       PetscFunctionBegin;
-      PetscCall(get_values(dctx,scal,mtype,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&ptr));
+      PetscCall(get_values(dctx,scal,mtype,PETSC_MEMORY_ACCESS_READ,PETSC_FALSE,&ptr));
       PetscFunctionReturn(0);
     };
 
     PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
     if (PetscOffloadHost(omask) || omask == PETSC_OFFLOAD_BOTH) {
-      PetscCall(OffloadAndSync(PETSC_MEMTYPE_HOST));
+      PetscCall(OffloadToMemType(PETSC_MEMTYPE_HOST));
     }
     if (PetscOffloadDevice(omask) || omask == PETSC_OFFLOAD_BOTH) {
-      PetscCall(OffloadAndSync(PETSC_MEMTYPE_DEVICE));
+      PetscCall(OffloadToMemType(PETSC_MEMTYPE_DEVICE));
     }
   }
   PetscFunctionReturn(0);
