@@ -1257,6 +1257,126 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::setrandom_async(Vec v, Pets
   PetscFunctionReturn(0);
 }
 
+// ================================================================================== //
+//                                 implementations                                    //
+
+template <typename T>
+PETSC_CXX_COMPAT_DECL(PetscErrorCode VecCreateSeqCUPMAsync(T&& VecSeq_CUPM_Impls, MPI_Comm comm, PetscInt n, PetscDeviceContext dctx, Vec *v))
+{
+  PetscFunctionBegin;
+  PetscValidPointer(v,4);
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  PetscCall(VecSeq_CUPM_Impls.createseqcupm_async(comm,0,n,dctx,v,PETSC_TRUE));
+  PetscFunctionReturn(0);
+}
+
+template <typename T>
+PETSC_CXX_COMPAT_DECL(PetscErrorCode VecCreateSeqCUPMWithArraysAsync(T&& VecSeq_CUPM_Impls, MPI_Comm comm, PetscInt bs, PetscInt n, const PetscScalar cpuarray[], const PetscScalar gpuarray[], PetscDeviceContext dctx, Vec *v))
+{
+  PetscFunctionBegin;
+  if (n && cpuarray) PetscValidScalarPointer(cpuarray,5);
+  PetscValidPointer(v,7);
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  PetscCall(VecSeq_CUPM_Impls.createseqcupmwithbotharrays_async(comm,bs,n,cpuarray,gpuarray,dctx,v));
+  PetscFunctionReturn(0);
+}
+
+template <typename T>
+PETSC_CXX_COMPAT_DECL(PetscErrorCode VecCUPMGetArrayAsync(T&& VecSeq_CUPM_Impls, Vec v, PetscScalar **a, PetscDeviceContext dctx))
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(v,VEC_CLASSID,2);
+  PetscValidPointer(a,3);
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  PetscCall(VecSeq_CUPM_Impls.getarray_async<PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_READ_WRITE>(v,a,dctx));
+  PetscFunctionReturn(0);
+}
+
+template <typename T>
+PETSC_CXX_COMPAT_DECL(PetscErrorCode VecCUPMRestoreArrayAsync(T&& VecSeq_CUPM_Impls, Vec v, PetscScalar **a, PetscDeviceContext dctx))
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(v,VEC_CLASSID,2);
+  PetscValidPointer(a,3);
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  PetscCall(VecSeq_CUPM_Impls.restorearray_async<PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_READ_WRITE>(v,a,dctx));
+  PetscFunctionReturn(0);
+}
+
+template <typename T>
+PETSC_CXX_COMPAT_DECL(PetscErrorCode VecCUDAGetArrayReadAsync(T&& VecSeq_CUPM_impls, Vec v, const PetscScalar **a, PetscDeviceContext dctx))
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(v,VEC_CLASSID,2);
+  PetscValidPointer(a,3);
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  PetscCall(VecSeq_CUPM_Impls.getarray_async<PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_READ>(v,const_cast<PetscScalar**>(a),dctx));
+  PetscFunctionReturn(0);
+}
+
+template <typename T>
+PETSC_CXX_COMPAT_DECL(PetscErrorCode VecCUPMRestoreArrayReadAsync(T&& VecSeq_CUPM_Impls, Vec v, const PetscScalar **a, PetscDeviceContext dctx))
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(v,VEC_CLASSID,2);
+  PetscValidPointer(a,3);
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  PetscCall(VecSeq_CUPM_Impls.restorearray_async<PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_READ>(v,const_cast<PetscScalar**>(a),dctx));
+  PetscFunctionReturn(0);
+}
+
+template <typename T>
+PETSC_CXX_COMPAT_DECL(PetscErrorCode VecCUPMGetArrayWriteAsync(T&& VecSeq_CUPM_Impls, Vec v, PetscScalar **a, PetscDeviceContext dctx))
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(v,VEC_CLASSID,2);
+  PetscValidPointer(a,3);
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  PetscCall(VecSeq_CUPM_Impls.getarray_async<PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_WRITE>(v,a,dctx));
+  PetscFunctionReturn(0);
+}
+
+template <typename T>
+PETSC_CXX_COMPAT_DECL(PetscErrorCode VecCUPMRestoreArrayWrite(T&& VecSeq_CUPM_Impls, Vec v, PetscScalar **a, PetscDeviceContext dctx))
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(v,VEC_CLASSID,2);
+  PetscValidPointer(a,3);
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  PetscCall(VecSeq_CUPM_Impls.restorearray_async<PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_WRITE>(v,a,dctx));
+  PetscFunctionReturn(0);
+}
+
+template <typename T>
+PETSC_CXX_COMPAT_DECL(PetscErrorCode VecCUPMPlaceArrayAsync(T&& VecSeq_CUPM_Impls, Vec vin, const PetscScalar a[], PetscDeviceContext dctx))
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(vin,VEC_CLASSID,2);
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  PetscCall(VecSeq_CUPM_Impls.placearray_async<PETSC_MEMTYPE_DEVICE>(vin,a,dctx));
+  PetscFunctionReturn(0);
+}
+
+template <typename T>
+PETSC_CXX_COMPAT_DECL(PetscErrorCode VecCUPMReplaceArrayAsync(T&& VecSeq_CUPM_Impls, Vec vin, const PetscScalar a[], PetscDeviceContext dctx))
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(vin,VEC_CLASSID,2);
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  PetscCall(VecSeq_CUPM_Impls.replacearray_async<PETSC_MEMTYPE_DEVICE>(vin,a,dctx));
+  PetscFunctionReturn(0);
+}
+
+template <typename T>
+PETSC_CXX_COMPAT_DECL(PetscErrorCode VecCUPMResetArrayAsync(T&& VecSeq_CUPM_Impls, Vec vin, PetscDeviceContext dctx))
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(vin,VEC_CLASSID,2);
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  PetscCall(VecSeq_CUPM_Impls.resetarray_async<PETSC_MEMTYPE_DEVICE>(vin,dctx));
+  PetscFunctionReturn(0);
+}
+
 // REVIEW ME: TODO figure out a way around gcc 9.3.1 linker bug to get these to
 // work. Everything compiles but get linker error in optimized build for mdot_async_(). I think
 // this is because it is overloaded function and since we __always__ only call one overload,

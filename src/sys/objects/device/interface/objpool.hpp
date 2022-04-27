@@ -218,9 +218,7 @@ inline PetscErrorCode ObjectPool<T,Allocator>::finalize() noexcept
 {
   PetscFunctionBegin;
   while (!stack_.empty()) {
-    // we do CHKERRQ __after__ the CHKERCXX on the off chance that someone uses the CXX
-    // error handler, we don't want to catch our own exception!
-    PetscCallCXX(PetscCall(this->allocator().destroy(stack_.top())));
+    PetscCall(this->allocator().destroy(stack_.top()));
     PetscCallCXX(stack_.pop());
   }
   PetscCall(this->allocator().finalize());
@@ -232,9 +230,10 @@ template <typename T, class Allocator>
 inline PetscErrorCode ObjectPool<T,Allocator>::registerFinalize_() noexcept
 {
   PetscFunctionBegin;
-  if (PetscLikely(registered_)) PetscFunctionReturn(0);
-  registered_ = true;
-  PetscCall(PetscCxxObjectRegisterFinalize(this));
+  if (PetscUnlikely(!registered_)) {
+    registered_ = true;
+    PetscCall(PetscCxxObjectRegisterFinalize(this));
+  }
   PetscFunctionReturn(0);
 }
 
