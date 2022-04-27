@@ -1304,7 +1304,7 @@ PETSC_CXX_COMPAT_DECL(PetscErrorCode VecCUPMRestoreArrayAsync(T&& VecSeq_CUPM_Im
 }
 
 template <typename T>
-PETSC_CXX_COMPAT_DECL(PetscErrorCode VecCUDAGetArrayReadAsync(T&& VecSeq_CUPM_impls, Vec v, const PetscScalar **a, PetscDeviceContext dctx))
+PETSC_CXX_COMPAT_DECL(PetscErrorCode VecCUPMGetArrayReadAsync(T&& VecSeq_CUPM_Impls, Vec v, const PetscScalar **a, PetscDeviceContext dctx))
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,2);
@@ -1337,7 +1337,7 @@ PETSC_CXX_COMPAT_DECL(PetscErrorCode VecCUPMGetArrayWriteAsync(T&& VecSeq_CUPM_I
 }
 
 template <typename T>
-PETSC_CXX_COMPAT_DECL(PetscErrorCode VecCUPMRestoreArrayWrite(T&& VecSeq_CUPM_Impls, Vec v, PetscScalar **a, PetscDeviceContext dctx))
+PETSC_CXX_COMPAT_DECL(PetscErrorCode VecCUPMRestoreArrayWriteAsync(T&& VecSeq_CUPM_Impls, Vec v, PetscScalar **a, PetscDeviceContext dctx))
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,2);

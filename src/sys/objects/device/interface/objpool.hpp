@@ -178,15 +178,9 @@ public:
 };
 
 template <typename T, class Allocator>
-inline PetscBool operator==(const ObjectPool<T,Allocator> &l,const ObjectPool<T,Allocator> &r) noexcept
+inline PetscBool operator==(const ObjectPool<T,Allocator> &l, const ObjectPool<T,Allocator> &r) noexcept
 {
   return static_cast<PetscBool>(l.stack_ == r.stack_);
-}
-
-template <typename T, class Allocator>
-inline PetscBool operator< (const ObjectPool<T,Allocator> &l, const ObjectPool<T,Allocator> &r) noexcept
-{
-  return static_cast<PetscBool>(l.stack_ < r.stack_);
 }
 
 template <typename T, class Allocator>
@@ -196,9 +190,15 @@ inline PetscBool operator!=(const ObjectPool<T,Allocator> &l, const ObjectPool<T
 }
 
 template <typename T, class Allocator>
+inline PetscBool operator< (const ObjectPool<T,Allocator> &l, const ObjectPool<T,Allocator> &r) noexcept
+{
+  return static_cast<PetscBool>(l.stack_ < r.stack_);
+}
+
+template <typename T, class Allocator>
 inline PetscBool operator> (const ObjectPool<T,Allocator> &l, const ObjectPool<T,Allocator> &r) noexcept
 {
-  return r.stack_ < l.stack_;
+  return l.stack_ > r.stack_;
 }
 
 template <typename T, class Allocator>
