@@ -813,8 +813,8 @@ PetscErrorCode PetscDeviceContextSetCurrentContext(PetscDeviceContext dctx)
 */
 PetscErrorCode PetscDeviceContextQueryOptions_Internal(MPI_Comm comm, const char prefix[], std::pair<PetscDeviceType,PetscBool> &deviceType, std::pair<PetscStreamType,PetscBool> &streamType)
 {
-  PetscInt dtype = static_cast<PetscInt>(deviceType.first);
-  PetscInt stype = static_cast<PetscInt>(streamType.first);
+  auto dtype = static_cast<PetscInt>(deviceType.first);
+  auto stype = static_cast<PetscInt>(streamType.first);
 
   PetscFunctionBegin;
   if (prefix) PetscValidCharPointer(prefix,2);
@@ -823,8 +823,8 @@ PetscErrorCode PetscDeviceContextQueryOptions_Internal(MPI_Comm comm, const char
   PetscCall(PetscOptionsEList("-device_context_device_type","Underlying PetscDevice","PetscDeviceContextSetDevice",PetscDeviceTypes,PETSC_DEVICE_MAX,PetscDeviceTypes[dtype],&dtype,&deviceType.second));
   PetscCall(PetscOptionsEList("-device_context_stream_type","PetscDeviceContext PetscStreamType","PetscDeviceContextSetStreamType",PetscStreamTypes,PETSC_STREAM_MAX,PetscStreamTypes[stype],&stype,&streamType.second));
   PetscOptionsEnd();
-  deviceType.first = static_cast<PetscDeviceType>(dtype);
-  streamType.first = static_cast<PetscStreamType>(stype);
+  deviceType.first = PetscDeviceTypeCast(dtype);
+  streamType.first = PetscStreamTypeCast(stype);
   PetscFunctionReturn(0);
 }
 

@@ -338,6 +338,16 @@ PetscBool PetscDeviceInitialized(PetscDeviceType type)
   return static_cast<PetscBool>(PetscDeviceConfiguredFor_Internal(type) && defaultDevices[type].second);
 }
 
+/* Get the default PetscDevice for a particular type and constructs them if lazily initialized. */
+PetscErrorCode PetscDeviceGetDefaultForType_Internal(PetscDeviceType type, PetscDevice *device)
+{
+  PetscFunctionBegin;
+  PetscValidPointer(device,2);
+  PetscCall(PetscDeviceInitialize(type));
+  *device = defaultDevices[type].first;
+  PetscFunctionReturn(0);
+}
+
 /*
   Actual intialization function; any functions claiming to initialize PetscDevice or
   PetscDeviceContext will have to run through this one
@@ -555,15 +565,5 @@ PetscErrorCode PetscDeviceInitializeFromOptions_Internal(MPI_Comm comm)
     PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
     PetscCall(PetscDeviceContextSetUp(dctx));
   }
-  PetscFunctionReturn(0);
-}
-
-/* Get the default PetscDevice for a particular type and constructs them if lazily initialized. */
-PetscErrorCode PetscDeviceGetDefaultForType_Internal(PetscDeviceType type, PetscDevice *device)
-{
-  PetscFunctionBegin;
-  PetscValidPointer(device,2);
-  PetscCall(PetscDeviceInitialize(type));
-  *device = defaultDevices[type].first;
   PetscFunctionReturn(0);
 }

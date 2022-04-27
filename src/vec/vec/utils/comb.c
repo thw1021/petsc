@@ -528,7 +528,7 @@ PetscErrorCode VecNormBeginAsync(Vec x, NormType ntype, PetscManagedReal result,
   PetscCall(PetscLogEventEnd(VEC_ReduceArithmetic,0,0,0,0));
 
   // implicit sync, can likely do this better without a sync necessary
-  PetscCall(PetscManagedRealGetValues(dctx,result,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&resptr,NULL));
+  PetscCall(PetscManagedRealGetValues(dctx,result,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&resptr));
 
   sr->reducetype[sr->numopsbegin] = ntype == NORM_MAX ? PETSC_SR_REDUCE_MAX : PETSC_SR_REDUCE_SUM;
   sr->lvalues[sr->numopsbegin++]  = ntype == NORM_2 ? PetscSqr(resptr[0]) : resptr[0];
@@ -660,7 +660,7 @@ static PetscErrorCode VecMXDotBegin_Private(Vec x, PetscManagedInt nv, const Vec
   PetscCheck(op_local,PETSC_COMM_SELF,PETSC_ERR_SUP,"Vector does not support local mdots");
 
   // implicit sync
-  PetscCall(PetscManagedIntGetValues(dctx,nv,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&nvptr,NULL));
+  PetscCall(PetscManagedIntGetValues(dctx,nv,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&nvptr));
   nvval = *nvptr;
   for (PetscInt i = 0; i < nvval; ++i) {
     if (sr->numopsbegin+i >= sr->maxops) PetscCall(PetscSplitReductionExtend(sr));
@@ -730,7 +730,7 @@ PetscErrorCode VecMDotEndAsync(Vec x, PetscManagedInt nv, const Vec y[], PetscMa
   PetscCheck(sr->numopsend < sr->numopsbegin,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecxxxEnd() more times then VecxxxBegin()");
   PetscCheck(!x || (void*)x == sr->invecs[sr->numopsend],PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecxxxEnd() in a different order or with a different vector than VecxxxBegin()");
   PetscCheck(sr->reducetype[sr->numopsend] == PETSC_SR_REDUCE_SUM,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecDotEnd() on a reduction started with VecNormBegin()");
-  PetscCall(PetscManagedIntGetValues(dctx,nv,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&nvptr,NULL));
+  PetscCall(PetscManagedIntGetValues(dctx,nv,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&nvptr));
   PetscCall(PetscManagedScalarSetValues(dctx,result,PETSC_MEMTYPE_HOST,sr->gvalues+sr->numopsend,*nvptr));
   sr->numopsend += *nvptr;
 

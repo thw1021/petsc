@@ -45,7 +45,7 @@ struct ManagedTypeInterface
     PetscFunctionBegin;
     // single size
     for (auto& host : host_ptrs) {
-      const auto alloc = host.first == host_ptr;
+      const auto alloc = host.second == PETSC_OWN_POINTER;
 
       for (const auto mask : masks) {
         for (PetscInt k = 0; k < nmax; ++k) {

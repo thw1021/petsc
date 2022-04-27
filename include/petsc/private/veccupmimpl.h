@@ -419,7 +419,8 @@ public:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode Create_CUPM(Vec,PetscDeviceContext));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode Create_CUPMBase(MPI_Comm,PetscInt,PetscInt,PetscInt,PetscDeviceContext,Vec*,PetscBool,PetscLayout/*reference*/=nullptr));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode Initialize_CUPMBase(Vec,PetscBool,PetscScalar*,PetscScalar*,PetscDeviceContext));
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode Destroy_CUPMBase(Vec,PetscDeviceContext));
+  template <typename F>
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode Destroy_CUPMBase(Vec,PetscDeviceContext,F&&));
   template <typename SetupFunctionT = no_op>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode Duplicate_CUPMBase(Vec,Vec*,PetscDeviceContext,SetupFunctionT&& = SetupFunctionT{}));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode BindToCPU_CUPMBase(Vec,PetscBool,PetscDeviceContext));
@@ -772,7 +773,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Initialize_CUPMBase(Vec 
 
 // v->ops->destroy
 template <Device::CUPM::DeviceType T, typename D>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Destroy_CUPMBase(Vec v, PetscDeviceContext dctx))
+template <typename F>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Destroy_CUPMBase(Vec v, PetscDeviceContext dctx, F&& VecDestroy_IMPLS))
 {
   PetscFunctionBegin;
   if (auto vcu = VecCUPMCast(v)) {
@@ -800,6 +802,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Destroy_CUPMBase(Vec v, 
     PetscCall(PetscFree(vimpl->array_allocated));
   }
   v->pinned_memory = PETSC_FALSE;
+  PetscCall(VecDestroy_IMPLS(v,dctx));
   PetscFunctionReturn(0);
 }
 

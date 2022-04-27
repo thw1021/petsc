@@ -405,33 +405,31 @@ static inline PetscErrorCode PetscDeviceContextAllReduceManagedType_Internal(Pet
 
 static inline PetscErrorCode PetscDeviceContextAllReduceManagedScalar_Internal(PetscDeviceContext dctx, PetscManagedScalar scal, const PetscInt *n, MPI_Op op, PetscObject obj)
 {
-  PetscInt     nv;
   PetscScalar *scalptr;
 
   PetscFunctionBegin;
   if (use_gpu_aware_mpi) {
     // we do not care where the pointer is, MPI will figure that out
-    PetscCall(PetscManagedScalarGetPointerAndMemType(dctx,scal,PETSC_MEMORY_ACCESS_READ,&scalptr,PETSC_NULLPTR,n ? PETSC_NULLPTR : &nv));
+    PetscCall(PetscManagedScalarGetPointerAndMemType(dctx,scal,PETSC_MEMORY_ACCESS_READ,&scalptr,PETSC_NULLPTR));
   } else {
-    PetscCall(PetscManagedScalarGetValues(dctx,scal,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&scalptr,n ? PETSC_NULLPTR : &nv));
+    PetscCall(PetscManagedScalarGetValues(dctx,scal,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&scalptr));
   }
-  PetscCall(PetscDeviceContextAllReduceManagedType_Internal(dctx,scalptr,n ? n : &nv,MPIU_SCALAR,op,obj));
+  PetscCall(PetscDeviceContextAllReduceManagedType_Internal(dctx,scalptr,n,MPIU_SCALAR,op,obj));
   PetscFunctionReturn(0);
 }
 
 static inline PetscErrorCode PetscDeviceContextAllReduceManagedReal_Internal(PetscDeviceContext dctx, PetscManagedReal scal, const PetscInt *n, MPI_Op op, PetscObject obj)
 {
-  PetscInt   nv;
   PetscReal *scalptr;
 
   PetscFunctionBegin;
   if (use_gpu_aware_mpi) {
     // we do not care where the pointer is, MPI will figure that out
-    PetscCall(PetscManagedRealGetPointerAndMemType(dctx,scal,PETSC_MEMORY_ACCESS_READ,&scalptr,PETSC_NULLPTR,n ? PETSC_NULLPTR : &nv));
+    PetscCall(PetscManagedRealGetPointerAndMemType(dctx,scal,PETSC_MEMORY_ACCESS_READ,&scalptr,PETSC_NULLPTR));
   } else {
-    PetscCall(PetscManagedRealGetValues(dctx,scal,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&scalptr,n ? PETSC_NULLPTR : &nv));
+    PetscCall(PetscManagedRealGetValues(dctx,scal,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&scalptr));
   }
-  PetscCall(PetscDeviceContextAllReduceManagedType_Internal(dctx,scalptr,n ? n : &nv,MPIU_REAL,op,obj));
+  PetscCall(PetscDeviceContextAllReduceManagedType_Internal(dctx,scalptr,n,MPIU_REAL,op,obj));
   PetscFunctionReturn(0);
 }
 #else /* PETSC_HAVE_CXX for PetscDeviceContext Internal Functions */

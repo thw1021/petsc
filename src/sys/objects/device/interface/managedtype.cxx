@@ -60,9 +60,9 @@ class PetscManagedTypeImpl
 public:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode create(PetscDeviceContext,PetscType*,PetscType*,PetscInt,PetscCopyMode,PetscCopyMode,PetscOffloadMask,ManagedType*));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode destroy(PetscDeviceContext,ManagedType*));
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode get_values(PetscDeviceContext,ManagedType,PetscMemType,PetscMemoryAccessMode,PetscBool,PetscType**,PetscInt* = nullptr));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode get_values(PetscDeviceContext,ManagedType,PetscMemType,PetscMemoryAccessMode,PetscBool,PetscType**));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode set_values(PetscDeviceContext,ManagedType,PetscMemType,const PetscType*,PetscInt));
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode get_pointer_and_mem_type(PetscDeviceContext,ManagedType,PetscMemoryAccessMode,PetscType**,PetscMemType* = nullptr,PetscInt* = nullptr));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode get_pointer_and_mem_type(PetscDeviceContext,ManagedType,PetscMemoryAccessMode,PetscType**,PetscMemType* = nullptr));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode ensure_offload(PetscDeviceContext,ManagedType,PetscOffloadMask));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode copy(PetscDeviceContext,ManagedType,ManagedType));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode apply_operator(PetscDeviceContext,ManagedType,PetscOperatorType,PetscMemType,const PetscType*,ManagedType=nullptr));
@@ -79,13 +79,12 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::copy_values(Pet
 {
   PetscDeviceCopyMode  mode;
   PetscType           *ptr;
-  PetscInt             n = 0; // silence overzealous gcc
 
   // need to actually allocate the stuff
   PetscFunctionBegin;
-  PetscCall(get_values(dctx,scal,PetscOffloadMaskToMemType(mask),PETSC_MEMORY_ACCESS_WRITE,PETSC_FALSE,&ptr,&n));
+  PetscCall(get_values(dctx,scal,PetscOffloadMaskToMemType(mask),PETSC_MEMORY_ACCESS_WRITE,PETSC_FALSE,&ptr));
   PetscCall(PetscOffloadMaskToDeviceCopyMode(mask,src_mask,&mode));
-  PetscCall(PetscDeviceArrayCopy(dctx,ptr,src_ptr,n,mode));
+  PetscCall(PetscDeviceArrayCopy(dctx,ptr,src_ptr,scal->n,mode));
   PetscFunctionReturn(0);
 }
 
@@ -174,26 +173,29 @@ template <typename T, typename MT>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::destroy(PetscDeviceContext dctx, ManagedType *scal))
 {
   PetscFunctionBegin;
+  PetscValidPointer(scal,2);
   if (!*scal) PetscFunctionReturn(0);
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   PetscCall(destroy_managed_type_fn(dctx,*scal));
+  // if the host pointer still exists at this point it is because it didn't belong to its
+  // respective memory pool. If copy mode is PETSC_OWN_POINTER its because we have
+  // co-opted the users pointer, so we should free it now.
+  if ((*scal)->host && ((*scal)->h_cmode == PETSC_OWN_POINTER)) PetscCall(PetscFree((*scal)->host));
+  // cannot handle device pointers though
+  PetscAssert(!(*scal)->device || ((*scal)->d_cmode != PETSC_OWN_POINTER),PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscDeviceContext (id %" PetscInt_FMT ", device type %s) failed to free the owned device pointer",dctx->id,PetscDeviceTypes[dctx->device->type]);
   PetscCall(pool.reclaim(std::move(*scal)));
   *scal = nullptr;
   PetscFunctionReturn(0);
 }
 
 template <typename T, typename MT>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::get_values(PetscDeviceContext dctx, ManagedType scal, PetscMemType mtype, PetscMemoryAccessMode mode, PetscBool sync, PetscType **ptr, PetscInt *n))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::get_values(PetscDeviceContext dctx, ManagedType scal, PetscMemType mtype, PetscMemoryAccessMode mode, PetscBool sync, PetscType **ptr))
 {
   PetscFunctionBegin;
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   PetscValidPointer(scal,2);
   PetscCall(check_lock(scal));
   PetscValidPointer(ptr,5);
-  if (n) {
-    PetscValidIntPointer(n,6);
-    *n = scal->n;
-  }
   PetscCall(get_managed_values_fn(dctx,scal,mtype,mode,ptr));
   // if user intends to write to device in any capacity then we are tainted
   if (PetscMemTypeDevice(mtype) && (mode != PETSC_MEMORY_ACCESS_READ)) scal->state.tainted = 1;
@@ -214,18 +216,17 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::set_values(Pets
   if (n) {
     PetscMemType  scalmtype;
     PetscType    *scalptr;
-    PetscInt      scaln;
 
     PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
-    PetscCall(get_pointer_and_mem_type(dctx,scal,PETSC_MEMORY_ACCESS_WRITE,&scalptr,&scalmtype,&scaln));
-    PetscAssert(n <= scaln,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Trying to write %" PetscInt_FMT " values to " PetscStringize(PetscManagedType) " but it only holds %" PetscInt_FMT " entries",n,scaln);
+    PetscCall(get_pointer_and_mem_type(dctx,scal,PETSC_MEMORY_ACCESS_WRITE,&scalptr,&scalmtype));
+    PetscAssert(n <= scal->n,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Trying to write %" PetscInt_FMT " values to " PetscStringize(PetscManagedType) " but it only holds %" PetscInt_FMT " entries",n,scal->n);
     PetscCall(PetscDeviceArrayCopy(dctx,scalptr,ptr,n,PetscMemTypeToDeviceCopyMode(scalmtype,mtype)));
   }
   PetscFunctionReturn(0);
 }
 
 template <typename T, typename MT>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::get_pointer_and_mem_type(PetscDeviceContext dctx, ManagedType scal, PetscMemoryAccessMode mode, PetscType **ptr, PetscMemType *mtype, PetscInt *n))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::get_pointer_and_mem_type(PetscDeviceContext dctx, ManagedType scal, PetscMemoryAccessMode mode, PetscType **ptr, PetscMemType *mtype))
 {
   const auto assign = [&](PetscType *ptr_arg, PetscMemType mtype_arg)
   {
@@ -238,10 +239,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::get_pointer_and
   PetscCall(check_lock(scal));
   PetscValidPointer(ptr,4);
   if (mtype) PetscValidPointer(mtype,5);
-  if (n) {
-    PetscValidIntPointer(n,6);
-    *n = scal->n;
-  }
   switch (scal->mask) {
   case PETSC_OFFLOAD_CPU:
   UNALLOCATED_PREFER_HOST:
@@ -254,7 +251,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::get_pointer_and
     break;
   case PETSC_OFFLOAD_UNALLOCATED: {
     const auto prefer_host = dctx->device->type == PETSC_DEVICE_HOST;
-    PetscCall(get_values(dctx,scal,prefer_host ? PETSC_MEMTYPE_HOST : PETSC_MEMTYPE_DEVICE,mode,PETSC_FALSE,ptr,nullptr));
+    PetscCall(get_values(dctx,scal,prefer_host ? PETSC_MEMTYPE_HOST : PETSC_MEMTYPE_DEVICE,mode,PETSC_FALSE,ptr));
     if (prefer_host) {
       goto UNALLOCATED_PREFER_HOST;
     } else {
@@ -299,17 +296,16 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::copy(PetscDevic
 {
   // initialize to silence overzealous gcc, at least we can use auto now
   auto       dest_mtype = PETSC_MEMTYPE_DEVICE,src_mtype = PETSC_MEMTYPE_DEVICE;
-  PetscInt   dest_n = 0,src_n = 0;
   PetscType *dest_ptr,*src_ptr;
 
   PetscFunctionBegin;
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   PetscValidPointer(dest,2);
   PetscValidPointer(src,3);
-  PetscCall(get_pointer_and_mem_type(dctx,dest,PETSC_MEMORY_ACCESS_WRITE,&dest_ptr,&dest_mtype,&dest_n));
-  PetscCall(get_pointer_and_mem_type(dctx,src,PETSC_MEMORY_ACCESS_READ,&src_ptr,&src_mtype,&src_n));
-  PetscAssert(dest_n >= src_n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Destination size %" PetscInt_FMT " not large enough for source size %" PetscInt_FMT,dest_n,src_n);
-  PetscCall(PetscDeviceArrayCopy(dctx,dest_ptr,src_ptr,dest_n,PetscMemTypeToDeviceCopyMode(dest_mtype,src_mtype)));
+  PetscCall(get_pointer_and_mem_type(dctx,dest,PETSC_MEMORY_ACCESS_WRITE,&dest_ptr,&dest_mtype));
+  PetscCall(get_pointer_and_mem_type(dctx,src,PETSC_MEMORY_ACCESS_READ,&src_ptr,&src_mtype));
+  PetscAssert(dest->n >= src->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Destination size %" PetscInt_FMT " not large enough for source size %" PetscInt_FMT,dest->n,src->n);
+  PetscCall(PetscDeviceArrayCopy(dctx,dest_ptr,src_ptr,dest->n,PetscMemTypeToDeviceCopyMode(dest_mtype,src_mtype)));
   PetscFunctionReturn(0);
 }
 
@@ -324,10 +320,10 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::apply_operator(
   if ((PetscOffloadHost(scal->mask) || PetscOffloadUnallocated(scal->mask)) && PetscMemTypeHost(mtype)) {
     const auto  src_access = ret ? PETSC_MEMORY_ACCESS_READ : PETSC_MEMORY_ACCESS_READ_WRITE;
     const auto  rhsv       = *rhs;
+    const auto  n          = scal->n;
     PetscType  *ptr,*retptr;
-    PetscInt    n = 0; // silence overzealous gcc
 
-    PetscCall(get_values(dctx,scal,PETSC_MEMTYPE_HOST,src_access,PETSC_TRUE,&ptr,&n));
+    PetscCall(get_values(dctx,scal,PETSC_MEMTYPE_HOST,src_access,PETSC_TRUE,&ptr));
     if (ret) {
       PetscCall(get_values(dctx,ret,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_WRITE,PETSC_TRUE,&retptr));
     } else {

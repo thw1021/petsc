@@ -64,7 +64,7 @@ PetscErrorCode VecScale_Seq(Vec xin, PetscManagedScalar alpha, PetscDeviceContex
     PetscBLASInt  one = 1;
     PetscBLASInt  bn;
 
-    PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&aptr,NULL));
+    PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&aptr));
     PetscCall(PetscBLASIntCast(xin->map->n,&bn));
     PetscCall(VecGetArray(xin,&xarray));
     PetscStackCallBLAS("BLASscal",BLASscal_(&bn,aptr,xarray,&one));
@@ -86,7 +86,7 @@ PetscErrorCode VecAXPY_Seq(Vec yin, PetscManagedScalar alpha, Vec xin, PetscDevi
     PetscScalar       *yarray,*aptr;
     PetscBLASInt       one = 1,bn;
 
-    PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&aptr,NULL));
+    PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&aptr));
     PetscCall(PetscBLASIntCast(yin->map->n,&bn));
     PetscCall(VecGetArrayRead(xin,&xarray));
     PetscCall(VecGetArray(yin,&yarray));
@@ -103,8 +103,8 @@ PetscErrorCode VecAXPBY_Seq(Vec yin, PetscManagedScalar a, PetscManagedScalar b,
   PetscScalar *aptr,*bptr;
 
   PetscFunctionBegin;
-  PetscCall(PetscManagedScalarGetValues(dctx,a,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&aptr,NULL));
-  PetscCall(PetscManagedScalarGetValues(dctx,b,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&bptr,NULL));
+  PetscCall(PetscManagedScalarGetValues(dctx,a,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&aptr));
+  PetscCall(PetscManagedScalarGetValues(dctx,b,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&bptr));
   PetscCall(PetscDeviceContextSynchronize(dctx));
   {
     const PetscScalar aval = *aptr, bval = *bptr;
@@ -144,9 +144,9 @@ PetscErrorCode VecAXPBYPCZ_Seq(Vec zin, PetscManagedScalar alpha, PetscManagedSc
   PetscScalar *aptr,*bptr,*gptr;
 
   PetscFunctionBegin;
-  PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&aptr,NULL));
-  PetscCall(PetscManagedScalarGetValues(dctx,beta,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&bptr,NULL));
-  PetscCall(PetscManagedScalarGetValues(dctx,gamma,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&gptr,NULL));
+  PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&aptr));
+  PetscCall(PetscManagedScalarGetValues(dctx,beta,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&bptr));
+  PetscCall(PetscManagedScalarGetValues(dctx,gamma,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&gptr));
   PetscCall(PetscDeviceContextSynchronize(dctx));
   {
     const PetscScalar  aval  = *aptr,bval = *bptr,gval = *gptr;

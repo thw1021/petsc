@@ -68,9 +68,9 @@ PetscErrorCode PetscManagedTypeDestroy(PetscDeviceContext dctx, PetscManagedType
   return PetscManagedTypeImpl::destroy(dctx,scal);
 }
 
-PetscErrorCode PetscManagedTypeGetValues(PetscDeviceContext dctx, PetscManagedType scal, PetscMemType mtype, PetscMemoryAccessMode mode, PetscBool sync, PetscType **ptr, PetscInt *n)
+PetscErrorCode PetscManagedTypeGetValues(PetscDeviceContext dctx, PetscManagedType scal, PetscMemType mtype, PetscMemoryAccessMode mode, PetscBool sync, PetscType **ptr)
 {
-  return PetscManagedTypeImpl::get_values(dctx,scal,mtype,mode,sync,ptr,n);
+  return PetscManagedTypeImpl::get_values(dctx,scal,mtype,mode,sync,ptr);
 }
 
 PetscErrorCode PetscManagedTypeSetValues(PetscDeviceContext dctx, PetscManagedType scal, PetscMemType mtype, const PetscType *ptr, PetscInt n)
@@ -78,9 +78,9 @@ PetscErrorCode PetscManagedTypeSetValues(PetscDeviceContext dctx, PetscManagedTy
   return PetscManagedTypeImpl::set_values(dctx,scal,mtype,ptr,n);
 }
 
-PetscErrorCode PetscManagedTypeGetPointerAndMemType(PetscDeviceContext dctx, PetscManagedType scal, PetscMemoryAccessMode mode, PetscType **ptr, PetscMemType *mtype, PetscInt *n)
+PetscErrorCode PetscManagedTypeGetPointerAndMemType(PetscDeviceContext dctx, PetscManagedType scal, PetscMemoryAccessMode mode, PetscType **ptr, PetscMemType *mtype)
 {
-  return PetscManagedTypeImpl::get_pointer_and_mem_type(dctx,scal,mode,ptr,mtype,n);
+  return PetscManagedTypeImpl::get_pointer_and_mem_type(dctx,scal,mode,ptr,mtype);
 }
 
 PetscErrorCode PetscManagedTypeEnsureOffload(PetscDeviceContext dctx, PetscManagedType scal, PetscOffloadMask omask)

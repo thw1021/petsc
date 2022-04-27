@@ -34,6 +34,7 @@
 #define PetscManagedTypeGetSubRange          PetscConcat(PetscManagedType,GetSubRange)
 #define PetscManagedTypeRestoreSubRange      PetscConcat(PetscManagedType,RestoreSubRange)
 #define PetscManagedTypeEqual                PetscConcat(PetscManagedType,Equal)
+#define PetscManagedTypeGetSize              PetscConcat(PetscManagedType,GetSize)
 
 #define PETSC_NO_DEVICE_UNUSED PetscIfPetscDefined(HAVE_CXX,,PETSC_UNUSED)
 #define PETSC_MANAGED_TYPE_DECL_OR_STUB(FunctionDecl,...) PetscIfPetscDefined(HAVE_CXX,PETSC_EXTERN FunctionDecl,static inline FunctionDecl __VA_ARGS__)
@@ -87,11 +88,10 @@ PetscErrorCode PetscManagedTypeDestroy(PetscDeviceContext PETSC_NO_DEVICE_UNUSED
 );
 
 PETSC_MANAGED_TYPE_DECL_OR_STUB(
-PetscErrorCode PetscManagedTypeGetValues(PetscDeviceContext PETSC_NO_DEVICE_UNUSED dctx, PetscManagedType scal, PetscMemType PETSC_NO_DEVICE_UNUSED mtype, PetscMemoryAccessMode PETSC_NO_DEVICE_UNUSED amode, PetscBool PETSC_NO_DEVICE_UNUSED sync, PetscType **ptr, PetscInt *n),
+PetscErrorCode PetscManagedTypeGetValues(PetscDeviceContext PETSC_NO_DEVICE_UNUSED dctx, PetscManagedType scal, PetscMemType PETSC_NO_DEVICE_UNUSED mtype, PetscMemoryAccessMode PETSC_NO_DEVICE_UNUSED amode, PetscBool PETSC_NO_DEVICE_UNUSED sync, PetscType **ptr),
 {
   PetscFunctionBegin;
   *ptr = scal->host;
-  if (n) *n = scal->n;
   PetscFunctionReturn(0);
 }
 );
@@ -106,10 +106,10 @@ PetscErrorCode PetscManagedTypeSetValues(PetscDeviceContext PETSC_NO_DEVICE_UNUS
 );
 
 PETSC_MANAGED_TYPE_DECL_OR_STUB(
-PetscErrorCode PetscManagedTypeGetPointerAndMemType(PetscDeviceContext dctx, PetscManagedType scal, PetscMemoryAccessMode mode, PetscType **ptr, PetscMemType *mtype, PetscInt *n),
+PetscErrorCode PetscManagedTypeGetPointerAndMemType(PetscDeviceContext dctx, PetscManagedType scal, PetscMemoryAccessMode mode, PetscType **ptr, PetscMemType *mtype),
 {
   PetscFunctionBegin;
-  PetscCall(PetscManagedTypeGetValues(dctx,scal,PETSC_MEMTYPE_HOST,mode,ptr,n));
+  PetscCall(PetscManagedTypeGetValues(dctx,scal,PETSC_MEMTYPE_HOST,mode,ptr));
   if (mtype) *mtype = PETSC_MEMTYPE_HOST;
   PetscFunctionReturn(0);
 }
@@ -177,7 +177,7 @@ PetscErrorCode PetscManagedTypeRestoreSubRange(PetscDeviceContext dctx, PetscMan
 );
 
 PETSC_MANAGED_TYPE_DECL_OR_STUB(
-PetscErrorCode PetscManagedTypeEqual(PetscManagedType in, PetscType val, PetscBool *known, PetscBool *equal),
+PetscErrorCode PetscManagedTypeEqual(PetscManagedType scal, PetscType val, PetscBool *known, PetscBool *equal),
 {
   PetscInt eqcnt = 0;
 
@@ -210,6 +210,13 @@ static inline PetscErrorCode PetscManagedTypeCreateDefault(PetscDeviceContext dc
   PetscFunctionReturn(0);
 }
 
+static inline PetscErrorCode PetscManagedTypeGetSize(PetscManagedType scal, PetscInt *n)
+{
+  PetscFunctionBegin;
+  *n = scal->n;
+  PetscFunctionReturn(0);
+}
+
 #undef PETSC_NO_DEVICE_UNUSED
 #undef PETSC_MANAGED_TYPE_DECL_OR_STUB
 
@@ -228,6 +235,7 @@ static inline PetscErrorCode PetscManagedTypeCreateDefault(PetscDeviceContext dc
 #undef PetscManagedTypeGetSubRange
 #undef PetscManagedTypeRestoreSubRange
 #undef PetscManagedTypeEqual
+#undef PetscManagedTypeGetSize
 
 #undef PetscTypeSuffix
 #undef PetscType

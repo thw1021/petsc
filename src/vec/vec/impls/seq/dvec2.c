@@ -19,8 +19,8 @@ PetscErrorCode VecMDot_Seq(Vec xin, PetscManagedInt nv, const Vec yin[], PetscMa
   Vec               *yy;
 
   PetscFunctionBegin;
-  PetscCall(PetscManagedIntGetValues(dctx,nv,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&nvptr,NULL));
-  PetscCall(PetscManagedScalarGetValues(dctx,zt,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&zptr,NULL));
+  PetscCall(PetscManagedIntGetValues(dctx,nv,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&nvptr));
+  PetscCall(PetscManagedScalarGetValues(dctx,zt,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&zptr));
   sum0  = 0.0;
   sum1  = 0.0;
   sum2  = 0.0;
@@ -103,8 +103,8 @@ PetscErrorCode VecMDot_Seq(Vec xin, PetscManagedInt nv, const Vec yin[], PetscMa
   Vec               *yy;
 
   PetscFunctionBegin;
-  PetscCall(PetscManagedIntGetValues(dctx,nv,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&nvptr,NULL));
-  PetscCall(PetscManagedScalarGetValues(dctx,zt,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_WRITE,PETSC_TRUE,&z,NULL));
+  PetscCall(PetscManagedIntGetValues(dctx,nv,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&nvptr));
+  PetscCall(PetscManagedScalarGetValues(dctx,zt,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_WRITE,PETSC_TRUE,&z));
   sum0 = 0.;
   sum1 = 0.;
   sum2 = 0.;
@@ -306,8 +306,8 @@ PetscErrorCode VecMTDot_Seq(Vec xin, PetscManagedInt nv, const Vec yin[], PetscM
   Vec               *yy;
 
   PetscFunctionBegin;
-  PetscCall(PetscManagedIntGetValues(dctx,nv,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&nvptr,NULL));
-  PetscCall(PetscManagedScalarGetValues(dctx,zt,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_WRITE,PETSC_TRUE,&z,NULL));
+  PetscCall(PetscManagedIntGetValues(dctx,nv,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&nvptr));
+  PetscCall(PetscManagedScalarGetValues(dctx,zt,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_WRITE,PETSC_TRUE,&z));
   sum0 = 0.;
   sum1 = 0.;
   sum2 = 0.;
@@ -540,7 +540,7 @@ PetscErrorCode VecSet_Seq(Vec xin, PetscManagedScalar alpha, PetscDeviceContext 
   PetscScalar *aptr;
 
   PetscFunctionBegin;
-  PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&aptr,NULL));
+  PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&aptr));
   {
     const PetscScalar  aval = *aptr;
     const PetscInt     n    = xin->map->n;
@@ -563,8 +563,8 @@ PetscErrorCode VecMAXPY_Seq(Vec xin, PetscManagedInt nvt, PetscManagedScalar alp
   PetscScalar *aptr;
 
   PetscFunctionBegin;
-  PetscCall(PetscManagedIntGetValues(dctx,nvt,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&nvptr,NULL));
-  PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&aptr,NULL));
+  PetscCall(PetscManagedIntGetValues(dctx,nvt,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&nvptr));
+  PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&aptr));
   {
     const PetscInt     nv = *nvptr,j_rem = nv&0x3,n = xin->map->n;
     const PetscScalar *yptr[4];
@@ -607,7 +607,7 @@ PetscErrorCode VecAYPX_Seq(Vec yin, PetscManagedScalar alpha, Vec xin, PetscDevi
   PetscScalar *aptr;
 
   PetscFunctionBegin;
-  PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&aptr,NULL));
+  PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&aptr));
   {
     const PetscScalar aval = *aptr;
 
@@ -657,7 +657,7 @@ PetscErrorCode VecWAXPY_Seq(Vec win, PetscManagedScalar alpha, Vec xin, Vec yin,
   PetscCall(VecGetArrayRead(xin,&xx));
   PetscCall(VecGetArrayRead(yin,&yy));
   PetscCall(VecGetArray(win,&ww));
-  PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&aptr,NULL));
+  PetscCall(PetscManagedScalarGetValues(dctx,alpha,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&aptr));
   if (*aptr == (PetscScalar)1.0) {
     PetscCall(PetscLogFlops(n));
     /* could call BLAS axpy after call to memcopy, but may be slower */

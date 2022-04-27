@@ -436,10 +436,33 @@ template <DeviceType T>
 template <typename PetscType, typename PetscManagedType>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::destroyManagedType(PetscDeviceContext dctx, PetscManagedType scal))
 {
+  auto  stream     = impls_cast_(dctx)->stream;
+  auto& host_ptr   = scal->host;
+  auto& device_ptr = scal->device;
+
   PetscFunctionBegin;
   // try returning them to the pool
-  PetscCall(managed_host_pool_<PetscType>().release(&scal->host));
-  PetscCall(managed_device_pool_<PetscType>().release(&scal->device));
+  PetscCall(managed_host_pool_<PetscType>().release(&host_ptr));
+  // not freed, indicating the pool doesn't own it, now check if it is our responsibility to
+  // get rid of it
+  if (host_ptr && (scal->h_cmode == PETSC_OWN_POINTER)) {
+    PetscMemType mtype;
+
+    // if the pointer is managed memory we need to call cupmFree() on it
+    PetscCallCUPM(cupmGetMemType(host_ptr,&mtype));
+    if (PetscMemTypeDevice(mtype)) {
+      PetscCallCUPM(cupmFreeAsync(host_ptr,stream));
+      host_ptr = nullptr;
+    } else {
+      PetscCall(PetscFree(host_ptr));
+    }
+  }
+  PetscCall(managed_device_pool_<PetscType>().release(&device_ptr));
+  // same deal with device pointer
+  if (device_ptr && (scal->d_cmode == PETSC_OWN_POINTER)) {
+    PetscCallCUPM(cupmFreeAsync(device_ptr,stream));
+    device_ptr = nullptr;
+  }
   PetscFunctionReturn(0);
 }
 

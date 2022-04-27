@@ -246,15 +246,11 @@ struct InterfaceBase
     return std::get<util::integral_value(T)>(DeviceTypes);
   }
 
-  PETSC_CXX_COMPAT_DECL(constexpr PetscDeviceType cupmDeviceTypeToPetscDeviceType())
-  {
-    return T == DeviceType::CUDA ? PETSC_DEVICE_CUDA : PETSC_DEVICE_HIP;
-  }
+  PETSC_CXX_COMPAT_DECL(constexpr auto cupmDeviceTypeToPetscDeviceType())
+  PETSC_DECLTYPE_AUTO_RETURNS(T == DeviceType::CUDA ? PETSC_DEVICE_CUDA : PETSC_DEVICE_HIP);
 
-  PETSC_CXX_COMPAT_DECL(constexpr PetscMemType cupmDeviceTypeToPetscMemType())
-  {
-    return T == DeviceType::CUDA ? PETSC_MEMTYPE_CUDA : PETSC_MEMTYPE_HIP;
-  }
+  PETSC_CXX_COMPAT_DECL(constexpr auto cupmDeviceTypeToPetscMemType())
+  PETSC_DECLTYPE_AUTO_RETURNS(T == DeviceType::CUDA ? PETSC_MEMTYPE_CUDA : PETSC_MEMTYPE_HIP);
 };
 
 // declare the base class static member variables
@@ -589,7 +585,13 @@ struct Interface : InterfaceImpl<T>
 
   // REVIEW ME: this needs to be cleaned up, it is unreadable
   PETSC_CXX_COMPAT_DECL(constexpr auto makeCupmScalar(PetscScalar s))
-  PETSC_DECLTYPE_AUTO_RETURNS(PetscIfPetscDefined(USE_COMPLEX,(cupmComplex_t{PetscRealPart(s),PetscImaginaryPart(s)}),static_cast<cupmReal_t>(s)));
+  PETSC_DECLTYPE_AUTO_RETURNS(
+    PetscIfPetscDefined(
+      USE_COMPLEX,
+      (cupmComplex_t{PetscRealPart(s),PetscImaginaryPart(s)}),
+      static_cast<cupmReal_t>(s)
+    )
+  );
 
   PETSC_CXX_COMPAT_DECL(constexpr auto cupmScalarCast(const PetscScalar *s))
   PETSC_DECLTYPE_AUTO_RETURNS(reinterpret_cast<const cupmScalar_t*>(s));

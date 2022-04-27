@@ -103,7 +103,6 @@ PetscErrorCode VecDotAsync(Vec x, Vec y, PetscManagedScalar val, PetscDeviceCont
     PetscCall(PetscManageHostScalar(dctx_name__,ptr_name__,ptr_size__,&scal_name__));          \
     __VA_ARGS__;                                                                               \
     PetscCall(PetscManagedScalarEnsureOffload(dctx_name__,scal_name__,PETSC_OFFLOAD_CPU));     \
-    PetscCall(PetscDeviceContextSynchronize(dctx_name__));                                     \
     PetscCall(PetscManagedScalarDestroy(dctx_name__,&scal_name__));                            \
   } while (0)
 
@@ -167,7 +166,7 @@ PetscErrorCode VecDotRealPartAsync(Vec x, Vec y, PetscManagedReal val, PetscDevi
 
     PetscCall(PetscManagedScalarCreateDefault(dctx,size,&tmp));
     PetscCall(VecDotAsync(x,y,tmp,dctx));
-    PetscCall(PetscManagedScalarGetPointerAndMemType(dctx,tmp,PETSC_MEMORY_ACCESS_READ,&ptr,&mtype,NULL));
+    PetscCall(PetscManagedScalarGetPointerAndMemType(dctx,tmp,PETSC_MEMORY_ACCESS_READ,&ptr,&mtype));
     PetscCall(PetscManagedRealSetValues(dctx,val,mtype,(PetscReal*)ptr,size));
     PetscCall(PetscManagedScalarDestroy(dctx,&tmp));
   } else {
