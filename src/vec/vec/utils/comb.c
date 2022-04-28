@@ -318,6 +318,10 @@ static PetscErrorCode VecXDotBeginAsync(Vec x, Vec y, PetscManagedScalar PETSC_U
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
   PetscValidHeaderSpecific(y,VEC_CLASSID,2);
+  PetscValidType(x,1);
+  PetscValidType(y,2);
+  PetscCheckSameTypeAndComm(x,1,y,2);
+  VecCheckSameSize(x,1,y,2);
   PetscCall(PetscObjectGetComm((PetscObject)x,&comm));
   PetscCall(PetscSplitReductionGet(comm,&sr));
   PetscCheck(sr->state == STATE_BEGIN,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Called before all VecxxxEnd() called");
@@ -328,13 +332,15 @@ static PetscErrorCode VecXDotBeginAsync(Vec x, Vec y, PetscManagedScalar PETSC_U
   sr->reducetype[sr->numopsbegin] = PETSC_SR_REDUCE_SUM;
   sr->invecs[sr->numopsbegin]     = (void*)x;
 
+  PetscCall(VecLockReadPush(x));
+  PetscCall(VecLockReadPush(y));
   PetscCall(PetscManageHostScalar(dctx,sr->lvalues+sr->numopsbegin++,1,&tmp));
   PetscCall(PetscLogEventBegin(VEC_ReduceArithmetic,0,0,0,0));
   PetscCall((*op_local)(x,y,tmp,dctx));
   PetscCall(PetscLogEventEnd(VEC_ReduceArithmetic,0,0,0,0));
-  // ensure that the host gets the data back
-  PetscCall(PetscManagedScalarEnsureOffload(dctx,tmp,PETSC_OFFLOAD_CPU));
-  PetscCall(PetscManagedScalarDestroy(dctx,&tmp));
+  PetscCall(PetscManagedHostScalarDestroy(dctx,&tmp));
+  PetscCall(VecLockReadPop(x));
+  PetscCall(VecLockReadPop(y));
   PetscFunctionReturn(0);
 }
 
@@ -378,6 +384,10 @@ PetscErrorCode VecDotEndAsync(Vec x, Vec y, PetscManagedScalar result, PetscDevi
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
   PetscValidHeaderSpecific(y,VEC_CLASSID,2);
+  PetscValidType(x,1);
+  PetscValidType(y,2);
+  PetscCheckSameTypeAndComm(x,1,y,2);
+  VecCheckSameSize(x,1,y,2);
   PetscCall(PetscObjectGetComm((PetscObject)x,&comm));
   PetscCall(PetscSplitReductionGet(comm,&sr));
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
@@ -427,7 +437,7 @@ PetscErrorCode  VecDotEnd(Vec x,Vec y,PetscScalar *result)
   PetscValidScalarPointer(result,3);
   PetscCall(PetscManageHostScalar(NULL,result,1,&scal));
   PetscCall(VecDotEndAsync(x,y,scal,NULL));
-  PetscCall(PetscManagedScalarDestroy(NULL,&scal));
+  PetscCall(PetscManagedHostScalarDestroy(NULL,&scal));
   PetscFunctionReturn(0);
 }
 
@@ -497,7 +507,7 @@ PetscErrorCode  VecTDotEnd(Vec x,Vec y,PetscScalar *result)
   PetscValidScalarPointer(result,3);
   PetscCall(PetscManageHostScalar(NULL,result,1,&scal));
   PetscCall(VecTDotEndAsync(x,y,scal,NULL));
-  PetscCall(PetscManagedScalarDestroy(NULL,&scal));
+  PetscCall(PetscManagedHostScalarDestroy(NULL,&scal));
   PetscFunctionReturn(0);
 }
 
@@ -511,6 +521,7 @@ PetscErrorCode VecNormBeginAsync(Vec x, NormType ntype, PetscManagedReal result,
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
 
   PetscCall(PetscObjectGetComm((PetscObject)x,&comm));
@@ -523,9 +534,11 @@ PetscErrorCode VecNormBeginAsync(Vec x, NormType ntype, PetscManagedReal result,
   }
   sr->invecs[sr->numopsbegin] = (void*)x;
 
+  PetscCall(VecLockReadPush(x));
   PetscCall(PetscLogEventBegin(VEC_ReduceArithmetic,0,0,0,0));
   PetscCall((*x->ops->norm_local)(x,ntype,result,dctx));
   PetscCall(PetscLogEventEnd(VEC_ReduceArithmetic,0,0,0,0));
+  PetscCall(VecLockReadPop(x));
 
   // implicit sync, can likely do this better without a sync necessary
   PetscCall(PetscManagedRealGetValues(dctx,result,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&resptr));
@@ -565,7 +578,7 @@ PetscErrorCode  VecNormBegin(Vec x,NormType ntype,PetscReal *result)
   PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
   PetscCall(PetscManageHostReal(dctx,result,1+(ntype == NORM_1_AND_2),&tmp));
   PetscCall(VecNormBeginAsync(x,ntype,tmp,dctx));
-  PetscCall(PetscManagedRealDestroy(dctx,&tmp));
+  PetscCall(PetscManagedHostRealDestroy(dctx,&tmp));
   PetscFunctionReturn(0);
 }
 
@@ -577,6 +590,7 @@ PetscErrorCode VecNormEndAsync(Vec x, NormType ntype, PetscManagedReal result, P
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
 
   PetscCall(PetscObjectGetComm((PetscObject)x,&comm));
@@ -631,7 +645,7 @@ PetscErrorCode  VecNormEnd(Vec x,NormType ntype,PetscReal *result)
   PetscValidRealPointer(result,3);
   PetscCall(PetscManageHostReal(NULL,result,1+(ntype == NORM_1_AND_2),&scal));
   PetscCall(VecNormEndAsync(x,ntype,scal,NULL));
-  PetscCall(PetscManagedRealDestroy(NULL,&scal));
+  PetscCall(PetscManagedHostRealDestroy(NULL,&scal));
   PetscFunctionReturn(0);
 }
 
@@ -643,7 +657,7 @@ PetscErrorCode  VecNormEnd(Vec x,NormType ntype,PetscReal *result)
      PetscReductionMinBegin/End()
    or have more like MPI with a single function with flag for Op? Like first better
 */
-static PetscErrorCode VecMXDotBegin_Private(Vec x, PetscManagedInt nv, const Vec y[], PetscManagedScalar PETSC_UNUSED result, PetscDeviceContext dctx, PetscErrorCode(*const op_local)(Vec,PetscManagedInt,const Vec*,PetscManagedScalar,PetscDeviceContext))
+static PetscErrorCode VecMXDotBeginAsync_Private(Vec x, PetscManagedInt nv, const Vec y[], PetscManagedScalar PETSC_UNUSED result, PetscDeviceContext dctx, PetscErrorCode(*const op_local)(Vec,PetscManagedInt,const Vec*,PetscManagedScalar,PetscDeviceContext))
 {
   PetscSplitReduction *sr;
   PetscManagedScalar   scal;
@@ -653,6 +667,8 @@ static PetscErrorCode VecMXDotBegin_Private(Vec x, PetscManagedInt nv, const Vec
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscValidType(x,1);
+  PetscValidPointer(y,3);
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   PetscCall(PetscObjectGetComm((PetscObject)x,&comm));
   PetscCall(PetscSplitReductionGet(comm,&sr));
@@ -663,16 +679,40 @@ static PetscErrorCode VecMXDotBegin_Private(Vec x, PetscManagedInt nv, const Vec
   PetscCall(PetscManagedIntGetValues(dctx,nv,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&nvptr));
   nvval = *nvptr;
   for (PetscInt i = 0; i < nvval; ++i) {
+    // use this opportunity to check y
+    PetscValidType(y[i],3);
+    PetscCheckSameTypeAndComm(x,1,y[i],3);
+    VecCheckSameSize(x,1,y[i],3);
+    PetscCall(VecLockReadPush(y[i]));
+
     if (sr->numopsbegin+i >= sr->maxops) PetscCall(PetscSplitReductionExtend(sr));
     sr->reducetype[sr->numopsbegin+i] = PETSC_SR_REDUCE_SUM;
     sr->invecs[sr->numopsbegin+i]     = (void*)x;
   }
   PetscCall(PetscManageHostScalar(dctx,sr->lvalues+sr->numopsbegin,nvval,&scal));
   sr->numopsbegin += nvval;
+  PetscCall(VecLockReadPush(x));
   PetscCall(PetscLogEventBegin(VEC_ReduceArithmetic,0,0,0,0));
   PetscCall((*op_local)(x,nv,y,result,dctx));
   PetscCall(PetscLogEventEnd(VEC_ReduceArithmetic,0,0,0,0));
-  PetscCall(PetscManagedScalarDestroy(dctx,&scal));
+  PetscCall(PetscManagedHostScalarDestroy(dctx,&scal));
+  PetscCall(VecLockReadPop(x));
+  for (PetscInt i = 0; i < nvval; ++i) PetscCall(VecLockReadPop(y[i]));
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode VecMXDotBegin_Private(Vec x, PetscInt nv, const Vec y[], PetscScalar PETSC_UNUSED result[], PetscErrorCode(*const VecMXDotBeginAsync_Func)(Vec,PetscManagedInt,const Vec[],PetscManagedScalar,PetscDeviceContext))
+{
+  PetscDeviceContext dctx;
+  PetscManagedInt    nvtmp;
+
+  PetscFunctionBegin;
+  if (nv) PetscValidScalarPointer(result,4);
+  PetscValidFunction(VecMXDotBeginAsync_Func,5);
+  PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
+  PetscCall(PetscManageHostInt(dctx,&nv,1,&nvtmp));
+  PetscCall(VecMXDotBeginAsync_Func(x,nvtmp,y,NULL,dctx));
+  PetscCall(PetscManagedIntDestroy(dctx,&nvtmp));
   PetscFunctionReturn(0);
 }
 
@@ -680,7 +720,7 @@ PetscErrorCode VecMDotBeginAsync(Vec x, PetscManagedInt nv, const Vec y[], Petsc
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  PetscCall(VecMXDotBegin_Private(x,nv,y,result,dctx,x->ops->mdot_local));
+  PetscCall(VecMXDotBeginAsync_Private(x,nv,y,result,dctx,x->ops->mdot_local));
   PetscFunctionReturn(0);
 }
 
@@ -701,19 +741,47 @@ PetscErrorCode VecMDotBeginAsync(Vec x, PetscManagedInt nv, const Vec y[], Petsc
 .seealso: VecMDotEnd(), VecNormBegin(), VecNormEnd(), VecNorm(), VecDot(), VecMDot(),
          VecTDotBegin(), VecTDotEnd(), VecMTDotBegin(), VecMTDotEnd(), PetscCommSplitReductionBegin()
 @*/
-PetscErrorCode  VecMDotBegin(Vec x,PetscInt nv,const Vec y[],PetscScalar result[])
+PetscErrorCode  VecMDotBegin(Vec x,PetscInt nv,const Vec y[],PetscScalar PETSC_UNUSED result[])
 {
-  PetscManagedInt nvtmp;
-
   PetscFunctionBegin;
-  if (nv) PetscValidScalarPointer(result,4);
-  PetscCall(PetscManageHostInt(NULL,&nv,1,&nvtmp));
-  PetscCall(VecMDotBeginAsync(x,nvtmp,y,NULL,NULL));
-  PetscCall(PetscManagedIntDestroy(NULL,&nvtmp));
+  PetscCall(VecMXDotBegin_Private(x,nv,y,result,VecMDotBeginAsync));
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecMDotEndAsync(Vec x, PetscManagedInt nv, const Vec y[], PetscManagedScalar result, PetscDeviceContext dctx)
+PetscErrorCode VecMTDotBeginAsync(Vec x, PetscManagedInt nv, const Vec y[], PetscManagedScalar result, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
+  PetscCall(VecMXDotBeginAsync_Private(x,nv,y,result,dctx,x->ops->mtdot_local));
+  PetscFunctionReturn(0);
+}
+
+/*@
+   VecMTDotBegin - Starts a split phase transpose multiple dot product computation.
+
+   Input Parameters:
++  x - the first vector
+.  nv - number of vectors
+.  y - array of  vectors
+-  result - where the result will go (can be NULL)
+
+   Level: advanced
+
+   Notes:
+   Each call to VecMTDotBegin() should be paired with a call to VecMTDotEnd().
+
+.seealso: VecMTDotEnd(), VecNormBegin(), VecNormEnd(), VecNorm(), VecDot(), VecMDot(),
+         VecDotBegin(), VecDotEnd(), VecMDotBegin(), VecMDotEnd(), PetscCommSplitReductionBegin()
+
+@*/
+PetscErrorCode  VecMTDotBegin(Vec x,PetscInt nv,const Vec y[],PetscScalar result[])
+{
+  PetscFunctionBegin;
+  PetscCall(VecMXDotBegin_Private(x,nv,y,result,VecMTDotBeginAsync));
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode VecMXDotEndAsync_Private(Vec x, PetscManagedInt nv, const Vec y[], PetscManagedScalar result, PetscDeviceContext dctx)
 {
   PetscSplitReduction *sr;
   PetscInt            *nvptr;
@@ -730,6 +798,7 @@ PetscErrorCode VecMDotEndAsync(Vec x, PetscManagedInt nv, const Vec y[], PetscMa
   PetscCheck(sr->numopsend < sr->numopsbegin,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecxxxEnd() more times then VecxxxBegin()");
   PetscCheck(!x || (void*)x == sr->invecs[sr->numopsend],PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecxxxEnd() in a different order or with a different vector than VecxxxBegin()");
   PetscCheck(sr->reducetype[sr->numopsend] == PETSC_SR_REDUCE_SUM,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecDotEnd() on a reduction started with VecNormBegin()");
+  // implicit sync
   PetscCall(PetscManagedIntGetValues(dctx,nv,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&nvptr));
   PetscCall(PetscManagedScalarSetValues(dctx,result,PETSC_MEMTYPE_HOST,sr->gvalues+sr->numopsend,*nvptr));
   sr->numopsend += *nvptr;
@@ -742,6 +811,31 @@ PetscErrorCode VecMDotEndAsync(Vec x, PetscManagedInt nv, const Vec y[], PetscMa
     sr->numopsend   = 0;
     sr->numopsbegin = 0;
   }
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode VecMXDotEnd_Private(Vec x, PetscInt nv, const Vec y[], PetscScalar result[], PetscErrorCode(*const VecMXDotEndAsync_Func)(Vec,PetscManagedInt,const Vec[],PetscManagedScalar,PetscDeviceContext))
+{
+  PetscManagedInt    nvtmp;
+  PetscManagedScalar restmp;
+  PetscDeviceContext dctx;
+
+  PetscFunctionBegin;
+  if (nv) PetscValidScalarPointer(result,4);
+  PetscValidFunction(VecMXDotEndAsync_Func,5);
+  PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
+  PetscCall(PetscManageHostInt(dctx,&nv,1,&nvtmp));
+  PetscCall(PetscManageHostScalar(dctx,result,nv,&restmp));
+  PetscCall(VecMXDotEndAsync_Func(x,nvtmp,y,restmp,dctx));
+  PetscCall(PetscManagedHostScalarDestroy(dctx,&restmp));
+  PetscCall(PetscManagedIntDestroy(dctx,&nvtmp));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode VecMDotEndAsync(Vec x, PetscManagedInt nv, const Vec y[], PetscManagedScalar result, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
+  PetscCall(VecMXDotEndAsync_Private(x,nv,y,result,dctx));
   PetscFunctionReturn(0);
 }
 
@@ -767,54 +861,8 @@ PetscErrorCode VecMDotEndAsync(Vec x, PetscManagedInt nv, const Vec y[], PetscMa
 @*/
 PetscErrorCode  VecMDotEnd(Vec x,PetscInt nv,const Vec y[],PetscScalar result[])
 {
-  PetscManagedInt    nvtmp;
-  PetscManagedScalar restmp;
-
   PetscFunctionBegin;
-  if (nv) PetscValidScalarPointer(result,4);
-  PetscCall(PetscManageHostInt(NULL,&nv,1,&nvtmp));
-  PetscCall(PetscManageHostScalar(NULL,result,nv,&restmp));
-  PetscCall(VecMDotEndAsync(x,nvtmp,y,restmp,NULL));
-  PetscCall(PetscManagedScalarDestroy(NULL,&restmp));
-  PetscCall(PetscManagedIntDestroy(NULL,&nvtmp));
-  PetscFunctionReturn(0);
-}
-
-PetscErrorCode VecMTDotBeginAsync(Vec x, PetscManagedInt nv, const Vec y[], PetscManagedScalar result, PetscDeviceContext dctx)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
-  PetscCall(VecMXDotBegin_Private(x,nv,y,result,dctx,x->ops->mtdot_local));
-  PetscFunctionReturn(0);
-}
-
-/*@
-   VecMTDotBegin - Starts a split phase transpose multiple dot product computation.
-
-   Input Parameters:
-+  x - the first vector
-.  nv - number of vectors
-.  y - array of  vectors
--  result - where the result will go (can be NULL)
-
-   Level: advanced
-
-   Notes:
-   Each call to VecMTDotBegin() should be paired with a call to VecMTDotEnd().
-
-.seealso: VecMTDotEnd(), VecNormBegin(), VecNormEnd(), VecNorm(), VecDot(), VecMDot(),
-         VecDotBegin(), VecDotEnd(), VecMDotBegin(), VecMDotEnd(), PetscCommSplitReductionBegin()
-
-@*/
-PetscErrorCode  VecMTDotBegin(Vec x,PetscInt nv,const Vec y[],PetscScalar result[])
-{
-  PetscManagedInt nvtmp;
-
-  PetscFunctionBegin;
-  if (nv) PetscValidScalarPointer(result,4);
-  PetscCall(PetscManageHostInt(NULL,&nv,1,&nvtmp));
-  PetscCall(VecMTDotBeginAsync(x,nvtmp,y,NULL,NULL));
-  PetscCall(PetscManagedIntDestroy(NULL,&nvtmp));
+  PetscCall(VecMXDotEnd_Private(x,nv,y,result,VecMDotEndAsync));
   PetscFunctionReturn(0);
 }
 
@@ -847,15 +895,7 @@ PetscErrorCode VecMTDotEndAsync(Vec x, PetscManagedInt nv, const Vec y[], PetscM
 @*/
 PetscErrorCode  VecMTDotEnd(Vec x,PetscInt nv,const Vec y[],PetscScalar result[])
 {
-  PetscManagedInt    nvtmp;
-  PetscManagedScalar restmp;
-
   PetscFunctionBegin;
-  if (nv) PetscValidScalarPointer(result,4);
-  PetscCall(PetscManageHostInt(NULL,&nv,1,&nvtmp));
-  PetscCall(PetscManageHostScalar(NULL,result,nv,&restmp));
-  PetscCall(VecMDotEndAsync(x,nvtmp,y,restmp,NULL));
-  PetscCall(PetscManagedScalarDestroy(NULL,&restmp));
-  PetscCall(PetscManagedIntDestroy(NULL,&nvtmp));
+  PetscCall(VecMXDotEnd_Private(x,nv,y,result,VecMTDotEndAsync));
   PetscFunctionReturn(0);
 }

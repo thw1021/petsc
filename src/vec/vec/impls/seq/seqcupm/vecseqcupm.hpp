@@ -276,20 +276,21 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::getlocalvector_async(Vec v,
   PetscCall(PetscObjectTypeCompare(PetscObjectCast(w),VECSEQCUPM(),&wisseqcupm));
   if (wisseqcupm) {
     if (const auto wseq = VecIMPLCast(w)) {
-      if (wseq->array_allocated) {
+      if (auto& alloced = wseq->array_allocated) {
         const auto useit = UseCUPMHostAlloc(w);
 
-        PetscCall(PetscFree(wseq->array_allocated));
+        PetscCall(PetscFree(alloced));
         w->pinned_memory = PETSC_FALSE;
       }
       wseq->array = wseq->unplacedarray = nullptr;
     }
     if (const auto wcu = VecCUPMCast(w)) {
-      if (auto device_array = wcu->device_array) {
+      if (auto& device_array = wcu->device_array) {
         cupmStream_t stream;
 
         PetscCall(GetHandles_(dctx,&stream));
         PetscCallCUPM(cupmFreeAsync(device_array,stream));
+        device_array = nullptr;
       }
       PetscCall(PetscFree(w->spptr /* wcu */));
     }
@@ -1067,7 +1068,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::norm_async(Vec xin, NormTyp
     PetscCall(PetscLogGpuTimeEnd());
     PetscCall(PetscLogGpuFlops(flopCount));
   } else {
-    const PetscReal zero[] = {0.0,0.0};
+    constexpr PetscReal zero[] = {0.0,0.0};
 
     PetscCall(PetscManagedRealSetValues(dctx,z,PETSC_MEMTYPE_HOST,zero,1+(type == NORM_1_AND_2)));
   }

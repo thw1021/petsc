@@ -3139,8 +3139,6 @@ static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat A,Vec xx,Vec yy,Vec zz
     PetscCall(PetscLogGpuTimeEnd());
 
     if (opA == CUSPARSE_OPERATION_NON_TRANSPOSE) {
-      PetscDeviceContext dctx;
-
       if (yy) { /* MatMultAdd: zz = A*xx + yy */
         if (compressed) { /* A is compressed. We first copy yy to zz, then ScatterAdd the work vector to zz */
           PetscCall(VecSeq_CUDA::copy_async(yy,zz,dctx)); /* zz = yy */
@@ -3677,8 +3675,6 @@ static PetscErrorCode MatSeqAIJCUSPARSEMultStruct_Destroy(Mat_SeqAIJCUSPARSETriF
 
 static PetscErrorCode MatSeqAIJCUSPARSEMultStruct_Destroy(Mat_SeqAIJCUSPARSEMultStruct **matstruct,MatCUSPARSEStorageFormat format)
 {
-  CsrMatrix        *mat;
-
   PetscFunctionBegin;
   if (*matstruct) {
     if ((*matstruct)->mat) {
@@ -3690,8 +3686,7 @@ static PetscErrorCode MatSeqAIJCUSPARSEMultStruct_Destroy(Mat_SeqAIJCUSPARSEMult
         PetscCallCUSPARSE(cusparseDestroyHybMat(hybMat));
        #endif
       } else {
-        mat = (CsrMatrix*)(*matstruct)->mat;
-        CsrMatrix_Destroy(&mat);
+        PetscCall(CsrMatrix_Destroy(reinterpret_cast<CsrMatrix**>(&((*matstruct)->mat))));
       }
     }
     if ((*matstruct)->descr) PetscCallCUSPARSE(cusparseDestroyMatDescr((*matstruct)->descr));

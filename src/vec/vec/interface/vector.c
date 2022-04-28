@@ -661,8 +661,8 @@ PetscErrorCode  VecView(Vec vec,PetscViewer viewer)
   } else {
     PetscCall((*vec->ops->view)(vec,viewer));
   }
-  PetscCall(VecLockReadPop(vec));
   PetscCall(PetscLogEventEnd(VEC_View,vec,viewer,0,0));
+  PetscCall(VecLockReadPop(vec));
   PetscFunctionReturn(0);
 }
 
@@ -1664,7 +1664,7 @@ PetscErrorCode  VecCopy(Vec x,Vec y)
 
 PetscErrorCode VecSwapAsync(Vec x, Vec y, PetscDeviceContext dctx)
 {
-  PetscReal normxs[4] = {0.0},normys[4] = {0.0};
+  PetscReal normxs[4],normys[4];
   PetscBool flgxs[4],flgys[4];
 
   PetscFunctionBegin;
