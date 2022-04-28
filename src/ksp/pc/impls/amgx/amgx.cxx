@@ -16,6 +16,7 @@
 #include <vector>
 #include <algorithm>
 #include <map>
+#include <numeric>
 #include "cuda_runtime.h"
 
 enum class AmgXSmoother { PCG, PCGF, PBiCGStab, GMRES, FGMRES, JacobiL1,
@@ -231,10 +232,8 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
 
     // Fetch the number of local rows per rank
     partitionOffsets[0] = 0; /* could use PetscLayoutGetRanges */
-    PetscCall(MPIU_Allgather(&amgx->nLocalRows, 1, MPIU_INT, partitionOffsets.data()+1, 1, MPIU_INT, amgx->comm));
-
-    // Prefix sum to get offsets
-    std::partial_sum(partitionOffsets.begin(),partitionOffsets.end(),partitionOffsets.begin());
+    PetscCall(MPI_Allgather(&amgx->nLocalRows, 1, MPIU_INT, partitionOffsets.data()+1, 1, MPIU_INT, amgx->comm));
+    std::partial_sum(partitionOffsets.begin(), partitionOffsets.end(), partitionOffsets.begin());
 
     // Fetch the number of global rows
     amgx->nGlobalRows = partitionOffsets[amgx->nranks];
