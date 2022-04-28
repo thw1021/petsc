@@ -25,7 +25,7 @@ KOKKOS_INLINE_FUNCTION PetscErrorCode MMSForcing1(PetscReal user_param,const DMD
   return 0;
 }
 
-PetscErrorCode FormFunctionLocalVec_Kokkos(DMDALocalInfo *info,Vec x,Vec f,AppCtx *user)
+PetscErrorCode FormFunctionLocalExt_Kokkos(DMDALocalInfo *info,Vec x,Vec f,AppCtx *user)
 {
   PetscReal      lambda,hx,hy,hxdhy,hydhx;
   PetscInt       xs = info->xs,ys = info->ys,xm = info->xm,ym = info->ym,mx = info->mx,my = info->my;
