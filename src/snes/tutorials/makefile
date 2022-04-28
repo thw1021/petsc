@@ -22,6 +22,13 @@ CLEANFILES       = ex5f90t
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 
+
+ex5objs := ex5.o
+ifneq ($(KOKKOS_LIB),)
+  ex5objs += ex5k.o
+endif
+ex5 : ${ex5objs}
+
 #-------------------------------------------------------------------------
 
 #  these tests are used by the makefile in PETSC_DIR for basic tests of the install and should not be removed
