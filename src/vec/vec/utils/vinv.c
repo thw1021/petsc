@@ -1066,10 +1066,11 @@ PetscErrorCode  VecStrideSubSetScatter_Default(Vec s,PetscInt nidx,const PetscIn
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecApplyUnary_Private(Vec v, PetscDeviceContext dctx, PetscErrorCode(*const unary_op)(Vec,PetscDeviceContext), PetscScalar(*const UnaryFunc)(PetscScalar))
+static PetscErrorCode VecApplyUnaryAsync_Private(Vec v, PetscDeviceContext dctx, PetscErrorCode(*const unary_op)(Vec,PetscDeviceContext), PetscScalar(*const UnaryFunc)(PetscScalar))
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
+  PetscCall(VecSetErrorIfLocked(v,1));
   if (unary_op) {
     PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
     PetscValidFunction(unary_op,3);
@@ -1095,8 +1096,7 @@ static PetscScalar PetscReciprocal_Fn(PetscScalar x)
 PetscErrorCode VecReciprocal_Default(Vec v, PetscDeviceContext dctx)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
-  PetscCall(VecApplyUnary_Private(v,dctx,NULL,PetscReciprocal_Fn));
+  PetscCall(VecApplyUnaryAsync_Private(v,dctx,NULL,PetscReciprocal_Fn));
   PetscFunctionReturn(0);
 }
 
@@ -1106,7 +1106,7 @@ PetscErrorCode VecExpAsync(Vec v, PetscDeviceContext dctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
-  PetscCall(VecApplyUnary_Private(v,dctx,v->ops->exp,PetscExpScalar_Fn));
+  PetscCall(VecApplyUnaryAsync_Private(v,dctx,v->ops->exp,PetscExpScalar_Fn));
   PetscFunctionReturn(0);
 }
 
@@ -1139,7 +1139,7 @@ PetscErrorCode VecLogAsync(Vec v, PetscDeviceContext dctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
-  PetscCall(VecApplyUnary_Private(v,dctx,v->ops->log,PetscLogScalar_Fn));
+  PetscCall(VecApplyUnaryAsync_Private(v,dctx,v->ops->log,PetscLogScalar_Fn));
   PetscFunctionReturn(0);
 }
 
@@ -1172,7 +1172,7 @@ PetscErrorCode VecSqrtAbsAsync(Vec v, PetscDeviceContext dctx)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
-  PetscCall(VecApplyUnary_Private(v,dctx,v->ops->sqrt,PetscSqrtScalar_Fn));
+  PetscCall(VecApplyUnaryAsync_Private(v,dctx,v->ops->sqrt,PetscSqrtScalar_Fn));
   PetscFunctionReturn(0);
 }
 
@@ -1201,6 +1201,98 @@ PetscErrorCode  VecSqrtAbs(Vec v)
   PetscFunctionReturn(0);
 }
 
+static PetscScalar PetscAbsScalar_Func(PetscScalar x) { return (PetscScalar)PetscAbsScalar(x); }
+
+PetscErrorCode VecAbsAsync(Vec v, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
+  PetscCall(VecSetErrorIfLocked(v,1));
+  if (v->ops->abs) {
+    PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+    PetscCall((*v->ops->abs)(v,dctx));
+  } else {
+    PetscCall(VecApplyUnaryAsync_Private(v,dctx,NULL,PetscAbsScalar_Func));
+  }
+  PetscFunctionReturn(0);
+}
+
+/*@
+   VecAbs - Replaces every element in a vector with its absolute value.
+
+   Logically Collective on Vec
+
+   Input Parameters:
+.  v - the vector
+
+   Level: intermediate
+
+@*/
+PetscErrorCode  VecAbs(Vec v)
+{
+  PetscFunctionBegin;
+  PetscCall(VecAbsAsync(v,NULL));
+  PetscFunctionReturn(0);
+}
+
+// have to make a function since PetscImaginaryPart() is a macro
+static PetscScalar PetscImaginaryPart_Func(PetscScalar x) { return (PetscScalar)PetscImaginaryPart(x); }
+
+PetscErrorCode VecImaginaryPartAsync(Vec v, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
+  PetscCall(VecApplyUnaryAsync_Private(v,dctx,NULL,PetscImaginaryPart_Func));
+  PetscFunctionReturn(0);
+}
+
+/*@
+   VecImaginaryPart - Replaces a complex vector with its imginary part
+
+   Collective on Vec
+
+   Input Parameter:
+.  v - the vector
+
+   Level: beginner
+
+.seealso: VecNorm(), VecRealPart()
+@*/
+PetscErrorCode  VecImaginaryPart(Vec v)
+{
+  PetscFunctionBegin;
+  PetscCall(VecImaginaryPartAsync(v,NULL));
+  PetscFunctionReturn(0);
+}
+
+// have to make a function since PetscRealPart() is a macro
+static PetscScalar PetscRealPart_Func(PetscScalar x) { return (PetscScalar)PetscRealPart(x); }
+
+PetscErrorCode VecRealPartAsync(Vec v, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
+  PetscCall(VecApplyUnaryAsync_Private(v,dctx,NULL,PetscRealPart_Func));
+  PetscFunctionReturn(0);
+}
+
+/*@
+   VecRealPart - Replaces a complex vector with its real part
+
+   Collective on Vec
+
+   Input Parameter:
+.  v - the vector
+
+   Level: beginner
+
+.seealso: VecNorm(), VecImaginaryPart()
+@*/
+PetscErrorCode  VecRealPart(Vec v)
+{
+  PetscFunctionBegin;
+  PetscCall(VecRealPartAsync(v,NULL));
+  PetscFunctionReturn(0);
+}
+
 PetscErrorCode VecDotNorm2Async(Vec s, Vec t, PetscManagedScalar dp, PetscManagedReal nm, PetscDeviceContext dctx)
 {
   PetscFunctionBegin;
@@ -1211,15 +1303,20 @@ PetscErrorCode VecDotNorm2Async(Vec s, Vec t, PetscManagedScalar dp, PetscManage
   PetscCheckSameTypeAndComm(s,1,t,2);
   VecCheckSameSize(s,1,t,2);
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  PetscCall(VecLockReadPush(s));
+  PetscCall(VecLockReadPush(t));
 
   PetscCall(PetscLogEventBegin(VEC_DotNorm2,s,t,0,0));
   if (s->ops->dotnorm2) {
-    PetscManagedScalar nmtmp;
+    const PetscInt      size = 1;
+    PetscScalar        *ptr;
+    PetscMemType        mtype;
+    PetscManagedScalar  nmtmp;
 
-    PetscCall(PetscManagedScalarCreateDefault(dctx,1,&nmtmp));
+    PetscCall(PetscManagedScalarCreateDefault(dctx,size,&nmtmp));
     PetscCall((*s->ops->dotnorm2)(s,t,dp,nmtmp,dctx));
-    // REVIEW ME
-    //*nm = PetscRealPart(dpx);
+    PetscCall(PetscManagedScalarGetPointerAndMemType(dctx,nmtmp,PETSC_MEMORY_ACCESS_READ,&ptr,&mtype));
+    PetscCall(PetscManagedRealSetValues(dctx,nm,mtype,(const PetscReal*)ptr,size));
     PetscCall(PetscManagedScalarDestroy(dctx,&nmtmp));
   } else {
     const PetscScalar *sx,*tx;
@@ -1243,6 +1340,8 @@ PetscErrorCode VecDotNorm2Async(Vec s, Vec t, PetscManagedScalar dp, PetscManage
     PetscCall(PetscLogFlops(4.0*n));
   }
   PetscCall(PetscLogEventEnd(VEC_DotNorm2,s,t,0,0));
+  PetscCall(VecLockReadPop(s));
+  PetscCall(VecLockReadPop(t));
   PetscFunctionReturn(0);
 }
 
@@ -1278,8 +1377,8 @@ PetscErrorCode  VecDotNorm2(Vec s,Vec t,PetscScalar *dp, PetscReal *nm)
   PetscCall(PetscManageHostScalar(NULL,dp,1,&dpt));
   PetscCall(PetscManageHostReal(NULL,nm,1,&nmt));
   PetscCall(VecDotNorm2Async(s,t,dpt,nmt,NULL));
-  PetscCall(PetscManagedScalarDestroy(NULL,&dpt));
-  PetscCall(PetscManagedRealDestroy(NULL,&nmt));
+  PetscCall(PetscManagedHostScalarDestroy(NULL,&dpt));
+  PetscCall(PetscManagedHostRealDestroy(NULL,&nmt));
   PetscFunctionReturn(0);
 }
 
@@ -1330,7 +1429,7 @@ PetscErrorCode  VecSum(Vec v,PetscScalar *sum)
   PetscValidScalarPointer(sum,2);
   PetscCall(PetscManageHostScalar(NULL,sum,1,&stmp));
   PetscCall(VecSumAsync(v,stmp,NULL));
-  PetscCall(PetscManagedScalarDestroy(NULL,&stmp));
+  PetscCall(PetscManagedHostScalarDestroy(NULL,&stmp));
   PetscFunctionReturn(0);
 }
 
@@ -1373,80 +1472,7 @@ PetscErrorCode  VecMean(Vec v,PetscScalar *mean)
   PetscValidScalarPointer(mean,2);
   PetscCall(PetscManageHostScalar(NULL,mean,1,&scal));
   PetscCall(VecMeanAsync(v,scal,NULL));
-  PetscCall(PetscManagedScalarDestroy(NULL,&scal));
-  PetscFunctionReturn(0);
-}
-
-static PetscErrorCode VecInplaceMutate_Private(Vec v, PetscDeviceContext PETSC_UNUSED dctx, PetscScalar(*const func)(PetscScalar))
-{
-  PetscInt     n;
-  PetscScalar *x;
-
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
-  PetscValidFunction(func,3);
-  PetscCall(VecGetLocalSize(v,&n));
-  PetscCall(VecGetArray(v,&x));
-  for (PetscInt i = 0; i < n; ++i) x[i] = func(x[i]);
-  PetscCall(VecRestoreArray(v,&x));
-  PetscFunctionReturn(0);
-}
-
-// have to make a function since PetscImaginaryPart() is a macro
-static PetscScalar PetscImaginaryPart_Func(PetscScalar x) { return (PetscScalar)PetscImaginaryPart(x); }
-
-PetscErrorCode VecImaginaryPartAsync(Vec v, PetscDeviceContext dctx)
-{
-  PetscFunctionBegin;
-  PetscCall(VecInplaceMutate_Private(v,dctx,PetscImaginaryPart_Func));
-  PetscFunctionReturn(0);
-}
-
-/*@
-   VecImaginaryPart - Replaces a complex vector with its imginary part
-
-   Collective on Vec
-
-   Input Parameter:
-.  v - the vector
-
-   Level: beginner
-
-.seealso: VecNorm(), VecRealPart()
-@*/
-PetscErrorCode  VecImaginaryPart(Vec v)
-{
-  PetscFunctionBegin;
-  PetscCall(VecImaginaryPartAsync(v,NULL));
-  PetscFunctionReturn(0);
-}
-
-// have to make a function since PetscRealPart() is a macro
-static PetscScalar PetscRealPart_Func(PetscScalar x) { return (PetscScalar)PetscRealPart(x); }
-
-PetscErrorCode VecRealPartAsync(Vec v, PetscDeviceContext dctx)
-{
-  PetscFunctionBegin;
-  PetscCall(VecInplaceMutate_Private(v,dctx,PetscRealPart_Func));
-  PetscFunctionReturn(0);
-}
-
-/*@
-   VecRealPart - Replaces a complex vector with its real part
-
-   Collective on Vec
-
-   Input Parameter:
-.  v - the vector
-
-   Level: beginner
-
-.seealso: VecNorm(), VecImaginaryPart()
-@*/
-PetscErrorCode  VecRealPart(Vec v)
-{
-  PetscFunctionBegin;
-  PetscCall(VecRealPartAsync(v,NULL));
+  PetscCall(PetscManagedHostScalarDestroy(NULL,&scal));
   PetscFunctionReturn(0);
 }
 
@@ -1498,40 +1524,6 @@ PetscErrorCode  VecShift(Vec v,PetscScalar shift)
     PetscCall(VecShiftAsync(v,scal,NULL));
     PetscCall(PetscManagedScalarDestroy(NULL,&scal));
   }
-  PetscFunctionReturn(0);
-}
-
-static PetscScalar PetscAbsScalar_Func(PetscScalar x) { return (PetscScalar)PetscAbsScalar(x); }
-
-PetscErrorCode VecAbsAsync(Vec v, PetscDeviceContext dctx)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
-  PetscCall(VecSetErrorIfLocked(v,1));
-  if (v->ops->abs) {
-    PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
-    PetscCall((*v->ops->abs)(v,dctx));
-  } else {
-    PetscCall(VecInplaceMutate_Private(v,dctx,PetscAbsScalar_Func));
-  }
-  PetscFunctionReturn(0);
-}
-
-/*@
-   VecAbs - Replaces every element in a vector with its absolute value.
-
-   Logically Collective on Vec
-
-   Input Parameters:
-.  v - the vector
-
-   Level: intermediate
-
-@*/
-PetscErrorCode  VecAbs(Vec v)
-{
-  PetscFunctionBegin;
-  PetscCall(VecAbsAsync(v,NULL));
   PetscFunctionReturn(0);
 }
 

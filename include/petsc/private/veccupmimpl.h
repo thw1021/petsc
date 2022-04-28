@@ -607,6 +607,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::getarray_async(Vec v, Pe
     } else PetscCall(CopyToDevice_(dctx,v));
   }
   if (access != PETSC_MEMORY_ACCESS_READ) {
+    PetscCall(VecSetErrorIfLocked(v,1));
     // not read-only so immediately assume modified
     // REVIEW ME: this should probably also call PetscObjectStateIncrease() since we assume it
     // is immediately modified
@@ -668,34 +669,36 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::replacearray_async(Vec v
   PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
   PetscCall(CheckPointerMatchesMemType_(a,mtype));
   if (PetscMemTypeHost(mtype)) {
-    const auto vimpl = VecIMPLCast(v);
+    const auto vimpl      = VecIMPLCast(v);
+    auto&      host_array = vimpl->array_allocated;
 
     // make sure the users array has the latest values.
     // REVIEW ME: why? we're about to free it
-    if (vimpl->array != vimpl->array_allocated) PetscCall(CopyToHost_(dctx,v));
-    if (vimpl->array_allocated) {
+    if (host_array != vimpl->array) PetscCall(CopyToHost_(dctx,v));
+    if (host_array) {
       const auto useit = UseCUPMHostAlloc(v);
-      PetscCall(PetscFree(vimpl->array_allocated));
+      PetscCall(PetscFree(host_array));
     }
-    vimpl->array_allocated = vimpl->array = PetscRemoveConstCast(a);
-    v->pinned_memory       = PETSC_FALSE; // REVIEW ME: we can determine this
-    v->offloadmask         = PETSC_OFFLOAD_CPU;
+    host_array       = vimpl->array = PetscRemoveConstCast(a);
+    v->pinned_memory = PETSC_FALSE; // REVIEW ME: we can determine this
+    v->offloadmask   = PETSC_OFFLOAD_CPU;
   } else {
-    const auto vcu = VecCUPMCast(v);
+    const auto vcu          = VecCUPMCast(v);
+    auto&      device_array = vcu->device_array;
 
     switch (vcu->ptr_ownership) {
     case PETSC_COPY_VALUES:
     case PETSC_OWN_POINTER:
       if (PetscDefined(HAVE_NVSHMEM) && vcu->nvshmem) {
-        PetscCall(PetscNvshmemFree(vcu->device_array));
+        PetscCall(PetscNvshmemFree(device_array));
       } else {
         cupmStream_t stream;
 
         PetscCall(GetHandles_(dctx,&stream));
-        PetscCallCUPM(cupmFreeAsync(vcu->device_array,stream));
+        PetscCallCUPM(cupmFreeAsync(device_array,stream));
       }
     case PETSC_USE_POINTER:
-      vcu->device_array = PetscRemoveConstCast(a);
+      device_array = PetscRemoveConstCast(a);
       break;
     }
     PetscCall(PetscObjectStateIncrease(PetscObjectCast(v)));
