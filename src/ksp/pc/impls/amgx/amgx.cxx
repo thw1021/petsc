@@ -231,12 +231,10 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
 
     // Fetch the number of local rows per rank
     partitionOffsets[0] = 0; /* could use PetscLayoutGetRanges */
-    PetscCallMPI(MPI_Allgather(&amgx->nLocalRows, sizeof(amgx->nLocalRows), MPI_BYTE, partitionOffsets.data()+1, sizeof(amgx->nLocalRows), MPI_BYTE, amgx->comm));
+    PetscCall(MPIU_Allgather(&amgx->nLocalRows, 1, MPIU_INT, partitionOffsets.data()+1, 1, MPIU_INT, amgx->comm));
 
     // Prefix sum to get offsets
-    for (int i = 1; i <= amgx->nranks; i++) {
-      partitionOffsets[i] += partitionOffsets[i - 1];
-    }
+    std::partial_sum(partitionOffsets.begin(),partitionOffsets.end(),partitionOffsets.begin());
 
     // Fetch the number of global rows
     amgx->nGlobalRows = partitionOffsets[amgx->nranks];
@@ -258,7 +256,7 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
     AMGX_vector_bind(amgx->sol, amgx->A);
     AMGX_vector_bind(amgx->rhs, amgx->A);
 
-    int nlr = 0;
+    PetscInt nlr = 0;
     PetscCall(MatRestoreRowIJ(amgx->localA, 0, PETSC_FALSE, PETSC_FALSE, &nlr, &rowOffsets, &colIndices, &done));
 
   } else {
@@ -648,7 +646,7 @@ PETSC_EXTERN PetscErrorCode PCAmgXGetResources(PC pc, void* rsrc_out)
     amgx->rsrc_init = true;
   }
 
-  *((AMGX_resources_handle*)rsrc_out) = amgx->rsrc;
+  *static_cast<AMGX_resources_handle*>(rsrc_out) = amgx->rsrc;
   PetscFunctionReturn(0);
 }
 
