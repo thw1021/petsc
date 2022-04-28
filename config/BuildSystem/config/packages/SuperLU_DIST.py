@@ -17,9 +17,9 @@ class Configure(config.package.CMakePackage):
     self.downloadonWindows= 1
     self.hastests         = 1
     self.hastestsdatafiles= 1
+    self.precisions       = ['double','single']
     self.buildLanguages   = ['Cxx']
     self.minCmakeVersion  = (3,18,1)
-    self.precisions       = ['double','single']
     return
 
   def setupDependencies(self, framework):
@@ -33,34 +33,7 @@ class Configure(config.package.CMakePackage):
     self.deps           = [self.mpi,self.blasLapack]
     return
 
-  def configureMKL(self):
-    '''SuperLU_DIST public include files need access to mkl.h if built with Intel compilers at PETSc compile time'''
-    '''Hence this information must be set into the list of include files that PETSc provides to the compiler'''
-    '''May not be needed so returning early'''
-    return
-    if config.setCompilers.Configure.isIntel(self.setCompilers.CC, self.log):
-      if not self.headers.checkInclude([],'mkl.h'):
-        if self.blasLapack.versioninclude == 'mkl_version.h':
-          mklinclude = self.headers.toStringNoDupes(self.blasLapack.include)
-        elif 'MKLROOT' in os.environ:
-          mklinclude = '-I'+os.path.join(os.environ['MKLROOT'],'include')
-        else:
-          raise RuntimeError("Building SuperLU_DIST with Intel compilers requires MKL, make sure the environmental variable MKLROOT is set")
-        # this should actually be added to self.include but there is no mechanism to utilize any preset values in package.py
-        for lang in ['C','Cxx']:
-          self.pushLanguage(lang)
-          # there must be a better way to adding include paths but I cannot find it
-          flagsArg = self.getPreprocessorFlagsArg()
-          oldFlags = getattr(self.compilers, flagsArg)
-          setattr(self.compilers, flagsArg, oldFlags+' '+mklinclude)
-          self.popLanguage()
-
-  def configureLibrary(self):
-    self.configureMKL()
-    config.package.Package.configureLibrary(self)
-
   def formCMakeConfigureArgs(self):
-    self.configureMKL()
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
     if self.openmp.found:
       self.usesopenmp = 'yes'
