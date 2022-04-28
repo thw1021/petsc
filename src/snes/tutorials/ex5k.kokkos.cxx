@@ -46,7 +46,7 @@ PetscErrorCode FormFunctionLocalExt_Kokkos(DMDALocalInfo *info,Vec x,Vec f,AppCt
   PetscCallCXX(DMDAVecGetKokkosOffsetView(info->da,x,&xv));
   PetscCallCXX(DMDAVecGetKokkosOffsetViewWrite(info->da,f,&fv));
 
-  Kokkos::parallel_for ("FormFunctionLocalVec_Kokkos",
+  PetscCallCXX(Kokkos::parallel_for ("FormFunctionLocalVec_Kokkos",
     MDRangePolicy <Rank<2,Iterate::Right,Iterate::Right>>({ys,xs},{ys+ym,xs+xm}),
     KOKKOS_LAMBDA (PetscInt j,PetscInt i)
   {
@@ -77,7 +77,7 @@ PetscErrorCode FormFunctionLocalExt_Kokkos(DMDALocalInfo *info,Vec x,Vec f,AppCt
       MMSForcing1(user_param,&c,&mms_forcing);
       fv(j,i) = uxx + uyy - hx*hy*(lambda*PetscExpScalar(u) + mms_forcing);
     }
-  });
+  }));
 
   PetscCallCXX(DMDAVecRestoreKokkosOffsetView(info->da,x,&xv));
   PetscCallCXX(DMDAVecRestoreKokkosOffsetViewWrite(info->da,f,&fv));
@@ -85,3 +85,59 @@ PetscErrorCode FormFunctionLocalExt_Kokkos(DMDALocalInfo *info,Vec x,Vec f,AppCt
   PetscCall(PetscLogFlops(11.0*info->ym*info->xm));
   PetscFunctionReturn(0);
 }
+
+PetscErrorCode FormObjectiveLocalExt_Kokkos(DMDALocalInfo *info,Vec x,PetscReal *obj,AppCtx *user)
+{
+  PetscInt       xs = info->xs,ys = info->ys,xm = info->xm,ym = info->ym,mx = info->mx,my = info->my;
+  PetscReal      lambda,hx,hy,hxdhy,hydhx,sc,lobj=0;
+  MPI_Comm       comm;
+
+  ConstPetscScalarKokkosOffsetView2D xv;
+
+  PetscFunctionBeginUser;
+  *obj   = 0;
+  PetscCall(PetscObjectGetComm((PetscObject)info->da,&comm));
+  lambda = user->param;
+  hx     = 1.0/(PetscReal)(mx-1);
+  hy     = 1.0/(PetscReal)(my-1);
+  sc     = hx*hy*lambda;
+  hxdhy  = hx/hy;
+  hydhx  = hy/hx;
+  /*
+     Compute function over the locally owned part of the grid
+  */
+  PetscCallCXX(DMDAVecGetKokkosOffsetView(info->da,x,&xv));
+
+  PetscCallCXX(Kokkos::parallel_reduce("FormObjectiveLocalExt_Kokkos",
+    MDRangePolicy <Rank<2,Iterate::Right,Iterate::Right>>({ys,xs},{ys+ym,xs+xm}),
+    KOKKOS_LAMBDA (PetscInt j,PetscInt i,PetscReal& update)
+  {
+    PetscScalar    u,ue,uw,un,us,uxux,uyuy;
+    if (i == 0 || j == 0 || i == mx-1 || j == my-1) {
+      update += PetscRealPart((hydhx + hxdhy)*xv(j,i)*xv(j,i));
+    } else {
+      u  = xv(j,i);
+      uw = xv(j,i-1);
+      ue = xv(j,i+1);
+      un = xv(j-1,i);
+      us = xv(j+1,i);
+
+      if (i-1 == 0)    uw = 0.;
+      if (i+1 == mx-1) ue = 0.;
+      if (j-1 == 0)    un = 0.;
+      if (j+1 == my-1) us = 0.;
+
+      /* F[u] = 1/2\int_{\omega}\nabla^2u(x)*u(x)*dx */
+
+      uxux = u*(2.*u - ue - uw)*hydhx;
+      uyuy = u*(2.*u - un - us)*hxdhy;
+
+      update += PetscRealPart(0.5*(uxux + uyuy) - sc*PetscExpScalar(u));
+    }
+  },lobj));
+
+  PetscCall(PetscLogFlops(12.0*info->ym*info->xm));
+  PetscCallMPI(MPI_Allreduce(&lobj,obj,1,MPIU_REAL,MPIU_SUM,comm));
+  PetscFunctionReturn(0);
+}
+
