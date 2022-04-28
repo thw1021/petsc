@@ -34,7 +34,10 @@ class Configure(config.package.CMakePackage):
     return
 
   def configureMKL(self):
-    '''SuperLU_DIST needs access to mkl.h if built with Intel compilers at compile and usage time'''
+    '''SuperLU_DIST public include files need access to mkl.h if built with Intel compilers at PETSc compile time'''
+    '''Hence this information must be set into the list of include files that PETSc provides to the compiler'''
+    '''May not be needed so returning early'''
+    return
     if config.setCompilers.Configure.isIntel(self.setCompilers.CC, self.log):
       if not self.headers.checkInclude([],'mkl.h'):
         if self.blasLapack.versioninclude == 'mkl_version.h':

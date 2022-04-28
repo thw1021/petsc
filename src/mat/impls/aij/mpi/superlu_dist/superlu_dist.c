@@ -9,6 +9,7 @@
 EXTERN_C_BEGIN
 #if defined(PETSC_USE_COMPLEX)
 #define CASTDOUBLECOMPLEX (doublecomplex*)
+#define CASTDOUBLECOMPLEXSTAR (doublecomplex**)
 #include <superlu_zdefs.h>
 #define LUstructInit zLUstructInit
 #define ScalePermstructInit zScalePermstructInit
@@ -32,6 +33,7 @@ EXTERN_C_BEGIN
 #endif
 #elif defined(PETSC_USE_REAL_SINGLE)
 #define CASTDOUBLECOMPLEX
+#define CASTDOUBLECOMPLEXSTAR
 #include <superlu_sdefs.h>
 #define LUstructInit sLUstructInit
 #define ScalePermstructInit sScalePermstructInit
@@ -55,6 +57,7 @@ EXTERN_C_BEGIN
 #endif
 #else
 #define CASTDOUBLECOMPLEX
+#define CASTDOUBLECOMPLEXSTAR
 #include <superlu_ddefs.h>
 #define LUstructInit dLUstructInit
 #define ScalePermstructInit dScalePermstructInit
@@ -105,7 +108,7 @@ PetscErrorCode MatSuperluDistGetDiagU_SuperLU_DIST(Mat F,PetscScalar *diagU)
   Mat_SuperLU_DIST *lu = (Mat_SuperLU_DIST*)F->data;
 
   PetscFunctionBegin;
-  PetscStackCall("SuperLU_DIST:pGetDiagU",pGetDiagU(F->rmap->N,&lu->LUstruct,&lu->grid,diagU));
+  PetscStackCall("SuperLU_DIST:pGetDiagU",pGetDiagU(F->rmap->N,&lu->LUstruct,&lu->grid,CASTDOUBLECOMPLEX diagU));
   PetscFunctionReturn(0);
 }
 
@@ -396,7 +399,7 @@ static PetscErrorCode MatLUFactorNumeric_SuperLU_DIST(Mat F,Mat A,const MatFacto
 
   /* Allocations for A_sup */
   if (lu->options.Fact == DOFACT) { /* first numeric factorization */
-    PetscStackCall("SuperLU_DIST:allocateA_dist",allocateA_dist(Aloc->rmap->n, nz, &lu->val, &lu->col, &lu->row));
+    PetscStackCall("SuperLU_DIST:allocateA_dist",allocateA_dist(Aloc->rmap->n, nz, CASTDOUBLECOMPLEXSTAR &lu->val, &lu->col, &lu->row));
   } else { /* successive numeric factorization, sparsity pattern and perm_c are reused. */
     if (lu->FactPattern == SamePattern_SameRowPerm) {
       lu->options.Fact = SamePattern_SameRowPerm; /* matrix has similar numerical values */
@@ -418,7 +421,7 @@ static PetscErrorCode MatLUFactorNumeric_SuperLU_DIST(Mat F,Mat A,const MatFacto
       PetscStackCall("SuperLU_DIST:Destroy_CompRowLoc_Matrix_dist",Destroy_CompRowLoc_Matrix_dist(&lu->A_sup));
       PetscStackCall("SuperLU_DIST:Destroy_LU",Destroy_LU(A->rmap->N, &lu->grid, &lu->LUstruct));
       lu->options.Fact = DOFACT;
-      PetscStackCall("SuperLU_DIST:allocateA_dist",allocateA_dist(Aloc->rmap->n, nz, &lu->val, &lu->col, &lu->row));
+      PetscStackCall("SuperLU_DIST:allocateA_dist",allocateA_dist(Aloc->rmap->n, nz, CASTDOUBLECOMPLEXSTAR &lu->val, &lu->col, &lu->row));
     } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"options.Fact must be one of SamePattern SamePattern_SameRowPerm DOFACT");
   }
 
@@ -433,7 +436,7 @@ static PetscErrorCode MatLUFactorNumeric_SuperLU_DIST(Mat F,Mat A,const MatFacto
 
   /* Create and setup A_sup */
   if (lu->options.Fact == DOFACT) {
-    PetscStackCall("SuperLU_DIST:Create_CompRowLoc_Matrix_dist",Create_CompRowLoc_Matrix_dist(&lu->A_sup, A->rmap->N, A->cmap->N, nz, A->rmap->n, A->rmap->rstart, lu->val, lu->col, lu->row, SLU_NR_loc, SLU, SLU_GE));
+    PetscStackCall("SuperLU_DIST:Create_CompRowLoc_Matrix_dist",Create_CompRowLoc_Matrix_dist(&lu->A_sup, A->rmap->N, A->cmap->N, nz, A->rmap->n, A->rmap->rstart, CASTDOUBLECOMPLEX lu->val, lu->col, lu->row, SLU_NR_loc, SLU, SLU_GE));
   }
 
   /* Factor the matrix. */
