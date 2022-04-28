@@ -14,7 +14,7 @@ namespace Device
 namespace Impl
 {
 
-struct MemoryBlock
+struct MemoryChunk
 {
   using size_type = std::size_t;
 
@@ -22,22 +22,22 @@ struct MemoryBlock
   const size_type size;
   bool            open;
 
-  constexpr MemoryBlock(size_type start_, size_type size_, bool open_ = false) noexcept
+  constexpr MemoryChunk(size_type start_, size_type size_, bool open_ = false) noexcept
     : start(start_), size(size_), open(open_)
   { }
 
-  constexpr MemoryBlock(size_type size_) noexcept : MemoryBlock(0,size_) { }
+  constexpr MemoryChunk(size_type size_) noexcept : MemoryChunk(0,size_) { }
 };
 
 template <typename MemType, typename AllocType, typename FreeType, std::size_t PoolSize>
 class SegmentedMemoryPool
 {
-  using BlocksType = std::vector<MemoryBlock>;
-  using size_type  = BlocksType::value_type::size_type;
+  using ChunksType = std::vector<MemoryChunk>;
+  using size_type  = ChunksType::value_type::size_type;
 
   const AllocType  allocate_;
   const FreeType   destroy_;
-  BlocksType       blocks_;
+  ChunksType       blocks_;
   MemType         *mem_pool_;
 
 public:
@@ -79,8 +79,12 @@ inline PetscErrorCode SegmentedMemoryPool<MemType,AllocType,FreeType,PoolSize>::
 {
   PetscFunctionBegin;
   PetscAssert(size >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Cannot retrieve negative (%" PetscInt_FMT ") memory from the pool",size);
-  PetscAssert(static_cast<decltype(PoolSize)>(size) < PoolSize,PETSC_COMM_SELF,PETSC_ERR_MEM,"Cannot allocate pool larger than %zu elements",PoolSize);
   PetscCall(initialize());
+  if (static_cast<decltype(PoolSize)>(size) >= (PoolSize/2)) {
+    // any allocation requestion more than half of the pool probably shouldn't go in the pool
+    // in the first place
+  }
+  PetscAssert(,PETSC_COMM_SELF,PETSC_ERR_MEM,"Cannot allocate pool larger than %zu elements",PoolSize);
   {
     auto result = mem_pool_;
 
@@ -104,7 +108,7 @@ inline PetscErrorCode SegmentedMemoryPool<MemType,AllocType,FreeType,PoolSize>::
       // no open block found, need to make one
       if (result == mem_pool_) {
         // check that the pool has enough room
-        PetscCheck(static_cast<decltype(PoolSize)>(block_alloced+size) <= PoolSize,PETSC_COMM_SELF,PETSC_ERR_MEM,"Allocating block of size %" PetscInt_FMT " would exceed maximum pool size %zu",size,PoolSize);
+        PetscCheck(static_cast<decltype(PoolSize)>(block_alloced+size) <= PoolSize,PETSC_COMM_SELF,PETSC_ERR_MEM,"Allocating block of size %" PetscInt_FMT " would exceed maximum pool capacity %zu (current capacity %zu)",size,PoolSize,block_alloced);
         PetscCallCXX(blocks_.emplace_back(block_alloced,size));
       }
     }

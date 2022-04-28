@@ -95,14 +95,13 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustApplyPointwise(typename Interface<DT>
 
 // actual implementation that calls thrust, 3 argument version
 template <DeviceType DT, typename FunctorType, typename T>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustApplyPointwise(typename Interface<DT>::cupmStream_t stream, FunctorType&& functor, PetscInt n, const T *xin, const T *yin, T *zin))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustApplyPointwise(typename Interface<DT>::cupmStream_t stream, FunctorType&& functor, PetscInt n, T *xin, T *yin, T *zin))
 {
   PetscFunctionBegin;
   PetscAssert(n >= 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"n %" PetscInt_FMT " must be >= 0",n);
   PetscValidDevicePointer(xin,4);
   PetscValidDevicePointer(yin,5);
   PetscValidDevicePointer(zin,6);
-  PetscAssert((xin != yin) && (xin != zin) && (zin != yin),PETSC_COMM_SELF,PETSC_ERR_PLIB,"Must have disjoint pointers when passing all three!");
   if (PetscLikely(n)) {
     const auto xptr = thrust::device_pointer_cast(xin);
 
@@ -119,6 +118,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustApplyPointwise(typename Interface<DT>
   }
   PetscFunctionReturn(0);
 }
+
+#undef PetscValidDevicePointer
 
 // serves as setup to the real implementation above
 template <DeviceType T, typename... Args>
@@ -140,7 +141,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustApplyPointwise(PetscDeviceContext dct
     const auto cupmName           = [](             ){ return interface::cupmName          ( ); }; \
     const auto cupmGetErrorName   = [](cupmError_t e){ return interface::cupmGetErrorName  (e); }; \
     const auto cupmGetErrorString = [](cupmError_t e){ return interface::cupmGetErrorString(e); }; \
-    const auto cupmSuccess = interface::cupmSuccess;                                           \
+    const auto cupmSuccess        = interface::cupmSuccess;                                    \
     PetscCallCUPM(__VA_ARGS__);                                                                \
   } while (0)
 
