@@ -4,27 +4,78 @@ static const char help[] = "Tests creation and destruction of PetscManagedScalar
 #include <petsc/private/cpputil.hpp>
 #include <array>
 
-template <typename PetscType, typename PetscManagedType, typename CreateT, typename CreateDefaultT, typename DestroyT>
+template <
+  typename PetscType,
+  typename PetscManagedType,
+  typename CreateT,
+  typename CreateDefaultT,
+  typename DestroyT,
+  typename GetValuesT
+  >
 struct ManagedTypeInterface
 {
   const CreateT        PetscManagedTypeCreate;
   const CreateDefaultT PetscManagedTypeCreateDefault;
   const DestroyT       PetscManagedTypeDestroy;
+  const GetValuesT     PetscManagedTypeGetValues;
+
+  PetscErrorCode TestGetValues(PetscDeviceContext dctx, PetscManagedType scal) const noexcept
+  {
+    const auto syncs  = std::array<PetscBool,2>{PETSC_TRUE,PETSC_FALSE};
+    const auto mtypes = std::array<PetscMemType,2>{
+      PETSC_MEMTYPE_HOST,
+      PETSC_MEMTYPE_DEVICE
+    };
+    const auto modes  = std::array<PetscMemoryAccessMode,3>{
+      PETSC_MEMORY_ACCESS_READ,
+      PETSC_MEMORY_ACCESS_READ_WRITE,
+      PETSC_MEMORY_ACCESS_WRITE
+    };
+
+    PetscFunctionBegin;
+    for (auto sync : syncs) {
+      for (auto mtype : mtypes) {
+        if (mtype == PETSC_MEMTYPE_DEVICE) continue;
+        for (auto mode : modes) {
+          PetscType *ptr;
+
+          PetscCall(PetscManagedTypeGetValues(dctx,scal,mtype,mode,sync,&ptr));
+        }
+      }
+    }
+    PetscFunctionReturn(0);
+  }
 
   PetscErrorCode TestSingletonDefault(PetscDeviceContext dctx, PetscInt nmax = 20) const noexcept
   {
-    PetscManagedType scal;
+    PetscManagedType  scal;
 
     PetscFunctionBegin;
     // single size
     for (PetscInt i = 0; i < nmax; ++i) {
       PetscCall(PetscManagedTypeCreateDefault(dctx,1,&scal));
+      PetscCall(TestGetValues(dctx,scal));
+      PetscCall(PetscManagedTypeDestroy(dctx,&scal));
+    }
+
+    // single large size
+    for (PetscInt i = 0; i < nmax; ++i) {
+      PetscCall(PetscManagedTypeCreateDefault(dctx,10,&scal));
+      PetscCall(TestGetValues(dctx,scal));
       PetscCall(PetscManagedTypeDestroy(dctx,&scal));
     }
 
     // different sizes
     for (PetscInt i = 0; i < nmax; ++i) {
       PetscCall(PetscManagedTypeCreateDefault(dctx,i,&scal));
+      if (i) PetscCall(TestGetValues(dctx,scal));
+      PetscCall(PetscManagedTypeDestroy(dctx,&scal));
+    }
+
+    // different large sizes
+    for (PetscInt i = 0; i < nmax; ++i) {
+      PetscCall(PetscManagedTypeCreateDefault(dctx,100*i,&scal));
+      if (i) PetscCall(TestGetValues(dctx,scal));
       PetscCall(PetscManagedTypeDestroy(dctx,&scal));
     }
     PetscFunctionReturn(0);
@@ -54,6 +105,7 @@ struct ManagedTypeInterface
           // need to keep reallocating the host pointer since we will pass over ownership
           if (alloc) PetscCall(PetscMalloc1(size,&host.first));
           PetscCall(PetscManagedTypeCreate(dctx,host.first,device_ptr,size,host.second,PETSC_OWN_POINTER,mask,&scal));
+          if (k) PetscCall(TestGetValues(dctx,scal));
           PetscCall(PetscManagedTypeDestroy(dctx,&scal));
         }
       }
@@ -69,16 +121,25 @@ struct ManagedTypeInterface
     PetscFunctionBegin;
     static_assert(n_scal % 2 == 0,"");
     // destroy in original order
-    for (PetscInt i = 0; i < n_scal; ++i) PetscCall(PetscManagedTypeCreateDefault(dctx,1,scal_arr+i));
+    for (PetscInt i = 0; i < n_scal; ++i) {
+      PetscCall(PetscManagedTypeCreateDefault(dctx,1,scal_arr+i));
+      if (i) PetscCall(TestGetValues(dctx,scal_arr[i]));
+    }
     for (PetscInt i = 0; i < n_scal; ++i) PetscCall(PetscManagedTypeDestroy(dctx,scal_arr+i));
 
     // destroy in reverse order
-    for (PetscInt i = 0; i < n_scal; ++i) PetscCall(PetscManagedTypeCreateDefault(dctx,1,scal_arr+i));
+    for (PetscInt i = 0; i < n_scal; ++i) {
+      PetscCall(PetscManagedTypeCreateDefault(dctx,100*i,scal_arr+i));
+      if (i) PetscCall(TestGetValues(dctx,scal_arr[i]));
+    }
     for (PetscInt i = n_scal-1; i >= 0; --i) PetscCall(PetscManagedTypeDestroy(dctx,scal_arr+i));
 
     // destroy as we create
     for (PetscInt i = 0, j = 0; i < n_scal+(n_scal/2); ++i) {
-      if (i < n_scal) PetscCall(PetscManagedTypeCreateDefault(dctx,i,scal_arr+i));
+      if (i < n_scal) {
+        PetscCall(PetscManagedTypeCreateDefault(dctx,i,scal_arr+i));
+        if (i) PetscCall(TestGetValues(dctx,scal_arr[i]));
+      }
       if (i >= n_scal/2) {
         PetscCall(PetscManagedTypeDestroy(dctx,scal_arr+j));
         ++j;
@@ -107,7 +168,8 @@ static PetscErrorCode TestPetscManagedScalar(PetscDeviceContext dctx)
   const auto interface = make_managed_interface<PetscScalar,PetscManagedScalar>(
     PetscManagedScalarCreate,
     PetscManagedScalarCreateDefault,
-    PetscManagedScalarDestroy
+    PetscManagedScalarDestroy,
+    PetscManagedScalarGetValues
   );
 
   PetscFunctionBegin;
@@ -120,7 +182,8 @@ static PetscErrorCode TestPetscManagedReal(PetscDeviceContext dctx)
   const auto interface = make_managed_interface<PetscReal,PetscManagedReal>(
     PetscManagedRealCreate,
     PetscManagedRealCreateDefault,
-    PetscManagedRealDestroy
+    PetscManagedRealDestroy,
+    PetscManagedRealGetValues
   );
 
   PetscFunctionBegin;
@@ -133,7 +196,8 @@ static PetscErrorCode TestPetscManagedInt(PetscDeviceContext dctx)
   const auto interface = make_managed_interface<PetscInt,PetscManagedInt>(
     PetscManagedIntCreate,
     PetscManagedIntCreateDefault,
-    PetscManagedIntDestroy
+    PetscManagedIntDestroy,
+    PetscManagedIntGetValues
   );
 
   PetscFunctionBegin;
