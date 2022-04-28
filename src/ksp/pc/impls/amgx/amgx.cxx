@@ -248,9 +248,6 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
     AMGX_distribution_set_partition_data(dist, AMGX_DIST_PARTITION_OFFSETS, partitionOffsets.data());
 
     AMGX_matrix_upload_distributed(amgx->A, amgx->nGlobalRows, (int)amgx->nLocalRows, (int)amgx->nnz, amgx->bSize, amgx->bSize, rowOffsets, colIndices, amgx->values, NULL, dist);
-
-    PetscCallMPI(MPI_Barrier(amgx->comm));
-
     AMGX_solver_setup(amgx->solver, amgx->A);
     AMGX_vector_bind(amgx->sol, amgx->A);
     AMGX_vector_bind(amgx->rhs, amgx->A);
@@ -303,9 +300,6 @@ static PetscErrorCode PCApply_AMGX(PC pc, Vec b, Vec x)
 
   AMGX_vector_upload(amgx->sol, amgx->nLocalRows, 1, x_);
   AMGX_vector_upload(amgx->rhs, amgx->nLocalRows, 1, b_);
-
-  PetscCallMPI(MPI_Barrier(amgx->comm));
-
   AMGX_solver_solve_with_0_initial_guess(amgx->solver, amgx->rhs, amgx->sol);
 
   AMGX_SOLVE_STATUS status;
@@ -373,9 +367,6 @@ static PetscErrorCode PCDestroy_AMGX(PC pc)
     AMGX_SAFE_CALL(AMGX_finalize());
 
     PetscCallMPI(MPI_Comm_free(&amgx->comm));
-#ifdef AMGX_DYNAMIC_LOADING
-    amgx_libclose(amgx->lib_handle);
-#endif
   } else {
     AMGX_SAFE_CALL(AMGX_config_destroy(amgx->cfg));
   }
@@ -402,21 +393,6 @@ static PetscErrorCode PCSetFromOptions_AMGX(PetscOptionItems *PetscOptionsObject
   PetscFunctionBegin;
 
   PC_AMGX *amgx = (PC_AMGX *)pc->data;
-
-  // Set the defaults
-  amgx->selector = AmgXSelector::PMIS;
-  amgx->smoother = AmgXSmoother::BlockJacobi;
-  amgx->amg_method = AmgXAMGMethod::Classical;
-  amgx->coarse_solver = AmgXCoarseSolver::DenseLU;
-  amgx->amg_cycle = AmgXAMGCycle::V;
-  amgx->presweeps = 1;
-  amgx->postsweeps = 1;
-  amgx->max_levels = 100;
-  amgx->strength_threshold = 0.5;
-  amgx->aggressive_levels = 0;
-  amgx->jacobi_relaxation_factor = 0.9;
-  amgx->gs_symmetric = PETSC_FALSE;
-  amgx->print_grid_stats = PETSC_FALSE;
 
   constexpr int MAX_PARAM_LEN = 128;
   char option[MAX_PARAM_LEN];
@@ -590,30 +566,26 @@ PETSC_EXTERN PetscErrorCode PCCreate_AMGX(PC pc)
   pc->ops->reset = PCReset_AMGX;
   pc->data = (void *)amgx;
 
+  // Set the defaults
+  amgx->selector = AmgXSelector::PMIS;
+  amgx->smoother = AmgXSmoother::BlockJacobi;
+  amgx->amg_method = AmgXAMGMethod::Classical;
+  amgx->coarse_solver = AmgXCoarseSolver::DenseLU;
+  amgx->amg_cycle = AmgXAMGCycle::V;
+  amgx->presweeps = 1;
+  amgx->postsweeps = 1;
+  amgx->max_levels = 100;
+  amgx->strength_threshold = 0.5;
+  amgx->aggressive_levels = 0;
+  amgx->jacobi_relaxation_factor = 0.9;
+  amgx->gs_symmetric = PETSC_FALSE;
+  amgx->print_grid_stats = PETSC_FALSE;
+
   s_count++;
 
   PetscCallCUDA(cudaGetDevice(&amgx->devID));
 
   if (s_count == 1) {
-
-    /* can put this in a PCAMGXFinalizePackage method */
-    /* load the library (if it was dynamically loaded) */
-#ifdef AMGX_DYNAMIC_LOADING
-    amgx->lib_handle = NULL;
-#ifdef _WIN32
-    amgx->lib_handle = amgx_libopen("amgxsh.dll");
-#else
-    amgx->lib_handle = amgx_libopen("libamgxsh.so");
-#endif
-    if (amgx->lib_handle == NULL) {
-          errAndExit("ERROR: can not load the library");
-    }
-    //load all the routines
-    if (amgx_liblink_all(amgx->lib_handle) == 0) {
-      amgx_libclose(amgx->lib_handle);
-      errAndExit("ERROR: corrupted library loaded\n");
-    }
-#endif
     AMGX_SAFE_CALL(AMGX_initialize());
     AMGX_SAFE_CALL(AMGX_initialize_plugins());
     AMGX_SAFE_CALL(AMGX_register_print_callback(&print_callback));
