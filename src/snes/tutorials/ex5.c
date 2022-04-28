@@ -647,7 +647,7 @@ int main(int argc,char **argv)
   if (useKokkos) {
     PetscCheck(MMS == 1,PETSC_COMM_WORLD,PETSC_ERR_USER,"FormFunctionLocalVec_Kokkos only works with MMS 1");
    #if defined(PETSC_HAVE_KOKKOS)
-    PetscCall(DMDASNESSetFunctionVecLocal(da,INSERT_VALUES,(DMDASNESFunctionVec)FormFunctionLocalVec_Kokkos,&user));
+    PetscCall(DMDASNESSetFunctionLocalExt(da,INSERT_VALUES,(DMDASNESFunctionExt)FormFunctionLocalExt_Kokkos,&user));
    #else
     SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Kokkos not enabled");
    #endif
