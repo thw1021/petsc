@@ -45,19 +45,7 @@ The command line options include:\n\
 #include <petscsnes.h>
 #include <petscmatlab.h>
 #include <petsc/private/snesimpl.h> /* For SNES_Solve event */
-
-/*
-   User-defined application context - contains data needed by the
-   application-provided call-back routines, FormJacobianLocal() and
-   FormFunctionLocal().
-*/
-typedef struct AppCtx AppCtx;
-struct AppCtx {
-  PetscReal param;          /* test problem parameter */
-  PetscInt  m,n;            /* MMS3 parameters */
-  PetscErrorCode (*mms_solution)(AppCtx*,const DMDACoor2d*,PetscScalar*);
-  PetscErrorCode (*mms_forcing)(AppCtx*,const DMDACoor2d*,PetscScalar*);
-};
+#include "ex5.h"
 
 /* ------------------------------------------------------------------- */
 /*
@@ -594,9 +582,10 @@ int main(int argc,char **argv)
   PetscInt       MMS              = 1;
   PetscBool      flg              = PETSC_FALSE,setMMS;
   DM             da;
-  Vec            r               = NULL;
+  Vec            r                = NULL;
   KSP            ksp;
   PetscInt       lits,slits;
+  PetscBool      useKokkos        = PETSC_FALSE;
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Initialize program
@@ -652,7 +641,20 @@ int main(int argc,char **argv)
   case 4: user.mms_solution = MMSSolution4; user.mms_forcing = MMSForcing4; break;
   default: SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_USER,"Unknown MMS type %" PetscInt_FMT,MMS);
   }
-  PetscCall(DMDASNESSetFunctionLocal(da,INSERT_VALUES,(DMDASNESFunction)FormFunctionLocal,&user));
+
+  PetscCall(PetscOptionsGetBool(NULL,NULL,"-kokkos",&useKokkos,NULL));
+
+  if (useKokkos) {
+    PetscCheck(MMS == 1,PETSC_COMM_WORLD,PETSC_ERR_USER,"FormFunctionLocalVec_Kokkos only works with MMS 1");
+   #if defined(PETSC_HAVE_KOKKOS)
+    PetscCall(DMDASNESSetFunctionVecLocal(da,INSERT_VALUES,(DMDASNESFunctionVec)FormFunctionLocalVec_Kokkos,&user));
+   #else
+    SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Kokkos not enabled");
+   #endif
+  } else {
+    PetscCall(DMDASNESSetFunctionLocal(da,INSERT_VALUES,(DMDASNESFunction)FormFunctionLocal,&user));
+  }
+
   PetscCall(PetscOptionsGetBool(NULL,NULL,"-fd",&flg,NULL));
   if (!flg) {
     PetscCall(DMDASNESSetJacobianLocal(da,(DMDASNESJacobian)FormJacobianLocal,&user));
