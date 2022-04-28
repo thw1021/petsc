@@ -10,6 +10,7 @@
 */
 
 #include <petsc/private/pcimpl.h>   /*I "petscpc.h" I*/
+#include <petscdevice.h>
 #include <amgx_c.h>
 #include <limits>
 #include <vector>
@@ -108,7 +109,7 @@ struct PC_AMGX {
   PetscInt nGlobalRows;
   PetscInt bSize;
   Mat localA;
-  PetscScalar *values;
+  const PetscScalar *values;
 
   // AMG Control parameters
   AmgXSmoother smoother;
@@ -134,7 +135,7 @@ static PetscInt s_count = 0;
 static void print_callback(const char *msg, int length)
 {
   int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
 
   if (rank == 0) {
     PetscPrintf(PETSC_COMM_SELF,"%s", msg);
@@ -219,7 +220,7 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
 
     PetscCheck(amgx->nLocalRows < std::numeric_limits<int>::max(), PETSC_COMM_SELF,PETSC_ERR_PLIB, "AmgX restricted to int local rows but nLocalRows = %" PetscInt_FMT " > max<int>", amgx->nLocalRows);
 
-    PetscCall(MatSeqAIJGetArray(amgx->localA, &amgx->values));
+    PetscCall(MatSeqAIJGetArrayRead(amgx->localA, &amgx->values));
 
     amgx->nnz = rowOffsets[amgx->nLocalRows];
 
@@ -242,15 +243,11 @@ static PetscErrorCode PCSetUp_AMGX(PC pc)
 
     PetscCall(MatGetBlockSize(Pmat, &amgx->bSize));
 
-    // Determine if PETSc compiled in 64-bit mode
-    bool petsc32 = (sizeof(PetscInt) == sizeof(int32_t));
-
-    PetscCheck(petsc32, PETSC_COMM_SELF, PETSC_ERR_PLIB, "PETSc compiled with 64-bit integers. AmgX backend does not currently support");
-
+    // XXX Currently constrained to 32-bit indices, to be changed in the future
     // Create the distribution and upload the matrix data
     AMGX_distribution_handle dist;
     AMGX_distribution_create(&dist, amgx->cfg);
-    AMGX_distribution_set_32bit_colindices(dist, petsc32);
+    AMGX_distribution_set_32bit_colindices(dist, true);
     AMGX_distribution_set_partition_data(dist, AMGX_DIST_PARTITION_OFFSETS, partitionOffsets.data());
 
     AMGX_matrix_upload_distributed(amgx->A, amgx->nGlobalRows, (int)amgx->nLocalRows, (int)amgx->nnz, amgx->bSize, amgx->bSize, rowOffsets, colIndices, amgx->values, NULL, dist);
@@ -294,17 +291,17 @@ static PetscErrorCode PCApply_AMGX(PC pc, Vec b, Vec x)
   PetscFunctionBegin;
 
   PetscScalar *x_;
-  PetscScalar *b_;
+  const PetscScalar *b_;
 
   PetscBool is_dev_ptrs;
   PetscCall(PetscObjectTypeCompare((PetscObject)x, VECSEQCUDA, &is_dev_ptrs));
 
   if (is_dev_ptrs) {
-    PetscCall(VecCUDAGetArray(x, &x_));
-    PetscCall(VecCUDAGetArray(b, &b_));
+    PetscCall(VecCUDAGetArrayWrite(x, &x_));
+    PetscCall(VecCUDAGetArrayRead(b, &b_));
   } else {
-    PetscCall(VecGetArray(x, &x_));
-    PetscCall(VecGetArray(b, &b_));
+    PetscCall(VecGetArrayWrite(x, &x_));
+    PetscCall(VecGetArrayRead(b, &b_));
   }
 
   AMGX_vector_upload(amgx->sol, amgx->nLocalRows, 1, x_);
@@ -324,11 +321,11 @@ static PetscErrorCode PCApply_AMGX(PC pc, Vec b, Vec x)
   AMGX_vector_download(amgx->sol, x_);
 
   if (is_dev_ptrs) {
-    PetscCall(VecCUDARestoreArray(x, &x_));
-    PetscCall(VecCUDARestoreArray(b, &b_));
+    PetscCall(VecCUDARestoreArrayWrite(x, &x_));
+    PetscCall(VecCUDARestoreArrayRead(b, &b_));
   } else {
-    PetscCall(VecRestoreArray(x, &x_));
-    PetscCall(VecRestoreArray(b, &b_));
+    PetscCall(VecRestoreArrayWrite(x, &x_));
+    PetscCall(VecRestoreArrayRead(b, &b_));
   }
 
   PetscFunctionReturn(0);
@@ -340,7 +337,7 @@ static PetscErrorCode PCReset_AMGX(PC pc)
   PC_AMGX *amgx = (PC_AMGX *)pc->data;
 
   if (pc->setupcalled) {
-    PetscCall(MatSeqAIJRestoreArray(amgx->localA, &amgx->values));
+    PetscCall(MatSeqAIJRestoreArrayRead(amgx->localA, &amgx->values));
   }
 
   PetscFunctionBegin;
@@ -597,6 +594,8 @@ PETSC_EXTERN PetscErrorCode PCCreate_AMGX(PC pc)
   pc->data = (void *)amgx;
 
   s_count++;
+
+  PetscCallCUDA(cudaGetDevice(&amgx->devID));
 
   if (s_count == 1) {
 
