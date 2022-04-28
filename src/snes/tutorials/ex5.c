@@ -662,7 +662,13 @@ int main(int argc,char **argv)
 
   PetscCall(PetscOptionsGetBool(NULL,NULL,"-obj",&flg,NULL));
   if (flg) {
-    PetscCall(DMDASNESSetObjectiveLocal(da,(DMDASNESObjective)FormObjectiveLocal,&user));
+    if (useKokkos) {
+     #if defined(PETSC_HAVE_KOKKOS)
+      PetscCall(DMDASNESSetObjectiveLocalExt(da,(DMDASNESObjectiveExt)FormObjectiveLocalExt_Kokkos,&user));
+     #else
+      SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Kokkos not enabled");
+     #endif
+    } else PetscCall(DMDASNESSetObjectiveLocal(da,(DMDASNESObjective)FormObjectiveLocal,&user));
   }
 
   if (PetscDefined(HAVE_MATLAB_ENGINE)) {

@@ -346,6 +346,23 @@ PetscErrorCode DMDASNESSetObjectiveLocal(DM dm,DMDASNESObjective func,void *ctx)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode DMDASNESSetObjectiveLocalExt(DM dm,DMDASNESObjectiveExt func,void *ctx)
+{
+  DMSNES         sdm;
+  DMSNES_DA      *dmdasnes;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm,DM_CLASSID,1);
+  PetscCall(DMGetDMSNESWrite(dm,&sdm));
+  PetscCall(DMDASNESGetContext(dm,sdm,&dmdasnes));
+
+  dmdasnes->objectivelocalext = func;
+  dmdasnes->objectivelocalctx = ctx;
+
+  PetscCall(DMSNESSetObjective(dm,SNESComputeObjective_DMDA,dmdasnes));
+  PetscFunctionReturn(0);
+}
+
 static PetscErrorCode SNESComputePicard_DMDA(SNES snes,Vec X,Vec F,void *ctx)
 {
   DM             dm;
