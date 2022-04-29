@@ -1450,7 +1450,7 @@ static PetscErrorCode DMPlexConstructCohesiveCells_Internal(DM dm, DMLabel label
           else                 {ocell = support[0]; flip = vals[0] < 0 ? PETSC_TRUE : PETSC_FALSE;}
           PetscCall(DMPlexGetConeSize(dm, ocell, &nconeSize));
           PetscCall(DMPlexGetCone(dm, ocell, &ncone));
-          PetscCall(DMPlexGetConeOrientation(dm, support[s], &nconeO));
+          PetscCall(DMPlexGetConeOrientation(dm, ocell, &nconeO));
           for (nc = 0; nc < nconeSize; ++nc) {
             if (ncone[nc] == oldp) {
               coneONew[0] = flip ? -(nconeO[nc]+1) : nconeO[nc];
