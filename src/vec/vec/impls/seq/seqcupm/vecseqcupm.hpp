@@ -640,18 +640,47 @@ PETSC_KERNEL_DECL static void mdot_kernel(const PetscScalar *PETSC_RESTRICT x, c
 
 } // namespace kernels
 
+template <int N>
+__global__ void mini_kernel(const PetscScalar *x, const PetscScalar *y[N], PetscScalar *result, PetscInt size)
+{
+  // for (PetscInt i = 0; i < size; ++i) {
+  //   printf("tmpl %d x[%d] = %g\n",N,i,x[i]);
+  // }
+  // __syncthreads();
+  // for (PetscInt i = 0; i < N; ++i) {
+  //   for (PetscInt j = 0; j < size; ++j) {
+  //     printf("tmpl %d y[%d][%d] = %g\n",N,i,j,y[i][j]);
+  //   }
+  // }
+  __syncthreads();
+  __syncthreads();
+  if (threadIdx.x < N) {
+    auto i = blockIdx.x+(threadIdx.x*gridDim.x);
+    printf("tmpl %d size %d result[%d] (addr %p)\n",N,size,i,result+i);
+    result[i] = 0;
+  }
+  __syncthreads();
+  // for (PetscInt i = 0; i < N*MDOT_WORKGROUP_NUM; ++i) {
+  //   printf("tmpl %d size %d result[%d] (addr %p)\n",N,size,i,result+i);
+  //   result[i] = 0;
+  // }
+  // __syncthreads();
+}
+
 template <Device::CUPM::DeviceType T>
 template <int N>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_kernel_dispatch_(PetscDeviceContext dctx, cupmStream_t stream, const PetscScalar *xarr, const Vec yin[], PetscInt size, PetscScalar **device_y, PetscScalar *results, PetscInt *yidx))
 {
   const auto   yidxt = *yidx;
-  const auto   yint  = yin+yidxt;
   PetscScalar *host_y[N];
 
   PetscFunctionBegin;
-  for (auto i = 0; i < N; ++i) host_y[i] = DeviceArrayRead(dctx,yint[i]);
-  PetscCallCUPM(cupmMemcpyAsync(device_y,host_y,N*sizeof(*device_y),cupmMemcpyHostToDevice,stream));
-  PetscCallCUPM(cupmLaunchKernel(kernels::mdot_kernel<N>,dim3(MDOT_WORKGROUP_NUM),dim3(MDOT_WORKGROUP_SIZE),0,stream,xarr,device_y,size,results+(yidxt*MDOT_WORKGROUP_NUM)));
+  for (auto i = 0; i < N; ++i) host_y[i] = DeviceArrayRead(dctx,yin[i+yidxt]);
+  PetscCallCUPM(cupmMemcpyAsync(device_y,host_y,N*sizeof(*device_y),cupmMemcpyDefault,stream));
+  PetscCallCUDA(cudaDeviceSynchronize());
+  PetscCallCUPM(cupmLaunchKernel(mini_kernel<N>,MDOT_WORKGROUP_NUM,MDOT_WORKGROUP_SIZE,0,stream,xarr,device_y,results+yidxt*MDOT_WORKGROUP_NUM,size));
+  PetscCallCUDA(cudaDeviceSynchronize());
+  //PetscCallCUPM(cupmLaunchKernel(kernels::mdot_kernel<N>,dim3(MDOT_WORKGROUP_NUM),dim3(MDOT_WORKGROUP_SIZE),0,stream,xarr,device_y,size,results+yidxt*MDOT_WORKGROUP_NUM));
   *yidx += N;
   PetscFunctionReturn(0);
 }
@@ -668,6 +697,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<f
   cupmStream_t   stream;
 
   PetscFunctionBegin;
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Size %d\n",nwork));
   PetscCall(GetHandles_(dctx,&stream));
   // will hold all the device y pointers
   PetscCallCUPM(cupmMallocAsync(reinterpret_cast<void**>(&d_y),8*sizeof(*d_y),stream));
@@ -722,7 +752,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<f
     auto         h_results  = stackarray.data();
     PetscScalar *zptr;
 
-    if (allocate) PetscCallCUPM(cupmMallocHost(reinterpret_cast<void**>(&h_results),nwork*sizeof(PetscScalar)));
+    if (allocate) PetscCallCUPM(cupmMallocHost(reinterpret_cast<void**>(&h_results),nbytes));
     PetscCallCUPM(cupmMemcpyAsync(h_results,d_results,nbytes,cupmMemcpyDeviceToHost,stream));
     // do these now while memcpy is in flight
     PetscCall(PetscLogFlops(nwork));

@@ -1,6 +1,6 @@
 
 #include <../src/vec/vec/impls/nest/vecnestimpl.h>   /*I  "petscvec.h"   I*/
-#include <petscdevicetypes.h>
+#include <petscdevice.h>
 
 /* check all blocks are filled */
 static PetscErrorCode VecAssemblyBegin_Nest(Vec v)
@@ -237,8 +237,8 @@ static PetscErrorCode VecReciprocal_Nest(Vec x, PetscDeviceContext dctx)
 static PetscErrorCode VecNorm_Nest(Vec xin, NormType type, PetscManagedReal z, PetscDeviceContext dctx)
 {
   Vec_Nest       *bx  = (Vec_Nest*)xin->data;
-  const PetscInt  nr  = bx->nb;
   Vec            *bxv = bx->v;
+  const PetscInt  nr  = bx->nb;
   PetscReal       _z;
 
   PetscFunctionBegin;
@@ -277,17 +277,13 @@ static PetscErrorCode VecMAXPY_Nest(Vec y, PetscManagedInt nv, PetscManagedScala
   PetscFunctionBegin;
   PetscCall(PetscManagedIntGetValues(dctx,nv,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&nvptr));
   /* Do axpy on each vector, v */
-  {
-    const PetscInt nvval = *nvptr;
-    for (PetscInt v = 0; v < nvval; ++v) {
-      PetscManagedScalar tmp;
+  for (PetscInt v = 0, nvval = *nvptr; v < nvval; ++v) {
+    PetscManagedScalar tmp;
 
-      PetscCall(PetscManagedScalarGetSubRange(dctx,alpha,v,v+1,&tmp));
-      PetscCall(VecAXPYAsync(y,tmp,x[v],dctx));
-      PetscCall(PetscManagedScalarRestoreSubRange(dctx,alpha,&tmp));
-    }
+    PetscCall(PetscManagedScalarGetSubRange(dctx,alpha,v,1,&tmp));
+    PetscCall(VecAXPYAsync(y,tmp,x[v],dctx));
+    PetscCall(PetscManagedScalarRestoreSubRange(dctx,alpha,&tmp));
   }
-
   PetscFunctionReturn(0);
 }
 
@@ -297,15 +293,12 @@ static PetscErrorCode VecMXDot_Nest_Private(Vec x, PetscManagedInt nv, const Vec
 
   PetscFunctionBegin;
   PetscCall(PetscManagedIntGetValues(dctx,nv,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&nvptr));
-  {
-    const PetscInt nvval = *nvptr;
-    for (PetscInt j = 0; j < nvval; ++j) {
-      PetscManagedScalar tmp;
+  for (PetscInt j = 0, nvval = *nvptr; j < nvval; ++j) {
+    PetscManagedScalar tmp;
 
-      PetscCall(PetscManagedScalarGetSubRange(dctx,val,j,j+1,&tmp));
-      PetscCall(VecDotFunc(x,y[j],tmp,dctx));
-      PetscCall(PetscManagedScalarRestoreSubRange(dctx,val,&tmp));
-    }
+    PetscCall(PetscManagedScalarGetSubRange(dctx,val,j,1,&tmp));
+    PetscCall(VecDotFunc(x,y[j],tmp,dctx));
+    PetscCall(PetscManagedScalarRestoreSubRange(dctx,val,&tmp));
   }
   PetscFunctionReturn(0);
 }
@@ -361,9 +354,7 @@ static PetscErrorCode VecSwap_Nest(Vec x,Vec y, PetscDeviceContext dctx)
 static PetscErrorCode VecWAXPY_Nest(Vec w, PetscManagedScalar alpha, Vec x, Vec y, PetscDeviceContext dctx)
 {
   Vec_Nest       *bx = (Vec_Nest*)x->data;
-  Vec_Nest       *by = (Vec_Nest*)y->data;
-  Vec_Nest       *bw = (Vec_Nest*)w->data;
-  Vec            *bxv = bx->v,*byv = by->v,*bwv = bw->v;
+  Vec            *bxv = bx->v,*byv = ((Vec_Nest*)y->data)->v,*bwv = ((Vec_Nest*)w->data)->v;
   const PetscInt  nr  = bx->nb;
 
   PetscFunctionBegin;

@@ -53,9 +53,9 @@ public:
   size_type size()       const noexcept { return size_;          }
   size_type num_chunks() const noexcept { return chunks_.size(); }
 
-  PETSC_NODISCARD PetscErrorCode get_chunk(size_type,T**)      noexcept;
-  PETSC_NODISCARD PetscErrorCode reclaim_chunk(T**)            noexcept;
-  PETSC_NODISCARD bool           owns_pointer(T*const&)  const noexcept;
+  PETSC_NODISCARD PetscErrorCode get_chunk(size_type,T**) noexcept;
+  PETSC_NODISCARD PetscErrorCode reclaim_chunk(T**)       noexcept;
+  PETSC_NODISCARD bool           owns_pointer(T*)   const noexcept;
 
 private:
   T *const        mem_;
@@ -63,7 +63,7 @@ private:
   const size_type size_;
   ChunksType      chunks_;
 
-  PETSC_NODISCARD static T* allocate_(AllocType&& allocate, size_type s) noexcept
+  PETSC_CXX_COMPAT_DECL(T* allocate_(AllocType&& allocate, size_type s))
   {
     T* mem;
 
@@ -76,7 +76,7 @@ private:
 template <typename T, typename A, typename F>
 inline PetscErrorCode MemoryBlock<T,A,F>::get_chunk(size_type s, T **ptr) noexcept
 {
-  auto &result = *ptr = nullptr;
+  auto &result = *ptr;
 
   PetscFunctionBegin;
   if (s > size_) PetscFunctionReturn(0);
@@ -135,9 +135,9 @@ inline PetscErrorCode MemoryBlock<T,A,F>::reclaim_chunk(T **ptr) noexcept
 }
 
 template <typename T, typename A, typename F>
-inline bool MemoryBlock<T,A,F>::owns_pointer(T *const& ptr) const noexcept
+inline bool MemoryBlock<T,A,F>::owns_pointer(T *ptr) const noexcept
 {
-  // if we have no mem_pool_ then we don't own any pointers
+  // each pool is linear in memory, so it suffices to check the bounds
   return (ptr >= mem_) && (ptr < std::next(mem_,size_));
 }
 
@@ -151,6 +151,7 @@ class SegmentedMemoryPool
   const AllocType allocate_;
   const FreeType  destroy_;
   PoolType        pool_;
+  bool            init_ = false;
 
   PETSC_NODISCARD PetscErrorCode make_block_(size_type size = ChunkSize) noexcept
   {
@@ -176,6 +177,8 @@ inline PetscErrorCode SegmentedMemoryPool<MemType,AllocType,FreeType,ChunkSize>:
 {
   PetscFunctionBegin;
   PetscCallCXX(pool_.clear());
+  PetscCallCXX(pool_.shrink_to_fit());
+  init_ = false;
   PetscFunctionReturn(0);
 }
 
@@ -183,13 +186,8 @@ template <typename MemType, typename AllocType, typename FreeType, std::size_t C
 inline PetscErrorCode SegmentedMemoryPool<MemType,AllocType,FreeType,ChunkSize>::initialize() noexcept
 {
   PetscFunctionBegin;
-  if (PetscUnlikely(pool_.empty())) {
-    if (PetscDefined(USE_DEBUG)) {
-      static auto inited = false;
-
-      PetscAssert(!inited,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Initializing a pool twice");
-      inited = true;
-    }
+  if (PetscUnlikely(!init_)) {
+    init_ = true;
     PetscCall(make_block_());
     PetscCall(PetscCxxObjectRegisterFinalize(this));
   }
@@ -202,10 +200,9 @@ inline PetscErrorCode SegmentedMemoryPool<MemType,AllocType,FreeType,ChunkSize>:
   const auto size = static_cast<size_type>(sizein);
 
   PetscFunctionBegin;
+  *ptr = nullptr;
   PetscAssert(sizein > 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Cannot retrieve negative (%" PetscInt_FMT ") memory from the pool",sizein);
   PetscCall(initialize());
-
-  *ptr = nullptr;
   for (auto& block : pool_) {
     PetscCall(block.get_chunk(size,ptr));
     if (*ptr) PetscFunctionReturn(0);

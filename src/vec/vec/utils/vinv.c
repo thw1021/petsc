@@ -1166,42 +1166,7 @@ PetscErrorCode  VecLog(Vec v)
   PetscFunctionReturn(0);
 }
 
-static PetscScalar PetscSqrtScalar_Fn(PetscScalar x) { return PetscSqrtReal(PetscAbsScalar(x)); }
-
-PetscErrorCode VecSqrtAbsAsync(Vec v, PetscDeviceContext dctx)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
-  PetscCall(VecApplyUnaryAsync_Private(v,dctx,v->ops->sqrt,PetscSqrtScalar_Fn));
-  PetscFunctionReturn(0);
-}
-
-/*@
-  VecSqrtAbs - Replaces each component of a vector by the square root of its magnitude.
-
-  Not collective
-
-  Input Parameter:
-. v - The vector
-
-  Output Parameter:
-. v - The vector square root
-
-  Level: beginner
-
-  Note: The actual function is sqrt(|x_i|)
-
-.seealso: VecLog(), VecExp(), VecReciprocal(), VecAbs()
-
-@*/
-PetscErrorCode  VecSqrtAbs(Vec v)
-{
-  PetscFunctionBegin;
-  PetscCall(VecSqrtAbsAsync(v,NULL));
-  PetscFunctionReturn(0);
-}
-
-static PetscScalar PetscAbsScalar_Func(PetscScalar x) { return (PetscScalar)PetscAbsScalar(x); }
+static PetscScalar PetscAbsScalar_Func(PetscScalar x) { return PetscAbsScalar(x); }
 
 PetscErrorCode VecAbsAsync(Vec v, PetscDeviceContext dctx)
 {
@@ -1235,8 +1200,43 @@ PetscErrorCode  VecAbs(Vec v)
   PetscFunctionReturn(0);
 }
 
+static PetscScalar PetscSqrtAbsScalar_Fn(PetscScalar x) { return PetscSqrtReal(PetscAbsScalar_Func(x)); }
+
+PetscErrorCode VecSqrtAbsAsync(Vec v, PetscDeviceContext dctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(v,VEC_CLASSID,1);
+  PetscCall(VecApplyUnaryAsync_Private(v,dctx,v->ops->sqrt,PetscSqrtAbsScalar_Fn));
+  PetscFunctionReturn(0);
+}
+
+/*@
+  VecSqrtAbs - Replaces each component of a vector by the square root of its magnitude.
+
+  Not collective
+
+  Input Parameter:
+. v - The vector
+
+  Output Parameter:
+. v - The vector square root
+
+  Level: beginner
+
+  Note: The actual function is sqrt(|x_i|)
+
+.seealso: VecLog(), VecExp(), VecReciprocal(), VecAbs()
+
+@*/
+PetscErrorCode  VecSqrtAbs(Vec v)
+{
+  PetscFunctionBegin;
+  PetscCall(VecSqrtAbsAsync(v,NULL));
+  PetscFunctionReturn(0);
+}
+
 // have to make a function since PetscImaginaryPart() is a macro
-static PetscScalar PetscImaginaryPart_Func(PetscScalar x) { return (PetscScalar)PetscImaginaryPart(x); }
+static PetscScalar PetscImaginaryPart_Func(PetscScalar x) { return PetscImaginaryPart(x); }
 
 PetscErrorCode VecImaginaryPartAsync(Vec v, PetscDeviceContext dctx)
 {
@@ -1265,7 +1265,7 @@ PetscErrorCode  VecImaginaryPart(Vec v)
 }
 
 // have to make a function since PetscRealPart() is a macro
-static PetscScalar PetscRealPart_Func(PetscScalar x) { return (PetscScalar)PetscRealPart(x); }
+static PetscScalar PetscRealPart_Func(PetscScalar x) { return PetscRealPart(x); }
 
 PetscErrorCode VecRealPartAsync(Vec v, PetscDeviceContext dctx)
 {
@@ -1320,7 +1320,7 @@ PetscErrorCode VecDotNorm2Async(Vec s, Vec t, PetscManagedScalar dp, PetscManage
     PetscCall(PetscManagedScalarDestroy(dctx,&nmtmp));
   } else {
     const PetscScalar *sx,*tx;
-    PetscScalar        sum[2] = {(PetscScalar)0};
+    PetscScalar        sum[2] = {0,0};
     PetscInt           n;
 
     PetscCall(VecGetLocalSize(s,&n));
@@ -1480,10 +1480,9 @@ PetscErrorCode VecShiftAsync(Vec v, PetscManagedScalar shift, PetscDeviceContext
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(v,VEC_CLASSID,1);
-  //PetscValidLogicalCollectiveScalar(v,shift,2);
   PetscCall(VecSetErrorIfLocked(v,1));
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   if (v->ops->shift) {
-    PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
     PetscCall((*v->ops->shift)(v,shift,dctx));
   } else {
     PetscInt     n;

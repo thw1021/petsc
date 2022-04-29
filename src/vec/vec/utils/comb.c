@@ -394,16 +394,16 @@ PetscErrorCode VecDotEndAsync(Vec x, Vec y, PetscManagedScalar result, PetscDevi
   // sync for MPI
   PetscCall(PetscDeviceContextSynchronize(dctx));
   PetscCall(PetscSplitReductionEnd(sr));
-  PetscCall(PetscManagedScalarSetValues(dctx,result,PETSC_MEMTYPE_HOST,sr->gvalues+sr->numopsend,1));
 
   PetscCheck(sr->numopsend < sr->numopsbegin,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecxxxEnd() more times then VecxxxBegin()");
   PetscCheck(!x || (void*)x == sr->invecs[sr->numopsend],PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecxxxEnd() in a different order or with a different vector than VecxxxBegin()");
   PetscCheck(sr->reducetype[sr->numopsend] == PETSC_SR_REDUCE_SUM,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecDotEnd() on a reduction started with VecNormBegin()");
 
+  PetscCall(PetscManagedScalarSetValues(dctx,result,PETSC_MEMTYPE_HOST,sr->gvalues+sr->numopsend++,1));
   /*
      We are finished getting all the results so reset to no outstanding requests
   */
-  if (++(sr->numopsend) == sr->numopsbegin) {
+  if (sr->numopsend == sr->numopsbegin) {
     sr->state       = STATE_BEGIN;
     sr->numopsend   = 0;
     sr->numopsbegin = 0;
@@ -693,7 +693,7 @@ static PetscErrorCode VecMXDotBeginAsync_Private(Vec x, PetscManagedInt nv, cons
   sr->numopsbegin += nvval;
   PetscCall(VecLockReadPush(x));
   PetscCall(PetscLogEventBegin(VEC_ReduceArithmetic,0,0,0,0));
-  PetscCall((*op_local)(x,nv,y,result,dctx));
+  PetscCall((*op_local)(x,nv,y,scal,dctx));
   PetscCall(PetscLogEventEnd(VEC_ReduceArithmetic,0,0,0,0));
   PetscCall(PetscManagedHostScalarDestroy(dctx,&scal));
   PetscCall(VecLockReadPop(x));
@@ -793,6 +793,8 @@ static PetscErrorCode VecMXDotEndAsync_Private(Vec x, PetscManagedInt nv, const 
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   PetscCall(PetscObjectGetComm((PetscObject)x,&comm));
   PetscCall(PetscSplitReductionGet(comm,&sr));
+  // sync for MPI
+  PetscCall(PetscDeviceContextSynchronize(dctx));
   PetscCall(PetscSplitReductionEnd(sr));
 
   PetscCheck(sr->numopsend < sr->numopsbegin,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecxxxEnd() more times then VecxxxBegin()");
