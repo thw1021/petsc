@@ -1785,8 +1785,6 @@ PetscErrorCode MatTransposeMatMultSymbolic_MPIAIJ_MPIAIJ(Mat P,Mat A,PetscReal f
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)A,&comm));
-  /* check if matrix local sizes are compatible */
-  PetscCheck(A->rmap->rstart == P->rmap->rstart && A->rmap->rend == P->rmap->rend,comm,PETSC_ERR_ARG_SIZ,"Matrix local dimensions are incompatible, A (%" PetscInt_FMT ", %" PetscInt_FMT ") != P (%" PetscInt_FMT ",%" PetscInt_FMT ")",A->rmap->rstart,A->rmap->rend,P->rmap->rstart,P->rmap->rend);
 
   PetscCallMPI(MPI_Comm_size(comm,&size));
   PetscCallMPI(MPI_Comm_rank(comm,&rank));
