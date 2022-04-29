@@ -640,48 +640,18 @@ PETSC_KERNEL_DECL static void mdot_kernel(const PetscScalar *PETSC_RESTRICT x, c
 
 } // namespace kernels
 
-template <int N>
-__global__ void mini_kernel(const PetscScalar *x, const PetscScalar *y[N], PetscScalar *result, PetscInt size)
-{
-  // for (PetscInt i = 0; i < size; ++i) {
-  //   printf("tmpl %d x[%d] = %g\n",N,i,x[i]);
-  // }
-  // __syncthreads();
-  // for (PetscInt i = 0; i < N; ++i) {
-  //   for (PetscInt j = 0; j < size; ++j) {
-  //     printf("tmpl %d y[%d][%d] = %g\n",N,i,j,y[i][j]);
-  //   }
-  // }
-  __syncthreads();
-  __syncthreads();
-  if (threadIdx.x < N) {
-    auto i = blockIdx.x+(threadIdx.x*gridDim.x);
-    printf("tmpl %d size %d result[%d] (addr %p)\n",N,size,i,result+i);
-    result[i] = 0;
-  }
-  __syncthreads();
-  // for (PetscInt i = 0; i < N*MDOT_WORKGROUP_NUM; ++i) {
-  //   printf("tmpl %d size %d result[%d] (addr %p)\n",N,size,i,result+i);
-  //   result[i] = 0;
-  // }
-  // __syncthreads();
-}
-
 template <Device::CUPM::DeviceType T>
 template <int N>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_kernel_dispatch_(PetscDeviceContext dctx, cupmStream_t stream, const PetscScalar *xarr, const Vec yin[], PetscInt size, PetscScalar **device_y, PetscScalar *results, PetscInt *yidx))
 {
-  const auto   yidxt = *yidx;
+  auto&        yidxt = *yidx;
   PetscScalar *host_y[N];
 
   PetscFunctionBegin;
   for (auto i = 0; i < N; ++i) host_y[i] = DeviceArrayRead(dctx,yin[i+yidxt]);
   PetscCallCUPM(cupmMemcpyAsync(device_y,host_y,N*sizeof(*device_y),cupmMemcpyDefault,stream));
-  PetscCallCUDA(cudaDeviceSynchronize());
-  PetscCallCUPM(cupmLaunchKernel(mini_kernel<N>,MDOT_WORKGROUP_NUM,MDOT_WORKGROUP_SIZE,0,stream,xarr,device_y,results+yidxt*MDOT_WORKGROUP_NUM,size));
-  PetscCallCUDA(cudaDeviceSynchronize());
-  //PetscCallCUPM(cupmLaunchKernel(kernels::mdot_kernel<N>,dim3(MDOT_WORKGROUP_NUM),dim3(MDOT_WORKGROUP_SIZE),0,stream,xarr,device_y,size,results+yidxt*MDOT_WORKGROUP_NUM));
-  *yidx += N;
+  PetscCallCUPM(cupmLaunchKernel(kernels::mdot_kernel<N>,MDOT_WORKGROUP_NUM,MDOT_WORKGROUP_SIZE,0,stream,xarr,device_y,size,results+yidxt*MDOT_WORKGROUP_NUM));
+  yidxt += N;
   PetscFunctionReturn(0);
 }
 
@@ -711,18 +681,17 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<f
     // REVIEW ME: Can fork-join here, but should probably only have a single-sized kernel then
     // REVIEW ME: Should probably try and load-balance these. Consider the case where nv = 9;
     // it is very likely better to do 4+5 rather and 8+1
-    while (yidx < nv)
-    {
+    while (yidx < nv) {
       switch (nv-yidx) {
-      case 7:
-        PetscCall(mdot_kernel_dispatch_<7>(dctx,stream,xptr,yin,n,d_y,d_results,&yidx));
-        break;
-      case 6:
-        PetscCall(mdot_kernel_dispatch_<6>(dctx,stream,xptr,yin,n,d_y,d_results,&yidx));
-        break;
-      case 5:
-        PetscCall(mdot_kernel_dispatch_<5>(dctx,stream,xptr,yin,n,d_y,d_results,&yidx));
-        break;
+      // case 7:
+      //   PetscCall(mdot_kernel_dispatch_<7>(dctx,stream,xptr,yin,n,d_y,d_results,&yidx));
+      //   break;
+      // case 6:
+      //   PetscCall(mdot_kernel_dispatch_<6>(dctx,stream,xptr,yin,n,d_y,d_results,&yidx));
+      //   break;
+      // case 5:
+      //   PetscCall(mdot_kernel_dispatch_<5>(dctx,stream,xptr,yin,n,d_y,d_results,&yidx));
+      //   break;
       case 4:
         PetscCall(mdot_kernel_dispatch_<4>(dctx,stream,xptr,yin,n,d_y,d_results,&yidx));
         break;
@@ -732,8 +701,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::mdot_async_(UseComplexTag<f
       case 2:
         PetscCall(mdot_kernel_dispatch_<2>(dctx,stream,xptr,yin,n,d_y,d_results,&yidx));
         break;
-      case 1:
-        PetscCall(mdot_kernel_dispatch_<1>(dctx,stream,xptr,yin,n,d_y,d_results,&yidx));
+      // case 1:
+      //   PetscCall(mdot_kernel_dispatch_<1>(dctx,stream,xptr,yin,n,d_y,d_results,&yidx));
       case 0:
         break;
       default: // 8 or more

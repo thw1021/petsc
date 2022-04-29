@@ -1369,7 +1369,7 @@ static PetscErrorCode VecMXDot_Private(Vec x, PetscInt nv, const Vec y[], PetscS
     PetscCall(PetscManageHostScalar(dctx,vals,nv,&valtmp));
     PetscCall(VecMXDotAsyncFunction(x,nvtmp,y,valtmp,dctx));
     PetscCall(PetscManagedHostScalarDestroy(dctx,&valtmp));
-    PetscCall(PetscManagedHostIntDestroy(dctx,&nvtmp));
+    PetscCall(PetscManagedIntDestroy(dctx,&nvtmp));
     PetscCall(VecLockReadPop(x));
     for (PetscInt i = 0; i < nv; ++i) PetscCall(VecLockReadPop(y[i]));
   }
