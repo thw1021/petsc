@@ -648,8 +648,6 @@ int main(int argc,char **argv)
     PetscCheck(MMS == 1,PETSC_COMM_WORLD,PETSC_ERR_USER,"FormFunctionLocalVec_Kokkos only works with MMS 1");
    #if defined(PETSC_HAVE_KOKKOS)
     PetscCall(DMDASNESSetFunctionLocalExt(da,INSERT_VALUES,(DMDASNESFunctionExt)FormFunctionLocalExt_Kokkos,&user));
-   #else
-    SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Kokkos not enabled");
    #endif
   } else {
     PetscCall(DMDASNESSetFunctionLocal(da,INSERT_VALUES,(DMDASNESFunction)FormFunctionLocal,&user));
@@ -657,7 +655,11 @@ int main(int argc,char **argv)
 
   PetscCall(PetscOptionsGetBool(NULL,NULL,"-fd",&flg,NULL));
   if (!flg) {
-    PetscCall(DMDASNESSetJacobianLocal(da,(DMDASNESJacobian)FormJacobianLocal,&user));
+    if (useKokkos) {
+     #if defined(PETSC_HAVE_KOKKOS)
+      PetscCall(DMDASNESSetJacobianLocalExt(da,(DMDASNESJacobianExt)FormJacobianLocalExt_Kokkos,&user));
+     #endif
+    } else PetscCall(DMDASNESSetJacobianLocal(da,(DMDASNESJacobian)FormJacobianLocal,&user));
   }
 
   PetscCall(PetscOptionsGetBool(NULL,NULL,"-obj",&flg,NULL));
@@ -665,8 +667,6 @@ int main(int argc,char **argv)
     if (useKokkos) {
      #if defined(PETSC_HAVE_KOKKOS)
       PetscCall(DMDASNESSetObjectiveLocalExt(da,(DMDASNESObjectiveExt)FormObjectiveLocalExt_Kokkos,&user));
-     #else
-      SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Kokkos not enabled");
      #endif
     } else PetscCall(DMDASNESSetObjectiveLocal(da,(DMDASNESObjective)FormObjectiveLocal,&user));
   }
