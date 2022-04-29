@@ -1362,8 +1362,8 @@ static PetscErrorCode VecMXDot_Private(Vec x, PetscInt nv, const Vec y[], PetscS
     }
     PetscValidScalarPointer(vals,4);
     PetscValidFunction(VecMXDotAsyncFunction,5);
-
     PetscCall(VecLockReadPush(x));
+
     PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
     PetscCall(PetscManageHostInt(dctx,&nv,1,&nvtmp));
     PetscCall(PetscManageHostScalar(dctx,vals,nv,&valtmp));

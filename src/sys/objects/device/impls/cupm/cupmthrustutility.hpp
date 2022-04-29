@@ -44,6 +44,8 @@ struct PetscLogGpuTimer
   ~PetscLogGpuTimer() noexcept { PetscCallAbort(PETSC_COMM_SELF,PetscLogGpuTimeEnd());   }
 };
 
+struct private_tag  { };
+
 } // namespace detail
 
 #define THRUST_CALL(...) [&]{                                                   \
@@ -51,7 +53,7 @@ struct PetscLogGpuTimer
     return thrust_call_par_on(__VA_ARGS__);                                     \
   }()
 
-#define CHKERRTHRUST(...)  do {                                                 \
+#define PetscCallThrust(...)  do {                                              \
     try {                                                                       \
       __VA_ARGS__;                                                              \
     } catch (const thrust::system_error& ex) {                                  \
@@ -78,60 +80,63 @@ PETSC_DECLTYPE_NOEXCEPT_AUTO_RETURNS(
 
 // actual implementation that calls thrust, 2 argument version
 template <DeviceType DT, typename FunctorType, typename T>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustApplyPointwise(typename Interface<DT>::cupmStream_t stream, FunctorType&& functor, PetscInt n, T *xinout, T *yin = nullptr))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustApplyPointwise(detail::private_tag, typename Interface<DT>::cupmStream_t stream, FunctorType&& functor, PetscInt n, T *xinout, T *yin = nullptr))
 {
-  PetscFunctionBegin;
-  PetscAssert(n >= 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"n %" PetscInt_FMT " must be >= 0",n);
-  PetscValidDevicePointer(xinout,4);
-  if (PetscLikely(n)) {
-    const auto xptr = thrust::device_pointer_cast(xinout);
-    const auto retptr = (yin && (yin != xinout)) ? thrust::device_pointer_cast(yin) : xptr;
+  const auto xptr   = thrust::device_pointer_cast(xinout);
+  const auto retptr = (yin && (yin != xinout)) ? thrust::device_pointer_cast(yin) : xptr;
 
-    CHKERRTHRUST(THRUST_CALL(thrust::transform,stream,xptr,xptr+n,retptr,std::forward<FunctorType>(functor)));
-    PetscCall(PetscLogGpuFlops(n));
-  }
+  PetscFunctionBegin;
+  PetscValidDevicePointer(xinout,4);
+  PetscCallThrust(THRUST_CALL(thrust::transform,stream,xptr,xptr+n,retptr,std::forward<FunctorType>(functor)));
   PetscFunctionReturn(0);
 }
 
 // actual implementation that calls thrust, 3 argument version
 template <DeviceType DT, typename FunctorType, typename T>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustApplyPointwise(typename Interface<DT>::cupmStream_t stream, FunctorType&& functor, PetscInt n, T *xin, T *yin, T *zin))
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustApplyPointwise(detail::private_tag, typename Interface<DT>::cupmStream_t stream, FunctorType&& functor, PetscInt n, T *xin, T *yin, T *zin))
 {
+  const auto xptr = thrust::device_pointer_cast(xin);
+
   PetscFunctionBegin;
-  PetscAssert(n >= 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"n %" PetscInt_FMT " must be >= 0",n);
   PetscValidDevicePointer(xin,4);
   PetscValidDevicePointer(yin,5);
   PetscValidDevicePointer(zin,6);
-  if (PetscLikely(n)) {
-    const auto xptr = thrust::device_pointer_cast(xin);
+  PetscCallThrust(
+    THRUST_CALL(
+      thrust::transform,stream,
+      xptr,xptr+n,
+      thrust::device_pointer_cast(yin),
+      thrust::device_pointer_cast(zin),
+      std::forward<FunctorType>(functor)
+    )
+  );
+  PetscFunctionReturn(0);
+}
 
-    CHKERRTHRUST(
-      THRUST_CALL(
-        thrust::transform,stream,
-        xptr,xptr+n,
-        thrust::device_pointer_cast(yin),
-        thrust::device_pointer_cast(zin),
-        std::forward<FunctorType>(functor)
-      )
-    );
+// one last intermediate function to check n, and log flops for everything
+template <DeviceType DT, typename F, typename... T>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustApplyPointwise(typename Interface<DT>::cupmStream_t stream, F&& functor, PetscInt n, T&&... rest))
+{
+  PetscFunctionBegin;
+  PetscAssert(n >= 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"n %" PetscInt_FMT " must be >= 0",n);
+  if (PetscLikely(n)) {
+    PetscCall(ThrustApplyPointwise<DT>(detail::private_tag{},stream,std::forward<F>(functor),n,std::forward<T>(rest)...));
     PetscCall(PetscLogGpuFlops(n));
   }
   PetscFunctionReturn(0);
 }
 
-#undef PetscValidDevicePointer
-
 // serves as setup to the real implementation above
-template <DeviceType T, typename... Args>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustApplyPointwise(PetscDeviceContext dctx, Args&&... rest))
+template <DeviceType T, typename F, typename... Args>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustApplyPointwise(PetscDeviceContext dctx, F&& functor, PetscInt n, Args&&... rest))
 {
   typename Interface<T>::cupmStream_t stream;
 
   PetscFunctionBegin;
-  static_assert(sizeof...(Args) <= 5,"");
+  static_assert(sizeof...(Args) <= 3,"");
   PetscValidDeviceContext(dctx,1);
   PetscCall(PetscDeviceContextGetStreamHandle_Internal(dctx,&stream));
-  PetscCall(ThrustApplyPointwise<T>(stream,std::forward<Args>(rest)...));
+  PetscCall(ThrustApplyPointwise<T>(stream,std::forward<F>(functor),n,std::forward<Args>(rest)...));
   PetscFunctionReturn(0);
 }
 
@@ -152,22 +157,27 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustSet(typename Interface<DT>::cupmStrea
 
   PetscFunctionBegin;
   PetscValidPointer(val,4);
-  if (*val == T{0}) {
-    PetscCallCUPM_(Interface<DT>::cupmMemsetAsync(ptr,0,size,stream));
-  } else {
-    auto xptr = thrust::device_pointer_cast(ptr);
+  if (n) {
+    PetscValidDevicePointer(ptr,3);
 
-    CHKERRTHRUST(THRUST_CALL(thrust::fill,stream,xptr,xptr+n,*val));
-    if (std::is_same<util::remove_cv_t<T>,PetscScalar>::value) {
-      PetscCall(PetscLogCpuToGpuScalar(size));
+    if (*val == T{0}) {
+      PetscCallCUPM_(Interface<DT>::cupmMemsetAsync(ptr,0,size,stream));
     } else {
-      PetscCall(PetscLogCpuToGpu(size));
+      const auto xptr = thrust::device_pointer_cast(ptr);
+
+      PetscCallThrust(THRUST_CALL(thrust::fill,stream,xptr,xptr+n,*val));
+      if (std::is_same<util::remove_cv_t<T>,PetscScalar>::value) {
+        PetscCall(PetscLogCpuToGpuScalar(size));
+      } else {
+        PetscCall(PetscLogCpuToGpu(size));
+      }
     }
   }
   PetscFunctionReturn(0);
 }
 
 #undef PetscCallCUPM_
+#undef PetscValidDevicePointer
 
 template <DeviceType DT, typename T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode ThrustSet(PetscDeviceContext dctx, PetscInt n, T *ptr, const T *val))

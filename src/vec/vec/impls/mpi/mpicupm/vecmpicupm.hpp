@@ -25,11 +25,15 @@ struct VecMPI_CUPM : Vec_CUPMBase<T,VecMPI_CUPM<T>>
   using VecSeq_T = VecSeq_CUPM<T>;
 
 private:
-  PETSC_CXX_COMPAT_DECL(constexpr auto VecIMPLCast_(Vec v))
+  PETSC_CXX_COMPAT_DECL(auto VecIMPLCast_(Vec v))
   PETSC_DECLTYPE_AUTO_RETURNS(static_cast<Vec_MPI*>(v->data));
-  PETSC_CXX_COMPAT_DECL(PETSC_CONSTEXPR_14 auto VECTYPE_()) PETSC_DECLTYPE_AUTO_RETURNS(VECMPICUPM());
+  PETSC_CXX_COMPAT_DECL(constexpr auto VECTYPE_()) PETSC_DECLTYPE_AUTO_RETURNS(VECMPICUPM());
 
   PETSC_CXX_COMPAT_DECL(PetscErrorCode creatempicupm_async_(Vec,PetscDeviceContext,PetscBool/*allocate_missing*/=PETSC_TRUE,PetscInt/*nghost*/=0,PetscScalar*/*host_array*/=nullptr,PetscScalar*/*device_array*/=nullptr));
+  // common core for the dots
+  template <typename F>
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode xdot_async_(F&&,Vec,Vec,PetscManagedScalar,PetscDeviceContext));
+  // common core for min/max
   template <typename SeqFunction>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode minmax_async_(Vec,PetscManagedInt,PetscManagedReal,SeqFunction,MPI_Op,MPI_Op,PetscDeviceContext));
 
@@ -114,21 +118,25 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::duplicate_async(Vec v, Vec 
 
   PetscFunctionBegin;
   // does not call VecSetType(), we set up the data structures ourselves
-  PetscCall(Duplicate_CUPMBase(v,y,dctx,[=](Vec z, PetscDeviceContext dctx){return creatempicupm_async_(z,dctx,PETSC_FALSE,nghost);}));
+  PetscCall(Duplicate_CUPMBase(v,y,dctx,[=](Vec z, PetscDeviceContext dctx)
+  {
+    return creatempicupm_async_(z,dctx,PETSC_FALSE,nghost);
+  }));
 
   /* save local representation of the parallel vector (and scatter) if it exists */
-  if (const auto& locrep = vimpl->localrep) {
-    const auto   ops   = locrep->ops;
-    const auto   yimpl = VecIMPLCast(*y);
+  if (const auto locrep = vimpl->localrep) {
+    const auto   yimpl   = VecIMPLCast(*y);
+    auto&        ylocrep = yimpl->localrep;
     PetscScalar *array;
 
     PetscCall(VecGetArrayAsync(*y,&array,dctx));
-    PetscCall(VecCreateSeqWithArray(PETSC_COMM_SELF,1,v->map->n+nghost,array,&yimpl->localrep));
-    PetscCall(PetscMemcpy(yimpl->localrep->ops,ops,sizeof(*ops)));
+    PetscCall(VecCreateSeqWithArray(PETSC_COMM_SELF,1,v->map->n+nghost,array,&ylocrep));
+    PetscCall(PetscMemcpy(ylocrep->ops,locrep->ops,sizeof(*locrep->ops)));
     PetscCall(VecRestoreArrayAsync(*y,&array,dctx));
-    PetscCall(PetscLogObjectParent(PetscObjectCast(*y),PetscObjectCast(yimpl->localrep)));
-    yimpl->localupdate = vimpl->localupdate;
-    if (auto &scatter = yimpl->localupdate) PetscCall(PetscObjectReference(PetscObjectCast(scatter)));
+    PetscCall(PetscLogObjectParent(PetscObjectCast(*y),PetscObjectCast(ylocrep)));
+    if (auto &scatter = (yimpl->localupdate = vimpl->localupdate)) {
+      PetscCall(PetscObjectReference(PetscObjectCast(scatter)));
+    }
   }
   PetscFunctionReturn(0);
 }
@@ -206,24 +214,30 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::norm_async(Vec v, NormType 
 }
 
 template <Device::CUPM::DeviceType T>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::dot_async(Vec x, Vec y, PetscManagedScalar z, PetscDeviceContext dctx))
+template <typename F>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::xdot_async_(F&& VecSeq_CUPM_XDotAsync, Vec x, Vec y, PetscManagedScalar z, PetscDeviceContext dctx))
 {
   constexpr auto one = PetscInt{1};
 
   PetscFunctionBegin;
-  PetscCall(VecSeq_T::dot_async(x,y,z,dctx));
+  PetscCall(VecSeq_CUPM_XDotAsync(x,y,z,dctx));
   PetscCall(PetscDeviceContextAllReduceManagedScalar_Internal(dctx,z,&one,MPIU_SUM,PetscObjectCast(x)));
+  PetscFunctionReturn(0);
+}
+
+template <Device::CUPM::DeviceType T>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::dot_async(Vec x, Vec y, PetscManagedScalar z, PetscDeviceContext dctx))
+{
+  PetscFunctionBegin;
+  PetscCall(xdot_async_(VecSeq_T::dot_async,x,y,z,dctx));
   PetscFunctionReturn(0);
 }
 
 template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::tdot_async(Vec x, Vec y, PetscManagedScalar z, PetscDeviceContext dctx))
 {
-  constexpr auto one = PetscInt{1};
-
   PetscFunctionBegin;
-  PetscCall(VecSeq_T::tdot_async(x,y,z,dctx));
-  PetscCall(PetscDeviceContextAllReduceManagedScalar_Internal(dctx,z,&one,MPIU_SUM,PetscObjectCast(x)));
+  PetscCall(xdot_async_(VecSeq_T::tdot_async,x,y,z,dctx));
   PetscFunctionReturn(0);
 }
 
