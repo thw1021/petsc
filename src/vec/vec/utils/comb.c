@@ -741,7 +741,7 @@ PetscErrorCode VecMDotBeginAsync(Vec x, PetscManagedInt nv, const Vec y[], Petsc
 .seealso: VecMDotEnd(), VecNormBegin(), VecNormEnd(), VecNorm(), VecDot(), VecMDot(),
          VecTDotBegin(), VecTDotEnd(), VecMTDotBegin(), VecMTDotEnd(), PetscCommSplitReductionBegin()
 @*/
-PetscErrorCode  VecMDotBegin(Vec x,PetscInt nv,const Vec y[],PetscScalar PETSC_UNUSED result[])
+PetscErrorCode  VecMDotBegin(Vec x,PetscInt nv,const Vec y[],PetscScalar result[])
 {
   PetscFunctionBegin;
   PetscCall(VecMXDotBegin_Private(x,nv,y,result,VecMDotBeginAsync));
