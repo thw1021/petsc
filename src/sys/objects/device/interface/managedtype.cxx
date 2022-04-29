@@ -55,6 +55,7 @@ class PetscManagedTypeImpl
 
   PETSC_CXX_COMPAT_DECL(PetscErrorCode copy_values(PetscDeviceContext,ManagedType,PetscOffloadMask,PetscOffloadMask,const PetscType*));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode check_lock(ManagedType,bool = false));
+  PETSC_CXX_COMPAT_DECL(bool           managed_type_equal(const ManagedType&,const ManagedType&));
 
 public:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode create(PetscDeviceContext,PetscType*,PetscType*,PetscInt,PetscCopyMode,PetscCopyMode,PetscOffloadMask,ManagedType*));
@@ -97,6 +98,14 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::check_lock(Mana
   PetscFunctionBegin;
   PetscAssert(lock == val,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Managed type object is %s expected it to be %s",strings[lock],strings[val]);
   PetscFunctionReturn(0);
+}
+
+template <typename T, typename MT>
+PETSC_CXX_COMPAT_DEFN(bool PetscManagedTypeImpl<T,MT>::managed_type_equal(const ManagedType& l, const ManagedType& r))
+{
+  return (l->host == r->host) && (l->device == r->device) && (l->dtype == r->dtype) &&
+    (l->mask == r->mask) && (l->d_cmode == r->d_cmode) && (l->h_cmode == r->h_cmode) &&
+    (l->n == r->n) && (l->state.locked == r->state.locked) && (l->state.tainted == r->state.tainted);
 }
 
 template <typename T = void>
@@ -350,22 +359,28 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::apply_operator(
 template <typename T, typename MT>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::get_sub_range(PetscDeviceContext dctx, ManagedType in, PetscInt begin, PetscInt len, ManagedType *out))
 {
-  PetscType *tmp;
-
   PetscFunctionBegin;
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   PetscValidPointer(in,2);
   PetscValidPointer(out,5);
   PetscCall(check_lock(in));
   PetscAssert(len > 0,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Cannot extract a subrange of negative size %" PetscInt_FMT,len);
-  PetscAssert(begin+len < in->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Trying to extract a subrange of [%" PetscInt_FMT ",%" PetscInt_FMT ") from managed type of size %" PetscInt_FMT,begin,begin+len,in->n);
-  if (!in->host)   PetscCall(get_values(dctx,in,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,PETSC_FALSE,&tmp));
-  if (!in->device) PetscCall(get_values(dctx,in,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_READ_WRITE,PETSC_FALSE,&tmp));
-  PetscCall(create(dctx,in->host+begin,in->device+begin,len,PETSC_USE_POINTER,PETSC_USE_POINTER,in->mask,out));
-  // copy state over to the subrange
-  (*out)->state = in->state;
-  // but lock ourselves
-  in->state.locked = 1;
+  PetscAssert(begin+len <= in->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Trying to extract a subrange of [%" PetscInt_FMT ",%" PetscInt_FMT ") from managed type of size %" PetscInt_FMT,begin,begin+len,in->n);
+  if (len == in->n) {
+    // curious case of trying to extract a subrange that is exactly the size of the current
+    // object, in which case we simply return ourselves and don't need to lock
+    *out = in;
+  } else {
+    PetscType *tmp;
+
+    if (!in->host) PetscCall(get_values(dctx,in,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,PETSC_FALSE,&tmp));
+    if (!in->device) PetscCall(get_values(dctx,in,PETSC_MEMTYPE_DEVICE,PETSC_MEMORY_ACCESS_READ_WRITE,PETSC_FALSE,&tmp));
+    PetscCall(create(dctx,in->host+begin,in->device+begin,len,PETSC_USE_POINTER,PETSC_USE_POINTER,in->mask,out));
+    // copy state over to the subrange
+    (*out)->state = in->state;
+    // but lock ourselves
+    in->state.locked = 1;
+  }
   PetscFunctionReturn(0);
 }
 
@@ -375,10 +390,18 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::restore_sub_ran
   PetscFunctionBegin;
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
   PetscValidPointer(in,2);
-  PetscCall(check_lock(in,true)); // assert that we are locked
   PetscValidPointer(out,3);
   PetscValidPointer(*out,3);
-  PetscCall(check_lock(*out)); // the restored obj can't also have an outstanding subrange
+  if (in == *out) {
+    // case where the subrange len was the same as the original (and hence we returned
+    // ourselves). do a sanity check -- which to be honest I don't see how it could fail -- to
+    // double check
+    PetscAssert(managed_type_equal(in,*out),PETSC_COMM_SELF,PETSC_ERR_PLIB,"Subrange '" PetscStringize(*out) "' being restored is pointer equavalent to '" PetscStringize(in) "' but not value equivalent");
+    *out = nullptr;
+    PetscFunctionReturn(0);
+  }
+  PetscCall(check_lock(in,true)); // assert that we are locked
+  PetscCall(check_lock(*out));    // the restored obj can't also have an outstanding subrange
   if (PetscDefined(USE_DEBUG)) {
     const auto check_ownership = [&](const PetscType *begin, const PetscType *needle)
     {

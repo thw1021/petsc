@@ -332,15 +332,14 @@ static PetscErrorCode KSPSolve_InnerLoop_PIPELCG(KSP ksp)
     if (it < l) {
       PetscDeviceContext dctx;
 
-      PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+      PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
       for (j = 0; j < it+2; ++j) {
         PetscManagedScalar gtmp;
 
         // REVIEW ME: VecMDotBegin()?
         PetscCall(PetscManageHostScalar(dctx,&G(j,it+1),1,&gtmp));
         PetscCall((*U[0]->ops->dot_local)(U[0],Z[l-j],gtmp,dctx)); /* dot-products (U[0],Z[j]) */
-        PetscCall(PetscManagedScalarEnsureOffload(dctx,gtmp,PETSC_OFFLOAD_CPU));
-        PetscCall(PetscManagedScalarDestroy(dctx,&gtmp));
+        PetscCall(PetscManagedHostScalarDestroy(dctx,&gtmp));
       }
       PetscCall(PetscDeviceContextSynchronize(dctx));
       PetscCall(MPIPetsc_Iallreduce(MPI_IN_PLACE,&G(0,it+1),it+2,MPIU_SCALAR,MPIU_SUM,comm,&req(it+1)));
@@ -350,19 +349,18 @@ static PetscErrorCode KSPSolve_InnerLoop_PIPELCG(KSP ksp)
 
       middle = it-l+2;
       end = it+2;
-      PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+      PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
       PetscCall(PetscManageHostScalar(dctx,&G(it-l+1,it+1),1,&guvtmp));
       // REVIEW ME: VecMDotBegin()?
       PetscCall((*U[0]->ops->dot_local)(U[0],V[0],guvtmp,dctx)); /* dot-product (U[0],V[0]) */
-      PetscCall(PetscManagedScalarEnsureOffload(dctx,guvtmp,PETSC_OFFLOAD_CPU));
+      PetscCall(PetscManagedHostScalarDestroy(dctx,&guvtmp));
       for (j = middle; j < end; ++j) {
         PetscManagedScalar  gtmp;
 
         PetscCall(PetscManageHostScalar(dctx,&G(j,it+1),1,&gtmp));
         PetscCall((*U[0]->ops->dot_local)(U[0],plcg->Z[it+1-j],gtmp,dctx)); /* dot-products (U[0],Z[j]) */
         // ensure the host values are updated again
-        PetscCall(PetscManagedScalarEnsureOffload(dctx,gtmp,PETSC_OFFLOAD_CPU));
-        PetscCall(PetscManagedScalarDestroy(dctx,&gtmp));
+        PetscCall(PetscManagedHostScalarDestroy(dctx,&gtmp));
       }
       PetscCall(PetscDeviceContextSynchronize(dctx));
       PetscCall(MPIPetsc_Iallreduce(MPI_IN_PLACE,&G(it-l+1,it+1),l+1,MPIU_SCALAR,MPIU_SUM,comm,&req(it+1)));
@@ -498,11 +496,10 @@ static PetscErrorCode KSPSolve_PIPELCG(KSP ksp)
       PetscManagedScalar gtmp;
       PetscDeviceContext dctx;
 
-      PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+      PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
       PetscCall(PetscManageHostScalar(dctx,&G(0,0),1,&gtmp));
       PetscCall((*plcg->U[0]->ops->dot_local)(plcg->U[0],p,gtmp,dctx));
-      PetscCall(PetscManagedScalarEnsureOffload(dctx,gtmp,PETSC_OFFLOAD_CPU));
-      PetscCall(PetscManagedScalarDestroy(dctx,&gtmp));
+      PetscCall(PetscManagedHostScalarDestroy(dctx,&gtmp));
       PetscCall(PetscDeviceContextSynchronize(dctx));
     }
 

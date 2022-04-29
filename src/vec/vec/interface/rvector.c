@@ -1344,7 +1344,7 @@ static PetscErrorCode VecMXDot_Private(Vec x, PetscInt nv, const Vec y[], PetscS
   // safely use x as a PetscObject
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
   PetscValidLogicalCollectiveInt(x,nv,2);
-  PetscCheck(nv > 0,PetscObjectComm((PetscObject)x),PETSC_ERR_ARG_OUTOFRANGE,"Number of vectors (given %" PetscInt_FMT ") cannot be negative",nv);
+  PetscCheck(nv >= 0,PetscObjectComm((PetscObject)x),PETSC_ERR_ARG_OUTOFRANGE,"Number of vectors (nv = %" PetscInt_FMT ") cannot be negative",nv);
   if (nv) {
     PetscManagedInt    nvtmp;
     PetscManagedScalar valtmp;
@@ -1487,15 +1487,14 @@ PetscErrorCode  VecMAXPY(Vec y,PetscInt nv,const PetscScalar alpha[],Vec x[])
   PetscValidHeaderSpecific(y,VEC_CLASSID,1);
   PetscValidLogicalCollectiveInt(y,nv,2);
   PetscCall(VecSetErrorIfLocked(y,1));
+  PetscCheck(nv >= 0,PetscObjectComm((PetscObject)x),PETSC_ERR_ARG_OUTOFRANGE,"Number of vectors (nv = %" PetscInt_FMT ") cannot be negative",nv);
   if (nv) {
     PetscManagedInt    nvtmp;
     PetscManagedScalar alphatmp;
     PetscDeviceContext dctx;
 
-    PetscCheck(nv > 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of vectors (given %" PetscInt_FMT ") cannot be negative",nv);
     PetscValidScalarPointer(alpha,3);
     PetscValidPointer(x,4);
-
     // do these checks on x here since we may not know the size of nv in the async version
     for (PetscInt i = 0; i < nv; ++i) {
       PetscValidLogicalCollectiveScalar(y,alpha[i],3);
