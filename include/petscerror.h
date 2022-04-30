@@ -243,7 +243,7 @@ M*/
 
 .seealso: PetscCheck()
 M*/
-#define PetscCheckFalse(cond,comm,ierr,...) PetscCheck(!(cond),comm,ierr,__VA_ARGS__)
+#define PetscCheckFalse(cond,comm,ierr,...) PETSC_DEPRECATED_MACRO("GCC warning \"Use PetscCheck() (since version 3.18)\"") PetscCheck(!(cond),comm,ierr,__VA_ARGS__)
 
 /*MC
   PetscAssert - Assert that a particular condition is true
