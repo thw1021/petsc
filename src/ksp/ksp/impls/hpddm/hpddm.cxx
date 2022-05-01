@@ -246,7 +246,7 @@ static inline PetscErrorCode KSPSolve_HPDDM_Private(KSP ksp, const PetscScalar *
     PetscCall(PetscMalloc2(N, dbl, N, dbl + 1));
     std::copy_n(b, N, dbl[0]);
     std::copy_n(x, N, dbl[1]);
-    PetscCall(static_cast<PetscErrorCode>(HPDDM::IterativeMethod::solve(*data->op, dbl[0], dbl[1], n, PetscObjectComm((PetscObject)ksp))));
+    PetscCall(HPDDM::IterativeMethod::solve(*data->op, dbl[0], dbl[1], n, PetscObjectComm((PetscObject)ksp)));
     std::copy_n(dbl[1], N, x);
     PetscCall(PetscFree2(dbl[0], dbl[1]));
   } else if (data->precision == KSP_HPDDM_PRECISION_SINGLE && PetscDefined(USE_REAL_DOUBLE)) {
@@ -254,14 +254,14 @@ static inline PetscErrorCode KSPSolve_HPDDM_Private(KSP ksp, const PetscScalar *
     sgl[1] = reinterpret_cast<HPDDM::downscaled_type<PetscScalar>*>(x);
     std::copy_n(b, N, sgl[0]);
     for (PetscInt i = 0; i < N; ++i) sgl[1][i] = x[i];
-    PetscCall(static_cast<PetscErrorCode>(HPDDM::IterativeMethod::solve(*data->op, sgl[0], sgl[1], n, PetscObjectComm((PetscObject)ksp))));
+    PetscCall(HPDDM::IterativeMethod::solve(*data->op, sgl[0], sgl[1], n, PetscObjectComm((PetscObject)ksp)));
     if (N) {
       sgl[0][0] = sgl[1][0];
       std::copy_backward(sgl[1] + 1, sgl[1] + N, x + N);
       x[0] = sgl[0][0];
     }
     PetscCall(PetscFree(sgl[0]));
-  } else PetscCall(static_cast<PetscErrorCode>(HPDDM::IterativeMethod::solve(*data->op, b, x, n, PetscObjectComm((PetscObject)ksp))));
+  } else PetscCall(HPDDM::IterativeMethod::solve(*data->op, b, x, n, PetscObjectComm((PetscObject)ksp)));
   if (!ksp->reason) { /* KSPConvergedDefault() is still returning 0 (= KSP_CONVERGED_ITERATING) */
     if (ksp->its >= ksp->max_it) ksp->reason = KSP_DIVERGED_ITS;
     else ksp->reason = KSP_CONVERGED_RTOL; /* early exit by HPDDM, which only happens on breakdowns or convergence */
