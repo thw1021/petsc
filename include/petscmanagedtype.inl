@@ -117,7 +117,7 @@ PetscErrorCode PetscManagedTypeGetPointerAndMemType(PetscDeviceContext dctx, Pet
 );
 
 PETSC_MANAGED_TYPE_DECL_OR_STUB(
-PetscErrorCode PetscManagedTypeEnsureOffload(PetscDeviceContext PETSC_NO_DEVICE_UNUSED dctx, PetscManagedType PETSC_NO_DEVICE_UNUSED scal, PetscOffloadMask PETSC_NO_DEVICE_UNUSED mask),
+PetscErrorCode PetscManagedTypeEnsureOffload(PetscDeviceContext,PetscManagedType,PetscOffloadMask),
 {
   return 0;
 }
@@ -193,6 +193,15 @@ PetscErrorCode PetscManagedTypeEqual(PetscManagedType scal, PetscType val, Petsc
 }
 );
 
+PETSC_MANAGED_TYPE_DECL_OR_STUB(
+PetscErrorCode PetscManagedHostTypeDestroy(PetscDeviceContext dctx, PetscManagedType *scal),
+{
+  PetscFunctionBegin;
+  PetscCall(PetscManagedTypeDestroy(dctx,scal));
+  PetscFunctionReturn(0);
+}
+);
+
 static inline PetscErrorCode PetscManageHostType(PetscDeviceContext dctx, PetscType *host_ptr, PetscInt n, PetscManagedType *scal)
 {
   PetscFunctionBegin;
@@ -218,14 +227,6 @@ static inline PetscErrorCode PetscManagedTypeGetSize(PetscManagedType scal, Pets
 {
   PetscFunctionBegin;
   *n = scal->n;
-  PetscFunctionReturn(0);
-}
-
-static inline PetscErrorCode PetscManagedHostTypeDestroy(PetscDeviceContext dctx, PetscManagedType *scal)
-{
-  PetscFunctionBegin;
-  PetscCall(PetscManagedTypeEnsureOffload(dctx,*scal,PETSC_OFFLOAD_CPU));
-  PetscCall(PetscManagedTypeDestroy(dctx,scal));
   PetscFunctionReturn(0);
 }
 

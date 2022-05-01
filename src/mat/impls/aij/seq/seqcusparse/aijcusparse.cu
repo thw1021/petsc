@@ -3168,7 +3168,9 @@ static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat A,Vec xx,Vec yy,Vec zz
        #endif
         PetscCall(PetscLogGpuTimeEnd());
       }
-    } else if (yy && yy != zz) PetscCall(VecSeq_CUDA::axpy_async(zz,one,yy,dctx)); /* zz += yy */
+    } else {
+      if (yy && yy != zz) PetscCall(VecSeq_CUDA::axpy_async(zz,one,yy,dctx)); /* zz += yy */
+    }
     PetscCall(VecCUDARestoreArrayRead(xx,(const PetscScalar**)&xarray));
     if (yy == zz) PetscCall(VecCUDARestoreArray(zz,&zarray));
     else PetscCall(VecCUDARestoreArrayWrite(zz,&zarray));
@@ -3647,10 +3649,10 @@ static PetscErrorCode CsrMatrix_Destroy(CsrMatrix **mat)
 {
   PetscFunctionBegin;
   if (*mat) {
-    CHKERRCXX(delete (*mat)->values);
-    CHKERRCXX(delete (*mat)->column_indices);
-    CHKERRCXX(delete (*mat)->row_offsets);
-    CHKERRCXX(delete *mat);
+    PetscCallCXX(delete (*mat)->values);
+    PetscCallCXX(delete (*mat)->column_indices);
+    PetscCallCXX(delete (*mat)->row_offsets);
+    PetscCallCXX(delete *mat);
     *mat = nullptr;
   }
   PetscFunctionReturn(0);

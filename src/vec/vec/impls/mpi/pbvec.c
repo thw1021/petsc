@@ -105,7 +105,7 @@ static PetscErrorCode VecSetOption_MPI(Vec V,VecOption op,PetscBool flag)
 
 PetscErrorCode VecResetArray_MPI(Vec vin, PetscDeviceContext dctx)
 {
-  Vec_MPI        *v = (Vec_MPI*)vin->data;
+  Vec_MPI *v = (Vec_MPI*)vin->data;
 
   PetscFunctionBegin;
   v->array         = v->unplacedarray;

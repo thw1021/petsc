@@ -246,7 +246,8 @@ private:
     // PetscScalar *const
     const pointer_type ptr;
 
-    pointer_type data() const noexcept { return ptr; }
+    pointer_type      data()     const noexcept { return ptr;                    }
+    cupm_pointer_type cupmdata() const noexcept { return cupmScalarCast(data()); }
 
     operator pointer_type() const noexcept { return const_cast<pointer_type>(this->ptr); }
 
@@ -267,9 +268,8 @@ private:
 
     ~vector_array() noexcept
     {
-      // REVIEW ME: could just as well CHKERRABORT() here
       PetscFunctionBegin;
-      PetscCallContinue(restorearray_async<MT,MA>(PetscRemoveConstCast(v_),&PetscRemoveConstCast(ptr),PetscRemoveConstCast(dctx_)));
+      PetscCallAbort(PETSC_COMM_SELF,restorearray_async<MT,MA>(PetscRemoveConstCast(v_),&PetscRemoveConstCast(ptr),PetscRemoveConstCast(dctx_)));
       PetscFunctionReturnVoid();
     }
 
@@ -550,7 +550,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::DeviceAllocateCheck_(Pet
   else {
     cupmStream_t stream;
 
-    PetscCall(PetscDeviceContextGetStreamHandle_Internal(dctx,&stream));
+    PetscCall(GetHandles_(dctx,&stream));
     PetscCallCUPM(cupmMallocAsync(reinterpret_cast<void**>(&vcu->device_array),v->map->n*sizeof(*vcu->device_array),stream));
     vcu->ptr_ownership = PETSC_OWN_POINTER;
     if (v->offloadmask == PETSC_OFFLOAD_UNALLOCATED) {
@@ -570,7 +570,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::CopyToDevice_(PetscDevic
     const auto   xfersize = v->map->n*sizeof(*VecIMPLCast(v)->array);
     cupmStream_t stream;
 
-    PetscCall(PetscDeviceContextGetStreamHandle_Internal(dctx,&stream));
+    PetscCall(GetHandles_(dctx,&stream));
     PetscCall(PetscLogEventBegin(VEC_CUPMCopyToGPU(),v,0,0,0));
     PetscCallCUPM(cupmMemcpyAsync(VecCUPMCast(v)->device_array,VecIMPLCast(v)->array,xfersize,cupmMemcpyHostToDevice,stream));
     PetscCall(PetscLogEventEnd(VEC_CUPMCopyToGPU(),v,0,0,0));
@@ -615,14 +615,16 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::getarray_async(Vec v, Pe
   if (access == PETSC_MEMORY_ACCESS_WRITE) {
     PetscCall((hostmem ? HostAllocateCheck_ : DeviceAllocateCheck_)(dctx,v));
   } else {
+    const auto oldmask = v->offloadmask;
     // READ or READ_WRITE
-    if (hostmem) {
-      PetscCall(CopyToHost_(dctx,v));
-      // REVIEW ME: if we have a clearly defined async api then this sync is not necessary!
-      // Otherwise we have to assume every pointer returned to host memory is immediately
-      // dereferenced by the host, and must therefore hard-sync every time...
-      PetscCall(PetscDeviceContextSynchronize(dctx));
-    } else PetscCall(CopyToDevice_(dctx,v));
+    PetscCall((hostmem ? CopyToHost_ : CopyToDevice_)(dctx,v));
+    if (oldmask == PETSC_OFFLOAD_UNALLOCATED) {
+      // if unallocated previously we should zero things out here
+      cupmStream_t stream;
+
+      PetscCall(GetHandles_(dctx,&stream));
+      PetscCallCUPM(cupmMemsetAsync(hostmem ? VecIMPLCast(v)->array : VecCUPMCast(v)->device_array ,0,v->map->n*sizeof(PetscScalar),stream));
+    }
   }
   if (access != PETSC_MEMORY_ACCESS_READ) {
     PetscCall(VecSetErrorIfLocked(v,1));
@@ -687,17 +689,17 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::replacearray_async(Vec v
   PetscCheckTypeNames(v,VECSEQCUPM(),VECMPICUPM());
   PetscCall(CheckPointerMatchesMemType_(a,mtype));
   if (PetscMemTypeHost(mtype)) {
-    const auto vimpl      = VecIMPLCast(v);
-    auto&      host_array = vimpl->array_allocated;
+    const auto vimpl       = VecIMPLCast(v);
+    auto&      alloc_array = vimpl->array_allocated;
 
     // make sure the users array has the latest values.
     // REVIEW ME: why? we're about to free it
-    if (host_array != vimpl->array) PetscCall(CopyToHost_(dctx,v));
-    if (host_array) {
+    if (alloc_array != vimpl->array) PetscCall(CopyToHost_(dctx,v));
+    if (alloc_array) {
       const auto useit = UseCUPMHostAlloc(v);
-      PetscCall(PetscFree(host_array));
+      PetscCall(PetscFree(alloc_array));
     }
-    host_array       = vimpl->array = PetscRemoveConstCast(a);
+    alloc_array      = vimpl->array = PetscRemoveConstCast(a);
     v->pinned_memory = PETSC_FALSE; // REVIEW ME: we can determine this
     v->offloadmask   = PETSC_OFFLOAD_CPU;
   } else {
@@ -879,12 +881,12 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::ResetArray_CUPMBase(Vec 
     PetscCall(VecResetArray_IMPL(v,dctx));
     v->offloadmask = PETSC_OFFLOAD_CPU;
   } else {
-    const auto vimpl = VecIMPLCast(v);
+    auto& host_array = VecIMPLCast(v)->unplacedarray;
 
     PetscCall(CopyToDevice_(dctx,v));
     PetscCall(PetscObjectStateIncrease(PetscObjectCast(v)));
-    VecCUPMCast(v)->device_array = vimpl->unplacedarray;
-    vimpl->unplacedarray         = nullptr;
+    VecCUPMCast(v)->device_array = host_array;
+    host_array                   = nullptr;
     v->offloadmask               = PETSC_OFFLOAD_GPU;
   }
   PetscFunctionReturn(0);
@@ -904,10 +906,10 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::PlaceArray_CUPMBase(Vec 
     PetscCall(VecPlaceArray_IMPL(v,a,dctx));
     v->offloadmask = PETSC_OFFLOAD_CPU;
   } else {
-    const auto vimpl = VecIMPLCast(v);
+    auto& host_array = VecIMPLCast(v)->unplacedarray;
 
-    PetscCheck(!vimpl->unplacedarray,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"VecPlaceArray() was already called on this vector, without a call to VecResetArray()");
-    PetscCall(getarray_async<mtype,PETSC_MEMORY_ACCESS_READ_WRITE>(v,&vimpl->unplacedarray,dctx));
+    PetscCheck(!host_array,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"VecPlaceArray() was already called on this vector, without a call to VecResetArray()");
+    PetscCall(getarray_async<mtype,PETSC_MEMORY_ACCESS_READ_WRITE>(v,&host_array,dctx));
     PetscCall(PetscObjectStateIncrease(PetscObjectCast(v)));
     VecCUPMCast(v)->device_array = PetscRemoveConstCast(a);
     // offload mask set by getarray
