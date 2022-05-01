@@ -131,10 +131,10 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::duplicate_async(Vec v, Vec 
 
     PetscCall(VecGetArrayAsync(*y,&array,dctx));
     PetscCall(VecCreateSeqWithArray(PETSC_COMM_SELF,1,v->map->n+nghost,array,&ylocrep));
-    PetscCall(PetscMemcpy(ylocrep->ops,locrep->ops,sizeof(*locrep->ops)));
     PetscCall(VecRestoreArrayAsync(*y,&array,dctx));
+    PetscCall(PetscMemcpy(ylocrep->ops,locrep->ops,sizeof(*locrep->ops)));
     PetscCall(PetscLogObjectParent(PetscObjectCast(*y),PetscObjectCast(ylocrep)));
-    if (auto &scatter = (yimpl->localupdate = vimpl->localupdate)) {
+    if (auto& scatter = (yimpl->localupdate = vimpl->localupdate)) {
       PetscCall(PetscObjectReference(PetscObjectCast(scatter)));
     }
   }

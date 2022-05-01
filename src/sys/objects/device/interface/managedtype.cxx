@@ -10,16 +10,9 @@ struct PetscManagedTypeAllocator : Petsc::AllocatorBase<T>
 {
   PETSC_CXX_COMPAT_DECL(PetscErrorCode create(T *mscal))
   {
-    using Petsc::util::integral_value;
-
     PetscFunctionBegin;
     PetscCall(PetscNew(mscal));
-    (*mscal)->h_cmode = PETSC_OWN_POINTER;
-    (*mscal)->d_cmode = PETSC_OWN_POINTER;
-    static_assert(integral_value(PETSC_OWN_POINTER)         != 0,"");
-    static_assert(integral_value(PETSC_DEVICE_HOST)         == 0,"");
-    static_assert(integral_value(PETSC_OFFLOAD_UNALLOCATED) == 0,"");
-    static_assert(integral_value(PETSC_FALSE)               == 0,"");
+    PetscCall(reset(*mscal,false));
     PetscFunctionReturn(0);
   }
 
@@ -30,15 +23,22 @@ struct PetscManagedTypeAllocator : Petsc::AllocatorBase<T>
     PetscFunctionReturn(0);
   }
 
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode reset(T mscal))
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode reset(T mscal, bool zero = true))
   {
-    using Petsc::util::remove_pointer_t;
+    using Petsc::util::integral_value;
 
     PetscFunctionBegin;
-    static_assert(std::is_trivially_copyable<remove_pointer_t<T>>::value,"");
-    PetscCallCXX(std::memset(mscal,0,sizeof(*mscal)));
+    if (zero) {
+      using Petsc::util::remove_pointer_t;
+      static_assert(std::is_trivially_copyable<remove_pointer_t<T>>::value,"");
+      PetscCallCXX(std::memset(mscal,0,sizeof(*mscal)));
+    }
     mscal->h_cmode = PETSC_OWN_POINTER;
     mscal->d_cmode = PETSC_OWN_POINTER;
+    static_assert(integral_value(PETSC_OWN_POINTER)         != 0,"");
+    static_assert(integral_value(PETSC_DEVICE_HOST)         == 0,"");
+    static_assert(integral_value(PETSC_OFFLOAD_UNALLOCATED) == 0,"");
+    static_assert(integral_value(PETSC_FALSE)               == 0,"");
     PetscFunctionReturn(0);
   }
 
@@ -63,7 +63,6 @@ public:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode get_values(PetscDeviceContext,ManagedType,PetscMemType,PetscMemoryAccessMode,PetscBool,PetscType**));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode set_values(PetscDeviceContext,ManagedType,PetscMemType,const PetscType*,PetscInt));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode get_pointer_and_mem_type(PetscDeviceContext,ManagedType,PetscMemoryAccessMode,PetscType**,PetscMemType* = nullptr));
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode ensure_offload(PetscDeviceContext,ManagedType,PetscOffloadMask));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode copy(PetscDeviceContext,ManagedType,ManagedType));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode apply_operator(PetscDeviceContext,ManagedType,PetscOperatorType,PetscMemType,const PetscType*,ManagedType=nullptr));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode get_sub_range(PetscDeviceContext,ManagedType,PetscInt,PetscInt,ManagedType*));
@@ -271,32 +270,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::get_pointer_and
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"No support yet for PETSC_OFFLOAD_KOKKOS");
   }
   PetscAssert(*ptr,PETSC_COMM_SELF,PETSC_ERR_PLIB,PetscStringize(PetscManagedType) " returned a null pointer for memtype %s as values",mtype ? (PetscMemTypeHost(*mtype) ? "host" : "device") : "unknown");
-  PetscFunctionReturn(0);
-}
-
-template <typename T, typename MT>
-PETSC_CXX_COMPAT_DEFN(PetscErrorCode PetscManagedTypeImpl<T,MT>::ensure_offload(PetscDeviceContext dctx, ManagedType scal, PetscOffloadMask omask))
-{
-  PetscFunctionBegin;
-  PetscValidPointer(scal,2);
-  if ((scal->mask != PETSC_OFFLOAD_BOTH) && (scal->mask != omask)) {
-    const auto OffloadToMemType = [&](PetscMemType mtype)
-    {
-      PetscType PETSC_UNUSED *ptr;
-
-      PetscFunctionBegin;
-      PetscCall(get_values(dctx,scal,mtype,PETSC_MEMORY_ACCESS_READ,PETSC_FALSE,&ptr));
-      PetscFunctionReturn(0);
-    };
-
-    PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
-    if (PetscOffloadHost(omask) || omask == PETSC_OFFLOAD_BOTH) {
-      PetscCall(OffloadToMemType(PETSC_MEMTYPE_HOST));
-    }
-    if (PetscOffloadDevice(omask) || omask == PETSC_OFFLOAD_BOTH) {
-      PetscCall(OffloadToMemType(PETSC_MEMTYPE_DEVICE));
-    }
-  }
   PetscFunctionReturn(0);
 }
 

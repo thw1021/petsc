@@ -46,6 +46,7 @@ PETSC_DECLTYPE_AUTO_RETURNS((*dctx->ops->applyoperatortype)(dctx,std::forward<T>
 #define PetscManageHostType                  PetscConcat(PetscManageHost,PetscTypeSuffix)
 #define PetscManagedTypeCreateDefault        PetscConcat(PetscManagedTypeCreate,Default)
 #define PetscManagedTypeDestroy              PetscConcat(PetscManagedType,Destroy)
+#define PetscManagedHostTypeDestroy          PetscConcat(PetscConcat(PetscManagedHost,PetscTypeSuffix),Destroy)
 #define PetscManagedTypeGetValues            PetscConcat(PetscManagedType,GetValues)
 #define PetscManagedTypeSetValues            PetscConcat(PetscManagedType,SetValues)
 #define PetscManagedTypeGetPointerAndMemType PetscConcat(PetscManagedType,GetPointerAndMemType)
@@ -83,11 +84,6 @@ PetscErrorCode PetscManagedTypeGetPointerAndMemType(PetscDeviceContext dctx, Pet
   return PetscManagedTypeImpl::get_pointer_and_mem_type(dctx,scal,mode,ptr,mtype);
 }
 
-PetscErrorCode PetscManagedTypeEnsureOffload(PetscDeviceContext dctx, PetscManagedType scal, PetscOffloadMask omask)
-{
-  return PetscManagedTypeImpl::ensure_offload(dctx,scal,omask);
-}
-
 PetscErrorCode PetscManagedTypeCopy(PetscDeviceContext dctx, PetscManagedType dest, PetscManagedType src)
 {
   return PetscManagedTypeImpl::copy(dctx,dest,src);
@@ -113,11 +109,48 @@ PetscErrorCode PetscManagedTypeEqual(PetscManagedType scal, PetscType val, Petsc
   return PetscManagedTypeImpl::query(scal,val,known,equal);
 }
 
+PetscErrorCode PetscManagedHostTypeDestroy(PetscDeviceContext dctx, PetscManagedType *scal)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  PetscValidPointer(scal,2);
+  PetscCall(PetscManagedTypeEnsureOffload(dctx,*scal,PETSC_OFFLOAD_CPU));
+  PetscCall(PetscDeviceContextSynchronize(dctx));
+  PetscCall(PetscManagedTypeDestroy(dctx,scal));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscManagedTypeEnsureOffload(PetscDeviceContext dctx, PetscManagedType scal, PetscOffloadMask omask)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  PetscValidPointer(scal,2);
+  if ((scal->mask != PETSC_OFFLOAD_BOTH) && (scal->mask != omask)) {
+    const auto OffloadToMemType = [&](PetscMemType mtype)
+    {
+      PetscType PETSC_UNUSED *ptr;
+
+      PetscFunctionBegin;
+      PetscCall(PetscManagedTypeGetValues(dctx,scal,mtype,PETSC_MEMORY_ACCESS_READ,PETSC_FALSE,&ptr));
+      PetscFunctionReturn(0);
+    };
+
+    if (PetscOffloadHost(omask) || omask == PETSC_OFFLOAD_BOTH) {
+      PetscCall(OffloadToMemType(PETSC_MEMTYPE_HOST));
+    }
+    if (PetscOffloadDevice(omask) || omask == PETSC_OFFLOAD_BOTH) {
+      PetscCall(OffloadToMemType(PETSC_MEMTYPE_DEVICE));
+    }
+  }
+  PetscFunctionReturn(0);
+}
+
 #undef PetscManagedTypeImpl
 #undef PetscManagedTypeCreate
 #undef PetscManageHostType
 #undef PetscManagedTypeCreateDefault
 #undef PetscManagedTypeDestroy
+#undef PetscManagedHostTypeDestroy
 #undef PetscManagedTypeGetValues
 #undef PetscManagedTypeSetValues
 #undef PetscManagedTypeGetPointerAndMemType

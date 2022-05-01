@@ -188,8 +188,12 @@ VecGetArrayRead(), VecGetArrayWrite()
 @*/
 PetscErrorCode VecCUDAGetArray(Vec v, PetscScalar **a)
 {
+  PetscDeviceContext dctx;
+
   PetscFunctionBegin;
-  PetscCall(VecCUDAGetArrayAsync(v,a,nullptr));
+  PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
+  PetscCall(VecCUDAGetArrayAsync(v,a,dctx));
+  PetscCall(PetscDeviceContextSynchronize(dctx));
   PetscFunctionReturn(0);
 }
 
@@ -268,8 +272,12 @@ VecGetArrayRead()
 @*/
 PetscErrorCode VecCUDAGetArrayRead(Vec v, const PetscScalar **a)
 {
+  PetscDeviceContext dctx;
+
   PetscFunctionBegin;
-  PetscCall(VecCUDAGetArrayReadAsync(v,a,nullptr));
+  PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
+  PetscCall(VecCUDAGetArrayReadAsync(v,a,dctx));
+  PetscCall(PetscDeviceContextSynchronize(dctx));
   PetscFunctionReturn(0);
 }
 
@@ -343,8 +351,12 @@ VecCUDAGetArrayWrite(), VecGetArray(), VecGetArrayRead()
 @*/
 PetscErrorCode VecCUDAGetArrayWrite(Vec v, PetscScalar **a)
 {
+  PetscDeviceContext dctx;
+
   PetscFunctionBegin;
-  PetscCall(VecCUDAGetArrayWriteAsync(v,a,nullptr));
+  PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
+  PetscCall(VecCUDAGetArrayWriteAsync(v,a,dctx));
+  PetscCall(PetscDeviceContextSynchronize(dctx));
   PetscFunctionReturn(0);
 }
 
