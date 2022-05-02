@@ -45,7 +45,7 @@ static PetscErrorCode MatAssemblyEnd_SeqAIJKokkos(Mat A,MatAssemblyType mode)
     A->spptr = aijkok;
   }
 
-  if (aijkok && aijkok->device_mat_d.data()) {
+  if (aijkok->device_mat_d.data()) {
     A->offloadmask = PETSC_OFFLOAD_GPU; // in GPU mode, no going back. MatSetValues checks this
   }
   PetscFunctionReturn(0);
@@ -1128,7 +1128,6 @@ static PetscErrorCode MatSetOps_SeqAIJKokkos(Mat A)
   A->ops->productnumeric            = MatProductNumeric_SeqAIJKokkos_SeqAIJKokkos;
   A->ops->transpose                 = MatTranspose_SeqAIJKokkos;
   A->ops->setoption                 = MatSetOption_SeqAIJKokkos;
-  A->ops->shift                     = MatShift_Basic;
   a->ops->getarray                  = MatSeqAIJGetArray_SeqAIJKokkos;
   a->ops->restorearray              = MatSeqAIJRestoreArray_SeqAIJKokkos;
   a->ops->getarrayread              = MatSeqAIJGetArrayRead_SeqAIJKokkos;

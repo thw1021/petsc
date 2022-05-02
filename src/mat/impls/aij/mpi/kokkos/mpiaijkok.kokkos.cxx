@@ -7,11 +7,11 @@
 
 PetscErrorCode MatAssemblyEnd_MPIAIJKokkos(Mat A,MatAssemblyType mode)
 {
-  Mat_MPIAIJ       *mpiaij = (Mat_MPIAIJ*)A->data;
-  Mat_SeqAIJKokkos *aijkok = mpiaij->A->spptr ? static_cast<Mat_SeqAIJKokkos*>(mpiaij->A->spptr) : NULL;
+  Mat_SeqAIJKokkos *aijkok;
 
   PetscFunctionBegin;
   PetscCall(MatAssemblyEnd_MPIAIJ(A,mode));
+  aijkok = static_cast<Mat_SeqAIJKokkos*>(((Mat_MPIAIJ*)A->data)->A->spptr); /* Access spptr after MatAssemblyEnd_MPIAIJ(), which might have deleted old spptr */
   if (aijkok && aijkok->device_mat_d.data()) {
     A->offloadmask = PETSC_OFFLOAD_GPU; // in GPU mode, no going back. MatSetValues checks this
   }
@@ -1355,7 +1355,6 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIAIJKokkos(Mat A, MatType mtype,
   B->ops->multtranspose         = MatMultTranspose_MPIAIJKokkos;
   B->ops->productsetfromoptions = MatProductSetFromOptions_MPIAIJKokkos;
   B->ops->destroy               = MatDestroy_MPIAIJKokkos;
-  A->ops->shift                 = MatShift_Basic;
 
   PetscCall(PetscObjectComposeFunction((PetscObject)B,"MatMPIAIJSetPreallocation_C",MatMPIAIJSetPreallocation_MPIAIJKokkos));
   PetscCall(PetscObjectComposeFunction((PetscObject)B,"MatMPIAIJGetLocalMatMerge_C",MatMPIAIJGetLocalMatMerge_MPIAIJKokkos));

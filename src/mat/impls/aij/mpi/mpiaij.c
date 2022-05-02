@@ -540,7 +540,7 @@ PetscErrorCode MatSetValues_MPIAIJ(Mat mat,PetscInt m,const PetscInt im[],PetscI
       }
     }
   }
-  PetscCall(MatSeqAIJRestoreArray(A,&aa));
+  PetscCall(MatSeqAIJRestoreArray(A,&aa)); /* aa, bb might have been free'd due to reallocation above. But we don't access them here */
   PetscCall(MatSeqAIJRestoreArray(B,&ba));
   PetscFunctionReturn(0);
 }
