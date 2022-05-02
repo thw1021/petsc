@@ -1355,6 +1355,7 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIAIJKokkos(Mat A, MatType mtype,
   B->ops->multtranspose         = MatMultTranspose_MPIAIJKokkos;
   B->ops->productsetfromoptions = MatProductSetFromOptions_MPIAIJKokkos;
   B->ops->destroy               = MatDestroy_MPIAIJKokkos;
+  A->ops->shift                 = MatShift_Basic;
 
   PetscCall(PetscObjectComposeFunction((PetscObject)B,"MatMPIAIJSetPreallocation_C",MatMPIAIJSetPreallocation_MPIAIJKokkos));
   PetscCall(PetscObjectComposeFunction((PetscObject)B,"MatMPIAIJGetLocalMatMerge_C",MatMPIAIJGetLocalMatMerge_MPIAIJKokkos));
