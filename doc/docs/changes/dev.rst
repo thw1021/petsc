@@ -121,6 +121,7 @@ In addition to the changes above
 - Add ``DMLabelPropagateBegin()``, ``DMLabelPropagatePush()``, and ``DMLabelPropagateEnd()``
 - Add ``DMPlexPointQueue`` and API
 - Change ``DMPlexCheckPointSF()`` to take optional ``PetscSF`` parameter
+- Add ``DMPlexCheck()``
 
 .. rubric:: FE/FV:
 
