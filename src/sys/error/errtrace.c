@@ -212,7 +212,7 @@ PetscErrorCode  PetscTraceBackErrorHandler(MPI_Comm comm,int line,const char *fu
     }
     /* print line of stack trace */
     if (fun) (*PetscErrorPrintf)("#%d %s() at %s:%d\n",cnt++,fun,file,line);
-    else  (*PetscErrorPrintf)("#%d %s:%d\n",cnt++,file,line);
+    else (*PetscErrorPrintf)("#%d %s:%d\n",cnt++,file,line);
     if (fun) {
       PetscStrncmp(fun,"main",4,&ismain);
       if (ismain) {
