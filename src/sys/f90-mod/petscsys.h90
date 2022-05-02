@@ -146,9 +146,17 @@
        PetscErrorCode ierr
        end subroutine
 
-      subroutine PetscErrorf(ierr)
+      subroutine PetscErrorf(ierr,line,file)
        PetscErrorCode, intent(in) :: ierr
+       integer, intent(in) ::  line
+       character(*) file
       end Subroutine PetscErrorf
+
+      subroutine PetscErrorMPI(ierr,line,file)
+       PetscErrorCode, intent(inout) :: ierr
+       integer, intent(in) ::  line
+       character(*) file
+      end Subroutine PetscErrorMPI
 
       subroutine PetscFinalize(ierr)
        PetscErrorCode, intent(out) :: ierr
