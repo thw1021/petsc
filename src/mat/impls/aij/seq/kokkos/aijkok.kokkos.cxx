@@ -45,7 +45,7 @@ static PetscErrorCode MatAssemblyEnd_SeqAIJKokkos(Mat A,MatAssemblyType mode)
     A->spptr = aijkok;
   }
 
-  if (aijkok && aijkok->device_mat_d.data()) {
+  if (aijkok->device_mat_d.data()) {
     A->offloadmask = PETSC_OFFLOAD_GPU; // in GPU mode, no going back. MatSetValues checks this
   }
   PetscFunctionReturn(0);
@@ -101,7 +101,13 @@ static PetscErrorCode MatSeqAIJGetArray_SeqAIJKokkos(Mat A,PetscScalar *array[])
   Mat_SeqAIJKokkos *aijkok = static_cast<Mat_SeqAIJKokkos*>(A->spptr);
 
   PetscFunctionBegin;
-  if (aijkok) {
+  /* aijkok contains up to date pointers only if A is assembled.
+    Suppose A was assembled, and we had valid aijkok. Then we do either MatSeqAIJSetPreallocation() or
+    MatSetValues() on host, where aijseq->{i,j,a} might be reallocated, leading to stale {i,j,a}_dual
+    in aijkok. In both operations, the matrix is marked unassembled.
+    We leave the stale aijkok until MatAssembly, which it will be rebuilt.
+  */
+  if (aijkok && A->assembled) {
     aijkok->a_dual.sync_host();
     *array = aijkok->a_dual.view_host().data();
   } else { /* Happens when calling MatSetValues on a newly created matrix */
@@ -115,7 +121,7 @@ static PetscErrorCode MatSeqAIJRestoreArray_SeqAIJKokkos(Mat A,PetscScalar *arra
   Mat_SeqAIJKokkos *aijkok = static_cast<Mat_SeqAIJKokkos*>(A->spptr);
 
   PetscFunctionBegin;
-  if (aijkok) aijkok->a_dual.modify_host();
+  if (aijkok && A->assembled) aijkok->a_dual.modify_host();
   PetscFunctionReturn(0);
 }
 
@@ -124,7 +130,7 @@ static PetscErrorCode MatSeqAIJGetArrayRead_SeqAIJKokkos(Mat A,const PetscScalar
   Mat_SeqAIJKokkos *aijkok = static_cast<Mat_SeqAIJKokkos*>(A->spptr);
 
   PetscFunctionBegin;
-  if (aijkok) {
+  if (aijkok && A->assembled) {
     aijkok->a_dual.sync_host();
     *array = aijkok->a_dual.view_host().data();
   } else {
@@ -145,7 +151,7 @@ static PetscErrorCode MatSeqAIJGetArrayWrite_SeqAIJKokkos(Mat A,PetscScalar *arr
   Mat_SeqAIJKokkos *aijkok = static_cast<Mat_SeqAIJKokkos*>(A->spptr);
 
   PetscFunctionBegin;
-  if (aijkok) {
+  if (aijkok && A->assembled) {
     *array = aijkok->a_dual.view_host().data();
   } else { /* Ex. happens with MatZeroEntries on a preallocated but not assembled matrix */
     *array = static_cast<Mat_SeqAIJ*>(A->data)->a;
@@ -158,7 +164,7 @@ static PetscErrorCode MatSeqAIJRestoreArrayWrite_SeqAIJKokkos(Mat A,PetscScalar 
   Mat_SeqAIJKokkos *aijkok = static_cast<Mat_SeqAIJKokkos*>(A->spptr);
 
   PetscFunctionBegin;
-  if (aijkok) {
+  if (aijkok && A->assembled) {
     aijkok->a_dual.clear_sync_state();
     aijkok->a_dual.modify_host();
   }
