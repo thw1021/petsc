@@ -45,7 +45,7 @@ static PetscErrorCode MatAssemblyEnd_SeqAIJKokkos(Mat A,MatAssemblyType mode)
     A->spptr = aijkok;
   }
 
-  if (aijkok && aijkok->device_mat_d.data()) {
+  if (aijkok->device_mat_d.data()) {
     A->offloadmask = PETSC_OFFLOAD_GPU; // in GPU mode, no going back. MatSetValues checks this
   }
   PetscFunctionReturn(0);
