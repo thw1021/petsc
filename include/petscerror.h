@@ -275,7 +275,7 @@ M*/
 
 /*MC
   PetscCall - Calls a PETSc function and then checks the resulting error code, if it is non-zero it calls the error
-  handler and and returns from the current function with the error code.
+  handler and returns from the current function with the error code.
 
   Synopsis:
   #include <petscerror.h>
