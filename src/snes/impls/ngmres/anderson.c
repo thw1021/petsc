@@ -6,7 +6,7 @@ static PetscErrorCode SNESSetFromOptions_Anderson(PetscOptionItems *PetscOptions
   PetscBool      monitor = PETSC_FALSE;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"SNES NGMRES options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"SNES NGMRES options");
   PetscCall(PetscOptionsInt("-snes_anderson_m",            "Number of directions","SNES",ngmres->msize,&ngmres->msize,NULL));
   PetscCall(PetscOptionsReal("-snes_anderson_beta",        "Mixing parameter","SNES",ngmres->andersonBeta,&ngmres->andersonBeta,NULL));
   PetscCall(PetscOptionsInt("-snes_anderson_restart",      "Iterations before forced restart", "SNES",ngmres->restart_periodic,&ngmres->restart_periodic,NULL));
@@ -16,7 +16,7 @@ static PetscErrorCode SNESSetFromOptions_Anderson(PetscOptionItems *PetscOptions
   if (monitor) {
     ngmres->monitor = PETSC_VIEWER_STDOUT_(PetscObjectComm((PetscObject)snes));
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -38,7 +38,7 @@ static PetscErrorCode SNESSolve_Anderson(SNES snes)
   SNESConvergedReason reason;
 
   PetscFunctionBegin;
-  PetscCheckFalse(snes->xl || snes->xu || snes->ops->computevariablebounds,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
+  PetscCheck(!snes->xl && !snes->xu && !snes->ops->computevariablebounds,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
 
   PetscCall(PetscCitationsRegister(SNESCitation,&SNEScite));
   /* variable initialization */
@@ -129,7 +129,7 @@ static PetscErrorCode SNESSolve_Anderson(SNES snes)
     } else if (ngmres->restart_type == SNES_NGMRES_RESTART_PERIODIC) {
       PetscCall(SNESNGMRESNorms_Private(snes,l,X,F,XM,FM,XA,FA,D,NULL,NULL,NULL,NULL,NULL,&xnorm,&fAnorm,&ynorm));
       if (k_restart > ngmres->restart_periodic) {
-        if (ngmres->monitor) PetscCall(PetscViewerASCIIPrintf(ngmres->monitor,"periodic restart after %D iterations\n",k_restart));
+        if (ngmres->monitor) PetscCall(PetscViewerASCIIPrintf(ngmres->monitor,"periodic restart after %" PetscInt_FMT " iterations\n",k_restart));
         restart_count = ngmres->restart_it;
       }
     } else {
@@ -138,7 +138,7 @@ static PetscErrorCode SNESSolve_Anderson(SNES snes)
     /* restart after restart conditions have persisted for a fixed number of iterations */
     if (restart_count >= ngmres->restart_it) {
       if (ngmres->monitor) {
-        PetscCall(PetscViewerASCIIPrintf(ngmres->monitor,"Restarted at iteration %d\n",k_restart));
+        PetscCall(PetscViewerASCIIPrintf(ngmres->monitor,"Restarted at iteration %" PetscInt_FMT "\n",k_restart));
       }
       restart_count = 0;
       k_restart     = 0;
@@ -197,7 +197,7 @@ static PetscErrorCode SNESSolve_Anderson(SNES snes)
 -  * - Peter R. Brune, Matthew G. Knepley, Barry F. Smith, and Xuemin Tu,"Composing Scalable Nonlinear Algebraic Solvers",
    SIAM Review, 57(4), 2015
 
-.seealso: SNESNGMRES, SNESCreate(), SNES, SNESSetType(), SNESType (for list of available types)
+.seealso: `SNESNGMRES`, `SNESCreate()`, `SNES`, `SNESSetType()`, `SNESType`
 M*/
 
 PETSC_EXTERN PetscErrorCode SNESCreate_Anderson(SNES snes)

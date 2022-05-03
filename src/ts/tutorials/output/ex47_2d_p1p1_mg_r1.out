@@ -39,7 +39,7 @@ SNES Object: 1 MPI processes
       type is MULTIPLICATIVE, levels=2 cycles=v
         Cycles per PCApply=1
         Not using Galerkin computed coarse grid matrices
-    Coarse grid solver -- level -------------------------------
+    Coarse grid solver -- level 0 -------------------------------
       KSP Object: (mg_coarse_) 1 MPI processes
         type: preonly
         maximum iterations=10000, initial guess is zero
@@ -61,7 +61,7 @@ SNES Object: 1 MPI processes
                 total: nonzeros=1, allocated nonzeros=1
                   not using I-node routines
         linear system matrix = precond matrix:
-        Mat Object: 1 MPI processes
+        Mat Object: (mg_coarse_) 1 MPI processes
           type: seqaij
           rows=1, cols=1
           total: nonzeros=1, allocated nonzeros=1
@@ -145,7 +145,7 @@ SNES Object: 1 MPI processes
       type is MULTIPLICATIVE, levels=2 cycles=v
         Cycles per PCApply=1
         Not using Galerkin computed coarse grid matrices
-    Coarse grid solver -- level -------------------------------
+    Coarse grid solver -- level 0 -------------------------------
       KSP Object: (mg_coarse_) 1 MPI processes
         type: preonly
         maximum iterations=10000, initial guess is zero
@@ -167,7 +167,7 @@ SNES Object: 1 MPI processes
                 total: nonzeros=1, allocated nonzeros=1
                   not using I-node routines
         linear system matrix = precond matrix:
-        Mat Object: 1 MPI processes
+        Mat Object: (mg_coarse_) 1 MPI processes
           type: seqaij
           rows=1, cols=1
           total: nonzeros=1, allocated nonzeros=1
@@ -251,7 +251,7 @@ SNES Object: 1 MPI processes
       type is MULTIPLICATIVE, levels=2 cycles=v
         Cycles per PCApply=1
         Not using Galerkin computed coarse grid matrices
-    Coarse grid solver -- level -------------------------------
+    Coarse grid solver -- level 0 -------------------------------
       KSP Object: (mg_coarse_) 1 MPI processes
         type: preonly
         maximum iterations=10000, initial guess is zero
@@ -273,7 +273,7 @@ SNES Object: 1 MPI processes
                 total: nonzeros=1, allocated nonzeros=1
                   not using I-node routines
         linear system matrix = precond matrix:
-        Mat Object: 1 MPI processes
+        Mat Object: (mg_coarse_) 1 MPI processes
           type: seqaij
           rows=1, cols=1
           total: nonzeros=1, allocated nonzeros=1
@@ -357,7 +357,7 @@ SNES Object: 1 MPI processes
       type is MULTIPLICATIVE, levels=2 cycles=v
         Cycles per PCApply=1
         Not using Galerkin computed coarse grid matrices
-    Coarse grid solver -- level -------------------------------
+    Coarse grid solver -- level 0 -------------------------------
       KSP Object: (mg_coarse_) 1 MPI processes
         type: preonly
         maximum iterations=10000, initial guess is zero
@@ -379,7 +379,7 @@ SNES Object: 1 MPI processes
                 total: nonzeros=1, allocated nonzeros=1
                   not using I-node routines
         linear system matrix = precond matrix:
-        Mat Object: 1 MPI processes
+        Mat Object: (mg_coarse_) 1 MPI processes
           type: seqaij
           rows=1, cols=1
           total: nonzeros=1, allocated nonzeros=1
@@ -463,7 +463,7 @@ SNES Object: 1 MPI processes
       type is MULTIPLICATIVE, levels=2 cycles=v
         Cycles per PCApply=1
         Not using Galerkin computed coarse grid matrices
-    Coarse grid solver -- level -------------------------------
+    Coarse grid solver -- level 0 -------------------------------
       KSP Object: (mg_coarse_) 1 MPI processes
         type: preonly
         maximum iterations=10000, initial guess is zero
@@ -485,7 +485,7 @@ SNES Object: 1 MPI processes
                 total: nonzeros=1, allocated nonzeros=1
                   not using I-node routines
         linear system matrix = precond matrix:
-        Mat Object: 1 MPI processes
+        Mat Object: (mg_coarse_) 1 MPI processes
           type: seqaij
           rows=1, cols=1
           total: nonzeros=1, allocated nonzeros=1
@@ -569,7 +569,7 @@ SNES Object: 1 MPI processes
       type is MULTIPLICATIVE, levels=2 cycles=v
         Cycles per PCApply=1
         Not using Galerkin computed coarse grid matrices
-    Coarse grid solver -- level -------------------------------
+    Coarse grid solver -- level 0 -------------------------------
       KSP Object: (mg_coarse_) 1 MPI processes
         type: preonly
         maximum iterations=10000, initial guess is zero
@@ -591,7 +591,7 @@ SNES Object: 1 MPI processes
                 total: nonzeros=1, allocated nonzeros=1
                   not using I-node routines
         linear system matrix = precond matrix:
-        Mat Object: 1 MPI processes
+        Mat Object: (mg_coarse_) 1 MPI processes
           type: seqaij
           rows=1, cols=1
           total: nonzeros=1, allocated nonzeros=1
@@ -675,7 +675,7 @@ SNES Object: 1 MPI processes
       type is MULTIPLICATIVE, levels=2 cycles=v
         Cycles per PCApply=1
         Not using Galerkin computed coarse grid matrices
-    Coarse grid solver -- level -------------------------------
+    Coarse grid solver -- level 0 -------------------------------
       KSP Object: (mg_coarse_) 1 MPI processes
         type: preonly
         maximum iterations=10000, initial guess is zero
@@ -697,7 +697,7 @@ SNES Object: 1 MPI processes
                 total: nonzeros=1, allocated nonzeros=1
                   not using I-node routines
         linear system matrix = precond matrix:
-        Mat Object: 1 MPI processes
+        Mat Object: (mg_coarse_) 1 MPI processes
           type: seqaij
           rows=1, cols=1
           total: nonzeros=1, allocated nonzeros=1
@@ -781,7 +781,7 @@ SNES Object: 1 MPI processes
       type is MULTIPLICATIVE, levels=2 cycles=v
         Cycles per PCApply=1
         Not using Galerkin computed coarse grid matrices
-    Coarse grid solver -- level -------------------------------
+    Coarse grid solver -- level 0 -------------------------------
       KSP Object: (mg_coarse_) 1 MPI processes
         type: preonly
         maximum iterations=10000, initial guess is zero
@@ -803,7 +803,7 @@ SNES Object: 1 MPI processes
                 total: nonzeros=1, allocated nonzeros=1
                   not using I-node routines
         linear system matrix = precond matrix:
-        Mat Object: 1 MPI processes
+        Mat Object: (mg_coarse_) 1 MPI processes
           type: seqaij
           rows=1, cols=1
           total: nonzeros=1, allocated nonzeros=1
@@ -887,7 +887,7 @@ SNES Object: 1 MPI processes
       type is MULTIPLICATIVE, levels=2 cycles=v
         Cycles per PCApply=1
         Not using Galerkin computed coarse grid matrices
-    Coarse grid solver -- level -------------------------------
+    Coarse grid solver -- level 0 -------------------------------
       KSP Object: (mg_coarse_) 1 MPI processes
         type: preonly
         maximum iterations=10000, initial guess is zero
@@ -909,7 +909,7 @@ SNES Object: 1 MPI processes
                 total: nonzeros=1, allocated nonzeros=1
                   not using I-node routines
         linear system matrix = precond matrix:
-        Mat Object: 1 MPI processes
+        Mat Object: (mg_coarse_) 1 MPI processes
           type: seqaij
           rows=1, cols=1
           total: nonzeros=1, allocated nonzeros=1
@@ -993,7 +993,7 @@ SNES Object: 1 MPI processes
       type is MULTIPLICATIVE, levels=2 cycles=v
         Cycles per PCApply=1
         Not using Galerkin computed coarse grid matrices
-    Coarse grid solver -- level -------------------------------
+    Coarse grid solver -- level 0 -------------------------------
       KSP Object: (mg_coarse_) 1 MPI processes
         type: preonly
         maximum iterations=10000, initial guess is zero
@@ -1015,7 +1015,7 @@ SNES Object: 1 MPI processes
                 total: nonzeros=1, allocated nonzeros=1
                   not using I-node routines
         linear system matrix = precond matrix:
-        Mat Object: 1 MPI processes
+        Mat Object: (mg_coarse_) 1 MPI processes
           type: seqaij
           rows=1, cols=1
           total: nonzeros=1, allocated nonzeros=1

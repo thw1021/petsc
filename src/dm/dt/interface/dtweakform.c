@@ -87,7 +87,7 @@ static PetscErrorCode PetscChunkBufferEnlargeChunk(PetscChunkBuffer *buffer, Pet
 
   Level: intermediate
 
-.seealso: PetscIntSortSemiOrdered(), PetscSortInt()
+.seealso: `PetscIntSortSemiOrdered()`, `PetscSortInt()`
 @*/
 PetscErrorCode PetscFormKeySort(PetscInt n, PetscFormKey arr[])
 {
@@ -168,7 +168,7 @@ PetscErrorCode PetscWeakFormGetIndexFunction_Private(PetscWeakForm wf, PetscHMap
   PetscCall(PetscHMapFormGet(ht, key, &chunk));
   if (chunk.size < 0) {*func = NULL;}
   else {
-    PetscCheckFalse(ind >= chunk.size,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Index %D not in [0, %D)", ind, chunk.size);
+    PetscCheck(ind < chunk.size,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Index %" PetscInt_FMT " not in [0, %" PetscInt_FMT ")", ind, chunk.size);
     *func = ((void (**)()) &wf->funcs->array[chunk.start])[ind];
   }
   PetscFunctionReturn(0);
@@ -228,7 +228,7 @@ PetscErrorCode PetscWeakFormClearIndexFunction_Private(PetscWeakForm wf, PetscHM
 
   Level: intermediate
 
-.seealso: PetscWeakFormCreate(), PetscWeakFormDestroy()
+.seealso: `PetscWeakFormCreate()`, `PetscWeakFormDestroy()`
 @*/
 PetscErrorCode PetscWeakFormCopy(PetscWeakForm wf, PetscWeakForm wfNew)
 {
@@ -255,7 +255,7 @@ PetscErrorCode PetscWeakFormCopy(PetscWeakForm wf, PetscWeakForm wfNew)
 
   Level: intermediate
 
-.seealso: PetscWeakFormCopy(), PetscWeakFormCreate(), PetscWeakFormDestroy()
+.seealso: `PetscWeakFormCopy()`, `PetscWeakFormCreate()`, `PetscWeakFormDestroy()`
 @*/
 PetscErrorCode PetscWeakFormClear(PetscWeakForm wf)
 {
@@ -308,7 +308,7 @@ static PetscErrorCode PetscWeakFormRewriteKeys_Internal(PetscWeakForm wf, PetscH
 
   Level: intermediate
 
-.seealso: PetscWeakFormReplaceLabel(), PetscWeakFormCreate(), PetscWeakFormDestroy()
+.seealso: `PetscWeakFormReplaceLabel()`, `PetscWeakFormCreate()`, `PetscWeakFormDestroy()`
 @*/
 PetscErrorCode PetscWeakFormRewriteKeys(PetscWeakForm wf, DMLabel label, PetscInt Nv, const PetscInt values[])
 {
@@ -383,7 +383,7 @@ static PetscErrorCode PetscWeakFormReplaceLabel_Internal(PetscWeakForm wf, Petsc
 
   Level: intermediate
 
-.seealso: PetscWeakFormRewriteKeys(), PetscWeakFormCreate(), PetscWeakFormDestroy()
+.seealso: `PetscWeakFormRewriteKeys()`, `PetscWeakFormCreate()`, `PetscWeakFormDestroy()`
 @*/
 PetscErrorCode PetscWeakFormReplaceLabel(PetscWeakForm wf, DMLabel label)
 {
@@ -1330,7 +1330,7 @@ PetscErrorCode PetscWeakFormSetIndexRiemannSolver(PetscWeakForm wf, DMLabel labe
 
   Level: beginner
 
-.seealso: PetscWeakFormSetNumFields(), PetscWeakFormCreate()
+.seealso: `PetscWeakFormSetNumFields()`, `PetscWeakFormCreate()`
 @*/
 PetscErrorCode PetscWeakFormGetNumFields(PetscWeakForm wf, PetscInt *Nf)
 {
@@ -1352,7 +1352,7 @@ PetscErrorCode PetscWeakFormGetNumFields(PetscWeakForm wf, PetscInt *Nf)
 
   Level: beginner
 
-.seealso: PetscWeakFormGetNumFields(), PetscWeakFormCreate()
+.seealso: `PetscWeakFormGetNumFields()`, `PetscWeakFormCreate()`
 @*/
 PetscErrorCode PetscWeakFormSetNumFields(PetscWeakForm wf, PetscInt Nf)
 {
@@ -1372,7 +1372,7 @@ PetscErrorCode PetscWeakFormSetNumFields(PetscWeakForm wf, PetscInt Nf)
 
   Level: developer
 
-.seealso PetscWeakFormCreate(), PetscWeakFormView()
+.seealso `PetscWeakFormCreate()`, `PetscWeakFormView()`
 @*/
 PetscErrorCode PetscWeakFormDestroy(PetscWeakForm *wf)
 {
@@ -1435,13 +1435,13 @@ static PetscErrorCode PetscWeakFormViewTable_Ascii(PetscWeakForm wf, PetscViewer
       PetscInt       n, f;
 
       if (keys[i].label) {
-        if (showPointer) PetscCall(PetscViewerASCIIPrintf(viewer, "(%s:%p, %D) ", names[i], keys[i].label, keys[i].value));
-        else             PetscCall(PetscViewerASCIIPrintf(viewer, "(%s, %D) ", names[i], keys[i].value));
-      } else PetscCall(PetscViewerASCIIPrintf(viewer, ""));
+        if (showPointer) PetscCall(PetscViewerASCIIPrintf(viewer, "(%s:%p, %" PetscInt_FMT ") ", names[i], keys[i].label, keys[i].value));
+        else             PetscCall(PetscViewerASCIIPrintf(viewer, "(%s, %" PetscInt_FMT ") ", names[i], keys[i].value));
+      }
       PetscCall(PetscViewerASCIIUseTabs(viewer, PETSC_FALSE));
-      if (splitField) PetscCall(PetscViewerASCIIPrintf(viewer, "(%D, %D) ", keys[i].field/Nf, keys[i].field%Nf));
-      else            PetscCall(PetscViewerASCIIPrintf(viewer, "(%D) ", keys[i].field));
-      if (showPart)   PetscCall(PetscViewerASCIIPrintf(viewer, "(%D) ", keys[i].part));
+      if (splitField) PetscCall(PetscViewerASCIIPrintf(viewer, "(%" PetscInt_FMT ", %" PetscInt_FMT ") ", keys[i].field/Nf, keys[i].field%Nf));
+      else            PetscCall(PetscViewerASCIIPrintf(viewer, "(%" PetscInt_FMT ") ", keys[i].field));
+      if (showPart)   PetscCall(PetscViewerASCIIPrintf(viewer, "(%" PetscInt_FMT ") ", keys[i].part));
       PetscCall(PetscWeakFormGetFunction_Private(wf, map, keys[i].label, keys[i].value, keys[i].field, keys[i].part, &n, &funcs));
       for (f = 0; f < n; ++f) {
         char  *fname;
@@ -1475,7 +1475,7 @@ static PetscErrorCode PetscWeakFormView_Ascii(PetscWeakForm wf, PetscViewer view
 
   PetscFunctionBegin;
   PetscCall(PetscViewerGetFormat(viewer, &format));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "Weak Form System with %d fields\n", wf->Nf));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "Weak Form System with %" PetscInt_FMT " fields\n", wf->Nf));
   PetscCall(PetscViewerASCIIPushTab(viewer));
   for (f = 0; f < PETSC_NUM_WF; ++f) {
     PetscCall(PetscWeakFormViewTable_Ascii(wf, viewer, PETSC_TRUE, PetscWeakFormKinds[f], wf->form[f]));
@@ -1495,7 +1495,7 @@ static PetscErrorCode PetscWeakFormView_Ascii(PetscWeakForm wf, PetscViewer view
 
   Level: developer
 
-.seealso PetscWeakFormDestroy(), PetscWeakFormCreate()
+.seealso `PetscWeakFormDestroy()`, `PetscWeakFormCreate()`
 @*/
 PetscErrorCode PetscWeakFormView(PetscWeakForm wf, PetscViewer v)
 {
@@ -1524,7 +1524,7 @@ PetscErrorCode PetscWeakFormView(PetscWeakForm wf, PetscViewer v)
 
   Level: beginner
 
-.seealso: PetscDS, PetscWeakFormDestroy()
+.seealso: `PetscDS`, `PetscWeakFormDestroy()`
 @*/
 PetscErrorCode PetscWeakFormCreate(MPI_Comm comm, PetscWeakForm *wf)
 {

@@ -2,7 +2,6 @@
 #include <petscblaslapack.h>
 #include <set>
 
-#define ALEN(a) (sizeof(a)/sizeof((a)[0]))
 const char *const MatHtoolCompressorTypes[] = { "sympartialACA", "fullACA", "SVD" };
 const char *const MatHtoolClusteringTypes[] = { "PCARegular", "PCAGeometric", "BoundingBox1Regular", "BoundingBox1Geometric" };
 const char HtoolCitation[] = "@article{marchand2020two,\n"
@@ -50,8 +49,6 @@ static PetscErrorCode MatGetDiagonalBlock_Htool(Mat A,Mat *b)
     a->hmatrix->copy_local_diagonal_block(ptr);
     PetscCall(MatDenseRestoreArrayWrite(B,&ptr));
     PetscCall(MatPropagateSymmetryOptions(A,B));
-    PetscCall(MatAssemblyBegin(B,MAT_FINAL_ASSEMBLY));
-    PetscCall(MatAssemblyEnd(B,MAT_FINAL_ASSEMBLY));
     PetscCall(MatScale(B,a->s));
     PetscCall(PetscObjectCompose((PetscObject)A,"DiagonalBlock",(PetscObject)B));
     *b   = B;
@@ -249,8 +246,6 @@ static PetscErrorCode MatCreateSubMatrices_Htool(Mat A,PetscInt n,const IS irow[
     PetscCall(ISRestoreIndices(irow[i],&idxr));
     PetscCall(ISRestoreIndices(icol[i],&idxc));
     PetscCall(MatDenseRestoreArrayWrite((*submat)[i],&ptr));
-    PetscCall(MatAssemblyBegin((*submat)[i],MAT_FINAL_ASSEMBLY));
-    PetscCall(MatAssemblyEnd((*submat)[i],MAT_FINAL_ASSEMBLY));
     PetscCall(MatScale((*submat)[i],a->s));
   }
   PetscFunctionReturn(0);
@@ -382,7 +377,7 @@ static PetscErrorCode MatSetFromOptions_Htool(PetscOptionItems *PetscOptionsObje
   PetscBool      flg;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Htool options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Htool options");
   PetscCall(PetscOptionsInt("-mat_htool_min_cluster_size","Minimal leaf size in cluster tree",NULL,a->bs[0],a->bs,NULL));
   PetscCall(PetscOptionsInt("-mat_htool_max_block_size","Maximal number of coefficients in a dense block",NULL,a->bs[1],a->bs + 1,NULL));
   PetscCall(PetscOptionsReal("-mat_htool_epsilon","Relative error in Frobenius norm when approximating a block",NULL,a->epsilon,&a->epsilon,NULL));
@@ -390,12 +385,12 @@ static PetscErrorCode MatSetFromOptions_Htool(PetscOptionItems *PetscOptionsObje
   PetscCall(PetscOptionsInt("-mat_htool_min_target_depth","Minimal cluster tree depth associated with the rows",NULL,a->depth[0],a->depth,NULL));
   PetscCall(PetscOptionsInt("-mat_htool_min_source_depth","Minimal cluster tree depth associated with the columns",NULL,a->depth[1],a->depth + 1,NULL));
   n = 0;
-  PetscCall(PetscOptionsEList("-mat_htool_compressor","Type of compression","MatHtoolCompressorType",MatHtoolCompressorTypes,ALEN(MatHtoolCompressorTypes),MatHtoolCompressorTypes[MAT_HTOOL_COMPRESSOR_SYMPARTIAL_ACA],&n,&flg));
+  PetscCall(PetscOptionsEList("-mat_htool_compressor","Type of compression","MatHtoolCompressorType",MatHtoolCompressorTypes,PETSC_STATIC_ARRAY_LENGTH(MatHtoolCompressorTypes),MatHtoolCompressorTypes[MAT_HTOOL_COMPRESSOR_SYMPARTIAL_ACA],&n,&flg));
   if (flg) a->compressor = MatHtoolCompressorType(n);
   n = 0;
-  PetscCall(PetscOptionsEList("-mat_htool_clustering","Type of clustering","MatHtoolClusteringType",MatHtoolClusteringTypes,ALEN(MatHtoolClusteringTypes),MatHtoolClusteringTypes[MAT_HTOOL_CLUSTERING_PCA_REGULAR],&n,&flg));
+  PetscCall(PetscOptionsEList("-mat_htool_clustering","Type of clustering","MatHtoolClusteringType",MatHtoolClusteringTypes,PETSC_STATIC_ARRAY_LENGTH(MatHtoolClusteringTypes),MatHtoolClusteringTypes[MAT_HTOOL_CLUSTERING_PCA_REGULAR],&n,&flg));
   if (flg) a->clustering = MatHtoolClusteringType(n);
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -580,7 +575,7 @@ static PetscErrorCode MatHtoolGetHierarchicalMat_Htool(Mat A,const htool::Virtua
 
    Level: advanced
 
-.seealso:  MATHTOOL
+.seealso: `MATHTOOL`
 @*/
 PETSC_EXTERN PetscErrorCode MatHtoolGetHierarchicalMat(Mat A,const htool::VirtualHMatrix<PetscScalar> **hmatrix)
 {
@@ -613,7 +608,7 @@ static PetscErrorCode MatHtoolSetKernel_Htool(Mat A,MatHtoolKernel kernel,void *
 
    Level: advanced
 
-.seealso:  MATHTOOL, MatCreateHtoolFromKernel()
+.seealso: `MATHTOOL`, `MatCreateHtoolFromKernel()`
 @*/
 PETSC_EXTERN PetscErrorCode MatHtoolSetKernel(Mat A,MatHtoolKernel kernel,void *kernelctx)
 {
@@ -648,7 +643,7 @@ static PetscErrorCode MatHtoolGetPermutationSource_Htool(Mat A,IS* is)
 
    Level: advanced
 
-.seealso:  MATHTOOL, MatHtoolGetPermutationTarget(), MatHtoolUsePermutation()
+.seealso: `MATHTOOL`, `MatHtoolGetPermutationTarget()`, `MatHtoolUsePermutation()`
 @*/
 PETSC_EXTERN PetscErrorCode MatHtoolGetPermutationSource(Mat A,IS* is)
 {
@@ -682,7 +677,7 @@ static PetscErrorCode MatHtoolGetPermutationTarget_Htool(Mat A,IS* is)
 
    Level: advanced
 
-.seealso:  MATHTOOL, MatHtoolGetPermutationSource(), MatHtoolUsePermutation()
+.seealso: `MATHTOOL`, `MatHtoolGetPermutationSource()`, `MatHtoolUsePermutation()`
 @*/
 PETSC_EXTERN PetscErrorCode MatHtoolGetPermutationTarget(Mat A,IS* is)
 {
@@ -711,7 +706,7 @@ static PetscErrorCode MatHtoolUsePermutation_Htool(Mat A,PetscBool use)
 
    Level: advanced
 
-.seealso:  MATHTOOL, MatHtoolGetPermutationSource(), MatHtoolGetPermutationTarget()
+.seealso: `MATHTOOL`, `MatHtoolGetPermutationSource()`, `MatHtoolGetPermutationTarget()`
 @*/
 PETSC_EXTERN PetscErrorCode MatHtoolUsePermutation(Mat A,PetscBool use)
 {
@@ -853,7 +848,7 @@ static PetscErrorCode MatTranspose_Htool(Mat A,MatReuse reuse,Mat *B)
 
    Level: intermediate
 
-.seealso:  MatCreate(), MATHTOOL, PCSetCoordinates(), MatHtoolSetKernel(), MatHtoolCompressorType, MATH2OPUS, MatCreateH2OpusFromKernel()
+.seealso: `MatCreate()`, `MATHTOOL`, `PCSetCoordinates()`, `MatHtoolSetKernel()`, `MatHtoolCompressorType`, `MATH2OPUS`, `MatCreateH2OpusFromKernel()`
 @*/
 PetscErrorCode MatCreateHtoolFromKernel(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt M,PetscInt N,PetscInt spacedim,const PetscReal coords_target[],const PetscReal coords_source[],MatHtoolKernel kernel,void *kernelctx,Mat *B)
 {
@@ -898,7 +893,7 @@ PetscErrorCode MatCreateHtoolFromKernel(MPI_Comm comm,PetscInt m,PetscInt n,Pets
 
    Level: beginner
 
-.seealso: MATH2OPUS, MATDENSE, MatCreateHtoolFromKernel(), MatHtoolSetKernel()
+.seealso: `MATH2OPUS`, `MATDENSE`, `MatCreateHtoolFromKernel()`, `MatHtoolSetKernel()`
 M*/
 PETSC_EXTERN PetscErrorCode MatCreate_Htool(Mat A)
 {

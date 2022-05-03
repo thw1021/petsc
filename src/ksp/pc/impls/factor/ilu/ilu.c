@@ -49,7 +49,7 @@ static PetscErrorCode PCSetFromOptions_ILU(PetscOptionItems *PetscOptionsObject,
   PetscReal      tol;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"ILU Options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"ILU Options");
   PetscCall(PCSetFromOptions_Factor(PetscOptionsObject,pc));
 
   PetscCall(PetscOptionsInt("-pc_factor_levels","levels of fill","PCFactorSetLevels",(PetscInt)((PC_Factor*)ilu)->info.levels,&itmp,&flg));
@@ -64,7 +64,7 @@ static PetscErrorCode PCSetFromOptions_ILU(PetscOptionItems *PetscOptionsObject,
     PetscCall(PCFactorReorderForNonzeroDiagonal(pc,tol));
   }
 
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -75,8 +75,11 @@ static PetscErrorCode PCSetUp_ILU(PC pc)
   PetscBool              flg;
   MatSolverType          stype;
   MatFactorError         err;
+  const char             *prefix;
 
   PetscFunctionBegin;
+  PetscCall(PCGetOptionsPrefix(pc,&prefix));
+  PetscCall(MatSetOptionsPrefix(pc->pmat,prefix));
   pc->failedreason = PC_NOERROR;
   /* ugly hack to change default, since it is not support by some matrix types */
   if (((PC_Factor*)ilu)->info.shifttype == (PetscReal)MAT_SHIFT_NONZERO) {
@@ -284,11 +287,11 @@ static PetscErrorCode PCApplySymmetricRight_ILU(PC pc,Vec x,Vec y)
       Algorithms, edited by D. Keyes, A. Semah, V. Venkatakrishnan, ICASE/LaRC Interdisciplinary Series in
       Science and Engineering, Kluwer.
 
-.seealso:  PCCreate(), PCSetType(), PCType (for list of available types), PC, PCSOR, MatOrderingType,
-           PCFactorSetZeroPivot(), PCFactorSetShiftSetType(), PCFactorSetAmount(),
-           PCFactorSetDropTolerance(),PCFactorSetFill(), PCFactorSetMatOrderingType(), PCFactorSetReuseOrdering(),
-           PCFactorSetLevels(), PCFactorSetUseInPlace(), PCFactorSetAllowDiagonalFill(), PCFactorSetPivotInBlocks(),
-           PCFactorGetAllowDiagonalFill(), PCFactorGetUseInPlace()
+.seealso: `PCCreate()`, `PCSetType()`, `PCType`, `PC`, `PCSOR`, `MatOrderingType`,
+          `PCFactorSetZeroPivot()`, `PCFactorSetShiftSetType()`, `PCFactorSetAmount()`,
+          `PCFactorSetDropTolerance(),PCFactorSetFill()`, `PCFactorSetMatOrderingType()`, `PCFactorSetReuseOrdering()`,
+          `PCFactorSetLevels()`, `PCFactorSetUseInPlace()`, `PCFactorSetAllowDiagonalFill()`, `PCFactorSetPivotInBlocks()`,
+          `PCFactorGetAllowDiagonalFill()`, `PCFactorGetUseInPlace()`
 
 M*/
 

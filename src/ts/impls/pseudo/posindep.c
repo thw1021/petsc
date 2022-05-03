@@ -45,7 +45,7 @@ typedef struct {
     The routine to be called here to compute the timestep should be
     set by calling TSPseudoSetTimeStep().
 
-.seealso: TSPseudoTimeStepDefault(), TSPseudoSetTimeStep()
+.seealso: `TSPseudoTimeStepDefault()`, `TSPseudoSetTimeStep()`
 @*/
 PetscErrorCode  TSPseudoComputeTimeStep(TS ts,PetscReal *dt)
 {
@@ -79,7 +79,7 @@ PetscErrorCode  TSPseudoComputeTimeStep(TS ts,PetscReal *dt)
    This routine always returns a flag of 1, indicating an acceptable
    timestep.
 
-.seealso: TSPseudoSetVerifyTimeStep(), TSPseudoVerifyTimeStep()
+.seealso: `TSPseudoSetVerifyTimeStep()`, `TSPseudoVerifyTimeStep()`
 @*/
 PetscErrorCode  TSPseudoVerifyTimeStepDefault(TS ts,Vec update,void *dtctx,PetscReal *newdt,PetscBool  *flag)
 {
@@ -107,7 +107,7 @@ PetscErrorCode  TSPseudoVerifyTimeStepDefault(TS ts,Vec update,void *dtctx,Petsc
     The routine to be called here to compute the timestep should be
     set by calling TSPseudoSetVerifyTimeStep().
 
-.seealso: TSPseudoSetVerifyTimeStep(), TSPseudoVerifyTimeStepDefault()
+.seealso: `TSPseudoSetVerifyTimeStep()`, `TSPseudoVerifyTimeStepDefault()`
 @*/
 PetscErrorCode  TSPseudoVerifyTimeStep(TS ts,Vec update,PetscReal *dt,PetscBool *flag)
 {
@@ -150,7 +150,7 @@ static PetscErrorCode TSStep_Pseudo(TS ts)
   }
   if (reject >= ts->max_reject) {
     ts->reason = TS_DIVERGED_STEP_REJECTED;
-    PetscCall(PetscInfo(ts,"Step=%D, step rejections %D greater than current TS allowed, stopping solve\n",ts->steps,reject));
+    PetscCall(PetscInfo(ts,"Step=%" PetscInt_FMT ", step rejections %" PetscInt_FMT " greater than current TS allowed, stopping solve\n",ts->steps,reject));
     PetscFunctionReturn(0);
   }
 
@@ -165,12 +165,12 @@ static PetscErrorCode TSStep_Pseudo(TS ts)
   }
   if (pseudo->fnorm < pseudo->fatol) {
     ts->reason = TS_CONVERGED_PSEUDO_FATOL;
-    PetscCall(PetscInfo(ts,"Step=%D, converged since fnorm %g < fatol %g\n",ts->steps,pseudo->fnorm,pseudo->frtol));
+    PetscCall(PetscInfo(ts,"Step=%" PetscInt_FMT ", converged since fnorm %g < fatol %g\n",ts->steps,(double)pseudo->fnorm,(double)pseudo->frtol));
     PetscFunctionReturn(0);
   }
   if (pseudo->fnorm/pseudo->fnorm_initial < pseudo->frtol) {
     ts->reason = TS_CONVERGED_PSEUDO_FRTOL;
-    PetscCall(PetscInfo(ts,"Step=%D, converged since fnorm %g / fnorm_initial %g < frtol %g\n",ts->steps,pseudo->fnorm,pseudo->fnorm_initial,pseudo->fatol));
+    PetscCall(PetscInfo(ts,"Step=%" PetscInt_FMT ", converged since fnorm %g / fnorm_initial %g < frtol %g\n",ts->steps,(double)pseudo->fnorm,(double)pseudo->fnorm_initial,(double)pseudo->fatol));
     PetscFunctionReturn(0);
   }
   PetscFunctionReturn(0);
@@ -297,7 +297,7 @@ static PetscErrorCode TSPseudoMonitorDefault(TS ts,PetscInt step,PetscReal ptime
     PetscCall(VecNorm(pseudo->func,NORM_2,&pseudo->fnorm));
   }
   PetscCall(PetscViewerASCIIAddTab(viewer,((PetscObject)ts)->tablevel));
-  PetscCall(PetscViewerASCIIPrintf(viewer,"TS %D dt %g time %g fnorm %g\n",step,(double)ts->time_step,(double)ptime,(double)pseudo->fnorm));
+  PetscCall(PetscViewerASCIIPrintf(viewer,"TS %" PetscInt_FMT " dt %g time %g fnorm %g\n",step,(double)ts->time_step,(double)ptime,(double)pseudo->fnorm));
   PetscCall(PetscViewerASCIISubtractTab(viewer,((PetscObject)ts)->tablevel));
   PetscFunctionReturn(0);
 }
@@ -309,7 +309,7 @@ static PetscErrorCode TSSetFromOptions_Pseudo(PetscOptionItems *PetscOptionsObje
   PetscViewer    viewer;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Pseudo-timestepping options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Pseudo-timestepping options");
   PetscCall(PetscOptionsBool("-ts_monitor_pseudo","Monitor convergence","",flg,&flg,NULL));
   if (flg) {
     PetscCall(PetscViewerASCIIOpen(PetscObjectComm((PetscObject)ts),"stdout",&viewer));
@@ -322,7 +322,7 @@ static PetscErrorCode TSSetFromOptions_Pseudo(PetscOptionItems *PetscOptionsObje
   PetscCall(PetscOptionsReal("-ts_pseudo_max_dt","Maximum value for dt","TSPseudoSetMaxTimeStep",pseudo->dt_max,&pseudo->dt_max,NULL));
   PetscCall(PetscOptionsReal("-ts_pseudo_fatol","Tolerance for norm of function","",pseudo->fatol,&pseudo->fatol,NULL));
   PetscCall(PetscOptionsReal("-ts_pseudo_frtol","Relative tolerance for norm of function","",pseudo->frtol,&pseudo->frtol,NULL));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -370,7 +370,7 @@ $  func (TS ts,Vec update,void *ctx,PetscReal *newdt,PetscBool  *flag);
    The routine set here will be called by TSPseudoVerifyTimeStep()
    during the timestepping process.
 
-.seealso: TSPseudoVerifyTimeStepDefault(), TSPseudoVerifyTimeStep()
+.seealso: `TSPseudoVerifyTimeStepDefault()`, `TSPseudoVerifyTimeStep()`
 @*/
 PetscErrorCode  TSPseudoSetVerifyTimeStep(TS ts,PetscErrorCode (*dt)(TS,Vec,void*,PetscReal*,PetscBool*),void *ctx)
 {
@@ -395,7 +395,7 @@ PetscErrorCode  TSPseudoSetVerifyTimeStep(TS ts,PetscErrorCode (*dt)(TS,Vec,void
 
     Level: advanced
 
-.seealso: TSPseudoSetTimeStep(), TSPseudoTimeStepDefault()
+.seealso: `TSPseudoSetTimeStep()`, `TSPseudoTimeStepDefault()`
 @*/
 PetscErrorCode  TSPseudoSetTimeStepIncrement(TS ts,PetscReal inc)
 {
@@ -421,7 +421,7 @@ PetscErrorCode  TSPseudoSetTimeStepIncrement(TS ts,PetscReal inc)
 
     Level: advanced
 
-.seealso: TSPseudoSetTimeStep(), TSPseudoTimeStepDefault()
+.seealso: `TSPseudoSetTimeStep()`, `TSPseudoTimeStepDefault()`
 @*/
 PetscErrorCode  TSPseudoSetMaxTimeStep(TS ts,PetscReal maxdt)
 {
@@ -449,7 +449,7 @@ $         dt = current_dt*previous_fnorm/current_fnorm.
 
     Level: advanced
 
-.seealso: TSPseudoSetTimeStep(), TSPseudoTimeStepDefault()
+.seealso: `TSPseudoSetTimeStep()`, `TSPseudoTimeStepDefault()`
 @*/
 PetscErrorCode  TSPseudoIncrementDtFromInitialDt(TS ts)
 {
@@ -484,7 +484,7 @@ $  func (TS ts,PetscReal *newdt,void *ctx);
    during the timestepping process.
    If not set then TSPseudoTimeStepDefault() is automatically used
 
-.seealso: TSPseudoTimeStepDefault(), TSPseudoComputeTimeStep()
+.seealso: `TSPseudoTimeStepDefault()`, `TSPseudoComputeTimeStep()`
 @*/
 PetscErrorCode  TSPseudoSetTimeStep(TS ts,PetscErrorCode (*dt)(TS,PetscReal*,void*),void *ctx)
 {
@@ -588,7 +588,7 @@ $  Xdot = (Xpredicted - Xold)/dt = (Xold-Xold)/dt = 0
   described above and in the papers.  If the user chooses to perform multiple Newton iterations, the
   algorithm is no longer the one described in the referenced papers.
 
-.seealso:  TSCreate(), TS, TSSetType()
+.seealso: `TSCreate()`, `TS`, `TSSetType()`
 
 M*/
 PETSC_EXTERN PetscErrorCode TSCreate_Pseudo(TS ts)
@@ -653,7 +653,7 @@ PETSC_EXTERN PetscErrorCode TSCreate_Pseudo(TS ts)
 
    Level: advanced
 
-.seealso: TSPseudoSetTimeStep(), TSPseudoComputeTimeStep()
+.seealso: `TSPseudoSetTimeStep()`, `TSPseudoComputeTimeStep()`
 @*/
 PetscErrorCode  TSPseudoTimeStepDefault(TS ts,PetscReal *newdt,void *dtctx)
 {

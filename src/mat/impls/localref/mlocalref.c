@@ -10,19 +10,19 @@ typedef struct {
 } Mat_LocalRef;
 
 /* These need to be macros because they use sizeof */
-#define IndexSpaceGet(buf,nrow,ncol,irowm,icolm) do {                   \
-    if (nrow + ncol > (PetscInt)(sizeof(buf)/sizeof(buf[0]))) {         \
-      PetscCall(PetscMalloc2(nrow,&irowm,ncol,&icolm)); \
-    } else {                                                            \
-      irowm = &buf[0];                                                  \
-      icolm = &buf[nrow];                                               \
-    }                                                                   \
+#define IndexSpaceGet(buf,nrow,ncol,irowm,icolm) do {               \
+    if (nrow + ncol > (PetscInt)PETSC_STATIC_ARRAY_LENGTH(buf)) {   \
+      PetscCall(PetscMalloc2(nrow,&irowm,ncol,&icolm));             \
+    } else {                                                        \
+      irowm = &buf[0];                                              \
+      icolm = &buf[nrow];                                           \
+    }                                                               \
 } while (0)
 
-#define IndexSpaceRestore(buf,nrow,ncol,irowm,icolm) do {       \
-    if (nrow + ncol > (PetscInt)(sizeof(buf)/sizeof(buf[0]))) { \
-      PetscCall(PetscFree2(irowm,icolm));             \
-    }                                                           \
+#define IndexSpaceRestore(buf,nrow,ncol,irowm,icolm) do {           \
+    if (nrow + ncol > (PetscInt)PETSC_STATIC_ARRAY_LENGTH(buf)) {   \
+      PetscCall(PetscFree2(irowm,icolm));                           \
+    }                                                               \
 } while (0)
 
 static void BlockIndicesExpand(PetscInt n,const PetscInt idx[],PetscInt bs,PetscInt idxm[])
@@ -187,7 +187,7 @@ static PetscErrorCode MatDestroy_LocalRef(Mat B)
    The new matrix forwards MatSetValuesLocal() and MatSetValuesBlockedLocal() to the global system.
    In general, it does not define MatMult() or any other functions.  Local submatrices can be nested.
 
-.seealso: MatSetValuesLocal(), MatSetValuesBlockedLocal(), MatGetLocalSubMatrix(), MatCreateSubMatrix()
+.seealso: `MatSetValuesLocal()`, `MatSetValuesBlockedLocal()`, `MatGetLocalSubMatrix()`, `MatCreateSubMatrix()`
 @*/
 PetscErrorCode  MatCreateLocalRef(Mat A,IS isrow,IS iscol,Mat *newmat)
 {

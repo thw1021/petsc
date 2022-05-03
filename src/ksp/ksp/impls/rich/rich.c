@@ -175,12 +175,12 @@ PetscErrorCode KSPSetFromOptions_Richardson(PetscOptionItems *PetscOptionsObject
   PetscBool      flg,flg2;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"KSP Richardson Options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"KSP Richardson Options");
   PetscCall(PetscOptionsReal("-ksp_richardson_scale","damping factor","KSPRichardsonSetScale",rich->scale,&tmp,&flg));
   if (flg) PetscCall(KSPRichardsonSetScale(ksp,tmp));
   PetscCall(PetscOptionsBool("-ksp_richardson_self_scale","dynamically determine optimal damping factor","KSPRichardsonSetSelfScale",rich->selfscale,&flg2,&flg));
   if (flg) PetscCall(KSPRichardsonSetSelfScale(ksp,flg2));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -261,8 +261,8 @@ $    -ksp_type richardson -pc_type jacobi gives one classically Jacobi precondit
   Philosophical Transactions of the Royal Society of London. Series A,
   Containing Papers of a Mathematical or Physical Character, Vol. 210, 1911 (1911).
 
-.seealso:  KSPCreate(), KSPSetType(), KSPType (for list of available types), KSP,
-           KSPRichardsonSetScale(), KSPPREONLY
+.seealso: `KSPCreate()`, `KSPSetType()`, `KSPType`, `KSP`,
+          `KSPRichardsonSetScale()`, `KSPPREONLY`
 
 M*/
 

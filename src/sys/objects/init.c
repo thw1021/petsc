@@ -55,7 +55,7 @@ template <> class std::complex<double>; /* instantiate complex template class */
    Note:
    Complex numbers are automatically available if PETSc located a working complex implementation
 
-.seealso: PetscRealPart(), PetscImaginaryPart(), PetscRealPartComplex(), PetscImaginaryPartComplex()
+.seealso: `PetscRealPart()`, `PetscImaginaryPart()`, `PetscRealPartComplex()`, `PetscImaginaryPartComplex()`
 M*/
 PetscComplex PETSC_i;
 MPI_Datatype MPIU___COMPLEX128 = 0;
@@ -190,7 +190,7 @@ void Petsc_MPI_DebuggerOnError(MPI_Comm *comm,PetscMPIInt *flag,...)
    Note:
    See PetscInitialize() for more general runtime options.
 
-.seealso: PetscInitialize(), PetscOptionsView(), PetscMallocDump(), PetscMPIDump(), PetscFinalize()
+.seealso: `PetscInitialize()`, `PetscOptionsView()`, `PetscMallocDump()`, `PetscMPIDump()`, `PetscFinalize()`
 @*/
 PetscErrorCode  PetscEnd(void)
 {
@@ -620,6 +620,9 @@ PETSC_INTERN PetscErrorCode  PetscOptionsCheckInitial_Private(const char help[])
     PetscCall((*PetscHelpPrintf)(comm," -log_view [:filename:[format]]: logging objects and events\n"));
     PetscCall((*PetscHelpPrintf)(comm," -log_trace [filename]: prints trace of all PETSc calls\n"));
     PetscCall((*PetscHelpPrintf)(comm," -log_exclude <list,of,classnames>: exclude given classes from logging\n"));
+#if defined(PETSC_HAVE_DEVICE)
+    PetscCall((*PetscHelpPrintf)(comm," -log_view_gpu_time: log the GPU time for each and event\n"));
+#endif
 #if defined(PETSC_HAVE_MPE)
     PetscCall((*PetscHelpPrintf)(comm," -log_mpe: Also create logfile viewable through Jumpshot\n"));
 #endif

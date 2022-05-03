@@ -37,8 +37,8 @@ static PetscErrorCode CheckLocal(Mat A, Mat B, PetscScalar *a, PetscScalar *b)
     }
     PetscCall(MatDenseRestoreArrayRead(B,&Bb));
   }
-  PetscCheckFalse(wA || wB,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Wrong array in first Mat? %d, Wrong array in second Mat? %d",wA,wB);
-  PetscCheckFalse(wAv || wBv,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Wrong data in first Mat? %d, Wrong data in second Mat? %d",wAv,wBv);
+  PetscCheck(!wA && !wB,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Wrong array in first Mat? %d, Wrong array in second Mat? %d",wA,wB);
+  PetscCheck(!wAv && !wBv,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Wrong data in first Mat? %d, Wrong data in second Mat? %d",wAv,wBv);
   PetscFunctionReturn(0);
 }
 
@@ -212,7 +212,6 @@ int main(int argc,char **args)
   PetscScalar    *dataX = NULL,*dataB = NULL, *dataR = NULL, *dataBt = NULL;
   PetscScalar    *aX,*aB,*aBt;
   PetscReal      err;
-  PetscErrorCode ierr;
 
   PetscCall(PetscInitialize(&argc,&args,NULL,help));
   PetscCall(PetscOptionsGetInt(NULL,NULL,"-N",&N,NULL));
@@ -251,9 +250,9 @@ int main(int argc,char **args)
     PetscCall(MatSetOption(A,MAT_SYMMETRIC,PETSC_TRUE));
   }
   PetscCall(MatViewFromOptions(A,NULL,"-A_init_view"));
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"","","");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,"","","");
   PetscCall(PetscOptionsFList("-A_mat_type","Matrix type","MatSetType",MatList,deft,mattype,256,&flg));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   if (flg) {
     Mat A2;
 
@@ -344,9 +343,9 @@ int main(int argc,char **args)
     PetscCall(MatDuplicate(B,MAT_DO_NOT_COPY_VALUES,&T4));
     PetscCall(MatSetRandom(T4,NULL));
     PetscCall(MatAXPY(B2,1.0,T4,SAME_NONZERO_PATTERN));
-    PetscCall(MatDenseGetSubMatrix(B,PetscMin(1,K),PetscMin(2,K),&T));
-    PetscCall(MatDenseGetSubMatrix(T4,PetscMin(1,K),PetscMin(2,K),&T2));
-    PetscCall(MatDenseGetSubMatrix(B2,PetscMin(1,K),PetscMin(2,K),&T3));
+    PetscCall(MatDenseGetSubMatrix(B,PetscMin(1,K-1),PetscMin(2,K),&T));
+    PetscCall(MatDenseGetSubMatrix(T4,PetscMin(1,K-1),PetscMin(2,K),&T2));
+    PetscCall(MatDenseGetSubMatrix(B2,PetscMin(1,K-1),PetscMin(2,K),&T3));
     PetscCall(MatAXPY(T,1.0,T2,SAME_NONZERO_PATTERN));
     PetscCall(MatAXPY(T3,-1.0,T,SAME_NONZERO_PATTERN));
     PetscCall(MatNorm(T3,NORM_FROBENIUS,&err));

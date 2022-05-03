@@ -26,10 +26,10 @@
 
    VecStride*() operations can be useful when using DM with dof > 1
 
-.seealso: DMCreateGlobalVector(), VecDuplicate(), VecDuplicateVecs(),
-          DMDACreate1d(), DMDACreate2d(), DMDACreate3d(), DMGlobalToLocalBegin(),
-          DMGlobalToLocalEnd(), DMLocalToGlobalBegin(), DMCreateLocalVector(), DMRestoreLocalVector(),
-          VecStrideMax(), VecStrideMin(), VecStrideNorm()
+.seealso: `DMCreateGlobalVector()`, `VecDuplicate()`, `VecDuplicateVecs()`,
+          `DMDACreate1d()`, `DMDACreate2d()`, `DMDACreate3d()`, `DMGlobalToLocalBegin()`,
+          `DMGlobalToLocalEnd()`, `DMLocalToGlobalBegin()`, `DMCreateLocalVector()`, `DMRestoreLocalVector()`,
+          `VecStrideMax()`, `VecStrideMin()`, `VecStrideNorm()`
 @*/
 PetscErrorCode  DMGetLocalVector(DM dm,Vec *g)
 {
@@ -74,9 +74,9 @@ alldone:
 
    Level: beginner
 
-.seealso: DMCreateGlobalVector(), VecDuplicate(), VecDuplicateVecs(),
-          DMDACreate1d(), DMDACreate2d(), DMDACreate3d(), DMGlobalToLocalBegin(),
-          DMGlobalToLocalEnd(), DMLocalToGlobalBegin(), DMCreateLocalVector(), DMGetLocalVector()
+.seealso: `DMCreateGlobalVector()`, `VecDuplicate()`, `VecDuplicateVecs()`,
+          `DMDACreate1d()`, `DMDACreate2d()`, `DMDACreate3d()`, `DMGlobalToLocalBegin()`,
+          `DMGlobalToLocalEnd()`, `DMLocalToGlobalBegin()`, `DMCreateLocalVector()`, `DMGetLocalVector()`
 @*/
 PetscErrorCode  DMRestoreLocalVector(DM dm,Vec *g)
 {
@@ -90,7 +90,7 @@ PetscErrorCode  DMRestoreLocalVector(DM dm,Vec *g)
       DM vdm;
 
       PetscCall(VecGetDM(*g,&vdm));
-      PetscCheckFalse(vdm != dm,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Invalid vector");
+      PetscCheck(vdm == dm,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Invalid vector");
       PetscCall(VecSetDM(*g,NULL));
       dm->localout[j] = NULL;
       for (i=0; i<DM_MAX_WORK_VECTORS; i++) {
@@ -133,10 +133,10 @@ alldone:
 
    VecStride*() operations can be useful when using DM with dof > 1
 
-.seealso: DMCreateGlobalVector(), VecDuplicate(), VecDuplicateVecs(),
-          DMDACreate1d(), DMDACreate2d(), DMDACreate3d(), DMGlobalToLocalBegin(),
-          DMGlobalToLocalEnd(), DMLocalToGlobalBegin(), DMCreateLocalVector(), DMRestoreLocalVector()
-          VecStrideMax(), VecStrideMin(), VecStrideNorm()
+.seealso: `DMCreateGlobalVector()`, `VecDuplicate()`, `VecDuplicateVecs()`,
+          `DMDACreate1d()`, `DMDACreate2d()`, `DMDACreate3d()`, `DMGlobalToLocalBegin()`,
+          `DMGlobalToLocalEnd()`, `DMLocalToGlobalBegin()`, `DMCreateLocalVector()`, `DMRestoreLocalVector()`
+          `VecStrideMax()`, `VecStrideMin()`, `VecStrideNorm()`
 @*/
 PetscErrorCode  DMGetGlobalVector(DM dm,Vec *g)
 {
@@ -180,10 +180,10 @@ alldone:
 
    Level: developer
 
-.seealso: DMCreateGlobalVector(), VecDuplicate(), VecDuplicateVecs(),
-          DMDACreate1d(), DMDACreate2d(), DMDACreate3d(), DMGlobalToLocalBegin(),
-          DMGlobalToLocalEnd(), DMLocalToGlobalBegin(), DMCreateLocalVector(), DMRestoreLocalVector()
-          VecStrideMax(), VecStrideMin(), VecStrideNorm()
+.seealso: `DMCreateGlobalVector()`, `VecDuplicate()`, `VecDuplicateVecs()`,
+          `DMDACreate1d()`, `DMDACreate2d()`, `DMDACreate3d()`, `DMGlobalToLocalBegin()`,
+          `DMGlobalToLocalEnd()`, `DMLocalToGlobalBegin()`, `DMCreateLocalVector()`, `DMRestoreLocalVector()`
+          `VecStrideMax()`, `VecStrideMin()`, `VecStrideNorm()`
 @*/
 PetscErrorCode  DMClearGlobalVectors(DM dm)
 {
@@ -194,7 +194,7 @@ PetscErrorCode  DMClearGlobalVectors(DM dm)
   for (i=0; i<DM_MAX_WORK_VECTORS; i++) {
     Vec g;
 
-    PetscCheckFalse(dm->globalout[i],PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Clearing DM of global vectors that has a global vector obtained with DMGetGlobalVector()");
+    PetscCheck(!dm->globalout[i],PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Clearing DM of global vectors that has a global vector obtained with DMGetGlobalVector()");
     g = dm->globalin[i];
     dm->globalin[i] = NULL;
     if (g) {
@@ -218,10 +218,10 @@ PetscErrorCode  DMClearGlobalVectors(DM dm)
 
    Level: developer
 
-.seealso: DMCreateLocalVector(), VecDuplicate(), VecDuplicateVecs(),
-          DMDACreate1d(), DMDACreate2d(), DMDACreate3d(), DMLocalToLocalBegin(),
-          DMLocalToLocalEnd(), DMLocalToLocalBegin(), DMCreateLocalVector(), DMRestoreLocalVector()
-          VecStrideMax(), VecStrideMin(), VecStrideNorm()
+.seealso: `DMCreateLocalVector()`, `VecDuplicate()`, `VecDuplicateVecs()`,
+          `DMDACreate1d()`, `DMDACreate2d()`, `DMDACreate3d()`, `DMLocalToLocalBegin()`,
+          `DMLocalToLocalEnd()`, `DMLocalToLocalBegin()`, `DMCreateLocalVector()`, `DMRestoreLocalVector()`
+          `VecStrideMax()`, `VecStrideMin()`, `VecStrideNorm()`
 @*/
 PetscErrorCode  DMClearLocalVectors(DM dm)
 {
@@ -232,7 +232,7 @@ PetscErrorCode  DMClearLocalVectors(DM dm)
   for (i=0; i<DM_MAX_WORK_VECTORS; i++) {
     Vec g;
 
-    PetscCheckFalse(dm->localout[i],PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Clearing DM of local vectors that has a local vector obtained with DMGetLocalVector()");
+    PetscCheck(!dm->localout[i],PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Clearing DM of local vectors that has a local vector obtained with DMGetLocalVector()");
     g = dm->localin[i];
     dm->localin[i] = NULL;
     if (g) {
@@ -259,9 +259,9 @@ PetscErrorCode  DMClearLocalVectors(DM dm)
 
    Level: beginner
 
-.seealso: DMCreateGlobalVector(), VecDuplicate(), VecDuplicateVecs(),
-          DMDACreate1d(), DMDACreate2d(), DMDACreate3d(), DMGlobalToGlobalBegin(),
-          DMGlobalToGlobalEnd(), DMGlobalToGlobal(), DMCreateLocalVector(), DMGetGlobalVector()
+.seealso: `DMCreateGlobalVector()`, `VecDuplicate()`, `VecDuplicateVecs()`,
+          `DMDACreate1d()`, `DMDACreate2d()`, `DMDACreate3d()`, `DMGlobalToGlobalBegin()`,
+          `DMGlobalToGlobalEnd()`, `DMGlobalToGlobal()`, `DMCreateLocalVector()`, `DMGetGlobalVector()`
 @*/
 PetscErrorCode  DMRestoreGlobalVector(DM dm,Vec *g)
 {
@@ -276,7 +276,7 @@ PetscErrorCode  DMRestoreGlobalVector(DM dm,Vec *g)
       DM vdm;
 
       PetscCall(VecGetDM(*g,&vdm));
-      PetscCheckFalse(vdm != dm,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Invalid vector");
+      PetscCheck(vdm == dm,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Invalid vector");
       PetscCall(VecSetDM(*g,NULL));
       dm->globalout[j] = NULL;
       for (i=0; i<DM_MAX_WORK_VECTORS; i++) {
@@ -309,7 +309,7 @@ alldone:
 
    Note: If a Vec with the given name does not exist, it is created.
 
-.seealso: DMGetNamedGlobalVector(), DMRestoreNamedLocalVector()
+.seealso: `DMGetNamedGlobalVector()`, `DMRestoreNamedLocalVector()`
 @*/
 PetscErrorCode DMHasNamedGlobalVector(DM dm,const char *name,PetscBool *exists)
 {
@@ -347,7 +347,7 @@ PetscErrorCode DMHasNamedGlobalVector(DM dm,const char *name,PetscBool *exists)
 
    Note: If a Vec with the given name does not exist, it is created.
 
-.seealso: DMRestoreNamedGlobalVector()
+.seealso: `DMRestoreNamedGlobalVector()`
 @*/
 PetscErrorCode DMGetNamedGlobalVector(DM dm,const char *name,Vec *X)
 {
@@ -364,7 +364,7 @@ PetscErrorCode DMGetNamedGlobalVector(DM dm,const char *name,Vec *X)
     if (match) {
       DM vdm;
 
-      PetscCheckFalse(link->status != DMVEC_STATUS_IN,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Vec name '%s' already checked out",name);
+      PetscCheck(link->status == DMVEC_STATUS_IN,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Vec name '%s' already checked out",name);
       PetscCall(VecGetDM(link->X,&vdm));
       PetscCheck(!vdm,PetscObjectComm((PetscObject)vdm),PETSC_ERR_LIB,"Invalid vector");
       PetscCall(VecSetDM(link->X,dm));
@@ -397,7 +397,7 @@ found:
 
    Level: developer
 
-.seealso: DMGetNamedGlobalVector()
+.seealso: `DMGetNamedGlobalVector()`
 @*/
 PetscErrorCode DMRestoreNamedGlobalVector(DM dm,const char *name,Vec *X)
 {
@@ -416,9 +416,9 @@ PetscErrorCode DMRestoreNamedGlobalVector(DM dm,const char *name,Vec *X)
       DM vdm;
 
       PetscCall(VecGetDM(*X,&vdm));
-      PetscCheckFalse(link->status != DMVEC_STATUS_OUT,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Vec name '%s' was not checked out",name);
-      PetscCheckFalse(link->X != *X,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_INCOMP,"Attempt to restore Vec name '%s', but Vec does not match the cache",name);
-      PetscCheckFalse(vdm != dm,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Invalid vector");
+      PetscCheck(link->status == DMVEC_STATUS_OUT,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Vec name '%s' was not checked out",name);
+      PetscCheck(link->X == *X,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_INCOMP,"Attempt to restore Vec name '%s', but Vec does not match the cache",name);
+      PetscCheck(vdm == dm,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Invalid vector");
 
       link->status = DMVEC_STATUS_IN;
       PetscCall(VecSetDM(link->X,NULL));
@@ -445,7 +445,7 @@ PetscErrorCode DMRestoreNamedGlobalVector(DM dm,const char *name,Vec *X)
 
    Note: If a Vec with the given name does not exist, it is created.
 
-.seealso: DMGetNamedGlobalVector(), DMRestoreNamedLocalVector()
+.seealso: `DMGetNamedGlobalVector()`, `DMRestoreNamedLocalVector()`
 @*/
 PetscErrorCode DMHasNamedLocalVector(DM dm,const char *name,PetscBool *exists)
 {
@@ -483,7 +483,7 @@ PetscErrorCode DMHasNamedLocalVector(DM dm,const char *name,PetscBool *exists)
 
    Note: If a Vec with the given name does not exist, it is created.
 
-.seealso: DMGetNamedGlobalVector(), DMRestoreNamedLocalVector()
+.seealso: `DMGetNamedGlobalVector()`, `DMRestoreNamedLocalVector()`
 @*/
 PetscErrorCode DMGetNamedLocalVector(DM dm,const char *name,Vec *X)
 {
@@ -500,7 +500,7 @@ PetscErrorCode DMGetNamedLocalVector(DM dm,const char *name,Vec *X)
     if (match) {
       DM vdm;
 
-      PetscCheckFalse(link->status != DMVEC_STATUS_IN,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Vec name '%s' already checked out",name);
+      PetscCheck(link->status == DMVEC_STATUS_IN,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Vec name '%s' already checked out",name);
       PetscCall(VecGetDM(link->X,&vdm));
       PetscCheck(!vdm,PetscObjectComm((PetscObject)vdm),PETSC_ERR_LIB,"Invalid vector");
       PetscCall(VecSetDM(link->X,dm));
@@ -533,7 +533,7 @@ found:
 
    Level: developer
 
-.seealso: DMRestoreNamedGlobalVector(), DMGetNamedLocalVector()
+.seealso: `DMRestoreNamedGlobalVector()`, `DMGetNamedLocalVector()`
 @*/
 PetscErrorCode DMRestoreNamedLocalVector(DM dm,const char *name,Vec *X)
 {
@@ -552,9 +552,9 @@ PetscErrorCode DMRestoreNamedLocalVector(DM dm,const char *name,Vec *X)
       DM vdm;
 
       PetscCall(VecGetDM(*X,&vdm));
-      PetscCheckFalse(link->status != DMVEC_STATUS_OUT,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Vec name '%s' was not checked out",name);
-      PetscCheckFalse(link->X != *X,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_INCOMP,"Attempt to restore Vec name '%s', but Vec does not match the cache",name);
-      PetscCheckFalse(vdm != dm,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Invalid vector");
+      PetscCheck(link->status == DMVEC_STATUS_OUT,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Vec name '%s' was not checked out",name);
+      PetscCheck(link->X == *X,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_INCOMP,"Attempt to restore Vec name '%s', but Vec does not match the cache",name);
+      PetscCheck(vdm == dm,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Invalid vector");
 
       link->status = DMVEC_STATUS_IN;
       PetscCall(VecSetDM(link->X,NULL));

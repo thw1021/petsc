@@ -10,16 +10,14 @@ typedef struct {
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBeginUser;
   options->testPartition = PETSC_TRUE;
   options->testNum       = 0;
 
-  ierr = PetscOptionsBegin(comm, "", "Meshing Problem Options", "DMPLEX");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "Meshing Problem Options", "DMPLEX");
   PetscCall(PetscOptionsBool("-test_partition", "Use a fixed partition for testing", "ex13.c", options->testPartition, &options->testPartition, NULL));
   PetscCall(PetscOptionsBoundedInt("-test_num", "The test partition number", "ex13.c", options->testNum, &options->testNum, NULL,0));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -64,7 +62,7 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *user, DM *dm)
           PetscCall(PetscArraycpy(points, triPoints_p2, 8));
           break;}
         default:
-          SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "Could not find matching test number %d for triangular mesh on 2 procs", user->testNum);
+          SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "Could not find matching test number %" PetscInt_FMT " for triangular mesh on 2 procs", user->testNum);
         }
       } else if (dim == 2 && simplex && size == 3) {
         PetscInt triSizes_p3[3]  = {3, 3, 2};

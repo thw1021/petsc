@@ -401,7 +401,7 @@ static PetscErrorCode PCSetCoordinates_ML(PC pc, PetscInt ndm, PetscInt a_nloc, 
   aloc = (Iend-my0);
   nloc = (Iend-my0)/bs;
 
-  PetscCheck((nloc == a_nloc) || (aloc == a_nloc),PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Number of local blocks %D must be %D or %D.",a_nloc,nloc,aloc);
+  PetscCheck((nloc == a_nloc) || (aloc == a_nloc),PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Number of local blocks %" PetscInt_FMT " must be %" PetscInt_FMT " or %" PetscInt_FMT ".",a_nloc,nloc,aloc);
 
   oldarrsz    = pc_ml->dim * pc_ml->nloc;
   pc_ml->dim  = ndm;
@@ -500,7 +500,6 @@ extern PetscErrorCode PCReset_MG(PC);
 
 PetscErrorCode PCSetUp_ML(PC pc)
 {
-  PetscErrorCode   ierr;
   PetscMPIInt      size;
   FineGridCtx      *PetscMLdata;
   ML               *ml_object;
@@ -807,9 +806,9 @@ PetscErrorCode PCSetUp_ML(PC pc)
     PetscCall(KSPGetPC(smoother,&subpc));
     PetscCall(PCSetType(subpc,PCSOR));
   }
-  ierr = PetscObjectOptionsBegin((PetscObject)pc);PetscCall(ierr);
+  PetscObjectOptionsBegin((PetscObject)pc);
   PetscCall(PCSetFromOptions_MG(PetscOptionsObject,pc)); /* should be called in PCSetFromOptions_ML(), but cannot be called prior to PCMGSetLevels() */
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   PetscCall(PetscMalloc1(Nlevels,&gridctx));
 
@@ -961,7 +960,7 @@ PetscErrorCode PCSetFromOptions_ML(PetscOptionItems *PetscOptionsObject,PC pc)
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)pc,&comm));
   PetscCallMPI(MPI_Comm_size(comm,&size));
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"ML options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"ML options");
 
   PrintLevel = 0;
   indx       = 0;
@@ -990,8 +989,8 @@ PetscErrorCode PCSetFromOptions_ML(PetscOptionItems *PetscOptionsObject,PC pc)
     We also try to set some sane defaults when energy minimization is activated, otherwise it's hard to find a working
     combination of options and ML's exit(1) explanations don't help matters.
   */
-  PetscCheckFalse(pc_ml->EnergyMinimization < -1 || pc_ml->EnergyMinimization > 4,comm,PETSC_ERR_ARG_OUTOFRANGE,"EnergyMinimization must be in range -1..4");
-  PetscCheckFalse(pc_ml->EnergyMinimization == 4 && size > 1,comm,PETSC_ERR_SUP,"Energy minimization type 4 does not work in parallel");
+  PetscCheck(pc_ml->EnergyMinimization >= -1 && pc_ml->EnergyMinimization <= 4,comm,PETSC_ERR_ARG_OUTOFRANGE,"EnergyMinimization must be in range -1..4");
+  PetscCheck(pc_ml->EnergyMinimization != 4 || size == 1,comm,PETSC_ERR_SUP,"Energy minimization type 4 does not work in parallel");
   if (pc_ml->EnergyMinimization == 4) PetscCall(PetscInfo(pc,"Mandel's energy minimization scheme is experimental and broken in ML-6.2\n"));
   if (pc_ml->EnergyMinimization) {
     PetscCall(PetscOptionsReal("-pc_ml_EnergyMinimizationDropTol","Energy minimization drop tolerance","None",pc_ml->EnergyMinimizationDropTol,&pc_ml->EnergyMinimizationDropTol,NULL));
@@ -1040,7 +1039,7 @@ PetscErrorCode PCSetFromOptions_ML(PetscOptionItems *PetscOptionsObject,PC pc)
     PetscCall(PetscOptionsBool("-pc_ml_Aux","Aggregate using auxiliary coordinate-based laplacian","None",pc_ml->Aux,&pc_ml->Aux,NULL));
     PetscCall(PetscOptionsReal("-pc_ml_AuxThreshold","Auxiliary smoother drop tol","None",pc_ml->AuxThreshold,&pc_ml->AuxThreshold,NULL));
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -1087,11 +1086,11 @@ PetscErrorCode PCSetFromOptions_ML(PetscOptionItems *PetscOptionsObject,PC pc)
 
    Level: intermediate
 
-.seealso:  PCCreate(), PCSetType(), PCType (for list of available types), PC, PCMGType,
-           PCMGSetLevels(), PCMGGetLevels(), PCMGSetType(), MPSetCycles(), PCMGSetDistinctSmoothUp(),
-           PCMGGetCoarseSolve(), PCMGSetResidual(), PCMGSetInterpolation(),
-           PCMGSetRestriction(), PCMGGetSmoother(), PCMGGetSmootherUp(), PCMGGetSmootherDown(),
-           PCMGSetCycleTypeOnLevel(), PCMGSetRhs(), PCMGSetX(), PCMGSetR()
+.seealso: `PCCreate()`, `PCSetType()`, `PCType`, `PC`, `PCMGType`,
+          `PCMGSetLevels()`, `PCMGGetLevels()`, `PCMGSetType()`, `MPSetCycles()`, `PCMGSetDistinctSmoothUp()`,
+          `PCMGGetCoarseSolve()`, `PCMGSetResidual()`, `PCMGSetInterpolation()`,
+          `PCMGSetRestriction()`, `PCMGGetSmoother()`, `PCMGGetSmootherUp()`, `PCMGGetSmootherDown()`,
+          `PCMGSetCycleTypeOnLevel()`, `PCMGSetRhs()`, `PCMGSetX()`, `PCMGSetR()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_ML(PC pc)

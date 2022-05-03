@@ -22,7 +22,7 @@ PetscBool         PFRegisterAllCalled = PETSC_FALSE;
 
    Level: beginner
 
-.seealso: PFCreate(), PFDestroy(), PFSetType(), PFApply(), PFApplyVec()
+.seealso: `PFCreate()`, `PFDestroy()`, `PFSetType()`, `PFApply()`, `PFApplyVec()`
 @*/
 PetscErrorCode  PFSet(PF pf,PetscErrorCode (*apply)(void*,PetscInt,const PetscScalar*,PetscScalar*),PetscErrorCode (*applyvec)(void*,Vec,Vec),PetscErrorCode (*view)(void*,PetscViewer),PetscErrorCode (*destroy)(void*),void*ctx)
 {
@@ -46,7 +46,7 @@ PetscErrorCode  PFSet(PF pf,PetscErrorCode (*apply)(void*,PetscInt,const PetscSc
 
    Level: beginner
 
-.seealso: PFCreate(), PFSet(), PFSetType()
+.seealso: `PFCreate()`, `PFSet()`, `PFSetType()`
 @*/
 PetscErrorCode  PFDestroy(PF *pf)
 {
@@ -79,7 +79,7 @@ PetscErrorCode  PFDestroy(PF *pf)
 
    Level: developer
 
-.seealso: PFSet(), PFApply(), PFDestroy(), PFApplyVec()
+.seealso: `PFSet()`, `PFApply()`, `PFDestroy()`, `PFApplyVec()`
 @*/
 PetscErrorCode  PFCreate(MPI_Comm comm,PetscInt dimin,PetscInt dimout,PF *pf)
 {
@@ -120,7 +120,7 @@ PetscErrorCode  PFCreate(MPI_Comm comm,PetscInt dimin,PetscInt dimout,PF *pf)
 
    Level: beginner
 
-.seealso: PFApply(), PFCreate(), PFDestroy(), PFSetType(), PFSet()
+.seealso: `PFApply()`, `PFCreate()`, `PFDestroy()`, `PFSetType()`, `PFSet()`
 @*/
 PetscErrorCode  PFApplyVec(PF pf,Vec x,Vec y)
 {
@@ -132,7 +132,7 @@ PetscErrorCode  PFApplyVec(PF pf,Vec x,Vec y)
   PetscValidHeaderSpecific(y,VEC_CLASSID,3);
   if (x) {
     PetscValidHeaderSpecific(x,VEC_CLASSID,2);
-    PetscCheckFalse(x == y,PETSC_COMM_SELF,PETSC_ERR_ARG_IDN,"x and y must be different vectors");
+    PetscCheck(x != y,PETSC_COMM_SELF,PETSC_ERR_ARG_IDN,"x and y must be different vectors");
   } else {
     PetscScalar *xx;
     PetscInt    lsize;
@@ -149,9 +149,9 @@ PetscErrorCode  PFApplyVec(PF pf,Vec x,Vec y)
 
   PetscCall(VecGetLocalSize(x,&n));
   PetscCall(VecGetLocalSize(y,&p));
-  PetscCheckFalse((pf->dimin*(n/pf->dimin)) != n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local input vector length %" PetscInt_FMT " not divisible by dimin %" PetscInt_FMT " of function",n,pf->dimin);
-  PetscCheckFalse((pf->dimout*(p/pf->dimout)) != p,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local output vector length %" PetscInt_FMT " not divisible by dimout %" PetscInt_FMT " of function",p,pf->dimout);
-  PetscCheckFalse((n/pf->dimin) != (p/pf->dimout),PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local vector lengths %" PetscInt_FMT " %" PetscInt_FMT " are wrong for dimin and dimout %" PetscInt_FMT " %" PetscInt_FMT " of function",n,p,pf->dimin,pf->dimout);
+  PetscCheck((pf->dimin*(n/pf->dimin)) == n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local input vector length %" PetscInt_FMT " not divisible by dimin %" PetscInt_FMT " of function",n,pf->dimin);
+  PetscCheck((pf->dimout*(p/pf->dimout)) == p,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local output vector length %" PetscInt_FMT " not divisible by dimout %" PetscInt_FMT " of function",p,pf->dimout);
+  PetscCheck((n/pf->dimin) == (p/pf->dimout),PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local vector lengths %" PetscInt_FMT " %" PetscInt_FMT " are wrong for dimin and dimout %" PetscInt_FMT " %" PetscInt_FMT " of function",n,p,pf->dimin,pf->dimout);
 
   if (pf->ops->applyvec) {
     PetscCall((*pf->ops->applyvec)(pf->data,x,y));
@@ -192,7 +192,7 @@ PetscErrorCode  PFApplyVec(PF pf,Vec x,Vec y)
 
    Notes:
 
-.seealso: PFApplyVec(), PFCreate(), PFDestroy(), PFSetType(), PFSet()
+.seealso: `PFApplyVec()`, `PFCreate()`, `PFDestroy()`, `PFSetType()`, `PFSet()`
 @*/
 PetscErrorCode  PFApply(PF pf,PetscInt n,const PetscScalar *x,PetscScalar *y)
 {
@@ -200,7 +200,7 @@ PetscErrorCode  PFApply(PF pf,PetscInt n,const PetscScalar *x,PetscScalar *y)
   PetscValidHeaderSpecific(pf,PF_CLASSID,1);
   PetscValidScalarPointer(x,3);
   PetscValidScalarPointer(y,4);
-  PetscCheckFalse(x == y,PETSC_COMM_SELF,PETSC_ERR_ARG_IDN,"x and y must be different arrays");
+  PetscCheck(x != y,PETSC_COMM_SELF,PETSC_ERR_ARG_IDN,"x and y must be different arrays");
   PetscCheck(pf->ops->apply,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"No function has been provided for this PF");
 
   PetscCall((*pf->ops->apply)(pf->data,n,x,y));
@@ -218,7 +218,7 @@ PetscErrorCode  PFApply(PF pf,PetscInt n,const PetscScalar *x,PetscScalar *y)
 -  name - command line option
 
    Level: intermediate
-.seealso:  PF, PFView, PetscObjectViewFromOptions(), PFCreate()
+.seealso: `PF`, `PFView`, `PetscObjectViewFromOptions()`, `PFCreate()`
 @*/
 PetscErrorCode  PFViewFromOptions(PF A,PetscObject obj,const char name[])
 {
@@ -250,7 +250,7 @@ PetscErrorCode  PFViewFromOptions(PF A,PetscObject obj,const char name[])
 
    Level: developer
 
-.seealso: PetscViewerCreate(), PetscViewerASCIIOpen()
+.seealso: `PetscViewerCreate()`, `PetscViewerASCIIOpen()`
 @*/
 PetscErrorCode  PFView(PF pf,PetscViewer viewer)
 {
@@ -302,7 +302,7 @@ $     -pf_type my_function
 
    Level: advanced
 
-.seealso: PFRegisterAll(), PFRegisterDestroy(), PFRegister()
+.seealso: `PFRegisterAll()`, `PFRegisterDestroy()`, `PFRegister()`
 @*/
 PetscErrorCode  PFRegister(const char sname[],PetscErrorCode (*function)(PF,void*))
 {
@@ -326,7 +326,7 @@ PetscErrorCode  PFRegister(const char sname[],PetscErrorCode (*function)(PF,void
 
    Level: intermediate
 
-.seealso: PFSetType()
+.seealso: `PFSetType()`
 
 @*/
 PetscErrorCode  PFGetType(PF pf,PFType *type)
@@ -357,7 +357,7 @@ PetscErrorCode  PFGetType(PF pf,PFType *type)
 
   Level: intermediate
 
-.seealso: PFSet(), PFRegister(), PFCreate(), DMDACreatePF()
+.seealso: `PFSet()`, `PFRegister()`, `PFCreate()`, `DMDACreatePF()`
 
 @*/
 PetscErrorCode  PFSetType(PF pf,PFType type,void *ctx)
@@ -410,14 +410,13 @@ PetscErrorCode  PFSetType(PF pf,PFType type,void *ctx)
 @*/
 PetscErrorCode  PFSetFromOptions(PF pf)
 {
-  PetscErrorCode ierr;
   char           type[256];
   PetscBool      flg;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pf,PF_CLASSID,1);
 
-  ierr = PetscObjectOptionsBegin((PetscObject)pf);PetscCall(ierr);
+  PetscObjectOptionsBegin((PetscObject)pf);
   PetscCall(PetscOptionsFList("-pf_type","Type of function","PFSetType",PFList,NULL,type,256,&flg));
   if (flg) {
     PetscCall(PFSetType(pf,type,NULL));
@@ -428,7 +427,7 @@ PetscErrorCode  PFSetFromOptions(PF pf)
 
   /* process any options handlers added with PetscObjectAddOptionsHandler() */
   PetscCall(PetscObjectProcessOptionsHandlers(PetscOptionsObject,(PetscObject)pf));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -439,7 +438,7 @@ static PetscBool PFPackageInitialized = PETSC_FALSE;
 
   Level: developer
 
-.seealso: PetscFinalize()
+.seealso: `PetscFinalize()`
 @*/
 PetscErrorCode  PFFinalizePackage(void)
 {
@@ -457,7 +456,7 @@ PetscErrorCode  PFFinalizePackage(void)
 
   Level: developer
 
-.seealso: PetscInitialize()
+.seealso: `PetscInitialize()`
 @*/
 PetscErrorCode  PFInitializePackage(void)
 {

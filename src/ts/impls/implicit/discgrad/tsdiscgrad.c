@@ -122,11 +122,11 @@ static PetscErrorCode TSSetFromOptions_DiscGrad(PetscOptionItems *PetscOptionsOb
   TS_DiscGrad   *dg = (TS_DiscGrad *) ts->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject, "Discrete Gradients ODE solver options"));
+  PetscOptionsHeadBegin(PetscOptionsObject, "Discrete Gradients ODE solver options");
   {
     PetscCall(PetscOptionsBool("-ts_discgrad_gonzalez","Use Gonzalez term in discrete gradients formulation","TSDiscGradUseGonzalez",dg->gonzalez,&dg->gonzalez,NULL));
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -257,7 +257,7 @@ static PetscErrorCode TSStep_DiscGrad(TS ts)
     ts->reject++; accept = PETSC_FALSE;
     if (!ts->reason && ts->max_reject >= 0 && ++rejections > ts->max_reject) {
       ts->reason = TS_DIVERGED_STEP_REJECTED;
-      PetscCall(PetscInfo(ts, "Step=%D, step rejections %D greater than current TS allowed, stopping solve\n", ts->steps, rejections));
+      PetscCall(PetscInfo(ts, "Step=%" PetscInt_FMT ", step rejections %" PetscInt_FMT " greater than current TS allowed, stopping solve\n", ts->steps, rejections));
     }
   }
   PetscFunctionReturn(0);
@@ -408,7 +408,7 @@ $ u_t = S(u) grad F(u)
 
   Level: intermediate
 
-.seealso: TSCreate(), TSSetType(), TS, TSDISCGRAD, TSDiscGradSetFormulation()
+.seealso: `TSCreate()`, `TSSetType()`, `TS`, `TSDISCGRAD`, `TSDiscGradSetFormulation()`
 M*/
 PETSC_EXTERN PetscErrorCode TSCreate_DiscGrad(TS ts)
 {
@@ -467,7 +467,7 @@ $ PetscErrorCode func(TS ts, PetscReal time, Vec u, Vec G, void *)
 
   Level: intermediate
 
-.seealso: TSDiscGradSetFormulation()
+.seealso: `TSDiscGradSetFormulation()`
 @*/
 PetscErrorCode TSDiscGradGetFormulation(TS ts, PetscErrorCode (**Sfunc)(TS, PetscReal, Vec, Mat, void *), PetscErrorCode (**Ffunc)(TS, PetscReal, Vec, PetscScalar *, void *), PetscErrorCode (**Gfunc)(TS, PetscReal, Vec, Vec, void *), void *ctx)
 {
@@ -501,7 +501,7 @@ $ PetscErrorCode func(TS ts, PetscReal time, Vec u, Vec G, void *)
 
   Level: Intermediate
 
-.seealso: TSDiscGradGetFormulation()
+.seealso: `TSDiscGradGetFormulation()`
 @*/
 PetscErrorCode TSDiscGradSetFormulation(TS ts, PetscErrorCode (*Sfunc)(TS, PetscReal, Vec, Mat, void *), PetscErrorCode (*Ffunc)(TS, PetscReal, Vec , PetscScalar *, void *), PetscErrorCode (*Gfunc)(TS, PetscReal, Vec, Vec, void *), void *ctx)
 {
@@ -527,7 +527,7 @@ PetscErrorCode TSDiscGradSetFormulation(TS ts, PetscErrorCode (*Sfunc)(TS, Petsc
 
   Level: Advanced
 
-.seealso: TSDiscGradUseGonzalez(), TSDISCGRAD
+.seealso: `TSDiscGradUseGonzalez()`, `TSDISCGRAD`
 @*/
 PetscErrorCode TSDiscGradIsGonzalez(TS ts,PetscBool *gonzalez)
 {
@@ -552,7 +552,7 @@ PetscErrorCode TSDiscGradIsGonzalez(TS ts,PetscBool *gonzalez)
 
   Level: Intermediate
 
-.seealso: TSDISCGRAD
+.seealso: `TSDISCGRAD`
 @*/
 PetscErrorCode TSDiscGradUseGonzalez(TS ts,PetscBool flg)
 {

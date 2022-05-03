@@ -374,7 +374,7 @@ PetscErrorCode da_test_RefineCoords1D(PetscInt mx)
     PetscCall(VecAXPY(afexact,-1.0,af)); /* af <= af - afinterp */
     PetscCall(VecNorm(afexact,NORM_2,&nrm));
     PetscCall(VecGetSize(afexact,&N));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%D=>%D, interp err = %1.4e\n",mx,Mx,(double)(nrm/PetscSqrtReal((PetscReal)N))));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%" PetscInt_FMT "=>%" PetscInt_FMT ", interp err = %1.4e\n",mx,Mx,(double)(nrm/PetscSqrtReal((PetscReal)N))));
     PetscCall(VecDestroy(&afexact));
   }
 
@@ -461,7 +461,7 @@ PetscErrorCode da_test_RefineCoords2D(PetscInt mx,PetscInt my)
     PetscCall(VecAXPY(afexact,-1.0,af)); /* af <= af - afinterp */
     PetscCall(VecNorm(afexact,NORM_2,&nrm));
     PetscCall(VecGetSize(afexact,&N));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"[%D x %D]=>[%D x %D], interp err = %1.4e\n",mx,my,Mx,My,(double)(nrm/PetscSqrtReal((PetscReal)N))));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"[%" PetscInt_FMT " x %" PetscInt_FMT "]=>[%" PetscInt_FMT " x %" PetscInt_FMT "], interp err = %1.4e\n",mx,my,Mx,My,(double)(nrm/PetscSqrtReal((PetscReal)N))));
     PetscCall(VecDestroy(&afexact));
   }
 
@@ -486,7 +486,6 @@ PetscErrorCode da_test_RefineCoords2D(PetscInt mx,PetscInt my)
 
 PetscErrorCode da_test_RefineCoords3D(PetscInt mx,PetscInt my,PetscInt mz)
 {
-  PetscErrorCode ierr;
   DM             dac,daf;
   PetscViewer    vv;
   Vec            ac,af;
@@ -496,8 +495,8 @@ PetscErrorCode da_test_RefineCoords3D(PetscInt mx,PetscInt my,PetscInt mz)
   PetscBool      output = PETSC_FALSE;
 
   PetscFunctionBeginUser;
-  ierr = DMDACreate3d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DMDA_STENCIL_BOX,mx+1, my+1,mz+1,PETSC_DECIDE, PETSC_DECIDE,PETSC_DECIDE,1, /* 1 dof */
-                      1, /* stencil = 1 */NULL,NULL,NULL,&dac);PetscCall(ierr);
+  PetscCall(DMDACreate3d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DMDA_STENCIL_BOX,mx+1, my+1,mz+1,PETSC_DECIDE, PETSC_DECIDE,PETSC_DECIDE,1, /* 1 dof */
+                         1, /* stencil = 1 */NULL,NULL,NULL,&dac));
   PetscCall(DMSetFromOptions(dac));
   PetscCall(DMSetUp(dac));
 
@@ -555,7 +554,7 @@ PetscErrorCode da_test_RefineCoords3D(PetscInt mx,PetscInt my,PetscInt mz)
     PetscCall(VecAXPY(afexact,-1.0,af)); /* af <= af - afinterp */
     PetscCall(VecNorm(afexact,NORM_2,&nrm));
     PetscCall(VecGetSize(afexact,&N));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"[%D x %D x %D]=>[%D x %D x %D], interp err = %1.4e\n",mx,my,mz,Mx,My,Mz,(double)(nrm/PetscSqrtReal((PetscReal)N))));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"[%" PetscInt_FMT " x %" PetscInt_FMT " x %" PetscInt_FMT "]=>[%" PetscInt_FMT " x %" PetscInt_FMT " x %" PetscInt_FMT "], interp err = %1.4e\n",mx,my,mz,Mx,My,Mz,(double)(nrm/PetscSqrtReal((PetscReal)N))));
     PetscCall(VecDestroy(&afexact));
   }
 

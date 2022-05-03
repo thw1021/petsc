@@ -224,13 +224,13 @@ PETSC_EXTERN PetscErrorCode AOCreate_Basic(AO ao)
     PetscCall(PetscArraycpy(sorted,allpetsc,N));
     PetscCall(PetscSortInt(N,sorted));
     for (i=0; i<N; i++) {
-      PetscCheckFalse(sorted[i] != i,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"PETSc ordering requires a permutation of numbers 0 to N-1\n it is missing %" PetscInt_FMT " has %" PetscInt_FMT,i,sorted[i]);
+      PetscCheck(sorted[i] == i,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"PETSc ordering requires a permutation of numbers 0 to N-1\n it is missing %" PetscInt_FMT " has %" PetscInt_FMT,i,sorted[i]);
     }
 
     PetscCall(PetscArraycpy(sorted,allapp,N));
     PetscCall(PetscSortInt(N,sorted));
     for (i=0; i<N; i++) {
-      PetscCheckFalse(sorted[i] != i,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Application ordering requires a permutation of numbers 0 to N-1\n it is missing %" PetscInt_FMT " has %" PetscInt_FMT,i,sorted[i]);
+      PetscCheck(sorted[i] == i,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Application ordering requires a permutation of numbers 0 to N-1\n it is missing %" PetscInt_FMT " has %" PetscInt_FMT,i,sorted[i]);
     }
 
     PetscCall(PetscFree(sorted));
@@ -243,9 +243,9 @@ PETSC_EXTERN PetscErrorCode AOCreate_Basic(AO ao)
     ip = allpetsc[i];
     ia = allapp[i];
     /* check there are no duplicates */
-    PetscCheckFalse(aobasic->app[ip],PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Duplicate in PETSc ordering at position %" PetscInt_FMT ". Already mapped to %" PetscInt_FMT ", not %" PetscInt_FMT ".", i, aobasic->app[ip]-1, ia);
+    PetscCheck(!aobasic->app[ip],PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Duplicate in PETSc ordering at position %" PetscInt_FMT ". Already mapped to %" PetscInt_FMT ", not %" PetscInt_FMT ".", i, aobasic->app[ip]-1, ia);
     aobasic->app[ip] = ia + 1;
-    PetscCheckFalse(aobasic->petsc[ia],PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Duplicate in Application ordering at position %" PetscInt_FMT ". Already mapped to %" PetscInt_FMT ", not %" PetscInt_FMT ".", i, aobasic->petsc[ia]-1, ip);
+    PetscCheck(!aobasic->petsc[ia],PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Duplicate in Application ordering at position %" PetscInt_FMT ". Already mapped to %" PetscInt_FMT ", not %" PetscInt_FMT ".", i, aobasic->petsc[ia]-1, ip);
     aobasic->petsc[ia] = ip + 1;
   }
   if (napp && !mypetsc) {
@@ -290,7 +290,7 @@ PETSC_EXTERN PetscErrorCode AOCreate_Basic(AO ao)
     the arrays myapp and mypetsc must contain the all the integers 0 to napp-1 with no duplicates; that is there cannot be any "holes"
            in the indices. Use AOCreateMapping() or AOCreateMappingIS() if you wish to have "holes" in the indices.
 
-.seealso: AOCreateBasicIS(), AODestroy(), AOPetscToApplication(), AOApplicationToPetsc()
+.seealso: `AOCreateBasicIS()`, `AODestroy()`, `AOPetscToApplication()`, `AOApplicationToPetsc()`
 @*/
 PetscErrorCode  AOCreateBasic(MPI_Comm comm,PetscInt napp,const PetscInt myapp[],const PetscInt mypetsc[],AO *aoout)
 {
@@ -331,7 +331,7 @@ PetscErrorCode  AOCreateBasic(MPI_Comm comm,PetscInt napp,const PetscInt myapp[]
     the index sets isapp and ispetsc must contain the all the integers 0 to napp-1 (where napp is the length of the index sets) with no duplicates;
            that is there cannot be any "holes"
 
-.seealso: AOCreateBasic(),  AODestroy()
+.seealso: `AOCreateBasic()`, `AODestroy()`
 @*/
 PetscErrorCode AOCreateBasicIS(IS isapp,IS ispetsc,AO *aoout)
 {

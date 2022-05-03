@@ -419,13 +419,13 @@ static PetscErrorCode VecTaggerSetFromOptions_CDF(PetscOptionItems *PetscOptions
 
   PetscFunctionBegin;
   PetscCall(VecTaggerSetFromOptions_Simple(PetscOptionsObject,tagger));
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"VecTagger options for CDF boxes"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"VecTagger options for CDF boxes");
   PetscCall(PetscOptionsEList("-vec_tagger_cdf_method","Method for computing absolute boxes from CDF boxes","VecTaggerCDFSetMethod()",VecTaggerCDFMethods,VECTAGGER_CDF_NUM_METHODS,VecTaggerCDFMethods[cuml->method],&method,&set));
   if (set) cuml->method = (VecTaggerCDFMethod) method;
   PetscCall(PetscOptionsInt("-vec_tagger_cdf_max_it","Maximum iterations for iterative computation of absolute boxes from CDF boxes","VecTaggerCDFIterativeSetTolerances()",cuml->maxit,&cuml->maxit,NULL));
   PetscCall(PetscOptionsReal("-vec_tagger_cdf_rtol","Maximum relative tolerance for iterative computation of absolute boxes from CDF boxes","VecTaggerCDFIterativeSetTolerances()",cuml->rtol,&cuml->rtol,NULL));
   PetscCall(PetscOptionsReal("-vec_tagger_cdf_atol","Maximum absolute tolerance for iterative computation of absolute boxes from CDF boxes","VecTaggerCDFIterativeSetTolerances()",cuml->atol,&cuml->atol,NULL));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -440,7 +440,7 @@ static PetscErrorCode VecTaggerSetFromOptions_CDF(PetscOptionItems *PetscOptions
 + tagger - the VecTagger context
 - method - the method
 
-.seealso VecTaggerCDFMethod
+.seealso `VecTaggerCDFMethod`
 @*/
 PetscErrorCode VecTaggerCDFSetMethod(VecTagger tagger, VecTaggerCDFMethod method)
 {
@@ -466,7 +466,7 @@ PetscErrorCode VecTaggerCDFSetMethod(VecTagger tagger, VecTaggerCDFMethod method
   Output Parameters:
 . method - the method
 
-.seealso VecTaggerCDFMethod
+.seealso `VecTaggerCDFMethod`
 @*/
 PetscErrorCode VecTaggerCDFGetMethod(VecTagger tagger, VecTaggerCDFMethod *method)
 {
@@ -492,7 +492,7 @@ PetscErrorCode VecTaggerCDFGetMethod(VecTagger tagger, VecTaggerCDFMethod *metho
 
   Level: advanced
 
-.seealso: VecTaggerCDFSetMethod()
+.seealso: `VecTaggerCDFSetMethod()`
 @*/
 PetscErrorCode VecTaggerCDFIterativeSetTolerances(VecTagger tagger, PetscInt maxit, PetscReal rtol, PetscReal atol)
 {
@@ -524,7 +524,7 @@ PetscErrorCode VecTaggerCDFIterativeSetTolerances(VecTagger tagger, PetscInt max
 
   Level: advanced
 
-.seealso: VecTaggerCDFSetMethod()
+.seealso: `VecTaggerCDFSetMethod()`
 @*/
 PetscErrorCode VecTaggerCDFIterativeGetTolerances(VecTagger tagger, PetscInt *maxit, PetscReal *rtol, PetscReal *atol)
 {
@@ -549,7 +549,7 @@ PetscErrorCode VecTaggerCDFIterativeGetTolerances(VecTagger tagger, PetscInt *ma
 
   Level: advanced
 
-.seealso: VecTaggerCDFGetBox()
+.seealso: `VecTaggerCDFGetBox()`
 @*/
 PetscErrorCode VecTaggerCDFSetBox(VecTagger tagger,VecTaggerBox *box)
 {
@@ -571,7 +571,7 @@ PetscErrorCode VecTaggerCDFSetBox(VecTagger tagger,VecTaggerBox *box)
 
   Level: advanced
 
-.seealso: VecTaggerCDFSetBox()
+.seealso: `VecTaggerCDFSetBox()`
 @*/
 PetscErrorCode VecTaggerCDFGetBox(VecTagger tagger,const VecTaggerBox **box)
 {

@@ -118,8 +118,6 @@ static PetscErrorCode SetupWorkspace(UserCtx ctx)
 
 static PetscErrorCode ConfigureContext(UserCtx ctx)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   ctx->m        = 16;
   ctx->n        = 16;
@@ -136,7 +134,7 @@ static PetscErrorCode ConfigureContext(UserCtx ctx)
   ctx->p        = NORM_2;
   ctx->taylor   = PETSC_TRUE;
   ctx->use_admm = PETSC_FALSE;
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "Configure separable objection example", "ex4.c");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "Configure separable objection example", "ex4.c");
   PetscCall(PetscOptionsInt("-m", "The row dimension of matrix F", "ex4.c", ctx->m, &(ctx->m), NULL));
   PetscCall(PetscOptionsInt("-n", "The column dimension of matrix F", "ex4.c", ctx->n, &(ctx->n), NULL));
   PetscCall(PetscOptionsInt("-matrix_format","Decide format of F matrix. 0 for stencil, 1 for random", "ex4.c", ctx->matops, &(ctx->matops), NULL));
@@ -152,7 +150,7 @@ static PetscErrorCode ConfigureContext(UserCtx ctx)
   PetscCall(PetscOptionsBool("-taylor","Flag for Taylor test. Default is true.", "ex4.c", ctx->taylor, &(ctx->taylor), NULL));
   PetscCall(PetscOptionsBool("-use_admm","Use the ADMM solver in this example.", "ex4.c", ctx->use_admm, &(ctx->use_admm), NULL));
   PetscCall(PetscOptionsEnum("-p","Norm type.", "ex4.c", NormTypes, (PetscEnum)ctx->p, (PetscEnum *) &(ctx->p), NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   /* Creating random ctx */
   PetscCall(PetscRandomCreate(PETSC_COMM_WORLD,&(ctx->rctx)));
   PetscCall(PetscRandomSetFromOptions(ctx->rctx));
@@ -547,7 +545,7 @@ static PetscErrorCode TaoSolveADMM(UserCtx ctx,  Vec x)
     /* Duality : sqrt(n)*ABSTOL + RELTOL*norm(mu*u)*/
     PetscCall(VecNorm(u,NORM_2,&u_norm));
     dual = PetscSqrtReal(ctx->n)*ctx->abstol + ctx->reltol*u_norm*mu;
-    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)tao1),"Iter %D : ||x-z||: %g, mu*||z-zold||: %g\n", i, (double) r_norm, (double) s_norm));
+    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)tao1),"Iter %" PetscInt_FMT " : ||x-z||: %g, mu*||z-zold||: %g\n", i, (double) r_norm, (double) s_norm));
     if (r_norm < primal && s_norm < dual) break;
   }
   PetscCall(VecCopy(xk, x));
@@ -596,7 +594,7 @@ static PetscErrorCode TaylorTest(UserCtx ctx, Tao tao, Vec x, PetscReal *C)
   }
   for (j=1; j<numValues; j++) {
     temp    = PetscLogReal(Js[j]/Js[j-1]) / PetscLogReal (hs[j]/hs[j-1]);
-    PetscCall(PetscPrintf (comm, "Convergence rate step %D: %g\n", j-1, (double) temp));
+    PetscCall(PetscPrintf (comm, "Convergence rate step %" PetscInt_FMT ": %g\n", j-1, (double) temp));
     minrate = PetscMin(minrate, temp);
   }
   /* If O is not ~2, then the test is wrong */

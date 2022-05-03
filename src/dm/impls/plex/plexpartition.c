@@ -88,7 +88,7 @@ static PetscErrorCode DMPlexCreatePartitionerGraph_Overlap(DM dm, PetscInt heigh
         vAdj[off++] = DMPlex_GlobalID(cellNum[point]);
       }
     }
-    PetscCheck(off == vOffsets[v+1],PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Offsets %D should be %D", off, vOffsets[v+1]);
+    PetscCheck(off == vOffsets[v+1],PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Offsets %" PetscInt_FMT " should be %" PetscInt_FMT, off, vOffsets[v+1]);
     /* Sort adjacencies (not strictly necessary) */
     PetscCall(PetscSortInt(off-vOffsets[v], &vAdj[vOffsets[v]]));
     ++v;
@@ -458,7 +458,7 @@ static PetscErrorCode DMPlexCreatePartitionerGraph_ViaMat(DM dm, PetscInt height
         idxs[c++] = jj[j];
       }
     }
-    PetscCheck(c == ii[m] - m,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unexpected %D != %D",c,ii[m]-m);
+    PetscCheck(c == ii[m] - m,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unexpected %" PetscInt_FMT " != %" PetscInt_FMT,c,ii[m]-m);
     PetscCall(ISRestoreIndices(cis_own, &rows));
     *adjacency = idxs;
   }
@@ -492,7 +492,7 @@ static PetscErrorCode DMPlexCreatePartitionerGraph_ViaMat(DM dm, PetscInt height
 
   Level: developer
 
-.seealso: PetscPartitionerGetType(), PetscPartitionerCreate(), DMSetAdjacency()
+.seealso: `PetscPartitionerGetType()`, `PetscPartitionerCreate()`, `DMSetAdjacency()`
 @*/
 PetscErrorCode DMPlexCreatePartitionerGraph(DM dm, PetscInt height, PetscInt *numVertices, PetscInt **offsets, PetscInt **adjacency, IS *globalNumbering)
 {
@@ -529,7 +529,7 @@ PetscErrorCode DMPlexCreatePartitionerGraph(DM dm, PetscInt height, PetscInt *nu
 
   Level: advanced
 
-.seealso: DMPlexCreate()
+.seealso: `DMPlexCreate()`
 @*/
 PetscErrorCode DMPlexCreateNeighborCSR(DM dm, PetscInt cellHeight, PetscInt *numVertices, PetscInt **offsets, PetscInt **adjacency)
 {
@@ -599,7 +599,7 @@ PetscErrorCode DMPlexCreateNeighborCSR(DM dm, PetscInt cellHeight, PetscInt *num
           }
         }
       }
-      for (c = 0; c < cEnd-cStart; ++c) PetscAssert(tmp[c] == off[c+1],PETSC_COMM_SELF, PETSC_ERR_PLIB, "Offset %d != %d for cell %d", tmp[c], off[c], c+cStart);
+      for (c = 0; c < cEnd-cStart; ++c) PetscAssert(tmp[c] == off[c+1],PETSC_COMM_SELF, PETSC_ERR_PLIB, "Offset %" PetscInt_FMT " != %" PetscInt_FMT " for cell %" PetscInt_FMT, tmp[c], off[c], c+cStart);
       PetscCall(PetscFree(tmp));
     }
     if (numVertices) *numVertices = numCells;
@@ -727,7 +727,7 @@ PetscErrorCode DMPlexCreateNeighborCSR(DM dm, PetscInt cellHeight, PetscInt *num
 
   Level: developer
 
-.seealso DMPlexDistribute(), PetscPartitionerCreate(), PetscSectionCreate(), PetscSectionSetChart(), PetscPartitionerPartition()
+.seealso `DMPlexDistribute()`, `PetscPartitionerCreate()`, `PetscSectionCreate()`, `PetscSectionSetChart()`, `PetscPartitionerPartition()`
 @*/
 PetscErrorCode PetscPartitionerDMPlexPartition(PetscPartitioner part, DM dm, PetscSection targetSection, PetscSection partSection, IS *partition)
 {
@@ -817,7 +817,7 @@ PetscErrorCode PetscPartitionerDMPlexPartition(PetscPartitioner part, DM dm, Pet
             dof += clDof;
           }
         }
-        PetscCheck(dof,PETSC_COMM_SELF,PETSC_ERR_SUP,"Number of dofs for point %D in the local section should be positive",p);
+        PetscCheck(dof,PETSC_COMM_SELF,PETSC_ERR_SUP,"Number of dofs for point %" PetscInt_FMT " in the local section should be positive",p);
         PetscCall(PetscSectionSetDof(vertSection, v, dof));
         v++;
       }
@@ -859,7 +859,7 @@ PetscErrorCode PetscPartitionerDMPlexPartition(PetscPartitioner part, DM dm, Pet
       PetscCall(ISDestroy(partition));
       *partition = newPartition;
     }
-  } else SETERRQ(PetscObjectComm((PetscObject) part), PETSC_ERR_ARG_OUTOFRANGE, "Invalid height %D for points to partition", part->height);
+  } else SETERRQ(PetscObjectComm((PetscObject) part), PETSC_ERR_ARG_OUTOFRANGE, "Invalid height %" PetscInt_FMT " for points to partition", part->height);
   PetscCall(PetscSectionDestroy(&vertSection));
   PetscFunctionReturn(0);
 }
@@ -879,7 +879,7 @@ PetscErrorCode PetscPartitionerDMPlexPartition(PetscPartitioner part, DM dm, Pet
 
   Note: This gets a borrowed reference, so the user should not destroy this PetscPartitioner.
 
-.seealso DMPlexDistribute(), DMPlexSetPartitioner(), PetscPartitionerDMPlexPartition(), PetscPartitionerCreate()
+.seealso `DMPlexDistribute()`, `DMPlexSetPartitioner()`, `PetscPartitionerDMPlexPartition()`, `PetscPartitionerCreate()`
 @*/
 PetscErrorCode DMPlexGetPartitioner(DM dm, PetscPartitioner *part)
 {
@@ -905,7 +905,7 @@ PetscErrorCode DMPlexGetPartitioner(DM dm, PetscPartitioner *part)
 
   Note: Any existing PetscPartitioner will be destroyed.
 
-.seealso DMPlexDistribute(), DMPlexGetPartitioner(), PetscPartitionerCreate()
+.seealso `DMPlexDistribute()`, `DMPlexGetPartitioner()`, `PetscPartitionerCreate()`
 @*/
 PetscErrorCode DMPlexSetPartitioner(DM dm, PetscPartitioner part)
 {
@@ -1079,7 +1079,7 @@ PetscErrorCode DMPlexClosurePoints_Private(DM dm, PetscInt numPoints, const Pets
 
   Level: developer
 
-.seealso: DMPlexPartitionLabelCreateSF(), DMPlexDistribute(), DMPlexCreateOverlap()
+.seealso: `DMPlexPartitionLabelCreateSF()`, `DMPlexDistribute()`, `DMPlexCreateOverlap()`
 @*/
 PetscErrorCode DMPlexPartitionLabelClosure(DM dm, DMLabel label)
 {
@@ -1116,7 +1116,7 @@ PetscErrorCode DMPlexPartitionLabelClosure(DM dm, DMLabel label)
 
   Level: developer
 
-.seealso: DMPlexPartitionLabelCreateSF(), DMPlexDistribute(), DMPlexCreateOverlap()
+.seealso: `DMPlexPartitionLabelCreateSF()`, `DMPlexDistribute()`, `DMPlexCreateOverlap()`
 @*/
 PetscErrorCode DMPlexPartitionLabelAdjacency(DM dm, DMLabel label)
 {
@@ -1161,7 +1161,7 @@ PetscErrorCode DMPlexPartitionLabelAdjacency(DM dm, DMLabel label)
   Note: This is required when generating multi-level overlaps to capture
   overlap points from non-neighbouring partitions.
 
-.seealso: DMPlexPartitionLabelCreateSF(), DMPlexDistribute(), DMPlexCreateOverlap()
+.seealso: `DMPlexPartitionLabelCreateSF()`, `DMPlexDistribute()`, `DMPlexCreateOverlap()`
 @*/
 PetscErrorCode DMPlexPartitionLabelPropagate(DM dm, DMLabel label)
 {
@@ -1226,7 +1226,7 @@ PetscErrorCode DMPlexPartitionLabelPropagate(DM dm, DMLabel label)
 
   Level: developer
 
-.seealso: DMPlexPartitionLabelCreateSF(), DMPlexDistribute(), DMPlexCreateOverlap()
+.seealso: `DMPlexPartitionLabelCreateSF()`, `DMPlexDistribute()`, `DMPlexCreateOverlap()`
 @*/
 PetscErrorCode DMPlexPartitionLabelInvert(DM dm, DMLabel rootLabel, PetscSF processSF, DMLabel leafLabel)
 {
@@ -1359,7 +1359,7 @@ PetscErrorCode DMPlexPartitionLabelInvert(DM dm, DMLabel rootLabel, PetscSF proc
 
   Level: developer
 
-.seealso: DMPlexDistribute(), DMPlexCreateOverlap()
+.seealso: `DMPlexDistribute()`, `DMPlexCreateOverlap()`
 @*/
 PetscErrorCode DMPlexPartitionLabelCreateSF(DM dm, DMLabel label, PetscSF *sf)
 {
@@ -1613,7 +1613,7 @@ static PetscErrorCode DMPlexViewDistribution(MPI_Comm comm, PetscInt n, PetscInt
     if (distribution[i]>max) max=distribution[i];
     sum += distribution[i];
   }
-  PetscCall(PetscViewerASCIIPrintf(viewer, "Min: %D, Avg: %D, Max: %D, Balance: %f\n", min, sum/size, max, (max*1.*size)/sum));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "Min: %" PetscInt_FMT ", Avg: %" PetscInt_FMT ", Max: %" PetscInt_FMT ", Balance: %f\n", min, sum/size, max, (max*1.*size)/sum));
   PetscCall(PetscFree(distribution));
   PetscFunctionReturn(0);
 }
@@ -1846,8 +1846,8 @@ PetscErrorCode DMPlexRebalanceSharedPoints(DM dm, PetscInt entityDepth, PetscBoo
   }
 
   if (viewer) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "Attempt rebalancing of shared points of depth %D on interface of mesh distribution.\n", entityDepth));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "Size of generated auxiliary graph: %D\n", cumSumVertices[size]));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Attempt rebalancing of shared points of depth %" PetscInt_FMT " on interface of mesh distribution.\n", entityDepth));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Size of generated auxiliary graph: %" PetscInt_FMT "\n", cumSumVertices[size]));
   }
   if (parallel) {
     PetscCall(PetscMalloc1(4, &options));
@@ -1994,7 +1994,7 @@ PetscErrorCode DMPlexRebalanceSharedPoints(DM dm, PetscInt entityDepth, PetscBoo
 
   /*Let's check how well we did distributing points*/
   if (viewer) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "Comparing number of owned entities of depth %D on each process before rebalancing, after rebalancing, and after consistency checks.\n", entityDepth));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Comparing number of owned entities of depth %" PetscInt_FMT " on each process before rebalancing, after rebalancing, and after consistency checks.\n", entityDepth));
     PetscCall(PetscViewerASCIIPrintf(viewer, "Initial.     "));
     PetscCall(DMPlexViewDistribution(comm, cumSumVertices[rank+1]-cumSumVertices[rank], ncon, vtxwgt, NULL, viewer));
     PetscCall(PetscViewerASCIIPrintf(viewer, "Rebalanced.  "));

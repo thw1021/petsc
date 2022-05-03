@@ -49,7 +49,7 @@ static PetscErrorCode PCApplyRichardson_SOR(PC pc,Vec b,Vec y,Vec w,PetscReal rt
   MatSORType     stype = jac->sym;
 
   PetscFunctionBegin;
-  PetscCall(PetscInfo(pc,"Warning, convergence critera ignored, using %D iterations\n",its));
+  PetscCall(PetscInfo(pc,"Warning, convergence critera ignored, using %" PetscInt_FMT " iterations\n",its));
   if (guesszero) stype = (MatSORType) (stype | SOR_ZERO_INITIAL_GUESS);
   PetscCall(MatSOR(pc->pmat,b,jac->omega,stype,jac->fshift,its*jac->its,jac->lits,y));
   PetscCall(MatFactorGetError(pc->pmat,(MatFactorError*)&pc->failedreason));
@@ -64,7 +64,7 @@ PetscErrorCode PCSetFromOptions_SOR(PetscOptionItems *PetscOptionsObject,PC pc)
   PetscBool      flg;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"(S)SOR options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"(S)SOR options");
   PetscCall(PetscOptionsReal("-pc_sor_omega","relaxation factor (0 < omega < 2)","PCSORSetOmega",jac->omega,&jac->omega,NULL));
   PetscCall(PetscOptionsReal("-pc_sor_diagonal_shift","Add to the diagonal entries","",jac->fshift,&jac->fshift,NULL));
   PetscCall(PetscOptionsInt("-pc_sor_its","number of inner SOR iterations","PCSORSetIterations",jac->its,&jac->its,NULL));
@@ -81,7 +81,7 @@ PetscErrorCode PCSetFromOptions_SOR(PetscOptionItems *PetscOptionsObject,PC pc)
   if (flg) PetscCall(PCSORSetSymmetric(pc,SOR_LOCAL_BACKWARD_SWEEP));
   PetscCall(PetscOptionsBoolGroupEnd("-pc_sor_local_forward","use forward sweep locally","PCSORSetSymmetric",&flg));
   if (flg) PetscCall(PCSORSetSymmetric(pc,SOR_LOCAL_FORWARD_SWEEP));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -106,7 +106,7 @@ PetscErrorCode PCView_SOR(PC pc,PetscViewer viewer)
     else if (sym & SOR_LOCAL_FORWARD_SWEEP)                                  sortype = "local_forward";
     else if (sym & SOR_LOCAL_BACKWARD_SWEEP)                                 sortype = "local_backward";
     else                                                                     sortype = "unknown";
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  type = %s, iterations = %D, local iterations = %D, omega = %g\n",sortype,jac->its,jac->lits,(double)jac->omega));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  type = %s, iterations = %" PetscInt_FMT ", local iterations = %" PetscInt_FMT ", omega = %g\n",sortype,jac->its,jac->lits,(double)jac->omega));
   }
   PetscFunctionReturn(0);
 }
@@ -126,7 +126,7 @@ static PetscErrorCode  PCSORSetOmega_SOR(PC pc,PetscReal omega)
   PC_SOR *jac = (PC_SOR*)pc->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(omega >= 2.0 || omega <= 0.0,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Relaxation out of range");
+  PetscCheck(omega > 0.0 && omega < 2.0,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Relaxation out of range");
   jac->omega = omega;
   PetscFunctionReturn(0);
 }
@@ -204,7 +204,7 @@ static PetscErrorCode  PCSORGetIterations_SOR(PC pc,PetscInt *its,PetscInt *lits
 
    Level: intermediate
 
-.seealso: PCEisenstatSetOmega(), PCSORSetIterations(), PCSORSetOmega(), PCSORSetSymmetric()
+.seealso: `PCEisenstatSetOmega()`, `PCSORSetIterations()`, `PCSORSetOmega()`, `PCSORSetSymmetric()`
 @*/
 PetscErrorCode  PCSORGetSymmetric(PC pc,MatSORType *flag)
 {
@@ -231,7 +231,7 @@ PetscErrorCode  PCSORGetSymmetric(PC pc,MatSORType *flag)
 
    Level: intermediate
 
-.seealso: PCSORSetSymmetric(), PCSORSetIterations(), PCEisenstatSetOmega(), PCSORSetOmega()
+.seealso: `PCSORSetSymmetric()`, `PCSORSetIterations()`, `PCEisenstatSetOmega()`, `PCSORSetOmega()`
 @*/
 PetscErrorCode  PCSORGetOmega(PC pc,PetscReal *omega)
 {
@@ -263,7 +263,7 @@ PetscErrorCode  PCSORGetOmega(PC pc,PetscReal *omega)
    Notes:
     When run on one processor the number of smoothings is lits*its
 
-.seealso: PCSORSetOmega(), PCSORSetSymmetric(), PCSORSetIterations()
+.seealso: `PCSORSetOmega()`, `PCSORSetSymmetric()`, `PCSORSetIterations()`
 @*/
 PetscErrorCode  PCSORGetIterations(PC pc,PetscInt *its,PetscInt *lits)
 {
@@ -306,7 +306,7 @@ PetscErrorCode  PCSORGetIterations(PC pc,PetscInt *its,PetscInt *lits)
 
    Level: intermediate
 
-.seealso: PCEisenstatSetOmega(), PCSORSetIterations(), PCSORSetOmega()
+.seealso: `PCEisenstatSetOmega()`, `PCSORSetIterations()`, `PCSORSetOmega()`
 @*/
 PetscErrorCode  PCSORSetSymmetric(PC pc,MatSORType flag)
 {
@@ -335,7 +335,7 @@ PetscErrorCode  PCSORSetSymmetric(PC pc,MatSORType flag)
    Note:
    If omega != 1, you will need to set the MAT_USE_INODES option to PETSC_FALSE on the matrix.
 
-.seealso: PCSORSetSymmetric(), PCSORSetIterations(), PCEisenstatSetOmega(), MatSetOption()
+.seealso: `PCSORSetSymmetric()`, `PCSORSetIterations()`, `PCEisenstatSetOmega()`, `MatSetOption()`
 @*/
 PetscErrorCode  PCSORSetOmega(PC pc,PetscReal omega)
 {
@@ -366,7 +366,7 @@ PetscErrorCode  PCSORSetOmega(PC pc,PetscReal omega)
    Notes:
     When run on one processor the number of smoothings is lits*its
 
-.seealso: PCSORSetOmega(), PCSORSetSymmetric()
+.seealso: `PCSORSetOmega()`, `PCSORSetSymmetric()`
 @*/
 PetscErrorCode  PCSORSetIterations(PC pc,PetscInt its,PetscInt lits)
 {
@@ -414,8 +414,8 @@ PetscErrorCode  PCSORSetIterations(PC pc,PetscInt its,PetscInt lits)
 
           If omega != 1, you will need to set the MAT_USE_INODES option to PETSC_FALSE on the matrix.
 
-.seealso:  PCCreate(), PCSetType(), PCType (for list of available types), PC,
-           PCSORSetIterations(), PCSORSetSymmetric(), PCSORSetOmega(), PCEISENSTAT, MatSetOption()
+.seealso: `PCCreate()`, `PCSetType()`, `PCType`, `PC`,
+          `PCSORSetIterations()`, `PCSORSetSymmetric()`, `PCSORSetOmega()`, `PCEISENSTAT`, `MatSetOption()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_SOR(PC pc)

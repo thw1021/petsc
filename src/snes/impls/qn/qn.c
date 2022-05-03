@@ -36,7 +36,7 @@ static PetscErrorCode SNESSolve_QN(SNES snes)
   /* basically just a regular newton's method except for the application of the Jacobian */
 
   PetscFunctionBegin;
-  PetscCheckFalse(snes->xl || snes->xu || snes->ops->computevariablebounds,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
+  PetscCheck(!snes->xl && !snes->xu && !snes->ops->computevariablebounds,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
 
   PetscCall(PetscCitationsRegister(SNESCitation,&SNEScite));
   F    = snes->vec_func;                /* residual vector */
@@ -207,9 +207,9 @@ static PetscErrorCode SNESSolve_QN(SNES snes)
       if (qn->monflg) {
         PetscCall(PetscViewerASCIIAddTab(qn->monitor,((PetscObject)snes)->tablevel+2));
         if (powell) {
-          PetscCall(PetscViewerASCIIPrintf(qn->monitor, "Powell restart! |%14.12e| > %6.4f*|%14.12e| i_r = %D\n", (double)PetscRealPart(DolddotD), (double)qn->powell_gamma, (double)PetscRealPart(DolddotDold),i_r));
+          PetscCall(PetscViewerASCIIPrintf(qn->monitor, "Powell restart! |%14.12e| > %6.4f*|%14.12e| i_r = %" PetscInt_FMT "\n", (double)PetscRealPart(DolddotD), (double)qn->powell_gamma, (double)PetscRealPart(DolddotDold),i_r));
         } else {
-          PetscCall(PetscViewerASCIIPrintf(qn->monitor, "Periodic restart! i_r = %D\n", i_r));
+          PetscCall(PetscViewerASCIIPrintf(qn->monitor, "Periodic restart! i_r = %" PetscInt_FMT "\n", i_r));
         }
         PetscCall(PetscViewerASCIISubtractTab(qn->monitor,((PetscObject)snes)->tablevel+2));
       }
@@ -222,7 +222,7 @@ static PetscErrorCode SNESSolve_QN(SNES snes)
     }
   }
   if (i == snes->max_its) {
-    PetscCall(PetscInfo(snes, "Maximum number of iterations has been reached: %D\n", snes->max_its));
+    PetscCall(PetscInfo(snes, "Maximum number of iterations has been reached: %" PetscInt_FMT "\n", snes->max_its));
     if (!snes->reason) snes->reason = SNES_DIVERGED_MAX_IT;
   }
   PetscFunctionReturn(0);
@@ -334,7 +334,7 @@ static PetscErrorCode SNESSetFromOptions_QN(PetscOptionItems *PetscOptionsObject
   SNESQNType        qtype = qn->type;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"SNES QN options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"SNES QN options");
   PetscCall(PetscOptionsInt("-snes_qn_m","Number of past states saved for L-BFGS methods","SNESQN",qn->m,&qn->m,NULL));
   PetscCall(PetscOptionsReal("-snes_qn_powell_gamma","Powell angle tolerance",          "SNESQN", qn->powell_gamma, &qn->powell_gamma, NULL));
   PetscCall(PetscOptionsBool("-snes_qn_monitor",         "Monitor for the QN methods",      "SNESQN", qn->monflg, &qn->monflg, NULL));
@@ -347,7 +347,7 @@ static PetscErrorCode SNESSetFromOptions_QN(PetscOptionItems *PetscOptionsObject
   PetscCall(PetscOptionsEnum("-snes_qn_type","Quasi-Newton update type","",SNESQNTypes,(PetscEnum)qtype,(PetscEnum*)&qtype,&flg));
   if (flg) PetscCall(SNESQNSetType(snes,qtype));
   PetscCall(MatSetFromOptions(qn->B));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   if (!snes->linesearch) {
     PetscCall(SNESGetLineSearch(snes, &linesearch));
     if (!((PetscObject)linesearch)->type_name) {
@@ -375,7 +375,7 @@ static PetscErrorCode SNESView_QN(SNES snes, PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERASCII, &iascii));
   if (iascii) {
     PetscCall(PetscViewerASCIIPrintf(viewer,"  type is %s, restart type is %s, scale type is %s\n",SNESQNTypes[qn->type],SNESQNRestartTypes[qn->restart_type],SNESQNScaleTypes[qn->scale_type]));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Stored subspace size: %D\n", qn->m));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Stored subspace size: %" PetscInt_FMT "\n", qn->m));
   }
   PetscFunctionReturn(0);
 }
@@ -430,7 +430,7 @@ PetscErrorCode SNESQNSetRestartType(SNES snes, SNESQNRestartType rtype)
 -   SNES_QN_SCALE_JACOBIAN - scale by solving a linear system coming from the Jacobian you provided with SNESSetJacobian() computed at the first iteration
                              of QN and at ever restart.
 
-.seealso: SNES, SNESQN, SNESLineSearch, SNESQNScaleType, SNESSetJacobian()
+.seealso: `SNES`, `SNESQN`, `SNESLineSearch`, `SNESQNScaleType`, `SNESSetJacobian()`
 @*/
 
 PetscErrorCode SNESQNSetScaleType(SNES snes, SNESQNScaleType stype)
@@ -541,7 +541,7 @@ PetscErrorCode SNESQNSetType_QN(SNES snes, SNESQNType qtype)
 
       Level: beginner
 
-.seealso:  SNESCreate(), SNES, SNESSetType(), SNESNEWTONLS, SNESNEWTONTR
+.seealso: `SNESCreate()`, `SNES`, `SNESSetType()`, `SNESNEWTONLS`, `SNESNEWTONTR`
 
 M*/
 PETSC_EXTERN PetscErrorCode SNESCreate_QN(SNES snes)

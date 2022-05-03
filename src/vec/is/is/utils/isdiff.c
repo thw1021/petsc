@@ -24,7 +24,7 @@
 
    Level: intermediate
 
-.seealso: ISDestroy(), ISView(), ISSum(), ISExpand()
+.seealso: `ISDestroy()`, `ISView()`, `ISSum()`, `ISExpand()`
 @*/
 PetscErrorCode  ISDifference(IS is1,IS is2,IS *isout)
 {
@@ -110,7 +110,7 @@ PetscErrorCode  ISDifference(IS is1,IS is2,IS *isout)
 
    Level: intermediate
 
-.seealso: ISDestroy(), ISView(), ISDifference(), ISExpand()
+.seealso: `ISDestroy()`, `ISView()`, `ISDifference()`, `ISExpand()`
 
 @*/
 PetscErrorCode  ISSum(IS is1,IS is2,IS *is3)
@@ -126,7 +126,7 @@ PetscErrorCode  ISSum(IS is1,IS is2,IS *is3)
   PetscValidHeaderSpecific(is2,IS_CLASSID,2);
   PetscCall(PetscObjectGetComm((PetscObject)(is1),&comm));
   PetscCallMPI(MPI_Comm_size(comm,&size));
-  PetscCheckFalse(size>1,PETSC_COMM_SELF,PETSC_ERR_SUP,"Currently only for uni-processor IS");
+  PetscCheck(size<=1,PETSC_COMM_SELF,PETSC_ERR_SUP,"Currently only for uni-processor IS");
 
   PetscCall(ISSorted(is1,&f));
   PetscCheck(f,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Arg 1 is not sorted");
@@ -236,7 +236,7 @@ PetscErrorCode  ISSum(IS is1,IS is2,IS *is3)
 
    Level: intermediate
 
-.seealso: ISDestroy(), ISView(), ISDifference(), ISSum()
+.seealso: `ISDestroy()`, `ISView()`, `ISDifference()`, `ISSum()`
 
 @*/
 PetscErrorCode ISExpand(IS is1,IS is2,IS *isout)
@@ -251,7 +251,7 @@ PetscErrorCode ISExpand(IS is1,IS is2,IS *isout)
   if (is2) PetscValidHeaderSpecific(is2,IS_CLASSID,2);
   PetscValidPointer(isout,3);
 
-  PetscCheckFalse(!is1 && !is2,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Both arguments cannot be NULL");
+  PetscCheck(is1 || is2,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Both arguments cannot be NULL");
   if (!is1) {PetscCall(ISDuplicate(is2, isout));PetscFunctionReturn(0);}
   if (!is2) {PetscCall(ISDuplicate(is1, isout));PetscFunctionReturn(0);}
   PetscCall(ISGetIndices(is1,&i1));
@@ -319,7 +319,7 @@ PetscErrorCode ISExpand(IS is1,IS is2,IS *isout)
 
    Level: intermediate
 
-.seealso: ISDestroy(), ISView(), ISDifference(), ISSum(), ISExpand()
+.seealso: `ISDestroy()`, `ISView()`, `ISDifference()`, `ISSum()`, `ISExpand()`
 @*/
 PetscErrorCode ISIntersect(IS is1,IS is2,IS *isout)
 {
@@ -434,7 +434,7 @@ PetscErrorCode ISIntersect_Caching_Internal(IS is1, IS is2, IS *isect)
 
    Level: intermediate
 
-.seealso: ISDifference(), ISSum(), ISExpand()
+.seealso: `ISDifference()`, `ISSum()`, `ISExpand()`
 
 @*/
 PetscErrorCode ISConcatenate(MPI_Comm comm, PetscInt len, const IS islist[], IS *isout)
@@ -453,7 +453,7 @@ PetscErrorCode ISConcatenate(MPI_Comm comm, PetscInt len, const IS islist[], IS 
     PetscCall(ISCreateStride(comm, 0,0,0, isout));
     PetscFunctionReturn(0);
   }
-  PetscCheckFalse(len < 0,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Negative array length: %" PetscInt_FMT, len);
+  PetscCheck(len >= 0,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Negative array length: %" PetscInt_FMT, len);
   N = 0;
   for (i = 0; i < len; ++i) {
     if (islist[i]) {
@@ -507,7 +507,7 @@ PetscErrorCode ISConcatenate(MPI_Comm comm, PetscInt len, const IS islist[], IS 
   Equivalently, the local numbers of the subcomms on each local list are drawn from some global
   numbering. This is ensured, for example, by ISPairToList().
 
-.seealso ISPairToList()
+.seealso `ISPairToList()`
 @*/
 PetscErrorCode ISListToPair(MPI_Comm comm, PetscInt listlen, IS islist[], IS *xis, IS *yis)
 {
@@ -565,7 +565,7 @@ PetscErrorCode ISListToPair(MPI_Comm comm, PetscInt listlen, IS islist[], IS *xi
 
   Level: advanced
 
-.seealso ISListToPair()
+.seealso `ISListToPair()`
  @*/
 PetscErrorCode ISPairToList(IS xis, IS yis, PetscInt *listlen, IS **islist)
 {
@@ -587,7 +587,7 @@ PetscErrorCode ISPairToList(IS xis, IS yis, PetscInt *listlen, IS **islist)
   /* Extract, copy and sort the local indices and colors on the color. */
   PetscCall(ISGetLocalSize(coloris, &llen));
   PetscCall(ISGetLocalSize(indis,   &ilen));
-  PetscCheckFalse(llen != ilen,comm, PETSC_ERR_ARG_SIZ, "Incompatible IS sizes: %" PetscInt_FMT " and %" PetscInt_FMT, ilen, llen);
+  PetscCheck(llen == ilen,comm, PETSC_ERR_ARG_SIZ, "Incompatible IS sizes: %" PetscInt_FMT " and %" PetscInt_FMT, ilen, llen);
   PetscCall(ISGetIndices(coloris, &ccolors));
   PetscCall(ISGetIndices(indis, &cinds));
   PetscCall(PetscMalloc2(ilen,&inds,llen,&colors));
@@ -633,7 +633,7 @@ PetscErrorCode ISPairToList(IS xis, IS yis, PetscInt *listlen, IS **islist)
           while (lend < llen && colors[lend] == colors[lstart]) ++lend;
         }
         /* Now check whether the identified color segment matches l. */
-        PetscCheckFalse(colors[lstart] < l,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Locally owned color %" PetscInt_FMT " at location %" PetscInt_FMT " is < than the next global color %" PetscInt_FMT, colors[lstart], lcount, l);
+        PetscCheck(colors[lstart] >= l,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Locally owned color %" PetscInt_FMT " at location %" PetscInt_FMT " is < than the next global color %" PetscInt_FMT, colors[lstart], lcount, l);
       }
       color = (PetscMPIInt)(colors[lstart] == l);
       /* Check whether a proper subcommunicator exists. */
@@ -691,7 +691,7 @@ PetscErrorCode ISPairToList(IS xis, IS yis, PetscInt *listlen, IS **islist)
 
   Level: advanced
 
-.seealso ISLocalToGlobalMapping
+.seealso `ISLocalToGlobalMapping`
  @*/
 PetscErrorCode ISEmbed(IS a, IS b, PetscBool drop, IS *c)
 {
@@ -740,7 +740,7 @@ PetscErrorCode ISEmbed(IS a, IS b, PetscBool drop, IS *c)
 
   Level: advanced
 
-.seealso ISLocalToGlobalMapping, ISSort()
+.seealso `ISLocalToGlobalMapping`, `ISSort()`
  @*/
 PetscErrorCode ISSortPermutation(IS f,PetscBool always,IS *h)
 {

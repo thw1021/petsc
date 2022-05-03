@@ -20,9 +20,9 @@ typedef struct {
 } MatPartitioning_Parmetis;
 
 #define PetscCallPARMETIS(n,func) do { \
-    PetscCheckFalse(n == METIS_ERROR_INPUT,PETSC_COMM_SELF,PETSC_ERR_LIB,"ParMETIS error due to wrong inputs and/or options for %s",func); \
-    else PetscCheckFalse(n == METIS_ERROR_MEMORY,PETSC_COMM_SELF,PETSC_ERR_LIB,"ParMETIS error due to insufficient memory in %s",func); \
-    else PetscCheckFalse(n == METIS_ERROR,PETSC_COMM_SELF,PETSC_ERR_LIB,"ParMETIS general error in %s",func); \
+    PetscCheck(n != METIS_ERROR_INPUT,PETSC_COMM_SELF,PETSC_ERR_LIB,"ParMETIS error due to wrong inputs and/or options for %s",func); \
+    else PetscCheck(n != METIS_ERROR_MEMORY,PETSC_COMM_SELF,PETSC_ERR_LIB,"ParMETIS error due to insufficient memory in %s",func); \
+    else PetscCheck(n != METIS_ERROR,PETSC_COMM_SELF,PETSC_ERR_LIB,"ParMETIS general error in %s",func); \
   } while (0)
 
 #define PetscStackCallParmetis_(name,func,args) do {    \
@@ -75,7 +75,7 @@ static PetscErrorCode MatPartitioningApply_Parmetis_Private(MatPartitioning part
       PetscCall(MatGetOwnershipRange(pmat,&rstart,NULL));
       for (i=0; i<pmat->rmap->n; i++) {
         for (j=xadj[i]; j<xadj[i+1]; j++) {
-          PetscCheckFalse(adjncy[j] == i+rstart,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Row %" PetscInt_FMT " has diagonal entry; Parmetis forbids diagonal entry",i+rstart);
+          PetscCheck(adjncy[j] != i+rstart,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Row %" PetscInt_FMT " has diagonal entry; Parmetis forbids diagonal entry",i+rstart);
         }
       }
     }
@@ -325,7 +325,7 @@ PetscErrorCode MatPartitioningSetFromOptions_Parmetis(PetscOptionItems *PetscOpt
   PetscBool      flag = PETSC_FALSE;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Set ParMeTiS partitioning options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Set ParMeTiS partitioning options");
   PetscCall(PetscOptionsBool("-mat_partitioning_parmetis_coarse_sequential","Use sequential coarse partitioner","MatPartitioningParmetisSetCoarseSequential",flag,&flag,NULL));
   if (flag) {
     PetscCall(MatPartitioningParmetisSetCoarseSequential(part));
@@ -334,7 +334,7 @@ PetscErrorCode MatPartitioningSetFromOptions_Parmetis(PetscOptionItems *PetscOpt
   if (flag) {
     PetscCall(MatPartitioningParmetisSetRepartition(part));
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -363,7 +363,7 @@ PetscErrorCode MatPartitioningDestroy_Parmetis(MatPartitioning part)
    Notes:
     See https://www-users.cs.umn.edu/~karypis/metis/
 
-.seealso: MatPartitioningSetType(), MatPartitioningType
+.seealso: `MatPartitioningSetType()`, `MatPartitioningType`
 
 M*/
 
@@ -415,7 +415,7 @@ PETSC_EXTERN PetscErrorCode MatPartitioningCreate_Parmetis(MatPartitioning part)
 
    Level: advanced
 
-.seealso: MatMeshToCellGraph(), MatCreateMPIAdj(), MatPartitioningCreate()
+.seealso: `MatMeshToCellGraph()`, `MatCreateMPIAdj()`, `MatPartitioningCreate()`
 
 @*/
 PetscErrorCode MatMeshToVertexGraph(Mat mesh,PetscInt ncommonnodes,Mat *dual)
@@ -450,7 +450,7 @@ $     The number of rows in mesh is number of cells, the number of columns is th
 
    Level: advanced
 
-.seealso: MatMeshToVertexGraph(), MatCreateMPIAdj(), MatPartitioningCreate()
+.seealso: `MatMeshToVertexGraph()`, `MatCreateMPIAdj()`, `MatPartitioningCreate()`
 
 @*/
 PetscErrorCode MatMeshToCellGraph(Mat mesh,PetscInt ncommonnodes,Mat *dual)

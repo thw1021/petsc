@@ -90,7 +90,7 @@ static PetscErrorCode MatMFFDCompute_DS(MatMFFD ctx,Vec U,Vec a,PetscScalar *h,P
     if (PetscAbsScalar(dot) < umin*sum && PetscRealPart(dot) >= 0.0) dot = umin*sum;
     else if (PetscAbsScalar(dot) < 0.0 && PetscRealPart(dot) > -umin*sum) dot = -umin*sum;
     *h = ctx->error_rel*dot/(nrm*nrm);
-    PetscCheckFalse(PetscIsInfOrNanScalar(*h),PETSC_COMM_SELF,PETSC_ERR_PLIB,"Differencing parameter is not a number sum = %g dot = %g norm = %g",(double)sum,(double)PetscRealPart(dot),(double)nrm);
+    PetscCheck(!PetscIsInfOrNanScalar(*h),PETSC_COMM_SELF,PETSC_ERR_PLIB,"Differencing parameter is not a number sum = %g dot = %g norm = %g",(double)sum,(double)PetscRealPart(dot),(double)nrm);
   } else {
     *h = ctx->currenth;
   }
@@ -139,9 +139,9 @@ static PetscErrorCode MatMFFDSetFromOptions_DS(PetscOptionItems *PetscOptionsObj
   MatMFFD_DS     *hctx = (MatMFFD_DS*)ctx->hctx;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Finite difference matrix free parameters"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Finite difference matrix free parameters");
   PetscCall(PetscOptionsReal("-mat_mffd_umin","umin","MatMFFDDSSetUmin",hctx->umin,&hctx->umin,NULL));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -194,7 +194,7 @@ PetscErrorCode MatMFFDDSSetUmin_DS(Mat mat,PetscReal umin)
    See the manual page for MatCreateSNESMF() for a complete description of the
    algorithm used to compute h.
 
-.seealso: MatMFFDSetFunctionError(), MatCreateSNESMF()
+.seealso: `MatMFFDSetFunctionError()`, `MatCreateSNESMF()`
 
 @*/
 PetscErrorCode  MatMFFDDSSetUmin(Mat A,PetscReal umin)
@@ -229,7 +229,7 @@ PetscErrorCode  MatMFFDDSSetUmin(Mat A,PetscReal umin)
      error_rel = square root of relative error in function evaluation
      umin = minimum iterate parameter
 
-.seealso: MATMFFD, MatCreateMFFD(), MatCreateSNESMF(), MATMFFD_WP, MatMFFDDSSetUmin()
+.seealso: `MATMFFD`, `MatCreateMFFD()`, `MatCreateSNESMF()`, `MATMFFD_WP`, `MatMFFDDSSetUmin()`
 
 M*/
 PETSC_EXTERN PetscErrorCode MatCreateMFFD_DS(MatMFFD ctx)

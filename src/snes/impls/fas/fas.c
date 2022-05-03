@@ -201,7 +201,7 @@ static PetscErrorCode SNESSetFromOptions_FAS(PetscOptionItems *PetscOptionsObjec
 
   PetscFunctionBegin;
   PetscCall(SNESFASCycleIsFine(snes, &isFine));
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"SNESFAS Options-----------------------------------"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"SNESFAS Options-----------------------------------");
 
   /* number of levels -- only process most options on the finest level */
   if (isFine) {
@@ -261,7 +261,7 @@ static PetscErrorCode SNESSetFromOptions_FAS(PetscOptionItems *PetscOptionsObjec
     if (flg) PetscCall(SNESFASSetLog(snes,monflg));
   }
 
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
 
   /* setup from the determined types if there is no pointwise procedure or smoother defined */
   if (upflg) {
@@ -299,7 +299,7 @@ static PetscErrorCode SNESView_FAS(SNES snes, PetscViewer viewer)
     PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
     PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERDRAW,&isdraw));
     if (iascii) {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "  type is %s, levels=%D, cycles=%D\n",  SNESFASTypes[fas->fastype], fas->levels, fas->n_cycles));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "  type is %s, levels=%" PetscInt_FMT ", cycles=%" PetscInt_FMT "\n",  SNESFASTypes[fas->fastype], fas->levels, fas->n_cycles));
       if (fas->galerkin) {
         PetscCall(PetscViewerASCIIPrintf(viewer,"  Using Galerkin computed coarse grid function evaluation\n"));
       } else {
@@ -310,9 +310,9 @@ static PetscErrorCode SNESView_FAS(SNES snes, PetscViewer viewer)
         PetscCall(SNESFASCycleGetSmootherUp(levelsnes, &smoothu));
         PetscCall(SNESFASCycleGetSmootherDown(levelsnes, &smoothd));
         if (!i) {
-          PetscCall(PetscViewerASCIIPrintf(viewer,"  Coarse grid solver -- level %D -------------------------------\n",i));
+          PetscCall(PetscViewerASCIIPrintf(viewer,"  Coarse grid solver -- level %" PetscInt_FMT " -------------------------------\n",i));
         } else {
-          PetscCall(PetscViewerASCIIPrintf(viewer,"  Down solver (pre-smoother) on level %D -------------------------------\n",i));
+          PetscCall(PetscViewerASCIIPrintf(viewer,"  Down solver (pre-smoother) on level %" PetscInt_FMT " -------------------------------\n",i));
         }
         PetscCall(PetscViewerASCIIPushTab(viewer));
         if (smoothd) {
@@ -324,7 +324,7 @@ static PetscErrorCode SNESView_FAS(SNES snes, PetscViewer viewer)
         if (i && (smoothd == smoothu)) {
           PetscCall(PetscViewerASCIIPrintf(viewer,"  Up solver (post-smoother) same as down solver (pre-smoother)\n"));
         } else if (i) {
-          PetscCall(PetscViewerASCIIPrintf(viewer,"  Up solver (post-smoother) on level %D -------------------------------\n",i));
+          PetscCall(PetscViewerASCIIPrintf(viewer,"  Up solver (post-smoother) on level %" PetscInt_FMT " -------------------------------\n",i));
           PetscCall(PetscViewerASCIIPushTab(viewer));
           if (smoothu) {
             PetscCall(SNESView(smoothu,viewer));
@@ -445,7 +445,7 @@ static PetscErrorCode SNESFASUpSmooth_Private(SNES snes, Vec B, Vec X, Vec F, Pe
 
    Level: developer
 
-.seealso: SNESFASSetRestriction(), SNESFASRestrict()
+.seealso: `SNESFASSetRestriction()`, `SNESFASRestrict()`
 @*/
 PetscErrorCode SNESFASCreateCoarseVec(SNES snes,Vec *Xcoarse)
 {
@@ -477,7 +477,7 @@ PetscErrorCode SNESFASCreateCoarseVec(SNES snes,Vec *Xcoarse)
 
    Level: developer
 
-.seealso: SNESFASSetRestriction(), SNESFASSetInjection()
+.seealso: `SNESFASSetRestriction()`, `SNESFASSetInjection()`
 @*/
 PetscErrorCode SNESFASRestrict(SNES fine,Vec Xfine,Vec Xcoarse)
 {
@@ -855,7 +855,7 @@ static PetscErrorCode SNESSolve_FAS(SNES snes)
   PetscBool      isFine;
 
   PetscFunctionBegin;
-  PetscCheckFalse(snes->xl || snes->xu || snes->ops->computevariablebounds,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
+  PetscCheck(!snes->xl && !snes->xu && !snes->ops->computevariablebounds,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
 
   PetscCall(PetscCitationsRegister(SNESCitation,&SNEScite));
   snes->reason = SNES_CONVERGED_ITERATING;
@@ -929,7 +929,7 @@ static PetscErrorCode SNESSolve_FAS(SNES snes)
     }
   }
   if (i == snes->max_its) {
-    PetscCall(PetscInfo(snes, "Maximum number of iterations has been reached: %D\n", i));
+    PetscCall(PetscInfo(snes, "Maximum number of iterations has been reached: %" PetscInt_FMT "\n", i));
     if (!snes->reason) snes->reason = SNES_DIVERGED_MAX_IT;
   }
   PetscFunctionReturn(0);
@@ -969,7 +969,7 @@ Level: beginner
 .  * - Peter R. Brune, Matthew G. Knepley, Barry F. Smith, and Xuemin Tu, "Composing Scalable Nonlinear Algebraic Solvers",
    SIAM Review, 57(4), 2015
 
-.seealso: PCMG, SNESCreate(), SNES, SNESSetType(), SNESType (for list of available types)
+.seealso: `PCMG`, `SNESCreate()`, `SNES`, `SNESSetType()`, `SNESType`
 M*/
 
 PETSC_EXTERN PetscErrorCode SNESCreate_FAS(SNES snes)

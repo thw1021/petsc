@@ -17,7 +17,7 @@
 
   Level: developer
 
-.seealso: PetscIntStackCreate(), PetscIntStackEmpty(), PetscIntStackPush(), PetscIntStackPop(), PetscIntStackTop()
+.seealso: `PetscIntStackCreate()`, `PetscIntStackEmpty()`, `PetscIntStackPush()`, `PetscIntStackPop()`, `PetscIntStackTop()`
 @*/
 PetscErrorCode PetscIntStackDestroy(PetscIntStack stack)
 {
@@ -40,7 +40,7 @@ PetscErrorCode PetscIntStackDestroy(PetscIntStack stack)
 
   Level: developer
 
-.seealso: PetscIntStackCreate(), PetscIntStackDestroy(), PetscIntStackPush(), PetscIntStackPop(), PetscIntStackTop()
+.seealso: `PetscIntStackCreate()`, `PetscIntStackDestroy()`, `PetscIntStackPush()`, `PetscIntStackPop()`, `PetscIntStackTop()`
 @*/
 PetscErrorCode PetscIntStackEmpty(PetscIntStack stack, PetscBool  *empty)
 {
@@ -64,7 +64,7 @@ PetscErrorCode PetscIntStackEmpty(PetscIntStack stack, PetscBool  *empty)
 
   Level: developer
 
-.seealso: PetscIntStackCreate(), PetscIntStackDestroy(), PetscIntStackEmpty(), PetscIntStackPush(), PetscIntStackPop()
+.seealso: `PetscIntStackCreate()`, `PetscIntStackDestroy()`, `PetscIntStackEmpty()`, `PetscIntStackPush()`, `PetscIntStackPop()`
 @*/
 PetscErrorCode PetscIntStackTop(PetscIntStack stack, int *top)
 {
@@ -85,7 +85,7 @@ PetscErrorCode PetscIntStackTop(PetscIntStack stack, int *top)
 
   Level: developer
 
-.seealso: PetscIntStackCreate(), PetscIntStackDestroy(), PetscIntStackEmpty(), PetscIntStackPop(), PetscIntStackTop()
+.seealso: `PetscIntStackCreate()`, `PetscIntStackDestroy()`, `PetscIntStackEmpty()`, `PetscIntStackPop()`, `PetscIntStackTop()`
 @*/
 PetscErrorCode PetscIntStackPush(PetscIntStack stack, int item)
 {
@@ -118,13 +118,13 @@ PetscErrorCode PetscIntStackPush(PetscIntStack stack, int item)
 
   Level: developer
 
-.seealso: PetscIntStackCreate(), PetscIntStackDestroy(), PetscIntStackEmpty(), PetscIntStackPush(), PetscIntStackTop()
+.seealso: `PetscIntStackCreate()`, `PetscIntStackDestroy()`, `PetscIntStackEmpty()`, `PetscIntStackPush()`, `PetscIntStackTop()`
 @*/
 PetscErrorCode PetscIntStackPop(PetscIntStack stack, int *item)
 {
   PetscFunctionBegin;
   PetscValidPointer(item,2);
-  PetscCheckFalse(stack->top == -1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "Stack is empty");
+  PetscCheck(stack->top != -1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE, "Stack is empty");
   *item = stack->stack[stack->top--];
   PetscFunctionReturn(0);
 }
@@ -139,7 +139,7 @@ PetscErrorCode PetscIntStackPop(PetscIntStack stack, int *item)
 
   Level: developer
 
-.seealso: PetscIntStackDestroy(), PetscIntStackEmpty(), PetscIntStackPush(), PetscIntStackPop(), PetscIntStackTop()
+.seealso: `PetscIntStackDestroy()`, `PetscIntStackEmpty()`, `PetscIntStackPush()`, `PetscIntStackPop()`, `PetscIntStackTop()`
 @*/
 PetscErrorCode PetscIntStackCreate(PetscIntStack *stack)
 {

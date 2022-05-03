@@ -63,7 +63,7 @@ PetscErrorCode PCSetFromOptions_BDDC(PetscOptionItems *PetscOptionsObject,PC pc)
   PetscInt       nt,i;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"BDDC options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"BDDC options");
   /* Verbose debugging */
   PetscCall(PetscOptionsInt("-pc_bddc_check_level","Verbose output for PCBDDC (intended for debug)","none",pcbddc->dbg_flag,&pcbddc->dbg_flag,NULL));
   /* Approximate solvers */
@@ -127,7 +127,7 @@ PetscErrorCode PCSetFromOptions_BDDC(PetscOptionItems *PetscOptionsObject,PC pc)
   PetscCall(PetscOptionsBool("-pc_bddc_detect_disconnected","Detects disconnected subdomains","none",pcbddc->detect_disconnected,&pcbddc->detect_disconnected,NULL));
   PetscCall(PetscOptionsBool("-pc_bddc_detect_disconnected_filter","Filters out small entries in the local matrix when detecting disconnected subdomains","none",pcbddc->detect_disconnected_filter,&pcbddc->detect_disconnected_filter,NULL));
   PetscCall(PetscOptionsBool("-pc_bddc_eliminate_dirichlet","Whether or not we want to eliminate dirichlet dofs during presolve","none",pcbddc->eliminate_dirdofs,&pcbddc->eliminate_dirdofs,NULL));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -152,7 +152,7 @@ static PetscErrorCode PCView_BDDC(PC pc,PetscViewer viewer)
     if (!pc->setupcalled) {
       PetscCall(PetscViewerASCIIPrintf(viewer,"  Partial information available: preconditioner has not been setup yet\n"));
     }
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Use verbose output: %D\n",pcbddc->dbg_flag));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Use verbose output: %" PetscInt_FMT "\n",pcbddc->dbg_flag));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  Use user-defined CSR: %d\n",!!pcbddc->mat_graph->nvtxs_csr));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  Use local mat graph: %d\n",pcbddc->use_local_adj && !pcbddc->mat_graph->nvtxs_csr));
     if (pcbddc->mat_graph->twodim) {
@@ -161,10 +161,10 @@ static PetscErrorCode PCView_BDDC(PC pc,PetscViewer viewer)
       PetscCall(PetscViewerASCIIPrintf(viewer,"  Connectivity graph topological dimension: 3\n"));
     }
     if (pcbddc->graphmaxcount != PETSC_MAX_INT) {
-      PetscCall(PetscViewerASCIIPrintf(viewer,"  Graph max count: %D\n",pcbddc->graphmaxcount));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"  Graph max count: %" PetscInt_FMT "\n",pcbddc->graphmaxcount));
     }
     PetscCall(PetscViewerASCIIPrintf(viewer,"  Corner selection: %d (selected %d)\n",pcbddc->corner_selection,pcbddc->corner_selected));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Use vertices: %d (vertex size %D)\n",pcbddc->use_vertices,pcbddc->vertex_size));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Use vertices: %d (vertex size %" PetscInt_FMT ")\n",pcbddc->use_vertices,pcbddc->vertex_size));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  Use edges: %d\n",pcbddc->use_edges));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  Use faces: %d\n",pcbddc->use_faces));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  Use true near null space: %d\n",pcbddc->use_nnsp_true));
@@ -177,26 +177,26 @@ static PetscErrorCode PCView_BDDC(PC pc,PetscViewer viewer)
     PetscCall(PetscViewerASCIIPrintf(viewer,"  Switch on static condensation ops around the interface preconditioner: %d\n",pcbddc->switch_static));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  Use exact dirichlet trick: %d\n",pcbddc->use_exact_dirichlet_trick));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  Interface extension: %s\n",PCBDDCInterfaceExtTypes[pcbddc->interface_extension]));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Multilevel max levels: %D\n",pcbddc->max_levels));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Multilevel coarsening ratio: %D\n",pcbddc->coarsening_ratio));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Multilevel max levels: %" PetscInt_FMT "\n",pcbddc->max_levels));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Multilevel coarsening ratio: %" PetscInt_FMT "\n",pcbddc->coarsening_ratio));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  Use estimated eigs for coarse problem: %d\n",pcbddc->use_coarse_estimates));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  Use deluxe scaling: %d\n",pcbddc->use_deluxe_scaling));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  Use deluxe zerorows: %d\n",pcbddc->deluxe_zerorows));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  Use deluxe singlemat: %d\n",pcbddc->deluxe_singlemat));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  Rebuild interface graph for Schur principal minors: %d\n",pcbddc->sub_schurs_rebuild));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Number of dofs' layers for the computation of principal minors: %D\n",pcbddc->sub_schurs_layers));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Number of dofs' layers for the computation of principal minors: %" PetscInt_FMT "\n",pcbddc->sub_schurs_layers));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  Use user CSR graph to compute successive layers: %d\n",pcbddc->sub_schurs_use_useradj));
     if (pcbddc->adaptive_threshold[1] != pcbddc->adaptive_threshold[0]) {
-      PetscCall(PetscViewerASCIIPrintf(viewer,"  Adaptive constraint selection thresholds (active %d, userdefined %d): %g,%g\n",pcbddc->adaptive_selection,pcbddc->adaptive_userdefined,pcbddc->adaptive_threshold[0],pcbddc->adaptive_threshold[1]));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"  Adaptive constraint selection thresholds (active %d, userdefined %d): %g,%g\n",pcbddc->adaptive_selection,pcbddc->adaptive_userdefined,(double)pcbddc->adaptive_threshold[0],(double)pcbddc->adaptive_threshold[1]));
     } else {
-      PetscCall(PetscViewerASCIIPrintf(viewer,"  Adaptive constraint selection threshold (active %d, userdefined %d): %g\n",pcbddc->adaptive_selection,pcbddc->adaptive_userdefined,pcbddc->adaptive_threshold[0]));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"  Adaptive constraint selection threshold (active %d, userdefined %d): %g\n",pcbddc->adaptive_selection,pcbddc->adaptive_userdefined,(double)pcbddc->adaptive_threshold[0]));
     }
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Min constraints / connected component: %D\n",pcbddc->adaptive_nmin));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Max constraints / connected component: %D\n",pcbddc->adaptive_nmax));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Min constraints / connected component: %" PetscInt_FMT "\n",pcbddc->adaptive_nmin));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Max constraints / connected component: %" PetscInt_FMT "\n",pcbddc->adaptive_nmax));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  Invert exact Schur complement for adaptive selection: %d\n",pcbddc->sub_schurs_exact_schur));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  Symmetric computation of primal basis functions: %d\n",pcbddc->symmetric_primal));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Num. Procs. to map coarse adjacency list: %D\n",pcbddc->coarse_adj_red));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Coarse eqs per proc (significant at the coarsest level): %D\n",pcbddc->coarse_eqs_per_proc));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Num. Procs. to map coarse adjacency list: %" PetscInt_FMT "\n",pcbddc->coarse_adj_red));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Coarse eqs per proc (significant at the coarsest level): %" PetscInt_FMT "\n",pcbddc->coarse_eqs_per_proc));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  Detect disconnected: %d (filter %d)\n",pcbddc->detect_disconnected,pcbddc->detect_disconnected_filter));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  Benign subspace trick: %d (change explicit %d)\n",pcbddc->benign_saddle_point,pcbddc->benign_change_explicit));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  Benign subspace trick is active: %d\n",pcbddc->benign_have_null));
@@ -232,20 +232,20 @@ static PetscErrorCode PCView_BDDC(PC pc,PetscViewer viewer)
       ratio1 = pc->pmat->rmap->N/(1.*pcbddc->coarse_size);
       ratio2 = PetscRealPart(interface_size)/pcbddc->coarse_size;
     }
-    PetscCall(PetscViewerASCIIPrintf(viewer,"********************************** STATISTICS AT LEVEL %d **********************************\n",pcbddc->current_level));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Global dofs sizes: all %D interface %D coarse %D\n",pc->pmat->rmap->N,(PetscInt)PetscRealPart(interface_size),pcbddc->coarse_size));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Coarsening ratios: all/coarse %D interface/coarse %D\n",(PetscInt)ratio1,(PetscInt)ratio2));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Active processes : %D\n",(PetscInt)gsum[0]));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Total subdomains : %D\n",(PetscInt)gsum[5]));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"********************************** STATISTICS AT LEVEL %" PetscInt_FMT " **********************************\n",pcbddc->current_level));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Global dofs sizes: all %" PetscInt_FMT " interface %" PetscInt_FMT " coarse %" PetscInt_FMT "\n",pc->pmat->rmap->N,(PetscInt)PetscRealPart(interface_size),pcbddc->coarse_size));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Coarsening ratios: all/coarse %" PetscInt_FMT " interface/coarse %" PetscInt_FMT "\n",(PetscInt)ratio1,(PetscInt)ratio2));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Active processes : %" PetscInt_FMT "\n",(PetscInt)gsum[0]));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Total subdomains : %" PetscInt_FMT "\n",(PetscInt)gsum[5]));
     if (pcbddc->benign_have_null) {
-      PetscCall(PetscViewerASCIIPrintf(viewer,"  Benign subs      : %D\n",(PetscInt)totbenign));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"  Benign subs      : %" PetscInt_FMT "\n",(PetscInt)totbenign));
     }
     PetscCall(PetscViewerASCIIPrintf(viewer,"  Dofs type        :\tMIN\tMAX\tMEAN\n"));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Interior  dofs   :\t%D\t%D\t%D\n",(PetscInt)gmin[1],(PetscInt)gmax[1],(PetscInt)(gsum[1]/gsum[0])));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Interface dofs   :\t%D\t%D\t%D\n",(PetscInt)gmin[2],(PetscInt)gmax[2],(PetscInt)(gsum[2]/gsum[0])));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Primal    dofs   :\t%D\t%D\t%D\n",(PetscInt)gmin[3],(PetscInt)gmax[3],(PetscInt)(gsum[3]/gsum[0])));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Local     dofs   :\t%D\t%D\t%D\n",(PetscInt)gmin[4],(PetscInt)gmax[4],(PetscInt)(gsum[4]/gsum[0])));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Local     subs   :\t%D\t%D\n"    ,(PetscInt)gmin[5],(PetscInt)gmax[5]));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Interior  dofs   :\t%" PetscInt_FMT "\t%" PetscInt_FMT "\t%" PetscInt_FMT "\n",(PetscInt)gmin[1],(PetscInt)gmax[1],(PetscInt)(gsum[1]/gsum[0])));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Interface dofs   :\t%" PetscInt_FMT "\t%" PetscInt_FMT "\t%" PetscInt_FMT "\n",(PetscInt)gmin[2],(PetscInt)gmax[2],(PetscInt)(gsum[2]/gsum[0])));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Primal    dofs   :\t%" PetscInt_FMT "\t%" PetscInt_FMT "\t%" PetscInt_FMT "\n",(PetscInt)gmin[3],(PetscInt)gmax[3],(PetscInt)(gsum[3]/gsum[0])));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Local     dofs   :\t%" PetscInt_FMT "\t%" PetscInt_FMT "\t%" PetscInt_FMT "\n",(PetscInt)gmin[4],(PetscInt)gmax[4],(PetscInt)(gsum[4]/gsum[0])));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Local     subs   :\t%" PetscInt_FMT "\t%" PetscInt_FMT "\n"    ,(PetscInt)gmin[5],(PetscInt)gmax[5]));
     PetscCall(PetscViewerFlush(viewer));
 
     PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)pc),&rank));
@@ -326,7 +326,7 @@ static PetscErrorCode PCBDDCSetDiscreteGradient_BDDC(PC pc, Mat G, PetscInt orde
           In the latter case, it should hold gid[i] < gid[j] iff geid[i] < geid[j], with gid the global orderding for all the dofs
           and geid the one for the Nedelec field.
 
-.seealso: PCBDDC,PCBDDCSetDofsSplitting(),PCBDDCSetDofsSplittingLocal()
+.seealso: `PCBDDC`, `PCBDDCSetDofsSplitting()`, `PCBDDCSetDofsSplittingLocal()`
 @*/
 PetscErrorCode PCBDDCSetDiscreteGradient(PC pc, Mat G, PetscInt order, PetscInt field, PetscBool global, PetscBool conforming)
 {
@@ -377,7 +377,7 @@ static PetscErrorCode PCBDDCSetDivergenceMat_BDDC(PC pc, Mat divudotp, PetscBool
     This auxiliary matrix is used to compute quadrature weights representing the net-flux across subdomain boundaries
           If vl2l is NULL, the local ordering for velocities in divudotp should match that of the preconditioning matrix
 
-.seealso: PCBDDC
+.seealso: `PCBDDC`
 @*/
 PetscErrorCode PCBDDCSetDivergenceMat(PC pc, Mat divudotp, PetscBool trans, IS vl2l)
 {
@@ -420,7 +420,7 @@ static PetscErrorCode PCBDDCSetChangeOfBasisMat_BDDC(PC pc, Mat change, PetscBoo
 
    Notes:
 
-.seealso: PCBDDC
+.seealso: `PCBDDC`
 @*/
 PetscErrorCode PCBDDCSetChangeOfBasisMat(PC pc, Mat change, PetscBool interior)
 {
@@ -432,12 +432,12 @@ PetscErrorCode PCBDDCSetChangeOfBasisMat(PC pc, Mat change, PetscBool interior)
     PetscInt rows_c,cols_c,rows,cols;
     PetscCall(MatGetSize(pc->mat,&rows,&cols));
     PetscCall(MatGetSize(change,&rows_c,&cols_c));
-    PetscCheck(rows_c == rows,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Invalid number of rows for change of basis matrix! %D != %D",rows_c,rows);
-    PetscCheck(cols_c == cols,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Invalid number of columns for change of basis matrix! %D != %D",cols_c,cols);
+    PetscCheck(rows_c == rows,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Invalid number of rows for change of basis matrix! %" PetscInt_FMT " != %" PetscInt_FMT,rows_c,rows);
+    PetscCheck(cols_c == cols,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Invalid number of columns for change of basis matrix! %" PetscInt_FMT " != %" PetscInt_FMT,cols_c,cols);
     PetscCall(MatGetLocalSize(pc->mat,&rows,&cols));
     PetscCall(MatGetLocalSize(change,&rows_c,&cols_c));
-    PetscCheck(rows_c == rows,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Invalid number of local rows for change of basis matrix! %D != %D",rows_c,rows);
-    PetscCheck(cols_c == cols,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Invalid number of local columns for change of basis matrix! %D != %D",cols_c,cols);
+    PetscCheck(rows_c == rows,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Invalid number of local rows for change of basis matrix! %" PetscInt_FMT " != %" PetscInt_FMT,rows_c,rows);
+    PetscCheck(cols_c == cols,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Invalid number of local columns for change of basis matrix! %" PetscInt_FMT " != %" PetscInt_FMT,cols_c,cols);
   }
   PetscTryMethod(pc,"PCBDDCSetChangeOfBasisMat_C",(PC,Mat,PetscBool),(pc,change,interior));
   PetscFunctionReturn(0);
@@ -474,7 +474,7 @@ static PetscErrorCode PCBDDCSetPrimalVerticesIS_BDDC(PC pc, IS PrimalVertices)
    Notes:
      Any process can list any global node
 
-.seealso: PCBDDC, PCBDDCGetPrimalVerticesIS(), PCBDDCSetPrimalVerticesLocalIS(), PCBDDCGetPrimalVerticesLocalIS()
+.seealso: `PCBDDC`, `PCBDDCGetPrimalVerticesIS()`, `PCBDDCSetPrimalVerticesLocalIS()`, `PCBDDCGetPrimalVerticesLocalIS()`
 @*/
 PetscErrorCode PCBDDCSetPrimalVerticesIS(PC pc, IS PrimalVertices)
 {
@@ -510,7 +510,7 @@ static PetscErrorCode PCBDDCGetPrimalVerticesIS_BDDC(PC pc, IS *is)
 
    Notes:
 
-.seealso: PCBDDC, PCBDDCSetPrimalVerticesIS(), PCBDDCSetPrimalVerticesLocalIS(), PCBDDCGetPrimalVerticesLocalIS()
+.seealso: `PCBDDC`, `PCBDDCSetPrimalVerticesIS()`, `PCBDDCSetPrimalVerticesLocalIS()`, `PCBDDCGetPrimalVerticesLocalIS()`
 @*/
 PetscErrorCode PCBDDCGetPrimalVerticesIS(PC pc, IS *is)
 {
@@ -551,7 +551,7 @@ static PetscErrorCode PCBDDCSetPrimalVerticesLocalIS_BDDC(PC pc, IS PrimalVertic
 
    Notes:
 
-.seealso: PCBDDC, PCBDDCSetPrimalVerticesIS(), PCBDDCGetPrimalVerticesIS(), PCBDDCGetPrimalVerticesLocalIS()
+.seealso: `PCBDDC`, `PCBDDCSetPrimalVerticesIS()`, `PCBDDCGetPrimalVerticesIS()`, `PCBDDCGetPrimalVerticesLocalIS()`
 @*/
 PetscErrorCode PCBDDCSetPrimalVerticesLocalIS(PC pc, IS PrimalVertices)
 {
@@ -587,7 +587,7 @@ static PetscErrorCode PCBDDCGetPrimalVerticesLocalIS_BDDC(PC pc, IS *is)
 
    Notes:
 
-.seealso: PCBDDC, PCBDDCSetPrimalVerticesIS(), PCBDDCGetPrimalVerticesIS(), PCBDDCSetPrimalVerticesLocalIS()
+.seealso: `PCBDDC`, `PCBDDCSetPrimalVerticesIS()`, `PCBDDCGetPrimalVerticesIS()`, `PCBDDCSetPrimalVerticesLocalIS()`
 @*/
 PetscErrorCode PCBDDCGetPrimalVerticesLocalIS(PC pc, IS *is)
 {
@@ -624,7 +624,7 @@ static PetscErrorCode PCBDDCSetCoarseningRatio_BDDC(PC pc,PetscInt k)
    Notes:
      Approximatively k subdomains at the finer level will be aggregated into a single subdomain at the coarser level
 
-.seealso: PCBDDC, PCBDDCSetLevels()
+.seealso: `PCBDDC`, `PCBDDCSetLevels()`
 @*/
 PetscErrorCode PCBDDCSetCoarseningRatio(PC pc,PetscInt k)
 {
@@ -699,7 +699,7 @@ static PetscErrorCode PCBDDCSetLevels_BDDC(PC pc,PetscInt levels)
    Notes:
      The default value is 0, that gives the classical two-levels BDDC
 
-.seealso: PCBDDC, PCBDDCSetCoarseningRatio()
+.seealso: `PCBDDC`, `PCBDDCSetCoarseningRatio()`
 @*/
 PetscErrorCode PCBDDCSetLevels(PC pc,PetscInt levels)
 {
@@ -742,7 +742,7 @@ static PetscErrorCode PCBDDCSetDirichletBoundaries_BDDC(PC pc,IS DirichletBounda
    Notes:
      Provide the information if you used MatZeroRows/Columns routines. Any process can list any global node
 
-.seealso: PCBDDC, PCBDDCSetDirichletBoundariesLocal(), MatZeroRows(), MatZeroRowsColumns()
+.seealso: `PCBDDC`, `PCBDDCSetDirichletBoundariesLocal()`, `MatZeroRows()`, `MatZeroRowsColumns()`
 @*/
 PetscErrorCode PCBDDCSetDirichletBoundaries(PC pc,IS DirichletBoundaries)
 {
@@ -785,7 +785,7 @@ static PetscErrorCode PCBDDCSetDirichletBoundariesLocal_BDDC(PC pc,IS DirichletB
 
    Notes:
 
-.seealso: PCBDDC, PCBDDCSetDirichletBoundaries(), MatZeroRows(), MatZeroRowsColumns()
+.seealso: `PCBDDC`, `PCBDDCSetDirichletBoundaries()`, `MatZeroRows()`, `MatZeroRowsColumns()`
 @*/
 PetscErrorCode PCBDDCSetDirichletBoundariesLocal(PC pc,IS DirichletBoundaries)
 {
@@ -829,7 +829,7 @@ static PetscErrorCode PCBDDCSetNeumannBoundaries_BDDC(PC pc,IS NeumannBoundaries
    Notes:
      Any process can list any global node
 
-.seealso: PCBDDC, PCBDDCSetNeumannBoundariesLocal()
+.seealso: `PCBDDC`, `PCBDDCSetNeumannBoundariesLocal()`
 @*/
 PetscErrorCode PCBDDCSetNeumannBoundaries(PC pc,IS NeumannBoundaries)
 {
@@ -872,7 +872,7 @@ static PetscErrorCode PCBDDCSetNeumannBoundariesLocal_BDDC(PC pc,IS NeumannBound
 
    Notes:
 
-.seealso: PCBDDC, PCBDDCSetNeumannBoundaries()
+.seealso: `PCBDDC`, `PCBDDCSetNeumannBoundaries()`
 @*/
 PetscErrorCode PCBDDCSetNeumannBoundariesLocal(PC pc,IS NeumannBoundaries)
 {
@@ -909,7 +909,7 @@ static PetscErrorCode PCBDDCGetDirichletBoundaries_BDDC(PC pc,IS *DirichletBound
    Notes:
      The IS returned (if any) is the same passed in earlier by the user with PCBDDCSetDirichletBoundaries
 
-.seealso: PCBDDC
+.seealso: `PCBDDC`
 @*/
 PetscErrorCode PCBDDCGetDirichletBoundaries(PC pc,IS *DirichletBoundaries)
 {
@@ -945,7 +945,7 @@ static PetscErrorCode PCBDDCGetDirichletBoundariesLocal_BDDC(PC pc,IS *Dirichlet
      The IS returned could be the same passed in earlier by the user (if provided with PCBDDCSetDirichletBoundariesLocal) or a global-to-local map of the global IS (if provided with PCBDDCSetDirichletBoundaries).
           In the latter case, the IS will be available after PCSetUp.
 
-.seealso: PCBDDC
+.seealso: `PCBDDC`
 @*/
 PetscErrorCode PCBDDCGetDirichletBoundariesLocal(PC pc,IS *DirichletBoundaries)
 {
@@ -980,7 +980,7 @@ static PetscErrorCode PCBDDCGetNeumannBoundaries_BDDC(PC pc,IS *NeumannBoundarie
    Notes:
      The IS returned (if any) is the same passed in earlier by the user with PCBDDCSetNeumannBoundaries
 
-.seealso: PCBDDC
+.seealso: `PCBDDC`
 @*/
 PetscErrorCode PCBDDCGetNeumannBoundaries(PC pc,IS *NeumannBoundaries)
 {
@@ -1016,7 +1016,7 @@ static PetscErrorCode PCBDDCGetNeumannBoundariesLocal_BDDC(PC pc,IS *NeumannBoun
      The IS returned could be the same passed in earlier by the user (if provided with PCBDDCSetNeumannBoundariesLocal) or a global-to-local map of the global IS (if provided with PCBDDCSetNeumannBoundaries).
           In the latter case, the IS will be available after PCSetUp.
 
-.seealso: PCBDDC
+.seealso: `PCBDDC`
 @*/
 PetscErrorCode PCBDDCGetNeumannBoundariesLocal(PC pc,IS *NeumannBoundaries)
 {
@@ -1068,7 +1068,7 @@ static PetscErrorCode PCBDDCSetLocalAdjacencyGraph_BDDC(PC pc, PetscInt nvtxs,co
       mat_graph->xadj    = (PetscInt*)xadj;
       mat_graph->adjncy  = (PetscInt*)adjncy;
       mat_graph->freecsr = PETSC_FALSE;
-    } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Unsupported copy mode %D",copymode);
+    } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Unsupported copy mode %d",copymode);
     mat_graph->nvtxs_csr = nvtxs;
     pcbddc->recompute_topography = PETSC_TRUE;
   }
@@ -1091,7 +1091,7 @@ static PetscErrorCode PCBDDCSetLocalAdjacencyGraph_BDDC(PC pc, PetscInt nvtxs,co
    Notes:
     A dof is considered connected with all local dofs if xadj[dof+1]-xadj[dof] == 1 and adjncy[xadj[dof]] is negative.
 
-.seealso: PCBDDC,PetscCopyMode
+.seealso: `PCBDDC`, `PetscCopyMode`
 @*/
 PetscErrorCode PCBDDCSetLocalAdjacencyGraph(PC pc,PetscInt nvtxs,const PetscInt xadj[],const PetscInt adjncy[], PetscCopyMode copymode)
 {
@@ -1170,7 +1170,7 @@ static PetscErrorCode PCBDDCSetDofsSplittingLocal_BDDC(PC pc,PetscInt n_is, IS I
    Notes:
      n_is should be the same among processes. Not all nodes need to be listed: unlisted nodes will belong to the complement field.
 
-.seealso: PCBDDC
+.seealso: `PCBDDC`
 @*/
 PetscErrorCode PCBDDCSetDofsSplittingLocal(PC pc,PetscInt n_is, IS ISForDofs[])
 {
@@ -1244,7 +1244,7 @@ static PetscErrorCode PCBDDCSetDofsSplitting_BDDC(PC pc,PetscInt n_is, IS ISForD
    Notes:
      Any process can list any global node. Not all nodes need to be listed: unlisted nodes will belong to the complement field.
 
-.seealso: PCBDDC
+.seealso: `PCBDDC`
 @*/
 PetscErrorCode PCBDDCSetDofsSplitting(PC pc,PetscInt n_is, IS ISForDofs[])
 {
@@ -1422,7 +1422,7 @@ static PetscErrorCode PCPreSolve_BDDC(PC pc, KSP ksp, Vec rhs, Vec x)
       PetscCall(VecCopy(rhs,v));
     }
     PetscCall(PCBDDCBenignGetOrSetP0(pc,v,PETSC_TRUE));
-    PetscCall(PetscViewerASCIIPrintf(pcbddc->dbg_viewer,"LEVEL %D: is the correction benign?\n",pcbddc->current_level));
+    PetscCall(PetscViewerASCIIPrintf(pcbddc->dbg_viewer,"LEVEL %" PetscInt_FMT ": is the correction benign?\n",pcbddc->current_level));
     PetscCall(PetscScalarView(pcbddc->benign_n,pcbddc->benign_p0,pcbddc->dbg_viewer));
     PetscCall(PetscViewerFlush(pcbddc->dbg_viewer));
     PetscCall(VecDestroy(&v));
@@ -2380,7 +2380,7 @@ static PetscErrorCode PCBDDCMatFETIDPGetRHS_BDDC(Mat fetidp_mat, Vec standard_rh
 
    Notes:
 
-.seealso: PCBDDC, PCBDDCCreateFETIDPOperators, PCBDDCMatFETIDPGetSolution
+.seealso: `PCBDDC`, `PCBDDCCreateFETIDPOperators()`, `PCBDDCMatFETIDPGetSolution()`
 @*/
 PetscErrorCode PCBDDCMatFETIDPGetRHS(Mat fetidp_mat, Vec standard_rhs, Vec fetidp_flux_rhs)
 {
@@ -2568,7 +2568,7 @@ static PetscErrorCode PCDestroy_BDDCIPC(PC pc)
 
    Notes:
 
-.seealso: PCBDDC, PCBDDCCreateFETIDPOperators, PCBDDCMatFETIDPGetRHS
+.seealso: `PCBDDC`, `PCBDDCCreateFETIDPOperators()`, `PCBDDCMatFETIDPGetRHS()`
 @*/
 PetscErrorCode PCBDDCMatFETIDPGetSolution(Mat fetidp_mat, Vec fetidp_flux_sol, Vec standard_sol)
 {
@@ -2839,7 +2839,7 @@ static PetscErrorCode PCBDDCCreateFETIDPOperators_BDDC(PC pc, PetscBool fully_re
    Notes:
      Currently the only operations provided for FETI-DP matrix are MatMult and MatMultTranspose
 
-.seealso: PCBDDC, PCBDDCMatFETIDPGetRHS, PCBDDCMatFETIDPGetSolution
+.seealso: `PCBDDC`, `PCBDDCMatFETIDPGetRHS()`, `PCBDDCMatFETIDPGetSolution()`
 @*/
 PetscErrorCode PCBDDCCreateFETIDPOperators(PC pc, PetscBool fully_redundant, const char *prefix, Mat *fetidp_mat, PC *fetidp_pc)
 {
@@ -2930,7 +2930,7 @@ PetscErrorCode PCBDDCCreateFETIDPOperators(PC pc, PetscBool fully_redundant, con
 
    Contributed by Stefano Zampini
 
-.seealso:  PCCreate(), PCSetType(), PCType (for list of available types), PC,  MATIS
+.seealso: `PCCreate()`, `PCSetType()`, `PCType`, `PC`, `MATIS`
 M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_BDDC(PC pc)
@@ -3018,7 +3018,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_BDDC(PC pc)
 
  Level: developer
 
- .seealso: PetscInitialize()
+ .seealso: `PetscInitialize()`
 @*/
 PetscErrorCode PCBDDCInitializePackage(void)
 {
@@ -3085,7 +3085,7 @@ PetscErrorCode PCBDDCInitializePackage(void)
 
  Level: developer
 
- .seealso: PetscFinalize()
+ .seealso: `PetscFinalize()`
 @*/
 PetscErrorCode PCBDDCFinalizePackage(void)
 {

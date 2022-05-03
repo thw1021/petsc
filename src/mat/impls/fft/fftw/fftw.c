@@ -454,7 +454,7 @@ static PetscErrorCode VecDuplicate_FFTW_bout(Vec bout, Vec *bout_new)
         figures out how much space is needed, i.e. it figures out the data+scratch space for
         each processor and returns that.
 
-.seealso: MatCreateFFT()
+.seealso: `MatCreateFFT()`
 @*/
 PetscErrorCode MatCreateVecsFFTW(Mat A,Vec *x,Vec *y,Vec *z)
 {
@@ -721,7 +721,7 @@ PetscErrorCode  MatCreateVecsFFTW_FFTW(Mat A,Vec *fin,Vec *fout,Vec *bout)
          one is not doing in-place transform. The last dimension size must be changed to 2*(dim[last]/2+1) to accommodate these extra
          zeros. This routine does that job by scattering operation.
 
-.seealso: VecScatterFFTWToPetsc()
+.seealso: `VecScatterFFTWToPetsc()`
 @*/
 PetscErrorCode VecScatterPetscToFFTW(Mat A,Vec x,Vec y)
 {
@@ -954,7 +954,7 @@ PetscErrorCode VecScatterPetscToFFTW_FFTW(Mat A,Vec x,Vec y)
    Note: While doing real transform the FFTW output of backward DFT contains extra zeros at the end of last dimension.
          VecScatterFFTWToPetsc removes those extra zeros.
 
-.seealso: VecScatterPetscToFFTW()
+.seealso: `VecScatterPetscToFFTW()`
 @*/
 PetscErrorCode VecScatterFFTWToPetsc(Mat A,Vec x,Vec y)
 {
@@ -1182,7 +1182,6 @@ PETSC_EXTERN PetscErrorCode MatCreate_FFTW(Mat A)
   PetscInt       p_flag,partial_dim=1,ctr;
   PetscMPIInt    size,rank;
   ptrdiff_t      *pdim;
-  PetscErrorCode ierr;
 #if !defined(PETSC_USE_COMPLEX)
   PetscInt       tot_dim;
 #endif
@@ -1325,9 +1324,9 @@ PETSC_EXTERN PetscErrorCode MatCreate_FFTW(Mat A)
   PetscCall(PetscObjectComposeFunction((PetscObject)A,"VecScatterFFTWToPetsc_C",VecScatterFFTWToPetsc_FFTW));
 
   /* get runtime options */
-  ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)A),((PetscObject)A)->prefix,"FFTW Options","Mat");PetscCall(ierr);
+  PetscOptionsBegin(PetscObjectComm((PetscObject)A),((PetscObject)A)->prefix,"FFTW Options","Mat");
   PetscCall(PetscOptionsEList("-mat_fftw_plannerflags","Planner Flags","None",plans,4,plans[0],&p_flag,&flg));
   if (flg) fftw->p_flag = iplans[p_flag];
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }

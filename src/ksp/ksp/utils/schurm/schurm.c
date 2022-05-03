@@ -119,10 +119,10 @@ PetscErrorCode MatSetFromOptions_SchurComplement(PetscOptionItems *PetscOptionsO
   Mat_SchurComplement *Na = (Mat_SchurComplement*)N->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"MatSchurComplementOptions"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"MatSchurComplementOptions");
   Na->ainvtype = MAT_SCHUR_COMPLEMENT_AINV_DIAG;
   PetscCall(PetscOptionsEnum("-mat_schur_complement_ainv_type","Type of approximation for DIAGFORM(A00) used when assembling Sp = A11 - A10 inv(DIAGFORM(A00)) A01","MatSchurComplementSetAinvType",MatSchurComplementAinvTypes,(PetscEnum)Na->ainvtype,(PetscEnum*)&Na->ainvtype,NULL));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscCall(KSPSetFromOptions(Na->ksp));
   PetscFunctionReturn(0);
 }
@@ -175,8 +175,8 @@ PetscErrorCode MatDestroy_SchurComplement(Mat N)
     The API that includes MatGetSchurComplement(), MatCreateSchurComplement(), MatSchurComplementGetPmat() should be refactored to
     remove redundancy and be clearer and simpler.
 
-.seealso: MatCreateNormal(), MatMult(), MatCreate(), MatSchurComplementGetKSP(), MatSchurComplementUpdateSubMatrices(), MatCreateTranspose(), MatGetSchurComplement(),
-          MatSchurComplementGetPmat(), MatSchurComplementSetSubMatrices()
+.seealso: `MatCreateNormal()`, `MatMult()`, `MatCreate()`, `MatSchurComplementGetKSP()`, `MatSchurComplementUpdateSubMatrices()`, `MatCreateTranspose()`, `MatGetSchurComplement()`,
+          `MatSchurComplementGetPmat()`, `MatSchurComplementSetSubMatrices()`
 
 @*/
 PetscErrorCode  MatCreateSchurComplement(Mat A00,Mat Ap00,Mat A01,Mat A10,Mat A11,Mat *S)
@@ -215,7 +215,7 @@ $        MatSchurComplementSetSubMatrices(S,...);
 
     while MatSchurComplementUpdateSubMatrices() should only be called after MatCreateSchurComplement() or MatSchurComplementSetSubMatrices()
 
-.seealso: MatCreateNormal(), MatMult(), MatCreate(), MatSchurComplementGetKSP(), MatSchurComplementUpdateSubMatrices(), MatCreateTranspose(), MatCreateSchurComplement(), MatGetSchurComplement()
+.seealso: `MatCreateNormal()`, `MatMult()`, `MatCreate()`, `MatSchurComplementGetKSP()`, `MatSchurComplementUpdateSubMatrices()`, `MatCreateTranspose()`, `MatCreateSchurComplement()`, `MatGetSchurComplement()`
 
 @*/
 PetscErrorCode  MatSchurComplementSetSubMatrices(Mat S,Mat A00,Mat Ap00,Mat A01,Mat A10,Mat A11)
@@ -234,15 +234,15 @@ PetscErrorCode  MatSchurComplementSetSubMatrices(Mat S,Mat A00,Mat Ap00,Mat A01,
   PetscCheckSameComm(A00,2,Ap00,3);
   PetscCheckSameComm(A00,2,A01,4);
   PetscCheckSameComm(A00,2,A10,5);
-  PetscCheck(A00->rmap->n == A00->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local rows of A00 %D do not equal local columns %D",A00->rmap->n,A00->cmap->n);
-  PetscCheck(A00->rmap->n == Ap00->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local rows of A00 %D do not equal local rows of Ap00 %D",A00->rmap->n,Ap00->rmap->n);
-  PetscCheck(Ap00->rmap->n == Ap00->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local rows of Ap00 %D do not equal local columns %D",Ap00->rmap->n,Ap00->cmap->n);
-  PetscCheck(A00->cmap->n == A01->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local columns of A00 %D do not equal local rows of A01 %D",A00->cmap->n,A01->rmap->n);
-  PetscCheck(A10->cmap->n == A00->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local columns of A10 %D do not equal local rows of A00 %D",A10->cmap->n,A00->rmap->n);
+  PetscCheck(A00->rmap->n == A00->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local rows of A00 %" PetscInt_FMT " do not equal local columns %" PetscInt_FMT,A00->rmap->n,A00->cmap->n);
+  PetscCheck(A00->rmap->n == Ap00->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local rows of A00 %" PetscInt_FMT " do not equal local rows of Ap00 %" PetscInt_FMT,A00->rmap->n,Ap00->rmap->n);
+  PetscCheck(Ap00->rmap->n == Ap00->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local rows of Ap00 %" PetscInt_FMT " do not equal local columns %" PetscInt_FMT,Ap00->rmap->n,Ap00->cmap->n);
+  PetscCheck(A00->cmap->n == A01->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local columns of A00 %" PetscInt_FMT " do not equal local rows of A01 %" PetscInt_FMT,A00->cmap->n,A01->rmap->n);
+  PetscCheck(A10->cmap->n == A00->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local columns of A10 %" PetscInt_FMT " do not equal local rows of A00 %" PetscInt_FMT,A10->cmap->n,A00->rmap->n);
   if (A11) {
     PetscValidHeaderSpecific(A11,MAT_CLASSID,6);
     PetscCheckSameComm(A00,2,A11,6);
-    PetscCheck(A10->rmap->n == A11->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local rows of A10 %D do not equal local rows A11 %D",A10->rmap->n,A11->rmap->n);
+    PetscCheck(A10->rmap->n == A11->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local rows of A10 %" PetscInt_FMT " do not equal local rows A11 %" PetscInt_FMT,A10->rmap->n,A11->rmap->n);
   }
 
   PetscCall(MatSetSizes(S,A10->rmap->n,A01->cmap->n,A10->rmap->N,A01->cmap->N));
@@ -280,7 +280,7 @@ PetscErrorCode  MatSchurComplementSetSubMatrices(Mat S,Mat A00,Mat Ap00,Mat A01,
 
   Level: intermediate
 
-.seealso: MatSchurComplementSetKSP(), MatCreateSchurComplement(), MatCreateNormal(), MatMult(), MatCreate()
+.seealso: `MatSchurComplementSetKSP()`, `MatCreateSchurComplement()`, `MatCreateNormal()`, `MatMult()`, `MatCreate()`
 @*/
 PetscErrorCode MatSchurComplementGetKSP(Mat S, KSP *ksp)
 {
@@ -312,7 +312,7 @@ PetscErrorCode MatSchurComplementGetKSP(Mat S, KSP *ksp)
     This is used in PCFieldSplit to reuse the 0-split KSP to implement ksp(A00,Ap00) in S.
     The KSP operators are overwritten with A00 and Ap00 currently set in S.
 
-.seealso: MatSchurComplementGetKSP(), MatCreateSchurComplement(), MatCreateNormal(), MatMult(), MatCreate(), MATSCHURCOMPLEMENT
+.seealso: `MatSchurComplementGetKSP()`, `MatCreateSchurComplement()`, `MatCreateNormal()`, `MatMult()`, `MatCreate()`, `MATSCHURCOMPLEMENT`
 @*/
 PetscErrorCode MatSchurComplementSetKSP(Mat S, KSP ksp)
 {
@@ -357,7 +357,7 @@ PetscErrorCode MatSchurComplementSetKSP(Mat S, KSP ksp)
    Developer Notes:
      This code is almost identical to MatSchurComplementSetSubMatrices(). The API should be refactored.
 
-.seealso: MatCreateNormal(), MatMult(), MatCreate(), MatSchurComplementGetKSP(), MatCreateSchurComplement()
+.seealso: `MatCreateNormal()`, `MatMult()`, `MatCreate()`, `MatSchurComplementGetKSP()`, `MatCreateSchurComplement()`
 
 @*/
 PetscErrorCode  MatSchurComplementUpdateSubMatrices(Mat S,Mat A00,Mat Ap00,Mat A01,Mat A10,Mat A11)
@@ -377,15 +377,15 @@ PetscErrorCode  MatSchurComplementUpdateSubMatrices(Mat S,Mat A00,Mat Ap00,Mat A
   PetscCheckSameComm(A00,2,Ap00,3);
   PetscCheckSameComm(A00,2,A01,4);
   PetscCheckSameComm(A00,2,A10,5);
-  PetscCheck(A00->rmap->n == A00->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local rows of A00 %D do not equal local columns %D",A00->rmap->n,A00->cmap->n);
-  PetscCheck(A00->rmap->n == Ap00->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local rows of A00 %D do not equal local rows of Ap00 %D",A00->rmap->n,Ap00->rmap->n);
-  PetscCheck(Ap00->rmap->n == Ap00->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local rows of Ap00 %D do not equal local columns %D",Ap00->rmap->n,Ap00->cmap->n);
-  PetscCheck(A00->cmap->n == A01->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local columns of A00 %D do not equal local rows of A01 %D",A00->cmap->n,A01->rmap->n);
-  PetscCheck(A10->cmap->n == A00->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local columns of A10 %D do not equal local rows of A00 %D",A10->cmap->n,A00->rmap->n);
+  PetscCheck(A00->rmap->n == A00->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local rows of A00 %" PetscInt_FMT " do not equal local columns %" PetscInt_FMT,A00->rmap->n,A00->cmap->n);
+  PetscCheck(A00->rmap->n == Ap00->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local rows of A00 %" PetscInt_FMT " do not equal local rows of Ap00 %" PetscInt_FMT,A00->rmap->n,Ap00->rmap->n);
+  PetscCheck(Ap00->rmap->n == Ap00->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local rows of Ap00 %" PetscInt_FMT " do not equal local columns %" PetscInt_FMT,Ap00->rmap->n,Ap00->cmap->n);
+  PetscCheck(A00->cmap->n == A01->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local columns of A00 %" PetscInt_FMT " do not equal local rows of A01 %" PetscInt_FMT,A00->cmap->n,A01->rmap->n);
+  PetscCheck(A10->cmap->n == A00->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local columns of A10 %" PetscInt_FMT " do not equal local rows of A00 %" PetscInt_FMT,A10->cmap->n,A00->rmap->n);
   if (A11) {
     PetscValidHeaderSpecific(A11,MAT_CLASSID,6);
     PetscCheckSameComm(A00,2,A11,6);
-    PetscCheck(A10->rmap->n == A11->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local rows of A10 %D do not equal local rows A11 %D",A10->rmap->n,A11->rmap->n);
+    PetscCheck(A10->rmap->n == A11->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local rows of A10 %" PetscInt_FMT " do not equal local rows A11 %" PetscInt_FMT,A10->rmap->n,A11->rmap->n);
   }
 
   PetscCall(PetscObjectReference((PetscObject)A00));
@@ -431,7 +431,7 @@ PetscErrorCode  MatSchurComplementUpdateSubMatrices(Mat S,Mat A00,Mat Ap00,Mat A
 
   Level: intermediate
 
-.seealso: MatCreateNormal(), MatMult(), MatCreate(), MatSchurComplementGetKSP(), MatCreateSchurComplement(), MatSchurComplementUpdateSubMatrices()
+.seealso: `MatCreateNormal()`, `MatMult()`, `MatCreate()`, `MatSchurComplementGetKSP()`, `MatCreateSchurComplement()`, `MatSchurComplementUpdateSubMatrices()`
 @*/
 PetscErrorCode  MatSchurComplementGetSubMatrices(Mat S,Mat *A00,Mat *Ap00,Mat *A01,Mat *A10,Mat *A11)
 {
@@ -470,7 +470,7 @@ PetscErrorCode  MatSchurComplementGetSubMatrices(Mat S,Mat *A00,Mat *Ap00,Mat *A
 
   Level: advanced
 
-.seealso: MatCreateSchurComplement(), MatSchurComplementUpdate(), MatSchurComplementGetPmat()
+.seealso: `MatCreateSchurComplement()`, `MatSchurComplementUpdate()`, `MatSchurComplementGetPmat()`
 @*/
 PetscErrorCode MatSchurComplementComputeExplicitOperator(Mat A, Mat *S)
 {
@@ -599,7 +599,7 @@ PetscErrorCode MatGetSchurComplement_Basic(Mat mat,IS isrow0,IS iscol0,IS isrow1
 
     Level: advanced
 
-.seealso: MatCreateSubMatrix(), PCFIELDSPLIT, MatCreateSchurComplement(), MatSchurComplementAinvType
+.seealso: `MatCreateSubMatrix()`, `PCFIELDSPLIT`, `MatCreateSchurComplement()`, `MatSchurComplementAinvType`
 @*/
 PetscErrorCode  MatGetSchurComplement(Mat A,IS isrow0,IS iscol0,IS isrow1,IS iscol1,MatReuse mreuse,Mat *S,MatSchurComplementAinvType ainvtype,MatReuse preuse,Mat *Sp)
 {
@@ -641,7 +641,7 @@ PetscErrorCode  MatGetSchurComplement(Mat A,IS isrow0,IS iscol0,IS isrow1,IS isc
 
     Level: advanced
 
-.seealso: MatSchurComplementAinvType, MatCreateSchurComplement(), MatGetSchurComplement(), MatSchurComplementGetPmat(), MatSchurComplementGetAinvType()
+.seealso: `MatSchurComplementAinvType`, `MatCreateSchurComplement()`, `MatGetSchurComplement()`, `MatSchurComplementGetPmat()`, `MatSchurComplementGetAinvType()`
 @*/
 PetscErrorCode  MatSchurComplementSetAinvType(Mat S,MatSchurComplementAinvType ainvtype)
 {
@@ -673,7 +673,7 @@ PetscErrorCode  MatSchurComplementSetAinvType(Mat S,MatSchurComplementAinvType a
 
     Level: advanced
 
-.seealso: MatSchurComplementAinvType, MatCreateSchurComplement(), MatGetSchurComplement(), MatSchurComplementGetPmat(), MatSchurComplementSetAinvType()
+.seealso: `MatSchurComplementAinvType`, `MatCreateSchurComplement()`, `MatGetSchurComplement()`, `MatSchurComplementGetPmat()`, `MatSchurComplementSetAinvType()`
 @*/
 PetscErrorCode  MatSchurComplementGetAinvType(Mat S,MatSchurComplementAinvType *ainvtype)
 {
@@ -708,7 +708,7 @@ PetscErrorCode  MatSchurComplementGetAinvType(Mat S,MatSchurComplementAinvType *
 
     Level: advanced
 
-.seealso: MatCreateSchurComplement(), MatGetSchurComplement(), MatSchurComplementGetPmat(), MatSchurComplementAinvType
+.seealso: `MatCreateSchurComplement()`, `MatGetSchurComplement()`, `MatSchurComplementGetPmat()`, `MatSchurComplementAinvType`
 @*/
 PetscErrorCode  MatCreateSchurComplementPmat(Mat A00,Mat A01,Mat A10,Mat A11,MatSchurComplementAinvType ainvtype,MatReuse preuse,Mat *Sp)
 {
@@ -717,7 +717,6 @@ PetscErrorCode  MatCreateSchurComplementPmat(Mat A00,Mat A01,Mat A10,Mat A11,Mat
   PetscFunctionBegin;
   /* Use an appropriate approximate inverse of A00 to form A11 - A10 inv(DIAGFORM(A00)) A01; a NULL A01, A10 or A11 indicates a zero matrix. */
   /* TODO: Perhaps should create an appropriately-sized zero matrix of the same type as A00? */
-  PetscCheckFalse((!A01 || !A10) & !A11,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Cannot assemble Sp: A01, A10 and A11 are all NULL.");
   PetscValidLogicalCollectiveEnum(A11,preuse,6);
   if (preuse == MAT_IGNORE_MATRIX) PetscFunctionReturn(0);
 
@@ -816,7 +815,7 @@ PetscErrorCode  MatSchurComplementGetPmat_Basic(Mat S,MatReuse preuse,Mat *Sp)
 
     Level: advanced
 
-.seealso: MatCreateSubMatrix(), PCFIELDSPLIT, MatGetSchurComplement(), MatCreateSchurComplement(), MatSchurComplementSetAinvType()
+.seealso: `MatCreateSubMatrix()`, `PCFIELDSPLIT`, `MatGetSchurComplement()`, `MatCreateSchurComplement()`, `MatSchurComplementSetAinvType()`
 @*/
 PetscErrorCode  MatSchurComplementGetPmat(Mat S,MatReuse preuse,Mat *Sp)
 {

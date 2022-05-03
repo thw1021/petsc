@@ -37,12 +37,10 @@ typedef pUserCtx* UserCtx;
 PetscErrorCode Initialize_AppContext(UserCtx *puser)
 {
   UserCtx           user;
-  PetscErrorCode    ierr;
 
   PetscFunctionBegin;
   PetscCall(PetscNew(&user));
-
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Advection-reaction options","ex35.cxx");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Advection-reaction options","ex35.cxx");
   {
     user->nvars  = 2;
     user->A      = 1;
@@ -67,7 +65,7 @@ PetscErrorCode Initialize_AppContext(UserCtx *puser)
     PetscCall(PetscOptionsBool("-io","Write the mesh and solution output to a file.","ex35.cxx",user->io,&user->io,NULL));
     user->npts   = user->n+1;
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   *puser = user;
   PetscFunctionReturn(0);
@@ -157,7 +155,7 @@ int main(int argc,char **argv)
   PetscCall(TSGetSolveTime(ts,&ftime));
   PetscCall(TSGetStepNumber(ts,&steps));
   PetscCall(TSGetConvergedReason(ts,&reason));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%s at time %g after %D steps\n",TSConvergedReasons[reason],ftime,steps));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%s at time %g after %" PetscInt_FMT " steps\n",TSConvergedReasons[reason],(double)ftime,steps));
 
   if (user->io) {
     /* Print the numerical solution to screen and then dump to file */

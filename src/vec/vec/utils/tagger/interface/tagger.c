@@ -27,7 +27,7 @@
 
    Level: advanced
 
-.seealso: VecTaggerSetBlockSize(), VecTaggerSetFromOptions(), VecTaggerSetUp(), VecTaggerComputeIS(), VecTaggerComputeBoxes(), VecTaggerDestroy()
+.seealso: `VecTaggerSetBlockSize()`, `VecTaggerSetFromOptions()`, `VecTaggerSetUp()`, `VecTaggerComputeIS()`, `VecTaggerComputeBoxes()`, `VecTaggerDestroy()`
 @*/
 PetscErrorCode VecTaggerCreate(MPI_Comm comm,VecTagger *tagger)
 {
@@ -70,7 +70,7 @@ PetscErrorCode VecTaggerCreate(MPI_Comm comm,VecTagger *tagger)
 
   Level: advanced
 
-.seealso: VecTaggerType, VecTaggerCreate(), VecTagger
+.seealso: `VecTaggerType`, `VecTaggerCreate()`, `VecTagger`
 @*/
 PetscErrorCode VecTaggerSetType(VecTagger tagger,VecTaggerType type)
 {
@@ -108,7 +108,7 @@ PetscErrorCode VecTaggerSetType(VecTagger tagger,VecTaggerType type)
 
   Level: advanced
 
-.seealso: VecTaggerSetType(), VecTaggerCreate(), VecTaggerSetFromOptions(), VecTagger, VecTaggerType
+.seealso: `VecTaggerSetType()`, `VecTaggerCreate()`, `VecTaggerSetFromOptions()`, `VecTagger`, `VecTaggerType`
 @*/
 PetscErrorCode  VecTaggerGetType(VecTagger tagger, VecTaggerType *type)
 {
@@ -130,7 +130,7 @@ PetscErrorCode  VecTaggerGetType(VecTagger tagger, VecTaggerType *type)
 
    Level: advanced
 
-.seealso: VecTaggerCreate(), VecTaggerSetType(), VecTagger
+.seealso: `VecTaggerCreate()`, `VecTaggerSetType()`, `VecTagger`
 @*/
 PetscErrorCode VecTaggerDestroy(VecTagger *tagger)
 {
@@ -153,7 +153,7 @@ PetscErrorCode VecTaggerDestroy(VecTagger *tagger)
 
    Level: advanced
 
-.seealso: VecTaggerSetFromOptions(), VecTaggerSetType(), VecTagger, VecTaggerCreate(), VecTaggerSetUp()
+.seealso: `VecTaggerSetFromOptions()`, `VecTaggerSetType()`, `VecTagger`, `VecTaggerCreate()`, `VecTaggerSetUp()`
 @*/
 PetscErrorCode VecTaggerSetUp(VecTagger tagger)
 {
@@ -180,26 +180,25 @@ PetscErrorCode VecTaggerSetUp(VecTagger tagger)
 
    Level: advanced
 
-.seealso: VecTagger, VecTaggerCreate(), VecTaggerSetUp()
+.seealso: `VecTagger`, `VecTaggerCreate()`, `VecTaggerSetUp()`
 
 @*/
 PetscErrorCode VecTaggerSetFromOptions(VecTagger tagger)
 {
   VecTaggerType  deft;
   char           type[256];
-  PetscErrorCode ierr;
   PetscBool      flg;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tagger,VEC_TAGGER_CLASSID,1);
-  ierr = PetscObjectOptionsBegin((PetscObject)tagger);PetscCall(ierr);
+  PetscObjectOptionsBegin((PetscObject)tagger);
   deft = ((PetscObject)tagger)->type_name ? ((PetscObject)tagger)->type_name : VECTAGGERABSOLUTE;
   PetscCall(PetscOptionsFList("-vec_tagger_type","VecTagger implementation type","VecTaggerSetType",VecTaggerList,deft,type,256,&flg));
   PetscCall(VecTaggerSetType(tagger,flg ? type : deft));
   PetscCall(PetscOptionsInt("-vec_tagger_block_size","block size of the vectors the tagger operates on","VecTaggerSetBlockSize",tagger->blocksize,&tagger->blocksize,NULL));
   PetscCall(PetscOptionsBool("-vec_tagger_invert","invert the set of indices returned by VecTaggerComputeIS()","VecTaggerSetInvert",tagger->invert,&tagger->invert,NULL));
   if (tagger->ops->setfromoptions) PetscCall((*tagger->ops->setfromoptions)(PetscOptionsObject,tagger));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -224,7 +223,7 @@ PetscErrorCode VecTaggerSetFromOptions(VecTagger tagger)
 
    Level: advanced
 
-.seealso: VecTaggerComputeIS(), VecTaggerGetBlockSize(), VecSetBlockSize(), VecGetBlockSize(), VecTagger, VecTaggerCreate()
+.seealso: `VecTaggerComputeIS()`, `VecTaggerGetBlockSize()`, `VecSetBlockSize()`, `VecGetBlockSize()`, `VecTagger`, `VecTaggerCreate()`
 @*/
 PetscErrorCode VecTaggerSetBlockSize(VecTagger tagger, PetscInt blocksize)
 {
@@ -248,7 +247,7 @@ PetscErrorCode VecTaggerSetBlockSize(VecTagger tagger, PetscInt blocksize)
 
    Level: advanced
 
-.seealso: VecTaggerComputeIS(), VecTaggerSetBlockSize(), VecTagger, VecTaggerCreate()
+.seealso: `VecTaggerComputeIS()`, `VecTaggerSetBlockSize()`, `VecTagger`, `VecTaggerCreate()`
 @*/
 PetscErrorCode VecTaggerGetBlockSize(VecTagger tagger, PetscInt *blocksize)
 {
@@ -272,7 +271,7 @@ PetscErrorCode VecTaggerGetBlockSize(VecTagger tagger, PetscInt *blocksize)
 
    Level: advanced
 
-.seealso: VecTaggerComputeIS(), VecTaggerGetInvert(), VecTagger, VecTaggerCreate()
+.seealso: `VecTaggerComputeIS()`, `VecTaggerGetInvert()`, `VecTagger`, `VecTaggerCreate()`
 @*/
 PetscErrorCode VecTaggerSetInvert(VecTagger tagger, PetscBool invert)
 {
@@ -296,7 +295,7 @@ PetscErrorCode VecTaggerSetInvert(VecTagger tagger, PetscBool invert)
 
    Level: advanced
 
-.seealso: VecTaggerComputeIS(), VecTaggerSetInvert(), VecTagger, VecTaggerCreate()
+.seealso: `VecTaggerComputeIS()`, `VecTaggerSetInvert()`, `VecTagger`, `VecTaggerCreate()`
 @*/
 PetscErrorCode VecTaggerGetInvert(VecTagger tagger, PetscBool *invert)
 {
@@ -318,7 +317,7 @@ PetscErrorCode VecTaggerGetInvert(VecTagger tagger, PetscBool *invert)
 
    Level: advanced
 
-.seealso: VecTaggerCreate(), VecTagger, VecTaggerCreate()
+.seealso: `VecTaggerCreate()`, `VecTagger`, `VecTaggerCreate()`
 @*/
 PetscErrorCode VecTaggerView(VecTagger tagger,PetscViewer viewer)
 {
@@ -361,7 +360,7 @@ PetscErrorCode VecTaggerView(VecTagger tagger,PetscViewer viewer)
 
    Level: advanced
 
-.seealso: VecTaggerComputeIS(), VecTagger, VecTaggerCreate()
+.seealso: `VecTaggerComputeIS()`, `VecTagger`, `VecTaggerCreate()`
 @*/
 PetscErrorCode VecTaggerComputeBoxes(VecTagger tagger,Vec vec,PetscInt *numBoxes,VecTaggerBox **boxes,PetscBool *listed)
 {
@@ -374,7 +373,7 @@ PetscErrorCode VecTaggerComputeBoxes(VecTagger tagger,Vec vec,PetscInt *numBoxes
   PetscValidPointer(boxes,4);
   PetscCall(VecGetLocalSize(vec,&vls));
   PetscCall(VecTaggerGetBlockSize(tagger,&tbs));
-  PetscCheckFalse(vls % tbs,PetscObjectComm((PetscObject)tagger),PETSC_ERR_ARG_INCOMP,"vec local size %" PetscInt_FMT " is not a multiple of tagger block size %" PetscInt_FMT,vls,tbs);
+  PetscCheck(vls % tbs == 0,PetscObjectComm((PetscObject)tagger),PETSC_ERR_ARG_INCOMP,"vec local size %" PetscInt_FMT " is not a multiple of tagger block size %" PetscInt_FMT,vls,tbs);
   if (tagger->ops->computeboxes) {
     *listed = PETSC_TRUE;
     PetscCall((*tagger->ops->computeboxes) (tagger,vec,numBoxes,boxes,listed));
@@ -397,7 +396,7 @@ PetscErrorCode VecTaggerComputeBoxes(VecTagger tagger,Vec vec,PetscInt *numBoxes
 
    Level: advanced
 
-.seealso: VecTaggerComputeBoxes(), VecTagger, VecTaggerCreate()
+.seealso: `VecTaggerComputeBoxes()`, `VecTagger`, `VecTaggerCreate()`
 @*/
 PetscErrorCode VecTaggerComputeIS(VecTagger tagger,Vec vec,IS *is,PetscBool *listed)
 {
@@ -409,7 +408,7 @@ PetscErrorCode VecTaggerComputeIS(VecTagger tagger,Vec vec,IS *is,PetscBool *lis
   PetscValidPointer(is,3);
   PetscCall(VecGetLocalSize(vec,&vls));
   PetscCall(VecTaggerGetBlockSize(tagger,&tbs));
-  PetscCheckFalse(vls % tbs,PetscObjectComm((PetscObject)tagger),PETSC_ERR_ARG_INCOMP,"vec local size %" PetscInt_FMT " is not a multiple of tagger block size %" PetscInt_FMT,vls,tbs);
+  PetscCheck(vls % tbs == 0,PetscObjectComm((PetscObject)tagger),PETSC_ERR_ARG_INCOMP,"vec local size %" PetscInt_FMT " is not a multiple of tagger block size %" PetscInt_FMT,vls,tbs);
   if (tagger->ops->computeis) {
     PetscCall((*tagger->ops->computeis) (tagger,vec,is,listed));
   } else if (listed) *listed = PETSC_FALSE;
@@ -440,7 +439,7 @@ PetscErrorCode VecTaggerComputeIS_FromBoxes(VecTagger tagger, Vec vec, IS *is,Pe
   numTagged = 0;
   offset = 0;
   tagged = NULL;
-  PetscCheckFalse(n % bs,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"blocksize %" PetscInt_FMT " does not divide vector length %" PetscInt_FMT, bs, n);
+  PetscCheck(n % bs == 0,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"blocksize %" PetscInt_FMT " does not divide vector length %" PetscInt_FMT, bs, n);
   n /= bs;
   for (i = 0; i < 2; i++) {
     if (i) {

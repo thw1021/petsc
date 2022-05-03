@@ -35,7 +35,7 @@ typedef struct {
 
   Level: advanced
 
-.seealso:  SNESMSRegisterDestroy()
+.seealso: `SNESMSRegisterDestroy()`
 @*/
 PetscErrorCode SNESMSRegisterAll(void)
 {
@@ -98,7 +98,7 @@ PetscErrorCode SNESMSRegisterAll(void)
 
    Level: advanced
 
-.seealso: SNESMSRegister(), SNESMSRegisterAll()
+.seealso: `SNESMSRegister()`, `SNESMSRegisterAll()`
 @*/
 PetscErrorCode SNESMSRegisterDestroy(void)
 {
@@ -125,7 +125,7 @@ PetscErrorCode SNESMSRegisterDestroy(void)
 
   Level: developer
 
-.seealso: PetscInitialize()
+.seealso: `PetscInitialize()`
 @*/
 PetscErrorCode SNESMSInitializePackage(void)
 {
@@ -144,7 +144,7 @@ PetscErrorCode SNESMSInitializePackage(void)
 
   Level: developer
 
-.seealso: PetscFinalize()
+.seealso: `PetscFinalize()`
 @*/
 PetscErrorCode SNESMSFinalizePackage(void)
 {
@@ -183,7 +183,7 @@ PetscErrorCode SNESMSFinalizePackage(void)
 
    Level: advanced
 
-.seealso: SNESMS
+.seealso: `SNESMS`
 @*/
 PetscErrorCode SNESMSRegister(SNESMSType name,PetscInt nstages,PetscInt nregisters,PetscReal stability,const PetscReal gamma[],const PetscReal delta[],const PetscReal betasub[])
 {
@@ -192,13 +192,13 @@ PetscErrorCode SNESMSRegister(SNESMSType name,PetscInt nstages,PetscInt nregiste
 
   PetscFunctionBegin;
   PetscValidCharPointer(name,1);
-  PetscCheckFalse(nstages < 1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must have at least one stage");
+  PetscCheck(nstages >= 1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must have at least one stage");
   if (gamma || delta) {
-    PetscCheckFalse(nregisters != 3,PETSC_COMM_SELF,PETSC_ERR_SUP,"Only support for methods written in 3-register form");
+    PetscCheck(nregisters == 3,PETSC_COMM_SELF,PETSC_ERR_SUP,"Only support for methods written in 3-register form");
     PetscValidRealPointer(gamma,5);
     PetscValidRealPointer(delta,6);
   } else {
-    PetscCheckFalse(nregisters != 1,PETSC_COMM_SELF,PETSC_ERR_SUP,"Only support for methods written in 1-register form");
+    PetscCheck(nregisters == 1,PETSC_COMM_SELF,PETSC_ERR_SUP,"Only support for methods written in 1-register form");
   }
   PetscValidRealPointer(betasub,7);
 
@@ -335,7 +335,7 @@ static PetscErrorCode SNESSolve_MS(SNES snes)
   PetscInt       i;
 
   PetscFunctionBegin;
-  PetscCheckFalse(snes->xl || snes->xu || snes->ops->computevariablebounds,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
+  PetscCheck(!snes->xl && !snes->xu && !snes->ops->computevariablebounds,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
   PetscCall(PetscCitationsRegister(SNESCitation,&SNEScite));
 
   snes->reason = SNES_CONVERGED_ITERATING;
@@ -427,7 +427,7 @@ static PetscErrorCode SNESSetFromOptions_MS(PetscOptionItems *PetscOptionsObject
   SNES_MS        *ms = (SNES_MS*)snes->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"SNES MS options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"SNES MS options");
   {
     SNESMSTableauLink link;
     PetscInt          count,choice;
@@ -448,7 +448,7 @@ static PetscErrorCode SNESSetFromOptions_MS(PetscOptionItems *PetscOptionsObject
     if (flg) PetscCall(SNESMSSetDamping(snes,damping));
     PetscCall(PetscOptionsBool("-snes_ms_norms","Compute norms for monitoring","none",ms->norms,&ms->norms,NULL));
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -498,7 +498,7 @@ static PetscErrorCode SNESMSSetType_MS(SNES snes,SNESMSType mstype)
 
   Level: beginner
 
-.seealso: SNESMSSetType(), SNESMSType, SNESMS
+.seealso: `SNESMSSetType()`, `SNESMSType`, `SNESMS`
 @*/
 PetscErrorCode SNESMSGetType(SNES snes,SNESMSType *mstype)
 {
@@ -520,7 +520,7 @@ PetscErrorCode SNESMSGetType(SNES snes,SNESMSType *mstype)
 
   Level: beginner
 
-.seealso: SNESMSGetType(), SNESMSType, SNESMS
+.seealso: `SNESMSGetType()`, `SNESMSType`, `SNESMS`
 @*/
 PetscErrorCode SNESMSSetType(SNES snes,SNESMSType mstype)
 {
@@ -562,7 +562,7 @@ static PetscErrorCode SNESMSSetDamping_MS(SNES snes,PetscReal damping)
 
   Level: advanced
 
-.seealso: SNESMSSetDamping(), SNESMS
+.seealso: `SNESMSSetDamping()`, `SNESMS`
 @*/
 PetscErrorCode SNESMSGetDamping(SNES snes,PetscReal *damping)
 {
@@ -584,7 +584,7 @@ PetscErrorCode SNESMSGetDamping(SNES snes,PetscReal *damping)
 
   Level: advanced
 
-.seealso: SNESMSGetDamping(), SNESMS
+.seealso: `SNESMSGetDamping()`, `SNESMS`
 @*/
 PetscErrorCode SNESMSSetDamping(SNES snes,PetscReal damping)
 {
@@ -620,7 +620,7 @@ PetscErrorCode SNESMSSetDamping(SNES snes,PetscReal damping)
 
       Level: beginner
 
-.seealso:  SNESCreate(), SNES, SNESSetType(), SNESMS, SNESFAS, KSPCHEBYSHEV
+.seealso: `SNESCreate()`, `SNES`, `SNESSetType()`, `SNESMS`, `SNESFAS`, `KSPCHEBYSHEV`
 
 M*/
 PETSC_EXTERN PetscErrorCode SNESCreate_MS(SNES snes)

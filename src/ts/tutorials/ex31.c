@@ -1075,7 +1075,7 @@ PetscErrorCode Initialize(Vec Y, void* s)
     IJacobian   = IJacobian_Hull1972C34;
   }
   PetscCall(PetscOptionsGetScalarArray(NULL,NULL,"-yinit",y,&N,&flg));
-  PetscCheck((N == GetSize((const char*)s)) || !flg,PETSC_COMM_WORLD,PETSC_ERR_ARG_SIZ,"Number of initial values %D does not match problem size %D.",N,GetSize((const char*)s));
+  PetscCheck((N == GetSize((const char*)s)) || !flg,PETSC_COMM_WORLD,PETSC_ERR_ARG_SIZ,"Number of initial values %" PetscInt_FMT " does not match problem size %" PetscInt_FMT ".",N,GetSize((const char*)s));
   PetscCall(VecRestoreArray(Y,&y));
   PetscFunctionReturn(0);
 }
@@ -1190,11 +1190,11 @@ PetscErrorCode SolveODE(char* ptype, PetscReal dt, PetscReal tfinal, PetscInt ma
   PetscCall(TSGetTimeError(ts,0,&Yerr));
   PetscCall(VecNorm(Yerr,NORM_2,&err_norm));
   PetscCall(VecDestroy(&Yerr));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Estimated Error = %E.\n",err_norm));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Estimated Error = %e.\n",(double)err_norm));
 
   /* Exact solution */
   PetscCall(VecDuplicate(Y,&Yex));
-  if (PetscAbsScalar(final_time-tfinal)>2.*PETSC_MACHINE_EPSILON) {
+  if (PetscAbsReal(final_time-tfinal)>2.*PETSC_MACHINE_EPSILON) {
     PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Note: There is a difference between the prescribed final time %g and the actual final time, %g.\n",(double)tfinal,(double)final_time));
   }
   PetscCall(ExactSolution(Yex,&ptype[0],final_time,exact_flag));
@@ -1215,7 +1215,6 @@ PetscErrorCode SolveODE(char* ptype, PetscReal dt, PetscReal tfinal, PetscInt ma
 
 int main(int argc, char **argv)
 {
-  PetscErrorCode  ierr;                       /* Error code                                           */
   char            ptype[256] = "hull1972a1";  /* Problem specification                                */
   PetscInt        n_refine   = 1;             /* Number of refinement levels for convergence analysis */
   PetscReal       refine_fac = 2.0;           /* Refinement factor for dt                             */
@@ -1235,20 +1234,20 @@ int main(int argc, char **argv)
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD,&size));
   PetscCheck(size == 1,PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,"Only for sequential runs");
 
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"ex31",NULL);PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"ex31",NULL);
   PetscCall(PetscOptionsString("-problem","Problem specification","<hull1972a1>",ptype,ptype,sizeof(ptype),NULL));
   PetscCall(PetscOptionsInt("-refinement_levels","Number of refinement levels for convergence analysis","<1>",n_refine,&n_refine,NULL));
   PetscCall(PetscOptionsReal("-refinement_factor","Refinement factor for dt","<2.0>",refine_fac,&refine_fac,NULL));
   PetscCall(PetscOptionsReal("-dt","Time step size (for convergence analysis, initial time step)","<0.01>",dt_initial,&dt_initial,NULL));
   PetscCall(PetscOptionsReal("-final_time","Final time for the time-integration","<20.0>",tfinal,&tfinal,NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   PetscCall(PetscMalloc1(n_refine,&error));
   for (r = 0,dt = dt_initial; r < n_refine; r++) {
     error[r] = 0;
     if (r > 0) dt /= refine_fac;
 
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Solving ODE \"%s\" with dt %f, final time %f and system size %D.\n",ptype,(double)dt,(double)tfinal,GetSize(&ptype[0])));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Solving ODE \"%s\" with dt %f, final time %f and system size %" PetscInt_FMT ".\n",ptype,(double)dt,(double)tfinal,GetSize(&ptype[0])));
     PetscCall(SolveODE(&ptype[0],dt,tfinal,maxiter,&error[r],&flag));
     if (flag) {
       /* If exact solution available for the specified ODE */
@@ -1256,7 +1255,7 @@ int main(int argc, char **argv)
         PetscReal conv_rate = (PetscLogReal(error[r]) - PetscLogReal(error[r-1])) / (-PetscLogReal(refine_fac));
         PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Error           = %E,\tConvergence rate = %f.\n",(double)error[r],(double)conv_rate));
       } else {
-        PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Error           = %E.\n",error[r]));
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Error           = %E.\n",(double)error[r]));
       }
     }
   }

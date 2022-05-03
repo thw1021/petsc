@@ -63,7 +63,7 @@ static PetscErrorCode MatSTRUMPACKSetReordering_STRUMPACK(Mat F,MatSTRUMPACKReor
    References:
 .  * - STRUMPACK manual
 
-.seealso: MatGetFactor()
+.seealso: `MatGetFactor()`
 @*/
 PetscErrorCode MatSTRUMPACKSetReordering(Mat F,MatSTRUMPACKReordering reordering)
 {
@@ -100,7 +100,7 @@ static PetscErrorCode MatSTRUMPACKSetColPerm_STRUMPACK(Mat F,PetscBool cperm)
    References:
 .  * - STRUMPACK manual
 
-.seealso: MatGetFactor()
+.seealso: `MatGetFactor()`
 @*/
 PetscErrorCode MatSTRUMPACKSetColPerm(Mat F,PetscBool cperm)
 {
@@ -137,7 +137,7 @@ static PetscErrorCode MatSTRUMPACKSetHSSRelTol_STRUMPACK(Mat F,PetscReal rtol)
    References:
 .  * - STRUMPACK manual
 
-.seealso: MatGetFactor()
+.seealso: `MatGetFactor()`
 @*/
 PetscErrorCode MatSTRUMPACKSetHSSRelTol(Mat F,PetscReal rtol)
 {
@@ -174,7 +174,7 @@ static PetscErrorCode MatSTRUMPACKSetHSSAbsTol_STRUMPACK(Mat F,PetscReal atol)
    References:
 .  * - STRUMPACK manual
 
-.seealso: MatGetFactor()
+.seealso: `MatGetFactor()`
 @*/
 PetscErrorCode MatSTRUMPACKSetHSSAbsTol(Mat F,PetscReal atol)
 {
@@ -211,7 +211,7 @@ static PetscErrorCode MatSTRUMPACKSetHSSMaxRank_STRUMPACK(Mat F,PetscInt hssmaxr
    References:
 .  * - STRUMPACK manual
 
-.seealso: MatGetFactor()
+.seealso: `MatGetFactor()`
 @*/
 PetscErrorCode MatSTRUMPACKSetHSSMaxRank(Mat F,PetscInt hssmaxrank)
 {
@@ -248,7 +248,7 @@ static PetscErrorCode MatSTRUMPACKSetHSSLeafSize_STRUMPACK(Mat F,PetscInt leaf_s
    References:
 .  * - STRUMPACK manual
 
-.seealso: MatGetFactor()
+.seealso: `MatGetFactor()`
 @*/
 PetscErrorCode MatSTRUMPACKSetHSSLeafSize(Mat F,PetscInt leaf_size)
 {
@@ -285,7 +285,7 @@ static PetscErrorCode MatSTRUMPACKSetHSSMinSepSize_STRUMPACK(Mat F,PetscInt hssm
    References:
 .  * - STRUMPACK manual
 
-.seealso: MatGetFactor()
+.seealso: `MatGetFactor()`
 @*/
 PetscErrorCode MatSTRUMPACKSetHSSMinSepSize(Mat F,PetscInt hssminsize)
 {
@@ -438,7 +438,7 @@ static PetscErrorCode MatFactorGetSolverType_aij_strumpack(Mat A,MatSolverType *
 
  Level: beginner
 
-.seealso: PCLU, PCILU, MATSOLVERSUPERLU_DIST, MATSOLVERMUMPS, PCFactorSetMatSolverType(), MatSolverType
+.seealso: `PCLU`, `PCILU`, `MATSOLVERSUPERLU_DIST`, `MATSOLVERMUMPS`, `PCFactorSetMatSolverType()`, `MatSolverType`
 M*/
 static PetscErrorCode MatGetFactor_aij_strumpack(Mat A,MatFactorType ftype,Mat *F)
 {
@@ -459,7 +459,6 @@ static PetscErrorCode MatGetFactor_aij_strumpack(Mat A,MatFactorType ftype,Mat *
   const STRUMPACK_PRECISION     prec = table[(sizeof(PetscInt)==8)?0:1][(PETSC_SCALAR==PETSC_COMPLEX)?0:1][(PETSC_REAL==PETSC_FLOAT)?0:1];
   const char *const             STRUMPACKNDTypes[] = {"NATURAL","METIS","PARMETIS","SCOTCH","PTSCOTCH","RCM","STRUMPACKNDTypes","",0};
   const char *const             SolverTypes[] = {"AUTO","NONE","REFINE","PREC_GMRES","GMRES","PREC_BICGSTAB","BICGSTAB","SolverTypes","",0};
-  PetscErrorCode                ierr;
 
   PetscFunctionBegin;
   /* Create the factorization matrix */
@@ -491,7 +490,7 @@ static PetscErrorCode MatGetFactor_aij_strumpack(Mat A,MatFactorType ftype,Mat *
   PetscCall(PetscObjectTypeCompare((PetscObject)A,MATSEQAIJ,&flg));
   iface = flg ? STRUMPACK_MT : STRUMPACK_MPI_DIST;
 
-  ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)A),((PetscObject)A)->prefix,"STRUMPACK Options","Mat");PetscCall(ierr);
+  PetscOptionsBegin(PetscObjectComm((PetscObject)A),((PetscObject)A)->prefix,"STRUMPACK Options","Mat");
 
   verb = PetscLogPrintInfo ? PETSC_TRUE : PETSC_FALSE;
   PetscCall(PetscOptionsBool("-mat_strumpack_verbose","Print STRUMPACK information","None",verb,&verb,NULL));
@@ -543,7 +542,7 @@ static PetscErrorCode MatGetFactor_aij_strumpack(Mat A,MatFactorType ftype,Mat *
   PetscCall(PetscOptionsEnum("-mat_strumpack_iterative_solver","Select iterative solver from STRUMPACK","None",SolverTypes,(PetscEnum)itcurrent,(PetscEnum*)&itsolver,&set));
   if (set) PetscStackCall("STRUMPACK_set_Krylov_solver",STRUMPACK_set_Krylov_solver(*S,itsolver));
 
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   *F = B;
   PetscFunctionReturn(0);

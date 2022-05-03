@@ -5,8 +5,8 @@ static PetscErrorCode KSPSetUp_BiCG(KSP ksp)
 {
   PetscFunctionBegin;
   /* check user parameters and functions */
-  PetscCheckFalse(ksp->pc_side == PC_RIGHT,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"no right preconditioning for KSPBiCG");
-  else PetscCheckFalse(ksp->pc_side == PC_SYMMETRIC,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"no symmetric preconditioning for KSPBiCG");
+  PetscCheck(ksp->pc_side != PC_RIGHT,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"no right preconditioning for KSPBiCG");
+  else PetscCheck(ksp->pc_side != PC_SYMMETRIC,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"no symmetric preconditioning for KSPBiCG");
   PetscCall(KSPSetWorkVecs(ksp,6));
   PetscFunctionReturn(0);
 }
@@ -132,7 +132,7 @@ static PetscErrorCode  KSPSolve_BiCG(KSP ksp)
          See KSPCGNE for code that EXACTLY runs the preconditioned conjugate gradient method on the
          normal equations
 
-.seealso:  KSPCreate(), KSPSetType(), KSPType (for list of available types), KSP, KSPBCGS, KSPCGNE
+.seealso: `KSPCreate()`, `KSPSetType()`, `KSPType`, `KSP`, `KSPBCGS`, `KSPCGNE`
 
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_BiCG(KSP ksp)

@@ -16,7 +16,7 @@
 
   Level: beginner
 
-.seealso: VecCreate(), VecSetType(), VecSetFromOptions(), VecCreateMPIWithArray(), VECSEQHIP, VECMPIHIP, VECSTANDARD, VecType, VecCreateMPI(), VecSetPinnedMemoryMin()
+.seealso: `VecCreate()`, `VecSetType()`, `VecSetFromOptions()`, `VecCreateMPIWithArray()`, `VECSEQHIP`, `VECMPIHIP`, `VECSTANDARD`, `VecType`, `VecCreateMPI()`, `VecSetPinnedMemoryMin()`
 M*/
 
 PetscErrorCode VecDestroy_MPIHIP(Vec v)
@@ -123,7 +123,7 @@ PetscErrorCode VecMDot_MPIHIP(Vec xin,PetscInt nv,const Vec y[],PetscScalar *z)
 
   Level: beginner
 
-.seealso: VecCreate(), VecSetType(), VecSetFromOptions(), VecCreateMPIWithArray(), VECMPI, VecType, VecCreateMPI(), VecSetPinnedMemoryMin()
+.seealso: `VecCreate()`, `VecSetType()`, `VecSetFromOptions()`, `VecCreateMPIWithArray()`, `VECMPI`, `VecType`, `VecCreateMPI()`, `VecSetPinnedMemoryMin()`
 M*/
 
 PetscErrorCode VecDuplicate_MPIHIP(Vec win,Vec *v)
@@ -226,9 +226,9 @@ PetscErrorCode VecCreate_HIP(Vec v)
 
     Level: intermediate
 
- .seealso: VecCreateMPIHIPWithArray(), VecCreateMPIHIPWithArrays(), VecCreateSeqHIP(), VecCreateSeq(),
-           VecCreateMPI(), VecCreate(), VecDuplicate(), VecDuplicateVecs(), VecCreateGhost(),
-           VecCreateMPIWithArray(), VecCreateGhostWithArray(), VecMPISetGhost()
+ .seealso: `VecCreateMPIHIPWithArray()`, `VecCreateMPIHIPWithArrays()`, `VecCreateSeqHIP()`, `VecCreateSeq()`,
+           `VecCreateMPI()`, `VecCreate()`, `VecDuplicate()`, `VecDuplicateVecs()`, `VecCreateGhost()`,
+           `VecCreateMPIWithArray()`, `VecCreateGhostWithArray()`, `VecMPISetGhost()`
 
  @*/
  PetscErrorCode VecCreateMPIHIP(MPI_Comm comm,PetscInt n,PetscInt N,Vec *v)
@@ -268,15 +268,15 @@ PetscErrorCode VecCreate_HIP(Vec v)
 
    Level: intermediate
 
-.seealso: VecCreateSeqHIPWithArray(), VecCreateMPIWithArray(), VecCreateSeqWithArray(),
-          VecCreate(), VecDuplicate(), VecDuplicateVecs(), VecCreateGhost(),
-          VecCreateMPI(), VecCreateGhostWithArray(), VecPlaceArray()
+.seealso: `VecCreateSeqHIPWithArray()`, `VecCreateMPIWithArray()`, `VecCreateSeqWithArray()`,
+          `VecCreate()`, `VecDuplicate()`, `VecDuplicateVecs()`, `VecCreateGhost()`,
+          `VecCreateMPI()`, `VecCreateGhostWithArray()`, `VecPlaceArray()`
 
 @*/
 PetscErrorCode  VecCreateMPIHIPWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,PetscInt N,const PetscScalar array[],Vec *vv)
 {
   PetscFunctionBegin;
-  PetscCheckFalse(n == PETSC_DECIDE,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must set local size of vector");
+  PetscCheck(n != PETSC_DECIDE,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must set local size of vector");
   PetscCall(PetscDeviceInitialize(PETSC_DEVICE_HIP));
   PetscCall(VecCreate(comm,vv));
   PetscCall(VecSetSizes(*vv,n,N));
@@ -315,10 +315,10 @@ PetscErrorCode  VecCreateMPIHIPWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,Pe
 
    Level: intermediate
 
-.seealso: VecCreateSeqHIPWithArrays(), VecCreateMPIWithArray(), VecCreateSeqWithArray(),
-          VecCreate(), VecDuplicate(), VecDuplicateVecs(), VecCreateGhost(),
-          VecCreateMPI(), VecCreateGhostWithArray(), VecHIPPlaceArray(), VecPlaceArray(),
-          VecHIPAllocateCheckHost()
+.seealso: `VecCreateSeqHIPWithArrays()`, `VecCreateMPIWithArray()`, `VecCreateSeqWithArray()`,
+          `VecCreate()`, `VecDuplicate()`, `VecDuplicateVecs()`, `VecCreateGhost()`,
+          `VecCreateMPI()`, `VecCreateGhostWithArray()`, `VecHIPPlaceArray()`, `VecPlaceArray()`,
+          `VecHIPAllocateCheckHost()`
 @*/
 PetscErrorCode  VecCreateMPIHIPWithArrays(MPI_Comm comm,PetscInt bs,PetscInt n,PetscInt N,const PetscScalar cpuarray[],const PetscScalar gpuarray[],Vec *vv)
 {
@@ -505,7 +505,6 @@ PetscErrorCode VecCreate_MPIHIP_Private(Vec vv,PetscBool alloc,PetscInt nghost,c
     if (!vv->spptr) {
       PetscReal      pinned_memory_min;
       PetscBool      flag;
-      PetscErrorCode ierr;
 
       /* Cannot use PetscNew() here because spptr is void* */
       PetscCall(PetscCalloc(sizeof(Vec_HIP),&vv->spptr));
@@ -514,11 +513,11 @@ PetscErrorCode VecCreate_MPIHIP_Private(Vec vv,PetscBool alloc,PetscInt nghost,c
 
       /* Need to parse command line for minimum size to use for pinned memory allocations on host here.
          Note: This same code duplicated in VecCreate_SeqHIP_Private() and VecHIPAllocateCheck(). Is there a good way to avoid this? */
-      ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)vv),((PetscObject)vv)->prefix,"VECHIP Options","Vec");PetscCall(ierr);
+      PetscOptionsBegin(PetscObjectComm((PetscObject)vv),((PetscObject)vv)->prefix,"VECHIP Options","Vec");
       pinned_memory_min = vv->minimum_bytes_pinned_memory;
       PetscCall(PetscOptionsReal("-vec_pinned_memory_min","Minimum size (in bytes) for an allocation to use pinned memory on host","VecSetPinnedMemoryMin",pinned_memory_min,&pinned_memory_min,&flag));
       if (flag) vv->minimum_bytes_pinned_memory = pinned_memory_min;
-      ierr = PetscOptionsEnd();PetscCall(ierr);
+      PetscOptionsEnd();
     }
     vechip = (Vec_HIP*)vv->spptr;
     vechip->GPUarray = (PetscScalar*)array;

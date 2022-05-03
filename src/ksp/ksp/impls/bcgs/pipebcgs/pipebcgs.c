@@ -43,7 +43,7 @@ static PetscErrorCode  KSPSolve_PIPEBCGS(KSP ksp)
   V  = ksp->work[14];
 
   /* Only supports right preconditioning */
-  PetscCheckFalse(ksp->pc_side != PC_RIGHT,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"KSP pipebcgs does not support %s",PCSides[ksp->pc_side]);
+  PetscCheck(ksp->pc_side == PC_RIGHT,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"KSP pipebcgs does not support %s",PCSides[ksp->pc_side]);
   if (!ksp->guess_zero) {
     if (!bcgs->guess) {
       PetscCall(VecDuplicate(X,&bcgs->guess));
@@ -169,7 +169,7 @@ static PetscErrorCode  KSPSolve_PIPEBCGS(KSP ksp)
     PetscCall(VecDotEnd(W,RP,&d2));
     PetscCall(VecDotEnd(Z,RP,&d3));
 
-    PetscCheckFalse(d2 + beta * d1 - beta * omega * d3 == 0.0,PetscObjectComm((PetscObject)ksp),PETSC_ERR_PLIB,"Divide by zero");
+    PetscCheck(d2 + beta * d1 - beta * omega * d3 != 0.0,PetscObjectComm((PetscObject)ksp),PETSC_ERR_PLIB,"Divide by zero");
 
     beta = (rho/rhoold) * (alpha/omega);
     alpha = rho/(d2 + beta * d1 - beta * omega * d3); /* alpha <- rho / (d2 + beta * d1 - beta * omega * d3) */
@@ -236,7 +236,7 @@ static PetscErrorCode  KSPSolve_PIPEBCGS(KSP ksp)
     "The communication-hiding pipelined BiCGStab method for the parallel solution of large unsymmetric linear systems",
     Parallel Computing, 65:1-20, 2017.
 
-.seealso:  KSPCreate(), KSPSetType(), KSPType (for list of available types), KSP, KSPBICG, KSPFBCGS, KSPFBCGSL, KSPSetPCSide()
+.seealso: `KSPCreate()`, `KSPSetType()`, `KSPType`, `KSP`, `KSPBICG`, `KSPFBCGS`, `KSPFBCGSL`, `KSPSetPCSide()`
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_PIPEBCGS(KSP ksp)
 {

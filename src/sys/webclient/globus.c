@@ -23,7 +23,7 @@ static PetscErrorCode base64_encode(const unsigned char *data,unsigned char *enc
   PetscFunctionBegin;
   PetscCall(PetscStrlen((const char*)data,&input_length));
   output_length = 4 * ((input_length + 2) / 3);
-  PetscCheckFalse(output_length > len,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Output length not large enough");
+  PetscCheck(output_length <= len,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Output length not large enough");
 
   for (i = 0, j = 0; i < input_length;) {
      uint32_t octet_a = i < input_length ? (unsigned char)data[i++] : 0;
@@ -55,12 +55,12 @@ PETSC_UNUSED static PetscErrorCode base64_decode(const unsigned char *data,unsig
   }
 
   PetscCall(PetscStrlen((const char*)data,&input_length));
-  PetscCheckFalse(input_length % 4 != 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Input length must be divisible by 4");
+  PetscCheck(input_length % 4 == 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Input length must be divisible by 4");
 
   output_length = input_length / 4 * 3;
   if (data[input_length - 1] == '=') (output_length)--;
   if (data[input_length - 2] == '=') (output_length)--;
-  PetscCheckFalse(output_length > length,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Output length too shore");
+  PetscCheck(output_length <= length,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Output length too shore");
 
   for (i = 0, j = 0; i < input_length;) {
     uint32_t sextet_a = data[i] == '=' ? 0 & i++ : decoding_table[(int)data[i++]];
@@ -100,7 +100,7 @@ PETSC_UNUSED static PetscErrorCode base64_decode(const unsigned char *data,unsig
 
    Level: intermediate
 
-.seealso: PetscGoogleDriveRefresh(), PetscGoogleDriveUpload(), PetscURLShorten(), PetscGlobusUpload()
+.seealso: `PetscGoogleDriveRefresh()`, `PetscGoogleDriveUpload()`, `PetscURLShorten()`, `PetscGlobusUpload()`
 
 @*/
 PetscErrorCode PetscGlobusAuthorize(MPI_Comm comm,char access_token[],size_t tokensize)
@@ -116,7 +116,7 @@ PetscErrorCode PetscGlobusAuthorize(MPI_Comm comm,char access_token[],size_t tok
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_rank(comm,&rank));
   if (rank == 0) {
-    PetscCheckFalse(!isatty(fileno(PETSC_STDOUT)),PETSC_COMM_SELF,PETSC_ERR_USER,"Requires users input/output");
+    PetscCheck(isatty(fileno(PETSC_STDOUT)),PETSC_COMM_SELF,PETSC_ERR_USER,"Requires users input/output");
     PetscCall(PetscPrintf(comm,"Enter globus username:"));
     ptr  = fgets(buff, 1024, stdin);
     PetscCheck(ptr,PETSC_COMM_SELF, PETSC_ERR_FILE_READ, "Error reading from stdin: %d", errno);
@@ -164,7 +164,7 @@ PetscErrorCode PetscGlobusAuthorize(MPI_Comm comm,char access_token[],size_t tok
 
    Level: intermediate
 
-.seealso: PetscGoogleDriveRefresh(), PetscGoogleDriveUpload(), PetscURLShorten(), PetscGlobusUpload(), PetscGlobusAuthorize()
+.seealso: `PetscGoogleDriveRefresh()`, `PetscGoogleDriveUpload()`, `PetscURLShorten()`, `PetscGlobusUpload()`, `PetscGlobusAuthorize()`
 
 @*/
 PetscErrorCode PetscGlobusGetTransfers(MPI_Comm comm,const char access_token[],char buff[],size_t buffsize)
@@ -214,7 +214,7 @@ PetscErrorCode PetscGlobusGetTransfers(MPI_Comm comm,const char access_token[],c
 
    Level: intermediate
 
-.seealso: PetscURLShorten(), PetscGoogleDriveAuthorize(), PetscGoogleDriveRefresh(), PetscGlobusAuthorize()
+.seealso: `PetscURLShorten()`, `PetscGoogleDriveAuthorize()`, `PetscGoogleDriveRefresh()`, `PetscGlobusAuthorize()`
 
 @*/
 PetscErrorCode PetscGlobusUpload(MPI_Comm comm,const char access_token[],const char filename[])

@@ -208,7 +208,7 @@ static PetscErrorCode TSStep_Alpha(TS ts)
     ts->reject++; accept = PETSC_FALSE;
     if (!ts->reason && ++rejections > ts->max_reject && ts->max_reject >= 0) {
       ts->reason = TS_DIVERGED_STEP_REJECTED;
-      PetscCall(PetscInfo(ts,"Step=%D, step rejections %D greater than current TS allowed, stopping solve\n",ts->steps,rejections));
+      PetscCall(PetscInfo(ts,"Step=%" PetscInt_FMT ", step rejections %" PetscInt_FMT " greater than current TS allowed, stopping solve\n",ts->steps,rejections));
     }
 
   }
@@ -349,7 +349,7 @@ static PetscErrorCode TSSetFromOptions_Alpha(PetscOptionItems *PetscOptionsObjec
   TS_Alpha       *th = (TS_Alpha*)ts->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Generalized-Alpha ODE solver options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Generalized-Alpha ODE solver options");
   {
     PetscBool flg;
     PetscReal radius = 1;
@@ -360,7 +360,7 @@ static PetscErrorCode TSSetFromOptions_Alpha(PetscOptionItems *PetscOptionsObjec
     PetscCall(PetscOptionsReal("-ts_alpha_gamma","Algorithmic parameter gamma","TSAlphaSetParams",th->Gamma,&th->Gamma,NULL));
     PetscCall(TSAlphaSetParams(ts,th->Alpha_m,th->Alpha_f,th->Gamma));
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -382,7 +382,7 @@ static PetscErrorCode TSAlphaSetRadius_Alpha(TS ts,PetscReal radius)
   PetscReal      alpha_m,alpha_f,gamma;
 
   PetscFunctionBegin;
-  PetscCheckFalse(radius < 0 || radius > 1,PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_OUTOFRANGE,"Radius %g not in range [0,1]",(double)radius);
+  PetscCheck(radius >= 0 && radius <= 1,PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_OUTOFRANGE,"Radius %g not in range [0,1]",(double)radius);
   alpha_m = (PetscReal)0.5*(3-radius)/(1+radius);
   alpha_f = 1/(1+radius);
   gamma   = (PetscReal)0.5 + alpha_m - alpha_f;
@@ -431,7 +431,7 @@ static PetscErrorCode TSAlphaGetParams_Alpha(TS ts,PetscReal *alpha_m,PetscReal 
   Dynamics with Improved Numerical Dissipation: The Generalized-alpha
   Method" ASME Journal of Applied Mechanics, 60, 371:375, 1993.
 
-.seealso:  TS, TSCreate(), TSSetType(), TSAlphaSetRadius(), TSAlphaSetParams()
+.seealso: `TS`, `TSCreate()`, `TSSetType()`, `TSAlphaSetRadius()`, `TSAlphaSetParams()`
 M*/
 PETSC_EXTERN PetscErrorCode TSCreate_Alpha(TS ts)
 {
@@ -489,14 +489,14 @@ PETSC_EXTERN PetscErrorCode TSCreate_Alpha(TS ts)
 
   Level: intermediate
 
-.seealso: TSAlphaSetParams(), TSAlphaGetParams()
+.seealso: `TSAlphaSetParams()`, `TSAlphaGetParams()`
 @*/
 PetscErrorCode TSAlphaSetRadius(TS ts,PetscReal radius)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ts,TS_CLASSID,1);
   PetscValidLogicalCollectiveReal(ts,radius,2);
-  PetscCheckFalse(radius < 0 || radius > 1,((PetscObject)ts)->comm,PETSC_ERR_ARG_OUTOFRANGE,"Radius %g not in range [0,1]",(double)radius);
+  PetscCheck(radius >= 0 && radius <= 1,((PetscObject)ts)->comm,PETSC_ERR_ARG_OUTOFRANGE,"Radius %g not in range [0,1]",(double)radius);
   PetscTryMethod(ts,"TSAlphaSetRadius_C",(TS,PetscReal),(ts,radius));
   PetscFunctionReturn(0);
 }
@@ -535,7 +535,7 @@ PetscErrorCode TSAlphaSetRadius(TS ts,PetscReal radius)
 
   Level: advanced
 
-.seealso: TSAlphaSetRadius(), TSAlphaGetParams()
+.seealso: `TSAlphaSetRadius()`, `TSAlphaGetParams()`
 @*/
 PetscErrorCode TSAlphaSetParams(TS ts,PetscReal alpha_m,PetscReal alpha_f,PetscReal gamma)
 {
@@ -570,7 +570,7 @@ PetscErrorCode TSAlphaSetParams(TS ts,PetscReal alpha_m,PetscReal alpha_f,PetscR
 
   Level: advanced
 
-.seealso: TSAlphaSetRadius(), TSAlphaSetParams()
+.seealso: `TSAlphaSetRadius()`, `TSAlphaSetParams()`
 @*/
 PetscErrorCode TSAlphaGetParams(TS ts,PetscReal *alpha_m,PetscReal *alpha_f,PetscReal *gamma)
 {

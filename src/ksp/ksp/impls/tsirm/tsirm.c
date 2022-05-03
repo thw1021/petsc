@@ -136,12 +136,12 @@ PetscErrorCode KSPSetFromOptions_TSIRM(PetscOptionItems *PetscOptionsObject,KSP 
   KSP_TSIRM      *tsirm = (KSP_TSIRM*)ksp->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"KSP TSIRM options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"KSP TSIRM options");
   PetscCall(PetscOptionsInt("-ksp_tsirm_cgls","Method used for the minimization step","",tsirm->cgls,&tsirm->cgls,NULL)); /*0:LSQR, 1:CGLS*/
   PetscCall(PetscOptionsReal("-ksp_tsirm_tol_ls","Tolerance threshold for the minimization step","",tsirm->tol_ls,&tsirm->tol_ls,NULL));
   PetscCall(PetscOptionsInt("-ksp_tsirm_max_it_ls","Maximum number of iterations for the minimization step","",tsirm->maxiter_ls,&tsirm->maxiter_ls,NULL));
   PetscCall(PetscOptionsInt("-ksp_tsirm_size_ls","Number of residuals for minimization","",tsirm->size_ls,&tsirm->size_ls,NULL));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -187,10 +187,10 @@ PetscErrorCode KSPDestroy_TSIRM(KSP ksp)
 
    Contributed by: Lilia Ziane Khodja
 
-.seealso:  KSPCreate(), KSPSetType(), KSPType (for list of available types), KSP, KSPFGMRES, KSPLGMRES,
-           KSPGMRESSetRestart(), KSPGMRESSetHapTol(), KSPGMRESSetPreAllocateVectors(), KSPGMRESSetOrthogonalization(), KSPGMRESGetOrthogonalization(),
-           KSPGMRESClassicalGramSchmidtOrthogonalization(), KSPGMRESModifiedGramSchmidtOrthogonalization(),
-           KSPGMRESCGSRefinementType, KSPGMRESSetCGSRefinementType(), KSPGMRESGetCGSRefinementType(), KSPGMRESMonitorKrylov(), KSPSetPCSide()
+.seealso: `KSPCreate()`, `KSPSetType()`, `KSPType`, `KSP`, `KSPFGMRES`, `KSPLGMRES`,
+          `KSPGMRESSetRestart()`, `KSPGMRESSetHapTol()`, `KSPGMRESSetPreAllocateVectors()`, `KSPGMRESSetOrthogonalization()`, `KSPGMRESGetOrthogonalization()`,
+          `KSPGMRESClassicalGramSchmidtOrthogonalization()`, `KSPGMRESModifiedGramSchmidtOrthogonalization()`,
+          `KSPGMRESCGSRefinementType`, `KSPGMRESSetCGSRefinementType()`, `KSPGMRESGetCGSRefinementType()`, `KSPGMRESMonitorKrylov()`, `KSPSetPCSide()`
 
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_TSIRM(KSP ksp)

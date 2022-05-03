@@ -16,7 +16,7 @@ static PetscBool DMPackageInitialized = PETSC_FALSE;
 
   Level: developer
 
-.seealso: PetscInitialize()
+.seealso: `PetscInitialize()`
 @*/
 PetscErrorCode  DMFinalizePackage(void)
 {
@@ -39,7 +39,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_HYPRESStruct(Mat);
 
   Level: developer
 
-.seealso: PetscInitialize()
+.seealso: `PetscInitialize()`
 @*/
 PetscErrorCode DMInitializePackage(void)
 {
@@ -75,6 +75,7 @@ PetscErrorCode DMInitializePackage(void)
   PetscCall(PetscLogEventRegister("DMCreateRestrict",       DM_CLASSID,&DM_CreateRestriction));
   PetscCall(PetscLogEventRegister("DMCreateInject",         DM_CLASSID,&DM_CreateInjection));
   PetscCall(PetscLogEventRegister("DMCreateMat",            DM_CLASSID,&DM_CreateMatrix));
+  PetscCall(PetscLogEventRegister("DMCreateMassMat",        DM_CLASSID,&DM_CreateMassMatrix));
   PetscCall(PetscLogEventRegister("DMLoad",                 DM_CLASSID,&DM_Load));
   PetscCall(PetscLogEventRegister("DMAdaptInterp",          DM_CLASSID,&DM_AdaptInterpolator));
 
@@ -170,7 +171,7 @@ static PetscBool PetscFEPackageInitialized = PETSC_FALSE;
 
   Level: developer
 
-.seealso: PetscInitialize()
+.seealso: `PetscInitialize()`
 @*/
 PetscErrorCode PetscFEFinalizePackage(void)
 {
@@ -192,7 +193,7 @@ PetscErrorCode PetscFEFinalizePackage(void)
 
   Level: developer
 
-.seealso: PetscInitialize()
+.seealso: `PetscInitialize()`
 @*/
 PetscErrorCode PetscFEInitializePackage(void)
 {
@@ -244,7 +245,7 @@ static PetscBool PetscFVPackageInitialized = PETSC_FALSE;
 
   Level: developer
 
-.seealso: PetscInitialize()
+.seealso: `PetscInitialize()`
 @*/
 PetscErrorCode PetscFVFinalizePackage(void)
 {
@@ -264,7 +265,7 @@ PetscErrorCode PetscFVFinalizePackage(void)
 
   Level: developer
 
-.seealso: PetscInitialize()
+.seealso: `PetscInitialize()`
 @*/
 PetscErrorCode PetscFVInitializePackage(void)
 {
@@ -311,7 +312,7 @@ static PetscBool PetscDSPackageInitialized = PETSC_FALSE;
 
   Level: developer
 
-.seealso: PetscInitialize()
+.seealso: `PetscInitialize()`
 @*/
 PetscErrorCode PetscDSFinalizePackage(void)
 {
@@ -329,7 +330,7 @@ PetscErrorCode PetscDSFinalizePackage(void)
 
   Level: developer
 
-.seealso: PetscInitialize()
+.seealso: `PetscInitialize()`
 @*/
 PetscErrorCode PetscDSInitializePackage(void)
 {

@@ -35,7 +35,7 @@
    Notes:
     The reference count on the AIJ matrix is not increased so you should not destroy it.
 
-.seealso: MatCreateMAIJ()
+.seealso: `MatCreateMAIJ()`
 @*/
 PetscErrorCode  MatMAIJGetAIJ(Mat A,Mat *B)
 {
@@ -72,7 +72,7 @@ PetscErrorCode  MatMAIJGetAIJ(Mat A,Mat *B)
 
    Level: advanced
 
-.seealso: MatCreateMAIJ()
+.seealso: `MatCreateMAIJ()`
 @*/
 PetscErrorCode  MatMAIJRedimension(Mat A,PetscInt dof,Mat *B)
 {
@@ -157,7 +157,7 @@ PetscErrorCode MatDestroy_MPIMAIJ(Mat A)
 
   Level: advanced
 
-.seealso: MatMAIJGetAIJ(), MatMAIJRedimension(), MatCreateMAIJ()
+.seealso: `MatMAIJGetAIJ()`, `MatMAIJRedimension()`, `MatCreateMAIJ()`
 M*/
 
 PETSC_EXTERN PetscErrorCode MatCreate_MAIJ(Mat A)
@@ -2809,7 +2809,6 @@ PetscErrorCode MatProductSetFromOptions_SeqAIJ_SeqMAIJ(Mat C)
 
 PetscErrorCode MatProductSetFromOptions_MPIAIJ_MPIMAIJ(Mat C)
 {
-  PetscErrorCode ierr;
   Mat_Product    *product = C->product;
   PetscBool      flg = PETSC_FALSE;
   Mat            A=product->A,P=product->B;
@@ -2823,12 +2822,12 @@ PetscErrorCode MatProductSetFromOptions_MPIAIJ_MPIMAIJ(Mat C)
 #endif
 
   PetscFunctionBegin;
-  PetscCheckFalse(product->type != MATPRODUCT_PtAP,PETSC_COMM_SELF,PETSC_ERR_SUP,"Mat Product type %s is not supported for MPIAIJ and MPIMAIJ matrices",MatProductTypes[product->type]);
+  PetscCheck(product->type == MATPRODUCT_PtAP,PETSC_COMM_SELF,PETSC_ERR_SUP,"Mat Product type %s is not supported for MPIAIJ and MPIMAIJ matrices",MatProductTypes[product->type]);
 
   /* PtAP */
   /* Check matrix local sizes */
-  PetscCheckFalse(A->rmap->rstart != P->rmap->rstart || A->rmap->rend != P->rmap->rend,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Matrix local dimensions are incompatible, Arow (%" PetscInt_FMT ", %" PetscInt_FMT ") != Prow (%" PetscInt_FMT ",%" PetscInt_FMT ")",A->rmap->rstart,A->rmap->rend,P->rmap->rstart,P->rmap->rend);
-  PetscCheckFalse(A->cmap->rstart != P->rmap->rstart || A->cmap->rend != P->rmap->rend,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Matrix local dimensions are incompatible, Acol (%" PetscInt_FMT ", %" PetscInt_FMT ") != Prow (%" PetscInt_FMT ",%" PetscInt_FMT ")",A->cmap->rstart,A->cmap->rend,P->rmap->rstart,P->rmap->rend);
+  PetscCheck(A->rmap->rstart == P->rmap->rstart && A->rmap->rend == P->rmap->rend,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Matrix local dimensions are incompatible, Arow (%" PetscInt_FMT ", %" PetscInt_FMT ") != Prow (%" PetscInt_FMT ",%" PetscInt_FMT ")",A->rmap->rstart,A->rmap->rend,P->rmap->rstart,P->rmap->rend);
+  PetscCheck(A->cmap->rstart == P->rmap->rstart && A->cmap->rend == P->rmap->rend,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Matrix local dimensions are incompatible, Acol (%" PetscInt_FMT ", %" PetscInt_FMT ") != Prow (%" PetscInt_FMT ",%" PetscInt_FMT ")",A->cmap->rstart,A->cmap->rend,P->rmap->rstart,P->rmap->rend);
 
   /* Set the default algorithm */
   PetscCall(PetscStrcmp(C->product->alg,"default",&flg));
@@ -2837,12 +2836,12 @@ PetscErrorCode MatProductSetFromOptions_MPIAIJ_MPIMAIJ(Mat C)
   }
 
   /* Get runtime option */
-  ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)C),((PetscObject)C)->prefix,"MatProduct_PtAP","Mat");PetscCall(ierr);
+  PetscOptionsBegin(PetscObjectComm((PetscObject)C),((PetscObject)C)->prefix,"MatProduct_PtAP","Mat");
   PetscCall(PetscOptionsEList("-mat_product_algorithm","Algorithmic approach","MatPtAP",algTypes,nalg,algTypes[alg],&alg,&flg));
   if (flg) {
     PetscCall(MatProductSetAlgorithm(C,(MatProductAlgorithm)algTypes[alg]));
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   PetscCall(PetscStrcmp(C->product->alg,"allatonce",&flg));
   if (flg) {
@@ -3338,7 +3337,7 @@ PetscErrorCode MatCreateSubMatrices_MAIJ(Mat mat,PetscInt n,const IS irow[],cons
 
   Level: advanced
 
-.seealso: MatMAIJGetAIJ(), MatMAIJRedimension(), MATMAIJ
+.seealso: `MatMAIJGetAIJ()`, `MatMAIJRedimension()`, `MATMAIJ`
 @*/
 PetscErrorCode  MatCreateMAIJ(Mat A,PetscInt dof,Mat *maij)
 {

@@ -8,8 +8,8 @@ typedef struct {
 static PetscErrorCode KSPSetUp_MINRES(KSP ksp)
 {
   PetscFunctionBegin;
-  PetscCheckFalse(ksp->pc_side == PC_RIGHT,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"No right preconditioning for KSPMINRES");
-  else PetscCheckFalse(ksp->pc_side == PC_SYMMETRIC,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"No symmetric preconditioning for KSPMINRES");
+  PetscCheck(ksp->pc_side != PC_RIGHT,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"No right preconditioning for KSPMINRES");
+  else PetscCheck(ksp->pc_side != PC_SYMMETRIC,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"No symmetric preconditioning for KSPMINRES");
   PetscCall(KSPSetWorkVecs(ksp,9));
   PetscFunctionReturn(0);
 }
@@ -198,7 +198,7 @@ static PetscErrorCode  KSPSolve_MINRES(KSP ksp)
 
    Contributed by: Robert Scheichl: maprs@maths.bath.ac.uk
 
-.seealso: KSPCreate(), KSPSetType(), KSPType (for list of available types), KSP, KSPCG, KSPCR
+.seealso: `KSPCreate()`, `KSPSetType()`, `KSPType`, `KSP`, `KSPCG`, `KSPCR`
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_MINRES(KSP ksp)
 {

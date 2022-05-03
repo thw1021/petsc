@@ -20,7 +20,7 @@ int main(int argc,char **argv)
   PetscCall(PetscInitialize(&argc,&argv,NULL,help));
   PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD,&rank));
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD,&size));
-  PetscCheckFalse(size != 2,PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,"The test can only run with two MPI ranks");
+  PetscCheck(size == 2,PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,"The test can only run with two MPI ranks");
 
   /* Test PetscSF */
   PetscCall(PetscSFCreate(PETSC_COMM_WORLD,&sf));
@@ -50,7 +50,7 @@ int main(int argc,char **argv)
   PetscCall(PetscSFReduceBegin(sf,MPI_SIGNED_CHAR,leafdata,rootdata,MPI_SUM)); /* rank 1->0, add leafdata to rootdata */
   PetscCall(PetscSFReduceEnd(sf,MPI_SIGNED_CHAR,leafdata,rootdata,MPI_SUM));
   if (!rank) {
-    PetscCheckFalse(rootdata[0] != 22 || rootdata[nroots-1] != 24,PETSC_COMM_SELF,PETSC_ERR_PLIB,"SF: wrong results");
+    PetscCheck(rootdata[0] == 22 && rootdata[nroots-1] == 24,PETSC_COMM_SELF,PETSC_ERR_PLIB,"SF: wrong results");
   }
 
   PetscCall(PetscFree2(rootdata,leafdata));
@@ -77,7 +77,7 @@ int main(int argc,char **argv)
   PetscCall(VecScatterEnd(vscat,y,x,ADD_VALUES,SCATTER_REVERSE));
 
   PetscCall(VecGetArrayRead(x,&xv));
-  PetscCheckFalse(xv[0] != 6.0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"VecScatter: wrong results");
+  PetscCheck(xv[0] == 6.0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"VecScatter: wrong results");
   PetscCall(VecRestoreArrayRead(x,&xv));
   PetscCall(VecDestroy(&x));
   PetscCall(VecDestroy(&y));

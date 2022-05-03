@@ -158,8 +158,8 @@ PetscErrorCode KSPView_LCD(KSP ksp,PetscViewer viewer)
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
   if (iascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  restart=%d\n",lcd->restart));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  happy breakdown tolerance %g\n",lcd->haptol));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  restart=%" PetscInt_FMT "\n",lcd->restart));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  happy breakdown tolerance %g\n",(double)lcd->haptol));
   }
   PetscFunctionReturn(0);
 }
@@ -174,11 +174,11 @@ PetscErrorCode KSPSetFromOptions_LCD(PetscOptionItems *PetscOptionsObject,KSP ks
   KSP_LCD        *lcd = (KSP_LCD*)ksp->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"KSP LCD options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"KSP LCD options");
   PetscCall(PetscOptionsInt("-ksp_lcd_restart","Number of vectors conjugate","KSPLCDSetRestart",lcd->restart,&lcd->restart,&flg));
-  PetscCheckFalse(flg && lcd->restart < 1,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Restart must be positive");
+  PetscCheck(!flg || lcd->restart >= 1,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Restart must be positive");
   PetscCall(PetscOptionsReal("-ksp_lcd_haptol","Tolerance for exact convergence (happy ending)","KSPLCDSetHapTol",lcd->haptol,&lcd->haptol,&flg));
-  PetscCheckFalse(flg && lcd->haptol < 0.0,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Tolerance must be non-negative");
+  PetscCheck(!flg || lcd->haptol >= 0.0,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Tolerance must be non-negative");
   PetscFunctionReturn(0);
 }
 
@@ -213,8 +213,8 @@ PetscErrorCode KSPSetFromOptions_LCD(PetscOptionItems *PetscOptionsObject,KSP ks
 
   Contributed by: Lucia Catabriga <luciac@ices.utexas.edu>
 
-.seealso:  KSPCreate(), KSPSetType(), KSPType (for list of available types), KSP,
-           KSPCGSetType(), KSPLCDSetRestart(), KSPLCDSetHapTol()
+.seealso: `KSPCreate()`, `KSPSetType()`, `KSPType`, `KSP`,
+          `KSPCGSetType()`, `KSPLCDSetRestart()`, `KSPLCDSetHapTol()`
 
 M*/
 

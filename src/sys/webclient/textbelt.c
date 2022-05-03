@@ -30,7 +30,7 @@
        waiting for part of the message to arrive that does not exist, hence the success flg may be improperly set to false even
        though the message was delivered.
 
-.seealso: PetscTellMyCell(), PetscOpenSocket(), PetscHTTPRequest()
+.seealso: `PetscTellMyCell()`, `PetscOpenSocket()`, `PetscHTTPRequest()`
 @*/
 PetscErrorCode PetscTextBelt(MPI_Comm comm,const char number[],const char message[],PetscBool *flg)
 {
@@ -39,9 +39,9 @@ PetscErrorCode PetscTextBelt(MPI_Comm comm,const char number[],const char messag
 
   PetscFunctionBegin;
   PetscCall(PetscStrlen(number,&nlen));
-  PetscCheckFalse(nlen != 10,comm,PETSC_ERR_ARG_WRONG,"Number %s is not ten digits",number);
+  PetscCheck(nlen == 10,comm,PETSC_ERR_ARG_WRONG,"Number %s is not ten digits",number);
   PetscCall(PetscStrlen(message,&mlen));
-  PetscCheckFalse(mlen > 100,comm,PETSC_ERR_ARG_WRONG,"Message  %s is too long",message);
+  PetscCheck(mlen <= 100,comm,PETSC_ERR_ARG_WRONG,"Message  %s is too long",message);
   PetscCallMPI(MPI_Comm_rank(comm,&rank));
   if (rank == 0) {
     int       sock;

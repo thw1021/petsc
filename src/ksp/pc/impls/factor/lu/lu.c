@@ -25,7 +25,7 @@ static PetscErrorCode PCSetFromOptions_LU(PetscOptionItems *PetscOptionsObject,P
   PetscReal      tol;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"LU options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"LU options");
   PetscCall(PCSetFromOptions_Factor(PetscOptionsObject,pc));
 
   PetscCall(PetscOptionsName("-pc_factor_nonzeros_along_diagonal","Reorder to remove zeros from diagonal","PCFactorReorderForNonzeroDiagonal",&flg));
@@ -34,7 +34,7 @@ static PetscErrorCode PCSetFromOptions_LU(PetscOptionItems *PetscOptionsObject,P
     PetscCall(PetscOptionsReal("-pc_factor_nonzeros_along_diagonal","Reorder to remove zeros from diagonal","PCFactorReorderForNonzeroDiagonal",lu->nonzerosalongdiagonaltol,&tol,NULL));
     PetscCall(PCFactorReorderForNonzeroDiagonal(pc,tol));
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -43,8 +43,11 @@ static PetscErrorCode PCSetUp_LU(PC pc)
   PC_LU                  *dir = (PC_LU*)pc->data;
   MatSolverType          stype;
   MatFactorError         err;
+  const char             *prefix;
 
   PetscFunctionBegin;
+  PetscCall(PCGetOptionsPrefix(pc,&prefix));
+  PetscCall(MatSetOptionsPrefix(pc->pmat,prefix));
   pc->failedreason = PC_NOERROR;
   if (dir->hdr.reusefill && pc->setupcalled) ((PC_Factor*)dir)->info.fill = dir->hdr.actualfill;
 
@@ -238,11 +241,11 @@ static PetscErrorCode PCApplyTranspose_LU(PC pc,Vec x,Vec y)
           not need a Krylov method (i.e. you can use -ksp_type preonly, or
           KSPSetType(ksp,KSPPREONLY) for the Krylov method
 
-.seealso:  PCCreate(), PCSetType(), PCType (for list of available types), PC,
-           PCILU, PCCHOLESKY, PCICC, PCFactorSetReuseOrdering(), PCFactorSetReuseFill(), PCFactorGetMatrix(),
-           PCFactorSetFill(), PCFactorSetUseInPlace(), PCFactorSetMatOrderingType(), PCFactorSetColumnPivot(),
-           PCFactorSetPivotInBlocks(),PCFactorSetShiftType(),PCFactorSetShiftAmount()
-           PCFactorReorderForNonzeroDiagonal()
+.seealso: `PCCreate()`, `PCSetType()`, `PCType`, `PC`,
+          `PCILU`, `PCCHOLESKY`, `PCICC`, `PCFactorSetReuseOrdering()`, `PCFactorSetReuseFill()`, `PCFactorGetMatrix()`,
+          `PCFactorSetFill()`, `PCFactorSetUseInPlace()`, `PCFactorSetMatOrderingType()`, `PCFactorSetColumnPivot()`,
+          `PCFactorSetPivotInBlocks(),PCFactorSetShiftType(),PCFactorSetShiftAmount()`
+          `PCFactorReorderForNonzeroDiagonal()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_LU(PC pc)

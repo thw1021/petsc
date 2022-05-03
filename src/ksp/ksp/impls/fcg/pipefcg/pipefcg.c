@@ -60,7 +60,6 @@ static PetscErrorCode KSPAllocateVectors_PIPEFCG(KSP ksp, PetscInt nvecsneeded, 
 
 static PetscErrorCode KSPSetUp_PIPEFCG(KSP ksp)
 {
-  PetscErrorCode ierr;
   KSP_PIPEFCG    *pipefcg;
   const PetscInt nworkstd = 5;
 
@@ -81,14 +80,14 @@ static PetscErrorCode KSPSetUp_PIPEFCG(KSP ksp)
 
   /* If the requested number of preallocated vectors is greater than mmax reduce nprealloc */
   if (pipefcg->nprealloc > pipefcg->mmax+1) {
-    PetscCall(PetscInfo(NULL,"Requested nprealloc=%d is greater than m_max+1=%d. Resetting nprealloc = m_max+1.\n",pipefcg->nprealloc, pipefcg->mmax+1));
+    PetscCall(PetscInfo(NULL,"Requested nprealloc=%" PetscInt_FMT " is greater than m_max+1=%" PetscInt_FMT ". Resetting nprealloc = m_max+1.\n",pipefcg->nprealloc, pipefcg->mmax+1));
   }
 
   /* Preallocate additional work vectors */
   PetscCall(KSPAllocateVectors_PIPEFCG(ksp,pipefcg->nprealloc,pipefcg->nprealloc));
 
-  ierr = PetscLogObjectMemory((PetscObject)ksp,(pipefcg->mmax+1)*4*sizeof(Vec*)+(pipefcg->mmax+1)*4*sizeof(Vec**)+(pipefcg->mmax+1)*4*sizeof(Vec*)+
-    (pipefcg->mmax+1)*sizeof(PetscInt)+(pipefcg->mmax+2)*sizeof(Vec*)+(pipefcg->mmax+2)*sizeof(PetscScalar)+(pipefcg->mmax+1)*sizeof(PetscReal));PetscCall(ierr);
+  PetscCall(PetscLogObjectMemory((PetscObject)ksp,(pipefcg->mmax+1)*4*sizeof(Vec*)+(pipefcg->mmax+1)*4*sizeof(Vec**)+(pipefcg->mmax+1)*4*sizeof(Vec*)+
+                                 (pipefcg->mmax+1)*sizeof(PetscInt)+(pipefcg->mmax+2)*sizeof(Vec*)+(pipefcg->mmax+2)*sizeof(PetscScalar)+(pipefcg->mmax+1)*sizeof(PetscReal)));
   PetscFunctionReturn(0);
 }
 
@@ -104,7 +103,7 @@ static PetscErrorCode KSPSolve_PIPEFCG_cycle(KSP ksp)
   PetscFunctionBegin;
   /* We have not checked these routines for use with complex numbers. The inner products
      are likely not defined correctly for that case */
-  PetscCheckFalse(PetscDefined(USE_COMPLEX) && !PetscDefined(SKIP_COMPLEX),PETSC_COMM_WORLD,PETSC_ERR_SUP,"PIPEFGMRES has not been implemented for use with complex scalars");
+  PetscCheck(!PetscDefined(USE_COMPLEX) || PetscDefined(SKIP_COMPLEX),PETSC_COMM_WORLD,PETSC_ERR_SUP,"PIPEFGMRES has not been implemented for use with complex scalars");
 
 #define VecXDot(x,y,a)         (((pipefcg->type) == (KSP_CG_HERMITIAN)) ? VecDot       (x,y,a)   : VecTDot       (x,y,a))
 #define VecXDotBegin(x,y,a)    (((pipefcg->type) == (KSP_CG_HERMITIAN)) ? VecDotBegin  (x,y,a)   : VecTDotBegin  (x,y,a))
@@ -250,7 +249,7 @@ static PetscErrorCode KSPSolve_PIPEFCG_cycle(KSP ksp)
     *eta += delta;                                          /* etai    = delta -betaik^2 * etak */
     if (*eta < 0.) {
       pipefcg->norm_breakdown = PETSC_TRUE;
-      PetscCall(PetscInfo(ksp,"Restart due to square root breakdown at it = \n",ksp->its));
+      PetscCall(PetscInfo(ksp,"Restart due to square root breakdown at it = %" PetscInt_FMT "\n",ksp->its));
       break;
     } else {
       alpha= gamma/(*eta);                                  /* alpha = gamma/etai */
@@ -374,7 +373,6 @@ static PetscErrorCode KSPDestroy_PIPEFCG(KSP ksp)
 static PetscErrorCode KSPView_PIPEFCG(KSP ksp,PetscViewer viewer)
 {
   KSP_PIPEFCG    *pipefcg = (KSP_PIPEFCG*)ksp->data;
-  PetscErrorCode ierr;
   PetscBool      iascii,isstring;
   const char     *truncstr;
 
@@ -391,14 +389,12 @@ static PetscErrorCode KSPView_PIPEFCG(KSP ksp,PetscViewer viewer)
   }
 
   if (iascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  max previous directions = %D\n",pipefcg->mmax));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  preallocated %D directions\n",PetscMin(pipefcg->nprealloc,pipefcg->mmax+1)));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  max previous directions = %" PetscInt_FMT "\n",pipefcg->mmax));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  preallocated %" PetscInt_FMT " directions\n",PetscMin(pipefcg->nprealloc,pipefcg->mmax+1)));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  %s\n",truncstr));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  restarts performed = %D \n", pipefcg->n_restarts));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  restarts performed = %" PetscInt_FMT " \n", pipefcg->n_restarts));
   } else if (isstring) {
-    ierr = PetscViewerStringSPrintf(viewer,
-      "max previous directions = %D, preallocated %D directions, %s truncation strategy",
-      pipefcg->mmax,pipefcg->nprealloc,truncstr);PetscCall(ierr);
+    PetscCall(PetscViewerStringSPrintf(viewer,"max previous directions = %" PetscInt_FMT ", preallocated %" PetscInt_FMT " directions, %s truncation strategy",pipefcg->mmax,pipefcg->nprealloc,truncstr));
   }
   PetscFunctionReturn(0);
 }
@@ -421,7 +417,7 @@ static PetscErrorCode KSPView_PIPEFCG(KSP ksp,PetscViewer viewer)
   Options Database:
 . -ksp_pipefcg_mmax <N> - maximum number of previous directions
 
-.seealso: KSPPIPEFCG, KSPPIPEFCGSetTruncationType(), KSPPIPEFCGSetNprealloc()
+.seealso: `KSPPIPEFCG`, `KSPPIPEFCGSetTruncationType()`, `KSPPIPEFCGSetNprealloc()`
 @*/
 PetscErrorCode KSPPIPEFCGSetMmax(KSP ksp,PetscInt mmax)
 {
@@ -452,7 +448,7 @@ PetscErrorCode KSPPIPEFCGSetMmax(KSP ksp,PetscInt mmax)
 
    Level: intermediate
 
-.seealso: KSPPIPEFCG, KSPPIPEFCGGetTruncationType(), KSPPIPEFCGGetNprealloc(), KSPPIPEFCGSetMmax()
+.seealso: `KSPPIPEFCG`, `KSPPIPEFCGGetTruncationType()`, `KSPPIPEFCGGetNprealloc()`, `KSPPIPEFCGSetMmax()`
 @*/
 PetscErrorCode KSPPIPEFCGGetMmax(KSP ksp,PetscInt *mmax)
 {
@@ -478,7 +474,7 @@ PetscErrorCode KSPPIPEFCGGetMmax(KSP ksp,PetscInt *mmax)
   Options Database:
 . -ksp_pipefcg_nprealloc <N> - the number of vectors to preallocate
 
-.seealso: KSPPIPEFCG, KSPPIPEFCGSetTruncationType(), KSPPIPEFCGGetNprealloc()
+.seealso: `KSPPIPEFCG`, `KSPPIPEFCGSetTruncationType()`, `KSPPIPEFCGGetNprealloc()`
 @*/
 PetscErrorCode KSPPIPEFCGSetNprealloc(KSP ksp,PetscInt nprealloc)
 {
@@ -504,7 +500,7 @@ PetscErrorCode KSPPIPEFCGSetNprealloc(KSP ksp,PetscInt nprealloc)
 
    Level: advanced
 
-.seealso: KSPPIPEFCG, KSPPIPEFCGGetTruncationType(), KSPPIPEFCGSetNprealloc()
+.seealso: `KSPPIPEFCG`, `KSPPIPEFCGGetTruncationType()`, `KSPPIPEFCGSetNprealloc()`
 @*/
 PetscErrorCode KSPPIPEFCGGetNprealloc(KSP ksp,PetscInt *nprealloc)
 {
@@ -533,7 +529,7 @@ PetscErrorCode KSPPIPEFCGGetNprealloc(KSP ksp,PetscInt *nprealloc)
   Options Database:
 .  -ksp_pipefcg_truncation_type <standard,notay> - which stored search directions to orthogonalize against
 
-.seealso: KSPPIPEFCG, KSPPIPEFCGGetTruncationType, KSPFCDTruncationType
+.seealso: `KSPPIPEFCG`, `KSPPIPEFCGGetTruncationType`, `KSPFCDTruncationType`
 @*/
 PetscErrorCode KSPPIPEFCGSetTruncationType(KSP ksp,KSPFCDTruncationType truncstrat)
 {
@@ -562,7 +558,7 @@ PetscErrorCode KSPPIPEFCGSetTruncationType(KSP ksp,KSPFCDTruncationType truncstr
 
    Level: intermediate
 
-.seealso: KSPPIPEFCG, KSPPIPEFCGSetTruncationType, KSPFCDTruncationType
+.seealso: `KSPPIPEFCG`, `KSPPIPEFCGSetTruncationType`, `KSPFCDTruncationType`
 @*/
 PetscErrorCode KSPPIPEFCGGetTruncationType(KSP ksp,KSPFCDTruncationType *truncstrat)
 {
@@ -581,13 +577,13 @@ static PetscErrorCode KSPSetFromOptions_PIPEFCG(PetscOptionItems *PetscOptionsOb
   PetscBool      flg;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"KSP PIPEFCG options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"KSP PIPEFCG options");
   PetscCall(PetscOptionsInt("-ksp_pipefcg_mmax","Number of search directions to storue","KSPPIPEFCGSetMmax",pipefcg->mmax,&mmax,&flg));
   if (flg) PetscCall(KSPPIPEFCGSetMmax(ksp,mmax));
   PetscCall(PetscOptionsInt("-ksp_pipefcg_nprealloc","Number of directions to preallocate","KSPPIPEFCGSetNprealloc",pipefcg->nprealloc,&nprealloc,&flg));
   if (flg) PetscCall(KSPPIPEFCGSetNprealloc(ksp,nprealloc));
   PetscCall(PetscOptionsEnum("-ksp_pipefcg_truncation_type","Truncation approach for directions","KSPFCGSetTruncationType",KSPFCDTruncationTypes,(PetscEnum)pipefcg->truncstrat,(PetscEnum*)&pipefcg->truncstrat,NULL));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -616,7 +612,7 @@ static PetscErrorCode KSPSetFromOptions_PIPEFCG(PetscOptionItems *PetscOptionsOb
 
   Level: intermediate
 
-.seealso: KSPFCG, KSPPIPECG, KSPPIPECR, KSPGCR, KSPPIPEGCR, KSPFGMRES, KSPCG, KSPPIPEFCGSetMmax(), KSPPIPEFCGGetMmax(), KSPPIPEFCGSetNprealloc(), KSPPIPEFCGGetNprealloc(), KSPPIPEFCGSetTruncationType(), KSPPIPEFCGGetTruncationType()
+.seealso: `KSPFCG`, `KSPPIPECG`, `KSPPIPECR`, `KSPGCR`, `KSPPIPEGCR`, `KSPFGMRES`, `KSPCG`, `KSPPIPEFCGSetMmax()`, `KSPPIPEFCGGetMmax()`, `KSPPIPEFCGSetNprealloc()`, `KSPPIPEFCGGetNprealloc()`, `KSPPIPEFCGSetTruncationType()`, `KSPPIPEFCGGetTruncationType()`
 
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_PIPEFCG(KSP ksp)

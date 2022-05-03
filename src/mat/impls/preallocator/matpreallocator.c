@@ -166,7 +166,7 @@ PetscErrorCode MatPreallocatorPreallocate_Preallocator(Mat mat, PetscBool fill, 
       rowstarts[i+1] = rowstarts[i] + p->dnz[i] + p->onz[i];
       maxrow = PetscMax(maxrow, p->dnz[i] + p->onz[i]);
     }
-    PetscCheckFalse(rowstarts[rEnd-rStart] != n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Hash claims %" PetscInt_FMT " entries, but dnz+onz counts %" PetscInt_FMT,n,rowstarts[rEnd-rStart]);
+    PetscCheck(rowstarts[rEnd-rStart] == n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Hash claims %" PetscInt_FMT " entries, but dnz+onz counts %" PetscInt_FMT,n,rowstarts[rEnd-rStart]);
 
     PetscHashIterBegin(p->ht,hi);
     for (PetscInt i=0; !PetscHashIterAtEnd(p->ht,hi); i++) {
@@ -223,7 +223,7 @@ PetscErrorCode MatPreallocatorPreallocate_Preallocator(Mat mat, PetscBool fill, 
 
   Level: advanced
 
-.seealso: MATPREALLOCATOR
+.seealso: `MATPREALLOCATOR`
 @*/
 PetscErrorCode MatPreallocatorPreallocate(Mat mat, PetscBool fill, Mat A)
 {
@@ -248,7 +248,7 @@ PetscErrorCode MatPreallocatorPreallocate(Mat mat, PetscBool fill, Mat A)
 
   Level: advanced
 
-.seealso: Mat, MatPreallocatorPreallocate()
+.seealso: `Mat`, `MatPreallocatorPreallocate()`
 
 M*/
 

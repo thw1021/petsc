@@ -14,72 +14,90 @@ const char * const DMStagStencilLocations[] = {"NONE","BACK_DOWN_LEFT","BACK_DOW
 
   Input Parameters:
 + dm - the DMStag object
-. nStencil - the number of stencils provided
-- stencils - an array of DMStagStencil objects (i,j, and k are ignored)
+. n_stencil - the number of stencils provided
+- stencils - an array of DMStagStencil objects (i, j, and k are ignored)
 
   Output Parameter:
 . is - the global IS
 
   Note:
-  Redundant entries in s are ignored
+  Redundant entries in the stencils argument are ignored
 
   Level: advanced
 
-.seealso: DMSTAG, IS, DMStagStencil, DMCreateGlobalVector
+.seealso: `DMSTAG`, `IS`, `DMStagStencil`, `DMCreateGlobalVector`
 @*/
-PetscErrorCode DMStagCreateISFromStencils(DM dm,PetscInt nStencil,DMStagStencil* stencils,IS *is)
+PetscErrorCode DMStagCreateISFromStencils(DM dm,PetscInt n_stencil,DMStagStencil* stencils,IS *is)
 {
-  DMStagStencil          *ss;
+  PetscInt               *stencil_active;
+  DMStagStencil          *stencils_ordered_unique;
   PetscInt               *idx,*idxLocal;
   const PetscInt         *ltogidx;
-  PetscInt               p,p2,pmax,i,j,k,d,dim,count,nidx;
+  PetscInt               n_stencil_unique,dim,count,nidx,nc_max;
   ISLocalToGlobalMapping ltog;
   PetscInt               start[DMSTAG_MAX_DIM],n[DMSTAG_MAX_DIM],extraPoint[DMSTAG_MAX_DIM];
 
   PetscFunctionBegin;
   PetscCall(DMGetDimension(dm,&dim));
-  PetscCheckFalse(dim<1 || dim>3,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Unsupported dimension %D",dim);
+  PetscCheck(dim >= 1 && dim <= 3,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Unsupported dimension %" PetscInt_FMT,dim);
 
-  /* Only use non-redundant stencils */
-  PetscCall(PetscMalloc1(nStencil,&ss));
-  pmax = 0;
-  for (p=0; p<nStencil; ++p) {
-    PetscBool skip = PETSC_FALSE;
-    DMStagStencil stencilPotential = stencils[p];
-    PetscCall(DMStagStencilLocationCanonicalize(stencils[p].loc,&stencilPotential.loc));
-    for (p2=0; p2<pmax; ++p2) { /* Quadratic complexity algorithm in nStencil */
-      if (stencilPotential.loc == ss[p2].loc && stencilPotential.c == ss[p2].c) {
-        skip = PETSC_TRUE;
-        break;
-      }
-    }
-    if (!skip) {
-      ss[pmax] = stencilPotential;
-      ++pmax;
+  /* To assert that the resulting IS has unique, sorted, entries, we perform
+     a bucket sort, taking advantage of the fact that DMStagStencilLocation
+     enum values are integers starting with 1, in canonical order */
+  nc_max = 1; // maximum number of components to represent these stencils
+  n_stencil_unique = 0;
+  for (PetscInt p=0;p<n_stencil;++p) nc_max = PetscMax(nc_max, (stencils[p].c + 1));
+  PetscCall(PetscCalloc1(DMSTAG_NUMBER_LOCATIONS * nc_max, &stencil_active));
+  for (PetscInt p=0; p<n_stencil; ++p) {
+    DMStagStencilLocation loc_canonical;
+    PetscInt              slot;
+
+    PetscCall(DMStagStencilLocationCanonicalize(stencils[p].loc,&loc_canonical));
+    slot = nc_max * ((PetscInt) loc_canonical) + stencils[p].c;
+    if (stencil_active[slot] == 0) {
+      stencil_active[slot] = 1;
+      ++n_stencil_unique;
     }
   }
+  PetscCall(PetscMalloc1(n_stencil_unique,&stencils_ordered_unique));
+  {
+    PetscInt p = 0;
 
-  PetscCall(PetscMalloc1(pmax,&idxLocal));
+    for (PetscInt i=1; i<DMSTAG_NUMBER_LOCATIONS; ++i) {
+      for (PetscInt c = 0; c<nc_max; ++c) {
+        if (stencil_active[nc_max * i + c] != 0) {
+          stencils_ordered_unique[p].loc = (DMStagStencilLocation) i;
+          stencils_ordered_unique[p].c = c;
+          ++p;
+        }
+      }
+    }
+  }
+  PetscCall(PetscFree(stencil_active));
+
+  PetscCall(PetscMalloc1(n_stencil_unique,&idxLocal));
   PetscCall(DMGetLocalToGlobalMapping(dm,&ltog));
   PetscCall(ISLocalToGlobalMappingGetIndices(ltog,&ltogidx));
   PetscCall(DMStagGetCorners(dm,&start[0],&start[1],&start[2],&n[0],&n[1],&n[2],&extraPoint[0],&extraPoint[1],&extraPoint[2]));
-  for (d=dim; d<DMSTAG_MAX_DIM; ++d) {
+  for (PetscInt d=dim; d<DMSTAG_MAX_DIM; ++d) {
     start[d]      = 0;
     n[d]          = 1; /* To allow for a single loop nest below */
     extraPoint[d] = 0;
   }
-  nidx = pmax; for (d=0; d<dim; ++d) nidx *= (n[d]+1); /* Overestimate (always assumes extraPoint) */
+  nidx = n_stencil_unique; for (PetscInt d=0; d<dim; ++d) nidx *= (n[d]+1); /* Overestimate (always assumes extraPoint) */
   PetscCall(PetscMalloc1(nidx,&idx));
   count = 0;
   /* Note that unused loop variables are not accessed, for lower dimensions */
-  for (k=start[2]; k<start[2]+n[2]+extraPoint[2]; ++k) {
-    for (j=start[1]; j<start[1]+n[1]+extraPoint[1]; ++j) {
-      for (i=start[0]; i<start[0]+n[0]+extraPoint[0]; ++i) {
-        for (p=0; p<pmax; ++p) {
-          ss[p].i = i; ss[p].j = j; ss[p].k = k;
+  for (PetscInt k=start[2]; k<start[2]+n[2]+extraPoint[2]; ++k) {
+    for (PetscInt j=start[1]; j<start[1]+n[1]+extraPoint[1]; ++j) {
+      for (PetscInt i=start[0]; i<start[0]+n[0]+extraPoint[0]; ++i) {
+        for (PetscInt p=0; p<n_stencil_unique; ++p) {
+          stencils_ordered_unique[p].i = i;
+          stencils_ordered_unique[p].j = j;
+          stencils_ordered_unique[p].k = k;
         }
-        PetscCall(DMStagStencilToIndexLocal(dm,dim,pmax,ss,idxLocal));
-        for (p=0; p<pmax; ++p) {
+        PetscCall(DMStagStencilToIndexLocal(dm,dim,n_stencil_unique,stencils_ordered_unique,idxLocal));
+        for (PetscInt p=0; p<n_stencil_unique; ++p) {
           const PetscInt gidx = ltogidx[idxLocal[p]];
           if (gidx >= 0) {
             idx[count] = gidx;
@@ -89,11 +107,15 @@ PetscErrorCode DMStagCreateISFromStencils(DM dm,PetscInt nStencil,DMStagStencil*
       }
     }
   }
-  PetscCall(ISLocalToGlobalMappingRestoreIndices(ltog,&ltogidx));
-  PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)dm),count,idx,PETSC_OWN_POINTER,is));
 
-  PetscCall(PetscFree(ss));
+  PetscCall(ISLocalToGlobalMappingRestoreIndices(ltog,&ltogidx));
+  PetscCall(PetscFree(stencils_ordered_unique));
   PetscCall(PetscFree(idxLocal));
+
+  PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)dm),count,idx,PETSC_OWN_POINTER,is));
+  PetscCall(ISSetInfo(*is,IS_SORTED,IS_GLOBAL,PETSC_TRUE,PETSC_TRUE));
+  PetscCall(ISSetInfo(*is,IS_UNIQUE,IS_GLOBAL,PETSC_TRUE,PETSC_TRUE));
+
   PetscFunctionReturn(0);
 }
 
@@ -111,7 +133,7 @@ PetscErrorCode DMStagCreateISFromStencils(DM dm,PetscInt nStencil,DMStagStencil*
 
   Level: intermediate
 
-.seealso: DMSTAG, DMStagStencilLocation, DMStagStencil, DMDAGetDof()
+.seealso: `DMSTAG`, `DMStagStencilLocation`, `DMStagStencil`, `DMDAGetDof()`
 @*/
 PetscErrorCode DMStagGetLocationDOF(DM dm,DMStagStencilLocation loc,PetscInt *dof)
 {
@@ -185,7 +207,7 @@ PetscErrorCode DMStagGetLocationDOF(DM dm,DMStagStencilLocation loc,PetscInt *do
         default : SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Not implemented for location %s",DMStagStencilLocations[loc]);
       }
       break;
-    default : SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Unsupported dimension %D",dim);
+    default : SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"Unsupported dimension %" PetscInt_FMT,dim);
   }
   PetscFunctionReturn(0);
 }
@@ -265,7 +287,7 @@ PETSC_INTERN PetscErrorCode DMStagStencilLocationCanonicalize(DMStagStencilLocat
 
   Level: advanced
 
-.seealso: DMSTAG, DMStagStencil, DMStagStencilLocation, DMStagVecGetValuesStencil(), DMStagVecSetValuesStencil(), DMStagMatSetValuesStencil(), MatSetValuesStencil(), MatAssemblyBegin(), MatAssemblyEnd(), DMCreateMatrix()
+.seealso: `DMSTAG`, `DMStagStencil`, `DMStagStencilLocation`, `DMStagVecGetValuesStencil()`, `DMStagVecSetValuesStencil()`, `DMStagMatSetValuesStencil()`, `MatSetValuesStencil()`, `MatAssemblyBegin()`, `MatAssemblyEnd()`, `DMCreateMatrix()`
 @*/
 PetscErrorCode DMStagMatGetValuesStencil(DM dm,Mat mat,PetscInt nRow,const DMStagStencil *posRow,PetscInt nCol,const DMStagStencil *posCol,PetscScalar *val)
 {
@@ -304,7 +326,7 @@ PetscErrorCode DMStagMatGetValuesStencil(DM dm,Mat mat,PetscInt nRow,const DMSta
 
   Level: intermediate
 
-.seealso: DMSTAG, DMStagStencil, DMStagStencilLocation, DMStagVecGetValuesStencil(), DMStagVecSetValuesStencil(), DMStagMatGetValuesStencil(), MatSetValuesStencil(), MatAssemblyBegin(), MatAssemblyEnd(), DMCreateMatrix()
+.seealso: `DMSTAG`, `DMStagStencil`, `DMStagStencilLocation`, `DMStagVecGetValuesStencil()`, `DMStagVecSetValuesStencil()`, `DMStagMatGetValuesStencil()`, `MatSetValuesStencil()`, `MatAssemblyBegin()`, `MatAssemblyEnd()`, `DMCreateMatrix()`
 @*/
 PetscErrorCode DMStagMatSetValuesStencil(DM dm,Mat mat,PetscInt nRow,const DMStagStencil *posRow,PetscInt nCol,const DMStagStencil *posCol,const PetscScalar *val,InsertMode insertMode)
 {
@@ -345,7 +367,7 @@ PetscErrorCode DMStagMatSetValuesStencil(DM dm,Mat mat,PetscInt nRow,const DMSta
 
   Level: developer
 
-.seealso: DMSTAG, DMStagStencilLocation, DMStagStencil, DMGetLocalVector, DMCreateLocalVector
+.seealso: `DMSTAG`, `DMStagStencilLocation`, `DMStagStencil`, `DMGetLocalVector`, `DMCreateLocalVector`
 @*/
 PetscErrorCode DMStagStencilToIndexLocal(DM dm,PetscInt dim,PetscInt n,const DMStagStencil *pos,PetscInt *ix)
 {
@@ -381,7 +403,7 @@ PetscErrorCode DMStagStencilToIndexLocal(DM dm,PetscInt dim,PetscInt n,const DMS
 
       ix[idx] = eLocal * epe + stag->locationOffsets[pos[idx].loc] + pos[idx].c;
     }
-  } else SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Unsupported dimension %d",dim);
+  } else SETERRQ(PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Unsupported dimension %" PetscInt_FMT,dim);
   PetscFunctionReturn(0);
 }
 
@@ -407,7 +429,7 @@ PetscErrorCode DMStagStencilToIndexLocal(DM dm,PetscInt dim,PetscInt n,const DMS
 
   Level: advanced
 
-.seealso: DMSTAG, DMStagStencil, DMStagStencilLocation, DMStagVecSetValuesStencil(), DMStagMatSetValuesStencil(), DMStagVecGetArray()
+.seealso: `DMSTAG`, `DMStagStencil`, `DMStagStencilLocation`, `DMStagVecSetValuesStencil()`, `DMStagMatSetValuesStencil()`, `DMStagVecGetArray()`
 @*/
 PetscErrorCode DMStagVecGetValuesStencil(DM dm, Vec vec,PetscInt n,const DMStagStencil *pos,PetscScalar *val)
 {
@@ -420,7 +442,7 @@ PetscErrorCode DMStagVecGetValuesStencil(DM dm, Vec vec,PetscInt n,const DMStagS
   PetscValidHeaderSpecificType(dm,DM_CLASSID,1,DMSTAG);
   PetscValidHeaderSpecific(vec,VEC_CLASSID,2);
   PetscCall(VecGetLocalSize(vec,&nLocal));
-  PetscCheckFalse(nLocal != stag->entriesGhost,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Vector should be a local vector. Local size %d does not match expected %d",nLocal,stag->entriesGhost);
+  PetscCheck(nLocal == stag->entriesGhost,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Vector should be a local vector. Local size %" PetscInt_FMT " does not match expected %" PetscInt_FMT,nLocal,stag->entriesGhost);
   PetscCall(PetscMalloc1(n,&ix));
   PetscCall(DMStagStencilToIndexLocal(dm,dm->dim,n,pos,ix));
   PetscCall(VecGetArrayRead(vec,&arr));
@@ -451,7 +473,7 @@ PetscErrorCode DMStagVecGetValuesStencil(DM dm, Vec vec,PetscInt n,const DMStagS
 
   Level: advanced
 
-.seealso: DMSTAG, DMStagStencil, DMStagStencilLocation, DMStagVecGetValuesStencil(), DMStagMatSetValuesStencil(), DMCreateGlobalVector(), DMGetLocalVector(), DMStagVecGetArray()
+.seealso: `DMSTAG`, `DMStagStencil`, `DMStagStencilLocation`, `DMStagVecGetValuesStencil()`, `DMStagMatSetValuesStencil()`, `DMCreateGlobalVector()`, `DMGetLocalVector()`, `DMStagVecGetArray()`
 @*/
 PetscErrorCode DMStagVecSetValuesStencil(DM dm,Vec vec,PetscInt n,const DMStagStencil *pos,const PetscScalar *val,InsertMode insertMode)
 {
@@ -463,7 +485,7 @@ PetscErrorCode DMStagVecSetValuesStencil(DM dm,Vec vec,PetscInt n,const DMStagSt
   PetscValidHeaderSpecificType(dm,DM_CLASSID,1,DMSTAG);
   PetscValidHeaderSpecific(vec,VEC_CLASSID,2);
   PetscCall(VecGetLocalSize(vec,&nLocal));
-  PetscCheckFalse(nLocal != stag->entries,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONG,"Provided vec has a different number of local entries (%D) than expected (%D). It should be a global vector",nLocal,stag->entries);
+  PetscCheck(nLocal == stag->entries,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONG,"Provided vec has a different number of local entries (%" PetscInt_FMT ") than expected (%" PetscInt_FMT "). It should be a global vector",nLocal,stag->entries);
   PetscCall(PetscMalloc1(n,&ix));
   PetscCall(DMStagStencilToIndexLocal(dm,dm->dim,n,pos,ix));
   PetscCall(VecSetValuesLocal(vec,n,ix,val,insertMode));

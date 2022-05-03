@@ -19,7 +19,7 @@ PETSC_EXTERN PetscErrorCode ISInitializePackage(void);
 
    Level: beginner
 
-.seealso: ISSetType(), IS, ISCreate(), ISRegister()
+.seealso: `ISSetType()`, `IS`, `ISCreate()`, `ISRegister()`
 J*/
 typedef const char* ISType;
 #define ISGENERAL      "general"
@@ -51,7 +51,7 @@ PETSC_EXTERN PetscErrorCode ISContiguousLocal(IS,PetscInt,PetscInt,PetscInt*,Pet
    Developer Notes:
     Entries that are negative need not be called collectively by all processes.
 
-.seealso: ISSetInfo()
+.seealso: `ISSetInfo()`
 E*/
 typedef enum {IS_INFO_MIN = -1,
               IS_SORTED = 0,
@@ -103,6 +103,7 @@ PETSC_EXTERN PetscErrorCode ISToGeneral(IS);
 
 PETSC_EXTERN PetscErrorCode ISDuplicate(IS,IS*);
 PETSC_EXTERN PetscErrorCode ISCopy(IS,IS);
+PETSC_EXTERN PetscErrorCode ISShift(IS,PetscInt,IS);
 PETSC_EXTERN PetscErrorCode ISAllGather(IS,IS*);
 PETSC_EXTERN PetscErrorCode ISComplement(IS,PetscInt,PetscInt,IS*);
 PETSC_EXTERN PetscErrorCode ISConcatenate(MPI_Comm,PetscInt,const IS[],IS*);
@@ -144,7 +145,7 @@ PETSC_EXTERN PetscClassId IS_LTOGM_CLASSID;
 
    Level: beginner
 
-.seealso: ISGlobalToLocalMappingApplyBlock(), ISGlobalToLocalMappingApply()
+.seealso: `ISGlobalToLocalMappingApplyBlock()`, `ISGlobalToLocalMappingApply()`
 
 E*/
 typedef enum {IS_GTOLM_MASK,IS_GTOLM_DROP} ISGlobalToLocalMappingMode;
@@ -154,7 +155,7 @@ typedef enum {IS_GTOLM_MASK,IS_GTOLM_DROP} ISGlobalToLocalMappingMode;
 
    Level: beginner
 
-.seealso: ISLocalToGlobalMappingSetType(), ISLocalToGlobalSetFromOptions()
+.seealso: `ISLocalToGlobalMappingSetType()`, `ISLocalToGlobalSetFromOptions()`
 J*/
 typedef const char* ISLocalToGlobalMappingType;
 #define ISLOCALTOGLOBALMAPPINGBASIC "basic"
@@ -210,7 +211,7 @@ $                         require a "parallel coloring", rather each process col
 $                         Using this can result in much less parallel communication. Currently only works
 $                         with DMDA and if you call MatFDColoringSetFunction() with the local function.
 
-.seealso: DMCreateColoring()
+.seealso: `DMCreateColoring()`
 E*/
 typedef enum {IS_COLORING_GLOBAL,IS_COLORING_LOCAL} ISColoringType;
 PETSC_EXTERN const char *const ISColoringTypes[];

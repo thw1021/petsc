@@ -224,11 +224,11 @@ static PetscErrorCode PCSetFromOptions_KSP(PetscOptionItems *PetscOptionsObject,
   PC_KSP         *jac = (PC_KSP*)pc->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"PC KSP options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"PC KSP options");
   if (jac->ksp) {
     PetscCall(KSPSetFromOptions(jac->ksp));
    }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -260,8 +260,8 @@ static PetscErrorCode PCSetFromOptions_KSP(PetscOptionItems *PetscOptionsObject,
     is not an efficient algorithm anyways and (2) implementing it for its > 1 would essentially require that we implement Richardson (reimplementing the
     Richardson code) inside the PCApplyRichardson_PCKSP() leading to duplicate code.
 
-.seealso:  PCCreate(), PCSetType(), PCType (for list of available types), PC,
-           PCSHELL, PCCOMPOSITE, PCSetUseAmat(), PCKSPGetKSP()
+.seealso: `PCCreate()`, `PCSetType()`, `PCType`, `PC`,
+          `PCSHELL`, `PCCOMPOSITE`, `PCSetUseAmat()`, `PCKSPGetKSP()`
 
 M*/
 

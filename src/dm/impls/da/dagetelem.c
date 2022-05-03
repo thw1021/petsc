@@ -191,7 +191,7 @@ static PetscErrorCode DMDAGetElements_3D(DM dm,PetscInt *nel,PetscInt *nen,const
 
    Notes:
 
-.seealso: DMDAElementType, DMDASetElementType(), DMDAGetElements()
+.seealso: `DMDAElementType`, `DMDASetElementType()`, `DMDAGetElements()`
 @*/
 PetscErrorCode  DMDAGetElementsCorners(DM da, PetscInt *gx, PetscInt *gy, PetscInt *gz)
 {
@@ -236,7 +236,7 @@ PetscErrorCode  DMDAGetElementsCorners(DM da, PetscInt *gx, PetscInt *gy, PetscI
    Notes:
     It returns the same number of elements, irrespective of the DMDAElementType
 
-.seealso: DMDAElementType, DMDASetElementType(), DMDAGetElements
+.seealso: `DMDAElementType`, `DMDASetElementType()`, `DMDAGetElements`
 @*/
 PetscErrorCode  DMDAGetElementsSizes(DM da, PetscInt *mx, PetscInt *my, PetscInt *mz)
 {
@@ -287,7 +287,7 @@ PetscErrorCode  DMDAGetElementsSizes(DM da, PetscInt *mx, PetscInt *my, PetscInt
 
    Level: intermediate
 
-.seealso: DMDAElementType, DMDAGetElementType(), DMDAGetElements(), DMDARestoreElements()
+.seealso: `DMDAElementType`, `DMDAGetElementType()`, `DMDAGetElements()`, `DMDARestoreElements()`
 @*/
 PetscErrorCode  DMDASetElementType(DM da, DMDAElementType etype)
 {
@@ -324,7 +324,7 @@ PetscErrorCode  DMDASetElementType(DM da, DMDAElementType etype)
 
    Level: intermediate
 
-.seealso: DMDAElementType, DMDASetElementType(), DMDAGetElements(), DMDARestoreElements()
+.seealso: `DMDAElementType`, `DMDASetElementType()`, `DMDAGetElements()`, `DMDARestoreElements()`
 @*/
 PetscErrorCode  DMDAGetElementType(DM da, DMDAElementType *etype)
 {
@@ -365,7 +365,7 @@ PetscErrorCode  DMDAGetElementType(DM da, DMDAElementType *etype)
 
      Not supported in Fortran
 
-.seealso: DMDAElementType, DMDASetElementType(), VecSetValuesLocal(), MatSetValuesLocal(), DMGlobalToLocalBegin(), DMLocalToGlobalBegin()
+.seealso: `DMDAElementType`, `DMDASetElementType()`, `VecSetValuesLocal()`, `MatSetValuesLocal()`, `DMGlobalToLocalBegin()`, `DMLocalToGlobalBegin()`
 @*/
 PetscErrorCode  DMDAGetElements(DM dm,PetscInt *nel,PetscInt *nen,const PetscInt *e[])
 {
@@ -380,7 +380,7 @@ PetscErrorCode  DMDAGetElements(DM dm,PetscInt *nel,PetscInt *nen,const PetscInt
   PetscValidPointer(e,4);
   PetscCall(PetscObjectTypeCompare((PetscObject)dm,DMDA,&isda));
   PetscCheck(isda,PetscObjectComm((PetscObject)dm),PETSC_ERR_USER,"Not for DM type %s",((PetscObject)dm)->type_name);
-  PetscCheckFalse(dd->stencil_type == DMDA_STENCIL_STAR,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DMDAGetElements() requires you use a stencil type of DMDA_STENCIL_BOX");
+  PetscCheck(dd->stencil_type != DMDA_STENCIL_STAR,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DMDAGetElements() requires you use a stencil type of DMDA_STENCIL_BOX");
   PetscCall(DMGetDimension(dm, &dim));
   if (dd->e) {
     *nel = dd->ne;
@@ -396,7 +396,7 @@ PetscErrorCode  DMDAGetElements(DM dm,PetscInt *nel,PetscInt *nen,const PetscInt
     PetscCall(DMDAGetElements_2D(dm,nel,nen,e));
   } else if (dim==3) {
     PetscCall(DMDAGetElements_3D(dm,nel,nen,e));
-  } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"DMDA dimension not 1, 2, or 3, it is %D",dim);
+  } else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"DMDA dimension not 1, 2, or 3, it is %" PetscInt_FMT,dim);
   PetscFunctionReturn(0);
 }
 
@@ -417,7 +417,7 @@ PetscErrorCode  DMDAGetElements(DM dm,PetscInt *nel,PetscInt *nen,const PetscInt
    Notes:
     Call DMDARestoreSubdomainCornersIS() once you have finished accessing the index set.
 
-.seealso: DMDAElementType, DMDASetElementType(), DMDAGetElements(), DMDARestoreElementsCornersIS()
+.seealso: `DMDAElementType`, `DMDASetElementType()`, `DMDAGetElements()`, `DMDARestoreElementsCornersIS()`
 @*/
 PetscErrorCode  DMDAGetSubdomainCornersIS(DM dm,IS *is)
 {
@@ -429,7 +429,7 @@ PetscErrorCode  DMDAGetSubdomainCornersIS(DM dm,IS *is)
   PetscValidPointer(is,2);
   PetscCall(PetscObjectTypeCompare((PetscObject)dm,DMDA,&isda));
   PetscCheck(isda,PetscObjectComm((PetscObject)dm),PETSC_ERR_USER,"Not for DM type %s",((PetscObject)dm)->type_name);
-  PetscCheckFalse(dd->stencil_type == DMDA_STENCIL_STAR,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DMDAGetElement() requires you use a stencil type of DMDA_STENCIL_BOX");
+  PetscCheck(dd->stencil_type != DMDA_STENCIL_STAR,PetscObjectComm((PetscObject)dm),PETSC_ERR_SUP,"DMDAGetElement() requires you use a stencil type of DMDA_STENCIL_BOX");
   if (!dd->ecorners) { /* compute elements if not yet done */
     const PetscInt *e;
     PetscInt       nel,nen;
@@ -460,7 +460,7 @@ PetscErrorCode  DMDAGetSubdomainCornersIS(DM dm,IS *is)
 
          Not supported in Fortran
 
-.seealso: DMDAElementType, DMDASetElementType(), DMDAGetElements()
+.seealso: `DMDAElementType`, `DMDASetElementType()`, `DMDAGetElements()`
 @*/
 PetscErrorCode  DMDARestoreElements(DM dm,PetscInt *nel,PetscInt *nen,const PetscInt *e[])
 {
@@ -488,7 +488,7 @@ PetscErrorCode  DMDARestoreElements(DM dm,PetscInt *nel,PetscInt *nen,const Pets
 
    Note:
 
-.seealso: DMDAElementType, DMDASetElementType(), DMDAGetSubdomainCornersIS()
+.seealso: `DMDAElementType`, `DMDASetElementType()`, `DMDAGetSubdomainCornersIS()`
 @*/
 PetscErrorCode  DMDARestoreSubdomainCornersIS(DM dm,IS *is)
 {

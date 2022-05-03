@@ -59,7 +59,7 @@ PetscErrorCode SNESMatrixFreeView2_Private(Mat J,PetscViewer viewer)
     PetscCall(PetscViewerASCIIPrintf(viewer,"    err=%g (relative error in function evaluation)\n",(double)ctx->error_rel));
     PetscCall(PetscViewerASCIIPrintf(viewer,"    umin=%g (minimum iterate parameter)\n",(double)ctx->umin));
     if (ctx->compute_err) {
-      PetscCall(PetscViewerASCIIPrintf(viewer,"    freq_err=%D (frequency for computing err)\n",ctx->compute_err_freq));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"    freq_err=%" PetscInt_FMT " (frequency for computing err)\n",ctx->compute_err_freq));
     }
   }
   PetscFunctionReturn(0);
@@ -199,7 +199,7 @@ $  -snes_mf_compute_err
 $  -snes_mf_freq_err <freq>
 $  -snes_mf_jorge
 
-.seealso: MatDestroy(), MatMFFDSetFunctionError()
+.seealso: `MatDestroy()`, `MatMFFDSetFunctionError()`
 @*/
 PetscErrorCode  SNESDefaultMatrixFreeCreate2(SNES snes,Vec x,Mat *J)
 {
@@ -293,7 +293,7 @@ $
    If the user sets the parameter h directly, then this value will be used
    instead of the default computation indicated above.
 
-.seealso: MatCreateSNESMF()
+.seealso: `MatCreateSNESMF()`
 @*/
 PetscErrorCode  SNESDefaultMatrixFreeSetParameters2(Mat mat,PetscReal error,PetscReal umin,PetscReal h)
 {

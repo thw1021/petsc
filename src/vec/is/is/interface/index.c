@@ -219,7 +219,7 @@ PetscErrorCode ISRenumber(IS subset, IS subset_mult, PetscInt *N, IS *subset_n)
    The output index set (subis) should look like:
    | 11 7 | 9 0 | 4 6|
 
-.seealso: VecGetSubVector(), MatCreateSubMatrix()
+.seealso: `VecGetSubVector()`, `MatCreateSubMatrix()`
 @*/
 PetscErrorCode ISCreateSubIS(IS is,IS comps,IS *subis)
 {
@@ -285,7 +285,7 @@ PetscErrorCode ISCreateSubIS(IS is,IS comps,IS *subis)
 
    Level: developer
 
-.seealso:  ISInfo, ISInfoType, ISSetInfo(), ISClearInfoCache()
+.seealso: `ISInfo`, `ISInfoType`, `ISSetInfo()`, `ISClearInfoCache()`
 
 @*/
 PetscErrorCode ISClearInfoCache(IS is, PetscBool clear_permanent_local)
@@ -400,7 +400,7 @@ static PetscErrorCode ISSetInfo_Internal(IS is, ISInfo info, ISInfoType type, IS
     }
     break;
   default:
-    PetscCheckFalse(type == IS_LOCAL,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Unknown IS property");
+    PetscCheck(type != IS_LOCAL,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Unknown IS property");
     else SETERRQ(PetscObjectComm((PetscObject)is), PETSC_ERR_ARG_OUTOFRANGE, "Unknown IS property");
   }
   PetscFunctionReturn(0);
@@ -434,7 +434,7 @@ static PetscErrorCode ISSetInfo_Internal(IS is, ISInfo info, ISInfoType type, IS
 
    Level: advanced
 
-.seealso:  ISInfo, ISInfoType, IS
+.seealso: `ISInfo`, `ISInfoType`, `IS`
 
 @*/
 PetscErrorCode ISSetInfo(IS is, ISInfo info, ISInfoType type, PetscBool permanent, PetscBool flg)
@@ -455,7 +455,7 @@ PetscErrorCode ISSetInfo(IS is, ISInfo info, ISInfoType type, PetscBool permanen
     errcomm = PETSC_COMM_SELF;
   }
 
-  PetscCheckFalse(((int) info) <= IS_INFO_MIN || ((int) info) >= IS_INFO_MAX,errcomm,PETSC_ERR_ARG_OUTOFRANGE,"Options %d is out of range",(int)info);
+  PetscCheck(((int) info) > IS_INFO_MIN && ((int) info) < IS_INFO_MAX,errcomm,PETSC_ERR_ARG_OUTOFRANGE,"Options %d is out of range",(int)info);
 
   PetscCallMPI(MPI_Comm_size(comm, &size));
   /* do not use global values if size == 1: it makes it easier to keep the implications straight */
@@ -752,7 +752,7 @@ static PetscErrorCode ISGetInfo_Identity(IS is, ISInfoType type, PetscBool *flg)
 
    Level: advanced
 
-.seealso:  ISInfo, ISInfoType, ISSetInfo(), ISClearInfoCache()
+.seealso: `ISInfo`, `ISInfoType`, `ISSetInfo()`, `ISClearInfoCache()`
 
 @*/
 PetscErrorCode ISGetInfo(IS is, ISInfo info, ISInfoType type, PetscBool compute, PetscBool *flg)
@@ -777,7 +777,7 @@ PetscErrorCode ISGetInfo(IS is, ISInfo info, ISInfoType type, PetscBool compute,
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
 
-  PetscCheckFalse(((int) info) <= IS_INFO_MIN || ((int) info) >= IS_INFO_MAX,errcomm,PETSC_ERR_ARG_OUTOFRANGE,"Options %d is out of range",(int)info);
+  PetscCheck(((int) info) > IS_INFO_MIN && ((int) info) < IS_INFO_MAX,errcomm,PETSC_ERR_ARG_OUTOFRANGE,"Options %d is out of range",(int)info);
   if (size == 1) type = IS_LOCAL;
   itype = (type == IS_LOCAL) ? 0 : 1;
   hasprop = PETSC_FALSE;
@@ -846,7 +846,7 @@ static PetscErrorCode ISCopyInfo(IS source, IS dest)
    which may require synchronization on the communicator of IS.  To avoid this computation,
    call ISGetInfo() directly with the compute flag set to PETSC_FALSE, and ident will be assumed false.
 
-.seealso: ISSetIdentity(), ISGetInfo()
+.seealso: `ISSetIdentity()`, `ISGetInfo()`
 @*/
 PetscErrorCode  ISIdentity(IS is,PetscBool  *ident)
 {
@@ -871,7 +871,7 @@ PetscErrorCode  ISIdentity(IS is,PetscBool  *ident)
    ISGeneralSetIndices()).  It's a good idea to only set this property if the IS will not change in the future.
    To clear this property, use ISClearInfoCache().
 
-.seealso: ISIdentity(), ISSetInfo(), ISClearInfoCache()
+.seealso: `ISIdentity()`, `ISSetInfo()`, `ISClearInfoCache()`
 @*/
 PetscErrorCode  ISSetIdentity(IS is)
 {
@@ -897,7 +897,7 @@ PetscErrorCode  ISSetIdentity(IS is)
 
    Level: developer
 
-.seealso: ISGetLocalSize(), VecGetOwnershipRange()
+.seealso: `ISGetLocalSize()`, `VecGetOwnershipRange()`
 @*/
 PetscErrorCode  ISContiguousLocal(IS is,PetscInt gstart,PetscInt gend,PetscInt *start,PetscBool *contig)
 {
@@ -933,7 +933,7 @@ PetscErrorCode  ISContiguousLocal(IS is,PetscInt gstart,PetscInt gend,PetscInt *
    To compute the value when it is not already known, use ISGetInfo() with
    the compute flag set to PETSC_TRUE.
 
-.seealso: ISSetPermutation(), ISGetInfo()
+.seealso: `ISSetPermutation()`, `ISGetInfo()`
 @*/
 PetscErrorCode  ISPermutation(IS is,PetscBool  *perm)
 {
@@ -961,7 +961,7 @@ PetscErrorCode  ISPermutation(IS is,PetscBool  *perm)
    ISGeneralSetIndices()).  It's a good idea to only set this property if the IS will not change in the future.
    To clear this property, use ISClearInfoCache().
 
-.seealso: ISPermutation(), ISSetInfo(), ISClearInfoCache().
+.seealso: `ISPermutation()`, `ISSetInfo()`, `ISClearInfoCache().`
 @*/
 PetscErrorCode  ISSetPermutation(IS is)
 {
@@ -981,7 +981,7 @@ PetscErrorCode  ISSetPermutation(IS is)
       PetscCall(PetscArraycpy(idx,iidx,n));
       PetscCall(PetscIntSortSemiOrdered(n,idx));
       for (i=0; i<n; i++) {
-        PetscCheckFalse(idx[i] != i,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Index set is not a permutation");
+        PetscCheck(idx[i] == i,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Index set is not a permutation");
       }
       PetscCall(PetscFree(idx));
       PetscCall(ISRestoreIndices(is,&iidx));
@@ -1001,7 +1001,7 @@ PetscErrorCode  ISSetPermutation(IS is)
 
    Level: beginner
 
-.seealso: ISCreateGeneral(), ISCreateStride(), ISCreateBlocked()
+.seealso: `ISCreateGeneral()`, `ISCreateStride()`, `ISCreateBlocked()`
 @*/
 PetscErrorCode  ISDestroy(IS *is)
 {
@@ -1012,7 +1012,7 @@ PetscErrorCode  ISDestroy(IS *is)
   if ((*is)->complement) {
     PetscInt refcnt;
     PetscCall(PetscObjectGetReference((PetscObject)((*is)->complement), &refcnt));
-    PetscCheckFalse(refcnt > 1,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Nonlocal IS has not been restored");
+    PetscCheck(refcnt <= 1,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Nonlocal IS has not been restored");
     PetscCall(ISDestroy(&(*is)->complement));
   }
   if ((*is)->ops->destroy) {
@@ -1135,7 +1135,7 @@ PetscErrorCode  ISGetLocalSize(IS is,PetscInt *size)
 
    Level: developer
 
-.seealso: ISSetLayout(), ISGetSize(), ISGetLocalSize()
+.seealso: `ISSetLayout()`, `ISGetSize()`, `ISGetLocalSize()`
 @*/
 PetscErrorCode ISGetLayout(IS is,PetscLayout *map)
 {
@@ -1163,7 +1163,7 @@ PetscErrorCode ISGetLayout(IS is,PetscLayout *map)
    This function can be useful in some special cases of constructing a new IS, e.g. after ISCreate() and before ISLoad().
    Otherwise, it is only valid to replace the layout with a layout known to be equivalent.
 
-.seealso: ISCreate(), ISGetLayout(), ISGetSize(), ISGetLocalSize()
+.seealso: `ISCreate()`, `ISGetLayout()`, `ISGetSize()`, `ISGetLocalSize()`
 @*/
 PetscErrorCode ISSetLayout(IS is,PetscLayout map)
 {
@@ -1212,7 +1212,7 @@ $          call ISGetIndicesF90(i,array,ierr)
 
    Level: intermediate
 
-.seealso: ISRestoreIndices(), ISGetIndicesF90()
+.seealso: `ISRestoreIndices()`, `ISGetIndicesF90()`
 @*/
 PetscErrorCode  ISGetIndices(IS is,const PetscInt *ptr[])
 {
@@ -1241,7 +1241,7 @@ PetscErrorCode  ISGetIndices(IS is,const PetscInt *ptr[])
     Empty index sets return min=PETSC_MAX_INT and max=PETSC_MIN_INT.
     In parallel, it returns the min and max of the local portion of the IS
 
-.seealso: ISGetIndices(), ISRestoreIndices(), ISGetIndicesF90()
+.seealso: `ISGetIndices()`, `ISRestoreIndices()`, `ISGetIndicesF90()`
 @*/
 PetscErrorCode  ISGetMinMax(IS is,PetscInt *min,PetscInt *max)
 {
@@ -1329,7 +1329,7 @@ $       call ISRestoreIndices(is,is_array,i_is,ierr)
    Note:
    This routine zeros out ptr. This is to prevent accidental us of the array after it has been restored.
 
-.seealso: ISGetIndices(), ISRestoreIndicesF90()
+.seealso: `ISGetIndices()`, `ISRestoreIndicesF90()`
 @*/
 PetscErrorCode  ISRestoreIndices(IS is,const PetscInt *ptr[])
 {
@@ -1395,7 +1395,7 @@ static PetscErrorCode ISGatherTotal_Private(IS is)
      (use ISGetIndices() and ISGetNonlocalIndices() to retrieve just the local and just
       the nonlocal part (complement), respectively).
 
-.seealso: ISRestoreTotalIndices(), ISGetNonlocalIndices(), ISGetSize()
+.seealso: `ISRestoreTotalIndices()`, `ISGetNonlocalIndices()`, `ISGetSize()`
 @*/
 PetscErrorCode ISGetTotalIndices(IS is, const PetscInt *indices[])
 {
@@ -1427,7 +1427,7 @@ PetscErrorCode ISGetTotalIndices(IS is, const PetscInt *indices[])
 
    Level: intermediate
 
-.seealso: ISRestoreTotalIndices(), ISGetNonlocalIndices()
+.seealso: `ISRestoreTotalIndices()`, `ISGetNonlocalIndices()`
 @*/
 PetscErrorCode  ISRestoreTotalIndices(IS is, const PetscInt *indices[])
 {
@@ -1440,7 +1440,7 @@ PetscErrorCode  ISRestoreTotalIndices(IS is, const PetscInt *indices[])
   if (size == 1) {
     PetscCall((*is->ops->restoreindices)(is,indices));
   } else {
-    PetscCheckFalse(is->total != *indices,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Index array pointer being restored does not point to the array obtained from the IS.");
+    PetscCheck(is->total == *indices,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Index array pointer being restored does not point to the array obtained from the IS.");
   }
   PetscFunctionReturn(0);
 }
@@ -1467,7 +1467,7 @@ PetscErrorCode  ISRestoreTotalIndices(IS is, const PetscInt *indices[])
           The same scalability considerations as those for ISGetTotalIndices
           apply here.
 
-.seealso: ISGetTotalIndices(), ISRestoreNonlocalIndices(), ISGetSize(), ISGetLocalSize().
+.seealso: `ISGetTotalIndices()`, `ISRestoreNonlocalIndices()`, `ISGetSize()`, `ISGetLocalSize().`
 @*/
 PetscErrorCode  ISGetNonlocalIndices(IS is, const PetscInt *indices[])
 {
@@ -1504,14 +1504,14 @@ PetscErrorCode  ISGetNonlocalIndices(IS is, const PetscInt *indices[])
 
    Level: intermediate
 
-.seealso: ISGetTotalIndices(), ISGetNonlocalIndices(), ISRestoreTotalIndices()
+.seealso: `ISGetTotalIndices()`, `ISGetNonlocalIndices()`, `ISRestoreTotalIndices()`
 @*/
 PetscErrorCode  ISRestoreNonlocalIndices(IS is, const PetscInt *indices[])
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(is,IS_CLASSID,1);
   PetscValidPointer(indices,2);
-  PetscCheckFalse(is->nonlocal != *indices,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Index array pointer being restored does not point to the array obtained from the IS.");
+  PetscCheck(is->nonlocal == *indices,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Index array pointer being restored does not point to the array obtained from the IS.");
   PetscFunctionReturn(0);
 }
 
@@ -1535,7 +1535,7 @@ PetscErrorCode  ISRestoreNonlocalIndices(IS is, const PetscInt *indices[])
           Therefore scalability issues similar to ISGetNonlocalIndices apply.
           The resulting IS must be restored using ISRestoreNonlocalIS().
 
-.seealso: ISGetNonlocalIndices(), ISRestoreNonlocalIndices(),  ISAllGather(), ISGetSize()
+.seealso: `ISGetNonlocalIndices()`, `ISRestoreNonlocalIndices()`, `ISAllGather()`, `ISGetSize()`
 @*/
 PetscErrorCode  ISGetNonlocalIS(IS is, IS *complement)
 {
@@ -1570,7 +1570,7 @@ PetscErrorCode  ISGetNonlocalIS(IS is, IS *complement)
 
    Level: intermediate
 
-.seealso: ISGetNonlocalIS(), ISGetNonlocalIndices(), ISRestoreNonlocalIndices()
+.seealso: `ISGetNonlocalIS()`, `ISGetNonlocalIndices()`, `ISRestoreNonlocalIndices()`
 @*/
 PetscErrorCode  ISRestoreNonlocalIS(IS is, IS *complement)
 {
@@ -1579,9 +1579,9 @@ PetscErrorCode  ISRestoreNonlocalIS(IS is, IS *complement)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(is,IS_CLASSID,1);
   PetscValidPointer(complement,2);
-  PetscCheckFalse(*complement != is->complement,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Complement IS being restored was not obtained with ISGetNonlocalIS()");
+  PetscCheck(*complement == is->complement,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Complement IS being restored was not obtained with ISGetNonlocalIS()");
   PetscCall(PetscObjectGetReference((PetscObject)(is->complement), &refcnt));
-  PetscCheckFalse(refcnt <= 1,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Duplicate call to ISRestoreNonlocalIS() detected");
+  PetscCheck(refcnt > 1,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Duplicate call to ISRestoreNonlocalIS() detected");
   PetscCall(PetscObjectDereference((PetscObject)(is->complement)));
   PetscFunctionReturn(0);
 }
@@ -1597,7 +1597,7 @@ PetscErrorCode  ISRestoreNonlocalIS(IS is, IS *complement)
 -  name - command line option
 
    Level: intermediate
-.seealso:  IS, ISView, PetscObjectViewFromOptions(), ISCreate()
+.seealso: `IS`, `ISView`, `PetscObjectViewFromOptions()`, `ISCreate()`
 @*/
 PetscErrorCode  ISViewFromOptions(IS A,PetscObject obj,const char name[])
 {
@@ -1618,7 +1618,7 @@ PetscErrorCode  ISViewFromOptions(IS A,PetscObject obj,const char name[])
 
    Level: intermediate
 
-.seealso: PetscViewerASCIIOpen()
+.seealso: `PetscViewerASCIIOpen()`
 @*/
 PetscErrorCode  ISView(IS is,PetscViewer viewer)
 {
@@ -1651,7 +1651,7 @@ PetscErrorCode  ISView(IS is,PetscViewer viewer)
   that was stored in the file using PetscObjectSetName(). Otherwise you will
   get the error message: "Cannot H5DOpen2() with Vec name NAMEOFOBJECT"
 
-.seealso: PetscViewerBinaryOpen(), ISView(), MatLoad(), VecLoad()
+.seealso: `PetscViewerBinaryOpen()`, `ISView()`, `MatLoad()`, `VecLoad()`
 @*/
 PetscErrorCode ISLoad(IS is, PetscViewer viewer)
 {
@@ -1663,7 +1663,7 @@ PetscErrorCode ISLoad(IS is, PetscViewer viewer)
   PetscCheckSameComm(is,1,viewer,2);
   PetscCall(PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERBINARY, &isbinary));
   PetscCall(PetscObjectTypeCompare((PetscObject) viewer, PETSCVIEWERHDF5, &ishdf5));
-  PetscCheckFalse(!isbinary && !ishdf5,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Invalid viewer; open viewer with PetscViewerBinaryOpen()");
+  PetscCheck(isbinary || ishdf5,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Invalid viewer; open viewer with PetscViewerBinaryOpen()");
   if (!((PetscObject)is)->type_name) PetscCall(ISSetType(is, ISGENERAL));
   PetscCall(PetscLogEventBegin(IS_Load,is,viewer,0,0));
   PetscCall((*is->ops->load)(is, viewer));
@@ -1681,7 +1681,7 @@ PetscErrorCode ISLoad(IS is, PetscViewer viewer)
 
    Level: intermediate
 
-.seealso: ISSortRemoveDups(), ISSorted()
+.seealso: `ISSortRemoveDups()`, `ISSorted()`
 @*/
 PetscErrorCode  ISSort(IS is)
 {
@@ -1702,7 +1702,7 @@ PetscErrorCode  ISSort(IS is)
 
   Level: intermediate
 
-.seealso: ISSort(), ISSorted()
+.seealso: `ISSort()`, `ISSorted()`
 @*/
 PetscErrorCode ISSortRemoveDups(IS is)
 {
@@ -1725,7 +1725,7 @@ PetscErrorCode ISSortRemoveDups(IS is)
 
    Level: intermediate
 
-.seealso: ISSorted()
+.seealso: `ISSorted()`
 @*/
 PetscErrorCode  ISToGeneral(IS is)
 {
@@ -1756,7 +1756,7 @@ PetscErrorCode  ISToGeneral(IS is)
 
    Level: intermediate
 
-.seealso: ISSort(), ISSortRemoveDups()
+.seealso: `ISSort()`, `ISSortRemoveDups()`
 @*/
 PetscErrorCode  ISSorted(IS is,PetscBool  *flg)
 {
@@ -1780,7 +1780,7 @@ PetscErrorCode  ISSorted(IS is,PetscBool  *flg)
 
    Level: beginner
 
-.seealso: ISCreateGeneral(), ISCopy()
+.seealso: `ISCreateGeneral()`, `ISCopy()`
 @*/
 PetscErrorCode  ISDuplicate(IS is,IS *newIS)
 {
@@ -1805,19 +1805,66 @@ PetscErrorCode  ISDuplicate(IS is,IS *newIS)
 
    Level: beginner
 
-.seealso: ISDuplicate()
+.seealso: `ISDuplicate()`, `ISShift()`
 @*/
 PetscErrorCode  ISCopy(IS is,IS isy)
 {
+  PetscInt bs, bsy;
+
   PetscFunctionBegin;
   PetscValidHeaderSpecific(is,IS_CLASSID,1);
   PetscValidHeaderSpecific(isy,IS_CLASSID,2);
   PetscCheckSameComm(is,1,isy,2);
   if (is == isy) PetscFunctionReturn(0);
+  PetscCall(PetscLayoutGetBlockSize(is->map, &bs));
+  PetscCall(PetscLayoutGetBlockSize(isy->map, &bsy));
+  PetscCheck(is->map->N  == isy->map->N,PetscObjectComm((PetscObject)is),PETSC_ERR_ARG_INCOMP,"Index sets have different global size %" PetscInt_FMT " != %" PetscInt_FMT, is->map->N, isy->map->N);
+  PetscCheck(is->map->n  == isy->map->n,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Index sets have different local size %" PetscInt_FMT " != %" PetscInt_FMT, is->map->n, isy->map->n);
+  PetscCheck(bs == bsy,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Index sets have different block size %" PetscInt_FMT " != %" PetscInt_FMT, bs, bsy);
   PetscCall(ISCopyInfo(is,isy));
   isy->max        = is->max;
   isy->min        = is->min;
   PetscCall((*is->ops->copy)(is,isy));
+  PetscFunctionReturn(0);
+}
+
+/*@
+   ISShift - Shift all indices by given offset
+
+   Collective on IS
+
+   Input Parameters:
++  is - the index set
+-  offset - the offset
+
+   Output Parameter:
+.  isy - the shifted copy of the input index set
+
+   Notes:
+   The offset can be different across processes.
+   IS is and isy can be the same.
+
+   Level: beginner
+
+.seealso: `ISDuplicate()`, `ISCopy()`
+@*/
+PetscErrorCode ISShift(IS is,PetscInt offset,IS isy)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(is,IS_CLASSID,1);
+  PetscValidHeaderSpecific(isy,IS_CLASSID,3);
+  PetscCheckSameComm(is,1,isy,3);
+  if (!offset) {
+    PetscCall(ISCopy(is,isy));
+    PetscFunctionReturn(0);
+  }
+  PetscCheck(is->map->N == isy->map->N,PetscObjectComm((PetscObject)is),PETSC_ERR_ARG_INCOMP,"Index sets have different global size %" PetscInt_FMT " != %" PetscInt_FMT, is->map->N, isy->map->N);
+  PetscCheck(is->map->n == isy->map->n,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Index sets have different local size %" PetscInt_FMT " != %" PetscInt_FMT, is->map->n, isy->map->n);
+  PetscCheck(is->map->bs == isy->map->bs,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Index sets have different block size %" PetscInt_FMT " != %" PetscInt_FMT, is->map->bs, isy->map->bs);
+  PetscCall(ISCopyInfo(is,isy));
+  isy->max = is->max + offset;
+  isy->min = is->min + offset;
+  PetscUseMethod(is,"ISShift_C",(IS,PetscInt,IS),(is,offset,isy));
   PetscFunctionReturn(0);
 }
 
@@ -1878,24 +1925,24 @@ PetscErrorCode  ISOnComm(IS is,MPI_Comm comm,PetscCopyMode mode,IS *newis)
    within a block but this is not the case for other IS.
    ISBlockGetIndices() only works for ISBlock IS, not others.
 
-.seealso: ISGetBlockSize(), ISCreateBlock(), ISBlockGetIndices(),
+.seealso: `ISGetBlockSize()`, `ISCreateBlock()`, `ISBlockGetIndices()`,
 @*/
 PetscErrorCode  ISSetBlockSize(IS is,PetscInt bs)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(is,IS_CLASSID,1);
   PetscValidLogicalCollectiveInt(is,bs,2);
-  PetscCheckFalse(bs < 1,PetscObjectComm((PetscObject)is),PETSC_ERR_ARG_OUTOFRANGE,"Block size %" PetscInt_FMT ", must be positive",bs);
+  PetscCheck(bs >= 1,PetscObjectComm((PetscObject)is),PETSC_ERR_ARG_OUTOFRANGE,"Block size %" PetscInt_FMT ", must be positive",bs);
   if (PetscDefined(USE_DEBUG)) {
     const PetscInt *indices;
     PetscInt       length,i,j;
     PetscCall(ISGetIndices(is,&indices));
     if (indices) {
       PetscCall(ISGetLocalSize(is,&length));
-      PetscCheckFalse(length%bs != 0,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local size %D not compatible with block size %D",length,bs);
+      PetscCheck(length%bs == 0,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local size %" PetscInt_FMT " not compatible with block size %" PetscInt_FMT,length,bs);
       for (i=0;i<length/bs;i+=bs) {
         for (j=0;j<bs-1;j++) {
-          PetscCheckFalse(indices[i*bs+j] != indices[i*bs+j+1]-1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Block size %" PetscInt_FMT " is incompatible with the indices: non consecutive indices %" PetscInt_FMT " %" PetscInt_FMT,bs,indices[i*bs+j],indices[i*bs+j+1]);
+          PetscCheck(indices[i*bs+j] == indices[i*bs+j+1]-1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Block size %" PetscInt_FMT " is incompatible with the indices: non consecutive indices %" PetscInt_FMT " %" PetscInt_FMT,bs,indices[i*bs+j],indices[i*bs+j+1]);
         }
       }
     }
@@ -1924,7 +1971,7 @@ Notes:
    within a block but this is not the case for other IS.
    ISBlockGetIndices() only works for ISBlock IS, not others.
 
-.seealso: ISBlockGetSize(), ISGetSize(), ISCreateBlock(), ISSetBlockSize()
+.seealso: `ISBlockGetSize()`, `ISGetSize()`, `ISCreateBlock()`, `ISSetBlockSize()`
 @*/
 PetscErrorCode  ISGetBlockSize(IS is,PetscInt *size)
 {
@@ -1974,7 +2021,7 @@ PetscErrorCode ISGetIndicesCopy(IS is, PetscInt idx[])
 
     Level: intermediate
 
-.seealso:  ISRestoreIndicesF90(), ISGetIndices(), ISRestoreIndices()
+.seealso: `ISRestoreIndicesF90()`, `ISGetIndices()`, `ISRestoreIndices()`
 
 M*/
 
@@ -2005,7 +2052,7 @@ M*/
 
     Level: intermediate
 
-.seealso:  ISGetIndicesF90(), ISGetIndices(), ISRestoreIndices()
+.seealso: `ISGetIndicesF90()`, `ISGetIndices()`, `ISRestoreIndices()`
 
 M*/
 
@@ -2036,8 +2083,8 @@ M*/
 
     Level: intermediate
 
-.seealso:  ISBlockRestoreIndicesF90(), ISGetIndices(), ISRestoreIndices(),
-           ISRestoreIndices()
+.seealso: `ISBlockRestoreIndicesF90()`, `ISGetIndices()`, `ISRestoreIndices()`,
+          `ISRestoreIndices()`
 
 M*/
 
@@ -2071,6 +2118,6 @@ M*/
 
     Level: intermediate
 
-.seealso:  ISBlockGetIndicesF90(), ISGetIndices(), ISRestoreIndices(), ISRestoreIndicesF90()
+.seealso: `ISBlockGetIndicesF90()`, `ISGetIndices()`, `ISRestoreIndices()`, `ISRestoreIndicesF90()`
 
 M*/

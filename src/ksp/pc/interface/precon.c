@@ -63,7 +63,7 @@ PetscErrorCode PCGetDefaultType_Private(PC pc,const char *type[])
    Notes:
     This allows a PC to be reused for a different sized linear system but using the same options that have been previously set in the PC
 
-.seealso: PCCreate(), PCSetUp()
+.seealso: `PCCreate()`, `PCSetUp()`
 @*/
 PetscErrorCode  PCReset(PC pc)
 {
@@ -91,7 +91,7 @@ PetscErrorCode  PCReset(PC pc)
 
    Level: developer
 
-.seealso: PCCreate(), PCSetUp()
+.seealso: `PCCreate()`, `PCSetUp()`
 @*/
 PetscErrorCode  PCDestroy(PC *pc)
 {
@@ -129,7 +129,7 @@ PetscErrorCode  PCDestroy(PC *pc)
 $           D M A D^{-1} y = D M b  for left preconditioning or
 $           D A M D^{-1} z = D b for right preconditioning
 
-.seealso: PCCreate(), PCSetUp(), PCDiagonalScaleLeft(), PCDiagonalScaleRight(), PCSetDiagonalScale()
+.seealso: `PCCreate()`, `PCSetUp()`, `PCDiagonalScaleLeft()`, `PCDiagonalScaleRight()`, `PCSetDiagonalScale()`
 @*/
 PetscErrorCode  PCGetDiagonalScale(PC pc,PetscBool  *flag)
 {
@@ -159,7 +159,7 @@ $           D A M D^{-1} z = D b for right preconditioning
 
    PCDiagonalScaleLeft() scales a vector by D. PCDiagonalScaleRight() scales a vector by D^{-1}.
 
-.seealso: PCCreate(), PCSetUp(), PCDiagonalScaleLeft(), PCDiagonalScaleRight(), PCGetDiagonalScale()
+.seealso: `PCCreate()`, `PCSetUp()`, `PCDiagonalScaleLeft()`, `PCDiagonalScaleRight()`, `PCGetDiagonalScale()`
 @*/
 PetscErrorCode  PCSetDiagonalScale(PC pc,Vec s)
 {
@@ -200,7 +200,7 @@ $           D A M D^{-1} z = D b for right preconditioning
 
    If diagonal scaling is turned off and in is not out then in is copied to out
 
-.seealso: PCCreate(), PCSetUp(), PCDiagonalScaleSet(), PCDiagonalScaleRight(), PCDiagonalScale()
+.seealso: `PCCreate()`, `PCSetUp()`, `PCDiagonalScaleSet()`, `PCDiagonalScaleRight()`, `PCDiagonalScale()`
 @*/
 PetscErrorCode  PCDiagonalScaleLeft(PC pc,Vec in,Vec out)
 {
@@ -237,7 +237,7 @@ $           D A M D^{-1} z = D b for right preconditioning
 
    If diagonal scaling is turned off and in is not out then in is copied to out
 
-.seealso: PCCreate(), PCSetUp(), PCDiagonalScaleLeft(), PCDiagonalScaleSet(), PCDiagonalScale()
+.seealso: `PCCreate()`, `PCSetUp()`, `PCDiagonalScaleLeft()`, `PCDiagonalScaleSet()`, `PCDiagonalScale()`
 @*/
 PetscErrorCode  PCDiagonalScaleRight(PC pc,Vec in,Vec out)
 {
@@ -273,7 +273,7 @@ PetscErrorCode  PCDiagonalScaleRight(PC pc,Vec in,Vec out)
 
    Level: intermediate
 
-.seealso: PCGetUseAmat(), PCBJACOBI, PGMG, PCFIELDSPLIT, PCCOMPOSITE
+.seealso: `PCGetUseAmat()`, `PCBJACOBI`, `PGMG`, `PCFIELDSPLIT`, `PCCOMPOSITE`
 @*/
 PetscErrorCode  PCSetUseAmat(PC pc,PetscBool flg)
 {
@@ -301,7 +301,7 @@ PetscErrorCode  PCSetUseAmat(PC pc,PetscBool flg)
 
     This is propagated into KSPs used by this PC, which then propagate it into PCs used by those KSPs
 
-.seealso: PCGetInitialGuessNonzero(), PCSetInitialGuessKnoll(), PCGetInitialGuessKnoll()
+.seealso: `PCGetInitialGuessNonzero()`, `PCSetInitialGuessKnoll()`, `PCGetInitialGuessKnoll()`
 @*/
 PetscErrorCode  PCSetErrorIfFailure(PC pc,PetscBool flg)
 {
@@ -331,7 +331,7 @@ PetscErrorCode  PCSetErrorIfFailure(PC pc,PetscBool flg)
 
    Level: intermediate
 
-.seealso: PCSetUseAmat(), PCBJACOBI, PGMG, PCFIELDSPLIT, PCCOMPOSITE
+.seealso: `PCSetUseAmat()`, `PCBJACOBI`, `PGMG`, `PCFIELDSPLIT`, `PCCOMPOSITE`
 @*/
 PetscErrorCode  PCGetUseAmat(PC pc,PetscBool *flg)
 {
@@ -358,7 +358,7 @@ PetscErrorCode  PCGetUseAmat(PC pc,PetscBool *flg)
 
    Level: developer
 
-.seealso: PCSetUp(), PCApply(), PCDestroy()
+.seealso: `PCSetUp()`, `PCApply()`, `PCDestroy()`
 @*/
 PetscErrorCode  PCCreate(MPI_Comm comm,PC *newpc)
 {
@@ -404,7 +404,7 @@ PetscErrorCode  PCCreate(MPI_Comm comm,PC *newpc)
 
    Level: developer
 
-.seealso: PCApplyTranspose(), PCApplyBAorAB()
+.seealso: `PCApplyTranspose()`, `PCApplyBAorAB()`
 @*/
 PetscErrorCode  PCApply(PC pc,Vec x,Vec y)
 {
@@ -421,8 +421,8 @@ PetscErrorCode  PCApply(PC pc,Vec x,Vec y)
   PetscCall(VecGetLocalSize(x,&mv));
   PetscCall(VecGetLocalSize(y,&nv));
   /* check pmat * y = x is feasible */
-  PetscCheck(mv == m,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Preconditioner number of local rows %D does not equal input vector size %D",m,mv);
-  PetscCheck(nv == n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Preconditioner number of local columns %D does not equal output vector size %D",n,nv);
+  PetscCheck(mv == m,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Preconditioner number of local rows %" PetscInt_FMT " does not equal input vector size %" PetscInt_FMT,m,mv);
+  PetscCheck(nv == n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Preconditioner number of local columns %" PetscInt_FMT " does not equal output vector size %" PetscInt_FMT,n,nv);
   PetscCall(VecSetErrorIfLocked(y,3));
 
   PetscCall(PCSetUp(pc));
@@ -450,7 +450,7 @@ PetscErrorCode  PCApply(PC pc,Vec x,Vec y)
 
    Level: developer
 
-.seealso: PCApply(), KSPMatSolve()
+.seealso: `PCApply()`, `KSPMatSolve()`
 @*/
 PetscErrorCode  PCMatApply(PC pc,Mat X,Mat Y)
 {
@@ -473,9 +473,9 @@ PetscErrorCode  PCMatApply(PC pc,Mat X,Mat Y)
   PetscCall(MatGetSize(A, &M3, &N3));
   PetscCall(MatGetSize(X, &M2, &N2));
   PetscCall(MatGetSize(Y, &M1, &N1));
-  PetscCheck(n1 == n2 && N1 == N2,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Incompatible number of columns between block of input vectors (n,N) = (%D,%D) and block of output vectors (n,N) = (%D,%D)", n2, N2, n1, N1);
-  PetscCheck(m2 == m3 && M2 == M3,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Incompatible layout between block of input vectors (m,M) = (%D,%D) and Pmat (m,M)x(n,N) = (%D,%D)x(%D,%D)", m2, M2, m3, M3, n3, N3);
-  PetscCheck(m1 == n3 && M1 == N3,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Incompatible layout between block of output vectors (m,M) = (%D,%D) and Pmat (m,M)x(n,N) = (%D,%D)x(%D,%D)", m1, M1, m3, M3, n3, N3);
+  PetscCheck(n1 == n2 && N1 == N2,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Incompatible number of columns between block of input vectors (n,N) = (%" PetscInt_FMT ",%" PetscInt_FMT ") and block of output vectors (n,N) = (%" PetscInt_FMT ",%" PetscInt_FMT ")", n2, N2, n1, N1);
+  PetscCheck(m2 == m3 && M2 == M3,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Incompatible layout between block of input vectors (m,M) = (%" PetscInt_FMT ",%" PetscInt_FMT ") and Pmat (m,M)x(n,N) = (%" PetscInt_FMT ",%" PetscInt_FMT ")x(%" PetscInt_FMT ",%" PetscInt_FMT ")", m2, M2, m3, M3, n3, N3);
+  PetscCheck(m1 == n3 && M1 == N3,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Incompatible layout between block of output vectors (m,M) = (%" PetscInt_FMT ",%" PetscInt_FMT ") and Pmat (m,M)x(n,N) = (%" PetscInt_FMT ",%" PetscInt_FMT ")x(%" PetscInt_FMT ",%" PetscInt_FMT ")", m1, M1, m3, M3, n3, N3);
   PetscCall(PetscObjectBaseTypeCompareAny((PetscObject)Y, &match, MATSEQDENSE, MATMPIDENSE, ""));
   PetscCheck(match,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Provided block of output vectors not stored in a dense Mat");
   PetscCall(PetscObjectBaseTypeCompareAny((PetscObject)X, &match, MATSEQDENSE, MATMPIDENSE, ""));
@@ -515,7 +515,7 @@ PetscErrorCode  PCMatApply(PC pc,Mat X,Mat Y)
 
    Level: developer
 
-.seealso: PCApply(), PCApplySymmetricRight()
+.seealso: `PCApply()`, `PCApplySymmetricRight()`
 @*/
 PetscErrorCode  PCApplySymmetricLeft(PC pc,Vec x,Vec y)
 {
@@ -553,7 +553,7 @@ PetscErrorCode  PCApplySymmetricLeft(PC pc,Vec x,Vec y)
    Notes:
    Currently, this routine is implemented only for PCICC and PCJACOBI preconditioners.
 
-.seealso: PCApply(), PCApplySymmetricLeft()
+.seealso: `PCApply()`, `PCApplySymmetricLeft()`
 @*/
 PetscErrorCode  PCApplySymmetricRight(PC pc,Vec x,Vec y)
 {
@@ -594,7 +594,7 @@ PetscErrorCode  PCApplySymmetricRight(PC pc,Vec x,Vec y)
 
    Level: developer
 
-.seealso: PCApply(), PCApplyBAorAB(), PCApplyBAorABTranspose(), PCApplyTransposeExists()
+.seealso: `PCApply()`, `PCApplyBAorAB()`, `PCApplyBAorABTranspose()`, `PCApplyTransposeExists()`
 @*/
 PetscErrorCode  PCApplyTranspose(PC pc,Vec x,Vec y)
 {
@@ -628,7 +628,7 @@ PetscErrorCode  PCApplyTranspose(PC pc,Vec x,Vec y)
 
    Level: developer
 
-.seealso: PCApplyTranspose()
+.seealso: `PCApplyTranspose()`
 @*/
 PetscErrorCode  PCApplyTransposeExists(PC pc,PetscBool  *flg)
 {
@@ -660,7 +660,7 @@ PetscErrorCode  PCApplyTransposeExists(PC pc,PetscBool  *flg)
     If the PC has had PCSetDiagonalScale() set then D M A D^{-1} for left preconditioning or  D A M D^{-1} is actually applied. Note that the
    specific KSPSolve() method must also be written to handle the post-solve "correction" for the diagonal scaling.
 
-.seealso: PCApply(), PCApplyTranspose(), PCApplyBAorABTranspose()
+.seealso: `PCApply()`, `PCApplyTranspose()`, `PCApplyBAorABTranspose()`
 @*/
 PetscErrorCode  PCApplyBAorAB(PC pc,PCSide side,Vec x,Vec y,Vec work)
 {
@@ -741,7 +741,7 @@ PetscErrorCode  PCApplyBAorAB(PC pc,PCSide side,Vec x,Vec y,Vec work)
 
     Level: developer
 
-.seealso: PCApply(), PCApplyTranspose(), PCApplyBAorAB()
+.seealso: `PCApply()`, `PCApplyTranspose()`, `PCApplyBAorAB()`
 @*/
 PetscErrorCode  PCApplyBAorABTranspose(PC pc,PCSide side,Vec x,Vec y,Vec work)
 {
@@ -788,7 +788,7 @@ PetscErrorCode  PCApplyBAorABTranspose(PC pc,PCSide side,Vec x,Vec y,Vec work)
 
    Level: developer
 
-.seealso: PCApplyRichardson()
+.seealso: `PCApplyRichardson()`
 @*/
 PetscErrorCode  PCApplyRichardsonExists(PC pc,PetscBool  *exists)
 {
@@ -831,7 +831,7 @@ PetscErrorCode  PCApplyRichardsonExists(PC pc,PetscBool  *exists)
 
    Level: developer
 
-.seealso: PCApplyRichardsonExists()
+.seealso: `PCApplyRichardsonExists()`
 @*/
 PetscErrorCode  PCApplyRichardson(PC pc,Vec b,Vec y,Vec w,PetscReal rtol,PetscReal abstol, PetscReal dtol,PetscInt its,PetscBool guesszero,PetscInt *outits,PCRichardsonConvergedReason *reason)
 {
@@ -858,7 +858,7 @@ PetscErrorCode  PCApplyRichardson(PC pc,Vec b,Vec y,Vec w,PetscReal rtol,PetscRe
 
    Level: advanced
 
-.seealso: PCCreate(), PCApply(), PCDestroy(), PCFailedReason
+.seealso: `PCCreate()`, `PCApply()`, `PCDestroy()`, `PCFailedReason`
 @*/
 PetscErrorCode PCSetFailedReason(PC pc,PCFailedReason reason)
 {
@@ -884,7 +884,7 @@ PetscErrorCode PCSetFailedReason(PC pc,PCFailedReason reason)
    a call KSPCheckDot() or  KSPCheckNorm() inside a KSPSolve(). It is not valid immediately after a PCSetUp()
    or PCApply(), then use PCGetFailedReasonRank()
 
-.seealso: PCCreate(), PCApply(), PCDestroy(), PCGetFailedReasonRank(), PCSetFailedReason()
+.seealso: `PCCreate()`, `PCApply()`, `PCDestroy()`, `PCGetFailedReasonRank()`, `PCSetFailedReason()`
 @*/
 PetscErrorCode PCGetFailedReason(PC pc,PCFailedReason *reason)
 {
@@ -910,7 +910,7 @@ PetscErrorCode PCGetFailedReason(PC pc,PCFailedReason *reason)
 
    Level: advanced
 
-.seealso: PCCreate(), PCApply(), PCDestroy(), PCGetFailedReason(), PCSetFailedReason()
+.seealso: `PCCreate()`, `PCApply()`, `PCDestroy()`, `PCGetFailedReason()`, `PCSetFailedReason()`
 @*/
 PetscErrorCode PCGetFailedReasonRank(PC pc,PCFailedReason *reason)
 {
@@ -938,7 +938,7 @@ PetscErrorCode PCGetFailedReasonRank(PC pc,PCFailedReason *reason)
 
    Level: developer
 
-.seealso: PCCreate(), PCApply(), PCDestroy()
+.seealso: `PCCreate()`, `PCApply()`, `PCDestroy()`
 @*/
 PetscErrorCode  PCSetUp(PC pc)
 {
@@ -1008,7 +1008,7 @@ PetscErrorCode  PCSetUp(PC pc)
 
    Level: developer
 
-.seealso: PCCreate(), PCApply(), PCDestroy(), PCSetUp()
+.seealso: `PCCreate()`, `PCApply()`, `PCDestroy()`, `PCSetUp()`
 @*/
 PetscErrorCode  PCSetUpOnBlocks(PC pc)
 {
@@ -1056,7 +1056,7 @@ $     func (PC pc,PetscInt nsub,IS *row,IS *col,Mat *submat,void *ctx);
 
    Level: advanced
 
-.seealso: PCModifySubMatrices()
+.seealso: `PCModifySubMatrices()`
 @*/
 PetscErrorCode  PCSetModifySubMatrices(PC pc,PetscErrorCode (*func)(PC,PetscInt,const IS[],const IS[],Mat[],void*),void *ctx)
 {
@@ -1100,7 +1100,7 @@ PetscErrorCode  PCSetModifySubMatrices(PC pc,PetscErrorCode (*func)(PC,PetscInt,
 
    Level: developer
 
-.seealso: PCSetModifySubMatrices()
+.seealso: `PCSetModifySubMatrices()`
 @*/
 PetscErrorCode  PCModifySubMatrices(PC pc,PetscInt nsub,const IS row[],const IS col[],Mat submat[],void *ctx)
 {
@@ -1139,7 +1139,7 @@ PetscErrorCode  PCModifySubMatrices(PC pc,PetscInt nsub,const IS row[],const IS 
 
    Level: intermediate
 
-.seealso: PCGetOperators(), MatZeroEntries()
+.seealso: `PCGetOperators()`, `MatZeroEntries()`
  @*/
 PetscErrorCode  PCSetOperators(PC pc,Mat Amat,Mat Pmat)
 {
@@ -1154,10 +1154,10 @@ PetscErrorCode  PCSetOperators(PC pc,Mat Amat,Mat Pmat)
   if (pc->setupcalled && pc->mat && pc->pmat && Amat && Pmat) {
     PetscCall(MatGetLocalSize(Amat,&m1,&n1));
     PetscCall(MatGetLocalSize(pc->mat,&m2,&n2));
-    PetscCheck(m1 == m2 && n1 == n2,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Cannot change local size of Amat after use old sizes %D %D new sizes %D %D",m2,n2,m1,n1);
+    PetscCheck(m1 == m2 && n1 == n2,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Cannot change local size of Amat after use old sizes %" PetscInt_FMT " %" PetscInt_FMT " new sizes %" PetscInt_FMT " %" PetscInt_FMT,m2,n2,m1,n1);
     PetscCall(MatGetLocalSize(Pmat,&m1,&n1));
     PetscCall(MatGetLocalSize(pc->pmat,&m2,&n2));
-    PetscCheck(m1 == m2 && n1 == n2,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Cannot change local size of Pmat after use old sizes %D %D new sizes %D %D",m2,n2,m1,n1);
+    PetscCheck(m1 == m2 && n1 == n2,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Cannot change local size of Pmat after use old sizes %" PetscInt_FMT " %" PetscInt_FMT " new sizes %" PetscInt_FMT " %" PetscInt_FMT,m2,n2,m1,n1);
   }
 
   if (Pmat != pc->pmat) {
@@ -1187,7 +1187,7 @@ PetscErrorCode  PCSetOperators(PC pc,Mat Amat,Mat Pmat)
 
     Level: intermediate
 
-.seealso: PCGetOperators(), MatZeroEntries(), PCGetReusePreconditioner(), KSPSetReusePreconditioner()
+.seealso: `PCGetOperators()`, `MatZeroEntries()`, `PCGetReusePreconditioner()`, `KSPSetReusePreconditioner()`
  @*/
 PetscErrorCode  PCSetReusePreconditioner(PC pc,PetscBool flag)
 {
@@ -1211,7 +1211,7 @@ PetscErrorCode  PCSetReusePreconditioner(PC pc,PetscBool flag)
 
    Level: intermediate
 
-.seealso: PCGetOperators(), MatZeroEntries(), PCSetReusePreconditioner()
+.seealso: `PCGetOperators()`, `MatZeroEntries()`, `PCSetReusePreconditioner()`
  @*/
 PetscErrorCode  PCGetReusePreconditioner(PC pc,PetscBool *flag)
 {
@@ -1277,7 +1277,7 @@ $           set size, type, etc of Amat and Pmat
     Thus, why should YOU have to create the Mat and attach it to the SNES/KSP/PC, when
     it can be created for you?
 
-.seealso: PCSetOperators(), KSPGetOperators(), KSPSetOperators(), PCGetOperatorsSet()
+.seealso: `PCSetOperators()`, `KSPGetOperators()`, `KSPSetOperators()`, `PCGetOperatorsSet()`
 @*/
 PetscErrorCode  PCGetOperators(PC pc,Mat *Amat,Mat *Pmat)
 {
@@ -1331,7 +1331,7 @@ PetscErrorCode  PCGetOperators(PC pc,Mat *Amat,Mat *Pmat)
 
    Level: intermediate
 
-.seealso: PCSetOperators(), KSPGetOperators(), KSPSetOperators(), PCGetOperators()
+.seealso: `PCSetOperators()`, `KSPGetOperators()`, `KSPSetOperators()`, `PCGetOperators()`
 @*/
 PetscErrorCode  PCGetOperatorsSet(PC pc,PetscBool  *mat,PetscBool  *pmat)
 {
@@ -1389,7 +1389,7 @@ PetscErrorCode  PCFactorGetMatrix(PC pc,Mat *mat)
 
    Level: advanced
 
-.seealso: PCAppendOptionsPrefix(), PCGetOptionsPrefix()
+.seealso: `PCAppendOptionsPrefix()`, `PCGetOptionsPrefix()`
 @*/
 PetscErrorCode  PCSetOptionsPrefix(PC pc,const char prefix[])
 {
@@ -1416,7 +1416,7 @@ PetscErrorCode  PCSetOptionsPrefix(PC pc,const char prefix[])
 
    Level: advanced
 
-.seealso: PCSetOptionsPrefix(), PCGetOptionsPrefix()
+.seealso: `PCSetOptionsPrefix()`, `PCGetOptionsPrefix()`
 @*/
 PetscErrorCode  PCAppendOptionsPrefix(PC pc,const char prefix[])
 {
@@ -1444,7 +1444,7 @@ PetscErrorCode  PCAppendOptionsPrefix(PC pc,const char prefix[])
 
    Level: advanced
 
-.seealso: PCSetOptionsPrefix(), PCAppendOptionsPrefix()
+.seealso: `PCSetOptionsPrefix()`, `PCAppendOptionsPrefix()`
 @*/
 PetscErrorCode  PCGetOptionsPrefix(PC pc,const char *prefix[])
 {
@@ -1495,7 +1495,7 @@ PETSC_INTERN PetscErrorCode  PCPreSolveChangeRHS(PC pc,PetscBool *change)
 
    KSPSolve() calls this directly, so is rarely called by the user.
 
-.seealso: PCPostSolve()
+.seealso: `PCPostSolve()`
 @*/
 PetscErrorCode PCPreSolve(PC pc,KSP ksp)
 {
@@ -1536,7 +1536,7 @@ $  func(PC pc,KSP ksp)
 
    Level: developer
 
-.seealso: PC, PCSetUp(), PCPreSolve()
+.seealso: `PC`, `PCSetUp()`, `PCPreSolve()`
 @*/
 PetscErrorCode PCSetPreSolve(PC pc,PetscErrorCode (*presolve)(PC,KSP))
 {
@@ -1569,7 +1569,7 @@ PetscErrorCode PCSetPreSolve(PC pc,PetscErrorCode (*presolve)(PC,KSP))
 
    Level: developer
 
-.seealso: PCPreSolve(), KSPSolve()
+.seealso: `PCPreSolve()`, `KSPSolve()`
 @*/
 PetscErrorCode  PCPostSolve(PC pc,KSP ksp)
 {
@@ -1611,7 +1611,7 @@ PetscErrorCode  PCPostSolve(PC pc,KSP ksp)
      has not yet been determined
 .ve
 
-.seealso: PetscViewerBinaryOpen(), PCView(), MatLoad(), VecLoad()
+.seealso: `PetscViewerBinaryOpen()`, `PCView()`, `MatLoad()`, `VecLoad()`
 @*/
 PetscErrorCode  PCLoad(PC newdm, PetscViewer viewer)
 {
@@ -1651,7 +1651,7 @@ PetscErrorCode  PCLoad(PC newdm, PetscViewer viewer)
 -  name - command line option
 
    Level: intermediate
-.seealso:  PC, PCView, PetscObjectViewFromOptions(), PCCreate()
+.seealso: `PC`, `PCView`, `PetscObjectViewFromOptions()`, `PCCreate()`
 @*/
 PetscErrorCode  PCViewFromOptions(PC A,PetscObject obj,const char name[])
 {
@@ -1683,7 +1683,7 @@ PetscErrorCode  PCViewFromOptions(PC A,PetscObject obj,const char name[])
 
    Level: developer
 
-.seealso: KSPView(), PetscViewerASCIIOpen()
+.seealso: `KSPView()`, `PetscViewerASCIIOpen()`
 @*/
 PetscErrorCode  PCView(PC pc,PetscViewer viewer)
 {
@@ -1771,7 +1771,7 @@ PetscErrorCode  PCView(PC pc,PetscViewer viewer)
     PetscCall(PetscDrawGetCurrentPoint(draw,&x,&y));
     if (pc->mat) {
       PetscCall(MatGetSize(pc->mat,&n,NULL));
-      PetscCall(PetscSNPrintf(str,25,"PC: %s (%D)",((PetscObject)pc)->type_name,n));
+      PetscCall(PetscSNPrintf(str,25,"PC: %s (%" PetscInt_FMT ")",((PetscObject)pc)->type_name,n));
     } else {
       PetscCall(PetscSNPrintf(str,25,"PC: %s",((PetscObject)pc)->type_name));
     }
@@ -1822,7 +1822,7 @@ $     -pc_type my_solver
 
    Level: advanced
 
-.seealso: PCRegisterAll()
+.seealso: `PCRegisterAll()`
 @*/
 PetscErrorCode  PCRegister(const char sname[],PetscErrorCode (*function)(PC))
 {
@@ -1861,7 +1861,7 @@ static PetscErrorCode MatMult_PC(Mat A,Vec X,Vec Y)
 
     Level: advanced
 
-.seealso: KSPComputeOperator(), MatType
+.seealso: `KSPComputeOperator()`, `MatType`
 
 @*/
 PetscErrorCode  PCComputeOperator(PC pc,MatType mattype,Mat *mat)
@@ -1905,7 +1905,7 @@ PetscErrorCode  PCComputeOperator(PC pc,MatType mattype,Mat *mat)
    should be ordered for nodes 0 to N-1 like so: [ 0.x, 0.y, 0.z, 1.x,
    ... , N-1.z ].
 
-.seealso: MatSetNearNullSpace()
+.seealso: `MatSetNearNullSpace()`
 @*/
 PetscErrorCode PCSetCoordinates(PC pc, PetscInt dim, PetscInt nloc, PetscReal coords[])
 {
@@ -1932,7 +1932,7 @@ PetscErrorCode PCSetCoordinates(PC pc, PetscInt dim, PetscInt nloc, PetscReal co
 
 .keywords: MG, GAMG, BoomerAMG, multigrid, interpolation, level
 
-.seealso: PCMGGetRestriction(), PCMGSetInterpolation(), PCMGGetInterpolation(), PCGetCoarseOperators()
+.seealso: `PCMGGetRestriction()`, `PCMGSetInterpolation()`, `PCMGGetInterpolation()`, `PCGetCoarseOperators()`
 @*/
 PetscErrorCode PCGetInterpolations(PC pc,PetscInt *num_levels,Mat *interpolations[])
 {
@@ -1960,7 +1960,7 @@ PetscErrorCode PCGetInterpolations(PC pc,PetscInt *num_levels,Mat *interpolation
 
 .keywords: MG, GAMG, BoomerAMG, get, multigrid, interpolation, level
 
-.seealso: PCMGGetRestriction(), PCMGSetInterpolation(), PCMGGetRScale(), PCMGGetInterpolation(), PCGetInterpolations()
+.seealso: `PCMGGetRestriction()`, `PCMGSetInterpolation()`, `PCMGGetRScale()`, `PCMGGetInterpolation()`, `PCGetInterpolations()`
 @*/
 PetscErrorCode PCGetCoarseOperators(PC pc,PetscInt *num_levels,Mat *coarseOperators[])
 {

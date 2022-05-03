@@ -261,7 +261,7 @@ PetscErrorCode MatShellGetContext_Shell(Mat mat,void *ctx)
     To use this from Fortran you must write a Fortran interface definition for this
     function that tells Fortran the Fortran derived data type that you are passing in as the ctx argument.
 
-.seealso: MatCreateShell(), MatShellSetOperation(), MatShellSetContext()
+.seealso: `MatCreateShell()`, `MatShellSetOperation()`, `MatShellSetContext()`
 @*/
 PetscErrorCode  MatShellGetContext(Mat mat,void *ctx)
 {
@@ -557,7 +557,7 @@ static PetscErrorCode MatProductNumeric_Shell_X(Mat D)
     PetscBool      useBmdata = PETSC_FALSE, newB = PETSC_TRUE;
 
     if (shell->managescalingshifts) {
-      PetscCheckFalse(shell->zcols || shell->zrows,PetscObjectComm((PetscObject)D),PETSC_ERR_SUP,"MatProduct not supported with zeroed rows/columns");
+      PetscCheck(!shell->zcols && !shell->zrows,PetscObjectComm((PetscObject)D),PETSC_ERR_SUP,"MatProduct not supported with zeroed rows/columns");
       if (shell->right || shell->left) {
         useBmdata = PETSC_TRUE;
         if (!mdata->B) {
@@ -674,7 +674,7 @@ static PetscErrorCode MatProductNumeric_Shell_X(Mat D)
         break;
       case MATPRODUCT_PtAP: /* s B^t L A R B + v B^t L R B + B^t L D R B */
       case MATPRODUCT_RARt: /* s B L A R B^t + v B L R B^t + B L D R B^t */
-        PetscCheckFalse(shell->dshift || shell->vshift != zero,PetscObjectComm((PetscObject)D),PETSC_ERR_SUP,"MatProductSymbolic type %s not supported for %s and %s matrices with diagonal shift",MatProductTypes[product->type],((PetscObject)A)->type_name,((PetscObject)B)->type_name);
+        PetscCheck(!shell->dshift && shell->vshift == zero,PetscObjectComm((PetscObject)D),PETSC_ERR_SUP,"MatProductSymbolic type %s not supported for %s and %s matrices with diagonal shift",MatProductTypes[product->type],((PetscObject)A)->type_name,((PetscObject)B)->type_name);
         break;
       default: SETERRQ(PetscObjectComm((PetscObject)D),PETSC_ERR_SUP,"MatProductSymbolic type %s not supported for %s and %s matrices",MatProductTypes[product->type],((PetscObject)A)->type_name,((PetscObject)B)->type_name);
       }
@@ -685,7 +685,7 @@ static PetscErrorCode MatProductNumeric_Shell_X(Mat D)
 
         PetscCall(MatShellGetContext(shell->axpy,&X));
         PetscCall(PetscObjectStateGet((PetscObject)X,&axpy_state));
-        PetscCheckFalse(shell->axpy_state != axpy_state,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Invalid AXPY state: cannot modify the X matrix passed to MatAXPY(Y,a,X,...)");
+        PetscCheck(shell->axpy_state == axpy_state,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Invalid AXPY state: cannot modify the X matrix passed to MatAXPY(Y,a,X,...)");
         if (!mdata->axpy) {
           str  = DIFFERENT_NONZERO_PATTERN;
           PetscCall(MatProductCreate(shell->axpy,B,NULL,&mdata->axpy));
@@ -895,14 +895,14 @@ $      [ use C = A*B ]
     It is allowed to specify the same callbacks for different Btype matrix types.
     The couple (Btype,ptype) uniquely identifies the operation: the last specified callbacks takes precedence.
 
-.seealso: MatCreateShell(), MatShellGetContext(), MatShellGetOperation(), MatShellSetContext(), MatSetOperation(), MatProductType, MatType, MatSetUp()
+.seealso: `MatCreateShell()`, `MatShellGetContext()`, `MatShellGetOperation()`, `MatShellSetContext()`, `MatSetOperation()`, `MatProductType`, `MatType`, `MatSetUp()`
 @*/
 PetscErrorCode MatShellSetMatProductOperation(Mat A,MatProductType ptype,PetscErrorCode (*symbolic)(Mat,Mat,Mat,void**),PetscErrorCode (*numeric)(Mat,Mat,Mat,void*),PetscErrorCode (*destroy)(void *),MatType Btype,MatType Ctype)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
   PetscValidLogicalCollectiveEnum(A,ptype,2);
-  PetscCheckFalse(ptype == MATPRODUCT_ABC,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Not for product type %s",MatProductTypes[ptype]);
+  PetscCheck(ptype != MATPRODUCT_ABC,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Not for product type %s",MatProductTypes[ptype]);
   PetscCheck(numeric,PetscObjectComm((PetscObject)A),PETSC_ERR_USER,"Missing numeric routine, argument 4");
   PetscValidCharPointer(Btype,6);
   if (Ctype) PetscValidCharPointer(Ctype,7);
@@ -1053,7 +1053,7 @@ PetscErrorCode MatMult_Shell(Mat A,Vec x,Vec y)
 
     PetscCall(MatShellGetContext(shell->axpy,&X));
     PetscCall(PetscObjectStateGet((PetscObject)X,&axpy_state));
-    PetscCheckFalse(shell->axpy_state != axpy_state,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Invalid AXPY state: cannot modify the X matrix passed to MatAXPY(Y,a,X,...)");
+    PetscCheck(shell->axpy_state == axpy_state,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Invalid AXPY state: cannot modify the X matrix passed to MatAXPY(Y,a,X,...)");
 
     PetscCall(MatCreateVecs(shell->axpy,shell->axpy_right ? NULL : &shell->axpy_right,shell->axpy_left ? NULL : &shell->axpy_left));
     PetscCall(VecCopy(x,shell->axpy_right));
@@ -1106,7 +1106,7 @@ PetscErrorCode MatMultTranspose_Shell(Mat A,Vec x,Vec y)
 
     PetscCall(MatShellGetContext(shell->axpy,&X));
     PetscCall(PetscObjectStateGet((PetscObject)X,&axpy_state));
-    PetscCheckFalse(shell->axpy_state != axpy_state,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Invalid AXPY state: cannot modify the X matrix passed to MatAXPY(Y,a,X,...)");
+    PetscCheck(shell->axpy_state == axpy_state,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Invalid AXPY state: cannot modify the X matrix passed to MatAXPY(Y,a,X,...)");
     PetscCall(MatCreateVecs(shell->axpy,shell->axpy_right ? NULL : &shell->axpy_right,shell->axpy_left ? NULL : &shell->axpy_left));
     PetscCall(VecCopy(x,shell->axpy_left));
     PetscCall(MatMultTranspose(shell->axpy,shell->axpy_left,shell->axpy_right));
@@ -1159,7 +1159,7 @@ PetscErrorCode MatGetDiagonal_Shell(Mat A,Vec v)
 
     PetscCall(MatShellGetContext(shell->axpy,&X));
     PetscCall(PetscObjectStateGet((PetscObject)X,&axpy_state));
-    PetscCheckFalse(shell->axpy_state != axpy_state,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Invalid AXPY state: cannot modify the X matrix passed to MatAXPY(Y,a,X,...)");
+    PetscCheck(shell->axpy_state == axpy_state,PetscObjectComm((PetscObject)A),PETSC_ERR_ORDER,"Invalid AXPY state: cannot modify the X matrix passed to MatAXPY(Y,a,X,...)");
     PetscCall(MatCreateVecs(shell->axpy,NULL,shell->axpy_left ? NULL : &shell->axpy_left));
     PetscCall(MatGetDiagonal(shell->axpy,shell->axpy_left));
     PetscCall(VecAXPY(v,shell->axpy_vscale,shell->axpy_left));
@@ -1646,7 +1646,7 @@ PetscErrorCode MatShellGetOperation_Shell(Mat mat,MatOperation op,void(**f)(void
 
   Level: advanced
 
-.seealso: MatCreateShell()
+.seealso: `MatCreateShell()`
 M*/
 
 PETSC_EXTERN PetscErrorCode MatCreate_Shell(Mat A)
@@ -1766,7 +1766,7 @@ $
    Calling MatAssemblyBegin()/MatAssemblyEnd() on a MATSHELL removes any previously supplied shift and scales that were provided
    with MatDiagonalSet(), MatShift(), MatScale(), or MatDiagonalScale().
 
-.seealso: MatShellSetOperation(), MatHasOperation(), MatShellGetContext(), MatShellSetContext(), MATSHELL, MatShellSetManageScalingShifts(), MatShellSetMatProductOperation()
+.seealso: `MatShellSetOperation()`, `MatHasOperation()`, `MatShellGetContext()`, `MatShellSetContext()`, `MATSHELL`, `MatShellSetManageScalingShifts()`, `MatShellSetMatProductOperation()`
 @*/
 PetscErrorCode  MatCreateShell(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt M,PetscInt N,void *ctx,Mat *A)
 {
@@ -1794,7 +1794,7 @@ PetscErrorCode  MatCreateShell(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt M,Pe
     To use this from Fortran you must write a Fortran interface definition for this
     function that tells Fortran the Fortran derived data type that you are passing in as the ctx argument.
 
-.seealso: MatCreateShell(), MatShellGetContext(), MatShellGetOperation()
+.seealso: `MatCreateShell()`, `MatShellGetContext()`, `MatShellGetOperation()`
 @*/
 PetscErrorCode  MatShellSetContext(Mat mat,void *ctx)
 {
@@ -1817,7 +1817,7 @@ PetscErrorCode  MatShellSetContext(Mat mat,void *ctx)
 
  Level: advanced
 
-.seealso: MatCreateVecs()
+.seealso: `MatCreateVecs()`
 @*/
 PetscErrorCode  MatShellSetVecType(Mat mat,VecType vtype)
 {
@@ -1837,7 +1837,7 @@ PetscErrorCode  MatShellSetVecType(Mat mat,VecType vtype)
 
   Level: advanced
 
-.seealso: MatCreateShell(), MatShellGetContext(), MatShellGetOperation(), MatShellSetContext(), MatShellSetOperation()
+.seealso: `MatCreateShell()`, `MatShellGetContext()`, `MatShellGetOperation()`, `MatShellSetContext()`, `MatShellSetOperation()`
 @*/
 PetscErrorCode MatShellSetManageScalingShifts(Mat A)
 {
@@ -1869,7 +1869,7 @@ PetscErrorCode MatShellSetManageScalingShifts(Mat A)
    Fortran Notes:
     Not supported from Fortran
 
-.seealso: MatCreateShell(), MatShellGetContext(), MatShellGetOperation(), MatShellTestMultTranspose()
+.seealso: `MatCreateShell()`, `MatShellGetContext()`, `MatShellGetOperation()`, `MatShellTestMultTranspose()`
 @*/
 PetscErrorCode  MatShellTestMult(Mat mat,PetscErrorCode (*f)(void*,Vec,Vec),Vec base,void *ctx,PetscBool *flg)
 {
@@ -1934,7 +1934,7 @@ PetscErrorCode  MatShellTestMult(Mat mat,PetscErrorCode (*f)(void*,Vec,Vec),Vec 
    Fortran Notes:
     Not supported from Fortran
 
-.seealso: MatCreateShell(), MatShellGetContext(), MatShellGetOperation(), MatShellTestMult()
+.seealso: `MatCreateShell()`, `MatShellGetContext()`, `MatShellGetOperation()`, `MatShellTestMult()`
 @*/
 PetscErrorCode  MatShellTestMultTranspose(Mat mat,PetscErrorCode (*f)(void*,Vec,Vec),Vec base,void *ctx,PetscBool *flg)
 {
@@ -2026,7 +2026,7 @@ $       MatMult(Mat,Vec,Vec) -> usermult(Mat,Vec,Vec)
     For MatCreateVecs() the user code should check if the input left or right matrix is -1 and in that case not
        generate a matrix. See src/mat/tests/ex120f.F
 
-.seealso: MatCreateShell(), MatShellGetContext(), MatShellGetOperation(), MatShellSetContext(), MatSetOperation(), MatShellSetManageScalingShifts(), MatShellSetMatProductOperation()
+.seealso: `MatCreateShell()`, `MatShellGetContext()`, `MatShellGetOperation()`, `MatShellSetContext()`, `MatSetOperation()`, `MatShellSetManageScalingShifts()`, `MatShellSetMatProductOperation()`
 @*/
 PetscErrorCode MatShellSetOperation(Mat mat,MatOperation op,void (*g)(void))
 {
@@ -2066,7 +2066,7 @@ $       MatMult(Mat,Vec,Vec) -> usermult(Mat,Vec,Vec)
     MatShellGetContext() to obtain the user-defined context that was
     set by MatCreateShell().
 
-.seealso: MatCreateShell(), MatShellGetContext(), MatShellSetOperation(), MatShellSetContext()
+.seealso: `MatCreateShell()`, `MatShellGetContext()`, `MatShellSetOperation()`, `MatShellSetContext()`
 @*/
 PetscErrorCode MatShellGetOperation(Mat mat,MatOperation op,void(**g)(void))
 {
@@ -2089,7 +2089,7 @@ PetscErrorCode MatShellGetOperation(Mat mat,MatOperation op,void(**g)(void))
 
     Notes: in the future, we should allow the object type name to be changed still using the MatShell data structure for other matrices (i.e. MATTRANSPOSEMAT, MATSCHURCOMPLEMENT etc)
 
-.seealso: MatCreateShell()
+.seealso: `MatCreateShell()`
 @*/
 PetscErrorCode MatIsShell(Mat mat, PetscBool *flg)
 {

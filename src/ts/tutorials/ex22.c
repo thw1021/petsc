@@ -44,7 +44,6 @@ int main(int argc,char **argv)
   Vec               X;          /* solution, residual vectors */
   Mat               J;          /* Jacobian matrix */
   PetscInt          steps,mx;
-  PetscErrorCode    ierr;
   DM                da;
   PetscReal         ftime,dt;
   struct _User      user;       /* user-defined work context */
@@ -65,7 +64,7 @@ int main(int argc,char **argv)
   PetscCall(DMCreateGlobalVector(da,&X));
 
   /* Initialize user application context */
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Advection-reaction options","");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Advection-reaction options","");
   {
     user.a[0] = 1;           PetscCall(PetscOptionsReal("-a0","Advection rate 0","",user.a[0],&user.a[0],NULL));
     user.a[1] = 0;           PetscCall(PetscOptionsReal("-a1","Advection rate 1","",user.a[1],&user.a[1],NULL));
@@ -74,7 +73,7 @@ int main(int argc,char **argv)
     user.s[0] = 0;           PetscCall(PetscOptionsReal("-s0","Source 0","",user.s[0],&user.s[0],NULL));
     user.s[1] = 1;           PetscCall(PetscOptionsReal("-s1","Source 1","",user.s[1],&user.s[1],NULL));
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Create timestepping solver context
@@ -120,7 +119,7 @@ int main(int argc,char **argv)
   PetscCall(TSGetSolveTime(ts,&ftime));
   PetscCall(TSGetStepNumber(ts,&steps));
   PetscCall(TSGetConvergedReason(ts,&reason));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%s at time %g after %D steps\n",TSConvergedReasons[reason],(double)ftime,steps));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%s at time %g after %" PetscInt_FMT " steps\n",TSConvergedReasons[reason],(double)ftime,steps));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Free work space.

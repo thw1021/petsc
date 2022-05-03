@@ -4,8 +4,8 @@
 static PetscErrorCode KSPSetUp_CR(KSP ksp)
 {
   PetscFunctionBegin;
-  PetscCheckFalse(ksp->pc_side == PC_RIGHT,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"no right preconditioning for KSPCR");
-  else PetscCheckFalse(ksp->pc_side == PC_SYMMETRIC,PETSC_COMM_SELF,PETSC_ERR_SUP,"no symmetric preconditioning for KSPCR");
+  PetscCheck(ksp->pc_side != PC_RIGHT,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"no right preconditioning for KSPCR");
+  else PetscCheck(ksp->pc_side != PC_SYMMETRIC,PETSC_COMM_SELF,PETSC_ERR_SUP,"no symmetric preconditioning for KSPCR");
   PetscCall(KSPSetWorkVecs(ksp,6));
   PetscFunctionReturn(0);
 }
@@ -158,7 +158,7 @@ static PetscErrorCode  KSPSolve_CR(KSP ksp)
 .  * - Magnus R. Hestenes and Eduard Stiefel, Methods of Conjugate Gradients for Solving Linear Systems,
    Journal of Research of the National Bureau of Standards Vol. 49, No. 6, December 1952 Research Paper 2379
 
-.seealso: KSPCreate(), KSPSetType(), KSPType (for list of available types), KSP, KSPCG
+.seealso: `KSPCreate()`, `KSPSetType()`, `KSPType`, `KSP`, `KSPCG`
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_CR(KSP ksp)
 {

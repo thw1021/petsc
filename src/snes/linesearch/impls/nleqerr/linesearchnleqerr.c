@@ -121,7 +121,7 @@ static PetscErrorCode  SNESLineSearchApply_NLEQERR(SNESLineSearch linesearch)
   while (PETSC_TRUE) {
     if (monitor) {
       PetscCall(PetscViewerASCIIAddTab(monitor,((PetscObject)linesearch)->tablevel));
-      PetscCall(PetscViewerASCIIPrintf(monitor,"    Line search: entering iteration with lambda: %14.12e\n", lambda));
+      PetscCall(PetscViewerASCIIPrintf(monitor,"    Line search: entering iteration with lambda: %14.12e\n", (double)lambda));
       PetscCall(PetscViewerASCIISubtractTab(monitor,((PetscObject)linesearch)->tablevel));
     }
 
@@ -209,8 +209,7 @@ static PetscErrorCode  SNESLineSearchApply_NLEQERR(SNESLineSearch linesearch)
       if (lambdadash == 1.0 && lambda == 1.0 && wnorm <= stol) {
         /* store the updated state, X - Y - W, in G:
            I need to keep W for the next linesearch */
-        PetscCall(VecCopy(X, G));
-        PetscCall(VecAXPY(G, -1.0, Y));
+        PetscCall(VecWAXPY(G, -1.0, Y, X));
         PetscCall(VecAXPY(G, -1.0, W));
         break;
       }
@@ -312,7 +311,7 @@ static PetscErrorCode SNESLineSearchDestroy_NLEQERR(SNESLineSearch linesearch)
 
    Level: advanced
 
-.seealso: SNESLineSearchCreate(), SNESLineSearchSetType()
+.seealso: `SNESLineSearchCreate()`, `SNESLineSearchSetType()`
 M*/
 PETSC_EXTERN PetscErrorCode SNESLineSearchCreate_NLEQERR(SNESLineSearch linesearch)
 {

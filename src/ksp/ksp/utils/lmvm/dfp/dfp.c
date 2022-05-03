@@ -397,9 +397,9 @@ static PetscErrorCode MatSetFromOptions_LMVMDFP(PetscOptionItems *PetscOptionsOb
 {
   PetscFunctionBegin;
   PetscCall(MatSetFromOptions_LMVM(PetscOptionsObject, B));
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"DFP method for approximating SPD Jacobian actions (MATLMVMDFP)"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"DFP method for approximating SPD Jacobian actions (MATLMVMDFP)");
   PetscCall(MatSetFromOptions_LMVMSymBrdn_Private(PetscOptionsObject, B));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -470,8 +470,8 @@ PetscErrorCode MatCreate_LMVMDFP(Mat B)
 
    Level: intermediate
 
-.seealso: MatCreate(), MATLMVM, MATLMVMDFP, MatCreateLMVMBFGS(), MatCreateLMVMSR1(),
-           MatCreateLMVMBrdn(), MatCreateLMVMBadBrdn(), MatCreateLMVMSymBrdn()
+.seealso: `MatCreate()`, `MATLMVM`, `MATLMVMDFP`, `MatCreateLMVMBFGS()`, `MatCreateLMVMSR1()`,
+          `MatCreateLMVMBrdn()`, `MatCreateLMVMBadBrdn()`, `MatCreateLMVMSymBrdn()`
 @*/
 PetscErrorCode MatCreateLMVMDFP(MPI_Comm comm, PetscInt n, PetscInt N, Mat *B)
 {

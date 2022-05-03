@@ -150,7 +150,6 @@ PetscErrorCode MatDestroy_SeqUSFFT(Mat A)
 @*/
 PetscErrorCode  MatCreateSeqUSFFT(Vec sampleCoords, DMDA freqDA, Mat *A)
 {
-  PetscErrorCode ierr;
   Mat_USFFT      *usfft;
   PetscInt       m,n,M,N,i;
   const char     *p_flags[]={"FFTW_ESTIMATE","FFTW_MEASURE","FFTW_PATIENT","FFTW_EXHAUSTIVE"};
@@ -163,10 +162,10 @@ PetscErrorCode  MatCreateSeqUSFFT(Vec sampleCoords, DMDA freqDA, Mat *A)
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)inda, &comm));
   PetscCallMPI(MPI_Comm_size(comm, &size));
-  PetscCheckFalse(size > 1,comm,PETSC_ERR_USER, "Parallel DMDA (in) not yet supported by USFFT");
+  PetscCheck(size <= 1,comm,PETSC_ERR_USER, "Parallel DMDA (in) not yet supported by USFFT");
   PetscCall(PetscObjectGetComm((PetscObject)outda, &comm));
   PetscCallMPI(MPI_Comm_size(comm, &size));
-  PetscCheckFalse(size > 1,comm,PETSC_ERR_USER, "Parallel DMDA (out) not yet supported by USFFT");
+  PetscCheck(size <= 1,comm,PETSC_ERR_USER, "Parallel DMDA (out) not yet supported by USFFT");
   PetscCall(MatCreate(comm,A));
   PetscCall(PetscNewLog(*A,&usfft));
   (*A)->data   = (void*)usfft;
@@ -174,8 +173,8 @@ PetscErrorCode  MatCreateSeqUSFFT(Vec sampleCoords, DMDA freqDA, Mat *A)
   usfft->outda = outda;
   /* inda */
   PetscCall(DMDAGetInfo(usfft->inda, &ndim, dim+0, dim+1, dim+2, NULL, NULL, NULL, &dof, NULL, NULL, NULL));
-  PetscCheckFalse(ndim <= 0,PETSC_COMM_SELF,PETSC_ERR_USER,"ndim %d must be > 0",ndim);
-  PetscCheckFalse(dof <= 0,PETSC_COMM_SELF,PETSC_ERR_USER,"dof %d must be > 0",dof);
+  PetscCheck(ndim > 0,PETSC_COMM_SELF,PETSC_ERR_USER,"ndim %d must be > 0",ndim);
+  PetscCheck(dof > 0,PETSC_COMM_SELF,PETSC_ERR_USER,"dof %d must be > 0",dof);
   usfft->ndim   = ndim;
   usfft->dof    = dof;
   usfft->freqDA = freqDA;
@@ -186,8 +185,8 @@ PetscErrorCode  MatCreateSeqUSFFT(Vec sampleCoords, DMDA freqDA, Mat *A)
 
   /* outda */
   PetscCall(DMDAGetInfo(usfft->outda, &ndim, dim+0, dim+1, dim+2, NULL, NULL, NULL, &dof, NULL, NULL, NULL));
-  PetscCheckFalse(ndim != usfft->ndim,PETSC_COMM_SELF,PETSC_ERR_USER,"in and out DMDA dimensions must match: %d != %d",usfft->ndim, ndim);
-  PetscCheckFalse(dof != usfft->dof,PETSC_COMM_SELF,PETSC_ERR_USER,"in and out DMDA dof must match: %d != %d",usfft->dof, dof);
+  PetscCheck(ndim == usfft->ndim,PETSC_COMM_SELF,PETSC_ERR_USER,"in and out DMDA dimensions must match: %d != %d",usfft->ndim, ndim);
+  PetscCheck(dof == usfft->dof,PETSC_COMM_SELF,PETSC_ERR_USER,"in and out DMDA dof must match: %d != %d",usfft->dof, dof);
   /* Store output dimensions */
   /* NB: we reverse the DMDA dimensions, since the DMDA ordering (natural on x-y-z, with x varying the fastest)
      is the order opposite of that assumed by FFTW: z varying the fastest */
@@ -196,8 +195,8 @@ PetscErrorCode  MatCreateSeqUSFFT(Vec sampleCoords, DMDA freqDA, Mat *A)
 
   /* TODO: Use the new form of DMDACreate() */
 #if 0
-  ierr = DMDACreate(comm,usfft->dim, DMDA_NONPERIODIC, DMDA_STENCIL_STAR, usfft->freqSizes[0], usfft->freqSizes[1], usfft->freqSizes[2],
-                    PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, dof, 0, NULL, NULL, NULL,  0, &(usfft->resampleDA));PetscCall(ierr);
+  PetscCall(DMDACreate(comm,usfft->dim, DMDA_NONPERIODIC, DMDA_STENCIL_STAR, usfft->freqSizes[0], usfft->freqSizes[1], usfft->freqSizes[2],
+                       PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, dof, 0, NULL, NULL, NULL,  0, &(usfft->resampleDA)));
 #endif
   PetscCall(DMDAGetVec(usfft->resampleDA, usfft->resample));
 
@@ -207,8 +206,8 @@ PetscErrorCode  MatCreateSeqUSFFT(Vec sampleCoords, DMDA freqDA, Mat *A)
   /* mat sizes */
   m = 1; n = 1;
   for (i=0; i<usfft->ndim; i++) {
-    PetscCheckFalse(usfft->indim[i] <= 0,PETSC_COMM_SELF,PETSC_ERR_USER,"indim[%d]=%d must be > 0",i,usfft->indim[i]);
-    PetscCheckFalse(usfft->outdim[i] <= 0,PETSC_COMM_SELF,PETSC_ERR_USER,"outdim[%d]=%d must be > 0",i,usfft->outdim[i]);
+    PetscCheck(usfft->indim[i] > 0,PETSC_COMM_SELF,PETSC_ERR_USER,"indim[%d]=%d must be > 0",i,usfft->indim[i]);
+    PetscCheck(usfft->outdim[i] > 0,PETSC_COMM_SELF,PETSC_ERR_USER,"outdim[%d]=%d must be > 0",i,usfft->outdim[i]);
     n *= usfft->indim[i];
     m *= usfft->outdim[i];
   }
@@ -227,7 +226,7 @@ PetscErrorCode  MatCreateSeqUSFFT(Vec sampleCoords, DMDA freqDA, Mat *A)
   (*A)->assembled          = PETSC_TRUE;
   (*A)->ops->destroy       = MatDestroy_SeqUSFFT;
   /* get runtime options */
-  ierr = PetscOptionsBegin(((PetscObject)(*A))->comm,((PetscObject)(*A))->prefix,"USFFT Options","Mat");PetscCall(ierr);
+  PetscOptionsBegin(((PetscObject)(*A))->comm,((PetscObject)(*A))->prefix,"USFFT Options","Mat");
   PetscCall(PetscOptionsEList("-mat_usfft_fftw_plannerflags","Planner Flags","None",p_flags,4,p_flags[0],&p_flag,&flg));
   if (flg) usfft->p_flag = (unsigned)p_flag;
   PetscOptionsEnd();

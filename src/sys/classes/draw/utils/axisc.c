@@ -20,9 +20,9 @@ PetscClassId PETSC_DRAWAXIS_CLASSID = 0;
 
    Level: advanced
 
-.seealso: PetscDrawLGCreate(), PetscDrawLG, PetscDrawSPCreate(), PetscDrawSP, PetscDrawHGCreate(), PetscDrawHG, PetscDrawBarCreate(), PetscDrawBar, PetscDrawLGGetAxis(), PetscDrawSPGetAxis(),
-          PetscDrawHGGetAxis(), PetscDrawBarGetAxis(), PetscDrawAxis, PetscDrawAxisDestroy(), PetscDrawAxisSetColors(), PetscDrawAxisSetLabels(), PetscDrawAxisSetLimits(), PetscDrawAxisGetLimits(), PetscDrawAxisSetHoldLimits(),
-          PetscDrawAxisDraw()
+.seealso: `PetscDrawLGCreate()`, `PetscDrawLG`, `PetscDrawSPCreate()`, `PetscDrawSP`, `PetscDrawHGCreate()`, `PetscDrawHG`, `PetscDrawBarCreate()`, `PetscDrawBar`, `PetscDrawLGGetAxis()`, `PetscDrawSPGetAxis()`,
+          `PetscDrawHGGetAxis()`, `PetscDrawBarGetAxis()`, `PetscDrawAxis`, `PetscDrawAxisDestroy()`, `PetscDrawAxisSetColors()`, `PetscDrawAxisSetLabels()`, `PetscDrawAxisSetLimits()`, `PetscDrawAxisGetLimits()`, `PetscDrawAxisSetHoldLimits()`,
+          `PetscDrawAxisDraw()`
 @*/
 PetscErrorCode  PetscDrawAxisCreate(PetscDraw draw,PetscDrawAxis *axis)
 {
@@ -63,7 +63,7 @@ PetscErrorCode  PetscDrawAxisCreate(PetscDraw draw,PetscDrawAxis *axis)
 
     Level: advanced
 
-.seealso: PetscDrawAxisCreate(), PetscDrawAxis
+.seealso: `PetscDrawAxisCreate()`, `PetscDrawAxis`
 @*/
 PetscErrorCode  PetscDrawAxisDestroy(PetscDrawAxis *axis)
 {
@@ -94,7 +94,7 @@ PetscErrorCode  PetscDrawAxisDestroy(PetscDrawAxis *axis)
 
     Level: advanced
 
-.seealso: PetscDrawAxisCreate(), PetscDrawAxis, PetscDrawAxisSetLabels(), PetscDrawAxisDraw(), PetscDrawAxisSetLimits()
+.seealso: `PetscDrawAxisCreate()`, `PetscDrawAxis`, `PetscDrawAxisSetLabels()`, `PetscDrawAxisDraw()`, `PetscDrawAxisSetLimits()`
 @*/
 PetscErrorCode  PetscDrawAxisSetColors(PetscDrawAxis axis,int ac,int tc,int cc)
 {
@@ -123,7 +123,7 @@ PetscErrorCode  PetscDrawAxisSetColors(PetscDrawAxis axis,int ac,int tc,int cc)
 
     Level: advanced
 
-.seealso: PetscDrawAxisCreate(), PetscDrawAxis, PetscDrawAxisSetColors(), PetscDrawAxisDraw(), PetscDrawAxisSetLimits()
+.seealso: `PetscDrawAxisCreate()`, `PetscDrawAxis`, `PetscDrawAxisSetColors()`, `PetscDrawAxisDraw()`, `PetscDrawAxisSetLimits()`
 @*/
 PetscErrorCode  PetscDrawAxisSetLabels(PetscDrawAxis axis,const char top[],const char xlabel[],const char ylabel[])
 {
@@ -153,7 +153,7 @@ PetscErrorCode  PetscDrawAxisSetLabels(PetscDrawAxis axis,const char top[],const
 
     Level: advanced
 
-.seealso:  PetscDrawAxisSetHoldLimits(), PetscDrawAxisGetLimits(), PetscDrawAxisSetLabels(), PetscDrawAxisSetColors()
+.seealso: `PetscDrawAxisSetHoldLimits()`, `PetscDrawAxisGetLimits()`, `PetscDrawAxisSetLabels()`, `PetscDrawAxisSetColors()`
 
 @*/
 PetscErrorCode  PetscDrawAxisSetLimits(PetscDrawAxis axis,PetscReal xmin,PetscReal xmax,PetscReal ymin,PetscReal ymax)
@@ -181,7 +181,7 @@ PetscErrorCode  PetscDrawAxisSetLimits(PetscDrawAxis axis,PetscReal xmin,PetscRe
 
     Level: advanced
 
-.seealso:  PetscDrawAxisCreate(), PetscDrawAxis, PetscDrawAxisSetHoldLimits(), PetscDrawAxisSetLimits(), PetscDrawAxisSetLabels(), PetscDrawAxisSetColors()
+.seealso: `PetscDrawAxisCreate()`, `PetscDrawAxis`, `PetscDrawAxisSetHoldLimits()`, `PetscDrawAxisSetLimits()`, `PetscDrawAxisSetLabels()`, `PetscDrawAxisSetColors()`
 
 @*/
 PetscErrorCode  PetscDrawAxisGetLimits(PetscDrawAxis axis,PetscReal *xmin,PetscReal *xmax,PetscReal *ymin,PetscReal *ymax)
@@ -211,7 +211,7 @@ PetscErrorCode  PetscDrawAxisGetLimits(PetscDrawAxis axis,PetscReal *xmin,PetscR
         Once this has been called with PETSC_TRUE the limits will not change if you call
      PetscDrawAxisSetLimits() until you call this with PETSC_FALSE
 
-.seealso:  PetscDrawAxisCreate(), PetscDrawAxis, PetscDrawAxisGetLimits(), PetscDrawAxisSetLimits(), PetscDrawAxisSetLabels(), PetscDrawAxisSetColors()
+.seealso: `PetscDrawAxisCreate()`, `PetscDrawAxis`, `PetscDrawAxisGetLimits()`, `PetscDrawAxisSetLimits()`, `PetscDrawAxisSetLabels()`, `PetscDrawAxisSetColors()`
 
 @*/
 PetscErrorCode  PetscDrawAxisSetHoldLimits(PetscDrawAxis axis,PetscBool hold)
@@ -239,7 +239,7 @@ PetscErrorCode  PetscDrawAxisSetHoldLimits(PetscDrawAxis axis,PetscBool hold)
     effects may be generated.  These routines are part of the Axis
     structure (axis).
 
-.seealso:  PetscDrawAxisCreate(), PetscDrawAxis, PetscDrawAxisGetLimits(), PetscDrawAxisSetLimits(), PetscDrawAxisSetLabels(), PetscDrawAxisSetColors()
+.seealso: `PetscDrawAxisCreate()`, `PetscDrawAxis`, `PetscDrawAxisGetLimits()`, `PetscDrawAxisSetLimits()`, `PetscDrawAxisSetLabels()`, `PetscDrawAxisSetColors()`
 
 @*/
 PetscErrorCode  PetscDrawAxisDraw(PetscDrawAxis axis)
@@ -252,7 +252,6 @@ PetscErrorCode  PetscDrawAxisDraw(PetscDrawAxis axis)
   char           *p;
   PetscDraw      draw;
   PetscBool      isnull;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(axis,PETSC_DRAWAXIS_CLASSID,1);
@@ -266,7 +265,7 @@ PetscErrorCode  PetscDrawAxisDraw(PetscDrawAxis axis)
   if (axis->xlow == axis->xhigh) {axis->xlow -= .5; axis->xhigh += .5;}
   if (axis->ylow == axis->yhigh) {axis->ylow -= .5; axis->yhigh += .5;}
 
-  ierr = PetscDrawCollectiveBegin(draw);PetscCall(ierr);
+  PetscDrawCollectiveBegin(draw);
   if (rank) goto finally;
 
   /* get cannonical string size */
@@ -361,7 +360,7 @@ PetscErrorCode  PetscDrawAxisDraw(PetscDrawAxis axis)
 
   PetscCall(PetscDrawGetCoordinates(draw,&coors[0],&coors[1],&coors[2],&coors[3]));
 finally:
-  ierr = PetscDrawCollectiveEnd(draw);PetscCall(ierr);
+  PetscDrawCollectiveEnd(draw);
   PetscCallMPI(MPI_Bcast(coors,4,MPIU_REAL,0,PetscObjectComm((PetscObject)draw)));
   PetscCall(PetscDrawSetCoordinates(draw,coors[0],coors[1],coors[2],coors[3]));
   PetscFunctionReturn(0);

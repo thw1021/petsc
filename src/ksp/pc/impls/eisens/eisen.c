@@ -50,7 +50,7 @@ static PetscErrorCode PCPreSolve_Eisenstat(PC pc,KSP ksp,Vec b,Vec x)
 
   PetscFunctionBegin;
   if (pc->presolvedone < 2) {
-    PetscCheckFalse(pc->mat != pc->pmat,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Cannot have different mat and pmat");
+    PetscCheck(pc->mat == pc->pmat,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Cannot have different mat and pmat");
     /* swap shell matrix and true matrix */
     eis->A  = pc->mat;
     pc->mat = eis->shell;
@@ -117,13 +117,13 @@ static PetscErrorCode PCSetFromOptions_Eisenstat(PetscOptionItems *PetscOptionsO
   PetscBool      set,flg;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Eisenstat SSOR options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Eisenstat SSOR options");
   PetscCall(PetscOptionsReal("-pc_eisenstat_omega","Relaxation factor 0 < omega < 2","PCEisenstatSetOmega",eis->omega,&eis->omega,NULL));
   PetscCall(PetscOptionsBool("-pc_eisenstat_no_diagonal_scaling","Do not use standard diagonal scaling","PCEisenstatSetNoDiagonalScaling",eis->usediag ? PETSC_FALSE : PETSC_TRUE,&flg,&set));
   if (set) {
     PetscCall(PCEisenstatSetNoDiagonalScaling(pc,flg));
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -178,7 +178,7 @@ static PetscErrorCode  PCEisenstatSetOmega_Eisenstat(PC pc,PetscReal omega)
   PC_Eisenstat *eis = (PC_Eisenstat*)pc->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(omega >= 2.0 || omega <= 0.0,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Relaxation out of range");
+  PetscCheck(omega > 0.0 && omega < 2.0,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Relaxation out of range");
   eis->omega = omega;
   PetscFunctionReturn(0);
 }
@@ -235,7 +235,7 @@ $    -pc_type  sor  -pc_sor_symmetric
 
    Level: intermediate
 
-.seealso: PCSORSetOmega()
+.seealso: `PCSORSetOmega()`
 @*/
 PetscErrorCode  PCEisenstatSetOmega(PC pc,PetscReal omega)
 {
@@ -266,7 +266,7 @@ PetscErrorCode  PCEisenstatSetOmega(PC pc,PetscReal omega)
      If you use the KSPSetDiagonalScaling() or -ksp_diagonal_scale option then you will
    likley want to use this routine since it will save you some unneeded flops.
 
-.seealso: PCEisenstatSetOmega()
+.seealso: `PCEisenstatSetOmega()`
 @*/
 PetscErrorCode  PCEisenstatSetNoDiagonalScaling(PC pc,PetscBool flg)
 {
@@ -303,7 +303,7 @@ $    -pc_type  sor  -pc_sor_symmetric
 
    Level: intermediate
 
-.seealso: PCSORGetOmega(), PCEisenstatSetOmega()
+.seealso: `PCSORGetOmega()`, `PCEisenstatSetOmega()`
 @*/
 PetscErrorCode  PCEisenstatGetOmega(PC pc,PetscReal *omega)
 {
@@ -335,7 +335,7 @@ PetscErrorCode  PCEisenstatGetOmega(PC pc,PetscReal *omega)
      If you use the KSPSetDiagonalScaling() or -ksp_diagonal_scale option then you will
    likley want to use this routine since it will save you some unneeded flops.
 
-.seealso: PCEisenstatGetOmega()
+.seealso: `PCEisenstatGetOmega()`
 @*/
 PetscErrorCode  PCEisenstatGetNoDiagonalScaling(PC pc,PetscBool *flg)
 {
@@ -369,8 +369,8 @@ static PetscErrorCode PCPreSolveChangeRHS_Eisenstat(PC pc, PetscBool* change)
           Not a true parallel SOR, in parallel this implementation corresponds to block
           Jacobi with SOR on each block.
 
-.seealso:  PCCreate(), PCSetType(), PCType (for list of available types), PC,
-           PCEisenstatSetNoDiagonalScaling(), PCEisenstatSetOmega(), PCSOR
+.seealso: `PCCreate()`, `PCSetType()`, `PCType`, `PC`,
+          `PCEisenstatSetNoDiagonalScaling()`, `PCEisenstatSetOmega()`, `PCSOR`
 M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_Eisenstat(PC pc)

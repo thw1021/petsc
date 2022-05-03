@@ -20,8 +20,8 @@
 
   Level: advanced
 
-.seealso: PetscOptionsCreate(), PetscOptionsDestroy(), PetscObjectSetOptionsPrefix(), PetscObjectAppendOptionsPrefix(), PetscObjectPrependOptionsPrefix(),
-          PetscObjectGetOptionsPrefix(), PetscObjectSetOptions()
+.seealso: `PetscOptionsCreate()`, `PetscOptionsDestroy()`, `PetscObjectSetOptionsPrefix()`, `PetscObjectAppendOptionsPrefix()`, `PetscObjectPrependOptionsPrefix()`,
+          `PetscObjectGetOptionsPrefix()`, `PetscObjectSetOptions()`
 
 @*/
 PetscErrorCode  PetscObjectGetOptions(PetscObject obj,PetscOptions *options)
@@ -46,8 +46,8 @@ PetscErrorCode  PetscObjectGetOptions(PetscObject obj,PetscOptions *options)
 
   Level: advanced
 
-.seealso: PetscOptionsCreate(), PetscOptionsDestroy(), PetscObjectSetOptionsPrefix(), PetscObjectAppendOptionsPrefix(), PetscObjectPrependOptionsPrefix(),
-          PetscObjectGetOptionsPrefix(), PetscObjectGetOptions()
+.seealso: `PetscOptionsCreate()`, `PetscOptionsDestroy()`, `PetscObjectSetOptionsPrefix()`, `PetscObjectAppendOptionsPrefix()`, `PetscObjectPrependOptionsPrefix()`,
+          `PetscObjectGetOptionsPrefix()`, `PetscObjectGetOptions()`
 
 @*/
 PetscErrorCode  PetscObjectSetOptions(PetscObject obj,PetscOptions options)
@@ -75,8 +75,8 @@ PetscErrorCode  PetscObjectSetOptions(PetscObject obj,PetscOptions options)
 
   Level: advanced
 
-.seealso: PetscOptionsCreate(), PetscOptionsDestroy(), PetscObjectAppendOptionsPrefix(), PetscObjectPrependOptionsPrefix(),
-          PetscObjectGetOptionsPrefix(), TSSetOptionsPrefix(), SNESSetOptionsPrefix(), KSPSetOptionsPrefix()
+.seealso: `PetscOptionsCreate()`, `PetscOptionsDestroy()`, `PetscObjectAppendOptionsPrefix()`, `PetscObjectPrependOptionsPrefix()`,
+          `PetscObjectGetOptionsPrefix()`, `TSSetOptionsPrefix()`, `SNESSetOptionsPrefix()`, `KSPSetOptionsPrefix()`
 
 @*/
 PetscErrorCode  PetscObjectSetOptionsPrefix(PetscObject obj,const char prefix[])
@@ -109,8 +109,8 @@ PetscErrorCode  PetscObjectSetOptionsPrefix(PetscObject obj,const char prefix[])
 
   Level: advanced
 
-.seealso: PetscOptionsCreate(), PetscOptionsDestroy(), PetscObjectSetOptionsPrefix(), PetscObjectPrependOptionsPrefix(),
-          PetscObjectGetOptionsPrefix(), TSAppendOptionsPrefix(), SNESAppendOptionsPrefix(), KSPAppendOptionsPrefix()
+.seealso: `PetscOptionsCreate()`, `PetscOptionsDestroy()`, `PetscObjectSetOptionsPrefix()`, `PetscObjectPrependOptionsPrefix()`,
+          `PetscObjectGetOptionsPrefix()`, `TSAppendOptionsPrefix()`, `SNESAppendOptionsPrefix()`, `KSPAppendOptionsPrefix()`
 
 @*/
 PetscErrorCode  PetscObjectAppendOptionsPrefix(PetscObject obj,const char prefix[])
@@ -125,7 +125,7 @@ PetscErrorCode  PetscObjectAppendOptionsPrefix(PetscObject obj,const char prefix
     PetscCall(PetscObjectSetOptionsPrefix(obj,prefix));
     PetscFunctionReturn(0);
   }
-  PetscCheckFalse(prefix[0] == '-',PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Options prefix should not begin with a hyphen");
+  PetscCheck(prefix[0] != '-',PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Options prefix should not begin with a hyphen");
 
   PetscCall(PetscStrlen(prefix,&len1));
   PetscCall(PetscStrlen(buf,&len2));
@@ -147,8 +147,8 @@ PetscErrorCode  PetscObjectAppendOptionsPrefix(PetscObject obj,const char prefix
 
   Level: advanced
 
-.seealso: PetscOptionsCreate(), PetscOptionsDestroy(), PetscObjectSetOptionsPrefix(), PetscObjectAppendOptionsPrefix(), PetscObjectPrependOptionsPrefix(),
-          TSGetOptionsPrefix(), SNESGetOptionsPrefix(), KSPGetOptionsPrefix()
+.seealso: `PetscOptionsCreate()`, `PetscOptionsDestroy()`, `PetscObjectSetOptionsPrefix()`, `PetscObjectAppendOptionsPrefix()`, `PetscObjectPrependOptionsPrefix()`,
+          `TSGetOptionsPrefix()`, `SNESGetOptionsPrefix()`, `KSPGetOptionsPrefix()`
 
 @*/
 PetscErrorCode  PetscObjectGetOptionsPrefix(PetscObject obj,const char *prefix[])
@@ -175,8 +175,8 @@ PetscErrorCode  PetscObjectGetOptionsPrefix(PetscObject obj,const char *prefix[]
 
   Level: advanced
 
-.seealso: PetscOptionsCreate(), PetscOptionsDestroy(), PetscObjectSetOptionsPrefix(), PetscObjectAppendOptionsPrefix(),
-          PetscObjectGetOptionsPrefix()
+.seealso: `PetscOptionsCreate()`, `PetscOptionsDestroy()`, `PetscObjectSetOptionsPrefix()`, `PetscObjectAppendOptionsPrefix()`,
+          `PetscObjectGetOptionsPrefix()`
 
 @*/
 PetscErrorCode  PetscObjectPrependOptionsPrefix(PetscObject obj,const char prefix[])
@@ -192,7 +192,7 @@ PetscErrorCode  PetscObjectPrependOptionsPrefix(PetscObject obj,const char prefi
     PetscCall(PetscObjectSetOptionsPrefix(obj,prefix));
     PetscFunctionReturn(0);
   }
-  PetscCheckFalse(prefix[0] == '-',PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Options prefix should not begin with a hyphen");
+  PetscCheck(prefix[0] != '-',PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Options prefix should not begin with a hyphen");
 
   PetscCall(PetscStrlen(prefix,&len1));
   PetscCall(PetscStrlen(buf,&len2));

@@ -1323,7 +1323,6 @@ static void g3_conduct_wT(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
   PetscInt       mod, sol;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   options->modType      = MOD_INCOMPRESSIBLE;
@@ -1331,14 +1330,14 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->hasNullSpace = PETSC_TRUE;
   options->dmCell       = NULL;
 
-  ierr = PetscOptionsBegin(comm, "", "Low Mach flow Problem Options", "DMPLEX");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "Low Mach flow Problem Options", "DMPLEX");
   mod = options->modType;
   PetscCall(PetscOptionsEList("-mod_type", "The model type", "ex76.c", modTypes, NUM_MOD_TYPES, modTypes[options->modType], &mod, NULL));
   options->modType = (ModType) mod;
   sol = options->solType;
   PetscCall(PetscOptionsEList("-sol_type", "The solution type", "ex76.c", solTypes, NUM_SOL_TYPES, solTypes[options->solType], &sol, NULL));
   options->solType = (SolType) sol;
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -1489,7 +1488,7 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
 
         PetscCall(UniformBoundaryConditions(dm, label, exactFuncs, exactFuncs_t, user));
         break;
-       default: SETERRQ(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Unsupported solution type: %s (%D)", solTypes[PetscMin(user->solType, NUM_SOL_TYPES)], user->solType);
+       default: SETERRQ(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Unsupported solution type: %s (%d)", solTypes[PetscMin(user->solType, NUM_SOL_TYPES)], user->solType);
       }
       break;
     case MOD_CONDUCTING:
@@ -1582,10 +1581,10 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *user)
         PetscCall(PetscDSAddBoundary(ds, DM_BC_ESSENTIAL, "bottom wall velocity",    label, 1, &id, VEL,  0, NULL, (void (*)(void)) exactFuncs[VEL], (void (*)(void)) exactFuncs_t[VEL], ctx, NULL));
         PetscCall(PetscDSAddBoundary(ds, DM_BC_ESSENTIAL, "bottom wall temperature", label, 1, &id, TEMP, 0, NULL, (void (*)(void)) exactFuncs[TEMP], (void (*)(void)) exactFuncs_t[TEMP], ctx, NULL));
         break;
-       default: SETERRQ(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Unsupported solution type: %s (%D)", solTypes[PetscMin(user->solType, NUM_SOL_TYPES)], user->solType);
+       default: SETERRQ(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Unsupported solution type: %s (%d)", solTypes[PetscMin(user->solType, NUM_SOL_TYPES)], user->solType);
       }
       break;
-    default: SETERRQ(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Unsupported model type: %s (%D)", modTypes[PetscMin(user->modType, NUM_MOD_TYPES)], user->modType);
+    default: SETERRQ(PetscObjectComm((PetscObject) ds), PETSC_ERR_ARG_WRONG, "Unsupported model type: %s (%d)", modTypes[PetscMin(user->modType, NUM_MOD_TYPES)], user->modType);
   }
   /* Setup constants */
   {
@@ -1717,7 +1716,7 @@ static PetscErrorCode CreatePressureNullSpace(DM dm, PetscInt ofield, PetscInt n
   PetscErrorCode (*funcs[3])(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar *, void *) = {zero, zero, zero};
 
   PetscFunctionBeginUser;
-  PetscCheck(ofield == PRES,PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "Nullspace must be for pressure field at index %D, not %D", PRES, ofield);
+  PetscCheck(ofield == PRES,PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "Nullspace must be for pressure field at index %" PetscInt_FMT ", not %" PetscInt_FMT, PRES, ofield);
   funcs[nfield] = constant;
   PetscCall(DMCreateGlobalVector(dm, &vec));
   PetscCall(DMProjectFunction(dm, 0.0, funcs, NULL, INSERT_ALL_VALUES, vec));

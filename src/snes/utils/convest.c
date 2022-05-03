@@ -21,7 +21,7 @@ static PetscErrorCode zero_private(PetscInt dim, PetscReal time, const PetscReal
 
   Level: beginner
 
-.seealso: PetscConvEstCreate(), PetscConvEstGetConvRate()
+.seealso: `PetscConvEstCreate()`, `PetscConvEstGetConvRate()`
 @*/
 PetscErrorCode PetscConvEstDestroy(PetscConvEst *ce)
 {
@@ -48,19 +48,17 @@ PetscErrorCode PetscConvEstDestroy(PetscConvEst *ce)
 
   Level: beginner
 
-.seealso: PetscConvEstCreate(), PetscConvEstGetConvRate()
+.seealso: `PetscConvEstCreate()`, `PetscConvEstGetConvRate()`
 @*/
 PetscErrorCode PetscConvEstSetFromOptions(PetscConvEst ce)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = PetscOptionsBegin(PetscObjectComm((PetscObject) ce), "", "Convergence Estimator Options", "PetscConvEst");PetscCall(ierr);
+  PetscOptionsBegin(PetscObjectComm((PetscObject) ce), "", "Convergence Estimator Options", "PetscConvEst");
   PetscCall(PetscOptionsInt("-convest_num_refine", "The number of refinements for the convergence check", "PetscConvEst", ce->Nr, &ce->Nr, NULL));
   PetscCall(PetscOptionsReal("-convest_refine_factor", "The increase in resolution in each dimension", "PetscConvEst", ce->r, &ce->r, NULL));
   PetscCall(PetscOptionsBool("-convest_monitor", "Monitor the error for each convergence check", "PetscConvEst", ce->monitor, &ce->monitor, NULL));
   PetscCall(PetscOptionsBool("-convest_no_refine", "Debugging flag to run on the same mesh each time", "PetscConvEst", ce->noRefine, &ce->noRefine, NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -75,13 +73,13 @@ PetscErrorCode PetscConvEstSetFromOptions(PetscConvEst ce)
 
   Level: beginner
 
-.seealso: PetscConvEstCreate(), PetscConvEstGetConvRate()
+.seealso: `PetscConvEstCreate()`, `PetscConvEstGetConvRate()`
 @*/
 PetscErrorCode PetscConvEstView(PetscConvEst ce, PetscViewer viewer)
 {
   PetscFunctionBegin;
   PetscCall(PetscObjectPrintClassNamePrefixType((PetscObject) ce, viewer));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "ConvEst with %D levels\n", ce->Nr+1));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "ConvEst with %" PetscInt_FMT " levels\n", ce->Nr+1));
   PetscFunctionReturn(0);
 }
 
@@ -98,7 +96,7 @@ PetscErrorCode PetscConvEstView(PetscConvEst ce, PetscViewer viewer)
 
   Level: intermediate
 
-.seealso: PetscConvEstSetSolver(), PetscConvEstCreate(), PetscConvEstGetConvRate()
+.seealso: `PetscConvEstSetSolver()`, `PetscConvEstCreate()`, `PetscConvEstGetConvRate()`
 @*/
 PetscErrorCode PetscConvEstGetSolver(PetscConvEst ce, PetscObject *solver)
 {
@@ -122,7 +120,7 @@ PetscErrorCode PetscConvEstGetSolver(PetscConvEst ce, PetscObject *solver)
 
   Note: The solver MUST have an attached DM/DS, so that we know the exact solution
 
-.seealso: PetscConvEstGetSNES(), PetscConvEstCreate(), PetscConvEstGetConvRate()
+.seealso: `PetscConvEstGetSNES()`, `PetscConvEstCreate()`, `PetscConvEstGetConvRate()`
 @*/
 PetscErrorCode PetscConvEstSetSolver(PetscConvEst ce, PetscObject solver)
 {
@@ -144,7 +142,7 @@ PetscErrorCode PetscConvEstSetSolver(PetscConvEst ce, PetscObject solver)
 
   Level: beginner
 
-.seealso: PetscConvEstCreate(), PetscConvEstGetConvRate()
+.seealso: `PetscConvEstCreate()`, `PetscConvEstGetConvRate()`
 @*/
 PetscErrorCode PetscConvEstSetUp(PetscConvEst ce)
 {
@@ -174,7 +172,7 @@ PetscErrorCode PetscConvEstSetUp(PetscConvEst ce)
     if (fieldIS) PetscCall(ISRestoreIndices(fieldIS, &fields));
   }
   for (f = 0; f < Nf; ++f) {
-    PetscCheckFalse(!ce->exactSol[f],PetscObjectComm((PetscObject) ce), PETSC_ERR_ARG_WRONG, "DS must contain exact solution functions in order to estimate convergence, missing for field %D", f);
+    PetscCheck(ce->exactSol[f],PetscObjectComm((PetscObject) ce), PETSC_ERR_ARG_WRONG, "DS must contain exact solution functions in order to estimate convergence, missing for field %" PetscInt_FMT, f);
   }
   PetscFunctionReturn(0);
 }
@@ -214,7 +212,7 @@ PetscErrorCode PetscConvEstComputeError(PetscConvEst ce, PetscInt r, DM dm, Vec 
 
   Level: intermediate
 
-.seealso: PetscConvEstCreate(), PetscConvEstGetConvRate(), SNESSolve(), TSSolve()
+.seealso: `PetscConvEstCreate()`, `PetscConvEstGetConvRate()`, `SNESSolve()`, `TSSolve()`
 @*/
 PetscErrorCode PetscConvEstMonitorDefault(PetscConvEst ce, PetscInt r)
 {
@@ -231,7 +229,7 @@ PetscErrorCode PetscConvEstMonitorDefault(PetscConvEst ce, PetscInt r)
     if (ce->Nf > 1) PetscCall(PetscPrintf(comm, "["));
     for (f = 0; f < ce->Nf; ++f) {
       if (f > 0) PetscCall(PetscPrintf(comm, ", "));
-      PetscCall(PetscPrintf(comm, "%7D", dofs[f]));
+      PetscCall(PetscPrintf(comm, "%7" PetscInt_FMT, dofs[f]));
     }
     if (ce->Nf > 1) PetscCall(PetscPrintf(comm, "]"));
     PetscCall(PetscPrintf(comm, "  "));
@@ -254,7 +252,7 @@ static PetscErrorCode PetscConvEstSetSNES_Private(PetscConvEst ce, PetscObject s
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetClassId(ce->solver, &id));
-  PetscCheckFalse(id != SNES_CLASSID,PetscObjectComm((PetscObject) ce), PETSC_ERR_ARG_WRONG, "Solver was not a SNES");
+  PetscCheck(id == SNES_CLASSID,PetscObjectComm((PetscObject) ce), PETSC_ERR_ARG_WRONG, "Solver was not a SNES");
   PetscCall(SNESGetDM((SNES) ce->solver, &ce->idm));
   PetscFunctionReturn(0);
 }
@@ -309,7 +307,7 @@ static PetscErrorCode PetscConvEstGetConvRateSNES_Private(PetscConvEst ce, Petsc
   void          *ctx;
 
   PetscFunctionBegin;
-  PetscCheckFalse(ce->r != 2.0,PetscObjectComm((PetscObject) ce), PETSC_ERR_SUP, "Only refinement factor 2 is currently supported (not %g)", (double) ce->r);
+  PetscCheck(ce->r == 2.0,PetscObjectComm((PetscObject) ce), PETSC_ERR_SUP, "Only refinement factor 2 is currently supported (not %g)", (double) ce->r);
   PetscCall(DMGetDimension(ce->idm, &dim));
   PetscCall(DMGetApplicationContext(ce->idm, &ctx));
   PetscCall(DMPlexSetRefinementUniform(ce->idm, PETSC_TRUE));
@@ -325,7 +323,7 @@ static PetscErrorCode PetscConvEstGetConvRateSNES_Private(PetscConvEst ce, Petsc
     char          stageName[PETSC_MAX_PATH_LEN];
     const char   *dmname, *uname;
 
-    PetscCall(PetscSNPrintf(stageName, PETSC_MAX_PATH_LEN-1, "ConvEst Refinement Level %D", r));
+    PetscCall(PetscSNPrintf(stageName, PETSC_MAX_PATH_LEN-1, "ConvEst Refinement Level %" PetscInt_FMT, r));
 #if defined(PETSC_USE_LOG)
     PetscCall(PetscLogStageGetId(stageName, &stage));
     if (stage < 0) PetscCall(PetscLogStageRegister(stageName, &stage));
@@ -460,7 +458,7 @@ based upon the exact solution in the DS, and then fit the result to our model ab
 
   Level: intermediate
 
-.seealso: PetscConvEstSetSolver(), PetscConvEstCreate(), PetscConvEstGetConvRate(), SNESSolve(), TSSolve()
+.seealso: `PetscConvEstSetSolver()`, `PetscConvEstCreate()`, `PetscConvEstGetConvRate()`, `SNESSolve()`, `TSSolve()`
 @*/
 PetscErrorCode PetscConvEstGetConvRate(PetscConvEst ce, PetscReal alpha[])
 {
@@ -488,7 +486,7 @@ PetscErrorCode PetscConvEstGetConvRate(PetscConvEst ce, PetscReal alpha[])
 
    Level: developer
 
-.seealso: PetscConvEstGetRate()
+.seealso: `PetscConvEstGetRate()`
 @*/
 PetscErrorCode PetscConvEstRateView(PetscConvEst ce, const PetscReal alpha[], PetscViewer viewer)
 {
@@ -526,7 +524,7 @@ PetscErrorCode PetscConvEstRateView(PetscConvEst ce, const PetscReal alpha[], Pe
 
   Level: beginner
 
-.seealso: PetscConvEstDestroy(), PetscConvEstGetConvRate()
+.seealso: `PetscConvEstDestroy()`, `PetscConvEstGetConvRate()`
 @*/
 PetscErrorCode PetscConvEstCreate(MPI_Comm comm, PetscConvEst *ce)
 {

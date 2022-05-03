@@ -12,7 +12,7 @@
 
   Level: developer
 
-.seealso: DMPlexGenerate()
+.seealso: `DMPlexGenerate()`
 @*/
 PetscErrorCode DMPlexInvertCell(DMPolytopeType cellType, PetscInt cone[])
 {
@@ -56,7 +56,7 @@ PetscErrorCode DMPlexInvertCell(DMPolytopeType cellType, PetscInt cone[])
 
   Level: developer
 
-.seealso: DMPlexGenerate()
+.seealso: `DMPlexGenerate()`
 @*/
 PetscErrorCode DMPlexReorderCell(DM dm, PetscInt cell, PetscInt cone[])
 {
@@ -79,7 +79,7 @@ PetscErrorCode DMPlexReorderCell(DM dm, PetscInt cell, PetscInt cone[])
 
   Level: developer
 
-.seealso: DMPlexTetgenSetOptions(), DMPlexGenerate()
+.seealso: `DMPlexTetgenSetOptions()`, `DMPlexGenerate()`
 @*/
 PetscErrorCode DMPlexTriangleSetOptions(DM dm, const char *opts)
 {
@@ -104,7 +104,7 @@ PetscErrorCode DMPlexTriangleSetOptions(DM dm, const char *opts)
 
   Level: developer
 
-.seealso: DMPlexTriangleSetOptions(), DMPlexGenerate()
+.seealso: `DMPlexTriangleSetOptions()`, `DMPlexGenerate()`
 @*/
 PetscErrorCode DMPlexTetgenSetOptions(DM dm, const char *opts)
 {
@@ -137,7 +137,7 @@ PetscErrorCode DMPlexTetgenSetOptions(DM dm, const char *opts)
 
   Level: intermediate
 
-.seealso: DMPlexCreate(), DMRefine()
+.seealso: `DMPlexCreate()`, `DMRefine()`
 @*/
 PetscErrorCode DMPlexGenerate(DM boundary, const char name[], PetscBool interpolate, DM *mesh)
 {
@@ -180,6 +180,6 @@ PetscErrorCode DMPlexGenerate(DM boundary, const char name[], PetscBool interpol
     suggestions = "";
     if (boundary->dim+1 == 2) suggestions = " You may need to add --download-triangle to your ./configure options";
     else if (boundary->dim+1 == 3) suggestions = " You may need to add --download-ctetgen or --download-tetgen in your ./configure options";
-    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"No grid generator of dimension %D registered%s",boundary->dim+1,suggestions);
+    SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"No grid generator of dimension %" PetscInt_FMT " registered%s",boundary->dim+1,suggestions);
   }
 }

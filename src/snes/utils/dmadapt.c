@@ -30,7 +30,7 @@ static PetscErrorCode DMAdaptorTransferSolution_Exact_Private(DMAdaptor adaptor,
 
   Level: beginner
 
-.seealso: DMAdaptorDestroy(), DMAdaptorAdapt()
+.seealso: `DMAdaptorDestroy()`, `DMAdaptorAdapt()`
 @*/
 PetscErrorCode DMAdaptorCreate(MPI_Comm comm, DMAdaptor *adaptor)
 {
@@ -70,7 +70,7 @@ PetscErrorCode DMAdaptorCreate(MPI_Comm comm, DMAdaptor *adaptor)
 
   Level: beginner
 
-.seealso: DMAdaptorCreate(), DMAdaptorAdapt()
+.seealso: `DMAdaptorCreate()`, `DMAdaptorAdapt()`
 @*/
 PetscErrorCode DMAdaptorDestroy(DMAdaptor *adaptor)
 {
@@ -104,19 +104,17 @@ PetscErrorCode DMAdaptorDestroy(DMAdaptor *adaptor)
 
   Level: beginner
 
-.seealso: DMAdaptorCreate(), DMAdaptorAdapt()
+.seealso: `DMAdaptorCreate()`, `DMAdaptorAdapt()`
 @*/
 PetscErrorCode DMAdaptorSetFromOptions(DMAdaptor adaptor)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
-  ierr = PetscOptionsBegin(PetscObjectComm((PetscObject) adaptor), "", "DM Adaptor Options", "DMAdaptor");PetscCall(ierr);
+  PetscOptionsBegin(PetscObjectComm((PetscObject) adaptor), "", "DM Adaptor Options", "DMAdaptor");
   PetscCall(PetscOptionsBool("-adaptor_monitor", "Monitor the adaptation process", "DMAdaptorMonitor", adaptor->monitor, &adaptor->monitor, NULL));
   PetscCall(PetscOptionsInt("-adaptor_sequence_num", "Number of adaptations to generate an optimal grid", "DMAdaptorSetSequenceLength", adaptor->numSeq, &adaptor->numSeq, NULL));
   PetscCall(PetscOptionsInt("-adaptor_target_num", "Set the target number of vertices N_adapt, -1 for automatic determination", "DMAdaptor", adaptor->Nadapt, &adaptor->Nadapt, NULL));
   PetscCall(PetscOptionsReal("-adaptor_refinement_factor", "Set r such that N_adapt = r^dim N_orig", "DMAdaptor", adaptor->refinementFactor, &adaptor->refinementFactor, NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscCall(VecTaggerSetFromOptions(adaptor->refineTag));
   PetscCall(VecTaggerSetFromOptions(adaptor->coarsenTag));
   PetscFunctionReturn(0);
@@ -133,14 +131,14 @@ PetscErrorCode DMAdaptorSetFromOptions(DMAdaptor adaptor)
 
   Level: beginner
 
-.seealso: DMAdaptorCreate(), DMAdaptorAdapt()
+.seealso: `DMAdaptorCreate()`, `DMAdaptorAdapt()`
 @*/
 PetscErrorCode DMAdaptorView(DMAdaptor adaptor, PetscViewer viewer)
 {
   PetscFunctionBegin;
   PetscCall(PetscObjectPrintClassNamePrefixType((PetscObject) adaptor, viewer));
   PetscCall(PetscViewerASCIIPrintf(viewer, "DM Adaptor\n"));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "  sequence length: %D\n", adaptor->numSeq));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "  sequence length: %" PetscInt_FMT "\n", adaptor->numSeq));
   PetscCall(VecTaggerView(adaptor->refineTag,  viewer));
   PetscCall(VecTaggerView(adaptor->coarsenTag, viewer));
   PetscFunctionReturn(0);
@@ -159,7 +157,7 @@ PetscErrorCode DMAdaptorView(DMAdaptor adaptor, PetscViewer viewer)
 
   Level: intermediate
 
-.seealso: DMAdaptorSetSolver(), DMAdaptorCreate(), DMAdaptorAdapt()
+.seealso: `DMAdaptorSetSolver()`, `DMAdaptorCreate()`, `DMAdaptorAdapt()`
 @*/
 PetscErrorCode DMAdaptorGetSolver(DMAdaptor adaptor, SNES *snes)
 {
@@ -183,7 +181,7 @@ PetscErrorCode DMAdaptorGetSolver(DMAdaptor adaptor, SNES *snes)
 
   Note: The solver MUST have an attached DM/DS, so that we know the exact solution
 
-.seealso: DMAdaptorGetSolver(), DMAdaptorCreate(), DMAdaptorAdapt()
+.seealso: `DMAdaptorGetSolver()`, `DMAdaptorCreate()`, `DMAdaptorAdapt()`
 @*/
 PetscErrorCode DMAdaptorSetSolver(DMAdaptor adaptor, SNES snes)
 {
@@ -208,7 +206,7 @@ PetscErrorCode DMAdaptorSetSolver(DMAdaptor adaptor, SNES snes)
 
   Level: intermediate
 
-.seealso: DMAdaptorSetSequenceLength(), DMAdaptorCreate(), DMAdaptorAdapt()
+.seealso: `DMAdaptorSetSequenceLength()`, `DMAdaptorCreate()`, `DMAdaptorAdapt()`
 @*/
 PetscErrorCode DMAdaptorGetSequenceLength(DMAdaptor adaptor, PetscInt *num)
 {
@@ -230,7 +228,7 @@ PetscErrorCode DMAdaptorGetSequenceLength(DMAdaptor adaptor, PetscInt *num)
 
   Level: intermediate
 
-.seealso: DMAdaptorGetSequenceLength(), DMAdaptorCreate(), DMAdaptorAdapt()
+.seealso: `DMAdaptorGetSequenceLength()`, `DMAdaptorCreate()`, `DMAdaptorAdapt()`
 @*/
 PetscErrorCode DMAdaptorSetSequenceLength(DMAdaptor adaptor, PetscInt num)
 {
@@ -250,7 +248,7 @@ PetscErrorCode DMAdaptorSetSequenceLength(DMAdaptor adaptor, PetscInt num)
 
   Level: beginner
 
-.seealso: DMAdaptorCreate(), DMAdaptorAdapt()
+.seealso: `DMAdaptorCreate()`, `DMAdaptorAdapt()`
 @*/
 PetscErrorCode DMAdaptorSetUp(DMAdaptor adaptor)
 {
@@ -370,7 +368,7 @@ PetscErrorCode DMAdaptorTransferSolution(DMAdaptor adaptor, DM dm, Vec x, DM adm
       PetscCall(DMInterpolate(dm, interp, adm));
       PetscCall(MatDestroy(&interp));
       break;
-    default: SETERRQ(PetscObjectComm((PetscObject) adaptor), PETSC_ERR_SUP, "No built-in projection for this adaptation criterion: %D", adaptor->adaptCriterion);
+    default: SETERRQ(PetscObjectComm((PetscObject) adaptor), PETSC_ERR_SUP, "No built-in projection for this adaptation criterion: %d", adaptor->adaptCriterion);
     }
   }
   PetscFunctionReturn(0);
@@ -415,7 +413,7 @@ PetscErrorCode DMAdaptorPostAdapt(DMAdaptor adaptor)
   Output Parameter:
 . errInd   - The error indicator
 
-.seealso: DMAdaptorComputeErrorIndicator()
+.seealso: `DMAdaptorComputeErrorIndicator()`
 */
 static PetscErrorCode DMAdaptorSimpleErrorIndicator_Private(DMAdaptor adaptor, PetscInt dim, PetscInt Nc, const PetscScalar *field, const PetscScalar *gradient, const PetscFVCellGeom *cg, PetscReal *errInd, void *ctx)
 {
@@ -544,7 +542,7 @@ static PetscErrorCode DMAdaptorAdapt_Sequence_Private(DMAdaptor adaptor, Vec inx
   PetscCall(DMGetApplicationContext(adaptor->idm, &ctx));
   PetscCall(DMGetDS(adaptor->idm, &prob));
   PetscCall(PetscDSGetNumFields(prob, &numFields));
-  PetscCheckFalse(numFields == 0,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Number of fields is zero!");
+  PetscCheck(numFields != 0,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Number of fields is zero!");
 
   /* Adapt until nothing changes */
   /* Adapt for a specified number of iterates */
@@ -606,13 +604,13 @@ static PetscErrorCode DMAdaptorAdapt_Sequence_Private(DMAdaptor adaptor, Vec inx
       PetscCall(VecRestoreArrayRead(locX, &pointSols));
       PetscCall(VecRestoreArray(errVec, &errArray));
       PetscCall(PetscGlobalMinMaxReal(PetscObjectComm((PetscObject) adaptor), minMaxInd, minMaxIndGlobal));
-      PetscCall(PetscInfo(adaptor, "DMAdaptor: error indicator range (%E, %E)\n", minMaxIndGlobal[0], minMaxIndGlobal[1]));
+      PetscCall(PetscInfo(adaptor, "DMAdaptor: error indicator range (%g, %g)\n", (double)minMaxIndGlobal[0], (double)minMaxIndGlobal[1]));
       /*     Compute IS from VecTagger */
       PetscCall(VecTaggerComputeIS(adaptor->refineTag, errVec, &refineIS,NULL));
       PetscCall(VecTaggerComputeIS(adaptor->coarsenTag, errVec, &coarsenIS,NULL));
       PetscCall(ISGetSize(refineIS, &nRefine));
       PetscCall(ISGetSize(coarsenIS, &nCoarsen));
-      PetscCall(PetscInfo(adaptor, "DMAdaptor: numRefine %D, numCoarsen %D\n", nRefine, nCoarsen));
+      PetscCall(PetscInfo(adaptor, "DMAdaptor: numRefine %" PetscInt_FMT ", numCoarsen %" PetscInt_FMT "\n", nRefine, nCoarsen));
       if (nRefine)  PetscCall(DMLabelSetStratumIS(adaptLabel, DM_ADAPT_REFINE,  refineIS));
       if (nCoarsen) PetscCall(DMLabelSetStratumIS(adaptLabel, DM_ADAPT_COARSEN, coarsenIS));
       PetscCall(ISDestroy(&coarsenIS));
@@ -646,7 +644,7 @@ static PetscErrorCode DMAdaptorAdapt_Sequence_Private(DMAdaptor adaptor, Vec inx
       /*     Setup finite element spaces */
       PetscCall(DMClone(dm, &dmGrad));
       PetscCall(DMClone(dm, &dmHess));
-      PetscCheckFalse(numFields > 1,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Adaptation with multiple fields not yet considered");  // TODO
+      PetscCheck(numFields <= 1,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Adaptation with multiple fields not yet considered");  // TODO
       for (f = 0; f < numFields; ++f) {
         PetscFE         fe, feGrad, feHess;
         PetscDualSpace  Q;
@@ -658,7 +656,7 @@ static PetscErrorCode DMAdaptorAdapt_Sequence_Private(DMAdaptor adaptor, Vec inx
 
         PetscCall(PetscDSGetDiscretization(prob, f, (PetscObject *) &fe));
         PetscCall(PetscFEGetNumComponents(fe, &Nc));
-        PetscCheckFalse(Nc > 1,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Adaptation with multiple components not yet considered");  // TODO
+        PetscCheck(Nc <= 1,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Adaptation with multiple components not yet considered");  // TODO
         PetscCall(PetscFEGetBasisSpace(fe, &space));
         PetscCall(PetscSpaceGetDegree(space, NULL, &p));
         if (p > 1) higherOrder = PETSC_TRUE;
@@ -695,7 +693,7 @@ static PetscErrorCode DMAdaptorAdapt_Sequence_Private(DMAdaptor adaptor, Vec inx
         PetscMPIInt rank, size;
         PetscCallMPI(MPI_Comm_rank(comm, &size));
         PetscCallMPI(MPI_Comm_rank(comm, &rank));
-        PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%D] N_orig: %D N_adapt: %g\n", rank, vEnd - vStart, N));
+        PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%d] N_orig: %" PetscInt_FMT " N_adapt: %g\n", rank, vEnd - vStart, (double)N));
       }
       PetscCall(DMPlexMetricSetTargetComplexity(dmMetric, (PetscReal) N));
       if (higherOrder) {
@@ -718,7 +716,7 @@ static PetscErrorCode DMAdaptorAdapt_Sequence_Private(DMAdaptor adaptor, Vec inx
       PetscCall(DMDestroy(&dmMetric));
     }
     break;
-    default: SETERRQ(comm, PETSC_ERR_ARG_WRONG, "Invalid adaptation type: %D", adaptor->adaptCriterion);
+    default: SETERRQ(comm, PETSC_ERR_ARG_WRONG, "Invalid adaptation type: %d", adaptor->adaptCriterion);
     }
     PetscCall(DMAdaptorPostAdapt(adaptor));
     PetscCall(DMRestoreLocalVector(dm, &locX));
@@ -790,7 +788,7 @@ $ 3) Solve the problem on a hierarchy of adapted meshes generated to satisfy a q
 
   Level: intermediate
 
-.seealso: DMAdaptorSetSolver(), DMAdaptorCreate(), DMAdaptorAdapt()
+.seealso: `DMAdaptorSetSolver()`, `DMAdaptorCreate()`, `DMAdaptorAdapt()`
 @*/
 PetscErrorCode DMAdaptorAdapt(DMAdaptor adaptor, Vec x, DMAdaptationStrategy strategy, DM *adm, Vec *ax)
 {

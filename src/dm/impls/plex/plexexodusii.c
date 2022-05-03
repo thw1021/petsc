@@ -27,7 +27,7 @@
   an error code.  The GLVIS PetscViewer is usually used in the form
 $       XXXView(XXX object, PETSC_VIEWER_EXODUSII_(comm));
 
-.seealso: PetscViewerExodusIIOpen(), PetscViewerType, PetscViewerCreate(), PetscViewerDestroy()
+.seealso: `PetscViewerExodusIIOpen()`, `PetscViewerType`, `PetscViewerCreate()`, `PetscViewerDestroy()`
 */
 PetscViewer PETSC_VIEWER_EXODUSII_(MPI_Comm comm)
 {
@@ -57,8 +57,8 @@ static PetscErrorCode PetscViewerView_ExodusII(PetscViewer v, PetscViewer viewer
 static PetscErrorCode PetscViewerSetFromOptions_ExodusII(PetscOptionItems *PetscOptionsObject, PetscViewer v)
 {
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject, "ExodusII PetscViewer Options"));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadBegin(PetscOptionsObject, "ExodusII PetscViewer Options");
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -127,7 +127,7 @@ static PetscErrorCode PetscViewerFileSetName_ExodusII(PetscViewer viewer, const 
   EXO_mode += EX_ALL_INT64_API;
   #endif
   exo->exoid = ex_open_par(name,EXO_mode,&CPU_word_size,&IO_word_size,&EXO_version,PETSC_COMM_WORLD,mpi_info);
-  PetscCheckFalse(exo->exoid < 0,PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_open_par failed for %s", name);
+  PetscCheck(exo->exoid >= 0,PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_open_par failed for %s", name);
   PetscFunctionReturn(0);
 }
 
@@ -188,8 +188,8 @@ static PetscErrorCode PetscViewerExodusIISetOrder_ExodusII(PetscViewer viewer, P
 /*MC
    PETSCVIEWEREXODUSII - A viewer that writes to an Exodus II file
 
-.seealso:  PetscViewerExodusIIOpen(), PetscViewerCreate(), PETSCVIEWERBINARY, PETSCVIEWERHDF5, DMView(),
-           PetscViewerFileSetName(), PetscViewerFileSetMode(), PetscViewerFormat, PetscViewerType, PetscViewerSetType()
+.seealso: `PetscViewerExodusIIOpen()`, `PetscViewerCreate()`, `PETSCVIEWERBINARY`, `PETSCVIEWERHDF5`, `DMView()`,
+          `PetscViewerFileSetName()`, `PetscViewerFileSetMode()`, `PetscViewerFormat`, `PetscViewerType`, `PetscViewerSetType()`
 
   Level: beginner
 M*/
@@ -242,7 +242,7 @@ PETSC_EXTERN PetscErrorCode PetscViewerCreate_ExodusII(PetscViewer v)
 
   Level: beginner
 
-.seealso: EXOGetVarIndex(),DMPlexView_ExodusII_Internal(),VecViewPlex_ExodusII_Nodal_Internal(),VecLoadNodal_PlexEXO(),VecLoadZonal_PlexEXO()
+.seealso: `EXOGetVarIndex(),DMPlexView_ExodusII_Internal(),VecViewPlex_ExodusII_Nodal_Internal(),VecLoadNodal_PlexEXO(),VecLoadZonal_PlexEXO()`
 */
 PetscErrorCode EXOGetVarIndex_Internal(int exoid, ex_entity_type obj_type, const char name[], int *varIndex)
 {
@@ -333,8 +333,6 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
   PetscInt        nodesTetP2[4]  = {4,6,0,0};
   PetscInt        nodesHexP1[4]  = {8,0,0,0};
   PetscInt        nodesHexP2[4]  = {8,12,6,1};
-  PetscErrorCode  ierr;
-
   int             CPU_word_size, IO_word_size, EXO_mode;
   float           EXO_version;
 
@@ -367,7 +365,7 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
         CPU_word_size = sizeof(PetscReal);
         IO_word_size  = sizeof(PetscReal);
         exo->exoid = ex_create(exo->filename, EXO_mode, &CPU_word_size, &IO_word_size);
-        PetscCheckFalse(exo->exoid < 0,PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_create failed for %s", exo->filename);
+        PetscCheck(exo->exoid >= 0,PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_create failed for %s", exo->filename);
 
       break;
     default:
@@ -420,14 +418,14 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
         case 2:
           if      (closureSize == 3*dim) {type[cs] = TRI;}
           else if (closureSize == 4*dim) {type[cs] = QUAD;}
-          else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of vertices %D in dimension %D has no ExodusII type", closureSize/dim, dim);
+          else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of vertices %" PetscInt_FMT " in dimension %" PetscInt_FMT " has no ExodusII type", closureSize/dim, dim);
           break;
         case 3:
           if      (closureSize == 4*dim) {type[cs] = TET;}
           else if (closureSize == 8*dim) {type[cs] = HEX;}
-          else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of vertices %D in dimension %D has no ExodusII type", closureSize/dim, dim);
+          else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of vertices %" PetscInt_FMT " in dimension %" PetscInt_FMT " has no ExodusII type", closureSize/dim, dim);
           break;
-        default: SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Dimension %D not handled by ExodusII viewer", dim);
+        default: SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Dimension %" PetscInt_FMT " not handled by ExodusII viewer", dim);
       }
       if ((degree == 2) && (type[cs] == QUAD)) {numNodes += csSize;}
       if ((degree == 2) && (type[cs] == HEX))  {numNodes += csSize; numNodes += numFaces;}
@@ -669,9 +667,7 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
         elem_list_size += fsSize;
         PetscCall(ISDestroy(&stratumIS));
       }
-      ierr = PetscMalloc3(num_fs, &elem_ind,
-                          elem_list_size, &elem_list,
-                          elem_list_size, &side_list);PetscCall(ierr);
+      PetscCall(PetscMalloc3(num_fs, &elem_ind,elem_list_size, &elem_list,elem_list_size, &side_list));
       elem_ind[0] = 0;
       for (fs=0; fs<num_fs; ++fs) {
         PetscCall(DMLabelGetStratumIS(fsLabel, fsIdx[fs], &stratumIS));
@@ -745,7 +741,7 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
   CPU_word_size = sizeof(PetscReal);
   IO_word_size  = sizeof(PetscReal);
   exo->exoid = ex_open_par(exo->filename,EXO_mode,&CPU_word_size,&IO_word_size,&EXO_version,comm,MPI_INFO_NULL);
-  PetscCheckFalse(exo->exoid < 0,PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_open_par failed for %s", exo->filename);
+  PetscCheck(exo->exoid >= 0,PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_open_par failed for %s", exo->filename);
   PetscFunctionReturn(0);
 }
 
@@ -768,7 +764,7 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
 
   Level: beginner
 
-.seealso: EXOGetVarIndex_Internal(),DMPlexView_ExodusII(),VecView_PlexExodusII()
+.seealso: `EXOGetVarIndex_Internal(),DMPlexView_ExodusII(),VecView_PlexExodusII()`
 @*/
 PetscErrorCode VecView_PlexExodusII_Internal(Vec v, PetscViewer viewer)
 {
@@ -790,7 +786,7 @@ PetscErrorCode VecView_PlexExodusII_Internal(Vec v, PetscViewer viewer)
   PetscCall(DMGetOutputSequenceNumber(dm,&step,NULL));
   PetscCall(EXOGetVarIndex_Internal(exoid,EX_NODAL,vecname,&offsetN));
   PetscCall(EXOGetVarIndex_Internal(exoid,EX_ELEM_BLOCK,vecname,&offsetZ));
-  PetscCheckFalse(offsetN <= 0 && offsetZ <= 0,comm, PETSC_ERR_FILE_UNEXPECTED, "Found both nodal and zonal variable %s in exodus file. ", vecname);
+  PetscCheck(offsetN > 0 || offsetZ > 0,comm, PETSC_ERR_FILE_UNEXPECTED, "Found both nodal and zonal variable %s in exodus file. ", vecname);
   if (offsetN > 0) {
     PetscCall(VecViewPlex_ExodusII_Nodal_Internal(v,exoid,(int) step+1,offsetN));
   } else if (offsetZ > 0) {
@@ -818,7 +814,7 @@ PetscErrorCode VecView_PlexExodusII_Internal(Vec v, PetscViewer viewer)
 
   Level: beginner
 
-.seealso: EXOGetVarIndex_Internal(),DMPlexView_ExodusII(),VecView_PlexExodusII()
+.seealso: `EXOGetVarIndex_Internal(),DMPlexView_ExodusII(),VecView_PlexExodusII()`
 @*/
 PetscErrorCode VecLoad_PlexExodusII_Internal(Vec v, PetscViewer viewer)
 {
@@ -840,12 +836,10 @@ PetscErrorCode VecLoad_PlexExodusII_Internal(Vec v, PetscViewer viewer)
   PetscCall(DMGetOutputSequenceNumber(dm,&step,NULL));
   PetscCall(EXOGetVarIndex_Internal(exoid,EX_NODAL,vecname,&offsetN));
   PetscCall(EXOGetVarIndex_Internal(exoid,EX_ELEM_BLOCK,vecname,&offsetZ));
-  PetscCheckFalse(offsetN <= 0 && offsetZ <= 0,comm, PETSC_ERR_FILE_UNEXPECTED, "Found both nodal and zonal variable %s in exodus file. ", vecname);
-  if (offsetN > 0) {
-    PetscCall(VecLoadPlex_ExodusII_Nodal_Internal(v,exoid,(int) step+1,offsetN));
-  } else if (offsetZ > 0) {
-    PetscCall(VecLoadPlex_ExodusII_Zonal_Internal(v,exoid,(int) step+1,offsetZ));
-  } else SETERRQ(comm, PETSC_ERR_FILE_UNEXPECTED, "Could not find nodal or zonal variable %s in exodus file. ", vecname);
+  PetscCheck(offsetN > 0 || offsetZ > 0,comm, PETSC_ERR_FILE_UNEXPECTED, "Found both nodal and zonal variable %s in exodus file. ", vecname);
+  if (offsetN > 0) PetscCall(VecLoadPlex_ExodusII_Nodal_Internal(v,exoid,(int) step+1,offsetN));
+  else if (offsetZ > 0) PetscCall(VecLoadPlex_ExodusII_Zonal_Internal(v,exoid,(int) step+1,offsetZ));
+  else SETERRQ(comm, PETSC_ERR_FILE_UNEXPECTED, "Could not find nodal or zonal variable %s in exodus file. ", vecname);
   PetscFunctionReturn(0);
 }
 
@@ -868,7 +862,7 @@ PetscErrorCode VecLoad_PlexExodusII_Internal(Vec v, PetscViewer viewer)
 
   Level: beginner
 
-.seealso: EXOGetVarIndex_Internal(),DMPlexView_ExodusII_Internal(),VecLoadNodal_PlexEXO(),VecViewZonal_PlexEXO(),VecLoadZonal_PlexEXO()
+.seealso: `EXOGetVarIndex_Internal(),DMPlexView_ExodusII_Internal(),VecLoadNodal_PlexEXO(),VecViewZonal_PlexEXO(),VecLoadZonal_PlexEXO()`
 @*/
 PetscErrorCode VecViewPlex_ExodusII_Nodal_Internal(Vec v, int exoid, int step, int offset)
 {
@@ -941,7 +935,7 @@ PetscErrorCode VecViewPlex_ExodusII_Nodal_Internal(Vec v, int exoid, int step, i
 
   Level: beginner
 
-.seealso: EXOGetVarIndex_Internal(), DMPlexView_ExodusII_Internal(), VecViewPlex_ExodusII_Nodal_Internal(), VecViewZonal_PlexEXO(), VecLoadZonal_PlexEXO()
+.seealso: `EXOGetVarIndex_Internal()`, `DMPlexView_ExodusII_Internal()`, `VecViewPlex_ExodusII_Nodal_Internal()`, `VecViewZonal_PlexEXO()`, `VecLoadZonal_PlexEXO()`
 */
 PetscErrorCode VecLoadPlex_ExodusII_Nodal_Internal(Vec v, int exoid, int step, int offset)
 {
@@ -1011,7 +1005,7 @@ PetscErrorCode VecLoadPlex_ExodusII_Nodal_Internal(Vec v, int exoid, int step, i
 
   Level: beginner
 
-.seealso: EXOGetVarIndex_Internal(),DMPlexView_ExodusII_Internal(),VecViewPlex_ExodusII_Nodal_Internal(),VecLoadPlex_ExodusII_Nodal_Internal(),VecLoadPlex_ExodusII_Zonal_Internal()
+.seealso: `EXOGetVarIndex_Internal(),DMPlexView_ExodusII_Internal(),VecViewPlex_ExodusII_Nodal_Internal(),VecLoadPlex_ExodusII_Nodal_Internal(),VecLoadPlex_ExodusII_Zonal_Internal()`
 */
 PetscErrorCode VecViewPlex_ExodusII_Zonal_Internal(Vec v, int exoid, int step, int offset)
 {
@@ -1108,7 +1102,7 @@ PetscErrorCode VecViewPlex_ExodusII_Zonal_Internal(Vec v, int exoid, int step, i
 
   Level: beginner
 
-.seealso: EXOGetVarIndex_Internal(), DMPlexView_ExodusII_Internal(), VecViewPlex_ExodusII_Nodal_Internal(), VecLoadPlex_ExodusII_Nodal_Internal(), VecLoadPlex_ExodusII_Zonal_Internal()
+.seealso: `EXOGetVarIndex_Internal()`, `DMPlexView_ExodusII_Internal()`, `VecViewPlex_ExodusII_Nodal_Internal()`, `VecLoadPlex_ExodusII_Nodal_Internal()`, `VecLoadPlex_ExodusII_Zonal_Internal()`
 */
 PetscErrorCode VecLoadPlex_ExodusII_Zonal_Internal(Vec v, int exoid, int step, int offset)
 {
@@ -1199,7 +1193,7 @@ PetscErrorCode VecLoadPlex_ExodusII_Zonal_Internal(Vec v, int exoid, int step, i
 
   Level: intermediate
 
-.seealso: PetscViewerFileSetMode(), PetscViewerCreate(), PetscViewerSetType(), PetscViewerBinaryOpen()
+.seealso: `PetscViewerFileSetMode()`, `PetscViewerCreate()`, `PetscViewerSetType()`, `PetscViewerBinaryOpen()`
 @*/
 PetscErrorCode PetscViewerExodusIIGetId(PetscViewer viewer, int *exoid)
 {
@@ -1224,7 +1218,7 @@ PetscErrorCode PetscViewerExodusIIGetId(PetscViewer viewer, int *exoid)
 
    Note:
 
-.seealso: PetscViewerExodusIIGetId(), PetscViewerExodusIIGetOrder(), PetscViewerExodusIISetOrder()
+.seealso: `PetscViewerExodusIIGetId()`, `PetscViewerExodusIIGetOrder()`, `PetscViewerExodusIISetOrder()`
 @*/
 PetscErrorCode PetscViewerExodusIISetOrder(PetscViewer viewer, PetscInt order)
 {
@@ -1249,7 +1243,7 @@ PetscErrorCode PetscViewerExodusIISetOrder(PetscViewer viewer, PetscInt order)
 
    Note:
 
-.seealso: PetscViewerExodusIIGetId(), PetscViewerExodusIIGetOrder(), PetscViewerExodusIISetOrder()
+.seealso: `PetscViewerExodusIIGetId()`, `PetscViewerExodusIIGetOrder()`, `PetscViewerExodusIISetOrder()`
 @*/
 PetscErrorCode PetscViewerExodusIIGetOrder(PetscViewer viewer, PetscInt *order)
 {
@@ -1280,8 +1274,8 @@ $    FILE_MODE_APPEND - open existing file for binary output
    Note:
    This PetscViewer should be destroyed with PetscViewerDestroy().
 
-.seealso: PetscViewerPushFormat(), PetscViewerDestroy(),
-          DMLoad(), PetscFileMode, PetscViewer, PetscViewerSetType(), PetscViewerFileSetMode(), PetscViewerFileSetName()
+.seealso: `PetscViewerPushFormat()`, `PetscViewerDestroy()`,
+          `DMLoad()`, `PetscFileMode`, `PetscViewer`, `PetscViewerSetType()`, `PetscViewerFileSetMode()`, `PetscViewerFileSetName()`
 @*/
 PetscErrorCode PetscViewerExodusIIOpen(MPI_Comm comm, const char name[], PetscFileMode type, PetscViewer *exo)
 {
@@ -1309,7 +1303,7 @@ PetscErrorCode PetscViewerExodusIIOpen(MPI_Comm comm, const char name[], PetscFi
 
   Level: beginner
 
-.seealso: DMPLEX, DMCreate(), DMPlexCreateExodus()
+.seealso: `DMPLEX`, `DMCreate()`, `DMPlexCreateExodus()`
 @*/
 PetscErrorCode DMPlexCreateExodusFromFile(MPI_Comm comm, const char filename[], PetscBool interpolate, DM *dm)
 {
@@ -1325,7 +1319,7 @@ PetscErrorCode DMPlexCreateExodusFromFile(MPI_Comm comm, const char filename[], 
 #if defined(PETSC_HAVE_EXODUSII)
   if (rank == 0) {
     exoid = ex_open(filename, EX_READ, &CPU_word_size, &IO_word_size, &version);
-    PetscCheckFalse(exoid <= 0,PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_open(\"%s\",...) did not return a valid file ID", filename);
+    PetscCheck(exoid > 0,PETSC_COMM_SELF, PETSC_ERR_LIB, "ex_open(\"%s\",...) did not return a valid file ID", filename);
   }
   PetscCall(DMPlexCreateExodus(comm, exoid, interpolate, dm));
   if (rank == 0) {PetscStackCallStandard(ex_close,exoid);}
@@ -1385,7 +1379,7 @@ static PetscErrorCode ExodusGetCellType_Internal(const char *elem_type, DMPolyto
 
   Level: beginner
 
-.seealso: DMPLEX, DMCreate()
+.seealso: `DMPLEX`, `DMCreate()`
 @*/
 PetscErrorCode DMPlexCreateExodus(MPI_Comm comm, PetscInt exoid, PetscBool interpolate, DM *dm)
 {
@@ -1602,12 +1596,12 @@ PetscErrorCode DMPlexCreateExodus(MPI_Comm comm, PetscInt exoid, PetscBool inter
         PetscInt       faceSize = fs_vertex_count_list[f], numFaces;
         PetscInt       faceVertices[4], v;
 
-        PetscCheckFalse(faceSize > 4,comm, PETSC_ERR_ARG_WRONG, "ExodusII side cannot have %d > 4 vertices", faceSize);
+        PetscCheck(faceSize <= 4,comm, PETSC_ERR_ARG_WRONG, "ExodusII side cannot have %d > 4 vertices", faceSize);
         for (v = 0; v < faceSize; ++v, ++voff) {
           faceVertices[v] = fs_vertex_list[voff]+numCells-1;
         }
         PetscCall(DMPlexGetFullJoin(*dm, faceSize, faceVertices, &numFaces, &faces));
-        PetscCheckFalse(numFaces != 1,comm, PETSC_ERR_ARG_WRONG, "Invalid ExodusII side %d in set %d maps to %d faces", f, fs, numFaces);
+        PetscCheck(numFaces == 1,comm, PETSC_ERR_ARG_WRONG, "Invalid ExodusII side %d in set %d maps to %d faces", f, fs, numFaces);
         PetscCall(DMSetLabelValue_Fast(*dm, &faceSets, "Face Sets", faces[0], fs_id[fs]));
         /* Only add the label if one has been detected for this side set. */
         if (!fs_name_err) {

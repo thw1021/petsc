@@ -24,7 +24,7 @@ static PetscErrorCode PetscViewerFileClose_ASCII(PetscViewer viewer)
       PetscCall(PetscStrlcat(par,vascii->filename,sizeof(par)));
 #if defined(PETSC_HAVE_POPEN)
       PetscCall(PetscPOpen(PETSC_COMM_SELF,NULL,par,"r",&fp));
-      PetscCheckFalse(fgets(buf,1024,fp),PETSC_COMM_SELF,PETSC_ERR_LIB,"Error from compression command %s\n%s",par,buf);
+      PetscCheck(!fgets(buf,1024,fp),PETSC_COMM_SELF,PETSC_ERR_LIB,"Error from compression command %s\n%s",par,buf);
       PetscCall(PetscPClose(PETSC_COMM_SELF,fp));
 #else
       SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP_SYS,"Cannot run external programs on this machine");
@@ -199,8 +199,8 @@ PetscErrorCode PetscViewerFlush_ASCII(PetscViewer viewer)
     Fortran Note:
     This routine is not supported in Fortran.
 
-.seealso: PetscViewerASCIIOpen(), PetscViewerDestroy(), PetscViewerSetType(), PetscViewerCreate(), PetscViewerASCIIPrintf(),
-          PetscViewerASCIISynchronizedPrintf(), PetscViewerFlush()
+.seealso: `PetscViewerASCIIOpen()`, `PetscViewerDestroy()`, `PetscViewerSetType()`, `PetscViewerCreate()`, `PetscViewerASCIIPrintf()`,
+          `PetscViewerASCIISynchronizedPrintf()`, `PetscViewerFlush()`
 @*/
 PetscErrorCode  PetscViewerASCIIGetPointer(PetscViewer viewer,FILE **fd)
 {
@@ -249,9 +249,9 @@ PETSC_INTERN FILE *petsc_history;
     Fortran Note:
     This routine is not supported in Fortran.
 
-.seealso: PetscPrintf(), PetscSynchronizedPrintf(), PetscViewerASCIIPrintf(), PetscViewerASCIIGetTab(),
-          PetscViewerASCIIPopTab(), PetscViewerASCIISynchronizedPrintf(), PetscViewerASCIIOpen(),
-          PetscViewerCreate(), PetscViewerDestroy(), PetscViewerSetType(), PetscViewerASCIIGetPointer(), PetscViewerASCIIPushTab()
+.seealso: `PetscPrintf()`, `PetscSynchronizedPrintf()`, `PetscViewerASCIIPrintf()`, `PetscViewerASCIIGetTab()`,
+          `PetscViewerASCIIPopTab()`, `PetscViewerASCIISynchronizedPrintf()`, `PetscViewerASCIIOpen()`,
+          `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerSetType()`, `PetscViewerASCIIGetPointer()`, `PetscViewerASCIIPushTab()`
 @*/
 PetscErrorCode  PetscViewerASCIISetTab(PetscViewer viewer,PetscInt tabs)
 {
@@ -281,9 +281,9 @@ PetscErrorCode  PetscViewerASCIISetTab(PetscViewer viewer,PetscInt tabs)
     Fortran Note:
     This routine is not supported in Fortran.
 
-.seealso: PetscPrintf(), PetscSynchronizedPrintf(), PetscViewerASCIIPrintf(), PetscViewerASCIISetTab(),
-          PetscViewerASCIIPopTab(), PetscViewerASCIISynchronizedPrintf(), PetscViewerASCIIOpen(),
-          PetscViewerCreate(), PetscViewerDestroy(), PetscViewerSetType(), PetscViewerASCIIGetPointer(), PetscViewerASCIIPushTab()
+.seealso: `PetscPrintf()`, `PetscSynchronizedPrintf()`, `PetscViewerASCIIPrintf()`, `PetscViewerASCIISetTab()`,
+          `PetscViewerASCIIPopTab()`, `PetscViewerASCIISynchronizedPrintf()`, `PetscViewerASCIIOpen()`,
+          `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerSetType()`, `PetscViewerASCIIGetPointer()`, `PetscViewerASCIIPushTab()`
 @*/
 PetscErrorCode  PetscViewerASCIIGetTab(PetscViewer viewer,PetscInt *tabs)
 {
@@ -311,9 +311,9 @@ PetscErrorCode  PetscViewerASCIIGetTab(PetscViewer viewer,PetscInt *tabs)
     Fortran Note:
     This routine is not supported in Fortran.
 
-.seealso: PetscPrintf(), PetscSynchronizedPrintf(), PetscViewerASCIIPrintf(),
-          PetscViewerASCIIPopTab(), PetscViewerASCIISynchronizedPrintf(), PetscViewerASCIIOpen(),
-          PetscViewerCreate(), PetscViewerDestroy(), PetscViewerSetType(), PetscViewerASCIIGetPointer(), PetscViewerASCIIPushTab()
+.seealso: `PetscPrintf()`, `PetscSynchronizedPrintf()`, `PetscViewerASCIIPrintf()`,
+          `PetscViewerASCIIPopTab()`, `PetscViewerASCIISynchronizedPrintf()`, `PetscViewerASCIIOpen()`,
+          `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerSetType()`, `PetscViewerASCIIGetPointer()`, `PetscViewerASCIIPushTab()`
 @*/
 PetscErrorCode  PetscViewerASCIIAddTab(PetscViewer viewer,PetscInt tabs)
 {
@@ -341,9 +341,9 @@ PetscErrorCode  PetscViewerASCIIAddTab(PetscViewer viewer,PetscInt tabs)
     Fortran Note:
     This routine is not supported in Fortran.
 
-.seealso: PetscPrintf(), PetscSynchronizedPrintf(), PetscViewerASCIIPrintf(),
-          PetscViewerASCIIPopTab(), PetscViewerASCIISynchronizedPrintf(), PetscViewerASCIIOpen(),
-          PetscViewerCreate(), PetscViewerDestroy(), PetscViewerSetType(), PetscViewerASCIIGetPointer(), PetscViewerASCIIPushTab()
+.seealso: `PetscPrintf()`, `PetscSynchronizedPrintf()`, `PetscViewerASCIIPrintf()`,
+          `PetscViewerASCIIPopTab()`, `PetscViewerASCIISynchronizedPrintf()`, `PetscViewerASCIIOpen()`,
+          `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerSetType()`, `PetscViewerASCIIGetPointer()`, `PetscViewerASCIIPushTab()`
 @*/
 PetscErrorCode  PetscViewerASCIISubtractTab(PetscViewer viewer,PetscInt tabs)
 {
@@ -370,9 +370,9 @@ PetscErrorCode  PetscViewerASCIISubtractTab(PetscViewer viewer,PetscInt tabs)
     Notes:
     See documentation of PetscViewerASCIISynchronizedPrintf() for more details how the synchronized output should be done properly.
 
-.seealso: PetscViewerASCIISynchronizedPrintf(), PetscViewerFlush(), PetscViewerASCIIPopSynchronized(),
-          PetscSynchronizedPrintf(), PetscViewerASCIIPrintf(), PetscViewerASCIIOpen(),
-          PetscViewerCreate(), PetscViewerDestroy(), PetscViewerSetType()
+.seealso: `PetscViewerASCIISynchronizedPrintf()`, `PetscViewerFlush()`, `PetscViewerASCIIPopSynchronized()`,
+          `PetscSynchronizedPrintf()`, `PetscViewerASCIIPrintf()`, `PetscViewerASCIIOpen()`,
+          `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerSetType()`
 @*/
 PetscErrorCode  PetscViewerASCIIPushSynchronized(PetscViewer viewer)
 {
@@ -400,9 +400,9 @@ PetscErrorCode  PetscViewerASCIIPushSynchronized(PetscViewer viewer)
     Notes:
     See documentation of PetscViewerASCIISynchronizedPrintf() for more details how the synchronized output should be done properly.
 
-.seealso: PetscViewerASCIIPushSynchronized(), PetscViewerASCIISynchronizedPrintf(), PetscViewerFlush(),
-          PetscSynchronizedPrintf(), PetscViewerASCIIPrintf(), PetscViewerASCIIOpen(),
-          PetscViewerCreate(), PetscViewerDestroy(), PetscViewerSetType()
+.seealso: `PetscViewerASCIIPushSynchronized()`, `PetscViewerASCIISynchronizedPrintf()`, `PetscViewerFlush()`,
+          `PetscSynchronizedPrintf()`, `PetscViewerASCIIPrintf()`, `PetscViewerASCIIOpen()`,
+          `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerSetType()`
 @*/
 PetscErrorCode  PetscViewerASCIIPopSynchronized(PetscViewer viewer)
 {
@@ -415,7 +415,7 @@ PetscErrorCode  PetscViewerASCIIPopSynchronized(PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
   if (iascii) {
     ascii->allowsynchronized--;
-    PetscCheckFalse(ascii->allowsynchronized < 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Called more times than PetscViewerASCIIPushSynchronized()");
+    PetscCheck(ascii->allowsynchronized >= 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Called more times than PetscViewerASCIIPushSynchronized()");
   }
   PetscFunctionReturn(0);
 }
@@ -434,9 +434,9 @@ PetscErrorCode  PetscViewerASCIIPopSynchronized(PetscViewer viewer)
     Fortran Note:
     This routine is not supported in Fortran.
 
-.seealso: PetscPrintf(), PetscSynchronizedPrintf(), PetscViewerASCIIPrintf(),
-          PetscViewerASCIIPopTab(), PetscViewerASCIISynchronizedPrintf(), PetscViewerASCIIOpen(),
-          PetscViewerCreate(), PetscViewerDestroy(), PetscViewerSetType(), PetscViewerASCIIGetPointer()
+.seealso: `PetscPrintf()`, `PetscSynchronizedPrintf()`, `PetscViewerASCIIPrintf()`,
+          `PetscViewerASCIIPopTab()`, `PetscViewerASCIISynchronizedPrintf()`, `PetscViewerASCIIOpen()`,
+          `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerSetType()`, `PetscViewerASCIIGetPointer()`
 @*/
 PetscErrorCode  PetscViewerASCIIPushTab(PetscViewer viewer)
 {
@@ -464,9 +464,9 @@ PetscErrorCode  PetscViewerASCIIPushTab(PetscViewer viewer)
     Fortran Note:
     This routine is not supported in Fortran.
 
-.seealso: PetscPrintf(), PetscSynchronizedPrintf(), PetscViewerASCIIPrintf(),
-          PetscViewerASCIIPushTab(), PetscViewerASCIISynchronizedPrintf(), PetscViewerASCIIOpen(),
-          PetscViewerCreate(), PetscViewerDestroy(), PetscViewerSetType(), PetscViewerASCIIGetPointer()
+.seealso: `PetscPrintf()`, `PetscSynchronizedPrintf()`, `PetscViewerASCIIPrintf()`,
+          `PetscViewerASCIIPushTab()`, `PetscViewerASCIISynchronizedPrintf()`, `PetscViewerASCIIOpen()`,
+          `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerSetType()`, `PetscViewerASCIIGetPointer()`
 @*/
 PetscErrorCode  PetscViewerASCIIPopTab(PetscViewer viewer)
 {
@@ -477,7 +477,7 @@ PetscErrorCode  PetscViewerASCIIPopTab(PetscViewer viewer)
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
   if (iascii) {
-    PetscCheckFalse(ascii->tab <= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"More tabs popped than pushed");
+    PetscCheck(ascii->tab > 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"More tabs popped than pushed");
     ascii->tab--;
   }
   PetscFunctionReturn(0);
@@ -497,9 +497,9 @@ PetscErrorCode  PetscViewerASCIIPopTab(PetscViewer viewer)
     Fortran Note:
     This routine is not supported in Fortran.
 
-.seealso: PetscPrintf(), PetscSynchronizedPrintf(), PetscViewerASCIIPrintf(),
-          PetscViewerASCIIPopTab(), PetscViewerASCIISynchronizedPrintf(), PetscViewerASCIIPushTab(), PetscViewerASCIIOpen(),
-          PetscViewerCreate(), PetscViewerDestroy(), PetscViewerSetType(), PetscViewerASCIIGetPointer()
+.seealso: `PetscPrintf()`, `PetscSynchronizedPrintf()`, `PetscViewerASCIIPrintf()`,
+          `PetscViewerASCIIPopTab()`, `PetscViewerASCIISynchronizedPrintf()`, `PetscViewerASCIIPushTab()`, `PetscViewerASCIIOpen()`,
+          `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerSetType()`, `PetscViewerASCIIGetPointer()`
 @*/
 PetscErrorCode  PetscViewerASCIIUseTabs(PetscViewer viewer,PetscBool flg)
 {
@@ -537,9 +537,9 @@ PetscErrorCode  PetscViewerASCIIUseTabs(PetscViewer viewer,PetscBool flg)
     The call sequence is PetscViewerASCIIPrintf(PetscViewer, character(*), int ierr) from Fortran.
     That is, you can only pass a single character string from Fortran.
 
-.seealso: PetscPrintf(), PetscSynchronizedPrintf(), PetscViewerASCIIOpen(),
-          PetscViewerASCIIPushTab(), PetscViewerASCIIPopTab(), PetscViewerASCIISynchronizedPrintf(),
-          PetscViewerCreate(), PetscViewerDestroy(), PetscViewerSetType(), PetscViewerASCIIGetPointer(), PetscViewerASCIIPushSynchronized()
+.seealso: `PetscPrintf()`, `PetscSynchronizedPrintf()`, `PetscViewerASCIIOpen()`,
+          `PetscViewerASCIIPushTab()`, `PetscViewerASCIIPopTab()`, `PetscViewerASCIISynchronizedPrintf()`,
+          `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerSetType()`, `PetscViewerASCIIGetPointer()`, `PetscViewerASCIIPushSynchronized()`
 @*/
 PetscErrorCode  PetscViewerASCIIPrintf(PetscViewer viewer,const char format[],...)
 {
@@ -619,8 +619,8 @@ PetscErrorCode  PetscViewerASCIIPrintf(PetscViewer viewer,const char format[],..
 
     Level: advanced
 
-.seealso: PetscViewerCreate(), PetscViewerSetType(), PetscViewerASCIIOpen(), PetscViewerBinaryOpen(), PetscViewerDestroy(),
-          PetscViewerASCIIGetPointer(), PetscViewerASCIIPrintf(), PetscViewerASCIISynchronizedPrintf()
+.seealso: `PetscViewerCreate()`, `PetscViewerSetType()`, `PetscViewerASCIIOpen()`, `PetscViewerBinaryOpen()`, `PetscViewerDestroy()`,
+          `PetscViewerASCIIGetPointer()`, `PetscViewerASCIIPrintf()`, `PetscViewerASCIISynchronizedPrintf()`
 
 @*/
 PetscErrorCode  PetscViewerFileSetName(PetscViewer viewer,const char name[])
@@ -648,7 +648,7 @@ PetscErrorCode  PetscViewerFileSetName(PetscViewer viewer,const char name[])
 
     Level: advanced
 
-.seealso: PetscViewerCreate(), PetscViewerSetType(), PetscViewerASCIIOpen(), PetscViewerBinaryOpen(), PetscViewerFileSetName()
+.seealso: `PetscViewerCreate()`, `PetscViewerSetType()`, `PetscViewerASCIIOpen()`, `PetscViewerBinaryOpen()`, `PetscViewerFileSetName()`
 
 @*/
 PetscErrorCode  PetscViewerFileGetName(PetscViewer viewer,const char **name)
@@ -689,7 +689,7 @@ PetscErrorCode  PetscViewerFileSetName_ASCII(PetscViewer viewer,const char name[
   if (gz) {
     PetscCall(PetscStrlen(gz,&len));
     if (len == 3) {
-      PetscCheckFalse(vascii->mode != FILE_MODE_WRITE,PetscObjectComm((PetscObject)viewer),PETSC_ERR_SUP,"Cannot open ASCII PetscViewer file that is compressed; uncompress it manually first");
+      PetscCheck(vascii->mode == FILE_MODE_WRITE,PetscObjectComm((PetscObject)viewer),PETSC_ERR_SUP,"Cannot open ASCII PetscViewer file that is compressed; uncompress it manually first");
       *gz = 0;
       vascii->storecompressed = PETSC_TRUE;
     }
@@ -778,7 +778,7 @@ PetscErrorCode PetscViewerRestoreSubViewer_ASCII(PetscViewer viewer,MPI_Comm com
 
   PetscFunctionBegin;
   PetscCheck(ascii->sviewer,PETSC_COMM_SELF,PETSC_ERR_ORDER,"SubViewer never obtained from PetscViewer");
-  PetscCheckFalse(ascii->sviewer != *outviewer,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"This PetscViewer did not generate this SubViewer");
+  PetscCheck(ascii->sviewer == *outviewer,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"This PetscViewer did not generate this SubViewer");
 
   PetscCall(PetscViewerASCIIPopSynchronized(*outviewer));
   ascii->sviewer             = NULL;
@@ -802,9 +802,9 @@ PetscErrorCode  PetscViewerView_ASCII(PetscViewer v,PetscViewer viewer)
 /*MC
    PETSCVIEWERASCII - A viewer that prints to stdout or an ASCII file
 
-.seealso:  PETSC_VIEWER_STDOUT_(),PETSC_VIEWER_STDOUT_SELF, PETSC_VIEWER_STDOUT_WORLD,PetscViewerCreate(), PetscViewerASCIIOpen(),
-           PetscViewerMatlabOpen(), VecView(), DMView(), PetscViewerMatlabPutArray(), PETSCVIEWERBINARY, PETSCVIEWERMATLAB,
-           PetscViewerFileSetName(), PetscViewerFileSetMode(), PetscViewerFormat, PetscViewerType, PetscViewerSetType()
+.seealso: `PETSC_VIEWER_STDOUT_(),PETSC_VIEWER_STDOUT_SELF`, `PETSC_VIEWER_STDOUT_WORLD,PetscViewerCreate()`, `PetscViewerASCIIOpen()`,
+          `PetscViewerMatlabOpen()`, `VecView()`, `DMView()`, `PetscViewerMatlabPutArray()`, `PETSCVIEWERBINARY`, `PETSCVIEWERMATLAB`,
+          `PetscViewerFileSetName()`, `PetscViewerFileSetMode()`, `PetscViewerFormat`, `PetscViewerType`, `PetscViewerSetType()`
 
   Level: beginner
 
@@ -876,9 +876,9 @@ $ PetscViewerASCIIPopSynchronized(viewer);
     Fortran Note:
       Can only print a single character* string
 
-.seealso: PetscViewerASCIIPushSynchronized(), PetscViewerFlush(), PetscViewerASCIIPopSynchronized(),
-          PetscSynchronizedPrintf(), PetscViewerASCIIPrintf(), PetscViewerASCIIOpen(),
-          PetscViewerCreate(), PetscViewerDestroy(), PetscViewerSetType()
+.seealso: `PetscViewerASCIIPushSynchronized()`, `PetscViewerFlush()`, `PetscViewerASCIIPopSynchronized()`,
+          `PetscSynchronizedPrintf()`, `PetscViewerASCIIPrintf()`, `PetscViewerASCIIOpen()`,
+          `PetscViewerCreate()`, `PetscViewerDestroy()`, `PetscViewerSetType()`
 @*/
 PetscErrorCode  PetscViewerASCIISynchronizedPrintf(PetscViewer viewer,const char format[],...)
 {
@@ -998,9 +998,9 @@ PetscErrorCode  PetscViewerASCIISynchronizedPrintf(PetscViewer viewer,const char
 
    Level: beginner
 
-.seealso: PetscViewerASCIIOpen(), PetscViewerPushFormat(), PetscViewerDestroy(), PetscViewerCreate(), PetscViewerFileSetMode(), PetscViewerFileSetName()
-          VecView(), MatView(), VecLoad(), MatLoad(), PetscViewerBinaryGetDescriptor(),
-          PetscViewerBinaryGetInfoPointer(), PetscFileMode, PetscViewer, PetscViewerBinaryRead()
+.seealso: `PetscViewerASCIIOpen()`, `PetscViewerPushFormat()`, `PetscViewerDestroy()`, `PetscViewerCreate()`, `PetscViewerFileSetMode()`, `PetscViewerFileSetName()`
+          `VecView()`, `MatView()`, `VecLoad()`, `MatLoad()`, `PetscViewerBinaryGetDescriptor()`,
+          `PetscViewerBinaryGetInfoPointer()`, `PetscFileMode`, `PetscViewer`, `PetscViewerBinaryRead()`
 @*/
 PetscErrorCode PetscViewerASCIIRead(PetscViewer viewer,void *data,PetscInt num,PetscInt *count,PetscDataType dtype)
 {
@@ -1035,6 +1035,6 @@ PetscErrorCode PetscViewerASCIIRead(PetscViewer viewer,void *data,PetscInt num,P
     else if (ret < 0) break; /* Proxy for EOF, need to check for it in configure */
   }
   if (count) *count = i;
-  else PetscCheckFalse(ret < 0,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Insufficient data, read only %" PetscInt_FMT " < %" PetscInt_FMT " items", i, num);
+  else PetscCheck(ret >= 0,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Insufficient data, read only %" PetscInt_FMT " < %" PetscInt_FMT " items", i, num);
   PetscFunctionReturn(0);
 }

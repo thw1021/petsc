@@ -168,7 +168,7 @@ static inline PetscErrorCode MatSeqXAIJFreeAIJ(Mat AA,MatScalar **a,PetscInt **j
     PetscInt CHUNKSIZE = 15,new_nz = AI[AM] + CHUNKSIZE,len,*new_i=NULL,*new_j=NULL; \
     datatype *new_a; \
  \
-    PetscCheckFalse(NONEW == -2,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"New nonzero at (%" PetscInt_FMT ",%" PetscInt_FMT ") caused a malloc\nUse MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE) to turn off this check",ROW,COL); \
+    PetscCheck(NONEW != -2,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"New nonzero at (%" PetscInt_FMT ",%" PetscInt_FMT ") caused a malloc\nUse MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE) to turn off this check",ROW,COL); \
     /* malloc new storage space */ \
     PetscCall(PetscMalloc3(BS2*new_nz,&new_a,new_nz,&new_j,AM+1,&new_i)); \
  \
@@ -200,7 +200,7 @@ static inline PetscErrorCode MatSeqXAIJFreeAIJ(Mat AA,MatScalar **a,PetscInt **j
     /* there is no extra room in row, therefore enlarge */ \
     PetscInt CHUNKSIZE = 15,new_nz = AI[AM] + CHUNKSIZE,len,*new_i=NULL,*new_j=NULL; \
  \
-    PetscCheckFalse(NONEW == -2,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"New nonzero at (%" PetscInt_FMT ",%" PetscInt_FMT ") caused a malloc\nUse MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE) to turn off this check",ROW,COL); \
+    PetscCheck(NONEW != -2,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"New nonzero at (%" PetscInt_FMT ",%" PetscInt_FMT ") caused a malloc\nUse MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE) to turn off this check",ROW,COL); \
     /* malloc new storage space */ \
     PetscCall(PetscMalloc1(new_nz,&new_j)); \
     PetscCall(PetscMalloc1(AM+1,&new_i));\
@@ -425,7 +425,7 @@ PETSC_INTERN PetscErrorCode MatSetSeqAIJWithArrays_private(MPI_Comm,PetscInt,Pet
   Developer Notes:
     The macro changes sum but not other parameters
 
-.seealso: PetscSparseDensePlusDot()
+.seealso: `PetscSparseDensePlusDot()`
 
 */
 #if defined(PETSC_KERNEL_USE_UNROLL_4)
@@ -478,7 +478,7 @@ PETSC_INTERN PetscErrorCode MatSetSeqAIJWithArrays_private(MPI_Comm,PetscInt,Pet
   Developer Notes:
     The macro changes sum but not other parameters
 
-.seealso: PetscSparseDenseMinusDot()
+.seealso: `PetscSparseDenseMinusDot()`
 
 */
 #if defined(PETSC_KERNEL_USE_UNROLL_4)
@@ -568,7 +568,7 @@ static inline void PetscSparseDensePlusDot_AVX512_Private(PetscScalar *sum,const
   Output Parameter:
 .  max - the max of results
 
-.seealso: PetscSparseDensePlusDot(), PetscSparseDenseMinusDot()
+.seealso: `PetscSparseDensePlusDot()`, `PetscSparseDenseMinusDot()`
 
 */
 #define PetscSparseDenseMaxDot(max,r,xv,xi,nnz) { \

@@ -16,7 +16,7 @@
 
    Level: beginner
 
-.seealso: PetscDrawLine(), PetscDrawRectangle(), PetscDrawEllipse(), PetscDrawMarker(), PetscDrawPoint(), PetscDrawArrow()
+.seealso: `PetscDrawLine()`, `PetscDrawRectangle()`, `PetscDrawEllipse()`, `PetscDrawMarker()`, `PetscDrawPoint()`, `PetscDrawArrow()`
 @*/
 PetscErrorCode  PetscDrawTriangle(PetscDraw draw,PetscReal x1,PetscReal y_1,PetscReal x2,PetscReal y2,PetscReal x3,PetscReal y3,int c1,int c2,int c3)
 {
@@ -42,7 +42,7 @@ PetscErrorCode  PetscDrawTriangle(PetscDraw draw,PetscReal x1,PetscReal y_1,Pets
    Notes:
     All processors that share the draw MUST call this routine
 
-.seealso: PetscDrawGetPopup(), PetscDrawTensorContour()
+.seealso: `PetscDrawGetPopup()`, `PetscDrawTensorContour()`
 
 @*/
 PetscErrorCode  PetscDrawScalePopup(PetscDraw popup,PetscReal min,PetscReal max)
@@ -52,7 +52,6 @@ PetscErrorCode  PetscDrawScalePopup(PetscDraw popup,PetscReal min,PetscReal max)
   PetscMPIInt    rank;
   int            i;
   char           string[32];
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (!popup) PetscFunctionReturn(0);
@@ -65,7 +64,7 @@ PetscErrorCode  PetscDrawScalePopup(PetscDraw popup,PetscReal min,PetscReal max)
   PetscCall(PetscDrawClear(popup));
   PetscCall(PetscDrawSetTitle(popup,"Contour Scale"));
   PetscCall(PetscDrawSetCoordinates(popup,xl,yl,xr,yr));
-  ierr = PetscDrawCollectiveBegin(popup);PetscCall(ierr);
+  PetscDrawCollectiveBegin(popup);
   if (rank == 0) {
     for (i=0; i<10; i++) {
       int c = PetscDrawRealToColor((PetscReal)i/9,0,1);
@@ -80,7 +79,7 @@ PetscErrorCode  PetscDrawScalePopup(PetscDraw popup,PetscReal min,PetscReal max)
       PetscCall(PetscDrawString(popup,0.2,0.02+i/10.0,PETSC_DRAW_BLACK,string));
     }
   }
-  ierr = PetscDrawCollectiveEnd(popup);PetscCall(ierr);
+  PetscDrawCollectiveEnd(popup);
   PetscCall(PetscDrawFlush(popup));
   PetscCall(PetscDrawSave(popup));
   PetscFunctionReturn(0);
@@ -129,7 +128,7 @@ static PetscErrorCode PetscDrawTensorContour_Zoom(PetscDraw win,void *dctx)
 
    Level: intermediate
 
-.seealso: PetscDrawTensorContourPatch(), PetscDrawScalePopup()
+.seealso: `PetscDrawTensorContourPatch()`, `PetscDrawScalePopup()`
 
 @*/
 PetscErrorCode  PetscDrawTensorContour(PetscDraw draw,int m,int n,const PetscReal xi[],const PetscReal yi[],PetscReal *v)
@@ -147,8 +146,8 @@ PetscErrorCode  PetscDrawTensorContour(PetscDraw draw,int m,int n,const PetscRea
   PetscCall(PetscDrawIsNull(draw,&isnull));
   if (isnull) PetscFunctionReturn(0);
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)draw),&size));
-  PetscCheckFalse(size > 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"May only be used with single processor PetscDraw");
-  PetscCheckFalse(N <= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"n %d and m %d must be positive",m,n);
+  PetscCheck(size <= 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"May only be used with single processor PetscDraw");
+  PetscCheck(N > 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"n %d and m %d must be positive",m,n);
 
   ctx.v   = v;
   ctx.m   = m;
@@ -213,7 +212,7 @@ PetscErrorCode  PetscDrawTensorContour(PetscDraw draw,int m,int n,const PetscRea
    This is a lower level support routine, usually the user will call
    PetscDrawTensorContour().
 
-.seealso: PetscDrawTensorContour()
+.seealso: `PetscDrawTensorContour()`
 
 @*/
 PetscErrorCode  PetscDrawTensorContourPatch(PetscDraw draw,int m,int n,PetscReal *x,PetscReal *y,PetscReal min,PetscReal max,PetscReal *v)

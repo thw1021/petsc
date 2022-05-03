@@ -174,12 +174,10 @@ CEED_QFUNCTION(SetupMassGeoSphere)(void *ctx, const CeedInt Q, const CeedScalar 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *ctx)
 {
   DMPlexShape    shape = DM_SHAPE_UNKNOWN;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
-
-  ierr = PetscOptionsBegin(comm, "", "libCEED Test Options", "DMPLEX");PetscCall(ierr);
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "libCEED Test Options", "DMPLEX");
+  PetscOptionsEnd();
   PetscCall(PetscOptionsGetEnum(NULL, NULL, "-dm_plex_shape", DMPlexShapes, (PetscEnum *) &shape, NULL));
   ctx->setupgeo      = NULL;
   ctx->setupgeofname = NULL;
@@ -283,7 +281,7 @@ static PetscErrorCode LibCeedSetupByDegree(DM dm, AppCtx *ctx, CeedData *data)
   PetscCall(DMPlexGetCeedRestriction(dm,  NULL, 0, 0, 0, &Erestrictu));
   PetscCall(CeedBasisGetNumQuadraturePoints(basisu, &nqpts));
   PetscCall(CeedBasisGetNumQuadraturePoints(basisx, &nqptsx));
-  PetscCheckFalse(nqptsx != nqpts,PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Number of qpoints for u %D != %D Number of qpoints for x", nqpts, nqptsx);
+  PetscCheck(nqptsx == nqpts,PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Number of qpoints for u %" PetscInt_FMT " != %" PetscInt_FMT " Number of qpoints for x", nqpts, nqptsx);
   PetscCall(CeedElemRestrictionCreateStrided(ceed, Ncell, nqpts, Nqdata, Nqdata*Ncell*nqpts, CEED_STRIDES_BACKEND, &Erestrictq));
 
   PetscCall(DMGetCoordinatesLocal(dm, &coords));
@@ -374,12 +372,12 @@ int main(int argc, char **argv)
     PetscReal error = PetscAbsReal(area - ctx.areaExact);
     PetscReal tol   = PETSC_SMALL;
 
-    PetscCall(PetscPrintf(comm,   "Exact mesh surface area    : % .*f\n", fabs(ctx.areaExact - round(ctx.areaExact)) > 1E-15 ? 14 : 1, (double) ctx.areaExact));
-    PetscCall(PetscPrintf(comm,   "Computed mesh surface area : % .*f\n", fabs(area          - round(area))          > 1E-15 ? 14 : 1, (double) area));
+    PetscCall(PetscPrintf(comm,   "Exact mesh surface area    : % .*f\n", PetscAbsReal(ctx.areaExact - round(ctx.areaExact)) > 1E-15 ? 14 : 1, (double) ctx.areaExact));
+    PetscCall(PetscPrintf(comm,   "Computed mesh surface area : % .*f\n", PetscAbsScalar(area          - round(area))          > 1E-15 ? 14 : 1, (double)PetscRealPart(area)));
     if (error > tol) {
-      PetscCall(PetscPrintf(comm, "Area error                 : % .14f\n", (double) error));
+      PetscCall(PetscPrintf(comm, "Area error                 : % .14g\n", (double) error));
     } else {
-      PetscCall(PetscPrintf(comm, "Area verifies!\n", (double) error));
+      PetscCall(PetscPrintf(comm, "Area verifies!\n"));
     }
   }
 

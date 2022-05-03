@@ -271,9 +271,9 @@ static PetscErrorCode TaoSetFromOptions_OWLQN(PetscOptionItems *PetscOptionsObje
   TAO_OWLQN      *lmP = (TAO_OWLQN *)tao->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Orthant-Wise Limited-memory method for Quasi-Newton unconstrained optimization"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Orthant-Wise Limited-memory method for Quasi-Newton unconstrained optimization");
   PetscCall(PetscOptionsReal("-tao_owlqn_lambda", "regulariser weight","", 100,&lmP->lambda,NULL));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscCall(TaoLineSearchSetFromOptions(tao->linesearch));
   PetscFunctionReturn(0);
 }
@@ -288,9 +288,9 @@ static PetscErrorCode TaoView_OWLQN(Tao tao, PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
   if (isascii) {
     PetscCall(PetscViewerASCIIPushTab(viewer));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "BFGS steps: %D\n", lm->bfgs));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "Scaled gradient steps: %D\n", lm->sgrad));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "Gradient steps: %D\n", lm->grad));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "BFGS steps: %" PetscInt_FMT "\n", lm->bfgs));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Scaled gradient steps: %" PetscInt_FMT "\n", lm->sgrad));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Gradient steps: %" PetscInt_FMT "\n", lm->grad));
     PetscCall(PetscViewerASCIIPopTab(viewer));
   }
   PetscFunctionReturn(0);

@@ -249,7 +249,7 @@ PetscScalar ExactSolution(PetscReal coords[3], UserContext* user)
   case 3:
   case 2:
   default:
-    SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Exact solution for -problem = [%D] is not available.", user->problem);
+    SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Exact solution for -problem = [%" PetscInt_FMT "] is not available.", user->problem);
   }
 }
 
@@ -323,7 +323,7 @@ PetscErrorCode ComputeRHS(KSP ksp, Vec b, void *ptr)
 
     /* Get connectivity information: */
     PetscCall(DMMoabGetElementConnectivity(dm, ehandle, &nconn, &connect));
-    PetscCheckFalse(nconn != 3 && nconn != 4,PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "Only TRI3/QUAD4 element bases are supported in the current example. n(Connectivity)=%D.", nconn);
+    PetscCheck(nconn == 3 || nconn == 4,PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "Only TRI3/QUAD4 element bases are supported in the current example. n(Connectivity)=%" PetscInt_FMT ".", nconn);
 
     PetscCall(PetscArrayzero(localv, nconn));
 
@@ -428,7 +428,7 @@ PetscErrorCode ComputeMatrix(KSP ksp, Mat J, Mat jac, void *ctx)
 
     // Get connectivity information:
     PetscCall(DMMoabGetElementConnectivity(dm, ehandle, &nconn, &connect));
-    PetscCheckFalse(nconn != 3 && nconn != 4,PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "Only QUAD4 or TRI3 element bases are supported in the current example. Connectivity=%D.", nconn);
+    PetscCheck(nconn == 3 || nconn == 4,PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "Only QUAD4 or TRI3 element bases are supported in the current example. Connectivity=%" PetscInt_FMT ".", nconn);
 
     /* compute the mid-point of the element and use a 1-point lumped quadrature */
     PetscCall(DMMoabGetVertexCoordinates(dm, nconn, connect, vpos));
@@ -575,7 +575,6 @@ PetscErrorCode InitializeOptions(UserContext* user)
 {
   const char     *bcTypes[2] = {"dirichlet", "neumann"};
   PetscInt       bc;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* set default parameters */
@@ -595,7 +594,7 @@ PetscErrorCode InitializeOptions(UserContext* user)
   user->error  = PETSC_FALSE;
   bc           = (PetscInt)DIRICHLET;
 
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "", "Options for the inhomogeneous Poisson equation", "ex35.cxx");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD, "", "Options for the inhomogeneous Poisson equation", "ex35.cxx");
   PetscCall(PetscOptionsInt("-problem", "The type of problem being solved (controls forcing function)", "ex35.cxx", user->problem, &user->problem, NULL));
   PetscCall(PetscOptionsInt("-n", "The elements in each direction", "ex35.cxx", user->n, &user->n, NULL));
   PetscCall(PetscOptionsInt("-levels", "Number of levels in the multigrid hierarchy", "ex35.cxx", user->nlevels, &user->nlevels, NULL));
@@ -611,7 +610,7 @@ PetscErrorCode InitializeOptions(UserContext* user)
   PetscCall(PetscOptionsBool("-error", "Compute the discrete L_2 and L_inf errors of the solution", "ex35.cxx", user->error, &user->error, NULL));
   PetscCall(PetscOptionsEList("-bc", "Type of boundary condition", "ex35.cxx", bcTypes, 2, bcTypes[0], &bc, NULL));
   PetscCall(PetscOptionsString("-file", "The mesh file for the problem", "ex35.cxx", "", user->filename, sizeof(user->filename), &user->use_extfile));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   if (user->problem < 1 || user->problem > 3) user->problem = 1;
   user->bcType = (BCType)bc;

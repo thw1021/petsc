@@ -85,7 +85,7 @@ PetscErrorCode  PetscDrawGetViewPort(PetscDraw draw,PetscReal *xl,PetscReal *yl,
 
    Level: advanced
 
-.seealso: PetscDrawDivideViewPort(), PetscDrawSetViewPort()
+.seealso: `PetscDrawDivideViewPort()`, `PetscDrawSetViewPort()`
 
 @*/
 PetscErrorCode  PetscDrawSplitViewPort(PetscDraw draw)
@@ -94,7 +94,6 @@ PetscErrorCode  PetscDrawSplitViewPort(PetscDraw draw)
   PetscInt       n;
   PetscBool      isnull;
   PetscReal      xl,xr,yl,yr,h;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
@@ -112,12 +111,12 @@ PetscErrorCode  PetscDrawSplitViewPort(PetscDraw draw)
   yl = (rank / n)*h;
   yr = yl + h;
 
-  ierr = PetscDrawCollectiveBegin(draw);PetscCall(ierr);
+  PetscDrawCollectiveBegin(draw);
   PetscCall(PetscDrawLine(draw,xl,yl,xl,yr,PETSC_DRAW_BLACK));
   PetscCall(PetscDrawLine(draw,xl,yr,xr,yr,PETSC_DRAW_BLACK));
   PetscCall(PetscDrawLine(draw,xr,yr,xr,yl,PETSC_DRAW_BLACK));
   PetscCall(PetscDrawLine(draw,xr,yl,xl,yl,PETSC_DRAW_BLACK));
-  ierr = PetscDrawCollectiveEnd(draw);PetscCall(ierr);
+  PetscDrawCollectiveEnd(draw);
   PetscCall(PetscDrawFlush(draw));
 
   draw->port_xl = xl + .05*h;
@@ -146,7 +145,7 @@ PetscErrorCode  PetscDrawSplitViewPort(PetscDraw draw)
 
    Level: advanced
 
-.seealso: PetscDrawSplitViewPort(), PetscDrawSetViewPort(), PetscDrawViewPortsSet(), PetscDrawViewPortsDestroy()
+.seealso: `PetscDrawSplitViewPort()`, `PetscDrawSetViewPort()`, `PetscDrawViewPortsSet()`, `PetscDrawViewPortsDestroy()`
 
 @*/
 PetscErrorCode  PetscDrawViewPortsCreate(PetscDraw draw,PetscInt nports,PetscDrawViewPorts **newports)
@@ -156,7 +155,6 @@ PetscErrorCode  PetscDrawViewPortsCreate(PetscDraw draw,PetscInt nports,PetscDra
   PetscBool          isnull;
   PetscMPIInt        rank;
   PetscReal          *xl,*xr,*yl,*yr,h;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
@@ -184,7 +182,7 @@ PetscErrorCode  PetscDrawViewPortsCreate(PetscDraw draw,PetscInt nports,PetscDra
   ports->yr = yr;
 
   PetscCall(PetscDrawSetCoordinates(draw,0.0,0.0,1.0,1.0));
-  ierr = PetscDrawCollectiveBegin(draw);PetscCall(ierr);
+  PetscDrawCollectiveBegin(draw);
   for (i=0; i<n*n; i++) {
     xl[i] = (i % n)*h;
     xr[i] = xl[i] + h;
@@ -203,7 +201,7 @@ PetscErrorCode  PetscDrawViewPortsCreate(PetscDraw draw,PetscInt nports,PetscDra
     yl[i] += .05*h;
     yr[i] -= .05*h;
   }
-  ierr = PetscDrawCollectiveEnd(draw);PetscCall(ierr);
+  PetscDrawCollectiveEnd(draw);
   PetscCall(PetscDrawFlush(draw));
   PetscFunctionReturn(0);
 }
@@ -225,7 +223,7 @@ PetscErrorCode  PetscDrawViewPortsCreate(PetscDraw draw,PetscInt nports,PetscDra
 
    Level: advanced
 
-.seealso: PetscDrawSplitViewPort(), PetscDrawSetViewPort(), PetscDrawViewPortsSet(), PetscDrawViewPortsDestroy()
+.seealso: `PetscDrawSplitViewPort()`, `PetscDrawSetViewPort()`, `PetscDrawViewPortsSet()`, `PetscDrawViewPortsDestroy()`
 
 @*/
 PetscErrorCode  PetscDrawViewPortsCreateRect(PetscDraw draw,PetscInt nx,PetscInt ny,PetscDrawViewPorts **newports)
@@ -235,7 +233,6 @@ PetscErrorCode  PetscDrawViewPortsCreateRect(PetscDraw draw,PetscInt nx,PetscInt
   PetscInt           i,j,k,n;
   PetscBool          isnull;
   PetscMPIInt        rank;
-  PetscErrorCode     ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
@@ -262,7 +259,7 @@ PetscErrorCode  PetscDrawViewPortsCreateRect(PetscDraw draw,PetscInt nx,PetscInt
   ports->yr = yr;
 
   PetscCall(PetscDrawSetCoordinates(draw,0.0,0.0,1.0,1.0));
-  ierr = PetscDrawCollectiveBegin(draw);PetscCall(ierr);
+  PetscDrawCollectiveBegin(draw);
   for (i = 0; i < nx; i++) {
     for (j = 0; j < ny; j++) {
       k = j*nx+i;
@@ -285,7 +282,7 @@ PetscErrorCode  PetscDrawViewPortsCreateRect(PetscDraw draw,PetscInt nx,PetscInt
       yr[k] -= .05*hy;
     }
   }
-  ierr = PetscDrawCollectiveEnd(draw);PetscCall(ierr);
+  PetscDrawCollectiveEnd(draw);
   PetscCall(PetscDrawFlush(draw));
   PetscFunctionReturn(0);
 }
@@ -300,7 +297,7 @@ PetscErrorCode  PetscDrawViewPortsCreateRect(PetscDraw draw,PetscInt nx,PetscInt
 
    Level: advanced
 
-.seealso: PetscDrawSplitViewPort(), PetscDrawSetViewPort(), PetscDrawViewPortsSet(), PetscDrawViewPortsCreate()
+.seealso: `PetscDrawSplitViewPort()`, `PetscDrawSetViewPort()`, `PetscDrawViewPortsSet()`, `PetscDrawViewPortsCreate()`
 
 @*/
 PetscErrorCode  PetscDrawViewPortsDestroy(PetscDrawViewPorts *ports)
@@ -327,7 +324,7 @@ PetscErrorCode  PetscDrawViewPortsDestroy(PetscDrawViewPorts *ports)
 
    Level: advanced
 
-.seealso: PetscDrawSplitViewPort(), PetscDrawSetViewPort(), PetscDrawViewPortsDestroy(), PetscDrawViewPortsCreate()
+.seealso: `PetscDrawSplitViewPort()`, `PetscDrawSetViewPort()`, `PetscDrawViewPortsDestroy()`, `PetscDrawViewPortsCreate()`
 
 @*/
 PetscErrorCode  PetscDrawViewPortsSet(PetscDrawViewPorts *ports,PetscInt port)

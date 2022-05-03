@@ -113,11 +113,11 @@ static PetscErrorCode PCSetFromOptions_LSC(PetscOptionItems *PetscOptionsObject,
   PC_LSC         *lsc = (PC_LSC*)pc->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"LSC options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"LSC options");
   {
     PetscCall(PetscOptionsBool("-pc_lsc_scale_diag","Use diagonal of velocity block (A) for scaling","None",lsc->scalediag,&lsc->scalediag,NULL));
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -197,9 +197,9 @@ static PetscErrorCode PCView_LSC(PC pc,PetscViewer viewer)
 +  * - Elman, Howle, Shadid, Shuttleworth, and Tuminaro, Block preconditioners based on approximate commutators, 2006.
 -  * - Silvester, Elman, Kay, Wathen, Efficient preconditioning of the linearized Navier Stokes equations for incompressible flow, 2001.
 
-.seealso:  PCCreate(), PCSetType(), PCType (for list of available types), PC, Block_Preconditioners, PCFIELDSPLIT,
-           PCFieldSplitGetSubKSP(), PCFieldSplitSetFields(), PCFieldSplitSetType(), PCFieldSplitSetIS(), PCFieldSplitSetSchurPre(),
-           MatCreateSchurComplement()
+.seealso: `PCCreate()`, `PCSetType()`, `PCType`, `PC`, `Block_Preconditioners`, `PCFIELDSPLIT`,
+          `PCFieldSplitGetSubKSP()`, `PCFieldSplitSetFields()`, `PCFieldSplitSetType()`, `PCFieldSplitSetIS()`, `PCFieldSplitSetSchurPre()`,
+          `MatCreateSchurComplement()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_LSC(PC pc)

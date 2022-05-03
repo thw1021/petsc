@@ -23,7 +23,7 @@ typedef struct {
 
     Level: intermediate
 
-.seealso: MatCreateScatter(), MatScatterSetVecScatter(), MATSCATTER
+.seealso: `MatCreateScatter()`, `MatScatterSetVecScatter()`, `MATSCATTER`
 @*/
 PetscErrorCode  MatScatterGetVecScatter(Mat mat,VecScatter *scatter)
 {
@@ -250,7 +250,7 @@ static struct _MatOps MatOps_Values = {NULL,
 
   Level: advanced
 
-.seealso: MatCreateScatter(), MatScatterSetVecScatter(), MatScatterGetVecScatter()
+.seealso: `MatCreateScatter()`, `MatScatterSetVecScatter()`, `MatScatterGetVecScatter()`
 
 M*/
 
@@ -301,7 +301,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_Scatter(Mat A)
   Developer Notes: This directly accesses information inside the VecScatter associated with the matrix-vector product
    for this matrix. This is not desirable..
 
-.seealso: MatScatterSetVecScatter(), MatScatterGetVecScatter(), MATSCATTER
+.seealso: `MatScatterSetVecScatter()`, `MatScatterGetVecScatter()`, `MATSCATTER`
 @*/
 PetscErrorCode  MatCreateScatter(MPI_Comm comm,VecScatter scatter,Mat *A)
 {
@@ -325,7 +325,7 @@ PetscErrorCode  MatCreateScatter(MPI_Comm comm,VecScatter scatter,Mat *A)
 
    Level: advanced
 
-.seealso: MatCreateScatter(), MATSCATTER
+.seealso: `MatCreateScatter()`, `MATSCATTER`
 @*/
 PetscErrorCode  MatScatterSetVecScatter(Mat mat,VecScatter scatter)
 {
@@ -335,8 +335,8 @@ PetscErrorCode  MatScatterSetVecScatter(Mat mat,VecScatter scatter)
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
   PetscValidHeaderSpecific(scatter,PETSCSF_CLASSID,2);
   PetscCheckSameComm((PetscObject)scatter,2,(PetscObject)mat,1);
-  PetscCheckFalse(mat->rmap->n != scatter->vscat.to_n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Number of local rows in matrix %" PetscInt_FMT " not equal local scatter size %" PetscInt_FMT,mat->rmap->n,scatter->vscat.to_n);
-  PetscCheckFalse(mat->cmap->n != scatter->vscat.from_n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Number of local columns in matrix %" PetscInt_FMT " not equal local scatter size %" PetscInt_FMT,mat->cmap->n,scatter->vscat.from_n);
+  PetscCheck(mat->rmap->n == scatter->vscat.to_n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Number of local rows in matrix %" PetscInt_FMT " not equal local scatter size %" PetscInt_FMT,mat->rmap->n,scatter->vscat.to_n);
+  PetscCheck(mat->cmap->n == scatter->vscat.from_n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Number of local columns in matrix %" PetscInt_FMT " not equal local scatter size %" PetscInt_FMT,mat->cmap->n,scatter->vscat.from_n);
 
   PetscCall(PetscObjectReference((PetscObject)scatter));
   PetscCall(VecScatterDestroy(&mscatter->scatter));

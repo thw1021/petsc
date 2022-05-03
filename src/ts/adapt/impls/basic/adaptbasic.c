@@ -18,10 +18,10 @@ static PetscErrorCode TSAdaptChoose_Basic(TSAdapt adapt,TS ts,PetscReal h,PetscI
 
   if (ts->ops->evaluatewlte) {
     PetscCall(TSEvaluateWLTE(ts,adapt->wnormtype,&order,&enorm));
-    PetscCheckFalse(enorm >= 0 && order < 1,PetscObjectComm((PetscObject)adapt),PETSC_ERR_ARG_OUTOFRANGE,"Computed error order %D must be positive",order);
+    PetscCheck(enorm < 0 || order >= 1,PetscObjectComm((PetscObject)adapt),PETSC_ERR_ARG_OUTOFRANGE,"Computed error order %" PetscInt_FMT " must be positive",order);
   } else if (ts->ops->evaluatestep) {
-    PetscCheckFalse(adapt->candidates.n < 1,PetscObjectComm((PetscObject)adapt),PETSC_ERR_ARG_WRONGSTATE,"No candidate has been registered");
-    PetscCheck(adapt->candidates.inuse_set,PetscObjectComm((PetscObject)adapt),PETSC_ERR_ARG_WRONGSTATE,"The current in-use scheme is not among the %D candidates",adapt->candidates.n);
+    PetscCheck(adapt->candidates.n >= 1,PetscObjectComm((PetscObject)adapt),PETSC_ERR_ARG_WRONGSTATE,"No candidate has been registered");
+    PetscCheck(adapt->candidates.inuse_set,PetscObjectComm((PetscObject)adapt),PETSC_ERR_ARG_WRONGSTATE,"The current in-use scheme is not among the %" PetscInt_FMT " candidates",adapt->candidates.n);
     order = adapt->candidates.order[0];
     PetscCall(TSGetDM(ts,&dm));
     PetscCall(DMGetGlobalVector(dm,&Y));
@@ -76,7 +76,7 @@ static PetscErrorCode TSAdaptChoose_Basic(TSAdapt adapt,TS ts,PetscReal h,PetscI
 
    Level: intermediate
 
-.seealso: TS, TSAdapt, TSGetAdapt()
+.seealso: `TS`, `TSAdapt`, `TSGetAdapt()`
 M*/
 PETSC_EXTERN PetscErrorCode TSAdaptCreate_Basic(TSAdapt adapt)
 {

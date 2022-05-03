@@ -18,7 +18,7 @@ static PetscErrorCode CheckValues(Mat A,PetscBool one)
       PetscInt ii = i - rstart, jj = j;
       PetscReal v = (PetscReal)(one ? 1 : (1 + i + j*M));
       PetscReal w = PetscRealPart(array[ii + jj*lda]);
-      PetscCheckFalse(PetscAbsReal(v-w) > 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Matrix entry (%" PetscInt_FMT ",%" PetscInt_FMT ") should be %g, got %g",i,j,(double)v,(double)w);
+      PetscCheck(PetscAbsReal(v-w) <= 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Matrix entry (%" PetscInt_FMT ",%" PetscInt_FMT ") should be %g, got %g",i,j,(double)v,(double)w);
     }
   }
   PetscCall(MatDenseRestoreArrayRead(A,&array));
@@ -43,8 +43,6 @@ int main(int argc,char **args)
       Create a parallel dense matrix shared by all processors
   */
   PetscCall(MatCreateDense(PETSC_COMM_WORLD,PETSC_DECIDE,PETSC_DECIDE,M,N,NULL,&A));
-  PetscCall(MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY));
-  PetscCall(MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY));
   PetscCall(MatConvert(A,mattype,MAT_INPLACE_MATRIX,&A));
   /*
      Set values into the matrix

@@ -5,9 +5,9 @@ static PetscErrorCode PetscSpaceSetFromOptions_Polynomial(PetscOptionItems *Pets
   PetscSpace_Poly *poly = (PetscSpace_Poly *) sp->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"PetscSpace polynomial options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"PetscSpace polynomial options");
   PetscCall(PetscOptionsBool("-petscspace_poly_tensor", "Use the tensor product polynomials", "PetscSpacePolynomialSetTensor", poly->tensor, &poly->tensor, NULL));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -16,7 +16,7 @@ static PetscErrorCode PetscSpacePolynomialView_Ascii(PetscSpace sp, PetscViewer 
   PetscSpace_Poly *poly = (PetscSpace_Poly *) sp->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscViewerASCIIPrintf(v, "%s space of degree %D\n", poly->tensor ? "Tensor polynomial" : "Polynomial", sp->degree));
+  PetscCall(PetscViewerASCIIPrintf(v, "%s space of degree %" PetscInt_FMT "\n", poly->tensor ? "Tensor polynomial" : "Polynomial", sp->degree));
   PetscFunctionReturn(0);
 }
 
@@ -102,7 +102,7 @@ static PetscErrorCode PetscSpaceSetUp_Polynomial(PetscSpace sp)
     PetscCall(PetscSpaceSetUp(sp));
     PetscFunctionReturn(0);
   }
-  PetscCheckFalse(sp->degree < 0,PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_OUTOFRANGE, "Negative degree %D invalid", sp->degree);
+  PetscCheck(sp->degree >= 0,PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_OUTOFRANGE, "Negative degree %" PetscInt_FMT " invalid", sp->degree);
   sp->maxDegree = sp->degree;
   poly->setupCalled = PETSC_TRUE;
   PetscFunctionReturn(0);
@@ -159,7 +159,7 @@ static PetscErrorCode PetscSpaceEvaluate_Polynomial(PetscSpace sp, PetscInt npoi
     PetscCall(PetscSpaceEvaluate(sp, npoints, points, B, D, H));
     PetscFunctionReturn(0);
   }
-  PetscCheckFalse(poly->tensor || sp->Nc != 1,PETSC_COMM_SELF, PETSC_ERR_PLIB, "tensor and multicomponent spaces should have been converted");
+  PetscCheck(!poly->tensor && sp->Nc == 1,PETSC_COMM_SELF, PETSC_ERR_PLIB, "tensor and multicomponent spaces should have been converted");
   PetscCall(PetscDTBinomialInt(dim + sp->degree, dim, &Nb));
   if (H) {
     jet = 2;
@@ -258,7 +258,7 @@ static PetscErrorCode PetscSpaceEvaluate_Polynomial(PetscSpace sp, PetscInt npoi
 
   Level: intermediate
 
-.seealso: PetscSpacePolynomialGetTensor(), PetscSpaceSetDegree(), PetscSpaceSetNumVariables()
+.seealso: `PetscSpacePolynomialGetTensor()`, `PetscSpaceSetDegree()`, `PetscSpaceSetNumVariables()`
 @*/
 PetscErrorCode PetscSpacePolynomialSetTensor(PetscSpace sp, PetscBool tensor)
 {
@@ -281,7 +281,7 @@ PetscErrorCode PetscSpacePolynomialSetTensor(PetscSpace sp, PetscBool tensor)
 
   Level: intermediate
 
-.seealso: PetscSpacePolynomialSetTensor(), PetscSpaceSetDegree(), PetscSpaceSetNumVariables()
+.seealso: `PetscSpacePolynomialSetTensor()`, `PetscSpaceSetDegree()`, `PetscSpaceSetNumVariables()`
 @*/
 PetscErrorCode PetscSpacePolynomialGetTensor(PetscSpace sp, PetscBool *tensor)
 {
@@ -323,7 +323,7 @@ static PetscErrorCode PetscSpaceGetHeightSubspace_Polynomial(PetscSpace sp, Pets
   PetscCall(PetscSpaceGetNumVariables(sp, &dim));
   PetscCall(PetscSpaceGetDegree(sp, &order, NULL));
   PetscCall(PetscSpacePolynomialGetTensor(sp, &tensor));
-  PetscCheckFalse(height > dim || height < 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Asked for space at height %D for dimension %D space", height, dim);
+  PetscCheck(height <= dim && height >= 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Asked for space at height %" PetscInt_FMT " for dimension %" PetscInt_FMT " space", height, dim);
   if (!poly->subspaces) PetscCall(PetscCalloc1(dim, &poly->subspaces));
   if (height <= dim) {
     if (!poly->subspaces[height-1]) {
@@ -369,7 +369,7 @@ static PetscErrorCode PetscSpaceInitialize_Polynomial(PetscSpace sp)
 
   Level: intermediate
 
-.seealso: PetscSpaceType, PetscSpaceCreate(), PetscSpaceSetType()
+.seealso: `PetscSpaceType`, `PetscSpaceCreate()`, `PetscSpaceSetType()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PetscSpaceCreate_Polynomial(PetscSpace sp)

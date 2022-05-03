@@ -29,17 +29,16 @@ int main(int argc, char **argv) {
   PetscInt          sdim, d, pStart, pEnd, p, numCS, set;
   PetscMPIInt       rank, size;
   PetscViewer       viewer;
-  PetscErrorCode    ierr;
 
   PetscCall(PetscInitialize(&argc, &argv,NULL, help));
   PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "FEM Layout Options", "ex26");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "FEM Layout Options", "ex26");
   PetscCall(PetscOptionsString("-i", "Filename to read", "ex26", ifilename, ifilename, sizeof(ifilename), NULL));
   PetscCall(PetscOptionsString("-o", "Filename to write", "ex26", ofilename, ofilename, sizeof(ofilename), NULL));
   PetscCall(PetscOptionsBoundedInt("-order", "FEM polynomial order", "ex26", order, &order, NULL,1));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
-  PetscCheckFalse((order > 2) || (order < 1),PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Unsupported polynomial order %D not in [1, 2]", order);
+  PetscOptionsEnd();
+  PetscCheck((order >= 1) && (order <= 2),PETSC_COMM_WORLD, PETSC_ERR_ARG_OUTOFRANGE, "Unsupported polynomial order %" PetscInt_FMT " not in [1, 2]", order);
 
   /* Read the mesh from a file in any supported format */
   PetscCall(DMPlexCreateFromFile(PETSC_COMM_WORLD, ifilename, NULL, PETSC_TRUE, &dm));
@@ -109,7 +108,7 @@ int main(int argc, char **argv) {
       zonalVarName[4] = (char *) "Sigma_13";
       zonalVarName[5] = (char *) "Sigma_12";
       break;
-    default: SETERRQ(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "No layout for dimension %D", sdim);
+    default: SETERRQ(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "No layout for dimension %" PetscInt_FMT, sdim);
     }
     PetscCall(PetscViewerExodusIIGetId(viewer,&exoid));
     PetscStackCallStandard(ex_put_variable_param,exoid, EX_ELEM_BLOCK, numZonalVar);
@@ -185,7 +184,7 @@ int main(int argc, char **argv) {
       switch (sdim) {
       case 2: dofS = dofS2D;break;
       case 3: dofS = dofS3D;break;
-      default: SETERRQ(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "No layout for dimension %D", sdim);
+      default: SETERRQ(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "No layout for dimension %" PetscInt_FMT, sdim);
       }
 
       /* Identify cell type based on closure size only. This works for Tri/Tet/Quad/Hex meshes
@@ -229,7 +228,7 @@ int main(int argc, char **argv) {
           dofA = dofAP2Hex;
         }
         break;
-        default: SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Unknown element with closure size %D", closureSize);
+        default: SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Unknown element with closure size %" PetscInt_FMT, closureSize);
       }
       PetscCall(DMPlexRestoreTransitiveClosure(dm, cellID[0], PETSC_TRUE, &closureSize, &closureA));
 
@@ -395,7 +394,7 @@ int main(int argc, char **argv) {
     PetscCall(VecLoad(tmpVec, viewer));
     PetscCall(VecAXPY(UA, -1.0, tmpVec));
     PetscCall(VecNorm(UA, NORM_INFINITY, &norm));
-    PetscCheckFalse(norm > PETSC_SQRT_MACHINE_EPSILON,PetscObjectComm((PetscObject) dm), PETSC_ERR_PLIB, "UAlpha ||Vin - Vout|| = %g", (double) norm);
+    PetscCheck(norm <= PETSC_SQRT_MACHINE_EPSILON,PetscObjectComm((PetscObject) dm), PETSC_ERR_PLIB, "UAlpha ||Vin - Vout|| = %g", (double) norm);
     PetscCall(DMRestoreGlobalVector(dmUA, &tmpVec));
 
     /* same thing with the UA2 Vec obtained from the superDM */
@@ -409,7 +408,7 @@ int main(int argc, char **argv) {
     PetscCall(VecLoad(tmpVec,viewer));
     PetscCall(VecAXPY(UA2, -1.0, tmpVec));
     PetscCall(VecNorm(UA2, NORM_INFINITY, &norm));
-    PetscCheckFalse(norm > PETSC_SQRT_MACHINE_EPSILON,PetscObjectComm((PetscObject) dm), PETSC_ERR_PLIB, "UAlpha2 ||Vin - Vout|| = %g", (double) norm);
+    PetscCheck(norm <= PETSC_SQRT_MACHINE_EPSILON,PetscObjectComm((PetscObject) dm), PETSC_ERR_PLIB, "UAlpha2 ||Vin - Vout|| = %g", (double) norm);
     PetscCall(DMRestoreGlobalVector(dmUA2, &tmpVec));
 
     /* Building and saving Sigma
@@ -463,7 +462,7 @@ int main(int argc, char **argv) {
     PetscCall(VecLoad(tmpVec,viewer));
     PetscCall(VecAXPY(S, -1.0, tmpVec));
     PetscCall(VecNorm(S, NORM_INFINITY, &norm));
-    PetscCheckFalse(norm > PETSC_SQRT_MACHINE_EPSILON,PetscObjectComm((PetscObject) dm), PETSC_ERR_PLIB, "Sigma ||Vin - Vout|| = %g", (double) norm);
+    PetscCheck(norm <= PETSC_SQRT_MACHINE_EPSILON,PetscObjectComm((PetscObject) dm), PETSC_ERR_PLIB, "Sigma ||Vin - Vout|| = %g", (double) norm);
     PetscCall(DMRestoreGlobalVector(dmS, &tmpVec));
   }
   PetscCall(PetscViewerDestroy(&viewer));

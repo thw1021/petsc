@@ -56,7 +56,7 @@ static PetscErrorCode PetscFESetUp_Composite(PetscFE fem)
       for (k = 0; k < dof; k++) cmp->embedding[s*spdim+sd++] = off + k;
     }
     PetscCall(DMPlexRestoreTransitiveClosure(K, s, PETSC_TRUE, &closureSize, &closure));
-    PetscCheckFalse(sd != spdim,PetscObjectComm((PetscObject) fem), PETSC_ERR_PLIB, "Subelement %d has %d dual basis vectors != %d", s, sd, spdim);
+    PetscCheck(sd == spdim,PetscObjectComm((PetscObject) fem), PETSC_ERR_PLIB, "Subelement %" PetscInt_FMT " has %" PetscInt_FMT " dual basis vectors != %" PetscInt_FMT, s, sd, spdim);
   }
   PetscCall(DMRestoreWorkArray(K, dim, MPIU_REAL, &subpoint));
   /* Construct the change of basis from prime basis to nodal basis for each subelement */
@@ -137,7 +137,7 @@ static PetscErrorCode PetscFECreateTabulation_Composite(PetscFE fem, PetscInt np
       PetscCall(DMPolytopeInCellTest(ct, subpoint, &inside));
       if (inside) {subpoints[p] = s; break;}
     }
-    PetscCheckFalse(s >= cmp->numSubelements,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Point %d was not found in any subelement", p);
+    PetscCheck(s < cmp->numSubelements,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Point %" PetscInt_FMT " was not found in any subelement", p);
   }
   PetscCall(DMRestoreWorkArray(dm, dim, MPIU_REAL, &subpoint));
   /* Evaluate the prime basis functions at all points */
@@ -218,7 +218,7 @@ static PetscErrorCode PetscFEInitialize_Composite(PetscFE fem)
 
   Level: intermediate
 
-.seealso: PetscFEType, PetscFECreate(), PetscFESetType()
+.seealso: `PetscFEType`, `PetscFECreate()`, `PetscFESetType()`
 M*/
 PETSC_EXTERN PetscErrorCode PetscFECreate_Composite(PetscFE fem)
 {
@@ -253,7 +253,7 @@ PETSC_EXTERN PetscErrorCode PetscFECreate_Composite(PetscFE fem)
 
   Level: intermediate
 
-.seealso: PetscFECreate()
+.seealso: `PetscFECreate()`
 @*/
 PetscErrorCode PetscFECompositeGetMapping(PetscFE fem, PetscInt *numSubelements, const PetscReal *v0[], const PetscReal *jac[], const PetscReal *invjac[])
 {

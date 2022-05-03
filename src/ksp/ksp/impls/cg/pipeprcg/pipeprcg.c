@@ -26,10 +26,10 @@ static PetscErrorCode KSPSetFromOptions_PIPEPRCG(PetscOptionItems *PetscOptionsO
   PetscBool      flag=PETSC_FALSE;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"KSP PIPEPRCG options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"KSP PIPEPRCG options");
   PetscCall(PetscOptionsBool("-recompute_w","-recompute w_k with Ar_k? (default = True)","",prcg->rc_w_q,&prcg->rc_w_q,&flag));
   if (!flag) prcg->rc_w_q = PETSC_TRUE;
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -192,7 +192,7 @@ static PetscErrorCode  KSPSolve_PIPEPRCG(KSP ksp)
    Acknowledgments:
    This material is based upon work supported by the National Science Foundation Graduate Research Fellowship Program under Grant No. DGE-1762114. Any opinions, findings, and conclusions or recommendations expressed in this material are those of the author and do not necessarily reflect the views of the National Science Foundation.
 
-.seealso: KSPCreate(), KSPSetType(), KSPPIPECG, KSPPIPECR, KSPGROPPCG, KSPPGMRES, KSPCG, KSPCGUseSingleReduction()
+.seealso: `KSPCreate()`, `KSPSetType()`, `KSPPIPECG`, `KSPPIPECR`, `KSPGROPPCG`, `KSPPGMRES`, `KSPCG`, `KSPCGUseSingleReduction()`
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_PIPEPRCG(KSP ksp)
 {

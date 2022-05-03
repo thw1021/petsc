@@ -146,20 +146,18 @@ typedef struct {
 
 PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   options->testNum      = 0;
   options->dim          = 2;
   options->simplex      = PETSC_TRUE;
   options->useGenerator = PETSC_FALSE;
 
-  ierr = PetscOptionsBegin(comm, "", "Meshing Interpolation Test Options", "DMPLEX");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "Meshing Interpolation Test Options", "DMPLEX");
   PetscCall(PetscOptionsBoundedInt("-testnum", "The mesh to create", "ex7.c", options->testNum, &options->testNum, NULL,0));
   PetscCall(PetscOptionsRangeInt("-dim", "The topological mesh dimension", "ex7.c", options->dim, &options->dim, NULL,1,3));
   PetscCall(PetscOptionsBool("-simplex", "Use simplices if true, otherwise hexes", "ex7.c", options->simplex, &options->simplex, NULL));
   PetscCall(PetscOptionsBool("-use_generator", "Use a mesh generator to build the mesh", "ex7.c", options->useGenerator, &options->useGenerator, NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -188,7 +186,7 @@ PetscErrorCode CreateSimplex_2D(MPI_Comm comm, DM dm)
     }
     break;
     default:
-      SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "No test mesh %d", testNum);
+      SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "No test mesh %" PetscInt_FMT, testNum);
     }
   } else {
     PetscInt numPoints[2] = {0, 0};
@@ -224,7 +222,7 @@ PetscErrorCode CreateSimplex_3D(MPI_Comm comm, DM dm)
     }
     break;
     default:
-      SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "No test mesh %d", testNum);
+      SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "No test mesh %" PetscInt_FMT, testNum);
     }
   } else {
     PetscInt numPoints[2] = {0, 0};
@@ -275,7 +273,7 @@ PetscErrorCode CreateQuad_2D(MPI_Comm comm, PetscInt testNum, DM dm)
     }
     break;
     default:
-      SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "No test mesh %d", testNum);
+      SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "No test mesh %" PetscInt_FMT, testNum);
     }
   } else {
     PetscInt numPoints[2] = {0, 0};
@@ -313,7 +311,7 @@ PetscErrorCode CreateHex_3D(MPI_Comm comm, DM dm)
     }
     break;
     default:
-      SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "No test mesh %d", testNum);
+      SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "No test mesh %" PetscInt_FMT, testNum);
     }
   } else {
     PetscInt numPoints[2] = {0, 0};
@@ -352,7 +350,7 @@ PetscErrorCode CreateMesh(MPI_Comm comm, PetscInt testNum, AppCtx *user, DM *dm)
       }
       break;
     default:
-      SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "Cannot make meshes for dimension %d", dim);
+      SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "Cannot make meshes for dimension %" PetscInt_FMT, dim);
     }
   }
   PetscCall(DMSetFromOptions(*dm));

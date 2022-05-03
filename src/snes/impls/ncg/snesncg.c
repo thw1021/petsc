@@ -37,7 +37,7 @@ static PetscErrorCode SNESSetUp_NCG(SNES snes)
 {
   PetscFunctionBegin;
   PetscCall(SNESSetWorkVecs(snes,2));
-  PetscCheckFalse(snes->npcside== PC_RIGHT,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE, "SNESNCG only supports left preconditioning");
+  PetscCheck(snes->npcside!= PC_RIGHT,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE, "SNESNCG only supports left preconditioning");
   if (snes->functype == SNES_FUNCTION_DEFAULT) snes->functype = SNES_FUNCTION_UNPRECONDITIONED;
   PetscFunctionReturn(0);
 }
@@ -94,7 +94,7 @@ static PetscErrorCode SNESLineSearchApply_NCGLinear(SNESLineSearch linesearch)
 
    Level: advanced
 
-.seealso: SNESLineSearchCreate(), SNESLineSearchSetType()
+.seealso: `SNESLineSearchCreate()`, `SNESLineSearchSetType()`
 M*/
 
 PETSC_EXTERN PetscErrorCode SNESLineSearchCreate_NCGLinear(SNESLineSearch linesearch)
@@ -125,14 +125,14 @@ static PetscErrorCode SNESSetFromOptions_NCG(PetscOptionItems *PetscOptionsObjec
   SNESLineSearch linesearch;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"SNES NCG options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"SNES NCG options");
   PetscCall(PetscOptionsBool("-snes_ncg_monitor","Monitor the beta values used in the NCG iterations","SNES",ncg->monitor ? PETSC_TRUE : PETSC_FALSE, &debug, NULL));
   if (debug) {
     ncg->monitor = PETSC_VIEWER_STDOUT_(PetscObjectComm((PetscObject)snes));
   }
   PetscCall(PetscOptionsEnum("-snes_ncg_type","NCG Beta type used","SNESNCGSetType",SNESNCGTypes,(PetscEnum)ncg->type,(PetscEnum*)&ncgtype,NULL));
   PetscCall(SNESNCGSetType(snes, ncgtype));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   if (!snes->linesearch) {
     PetscCall(SNESGetLineSearch(snes, &linesearch));
     if (!((PetscObject)linesearch)->type_name) {
@@ -261,7 +261,7 @@ static PetscErrorCode SNESSolve_NCG(SNES snes)
   SNESConvergedReason  reason;
 
   PetscFunctionBegin;
-  PetscCheckFalse(snes->xl || snes->xu || snes->ops->computevariablebounds,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
+  PetscCheck(!snes->xl && !snes->xu && !snes->ops->computevariablebounds,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
 
   PetscCall(PetscCitationsRegister(SNESCitation,&SNEScite));
   snes->reason = SNES_CONVERGED_ITERATING;
@@ -437,7 +437,7 @@ static PetscErrorCode SNESSolve_NCG(SNES snes)
     }
     PetscCall(VecAYPX(lX, beta, dX));
   }
-  PetscCall(PetscInfo(snes, "Maximum number of iterations has been reached: %D\n", maxits));
+  PetscCall(PetscInfo(snes, "Maximum number of iterations has been reached: %" PetscInt_FMT "\n", maxits));
   if (!snes->reason) snes->reason = SNES_DIVERGED_MAX_IT;
   PetscFunctionReturn(0);
 }
@@ -466,7 +466,7 @@ static PetscErrorCode SNESSolve_NCG(SNES snes)
 .  * -  Peter R. Brune, Matthew G. Knepley, Barry F. Smith, and Xuemin Tu,"Composing Scalable Nonlinear Algebraic Solvers",
    SIAM Review, 57(4), 2015
 
-.seealso:  SNESCreate(), SNES, SNESSetType(), SNESNEWTONLS, SNESNEWTONTR, SNESNGMRES, SNESQN, SNESLINESEARCHNCGLINEAR, SNESNCGSetType(), SNESNCGGetType(), SNESLineSearchSetType()
+.seealso: `SNESCreate()`, `SNES`, `SNESSetType()`, `SNESNEWTONLS`, `SNESNEWTONTR`, `SNESNGMRES`, `SNESQN`, `SNESLINESEARCHNCGLINEAR`, `SNESNCGSetType()`, `SNESNCGGetType()`, `SNESLineSearchSetType()`
 M*/
 PETSC_EXTERN PetscErrorCode SNESCreate_NCG(SNES snes)
 {

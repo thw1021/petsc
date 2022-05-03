@@ -39,9 +39,9 @@ PetscErrorCode  DMLocalToGlobalBegin_DA(DM da,Vec l,InsertMode mode,Vec g)
   if (mode == ADD_VALUES) {
     PetscCall(VecScatterBegin(dd->gtol,l,g,ADD_VALUES,SCATTER_REVERSE));
   } else if (mode == INSERT_VALUES) {
-    PetscCheckFalse(dd->bx != DM_BOUNDARY_GHOSTED && dd->bx != DM_BOUNDARY_NONE && dd->s > 0 && dd->m == 1,PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Available only for boundary none or with parallelism in x direction");
-    PetscCheckFalse(dd->bx != DM_BOUNDARY_GHOSTED && dd->by != DM_BOUNDARY_NONE && dd->s > 0 && dd->n == 1,PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Available only for boundary none or with parallelism in y direction");
-    PetscCheckFalse(dd->bx != DM_BOUNDARY_GHOSTED && dd->bz != DM_BOUNDARY_NONE && dd->s > 0 && dd->p == 1,PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Available only for boundary none or with parallelism in z direction");
+    PetscCheck(dd->bx == DM_BOUNDARY_GHOSTED || dd->bx == DM_BOUNDARY_NONE || dd->s <= 0 || dd->m != 1,PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Available only for boundary none or with parallelism in x direction");
+    PetscCheck(dd->bx == DM_BOUNDARY_GHOSTED || dd->by == DM_BOUNDARY_NONE || dd->s <= 0 || dd->n != 1,PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Available only for boundary none or with parallelism in y direction");
+    PetscCheck(dd->bx == DM_BOUNDARY_GHOSTED || dd->bz == DM_BOUNDARY_NONE || dd->s <= 0 || dd->p != 1,PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Available only for boundary none or with parallelism in z direction");
     PetscCall(VecScatterBegin(dd->gtol,l,g,INSERT_VALUES,SCATTER_REVERSE_LOCAL));
   } else SETERRQ(PetscObjectComm((PetscObject)da),PETSC_ERR_SUP,"Not yet implemented");
   PetscFunctionReturn(0);
@@ -78,8 +78,8 @@ extern PetscErrorCode DMDAGetNatural_Private(DM,PetscInt*,IS*);
     This is an internal routine called by DMDAGlobalToNatural() to
      create the scatter context.
 
-.seealso: DMDAGlobalToNaturalBegin(), DMDAGlobalToNaturalEnd(), DMLocalToGlobalBegin(), DMDACreate2d(),
-          DMGlobalToLocalBegin(), DMGlobalToLocalEnd(), DMDACreateNaturalVector()
+.seealso: `DMDAGlobalToNaturalBegin()`, `DMDAGlobalToNaturalEnd()`, `DMLocalToGlobalBegin()`, `DMDACreate2d()`,
+          `DMGlobalToLocalBegin()`, `DMGlobalToLocalEnd()`, `DMDACreateNaturalVector()`
 */
 PetscErrorCode DMDAGlobalToNatural_Create(DM da)
 {
@@ -97,7 +97,7 @@ PetscErrorCode DMDAGlobalToNatural_Create(DM da)
   PetscCall(VecGetOwnershipRange(dd->natural,&start,NULL));
 
   PetscCall(DMDAGetNatural_Private(da,&Nlocal,&to));
-  PetscCheckFalse(Nlocal != m,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Internal error: Nlocal %D local vector size %D",Nlocal,m);
+  PetscCheck(Nlocal == m,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Internal error: Nlocal %" PetscInt_FMT " local vector size %" PetscInt_FMT,Nlocal,m);
   PetscCall(ISCreateStride(PetscObjectComm((PetscObject)da),m,start,1,&from));
   PetscCall(VecCreateMPIWithArray(PetscObjectComm((PetscObject)da),dd->w,dd->Nlocal,PETSC_DETERMINE,NULL,&global));
   PetscCall(VecScatterCreate(global,from,dd->natural,to,&dd->gton));
@@ -132,8 +132,8 @@ PetscErrorCode DMDAGlobalToNatural_Create(DM da)
 
    You must call DMDACreateNaturalVector() before using this routine
 
-.seealso: DMDAGlobalToNaturalEnd(), DMLocalToGlobalBegin(), DMDACreate2d(),
-          DMGlobalToLocalBegin(), DMGlobalToLocalEnd(), DMDACreateNaturalVector()
+.seealso: `DMDAGlobalToNaturalEnd()`, `DMLocalToGlobalBegin()`, `DMDACreate2d()`,
+          `DMGlobalToLocalBegin()`, `DMGlobalToLocalEnd()`, `DMDACreateNaturalVector()`
 
 @*/
 PetscErrorCode  DMDAGlobalToNaturalBegin(DM da,Vec g,InsertMode mode,Vec n)
@@ -174,8 +174,8 @@ PetscErrorCode  DMDAGlobalToNaturalBegin(DM da,Vec g,InsertMode mode,Vec n)
    must have the same parallel data layout; they could, for example, be
    obtained with VecDuplicate() from the DMDA originating vectors.
 
-.seealso: DMDAGlobalToNaturalBegin(), DMLocalToGlobalBegin(), DMDACreate2d(),
-          DMGlobalToLocalBegin(), DMGlobalToLocalEnd(), DMDACreateNaturalVector()
+.seealso: `DMDAGlobalToNaturalBegin()`, `DMLocalToGlobalBegin()`, `DMDACreate2d()`,
+          `DMGlobalToLocalBegin()`, `DMGlobalToLocalEnd()`, `DMDACreateNaturalVector()`
 
 @*/
 PetscErrorCode  DMDAGlobalToNaturalEnd(DM da,Vec g,InsertMode mode,Vec n)
@@ -213,8 +213,8 @@ PetscErrorCode  DMDAGlobalToNaturalEnd(DM da,Vec g,InsertMode mode,Vec n)
    must have the same parallel data layout; they could, for example, be
    obtained with VecDuplicate() from the DMDA originating vectors.
 
-.seealso: DMDAGlobalToNaturalEnd(), DMDAGlobalToNaturalBegin(), DMLocalToGlobalBegin(), DMDACreate2d(),
-          DMGlobalToLocalBegin(), DMGlobalToLocalEnd(), DMDACreateNaturalVector()
+.seealso: `DMDAGlobalToNaturalEnd()`, `DMDAGlobalToNaturalBegin()`, `DMLocalToGlobalBegin()`, `DMDACreate2d()`,
+          `DMGlobalToLocalBegin()`, `DMGlobalToLocalEnd()`, `DMDACreateNaturalVector()`
 
 @*/
 PetscErrorCode  DMDANaturalToGlobalBegin(DM da,Vec n,InsertMode mode,Vec g)
@@ -255,8 +255,8 @@ PetscErrorCode  DMDANaturalToGlobalBegin(DM da,Vec n,InsertMode mode,Vec g)
    must have the same parallel data layout; they could, for example, be
    obtained with VecDuplicate() from the DMDA originating vectors.
 
-.seealso: DMDAGlobalToNaturalBegin(), DMDAGlobalToNaturalEnd(), DMLocalToGlobalBegin(), DMDACreate2d(),
-          DMGlobalToLocalBegin(), DMGlobalToLocalEnd(), DMDACreateNaturalVector()
+.seealso: `DMDAGlobalToNaturalBegin()`, `DMDAGlobalToNaturalEnd()`, `DMLocalToGlobalBegin()`, `DMDACreate2d()`,
+          `DMGlobalToLocalBegin()`, `DMGlobalToLocalEnd()`, `DMDACreateNaturalVector()`
 
 @*/
 PetscErrorCode  DMDANaturalToGlobalEnd(DM da,Vec n,InsertMode mode,Vec g)

@@ -157,9 +157,9 @@ static PetscErrorCode MatCreateSubMatrices_MPIAdj_Private(Mat mat,PetscInt n,con
       PetscCall(PetscObjectGetComm((PetscObject)irow[i],&scomm_row));
       PetscCall(PetscObjectGetComm((PetscObject)icol[i],&scomm_col));
       PetscCallMPI(MPI_Comm_compare(scomm_row,scomm_col,&issame));
-      PetscCheckFalse(issame != MPI_IDENT,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"row index set must have the same comm as the col index set");
+      PetscCheck(issame == MPI_IDENT,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"row index set must have the same comm as the col index set");
       PetscCallMPI(MPI_Comm_compare(scomm_row,PETSC_COMM_SELF,&issame));
-      PetscCheckFalse(issame == MPI_IDENT,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP," can not use PETSC_COMM_SELF as comm when extracting a parallel submatrix");
+      PetscCheck(issame != MPI_IDENT,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP," can not use PETSC_COMM_SELF as comm when extracting a parallel submatrix");
     } else {
       scomm_row = PETSC_COMM_SELF;
     }
@@ -180,7 +180,7 @@ static PetscErrorCode MatCreateSubMatrices_MPIAdj_Private(Mat mat,PetscInt n,con
     for (j=0; j<irow_n; j++) {
       for (k=sxadj[j]; k<sxadj[j+1]; k++) {
         PetscCall(PetscFindInt(sadjncy[k],nindx,indices,&loc));
-        PetscCheckFalse(loc<0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"can not find col %" PetscInt_FMT,sadjncy[k]);
+        PetscCheck(loc>=0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"can not find col %" PetscInt_FMT,sadjncy[k]);
         sadjncy[k] = loc;
       }
     }
@@ -191,7 +191,7 @@ static PetscErrorCode MatCreateSubMatrices_MPIAdj_Private(Mat mat,PetscInt n,con
        Mat_MPIAdj         *sa  = (Mat_MPIAdj*)((sadj)->data);
        PetscCall(PetscObjectGetComm((PetscObject)sadj,&scomm_mat));
        PetscCallMPI(MPI_Comm_compare(scomm_row,scomm_mat,&issame));
-       PetscCheckFalse(issame != MPI_IDENT,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"submatrix  must have the same comm as the col index set");
+       PetscCheck(issame == MPI_IDENT,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"submatrix  must have the same comm as the col index set");
        PetscCall(PetscArraycpy(sa->i,sxadj,irow_n+1));
        PetscCall(PetscArraycpy(sa->j,sadjncy,sxadj[irow_n]));
        if (svalues) PetscCall(PetscArraycpy(sa->values,svalues,sxadj[irow_n]));
@@ -232,7 +232,7 @@ static PetscErrorCode MatView_MPIAdj_ASCII(Mat A,PetscViewer viewer)
   PetscCall(PetscViewerGetFormat(viewer,&format));
   if (format == PETSC_VIEWER_ASCII_INFO) {
     PetscFunctionReturn(0);
-  } else PetscCheckFalse(format == PETSC_VIEWER_ASCII_MATLAB,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"MATLAB format not supported");
+  } else PetscCheck(format != PETSC_VIEWER_ASCII_MATLAB,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"MATLAB format not supported");
   else {
     PetscCall(PetscViewerASCIIUseTabs(viewer,PETSC_FALSE));
     PetscCall(PetscViewerASCIIPushSynchronized(viewer));
@@ -319,7 +319,7 @@ static PetscErrorCode MatGetRow_MPIAdj(Mat A,PetscInt row,PetscInt *nz,PetscInt 
 
   PetscFunctionBegin;
   row -= A->rmap->rstart;
-  PetscCheckFalse(row < 0 || row >= A->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Row out of range");
+  PetscCheck(row >= 0 && row < A->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Row out of range");
   *nz = a->i[row+1] - a->i[row];
   if (v) {
     PetscInt j;
@@ -391,8 +391,8 @@ static PetscErrorCode MatRestoreRowIJ_MPIAdj(Mat A,PetscInt oshift,PetscBool sym
   PetscInt   **ia = (PetscInt**)inia,**ja = (PetscInt**)inja;
 
   PetscFunctionBegin;
-  PetscCheckFalse(ia && a->i != *ia,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONGSTATE,"ia passed back is not one obtained with MatGetRowIJ()");
-  PetscCheckFalse(ja && a->j != *ja,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONGSTATE,"ja passed back is not one obtained with MatGetRowIJ()");
+  PetscCheck(!ia || a->i == *ia,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONGSTATE,"ia passed back is not one obtained with MatGetRowIJ()");
+  PetscCheck(!ja || a->j == *ja,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONGSTATE,"ja passed back is not one obtained with MatGetRowIJ()");
   if (oshift) {
     PetscCheck(ia,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONGSTATE,"If oshift then you must passed in inia[] argument");
     PetscCheck(ja,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONGSTATE,"If oshift then you must passed in inja[] argument");
@@ -628,12 +628,12 @@ static PetscErrorCode  MatMPIAdjSetPreallocation_MPIAdj(Mat B,PetscInt *i,PetscI
   if (PetscDefined(USE_DEBUG)) {
     PetscInt ii;
 
-    PetscCheckFalse(i[0] != 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"First i[] index must be zero, instead it is %" PetscInt_FMT,i[0]);
+    PetscCheck(i[0] == 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"First i[] index must be zero, instead it is %" PetscInt_FMT,i[0]);
     for (ii=1; ii<B->rmap->n; ii++) {
-      PetscCheckFalse(i[ii] < 0 || i[ii] < i[ii-1],PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"i[%" PetscInt_FMT "]=%" PetscInt_FMT " index is out of range: i[%" PetscInt_FMT "]=%" PetscInt_FMT,ii,i[ii],ii-1,i[ii-1]);
+      PetscCheck(i[ii] >= 0 && i[ii] >= i[ii-1],PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"i[%" PetscInt_FMT "]=%" PetscInt_FMT " index is out of range: i[%" PetscInt_FMT "]=%" PetscInt_FMT,ii,i[ii],ii-1,i[ii-1]);
     }
     for (ii=0; ii<i[B->rmap->n]; ii++) {
-      PetscCheckFalse(j[ii] < 0 || j[ii] >= B->cmap->N,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Column index %" PetscInt_FMT " out of range %" PetscInt_FMT,ii,j[ii]);
+      PetscCheck(j[ii] >= 0 && j[ii] < B->cmap->N,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Column index %" PetscInt_FMT " out of range %" PetscInt_FMT,ii,j[ii]);
     }
   }
   B->preallocated = PETSC_TRUE;
@@ -710,7 +710,7 @@ PetscErrorCode  MatMPIAdjToSeq_MPIAdj(Mat A,Mat *B)
   PetscCall(MatGetSize(A,&M,&N));
   PetscCall(MatGetLocalSize(A,&m,NULL));
   nz   = adj->nz;
-  PetscCheckFalse(adj->i[m] != nz,PETSC_COMM_SELF,PETSC_ERR_PLIB,"nz %" PetscInt_FMT " not correct i[m] %" PetscInt_FMT,nz,adj->i[m]);
+  PetscCheck(adj->i[m] == nz,PETSC_COMM_SELF,PETSC_ERR_PLIB,"nz %" PetscInt_FMT " not correct i[m] %" PetscInt_FMT,nz,adj->i[m]);
   PetscCallMPI(MPI_Allreduce(&nz,&NZ,1,MPIU_INT,MPI_SUM,PetscObjectComm((PetscObject)A)));
 
   PetscCall(PetscMPIIntCast(nz,&mnz));
@@ -760,7 +760,7 @@ PetscErrorCode  MatMPIAdjToSeq_MPIAdj(Mat A,Mat *B)
 
    The matrix B should be destroyed with MatDestroy(). The arrays are not copied, so B should be destroyed before A is destroyed.
 
-.seealso: MatCreateMPIAdj()
+.seealso: `MatCreateMPIAdj()`
 @*/
 PetscErrorCode MatMPIAdjCreateNonemptySubcommMat(Mat A,Mat *B)
 {
@@ -776,7 +776,7 @@ PetscErrorCode MatMPIAdjCreateNonemptySubcommMat(Mat A,Mat *B)
 
   Level: beginner
 
-.seealso: MatCreateMPIAdj
+.seealso: `MatCreateMPIAdj`
 M*/
 
 PETSC_EXTERN PetscErrorCode MatCreate_MPIAdj(Mat B)
@@ -809,7 +809,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPIAdj(Mat B)
 
    Level: intermediate
 
-.seealso: MatCreate(), MatCreateMPIAdj(), MatSetValues()
+.seealso: `MatCreate()`, `MatCreateMPIAdj()`, `MatSetValues()`
 @*/
 PetscErrorCode  MatMPIAdjToSeq(Mat A,Mat *B)
 {
@@ -832,7 +832,7 @@ PetscErrorCode  MatMPIAdjToSeq(Mat A,Mat *B)
 
    Level: intermediate
 
-.seealso: MatCreate(), MatCreateMPIAdj(), MatSetValues()
+.seealso: `MatCreate()`, `MatCreateMPIAdj()`, `MatSetValues()`
 @*/
 PetscErrorCode  MatMPIAdjSetPreallocation(Mat B,PetscInt *i,PetscInt *j,PetscInt *values)
 {
@@ -875,7 +875,7 @@ PetscErrorCode  MatMPIAdjSetPreallocation(Mat B,PetscInt *i,PetscInt *j,PetscInt
 
    Possible values for MatSetOption() - MAT_STRUCTURALLY_SYMMETRIC
 
-.seealso: MatCreate(), MatConvert(), MatGetOrdering()
+.seealso: `MatCreate()`, `MatConvert()`, `MatGetOrdering()`
 @*/
 PetscErrorCode  MatCreateMPIAdj(MPI_Comm comm,PetscInt m,PetscInt N,PetscInt *i,PetscInt *j,PetscInt *values,Mat *A)
 {

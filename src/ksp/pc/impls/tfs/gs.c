@@ -224,8 +224,8 @@ static PCTFS_gs_id *gsi_check_args(PetscInt *in_elms, PetscInt nel, PetscInt lev
   PetscInt       *companion, *elms, *unique, *iptr;
   PetscInt       num_local=0, *num_to_reduce, **local_reduce;
   PetscInt       oprs[]   = {NON_UNIFORM,GL_MIN,GL_MAX,GL_ADD,GL_MIN,GL_MAX,GL_MIN,GL_B_AND};
-  PetscInt       vals[sizeof(oprs)/sizeof(oprs[0])-1];
-  PetscInt       work[sizeof(oprs)/sizeof(oprs[0])-1];
+  PetscInt       vals[PETSC_STATIC_ARRAY_LENGTH(oprs)-1];
+  PetscInt       work[PETSC_STATIC_ARRAY_LENGTH(oprs)-1];
   PCTFS_gs_id    *gs;
 
   if (!in_elms) SETERRABORT(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"elms point to nothing!!!\n");
@@ -348,7 +348,7 @@ static PCTFS_gs_id *gsi_check_args(PetscInt *in_elms, PetscInt nel, PetscInt lev
   vals[6] = num_gs_ids;
 
   /* GLOBAL: send 'em out */
-  PetscCallAbort(PETSC_COMM_WORLD,PCTFS_giop(vals,work,sizeof(oprs)/sizeof(oprs[0])-1,oprs));
+  PetscCallAbort(PETSC_COMM_WORLD,PCTFS_giop(vals,work,PETSC_STATIC_ARRAY_LENGTH(oprs)-1,oprs));
 
   /* must be semi-pos def - only pairwise depends on this */
   /* LATER - remove this restriction */
@@ -362,7 +362,7 @@ static PCTFS_gs_id *gsi_check_args(PetscInt *in_elms, PetscInt nel, PetscInt lev
   gs->gl_max  = vals[4];
   gs->negl    = vals[4]-vals[3]+1;
 
-  if (gs->negl<=0) SETERRABORT(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"gsi_check_args() :: system empty or neg :: %d\n");
+  if (gs->negl<=0) SETERRABORT(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"gsi_check_args() :: system empty or neg :: %" PetscInt_FMT "\n",gs->negl);
 
   /* LATER :: add level == -1 -> program selects level */
   if (vals[5]<0) vals[5]=0;
@@ -405,7 +405,7 @@ static PetscErrorCode gsi_via_bit_mask(PCTFS_gs_id *gs)
     for (i=0, t1=0; i<gs->num_local; i++, reduce++) {
       if ((PCTFS_ivec_binary_search(**reduce,gs->pw_elm_list,gs->len_pw_list)>=0) || PCTFS_ivec_binary_search(**reduce,gs->tree_map_in,gs->tree_map_sz)>=0) {
         t1++;
-        PetscCheckFalse(gs->num_local_reduce[i]<=0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"nobody in list?");
+        PetscCheck(gs->num_local_reduce[i]>0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"nobody in list?");
         gs->num_local_reduce[i] *= -1;
       }
       **reduce=map[**reduce];
@@ -427,7 +427,7 @@ static PetscErrorCode gsi_via_bit_mask(PCTFS_gs_id *gs)
       gs->num_gop_local_reduce = gs->num_local_reduce;
 
       for (i=0; i<t1; i++) {
-        PetscCheckFalse(gs->num_gop_local_reduce[i]>=0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"they aren't negative?");
+        PetscCheck(gs->num_gop_local_reduce[i]<0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"they aren't negative?");
         gs->num_gop_local_reduce[i] *= -1;
         gs->local_reduce++;
         gs->num_local_reduce++;
@@ -522,7 +522,7 @@ static PetscErrorCode get_ngh_buf(PCTFS_gs_id *gs)
   buf_size = PetscMin(msg_buf,i);
 
   /* can we do it? */
-  PetscCheckFalse(p_mask_size>buf_size,PETSC_COMM_SELF,PETSC_ERR_PLIB,"get_ngh_buf() :: buf<pms :: %d>%d",p_mask_size,buf_size);
+  PetscCheck(p_mask_size<=buf_size,PETSC_COMM_SELF,PETSC_ERR_PLIB,"get_ngh_buf() :: buf<pms :: %" PetscInt_FMT ">%" PetscInt_FMT,p_mask_size,buf_size);
 
   /* get PCTFS_giop buf space ... make *only* one malloc */
   buf1 = (PetscInt*) malloc(buf_size<<1);

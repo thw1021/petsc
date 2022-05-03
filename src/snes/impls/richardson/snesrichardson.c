@@ -35,7 +35,7 @@ PetscErrorCode SNESDestroy_NRichardson(SNES snes)
 PetscErrorCode SNESSetUp_NRichardson(SNES snes)
 {
   PetscFunctionBegin;
-  PetscCheckFalse(snes->npcside== PC_RIGHT,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"NRichardson only supports left preconditioning");
+  PetscCheck(snes->npcside!= PC_RIGHT,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"NRichardson only supports left preconditioning");
   if (snes->functype == SNES_FUNCTION_DEFAULT) snes->functype = SNES_FUNCTION_UNPRECONDITIONED;
   PetscFunctionReturn(0);
 }
@@ -51,8 +51,8 @@ PetscErrorCode SNESSetUp_NRichardson(SNES snes)
 static PetscErrorCode SNESSetFromOptions_NRichardson(PetscOptionItems *PetscOptionsObject,SNES snes)
 {
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"SNES Richardson options"));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadBegin(PetscOptionsObject,"SNES Richardson options");
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -96,7 +96,7 @@ PetscErrorCode SNESSolve_NRichardson(SNES snes)
   SNESConvergedReason  reason;
 
   PetscFunctionBegin;
-  PetscCheckFalse(snes->xl || snes->xu || snes->ops->computevariablebounds,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
+  PetscCheck(!snes->xl && !snes->xu && !snes->ops->computevariablebounds,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
 
   snes->reason = SNES_CONVERGED_ITERATING;
 
@@ -209,7 +209,7 @@ PetscErrorCode SNESSolve_NRichardson(SNES snes)
     }
   }
   if (i == maxits+1) {
-    PetscCall(PetscInfo(snes, "Maximum number of iterations has been reached: %D\n", maxits));
+    PetscCall(PetscInfo(snes, "Maximum number of iterations has been reached: %" PetscInt_FMT "\n", maxits));
     if (!snes->reason) snes->reason = SNES_DIVERGED_MAX_IT;
   }
   PetscFunctionReturn(0);
@@ -238,7 +238,7 @@ PetscErrorCode SNESSolve_NRichardson(SNES snes)
 
      Only supports left non-linear preconditioning.
 
-.seealso:  SNESCreate(), SNES, SNESSetType(), SNESNEWTONLS, SNESNEWTONTR, SNESNGMRES, SNESQN, SNESNCG
+.seealso: `SNESCreate()`, `SNES`, `SNESSetType()`, `SNESNEWTONLS`, `SNESNEWTONTR`, `SNESNGMRES`, `SNESQN`, `SNESNCG`
 M*/
 PETSC_EXTERN PetscErrorCode SNESCreate_NRichardson(SNES snes)
 {

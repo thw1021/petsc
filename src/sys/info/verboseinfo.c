@@ -52,12 +52,12 @@ FILE                      *PetscInfoFile = NULL;
 
     Level: advanced
 
-.seealso: PetscInfo(), PetscInfoAllow(), PetscInfoGetInfo(), PetscObjectGetClassid()
+.seealso: `PetscInfo()`, `PetscInfoAllow()`, `PetscInfoGetInfo()`, `PetscObjectGetClassid()`
 @*/
 PetscErrorCode PetscInfoEnabled(PetscClassId classid, PetscBool *enabled)
 {
   PetscFunctionBegin;
-  PetscCheckFalse(classid < PETSC_SMALLEST_CLASSID,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Classid (current: %d) must be equal to or greater than PETSC_SMALLEST_CLASSID", classid);
+  PetscCheck(classid >= PETSC_SMALLEST_CLASSID,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Classid (current: %d) must be equal to or greater than PETSC_SMALLEST_CLASSID", classid);
   *enabled = (PetscBool) (PetscLogPrintInfo && PetscInfoFlags[classid - PETSC_SMALLEST_CLASSID]);
   PetscFunctionReturn(0);
 }
@@ -72,7 +72,7 @@ PetscErrorCode PetscInfoEnabled(PetscClassId classid, PetscBool *enabled)
 
     Level: advanced
 
-.seealso: PetscInfo(), PetscInfoEnabled(), PetscInfoGetInfo(), PetscInfoSetFromOptions()
+.seealso: `PetscInfo()`, `PetscInfoEnabled()`, `PetscInfoGetInfo()`, `PetscInfoSetFromOptions()`
 @*/
 PetscErrorCode PetscInfoAllow(PetscBool flag)
 {
@@ -95,7 +95,7 @@ PetscErrorCode PetscInfoAllow(PetscBool flag)
 
     Level: advanced
 
-.seealso: PetscInfo(), PetscInfoSetFile(), PetscInfoSetFromOptions(), PetscFOpen()
+.seealso: `PetscInfo()`, `PetscInfoSetFile()`, `PetscInfoSetFromOptions()`, `PetscFOpen()`
 @*/
 PetscErrorCode PetscInfoSetFile(const char filename[], const char mode[])
 {
@@ -141,7 +141,7 @@ PetscErrorCode PetscInfoSetFile(const char filename[], const char mode[])
     Fortran Note:
     This routine is not supported in Fortran.
 
-.seealso: PetscInfo(), PetscInfoSetFile(), PetscInfoSetFromOptions(), PetscInfoDestroy()
+.seealso: `PetscInfo()`, `PetscInfoSetFile()`, `PetscInfoSetFromOptions()`, `PetscInfoDestroy()`
 @*/
 PetscErrorCode PetscInfoGetFile(char **filename, FILE **InfoFile)
 {
@@ -178,7 +178,7 @@ PetscErrorCode PetscInfoGetFile(char **filename, FILE **InfoFile)
 
     Level: developer
 
-.seealso: PetscInfo(), PetscInfoGetClass(), PetscInfoProcessClass(), PetscInfoSetFromOptions(), PetscStrToArray(), PetscObjectGetName()
+.seealso: `PetscInfo()`, `PetscInfoGetClass()`, `PetscInfoProcessClass()`, `PetscInfoSetFromOptions()`, `PetscStrToArray()`, `PetscObjectGetName()`
 @*/
 PetscErrorCode PetscInfoSetClasses(PetscBool exclude, PetscInt N, const char *const *classnames)
 {
@@ -213,7 +213,7 @@ PetscErrorCode PetscInfoSetClasses(PetscBool exclude, PetscInt N, const char *co
 
     Level: developer
 
-.seealso: PetscInfo(), PetscInfoSetClasses(), PetscInfoSetFromOptions(), PetscObjectGetName()
+.seealso: `PetscInfo()`, `PetscInfoSetClasses()`, `PetscInfoSetFromOptions()`, `PetscObjectGetName()`
 @*/
 PetscErrorCode PetscInfoGetClass(const char *classname, PetscBool *found)
 {
@@ -244,7 +244,7 @@ PetscErrorCode PetscInfoGetClass(const char *classname, PetscBool *found)
 
     Level: developer
 
-.seealso: PetscInfo(), PetscInfoAllow(), PetscInfoSetFilterCommSelf, PetscInfoSetFromOptions()
+.seealso: `PetscInfo()`, `PetscInfoAllow()`, `PetscInfoSetFilterCommSelf`, `PetscInfoSetFromOptions()`
 @*/
 PetscErrorCode PetscInfoGetInfo(PetscBool *infoEnabled, PetscBool *classesSet, PetscBool *exclude, PetscBool *locked, PetscInfoCommFlag *commSelfFlag)
 {
@@ -269,7 +269,7 @@ PetscErrorCode PetscInfoGetInfo(PetscBool *infoEnabled, PetscBool *classesSet, P
 
     Level: developer
 
-.seealso: PetscInfo(), PetscInfoActivateClass(), PetscInfoDeactivateClass(), PetscInfoSetFromOptions()
+.seealso: `PetscInfo()`, `PetscInfoActivateClass()`, `PetscInfoDeactivateClass()`, `PetscInfoSetFromOptions()`
 @*/
 PetscErrorCode PetscInfoProcessClass(const char classname[], PetscInt numClassID, PetscClassId classIDs[])
 {
@@ -316,7 +316,7 @@ PetscErrorCode PetscInfoProcessClass(const char classname[], PetscInt numClassID
 
     Level: advanced
 
-.seealso: PetscInfo(), PetscInfoGetInfo()
+.seealso: `PetscInfo()`, `PetscInfoGetInfo()`
 @*/
 PetscErrorCode PetscInfoSetFilterCommSelf(PetscInfoCommFlag commSelfFlag)
 {
@@ -341,7 +341,7 @@ PetscErrorCode PetscInfoSetFilterCommSelf(PetscInfoCommFlag commSelfFlag)
 
     Level: advanced
 
-.seealso: PetscInfo(), PetscInfoAllow(), PetscInfoSetFile(), PetscInfoSetClasses(), PetscInfoSetFilterCommSelf(), PetscInfoDestroy()
+.seealso: `PetscInfo()`, `PetscInfoAllow()`, `PetscInfoSetFile()`, `PetscInfoSetClasses()`, `PetscInfoSetFilterCommSelf()`, `PetscInfoDestroy()`
 @*/
 PetscErrorCode PetscInfoSetFromOptions(PetscOptions options)
 {
@@ -413,7 +413,7 @@ PetscErrorCode PetscInfoSetFromOptions(PetscOptions options)
 
   Level: developer
 
-.seealso: PetscInfo(), PetscInfoSetFromOptions()
+.seealso: `PetscInfo()`, `PetscInfoSetFromOptions()`
 @*/
 PetscErrorCode PetscInfoDestroy(void)
 {
@@ -429,7 +429,7 @@ PetscErrorCode PetscInfoDestroy(void)
     PetscCall(PetscFClose(MPI_COMM_SELF, PetscInfoFile));
   }
   PetscCall(PetscFree(PetscInfoFilename));
-  for (i=0; i<sizeof(PetscInfoFlags)/sizeof(PetscInfoFlags[0]); i++) PetscInfoFlags[i] = 1;
+  for (i=0; i<PETSC_STATIC_ARRAY_LENGTH(PetscInfoFlags); i++) PetscInfoFlags[i] = 1;
   PetscInfoClassesLocked = PETSC_FALSE;
   PetscInfoInvertClasses = PETSC_FALSE;
   PetscInfoClassesSet = PETSC_FALSE;
@@ -451,7 +451,7 @@ PetscErrorCode PetscInfoDestroy(void)
 
   Level: developer
 
-.seealso: PetscInfoActivateClass(), PetscInfo(), PetscInfoAllow(), PetscInfoSetFromOptions()
+.seealso: `PetscInfoActivateClass()`, `PetscInfo()`, `PetscInfoAllow()`, `PetscInfoSetFromOptions()`
 @*/
 PetscErrorCode  PetscInfoDeactivateClass(PetscClassId classid)
 {
@@ -474,7 +474,7 @@ PetscErrorCode  PetscInfoDeactivateClass(PetscClassId classid)
 
   Level: developer
 
-.seealso: PetscInfoDeactivateClass(), PetscInfo(), PetscInfoAllow(), PetscInfoSetFromOptions()
+.seealso: `PetscInfoDeactivateClass()`, `PetscInfo()`, `PetscInfoAllow()`, `PetscInfoSetFromOptions()`
 @*/
 PetscErrorCode  PetscInfoActivateClass(PetscClassId classid)
 {
@@ -555,7 +555,7 @@ $     -info :sys:~self
 
     Level: intermediate
 
-.seealso: PetscInfoAllow(), PetscInfoSetFromOptions()
+.seealso: `PetscInfoAllow()`, `PetscInfoSetFromOptions()`
 M*/
 PetscErrorCode  PetscInfo_Private(const char func[],PetscObject obj, const char message[], ...)
 {

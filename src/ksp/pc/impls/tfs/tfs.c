@@ -94,7 +94,7 @@ static PetscErrorCode PCSetUp_TFS(PC pc)
   */
 
   PetscFunctionBegin;
-  PetscCheckFalse(A->cmap->N != A->rmap->N,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_SIZ,"matrix must be square");
+  PetscCheck(A->cmap->N == A->rmap->N,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_SIZ,"matrix must be square");
   PetscCall(PetscObjectTypeCompare((PetscObject)pc->pmat,MATMPIAIJ,&ismpiaij));
   PetscCheck(ismpiaij,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Currently only supports MPIAIJ matrices");
 
@@ -154,7 +154,7 @@ static PetscErrorCode PCView_TFS(PC pc,PetscViewer viewer)
 
     Only works for real numbers (is not built if PetscScalar is complex)
 
-.seealso:  PCCreate(), PCSetType(), PCType (for list of available types), PC
+.seealso: `PCCreate()`, `PCSetType()`, `PCType`, `PC`
 M*/
 PETSC_EXTERN PetscErrorCode PCCreate_TFS(PC pc)
 {
@@ -163,7 +163,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_TFS(PC pc)
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_compare(PETSC_COMM_WORLD,PetscObjectComm((PetscObject)pc),&cmp));
-  PetscCheckFalse(cmp != MPI_IDENT && cmp != MPI_CONGRUENT,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"TFS only works with PETSC_COMM_WORLD objects");
+  PetscCheck(cmp == MPI_IDENT || cmp == MPI_CONGRUENT,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"TFS only works with PETSC_COMM_WORLD objects");
   PetscCall(PetscNewLog(pc,&tfs));
 
   tfs->xxt = NULL;

@@ -77,7 +77,7 @@ static PetscErrorCode PCSetUp_SVD(PC pc)
     PetscBLASInt lierr;
     PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
     PetscStackCallBLAS("LAPACKgesvd",LAPACKgesvd_("A","A",&nb,&nb,a,&nb,d,u,&nb,v,&nb,work,&lwork,&lierr));
-    PetscCheck(!lierr,PETSC_COMM_SELF,PETSC_ERR_LIB,"gesv() error %d",lierr);
+    PetscCheck(!lierr,PETSC_COMM_SELF,PETSC_ERR_LIB,"gesv() error %" PetscBLASInt_FMT,lierr);
     PetscCall(PetscFPTrapPop());
   }
 #else
@@ -88,7 +88,7 @@ static PetscErrorCode PCSetUp_SVD(PC pc)
     PetscCall(PetscMalloc1(nb,&dd));
     PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
     PetscStackCallBLAS("LAPACKgesvd",LAPACKgesvd_("A","A",&nb,&nb,a,&nb,dd,u,&nb,v,&nb,work,&lwork,rwork,&lierr));
-    PetscCheck(!lierr,PETSC_COMM_SELF,PETSC_ERR_LIB,"gesv() error %d",lierr);
+    PetscCheck(!lierr,PETSC_COMM_SELF,PETSC_ERR_LIB,"gesv() error %" PetscBLASInt_FMT,lierr);
     PetscCall(PetscFree(rwork));
     for (i=0; i<n; i++) d[i] = dd[i];
     PetscCall(PetscFree(dd));
@@ -102,7 +102,7 @@ static PetscErrorCode PCSetUp_SVD(PC pc)
   jac->nzero = n-1-i;
   if (jac->monitor) {
     PetscCall(PetscViewerASCIIAddTab(jac->monitor,((PetscObject)pc)->tablevel));
-    PetscCall(PetscViewerASCIIPrintf(jac->monitor,"    SVD: condition number %14.12e, %D of %D singular values are (nearly) zero\n",(double)PetscRealPart(d[0]/d[n-1]),jac->nzero,n));
+    PetscCall(PetscViewerASCIIPrintf(jac->monitor,"    SVD: condition number %14.12e, %" PetscInt_FMT " of %" PetscInt_FMT " singular values are (nearly) zero\n",(double)PetscRealPart(d[0]/d[n-1]),jac->nzero,n));
     if (n < 10 || jac->monitorformat == PETSC_VIEWER_ALL) {
       PetscCall(PetscViewerASCIIPrintf(jac->monitor,"    SVD: singular values:\n"));
       for (i=0; i<n; i++) {
@@ -125,7 +125,7 @@ static PetscErrorCode PCSetUp_SVD(PC pc)
   for (i=0; i<n-jac->nzero; i++) d[i] = 1.0/d[i];
   for (; i<n; i++) d[i] = 0.0;
   if (jac->essrank > 0) for (i=0; i<n-jac->nzero-jac->essrank; i++) d[i] = 0.0; /* Skip all but essrank eigenvalues */
-  PetscCall(PetscInfo(pc,"Number of zero or nearly singular values %D\n",jac->nzero));
+  PetscCall(PetscInfo(pc,"Number of zero or nearly singular values %" PetscInt_FMT "\n",jac->nzero));
   PetscCall(VecRestoreArray(jac->diag,&d));
   PetscCall(PetscFree(work));
   PetscFunctionReturn(0);
@@ -290,11 +290,11 @@ static PetscErrorCode PCSetFromOptions_SVD(PetscOptionItems *PetscOptionsObject,
   PetscBool      flg;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"SVD options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"SVD options");
   PetscCall(PetscOptionsReal("-pc_svd_zero_sing","Singular values smaller than this treated as zero","None",jac->zerosing,&jac->zerosing,NULL));
   PetscCall(PetscOptionsInt("-pc_svd_ess_rank","Essential rank of operator (0 to use entire operator)","None",jac->essrank,&jac->essrank,NULL));
   PetscCall(PetscOptionsViewer("-pc_svd_monitor","Monitor the conditioning, and extremal singular values","None",&jac->monitor,&jac->monitorformat,&flg));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -307,7 +307,7 @@ static PetscErrorCode PCView_SVD(PC pc,PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
   if (iascii) {
     PetscCall(PetscViewerASCIIPrintf(viewer,"  All singular values smaller than %g treated as zero\n",(double)svd->zerosing));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Provided essential rank of the matrix %D (all other eigenvalues are zeroed)\n",svd->essrank));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Provided essential rank of the matrix %" PetscInt_FMT " (all other eigenvalues are zeroed)\n",svd->essrank));
   }
   PetscFunctionReturn(0);
 }
@@ -337,7 +337,7 @@ static PetscErrorCode PCView_SVD(PC pc,PetscViewer viewer)
    matrix on each process and uses a sequential SVD solve. Why does it do this instead
    of using the composable PCREDUNDANT object?
 
-.seealso:  PCCreate(), PCSetType(), PCType (for list of available types), PC
+.seealso: `PCCreate()`, `PCSetType()`, `PCType`, `PC`
 M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_SVD(PC pc)

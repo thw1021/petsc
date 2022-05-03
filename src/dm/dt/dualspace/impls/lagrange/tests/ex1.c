@@ -191,7 +191,7 @@ PetscErrorCode testLagrange(PetscHashLag lagTable, DM K, PetscInt dim, PetscInt 
   PetscCall(PetscDualSpaceLagrangeSetContinuity(sp, continuous));
   PetscCall(PetscDualSpaceLagrangeSetTensor(sp, (PetscBool) tensor));
   PetscCall(PetscDualSpaceLagrangeSetTrimmed(sp, trimmed));
-  PetscCall(PetscInfo(NULL, "Input: dim %D, order %D, trimmed %D, tensor %D, continuous %D, formDegree %D, nCopies %D\n", dim, order, (PetscInt) trimmed, tensor, (PetscInt) continuous, formDegree, nCopies));
+  PetscCall(PetscInfo(NULL, "Input: dim %" PetscInt_FMT ", order %" PetscInt_FMT ", trimmed %" PetscInt_FMT ", tensor %" PetscInt_FMT ", continuous %" PetscInt_FMT ", formDegree %" PetscInt_FMT ", nCopies %" PetscInt_FMT "\n", dim, order, (PetscInt) trimmed, tensor, (PetscInt) continuous, formDegree, nCopies));
   PetscCall(ExpectedNumDofs_Total(dim, order, formDegree, trimmed, tensor, nCopies, &exspdim));
   if (continuous && dim > 0 && order > 0) {
     PetscCall(ExpectedNumDofs_Interior(dim, order, formDegree, trimmed, tensor, nCopies, &exspintdim));
@@ -201,8 +201,8 @@ PetscErrorCode testLagrange(PetscHashLag lagTable, DM K, PetscInt dim, PetscInt 
   PetscCall(PetscDualSpaceSetUp(sp));
   PetscCall(PetscDualSpaceGetDimension(sp, &spdim));
   PetscCall(PetscDualSpaceGetInteriorDimension(sp, &spintdim));
-  PetscCheckFalse(spdim != exspdim,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Expected dual space dimension %D, got %D", exspdim, spdim);
-  PetscCheckFalse(spintdim != exspintdim,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Expected dual space interior dimension %D, got %D", exspintdim, spintdim);
+  PetscCheck(spdim == exspdim,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Expected dual space dimension %" PetscInt_FMT ", got %" PetscInt_FMT, exspdim, spdim);
+  PetscCheck(spintdim == exspintdim,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Expected dual space interior dimension %" PetscInt_FMT ", got %" PetscInt_FMT, exspintdim, spintdim);
   key.dim = dim;
   key.formDegree = formDegree;
   PetscCall(PetscDualSpaceGetOrder(sp, &key.order));
@@ -216,13 +216,13 @@ PetscErrorCode testLagrange(PetscHashLag lagTable, DM K, PetscInt dim, PetscInt 
     key.tensor = bTensor;
   }
   PetscCall(PetscDualSpaceLagrangeGetTrimmed(sp, &key.trimmed));
-  PetscCall(PetscInfo(NULL, "After setup:  order %D, trimmed %D, tensor %D, continuous %D\n", key.order, (PetscInt) key.trimmed, key.tensor, (PetscInt) key.continuous));
+  PetscCall(PetscInfo(NULL, "After setup:  order %" PetscInt_FMT ", trimmed %" PetscInt_FMT ", tensor %" PetscInt_FMT ", continuous %" PetscInt_FMT "\n", key.order, (PetscInt) key.trimmed, key.tensor, (PetscInt) key.continuous));
   PetscCall(PetscHashLagPut(lagTable, key, &iter, &missing));
   if (missing) {
     DMPolytopeType type;
 
     PetscCall(DMPlexGetCellType(K, 0, &type));
-    PetscCall(PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_SELF, "New space: %s, order %D, trimmed %D, tensor %D, continuous %D, form degree %D\n", DMPolytopeTypes[type], order, (PetscInt) trimmed, tensor, (PetscInt) continuous, formDegree));
+    PetscCall(PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_SELF, "New space: %s, order %" PetscInt_FMT ", trimmed %" PetscInt_FMT ", tensor %" PetscInt_FMT ", continuous %" PetscInt_FMT ", form degree %" PetscInt_FMT "\n", DMPolytopeTypes[type], order, (PetscInt) trimmed, tensor, (PetscInt) continuous, formDegree));
     PetscCall(PetscViewerASCIIPushTab(PETSC_VIEWER_STDOUT_SELF));
     {
       PetscQuadrature intNodes, allNodes;
@@ -235,8 +235,8 @@ PetscErrorCode testLagrange(PetscHashLag lagTable, DM K, PetscInt dim, PetscInt 
       PetscDualSpace_Lag *lag = (PetscDualSpace_Lag *) sp->data;
 
       PetscCall(PetscLagNodeIndicesGetData_Internal(lag->allNodeIndices, &nodeIdxDim, &nodeVecDim, &nNodes, &nodeIdx, &nodeVec));
-      PetscCheckFalse(nodeVecDim != Nk,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Incorrect nodeVecDim");
-      PetscCheckFalse(nNodes != spdim,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Incorrect nNodes");
+      PetscCheck(nodeVecDim == Nk,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Incorrect nodeVecDim");
+      PetscCheck(nNodes == spdim,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Incorrect nNodes");
 
       PetscCall(PetscDualSpaceGetAllData(sp, &allNodes, &allMat));
 
@@ -248,7 +248,7 @@ PetscErrorCode testLagrange(PetscHashLag lagTable, DM K, PetscInt dim, PetscInt 
       for (i = 0; i < spdim; i++) {
         PetscCall(PetscPrintf(PETSC_COMM_SELF, "("));
         for (j = 0; j < nodeIdxDim; j++) {
-          PetscCall(PetscPrintf(PETSC_COMM_SELF, " %D,", nodeIdx[i * nodeIdxDim + j]));
+          PetscCall(PetscPrintf(PETSC_COMM_SELF, " %" PetscInt_FMT ",", nodeIdx[i * nodeIdxDim + j]));
         }
         PetscCall(PetscPrintf(PETSC_COMM_SELF, "): ["));
         for (j = 0; j < nodeVecDim; j++) {
@@ -258,7 +258,7 @@ PetscErrorCode testLagrange(PetscHashLag lagTable, DM K, PetscInt dim, PetscInt 
       }
 
       PetscCall(MatGetInfo(allMat, MAT_LOCAL, &info));
-      PetscCall(PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_SELF, "All matrix: %D nonzeros\n", (PetscInt) info.nz_used));
+      PetscCall(PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_SELF, "All matrix: %" PetscInt_FMT " nonzeros\n", (PetscInt) info.nz_used));
 
       PetscCall(PetscDualSpaceGetInteriorData(sp, &intNodes, &intMat));
       if (intMat && intMat != allMat) {
@@ -273,18 +273,18 @@ PetscErrorCode testLagrange(PetscHashLag lagTable, DM K, PetscInt dim, PetscInt 
         PetscCall(PetscViewerASCIIPopTab(PETSC_VIEWER_STDOUT_SELF));
 
         PetscCall(MatGetInfo(intMat, MAT_LOCAL, &info));
-        PetscCall(PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_SELF, "Interior matrix: %D nonzeros\n", (PetscInt) info.nz_used));
+        PetscCall(PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_SELF, "Interior matrix: %" PetscInt_FMT " nonzeros\n", (PetscInt) info.nz_used));
         PetscCall(PetscLagNodeIndicesGetData_Internal(lag->intNodeIndices, &intNodeIdxDim, &intNodeVecDim, &intNnodes, &intNodeIdx, &intNodeVec));
-        PetscCheckFalse(intNodeIdxDim != nodeIdxDim || intNodeVecDim != nodeVecDim,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Interior node indices not the same shale as all node indices");
-        PetscCheckFalse(intNnodes != spintdim,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Incorrect interior nNodes");
+        PetscCheck(intNodeIdxDim == nodeIdxDim && intNodeVecDim == nodeVecDim,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Interior node indices not the same shale as all node indices");
+        PetscCheck(intNnodes == spintdim,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Incorrect interior nNodes");
         PetscCall(PetscArraycmp(intNodeIdx, nodeIdx, nodeIdxDim * intNnodes, &same));
         PetscCheck(same,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Interior node indices not the same as start of all node indices");
         PetscCall(PetscArraycmp(intNodeVec, nodeVec, nodeVecDim * intNnodes, &same));
         PetscCheck(same,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Interior node vectors not the same as start of all node vectors");
       } else if (intMat) {
         PetscCall(PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_SELF, "Interior data is the same as all data\n"));
-        PetscCheckFalse(intNodes != allNodes,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Interior nodes should be the same as all nodes");
-        PetscCheckFalse(lag->intNodeIndices != lag->allNodeIndices,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Interior node indices should be the same as all node indices");
+        PetscCheck(intNodes == allNodes,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Interior nodes should be the same as all nodes");
+        PetscCheck(lag->intNodeIndices == lag->allNodeIndices,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Interior node indices should be the same as all node indices");
       }
     }
     if (dim <= 2 && spintdim) {
@@ -300,7 +300,7 @@ PetscErrorCode testLagrange(PetscHashLag lagTable, DM K, PetscInt dim, PetscInt 
         Mat symMat;
 
         PetscCall(PetscDualSpaceCreateInteriorSymmetryMatrix_Lagrange(sp, o, &symMat));
-        PetscCall(PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_SELF, "Interior node symmetry matrix for orientation %D:\n", o));
+        PetscCall(PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_SELF, "Interior node symmetry matrix for orientation %" PetscInt_FMT ":\n", o));
         PetscCall(PetscViewerASCIIPushTab(PETSC_VIEWER_STDOUT_SELF));
         PetscCall(MatView(symMat, PETSC_VIEWER_STDOUT_SELF));
         PetscCall(PetscViewerASCIIPopTab(PETSC_VIEWER_STDOUT_SELF));
@@ -322,19 +322,18 @@ int main (int argc, char **argv)
   PetscBool       continuous;
   PetscBool       trimmed;
   DM              dm;
-  PetscErrorCode  ierr;
 
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   dim = 3;
   tensorCell = 0;
   continuous = PETSC_FALSE;
   trimmed = PETSC_FALSE;
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"","Options for PETSCDUALSPACELAGRANGE test","none");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,"","Options for PETSCDUALSPACELAGRANGE test","none");
   PetscCall(PetscOptionsRangeInt("-dim", "The spatial dimension","ex1.c",dim,&dim,NULL,0,3));
   PetscCall(PetscOptionsRangeInt("-tensor", "(0) simplex (1) hypercube (2) wedge","ex1.c",tensorCell,&tensorCell,NULL,0,2));
   PetscCall(PetscOptionsBool("-continuous", "Whether the dual space has continuity","ex1.c",continuous,&continuous,NULL));
   PetscCall(PetscOptionsBool("-trimmed", "Whether the dual space matches a trimmed polynomial space","ex1.c",trimmed,&trimmed,NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscCall(PetscHashLagCreate(&lagTable));
 
   if (tensorCell < 2) {

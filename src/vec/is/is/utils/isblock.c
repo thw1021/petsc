@@ -18,7 +18,7 @@
 
    Level: intermediate
 
-.seealso: ISExpandIndicesGeneral()
+.seealso: `ISExpandIndicesGeneral()`
 @*/
 PetscErrorCode  ISCompressIndicesGeneral(PetscInt n,PetscInt nkeys,PetscInt bs,PetscInt imax,const IS is_in[],IS is_out[])
 {
@@ -60,7 +60,7 @@ PetscErrorCode  ISCompressIndicesGeneral(PetscInt n,PetscInt nkeys,PetscInt bs,P
         isz++;
       }
 #else
-      PetscCheckFalse(ival>Nbs,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"index greater than mat-dim");
+      PetscCheck(ival<=Nbs,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"index greater than mat-dim");
       if (!PetscBTLookupSet(table,ival)) nidx[isz++] = ival;
 #endif
     }
@@ -72,11 +72,11 @@ PetscErrorCode  ISCompressIndicesGeneral(PetscInt n,PetscInt nkeys,PetscInt bs,P
     j    = 0;
     while (tpos) {
       PetscCall(PetscTableGetNext(gid1_lid1,&tpos,&gid1,&tt));
-      PetscCheckFalse(tt-- > isz,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"index greater than array-dim");
+      PetscCheck(tt-- <= isz,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"index greater than array-dim");
       nidx[tt] = gid1 - 1;
       j++;
     }
-    PetscCheckFalse(j != isz,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"table error: jj != isz");
+    PetscCheck(j == isz,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"table error: jj != isz");
     PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)is_in[i]),isz,nidx,PETSC_OWN_POINTER,(is_out+i)));
 #else
     PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)is_in[i]),isz,nidx,PETSC_COPY_VALUES,(is_out+i)));
@@ -112,7 +112,7 @@ PetscErrorCode  ISCompressIndicesSorted(PetscInt n,PetscInt bs,PetscInt imax,con
   /* Now check max size */
   for (i=0,maxsz=0; i<imax; i++) {
     PetscCall(ISGetLocalSize(is_in[i],&len));
-    PetscCheckFalse(len%bs !=0,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Indices are not block ordered");
+    PetscCheck(len%bs == 0,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Indices are not block ordered");
     len = len/bs; /* The reduced index size */
     if (len > maxsz) maxsz = len;
   }
@@ -137,15 +137,15 @@ PetscErrorCode  ISCompressIndicesSorted(PetscInt n,PetscInt bs,PetscInt imax,con
       }
     }
     PetscCall(ISGetIndices(is_in[i],&idx));
-    PetscCheckFalse(len%bs !=0,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Indices are not block ordered");
+    PetscCheck(len%bs == 0,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Indices are not block ordered");
 
     len       = len/bs; /* The reduced index size */
     idx_local = idx;
     for (j=0; j<len; j++) {
       val = idx_local[0];
-      PetscCheckFalse(val%bs != 0,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Indices are not block ordered");
+      PetscCheck(val%bs == 0,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Indices are not block ordered");
       for (k=0; k<bs; k++) {
-        PetscCheckFalse(val+k != idx_local[k],PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Indices are not block ordered");
+        PetscCheck(val+k == idx_local[k],PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Indices are not block ordered");
       }
       nidx[j]    = val/bs;
       idx_local += bs;
@@ -172,7 +172,7 @@ PetscErrorCode  ISCompressIndicesSorted(PetscInt n,PetscInt bs,PetscInt imax,con
 
    Level: intermediate
 
-.seealso: ISCompressIndicesGeneral()
+.seealso: `ISCompressIndicesGeneral()`
 @*/
 PetscErrorCode  ISExpandIndicesGeneral(PetscInt n,PetscInt nkeys,PetscInt bs,PetscInt imax,const IS is_in[],IS is_out[])
 {

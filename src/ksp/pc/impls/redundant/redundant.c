@@ -48,7 +48,7 @@ static PetscErrorCode PCView_Redundant(PC pc,PetscViewer viewer)
     if (!red->psubcomm) {
       PetscCall(PetscViewerASCIIPrintf(viewer,"  Not yet setup\n"));
     } else {
-      PetscCall(PetscViewerASCIIPrintf(viewer,"  First (color=0) of %D PCs follows\n",red->nsubcomm));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"  First (color=0) of %" PetscInt_FMT " PCs follows\n",red->nsubcomm));
       PetscCall(PetscViewerGetSubViewer(viewer,((PetscObject)red->pc)->comm,&subviewer));
       if (!red->psubcomm->color) { /* only view first redundant pc */
         PetscCall(PetscViewerASCIIPushTab(subviewer));
@@ -293,9 +293,9 @@ static PetscErrorCode PCSetFromOptions_Redundant(PetscOptionItems *PetscOptionsO
   PC_Redundant   *red = (PC_Redundant*)pc->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Redundant options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Redundant options");
   PetscCall(PetscOptionsInt("-pc_redundant_number","Number of redundant pc","PCRedundantSetNumber",red->nsubcomm,&red->nsubcomm,NULL));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -325,7 +325,7 @@ PetscErrorCode PCRedundantSetNumber(PC pc,PetscInt nredundant)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
-  PetscCheckFalse(nredundant <= 0,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONG, "num of redundant pc %D must be positive",nredundant);
+  PetscCheck(nredundant > 0,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_WRONG, "num of redundant pc %" PetscInt_FMT " must be positive",nredundant);
   PetscTryMethod(pc,"PCRedundantSetNumber_C",(PC,PetscInt),(pc,nredundant));
   PetscFunctionReturn(0);
 }
@@ -498,8 +498,8 @@ PetscErrorCode PCRedundantGetOperators(PC pc,Mat *mat,Mat *pmat)
    Developer Notes:
     Note that PCSetInitialGuessNonzero()  is not used by this class but likely should be.
 
-.seealso:  PCCreate(), PCSetType(), PCType (for list of available types), PCRedundantSetScatter(),
-           PCRedundantGetKSP(), PCRedundantGetOperators(), PCRedundantSetNumber()
+.seealso: `PCCreate()`, `PCSetType()`, `PCType`, `PCRedundantSetScatter()`,
+          `PCRedundantGetKSP()`, `PCRedundantGetOperators()`, `PCRedundantSetNumber()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_Redundant(PC pc)

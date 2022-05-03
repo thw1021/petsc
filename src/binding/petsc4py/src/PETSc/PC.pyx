@@ -863,6 +863,43 @@ cdef class PC(Object):
         CHKERR( PCHPDDMGetSTShareSubKSP(self.pc, &cval) )
         return toBool(cval)
 
+    def setHPDDMDeflationMat(self, IS uis, Mat U):
+        CHKERR( PCHPDDMSetDeflationMat(self.pc, uis.iset, U.mat) )
+
+    # --- SPAI ---
+
+    def setSPAIEpsilon(self, val):
+        cdef PetscReal cval = asReal(val)
+        CHKERR( PCSPAISetEpsilon(self.pc, cval) )
+
+    def setSPAINBSteps(self, nbsteps):
+        cdef PetscInt cval = asInt(nbsteps)
+        CHKERR( PCSPAISetNBSteps(self.pc, cval) )
+
+    def setSPAIMax(self, maxval):
+        cdef PetscInt cval = asInt(maxval)
+        CHKERR( PCSPAISetMax(self.pc, cval) )
+
+    def setSPAIMaxNew(self, maxval):
+        cdef PetscInt cval = asInt(maxval)
+        CHKERR( PCSPAISetMaxNew(self.pc, cval) )
+
+    def setSPAIBlockSize(self, n):
+        cdef PetscInt cval = asInt(n)
+        CHKERR( PCSPAISetBlockSize(self.pc, cval) )
+
+    def setSPAICacheSize(self, size):
+        cdef PetscInt cval = asInt(size)
+        CHKERR( PCSPAISetCacheSize(self.pc, cval) )
+
+    def setSPAIVerbose(self, level):
+        cdef PetscInt cval = asInt(level)
+        CHKERR( PCSPAISetVerbose(self.pc, cval) )
+
+    def setSPAISp(self, sym):
+        cdef PetscInt cval = asInt(sym)
+        CHKERR( PCSPAISetSp(self.pc, cval) )
+
 # --------------------------------------------------------------------
 
 del PCType

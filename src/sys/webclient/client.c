@@ -35,7 +35,7 @@ $    cat newkey.pem newcert.pem > sslclient.pem
     and put the resulting file in either the current directory (with the application) or in the home directory. This seems kind of
     silly but it was all I could figure out.
 
-.seealso: PetscSSLDestroyContext(), PetscHTTPSConnect(), PetscHTTPSRequest()
+.seealso: `PetscSSLDestroyContext()`, `PetscHTTPSConnect()`, `PetscHTTPSRequest()`
 
 @*/
 PetscErrorCode PetscSSLInitializeContext(SSL_CTX **octx)
@@ -77,10 +77,10 @@ PetscErrorCode PetscSSLInitializeContext(SSL_CTX **octx)
     }
 
     /* Load our keys and certificates*/
-    PetscCheckFalse(!(SSL_CTX_use_certificate_chain_file(ctx,keyfile)),PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Cannot read certificate file");
+    PetscCheck(SSL_CTX_use_certificate_chain_file(ctx,keyfile),PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Cannot read certificate file");
 
     SSL_CTX_set_default_passwd_cb(ctx,password_cb);
-    PetscCheckFalse(!(SSL_CTX_use_PrivateKey_file(ctx,keyfile,SSL_FILETYPE_PEM)),PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Cannot read key file");
+    PetscCheck(SSL_CTX_use_PrivateKey_file(ctx,keyfile,SSL_FILETYPE_PEM),PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Cannot read key file");
 #endif
 
     *octx = ctx;
@@ -95,7 +95,7 @@ PetscErrorCode PetscSSLInitializeContext(SSL_CTX **octx)
 
     Level: advanced
 
-.seealso: PetscSSLInitializeContext(), PetscHTTPSConnect()
+.seealso: `PetscSSLInitializeContext()`, `PetscHTTPSConnect()`
 @*/
 PetscErrorCode PetscSSLDestroyContext(SSL_CTX *ctx)
 {
@@ -176,7 +176,7 @@ static PetscErrorCode PetscHTTPBuildRequest(const char type[],const char url[],c
 
     Level: advanced
 
-.seealso: PetscHTTPRequest(), PetscHTTPSConnect(), PetscSSLInitializeContext(), PetscSSLDestroyContext(), PetscPullJSONValue()
+.seealso: `PetscHTTPRequest()`, `PetscHTTPSConnect()`, `PetscSSLInitializeContext()`, `PetscSSLDestroyContext()`, `PetscPullJSONValue()`
 
 @*/
 PetscErrorCode PetscHTTPSRequest(const char type[],const char url[],const char header[],const char ctype[],const char body[],SSL *ssl,char buff[],size_t buffsize)
@@ -193,7 +193,7 @@ PetscErrorCode PetscHTTPSRequest(const char type[],const char url[],const char h
   r = SSL_write(ssl,request,(int)request_len);
   switch (SSL_get_error(ssl,r)) {
     case SSL_ERROR_NONE:
-      PetscCheckFalse(request_len != (size_t)r,PETSC_COMM_SELF,PETSC_ERR_LIB,"Incomplete write to SSL socket");
+      PetscCheck(request_len == (size_t)r,PETSC_COMM_SELF,PETSC_ERR_LIB,"Incomplete write to SSL socket");
       break;
     default:
       SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"SSL socket write problem");
@@ -265,7 +265,7 @@ PetscErrorCode PetscHTTPSRequest(const char type[],const char url[],const char h
 
     Level: advanced
 
-.seealso: PetscHTTPSRequest(), PetscOpenSocket(), PetscHTTPSConnect(), PetscPullJSONValue()
+.seealso: `PetscHTTPSRequest()`, `PetscOpenSocket()`, `PetscHTTPSConnect()`, `PetscPullJSONValue()`
 @*/
 PetscErrorCode PetscHTTPRequest(const char type[],const char url[],const char header[],const char ctype[],const char body[],int sock,char buff[],size_t buffsize)
 {
@@ -298,7 +298,7 @@ PetscErrorCode PetscHTTPRequest(const char type[],const char url[],const char he
 
     Level: advanced
 
-.seealso: PetscOpenSocket(), PetscHTTPSRequest(), PetscSSLInitializeContext()
+.seealso: `PetscOpenSocket()`, `PetscHTTPSRequest()`, `PetscSSLInitializeContext()`
 @*/
 PetscErrorCode PetscHTTPSConnect(const char host[],int port,SSL_CTX *ctx,int *sock,SSL **ssl)
 {
@@ -312,7 +312,7 @@ PetscErrorCode PetscHTTPSConnect(const char host[],int port,SSL_CTX *ctx,int *so
   *ssl = SSL_new(ctx);
   sbio = BIO_new_socket(*sock,BIO_NOCLOSE);
   SSL_set_bio(*ssl,sbio,sbio);
-  PetscCheckFalse(SSL_connect(*ssl) <= 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"SSL connect error");
+  PetscCheck(SSL_connect(*ssl) > 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"SSL connect error");
   PetscFunctionReturn(0);
 }
 

@@ -4,7 +4,7 @@
 static PetscErrorCode KSPSetUp_TFQMR(KSP ksp)
 {
   PetscFunctionBegin;
-  PetscCheckFalse(ksp->pc_side == PC_SYMMETRIC,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"no symmetric preconditioning for KSPTFQMR");
+  PetscCheck(ksp->pc_side != PC_SYMMETRIC,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"no symmetric preconditioning for KSPTFQMR");
   PetscCall(KSPSetWorkVecs(ksp,9));
   PetscFunctionReturn(0);
 }
@@ -140,7 +140,7 @@ static PetscErrorCode  KSPSolve_TFQMR(KSP ksp)
    References:
 .  * - Freund, 1993
 
-.seealso: KSPCreate(), KSPSetType(), KSPType (for list of available types), KSP, KSPTCQMR
+.seealso: `KSPCreate()`, `KSPSetType()`, `KSPType`, `KSP`, `KSPTCQMR`
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_TFQMR(KSP ksp)
 {

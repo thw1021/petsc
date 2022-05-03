@@ -5,9 +5,9 @@ static PetscErrorCode PetscSpaceSetFromOptions_Ptrimmed(PetscOptionItems *PetscO
   PetscSpace_Ptrimmed *pt = (PetscSpace_Ptrimmed *) sp->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"PetscSpace polynomial options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"PetscSpace polynomial options");
   PetscCall(PetscOptionsInt("-petscspace_ptrimmed_form_degree", "form degree of trimmed space", "PetscSpacePTrimmedSetFormDegree", pt->formDegree, &(pt->formDegree), NULL));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -19,7 +19,7 @@ static PetscErrorCode PetscSpacePTrimmedView_Ascii(PetscSpace sp, PetscViewer v)
   PetscFunctionBegin;
   f = pt->formDegree;
   tdegree = f == 0 ? sp->degree : sp->degree + 1;
-  PetscCall(PetscViewerASCIIPrintf(v, "Trimmed polynomials %D%s-forms of degree %D (P-%D/\\%D)\n", PetscAbsInt(f), f < 0 ? "*" : "", sp->degree, tdegree, PetscAbsInt(f)));
+  PetscCall(PetscViewerASCIIPrintf(v, "Trimmed polynomials %" PetscInt_FMT "%s-forms of degree %" PetscInt_FMT " (P-%" PetscInt_FMT "/\\%" PetscInt_FMT ")\n", PetscAbsInt(f), f < 0 ? "*" : "", sp->degree, tdegree, PetscAbsInt(f)));
   PetscFunctionReturn(0);
 }
 
@@ -61,12 +61,12 @@ static PetscErrorCode PetscSpaceSetUp_Ptrimmed(PetscSpace sp)
 
   PetscFunctionBegin;
   if (pt->setupCalled) PetscFunctionReturn(0);
-  PetscCheckFalse(pt->formDegree < -sp->Nv || pt->formDegree > sp->Nv,PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_OUTOFRANGE, "Form degree %D not in valid range [%D,%D]", pt->formDegree, sp->Nv, sp->Nv);
+  PetscCheck(pt->formDegree >= -sp->Nv && pt->formDegree <= sp->Nv,PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_OUTOFRANGE, "Form degree %" PetscInt_FMT " not in valid range [%" PetscInt_FMT ",%" PetscInt_FMT "]", pt->formDegree, sp->Nv, sp->Nv);
   PetscCall(PetscDTBinomialInt(sp->Nv, PetscAbsInt(pt->formDegree), &Nf));
   if (sp->Nc == PETSC_DETERMINE) {
     sp->Nc = Nf;
   }
-  PetscCheckFalse(sp->Nc % Nf,PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_INCOMP, "Number of components %D is not a multiple of form dimension %D", sp->Nc, Nf);
+  PetscCheck(sp->Nc % Nf == 0,PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_INCOMP, "Number of components %" PetscInt_FMT " is not a multiple of form dimension %" PetscInt_FMT, sp->Nc, Nf);
   if (sp->Nc != Nf) {
     PetscSpace  subsp;
     PetscInt    nCopies = sp->Nc / Nf;
@@ -108,7 +108,7 @@ static PetscErrorCode PetscSpaceSetUp_Ptrimmed(PetscSpace sp)
   if (sp->degree == PETSC_DEFAULT) {
     sp->degree = 0;
   } else if (sp->degree < 0) {
-    SETERRQ(PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_OUTOFRANGE, "Invalid negative degree %D", sp->degree);
+    SETERRQ(PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_OUTOFRANGE, "Invalid negative degree %" PetscInt_FMT, sp->degree);
   }
   sp->maxDegree = (pt->formDegree == 0 || PetscAbsInt(pt->formDegree) == sp->Nv) ? sp->degree : sp->degree + 1;
   if (pt->formDegree == 0 || PetscAbsInt(pt->formDegree) == sp->Nv) {
@@ -170,7 +170,7 @@ static PetscErrorCode PetscSpaceEvaluate_Ptrimmed(PetscSpace sp, PetscInt npoint
   degree = f == 0 ? sp->degree : sp->degree + 1;
   PetscCall(PetscDTBinomialInt(dim, PetscAbsInt(f), &Nf));
   Ncopies = Nc / Nf;
-  PetscCheckFalse(Ncopies != 1,PetscObjectComm((PetscObject) sp), PETSC_ERR_PLIB, "Multicopy spaces should have been converted to PETSCSPACESUM");
+  PetscCheck(Ncopies == 1,PetscObjectComm((PetscObject) sp), PETSC_ERR_PLIB, "Multicopy spaces should have been converted to PETSCSPACESUM");
   PetscCall(PetscDTBinomialInt(dim + jet, dim, &Njet));
   PetscCall(PetscDTPTrimmedSize(dim, degree, f, &Nb));
   PetscCall(DMGetWorkArray(dm, Nb * Nf * Njet * npoints, MPIU_REAL, &eval));
@@ -262,7 +262,7 @@ static PetscErrorCode PetscSpaceEvaluate_Ptrimmed(PetscSpace sp, PetscInt npoint
 
   Level: intermediate
 
-.seealso: PetscDTAltV, PetscDTPTrimmedEvalJet(), PetscSpacePTrimmedGetFormDegree()
+.seealso: `PetscDTAltV`, `PetscDTPTrimmedEvalJet()`, `PetscSpacePTrimmedGetFormDegree()`
 @*/
 PetscErrorCode PetscSpacePTrimmedSetFormDegree(PetscSpace sp, PetscInt formDegree)
 {
@@ -283,7 +283,7 @@ PetscErrorCode PetscSpacePTrimmedSetFormDegree(PetscSpace sp, PetscInt formDegre
 
   Level: intermediate
 
-.seealso: PetscDTAltV, PetscDTPTrimmedEvalJet(), PetscSpacePTrimmedSetFormDegree()
+.seealso: `PetscDTAltV`, `PetscDTPTrimmedEvalJet()`, `PetscSpacePTrimmedSetFormDegree()`
 @*/
 PetscErrorCode PetscSpacePTrimmedGetFormDegree(PetscSpace sp, PetscInt *formDegree)
 {
@@ -321,7 +321,7 @@ static PetscErrorCode PetscSpaceGetHeightSubspace_Ptrimmed(PetscSpace sp, PetscI
 
   PetscFunctionBegin;
   PetscCall(PetscSpaceGetNumVariables(sp, &dim));
-  PetscCheckFalse(height > dim || height < 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Asked for space at height %D for dimension %D space", height, dim);
+  PetscCheck(height <= dim && height >= 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Asked for space at height %" PetscInt_FMT " for dimension %" PetscInt_FMT " space", height, dim);
   if (!pt->subspaces) PetscCall(PetscCalloc1(dim, &(pt->subspaces)));
   if ((dim - height) <= PetscAbsInt(pt->formDegree)) {
     if (!pt->subspaces[height-1]) {
@@ -373,7 +373,7 @@ static PetscErrorCode PetscSpaceInitialize_Ptrimmed(PetscSpace sp)
 
   Level: intermediate
 
-.seealso: PetscSpaceType, PetscSpaceCreate(), PetscSpaceSetType(), PetscDTPTrimmedEvalJet()
+.seealso: `PetscSpaceType`, `PetscSpaceCreate()`, `PetscSpaceSetType()`, `PetscDTPTrimmedEvalJet()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PetscSpaceCreate_Ptrimmed(PetscSpace sp)

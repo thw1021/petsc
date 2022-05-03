@@ -168,11 +168,11 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, PetscInt stepi, PetscReal time, 
   Vec               *XsubArray;
 
   PetscFunctionBeginUser;
-  PetscCheckFalse(ctx->num_species!=2,PETSC_COMM_SELF, PETSC_ERR_PLIB, "ctx->num_species %D != 2",ctx->num_species);
+  PetscCheck(ctx->num_species==2,PETSC_COMM_SELF, PETSC_ERR_PLIB, "ctx->num_species %" PetscInt_FMT " != 2",ctx->num_species);
   PetscCall(VecGetDM(X, &pack));
   PetscCheck(pack,PETSC_COMM_SELF, PETSC_ERR_PLIB, "no DM");
   PetscCall(DMCompositeGetNumberDM(pack,&nDMs));
-  PetscCheckFalse(nDMs != ctx->num_grids*ctx->batch_sz,PETSC_COMM_SELF, PETSC_ERR_PLIB, "nDMs != ctx->num_grids*ctx->batch_sz %D != %D",nDMs,ctx->num_grids*ctx->batch_sz);
+  PetscCheck(nDMs == ctx->num_grids*ctx->batch_sz,PETSC_COMM_SELF, PETSC_ERR_PLIB, "nDMs != ctx->num_grids*ctx->batch_sz %" PetscInt_FMT " != %" PetscInt_FMT,nDMs,ctx->num_grids*ctx->batch_sz);
   PetscCall(PetscMalloc(sizeof(*XsubArray)*nDMs, &XsubArray));
   PetscCall(DMCompositeGetAccessArray(pack, X, nDMs, NULL, XsubArray)); // read only
   PetscCall(TSGetTimeStep(ts,&dt));
@@ -242,8 +242,8 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, PetscInt stepi, PetscReal time, 
   PetscCall(TSGetConvergedReason(ts,&reason));
   PetscCall(TSGetConvergedReason(ts,&reason));
   if ((rectx->plotting) || stepi == 0 || reason || rectx->pulse_start == time + 0.98*dt) {
-    PetscCall(PetscPrintf(ctx->comm, "testSpitzer: %4D) time=%11.4e n_e= %10.3e E= %10.3e J= %10.3e J_re= %10.3e %.3g%% Te_kev= %10.3e Z_eff=%g E/J to eta ratio= %g (diff=%g) %s %s spit_eta=%g\n",stepi,time,n_e/ctx->n_0,ctx->Ez,J,J_re,100*J_re/J, Te_kev,Z,ratio,old_ratio-ratio, rectx->use_spitzer_eta ? "using Spitzer eta*J E" : "constant E",rectx->pulse_start != time + 0.98*dt ? "normal" : "transition",spit_eta));
-    PetscCheckFalse(rectx->pulse_start == time + 0.98*dt,PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"Spitzer complete ratio=%g",ratio);
+    PetscCall(PetscPrintf(ctx->comm, "testSpitzer: %4" PetscInt_FMT ") time=%11.4e n_e= %10.3e E= %10.3e J= %10.3e J_re= %10.3e %.3g%% Te_kev= %10.3e Z_eff=%g E/J to eta ratio= %g (diff=%g) %s %s spit_eta=%g\n",stepi,(double)time,(double)(n_e/ctx->n_0),(double)ctx->Ez,(double)J,(double)J_re,(double)(100*J_re/J),(double)Te_kev,(double)Z,(double)ratio,(double)(old_ratio-ratio), rectx->use_spitzer_eta ? "using Spitzer eta*J E" : "constant E",rectx->pulse_start != time + 0.98*dt ? "normal" : "transition",(double)spit_eta));
+    PetscCheck(rectx->pulse_start != (time + 0.98*dt),PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"Spitzer complete ratio=%g",(double)ratio);
   }
   old_ratio = ratio;
   PetscFunctionReturn(0);
@@ -318,7 +318,7 @@ static PetscErrorCode testStable(TS ts, Vec X, PetscInt stepi, PetscReal time, P
     PetscCall(DMPlexComputeIntegralFEM(plex,X2,tt,NULL));
     lpm1 = PetscPowReal(PetscRealPart(tt[0]),1./ppp);
   }
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%s %D) time=%10.3e n-%d norm electrons/max=%20.13e ions/max=%20.13e\n", "----",stepi,time,(int)ppp,ediff/lpm0,idiff/lpm1));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%s %" PetscInt_FMT ") time=%10.3e n-%d norm electrons/max=%20.13e ions/max=%20.13e\n", "----",stepi,(double)time,(int)ppp,(double)(ediff/lpm0),(double)(idiff/lpm1)));
   /* view */
   PetscCall(VecCopy(X2,X));
   PetscCall(VecDestroy(&X2));
@@ -407,7 +407,7 @@ static PetscErrorCode FormSource(TS ts, PetscReal ftime, Vec X_dummmy, Vec F, vo
       dne_dt = new_imp_rate*rectx->Ne_ion /* *ctx->t_0 */;
       tilda_ns[0] = dne_dt;        tilda_ns[rectx->imp_idx] = dni_dt;
       temps[0]    = rectx->T_cold;    temps[rectx->imp_idx] = rectx->T_cold;
-      PetscCall(PetscInfo(ctx->plex[0], "\tHave new_imp_rate= %10.3e time= %10.3e de/dt= %10.3e di/dt= %10.3e ***\n",new_imp_rate,ftime,dne_dt,dni_dt));
+      PetscCall(PetscInfo(ctx->plex[0], "\tHave new_imp_rate= %10.3e time= %10.3e de/dt= %10.3e di/dt= %10.3e ***\n",(double)new_imp_rate,(double)ftime,(double)dne_dt,(double)dni_dt));
       PetscCall(DMCompositeGetAccessArray(pack, F, ctx->num_grids*ctx->batch_sz, NULL, globFarray));
       for (PetscInt grid=0 ; grid<ctx->num_grids ; grid++) {
         /* add it */
@@ -459,7 +459,7 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
 
     rectx->plotStep = stepi;
   } else {
-    if (rectx->plotting) PetscPrintf(PETSC_COMM_WORLD," ERROR rectx->plotting=%D step %D\n",rectx->plotting,stepi);
+    if (rectx->plotting) PetscPrintf(PETSC_COMM_WORLD," ERROR rectx->plotting=%s step %" PetscInt_FMT "\n",PetscBools[rectx->plotting],stepi);
     /* diagnostics + change E field with Sptizer (not just a monitor) - can we lag this? */
     PetscCall(rectx->test(ts,X,stepi,time,reason ? PETSC_TRUE : PETSC_FALSE, ctx, rectx));
   }
@@ -474,14 +474,14 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
         PetscCall(VecNorm(globXArray[ LAND_PACK_IDX(i,grid) ],NORM_2,&val));
         if (i==0) rval = val;
         else if ((val=PetscAbs(val-rval)/rval) > 1000*PETSC_MACHINE_EPSILON) {
-          PetscCall(PetscPrintf(PETSC_COMM_SELF, " [%D] Warning %D.%D) diff = %2.15e\n",rank,grid,i,val));
+          PetscCall(PetscPrintf(PETSC_COMM_SELF, " [%d] Warning %" PetscInt_FMT ".%" PetscInt_FMT ") diff = %2.15e\n",rank,grid,i,(double)val));
           nerrors++;
         }
       }
       if (nerrors) {
-        PetscCall(PetscPrintf(PETSC_COMM_SELF, " ***** [%D] ERROR max %D errors\n",rank,nerrors));
+        PetscCall(PetscPrintf(PETSC_COMM_SELF, " ***** [%d] ERROR max %" PetscInt_FMT " errors\n",rank,nerrors));
       } else {
-        PetscCall(PetscPrintf(PETSC_COMM_WORLD, "[%D] %D) batch consistency check OK\n",rank,grid));
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD, "[%d] %" PetscInt_FMT ") batch consistency check OK\n",rank,grid));
       }
     }
   }
@@ -533,7 +533,7 @@ static PetscErrorCode pulseSrc(PetscReal time, PetscReal *rho, LandauCtx *ctx)
   REctx *rectx = (REctx*)ctx->data;
 
   PetscFunctionBeginUser;
-  PetscCheckFalse(rectx->pulse_start == PETSC_MAX_REAL,PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"'-ex2_pulse_start_time X' must be used with '-ex2_impurity_source_type pulse'");
+  PetscCheck(rectx->pulse_start != PETSC_MAX_REAL,PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"'-ex2_pulse_start_time X' must be used with '-ex2_impurity_source_type pulse'");
   if (time < rectx->pulse_start || time > rectx->pulse_start + 3*rectx->pulse_width) *rho = 0;
   /* else if (0) { */
   /*   double t = time - rectx->pulse_start, start = rectx->pulse_width, stop = 2*rectx->pulse_width, cycle = 3*rectx->pulse_width, steep = 5, xi = 0.75 - (stop - start)/(2* cycle); */
@@ -555,7 +555,6 @@ static PetscErrorCode pulseSrc(PetscReal time, PetscReal *rho, LandauCtx *ctx)
 #define __FUNCT__ "ProcessREOptions"
 static PetscErrorCode ProcessREOptions(REctx *rectx, const LandauCtx *ctx, DM dm, const char prefix[])
 {
-  PetscErrorCode    ierr;
   PetscFunctionList plist = NULL, testlist = NULL, elist = NULL;
   char              pname[256],testname[256],ename[256];
   DM                dm_dummy;
@@ -596,17 +595,17 @@ static PetscErrorCode ProcessREOptions(REctx *rectx, const LandauCtx *ctx, DM dm
   PetscCall(PetscFunctionListAdd(&elist,"constant",&EConstant));
   PetscCall(PetscStrcpy(ename,"constant"));
 
-  ierr = PetscOptionsBegin(PETSC_COMM_SELF, prefix, "Options for Runaway/seed electron model", "none");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_SELF, prefix, "Options for Runaway/seed electron model", "none");
   PetscCall(PetscOptionsReal("-ex2_plot_dt", "Plotting interval", "ex2.c", rectx->plotDt, &rectx->plotDt, NULL));
   if (rectx->plotDt < 0) rectx->plotDt = 1e30;
   if (rectx->plotDt == 0) rectx->plotDt = 1e-30;
   PetscCall(PetscOptionsInt("-ex2_print_period", "Plotting interval", "ex2.c", rectx->print_period, &rectx->print_period, NULL));
   PetscCall(PetscOptionsInt("-ex2_grid_view_idx", "grid_view_idx", "ex2.c", rectx->grid_view_idx, &rectx->grid_view_idx, NULL));
-  PetscCheckFalse(rectx->grid_view_idx >= ctx->num_grids,PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"rectx->grid_view_idx (%D) >= ctx->num_grids (%D)",rectx->imp_idx,ctx->num_grids);
+  PetscCheck(rectx->grid_view_idx < ctx->num_grids,PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"rectx->grid_view_idx (%" PetscInt_FMT ") >= ctx->num_grids (%" PetscInt_FMT ")",rectx->imp_idx,ctx->num_grids);
   PetscCall(PetscOptionsFList("-ex2_impurity_source_type","Name of impurity source to run","",plist,pname,pname,sizeof(pname),NULL));
   PetscCall(PetscOptionsFList("-ex2_test_type","Name of test to run","",testlist,testname,testname,sizeof(testname),NULL));
   PetscCall(PetscOptionsInt("-ex2_impurity_index", "index of sink for impurities", "none", rectx->imp_idx, &rectx->imp_idx, NULL));
-  PetscCheckFalse((rectx->imp_idx >= ctx->num_species || rectx->imp_idx < 1) && ctx->num_species > 1,PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"index of sink for impurities ions is out of range (%D), must be > 0 && < NS",rectx->imp_idx);
+  PetscCheck((rectx->imp_idx < ctx->num_species && rectx->imp_idx >= 1) || ctx->num_species <= 1,PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"index of sink for impurities ions is out of range (%" PetscInt_FMT "), must be > 0 && < NS",rectx->imp_idx);
   PetscCall(PetscOptionsFList("-ex2_e_field_type","Electric field type","",elist,ename,ename,sizeof(ename),NULL));
   rectx->Ne_ion = -ctx->charges[rectx->imp_idx]/ctx->charges[0];
   PetscCall(PetscOptionsReal("-ex2_t_cold","Temperature of cold electron and ions after ionization in keV","none",rectx->T_cold,&rectx->T_cold, NULL));
@@ -617,8 +616,8 @@ static PetscErrorCode ProcessREOptions(REctx *rectx, const LandauCtx *ctx, DM dm
   PetscCall(PetscOptionsReal("-ex2_ion_potential","Potential to ionize impurity (should be array) in ev","none",rectx->ion_potential,&rectx->ion_potential, NULL));
   PetscCall(PetscOptionsReal("-ex2_inductance","Inductance E feild","none",rectx->L,&rectx->L, NULL));
   PetscCall(PetscOptionsBool("-ex2_connor_e_field_units","Scale Ex but Connor-Hastie E_c","none",Connor_E,&Connor_E, NULL));
-  PetscCall(PetscInfo(dm_dummy, "Num electrons from ions=%g, T_cold=%10.3e, ion potential=%10.3e, E_z=%10.3e v_0=%10.3e\n",rectx->Ne_ion,rectx->T_cold,rectx->ion_potential,ctx->Ez,ctx->v_0));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscCall(PetscInfo(dm_dummy, "Num electrons from ions=%g, T_cold=%10.3e, ion potential=%10.3e, E_z=%10.3e v_0=%10.3e\n",(double)rectx->Ne_ion,(double)rectx->T_cold,(double)rectx->ion_potential,(double)ctx->Ez,(double)ctx->v_0));
+  PetscOptionsEnd();
   /* get impurity source rate function */
   PetscCall(PetscFunctionListFind(plist,pname,&rectx->impuritySrcRate));
   PetscCheck(rectx->impuritySrcRate,PETSC_COMM_WORLD,PETSC_ERR_ARG_WRONG,"No impurity source function found '%s'",pname);
@@ -726,7 +725,6 @@ int main(int argc, char **argv)
     PetscCall(PetscLogStagePop());
     PetscCall(VecCopy(vec,X));
     PetscCall(VecDestroy(&vec));
-    ctx->aux_bool = PETSC_FALSE; // flag for not a clean Jacobian
   }
   /* go */
   PetscCall(PetscLogStageRegister("Solve", &stage));
@@ -758,7 +756,7 @@ int main(int argc, char **argv)
 /*TEST
 
   testset:
-    requires: p4est !complex double
+    requires: p4est !complex double defined(PETSC_USE_DMLANDAU_2D)
     output_file: output/ex2_0.out
     args: -dm_landau_num_species_grid 1,1 -dm_landau_Ez 0 -petscspace_degree 3 -petscspace_poly_tensor 1 -dm_landau_type p4est -dm_landau_ion_masses 2 -dm_landau_ion_charges 1 -dm_landau_thermal_temps 5,5 -dm_landau_n 2,2 -dm_landau_n_0 5e19 -ts_monitor -snes_rtol 1.e-10 -snes_stol 1.e-14 -snes_monitor -snes_converged_reason -snes_max_it 10 -ts_type arkimex -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-3 -ts_dt 1.e-1 -ts_max_time 1 -ts_adapt_clip .5,1.25 -ts_max_steps 2 -ts_adapt_scale_solve_failed 0.75 -ts_adapt_time_step_increase_delay 5 -ksp_type tfqmr -pc_type jacobi -dm_landau_amr_levels_max 2,2 -ex2_impurity_source_type pulse -ex2_pulse_start_time 1e-1 -ex2_pulse_width_time 10 -ex2_pulse_rate 1e-2 -ex2_t_cold .05 -ex2_plot_dt 1e-1 -dm_refine 0 -dm_landau_gpu_assembly true -dm_landau_batch_size 2
     test:

@@ -45,7 +45,7 @@ const char LimiterCitation[] = "@article{BergerAftosmisMurman2005,\n"
 
   Level: advanced
 
-.seealso: PetscLimiterRegisterAll(), PetscLimiterRegisterDestroy()
+.seealso: `PetscLimiterRegisterAll()`, `PetscLimiterRegisterDestroy()`
 
 @*/
 PetscErrorCode PetscLimiterRegister(const char sname[], PetscErrorCode (*function)(PetscLimiter))
@@ -69,7 +69,7 @@ PetscErrorCode PetscLimiterRegister(const char sname[], PetscErrorCode (*functio
 
   Level: intermediate
 
-.seealso: PetscLimiterGetType(), PetscLimiterCreate()
+.seealso: `PetscLimiterGetType()`, `PetscLimiterCreate()`
 @*/
 PetscErrorCode PetscLimiterSetType(PetscLimiter lim, PetscLimiterType name)
 {
@@ -107,7 +107,7 @@ PetscErrorCode PetscLimiterSetType(PetscLimiter lim, PetscLimiterType name)
 
   Level: intermediate
 
-.seealso: PetscLimiterSetType(), PetscLimiterCreate()
+.seealso: `PetscLimiterSetType()`, `PetscLimiterCreate()`
 @*/
 PetscErrorCode PetscLimiterGetType(PetscLimiter lim, PetscLimiterType *name)
 {
@@ -130,7 +130,7 @@ PetscErrorCode PetscLimiterGetType(PetscLimiter lim, PetscLimiterType *name)
 -  name - command line option
 
    Level: intermediate
-.seealso:  PetscLimiter, PetscLimiterView, PetscObjectViewFromOptions(), PetscLimiterCreate()
+.seealso: `PetscLimiter`, `PetscLimiterView`, `PetscObjectViewFromOptions()`, `PetscLimiterCreate()`
 @*/
 PetscErrorCode  PetscLimiterViewFromOptions(PetscLimiter A,PetscObject obj,const char name[])
 {
@@ -151,7 +151,7 @@ PetscErrorCode  PetscLimiterViewFromOptions(PetscLimiter A,PetscObject obj,const
 
   Level: beginner
 
-.seealso: PetscLimiterDestroy()
+.seealso: `PetscLimiterDestroy()`
 @*/
 PetscErrorCode PetscLimiterView(PetscLimiter lim, PetscViewer v)
 {
@@ -172,14 +172,13 @@ PetscErrorCode PetscLimiterView(PetscLimiter lim, PetscViewer v)
 
   Level: intermediate
 
-.seealso: PetscLimiterView()
+.seealso: `PetscLimiterView()`
 @*/
 PetscErrorCode PetscLimiterSetFromOptions(PetscLimiter lim)
 {
   const char    *defaultType;
   char           name[256];
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(lim, PETSCLIMITER_CLASSID, 1);
@@ -187,7 +186,7 @@ PetscErrorCode PetscLimiterSetFromOptions(PetscLimiter lim)
   else                                 defaultType = ((PetscObject) lim)->type_name;
   PetscCall(PetscLimiterRegisterAll());
 
-  ierr = PetscObjectOptionsBegin((PetscObject) lim);PetscCall(ierr);
+  PetscObjectOptionsBegin((PetscObject) lim);
   PetscCall(PetscOptionsFList("-petsclimiter_type", "Finite volume slope limiter", "PetscLimiterSetType", PetscLimiterList, defaultType, name, 256, &flg));
   if (flg) {
     PetscCall(PetscLimiterSetType(lim, name));
@@ -197,7 +196,7 @@ PetscErrorCode PetscLimiterSetFromOptions(PetscLimiter lim)
   if (lim->ops->setfromoptions) PetscCall((*lim->ops->setfromoptions)(lim));
   /* process any options handlers added with PetscObjectAddOptionsHandler() */
   PetscCall(PetscObjectProcessOptionsHandlers(PetscOptionsObject,(PetscObject) lim));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscCall(PetscLimiterViewFromOptions(lim, NULL, "-petsclimiter_view"));
   PetscFunctionReturn(0);
 }
@@ -212,7 +211,7 @@ PetscErrorCode PetscLimiterSetFromOptions(PetscLimiter lim)
 
   Level: intermediate
 
-.seealso: PetscLimiterView(), PetscLimiterDestroy()
+.seealso: `PetscLimiterView()`, `PetscLimiterDestroy()`
 @*/
 PetscErrorCode PetscLimiterSetUp(PetscLimiter lim)
 {
@@ -232,7 +231,7 @@ PetscErrorCode PetscLimiterSetUp(PetscLimiter lim)
 
   Level: beginner
 
-.seealso: PetscLimiterView()
+.seealso: `PetscLimiterView()`
 @*/
 PetscErrorCode PetscLimiterDestroy(PetscLimiter *lim)
 {
@@ -261,7 +260,7 @@ PetscErrorCode PetscLimiterDestroy(PetscLimiter *lim)
 
   Level: beginner
 
-.seealso: PetscLimiterSetType(), PETSCLIMITERSIN
+.seealso: `PetscLimiterSetType()`, `PETSCLIMITERSIN`
 @*/
 PetscErrorCode PetscLimiterCreate(MPI_Comm comm, PetscLimiter *lim)
 {
@@ -325,7 +324,7 @@ $ w_minmod(f) = 2 min(f,(1-f))             w_superbee(r) = 4 min((1-f), f)
 
   Level: beginner
 
-.seealso: PetscLimiterSetType(), PetscLimiterCreate()
+.seealso: `PetscLimiterSetType()`, `PetscLimiterCreate()`
 @*/
 PetscErrorCode PetscLimiterLimit(PetscLimiter lim, PetscReal flim, PetscReal *phi)
 {
@@ -388,7 +387,7 @@ static PetscErrorCode PetscLimiterInitialize_Sin(PetscLimiter lim)
 
   Level: intermediate
 
-.seealso: PetscLimiterType, PetscLimiterCreate(), PetscLimiterSetType()
+.seealso: `PetscLimiterType`, `PetscLimiterCreate()`, `PetscLimiterSetType()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PetscLimiterCreate_Sin(PetscLimiter lim)
@@ -456,7 +455,7 @@ static PetscErrorCode PetscLimiterInitialize_Zero(PetscLimiter lim)
 
   Level: intermediate
 
-.seealso: PetscLimiterType, PetscLimiterCreate(), PetscLimiterSetType()
+.seealso: `PetscLimiterType`, `PetscLimiterCreate()`, `PetscLimiterSetType()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PetscLimiterCreate_Zero(PetscLimiter lim)
@@ -524,7 +523,7 @@ static PetscErrorCode PetscLimiterInitialize_None(PetscLimiter lim)
 
   Level: intermediate
 
-.seealso: PetscLimiterType, PetscLimiterCreate(), PetscLimiterSetType()
+.seealso: `PetscLimiterType`, `PetscLimiterCreate()`, `PetscLimiterSetType()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PetscLimiterCreate_None(PetscLimiter lim)
@@ -592,7 +591,7 @@ static PetscErrorCode PetscLimiterInitialize_Minmod(PetscLimiter lim)
 
   Level: intermediate
 
-.seealso: PetscLimiterType, PetscLimiterCreate(), PetscLimiterSetType()
+.seealso: `PetscLimiterType`, `PetscLimiterCreate()`, `PetscLimiterSetType()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PetscLimiterCreate_Minmod(PetscLimiter lim)
@@ -660,7 +659,7 @@ static PetscErrorCode PetscLimiterInitialize_VanLeer(PetscLimiter lim)
 
   Level: intermediate
 
-.seealso: PetscLimiterType, PetscLimiterCreate(), PetscLimiterSetType()
+.seealso: `PetscLimiterType`, `PetscLimiterCreate()`, `PetscLimiterSetType()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PetscLimiterCreate_VanLeer(PetscLimiter lim)
@@ -728,7 +727,7 @@ static PetscErrorCode PetscLimiterInitialize_VanAlbada(PetscLimiter lim)
 
   Level: intermediate
 
-.seealso: PetscLimiterType, PetscLimiterCreate(), PetscLimiterSetType()
+.seealso: `PetscLimiterType`, `PetscLimiterCreate()`, `PetscLimiterSetType()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PetscLimiterCreate_VanAlbada(PetscLimiter lim)
@@ -796,7 +795,7 @@ static PetscErrorCode PetscLimiterInitialize_Superbee(PetscLimiter lim)
 
   Level: intermediate
 
-.seealso: PetscLimiterType, PetscLimiterCreate(), PetscLimiterSetType()
+.seealso: `PetscLimiterType`, `PetscLimiterCreate()`, `PetscLimiterSetType()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PetscLimiterCreate_Superbee(PetscLimiter lim)
@@ -865,7 +864,7 @@ static PetscErrorCode PetscLimiterInitialize_MC(PetscLimiter lim)
 
   Level: intermediate
 
-.seealso: PetscLimiterType, PetscLimiterCreate(), PetscLimiterSetType()
+.seealso: `PetscLimiterType`, `PetscLimiterCreate()`, `PetscLimiterSetType()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PetscLimiterCreate_MC(PetscLimiter lim)
@@ -915,7 +914,7 @@ PetscBool         PetscFVRegisterAllCalled = PETSC_FALSE;
 
   Level: advanced
 
-.seealso: PetscFVRegisterAll(), PetscFVRegisterDestroy()
+.seealso: `PetscFVRegisterAll()`, `PetscFVRegisterDestroy()`
 
 @*/
 PetscErrorCode PetscFVRegister(const char sname[], PetscErrorCode (*function)(PetscFV))
@@ -939,7 +938,7 @@ PetscErrorCode PetscFVRegister(const char sname[], PetscErrorCode (*function)(Pe
 
   Level: intermediate
 
-.seealso: PetscFVGetType(), PetscFVCreate()
+.seealso: `PetscFVGetType()`, `PetscFVCreate()`
 @*/
 PetscErrorCode PetscFVSetType(PetscFV fvm, PetscFVType name)
 {
@@ -977,7 +976,7 @@ PetscErrorCode PetscFVSetType(PetscFV fvm, PetscFVType name)
 
   Level: intermediate
 
-.seealso: PetscFVSetType(), PetscFVCreate()
+.seealso: `PetscFVSetType()`, `PetscFVCreate()`
 @*/
 PetscErrorCode PetscFVGetType(PetscFV fvm, PetscFVType *name)
 {
@@ -1000,7 +999,7 @@ PetscErrorCode PetscFVGetType(PetscFV fvm, PetscFVType *name)
 -  name - command line option
 
    Level: intermediate
-.seealso:  PetscFV, PetscFVView, PetscObjectViewFromOptions(), PetscFVCreate()
+.seealso: `PetscFV`, `PetscFVView`, `PetscObjectViewFromOptions()`, `PetscFVCreate()`
 @*/
 PetscErrorCode  PetscFVViewFromOptions(PetscFV A,PetscObject obj,const char name[])
 {
@@ -1021,7 +1020,7 @@ PetscErrorCode  PetscFVViewFromOptions(PetscFV A,PetscObject obj,const char name
 
   Level: beginner
 
-.seealso: PetscFVDestroy()
+.seealso: `PetscFVDestroy()`
 @*/
 PetscErrorCode PetscFVView(PetscFV fvm, PetscViewer v)
 {
@@ -1045,14 +1044,13 @@ PetscErrorCode PetscFVView(PetscFV fvm, PetscViewer v)
 
   Level: intermediate
 
-.seealso: PetscFVView()
+.seealso: `PetscFVView()`
 @*/
 PetscErrorCode PetscFVSetFromOptions(PetscFV fvm)
 {
   const char    *defaultType;
   char           name[256];
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(fvm, PETSCFV_CLASSID, 1);
@@ -1060,7 +1058,7 @@ PetscErrorCode PetscFVSetFromOptions(PetscFV fvm)
   else                                 defaultType = ((PetscObject) fvm)->type_name;
   PetscCall(PetscFVRegisterAll());
 
-  ierr = PetscObjectOptionsBegin((PetscObject) fvm);PetscCall(ierr);
+  PetscObjectOptionsBegin((PetscObject) fvm);
   PetscCall(PetscOptionsFList("-petscfv_type", "Finite volume discretization", "PetscFVSetType", PetscFVList, defaultType, name, 256, &flg));
   if (flg) {
     PetscCall(PetscFVSetType(fvm, name));
@@ -1073,7 +1071,7 @@ PetscErrorCode PetscFVSetFromOptions(PetscFV fvm)
   /* process any options handlers added with PetscObjectAddOptionsHandler() */
   PetscCall(PetscObjectProcessOptionsHandlers(PetscOptionsObject,(PetscObject) fvm));
   PetscCall(PetscLimiterSetFromOptions(fvm->limiter));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscCall(PetscFVViewFromOptions(fvm, NULL, "-petscfv_view"));
   PetscFunctionReturn(0);
 }
@@ -1088,7 +1086,7 @@ PetscErrorCode PetscFVSetFromOptions(PetscFV fvm)
 
   Level: intermediate
 
-.seealso: PetscFVView(), PetscFVDestroy()
+.seealso: `PetscFVView()`, `PetscFVDestroy()`
 @*/
 PetscErrorCode PetscFVSetUp(PetscFV fvm)
 {
@@ -1109,7 +1107,7 @@ PetscErrorCode PetscFVSetUp(PetscFV fvm)
 
   Level: beginner
 
-.seealso: PetscFVView()
+.seealso: `PetscFVView()`
 @*/
 PetscErrorCode PetscFVDestroy(PetscFV *fvm)
 {
@@ -1150,7 +1148,7 @@ PetscErrorCode PetscFVDestroy(PetscFV *fvm)
 
   Level: beginner
 
-.seealso: PetscFVSetType(), PETSCFVUPWIND
+.seealso: `PetscFVSetType()`, `PETSCFVUPWIND`
 @*/
 PetscErrorCode PetscFVCreate(MPI_Comm comm, PetscFV *fvm)
 {
@@ -1186,7 +1184,7 @@ PetscErrorCode PetscFVCreate(MPI_Comm comm, PetscFV *fvm)
 
   Level: intermediate
 
-.seealso: PetscFVGetLimiter()
+.seealso: `PetscFVGetLimiter()`
 @*/
 PetscErrorCode PetscFVSetLimiter(PetscFV fvm, PetscLimiter lim)
 {
@@ -1212,7 +1210,7 @@ PetscErrorCode PetscFVSetLimiter(PetscFV fvm, PetscLimiter lim)
 
   Level: intermediate
 
-.seealso: PetscFVSetLimiter()
+.seealso: `PetscFVSetLimiter()`
 @*/
 PetscErrorCode PetscFVGetLimiter(PetscFV fvm, PetscLimiter *lim)
 {
@@ -1234,7 +1232,7 @@ PetscErrorCode PetscFVGetLimiter(PetscFV fvm, PetscLimiter *lim)
 
   Level: intermediate
 
-.seealso: PetscFVGetNumComponents()
+.seealso: `PetscFVGetNumComponents()`
 @*/
 PetscErrorCode PetscFVSetNumComponents(PetscFV fvm, PetscInt comp)
 {
@@ -1268,7 +1266,7 @@ PetscErrorCode PetscFVSetNumComponents(PetscFV fvm, PetscInt comp)
 
   Level: intermediate
 
-.seealso: PetscFVSetNumComponents()
+.seealso: `PetscFVSetNumComponents()`
 @*/
 PetscErrorCode PetscFVGetNumComponents(PetscFV fvm, PetscInt *comp)
 {
@@ -1290,7 +1288,7 @@ PetscErrorCode PetscFVGetNumComponents(PetscFV fvm, PetscInt *comp)
 
   Level: intermediate
 
-.seealso: PetscFVGetComponentName()
+.seealso: `PetscFVGetComponentName()`
 @*/
 PetscErrorCode PetscFVSetComponentName(PetscFV fvm, PetscInt comp, const char *name)
 {
@@ -1313,7 +1311,7 @@ PetscErrorCode PetscFVSetComponentName(PetscFV fvm, PetscInt comp, const char *n
 
   Level: intermediate
 
-.seealso: PetscFVSetComponentName()
+.seealso: `PetscFVSetComponentName()`
 @*/
 PetscErrorCode PetscFVGetComponentName(PetscFV fvm, PetscInt comp, const char **name)
 {
@@ -1333,7 +1331,7 @@ PetscErrorCode PetscFVGetComponentName(PetscFV fvm, PetscInt comp, const char **
 
   Level: intermediate
 
-.seealso: PetscFVGetSpatialDimension()
+.seealso: `PetscFVGetSpatialDimension()`
 @*/
 PetscErrorCode PetscFVSetSpatialDimension(PetscFV fvm, PetscInt dim)
 {
@@ -1356,7 +1354,7 @@ PetscErrorCode PetscFVSetSpatialDimension(PetscFV fvm, PetscInt dim)
 
   Level: intermediate
 
-.seealso: PetscFVSetSpatialDimension()
+.seealso: `PetscFVSetSpatialDimension()`
 @*/
 PetscErrorCode PetscFVGetSpatialDimension(PetscFV fvm, PetscInt *dim)
 {
@@ -1378,7 +1376,7 @@ PetscErrorCode PetscFVGetSpatialDimension(PetscFV fvm, PetscInt *dim)
 
   Level: intermediate
 
-.seealso: PetscFVGetComputeGradients()
+.seealso: `PetscFVGetComputeGradients()`
 @*/
 PetscErrorCode PetscFVSetComputeGradients(PetscFV fvm, PetscBool computeGradients)
 {
@@ -1401,7 +1399,7 @@ PetscErrorCode PetscFVSetComputeGradients(PetscFV fvm, PetscBool computeGradient
 
   Level: intermediate
 
-.seealso: PetscFVSetComputeGradients()
+.seealso: `PetscFVSetComputeGradients()`
 @*/
 PetscErrorCode PetscFVGetComputeGradients(PetscFV fvm, PetscBool *computeGradients)
 {
@@ -1423,7 +1421,7 @@ PetscErrorCode PetscFVGetComputeGradients(PetscFV fvm, PetscBool *computeGradien
 
   Level: intermediate
 
-.seealso: PetscFVGetQuadrature()
+.seealso: `PetscFVGetQuadrature()`
 @*/
 PetscErrorCode PetscFVSetQuadrature(PetscFV fvm, PetscQuadrature q)
 {
@@ -1448,7 +1446,7 @@ PetscErrorCode PetscFVSetQuadrature(PetscFV fvm, PetscQuadrature q)
 
   Level: intermediate
 
-.seealso: PetscFVSetQuadrature()
+.seealso: `PetscFVSetQuadrature()`
 @*/
 PetscErrorCode PetscFVGetQuadrature(PetscFV fvm, PetscQuadrature *q)
 {
@@ -1484,7 +1482,7 @@ PetscErrorCode PetscFVGetQuadrature(PetscFV fvm, PetscQuadrature *q)
 
   Level: intermediate
 
-.seealso: PetscFVCreate()
+.seealso: `PetscFVCreate()`
 @*/
 PetscErrorCode PetscFVGetDualSpace(PetscFV fvm, PetscDualSpace *sp)
 {
@@ -1536,7 +1534,7 @@ PetscErrorCode PetscFVGetDualSpace(PetscFV fvm, PetscDualSpace *sp)
 
   Note: A simple dual space is provided automatically, and the user typically will not need to override it.
 
-.seealso: PetscFVCreate()
+.seealso: `PetscFVCreate()`
 @*/
 PetscErrorCode PetscFVSetDualSpace(PetscFV fvm, PetscDualSpace sp)
 {
@@ -1567,7 +1565,7 @@ $ T->T[2] = H[(((p*pdim + i)*Nc + c)*dim + d)*dim + e] is the value at point p f
 
   Level: intermediate
 
-.seealso: PetscFEGetCellTabulation(), PetscFVCreateTabulation(), PetscFVGetQuadrature(), PetscQuadratureGetData()
+.seealso: `PetscFEGetCellTabulation()`, `PetscFVCreateTabulation()`, `PetscFVGetQuadrature()`, `PetscQuadratureGetData()`
 @*/
 PetscErrorCode PetscFVGetCellTabulation(PetscFV fvm, PetscTabulation *T)
 {
@@ -1605,7 +1603,7 @@ $ T->T[2] = H[(((p*pdim + i)*Nc + c)*dim + d)*dim + e] is the value at point p f
 
   Level: intermediate
 
-.seealso: PetscFECreateTabulation(), PetscTabulationDestroy(), PetscFEGetCellTabulation()
+.seealso: `PetscFECreateTabulation()`, `PetscTabulationDestroy()`, `PetscFEGetCellTabulation()`
 @*/
 PetscErrorCode PetscFVCreateTabulation(PetscFV fvm, PetscInt nrepl, PetscInt npoints, const PetscReal points[], PetscInt K, PetscTabulation *T)
 {
@@ -1651,7 +1649,7 @@ PetscErrorCode PetscFVCreateTabulation(PetscFV fvm, PetscInt nrepl, PetscInt npo
 
   Level: advanced
 
-.seealso: PetscFVCreate()
+.seealso: `PetscFVCreate()`
 @*/
 PetscErrorCode PetscFVComputeGradient(PetscFV fvm, PetscInt numFaces, PetscScalar dx[], PetscScalar grad[])
 {
@@ -1682,7 +1680,7 @@ PetscErrorCode PetscFVComputeGradient(PetscFV fvm, PetscInt numFaces, PetscScala
 
   Level: developer
 
-.seealso: PetscFVCreate()
+.seealso: `PetscFVCreate()`
 @*/
 PetscErrorCode PetscFVIntegrateRHSFunction(PetscFV fvm, PetscDS prob, PetscInt field, PetscInt Nf, PetscFVFaceGeom *fgeom, PetscReal *neighborVol,
                                            PetscScalar uL[], PetscScalar uR[], PetscScalar fluxL[], PetscScalar fluxR[])
@@ -1706,7 +1704,7 @@ PetscErrorCode PetscFVIntegrateRHSFunction(PetscFV fvm, PetscDS prob, PetscInt f
 
   Level: advanced
 
-.seealso: PetscFVType, PetscFVCreate(), PetscFVSetType()
+.seealso: `PetscFVType`, `PetscFVCreate()`, `PetscFVSetType()`
 @*/
 PetscErrorCode PetscFVRefine(PetscFV fv, PetscFV *fvRef)
 {
@@ -1784,10 +1782,10 @@ static PetscErrorCode PetscFVView_Upwind_Ascii(PetscFV fv, PetscViewer viewer)
   PetscCall(PetscFVGetNumComponents(fv, &Nc));
   PetscCall(PetscViewerGetFormat(viewer, &format));
   PetscCall(PetscViewerASCIIPrintf(viewer, "Upwind Finite Volume:\n"));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "  num components: %d\n", Nc));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "  num components: %" PetscInt_FMT "\n", Nc));
   for (c = 0; c < Nc; c++) {
     if (fv->componentNames[c]) {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "    component %d: %s\n", c, fv->componentNames[c]));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "    component %" PetscInt_FMT ": %s\n", c, fv->componentNames[c]));
     }
   }
   PetscFunctionReturn(0);
@@ -1859,7 +1857,7 @@ static PetscErrorCode PetscFVInitialize_Upwind(PetscFV fvm)
 
   Level: intermediate
 
-.seealso: PetscFVType, PetscFVCreate(), PetscFVSetType()
+.seealso: `PetscFVType`, `PetscFVCreate()`, `PetscFVSetType()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PetscFVCreate_Upwind(PetscFV fvm)
@@ -1897,10 +1895,10 @@ static PetscErrorCode PetscFVView_LeastSquares_Ascii(PetscFV fv, PetscViewer vie
   PetscCall(PetscFVGetNumComponents(fv, &Nc));
   PetscCall(PetscViewerGetFormat(viewer, &format));
   PetscCall(PetscViewerASCIIPrintf(viewer, "Finite Volume with Least Squares Reconstruction:\n"));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "  num components: %d\n", Nc));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "  num components: %" PetscInt_FMT "\n", Nc));
   for (c = 0; c < Nc; c++) {
     if (fv->componentNames[c]) {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "    component %d: %s\n", c, fv->componentNames[c]));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "    component %" PetscInt_FMT ": %s\n", c, fv->componentNames[c]));
     }
   }
   PetscFunctionReturn(0);
@@ -2022,7 +2020,7 @@ static PetscErrorCode PetscFVLeastSquaresPseudoInverseSVD_Static(PetscInt m,Pets
 #endif
   PetscCheck(!info,PETSC_COMM_SELF,PETSC_ERR_LIB,"xGELSS error");
   /* The following check should be turned into a diagnostic as soon as someone wants to do this intentionally */
-  PetscCheckFalse(irank < PetscMin(M,N),PETSC_COMM_SELF,PETSC_ERR_USER,"Rank deficient least squares fit, indicates an isolated cell with two colinear points");
+  PetscCheck(irank >= PetscMin(M,N),PETSC_COMM_SELF,PETSC_ERR_USER,"Rank deficient least squares fit, indicates an isolated cell with two colinear points");
   PetscFunctionReturn(0);
 }
 
@@ -2068,7 +2066,7 @@ static PetscErrorCode PetscFVLeastSquaresDebugCell_Static(PetscFV fvm, PetscInt 
 
   Level: developer
 
-.seealso: PetscFVCreate()
+.seealso: `PetscFVCreate()`
 */
 static PetscErrorCode PetscFVComputeGradient_LeastSquares(PetscFV fvm, PetscInt numFaces, const PetscScalar dx[], PetscScalar grad[])
 {
@@ -2079,8 +2077,8 @@ static PetscErrorCode PetscFVComputeGradient_LeastSquares(PetscFV fvm, PetscInt 
 
   PetscFunctionBegin;
   if (numFaces > maxFaces) {
-    PetscCheckFalse(maxFaces < 0,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Reconstruction has not been initialized, call PetscFVLeastSquaresSetMaxFaces()");
-    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of input faces %D > %D maxfaces", numFaces, maxFaces);
+    PetscCheck(maxFaces >= 0,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Reconstruction has not been initialized, call PetscFVLeastSquaresSetMaxFaces()");
+    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of input faces %" PetscInt_FMT " > %" PetscInt_FMT " maxfaces", numFaces, maxFaces);
   }
   PetscCall(PetscFVGetSpatialDimension(fvm, &dim));
   for (f = 0; f < numFaces; ++f) {
@@ -2173,7 +2171,7 @@ PetscErrorCode PetscFVInitialize_LeastSquares(PetscFV fvm)
 
   Level: intermediate
 
-.seealso: PetscFVType, PetscFVCreate(), PetscFVSetType()
+.seealso: `PetscFVType`, `PetscFVCreate()`, `PetscFVSetType()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PetscFVCreate_LeastSquares(PetscFV fvm)
@@ -2209,7 +2207,7 @@ PETSC_EXTERN PetscErrorCode PetscFVCreate_LeastSquares(PetscFV fvm)
 
   Level: intermediate
 
-.seealso: PetscFVCreate(), PETSCFVLEASTSQUARES
+.seealso: `PetscFVCreate()`, `PETSCFVLEASTSQUARES`
 @*/
 PetscErrorCode PetscFVLeastSquaresSetMaxFaces(PetscFV fvm, PetscInt maxFaces)
 {

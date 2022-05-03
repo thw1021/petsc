@@ -469,14 +469,14 @@ PetscErrorCode KSPSetFromOptions_CG(PetscOptionItems *PetscOptionsObject,KSP ksp
   PetscBool  flg;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"KSP CG and CGNE options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"KSP CG and CGNE options");
 #if defined(PETSC_USE_COMPLEX)
   PetscCall(PetscOptionsEnum("-ksp_cg_type","Matrix is Hermitian or complex symmetric","KSPCGSetType",KSPCGTypes,(PetscEnum)cg->type,
                            (PetscEnum*)&cg->type,NULL));
 #endif
   PetscCall(PetscOptionsBool("-ksp_cg_single_reduction","Merge inner products into single MPI_Allreduce()","KSPCGUseSingleReduction",cg->singlereduction,&cg->singlereduction,&flg));
   if (flg) PetscCall(KSPCGUseSingleReduction(ksp,cg->singlereduction));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -563,8 +563,8 @@ PETSC_INTERN PetscErrorCode KSPBuildResidual_CG(KSP ksp,Vec t,Vec v,Vec *V)
 -  * - Josef Malek and Zdenek Strakos, Preconditioning and the Conjugate Gradient Method in the Context of Solving PDEs,
     SIAM, 2014.
 
-.seealso:  KSPCreate(), KSPSetType(), KSPType (for list of available types), KSP,
-           KSPCGSetType(), KSPCGUseSingleReduction(), KSPPIPECG, KSPGROPPCG
+.seealso: `KSPCreate()`, `KSPSetType()`, `KSPType`, `KSP`,
+          `KSPCGSetType()`, `KSPCGUseSingleReduction()`, `KSPPIPECG`, `KSPGROPPCG`
 
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_CG(KSP ksp)

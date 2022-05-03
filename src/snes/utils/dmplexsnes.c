@@ -32,7 +32,7 @@ static void pressure_Private(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 
   Level: developer
 
-.seealso: SNESConvergedCorrectPressure()
+.seealso: `SNESConvergedCorrectPressure()`
 */
 static PetscErrorCode SNESCorrectDiscretePressure_Private(SNES snes, PetscInt pfield, MatNullSpace nullspace, Vec u, void *ctx)
 {
@@ -51,9 +51,9 @@ static PetscErrorCode SNESCorrectDiscretePressure_Private(SNES snes, PetscInt pf
   PetscCall(DMGetDS(dm, &ds));
   PetscCall(PetscDSSetObjective(ds, pfield, pressure_Private));
   PetscCall(MatNullSpaceGetVecs(nullspace, NULL, &Nv, &nullvecs));
-  PetscCheckFalse(Nv != 1,comm, PETSC_ERR_ARG_OUTOFRANGE, "Can only handle a single null vector for pressure, not %D", Nv);
+  PetscCheck(Nv == 1,comm, PETSC_ERR_ARG_OUTOFRANGE, "Can only handle a single null vector for pressure, not %" PetscInt_FMT, Nv);
   PetscCall(VecDot(nullvecs[0], u, &pintd));
-  PetscCheckFalse(PetscAbsScalar(pintd) > PETSC_SMALL,comm, PETSC_ERR_ARG_WRONG, "Discrete integral of pressure: %g", (double) PetscRealPart(pintd));
+  PetscCheck(PetscAbsScalar(pintd) <= PETSC_SMALL,comm, PETSC_ERR_ARG_WRONG, "Discrete integral of pressure: %g", (double) PetscRealPart(pintd));
   PetscCall(PetscDSGetNumFields(ds, &Nf));
   PetscCall(PetscMalloc2(Nf, &intc, Nf, &intn));
   PetscCall(DMPlexComputeIntegralFEM(dm, nullvecs[0], intn, ctx));
@@ -61,7 +61,7 @@ static PetscErrorCode SNESCorrectDiscretePressure_Private(SNES snes, PetscInt pf
   PetscCall(VecAXPY(u, -intc[pfield]/intn[pfield], nullvecs[0]));
 #if defined (PETSC_USE_DEBUG)
   PetscCall(DMPlexComputeIntegralFEM(dm, u, intc, ctx));
-  PetscCheckFalse(PetscAbsScalar(intc[pfield]) > PETSC_SMALL,comm, PETSC_ERR_ARG_WRONG, "Continuum integral of pressure after correction: %g", (double) PetscRealPart(intc[pfield]));
+  PetscCheck(PetscAbsScalar(intc[pfield]) <= PETSC_SMALL,comm, PETSC_ERR_ARG_WRONG, "Continuum integral of pressure after correction: %g", (double) PetscRealPart(intc[pfield]));
 #endif
   PetscCall(PetscFree2(intc, intn));
   PetscFunctionReturn(0);
@@ -91,7 +91,7 @@ static PetscErrorCode SNESCorrectDiscretePressure_Private(SNES snes, PetscInt pf
 
    Level: advanced
 
-.seealso: SNESConvergedDefault(), SNESSetConvergenceTest(), DMSetNullSpaceConstructor()
+.seealso: `SNESConvergedDefault()`, `SNESSetConvergenceTest()`, `DMSetNullSpaceConstructor()`
 @*/
 PetscErrorCode SNESConvergedCorrectPressure(SNES snes, PetscInt it, PetscReal xnorm, PetscReal gnorm, PetscReal f, SNESConvergedReason *reason, void *ctx)
 {
@@ -167,7 +167,7 @@ static PetscErrorCode DMSNESConvertPlex(DM dm, DM *plex, PetscBool copy)
 
   Level: beginner
 
-.seealso: DMInterpolationEvaluate(), DMInterpolationAddPoints(), DMInterpolationDestroy()
+.seealso: `DMInterpolationEvaluate()`, `DMInterpolationAddPoints()`, `DMInterpolationDestroy()`
 @*/
 PetscErrorCode DMInterpolationCreate(MPI_Comm comm, DMInterpolationInfo *ctx)
 {
@@ -196,12 +196,12 @@ PetscErrorCode DMInterpolationCreate(MPI_Comm comm, DMInterpolationInfo *ctx)
 
   Level: intermediate
 
-.seealso: DMInterpolationGetDim(), DMInterpolationEvaluate(), DMInterpolationAddPoints()
+.seealso: `DMInterpolationGetDim()`, `DMInterpolationEvaluate()`, `DMInterpolationAddPoints()`
 @*/
 PetscErrorCode DMInterpolationSetDim(DMInterpolationInfo ctx, PetscInt dim)
 {
   PetscFunctionBegin;
-  PetscCheckFalse((dim < 1) || (dim > 3),ctx->comm, PETSC_ERR_ARG_OUTOFRANGE, "Invalid dimension for points: %D", dim);
+  PetscCheck(!(dim < 1) && !(dim > 3),ctx->comm, PETSC_ERR_ARG_OUTOFRANGE, "Invalid dimension for points: %" PetscInt_FMT, dim);
   ctx->dim = dim;
   PetscFunctionReturn(0);
 }
@@ -219,7 +219,7 @@ PetscErrorCode DMInterpolationSetDim(DMInterpolationInfo ctx, PetscInt dim)
 
   Level: intermediate
 
-.seealso: DMInterpolationSetDim(), DMInterpolationEvaluate(), DMInterpolationAddPoints()
+.seealso: `DMInterpolationSetDim()`, `DMInterpolationEvaluate()`, `DMInterpolationAddPoints()`
 @*/
 PetscErrorCode DMInterpolationGetDim(DMInterpolationInfo ctx, PetscInt *dim)
 {
@@ -240,12 +240,12 @@ PetscErrorCode DMInterpolationGetDim(DMInterpolationInfo ctx, PetscInt *dim)
 
   Level: intermediate
 
-.seealso: DMInterpolationGetDof(), DMInterpolationEvaluate(), DMInterpolationAddPoints()
+.seealso: `DMInterpolationGetDof()`, `DMInterpolationEvaluate()`, `DMInterpolationAddPoints()`
 @*/
 PetscErrorCode DMInterpolationSetDof(DMInterpolationInfo ctx, PetscInt dof)
 {
   PetscFunctionBegin;
-  PetscCheckFalse(dof < 1,ctx->comm, PETSC_ERR_ARG_OUTOFRANGE, "Invalid number of components: %D", dof);
+  PetscCheck(dof >= 1,ctx->comm, PETSC_ERR_ARG_OUTOFRANGE, "Invalid number of components: %" PetscInt_FMT, dof);
   ctx->dof = dof;
   PetscFunctionReturn(0);
 }
@@ -263,7 +263,7 @@ PetscErrorCode DMInterpolationSetDof(DMInterpolationInfo ctx, PetscInt dof)
 
   Level: intermediate
 
-.seealso: DMInterpolationSetDof(), DMInterpolationEvaluate(), DMInterpolationAddPoints()
+.seealso: `DMInterpolationSetDof()`, `DMInterpolationEvaluate()`, `DMInterpolationAddPoints()`
 @*/
 PetscErrorCode DMInterpolationGetDof(DMInterpolationInfo ctx, PetscInt *dof)
 {
@@ -287,12 +287,12 @@ PetscErrorCode DMInterpolationGetDof(DMInterpolationInfo ctx, PetscInt *dof)
 
   Level: intermediate
 
-.seealso: DMInterpolationSetDim(), DMInterpolationEvaluate(), DMInterpolationCreate()
+.seealso: `DMInterpolationSetDim()`, `DMInterpolationEvaluate()`, `DMInterpolationCreate()`
 @*/
 PetscErrorCode DMInterpolationAddPoints(DMInterpolationInfo ctx, PetscInt n, PetscReal points[])
 {
   PetscFunctionBegin;
-  PetscCheckFalse(ctx->dim < 0,ctx->comm, PETSC_ERR_ARG_WRONGSTATE, "The spatial dimension has not been set");
+  PetscCheck(ctx->dim >= 0,ctx->comm, PETSC_ERR_ARG_WRONGSTATE, "The spatial dimension has not been set");
   PetscCheck(!ctx->points,ctx->comm, PETSC_ERR_ARG_WRONGSTATE, "Cannot add points multiple times yet");
   ctx->nInput = n;
 
@@ -314,7 +314,7 @@ PetscErrorCode DMInterpolationAddPoints(DMInterpolationInfo ctx, PetscInt n, Pet
 
   Level: intermediate
 
-.seealso: DMInterpolationEvaluate(), DMInterpolationAddPoints(), DMInterpolationCreate()
+.seealso: `DMInterpolationEvaluate()`, `DMInterpolationAddPoints()`, `DMInterpolationCreate()`
 @*/
 PetscErrorCode DMInterpolationSetUp(DMInterpolationInfo ctx, DM dm, PetscBool redundantPoints, PetscBool ignoreOutsideDomain)
 {
@@ -338,7 +338,7 @@ PetscErrorCode DMInterpolationSetUp(DMInterpolationInfo ctx, DM dm, PetscBool re
   PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
-  PetscCheckFalse(ctx->dim < 0,comm, PETSC_ERR_ARG_WRONGSTATE, "The spatial dimension has not been set");
+  PetscCheck(ctx->dim >= 0,comm, PETSC_ERR_ARG_WRONGSTATE, "The spatial dimension has not been set");
   /* Locate points */
   n = ctx->nInput;
   if (!redundantPoints) {
@@ -386,7 +386,7 @@ PetscErrorCode DMInterpolationSetUp(DMInterpolationInfo ctx, DM dm, PetscBool re
   ctx->n = 0;
   for (p = 0; p < N; ++p) {
     if (globalProcs[p] == size) {
-      PetscCheck(ignoreOutsideDomain,comm, PETSC_ERR_PLIB, "Point %d: %g %g %g not located in mesh", p, (double)globalPoints[p*ctx->dim+0], (double)(ctx->dim > 1 ? globalPoints[p*ctx->dim+1] : 0.0), (double)(ctx->dim > 2 ? globalPoints[p*ctx->dim+2] : 0.0));
+      PetscCheck(ignoreOutsideDomain,comm, PETSC_ERR_PLIB, "Point %" PetscInt_FMT ": %g %g %g not located in mesh", p, (double)globalPoints[p*ctx->dim+0], (double)(ctx->dim > 1 ? globalPoints[p*ctx->dim+1] : 0.0), (double)(ctx->dim > 2 ? globalPoints[p*ctx->dim+2] : 0.0));
       else if (rank == 0) ++ctx->n;
     } else if (globalProcs[p] == rank) ++ctx->n;
   }
@@ -442,7 +442,7 @@ PetscErrorCode DMInterpolationSetUp(DMInterpolationInfo ctx, DM dm, PetscBool re
 
   Level: intermediate
 
-.seealso: DMInterpolationEvaluate(), DMInterpolationAddPoints(), DMInterpolationCreate()
+.seealso: `DMInterpolationEvaluate()`, `DMInterpolationAddPoints()`, `DMInterpolationCreate()`
 @*/
 PetscErrorCode DMInterpolationGetCoordinates(DMInterpolationInfo ctx, Vec *coordinates)
 {
@@ -468,7 +468,7 @@ PetscErrorCode DMInterpolationGetCoordinates(DMInterpolationInfo ctx, Vec *coord
 
   Level: intermediate
 
-.seealso: DMInterpolationRestoreVector(), DMInterpolationEvaluate(), DMInterpolationAddPoints(), DMInterpolationCreate()
+.seealso: `DMInterpolationRestoreVector()`, `DMInterpolationEvaluate()`, `DMInterpolationAddPoints()`, `DMInterpolationCreate()`
 @*/
 PetscErrorCode DMInterpolationGetVector(DMInterpolationInfo ctx, Vec *v)
 {
@@ -493,7 +493,7 @@ PetscErrorCode DMInterpolationGetVector(DMInterpolationInfo ctx, Vec *v)
 
   Level: intermediate
 
-.seealso: DMInterpolationGetVector(), DMInterpolationEvaluate(), DMInterpolationAddPoints(), DMInterpolationCreate()
+.seealso: `DMInterpolationGetVector()`, `DMInterpolationEvaluate()`, `DMInterpolationAddPoints()`, `DMInterpolationCreate()`
 @*/
 PetscErrorCode DMInterpolationRestoreVector(DMInterpolationInfo ctx, Vec *v)
 {
@@ -555,7 +555,7 @@ static inline PetscErrorCode DMInterpolate_Triangle_Private(DMInterpolationInfo 
     PetscInt     d, f, comp;
 
     PetscCall(DMPlexComputeCellGeometryFEM(dm, c, NULL, v0, J, invJ, &detJ));
-    PetscCheckFalse(detJ <= 0.0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid determinant %g for element %D", (double)detJ, c);
+    PetscCheck(detJ > 0.0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid determinant %g for element %" PetscInt_FMT, (double)detJ, c);
     PetscCall(DMPlexVecGetClosure(dm, NULL, xLocal, c, NULL, &x));
     for (comp = 0; comp < ctx->dof; ++comp) a[p*ctx->dof+comp] = x[0*ctx->dof+comp];
 
@@ -591,7 +591,7 @@ static inline PetscErrorCode DMInterpolate_Tetrahedron_Private(DMInterpolationIn
     PetscInt       d, f, comp;
 
     PetscCall(DMPlexComputeCellGeometryFEM(dm, c, NULL, v0, J, invJ, &detJ));
-    PetscCheckFalse(detJ <= 0.0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid determinant %g for element %D", (double)detJ, c);
+    PetscCheck(detJ > 0.0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid determinant %g for element %" PetscInt_FMT, (double)detJ, c);
     PetscCall(DMPlexVecGetClosure(dm, NULL, xLocal, c, NULL, &x));
     for (comp = 0; comp < ctx->dof; ++comp) a[p*ctx->dof+comp] = x[0*ctx->dof+comp];
 
@@ -734,7 +734,7 @@ static inline PetscErrorCode DMInterpolate_Quad_Private(DMInterpolationInfo ctx,
 
     /* Can make this do all points at once */
     PetscCall(DMPlexVecGetClosure(dmCoord, NULL, coordsLocal, c, &coordSize, &vertices));
-    PetscCheckFalse(4*2 != coordSize,ctx->comm, PETSC_ERR_ARG_SIZ, "Invalid closure size %D should be %d", coordSize, 4*2);
+    PetscCheck(4*2 == coordSize,ctx->comm, PETSC_ERR_ARG_SIZ, "Invalid closure size %" PetscInt_FMT " should be %d", coordSize, 4*2);
     PetscCall(DMPlexVecGetClosure(dm, NULL, xLocal, c, &xSize, &x));
     PetscCall(SNESSetFunction(snes, NULL, NULL, vertices));
     PetscCall(SNESSetJacobian(snes, NULL, NULL, NULL, vertices));
@@ -1021,7 +1021,7 @@ static inline PetscErrorCode DMInterpolate_Hex_Private(DMInterpolationInfo ctx, 
 
   Level: beginner
 
-.seealso: DMInterpolationGetVector(), DMInterpolationAddPoints(), DMInterpolationCreate()
+.seealso: `DMInterpolationGetVector()`, `DMInterpolationAddPoints()`, `DMInterpolationCreate()`
 @*/
 PetscErrorCode DMInterpolationEvaluate(DMInterpolationInfo ctx, DM dm, Vec x, Vec v)
 {
@@ -1034,7 +1034,7 @@ PetscErrorCode DMInterpolationEvaluate(DMInterpolationInfo ctx, DM dm, Vec x, Ve
   PetscValidHeaderSpecific(x, VEC_CLASSID, 3);
   PetscValidHeaderSpecific(v, VEC_CLASSID, 4);
   PetscCall(VecGetLocalSize(v, &n));
-  PetscCheckFalse(n != ctx->n*ctx->dof,ctx->comm, PETSC_ERR_ARG_SIZ, "Invalid input vector size %D should be %D", n, ctx->n*ctx->dof);
+  PetscCheck(n == ctx->n*ctx->dof,ctx->comm, PETSC_ERR_ARG_SIZ, "Invalid input vector size %" PetscInt_FMT " should be %" PetscInt_FMT, n, ctx->n*ctx->dof);
   if (!n) PetscFunctionReturn(0);
   PetscCall(DMGetDS(dm, &ds));
   if (ds) {
@@ -1090,8 +1090,8 @@ PetscErrorCode DMInterpolationEvaluate(DMInterpolationInfo ctx, DM dm, Vec x, Ve
         PetscCall(PetscTabulationDestroy(&T));
       }
       PetscCall(DMPlexVecRestoreClosure(dm, NULL, x, ctx->cells[p], &clSize, &xa));
-      PetscCheckFalse(coff != ctx->dof,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Total components %D != %D dof specified for interpolation", coff, ctx->dof);
-      PetscCheckFalse(foff != clSize,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Total FE space size %D != %D closure size", foff, clSize);
+      PetscCheck(coff == ctx->dof,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Total components %" PetscInt_FMT " != %" PetscInt_FMT " dof specified for interpolation", coff, ctx->dof);
+      PetscCheck(foff == clSize,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Total FE space size %" PetscInt_FMT " != %" PetscInt_FMT " closure size", foff, clSize);
     }
     PetscCall(VecRestoreArrayRead(ctx->coords, &coords));
     PetscCall(VecRestoreArrayWrite(v, &interpolant));
@@ -1122,7 +1122,7 @@ PetscErrorCode DMInterpolationEvaluate(DMInterpolationInfo ctx, DM dm, Vec x, Ve
 
   Level: beginner
 
-.seealso: DMInterpolationEvaluate(), DMInterpolationAddPoints(), DMInterpolationCreate()
+.seealso: `DMInterpolationEvaluate()`, `DMInterpolationAddPoints()`, `DMInterpolationCreate()`
 @*/
 PetscErrorCode DMInterpolationDestroy(DMInterpolationInfo *ctx)
 {
@@ -1152,7 +1152,7 @@ PetscErrorCode DMInterpolationDestroy(DMInterpolationInfo *ctx)
 
   Level: intermediate
 
-.seealso: SNESMonitorSet(), SNESMonitorDefault()
+.seealso: `SNESMonitorSet()`, `SNESMonitorDefault()`
 @*/
 PetscErrorCode SNESMonitorFields(SNES snes, PetscInt its, PetscReal fgnorm, PetscViewerAndFormat *vf)
 {
@@ -1186,7 +1186,7 @@ PetscErrorCode SNESMonitorFields(SNES snes, PetscInt its, PetscReal fgnorm, Pets
   PetscCall(MPIU_Allreduce(lnorms, norms, numFields, MPIU_REAL, MPIU_SUM, PetscObjectComm((PetscObject) dm)));
   PetscCall(PetscViewerPushFormat(viewer,vf->format));
   PetscCall(PetscViewerASCIIAddTab(viewer, ((PetscObject) snes)->tablevel));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "%3D SNES Function norm %14.12e [", its, (double) fgnorm));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " SNES Function norm %14.12e [", its, (double) fgnorm));
   for (f = 0; f < numFields; ++f) {
     if (f > 0) PetscCall(PetscViewerASCIIPrintf(viewer, ", "));
     PetscCall(PetscViewerASCIIPrintf(viewer, "%14.12e", (double) PetscSqrtReal(norms[f])));
@@ -1227,7 +1227,7 @@ PetscErrorCode DMPlexGetAllCells_Internal(DM plex, IS *cellIS)
 
   Level: developer
 
-.seealso: DMPlexComputeJacobianAction()
+.seealso: `DMPlexComputeJacobianAction()`
 @*/
 PetscErrorCode DMPlexSNESComputeResidualFEM(DM dm, Vec X, Vec F, void *user)
 {
@@ -1299,7 +1299,7 @@ PetscErrorCode DMSNESComputeResidual(DM dm, Vec X, Vec F, void *user)
       for (m = 0; m < Nm; ++m) {
         PetscCall(PetscHMapFormGetKeys(ds->wf->form[resmap[m]], &off, reskeys));
       }
-      PetscCheckFalse(off != Nk,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Number of keys %D should be %D", off, Nk);
+      PetscCheck(off == Nk,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Number of keys %" PetscInt_FMT " should be %" PetscInt_FMT, off, Nk);
       PetscCall(PetscFormKeySort(Nk, reskeys));
       for (k = 0, kp = 1; kp < Nk; ++kp) {
         if ((reskeys[k].label != reskeys[kp].label) || (reskeys[k].value != reskeys[kp].value)) {
@@ -1347,7 +1347,7 @@ PetscErrorCode DMSNESComputeResidual(DM dm, Vec X, Vec F, void *user)
 
   Level: developer
 
-.seealso: DMPlexComputeJacobianAction()
+.seealso: `DMPlexComputeJacobianAction()`
 @*/
 PetscErrorCode DMPlexSNESComputeBoundaryFEM(DM dm, Vec X, void *user)
 {
@@ -1377,7 +1377,7 @@ PetscErrorCode DMPlexSNESComputeBoundaryFEM(DM dm, Vec X, void *user)
   Notes:
   Users will typically use DMSNESCreateJacobianMF() followed by MatMult() instead of calling this routine directly.
 
-.seealso: DMSNESCreateJacobianMF(), DMPlexSNESComputeResidualFEM()
+.seealso: `DMSNESCreateJacobianMF()`, `DMPlexSNESComputeResidualFEM()`
 @*/
 PetscErrorCode DMSNESComputeJacobianAction(DM dm, Vec X, Vec Y, Vec F, void *user)
 {
@@ -1411,7 +1411,7 @@ PetscErrorCode DMSNESComputeJacobianAction(DM dm, Vec X, Vec Y, Vec F, void *use
       for (m = 0; m < Nm; ++m) {
         PetscCall(PetscHMapFormGetKeys(ds->wf->form[jacmap[m]], &off, jackeys));
       }
-      PetscCheckFalse(off != Nk,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Number of keys %D should be %D", off, Nk);
+      PetscCheck(off == Nk,PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Number of keys %" PetscInt_FMT " should be %" PetscInt_FMT, off, Nk);
       PetscCall(PetscFormKeySort(Nk, jackeys));
       for (k = 0, kp = 1; kp < Nk; ++kp) {
         if ((jackeys[k].label != jackeys[kp].label) || (jackeys[k].value != jackeys[kp].value)) {
@@ -1464,7 +1464,7 @@ PetscErrorCode DMSNESComputeJacobianAction(DM dm, Vec X, Vec Y, Vec F, void *use
 
   Level: developer
 
-.seealso: FormFunctionLocal()
+.seealso: `FormFunctionLocal()`
 @*/
 PetscErrorCode DMPlexSNESComputeJacobianFEM(DM dm, Vec X, Mat Jac, Mat JacP,void *user)
 {
@@ -1559,7 +1559,7 @@ static PetscErrorCode DMSNESJacobianMF_Mult_Private(Mat A, Vec Y, Vec Z)
   Notes:
   Vec X is kept in Mat J, so updating X then updates the evaluation point.
 
-.seealso: DMSNESComputeJacobianAction()
+.seealso: `DMSNESComputeJacobianAction()`
 @*/
 PetscErrorCode DMSNESCreateJacobianMF(DM dm, Vec X, void *user, Mat *J)
 {
@@ -1596,7 +1596,7 @@ PetscErrorCode DMSNESCreateJacobianMF(DM dm, Vec X, void *user, Mat *J)
 
    Level: intermediate
 
-.seealso: DMCreateNeumannOverlap(), MATIS, PCHPDDMSetAuxiliaryMat()
+.seealso: `DMCreateNeumannOverlap()`, `MATIS`, `PCHPDDMSetAuxiliaryMat()`
 */
 static PetscErrorCode MatComputeNeumannOverlap_Plex(Mat J, PetscReal t, Vec X, Vec X_t, PetscReal s, IS ovl, void *ctx)
 {
@@ -1679,7 +1679,7 @@ PetscErrorCode DMPlexSetSNESLocalFEM(DM dm, void *boundaryctx, void *residualctx
 
   Level: developer
 
-.seealso: DNSNESCheckFromOptions(), DMSNESCheckResidual(), DMSNESCheckJacobian(), PetscDSSetExactSolution()
+.seealso: `DNSNESCheckFromOptions()`, `DMSNESCheckResidual()`, `DMSNESCheckJacobian()`, `PetscDSSetExactSolution()`
 @*/
 PetscErrorCode DMSNESCheckDiscretization(SNES snes, DM dm, PetscReal t, Vec u, PetscReal tol, PetscReal error[])
 {
@@ -1726,7 +1726,7 @@ PetscErrorCode DMSNESCheckDiscretization(SNES snes, DM dm, PetscReal t, Vec u, P
     PetscCall(DMComputeL2FieldDiff(dm, t, exacts, ectxs, u, err));
     if (tol >= 0.0) {
       for (f = 0; f < Nf; ++f) {
-        PetscCheckFalse(err[f] > tol,comm, PETSC_ERR_ARG_WRONG, "L_2 Error %g for field %D exceeds tolerance %g", (double) err[f], f, (double) tol);
+        PetscCheck(err[f] <= tol,comm, PETSC_ERR_ARG_WRONG, "L_2 Error %g for field %" PetscInt_FMT " exceeds tolerance %g", (double) err[f], f, (double) tol);
       }
     } else if (error) {
       for (f = 0; f < Nf; ++f) error[f] = err[f];
@@ -1741,7 +1741,7 @@ PetscErrorCode DMSNESCheckDiscretization(SNES snes, DM dm, PetscReal t, Vec u, P
   } else {
     PetscCall(DMComputeL2Diff(dm, t, exacts, ectxs, u, &err[0]));
     if (tol >= 0.0) {
-      PetscCheckFalse(err[0] > tol,comm, PETSC_ERR_ARG_WRONG, "L_2 Error %g exceeds tolerance %g", (double) err[0], (double) tol);
+      PetscCheck(err[0] <= tol,comm, PETSC_ERR_ARG_WRONG, "L_2 Error %g exceeds tolerance %g", (double) err[0], (double) tol);
     } else if (error) {
       error[0] = err[0];
     } else {
@@ -1766,7 +1766,7 @@ PetscErrorCode DMSNESCheckDiscretization(SNES snes, DM dm, PetscReal t, Vec u, P
 
   Level: developer
 
-.seealso: DNSNESCheckFromOptions(), DMSNESCheckDiscretization(), DMSNESCheckJacobian()
+.seealso: `DNSNESCheckFromOptions()`, `DMSNESCheckDiscretization()`, `DMSNESCheckJacobian()`
 @*/
 PetscErrorCode DMSNESCheckResidual(SNES snes, DM dm, Vec u, PetscReal tol, PetscReal *residual)
 {
@@ -1785,7 +1785,7 @@ PetscErrorCode DMSNESCheckResidual(SNES snes, DM dm, Vec u, PetscReal tol, Petsc
   PetscCall(SNESComputeFunction(snes, u, r));
   PetscCall(VecNorm(r, NORM_2, &res));
   if (tol >= 0.0) {
-    PetscCheckFalse(res > tol,comm, PETSC_ERR_ARG_WRONG, "L_2 Residual %g exceeds tolerance %g", (double) res, (double) tol);
+    PetscCheck(res <= tol,comm, PETSC_ERR_ARG_WRONG, "L_2 Residual %g exceeds tolerance %g", (double) res, (double) tol);
   } else if (residual) {
     *residual = res;
   } else {
@@ -1814,7 +1814,7 @@ PetscErrorCode DMSNESCheckResidual(SNES snes, DM dm, Vec u, PetscReal tol, Petsc
 
   Level: developer
 
-.seealso: DNSNESCheckFromOptions(), DMSNESCheckDiscretization(), DMSNESCheckResidual()
+.seealso: `DNSNESCheckFromOptions()`, `DMSNESCheckDiscretization()`, `DMSNESCheckResidual()`
 @*/
 PetscErrorCode DMSNESCheckJacobian(SNES snes, DM dm, Vec u, PetscReal tol, PetscBool *isLinear, PetscReal *convRate)
 {
@@ -1906,7 +1906,7 @@ PetscErrorCode DMSNESCheckJacobian(SNES snes, DM dm, Vec u, PetscReal tol, Petsc
     PetscCall(PetscFree3(es, hs, errors));
     /* Slope should be about 2 */
     if (tol >= 0) {
-      PetscCheckFalse(!isLin && PetscAbsReal(2 - slope) > tol,comm, PETSC_ERR_ARG_WRONG, "Taylor approximation convergence rate should be 2, not %0.2f", (double) slope);
+      PetscCheck(isLin || PetscAbsReal(2 - slope) <= tol,comm, PETSC_ERR_ARG_WRONG, "Taylor approximation convergence rate should be 2, not %0.2f", (double) slope);
     } else if (isLinear || convRate) {
       if (isLinear) *isLinear = isLin;
       if (convRate) *convRate = slope;

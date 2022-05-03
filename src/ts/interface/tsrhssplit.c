@@ -27,7 +27,7 @@ static PetscErrorCode TSRHSSplitGetRHSSplit(TS ts,const char splitname[],TS_RHSS
 
    Level: intermediate
 
-.seealso: TSRHSSplitGetIS()
+.seealso: `TSRHSSplitGetIS()`
 
 @*/
 PetscErrorCode TSRHSSplitSetIS(TS ts,const char splitname[],IS is)
@@ -44,7 +44,7 @@ PetscErrorCode TSRHSSplitSetIS(TS ts,const char splitname[],IS is)
     PetscCall(PetscStrallocpy(splitname,&newsplit->splitname));
   } else {
     PetscCall(PetscMalloc1(8,&newsplit->splitname));
-    PetscCall(PetscSNPrintf(newsplit->splitname,7,"%D",ts->num_rhs_splits));
+    PetscCall(PetscSNPrintf(newsplit->splitname,7,"%" PetscInt_FMT,ts->num_rhs_splits));
   }
   PetscCall(PetscObjectReference((PetscObject)is));
   newsplit->is = is;
@@ -77,7 +77,7 @@ PetscErrorCode TSRHSSplitSetIS(TS ts,const char splitname[],IS is)
 
    Level: intermediate
 
-.seealso: TSRHSSplitSetIS()
+.seealso: `TSRHSSplitSetIS()`
 
 @*/
 PetscErrorCode TSRHSSplitGetIS(TS ts,const char splitname[],IS *is)
@@ -167,7 +167,7 @@ PetscErrorCode TSRHSSplitSetRHSFunction(TS ts,const char splitname[],Vec r,TSRHS
 
    Level: advanced
 
-.seealso: TSGetRHSSplitFunction()
+.seealso: `TSGetRHSSplitFunction()`
 @*/
 PetscErrorCode TSRHSSplitGetSubTS(TS ts,const char splitname[],TS *subts)
 {
@@ -201,7 +201,7 @@ PetscErrorCode TSRHSSplitGetSubTS(TS ts,const char splitname[],TS *subts)
 
    Level: advanced
 
-.seealso: TSGetRHSSplitFunction()
+.seealso: `TSGetRHSSplitFunction()`
 @*/
 PetscErrorCode TSRHSSplitGetSubTSs(TS ts,PetscInt *n,TS *subts[])
 {

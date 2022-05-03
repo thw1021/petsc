@@ -528,21 +528,18 @@ static PetscErrorCode TaoSolve_ADMM(Tao tao)
 static PetscErrorCode TaoSetFromOptions_ADMM(PetscOptionItems *PetscOptionsObject,Tao tao)
 {
   TAO_ADMM       *am = (TAO_ADMM*)tao->data;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"ADMM problem that solves f(x) in a form of f(x) + g(z) subject to x - z = 0. Norm 1 and 2 are supported. Different subsolver routines can be selected. "));
+  PetscOptionsHeadBegin(PetscOptionsObject,"ADMM problem that solves f(x) in a form of f(x) + g(z) subject to x - z = 0. Norm 1 and 2 are supported. Different subsolver routines can be selected. ");
   PetscCall(PetscOptionsReal("-tao_admm_regularizer_coefficient","regularizer constant","",am->lambda,&am->lambda,NULL));
   PetscCall(PetscOptionsReal("-tao_admm_spectral_penalty","Constant for Augmented Lagrangian term.","",am->mu,&am->mu,NULL));
   PetscCall(PetscOptionsReal("-tao_admm_relaxation_parameter","x relaxation parameter for Z update.","",am->gamma,&am->gamma,NULL));
   PetscCall(PetscOptionsReal("-tao_admm_tolerance_update_factor","ADMM dynamic tolerance update factor.","",am->tol,&am->tol,NULL));
   PetscCall(PetscOptionsReal("-tao_admm_spectral_penalty_update_factor","ADMM spectral penalty update curvature safeguard value.","",am->orthval,&am->orthval,NULL));
   PetscCall(PetscOptionsReal("-tao_admm_minimum_spectral_penalty","Set ADMM minimum spectral penalty.","",am->mumin,&am->mumin,NULL));
-  ierr = PetscOptionsEnum("-tao_admm_dual_update","Lagrangian dual update policy","TaoADMMUpdateType",
-                          TaoADMMUpdateTypes,(PetscEnum)am->update,(PetscEnum*)&am->update,NULL);PetscCall(ierr);
-  ierr = PetscOptionsEnum("-tao_admm_regularizer_type","ADMM regularizer update rule","TaoADMMRegularizerType",
-                          TaoADMMRegularizerTypes,(PetscEnum)am->regswitch,(PetscEnum*)&am->regswitch,NULL);PetscCall(ierr);
-  PetscCall(PetscOptionsTail());
+  PetscCall(PetscOptionsEnum("-tao_admm_dual_update","Lagrangian dual update policy","TaoADMMUpdateType",TaoADMMUpdateTypes,(PetscEnum)am->update,(PetscEnum*)&am->update,NULL));
+  PetscCall(PetscOptionsEnum("-tao_admm_regularizer_type","ADMM regularizer update rule","TaoADMMRegularizerType",TaoADMMRegularizerTypes,(PetscEnum)am->regswitch,(PetscEnum*)&am->regswitch,NULL));
+  PetscOptionsHeadEnd();
   PetscCall(TaoSetFromOptions(am->subsolverX));
   if (am->regswitch != TAO_ADMM_REGULARIZER_SOFT_THRESH) {
     PetscCall(TaoSetFromOptions(am->subsolverZ));
@@ -742,14 +739,14 @@ static PetscErrorCode TaoDestroy_ADMM(Tao tao)
 
   Level: beginner
 
-.seealso: TaoADMMSetMisfitHessianChangeStatus(), TaoADMMSetRegHessianChangeStatus(), TaoADMMGetSpectralPenalty(),
-          TaoADMMGetMisfitSubsolver(), TaoADMMGetRegularizationSubsolver(), TaoADMMSetConstraintVectorRHS(),
-          TaoADMMSetMinimumSpectralPenalty(), TaoADMMSetRegularizerCoefficient(),
-          TaoADMMSetRegularizerConstraintJacobian(), TaoADMMSetMisfitConstraintJacobian(),
-          TaoADMMSetMisfitObjectiveAndGradientRoutine(), TaoADMMSetMisfitHessianRoutine(),
-          TaoADMMSetRegularizerObjectiveAndGradientRoutine(), TaoADMMSetRegularizerHessianRoutine(),
-          TaoGetADMMParentTao(), TaoADMMGetDualVector(), TaoADMMSetRegularizerType(),
-          TaoADMMGetRegularizerType(), TaoADMMSetUpdateType(), TaoADMMGetUpdateType()
+.seealso: `TaoADMMSetMisfitHessianChangeStatus()`, `TaoADMMSetRegHessianChangeStatus()`, `TaoADMMGetSpectralPenalty()`,
+          `TaoADMMGetMisfitSubsolver()`, `TaoADMMGetRegularizationSubsolver()`, `TaoADMMSetConstraintVectorRHS()`,
+          `TaoADMMSetMinimumSpectralPenalty()`, `TaoADMMSetRegularizerCoefficient()`,
+          `TaoADMMSetRegularizerConstraintJacobian()`, `TaoADMMSetMisfitConstraintJacobian()`,
+          `TaoADMMSetMisfitObjectiveAndGradientRoutine()`, `TaoADMMSetMisfitHessianRoutine()`,
+          `TaoADMMSetRegularizerObjectiveAndGradientRoutine()`, `TaoADMMSetRegularizerHessianRoutine()`,
+          `TaoGetADMMParentTao()`, `TaoADMMGetDualVector()`, `TaoADMMSetRegularizerType()`,
+          `TaoADMMGetRegularizerType()`, `TaoADMMSetUpdateType()`, `TaoADMMGetUpdateType()`
 M*/
 
 PETSC_EXTERN PetscErrorCode TaoCreate_ADMM(Tao tao)
@@ -822,7 +819,7 @@ PETSC_EXTERN PetscErrorCode TaoCreate_ADMM(Tao tao)
 
   Level: advanced
 
-.seealso: TAOADMM
+.seealso: `TAOADMM`
 
 @*/
 PetscErrorCode TaoADMMSetMisfitHessianChangeStatus(Tao tao, PetscBool b)
@@ -845,7 +842,7 @@ PetscErrorCode TaoADMMSetMisfitHessianChangeStatus(Tao tao, PetscBool b)
 
   Level: advanced
 
-.seealso: TAOADMM
+.seealso: `TAOADMM`
 
 @*/
 PetscErrorCode TaoADMMSetRegHessianChangeStatus(Tao tao, PetscBool b)
@@ -868,7 +865,7 @@ PetscErrorCode TaoADMMSetRegHessianChangeStatus(Tao tao, PetscBool b)
 
   Level: advanced
 
-.seealso: TaoADMMSetMinimumSpectralPenalty(), TAOADMM
+.seealso: `TaoADMMSetMinimumSpectralPenalty()`, `TAOADMM`
 @*/
 PetscErrorCode TaoADMMSetSpectralPenalty(Tao tao, PetscReal mu)
 {
@@ -892,7 +889,7 @@ PetscErrorCode TaoADMMSetSpectralPenalty(Tao tao, PetscReal mu)
 
   Level: advanced
 
-.seealso: TaoADMMSetMinimumSpectralPenalty(), TaoADMMSetSpectralPenalty(), TAOADMM
+.seealso: `TaoADMMSetMinimumSpectralPenalty()`, `TaoADMMSetSpectralPenalty()`, `TAOADMM`
 @*/
 PetscErrorCode TaoADMMGetSpectralPenalty(Tao tao, PetscReal *mu)
 {
@@ -918,7 +915,7 @@ PetscErrorCode TaoADMMGetSpectralPenalty(Tao tao, PetscReal *mu)
 
   Level: advanced
 
-.seealso: TAOADMM
+.seealso: `TAOADMM`
 
 @*/
 PetscErrorCode TaoADMMGetMisfitSubsolver(Tao tao, Tao *misfit)
@@ -943,7 +940,7 @@ PetscErrorCode TaoADMMGetMisfitSubsolver(Tao tao, Tao *misfit)
 
   Level: advanced
 
-.seealso: TAOADMM
+.seealso: `TAOADMM`
 
 @*/
 PetscErrorCode TaoADMMGetRegularizationSubsolver(Tao tao, Tao *reg)
@@ -966,7 +963,7 @@ PetscErrorCode TaoADMMGetRegularizationSubsolver(Tao tao, Tao *reg)
 
   Level: advanced
 
-.seealso: TAOADMM
+.seealso: `TAOADMM`
 
 @*/
 PetscErrorCode TaoADMMSetConstraintVectorRHS(Tao tao, Vec c)
@@ -989,7 +986,7 @@ PetscErrorCode TaoADMMSetConstraintVectorRHS(Tao tao, Vec c)
 
   Level: advanced
 
-.seealso: TaoADMMGetSpectralPenalty(), TAOADMM
+.seealso: `TaoADMMGetSpectralPenalty()`, `TAOADMM`
 @*/
 PetscErrorCode TaoADMMSetMinimumSpectralPenalty(Tao tao, PetscReal mu)
 {
@@ -1011,7 +1008,7 @@ PetscErrorCode TaoADMMSetMinimumSpectralPenalty(Tao tao, PetscReal mu)
 
   Level: advanced
 
-.seealso: TaoADMMSetMisfitConstraintJacobian(), TaoADMMSetRegularizerConstraintJacobian(), TAOADMM
+.seealso: `TaoADMMSetMisfitConstraintJacobian()`, `TaoADMMSetRegularizerConstraintJacobian()`, `TAOADMM`
 
 @*/
 PetscErrorCode TaoADMMSetRegularizerCoefficient(Tao tao, PetscReal lambda)
@@ -1037,7 +1034,7 @@ PetscErrorCode TaoADMMSetRegularizerCoefficient(Tao tao, PetscReal lambda)
 
   Level: advanced
 
-.seealso: TaoADMMSetRegularizerCoefficient(), TaoADMMSetRegularizerConstraintJacobian(), TAOADMM
+.seealso: `TaoADMMSetRegularizerCoefficient()`, `TaoADMMSetRegularizerConstraintJacobian()`, `TAOADMM`
 
 @*/
 PetscErrorCode TaoADMMSetMisfitConstraintJacobian(Tao tao, Mat J, Mat Jpre, PetscErrorCode (*func)(Tao, Vec, Mat, Mat, void*), void *ctx)
@@ -1084,7 +1081,7 @@ PetscErrorCode TaoADMMSetMisfitConstraintJacobian(Tao tao, Mat J, Mat Jpre, Pets
 
   Level: advanced
 
-.seealso: TaoADMMSetRegularizerCoefficient(), TaoADMMSetMisfitConstraintJacobian(), TAOADMM
+.seealso: `TaoADMMSetRegularizerCoefficient()`, `TaoADMMSetMisfitConstraintJacobian()`, `TAOADMM`
 
 @*/
 PetscErrorCode TaoADMMSetRegularizerConstraintJacobian(Tao tao, Mat J, Mat Jpre, PetscErrorCode (*func)(Tao, Vec, Mat, Mat, void*), void *ctx)
@@ -1129,7 +1126,7 @@ PetscErrorCode TaoADMMSetRegularizerConstraintJacobian(Tao tao, Mat J, Mat Jpre,
 
    Level: advanced
 
-.seealso: TAOADMM
+.seealso: `TAOADMM`
 
 @*/
 PetscErrorCode TaoADMMSetMisfitObjectiveAndGradientRoutine(Tao tao, PetscErrorCode (*func)(Tao, Vec, PetscReal*, Vec, void*), void *ctx)
@@ -1158,7 +1155,7 @@ PetscErrorCode TaoADMMSetMisfitObjectiveAndGradientRoutine(Tao tao, PetscErrorCo
 
    Level: advanced
 
-.seealso: TAOADMM
+.seealso: `TAOADMM`
 
 @*/
 PetscErrorCode TaoADMMSetMisfitHessianRoutine(Tao tao, Mat H, Mat Hpre, PetscErrorCode (*func)(Tao, Vec, Mat, Mat, void*), void *ctx)
@@ -1206,7 +1203,7 @@ PetscErrorCode TaoADMMSetMisfitHessianRoutine(Tao tao, Mat H, Mat Hpre, PetscErr
 
    Level: advanced
 
-.seealso: TAOADMM
+.seealso: `TAOADMM`
 
 @*/
 PetscErrorCode TaoADMMSetRegularizerObjectiveAndGradientRoutine(Tao tao, PetscErrorCode (*func)(Tao, Vec, PetscReal*, Vec, void*), void *ctx)
@@ -1235,7 +1232,7 @@ PetscErrorCode TaoADMMSetRegularizerObjectiveAndGradientRoutine(Tao tao, PetscEr
 
    Level: advanced
 
-.seealso: TAOADMM
+.seealso: `TAOADMM`
 
 @*/
 PetscErrorCode TaoADMMSetRegularizerHessianRoutine(Tao tao, Mat H, Mat Hpre, PetscErrorCode (*func)(Tao, Vec, Mat, Mat, void*), void *ctx)
@@ -1284,7 +1281,7 @@ PetscErrorCode TaoADMMSetRegularizerHessianRoutine(Tao tao, Mat H, Mat Hpre, Pet
 
    Level: advanced
 
-.seealso: TAOADMM
+.seealso: `TAOADMM`
 
 @*/
 PetscErrorCode TaoGetADMMParentTao(Tao tao, Tao *admm_tao)
@@ -1308,7 +1305,7 @@ PetscErrorCode TaoGetADMMParentTao(Tao tao, Tao *admm_tao)
 
   Level: intermediate
 
-.seealso: TAOADMM
+.seealso: `TAOADMM`
 
 @*/
 PetscErrorCode TaoADMMGetDualVector(Tao tao, Vec *Y)
@@ -1335,7 +1332,7 @@ PetscErrorCode TaoADMMGetDualVector(Tao tao, Vec *Y)
 
   Level: intermediate
 
-.seealso: TaoADMMGetRegularizerType(), TaoADMMRegularizerType, TAOADMM
+.seealso: `TaoADMMGetRegularizerType()`, `TaoADMMRegularizerType`, `TAOADMM`
 @*/
 PetscErrorCode TaoADMMSetRegularizerType(Tao tao, TaoADMMRegularizerType type)
 {
@@ -1359,7 +1356,7 @@ PetscErrorCode TaoADMMSetRegularizerType(Tao tao, TaoADMMRegularizerType type)
 
    Level: intermediate
 
-.seealso: TaoADMMSetRegularizerType(), TaoADMMRegularizerType, TAOADMM
+.seealso: `TaoADMMSetRegularizerType()`, `TaoADMMRegularizerType`, `TAOADMM`
 @*/
 PetscErrorCode TaoADMMGetRegularizerType(Tao tao, TaoADMMRegularizerType *type)
 {
@@ -1380,7 +1377,7 @@ PetscErrorCode TaoADMMGetRegularizerType(Tao tao, TaoADMMRegularizerType *type)
 
   Level: intermediate
 
-.seealso: TaoADMMGetUpdateType(), TaoADMMUpdateType, TAOADMM
+.seealso: `TaoADMMGetUpdateType()`, `TaoADMMUpdateType`, `TAOADMM`
 @*/
 PetscErrorCode TaoADMMSetUpdateType(Tao tao, TaoADMMUpdateType type)
 {
@@ -1404,7 +1401,7 @@ PetscErrorCode TaoADMMSetUpdateType(Tao tao, TaoADMMUpdateType type)
 
    Level: intermediate
 
-.seealso: TaoADMMSetUpdateType(), TaoADMMUpdateType, TAOADMM
+.seealso: `TaoADMMSetUpdateType()`, `TaoADMMUpdateType`, `TAOADMM`
 @*/
 PetscErrorCode TaoADMMGetUpdateType(Tao tao, TaoADMMUpdateType *type)
 {

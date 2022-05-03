@@ -833,7 +833,7 @@ PetscErrorCode MatPtAPNumeric_SeqAIJMKL_SeqAIJMKL_SymmetricReal(Mat A,Mat P,Mat 
 
   PetscFunctionBegin;
   PetscCall(MatIsSymmetricKnown(A,&set,&flag));
-  PetscCheckFalse(!set || (set && !flag),PETSC_COMM_SELF,PETSC_ERR_PLIB,"MatPtAPNumeric_SeqAIJMKL_SeqAIJMKL_SymmetricReal() called on matrix A not marked as symmetric");
+  PetscCheck(set && !(set && !flag),PETSC_COMM_SELF,PETSC_ERR_PLIB,"MatPtAPNumeric_SeqAIJMKL_SeqAIJMKL_SymmetricReal() called on matrix A not marked as symmetric");
 
   PetscCall(PetscObjectStateGet((PetscObject)A,&state));
   if (!a->sparse_optimized || a->state != state) PetscCall(MatSeqAIJMKL_create_mkl_handle(A));
@@ -1013,7 +1013,6 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJMKL(Mat A,MatType type,MatRe
   Mat_SeqAIJMKL  *aijmkl;
   PetscBool      set;
   PetscBool      sametype;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   if (reuse == MAT_INITIAL_MATRIX) PetscCall(MatDuplicate(A,MAT_COPY_VALUES,&B));
@@ -1039,10 +1038,10 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJMKL(Mat A,MatType type,MatRe
   aijmkl->eager_inspection = PETSC_FALSE;
 
   /* Parse command line options. */
-  ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)A),((PetscObject)A)->prefix,"AIJMKL Options","Mat");PetscCall(ierr);
+  PetscOptionsBegin(PetscObjectComm((PetscObject)A),((PetscObject)A)->prefix,"AIJMKL Options","Mat");
   PetscCall(PetscOptionsBool("-mat_aijmkl_no_spmv2","Disable use of inspector-executor (SpMV 2) routines","None",(PetscBool)aijmkl->no_SpMV2,(PetscBool*)&aijmkl->no_SpMV2,&set));
   PetscCall(PetscOptionsBool("-mat_aijmkl_eager_inspection","Run inspection at matrix assembly time, instead of waiting until needed by an operation","None",(PetscBool)aijmkl->eager_inspection,(PetscBool*)&aijmkl->eager_inspection,&set));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 #if !defined(PETSC_HAVE_MKL_SPARSE_OPTIMIZE)
   if (!aijmkl->no_SpMV2) {
     PetscCall(PetscInfo(B,"User requested use of MKL SpMV2 routines, but MKL version does not support mkl_sparse_optimize();  defaulting to non-SpMV2 routines.\n"));
@@ -1121,7 +1120,7 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJMKL(Mat A,MatType type,MatRe
 
    Level: intermediate
 
-.seealso: MatCreate(), MatCreateMPIAIJMKL(), MatSetValues()
+.seealso: `MatCreate()`, `MatCreateMPIAIJMKL()`, `MatSetValues()`
 @*/
 PetscErrorCode  MatCreateSeqAIJMKL(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt nz,const PetscInt nnz[],Mat *A)
 {

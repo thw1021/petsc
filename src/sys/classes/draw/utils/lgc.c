@@ -19,7 +19,7 @@ PetscClassId PETSC_DRAWLG_CLASSID = 0;
 
    Level: advanced
 
-.seealso: PetscDrawLGCreate(), PetscDrawAxis
+.seealso: `PetscDrawLGCreate()`, `PetscDrawAxis`
 
 @*/
 PetscErrorCode  PetscDrawLGGetAxis(PetscDrawLG lg,PetscDrawAxis *axis)
@@ -44,7 +44,7 @@ PetscErrorCode  PetscDrawLGGetAxis(PetscDrawLG lg,PetscDrawAxis *axis)
 
    Level: intermediate
 
-.seealso: PetscDrawLGCreate(), PetscDraw
+.seealso: `PetscDrawLGCreate()`, `PetscDraw`
 @*/
 PetscErrorCode  PetscDrawLGGetDraw(PetscDrawLG lg,PetscDraw *draw)
 {
@@ -65,7 +65,7 @@ PetscErrorCode  PetscDrawLGGetDraw(PetscDrawLG lg,PetscDraw *draw)
 
    Level: intermediate
 
-.seealso: PetscDrawLGDraw(), PetscDrawSPDraw()
+.seealso: `PetscDrawLGDraw()`, `PetscDrawSPDraw()`
 
    Developer Notes:
     This code cheats and uses the fact that the LG and SP structs are the same
@@ -78,7 +78,6 @@ PetscErrorCode  PetscDrawLGSPDraw(PetscDrawLG lg,PetscDrawSP spin)
   PetscBool      isnull;
   PetscMPIInt    rank;
   PetscDraw      draw;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(lg,PETSC_DRAWLG_CLASSID,1);
@@ -96,7 +95,7 @@ PetscErrorCode  PetscDrawLGSPDraw(PetscDrawLG lg,PetscDrawSP spin)
   PetscCall(PetscDrawAxisSetLimits(lg->axis,xmin,xmax,ymin,ymax));
   PetscCall(PetscDrawAxisDraw(lg->axis));
 
-  ierr = PetscDrawCollectiveBegin(draw);PetscCall(ierr);
+  PetscDrawCollectiveBegin(draw);
   if (rank == 0) {
     int i,j,dim,nopts;
     dim   = lg->dim;
@@ -117,7 +116,7 @@ PetscErrorCode  PetscDrawLGSPDraw(PetscDrawLG lg,PetscDrawSP spin)
       }
     }
   }
-  ierr = PetscDrawCollectiveEnd(draw);PetscCall(ierr);
+  PetscDrawCollectiveEnd(draw);
 
   PetscCall(PetscDrawFlush(draw));
   PetscCall(PetscDrawPause(draw));
@@ -142,9 +141,9 @@ PetscErrorCode  PetscDrawLGSPDraw(PetscDrawLG lg,PetscDrawSP spin)
     The MPI communicator that owns the PetscDraw owns this PetscDrawLG, but the calls to set options and add points are ignored on all processes except the
            zeroth MPI process in the communicator. All MPI processes in the communicator must call PetscDrawLGDraw() to display the updated graph.
 
-.seealso:  PetscDrawLGDestroy(), PetscDrawLGAddPoint(), PetscDrawLGAddCommonPoint(), PetscDrawLGAddPoints(), PetscDrawLGDraw(), PetscDrawLGSave(),
-           PetscDrawLGView(), PetscDrawLGReset(), PetscDrawLGSetDimension(), PetscDrawLGGetDimension(), PetscDrawLGSetLegend(), PetscDrawLGGetAxis(),
-           PetscDrawLGGetDraw(), PetscDrawLGSetUseMarkers(), PetscDrawLGSetLimits(), PetscDrawLGSetColors(), PetscDrawLGSetOptionsPrefix(), PetscDrawLGSetFromOptions()
+.seealso: `PetscDrawLGDestroy()`, `PetscDrawLGAddPoint()`, `PetscDrawLGAddCommonPoint()`, `PetscDrawLGAddPoints()`, `PetscDrawLGDraw()`, `PetscDrawLGSave()`,
+          `PetscDrawLGView()`, `PetscDrawLGReset()`, `PetscDrawLGSetDimension()`, `PetscDrawLGGetDimension()`, `PetscDrawLGSetLegend()`, `PetscDrawLGGetAxis()`,
+          `PetscDrawLGGetDraw()`, `PetscDrawLGSetUseMarkers()`, `PetscDrawLGSetLimits()`, `PetscDrawLGSetColors()`, `PetscDrawLGSetOptionsPrefix()`, `PetscDrawLGSetFromOptions()`
 @*/
 PetscErrorCode  PetscDrawLGCreate(PetscDraw draw,PetscInt dim,PetscDrawLG *outlg)
 {
@@ -196,7 +195,7 @@ PetscErrorCode  PetscDrawLGCreate(PetscDraw draw,PetscInt dim,PetscDrawLG *outlg
 
    Level: intermediate
 
-.seealso: PetscDrawLGCreate()
+.seealso: `PetscDrawLGCreate()`
 
 @*/
 PetscErrorCode  PetscDrawLGSetColors(PetscDrawLG lg,const int colors[])
@@ -225,7 +224,7 @@ PetscErrorCode  PetscDrawLGSetColors(PetscDrawLG lg,const int colors[])
    Notes:
     Call PetscDrawLGGetAxis() and then change properties of the PetscDrawAxis for detailed control of the plot
 
-.seealso: PetscDrawLGGetAxis(), PetscDrawAxis, PetscDrawAxisSetColors(), PetscDrawAxisSetLabels(), PetscDrawAxisSetHoldLimits()
+.seealso: `PetscDrawLGGetAxis()`, `PetscDrawAxis`, `PetscDrawAxisSetColors()`, `PetscDrawAxisSetLabels()`, `PetscDrawAxisSetHoldLimits()`
 
 @*/
 PetscErrorCode  PetscDrawLGSetLegend(PetscDrawLG lg,const char *const *names)
@@ -264,7 +263,7 @@ PetscErrorCode  PetscDrawLGSetLegend(PetscDrawLG lg,const char *const *names)
 
    Level: intermediate
 
-.seealso: PetscDrawLGCreate(), PetscDrawLGSetDimension()
+.seealso: `PetscDrawLGCreate()`, `PetscDrawLGSetDimension()`
 
 @*/
 PetscErrorCode  PetscDrawLGGetDimension(PetscDrawLG lg,PetscInt *dim)
@@ -287,7 +286,7 @@ PetscErrorCode  PetscDrawLGGetDimension(PetscDrawLG lg,PetscInt *dim)
 
    Level: intermediate
 
-.seealso: PetscDrawLGCreate(), PetscDrawLGGetDimension()
+.seealso: `PetscDrawLGCreate()`, `PetscDrawLGGetDimension()`
 @*/
 PetscErrorCode  PetscDrawLGSetDimension(PetscDrawLG lg,PetscInt dim)
 {
@@ -326,7 +325,7 @@ PetscErrorCode  PetscDrawLGSetDimension(PetscDrawLG lg,PetscInt dim)
 
    Level: intermediate
 
-.seealso: PetscDrawLGCreate()
+.seealso: `PetscDrawLGCreate()`
 
 @*/
 PetscErrorCode  PetscDrawLGSetLimits(PetscDrawLG lg,PetscReal x_min,PetscReal x_max,PetscReal y_min,PetscReal y_max)
@@ -351,7 +350,7 @@ PetscErrorCode  PetscDrawLGSetLimits(PetscDrawLG lg,PetscReal x_min,PetscReal x_
 
    Level: intermediate
 
-.seealso: PetscDrawLGCreate()
+.seealso: `PetscDrawLGCreate()`
 @*/
 PetscErrorCode  PetscDrawLGReset(PetscDrawLG lg)
 {
@@ -376,7 +375,7 @@ PetscErrorCode  PetscDrawLGReset(PetscDrawLG lg)
 
    Level: intermediate
 
-.seealso:  PetscDrawLGCreate()
+.seealso: `PetscDrawLGCreate()`
 @*/
 PetscErrorCode  PetscDrawLGDestroy(PetscDrawLG *lg)
 {
@@ -414,7 +413,7 @@ PetscErrorCode  PetscDrawLGDestroy(PetscDrawLG *lg)
 
    Level: intermediate
 
-.seealso: PetscDrawLGCreate()
+.seealso: `PetscDrawLGCreate()`
 @*/
 PetscErrorCode  PetscDrawLGSetUseMarkers(PetscDrawLG lg,PetscBool flg)
 {
@@ -435,7 +434,7 @@ PetscErrorCode  PetscDrawLGSetUseMarkers(PetscDrawLG lg,PetscBool flg)
 
    Level: intermediate
 
-.seealso: PetscDrawSPDraw(), PetscDrawLGSPDraw(), PetscDrawLGReset()
+.seealso: `PetscDrawSPDraw()`, `PetscDrawLGSPDraw()`, `PetscDrawLGReset()`
 @*/
 PetscErrorCode  PetscDrawLGDraw(PetscDrawLG lg)
 {
@@ -443,7 +442,6 @@ PetscErrorCode  PetscDrawLGDraw(PetscDrawLG lg)
   PetscMPIInt    rank;
   PetscDraw      draw;
   PetscBool      isnull;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(lg,PETSC_DRAWLG_CLASSID,1);
@@ -459,7 +457,7 @@ PetscErrorCode  PetscDrawLGDraw(PetscDrawLG lg)
   PetscCall(PetscDrawAxisSetLimits(lg->axis,xmin,xmax,ymin,ymax));
   PetscCall(PetscDrawAxisDraw(lg->axis));
 
-  ierr = PetscDrawCollectiveBegin(draw);PetscCall(ierr);
+  PetscDrawCollectiveBegin(draw);
   if (rank == 0) {
     int i,j,dim=lg->dim,nopts=lg->nopts,cl;
     for (i=0; i<dim; i++) {
@@ -497,7 +495,7 @@ PetscErrorCode  PetscDrawLGDraw(PetscDrawLG lg)
       PetscCall(PetscDrawString(draw,xl + 6*tw,yr - (i + 1.5)*th,PETSC_DRAW_BLACK,lg->legend[i]));
     }
   }
-  ierr = PetscDrawCollectiveEnd(draw);PetscCall(ierr);
+  PetscDrawCollectiveEnd(draw);
 
   PetscCall(PetscDrawFlush(draw));
   PetscCall(PetscDrawPause(draw));
@@ -514,7 +512,7 @@ PetscErrorCode  PetscDrawLGDraw(PetscDrawLG lg)
 
   Level: intermediate
 
-.seealso:  PetscDrawLGCreate(), PetscDrawLGGetDraw(), PetscDrawSetSave(), PetscDrawSave()
+.seealso: `PetscDrawLGCreate()`, `PetscDrawLGGetDraw()`, `PetscDrawSetSave()`, `PetscDrawSave()`
 @*/
 PetscErrorCode  PetscDrawLGSave(PetscDrawLG lg)
 {
@@ -534,7 +532,7 @@ PetscErrorCode  PetscDrawLGSave(PetscDrawLG lg)
 
   Level: beginner
 
-.seealso: PetscDrawLGCreate()
+.seealso: `PetscDrawLGCreate()`
 
 @*/
 PetscErrorCode  PetscDrawLGView(PetscDrawLG lg,PetscViewer viewer)
@@ -573,7 +571,7 @@ PetscErrorCode  PetscDrawLGView(PetscDrawLG lg,PetscViewer viewer)
 
    Level: advanced
 
-.seealso: PetscDrawLGSetFromOptions(), PetscDrawLGCreate()
+.seealso: `PetscDrawLGSetFromOptions()`, `PetscDrawLGCreate()`
 @*/
 PetscErrorCode  PetscDrawLGSetOptionsPrefix(PetscDrawLG lg,const char prefix[])
 {
@@ -592,7 +590,7 @@ PetscErrorCode  PetscDrawLGSetOptionsPrefix(PetscDrawLG lg,const char prefix[])
 
     Level: intermediate
 
-.seealso:  PetscDrawLGDestroy(), PetscDrawLGCreate()
+.seealso: `PetscDrawLGDestroy()`, `PetscDrawLGCreate()`
 @*/
 PetscErrorCode  PetscDrawLGSetFromOptions(PetscDrawLG lg)
 {

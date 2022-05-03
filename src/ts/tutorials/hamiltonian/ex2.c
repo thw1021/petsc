@@ -31,8 +31,6 @@ typedef struct {
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBeginUser;
   options->dim              = 2;
   options->simplex          = PETSC_TRUE;
@@ -48,7 +46,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->stepSize         = 0.01;
   options->bdm              = PETSC_FALSE;
 
-  ierr = PetscOptionsBegin(comm, "", "Two Stream options", "DMPLEX");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "Two Stream options", "DMPLEX");
   PetscCall(PetscStrcpy(options->meshFilename, ""));
   PetscCall(PetscOptionsInt("-dim", "The topological mesh dimension", "ex2.c", options->dim, &options->dim, NULL));
   PetscCall(PetscOptionsInt("-steps", "TS steps to take", "ex2.c", options->steps, &options->steps, NULL));
@@ -63,7 +61,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscCall(PetscOptionsReal("-stepSize","parameter","<1e-2>",options->stepSize,&options->stepSize,PETSC_NULL));
   PetscCall(PetscOptionsReal("-timeScale","parameter","<1>",options->timeScale,&options->timeScale,PETSC_NULL));
   PetscCall(PetscOptionsReal("-particle_perturbation", "Relative perturbation of particles (0,1)", "ex2.c", options->particleRelDx, &options->particleRelDx, NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -283,7 +281,7 @@ static PetscErrorCode RHSFunction2(TS ts,PetscReal t,Vec X,Vec Vres,void *ctx)
     PetscCall(VecShift(rho, -sum/n));
 
     PetscCall(VecSum(rho, &sum));
-    PetscCheck(PetscAbsScalar(sum) <= 1.0e-10,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Charge should have no DC component %g", sum);
+    PetscCheck(PetscAbsScalar(sum) <= 1.0e-10,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Charge should have no DC component %g", (double)PetscAbsScalar(sum));
     PetscCall(VecScale(rho, phi_0));
   }
   PetscCall(VecSet(phi, 0.0));

@@ -40,13 +40,12 @@ int main(int argc,char **args)
   PetscInt       *idx,indx,count,*rows,i,j,k,start,end,its;
   PetscReal      *rowsx,*rowsy;
   PetscReal      *gllNode, *gllWgts;
-  PetscErrorCode ierr;
 
   PetscCall(PetscInitialize(&argc,&args,(char*)0,help));
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Options for p-FEM","");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Options for p-FEM","");
   PetscCall(PetscOptionsInt("-m","Number of elements in each direction","None",m,&m,NULL));
   PetscCall(PetscOptionsInt("-p","Order of each element (tensor product basis)","None",p,&p,NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscCheck(p > 0,PETSC_COMM_SELF,PETSC_ERR_USER,"Option -p value should be greater than zero");
   N    = (p*m+1)*(p*m+1); /* dimension of matrix */
   M    = m*m; /* number of elements */
@@ -207,7 +206,7 @@ int main(int argc,char **args)
   PetscCall(VecAXPY(u,-1.0,ustar));
   PetscCall(VecNorm(u,NORM_2,&norm));
   PetscCall(KSPGetIterationNumber(ksp,&its));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g Iterations %D\n",(double)(norm*h),its));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g Iterations %" PetscInt_FMT "\n",(double)(norm*h),its));
 
   PetscCall(PetscFree(gllNode));
   PetscCall(PetscFree(gllWgts));

@@ -402,10 +402,10 @@ PetscErrorCode MatSetValuesBlocked_MPIBAIJ(Mat mat,PetscInt m,const PetscInt im[
 #if defined(PETSC_USE_CTABLE)
             { PetscInt data;
               PetscCall(PetscTableFind(baij->colmap,in[j]+1,&data));
-              PetscCheckFalse((data - 1) % bs,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Incorrect colmap");
+              PetscCheck((data - 1) % bs == 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Incorrect colmap");
             }
 #else
-            PetscCheckFalse((baij->colmap[in[j]] - 1) % bs,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Incorrect colmap");
+            PetscCheck((baij->colmap[in[j]] - 1) % bs == 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Incorrect colmap");
 #endif
 #endif
 #if defined(PETSC_USE_CTABLE)
@@ -1967,7 +1967,7 @@ PetscErrorCode MatCreateSubMatrix_MPIBAIJ_Private(Mat mat,IS isrow,IS iscol,Pets
     }
     PetscCallMPI(MPI_Scan(&nlocal,&rend,1,MPIU_INT,MPI_SUM,comm));
     rstart = rend - nlocal;
-    PetscCheckFalse(rank == size - 1 && rend != n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local column sizes %" PetscInt_FMT " do not add up to total number of columns %" PetscInt_FMT,rend,n);
+    PetscCheck(rank != size - 1 || rend == n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Local column sizes %" PetscInt_FMT " do not add up to total number of columns %" PetscInt_FMT,rend,n);
 
     /* next, compute all the lengths */
     PetscCall(PetscMalloc2(m+1,&dlens,m+1,&olens));
@@ -2678,7 +2678,7 @@ PetscErrorCode MatMPIBAIJSetPreallocationCSR_MPIBAIJ(Mat B,PetscInt bs,const Pet
 
    Though this routine has Preallocation() in the name it also sets the exact nonzero locations of the matrix entries and usually the numerical values as well
 
-.seealso: MatCreate(), MatCreateSeqAIJ(), MatSetValues(), MatMPIBAIJSetPreallocation(), MatCreateAIJ(), MPIAIJ, MatCreateMPIBAIJWithArrays(), MPIBAIJ
+.seealso: `MatCreate()`, `MatCreateSeqAIJ()`, `MatSetValues()`, `MatMPIBAIJSetPreallocation()`, `MatCreateAIJ()`, `MPIAIJ`, `MatCreateMPIBAIJWithArrays()`, `MPIBAIJ`
 @*/
 PetscErrorCode  MatMPIBAIJSetPreallocationCSR(Mat B,PetscInt bs,const PetscInt i[],const PetscInt j[], const PetscScalar v[])
 {
@@ -2775,8 +2775,8 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIBAIJ_MPIAdj(Mat B, MatType newtype,Mat
   PetscCall(PetscMalloc1(M+1,&ii));
   ii[0] = 0;
   for (i=0; i<M; i++) {
-    PetscCheckFalse((id[i+1] - id[i]) < 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Indices wrong %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT,i,id[i],id[i+1]);
-    PetscCheckFalse((io[i+1] - io[i]) < 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Indices wrong %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT,i,io[i],io[i+1]);
+    PetscCheck((id[i+1] - id[i]) >= 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Indices wrong %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT,i,id[i],id[i+1]);
+    PetscCheck((io[i+1] - io[i]) >= 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Indices wrong %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT,i,io[i],io[i+1]);
     ii[i+1] = ii[i] + id[i+1] - id[i] + io[i+1] - io[i];
     /* remove one from count of matrix has diagonal */
     for (j=id[i]; j<id[i+1]; j++) {
@@ -2866,7 +2866,7 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIBAIJ_MPIAIJ(Mat A,MatType newtype,MatR
     MatSetOptions(,MAT_STRUCTURE_ONLY,PETSC_TRUE) may be called for this matrix type. In this no
     space is allocated for the nonzero entries and any entries passed with MatSetValues() are ignored
 
-.seealso: MatCreateBAIJ
+.seealso: `MatCreateBAIJ`
 M*/
 
 PETSC_INTERN PetscErrorCode MatConvert_MPIBAIJ_MPIBSTRM(Mat,MatType,MatReuse,Mat*);
@@ -2874,7 +2874,6 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIBAIJ_MPIBSTRM(Mat,MatType,MatReuse,Mat
 PETSC_EXTERN PetscErrorCode MatCreate_MPIBAIJ(Mat B)
 {
   Mat_MPIBAIJ    *b;
-  PetscErrorCode ierr;
   PetscBool      flg = PETSC_FALSE;
 
   PetscFunctionBegin;
@@ -2938,7 +2937,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPIBAIJ(Mat B)
   PetscCall(PetscObjectComposeFunction((PetscObject)B,"MatConvert_mpibaij_is_C",MatConvert_XAIJ_IS));
   PetscCall(PetscObjectChangeTypeName((PetscObject)B,MATMPIBAIJ));
 
-  ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)B),NULL,"Options for loading MPIBAIJ matrix 1","Mat");PetscCall(ierr);
+  PetscOptionsBegin(PetscObjectComm((PetscObject)B),NULL,"Options for loading MPIBAIJ matrix 1","Mat");
   PetscCall(PetscOptionsName("-mat_use_hash_table","Use hash table to save time in constructing matrix","MatSetOption",&flg));
   if (flg) {
     PetscReal fact = 1.39;
@@ -2948,7 +2947,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPIBAIJ(Mat B)
     PetscCall(MatMPIBAIJSetHashTableFactor(B,fact));
     PetscCall(PetscInfo(B,"Hash table Factor used %5.2g\n",(double)fact));
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -2963,7 +2962,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPIBAIJ(Mat B)
 
   Level: beginner
 
-.seealso: MatCreateBAIJ(),MATSEQBAIJ,MATMPIBAIJ, MatMPIBAIJSetPreallocation(), MatMPIBAIJSetPreallocationCSR()
+.seealso: `MatCreateBAIJ(),MATSEQBAIJ,MATMPIBAIJ`, `MatMPIBAIJSetPreallocation()`, `MatMPIBAIJSetPreallocationCSR()`
 M*/
 
 /*@C
@@ -3044,7 +3043,7 @@ M*/
 
    Level: intermediate
 
-.seealso: MatCreate(), MatCreateSeqBAIJ(), MatSetValues(), MatCreateBAIJ(), MatMPIBAIJSetPreallocationCSR(), PetscSplitOwnership()
+.seealso: `MatCreate()`, `MatCreateSeqBAIJ()`, `MatSetValues()`, `MatCreateBAIJ()`, `MatMPIBAIJSetPreallocationCSR()`, `PetscSplitOwnership()`
 @*/
 PetscErrorCode  MatMPIBAIJSetPreallocation(Mat B,PetscInt bs,PetscInt d_nz,const PetscInt d_nnz[],PetscInt o_nz,const PetscInt o_nnz[])
 {
@@ -3149,7 +3148,7 @@ PetscErrorCode  MatMPIBAIJSetPreallocation(Mat B,PetscInt bs,PetscInt d_nz,const
 
    Level: intermediate
 
-.seealso: MatCreate(), MatCreateSeqBAIJ(), MatSetValues(), MatCreateBAIJ(), MatMPIBAIJSetPreallocation(), MatMPIBAIJSetPreallocationCSR()
+.seealso: `MatCreate()`, `MatCreateSeqBAIJ()`, `MatSetValues()`, `MatCreateBAIJ()`, `MatMPIBAIJSetPreallocation()`, `MatMPIBAIJSetPreallocationCSR()`
 @*/
 PetscErrorCode  MatCreateBAIJ(MPI_Comm comm,PetscInt bs,PetscInt m,PetscInt n,PetscInt M,PetscInt N,PetscInt d_nz,const PetscInt d_nnz[],PetscInt o_nz,const PetscInt o_nnz[],Mat *A)
 {
@@ -3374,7 +3373,7 @@ PetscErrorCode MatLoad_MPIBAIJ(Mat mat,PetscViewer viewer)
   Notes:
    This can also be set by the command line option: -mat_use_hash_table <fact>
 
-.seealso: MatSetOption()
+.seealso: `MatSetOption()`
 @*/
 PetscErrorCode  MatMPIBAIJSetHashTableFactor(Mat mat,PetscReal fact)
 {
@@ -3435,7 +3434,7 @@ PetscErrorCode  MatMPIBAIJGetSeqBAIJ(Mat A,Mat *Ad,Mat *Ao,const PetscInt *colma
 
   Level: advanced
 
-.seealso:   MatSetValuesBlocked()
+.seealso: `MatSetValuesBlocked()`
 @*/
 PetscErrorCode matmpibaijsetvaluesblocked_(Mat *matin,PetscInt *min,const PetscInt im[],PetscInt *nin,const PetscInt in[],const MatScalar v[],InsertMode *addvin)
 {
@@ -3511,10 +3510,10 @@ PetscErrorCode matmpibaijsetvaluesblocked_(Mat *matin,PetscInt *min,const PetscI
 #if defined(PETSC_USE_CTABLE)
             { PetscInt data;
               PetscCall(PetscTableFind(baij->colmap,in[j]+1,&data));
-              PetscCheckFalse((data - 1) % bs,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Incorrect colmap");
+              PetscCheck((data - 1) % bs == 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Incorrect colmap");
             }
 #else
-            PetscCheckFalse((baij->colmap[in[j]] - 1) % bs,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Incorrect colmap");
+            PetscCheck((baij->colmap[in[j]] - 1) % bs == 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Incorrect colmap");
 #endif
 #endif
 #if defined(PETSC_USE_CTABLE)
@@ -3583,8 +3582,8 @@ PetscErrorCode matmpibaijsetvaluesblocked_(Mat *matin,PetscInt *min,const PetscI
 
        The i and j indices are 0 based, and i indices are indices corresponding to the local j array.
 
-.seealso: MatCreate(), MatCreateSeqAIJ(), MatSetValues(), MatMPIAIJSetPreallocation(), MatMPIAIJSetPreallocationCSR(),
-          MPIAIJ, MatCreateAIJ(), MatCreateMPIAIJWithSplitArrays()
+.seealso: `MatCreate()`, `MatCreateSeqAIJ()`, `MatSetValues()`, `MatMPIAIJSetPreallocation()`, `MatMPIAIJSetPreallocationCSR()`,
+          `MPIAIJ`, `MatCreateAIJ()`, `MatCreateMPIAIJWithSplitArrays()`
 @*/
 PetscErrorCode  MatCreateMPIBAIJWithArrays(MPI_Comm comm,PetscInt bs,PetscInt m,PetscInt n,PetscInt M,PetscInt N,const PetscInt i[],const PetscInt j[],const PetscScalar a[],Mat *mat)
 {
@@ -3604,7 +3603,6 @@ PetscErrorCode  MatCreateMPIBAIJWithArrays(MPI_Comm comm,PetscInt bs,PetscInt m,
 
 PetscErrorCode MatCreateMPIMatConcatenateSeqMat_MPIBAIJ(MPI_Comm comm,Mat inmat,PetscInt n,MatReuse scall,Mat *outmat)
 {
-  PetscErrorCode ierr;
   PetscInt       m,N,i,rstart,nnz,Ii,bs,cbs;
   PetscInt       *indx;
   PetscScalar    *values;
@@ -3625,7 +3623,7 @@ PetscErrorCode MatCreateMPIMatConcatenateSeqMat_MPIBAIJ(MPI_Comm comm,Mat inmat,
     nbs = n/cbs;
 
     PetscCall(PetscMalloc1(rmax,&bindx));
-    ierr = MatPreallocateInitialize(comm,mbs,nbs,dnz,onz);PetscCall(ierr); /* inline function, output __end and __rstart are used below */
+    MatPreallocateBegin(comm,mbs,nbs,dnz,onz); /* inline function, output __end and __rstart are used below */
 
     PetscCallMPI(MPI_Comm_rank(comm,&rank));
     PetscCallMPI(MPI_Comm_rank(comm,&size));
@@ -3634,7 +3632,7 @@ PetscErrorCode MatCreateMPIMatConcatenateSeqMat_MPIBAIJ(MPI_Comm comm,Mat inmat,
       PetscCheck(__end == Nbs,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Sum of local block columns %" PetscInt_FMT " != global block columns %" PetscInt_FMT,__end,Nbs);
     }
 
-    rstart = __rstart; /* block rstart of *outmat; see inline function MatPreallocateInitialize */
+    rstart = __rstart; /* block rstart of *outmat; see inline function MatPreallocateBegin */
     for (i=0; i<mbs; i++) {
       PetscCall(MatGetRow_SeqBAIJ(inmat,i*bs,&nnz,&indx,NULL)); /* non-blocked nnz and indx */
       nnz = nnz/bs;
@@ -3650,7 +3648,7 @@ PetscErrorCode MatCreateMPIMatConcatenateSeqMat_MPIBAIJ(MPI_Comm comm,Mat inmat,
     PetscCall(MatSetType(*outmat,MATBAIJ));
     PetscCall(MatSeqBAIJSetPreallocation(*outmat,bs,0,dnz));
     PetscCall(MatMPIBAIJSetPreallocation(*outmat,bs,0,dnz,0,onz));
-    ierr = MatPreallocateFinalize(dnz,onz);PetscCall(ierr);
+    MatPreallocateEnd(dnz,onz);
     PetscCall(MatSetOption(*outmat,MAT_NO_OFF_PROC_ENTRIES,PETSC_TRUE));
   }
 

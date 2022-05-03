@@ -32,7 +32,7 @@ static PetscErrorCode KSPCGSolve_NASH(KSP ksp)
 
   PetscCall(PCGetDiagonalScale(ksp->pc, &diagonalscale));
   PetscCheck(!diagonalscale,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP, "Krylov method %s does not support diagonal scaling", ((PetscObject)ksp)->type_name);
-  PetscCheckFalse(cg->radius < 0.0,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE, "Input error: radius < 0");
+  PetscCheck(cg->radius >= 0.0,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE, "Input error: radius < 0");
 
   /***************************************************************************/
   /* Get the workspace vectors and initialize variables                      */
@@ -450,7 +450,7 @@ static PetscErrorCode KSPCGSolve_NASH(KSP ksp)
 
     if (ksp->its >= max_cg_its) {
       ksp->reason = KSP_DIVERGED_ITS;
-      PetscCall(PetscInfo(ksp, "KSPCGSolve_NASH: iterlim: its=%D\n", ksp->its));
+      PetscCall(PetscInfo(ksp, "KSPCGSolve_NASH: iterlim: its=%" PetscInt_FMT "\n", ksp->its));
       break;
     }
 
@@ -562,13 +562,13 @@ static PetscErrorCode KSPCGSetFromOptions_NASH(PetscOptionItems *PetscOptionsObj
   KSPCG_NASH     *cg = (KSPCG_NASH*)ksp->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"KSPCG NASH options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"KSPCG NASH options");
 
   PetscCall(PetscOptionsReal("-ksp_cg_radius", "Trust Region Radius", "KSPCGSetRadius", cg->radius, &cg->radius, NULL));
 
   PetscCall(PetscOptionsEList("-ksp_cg_dtype", "Norm used for direction", "", DType_Table, NASH_DIRECTION_TYPES, DType_Table[cg->dtype], &cg->dtype, NULL));
 
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -612,7 +612,7 @@ $  other KSP converged/diverged reasons
   Reference:
    Nash, Stephen G. Newton-type minimization via the Lanczos method. SIAM Journal on Numerical Analysis 21, no. 4 (1984): 770-788.
 
-.seealso:  KSPCreate(), KSPSetType(), KSPType (for list of available types), KSP, KSPCGSetRadius(), KSPCGGetNormD(), KSPCGGetObjFcn()
+.seealso: `KSPCreate()`, `KSPSetType()`, `KSPType`, `KSP`, `KSPCGSetRadius()`, `KSPCGGetNormD()`, `KSPCGGetObjFcn()`
 M*/
 
 PETSC_EXTERN PetscErrorCode KSPCreate_NASH(KSP ksp)

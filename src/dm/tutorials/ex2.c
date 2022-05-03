@@ -22,7 +22,6 @@ static const int GLIDER[3][3] = {
 
 int main(int argc,char **argv)
 {
-  PetscErrorCode   ierr;
   DM               da;
   PetscViewer      viewer;
   Vec              Xlocal, Xglobal;
@@ -31,7 +30,7 @@ int main(int argc,char **argv)
   PetscBool        has_glider, has_blinker;
 
   PetscCall(PetscInitialize(&argc,&argv,(char*)0,help));
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Conway's Game of Life","");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Conway's Game of Life","");
   {
     PetscCall(PetscOptionsIntArray("-glider","Coordinate at which to center a glider",NULL,glider_loc,(two=2,&two),&has_glider));
     PetscCall(PetscOptionsIntArray("-blinker","Coordinate at which to center a blinker",NULL,blinker_loc,(two=2,&two),&has_blinker));
@@ -40,7 +39,7 @@ int main(int argc,char **argv)
     PetscCall(PetscOptionsInt("-check_step_alive","Step on which to check that the simulation is alive",NULL,check_step_alive,&check_step_alive,NULL));
     PetscCall(PetscOptionsInt("-check_step_dead","Step on which to check that the simulation is dead",NULL,check_step_dead,&check_step_dead,NULL));
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   PetscCall(PetscViewerDrawOpen(PETSC_COMM_WORLD,NULL,"Life",PETSC_DECIDE,PETSC_DECIDE,1000,1000,&viewer));
 
@@ -126,10 +125,10 @@ int main(int argc,char **argv)
         PetscCall(VecSum(Xglobal, &sum));
         if (PetscAbsScalar(sum) > 0.1) {
           if (step == check_step_dead) {
-            PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Simulation alive at step %D\n",step));
+            PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Simulation alive at step %" PetscInt_FMT "\n",step));
           }
         } else if (step == check_step_alive) {
-          PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Simulation dead at step %D\n",step));
+          PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Simulation dead at step %" PetscInt_FMT "\n",step));
         }
       }
       if (step % viz_interval == 0) {

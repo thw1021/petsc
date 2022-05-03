@@ -13,18 +13,16 @@ typedef struct {
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   options->parallel        = PETSC_FALSE;
   options->useInitialGuess = PETSC_FALSE;
   options->entityDepth     = 0;
 
-  ierr = PetscOptionsBegin(comm, "", "Meshing Interpolation Test Options", "DMPLEX");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "Meshing Interpolation Test Options", "DMPLEX");
   PetscCall(PetscOptionsBoundedInt("-entity_depth", "Depth of the entities to rebalance (0 => vertices)", FILENAME, options->entityDepth, &options->entityDepth, NULL,0));
   PetscCall(PetscOptionsBool("-parallel", "Use ParMetis instead of Metis", FILENAME, options->parallel, &options->parallel, NULL));
   PetscCall(PetscOptionsBool("-use_initial_guess", "Use RefineKway function of ParMetis", FILENAME, options->useInitialGuess, &options->useInitialGuess, NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -113,8 +111,8 @@ int main(int argc, char **argv)
     PetscCallMPI(MPI_Allreduce(MPI_IN_PLACE, &gSizeAfter, 1, MPIU_INT, MPI_SUM, comm));
     PetscCallMPI(MPI_Allreduce(MPI_IN_PLACE, &minAfter, 1, MPIU_INT, MPI_MIN, comm));
     PetscCallMPI(MPI_Allreduce(MPI_IN_PLACE, &maxAfter, 1, MPIU_INT, MPI_MAX, comm));
-    PetscCheckFalse(gSizeAfter != gSizeBefore,comm, PETSC_ERR_PLIB, "Global section has not the same size before and after.");
-    PetscCheckFalse(!(minAfter >= minBefore && maxAfter <= maxBefore && (minAfter > minBefore || maxAfter < maxBefore)),comm, PETSC_ERR_PLIB, "DMPlexRebalanceSharedPoints did not improve mesh point balance.");
+    PetscCheck(gSizeAfter == gSizeBefore,comm, PETSC_ERR_PLIB, "Global section has not the same size before and after.");
+    PetscCheck(minAfter >= minBefore && maxAfter <= maxBefore && (minAfter > minBefore || maxAfter < maxBefore),comm, PETSC_ERR_PLIB, "DMPlexRebalanceSharedPoints did not improve mesh point balance.");
     PetscCall(PetscSectionDestroy(&gsection));
     PetscCall(PetscSectionDestroy(&s));
   }

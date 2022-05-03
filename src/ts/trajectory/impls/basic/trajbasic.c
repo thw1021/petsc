@@ -52,8 +52,8 @@ static PetscErrorCode TSTrajectorySet_Basic(TSTrajectory tj,TS ts,PetscInt stepn
 static PetscErrorCode TSTrajectorySetFromOptions_Basic(PetscOptionItems *PetscOptionsObject,TSTrajectory tj)
 {
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"TS trajectory options for Basic type"));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadBegin(PetscOptionsObject,"TS trajectory options for Basic type");
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -155,7 +155,7 @@ static PetscErrorCode TSTrajectoryDestroy_Basic(TSTrajectory tj)
 
   Level: intermediate
 
-.seealso:  TSTrajectoryCreate(), TS, TSTrajectorySetType(), TSTrajectorySetDirname(), TSTrajectorySetFile()
+.seealso: `TSTrajectoryCreate()`, `TS`, `TSTrajectorySetType()`, `TSTrajectorySetDirname()`, `TSTrajectorySetFile()`
 
 M*/
 PETSC_EXTERN PetscErrorCode TSTrajectoryCreate_Basic(TSTrajectory tj,TS ts)

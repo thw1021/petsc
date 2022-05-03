@@ -79,7 +79,7 @@ PetscErrorCode TaoVecGetSubVec(Vec vfull, IS is, TaoSubsetType reduced_type, Pet
       PetscCall(VecGetArray(vfull,&fv));
       PetscCall(VecGetArray(*vreduced,&rv));
       PetscCall(ISGetIndices(is,&s));
-      PetscCheck(nlocal <= (fhigh-flow),PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"IS local size %D > Vec local size %D",nlocal,fhigh-flow);
+      PetscCheck(nlocal <= (fhigh-flow),PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"IS local size %" PetscInt_FMT " > Vec local size %" PetscInt_FMT,nlocal,fhigh-flow);
       for (i=0;i<nlocal;++i) {
         rv[s[i]-flow] = fv[s[i]-flow];
       }
@@ -108,7 +108,6 @@ PetscErrorCode TaoVecGetSubVec(Vec vfull, IS is, TaoSubsetType reduced_type, Pet
 @*/
 PetscErrorCode TaoMatGetSubMat(Mat M, IS is, Vec v1, TaoSubsetType subset_type, Mat *Msub)
 {
-  PetscErrorCode ierr;
   IS             iscomp;
   PetscBool      flg = PETSC_TRUE;
 
@@ -126,9 +125,9 @@ PetscErrorCode TaoMatGetSubMat(Mat M, IS is, Vec v1, TaoSubsetType subset_type, 
      Msub[i,j] = M[i,j] if i,j in Free_Local or i==j
      Msub[i,j] = 0      if i!=j and i or j not in Free_Local
      */
-    ierr = PetscObjectOptionsBegin((PetscObject)M);PetscCall(ierr);
+    PetscObjectOptionsBegin((PetscObject)M);
     PetscCall(PetscOptionsBool("-overwrite_hessian","modify the existing hessian matrix when computing submatrices","TaoSubsetType",flg,&flg,NULL));
-    ierr = PetscOptionsEnd();PetscCall(ierr);
+    PetscOptionsEnd();
     if (flg) {
       PetscCall(MatDuplicate(M, MAT_COPY_VALUES, Msub));
     } else {
@@ -398,7 +397,7 @@ PetscErrorCode TaoBoundStep(Vec X, Vec XL, Vec XU, IS active_lower, IS active_up
 
   Level: developer
 
-.seealso: TAOBNCG, TAOBNTL, TAOBNTR
+.seealso: `TAOBNCG`, `TAOBNTL`, `TAOBNTR`
 @*/
 PetscErrorCode TaoBoundSolution(Vec X, Vec XL, Vec XU, PetscReal bound_tol, PetscInt *nDiff, Vec Xout)
 {

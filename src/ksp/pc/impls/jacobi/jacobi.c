@@ -364,14 +364,14 @@ static PetscErrorCode PCSetFromOptions_Jacobi(PetscOptionItems *PetscOptionsObje
 
   PetscFunctionBegin;
   PetscCall(PCJacobiGetType(pc,&deflt));
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Jacobi options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Jacobi options");
   PetscCall(PetscOptionsEnum("-pc_jacobi_type","How to construct diagonal matrix","PCJacobiSetType",PCJacobiTypes,(PetscEnum)deflt,(PetscEnum*)&type,&flg));
   if (flg) {
     PetscCall(PCJacobiSetType(pc,type));
   }
   PetscCall(PetscOptionsBool("-pc_jacobi_abs","Use absolute values of diagonal entries","PCJacobiSetUseAbs",jac->useabs,&jac->useabs,NULL));
   PetscCall(PetscOptionsBool("-pc_jacobi_fixdiagonal","Fix null terms on diagonal","PCJacobiSetFixDiagonal",jac->fixdiag,&jac->fixdiag,NULL));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -427,11 +427,12 @@ static PetscErrorCode PCView_Jacobi(PC pc, PetscViewer viewer)
 
     Zero entries along the diagonal are replaced with the value 1.0
 
-    See PCPBJACOBI for a point-block Jacobi preconditioner
+    See PCPBJACOBI for fixed-size point block, PCVPBJACOBI for variable-sized point block, and PCBJACOBI for large size blocks
 
-.seealso:  PCCreate(), PCSetType(), PCType (for list of available types), PC,
-           PCJacobiSetType(), PCJacobiSetUseAbs(), PCJacobiGetUseAbs(),
-           PCJacobiSetFixDiagonal(), PCJacobiGetFixDiagonal(), PCPBJACOBI
+.seealso:  `PCCreate()`, `PCSetType()`, `PCType`, `PC`,
+           `PCJacobiSetType()`, `PCJacobiSetUseAbs()`, `PCJacobiGetUseAbs()`,
+           `PCJacobiSetFixDiagonal()`, `PCJacobiGetFixDiagonal()`
+           `PCJacobiSetType()`, `PCJacobiSetUseAbs()`, `PCJacobiGetUseAbs()`, `PCPBJACOBI`, `PCBJACOBI`, `PCVPBJACOBI`
 M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_Jacobi(PC pc)
@@ -502,7 +503,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_Jacobi(PC pc)
 
    Level: intermediate
 
-.seealso: PCJacobiaSetType(), PCJacobiGetUseAbs()
+.seealso: `PCJacobiaSetType()`, `PCJacobiGetUseAbs()`
 
 @*/
 PetscErrorCode  PCJacobiSetUseAbs(PC pc,PetscBool flg)
@@ -527,7 +528,7 @@ PetscErrorCode  PCJacobiSetUseAbs(PC pc,PetscBool flg)
 
    Level: intermediate
 
-.seealso: PCJacobiaSetType(), PCJacobiSetUseAbs(), PCJacobiGetType()
+.seealso: `PCJacobiaSetType()`, `PCJacobiSetUseAbs()`, `PCJacobiGetType()`
 
 @*/
 PetscErrorCode  PCJacobiGetUseAbs(PC pc,PetscBool *flg)
@@ -555,7 +556,7 @@ PetscErrorCode  PCJacobiGetUseAbs(PC pc,PetscBool *flg)
 
    Level: intermediate
 
-.seealso: PCJacobiSetType(), PCJacobiGetFixDiagonal()
+.seealso: `PCJacobiSetType()`, `PCJacobiGetFixDiagonal()`
 
 @*/
 PetscErrorCode  PCJacobiSetFixDiagonal(PC pc,PetscBool flg)
@@ -582,7 +583,7 @@ PetscErrorCode  PCJacobiSetFixDiagonal(PC pc,PetscBool flg)
 
    Level: intermediate
 
-.seealso: PCJacobiSetType(), PCJacobiSetFixDiagonal()
+.seealso: `PCJacobiSetType()`, `PCJacobiSetFixDiagonal()`
 
 @*/
 PetscErrorCode  PCJacobiGetFixDiagonal(PC pc,PetscBool *flg)
@@ -608,7 +609,7 @@ PetscErrorCode  PCJacobiGetFixDiagonal(PC pc,PetscBool *flg)
 
    Level: intermediate
 
-.seealso: PCJacobiaUseAbs(), PCJacobiGetType()
+.seealso: `PCJacobiaUseAbs()`, `PCJacobiGetType()`
 @*/
 PetscErrorCode  PCJacobiSetType(PC pc,PCJacobiType type)
 {
@@ -631,7 +632,7 @@ PetscErrorCode  PCJacobiSetType(PC pc,PCJacobiType type)
 
    Level: intermediate
 
-.seealso: PCJacobiaUseAbs(), PCJacobiSetType()
+.seealso: `PCJacobiaUseAbs()`, `PCJacobiSetType()`
 @*/
 PetscErrorCode  PCJacobiGetType(PC pc,PCJacobiType *type)
 {

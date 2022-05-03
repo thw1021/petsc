@@ -36,7 +36,7 @@ static PetscErrorCode KSPSetUp_AGMRES(KSP ksp)
   PetscInt        lwork   = PetscMax(8 * N + 16, 4 * neig * (N - neig));
 
   PetscFunctionBegin;
-  PetscCheckFalse(ksp->pc_side == PC_SYMMETRIC,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"no symmetric preconditioning for KSPAGMRES");
+  PetscCheck(ksp->pc_side != PC_SYMMETRIC,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"no symmetric preconditioning for KSPAGMRES");
   N     = MAXKSPSIZE;
   /* Preallocate space during the call to KSPSetup_GMRES for the Krylov basis */
   agmres->q_preallocate = PETSC_TRUE; /* No allocation on the fly */
@@ -145,7 +145,7 @@ PetscErrorCode KSPComputeShifts_GMRES(KSP ksp)
   /* Now, compute the Shifts values */
   PetscCall(PetscMalloc2(max_k,&Rshift,max_k,&Ishift));
   PetscCall(KSPComputeEigenvalues(kspgmres, max_k, Rshift, Ishift, &m));
-  PetscCheckFalse(m < max_k,PetscObjectComm((PetscObject)ksp),PETSC_ERR_PLIB, "Unable to compute the Shifts for the Newton basis");
+  PetscCheck(m >= max_k,PetscObjectComm((PetscObject)ksp),PETSC_ERR_PLIB, "Unable to compute the Shifts for the Newton basis");
   else {
     PetscCall(KSPAGMRESLejaOrdering(Rshift, Ishift, agmres->Rshift, agmres->Ishift, max_k));
 
@@ -433,17 +433,17 @@ static PetscErrorCode KSPAGMRESBuildSoln(KSP ksp,PetscInt it)
   }
   /* QR factorize the Hessenberg matrix */
   PetscStackCallBLAS("LAPACKgeqrf",LAPACKgeqrf_(&lC, &KspSize, agmres->hh_origin, &ldH, agmres->tau, agmres->work, &lwork, &info));
-  PetscCheck(!info,PetscObjectComm((PetscObject)ksp), PETSC_ERR_LIB,"Error in LAPACK routine XGEQRF INFO=%d", info);
+  PetscCheck(!info,PetscObjectComm((PetscObject)ksp), PETSC_ERR_LIB,"Error in LAPACK routine XGEQRF INFO=%" PetscBLASInt_FMT, info);
   /* Update the right hand side of the least square problem */
   PetscCall(PetscArrayzero(agmres->nrs, N));
 
   agmres->nrs[0] = ksp->rnorm;
   PetscStackCallBLAS("LAPACKormqr",LAPACKormqr_("L", "T", &lC, &nrhs, &KspSize, agmres->hh_origin, &ldH, agmres->tau, agmres->nrs, &N, agmres->work, &lwork, &info));
-  PetscCheck(!info,PetscObjectComm((PetscObject)ksp), PETSC_ERR_LIB,"Error in LAPACK routine XORMQR INFO=%d",info);
+  PetscCheck(!info,PetscObjectComm((PetscObject)ksp), PETSC_ERR_LIB,"Error in LAPACK routine XORMQR INFO=%" PetscBLASInt_FMT,info);
   ksp->rnorm = PetscAbsScalar(agmres->nrs[KspSize]);
   /* solve the least-square problem */
   PetscStackCallBLAS("LAPACKtrtrs",LAPACKtrtrs_("U", "N", "N", &KspSize, &nrhs, agmres->hh_origin, &ldH, agmres->nrs, &N, &info));
-  PetscCheck(!info,PetscObjectComm((PetscObject)ksp), PETSC_ERR_LIB,"Error in LAPACK routine XTRTRS INFO=%d",info);
+  PetscCheck(!info,PetscObjectComm((PetscObject)ksp), PETSC_ERR_LIB,"Error in LAPACK routine XTRTRS INFO=%" PetscBLASInt_FMT,info);
   /* Accumulate the correction to the solution of the preconditioned problem in VEC_TMP */
   PetscCall(VecZeroEntries(VEC_TMP));
   PetscCall(VecMAXPY(VEC_TMP, max_k, agmres->nrs, &VEC_V(0)));
@@ -609,26 +609,26 @@ static PetscErrorCode KSPView_AGMRES(KSP ksp,PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERSTRING,&isstring));
 
   if (iascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, " restart=%d using %s\n", agmres->max_k, cstr));
+    PetscCall(PetscViewerASCIIPrintf(viewer, " restart=%" PetscInt_FMT " using %s\n", agmres->max_k, cstr));
     PetscCall(PetscViewerASCIIPrintf(viewer, " %s\n", Nstr));
-    PetscCall(PetscViewerASCIIPrintf(viewer, " Number of matvecs : %D\n", agmres->matvecs));
+    PetscCall(PetscViewerASCIIPrintf(viewer, " Number of matvecs : %" PetscInt_FMT "\n", agmres->matvecs));
     if (agmres->force) PetscCall(PetscViewerASCIIPrintf (viewer, " Adaptive strategy is used: FALSE\n"));
     else PetscViewerASCIIPrintf(viewer, " Adaptive strategy is used: TRUE\n");
     if (agmres->DeflPrecond) {
       PetscCall(PetscViewerASCIIPrintf(viewer, " STRATEGY OF DEFLATION: PRECONDITIONER \n"));
-      PetscCall(PetscViewerASCIIPrintf(viewer, "  Frequency of extracted eigenvalues = %D\n", agmres->neig));
-      PetscCall(PetscViewerASCIIPrintf(viewer, "  Total number of extracted eigenvalues = %D\n", agmres->r));
-      PetscCall(PetscViewerASCIIPrintf(viewer, "  Maximum number of eigenvalues set to be extracted = %D\n", agmres->max_neig));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "  Frequency of extracted eigenvalues = %" PetscInt_FMT "\n", agmres->neig));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "  Total number of extracted eigenvalues = %" PetscInt_FMT "\n", agmres->r));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "  Maximum number of eigenvalues set to be extracted = %" PetscInt_FMT "\n", agmres->max_neig));
     } else {
       if (agmres->ritz) sprintf(ritzvec, "Ritz vectors");
       else sprintf(ritzvec, "Harmonic Ritz vectors");
       PetscCall(PetscViewerASCIIPrintf(viewer, " STRATEGY OF DEFLATION: AUGMENT\n"));
-      PetscCall(PetscViewerASCIIPrintf(viewer," augmented vectors  %d at frequency %d with %s\n", agmres->r, agmres->neig, ritzvec));
+      PetscCall(PetscViewerASCIIPrintf(viewer," augmented vectors  %" PetscInt_FMT " at frequency %" PetscInt_FMT " with %s\n", agmres->r, agmres->neig, ritzvec));
     }
-    PetscCall(PetscViewerASCIIPrintf(viewer, " Minimum relaxation parameter for the adaptive strategy(smv)  = %g\n", agmres->smv));
-    PetscCall(PetscViewerASCIIPrintf(viewer, " Maximum relaxation parameter for the adaptive strategy(bgv)  = %g\n", agmres->bgv));
+    PetscCall(PetscViewerASCIIPrintf(viewer, " Minimum relaxation parameter for the adaptive strategy(smv)  = %g\n", (double)agmres->smv));
+    PetscCall(PetscViewerASCIIPrintf(viewer, " Maximum relaxation parameter for the adaptive strategy(bgv)  = %g\n", (double)agmres->bgv));
   } else if (isstring) {
-    PetscCall(PetscViewerStringSPrintf(viewer,"%s restart %D",cstr,agmres->max_k));
+    PetscCall(PetscViewerStringSPrintf(viewer,"%s restart %" PetscInt_FMT,cstr,agmres->max_k));
   }
   PetscFunctionReturn(0);
 }
@@ -641,7 +641,7 @@ static PetscErrorCode KSPSetFromOptions_AGMRES(PetscOptionItems *PetscOptionsObj
 
   PetscFunctionBegin;
   PetscCall(KSPSetFromOptions_DGMRES(PetscOptionsObject,ksp));  /* Set common options from DGMRES and GMRES */
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"KSP AGMRES Options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"KSP AGMRES Options");
   PetscCall(PetscOptionsInt("-ksp_agmres_eigen", "Number of eigenvalues to deflate", "KSPDGMRESSetEigen", agmres->neig, &neig, &flg));
   if (flg) {
     PetscCall(KSPDGMRESSetEigen_DGMRES(ksp, neig));
@@ -654,7 +654,7 @@ static PetscErrorCode KSPSetFromOptions_AGMRES(PetscOptionItems *PetscOptionsObj
   PetscCall(PetscOptionsBool("-ksp_agmres_ritz", "Compute the Ritz vectors instead of the Harmonic Ritz vectors ", "KSPGMRESHarmonic",agmres->ritz,&agmres->ritz ,&flg));
   PetscCall(PetscOptionsReal("-ksp_agmres_MinRatio", "Relaxation parameter in the adaptive strategy; smallest multiple of the remaining number of steps allowed", "KSPGMRESSetMinRatio", agmres->smv, &agmres->smv, NULL));
   PetscCall(PetscOptionsReal("-ksp_agmres_MaxRatio", "Relaxation parameter in the adaptive strategy; Largest multiple of the remaining number of steps allowed", "KSPGMRESSetMaxRatio",agmres->bgv,&agmres->bgv, &flg));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -694,10 +694,10 @@ Mathematics, 62(9), pp. 1171-1186, 2012
  .  [5] M. Mohiyuddin, M. Hoemmen, J. Demmel, and K. Yelick, Minimizing communication in sparse matrix solvers, in SC '09: Proceedings of the Conference on High Performance Computing Networking, Storage and Analysis, New York, NY, USA, 2009, ACM, pp. 1154-1171.
  .    Sidje, Roger B. Alternatives for parallel Krylov subspace basis computation. Numer. Linear Algebra Appl. 4 (1997), no. 4, 305-331
 
- .seealso:  KSPCreate(), KSPSetType(), KSPType (for list of available types), KSP, KSPDGMRES, KSPPGMRES,
- KSPGMRESSetRestart(), KSPGMRESSetHapTol(), KSPGMRESSetPreAllocateVectors(), KSPGMRESSetOrthogonalization(), KSPGMRESGetOrthogonalization(),
- KSPGMRESClassicalGramSchmidtOrthogonalization(), KSPGMRESModifiedGramSchmidtOrthogonalization(),
- KSPGMRESCGSRefinementType, KSPGMRESSetCGSRefinementType(), KSPGMRESGetCGSRefinementType(), KSPGMRESMonitorKrylov(), KSPSetPCSide()
+ .seealso: `KSPCreate()`, `KSPSetType()`, `KSPType`, `KSP`, `KSPDGMRES`, `KSPPGMRES`,
+           `KSPGMRESSetRestart()`, `KSPGMRESSetHapTol()`, `KSPGMRESSetPreAllocateVectors()`, `KSPGMRESSetOrthogonalization()`, `KSPGMRESGetOrthogonalization()`,
+           `KSPGMRESClassicalGramSchmidtOrthogonalization()`, `KSPGMRESModifiedGramSchmidtOrthogonalization()`,
+           `KSPGMRESCGSRefinementType`, `KSPGMRESSetCGSRefinementType()`, `KSPGMRESGetCGSRefinementType()`, `KSPGMRESMonitorKrylov()`, `KSPSetPCSide()`
  M*/
 
 PETSC_EXTERN PetscErrorCode KSPCreate_AGMRES(KSP ksp)

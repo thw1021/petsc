@@ -169,7 +169,7 @@ static PetscErrorCode Monitor(TS ts,PetscInt step,PetscReal t,Vec X,void *ctx)
   PetscCall(TSGetMaxTime(ts,&tfinal));
   PetscCall(TSGetPrevTime(ts,&tprev));
   PetscCall(VecGetArrayRead(X,&x));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"[%.1f] %D TS %.6f (dt = %.6f) X % 12.6e % 12.6e\n",(double)user->next_output,step,(double)t,(double)dt,(double)PetscRealPart(x[0]),(double)PetscRealPart(x[1])));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"[%.1f] %" PetscInt_FMT " TS %.6f (dt = %.6f) X % 12.6e % 12.6e\n",(double)user->next_output,step,(double)t,(double)dt,(double)PetscRealPart(x[0]),(double)PetscRealPart(x[1])));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD,"t %.6f (tprev = %.6f) \n",(double)t,(double)tprev));
   PetscCall(VecRestoreArrayRead(X,&x));
   PetscFunctionReturn(0);
@@ -195,7 +195,7 @@ int main(int argc,char **argv)
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   PetscCall(PetscInitialize(&argc,&argv,NULL,help));
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD,&size));
-  PetscCheckFalse(size != 1,PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,"This is a uniprocessor example only!");
+  PetscCheck(size == 1,PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,"This is a uniprocessor example only!");
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     Set runtime options and create AdolcCtx
@@ -265,7 +265,7 @@ int main(int argc,char **argv)
   PetscCall(TSSolve(ts,x));
   PetscCall(TSGetSolveTime(ts,&ftime));
   PetscCall(TSGetStepNumber(ts,&steps));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"mu %g, steps %D, ftime %g\n",(double)user.mu,steps,(double)ftime));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"mu %g, steps %" PetscInt_FMT ", ftime %g\n",(double)user.mu,steps,(double)ftime));
   PetscCall(VecView(x,PETSC_VIEWER_STDOUT_WORLD));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -22,7 +22,7 @@ PetscErrorCode MatIncreaseOverlap_SeqBAIJ(Mat A,PetscInt is_max,IS is[],PetscInt
   aj = a->j;
   bs = A->rmap->bs;
 
-  PetscCheckFalse(ov < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Negative overlap specified");
+  PetscCheck(ov >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Negative overlap specified");
 
   PetscCall(PetscBTCreate(m,&table));
   PetscCall(PetscMalloc1(m+1,&nidx));
@@ -40,7 +40,7 @@ PetscErrorCode MatIncreaseOverlap_SeqBAIJ(Mat A,PetscInt is_max,IS is[],PetscInt
     /* Enter these into the temp arrays i.e mark table[row], enter row into new index */
     for (j=0; j<n; ++j) {
       ival = idx[j]/bs; /* convert the indices into block indices */
-      PetscCheckFalse(ival>=m,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"index greater than mat-dim");
+      PetscCheck(ival<m,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"index greater than mat-dim");
       if (!PetscBTLookupSet(table,ival)) nidx[isz++] = ival;
     }
     PetscCall(ISRestoreIndices(is[i],&idx));
@@ -106,7 +106,7 @@ PetscErrorCode MatCreateSubMatrix_SeqBAIJ_Private(Mat A,IS isrow,IS iscol,MatReu
   if (scall == MAT_REUSE_MATRIX) {
     c = (Mat_SeqBAIJ*)((*B)->data);
 
-    PetscCheckFalse(c->mbs!=nrows || c->nbs!=ncols || (*B)->rmap->bs!=bs,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Submatrix wrong size");
+    PetscCheck(c->mbs == nrows && c->nbs == ncols && (*B)->rmap->bs == bs,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Submatrix wrong size");
     PetscCall(PetscArraycmp(c->ilen,lens,c->mbs,&flag));
     PetscCheck(flag,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Cannot reuse matrix. wrong no of nonzeros");
     PetscCall(PetscArrayzero(c->ilen,c->mbs));
@@ -182,7 +182,7 @@ PetscErrorCode MatCreateSubMatrix_SeqBAIJ(Mat A,IS isrow,IS iscol,MatReuse scall
   PetscCall(PetscArrayzero(vary,a->mbs));
   for (i=0; i<nrows; i++) vary[irow[i]/bs]++;
   for (i=0; i<a->mbs; i++) {
-    PetscCheckFalse(vary[i]!=0 && vary[i]!=bs,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Index set does not match blocks");
+    PetscCheck(vary[i] == 0 || vary[i] == bs,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Index set does not match blocks");
   }
   count = 0;
   for (i=0; i<nrows; i++) {
@@ -194,7 +194,7 @@ PetscErrorCode MatCreateSubMatrix_SeqBAIJ(Mat A,IS isrow,IS iscol,MatReuse scall
   PetscCall(PetscArrayzero(vary,a->nbs));
   for (i=0; i<ncols; i++) vary[icol[i]/bs]++;
   for (i=0; i<a->nbs; i++) {
-    PetscCheckFalse(vary[i]!=0 && vary[i]!=bs,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Internal error in PETSc");
+    PetscCheck(vary[i] == 0 || vary[i] == bs,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Internal error in PETSc");
   }
   count = 0;
   for (i=0; i<ncols; i++) {
@@ -2783,7 +2783,7 @@ PetscErrorCode MatGetDiagonal_SeqBAIJ(Mat A,Vec v)
   PetscCall(VecSet(v,zero));
   PetscCall(VecGetArray(v,&x));
   PetscCall(VecGetLocalSize(v,&n));
-  PetscCheckFalse(n != A->rmap->N,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Nonconforming matrix and vector");
+  PetscCheck(n == A->rmap->N,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Nonconforming matrix and vector");
   for (i=0; i<ambs; i++) {
     for (j=ai[i]; j<ai[i+1]; j++) {
       if (aj[j] == i) {
@@ -2819,7 +2819,7 @@ PetscErrorCode MatDiagonalScale_SeqBAIJ(Mat A,Vec ll,Vec rr)
   if (ll) {
     PetscCall(VecGetArrayRead(ll,&l));
     PetscCall(VecGetLocalSize(ll,&lm));
-    PetscCheckFalse(lm != m,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Left scaling vector wrong length");
+    PetscCheck(lm == m,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Left scaling vector wrong length");
     for (i=0; i<mbs; i++) { /* for each block row */
       M  = ai[i+1] - ai[i];
       li = l + i*bs;
@@ -2837,7 +2837,7 @@ PetscErrorCode MatDiagonalScale_SeqBAIJ(Mat A,Vec ll,Vec rr)
   if (rr) {
     PetscCall(VecGetArrayRead(rr,&r));
     PetscCall(VecGetLocalSize(rr,&rn));
-    PetscCheckFalse(rn != n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Right scaling vector wrong length");
+    PetscCheck(rn == n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Right scaling vector wrong length");
     for (i=0; i<mbs; i++) { /* for each block row */
       iai = ai[i];
       M   = ai[i+1] - iai;
@@ -3155,9 +3155,9 @@ PetscErrorCode MatMatMultNumeric_SeqBAIJ_SeqDense(Mat A,Mat B,Mat C)
 
   PetscFunctionBegin;
   if (!cm || !cn) PetscFunctionReturn(0);
-  PetscCheckFalse(B->rmap->n != A->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Number columns in A %" PetscInt_FMT " not equal rows in B %" PetscInt_FMT,A->cmap->n,B->rmap->n);
-  PetscCheckFalse(A->rmap->n != C->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Number rows in C %" PetscInt_FMT " not equal rows in A %" PetscInt_FMT,C->rmap->n,A->rmap->n);
-  PetscCheckFalse(B->cmap->n != C->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Number columns in B %" PetscInt_FMT " not equal columns in C %" PetscInt_FMT,B->cmap->n,C->cmap->n);
+  PetscCheck(B->rmap->n == A->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Number columns in A %" PetscInt_FMT " not equal rows in B %" PetscInt_FMT,A->cmap->n,B->rmap->n);
+  PetscCheck(A->rmap->n == C->rmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Number rows in C %" PetscInt_FMT " not equal rows in A %" PetscInt_FMT,C->rmap->n,A->rmap->n);
+  PetscCheck(B->cmap->n == C->cmap->n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Number columns in B %" PetscInt_FMT " not equal columns in C %" PetscInt_FMT,B->cmap->n,C->cmap->n);
   b = bd->v;
   if (a->nonzerorowcnt != A->rmap->n) {
     PetscCall(MatZeroEntries(C));

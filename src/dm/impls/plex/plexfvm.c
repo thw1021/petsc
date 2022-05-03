@@ -91,7 +91,7 @@ PetscErrorCode DMPlexReconstructGradients_Internal(DM dm, PetscFV fvm, PetscInt 
     PetscCall(DMPlexGetTreeChildren(dm, face, &numChildren, NULL));
     if (ghost >= 0 || boundary || numChildren) continue;
     PetscCall(DMPlexGetSupportSize(dm, face, &numCells));
-    PetscCheckFalse(numCells != 2,PETSC_COMM_SELF, PETSC_ERR_PLIB, "facet %d has %d support points: expected 2",face,numCells);
+    PetscCheck(numCells == 2,PETSC_COMM_SELF, PETSC_ERR_PLIB, "facet %" PetscInt_FMT " has %" PetscInt_FMT " support points: expected 2",face,numCells);
     PetscCall(DMPlexGetSupport(dm, face, &cells));
     PetscCall(DMPlexPointLocalRead(dmFace, face, facegeom, &fg));
     for (c = 0; c < 2; ++c) {
@@ -162,7 +162,7 @@ PetscErrorCode DMPlexReconstructGradients_Internal(DM dm, PetscFV fvm, PetscInt 
 
   Level: developer
 
-.seealso: DMPlexGetGradientDM()
+.seealso: `DMPlexGetGradientDM()`
 @*/
 PetscErrorCode DMPlexReconstructGradientsFVM(DM dm, Vec locX, Vec grad)
 {

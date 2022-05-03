@@ -135,7 +135,7 @@ static PetscErrorCode PetscSFComputeMultiRootOriginalNumberingByRank_Private(Pet
   PetscFunctionBegin;
   PetscCall(PetscSFGetGraph(imsf, NULL, &nileaves, NULL, NULL));
   PetscCall(PetscSFGetRootRanks(imsf, &niranks, NULL, &iroffset, &irmine, NULL));
-  PetscCheckFalse(nileaves != iroffset[niranks],PETSC_COMM_SELF,PETSC_ERR_PLIB,"nileaves != iroffset[niranks])");
+  PetscCheck(nileaves == iroffset[niranks],PETSC_COMM_SELF,PETSC_ERR_PLIB,"nileaves != iroffset[niranks])");
   PetscCall(PetscSFComputeDegreeBegin(sf, &degree));
   PetscCall(PetscSFComputeDegreeEnd(sf, &degree));
   PetscCall(PetscSFComputeMultiRootOriginalNumbering(sf, degree, NULL, &mRootsOrigNumbering));
@@ -168,7 +168,7 @@ static PetscErrorCode PetscSFComputeMultiRootOriginalNumberingByRank_Private(Pet
 
   Level: developer
 
-.seealso: DMPlexGetCone(), DMPlexGetConeSize(), DMGetPointSF(), DMGetCoordinates(), DMSetFromOptions()
+.seealso: `DMPlexGetCone()`, `DMPlexGetConeSize()`, `DMGetPointSF()`, `DMGetCoordinates()`, `DMSetFromOptions()`
 @*/
 PetscErrorCode DMPlexCheckInterfaceCones(DM dm)
 {
@@ -202,7 +202,7 @@ PetscErrorCode DMPlexCheckInterfaceCones(DM dm)
   if (!sf) PetscFunctionReturn(0);
   PetscCall(PetscSFGetGraph(sf, &nroots, &nleaves, &mine, &remote));
   if (nroots < 0) PetscFunctionReturn(0);
-  PetscCheckFalse(!dm->coordinates && !dm->coordinatesLocal,PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "DM coordinates must be set");
+  PetscCheck(dm->coordinates || dm->coordinatesLocal,PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "DM coordinates must be set");
   PetscCall(PetscSFSetUp(sf));
   PetscCall(PetscSFGetRootRanks(sf, &nranks, &ranks, &roffset, &rmine, &rremote));
 
@@ -234,7 +234,7 @@ PetscErrorCode DMPlexCheckInterfaceCones(DM dm)
     PetscCall(PetscViewerASCIIPushSynchronized(v));
     PetscCall(PetscViewerASCIISynchronizedPrintf(v, "[%d] --------\n", myrank));
     for (r=0; r<nranks; r++) {
-      PetscCall(PetscViewerASCIISynchronizedPrintf(v, "  r=%D ranks[r]=%d sntCoordinatesPerRank[r]:\n", r, ranks[r]));
+      PetscCall(PetscViewerASCIISynchronizedPrintf(v, "  r=%" PetscInt_FMT " ranks[r]=%d sntCoordinatesPerRank[r]:\n", r, ranks[r]));
       PetscCall(PetscViewerASCIIPushTab(v));
       PetscCall(PetscViewerGetSubViewer(v,PETSC_COMM_SELF,&sv));
       PetscCall(VecView(sntCoordinatesPerRank[r], sv));
@@ -243,7 +243,7 @@ PetscErrorCode DMPlexCheckInterfaceCones(DM dm)
     }
     PetscCall(PetscViewerASCIISynchronizedPrintf(v, "  ----------\n"));
     for (r=0; r<niranks; r++) {
-      PetscCall(PetscViewerASCIISynchronizedPrintf(v, "  r=%D iranks[r]=%d refCoordinatesPerRank[r]:\n", r, iranks[r]));
+      PetscCall(PetscViewerASCIISynchronizedPrintf(v, "  r=%" PetscInt_FMT " iranks[r]=%d refCoordinatesPerRank[r]:\n", r, iranks[r]));
       PetscCall(PetscViewerASCIIPushTab(v));
       PetscCall(PetscViewerGetSubViewer(v,PETSC_COMM_SELF,&sv));
       PetscCall(VecView(refCoordinatesPerRank[r], sv));
@@ -252,7 +252,7 @@ PetscErrorCode DMPlexCheckInterfaceCones(DM dm)
     }
     PetscCall(PetscViewerASCIISynchronizedPrintf(v, "  ----------\n"));
     for (r=0; r<niranks; r++) {
-      PetscCall(PetscViewerASCIISynchronizedPrintf(v, "  r=%D iranks[r]=%d recCoordinatesPerRank[r]:\n", r, iranks[r]));
+      PetscCall(PetscViewerASCIISynchronizedPrintf(v, "  r=%" PetscInt_FMT " iranks[r]=%d recCoordinatesPerRank[r]:\n", r, iranks[r]));
       PetscCall(PetscViewerASCIIPushTab(v));
       PetscCall(PetscViewerGetSubViewer(v,PETSC_COMM_SELF,&sv));
       PetscCall(VecView(recCoordinatesPerRank[r], sv));

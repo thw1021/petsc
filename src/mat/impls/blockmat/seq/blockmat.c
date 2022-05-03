@@ -29,9 +29,9 @@ static PetscErrorCode MatSOR_BlockMat_Symmetric(Mat A,Vec bb,PetscReal omega,Mat
 
   PetscFunctionBegin;
   its = its*lits;
-  PetscCheckFalse(its <= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Relaxation requires global its %" PetscInt_FMT " and local its %" PetscInt_FMT " both positive",its,lits);
-  PetscCheckFalse(flag & SOR_EISENSTAT,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support yet for Eisenstat");
-  PetscCheckFalse(omega != 1.0,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support yet for omega not equal to 1.0");
+  PetscCheck(its > 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Relaxation requires global its %" PetscInt_FMT " and local its %" PetscInt_FMT " both positive",its,lits);
+  PetscCheck(!(flag & SOR_EISENSTAT),PETSC_COMM_SELF,PETSC_ERR_SUP,"No support yet for Eisenstat");
+  PetscCheck(omega == 1.0,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support yet for omega not equal to 1.0");
   PetscCheck(!fshift,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support yet for fshift");
   if ((flag & SOR_BACKWARD_SWEEP || flag & SOR_LOCAL_BACKWARD_SWEEP) && !(flag & SOR_FORWARD_SWEEP || flag & SOR_LOCAL_FORWARD_SWEEP)) {
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot do backward sweep without forward sweep");
@@ -134,9 +134,9 @@ static PetscErrorCode MatSOR_BlockMat(Mat A,Vec bb,PetscReal omega,MatSORType fl
 
   PetscFunctionBegin;
   its = its*lits;
-  PetscCheckFalse(its <= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Relaxation requires global its %" PetscInt_FMT " and local its %" PetscInt_FMT " both positive",its,lits);
-  PetscCheckFalse(flag & SOR_EISENSTAT,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support yet for Eisenstat");
-  PetscCheckFalse(omega != 1.0,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support yet for omega not equal to 1.0");
+  PetscCheck(its > 0,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Relaxation requires global its %" PetscInt_FMT " and local its %" PetscInt_FMT " both positive",its,lits);
+  PetscCheck(!(flag & SOR_EISENSTAT),PETSC_COMM_SELF,PETSC_ERR_SUP,"No support yet for Eisenstat");
+  PetscCheck(omega == 1.0,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support yet for omega not equal to 1.0");
   PetscCheck(!fshift,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support yet for fshift");
 
   if (!a->diags) {
@@ -258,7 +258,7 @@ static PetscErrorCode MatSetValues_BlockMat(Mat A,PetscInt m,const PetscInt im[]
         if (rp[i] == bcol) goto noinsert1;
       }
       if (nonew == 1) goto noinsert1;
-      PetscCheckFalse(nonew == -1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Inserting a new nonzero (%" PetscInt_FMT ", %" PetscInt_FMT ") in the matrix", row, col);
+      PetscCheck(nonew != -1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Inserting a new nonzero (%" PetscInt_FMT ", %" PetscInt_FMT ") in the matrix", row, col);
       MatSeqXAIJReallocateAIJ(A,a->mbs,1,nrow,brow,bcol,rmax,aa,ai,aj,rp,ap,imax,nonew,Mat);
       N = nrow++ - 1; high++;
       /* shift up all the later entries in this row */
@@ -284,7 +284,6 @@ noinsert1:;
 
 static PetscErrorCode MatLoad_BlockMat(Mat newmat, PetscViewer viewer)
 {
-  PetscErrorCode    ierr;
   Mat               tmpA;
   PetscInt          i,j,m,n,bs = 1,ncols,*lens,currentcol,mbs,**ii,*ilens,nextcol,*llens,cnt = 0;
   const PetscInt    *cols;
@@ -301,10 +300,10 @@ static PetscErrorCode MatLoad_BlockMat(Mat newmat, PetscViewer viewer)
   PetscCall(MatLoad_SeqAIJ(tmpA,viewer));
 
   PetscCall(MatGetLocalSize(tmpA,&m,&n));
-  ierr = PetscOptionsBegin(PETSC_COMM_SELF,NULL,"Options for loading BlockMat matrix 1","Mat");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_SELF,NULL,"Options for loading BlockMat matrix 1","Mat");
   PetscCall(PetscOptionsInt("-matload_block_size","Set the blocksize used to store the matrix","MatLoad",bs,&bs,NULL));
   PetscCall(PetscOptionsBool("-matload_symmetric","Store the matrix as symmetric","MatLoad",flg,&flg,NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   /* Determine number of nonzero blocks for each block row */
   a    = (Mat_SeqAIJ*) tmpA->data;
@@ -377,7 +376,7 @@ static PetscErrorCode MatLoad_BlockMat(Mat newmat, PetscViewer viewer)
           nextcol = PetscMin(nextcol,ii[j][0]/bs);
         }
       }
-      PetscCheckFalse(cnt >= amat->maxnz,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Number of blocks found greater than expected %" PetscInt_FMT,cnt);
+      PetscCheck(cnt < amat->maxnz,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Number of blocks found greater than expected %" PetscInt_FMT,cnt);
       if (!flg || currentcol >= i) {
         amat->j[cnt] = currentcol;
         PetscCall(MatCreateSeqAIJ(PETSC_COMM_SELF,bs,bs,0,llens,amat->a+cnt++));
@@ -588,7 +587,7 @@ static PetscErrorCode MatCreateSubMatrix_BlockMat(Mat A,IS isrow,IS iscol,MatReu
   PetscCall(PetscObjectTypeCompare((PetscObject)iscol,ISSTRIDE,&stride));
   PetscCheck(stride,PETSC_COMM_SELF,PETSC_ERR_SUP,"Only for stride indices");
   PetscCall(ISStrideGetInfo(iscol,&first,&step));
-  PetscCheckFalse(step != A->rmap->bs,PETSC_COMM_SELF,PETSC_ERR_SUP,"Can only select one entry from each block");
+  PetscCheck(step == A->rmap->bs,PETSC_COMM_SELF,PETSC_ERR_SUP,"Can only select one entry from each block");
 
   PetscCall(ISGetLocalSize(isrow,&nrows));
   ncols = nrows;
@@ -598,7 +597,7 @@ static PetscErrorCode MatCreateSubMatrix_BlockMat(Mat A,IS isrow,IS iscol,MatReu
     PetscInt n_cols,n_rows;
     C    = *B;
     PetscCall(MatGetSize(C,&n_rows,&n_cols));
-    PetscCheckFalse(n_rows != nrows || n_cols != ncols,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Reused submatrix wrong size");
+    PetscCheck(n_rows == nrows && n_cols == ncols,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Reused submatrix wrong size");
     PetscCall(MatZeroEntries(C));
   } else {
     PetscCall(MatCreate(PetscObjectComm((PetscObject)A),&C));
@@ -873,7 +872,7 @@ static struct _MatOps MatOps_Values = {MatSetValues_BlockMat,
 
    Level: intermediate
 
-.seealso: MatCreate(), MatCreateBlockMat(), MatSetValues()
+.seealso: `MatCreate()`, `MatCreateBlockMat()`, `MatSetValues()`
 
 @*/
 PetscErrorCode  MatBlockMatSetPreallocation(Mat B,PetscInt bs,PetscInt nz,const PetscInt nnz[])
@@ -896,11 +895,11 @@ static PetscErrorCode  MatBlockMatSetPreallocation_BlockMat(Mat A,PetscInt bs,Pe
   PetscCall(PetscLayoutGetBlockSize(A->rmap,&bs));
 
   if (nz == PETSC_DEFAULT || nz == PETSC_DECIDE) nz = 5;
-  PetscCheckFalse(nz < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"nz cannot be less than 0: value %" PetscInt_FMT,nz);
+  PetscCheck(nz >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"nz cannot be less than 0: value %" PetscInt_FMT,nz);
   if (nnz) {
     for (i=0; i<A->rmap->n/bs; i++) {
-      PetscCheckFalse(nnz[i] < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"nnz cannot be less than 0: local row %" PetscInt_FMT " value %" PetscInt_FMT,i,nnz[i]);
-      PetscCheckFalse(nnz[i] > A->cmap->n/bs,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"nnz cannot be greater than row length: local row %" PetscInt_FMT " value %" PetscInt_FMT " rowlength %" PetscInt_FMT,i,nnz[i],A->cmap->n/bs);
+      PetscCheck(nnz[i] >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"nnz cannot be less than 0: local row %" PetscInt_FMT " value %" PetscInt_FMT,i,nnz[i]);
+      PetscCheck(nnz[i] <= A->cmap->n/bs,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"nnz cannot be greater than row length: local row %" PetscInt_FMT " value %" PetscInt_FMT " rowlength %" PetscInt_FMT,i,nnz[i],A->cmap->n/bs);
     }
   }
   bmat->mbs = A->rmap->n/bs;
@@ -949,7 +948,7 @@ static PetscErrorCode  MatBlockMatSetPreallocation_BlockMat(Mat A,PetscInt bs,Pe
 
   Level: advanced
 
-.seealso: MatCreateBlockMat()
+.seealso: `MatCreateBlockMat()`
 
 M*/
 
@@ -994,7 +993,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_BlockMat(Mat A)
 
    For matrices containing parallel submatrices and variable block sizes, see MATNEST.
 
-.seealso: MATBLOCKMAT, MatCreateNest()
+.seealso: `MATBLOCKMAT`, `MatCreateNest()`
 @*/
 PetscErrorCode  MatCreateBlockMat(MPI_Comm comm,PetscInt m,PetscInt n,PetscInt bs,PetscInt nz,PetscInt *nnz, Mat *A)
 {

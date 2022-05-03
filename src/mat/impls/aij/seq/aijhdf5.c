@@ -23,7 +23,6 @@ PetscErrorCode MatLoad_AIJ_HDF5(Mat mat, PetscViewer viewer)
   PetscLayout     jmap = NULL;
   MPI_Comm        comm;
   PetscMPIInt     rank, size;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscCall(PetscViewerGetFormat(viewer, &format));
@@ -55,9 +54,9 @@ PetscErrorCode MatLoad_AIJ_HDF5(Mat mat, PetscViewer viewer)
     PetscCall(PetscStrallocpy("MATLAB_sparse",&c_name));
   }
 
-  ierr = PetscOptionsBegin(comm,NULL,"Options for loading matrix from HDF5","Mat");PetscCall(ierr);
+  PetscOptionsBegin(comm,NULL,"Options for loading matrix from HDF5","Mat");
   PetscCall(PetscOptionsInt("-matload_block_size","Set the blocksize used to store the matrix","MatLoad",bs,&bs,&flg));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   if (flg) {
     PetscCall(MatSetBlockSize(mat, bs));
   }
@@ -76,8 +75,8 @@ PetscErrorCode MatLoad_AIJ_HDF5(Mat mat, PetscViewer viewer)
   }
 
   /* If global sizes are set, check if they are consistent with that given in the file */
-  PetscCheckFalse(mat->rmap->N >= 0 && mat->rmap->N != M,PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED,"Inconsistent # of rows: Matrix in file has (%" PetscInt_FMT ") and input matrix has (%" PetscInt_FMT ")",mat->rmap->N,M);
-  PetscCheckFalse(mat->cmap->N >= 0 && mat->cmap->N != N,PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED,"Inconsistent # of cols: Matrix in file has (%" PetscInt_FMT ") and input matrix has (%" PetscInt_FMT ")",mat->cmap->N,N);
+  PetscCheck(mat->rmap->N < 0 || mat->rmap->N == M,PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED,"Inconsistent # of rows: Matrix in file has (%" PetscInt_FMT ") and input matrix has (%" PetscInt_FMT ")",mat->rmap->N,M);
+  PetscCheck(mat->cmap->N < 0 || mat->cmap->N == N,PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED,"Inconsistent # of cols: Matrix in file has (%" PetscInt_FMT ") and input matrix has (%" PetscInt_FMT ")",mat->cmap->N,N);
 
   /* Determine ownership of all (block) rows and columns */
   mat->rmap->N = M;

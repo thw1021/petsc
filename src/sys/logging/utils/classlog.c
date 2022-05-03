@@ -17,7 +17,7 @@
 
   Level: developer
 
-.seealso: PetscClassRegLogDestroy(), PetscStageLogCreate()
+.seealso: `PetscClassRegLogDestroy()`, `PetscStageLogCreate()`
 @*/
 PetscErrorCode PetscClassRegLogCreate(PetscClassRegLog *classLog)
 {
@@ -45,7 +45,7 @@ PetscErrorCode PetscClassRegLogCreate(PetscClassRegLog *classLog)
 
   Level: developer
 
-.seealso: PetscClassRegLogCreate()
+.seealso: `PetscClassRegLogCreate()`
 @*/
 PetscErrorCode PetscClassRegLogDestroy(PetscClassRegLog classLog)
 {
@@ -70,7 +70,7 @@ PetscErrorCode PetscClassRegLogDestroy(PetscClassRegLog classLog)
 
   Level: developer
 
-.seealso: PetscStageLogDestroy(), EventLogDestroy()
+.seealso: `PetscStageLogDestroy()`, `EventLogDestroy()`
 @*/
 PetscErrorCode PetscClassRegInfoDestroy(PetscClassRegInfo *c)
 {
@@ -89,7 +89,7 @@ PetscErrorCode PetscClassRegInfoDestroy(PetscClassRegInfo *c)
 
   Level: developer
 
-.seealso: PetscClassPerfLogDestroy(), PetscStageLogCreate()
+.seealso: `PetscClassPerfLogDestroy()`, `PetscStageLogCreate()`
 @*/
 PetscErrorCode PetscClassPerfLogCreate(PetscClassPerfLog *classLog)
 {
@@ -117,7 +117,7 @@ PetscErrorCode PetscClassPerfLogCreate(PetscClassPerfLog *classLog)
 
   Level: developer
 
-.seealso: PetscClassPerfLogCreate()
+.seealso: `PetscClassPerfLogCreate()`
 @*/
 PetscErrorCode PetscClassPerfLogDestroy(PetscClassPerfLog classLog)
 {
@@ -138,7 +138,7 @@ PetscErrorCode PetscClassPerfLogDestroy(PetscClassPerfLog classLog)
 
   Level: developer
 
-.seealso: PetscClassPerfLogCreate()
+.seealso: `PetscClassPerfLogCreate()`
 @*/
 PetscErrorCode PetscClassPerfInfoClear(PetscClassPerfInfo *classInfo)
 {
@@ -162,7 +162,7 @@ PetscErrorCode PetscClassPerfInfoClear(PetscClassPerfInfo *classInfo)
 
   Level: developer
 
-.seealso: PetscClassPerfLogCreate()
+.seealso: `PetscClassPerfLogCreate()`
 @*/
 PetscErrorCode PetscClassPerfLogEnsureSize(PetscClassPerfLog classLog, int size)
 {
@@ -198,7 +198,7 @@ PetscErrorCode PetscClassPerfLogEnsureSize(PetscClassPerfLog classLog, int size)
 
   Level: developer
 
-.seealso: PetscClassIdRegister()
+.seealso: `PetscClassIdRegister()`
 @*/
 PetscErrorCode PetscClassRegLogRegister(PetscClassRegLog classLog, const char cname[], PetscClassId classid)
 {
@@ -239,7 +239,7 @@ PetscErrorCode PetscClassRegLogRegister(PetscClassRegLog classLog, const char cn
 
   Level: developer
 
-.seealso: PetscClassIdRegister(), PetscLogObjCreateDefault(), PetscLogObjDestroyDefault()
+.seealso: `PetscClassIdRegister()`, `PetscLogObjCreateDefault()`, `PetscLogObjDestroyDefault()`
 @*/
 PetscErrorCode PetscClassRegLogGetClass(PetscClassRegLog classLog, PetscClassId classid, int *oclass)
 {
@@ -251,7 +251,7 @@ PetscErrorCode PetscClassRegLogGetClass(PetscClassRegLog classLog, PetscClassId 
     /* Could do bisection here */
     if (classLog->classInfo[c].classid == classid) break;
   }
-  PetscCheckFalse(c >= classLog->numClasses,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG, "Invalid object classid %d\nThis could happen if you compile with PETSC_HAVE_DYNAMIC_LIBRARIES, but link with static libraries.", classid);
+  PetscCheck(c < classLog->numClasses,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG, "Invalid object classid %d\nThis could happen if you compile with PETSC_HAVE_DYNAMIC_LIBRARIES, but link with static libraries.", classid);
   *oclass = c;
   PetscFunctionReturn(0);
 }

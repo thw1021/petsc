@@ -10,14 +10,12 @@ typedef struct {
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBeginUser;
   options->particlesPerCell = 1;
 
-  ierr = PetscOptionsBegin(comm, "", "CellSwarm Options", "DMSWARM");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "CellSwarm Options", "DMSWARM");
   PetscCall(PetscOptionsInt("-particles_per_cell", "Number of particles per cell", "ex3.c", options->particlesPerCell, &options->particlesPerCell, NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -75,6 +73,7 @@ int main(int argc,char **argv)
   PetscCall(CreateParticles(dm, &sw, &user));
   PetscCall(DMSetApplicationContext(sw, &user));
   PetscCall(DMCreate(comm, &cellsw));
+  PetscCall(PetscObjectSetName((PetscObject) cellsw, "SubParticles"));
   PetscCall(DMSwarmGetCellSwarm(sw, 1, cellsw));
   PetscCall(DMViewFromOptions(cellsw, NULL, "-subswarm_view"));
   PetscCall(DMSwarmRestoreCellSwarm(sw, 1, cellsw));

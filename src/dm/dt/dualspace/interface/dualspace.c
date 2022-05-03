@@ -23,7 +23,7 @@ PetscBool         PetscDualSpaceRegisterAllCalled = PETSC_FALSE;
 
   Level: developer
 
-.seealso: PetscDualSpaceTensorPointLexicographic_Internal()
+.seealso: `PetscDualSpaceTensorPointLexicographic_Internal()`
 */
 PetscErrorCode PetscDualSpaceLatticePointLexicographic_Internal(PetscInt len, PetscInt max, PetscInt tup[])
 {
@@ -54,7 +54,7 @@ PetscErrorCode PetscDualSpaceLatticePointLexicographic_Internal(PetscInt len, Pe
 
   Level: developer
 
-.seealso: PetscDualSpaceLatticePointLexicographic_Internal()
+.seealso: `PetscDualSpaceLatticePointLexicographic_Internal()`
 */
 PetscErrorCode PetscDualSpaceTensorPointLexicographic_Internal(PetscInt len, PetscInt max, PetscInt tup[])
 {
@@ -101,7 +101,7 @@ PetscErrorCode PetscDualSpaceTensorPointLexicographic_Internal(PetscInt len, Pet
 
   Level: advanced
 
-.seealso: PetscDualSpaceRegisterAll(), PetscDualSpaceRegisterDestroy()
+.seealso: `PetscDualSpaceRegisterAll()`, `PetscDualSpaceRegisterDestroy()`
 
 @*/
 PetscErrorCode PetscDualSpaceRegister(const char sname[], PetscErrorCode (*function)(PetscDualSpace))
@@ -125,7 +125,7 @@ PetscErrorCode PetscDualSpaceRegister(const char sname[], PetscErrorCode (*funct
 
   Level: intermediate
 
-.seealso: PetscDualSpaceGetType(), PetscDualSpaceCreate()
+.seealso: `PetscDualSpaceGetType()`, `PetscDualSpaceCreate()`
 @*/
 PetscErrorCode PetscDualSpaceSetType(PetscDualSpace sp, PetscDualSpaceType name)
 {
@@ -163,7 +163,7 @@ PetscErrorCode PetscDualSpaceSetType(PetscDualSpace sp, PetscDualSpaceType name)
 
   Level: intermediate
 
-.seealso: PetscDualSpaceSetType(), PetscDualSpaceCreate()
+.seealso: `PetscDualSpaceSetType()`, `PetscDualSpaceCreate()`
 @*/
 PetscErrorCode PetscDualSpaceGetType(PetscDualSpace sp, PetscDualSpaceType *name)
 {
@@ -187,16 +187,16 @@ static PetscErrorCode PetscDualSpaceView_ASCII(PetscDualSpace sp, PetscViewer v)
   PetscCall(PetscObjectPrintClassNamePrefixType((PetscObject) sp, v));
   PetscCall(PetscViewerASCIIPushTab(v));
   if (sp->k) {
-    PetscCall(PetscViewerASCIIPrintf(v, "Dual space for %D-forms %swith %D components, size %D\n", PetscAbsInt(sp->k), sp->k < 0 ? "(stored in dual form) ": "", sp->Nc, pdim));
+    PetscCall(PetscViewerASCIIPrintf(v, "Dual space for %" PetscInt_FMT "-forms %swith %" PetscInt_FMT " components, size %" PetscInt_FMT "\n", PetscAbsInt(sp->k), sp->k < 0 ? "(stored in dual form) ": "", sp->Nc, pdim));
   } else {
-    PetscCall(PetscViewerASCIIPrintf(v, "Dual space with %D components, size %D\n", sp->Nc, pdim));
+    PetscCall(PetscViewerASCIIPrintf(v, "Dual space with %" PetscInt_FMT " components, size %" PetscInt_FMT "\n", sp->Nc, pdim));
   }
   if (sp->ops->view) PetscCall((*sp->ops->view)(sp, v));
   PetscCall(PetscViewerGetFormat(v, &format));
   if (format == PETSC_VIEWER_ASCII_INFO_DETAIL) {
     PetscCall(PetscViewerASCIIPushTab(v));
     for (f = 0; f < pdim; ++f) {
-      PetscCall(PetscViewerASCIIPrintf(v, "Dual basis vector %D\n", f));
+      PetscCall(PetscViewerASCIIPrintf(v, "Dual basis vector %" PetscInt_FMT "\n", f));
       PetscCall(PetscViewerASCIIPushTab(v));
       PetscCall(PetscQuadratureView(sp->functional[f], v));
       PetscCall(PetscViewerASCIIPopTab(v));
@@ -218,7 +218,7 @@ static PetscErrorCode PetscDualSpaceView_ASCII(PetscDualSpace sp, PetscViewer v)
 -  name - command line option
 
    Level: intermediate
-.seealso:  PetscDualSpace, PetscDualSpaceView(), PetscObjectViewFromOptions(), PetscDualSpaceCreate()
+.seealso: `PetscDualSpace`, `PetscDualSpaceView()`, `PetscObjectViewFromOptions()`, `PetscDualSpaceCreate()`
 @*/
 PetscErrorCode  PetscDualSpaceViewFromOptions(PetscDualSpace A,PetscObject obj,const char name[])
 {
@@ -239,7 +239,7 @@ PetscErrorCode  PetscDualSpaceViewFromOptions(PetscDualSpace A,PetscObject obj,c
 
   Level: beginner
 
-.seealso PetscDualSpaceDestroy(), PetscDualSpace
+.seealso `PetscDualSpaceDestroy()`, `PetscDualSpace`
 @*/
 PetscErrorCode PetscDualSpaceView(PetscDualSpace sp, PetscViewer v)
 {
@@ -270,7 +270,7 @@ PetscErrorCode PetscDualSpaceView(PetscDualSpace sp, PetscViewer v)
 
   Level: intermediate
 
-.seealso PetscDualSpaceView(), PetscDualSpace, PetscObjectSetFromOptions()
+.seealso `PetscDualSpaceView()`, `PetscDualSpace`, `PetscObjectSetFromOptions()`
 @*/
 PetscErrorCode PetscDualSpaceSetFromOptions(PetscDualSpace sp)
 {
@@ -278,7 +278,6 @@ PetscErrorCode PetscDualSpaceSetFromOptions(PetscDualSpace sp)
   const char    *defaultType;
   char           name[256];
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
@@ -289,7 +288,7 @@ PetscErrorCode PetscDualSpaceSetFromOptions(PetscDualSpace sp)
   }
   if (!PetscSpaceRegisterAllCalled) PetscCall(PetscSpaceRegisterAll());
 
-  ierr = PetscObjectOptionsBegin((PetscObject) sp);PetscCall(ierr);
+  PetscObjectOptionsBegin((PetscObject) sp);
   PetscCall(PetscOptionsFList("-petscdualspace_type", "Dual space", "PetscDualSpaceSetType", PetscDualSpaceList, defaultType, name, 256, &flg));
   if (flg) {
     PetscCall(PetscDualSpaceSetType(sp, name));
@@ -313,7 +312,7 @@ PetscErrorCode PetscDualSpaceSetFromOptions(PetscDualSpace sp)
 
   /* process any options handlers added with PetscObjectAddOptionsHandler() */
   PetscCall(PetscObjectProcessOptionsHandlers(PetscOptionsObject,(PetscObject) sp));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   sp->setfromoptionscalled = PETSC_TRUE;
   PetscFunctionReturn(0);
 }
@@ -328,7 +327,7 @@ PetscErrorCode PetscDualSpaceSetFromOptions(PetscDualSpace sp)
 
   Level: intermediate
 
-.seealso PetscDualSpaceView(), PetscDualSpaceDestroy(), PetscDualSpace
+.seealso `PetscDualSpaceView()`, `PetscDualSpaceDestroy()`, `PetscDualSpace`
 @*/
 PetscErrorCode PetscDualSpaceSetUp(PetscDualSpace sp)
 {
@@ -393,7 +392,7 @@ static PetscErrorCode PetscDualSpaceClearDMData_Internal(PetscDualSpace sp, DM d
 
   Level: beginner
 
-.seealso PetscDualSpaceView(), PetscDualSpace(), PetscDualSpaceCreate()
+.seealso `PetscDualSpaceView()`, `PetscDualSpace()`, `PetscDualSpaceCreate()`
 @*/
 PetscErrorCode PetscDualSpaceDestroy(PetscDualSpace *sp)
 {
@@ -435,7 +434,7 @@ PetscErrorCode PetscDualSpaceDestroy(PetscDualSpace *sp)
 
   Level: beginner
 
-.seealso: PetscDualSpaceSetType(), PETSCDUALSPACELAGRANGE
+.seealso: `PetscDualSpaceSetType()`, `PETSCDUALSPACELAGRANGE`
 @*/
 PetscErrorCode PetscDualSpaceCreate(MPI_Comm comm, PetscDualSpace *sp)
 {
@@ -474,7 +473,7 @@ PetscErrorCode PetscDualSpaceCreate(MPI_Comm comm, PetscDualSpace *sp)
 
   Level: beginner
 
-.seealso: PetscDualSpaceCreate(), PetscDualSpaceSetType()
+.seealso: `PetscDualSpaceCreate()`, `PetscDualSpaceSetType()`
 @*/
 PetscErrorCode PetscDualSpaceDuplicate(PetscDualSpace sp, PetscDualSpace *spNew)
 {
@@ -514,7 +513,7 @@ PetscErrorCode PetscDualSpaceDuplicate(PetscDualSpace sp, PetscDualSpace *spNew)
 
   Level: intermediate
 
-.seealso: PetscDualSpaceSetDM(), PetscDualSpaceCreate()
+.seealso: `PetscDualSpaceSetDM()`, `PetscDualSpaceCreate()`
 @*/
 PetscErrorCode PetscDualSpaceGetDM(PetscDualSpace sp, DM *dm)
 {
@@ -536,7 +535,7 @@ PetscErrorCode PetscDualSpaceGetDM(PetscDualSpace sp, DM *dm)
 
   Level: intermediate
 
-.seealso: PetscDualSpaceGetDM(), PetscDualSpaceCreate()
+.seealso: `PetscDualSpaceGetDM()`, `PetscDualSpaceCreate()`
 @*/
 PetscErrorCode PetscDualSpaceSetDM(PetscDualSpace sp, DM dm)
 {
@@ -566,7 +565,7 @@ PetscErrorCode PetscDualSpaceSetDM(PetscDualSpace sp, DM dm)
 
   Level: intermediate
 
-.seealso: PetscDualSpaceSetOrder(), PetscDualSpaceCreate()
+.seealso: `PetscDualSpaceSetOrder()`, `PetscDualSpaceCreate()`
 @*/
 PetscErrorCode PetscDualSpaceGetOrder(PetscDualSpace sp, PetscInt *order)
 {
@@ -588,7 +587,7 @@ PetscErrorCode PetscDualSpaceGetOrder(PetscDualSpace sp, PetscInt *order)
 
   Level: intermediate
 
-.seealso: PetscDualSpaceGetOrder(), PetscDualSpaceCreate()
+.seealso: `PetscDualSpaceGetOrder()`, `PetscDualSpaceCreate()`
 @*/
 PetscErrorCode PetscDualSpaceSetOrder(PetscDualSpace sp, PetscInt order)
 {
@@ -612,7 +611,7 @@ PetscErrorCode PetscDualSpaceSetOrder(PetscDualSpace sp, PetscInt order)
 
   Level: intermediate
 
-.seealso: PetscDualSpaceSetNumComponents(), PetscDualSpaceGetDimension(), PetscDualSpaceCreate(), PetscDualSpace
+.seealso: `PetscDualSpaceSetNumComponents()`, `PetscDualSpaceGetDimension()`, `PetscDualSpaceCreate()`, `PetscDualSpace`
 @*/
 PetscErrorCode PetscDualSpaceGetNumComponents(PetscDualSpace sp, PetscInt *Nc)
 {
@@ -632,7 +631,7 @@ PetscErrorCode PetscDualSpaceGetNumComponents(PetscDualSpace sp, PetscInt *Nc)
 
   Level: intermediate
 
-.seealso: PetscDualSpaceGetNumComponents(), PetscDualSpaceCreate(), PetscDualSpace
+.seealso: `PetscDualSpaceGetNumComponents()`, `PetscDualSpaceCreate()`, `PetscDualSpace`
 @*/
 PetscErrorCode PetscDualSpaceSetNumComponents(PetscDualSpace sp, PetscInt Nc)
 {
@@ -657,7 +656,7 @@ PetscErrorCode PetscDualSpaceSetNumComponents(PetscDualSpace sp, PetscInt Nc)
 
   Level: intermediate
 
-.seealso: PetscDualSpaceGetDimension(), PetscDualSpaceCreate()
+.seealso: `PetscDualSpaceGetDimension()`, `PetscDualSpaceCreate()`
 @*/
 PetscErrorCode PetscDualSpaceGetFunctional(PetscDualSpace sp, PetscInt i, PetscQuadrature *functional)
 {
@@ -667,7 +666,7 @@ PetscErrorCode PetscDualSpaceGetFunctional(PetscDualSpace sp, PetscInt i, PetscQ
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
   PetscValidPointer(functional, 3);
   PetscCall(PetscDualSpaceGetDimension(sp, &dim));
-  PetscCheckFalse((i < 0) || (i >= dim),PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Functional index %d must be in [0, %d)", i, dim);
+  PetscCheck(!(i < 0) && !(i >= dim),PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Functional index %" PetscInt_FMT " must be in [0, %" PetscInt_FMT ")", i, dim);
   *functional = sp->functional[i];
   PetscFunctionReturn(0);
 }
@@ -685,7 +684,7 @@ PetscErrorCode PetscDualSpaceGetFunctional(PetscDualSpace sp, PetscInt i, PetscQ
 
   Level: intermediate
 
-.seealso: PetscDualSpaceGetFunctional(), PetscDualSpaceCreate()
+.seealso: `PetscDualSpaceGetFunctional()`, `PetscDualSpaceCreate()`
 @*/
 PetscErrorCode PetscDualSpaceGetDimension(PetscDualSpace sp, PetscInt *dim)
 {
@@ -717,7 +716,7 @@ PetscErrorCode PetscDualSpaceGetDimension(PetscDualSpace sp, PetscInt *dim)
 
   Level: intermediate
 
-.seealso: PetscDualSpaceGetFunctional(), PetscDualSpaceCreate()
+.seealso: `PetscDualSpaceGetFunctional()`, `PetscDualSpaceCreate()`
 @*/
 PetscErrorCode PetscDualSpaceGetInteriorDimension(PetscDualSpace sp, PetscInt *intdim)
 {
@@ -753,7 +752,7 @@ PetscErrorCode PetscDualSpaceGetInteriorDimension(PetscDualSpace sp, PetscInt *i
    Note: all of the usual spaces on simplex or tensor-product elements will be uniform, only reference cells
    with non-uniform strata (like trianguar-prisms) or anisotropic hp dual spaces will not be uniform.
 
-.seealso: PetscDualSpaceGetPointSubspace(), PetscDualSpaceGetSymmetries()
+.seealso: `PetscDualSpaceGetPointSubspace()`, `PetscDualSpaceGetSymmetries()`
 @*/
 PetscErrorCode PetscDualSpaceGetUniform(PetscDualSpace sp, PetscBool *uniform)
 {
@@ -777,7 +776,7 @@ PetscErrorCode PetscDualSpaceGetUniform(PetscDualSpace sp, PetscBool *uniform)
 
   Level: intermediate
 
-.seealso: PetscDualSpaceGetFunctional(), PetscDualSpaceCreate()
+.seealso: `PetscDualSpaceGetFunctional()`, `PetscDualSpaceCreate()`
 @*/
 PetscErrorCode PetscDualSpaceGetNumDof(PetscDualSpace sp, const PetscInt **numDof)
 {
@@ -804,7 +803,7 @@ PetscErrorCode PetscDualSpaceGetNumDof(PetscDualSpace sp, const PetscInt **numDo
     }
   }
   *numDof = sp->numDof;
-  PetscCheckFalse(!*numDof,PetscObjectComm((PetscObject) sp), PETSC_ERR_LIB, "Empty numDof[] returned from dual space implementation");
+  PetscCheck(*numDof,PetscObjectComm((PetscObject) sp), PETSC_ERR_LIB, "Empty numDof[] returned from dual space implementation");
   PetscFunctionReturn(0);
 }
 
@@ -841,7 +840,7 @@ PetscErrorCode PetscDualSpaceSectionCreate_Internal(PetscDualSpace sp, PetscSect
     }
     PetscCall(DMPlexRestoreTransitiveClosure(dm, c, PETSC_TRUE, &closureSize, &closure));
   }
-  PetscCheckFalse(count != pEnd - pStart,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Bad topological ordering");
+  PetscCheck(count == pEnd - pStart,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Bad topological ordering");
   for (i = 0; i < pEnd - pStart; i++) if (perm[i] != i) break;
   if (i < pEnd - pStart) {
     IS permIS;
@@ -901,7 +900,7 @@ PetscErrorCode PetscDualSpaceSectionSetUp_Internal(PetscDualSpace sp, PetscSecti
 
   Level: advanced
 
-.seealso: PetscDualSpaceCreate(), DMPLEX
+.seealso: `PetscDualSpaceCreate()`, `DMPLEX`
 @*/
 PetscErrorCode PetscDualSpaceGetSection(PetscDualSpace sp, PetscSection *section)
 {
@@ -995,7 +994,7 @@ $      PetscInt numComponents, PetscScalar values[], void *ctx)
 
   Level: beginner
 
-.seealso: PetscDualSpaceCreate()
+.seealso: `PetscDualSpaceCreate()`
 @*/
 PetscErrorCode PetscDualSpaceApply(PetscDualSpace sp, PetscInt f, PetscReal time, PetscFEGeom *cgeom, PetscInt numComp, PetscErrorCode (*func)(PetscInt, PetscReal, const PetscReal [], PetscInt, PetscScalar *, void *), void *ctx, PetscScalar *value)
 {
@@ -1019,7 +1018,7 @@ PetscErrorCode PetscDualSpaceApply(PetscDualSpace sp, PetscInt f, PetscReal time
 
   Level: beginner
 
-.seealso: PetscDualSpaceCreate()
+.seealso: `PetscDualSpaceCreate()`
 @*/
 PetscErrorCode PetscDualSpaceApplyAll(PetscDualSpace sp, const PetscScalar *pointEval, PetscScalar *spValue)
 {
@@ -1041,7 +1040,7 @@ PetscErrorCode PetscDualSpaceApplyAll(PetscDualSpace sp, const PetscScalar *poin
 
   Level: beginner
 
-.seealso: PetscDualSpaceCreate()
+.seealso: `PetscDualSpaceCreate()`
 @*/
 PetscErrorCode PetscDualSpaceApplyInterior(PetscDualSpace sp, const PetscScalar *pointEval, PetscScalar *spValue)
 {
@@ -1079,7 +1078,7 @@ where both n and f have Nc components.
 
   Level: beginner
 
-.seealso: PetscDualSpaceCreate()
+.seealso: `PetscDualSpaceCreate()`
 @*/
 PetscErrorCode PetscDualSpaceApplyDefault(PetscDualSpace sp, PetscInt f, PetscReal time, PetscFEGeom *cgeom, PetscInt Nc, PetscErrorCode (*func)(PetscInt, PetscReal, const PetscReal [], PetscInt, PetscScalar *, void *), void *ctx, PetscScalar *value)
 {
@@ -1097,8 +1096,8 @@ PetscErrorCode PetscDualSpaceApplyDefault(PetscDualSpace sp, PetscInt f, PetscRe
   PetscCall(PetscDualSpaceGetDM(sp, &dm));
   PetscCall(PetscDualSpaceGetFunctional(sp, f, &n));
   PetscCall(PetscQuadratureGetData(n, &dim, &qNc, &Nq, &points, &weights));
-  PetscCheckFalse(dim != cgeom->dim,PetscObjectComm((PetscObject) sp), PETSC_ERR_ARG_SIZ, "The quadrature spatial dimension %D != cell geometry dimension %D", dim, cgeom->dim);
-  PetscCheckFalse(qNc != Nc,PetscObjectComm((PetscObject) sp), PETSC_ERR_ARG_SIZ, "The quadrature components %D != function components %D", qNc, Nc);
+  PetscCheck(dim == cgeom->dim,PetscObjectComm((PetscObject) sp), PETSC_ERR_ARG_SIZ, "The quadrature spatial dimension %" PetscInt_FMT " != cell geometry dimension %" PetscInt_FMT, dim, cgeom->dim);
+  PetscCheck(qNc == Nc,PetscObjectComm((PetscObject) sp), PETSC_ERR_ARG_SIZ, "The quadrature components %" PetscInt_FMT " != function components %" PetscInt_FMT, qNc, Nc);
   PetscCall(DMGetWorkArray(dm, Nc, MPIU_SCALAR, &val));
   *value = 0.0;
   isAffine = cgeom->isAffine;
@@ -1130,7 +1129,7 @@ PetscErrorCode PetscDualSpaceApplyDefault(PetscDualSpace sp, PetscInt f, PetscRe
 
   Level: beginner
 
-.seealso: PetscDualSpaceCreate()
+.seealso: `PetscDualSpaceCreate()`
 @*/
 PetscErrorCode PetscDualSpaceApplyAllDefault(PetscDualSpace sp, const PetscScalar *pointEval, PetscScalar *spValue)
 {
@@ -1170,7 +1169,7 @@ PetscErrorCode PetscDualSpaceApplyAllDefault(PetscDualSpace sp, const PetscScala
 
   Level: beginner
 
-.seealso: PetscDualSpaceCreate()
+.seealso: `PetscDualSpaceCreate()`
 @*/
 PetscErrorCode PetscDualSpaceApplyInteriorDefault(PetscDualSpace sp, const PetscScalar *pointEval, PetscScalar *spValue)
 {
@@ -1210,7 +1209,7 @@ PetscErrorCode PetscDualSpaceApplyInteriorDefault(PetscDualSpace sp, const Petsc
 
   Level: advanced
 
-.seealso: PetscDualSpaceCreate()
+.seealso: `PetscDualSpaceCreate()`
 @*/
 PetscErrorCode PetscDualSpaceGetAllData(PetscDualSpace sp, PetscQuadrature *allNodes, Mat *allMat)
 {
@@ -1245,7 +1244,7 @@ PetscErrorCode PetscDualSpaceGetAllData(PetscDualSpace sp, PetscQuadrature *allN
 
   Level: advanced
 
-.seealso: PetscDualSpaceCreate()
+.seealso: `PetscDualSpaceCreate()`
 @*/
 PetscErrorCode PetscDualSpaceCreateAllDataDefault(PetscDualSpace sp, PetscQuadrature *allNodes, Mat *allMat)
 {
@@ -1287,7 +1286,7 @@ PetscErrorCode PetscDualSpaceCreateAllDataDefault(PetscDualSpace sp, PetscQuadra
 
     PetscCall(PetscDualSpaceGetFunctional(sp,f,&q));
     PetscCall(PetscQuadratureGetData(q,NULL,&fnc,&Np,&p,&w));
-    PetscCheckFalse(fnc != Nc,PETSC_COMM_SELF, PETSC_ERR_PLIB, "functional component mismatch");
+    PetscCheck(fnc == Nc,PETSC_COMM_SELF, PETSC_ERR_PLIB, "functional component mismatch");
     for (i = 0; i < Np * dim; i++) {
       points[offset* dim + i] = p[i];
     }
@@ -1322,7 +1321,7 @@ PetscErrorCode PetscDualSpaceCreateAllDataDefault(PetscDualSpace sp, PetscQuadra
 
   Level: advanced
 
-.seealso: PetscDualSpaceCreate(), PetscDualSpaceGetDimension(), PetscDualSpaceGetNumComponents(), PetscQuadratureGetData()
+.seealso: `PetscDualSpaceCreate()`, `PetscDualSpaceGetDimension()`, `PetscDualSpaceGetNumComponents()`, `PetscQuadratureGetData()`
 @*/
 PetscErrorCode PetscDualSpaceGetInteriorData(PetscDualSpace sp, PetscQuadrature *intNodes, Mat *intMat)
 {
@@ -1359,7 +1358,7 @@ PetscErrorCode PetscDualSpaceGetInteriorData(PetscDualSpace sp, PetscQuadrature 
 
   Level: advanced
 
-.seealso: PetscDualSpaceCreate(), PetscDualSpaceGetInteriorData()
+.seealso: `PetscDualSpaceCreate()`, `PetscDualSpaceGetInteriorData()`
 @*/
 PetscErrorCode PetscDualSpaceCreateInteriorDataDefault(PetscDualSpace sp, PetscQuadrature *intNodes, Mat *intMat)
 {
@@ -1452,7 +1451,7 @@ PetscErrorCode PetscDualSpaceCreateInteriorDataDefault(PetscDualSpace sp, PetscQ
 
   Level: advanced
 
-.seealso: PetscDualSpaceCreate()
+.seealso: `PetscDualSpaceCreate()`
 @*/
 PetscErrorCode PetscDualSpaceEqual(PetscDualSpace A, PetscDualSpace B, PetscBool *equal)
 {
@@ -1527,7 +1526,7 @@ where both n and f have Nc components.
 
   Level: beginner
 
-.seealso: PetscDualSpaceCreate()
+.seealso: `PetscDualSpaceCreate()`
 @*/
 PetscErrorCode PetscDualSpaceApplyFVM(PetscDualSpace sp, PetscInt f, PetscReal time, PetscFVCellGeom *cgeom, PetscInt Nc, PetscErrorCode (*func)(PetscInt, PetscReal, const PetscReal [], PetscInt, PetscScalar *, void *), void *ctx, PetscScalar *value)
 {
@@ -1544,7 +1543,7 @@ PetscErrorCode PetscDualSpaceApplyFVM(PetscDualSpace sp, PetscInt f, PetscReal t
   PetscCall(DMGetCoordinateDim(dm, &dimEmbed));
   PetscCall(PetscDualSpaceGetFunctional(sp, f, &n));
   PetscCall(PetscQuadratureGetData(n, NULL, &qNc, &Nq, &points, &weights));
-  PetscCheckFalse(qNc != Nc,PetscObjectComm((PetscObject) sp), PETSC_ERR_ARG_SIZ, "The quadrature components %D != function components %D", qNc, Nc);
+  PetscCheck(qNc == Nc,PetscObjectComm((PetscObject) sp), PETSC_ERR_ARG_SIZ, "The quadrature components %" PetscInt_FMT " != function components %" PetscInt_FMT, qNc, Nc);
   PetscCall(DMGetWorkArray(dm, Nc, MPIU_SCALAR, &val));
   *value = 0.;
   for (q = 0; q < Nq; ++q) {
@@ -1579,7 +1578,7 @@ PetscErrorCode PetscDualSpaceApplyFVM(PetscDualSpace sp, PetscInt f, PetscReal t
 
   Level: advanced
 
-.seealso: PetscSpaceGetHeightSubspace(), PetscDualSpace
+.seealso: `PetscSpaceGetHeightSubspace()`, `PetscDualSpace`
 @*/
 PetscErrorCode PetscDualSpaceGetHeightSubspace(PetscDualSpace sp, PetscInt height, PetscDualSpace *subsp)
 {
@@ -1589,11 +1588,11 @@ PetscErrorCode PetscDualSpaceGetHeightSubspace(PetscDualSpace sp, PetscInt heigh
   PetscFunctionBegin;
   PetscValidHeaderSpecific(sp, PETSCDUALSPACE_CLASSID, 1);
   PetscValidPointer(subsp,3);
-  PetscCheckFalse(!(sp->uniform),PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "A non-uniform dual space does not have a single dual space at each height");
+  PetscCheck((sp->uniform),PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "A non-uniform dual space does not have a single dual space at each height");
   *subsp = NULL;
   dm = sp->dm;
   PetscCall(DMPlexGetDepth(dm, &depth));
-  PetscCheckFalse(height < 0 || height > depth,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid height");
+  PetscCheck(height >= 0 && height <= depth,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid height");
   PetscCall(DMPlexGetHeightStratum(dm,0,&cStart,&cEnd));
   if (height == 0 && cEnd == cStart + 1) {
     *subsp = sp;
@@ -1648,7 +1647,7 @@ PetscErrorCode PetscDualSpaceGetHeightSubspace(PetscDualSpace sp, PetscInt heigh
 
   Level: advanced
 
-.seealso: PetscDualSpace
+.seealso: `PetscDualSpace`
 @*/
 PetscErrorCode PetscDualSpaceGetPointSubspace(PetscDualSpace sp, PetscInt point, PetscDualSpace *bdsp)
 {
@@ -1661,7 +1660,7 @@ PetscErrorCode PetscDualSpaceGetPointSubspace(PetscDualSpace sp, PetscInt point,
   *bdsp = NULL;
   dm = sp->dm;
   PetscCall(DMPlexGetChart(dm, &pStart, &pEnd));
-  PetscCheckFalse(point < pStart || point > pEnd,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid point");
+  PetscCheck(point >= pStart && point <= pEnd,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid point");
   PetscCall(DMPlexGetHeightStratum(dm,0,&cStart,&cEnd));
   if (point == cStart && cEnd == cStart + 1) { /* the dual space is only equivalent to the dual space on a cell if the reference mesh has just one cell */
     *bdsp = sp;
@@ -1737,7 +1736,7 @@ PetscErrorCode PetscDualSpaceGetSymmetries(PetscDualSpace sp, const PetscInt ***
 
   Level: developer
 
-.seealso: PetscDTAltV, PetscDualSpacePullback(), PetscDualSpacePushforward(), PetscDualSpaceTransform(), PetscDualSpaceTransformType
+.seealso: `PetscDTAltV`, `PetscDualSpacePullback()`, `PetscDualSpacePushforward()`, `PetscDualSpaceTransform()`, `PetscDualSpaceTransformType`
 @*/
 PetscErrorCode PetscDualSpaceGetFormDegree(PetscDualSpace dsp, PetscInt *k)
 {
@@ -1763,7 +1762,7 @@ PetscErrorCode PetscDualSpaceGetFormDegree(PetscDualSpace dsp, PetscInt *k)
 
   Level: developer
 
-.seealso: PetscDTAltV, PetscDualSpacePullback(), PetscDualSpacePushforward(), PetscDualSpaceTransform(), PetscDualSpaceTransformType
+.seealso: `PetscDTAltV`, `PetscDualSpacePullback()`, `PetscDualSpacePushforward()`, `PetscDualSpaceTransform()`, `PetscDualSpaceTransformType`
 @*/
 PetscErrorCode PetscDualSpaceSetFormDegree(PetscDualSpace dsp, PetscInt k)
 {
@@ -1773,7 +1772,7 @@ PetscErrorCode PetscDualSpaceSetFormDegree(PetscDualSpace dsp, PetscInt k)
   PetscValidHeaderSpecific(dsp, PETSCDUALSPACE_CLASSID, 1);
   PetscCheck(!dsp->setupcalled,PetscObjectComm((PetscObject)dsp), PETSC_ERR_ARG_WRONGSTATE, "Cannot change number of components after dualspace is set up");
   dim = dsp->dm->dim;
-  PetscCheckFalse(k < -dim || k > dim,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unsupported %D-form on %D-dimensional reference cell", PetscAbsInt(k), dim);
+  PetscCheck(k >= -dim && k <= dim,PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unsupported %" PetscInt_FMT "-form on %" PetscInt_FMT "-dimensional reference cell", PetscAbsInt(k), dim);
   dsp->k = k;
   PetscFunctionReturn(0);
 }
@@ -1795,7 +1794,7 @@ $ 1: These are Hcurl methods that transform functions using the covariant Piola 
 $ 2: These are the same as 1
 $ 3: These are Hdiv methods that transform functions using the contravariant Piola transform (CONTRAVARIANT_PIOLA_TRANSFORM)
 
-.seealso: PetscDualSpacePullback(), PetscDualSpacePushforward(), PetscDualSpaceTransform(), PetscDualSpaceTransformType
+.seealso: `PetscDualSpacePullback()`, `PetscDualSpacePushforward()`, `PetscDualSpaceTransform()`, `PetscDualSpaceTransformType`
 @*/
 PetscErrorCode PetscDualSpaceGetDeRahm(PetscDualSpace dsp, PetscInt *k)
 {
@@ -1831,7 +1830,7 @@ PetscErrorCode PetscDualSpaceGetDeRahm(PetscDualSpace dsp, PetscInt *k)
 
   Note: This only handles transformations when the embedding dimension of the geometry in fegeom is the same as the reference dimension.
 
-.seealso: PetscDualSpaceTransformGradient(), PetscDualSpaceTransformHessian(), PetscDualSpacePullback(), PetscDualSpacePushforward(), PetscDualSpaceTransformType
+.seealso: `PetscDualSpaceTransformGradient()`, `PetscDualSpaceTransformHessian()`, `PetscDualSpacePullback()`, `PetscDualSpacePushforward()`, `PetscDualSpaceTransformType`
 @*/
 PetscErrorCode PetscDualSpaceTransform(PetscDualSpace dsp, PetscDualSpaceTransformType trans, PetscBool isInverse, PetscFEGeom *fegeom, PetscInt Nv, PetscInt Nc, PetscScalar vals[])
 {
@@ -1860,7 +1859,7 @@ PetscErrorCode PetscDualSpaceTransform(PetscDualSpace dsp, PetscDualSpaceTransfo
     case 3:
       for (c = 0; c < Nc; c += 3) DMPlex_Mult3DReal_Internal(Jstar, 1, &vals[v*Nc + c], &vals[v*Nc + c]);
       break;
-    default: SETERRQ(PetscObjectComm((PetscObject) dsp), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported form size %D for transformation", Nk);
+    default: SETERRQ(PetscObjectComm((PetscObject) dsp), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported form size %" PetscInt_FMT " for transformation", Nk);
     }
   }
   PetscFunctionReturn(0);
@@ -1885,7 +1884,7 @@ PetscErrorCode PetscDualSpaceTransform(PetscDualSpace dsp, PetscDualSpaceTransfo
 
   Note: This only handles transformations when the embedding dimension of the geometry in fegeom is the same as the reference dimension.
 
-.seealso: PetscDualSpaceTransform(), PetscDualSpacePullback(), PetscDualSpacePushforward(), PetscDualSpaceTransformType
+.seealso: `PetscDualSpaceTransform()`, `PetscDualSpacePullback()`, `PetscDualSpacePushforward()`, `PetscDualSpaceTransformType`
 @*/
 PetscErrorCode PetscDualSpaceTransformGradient(PetscDualSpace dsp, PetscDualSpaceTransformType trans, PetscBool isInverse, PetscFEGeom *fegeom, PetscInt Nv, PetscInt Nc, PetscScalar vals[])
 {
@@ -1897,7 +1896,7 @@ PetscErrorCode PetscDualSpaceTransformGradient(PetscDualSpace dsp, PetscDualSpac
   PetscValidPointer(fegeom, 4);
   PetscValidScalarPointer(vals, 7);
 #ifdef PETSC_USE_DEBUG
-  PetscCheckFalse(dE <= 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid embedding dimension %D", dE);
+  PetscCheck(dE > 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid embedding dimension %" PetscInt_FMT, dE);
 #endif
   /* Transform gradient */
   if (dim == dE) {
@@ -1908,7 +1907,7 @@ PetscErrorCode PetscDualSpaceTransformGradient(PetscDualSpace dsp, PetscDualSpac
           case 1: vals[(v*Nc+c)*dim] *= fegeom->invJ[0];break;
           case 2: DMPlex_MultTranspose2DReal_Internal(fegeom->invJ, 1, &vals[(v*Nc+c)*dim], &vals[(v*Nc+c)*dim]);break;
           case 3: DMPlex_MultTranspose3DReal_Internal(fegeom->invJ, 1, &vals[(v*Nc+c)*dim], &vals[(v*Nc+c)*dim]);break;
-          default: SETERRQ(PetscObjectComm((PetscObject) dsp), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported dim %D for transformation", dim);
+          default: SETERRQ(PetscObjectComm((PetscObject) dsp), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported dim %" PetscInt_FMT " for transformation", dim);
         }
       }
     }
@@ -1931,7 +1930,7 @@ PetscErrorCode PetscDualSpaceTransformGradient(PetscDualSpace dsp, PetscDualSpac
           {
             case 2: DMPlex_MultTranspose2DReal_Internal(fegeom->J, dim, &vals[v*Nc*dim+d], &vals[v*Nc*dim+d]);break;
             case 3: DMPlex_MultTranspose3DReal_Internal(fegeom->J, dim, &vals[v*Nc*dim+d], &vals[v*Nc*dim+d]);break;
-            default: SETERRQ(PetscObjectComm((PetscObject) dsp), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported dim %D for transformation", dim);
+            default: SETERRQ(PetscObjectComm((PetscObject) dsp), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported dim %" PetscInt_FMT " for transformation", dim);
           }
         }
       }
@@ -1942,7 +1941,7 @@ PetscErrorCode PetscDualSpaceTransformGradient(PetscDualSpace dsp, PetscDualSpac
           {
             case 2: DMPlex_MultTranspose2DReal_Internal(fegeom->invJ, dim, &vals[v*Nc*dim+d], &vals[v*Nc*dim+d]);break;
             case 3: DMPlex_MultTranspose3DReal_Internal(fegeom->invJ, dim, &vals[v*Nc*dim+d], &vals[v*Nc*dim+d]);break;
-            default: SETERRQ(PetscObjectComm((PetscObject) dsp), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported dim %D for transformation", dim);
+            default: SETERRQ(PetscObjectComm((PetscObject) dsp), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported dim %" PetscInt_FMT " for transformation", dim);
           }
         }
       }
@@ -1956,7 +1955,7 @@ PetscErrorCode PetscDualSpaceTransformGradient(PetscDualSpace dsp, PetscDualSpac
           {
             case 2: DMPlex_Mult2DReal_Internal(fegeom->invJ, dim, &vals[v*Nc*dim+d], &vals[v*Nc*dim+d]);break;
             case 3: DMPlex_Mult3DReal_Internal(fegeom->invJ, dim, &vals[v*Nc*dim+d], &vals[v*Nc*dim+d]);break;
-            default: SETERRQ(PetscObjectComm((PetscObject) dsp), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported dim %D for transformation", dim);
+            default: SETERRQ(PetscObjectComm((PetscObject) dsp), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported dim %" PetscInt_FMT " for transformation", dim);
           }
           for (c = 0; c < Nc; ++c) vals[(v*Nc+c)*dim+d] *= fegeom->detJ[0];
         }
@@ -1968,7 +1967,7 @@ PetscErrorCode PetscDualSpaceTransformGradient(PetscDualSpace dsp, PetscDualSpac
           {
             case 2: DMPlex_Mult2DReal_Internal(fegeom->J, dim, &vals[v*Nc*dim+d], &vals[v*Nc*dim+d]);break;
             case 3: DMPlex_Mult3DReal_Internal(fegeom->J, dim, &vals[v*Nc*dim+d], &vals[v*Nc*dim+d]);break;
-            default: SETERRQ(PetscObjectComm((PetscObject) dsp), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported dim %D for transformation", dim);
+            default: SETERRQ(PetscObjectComm((PetscObject) dsp), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported dim %" PetscInt_FMT " for transformation", dim);
           }
           for (c = 0; c < Nc; ++c) vals[(v*Nc+c)*dim+d] /= fegeom->detJ[0];
         }
@@ -1998,7 +1997,7 @@ PetscErrorCode PetscDualSpaceTransformGradient(PetscDualSpace dsp, PetscDualSpac
 
   Note: This only handles transformations when the embedding dimension of the geometry in fegeom is the same as the reference dimension.
 
-.seealso: PetscDualSpaceTransform(), PetscDualSpacePullback(), PetscDualSpacePushforward(), PetscDualSpaceTransformType
+.seealso: `PetscDualSpaceTransform()`, `PetscDualSpacePullback()`, `PetscDualSpacePushforward()`, `PetscDualSpaceTransformType`
 @*/
 PetscErrorCode PetscDualSpaceTransformHessian(PetscDualSpace dsp, PetscDualSpaceTransformType trans, PetscBool isInverse, PetscFEGeom *fegeom, PetscInt Nv, PetscInt Nc, PetscScalar vals[])
 {
@@ -2010,7 +2009,7 @@ PetscErrorCode PetscDualSpaceTransformHessian(PetscDualSpace dsp, PetscDualSpace
   PetscValidPointer(fegeom, 4);
   PetscValidScalarPointer(vals, 7);
 #ifdef PETSC_USE_DEBUG
-  PetscCheckFalse(dE <= 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid embedding dimension %D", dE);
+  PetscCheck(dE > 0,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid embedding dimension %" PetscInt_FMT, dE);
 #endif
   /* Transform Hessian: J^{-T}_{ik} J^{-T}_{jl} H(f)_{kl} = J^{-T}_{ik} H(f)_{kl} J^{-1}_{lj} */
   if (dim == dE) {
@@ -2021,7 +2020,7 @@ PetscErrorCode PetscDualSpaceTransformHessian(PetscDualSpace dsp, PetscDualSpace
           case 1: vals[(v*Nc+c)*dim*dim] *= PetscSqr(fegeom->invJ[0]);break;
           case 2: DMPlex_PTAP2DReal_Internal(fegeom->invJ, &vals[(v*Nc+c)*dim*dim], &vals[(v*Nc+c)*dim*dim]);break;
           case 3: DMPlex_PTAP3DReal_Internal(fegeom->invJ, &vals[(v*Nc+c)*dim*dim], &vals[(v*Nc+c)*dim*dim]);break;
-          default: SETERRQ(PetscObjectComm((PetscObject) dsp), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported dim %D for transformation", dim);
+          default: SETERRQ(PetscObjectComm((PetscObject) dsp), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported dim %" PetscInt_FMT " for transformation", dim);
         }
       }
     }
@@ -2063,7 +2062,7 @@ PetscErrorCode PetscDualSpaceTransformHessian(PetscDualSpace dsp, PetscDualSpace
 
   Note: This only handles tranformations when the embedding dimension of the geometry in fegeom is the same as the reference dimension.
 
-.seealso: PetscDualSpacePushforward(), PetscDualSpaceTransform(), PetscDualSpaceGetDeRahm()
+.seealso: `PetscDualSpacePushforward()`, `PetscDualSpaceTransform()`, `PetscDualSpaceGetDeRahm()`
 @*/
 PetscErrorCode PetscDualSpacePullback(PetscDualSpace dsp, PetscFEGeom *fegeom, PetscInt Nq, PetscInt Nc, PetscScalar pointEval[])
 {
@@ -2086,7 +2085,7 @@ PetscErrorCode PetscDualSpacePullback(PetscDualSpace dsp, PetscFEGeom *fegeom, P
     case 2:
     case 3: /* Hdiv preserve normal traces */
     trans = CONTRAVARIANT_PIOLA_TRANSFORM;break;
-    default: SETERRQ(PetscObjectComm((PetscObject) dsp), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported simplex dim %D for transformation", k);
+    default: SETERRQ(PetscObjectComm((PetscObject) dsp), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported simplex dim %" PetscInt_FMT " for transformation", k);
   }
   PetscCall(PetscDualSpaceTransform(dsp, trans, PETSC_TRUE, fegeom, Nq, Nc, pointEval));
   PetscFunctionReturn(0);
@@ -2111,7 +2110,7 @@ PetscErrorCode PetscDualSpacePullback(PetscDualSpace dsp, PetscFEGeom *fegeom, P
 
   Note: This only handles transformations when the embedding dimension of the geometry in fegeom is the same as the reference dimension.
 
-.seealso: PetscDualSpacePullback(), PetscDualSpaceTransform(), PetscDualSpaceGetDeRahm()
+.seealso: `PetscDualSpacePullback()`, `PetscDualSpaceTransform()`, `PetscDualSpaceGetDeRahm()`
 @*/
 PetscErrorCode PetscDualSpacePushforward(PetscDualSpace dsp, PetscFEGeom *fegeom, PetscInt Nq, PetscInt Nc, PetscScalar pointEval[])
 {
@@ -2134,7 +2133,7 @@ PetscErrorCode PetscDualSpacePushforward(PetscDualSpace dsp, PetscFEGeom *fegeom
     case 2:
     case 3: /* Hdiv preserve normal traces */
     trans = CONTRAVARIANT_PIOLA_TRANSFORM;break;
-    default: SETERRQ(PetscObjectComm((PetscObject) dsp), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported simplex dim %D for transformation", k);
+    default: SETERRQ(PetscObjectComm((PetscObject) dsp), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported simplex dim %" PetscInt_FMT " for transformation", k);
   }
   PetscCall(PetscDualSpaceTransform(dsp, trans, PETSC_FALSE, fegeom, Nq, Nc, pointEval));
   PetscFunctionReturn(0);
@@ -2159,7 +2158,7 @@ PetscErrorCode PetscDualSpacePushforward(PetscDualSpace dsp, PetscFEGeom *fegeom
 
   Note: This only handles transformations when the embedding dimension of the geometry in fegeom is the same as the reference dimension.
 
-.seealso: PetscDualSpacePushforward(), PPetscDualSpacePullback(), PetscDualSpaceTransform(), PetscDualSpaceGetDeRahm()
+.seealso: `PetscDualSpacePushforward()`, `PPetscDualSpacePullback()`, `PetscDualSpaceTransform()`, `PetscDualSpaceGetDeRahm()`
 @*/
 PetscErrorCode PetscDualSpacePushforwardGradient(PetscDualSpace dsp, PetscFEGeom *fegeom, PetscInt Nq, PetscInt Nc, PetscScalar pointEval[])
 {
@@ -2182,7 +2181,7 @@ PetscErrorCode PetscDualSpacePushforwardGradient(PetscDualSpace dsp, PetscFEGeom
     case 2:
     case 3: /* Hdiv preserve normal traces */
     trans = CONTRAVARIANT_PIOLA_TRANSFORM;break;
-    default: SETERRQ(PetscObjectComm((PetscObject) dsp), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported simplex dim %D for transformation", k);
+    default: SETERRQ(PetscObjectComm((PetscObject) dsp), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported simplex dim %" PetscInt_FMT " for transformation", k);
   }
   PetscCall(PetscDualSpaceTransformGradient(dsp, trans, PETSC_FALSE, fegeom, Nq, Nc, pointEval));
   PetscFunctionReturn(0);
@@ -2207,7 +2206,7 @@ PetscErrorCode PetscDualSpacePushforwardGradient(PetscDualSpace dsp, PetscFEGeom
 
   Note: This only handles transformations when the embedding dimension of the geometry in fegeom is the same as the reference dimension.
 
-.seealso: PetscDualSpacePushforward(), PPetscDualSpacePullback(), PetscDualSpaceTransform(), PetscDualSpaceGetDeRahm()
+.seealso: `PetscDualSpacePushforward()`, `PPetscDualSpacePullback()`, `PetscDualSpaceTransform()`, `PetscDualSpaceGetDeRahm()`
 @*/
 PetscErrorCode PetscDualSpacePushforwardHessian(PetscDualSpace dsp, PetscFEGeom *fegeom, PetscInt Nq, PetscInt Nc, PetscScalar pointEval[])
 {
@@ -2230,7 +2229,7 @@ PetscErrorCode PetscDualSpacePushforwardHessian(PetscDualSpace dsp, PetscFEGeom 
     case 2:
     case 3: /* Hdiv preserve normal traces */
     trans = CONTRAVARIANT_PIOLA_TRANSFORM;break;
-    default: SETERRQ(PetscObjectComm((PetscObject) dsp), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported simplex dim %D for transformation", k);
+    default: SETERRQ(PetscObjectComm((PetscObject) dsp), PETSC_ERR_ARG_OUTOFRANGE, "Unsupported simplex dim %" PetscInt_FMT " for transformation", k);
   }
   PetscCall(PetscDualSpaceTransformHessian(dsp, trans, PETSC_FALSE, fegeom, Nq, Nc, pointEval));
   PetscFunctionReturn(0);

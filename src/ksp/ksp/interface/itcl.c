@@ -36,7 +36,7 @@
 
    Level: advanced
 
-.seealso: KSPAppendOptionsPrefix(), KSPGetOptionsPrefix()
+.seealso: `KSPAppendOptionsPrefix()`, `KSPGetOptionsPrefix()`
 @*/
 PetscErrorCode  KSPSetOptionsPrefix(KSP ksp,const char prefix[])
 {
@@ -64,7 +64,7 @@ PetscErrorCode  KSPSetOptionsPrefix(KSP ksp,const char prefix[])
 
    Level: advanced
 
-.seealso: KSPSetOptionsPrefix(), KSPGetOptionsPrefix()
+.seealso: `KSPSetOptionsPrefix()`, `KSPGetOptionsPrefix()`
 @*/
 PetscErrorCode  KSPAppendOptionsPrefix(KSP ksp,const char prefix[])
 {
@@ -91,7 +91,7 @@ PetscErrorCode  KSPAppendOptionsPrefix(KSP ksp,const char prefix[])
 
    Level: advanced
 
-.seealso: KSPSetOptionsPrefix(), KSPAppendOptionsPrefix(), KSPSetUseFischerGuess(), KSPSetGuess(), KSPGetGuess()
+.seealso: `KSPSetOptionsPrefix()`, `KSPAppendOptionsPrefix()`, `KSPSetUseFischerGuess()`, `KSPSetGuess()`, `KSPGetGuess()`
 @*/
 PetscErrorCode  KSPSetUseFischerGuess(KSP ksp,PetscInt model,PetscInt size)
 {
@@ -125,7 +125,7 @@ PetscErrorCode  KSPSetUseFischerGuess(KSP ksp,PetscInt model,PetscInt size)
           This increases the reference count of the guess object, you must destroy the object with KSPGuessDestroy()
           before the end of the program.
 
-.seealso: KSPSetOptionsPrefix(), KSPAppendOptionsPrefix(), KSPSetUseFischerGuess(), KSPGetGuess()
+.seealso: `KSPSetOptionsPrefix()`, `KSPAppendOptionsPrefix()`, `KSPSetUseFischerGuess()`, `KSPGetGuess()`
 @*/
 PetscErrorCode  KSPSetGuess(KSP ksp,KSPGuess guess)
 {
@@ -152,7 +152,7 @@ PetscErrorCode  KSPSetGuess(KSP ksp,KSPGuess guess)
 
    Level: developer
 
-.seealso: KSPSetOptionsPrefix(), KSPAppendOptionsPrefix(), KSPSetUseFischerGuess(), KSPSetGuess()
+.seealso: `KSPSetOptionsPrefix()`, `KSPAppendOptionsPrefix()`, `KSPSetUseFischerGuess()`, `KSPSetGuess()`
 @*/
 PetscErrorCode  KSPGetGuess(KSP ksp,KSPGuess *guess)
 {
@@ -191,7 +191,7 @@ PetscErrorCode  KSPGetGuess(KSP ksp,KSPGuess *guess)
 
    Level: advanced
 
-.seealso: KSPSetOptionsPrefix(), KSPAppendOptionsPrefix()
+.seealso: `KSPSetOptionsPrefix()`, `KSPAppendOptionsPrefix()`
 @*/
 PetscErrorCode  KSPGetOptionsPrefix(KSP ksp,const char *prefix[])
 {
@@ -222,13 +222,13 @@ static PetscErrorCode PetscViewerAndFormatCreate_Internal(PetscViewer viewer, Pe
 
    Level: developer
 
-.seealso: PetscOptionsGetViewer(), PetscOptionsGetReal(), PetscOptionsHasName(), PetscOptionsGetString(),
-          PetscOptionsGetIntArray(), PetscOptionsGetRealArray(), PetscOptionsBool()
-          PetscOptionsInt(), PetscOptionsString(), PetscOptionsReal(), PetscOptionsBool(),
-          PetscOptionsName(), PetscOptionsBegin(), PetscOptionsEnd(), PetscOptionsHead(),
-          PetscOptionsStringArray(),PetscOptionsRealArray(), PetscOptionsScalar(),
-          PetscOptionsBoolGroupBegin(), PetscOptionsBoolGroup(), PetscOptionsBoolGroupEnd(),
-          PetscOptionsFList(), PetscOptionsEList()
+.seealso: `PetscOptionsGetViewer()`, `PetscOptionsGetReal()`, `PetscOptionsHasName()`, `PetscOptionsGetString()`,
+          `PetscOptionsGetIntArray()`, `PetscOptionsGetRealArray()`, `PetscOptionsBool()`
+          `PetscOptionsInt()`, `PetscOptionsString()`, `PetscOptionsReal()`, `PetscOptionsBool()`,
+          `PetscOptionsName()`, `PetscOptionsBegin()`, `PetscOptionsEnd()`, `PetscOptionsHeadBegin()`,
+          `PetscOptionsStringArray(),PetscOptionsRealArray()`, `PetscOptionsScalar()`,
+          `PetscOptionsBoolGroupBegin()`, `PetscOptionsBoolGroup()`, `PetscOptionsBoolGroupEnd()`,
+          `PetscOptionsFList()`, `PetscOptionsEList()`
 @*/
 PetscErrorCode KSPMonitorSetFromOptions(KSP ksp, const char opt[], const char name[], void *ctx)
 {
@@ -318,7 +318,7 @@ PetscErrorCode KSPMonitorSetFromOptions(KSP ksp, const char opt[], const char na
 
    Level: beginner
 
-.seealso: KSPSetOptionsPrefix(), KSPResetFromOptions(), KSPSetUseFischerGuess()
+.seealso: `KSPSetOptionsPrefix()`, `KSPResetFromOptions()`, `KSPSetUseFischerGuess()`
 
 @*/
 PetscErrorCode  KSPSetFromOptions(KSP ksp)
@@ -331,7 +331,6 @@ PetscErrorCode  KSPSetFromOptions(KSP ksp)
   PCSide         pcside;
   void           *ctx;
   MPI_Comm       comm;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
@@ -343,7 +342,7 @@ PetscErrorCode  KSPSetFromOptions(KSP ksp)
   }
 
   PetscCall(KSPRegisterAll());
-  ierr = PetscObjectOptionsBegin((PetscObject)ksp);PetscCall(ierr);
+  PetscObjectOptionsBegin((PetscObject)ksp);
   PetscCall(PetscOptionsFList("-ksp_type","Krylov method","KSPSetType",KSPList,(char*)(((PetscObject)ksp)->type_name ? ((PetscObject)ksp)->type_name : KSPGMRES),type,256,&flg));
   if (flg) {
     PetscCall(KSPSetType(ksp,type));
@@ -441,7 +440,7 @@ PetscErrorCode  KSPSetFromOptions(KSP ksp)
     nmax = 2;
     PetscCall(PetscOptionsIntArray("-ksp_fischer_guess","Use Paul Fischer's algorithm or its variants for initial guess","KSPSetUseFischerGuess",model,&nmax,&flag));
     if (flag) {
-      PetscCheckFalse(nmax != 2,comm,PETSC_ERR_ARG_OUTOFRANGE,"Must pass in model,size as arguments");
+      PetscCheck(nmax == 2,comm,PETSC_ERR_ARG_OUTOFRANGE,"Must pass in model,size as arguments");
       PetscCall(KSPSetUseFischerGuess(ksp,model[0],model[1]));
     }
   }
@@ -661,7 +660,7 @@ PetscErrorCode  KSPSetFromOptions(KSP ksp)
   skipoptions:
   /* process any options handlers added with PetscObjectAddOptionsHandler() */
   PetscCall(PetscObjectProcessOptionsHandlers(PetscOptionsObject,(PetscObject)ksp));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   ksp->setfromoptionscalled++;
   PetscFunctionReturn(0);
 }
@@ -676,7 +675,7 @@ PetscErrorCode  KSPSetFromOptions(KSP ksp)
 
    Level: beginner
 
-.seealso: KSPSetFromOptions(), KSPSetOptionsPrefix()
+.seealso: `KSPSetFromOptions()`, `KSPSetOptionsPrefix()`
 @*/
 PetscErrorCode KSPResetFromOptions(KSP ksp)
 {

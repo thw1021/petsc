@@ -89,7 +89,7 @@ PetscSpinlock PetscCommSpinLock;
 
      Developer Note: Turns off PETSc signal handling to allow Julia to manage signals
 
-.seealso: PetscInitialize(), PetscInitializeFortran(), PetscInitializeNoArguments()
+.seealso: `PetscInitialize()`, `PetscInitializeFortran()`, `PetscInitializeNoArguments()`
 */
 PetscErrorCode  PetscInitializeNoPointers(int argc,char **args,const char *filename,const char *help)
 {
@@ -122,7 +122,7 @@ PetscErrorCode  PetscGetPETSC_COMM_SELF(MPI_Comm *comm)
 
    Level: advanced
 
-.seealso: PetscInitialize(), PetscInitializeFortran()
+.seealso: `PetscInitialize()`, `PetscInitializeFortran()`
 @*/
 PetscErrorCode  PetscInitializeNoArguments(void)
 {
@@ -139,7 +139,7 @@ PetscErrorCode  PetscInitializeNoArguments(void)
 
    Level: beginner
 
-.seealso: PetscInitialize(), PetscInitializeNoArguments(), PetscInitializeFortran()
+.seealso: `PetscInitialize()`, `PetscInitializeNoArguments()`, `PetscInitializeFortran()`
 @*/
 PetscErrorCode PetscInitialized(PetscBool *isInitialized)
 {
@@ -154,7 +154,7 @@ PetscErrorCode PetscInitialized(PetscBool *isInitialized)
 
    Level: developer
 
-.seealso: PetscInitialize(), PetscInitializeNoArguments(), PetscInitializeFortran()
+.seealso: `PetscInitialize()`, `PetscInitializeNoArguments()`, `PetscInitializeFortran()`
 @*/
 PetscErrorCode  PetscFinalized(PetscBool  *isFinalized)
 {
@@ -469,7 +469,7 @@ PetscErrorCode  PetscGetProgramName(char name[],size_t len)
 
       The first argument contains the program name as is normal for C arguments.
 
-.seealso: PetscFinalize(), PetscInitializeFortran(), PetscGetArguments()
+.seealso: `PetscFinalize()`, `PetscInitializeFortran()`, `PetscGetArguments()`
 
 @*/
 PetscErrorCode  PetscGetArgs(int *argc,char ***args)
@@ -495,7 +495,7 @@ PetscErrorCode  PetscGetArgs(int *argc,char ***args)
    Notes:
       This does NOT start with the program name and IS null terminated (final arg is void)
 
-.seealso: PetscFinalize(), PetscInitializeFortran(), PetscGetArgs(), PetscFreeArguments()
+.seealso: `PetscFinalize()`, `PetscInitializeFortran()`, `PetscGetArgs()`, `PetscFreeArguments()`
 
 @*/
 PetscErrorCode  PetscGetArguments(char ***args)
@@ -521,7 +521,7 @@ PetscErrorCode  PetscGetArguments(char ***args)
 
    Level: intermediate
 
-.seealso: PetscFinalize(), PetscInitializeFortran(), PetscGetArgs(), PetscGetArguments()
+.seealso: `PetscFinalize()`, `PetscInitializeFortran()`, `PetscGetArgs()`, `PetscGetArguments()`
 
 @*/
 PetscErrorCode  PetscFreeArguments(char **args)
@@ -994,7 +994,6 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char* prog,const char* 
   {
     PetscBool       omp_view_flag;
     char           *threads = getenv("OMP_NUM_THREADS");
-    PetscErrorCode  ierr;
 
     if (threads) {
       PetscCall(PetscInfo(NULL,"Number of OpenMP threads %s (as given by OMP_NUM_THREADS)\n",threads));
@@ -1003,10 +1002,10 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char* prog,const char* 
       PetscNumOMPThreads = (PetscInt) omp_get_max_threads();
       PetscCall(PetscInfo(NULL,"Number of OpenMP threads %" PetscInt_FMT " (as given by omp_get_max_threads())\n",PetscNumOMPThreads));
     }
-    ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"OpenMP options","Sys");PetscCall(ierr);
+    PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"OpenMP options","Sys");
     PetscCall(PetscOptionsInt("-omp_num_threads","Number of OpenMP threads to use (can also use environmental variable OMP_NUM_THREADS","None",PetscNumOMPThreads,&PetscNumOMPThreads,&flg));
     PetscCall(PetscOptionsName("-omp_view","Display OpenMP number of threads",NULL,&omp_view_flag));
-    ierr = PetscOptionsEnd();PetscCall(ierr);
+    PetscOptionsEnd();
     if (flg) {
       PetscCall(PetscInfo(NULL,"Number of OpenMP theads %" PetscInt_FMT " (given by -omp_num_threads)\n",PetscNumOMPThreads));
       omp_set_num_threads((int)PetscNumOMPThreads);
@@ -1139,7 +1138,8 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char* prog,const char* 
 .  -log_trace [filename] - Print traces of all PETSc calls to the screen (useful to determine where a program
         hangs without running in the debugger).  See PetscLogTraceBegin().
 .  -log_view [:filename:format] - Prints summary of flop and timing information to screen or file, see PetscLogView().
-.  -log_view_memory - Includes in the summary from -log_view the memory used in each method, see PetscLogView().
+.  -log_view_memory - Includes in the summary from -log_view the memory used in each event, see PetscLogView().
+.  -log_view_gpu_time - Includes in the summary from -log_view the time used in each GPU kernel, see PetscLogView().
 .  -log_summary [filename] - (Deprecated, use -log_view) Prints summary of flop and timing information to screen. If the filename is specified the
         summary is written to the file.  See PetscLogView().
 .  -log_exclude: <vec,mat,pc,ksp,snes> - excludes subset of object classes from logging
@@ -1191,7 +1191,7 @@ $       call PetscInitialize(file,ierr)
    If your main program is C but you call Fortran code that also uses PETSc you need to call PetscInitializeFortran() soon after
    calling PetscInitialize().
 
-.seealso: PetscFinalize(), PetscInitializeFortran(), PetscGetArgs(), PetscInitializeNoArguments()
+.seealso: `PetscFinalize()`, `PetscInitializeFortran()`, `PetscGetArgs()`, `PetscInitializeNoArguments()`, `PetscLogGpuTime()`
 
 @*/
 PetscErrorCode  PetscInitialize(int *argc,char ***args,const char file[],const char help[])
@@ -1292,7 +1292,7 @@ PETSC_INTERN PetscErrorCode PetscLogFinalize(void);
    Note:
    See PetscInitialize() for more general runtime options.
 
-.seealso: PetscInitialize(), PetscOptionsView(), PetscMallocDump(), PetscMPIDump(), PetscEnd()
+.seealso: `PetscInitialize()`, `PetscOptionsView()`, `PetscMallocDump()`, `PetscMPIDump()`, `PetscEnd()`
 @*/
 PetscErrorCode  PetscFinalize(void)
 {

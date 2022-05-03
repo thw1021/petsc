@@ -206,7 +206,7 @@ static PetscErrorCode KSPSolve_PGMRES(KSP ksp)
   PetscBool      guess_zero = ksp->guess_zero;
 
   PetscFunctionBegin;
-  PetscCheckFalse(ksp->calc_sings && !pgmres->Rsvd,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ORDER,"Must call KSPSetComputeSingularValues() before KSPSetUp() is called");
+  PetscCheck(!ksp->calc_sings || pgmres->Rsvd,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ORDER,"Must call KSPSetComputeSingularValues() before KSPSetUp() is called");
   PetscCall(PetscObjectSAWsTakeAccess((PetscObject)ksp));
   ksp->its = 0;
   PetscCall(PetscObjectSAWsGrantAccess((PetscObject)ksp));
@@ -323,7 +323,7 @@ static PetscErrorCode KSPPGMRESUpdateHessenberg(KSP ksp,PetscInt it,PetscBool *h
   /* check for the happy breakdown */
   hapbnd = PetscMin(PetscAbsScalar(hh[it+1] / rs[it]),pgmres->haptol);
   if (PetscAbsScalar(hh[it+1]) < hapbnd) {
-    PetscCall(PetscInfo(ksp,"Detected happy breakdown, current hapbnd = %14.12e H(%D,%D) = %14.12e\n",(double)hapbnd,it+1,it,(double)PetscAbsScalar(*HH(it+1,it))));
+    PetscCall(PetscInfo(ksp,"Detected happy breakdown, current hapbnd = %14.12e H(%" PetscInt_FMT ",%" PetscInt_FMT ") = %14.12e\n",(double)hapbnd,it+1,it,(double)PetscAbsScalar(*HH(it+1,it))));
     *hapend = PETSC_TRUE;
   }
 
@@ -417,8 +417,8 @@ PetscErrorCode KSPSetFromOptions_PGMRES(PetscOptionItems *PetscOptionsObject,KSP
 {
   PetscFunctionBegin;
   PetscCall(KSPSetFromOptions_GMRES(PetscOptionsObject,ksp));
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"KSP pipelined GMRES Options"));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadBegin(PetscOptionsObject,"KSP pipelined GMRES Options");
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -455,10 +455,10 @@ PetscErrorCode KSPReset_PGMRES(KSP ksp)
    Developer Notes:
     This object is subclassed off of KSPGMRES
 
-.seealso:  KSPCreate(), KSPSetType(), KSPType (for list of available types), KSP, KSPGMRES, KSPLGMRES, KSPPIPECG, KSPPIPECR,
-           KSPGMRESSetRestart(), KSPGMRESSetHapTol(), KSPGMRESSetPreAllocateVectors(), KSPGMRESSetOrthogonalization(), KSPGMRESGetOrthogonalization(),
-           KSPGMRESClassicalGramSchmidtOrthogonalization(), KSPGMRESModifiedGramSchmidtOrthogonalization(),
-           KSPGMRESCGSRefinementType, KSPGMRESSetCGSRefinementType(),  KSPGMRESGetCGSRefinementType(), KSPGMRESMonitorKrylov()
+.seealso: `KSPCreate()`, `KSPSetType()`, `KSPType`, `KSP`, `KSPGMRES`, `KSPLGMRES`, `KSPPIPECG`, `KSPPIPECR`,
+          `KSPGMRESSetRestart()`, `KSPGMRESSetHapTol()`, `KSPGMRESSetPreAllocateVectors()`, `KSPGMRESSetOrthogonalization()`, `KSPGMRESGetOrthogonalization()`,
+          `KSPGMRESClassicalGramSchmidtOrthogonalization()`, `KSPGMRESModifiedGramSchmidtOrthogonalization()`,
+          `KSPGMRESCGSRefinementType`, `KSPGMRESSetCGSRefinementType()`, `KSPGMRESGetCGSRefinementType()`, `KSPGMRESMonitorKrylov()`
 M*/
 
 PETSC_EXTERN PetscErrorCode KSPCreate_PGMRES(KSP ksp)

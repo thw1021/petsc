@@ -14,9 +14,9 @@ typedef struct {
 static PetscErrorCode PCSetFromOptions_Cholesky(PetscOptionItems *PetscOptionsObject,PC pc)
 {
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Cholesky options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Cholesky options");
   PetscCall(PCSetFromOptions_Factor(PetscOptionsObject,pc));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -26,8 +26,11 @@ static PetscErrorCode PCSetUp_Cholesky(PC pc)
   PC_Cholesky            *dir = (PC_Cholesky*)pc->data;
   MatSolverType          stype;
   MatFactorError         err;
+  const char             *prefix;
 
   PetscFunctionBegin;
+  PetscCall(PCGetOptionsPrefix(pc,&prefix));
+  PetscCall(MatSetOptionsPrefix(pc->pmat,prefix));
   pc->failedreason = PC_NOERROR;
   if (dir->hdr.reusefill && pc->setupcalled) ((PC_Factor*)dir)->info.fill = dir->hdr.actualfill;
 
@@ -248,7 +251,7 @@ static PetscErrorCode PCApplyTranspose_Cholesky(PC pc,Vec x,Vec y)
 
    Level: intermediate
 
-.seealso: PCFactorSetReuseFill()
+.seealso: `PCFactorSetReuseFill()`
 @*/
 PetscErrorCode  PCFactorSetReuseOrdering(PC pc,PetscBool flag)
 {
@@ -280,10 +283,10 @@ PetscErrorCode  PCFactorSetReuseOrdering(PC pc,PetscBool flag)
           not need a Krylov method (i.e. you can use -ksp_type preonly, or
           KSPSetType(ksp,KSPPREONLY) for the Krylov method
 
-.seealso:  PCCreate(), PCSetType(), PCType (for list of available types), PC,
-           PCILU, PCLU, PCICC, PCFactorSetReuseOrdering(), PCFactorSetReuseFill(), PCFactorGetMatrix(),
-           PCFactorSetFill(), PCFactorSetShiftNonzero(), PCFactorSetShiftType(), PCFactorSetShiftAmount()
-           PCFactorSetUseInPlace(), PCFactorGetUseInPlace(), PCFactorSetMatOrderingType()
+.seealso: `PCCreate()`, `PCSetType()`, `PCType`, `PC`,
+          `PCILU`, `PCLU`, `PCICC`, `PCFactorSetReuseOrdering()`, `PCFactorSetReuseFill()`, `PCFactorGetMatrix()`,
+          `PCFactorSetFill()`, `PCFactorSetShiftNonzero()`, `PCFactorSetShiftType()`, `PCFactorSetShiftAmount()`
+          `PCFactorSetUseInPlace()`, `PCFactorGetUseInPlace()`, `PCFactorSetMatOrderingType()`
 
 M*/
 

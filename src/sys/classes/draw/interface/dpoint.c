@@ -16,8 +16,8 @@
 
    Level: beginner
 
-.seealso: PetscDrawPointPixel(), PetscDrawPointSetSize(), PetscDrawLine(), PetscDrawRectangle(), PetscDrawTriangle(), PetscDrawEllipse(),
-          PetscDrawMarker(), PetscDrawString(), PetscDrawArrow()
+.seealso: `PetscDrawPointPixel()`, `PetscDrawPointSetSize()`, `PetscDrawLine()`, `PetscDrawRectangle()`, `PetscDrawTriangle()`, `PetscDrawEllipse()`,
+          `PetscDrawMarker()`, `PetscDrawString()`, `PetscDrawArrow()`
 
 @*/
 PetscErrorCode  PetscDrawPoint(PetscDraw draw,PetscReal xl,PetscReal yl,int cl)
@@ -41,7 +41,7 @@ PetscErrorCode  PetscDrawPoint(PetscDraw draw,PetscReal xl,PetscReal yl,int cl)
 
    Level: beginner
 
-.seealso: PetscDrawPoint(), PetscDrawPointSetSize()
+.seealso: `PetscDrawPoint()`, `PetscDrawPointSetSize()`
 
 @*/
 PetscErrorCode  PetscDrawPointPixel(PetscDraw draw,int x,int y,int c)
@@ -69,13 +69,13 @@ PetscErrorCode  PetscDrawPointPixel(PetscDraw draw,int x,int y,int c)
    Note:
    Even a size of zero insures that a single pixel is colored.
 
-.seealso: PetscDrawPoint(), PetscDrawMarker()
+.seealso: `PetscDrawPoint()`, `PetscDrawMarker()`
 @*/
 PetscErrorCode  PetscDrawPointSetSize(PetscDraw draw,PetscReal width)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
-  PetscCheckFalse(width < 0.0 || width > 1.0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Bad size %g, should be between 0 and 1",(double)width);
+  PetscCheck(width >= 0.0 && width <= 1.0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Bad size %g, should be between 0 and 1",(double)width);
   if (draw->ops->pointsetsize) {
     PetscCall((*draw->ops->pointsetsize)(draw,width));
   }

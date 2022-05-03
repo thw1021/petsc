@@ -170,7 +170,7 @@ static struct {
 PetscErrorCode  PetscDrawUtilitySetCmap(const char colormap[],int mapsize,unsigned char R[],unsigned char G[],unsigned char B[])
 {
   int             i,j;
-  const char      *cmap_name_list[sizeof(PetscDrawCmapTable)/sizeof(PetscDrawCmapTable[0])];
+  const char      *cmap_name_list[PETSC_STATIC_ARRAY_LENGTH(PetscDrawCmapTable)];
   PetscInt        id = 0, count = (PetscInt)(sizeof(cmap_name_list)/sizeof(char*));
   PetscBool       reverse = PETSC_FALSE, brighten = PETSC_FALSE;
   PetscReal       beta = 0;
@@ -185,13 +185,13 @@ PetscErrorCode  PetscDrawUtilitySetCmap(const char colormap[],int mapsize,unsign
   PetscCall(PetscOptionsGetEList(NULL,NULL,"-draw_cmap",cmap_name_list,count,&id,NULL));
   PetscCall(PetscOptionsGetBool(NULL,NULL,"-draw_cmap_reverse",&reverse,NULL));
   PetscCall(PetscOptionsGetReal(NULL,NULL,"-draw_cmap_brighten",&beta,&brighten));
-  PetscCheckFalse(brighten && (beta <= (PetscReal)-1 || beta >= (PetscReal)+1),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"brighten parameter %g must be in the range (-1,1)",(double)beta);
+  PetscCheck(!brighten || (beta > (PetscReal)-1 && beta < (PetscReal)+1),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"brighten parameter %g must be in the range (-1,1)",(double)beta);
 
   if (PetscDrawCmapTable[id].cmap) {
     PetscCall(PetscDrawCmapTable[id].cmap(mapsize,R,G,B));
   } else {
     const unsigned char (*rgb)[3] = PetscDrawCmapTable[id].data;
-    PetscCheckFalse(mapsize != 256-PETSC_DRAW_BASIC_COLORS,PETSC_COMM_SELF,PETSC_ERR_SUP,"Colormap '%s' with size %d not supported",cmap_name_list[id],mapsize);
+    PetscCheck(mapsize == 256-PETSC_DRAW_BASIC_COLORS,PETSC_COMM_SELF,PETSC_ERR_SUP,"Colormap '%s' with size %d not supported",cmap_name_list[id],mapsize);
     for (i=0; i<mapsize; i++) {R[i] = rgb[i][0]; G[i] = rgb[i][1]; B[i] = rgb[i][2];}
   }
 

@@ -41,9 +41,9 @@ static PetscErrorCode KSPSetUp_PIPELCG(KSP ksp)
 
   PetscFunctionBegin;
   comm = PetscObjectComm((PetscObject)ksp);
-  PetscCheckFalse(max_it < 1,comm,PETSC_ERR_ARG_OUTOFRANGE,"%s: max_it argument must be positive.",((PetscObject)ksp)->type_name);
-  PetscCheckFalse(l < 1,comm,PETSC_ERR_ARG_OUTOFRANGE,"%s: pipel argument must be positive.",((PetscObject)ksp)->type_name);
-  PetscCheckFalse(l > max_it,comm,PETSC_ERR_ARG_OUTOFRANGE,"%s: pipel argument must be less than max_it.",((PetscObject)ksp)->type_name);
+  PetscCheck(max_it >= 1,comm,PETSC_ERR_ARG_OUTOFRANGE,"%s: max_it argument must be positive.",((PetscObject)ksp)->type_name);
+  PetscCheck(l >= 1,comm,PETSC_ERR_ARG_OUTOFRANGE,"%s: pipel argument must be positive.",((PetscObject)ksp)->type_name);
+  PetscCheck(l <= max_it,comm,PETSC_ERR_ARG_OUTOFRANGE,"%s: pipel argument must be less than max_it.",((PetscObject)ksp)->type_name);
 
   PetscCall(KSPSetWorkVecs(ksp,1)); /* get work vectors needed by PIPELCG */
   plcg->p = ksp->work[0];
@@ -87,7 +87,7 @@ static PetscErrorCode KSPSetFromOptions_PIPELCG(PetscOptionItems *PetscOptionsOb
   PetscBool      flag=PETSC_FALSE;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"KSP PIPELCG options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"KSP PIPELCG options");
   PetscCall(PetscOptionsInt("-ksp_pipelcg_pipel","Pipeline length","",plcg->l,&plcg->l,&flag));
   if (!flag) plcg->l = 1;
   PetscCall(PetscOptionsReal("-ksp_pipelcg_lmin","Estimate for smallest eigenvalue","",plcg->lmin,&plcg->lmin,&flag));
@@ -96,7 +96,7 @@ static PetscErrorCode KSPSetFromOptions_PIPELCG(PetscOptionItems *PetscOptionsOb
   if (!flag) plcg->lmax = 0.0;
   PetscCall(PetscOptionsBool("-ksp_pipelcg_monitor","Output information on restarts when they occur? (default: 0)","",plcg->show_rstrt,&plcg->show_rstrt,&flag));
   if (!flag) plcg->show_rstrt = PETSC_FALSE;
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -121,13 +121,13 @@ static PetscErrorCode KSPView_PIPELCG(KSP ksp,PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERSTRING,&isstring));
   if (iascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Pipeline depth: %D\n", plcg->l));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Minimal eigenvalue estimate %g\n",plcg->lmin));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Maximal eigenvalue estimate %g\n",plcg->lmax));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Pipeline depth: %" PetscInt_FMT "\n", plcg->l));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Minimal eigenvalue estimate %g\n",(double)plcg->lmin));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Maximal eigenvalue estimate %g\n",(double)plcg->lmax));
   } else if (isstring) {
-    PetscCall(PetscViewerStringSPrintf(viewer,"  Pipeline depth: %D\n", plcg->l));
-    PetscCall(PetscViewerStringSPrintf(viewer,"  Minimal eigenvalue estimate %g\n",plcg->lmin));
-    PetscCall(PetscViewerStringSPrintf(viewer,"  Maximal eigenvalue estimate %g\n",plcg->lmax));
+    PetscCall(PetscViewerStringSPrintf(viewer,"  Pipeline depth: %" PetscInt_FMT "\n", plcg->l));
+    PetscCall(PetscViewerStringSPrintf(viewer,"  Minimal eigenvalue estimate %g\n",(double)plcg->lmin));
+    PetscCall(PetscViewerStringSPrintf(viewer,"  Maximal eigenvalue estimate %g\n",(double)plcg->lmax));
   }
   PetscFunctionReturn(0);
 }
@@ -235,7 +235,7 @@ static PetscErrorCode KSPSolve_InnerLoop_PIPELCG(KSP ksp)
       /* Breakdown check */
       if (tmp < 0) {
         if (plcg->show_rstrt) {
-          PetscCall(PetscPrintf(comm,"Sqrt breakdown in iteration %D: sqrt argument is %e. Iteration was restarted.\n",ksp->its+1,(double)tmp));
+          PetscCall(PetscPrintf(comm,"Sqrt breakdown in iteration %" PetscInt_FMT ": sqrt argument is %e. Iteration was restarted.\n",ksp->its+1,(double)tmp));
         }
         /* End hanging dot-products in the pipeline before exiting for-loop */
         start = it-l+2;
@@ -530,8 +530,8 @@ static PetscErrorCode KSPSolve_PIPELCG(KSP ksp)
         "Numerically Stable Recurrence Relations for the Communication Hiding Pipelined Conjugate Gradient Method"
         Submitted to IEEE Transactions on Parallel and Distributed Systems, 2019.
 
-.seealso:  KSPCreate(), KSPSetType(), KSPType (for list of available types), KSPCG, KSPPIPECG, KSPPIPECGRR, KSPPGMRES,
-    KSPPIPEBCGS, KSPSetPCSide()
+.seealso: `KSPCreate()`, `KSPSetType()`, `KSPType`, `KSPCG`, `KSPPIPECG`, `KSPPIPECGRR`, `KSPPGMRES`,
+          `KSPPIPEBCGS`, `KSPSetPCSide()`
 M*/
 PETSC_EXTERN
 PetscErrorCode KSPCreate_PIPELCG(KSP ksp)

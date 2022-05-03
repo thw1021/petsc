@@ -230,12 +230,12 @@ static PetscErrorCode TaoSetFromOptions_CG(PetscOptionItems *PetscOptionsObject,
 
   PetscFunctionBegin;
   PetscCall(TaoLineSearchSetFromOptions(tao->linesearch));
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Nonlinear Conjugate Gradient method for unconstrained optimization"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Nonlinear Conjugate Gradient method for unconstrained optimization");
   PetscCall(PetscOptionsReal("-tao_cg_eta","restart tolerance", "", cgP->eta,&cgP->eta,NULL));
   PetscCall(PetscOptionsEList("-tao_cg_type","cg formula", "", CG_Table, CG_Types, CG_Table[cgP->cg_type], &cgP->cg_type,NULL));
   PetscCall(PetscOptionsReal("-tao_cg_delta_min","minimum delta value", "", cgP->delta_min,&cgP->delta_min,NULL));
   PetscCall(PetscOptionsReal("-tao_cg_delta_max","maximum delta value", "", cgP->delta_max,&cgP->delta_max,NULL));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -249,8 +249,8 @@ static PetscErrorCode TaoView_CG(Tao tao, PetscViewer viewer)
   if (isascii) {
     PetscCall(PetscViewerASCIIPushTab(viewer));
     PetscCall(PetscViewerASCIIPrintf(viewer, "CG Type: %s\n", CG_Table[cgP->cg_type]));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "Gradient steps: %D\n", cgP->ngradsteps));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "Reset steps: %D\n", cgP->nresetsteps));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Gradient steps: %" PetscInt_FMT "\n", cgP->ngradsteps));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Reset steps: %" PetscInt_FMT "\n", cgP->nresetsteps));
     PetscCall(PetscViewerASCIIPopTab(viewer));
   }
   PetscFunctionReturn(0);

@@ -79,7 +79,7 @@ static PetscErrorCode PetscDualSpaceSimpleSetFunctional_Simple(PetscDualSpace sp
   PetscInt               Nc, c, Nq, p;
 
   PetscFunctionBegin;
-  PetscCheckFalse((f < 0) || (f >= s->dim),PetscObjectComm((PetscObject) sp), PETSC_ERR_ARG_OUTOFRANGE, "Basis index %d not in [0, %d)", f, s->dim);
+  PetscCheck(!(f < 0) && !(f >= s->dim),PetscObjectComm((PetscObject) sp), PETSC_ERR_ARG_OUTOFRANGE, "Basis index %" PetscInt_FMT " not in [0, %" PetscInt_FMT ")", f, s->dim);
   PetscCall(PetscQuadratureDuplicate(q, &sp->functional[f]));
   /* Reweight so that it has unit volume: Do we want to do this for Nc > 1? */
   PetscCall(PetscQuadratureGetData(sp->functional[f], NULL, &Nc, &Nq, NULL, (const PetscReal **) &weights));
@@ -103,7 +103,7 @@ static PetscErrorCode PetscDualSpaceSimpleSetFunctional_Simple(PetscDualSpace sp
 
   Level: intermediate
 
-.seealso: PetscDualSpaceSimpleSetFunctional()
+.seealso: `PetscDualSpaceSimpleSetFunctional()`
 @*/
 PetscErrorCode PetscDualSpaceSimpleSetDimension(PetscDualSpace sp, PetscInt dim)
 {
@@ -129,7 +129,7 @@ PetscErrorCode PetscDualSpaceSimpleSetDimension(PetscDualSpace sp, PetscInt dim)
 
   Note: The quadrature will be reweighted so that it has unit volume.
 
-.seealso: PetscDualSpaceSimpleSetDimension()
+.seealso: `PetscDualSpaceSimpleSetDimension()`
 @*/
 PetscErrorCode PetscDualSpaceSimpleSetFunctional(PetscDualSpace sp, PetscInt func, PetscQuadrature q)
 {
@@ -163,7 +163,7 @@ static PetscErrorCode PetscDualSpaceInitialize_Simple(PetscDualSpace sp)
 
   Level: intermediate
 
-.seealso: PetscDualSpaceType, PetscDualSpaceCreate(), PetscDualSpaceSetType()
+.seealso: `PetscDualSpaceType`, `PetscDualSpaceCreate()`, `PetscDualSpaceSetType()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PetscDualSpaceCreate_Simple(PetscDualSpace sp)

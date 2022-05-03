@@ -158,7 +158,7 @@ PetscErrorCode MatConvertToCSC(Mat A,PetscBool valOnly,PetscInt *n,PetscInt **co
             }
           }
           /* data structure of sparse matrix has changed */
-          PetscCheckFalse(k == (*colptr)[colidx + 1] - base,PETSC_COMM_SELF,PETSC_ERR_PLIB,"overflow on k %" PetscInt_FMT,k);
+          PetscCheck(k != (*colptr)[colidx + 1] - base,PETSC_COMM_SELF,PETSC_ERR_PLIB,"overflow on k %" PetscInt_FMT,k);
         }
       }
     }
@@ -196,7 +196,7 @@ PetscErrorCode MatDestroy_Pastix(Mat A)
                 lu->rhsnbr,
                 lu->iparm,
                 lu->dparm);
-    PetscCheckFalse(lu->iparm[IPARM_ERROR_NUMBER] != 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error reported by PaStiX in destroy: iparm(IPARM_ERROR_NUMBER)=%" PetscInt_FMT,lu->iparm[IPARM_ERROR_NUMBER]);
+    PetscCheck(lu->iparm[IPARM_ERROR_NUMBER] == 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error reported by PaStiX in destroy: iparm(IPARM_ERROR_NUMBER)=%" PetscInt_FMT,lu->iparm[IPARM_ERROR_NUMBER]);
     PetscCall(PetscFree(lu->colptr));
     PetscCall(PetscFree(lu->row));
     PetscCall(PetscFree(lu->val));
@@ -256,7 +256,7 @@ PetscErrorCode MatSolve_PaStiX(Mat A,Vec b,Vec x)
               lu->rhsnbr,
               lu->iparm,
               lu->dparm);
-  PetscCheckFalse(lu->iparm[IPARM_ERROR_NUMBER] != 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error reported by PaStiX in solve phase: lu->iparm[IPARM_ERROR_NUMBER] = %" PetscInt_FMT,lu->iparm[IPARM_ERROR_NUMBER]);
+  PetscCheck(lu->iparm[IPARM_ERROR_NUMBER] == 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error reported by PaStiX in solve phase: lu->iparm[IPARM_ERROR_NUMBER] = %" PetscInt_FMT,lu->iparm[IPARM_ERROR_NUMBER]);
 
   if (lu->commSize == 1) {
     PetscCall(VecRestoreArray(x,&(lu->rhs)));
@@ -279,7 +279,6 @@ PetscErrorCode MatFactorNumeric_PaStiX(Mat F,Mat A,const MatFactorInfo *info)
 {
   Mat_Pastix     *lu =(Mat_Pastix*)(F)->data;
   Mat            *tseq;
-  PetscErrorCode ierr;
   PetscInt       icntl;
   PetscInt       M=A->rmap->N;
   PetscBool      valOnly,flg, isSym;
@@ -320,9 +319,9 @@ PetscErrorCode MatFactorNumeric_PaStiX(Mat F,Mat A,const MatFactorInfo *info)
                 lu->rhsnbr,
                 lu->iparm,
                 lu->dparm);
-    PetscCheckFalse(lu->iparm[IPARM_ERROR_NUMBER] != 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error reported by PaStiX in MatFactorNumeric: iparm(IPARM_ERROR_NUMBER)=%" PetscInt_FMT,lu->iparm[IPARM_ERROR_NUMBER]);
+    PetscCheck(lu->iparm[IPARM_ERROR_NUMBER] == 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error reported by PaStiX in MatFactorNumeric: iparm(IPARM_ERROR_NUMBER)=%" PetscInt_FMT,lu->iparm[IPARM_ERROR_NUMBER]);
 
-    ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)A),((PetscObject)A)->prefix,"PaStiX Options","Mat");PetscCall(ierr);
+    PetscOptionsBegin(PetscObjectComm((PetscObject)A),((PetscObject)A)->prefix,"PaStiX Options","Mat");
     icntl = -1;
     lu->iparm[IPARM_VERBOSE] = API_VERBOSE_NOT;
     PetscCall(PetscOptionsInt("-mat_pastix_verbose","iparm[IPARM_VERBOSE] : level of printing (0 to 2)","None",lu->iparm[IPARM_VERBOSE],&icntl,&flg));
@@ -334,7 +333,7 @@ PetscErrorCode MatFactorNumeric_PaStiX(Mat F,Mat A,const MatFactorInfo *info)
     if ((flg && icntl > 0)) {
       lu->iparm[IPARM_THREAD_NBR] = icntl;
     }
-    ierr = PetscOptionsEnd();PetscCall(ierr);
+    PetscOptionsEnd();
     valOnly = PETSC_FALSE;
   } else {
     if (isSeqAIJ || isMPIAIJ) {
@@ -398,7 +397,7 @@ PetscErrorCode MatFactorNumeric_PaStiX(Mat F,Mat A,const MatFactorInfo *info)
                 lu->rhsnbr,
                 lu->iparm,
                 lu->dparm);
-    PetscCheckFalse(lu->iparm[IPARM_ERROR_NUMBER] != 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error reported by PaStiX in analysis phase: iparm(IPARM_ERROR_NUMBER)=%" PetscInt_FMT,lu->iparm[IPARM_ERROR_NUMBER]);
+    PetscCheck(lu->iparm[IPARM_ERROR_NUMBER] == 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error reported by PaStiX in analysis phase: iparm(IPARM_ERROR_NUMBER)=%" PetscInt_FMT,lu->iparm[IPARM_ERROR_NUMBER]);
   } else {
     lu->iparm[IPARM_START_TASK] = API_TASK_NUMFACT;
     lu->iparm[IPARM_END_TASK]   = API_TASK_NUMFACT;
@@ -414,7 +413,7 @@ PetscErrorCode MatFactorNumeric_PaStiX(Mat F,Mat A,const MatFactorInfo *info)
                 lu->rhsnbr,
                 lu->iparm,
                 lu->dparm);
-    PetscCheckFalse(lu->iparm[IPARM_ERROR_NUMBER] != 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error reported by PaStiX in analysis phase: iparm(IPARM_ERROR_NUMBER)=%" PetscInt_FMT,lu->iparm[IPARM_ERROR_NUMBER]);
+    PetscCheck(lu->iparm[IPARM_ERROR_NUMBER] == 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error reported by PaStiX in analysis phase: iparm(IPARM_ERROR_NUMBER)=%" PetscInt_FMT,lu->iparm[IPARM_ERROR_NUMBER]);
   }
 
   (F)->assembled    = PETSC_TRUE;
@@ -488,7 +487,7 @@ PetscErrorCode MatView_PaStiX(Mat A,PetscViewer viewer)
 
   Level: beginner
 
-.seealso: PCFactorSetMatSolverType(), MatSolverType
+.seealso: `PCFactorSetMatSolverType()`, `MatSolverType`
 
 M*/
 

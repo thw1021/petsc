@@ -17,8 +17,9 @@ class Configure(config.package.CMakePackage):
     self.downloadonWindows= 1
     self.hastests         = 1
     self.hastestsdatafiles= 1
-    self.precisions       = ['double']
+    self.precisions       = ['double','single']
     self.buildLanguages   = ['Cxx']
+    self.minCmakeVersion  = (3,18,1)
     return
 
   def setupDependencies(self, framework):
@@ -33,7 +34,6 @@ class Configure(config.package.CMakePackage):
     return
 
   def formCMakeConfigureArgs(self):
-    if self.versionToTuple(self.cmake.foundversion) < (3,18,1): raise RuntimeError("Requires cmake version 3.18.1 or higher: use --download-cmake")
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
     if self.openmp.found:
       self.usesopenmp = 'yes'

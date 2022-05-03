@@ -179,7 +179,7 @@ PetscErrorCode  MatFDColoringApply_AIJ(Mat J,MatFDColoring coloring,Vec x1,void 
   PetscFunctionBegin;
   PetscCall(VecBoundToCPU(x1,&alreadyboundtocpu));
   PetscCall(VecBindToCPU(x1,PETSC_TRUE));
-  PetscCheckFalse((ctype == IS_COLORING_LOCAL) && (J->ops->fdcoloringapply == MatFDColoringApply_AIJ),PetscObjectComm((PetscObject)J),PETSC_ERR_SUP,"Must call MatColoringUseDM() with IS_COLORING_LOCAL");
+  PetscCheck(!(ctype == IS_COLORING_LOCAL) || !(J->ops->fdcoloringapply == MatFDColoringApply_AIJ),PetscObjectComm((PetscObject)J),PETSC_ERR_SUP,"Must call MatColoringUseDM() with IS_COLORING_LOCAL");
   /* (1) Set w1 = F(x1) */
   if (!coloring->fset) {
     PetscCall(PetscLogEventBegin(MAT_FDColoringFunction,0,0,0,0));
@@ -730,7 +730,7 @@ PetscErrorCode MatFDColoringCreate_MPIXAIJ(Mat mat,ISColoring iscoloring,MatFDCo
 
    The code will be slightly faster if MatFDColoringSetBlockSize(coloring,PETSC_DEFAULT,nc); is called immediately after creating the coloring
 
-.seealso: MatFDColoringCreate(), ISColoring, ISColoringCreate(), ISColoringSetType(), IS_COLORING_LOCAL, MatFDColoringSetBlockSize()
+.seealso: `MatFDColoringCreate()`, `ISColoring`, `ISColoringCreate()`, `ISColoringSetType()`, `IS_COLORING_LOCAL`, `MatFDColoringSetBlockSize()`
 
 @*/
 PetscErrorCode  MatFDColoringSetValues(Mat J,MatFDColoring coloring,const PetscScalar *y)

@@ -274,13 +274,13 @@ static PetscErrorCode SNESCompositeApply_AdditiveOptimal(SNES snes,Vec X,Vec B,V
   PetscStackCallBLAS("LAPACKgelss",LAPACKgelss_(&jac->n,&jac->n,&jac->nrhs,jac->h,&jac->lda,jac->beta,&jac->lda,jac->s,&jac->rcond,&jac->rank,jac->work,&jac->lwork,&jac->info));
 #endif
   PetscCall(PetscFPTrapPop());
-  PetscCheckFalse(jac->info < 0,PetscObjectComm((PetscObject)snes),PETSC_ERR_LIB,"Bad argument to GELSS");
-  PetscCheckFalse(jac->info > 0,PetscObjectComm((PetscObject)snes),PETSC_ERR_LIB,"SVD failed to converge");
+  PetscCheck(jac->info >= 0,PetscObjectComm((PetscObject)snes),PETSC_ERR_LIB,"Bad argument to GELSS");
+  PetscCheck(jac->info <= 0,PetscObjectComm((PetscObject)snes),PETSC_ERR_LIB,"SVD failed to converge");
   tot = 0.;
   total = 0.;
   for (i=0; i<jac->n; i++) {
-    PetscCheckFalse(snes->errorifnotconverged && PetscIsInfOrNanScalar(jac->beta[i]),PetscObjectComm((PetscObject)snes),PETSC_ERR_LIB,"SVD generated inconsistent output");
-    PetscCall(PetscInfo(snes,"%D: %g\n",i,(double)PetscRealPart(jac->beta[i])));
+    PetscCheck(!snes->errorifnotconverged || !PetscIsInfOrNanScalar(jac->beta[i]),PetscObjectComm((PetscObject)snes),PETSC_ERR_LIB,"SVD generated inconsistent output");
+    PetscCall(PetscInfo(snes,"%" PetscInt_FMT ": %g\n",i,(double)PetscRealPart(jac->beta[i])));
     tot += jac->beta[i];
     total += PetscAbsScalar(jac->beta[i]);
   }
@@ -430,7 +430,7 @@ static PetscErrorCode SNESSetFromOptions_Composite(PetscOptionItems *PetscOption
   PetscBool          flg;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Composite preconditioner options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Composite preconditioner options");
   PetscCall(PetscOptionsEnum("-snes_composite_type","Type of composition","SNESCompositeSetType",SNESCompositeTypes,(PetscEnum)jac->type,(PetscEnum*)&jac->type,&flg));
   if (flg) {
     PetscCall(SNESCompositeSetType(snes,jac->type));
@@ -450,7 +450,7 @@ static PetscErrorCode SNESSetFromOptions_Composite(PetscOptionItems *PetscOption
   }
   PetscCall(PetscOptionsReal("-snes_composite_stol","Step tolerance for restart on the additive composite solvers","",jac->stol,&jac->stol,NULL));
   PetscCall(PetscOptionsReal("-snes_composite_rtol","Residual tolerance for the additive composite solvers","",jac->rtol,&jac->rtol,NULL));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
 
   next = jac->head;
   while (next) {
@@ -619,7 +619,7 @@ PetscErrorCode  SNESCompositeAddSNES(SNES snes,SNESType type)
 
    Level: Developer
 
-.seealso: SNESCompositeAddSNES()
+.seealso: `SNESCompositeAddSNES()`
 @*/
 PetscErrorCode  SNESCompositeGetSNES(SNES snes,PetscInt n,SNES *subsnes)
 {
@@ -690,7 +690,7 @@ static PetscErrorCode  SNESCompositeSetDamping_Composite(SNES snes,PetscInt n,Pe
 
    Level: Developer
 
-.seealso: SNESCompositeAddSNES()
+.seealso: `SNESCompositeAddSNES()`
 @*/
 PetscErrorCode  SNESCompositeSetDamping(SNES snes,PetscInt n,PetscReal dmp)
 {
@@ -810,7 +810,7 @@ static PetscErrorCode SNESSolve_Composite(SNES snes)
   }
   if (normtype == SNES_NORM_ALWAYS) {
     if (i == snes->max_its) {
-      PetscCall(PetscInfo(snes,"Maximum number of iterations has been reached: %D\n",snes->max_its));
+      PetscCall(PetscInfo(snes,"Maximum number of iterations has been reached: %" PetscInt_FMT "\n",snes->max_its));
       if (!snes->reason) snes->reason = SNES_DIVERGED_MAX_IT;
     }
   } else if (!snes->reason) snes->reason = SNES_CONVERGED_ITS;
@@ -828,9 +828,9 @@ static PetscErrorCode SNESSolve_Composite(SNES snes)
 
    Level: intermediate
 
-.seealso:  SNESCreate(), SNESSetType(), SNESType (for list of available types), SNES,
-           SNESSHELL, SNESCompositeSetType(), SNESCompositeSpecialSetAlpha(), SNESCompositeAddSNES(),
-           SNESCompositeGetSNES()
+.seealso: `SNESCreate()`, `SNESSetType()`, `SNESType`, `SNES`,
+          `SNESSHELL`, `SNESCompositeSetType()`, `SNESCompositeSpecialSetAlpha()`, `SNESCompositeAddSNES()`,
+          `SNESCompositeGetSNES()`
 
    References:
 .  * - Peter R. Brune, Matthew G. Knepley, Barry F. Smith, and Xuemin Tu, "Composing Scalable Nonlinear Algebraic Solvers",

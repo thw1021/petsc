@@ -1,4 +1,4 @@
-static char help[] = "3D, tri-quadratic hexahedra (Q1), displacement finite element formulation\n\
+static char help[] = "3D, tensor hexahedra (Q1-K), displacement finite element formulation\n\
 of linear elasticity.  E=1.0, nu=1/3.\n\
 Unit cube domain with Dirichlet boundary\n\n";
 
@@ -203,7 +203,6 @@ PetscErrorCode zero(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt 
 int main(int argc,char **args)
 {
   Mat                Amat;
-  PetscErrorCode     ierr;
   SNES               snes;
   KSP                ksp;
   MPI_Comm           comm;
@@ -233,7 +232,7 @@ int main(int argc,char **args)
   comm = PETSC_COMM_WORLD;
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
   /* options */
-  ierr = PetscOptionsBegin(comm,NULL,"3D bilinear Q1 elasticity options","");PetscCall(ierr);
+  PetscOptionsBegin(comm,NULL,"3D bilinear Q1 elasticity options","");
   {
     i = 3;
     PetscCall(PetscOptionsIntArray("-cells", "Number of (flux tube) processor in each dimension", "ex56.c", cells, &i, NULL));
@@ -241,7 +240,7 @@ int main(int argc,char **args)
     Lx = 1.; /* or ne for rod */
     max_conv_its = 3;
     PetscCall(PetscOptionsInt("-max_conv_its","Number of iterations in convergence study","",max_conv_its,&max_conv_its,NULL));
-    PetscCheck(max_conv_its > 0 && max_conv_its < 7,PETSC_COMM_WORLD, PETSC_ERR_USER, "Bad number of iterations for convergence test (%D)",max_conv_its);
+    PetscCheck(max_conv_its > 0 && max_conv_its < 7,PETSC_COMM_WORLD, PETSC_ERR_USER, "Bad number of iterations for convergence test (%" PetscInt_FMT ")",max_conv_its);
     PetscCall(PetscOptionsReal("-lx","Length of domain","",Lx,&Lx,NULL));
     PetscCall(PetscOptionsReal("-alpha","material coefficient inside circle","",s_soft_alpha,&s_soft_alpha,NULL));
     PetscCall(PetscOptionsBool("-test_nonzero_cols","nonzero test","",test_nonzero_cols,&test_nonzero_cols,NULL));
@@ -249,7 +248,7 @@ int main(int argc,char **args)
     PetscCall(PetscOptionsBool("-attach_mat_nearnullspace","MatNearNullSpace API test (via MatSetNearNullSpace)","",attach_nearnullspace,&attach_nearnullspace,NULL));
     PetscCall(PetscOptionsInt("-run_type","0: twisting load on cantalever, 1: 3rd order accurate convergence test","",run_type,&run_type,NULL));
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscCall(PetscLogStageRegister("Mesh Setup", &stage[16]));
   for (iter=0 ; iter<max_conv_its ; iter++) {
     char str[] = "Solve 0";
@@ -265,7 +264,7 @@ int main(int argc,char **args)
     PetscCall(DMCreateLabel(dm, "boundary"));
     PetscCall(DMGetLabel(dm, "boundary", &label));
     PetscCall(DMPlexMarkBoundaryFaces(dm, 1, label));
-    if (!run_type) {
+    if (run_type == 0) {
       PetscCall(DMGetStratumIS(dm, "boundary", 1,  &is));
       PetscCall(DMCreateLabel(dm,"Faces"));
       if (is) {
@@ -318,7 +317,7 @@ int main(int argc,char **args)
     }
     PetscCall(DMGetCoordinatesLocal(dm,&coordinates));
     PetscCall(DMGetCoordinateDim(dm,&dimEmbed));
-    PetscCheck(dimEmbed == dim,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"dimEmbed != dim %D",dimEmbed);
+    PetscCheck(dimEmbed == dim,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"dimEmbed != dim %" PetscInt_FMT,dimEmbed);
     PetscCall(VecGetLocalSize(coordinates,&nCoords));
     PetscCheck((nCoords % dimEmbed) == 0,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Coordinate vector the wrong size");
     PetscCall(VecGetArray(coordinates,&coords));
@@ -334,10 +333,9 @@ int main(int argc,char **args)
   }
 
   /* convert to p4est, and distribute */
-
-  ierr = PetscOptionsBegin(comm, "", "Mesh conversion options", "DMPLEX");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "Mesh conversion options", "DMPLEX");
   PetscCall(PetscOptionsFList("-dm_type","Convert DMPlex to another format (should not be Plex!)","ex56.c",DMList,DMPLEX,convType,256,&flg));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   if (flg) {
     DM newdm;
     PetscCall(DMConvert(dm,convType,&newdm));
@@ -443,7 +441,7 @@ int main(int argc,char **args)
     PetscCall(MatSetOption(Amat,MAT_SPD,PETSC_TRUE));
     PetscCall(VecGetSize(bb,&N));
     local_sizes[iter] = N;
-    PetscCall(PetscInfo(snes,"%D global equations, %D vertices\n",N,N/dim));
+    PetscCall(PetscInfo(snes,"%" PetscInt_FMT " global equations, %" PetscInt_FMT " vertices\n",N,N/dim));
     if ((use_nearnullspace || attach_nearnullspace) && N/dim > 1) {
       /* Set up the near null space (a.k.a. rigid body modes) that will be used by the multigrid preconditioner */
       DM           subdm;
@@ -481,7 +479,7 @@ int main(int argc,char **args)
     PetscCall(VecZeroEntries(bb));
     PetscCall(VecGetSize(bb,&i));
     local_sizes[iter] = i;
-    PetscCall(PetscInfo(snes,"%D equations in vector, %D vertices\n",i,i/dim));
+    PetscCall(PetscInfo(snes,"%" PetscInt_FMT " equations in vector, %" PetscInt_FMT " vertices\n",i,i/dim));
     PetscCall(PetscLogStagePop());
     /* solve */
     PetscCall(PetscLogStagePush(stage[iter]));
@@ -514,8 +512,8 @@ int main(int argc,char **args)
   for (iter=1 ; iter<max_conv_its ; iter++) {
     if (run_type==1) err[iter] = 59.975208 - mdisp[iter];
     else             err[iter] = 171.038 - mdisp[iter];
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"[%d] %D) N=%12D, max displ=%9.7e, disp diff=%9.2e, error=%4.3e, rate=%3.2g\n",rank,iter,local_sizes[iter],(double)mdisp[iter],
-                       (double)(mdisp[iter]-mdisp[iter-1]),(double)err[iter],(double)(PetscLogReal(err[iter-1]/err[iter])/PetscLogReal(2.)));PetscCall(ierr);
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD,"[%d] %" PetscInt_FMT ") N=%12" PetscInt_FMT ", max displ=%9.7e, disp diff=%9.2e, error=%4.3e, rate=%3.2g\n",rank,iter,local_sizes[iter],(double)mdisp[iter],
+                          (double)(mdisp[iter]-mdisp[iter-1]),(double)err[iter],(double)(PetscLogReal(err[iter-1]/err[iter])/PetscLogReal(2.))));
   }
 
   PetscCall(PetscFinalize());
@@ -528,7 +526,7 @@ int main(int argc,char **args)
     suffix: 0
     nsize: 4
     requires: !single
-    args: -cells 2,2,1 -max_conv_its 2 -petscspace_degree 2 -snes_max_it 2 -ksp_max_it 100 -ksp_type cg -ksp_rtol 1.e-10 -ksp_norm_type unpreconditioned -snes_rtol 1.e-10 -pc_type gamg -pc_gamg_esteig_ksp_max_it 10 -pc_gamg_type agg -pc_gamg_agg_nsmooths 1 -pc_gamg_coarse_eq_limit 10 -pc_gamg_reuse_interpolation true -pc_gamg_square_graph 1 -pc_gamg_threshold 0.05 -pc_gamg_threshold_scale .0 -ksp_converged_reason -snes_monitor_short -ksp_monitor_short -snes_converged_reason -use_mat_nearnullspace true -mg_levels_ksp_max_it 2 -mg_levels_ksp_type chebyshev -mg_levels_ksp_chebyshev_esteig 0,0.05,0,1.1 -mg_levels_pc_type jacobi -petscpartitioner_type simple -matptap_via scalable -ex56_dm_view
+    args: -cells 2,2,1 -max_conv_its 2 -petscspace_degree 3 -snes_max_it 1 -ksp_max_it 100 -ksp_type cg -ksp_rtol 1.e-10 -ksp_norm_type unpreconditioned -pc_type gamg -pc_gamg_coarse_eq_limit 10 -pc_gamg_reuse_interpolation true -pc_gamg_square_graph 0 -pc_gamg_threshold 0.001 -ksp_converged_reason -snes_converged_reason -use_mat_nearnullspace true -mg_levels_ksp_max_it 2 -mg_levels_ksp_type chebyshev -mg_levels_ksp_chebyshev_esteig 0,0.2,0,1.1 -mg_levels_pc_type jacobi -petscpartitioner_type simple -ex56_dm_view -snes_lag_jacobian -2 -snes_type ksponly -use_gpu_aware_mpi true
     timeoutfactor: 2
 
   # HYPRE PtAP broken with complex numbers

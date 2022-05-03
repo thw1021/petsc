@@ -16,7 +16,7 @@
 
   Level: beginner
 
-.seealso: VecCreate(), VecSetType(), VecSetFromOptions(), VecCreateMPIWithArray(), VECSEQCUDA, VECMPICUDA, VECSTANDARD, VecType, VecCreateMPI(), VecSetPinnedMemoryMin()
+.seealso: `VecCreate()`, `VecSetType()`, `VecSetFromOptions()`, `VecCreateMPIWithArray()`, `VECSEQCUDA`, `VECMPICUDA`, `VECSTANDARD`, `VecType`, `VecCreateMPI()`, `VecSetPinnedMemoryMin()`
 M*/
 
 PetscErrorCode VecDestroy_MPICUDA(Vec v)
@@ -123,7 +123,7 @@ PetscErrorCode VecMDot_MPICUDA(Vec xin,PetscInt nv,const Vec y[],PetscScalar *z)
 
   Level: beginner
 
-.seealso: VecCreate(), VecSetType(), VecSetFromOptions(), VecCreateMPIWithArray(), VECMPI, VecType, VecCreateMPI(), VecSetPinnedMemoryMin()
+.seealso: `VecCreate()`, `VecSetType()`, `VecSetFromOptions()`, `VecCreateMPIWithArray()`, `VECMPI`, `VecType`, `VecCreateMPI()`, `VecSetPinnedMemoryMin()`
 M*/
 
 PetscErrorCode VecDuplicate_MPICUDA(Vec win,Vec *v)
@@ -226,9 +226,9 @@ PetscErrorCode VecCreate_CUDA(Vec v)
 
     Level: intermediate
 
- .seealso: VecCreateMPICUDAWithArray(), VecCreateMPICUDAWithArrays(), VecCreateSeqCUDA(), VecCreateSeq(),
-           VecCreateMPI(), VecCreate(), VecDuplicate(), VecDuplicateVecs(), VecCreateGhost(),
-           VecCreateMPIWithArray(), VecCreateGhostWithArray(), VecMPISetGhost()
+ .seealso: `VecCreateMPICUDAWithArray()`, `VecCreateMPICUDAWithArrays()`, `VecCreateSeqCUDA()`, `VecCreateSeq()`,
+           `VecCreateMPI()`, `VecCreate()`, `VecDuplicate()`, `VecDuplicateVecs()`, `VecCreateGhost()`,
+           `VecCreateMPIWithArray()`, `VecCreateGhostWithArray()`, `VecMPISetGhost()`
 
  @*/
  PetscErrorCode VecCreateMPICUDA(MPI_Comm comm,PetscInt n,PetscInt N,Vec *v)
@@ -268,15 +268,15 @@ PetscErrorCode VecCreate_CUDA(Vec v)
 
    Level: intermediate
 
-.seealso: VecCreateMPICUDA(), VecCreateSeqCUDAWithArray(), VecCreateMPIWithArray(), VecCreateSeqWithArray(),
-          VecCreate(), VecDuplicate(), VecDuplicateVecs(), VecCreateGhost(),
-          VecCreateMPI(), VecCreateGhostWithArray(), VecPlaceArray()
+.seealso: `VecCreateMPICUDA()`, `VecCreateSeqCUDAWithArray()`, `VecCreateMPIWithArray()`, `VecCreateSeqWithArray()`,
+          `VecCreate()`, `VecDuplicate()`, `VecDuplicateVecs()`, `VecCreateGhost()`,
+          `VecCreateMPI()`, `VecCreateGhostWithArray()`, `VecPlaceArray()`
 
 @*/
 PetscErrorCode  VecCreateMPICUDAWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,PetscInt N,const PetscScalar array[],Vec *vv)
 {
   PetscFunctionBegin;
-  PetscCheckFalse(n == PETSC_DECIDE,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must set local size of vector");
+  PetscCheck(n != PETSC_DECIDE,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must set local size of vector");
   PetscCall(PetscDeviceInitialize(PETSC_DEVICE_CUDA));
   PetscCall(VecCreate(comm,vv));
   PetscCall(VecSetSizes(*vv,n,N));
@@ -315,10 +315,10 @@ PetscErrorCode  VecCreateMPICUDAWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,P
 
    Level: intermediate
 
-.seealso: VecCreateSeqCUDAWithArrays(), VecCreateMPIWithArray(), VecCreateSeqWithArray(),
-          VecCreate(), VecDuplicate(), VecDuplicateVecs(), VecCreateGhost(),
-          VecCreateMPI(), VecCreateGhostWithArray(), VecCUDAPlaceArray(), VecPlaceArray(),
-          VecCUDAAllocateCheckHost()
+.seealso: `VecCreateSeqCUDAWithArrays()`, `VecCreateMPIWithArray()`, `VecCreateSeqWithArray()`,
+          `VecCreate()`, `VecDuplicate()`, `VecDuplicateVecs()`, `VecCreateGhost()`,
+          `VecCreateMPI()`, `VecCreateGhostWithArray()`, `VecCUDAPlaceArray()`, `VecPlaceArray()`,
+          `VecCUDAAllocateCheckHost()`
 @*/
 PetscErrorCode  VecCreateMPICUDAWithArrays(MPI_Comm comm,PetscInt bs,PetscInt n,PetscInt N,const PetscScalar cpuarray[],const PetscScalar gpuarray[],Vec *vv)
 {
@@ -490,7 +490,6 @@ PetscErrorCode VecBindToCPU_MPICUDA(Vec V,PetscBool bind)
 
 PetscErrorCode VecCreate_MPICUDA_Private(Vec vv,PetscBool alloc,PetscInt nghost,const PetscScalar array[])
 {
-  PetscErrorCode ierr;
   Vec_CUDA       *veccuda;
 
   PetscFunctionBegin;
@@ -519,11 +518,11 @@ PetscErrorCode VecCreate_MPICUDA_Private(Vec vv,PetscBool alloc,PetscInt nghost,
 
       /* Need to parse command line for minimum size to use for pinned memory allocations on host here.
          Note: This same code duplicated in VecCreate_SeqCUDA_Private() and VecCUDAAllocateCheck(). Is there a good way to avoid this? */
-      ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)vv),((PetscObject)vv)->prefix,"VECCUDA Options","Vec");PetscCall(ierr);
+      PetscOptionsBegin(PetscObjectComm((PetscObject)vv),((PetscObject)vv)->prefix,"VECCUDA Options","Vec");
       pinned_memory_min = vv->minimum_bytes_pinned_memory;
       PetscCall(PetscOptionsReal("-vec_pinned_memory_min","Minimum size (in bytes) for an allocation to use pinned memory on host","VecSetPinnedMemoryMin",pinned_memory_min,&pinned_memory_min,&flag));
       if (flag) vv->minimum_bytes_pinned_memory = pinned_memory_min;
-      ierr = PetscOptionsEnd();PetscCall(ierr);
+      PetscOptionsEnd();
     }
     veccuda = (Vec_CUDA*)vv->spptr;
     veccuda->GPUarray = (PetscScalar*)array;

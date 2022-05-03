@@ -20,7 +20,7 @@ PetscErrorCode PetscPathJoin(const char dname[],const char fname[],size_t n,char
   PetscFunctionBegin;
   PetscCall(PetscStrlen(dname,&l1));
   PetscCall(PetscStrlen(fname,&l2));
-  PetscCheckFalse((l1+l2+2)>n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Path length is greater than buffer size");
+  PetscCheck((l1+l2+2)<=n,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Path length is greater than buffer size");
   PetscCall(PetscStrncpy(fullname,dname,n));
   PetscCall(PetscStrlcat(fullname,"/",n));
   PetscCall(PetscStrlcat(fullname,fname,n));
@@ -61,7 +61,7 @@ PetscErrorCode PetscMkdir(const char dir[])
 
   Level: developer
 
-.seealso: PetscMkdir()
+.seealso: `PetscMkdir()`
 @*/
 PetscErrorCode PetscMkdtemp(char dir[])
 {
@@ -122,11 +122,11 @@ PetscErrorCode PetscRMTree(const char dir[])
     if (data.attrib & _A_SUBDIR) {
       PetscCall(PetscRMTree(loc));
     } else{
-      PetscCheckFalse(remove(loc),PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED,"Could not delete file: %s",loc);
+      PetscCheck(!remove(loc),PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED,"Could not delete file: %s",loc);
     }
   }
   _findclose(handle);
-  PetscCheckFalse(_rmdir(dir),PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED,"Could not delete dir: %s",dir);
+  PetscCheck(!_rmdir(dir),PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED,"Could not delete dir: %s",dir);
   PetscFunctionReturn(0);
 }
 #else
@@ -155,15 +155,15 @@ PetscErrorCode PetscRMTree(const char dir[])
     PetscCall(PetscStrcmp(data->d_name, "..",&flg2));
     if (flg1 || flg2) continue;
     PetscCall(PetscPathJoin(dir,data->d_name,PETSC_MAX_PATH_LEN,loc));
-    PetscCheckFalse(lstat(loc,&statbuf) <0,PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED,"cannot run lstat() on: %s",loc);
+    PetscCheck(lstat(loc,&statbuf) >=0,PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED,"cannot run lstat() on: %s",loc);
     if (S_ISDIR(statbuf.st_mode)) {
       PetscCall(PetscRMTree(loc));
     } else {
-      PetscCheckFalse(unlink(loc),PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED,"Could not delete file: %s",loc);
+      PetscCheck(!unlink(loc),PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED,"Could not delete file: %s",loc);
     }
   }
   closedir(dirp);
-  PetscCheckFalse(rmdir(dir),PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED,"Could not delete dir: %s",dir);
+  PetscCheck(!rmdir(dir),PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED,"Could not delete dir: %s",dir);
   PetscFunctionReturn(0);
 }
 #endif

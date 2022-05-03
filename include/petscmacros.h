@@ -117,12 +117,63 @@ void assert_never_put_petsc_headers_inside_an_extern_c(int); void assert_never_p
 
   Level: intermediate
 
-.seealso: PetscDefined(), PetscLikely(), PetscUnlikely()
+.seealso: `PetscDefined()`, `PetscLikely()`, `PetscUnlikely()`, `PETSC_ATTRIBUTE_FORMAT`
 M*/
 #if !defined(__has_attribute)
 #  define __has_attribute(x) 0
 #endif
 #define PetscHasAttribute(name) __has_attribute(name)
+
+/*MC
+  PETSC_ATTRIBUTE_FORMAT - Indicate to the compiler that specified arguments should be treated
+  as format specifiers and checked for validity
+
+  Synopsis:
+  #include <petscmacros.h>
+  <attribute declaration> PETSC_ATTRIBUTE_FORMAT(int strIdx, int vaArgIdx)
+
+  Input Parameters:
++ strIdx   - The (1-indexed) location of the format string in the argument list
+- vaArgIdx - The (1-indexed) location of the first formattable argument in the argument list
+
+  Notes:
+  This function attribute causes the compiler to issue warnings when the format specifier does
+  not match the type of the variable that will be formatted, or when there exists a mismatch
+  between the number of format specifiers and variables to be formatted. It is safe to use this
+  macro if your compiler does not support format specifier checking (though this is
+  exceeedingly rare).
+
+  Both strIdx and vaArgIdx must be compile-time constant integer literals and cannot have the
+  same value.
+
+  The arguments to be formatted (and therefore checked by the compiler) must be "contiguous" in
+  the argument list, that is, there is no way to indicate gaps which should not be checked.
+
+  Definition is suppressed by defining PETSC_SKIP_ATTRIBUTE_FORMAT prior to including PETSc
+  header files. In this case the macro will expand empty.
+
+  Example Usage:
+.vb
+  // format string is 2nd argument, variable argument list containing args is 3rd argument
+  void my_printf(void *obj, const char *fmt_string, ...) PETSC_ATTRIBUTE_FORMAT(2,3)
+
+  int    x = 1;
+  double y = 50.0;
+
+  my_printf(NULL,"%g",x);      // WARNING, format specifier does not match for 'int'!
+  my_printf(NULL,"%d",x,y);    // WARNING, more arguments than format specifiers!
+  my_printf(NULL,"%d %g",x,y); // OK
+.ve
+
+  Level: developer
+
+.seealso: `PETSC_ATTRIBUTE_COLD`, `PetscHasAttribute()`
+M*/
+#if PetscHasAttribute(format) && !defined(PETSC_SKIP_ATTRIBUTE_FORMAT)
+#  define PETSC_ATTRIBUTE_FORMAT(strIdx,vaArgIdx) __attribute__((format(printf,strIdx,vaArgIdx)))
+#else
+#  define PETSC_ATTRIBUTE_FORMAT(strIdx,vaArgIdx)
+#endif
 
 /*MC
   PETSC_ATTRIBUTE_COLD - Indicate to the compiler that a function is very unlikely to be
@@ -147,8 +198,8 @@ M*/
 
   Level: intermediate
 
-.seealso: PetscUnlikely(), PetscUnlikelyDebug(), PetscLikely(), PetscLikelyDebug(),
-PetscUnreachable()
+.seealso: `PetscUnlikely()`, `PetscUnlikelyDebug()`, `PetscLikely()`, `PetscLikelyDebug()`,
+          `PetscUnreachable()`, `PETSC_ATTRIBUTE_FORMAT`
 M*/
 #if PetscHasAttribute(__cold__)
 #  define PETSC_ATTRIBUTE_COLD __attribute__((__cold__))
@@ -210,7 +261,7 @@ M*/
 
   Level: beginner
 
-.seealso: PETSC_CONSTEXPR_14, PETSC_NODISCARD
+.seealso: `PETSC_CONSTEXPR_14`, `PETSC_NODISCARD`
 M*/
 
 /*MC
@@ -240,7 +291,7 @@ M*/
 
   Level: beginner
 
-.seealso: PETSC_NULLPTR, PETSC_NODISCARD
+.seealso: `PETSC_NULLPTR`, `PETSC_NODISCARD`
 M*/
 
 /*MC
@@ -283,7 +334,7 @@ M*/
 
   Level: beginner
 
-.seealso: PETSC_NULLPTR, PETSC_CONSTEXPR_14
+.seealso: `PETSC_NULLPTR`, `PETSC_CONSTEXPR_14`
 M*/
 
 /* C++11 features */
@@ -352,8 +403,8 @@ M*/
 
   Level: advanced
 
-.seealso: PetscLikely(), PetscUnlikelyDebug(), PetscCall(), PetscDefined(), PetscHasAttribute(),
-PETSC_ATTRIBUTE_COLD
+.seealso: `PetscLikely()`, `PetscUnlikelyDebug()`, `PetscCall()`, `PetscDefined()`, `PetscHasAttribute()`,
+          `PETSC_ATTRIBUTE_COLD`
 M*/
 
 /*MC
@@ -385,8 +436,8 @@ M*/
 
   Level: advanced
 
-.seealso: PetscUnlikely(), PetscDefined(), PetscHasAttribute()
-PETSC_ATTRIBUTE_COLD
+.seealso: `PetscUnlikely()`, `PetscDefined()`, `PetscHasAttribute()`
+          `PETSC_ATTRIBUTE_COLD`
 M*/
 #if defined(PETSC_HAVE_BUILTIN_EXPECT)
 #  define PetscUnlikely(cond) __builtin_expect(!!(cond),0)
@@ -432,7 +483,7 @@ M*/
 
   Level: advanced
 
-.seealso: SETERRABORT(), PETSCABORT(), PETSC_ATTRIBUTE_COLD
+.seealso: `SETERRABORT()`, `PETSCABORT()`, `PETSC_ATTRIBUTE_COLD`
 M*/
 #if defined(__GNUC__)
 /* GCC 4.8+, Clang, Intel and other compilers compatible with GCC (-std=c++0x or above) */
@@ -455,7 +506,7 @@ M*/
 
   Level: beginner
 
-.seealso: PetscStringize(), PetscConcat()
+.seealso: `PetscStringize()`, `PetscConcat()`
 M*/
 #define PetscExpand_(...) __VA_ARGS__
 #define PetscExpand(...)  PetscExpand_(__VA_ARGS__)
@@ -494,7 +545,7 @@ M*/
 
   Level: beginner
 
-.seealso: PetscConcat(), PetscExpandToNothing(), PetscExpand()
+.seealso: `PetscConcat()`, `PetscExpandToNothing()`, `PetscExpand()`
 M*/
 #define PetscStringize_(x) #x
 #define PetscStringize(x)  PetscStringize_(x)
@@ -527,7 +578,7 @@ M*/
 
   Level: beginner
 
-.seealso: PetscStringize(), PetscExpand()
+.seealso: `PetscStringize()`, `PetscExpand()`
 M*/
 #define PetscConcat_(x,y) x ## y
 #define PetscConcat(x,y)  PetscConcat_(x,y)
@@ -571,7 +622,7 @@ $ #define PETSC_DONT_HAVE_FOO PetscCompl(PetscDefined(HAVE_FOO))
 
   Level: beginner
 
-.seealso: PetscConcat(), PetscDefined()
+.seealso: `PetscConcat()`, `PetscDefined()`
 M*/
 #define PetscCompl(b) PetscConcat_(PETSC_INTERNAL_COMPL_,PetscExpand(b))
 
@@ -650,8 +701,8 @@ $ #define FooDefined(d) PetscDefined_(PetscConcat(FOO_,d))
 
   Level: intermediate
 
-.seealso: PetscHasAttribute(), PetscUnlikely(), PetscLikely(), PetscConcat(),
-PetscExpandToNothing(), PetscCompl()
+.seealso: `PetscHasAttribute()`, `PetscUnlikely()`, `PetscLikely()`, `PetscConcat()`,
+          `PetscExpandToNothing()`, `PetscCompl()`
 M*/
 #define PetscDefined_arg_1 shift,
 #define PetscDefined_arg_  shift,
@@ -712,7 +763,7 @@ M*/
 
   Level: advanced
 
-.seealso: PetscUnlikely(), PetscLikely(), PetscCall(), SETERRQ
+.seealso: `PetscUnlikely()`, `PetscLikely()`, `PetscCall()`, `SETERRQ`
 M*/
 #define PetscUnlikelyDebug(cond) (PetscDefined(USE_DEBUG) && PetscUnlikely(cond))
 
@@ -747,7 +798,7 @@ M*/
 
   Level: beginner
 
-.seealso: PetscConcat(), PetscDefined(), PetscStringize(), PetscExpand()
+.seealso: `PetscConcat()`, `PetscDefined()`, `PetscStringize()`, `PetscExpand()`
 M*/
 #define PetscExpandToNothing(...)
 
@@ -823,12 +874,19 @@ M*/
 
   Level: intermediate
 
-.seealso: PetscExpand(), PetscConcat(), PetscStringize()
+.seealso: `PetscExpand()`, `PetscConcat()`, `PetscStringize()`
 M*/
 #define PetscMacroReturns(retexpr,...) PetscMacroReturns_(retexpr,__VA_ARGS__)
 
 #define PetscMacroReturnStandard(...) PetscMacroReturns(0,__VA_ARGS__)
 
 #endif /* !PETSC_SKIP_VARIADIC_MACROS */
+
+/*MC
+  PETSC_STATIC_ARRAY_LENGTH - Return the length of a static array
+
+  Level: intermediate
+M*/
+#define PETSC_STATIC_ARRAY_LENGTH(a) (sizeof(a)/sizeof((a)[0]))
 
 #endif /* PETSC_PREPROCESSOR_MACROS_H */

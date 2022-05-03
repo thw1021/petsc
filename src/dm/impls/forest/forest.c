@@ -50,7 +50,7 @@ static PetscErrorCode DMForestPackageInitialize(void)
 
   Level: advanced
 
-.seealso: DMFOREST, DMIsForest()
+.seealso: `DMFOREST`, `DMIsForest()`
 @*/
 PetscErrorCode DMForestRegisterType(DMType name)
 {
@@ -78,7 +78,7 @@ PetscErrorCode DMForestRegisterType(DMType name)
 
   Level: intermediate
 
-.seealso: DMFOREST, DMForestRegisterType()
+.seealso: `DMFOREST`, `DMForestRegisterType()`
 @*/
 PetscErrorCode DMIsForest(DM dm, PetscBool *isForest)
 {
@@ -115,7 +115,7 @@ PetscErrorCode DMIsForest(DM dm, PetscBool *isForest)
 
   Level: intermediate
 
-.seealso: DMForestSetAdaptivityForest()
+.seealso: `DMForestSetAdaptivityForest()`
 @*/
 PetscErrorCode DMForestTemplate(DM dm, MPI_Comm comm, DM *tdm)
 {
@@ -221,7 +221,7 @@ static PetscErrorCode DMDestroy_Forest(DM dm)
 
   Level: intermediate
 
-.seealso: DMForestGetTopology(), DMForestSetBaseDM()
+.seealso: `DMForestGetTopology()`, `DMForestSetBaseDM()`
 @*/
 PetscErrorCode DMForestSetTopology(DM dm, DMForestTopology topology)
 {
@@ -248,7 +248,7 @@ PetscErrorCode DMForestSetTopology(DM dm, DMForestTopology topology)
 
   Level: intermediate
 
-.seealso: DMForestSetTopology()
+.seealso: `DMForestSetTopology()`
 @*/
 PetscErrorCode DMForestGetTopology(DM dm, DMForestTopology *topology)
 {
@@ -277,7 +277,7 @@ PetscErrorCode DMForestGetTopology(DM dm, DMForestTopology *topology)
 
   Level: intermediate
 
-.seealso: DMForestGetBaseDM()
+.seealso: `DMForestGetBaseDM()`
 @*/
 PetscErrorCode DMForestSetBaseDM(DM dm, DM base)
 {
@@ -326,7 +326,7 @@ PetscErrorCode DMForestSetBaseDM(DM dm, DM base)
 
   Level: intermediate
 
-.seealso: DMForestSetBaseDM()
+.seealso: `DMForestSetBaseDM()`
 @*/
 PetscErrorCode DMForestGetBaseDM(DM dm, DM *base)
 {
@@ -378,7 +378,7 @@ PetscErrorCode DMForestGetBaseCoordinateMapping(DM dm, PetscErrorCode (**func) (
 
   Level: intermediate
 
-.seealso: DMForestGetAdaptivityForest(), DMForestSetAdaptivityPurpose()
+.seealso: `DMForestGetAdaptivityForest()`, `DMForestSetAdaptivityPurpose()`
 @*/
 PetscErrorCode DMForestSetAdaptivityForest(DM dm,DM adapt)
 {
@@ -391,7 +391,7 @@ PetscErrorCode DMForestSetAdaptivityForest(DM dm,DM adapt)
   if (adapt) PetscValidHeaderSpecific(adapt, DM_CLASSID, 2);
   PetscCall(DMIsForest(dm, &isForest));
   if (!isForest) PetscFunctionReturn(0);
-  PetscCheckFalse(adapt != NULL && dm->setupcalled,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Cannot change the adaptation forest after setup");
+  PetscCheck(adapt == NULL || !dm->setupcalled,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Cannot change the adaptation forest after setup");
   forest         = (DM_Forest*) dm->data;
   PetscCall(DMForestGetAdaptivityForest(dm,&oldAdapt));
   adaptForest    = (DM_Forest*) (adapt ? adapt->data : NULL);
@@ -433,7 +433,7 @@ PetscErrorCode DMForestSetAdaptivityForest(DM dm,DM adapt)
 
   Level: intermediate
 
-.seealso: DMForestSetAdaptivityForest(), DMForestSetAdaptivityPurpose()
+.seealso: `DMForestSetAdaptivityForest()`, `DMForestSetAdaptivityPurpose()`
 @*/
 PetscErrorCode DMForestGetAdaptivityForest(DM dm, DM *adapt)
 {
@@ -476,7 +476,7 @@ PetscErrorCode DMForestGetAdaptivityForest(DM dm, DM *adapt)
 
   Level: advanced
 
-.seealso: DMForestTemplate(), DMForestSetAdaptivityForest(), DMForestGetAdaptivityForest(), DMAdaptFlag
+.seealso: `DMForestTemplate()`, `DMForestSetAdaptivityForest()`, `DMForestGetAdaptivityForest()`, `DMAdaptFlag`
 @*/
 PetscErrorCode DMForestSetAdaptivityPurpose(DM dm, DMAdaptFlag purpose)
 {
@@ -520,7 +520,7 @@ PetscErrorCode DMForestSetAdaptivityPurpose(DM dm, DMAdaptFlag purpose)
 
   Level: advanced
 
-.seealso: DMForestTemplate(), DMForestSetAdaptivityForest(), DMForestGetAdaptivityForest(), DMAdaptFlag
+.seealso: `DMForestTemplate()`, `DMForestSetAdaptivityForest()`, `DMForestGetAdaptivityForest()`, `DMAdaptFlag`
 @*/
 PetscErrorCode DMForestGetAdaptivityPurpose(DM dm, DMAdaptFlag *purpose)
 {
@@ -544,7 +544,7 @@ PetscErrorCode DMForestGetAdaptivityPurpose(DM dm, DMAdaptFlag *purpose)
 
   Level: intermediate
 
-.seealso: DMForestGetAdjacencyDimension(), DMForestSetAdjacencyCodimension(), DMForestSetPartitionOverlap()
+.seealso: `DMForestGetAdjacencyDimension()`, `DMForestSetAdjacencyCodimension()`, `DMForestSetPartitionOverlap()`
 @*/
 PetscErrorCode DMForestSetAdjacencyDimension(DM dm, PetscInt adjDim)
 {
@@ -554,9 +554,9 @@ PetscErrorCode DMForestSetAdjacencyDimension(DM dm, PetscInt adjDim)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscCheck(!dm->setupcalled,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Cannot change the adjacency dimension after setup");
-  PetscCheckFalse(adjDim < 0,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"adjacency dim cannot be < 0: %d", adjDim);
+  PetscCheck(adjDim >= 0,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"adjacency dim cannot be < 0: %" PetscInt_FMT, adjDim);
   PetscCall(DMGetDimension(dm,&dim));
-  PetscCheckFalse(adjDim > dim,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"adjacency dim cannot be > %d: %d", dim, adjDim);
+  PetscCheck(adjDim <= dim,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"adjacency dim cannot be > %" PetscInt_FMT ": %" PetscInt_FMT, dim, adjDim);
   forest->adjDim = adjDim;
   PetscFunctionReturn(0);
 }
@@ -573,7 +573,7 @@ PetscErrorCode DMForestSetAdjacencyDimension(DM dm, PetscInt adjDim)
 
   Level: intermediate
 
-.seealso: DMForestGetAdjacencyCodimension(), DMForestSetAdjacencyDimension()
+.seealso: `DMForestGetAdjacencyCodimension()`, `DMForestSetAdjacencyDimension()`
 @*/
 PetscErrorCode DMForestSetAdjacencyCodimension(DM dm, PetscInt adjCodim)
 {
@@ -600,7 +600,7 @@ PetscErrorCode DMForestSetAdjacencyCodimension(DM dm, PetscInt adjCodim)
 
   Level: intermediate
 
-.seealso: DMForestSetAdjacencyDimension(), DMForestGetAdjacencyCodimension(), DMForestSetPartitionOverlap()
+.seealso: `DMForestSetAdjacencyDimension()`, `DMForestGetAdjacencyCodimension()`, `DMForestSetPartitionOverlap()`
 @*/
 PetscErrorCode DMForestGetAdjacencyDimension(DM dm, PetscInt *adjDim)
 {
@@ -627,7 +627,7 @@ PetscErrorCode DMForestGetAdjacencyDimension(DM dm, PetscInt *adjDim)
 
   Level: intermediate
 
-.seealso: DMForestSetAdjacencyCodimension(), DMForestGetAdjacencyDimension()
+.seealso: `DMForestSetAdjacencyCodimension()`, `DMForestGetAdjacencyDimension()`
 @*/
 PetscErrorCode DMForestGetAdjacencyCodimension(DM dm, PetscInt *adjCodim)
 {
@@ -655,7 +655,7 @@ PetscErrorCode DMForestGetAdjacencyCodimension(DM dm, PetscInt *adjCodim)
 
   Level: intermediate
 
-.seealso: DMForestGetPartitionOverlap(), DMForestSetAdjacencyDimension(), DMForestSetAdjacencyCodimension()
+.seealso: `DMForestGetPartitionOverlap()`, `DMForestSetAdjacencyDimension()`, `DMForestSetAdjacencyCodimension()`
 @*/
 PetscErrorCode DMForestSetPartitionOverlap(DM dm, PetscInt overlap)
 {
@@ -664,7 +664,7 @@ PetscErrorCode DMForestSetPartitionOverlap(DM dm, PetscInt overlap)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscCheck(!dm->setupcalled,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Cannot change the overlap after setup");
-  PetscCheckFalse(overlap < 0,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"overlap cannot be < 0: %d", overlap);
+  PetscCheck(overlap >= 0,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"overlap cannot be < 0: %" PetscInt_FMT, overlap);
   forest->overlap = overlap;
   PetscFunctionReturn(0);
 }
@@ -683,7 +683,7 @@ PetscErrorCode DMForestSetPartitionOverlap(DM dm, PetscInt overlap)
 
   Level: intermediate
 
-.seealso: DMForestGetPartitionOverlap(), DMForestSetAdjacencyDimension(), DMForestSetAdjacencyCodimension()
+.seealso: `DMForestGetPartitionOverlap()`, `DMForestSetAdjacencyDimension()`, `DMForestSetAdjacencyCodimension()`
 @*/
 PetscErrorCode DMForestGetPartitionOverlap(DM dm, PetscInt *overlap)
 {
@@ -709,7 +709,7 @@ PetscErrorCode DMForestGetPartitionOverlap(DM dm, PetscInt *overlap)
 
   Level: intermediate
 
-.seealso: DMForestGetMinimumRefinement(), DMForestSetMaximumRefinement(), DMForestSetInitialRefinement(), DMForestGetBaseDM(), DMForestGetAdaptivityForest()
+.seealso: `DMForestGetMinimumRefinement()`, `DMForestSetMaximumRefinement()`, `DMForestSetInitialRefinement()`, `DMForestGetBaseDM()`, `DMForestGetAdaptivityForest()`
 @*/
 PetscErrorCode DMForestSetMinimumRefinement(DM dm, PetscInt minRefinement)
 {
@@ -737,7 +737,7 @@ PetscErrorCode DMForestSetMinimumRefinement(DM dm, PetscInt minRefinement)
 
   Level: intermediate
 
-.seealso: DMForestSetMinimumRefinement(), DMForestGetMaximumRefinement(), DMForestGetInitialRefinement(), DMForestGetBaseDM(), DMForestGetAdaptivityForest()
+.seealso: `DMForestSetMinimumRefinement()`, `DMForestGetMaximumRefinement()`, `DMForestGetInitialRefinement()`, `DMForestGetBaseDM()`, `DMForestGetAdaptivityForest()`
 @*/
 PetscErrorCode DMForestGetMinimumRefinement(DM dm, PetscInt *minRefinement)
 {
@@ -762,7 +762,7 @@ PetscErrorCode DMForestGetMinimumRefinement(DM dm, PetscInt *minRefinement)
 
   Level: intermediate
 
-.seealso: DMForestSetMinimumRefinement(), DMForestSetMaximumRefinement(), DMForestGetBaseDM()
+.seealso: `DMForestSetMinimumRefinement()`, `DMForestSetMaximumRefinement()`, `DMForestGetBaseDM()`
 @*/
 PetscErrorCode DMForestSetInitialRefinement(DM dm, PetscInt initRefinement)
 {
@@ -789,7 +789,7 @@ PetscErrorCode DMForestSetInitialRefinement(DM dm, PetscInt initRefinement)
 
   Level: intermediate
 
-.seealso: DMForestSetMinimumRefinement(), DMForestSetMaximumRefinement(), DMForestGetBaseDM()
+.seealso: `DMForestSetMinimumRefinement()`, `DMForestSetMaximumRefinement()`, `DMForestGetBaseDM()`
 @*/
 PetscErrorCode DMForestGetInitialRefinement(DM dm, PetscInt *initRefinement)
 {
@@ -815,7 +815,7 @@ PetscErrorCode DMForestGetInitialRefinement(DM dm, PetscInt *initRefinement)
 
   Level: intermediate
 
-.seealso: DMForestGetMinimumRefinement(), DMForestSetMaximumRefinement(), DMForestSetInitialRefinement(), DMForestGetBaseDM(), DMForestGetAdaptivityDM()
+.seealso: `DMForestGetMinimumRefinement()`, `DMForestSetMaximumRefinement()`, `DMForestSetInitialRefinement()`, `DMForestGetBaseDM()`, `DMForestGetAdaptivityDM()`
 @*/
 PetscErrorCode DMForestSetMaximumRefinement(DM dm, PetscInt maxRefinement)
 {
@@ -843,7 +843,7 @@ PetscErrorCode DMForestSetMaximumRefinement(DM dm, PetscInt maxRefinement)
 
   Level: intermediate
 
-.seealso: DMForestSetMaximumRefinement(), DMForestGetMinimumRefinement(), DMForestGetInitialRefinement(), DMForestGetBaseDM(), DMForestGetAdaptivityForest()
+.seealso: `DMForestSetMaximumRefinement()`, `DMForestGetMinimumRefinement()`, `DMForestGetInitialRefinement()`, `DMForestGetBaseDM()`, `DMForestGetAdaptivityForest()`
 @*/
 PetscErrorCode DMForestGetMaximumRefinement(DM dm, PetscInt *maxRefinement)
 {
@@ -870,7 +870,7 @@ PetscErrorCode DMForestGetMaximumRefinement(DM dm, PetscInt *maxRefinement)
 
   Level: advanced
 
-.seealso: DMForestGetAdaptivityStrategy()
+.seealso: `DMForestGetAdaptivityStrategy()`
 @*/
 PetscErrorCode DMForestSetAdaptivityStrategy(DM dm, DMForestAdaptivityStrategy adaptStrategy)
 {
@@ -899,7 +899,7 @@ PetscErrorCode DMForestSetAdaptivityStrategy(DM dm, DMForestAdaptivityStrategy a
 
   Level: advanced
 
-.seealso: DMForestSetAdaptivityStrategy()
+.seealso: `DMForestSetAdaptivityStrategy()`
 @*/
 PetscErrorCode DMForestGetAdaptivityStrategy(DM dm, DMForestAdaptivityStrategy *adaptStrategy)
 {
@@ -956,7 +956,7 @@ PetscErrorCode DMForestGetAdaptivitySuccess(DM dm, PetscBool *success)
 
   Level: advanced
 
-.seealso: DMForestGetComputeAdaptivitySF(), DMForestGetAdaptivitySF()
+.seealso: `DMForestGetComputeAdaptivitySF()`, `DMForestGetAdaptivitySF()`
 @*/
 PetscErrorCode DMForestSetComputeAdaptivitySF(DM dm, PetscBool computeSF)
 {
@@ -1014,7 +1014,7 @@ PetscErrorCode DMForestTransferVecFromBase(DM dm, Vec vecIn, Vec vecOut)
 
   Level: advanced
 
-.seealso: DMForestSetComputeAdaptivitySF(), DMForestGetAdaptivitySF()
+.seealso: `DMForestSetComputeAdaptivitySF()`, `DMForestGetAdaptivitySF()`
 @*/
 PetscErrorCode DMForestGetComputeAdaptivitySF(DM dm, PetscBool *computeSF)
 {
@@ -1045,7 +1045,7 @@ PetscErrorCode DMForestGetComputeAdaptivitySF(DM dm, PetscBool *computeSF)
 
   Level: advanced
 
-.seealso: DMForestGetComputeAdaptivitySF(), DMForestSetComputeAdaptivitySF()
+.seealso: `DMForestGetComputeAdaptivitySF()`, `DMForestSetComputeAdaptivitySF()`
 @*/
 PetscErrorCode DMForestGetAdaptivitySF(DM dm, PetscSF *preCoarseToFine, PetscSF *coarseToPreFine)
 {
@@ -1073,7 +1073,7 @@ PetscErrorCode DMForestGetAdaptivitySF(DM dm, PetscSF *preCoarseToFine, PetscSF 
 
   Level: advanced
 
-.seealso: DMForestGetGradeFactor()
+.seealso: `DMForestGetGradeFactor()`
 @*/
 PetscErrorCode DMForestSetGradeFactor(DM dm, PetscInt grade)
 {
@@ -1101,7 +1101,7 @@ PetscErrorCode DMForestSetGradeFactor(DM dm, PetscInt grade)
 
   Level: advanced
 
-.seealso: DMForestSetGradeFactor()
+.seealso: `DMForestSetGradeFactor()`
 @*/
 PetscErrorCode DMForestGetGradeFactor(DM dm, PetscInt *grade)
 {
@@ -1129,7 +1129,7 @@ PetscErrorCode DMForestGetGradeFactor(DM dm, PetscInt *grade)
 
   Level: advanced
 
-.seealso: DMForestGetCellWeightFactor(), DMForestSetCellWeights()
+.seealso: `DMForestGetCellWeightFactor()`, `DMForestSetCellWeights()`
 @*/
 PetscErrorCode DMForestSetCellWeightFactor(DM dm, PetscReal weightsFactor)
 {
@@ -1159,7 +1159,7 @@ PetscErrorCode DMForestSetCellWeightFactor(DM dm, PetscReal weightsFactor)
 
   Level: advanced
 
-.seealso: DMForestSetCellWeightFactor(), DMForestSetCellWeights()
+.seealso: `DMForestSetCellWeightFactor()`, `DMForestSetCellWeights()`
 @*/
 PetscErrorCode DMForestGetCellWeightFactor(DM dm, PetscReal *weightsFactor)
 {
@@ -1186,7 +1186,7 @@ PetscErrorCode DMForestGetCellWeightFactor(DM dm, PetscReal *weightsFactor)
 
   Level: intermediate
 
-.seealso: DMForestGetCellSF()
+.seealso: `DMForestGetCellSF()`
 @*/
 PetscErrorCode DMForestGetCellChart(DM dm, PetscInt *cStart, PetscInt *cEnd)
 {
@@ -1217,7 +1217,7 @@ PetscErrorCode DMForestGetCellChart(DM dm, PetscInt *cStart, PetscInt *cEnd)
 
   Level: intermediate
 
-.seealso: DMForestGetCellChart()
+.seealso: `DMForestGetCellChart()`
 @*/
 PetscErrorCode DMForestGetCellSF(DM dm, PetscSF *cellSF)
 {
@@ -1247,7 +1247,7 @@ PetscErrorCode DMForestGetCellSF(DM dm, PetscSF *cellSF)
 
   Level: intermediate
 
-.seealso DMForestGetAdaptivityLabel()
+.seealso `DMForestGetAdaptivityLabel()`
 @*/
 PetscErrorCode DMForestSetAdaptivityLabel(DM dm, DMLabel adaptLabel)
 {
@@ -1278,7 +1278,7 @@ PetscErrorCode DMForestSetAdaptivityLabel(DM dm, DMLabel adaptLabel)
 
   Level: intermediate
 
-.seealso DMForestSetAdaptivityLabel()
+.seealso `DMForestSetAdaptivityLabel()`
 @*/
 PetscErrorCode DMForestGetAdaptivityLabel(DM dm, DMLabel *adaptLabel)
 {
@@ -1305,7 +1305,7 @@ PetscErrorCode DMForestGetAdaptivityLabel(DM dm, DMLabel *adaptLabel)
 
   Level: advanced
 
-.seealso: DMForestGetCellWeights(), DMForestSetWeightCapacity()
+.seealso: `DMForestGetCellWeights()`, `DMForestSetWeightCapacity()`
 @*/
 PetscErrorCode DMForestSetCellWeights(DM dm, PetscReal weights[], PetscCopyMode copyMode)
 {
@@ -1315,7 +1315,7 @@ PetscErrorCode DMForestSetCellWeights(DM dm, PetscReal weights[], PetscCopyMode 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   PetscCall(DMForestGetCellChart(dm,&cStart,&cEnd));
-  PetscCheckFalse(cEnd < cStart,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"cell chart [%d,%d) is not valid",cStart,cEnd);
+  PetscCheck(cEnd >= cStart,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"cell chart [%" PetscInt_FMT ",%" PetscInt_FMT ") is not valid",cStart,cEnd);
   if (copyMode == PETSC_COPY_VALUES) {
     if (forest->cellWeightsCopyMode != PETSC_OWN_POINTER || forest->cellWeights == weights) {
       PetscCall(PetscMalloc1(cEnd-cStart,&forest->cellWeights));
@@ -1348,7 +1348,7 @@ PetscErrorCode DMForestSetCellWeights(DM dm, PetscReal weights[], PetscCopyMode 
 
   Level: advanced
 
-.seealso: DMForestSetCellWeights(), DMForestSetWeightCapacity()
+.seealso: `DMForestSetCellWeights()`, `DMForestSetWeightCapacity()`
 @*/
 PetscErrorCode DMForestGetCellWeights(DM dm, PetscReal **weights)
 {
@@ -1375,7 +1375,7 @@ PetscErrorCode DMForestGetCellWeights(DM dm, PetscReal **weights)
 
   Level: advanced
 
-.seealso DMForestGetWeightCapacity(), DMForestSetCellWeights(), DMForestSetCellWeightFactor()
+.seealso `DMForestGetWeightCapacity()`, `DMForestSetCellWeights()`, `DMForestSetCellWeightFactor()`
 @*/
 PetscErrorCode DMForestSetWeightCapacity(DM dm, PetscReal capacity)
 {
@@ -1384,7 +1384,7 @@ PetscErrorCode DMForestSetWeightCapacity(DM dm, PetscReal capacity)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
   PetscCheck(!dm->setupcalled,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_WRONGSTATE,"Cannot change the weight capacity after setup");
-  PetscCheckFalse(capacity < 0.,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Cannot have negative weight capacity; %f",capacity);
+  PetscCheck(capacity >= 0.,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"Cannot have negative weight capacity; %g",(double)capacity);
   forest->weightCapacity = capacity;
   PetscFunctionReturn(0);
 }
@@ -1405,7 +1405,7 @@ PetscErrorCode DMForestSetWeightCapacity(DM dm, PetscReal capacity)
 
   Level: advanced
 
-.seealso DMForestSetWeightCapacity(), DMForestSetCellWeights(), DMForestSetCellWeightFactor()
+.seealso `DMForestSetWeightCapacity()`, `DMForestSetCellWeights()`, `DMForestSetCellWeightFactor()`
 @*/
 PetscErrorCode DMForestGetWeightCapacity(DM dm, PetscReal *capacity)
 {
@@ -1432,12 +1432,12 @@ PETSC_EXTERN PetscErrorCode DMSetFromOptions_Forest(PetscOptionItems *PetscOptio
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscCall(DMForestGetTopology(dm, &oldTopo));
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"DMForest Options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"DMForest Options");
   PetscCall(PetscOptionsString("-dm_forest_topology","the topology of the forest's base mesh","DMForestSetTopology",oldTopo,stringBuffer,sizeof(stringBuffer),&flg1));
   PetscCall(PetscOptionsViewer("-dm_forest_base_dm","load the base DM from a viewer specification","DMForestSetBaseDM",&viewer,&format,&flg2));
   PetscCall(PetscOptionsViewer("-dm_forest_coarse_forest","load the coarse forest from a viewer specification","DMForestSetCoarseForest",&viewer,&format,&flg3));
   PetscCall(PetscOptionsViewer("-dm_forest_fine_forest","load the fine forest from a viewer specification","DMForestSetFineForest",&viewer,&format,&flg4));
-  PetscCheckFalse((PetscInt) flg1 + (PetscInt) flg2 + (PetscInt) flg3 + (PetscInt) flg4 > 1,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_INCOMP,"Specify only one of -dm_forest_{topology,base_dm,coarse_forest,fine_forest}");
+  PetscCheck((PetscInt) flg1 + (PetscInt) flg2 + (PetscInt) flg3 + (PetscInt) flg4 <= 1,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_INCOMP,"Specify only one of -dm_forest_{topology,base_dm,coarse_forest,fine_forest}");
   if (flg1) {
     PetscCall(DMForestSetTopology(dm,(DMForestTopology)stringBuffer));
     PetscCall(DMForestSetBaseDM(dm,NULL));
@@ -1537,7 +1537,7 @@ PETSC_EXTERN PetscErrorCode DMSetFromOptions_Forest(PetscOptionItems *PetscOptio
   if (flg) {
     PetscCall(DMForestSetCellWeightFactor(dm,weightsFactor));
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -1585,7 +1585,7 @@ PetscErrorCode DMCoarsen_Forest(DM dm, MPI_Comm comm, DM *dmCoarsened)
     MPI_Comm    dmcomm = PetscObjectComm((PetscObject)dm);
 
     PetscCallMPI(MPI_Comm_compare(comm, dmcomm, &mpiComparison));
-    PetscCheckFalse(mpiComparison != MPI_IDENT && mpiComparison != MPI_CONGRUENT,dmcomm,PETSC_ERR_SUP,"No support for different communicators yet");
+    PetscCheck(mpiComparison == MPI_IDENT || mpiComparison == MPI_CONGRUENT,dmcomm,PETSC_ERR_SUP,"No support for different communicators yet");
   }
   PetscCall(DMGetCoarseDM(dm,&coarseDM));
   if (coarseDM) {
@@ -1652,7 +1652,7 @@ static PetscErrorCode DMInitialize_Forest(DM dm)
 
   Level: advanced
 
-.seealso: DMType, DMCreate(), DMSetType(), DMForestGetBaseDM(), DMForestSetBaseDM(), DMForestTemplate(), DMForestSetAdaptivityLabel()
+.seealso: `DMType`, `DMCreate()`, `DMSetType()`, `DMForestGetBaseDM()`, `DMForestSetBaseDM()`, `DMForestTemplate()`, `DMForestSetAdaptivityLabel()`
 M*/
 
 PETSC_EXTERN PetscErrorCode DMCreate_Forest(DM dm)

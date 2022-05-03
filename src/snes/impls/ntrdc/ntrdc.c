@@ -107,7 +107,7 @@ PetscErrorCode  SNESNewtonTRDCGetRhoFlag(SNES snes,PetscBool *rho_flag)
 
    Note: This function is called BEFORE the function evaluation within the SNESNEWTONTRDC solver.
 
-.seealso: SNESNewtonTRDCPreCheck(), SNESNewtonTRDCGetPreCheck(), SNESNewtonTRDCSetPostCheck(), SNESNewtonTRDCGetPostCheck()
+.seealso: `SNESNewtonTRDCPreCheck()`, `SNESNewtonTRDCGetPreCheck()`, `SNESNewtonTRDCSetPostCheck()`, `SNESNewtonTRDCGetPostCheck()`
 @*/
 PetscErrorCode  SNESNewtonTRDCSetPreCheck(SNES snes, PetscErrorCode (*func)(SNES,Vec,Vec,PetscBool*,void*),void *ctx)
 {
@@ -134,7 +134,7 @@ PetscErrorCode  SNESNewtonTRDCSetPreCheck(SNES snes, PetscErrorCode (*func)(SNES
 
    Level: intermediate
 
-.seealso: SNESNewtonTRDCSetPreCheck(), SNESNewtonTRDCPreCheck()
+.seealso: `SNESNewtonTRDCSetPreCheck()`, `SNESNewtonTRDCPreCheck()`
 @*/
 PetscErrorCode  SNESNewtonTRDCGetPreCheck(SNES snes, PetscErrorCode (**func)(SNES,Vec,Vec,PetscBool*,void*),void **ctx)
 {
@@ -163,7 +163,7 @@ PetscErrorCode  SNESNewtonTRDCGetPreCheck(SNES snes, PetscErrorCode (**func)(SNE
    Note: This function is called BEFORE the function evaluation within the SNESNEWTONTRDC solver while the function set in
    SNESLineSearchSetPostCheck() is called AFTER the function evaluation.
 
-.seealso: SNESNewtonTRDCPostCheck(), SNESNewtonTRDCGetPostCheck()
+.seealso: `SNESNewtonTRDCPostCheck()`, `SNESNewtonTRDCGetPostCheck()`
 @*/
 PetscErrorCode  SNESNewtonTRDCSetPostCheck(SNES snes,PetscErrorCode (*func)(SNES,Vec,Vec,Vec,PetscBool*,PetscBool*,void*),void *ctx)
 {
@@ -190,7 +190,7 @@ PetscErrorCode  SNESNewtonTRDCSetPostCheck(SNES snes,PetscErrorCode (*func)(SNES
 
    Level: intermediate
 
-.seealso: SNESNewtonTRDCSetPostCheck(), SNESNewtonTRDCPostCheck()
+.seealso: `SNESNewtonTRDCSetPostCheck()`, `SNESNewtonTRDCPostCheck()`
 @*/
 PetscErrorCode  SNESNewtonTRDCGetPostCheck(SNES snes,PetscErrorCode (**func)(SNES,Vec,Vec,Vec,PetscBool*,PetscBool*,void*),void **ctx)
 {
@@ -218,7 +218,7 @@ PetscErrorCode  SNESNewtonTRDCGetPostCheck(SNES snes,PetscErrorCode (**func)(SNE
 
    Level: developer
 
-.seealso: SNESNewtonTRDCSetPreCheck(), SNESNewtonTRDCGetPreCheck()
+.seealso: `SNESNewtonTRDCSetPreCheck()`, `SNESNewtonTRDCGetPreCheck()`
 @*/
 static PetscErrorCode SNESNewtonTRDCPreCheck(SNES snes,Vec X,Vec Y,PetscBool *changed_Y)
 {
@@ -253,7 +253,7 @@ static PetscErrorCode SNESNewtonTRDCPreCheck(SNES snes,Vec X,Vec Y,PetscBool *ch
 
    Level: developer
 
-.seealso: SNESNewtonTRDCSetPostCheck(), SNESNewtonTRDCGetPostCheck()
+.seealso: `SNESNewtonTRDCSetPostCheck()`, `SNESNewtonTRDCGetPostCheck()`
 @*/
 static PetscErrorCode SNESNewtonTRDCPostCheck(SNES snes,Vec X,Vec Y,Vec W,PetscBool *changed_Y,PetscBool *changed_W)
 {
@@ -305,7 +305,7 @@ static PetscErrorCode SNESSolve_NEWTONTRDC(SNES snes)
   YNtmp  = snes->work[4];               /* Newton solution */
   YCtmp  = snes->work[5];               /* Cauchy solution */
 
-  PetscCheckFalse(snes->xl || snes->xu || snes->ops->computevariablebounds,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
+  PetscCheck(!snes->xl && !snes->xu && !snes->ops->computevariablebounds,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
 
   PetscCall(VecGetBlockSize(YNtmp,&bs));
 
@@ -594,7 +594,7 @@ static PetscErrorCode SNESSetFromOptions_NEWTONTRDC(PetscOptionItems *PetscOptio
   SNES_NEWTONTRDC  *ctx = (SNES_NEWTONTRDC*)snes->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"SNES trust region options for nonlinear equations"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"SNES trust region options for nonlinear equations");
   PetscCall(PetscOptionsReal("-snes_trdc_tol","Trust region tolerance","SNESSetTrustRegionTolerance",snes->deltatol,&snes->deltatol,NULL));
   PetscCall(PetscOptionsReal("-snes_trdc_eta1","eta1","None",ctx->eta1,&ctx->eta1,NULL));
   PetscCall(PetscOptionsReal("-snes_trdc_eta2","eta2","None",ctx->eta2,&ctx->eta2,NULL));
@@ -606,7 +606,7 @@ static PetscErrorCode SNESSetFromOptions_NEWTONTRDC(PetscOptionItems *PetscOptio
   PetscCall(PetscOptionsReal("-snes_trdc_auto_scale_max","auto_scale_max","None",ctx->auto_scale_max,&ctx->auto_scale_max,NULL));
   PetscCall(PetscOptionsBool("-snes_trdc_use_cauchy","use_cauchy","use Cauchy step and direction",ctx->use_cauchy,&ctx->use_cauchy,NULL));
   PetscCall(PetscOptionsBool("-snes_trdc_auto_scale_multiphase","auto_scale_multiphase","Auto scaling for proper cauchy direction",ctx->auto_scale_multiphase,&ctx->auto_scale_multiphase,NULL));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -618,7 +618,7 @@ static PetscErrorCode SNESView_NEWTONTRDC(SNES snes,PetscViewer viewer)
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
   if (iascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Trust region tolerance (-snes_trtol)\n",(double)snes->deltatol));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  Trust region tolerance %g (-snes_trtol)\n",(double)snes->deltatol));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  eta1=%g, eta2=%g, eta3=%g\n",(double)tr->eta1,(double)tr->eta2,(double)tr->eta3));
     PetscCall(PetscViewerASCIIPrintf(viewer,"  delta0=%g, t1=%g, t2=%g, deltaM=%g\n",(double)tr->delta0,(double)tr->t1,(double)tr->t2,(double)tr->deltaM));
   }
@@ -648,7 +648,7 @@ static PetscErrorCode SNESView_NEWTONTRDC(SNES snes,PetscViewer viewer)
 
    Level: intermediate
 
-.seealso:  SNESCreate(), SNES, SNESSetType(), SNESNEWTONLS, SNESSetTrustRegionTolerance(), SNESNEWTONTRDC
+.seealso: `SNESCreate()`, `SNES`, `SNESSetType()`, `SNESNEWTONLS`, `SNESSetTrustRegionTolerance()`, `SNESNEWTONTRDC`
 
 M*/
 PETSC_EXTERN PetscErrorCode SNESCreate_NEWTONTRDC(SNES snes)

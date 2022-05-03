@@ -31,15 +31,22 @@ static PetscErrorCode ISDestroy_General(IS is)
 static PetscErrorCode ISCopy_General(IS is,IS isy)
 {
   IS_General     *is_general = (IS_General*)is->data,*isy_general = (IS_General*)isy->data;
-  PetscInt       n, N, ny, Ny;
+  PetscInt       n;
 
   PetscFunctionBegin;
   PetscCall(PetscLayoutGetLocalSize(is->map, &n));
-  PetscCall(PetscLayoutGetSize(is->map, &N));
-  PetscCall(PetscLayoutGetLocalSize(isy->map, &ny));
-  PetscCall(PetscLayoutGetSize(isy->map, &Ny));
-  PetscCheckFalse(n != ny || N != Ny,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Index sets incompatible");
   PetscCall(PetscArraycpy(isy_general->idx,is_general->idx,n));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode ISShift_General(IS is, PetscInt shift, IS isy)
+{
+  IS_General     *is_general = (IS_General*)is->data,*isy_general = (IS_General*)isy->data;
+  PetscInt       i, n;
+
+  PetscFunctionBegin;
+  PetscCall(PetscLayoutGetLocalSize(is->map, &n));
+  for (i=0; i<n; i++) isy_general->idx[i] = is_general->idx[i] + shift;
   PetscFunctionReturn(0);
 }
 
@@ -49,7 +56,7 @@ static PetscErrorCode ISOnComm_General(IS is,MPI_Comm comm,PetscCopyMode mode,IS
   PetscInt       n;
 
   PetscFunctionBegin;
-  PetscCheckFalse(mode == PETSC_OWN_POINTER,comm,PETSC_ERR_ARG_WRONG,"Cannot use PETSC_OWN_POINTER");
+  PetscCheck(mode != PETSC_OWN_POINTER,comm,PETSC_ERR_ARG_WRONG,"Cannot use PETSC_OWN_POINTER");
   PetscCall(PetscLayoutGetLocalSize(is->map, &n));
   PetscCall(ISCreateGeneral(comm,n,sub->idx,mode,newis));
   PetscFunctionReturn(0);
@@ -125,7 +132,7 @@ static PetscErrorCode ISRestoreIndices_General(IS in,const PetscInt *idx[])
 
   PetscFunctionBegin;
    /* F90Array1dCreate() inside ISRestoreArrayF90() does not keep array when zero length array */
-  PetscCheckFalse(in->map->n > 0  && *idx != sub->idx,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must restore with value from ISGetIndices()");
+  PetscCheck(in->map->n <= 0 || *idx == sub->idx,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must restore with value from ISGetIndices()");
   PetscFunctionReturn(0);
 }
 
@@ -522,7 +529,7 @@ PetscErrorCode ISSetUp_General(IS is)
 
    Level: beginner
 
-.seealso: ISCreateStride(), ISCreateBlock(), ISAllGather(), PETSC_COPY_VALUES, PETSC_OWN_POINTER, PETSC_USE_POINTER, PetscCopyMode
+.seealso: `ISCreateStride()`, `ISCreateBlock()`, `ISAllGather()`, `PETSC_COPY_VALUES`, `PETSC_OWN_POINTER`, `PETSC_USE_POINTER`, `PetscCopyMode`
 @*/
 PetscErrorCode  ISCreateGeneral(MPI_Comm comm,PetscInt n,const PetscInt idx[],PetscCopyMode mode,IS *is)
 {
@@ -546,7 +553,7 @@ PetscErrorCode  ISCreateGeneral(MPI_Comm comm,PetscInt n,const PetscInt idx[],Pe
 
    Level: beginner
 
-.seealso: ISCreateGeneral(), ISGeneralSetIndicesFromMask(), ISBlockSetIndices(), ISGENERAL, PetscCopyMode
+.seealso: `ISCreateGeneral()`, `ISGeneralSetIndicesFromMask()`, `ISBlockSetIndices()`, `ISGENERAL`, `PetscCopyMode`
 @*/
 PetscErrorCode  ISGeneralSetIndices(IS is,PetscInt n,const PetscInt idx[],PetscCopyMode mode)
 {
@@ -564,7 +571,7 @@ PetscErrorCode  ISGeneralSetIndices_General(IS is,PetscInt n,const PetscInt idx[
   IS_General     *sub = (IS_General*)is->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(n < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"length < 0");
+  PetscCheck(n >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"length < 0");
   if (n) PetscValidIntPointer(idx,3);
 
   PetscCall(PetscLayoutCreateFromSizes(PetscObjectComm((PetscObject)is),n,PETSC_DECIDE,is->map->bs,&map));
@@ -614,7 +621,7 @@ $  {11, 14}
 
    Level: beginner
 
-.seealso: ISCreateGeneral(), ISGeneralSetIndices(), ISGENERAL
+.seealso: `ISCreateGeneral()`, `ISGeneralSetIndices()`, `ISGENERAL`
 @*/
 PetscErrorCode ISGeneralSetIndicesFromMask(IS is,PetscInt rstart,PetscInt rend,const PetscBool mask[])
 {
@@ -675,7 +682,7 @@ static PetscErrorCode ISGeneralFilter_General(IS is, PetscInt start, PetscInt en
 
    Level: beginner
 
-.seealso: ISCreateGeneral(), ISGeneralSetIndices()
+.seealso: `ISCreateGeneral()`, `ISGeneralSetIndices()`
 @*/
 PetscErrorCode ISGeneralFilter(IS is, PetscInt start, PetscInt end)
 {
@@ -697,5 +704,6 @@ PETSC_EXTERN PetscErrorCode ISCreate_General(IS is)
   PetscCall(PetscObjectComposeFunction((PetscObject)is,"ISGeneralSetIndices_C",ISGeneralSetIndices_General));
   PetscCall(PetscObjectComposeFunction((PetscObject)is,"ISGeneralSetIndicesFromMask_C",ISGeneralSetIndicesFromMask_General));
   PetscCall(PetscObjectComposeFunction((PetscObject)is,"ISGeneralFilter_C",ISGeneralFilter_General));
+  PetscCall(PetscObjectComposeFunction((PetscObject)is,"ISShift_C",ISShift_General));
   PetscFunctionReturn(0);
 }

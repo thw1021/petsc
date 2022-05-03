@@ -14,7 +14,7 @@
 
   Level: intermediate
 
-.seealso: DMNetworkMonitorDestroy(), DMNetworkMonitorAdd()
+.seealso: `DMNetworkMonitorDestroy()`, `DMNetworkMonitorAdd()`
 @*/
 PetscErrorCode DMNetworkMonitorCreate(DM network,DMNetworkMonitor *monitorptr)
 {
@@ -46,7 +46,7 @@ PetscErrorCode DMNetworkMonitorCreate(DM network,DMNetworkMonitor *monitorptr)
 
   Level: intermediate
 
-.seealso: DMNetworkMonitorCreate, DMNetworkMonitorAdd
+.seealso: `DMNetworkMonitorCreate`, `DMNetworkMonitorAdd`
 @*/
 PetscErrorCode DMNetworkMonitorDestroy(DMNetworkMonitor *monitor)
 {
@@ -69,7 +69,7 @@ PetscErrorCode DMNetworkMonitorDestroy(DMNetworkMonitor *monitor)
 
   Level: intermediate
 
-.seealso: DMNetworkMonitorCreate(), DMNetworkMonitorDestroy()
+.seealso: `DMNetworkMonitorCreate()`, `DMNetworkMonitorDestroy()`
 @*/
 PetscErrorCode DMNetworkMonitorPop(DMNetworkMonitor monitor)
 {
@@ -116,7 +116,7 @@ PetscErrorCode DMNetworkMonitorPop(DMNetworkMonitor monitor)
   Precisely, the parameters nodes, start and blocksize allow you to select a general
   strided subarray of the variables to monitor.
 
-.seealso: DMNetworkMonitorCreate(), DMNetworkMonitorDestroy()
+.seealso: `DMNetworkMonitorCreate()`, `DMNetworkMonitorDestroy()`
 @*/
 PetscErrorCode DMNetworkMonitorAdd(DMNetworkMonitor monitor,const char *name,PetscInt element,PetscInt nodes,PetscInt start,PetscInt blocksize,PetscReal xmin,PetscReal xmax,PetscReal ymin,PetscReal ymax,PetscBool hold)
 {
@@ -136,9 +136,9 @@ PetscErrorCode DMNetworkMonitorAdd(DMNetworkMonitor monitor,const char *name,Pet
 
   /* Make window title */
   if (vStart <= element && element < vEnd) {
-    PetscCall(PetscSNPrintf(titleBuffer, 64, "%s @ vertex %d [%d / %d]", name, element - vStart, rank, size-1));
+    PetscCall(PetscSNPrintf(titleBuffer, sizeof(titleBuffer), "%s @ vertex %" PetscInt_FMT " [%d / %d]", name, element - vStart, rank, size-1));
   } else if (eStart <= element && element < eEnd) {
-    PetscCall(PetscSNPrintf(titleBuffer, 64, "%s @ edge %d [%d / %d]", name, element - eStart, rank, size-1));
+    PetscCall(PetscSNPrintf(titleBuffer, sizeof(titleBuffer), "%s @ edge %" PetscInt_FMT " [%d / %d]", name, element - eStart, rank, size-1));
   } else {
     /* vertex / edge is not on local machine, so skip! */
     PetscFunctionReturn(0);
@@ -182,7 +182,7 @@ PetscErrorCode DMNetworkMonitorAdd(DMNetworkMonitor monitor,const char *name,Pet
 
   Level: intermediate
 
-.seealso: DMNetworkMonitorCreate(), DMNetworkMonitorDestroy(), DMNetworkMonitorAdd()
+.seealso: `DMNetworkMonitorCreate()`, `DMNetworkMonitorDestroy()`, `DMNetworkMonitorAdd()`
 @*/
 
 PetscErrorCode DMNetworkMonitorView(DMNetworkMonitor monitor,Vec x)

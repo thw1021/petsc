@@ -20,12 +20,12 @@ PETSC_INTERN PetscErrorCode MatZeroRowsMapLocal_Private(Mat A,PetscInt N,const P
   if (!A->nooffproczerorows) PetscCall(PetscMalloc1(N, &rrows));
   for (r = 0; r < N; ++r) {
     const PetscInt idx   = rows[r];
-    PetscCheckFalse(idx < 0 || A->rmap->N <= idx,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Row %" PetscInt_FMT " out of range [0,%" PetscInt_FMT ")",idx,A->rmap->N);
+    PetscCheck(idx >= 0 && A->rmap->N > idx,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Row %" PetscInt_FMT " out of range [0,%" PetscInt_FMT ")",idx,A->rmap->N);
     if (idx < owners[p] || owners[p+1] <= idx) { /* short-circuit the search if the last p owns this row too */
       PetscCall(PetscLayoutFindOwner(A->rmap,idx,&p));
     }
     if (A->nooffproczerorows) {
-      PetscCheckFalse(p != rank,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"MAT_NO_OFF_PROC_ZERO_ROWS set, but row %" PetscInt_FMT " is not owned by rank %d",idx,rank);
+      PetscCheck(p == rank,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"MAT_NO_OFF_PROC_ZERO_ROWS set, but row %" PetscInt_FMT " is not owned by rank %d",idx,rank);
       lrows[len++] = idx - owners[p];
     } else {
       rrows[r].rank = p;

@@ -269,11 +269,11 @@ PetscErrorCode MatView_LMVM(Mat B, PetscViewer pv)
   PetscCall(PetscObjectTypeCompare((PetscObject)pv,PETSCVIEWERASCII,&isascii));
   if (isascii) {
     PetscCall(MatGetType(B, &type));
-    PetscCall(PetscViewerASCIIPrintf(pv,"Max. storage: %D\n",lmvm->m));
-    PetscCall(PetscViewerASCIIPrintf(pv,"Used storage: %D\n",lmvm->k+1));
-    PetscCall(PetscViewerASCIIPrintf(pv,"Number of updates: %D\n",lmvm->nupdates));
-    PetscCall(PetscViewerASCIIPrintf(pv,"Number of rejects: %D\n",lmvm->nrejects));
-    PetscCall(PetscViewerASCIIPrintf(pv,"Number of resets: %D\n",lmvm->nresets));
+    PetscCall(PetscViewerASCIIPrintf(pv,"Max. storage: %" PetscInt_FMT "\n",lmvm->m));
+    PetscCall(PetscViewerASCIIPrintf(pv,"Used storage: %" PetscInt_FMT "\n",lmvm->k+1));
+    PetscCall(PetscViewerASCIIPrintf(pv,"Number of updates: %" PetscInt_FMT "\n",lmvm->nupdates));
+    PetscCall(PetscViewerASCIIPrintf(pv,"Number of rejects: %" PetscInt_FMT "\n",lmvm->nrejects));
+    PetscCall(PetscViewerASCIIPrintf(pv,"Number of resets: %" PetscInt_FMT "\n",lmvm->nresets));
     if (lmvm->J0) {
       PetscCall(PetscViewerASCIIPrintf(pv,"J0 Matrix:\n"));
       PetscCall(PetscViewerPushFormat(pv, PETSC_VIEWER_ASCII_INFO));
@@ -291,11 +291,11 @@ PetscErrorCode MatSetFromOptions_LMVM(PetscOptionItems *PetscOptionsObject, Mat 
   Mat_LMVM          *lmvm = (Mat_LMVM*)B->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Limited-memory Variable Metric matrix for approximating Jacobians"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Limited-memory Variable Metric matrix for approximating Jacobians");
   PetscCall(PetscOptionsInt("-mat_lmvm_hist_size","number of past updates kept in memory for the approximation","",lmvm->m,&lmvm->m,NULL));
   PetscCall(PetscOptionsInt("-mat_lmvm_ksp_its","(developer) fixed number of KSP iterations to take when inverting J0","",lmvm->ksp_max_it,&lmvm->ksp_max_it,NULL));
   PetscCall(PetscOptionsReal("-mat_lmvm_eps","(developer) machine zero definition","",lmvm->eps,&lmvm->eps,NULL));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscCall(KSPSetFromOptions(lmvm->J0ksp));
   PetscFunctionReturn(0);
 }
@@ -311,7 +311,7 @@ PetscErrorCode MatSetUp_LMVM(Mat B)
 
   PetscFunctionBegin;
   PetscCall(MatGetSize(B, &M, &N));
-  PetscCheckFalse(M == 0 && N == 0,comm, PETSC_ERR_ORDER, "MatSetSizes() must be called before MatSetUp()");
+  PetscCheck(M != 0 || N != 0,comm, PETSC_ERR_ORDER, "MatSetSizes() must be called before MatSetUp()");
   if (!lmvm->allocated) {
     PetscCallMPI(MPI_Comm_size(comm, &size));
     if (size == 1) {

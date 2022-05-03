@@ -325,7 +325,7 @@ static PetscErrorCode  KSPSolve_BCGSL(KSP ksp)
 
    Level: intermediate
 
-.seealso: KSPBCGSLSetEll(), KSPBCGSLSetPol(), KSP
+.seealso: `KSPBCGSLSetEll()`, `KSPBCGSLSetPol()`, `KSP`
 @*/
 PetscErrorCode  KSPBCGSLSetXRes(KSP ksp, PetscReal delta)
 {
@@ -360,7 +360,7 @@ PetscErrorCode  KSPBCGSLSetXRes(KSP ksp, PetscReal delta)
 
    Level: intermediate
 
-.seealso: KSPBCGSLSetEll(), KSP
+.seealso: `KSPBCGSLSetEll()`, `KSP`
 @*/
 PetscErrorCode KSPBCGSLSetUsePseudoinverse(KSP ksp,PetscBool use_pinv)
 {
@@ -388,7 +388,7 @@ PetscErrorCode KSPBCGSLSetUsePseudoinverse(KSP ksp,PetscBool use_pinv)
 
    Level: intermediate
 
-.seealso: KSP, KSPBCGSL, KSPCreate(), KSPSetType()
+.seealso: `KSP`, `KSPBCGSL`, `KSPCreate()`, `KSPSetType()`
 @*/
 PetscErrorCode  KSPBCGSLSetPol(KSP ksp, PetscBool uMROR)
 {
@@ -432,14 +432,14 @@ PetscErrorCode  KSPBCGSLSetPol(KSP ksp, PetscBool uMROR)
    test problems, but also for larger problems). Consequently, by default, the system is solved by pseudoinverse, which
    allows the iteration to complete successfully. See KSPBCGSLSetUsePseudoinverse() to switch to a conventional solve.
 
-.seealso: KSPBCGSLSetUsePseudoinverse(), KSP, KSPBCGSL
+.seealso: `KSPBCGSLSetUsePseudoinverse()`, `KSP`, `KSPBCGSL`
 @*/
 PetscErrorCode  KSPBCGSLSetEll(KSP ksp, PetscInt ell)
 {
   KSP_BCGSL      *bcgsl = (KSP_BCGSL*)ksp->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(ell < 1,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE, "KSPBCGSLSetEll: second argument must be positive");
+  PetscCheck(ell >= 1,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE, "KSPBCGSLSetEll: second argument must be positive");
   PetscValidLogicalCollectiveInt(ksp,ell,2);
 
   if (!ksp->setupstage) bcgsl->ell = ell;
@@ -464,8 +464,8 @@ PetscErrorCode KSPView_BCGSL(KSP ksp, PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
 
   if (isascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  Ell = %D\n", bcgsl->ell));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  Delta = %lg\n", bcgsl->delta));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Ell = %" PetscInt_FMT "\n", bcgsl->ell));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Delta = %g\n", (double)bcgsl->delta));
   }
   PetscFunctionReturn(0);
 }
@@ -481,7 +481,7 @@ PetscErrorCode KSPSetFromOptions_BCGSL(PetscOptionItems *PetscOptionsObject,KSP 
   /* PetscOptionsBegin/End are called in KSPSetFromOptions. They
      don't need to be called here.
   */
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"KSP BiCGStab(L) Options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"KSP BiCGStab(L) Options");
 
   /* Set number of search directions */
   PetscCall(PetscOptionsInt("-ksp_bcgsl_ell","Number of Krylov search directions","KSPBCGSLSetEll",bcgsl->ell,&this_ell,&flg));
@@ -509,7 +509,7 @@ PetscErrorCode KSPSetFromOptions_BCGSL(PetscOptionItems *PetscOptionsObject,KSP 
   flg  = bcgsl->pinv;
   PetscCall(PetscOptionsBool("-ksp_bcgsl_pinv", "Polynomial correction via pseudoinverse", "KSPBCGSLSetUsePseudoinverse",flg,&flg,NULL));
   PetscCall(KSPBCGSLSetUsePseudoinverse(ksp,flg));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -575,7 +575,7 @@ PetscErrorCode KSPDestroy_BCGSL(KSP ksp)
 
    Level: beginner
 
-.seealso:  KSPCreate(), KSPSetType(), KSPType (for list of available types), KSP, KSPFGMRES, KSPBCGS, KSPSetPCSide(), KSPBCGSLSetEll(), KSPBCGSLSetXRes()
+.seealso: `KSPCreate()`, `KSPSetType()`, `KSPType`, `KSP`, `KSPFGMRES`, `KSPBCGS`, `KSPSetPCSide()`, `KSPBCGSLSetEll()`, `KSPBCGSLSetXRes()`
 
 M*/
 PETSC_EXTERN PetscErrorCode KSPCreate_BCGSL(KSP ksp)

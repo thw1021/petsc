@@ -405,7 +405,6 @@ PetscErrorCode PCBDDCSubSchursSetUp(PCBDDCSubSchurs sub_schurs, Mat Ain, Mat Sin
   PetscBool              deluxe = PETSC_TRUE;
   PetscBool              use_potr = PETSC_FALSE, use_sytr = PETSC_FALSE;
   PetscViewer            matl_dbg_viewer = NULL;
-  PetscErrorCode         ierr;
   PetscBool              flg;
 
   PetscFunctionBegin;
@@ -436,14 +435,14 @@ PetscErrorCode PCBDDCSubSchursSetUp(PCBDDCSubSchurs sub_schurs, Mat Ain, Mat Sin
     PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)sub_schurs->l2gmap),&rank));
     nr   = size;
     PetscCall(PetscMalloc1(nr,&print_schurs_ranks));
-    ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)sub_schurs->l2gmap),sub_schurs->prefix,"BDDC sub_schurs options","PC");PetscCall(ierr);
+    PetscOptionsBegin(PetscObjectComm((PetscObject)sub_schurs->l2gmap),sub_schurs->prefix,"BDDC sub_schurs options","PC");
     PetscCall(PetscOptionsIntArray("-sub_schurs_debug_ranks","Ranks to debug (all if the option is not used)",NULL,print_schurs_ranks,&nr,&flg));
     if (!flg) print_schurs = PETSC_TRUE;
     else {
       print_schurs = PETSC_FALSE;
       for (i=0;i<nr;i++) if (print_schurs_ranks[i] == (PetscInt)rank) { print_schurs = PETSC_TRUE; break; }
     }
-    ierr = PetscOptionsEnd();PetscCall(ierr);
+    PetscOptionsEnd();
     PetscCall(PetscFree(print_schurs_ranks));
     if (print_schurs) {
       char filename[256];
@@ -531,7 +530,7 @@ PetscErrorCode PCBDDCSubSchursSetUp(PCBDDCSubSchurs sub_schurs, Mat Ain, Mat Sin
     for (layer=0;layer<nlayers;layer++) {
       PetscInt n_added = 0;
       if (n_local_dofs == n_I+n_B) break;
-      PetscCheckFalse(n_local_dofs > n_I+n_B,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Error querying layer %D. Out of bound access (%D > %D)",layer,n_local_dofs,n_I+n_B);
+      PetscCheck(n_local_dofs <= n_I+n_B,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Error querying layer %" PetscInt_FMT ". Out of bound access (%" PetscInt_FMT " > %" PetscInt_FMT ")",layer,n_local_dofs,n_I+n_B);
       PetscCall(PCBDDCAdjGetNextLayer_Private(local_numbering+n_local_dofs,n_prev_added,touched,xadj,adjncy,&n_added));
       n_prev_added = n_added;
       n_local_dofs += n_added;
@@ -652,7 +651,7 @@ PetscErrorCode PCBDDCSubSchursSetUp(PCBDDCSubSchurs sub_schurs, Mat Ain, Mat Sin
   PetscCall(ISDestroy(&all_subsets));
   PetscCall(ISDestroy(&all_subsets_mult));
   PetscCall(ISGetLocalSize(all_subsets_n,&i));
-  PetscCheckFalse(i != local_stash_size,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Invalid size of new subset! %D != %D",i,local_stash_size);
+  PetscCheck(i == local_stash_size,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Invalid size of new subset! %" PetscInt_FMT " != %" PetscInt_FMT,i,local_stash_size);
   PetscCall(VecCreateSeqWithArray(PETSC_COMM_SELF,1,local_stash_size,NULL,&lstash));
   PetscCall(VecCreateMPI(comm_n,PETSC_DECIDE,global_size,&gstash));
   PetscCall(VecScatterCreate(lstash,NULL,gstash,all_subsets_n,&sstash));
@@ -664,7 +663,7 @@ PetscErrorCode PCBDDCSubSchursSetUp(PCBDDCSubSchurs sub_schurs, Mat Ain, Mat Sin
 
     PetscCall(PetscMalloc1(local_size,&all_local_idx_B));
     PetscCall(ISGlobalToLocalMappingApply(sub_schurs->BtoNmap,IS_GTOLM_DROP,local_size,all_local_idx_N+extra,&subset_size,all_local_idx_B));
-    PetscCheckFalse(subset_size != local_size,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Error in sub_schurs serial (BtoNmap)! %D != %D",subset_size,local_size);
+    PetscCheck(subset_size == local_size,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Error in sub_schurs serial (BtoNmap)! %" PetscInt_FMT " != %" PetscInt_FMT,subset_size,local_size);
     PetscCall(ISCreateGeneral(PETSC_COMM_SELF,local_size,all_local_idx_B,PETSC_OWN_POINTER,&sub_schurs->is_Ej_all));
   }
 
@@ -1137,7 +1136,7 @@ PetscErrorCode PCBDDCSubSchursSetUp(PCBDDCSubSchurs sub_schurs, Mat Ain, Mat Sin
             char name[16];
 
             PetscCall(VecCreateSeqWithArray(PETSC_COMM_SELF,1,size_schur,array+n_I,&vv));
-            PetscCall(PetscSNPrintf(name,sizeof(name),"Pvs%D",i));
+            PetscCall(PetscSNPrintf(name,sizeof(name),"Pvs%" PetscInt_FMT,i));
             PetscCall(PetscObjectSetName((PetscObject)vv,name));
             PetscCall(VecView(vv,matl_dbg_viewer));
           }
@@ -1843,7 +1842,7 @@ PetscErrorCode PCBDDCSubSchursSetUp(PCBDDCSubSchurs sub_schurs, Mat Ain, Mat Sin
       IS   is;
       char name[16];
 
-      PetscCall(PetscSNPrintf(name,sizeof(name),"IE%D",i));
+      PetscCall(PetscSNPrintf(name,sizeof(name),"IE%" PetscInt_FMT,i));
       PetscCall(ISGetLocalSize(sub_schurs->is_subs[i],&subset_size));
       PetscCall(ISCreateStride(PETSC_COMM_SELF,subset_size,cum,1,&is));
       PetscCall(PetscObjectSetName((PetscObject)is,name));
@@ -1867,7 +1866,6 @@ PetscErrorCode PCBDDCSubSchursInit(PCBDDCSubSchurs sub_schurs, const char* prefi
   IS              *faces,*edges,*all_cc,vertices;
   PetscInt        i,n_faces,n_edges,n_all_cc;
   PetscBool       is_sorted,ispardiso,ismumps;
-  PetscErrorCode  ierr;
 
   PetscFunctionBegin;
   PetscCall(ISSorted(is_I,&is_sorted));
@@ -1924,14 +1922,14 @@ PetscErrorCode PCBDDCSubSchursInit(PCBDDCSubSchurs sub_schurs, const char* prefi
   sub_schurs->is_symmetric  = PETSC_TRUE;
   sub_schurs->debug         = PETSC_FALSE;
   sub_schurs->restrict_comm = PETSC_FALSE;
-  ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)graph->l2gmap),sub_schurs->prefix,"BDDC sub_schurs options","PC");PetscCall(ierr);
+  PetscOptionsBegin(PetscObjectComm((PetscObject)graph->l2gmap),sub_schurs->prefix,"BDDC sub_schurs options","PC");
   PetscCall(PetscOptionsString("-sub_schurs_mat_solver_type","Specific direct solver to use",NULL,sub_schurs->mat_solver_type,sub_schurs->mat_solver_type,sizeof(sub_schurs->mat_solver_type),NULL));
   PetscCall(PetscOptionsBool("-sub_schurs_symmetric","Symmetric problem",NULL,sub_schurs->is_symmetric,&sub_schurs->is_symmetric,NULL));
   PetscCall(PetscOptionsBool("-sub_schurs_hermitian","Hermitian problem",NULL,sub_schurs->is_hermitian,&sub_schurs->is_hermitian,NULL));
   PetscCall(PetscOptionsBool("-sub_schurs_posdef","Positive definite problem",NULL,sub_schurs->is_posdef,&sub_schurs->is_posdef,NULL));
   PetscCall(PetscOptionsBool("-sub_schurs_restrictcomm","Restrict communicator on active processes only",NULL,sub_schurs->restrict_comm,&sub_schurs->restrict_comm,NULL));
   PetscCall(PetscOptionsBool("-sub_schurs_debug","Debug output",NULL,sub_schurs->debug,&sub_schurs->debug,NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscCall(PetscStrcmp(sub_schurs->mat_solver_type,MATSOLVERMUMPS,&ismumps));
   PetscCall(PetscStrcmp(sub_schurs->mat_solver_type,MATSOLVERMKL_PARDISO,&ispardiso));
   sub_schurs->schur_explicit = (PetscBool)(ispardiso || ismumps);

@@ -55,7 +55,7 @@ int main(int argc,char ** argv)
   PetscCall(DMNetworkSetNumSubNetworks(networkdm,PETSC_DECIDE,1));
   PetscCall(DMNetworkAddSubnetwork(networkdm,"",waterdata->nedge,edgelist,NULL));
   if (!crank) {
-    PetscCall(PetscPrintf(PETSC_COMM_SELF,"water nvertices %D, nedges %D\n",waterdata->nvertex,waterdata->nedge));
+    PetscCall(PetscPrintf(PETSC_COMM_SELF,"water nvertices %" PetscInt_FMT ", nedges %" PetscInt_FMT "\n",waterdata->nvertex,waterdata->nedge));
   }
 
   /* Set up the network layout */
@@ -106,7 +106,7 @@ int main(int argc,char ** argv)
   PetscCall(SNESSolve(snes,NULL,X));
   PetscCall(SNESGetConvergedReason(snes,&reason));
 
-  PetscCheckFalse(reason < 0,PETSC_COMM_SELF,PETSC_ERR_CONV_FAILED,"No solution found for the water network");
+  PetscCheck(reason >= 0,PETSC_COMM_SELF,PETSC_ERR_CONV_FAILED,"No solution found for the water network");
   /* PetscCall(VecView(X,PETSC_VIEWER_STDOUT_WORLD)); */
 
   PetscCall(VecDestroy(&X));

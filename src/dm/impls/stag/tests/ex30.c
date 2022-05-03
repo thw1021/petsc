@@ -74,7 +74,7 @@ static PetscErrorCode CreateMat(DM dmSol,Mat *pA)
   A = *pA;
   PetscCall(DMStagGetCorners(dmSol,&startx,&starty,&startz,&nx,&ny,&nz,NULL,NULL,NULL));
   PetscCall(DMStagGetGlobalSizes(dmSol,&N[0],&N[1],&N[2]));
-  PetscCheckFalse(N[0] < 2 || N[1] < 2 || N[2] < 2,PetscObjectComm((PetscObject)dmSol),PETSC_ERR_ARG_SIZ,"This example requires at least two elements in each dimensions");
+  PetscCheck(N[0] >= 2 && N[1] >= 2 && N[2] >= 2,PetscObjectComm((PetscObject)dmSol),PETSC_ERR_ARG_SIZ,"This example requires at least two elements in each dimensions");
   PetscCall(DMStagGetIsLastRank(dmSol,&isLastRankx,&isLastRanky,&isLastRankz));
   PetscCall(DMStagGetIsFirstRank(dmSol,&isFirstRankx,&isFirstRanky,&isFirstRankz));
   hx = 1.0/N[0]; hy = 1.0/N[1]; hz = 1.0/N[2];
@@ -513,7 +513,7 @@ static PetscErrorCode check_vals(PetscInt ex, PetscInt ey, PetscInt ez, PetscInt
 
   PetscFunctionBeginUser;
   for (i=0; i<n; ++i) {
-    PetscCheckFalse(ref[i] != computed[i],PETSC_COMM_SELF,PETSC_ERR_PLIB,"(%D,%D,%D) Assertion Failure. (ref[%D]) %g != %g (computed)[%D]",ex,ey,ez,i,(double)PetscRealPart(ref[i]),(double)PetscRealPart(computed[i]),i);
+    PetscCheck(ref[i] == computed[i],PETSC_COMM_SELF,PETSC_ERR_PLIB,"(%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT ") Assertion Failure. (ref[%" PetscInt_FMT "]) %g != %g (computed)[%" PetscInt_FMT "]",ex,ey,ez,i,(double)PetscRealPart(ref[i]),(double)PetscRealPart(computed[i]),i);
   }
   PetscFunctionReturn(0);
 }
@@ -533,7 +533,7 @@ static PetscErrorCode CheckMat(DM dmSol,Mat A)
   PetscFunctionBeginUser;
   PetscCall(DMStagGetCorners(dmSol,&startx,&starty,&startz,&nx,&ny,&nz,NULL,NULL,NULL));
   PetscCall(DMStagGetGlobalSizes(dmSol,&N[0],&N[1],&N[2]));
-  PetscCheckFalse(N[0] < 2 || N[1] < 2 || N[2] < 2,PetscObjectComm((PetscObject)dmSol),PETSC_ERR_ARG_SIZ,"This example requires at least two elements in each dimensions");
+  PetscCheck(N[0] >= 2 && N[1] >= 2 && N[2] >= 2,PetscObjectComm((PetscObject)dmSol),PETSC_ERR_ARG_SIZ,"This example requires at least two elements in each dimensions");
   PetscCall(DMStagGetIsLastRank(dmSol,&isLastRankx,&isLastRanky,&isLastRankz));
   PetscCall(DMStagGetIsFirstRank(dmSol,&isFirstRankx,&isFirstRanky,&isFirstRankz));
   hx = 1.0/N[0]; hy = 1.0/N[1]; hz = 1.0/N[2];

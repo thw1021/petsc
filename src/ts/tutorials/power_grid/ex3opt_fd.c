@@ -36,7 +36,7 @@ PetscErrorCode monitor(Tao tao,AppCtx *ctx)
   PetscCall(VecGetArrayRead(X,&x));
   PetscCall(VecGetArrayRead(G,&g));
   fp = fopen("ex3opt_fd_conv.out","a");
-  PetscCall(PetscFPrintf(PETSC_COMM_WORLD,fp,"%d %g %.12lf %.12lf\n",iterate,gnorm,x[0],g[0]));
+  PetscCall(PetscFPrintf(PETSC_COMM_WORLD,fp,"%" PetscInt_FMT " %g %.12lf %.12lf\n",iterate,(double)gnorm,(double)PetscRealPart(x[0]),(double)PetscRealPart(g[0])));
   PetscCall(VecRestoreArrayRead(X,&x));
   PetscCall(VecRestoreArrayRead(G,&g));
   fclose(fp);
@@ -47,7 +47,6 @@ int main(int argc,char **argv)
 {
   Vec                p;
   PetscScalar        *x_ptr;
-  PetscErrorCode     ierr;
   PetscMPIInt        size;
   AppCtx             ctx;
   Vec                lowerb,upperb;
@@ -66,7 +65,7 @@ int main(int argc,char **argv)
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     Set runtime options
     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Swing equation options","");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Swing equation options","");
   {
     ctx.beta    = 2;
     ctx.c       = 10000.0;
@@ -92,7 +91,7 @@ int main(int argc,char **argv)
     printtofile = PETSC_FALSE;
     PetscCall(PetscOptionsBool("-printtofile","Print convergence results to file","",printtofile,&printtofile,NULL));
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   /* Create TAO solver and set desired solution method */
   PetscCall(TaoCreate(PETSC_COMM_WORLD,&tao));

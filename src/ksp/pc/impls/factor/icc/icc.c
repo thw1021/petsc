@@ -9,8 +9,11 @@ static PetscErrorCode PCSetUp_ICC(PC pc)
   MatSolverType          stype;
   MatFactorError         err;
   PetscBool              canuseordering;
+  const char             *prefix;
 
   PetscFunctionBegin;
+  PetscCall(PCGetOptionsPrefix(pc,&prefix));
+  PetscCall(MatSetOptionsPrefix(pc->pmat,prefix));
   pc->failedreason = PC_NOERROR;
 
   PetscCall(MatSetErrorIfFailure(pc->pmat,pc->erroriffailure));
@@ -126,7 +129,7 @@ static PetscErrorCode PCSetFromOptions_ICC(PetscOptionItems *PetscOptionsObject,
   /* PetscReal      dt[3];*/
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"ICC Options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"ICC Options");
   PetscCall(PCSetFromOptions_Factor(PetscOptionsObject,pc));
 
   PetscCall(PetscOptionsReal("-pc_factor_levels","levels of fill","PCFactorSetLevels",((PC_Factor*)icc)->info.levels,&((PC_Factor*)icc)->info.levels,&flg));
@@ -139,7 +142,7 @@ static PetscErrorCode PCSetFromOptions_ICC(PetscOptionItems *PetscOptionsObject,
     PetscCall(PCFactorSetDropTolerance(pc,dt[0],dt[1],(PetscInt)dt[2]));
   }
   */
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -172,10 +175,10 @@ extern PetscErrorCode  PCFactorSetDropTolerance_ILU(PC,PetscReal,PetscReal,Petsc
       Chapter in Parallel Numerical Algorithms, edited by D. Keyes, A. Semah, V. Venkatakrishnan, ICASE/LaRC Interdisciplinary Series in
       Science and Engineering, Kluwer.
 
-.seealso:  PCCreate(), PCSetType(), PCType (for list of available types), PC, PCSOR, MatOrderingType,
-           PCFactorSetZeroPivot(), PCFactorSetShiftType(), PCFactorSetShiftAmount(),
-           PCFactorSetFill(), PCFactorSetMatOrderingType(), PCFactorSetReuseOrdering(),
-           PCFactorSetLevels()
+.seealso: `PCCreate()`, `PCSetType()`, `PCType`, `PC`, `PCSOR`, `MatOrderingType`,
+          `PCFactorSetZeroPivot()`, `PCFactorSetShiftType()`, `PCFactorSetShiftAmount()`,
+          `PCFactorSetFill()`, `PCFactorSetMatOrderingType()`, `PCFactorSetReuseOrdering()`,
+          `PCFactorSetLevels()`
 
 M*/
 

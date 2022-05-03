@@ -23,14 +23,13 @@ static PetscErrorCode PetscSubcommCreate_interlaced(PetscSubcomm);
 @*/
 PetscErrorCode PetscSubcommSetFromOptions(PetscSubcomm psubcomm)
 {
-  PetscErrorCode   ierr;
   PetscSubcommType type;
   PetscBool        flg;
 
   PetscFunctionBegin;
   PetscCheck(psubcomm,PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"Must call PetscSubcommCreate firt");
 
-  ierr = PetscOptionsBegin(psubcomm->parent,psubcomm->subcommprefix,"Options for PetscSubcomm",NULL);PetscCall(ierr);
+  PetscOptionsBegin(psubcomm->parent,psubcomm->subcommprefix,"Options for PetscSubcomm",NULL);
   PetscCall(PetscOptionsEnum("-psubcomm_type",NULL,NULL,PetscSubcommTypes,(PetscEnum)psubcomm->type,(PetscEnum*)&type,&flg));
   if (flg && psubcomm->type != type) {
     /* free old structures */
@@ -55,7 +54,7 @@ PetscErrorCode PetscSubcommSetFromOptions(PetscSubcomm psubcomm)
   if (flg) {
     PetscCall(PetscSubcommView(psubcomm,PETSC_VIEWER_STDOUT_(psubcomm->parent)));
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -78,7 +77,7 @@ PetscErrorCode PetscSubcommSetOptionsPrefix(PetscSubcomm psubcomm,const char pre
    if (!pre) {
     PetscCall(PetscFree(psubcomm->subcommprefix));
   } else {
-    PetscCheckFalse(pre[0] == '-',PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Options prefix should not begin with a hyphen");
+    PetscCheck(pre[0] != '-',PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Options prefix should not begin with a hyphen");
     PetscCall(PetscFree(psubcomm->subcommprefix));
     PetscCall(PetscStrallocpy(pre,&(psubcomm->subcommprefix)));
   }
@@ -135,7 +134,7 @@ PetscErrorCode PetscSubcommView(PetscSubcomm psubcomm,PetscViewer viewer)
 
    Level: advanced
 
-.seealso: PetscSubcommCreate(),PetscSubcommDestroy(),PetscSubcommSetType(),PetscSubcommSetTypeGeneral()
+.seealso: `PetscSubcommCreate(),PetscSubcommDestroy(),PetscSubcommSetType(),PetscSubcommSetTypeGeneral()`
 @*/
 PetscErrorCode  PetscSubcommSetNumber(PetscSubcomm psubcomm,PetscInt nsubcomm)
 {
@@ -146,7 +145,7 @@ PetscErrorCode  PetscSubcommSetNumber(PetscSubcomm psubcomm,PetscInt nsubcomm)
   PetscCheck(psubcomm,PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"PetscSubcomm is not created. Call PetscSubcommCreate() first");
   PetscCallMPI(MPI_Comm_size(comm,&size));
   PetscCall(PetscMPIIntCast(nsubcomm,&msub));
-  PetscCheckFalse(msub < 1 || msub > size,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE, "Num of subcommunicators %d cannot be < 1 or > input comm size %d",msub,size);
+  PetscCheck(msub >= 1 && msub <= size,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE, "Num of subcommunicators %d cannot be < 1 or > input comm size %d",msub,size);
 
   psubcomm->n = msub;
   PetscFunctionReturn(0);
@@ -163,13 +162,13 @@ PetscErrorCode  PetscSubcommSetNumber(PetscSubcomm psubcomm,PetscInt nsubcomm)
 
    Level: advanced
 
-.seealso: PetscSubcommCreate(),PetscSubcommDestroy(),PetscSubcommSetNumber(),PetscSubcommSetTypeGeneral(), PetscSubcommType
+.seealso: `PetscSubcommCreate(),PetscSubcommDestroy(),PetscSubcommSetNumber(),PetscSubcommSetTypeGeneral()`, `PetscSubcommType`
 @*/
 PetscErrorCode  PetscSubcommSetType(PetscSubcomm psubcomm,PetscSubcommType subcommtype)
 {
   PetscFunctionBegin;
   PetscCheck(psubcomm,PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"PetscSubcomm is not created. Call PetscSubcommCreate()");
-  PetscCheckFalse(psubcomm->n < 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"number of subcommunicators %d is incorrect. Call PetscSubcommSetNumber()",psubcomm->n);
+  PetscCheck(psubcomm->n >= 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"number of subcommunicators %d is incorrect. Call PetscSubcommSetNumber()",psubcomm->n);
 
   if (subcommtype == PETSC_SUBCOMM_CONTIGUOUS) {
     PetscCall(PetscSubcommCreate_contiguous(psubcomm));
@@ -191,7 +190,7 @@ PetscErrorCode  PetscSubcommSetType(PetscSubcomm psubcomm,PetscSubcommType subco
 
    Level: advanced
 
-.seealso: PetscSubcommCreate(),PetscSubcommDestroy(),PetscSubcommSetNumber(),PetscSubcommSetType()
+.seealso: `PetscSubcommCreate(),PetscSubcommDestroy(),PetscSubcommSetNumber(),PetscSubcommSetType()`
 @*/
 PetscErrorCode PetscSubcommSetTypeGeneral(PetscSubcomm psubcomm,PetscMPIInt color,PetscMPIInt subrank)
 {
@@ -201,7 +200,7 @@ PetscErrorCode PetscSubcommSetTypeGeneral(PetscSubcomm psubcomm,PetscMPIInt colo
 
   PetscFunctionBegin;
   PetscCheck(psubcomm,PETSC_COMM_SELF,PETSC_ERR_ARG_NULL,"PetscSubcomm is not created. Call PetscSubcommCreate()");
-  PetscCheckFalse(nsubcomm < 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"number of subcommunicators %d is incorrect. Call PetscSubcommSetNumber()",nsubcomm);
+  PetscCheck(nsubcomm >= 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"number of subcommunicators %d is incorrect. Call PetscSubcommSetNumber()",nsubcomm);
 
   PetscCallMPI(MPI_Comm_split(comm,color,subrank,&subcomm));
 
@@ -255,7 +254,7 @@ PetscErrorCode PetscSubcommSetTypeGeneral(PetscSubcomm psubcomm,PetscMPIInt colo
 
    Level: advanced
 
-.seealso: PetscSubcommCreate(),PetscSubcommSetType()
+.seealso: `PetscSubcommCreate(),PetscSubcommSetType()`
 @*/
 PetscErrorCode  PetscSubcommDestroy(PetscSubcomm *psubcomm)
 {
@@ -282,8 +281,8 @@ PetscErrorCode  PetscSubcommDestroy(PetscSubcomm *psubcomm)
 
    Level: advanced
 
-.seealso: PetscSubcommDestroy(), PetscSubcommSetTypeGeneral(), PetscSubcommSetFromOptions(), PetscSubcommSetType(),
-          PetscSubcommSetNumber()
+.seealso: `PetscSubcommDestroy()`, `PetscSubcommSetTypeGeneral()`, `PetscSubcommSetFromOptions()`, `PetscSubcommSetType()`,
+          `PetscSubcommSetNumber()`
 @*/
 PetscErrorCode  PetscSubcommCreate(MPI_Comm comm,PetscSubcomm *psubcomm)
 {
@@ -319,8 +318,8 @@ PetscErrorCode  PetscSubcommCreate(MPI_Comm comm,PetscSubcomm *psubcomm)
 
    Level: intermediate
 
-.seealso: PetscSubcommDestroy(), PetscSubcommSetTypeGeneral(), PetscSubcommSetFromOptions(), PetscSubcommSetType(),
-          PetscSubcommSetNumber(), PetscSubcommGetChild(), PetscSubcommContiguousParent()
+.seealso: `PetscSubcommDestroy()`, `PetscSubcommSetTypeGeneral()`, `PetscSubcommSetFromOptions()`, `PetscSubcommSetType()`,
+          `PetscSubcommSetNumber()`, `PetscSubcommGetChild()`, `PetscSubcommContiguousParent()`
 @*/
 PetscErrorCode  PetscSubcommGetParent(PetscSubcomm scomm,MPI_Comm *pcomm)
 {
@@ -342,8 +341,8 @@ PetscErrorCode  PetscSubcommGetParent(PetscSubcomm scomm,MPI_Comm *pcomm)
 
    Level: intermediate
 
-.seealso: PetscSubcommDestroy(), PetscSubcommSetTypeGeneral(), PetscSubcommSetFromOptions(), PetscSubcommSetType(),
-          PetscSubcommSetNumber(), PetscSubcommGetChild(), PetscSubcommContiguousParent()
+.seealso: `PetscSubcommDestroy()`, `PetscSubcommSetTypeGeneral()`, `PetscSubcommSetFromOptions()`, `PetscSubcommSetType()`,
+          `PetscSubcommSetNumber()`, `PetscSubcommGetChild()`, `PetscSubcommContiguousParent()`
 @*/
 PetscErrorCode  PetscSubcommGetContiguousParent(PetscSubcomm scomm,MPI_Comm *pcomm)
 {
@@ -364,8 +363,8 @@ PetscErrorCode  PetscSubcommGetContiguousParent(PetscSubcomm scomm,MPI_Comm *pco
 
    Level: intermediate
 
-.seealso: PetscSubcommDestroy(), PetscSubcommSetTypeGeneral(), PetscSubcommSetFromOptions(), PetscSubcommSetType(),
-          PetscSubcommSetNumber(), PetscSubcommGetParent(), PetscSubcommContiguousParent()
+.seealso: `PetscSubcommDestroy()`, `PetscSubcommSetTypeGeneral()`, `PetscSubcommSetFromOptions()`, `PetscSubcommSetType()`,
+          `PetscSubcommSetNumber()`, `PetscSubcommGetParent()`, `PetscSubcommContiguousParent()`
 @*/
 PetscErrorCode  PetscSubcommGetChild(PetscSubcomm scomm,MPI_Comm *ccomm)
 {

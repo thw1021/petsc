@@ -27,7 +27,7 @@ int main(int argc,char **argv)
 
   PetscCall(PetscInitialize(&argc,&argv,(char*)0,help));
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD,&size));
-  PetscCheckFalse(size != 1,PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,"This is a uniprocessor example only!");
+  PetscCheck(size == 1,PETSC_COMM_WORLD,PETSC_ERR_WRONG_MPI_SIZE,"This is a uniprocessor example only!");
 
   /* Allocate vectors / matrix */
   PetscCall(VecCreate(PETSC_COMM_WORLD,&x));
@@ -51,7 +51,7 @@ int main(int argc,char **argv)
   /* Set initial guess / solve */
   PetscCall(SNESSolve(snes,NULL,x));
   PetscCall(SNESGetIterationNumber(snes,&its));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Number of SNES iterations = %D\n",its));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"Number of SNES iterations = %" PetscInt_FMT "\n",its));
   PetscCall(VecView(x,PETSC_VIEWER_STDOUT_WORLD));
 
   /* Done */

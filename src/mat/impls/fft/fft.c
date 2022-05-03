@@ -37,11 +37,10 @@ PetscErrorCode MatDestroy_FFT(Mat A)
 
    Level: intermediate
 
-.seealso: MatCreateVecsFFTW()
+.seealso: `MatCreateVecsFFTW()`
 @*/
 PetscErrorCode MatCreateFFT(MPI_Comm comm,PetscInt ndim,const PetscInt dim[],MatType mattype,Mat *A)
 {
-  PetscErrorCode ierr;
   PetscMPIInt    size;
   Mat            FFT;
   PetscInt       N,i;
@@ -75,8 +74,8 @@ PetscErrorCode MatCreateFFT(MPI_Comm comm,PetscInt ndim,const PetscInt dim[],Mat
   FFT->ops->destroy = MatDestroy_FFT;
 
   /* get runtime options... what options? */
-  ierr = PetscObjectOptionsBegin((PetscObject)FFT);PetscCall(ierr);
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscObjectOptionsBegin((PetscObject)FFT);
+  PetscOptionsEnd();
 
   *A = FFT;
   PetscFunctionReturn(0);

@@ -259,7 +259,7 @@ static PetscErrorCode StackResize(Stack *stack,PetscInt newsize)
 static PetscErrorCode StackPush(Stack *stack,StackElement e)
 {
   PetscFunctionBegin;
-  PetscCheck(stack->top+1 < stack->stacksize,PETSC_COMM_SELF,PETSC_ERR_MEMC,"Maximum stack size (%D) exceeded",stack->stacksize);
+  PetscCheck(stack->top+1 < stack->stacksize,PETSC_COMM_SELF,PETSC_ERR_MEMC,"Maximum stack size (%" PetscInt_FMT ") exceeded",stack->stacksize);
   stack->container[++stack->top] = e;
   PetscFunctionReturn(0);
 }
@@ -298,7 +298,7 @@ static PetscErrorCode StackDestroy(Stack *stack)
 
   PetscFunctionBegin;
   if (!stack->container) PetscFunctionReturn(0);
-  PetscCheck(stack->top+1 <= n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Stack size does not match element counter %D",n);
+  PetscCheck(stack->top+1 <= n,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Stack size does not match element counter %" PetscInt_FMT,n);
   for (PetscInt i=0; i<n; i++) PetscCall(ElementDestroy(stack,stack->container[i]));
   PetscCall(PetscFree(stack->container));
   PetscFunctionReturn(0);
@@ -308,7 +308,7 @@ static PetscErrorCode StackFind(Stack *stack,StackElement *e,PetscInt index)
 {
   PetscFunctionBegin;
   *e = NULL;
-  PetscCheck(index >= 0 && index <= stack->top,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Invalid index %D",index);
+  PetscCheck(index >= 0 && index <= stack->top,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Invalid index %" PetscInt_FMT,index);
   *e = stack->container[index];
   PetscFunctionReturn(0);
 }
@@ -360,10 +360,10 @@ static PetscErrorCode StackDumpAll(TSTrajectory tj,TS ts,Stack *stack,PetscInt i
   PetscCall(PetscObjectGetComm((PetscObject)ts,&comm));
   if (tj->monitor) {
     PetscCall(PetscViewerASCIIPushTab(tj->monitor));
-    PetscCall(PetscViewerASCIIPrintf(tj->monitor,"Dump stack id %D to file\n",id));
+    PetscCall(PetscViewerASCIIPrintf(tj->monitor,"Dump stack id %" PetscInt_FMT " to file\n",id));
     PetscCall(PetscViewerASCIIPopTab(tj->monitor));
   }
-  PetscCall(PetscSNPrintf(filename,sizeof(filename),"%s/TS-STACK%06d.bin",tj->dirname,id));
+  PetscCall(PetscSNPrintf(filename,sizeof(filename),"%s/TS-STACK%06" PetscInt_FMT ".bin",tj->dirname,id));
   PetscCall(PetscViewerFileSetName(tjsch->viewer,filename));
   PetscCall(PetscViewerSetUp(tjsch->viewer));
   ndumped = stack->top+1;
@@ -401,7 +401,7 @@ static PetscErrorCode StackLoadAll(TSTrajectory tj,TS ts,Stack *stack,PetscInt i
     PetscCall(PetscViewerASCIIPrintf(tj->monitor,"Load stack from file\n"));
     PetscCall(PetscViewerASCIISubtractTab(tj->monitor,((PetscObject)tj)->tablevel));
   }
-  PetscCall(PetscSNPrintf(filename,sizeof filename,"%s/TS-STACK%06d.bin",tj->dirname,id));
+  PetscCall(PetscSNPrintf(filename,sizeof filename,"%s/TS-STACK%06" PetscInt_FMT ".bin",tj->dirname,id));
   PetscCall(PetscViewerBinaryOpen(PetscObjectComm((PetscObject)tj),filename,FILE_MODE_READ,&viewer));
   PetscCall(PetscViewerBinarySetSkipInfo(viewer,PETSC_TRUE));
   PetscCall(PetscViewerPushFormat(viewer,PETSC_VIEWER_NATIVE));
@@ -450,7 +450,7 @@ static PetscErrorCode StackLoadLast(TSTrajectory tj,TS ts,Stack *stack,PetscInt 
   /* VecView writes to file two extra int's for class id and number of rows */
   off  = -((stack->solution_only?0:stack->numY)+1)*(size*PETSC_BINARY_SCALAR_SIZE+2*PETSC_BINARY_INT_SIZE)-PETSC_BINARY_INT_SIZE-2*PETSC_BINARY_SCALAR_SIZE;
 
-  PetscCall(PetscSNPrintf(filename,sizeof filename,"%s/TS-STACK%06d.bin",tj->dirname,id));
+  PetscCall(PetscSNPrintf(filename,sizeof filename,"%s/TS-STACK%06" PetscInt_FMT ".bin",tj->dirname,id));
   PetscCall(PetscViewerBinaryOpen(PetscObjectComm((PetscObject)tj),filename,FILE_MODE_READ,&viewer));
   PetscCall(PetscViewerBinarySetSkipInfo(viewer,PETSC_TRUE));
   PetscCall(PetscViewerPushFormat(viewer,PETSC_VIEWER_NATIVE));
@@ -493,7 +493,7 @@ static PetscErrorCode DumpSingle(TSTrajectory tj,TS ts,Stack *stack,PetscInt id)
     PetscCall(PetscViewerASCIISubtractTab(tj->monitor,((PetscObject)tj)->tablevel));
   }
   PetscCall(TSGetStepNumber(ts,&stepnum));
-  PetscCall(PetscSNPrintf(filename,sizeof(filename),"%s/TS-CPS%06d.bin",tj->dirname,id));
+  PetscCall(PetscSNPrintf(filename,sizeof(filename),"%s/TS-CPS%06" PetscInt_FMT ".bin",tj->dirname,id));
   PetscCall(PetscViewerFileSetName(tjsch->viewer,filename));
   PetscCall(PetscViewerSetUp(tjsch->viewer));
 
@@ -517,7 +517,7 @@ static PetscErrorCode LoadSingle(TSTrajectory tj,TS ts,Stack *stack,PetscInt id)
     PetscCall(PetscViewerASCIIPrintf(tj->monitor,"Load a single point from file\n"));
     PetscCall(PetscViewerASCIISubtractTab(tj->monitor,((PetscObject)tj)->tablevel));
   }
-  PetscCall(PetscSNPrintf(filename,sizeof filename,"%s/TS-CPS%06d.bin",tj->dirname,id));
+  PetscCall(PetscSNPrintf(filename,sizeof filename,"%s/TS-CPS%06" PetscInt_FMT ".bin",tj->dirname,id));
   PetscCall(PetscViewerBinaryOpen(PetscObjectComm((PetscObject)tj),filename,FILE_MODE_READ,&viewer));
   PetscCall(PetscViewerBinarySetSkipInfo(viewer,PETSC_TRUE));
   PetscCall(PetscViewerPushFormat(viewer,PETSC_VIEWER_NATIVE));
@@ -731,7 +731,7 @@ static PetscErrorCode TSTrajectoryMemoryGet_N_2(TS ts,TJScheduler *tjsch,PetscIn
 
   PetscFunctionBegin;
   PetscCall(StackFind(stack,&e,stepnum));
-  PetscCheck(stepnum == e->stepnum,PetscObjectComm((PetscObject)ts),PETSC_ERR_PLIB,"Inconsistent steps! %D != %D",stepnum,e->stepnum);
+  PetscCheck(stepnum == e->stepnum,PetscObjectComm((PetscObject)ts),PETSC_ERR_PLIB,"Inconsistent steps! %" PetscInt_FMT " != %" PetscInt_FMT,stepnum,e->stepnum);
   PetscCall(UpdateTS(ts,stack,e,stepnum,PETSC_FALSE));
   PetscFunctionReturn(0);
 }
@@ -839,10 +839,10 @@ static PetscErrorCode printwhattodo(PetscViewer viewer,PetscRevolveInt whattodo,
 
   switch(whattodo) {
     case 1:
-      PetscCall(PetscViewerASCIIPrintf(viewer,"Advance from %D to %D\n",rctx->oldcapo+shift,rctx->capo+shift));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"Advance from %d to %d\n",rctx->oldcapo+shift,rctx->capo+shift));
       break;
     case 2:
-      PetscCall(PetscViewerASCIIPrintf(viewer,"Store in checkpoint number %D (located in RAM)\n",rctx->check));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"Store in checkpoint number %d (located in RAM)\n",rctx->check));
       break;
     case 3:
       PetscCall(PetscViewerASCIIPrintf(viewer,"First turn: Initialize adjoints and reverse first step\n"));
@@ -851,13 +851,13 @@ static PetscErrorCode printwhattodo(PetscViewer viewer,PetscRevolveInt whattodo,
       PetscCall(PetscViewerASCIIPrintf(viewer,"Forward and reverse one step\n"));
       break;
     case 5:
-      PetscCall(PetscViewerASCIIPrintf(viewer,"Restore in checkpoint number %D (located in RAM)\n",rctx->check));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"Restore in checkpoint number %d (located in RAM)\n",rctx->check));
       break;
     case 7:
-      PetscCall(PetscViewerASCIIPrintf(viewer,"Store in checkpoint number %D (located on disk)\n",rctx->check));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"Store in checkpoint number %d (located on disk)\n",rctx->check));
       break;
     case 8:
-      PetscCall(PetscViewerASCIIPrintf(viewer,"Restore in checkpoint number %D (located on disk)\n",rctx->check));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"Restore in checkpoint number %d (located on disk)\n",rctx->check));
       break;
     case -1:
       PetscCall(PetscViewerASCIIPrintf(viewer,"Error!"));
@@ -873,10 +873,10 @@ static PetscErrorCode printwhattodo2(PetscViewer viewer,PetscRevolveInt whattodo
 
   switch(whattodo) {
     case 1:
-      PetscCall(PetscViewerASCIIPrintf(viewer,"[Top Level] Advance from stride %D to stride %D\n",rctx->oldcapo+shift,rctx->capo+shift));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"[Top Level] Advance from stride %d to stride %d\n",rctx->oldcapo+shift,rctx->capo+shift));
       break;
     case 2:
-      PetscCall(PetscViewerASCIIPrintf(viewer,"[Top Level] Store in checkpoint number %D\n",rctx->check));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"[Top Level] Store in checkpoint number %d\n",rctx->check));
       break;
     case 3:
       PetscCall(PetscViewerASCIIPrintf(viewer,"[Top Level] First turn: Initialize adjoints and reverse first stride\n"));
@@ -885,13 +885,13 @@ static PetscErrorCode printwhattodo2(PetscViewer viewer,PetscRevolveInt whattodo
       PetscCall(PetscViewerASCIIPrintf(viewer,"[Top Level] Forward and reverse one stride\n"));
       break;
     case 5:
-      PetscCall(PetscViewerASCIIPrintf(viewer,"[Top Level] Restore in checkpoint number %D\n",rctx->check));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"[Top Level] Restore in checkpoint number %d\n",rctx->check));
       break;
     case 7:
-      PetscCall(PetscViewerASCIIPrintf(viewer,"[Top Level] Store in top-level checkpoint number %D\n",rctx->check));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"[Top Level] Store in top-level checkpoint number %d\n",rctx->check));
       break;
     case 8:
-      PetscCall(PetscViewerASCIIPrintf(viewer,"[Top Level] Restore in top-level checkpoint number %D\n",rctx->check));
+      PetscCall(PetscViewerASCIIPrintf(viewer,"[Top Level] Restore in top-level checkpoint number %d\n",rctx->check));
       break;
     case -1:
       PetscCall(PetscViewerASCIIPrintf(viewer,"[Top Level] Error!"));
@@ -1047,7 +1047,7 @@ static PetscErrorCode TSTrajectoryMemoryGet_ROF(TSTrajectory tj,TS ts,TJSchedule
     PetscCall(ApplyRevolve(tj->monitor,tjsch->stype,tjsch->rctx,rtotal_steps,rstepnum,rstepnum,PETSC_FALSE,&store));
     if (tj->monitor) {
       PetscCall(PetscViewerASCIIAddTab(tj->monitor,((PetscObject)tj)->tablevel));
-      PetscCall(PetscViewerASCIIPrintf(tj->monitor,"Skip the step from %D to %D (stage values already checkpointed)\n",tjsch->rctx->oldcapo,tjsch->rctx->oldcapo+1));
+      PetscCall(PetscViewerASCIIPrintf(tj->monitor,"Skip the step from %d to %d (stage values already checkpointed)\n",tjsch->rctx->oldcapo,tjsch->rctx->oldcapo+1));
       PetscCall(PetscViewerASCIISubtractTab(tj->monitor,((PetscObject)tj)->tablevel));
     }
     if (!tjsch->rctx->reverseonestep && tjsch->rctx->stepsleft > 0) tjsch->rctx->stepsleft--;
@@ -1138,7 +1138,7 @@ static PetscErrorCode TSTrajectoryMemoryGet_RON(TSTrajectory tj,TS ts,TJSchedule
     if (whattodo == 1) tjsch->rctx->stepsleft = tjsch->rctx->capo-tjsch->rctx->oldcapo;
     if (tj->monitor) {
       PetscCall(PetscViewerASCIIAddTab(tj->monitor,((PetscObject)tj)->tablevel));
-      PetscCall(PetscViewerASCIIPrintf(tj->monitor,"Skip the step from %D to %D (stage values already checkpointed)\n",tjsch->rctx->oldcapo,tjsch->rctx->oldcapo+1));
+      PetscCall(PetscViewerASCIIPrintf(tj->monitor,"Skip the step from %d to %d (stage values already checkpointed)\n",tjsch->rctx->oldcapo,tjsch->rctx->oldcapo+1));
       PetscCall(PetscViewerASCIISubtractTab(tj->monitor,((PetscObject)tj)->tablevel));
     }
     if (!tjsch->rctx->reverseonestep && tjsch->rctx->stepsleft > 0) tjsch->rctx->stepsleft--;
@@ -1269,7 +1269,7 @@ static PetscErrorCode TSTrajectoryMemoryGet_TLR(TSTrajectory tj,TS ts,TJSchedule
         PetscCall(ApplyRevolve(tj->monitor,tjsch->stype,tjsch->rctx,rtotal_steps,rnum,1,PETSC_FALSE,&store));
         if (tj->monitor) {
           PetscCall(PetscViewerASCIIAddTab(tj->monitor,((PetscObject)tj)->tablevel));
-          PetscCall(PetscViewerASCIIPrintf(tj->monitor,"Skip the step from %D to %D (stage values already checkpointed)\n",(stridenum-1)*tjsch->stride+tjsch->rctx->oldcapo,(stridenum-1)*tjsch->stride+tjsch->rctx->oldcapo+1));
+          PetscCall(PetscViewerASCIIPrintf(tj->monitor,"Skip the step from %" PetscInt_FMT " to %" PetscInt_FMT " (stage values already checkpointed)\n",(stridenum-1)*tjsch->stride+tjsch->rctx->oldcapo,(stridenum-1)*tjsch->stride+tjsch->rctx->oldcapo+1));
           PetscCall(PetscViewerASCIISubtractTab(tj->monitor,((PetscObject)tj)->tablevel));
         }
         cptype = SOLUTION_STAGES;
@@ -1288,7 +1288,7 @@ static PetscErrorCode TSTrajectoryMemoryGet_TLR(TSTrajectory tj,TS ts,TJSchedule
     PetscCall(ApplyRevolve(tj->monitor,tjsch->stype,tjsch->rctx,rtotal_steps,rstepnum,rlocalstepnum,PETSC_FALSE,&store));
     if (tj->monitor) {
       PetscCall(PetscViewerASCIIAddTab(tj->monitor,((PetscObject)tj)->tablevel));
-      PetscCall(PetscViewerASCIIPrintf(tj->monitor,"Skip the step from %D to %D (stage values already checkpointed)\n",stepnum-localstepnum+tjsch->rctx->oldcapo,stepnum-localstepnum+tjsch->rctx->oldcapo+1));
+      PetscCall(PetscViewerASCIIPrintf(tj->monitor,"Skip the step from %" PetscInt_FMT " to %" PetscInt_FMT " (stage values already checkpointed)\n",stepnum-localstepnum+tjsch->rctx->oldcapo,stepnum-localstepnum+tjsch->rctx->oldcapo+1));
       PetscCall(PetscViewerASCIISubtractTab(tj->monitor,((PetscObject)tj)->tablevel));
     }
     if (!tjsch->rctx->reverseonestep && tjsch->rctx->stepsleft > 0) tjsch->rctx->stepsleft--;
@@ -1408,7 +1408,7 @@ static PetscErrorCode TSTrajectoryMemoryGet_TLTR(TSTrajectory tj,TS ts,TJSchedul
       PetscCall(ApplyRevolve(tj->monitor,tjsch->stype,tjsch->rctx2,rtotal_steps,rstepnum,rstepnum,PETSC_TRUE,&tjsch->store_stride));
       if (tj->monitor) {
         PetscCall(PetscViewerASCIIAddTab(tj->monitor,((PetscObject)tj)->tablevel));
-        PetscCall(PetscViewerASCIIPrintf(tj->monitor,"[Top Level] Skip the stride from %D to %D (stage values already checkpointed)\n",tjsch->rctx2->oldcapo,tjsch->rctx2->oldcapo+1));
+        PetscCall(PetscViewerASCIIPrintf(tj->monitor,"[Top Level] Skip the stride from %d to %d (stage values already checkpointed)\n",tjsch->rctx2->oldcapo,tjsch->rctx2->oldcapo+1));
         PetscCall(PetscViewerASCIISubtractTab(tj->monitor,((PetscObject)tj)->tablevel));
       }
       if (!tjsch->rctx2->reverseonestep && tjsch->rctx2->stepsleft > 0) tjsch->rctx2->stepsleft--;
@@ -1465,7 +1465,7 @@ static PetscErrorCode TSTrajectoryMemoryGet_TLTR(TSTrajectory tj,TS ts,TJSchedul
           PetscCall(ApplyRevolve(tj->monitor,tjsch->stype,tjsch->rctx,rtotal_steps,rstepnum,1,PETSC_FALSE,&store));
           if (tj->monitor) {
             PetscCall(PetscViewerASCIIAddTab(tj->monitor,((PetscObject)tj)->tablevel));
-            PetscCall(PetscViewerASCIIPrintf(tj->monitor,"Skip the step from %D to %D (stage values already checkpointed)\n",(restoredstridenum-1)*tjsch->stride,(restoredstridenum-1)*tjsch->stride+1));
+            PetscCall(PetscViewerASCIIPrintf(tj->monitor,"Skip the step from %" PetscInt_FMT " to %" PetscInt_FMT " (stage values already checkpointed)\n",(restoredstridenum-1)*tjsch->stride,(restoredstridenum-1)*tjsch->stride+1));
             PetscCall(PetscViewerASCIISubtractTab(tj->monitor,((PetscObject)tj)->tablevel));
           }
           PetscCall(ElementCreate(ts,cptype,stack,&e));
@@ -1510,7 +1510,7 @@ static PetscErrorCode TSTrajectoryMemoryGet_TLTR(TSTrajectory tj,TS ts,TJSchedul
     PetscCall(ApplyRevolve(tj->monitor,tjsch->stype,tjsch->rctx,rtotal_steps,rstepnum,rlocalstepnum,PETSC_FALSE,&store));
     if (tj->monitor) {
       PetscCall(PetscViewerASCIIAddTab(tj->monitor,((PetscObject)tj)->tablevel));
-      PetscCall(PetscViewerASCIIPrintf(tj->monitor,"Skip the step from %D to %D (stage values already checkpointed)\n",stepnum-localstepnum+tjsch->rctx->oldcapo,stepnum-localstepnum+tjsch->rctx->oldcapo+1));
+      PetscCall(PetscViewerASCIIPrintf(tj->monitor,"Skip the step from %" PetscInt_FMT " to %" PetscInt_FMT " (stage values already checkpointed)\n",stepnum-localstepnum+tjsch->rctx->oldcapo,stepnum-localstepnum+tjsch->rctx->oldcapo+1));
       PetscCall(PetscViewerASCIISubtractTab(tj->monitor,((PetscObject)tj)->tablevel));
     }
     if (!tjsch->rctx->reverseonestep && tjsch->rctx->stepsleft > 0) tjsch->rctx->stepsleft--;
@@ -1592,7 +1592,7 @@ static PetscErrorCode TSTrajectoryMemoryGet_RMS(TSTrajectory tj,TS ts,TJSchedule
     if (whattodo == 1) tjsch->rctx->stepsleft = tjsch->rctx->capo-tjsch->rctx->oldcapo;
     if (tj->monitor) {
       PetscCall(PetscViewerASCIIAddTab(tj->monitor,((PetscObject)tj)->tablevel));
-      PetscCall(PetscViewerASCIIPrintf(tj->monitor,"Skip the step from %D to %D (stage values already checkpointed)\n",tjsch->rctx->oldcapo,tjsch->rctx->oldcapo+1));
+      PetscCall(PetscViewerASCIIPrintf(tj->monitor,"Skip the step from %d to %d (stage values already checkpointed)\n",tjsch->rctx->oldcapo,tjsch->rctx->oldcapo+1));
       PetscCall(PetscViewerASCIISubtractTab(tj->monitor,((PetscObject)tj)->tablevel));
     }
     if (!tjsch->rctx->reverseonestep && tjsch->rctx->stepsleft > 0) tjsch->rctx->stepsleft--;
@@ -1636,21 +1636,21 @@ static PetscErrorCode TSTrajectoryMemorySet_AOF(TSTrajectory tj,TS ts,TJSchedule
 
     if (tjsch->actx->nextcheckpointtype == 2) { /* solution + stage values */
       if (tj->monitor) {
-        PetscCall(PetscViewerASCIIPrintf(tj->monitor,"Store in checkpoint number %D with stage values and solution (located in RAM)\n",stepnum));
+        PetscCall(PetscViewerASCIIPrintf(tj->monitor,"Store in checkpoint number %" PetscInt_FMT " with stage values and solution (located in RAM)\n",stepnum));
       }
       PetscCall(ElementCreate(ts,SOLUTION_STAGES,stack,&e));
       PetscCall(ElementSet(ts,stack,&e,stepnum,time,X));
     }
     if (tjsch->actx->nextcheckpointtype == 1) {
       if (tj->monitor) {
-        PetscCall(PetscViewerASCIIPrintf(tj->monitor,"Store in checkpoint number %D with stage values (located in RAM)\n",stepnum));
+        PetscCall(PetscViewerASCIIPrintf(tj->monitor,"Store in checkpoint number %" PetscInt_FMT " with stage values (located in RAM)\n",stepnum));
       }
       PetscCall(ElementCreate(ts,STAGESONLY,stack,&e));
       PetscCall(ElementSet(ts,stack,&e,stepnum,time,X));
     }
     if (tjsch->actx->nextcheckpointtype == 0) { /* solution only */
       if (tj->monitor) {
-        PetscCall(PetscViewerASCIIPrintf(tj->monitor,"Store in checkpoint number %D (located in RAM)\n",stepnum));
+        PetscCall(PetscViewerASCIIPrintf(tj->monitor,"Store in checkpoint number %" PetscInt_FMT " (located in RAM)\n",stepnum));
       }
       PetscCall(ElementCreate(ts,SOLUTIONONLY,stack,&e));
       PetscCall(ElementSet(ts,stack,&e,stepnum,time,X));
@@ -1695,13 +1695,13 @@ static PetscErrorCode TSTrajectoryMemoryGet_AOF(TSTrajectory tj,TS ts,TJSchedule
   /* Update TS with stage values if an adjoint step can be taken immediately */
   if (HaveStages(e->cptype)) {
     if (tj->monitor) {
-      PetscCall(PetscViewerASCIIPrintf(tj->monitor,"Restore in checkpoint number %D with stage values (located in RAM)\n",e->stepnum));
+      PetscCall(PetscViewerASCIIPrintf(tj->monitor,"Restore in checkpoint number %" PetscInt_FMT " with stage values (located in RAM)\n",e->stepnum));
     }
     if (e->cptype == STAGESONLY) tjsch->actx->num_units_avail += tjsch->actx->num_stages;
     if (e->cptype == SOLUTION_STAGES) tjsch->actx->num_units_avail += tjsch->actx->num_stages+1;
   } else {
     if (tj->monitor) {
-      PetscCall(PetscViewerASCIIPrintf(tj->monitor,"Restore in checkpoint number %D (located in RAM)\n",e->stepnum));
+      PetscCall(PetscViewerASCIIPrintf(tj->monitor,"Restore in checkpoint number %" PetscInt_FMT " (located in RAM)\n",e->stepnum));
     }
     tjsch->actx->num_units_avail++;
   }
@@ -1973,7 +1973,7 @@ PetscErrorCode TSTrajectoryMemorySetType(TSTrajectory tj,TSTrajectoryMemoryType 
 
   Level: intermediate
 
-.seealso: TSTrajectorySetMaxUnitsRAM()
+.seealso: `TSTrajectorySetMaxUnitsRAM()`
 @*/
 PetscErrorCode TSTrajectorySetMaxCpsRAM(TSTrajectory tj,PetscInt max_cps_ram)
 {
@@ -1995,7 +1995,7 @@ PetscErrorCode TSTrajectorySetMaxCpsRAM(TSTrajectory tj,PetscInt max_cps_ram)
 
   Level: intermediate
 
-.seealso: TSTrajectorySetMaxUnitsDisk(), TSTrajectorySetMaxUnitsRAM()
+.seealso: `TSTrajectorySetMaxUnitsDisk()`, `TSTrajectorySetMaxUnitsRAM()`
 @*/
 PetscErrorCode TSTrajectorySetMaxCpsDisk(TSTrajectory tj,PetscInt max_cps_disk)
 {
@@ -2017,7 +2017,7 @@ PetscErrorCode TSTrajectorySetMaxCpsDisk(TSTrajectory tj,PetscInt max_cps_disk)
 
   Level: intermediate
 
-.seealso: TSTrajectorySetMaxCpsRAM()
+.seealso: `TSTrajectorySetMaxCpsRAM()`
 @*/
 PetscErrorCode TSTrajectorySetMaxUnitsRAM(TSTrajectory tj,PetscInt max_units_ram)
 {
@@ -2039,7 +2039,7 @@ PetscErrorCode TSTrajectorySetMaxUnitsRAM(TSTrajectory tj,PetscInt max_units_ram
 
   Level: intermediate
 
-.seealso: TSTrajectorySetMaxCpsDisk()
+.seealso: `TSTrajectorySetMaxCpsDisk()`
 @*/
 PetscErrorCode TSTrajectorySetMaxUnitsDisk(TSTrajectory tj,PetscInt max_units_disk)
 {
@@ -2056,7 +2056,7 @@ static PetscErrorCode TSTrajectorySetFromOptions_Memory(PetscOptionItems *PetscO
   PetscBool      flg;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Memory based TS trajectory options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Memory based TS trajectory options");
   {
     PetscCall(PetscOptionsInt("-ts_trajectory_max_cps_ram","Maximum number of checkpoints in RAM","TSTrajectorySetMaxCpsRAM",tjsch->max_cps_ram,&max_cps_ram,&flg));
     if (flg) {
@@ -2085,7 +2085,7 @@ static PetscErrorCode TSTrajectorySetFromOptions_Memory(PetscOptionItems *PetscO
       PetscCall(TSTrajectoryMemorySetType(tj,(TSTrajectoryMemoryType)etmp));
     }
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -2127,7 +2127,7 @@ static PetscErrorCode TSTrajectorySetUp_Memory(TSTrajectory tj,TS ts)
 
   /* Determine the scheduler type */
   if (tjsch->stride > 1) { /* two level mode */
-    PetscCheckFalse(tjsch->save_stack && tjsch->max_cps_disk > 1 && tjsch->max_cps_disk <= tjsch->max_cps_ram,PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_INCOMP,"The specified disk capacity is not enough to store a full stack of RAM checkpoints. You might want to change the disk capacity or use single level checkpointing instead.");
+    PetscCheck(!tjsch->save_stack || tjsch->max_cps_disk <= 1 || tjsch->max_cps_disk > tjsch->max_cps_ram,PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_INCOMP,"The specified disk capacity is not enough to store a full stack of RAM checkpoints. You might want to change the disk capacity or use single level checkpointing instead.");
     if (tjsch->max_cps_disk <= 1 && tjsch->max_cps_ram > 1 && tjsch->max_cps_ram <= tjsch->stride-1) tjsch->stype = TWO_LEVEL_REVOLVE; /* use revolve_offline for each stride */
     if (tjsch->max_cps_disk > 1 && tjsch->max_cps_ram > 1 && tjsch->max_cps_ram <= tjsch->stride-1) tjsch->stype = TWO_LEVEL_TWO_REVOLVE;  /* use revolve_offline for each stride */
     if (tjsch->max_cps_disk <= 1 && (tjsch->max_cps_ram >= tjsch->stride || tjsch->max_cps_ram == -1)) tjsch->stype = TWO_LEVEL_NOREVOLVE; /* can also be handled by TWO_LEVEL_REVOLVE */
@@ -2154,7 +2154,7 @@ static PetscErrorCode TSTrajectorySetUp_Memory(TSTrajectory tj,TS ts)
 #if defined(PETSC_HAVE_REVOLVE)
     if (tjsch->use_online) tjsch->stype = REVOLVE_ONLINE; /* trick into online (for testing purpose only) */
 #endif
-    PetscCheckFalse(tjsch->stype != NONE && tjsch->max_cps_ram < 1 && tjsch->max_cps_disk < 1,PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_INCOMP,"The specified storage capacity is insufficient for one checkpoint, which is the minimum");
+    PetscCheck(tjsch->stype == NONE || tjsch->max_cps_ram >= 1 || tjsch->max_cps_disk >= 1,PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_INCOMP,"The specified storage capacity is insufficient for one checkpoint, which is the minimum");
   }
   if (tjsch->stype >= CAMS_OFFLINE) {
 #ifndef PETSC_HAVE_CAMS
@@ -2318,7 +2318,7 @@ static PetscErrorCode TSTrajectoryDestroy_Memory(TSTrajectory tj)
 
   Level: intermediate
 
-.seealso:  TSTrajectoryCreate(), TS, TSTrajectorySetType()
+.seealso: `TSTrajectoryCreate()`, `TS`, `TSTrajectorySetType()`
 
 M*/
 PETSC_EXTERN PetscErrorCode TSTrajectoryCreate_Memory(TSTrajectory tj,TS ts)

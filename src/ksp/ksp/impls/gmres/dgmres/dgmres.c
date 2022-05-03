@@ -244,7 +244,7 @@ PetscErrorCode KSPSolve_DGMRES(KSP ksp)
   PetscBool      guess_zero = ksp->guess_zero;
 
   PetscFunctionBegin;
-  PetscCheckFalse(ksp->calc_sings && !dgmres->Rsvd,PetscObjectComm((PetscObject)ksp), PETSC_ERR_ORDER,"Must call KSPSetComputeSingularValues() before KSPSetUp() is called");
+  PetscCheck(!ksp->calc_sings || dgmres->Rsvd,PetscObjectComm((PetscObject)ksp), PETSC_ERR_ORDER,"Must call KSPSetComputeSingularValues() before KSPSetUp() is called");
 
   PetscCall(PetscObjectSAWsTakeAccess((PetscObject)ksp));
   ksp->its        = 0;
@@ -342,7 +342,7 @@ static PetscErrorCode KSPDGMRESBuildSoln(PetscScalar *nrs,Vec vs,Vec vdest,KSP k
     PetscCall(VecCopy(vs,vdest));     /* VecCopy() is smart, exists immediately if vguess == vdest */
     PetscFunctionReturn(0);
   }
-  PetscCheckFalse(*HH(it,it) == 0.0,PetscObjectComm((PetscObject)ksp), PETSC_ERR_CONV_FAILED,"Likely your matrix is the zero operator. HH(it,it) is identically zero; it = %D GRS(it) = %g",it,(double)PetscAbsScalar(*GRS(it)));
+  PetscCheck(*HH(it,it) != 0.0,PetscObjectComm((PetscObject)ksp), PETSC_ERR_CONV_FAILED,"Likely your matrix is the zero operator. HH(it,it) is identically zero; it = %" PetscInt_FMT " GRS(it) = %g",it,(double)PetscAbsScalar(*GRS(it)));
   if (*HH(it,it) != 0.0) nrs[it] = *GRS(it) / *HH(it,it);
   else nrs[it] = 0.0;
 
@@ -350,7 +350,7 @@ static PetscErrorCode KSPDGMRESBuildSoln(PetscScalar *nrs,Vec vs,Vec vdest,KSP k
     k  = it - ii;
     tt = *GRS(k);
     for (j=k+1; j<=it; j++) tt = tt - *HH(k,j) * nrs[j];
-    PetscCheckFalse(*HH(k,k) == 0.0,PetscObjectComm((PetscObject)ksp), PETSC_ERR_CONV_FAILED,"Likely your matrix is singular. HH(k,k) is identically zero; it = %D k = %D",it,k);
+    PetscCheck(*HH(k,k) != 0.0,PetscObjectComm((PetscObject)ksp), PETSC_ERR_CONV_FAILED,"Likely your matrix is singular. HH(k,k) is identically zero; it = %" PetscInt_FMT " k = %" PetscInt_FMT,it,k);
     nrs[k] = tt / *HH(k,k);
   }
 
@@ -488,18 +488,17 @@ PetscErrorCode KSPView_DGMRES(KSP ksp,PetscViewer viewer)
   PetscCall(KSPView_GMRES(ksp,viewer));
   PetscCall(PetscObjectTypeCompare((PetscObject) viewer,PETSCVIEWERASCII,&iascii));
   if (iascii) {
-    if (dgmres->force) PetscViewerASCIIPrintf(viewer, "    Adaptive strategy is used: FALSE\n");
-    else PetscViewerASCIIPrintf(viewer, "    Adaptive strategy is used: TRUE\n");
+    PetscViewerASCIIPrintf(viewer, "    Adaptive strategy is used: %s\n", PetscBools[dgmres->force]);
     PetscCall(PetscOptionsHasName(((PetscObject)ksp)->options,((PetscObject)ksp)->prefix, "-ksp_dgmres_harmonic_ritz", &isharmonic));
     if (isharmonic) {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "   Frequency of extracted eigenvalues = %D using Harmonic Ritz values \n", dgmres->neig));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "   Frequency of extracted eigenvalues = %" PetscInt_FMT " using Harmonic Ritz values \n", dgmres->neig));
     } else {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "   Frequency of extracted eigenvalues = %D using Ritz values \n", dgmres->neig));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "   Frequency of extracted eigenvalues = %" PetscInt_FMT " using Ritz values \n", dgmres->neig));
     }
-    PetscCall(PetscViewerASCIIPrintf(viewer, "   Total number of extracted eigenvalues = %D\n", dgmres->r));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "   Maximum number of eigenvalues set to be extracted = %D\n", dgmres->max_neig));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "   relaxation parameter for the adaptive strategy(smv)  = %g\n", dgmres->smv));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "   Number of matvecs : %D\n", dgmres->matvecs));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "   Total number of extracted eigenvalues = %" PetscInt_FMT "\n", dgmres->r));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "   Maximum number of eigenvalues set to be extracted = %" PetscInt_FMT "\n", dgmres->max_neig));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "   relaxation parameter for the adaptive strategy(smv)  = %g\n", (double)dgmres->smv));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "   Number of matvecs : %" PetscInt_FMT "\n", dgmres->matvecs));
   }
   PetscFunctionReturn(0);
 }
@@ -509,7 +508,7 @@ PetscErrorCode  KSPDGMRESSetEigen_DGMRES(KSP ksp,PetscInt neig)
   KSP_DGMRES *dgmres = (KSP_DGMRES*) ksp->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(neig< 0 && neig >dgmres->max_k,PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_OUTOFRANGE,"The value of neig must be positive and less than the restart value ");
+  PetscCheck(neig >= 0 && neig <= dgmres->max_k,PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_OUTOFRANGE,"The value of neig must be positive and less than the restart value ");
   dgmres->neig=neig;
   PetscFunctionReturn(0);
 }
@@ -519,7 +518,7 @@ static PetscErrorCode  KSPDGMRESSetMaxEigen_DGMRES(KSP ksp,PetscInt max_neig)
   KSP_DGMRES *dgmres = (KSP_DGMRES*) ksp->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(max_neig < 0 && max_neig >dgmres->max_k,PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_OUTOFRANGE,"The value of max_neig must be positive and less than the restart value ");
+  PetscCheck(max_neig >= 0 && max_neig <= dgmres->max_k,PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_OUTOFRANGE,"The value of max_neig must be positive and less than the restart value ");
   dgmres->max_neig=max_neig;
   PetscFunctionReturn(0);
 }
@@ -529,7 +528,7 @@ static PetscErrorCode  KSPDGMRESSetRatio_DGMRES(KSP ksp,PetscReal ratio)
   KSP_DGMRES *dgmres = (KSP_DGMRES*) ksp->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(ratio <= 0,PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_OUTOFRANGE,"The relaxation parameter value must be positive");
+  PetscCheck(ratio > 0,PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_OUTOFRANGE,"The relaxation parameter value must be positive");
   dgmres->smv=ratio;
   PetscFunctionReturn(0);
 }
@@ -552,7 +551,7 @@ PetscErrorCode KSPSetFromOptions_DGMRES(PetscOptionItems *PetscOptionsObject,KSP
 
   PetscFunctionBegin;
   PetscCall(KSPSetFromOptions_GMRES(PetscOptionsObject,ksp));
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"KSP DGMRES Options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"KSP DGMRES Options");
   PetscCall(PetscOptionsInt("-ksp_dgmres_eigen","Number of smallest eigenvalues to extract at each restart","KSPDGMRESSetEigen",dgmres->neig, &neig, &flg));
   if (flg) {
     PetscCall(KSPDGMRESSetEigen(ksp, neig));
@@ -564,7 +563,7 @@ PetscErrorCode KSPSetFromOptions_DGMRES(PetscOptionItems *PetscOptionsObject,KSP
   PetscCall(PetscOptionsReal("-ksp_dgmres_ratio","Relaxation parameter for the smaller number of matrix-vectors product allowed","KSPDGMRESSetRatio",dgmres->smv,&dgmres->smv,NULL));
   PetscCall(PetscOptionsBool("-ksp_dgmres_improve","Improve the computation of eigenvalues by solving a new generalized eigenvalue problem (experimental - not stable at this time)",NULL,dgmres->improve,&dgmres->improve,NULL));
   PetscCall(PetscOptionsBool("-ksp_dgmres_force","Sets DGMRES always at restart active, i.e do not use the adaptive strategy","KSPDGMRESForce",dgmres->force,&dgmres->force,NULL));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -821,7 +820,7 @@ PetscErrorCode  KSPDGMRESComputeSchurForm_DGMRES(KSP ksp, PetscInt *neig)
     PetscReal    CondEig;         /* lower bound on the reciprocal condition number for the selected cluster of eigenvalues */
     PetscReal    CondSub;         /* estimated reciprocal condition number of the specified invariant subspace. */
     PetscStackCallBLAS("LAPACKtrsen",LAPACKtrsen_("B", "V", select, &bn, A, &ldA, Q, &ldQ, wr, wi, &NbrEig, &CondEig, &CondSub, work, &lwork, iwork, &liwork, &info));
-    PetscCheckFalse(info == 1,PetscObjectComm((PetscObject)ksp), PETSC_ERR_LIB, "UNABLE TO REORDER THE EIGENVALUES WITH THE LAPACK ROUTINE : ILL-CONDITIONED PROBLEM");
+    PetscCheck(info != 1,PetscObjectComm((PetscObject)ksp), PETSC_ERR_LIB, "UNABLE TO REORDER THE EIGENVALUES WITH THE LAPACK ROUTINE : ILL-CONDITIONED PROBLEM");
   }
   PetscCall(PetscFree(select));
 
@@ -1021,7 +1020,7 @@ static PetscErrorCode  KSPDGMRESImproveEig_DGMRES(KSP ksp, PetscInt neig)
     PetscBLASInt ijob  = 2;
     PetscBLASInt wantQ = 1, wantZ = 1;
     PetscStackCallBLAS("LAPACKtgsen",LAPACKtgsen_(&ijob, &wantQ, &wantZ, select, &N, AUAU, &ldA, AUU, &ldA, wr, wi, beta, Q, &N, Z, &N, &NbrEig, NULL, NULL, &(Dif[0]), work, &lwork, iwork, &liwork, &info));
-    PetscCheckFalse(info == 1,PetscObjectComm((PetscObject)ksp),PETSC_ERR_LIB, "Unable to reorder the eigenvalues with the LAPACK routine: ill-conditioned problem.");
+    PetscCheck(info != 1,PetscObjectComm((PetscObject)ksp),PETSC_ERR_LIB, "Unable to reorder the eigenvalues with the LAPACK routine: ill-conditioned problem.");
   }
   PetscCall(PetscFree(select));
 
@@ -1111,10 +1110,10 @@ static PetscErrorCode  KSPDGMRESImproveEig_DGMRES(KSP ksp, PetscInt neig)
 
  Contributed by: Desire NUENTSA WAKAM,INRIA
 
- .seealso:  KSPCreate(), KSPSetType(), KSPType (for list of available types), KSP, KSPFGMRES, KSPLGMRES,
- KSPGMRESSetRestart(), KSPGMRESSetHapTol(), KSPGMRESSetPreAllocateVectors(), KSPGMRESSetOrthogonalization(), KSPGMRESGetOrthogonalization(),
- KSPGMRESClassicalGramSchmidtOrthogonalization(), KSPGMRESModifiedGramSchmidtOrthogonalization(),
- KSPGMRESCGSRefinementType, KSPGMRESSetCGSRefinementType(), KSPGMRESGetCGSRefinementType(), KSPGMRESMonitorKrylov(), KSPSetPCSide()
+ .seealso: `KSPCreate()`, `KSPSetType()`, `KSPType`, `KSP`, `KSPFGMRES`, `KSPLGMRES`,
+           `KSPGMRESSetRestart()`, `KSPGMRESSetHapTol()`, `KSPGMRESSetPreAllocateVectors()`, `KSPGMRESSetOrthogonalization()`, `KSPGMRESGetOrthogonalization()`,
+           `KSPGMRESClassicalGramSchmidtOrthogonalization()`, `KSPGMRESModifiedGramSchmidtOrthogonalization()`,
+           `KSPGMRESCGSRefinementType`, `KSPGMRESSetCGSRefinementType()`, `KSPGMRESGetCGSRefinementType()`, `KSPGMRESMonitorKrylov()`, `KSPSetPCSide()`
 
  M*/
 

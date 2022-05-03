@@ -148,7 +148,7 @@ static PetscErrorCode KSPSolve_TCQMR(KSP ksp)
 static PetscErrorCode KSPSetUp_TCQMR(KSP ksp)
 {
   PetscFunctionBegin;
-  PetscCheckFalse(ksp->pc_side == PC_SYMMETRIC,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"no symmetric preconditioning for KSPTCQMR");
+  PetscCheck(ksp->pc_side != PC_SYMMETRIC,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP,"no symmetric preconditioning for KSPTCQMR");
   PetscCall(KSPSetWorkVecs(ksp,TCQMR_VECS));
   PetscFunctionReturn(0);
 }
@@ -172,7 +172,7 @@ static PetscErrorCode KSPSetUp_TCQMR(KSP ksp)
 . * - Tony F. Chan, Lisette de Pillis, and Henk van der Vorst, Transpose free formulations of Lanczos type methods for nonsymmetric linear systems,
   Numerical Algorithms, Volume 17, 1998.
 
-.seealso:  KSPCreate(), KSPSetType(), KSPType (for list of available types), KSP, KSPTFQMR
+.seealso: `KSPCreate()`, `KSPSetType()`, `KSPType`, `KSP`, `KSPTFQMR`
 
 M*/
 

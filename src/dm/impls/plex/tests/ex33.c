@@ -18,7 +18,6 @@ typedef struct {
 PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
   PetscInt       n = 0, i;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   options->coordSpace        = PETSC_TRUE;
@@ -28,7 +27,7 @@ PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->volume            = -1.0;
   options->tol               = PETSC_SMALL;
 
-  ierr = PetscOptionsBegin(comm, "", "Meshing Interpolation Test Options", "DMPLEX");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "Meshing Interpolation Test Options", "DMPLEX");
   PetscCall(PetscOptionsBool("-coord_space", "Flag to create a coordinate space", "ex33.c", options->coordSpace, &options->coordSpace, NULL));
   PetscCall(PetscOptionsEnum("-mesh_transform", "Method to transform initial box mesh <none, shear, annulus, shell>", "ex33.c", TransformTypes, (PetscEnum) options->meshTransform, (PetscEnum *) &options->meshTransform, NULL));
   switch (options->meshTransform) {
@@ -60,11 +59,11 @@ PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
       options->transformData[1] = 2.0;
       PetscCall(PetscOptionsScalarArray("-transform_data", "Parameters for mesh transforms", "ex33.c", options->transformData, &n, NULL));
       break;
-    default: SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "Unknown mesh transform %D", options->meshTransform);
+    default: SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "Unknown mesh transform %d", options->meshTransform);
   }
   PetscCall(PetscOptionsReal("-volume", "The analytical volume of the mesh", "ex33.c", options->volume, &options->volume, NULL));
   PetscCall(PetscOptionsReal("-tol", "The tolerance for the volume check", "ex33.c", options->tol, &options->tol, NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -202,7 +201,7 @@ PetscErrorCode CreateMesh(MPI_Comm comm, AppCtx *ctx, DM *dm)
       PetscCall(PetscDSSetConstants(cds, 2, ctx->transformData));
       PetscCall(DMPlexRemapGeometry(*dm, 0.0, f0_shell));
       break;
-    default: SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "Unknown mesh transform %D", ctx->meshTransform);
+    default: SETERRQ(comm, PETSC_ERR_ARG_OUTOFRANGE, "Unknown mesh transform %d", ctx->meshTransform);
   }
   PetscCall(DMViewFromOptions(*dm, NULL, "-dm_view"));
   PetscFunctionReturn(0);

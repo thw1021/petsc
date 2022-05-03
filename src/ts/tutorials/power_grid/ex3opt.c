@@ -33,7 +33,7 @@ PetscErrorCode monitor(Tao tao,AppCtx *ctx)
   PetscCall(TaoGetSolutionStatus(tao,&iterate,&f,&gnorm,&cnorm,&xdiff,&reason));
 
   fp = fopen("ex3opt_conv.out","a");
-  PetscCall(PetscFPrintf(PETSC_COMM_WORLD,fp,"%D %g\n",iterate,(double)gnorm));
+  PetscCall(PetscFPrintf(PETSC_COMM_WORLD,fp,"%" PetscInt_FMT " %g\n",iterate,(double)gnorm));
   fclose(fp);
   PetscFunctionReturn(0);
 }
@@ -42,7 +42,6 @@ int main(int argc,char **argv)
 {
   Vec                p;
   PetscScalar        *x_ptr;
-  PetscErrorCode     ierr;
   PetscMPIInt        size;
   AppCtx             ctx;
   Tao                tao;
@@ -66,7 +65,7 @@ int main(int argc,char **argv)
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     Set runtime options
     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Swing equation options","");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"Swing equation options","");
   {
     ctx.beta    = 2;
     ctx.c       = 10000.0;
@@ -94,7 +93,7 @@ int main(int argc,char **argv)
     ctx.sa      = SA_ADJ;
     PetscCall(PetscOptionsEnum("-sa_method","Sensitivity analysis method (adj or tlm)","",SAMethods,(PetscEnum)ctx.sa,(PetscEnum*)&ctx.sa,NULL));
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     Create necessary matrix and vectors

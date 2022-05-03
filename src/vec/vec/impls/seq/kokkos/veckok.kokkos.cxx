@@ -1081,7 +1081,7 @@ static PetscErrorCode VecSetOps_SeqKokkos(Vec v)
 
   Level: beginner
 
-.seealso: VecCreate(), VecSetType(), VecSetFromOptions(), VecCreateMPIWithArray(), VECMPI, VecType, VecCreateMPI()
+.seealso: `VecCreate()`, `VecSetType()`, `VecSetFromOptions()`, `VecCreateMPIWithArray()`, `VECMPI`, `VecType`, `VecCreateMPI()`
 M*/
 PetscErrorCode VecCreate_SeqKokkos(Vec v)
 {
@@ -1128,9 +1128,9 @@ PetscErrorCode VecCreate_SeqKokkos(Vec v)
 
    Level: intermediate
 
-.seealso: VecCreateMPICUDAWithArray(), VecCreate(), VecDuplicate(), VecDuplicateVecs(),
-          VecCreateGhost(), VecCreateSeq(), VecCreateSeqWithArray(),
-          VecCreateMPIWithArray()
+.seealso: `VecCreateMPICUDAWithArray()`, `VecCreate()`, `VecDuplicate()`, `VecDuplicateVecs()`,
+          `VecCreateGhost()`, `VecCreateSeq()`, `VecCreateSeqWithArray()`,
+          `VecCreateMPIWithArray()`
 @*/
 PetscErrorCode  VecCreateSeqKokkosWithArray(MPI_Comm comm,PetscInt bs,PetscInt n,const PetscScalar darray[],Vec *v)
 {
@@ -1141,7 +1141,7 @@ PetscErrorCode  VecCreateSeqKokkosWithArray(MPI_Comm comm,PetscInt bs,PetscInt n
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_size(comm,&size));
-  PetscCheckFalse(size > 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot create VECSEQKOKKOS on more than one process");
+  PetscCheck(size <= 1,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Cannot create VECSEQKOKKOS on more than one process");
 
   PetscCall(PetscKokkosInitializeCheck());
   PetscCall(VecCreate(comm,&w));
@@ -1239,7 +1239,7 @@ PetscErrorCode  VecCreateSeqKokkosWithArrays_Private(MPI_Comm comm,PetscInt bs,P
 
  Level: intermediate
 
- .seealso: VecCreateMPI(), VecCreate(), VecDuplicate(), VecDuplicateVecs(), VecCreateGhost()
+ .seealso: `VecCreateMPI()`, `VecCreate()`, `VecDuplicate()`, `VecDuplicateVecs()`, `VecCreateGhost()`
  @*/
 PetscErrorCode VecCreateSeqKokkos(MPI_Comm comm,PetscInt n,Vec *v)
 {

@@ -230,7 +230,7 @@ static inline PetscErrorCode KSPLogErrorHistory(KSP ksp)
     if (0) {
       PetscCall(DMGetDS(dm, &ds));
       PetscCall(PetscDSGetNumFields(ds, &Nf));
-      PetscCheck(Nf <= 1,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Cannot handle number of fields %D > 1 right now", Nf);
+      PetscCheck(Nf <= 1,PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Cannot handle number of fields %" PetscInt_FMT " > 1 right now", Nf);
       PetscCall(PetscDSGetExactSolution(ds, 0, &exactSol, &exactCtx));
       PetscCall(DMComputeL2FieldDiff(dm, 0.0, &exactSol, &exactCtx, u, &error));
     } else {
@@ -457,7 +457,7 @@ PETSC_INTERN PetscErrorCode PCPreSolveChangeRHS(PC,PetscBool*);
    Developer Note:
    this is used to manage returning from KSP solvers whose preconditioners have failed in some way
 
-.seealso: KSPCreate(), KSPSetType(), KSP, KSPCheckNorm(), KSPCheckSolve()
+.seealso: `KSPCreate()`, `KSPSetType()`, `KSP`, `KSPCheckNorm()`, `KSPCheckSolve()`
 M*/
 #define KSPCheckDot(ksp,beta) do { \
   if (PetscIsInfOrNanScalar(beta)) { \
@@ -496,7 +496,7 @@ M*/
    Developer Note:
    this is used to manage returning from KSP solvers whose preconditioners have failed in some way
 
-.seealso: KSPCreate(), KSPSetType(), KSP, KSPCheckDot(), KSPCheckSolve()
+.seealso: `KSPCreate()`, `KSPSetType()`, `KSP`, `KSPCheckDot()`, `KSPCheckSolve()`
 M*/
 #define KSPCheckNorm(ksp,beta) do { \
   if (PetscIsInfOrNanReal(beta)) { \

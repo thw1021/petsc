@@ -218,7 +218,7 @@ static PetscErrorCode MatProductSymbolic_Unsafe(Mat mat)
      If the type of any of the input matrices is different than what was previously used, or their symmetry changed but
      the symbolic phase took advantage of their symmetry, the product is cleared and MatProductSetFromOptions()/MatProductSymbolic() are invoked again.
 
-.seealso: MatProductCreate(), MatProductSetFromOptions(), MatProductSymbolic(). MatProductClear()
+.seealso: `MatProductCreate()`, `MatProductSetFromOptions()`, `MatProductSymbolic().` `MatProductClear()`
 @*/
 PetscErrorCode MatProductReplaceMats(Mat A,Mat B,Mat C,Mat D)
 {
@@ -398,7 +398,7 @@ static PetscErrorCode MatProductSetFromOptions_Private(Mat mat)
   if (product->type == MATPRODUCT_UNSPECIFIED) PetscFunctionReturn(0);
   PetscCheck(A,PetscObjectComm((PetscObject)mat),PETSC_ERR_PLIB,"Missing A mat");
   PetscCheck(B,PetscObjectComm((PetscObject)mat),PETSC_ERR_PLIB,"Missing B mat");
-  PetscCheckFalse(product->type == MATPRODUCT_ABC && !C,PetscObjectComm((PetscObject)mat),PETSC_ERR_PLIB,"Missing C mat");
+  PetscCheck(product->type != MATPRODUCT_ABC || C,PetscObjectComm((PetscObject)mat),PETSC_ERR_PLIB,"Missing C mat");
   if (product->type != MATPRODUCT_ABC) C = NULL; /* do not use C if not needed */
   if (product->type == MATPRODUCT_RARt) bname = Bnames[1];
   else if (product->type == MATPRODUCT_PtAP) bname = Bnames[2];
@@ -413,8 +413,8 @@ static PetscErrorCode MatProductSetFromOptions_Private(Mat mat)
   Cn = C ? C->cmap->N : 0;
   if (product->type == MATPRODUCT_RARt || product->type == MATPRODUCT_ABt) { PetscInt t = Bn; Bn = Bm; Bm = t; }
   if (product->type == MATPRODUCT_AtB) { PetscInt t = An; An = Am; Am = t; }
-  PetscCheckFalse(An != Bm,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Matrix dimensions of A and %s are incompatible for MatProductType %s: A %" PetscInt_FMT "x%" PetscInt_FMT ", %s %" PetscInt_FMT "x%" PetscInt_FMT,bname,MatProductTypes[product->type],A->rmap->N,A->cmap->N,bname,B->rmap->N,B->cmap->N);
-  PetscCheckFalse(Cm && Cm != Bn,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Matrix dimensions of B and C are incompatible for MatProductType %s: B %" PetscInt_FMT "x%" PetscInt_FMT ", C %" PetscInt_FMT "x%" PetscInt_FMT,MatProductTypes[product->type],B->rmap->N,B->cmap->N,Cm,Cn);
+  PetscCheck(An == Bm,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Matrix dimensions of A and %s are incompatible for MatProductType %s: A %" PetscInt_FMT "x%" PetscInt_FMT ", %s %" PetscInt_FMT "x%" PetscInt_FMT,bname,MatProductTypes[product->type],A->rmap->N,A->cmap->N,bname,B->rmap->N,B->cmap->N);
+  PetscCheck(!Cm || Cm == Bn,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_SIZ,"Matrix dimensions of B and C are incompatible for MatProductType %s: B %" PetscInt_FMT "x%" PetscInt_FMT ", C %" PetscInt_FMT "x%" PetscInt_FMT,MatProductTypes[product->type],B->rmap->N,B->cmap->N,Cm,Cn);
 
   fA = A->ops->productsetfromoptions;
   fB = B->ops->productsetfromoptions;
@@ -512,20 +512,18 @@ static PetscErrorCode MatProductSetFromOptions_Private(Mat mat)
 
    Level: intermediate
 
-.seealso: MatSetFromOptions(), MatProductCreate(), MatProductCreateWithMat()
+.seealso: `MatSetFromOptions()`, `MatProductCreate()`, `MatProductCreateWithMat()`
 @*/
 PetscErrorCode MatProductSetFromOptions(Mat mat)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
   MatCheckProduct(mat,1);
   PetscCheck(!mat->product->data,PetscObjectComm((PetscObject)mat),PETSC_ERR_ORDER,"Cannot call MatProductSetFromOptions with already present data");
-  ierr = PetscObjectOptionsBegin((PetscObject)mat);PetscCall(ierr);
+  PetscObjectOptionsBegin((PetscObject)mat);
   PetscCall(PetscOptionsBool("-mat_product_clear","Clear intermediate data structures after MatProductNumeric() has been called","MatProductClear",mat->product->clear,&mat->product->clear,NULL));
   PetscCall(PetscOptionsDeprecated("-mat_freeintermediatedatastructures","-mat_product_clear","3.13","Or call MatProductClear() after MatProductNumeric()"));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscCall(MatProductSetFromOptions_Private(mat));
   PetscCheck(mat->product,PetscObjectComm((PetscObject)mat),PETSC_ERR_PLIB,"Missing product after setup phase");
   PetscFunctionReturn(0);
@@ -541,7 +539,7 @@ PetscErrorCode MatProductSetFromOptions(Mat mat)
 
    Level: intermediate
 
-.seealso: MatView(), MatProductCreate(), MatProductCreateWithMat()
+.seealso: `MatView()`, `MatProductCreate()`, `MatProductCreateWithMat()`
 @*/
 PetscErrorCode MatProductView(Mat mat, PetscViewer viewer)
 {
@@ -640,7 +638,7 @@ PetscErrorCode MatProductNumeric_ABC(Mat mat)
 
    Notes: MatProductSymbolic() must have been called on mat before calling this function
 
-.seealso: MatProductCreate(), MatSetType(), MatProductSymbolic()
+.seealso: `MatProductCreate()`, `MatSetType()`, `MatProductSymbolic()`
 @*/
 PetscErrorCode MatProductNumeric(Mat mat)
 {
@@ -762,7 +760,7 @@ PetscErrorCode MatProductSymbolic_ABC(Mat mat)
 
    Notes: MatProductSetFromOptions() must have been called on mat before calling this function
 
-.seealso: MatProductCreate(), MatProductCreateWithMat(), MatProductSetFromOptions(), MatProductNumeric(), MatProductSetType(), MatProductSetAlgorithm()
+.seealso: `MatProductCreate()`, `MatProductCreateWithMat()`, `MatProductSetFromOptions()`, `MatProductNumeric()`, `MatProductSetType()`, `MatProductSetAlgorithm()`
 @*/
 PetscErrorCode MatProductSymbolic(Mat mat)
 {
@@ -827,7 +825,7 @@ PetscErrorCode MatProductSymbolic(Mat mat)
 
    Level: intermediate
 
-.seealso: MatProductSetType(), MatProductSetAlgorithm(), MatProductCreate()
+.seealso: `MatProductSetType()`, `MatProductSetAlgorithm()`, `MatProductCreate()`
 @*/
 PetscErrorCode MatProductSetFill(Mat mat,PetscReal fill)
 {
@@ -854,7 +852,7 @@ PetscErrorCode MatProductSetFill(Mat mat,PetscReal fill)
 
    Level: intermediate
 
-.seealso: MatProductSetType(), MatProductSetFill(), MatProductCreate(), MatProductAlgorithm
+.seealso: `MatProductSetType()`, `MatProductSetFill()`, `MatProductCreate()`, `MatProductAlgorithm`
 @*/
 PetscErrorCode MatProductSetAlgorithm(Mat mat,MatProductAlgorithm alg)
 {
@@ -877,7 +875,7 @@ PetscErrorCode MatProductSetAlgorithm(Mat mat,MatProductAlgorithm alg)
 
    Level: intermediate
 
-.seealso: MatProductCreate(), MatProductType
+.seealso: `MatProductCreate()`, `MatProductType`
 @*/
 PetscErrorCode MatProductSetType(Mat mat,MatProductType productype)
 {
@@ -979,7 +977,7 @@ PetscErrorCode MatProductCreate_Private(Mat A,Mat B,Mat C,Mat D)
 
    Level: intermediate
 
-.seealso: MatProductCreate(), MatProductClear()
+.seealso: `MatProductCreate()`, `MatProductClear()`
 @*/
 PetscErrorCode MatProductCreateWithMat(Mat A,Mat B,Mat C,Mat D)
 {
@@ -1031,7 +1029,7 @@ PetscErrorCode MatProductCreateWithMat(Mat A,Mat B,Mat C,Mat D)
 
    Level: intermediate
 
-.seealso: MatProductCreateWithMat(), MatProductSetType(), MatProductSetAlgorithm()
+.seealso: `MatProductCreateWithMat()`, `MatProductSetType()`, `MatProductSetAlgorithm()`
 @*/
 PetscErrorCode MatProductCreate(Mat A,Mat B,Mat C,Mat *D)
 {
@@ -1186,7 +1184,7 @@ PetscErrorCode MatProductSymbolic_ABC_Basic(Mat mat)
 
    Level: intermediate
 
-.seealso: MatProductCreateWithMat(), MatProductSetType(), MatProductCreate()
+.seealso: `MatProductCreateWithMat()`, `MatProductSetType()`, `MatProductCreate()`
 @*/
 PetscErrorCode MatProductGetType(Mat mat, MatProductType *mtype)
 {
@@ -1213,7 +1211,7 @@ PetscErrorCode MatProductGetType(Mat mat, MatProductType *mtype)
 
    Level: intermediate
 
-.seealso: MatProductCreateWithMat(), MatProductSetType(), MatProductSetAlgorithm()
+.seealso: `MatProductCreateWithMat()`, `MatProductSetType()`, `MatProductSetAlgorithm()`
 @*/
 PetscErrorCode MatProductGetMats(Mat mat, Mat *A, Mat *B, Mat *C)
 {

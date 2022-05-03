@@ -11,7 +11,7 @@ static PetscErrorCode SNESSolve_KSPONLY(SNES snes)
   Vec            Y,X,F;
 
   PetscFunctionBegin;
-  PetscCheckFalse(snes->xl || snes->xu || snes->ops->computevariablebounds,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
+  PetscCheck(!snes->xl && !snes->xu && !snes->ops->computevariablebounds,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
 
   snes->numFailures            = 0;
   snes->numLinearSolveFailures = 0;
@@ -53,7 +53,7 @@ static PetscErrorCode SNESSolve_KSPONLY(SNES snes)
   SNESCheckKSPSolve(snes);
 
   PetscCall(KSPGetIterationNumber(snes->ksp,&lits));
-  PetscCall(PetscInfo(snes,"iter=%D, linear solve iterations=%D\n",snes->iter,lits));
+  PetscCall(PetscInfo(snes,"iter=%" PetscInt_FMT ", linear solve iterations=%" PetscInt_FMT "\n",snes->iter,lits));
   snes->iter++;
 
   /* Take the computed step. */
@@ -89,7 +89,7 @@ static PetscErrorCode SNESDestroy_KSPONLY(SNES snes)
 
    Level: beginner
 
-.seealso:  SNESCreate(), SNES, SNESSetType(), SNESNEWTONLS, SNESNEWTONTR
+.seealso: `SNESCreate()`, `SNES`, `SNESSetType()`, `SNESNEWTONLS`, `SNESNEWTONTR`
 M*/
 PETSC_EXTERN PetscErrorCode SNESCreate_KSPONLY(SNES snes)
 {
@@ -120,7 +120,7 @@ PETSC_EXTERN PetscErrorCode SNESCreate_KSPONLY(SNES snes)
 
    Level: beginner
 
-.seealso:  SNESCreate(), SNES, SNESSetType(), SNESKSPTRANSPOSEONLY, SNESNEWTONLS, SNESNEWTONTR
+.seealso: `SNESCreate()`, `SNES`, `SNESSetType()`, `SNESKSPTRANSPOSEONLY`, `SNESNEWTONLS`, `SNESNEWTONTR`
 M*/
 PETSC_EXTERN PetscErrorCode SNESCreate_KSPTRANSPOSEONLY(SNES snes)
 {

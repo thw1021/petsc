@@ -228,19 +228,18 @@ static void g0_temp(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
   PetscInt       sol;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   options->solType  = SOL_QUADRATIC_LINEAR;
   options->expTS    = PETSC_FALSE;
   options->lumped   = PETSC_TRUE;
 
-  ierr = PetscOptionsBegin(comm, "", "Heat Equation Options", "DMPLEX");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "Heat Equation Options", "DMPLEX");
   PetscCall(PetscOptionsEList("-sol_type", "Type of exact solution", "ex45.c", solutionTypes, NUM_SOLUTION_TYPES, solutionTypes[options->solType], &sol, NULL));
   options->solType = (SolutionType) sol;
   PetscCall(PetscOptionsBool("-explicit", "Use explicit timestepping", "ex45.c", options->expTS, &options->expTS, NULL));
   PetscCall(PetscOptionsBool("-lumped", "Lump the mass matrix", "ex45.c", options->lumped, &options->lumped, NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -291,7 +290,7 @@ static PetscErrorCode SetupProblem(DM dm, AppCtx *ctx)
       PetscCall(PetscDSSetExactSolution(ds, 0, mms_trig_trig, ctx));
       PetscCall(PetscDSSetExactSolutionTimeDerivative(ds, 0, mms_trig_trig_t, ctx));
       break;
-    default: SETERRQ(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "Invalid solution type: %s (%D)", solutionTypes[PetscMin(ctx->solType, NUM_SOLUTION_TYPES)], ctx->solType);
+    default: SETERRQ(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "Invalid solution type: %s (%d)", solutionTypes[PetscMin(ctx->solType, NUM_SOLUTION_TYPES)], ctx->solType);
   }
   PetscFunctionReturn(0);
 }

@@ -25,7 +25,7 @@ $     MatColoringSetType(part,"my_color")
    or at runtime via the option
 $     -mat_coloring_type my_color
 
-.seealso: MatColoringRegisterDestroy(), MatColoringRegisterAll()
+.seealso: `MatColoringRegisterDestroy()`, `MatColoringRegisterAll()`
 @*/
 PetscErrorCode  MatColoringRegister(const char sname[],PetscErrorCode (*function)(MatColoring))
 {
@@ -65,7 +65,7 @@ PetscErrorCode  MatColoringRegister(const char sname[],PetscErrorCode (*function
 
           Some coloring types only support distance two colorings
 
-.seealso: MatColoring, MatColoringApply(), MatFDColoringCreate(), DMCreateColoring(), MatColoringType
+.seealso: `MatColoring`, `MatColoringApply()`, `MatFDColoringCreate()`, `DMCreateColoring()`, `MatColoringType`
 @*/
 PetscErrorCode MatColoringCreate(Mat m,MatColoring *mcptr)
 {
@@ -100,7 +100,7 @@ PetscErrorCode MatColoringCreate(Mat m,MatColoring *mcptr)
 
    Level: beginner
 
-.seealso: MatColoringCreate(), MatColoringApply()
+.seealso: `MatColoringCreate()`, `MatColoringApply()`
 @*/
 PetscErrorCode MatColoringDestroy(MatColoring *mc)
 {
@@ -130,7 +130,7 @@ PetscErrorCode MatColoringDestroy(MatColoring *mc)
    MATCOLORINGSL, and MATCOLORINGID from the MINPACK package as well
    as a parallel MATCOLORINGMIS algorithm.
 
-.seealso: MatColoringCreate(), MatColoringApply()
+.seealso: `MatColoringCreate()`, `MatColoringApply()`
 @*/
 PetscErrorCode MatColoringSetType(MatColoring mc,MatColoringType type)
 {
@@ -176,24 +176,23 @@ PetscErrorCode MatColoringSetType(MatColoring mc,MatColoringType type)
 
    Level: beginner
 
-.seealso: MatColoring, MatColoringApply(), MatColoringSetDistance(), SNESComputeJacobianDefaultColor(), MatColoringType
+.seealso: `MatColoring`, `MatColoringApply()`, `MatColoringSetDistance()`, `SNESComputeJacobianDefaultColor()`, `MatColoringType`
 @*/
 PetscErrorCode MatColoringSetFromOptions(MatColoring mc)
 {
   PetscBool      flg;
   MatColoringType deft = MATCOLORINGSL;
   char           type[256];
-  PetscErrorCode ierr;
   PetscInt       dist,maxcolors;
-  PetscFunctionBegin;
 
+  PetscFunctionBegin;
   PetscValidHeaderSpecific(mc,MAT_COLORING_CLASSID,1);
   PetscCall(MatColoringGetDistance(mc,&dist));
   if (dist == 2) deft = MATCOLORINGSL;
   else           deft = MATCOLORINGGREEDY;
   PetscCall(MatColoringGetMaxColors(mc,&maxcolors));
   PetscCall(MatColoringRegisterAll());
-  ierr = PetscObjectOptionsBegin((PetscObject)mc);PetscCall(ierr);
+  PetscObjectOptionsBegin((PetscObject)mc);
   if (((PetscObject)mc)->type_name) deft = ((PetscObject)mc)->type_name;
   PetscCall(PetscOptionsFList("-mat_coloring_type","The coloring method used","MatColoringSetType",MatColoringList,deft,type,256,&flg));
   if (flg) {
@@ -212,7 +211,7 @@ PetscErrorCode MatColoringSetFromOptions(MatColoring mc)
   PetscCall(PetscOptionsBool("-mat_is_coloring_test","Check that a valid iscoloring has been produced","",mc->valid_iscoloring,&mc->valid_iscoloring,NULL));
   PetscCall(PetscOptionsEnum("-mat_coloring_weight_type","Sets the type of vertex weighting used","MatColoringSetWeightType",MatColoringWeightTypes,(PetscEnum)mc->weight_type,(PetscEnum*)&mc->weight_type,NULL));
   PetscCall(PetscObjectProcessOptionsHandlers(PetscOptionsObject,(PetscObject)mc));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -234,7 +233,7 @@ PetscErrorCode MatColoringSetFromOptions(MatColoring mc)
    coloring, where no two vertices of the same color are adjacent.
    distance-2 colorings are useful for the computation of Jacobians.
 
-.seealso: MatColoringGetDistance(), MatColoringApply()
+.seealso: `MatColoringGetDistance()`, `MatColoringApply()`
 @*/
 PetscErrorCode MatColoringSetDistance(MatColoring mc,PetscInt dist)
 {
@@ -257,7 +256,7 @@ PetscErrorCode MatColoringSetDistance(MatColoring mc,PetscInt dist)
 
    Level: beginner
 
-.seealso: MatColoringSetDistance(), MatColoringApply()
+.seealso: `MatColoringSetDistance()`, `MatColoringApply()`
 @*/
 PetscErrorCode MatColoringGetDistance(MatColoring mc,PetscInt *dist)
 {
@@ -285,7 +284,7 @@ PetscErrorCode MatColoringGetDistance(MatColoring mc,PetscInt *dist)
    not in a color are set to have color maxcolors+1, which is not
    a valid color as they may be adjacent.
 
-.seealso: MatColoringGetMaxColors(), MatColoringApply()
+.seealso: `MatColoringGetMaxColors()`, `MatColoringApply()`
 @*/
 PetscErrorCode MatColoringSetMaxColors(MatColoring mc,PetscInt maxcolors)
 {
@@ -308,7 +307,7 @@ PetscErrorCode MatColoringSetMaxColors(MatColoring mc,PetscInt maxcolors)
 
    Level: beginner
 
-.seealso: MatColoringSetMaxColors(), MatColoringApply()
+.seealso: `MatColoringSetMaxColors()`, `MatColoringApply()`
 @*/
 PetscErrorCode MatColoringGetMaxColors(MatColoring mc,PetscInt *maxcolors)
 {
@@ -333,7 +332,7 @@ PetscErrorCode MatColoringGetMaxColors(MatColoring mc,PetscInt *maxcolors)
 
    Level: beginner
 
-.seealso: MatColoring, MatColoringCreate()
+.seealso: `MatColoring`, `MatColoringCreate()`
 @*/
 PetscErrorCode MatColoringApply(MatColoring mc,ISColoring *coloring)
 {
@@ -384,7 +383,7 @@ PetscErrorCode MatColoringApply(MatColoring mc,ISColoring *coloring)
 
    Level: beginner
 
-.seealso: MatColoring, MatColoringApply()
+.seealso: `MatColoring`, `MatColoringApply()`
 @*/
 PetscErrorCode MatColoringView(MatColoring mc,PetscViewer viewer)
 {
@@ -422,7 +421,7 @@ PetscErrorCode MatColoringView(MatColoring mc,PetscViewer viewer)
 
    Level: beginner
 
-.seealso: MatColoring, MatColoringWeightType
+.seealso: `MatColoring`, `MatColoringWeightType`
 @*/
 PetscErrorCode MatColoringSetWeightType(MatColoring mc,MatColoringWeightType wt)
 {

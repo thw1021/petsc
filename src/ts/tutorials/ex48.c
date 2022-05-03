@@ -164,8 +164,6 @@ static void f1_jz(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBeginUser;
   options->debug    = 1;
   options->plotRef  = PETSC_FALSE;
@@ -179,7 +177,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->m        = 1;
   options->eps      = 1.e-6;
 
-  ierr = PetscOptionsBegin(comm, "", "Poisson Problem Options", "DMPLEX");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "Poisson Problem Options", "DMPLEX");
   PetscCall(PetscOptionsInt("-debug", "The debugging level", "ex48.c", options->debug, &options->debug, NULL));
   PetscCall(PetscOptionsBool("-plot_ref", "Plot the reference fields", "ex48.c", options->plotRef, &options->plotRef, NULL));
   PetscCall(PetscOptionsReal("-mu", "mu", "ex48.c", options->mu, &options->mu, NULL));
@@ -189,7 +187,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscCall(PetscOptionsReal("-m", "m", "ex48.c", options->m, &options->m, NULL));
   PetscCall(PetscOptionsReal("-eps", "eps", "ex48.c", options->eps, &options->eps, NULL));
   PetscCall(PetscOptionsBool("-implicit", "Use implicit time integrator", "ex48.c", options->implicit, &options->implicit, NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   options->ke = PetscSqrtScalar(options->Jop);
   if (options->Jop==0.0) {
     options->Jo = 1.0/PetscPowScalar(options->a,2);
@@ -207,7 +205,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
     options->kx = 0;
     options->DeltaPrime = -2.0;
   }
-  PetscCall(PetscPrintf(comm, "DeltaPrime=%g\n",options->DeltaPrime));
+  PetscCall(PetscPrintf(comm, "DeltaPrime=%g\n",(double)options->DeltaPrime));
 
   PetscFunctionReturn(0);
 }
@@ -249,7 +247,7 @@ static PetscErrorCode PostStep(TS ts)
     PetscCall(DMPlexComputeIntegralFEM(plex,X,tt,ctx));
     den = tt[0];
     PetscCall(DMDestroy(&plex));
-    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "%D) total perturbed mass = %g\n", stepi, (double) PetscRealPart(den)));
+    PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "%" PetscInt_FMT ") total perturbed mass = %g\n", stepi, (double) PetscRealPart(den)));
   }
   PetscFunctionReturn(0);
 }
@@ -388,9 +386,9 @@ static PetscErrorCode SetupEquilibriumFields(DM dm, DM dmAux, AppCtx *ctx)
     PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERHDF5,&isHDF5));
     PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERVTK,&isVTK));
     if (isHDF5) {
-      PetscCall(PetscSNPrintf(buf, 256, "uEquilibrium-%dD.h5", dim));
+      PetscCall(PetscSNPrintf(buf, 256, "uEquilibrium-%" PetscInt_FMT "D.h5", dim));
     } else if (isVTK) {
-      PetscCall(PetscSNPrintf(buf, 256, "uEquilibrium-%dD.vtu", dim));
+      PetscCall(PetscSNPrintf(buf, 256, "uEquilibrium-%" PetscInt_FMT "D.vtu", dim));
       PetscCall(PetscViewerPushFormat(viewer,PETSC_VIEWER_VTK_VTU));
     }
     PetscCall(PetscViewerFileSetMode(viewer,FILE_MODE_WRITE));
@@ -521,7 +519,7 @@ int main(int argc, char **argv)
   PetscCall(TSGetTime(ts, &t));
   PetscCall(DMComputeL2Diff(dm, t, ctx.initialFuncs, (void **)ctxarr, u, &L2error));
   if (L2error < 1.0e-11) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "L_2 Error: < 1.0e-11\n"));
-  else                   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "L_2 Error: %g\n", L2error));
+  else                   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "L_2 Error: %g\n", (double)L2error));
   PetscCall(VecDestroy(&u));
   PetscCall(VecDestroy(&r));
   PetscCall(TSDestroy(&ts));

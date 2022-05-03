@@ -178,7 +178,7 @@ static PetscErrorCode SNESSetFromOptions_NASM(PetscOptionItems *PetscOptionsObje
   SNES_NASM         *nasm = (SNES_NASM*)snes->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Nonlinear Additive Schwarz options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Nonlinear Additive Schwarz options");
   PetscCall(PetscOptionsEnum("-snes_nasm_type","Type of restriction/extension","",SNESNASMTypes,(PetscEnum)nasm->type,(PetscEnum*)&asmtype,&flg));
   if (flg) PetscCall(SNESNASMSetType(snes,asmtype));
   flg    = PETSC_FALSE;
@@ -193,7 +193,7 @@ static PetscErrorCode SNESSetFromOptions_NASM(PetscOptionItems *PetscOptionsObje
     PetscCall(PetscLogEventRegister("SNESNASMSubSolve",((PetscObject)snes)->classid,&nasm->eventsubsolve));
     PetscCall(PetscLogEventRegister("SNESNASMRestrict",((PetscObject)snes)->classid,&nasm->eventrestrictinterp));
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -216,7 +216,7 @@ static PetscErrorCode SNESView_NASM(SNES snes, PetscViewer viewer)
   PetscCallMPI(MPI_Comm_size(comm,&size));
   PetscCall(MPIU_Allreduce(&nasm->n,&N,1,MPIU_INT,MPI_SUM,comm));
   if (iascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  total subdomain blocks = %D\n",N));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  total subdomain blocks = %" PetscInt_FMT "\n",N));
     PetscCall(PetscViewerGetFormat(viewer,&format));
     if (format != PETSC_VIEWER_ASCII_INFO_DETAIL) {
       if (nasm->subsnes) {
@@ -236,7 +236,7 @@ static PetscErrorCode SNESView_NASM(SNES snes, PetscViewer viewer)
     } else {
       /* print the solver on each block */
       PetscCall(PetscViewerASCIIPushSynchronized(viewer));
-      PetscCall(PetscViewerASCIISynchronizedPrintf(viewer,"  [%d] number of local blocks = %D\n",(int)rank,nasm->n));
+      PetscCall(PetscViewerASCIISynchronizedPrintf(viewer,"  [%d] number of local blocks = %" PetscInt_FMT "\n",(int)rank,nasm->n));
       PetscCall(PetscViewerFlush(viewer));
       PetscCall(PetscViewerASCIIPopSynchronized(viewer));
       PetscCall(PetscViewerASCIIPrintf(viewer,"  Local solver information for each block is in the following SNES objects:\n"));
@@ -245,7 +245,7 @@ static PetscErrorCode SNESView_NASM(SNES snes, PetscViewer viewer)
       PetscCall(PetscViewerGetSubViewer(viewer,PETSC_COMM_SELF,&sviewer));
       for (i=0; i<nasm->n; i++) {
         PetscCall(VecGetLocalSize(nasm->x[i],&bsz));
-        PetscCall(PetscViewerASCIIPrintf(sviewer,"[%d] local block number %D, size = %D\n",(int)rank,i,bsz));
+        PetscCall(PetscViewerASCIIPrintf(sviewer,"[%d] local block number %" PetscInt_FMT ", size = %" PetscInt_FMT "\n",(int)rank,i,bsz));
         PetscCall(SNESView(nasm->subsnes[i],sviewer));
         PetscCall(PetscViewerASCIIPrintf(sviewer,"- - - - - - - - - - - - - - - - - -\n"));
       }
@@ -254,7 +254,7 @@ static PetscErrorCode SNESView_NASM(SNES snes, PetscViewer viewer)
       PetscCall(PetscViewerASCIIPopTab(viewer));
     }
   } else if (isstring) {
-    PetscCall(PetscViewerStringSPrintf(viewer," blocks=%D,type=%s",N,SNESNASMTypes[nasm->type]));
+    PetscCall(PetscViewerStringSPrintf(viewer," blocks=%" PetscInt_FMT ",type=%s",N,SNESNASMTypes[nasm->type]));
     PetscCall(PetscViewerGetSubViewer(viewer,PETSC_COMM_SELF,&sviewer));
     if (nasm->subsnes && rank == 0) PetscCall(SNESView(nasm->subsnes[0],sviewer));
     PetscCall(PetscViewerRestoreSubViewer(viewer,PETSC_COMM_SELF,&sviewer));
@@ -273,7 +273,7 @@ static PetscErrorCode SNESView_NASM(SNES snes, PetscViewer viewer)
 
    Level: intermediate
 
-.seealso: SNESNASM, SNESNASMGetType(), PCASMSetType()
+.seealso: `SNESNASM`, `SNESNASMGetType()`, `PCASMSetType()`
 @*/
 PetscErrorCode SNESNASMSetType(SNES snes,PCASMType type)
 {
@@ -290,7 +290,7 @@ static PetscErrorCode SNESNASMSetType_NASM(SNES snes,PCASMType type)
   SNES_NASM      *nasm = (SNES_NASM*)snes->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(type != PC_ASM_BASIC && type != PC_ASM_RESTRICT,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_OUTOFRANGE,"SNESNASM only supports basic and restrict types");
+  PetscCheck(type == PC_ASM_BASIC || type == PC_ASM_RESTRICT,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_OUTOFRANGE,"SNESNASM only supports basic and restrict types");
   nasm->type = type;
   PetscFunctionReturn(0);
 }
@@ -308,7 +308,7 @@ static PetscErrorCode SNESNASMSetType_NASM(SNES snes,PCASMType type)
 
    Level: intermediate
 
-.seealso: SNESNASM, SNESNASMSetType(), PCASMGetType()
+.seealso: `SNESNASM`, `SNESNASMSetType()`, `PCASMGetType()`
 @*/
 PetscErrorCode SNESNASMGetType(SNES snes,PCASMType *type)
 {
@@ -341,7 +341,7 @@ static PetscErrorCode SNESNASMGetType_NASM(SNES snes,PCASMType *type)
 
    Level: intermediate
 
-.seealso: SNESNASM, SNESNASMGetSubdomains()
+.seealso: `SNESNASM`, `SNESNASMGetSubdomains()`
 @*/
 PetscErrorCode SNESNASMSetSubdomains(SNES snes,PetscInt n,SNES subsnes[],VecScatter iscatter[],VecScatter oscatter[],VecScatter gscatter[])
 {
@@ -421,7 +421,7 @@ static PetscErrorCode SNESNASMSetSubdomains_NASM(SNES snes,PetscInt n,SNES subsn
 
    Level: intermediate
 
-.seealso: SNESNASM, SNESNASMSetSubdomains()
+.seealso: `SNESNASM`, `SNESNASMSetSubdomains()`
 @*/
 PetscErrorCode SNESNASMGetSubdomains(SNES snes,PetscInt *n,SNES *subsnes[],VecScatter *iscatter[],VecScatter *oscatter[],VecScatter *gscatter[])
 {
@@ -463,7 +463,7 @@ static PetscErrorCode SNESNASMGetSubdomains_NASM(SNES snes,PetscInt *n,SNES *sub
 
    Level: developer
 
-.seealso: SNESNASM, SNESNASMGetSubdomains()
+.seealso: `SNESNASM`, `SNESNASMGetSubdomains()`
 @*/
 PetscErrorCode SNESNASMGetSubdomainVecs(SNES snes,PetscInt *n,Vec **x,Vec **y,Vec **b, Vec **xl)
 {
@@ -503,7 +503,7 @@ static PetscErrorCode SNESNASMGetSubdomainVecs_NASM(SNES snes,PetscInt *n,Vec **
    This is used almost exclusively in the implementation of ASPIN, where the converged subdomain and global Jacobian
    is needed at each linear iteration.
 
-.seealso: SNESNASM, SNESNASMGetSubdomains()
+.seealso: `SNESNASM`, `SNESNASMGetSubdomains()`
 @*/
 PetscErrorCode SNESNASMSetComputeFinalJacobian(SNES snes,PetscBool flg)
 {
@@ -538,7 +538,7 @@ static PetscErrorCode SNESNASMSetComputeFinalJacobian_NASM(SNES snes,PetscBool f
    Notes:
     The new solution is obtained as old solution plus dmp times (sum of the solutions on the subdomains)
 
-.seealso: SNESNASM, SNESNASMGetDamping()
+.seealso: `SNESNASM`, `SNESNASMGetDamping()`
 @*/
 PetscErrorCode SNESNASMSetDamping(SNES snes,PetscReal dmp)
 {
@@ -570,7 +570,7 @@ static PetscErrorCode SNESNASMSetDamping_NASM(SNES snes,PetscReal dmp)
 
    Level: intermediate
 
-.seealso: SNESNASM, SNESNASMSetDamping()
+.seealso: `SNESNASM`, `SNESNASMSetDamping()`
 @*/
 PetscErrorCode SNESNASMGetDamping(SNES snes,PetscReal *dmp)
 {
@@ -735,7 +735,7 @@ static PetscErrorCode SNESSolve_NASM(SNES snes)
 
   PetscFunctionBegin;
 
-  PetscCheckFalse(snes->xl || snes->xu || snes->ops->computevariablebounds,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
+  PetscCheck(!snes->xl & !snes->xu && !snes->ops->computevariablebounds,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
 
   PetscCall(PetscCitationsRegister(SNESCitation,&SNEScite));
   X = snes->vec_sol;
@@ -806,7 +806,7 @@ static PetscErrorCode SNESSolve_NASM(SNES snes)
   }
   if (normschedule == SNES_NORM_ALWAYS) {
     if (i == snes->max_its) {
-      PetscCall(PetscInfo(snes,"Maximum number of iterations has been reached: %D\n",snes->max_its));
+      PetscCall(PetscInfo(snes,"Maximum number of iterations has been reached: %" PetscInt_FMT "\n",snes->max_its));
       if (!snes->reason) snes->reason = SNES_DIVERGED_MAX_IT;
     }
   } else if (!snes->reason) snes->reason = SNES_CONVERGED_ITS; /* NASM is meant to be used as a preconditioner */
@@ -839,7 +839,7 @@ static PetscErrorCode SNESSolve_NASM(SNES snes)
 .  * - Peter R. Brune, Matthew G. Knepley, Barry F. Smith, and Xuemin Tu, "Composing Scalable Nonlinear Algebraic Solvers",
    SIAM Review, 57(4), 2015
 
-.seealso: SNESCreate(), SNES, SNESSetType(), SNESType (for list of available types), SNESNASMSetType(), SNESNASMGetType(), SNESNASMSetSubdomains(), SNESNASMGetSubdomains(), SNESNASMGetSubdomainVecs(), SNESNASMSetComputeFinalJacobian(), SNESNASMSetDamping(), SNESNASMGetDamping()
+.seealso: `SNESCreate()`, `SNES`, `SNESSetType()`, `SNESType`, `SNESNASMSetType()`, `SNESNASMGetType()`, `SNESNASMSetSubdomains()`, `SNESNASMGetSubdomains()`, `SNESNASMGetSubdomainVecs()`, `SNESNASMSetComputeFinalJacobian()`, `SNESNASMSetDamping()`, `SNESNASMGetDamping()`
 M*/
 
 PETSC_EXTERN PetscErrorCode SNESCreate_NASM(SNES snes)
@@ -913,14 +913,14 @@ PETSC_EXTERN PetscErrorCode SNESCreate_NASM(SNES snes)
 
    Level: intermediate
 
-.seealso: SNESNASM, SNESNASMGetNumber()
+.seealso: `SNESNASM`, `SNESNASMGetNumber()`
 @*/
 PetscErrorCode SNESNASMGetSNES(SNES snes,PetscInt i,SNES *subsnes)
 {
   SNES_NASM      *nasm = (SNES_NASM*)snes->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(i < 0 || i >= nasm->n,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_OUTOFRANGE,"No such subsolver");
+  PetscCheck(i >= 0 && i < nasm->n,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_OUTOFRANGE,"No such subsolver");
   *subsnes = nasm->subsnes[i];
   PetscFunctionReturn(0);
 }
@@ -938,7 +938,7 @@ PetscErrorCode SNESNASMGetSNES(SNES snes,PetscInt i,SNES *subsnes)
 
    Level: intermediate
 
-.seealso: SNESNASM, SNESNASMGetSNES()
+.seealso: `SNESNASM`, `SNESNASMGetSNES()`
 @*/
 PetscErrorCode SNESNASMGetNumber(SNES snes,PetscInt *n)
 {
@@ -960,7 +960,7 @@ PetscErrorCode SNESNASMGetNumber(SNES snes,PetscInt *n)
 
    Level: intermediate
 
-.seealso: SNESNASM
+.seealso: `SNESNASM`
 @*/
 PetscErrorCode SNESNASMSetWeight(SNES snes,Vec weight)
 {

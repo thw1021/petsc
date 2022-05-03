@@ -7,10 +7,10 @@ PetscErrorCode DMSetFromOptions_Patch(PetscOptionItems *PetscOptionsObject,DM dm
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 2);
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"DMPatch Options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"DMPatch Options");
   /* Handle associated vectors */
   /* Handle viewing */
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -86,7 +86,7 @@ PETSC_EXTERN PetscErrorCode DMCreate_Patch(DM dm)
 
   Level: beginner
 
-.seealso: DMPatchZoom()
+.seealso: `DMPatchZoom()`
 
 @*/
 PetscErrorCode DMPatchCreate(MPI_Comm comm, DM *mesh)

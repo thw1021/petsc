@@ -251,8 +251,8 @@ PetscErrorCode PetscByteSwap(void *data,PetscDataType pdtype,PetscInt count)
    file as 64 bit integers, this means they can only be read back in when the option --with-64-bit-indices
    is used.
 
-.seealso: PetscBinaryWrite(), PetscBinaryOpen(), PetscBinaryClose(), PetscViewerBinaryGetDescriptor(), PetscBinarySynchronizedWrite(),
-          PetscBinarySynchronizedRead(), PetscBinarySynchronizedSeek()
+.seealso: `PetscBinaryWrite()`, `PetscBinaryOpen()`, `PetscBinaryClose()`, `PetscViewerBinaryGetDescriptor()`, `PetscBinarySynchronizedWrite()`,
+          `PetscBinarySynchronizedRead()`, `PetscBinarySynchronizedSeek()`
 @*/
 PetscErrorCode  PetscBinaryRead(int fd,void *data,PetscInt num,PetscInt *count,PetscDataType type)
 {
@@ -267,7 +267,7 @@ PetscErrorCode  PetscBinaryRead(int fd,void *data,PetscInt num,PetscInt *count,P
 
   PetscFunctionBegin;
   if (count) *count = 0;
-  PetscCheckFalse(num < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Trying to read a negative amount of data %" PetscInt_FMT,num);
+  PetscCheck(num >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Trying to read a negative amount of data %" PetscInt_FMT,num);
   if (!num) PetscFunctionReturn(0);
 
   if (type == PETSC_FUNCTION) {
@@ -300,12 +300,12 @@ PetscErrorCode  PetscBinaryRead(int fd,void *data,PetscInt num,PetscInt *count,P
     int    ret = (int)read(fd,p,len);
     if (ret < 0 && errno == EINTR) continue;
     if (!ret && len > 0) break; /* Proxy for EOF */
-    PetscCheckFalse(ret < 0,PETSC_COMM_SELF,PETSC_ERR_FILE_READ,"Error reading from file, errno %d",errno);
+    PetscCheck(ret >= 0,PETSC_COMM_SELF,PETSC_ERR_FILE_READ,"Error reading from file, errno %d",errno);
     m -= (size_t)ret;
     p += ret;
     n += (size_t)ret;
   }
-  PetscCheckFalse(m && !count,PETSC_COMM_SELF,PETSC_ERR_FILE_READ,"Read past end of file");
+  PetscCheck(!m || count,PETSC_COMM_SELF,PETSC_ERR_FILE_READ,"Read past end of file");
 
   num = (PetscInt)(n/typesize); /* Should we require `n % typesize == 0` ? */
   if (count) *count = num;      /* TODO: This is most likely wrong for PETSC_BIT_LOGICAL */
@@ -367,8 +367,8 @@ PetscErrorCode  PetscBinaryRead(int fd,void *data,PetscInt num,PetscInt *count,P
 
    Because byte-swapping may be done on the values in data it cannot be declared const
 
-.seealso: PetscBinaryRead(), PetscBinaryOpen(), PetscBinaryClose(), PetscViewerBinaryGetDescriptor(), PetscBinarySynchronizedWrite(),
-          PetscBinarySynchronizedRead(), PetscBinarySynchronizedSeek()
+.seealso: `PetscBinaryRead()`, `PetscBinaryOpen()`, `PetscBinaryClose()`, `PetscViewerBinaryGetDescriptor()`, `PetscBinarySynchronizedWrite()`,
+          `PetscBinarySynchronizedRead()`, `PetscBinarySynchronizedSeek()`
 @*/
 PetscErrorCode  PetscBinaryWrite(int fd,const void *p,PetscInt n,PetscDataType type)
 {
@@ -386,7 +386,7 @@ PetscErrorCode  PetscBinaryWrite(int fd,const void *p,PetscInt n,PetscDataType t
   PetscDataType  wtype = type;
 
   PetscFunctionBegin;
-  PetscCheckFalse(n < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Trying to write a negative amount of data %" PetscInt_FMT,n);
+  PetscCheck(n >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Trying to write a negative amount of data %" PetscInt_FMT,n);
   if (!n) PetscFunctionReturn(0);
 
   if (type == PETSC_FUNCTION) {
@@ -397,7 +397,7 @@ PetscErrorCode  PetscBinaryWrite(int fd,const void *p,PetscInt n,PetscDataType t
     fname = (char*)malloc(m*sizeof(char));
     PetscCheck(fname,PETSC_COMM_SELF,PETSC_ERR_MEM,"Cannot allocate space for function name");
 #if defined(PETSC_SERIALIZE_FUNCTIONS)
-    PetscCheckFalse(n > 1,PETSC_COMM_SELF,PETSC_ERR_SUP,"Can only binary view a single function at a time");
+    PetscCheck(n <= 1,PETSC_COMM_SELF,PETSC_ERR_SUP,"Can only binary view a single function at a time");
     PetscCall(PetscFPTFind(*(void**)p,&fnametmp));
     PetscCall(PetscStrncpy(fname,fnametmp,m));
 #else
@@ -446,7 +446,7 @@ PetscErrorCode  PetscBinaryWrite(int fd,const void *p,PetscInt n,PetscDataType t
     wsize = (m < maxblock) ? m : maxblock;
     err   = write(fd,pp,wsize);
     if (err < 0 && errno == EINTR) continue;
-    PetscCheckFalse(err != wsize,PETSC_COMM_SELF,PETSC_ERR_FILE_WRITE,"Error writing to file total size %d err %d wsize %d",(int)n,(int)err,(int)wsize);
+    PetscCheck(err == wsize,PETSC_COMM_SELF,PETSC_ERR_FILE_WRITE,"Error writing to file total size %d err %d wsize %d",(int)n,(int)err,(int)wsize);
     m  -= wsize;
     pp += wsize;
   }
@@ -483,8 +483,8 @@ PetscErrorCode  PetscBinaryWrite(int fd,const void *p,PetscInt n,PetscDataType t
    big-endian format. This means the file can be accessed using PetscBinaryOpen() and
    PetscBinaryRead() and PetscBinaryWrite() on any machine.
 
-.seealso: PetscBinaryRead(), PetscBinaryWrite(), PetscFileMode, PetscViewerFileSetMode(), PetscViewerBinaryGetDescriptor(),
-          PetscBinarySynchronizedWrite(), PetscBinarySynchronizedRead(), PetscBinarySynchronizedSeek()
+.seealso: `PetscBinaryRead()`, `PetscBinaryWrite()`, `PetscFileMode`, `PetscViewerFileSetMode()`, `PetscViewerBinaryGetDescriptor()`,
+          `PetscBinarySynchronizedWrite()`, `PetscBinarySynchronizedRead()`, `PetscBinarySynchronizedSeek()`
 
 @*/
 PetscErrorCode  PetscBinaryOpen(const char name[],PetscFileMode mode,int *fd)
@@ -496,7 +496,7 @@ PetscErrorCode  PetscBinaryOpen(const char name[],PetscFileMode mode,int *fd)
   case FILE_MODE_APPEND: *fd = open(name,O_BINARY|O_WRONLY|O_APPEND,0); break;
   default: SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"Unsupported file mode %s",PetscFileModes[mode]);
   }
-  PetscCheckFalse(*fd == -1,PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Cannot open file %s for %s",name,PetscFileModes[mode]);
+  PetscCheck(*fd != -1,PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Cannot open file %s for %s",name,PetscFileModes[mode]);
   PetscFunctionReturn(0);
 }
 
@@ -510,13 +510,13 @@ PetscErrorCode  PetscBinaryOpen(const char name[],PetscFileMode mode,int *fd)
 
    Level: advanced
 
-.seealso: PetscBinaryRead(), PetscBinaryWrite(), PetscBinaryOpen(), PetscBinarySynchronizedWrite(), PetscBinarySynchronizedRead(),
-          PetscBinarySynchronizedSeek()
+.seealso: `PetscBinaryRead()`, `PetscBinaryWrite()`, `PetscBinaryOpen()`, `PetscBinarySynchronizedWrite()`, `PetscBinarySynchronizedRead()`,
+          `PetscBinarySynchronizedSeek()`
 @*/
 PetscErrorCode  PetscBinaryClose(int fd)
 {
   PetscFunctionBegin;
-  PetscCheckFalse(close(fd),PETSC_COMM_SELF,PETSC_ERR_SYS,"close() failed on file descriptor");
+  PetscCheck(!close(fd),PETSC_COMM_SELF,PETSC_ERR_SYS,"close() failed on file descriptor");
   PetscFunctionReturn(0);
 }
 
@@ -544,8 +544,8 @@ PetscErrorCode  PetscBinaryClose(int fd)
    binary file may be read on any machine. Hence you CANNOT use sizeof()
    to determine the offset or location.
 
-.seealso: PetscBinaryRead(), PetscBinaryWrite(), PetscBinaryOpen(), PetscBinarySynchronizedWrite(), PetscBinarySynchronizedRead(),
-          PetscBinarySynchronizedSeek()
+.seealso: `PetscBinaryRead()`, `PetscBinaryWrite()`, `PetscBinaryOpen()`, `PetscBinarySynchronizedWrite()`, `PetscBinarySynchronizedRead()`,
+          `PetscBinarySynchronizedSeek()`
 @*/
 PetscErrorCode  PetscBinarySeek(int fd,off_t off,PetscBinarySeekType whence,off_t *offset)
 {
@@ -594,8 +594,8 @@ PetscErrorCode  PetscBinarySeek(int fd,off_t off,PetscBinarySeekType whence,off_
    they are stored in the machine as 32 or 64, this means the same
    binary file may be read on any machine.
 
-.seealso: PetscBinaryWrite(), PetscBinaryOpen(), PetscBinaryClose(), PetscBinaryRead(), PetscBinarySynchronizedWrite(),
-          PetscBinarySynchronizedSeek()
+.seealso: `PetscBinaryWrite()`, `PetscBinaryOpen()`, `PetscBinaryClose()`, `PetscBinaryRead()`, `PetscBinarySynchronizedWrite()`,
+          `PetscBinarySynchronizedSeek()`
 @*/
 PetscErrorCode  PetscBinarySynchronizedRead(MPI_Comm comm,int fd,void *data,PetscInt num,PetscInt *count,PetscDataType type)
 {
@@ -669,8 +669,8 @@ PetscErrorCode  PetscBinarySynchronizedRead(MPI_Comm comm,int fd,void *data,Pets
    WARNING: This is NOT like PetscSynchronizedFPrintf()! This routine ignores calls on all but process 0,
    while PetscSynchronizedFPrintf() has all processes print their strings in order.
 
-.seealso: PetscBinaryWrite(), PetscBinaryOpen(), PetscBinaryClose(), PetscBinaryRead(), PetscBinarySynchronizedRead(),
-          PetscBinarySynchronizedSeek()
+.seealso: `PetscBinaryWrite()`, `PetscBinaryOpen()`, `PetscBinaryClose()`, `PetscBinaryRead()`, `PetscBinarySynchronizedRead()`,
+          `PetscBinarySynchronizedSeek()`
 @*/
 PetscErrorCode  PetscBinarySynchronizedWrite(MPI_Comm comm,int fd,const void *p,PetscInt n,PetscDataType type)
 {
@@ -706,8 +706,8 @@ PetscErrorCode  PetscBinarySynchronizedWrite(MPI_Comm comm,int fd,const void *p,
    binary file may be read on any machine. Hence you CANNOT use sizeof()
    to determine the offset or location.
 
-.seealso: PetscBinaryRead(), PetscBinaryWrite(), PetscBinaryOpen(), PetscBinarySynchronizedWrite(), PetscBinarySynchronizedRead(),
-          PetscBinarySynchronizedSeek()
+.seealso: `PetscBinaryRead()`, `PetscBinaryWrite()`, `PetscBinaryOpen()`, `PetscBinarySynchronizedWrite()`, `PetscBinarySynchronizedRead()`,
+          `PetscBinarySynchronizedSeek()`
 @*/
 PetscErrorCode  PetscBinarySynchronizedSeek(MPI_Comm comm,int fd,off_t off,PetscBinarySeekType whence,off_t *offset)
 {

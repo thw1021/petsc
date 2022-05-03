@@ -544,12 +544,12 @@ PetscErrorCode KSPSetFromOptions_FGMRES(PetscOptionItems *PetscOptionsObject,KSP
 
   PetscFunctionBegin;
   PetscCall(KSPSetFromOptions_GMRES(PetscOptionsObject,ksp));
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"KSP flexible GMRES Options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"KSP flexible GMRES Options");
   PetscCall(PetscOptionsBoolGroupBegin("-ksp_fgmres_modifypcnochange","do not vary the preconditioner","KSPFGMRESSetModifyPC",&flg));
   if (flg) PetscCall(KSPFGMRESSetModifyPC(ksp,KSPFGMRESModifyPCNoChange,NULL,NULL));
   PetscCall(PetscOptionsBoolGroupEnd("-ksp_fgmres_modifypcksp","vary the KSP based preconditioner","KSPFGMRESSetModifyPC",&flg));
   if (flg) PetscCall(KSPFGMRESSetModifyPC(ksp,KSPFGMRESModifyPCKSP,NULL,NULL));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -594,7 +594,7 @@ PetscErrorCode  KSPGMRESSetRestart_FGMRES(KSP ksp,PetscInt max_k)
   KSP_FGMRES     *gmres = (KSP_FGMRES*)ksp->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(max_k < 1,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Restart must be positive");
+  PetscCheck(max_k >= 1,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE,"Restart must be positive");
   if (!ksp->setupstage) {
     gmres->max_k = max_k;
   } else if (gmres->max_k != max_k) {
@@ -645,11 +645,11 @@ PetscErrorCode  KSPGMRESGetRestart_FGMRES(KSP ksp,PetscInt *max_k)
     Developer Notes:
     This object is subclassed off of KSPGMRES
 
-.seealso:  KSPCreate(), KSPSetType(), KSPType (for list of available types), KSP, KSPGMRES, KSPLGMRES,
-           KSPGMRESSetRestart(), KSPGMRESSetHapTol(), KSPGMRESSetPreAllocateVectors(), KSPGMRESSetOrthogonalization(), KSPGMRESGetOrthogonalization(),
-           KSPGMRESClassicalGramSchmidtOrthogonalization(), KSPGMRESModifiedGramSchmidtOrthogonalization(),
-           KSPGMRESCGSRefinementType, KSPGMRESSetCGSRefinementType(),  KSPGMRESGetCGSRefinementType(), KSPGMRESMonitorKrylov(), KSPFGMRESSetModifyPC(),
-           KSPFGMRESModifyPCKSP()
+.seealso: `KSPCreate()`, `KSPSetType()`, `KSPType`, `KSP`, `KSPGMRES`, `KSPLGMRES`,
+          `KSPGMRESSetRestart()`, `KSPGMRESSetHapTol()`, `KSPGMRESSetPreAllocateVectors()`, `KSPGMRESSetOrthogonalization()`, `KSPGMRESGetOrthogonalization()`,
+          `KSPGMRESClassicalGramSchmidtOrthogonalization()`, `KSPGMRESModifiedGramSchmidtOrthogonalization()`,
+          `KSPGMRESCGSRefinementType`, `KSPGMRESSetCGSRefinementType()`, `KSPGMRESGetCGSRefinementType()`, `KSPGMRESMonitorKrylov()`, `KSPFGMRESSetModifyPC()`,
+          `KSPFGMRESModifyPCKSP()`
 
 M*/
 

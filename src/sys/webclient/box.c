@@ -101,7 +101,7 @@ $    cat newkey.pem newcert.pem > sslclient.pem
 
    Level: intermediate
 
-.seealso: PetscBoxRefresh(), PetscBoxUpload(), PetscURLShorten()
+.seealso: `PetscBoxRefresh()`, `PetscBoxUpload()`, `PetscURLShorten()`
 
 @*/
 PetscErrorCode PetscBoxAuthorize(MPI_Comm comm,char access_token[],char refresh_token[],size_t tokensize)
@@ -109,7 +109,6 @@ PetscErrorCode PetscBoxAuthorize(MPI_Comm comm,char access_token[],char refresh_
   SSL_CTX        *ctx;
   SSL            *ssl;
   int            sock;
-  PetscErrorCode ierr;
   char           buff[8*1024],body[1024];
   PetscMPIInt    rank;
   PetscBool      flg,found;
@@ -117,14 +116,14 @@ PetscErrorCode PetscBoxAuthorize(MPI_Comm comm,char access_token[],char refresh_
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_rank(comm,&rank));
   if (rank == 0) {
-    PetscCheckFalse(!isatty(fileno(PETSC_STDOUT)),PETSC_COMM_SELF,PETSC_ERR_USER,"Requires users input/output");
-    ierr = PetscPrintf(comm,"Cut and paste the following into your browser:\n\n"
-                            "https://www.box.com/api/oauth2/authorize?"
-                            "response_type=code&"
-                            "client_id="
-                            PETSC_BOX_CLIENT_ID
-                            "&state=PETScState"
-                            "\n\n");PetscCall(ierr);
+    PetscCheck(isatty(fileno(PETSC_STDOUT)),PETSC_COMM_SELF,PETSC_ERR_USER,"Requires users input/output");
+    PetscCall(PetscPrintf(comm,"Cut and paste the following into your browser:\n\n"
+                          "https://www.box.com/api/oauth2/authorize?"
+                          "response_type=code&"
+                          "client_id="
+                          PETSC_BOX_CLIENT_ID
+                          "&state=PETScState"
+                          "\n\n"));
     PetscCall(PetscBoxStartWebServer_Private());
     PetscCall(PetscStrbeginswith((const char*)result,"state=PETScState&code=",&flg));
     PetscCheck(flg,PETSC_COMM_SELF,PETSC_ERR_LIB,"Did not get expected string from Box got %s",result);
@@ -174,7 +173,7 @@ PetscErrorCode PetscBoxAuthorize(MPI_Comm comm,char access_token[],char refresh_
 
    Level: intermediate
 
-.seealso: PetscURLShorten(), PetscBoxAuthorize(), PetscBoxUpload()
+.seealso: `PetscURLShorten()`, `PetscBoxAuthorize()`, `PetscBoxUpload()`
 
 @*/
 PetscErrorCode PetscBoxRefresh(MPI_Comm comm,const char refresh_token[],char access_token[],char new_refresh_token[],size_t tokensize)
@@ -268,7 +267,7 @@ PetscErrorCode PetscBoxRefresh(MPI_Comm comm,const char refresh_token[],char acc
 
    Level: intermediate
 
-.seealso: PetscURLShorten(), PetscBoxAuthorize(), PetscBoxRefresh()
+.seealso: `PetscURLShorten()`, `PetscBoxAuthorize()`, `PetscBoxRefresh()`
 
 @*/
 PetscErrorCode PetscBoxUpload(MPI_Comm comm,const char access_token[],const char filename[])
@@ -276,7 +275,6 @@ PetscErrorCode PetscBoxUpload(MPI_Comm comm,const char access_token[],const char
   SSL_CTX        *ctx;
   SSL            *ssl;
   int            sock;
-  PetscErrorCode ierr;
   char           head[1024],buff[8*1024],*body,*title;
   PetscMPIInt    rank;
   struct stat    sb;
@@ -296,26 +294,26 @@ PetscErrorCode PetscBoxUpload(MPI_Comm comm,const char access_token[],const char
     PetscCheck(!err,PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Unable to stat file: %s",filename);
     len = 1024 + sb.st_size;
     PetscCall(PetscMalloc1(len,&body));
-    ierr = PetscStrcpy(body,"--foo_bar_baz\r\n"
-                            "Content-Type: application/json\r\n\r\n"
-                            "{");PetscCall(ierr);
+    PetscCall(PetscStrcpy(body,"--foo_bar_baz\r\n"
+                               "Content-Type: application/json\r\n\r\n"
+                               "{"));
     PetscCall(PetscPushJSONValue(body,"title",filename,len));
     PetscCall(PetscStrcat(body,","));
     PetscCall(PetscPushJSONValue(body,"mimeType","text.html",len));
     PetscCall(PetscStrcat(body,","));
     PetscCall(PetscPushJSONValue(body,"description","a file",len));
-    ierr = PetscStrcat(body, "}\r\n\r\n"
-                             "--foo_bar_baz\r\n"
-                             "Content-Type: text/html\r\n\r\n");PetscCall(ierr);
+    PetscCallPetscStrcat(body, "}\r\n\r\n"
+                               "--foo_bar_baz\r\n"
+                               "Content-Type: text/html\r\n\r\n"));
     PetscCall(PetscStrlen(body,&blen));
     fd = fopen (filename, "r");
     PetscCheck(fd,PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Unable to open file: %s",filename);
     rd = fread (body+blen, sizeof (unsigned char), sb.st_size, fd);
-    PetscCheckFalse(rd != (size_t)sb.st_size,PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Unable to read entire file: %s %d %d",filename,(int)rd,(int)sb.st_size);
+    PetscCheck(rd == (size_t)sb.st_size,PETSC_COMM_SELF,PETSC_ERR_FILE_OPEN,"Unable to read entire file: %s %d %d",filename,(int)rd,(int)sb.st_size);
     fclose(fd);
     body[blen + rd] = 0;
-    ierr = PetscStrcat(body,"\r\n\r\n"
-                            "--foo_bar_baz\r\n");PetscCall(ierr);
+    PetscCall(PetscStrcat(body,"\r\n\r\n"
+                               "--foo_bar_baz\r\n"));
     PetscCall(PetscSSLInitializeContext(&ctx));
     PetscCall(PetscHTTPSConnect("www.boxapis.com",443,ctx,&sock,&ssl));
     PetscCall(PetscHTTPSRequest("POST","www.boxapis.com/upload/drive/v2/files/",head,"multipart/related; boundary=\"foo_bar_baz\"",body,ssl,buff,sizeof(buff)));

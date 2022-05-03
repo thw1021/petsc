@@ -244,7 +244,7 @@ static PetscErrorCode TSStep_Theta(TS ts)
     ts->reject++; accept = PETSC_FALSE;
     if (!ts->reason && ++rejections > ts->max_reject && ts->max_reject >= 0) {
       ts->reason = TS_DIVERGED_STEP_REJECTED;
-      PetscCall(PetscInfo(ts,"Step=%D, step rejections %D greater than current TS allowed, stopping solve\n",ts->steps,rejections));
+      PetscCall(PetscInfo(ts,"Step=%" PetscInt_FMT ", step rejections %" PetscInt_FMT " greater than current TS allowed, stopping solve\n",ts->steps,rejections));
     }
   }
   PetscFunctionReturn(0);
@@ -311,7 +311,7 @@ static PetscErrorCode TSAdjointStepBEuler_Private(TS ts)
     PetscCall(KSPGetConvergedReason(ksp,&kspreason));
     if (kspreason < 0) {
       ts->reason = TSADJOINT_DIVERGED_LINEAR_SOLVE;
-      PetscCall(PetscInfo(ts,"Step=%D, %Dth cost function, transposed linear solve fails, stopping 1st-order adjoint solve\n",ts->steps,nadj));
+      PetscCall(PetscInfo(ts,"Step=%" PetscInt_FMT ", %" PetscInt_FMT "th cost function, transposed linear solve fails, stopping 1st-order adjoint solve\n",ts->steps,nadj));
     }
   }
 
@@ -338,7 +338,7 @@ static PetscErrorCode TSAdjointStepBEuler_Private(TS ts)
       PetscCall(KSPGetConvergedReason(ksp,&kspreason));
       if (kspreason < 0) {
         ts->reason = TSADJOINT_DIVERGED_LINEAR_SOLVE;
-        PetscCall(PetscInfo(ts,"Step=%D, %Dth cost function, transposed linear solve fails, stopping 2nd-order adjoint solve\n",ts->steps,nadj));
+        PetscCall(PetscInfo(ts,"Step=%" PetscInt_FMT ", %" PetscInt_FMT "th cost function, transposed linear solve fails, stopping 2nd-order adjoint solve\n",ts->steps,nadj));
       }
     }
   }
@@ -478,7 +478,7 @@ static PetscErrorCode TSAdjointStep_Theta(TS ts)
     PetscCall(KSPGetConvergedReason(ksp,&kspreason));
     if (kspreason < 0) {
       ts->reason = TSADJOINT_DIVERGED_LINEAR_SOLVE;
-      PetscCall(PetscInfo(ts,"Step=%D, %Dth cost function, transposed linear solve fails, stopping 1st-order adjoint solve\n",ts->steps,nadj));
+      PetscCall(PetscInfo(ts,"Step=%" PetscInt_FMT ", %" PetscInt_FMT "th cost function, transposed linear solve fails, stopping 1st-order adjoint solve\n",ts->steps,nadj));
     }
   }
 
@@ -509,7 +509,7 @@ static PetscErrorCode TSAdjointStep_Theta(TS ts)
       PetscCall(KSPGetConvergedReason(ksp,&kspreason));
       if (kspreason < 0) {
         ts->reason = TSADJOINT_DIVERGED_LINEAR_SOLVE;
-        PetscCall(PetscInfo(ts,"Step=%D, %Dth cost function, transposed linear solve fails, stopping 2nd-order adjoint solve\n",ts->steps,nadj));
+        PetscCall(PetscInfo(ts,"Step=%" PetscInt_FMT ", %" PetscInt_FMT "th cost function, transposed linear solve fails, stopping 2nd-order adjoint solve\n",ts->steps,nadj));
       }
     }
   }
@@ -843,7 +843,7 @@ static PetscErrorCode TSForwardStep_Theta(TS ts)
     PetscCall(KSPGetConvergedReason(ksp,&kspreason));
     if (kspreason < 0) {
       ts->reason = TSFORWARD_DIVERGED_LINEAR_SOLVE;
-      PetscCall(PetscInfo(ts,"Step=%D, %Dth tangent linear solve, linear solve fails, stopping tangent linear solve\n",ts->steps,ntlm));
+      PetscCall(PetscInfo(ts,"Step=%" PetscInt_FMT ", %" PetscInt_FMT "th tangent linear solve, linear solve fails, stopping tangent linear solve\n",ts->steps,ntlm));
     }
     PetscCall(VecResetArray(VecDeltaFwdSensipCol));
     PetscCall(MatDenseRestoreColumn(MatDeltaFwdSensip,&barr));
@@ -1111,13 +1111,13 @@ static PetscErrorCode TSSetFromOptions_Theta(PetscOptionItems *PetscOptionsObjec
   TS_Theta       *th = (TS_Theta*)ts->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Theta ODE solver options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Theta ODE solver options");
   {
     PetscCall(PetscOptionsReal("-ts_theta_theta","Location of stage (0<Theta<=1)","TSThetaSetTheta",th->Theta,&th->Theta,NULL));
     PetscCall(PetscOptionsBool("-ts_theta_endpoint","Use the endpoint instead of midpoint form of the Theta method","TSThetaSetEndpoint",th->endpoint,&th->endpoint,NULL));
     PetscCall(PetscOptionsBool("-ts_theta_initial_guess_extrapolate","Extrapolate stage initial guess from previous solution (sometimes unstable)","TSThetaSetExtrapolate",th->extrapolate,&th->extrapolate,NULL));
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -1149,7 +1149,7 @@ static PetscErrorCode TSThetaSetTheta_Theta(TS ts,PetscReal theta)
   TS_Theta *th = (TS_Theta*)ts->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(theta <= 0 || 1 < theta,PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_OUTOFRANGE,"Theta %g not in range (0,1]",(double)theta);
+  PetscCheck(theta > 0 && theta <= 1,PetscObjectComm((PetscObject)ts),PETSC_ERR_ARG_OUTOFRANGE,"Theta %g not in range (0,1]",(double)theta);
   th->Theta = theta;
   th->order = (th->Theta == 0.5) ? 2 : 1;
   PetscFunctionReturn(0);
@@ -1254,7 +1254,7 @@ $  Y_i = X + h sum_j a_ij Y'_j
 
    is interpreted as a formula for Y'_i in terms of Y_i and known values (Y'_j, j<i)
 
-.seealso:  TSCreate(), TS, TSSetType(), TSCN, TSBEULER, TSThetaSetTheta(), TSThetaSetEndpoint()
+.seealso: `TSCreate()`, `TS`, `TSSetType()`, `TSCN`, `TSBEULER`, `TSThetaSetTheta()`, `TSThetaSetEndpoint()`
 
 M*/
 PETSC_EXTERN PetscErrorCode TSCreate_Theta(TS ts)
@@ -1326,7 +1326,7 @@ PETSC_EXTERN PetscErrorCode TSCreate_Theta(TS ts)
 
   Level: Advanced
 
-.seealso: TSThetaSetTheta()
+.seealso: `TSThetaSetTheta()`
 @*/
 PetscErrorCode  TSThetaGetTheta(TS ts,PetscReal *theta)
 {
@@ -1351,7 +1351,7 @@ PetscErrorCode  TSThetaGetTheta(TS ts,PetscReal *theta)
 
   Level: Intermediate
 
-.seealso: TSThetaGetTheta()
+.seealso: `TSThetaGetTheta()`
 @*/
 PetscErrorCode  TSThetaSetTheta(TS ts,PetscReal theta)
 {
@@ -1374,7 +1374,7 @@ PetscErrorCode  TSThetaSetTheta(TS ts,PetscReal theta)
 
   Level: Advanced
 
-.seealso: TSThetaSetEndpoint(), TSTHETA, TSCN
+.seealso: `TSThetaSetEndpoint()`, `TSTHETA`, `TSCN`
 @*/
 PetscErrorCode TSThetaGetEndpoint(TS ts,PetscBool *endpoint)
 {
@@ -1399,7 +1399,7 @@ PetscErrorCode TSThetaGetEndpoint(TS ts,PetscBool *endpoint)
 
   Level: Intermediate
 
-.seealso: TSTHETA, TSCN
+.seealso: `TSTHETA`, `TSCN`
 @*/
 PetscErrorCode TSThetaSetEndpoint(TS ts,PetscBool flg)
 {
@@ -1419,7 +1419,7 @@ static PetscErrorCode TSSetUp_BEuler(TS ts)
   TS_Theta       *th = (TS_Theta*)ts->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(th->Theta != 1.0,PetscObjectComm((PetscObject)ts),PETSC_ERR_OPT_OVERWRITE,"Can not change the default value (1) of theta when using backward Euler");
+  PetscCheck(th->Theta == 1.0,PetscObjectComm((PetscObject)ts),PETSC_ERR_OPT_OVERWRITE,"Can not change the default value (1) of theta when using backward Euler");
   PetscCheck(!th->endpoint,PetscObjectComm((PetscObject)ts),PETSC_ERR_OPT_OVERWRITE,"Can not change to the endpoint form of the Theta methods when using backward Euler");
   PetscCall(TSSetUp_Theta(ts));
   PetscFunctionReturn(0);
@@ -1441,7 +1441,7 @@ static PetscErrorCode TSView_BEuler(TS ts,PetscViewer viewer)
 
 $  -ts_type theta -ts_theta_theta 1.0
 
-.seealso:  TSCreate(), TS, TSSetType(), TSEULER, TSCN, TSTHETA
+.seealso: `TSCreate()`, `TS`, `TSSetType()`, `TSEULER`, `TSCN`, `TSTHETA`
 
 M*/
 PETSC_EXTERN PetscErrorCode TSCreate_BEuler(TS ts)
@@ -1460,7 +1460,7 @@ static PetscErrorCode TSSetUp_CN(TS ts)
   TS_Theta       *th = (TS_Theta*)ts->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(th->Theta != 0.5,PetscObjectComm((PetscObject)ts),PETSC_ERR_OPT_OVERWRITE,"Can not change the default value (0.5) of theta when using Crank-Nicolson");
+  PetscCheck(th->Theta == 0.5,PetscObjectComm((PetscObject)ts),PETSC_ERR_OPT_OVERWRITE,"Can not change the default value (0.5) of theta when using Crank-Nicolson");
   PetscCheck(th->endpoint,PetscObjectComm((PetscObject)ts),PETSC_ERR_OPT_OVERWRITE,"Can not change to the midpoint form of the Theta methods when using Crank-Nicolson");
   PetscCall(TSSetUp_Theta(ts));
   PetscFunctionReturn(0);
@@ -1482,7 +1482,7 @@ static PetscErrorCode TSView_CN(TS ts,PetscViewer viewer)
 
 $  -ts_type theta -ts_theta_theta 0.5 -ts_theta_endpoint
 
-.seealso:  TSCreate(), TS, TSSetType(), TSBEULER, TSTHETA
+.seealso: `TSCreate()`, `TS`, `TSSetType()`, `TSBEULER`, `TSTHETA`
 
 M*/
 PETSC_EXTERN PetscErrorCode TSCreate_CN(TS ts)

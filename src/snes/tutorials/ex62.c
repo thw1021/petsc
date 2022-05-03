@@ -250,16 +250,14 @@ static void f0_trig_u(PetscInt dim, PetscInt Nf, PetscInt NfAux,
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
   PetscInt       sol;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   options->sol = SOL_QUADRATIC;
-
-  ierr = PetscOptionsBegin(comm, "", "Stokes Problem Options", "DMPLEX");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "Stokes Problem Options", "DMPLEX");
   sol  = options->sol;
-  PetscCall(PetscOptionsEList("-sol", "The MMS solution", "ex62.c", SolTypes, (sizeof(SolTypes)/sizeof(SolTypes[0]))-3, SolTypes[options->sol], &sol, NULL));
+  PetscCall(PetscOptionsEList("-sol", "The MMS solution", "ex62.c", SolTypes, PETSC_STATIC_ARRAY_LENGTH(SolTypes)-3, SolTypes[options->sol], &sol, NULL));
   options->sol = (SolType) sol;
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -321,7 +319,7 @@ static PetscErrorCode SetupEqn(DM dm, AppCtx *user)
       exactFuncs[0] = trig_u;
       exactFuncs[1] = trig_p;
       break;
-    default: SETERRQ(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "Unsupported solution type: %s (%D)", SolTypes[PetscMin(user->sol, SOL_UNKNOWN)], user->sol);
+    default: SETERRQ(PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "Unsupported solution type: %s (%d)", SolTypes[PetscMin(user->sol, SOL_UNKNOWN)], user->sol);
   }
   PetscCall(PetscDSSetResidual(ds, 1, f0_p, NULL));
   PetscCall(PetscDSSetJacobian(ds, 0, 0, NULL, NULL,  NULL,  g3_uu));
@@ -367,7 +365,7 @@ static PetscErrorCode CreatePressureNullSpace(DM dm, PetscInt origField, PetscIn
   PetscErrorCode (*funcs[2])(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nf, PetscScalar *u, void* ctx) = {zero, one};
 
   PetscFunctionBeginUser;
-  PetscCheck(origField == 1,PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "Field %D should be 1 for pressure", origField);
+  PetscCheck(origField == 1,PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_WRONG, "Field %" PetscInt_FMT " should be 1 for pressure", origField);
   funcs[field] = one;
   {
     PetscDS ds;

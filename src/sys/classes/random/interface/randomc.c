@@ -29,7 +29,7 @@ PetscClassId PETSC_RANDOM_CLASSID;
 
    Level: intermediate
 
-.seealso: PetscRandomGetValue(), PetscRandomCreate(), VecSetRandom()
+.seealso: `PetscRandomGetValue()`, `PetscRandomCreate()`, `VecSetRandom()`
 @*/
 PetscErrorCode  PetscRandomDestroy(PetscRandom *r)
 {
@@ -57,7 +57,7 @@ PetscErrorCode  PetscRandomDestroy(PetscRandom *r)
 
    Level: intermediate
 
-.seealso: PetscRandomCreate(), PetscRandomSetSeed(), PetscRandomSeed()
+.seealso: `PetscRandomCreate()`, `PetscRandomSetSeed()`, `PetscRandomSeed()`
 @*/
 PetscErrorCode  PetscRandomGetSeed(PetscRandom r,unsigned long *seed)
 {
@@ -88,7 +88,7 @@ PetscErrorCode  PetscRandomGetSeed(PetscRandom r,unsigned long *seed)
       PetscRandomSeed(r) without a call to PetscRandomSetSeed() re-initializes
         the seed. The random numbers generated will be the same as before.
 
-.seealso: PetscRandomCreate(), PetscRandomGetSeed(), PetscRandomSeed()
+.seealso: `PetscRandomCreate()`, `PetscRandomGetSeed()`, `PetscRandomSeed()`
 @*/
 PetscErrorCode  PetscRandomSetSeed(PetscRandom r,unsigned long seed)
 {
@@ -110,7 +110,7 @@ PetscErrorCode  PetscRandomSetSeed(PetscRandom r,unsigned long seed)
 
   Level: intermediate
 
-.seealso: PetscRandomSetFromOptions(), PetscRandomSetType()
+.seealso: `PetscRandomSetFromOptions()`, `PetscRandomSetType()`
 */
 static PetscErrorCode PetscRandomSetTypeFromOptions_Private(PetscOptionItems *PetscOptionsObject,PetscRandom rnd)
 {
@@ -154,18 +154,17 @@ static PetscErrorCode PetscRandomSetTypeFromOptions_Private(PetscOptionItems *Pe
 
   Level: beginner
 
-.seealso: PetscRandomCreate(), PetscRandomSetType()
+.seealso: `PetscRandomCreate()`, `PetscRandomSetType()`
 @*/
 PetscErrorCode  PetscRandomSetFromOptions(PetscRandom rnd)
 {
-  PetscErrorCode ierr;
   PetscBool      set,noimaginary = PETSC_FALSE;
   PetscInt       seed;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(rnd,PETSC_RANDOM_CLASSID,1);
 
-  ierr = PetscObjectOptionsBegin((PetscObject)rnd);PetscCall(ierr);
+  PetscObjectOptionsBegin((PetscObject)rnd);
 
   /* Handle PetscRandom type options */
   PetscCall(PetscRandomSetTypeFromOptions_Private(PetscOptionsObject,rnd));
@@ -191,7 +190,7 @@ PetscErrorCode  PetscRandomSetFromOptions(PetscRandom rnd)
     }
   }
 #endif
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscCall(PetscRandomViewFromOptions(rnd,NULL, "-random_view"));
   PetscFunctionReturn(0);
 }
@@ -211,7 +210,7 @@ PetscErrorCode  PetscRandomSetFromOptions(PetscRandom rnd)
 -  name - command line option
 
    Level: intermediate
-.seealso:  PetscRandom, PetscRandomView, PetscObjectViewFromOptions(), PetscRandomCreate()
+.seealso: `PetscRandom`, `PetscRandomView`, `PetscObjectViewFromOptions()`, `PetscRandomCreate()`
 @*/
 PetscErrorCode  PetscRandomViewFromOptions(PetscRandom A,PetscObject obj,const char name[])
 {
@@ -243,7 +242,7 @@ PetscErrorCode  PetscRandomViewFromOptions(PetscRandom A,PetscObject obj,const c
 
    Level: beginner
 
-.seealso:  PetscRealView(), PetscScalarView(), PetscIntView()
+.seealso: `PetscRealView()`, `PetscScalarView()`, `PetscIntView()`
 @*/
 PetscErrorCode  PetscRandomView(PetscRandom rnd,PetscViewer viewer)
 {
@@ -328,8 +327,8 @@ PetscErrorCode  PetscRandomView(PetscRandom rnd,PetscViewer viewer)
       PetscRandomDestroy(&r);
 .ve
 
-.seealso: PetscRandomSetType(), PetscRandomGetValue(), PetscRandomGetValueReal(), PetscRandomSetInterval(),
-          PetscRandomDestroy(), VecSetRandom(), PetscRandomType
+.seealso: `PetscRandomSetType()`, `PetscRandomGetValue()`, `PetscRandomGetValueReal()`, `PetscRandomSetInterval()`,
+          `PetscRandomDestroy()`, `VecSetRandom()`, `PetscRandomType`
 @*/
 
 PetscErrorCode  PetscRandomCreate(MPI_Comm comm,PetscRandom *r)
@@ -373,7 +372,7 @@ PetscErrorCode  PetscRandomCreate(MPI_Comm comm,PetscRandom *r)
       PetscRandomSeed(r) without a call to PetscRandomSetSeed() re-initializes
         the seed. The random numbers generated will be the same as before.
 
-.seealso: PetscRandomCreate(), PetscRandomGetSeed(), PetscRandomSetSeed()
+.seealso: `PetscRandomCreate()`, `PetscRandomGetSeed()`, `PetscRandomSetSeed()`
 @*/
 PetscErrorCode  PetscRandomSeed(PetscRandom r)
 {

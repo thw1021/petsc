@@ -82,7 +82,7 @@ static PetscErrorCode KSPCGSolve_GLTR(KSP ksp)
 
   PetscCall(PCGetDiagonalScale(ksp->pc, &diagonalscale));
   PetscCheck(!diagonalscale,PetscObjectComm((PetscObject)ksp),PETSC_ERR_SUP, "Krylov method %s does not support diagonal scaling", ((PetscObject)ksp)->type_name);
-  PetscCheckFalse(cg->radius < 0.0,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE, "Input error: radius < 0");
+  PetscCheck(cg->radius >= 0.0,PetscObjectComm((PetscObject)ksp),PETSC_ERR_ARG_OUTOFRANGE, "Input error: radius < 0");
 
   /***************************************************************************/
   /* Get the workspace vectors and initialize variables                      */
@@ -562,7 +562,7 @@ static PetscErrorCode KSPCGSolve_GLTR(KSP ksp)
 
     if (ksp->its >= max_cg_its) {
       ksp->reason = KSP_DIVERGED_ITS;
-      PetscCall(PetscInfo(ksp, "KSPCGSolve_GLTR: iterlim: its=%D\n", ksp->its));
+      PetscCall(PetscInfo(ksp, "KSPCGSolve_GLTR: iterlim: its=%" PetscInt_FMT "\n", ksp->its));
       break;
     }
 
@@ -1294,7 +1294,7 @@ static PetscErrorCode KSPCGSetFromOptions_GLTR(PetscOptionItems *PetscOptionsObj
   KSPCG_GLTR       *cg = (KSPCG_GLTR*)ksp->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"KSP GLTR options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"KSP GLTR options");
 
   PetscCall(PetscOptionsReal("-ksp_cg_radius", "Trust Region Radius", "KSPCGSetRadius", cg->radius, &cg->radius, NULL));
 
@@ -1307,7 +1307,7 @@ static PetscErrorCode KSPCGSetFromOptions_GLTR(PetscOptionItems *PetscOptionsObj
   PetscCall(PetscOptionsInt("-ksp_cg_gltr_max_lanczos_its", "Maximum Lanczos Iters", "", cg->max_lanczos_its, &cg->max_lanczos_its, NULL));
   PetscCall(PetscOptionsInt("-ksp_cg_gltr_max_newton_its", "Maximum Newton Iters", "", cg->max_newton_its, &cg->max_newton_its, NULL));
 
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -1352,7 +1352,7 @@ $  other KSP converged/diverged reasons
 
    Level: developer
 
-.seealso:  KSPCreate(), KSPSetType(), KSPType (for list of available types), KSP, KSPCGSetRadius(), KSPCGGetNormD(), KSPCGGetObjFcn(), KSPGLTRGetMinEig(), KSPGLTRGetLambda()
+.seealso: `KSPCreate()`, `KSPSetType()`, `KSPType`, `KSP`, `KSPCGSetRadius()`, `KSPCGGetNormD()`, `KSPCGGetObjFcn()`, `KSPGLTRGetMinEig()`, `KSPGLTRGetLambda()`
 M*/
 
 PETSC_EXTERN PetscErrorCode KSPCreate_GLTR(KSP ksp)

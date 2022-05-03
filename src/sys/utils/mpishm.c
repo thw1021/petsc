@@ -81,7 +81,7 @@ PetscErrorCode PetscShmCommGet(MPI_Comm globcomm,PetscShmComm *pshmcomm)
     PetscCallMPI(MPI_Comm_get_attr(globcomm,Petsc_InnerComm_keyval,&ucomm,&flg));
     if (!flg) {
       /* globcomm does not have a linked petsc inner comm, so we create one and replace globcomm with it */
-      PetscCheckFalse(num_dupped_comms >= MAX_SHMCOMM_DUPPED_COMMS,globcomm,PETSC_ERR_PLIB,"PetscShmCommGet() is trying to dup more than %d MPI_Comms",MAX_SHMCOMM_DUPPED_COMMS);
+      PetscCheck(num_dupped_comms < MAX_SHMCOMM_DUPPED_COMMS,globcomm,PETSC_ERR_PLIB,"PetscShmCommGet() is trying to dup more than %d MPI_Comms",MAX_SHMCOMM_DUPPED_COMMS);
       PetscCall(PetscCommDuplicate(globcomm,&globcomm,NULL));
       /* Register a function to free the dupped petsc comms at PetscFinalize at the first time */
       if (num_dupped_comms == 0) PetscCall(PetscRegisterFinalize(PetscShmCommDestroyDuppedComms));
@@ -273,9 +273,9 @@ static inline PetscErrorCode PetscOmpCtrlCreateBarrier(PetscOmpCtrl ctrl)
     PetscCall(PetscGetTmp(PETSC_COMM_SELF,pathname,PETSC_MAX_PATH_LEN));
     PetscCall(PetscStrlcat(pathname,"/petsc-shm-XXXXXX",PETSC_MAX_PATH_LEN));
     /* mkstemp replaces XXXXXX with a unique file name and opens the file for us */
-    fd      = mkstemp(pathname); PetscCheckFalse(fd == -1,PETSC_COMM_SELF,PETSC_ERR_LIB,"Could not create tmp file %s with mkstemp", pathname);
+    fd      = mkstemp(pathname); PetscCheck(fd != -1,PETSC_COMM_SELF,PETSC_ERR_LIB,"Could not create tmp file %s with mkstemp", pathname);
     PetscCall(ftruncate(fd,size));
-    baseptr = mmap(NULL,size,PROT_READ | PROT_WRITE, MAP_SHARED,fd,0); PetscCheckFalse(baseptr == MAP_FAILED,PETSC_COMM_SELF,PETSC_ERR_LIB,"mmap() failed");
+    baseptr = mmap(NULL,size,PROT_READ | PROT_WRITE, MAP_SHARED,fd,0); PetscCheck(baseptr != MAP_FAILED,PETSC_COMM_SELF,PETSC_ERR_LIB,"mmap() failed");
     PetscCall(close(fd));
     PetscCallMPI(MPI_Bcast(pathname,PETSC_MAX_PATH_LEN,MPI_CHAR,0,ctrl->omp_comm));
     /* this MPI_Barrier is to wait slaves to open the file before master unlinks it */
@@ -283,8 +283,8 @@ static inline PetscErrorCode PetscOmpCtrlCreateBarrier(PetscOmpCtrl ctrl)
     PetscCall(unlink(pathname));
   } else {
     PetscCallMPI(MPI_Bcast(pathname,PETSC_MAX_PATH_LEN,MPI_CHAR,0,ctrl->omp_comm));
-    fd      = open(pathname,O_RDWR); PetscCheckFalse(fd == -1,PETSC_COMM_SELF,PETSC_ERR_LIB,"Could not open tmp file %s", pathname);
-    baseptr = mmap(NULL,size,PROT_READ | PROT_WRITE, MAP_SHARED,fd,0); PetscCheckFalse(baseptr == MAP_FAILED,PETSC_COMM_SELF,PETSC_ERR_LIB,"mmap() failed");
+    fd      = open(pathname,O_RDWR); PetscCheck(fd != -1,PETSC_COMM_SELF,PETSC_ERR_LIB,"Could not open tmp file %s", pathname);
+    baseptr = mmap(NULL,size,PROT_READ | PROT_WRITE, MAP_SHARED,fd,0); PetscCheck(baseptr != MAP_FAILED,PETSC_COMM_SELF,PETSC_ERR_LIB,"mmap() failed");
     PetscCall(close(fd));
     PetscCallMPI(MPI_Barrier(ctrl->omp_comm));
   }
@@ -339,7 +339,7 @@ static inline PetscErrorCode PetscOmpCtrlDestroyBarrier(PetscOmpCtrl ctrl)
 
     TODO: Possibly use the variable PetscNumOMPThreads to determine the number for threads to use
 
-.seealso PetscOmpCtrlDestroy()
+.seealso `PetscOmpCtrlDestroy()`
 @*/
 PetscErrorCode PetscOmpCtrlCreate(MPI_Comm petsc_comm,PetscInt nthreads,PetscOmpCtrl *pctrl)
 {
@@ -468,7 +468,7 @@ PetscErrorCode PetscOmpCtrlCreate(MPI_Comm petsc_comm,PetscInt nthreads,PetscOmp
 
     Level: developer
 
-.seealso PetscOmpCtrlCreate()
+.seealso `PetscOmpCtrlCreate()`
 @*/
 PetscErrorCode PetscOmpCtrlDestroy(PetscOmpCtrl *pctrl)
 {
@@ -534,7 +534,7 @@ PetscErrorCode PetscOmpCtrlGetOmpComms(PetscOmpCtrl ctrl,MPI_Comm *omp_comm,MPI_
 
     Level: developer
 
-.seealso PetscOmpCtrlOmpRegionOnMasterBegin(), PetscOmpCtrlOmpRegionOnMasterEnd()
+.seealso `PetscOmpCtrlOmpRegionOnMasterBegin()`, `PetscOmpCtrlOmpRegionOnMasterEnd()`
 @*/
 PetscErrorCode PetscOmpCtrlBarrier(PetscOmpCtrl ctrl)
 {
@@ -542,7 +542,7 @@ PetscErrorCode PetscOmpCtrlBarrier(PetscOmpCtrl ctrl)
 
   PetscFunctionBegin;
   err = pthread_barrier_wait(ctrl->barrier);
-  PetscCheckFalse(err && err != PTHREAD_BARRIER_SERIAL_THREAD,PETSC_COMM_SELF,PETSC_ERR_LIB,"pthread_barrier_wait failed within PetscOmpCtrlBarrier with return code %" PetscInt_FMT, err);
+  PetscCheck(!err || err == PTHREAD_BARRIER_SERIAL_THREAD,PETSC_COMM_SELF,PETSC_ERR_LIB,"pthread_barrier_wait failed within PetscOmpCtrlBarrier with return code %" PetscInt_FMT, err);
   PetscFunctionReturn(0);
 }
 
@@ -558,7 +558,7 @@ PetscErrorCode PetscOmpCtrlBarrier(PetscOmpCtrl ctrl)
 
     Level: developer
 
-.seealso: PetscOmpCtrlOmpRegionOnMasterEnd()
+.seealso: `PetscOmpCtrlOmpRegionOnMasterEnd()`
 @*/
 PetscErrorCode PetscOmpCtrlOmpRegionOnMasterBegin(PetscOmpCtrl ctrl)
 {
@@ -580,7 +580,7 @@ PetscErrorCode PetscOmpCtrlOmpRegionOnMasterBegin(PetscOmpCtrl ctrl)
 
    Level: developer
 
-.seealso: PetscOmpCtrlOmpRegionOnMasterBegin()
+.seealso: `PetscOmpCtrlOmpRegionOnMasterBegin()`
 @*/
 PetscErrorCode PetscOmpCtrlOmpRegionOnMasterEnd(PetscOmpCtrl ctrl)
 {

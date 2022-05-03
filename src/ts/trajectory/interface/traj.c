@@ -21,7 +21,7 @@ PetscLogEvent     TSTrajectory_Set, TSTrajectory_Get, TSTrajectory_GetVecs, TSTr
 
   Level: developer
 
-.seealso: TSTrajectoryRegisterAll()
+.seealso: `TSTrajectoryRegisterAll()`
 @*/
 PetscErrorCode TSTrajectoryRegister(const char sname[],PetscErrorCode (*function)(TSTrajectory,TS))
 {
@@ -46,7 +46,7 @@ PetscErrorCode TSTrajectoryRegister(const char sname[],PetscErrorCode (*function
 
   Notes: Usually one does not call this routine, it is called automatically during TSSolve()
 
-.seealso: TSTrajectorySetUp(), TSTrajectoryDestroy(), TSTrajectorySetType(), TSTrajectorySetVariableNames(), TSGetTrajectory(), TSTrajectoryGet(), TSTrajectoryGetVecs()
+.seealso: `TSTrajectorySetUp()`, `TSTrajectoryDestroy()`, `TSTrajectorySetType()`, `TSTrajectorySetVariableNames()`, `TSGetTrajectory()`, `TSTrajectoryGet()`, `TSTrajectoryGetVecs()`
 @*/
 PetscErrorCode TSTrajectorySet(TSTrajectory tj,TS ts,PetscInt stepnum,PetscReal time,Vec X)
 {
@@ -60,7 +60,7 @@ PetscErrorCode TSTrajectorySet(TSTrajectory tj,TS ts,PetscInt stepnum,PetscReal 
   PetscCheck(tj->ops->set,PetscObjectComm((PetscObject)tj),PETSC_ERR_SUP,"TSTrajectory type %s",((PetscObject)tj)->type_name);
   PetscCheck(tj->setupcalled,PetscObjectComm((PetscObject)tj),PETSC_ERR_ORDER,"TSTrajectorySetUp should be called first");
   if (tj->monitor) {
-    PetscCall(PetscViewerASCIIPrintf(tj->monitor,"TSTrajectorySet: stepnum %D, time %g (stages %D)\n",stepnum,(double)time,(PetscInt)!tj->solution_only));
+    PetscCall(PetscViewerASCIIPrintf(tj->monitor,"TSTrajectorySet: stepnum %" PetscInt_FMT ", time %g (stages %" PetscInt_FMT ")\n",stepnum,(double)time,(PetscInt)!tj->solution_only));
   }
   PetscCall(PetscLogEventBegin(TSTrajectory_Set,tj,ts,0,0));
   PetscCall((*tj->ops->set)(tj,ts,stepnum,time,X));
@@ -85,7 +85,7 @@ PetscErrorCode TSTrajectorySet(TSTrajectory tj,TS ts,PetscInt stepnum,PetscReal 
 
   Level: developer
 
-.seealso: TSTrajectorySet()
+.seealso: `TSTrajectorySet()`
 @*/
 PetscErrorCode TSTrajectoryGetNumSteps(TSTrajectory tj, PetscInt *steps)
 {
@@ -113,7 +113,7 @@ PetscErrorCode TSTrajectoryGetNumSteps(TSTrajectory tj, PetscInt *steps)
 
   Notes: Usually one does not call this routine, it is called automatically during TSSolve()
 
-.seealso: TSTrajectorySetUp(), TSTrajectoryDestroy(), TSTrajectorySetType(), TSTrajectorySetVariableNames(), TSGetTrajectory(), TSTrajectorySet(), TSTrajectoryGetVecs(), TSGetSolution()
+.seealso: `TSTrajectorySetUp()`, `TSTrajectoryDestroy()`, `TSTrajectorySetType()`, `TSTrajectorySetVariableNames()`, `TSGetTrajectory()`, `TSTrajectorySet()`, `TSTrajectoryGetVecs()`, `TSGetSolution()`
 @*/
 PetscErrorCode TSTrajectoryGet(TSTrajectory tj,TS ts,PetscInt stepnum,PetscReal *time)
 {
@@ -127,7 +127,7 @@ PetscErrorCode TSTrajectoryGet(TSTrajectory tj,TS ts,PetscInt stepnum,PetscReal 
   PetscCheck(tj->setupcalled,PetscObjectComm((PetscObject)tj),PETSC_ERR_ORDER,"TSTrajectorySetUp should be called first");
   PetscCheck(stepnum >= 0,PetscObjectComm((PetscObject)tj),PETSC_ERR_PLIB,"Requesting negative step number");
   if (tj->monitor) {
-    PetscCall(PetscViewerASCIIPrintf(tj->monitor,"TSTrajectoryGet: stepnum %D, stages %D\n",stepnum,(PetscInt)!tj->solution_only));
+    PetscCall(PetscViewerASCIIPrintf(tj->monitor,"TSTrajectoryGet: stepnum %" PetscInt_FMT ", stages %" PetscInt_FMT "\n",stepnum,(PetscInt)!tj->solution_only));
     PetscCall(PetscViewerFlush(tj->monitor));
   }
   PetscCall(PetscLogEventBegin(TSTrajectory_Get,tj,ts,0,0));
@@ -158,7 +158,7 @@ PetscErrorCode TSTrajectoryGet(TSTrajectory tj,TS ts,PetscInt stepnum,PetscReal 
   Notes: If the step number is PETSC_DECIDE, the time argument is used to inquire the trajectory.
          If the requested time does not match any in the trajectory, Lagrangian interpolations are returned.
 
-.seealso: TSTrajectorySetUp(), TSTrajectoryDestroy(), TSTrajectorySetType(), TSTrajectorySetVariableNames(), TSGetTrajectory(), TSTrajectorySet(), TSTrajectoryGet()
+.seealso: `TSTrajectorySetUp()`, `TSTrajectoryDestroy()`, `TSTrajectorySetType()`, `TSTrajectorySetVariableNames()`, `TSGetTrajectory()`, `TSTrajectorySet()`, `TSTrajectoryGet()`
 @*/
 PetscErrorCode TSTrajectoryGetVecs(TSTrajectory tj,TS ts,PetscInt stepnum,PetscReal *time,Vec U,Vec Udot)
 {
@@ -177,7 +177,7 @@ PetscErrorCode TSTrajectoryGetVecs(TSTrajectory tj,TS ts,PetscInt stepnum,PetscR
     PetscInt pU,pUdot;
     pU    = U ? 1 : 0;
     pUdot = Udot ? 1 : 0;
-    PetscCall(PetscViewerASCIIPrintf(tj->monitor,"Requested by GetVecs %D %D: stepnum %D, time %g\n",pU,pUdot,stepnum,(double)*time));
+    PetscCall(PetscViewerASCIIPrintf(tj->monitor,"Requested by GetVecs %" PetscInt_FMT " %" PetscInt_FMT ": stepnum %" PetscInt_FMT ", time %g\n",pU,pUdot,stepnum,(double)*time));
     PetscCall(PetscViewerFlush(tj->monitor));
   }
   if (U && tj->lag.caching) {
@@ -270,7 +270,7 @@ PetscErrorCode TSTrajectoryGetVecs(TSTrajectory tj,TS ts,PetscInt stepnum,PetscR
 -  name - command line option
 
    Level: intermediate
-.seealso:  TSTrajectory, TSTrajectoryView, PetscObjectViewFromOptions(), TSTrajectoryCreate()
+.seealso: `TSTrajectory`, `TSTrajectoryView`, `PetscObjectViewFromOptions()`, `TSTrajectoryCreate()`
 @*/
 PetscErrorCode  TSTrajectoryViewFromOptions(TSTrajectory A,PetscObject obj,const char name[])
 {
@@ -305,7 +305,7 @@ PetscErrorCode  TSTrajectoryViewFromOptions(TSTrajectory A,PetscObject obj,const
 
     Level: developer
 
-.seealso: PetscViewerASCIIOpen()
+.seealso: `PetscViewerASCIIOpen()`
 @*/
 PetscErrorCode  TSTrajectoryView(TSTrajectory tj,PetscViewer viewer)
 {
@@ -322,9 +322,9 @@ PetscErrorCode  TSTrajectoryView(TSTrajectory tj,PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
   if (iascii) {
     PetscCall(PetscObjectPrintClassNamePrefixType((PetscObject)tj,viewer));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  total number of recomputations for adjoint calculation = %D\n",tj->recomps));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  disk checkpoint reads = %D\n",tj->diskreads));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  disk checkpoint writes = %D\n",tj->diskwrites));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  total number of recomputations for adjoint calculation = %" PetscInt_FMT "\n",tj->recomps));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  disk checkpoint reads = %" PetscInt_FMT "\n",tj->diskreads));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  disk checkpoint writes = %" PetscInt_FMT "\n",tj->diskwrites));
     if (tj->ops->view) {
       PetscCall(PetscViewerASCIIPushTab(viewer));
       PetscCall((*tj->ops->view)(tj,viewer));
@@ -347,7 +347,7 @@ PetscErrorCode  TSTrajectoryView(TSTrajectory tj,PetscViewer viewer)
 
    Note: Fortran interface is not possible because of the string array argument
 
-.seealso: TSTrajectory, TSGetTrajectory()
+.seealso: `TSTrajectory`, `TSGetTrajectory()`
 @*/
 PetscErrorCode  TSTrajectorySetVariableNames(TSTrajectory ctx,const char * const *names)
 {
@@ -372,7 +372,7 @@ PetscErrorCode  TSTrajectorySetVariableNames(TSTrajectory ctx,const char * const
 
    Level: intermediate
 
-.seealso:  TSTrajectorySetVariableNames(), TSTrajectory, TSMonitorLGSetTransform()
+.seealso: `TSTrajectorySetVariableNames()`, `TSTrajectory`, `TSMonitorLGSetTransform()`
 @*/
 PetscErrorCode  TSTrajectorySetTransform(TSTrajectory tj,PetscErrorCode (*transform)(void*,Vec,Vec*),PetscErrorCode (*destroy)(void*),void *tctx)
 {
@@ -400,7 +400,7 @@ PetscErrorCode  TSTrajectorySetTransform(TSTrajectory tj,PetscErrorCode (*transf
   Notes:
     Usually one does not call this routine, it is called automatically when one calls TSSetSaveTrajectory().
 
-.seealso: TSTrajectorySetUp(), TSTrajectoryDestroy(), TSTrajectorySetType(), TSTrajectorySetVariableNames(), TSGetTrajectory(), TSTrajectorySetKeepFiles()
+.seealso: `TSTrajectorySetUp()`, `TSTrajectoryDestroy()`, `TSTrajectorySetType()`, `TSTrajectorySetVariableNames()`, `TSGetTrajectory()`, `TSTrajectorySetKeepFiles()`
 @*/
 PetscErrorCode  TSTrajectoryCreate(MPI_Comm comm,TSTrajectory *tj)
 {
@@ -436,7 +436,7 @@ PetscErrorCode  TSTrajectoryCreate(MPI_Comm comm,TSTrajectory *tj)
   t->keepfiles            = PETSC_FALSE;
   t->usehistory           = PETSC_TRUE;
   *tj  = t;
-  PetscCall(TSTrajectorySetFiletemplate(t,"TS-%06D.bin"));
+  PetscCall(TSTrajectorySetFiletemplate(t,"TS-%06" PetscInt_FMT ".bin"));
   PetscFunctionReturn(0);
 }
 
@@ -455,7 +455,7 @@ PetscErrorCode  TSTrajectoryCreate(MPI_Comm comm,TSTrajectory *tj)
 
    Level: developer
 
-.seealso: TS, TSTrajectoryCreate(), TSTrajectorySetFromOptions(), TSTrajectoryDestroy(), TSTrajectoryGetType()
+.seealso: `TS`, `TSTrajectoryCreate()`, `TSTrajectorySetFromOptions()`, `TSTrajectoryDestroy()`, `TSTrajectoryGetType()`
 
 @*/
 PetscErrorCode  TSTrajectorySetType(TSTrajectory tj,TS ts,TSTrajectoryType type)
@@ -496,7 +496,7 @@ PetscErrorCode  TSTrajectorySetType(TSTrajectory tj,TS ts,TSTrajectoryType type)
 
   Level: developer
 
-.seealso: TS, TSTrajectoryCreate(), TSTrajectorySetFromOptions(), TSTrajectoryDestroy(), TSTrajectorySetType()
+.seealso: `TS`, `TSTrajectoryCreate()`, `TSTrajectorySetFromOptions()`, `TSTrajectoryDestroy()`, `TSTrajectorySetType()`
 
 @*/
 PetscErrorCode TSTrajectoryGetType(TSTrajectory tj,TS ts,TSTrajectoryType *type)
@@ -519,7 +519,7 @@ PETSC_EXTERN PetscErrorCode TSTrajectoryCreate_Visualization(TSTrajectory,TS);
 
   Level: developer
 
-.seealso: TSTrajectoryRegister()
+.seealso: `TSTrajectoryRegister()`
 @*/
 PetscErrorCode  TSTrajectoryRegisterAll(void)
 {
@@ -544,7 +544,7 @@ PetscErrorCode  TSTrajectoryRegisterAll(void)
 
    Level: developer
 
-.seealso: TSTrajectoryCreate(), TSTrajectorySetUp()
+.seealso: `TSTrajectoryCreate()`, `TSTrajectorySetUp()`
 @*/
 PetscErrorCode TSTrajectoryReset(TSTrajectory tj)
 {
@@ -571,7 +571,7 @@ PetscErrorCode TSTrajectoryReset(TSTrajectory tj)
 
    Level: developer
 
-.seealso: TSTrajectoryCreate(), TSTrajectorySetUp()
+.seealso: `TSTrajectoryCreate()`, `TSTrajectorySetUp()`
 @*/
 PetscErrorCode TSTrajectoryDestroy(TSTrajectory *tj)
 {
@@ -620,7 +620,7 @@ PetscErrorCode TSTrajectoryDestroy(TSTrajectory *tj)
 
   Level: developer
 
-.seealso: TSTrajectorySetFromOptions(), TSTrajectorySetType()
+.seealso: `TSTrajectorySetFromOptions()`, `TSTrajectorySetType()`
 */
 static PetscErrorCode TSTrajectorySetTypeFromOptions_Private(PetscOptionItems *PetscOptionsObject,TSTrajectory tj,TS ts)
 {
@@ -656,7 +656,7 @@ static PetscErrorCode TSTrajectorySetTypeFromOptions_Private(PetscOptionItems *P
 
    Level: advanced
 
-.seealso: TSTrajectoryCreate(), TSTrajectoryDestroy(), TSTrajectorySetUp()
+.seealso: `TSTrajectoryCreate()`, `TSTrajectoryDestroy()`, `TSTrajectorySetUp()`
 @*/
 PetscErrorCode TSTrajectorySetUseHistory(TSTrajectory tj,PetscBool flg)
 {
@@ -681,7 +681,7 @@ PetscErrorCode TSTrajectorySetUseHistory(TSTrajectory tj,PetscBool flg)
 
    Level: developer
 
-.seealso: TSTrajectoryCreate(), TSTrajectoryDestroy(), TSTrajectorySetUp()
+.seealso: `TSTrajectoryCreate()`, `TSTrajectoryDestroy()`, `TSTrajectorySetUp()`
 @*/
 PetscErrorCode TSTrajectorySetMonitor(TSTrajectory tj,PetscBool flg)
 {
@@ -710,7 +710,7 @@ PetscErrorCode TSTrajectorySetMonitor(TSTrajectory tj,PetscBool flg)
 
    Level: advanced
 
-.seealso: TSTrajectoryCreate(), TSTrajectoryDestroy(), TSTrajectorySetUp(), TSTrajectorySetMonitor()
+.seealso: `TSTrajectoryCreate()`, `TSTrajectoryDestroy()`, `TSTrajectorySetUp()`, `TSTrajectorySetMonitor()`
 @*/
 PetscErrorCode TSTrajectorySetKeepFiles(TSTrajectory tj,PetscBool flg)
 {
@@ -738,7 +738,7 @@ PetscErrorCode TSTrajectorySetKeepFiles(TSTrajectory tj,PetscBool flg)
 
    Level: developer
 
-.seealso: TSTrajectorySetFiletemplate(),TSTrajectorySetUp()
+.seealso: `TSTrajectorySetFiletemplate(),TSTrajectorySetUp()`
 @*/
 PetscErrorCode TSTrajectorySetDirname(TSTrajectory tj,const char dirname[])
 {
@@ -768,14 +768,14 @@ PetscErrorCode TSTrajectorySetDirname(TSTrajectory tj,const char dirname[])
 .  -ts_trajectory_file_template - set the file name template
 
    Notes:
-    The name template should be of the form, for example filename-%06D.bin It should not begin with a leading /
+    The name template should be of the form, for example filename-%06" PetscInt_FMT ".bin It should not begin with a leading /
 
-   The final location of the files is determined by dirname/filetemplate where dirname was provided by TSTrajectorySetDirname(). The %06D is replaced by the
+   The final location of the files is determined by dirname/filetemplate where dirname was provided by TSTrajectorySetDirname(). The %06" PetscInt_FMT " is replaced by the
    timestep counter
 
    Level: developer
 
-.seealso: TSTrajectorySetDirname(),TSTrajectorySetUp()
+.seealso: `TSTrajectorySetDirname(),TSTrajectorySetUp()`
 @*/
 PetscErrorCode TSTrajectorySetFiletemplate(TSTrajectory tj,const char filetemplate[])
 {
@@ -783,15 +783,16 @@ PetscErrorCode TSTrajectorySetFiletemplate(TSTrajectory tj,const char filetempla
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tj,TSTRAJECTORY_CLASSID,1);
+  PetscValidCharPointer(filetemplate,2);
   PetscCheck(!tj->dirfiletemplate,PetscObjectComm((PetscObject)tj),PETSC_ERR_ARG_WRONGSTATE,"Cannot set filetemplate after TSTrajectory has been setup");
 
-  PetscCheck(filetemplate[0],PetscObjectComm((PetscObject)tj),PETSC_ERR_USER,"-ts_trajectory_file_template requires a file name template, e.g. filename-%%06D.bin");
+  PetscCheck(filetemplate[0],PetscObjectComm((PetscObject)tj),PETSC_ERR_USER,"-ts_trajectory_file_template requires a file name template, e.g. filename-%%06" PetscInt_FMT ".bin");
   /* Do some cursory validation of the input. */
   PetscCall(PetscStrstr(filetemplate,"%",(char**)&ptr));
-  PetscCheck(ptr,PetscObjectComm((PetscObject)tj),PETSC_ERR_USER,"-ts_trajectory_file_template requires a file name template, e.g. filename-%%06D.bin");
+  PetscCheck(ptr,PetscObjectComm((PetscObject)tj),PETSC_ERR_USER,"-ts_trajectory_file_template requires a file name template, e.g. filename-%%06" PetscInt_FMT ".bin");
   for (ptr++; ptr && *ptr; ptr++) {
-    PetscCall(PetscStrchr("DdiouxX",*ptr,(char**)&ptr2));
-    PetscCheck(ptr2 || (*ptr >= '0' && *ptr <= '9'),PetscObjectComm((PetscObject)tj),PETSC_ERR_USER,"Invalid file template argument to -ts_trajectory_file_template, should look like filename-%%06D.bin");
+    PetscCall(PetscStrchr(PetscInt_FMT "DiouxX",*ptr,(char**)&ptr2));
+    PetscCheck(ptr2 || (*ptr >= '0' && *ptr <= '9'),PetscObjectComm((PetscObject)tj),PETSC_ERR_USER,"Invalid file template argument to -ts_trajectory_file_template, should look like filename-%%06" PetscInt_FMT ".bin");
     if (ptr2) break;
   }
   PetscCall(PetscFree(tj->filetemplate));
@@ -818,18 +819,17 @@ PetscErrorCode TSTrajectorySetFiletemplate(TSTrajectory tj,const char filetempla
    Notes:
     This is not normally called directly by users
 
-.seealso: TSSetSaveTrajectory(), TSTrajectorySetUp()
+.seealso: `TSSetSaveTrajectory()`, `TSTrajectorySetUp()`
 @*/
 PetscErrorCode  TSTrajectorySetFromOptions(TSTrajectory tj,TS ts)
 {
   PetscBool      set,flg;
   char           dirname[PETSC_MAX_PATH_LEN],filetemplate[PETSC_MAX_PATH_LEN];
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tj,TSTRAJECTORY_CLASSID,1);
   if (ts) PetscValidHeaderSpecific(ts,TS_CLASSID,2);
-  ierr = PetscObjectOptionsBegin((PetscObject)tj);PetscCall(ierr);
+  PetscObjectOptionsBegin((PetscObject)tj);
   PetscCall(TSTrajectorySetTypeFromOptions_Private(PetscOptionsObject,tj,ts));
   PetscCall(PetscOptionsBool("-ts_trajectory_use_history","Turn on/off usage of TSHistory",NULL,tj->usehistory,&tj->usehistory,NULL));
   PetscCall(PetscOptionsBool("-ts_trajectory_monitor","Print checkpointing schedules","TSTrajectorySetMonitor",tj->monitor ? PETSC_TRUE:PETSC_FALSE,&flg,&set));
@@ -846,7 +846,7 @@ PetscErrorCode  TSTrajectorySetFromOptions(TSTrajectory tj,TS ts)
     PetscCall(TSTrajectorySetDirname(tj,dirname));
   }
 
-  PetscCall(PetscOptionsString("-ts_trajectory_file_template","Template for TSTrajectory file name, use filename-%06D.bin","TSTrajectorySetFiletemplate",NULL,filetemplate,sizeof(filetemplate),&set));
+  PetscCall(PetscOptionsString("-ts_trajectory_file_template","Template for TSTrajectory file name, use filename-%06" PetscInt_FMT ".bin","TSTrajectorySetFiletemplate",NULL,filetemplate,sizeof(filetemplate),&set));
   if (set) {
     PetscCall(TSTrajectorySetFiletemplate(tj,filetemplate));
   }
@@ -855,7 +855,7 @@ PetscErrorCode  TSTrajectorySetFromOptions(TSTrajectory tj,TS ts)
   if (tj->ops->setfromoptions) {
     PetscCall((*tj->ops->setfromoptions)(PetscOptionsObject,tj));
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -871,7 +871,7 @@ PetscErrorCode  TSTrajectorySetFromOptions(TSTrajectory tj,TS ts)
 
    Level: developer
 
-.seealso: TSSetSaveTrajectory(), TSTrajectoryCreate(), TSTrajectoryDestroy()
+.seealso: `TSSetSaveTrajectory()`, `TSTrajectoryCreate()`, `TSTrajectoryDestroy()`
 @*/
 PetscErrorCode  TSTrajectorySetUp(TSTrajectory tj,TS ts)
 {
@@ -917,7 +917,7 @@ PetscErrorCode  TSTrajectorySetUp(TSTrajectory tj,TS ts)
 
    Level: developer
 
-.seealso: TSSetSaveTrajectory(), TSTrajectoryCreate(), TSTrajectoryDestroy(), TSTrajectoryGetSolutionOnly()
+.seealso: `TSSetSaveTrajectory()`, `TSTrajectoryCreate()`, `TSTrajectoryDestroy()`, `TSTrajectoryGetSolutionOnly()`
 @*/
 PetscErrorCode TSTrajectorySetSolutionOnly(TSTrajectory tj,PetscBool solution_only)
 {
@@ -941,7 +941,7 @@ PetscErrorCode TSTrajectorySetSolutionOnly(TSTrajectory tj,PetscBool solution_on
 
    Level: developer
 
-.seealso: TSSetSaveTrajectory(), TSTrajectoryCreate(), TSTrajectoryDestroy(), TSTrajectorySetSolutionOnly()
+.seealso: `TSSetSaveTrajectory()`, `TSTrajectoryCreate()`, `TSTrajectoryDestroy()`, `TSTrajectorySetSolutionOnly()`
 @*/
 PetscErrorCode TSTrajectoryGetSolutionOnly(TSTrajectory tj,PetscBool *solution_only)
 {
@@ -972,7 +972,7 @@ PetscErrorCode TSTrajectoryGetSolutionOnly(TSTrajectory tj,PetscBool *solution_o
           This function differs from TSTrajectoryGetVecs since the vectors obtained cannot be modified, and they need to be returned by
           calling TSTrajectoryRestoreUpdatedHistoryVecs().
 
-.seealso: TSSetSaveTrajectory(), TSTrajectoryCreate(), TSTrajectoryDestroy(), TSTrajectoryRestoreUpdatedHistoryVecs(), TSTrajectoryGetVecs()
+.seealso: `TSSetSaveTrajectory()`, `TSTrajectoryCreate()`, `TSTrajectoryDestroy()`, `TSTrajectoryRestoreUpdatedHistoryVecs()`, `TSTrajectoryGetVecs()`
 @*/
 PetscErrorCode TSTrajectoryGetUpdatedHistoryVecs(TSTrajectory tj, TS ts, PetscReal time, Vec *U, Vec *Udot)
 {
@@ -1018,7 +1018,7 @@ PetscErrorCode TSTrajectoryGetUpdatedHistoryVecs(TSTrajectory tj, TS ts, PetscRe
 
    Level: developer
 
-.seealso: TSTrajectoryGetUpdatedHistoryVecs()
+.seealso: `TSTrajectoryGetUpdatedHistoryVecs()`
 @*/
 PetscErrorCode TSTrajectoryRestoreUpdatedHistoryVecs(TSTrajectory tj, Vec *U, Vec *Udot)
 {

@@ -23,8 +23,6 @@
 
 static PetscErrorCode MPIPetsc_Iallreduce(void *sendbuf,void *recvbuf,PetscMPIInt count,MPI_Datatype datatype,MPI_Op op,MPI_Comm comm,MPI_Request *request)
 {
-  PETSC_UNUSED PetscErrorCode ierr;
-
   PetscFunctionBegin;
 #if defined(PETSC_HAVE_MPI_NONBLOCKING_COLLECTIVES)
   PetscCallMPI(MPI_Iallreduce(sendbuf,recvbuf,count,datatype,op,comm,request));
@@ -109,7 +107,7 @@ PETSC_EXTERN void MPIAPI PetscSplitReduction_Local(void *in,void *out,PetscMPIIn
    Calling this function is optional when using split-mode reduction. On supporting hardware, calling this after all
    VecXxxBegin() allows the reduction to make asynchronous progress before the result is needed (in VecXxxEnd()).
 
-.seealso: VecNormBegin(), VecNormEnd(), VecDotBegin(), VecDotEnd(), VecTDotBegin(), VecTDotEnd(), VecMDotBegin(), VecMDotEnd(), VecMTDotBegin(), VecMTDotEnd()
+.seealso: `VecNormBegin()`, `VecNormEnd()`, `VecDotBegin()`, `VecDotEnd()`, `VecTDotBegin()`, `VecTDotEnd()`, `VecMDotBegin()`, `VecMDotEnd()`, `VecMTDotBegin()`, `VecMTDotEnd()`
 @*/
 PetscErrorCode PetscCommSplitReductionBegin(MPI_Comm comm)
 {
@@ -117,7 +115,7 @@ PetscErrorCode PetscCommSplitReductionBegin(MPI_Comm comm)
 
   PetscFunctionBegin;
   PetscCall(PetscSplitReductionGet(comm,&sr));
-  PetscCheckFalse(sr->numopsend > 0,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Cannot call this after VecxxxEnd() has been called");
+  PetscCheck(sr->numopsend <= 0,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Cannot call this after VecxxxEnd() has been called");
   if (sr->async) {              /* Bad reuse, setup code copied from PetscSplitReductionApply(). */
     PetscInt    i,numops = sr->numopsbegin,*reducetype = sr->reducetype;
     PetscScalar *lvalues = sr->lvalues,*gvalues = sr->gvalues;
@@ -137,7 +135,7 @@ PetscErrorCode PetscCommSplitReductionBegin(MPI_Comm comm)
         else if (reducetype[i] == PETSC_SR_REDUCE_MIN) min_flg = 1;
         else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"Error in PetscSplitReduction() data structure, probably memory corruption");
       }
-      PetscCheckFalse(sum_flg + max_flg + min_flg > 1 && sr->mix,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Error in PetscSplitReduction() data structure, probably memory corruption");
+      PetscCheck(sum_flg + max_flg + min_flg <= 1 || !sr->mix,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Error in PetscSplitReduction() data structure, probably memory corruption");
       if (sum_flg + max_flg + min_flg > 1) {
         sr->mix = PETSC_TRUE;
         for (i=0; i<numops; i++) { sr->lvalues_mix[i].v = lvalues[i]; sr->lvalues_mix[i].i = reducetype[i]; }
@@ -197,7 +195,7 @@ static PetscErrorCode PetscSplitReductionApply(PetscSplitReduction *sr)
   PetscMPIInt    size,cmul = sizeof(PetscScalar)/sizeof(PetscReal);
 
   PetscFunctionBegin;
-  PetscCheckFalse(sr->numopsend > 0,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Cannot call this after VecxxxEnd() has been called");
+  PetscCheck(sr->numopsend <= 0,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Cannot call this after VecxxxEnd() has been called");
   PetscCall(PetscLogEventBegin(VEC_ReduceCommunication,0,0,0,0));
   PetscCallMPI(MPI_Comm_size(sr->comm,&size));
   if (size == 1) {
@@ -336,7 +334,7 @@ PetscErrorCode  VecDotBegin(Vec x,Vec y,PetscScalar *result)
   PetscValidHeaderSpecific(y,VEC_CLASSID,2);
   PetscCall(PetscObjectGetComm((PetscObject)x,&comm));
   PetscCall(PetscSplitReductionGet(comm,&sr));
-  PetscCheckFalse(sr->state != STATE_BEGIN,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Called before all VecxxxEnd() called");
+  PetscCheck(sr->state == STATE_BEGIN,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Called before all VecxxxEnd() called");
   if (sr->numopsbegin >= sr->maxops) {
     PetscCall(PetscSplitReductionExtend(sr));
   }
@@ -362,8 +360,8 @@ PetscErrorCode  VecDotBegin(Vec x,Vec y,PetscScalar *result)
    Notes:
    Each call to VecDotBegin() should be paired with a call to VecDotEnd().
 
-.seealso: VecDotBegin(), VecNormBegin(), VecNormEnd(), VecNorm(), VecDot(), VecMDot(),
-         VecTDotBegin(),VecTDotEnd(), PetscCommSplitReductionBegin()
+.seealso: `VecDotBegin()`, `VecNormBegin()`, `VecNormEnd()`, `VecNorm()`, `VecDot()`, `VecMDot()`,
+          `VecTDotBegin(),VecTDotEnd()`, `PetscCommSplitReductionBegin()`
 
 @*/
 PetscErrorCode  VecDotEnd(Vec x,Vec y,PetscScalar *result)
@@ -376,9 +374,9 @@ PetscErrorCode  VecDotEnd(Vec x,Vec y,PetscScalar *result)
   PetscCall(PetscSplitReductionGet(comm,&sr));
   PetscCall(PetscSplitReductionEnd(sr));
 
-  PetscCheckFalse(sr->numopsend >= sr->numopsbegin,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecxxxEnd() more times then VecxxxBegin()");
-  PetscCheckFalse(x && (void*)x != sr->invecs[sr->numopsend],PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecxxxEnd() in a different order or with a different vector than VecxxxBegin()");
-  PetscCheckFalse(sr->reducetype[sr->numopsend] != PETSC_SR_REDUCE_SUM,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecDotEnd() on a reduction started with VecNormBegin()");
+  PetscCheck(sr->numopsend < sr->numopsbegin,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecxxxEnd() more times then VecxxxBegin()");
+  PetscCheck(!x || (void*)x == sr->invecs[sr->numopsend],PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecxxxEnd() in a different order or with a different vector than VecxxxBegin()");
+  PetscCheck(sr->reducetype[sr->numopsend] == PETSC_SR_REDUCE_SUM,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecDotEnd() on a reduction started with VecNormBegin()");
   *result = sr->gvalues[sr->numopsend++];
 
   /*
@@ -406,8 +404,8 @@ PetscErrorCode  VecDotEnd(Vec x,Vec y,PetscScalar *result)
    Notes:
    Each call to VecTDotBegin() should be paired with a call to VecTDotEnd().
 
-.seealso: VecTDotEnd(), VecNormBegin(), VecNormEnd(), VecNorm(), VecDot(), VecMDot(),
-         VecDotBegin(), VecDotEnd(), PetscCommSplitReductionBegin()
+.seealso: `VecTDotEnd()`, `VecNormBegin()`, `VecNormEnd()`, `VecNorm()`, `VecDot()`, `VecMDot()`,
+          `VecDotBegin()`, `VecDotEnd()`, `PetscCommSplitReductionBegin()`
 
 @*/
 PetscErrorCode  VecTDotBegin(Vec x,Vec y,PetscScalar *result)
@@ -418,7 +416,7 @@ PetscErrorCode  VecTDotBegin(Vec x,Vec y,PetscScalar *result)
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)x,&comm));
   PetscCall(PetscSplitReductionGet(comm,&sr));
-  PetscCheckFalse(sr->state != STATE_BEGIN,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Called before all VecxxxEnd() called");
+  PetscCheck(sr->state == STATE_BEGIN,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Called before all VecxxxEnd() called");
   if (sr->numopsbegin >= sr->maxops) {
     PetscCall(PetscSplitReductionExtend(sr));
   }
@@ -472,7 +470,7 @@ PetscErrorCode  VecTDotEnd(Vec x,Vec y,PetscScalar *result)
    Notes:
    Each call to VecNormBegin() should be paired with a call to VecNormEnd().
 
-.seealso: VecNormEnd(), VecNorm(), VecDot(), VecMDot(), VecDotBegin(), VecDotEnd(), PetscCommSplitReductionBegin()
+.seealso: `VecNormEnd()`, `VecNorm()`, `VecDot()`, `VecMDot()`, `VecDotBegin()`, `VecDotEnd()`, `PetscCommSplitReductionBegin()`
 
 @*/
 PetscErrorCode  VecNormBegin(Vec x,NormType ntype,PetscReal *result)
@@ -485,7 +483,7 @@ PetscErrorCode  VecNormBegin(Vec x,NormType ntype,PetscReal *result)
   PetscValidHeaderSpecific(x,VEC_CLASSID,1);
   PetscCall(PetscObjectGetComm((PetscObject)x,&comm));
   PetscCall(PetscSplitReductionGet(comm,&sr));
-  PetscCheckFalse(sr->state != STATE_BEGIN,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Called before all VecxxxEnd() called");
+  PetscCheck(sr->state == STATE_BEGIN,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Called before all VecxxxEnd() called");
   if (sr->numopsbegin >= sr->maxops || (sr->numopsbegin == sr->maxops-1 && ntype == NORM_1_AND_2)) {
     PetscCall(PetscSplitReductionExtend(sr));
   }
@@ -522,7 +520,7 @@ PetscErrorCode  VecNormBegin(Vec x,NormType ntype,PetscReal *result)
 
    The x vector is not allowed to be NULL, otherwise the vector would not have its correctly cached norm value
 
-.seealso: VecNormBegin(), VecNorm(), VecDot(), VecMDot(), VecDotBegin(), VecDotEnd(), PetscCommSplitReductionBegin()
+.seealso: `VecNormBegin()`, `VecNorm()`, `VecDot()`, `VecMDot()`, `VecDotBegin()`, `VecDotEnd()`, `PetscCommSplitReductionBegin()`
 
 @*/
 PetscErrorCode  VecNormEnd(Vec x,NormType ntype,PetscReal *result)
@@ -536,9 +534,9 @@ PetscErrorCode  VecNormEnd(Vec x,NormType ntype,PetscReal *result)
   PetscCall(PetscSplitReductionGet(comm,&sr));
   PetscCall(PetscSplitReductionEnd(sr));
 
-  PetscCheckFalse(sr->numopsend >= sr->numopsbegin,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecxxxEnd() more times then VecxxxBegin()");
-  PetscCheckFalse((void*)x != sr->invecs[sr->numopsend],PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecxxxEnd() in a different order or with a different vector than VecxxxBegin()");
-  PetscCheckFalse(sr->reducetype[sr->numopsend] != PETSC_SR_REDUCE_MAX && ntype == NORM_MAX,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecNormEnd(,NORM_MAX,) on a reduction started with VecDotBegin() or NORM_1 or NORM_2");
+  PetscCheck(sr->numopsend < sr->numopsbegin,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecxxxEnd() more times then VecxxxBegin()");
+  PetscCheck((void*)x == sr->invecs[sr->numopsend],PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecxxxEnd() in a different order or with a different vector than VecxxxBegin()");
+  PetscCheck(sr->reducetype[sr->numopsend] == PETSC_SR_REDUCE_MAX || ntype != NORM_MAX,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecNormEnd(,NORM_MAX,) on a reduction started with VecDotBegin() or NORM_1 or NORM_2");
   result[0] = PetscRealPart(sr->gvalues[sr->numopsend++]);
 
   if (ntype == NORM_2) result[0] = PetscSqrtReal(result[0]);
@@ -581,8 +579,8 @@ PetscErrorCode  VecNormEnd(Vec x,NormType ntype,PetscReal *result)
    Notes:
    Each call to VecMDotBegin() should be paired with a call to VecMDotEnd().
 
-.seealso: VecMDotEnd(), VecNormBegin(), VecNormEnd(), VecNorm(), VecDot(), VecMDot(),
-         VecTDotBegin(), VecTDotEnd(), VecMTDotBegin(), VecMTDotEnd(), PetscCommSplitReductionBegin()
+.seealso: `VecMDotEnd()`, `VecNormBegin()`, `VecNormEnd()`, `VecNorm()`, `VecDot()`, `VecMDot()`,
+          `VecTDotBegin()`, `VecTDotEnd()`, `VecMTDotBegin()`, `VecMTDotEnd()`, `PetscCommSplitReductionBegin()`
 @*/
 PetscErrorCode  VecMDotBegin(Vec x,PetscInt nv,const Vec y[],PetscScalar result[])
 {
@@ -593,7 +591,7 @@ PetscErrorCode  VecMDotBegin(Vec x,PetscInt nv,const Vec y[],PetscScalar result[
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)x,&comm));
   PetscCall(PetscSplitReductionGet(comm,&sr));
-  PetscCheckFalse(sr->state != STATE_BEGIN,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Called before all VecxxxEnd() called");
+  PetscCheck(sr->state == STATE_BEGIN,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Called before all VecxxxEnd() called");
   for (i=0; i<nv; i++) {
     if (sr->numopsbegin+i >= sr->maxops) {
       PetscCall(PetscSplitReductionExtend(sr));
@@ -625,8 +623,8 @@ PetscErrorCode  VecMDotBegin(Vec x,PetscInt nv,const Vec y[],PetscScalar result[
    Notes:
    Each call to VecMDotBegin() should be paired with a call to VecMDotEnd().
 
-.seealso: VecMDotBegin(), VecNormBegin(), VecNormEnd(), VecNorm(), VecDot(), VecMDot(),
-         VecTDotBegin(),VecTDotEnd(), VecMTDotBegin(), VecMTDotEnd(), PetscCommSplitReductionBegin()
+.seealso: `VecMDotBegin()`, `VecNormBegin()`, `VecNormEnd()`, `VecNorm()`, `VecDot()`, `VecMDot()`,
+          `VecTDotBegin(),VecTDotEnd()`, `VecMTDotBegin()`, `VecMTDotEnd()`, `PetscCommSplitReductionBegin()`
 
 @*/
 PetscErrorCode  VecMDotEnd(Vec x,PetscInt nv,const Vec y[],PetscScalar result[])
@@ -640,9 +638,9 @@ PetscErrorCode  VecMDotEnd(Vec x,PetscInt nv,const Vec y[],PetscScalar result[])
   PetscCall(PetscSplitReductionGet(comm,&sr));
   PetscCall(PetscSplitReductionEnd(sr));
 
-  PetscCheckFalse(sr->numopsend >= sr->numopsbegin,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecxxxEnd() more times then VecxxxBegin()");
-  PetscCheckFalse(x && (void*)x != sr->invecs[sr->numopsend],PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecxxxEnd() in a different order or with a different vector than VecxxxBegin()");
-  PetscCheckFalse(sr->reducetype[sr->numopsend] != PETSC_SR_REDUCE_SUM,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecDotEnd() on a reduction started with VecNormBegin()");
+  PetscCheck(sr->numopsend < sr->numopsbegin,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecxxxEnd() more times then VecxxxBegin()");
+  PetscCheck(!x || (void*)x == sr->invecs[sr->numopsend],PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecxxxEnd() in a different order or with a different vector than VecxxxBegin()");
+  PetscCheck(sr->reducetype[sr->numopsend] == PETSC_SR_REDUCE_SUM,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Called VecDotEnd() on a reduction started with VecNormBegin()");
   for (i=0;i<nv;i++) result[i] = sr->gvalues[sr->numopsend++];
 
   /*
@@ -670,8 +668,8 @@ PetscErrorCode  VecMDotEnd(Vec x,PetscInt nv,const Vec y[],PetscScalar result[])
    Notes:
    Each call to VecMTDotBegin() should be paired with a call to VecMTDotEnd().
 
-.seealso: VecMTDotEnd(), VecNormBegin(), VecNormEnd(), VecNorm(), VecDot(), VecMDot(),
-         VecDotBegin(), VecDotEnd(), VecMDotBegin(), VecMDotEnd(), PetscCommSplitReductionBegin()
+.seealso: `VecMTDotEnd()`, `VecNormBegin()`, `VecNormEnd()`, `VecNorm()`, `VecDot()`, `VecMDot()`,
+          `VecDotBegin()`, `VecDotEnd()`, `VecMDotBegin()`, `VecMDotEnd()`, `PetscCommSplitReductionBegin()`
 
 @*/
 PetscErrorCode  VecMTDotBegin(Vec x,PetscInt nv,const Vec y[],PetscScalar result[])
@@ -683,7 +681,7 @@ PetscErrorCode  VecMTDotBegin(Vec x,PetscInt nv,const Vec y[],PetscScalar result
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)x,&comm));
   PetscCall(PetscSplitReductionGet(comm,&sr));
-  PetscCheckFalse(sr->state != STATE_BEGIN,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Called before all VecxxxEnd() called");
+  PetscCheck(sr->state == STATE_BEGIN,PETSC_COMM_SELF,PETSC_ERR_ORDER,"Called before all VecxxxEnd() called");
   for (i=0; i<nv; i++) {
     if (sr->numopsbegin+i >= sr->maxops) {
       PetscCall(PetscSplitReductionExtend(sr));
@@ -715,8 +713,8 @@ PetscErrorCode  VecMTDotBegin(Vec x,PetscInt nv,const Vec y[],PetscScalar result
    Notes:
    Each call to VecTDotBegin() should be paired with a call to VecTDotEnd().
 
-.seealso: VecMTDotBegin(), VecNormBegin(), VecNormEnd(), VecNorm(), VecDot(), VecMDot(),
-         VecDotBegin(), VecDotEnd(), VecMDotBegin(), VecMDotEnd(), PetscCommSplitReductionBegin()
+.seealso: `VecMTDotBegin()`, `VecNormBegin()`, `VecNormEnd()`, `VecNorm()`, `VecDot()`, `VecMDot()`,
+          `VecDotBegin()`, `VecDotEnd()`, `VecMDotBegin()`, `VecMDotEnd()`, `PetscCommSplitReductionBegin()`
 @*/
 PetscErrorCode  VecMTDotEnd(Vec x,PetscInt nv,const Vec y[],PetscScalar result[])
 {

@@ -303,7 +303,7 @@ static PetscErrorCode PCView_PBJacobi(PC pc,PetscViewer viewer)
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
   if (iascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  point-block size %D\n",jac->bs));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"  point-block size %" PetscInt_FMT "\n",jac->bs));
   }
   PetscFunctionReturn(0);
 }
@@ -313,12 +313,12 @@ static PetscErrorCode PCView_PBJacobi(PC pc,PetscViewer viewer)
      PCPBJACOBI - Point block Jacobi preconditioner
 
    Notes:
-     See PCJACOBI for point Jacobi preconditioning, PCVPBJACOBI for variable size point block Jacobi and PCBJACOBI for large blocks
+    See PCJACOBI for diagonal Jacobi, PCVPBJACOBI for variable-size point block, and PCBJACOBI for large size blocks
 
-     This works for AIJ and BAIJ matrices and uses the blocksize provided to the matrix
+   This works for AIJ and BAIJ matrices and uses the blocksize provided to the matrix
 
-     Uses dense LU factorization with partial pivoting to invert the blocks; if a zero pivot
-     is detected a PETSc error is generated.
+   Uses dense LU factorization with partial pivoting to invert the blocks; if a zero pivot
+   is detected a PETSc error is generated.
 
    Developer Notes:
      This should support the PCSetErrorIfFailure() flag set to PETSC_TRUE to allow
@@ -331,7 +331,7 @@ static PetscErrorCode PCView_PBJacobi(PC pc,PetscViewer viewer)
 
    Level: beginner
 
-.seealso:  PCCreate(), PCSetType(), PCType (for list of available types), PC, PCJACOBI, PCVPBJACOBI, PCBJACOBI
+.seealso: `PCCreate()`, `PCSetType()`, `PCType`, `PC`, `PCJACOBI`, `PCVPBJACOBI`, `PCBJACOBI`
 
 M*/
 

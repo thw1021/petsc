@@ -14,10 +14,12 @@ Label 'subpoint_map':
 [0]: 31 (101)
 [0]: 38 (101)
 [0]: 46 (101)
+[0]: 48 (101)
 [0]: 2 (-102)
 [0]: 5 (-102)
 [0]: 32 (-101)
 [0]: 34 (-101)
+[0]: 41 (-101)
 [0]: 20 (200)
 Label 'subpoint_map split':
 [0]: 14 (100)
@@ -103,10 +105,10 @@ Discrete System with 2 fields
         Quadrature of order 3 on 2 points (dim 1)
   Weak Form System with 2 fields
     boundary_residual_f0
-      (cohesive, 1) (0, 1) f0_bd_l
-      (material, 1) (0, 0) f0_bd_u
-      (material, 2) (0, 0) f0_bd_u
+      (cohesive, 1) (0, 1)
+      (material, 1) (0, 0)
+      (material, 2) (0, 0)
     boundary_jacobian_g0
-      (cohesive, 1) (1, 0) g0_bd_lu
-      (material, 1) (0, 1) g0_bd_ul
-      (material, 2) (0, 1) g0_bd_ul
+      (cohesive, 1) (1, 0)
+      (material, 1) (0, 1)
+      (material, 2) (0, 1)

@@ -36,7 +36,7 @@ $    invj (x_cell - v0) = x_face
 
   Level: developer
 
-.seealso: DMPlexCellRefinerGetAffineTransforms(), Create()
+.seealso: `DMPlexCellRefinerGetAffineTransforms()`, `Create()`
 @*/
 PetscErrorCode DMPlexRefineRegularGetAffineFaceTransforms(DMPlexTransform tr, DMPolytopeType ct, PetscInt *Nf, PetscReal *v0[], PetscReal *J[], PetscReal *invJ[], PetscReal *detJ[])
 {
@@ -108,7 +108,7 @@ PetscErrorCode DMPlexRefineRegularGetAffineFaceTransforms(DMPlexTransform tr, DM
 
   Level: developer
 
-.seealso: DMPlexRefineRegularGetAffineFaceTransforms(), DMPLEXREFINEREGULAR
+.seealso: `DMPlexRefineRegularGetAffineFaceTransforms()`, `DMPLEXREFINEREGULAR`
 @*/
 PetscErrorCode DMPlexRefineRegularGetAffineTransforms(DMPlexTransform tr, DMPolytopeType ct, PetscInt *Nc, PetscReal *v0[], PetscReal *J[], PetscReal *invJ[])
 {
@@ -313,7 +313,7 @@ static PetscErrorCode DMPlexCellRefinerGetSubcellVertices_Regular(DMPlexCellRefi
                               9, 12, 13, 10, 18, 19, 22, 21,  10, 13, 14, 11, 19, 20, 23, 22,  13, 16, 17, 14, 22, 23, 26, 25,  12, 15, 16, 13, 21, 22, 25, 24};
 
   PetscFunctionBegin;
-  PetscCheckFalse(ct != rct,PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Cell type %s does not produce %s", DMPolytopeTypes[ct], DMPolytopeTypes[rct]);
+  PetscCheck(ct == rct,PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Cell type %s does not produce %s", DMPolytopeTypes[ct], DMPolytopeTypes[rct]);
   switch (ct) {
     case DM_POLYTOPE_SEGMENT:       *Nv = 2; *subcellV = &seg_v[r*(*Nv)];  break;
     case DM_POLYTOPE_TRIANGLE:      *Nv = 3; *subcellV = &tri_v[r*(*Nv)];  break;

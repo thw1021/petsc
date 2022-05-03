@@ -96,7 +96,6 @@ static PetscErrorCode PCApply_VPBJacobi(PC pc,Vec x,Vec y)
   PetscFunctionReturn(0);
 }
 
-/* -------------------------------------------------------------------------- */
 static PetscErrorCode PCSetUp_VPBJacobi(PC pc)
 {
   PC_VPBJacobi    *jac = (PC_VPBJacobi*)pc->data;
@@ -109,7 +108,7 @@ static PetscErrorCode PCSetUp_VPBJacobi(PC pc)
   PetscFunctionBegin;
   PetscCall(MatGetVariableBlockSizes(pc->pmat,&nblocks,&bsizes));
   PetscCall(MatGetLocalSize(pc->pmat,&nlocal,NULL));
-  PetscCheckFalse(nlocal && !nblocks,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call MatSetVariableBlockSizes() before using PCVPBJACOBI");
+  PetscCheck(!nlocal || nblocks,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call MatSetVariableBlockSizes() before using PCVPBJACOBI");
   if (!jac->diag) {
     for (i=0; i<nblocks; i++) nsize += bsizes[i]*bsizes[i];
     PetscCall(PetscMalloc1(nsize,&jac->diag));
@@ -120,7 +119,7 @@ static PetscErrorCode PCSetUp_VPBJacobi(PC pc)
   pc->ops->apply = PCApply_VPBJacobi;
   PetscFunctionReturn(0);
 }
-/* -------------------------------------------------------------------------- */
+
 static PetscErrorCode PCDestroy_VPBJacobi(PC pc)
 {
   PC_VPBJacobi    *jac = (PC_VPBJacobi*)pc->data;
@@ -134,7 +133,6 @@ static PetscErrorCode PCDestroy_VPBJacobi(PC pc)
   PetscFunctionReturn(0);
 }
 
-/* -------------------------------------------------------------------------- */
 /*MC
      PCVPBJACOBI - Variable size point block Jacobi preconditioner
 
@@ -159,7 +157,7 @@ static PetscErrorCode PCDestroy_VPBJacobi(PC pc)
 
    Level: beginner
 
-.seealso:  MatSetVariableBlockSizes(), PCCreate(), PCSetType(), PCType (for list of available types), PC, PCJACOBI, PCPBJACOBI, PCBJACOBI
+.seealso: `MatSetVariableBlockSizes()`, `PCCreate()`, `PCSetType()`, `PCType`, `PC`, `PCJACOBI`, `PCPBJACOBI`, `PCBJACOBI`
 
 M*/
 

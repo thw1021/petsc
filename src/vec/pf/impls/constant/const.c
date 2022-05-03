@@ -28,7 +28,7 @@ PetscErrorCode PFView_Constant(void *value,PetscViewer viewer)
 #if !defined(PETSC_USE_COMPLEX)
     PetscCall(PetscViewerASCIIPrintf(viewer,"Constant = %g\n",*(double*)value));
 #else
-    PetscCall(PetscViewerASCIIPrintf(viewer,"Constant = %g + %gi\n",PetscRealPart(*(PetscScalar*)value),PetscImaginaryPart(*(PetscScalar*)value)));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"Constant = %g + %gi\n",(double)PetscRealPart(*(PetscScalar*)value),(double)PetscImaginaryPart(*(PetscScalar*)value)));
 #endif
   }
   PetscFunctionReturn(0);
@@ -45,9 +45,9 @@ static PetscErrorCode PFSetFromOptions_Constant(PetscOptionItems *PetscOptionsOb
   PetscScalar    *value = (PetscScalar*)pf->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Constant function options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Constant function options");
   PetscCall(PetscOptionsScalar("-pf_constant","The constant value","None",*value,value,NULL));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -115,7 +115,7 @@ PETSC_EXTERN PetscErrorCode PFCreate_Identity(PF pf,void *value)
   PetscInt       *loc;
 
   PetscFunctionBegin;
-  PetscCheckFalse(pf->dimout != pf->dimin,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Input dimension must match output dimension for Identity function, dimin = %" PetscInt_FMT " dimout = %" PetscInt_FMT,pf->dimin,pf->dimout);
+  PetscCheck(pf->dimout == pf->dimin,PETSC_COMM_SELF,PETSC_ERR_ARG_SIZ,"Input dimension must match output dimension for Identity function, dimin = %" PetscInt_FMT " dimout = %" PetscInt_FMT,pf->dimin,pf->dimout);
   PetscCall(PetscNew(&loc));
   loc[0] = pf->dimout;
   PetscCall(PFSet(pf,PFApply_Identity,PFApplyVec_Identity,PFView_Identity,PFDestroy_Identity,loc));

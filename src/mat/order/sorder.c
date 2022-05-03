@@ -101,7 +101,7 @@ $     MatOrderingSetType(part,"my_order)
    or at runtime via the option
 $     -pc_factor_mat_ordering_type my_order
 
-.seealso: MatOrderingRegisterAll()
+.seealso: `MatOrderingRegisterAll()`
 @*/
 PetscErrorCode  MatOrderingRegister(const char sname[],PetscErrorCode (*function)(Mat,MatOrderingType,IS*,IS*))
 {
@@ -157,7 +157,7 @@ $      MATORDERINGEXTERNAL - Use an ordering internal to the factorzation packag
            One-way Dissection, Cholesky, Reverse Cuthill-McKee,
            Quotient Minimum Degree
 
-.seealso:   MatOrderingRegister(), PCFactorSetMatOrderingType(), MatColoring, MatColoringCreate()
+.seealso: `MatOrderingRegister()`, `PCFactorSetMatOrderingType()`, `MatColoring`, `MatColoringCreate()`
 @*/
 PetscErrorCode  MatGetOrdering(Mat mat,MatOrderingType type,IS *rperm,IS *cperm)
 {
@@ -220,7 +220,7 @@ PetscErrorCode  MatGetOrdering(Mat mat,MatOrderingType type,IS *rperm,IS *cperm)
   }
 
   PetscCall(MatGetLocalSize(mat,&mmat,&nmat));
-  PetscCheckFalse(mmat != nmat,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must be square matrix, rows %" PetscInt_FMT " columns %" PetscInt_FMT,mmat,nmat);
+  PetscCheck(mmat == nmat,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Must be square matrix, rows %" PetscInt_FMT " columns %" PetscInt_FMT,mmat,nmat);
 
   PetscCall(MatOrderingRegisterAll());
   PetscCall(PetscFunctionListFind(MatOrderingList,type,&r));

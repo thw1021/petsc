@@ -22,7 +22,7 @@ PetscStageLog petsc_stageLog = NULL;
   Developer Notes:
     Inline since called for EACH PetscEventLogBeginDefault() and PetscEventLogEndDefault()
 
-.seealso: PetscStageLogCreate()
+.seealso: `PetscStageLogCreate()`
 @*/
 PetscErrorCode PetscLogGetStageLog(PetscStageLog *stageLog)
 {
@@ -55,7 +55,7 @@ PetscErrorCode PetscLogGetStageLog(PetscStageLog *stageLog)
   Developer Notes:
     Inline since called for EACH PetscEventLogBeginDefault() and PetscEventLogEndDefault()
 
-.seealso: PetscStageLogPush(), PetscStageLogPop(), PetscLogGetStageLog()
+.seealso: `PetscStageLogPush()`, `PetscStageLogPop()`, `PetscLogGetStageLog()`
 @*/
 PetscErrorCode  PetscStageLogGetCurrent(PetscStageLog stageLog, int *stage)
 {
@@ -68,7 +68,7 @@ PetscErrorCode  PetscStageLogGetCurrent(PetscStageLog stageLog, int *stage)
   } else {
     PetscCall(PetscIntStackTop(stageLog->stack, stage));
   }
-  PetscCheckFalse(*stage != stageLog->curStage,PETSC_COMM_SELF,PETSC_ERR_PLIB, "Inconsistency in stage log: stage %d should be %d", *stage, stageLog->curStage);
+  PetscCheck(*stage == stageLog->curStage,PETSC_COMM_SELF,PETSC_ERR_PLIB, "Inconsistency in stage log: stage %d should be %d", *stage, stageLog->curStage);
   PetscFunctionReturn(0);
 }
 
@@ -89,13 +89,13 @@ PetscErrorCode  PetscStageLogGetCurrent(PetscStageLog stageLog, int *stage)
   Developer Notes:
     Inline since called for EACH PetscEventLogBeginDefault() and PetscEventLogEndDefault()
 
-.seealso: PetscStageLogPush(), PetscStageLogPop(), PetscLogGetStageLog()
+.seealso: `PetscStageLogPush()`, `PetscStageLogPop()`, `PetscLogGetStageLog()`
 @*/
 PetscErrorCode  PetscStageLogGetEventPerfLog(PetscStageLog stageLog, int stage, PetscEventPerfLog *eventLog)
 {
   PetscFunctionBegin;
   PetscValidPointer(eventLog,3);
-  PetscCheckFalse((stage < 0) || (stage >= stageLog->numStages),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", stage, stageLog->numStages);
+  PetscCheck(!(stage < 0) && !(stage >= stageLog->numStages),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", stage, stageLog->numStages);
   *eventLog = stageLog->stageInfo[stage].eventLog;
   PetscFunctionReturn(0);
 }
@@ -110,7 +110,7 @@ PetscErrorCode  PetscStageLogGetEventPerfLog(PetscStageLog stageLog, int stage, 
 
   Level: developer
 
-.seealso: PetscStageLogCreate()
+.seealso: `PetscStageLogCreate()`
 @*/
 PetscErrorCode  PetscStageInfoDestroy(PetscStageInfo *stageInfo)
 {
@@ -131,7 +131,7 @@ PetscErrorCode  PetscStageInfoDestroy(PetscStageInfo *stageInfo)
 
   Level: developer
 
-.seealso: PetscStageLogCreate()
+.seealso: `PetscStageLogCreate()`
 @*/
 PetscErrorCode  PetscStageLogDestroy(PetscStageLog stageLog)
 {
@@ -164,7 +164,7 @@ PetscErrorCode  PetscStageLogDestroy(PetscStageLog stageLog)
 
   Level: developer
 
-.seealso: PetscStageLogPush(), PetscStageLogPop(), PetscStageLogCreate()
+.seealso: `PetscStageLogPush()`, `PetscStageLogPop()`, `PetscStageLogCreate()`
 @*/
 PetscErrorCode  PetscStageLogRegister(PetscStageLog stageLog, const char sname[], int *stage)
 {
@@ -236,7 +236,7 @@ PetscErrorCode  PetscStageLogRegister(PetscStageLog stageLog, const char sname[]
 
   Level: developer
 
-.seealso: PetscStageLogPop(), PetscStageLogGetCurrent(), PetscStageLogRegister(), PetscLogGetStageLog()
+.seealso: `PetscStageLogPop()`, `PetscStageLogGetCurrent()`, `PetscStageLogRegister()`, `PetscLogGetStageLog()`
 @*/
 PetscErrorCode  PetscStageLogPush(PetscStageLog stageLog, int stage)
 {
@@ -244,7 +244,7 @@ PetscErrorCode  PetscStageLogPush(PetscStageLog stageLog, int stage)
   PetscBool      empty;
 
   PetscFunctionBegin;
-  PetscCheckFalse((stage < 0) || (stage >= stageLog->numStages),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", stage, stageLog->numStages);
+  PetscCheck(!(stage < 0) && !(stage >= stageLog->numStages),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", stage, stageLog->numStages);
 
   /* Record flops/time of previous stage */
   PetscCall(PetscIntStackEmpty(stageLog->stack, &empty));
@@ -303,7 +303,7 @@ PetscErrorCode  PetscStageLogPush(PetscStageLog stageLog, int stage)
 
   Level: developer
 
-.seealso: PetscStageLogPush(), PetscStageLogGetCurrent(), PetscStageLogRegister(), PetscLogGetStageLog()
+.seealso: `PetscStageLogPush()`, `PetscStageLogGetCurrent()`, `PetscStageLogRegister()`, `PetscLogGetStageLog()`
 @*/
 PetscErrorCode  PetscStageLogPop(PetscStageLog stageLog)
 {
@@ -349,7 +349,7 @@ PetscErrorCode  PetscStageLogPop(PetscStageLog stageLog)
 
   Level: developer
 
-.seealso: PetscStageLogPush(), PetscStageLogPop(), PetscLogGetStageLog()
+.seealso: `PetscStageLogPush()`, `PetscStageLogPop()`, `PetscLogGetStageLog()`
 @*/
 PetscErrorCode  PetscStageLogGetClassRegLog(PetscStageLog stageLog, PetscClassRegLog *classLog)
 {
@@ -372,7 +372,7 @@ PetscErrorCode  PetscStageLogGetClassRegLog(PetscStageLog stageLog, PetscClassRe
 
   Level: developer
 
-.seealso: PetscStageLogPush(), PetscStageLogPop(), PetscLogGetStageLog()
+.seealso: `PetscStageLogPush()`, `PetscStageLogPop()`, `PetscLogGetStageLog()`
 @*/
 PetscErrorCode  PetscStageLogGetEventRegLog(PetscStageLog stageLog, PetscEventRegLog *eventLog)
 {
@@ -396,13 +396,13 @@ PetscErrorCode  PetscStageLogGetEventRegLog(PetscStageLog stageLog, PetscEventRe
 
   Level: developer
 
-.seealso: PetscStageLogPush(), PetscStageLogPop(), PetscLogGetStageLog()
+.seealso: `PetscStageLogPush()`, `PetscStageLogPop()`, `PetscLogGetStageLog()`
 @*/
 PetscErrorCode  PetscStageLogGetClassPerfLog(PetscStageLog stageLog, int stage, PetscClassPerfLog *classLog)
 {
   PetscFunctionBegin;
   PetscValidPointer(classLog,3);
-  PetscCheckFalse((stage < 0) || (stage >= stageLog->numStages),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", stage, stageLog->numStages);
+  PetscCheck(!(stage < 0) && !(stage >= stageLog->numStages),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", stage, stageLog->numStages);
   *classLog = stageLog->stageInfo[stage].classLog;
   PetscFunctionReturn(0);
 }
@@ -419,12 +419,12 @@ PetscErrorCode  PetscStageLogGetClassPerfLog(PetscStageLog stageLog, int stage, 
 
   Level: developer
 
-.seealso: PetscStageLogGetActive(), PetscStageLogGetCurrent(), PetscStageLogRegister(), PetscLogGetStageLog()
+.seealso: `PetscStageLogGetActive()`, `PetscStageLogGetCurrent()`, `PetscStageLogRegister()`, `PetscLogGetStageLog()`
 @*/
 PetscErrorCode  PetscStageLogSetActive(PetscStageLog stageLog, int stage, PetscBool isActive)
 {
   PetscFunctionBegin;
-  PetscCheckFalse((stage < 0) || (stage >= stageLog->numStages),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", stage, stageLog->numStages);
+  PetscCheck(!(stage < 0) && !(stage >= stageLog->numStages),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", stage, stageLog->numStages);
   stageLog->stageInfo[stage].perfInfo.active = isActive;
   PetscFunctionReturn(0);
 }
@@ -443,12 +443,12 @@ PetscErrorCode  PetscStageLogSetActive(PetscStageLog stageLog, int stage, PetscB
 
   Level: developer
 
-.seealso: PetscStageLogSetActive(), PetscStageLogGetCurrent(), PetscStageLogRegister(), PetscLogGetStageLog()
+.seealso: `PetscStageLogSetActive()`, `PetscStageLogGetCurrent()`, `PetscStageLogRegister()`, `PetscLogGetStageLog()`
 @*/
 PetscErrorCode  PetscStageLogGetActive(PetscStageLog stageLog, int stage, PetscBool  *isActive)
 {
   PetscFunctionBegin;
-  PetscCheckFalse((stage < 0) || (stage >= stageLog->numStages),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", stage, stageLog->numStages);
+  PetscCheck(!(stage < 0) && !(stage >= stageLog->numStages),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", stage, stageLog->numStages);
   PetscValidBoolPointer(isActive,3);
   *isActive = stageLog->stageInfo[stage].perfInfo.active;
   PetscFunctionReturn(0);
@@ -469,12 +469,12 @@ PetscErrorCode  PetscStageLogGetActive(PetscStageLog stageLog, int stage, PetscB
 
   Level: developer
 
-.seealso: PetscStageLogGetVisible(), PetscStageLogGetCurrent(), PetscStageLogRegister(), PetscLogGetStageLog()
+.seealso: `PetscStageLogGetVisible()`, `PetscStageLogGetCurrent()`, `PetscStageLogRegister()`, `PetscLogGetStageLog()`
 @*/
 PetscErrorCode  PetscStageLogSetVisible(PetscStageLog stageLog, int stage, PetscBool isVisible)
 {
   PetscFunctionBegin;
-  PetscCheckFalse((stage < 0) || (stage >= stageLog->numStages),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", stage, stageLog->numStages);
+  PetscCheck(!(stage < 0) && !(stage >= stageLog->numStages),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", stage, stageLog->numStages);
   stageLog->stageInfo[stage].perfInfo.visible = isVisible;
   PetscFunctionReturn(0);
 }
@@ -496,12 +496,12 @@ PetscErrorCode  PetscStageLogSetVisible(PetscStageLog stageLog, int stage, Petsc
 
   Level: developer
 
-.seealso: PetscStageLogSetVisible(), PetscStageLogGetCurrent(), PetscStageLogRegister(), PetscLogGetStageLog()
+.seealso: `PetscStageLogSetVisible()`, `PetscStageLogGetCurrent()`, `PetscStageLogRegister()`, `PetscLogGetStageLog()`
 @*/
 PetscErrorCode  PetscStageLogGetVisible(PetscStageLog stageLog, int stage, PetscBool  *isVisible)
 {
   PetscFunctionBegin;
-  PetscCheckFalse((stage < 0) || (stage >= stageLog->numStages),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", stage, stageLog->numStages);
+  PetscCheck(!(stage < 0) && !(stage >= stageLog->numStages),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", stage, stageLog->numStages);
   PetscValidBoolPointer(isVisible,3);
   *isVisible = stageLog->stageInfo[stage].perfInfo.visible;
   PetscFunctionReturn(0);
@@ -521,7 +521,7 @@ PetscErrorCode  PetscStageLogGetVisible(PetscStageLog stageLog, int stage, Petsc
 
   Level: developer
 
-.seealso: PetscStageLogGetCurrent(), PetscStageLogRegister(), PetscLogGetStageLog()
+.seealso: `PetscStageLogGetCurrent()`, `PetscStageLogRegister()`, `PetscLogGetStageLog()`
 @*/
 PetscErrorCode  PetscStageLogGetStage(PetscStageLog stageLog, const char name[], PetscLogStage *stage)
 {
@@ -552,7 +552,7 @@ PetscErrorCode  PetscStageLogGetStage(PetscStageLog stageLog, const char name[],
 
   Level: developer
 
-.seealso: PetscStageLogCreate()
+.seealso: `PetscStageLogCreate()`
 @*/
 PetscErrorCode  PetscStageLogCreate(PetscStageLog *stageLog)
 {

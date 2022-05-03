@@ -199,7 +199,6 @@ int main(int argc, char **argv)
   Vec            x;       /* State vector */
   Mat            J; /* Jacobian matrix */
   AppCtx         user; /* user-defined context */
-  PetscErrorCode ierr;
   PetscReal      ftime;
   PetscInt       its;
   PetscMPIInt    size;
@@ -222,7 +221,7 @@ int main(int argc, char **argv)
   user.D_a = 0.;
   user.D_h = 30.;
 
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD, "", "Problem settings", "PROBLEM");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD, "", "Problem settings", "PROBLEM");
   PetscCall(PetscOptionsInt("-nb_cells", "Number of cells", "ex42.c",user.nb_cells, &user.nb_cells,NULL));
   PetscCall(PetscOptionsReal("-alpha", "Autocatalysis factor", "ex42.c",user.alpha, &user.alpha,NULL));
   PetscCall(PetscOptionsReal("-beta", "Inhibition factor", "ex42.c",user.beta, &user.beta,NULL));
@@ -232,9 +231,9 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsReal("-rho_h", "Default production of the inhibitor", "ex42.c",user.rho_h, &user.rho_h,NULL));
   PetscCall(PetscOptionsReal("-mu_h", "Degradation rate of the inhibitor", "ex42.c",user.mu_h, &user.mu_h,NULL));
   PetscCall(PetscOptionsReal("-D_h", "Diffusion rate of the inhibitor", "ex42.c",user.D_h, &user.D_h,NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "nb_cells: %D\n", user.nb_cells));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "nb_cells: %" PetscInt_FMT "\n", user.nb_cells));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "alpha: %5.5g\n", (double)user.alpha));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "beta:  %5.5g\n", (double)user.beta));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "rho_a: %5.5g\n", (double)user.rho_a));
@@ -334,7 +333,7 @@ int main(int argc, char **argv)
   PetscCall(TSSolve(ts, x));
   PetscCall(TSGetSolveTime(ts, &ftime));
   PetscCall(TSGetStepNumber(ts,&its));
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Number of time steps = %D, final time: %4.2e\nResult:\n\n", its, (double)ftime));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Number of time steps = %" PetscInt_FMT ", final time: %4.2e\nResult:\n\n", its, (double)ftime));
   PetscCall(PrintSolution(x, &user));
 
   /*

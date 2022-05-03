@@ -20,7 +20,7 @@ PetscClassId MAT_NULLSPACE_CLASSID;
 
    Level: advanced
 
-.seealso: MatNullSpaceDestroy(), MatNullSpaceRemove(), MatSetNullSpace(), MatNullSpace, MatNullSpaceCreate()
+.seealso: `MatNullSpaceDestroy()`, `MatNullSpaceRemove()`, `MatSetNullSpace()`, `MatNullSpace`, `MatNullSpaceCreate()`
 @*/
 PetscErrorCode  MatNullSpaceSetFunction(MatNullSpace sp, PetscErrorCode (*rem)(MatNullSpace,Vec,void*),void *ctx)
 {
@@ -49,7 +49,7 @@ PetscErrorCode  MatNullSpaceSetFunction(MatNullSpace sp, PetscErrorCode (*rem)(M
    Notes:
       These vectors and the array are owned by the MatNullSpace and should not be destroyed or freeded by the caller
 
-.seealso: MatNullSpaceCreate(), MatGetNullSpace(), MatGetNearNullSpace()
+.seealso: `MatNullSpaceCreate()`, `MatGetNullSpace()`, `MatGetNearNullSpace()`
 @*/
 PetscErrorCode MatNullSpaceGetVecs(MatNullSpace sp,PetscBool *has_const,PetscInt *n,const Vec **vecs)
 {
@@ -81,7 +81,7 @@ PetscErrorCode MatNullSpaceGetVecs(MatNullSpace sp,PetscBool *has_const,PetscInt
      If you are solving an elasticity problem with pure Neumann boundary conditions you can use this in conjunction with MatSetNullspace() to
      provide this information to the linear solver so it can handle the null space appropriately in the linear solution.
 
-.seealso: MatNullSpaceCreate(), MatSetNearNullspace(), MatSetNullspace()
+.seealso: `MatNullSpaceCreate()`, `MatSetNearNullspace()`, `MatSetNullspace()`
 @*/
 PetscErrorCode MatNullSpaceCreateRigidBody(Vec coords,MatNullSpace *sp)
 {
@@ -172,7 +172,7 @@ PetscErrorCode MatNullSpaceCreateRigidBody(Vec coords,MatNullSpace *sp)
    Fortran Note:
    This routine is not supported in Fortran.
 
-.seealso: MatNullSpaceCreate(), PetscViewerASCIIOpen()
+.seealso: `MatNullSpaceCreate()`, `PetscViewerASCIIOpen()`
 @*/
 PetscErrorCode MatNullSpaceView(MatNullSpace sp,PetscViewer viewer)
 {
@@ -231,7 +231,7 @@ PetscErrorCode MatNullSpaceView(MatNullSpace sp,PetscViewer viewer)
     If has_cnst is PETSC_TRUE you do not need to pass a constant vector in as a fourth argument to this routine, nor do you
     need to pass in a function that eliminates the constant function into MatNullSpaceSetFunction().
 
-.seealso: MatNullSpaceDestroy(), MatNullSpaceRemove(), MatSetNullSpace(), MatNullSpace, MatNullSpaceSetFunction()
+.seealso: `MatNullSpaceDestroy()`, `MatNullSpaceRemove()`, `MatSetNullSpace()`, `MatNullSpace`, `MatNullSpaceSetFunction()`
 @*/
 PetscErrorCode  MatNullSpaceCreate(MPI_Comm comm,PetscBool has_cnst,PetscInt n,const Vec vecs[],MatNullSpace *SP)
 {
@@ -239,7 +239,7 @@ PetscErrorCode  MatNullSpaceCreate(MPI_Comm comm,PetscBool has_cnst,PetscInt n,c
   PetscInt       i;
 
   PetscFunctionBegin;
-  PetscCheckFalse(n < 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of vectors (given %" PetscInt_FMT ") cannot be negative",n);
+  PetscCheck(n >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Number of vectors (given %" PetscInt_FMT ") cannot be negative",n);
   if (n) PetscValidPointer(vecs,4);
   for (i=0; i<n; i++) PetscValidHeaderSpecific(vecs[i],VEC_CLASSID,4);
   PetscValidPointer(SP,5);
@@ -254,13 +254,13 @@ PetscErrorCode  MatNullSpaceCreate(MPI_Comm comm,PetscBool has_cnst,PetscInt n,c
     for (i=0; i<n; i++) {
       PetscReal norm;
       PetscCall(VecNorm(vecs[i],NORM_2,&norm));
-      PetscCheckFalse(PetscAbsReal(norm - 1) > PETSC_SQRT_MACHINE_EPSILON,PetscObjectComm((PetscObject)vecs[i]),PETSC_ERR_ARG_WRONG,"Vector %" PetscInt_FMT " must have 2-norm of 1.0, it is %g",i,(double)norm);
+      PetscCheck(PetscAbsReal(norm - 1) <= PETSC_SQRT_MACHINE_EPSILON,PetscObjectComm((PetscObject)vecs[i]),PETSC_ERR_ARG_WRONG,"Vector %" PetscInt_FMT " must have 2-norm of 1.0, it is %g",i,(double)norm);
     }
     if (has_cnst) {
       for (i=0; i<n; i++) {
         PetscScalar sum;
         PetscCall(VecSum(vecs[i],&sum));
-        PetscCheckFalse(PetscAbsScalar(sum) > PETSC_SQRT_MACHINE_EPSILON,PetscObjectComm((PetscObject)vecs[i]),PETSC_ERR_ARG_WRONG,"Vector %" PetscInt_FMT " must be orthogonal to constant vector, inner product is %g",i,(double)PetscAbsScalar(sum));
+        PetscCheck(PetscAbsScalar(sum) <= PETSC_SQRT_MACHINE_EPSILON,PetscObjectComm((PetscObject)vecs[i]),PETSC_ERR_ARG_WRONG,"Vector %" PetscInt_FMT " must be orthogonal to constant vector, inner product is %g",i,(double)PetscAbsScalar(sum));
       }
     }
     PetscCall(PetscMalloc1(n-1,&dots));
@@ -268,7 +268,7 @@ PetscErrorCode  MatNullSpaceCreate(MPI_Comm comm,PetscBool has_cnst,PetscInt n,c
       PetscInt j;
       PetscCall(VecMDot(vecs[i],n-i-1,vecs+i+1,dots));
       for (j=0;j<n-i-1;j++) {
-        PetscCheckFalse(PetscAbsScalar(dots[j]) > PETSC_SQRT_MACHINE_EPSILON,PetscObjectComm((PetscObject)vecs[i]),PETSC_ERR_ARG_WRONG,"Vector %" PetscInt_FMT " must be orthogonal to vector %" PetscInt_FMT ", inner product is %g",i,i+j+1,(double)PetscAbsScalar(dots[j]));
+        PetscCheck(PetscAbsScalar(dots[j]) <= PETSC_SQRT_MACHINE_EPSILON,PetscObjectComm((PetscObject)vecs[i]),PETSC_ERR_ARG_WRONG,"Vector %" PetscInt_FMT " must be orthogonal to vector %" PetscInt_FMT ", inner product is %g",i,i+j+1,(double)PetscAbsScalar(dots[j]));
       }
     }
     PetscCall(PetscFree(dots));
@@ -311,7 +311,7 @@ PetscErrorCode  MatNullSpaceCreate(MPI_Comm comm,PetscBool has_cnst,PetscInt n,c
 
    Level: advanced
 
-.seealso: MatNullSpaceCreate(), MatNullSpaceRemove(), MatNullSpaceSetFunction()
+.seealso: `MatNullSpaceCreate()`, `MatNullSpaceRemove()`, `MatNullSpaceSetFunction()`
 @*/
 PetscErrorCode  MatNullSpaceDestroy(MatNullSpace *sp)
 {
@@ -343,7 +343,7 @@ PetscErrorCode  MatNullSpaceDestroy(MatNullSpace *sp)
 
    Level: advanced
 
-.seealso: MatNullSpaceCreate(), MatNullSpaceDestroy(), MatNullSpaceSetFunction()
+.seealso: `MatNullSpaceCreate()`, `MatNullSpaceDestroy()`, `MatNullSpaceSetFunction()`
 @*/
 PetscErrorCode  MatNullSpaceRemove(MatNullSpace sp,Vec vec)
 {
@@ -391,7 +391,7 @@ PetscErrorCode  MatNullSpaceRemove(MatNullSpace sp,Vec vec)
 
    Level: advanced
 
-.seealso: MatNullSpaceCreate(), MatNullSpaceDestroy(), MatNullSpaceSetFunction()
+.seealso: `MatNullSpaceCreate()`, `MatNullSpaceDestroy()`, `MatNullSpaceSetFunction()`
 @*/
 PetscErrorCode  MatNullSpaceTest(MatNullSpace sp,Mat mat,PetscBool  *isNull)
 {

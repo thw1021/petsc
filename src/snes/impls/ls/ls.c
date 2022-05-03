@@ -139,7 +139,7 @@ PetscErrorCode SNESSolve_NEWTONLS(SNES snes)
   SNESConvergedReason  reason;
 
   PetscFunctionBegin;
-  PetscCheckFalse(snes->xl || snes->xu || snes->ops->computevariablebounds,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
+  PetscCheck(!snes->xl && !snes->xu && !snes->ops->computevariablebounds,PetscObjectComm((PetscObject)snes),PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
 
   snes->numFailures            = 0;
   snes->numLinearSolveFailures = 0;
@@ -222,7 +222,7 @@ PetscErrorCode SNESSolve_NEWTONLS(SNES snes)
     PetscCall(KSPSolve(snes->ksp,F,Y));
     SNESCheckKSPSolve(snes);
     PetscCall(KSPGetIterationNumber(snes->ksp,&lits));
-    PetscCall(PetscInfo(snes,"iter=%D, linear solve iterations=%D\n",snes->iter,lits));
+    PetscCall(PetscInfo(snes,"iter=%" PetscInt_FMT ", linear solve iterations=%" PetscInt_FMT "\n",snes->iter,lits));
 
     if (PetscLogPrintInfo) {
       PetscCall(SNESNEWTONLSCheckResidual_Private(snes,snes->jacobian,F,Y));
@@ -272,7 +272,7 @@ PetscErrorCode SNESSolve_NEWTONLS(SNES snes)
     if (snes->reason) break;
   }
   if (i == maxits) {
-    PetscCall(PetscInfo(snes,"Maximum number of iterations has been reached: %D\n",maxits));
+    PetscCall(PetscInfo(snes,"Maximum number of iterations has been reached: %" PetscInt_FMT "\n",maxits));
     if (!snes->reason) snes->reason = SNES_DIVERGED_MAX_IT;
   }
   PetscFunctionReturn(0);
@@ -380,8 +380,8 @@ static PetscErrorCode SNESSetFromOptions_NEWTONLS(PetscOptionItems *PetscOptions
 
    Level: beginner
 
-.seealso:  SNESCreate(), SNES, SNESSetType(), SNESNEWTONTR, SNESQN, SNESLineSearchSetType(), SNESLineSearchSetOrder()
-           SNESLineSearchSetPostCheck(), SNESLineSearchSetPreCheck() SNESLineSearchSetComputeNorms()
+.seealso: `SNESCreate()`, `SNES`, `SNESSetType()`, `SNESNEWTONTR`, `SNESQN`, `SNESLineSearchSetType()`, `SNESLineSearchSetOrder()`
+          `SNESLineSearchSetPostCheck()`, `SNESLineSearchSetPreCheck()` `SNESLineSearchSetComputeNorms()`
 
 M*/
 PETSC_EXTERN PetscErrorCode SNESCreate_NEWTONLS(SNES snes)

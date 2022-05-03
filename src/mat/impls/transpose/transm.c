@@ -122,7 +122,7 @@ PETSC_INTERN PetscErrorCode MatProductSetFromOptions_Transpose(Mat D)
   PetscCall(PetscObjectTypeCompare((PetscObject)A,MATTRANSPOSEMAT,&Aistrans));
   PetscCall(PetscObjectTypeCompare((PetscObject)B,MATTRANSPOSEMAT,&Bistrans));
   PetscCall(PetscObjectTypeCompare((PetscObject)C,MATTRANSPOSEMAT,&Cistrans));
-  PetscCheckFalse(!Aistrans && !Bistrans && !Cistrans,PetscObjectComm((PetscObject)D),PETSC_ERR_PLIB,"This should not happen");
+  PetscCheck(Aistrans || Bistrans || Cistrans,PetscObjectComm((PetscObject)D),PETSC_ERR_PLIB,"This should not happen");
   Atrans = 0;
   Ain    = A;
   while (Aistrans) {
@@ -263,7 +263,7 @@ PetscErrorCode MatTransposeGetMat_Transpose(Mat A,Mat *M)
 
    Level: intermediate
 
-.seealso: MatCreateTranspose()
+.seealso: `MatCreateTranspose()`
 
 @*/
 PetscErrorCode MatTransposeGetMat(Mat A,Mat *M)
@@ -294,7 +294,7 @@ PetscErrorCode MatTransposeGetMat(Mat A,Mat *M)
           object performs the matrix-vector product by using the MatMultTranspose() on
           the original matrix
 
-.seealso: MatCreateNormal(), MatMult(), MatMultTranspose(), MatCreate()
+.seealso: `MatCreateNormal()`, `MatMult()`, `MatMultTranspose()`, `MatCreate()`
 
 @*/
 PetscErrorCode  MatCreateTranspose(Mat A,Mat *N)

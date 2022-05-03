@@ -611,7 +611,7 @@ PetscErrorCode PetscSFSetErrorOnUnsupportedOverlap(PetscSF sf,MPI_Datatype unit,
     if (rootdata || leafdata) {
       for (p=&bas->inuse; (link=*p); p=&link->next) {
         PetscCall(MPIPetsc_Type_compare(unit,link->unit,&match));
-        PetscCheckFalse(match && (rootdata == link->rootdata) && (leafdata == link->leafdata),PETSC_COMM_SELF,PETSC_ERR_SUP,"Overlapped PetscSF with the same rootdata(%p), leafdata(%p) and data type. Undo the overlapping to avoid the error.",rootdata,leafdata);
+        PetscCheck(!match || rootdata != link->rootdata || leafdata != link->leafdata,PETSC_COMM_SELF,PETSC_ERR_SUP,"Overlapped PetscSF with the same rootdata(%p), leafdata(%p) and data type. Undo the overlapping to avoid the error.",rootdata,leafdata);
       }
     }
   }
@@ -726,7 +726,7 @@ PetscErrorCode PetscSFLinkSetUp_Host(PetscSF sf,PetscSFLink link,MPI_Datatype un
   } else {
     MPI_Aint lb,nbyte;
     PetscCallMPI(MPI_Type_get_extent(unit,&lb,&nbyte));
-    PetscCheckFalse(lb != 0,PETSC_COMM_SELF,PETSC_ERR_SUP,"Datatype with nonzero lower bound %ld",(long)lb);
+    PetscCheck(lb == 0,PETSC_COMM_SELF,PETSC_ERR_SUP,"Datatype with nonzero lower bound %ld",(long)lb);
     if (nbyte % sizeof(int)) { /* If the type size is not multiple of int */
       if      (nbyte == 4) PackInit_DumbType_char_4_1(link); else if (nbyte%4 == 0) PackInit_DumbType_char_4_0(link);
       else if (nbyte == 2) PackInit_DumbType_char_2_1(link); else if (nbyte%2 == 0) PackInit_DumbType_char_2_0(link);
@@ -863,7 +863,7 @@ PetscErrorCode PetscSFLinkGetFetchAndOp(PetscSFLink link,PetscMemType mtype,MPI_
 {
   PetscFunctionBegin;
   *FetchAndOp = NULL;
-  PetscCheckFalse(op != MPI_SUM && op != MPIU_SUM,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support for MPI_Op in FetchAndOp");
+  PetscCheck(op == MPI_SUM || op == MPIU_SUM,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support for MPI_Op in FetchAndOp");
   if (PetscMemTypeHost(mtype)) *FetchAndOp = link->h_FetchAndAdd;
 #if defined(PETSC_HAVE_DEVICE)
   else if (PetscMemTypeDevice(mtype) && !atomic) *FetchAndOp = link->d_FetchAndAdd;
@@ -876,7 +876,7 @@ PetscErrorCode PetscSFLinkGetFetchAndOpLocal(PetscSFLink link,PetscMemType mtype
 {
   PetscFunctionBegin;
   *FetchAndOpLocal = NULL;
-  PetscCheckFalse(op != MPI_SUM && op != MPIU_SUM,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support for MPI_Op in FetchAndOp");
+  PetscCheck(op == MPI_SUM || op == MPIU_SUM,PETSC_COMM_SELF,PETSC_ERR_SUP,"No support for MPI_Op in FetchAndOp");
   if (PetscMemTypeHost(mtype)) *FetchAndOpLocal = link->h_FetchAndAddLocal;
 #if defined(PETSC_HAVE_DEVICE)
   else if (PetscMemTypeDevice(mtype) && !atomic) *FetchAndOpLocal = link->d_FetchAndAddLocal;

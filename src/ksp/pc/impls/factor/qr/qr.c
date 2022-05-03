@@ -11,8 +11,11 @@ static PetscErrorCode PCSetUp_QR(PC pc)
   PC_QR                  *dir = (PC_QR*)pc->data;
   MatSolverType          stype;
   MatFactorError         err;
+  const char             *prefix;
 
   PetscFunctionBegin;
+  PetscCall(PCGetOptionsPrefix(pc,&prefix));
+  PetscCall(MatSetOptionsPrefix(pc->pmat,prefix));
   pc->failedreason = PC_NOERROR;
   if (dir->hdr.reusefill && pc->setupcalled) ((PC_Factor*)dir)->info.fill = dir->hdr.actualfill;
 
@@ -137,11 +140,11 @@ static PetscErrorCode PCApplyTranspose_QR(PC pc,Vec x,Vec y)
           not need a Krylov method (i.e. you can use -ksp_type preonly, or
           KSPSetType(ksp,KSPPREONLY) for the Krylov method
 
-.seealso:  PCCreate(), PCSetType(), PCType (for list of available types), PC,
-           PCILU, PCLU, PCCHOLESKY, PCICC, PCFactorSetReuseOrdering(), PCFactorSetReuseFill(), PCFactorGetMatrix(),
-           PCFactorSetFill(), PCFactorSetUseInPlace(), PCFactorSetMatOrderingType(), PCFactorSetColumnPivot(),
-           PCFactorSetPivotingInBlocks(),PCFactorSetShiftType(),PCFactorSetShiftAmount()
-           PCFactorReorderForNonzeroDiagonal()
+.seealso: `PCCreate()`, `PCSetType()`, `PCType`, `PC`,
+          `PCILU`, `PCLU`, `PCCHOLESKY`, `PCICC`, `PCFactorSetReuseOrdering()`, `PCFactorSetReuseFill()`, `PCFactorGetMatrix()`,
+          `PCFactorSetFill()`, `PCFactorSetUseInPlace()`, `PCFactorSetMatOrderingType()`, `PCFactorSetColumnPivot()`,
+          `PCFactorSetPivotingInBlocks(),PCFactorSetShiftType(),PCFactorSetShiftAmount()`
+          `PCFactorReorderForNonzeroDiagonal()`
 M*/
 
 PETSC_EXTERN PetscErrorCode PCCreate_QR(PC pc)

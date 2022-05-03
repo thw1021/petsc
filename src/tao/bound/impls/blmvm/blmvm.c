@@ -174,9 +174,9 @@ static PetscErrorCode TaoSetFromOptions_BLMVM(PetscOptionItems* PetscOptionsObje
   PetscBool      is_spd;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Limited-memory variable-metric method for bound constrained optimization"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Limited-memory variable-metric method for bound constrained optimization");
   PetscCall(PetscOptionsBool("-tao_blmvm_recycle","enable recycling of the BFGS matrix between subsequent TaoSolve() calls","",blmP->recycle,&blmP->recycle,NULL));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscCall(MatSetOptionsPrefix(blmP->M, ((PetscObject)tao)->prefix));
   PetscCall(MatAppendOptionsPrefix(blmP->M, "tao_blmvm_"));
   PetscCall(MatSetFromOptions(blmP->M));
@@ -194,7 +194,7 @@ static PetscErrorCode TaoView_BLMVM(Tao tao, PetscViewer viewer)
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
   if (isascii) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "Gradient steps: %D\n", lmP->grad));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Gradient steps: %" PetscInt_FMT "\n", lmP->grad));
     PetscCall(PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_INFO));
     PetscCall(MatView(lmP->M, viewer));
     PetscCall(PetscViewerPopFormat(viewer));
@@ -305,7 +305,7 @@ PetscErrorCode TaoLMVMRecycle(Tao tao, PetscBool flg)
 
   Level: advanced
 
-.seealso: TaoLMVMGetH0(), TaoLMVMGetH0KSP()
+.seealso: `TaoLMVMGetH0()`, `TaoLMVMGetH0KSP()`
 @*/
 PetscErrorCode TaoLMVMSetH0(Tao tao, Mat H0)
 {
@@ -339,7 +339,7 @@ PetscErrorCode TaoLMVMSetH0(Tao tao, Mat H0)
 
   Level: advanced
 
-.seealso: TaoLMVMSetH0(), TaoLMVMGetH0KSP()
+.seealso: `TaoLMVMSetH0()`, `TaoLMVMGetH0KSP()`
 @*/
 PetscErrorCode TaoLMVMGetH0(Tao tao, Mat *H0)
 {
@@ -373,7 +373,7 @@ PetscErrorCode TaoLMVMGetH0(Tao tao, Mat *H0)
 
   Level: advanced
 
-.seealso: TaoLMVMGetH0(), TaoLMVMGetH0KSP()
+.seealso: `TaoLMVMGetH0()`, `TaoLMVMGetH0KSP()`
 @*/
 PetscErrorCode TaoLMVMGetH0KSP(Tao tao, KSP *ksp)
 {

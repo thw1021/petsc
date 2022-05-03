@@ -13,7 +13,7 @@
 
    Level: beginner
 
-.seealso: DMSwarmSetType()
+.seealso: `DMSwarmSetType()`
 E*/
 typedef enum {
   DMSWARM_BASIC=0,
@@ -48,7 +48,7 @@ typedef enum {
 
    Level: beginner
 
-.seealso DMSwarmInsertPointsUsingCellDM()
+.seealso `DMSwarmInsertPointsUsingCellDM()`
 E*/
 typedef enum {
   DMSWARMPIC_LAYOUT_REGULAR=0,
@@ -120,6 +120,10 @@ PETSC_EXTERN PetscErrorCode DMSwarmGetCellSwarm(DM, PetscInt, DM);
 PETSC_EXTERN PetscErrorCode DMSwarmRestoreCellSwarm(DM, PetscInt, DM);
 PETSC_EXTERN PetscErrorCode DMSwarmGetNumSpecies(DM, PetscInt*);
 PETSC_EXTERN PetscErrorCode DMSwarmSetNumSpecies(DM, PetscInt);
+PETSC_EXTERN PetscErrorCode DMSwarmGetCoordinateFunction(DM, PetscErrorCode (**)(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar[], void *));
+PETSC_EXTERN PetscErrorCode DMSwarmSetCoordinateFunction(DM, PetscErrorCode (*)(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar[], void *));
+PETSC_EXTERN PetscErrorCode DMSwarmGetVelocityFunction(DM, PetscErrorCode (**)(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar[], void *));
+PETSC_EXTERN PetscErrorCode DMSwarmSetVelocityFunction(DM, PetscErrorCode (*)(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar[], void *));
 PETSC_EXTERN PetscErrorCode DMSwarmComputeLocalSize(DM, PetscInt, PetscProbFunc);
 PETSC_EXTERN PetscErrorCode DMSwarmComputeLocalSizeFromOptions(DM);
 PETSC_EXTERN PetscErrorCode DMSwarmInitializeCoordinates(DM);

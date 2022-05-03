@@ -12,12 +12,12 @@ PetscErrorCode ViewLabels(DM dm, PetscViewer viewer)
   PetscFunctionBegin;
   /* query the number and name of labels*/
   PetscCall(DMGetNumLabels(dm, &numLabels));
-  PetscCall(PetscViewerASCIIPrintf(viewer, "Number of labels: %d\n", numLabels));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "Number of labels: %" PetscInt_FMT "\n", numLabels));
   for (l = 0; l < numLabels; ++l) {
     IS labelIS, tmpIS;
 
     PetscCall(DMGetLabelName(dm, l, &labelName));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "Label %d: name: %s\n", l, labelName));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Label %" PetscInt_FMT ": name: %s\n", l, labelName));
     PetscCall(PetscViewerASCIIPrintf(viewer, "IS of values\n"));
     PetscCall(DMGetLabel(dm, labelName, &label));
     PetscCall(DMLabelGetValueIS(label, &labelIS));
@@ -54,7 +54,7 @@ PetscErrorCode CheckLabelsSame(DMLabel label0, DMLabel label1)
   PetscCall(PetscObjectGetName((PetscObject)label0, &name0));
   PetscCall(PetscObjectGetName((PetscObject)label1, &name1));
   PetscCall(DMLabelCompare(PETSC_COMM_WORLD, label0, label1, &same, &msg));
-  PetscCheckFalse(same != (PetscBool) !msg,PETSC_COMM_WORLD, PETSC_ERR_PLIB, "DMLabelCompare returns inconsistent same=%d msg=\"%s\"", same, msg);
+  PetscCheck(same == (PetscBool) !msg,PETSC_COMM_WORLD, PETSC_ERR_PLIB, "DMLabelCompare returns inconsistent same=%d msg=\"%s\"", same, msg);
   PetscCheck(same,PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Labels \"%s\" and \"%s\" should not differ! Message:\n%s", name0, name1, msg);
   /* Test passing NULL, must not fail */
   PetscCall(DMLabelCompare(PETSC_COMM_WORLD, label0, label1, NULL, NULL));
@@ -72,7 +72,7 @@ PetscErrorCode CheckLabelsNotSame(DMLabel label0, DMLabel label1)
   PetscCall(PetscObjectGetName((PetscObject)label0, &name0));
   PetscCall(PetscObjectGetName((PetscObject)label1, &name1));
   PetscCall(DMLabelCompare(PETSC_COMM_WORLD, label0, label1, &same, &msg));
-  PetscCheckFalse(same != (PetscBool) !msg,PETSC_COMM_WORLD, PETSC_ERR_PLIB, "DMLabelCompare returns inconsistent same=%d msg=\"%s\"", same, msg);
+  PetscCheck(same == (PetscBool) !msg,PETSC_COMM_WORLD, PETSC_ERR_PLIB, "DMLabelCompare returns inconsistent same=%d msg=\"%s\"", same, msg);
   PetscCheck(!same,PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Labels \"%s\" and \"%s\" should differ!", name0, name1);
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Compare label \"%s\" with \"%s\": %s\n", name0, name1, msg));
   PetscCall(PetscFree(msg));
@@ -89,7 +89,7 @@ PetscErrorCode CheckDMLabelsSame(DM dm0, DM dm1)
   PetscCall(PetscObjectGetName((PetscObject)dm0, &name0));
   PetscCall(PetscObjectGetName((PetscObject)dm1, &name1));
   PetscCall(DMCompareLabels(dm0, dm1, &same, &msg));
-  PetscCheckFalse(same != (PetscBool) !msg,PETSC_COMM_WORLD, PETSC_ERR_PLIB, "DMCompareLabels returns inconsistent same=%d msg=\"%s\"", same, msg);
+  PetscCheck(same == (PetscBool) !msg,PETSC_COMM_WORLD, PETSC_ERR_PLIB, "DMCompareLabels returns inconsistent same=%d msg=\"%s\"", same, msg);
   PetscCheck(same,PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Labels of DMs \"%s\" and \"%s\" should not differ! Message:\n%s", name0, name1, msg);
   /* Test passing NULL, must not fail */
   PetscCall(DMCompareLabels(dm0, dm1, NULL, NULL));
@@ -107,7 +107,7 @@ PetscErrorCode CheckDMLabelsNotSame(DM dm0, DM dm1)
   PetscCall(PetscObjectGetName((PetscObject)dm0, &name0));
   PetscCall(PetscObjectGetName((PetscObject)dm1, &name1));
   PetscCall(DMCompareLabels(dm0, dm1, &same, &msg));
-  PetscCheckFalse(same != (PetscBool) !msg,PETSC_COMM_WORLD, PETSC_ERR_PLIB, "DMCompareLabels returns inconsistent same=%d msg=\"%s\"", same, msg);
+  PetscCheck(same == (PetscBool) !msg,PETSC_COMM_WORLD, PETSC_ERR_PLIB, "DMCompareLabels returns inconsistent same=%d msg=\"%s\"", same, msg);
   PetscCheck(!same,PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Labels of DMs \"%s\" and \"%s\" should differ!", name0, name1);
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Labels of DMs \"%s\" and \"%s\" differ: %s\n", name0, name1, msg));
   PetscCall(PetscFree(msg));
@@ -119,14 +119,13 @@ PetscErrorCode CreateMesh(const char name[], DM *newdm)
   DM             dm, dmDist;
   char           filename[PETSC_MAX_PATH_LEN]="";
   PetscBool      interpolate = PETSC_FALSE;
-  PetscErrorCode ierr;
 
   PetscFunctionBegin;
   /* initialize and get options */
-  ierr = PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "DMLabel ex1 Options", "DMLabel");PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "DMLabel ex1 Options", "DMLabel");
   PetscCall(PetscOptionsString("-i", "filename to read", "ex1.c", filename, filename, sizeof(filename), NULL));
   PetscCall(PetscOptionsBool("-interpolate", "Generate intermediate mesh elements", "ex1.c", interpolate, &interpolate, NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   /* create and distribute DM */
   PetscCall(DMPlexCreateFromFile(PETSC_COMM_WORLD, filename, "ex1_plex", interpolate, &dm));

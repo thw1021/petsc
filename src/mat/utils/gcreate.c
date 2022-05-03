@@ -4,8 +4,8 @@ PETSC_INTERN PetscErrorCode MatSetBlockSizes_Default(Mat mat,PetscInt rbs, Petsc
 {
   PetscFunctionBegin;
   if (!mat->preallocated) PetscFunctionReturn(0);
-  PetscCheckFalse(mat->rmap->bs > 0 && mat->rmap->bs != rbs,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot change row block size %" PetscInt_FMT " to %" PetscInt_FMT,mat->rmap->bs,rbs);
-  PetscCheckFalse(mat->cmap->bs > 0 && mat->cmap->bs != cbs,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot change column block size %" PetscInt_FMT " to %" PetscInt_FMT,mat->cmap->bs,cbs);
+  PetscCheck(mat->rmap->bs <= 0 || mat->rmap->bs == rbs,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot change row block size %" PetscInt_FMT " to %" PetscInt_FMT,mat->rmap->bs,rbs);
+  PetscCheck(mat->cmap->bs <= 0 || mat->cmap->bs == cbs,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Cannot change column block size %" PetscInt_FMT " to %" PetscInt_FMT,mat->cmap->bs,cbs);
   PetscFunctionReturn(0);
 }
 
@@ -61,11 +61,11 @@ PETSC_INTERN PetscErrorCode MatShift_Basic(Mat Y,PetscScalar a)
 
    Level: beginner
 
-.seealso: MatCreateSeqAIJ(), MatCreateAIJ(),
-          MatCreateSeqDense(), MatCreateDense(),
-          MatCreateSeqBAIJ(), MatCreateBAIJ(),
-          MatCreateSeqSBAIJ(), MatCreateSBAIJ(),
-          MatConvert()
+.seealso: `MatCreateSeqAIJ()`, `MatCreateAIJ()`,
+          `MatCreateSeqDense()`, `MatCreateDense()`,
+          `MatCreateSeqBAIJ()`, `MatCreateBAIJ()`,
+          `MatCreateSeqSBAIJ()`, `MatCreateSBAIJ()`,
+          `MatConvert()`
 @*/
 PetscErrorCode  MatCreate(MPI_Comm comm,Mat *A)
 {
@@ -102,7 +102,7 @@ PetscErrorCode  MatCreate(MPI_Comm comm,Mat *A)
 
    Level: advanced
 
-.seealso: PCSetErrorIfFailure()
+.seealso: `PCSetErrorIfFailure()`
 @*/
 PetscErrorCode  MatSetErrorIfFailure(Mat mat,PetscBool flg)
 {
@@ -143,7 +143,7 @@ PetscErrorCode  MatSetErrorIfFailure(Mat mat,PetscBool flg)
 
   Level: beginner
 
-.seealso: MatGetSize(), PetscSplitOwnership()
+.seealso: `MatGetSize()`, `PetscSplitOwnership()`
 @*/
 PetscErrorCode  MatSetSizes(Mat A, PetscInt m, PetscInt n, PetscInt M, PetscInt N)
 {
@@ -151,10 +151,10 @@ PetscErrorCode  MatSetSizes(Mat A, PetscInt m, PetscInt n, PetscInt M, PetscInt 
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
   PetscValidLogicalCollectiveInt(A,M,4);
   PetscValidLogicalCollectiveInt(A,N,5);
-  PetscCheckFalse(M > 0 && m > M,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local row size %" PetscInt_FMT " cannot be larger than global row size %" PetscInt_FMT,m,M);
-  PetscCheckFalse(N > 0 && n > N,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local column size %" PetscInt_FMT " cannot be larger than global column size %" PetscInt_FMT,n,N);
-  PetscCheckFalse((A->rmap->n >= 0 && A->rmap->N >= 0) && (A->rmap->n != m || (M > 0 && A->rmap->N != M)),PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot change/reset row sizes to %" PetscInt_FMT " local %" PetscInt_FMT " global after previously setting them to %" PetscInt_FMT " local %" PetscInt_FMT " global",m,M,A->rmap->n,A->rmap->N);
-  PetscCheckFalse((A->cmap->n >= 0 && A->cmap->N >= 0) && (A->cmap->n != n || (N > 0 && A->cmap->N != N)),PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot change/reset column sizes to %" PetscInt_FMT " local %" PetscInt_FMT " global after previously setting them to %" PetscInt_FMT " local %" PetscInt_FMT " global",n,N,A->cmap->n,A->cmap->N);
+  PetscCheck(M <= 0 || m <= M,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local row size %" PetscInt_FMT " cannot be larger than global row size %" PetscInt_FMT,m,M);
+  PetscCheck(N <= 0 || n <= N,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"Local column size %" PetscInt_FMT " cannot be larger than global column size %" PetscInt_FMT,n,N);
+  PetscCheck((A->rmap->n < 0 || A->rmap->N < 0) || (A->rmap->n == m && (M <= 0 || A->rmap->N == M)),PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot change/reset row sizes to %" PetscInt_FMT " local %" PetscInt_FMT " global after previously setting them to %" PetscInt_FMT " local %" PetscInt_FMT " global",m,M,A->rmap->n,A->rmap->N);
+  PetscCheck((A->cmap->n < 0 || A->cmap->N < 0) || (A->cmap->n == n && (N <= 0 || A->cmap->N == N)),PETSC_COMM_SELF,PETSC_ERR_SUP,"Cannot change/reset column sizes to %" PetscInt_FMT " local %" PetscInt_FMT " global after previously setting them to %" PetscInt_FMT " local %" PetscInt_FMT " global",n,N,A->cmap->n,A->cmap->N);
   A->rmap->n = m;
   A->cmap->n = n;
   A->rmap->N = M > -1 ? M : A->rmap->N;
@@ -188,15 +188,14 @@ PetscErrorCode  MatSetSizes(Mat A, PetscInt m, PetscInt n, PetscInt M, PetscInt 
 
    Level: beginner
 
-.seealso: MatCreateSeqAIJ((), MatCreateAIJ(),
-          MatCreateSeqDense(), MatCreateDense(),
-          MatCreateSeqBAIJ(), MatCreateBAIJ(),
-          MatCreateSeqSBAIJ(), MatCreateSBAIJ(),
-          MatConvert()
+.seealso: `MatCreateSeqAIJ(()`, `MatCreateAIJ()`,
+          `MatCreateSeqDense()`, `MatCreateDense()`,
+          `MatCreateSeqBAIJ()`, `MatCreateBAIJ()`,
+          `MatCreateSeqSBAIJ()`, `MatCreateSBAIJ()`,
+          `MatConvert()`
 @*/
 PetscErrorCode  MatSetFromOptions(Mat B)
 {
-  PetscErrorCode ierr;
   const char     *deft = MATAIJ;
   char           type[256];
   PetscBool      flg,set;
@@ -205,7 +204,7 @@ PetscErrorCode  MatSetFromOptions(Mat B)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(B,MAT_CLASSID,1);
 
-  ierr = PetscObjectOptionsBegin((PetscObject)B);PetscCall(ierr);
+  PetscObjectOptionsBegin((PetscObject)B);
 
   if (B->rmap->bs < 0) {
     PetscInt newbs = -1;
@@ -256,7 +255,7 @@ PetscErrorCode  MatSetFromOptions(Mat B)
 
   /* process any options handlers added with PetscObjectAddOptionsHandler() */
   PetscCall(PetscObjectProcessOptionsHandlers(PetscOptionsObject,(PetscObject)B));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -275,8 +274,8 @@ PetscErrorCode  MatSetFromOptions(Mat B)
 
    Level: beginner
 
-.seealso: MatSeqAIJSetPreallocation(), MatMPIAIJSetPreallocation(), MatSeqBAIJSetPreallocation(), MatMPIBAIJSetPreallocation(), MatSeqSBAIJSetPreallocation(), MatMPISBAIJSetPreallocation(),
-          PetscSplitOwnership()
+.seealso: `MatSeqAIJSetPreallocation()`, `MatMPIAIJSetPreallocation()`, `MatSeqBAIJSetPreallocation()`, `MatMPIBAIJSetPreallocation()`, `MatSeqSBAIJSetPreallocation()`, `MatMPISBAIJSetPreallocation()`,
+          `PetscSplitOwnership()`
 @*/
 PetscErrorCode MatXAIJSetPreallocation(Mat A,PetscInt bs,const PetscInt dnnz[],const PetscInt onnz[],const PetscInt dnnzu[],const PetscInt onnzu[])
 {
@@ -424,7 +423,7 @@ PETSC_EXTERN PetscErrorCode MatHeaderReplace(Mat A,Mat *C)
   PetscValidHeaderSpecific(*C,MAT_CLASSID,2);
   if (A == *C) PetscFunctionReturn(0);
   PetscCheckSameComm(A,1,*C,2);
-  PetscCheckFalse(((PetscObject)*C)->refct != 1,PetscObjectComm((PetscObject)C),PETSC_ERR_ARG_WRONGSTATE,"Object C has refct %" PetscInt_FMT " > 1, would leave hanging reference",((PetscObject)*C)->refct);
+  PetscCheck(((PetscObject)*C)->refct == 1,PetscObjectComm((PetscObject)C),PETSC_ERR_ARG_WRONGSTATE,"Object C has refct %" PetscInt_FMT " > 1, would leave hanging reference",((PetscObject)*C)->refct);
 
   /* swap C and A */
   refct   = ((PetscObject)A)->refct;
@@ -454,7 +453,7 @@ PETSC_EXTERN PetscErrorCode MatHeaderReplace(Mat A,Mat *C)
 
    Level: intermediate
 
-.seealso: MatBoundToCPU()
+.seealso: `MatBoundToCPU()`
 @*/
 PetscErrorCode MatBindToCPU(Mat A,PetscBool flg)
 {
@@ -482,7 +481,7 @@ PetscErrorCode MatBindToCPU(Mat A,PetscBool flg)
 
    Level: intermediate
 
-.seealso: MatBindToCPU()
+.seealso: `MatBindToCPU()`
 @*/
 PetscErrorCode MatBoundToCPU(Mat A,PetscBool *flg)
 {
@@ -511,7 +510,7 @@ PetscErrorCode MatSetValuesCOO_Basic(Mat A,const PetscScalar coo_v[],InsertMode 
   PetscCheck(is_coo_j,PetscObjectComm((PetscObject)A),PETSC_ERR_COR,"Missing coo_j IS");
   PetscCall(ISGetLocalSize(is_coo_i,&n_i));
   PetscCall(ISGetLocalSize(is_coo_j,&n_j));
-  PetscCheckFalse(n_i != n_j,PETSC_COMM_SELF,PETSC_ERR_COR,"Wrong local size %" PetscInt_FMT " != %" PetscInt_FMT,n_i,n_j);
+  PetscCheck(n_i == n_j,PETSC_COMM_SELF,PETSC_ERR_COR,"Wrong local size %" PetscInt_FMT " != %" PetscInt_FMT,n_i,n_j);
   PetscCall(ISGetIndices(is_coo_i,&coo_i));
   PetscCall(ISGetIndices(is_coo_j,&coo_j));
   if (imode != ADD_VALUES) {
@@ -556,7 +555,7 @@ PetscErrorCode MatSetPreallocationCOO_Basic(Mat A,PetscCount ncoo,const PetscInt
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
    MatSetPreallocationCOO - set preallocation for matrices using a coordinate format of the entries with global indices
 
    Collective on Mat
@@ -577,7 +576,7 @@ PetscErrorCode MatSetPreallocationCOO_Basic(Mat A,PetscCount ncoo,const PetscInt
 
    The arrays coo_i and coo_j may be freed immediately after calling this function.
 
-.seealso: MatSetValuesCOO(), MatSeqAIJSetPreallocation(), MatMPIAIJSetPreallocation(), MatSeqBAIJSetPreallocation(), MatMPIBAIJSetPreallocation(), MatSeqSBAIJSetPreallocation(), MatMPISBAIJSetPreallocation(), MatSetPreallocationCOOLocal(), DMSetMatrixPreallocateSkip()
+.seealso: `MatSetValuesCOO()`, `MatSeqAIJSetPreallocation()`, `MatMPIAIJSetPreallocation()`, `MatSeqBAIJSetPreallocation()`, `MatMPIBAIJSetPreallocation()`, `MatSeqSBAIJSetPreallocation()`, `MatMPISBAIJSetPreallocation()`, `MatSetPreallocationCOOLocal()`, `DMSetMatrixPreallocateSkip()`
 @*/
 PetscErrorCode MatSetPreallocationCOO(Mat A,PetscCount ncoo,const PetscInt coo_i[],const PetscInt coo_j[])
 {
@@ -604,7 +603,7 @@ PetscErrorCode MatSetPreallocationCOO(Mat A,PetscCount ncoo,const PetscInt coo_i
   PetscFunctionReturn(0);
 }
 
-/*@
+/*@C
    MatSetPreallocationCOOLocal - set preallocation for matrices using a coordinate format of the entries with local indices
 
    Collective on Mat
@@ -629,7 +628,7 @@ PetscErrorCode MatSetPreallocationCOO(Mat A,PetscCount ncoo,const PetscInt coo_i
    but will be ignored. The corresponding entries in MatSetValuesCOO() will be ignored too. Remote entries
    are allowed and will be properly added or inserted to the matrix.
 
-.seealso: MatSetValuesCOO(), MatSeqAIJSetPreallocation(), MatMPIAIJSetPreallocation(), MatSeqBAIJSetPreallocation(), MatMPIBAIJSetPreallocation(), MatSeqSBAIJSetPreallocation(), MatMPISBAIJSetPreallocation(), MatSetPreallocationCOO(), DMSetMatrixPreallocateSkip()
+.seealso: `MatSetValuesCOO()`, `MatSeqAIJSetPreallocation()`, `MatMPIAIJSetPreallocation()`, `MatSeqBAIJSetPreallocation()`, `MatMPIBAIJSetPreallocation()`, `MatSeqSBAIJSetPreallocation()`, `MatMPISBAIJSetPreallocation()`, `MatSetPreallocationCOO()`, `DMSetMatrixPreallocateSkip()`
 @*/
 PetscErrorCode MatSetPreallocationCOOLocal(Mat A,PetscCount ncoo,PetscInt coo_i[],PetscInt coo_j[])
 {
@@ -676,7 +675,7 @@ PetscErrorCode MatSetPreallocationCOOLocal(Mat A,PetscCount ncoo,PetscInt coo_i[
           The imode flag indicates if coo_v must be added to the current values of the matrix (ADD_VALUES) or overwritten (INSERT_VALUES).
           MatAssemblyBegin() and MatAssemblyEnd() do not need to be called after this routine. It automatically handles the assembly process.
 
-.seealso: MatSetPreallocationCOO(), MatSetPreallocationCOOLocal(), InsertMode, INSERT_VALUES, ADD_VALUES
+.seealso: `MatSetPreallocationCOO()`, `MatSetPreallocationCOOLocal()`, `InsertMode`, `INSERT_VALUES`, `ADD_VALUES`
 @*/
 PetscErrorCode MatSetValuesCOO(Mat A, const PetscScalar coo_v[], InsertMode imode)
 {
@@ -720,7 +719,7 @@ PetscErrorCode MatSetValuesCOO(Mat A, const PetscScalar coo_v[], InsertMode imod
    If the fine-scale DMDA has the -dm_bind_below option set to true, then DMCreateInterpolationScale() calls MatSetBindingPropagates()
    on the restriction/interpolation operator to set the bindingpropagates flag to true.
 
-.seealso: VecSetBindingPropagates(), MatGetBindingPropagates()
+.seealso: `VecSetBindingPropagates()`, `MatGetBindingPropagates()`
 @*/
 PetscErrorCode MatSetBindingPropagates(Mat A,PetscBool flg)
 {
@@ -743,7 +742,7 @@ PetscErrorCode MatSetBindingPropagates(Mat A,PetscBool flg)
 
    Level: developer
 
-.seealso: MatSetBindingPropagates()
+.seealso: `MatSetBindingPropagates()`
 @*/
 PetscErrorCode MatGetBindingPropagates(Mat A,PetscBool *flg)
 {

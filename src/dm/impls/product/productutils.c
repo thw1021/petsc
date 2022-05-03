@@ -15,7 +15,7 @@
 
   Level: advanced
 
-.seealso: DMPRODUCT, DMProductSetDM()
+.seealso: `DMPRODUCT`, `DMProductSetDM()`
 @*/
 PETSC_EXTERN PetscErrorCode DMProductGetDM(DM dm,PetscInt slot,DM *subdm)
 {
@@ -25,7 +25,7 @@ PETSC_EXTERN PetscErrorCode DMProductGetDM(DM dm,PetscInt slot,DM *subdm)
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm,DM_CLASSID,1,DMPRODUCT);
   PetscCall(DMGetDimension(dm,&dim));
-  PetscCheckFalse(slot >= dim || slot < 0,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"slot number must be in range 0-%D",dim-1);
+  PetscCheck(slot < dim && slot >= 0,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"slot number must be in range 0-%" PetscInt_FMT,dim-1);
   *subdm = product->dm[slot];
   PetscFunctionReturn(0);
 }
@@ -45,7 +45,7 @@ PETSC_EXTERN PetscErrorCode DMProductGetDM(DM dm,PetscInt slot,DM *subdm)
 
   Level: advanced
 
-.seealso: DMPRODUCT, DMProductGetDM(), DMProductSetDimensionIndex()
+.seealso: `DMPRODUCT`, `DMProductGetDM()`, `DMProductSetDimensionIndex()`
 @*/
 PETSC_EXTERN PetscErrorCode DMProductSetDM(DM dm,PetscInt slot,DM subdm)
 {
@@ -55,7 +55,7 @@ PETSC_EXTERN PetscErrorCode DMProductSetDM(DM dm,PetscInt slot,DM subdm)
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm,DM_CLASSID,1,DMPRODUCT);
   PetscCall(DMGetDimension(dm,&dim));
-  PetscCheckFalse(slot >= dim || slot < 0,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"slot number must be in range 0-%D",dim-1);
+  PetscCheck(slot < dim && slot >= 0,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"slot number must be in range 0-%" PetscInt_FMT,dim-1);
   PetscCall(PetscObjectReference((PetscObject)subdm));
   PetscCall(DMDestroy(&product->dm[slot]));
   product->dm[slot] = subdm;
@@ -74,7 +74,7 @@ PETSC_EXTERN PetscErrorCode DMProductSetDM(DM dm,PetscInt slot,DM subdm)
 
   Level: advanced
 
-.seealso: DMPRODUCT
+.seealso: `DMPRODUCT`
 @*/
 PETSC_EXTERN PetscErrorCode DMProductSetDimensionIndex(DM dm,PetscInt slot,PetscInt idx)
 {
@@ -84,7 +84,7 @@ PETSC_EXTERN PetscErrorCode DMProductSetDimensionIndex(DM dm,PetscInt slot,Petsc
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm,DM_CLASSID,1,DMPRODUCT);
   PetscCall(DMGetDimension(dm,&dim));
-  PetscCheckFalse(slot >= dim || slot < 0,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"slot number must be in range 0-%D",dim-1);
+  PetscCheck(slot < dim && slot >= 0,PetscObjectComm((PetscObject)dm),PETSC_ERR_ARG_OUTOFRANGE,"slot number must be in range 0-%" PetscInt_FMT,dim-1);
   product->dim[slot] = idx;
   PetscFunctionReturn(0);
 }

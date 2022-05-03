@@ -13,7 +13,6 @@ typedef struct {
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   options->dim     = 2;
@@ -21,12 +20,12 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->its     = 1;
   options->cbs     = 8;
 
-  ierr = PetscOptionsBegin(comm, "", "FE Integration Performance Options", "PETSCFE");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "FE Integration Performance Options", "PETSCFE");
   PetscCall(PetscOptionsInt("-dim", "The topological dimension", "ex1.c", options->dim, &options->dim, NULL));
   PetscCall(PetscOptionsBool("-simplex", "Simplex or hex cells", "ex1.c", options->simplex, &options->simplex, NULL));
   PetscCall(PetscOptionsInt("-its", "The number of replications for timing", "ex1.c", options->its, &options->its, NULL));
   PetscCall(PetscOptionsInt("-cbs", "The number of cells in an integration block", "ex1.c", options->cbs, &options->cbs, NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -122,7 +121,7 @@ PetscErrorCode CellRangeGetFEGeom(IS cellIS, DMField coordField, PetscQuadrature
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetId((PetscObject) quad, &id));
-  PetscCall(PetscSNPrintf(composeStr, 32, "CellRangeGetFEGeom_%x\n", id));
+  PetscCall(PetscSNPrintf(composeStr, 32, "CellRangeGetFEGeom_%" PetscInt64_FMT "\n", id));
   PetscCall(PetscObjectQuery((PetscObject) cellIS, composeStr, (PetscObject *) &container));
   if (container) {
     PetscCall(PetscContainerGetPointer(container, (void **) geom));
@@ -262,7 +261,7 @@ static PetscErrorCode TestIntegration(DM dm, PetscInt cbs, PetscInt its)
     PetscCall(PetscLogEventGetPerfInfo(stage, event, &eventInfo));
     flopRate = eventInfo.time != 0.0 ? eventInfo.flops/eventInfo.time : 0.0;
     cellRate = eventInfo.time != 0.0 ? N/eventInfo.time : 0.0;
-    PetscCall(PetscPrintf(PetscObjectComm((PetscObject) dm), "%s: %D integrals %D chunks %D reps\n  Cell rate: %.2f/s flop rate: %.2f MF/s\n", title, N, Nch, its, (double)cellRate, (double)(flopRate/1.e6)));
+    PetscCall(PetscPrintf(PetscObjectComm((PetscObject) dm), "%s: %" PetscInt_FMT " integrals %" PetscInt_FMT " chunks %" PetscInt_FMT " reps\n  Cell rate: %.2f/s flop rate: %.2f MF/s\n", title, N, Nch, its, (double)cellRate, (double)(flopRate/1.e6)));
   }
 #endif
   PetscFunctionReturn(0);
@@ -302,7 +301,7 @@ static PetscErrorCode TestIntegration2(DM dm, PetscInt cbs, PetscInt its)
     N        = (cEnd - cStart)*Nf*eventInfo.count;
     flopRate = eventInfo.time != 0.0 ? eventInfo.flops/eventInfo.time : 0.0;
     cellRate = eventInfo.time != 0.0 ? N/eventInfo.time : 0.0;
-    PetscCall(PetscPrintf(PetscObjectComm((PetscObject) dm), "%s: %D integrals %D reps\n  Cell rate: %.2f/s flop rate: %.2f MF/s\n", title, N, eventInfo.count, (double)cellRate, (double)(flopRate/1.e6)));
+    PetscCall(PetscPrintf(PetscObjectComm((PetscObject) dm), "%s: %" PetscInt_FMT " integrals %d reps\n  Cell rate: %.2f/s flop rate: %.2f MF/s\n", title, N, eventInfo.count, (double)cellRate, (double)(flopRate/1.e6)));
   }
 #endif
   PetscFunctionReturn(0);
@@ -316,7 +315,7 @@ int main(int argc, char **argv)
 
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
-  PetscCheckFalse(size > 1,PETSC_COMM_WORLD, PETSC_ERR_SUP, "This is a uniprocessor example only.");
+  PetscCheck(size <= 1,PETSC_COMM_WORLD, PETSC_ERR_SUP, "This is a uniprocessor example only.");
   PetscCall(ProcessOptions(PETSC_COMM_WORLD, &ctx));
   PetscCall(PetscLogDefaultBegin());
   PetscCall(DMCreate(PETSC_COMM_WORLD, &dm));

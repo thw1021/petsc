@@ -14,7 +14,7 @@
 
   Level: intermediate
 
-.seealso DMPlexVecGetClosure(), DMPlexVecRestoreClosure(), DMPlexVecSetClosure(), DMPlexMatSetClosure()
+.seealso `DMPlexVecGetClosure()`, `DMPlexVecRestoreClosure()`, `DMPlexVecSetClosure()`, `DMPlexMatSetClosure()`
 @*/
 PetscErrorCode DMPlexCreateClosureIndex(DM dm, PetscSection section)
 {
@@ -64,7 +64,7 @@ PetscErrorCode DMPlexCreateClosureIndex(DM dm, PetscSection section)
       }
     }
     PetscCall(DMPlexRestoreTransitiveClosure(dm, point, PETSC_TRUE, &numPoints, &points));
-    PetscCheckFalse(q*2 != cldof,PetscObjectComm((PetscObject) dm), PETSC_ERR_PLIB, "Invalid size for closure %D should be %D", q*2, cldof);
+    PetscCheck(q*2 == cldof,PetscObjectComm((PetscObject) dm), PETSC_ERR_PLIB, "Invalid size for closure %" PetscInt_FMT " should be %" PetscInt_FMT, q*2, cldof);
   }
   PetscCall(ISCreateGeneral(PETSC_COMM_SELF, clSize, clPoints, PETSC_OWN_POINTER, &closureIS));
   PetscCall(PetscSectionSetClosureIndex(section, (PetscObject) dm, closureSection, closureIS));

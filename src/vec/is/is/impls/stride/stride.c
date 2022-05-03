@@ -19,6 +19,16 @@ static PetscErrorCode ISCopy_Stride(IS is,IS isy)
   PetscFunctionReturn(0);
 }
 
+PetscErrorCode ISShift_Stride(IS is,PetscInt shift,IS isy)
+{
+  IS_Stride      *is_stride = (IS_Stride*)is->data,*isy_stride = (IS_Stride*)isy->data;
+
+  PetscFunctionBegin;
+  isy_stride->first = is_stride->first + shift;
+  isy_stride->step  = is_stride->step;
+  PetscFunctionReturn(0);
+}
+
 PetscErrorCode ISDuplicate_Stride(IS is,IS *newIS)
 {
   IS_Stride      *sub = (IS_Stride*)is->data;
@@ -71,7 +81,7 @@ PetscErrorCode ISInvertPermutation_Stride(IS is,PetscInt nlocal,IS *perm)
    Returns info on stride index set. This is a pseudo-public function that
    should not be needed by most users.
 
-.seealso: ISCreateStride(), ISGetSize(), ISSTRIDE
+.seealso: `ISCreateStride()`, `ISGetSize()`, `ISSTRIDE`
 @*/
 PetscErrorCode  ISStrideGetInfo(IS is,PetscInt *first,PetscInt *step)
 {
@@ -273,7 +283,7 @@ static PetscErrorCode ISSetBlockSize_Stride(IS is,PetscInt bs)
   IS_Stride     *sub = (IS_Stride*)is->data;
 
   PetscFunctionBegin;
-  PetscCheckFalse(sub->step != 1 && bs != 1,PetscObjectComm((PetscObject)is),PETSC_ERR_ARG_SIZ,"ISSTRIDE has stride %" PetscInt_FMT ", cannot be blocked of size %" PetscInt_FMT,sub->step,bs);
+  PetscCheck(sub->step == 1 || bs == 1,PetscObjectComm((PetscObject)is),PETSC_ERR_ARG_SIZ,"ISSTRIDE has stride %" PetscInt_FMT ", cannot be blocked of size %" PetscInt_FMT,sub->step,bs);
   PetscCall(PetscLayoutSetBlockSize(is->map, bs));
   PetscFunctionReturn(0);
 }
@@ -333,12 +343,12 @@ static struct _ISOps myops = {
 
    Level: beginner
 
-.seealso: ISCreateGeneral(), ISCreateBlock(), ISAllGather(), ISSTRIDE, ISCreateStride(), ISStrideGetInfo()
+.seealso: `ISCreateGeneral()`, `ISCreateBlock()`, `ISAllGather()`, `ISSTRIDE`, `ISCreateStride()`, `ISStrideGetInfo()`
 @*/
 PetscErrorCode  ISStrideSetStride(IS is,PetscInt n,PetscInt first,PetscInt step)
 {
   PetscFunctionBegin;
-  PetscCheckFalse(n < 0,PetscObjectComm((PetscObject)is), PETSC_ERR_ARG_OUTOFRANGE, "Negative length %" PetscInt_FMT " not valid", n);
+  PetscCheck(n >= 0,PetscObjectComm((PetscObject)is), PETSC_ERR_ARG_OUTOFRANGE, "Negative length %" PetscInt_FMT " not valid", n);
   PetscCall(ISClearInfoCache(is,PETSC_FALSE));
   PetscUseMethod(is,"ISStrideSetStride_C",(IS,PetscInt,PetscInt,PetscInt),(is,n,first,step));
   PetscFunctionReturn(0);
@@ -388,7 +398,7 @@ PetscErrorCode  ISStrideSetStride_Stride(IS is,PetscInt n,PetscInt first,PetscIn
 
    Level: beginner
 
-.seealso: ISCreateGeneral(), ISCreateBlock(), ISAllGather(), ISSTRIDE
+.seealso: `ISCreateGeneral()`, `ISCreateBlock()`, `ISAllGather()`, `ISSTRIDE`
 @*/
 PetscErrorCode  ISCreateStride(MPI_Comm comm,PetscInt n,PetscInt first,PetscInt step,IS *is)
 {
@@ -408,5 +418,6 @@ PETSC_EXTERN PetscErrorCode ISCreate_Stride(IS is)
   is->data = (void *) sub;
   PetscCall(PetscMemcpy(is->ops,&myops,sizeof(myops)));
   PetscCall(PetscObjectComposeFunction((PetscObject)is,"ISStrideSetStride_C",ISStrideSetStride_Stride));
+  PetscCall(PetscObjectComposeFunction((PetscObject)is,"ISShift_C",ISShift_Stride));
   PetscFunctionReturn(0);
 }

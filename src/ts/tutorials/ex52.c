@@ -40,18 +40,15 @@ typedef struct {
 /* Options for the scenario */
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
-    PetscErrorCode ierr;
-
     PetscFunctionBeginUser;
     options->u = 2.5;
     options->v = 0.0;
     options->diffusion = 0.0;
-
-    ierr = PetscOptionsBegin(comm, "", "Meshing Problem Options", "DMPLEX");PetscCall(ierr);
+    PetscOptionsBegin(comm, "", "Meshing Problem Options", "DMPLEX");
     PetscCall(PetscOptionsReal("-u", "The x component of the convective coefficient", "advection_DMPLEX.c", options->u, &options->u, NULL));
     PetscCall(PetscOptionsReal("-v", "The y component of the convective coefficient", "advection_DMPLEX.c", options->v, &options->v, NULL));
     PetscCall(PetscOptionsScalar("-diffus", "The diffusive coefficient", "advection_DMPLEX.c", options->diffusion, &options->diffusion, NULL));
-    ierr = PetscOptionsEnd();PetscCall(ierr);
+    PetscOptionsEnd();
     PetscFunctionReturn(0);
 }
 
@@ -111,7 +108,7 @@ PetscErrorCode MyTSMonitor(TS ts, PetscInt step, PetscReal ptime, Vec v, void *c
     if (step < 0) PetscFunctionReturn(0); /* step of -1 indicates an interpolated solution */
     PetscCall(VecNorm(v, NORM_2, &norm));
     PetscCall(PetscObjectGetComm((PetscObject) ts, &comm));
-    PetscCall(PetscPrintf(comm, "timestep %D time %g norm %g\n", step, (double) ptime, (double) norm));
+    PetscCall(PetscPrintf(comm, "timestep %" PetscInt_FMT " time %g norm %g\n", step, (double) ptime, (double) norm));
     PetscFunctionReturn(0);
 }
 

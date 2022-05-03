@@ -107,7 +107,6 @@ int main(int argc,char **argv)
   PreCheck            precheck = NULL;         /* precheck context for version in this file */
   PetscInt            use_precheck;            /* 0=none, 1=version in this file, 2=SNES-provided version */
   PetscReal           precheck_angle;          /* When manually setting the SNES-provided precheck function */
-  PetscErrorCode      ierr;
   SNESLineSearch      linesearch;
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -124,7 +123,7 @@ int main(int argc,char **argv)
   alloc_star     = PETSC_FALSE;
   use_precheck   = 0; precheck_angle = 10.;
   user.picard    = PETSC_FALSE;
-  ierr           = PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"p-Bratu options",__FILE__);PetscCall(ierr);
+  PetscOptionsBegin(PETSC_COMM_WORLD,NULL,"p-Bratu options",__FILE__);
   {
     PetscInt two=2;
     PetscCall(PetscOptionsReal("-lambda","Bratu parameter","",user.lambda,&user.lambda,NULL));
@@ -149,7 +148,7 @@ int main(int argc,char **argv)
     PetscCall(PetscOptionsReal("-kappa","diffusivity in odd regions","",user.kappa,&user.kappa,NULL));
     PetscCall(PetscOptionsString("-o","Output solution in vts format","",filename,filename,sizeof(filename),&write_output));
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   if (user.lambda > bratu_lambda_max || user.lambda < bratu_lambda_min) {
     PetscCall(PetscPrintf(PETSC_COMM_WORLD,"WARNING: lambda %g out of range for p=2\n",(double)user.lambda));
   }
@@ -194,8 +193,8 @@ int main(int argc,char **argv)
         This is not really right requiring the user to call SNESSetFunction/Jacobian but the DMDASNESSetPicardLocal() cannot access
         the SNES to set it
     */
-    ierr = DMDASNESSetPicardLocal(da,INSERT_VALUES,(PetscErrorCode (*)(DMDALocalInfo*,void*,void*,void*))FormFunctionPicardLocal,
-                                  (PetscErrorCode (*)(DMDALocalInfo*,void*,Mat,Mat,void*))FormJacobianLocal,&user);PetscCall(ierr);
+    PetscCall(DMDASNESSetPicardLocal(da,INSERT_VALUES,(PetscErrorCode (*)(DMDALocalInfo*,void*,void*,void*))FormFunctionPicardLocal,
+                                     (PetscErrorCode (*)(DMDALocalInfo*,void*,Mat,Mat,void*))FormJacobianLocal,&user));
     PetscCall(SNESSetFunction(snes,NULL,SNESPicardComputeFunction,&user));
     PetscCall(SNESSetJacobian(snes,NULL,NULL,SNESPicardComputeJacobian,&user));
   } else {
@@ -236,7 +235,7 @@ int main(int argc,char **argv)
   PetscCall(SNESGetIterationNumber(snes,&its));
   PetscCall(SNESGetConvergedReason(snes,&reason));
 
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%s Number of nonlinear iterations = %D\n",SNESConvergedReasons[reason],its));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%s Number of nonlinear iterations = %" PetscInt_FMT "\n",SNESConvergedReasons[reason],its));
 
   if (write_output) {
     PetscViewer viewer;
@@ -645,18 +644,17 @@ static PetscErrorCode FormJacobianLocal(DMDALocalInfo *info,PetscScalar **x,Mat 
  ***********************************************************/
 PetscErrorCode PreCheckSetFromOptions(PreCheck precheck)
 {
-  PetscErrorCode ierr;
   PetscBool      flg;
 
   PetscFunctionBeginUser;
-  ierr = PetscOptionsBegin(precheck->comm,NULL,"PreCheck Options","none");PetscCall(ierr);
+  PetscOptionsBegin(precheck->comm,NULL,"PreCheck Options","none");
   PetscCall(PetscOptionsReal("-precheck_angle","Angle in degrees between successive search directions necessary to activate step correction","",precheck->angle,&precheck->angle,NULL));
   flg  = PETSC_FALSE;
   PetscCall(PetscOptionsBool("-precheck_monitor","Monitor choices made by precheck routine","",flg,&flg,NULL));
   if (flg) {
     PetscCall(PetscViewerASCIIOpen(precheck->comm,"stdout",&precheck->monitor));
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -699,13 +697,13 @@ PetscErrorCode PreCheckFunction(SNESLineSearch linesearch,Vec X,Vec Y,PetscBool 
     PetscCall(VecCopy(Y,Ylast));
     PetscCall(VecScale(Y,alpha));
     if (precheck->monitor) {
-      PetscCall(PetscViewerASCIIPrintf(precheck->monitor,"Angle %E degrees less than threshold %g, corrected step by alpha=%g\n",(double)(theta*180./PETSC_PI),(double)precheck->angle,(double)alpha));
+      PetscCall(PetscViewerASCIIPrintf(precheck->monitor,"Angle %g degrees less than threshold %g, corrected step by alpha=%g\n",(double)(theta*180./PETSC_PI),(double)precheck->angle,(double)alpha));
     }
   } else {
     PetscCall(VecCopy(Y,Ylast));
     *changed = PETSC_FALSE;
     if (precheck->monitor) {
-      PetscCall(PetscViewerASCIIPrintf(precheck->monitor,"Angle %E degrees exceeds threshold %g, no correction applied\n",(double)(theta*180./PETSC_PI),(double)precheck->angle));
+      PetscCall(PetscViewerASCIIPrintf(precheck->monitor,"Angle %g degrees exceeds threshold %g, no correction applied\n",(double)(theta*180./PETSC_PI),(double)precheck->angle));
     }
   }
   PetscFunctionReturn(0);

@@ -13,7 +13,7 @@
 
    Level: developer
 
-.seealso:   PetscViewerVTKAddField()
+.seealso: `PetscViewerVTKAddField()`
 M*/
 
 /*@C
@@ -35,7 +35,7 @@ M*/
 
    Level: developer
 
-.seealso: PetscViewerVTKOpen(), DMDAVTKWriteAll(), PetscViewerVTKWriteFunction, PetscViewerVTKGetDM()
+.seealso: `PetscViewerVTKOpen()`, `DMDAVTKWriteAll()`, `PetscViewerVTKWriteFunction`, `PetscViewerVTKGetDM()`
 @*/
 PetscErrorCode PetscViewerVTKAddField(PetscViewer viewer,PetscObject dm,PetscErrorCode (*PetscViewerVTKWriteFunction)(PetscObject,PetscViewer),PetscInt fieldnum,PetscViewerVTKFieldType fieldtype,PetscBool checkdm,PetscObject vec)
 {
@@ -58,7 +58,7 @@ PetscErrorCode PetscViewerVTKAddField(PetscViewer viewer,PetscObject dm,PetscErr
 
    Level: developer
 
-.seealso: PetscViewerVTKOpen(), DMDAVTKWriteAll(), PetscViewerVTKWriteFunction, PetscViewerVTKAddField()
+.seealso: `PetscViewerVTKOpen()`, `DMDAVTKWriteAll()`, `PetscViewerVTKWriteFunction`, `PetscViewerVTKAddField()`
 @*/
 PetscErrorCode PetscViewerVTKGetDM(PetscViewer viewer,PetscObject *dm)
 {
@@ -90,7 +90,7 @@ static PetscErrorCode PetscViewerFlush_VTK(PetscViewer viewer)
   PetscViewerVTKObjectLink link,next;
 
   PetscFunctionBegin;
-  PetscCheckFalse(vtk->link && (!vtk->dm || !vtk->write),PetscObjectComm((PetscObject)viewer),PETSC_ERR_ARG_WRONGSTATE,"No fields or no grid");
+  PetscCheck(!vtk->link || !(!vtk->dm || !vtk->write),PetscObjectComm((PetscObject)viewer),PETSC_ERR_ARG_WRONGSTATE,"No fields or no grid");
   if (vtk->write) PetscCall((*vtk->write)(vtk->dm,viewer));
   for (link=vtk->link; link; link=next) {
     next = link->next;
@@ -123,16 +123,16 @@ PetscErrorCode  PetscViewerFileSetName_VTK(PetscViewer viewer,const char name[])
   }
   if (isvtk) {
     if (viewer->format == PETSC_VIEWER_DEFAULT) viewer->format = PETSC_VIEWER_ASCII_VTK_DEPRECATED;
-    PetscCheckFalse(viewer->format != PETSC_VIEWER_ASCII_VTK_DEPRECATED,PetscObjectComm((PetscObject)viewer),PETSC_ERR_ARG_INCOMP,"Cannot use file '%s' with format %s, should have '.vtk' extension",name,PetscViewerFormats[viewer->format]);
+    PetscCheck(viewer->format == PETSC_VIEWER_ASCII_VTK_DEPRECATED,PetscObjectComm((PetscObject)viewer),PETSC_ERR_ARG_INCOMP,"Cannot use file '%s' with format %s, should have '.vtk' extension",name,PetscViewerFormats[viewer->format]);
   } else if (isvts) {
     if (viewer->format == PETSC_VIEWER_DEFAULT) viewer->format = PETSC_VIEWER_VTK_VTS;
-    PetscCheckFalse(viewer->format != PETSC_VIEWER_VTK_VTS,PetscObjectComm((PetscObject)viewer),PETSC_ERR_ARG_INCOMP,"Cannot use file '%s' with format %s, should have '.vts' extension",name,PetscViewerFormats[viewer->format]);
+    PetscCheck(viewer->format == PETSC_VIEWER_VTK_VTS,PetscObjectComm((PetscObject)viewer),PETSC_ERR_ARG_INCOMP,"Cannot use file '%s' with format %s, should have '.vts' extension",name,PetscViewerFormats[viewer->format]);
   } else if (isvtu) {
     if (viewer->format == PETSC_VIEWER_DEFAULT) viewer->format = PETSC_VIEWER_VTK_VTU;
-    PetscCheckFalse(viewer->format != PETSC_VIEWER_VTK_VTU,PetscObjectComm((PetscObject)viewer),PETSC_ERR_ARG_INCOMP,"Cannot use file '%s' with format %s, should have '.vtu' extension",name,PetscViewerFormats[viewer->format]);
+    PetscCheck(viewer->format == PETSC_VIEWER_VTK_VTU,PetscObjectComm((PetscObject)viewer),PETSC_ERR_ARG_INCOMP,"Cannot use file '%s' with format %s, should have '.vtu' extension",name,PetscViewerFormats[viewer->format]);
   } else if (isvtr) {
     if (viewer->format == PETSC_VIEWER_DEFAULT) viewer->format = PETSC_VIEWER_VTK_VTR;
-    PetscCheckFalse(viewer->format != PETSC_VIEWER_VTK_VTR,PetscObjectComm((PetscObject)viewer),PETSC_ERR_ARG_INCOMP,"Cannot use file '%s' with format %s, should have '.vtr' extension",name,PetscViewerFormats[viewer->format]);
+    PetscCheck(viewer->format == PETSC_VIEWER_VTK_VTR,PetscObjectComm((PetscObject)viewer),PETSC_ERR_ARG_INCOMP,"Cannot use file '%s' with format %s, should have '.vtr' extension",name,PetscViewerFormats[viewer->format]);
   } else SETERRQ(PetscObjectComm((PetscObject)viewer),PETSC_ERR_ARG_UNKNOWN_TYPE,"File '%s' has unrecognized extension",name);
   PetscCall(PetscStrallocpy(len ? name : "stdout",&vtk->filename));
   PetscFunctionReturn(0);
@@ -171,7 +171,7 @@ PetscErrorCode  PetscViewerVTKAddField_VTK(PetscViewer viewer,PetscObject dm,Pet
 
   PetscFunctionBegin;
   if (vtk->dm) {
-    PetscCheckFalse(checkdm && dm != vtk->dm,PetscObjectComm((PetscObject)viewer),PETSC_ERR_ARG_INCOMP,"Refusing to write a field from more than one grid to the same VTK file. Set checkdm = PETSC_FALSE to skip this check.");
+    PetscCheck(!checkdm || dm == vtk->dm,PetscObjectComm((PetscObject)viewer),PETSC_ERR_ARG_INCOMP,"Refusing to write a field from more than one grid to the same VTK file. Set checkdm = PETSC_FALSE to skip this check.");
   } else {
     PetscCall(PetscObjectReference(dm));
     vtk->dm = dm;
@@ -202,10 +202,10 @@ PetscErrorCode PetscViewerVTKGetDM_VTK(PetscViewer viewer,PetscObject *dm)
 /*MC
    PETSCVIEWERVTK - A viewer that writes to a VTK file
 
-.seealso:  PetscViewerVTKOpen(), PetscViewerHDF5Open(), PetscViewerStringSPrintf(), PetscViewerSocketOpen(), PetscViewerDrawOpen(), PETSCVIEWERSOCKET,
-           PetscViewerCreate(), PetscViewerASCIIOpen(), PetscViewerBinaryOpen(), PETSCVIEWERBINARY, PETSCVIEWERDRAW, PETSCVIEWERSTRING,
-           PetscViewerMatlabOpen(), VecView(), DMView(), PetscViewerMatlabPutArray(), PETSCVIEWERASCII, PETSCVIEWERMATLAB,
-           PetscViewerFileSetName(), PetscViewerFileSetMode(), PetscViewerFormat, PetscViewerType, PetscViewerSetType()
+.seealso: `PetscViewerVTKOpen()`, `PetscViewerHDF5Open()`, `PetscViewerStringSPrintf()`, `PetscViewerSocketOpen()`, `PetscViewerDrawOpen()`, `PETSCVIEWERSOCKET`,
+          `PetscViewerCreate()`, `PetscViewerASCIIOpen()`, `PetscViewerBinaryOpen()`, `PETSCVIEWERBINARY`, `PETSCVIEWERDRAW`, `PETSCVIEWERSTRING`,
+          `PetscViewerMatlabOpen()`, `VecView()`, `DMView()`, `PetscViewerMatlabPutArray()`, `PETSCVIEWERASCII`, `PETSCVIEWERMATLAB`,
+          `PetscViewerFileSetName()`, `PetscViewerFileSetMode()`, `PetscViewerFormat`, `PetscViewerType`, `PetscViewerSetType()`
 
   Level: beginner
 M*/
@@ -253,9 +253,9 @@ $    FILE_MODE_APPEND - open existing file for binary output (not currently supp
    Note:
    This PetscViewer should be destroyed with PetscViewerDestroy().
 
-.seealso: PetscViewerASCIIOpen(), PetscViewerPushFormat(), PetscViewerDestroy(),
-          VecView(), MatView(), VecLoad(), MatLoad(),
-          PetscFileMode, PetscViewer
+.seealso: `PetscViewerASCIIOpen()`, `PetscViewerPushFormat()`, `PetscViewerDestroy()`,
+          `VecView()`, `MatView()`, `VecLoad()`, `MatLoad()`,
+          `PetscFileMode`, `PetscViewer`
 @*/
 PetscErrorCode PetscViewerVTKOpen(MPI_Comm comm,const char name[],PetscFileMode type,PetscViewer *vtk)
 {
@@ -284,7 +284,7 @@ PetscErrorCode PetscViewerVTKOpen(MPI_Comm comm,const char name[],PetscFileMode 
    Notes:
     If PetscScalar is __float128 then the binary files are written in double precision
 
-.seealso: DMDAVTKWriteAll(), DMPlexVTKWriteAll(), PetscViewerPushFormat(), PetscViewerVTKOpen(), PetscBinaryWrite()
+.seealso: `DMDAVTKWriteAll()`, `DMPlexVTKWriteAll()`, `PetscViewerPushFormat()`, `PetscViewerVTKOpen()`, `PetscBinaryWrite()`
 @*/
 PetscErrorCode PetscViewerVTKFWrite(PetscViewer viewer,FILE *fp,const void *data,PetscInt n,MPI_Datatype dtype)
 {
@@ -297,7 +297,7 @@ PetscErrorCode PetscViewerVTKFWrite(PetscViewer viewer,FILE *fp,const void *data
 #endif
 
   PetscFunctionBegin;
-  PetscCheckFalse(n < 0,PetscObjectComm((PetscObject)viewer),PETSC_ERR_ARG_OUTOFRANGE,"Trying to write a negative amount of data %" PetscInt_FMT,n);
+  PetscCheck(n >= 0,PetscObjectComm((PetscObject)viewer),PETSC_ERR_ARG_OUTOFRANGE,"Trying to write a negative amount of data %" PetscInt_FMT,n);
   if (!n) PetscFunctionReturn(0);
   PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)viewer),&rank));
   if (rank == 0) {
@@ -317,9 +317,9 @@ PetscErrorCode PetscViewerVTKFWrite(PetscViewer viewer,FILE *fp,const void *data
     bytes = PetscVTKIntCast(dsize*n);
 
     count = fwrite(&bytes,sizeof(int),1,fp);
-    PetscCheckFalse(count != 1,PETSC_COMM_SELF,PETSC_ERR_FILE_WRITE,"Error writing byte count");
+    PetscCheck(count == 1,PETSC_COMM_SELF,PETSC_ERR_FILE_WRITE,"Error writing byte count");
     count = fwrite(data,dsize,(size_t)n,fp);
-    PetscCheckFalse((PetscInt)count != n,PETSC_COMM_SELF,PETSC_ERR_FILE_WRITE,"Wrote %" PetscInt_FMT "/%" PetscInt_FMT " array members of size %d",(PetscInt)count,n,dsize);
+    PetscCheck((PetscInt)count == n,PETSC_COMM_SELF,PETSC_ERR_FILE_WRITE,"Wrote %" PetscInt_FMT "/%" PetscInt_FMT " array members of size %d",(PetscInt)count,n,dsize);
 #if defined(PETSC_USE_REAL___FLOAT128)
     if (dtype == MPIU___FLOAT128) {
       PetscCall(PetscFree(tmp));

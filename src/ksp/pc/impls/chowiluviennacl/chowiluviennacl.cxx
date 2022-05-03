@@ -94,7 +94,7 @@ static PetscErrorCode PCApply_CHOWILUVIENNACL(PC pc,Vec x,Vec y)
   /*how to apply a certain fixed number of iterations?*/
   PetscCall(PetscObjectTypeCompare((PetscObject)x,VECSEQVIENNACL,&flg1));
   PetscCall(PetscObjectTypeCompare((PetscObject)y,VECSEQVIENNACL,&flg2));
-  PetscCheckFalse(!(flg1 && flg2),PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP, "Currently only handles ViennaCL vectors");
+  PetscCheck((flg1 && flg2),PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP, "Currently only handles ViennaCL vectors");
   if (!ilu->CHOWILUVIENNACL) {
     PetscCall(PCSetUp_CHOWILUVIENNACL(pc));
   }
@@ -149,8 +149,8 @@ static PetscErrorCode PCDestroy_CHOWILUVIENNACL(PC pc)
 static PetscErrorCode PCSetFromOptions_CHOWILUVIENNACL(PetscOptionItems *PetscOptionsObject,PC pc)
 {
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"CHOWILUVIENNACL options"));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadBegin(PetscOptionsObject,"CHOWILUVIENNACL options");
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -161,7 +161,7 @@ static PetscErrorCode PCSetFromOptions_CHOWILUVIENNACL(PetscOptionItems *PetscOp
 
    Level: advanced
 
-.seealso:  PCCreate(), PCSetType(), PCType (for list of available types), PC
+.seealso: `PCCreate()`, `PCSetType()`, `PCType`, `PC`
 
 M*/
 
