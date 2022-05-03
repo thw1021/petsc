@@ -764,7 +764,7 @@ PetscErrorCode PetscSetMKL_PARDISOFromOptions(Mat F, Mat A)
 
   PetscCall(PetscOptionsInt("-mat_mkl_pardiso_60","Intel MKL_PARDISO mode","None",mat_mkl_pardiso->iparm[59],&icntl,&flg));
   if (flg) mat_mkl_pardiso->iparm[59] = icntl;
-  PetscOptionsEnd();
+  ierr = PetscOptionsEnd();PetscCall(ierr);
   PetscFunctionReturn(0);
 }
 
