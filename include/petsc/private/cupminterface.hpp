@@ -123,7 +123,7 @@ namespace Impl
 //   return cudaMalloc(std::forward<T>(args)...);
 // }
 #define PETSC_CUPM_ALIAS_FUNCTION_EXACT(our_prefix,our_suffix,their_prefix,their_suffix) \
-  PETSC_ALIAS_FUNCTION(static constexpr PetscConcat(our_prefix,our_suffix),PetscConcat(their_prefix,their_suffix))
+  PETSC_ALIAS_FUNCTION(static PetscConcat(our_prefix,our_suffix),PetscConcat(their_prefix,their_suffix))
 
 // PETSC_CUPM_ALIAS_FUNCTION_COMMON() - declaration to alias a cuda/hip function
 //
@@ -204,7 +204,7 @@ namespace Impl
 //   return cudaMalloc(std::forward<T>(args)...);
 // }
 #define PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_EXACT(our_prefix,our_suffix,their_prefix,their_suffix,N) \
-  PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS(static constexpr PetscConcat(our_prefix,our_suffix),PetscConcat(their_prefix,their_suffix),N)
+  PETSC_ALIAS_FUNCTION_GOBBLE_NTH_LAST_ARGS(static PetscConcat(our_prefix,our_suffix),PetscConcat(their_prefix,their_suffix),N)
 
 // PETSC_CUPM_ALIAS_FUNCTION_GOBBLE_COMMON() - declaration to alias a cuda/hip function but
 // discard the last N arguments
@@ -661,14 +661,6 @@ struct Interface : InterfaceImpl<T>
   using base_name::cupmRealCast;                                        \
   using base_name::cupmGetMemType;                                      \
   using base_name::PetscDeviceCopyModeToCUPMMemcpyKind
-
-#if PetscDefined(HAVE_CUDA)
-extern template struct Interface<DeviceType::CUDA>;
-#endif
-
-#if PetscDefined(HAVE_HIP)
-extern template struct Interface<DeviceType::HIP>;
-#endif
 
 } // namespace Impl
 

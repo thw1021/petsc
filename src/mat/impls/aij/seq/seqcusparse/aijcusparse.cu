@@ -3003,7 +3003,7 @@ static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat A,Vec xx,Vec yy,Vec zz
   PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
   PetscCall(PetscManagedScalarCreateDefault(dctx,1,&zero));
   {
-    constexpr auto zeroscal = PetscScalar{0.0};
+    const auto zeroscal = PetscScalar{0.0};
 
     PetscCall(PetscManagedScalarSetValues(dctx,zero,PETSC_MEMTYPE_HOST,&zeroscal,1));
   }
@@ -3013,7 +3013,7 @@ static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat A,Vec xx,Vec yy,Vec zz
     PetscCall(PetscManagedScalarDestroy(dctx,&zero));
     PetscFunctionReturn(0);
   } else {
-    constexpr auto onescal = PetscScalar{1.0};
+    const auto onescal = PetscScalar{1.0};
 
     PetscCall(PetscManagedScalarCreateDefault(dctx,1,&one));
     PetscCall(PetscManagedScalarSetValues(dctx,one,PETSC_MEMTYPE_HOST,&onescal,1));

@@ -282,14 +282,10 @@ PetscErrorCode VecNormAsync(Vec x, NormType type, PetscManagedReal scal, PetscDe
 @*/
 PetscErrorCode  VecNorm(Vec x,NormType type,PetscReal *val)
 {
-  PetscBool        flg;
   PetscManagedReal tmp;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(x,VEC_CLASSID,1);
   PetscValidRealPointer(val,3);
-  PetscCall(VecNormAvailable(x,type,&flg,val));
-  if (flg) PetscFunctionReturn(0);
   PetscCall(PetscManageHostReal(NULL,val,1+(type == NORM_1_AND_2),&tmp));
   PetscCall(VecNormAsync(x,type,tmp,NULL));
   PetscCall(PetscManagedHostRealDestroy(NULL,&tmp));
@@ -379,8 +375,8 @@ PetscErrorCode  VecNormalize(Vec x,PetscReal *val)
   } else if (norm != 1.0) {
     PetscCall(VecScale(x,1.0/norm));
   }
-  if (val) *val = norm;
   PetscCall(PetscLogEventEnd(VEC_Normalize,x,0,0,0));
+  if (val) *val = norm;
   PetscFunctionReturn(0);
 }
 
@@ -405,14 +401,16 @@ static PetscErrorCode VecMinMaxAsync_Private(Vec x, PetscManagedInt p, PetscMana
 static PetscErrorCode VecMinMax_Private(Vec x, PetscInt *p, PetscReal *val, PetscErrorCode (*const MinMaxAsyncFunc)(Vec,PetscManagedInt,PetscManagedReal,PetscDeviceContext))
 {
   PetscManagedReal   tmpv;
-  PetscManagedInt    tmpp = NULL;
-  PetscDeviceContext dctx = NULL;
+  PetscManagedInt    tmpp;
+  PetscDeviceContext dctx;
 
   PetscFunctionBegin;
-  PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+  PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
   if (p) {
     PetscValidIntPointer(p,2);
     PetscCall(PetscManageHostInt(dctx,p,1,&tmpp));
+  } else {
+    tmpp = NULL; // critical, as tmpp is checked for null to check internally
   }
   PetscValidRealPointer(val,3);
   PetscValidFunction(MinMaxAsyncFunc,4);
@@ -762,7 +760,7 @@ PetscErrorCode VecAXPY(Vec y, PetscScalar alpha, Vec x)
 
     PetscCall(PetscManageHostScalar(NULL,&alpha,1,&tmp));
     PetscCall(VecAXPYAsync(y,tmp,x,NULL));
-    PetscCall(PetscManagedHostScalarDestroy(NULL,&tmp));
+    PetscCall(PetscManagedScalarDestroy(NULL,&tmp));
   }
   PetscFunctionReturn(0);
 }
@@ -814,7 +812,7 @@ PetscErrorCode  VecAYPX(Vec y,PetscScalar beta,Vec x)
 
     PetscCall(PetscManageHostScalar(NULL,&beta,1,&btmp));
     PetscCall(VecAYPXAsync(y,btmp,x,NULL));
-    PetscCall(PetscManagedHostScalarDestroy(NULL,&btmp));
+    PetscCall(PetscManagedScalarDestroy(NULL,&btmp));
   }
   PetscFunctionReturn(0);
 }
@@ -872,6 +870,7 @@ PetscErrorCode VecAXPBYAsync(Vec y, PetscManagedScalar alpha, PetscManagedScalar
 PetscErrorCode  VecAXPBY(Vec y,PetscScalar alpha,PetscScalar beta,Vec x)
 {
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(y,VEC_CLASSID,1);
   PetscValidLogicalCollectiveScalar(y,alpha,2);
   PetscValidLogicalCollectiveScalar(y,beta,3);
   if ((alpha != (PetscScalar)0.0) || (beta != (PetscScalar)1.0)) {
@@ -880,8 +879,8 @@ PetscErrorCode  VecAXPBY(Vec y,PetscScalar alpha,PetscScalar beta,Vec x)
     PetscCall(PetscManageHostScalar(NULL,&alpha,1,&atmp));
     PetscCall(PetscManageHostScalar(NULL,&beta,1,&btmp));
     PetscCall(VecAXPBYAsync(y,atmp,btmp,x,NULL));
-    PetscCall(PetscManagedHostScalarDestroy(NULL,&atmp));
-    PetscCall(PetscManagedHostScalarDestroy(NULL,&btmp));
+    PetscCall(PetscManagedScalarDestroy(NULL,&atmp));
+    PetscCall(PetscManagedScalarDestroy(NULL,&btmp));
   }
   PetscFunctionReturn(0);
 }
@@ -937,6 +936,7 @@ PetscErrorCode VecAXPBYPCZAsync(Vec z, PetscManagedScalar alpha, PetscManagedSca
 PetscErrorCode  VecAXPBYPCZ(Vec z,PetscScalar alpha,PetscScalar beta,PetscScalar gamma,Vec x,Vec y)
 {
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(z,VEC_CLASSID,1);
   PetscValidLogicalCollectiveScalar(z,alpha,2);
   PetscValidLogicalCollectiveScalar(z,beta,3);
   PetscValidLogicalCollectiveScalar(z,gamma,4);
@@ -947,9 +947,9 @@ PetscErrorCode  VecAXPBYPCZ(Vec z,PetscScalar alpha,PetscScalar beta,PetscScalar
     PetscCall(PetscManageHostScalar(NULL,&beta,1,&btmp));
     PetscCall(PetscManageHostScalar(NULL,&gamma,1,&gtmp));
     PetscCall(VecAXPBYPCZAsync(z,atmp,btmp,gtmp,x,y,NULL));
-    PetscCall(PetscManagedHostScalarDestroy(NULL,&atmp));
-    PetscCall(PetscManagedHostScalarDestroy(NULL,&btmp));
-    PetscCall(PetscManagedHostScalarDestroy(NULL,&gtmp));
+    PetscCall(PetscManagedScalarDestroy(NULL,&atmp));
+    PetscCall(PetscManagedScalarDestroy(NULL,&btmp));
+    PetscCall(PetscManagedScalarDestroy(NULL,&gtmp));
   }
   PetscFunctionReturn(0);
 }
@@ -975,8 +975,9 @@ PetscErrorCode VecWAXPYAsync(Vec w, PetscManagedScalar alpha, Vec x, Vec y, Pets
   PetscCall(VecLockReadPush(x));
   PetscCall(VecLockReadPush(y));
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
+
   PetscCall(PetscManagedScalarEqual(alpha,0.0,&known,&equal));
-  if (known && equal) {
+  if (known && equal /* alpha = 0 */) {
     PetscCall(VecCopyAsync(y,w,dctx));
   } else {
     PetscCall(PetscLogEventBegin(VEC_WAXPY,x,y,w,0));
@@ -1011,17 +1012,13 @@ PetscErrorCode VecWAXPYAsync(Vec w, PetscManagedScalar alpha, Vec x, Vec y, Pets
 @*/
 PetscErrorCode  VecWAXPY(Vec w,PetscScalar alpha,Vec x,Vec y)
 {
+  PetscManagedScalar atmp;
+
   PetscFunctionBegin;
   PetscValidLogicalCollectiveScalar(y,alpha,2);
-  if (alpha == (PetscScalar)0.0) {
-    PetscCall(VecCopy(y,w));
-  } else {
-    PetscManagedScalar atmp;
-
-    PetscCall(PetscManageHostScalar(NULL,&alpha,1,&atmp));
-    PetscCall(VecWAXPYAsync(w,atmp,x,y,NULL));
-    PetscCall(PetscManagedHostScalarDestroy(NULL,&atmp));
-  }
+  PetscCall(PetscManageHostScalar(NULL,&alpha,1,&atmp));
+  PetscCall(VecWAXPYAsync(w,atmp,x,y,NULL));
+  PetscCall(PetscManagedScalarDestroy(NULL,&atmp));
   PetscFunctionReturn(0);
 }
 
@@ -1509,7 +1506,7 @@ PetscErrorCode  VecMAXPY(Vec y,PetscInt nv,const PetscScalar alpha[],Vec x[])
     PetscCall(PetscManageHostInt(dctx,&nv,1,&nvtmp));
     PetscCall(PetscManageHostScalar(dctx,(PetscScalar*)alpha,nv,&alphatmp));
     PetscCall(VecMAXPYAsync(y,nvtmp,alphatmp,x,dctx));
-    PetscCall(PetscManagedHostScalarDestroy(dctx,&alphatmp));
+    PetscCall(PetscManagedScalarDestroy(dctx,&alphatmp));
     PetscCall(PetscManagedIntDestroy(dctx,&nvtmp));
 
     for (PetscInt i = 0; i < nv; ++i) PetscCall(VecLockReadPop(x[i]));

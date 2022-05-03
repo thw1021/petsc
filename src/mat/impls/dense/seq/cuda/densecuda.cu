@@ -982,7 +982,6 @@ static PetscErrorCode MatMultAdd_SeqDenseCUDA_Private(Mat A,Vec xx,Vec yy,Vec zz
   PetscScalar       one=1.0,zero=0.0;
   PetscCuBLASInt    m, n, lda;
   cublasHandle_t    cublasv2handle;
-  cublasStatus_t    berr;
   PetscDeviceContext dctx;
 
   PetscFunctionBegin;
@@ -990,7 +989,7 @@ static PetscErrorCode MatMultAdd_SeqDenseCUDA_Private(Mat A,Vec xx,Vec yy,Vec zz
   if (yy && yy != zz) PetscCall(VecSeq_CUDA::copy_async(yy,zz,dctx)); /* mult add */
   if (!A->rmap->n || !A->cmap->n) {
     if (!yy) {
-      constexpr auto     zero = PetscScalar{0.0};
+      const auto         zero = PetscScalar{0.0};
       PetscManagedScalar scal;
 
       /* mult only */
@@ -1010,8 +1009,8 @@ static PetscErrorCode MatMultAdd_SeqDenseCUDA_Private(Mat A,Vec xx,Vec yy,Vec zz
   PetscCall(VecCUDAGetArrayRead(xx,&xarray));
   PetscCall(VecCUDAGetArray(zz,&zarray));
   PetscCall(PetscLogGpuTimeBegin());
-  berr = cublasXgemv(cublasv2handle,trans ? CUBLAS_OP_T : CUBLAS_OP_N,
-                     m,n,&one,da,lda,xarray,1,(yy ? &one : &zero),zarray,1);PetscCallCUBLAS(berr);
+  PetscCallCUBLAS(cublasXgemv(cublasv2handle,trans ? CUBLAS_OP_T : CUBLAS_OP_N,
+                              m,n,&one,da,lda,xarray,1,(yy ? &one : &zero),zarray,1));
   PetscCall(PetscLogGpuTimeEnd());
   PetscCall(PetscLogGpuFlops(2.0*A->rmap->n*A->cmap->n - (yy ? 0 : A->rmap->n)));
   PetscCall(VecCUDARestoreArrayRead(xx,&xarray));
