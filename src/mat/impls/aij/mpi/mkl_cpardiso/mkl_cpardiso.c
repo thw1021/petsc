@@ -389,7 +389,7 @@ PetscErrorCode MatSolve_MKL_CPARDISO(Mat A,Vec b,Vec x)
     &mat_mkl_cpardiso->comm_mkl_cpardiso,
     (PetscInt*)&mat_mkl_cpardiso->err);
 
-  PetscCheckFalse(mat_mkl_cpardiso->err < 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error reported by MKL_CPARDISO: err=%d, msg = \"%s\". Please check manual",mat_mkl_cpardiso->err,Err_MSG_CPardiso(mat_mkl_cpardiso->err));
+  PetscCheck(mat_mkl_cpardiso->err >= 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error reported by MKL_CPARDISO: err=%d, msg = \"%s\". Please check manual",mat_mkl_cpardiso->err,Err_MSG_CPardiso(mat_mkl_cpardiso->err));
 
   PetscCall(VecRestoreArray(x,&xarray));
   PetscCall(VecRestoreArrayRead(b,&barray));
@@ -425,7 +425,7 @@ PetscErrorCode MatMatSolve_MKL_CPARDISO(Mat A,Mat B,Mat X)
     PetscCall(MatDenseGetArrayRead(B,&barray));
     PetscCall(MatDenseGetArray(X,&xarray));
 
-    PetscCheckFalse(barray == xarray,PETSC_COMM_SELF,PETSC_ERR_SUP,"B and X cannot share the same memory location");
+    PetscCheck(barray != xarray,PETSC_COMM_SELF,PETSC_ERR_SUP,"B and X cannot share the same memory location");
 
     /* solve phase */
     /*-------------*/
@@ -448,7 +448,7 @@ PetscErrorCode MatMatSolve_MKL_CPARDISO(Mat A,Mat B,Mat X)
       (void*)xarray,
       &mat_mkl_cpardiso->comm_mkl_cpardiso,
       (PetscInt*)&mat_mkl_cpardiso->err);
-    PetscCheckFalse(mat_mkl_cpardiso->err < 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error reported by MKL_CPARDISO: err=%d, msg = \"%s\". Please check manual",mat_mkl_cpardiso->err,Err_MSG_CPardiso(mat_mkl_cpardiso->err));
+    PetscCheck(mat_mkl_cpardiso->err >= 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error reported by MKL_CPARDISO: err=%d, msg = \"%s\". Please check manual",mat_mkl_cpardiso->err,Err_MSG_CPardiso(mat_mkl_cpardiso->err));
     PetscCall(MatDenseRestoreArrayRead(B,&barray));
     PetscCall(MatDenseRestoreArray(X,&xarray));
 
@@ -487,7 +487,7 @@ PetscErrorCode MatFactorNumeric_MKL_CPARDISO(Mat F,Mat A,const MatFactorInfo *in
     NULL,
     &mat_mkl_cpardiso->comm_mkl_cpardiso,
     &mat_mkl_cpardiso->err);
-  PetscCheckFalse(mat_mkl_cpardiso->err < 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error reported by MKL_CPARDISO: err=%d, msg = \"%s\". Please check manual",mat_mkl_cpardiso->err,Err_MSG_CPardiso(mat_mkl_cpardiso->err));
+  PetscCheck(mat_mkl_cpardiso->err >= 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error reported by MKL_CPARDISO: err=%d, msg = \"%s\". Please check manual",mat_mkl_cpardiso->err,Err_MSG_CPardiso(mat_mkl_cpardiso->err));
 
   mat_mkl_cpardiso->matstruc = SAME_NONZERO_PATTERN;
   mat_mkl_cpardiso->CleanUp  = PETSC_TRUE;
@@ -498,12 +498,11 @@ PetscErrorCode MatFactorNumeric_MKL_CPARDISO(Mat F,Mat A,const MatFactorInfo *in
 PetscErrorCode PetscSetMKL_CPARDISOFromOptions(Mat F, Mat A)
 {
   Mat_MKL_CPARDISO    *mat_mkl_cpardiso = (Mat_MKL_CPARDISO*)F->data;
-  PetscErrorCode      ierr;
   PetscInt            icntl,threads;
   PetscBool           flg;
 
   PetscFunctionBegin;
-  ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)A),((PetscObject)A)->prefix,"MKL_CPARDISO Options","Mat");PetscCall(ierr);
+  PetscOptionsBegin(PetscObjectComm((PetscObject)A),((PetscObject)A)->prefix,"MKL_CPARDISO Options","Mat");
   PetscCall(PetscOptionsInt("-mat_mkl_cpardiso_65","Suggested number of threads to use within MKL_CPARDISO","None",threads,&threads,&flg));
   if (flg) mkl_set_num_threads((int)threads);
 
@@ -545,12 +544,10 @@ PetscErrorCode PetscSetMKL_CPARDISOFromOptions(Mat F, Mat A)
     PetscCall(PetscOptionsInt("-mat_mkl_cpardiso_12","Solve with transposed or conjugate transposed matrix A","None",mat_mkl_cpardiso->iparm[11],&icntl,&flg));
     if (flg) mat_mkl_cpardiso->iparm[11] = icntl;
 
-    ierr = PetscOptionsInt("-mat_mkl_cpardiso_13","Improved accuracy using (non-) symmetric weighted matching","None",mat_mkl_cpardiso->iparm[12],&icntl,
-      &flg);PetscCall(ierr);
+    PetscCall(PetscOptionsInt("-mat_mkl_cpardiso_13","Improved accuracy using (non-) symmetric weighted matching","None",mat_mkl_cpardiso->iparm[12],&icntl,&flg));
     if (flg) mat_mkl_cpardiso->iparm[12] = icntl;
 
-    ierr = PetscOptionsInt("-mat_mkl_cpardiso_18","Numbers of non-zero elements","None",mat_mkl_cpardiso->iparm[17],&icntl,
-      &flg);PetscCall(ierr);
+    PetscCall(PetscOptionsInt("-mat_mkl_cpardiso_18","Numbers of non-zero elements","None",mat_mkl_cpardiso->iparm[17],&icntl,&flg));
     if (flg) mat_mkl_cpardiso->iparm[17] = icntl;
 
     PetscCall(PetscOptionsInt("-mat_mkl_cpardiso_19","Report number of floating point operations","None",mat_mkl_cpardiso->iparm[18],&icntl,&flg));
@@ -578,7 +575,7 @@ PetscErrorCode PetscSetMKL_CPARDISOFromOptions(Mat F, Mat A)
     if (flg) mat_mkl_cpardiso->iparm[59] = icntl;
   }
 
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -690,7 +687,7 @@ PetscErrorCode MatLUFactorSymbolic_AIJMKL_CPARDISO(Mat F,Mat A,IS r,IS c,const M
     &mat_mkl_cpardiso->comm_mkl_cpardiso,
     (PetscInt*)&mat_mkl_cpardiso->err);
 
-  PetscCheckFalse(mat_mkl_cpardiso->err < 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error reported by MKL_CPARDISO: err=%d, msg = \"%s\".Check manual",mat_mkl_cpardiso->err,Err_MSG_CPardiso(mat_mkl_cpardiso->err));
+  PetscCheck(mat_mkl_cpardiso->err >= 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error reported by MKL_CPARDISO: err=%d, msg = \"%s\".Check manual",mat_mkl_cpardiso->err,Err_MSG_CPardiso(mat_mkl_cpardiso->err));
 
   mat_mkl_cpardiso->CleanUp = PETSC_TRUE;
   F->ops->lufactornumeric = MatFactorNumeric_MKL_CPARDISO;
@@ -742,7 +739,7 @@ PetscErrorCode MatCholeskyFactorSymbolic_AIJMKL_CPARDISO(Mat F,Mat A,IS perm,con
     &mat_mkl_cpardiso->comm_mkl_cpardiso,
     (PetscInt*)&mat_mkl_cpardiso->err);
 
-  PetscCheckFalse(mat_mkl_cpardiso->err < 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error reported by MKL_CPARDISO: err=%d, msg = \"%s\".Check manual",mat_mkl_cpardiso->err,Err_MSG_CPardiso(mat_mkl_cpardiso->err));
+  PetscCheck(mat_mkl_cpardiso->err >= 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Error reported by MKL_CPARDISO: err=%d, msg = \"%s\".Check manual",mat_mkl_cpardiso->err,Err_MSG_CPardiso(mat_mkl_cpardiso->err));
 
   mat_mkl_cpardiso->CleanUp = PETSC_TRUE;
   F->ops->choleskyfactornumeric = MatFactorNumeric_MKL_CPARDISO;

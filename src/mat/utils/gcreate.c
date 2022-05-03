@@ -196,7 +196,6 @@ PetscErrorCode  MatSetSizes(Mat A, PetscInt m, PetscInt n, PetscInt M, PetscInt 
 @*/
 PetscErrorCode  MatSetFromOptions(Mat B)
 {
-  PetscErrorCode ierr;
   const char     *deft = MATAIJ;
   char           type[256];
   PetscBool      flg,set;
@@ -205,7 +204,7 @@ PetscErrorCode  MatSetFromOptions(Mat B)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(B,MAT_CLASSID,1);
 
-  ierr = PetscObjectOptionsBegin((PetscObject)B);PetscCall(ierr);
+  PetscObjectOptionsBegin((PetscObject)B);
 
   if (B->rmap->bs < 0) {
     PetscInt newbs = -1;
@@ -256,7 +255,7 @@ PetscErrorCode  MatSetFromOptions(Mat B)
 
   /* process any options handlers added with PetscObjectAddOptionsHandler() */
   PetscCall(PetscObjectProcessOptionsHandlers(PetscOptionsObject,(PetscObject)B));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -511,7 +510,7 @@ PetscErrorCode MatSetValuesCOO_Basic(Mat A,const PetscScalar coo_v[],InsertMode 
   PetscCheck(is_coo_j,PetscObjectComm((PetscObject)A),PETSC_ERR_COR,"Missing coo_j IS");
   PetscCall(ISGetLocalSize(is_coo_i,&n_i));
   PetscCall(ISGetLocalSize(is_coo_j,&n_j));
-  PetscCheckFalse(n_i != n_j,PETSC_COMM_SELF,PETSC_ERR_COR,"Wrong local size %" PetscInt_FMT " != %" PetscInt_FMT,n_i,n_j);
+  PetscCheck(n_i == n_j,PETSC_COMM_SELF,PETSC_ERR_COR,"Wrong local size %" PetscInt_FMT " != %" PetscInt_FMT,n_i,n_j);
   PetscCall(ISGetIndices(is_coo_i,&coo_i));
   PetscCall(ISGetIndices(is_coo_j,&coo_j));
   if (imode != ADD_VALUES) {

@@ -192,13 +192,13 @@ PetscErrorCode SNESMSRegister(SNESMSType name,PetscInt nstages,PetscInt nregiste
 
   PetscFunctionBegin;
   PetscValidCharPointer(name,1);
-  PetscCheckFalse(nstages < 1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must have at least one stage");
+  PetscCheck(nstages >= 1,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Must have at least one stage");
   if (gamma || delta) {
-    PetscCheckFalse(nregisters != 3,PETSC_COMM_SELF,PETSC_ERR_SUP,"Only support for methods written in 3-register form");
+    PetscCheck(nregisters == 3,PETSC_COMM_SELF,PETSC_ERR_SUP,"Only support for methods written in 3-register form");
     PetscValidRealPointer(gamma,5);
     PetscValidRealPointer(delta,6);
   } else {
-    PetscCheckFalse(nregisters != 1,PETSC_COMM_SELF,PETSC_ERR_SUP,"Only support for methods written in 1-register form");
+    PetscCheck(nregisters == 1,PETSC_COMM_SELF,PETSC_ERR_SUP,"Only support for methods written in 1-register form");
   }
   PetscValidRealPointer(betasub,7);
 
@@ -427,7 +427,7 @@ static PetscErrorCode SNESSetFromOptions_MS(PetscOptionItems *PetscOptionsObject
   SNES_MS        *ms = (SNES_MS*)snes->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"SNES MS options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"SNES MS options");
   {
     SNESMSTableauLink link;
     PetscInt          count,choice;
@@ -448,7 +448,7 @@ static PetscErrorCode SNESSetFromOptions_MS(PetscOptionItems *PetscOptionsObject
     if (flg) PetscCall(SNESMSSetDamping(snes,damping));
     PetscCall(PetscOptionsBool("-snes_ms_norms","Compute norms for monitoring","none",ms->norms,&ms->norms,NULL));
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 

@@ -14,8 +14,6 @@ F*/
 
 #include <petsc/private/dmpleximpl.h> /* For DotD */
 
-#define ALEN(a) (sizeof(a)/sizeof((a)[0]))
-
 typedef enum {VEL_ZERO, VEL_CONSTANT, VEL_HARMONIC, VEL_SHEAR} VelocityDistribution;
 
 typedef enum {ZERO, CONSTANT, GAUSSIAN, TILTED, DELTA} PorosityDistribution;
@@ -70,7 +68,6 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   const char    *porosityDist[5]  = {"zero", "constant", "gaussian", "tilted", "delta"};
   PetscInt       vd, pd, d;
   PetscBool      flg;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   options->useFV        = PETSC_FALSE;
@@ -82,7 +79,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->source[1]    = 0.5;
   options->source[2]    = 0.5;
 
-  ierr = PetscOptionsBegin(comm, "", "Magma Dynamics Options", "DMPLEX");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "Magma Dynamics Options", "DMPLEX");
   PetscCall(PetscOptionsBool("-use_fv", "Use the finite volume method for advection", "ex18.c", options->useFV, &options->useFV, NULL));
   vd   = options->velocityDist;
   PetscCall(PetscOptionsEList("-velocity_dist","Velocity distribution type","ex18.c",velocityDist,4,velocityDist[options->velocityDist],&vd,NULL));
@@ -94,7 +91,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   d    = 2;
   PetscCall(PetscOptionsRealArray("-source_loc", "The source location", "ex18.c", options->source, &d, &flg));
   PetscCheck(!flg || d == 2,PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Must give dim coordinates for the source location, not %d", d);
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   PetscFunctionReturn(0);
 }
@@ -104,11 +101,10 @@ static PetscErrorCode ProcessMonitorOptions(MPI_Comm comm, AppCtx *options)
   Functional     func;
   char          *names[256];
   PetscInt       f;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
-  ierr = PetscOptionsBegin(comm, "", "Simulation Monitor Options", "DMPLEX");PetscCall(ierr);
-  options->numMonitorFuncs = ALEN(names);
+  PetscOptionsBegin(comm, "", "Simulation Monitor Options", "DMPLEX");
+  options->numMonitorFuncs = PETSC_STATIC_ARRAY_LENGTH(names);
   PetscCall(PetscOptionsStringArray("-monitor", "List of functionals to monitor", "", names, &options->numMonitorFuncs, NULL));
   PetscCall(PetscMalloc1(options->numMonitorFuncs, &options->monitorFuncs));
   for (f = 0; f < options->numMonitorFuncs; ++f) {
@@ -132,7 +128,7 @@ static PetscErrorCode ProcessMonitorOptions(MPI_Comm comm, AppCtx *options)
       if (func->func == call->func && func->ctx == call->ctx) options->maxMonitorFunc = PetscMax(options->maxMonitorFunc, func->offset);
     }
   }
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -718,8 +714,8 @@ static PetscErrorCode SetupBC(DM dm, AppCtx *user)
   if (label && user->useFV) {
     const PetscInt inflowids[] = {100,200,300}, outflowids[] = {101};
 
-    PetscCall(DMAddBoundary(dm, DM_BC_NATURAL_RIEMANN, "inflow",  label,  ALEN(inflowids),  inflowids, 1, 0, NULL, (void (*)(void)) advect_inflow, NULL, user, NULL));
-    PetscCall(DMAddBoundary(dm, DM_BC_NATURAL_RIEMANN, "outflow", label, ALEN(outflowids), outflowids, 1, 0, NULL, (void (*)(void)) advect_outflow, NULL, user, NULL));
+    PetscCall(DMAddBoundary(dm, DM_BC_NATURAL_RIEMANN, "inflow",  label,  PETSC_STATIC_ARRAY_LENGTH(inflowids),  inflowids, 1, 0, NULL, (void (*)(void)) advect_inflow, NULL, user, NULL));
+    PetscCall(DMAddBoundary(dm, DM_BC_NATURAL_RIEMANN, "outflow", label, PETSC_STATIC_ARRAY_LENGTH(outflowids), outflowids, 1, 0, NULL, (void (*)(void)) advect_outflow, NULL, user, NULL));
   }
   PetscFunctionReturn(0);
 }

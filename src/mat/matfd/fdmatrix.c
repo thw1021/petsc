@@ -336,14 +336,13 @@ PetscErrorCode  MatFDColoringSetFunction(MatFDColoring matfd,PetscErrorCode (*f)
 @*/
 PetscErrorCode  MatFDColoringSetFromOptions(MatFDColoring matfd)
 {
-  PetscErrorCode ierr;
   PetscBool      flg;
   char           value[3];
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(matfd,MAT_FDCOLORING_CLASSID,1);
 
-  ierr = PetscObjectOptionsBegin((PetscObject)matfd);PetscCall(ierr);
+  PetscObjectOptionsBegin((PetscObject)matfd);
   PetscCall(PetscOptionsReal("-mat_fd_coloring_err","Square root of relative error in function","MatFDColoringSetParameters",matfd->error_rel,&matfd->error_rel,NULL));
   PetscCall(PetscOptionsReal("-mat_fd_coloring_umin","Minimum allowable u magnitude","MatFDColoringSetParameters",matfd->umin,&matfd->umin,NULL));
   PetscCall(PetscOptionsString("-mat_fd_type","Algorithm to compute h, wp or ds","MatFDColoringCreate",matfd->htype,value,sizeof(value),&flg));
@@ -361,7 +360,7 @@ PetscErrorCode  MatFDColoringSetFromOptions(MatFDColoring matfd)
 
   /* process any options handlers added with PetscObjectAddOptionsHandler() */
   PetscCall(PetscObjectProcessOptionsHandlers(PetscOptionsObject,(PetscObject)matfd));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -451,7 +450,7 @@ PetscErrorCode  MatFDColoringCreate(Mat mat,ISColoring iscoloring,MatFDColoring 
   PetscCheck(mat->assembled,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"Matrix must be assembled by calls to MatAssemblyBegin/End();");
   PetscCall(PetscLogEventBegin(MAT_FDColoringCreate,mat,0,0,0));
   PetscCall(MatGetSize(mat,&M,&N));
-  PetscCheckFalse(M != N,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Only for square matrices");
+  PetscCheck(M == N,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Only for square matrices");
   PetscCall(PetscObjectGetComm((PetscObject)mat,&comm));
   PetscCall(PetscHeaderCreate(c,MAT_FDCOLORING_CLASSID,"MatFDColoring","Jacobian computation via finite differences with coloring","Mat",comm,MatFDColoringDestroy,MatFDColoringView));
 

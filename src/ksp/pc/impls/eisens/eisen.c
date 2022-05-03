@@ -50,7 +50,7 @@ static PetscErrorCode PCPreSolve_Eisenstat(PC pc,KSP ksp,Vec b,Vec x)
 
   PetscFunctionBegin;
   if (pc->presolvedone < 2) {
-    PetscCheckFalse(pc->mat != pc->pmat,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Cannot have different mat and pmat");
+    PetscCheck(pc->mat == pc->pmat,PetscObjectComm((PetscObject)pc),PETSC_ERR_SUP,"Cannot have different mat and pmat");
     /* swap shell matrix and true matrix */
     eis->A  = pc->mat;
     pc->mat = eis->shell;
@@ -117,13 +117,13 @@ static PetscErrorCode PCSetFromOptions_Eisenstat(PetscOptionItems *PetscOptionsO
   PetscBool      set,flg;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"Eisenstat SSOR options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"Eisenstat SSOR options");
   PetscCall(PetscOptionsReal("-pc_eisenstat_omega","Relaxation factor 0 < omega < 2","PCEisenstatSetOmega",eis->omega,&eis->omega,NULL));
   PetscCall(PetscOptionsBool("-pc_eisenstat_no_diagonal_scaling","Do not use standard diagonal scaling","PCEisenstatSetNoDiagonalScaling",eis->usediag ? PETSC_FALSE : PETSC_TRUE,&flg,&set));
   if (set) {
     PetscCall(PCEisenstatSetNoDiagonalScaling(pc,flg));
   }
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 

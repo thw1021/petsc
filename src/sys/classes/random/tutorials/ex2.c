@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
   PetscCallMPI(MPI_Reduce(&x, &totalx, 1, MPIU_REAL, MPIU_SUM,0,PETSC_COMM_WORLD));
   /* payoff = exp(-r*dt*n)*(totalx/totalNumSim);
   ierr = PetscPrintf(PETSC_COMM_WORLD,"Option price = $%.3f using %ds of %s computation with %d %s for %d stocks, %d trading period per year, %.2f%% interest rate\n",
-   payoff,(int)(stop - start),"parallel",size,"processors",n,(int)(1/dt),r);PetscCall(ierr); */
+   payoff,(int)(stop - start),"parallel",size,"processors",n,(int)(1/dt),r); */
 
   PetscCall(PetscFree(vol));
   PetscCall(PetscFree(eps));
@@ -152,7 +152,7 @@ PetscErrorCode readData(MPI_Comm comm,himaInfo *hinfo)
     PetscCall(PetscFOpen(PETSC_COMM_SELF,DATAFILENAME,"r",&fd));
     for (i=0;i<num;i++) {
       double vv,tt;
-      PetscCheckFalse(fscanf(fd,"%s%lf%lf",temp,&vv,&tt) != 3,PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED,"Badly formatted input file");
+      PetscCheck(fscanf(fd,"%s%lf%lf",temp,&vv,&tt) == 3,PETSC_COMM_SELF,PETSC_ERR_FILE_UNEXPECTED,"Badly formatted input file");
       v[i] = vv;
       t[i] = tt;
     }

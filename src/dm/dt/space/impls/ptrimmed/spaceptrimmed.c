@@ -5,9 +5,9 @@ static PetscErrorCode PetscSpaceSetFromOptions_Ptrimmed(PetscOptionItems *PetscO
   PetscSpace_Ptrimmed *pt = (PetscSpace_Ptrimmed *) sp->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"PetscSpace polynomial options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"PetscSpace polynomial options");
   PetscCall(PetscOptionsInt("-petscspace_ptrimmed_form_degree", "form degree of trimmed space", "PetscSpacePTrimmedSetFormDegree", pt->formDegree, &(pt->formDegree), NULL));
-  PetscCall(PetscOptionsTail());
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -66,7 +66,7 @@ static PetscErrorCode PetscSpaceSetUp_Ptrimmed(PetscSpace sp)
   if (sp->Nc == PETSC_DETERMINE) {
     sp->Nc = Nf;
   }
-  PetscCheckFalse(sp->Nc % Nf,PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_INCOMP, "Number of components %D is not a multiple of form dimension %D", sp->Nc, Nf);
+  PetscCheck(sp->Nc % Nf == 0,PetscObjectComm((PetscObject)sp), PETSC_ERR_ARG_INCOMP, "Number of components %D is not a multiple of form dimension %D", sp->Nc, Nf);
   if (sp->Nc != Nf) {
     PetscSpace  subsp;
     PetscInt    nCopies = sp->Nc / Nf;
@@ -170,7 +170,7 @@ static PetscErrorCode PetscSpaceEvaluate_Ptrimmed(PetscSpace sp, PetscInt npoint
   degree = f == 0 ? sp->degree : sp->degree + 1;
   PetscCall(PetscDTBinomialInt(dim, PetscAbsInt(f), &Nf));
   Ncopies = Nc / Nf;
-  PetscCheckFalse(Ncopies != 1,PetscObjectComm((PetscObject) sp), PETSC_ERR_PLIB, "Multicopy spaces should have been converted to PETSCSPACESUM");
+  PetscCheck(Ncopies == 1,PetscObjectComm((PetscObject) sp), PETSC_ERR_PLIB, "Multicopy spaces should have been converted to PETSCSPACESUM");
   PetscCall(PetscDTBinomialInt(dim + jet, dim, &Njet));
   PetscCall(PetscDTPTrimmedSize(dim, degree, f, &Nb));
   PetscCall(DMGetWorkArray(dm, Nb * Nf * Njet * npoints, MPIU_REAL, &eval));

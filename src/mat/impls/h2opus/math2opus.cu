@@ -58,14 +58,16 @@ template <class T> class PetscPointCloud : public H2OpusDataSet<T>
 
       pts.resize(num_pts*dim);
       if (coords) {
-        for (size_t n = 0; n < num_points; n++)
+        for (size_t n = 0; n < num_pts; n++)
           for (int i = 0; i < dim; i++)
             pts[n*dim + i] = coords[n*dim + i];
       } else {
-        PetscReal h = 1./(num_points - 1);
-        for (size_t n = 0; n < num_points; n++)
-          for (int i = 0; i < dim; i++)
-            pts[n*dim + i] = i*h;
+        PetscReal h = 1.0; //num_pts > 1 ? 1./(num_pts - 1) : 0.0;
+        for (size_t n = 0; n < num_pts; n++) {
+          pts[n*dim] = n*h;
+          for (int i = 1; i < dim; i++)
+            pts[n*dim + i] = 0.0;
+        }
       }
     }
 
@@ -191,6 +193,7 @@ typedef struct {
   PetscInt  norm_max_samples;
   PetscBool check_construction;
   PetscBool hara_verbose;
+  PetscBool resize;
 
   /* keeps track of MatScale values */
   PetscScalar s;
@@ -367,7 +370,7 @@ static PetscErrorCode MatMultNKernel_H2OPUS(Mat A, PetscBool transA, Mat B, Mat 
     }
     if (size > 1) {
       PetscCheck(h2opus->dist_hmatrix,PetscObjectComm((PetscObject)A),PETSC_ERR_PLIB,"Missing distributed CPU matrix");
-      PetscCheckFalse(transA && !A->symmetric,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"MatMultTranspose not yet coded in parallel");
+      PetscCheck(!transA || A->symmetric,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"MatMultTranspose not yet coded in parallel");
 #if defined(H2OPUS_USE_MPI)
       distributed_hgemv(/* transA ? H2Opus_Trans : H2Opus_NoTrans, */h2opus->s, *h2opus->dist_hmatrix, uxx, blda, 0.0, uyy, clda, B->cmap->N, h2opus->handle);
 #endif
@@ -409,7 +412,7 @@ static PetscErrorCode MatMultNKernel_H2OPUS(Mat A, PetscBool transA, Mat B, Mat 
     PetscCall(PetscLogGpuTimeBegin());
     if (size > 1) {
       PetscCheck(h2opus->dist_hmatrix_gpu,PetscObjectComm((PetscObject)A),PETSC_ERR_PLIB,"Missing distributed GPU matrix");
-      PetscCheckFalse(transA && !A->symmetric,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"MatMultTranspose not yet coded in parallel");
+      PetscCheck(!transA || A->symmetric,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"MatMultTranspose not yet coded in parallel");
 #if defined(H2OPUS_USE_MPI)
       distributed_hgemv(/* transA ? H2Opus_Trans : H2Opus_NoTrans, */h2opus->s, *h2opus->dist_hmatrix_gpu, uxx, blda, 0.0, uyy, clda, B->cmap->N, h2opus->handle);
 #endif
@@ -556,7 +559,7 @@ static PetscErrorCode MatMultKernel_H2OPUS(Mat A, Vec x, PetscScalar sy, Vec y, 
     }
     if (size > 1) {
       PetscCheck(h2opus->dist_hmatrix,PetscObjectComm((PetscObject)A),PETSC_ERR_PLIB,"Missing distributed CPU matrix");
-      PetscCheckFalse(trans && !A->symmetric,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"MatMultTranspose not yet coded in parallel");
+      PetscCheck(!trans || A->symmetric,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"MatMultTranspose not yet coded in parallel");
 #if defined(H2OPUS_USE_MPI)
       distributed_hgemv(/*trans ? H2Opus_Trans : H2Opus_NoTrans, */h2opus->s, *h2opus->dist_hmatrix, uxx, n, sy, uyy, n, 1, h2opus->handle);
 #endif
@@ -599,7 +602,7 @@ static PetscErrorCode MatMultKernel_H2OPUS(Mat A, Vec x, PetscScalar sy, Vec y, 
     PetscCall(PetscLogGpuTimeBegin());
     if (size > 1) {
       PetscCheck(h2opus->dist_hmatrix_gpu,PetscObjectComm((PetscObject)A),PETSC_ERR_PLIB,"Missing distributed GPU matrix");
-      PetscCheckFalse(trans && !A->symmetric,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"MatMultTranspose not yet coded in parallel");
+      PetscCheck(!trans || A->symmetric,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"MatMultTranspose not yet coded in parallel");
 #if defined(H2OPUS_USE_MPI)
       distributed_hgemv(/*trans ? H2Opus_Trans : H2Opus_NoTrans, */h2opus->s, *h2opus->dist_hmatrix_gpu, uxx, n, sy, uyy, n, 1, h2opus->handle);
 #endif
@@ -700,7 +703,7 @@ static PetscErrorCode MatSetFromOptions_H2OPUS(PetscOptionItems *PetscOptionsObj
   Mat_H2OPUS     *a = (Mat_H2OPUS*)A->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscOptionsHead(PetscOptionsObject,"H2OPUS options"));
+  PetscOptionsHeadBegin(PetscOptionsObject,"H2OPUS options");
   PetscCall(PetscOptionsInt("-mat_h2opus_leafsize","Leaf size of cluster tree",NULL,a->leafsize,&a->leafsize,NULL));
   PetscCall(PetscOptionsReal("-mat_h2opus_eta","Admissibility condition tolerance",NULL,a->eta,&a->eta,NULL));
   PetscCall(PetscOptionsInt("-mat_h2opus_order","Basis order for off-diagonal sampling when constructed from kernel",NULL,a->basisord,&a->basisord,NULL));
@@ -710,7 +713,8 @@ static PetscErrorCode MatSetFromOptions_H2OPUS(PetscOptionItems *PetscOptionsObj
   PetscCall(PetscOptionsReal("-mat_h2opus_rtol","Relative tolerance for construction from sampling",NULL,a->rtol,&a->rtol,NULL));
   PetscCall(PetscOptionsBool("-mat_h2opus_check","Check error when constructing from sampling during MatAssemblyEnd()",NULL,a->check_construction,&a->check_construction,NULL));
   PetscCall(PetscOptionsBool("-mat_h2opus_hara_verbose","Verbose output from hara construction",NULL,a->hara_verbose,&a->hara_verbose,NULL));
-  PetscCall(PetscOptionsTail());
+  PetscCall(PetscOptionsBool("-mat_h2opus_resize","Resize after compression",NULL,a->resize,&a->resize,NULL));
+  PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
 
@@ -813,6 +817,7 @@ static PetscErrorCode MatSetUpMultiply_H2OPUS(Mat A)
       }
       PetscCall(PetscSFCreate(comm,&a->sf));
       PetscCall(PetscSFSetGraphLayout(a->sf,A->rmap,n,NULL,PETSC_OWN_POINTER,idx));
+      PetscCall(PetscSFSetUp(a->sf));
       PetscCall(PetscSFViewFromOptions(a->sf,(PetscObject)A,"-mat_h2opus_sf_view"));
 #if defined(PETSC_H2OPUS_USE_GPU)
       a->xx_gpu  = new thrust::device_vector<PetscScalar>(n);
@@ -847,8 +852,8 @@ static PetscErrorCode MatAssemblyEnd_H2OPUS(Mat A, MatAssemblyType assemblytype)
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)A,&comm));
-  PetscCheckFalse(A->rmap->n != A->cmap->n,PETSC_COMM_SELF,PETSC_ERR_SUP,"Different row and column local sizes are not supported");
-  PetscCheckFalse(A->rmap->N != A->cmap->N,comm,PETSC_ERR_SUP,"Rectangular matrices are not supported");
+  PetscCheck(A->rmap->n == A->cmap->n,PETSC_COMM_SELF,PETSC_ERR_SUP,"Different row and column local sizes are not supported");
+  PetscCheck(A->rmap->N == A->cmap->N,comm,PETSC_ERR_SUP,"Rectangular matrices are not supported");
 
   /* XXX */
   a->leafsize = PetscMin(a->leafsize, PetscMin(A->rmap->N, A->cmap->N));
@@ -890,7 +895,7 @@ static PetscErrorCode MatAssemblyEnd_H2OPUS(Mat A, MatAssemblyType assemblytype)
     }
     kernel = PETSC_TRUE;
   } else {
-    PetscCheckFalse(size > 1,comm,PETSC_ERR_SUP,"Construction from sampling not supported in parallel");
+    PetscCheck(size <= 1,comm,PETSC_ERR_SUP,"Construction from sampling not supported in parallel");
     buildHMatrixStructure(*a->hmatrix,a->ptcloud,a->leafsize,adm);
   }
   PetscCall(MatSetUpMultiply_H2OPUS(A));
@@ -1010,7 +1015,7 @@ static PetscErrorCode MatZeroEntries_H2OPUS(Mat A)
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)A),&size));
-  PetscCheckFalse(size > 1,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Not yet supported");
+  PetscCheck(size <= 1,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Not yet supported");
   else {
     a->hmatrix->clearData();
 #if defined(PETSC_H2OPUS_USE_GPU)
@@ -1097,7 +1102,7 @@ static PetscErrorCode MatDuplicate_H2OPUS(Mat B, MatDuplicateOption op, Mat *nA)
 static PetscErrorCode MatView_H2OPUS(Mat A, PetscViewer view)
 {
   Mat_H2OPUS        *h2opus = (Mat_H2OPUS*)A->data;
-  PetscBool         isascii;
+  PetscBool         isascii, vieweps;
   PetscMPIInt       size;
   PetscViewerFormat format;
 
@@ -1157,16 +1162,17 @@ static PetscErrorCode MatView_H2OPUS(Mat A, PetscViewer view)
       }
     }
   }
-#if 0
-  if (size == 1) {
+  vieweps = PETSC_FALSE;
+  PetscCall(PetscOptionsGetBool(((PetscObject)A)->options,((PetscObject)A)->prefix,"-mat_h2opus_vieweps",&vieweps,NULL));
+  if (vieweps) {
     char filename[256];
     const char *name;
 
     PetscCall(PetscObjectGetName((PetscObject)A,&name));
     PetscCall(PetscSNPrintf(filename,sizeof(filename),"%s_structure.eps",name));
+    PetscCall(PetscOptionsGetString(((PetscObject)A)->options,((PetscObject)A)->prefix,"-mat_h2opus_vieweps_filename",filename,sizeof(filename),NULL));
     outputEps(*h2opus->hmatrix,filename);
   }
-#endif
   PetscFunctionReturn(0);
 }
 
@@ -1185,7 +1191,7 @@ static PetscErrorCode MatH2OpusSetCoords_H2OPUS(Mat A, PetscInt spacedim, const 
   PetscCall(PetscObjectGetComm((PetscObject)A,&comm));
   PetscCall(MatHasCongruentLayouts(A,&cong));
   PetscCheck(cong,comm,PETSC_ERR_SUP,"Only for square matrices with congruent layouts");
-  N    = A->rmap->N;
+  N = A->rmap->N;
   PetscCallMPI(MPI_Comm_size(comm,&size));
   if (spacedim > 0 && size > 1 && cdist) {
     PetscSF      sf;
@@ -1305,6 +1311,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_H2OPUS(Mat A)
   a->rtol             = 1.e-4;
   a->s                = 1.0;
   a->norm_max_samples = 10;
+  a->resize           = PETSC_TRUE; /* reallocate after compression */
 #if defined(H2OPUS_USE_MPI)
   h2opusCreateDistributedHandleComm(&a->handle,PetscObjectComm((PetscObject)A));
 #else
@@ -1461,6 +1468,12 @@ PetscErrorCode MatH2OpusCompress(Mat A, PetscReal tol)
 #if defined(H2OPUS_USE_MPI)
       distributed_hcompress(*a->dist_hmatrix, tol, a->handle);
 #endif
+
+      if (a->resize) {
+        DistributedHMatrix *dist_hmatrix = new DistributedHMatrix(*a->dist_hmatrix);
+        delete a->dist_hmatrix;
+        a->dist_hmatrix = dist_hmatrix;
+      }
 #if defined(PETSC_H2OPUS_USE_GPU)
       A->offloadmask = PETSC_OFFLOAD_CPU;
     } else {
@@ -1470,6 +1483,12 @@ PetscErrorCode MatH2OpusCompress(Mat A, PetscReal tol)
       distributed_hcompress(*a->dist_hmatrix_gpu, tol, a->handle);
 #endif
       PetscCall(PetscLogGpuTimeEnd());
+
+      if (a->resize) {
+        DistributedHMatrix_GPU *dist_hmatrix_gpu = new DistributedHMatrix_GPU(*a->dist_hmatrix_gpu);
+        delete a->dist_hmatrix_gpu;
+        a->dist_hmatrix_gpu = dist_hmatrix_gpu;
+      }
 #endif
     }
   } else {
@@ -1481,6 +1500,12 @@ PetscErrorCode MatH2OpusCompress(Mat A, PetscReal tol)
     if (boundtocpu) {
       PetscCheck(a->hmatrix,PetscObjectComm((PetscObject)A),PETSC_ERR_PLIB,"Missing CPU matrix");
       hcompress(*a->hmatrix, tol, handle);
+
+      if (a->resize) {
+        HMatrix *hmatrix = new HMatrix(*a->hmatrix);
+        delete a->hmatrix;
+        a->hmatrix = hmatrix;
+      }
 #if defined(PETSC_H2OPUS_USE_GPU)
       A->offloadmask = PETSC_OFFLOAD_CPU;
     } else {
@@ -1488,6 +1513,12 @@ PetscErrorCode MatH2OpusCompress(Mat A, PetscReal tol)
       PetscCall(PetscLogGpuTimeBegin());
       hcompress(*a->hmatrix_gpu, tol, handle);
       PetscCall(PetscLogGpuTimeEnd());
+
+      if (a->resize) {
+        HMatrix_GPU *hmatrix_gpu = new HMatrix_GPU(*a->hmatrix_gpu);
+        delete a->hmatrix_gpu;
+        a->hmatrix_gpu = hmatrix_gpu;
+      }
 #endif
     }
   }
@@ -1588,10 +1619,10 @@ PetscErrorCode MatCreateH2OpusFromKernel(MPI_Comm comm, PetscInt m, PetscInt n, 
 #endif
 
   PetscFunctionBegin;
-  PetscCheckFalse(m != n,PETSC_COMM_SELF,PETSC_ERR_SUP,"Different row and column local sizes are not supported");
+  PetscCheck(m == n,PETSC_COMM_SELF,PETSC_ERR_SUP,"Different row and column local sizes are not supported");
   PetscCall(MatCreate(comm,&A));
   PetscCall(MatSetSizes(A,m,n,M,N));
-  PetscCheckFalse(M != N,comm,PETSC_ERR_SUP,"Rectangular matrices are not supported");
+  PetscCheck(M == N,comm,PETSC_ERR_SUP,"Rectangular matrices are not supported");
   PetscCall(MatSetType(A,MATH2OPUS));
   PetscCall(MatBindToCPU(A,iscpu));
   PetscCall(MatH2OpusSetCoords_H2OPUS(A,spacedim,coords,cdist,kernel,kernelctx));
@@ -1656,8 +1687,8 @@ PetscErrorCode MatCreateH2OpusFromMat(Mat B, PetscInt spacedim, const PetscReal 
   PetscValidLogicalCollectiveReal(B,rtol,9);
   PetscValidPointer(nA,10);
   PetscCall(PetscObjectGetComm((PetscObject)B,&comm));
-  PetscCheckFalse(B->rmap->n != B->cmap->n,PETSC_COMM_SELF,PETSC_ERR_SUP,"Different row and column local sizes are not supported");
-  PetscCheckFalse(B->rmap->N != B->cmap->N,comm,PETSC_ERR_SUP,"Rectangular matrices are not supported");
+  PetscCheck(B->rmap->n == B->cmap->n,PETSC_COMM_SELF,PETSC_ERR_SUP,"Different row and column local sizes are not supported");
+  PetscCheck(B->rmap->N == B->cmap->N,comm,PETSC_ERR_SUP,"Rectangular matrices are not supported");
   PetscCall(MatCreate(comm,&A));
   PetscCall(MatSetSizes(A,B->rmap->n,B->cmap->n,B->rmap->N,B->cmap->N));
 #if defined(PETSC_H2OPUS_USE_GPU)
@@ -1810,7 +1841,7 @@ PetscErrorCode MatH2OpusLowRankUpdate(Mat A, Mat U, Mat V, PetscScalar s)
   PetscValidLogicalCollectiveScalar(A,s,4);
 
   if (!V) V = U;
-  PetscCheckFalse(U->cmap->N != V->cmap->N,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONGSTATE,"Non matching rank update %" PetscInt_FMT " != %" PetscInt_FMT,U->cmap->N,V->cmap->N);
+  PetscCheck(U->cmap->N == V->cmap->N,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONGSTATE,"Non matching rank update %" PetscInt_FMT " != %" PetscInt_FMT,U->cmap->N,V->cmap->N);
   if (!U->cmap->N) PetscFunctionReturn(0);
   PetscCall(PetscLayoutCompare(U->rmap,A->rmap,&flg));
   PetscCheck(flg,PetscObjectComm((PetscObject)A),PETSC_ERR_ARG_WRONGSTATE,"A and U must have the same row layout");
@@ -1831,7 +1862,7 @@ PetscErrorCode MatH2OpusLowRankUpdate(Mat A, Mat U, Mat V, PetscScalar s)
     PetscSF           usf,vsf;
 
     PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)A),&size));
-    PetscCheckFalse(size > 1,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Not yet implemented in parallel");
+    PetscCheck(size <= 1,PetscObjectComm((PetscObject)A),PETSC_ERR_SUP,"Not yet implemented in parallel");
     PetscCall(PetscLogEventBegin(MAT_H2Opus_LR,A,0,0,0));
     PetscCall(PetscObjectBaseTypeCompareAny((PetscObject)U,&flg,MATSEQDENSE,MATMPIDENSE,""));
     PetscCheck(flg,PetscObjectComm((PetscObject)U),PETSC_ERR_SUP,"Not for U of type %s",((PetscObject)U)->type_name);

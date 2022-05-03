@@ -1,4 +1,4 @@
-static char help[] = "Tests for KS test\n\n";
+static char help[] = "Tests for particle initialization using the KS test\n\n";
 
 #include <petscdmswarm.h>
 #include <petscdmplex.h>
@@ -23,8 +23,6 @@ typedef struct {
 
 PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   options->mass[0] = 9.10938356e-31; /* Electron Mass [kg] */
   options->mass[1] = 87.62 * 1.66054e-27; /* Sr+ Mass [kg] */
@@ -33,8 +31,8 @@ PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->v0[0]   = PetscSqrtReal(BOLTZMANN_K * options->T[0] / options->mass[0]); /* electron mean velocity in 1D */
   options->v0[1]   = PetscSqrtReal(BOLTZMANN_K * options->T[1] / options->mass[1]); /* ion mean velocity in 1D */
 
-  ierr = PetscOptionsBegin(comm, "", "KS Test Options", "DMPLEX");PetscCall(ierr);
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "KS Test Options", "DMPLEX");
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -118,6 +116,6 @@ int main(int argc, char **argv)
   test:
     suffix: 0
     requires: ks !complex
-    args: -dm_plex_dim 1 -dm_plex_box_lower -1 -dm_plex_box_upper 1 -dm_swarm_num_particles 300 -dm_swarm_coordinate_density {{constant gaussian}}
+    args: -dm_plex_dim 1 -dm_plex_box_lower -1 -dm_plex_box_upper 1 -dm_swarm_num_particles 375 -dm_swarm_coordinate_density {{constant gaussian}}
 
 TEST*/

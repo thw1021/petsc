@@ -155,7 +155,7 @@ PetscErrorCode PetscSegBufferExtractTo(PetscSegBuffer seg,void *contig)
     PetscCall(PetscFree(t));
     t    = tail;
   }
-  PetscCheckFalse(ptr != contig,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Tail count does not match");
+  PetscCheck(ptr == contig,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Tail count does not match");
   s->used             = 0;
   s->tailused         = 0;
   s->tail             = NULL;
@@ -202,7 +202,7 @@ PetscErrorCode PetscSegBufferExtractAlloc(PetscSegBuffer seg,void *contiguous)
 .  seg - segmented buffer object
 
    Output Parameter:
-.  contig - address of pointer to contiguous memory
+.  contig - address of pointer to contiguous memory, may be NULL
 
    Level: developer
 
@@ -224,7 +224,7 @@ PetscErrorCode PetscSegBufferExtractInPlace(PetscSegBuffer seg,void *contig)
     PetscCall(PetscSegBufferDestroy(&newseg));
     head = seg->head;
   }
-  *(char**)contig = head->u.array;
+  if (contig) *(char**)contig = head->u.array;
   head->used = 0;
   PetscFunctionReturn(0);
 }
@@ -270,7 +270,7 @@ PetscErrorCode PetscSegBufferUnuse(PetscSegBuffer seg,size_t unused)
 
   PetscFunctionBegin;
   head = seg->head;
-  PetscCheckFalse(head->used < unused,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Attempt to return more unused entries (%zu) than previously gotten (%zu)",unused,head->used);
+  PetscCheck(head->used >= unused,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Attempt to return more unused entries (%zu) than previously gotten (%zu)",unused,head->used);
   head->used -= unused;
   PetscFunctionReturn(0);
 }

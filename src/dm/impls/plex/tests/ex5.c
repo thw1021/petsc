@@ -311,8 +311,6 @@ typedef struct {
 
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
-  PetscErrorCode ierr;
-
   PetscFunctionBegin;
   options->debug          = 0;
   options->dim            = 2;
@@ -321,14 +319,14 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->testNum        = 0;
   options->cohesiveFields = 1;
 
-  ierr = PetscOptionsBegin(comm, "", "Meshing Problem Options", "DMPLEX");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "Meshing Problem Options", "DMPLEX");
   PetscCall(PetscOptionsBoundedInt("-debug", "The debugging level", "ex5.c", options->debug, &options->debug, NULL,0));
   PetscCall(PetscOptionsRangeInt("-dim", "The topological mesh dimension", "ex5.c", options->dim, &options->dim, NULL,1,3));
   PetscCall(PetscOptionsBool("-cell_simplex", "Use simplices if true, otherwise hexes", "ex5.c", options->cellSimplex, &options->cellSimplex, NULL));
   PetscCall(PetscOptionsBool("-test_partition", "Use a fixed partition for testing", "ex5.c", options->testPartition, &options->testPartition, NULL));
   PetscCall(PetscOptionsBoundedInt("-test_num", "The particular mesh to test", "ex5.c", options->testNum, &options->testNum, NULL,0));
   PetscCall(PetscOptionsBoundedInt("-cohesive_fields", "The number of cohesive fields", "ex5.c", options->cohesiveFields, &options->cohesiveFields, NULL, 0));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
 
@@ -1077,15 +1075,19 @@ int main(int argc, char **argv)
     test:
       suffix: tri_0
       args: -dim 2
+      filter: sed -e "s/_start//g" -e "s/f0_bd_u//g" -e "s/f0_bd_l//g" -e "s/g0_bd_ul//g" -e "s/g0_bd_lu//g"
     test:
       suffix: tri_t1_0
       args: -dim 2 -test_num 1
+      filter: sed -e "s/_start//g" -e "s/f0_bd_u//g" -e "s/f0_bd_l//g" -e "s/g0_bd_ul//g" -e "s/g0_bd_lu//g"
     test:
       suffix: tet_0
       args: -dim 3
+      filter: sed -e "s/_start//g" -e "s/f0_bd_u//g" -e "s/f0_bd_l//g" -e "s/g0_bd_ul//g" -e "s/g0_bd_lu//g"
     test:
       suffix: tet_t1_0
       args: -dim 3 -test_num 1
+      filter: sed -e "s/_start//g" -e "s/f0_bd_u//g" -e "s/f0_bd_l//g" -e "s/g0_bd_ul//g" -e "s/g0_bd_lu//g"
 
   testset:
     args: -orig_dm_plex_check_all -dm_plex_check_all \
@@ -1094,10 +1096,12 @@ int main(int argc, char **argv)
       suffix: tet_1
       nsize: 2
       args: -dim 3
+      filter: sed -e "s/_start//g" -e "s/f0_bd_u//g" -e "s/f0_bd_l//g" -e "s/g0_bd_ul//g" -e "s/g0_bd_lu//g"
     test:
       suffix: tri_1
       nsize: 2
       args: -dim 2
+      filter: sed -e "s/_start//g" -e "s/f0_bd_u//g" -e "s/f0_bd_l//g" -e "s/g0_bd_ul//g" -e "s/g0_bd_lu//g"
 
   testset:
     args: -orig_dm_plex_check_all -dm_plex_check_all \
@@ -1106,26 +1110,33 @@ int main(int argc, char **argv)
     test:
       suffix: quad_0
       args: -dim 2 -cell_simplex 0
+      filter: sed -e "s/_start//g" -e "s/f0_bd_u//g" -e "s/f0_bd_l//g" -e "s/g0_bd_ul//g" -e "s/g0_bd_lu//g"
     test:
       suffix: quad_1
       nsize: 2
       args: -dim 2 -cell_simplex 0
+      filter: sed -e "s/_start//g" -e "s/f0_bd_u//g" -e "s/f0_bd_l//g" -e "s/g0_bd_ul//g" -e "s/g0_bd_lu//g"
     test:
       suffix: quad_t1_0
       args: -dim 2 -cell_simplex 0 -test_num 1 -faulted_dm_plex_check_all
+      filter: sed -e "s/_start//g" -e "s/f0_bd_u//g" -e "s/f0_bd_l//g" -e "s/g0_bd_ul//g" -e "s/g0_bd_lu//g"
     # 3D Hex
     test:
       suffix: hex_0
       args: -dim 3 -cell_simplex 0
+      filter: sed -e "s/_start//g" -e "s/f0_bd_u//g" -e "s/f0_bd_l//g" -e "s/g0_bd_ul//g" -e "s/g0_bd_lu//g"
     test:
       suffix: hex_1
       nsize: 2
       args: -dim 3 -cell_simplex 0
+      filter: sed -e "s/_start//g" -e "s/f0_bd_u//g" -e "s/f0_bd_l//g" -e "s/g0_bd_ul//g" -e "s/g0_bd_lu//g"
     test:
       suffix: hex_t1_0
       args: -dim 3 -cell_simplex 0 -test_num 1
+      filter: sed -e "s/_start//g" -e "s/f0_bd_u//g" -e "s/f0_bd_l//g" -e "s/g0_bd_ul//g" -e "s/g0_bd_lu//g"
     test:
       suffix: hex_t2_0
       args: -dim 3 -cell_simplex 0 -test_num 2
+      filter: sed -e "s/_start//g" -e "s/f0_bd_u//g" -e "s/f0_bd_l//g" -e "s/g0_bd_ul//g" -e "s/g0_bd_lu//g"
 
 TEST*/

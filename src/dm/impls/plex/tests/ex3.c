@@ -111,7 +111,6 @@ PetscErrorCode trigDer(PetscInt dim, PetscReal time, const PetscReal coords[], c
 static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
 {
   PetscInt       n = 3;
-  PetscErrorCode ierr;
 
   PetscFunctionBeginUser;
   options->useDA           = PETSC_FALSE;
@@ -132,7 +131,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->constants[1]    = 2.0;
   options->constants[2]    = 3.0;
 
-  ierr = PetscOptionsBegin(comm, "", "Projection Test Options", "DMPlex");PetscCall(ierr);
+  PetscOptionsBegin(comm, "", "Projection Test Options", "DMPlex");
   PetscCall(PetscOptionsBool("-use_da", "Flag for DMDA mesh", "ex3.c", options->useDA, &options->useDA, NULL));
   PetscCall(PetscOptionsBool("-shear_coords", "Transform coordinates with a shear", "ex3.c", options->shearCoords, &options->shearCoords, NULL));
   PetscCall(PetscOptionsBool("-non_affine_coords", "Transform coordinates with a non-affine transform", "ex3.c", options->nonaffineCoords, &options->nonaffineCoords, NULL));
@@ -148,7 +147,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   PetscCall(PetscOptionsBool("-test_fv_grad", "Test finite volume gradient reconstruction", "ex3.c", options->testFVgrad, &options->testFVgrad, NULL));
   PetscCall(PetscOptionsBool("-test_injector","Test finite element injection", "ex3.c", options->testInjector, &options->testInjector,NULL));
   PetscCall(PetscOptionsRealArray("-constants","Set the constant values", "ex3.c", options->constants, &n,NULL));
-  ierr = PetscOptionsEnd();PetscCall(ierr);
+  PetscOptionsEnd();
 
   PetscFunctionReturn(0);
 }
@@ -332,7 +331,7 @@ static PetscErrorCode SetupSection(DM dm, AppCtx *user)
     MPI_Comm      comm = PetscObjectComm((PetscObject)dm);
 
     PetscCallMPI(MPI_Comm_size(comm,&size));
-    PetscCheckFalse(size > 1,comm,PETSC_ERR_SUP,"Local constraint test can only be performed in serial");
+    PetscCheck(size <= 1,comm,PETSC_ERR_SUP,"Local constraint test can only be performed in serial");
 
     /* we are going to test constraints by using them to enforce periodicity
      * in one direction, and comparing to the existing method of enforcing
@@ -402,7 +401,7 @@ static PetscErrorCode SetupSection(DM dm, AppCtx *user)
         PetscCall(PetscSectionGetDof(aSec,c,&cDof));
         if (cDof) {
           PetscInt cOff, a, aDof, aOff, j;
-          PetscCheckFalse(cDof != 1,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Found %d anchor points: should be just one",cDof);
+          PetscCheck(cDof == 1,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Found %d anchor points: should be just one",cDof);
 
           /* find the anchor point */
           PetscCall(PetscSectionGetOffset(aSec,c,&cOff));
@@ -416,8 +415,8 @@ static PetscErrorCode SetupSection(DM dm, AppCtx *user)
           PetscCall(PetscSectionGetDof(section,a,&aDof));
           PetscCall(PetscSectionGetOffset(section,a,&aOff));
 
-          PetscCheckFalse(cDof != aDof,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Point and anchor have different number of dofs: %d, %d",cDof,aDof);
-          PetscCheckFalse(cDof % numComp,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Point dofs not divisible by field components: %d, %d",cDof,numComp);
+          PetscCheck(cDof == aDof,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Point and anchor have different number of dofs: %d, %d",cDof,aDof);
+          PetscCheck(cDof % numComp == 0,PETSC_COMM_SELF,PETSC_ERR_PLIB,"Point dofs not divisible by field components: %d, %d",cDof,numComp);
 
           /* put in a simple equality constraint */
           for (j = 0; j < cDof; j++) {
@@ -462,7 +461,7 @@ static PetscErrorCode TestFEJacobian(DM dm, AppCtx *user)
     PetscDS      ds;
 
     PetscCall(DMGetDimension(dm, &dim));
-    PetscCheckFalse(user->numComponents != dim,PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "The number of components %d must be equal to the dimension %d for this test", user->numComponents, dim);
+    PetscCheck(user->numComponents == dim,PetscObjectComm((PetscObject) dm), PETSC_ERR_ARG_OUTOFRANGE, "The number of components %d must be equal to the dimension %d for this test", user->numComponents, dim);
     PetscCall(DMGetDS(dm,&ds));
     PetscCall(PetscDSSetJacobian(ds,0,0,NULL,NULL,NULL,symmetric_gradient_inner_product));
     PetscCall(DMCreateMatrix(dm,&E));

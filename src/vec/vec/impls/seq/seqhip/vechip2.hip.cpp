@@ -59,7 +59,6 @@ PetscErrorCode VecHIPAllocateCheck(Vec v)
   PetscFunctionBegin;
   if (!v->spptr) {
     PetscReal      pinned_memory_min;
-    PetscErrorCode ierr;
 
     PetscCall(PetscCalloc(sizeof(Vec_HIP),&v->spptr));
     vechip = (Vec_HIP*)v->spptr;
@@ -76,10 +75,10 @@ PetscErrorCode VecHIPAllocateCheck(Vec v)
 
     /* Need to parse command line for minimum size to use for pinned memory allocations on host here.
        Note: This same code duplicated in VecCreate_SeqHIP_Private() and VecCreate_MPIHIP_Private(). Is there a good way to avoid this? */
-    ierr = PetscOptionsBegin(PetscObjectComm((PetscObject)v),((PetscObject)v)->prefix,"VECHIP Options","Vec");PetscCall(ierr);
+    PetscOptionsBegin(PetscObjectComm((PetscObject)v),((PetscObject)v)->prefix,"VECHIP Options","Vec");
     PetscCall(PetscOptionsReal("-vec_pinned_memory_min","Minimum size (in bytes) for an allocation to use pinned memory on host","VecSetPinnedMemoryMin",pinned_memory_min,&pinned_memory_min,&option_set));
     if (option_set) v->minimum_bytes_pinned_memory = pinned_memory_min;
-    ierr = PetscOptionsEnd();PetscCall(ierr);
+    PetscOptionsEnd();
   }
   PetscFunctionReturn(0);
 }
@@ -534,7 +533,7 @@ PetscErrorCode VecMDot_SeqHIP(Vec xin,PetscInt nv,const Vec yin[],PetscScalar *z
   PetscFunctionBegin;
   PetscCall(PetscHIPBLASGetHandle(&hipblasv2handle));
   PetscCall(PetscBLASIntCast(xin->map->n,&bn));
-  PetscCheckFalse(nv <= 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Number of vectors provided to VecMDot_SeqHIP not positive.");
+  PetscCheck(nv > 0,PETSC_COMM_SELF,PETSC_ERR_LIB,"Number of vectors provided to VecMDot_SeqHIP not positive.");
   /* Handle the case of local size zero first */
   if (!xin->map->n) {
     for (i=0; i<nv; ++i) z[i] = 0;
