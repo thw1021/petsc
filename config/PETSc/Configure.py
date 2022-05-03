@@ -265,7 +265,6 @@ prepend-path PATH "%s"
 
     # Sometimes we need C compiler, even if built with C++
     self.setCompilers.pushLanguage('C')
-    self.addMakeMacro('CC_FLAGS',self.setCompilers.getCompilerFlags())
     # do not use getCompilerFlags() because that automatically includes the CPPFLAGS so one ends up with duplication flags in makefile usage
     self.addMakeMacro('CC_FLAGS',self.setCompilers.CFLAGS)
     self.setCompilers.popLanguage()
