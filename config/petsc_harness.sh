@@ -281,13 +281,36 @@ function petsc_testend() {
 }
 
 function petsc_mpiexec_cudamemcheck() {
-  _mpiexec=$1;shift
-  npopt=$1;shift
-  np=$1;shift
-
-  cudamemchk="cuda-memcheck"
-
-  $_mpiexec $npopt $np $cudamemchk $*
+  # loops over the argument list to find the integer argument to mpiexec -n and insert the
+  # cuda memcheck command.
+  pre_args=()
+  # regex to detect start of the petsc-arch path, which is where the test lives. This
+  # marks the end of the options to mpiexec, and hence where we should insert the
+  # cuda-memcheck command
+  re="${petsc_arch}"
+  for i in "$@"; do
+    if [[ $i =~ $re ]]; then
+      # found it, put cuda memcheck command in
+      pre_args+=("${PETSC_CUDAMEMCHECK_COMMAND:-cuda-memcheck} --leak-check full --flush-to-disk yes --report-api-errors no")
+      break
+    fi
+    pre_args+=("$i")
+    shift
+  done
+  # run command, but filter out
+  # ===== CUDA-MEMCHECK
+  # and
+  # ===== ERROR SUMMARY: 0 errors
+  if ${printcmd}; then
+    echo ${pre_args[@]} $*
+  else
+    ${pre_args[@]} $* \
+      | grep -v 'CUDA-MEMCHECK' \
+      | grep -v 'LEAK SUMMARY: 0 bytes leaked in 0 allocations' \
+      | grep -v 'ERROR SUMMARY: 0 errors' || [[ $? == 1 ]]
+  fi
+  # last or is needed to suppress grep exiting with error code 1 if it doesn't find a
+  # match
 }
 
 function petsc_mpiexec_valgrind() {

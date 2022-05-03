@@ -1262,7 +1262,11 @@ PetscErrorCode VecZeroEntriesAsync(Vec vec, PetscDeviceContext dctx)
 PetscErrorCode  VecZeroEntries(Vec vec)
 {
   PetscFunctionBegin;
-  PetscCall(VecZeroEntriesAsync(vec,NULL));
+  // REVIEW ME:
+  // TODO add PetscManagedTypeGetValuesAvailable().
+  // cannot call VecZeroEntriesAsync() since it does not set the stashed norms as it cannot
+  // safely retrieve the "set" value without synchronizing.
+  PetscCall(VecSet(vec,0));
   PetscFunctionReturn(0);
 }
 
