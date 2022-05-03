@@ -6,7 +6,6 @@ LOCDIR    = src/benchmarks/
 EXAMPLESC = PetscTime.c PetscGetTime.c MPI_Wtime.c PLogEvent.c PetscMalloc.c \
             PetscMemcpy.c PetscMemzero.c PetscMemcmp.c Index.c PetscVecNorm.c \
             PetscGetCPUTime.c
-EXAMPLESF =
 TESTS     = PetscTime PetscGetTime MPI_Wtime PLogEvent PetscMalloc \
             PetscMemcpy PetscMemzero PetscMemcmp Index PetscVecNorm \
             PetscGetCPUTime sizeof
