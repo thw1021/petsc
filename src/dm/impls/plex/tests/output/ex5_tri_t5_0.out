@@ -118,7 +118,7 @@ Discrete System with 2 fields
     cell total dim 12 total comp 4
     cohesive cell
   Field displacement FEM 2 components (implicit) (Nq 2 Nqc 1) 1-jet
-    PetscFE Object: displacement 1 MPI processes
+    PetscFE Object: displacement 1 MPI process
       type: basic
       Basic Finite Element in 1 dimensions with 2 components
       PetscSpace Object: displacement 1 MPI processes
