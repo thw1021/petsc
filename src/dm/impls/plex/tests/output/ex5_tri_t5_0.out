@@ -121,7 +121,7 @@ Discrete System with 2 fields
     PetscFE Object: displacement 1 MPI process
       type: basic
       Basic Finite Element in 1 dimensions with 2 components
-      PetscSpace Object: displacement 1 MPI processes
+      PetscSpace Object: displacement 1 MPI process
         type: sum
         Space in 1 variables with 2 components, size 4
         Sum space of 2 concatenated subspaces (all identical)
