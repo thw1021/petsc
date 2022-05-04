@@ -92,7 +92,7 @@ Process 0:
   (  27) dim  0 offset  16
   (  28) dim  2 offset  16
   (  29) dim  2 offset  18
-Vec Object: Local Solution 1 MPI processes
+Vec Object: Local Solution 1 MPI process
   type: seq
 0.
 3.
