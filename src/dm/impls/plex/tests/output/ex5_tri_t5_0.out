@@ -125,7 +125,7 @@ Discrete System with 2 fields
         type: sum
         Space in 1 variables with 2 components, size 4
         Sum space of 2 concatenated subspaces (all identical)
-          PetscSpace Object: sum component 1 MPI processes
+          PetscSpace Object: sum component 1 MPI process
             type: poly
             Space in 1 variables with 1 components, size 2
             Polynomial space of degree 1
