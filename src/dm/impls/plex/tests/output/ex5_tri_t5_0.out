@@ -135,7 +135,7 @@ Discrete System with 2 fields
         Continuous Lagrange dual space
         Quadrature of order 3 on 2 points (dim 1)
   Field fault traction FEM 2 components (implicit) (Nq 2 Nqc 1) 1-jet
-    PetscFE Object: fault traction (faulttraction_) 1 MPI processes
+    PetscFE Object: fault traction (faulttraction_) 1 MPI process
       type: basic
       Basic Finite Element in 1 dimensions with 2 components
       PetscSpace Object: fault traction (faulttraction_) 1 MPI processes
