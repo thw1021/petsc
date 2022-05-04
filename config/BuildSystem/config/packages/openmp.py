@@ -69,7 +69,7 @@ class Configure(config.package.Package):
           ompflag = flag
           self.found = 1
           oldFlags = self.compilers.CPPFLAGS
-          # Flag is sometimes needed at preprocessor time set put it there and NOT in compiler flags
+          # Flag is sometimes needed at preprocessor time so put it there and NOT in compiler flags
           self.compilers.CPPFLAGS += ' '+ompflag
           try:
             output,err,status  = self.preprocess('#if !defined(_OPENMP)\n#error "No _OPENMP macro, something is wrong with the OpenMP install"\n#endif')
