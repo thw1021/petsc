@@ -101,6 +101,9 @@ In addition to the changes above
 
 .. rubric:: SNES:
 
+- Add ``DMDASNESSetFunctionLocalExt()``, ``DMDASNESSetJacobianLocalExt()`` and ``DMDASNESSetObjectiveLocalExt()``, and associate types ``DMDASNESFunctionExt``, ``DMDASNESJacobianExt`` and ``DMDASNESObjectiveExt``,
+  which accept Vec parameters instead of void pointers in contrast to versions without the Ext suffix
+
 .. rubric:: SNESLineSearch:
 
 .. rubric:: TS:
