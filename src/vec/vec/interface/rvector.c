@@ -1498,6 +1498,7 @@ PetscErrorCode  VecMAXPY(Vec y,PetscInt nv,const PetscScalar alpha[],Vec x[])
       PetscValidType(x[i],4);
       PetscCheckSameTypeAndComm(y,1,x[i],4);
       VecCheckSameSize(y,1,x[i],4);
+      PetscCheck(y != x[i],PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Array of vectors 'x' cannot contain y, found x[%" PetscInt_FMT "] == y",i);
       PetscCall(VecLockReadPush(x[i]));
     }
 
