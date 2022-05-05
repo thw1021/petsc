@@ -228,37 +228,30 @@ PetscErrorCode SNESMSRegister(SNESMSType name,PetscInt nstages,PetscInt nregiste
   X - initial state, updated in-place.
   F - residual, computed at the initial X on input
 */
-static PetscErrorCode SNESMSStep_3Sstar(SNES snes,Vec X,Vec F)
+static PetscErrorCode SNESMSStep_3Sstar(SNES snes,Vec X,Vec F,Vec work)
 {
-  SNES_MS         *ms    = (SNES_MS*)snes->data;
-  SNESMSTableau   t      = ms->tableau;
-  const PetscReal *gamma = t->gamma,*delta = t->delta,*betasub = t->betasub;
-  Vec             S1,S2,S3,Y;
-  PetscInt        i,nstages = t->nstages;
+  SNES_MS             *ms      = (SNES_MS*)snes->data;
+  const SNESMSTableau  t       = ms->tableau;
+  const PetscInt       nstages = t->nstages;
+  const PetscReal     *gamma   = t->gamma,*delta = t->delta,*betasub = t->betasub;
+  Vec                  S1      = X,Y = snes->work[0],S2 = snes->work[1],S3 = snes->work[2];
 
   PetscFunctionBegin;
-  Y    = snes->work[0];
-  S1   = X;
-  S2   = snes->work[1];
-  S3   = snes->work[2];
   PetscCall(VecZeroEntries(S2));
   PetscCall(VecCopy(X,S3));
-  for (i = 0; i < nstages; i++) {
-    Vec         Ss[4];
-    PetscScalar scoeff[4];
-
-    Ss[0] = S1; Ss[1] = S2; Ss[2] = S3; Ss[3] = Y;
-
-    scoeff[0] = gamma[0*nstages+i] - 1;
-    scoeff[1] = gamma[1*nstages+i];
-    scoeff[2] = gamma[2*nstages+i];
-    scoeff[3] = -betasub[i]*ms->damping;
+  for (PetscInt i = 0; i < nstages; ++i) {
+    Vec               Ss[]     = {work,S2,S3,Y};
+    const PetscScalar scoeff[] = {
+      gamma[0*nstages+i] - 1,
+      gamma[1*nstages+i],
+      gamma[2*nstages+i],
+      -betasub[i]*ms->damping
+    };
 
     PetscCall(VecAXPY(S2,delta[i],S1));
-    if (i > 0) {
-      PetscCall(SNESComputeFunction(snes,S1,F));
-    }
+    if (i) PetscCall(SNESComputeFunction(snes,S1,F));
     PetscCall(KSPSolve(snes->ksp,F,Y));
+    PetscCall(VecCopy(S1,work));
     PetscCall(VecMAXPY(S1,4,scoeff,Ss));
   }
   PetscFunctionReturn(0);
@@ -288,14 +281,14 @@ static PetscErrorCode SNESMSStep_Basic(SNES snes,Vec X,Vec F)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode SNESMSStep_Step(SNES snes,Vec X,Vec F)
+static PetscErrorCode SNESMSStep_Step(SNES snes,Vec X,Vec F,Vec work)
 {
   SNES_MS        *ms = (SNES_MS*)snes->data;
   SNESMSTableau  tab = ms->tableau;
 
   PetscFunctionBegin;
   if (tab->gamma && tab->delta) {
-    PetscCall(SNESMSStep_3Sstar(snes,X,F));
+    PetscCall(SNESMSStep_3Sstar(snes,X,F,work));
   } else {
     PetscCall(SNESMSStep_Basic(snes,X,F));
   }
@@ -331,7 +324,7 @@ static PetscErrorCode SNESMSStep_Norms(SNES snes,PetscInt iter,Vec F)
 static PetscErrorCode SNESSolve_MS(SNES snes)
 {
   SNES_MS        *ms = (SNES_MS*)snes->data;
-  Vec            X   = snes->vec_sol,F = snes->vec_func;
+  Vec            X   = snes->vec_sol,F = snes->vec_func,step_3star_work;
   PetscInt       i;
 
   PetscFunctionBegin;
@@ -351,6 +344,9 @@ static PetscErrorCode SNESSolve_MS(SNES snes)
   PetscCall(SNESMSStep_Norms(snes,0,F));
   if (snes->reason) PetscFunctionReturn(0);
 
+  PetscCall(VecDuplicate(X,&step_3star_work));
+  /* need to register destroy since we may return due to SNESCheckJacobianDomainerror() */
+  PetscCall(PetscObjectRegisterDestroy((PetscObject)step_3star_work));
   for (i = 0; i < snes->max_its; i++) {
 
     /* Call general purpose update function */
@@ -365,7 +361,7 @@ static PetscErrorCode SNESSolve_MS(SNES snes)
       PetscCall(KSPSetOperators(snes->ksp,snes->jacobian,snes->jacobian_pre));
     }
 
-    PetscCall(SNESMSStep_Step(snes,X,F));
+    PetscCall(SNESMSStep_Step(snes,X,F,step_3star_work));
 
     if (i < snes->max_its-1 || ms->norms) {
       PetscCall(SNESComputeFunction(snes,X,F));
