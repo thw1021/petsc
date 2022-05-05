@@ -1449,9 +1449,9 @@ PetscErrorCode VecMAXPYAsync(Vec y, PetscManagedInt nv, PetscManagedScalar alpha
   PetscValidType(*x,4);
   PetscCheckSameTypeAndComm(y,1,*x,4);
   VecCheckSameSize(y,1,*x,4);
+  PetscCall(VecSetErrorIfLocked(y,1));
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
 
-  PetscCall(VecSetErrorIfLocked(y,1));
   PetscCall(PetscLogEventBegin(VEC_MAXPY,*x,y,0,0));
   PetscCall((*y->ops->maxpy)(y,nv,alpha,x,dctx));
   PetscCall(PetscLogEventEnd(VEC_MAXPY,*x,y,0,0));
