@@ -903,7 +903,7 @@ typedef struct {
 #define PetscStackPop_Private(stack__,func__) do {                                             \
     if (PetscUnlikely(stack__.currentsize <= 0)) {                                             \
       if (PetscUnlikely(stack__.check)) {                                                      \
-        printf("Invalid stack__ size %d, pop %s\n",stack__.currentsize,func__);                \
+        printf("Invalid stack size %d, pop %s\n",stack__.currentsize,func__);                  \
       }                                                                                        \
     } else {                                                                                   \
       if (--stack__.currentsize < PETSCSTACKSIZE) {                                            \
@@ -915,7 +915,7 @@ typedef struct {
           PetscBool _cmpflg;                                                                   \
           const char *_funct = stack__.function[stack__.currentsize];                          \
           PetscStrcmp(_funct,func__,&_cmpflg);                                                 \
-          if (!_cmpflg) printf("Invalid stack__: push from %s, pop from %s\n",_funct,func__);  \
+          if (!_cmpflg) printf("Invalid stack: push from %s, pop from %s\n",_funct,func__);    \
         }                                                                                      \
         stack__.function[stack__.currentsize]     = PETSC_NULLPTR;                             \
         stack__.file[stack__.currentsize]         = PETSC_NULLPTR;                             \
