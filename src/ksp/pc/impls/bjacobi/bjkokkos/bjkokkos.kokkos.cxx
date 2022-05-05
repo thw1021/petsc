@@ -926,8 +926,7 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
 
         Mat mat_block_order;
         PetscCall(MatCreateSubMatrix(A,isicol,isicol,MAT_INITIAL_MATRIX,&mat_block_order));
-        PetscCall(MatViewFromOptions(A, NULL, "-dm_landau_mat_view"));
-        PetscCall(MatViewFromOptions(mat_block_order, NULL, "-dm_landau_mat_view"));
+        PetscCall(MatViewFromOptions(mat_block_order, NULL, "-ksp_batch_reorder_view"));
         PetscCall(MatDestroy(&mat_block_order));
 
         PetscCall(ISGetIndices(isrow,&rowindices));
