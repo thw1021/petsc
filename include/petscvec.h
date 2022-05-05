@@ -132,6 +132,7 @@ PETSC_EXTERN PetscErrorCode VecSetUp(Vec);
 PETSC_EXTERN PetscErrorCode VecDestroy(Vec*);
 PETSC_EXTERN PetscErrorCode VecDestroyAsync(PetscDeviceContext,Vec*);
 PETSC_EXTERN PetscErrorCode VecZeroEntries(Vec);
+PETSC_EXTERN PetscErrorCode VecZeroEntriesAsync(Vec,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecSetOptionsPrefix(Vec,const char[]);
 PETSC_EXTERN PetscErrorCode VecAppendOptionsPrefix(Vec,const char[]);
 PETSC_EXTERN PetscErrorCode VecGetOptionsPrefix(Vec,const char*[]);

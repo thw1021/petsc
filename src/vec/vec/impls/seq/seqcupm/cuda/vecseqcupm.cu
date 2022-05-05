@@ -1,14 +1,8 @@
 #include  "../vecseqcupm.hpp" /*I <petscvec.h> I*/
 
-namespace Petsc { namespace Vector { namespace CUPM { namespace Impl {
-
-template struct VecSeq_CUPM<Petsc::Device::CUPM::DeviceType::CUDA>;
-
-}}}} // namespace Petsc::Vector::CUPM::Impl
-
 using namespace Petsc::Vector::CUPM::Impl;
 
-static const auto VecSeq_CUDA = VecSeq_CUPM<Petsc::Device::CUPM::DeviceType::CUDA>{};
+static constexpr auto VecSeq_CUDA = VecSeq_CUPM<Petsc::Device::CUPM::DeviceType::CUDA>{};
 
 PetscErrorCode VecCreate_SeqCUDA(Vec v, PetscDeviceContext dctx)
 {
