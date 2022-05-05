@@ -78,62 +78,6 @@ typedef struct {
 
 typedef Kokkos::DefaultExecutionSpace exec_space;
 
-template <class XType>
-void writeArrayToMM(std::string name, const XType x)
-{
-  std::ofstream myfile;
-  myfile.open(name);
-
-  typename XType::HostMirror x_h = Kokkos::create_mirror_view(x);
-
-  Kokkos::deep_copy(x_h, x);
-
-  myfile << "%% MatrixMarket 2D Array\n%" << std::endl;
-  myfile << x_h.extent(0) << " " << x_h.extent(1) << std::endl;
-
-  for (size_t i = 0; i < x_h.extent(0); ++i) {
-    for (size_t j = 0; j < x_h.extent(1); ++j) {
-      myfile << std::setprecision (15) << x_h(i, j) << " ";
-    }
-    myfile << std::endl;
-  }
-
-  myfile.close();
-}
-
-template <class VType, class IntType>
-void writeCRSToMM(std::string name, const VType &V, const IntType &r,
-                   const IntType &c)
-{
-  std::ofstream myfile;
-  myfile.open(name);
-
-  auto V_h = Kokkos::create_mirror_view(V);
-  auto r_h = Kokkos::create_mirror_view(r);
-  auto c_h = Kokkos::create_mirror_view(c);
-
-  Kokkos::deep_copy(V_h, V);
-  Kokkos::deep_copy(r_h, r);
-  Kokkos::deep_copy(c_h, c);
-
-  myfile << "%%MatrixMarket batched CRS matrix\n%" << std::endl;
-  myfile << r_h.extent(0) - 1 << " " << r_h.extent(0) - 1 << " " << V_h.extent(1) << " " << V_h.extent(0) << std::endl;
-
-  for (size_t i_row = 0; i_row < r_h.extent(1) - 1; ++i_row) {
-    for (size_t j_row = 0; j_row < r_h.extent(0) - 1; ++j_row) {
-      for (size_t i_nnz = r_h(j_row, i_row); i_nnz < r_h(j_row, i_row+1); ++i_nnz) {
-        myfile << i_row + 1 << " " << c_h(j_row, i_nnz) + 1 << " ";
-        for (size_t j = 0; j < V_h.extent(0); ++j) {
-          myfile << std::setprecision (15) << V_h(j, i_nnz) << " ";
-        }
-        myfile << std::endl;
-      }
-    }
-  }
-
-  myfile.close();
-}
-
 template <typename DeviceType, typename ValuesViewType, typename IntView,
           typename VectorViewType, typename KrylovHandleType>
 struct Functor_TestBatchedTeamVectorGMRES {
@@ -670,7 +614,7 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
       batch_sz = *pNf;
     } else batch_sz = 1;
     PetscCheck(nBlk%batch_sz==0,PetscObjectComm((PetscObject) pc),PETSC_ERR_ARG_WRONG,"batch_sz = %" PetscInt_FMT ", nBlk = %" PetscInt_FMT,batch_sz,nBlk);
-    if (ksp_type_idx==BATCH_KSP_GMRES_IDX) { // KK solver
+    if (ksp_type_idx==BATCH_KSP_GMRES_IDX) { // KK solver - move PETSc data into Kokkos Views, setup solver, solve, move data out of Kokkos, process metadata (convergence tests, etc.)
       using layout = Kokkos::LayoutRight;
       using IntView            = Kokkos::View<PetscInt**, layout, exec_space>;
       using AMatrixValueView   = const Kokkos::View<PetscScalar **, layout, exec_space>;
@@ -695,7 +639,6 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
         ("rowOffsets+map", Kokkos::TeamPolicy<>(Nsolves, team_size, PCBJKOKKOS_VEC_SIZE),
          KOKKOS_LAMBDA (const team_member team) {
           const int blkID = team.league_rank(), start = d_bid_eqOffset[blkID], end = d_bid_eqOffset[blkID+1];
-          //std::cout << blkID << "), d_bid_eqOffset = " << d_bid_eqOffset[blkID+1] << std::endl;
           if (blkID%Nsolves_team == 0) { // first matrix on this member
             Kokkos::parallel_for(Kokkos::TeamVectorRange(team,start,end), [=] (const int rowb) { // Nloc
                 int rowa = d_isicol[rowb];
@@ -736,22 +679,6 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
             });
         });
       Kokkos::fence();
-      // print
-      // Kokkos::parallel_for
-      //   ("print", Kokkos::TeamPolicy<>(Nsolves, team_size, PCBJKOKKOS_VEC_SIZE),
-      //    KOKKOS_LAMBDA (const team_member team) {
-      //     const int blkID = team.league_rank(), start = d_bid_eqOffset[blkID], end = d_bid_eqOffset[blkID+1], graphID = blkID/Nsolves_team;
-      //     std::cout << graphID << std::setw(10) << "), rowOffsets" << std::endl;
-      //     if (blkID%Nsolves_team == 0) for (size_t i = 0; i < Nloc+1; ++i) std::cout << rowOffsets(graphID,i) << " "; std::cout << std::endl;
-      //     std::cout << blkID << "), mat " << blkID << std::endl;
-      //     for (size_t i = 0, idx=0; i < Nloc; ++i) {
-      //       int n = rowOffsets(graphID, i+1) - rowOffsets(graphID, i);
-      //       for (size_t j = 0; j < n ; ++j, idx++) {
-      //         std::cout << i << ". " << std::setw(3) << colIndices(graphID, idx) << " : " << std::left << std::setw(13) << batch_values(blkID, idx) << " - ";
-      //       }
-      //       std::cout << ". inv diag = " << inv_diag(blkID,i) << std::endl;
-      //     }
-      //   });
       // setup solver
       using ScalarType = typename AMatrixValueView::non_const_value_type;
       using MagnitudeType = typename Kokkos::Details::ArithTraits<ScalarType>::mag_type;
@@ -790,10 +717,6 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
           }
           else {
             std::cout << "System " << i << " did not converge in " << handle.get_max_iteration() << " iterations, relative residual = " << handle.get_last_norm_host(i) << " -- write matrix" << std::endl;
-            // writeArrayToMM("convergence.mm", handle.residual_norms);
-            // writeCRSToMM("Mat.mm", batch_values, rowOffsets, colIndices);
-            // writeArrayToMM("RHS.mm", batch_b);
-            // writeArrayToMM("iDiag.mm", inv_diag);
           }
         }
 #endif
@@ -828,7 +751,6 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
 #endif
         PetscInt count=0, mbid=0;
         for (int blkID=0;blkID<nBlk;blkID++) {
-          //PetscCall(PetscLogGpuFlops((PetscLogDouble)h_metadata[blkID].flops));
           if (jac->reason) { // -pc_bjkokkos_ksp_converged_reason
             if (jac->batch_target==blkID) {
               PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A),  "    Linear solve %s in %d iterations, batch %" PetscInt_FMT ", species %" PetscInt_FMT "\n", handle.is_converged_host(blkID) ? "converged" : "diverged", handle.get_iteration_host(blkID), blkID%batch_sz, blkID/batch_sz));
@@ -965,9 +887,7 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc,Vec bin,Vec xout)
       PetscCall(VecCopy(xout, bvec));
       PetscCall(VecScatterBegin(plex_batch,bvec,xout,INSERT_VALUES,SCATTER_REVERSE));
       PetscCall(VecScatterEnd(plex_batch,bvec,xout,INSERT_VALUES,SCATTER_REVERSE));
-      //PetscCall(VecScatterView(plex_batch,PETSC_VIEWER_STDOUT_SELF));
     }
-    //PetscCall(VecView(xout, PETSC_VIEWER_STDOUT_WORLD));
     PetscCall(VecDestroy(&bvec));
   } // whole 'have aijkok' block
   PetscFunctionReturn(0);
@@ -998,18 +918,11 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
         MatOrderingType   rtype;
         IS                isrow,isicol;
         const PetscInt    *rowindices,*icolindices;
-        // if (container) {
-        //   rtype = MATORDERINGNATURAL; // if we have a vecscatter then don't reorder here (all the reorder stuff goes away in future)
-        //   SETERRQ(PetscObjectComm((PetscObject)A),PETSC_ERR_USER,"field major ordering not used");
-        // }
-        // else
         rtype = MATORDERINGRCM;
         // get permutation. Not what I expect so inverted here
         PetscCall(MatGetOrdering(A,rtype,&isrow,&isicol));
-        //PetscCall(ISView(isicol,PETSC_VIEWER_STDOUT_SELF));
         PetscCall(ISDestroy(&isrow));
         PetscCall(ISInvertPermutation(isicol,PETSC_DECIDE,&isrow)); // THIS IS BACKWARD -- isrow is inverse -- FIX!!!!!
-        //PetscCall(ISView(isrow,PETSC_VIEWER_STDOUT_SELF));
 
         Mat mat_block_order;
         PetscCall(MatCreateSubMatrix(A,isicol,isicol,MAT_INITIAL_MATRIX,&mat_block_order));
