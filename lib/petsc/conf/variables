@@ -48,13 +48,11 @@ PETSC_SYCLCOMPILE_SINGLE = ${SYCLC} -o $*.o $(MPICXX_INCLUDES) -c $(SYCLC_FLAGS)
 # SOURCEALL  - sources and includes
 # SOURCED    - sources/includes [but not fortran - for doc parsing?]
 #
-LIBNAME    = ${INSTALL_LIB_DIR}/${LIBBASE}.${AR_LIB_SUFFIX}
-SOURCE     = ${SOURCEKOKKOS} ${SOURCESYCL} ${SOURCEHIP} ${SOURCECU} ${SOURCEC} ${SOURCECXX} ${SOURCEF}
-SOURCEALL  = ${SOURCEKOKKOS} ${SOURCESYCL} ${SOURCEHIP} ${SOURCECU} ${SOURCEC} ${SOURCECXX} ${SOURCEF} ${SOURCEH}
-SOURCED    = ${SOURCEKOKKOS} ${SOURCESYCL} ${SOURCEHIP} ${SOURCECU} ${SOURCEC} ${SOURCECXX} ${SOURCEH}
-
-# Tests in tests/ and tutorials/ directories
-EXAMPLESALL = ${EXAMPLESC} ${EXAMPLESF} ${EXAMPLESCH} ${EXAMPLESFH} ${EXAMPLESCXX} ${EXAMPLESCU} ${EXAMPLESHIP} ${EXAMPLESSYCL} ${EXAMPLESKOKKOS} ${EXAMPLESMATLAB}
+LIBNAME     = ${INSTALL_LIB_DIR}/${LIBBASE}.${AR_LIB_SUFFIX}
+SOURCE      = `ls *.c *.cxx *.F *.F90 *.cu           2> /dev/null`
+SOURCEALL   = `ls *.c *.cxx *.F *.F90 *.cu *.h *.hpp 2> /dev/null`
+SOURCED     = `ls *.c *.cxx           *.cu *.h *.hpp 2> /dev/null`
+EXAMPLESALL = `ls *.c *.cxx *.F *.F90 *.cu           2> /dev/null`
 
 CLINKER = ${PCC_LINKER} ${PCC_LINKER_FLAGS} ${${CLANGUAGE}FLAGS}
 FLINKER = ${FC_LINKER} ${FC_LINKER_FLAGS} ${FFLAGS}
