@@ -8,7 +8,7 @@ LOCDIR	 = ./
 DIRS	 = src include tutorials interfaces share/petsc/matlab
 
 # next line defines PETSC_DIR and PETSC_ARCH if they are not set
-#include ././${PETSC_ARCH}/lib/petsc/conf/petscvariables
+include ././${PETSC_ARCH}/lib/petsc/conf/petscvariables
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 include ${PETSC_DIR}/lib/petsc/conf/test.common
