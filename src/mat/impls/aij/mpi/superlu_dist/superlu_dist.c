@@ -478,7 +478,7 @@ static PetscErrorCode MatLUFactorNumeric_SuperLU_DIST(Mat F,Mat A,const MatFacto
 static PetscErrorCode MatLUFactorSymbolic_SuperLU_DIST(Mat F,Mat A,IS r,IS c,const MatFactorInfo *info)
 {
   Mat_SuperLU_DIST *lu = (Mat_SuperLU_DIST*)F->data;
-  PetscInt         M=A->rmap->N,N=A->cmap->N,indx;
+  PetscInt         M = A->rmap->N,N = A->cmap->N,indx;
   PetscMPIInt      size;
   PetscBool        flg,set;
   const char       *colperm[]     = {"NATURAL","MMD_AT_PLUS_A","MMD_ATA","METIS_AT_PLUS_A","PARMETIS"};
