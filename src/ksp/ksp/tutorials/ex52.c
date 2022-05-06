@@ -104,6 +104,7 @@ int main(int argc,char **args)
   */
   PetscCall(MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY));
+  PetscCall(MatSetOptionsPrefix(A,"A_"));
   PetscCall(PetscLogStagePop());
 
   /* A is symmetric. Set symmetric flag to enable ICC/Cholesky preconditioner */
@@ -190,6 +191,7 @@ int main(int argc,char **args)
     PetscCall(PCFactorSetMatSolverType(pc,MATSOLVERMUMPS));
     PetscCall(PCFactorSetUpMatSolverType(pc)); /* call MatGetFactor() to create F */
     PetscCall(PCFactorGetMatrix(pc,&F));
+    PetscCall(MatSetOptionsPrefix(F,"F_"));
 
     if (flg_mumps) {
       /* Get memory estimates from MUMPS' MatLUFactorSymbolic(), e.g. INFOG(16), INFOG(17).
@@ -251,6 +253,7 @@ int main(int argc,char **args)
     }
     PetscCall(PCFactorSetUpMatSolverType(pc)); /* call MatGetFactor() to create F */
     PetscCall(PCFactorGetMatrix(pc,&F));
+    PetscCall(MatSetOptionsPrefix(F,"F_"));
 #if defined(PETSC_HAVE_SUPERLU)
     if (size == 1) {
       PetscCall(MatSuperluSetILUDropTol(F,1.e-8));
