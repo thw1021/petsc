@@ -626,7 +626,7 @@ PetscErrorCode PetscDeviceContextSynchronize(PetscDeviceContext dctx)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscDeviceArrayCopy_(PetscDeviceContext dctx, void *PETSC_RESTRICT dest, const void *PETSC_RESTRICT src, std::size_t n, PetscDeviceCopyMode mode)
+PetscErrorCode PetscDeviceMemcpy(PetscDeviceContext dctx, void *PETSC_RESTRICT dest, const void *PETSC_RESTRICT src, std::size_t n, PetscDeviceCopyMode mode)
 {
   PetscFunctionBegin;
   PetscValidDeviceContext(dctx,1);

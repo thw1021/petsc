@@ -1,9 +1,7 @@
 #ifndef PETSCDEVICETYPES_H
 #define PETSCDEVICETYPES_H
 
-#include <petscmacros.h> /*I <petscdevicetypes.h> I*/
-#include <petscsystypes.h>
-#include <petscerror.h>
+#include <petscsys.h> /*I <petscdevicetypes.h> I*/
 
 /*E
   PetscMemType - Memory type of a pointer

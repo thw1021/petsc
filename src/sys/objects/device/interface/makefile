@@ -1,10 +1,9 @@
-#requiresdefine 'PETSC_HAVE_CXX'
 ALL: lib
 
 CFLAGS    =
 FFLAGS    =
 CPPFLAGS  =
-SOURCEC	  =
+SOURCEC	  = utility.c
 SOURCECXX = dcontext.cxx device.cxx devicereg.cxx managedtype.cxx
 SOURCEF	  =
 SOURCEH   = objpool.hpp cupmdevice.hpp sycldevice.hpp hostdevice.hpp managedtype.inl
