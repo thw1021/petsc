@@ -1,7 +1,5 @@
-ALL: lib
+-include ../../../../../../petsckdir.mk
 
-CFLAGS   =
-FFLAGS   =
 SOURCEC  = rander48.c
 SOURCEF  =
 SOURCEH  =

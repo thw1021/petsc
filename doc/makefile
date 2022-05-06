@@ -27,6 +27,9 @@ clean: clean-classic-docs
 images:
 	git clone https://gitlab.com/petsc/images.git -b main-1 --depth=1 images
 
+# dummy rule needed by alltree in the PETSc root directory
+alltree:
+
 website-deploy: images
 	$(SPHINXBUILD) -b dirhtml "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) -T -E -j auto
 
