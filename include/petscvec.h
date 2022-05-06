@@ -416,7 +416,7 @@ PETSC_EXTERN PetscErrorCode VecSetValuesBlocked(Vec,PetscInt,const PetscInt[],co
 PETSC_EXTERN PetscFunctionList VecList;
 PETSC_EXTERN PetscErrorCode VecSetType(Vec,VecType);
 PETSC_EXTERN PetscErrorCode VecGetType(Vec,VecType*);
-PETSC_EXTERN PetscErrorCode VecRegister(const char[],PetscErrorCode (*)(Vec));
+PETSC_EXTERN PetscErrorCode VecRegister(const char[],PetscErrorCode (*)(Vec,PetscDeviceContext));
 
 PETSC_EXTERN PetscErrorCode VecScatterBegin(VecScatter,Vec,Vec,InsertMode,ScatterMode);
 PETSC_EXTERN PetscErrorCode VecScatterEnd(VecScatter,Vec,Vec,InsertMode,ScatterMode);
@@ -461,6 +461,7 @@ PETSC_EXTERN PetscErrorCode VecPlaceArrayAsync(Vec,const PetscScalar[],PetscDevi
 PETSC_EXTERN PetscErrorCode VecResetArray(Vec);
 PETSC_EXTERN PetscErrorCode VecResetArrayAsync(Vec,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecReplaceArray(Vec,const PetscScalar[]);
+PETSC_EXTERN PetscErrorCode VecReplaceArrayAsync(Vec,const PetscScalar[],PetscDeviceContext);
 
 PETSC_EXTERN PetscErrorCode VecGetArrays(const Vec[],PetscInt,PetscScalar**[]);
 PETSC_EXTERN PetscErrorCode VecRestoreArrays(const Vec[],PetscInt,PetscScalar**[]);
@@ -520,19 +521,30 @@ PETSC_EXTERN PetscErrorCode VecSetValuesBlockedLocal(Vec,PetscInt,const PetscInt
 PETSC_EXTERN PetscErrorCode VecGetLocalToGlobalMapping(Vec,ISLocalToGlobalMapping*);
 
 PETSC_EXTERN PetscErrorCode VecDotBegin(Vec,Vec,PetscScalar *);
+PETSC_EXTERN PetscErrorCode VecDotBeginAsync(Vec,Vec,PetscManagedScalar,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecDotEnd(Vec,Vec,PetscScalar *);
+PETSC_EXTERN PetscErrorCode VecDotEndAsync(Vec,Vec,PetscManagedScalar,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecTDotBegin(Vec,Vec,PetscScalar *);
+PETSC_EXTERN PetscErrorCode VecTDotBeginAsync(Vec,Vec,PetscManagedScalar,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecTDotEnd(Vec,Vec,PetscScalar *);
+PETSC_EXTERN PetscErrorCode VecTDotEndAsync(Vec,Vec,PetscManagedScalar,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecNormBegin(Vec,NormType,PetscReal *);
+PETSC_EXTERN PetscErrorCode VecNormBeginAsync(Vec,NormType,PetscManagedReal,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecNormEnd(Vec,NormType,PetscReal *);
+PETSC_EXTERN PetscErrorCode VecNormEndAsync(Vec,NormType,PetscManagedReal,PetscDeviceContext);
 
 PETSC_EXTERN PetscErrorCode VecMDotBegin(Vec,PetscInt,const Vec[],PetscScalar[]);
+PETSC_EXTERN PetscErrorCode VecMDotBeginAsync(Vec,PetscManagedInt,const Vec[],PetscManagedScalar,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecMDotEnd(Vec,PetscInt,const Vec[],PetscScalar[]);
+PETSC_EXTERN PetscErrorCode VecMDotEndAsync(Vec,PetscManagedInt,const Vec[],PetscManagedScalar,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecMTDotBegin(Vec,PetscInt,const Vec[],PetscScalar[]);
+PETSC_EXTERN PetscErrorCode VecMTDotBeginAsync(Vec,PetscManagedInt,const Vec[],PetscManagedScalar,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode VecMTDotEnd(Vec,PetscInt,const Vec[],PetscScalar[]);
+PETSC_EXTERN PetscErrorCode VecMTDotEndAsync(Vec,PetscManagedInt,const Vec[],PetscManagedScalar,PetscDeviceContext);
 PETSC_EXTERN PetscErrorCode PetscCommSplitReductionBegin(MPI_Comm);
 
 PETSC_EXTERN PetscErrorCode VecBindToCPU(Vec,PetscBool);
+PETSC_EXTERN PetscErrorCode VecBindToCPUAsync(Vec,PetscBool,PetscDeviceContext);
 PETSC_DEPRECATED_FUNCTION("Use VecBindToCPU (since v3.13)") static inline PetscErrorCode VecPinToCPU(Vec v,PetscBool flg) {return VecBindToCPU(v,flg);}
 PETSC_EXTERN PetscErrorCode VecBoundToCPU(Vec,PetscBool*);
 PETSC_EXTERN PetscErrorCode VecSetBindingPropagates(Vec,PetscBool);

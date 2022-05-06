@@ -225,12 +225,12 @@ static auto make_managed_interface(FunctionTypes&&... fns) PETSC_DECLTYPE_NOEXCE
   ManagedTypeInterface<PetscType,PetscManagedType,FunctionTypes...>{std::forward<FunctionTypes>(fns)...}
 );
 
-template <template <typename...> typename T, typename PT, typename PMT, typename... Args>
+template <template <typename...> class T, typename PT, typename PMT, typename... Args>
 static auto make_managed_test(Args&&... functions) PETSC_DECLTYPE_NOEXCEPT_AUTO_RETURNS(
   std::unique_ptr<T<PT,PMT,Args...>>{new T<PT,PMT,Args...>{std::forward<Args>(functions)...}}
 );
 
-template <template <typename...> typename T>
+template <template <typename...> class T>
 static auto make_managed_scalar_test() PETSC_DECLTYPE_NOEXCEPT_AUTO_RETURNS(
   make_managed_test<T,PetscScalar,PetscManagedScalar>(
     PetscManagedScalarCreate,
@@ -241,7 +241,7 @@ static auto make_managed_scalar_test() PETSC_DECLTYPE_NOEXCEPT_AUTO_RETURNS(
   )
 );
 
-template <template <typename...> typename T>
+template <template <typename...> class T>
 static auto make_managed_real_test() PETSC_DECLTYPE_NOEXCEPT_AUTO_RETURNS(
   make_managed_test<T,PetscReal,PetscManagedReal>(
     PetscManagedRealCreate,
@@ -252,7 +252,7 @@ static auto make_managed_real_test() PETSC_DECLTYPE_NOEXCEPT_AUTO_RETURNS(
   )
 );
 
-template <template <typename...> typename T>
+template <template <typename...> class T>
 static auto make_managed_int_test() PETSC_DECLTYPE_NOEXCEPT_AUTO_RETURNS(
   make_managed_test<T,PetscInt,PetscManagedInt>(
     PetscManagedIntCreate,

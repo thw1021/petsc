@@ -38,7 +38,7 @@
 #define PetscManagedTypeGetSize              PetscConcat(PetscManagedType,GetSize)
 
 #define PETSC_NO_DEVICE_UNUSED PetscIfPetscDefined(HAVE_CXX,,PETSC_UNUSED)
-#define PETSC_MANAGED_TYPE_DECL_OR_STUB(FunctionDecl,...) PetscIfPetscDefined(HAVE_CXX,PETSC_EXTERN FunctionDecl,static inline FunctionDecl __VA_ARGS__)
+#define PETSC_MANAGED_TYPE_DECL_OR_STUB(FunctionDecl,...) PetscIfPetscDefined(HAVE_CXX,PETSC_EXTERN FunctionDecl;,static inline FunctionDecl __VA_ARGS__)
 
 #define _n_PetscManagedType PetscConcat(_n_,PetscManagedType)
 struct _n_PetscManagedType
@@ -117,7 +117,7 @@ PetscErrorCode PetscManagedTypeGetPointerAndMemType(PetscDeviceContext dctx, Pet
 );
 
 PETSC_MANAGED_TYPE_DECL_OR_STUB(
-PetscErrorCode PetscManagedTypeEnsureOffload(PetscDeviceContext,PetscManagedType,PetscOffloadMask),
+PetscErrorCode PetscManagedTypeEnsureOffload(PetscDeviceContext PETSC_NO_DEVICE_UNUSED dctx, PetscManagedType PETSC_NO_DEVICE_UNUSED mtype, PetscOffloadMask PETSC_NO_DEVICE_UNUSED mask),
 {
   return 0;
 }

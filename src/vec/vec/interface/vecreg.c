@@ -174,7 +174,7 @@ PetscErrorCode VecGetRootType_Private(Vec vec, VecType *vtype)
 
 .seealso: `VecRegisterAll()`, `VecRegisterDestroy()`
 @*/
-PetscErrorCode VecRegister(const char sname[], PetscErrorCode (*function)(Vec))
+PetscErrorCode VecRegister(const char sname[], PetscErrorCode (*function)(Vec,PetscDeviceContext))
 {
   PetscFunctionBegin;
   PetscCall(VecInitializePackage());

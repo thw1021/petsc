@@ -117,8 +117,8 @@ PetscErrorCode VecReciprocal_SeqKokkos(Vec xin, PetscDeviceContext)
 }
 
 template <
-  template <typename...> typename FunctorType_,
-  template <typename...> typename CompareType_,
+  template <typename...> class FunctorType_,
+  template <typename...> class CompareType_,
   typename ScalarType = PetscReal,
   typename IndexType  = PetscInt
   >
@@ -322,7 +322,7 @@ struct MDotFunctor {
 };
 
 template<class WorkTag>
-PetscErrorCode VecMultiDot_Private(Vec xin,PetscInt nv,const Vec yin[],PetscScalar *z)
+static PetscErrorCode VecMultiDot_Private(Vec xin,PetscInt nv,const Vec yin[],PetscScalar *z)
 {
   PetscInt                        i,j,cur=0,ngroup=nv/8,rem=nv%8,N=xin->map->n;
   ConstPetscScalarKokkosView      xv,yv[8];
@@ -827,7 +827,7 @@ PetscErrorCode VecDotNorm2_SeqKokkos(Vec xin, Vec yin, PetscManagedScalar dp, Pe
   PetscCall(PetscLogGpuTimeBegin());
   PetscCall(VecGetKokkosView(xin,&xv));
   PetscCall(VecGetKokkosView(yin,&yv));
-  Kokkos::parallel_reduce(xin->map->n,DotNorm2{xv,yv},result);
+  Kokkos::parallel_reduce("DotNorm2",xin->map->n,DotNorm2{xv,yv},result);
   PetscCall(VecRestoreKokkosView(yin,&yv));
   PetscCall(VecRestoreKokkosView(xin,&xv));
   PetscCall(PetscLogGpuTimeEnd());

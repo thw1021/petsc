@@ -74,14 +74,14 @@ PETSC_INTERN PetscErrorCode VecReplaceArray_SeqKokkos(Vec,const PetscScalar*,Pet
 PETSC_INTERN PetscErrorCode VecDot_SeqKokkos(Vec,Vec,PetscManagedScalar,PetscDeviceContext);
 PETSC_INTERN PetscErrorCode VecTDot_SeqKokkos(Vec,Vec,PetscManagedScalar,PetscDeviceContext);
 PETSC_INTERN PetscErrorCode VecScale_SeqKokkos(Vec,PetscManagedScalar,PetscDeviceContext);
-PETSC_EXTERN PetscErrorCode VecCopy_SeqKokkos(Vec,Vec,PetscDeviceContext);
+PETSC_INTERN PetscErrorCode VecCopy_SeqKokkos(Vec,Vec,PetscDeviceContext);
 PETSC_INTERN PetscErrorCode VecSwap_SeqKokkos(Vec,Vec,PetscDeviceContext);
-PETSC_EXTERN PetscErrorCode VecAXPY_SeqKokkos(Vec,PetscManagedScalar,Vec,PetscDeviceContext);
+PETSC_INTERN PetscErrorCode VecAXPY_SeqKokkos(Vec,PetscManagedScalar,Vec,PetscDeviceContext);
 PETSC_INTERN PetscErrorCode VecAXPBY_SeqKokkos(Vec,PetscManagedScalar,PetscManagedScalar,Vec,PetscDeviceContext);
 PETSC_INTERN PetscErrorCode VecDuplicate_SeqKokkos(Vec,Vec*,PetscDeviceContext);
 PETSC_INTERN PetscErrorCode VecConjugate_SeqKokkos(Vec,PetscDeviceContext);
 PETSC_INTERN PetscErrorCode VecNorm_SeqKokkos(Vec,NormType,PetscManagedReal,PetscDeviceContext);
-PETSC_EXTERN PetscErrorCode VecCreate_SeqKokkos(Vec,PetscDeviceContext);
+PETSC_INTERN PetscErrorCode VecCreate_SeqKokkos(Vec,PetscDeviceContext);
 PETSC_INTERN PetscErrorCode VecCreate_MPIKokkos(Vec,PetscDeviceContext);
 PETSC_INTERN PetscErrorCode VecCreate_MPIKokkos_Private(Vec,PetscBool,PetscInt,const PetscScalar*);
 PETSC_INTERN PetscErrorCode VecCreate_Kokkos(Vec);

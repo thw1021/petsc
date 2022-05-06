@@ -20,7 +20,7 @@ extern PetscErrorCode VecCreate_Seq_Private(Vec,const float*);
 extern PetscErrorCode VecCreate_Seq_Private(Vec,const double*);
 #endif
 
-PETSC_EXTERN PetscErrorCode VecCreate_Seq(Vec V, PetscDeviceContext PETSC_UNUSED dctx)
+PetscErrorCode VecCreate_Seq(Vec V, PetscDeviceContext dctx)
 {
   Vec_Seq        *s;
   PetscScalar    *array;
@@ -33,7 +33,7 @@ PETSC_EXTERN PetscErrorCode VecCreate_Seq(Vec V, PetscDeviceContext PETSC_UNUSED
 #if !defined(PETSC_USE_MIXED_PRECISION)
   PetscCall(PetscCalloc1(n,&array));
   PetscCall(PetscLogObjectMemory((PetscObject)V, n*sizeof(PetscScalar)));
-  PetscCall(VecCreate_Seq_Private(V,array,NULL));
+  PetscCall(VecCreate_Seq_Private(V,array,dctx));
 
   s                  = (Vec_Seq*)V->data;
   s->array_allocated = array;
@@ -44,7 +44,7 @@ PETSC_EXTERN PetscErrorCode VecCreate_Seq(Vec V, PetscDeviceContext PETSC_UNUSED
 
     PetscCall(PetscCalloc1(n,&aarray));
     PetscCall(PetscLogObjectMemory((PetscObject)V, n*sizeof(float)));
-    PetscCall(VecCreate_Seq_Private(V,aarray,NULL));
+    PetscCall(VecCreate_Seq_Private(V,aarray,dctx));
 
     s                  = (Vec_Seq*)V->data;
     s->array_allocated = (PetscScalar*)aarray;
@@ -54,7 +54,7 @@ PETSC_EXTERN PetscErrorCode VecCreate_Seq(Vec V, PetscDeviceContext PETSC_UNUSED
 
     PetscCall(PetscCalloc1(n,&aarray));
     PetscCall(PetscLogObjectMemory((PetscObject)V, n*sizeof(double)));
-    PetscCall(VecCreate_Seq_Private(V,aarray,NULL));
+    PetscCall(VecCreate_Seq_Private(V,aarray,dctx));
 
     s                  = (Vec_Seq*)V->data;
     s->array_allocated = (PetscScalar*)aarray;

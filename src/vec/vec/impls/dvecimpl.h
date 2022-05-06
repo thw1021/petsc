@@ -52,6 +52,6 @@ PETSC_INTERN PetscErrorCode VecPointwiseMaxAbs_Seq(Vec,Vec,Vec,PetscDeviceContex
 PETSC_INTERN PetscErrorCode VecPointwiseMin_Seq(Vec,Vec,Vec,PetscDeviceContext);
 PETSC_INTERN PetscErrorCode VecPointwiseDivide_Seq(Vec,Vec,Vec,PetscDeviceContext);
 
-PETSC_EXTERN PetscErrorCode VecCreate_Seq(Vec,PetscDeviceContext);
+PETSC_INTERN PetscErrorCode VecCreate_Seq(Vec,PetscDeviceContext);
 PETSC_INTERN PetscErrorCode VecCreate_Seq_Private(Vec,const PetscScalar[],PetscDeviceContext);
 #endif

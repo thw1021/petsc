@@ -4,6 +4,7 @@
 #include <../src/mat/impls/aij/mpi/mpiaij.h>
 #include <../src/mat/impls/aij/mpi/kokkos/mpiaijkok.hpp>
 #include <KokkosSparse_spadd.hpp>
+#include <petscdevice_cupm.h>
 
 PetscErrorCode MatAssemblyEnd_MPIAIJKokkos(Mat A,MatAssemblyType mode)
 {

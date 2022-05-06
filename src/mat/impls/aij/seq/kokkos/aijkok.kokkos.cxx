@@ -4,6 +4,7 @@
 #include <petsc/private/sfimpl.h>
 #include <petscsystypes.h>
 #include <petscerror.h>
+#include <petscdevice_cupm.h>
 
 #include <Kokkos_Core.hpp>
 #include <KokkosBlas.hpp>
