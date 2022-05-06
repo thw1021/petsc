@@ -614,6 +614,19 @@ struct Interface : InterfaceImpl<T>
     PetscUnreachable();
     return cupmMemcpyDefault;
   }
+
+  template <typename M>
+  PETSC_CXX_COMPAT_DECL(cupmError_t cupmMallocAsync(M **ptr, std::size_t n, cupmStream_t stream))
+  {
+    return cupmMallocAsync(reinterpret_cast<void**>(ptr),n*sizeof(*ptr),stream);
+  }
+
+  template <typename D, typename S = D>
+  PETSC_CXX_COMPAT_DECL(cupmError_t cupmMemcpyAsync(D *dest, const S *src, std::size_t n, cupmMemcpyKind_t kind, cupmStream_t stream))
+  {
+    static_assert(sizeof(D) == sizeof(S),"");
+    return cupmMemcpyAsync(dest,src,n*sizeof(*src),kind,stream);
+  }
 };
 
 #define PETSC_CUPM_INHERIT_INTERFACE_TYPEDEFS_USING(base_name,T)        \
@@ -625,6 +638,8 @@ struct Interface : InterfaceImpl<T>
   using base_name::cupmScalarCast;                                      \
   using base_name::cupmRealCast;                                        \
   using base_name::cupmGetMemType;                                      \
+  using base_name::cupmMallocAsync;                                     \
+  using base_name::cupmMemcpyAsync;                                     \
   using base_name::PetscDeviceCopyModeToCUPMMemcpyKind
 
 } // namespace Impl

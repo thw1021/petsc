@@ -114,6 +114,8 @@ public:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode shift_async(Vec,PetscManagedScalar,PetscDeviceContext));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode setrandom_async(Vec,PetscRandom,PetscDeviceContext));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode bindtocpu_async(Vec,PetscBool,PetscDeviceContext));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode setpreallocationcoo_async(Vec,PetscCount,const PetscInt[],PetscDeviceContext));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode setvaluescoo_async(Vec,const PetscScalar[],InsertMode,PetscDeviceContext));
 };
 
 template <Device::CUPM::DeviceType T>
@@ -184,6 +186,7 @@ template <Device::CUPM::DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::destroy_async(Vec v, PetscDeviceContext dctx))
 {
   PetscFunctionBegin;
+  PetscCall(ResetPreallocationCOO_(v,dctx));
   PetscCall(Destroy_CUPMBase(v,dctx,VecDestroy_Seq));
   PetscFunctionReturn(0);
 }
@@ -212,6 +215,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::bindtocpu_async(Vec v, Pets
   VecSetOp_CUPM(conjugate,VecConjugate_Seq,conjugate_async);
   VecSetOp_CUPM(max,VecMax_Seq,max_async);
   VecSetOp_CUPM(min,VecMin_Seq,min_async);
+  VecSetOp_CUPM(setpreallocationcoo,VecSetPreallocationCOO_Seq,setpreallocationcoo_async);
+  VecSetOp_CUPM(setvaluescoo,VecSetValuesCOO_Seq,setvaluescoo_async);
   PetscFunctionReturn(0);
 }
 
@@ -282,12 +287,12 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::getlocalvector_async(Vec v,
       wseq->array = wseq->unplacedarray = nullptr;
     }
     if (const auto wcu = VecCUPMCast(w)) {
-      if (auto& device_array = wcu->device_array) {
+      if (auto& device_array = wcu->array_d) {
         cupmStream_t stream;
 
         PetscCall(GetHandles_(dctx,&stream));
         PetscCallCUPM(cupmFreeAsync(device_array,stream));
-        device_array = nullptr;
+        array_d = nullptr;
       }
       PetscCall(PetscFree(w->spptr /* wcu */));
     }
@@ -341,7 +346,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::restorelocalvector_async(Ve
       cupmStream_t stream;
 
       PetscCall(GetHandles_(dctx,&stream));
-      PetscCallCUPM(cupmFreeAsync(VecCUPMCast(w)->device_array,stream));
+      PetscCallCUPM(cupmFreeAsync(VecCUPMCast(w)->array_d,stream));
       PetscCall(PetscFree(w->spptr));
     }
   }
@@ -1300,6 +1305,86 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::setrandom_async(Vec v, Pets
   else PetscCall(PetscRandomGetValues(rand,n,HostArrayWrite(dctx,v)));
   // REVIEW ME: flops????
   // REVIEW ME: Timing???
+  PetscFunctionReturn(0);
+}
+
+template <Device::CUPM::DeviceType T>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::setpreallocationcoo_async(Vec v, PetscCount ncoo, const PetscInt coo_i[], PetscDeviceContext dctx))
+{
+  const auto   vseq = VecIMPLCast(x);
+  const auto   vcu  = VecCUPMCast(x);
+  cupmStream_t stream;
+
+  PetscFunctionBegin;
+  PetscCall(ResetPreallocationCOO_(v,dctx));
+  PetscCall(VecSetPreallocationCOO_Seq(x,ncoo,coo_i));
+  PetscCall(GetHandles_(dctx,&stream));
+  {
+    const auto jmap_bytes = (v->map->n+1)*sizeof(*vcu->jmap1_d);
+    const auto perm_bytes = vseq->tot1*sizeof(*vcu->perm1_d);
+
+    // REVIEW ME: this can be done with one allocation, with each pointer getting a slice of
+    // it. Doing it this way reduces the number of memcpys, presumably vseq->jmap1 and
+    // vseq->perm1 are not allocated using pinned memory so each of these memcpys are actually
+    // vseq->fully synchronous
+    static_assert(std::is_same<decltype(vseq->jmap1),decltype(vcu->jmap1_d)>::value,"");
+    static_assert(std::is_same<decltype(vseq->perm1),decltype(vcu->perm1_d)>::value,"");
+    PetscCallCUPM(cupmMallocAsync(reinterpret_cast<void**>(&vcu->jmap1_d),jmap_bytes,stream));
+    PetscCallCUPM(cupmMallocAsync(reinterpret_cast<void**>(&vcu->perm1_d),perm_bytes,stream));
+    PetscCallCUPM(cupmMemcpyAsync(vcu->jmap1_d,vseq->jmap1,jmap_bytes,cupmMemcpyHostToDevice,stream));
+    PetscCallCUPM(cupmMemcpyAsync(vcu->perm1_d,vseq->perm1,perm_bytes,cupmMemcpyHostToDevice,stream));
+  }
+  PetscFunctionReturn(0);
+}
+
+namespace kernels
+{
+
+PETSC_KERNEL_DECL static void add_coo_values(const PetscScalar *PETSC_RESTRICT vv, PetscCount m, const PetscCount *PETSC_RESTRICT jmap1, const PetscCount *PETSC_RESTRICT perm1, InsertMode imode, PetscScalar *PETSC_RESTRICT xv)
+{
+  const auto grid_size = static_cast<PetscCount>(gridDim.x*blockDim.x);
+
+  for (PetscCount i = blockIdx.x*blockDim.x+threadIdx.x; i < m; i += grid_size) {
+    PetscScalar sum = 0.0;
+
+    for (auto k = jmap1[i]; k < jmap1[i+1]; ++k) sum += vv[perm1[k]];
+
+    if (imode == INSERT_VALUES) {
+      xv[i] = sum;
+    } else {
+      xv[i] += sum;
+    }
+  }
+  return;
+}
+
+} // namespace kernels
+
+template <Device::CUPM::DeviceType T>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::setvaluescoo_async(Vec x, const PetscScalar v[], InsertMode imode, PetscDeviceContext dctx))
+{
+  auto         vv   = v;
+  PetscMemType memtype;
+  cupmStream_t stream;
+
+  PetscFunctionBegin;
+  PetscCall(GetHandles_(dctx,&stream));
+  PetscCall(PetscGetMemType(v,&memtype));
+  if (PetscMemTypeHost(memtype)) {
+    const auto bytes = VecIMPLCast(x)->coo_n*sizeof(*vv);
+
+    /* If user gave v[] in host, we might need to copy it to device if any */
+    PetscCallCUPM(cupmMallocAsync(reinterpret_cast<void**>(&vv),bytes,stream));
+    PetscCallCUPM(cupmMemcpyAsync(const_cast<void*>(vv),v,bytes,cupmMemcpyHostToDevice,stream));
+  }
+
+  if (const auto n = v->map->n) {
+    const auto vcu = VecCUPMCast(x);
+
+    PetscCallCUPM(cupmLaunchKernel(kernels::add_coo_values,(n+255)/256,256,0,stream,vv,n,vcu->jmap1_d,vcu->perm1_d,imode,imode == INSERT_VALUES ? DeviceArrayWrite(dctx,x) : DeviceArrayReadWrite(dctx,x)));
+  }
+
+  if (PetscMemTypeHost(memtype)) PetscCallCUPM(cupmFreeAsync(vv,stream));
   PetscFunctionReturn(0);
 }
 
