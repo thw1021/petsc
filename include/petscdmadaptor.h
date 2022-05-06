@@ -3,6 +3,7 @@
 */
 #if !defined(PETSCDMADAPTOR_H)
 #define PETSCDMADAPTOR_H
+
 #include <petscdm.h>
 #include <petscconvest.h>
 

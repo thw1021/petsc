@@ -4,9 +4,9 @@
 #if !defined(PETSCCE_H)
 #define PETSCCE_H
 
-#include <petscsys.h>
+#include <petscsnes.h>
 
-/* SUBMANSEC = Sys */
+/* SUBMANSEC = SNES */
 
 /*S
   PetscConvEst - Provides an estimated convergence rate for a discretized problem
