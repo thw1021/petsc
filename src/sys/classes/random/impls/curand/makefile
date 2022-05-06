@@ -1,9 +1,6 @@
+-include ../../../../../../petsckdir.mk
 #requirespackage 'PETSC_HAVE_CUDA'
 
-ALL: lib
-
-CFLAGS   =
-FFLAGS   =
 SOURCEC  = curand.c
 SOURCECU = curand2.cu
 SOURCEF  =

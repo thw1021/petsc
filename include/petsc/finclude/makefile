@@ -1,7 +1,6 @@
+-include ../../../petsckdir.mk
 #requiresdefine   'PETSC_HAVE_FORTRAN'
 
-CFLAGS    =
-FFLAGS    =
 SOURCEC   =
 SOURCEF   =
 SOURCEH   = petsc.h  petscsys.h petsclog.h petscvec.h petscsnes.h petscdm.h petscdmda.h \
