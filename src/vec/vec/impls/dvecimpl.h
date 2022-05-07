@@ -59,6 +59,6 @@ PETSC_INTERN PetscErrorCode VecPointwiseDivide_Seq(Vec,Vec,Vec,PetscDeviceContex
 
 PETSC_INTERN PetscErrorCode VecCreate_Seq(Vec,PetscDeviceContext);
 PETSC_INTERN PetscErrorCode VecCreate_Seq_Private(Vec,const PetscScalar[],PetscDeviceContext);
-PETSC_INTERN PetscErrorCode VecSetPreallocationCOO_Seq(Vec,PetscCount,const PetscInt[]);
-PETSC_INTERN PetscErrorCode VecSetValuesCOO_Seq(Vec,const PetscScalar[],InsertMode);
+PETSC_INTERN PetscErrorCode VecSetPreallocationCOO_Seq(Vec,PetscCount,const PetscInt[],PetscDeviceContext);
+PETSC_INTERN PetscErrorCode VecSetValuesCOO_Seq(Vec,const PetscScalar[],InsertMode,PetscDeviceContext);
 #endif

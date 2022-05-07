@@ -203,7 +203,7 @@ static PetscErrorCode VecGetSubVector_MPIKokkos(Vec x,IS is,Vec *y)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecSetPreallocationCOO_MPIKokkos(Vec x, PetscCount ncoo, const PetscInt coo_i[])
+static PetscErrorCode VecSetPreallocationCOO_MPIKokkos(Vec x, PetscCount ncoo, const PetscInt coo_i[], PetscDeviceContext dctx)
 {
   Vec_MPI                     *vecmpi = static_cast<Vec_MPI*>(x->data);
   Vec_Kokkos                  *veckok = static_cast<Vec_Kokkos*>(x->spptr);
@@ -211,12 +211,12 @@ static PetscErrorCode VecSetPreallocationCOO_MPIKokkos(Vec x, PetscCount ncoo, c
 
   PetscFunctionBegin;
   PetscCall(VecGetLocalSize(x,&m));
-  PetscCall(VecSetPreallocationCOO_MPI(x,ncoo,coo_i));
+  PetscCall(VecSetPreallocationCOO_MPI(x,ncoo,coo_i,dctx));
   PetscCallCXX(veckok->SetUpCOO(vecmpi,m));
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecSetValuesCOO_MPIKokkos(Vec x,const PetscScalar v[],InsertMode imode)
+static PetscErrorCode VecSetValuesCOO_MPIKokkos(Vec x,const PetscScalar v[],InsertMode imode,PetscDeviceContext)
 {
   Vec_MPI                     *vecmpi = static_cast<Vec_MPI*>(x->data);
   Vec_Kokkos                  *veckok = static_cast<Vec_Kokkos*>(x->spptr);

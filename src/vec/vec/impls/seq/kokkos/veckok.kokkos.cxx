@@ -1094,20 +1094,20 @@ PetscErrorCode VecRestoreSubVector_SeqKokkos(Vec x,IS is,Vec *y)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecSetPreallocationCOO_SeqKokkos(Vec x, PetscCount ncoo, const PetscInt coo_i[])
+static PetscErrorCode VecSetPreallocationCOO_SeqKokkos(Vec x, PetscCount ncoo, const PetscInt coo_i[], PetscDeviceContext dctx)
 {
   Vec_Seq      *vecseq = static_cast<Vec_Seq*>(x->data);
   Vec_Kokkos   *veckok = static_cast<Vec_Kokkos*>(x->spptr);
   PetscInt     m;
 
   PetscFunctionBegin;
-  PetscCall(VecSetPreallocationCOO_Seq(x,ncoo,coo_i));
+  PetscCall(VecSetPreallocationCOO_Seq(x,ncoo,coo_i,dctx));
   PetscCall(VecGetLocalSize(x,&m));
   PetscCallCXX(veckok->SetUpCOO(vecseq,m));
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecSetValuesCOO_SeqKokkos(Vec x,const PetscScalar v[],InsertMode imode)
+static PetscErrorCode VecSetValuesCOO_SeqKokkos(Vec x,const PetscScalar v[],InsertMode imode,PetscDeviceContext)
 {
   Vec_Seq                     *vecseq = static_cast<Vec_Seq*>(x->data);
   Vec_Kokkos                  *veckok = static_cast<Vec_Kokkos*>(x->spptr);

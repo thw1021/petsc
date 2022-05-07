@@ -230,7 +230,10 @@ PetscErrorCode VecSetPreallocationCOO(Vec x,PetscCount ncoo,const PetscInt coo_i
   PetscCall(PetscLogEventBegin(VEC_SetPreallocateCOO,x,0,0,0));
   PetscCall(PetscLayoutSetUp(x->map));
   if (x->ops->setpreallocationcoo) {
-    PetscCall((*x->ops->setpreallocationcoo)(x,ncoo,coo_i));
+    PetscDeviceContext dctx;
+
+    PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
+    PetscCall((*x->ops->setpreallocationcoo)(x,ncoo,coo_i,dctx));
   } else {
     IS is_coo_i;
     /* The default implementation only supports ncoo within limit of PetscInt */
@@ -310,7 +313,10 @@ PetscErrorCode VecSetValuesCOO(Vec x,const PetscScalar coo_v[],InsertMode imode)
   PetscValidLogicalCollectiveEnum(x,imode,3);
   PetscCall(PetscLogEventBegin(VEC_SetValuesCOO,x,0,0,0));
   if (x->ops->setvaluescoo) {
-    PetscCall((*x->ops->setvaluescoo)(x,coo_v,imode));
+    PetscDeviceContext dctx;
+
+    PetscCall(PetscDeviceContextGetNullContext_Internal(&dctx));
+    PetscCall((*x->ops->setvaluescoo)(x,coo_v,imode,dctx));
     PetscCall(PetscObjectStateIncrease((PetscObject)x));
   } else {
     IS             is_coo_i;

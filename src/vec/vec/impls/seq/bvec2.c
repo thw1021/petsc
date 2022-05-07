@@ -671,7 +671,7 @@ static PetscErrorCode VecResetPreallocationCOO_Seq(Vec x)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecSetPreallocationCOO_Seq(Vec x,PetscCount coo_n,const PetscInt coo_i[])
+PetscErrorCode VecSetPreallocationCOO_Seq(Vec x,PetscCount coo_n,const PetscInt coo_i[], PetscDeviceContext PETSC_UNUSED dctx)
 {
   PetscInt       m,*i;
   PetscCount     k,nneg;
@@ -713,7 +713,7 @@ PetscErrorCode VecSetPreallocationCOO_Seq(Vec x,PetscCount coo_n,const PetscInt 
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecSetValuesCOO_Seq(Vec x,const PetscScalar coo_v[],InsertMode imode)
+PetscErrorCode VecSetValuesCOO_Seq(Vec x,const PetscScalar coo_v[],InsertMode imode,PetscDeviceContext PETSC_UNUSED dctx)
 {
   Vec_Seq          *vs = (Vec_Seq*)x->data;
   const PetscCount *perm1 = vs->perm1,*jmap1 = vs->jmap1;

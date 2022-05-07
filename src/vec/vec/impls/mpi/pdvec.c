@@ -1036,7 +1036,7 @@ PetscErrorCode VecAssemblyEnd_MPI(Vec vec)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecSetPreallocationCOO_MPI(Vec x,PetscCount coo_n,const PetscInt coo_i[])
+PetscErrorCode VecSetPreallocationCOO_MPI(Vec x,PetscCount coo_n,const PetscInt coo_i[],PetscDeviceContext PETSC_UNUSED dctx)
 {
   PetscInt       m,M,rstart,rend;
   Vec_MPI        *vmpi = (Vec_MPI*)x->data;
@@ -1259,7 +1259,7 @@ PetscErrorCode VecSetPreallocationCOO_MPI(Vec x,PetscCount coo_n,const PetscInt 
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode VecSetValuesCOO_MPI(Vec x,const PetscScalar v[],InsertMode imode)
+PetscErrorCode VecSetValuesCOO_MPI(Vec x,const PetscScalar v[],InsertMode imode,PetscDeviceContext PETSC_UNUSED dctx)
 {
   Vec_MPI              *vmpi = (Vec_MPI*)x->data;
   PetscInt             m;

@@ -105,8 +105,8 @@ struct _VecOps {
   PetscErrorCode (*restorearraywriteandmemtype)(Vec,PetscScalar**,PetscMemType*,PetscDeviceContext);
   PetscErrorCode (*concatenate)(PetscInt,const Vec[],Vec*,IS*[]);
   PetscErrorCode (*sum)(Vec,PetscManagedScalar,PetscDeviceContext);
-  PetscErrorCode (*setpreallocationcoo)(Vec,PetscCount,const PetscInt[]);
-  PetscErrorCode (*setvaluescoo)(Vec,const PetscScalar[],InsertMode);
+  PetscErrorCode (*setpreallocationcoo)(Vec,PetscCount,const PetscInt[],PetscDeviceContext);
+  PetscErrorCode (*setvaluescoo)(Vec,const PetscScalar[],InsertMode,PetscDeviceContext);
 };
 
 /*

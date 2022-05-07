@@ -86,6 +86,6 @@ PETSC_EXTERN PetscErrorCode VecCreate_MPI(Vec,PetscDeviceContext);
 PETSC_INTERN PetscErrorCode VecDuplicate_MPI(Vec,Vec*,PetscDeviceContext);
 PETSC_INTERN PetscErrorCode VecResetArray_MPI(Vec,PetscDeviceContext);
 PETSC_INTERN PetscErrorCode VecPlaceArray_MPI(Vec,const PetscScalar*,PetscDeviceContext);
-PETSC_INTERN PetscErrorCode VecSetPreallocationCOO_MPI(Vec,PetscCount,const PetscInt[]);
-PETSC_INTERN PetscErrorCode VecSetValuesCOO_MPI(Vec,const PetscScalar[],InsertMode);
+PETSC_INTERN PetscErrorCode VecSetPreallocationCOO_MPI(Vec,PetscCount,const PetscInt[],PetscDeviceContext);
+PETSC_INTERN PetscErrorCode VecSetValuesCOO_MPI(Vec,const PetscScalar[],InsertMode,PetscDeviceContext);
 #endif
