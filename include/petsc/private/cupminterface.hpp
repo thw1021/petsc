@@ -652,6 +652,9 @@ struct Interface : InterfaceImpl<T>
     PetscCheck(dest,PETSC_COMM_SELF,PETSC_ERR_POINTER,"Trying to copy to a NULL pointer");
     PetscCheck(src,PETSC_COMM_SELF,PETSC_ERR_POINTER,"Trying to copy from a NULL pointer");
     PetscCallCUPM(cupmMemcpyAsync(dest,src,size,kind,stream));
+    // do this with preprocessors, since if no log is used the functions below are macros and
+    // hence the ternary is ill-formed
+#if PetscDefined(USE_LOG)
     // only the explicit HTOD or DTOH are handled, since we either don't log the other cases
     // (yet) or don't know the direction
     if (kind == cupmMemcpyDeviceToHost) {
@@ -659,6 +662,7 @@ struct Interface : InterfaceImpl<T>
     } else if (kind == cupmMemcpyHostToDevice) {
       PetscCall((is_scalar ? PetscLogCpuToGpuScalar : PetscLogCpuToGpu)(size));
     }
+#endif
     PetscFunctionReturn(0);
   }
 
