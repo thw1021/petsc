@@ -297,7 +297,7 @@ PetscErrorCode TSSSPGetType(TS ts,TSSSPType *type)
 
    Options Database Keys:
    -ts_ssp_type <rks2>: NumStages of SSP method (one of) rks2 rks3 rk104
-   -ts_ssp_nstages <5>: Number of stages
+   -ts_ssp_nstages <4>: Number of stages
 
    Level: beginner
 
