@@ -529,14 +529,11 @@ struct InterfaceImpl<DeviceType::HIP> : InterfaceBase<DeviceType::HIP>
   using base_name::cupmStreamSynchronize;                               \
   using base_name::cupmDeviceSynchronize;                               \
   using base_name::cupmGetSymbolAddress;                                \
-  using base_name::cupmFree;                                            \
-  using base_name::cupmFreeAsync;                                       \
   using base_name::cupmMalloc;                                          \
   using base_name::cupmMallocAsync;                                     \
   using base_name::cupmMemcpy;                                          \
   using base_name::cupmMemcpyAsync;                                     \
   using base_name::cupmMallocHost;                                      \
-  using base_name::cupmFreeHost;                                        \
   using base_name::cupmMemsetAsync;                                     \
   using base_name::cupmLaunchKernel
 
@@ -615,17 +612,99 @@ struct Interface : InterfaceImpl<T>
     return cupmMemcpyDefault;
   }
 
+  // these change what the arguments mean, so need to namespace these
   template <typename M>
-  PETSC_CXX_COMPAT_DECL(cupmError_t cupmMallocAsync(M **ptr, std::size_t n, cupmStream_t stream))
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscCUPMMallocAsync(M **ptr, std::size_t n, cupmStream_t stream))
   {
-    return cupmMallocAsync(reinterpret_cast<void**>(ptr),n*sizeof(*ptr),stream);
+    PetscFunctionBegin;
+    PetscValidPointer(ptr,1);
+    PetscCallCUPM(cupmMallocAsync(reinterpret_cast<void**>(ptr),n*sizeof(*ptr),stream));
+    PetscFunctionReturn(0);
   }
 
-  template <typename D, typename S = D>
-  PETSC_CXX_COMPAT_DECL(cupmError_t cupmMemcpyAsync(D *dest, const S *src, std::size_t n, cupmMemcpyKind_t kind, cupmStream_t stream))
+  template <typename M>
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscCUPMMalloc(M **ptr, std::size_t n))
+  {
+    PetscFunctionBegin;
+    PetscCall(PetscCUPMMallocAsync(ptr,n,nullptr));
+    PetscFunctionReturn(0);
+  }
+
+  template <typename M>
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscCUPMMallocHost(M **ptr, std::size_t n))
+  {
+    PetscFunctionBegin;
+    PetscValidPointer(ptr,1);
+    PetscCall(cupmMallocHost(reinterpret_cast<void**>(ptr),n*sizeof(*ptr)));
+    PetscFunctionReturn(0);
+  }
+
+  template <typename D, typename S>
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscCUPMMemcpyAsync(D *dest, const S *src, std::size_t n, cupmMemcpyKind_t kind, cupmStream_t stream))
   {
     static_assert(sizeof(D) == sizeof(S),"");
-    return cupmMemcpyAsync(dest,src,n*sizeof(*src),kind,stream);
+    static_assert(!std::is_void<D>::value && !std::is_void<S>::value,"");
+    constexpr auto is_scalar = std::is_same<util::remove_cv_t<D>,PetscScalar>::value;
+    const auto     size      = n*sizeof(*src);
+
+    PetscFunctionBegin;
+    // cannot dereference (i.e. cannot call PetscValidPointer() here)
+    PetscCheck(dest,PETSC_COMM_SELF,PETSC_ERR_POINTER,"Trying to copy to a NULL pointer");
+    PetscCheck(src,PETSC_COMM_SELF,PETSC_ERR_POINTER,"Trying to copy from a NULL pointer");
+    PetscCallCUPM(cupmMemcpyAsync(dest,src,size,kind,stream));
+    // only the explicit HTOD or DTOH are handled, since we either don't log the other cases
+    // (yet) or don't know the direction
+    if (kind == cupmMemcpyDeviceToHost) {
+      PetscCall((is_scalar ? PetscLogGpuToCpuScalar : PetscLogGpuToCpu)(size));
+    } else if (kind == cupmMemcpyHostToDevice) {
+      PetscCall((is_scalar ? PetscLogCpuToGpuScalar : PetscLogCpuToGpu)(size));
+    }
+    PetscFunctionReturn(0);
+  }
+
+  template <typename D, typename S>
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscCUPMMemcpy(D *dest, const S *src, std::size_t n, cupmMemcpyKind_t kind))
+  {
+    PetscFunctionBegin;
+    PetscCall(PetscCUPMMemcpyAsync(dest,src,n,kind,nullptr));
+    PetscFunctionReturn(0);
+  }
+
+  template <typename M>
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscCUPMMemsetAsync(M *ptr, int value, std::size_t n, cupmStream_t stream))
+  {
+    PetscFunctionBegin;
+    PetscCheck(ptr,PETSC_COMM_SELF,PETSC_ERR_POINTER,"Trying to memset a NULL pointer");
+    PetscCallCUPM(PetscCUPMMemsetAsync(ptr,value,n*sizeof(*ptr),stream));
+    PetscFunctionReturn(0);
+  }
+
+  template <typename M>
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscCUPMMemset(M *ptr, int value, std::size_t n))
+  {
+    PetscFunctionBegin;
+    PetscCall(PetscCUPMMemsetAsync(ptr,value,n,nullptr));
+    PetscFunctionReturn(0);
+  }
+
+  // these we can transparently wrap, no need to namespace it to Petsc
+  template <typename M>
+  PETSC_CXX_COMPAT_DECL(cupmError_t cupmFreeAsync(M *&ptr, cupmStream_t stream))
+  {
+    const auto cerr = interface_type::cupmFreeAsync(ptr,stream);
+    ptr = nullptr;
+    return cerr;
+  }
+
+  template <typename M>
+  PETSC_CXX_COMPAT_DECL(cupmError_t cupmFree(M *&ptr)) { return cupmFreeAsync(ptr,nullptr); }
+
+  template <typename M>
+  PETSC_CXX_COMPAT_DECL(cupmError_t cupmFreeHost(M *&ptr))
+  {
+    const auto cerr = interface_type::cupmFreeHost(ptr);
+    ptr = nullptr;
+    return cerr;
   }
 };
 
@@ -638,8 +717,16 @@ struct Interface : InterfaceImpl<T>
   using base_name::cupmScalarCast;                                      \
   using base_name::cupmRealCast;                                        \
   using base_name::cupmGetMemType;                                      \
-  using base_name::cupmMallocAsync;                                     \
-  using base_name::cupmMemcpyAsync;                                     \
+  using base_name::PetscCUPMMemset;                                     \
+  using base_name::PetscCUPMMemsetAsync;                                \
+  using base_name::PetscCUPMMalloc;                                     \
+  using base_name::PetscCUPMMallocAsync;                                \
+  using base_name::PetscCUPMMallocHost;                                 \
+  using base_name::PetscCUPMMemcpy;                                     \
+  using base_name::PetscCUPMMemcpyAsync;                                \
+  using base_name::cupmFree;                                            \
+  using base_name::cupmFreeAsync;                                       \
+  using base_name::cupmFreeHost;                                        \
   using base_name::PetscDeviceCopyModeToCUPMMemcpyKind
 
 } // namespace Impl

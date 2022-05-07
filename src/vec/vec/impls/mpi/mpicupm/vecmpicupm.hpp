@@ -57,6 +57,8 @@ public:
   PETSC_CXX_COMPAT_DECL(PetscErrorCode dotnorm2_async(Vec,Vec,PetscManagedScalar,PetscManagedScalar,PetscDeviceContext));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode max_async(Vec,PetscManagedInt,PetscManagedReal,PetscDeviceContext));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode min_async(Vec,PetscManagedInt,PetscManagedReal,PetscDeviceContext));
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode setpreallocationcoo_async(Vec,PetscCount,const PetscInt[],PetscDeviceContext));
+  PETSC_CXX_COMPAT_DEFN(PetscErrorCode setvaluescoo_async(Vec,const PetscScalar[],InsertMode,PetscDeviceContext));
 };
 
 template <Device::CUPM::DeviceType T>
@@ -320,15 +322,104 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::min_async(Vec x, PetscManag
   PetscFunctionReturn(0);
 }
 
-// declare the extern templates, each is explicitly instantiated in the respective
-// implementation directories
-#if PetscDefined(HAVE_CUDA)
-extern template struct VecMPI_CUPM<Device::CUPM::DeviceType::CUDA>;
-#endif
+template <Device::CUPM::DeviceType T>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::setpreallocationcoo_async(Vec x, PetscCount ncoo, const PetscInt coo_i[], PetscDeviceContext dctx))
+{
+  PetscFunctionBegin;
+  PetscCall(VecSetPreallocationCOO_MPI(x,ncoo,coo_i,dctx));
+  // both of these must exist for this to work
+  PetscCall(VecCUPMAllocateCheck_(x));
+  {
+    const auto vcu  = VecCUPMCast(x);
+    const auto vmpi = VecIMPLCast(x);
 
-#if PetscDefined(HAVE_HIP)
-extern template struct VecMPI_CUPM<Device::CUPM::DeviceType::HIP>;
-#endif
+    PetscCall(
+      SetPreallocationCOO_CUPMBase(
+        x,ncoo,coo_i,dctx,
+        util::make_array<CooPair<PetscCount>>({
+            {vcu->imap2_d,vmpi->imap2,vmpi->nnz2},
+            {vcu->jmap2_d,vmpi->jmap2,vmpi->nnz2+1},
+            {vcu->perm2_d,vmpi->perm2,vmpi->recvlen},
+            {vcu->Cperm_d,vmpi->Cperm,vmpi->sendlen}
+          }),
+        util::make_array<CooPair<PetscScalar>>({
+            {vcu->sendbuf_d,vmpi->sendbuf,vmpi->sendlen},
+            {vcu->recvbuf_d,vmpi->recvbuf,vmpi->recvlen},
+          })
+      )
+    );
+  }
+  PetscFunctionReturn(0);
+}
+
+namespace kernels
+{
+
+PETSC_KERNEL_DECL static void pack_coo_values(const PetscScalar *PETSC_RESTRICT vv, PetscCount nnz, const PetscCount *PETSC_RESTRICT perm, PetscScalar *PETSC_RESTRICT buf)
+{
+  const auto grid_size = static_cast<PetscCount>(gridDim.x*blockDim.x);
+  for (PetscCount i = blockIdx.x*blockDim.x+threadIdx.x; i < nnz; i += grid_size) buf[i] = vv[perm[i]];
+  return;
+}
+
+PETSC_KERNEL_DECL static void add_remote_coo_values(const PetscScalar *PETSC_RESTRICT vv, PetscCount nnz2, const PetscCount *PETSC_RESTRICT imap2, const PetscCount *PETSC_RESTRICT jmap2, const PetscCount *PETSC_RESTRICT perm2, PetscScalar *PETSC_RESTRICT xv)
+{
+  add_coo_values_impl(vv,nnz2,jmap2,perm2,ADD_VALUES,xv,[=](PetscCount i){ return imap2[i]; });
+  return;
+}
+
+} // namespace kernels
+
+template <Device::CUPM::DeviceType T>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::setvaluescoo_async(Vec x, const PetscScalar v[], InsertMode imode, PetscDeviceContext dctx))
+{
+  constexpr auto  mtype     = cupmDeviceTypeToPetscMemType();
+  const auto      vmpi      = VecIMPLCast(x);
+  const auto      sf        = vmpi->coo_sf;
+  const auto      vcu       = VecCUPMCast(x);
+  const auto      sendbuf_d = vcu->sendbuf_d;
+  const auto      recvbuf_d = vcu->recvbuf_d;
+  const auto      xv        = imode == INSERT_VALUES ? DeviceArrayWrite(dctx,x).data() : DeviceArrayReadWrite(dctx,x).data();
+  auto           *vv        = v;
+  PetscMemType    v_memtype;
+  cupmStream_t    stream;
+
+  PetscFunctionBegin;
+  PetscCall(GetHandles_(dctx,&stream));
+  PetscCall(PetscGetMemType(v,&v_memtype));
+
+  if (PetscMemTypeHost(v_memtype)) {
+    const auto size = vmpi->coo_n;
+
+    /* If user gave v[] in host, we might need to copy it to device if any */
+    PetscCall(PetscCUPMMallocAsync(&vv,size,stream));
+    PetscCall(PetscCUPMMemcpyAsync(const_cast<PetscScalar*>(vv),v,size,cupmMemcpyHostToDevice,stream));
+  }
+
+  /* Pack entries to be sent to remote */
+  if (const auto sendlen = VecIMPLCast(x)->sendlen) {
+    PetscCallCUPM(cupmLaunchKernel(kernels::pack_coo_values,(sendlen+255)/256,256,0,stream,vv,sendlen,vcu->Cperm_d,sendbuf_d));
+    // need to sync up here since we are about to send this to petscsf
+    // REVIEW ME: no we dont, sf just needs to learn to use PetscDeviceContext
+    PetscCallCUPM(cupmStreamSynchronize(stream));
+  }
+
+  PetscCall(PetscSFReduceWithMemTypeBegin(sf,MPIU_SCALAR,mtype,sendbuf_d,mtype,recvbuf_d,MPI_REPLACE));
+
+  if (const auto n = x->map->n) {
+    PetscCallCUPM(cupmLaunchKernel(kernels::add_coo_values,(n+255)/256,256,0,stream,vv,n,vcu->jmap1_d,vcu->perm1_d,imode,xv));
+  }
+
+  PetscCall(PetscSFReduceEnd(sf,MPIU_SCALAR,sendbuf_d,recvbuf_d,MPI_REPLACE));
+
+  /* Add received remote entries */
+  if (const auto nnz2 = vmpi->nnz2) {
+    PetscCallCUPM(cupmLaunchKernel(kernels::add_remote_coo_values,(nnz2+255)/256,256,0,stream,recvbuf_d,nnz2,vcu->imap2,vcu->jmap2,vcu->perm2,xv));
+  }
+
+  if (PetscMemTypeHost(v_memtype)) PetscCallCUPM(cupmFreeAsync(vv,stream));
+  PetscFunctionReturn(0);
+}
 
 } // namespace Impl
 

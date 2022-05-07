@@ -7,6 +7,22 @@
 #include <type_traits>
 #include <tuple>
 
+// basic building blocks
+#define PETSC_DECLTYPE_AUTO(...)         -> decltype(__VA_ARGS__)
+#define PETSC_NOEXCEPT_AUTO(...)         noexcept(noexcept(__VA_ARGS__))
+#define PETSC_RETURNS(...)               { return __VA_ARGS__; }
+
+// one without the other
+#define PETSC_DECLTYPE_AUTO_RETURNS(...) PETSC_DECLTYPE_AUTO(__VA_ARGS__) PETSC_RETURNS(__VA_ARGS__)
+#define PETSC_NOEXCEPT_AUTO_RETURNS(...) PETSC_NOEXCEPT_AUTO(__VA_ARGS__) PETSC_RETURNS(__VA_ARGS__)
+
+// both
+#define PETSC_DECLTYPE_NOEXCEPT_AUTO(...)                               \
+  PETSC_NOEXCEPT_AUTO(__VA_ARGS__) PETSC_DECLTYPE_AUTO(__VA_ARGS__)
+// all
+#define PETSC_DECLTYPE_NOEXCEPT_AUTO_RETURNS(...)                       \
+  PETSC_DECLTYPE_NOEXCEPT_AUTO(__VA_ARGS__) PETSC_RETURNS(__VA_ARGS__)
+
 namespace Petsc
 {
 
@@ -31,6 +47,7 @@ using std::add_pointer_t;
 using std::index_sequence;
 using std::make_index_sequence;
 using std::decay_t;
+using std::remove_cv_t;
 using std::tuple_element_t;
 #else // C++14
 template <bool B, class T = void>   using enable_if_t   = typename std::enable_if<B,T>::type;
@@ -42,9 +59,11 @@ template <class T> using underlying_type_t = typename std::underlying_type<T>::t
 template <class T> using remove_pointer_t  = typename std::remove_pointer<T>::type;
 template <class T> using add_pointer_t     = typename std::add_pointer<T>::type;
 template <class T> using decay_t           = typename std::decay<T>::type;
+template< class T> using remove_cv_t       = typename std::remove_cv<T>::type;
 template <std::size_t I, class T> using tuple_element_t = typename std::tuple_element<I,T>::type;
 // index sequence only
-template <std::size_t... idx> struct index_sequence
+template <std::size_t... idx>
+struct index_sequence
 {
   using value_type = std::size_t;
 
@@ -122,6 +141,38 @@ static inline constexpr can_call<F,A...> is_callable_with(F&&) noexcept
 
 template <typename... T> struct always_false : std::false_type { };
 
+namespace detail
+{
+
+template <typename T, std::size_t N, std::size_t... i>
+static inline constexpr std::array<util::remove_cv_t<T>,N> make_array_impl(T (&&a)[N], util::index_sequence<i...>) noexcept(noexcept(std::is_nothrow_move_constructible<T>::value))
+{
+  return {{std::move(a[i])...}};
+}
+
+} // namespace detail
+
+template <typename T, std::size_t N>
+static inline constexpr std::array<util::remove_cv_t<T>,N> make_array(T (&&a)[N])
+PETSC_NOEXCEPT_AUTO_RETURNS(detail::make_array_impl(std::move(a),make_index_sequence<N>{}));
+
+namespace detail
+{
+
+template <typename T, std::size_t NL, std::size_t... IL, std::size_t NR, std::size_t... IR>
+static inline constexpr std::array<T,NL+NR> concat_array_impl(const std::array<T,NL>& l, const std::array<T,NR>& r, util::index_sequence<IL...>, util::index_sequence<IR...>)
+{
+  return {l[IL]...,r[IR]...};
+}
+
+} // namespace detail
+
+template <typename T, std::size_t NL, std::size_t NR>
+static inline constexpr std::array<T,NL+NR> concat_array(const std::array<T,NL>& l, const std::array<T,NR>& r)
+{
+  return detail::concat_array_impl(l,r,util::make_index_sequence<NL>{},util::make_index_sequence<NR>{});
+}
+
 } // namespace util
 
 template <typename T>
@@ -181,13 +232,6 @@ static inline constexpr PetscObject& PetscObjectCast(const T& object) noexcept
 {
   return PetscObjectCast(PetscRemoveConstCast(object));
 }
-
-#define PETSC_RETURNS(...)                   { return __VA_ARGS__; }
-#define PETSC_DECLTYPE_AUTO(...)             -> decltype(__VA_ARGS__)
-#define PETSC_DECLTYPE_AUTO_RETURNS(...)     PETSC_DECLTYPE_AUTO(__VA_ARGS__) PETSC_RETURNS(__VA_ARGS__)
-#define PETSC_NOEXCEPT_AUTO(...)             noexcept(noexcept(__VA_ARGS__))
-#define PETSC_DECLTYPE_NOEXCEPT_AUTO(...)    PETSC_NOEXCEPT_AUTO(__VA_ARGS__) PETSC_DECLTYPE_AUTO(__VA_ARGS__)
-#define PETSC_DECLTYPE_NOEXCEPT_AUTO_RETURNS(...) PETSC_DECLTYPE_NOEXCEPT_AUTO(__VA_ARGS__) PETSC_RETURNS(__VA_ARGS__)
 
 #define PETSC_ALIAS_FUNCTION_WITH_PROLOGUE_AND_EPILOGUE_(alias,original,dispatch,prologue,epilogue) \
   template <typename... Args> static inline auto dispatch(int,Args&&... args)                  \

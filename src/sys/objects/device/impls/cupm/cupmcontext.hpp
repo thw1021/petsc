@@ -161,51 +161,20 @@ private:
   }
 
   template <typename PetscType>
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode host_malloc_wrapper(PetscType **ptr, std::size_t n))
-  {
-    PetscFunctionBegin;
-    PetscCallCUPM(cupmMallocHost(reinterpret_cast<void**>(ptr),n*sizeof(**ptr)));
-    PetscFunctionReturn(0);
-  }
-
-  template <typename PetscType>
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode host_free_wrapper(PetscType *ptr))
-  {
-    PetscFunctionBegin;
-    PetscCallCUPM(cupmFreeHost(ptr));
-    PetscFunctionReturn(0);
-  }
-
-  template <typename PetscType>
-  PETSC_CXX_COMPAT_DECL(auto managed_host_pool_()) -> decltype(Petsc::Device::Impl::make_segmented_memory_pool<PetscType>(host_malloc_wrapper<PetscType>,host_free_wrapper<PetscType>))&
+  PETSC_CXX_COMPAT_DECL(auto managed_host_pool_()) -> decltype(Petsc::Device::Impl::make_segmented_memory_pool<PetscType>(cupmInterface_t::template PetscCUPMMallocHost<PetscType>,cupmInterface_t::template cupmFreeHost<PetscType>))&
   {
     static auto pool = Petsc::Device::Impl::make_segmented_memory_pool<PetscType>(
-      host_malloc_wrapper<PetscType>,host_free_wrapper<PetscType>
+      cupmInterface_t::template PetscCUPMMallocHost<PetscType>,
+      cupmInterface_t::template cupmFreeHost<PetscType>
     );
     return pool;
   }
 
   template <typename PetscType>
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode device_malloc_wrapper(PetscType **ptr, std::size_t n))
-  {
-    PetscFunctionBegin;
-    PetscCallCUPM(cupmMalloc(reinterpret_cast<void**>(ptr),n*sizeof(**ptr)));
-    PetscFunctionReturn(0);
-  }
-
-  template <typename PetscType>
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode device_free_wrapper(PetscType *ptr))
-  {
-    PetscFunctionBegin;
-    PetscCallCUPM(cupmFree(ptr));
-    PetscFunctionReturn(0);
-  }
-
-  template <typename PetscType>
-  PETSC_CXX_COMPAT_DECL(auto managed_device_pool_()) -> decltype(Petsc::Device::Impl::make_segmented_memory_pool<PetscType>(device_malloc_wrapper<PetscType>,device_free_wrapper<PetscType>))&
+  PETSC_CXX_COMPAT_DECL(auto managed_device_pool_()) -> decltype(Petsc::Device::Impl::make_segmented_memory_pool<PetscType>(cupmInterface_t::template PetscCUPMMalloc<PetscType>,cupmInterface_t::template cupmFree<PetscType>))&
   {
     static auto pool = Petsc::Device::Impl::make_segmented_memory_pool<PetscType>(
-      device_malloc_wrapper<PetscType>,device_free_wrapper<PetscType>
+      cupmInterface_t::template PetscCUPMMalloc<PetscType>,cupmInterface_t::template cupmFree<PetscType>
     );
     return pool;
   }
@@ -426,7 +395,8 @@ template <DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::arrayCopy(PetscDeviceContext dctx, void *PETSC_RESTRICT dest, const void *PETSC_RESTRICT src, std::size_t n, PetscDeviceCopyMode mode))
 {
   PetscFunctionBegin;
-  PetscCallCUPM(cupmMemcpyAsync(dest,src,n,PetscDeviceCopyModeToCUPMMemcpyKind(mode),impls_cast_(dctx)->stream));
+  // can't use PetscCUPMMemcpyAsync here since we don't know sizeof(*src)...
+  PetscCall(cupmMemcpyAsync(dest,src,n,PetscDeviceCopyModeToCUPMMemcpyKind(mode),impls_cast_(dctx)->stream));
   PetscFunctionReturn(0);
 }
 
@@ -450,7 +420,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::destroyManagedType(PetscD
     PetscCall(cupmGetMemType(host_ptr,&mtype));
     if (PetscMemTypeDevice(mtype)) {
       PetscCallCUPM(cupmFreeAsync(host_ptr,stream));
-      host_ptr = nullptr;
     } else {
       PetscCall(PetscFree(host_ptr));
     }
@@ -459,7 +428,6 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::destroyManagedType(PetscD
   // same deal with device pointer
   if (device_ptr && (scal->d_cmode == PETSC_OWN_POINTER)) {
     PetscCallCUPM(cupmFreeAsync(device_ptr,stream));
-    device_ptr = nullptr;
   }
   PetscFunctionReturn(0);
 }
@@ -480,18 +448,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::getManagedTypeValues(Pets
       // if we want any kind of read (read or read_write) and we have valid SRC, we need to copy
       // it now
       if ((mode != PETSC_MEMORY_ACCESS_WRITE) && src) {
-        const auto size = n*sizeof(*src);
-
-        PetscCallCUPM(cupmMemcpyAsync(dest,src,size,direction,impls_cast_(dctx)->stream));
-        switch (direction) {
-        case cupmMemcpyDeviceToHost:
-          PetscCall(PetscLogGpuToCpu(size));
-          break;
-        case cupmMemcpyHostToDevice:
-          PetscCall(PetscLogCpuToGpu(size));
-        default:
-          break;
-        }
+        PetscCall(PetscCUPMMemcpyAsync(dest,src,n,direction,impls_cast_(dctx)->stream));
         // if read-only then update the offloadmask
         if (mode == PETSC_MEMORY_ACCESS_READ) mask = PETSC_OFFLOAD_BOTH;
       }
