@@ -700,8 +700,17 @@ struct Interface : InterfaceImpl<T>
     return cerr;
   }
 
+  template <>
+  PETSC_CXX_COMPAT_DECL(cupmError_t cupmFreeAsync(std::nullptr_t *&ptr, cupmStream_t stream))
+  {
+    return interface_type::cupmFreeAsync(ptr,stream);
+  }
+
   template <typename M>
   PETSC_CXX_COMPAT_DECL(cupmError_t cupmFree(M *&ptr)) { return cupmFreeAsync(ptr,nullptr); }
+
+  template <>
+  PETSC_CXX_COMPAT_DECL(cupmError_t cupmFree(std::nullptr_t *&p)) { return cupmFreeAsync(p,nullptr); }
 
   template <typename M>
   PETSC_CXX_COMPAT_DECL(cupmError_t cupmFreeHost(M *&ptr))
@@ -709,6 +718,12 @@ struct Interface : InterfaceImpl<T>
     const auto cerr = interface_type::cupmFreeHost(ptr);
     ptr = nullptr;
     return cerr;
+  }
+
+  template <>
+  PETSC_CXX_COMPAT_DECL(cupmError_t cupmFreeHost(std::nullptr_t *&ptr))
+  {
+    return interface_type::cupmFreeHost(ptr);
   }
 };
 
