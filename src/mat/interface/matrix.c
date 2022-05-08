@@ -10550,8 +10550,11 @@ PetscErrorCode MatCreateMPIMatConcatenateSeqMat(MPI_Comm comm,Mat seqmat,PetscIn
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_size(comm,&size));
   if (size == 1) {
-    *mpimat = seqmat;
-    //    PetscCall(PetscObjectReference((PetscObject)seqmat));
+    if (reuse == MAT_INITIAL_MATRIX) {
+      PetscCall(MatDuplicate(seqmat,MAT_COPY_VALUES,mpimat));
+    } else {
+      PetscCall(MatCopy(seqmat,*mpimat,SAME_NONZERO_PATTERN));
+    }
     PetscFunctionReturn(0);
   }
 

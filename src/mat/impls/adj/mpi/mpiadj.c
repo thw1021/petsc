@@ -869,7 +869,7 @@ PetscErrorCode  MatMPIAdjToSeqRankZero_MPIAdj(Mat A,Mat *B)
   PetscInt       M,N,*II,*J,NZ,nz,m,nzstart,i;
   PetscInt       *Values = NULL;
   Mat_MPIAdj     *adj = (Mat_MPIAdj*)A->data;
-  PetscMPIInt    mnz,mm,*allnz,*allm,size,*dispnz,*dispm,rank;
+  PetscMPIInt    mnz,mm,*allnz = NULL,*allm,size,*dispnz,*dispm,rank;
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)A),&size));
