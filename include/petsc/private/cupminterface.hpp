@@ -618,7 +618,11 @@ struct Interface : InterfaceImpl<T>
   {
     PetscFunctionBegin;
     PetscValidPointer(ptr,1);
-    PetscCallCUPM(cupmMallocAsync(reinterpret_cast<void**>(ptr),n*sizeof(*ptr),stream));
+    if (PetscLikely(n)) {
+      PetscCallCUPM(cupmMallocAsync(reinterpret_cast<void**>(ptr),n*sizeof(*ptr),stream));
+    } else {
+      *ptr = nullptr;
+    }
     PetscFunctionReturn(0);
   }
 
@@ -635,7 +639,11 @@ struct Interface : InterfaceImpl<T>
   {
     PetscFunctionBegin;
     PetscValidPointer(ptr,1);
-    PetscCall(cupmMallocHost(reinterpret_cast<void**>(ptr),n*sizeof(*ptr)));
+    if (PetscLikely(n)) {
+      PetscCall(cupmMallocHost(reinterpret_cast<void**>(ptr),n*sizeof(*ptr)));
+    } else {
+      *ptr = nullptr;
+    }
     PetscFunctionReturn(0);
   }
 
@@ -644,30 +652,31 @@ struct Interface : InterfaceImpl<T>
   {
     static_assert(sizeof(D) == sizeof(S),"");
     static_assert(!std::is_void<D>::value && !std::is_void<S>::value,"");
-    constexpr auto is_scalar = std::is_same<util::remove_cv_t<D>,PetscScalar>::value;
-    const auto     size      = n*sizeof(*src);
 
     PetscFunctionBegin;
-    // cannot dereference (i.e. cannot call PetscValidPointer() here)
-    PetscCheck(dest,PETSC_COMM_SELF,PETSC_ERR_POINTER,"Trying to copy to a NULL pointer");
-    PetscCheck(src,PETSC_COMM_SELF,PETSC_ERR_POINTER,"Trying to copy from a NULL pointer");
-    PetscCallCUPM(cupmMemcpyAsync(dest,src,size,kind,stream));
-    // do this with preprocessors, since if no log is used the functions below are macros and
-    // hence the ternary is ill-formed
+    if (PetscLikely(n)) {
+      constexpr auto is_scalar = std::is_same<util::remove_cv_t<D>,PetscScalar>::value;
+      const auto     size      = n*sizeof(*src);
+      // cannot dereference (i.e. cannot call PetscValidPointer() here)
+      PetscCheck(dest,PETSC_COMM_SELF,PETSC_ERR_POINTER,"Trying to copy to a NULL pointer");
+      PetscCheck(src,PETSC_COMM_SELF,PETSC_ERR_POINTER,"Trying to copy from a NULL pointer");
+      PetscCallCUPM(cupmMemcpyAsync(dest,src,size,kind,stream));
+      // do this with preprocessors, since if no log is used the functions below are macros and
+      // hence the ternary is ill-formed
 #if PetscDefined(USE_LOG) && PetscDefined(HAVE_DEVICE)
-    // only the explicit HTOD or DTOH are handled, since we either don't log the other cases
-    // (yet) or don't know the direction
-    if (kind == cupmMemcpyDeviceToHost) {
-      PetscCall((is_scalar ? PetscLogGpuToCpuScalar : PetscLogGpuToCpu)(size));
-    } else if (kind == cupmMemcpyHostToDevice) {
-      PetscCall((is_scalar ? PetscLogCpuToGpuScalar : PetscLogCpuToGpu)(size));
-    }
+      // only the explicit HTOD or DTOH are handled, since we either don't log the other cases
+      // (yet) or don't know the direction
+      if (kind == cupmMemcpyDeviceToHost) {
+        PetscCall((is_scalar ? PetscLogGpuToCpuScalar : PetscLogGpuToCpu)(size));
+      } else if (kind == cupmMemcpyHostToDevice) {
+        PetscCall((is_scalar ? PetscLogCpuToGpuScalar : PetscLogCpuToGpu)(size));
+      }
 #else
-    // use PetscLogGpuToCpu as the canary
-#if !defined(PetscLogGpuToCpu)
-#  error "PetscLogGpuToCpu() is no longer a macro when no logging or no device. PetscCUPMMemcpyAsync() should be updated"
+#  if !defined(PetscLogGpuToCpu) // use PetscLogGpuToCpu as the canary
+#    error "PetscLogGpuToCpu() is no longer a macro when no logging or no device. PetscCUPMMemcpyAsync() should be updated"
+#  endif
 #endif
-#endif
+    }
     PetscFunctionReturn(0);
   }
 
@@ -683,8 +692,10 @@ struct Interface : InterfaceImpl<T>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscCUPMMemsetAsync(M *ptr, int value, std::size_t n, cupmStream_t stream = nullptr))
   {
     PetscFunctionBegin;
-    PetscCheck(ptr,PETSC_COMM_SELF,PETSC_ERR_POINTER,"Trying to memset a NULL pointer");
-    PetscCallCUPM(cupmMemsetAsync(ptr,value,n*sizeof(*ptr),stream));
+    if (n) {
+      PetscCheck(ptr,PETSC_COMM_SELF,PETSC_ERR_POINTER,"Trying to memset a NULL pointer with size %zu != 0",n);
+      PetscCallCUPM(cupmMemsetAsync(ptr,value,n*sizeof(*ptr),stream));
+    }
     PetscFunctionReturn(0);
   }
 
@@ -713,7 +724,7 @@ struct Interface : InterfaceImpl<T>
   template <typename M>
   PETSC_CXX_COMPAT_DECL(cupmError_t cupmFree(M *&ptr)) { return cupmFreeAsync(ptr); }
 
-  PETSC_CXX_COMPAT_DECL(cupmError_t cupmFree(std::nullptr_t p)) { return cupmFreeAsync(p); }
+  PETSC_CXX_COMPAT_DECL(cupmError_t cupmFree(std::nullptr_t ptr)) { return cupmFreeAsync(ptr); }
 
   template <typename M>
   PETSC_CXX_COMPAT_DECL(cupmError_t cupmFreeHost(M *&ptr))
