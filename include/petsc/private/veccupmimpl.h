@@ -573,14 +573,13 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::DeviceAllocateCheck_(Pet
 {
   PetscFunctionBegin;
   PetscCall(VecCUPMAllocateCheck_(v));
-  const auto vcu = VecCUPMCast(v);
-  if (PetscLikely(vcu->array_d)) PetscFunctionReturn(0);
+  if (auto& alloc = VecCUPMCast(v)->array_d) PetscFunctionReturn(0);
   else {
     cupmStream_t stream;
 
     PetscCall(GetHandles_(dctx,&stream));
-    PetscCall(PetscCUPMMallocAsync(&vcu->array_d,v->map->n,stream));
-    vcu->cmode_d = PETSC_OWN_POINTER;
+    PetscCall(PetscCUPMMallocAsync(&alloc,v->map->n,stream));
+    VecCUPMCast(v)->cmode_d = PETSC_OWN_POINTER;
     if (v->offloadmask == PETSC_OFFLOAD_UNALLOCATED) {
       const auto vimp = VecIMPLCast(v);
       v->offloadmask = (vimp && vimp->array) ? PETSC_OFFLOAD_CPU : PETSC_OFFLOAD_GPU;

@@ -1357,8 +1357,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::setvaluescoo_async(Vec x, c
   if (PetscMemTypeHost(memtype)) {
     const auto size = VecIMPLCast(x)->coo_n;
 
-    /* If user gave v[] in host, we might need to copy it to device if any */
-    PetscCall(PetscCUPMMallocAsync(&vv,size,stream));
+    // If user gave v[] in host, we might need to copy it to device if any
+    PetscCall(PetscCUPMMallocAsync(const_cast<PetscScalar**>(&vv),size,stream));
     PetscCall(PetscCUPMMemcpyAsync(const_cast<PetscScalar*>(vv),v,size,cupmMemcpyHostToDevice,stream));
   }
 
@@ -1368,7 +1368,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::setvaluescoo_async(Vec x, c
     PetscCallCUPM(cupmLaunchKernel(kernels::add_coo_values,(n+255)/256,256,0,stream,vv,n,vcu->jmap1_d,vcu->perm1_d,imode,imode == INSERT_VALUES ? DeviceArrayWrite(dctx,x).data() : DeviceArrayReadWrite(dctx,x).data()));
   }
 
-  if (PetscMemTypeHost(memtype)) PetscCallCUPM(cupmFreeAsync(vv,stream));
+  if (PetscMemTypeHost(memtype)) PetscCallCUPM(cupmFreeAsync(const_cast<PetscScalar*>(vv),stream));
   PetscFunctionReturn(0);
 }
 

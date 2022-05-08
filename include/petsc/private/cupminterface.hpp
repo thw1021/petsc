@@ -618,7 +618,7 @@ struct Interface : InterfaceImpl<T>
   {
     PetscFunctionBegin;
     PetscValidPointer(ptr,1);
-    PetscCallCUPM(cupmMallocAsync(reinterpret_cast<void**>(const_cast<util::remove_cv_t<M>**>(ptr)),n*sizeof(*ptr),stream));
+    PetscCallCUPM(cupmMallocAsync(reinterpret_cast<void**>(ptr),n*sizeof(*ptr),stream));
     PetscFunctionReturn(0);
   }
 
@@ -700,7 +700,7 @@ struct Interface : InterfaceImpl<T>
   template <typename M>
   PETSC_CXX_COMPAT_DECL(cupmError_t cupmFreeAsync(M *&ptr, cupmStream_t stream = nullptr))
   {
-    const auto cerr = interface_type::cupmFreeAsync(const_cast<util::remove_cv_t<M>*>(ptr),stream);
+    const auto cerr = interface_type::cupmFreeAsync(ptr,stream);
     ptr = nullptr;
     return cerr;
   }
@@ -718,7 +718,7 @@ struct Interface : InterfaceImpl<T>
   template <typename M>
   PETSC_CXX_COMPAT_DECL(cupmError_t cupmFreeHost(M *&ptr))
   {
-    const auto cerr = interface_type::cupmFreeHost(const_cast<util::remove_cv_t<M>*>(ptr));
+    const auto cerr = interface_type::cupmFreeHost(ptr);
     ptr = nullptr;
     return cerr;
   }
