@@ -34,8 +34,9 @@ PETSC_INTERN PetscErrorCode VecAllocateNVSHMEM_SeqCUDA(Vec);
 #endif
 
 #if defined(__cplusplus) && PetscDefined(HAVE_DEVICE)
-#include <limits>  // std::numeric_limits
-#include <cstring> // std::memset
+#include <limits>     // std::numeric_limits
+#include <cstring>    // std::memset
+#include <functional> // std::ref
 
 namespace Petsc
 {
@@ -185,11 +186,11 @@ template <typename T>
 struct CooPair
 {
   using value_type = T;
-  using size_type  = std::size_t;
+  using size_type  = PetscCount;
 
-        value_type*& device;
-  const value_type*& host;
-  const size_type    size;
+  value_type            *& device;
+  const value_type *const& host;
+  const size_type          size;
 };
 
 } // anonymous namespace
@@ -472,8 +473,8 @@ public:
   template <PetscMemType,typename F>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode PlaceArray_CUPMBase(Vec,const PetscScalar*,F&&,PetscDeviceContext));
   PETSC_CXX_COMPAT_DECL(PetscErrorCode ResetPreallocationCOO_CUPMBase(Vec,PetscDeviceContext));
-  template <std::size_t NCount,std::size_t NScal>
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode SetPreallocationCOO_CUPMBase(Vec,PetscCount,const PetscInt[],PetscDeviceContext,const std::array<CooPair<PetscCount>,NCount>&={},const std::array<CooPair<PetscScalar>,NScal>&={}));
+  template <std::size_t NCount = 0,std::size_t NScal = 0>
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode SetPreallocationCOO_CUPMBase(Vec,PetscCount,const PetscInt[],PetscDeviceContext,const std::array<CooPair<PetscCount>,NCount>& = {},const std::array<CooPair<PetscScalar>,NScal>& = {}));
 
   // utility for using cupmHostAlloc()
   PETSC_CXX_COMPAT_DECL(auto UseCUPMHostAlloc(bool b))

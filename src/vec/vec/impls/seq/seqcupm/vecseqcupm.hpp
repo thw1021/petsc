@@ -1362,7 +1362,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecSeq_CUPM<T>::setvaluescoo_async(Vec x, c
     PetscCall(PetscCUPMMemcpyAsync(const_cast<PetscScalar*>(vv),v,size,cupmMemcpyHostToDevice,stream));
   }
 
-  if (const auto n = v->map->n) {
+  if (const auto n = x->map->n) {
     const auto vcu = VecCUPMCast(x);
 
     PetscCallCUPM(cupmLaunchKernel(kernels::add_coo_values,(n+255)/256,256,0,stream,vv,n,vcu->jmap1_d,vcu->perm1_d,imode,imode == INSERT_VALUES ? DeviceArrayWrite(dctx,x).data() : DeviceArrayReadWrite(dctx,x).data()));

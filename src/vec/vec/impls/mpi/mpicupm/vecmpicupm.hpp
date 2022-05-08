@@ -414,7 +414,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::setvaluescoo_async(Vec x, c
 
   /* Add received remote entries */
   if (const auto nnz2 = vmpi->nnz2) {
-    PetscCallCUPM(cupmLaunchKernel(kernels::add_remote_coo_values,(nnz2+255)/256,256,0,stream,recvbuf_d,nnz2,vcu->imap2,vcu->jmap2,vcu->perm2,xv));
+    PetscCallCUPM(cupmLaunchKernel(kernels::add_remote_coo_values,(nnz2+255)/256,256,0,stream,recvbuf_d,nnz2,vcu->imap2_d,vcu->jmap2_d,vcu->perm2_d,xv));
   }
 
   if (PetscMemTypeHost(v_memtype)) PetscCallCUPM(cupmFreeAsync(vv,stream));

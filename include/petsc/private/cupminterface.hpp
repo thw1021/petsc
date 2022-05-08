@@ -614,11 +614,11 @@ struct Interface : InterfaceImpl<T>
 
   // these change what the arguments mean, so need to namespace these
   template <typename M>
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscCUPMMallocAsync(M **ptr, std::size_t n, cupmStream_t stream))
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscCUPMMallocAsync(M **ptr, std::size_t n, cupmStream_t stream = nullptr))
   {
     PetscFunctionBegin;
     PetscValidPointer(ptr,1);
-    PetscCallCUPM(cupmMallocAsync(reinterpret_cast<void**>(ptr),n*sizeof(*ptr),stream));
+    PetscCallCUPM(cupmMallocAsync(reinterpret_cast<void**>(const_cast<util::remove_cv_t<M>**>(ptr)),n*sizeof(*ptr),stream));
     PetscFunctionReturn(0);
   }
 
@@ -626,7 +626,7 @@ struct Interface : InterfaceImpl<T>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscCUPMMalloc(M **ptr, std::size_t n))
   {
     PetscFunctionBegin;
-    PetscCall(PetscCUPMMallocAsync(ptr,n,nullptr));
+    PetscCall(PetscCUPMMallocAsync(ptr,n));
     PetscFunctionReturn(0);
   }
 
@@ -640,7 +640,7 @@ struct Interface : InterfaceImpl<T>
   }
 
   template <typename D, typename S>
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscCUPMMemcpyAsync(D *dest, const S *src, std::size_t n, cupmMemcpyKind_t kind, cupmStream_t stream))
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscCUPMMemcpyAsync(D *dest, const S *src, std::size_t n, cupmMemcpyKind_t kind, cupmStream_t stream = nullptr))
   {
     static_assert(sizeof(D) == sizeof(S),"");
     static_assert(!std::is_void<D>::value && !std::is_void<S>::value,"");
@@ -675,16 +675,16 @@ struct Interface : InterfaceImpl<T>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscCUPMMemcpy(D *dest, const S *src, std::size_t n, cupmMemcpyKind_t kind))
   {
     PetscFunctionBegin;
-    PetscCall(PetscCUPMMemcpyAsync(dest,src,n,kind,nullptr));
+    PetscCall(PetscCUPMMemcpyAsync(dest,src,n,kind));
     PetscFunctionReturn(0);
   }
 
   template <typename M>
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscCUPMMemsetAsync(M *ptr, int value, std::size_t n, cupmStream_t stream))
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscCUPMMemsetAsync(M *ptr, int value, std::size_t n, cupmStream_t stream = nullptr))
   {
     PetscFunctionBegin;
     PetscCheck(ptr,PETSC_COMM_SELF,PETSC_ERR_POINTER,"Trying to memset a NULL pointer");
-    PetscCallCUPM(PetscCUPMMemsetAsync(ptr,value,n*sizeof(*ptr),stream));
+    PetscCallCUPM(cupmMemsetAsync(ptr,value,n*sizeof(*ptr),stream));
     PetscFunctionReturn(0);
   }
 
@@ -692,33 +692,33 @@ struct Interface : InterfaceImpl<T>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode PetscCUPMMemset(M *ptr, int value, std::size_t n))
   {
     PetscFunctionBegin;
-    PetscCall(PetscCUPMMemsetAsync(ptr,value,n,nullptr));
+    PetscCall(PetscCUPMMemsetAsync(ptr,value,n));
     PetscFunctionReturn(0);
   }
 
   // these we can transparently wrap, no need to namespace it to Petsc
   template <typename M>
-  PETSC_CXX_COMPAT_DECL(cupmError_t cupmFreeAsync(M *&ptr, cupmStream_t stream))
+  PETSC_CXX_COMPAT_DECL(cupmError_t cupmFreeAsync(M *&ptr, cupmStream_t stream = nullptr))
   {
-    const auto cerr = interface_type::cupmFreeAsync(ptr,stream);
+    const auto cerr = interface_type::cupmFreeAsync(const_cast<util::remove_cv_t<M>*>(ptr),stream);
     ptr = nullptr;
     return cerr;
   }
 
-  PETSC_CXX_COMPAT_DECL(cupmError_t cupmFreeAsync(std::nullptr_t ptr, cupmStream_t stream))
+  PETSC_CXX_COMPAT_DECL(cupmError_t cupmFreeAsync(std::nullptr_t ptr, cupmStream_t stream = nullptr))
   {
     return interface_type::cupmFreeAsync(ptr,stream);
   }
 
   template <typename M>
-  PETSC_CXX_COMPAT_DECL(cupmError_t cupmFree(M *&ptr)) { return cupmFreeAsync(ptr,nullptr); }
+  PETSC_CXX_COMPAT_DECL(cupmError_t cupmFree(M *&ptr)) { return cupmFreeAsync(ptr); }
 
-  PETSC_CXX_COMPAT_DECL(cupmError_t cupmFree(std::nullptr_t p)) { return cupmFreeAsync(p,nullptr); }
+  PETSC_CXX_COMPAT_DECL(cupmError_t cupmFree(std::nullptr_t p)) { return cupmFreeAsync(p); }
 
   template <typename M>
   PETSC_CXX_COMPAT_DECL(cupmError_t cupmFreeHost(M *&ptr))
   {
-    const auto cerr = interface_type::cupmFreeHost(ptr);
+    const auto cerr = interface_type::cupmFreeHost(const_cast<util::remove_cv_t<M>*>(ptr));
     ptr = nullptr;
     return cerr;
   }
