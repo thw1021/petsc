@@ -654,7 +654,7 @@ struct Interface : InterfaceImpl<T>
     PetscCallCUPM(cupmMemcpyAsync(dest,src,size,kind,stream));
     // do this with preprocessors, since if no log is used the functions below are macros and
     // hence the ternary is ill-formed
-#if PetscDefined(USE_LOG)
+#if PetscDefined(USE_LOG) && PetscDefined(HAVE_DEVICE)
     // only the explicit HTOD or DTOH are handled, since we either don't log the other cases
     // (yet) or don't know the direction
     if (kind == cupmMemcpyDeviceToHost) {
@@ -662,6 +662,11 @@ struct Interface : InterfaceImpl<T>
     } else if (kind == cupmMemcpyHostToDevice) {
       PetscCall((is_scalar ? PetscLogCpuToGpuScalar : PetscLogCpuToGpu)(size));
     }
+#else
+    // use PetscLogGpuToCpu as the canary
+#if !defined(PetscLogGpuToCpu)
+#  error "PetscLogGpuToCpu() is no longer a macro when no logging or no device. PetscCUPMMemcpyAsync() should be updated"
+#endif
 #endif
     PetscFunctionReturn(0);
   }

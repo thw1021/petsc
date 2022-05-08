@@ -34,14 +34,19 @@ template <typename T, typename AllocType, typename FreeType>
 class MemoryBlock
 {
 public:
+  using value_type = T;
   using ChunksType = std::vector<MemoryChunk>;
   using size_type  = ChunksType::value_type::size_type;
 
-  MemoryBlock(AllocType&& alloc, FreeType&& destr, size_type s)
+  MemoryBlock(AllocType&& allocate, FreeType&& destroy, size_type s)
     noexcept(noexcept(std::is_nothrow_default_constructible<ChunksType>::value))
-    : mem_(allocate_(std::forward<AllocType>(alloc),s)),
-      destructor_(std::forward<FreeType>(destr)), size_(s), chunks_()
-  { }
+    : destructor_(std::forward<FreeType>(destroy)), size_(s), chunks_()
+  {
+    PetscFunctionBegin;
+    PetscCallAbort(PETSC_COMM_SELF,allocate(&mem_,s));
+    if (PetscUnlikely(!mem_)) SETERRABORT(PETSC_COMM_SELF,PETSC_ERR_MEM,"Failed to allocate memory block of size %zu",s);
+    PetscFunctionReturnVoid();
+  }
 
   ~MemoryBlock() noexcept
   {
@@ -58,20 +63,10 @@ public:
   PETSC_NODISCARD bool           owns_pointer(T*)   const noexcept;
 
 private:
-  T *const        mem_;
-  const FreeType  destructor_;
-  const size_type size_;
-  ChunksType      chunks_;
-
-  PETSC_CXX_COMPAT_DECL(T* allocate_(AllocType&& allocate, size_type s))
-  {
-    T* mem = nullptr;
-
-    PetscFunctionBegin;
-    PetscCallAbort(PETSC_COMM_SELF,allocate(&mem,s));
-    if (PetscUnlikely(!mem)) SETERRABORT(PETSC_COMM_SELF,PETSC_ERR_MEM,"Failed to allocate memory block of size %zu",s);
-    PetscFunctionReturn(mem);
-  }
+  value_type      *mem_ = nullptr;
+  const FreeType   destructor_;
+  const size_type  size_;
+  ChunksType       chunks_;
 };
 
 template <typename T, typename A, typename F>
@@ -222,6 +217,8 @@ template <typename MemType, typename AllocType, typename FreeType, std::size_t C
 inline PetscErrorCode SegmentedMemoryPool<MemType,AllocType,FreeType,ChunkSize>::release(MemType **ptr) noexcept
 {
   PetscFunctionBegin;
+  // nobody owns a nullptr, and if they do then they have bigger problems
+  if (!*ptr) PetscFunctionReturn(0);
   for (auto& block : pool_) {
     PetscCall(block.reclaim_chunk(ptr));
     if (!*ptr) break;
