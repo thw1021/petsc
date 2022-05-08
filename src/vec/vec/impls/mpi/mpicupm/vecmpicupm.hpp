@@ -380,7 +380,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::setvaluescoo_async(Vec x, c
   const auto      sendbuf_d = vcu->sendbuf_d;
   const auto      recvbuf_d = vcu->recvbuf_d;
   const auto      xv        = imode == INSERT_VALUES ? DeviceArrayWrite(dctx,x).data() : DeviceArrayReadWrite(dctx,x).data();
-  auto           *vv        = v;
+  auto            vv        = const_cast<PetscScalar*>(v);
   PetscMemType    v_memtype;
   cupmStream_t    stream;
 
@@ -393,7 +393,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode VecMPI_CUPM<T>::setvaluescoo_async(Vec x, c
 
     /* If user gave v[] in host, we might need to copy it to device if any */
     PetscCall(PetscCUPMMallocAsync(&vv,size,stream));
-    PetscCall(PetscCUPMMemcpyAsync(const_cast<PetscScalar*>(vv),v,size,cupmMemcpyHostToDevice,stream));
+    PetscCall(PetscCUPMMemcpyAsync(vv,v,size,cupmMemcpyHostToDevice,stream));
   }
 
   /* Pack entries to be sent to remote */
