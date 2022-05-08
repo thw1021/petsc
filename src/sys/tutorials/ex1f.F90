@@ -1,9 +1,8 @@
 ! Introductory example that illustrates printing: Fortran Example
 
 program main
-#include <petsc/finclude/petscvec.h>
+#include <petsc/finclude/petscsys.h>
       use petscsys
-      use petscvec
 
       implicit none
       PetscErrorCode    :: ierr
