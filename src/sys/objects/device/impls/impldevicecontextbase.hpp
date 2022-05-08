@@ -31,6 +31,9 @@ struct MemoryChunk
 };
 
 template <typename T, typename AllocType, typename FreeType>
+class PETSC_TEMPLATE_VISIBILITY_INTERNAL MemoryBlock;
+
+template <typename T, typename AllocType, typename FreeType>
 class MemoryBlock
 {
 public:

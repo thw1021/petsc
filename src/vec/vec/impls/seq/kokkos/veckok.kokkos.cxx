@@ -203,7 +203,7 @@ PetscErrorCode VecAXPY_SeqKokkos(Vec yin, PetscManagedScalar alpha, Vec xin, Pet
   PetscCall(PetscManagedScalarEqual(alpha,0.0,&known,&equal));
   if (known && equal /* alpha = 0 */) PetscFunctionReturn(0);
   if (yin == xin) {
-    constexpr auto one = PetscScalar{1};
+    const auto one = PetscScalar{1};
 
     PetscCall(PetscManagedScalarApplyOperator(dctx,alpha,PETSC_OPERATOR_PLUS,PETSC_MEMTYPE_HOST,&one,nullptr));
     PetscCall(VecScale_SeqKokkos(yin,alpha,dctx));
@@ -766,7 +766,7 @@ PetscErrorCode VecNorm_SeqKokkos(Vec xin, NormType type, PetscManagedReal z, Pet
     PetscCall(PetscManagedRealRestoreSubRange(dctx,z,&zp1));
   } else {
     const auto                 n = xin->map->n;
-    PetscScalar                ztmp;
+    PetscReal                  ztmp;
     ConstPetscScalarKokkosView xv;
 
     PetscCall(PetscLogGpuTimeBegin());
