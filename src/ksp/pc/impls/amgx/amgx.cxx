@@ -288,7 +288,7 @@ static PetscErrorCode PCApply_AMGX(PC pc, Vec b, Vec x)
   const PetscScalar *b_;
 
   PetscBool is_dev_ptrs;
-  PetscCall(PetscObjectTypeCompare((PetscObject)x, VECSEQCUDA, &is_dev_ptrs));
+  PetscCall(PetscObjectTypeCompareAny((PetscObject)x,&is_dev_ptrs,VECCUDA,VECMPICUDA,VECSEQCUDA,“”));
 
   if (is_dev_ptrs) {
     PetscCall(VecCUDAGetArrayWrite(x, &x_));
