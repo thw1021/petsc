@@ -109,7 +109,7 @@ PETSC_MANAGED_TYPE_DECL_OR_STUB(
 PetscErrorCode PetscManagedTypeGetPointerAndMemType(PetscDeviceContext dctx, PetscManagedType scal, PetscMemoryAccessMode mode, PetscType **ptr, PetscMemType *mtype),
 {
   PetscFunctionBegin;
-  PetscCall(PetscManagedTypeGetValues(dctx,scal,PETSC_MEMTYPE_HOST,mode,ptr));
+  PetscCall(PetscManagedTypeGetValues(dctx,scal,PETSC_MEMTYPE_HOST,mode,PETSC_TRUE,ptr));
   if (mtype) *mtype = PETSC_MEMTYPE_HOST;
   PetscFunctionReturn(0);
 }

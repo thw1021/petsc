@@ -224,7 +224,7 @@ typedef enum {
 #if defined(__cplusplus)
 // Some overzealous older gcc versions warn about the below comparisons. Neat that it can
 // detect this, but the tautology __is__ the point of the static_assert()!
-#  if defined(__GNUC__)
+#  if defined(__GNUC__) && __GNUC__ >= 6
 #    pragma GCC diagnostic push
 #    pragma GCC diagnostic ignored "-Wtautological-compare"
 #  endif
@@ -234,7 +234,7 @@ static_assert(!PetscMemoryAccessRead(PETSC_MEMORY_ACCESS_WRITE),"");
 static_assert(PetscMemoryAccessWrite(PETSC_MEMORY_ACCESS_WRITE),"");
 static_assert(PetscMemoryAccessWrite(PETSC_MEMORY_ACCESS_READ_WRITE),"");
 static_assert(!PetscMemoryAccessWrite(PETSC_MEMORY_ACCESS_READ),"");
-#  if defined(__GNUC__)
+#  if defined(__GNUC__) && __GNUC__ >= 6
 #    pragma GCC diagnostic pop
 #  endif
 #endif

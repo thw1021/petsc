@@ -824,16 +824,18 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Destroy_CUPMBase(Vec v, 
 {
   PetscFunctionBegin;
   if (const auto vcu = VecCUPMCast(v)) {
+    auto& array_d = vcu->array_d;
+
     switch (vcu->cmode_d) {
     case PETSC_COPY_VALUES:
     case PETSC_OWN_POINTER:
       if (PetscDefined(HAVE_NVSHMEM) && vcu->nvshmem) {
-        PetscCall(PetscNvshmemFree(vcu->array_d));
+        PetscCall(PetscNvshmemFree(array_d));
       } else {
         cupmStream_t stream;
 
         PetscCall(GetHandles_(dctx,&stream));
-        PetscCallCUPM(cupmFreeAsync(vcu->array_d,stream));
+        PetscCallCUPM(cupmFreeAsync(array_d,stream));
       }
     case PETSC_USE_POINTER:
       break;
@@ -841,7 +843,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::Destroy_CUPMBase(Vec v, 
     PetscCall(ResetPreallocationCOO_CUPMBase(v,dctx));
     PetscCall(PetscFree(v->spptr));
   }
-  PetscCall(PetscObjectSAWsViewOff(v));
+  PetscCall(PetscObjectSAWsViewOff(PetscObjectCast(v)));
   if (const auto vimpl = VecIMPLCast(v)) {
     const auto useit = UseCUPMHostAlloc(v);
 
@@ -912,8 +914,8 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode Vec_CUPMBase<T,D>::ResetArray_CUPMBase(Vec 
     PetscCall(CopyToDevice_(dctx,v));
     PetscCall(PetscObjectStateIncrease(PetscObjectCast(v)));
     VecCUPMCast(v)->array_d = host_array;
-    host_array                   = nullptr;
-    v->offloadmask               = PETSC_OFFLOAD_GPU;
+    host_array              = nullptr;
+    v->offloadmask          = PETSC_OFFLOAD_GPU;
   }
   PetscFunctionReturn(0);
 }

@@ -88,35 +88,30 @@ PetscErrorCode VecMDot_Seq(Vec xin, PetscManagedInt nv, const Vec yin[], PetscMa
     i   -= 4;
   }
   PetscCall(VecRestoreArrayRead(xin,&x));
-  PetscCall(PetscLogFlops(PetscMax(nv*(2.0*xin->map->n-1),0.0)));
+  PetscCall(PetscLogFlops(PetscMax((*nvptr)*(2.0*xin->map->n-1),0.0)));
   PetscFunctionReturn(0);
 }
 
 #else
 PetscErrorCode VecMDot_Seq(Vec xin, PetscManagedInt nv, const Vec yin[], PetscManagedScalar zt, PetscDeviceContext dctx)
 {
-  PetscInt          *nvptr;
-  PetscInt          n = xin->map->n,i,j,nv_rem,j_rem;
-  PetscScalar       sum0,sum1,sum2,sum3,x0,x1,x2,x3;
+  const PetscInt     n    = xin->map->n;
+  PetscInt           j    = n,nv_rem,j_rem,i;
+  PetscScalar        sum0 = 0.,sum1 = 0.,sum2 = 0.,sum3,x0,x1,x2,x3;
+  Vec               *yy   = (Vec*)yin;
   PetscScalar       *z;
   const PetscScalar *yy0,*yy1,*yy2,*yy3,*x,*xbase;
-  Vec               *yy;
+  PetscInt          *nvptr;
 
   PetscFunctionBegin;
   PetscCall(PetscManagedIntGetValues(dctx,nv,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&nvptr));
   PetscCall(PetscManagedScalarGetValues(dctx,zt,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_WRITE,PETSC_TRUE,&z));
-  sum0 = 0.;
-  sum1 = 0.;
-  sum2 = 0.;
-
-  i      = *nvptr;
-  nv_rem = i&0x3;
-  yy     = (Vec*)yin;
-  j      = n;
   PetscCall(VecGetArrayRead(xin,&xbase));
-  x      = xbase;
 
-  switch (nv_rem) {
+  x = xbase;
+  i = *nvptr;
+
+  switch (nv_rem = i&0x3) {
   case 3:
     PetscCall(VecGetArrayRead(yy[0],&yy0));
     PetscCall(VecGetArrayRead(yy[1],&yy1));
@@ -222,7 +217,6 @@ PetscErrorCode VecMDot_Seq(Vec xin, PetscManagedInt nv, const Vec yin[], PetscMa
     z[0] = sum0;
 
     PetscCall(VecRestoreArrayRead(yy[0],&yy0));
-    break;
   case 0:
     break;
   }

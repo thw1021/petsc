@@ -208,23 +208,8 @@ private:
     return pool;
   }
 
-  // template <typename PetscType>
-  // PETSC_CXX_COMPAT_DECL(auto managed_host_pool_()) -> decltype(Petsc::Device::Impl::make_segmented_memory_pool<PetscType>(HostAllocator<PetscType>{}))&
-  // {
-  //   static auto pool = Petsc::Device::Impl::make_segmented_memory_pool<PetscType>(
-  //     HostAllocator<PetscType>{}
-  //   );
-  //   return pool;
-  // }
-
-  // template <typename PetscType>
-  // PETSC_CXX_COMPAT_DECL(auto managed_device_pool_()) -> decltype(Petsc::Device::Impl::make_segmented_memory_pool<PetscType>(DeviceAllocator<PetscType>{}))&
-  // {
-  //   static auto pool = Petsc::Device::Impl::make_segmented_memory_pool<PetscType>(
-  //     DeviceAllocator<PetscType>{}
-  //   );
-  //   return pool;
-  // }
+  template <typename PetscType, typename PetscManagedType, template <typename = PetscType> class Allocator>
+  PETSC_CXX_COMPAT_DECL(PetscErrorCode copy_managed_values_(PetscDeviceContext,PetscManagedType,PetscMemoryAccessMode,PetscType*&,const PetscType*,PetscOffloadMask,cupmMemcpyKind_t,PetscType**));
 
 public:
   // All of these functions MUST be static in order to be callable from C, otherwise they
@@ -288,15 +273,14 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::initialize())
 template <DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::destroy(PetscDeviceContext dctx))
 {
-  const auto dci = impls_cast_(dctx);
-
   PetscFunctionBegin;
-  if (!dci) PetscFunctionReturn(0);
-  if (dci->stream) PetscCallCUPM(cupmStreamDestroy(dci->stream));
-  if (dci->event)  PetscCallCUPM(cupmEventDestroy(dci->event));
-  if (dci->begin)  PetscCallCUPM(cupmEventDestroy(dci->begin));
-  if (dci->end)    PetscCallCUPM(cupmEventDestroy(dci->end));
-  PetscCall(PetscFree(dctx->data));
+  if (const auto dci = impls_cast_(dctx)) {
+    if (dci->stream) PetscCallCUPM(cupmStreamDestroy(dci->stream));
+    if (dci->event)  PetscCallCUPM(cupmEventDestroy(dci->event));
+    if (dci->begin)  PetscCallCUPM(cupmEventDestroy(dci->begin));
+    if (dci->end)    PetscCallCUPM(cupmEventDestroy(dci->end));
+    PetscCall(PetscFree(dctx->data));
+  }
   PetscFunctionReturn(0);
 }
 
@@ -306,9 +290,9 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::changeStreamType(PetscDev
   const auto dci = impls_cast_(dctx);
 
   PetscFunctionBegin;
-  if (dci->stream) {
-    PetscCallCUPM(cupmStreamDestroy(dci->stream));
-    dci->stream = nullptr;
+  if (auto &stream = dci->stream) {
+    PetscCallCUPM(cupmStreamDestroy(stream));
+    stream = nullptr;
   }
   // set these to null so they aren't usable until setup is called again
   dci->blas   = nullptr;
@@ -319,23 +303,24 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::changeStreamType(PetscDev
 template <DeviceType T>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::setUp(PetscDeviceContext dctx))
 {
-  const auto dci = impls_cast_(dctx);
+  const auto dci    = impls_cast_(dctx);
+  auto&      stream = dci->stream;
 
   PetscFunctionBegin;
   PetscCall(check_current_device_(dctx));
-  if (dci->stream) {
-    PetscCallCUPM(cupmStreamDestroy(dci->stream));
-    dci->stream = nullptr;
+  if (stream) {
+    PetscCallCUPM(cupmStreamDestroy(stream));
+    stream = nullptr;
   }
   switch (dctx->streamType) {
   case PETSC_STREAM_GLOBAL_BLOCKING:
     // don't create a stream for global blocking
     break;
   case PETSC_STREAM_DEFAULT_BLOCKING:
-    PetscCallCUPM(cupmStreamCreate(&dci->stream));
+    PetscCallCUPM(cupmStreamCreate(&stream));
     break;
   case PETSC_STREAM_GLOBAL_NONBLOCKING:
-    PetscCallCUPM(cupmStreamCreateWithFlags(&dci->stream,cupmStreamNonBlocking));
+    PetscCallCUPM(cupmStreamCreateWithFlags(&stream,cupmStreamNonBlocking));
     break;
   default:
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_CORRUPT,"Invalid PetscStreamType %s",PetscStreamTypes[util::integral_value(dctx->streamType)]);
@@ -479,46 +464,46 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::destroyManagedType(PetscD
   PetscFunctionReturn(0);
 }
 
+// this should by all means be a lambda in getManagedTypeValues(), but since you can't make
+// templated lambdas until either C++14 or for real in C++20 it is a function instead...
+template <DeviceType T>
+template <typename PetscType, typename PetscManagedType, template <typename> class Allocator>
+PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::copy_managed_values_(PetscDeviceContext dctx, PetscManagedType scal, PetscMemoryAccessMode mode, PetscType *&dest, const PetscType *src, PetscOffloadMask requested_mask, cupmMemcpyKind_t direction, PetscType **ptr))
+{
+  const auto n    = scal->n;
+  auto&      mask = scal->mask;
+
+  PetscFunctionBegin;
+
+  PetscFunctionBegin;
+  if (!dest) PetscCall(managed_pool_<Allocator<PetscType>>().get(n,&dest));
+  // no need to do anything if we already match the desired offload
+  if (mask != requested_mask) {
+    mask = requested_mask;
+    // if we want any kind of read (read or read_write) and we have valid SRC, we need to copy
+    // it now
+    if ((mode != PETSC_MEMORY_ACCESS_WRITE) && src) {
+      PetscCall(PetscCUPMMemcpyAsync(dest,src,n,direction,impls_cast_(dctx)->stream));
+      // if read-only then update the offloadmask
+      if (mode == PETSC_MEMORY_ACCESS_READ) mask = PETSC_OFFLOAD_BOTH;
+    }
+  }
+  *ptr = dest;
+  PetscFunctionReturn(0);
+}
+
 template <DeviceType T>
 template <typename PetscType, typename PetscManagedType>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::getManagedTypeValues(PetscDeviceContext dctx, PetscManagedType scal, PetscMemType mtype, PetscMemoryAccessMode mode, PetscType **ptr))
 {
-  const auto n               = scal->n;
-  const auto update_and_copy = [&](PetscType *dest, const PetscType *src, PetscOffloadMask requested_mask, cupmMemcpyKind_t direction)
-  {
-    auto& mask = scal->mask;
-
-    PetscFunctionBegin;
-    // no need to do anything if we already match the desired offload
-    if (mask != requested_mask) {
-      mask = requested_mask;
-      // if we want any kind of read (read or read_write) and we have valid SRC, we need to copy
-      // it now
-      if ((mode != PETSC_MEMORY_ACCESS_WRITE) && src) {
-        PetscCall(PetscCUPMMemcpyAsync(dest,src,n,direction,impls_cast_(dctx)->stream));
-        // if read-only then update the offloadmask
-        if (mode == PETSC_MEMORY_ACCESS_READ) mask = PETSC_OFFLOAD_BOTH;
-      }
-    }
-    *ptr = dest;
-    PetscFunctionReturn(0);
-  };
-
   PetscFunctionBegin;
   switch (mtype) {
-  case PETSC_MEMTYPE_HOST: {
-    auto& dest = scal->host;
-
-    // read or write, get a pointer if we don't have one yet
-    if (!dest) PetscCall(managed_pool_<HostAllocator<PetscType>>().get(n,&dest));
-    PetscCall(update_and_copy(dest,scal->device,PETSC_OFFLOAD_CPU,cupmMemcpyDeviceToHost));
-  } break;
-  case PETSC_MEMTYPE_DEVICE: {
-    auto& dest = scal->device;
-
-    if (!dest) PetscCall(managed_pool_<DeviceAllocator<PetscType>>().get(n,&dest));
-    PetscCall(update_and_copy(dest,scal->host,PETSC_OFFLOAD_GPU,cupmMemcpyHostToDevice));
-  } break;
+  case PETSC_MEMTYPE_HOST:
+    PetscCall(copy_managed_values_<HostAllocator>(dctx,scal,mode,scal->host,scal->device,PETSC_OFFLOAD_CPU,cupmMemcpyDeviceToHost,ptr));
+    break;
+  case PETSC_MEMTYPE_DEVICE:
+    PetscCall(copy_managed_values_<DeviceAllocator>(dctx,scal,mode,scal->device,scal->host,PETSC_OFFLOAD_GPU,cupmMemcpyHostToDevice,ptr));
+    break;
   default:
     SETERRQ(PETSC_COMM_SELF,PETSC_ERR_PLIB,"PetscMemType must be either PETSC_MEMTYPE_HOST (%d) or PETSC_MEMTYPE_DEVICE (%d) not %d",static_cast<int>(PETSC_MEMTYPE_HOST),static_cast<int>(PETSC_MEMTYPE_DEVICE),static_cast<int>(mtype));
     break;

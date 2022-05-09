@@ -261,7 +261,7 @@ static inline PetscErrorCode PetscDeviceDereference_Internal(PetscDevice device)
 #if PetscDefined(HAVE_CXX)
 PETSC_INTERN PetscErrorCode PetscDeviceContextSetRootDeviceType_Internal(PetscDeviceType);
 PETSC_INTERN PetscErrorCode PetscDeviceContextSetRootStreamType_Internal(PetscStreamType);
-PETSC_INTERN PetscErrorCode PetscDeviceContextGetNullContextForDevice_Internal(PetscDevice,PetscDeviceContext*);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode PetscDeviceContextGetNullContextForDevice_Internal(PetscDevice,PetscDeviceContext*);
 
 static inline PetscErrorCode PetscDeviceContextSetDefaultDeviceForType_Internal(PetscDeviceContext dctx, PetscDeviceType type)
 {
@@ -358,14 +358,17 @@ static inline PetscErrorCode PetscDeviceContextEndTimer_Internal(PetscDeviceCont
   PetscFunctionReturn(0);
 }
 
-static inline PetscErrorCode PetscDeviceContextAllReduceManagedType_Internal(PetscDeviceContext dctx, void *ptr, const PetscInt *n, MPI_Datatype dtype, MPI_Op op, PetscObject obj)
+static inline PetscErrorCode PetscDeviceContextAllReduceManagedType_Internal(PetscDeviceContext dctx, void *ptr, const PetscInt *nin, MPI_Datatype dtype, MPI_Op op, PetscObject obj)
 {
+  PetscMPIInt n;
+
   PetscFunctionBegin;
   PetscValidDeviceContext(dctx,1);
-  PetscValidIntPointer(n,3);
+  PetscValidIntPointer(nin,3);
   PetscValidHeader(obj,6);
+  PetscCall(PetscMPIIntCast(*nin,&n));
   PetscCall(PetscDeviceContextSynchronize(dctx));
-  PetscCall(MPIU_Allreduce(MPI_IN_PLACE,ptr,*n,dtype,op,PetscObjectComm(obj)));
+  PetscCall(MPIU_Allreduce(MPI_IN_PLACE,ptr,n,dtype,op,PetscObjectComm(obj)));
   PetscFunctionReturn(0);
 }
 
@@ -375,10 +378,13 @@ static inline PetscErrorCode PetscDeviceContextAllReduceManagedScalar_Internal(P
 
   PetscFunctionBegin;
   if (use_gpu_aware_mpi) {
-    // we do not care where the pointer is, MPI will figure that out
-    PetscCall(PetscManagedScalarGetPointerAndMemType(dctx,scal,PETSC_MEMORY_ACCESS_READ,&scalptr,PETSC_NULLPTR));
+    PetscMemType mtype;
+
+    PetscCall(PetscManagedScalarGetPointerAndMemType(dctx,scal,PETSC_MEMORY_ACCESS_READ_WRITE,&scalptr,&mtype));
+    // we are about to sync, so we can reset this
+    if (PetscMemTypeHost(mtype)) scal->state.tainted = 0;
   } else {
-    PetscCall(PetscManagedScalarGetValues(dctx,scal,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&scalptr));
+    PetscCall(PetscManagedScalarGetValues(dctx,scal,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,PETSC_TRUE,&scalptr));
   }
   PetscCall(PetscDeviceContextAllReduceManagedType_Internal(dctx,scalptr,n,MPIU_SCALAR,op,obj));
   PetscFunctionReturn(0);
@@ -390,10 +396,13 @@ static inline PetscErrorCode PetscDeviceContextAllReduceManagedReal_Internal(Pet
 
   PetscFunctionBegin;
   if (use_gpu_aware_mpi) {
-    // we do not care where the pointer is, MPI will figure that out
-    PetscCall(PetscManagedRealGetPointerAndMemType(dctx,scal,PETSC_MEMORY_ACCESS_READ,&scalptr,PETSC_NULLPTR));
+    PetscMemType mtype;
+
+    PetscCall(PetscManagedRealGetPointerAndMemType(dctx,scal,PETSC_MEMORY_ACCESS_READ_WRITE,&scalptr,&mtype));
+    // we are about to sync, so we can reset this
+    if (PetscMemTypeHost(mtype)) scal->state.tainted = 0;
   } else {
-    PetscCall(PetscManagedRealGetValues(dctx,scal,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ,PETSC_TRUE,&scalptr));
+    PetscCall(PetscManagedRealGetValues(dctx,scal,PETSC_MEMTYPE_HOST,PETSC_MEMORY_ACCESS_READ_WRITE,PETSC_TRUE,&scalptr));
   }
   PetscCall(PetscDeviceContextAllReduceManagedType_Internal(dctx,scalptr,n,MPIU_REAL,op,obj));
   PetscFunctionReturn(0);

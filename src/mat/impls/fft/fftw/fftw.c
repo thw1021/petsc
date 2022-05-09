@@ -380,7 +380,7 @@ PetscErrorCode MatDestroy_FFTW(Mat A)
 
 #if !PetscDefined(HAVE_MPIUNI)
 #include <../src/vec/vec/impls/mpi/pvecimpl.h>   /*I  "petscvec.h"   I*/
-PetscErrorCode VecDestroy_MPIFFTW(Vec v)
+PetscErrorCode VecDestroy_MPIFFTW(Vec v, PetscDeviceContext dctx)
 {
   PetscScalar    *array;
 
@@ -388,13 +388,13 @@ PetscErrorCode VecDestroy_MPIFFTW(Vec v)
   PetscCall(VecGetArray(v,&array));
   fftw_free((fftw_complex*)array);
   PetscCall(VecRestoreArray(v,&array));
-  PetscCall(VecDestroy_MPI(v));
+  PetscCall(VecDestroy_MPI(v,dctx));
   PetscFunctionReturn(0);
 }
 #endif
 
 #if !PetscDefined(HAVE_MPIUNI)
-static PetscErrorCode VecDuplicate_FFTW_fin(Vec fin,Vec *fin_new)
+static PetscErrorCode VecDuplicate_FFTW_fin(Vec fin,Vec *fin_new, PetscDeviceContext PETSC_UNUSED dctx)
 {
   Mat            A;
 
@@ -404,7 +404,7 @@ static PetscErrorCode VecDuplicate_FFTW_fin(Vec fin,Vec *fin_new)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecDuplicate_FFTW_fout(Vec fout,Vec *fout_new)
+static PetscErrorCode VecDuplicate_FFTW_fout(Vec fout,Vec *fout_new, PetscDeviceContext PETSC_UNUSED dctx)
 {
   Mat            A;
 
@@ -414,7 +414,7 @@ static PetscErrorCode VecDuplicate_FFTW_fout(Vec fout,Vec *fout_new)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode VecDuplicate_FFTW_bout(Vec bout, Vec *bout_new)
+static PetscErrorCode VecDuplicate_FFTW_bout(Vec bout, Vec *bout_new, PetscDeviceContext PETSC_UNUSED dctx)
 {
   Mat            A;
 
