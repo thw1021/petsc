@@ -161,23 +161,70 @@ private:
   }
 
   template <typename PetscType>
-  PETSC_CXX_COMPAT_DECL(auto managed_host_pool_()) -> decltype(Petsc::Device::Impl::make_segmented_memory_pool<PetscType>(cupmInterface_t::template PetscCUPMMallocHost<PetscType>,cupmInterface_t::template cupmFreeHost<PetscType>))&
+  struct HostAllocator
   {
-    static auto pool = Petsc::Device::Impl::make_segmented_memory_pool<PetscType>(
-      cupmInterface_t::template PetscCUPMMallocHost<PetscType>,
-      cupmInterface_t::template cupmFreeHost<PetscType>
-    );
+    using value_type = PetscType;
+
+    PETSC_CXX_COMPAT_DECL(PetscErrorCode allocate(value_type **ptr, std::size_t n))
+    {
+      PetscFunctionBegin;
+      PetscCall(PetscCUPMMallocHost(ptr,n));
+      PetscFunctionReturn(0);
+    }
+
+    PETSC_CXX_COMPAT_DECL(PetscErrorCode deallocate(value_type *ptr))
+    {
+      PetscFunctionBegin;
+      PetscCallCUPM(cupmFreeHost(ptr));
+      PetscFunctionReturn(0);
+    }
+  };
+
+  template <typename PetscType>
+  struct DeviceAllocator
+  {
+    using value_type = PetscType;
+
+    PETSC_CXX_COMPAT_DECL(PetscErrorCode allocate(value_type **ptr, std::size_t n))
+    {
+      PetscFunctionBegin;
+      PetscCall(PetscCUPMMalloc(ptr,n));
+      PetscFunctionReturn(0);
+    }
+
+    PETSC_CXX_COMPAT_DECL(PetscErrorCode deallocate(value_type *ptr))
+    {
+      PetscFunctionBegin;
+      PetscCallCUPM(cupmFree(ptr));
+      PetscFunctionReturn(0);
+    }
+  };
+
+  template <typename Allocator>
+  PETSC_CXX_COMPAT_DECL(auto managed_pool_()) -> decltype(Petsc::Device::Impl::make_segmented_memory_pool<typename Allocator::value_type>(Allocator{}))&
+  {
+    using value_type = typename Allocator::value_type;
+    static auto pool = Petsc::Device::Impl::make_segmented_memory_pool<value_type>(Allocator{});
     return pool;
   }
 
-  template <typename PetscType>
-  PETSC_CXX_COMPAT_DECL(auto managed_device_pool_()) -> decltype(Petsc::Device::Impl::make_segmented_memory_pool<PetscType>(cupmInterface_t::template PetscCUPMMalloc<PetscType>,cupmInterface_t::template cupmFree<PetscType>))&
-  {
-    static auto pool = Petsc::Device::Impl::make_segmented_memory_pool<PetscType>(
-      cupmInterface_t::template PetscCUPMMalloc<PetscType>,cupmInterface_t::template cupmFree<PetscType>
-    );
-    return pool;
-  }
+  // template <typename PetscType>
+  // PETSC_CXX_COMPAT_DECL(auto managed_host_pool_()) -> decltype(Petsc::Device::Impl::make_segmented_memory_pool<PetscType>(HostAllocator<PetscType>{}))&
+  // {
+  //   static auto pool = Petsc::Device::Impl::make_segmented_memory_pool<PetscType>(
+  //     HostAllocator<PetscType>{}
+  //   );
+  //   return pool;
+  // }
+
+  // template <typename PetscType>
+  // PETSC_CXX_COMPAT_DECL(auto managed_device_pool_()) -> decltype(Petsc::Device::Impl::make_segmented_memory_pool<PetscType>(DeviceAllocator<PetscType>{}))&
+  // {
+  //   static auto pool = Petsc::Device::Impl::make_segmented_memory_pool<PetscType>(
+  //     DeviceAllocator<PetscType>{}
+  //   );
+  //   return pool;
+  // }
 
 public:
   // All of these functions MUST be static in order to be callable from C, otherwise they
@@ -410,7 +457,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::destroyManagedType(PetscD
 
   PetscFunctionBegin;
   // try returning them to the pool
-  PetscCall(managed_host_pool_<PetscType>().release(&host_ptr));
+  PetscCall(managed_pool_<HostAllocator<PetscType>>().release(&host_ptr));
   // not freed, indicating the pool doesn't own it, now check if it is our responsibility to
   // get rid of it
   if (host_ptr && (scal->h_cmode == PETSC_OWN_POINTER)) {
@@ -424,7 +471,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::destroyManagedType(PetscD
       PetscCall(PetscFree(host_ptr));
     }
   }
-  PetscCall(managed_device_pool_<PetscType>().release(&device_ptr));
+  PetscCall(managed_pool_<DeviceAllocator<PetscType>>().release(&device_ptr));
   // same deal with device pointer
   if (device_ptr && (scal->d_cmode == PETSC_OWN_POINTER)) {
     PetscCallCUPM(cupmFreeAsync(device_ptr,stream));
@@ -463,13 +510,13 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::getManagedTypeValues(Pets
     auto& dest = scal->host;
 
     // read or write, get a pointer if we don't have one yet
-    if (!dest) PetscCall(managed_host_pool_<PetscType>().get(n,&dest));
+    if (!dest) PetscCall(managed_pool_<HostAllocator<PetscType>>().get(n,&dest));
     PetscCall(update_and_copy(dest,scal->device,PETSC_OFFLOAD_CPU,cupmMemcpyDeviceToHost));
   } break;
   case PETSC_MEMTYPE_DEVICE: {
     auto& dest = scal->device;
 
-    if (!dest) PetscCall(managed_device_pool_<PetscType>().get(n,&dest));
+    if (!dest) PetscCall(managed_pool_<DeviceAllocator<PetscType>>().get(n,&dest));
     PetscCall(update_and_copy(dest,scal->host,PETSC_OFFLOAD_GPU,cupmMemcpyHostToDevice));
   } break;
   default:

@@ -19,28 +19,29 @@ namespace Impl
 struct DeviceContext
 {
 private:
-  template <typename PetscType>
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode malloc_wrapper(PetscType **ptr, std::size_t n))
+  template <typename T>
+  struct HostAllocator
   {
-    PetscFunctionBegin;
-    PetscCall(PetscMalloc1(n,ptr));
-    PetscFunctionReturn(0);
-  }
+    PETSC_CXX_COMPAT_DECL(PetscErrorCode allocate(T **ptr, std::size_t n))
+    {
+      PetscFunctionBegin;
+      PetscCall(PetscMalloc1(n,ptr));
+      PetscFunctionReturn(0);
+    }
+
+    PETSC_CXX_COMPAT_DECL(PetscErrorCode deallocate(T *ptr))
+    {
+      PetscFunctionBegin;
+      PetscCall(PetscFree(ptr));
+      PetscFunctionReturn(0);
+    }
+  };
 
   template <typename PetscType>
-  PETSC_CXX_COMPAT_DECL(PetscErrorCode free_wrapper(PetscType *ptr))
+  PETSC_CXX_COMPAT_DECL(auto managed_pool_()) -> decltype(Petsc::Device::Impl::make_segmented_memory_pool<PetscType>(HostAllocator<PetscType>{}))&
   {
-    PetscFunctionBegin;
-    PetscCall(PetscFree(ptr));
-    PetscFunctionReturn(0);
-  }
-
-  template <typename PetscType>
-  PETSC_CXX_COMPAT_DECL(auto managed_pool_()) -> decltype(Petsc::Device::Impl::make_segmented_memory_pool<PetscType>(malloc_wrapper<PetscType>,free_wrapper<PetscType>))&
-  {
-    static auto pool = Petsc::Device::Impl::make_segmented_memory_pool<PetscType>(
-      malloc_wrapper<PetscType>,free_wrapper<PetscType>
-    );
+    using AllocatorType = HostAllocator<PetscType>;
+    static auto pool = Petsc::Device::Impl::make_segmented_memory_pool<PetscType>(AllocatorType{});
     return pool;
   }
 
