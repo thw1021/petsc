@@ -31,19 +31,18 @@ struct MemoryChunk
 };
 
 template <typename T, typename AllocType, typename FreeType>
-class PETSC_TEMPLATE_VISIBILITY_INTERNAL MemoryBlock;
-
-template <typename T, typename AllocType, typename FreeType>
 class MemoryBlock
 {
 public:
-  using value_type = T;
-  using ChunksType = std::vector<MemoryChunk>;
-  using size_type  = ChunksType::value_type::size_type;
+  using value_type       = T;
+  using allocator_type   = AllocType;
+  using deallocator_type = FreeType;
+  using chunks_type      = std::vector<MemoryChunk>;
+  using size_type        = chunks_type::value_type::size_type;
 
-  MemoryBlock(AllocType&& allocate, FreeType&& destroy, size_type s)
-    noexcept(noexcept(std::is_nothrow_default_constructible<ChunksType>::value))
-    : destructor_(std::forward<FreeType>(destroy)), size_(s), chunks_()
+  MemoryBlock(allocator_type&& allocate, deallocator_type&& destroy, size_type s)
+    noexcept(noexcept(std::is_nothrow_default_constructible<chunks_type>::value))
+    : destructor_(std::forward<deallocator_type>(destroy)), size_(s), chunks_()
   {
     PetscFunctionBegin;
     PetscCallAbort(PETSC_COMM_SELF,allocate(&mem_,s));
@@ -66,10 +65,10 @@ public:
   PETSC_NODISCARD bool           owns_pointer(T*)   const noexcept;
 
 private:
-  value_type      *mem_ = nullptr;
-  const FreeType   destructor_;
-  const size_type  size_;
-  ChunksType       chunks_;
+  value_type             *mem_ = nullptr;
+  const deallocator_type  destructor_;
+  const size_type         size_;
+  chunks_type             chunks_;
 };
 
 template <typename T, typename A, typename F>
@@ -143,14 +142,29 @@ inline bool MemoryBlock<T,A,F>::owns_pointer(T *ptr) const noexcept
 template <typename MemType, typename AllocType, typename FreeType, std::size_t ChunkSize>
 class SegmentedMemoryPool
 {
-  // list of chunks within the pool
-  using PoolType   = std::deque<MemoryBlock<MemType,AllocType,FreeType>>;
-  using size_type  = typename PoolType::value_type::size_type;
+public:
+  using value_type       = MemType;
+  using allocator_type   = AllocType;
+  using deallocator_type = FreeType;
+  using block_type       = MemoryBlock<value_type,allocator_type,deallocator_type>;
+  using pool_type        = std::deque<block_type>;
+  using size_type        = typename pool_type::value_type::size_type;
 
-  const AllocType allocate_;
-  const FreeType  destroy_;
-  PoolType        pool_;
-  bool            init_ = false;
+  constexpr SegmentedMemoryPool(allocator_type&& alloc, deallocator_type&& destroy) noexcept
+    : allocate_(std::forward<allocator_type>(alloc)), destroy_(std::forward<deallocator_type>(destroy)),
+      pool_()
+  { }
+
+  PETSC_NODISCARD PetscErrorCode finalize()              noexcept;
+  PETSC_NODISCARD PetscErrorCode initialize()            noexcept;
+  PETSC_NODISCARD PetscErrorCode get(PetscInt,MemType**) noexcept;
+  PETSC_NODISCARD PetscErrorCode release(MemType**)      noexcept;
+
+private:
+  const allocator_type   allocate_;
+  const deallocator_type destroy_;
+  pool_type              pool_;
+  bool                   init_ = false;
 
   PETSC_NODISCARD PetscErrorCode make_block_(size_type size = ChunkSize) noexcept
   {
@@ -159,16 +173,6 @@ class SegmentedMemoryPool
     PetscFunctionReturn(0);
   }
 
-public:
-  constexpr SegmentedMemoryPool(AllocType&& alloc, FreeType&& destroy) noexcept
-    : allocate_(std::forward<AllocType>(alloc)), destroy_(std::forward<FreeType>(destroy)),
-      pool_()
-  { }
-
-  PETSC_NODISCARD PetscErrorCode finalize()              noexcept;
-  PETSC_NODISCARD PetscErrorCode initialize()            noexcept;
-  PETSC_NODISCARD PetscErrorCode get(PetscInt,MemType**) noexcept;
-  PETSC_NODISCARD PetscErrorCode release(MemType**)      noexcept;
 };
 
 template <typename MemType, typename AllocType, typename FreeType, std::size_t ChunkSize>
