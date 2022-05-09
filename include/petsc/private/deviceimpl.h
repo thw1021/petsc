@@ -366,8 +366,8 @@ static inline PetscErrorCode PetscDeviceContextAllReduceManagedType_Internal(Pet
   PetscValidDeviceContext(dctx,1);
   PetscValidIntPointer(nin,3);
   PetscValidHeader(obj,6);
-  PetscCall(PetscMPIIntCast(*nin,&n));
   PetscCall(PetscDeviceContextSynchronize(dctx));
+  PetscCall(PetscMPIIntCast(*nin,&n));
   PetscCall(MPIU_Allreduce(MPI_IN_PLACE,ptr,n,dtype,op,PetscObjectComm(obj)));
   PetscFunctionReturn(0);
 }

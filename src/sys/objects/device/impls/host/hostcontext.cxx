@@ -22,14 +22,16 @@ private:
   template <typename T>
   struct HostAllocator
   {
-    PETSC_CXX_COMPAT_DECL(PetscErrorCode allocate(T **ptr, std::size_t n))
+    using value_type = T;
+
+    PETSC_CXX_COMPAT_DECL(PetscErrorCode allocate(value_type **ptr, std::size_t n))
     {
       PetscFunctionBegin;
       PetscCall(PetscMalloc1(n,ptr));
       PetscFunctionReturn(0);
     }
 
-    PETSC_CXX_COMPAT_DECL(PetscErrorCode deallocate(T *ptr))
+    PETSC_CXX_COMPAT_DECL(PetscErrorCode deallocate(value_type *ptr))
     {
       PetscFunctionBegin;
       PetscCall(PetscFree(ptr));
@@ -38,10 +40,10 @@ private:
   };
 
   template <typename PetscType>
-  PETSC_CXX_COMPAT_DECL(auto managed_pool_()) -> decltype(Petsc::Device::Impl::make_segmented_memory_pool<PetscType>(HostAllocator<PetscType>{}))&
+  PETSC_CXX_COMPAT_DECL(auto managed_pool_())
+    -> decltype(Petsc::Device::Impl::SegmentedMemoryPool<PetscType,HostAllocator<PetscType>>{})&
   {
-    using AllocatorType = HostAllocator<PetscType>;
-    static auto pool = Petsc::Device::Impl::make_segmented_memory_pool<PetscType>(AllocatorType{});
+    static auto pool = Petsc::Device::Impl::SegmentedMemoryPool<PetscType,HostAllocator<PetscType>>{};
     return pool;
   }
 

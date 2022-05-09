@@ -201,14 +201,14 @@ private:
   };
 
   template <typename Allocator>
-  PETSC_CXX_COMPAT_DECL(auto managed_pool_()) -> decltype(Petsc::Device::Impl::make_segmented_memory_pool<typename Allocator::value_type>(Allocator{}))&
+  PETSC_CXX_COMPAT_DECL(auto managed_pool_()) -> decltype(Petsc::Device::Impl::SegmentedMemoryPool<typename Allocator::value_type,Allocator>{})&
   {
     using value_type = typename Allocator::value_type;
-    static auto pool = Petsc::Device::Impl::make_segmented_memory_pool<value_type>(Allocator{});
+    static auto pool = Petsc::Device::Impl::SegmentedMemoryPool<value_type,Allocator>{};
     return pool;
   }
 
-  template <typename PetscType, typename PetscManagedType, template <typename = PetscType> class Allocator>
+  template <template <typename> class Allocator, typename PetscType, typename PetscManagedType>
   PETSC_CXX_COMPAT_DECL(PetscErrorCode copy_managed_values_(PetscDeviceContext,PetscManagedType,PetscMemoryAccessMode,PetscType*&,const PetscType*,PetscOffloadMask,cupmMemcpyKind_t,PetscType**));
 
 public:
@@ -467,13 +467,11 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::destroyManagedType(PetscD
 // this should by all means be a lambda in getManagedTypeValues(), but since you can't make
 // templated lambdas until either C++14 or for real in C++20 it is a function instead...
 template <DeviceType T>
-template <typename PetscType, typename PetscManagedType, template <typename> class Allocator>
+template <template <typename> class Allocator, typename PetscType, typename PetscManagedType>
 PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::copy_managed_values_(PetscDeviceContext dctx, PetscManagedType scal, PetscMemoryAccessMode mode, PetscType *&dest, const PetscType *src, PetscOffloadMask requested_mask, cupmMemcpyKind_t direction, PetscType **ptr))
 {
   const auto n    = scal->n;
   auto&      mask = scal->mask;
-
-  PetscFunctionBegin;
 
   PetscFunctionBegin;
   if (!dest) PetscCall(managed_pool_<Allocator<PetscType>>().get(n,&dest));
@@ -482,7 +480,7 @@ PETSC_CXX_COMPAT_DEFN(PetscErrorCode DeviceContext<T>::copy_managed_values_(Pets
     mask = requested_mask;
     // if we want any kind of read (read or read_write) and we have valid SRC, we need to copy
     // it now
-    if ((mode != PETSC_MEMORY_ACCESS_WRITE) && src) {
+    if (PetscMemoryAccessRead(mode) && src) {
       PetscCall(PetscCUPMMemcpyAsync(dest,src,n,direction,impls_cast_(dctx)->stream));
       // if read-only then update the offloadmask
       if (mode == PETSC_MEMORY_ACCESS_READ) mask = PETSC_OFFLOAD_BOTH;

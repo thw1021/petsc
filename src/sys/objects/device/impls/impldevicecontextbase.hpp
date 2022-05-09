@@ -34,13 +34,14 @@ template <typename T, typename AllocatorType>
 class MemoryBlock
 {
 public:
-  using value_type     = T;
-  using allocator_type = AllocatorType;
-  using chunk_type     = MemoryChunk;
-  using size_type      = chunk_type::size_type;
+  using value_type      = T;
+  using allocator_type  = AllocatorType;
+  using chunk_type      = MemoryChunk;
+  using chunk_list_type = std::vector<chunk_type>;
+  using size_type       = chunk_type::size_type;
 
   MemoryBlock(allocator_type& alloc, size_type s)
-    noexcept(noexcept(std::is_nothrow_default_constructible<std::vector<chunk_type>>::value))
+    noexcept(noexcept(std::is_nothrow_default_constructible<chunk_list_type>::value))
     : allocator_(alloc), size_(s), chunks_()
   {
     PetscFunctionBegin;
@@ -64,10 +65,10 @@ public:
   PETSC_NODISCARD bool           owns_pointer(T*)   const noexcept;
 
 private:
-  value_type              *mem_ = nullptr;
-  allocator_type          &allocator_;
-  const size_type          size_;
-  std::vector<chunk_type>  chunks_;
+  value_type      *mem_ = nullptr;
+  allocator_type  &allocator_;
+  const size_type  size_;
+  chunk_list_type  chunks_;
 };
 
 template <typename T, typename A>
@@ -138,7 +139,7 @@ inline bool MemoryBlock<T,A>::owns_pointer(T *ptr) const noexcept
   return (ptr >= mem_) && (ptr < std::next(mem_,size_));
 }
 
-template <typename MemType, typename AllocType, std::size_t ChunkSize>
+template <typename MemType, typename AllocType, std::size_t ChunkSize = 200>
 class SegmentedMemoryPool
 {
 public:
@@ -148,8 +149,8 @@ public:
   using pool_type      = std::deque<block_type>;
   using size_type      = typename block_type::size_type;
 
-  constexpr SegmentedMemoryPool(allocator_type&& alloc) noexcept
-    : allocate_(std::forward<allocator_type>(alloc)), pool_()
+  constexpr SegmentedMemoryPool(const allocator_type& alloc = allocator_type{}) noexcept
+    : allocate_(alloc), pool_()
   { }
 
   PETSC_NODISCARD PetscErrorCode finalize()              noexcept;
@@ -168,7 +169,6 @@ private:
     PetscCallCXX(pool_.emplace_back(allocate_,size));
     PetscFunctionReturn(0);
   }
-
 };
 
 template <typename MemType, typename AllocType, std::size_t ChunkSize>
@@ -233,12 +233,6 @@ inline PetscErrorCode SegmentedMemoryPool<MemType,AllocType,ChunkSize>::release(
   }
   PetscFunctionReturn(0);
 }
-
-template <typename MemType, std::size_t ChunkSize = 200, typename AllocType>
-static inline auto make_segmented_memory_pool(AllocType&& alloc)
-PETSC_DECLTYPE_NOEXCEPT_AUTO_RETURNS(SegmentedMemoryPool<MemType,AllocType,ChunkSize>{
-  std::forward<AllocType>(alloc)
-});
 
 } // namespace Impl
 
