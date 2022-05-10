@@ -1634,8 +1634,16 @@ PetscLogEvent RebalBuildGraph,RebalRewriteSF,RebalGatherGraph,RebalPartition,Reb
   Output parameters:
 . success          - whether the graph partitioning was successful or not. If not, try useInitialGuess=True and parallel=True.
 
-  Level: intermediate
+  Options Database:
++  -dm_plex_rebalance_shared_points_parmetis - Use ParMetis instead of Metis for the partitioner
+.  -dm_plex_rebalance_shared_points_use_initial_guess - Use current partition to bootstrap ParMetis partition
+-  -dm_plex_rebalance_shared_points_monitor - Monitor the shared points rebalance process
 
+
+  Developer Notes:
+  This should use MatPartitioning to allow the use of any partitioner and not be hardwired to use ParMetis
+
+  Level: intermediate
 @*/
 PetscErrorCode DMPlexRebalanceSharedPoints(DM dm, PetscInt entityDepth, PetscBool useInitialGuess, PetscBool parallel, PetscBool *success)
 {
@@ -1660,7 +1668,6 @@ PetscErrorCode DMPlexRebalanceSharedPoints(DM dm, PetscInt entityDepth, PetscBoo
   PetscInt          failed, failedGlobal;
   MPI_Comm          comm;
   Mat               A;
-  const char        *prefix = NULL;
   PetscViewer       viewer;
   PetscViewerFormat format;
   PetscLayout       layout;
@@ -1687,8 +1694,11 @@ PetscErrorCode DMPlexRebalanceSharedPoints(DM dm, PetscInt entityDepth, PetscBoo
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
 
   parallel = PETSC_FALSE;
-  PetscCall(PetscOptionsHasName(NULL,((PetscObject)dm)->prefix,"-dm_plex_rebalance_shared_points_parmetis",&parallel));
-  PetscCall(PetscOptionsGetViewer(comm,((PetscObject)dm)->options, prefix,"-dm_plex_rebalance_shared_points_monitor",&viewer,&format,NULL));
+  PetscObjectOptionsBegin((PetscObject)dm);
+  PetscCall(PetscOptionsName("-dm_plex_rebalance_shared_points_parmetis","Use ParMetis instead of Metis for the partitioner","DMPlexRebalanceSharedPoints",&parallel));
+  PetscCall(PetscOptionsBool("-dm_plex_rebalance_shared_points_use_initial_guess","Use current partition to bootstrap ParMetis partition","DMPlexRebalanceSharedPoints",useInitialGuess,&useInitialGuess,NULL));
+  PetscCall(PetscOptionsViewer("-dm_plex_rebalance_shared_points_monitor","Monitor the shared points rebalance process","DMPlexRebalanceSharedPoints",&viewer,&format,NULL));
+  PetscOptionsEnd();
   if (viewer) PetscCall(PetscViewerPushFormat(viewer,format));
 
   PetscCall(PetscLogEventBegin(DMPLEX_RebalanceSharedPoints, dm, 0, 0, 0));
@@ -1825,7 +1835,8 @@ PetscErrorCode DMPlexRebalanceSharedPoints(DM dm, PetscInt entityDepth, PetscBoo
     options[3] = PARMETIS_PSR_COUPLED; /* Seed */
     wgtflag    = 2;
     numflag    = 0;
-    if (0) { /* this is broken because no initial partition was ever provided !useInitialGuess) { */
+    if (useInitialGuess) {
+      for (i=0; i<numRows; i++) part[i] = rank;
       if (viewer) PetscCall(PetscViewerASCIIPrintf(viewer, "Using current distribution of points as initial guess.\n"));
       PetscStackPush("ParMETIS_V3_RefineKway");
       PetscCall(PetscLogEventBegin(RebalPartition,0,0,0,0));
