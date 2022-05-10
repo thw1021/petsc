@@ -248,7 +248,7 @@ static PetscErrorCode TSDestroy_SSP(TS ts)
 
    Options Database Keys:
    -ts_ssp_type <rks2>: Type of SSP method (one of) rks2 rks3 rk104
-   -ts_ssp_nstages <5>: Number of stages
+   -ts_ssp_nstages <4>: Number of stages
 
    Level: beginner
 
@@ -297,7 +297,7 @@ PetscErrorCode TSSSPGetType(TS ts,TSSSPType *type)
 
    Options Database Keys:
    -ts_ssp_type <rks2>: NumStages of SSP method (one of) rks2 rks3 rk104
-   -ts_ssp_nstages <5>: Number of stages
+   -ts_ssp_nstages <4>: Number of stages
 
    Level: beginner
 
@@ -470,7 +470,7 @@ PETSC_EXTERN PetscErrorCode TSCreate_SSP(TS ts)
   PetscCall(PetscObjectComposeFunction((PetscObject)ts,"TSSSPSetNumStages_C",TSSSPSetNumStages_SSP));
 
   PetscCall(TSSSPSetType(ts,TSSSPRKS2));
-  ssp->nstages = 5;
+  ssp->nstages = 4;
   PetscFunctionReturn(0);
 }
 

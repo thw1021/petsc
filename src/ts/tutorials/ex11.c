@@ -2269,19 +2269,19 @@ int initLinearWave(EulerNode *ux, const PetscReal gamma, const PetscReal coord[]
       suffix: adv_2d_tri_0
       requires: triangle
       TODO: how did this ever get in main when there is no support for this
-      args: -ufv_vtk_interval 0 -simplex -dm_refine 3 -dm_plex_faces 1,1 -dm_plex_separate_marker -bc_inflow 1,2,4 -bc_outflow 3
+      args: -ufv_vtk_interval 0 -simplex -dm_refine 3 -dm_plex_faces 1,1 -dm_plex_separate_marker -bc_inflow 1,2,4 -bc_outflow 3 -ts_ssp_nstages 5
 
     test:
       suffix: adv_2d_tri_1
       requires: triangle
       TODO: how did this ever get in main when there is no support for this
-      args: -ufv_vtk_interval 0 -simplex -dm_refine 5 -dm_plex_faces 1,1 -dm_plex_separate_marker -grid_bounds -0.5,0.5,-0.5,0.5 -bc_inflow 1,2,4 -bc_outflow 3 -advect_sol_type bump -advect_bump_center 0.25,0 -advect_bump_radius 0.1
+      args: -ufv_vtk_interval 0 -simplex -dm_refine 5 -dm_plex_faces 1,1 -dm_plex_separate_marker -grid_bounds -0.5,0.5,-0.5,0.5 -bc_inflow 1,2,4 -bc_outflow 3 -advect_sol_type bump -advect_bump_center 0.25,0 -advect_bump_radius 0.1 -ts_ssp_nstages 5
 
     test:
       suffix: tut_1
       requires: exodusii
       nsize: 1
-      args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside.exo
+      args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside.exo -ts_ssp_nstages 5
 
     test:
       suffix: tut_2
@@ -2293,45 +2293,45 @@ int initLinearWave(EulerNode *ux, const PetscReal gamma, const PetscReal coord[]
       suffix: tut_3
       requires: exodusii
       nsize: 4
-      args: -dm_distribute_overlap 1 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/annulus-20.exo -monitor Error -advect_sol_type bump -petscfv_type leastsquares -petsclimiter_type sin
+      args: -dm_distribute_overlap 1 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/annulus-20.exo -monitor Error -advect_sol_type bump -petscfv_type leastsquares -petsclimiter_type sin -ts_ssp_nstages 5
 
     test:
       suffix: tut_4
       requires: exodusii
       nsize: 4
-      args: -dm_distribute_overlap 1 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/annulus-20.exo -physics sw -monitor Height,Energy -petscfv_type leastsquares -petsclimiter_type minmod
+      args: -dm_distribute_overlap 1 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/annulus-20.exo -physics sw -monitor Height,Energy -petscfv_type leastsquares -petsclimiter_type minmod -ts_ssp_nstages 5
 
   testset:
-    args: -dm_plex_adj_cone -dm_plex_adj_closure 0 -dm_plex_simplex 0 -dm_plex_box_faces 1,1,1
+    args: -dm_plex_adj_cone -dm_plex_adj_closure 0 -dm_plex_simplex 0 -dm_plex_box_faces 1,1,1 
 
     # 2D Advection 0-10
     test:
       suffix: 0
       requires: exodusii
-      args: -ufv_vtk_interval 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside.exo
+      args: -ufv_vtk_interval 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside.exo -ts_ssp_nstages 5
 
     test:
       suffix: 1
       requires: exodusii
-      args: -ufv_vtk_interval 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside-quad-15.exo
+      args: -ufv_vtk_interval 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside-quad-15.exo -ts_ssp_nstages 5
 
     test:
       suffix: 2
       requires: exodusii
       nsize: 2
-      args: -dm_distribute_overlap 1 -ufv_vtk_interval 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside.exo
+      args: -dm_distribute_overlap 1 -ufv_vtk_interval 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside.exo -ts_ssp_nstages 5
 
     test:
       suffix: 3
       requires: exodusii
       nsize: 2
-      args: -dm_distribute_overlap 1 -ufv_vtk_interval 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside-quad-15.exo
+      args: -dm_distribute_overlap 1 -ufv_vtk_interval 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside-quad-15.exo -ts_ssp_nstages 5
 
     test:
       suffix: 4
       requires: exodusii
       nsize: 8
-      args: -dm_distribute_overlap 1 -ufv_vtk_interval 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside-quad.exo
+      args: -dm_distribute_overlap 1 -ufv_vtk_interval 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside-quad.exo -ts_ssp_nstages 5
 
     test:
       suffix: 5
@@ -2341,24 +2341,24 @@ int initLinearWave(EulerNode *ux, const PetscReal gamma, const PetscReal coord[]
     test:
       suffix: 7
       requires: exodusii
-      args: -ufv_vtk_interval 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside-quad-15.exo -dm_refine 1
+      args: -ufv_vtk_interval 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside-quad-15.exo -dm_refine 1 -ts_ssp_nstages 5
 
     test:
       suffix: 8
       requires: exodusii
       nsize: 2
-      args: -dm_distribute_overlap 1 -ufv_vtk_interval 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside-quad-15.exo -dm_refine 1
+      args: -dm_distribute_overlap 1 -ufv_vtk_interval 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside-quad-15.exo -dm_refine 1 -ts_ssp_nstages 5
 
     test:
       suffix: 9
       requires: exodusii
       nsize: 8
-      args: -dm_distribute_overlap 1 -ufv_vtk_interval 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside-quad-15.exo -dm_refine 1
+      args: -dm_distribute_overlap 1 -ufv_vtk_interval 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside-quad-15.exo -dm_refine 1 -ts_ssp_nstages 5
 
     test:
       suffix: 10
       requires: exodusii
-      args: -ufv_vtk_interval 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside-quad.exo
+      args: -ufv_vtk_interval 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside-quad.exo -ts_ssp_nstages 5
 
     # 2D Shallow water
     test:
@@ -2374,39 +2374,39 @@ int initLinearWave(EulerNode *ux, const PetscReal gamma, const PetscReal coord[]
     test:
       suffix: p4est_advec_2d
       requires: p4est
-      args: -ufv_vtk_interval 0 -dm_type p4est -dm_forest_minimum_refinement 1 -dm_forest_initial_refinement 2 -dm_p4est_refine_pattern hash   -dm_forest_maximum_refinement 5
+      args: -ufv_vtk_interval 0 -dm_type p4est -dm_forest_minimum_refinement 1 -dm_forest_initial_refinement 2 -dm_p4est_refine_pattern hash   -dm_forest_maximum_refinement 5 -ts_ssp_nstages 5
 
     # Advection in a box
     test:
       suffix: adv_2d_quad_0
-      args: -ufv_vtk_interval 0 -dm_refine 3 -dm_plex_separate_marker -bc_inflow 1,2,4 -bc_outflow 3
+      args: -ufv_vtk_interval 0 -dm_refine 3 -dm_plex_separate_marker -bc_inflow 1,2,4 -bc_outflow 3 -ts_ssp_nstages 5
 
     test:
       suffix: adv_2d_quad_1
-      args: -ufv_vtk_interval 0 -dm_refine 3 -dm_plex_separate_marker -grid_bounds -0.5,0.5,-0.5,0.5 -bc_inflow 1,2,4 -bc_outflow 3 -advect_sol_type bump -advect_bump_center 0.25,0 -advect_bump_radius 0.1
+      args: -ufv_vtk_interval 0 -dm_refine 3 -dm_plex_separate_marker -grid_bounds -0.5,0.5,-0.5,0.5 -bc_inflow 1,2,4 -bc_outflow 3 -advect_sol_type bump -advect_bump_center 0.25,0 -advect_bump_radius 0.1 -ts_ssp_nstages 5
       timeoutfactor: 3
 
     test:
       suffix: adv_2d_quad_p4est_0
       requires: p4est
-      args: -ufv_vtk_interval 0 -dm_refine 5 -dm_type p4est -dm_plex_separate_marker -bc_inflow 1,2,4 -bc_outflow 3
+      args: -ufv_vtk_interval 0 -dm_refine 5 -dm_type p4est -dm_plex_separate_marker -bc_inflow 1,2,4 -bc_outflow 3 -ts_ssp_nstages 5
 
     test:
       suffix: adv_2d_quad_p4est_1
       requires: p4est
-      args: -ufv_vtk_interval 0 -dm_refine 5 -dm_type p4est -dm_plex_separate_marker -grid_bounds -0.5,0.5,-0.5,0.5 -bc_inflow 1,2,4 -bc_outflow   3 -advect_sol_type bump -advect_bump_center 0.25,0 -advect_bump_radius 0.1
+      args: -ufv_vtk_interval 0 -dm_refine 5 -dm_type p4est -dm_plex_separate_marker -grid_bounds -0.5,0.5,-0.5,0.5 -bc_inflow 1,2,4 -bc_outflow   3 -advect_sol_type bump -advect_bump_center 0.25,0 -advect_bump_radius 0.1 -ts_ssp_nstages 5
       timeoutfactor: 3
 
     test:
       suffix: adv_2d_quad_p4est_adapt_0
       requires: p4est !__float128 #broken for quad precision
-      args: -ufv_vtk_interval 0 -dm_refine 3 -dm_type p4est -dm_plex_separate_marker -grid_bounds -0.5,0.5,-0.5,0.5 -bc_inflow 1,2,4 -bc_outflow   3 -advect_sol_type bump -advect_bump_center 0.25,0 -advect_bump_radius 0.1 -ufv_use_amr -refine_vec_tagger_box 0.005,inf -coarsen_vec_tagger_box   0,1.e-5 -petscfv_type leastsquares -ts_max_time 0.01
+      args: -ufv_vtk_interval 0 -dm_refine 3 -dm_type p4est -dm_plex_separate_marker -grid_bounds -0.5,0.5,-0.5,0.5 -bc_inflow 1,2,4 -bc_outflow   3 -advect_sol_type bump -advect_bump_center 0.25,0 -advect_bump_radius 0.1 -ufv_use_amr -refine_vec_tagger_box 0.005,inf -coarsen_vec_tagger_box   0,1.e-5 -petscfv_type leastsquares -ts_max_time 0.01 -ts_ssp_nstages 5
       timeoutfactor: 3
 
     test:
       suffix: adv_0
       requires: exodusii
-      args: -ufv_vtk_interval 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/blockcylinder-50.exo -bc_inflow 100,101,200 -bc_outflow 201
+      args: -ufv_vtk_interval 0 -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/blockcylinder-50.exo -bc_inflow 100,101,200 -bc_outflow 201 -ts_ssp_nstages 5
 
     test:
       suffix: shock_0
@@ -2417,7 +2417,7 @@ int initLinearWave(EulerNode *ux, const PetscReal gamma, const PetscReal coord[]
       -bc_wall 1,2,3,4 -physics euler -eu_type iv_shock -ufv_cfl 10 -eu_alpha 60. -eu_gamma 1.4 -eu_amach 2.02 -eu_rho2 3. \
       -petscfv_type leastsquares -petsclimiter_type minmod -petscfv_compute_gradients 0 \
       -ts_max_time 0.5 -ts_ssp_type rks2 -ts_ssp_nstages 10 \
-      -ufv_vtk_basename ${wPETSC_DIR}/ex11 -ufv_vtk_interval 0 -monitor density,energy
+      -ufv_vtk_basename ${wPETSC_DIR}/ex11 -ufv_vtk_interval 0 -monitor density,energy -ts_ssp_nstages 5
       timeoutfactor: 3
 
     # Test GLVis visualization of PetscFV fields
@@ -2425,12 +2425,12 @@ int initLinearWave(EulerNode *ux, const PetscReal gamma, const PetscReal coord[]
       suffix: glvis_adv_2d_tet
       args: -ufv_vtk_interval 0 -ufv_vtk_monitor 0 \
             -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/square_periodic.msh -dm_plex_gmsh_periodic 0 \
-            -ts_monitor_solution glvis: -ts_max_steps 0
+            -ts_monitor_solution glvis: -ts_max_steps 0 -ts_ssp_nstages 5
 
     test:
       suffix: glvis_adv_2d_quad
       args: -ufv_vtk_interval 0 -ufv_vtk_monitor 0 -bc_inflow 1,2,4 -bc_outflow 3 \
             -dm_refine 5 -dm_plex_separate_marker \
-            -ts_monitor_solution glvis: -ts_max_steps 0
+            -ts_monitor_solution glvis: -ts_max_steps 0 -ts_ssp_nstages 5
 
 TEST*/

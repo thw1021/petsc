@@ -1156,7 +1156,7 @@ int main(int argc, char **argv)
     test:
       suffix: adv_1
       requires: !complex !single
-      args: -use_fv -velocity_dist zero -porosity_dist tilted -ts_type ssp -ts_max_time 2.0 -ts_max_steps 1000 -ts_dt 0.993392 -bc_inflow 1,2,4 -bc_outflow 3 -ts_view -dm_view
+      args: -use_fv -velocity_dist zero -porosity_dist tilted -ts_type ssp -ts_ssp_nstages 5 -ts_max_time 2.0 -ts_max_steps 1000 -ts_dt 0.993392 -bc_inflow 1,2,4 -bc_outflow 3 -ts_view -dm_view
 
     test:
       suffix: adv_2
@@ -1173,7 +1173,7 @@ int main(int argc, char **argv)
     test:
       suffix: adv_3_ex
       requires: !complex
-      args: -dm_plex_box_bd periodic,none -use_fv -velocity_dist zero -porosity_dist tilted -ts_type ssp -ts_max_time 2.0 -ts_max_steps 1000 -ts_dt   0.1 -bc_inflow 3 -bc_outflow 1 -snes_fd_color -ksp_max_it 100 -ts_view -dm_view
+      args: -dm_plex_box_bd periodic,none -use_fv -velocity_dist zero -porosity_dist tilted -ts_type ssp -ts_ssp_nstages 5 -ts_max_time 2.0 -ts_max_steps 1000 -ts_dt 0.1 -bc_inflow 3 -bc_outflow 1 -snes_fd_color -ksp_max_it 100 -ts_view -dm_view
 
     test:
       suffix: adv_4
@@ -1314,7 +1314,7 @@ int main(int argc, char **argv)
   test:
     suffix: adv_0
     requires: !complex !single exodusii
-    args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside-quad.exo -use_fv -velocity_dist zero -porosity_dist tilted -ts_type ssp -ts_max_time 2.0 -ts_max_steps 1000 -ts_dt 0.993392 -ts_view -dm_view
+    args: -dm_plex_filename ${wPETSC_DIR}/share/petsc/datafiles/meshes/sevenside-quad.exo -use_fv -velocity_dist zero -porosity_dist tilted -ts_type ssp -ts_ssp_nstages 5 -ts_max_time 2.0 -ts_max_steps 1000 -ts_dt 0.993392 -ts_view -dm_view
 
   test:
     suffix: adv_0_im

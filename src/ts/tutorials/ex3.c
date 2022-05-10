@@ -541,11 +541,11 @@ PetscErrorCode IJacobianHeat(TS ts,PetscReal t,Vec X,Vec Xdot,PetscReal s,Mat A,
 /*TEST
 
     test:
-      args: -nox -ts_type ssp -ts_dt 0.0005
+      args: -nox -ts_type ssp -ts_ssp_nstages 5 -ts_dt 0.0005
 
     test:
       suffix: 2
-      args: -nox -ts_type ssp -ts_dt 0.0005 -time_dependent_rhs 1
+      args: -nox -ts_type ssp -ts_ssp_nstages 5 -ts_dt 0.0005 -time_dependent_rhs 1
 
     test:
       suffix: 3
