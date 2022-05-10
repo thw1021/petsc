@@ -1493,18 +1493,18 @@ int main(int argc,char *argv[])
       requires: !complex
 
     test:
-      args: -da_grid_x 100 -initial 1 -xmin -2 -xmax 5 -exact -limit mc
+      args: -da_grid_x 100 -initial 1 -xmin -2 -xmax 5 -exact -limit mc -ts_ssp_nstages 5 
       requires: !complex !single
 
     test:
       suffix: 2
-      args: -da_grid_x 100 -initial 2 -xmin -2 -xmax 2 -exact -limit mc -physics burgers -bc_type outflow -ts_max_time 1
+      args: -da_grid_x 100 -initial 2 -xmin -2 -xmax 2 -exact -limit mc -physics burgers -bc_type outflow -ts_max_time 1 -ts_ssp_nstages 5
       filter:  sed "s/at 48/at 0/g"
       requires: !complex !single
 
     test:
       suffix: 3
-      args: -da_grid_x 100 -initial 2 -xmin -2 -xmax 2 -exact -limit mc -physics burgers -bc_type outflow -ts_max_time 1
+      args: -da_grid_x 100 -initial 2 -xmin -2 -xmax 2 -exact -limit mc -physics burgers -bc_type outflow -ts_max_time 1 -ts_ssp_nstages 5
       nsize: 3
       filter:  sed "s/at 48/at 0/g"
       requires: !complex !single
