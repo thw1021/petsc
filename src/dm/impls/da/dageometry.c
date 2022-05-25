@@ -199,7 +199,7 @@ PetscErrorCode private_DMDALocatePointsIS_3D_Regular(DM dmregular,Vec pos,IS *is
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode DMLocatePoints_DA_Regular(DM dm,Vec pos,DMPointLocationType ltype,PetscSF cellSF)
+PetscErrorCode DMLocatePoints_DA_Regular(DM dm,Vec pos,DMPointLocationType ltype,PetscSF cellSF,PetscSF notFoundSF)
 {
   IS             iscell;
   PetscSFNode    *cells;

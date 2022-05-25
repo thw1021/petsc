@@ -323,7 +323,7 @@ PetscErrorCode DMInterpolationSetUp(DMInterpolationInfo ctx, DM dm, PetscBool re
   PetscInt          p, q, i;
   PetscMPIInt       rank, size;
   Vec               pointVec;
-  PetscSF           cellSF;
+  PetscSF           cellSF = NULL, notFoundSF = NULL;
   PetscLayout       layout;
   PetscReal         *globalPoints;
   PetscScalar       *globalPointsScalar;
@@ -375,7 +375,8 @@ PetscErrorCode DMInterpolationSetUp(DMInterpolationInfo ctx, DM dm, PetscBool re
   PetscCall(PetscMalloc2(N,&foundProcs,N,&globalProcs));
   for (p = 0; p < N; ++p) {foundProcs[p] = size;}
   cellSF = NULL;
-  PetscCall(DMLocatePoints(dm, pointVec, DM_POINTLOCATION_REMOVE, &cellSF));
+  PetscCall(DMLocatePoints(dm, pointVec, DM_POINTLOCATION_REMOVE, &cellSF, &notFoundSF));
+  PetscCall(PetscSFDestroy(&notFoundSF));
   PetscCall(PetscSFGetGraph(cellSF,NULL,&numFound,&foundPoints,&foundCells));
 #endif
   for (p = 0; p < numFound; ++p) {

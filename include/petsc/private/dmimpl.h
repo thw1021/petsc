@@ -85,7 +85,7 @@ struct _DMOps {
   PetscErrorCode (*createddscatters)(DM,PetscInt,DM*,VecScatter**,VecScatter**,VecScatter**);
 
   PetscErrorCode (*getdimpoints)(DM,PetscInt,PetscInt*,PetscInt*);
-  PetscErrorCode (*locatepoints)(DM,Vec,DMPointLocationType,PetscSF);
+  PetscErrorCode (*locatepoints)(DM,Vec,DMPointLocationType,PetscSF,PetscSF);
   PetscErrorCode (*getneighbors)(DM,PetscInt*,const PetscMPIInt**);
   PetscErrorCode (*getboundingbox)(DM,PetscReal*,PetscReal*);
   PetscErrorCode (*getlocalboundingbox)(DM,PetscReal*,PetscReal*);

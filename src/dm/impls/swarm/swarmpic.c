@@ -54,7 +54,7 @@ PETSC_EXTERN PetscErrorCode DMSwarmSetPointsUniformCoordinates(DM dm,PetscReal m
   PetscScalar       *_pos;
   PetscReal         *swarm_coor;
   PetscInt          *swarm_cellid;
-  PetscSF           sfcell = NULL;
+  PetscSF           sfcell = NULL, notFoundSF = NULL;
   const PetscSFNode *LA_sfcell;
 
   PetscFunctionBegin;
@@ -143,7 +143,8 @@ PETSC_EXTERN PetscErrorCode DMSwarmSetPointsUniformCoordinates(DM dm,PetscReal m
   PetscCall(VecRestoreArray(pos,&_pos));
 
   /* locate points */
-  PetscCall(DMLocatePoints(celldm,pos,DM_POINTLOCATION_NONE,&sfcell));
+  PetscCall(DMLocatePoints(celldm,pos,DM_POINTLOCATION_NONE,&sfcell,&notFoundSF));
+  PetscCall(PetscSFDestroy(&notFoundSF));
   PetscCall(PetscSFGetGraph(sfcell, NULL, NULL, NULL, &LA_sfcell));
   n_found = 0;
   for (p=0; p<n_estimate; p++) {
@@ -220,7 +221,7 @@ PETSC_EXTERN PetscErrorCode DMSwarmSetPointCoordinates(DM dm,PetscInt npoints,Pe
   PetscScalar       *_pos;
   PetscReal         *swarm_coor;
   PetscInt          *swarm_cellid;
-  PetscSF           sfcell = NULL;
+  PetscSF           sfcell = NULL, notFoundSF = NULL;
   const PetscSFNode *LA_sfcell;
   PetscReal         *my_coor;
   PetscInt          my_npoints;
@@ -299,7 +300,8 @@ PETSC_EXTERN PetscErrorCode DMSwarmSetPointCoordinates(DM dm,PetscInt npoints,Pe
   PetscCall(VecRestoreArray(pos,&_pos));
 
   /* locate points */
-  PetscCall(DMLocatePoints(celldm,pos,DM_POINTLOCATION_NONE,&sfcell));
+  PetscCall(DMLocatePoints(celldm,pos,DM_POINTLOCATION_NONE,&sfcell,&notFoundSF));
+  PetscCall(PetscSFDestroy(&notFoundSF));
 
   PetscCall(PetscSFGetGraph(sfcell, NULL, NULL, NULL, &LA_sfcell));
   n_found = 0;

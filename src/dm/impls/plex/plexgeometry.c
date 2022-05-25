@@ -765,7 +765,7 @@ PetscErrorCode DMPlexComputeGridHash_Internal(DM dm, PetscGridHash *localBox)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode DMLocatePoints_Plex(DM dm, Vec v, DMPointLocationType ltype, PetscSF cellSF)
+PetscErrorCode DMLocatePoints_Plex(DM dm, Vec v, DMPointLocationType ltype, PetscSF cellSF, PetscSF notFoundCellSF)
 {
   const PetscInt  debug = 0;
   DM_Plex        *mesh = (DM_Plex *) dm->data;
