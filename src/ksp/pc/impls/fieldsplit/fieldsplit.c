@@ -13,9 +13,9 @@ struct _PC_FieldSplitLink {
   Vec               x,y,z;
   char              *splitname;
   PetscInt          nfields;
-  PetscInt          *fields,*fields_col;
+  PetscInt          *fields;
   VecScatter        sctx;
-  IS                is,is_col;
+  IS                is;
   PC_FieldSplitLink next,previous;
   PetscLogEvent     event;
 
@@ -357,30 +357,20 @@ static PetscErrorCode PCView_FieldSplit_GKB(PC pc,PetscViewer viewer)
 static PetscErrorCode PCFieldSplitSetRuntimeSplits_Private(PC pc)
 {
   PC_FieldSplit  *jac = (PC_FieldSplit*)pc->data;
-  PetscInt       i,nfields,*ifields,nfields_col,*ifields_col;
-  PetscBool      flg,flg_col;
-  char           optionname[128],splitname[8],optionname_col[128];
+  PetscInt       i,nfields,*ifields;
+  PetscBool      flg;
+  char           optionname[128],splitname[8];
 
   PetscFunctionBegin;
   PetscCall(PetscMalloc1(jac->bs,&ifields));
-  PetscCall(PetscMalloc1(jac->bs,&ifields_col));
   for (i=0,flg=PETSC_TRUE;; i++) {
     PetscCall(PetscSNPrintf(splitname,sizeof(splitname),"%" PetscInt_FMT,i));
     PetscCall(PetscSNPrintf(optionname,sizeof(optionname),"-pc_fieldsplit_%" PetscInt_FMT "_fields",i));
-    PetscCall(PetscSNPrintf(optionname_col,sizeof(optionname_col),"-pc_fieldsplit_%" PetscInt_FMT "_fields_col",i));
     nfields     = jac->bs;
-    nfields_col = jac->bs;
     PetscCall(PetscOptionsGetIntArray(((PetscObject)pc)->options,((PetscObject)pc)->prefix,optionname,ifields,&nfields,&flg));
-    PetscCall(PetscOptionsGetIntArray(((PetscObject)pc)->options,((PetscObject)pc)->prefix,optionname_col,ifields_col,&nfields_col,&flg_col));
     if (!flg) break;
-    else if (flg && !flg_col) {
-      PetscCheck(nfields,PETSC_COMM_SELF,PETSC_ERR_USER,"Cannot list zero fields");
-      PetscCall(PCFieldSplitSetFields(pc,splitname,nfields,ifields,ifields));
-    } else {
-      PetscCheck(nfields && nfields_col,PETSC_COMM_SELF,PETSC_ERR_USER,"Cannot list zero fields");
-      PetscCheck(nfields == nfields_col,PETSC_COMM_SELF,PETSC_ERR_USER,"Number of row and column fields must match");
-      PetscCall(PCFieldSplitSetFields(pc,splitname,nfields,ifields,ifields_col));
-    }
+    PetscCheck(nfields > 0,PETSC_COMM_SELF,PETSC_ERR_USER,"Cannot list zero fields");
+    PetscCall(PCFieldSplitSetFields(pc,splitname,nfields,ifields));
   }
   if (i > 0) {
     /* Makes command-line setting of splits take precedence over setting them in code.
@@ -389,7 +379,6 @@ static PetscErrorCode PCFieldSplitSetRuntimeSplits_Private(PC pc)
     jac->splitdefined = PETSC_TRUE;
   }
   PetscCall(PetscFree(ifields));
-  PetscCall(PetscFree(ifields_col));
   PetscFunctionReturn(0);
 }
 
@@ -548,7 +537,7 @@ static PetscErrorCode PCFieldSplitSetDefaults(PC pc)
             for (i=0; i<jac->bs; i++) {
               char splitname[8];
               PetscCall(PetscSNPrintf(splitname,sizeof(splitname),"%" PetscInt_FMT,i));
-              PetscCall(PCFieldSplitSetFields(pc,splitname,1,&i,&i));
+              PetscCall(PCFieldSplitSetFields(pc,splitname,1,&i));
             }
             jac->defaultsplit = PETSC_TRUE;
           }
@@ -604,7 +593,7 @@ static PetscErrorCode PCSetUp_FieldSplit(PC pc)
   PC_FieldSplit     *jac = (PC_FieldSplit*)pc->data;
   PC_FieldSplitLink ilink;
   PetscInt          i,nsplit;
-  PetscBool         sorted, sorted_col;
+  PetscBool         sorted;
 
   PetscFunctionBegin;
   pc->failedreason = PC_NOERROR;
@@ -628,30 +617,23 @@ static PetscErrorCode PCSetUp_FieldSplit(PC pc)
     for (i=0; i<nsplit; i++) {
       if (jac->defaultsplit) {
         PetscCall(ISCreateStride(PetscObjectComm((PetscObject)pc),nslots,rstart+i,nsplit,&ilink->is));
-        PetscCall(ISDuplicate(ilink->is,&ilink->is_col));
       } else if (!ilink->is) {
         if (ilink->nfields > 1) {
-          PetscInt *ii,*jj,j,k,nfields = ilink->nfields,*fields = ilink->fields,*fields_col = ilink->fields_col;
+          PetscInt *ii,j,k,nfields = ilink->nfields,*fields = ilink->fields;
           PetscCall(PetscMalloc1(ilink->nfields*nslots,&ii));
-          PetscCall(PetscMalloc1(ilink->nfields*nslots,&jj));
           for (j=0; j<nslots; j++) {
             for (k=0; k<nfields; k++) {
               ii[nfields*j + k] = rstart + bs*j + fields[k];
-              jj[nfields*j + k] = rstart + bs*j + fields_col[k];
             }
           }
           PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)pc),nslots*nfields,ii,PETSC_OWN_POINTER,&ilink->is));
-          PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)pc),nslots*nfields,jj,PETSC_OWN_POINTER,&ilink->is_col));
           PetscCall(ISSetBlockSize(ilink->is, nfields));
-          PetscCall(ISSetBlockSize(ilink->is_col, nfields));
         } else {
           PetscCall(ISCreateStride(PetscObjectComm((PetscObject)pc),nslots,rstart+ilink->fields[0],bs,&ilink->is));
-          PetscCall(ISCreateStride(PetscObjectComm((PetscObject)pc),nslots,rstart+ilink->fields_col[0],bs,&ilink->is_col));
         }
       }
       PetscCall(ISSorted(ilink->is,&sorted));
-      if (ilink->is_col) PetscCall(ISSorted(ilink->is_col,&sorted_col));
-      PetscCheck(sorted && sorted_col,PETSC_COMM_SELF,PETSC_ERR_USER,"Fields must be sorted when creating split");
+      PetscCheck(sorted,PETSC_COMM_SELF,PETSC_ERR_USER,"Fields must be sorted when creating split");
       ilink = ilink->next;
     }
   }
@@ -677,7 +659,7 @@ static PetscErrorCode PCSetUp_FieldSplit(PC pc)
         }
       } else {
         const char *prefix;
-        PetscCall(MatCreateSubMatrix(pc->pmat,ilink->is,ilink->is_col,MAT_INITIAL_MATRIX,&jac->pmat[i]));
+        PetscCall(MatCreateSubMatrix(pc->pmat,ilink->is,ilink->is,MAT_INITIAL_MATRIX,&jac->pmat[i]));
         PetscCall(KSPGetOptionsPrefix(ilink->ksp,&prefix));
         PetscCall(MatSetOptionsPrefix(jac->pmat[i],prefix));
         PetscCall(MatViewFromOptions(jac->pmat[i],NULL,"-mat_view"));
@@ -709,7 +691,7 @@ static PetscErrorCode PCSetUp_FieldSplit(PC pc)
       /* Check for preconditioning matrix attached to IS */
       PetscCall(PetscObjectQuery((PetscObject) ilink->is, "pmat", (PetscObject*) &pmat));
       if (!pmat) {
-        PetscCall(MatCreateSubMatrix(pc->pmat,ilink->is,ilink->is_col,scall,&jac->pmat[i]));
+        PetscCall(MatCreateSubMatrix(pc->pmat,ilink->is,ilink->is,scall,&jac->pmat[i]));
       }
       ilink = ilink->next;
     }
@@ -719,7 +701,7 @@ static PetscErrorCode PCSetUp_FieldSplit(PC pc)
     if (!jac->mat) {
       PetscCall(PetscMalloc1(nsplit,&jac->mat));
       for (i=0; i<nsplit; i++) {
-        PetscCall(MatCreateSubMatrix(pc->mat,ilink->is,ilink->is_col,MAT_INITIAL_MATRIX,&jac->mat[i]));
+        PetscCall(MatCreateSubMatrix(pc->mat,ilink->is,ilink->is,MAT_INITIAL_MATRIX,&jac->mat[i]));
         ilink = ilink->next;
       }
     } else {
@@ -732,7 +714,7 @@ static PetscErrorCode PCSetUp_FieldSplit(PC pc)
       } else scall = MAT_REUSE_MATRIX;
 
       for (i=0; i<nsplit; i++) {
-        PetscCall(MatCreateSubMatrix(pc->mat,ilink->is,ilink->is_col,scall,&jac->mat[i]));
+        PetscCall(MatCreateSubMatrix(pc->mat,ilink->is,ilink->is,scall,&jac->mat[i]));
         ilink = ilink->next;
       }
     }
@@ -841,7 +823,7 @@ static PetscErrorCode PCSetUp_FieldSplit(PC pc)
 
       PetscCall(MatSchurComplementGetKSP(jac->schur, &kspInner));
       ilink = jac->head;
-      PetscCall(ISComplement(ilink->is_col,rstart,rend,&ccis));
+      PetscCall(ISComplement(ilink->is,rstart,rend,&ccis));
       if (jac->offdiag_use_amat) {
         PetscCall(MatCreateSubMatrix(pc->mat,ilink->is,ccis,scall,&jac->B));
       } else {
@@ -849,7 +831,7 @@ static PetscErrorCode PCSetUp_FieldSplit(PC pc)
       }
       PetscCall(ISDestroy(&ccis));
       ilink = ilink->next;
-      PetscCall(ISComplement(ilink->is_col,rstart,rend,&ccis));
+      PetscCall(ISComplement(ilink->is,rstart,rend,&ccis));
       if (jac->offdiag_use_amat) {
         PetscCall(MatCreateSubMatrix(pc->mat,ilink->is,ccis,scall,&jac->C));
       } else {
@@ -878,7 +860,7 @@ static PetscErrorCode PCSetUp_FieldSplit(PC pc)
 
       /* extract the A01 and A10 matrices */
       ilink = jac->head;
-      PetscCall(ISComplement(ilink->is_col,rstart,rend,&ccis));
+      PetscCall(ISComplement(ilink->is,rstart,rend,&ccis));
       if (jac->offdiag_use_amat) {
         PetscCall(MatCreateSubMatrix(pc->mat,ilink->is,ccis,MAT_INITIAL_MATRIX,&jac->B));
       } else {
@@ -886,7 +868,7 @@ static PetscErrorCode PCSetUp_FieldSplit(PC pc)
       }
       PetscCall(ISDestroy(&ccis));
       ilink = ilink->next;
-      PetscCall(ISComplement(ilink->is_col,rstart,rend,&ccis));
+      PetscCall(ISComplement(ilink->is,rstart,rend,&ccis));
       if (jac->offdiag_use_amat) {
         PetscCall(MatCreateSubMatrix(pc->mat,ilink->is,ccis,MAT_INITIAL_MATRIX,&jac->C));
       } else {
@@ -1041,7 +1023,7 @@ static PetscErrorCode PCSetUp_FieldSplit(PC pc)
     /* When extracting off-diagonal submatrices, we take complements from this range */
     PetscCall(MatGetOwnershipRangeColumn(pc->mat,&rstart,&rend));
 
-    PetscCall(ISComplement(ilink->is_col,rstart,rend,&ccis));
+    PetscCall(ISComplement(ilink->is,rstart,rend,&ccis));
     if (jac->offdiag_use_amat) {
       PetscCall(MatCreateSubMatrix(pc->mat,ilink->is,ccis,MAT_INITIAL_MATRIX,&jac->B));
     } else {
@@ -1053,7 +1035,7 @@ static PetscErrorCode PCSetUp_FieldSplit(PC pc)
     PetscCall(VecDuplicate(ilink->x,&jac->Hu));
     PetscCall(VecDuplicate(ilink->x,&jac->w2));
     ilink = ilink->next;
-    PetscCall(ISComplement(ilink->is_col,rstart,rend,&ccis));
+    PetscCall(ISComplement(ilink->is,rstart,rend,&ccis));
     if (jac->offdiag_use_amat) {
       PetscCall(MatCreateSubMatrix(pc->mat,ilink->is,ccis,MAT_INITIAL_MATRIX,&jac->C));
     } else {
@@ -1558,10 +1540,8 @@ static PetscErrorCode PCReset_FieldSplit(PC pc)
     PetscCall(VecDestroy(&ilink->z));
     PetscCall(VecScatterDestroy(&ilink->sctx));
     PetscCall(ISDestroy(&ilink->is));
-    PetscCall(ISDestroy(&ilink->is_col));
     PetscCall(PetscFree(ilink->splitname));
     PetscCall(PetscFree(ilink->fields));
-    PetscCall(PetscFree(ilink->fields_col));
     next  = ilink->next;
     PetscCall(PetscFree(ilink));
     ilink = next;
@@ -1665,7 +1645,7 @@ static PetscErrorCode PCSetFromOptions_FieldSplit(PetscOptionItems *PetscOptions
 
 /*------------------------------------------------------------------------------------*/
 
-static PetscErrorCode  PCFieldSplitSetFields_FieldSplit(PC pc,const char splitname[],PetscInt n,const PetscInt *fields,const PetscInt *fields_col)
+static PetscErrorCode  PCFieldSplitSetFields_FieldSplit(PC pc,const char splitname[],PetscInt n,const PetscInt *fields)
 {
   PC_FieldSplit     *jac = (PC_FieldSplit*)pc->data;
   PC_FieldSplitLink ilink,next = jac->head;
@@ -1691,8 +1671,6 @@ static PetscErrorCode  PCFieldSplitSetFields_FieldSplit(PC pc,const char splitna
   ilink->event = jac->nsplits < 5 ? KSP_Solve_FS_0 + jac->nsplits : KSP_Solve_FS_0 + 4; /* Any split great than 4 gets logged in the 4th split */
   PetscCall(PetscMalloc1(n,&ilink->fields));
   PetscCall(PetscArraycpy(ilink->fields,fields,n));
-  PetscCall(PetscMalloc1(n,&ilink->fields_col));
-  PetscCall(PetscArraycpy(ilink->fields_col,fields_col,n));
 
   ilink->nfields = n;
   ilink->next    = NULL;
@@ -1819,9 +1797,6 @@ static PetscErrorCode  PCFieldSplitRestrictIS_FieldSplit(PC pc, IS isy)
     PetscCall(PetscObjectReference((PetscObject)isr));
     PetscCall(ISDestroy(&ilink->is));
     ilink->is     = isr;
-    PetscCall(PetscObjectReference((PetscObject)isr));
-    PetscCall(ISDestroy(&ilink->is_col));
-    ilink->is_col = isr;
     PetscCall(ISDestroy(&isr));
     PetscCall(KSPGetPC(ilink->ksp, &subpc));
     PetscCall(PetscObjectTypeCompare((PetscObject)subpc,PCFIELDSPLIT,&flg));
@@ -1873,9 +1848,6 @@ static PetscErrorCode  PCFieldSplitSetIS_FieldSplit(PC pc,const char splitname[]
   PetscCall(PetscObjectReference((PetscObject)is));
   PetscCall(ISDestroy(&ilink->is));
   ilink->is     = is;
-  PetscCall(PetscObjectReference((PetscObject)is));
-  PetscCall(ISDestroy(&ilink->is_col));
-  ilink->is_col = is;
   ilink->next   = NULL;
   PetscCall(KSPCreate(PetscObjectComm((PetscObject)pc),&ilink->ksp));
   PetscCall(KSPSetErrorIfNotConverged(ilink->ksp,pc->erroriffailure));
@@ -1931,14 +1903,14 @@ static PetscErrorCode  PCFieldSplitSetIS_FieldSplit(PC pc,const char splitname[]
 .seealso: `PCFieldSplitGetSubKSP()`, `PCFIELDSPLIT`, `PCFieldSplitSetBlockSize()`, `PCFieldSplitSetIS()`
 
 @*/
-PetscErrorCode  PCFieldSplitSetFields(PC pc,const char splitname[],PetscInt n,const PetscInt *fields,const PetscInt *fields_col)
+PetscErrorCode  PCFieldSplitSetFields(PC pc,const char splitname[],PetscInt n,const PetscInt *fields)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(pc,PC_CLASSID,1);
   PetscValidCharPointer(splitname,2);
   PetscCheck(n >= 1,PetscObjectComm((PetscObject)pc),PETSC_ERR_ARG_OUTOFRANGE,"Provided number of fields %" PetscInt_FMT " in split \"%s\" not positive",n,splitname);
   PetscValidIntPointer(fields,4);
-  PetscTryMethod(pc,"PCFieldSplitSetFields_C",(PC,const char[],PetscInt,const PetscInt*,const PetscInt*),(pc,splitname,n,fields,fields_col));
+  PetscTryMethod(pc,"PCFieldSplitSetFields_C",(PC,const char[],PetscInt,const PetscInt*),(pc,splitname,n,fields));
   PetscFunctionReturn(0);
 }
 

@@ -1899,8 +1899,8 @@ static PetscErrorCode solve_stokes_3d_coupled(PetscInt mx,PetscInt my,PetscInt m
     const PetscInt ufields[] = {0,1,2},pfields[] = {3};
     PetscCall(KSPGetPC(ksp_S,&pc));
     PetscCall(PCFieldSplitSetBlockSize(pc,4));
-    PetscCall(PCFieldSplitSetFields(pc,"u",3,ufields,ufields));
-    PetscCall(PCFieldSplitSetFields(pc,"p",1,pfields,pfields));
+    PetscCall(PCFieldSplitSetFields(pc,"u",3,ufields));
+    PetscCall(PCFieldSplitSetFields(pc,"p",1,pfields));
   }
 
   {

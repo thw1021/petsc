@@ -250,7 +250,7 @@ PETSC_EXTERN PetscErrorCode PCHYPRESetEdgeConstantVectors(PC,Vec,Vec,Vec);
 PETSC_EXTERN PetscErrorCode PCHYPRESetAlphaPoissonMatrix(PC,Mat);
 PETSC_EXTERN PetscErrorCode PCHYPRESetBetaPoissonMatrix(PC,Mat);
 
-PETSC_EXTERN PetscErrorCode PCFieldSplitSetFields(PC,const char[],PetscInt,const PetscInt*,const PetscInt*);
+PETSC_EXTERN PetscErrorCode PCFieldSplitSetFields(PC,const char[],PetscInt,const PetscInt*);
 PETSC_EXTERN PetscErrorCode PCFieldSplitSetType(PC,PCCompositeType);
 PETSC_EXTERN PetscErrorCode PCFieldSplitGetType(PC,PCCompositeType*);
 PETSC_EXTERN PetscErrorCode PCFieldSplitSetBlockSize(PC,PetscInt);

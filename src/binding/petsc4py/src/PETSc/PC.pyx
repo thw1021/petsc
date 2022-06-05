@@ -527,7 +527,7 @@ cdef class PC(Object):
             name = str2bytes(name, &cname)
             field = iarray_i(field, &nfields, &ifields)
             CHKERR( PCFieldSplitSetFields(self.pc, cname,
-                                          nfields, ifields, ifields) )
+                                          nfields, ifields) )
 
     def getFieldSplitSubKSP(self):
         cdef PetscInt i = 0, n = 0

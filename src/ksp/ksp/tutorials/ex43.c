@@ -1430,8 +1430,8 @@ static PetscErrorCode solve_stokes_2d_coupled(PetscInt mx,PetscInt my)
 
     PetscCall(KSPGetPC(ksp_S,&pc));
     PetscCall(PCFieldSplitSetBlockSize(pc,3));
-    PetscCall(PCFieldSplitSetFields(pc,"u",2,ufields,ufields));
-    PetscCall(PCFieldSplitSetFields(pc,"p",1,pfields,pfields));
+    PetscCall(PCFieldSplitSetFields(pc,"u",2,ufields));
+    PetscCall(PCFieldSplitSetFields(pc,"p",1,pfields));
   }
 
   {

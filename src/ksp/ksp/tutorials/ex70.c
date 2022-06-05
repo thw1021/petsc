@@ -1153,8 +1153,8 @@ static PetscErrorCode SolveTimeDepStokes(PetscInt mx,PetscInt my)
 
     PetscCall(KSPGetPC(ksp,&pc));
     PetscCall(PCFieldSplitSetBlockSize(pc,3));
-    PetscCall(PCFieldSplitSetFields(pc,"u",2,ufields,ufields));
-    PetscCall(PCFieldSplitSetFields(pc,"p",1,pfields,pfields));
+    PetscCall(PCFieldSplitSetFields(pc,"u",2,ufields));
+    PetscCall(PCFieldSplitSetFields(pc,"p",1,pfields));
   }
 
   /* If using a fieldsplit preconditioner, attach a DMDA to the velocity split so that geometric multigrid can be used */

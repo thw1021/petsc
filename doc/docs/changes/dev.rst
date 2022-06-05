@@ -104,6 +104,7 @@ In addition to the changes above
 .. rubric:: KSP:
 
 - Deprecate ``KSPHPDDMGetDeflationSpace()`` (resp. ``KSPHPDDMSetDeflationSpace()``) in favor of ``KSPHPDDMGetDeflationMat()`` (resp. ``KSPHPDDMSetDeflationMat()``)
+- Remove last, unused ``fields_col`` argument from ``PCFieldSplitSetFields()``
 
 .. rubric:: SNES:
 
