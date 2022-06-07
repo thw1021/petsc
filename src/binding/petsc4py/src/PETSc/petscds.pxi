@@ -1,3 +1,20 @@
+
+ctypedef void(*PetscDSObjectiveFunction)(PetscInt, PetscInt, PetscInt,
+                        const PetscInt*, const PetscInt*, const PetscScalar*, const PetscScalar*, const PetscScalar*,
+                        const PetscInt*, const PetscInt*, const PetscScalar*, const PetscScalar*, const PetscScalar*,
+                        PetscReal, const PetscReal*, PetscInt, const PetscScalar*, PetscScalar*)
+
+ctypedef void(*PetscDSResidualFunction)(PetscInt, PetscInt, PetscInt,
+                        const PetscInt*, const PetscInt*, const PetscScalar*, const PetscScalar*, const PetscScalar*,
+                        const PetscInt*, const PetscInt*, const PetscScalar*, const PetscScalar*, const PetscScalar*,
+                        PetscReal, const PetscReal*, PetscInt, const PetscScalar*, PetscScalar*)
+
+ctypedef void (*PetscDSJacobianFunction)(PetscInt, PetscInt, PetscInt,
+                        const PetscInt*, const PetscInt*, const PetscScalar*, const PetscScalar*, const PetscScalar*,
+                        const PetscInt*, const PetscInt*, const PetscScalar*, const PetscScalar*, const PetscScalar*,
+                        PetscReal, PetscReal, const PetscReal*, PetscInt, const PetscScalar*, PetscScalar*)
+  
+
 cdef extern from * nogil:
 
     ctypedef const char* PetscDSType
@@ -32,3 +49,18 @@ cdef extern from * nogil:
     int PetscDSAddDiscretization(PetscDS,PetscObject)
     int PetscDSGetImplicit(PetscDS,PetscInt,PetscBool*)
     int PetscDSSetImplicit(PetscDS,PetscInt,PetscBool)
+
+    int PetscDSSetObjective(PetscDS,PetscInt,PetscDSObjectiveFunction*)
+    int PetscDSSetJacobian(PetscDS,PetscInt,PetscInt,PetscDSJacobianFunction,PetscDSJacobianFunction,PetscDSJacobianFunction,PetscDSJacobianFunction)
+    int PetscDSSetJacobianPreconditioner(PetscDS,PetscInt,PetscInt,PetscDSJacobianFunction,PetscDSJacobianFunction,PetscDSJacobianFunction,PetscDSJacobianFunction)
+    int PetscDSSetResidual(PetscDS,PetscInt,PetscDSResidualFunction,PetscDSResidualFunction)
+
+
+cdef class DS_Objective:
+    cdef PetscDSObjectiveFunction fn
+
+cdef class DS_Residual:
+    cdef PetscDSResidualFunction fn
+
+cdef class DS_Jacobian:
+    cdef PetscDSJacobianFunction fn

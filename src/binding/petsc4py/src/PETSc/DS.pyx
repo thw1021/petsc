@@ -97,7 +97,18 @@ cdef class DS(Object):
         cdef FE fe = disc
         CHKERR( PetscDSSetDiscretization(self.ds, cf, <PetscObject> fe.fe) )
 
+    def setObjective(self, f, DS_Objective objective):
+        cdef PetscInt cf = asInt(f)
+        CHKERR( PetscDSSetObjective(self.ds, cf, &objective.fn) )
 
+    def setJacobian(self, f, g, DS_Jacobian g0, DS_Jacobian g1, DS_Jacobian g2, DS_Jacobian g3):
+        cdef PetscInt cf = asInt(f)
+        cdef PetscInt cg = asInt(g)
+        CHKERR( PetscDSSetJacobian(self.ds, cf, cg, g0.fn, g1.fn, g2.fn, g3.fn) )
+
+    def setResidual(self, f, DS_Residual f0, DS_Residual f1):
+        cdef PetscInt cf = asInt(f)
+        CHKERR( PetscDSSetResidual(self.ds, cf, f0.fn, f1.fn) )
 
 # --------------------------------------------------------------------
 
