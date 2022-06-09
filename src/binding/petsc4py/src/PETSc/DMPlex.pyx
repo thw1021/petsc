@@ -280,6 +280,24 @@ cdef class DMPlex(DM):
         CHKERR( DMPlexSetSupportSize(self.dm, cp, nsupp) )
         CHKERR( DMPlexSetSupport(self.dm, cp, isupp) )
 
+    def insertSupport(self, p, supportPos, supportPoint):
+        cdef PetscInt cp = asInt(p)
+        cdef PetscInt csupportPos = asInt(supportPos)
+        cdef PetscInt csupportPoint = asInt(supportPoint)
+        CHKERR( DMPlexInsertSupport(self.dm, cp, csupportPos, csupportPoint) )
+
+    def getConeSection(self):
+        cdef Section sec = Section()
+        CHKERR( DMPlexGetConeSection(self.dm, &sec.sec) )
+        PetscINCREF(sec.obj)
+        return sec
+    
+    def getSupportSection(self):
+        cdef Section sec = Section()
+        CHKERR( DMPlexGetSupportSection(self.dm, &sec.sec) )
+        PetscINCREF(sec.obj)
+        return sec
+
     def getMaxSizes(self):
         cdef PetscInt maxConeSize = 0, maxSupportSize = 0
         CHKERR( DMPlexGetMaxSizes(self.dm, &maxConeSize, &maxSupportSize) )
@@ -290,6 +308,11 @@ cdef class DMPlex(DM):
 
     def stratify(self):
         CHKERR( DMPlexStratify(self.dm) )
+
+    def equal(self, DM dm):
+        cdef PetscBool equal = PETSC_FALSE
+        CHKERR( DMPlexEqual(self.dm, dm.dm, &equal) )
+        return toBool(equal)
 
     def orient(self):
         CHKERR( DMPlexOrient(self.dm) )
@@ -915,3 +938,40 @@ cdef class DMPlex(DM):
 
     def localVectorLoad(self, Viewer viewer, DM sectiondm, SF sf, Vec vec):
         CHKERR( DMPlexLocalVectorLoad(self.dm, viewer.vwr, sectiondm.dm, sf.sf, vec.vec))
+
+    ###
+
+    def computeIntegralFEM(self, Vec X, args=None, kargs=None):
+        cdef PetscScalar *cintegrals = NULL
+        cdef PetscInt nfields = 0
+        if args  is None: args  = ()
+        if kargs is None: kargs = {}
+        context = (args, kargs)
+        CHKERR( DMGetNumFields(self.dm, &nfields) )
+        integrals = iarray_r(empty_r(nfields), &nfields, &cintegrals)
+        CHKERR( DMPlexComputeIntegralFEM(self.dm, X.vec, cintegrals, <void*>context) )
+        return array_r(nfields, cintegrals)
+
+    def computeCellWiseIntegralFEM(self, Vec X, args=None, kargs=None):
+        cdef Vec integral = Vec()
+        if args  is None: args  = ()
+        if kargs is None: kargs = {}
+        context = (args, kargs)
+        CHKERR( DMPlexComputeCellwiseIntegralFEM(self.dm, X.vec, integral.vec, <void*>context) )
+        return integral
+
+    def computeGeometryFVM(self):
+        cdef Vec cellgeom = Vec()
+        cdef Vec facegeom = Vec()
+        CHKERR( DMPlexComputeGeometryFVM(self.dm, &cellgeom.vec, &facegeom.vec) )
+        return cellgeom, facegeom
+
+    def setSNESLocalFEM(self):
+        CHKERR( DMPlexSetSNESLocalFEM(self.dm, NULL, NULL, NULL) )
+
+    def SNESComputeBoundaryFEM(self, Vec X, args, kargs):
+        if args  is None: args  = ()
+        if kargs is None: kargs = {}
+        context = (args, kargs)
+        CHKERR( DMPlexSNESComputeBoundaryFEM(self.dm, X.vec, <void*>context) )
+        return X
