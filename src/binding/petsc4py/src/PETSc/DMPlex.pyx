@@ -969,7 +969,7 @@ cdef class DMPlex(DM):
     def setSNESLocalFEM(self):
         CHKERR( DMPlexSetSNESLocalFEM(self.dm, NULL, NULL, NULL) )
 
-    def SNESComputeBoundaryFEM(self, Vec X, args, kargs):
+    def SNESComputeBoundaryFEM(self, Vec X, args=None, kargs=None):
         if args  is None: args  = ()
         if kargs is None: kargs = {}
         context = (args, kargs)
