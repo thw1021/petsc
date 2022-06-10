@@ -1325,6 +1325,9 @@ cdef class Mat(Object):
     def multHermitianAdd(self, Vec x, Vec v, Vec y):
         CHKERR( MatMultHermitianAdd(self.mat, x.vec, v.vec, y.vec) )
 
+    def interpolate(self, Vec x, Vec y):
+        CHKERR( MatInterpolate(self.mat, x.vec, y.vec) )
+
     # SOR
 
     def SOR(self, Vec b, Vec x, omega=1.0, sortype=None, shift=0.0, its=1, lits=1):
