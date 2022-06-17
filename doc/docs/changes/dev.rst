@@ -136,6 +136,7 @@ In addition to the changes above
 .. rubric:: DM/DA:
 
 - Change ``DMGetLocalBoundingBox()`` to use ``DMGetCoordinatesLocal()`` rather than ``DMGetCoordinates()``
+- Add ``DMGetLocalBoundingBoxes()`` for getting the bounding box associated with each process
 - Add ``DMDAMapMatStencilToGlobal()`` to map MatStencils to global indices
 - Add ``DMGetCellCoordinateDM()``, ``DMSetCellCoordinateDM()``, ``DMGetCellCoordinateSection()``, ``DMSetCellCoordinateSection()``, ``DMGetCellCoordinates()``, ``DMSetCellCoordinates()``, ``DMGetCellCoordinatesLocalSetup()``, ``DMGetCellCoordinatesLocal()``, ``DMGetCellCoordinatesLocalNoncollective()``, ``DMSetCellCoordinatesLocal()``
 - Add ``DMFieldCreateDSWithDG()`` to allow multiple representations of a given field

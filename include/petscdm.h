@@ -162,6 +162,7 @@ PETSC_EXTERN PetscErrorCode DMGetCoordinateField(DM,DMField*);
 PETSC_EXTERN PetscErrorCode DMSetCoordinateField(DM,DMField);
 PETSC_EXTERN PetscErrorCode DMGetLocalBoundingBox(DM,PetscReal[],PetscReal[]);
 PETSC_EXTERN PetscErrorCode DMGetBoundingBox(DM,PetscReal[],PetscReal[]);
+PETSC_EXTERN PetscErrorCode DMGetLocalBoundingBoxes(DM,PetscReal[],PetscReal[]);
 PETSC_EXTERN PetscErrorCode DMProjectCoordinates(DM,PetscFE);
 PETSC_EXTERN PetscErrorCode DMLocatePoints(DM,Vec,DMPointLocationType,PetscSF*,PetscSF*);
 

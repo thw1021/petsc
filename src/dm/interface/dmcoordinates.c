@@ -912,6 +912,43 @@ PetscErrorCode DMGetBoundingBox(DM dm, PetscReal gmin[], PetscReal gmax[])
 }
 
 /*@
+  DMGetLocalBoundingBoxes - Gathers the local bounding box for each local piece of the DM to each process.
+
+  Collective
+
+  Input Parameter:
+. dm - the DM
+
+  Output Parameters:
++ gmin - gathered minimum coordinates (length coord dim * nproc, optional)
+- gmax - gathered maximum coordinates (length coord dim * nproc, optional)
+
+  Level: beginner
+
+  Notes:
+
+  The bounding box associated with each process is obtained using `DMGetLocalBoundingBox()`, which includes
+  ghost points. The results are gathered and ordered by MPI rank.
+
+.seealso: `DMGetLocalBoundingBox()`, `DMGetBoundingBox()`, `DMGetCoordinatesLocal()`
+@*/
+PetscErrorCode DMGetLocalBoundingBoxes(DM dm, PetscReal gmin[], PetscReal gmax[])
+{
+  PetscReal   lmin[3], lmax[3];
+  PetscInt    cdim;
+  PetscMPIInt count;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscCall(DMGetCoordinateDim(dm, &cdim));
+  PetscCall(PetscMPIIntCast(cdim, &count));
+  PetscCall(DMGetLocalBoundingBox(dm, lmin, lmax));
+  if (gmin) PetscCall(MPI_Allgather(lmin, count, MPIU_REAL, gmin, count, MPIU_REAL, PetscObjectComm((PetscObject) dm)));
+  if (gmax) PetscCall(MPI_Allgather(lmax, count, MPIU_REAL, gmax, count, MPIU_REAL, PetscObjectComm((PetscObject) dm)));
+  PetscFunctionReturn(0);
+}
+
+/*@
   DMProjectCoordinates - Project coordinates to a different space
 
   Input Parameters:
