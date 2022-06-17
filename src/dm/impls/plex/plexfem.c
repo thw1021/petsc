@@ -2732,20 +2732,24 @@ PetscErrorCode DMPlexComputeInterpolatorGeneral(DM dmc, DM dmf, Mat In, void *us
   PetscInt     locRows, locCols;
   PetscReal   *x, *v0, *J, *invJ, detJ;
   PetscReal   *v0c, *Jc, *invJc, detJc;
+  PetscReal   *gmin, *gmax;
   PetscScalar *elemMat;
   PetscInt     dim, Nf, field, totDim, cStart, cEnd, cell, ccell, s, numNotFound, missing, missingLocal;
-  PetscSection missingSection, globalMissingSection;
+  PetscSection missingSection,  globalMissingSection;
   Vec          missingDofs,     globalMissingDofs;
-  PetscInt    *missingIndices, *globalMissingIndices, *counts, *displs;
+  PetscInt    *missingIndices, *globalMissingIndices, *candidates, *globalCandidates, numCandidates, *counts, *displs;
   VecScatter   vscat;
   MPI_Comm     comm;
-  PetscMPIInt  size;
+  PetscMPIInt  size, rank;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject) dmc, &comm));
   PetscCallMPI(MPI_Comm_size(comm, &size));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
   PetscCall(PetscLogEventBegin(DMPLEX_InterpolatorFEM,dmc,dmf,0,0));
   PetscCall(DMGetCoordinateDim(dmc, &dim));
+  PetscCall(PetscMalloc2(dim * size, &gmin, dim * size, &gmax));
+  PetscCall(DMGetLocalBoundingBoxes(dmc, gmin, gmax));
   PetscCall(DMGetDS(dmc, &prob));
   PetscCall(PetscDSGetWorkspace(prob, &x, NULL, NULL, NULL, NULL));
   PetscCall(PetscDSGetNumFields(prob, &Nf));
@@ -2976,6 +2980,28 @@ PetscErrorCode DMPlexComputeInterpolatorGeneral(DM dmc, DM dmf, Mat In, void *us
         }
         if (s && id == PETSCFE_CLASSID) PetscCall(PetscTabulationDestroy(&T));
       }
+      PetscCall(VecAssemblyBegin(missingDofs));
+      PetscCall(VecAssemblyEnd(missingDofs));
+
+      /* Determine candidates */
+      PetscCall(PetscMalloc1(missingLocal*size, &candidates));
+      {
+        PetscInt     j, p, d;
+        PetscScalar *dofs;
+
+        PetscCall(VecGetArray(missingDofs, &dofs));
+        for (j = 0; j < missingLocal; j += dim) {
+          for (p = 0; p < size; ++p) {
+            candidates[j*size+p] = 1;
+            for (d = 0; d < dim; ++d) {
+              if ((dofs[j+d] < gmin[p*dim+d]) || (dofs[j+d] > gmax[p*dim+d])) {
+                candidates[j*size+p] = 0;
+                break;
+              }
+            }
+          }
+        }
+      }
 
       /* Scatter the indices */
       PetscCall(PetscMalloc1(missing, &globalMissingIndices));
@@ -2983,17 +3009,21 @@ PetscErrorCode DMPlexComputeInterpolatorGeneral(DM dmc, DM dmf, Mat In, void *us
       PetscCallMPI(MPI_Allgather(&missingLocal, 1, MPIU_INT, counts, 1, MPIU_INT, comm));
       for (PetscMPIInt p = 1; p < size; ++p) displs[p] = displs[p-1] + counts[p-1];
       PetscCallMPI(MPI_Allgatherv(missingIndices, missingLocal, MPIU_INT, globalMissingIndices, counts, displs, MPIU_INT, comm));
+
+      /* Scatter candidates */
+      numCandidates = missingLocal*size;
+      PetscCall(PetscMalloc1(missing*size, &globalCandidates));
+      PetscCallMPI(MPI_Allgather(&numCandidates, 1, MPIU_INT, counts, 1, MPIU_INT, comm));
+      for (PetscMPIInt p = 1; p < size; ++p) displs[p] = displs[p-1] + counts[p-1];
+      PetscCallMPI(MPI_Allgatherv(candidates, numCandidates, MPIU_INT, globalCandidates, counts, displs, MPIU_INT, comm));
       PetscCall(PetscFree2(counts, displs));
+      PetscCall(PetscFree(candidates));
 
       /* Scatter the DoFs */
-      PetscCall(VecAssemblyBegin(missingDofs));
-      PetscCall(VecAssemblyEnd(missingDofs));
       PetscCall(VecScatterCreateToAll(missingDofs, &vscat, &globalMissingDofs));
       PetscCall(VecScatterBegin(vscat, missingDofs, globalMissingDofs, INSERT_VALUES, SCATTER_FORWARD));
       PetscCall(VecScatterEnd(vscat, missingDofs, globalMissingDofs, INSERT_VALUES, SCATTER_FORWARD));
       PetscCall(VecScatterDestroy(&vscat));
-
-      /* TODO: Use bounding boxes to deduce candidate processes, rather than getting all processes to search */
 
       /* Loop over the missing points and interpolate where possible */
       PetscCall(DMGetGlobalSection(dmMissing, &globalMissingSection));
@@ -3039,6 +3069,12 @@ PetscErrorCode DMPlexComputeInterpolatorGeneral(DM dmc, DM dmf, Mat In, void *us
             PetscCall(PetscDualSpaceGetFunctional(Q, i, &f));
             PetscCall(PetscQuadratureGetData(f, NULL, &qNc, &Np, &qpoints, &qweights));
             PetscCheck(qNc == Nc, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Number of components in quadrature %" PetscInt_FMT " does not match coarse field %" PetscInt_FMT, qNc, Nc);
+            /* Check if current rank is a candidate */
+            if (!globalCandidates[idx*size+rank]) {
+              idx += Np*dim;
+              continue;
+            }
+            /* If so, attempt point location */
             PetscCall(PetscMalloc(Np*dim, &findices));
             PetscCall(VecCreateSeq(PETSC_COMM_SELF, Np*dim, &pointVec));
             PetscCall(VecSetBlockSize(pointVec, Np*dim));
@@ -3108,6 +3144,7 @@ PetscErrorCode DMPlexComputeInterpolatorGeneral(DM dmc, DM dmf, Mat In, void *us
       }
       PetscCall(VecDestroy(&globalMissingDofs));
       PetscCall(PetscFree(globalMissingIndices));
+      PetscCall(PetscFree(globalCandidates));
     }
 
     /* Preallocate, if appropriate */
@@ -3131,6 +3168,7 @@ PetscErrorCode DMPlexComputeInterpolatorGeneral(DM dmc, DM dmf, Mat In, void *us
   PetscCall(PetscFree(elemMat));
   PetscCall(MatAssemblyBegin(In, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(In, MAT_FINAL_ASSEMBLY));
+  PetscCall(PetscFree2(gmin, gmax));
   PetscCall(PetscLogEventEnd(DMPLEX_InterpolatorFEM,dmc,dmf,0,0));
   PetscFunctionReturn(0);
 }
