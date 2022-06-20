@@ -856,7 +856,7 @@ PetscErrorCode DMGetLocalBoundingBox(DM dm, PetscReal lmin[], PetscReal lmax[])
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscCall(DMGetCoordinateDim(dm, &cdim));
-  PetscCall(DMGetCoordinates(dm, &coords));
+  PetscCall(DMGetCoordinatesLocal(dm, &coords));
   if (coords) {
     PetscCall(VecGetArrayRead(coords, &local_coords));
     PetscCall(VecGetLocalSize(coords, &N));
