@@ -74,17 +74,28 @@ $(OBJDIR)/%.o : CXXCPPFLAGS+=-Dpetsc_EXPORTS
 $(OBJDIR)/%.o : CUDACPPFLAGS+=-Dpetsc_EXPORTS
 endif
 
-langs := F F90 cxx c
-ifneq ($(CUDAC),)
+langs := c
+ifneq ($(strip $(FC)),)
+langs += F
+ifneq ($(strip $(FC90)),)
+# the FC90 make variable isn't actually used to compile f90 sources, it is set it in
+# configure to be able to detect f90 from this makefile
+langs += F90
+endif
+endif
+ifneq ($(strip $(CXX)),)
+langs += cxx
+endif
+ifneq ($(strip $(CUDAC)),)
 langs += cu
 endif
-ifneq ($(HIPC),)
+ifneq ($(strip $(HIPC)),)
 langs += hip.cpp
 endif
-ifneq ($(SYCLC),)
+ifneq ($(strip $(SYCLC)),)
 langs += sycl.cxx
 endif
-ifneq ($(KOKKOS_LIB),)
+ifneq ($(strip $(KOKKOS_LIB)),)
 langs += kokkos.cxx
 endif
 
@@ -92,6 +103,10 @@ concatlang = $(foreach lang, $(langs), $(srcs-$(1).$(lang):src/%.$(lang)=$(OBJDI
 srcs.o := $(foreach pkg, $(pkgs), $(call concatlang,$(pkg)))
 concatlangsrc = $(foreach lang, $(langs), $(srcs-$(1).$(lang)))
 csrc := $(foreach pkg, $(pkgs),  $(srcs-$(pkg).c))
+
+showlangs:
+	-@echo $(langs)
+
 showcsrc:
 	-@echo $(csrc)
 

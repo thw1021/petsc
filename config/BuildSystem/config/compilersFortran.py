@@ -3,6 +3,7 @@ import config.base
 import re
 import os
 import shutil
+import textwrap
 
 def remove_xcode_verbose(buf):
   retbuf =[]
@@ -145,18 +146,25 @@ class Configure(config.base.Configure):
 
   def checkFortran90(self):
     '''Determine whether the Fortran compiler handles F90'''
-    self.pushLanguage('FC')
-    if self.checkLink(body = '''
+    with self.Language('FC'):
+      body = textwrap.indent(textwrap.dedent(
+        '''
         REAL(KIND=SELECTED_REAL_KIND(10)) d
         INTEGER, PARAMETER :: int = SELECTED_INT_KIND(8)
         INTEGER (KIND=int) :: ierr
-        ierr = 1'''):
-      self.fortranIsF90 = 1
-      self.logPrint('Fortran compiler supports F90')
-    else:
-      self.fortranIsF90 = 0
-      self.logPrint('Fortran compiler does not support F90')
-    self.popLanguage()
+        ierr = 1
+        d = 4.0
+        '''
+      ),6*' ')
+      supports          = self.checkLink(body=body)
+      self.fortranIsF90 = int(supports)
+      self.logPrint('Fortran compiler {} F90'.format('supports' if supports else 'does not support'))
+      if supports:
+        self.addDefine('HAVE_FORTRAN90',1)
+        f90c = self.setCompilers.FC
+      else:
+        f90c = ''
+      self.addMakeMacro('FC90',f90c)
     return
 
   def checkFortran90LineLength(self):

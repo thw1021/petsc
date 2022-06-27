@@ -128,22 +128,35 @@ class Configure(script.Script):
 
   def executeTest(self, test, args = [], kargs = {}):
     '''Prints the function and class information for the test and then runs the test'''
-    import time
-
-    self.logPrintDivider()
-    self.logPrint('TESTING: '+str(test.__func__.__name__)+' from '+str(test.__self__.__class__.__module__)+'('+str(test.__func__.__code__.co_filename)+':'+str(test.__func__.__code__.co_firstlineno)+')', debugSection = 'screen', indent = 0)
-    if test.__doc__: self.logWrite('  '+test.__doc__+'\n')
+    self.printTest(test)
     #t = time.time()
-    if not isinstance(args, list): args = [args]
+    if not isinstance(args, (list, tuple)): args = [args]
     ret = test(*args,**kargs)
     #self.logPrint('  TIME: '+str(time.time() - t)+' sec', debugSection = 'screen', indent = 0)
     return ret
 
   def printTest(self, test):
     '''Prints the function and class information for a test'''
+    import types
+
     self.logPrintDivider()
-    self.logPrint('TESTING: '+str(test.__func__.__name__)+' from '+str(test.__self__.__class__.__module__)+'('+str(test.__func__.__code__.co_filename)+':'+str(test.__func__.__code__.co_firstlineno)+')', debugSection = 'screen', indent = 0)
-    if test.__doc__: self.logWrite('  '+test.__doc__+'\n')
+    if isinstance(test, types.MethodType):
+      # class method
+      func   = test.__func__
+      module = test.__self__.__class__.__module__
+    elif isinstance(test, (types.FunctionType, types.BuiltinFunctionType)):
+      # free function
+      func   = test
+      module = func.__module__
+    else:
+      # some other callable type, probably a callable class
+      assert callable(test)
+      func   = test.__call__
+      module = func.__self__.__class__.__module__
+    code = func.__code__
+    mess = 'TESTING: {} from {}({}:{})'.format(func.__name__,module,code.co_filename,code.co_firstlineno)
+    self.logPrint(mess, debugSection = 'screen', indent = 0)
+    if func.__doc__: self.logWrite('  '+func.__doc__+'\n')
 
   #################################
   # Define and Substitution Supported
