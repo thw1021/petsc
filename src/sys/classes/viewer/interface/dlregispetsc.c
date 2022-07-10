@@ -4,6 +4,7 @@
 #include <petsc/private/viewerimpl.h>
 
 static PetscBool PetscSysPackageInitialized = PETSC_FALSE;
+PetscClassId PETSC_BENCH_CLASSID;
 
 /*@C
   PetscSysFinalizePackage - This function destroys everything in the PETSc created internally in the system library portion of PETSc.
@@ -43,6 +44,7 @@ PetscErrorCode  PetscSysInitializePackage(void)
   /* Register Classes */
   PetscCall(PetscClassIdRegister("Object",&PETSC_OBJECT_CLASSID));
   PetscCall(PetscClassIdRegister("Container",&PETSC_CONTAINER_CLASSID));
+  PetscCall(PetscClassIdRegister("Benchmark",&PETSC_BENCH_CLASSID));
 
   /* Register Events */
   PetscCall(PetscLogEventRegister("PetscBarrier", PETSC_SMALLEST_CLASSID,&PETSC_Barrier));

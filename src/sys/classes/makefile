@@ -1,7 +1,7 @@
 -include ../../../petsckdir.mk
 
 SOURCEH   =
-DIRS      = viewer draw matlabengine random bag
+DIRS      = viewer draw matlabengine random bag bench
 LOCDIR    = src/sys/classes/
 MANSEC    = Sys
 

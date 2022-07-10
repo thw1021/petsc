@@ -285,6 +285,19 @@ int MPI_Comm_free(MPI_Comm *comm)
   return MPI_SUCCESS;
 }
 
+/* Currently the info values are not used but set them to distinct values from MPI_INFO_NULL in case they are needed in the future */
+int MPI_Info_free(MPI_Info *info)
+{
+  *info = -1;
+  return MPI_SUCCESS;
+}
+
+int MPI_Info_create(MPI_Info *info)
+{
+  *info = 1;
+  return MPI_SUCCESS;
+}
+
 int MPI_Comm_size(MPI_Comm comm, int *size)
 {
   if (comm < 1 || comm > MaxComm) return MPI_FAILURE;

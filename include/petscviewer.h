@@ -107,6 +107,8 @@ PETSC_EXTERN PetscErrorCode PetscViewerWritable(PetscViewer,PetscBool*);
 PETSC_EXTERN PetscErrorCode PetscViewerCheckReadable(PetscViewer);
 PETSC_EXTERN PetscErrorCode PetscViewerCheckWritable(PetscViewer);
 
+PETSC_EXTERN PetscErrorCode PetscViewerPrintf(PetscViewer,const char[],...) PETSC_ATTRIBUTE_FORMAT(2,3);
+
 #define PETSC_VIEWER_ASCII_VTK_ATTR        PETSC_VIEWER_ASCII_VTK        PETSC_DEPRECATED_ENUM("Legacy VTK deprecated; use PetscViewerVTKOpen() with XML (.vtr .vts .vtu) format (since 3.14)")
 #define PETSC_VIEWER_ASCII_VTK_CELL_ATTR   PETSC_VIEWER_ASCII_VTK_CELL   PETSC_DEPRECATED_ENUM("Legacy VTK deprecated; use PetscViewerVTKOpen() with XML (.vtr .vts .vtu) format (since 3.14)")
 #define PETSC_VIEWER_ASCII_VTK_COORDS_ATTR PETSC_VIEWER_ASCII_VTK_COORDS PETSC_DEPRECATED_ENUM("Legacy VTK deprecated; use PetscViewerVTKOpen() with XML (.vtr .vts .vtu) format (since 3.14)")

@@ -3,6 +3,54 @@
 
 #define QUEUESTRINGSIZE 8192
 
+PetscErrorCode  PetscViewerPrintf_ASCII(PetscViewer viewer,const char format[],va_list Argp)
+{
+  PetscViewer_ASCII *ascii = (PetscViewer_ASCII*)viewer->data;
+  PetscMPIInt       rank;
+  PetscInt          tab,intab = ascii->tab;
+  FILE              *fd = ascii->fd;
+  PetscBool         iascii;
+  int               err;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
+  PetscCheck(!ascii->sviewer,PetscObjectComm((PetscObject)viewer),PETSC_ERR_ARG_WRONGSTATE,"Cannot call with outstanding call to PetscViewerRestoreSubViewer()");
+  PetscValidCharPointer(format,2);
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
+  PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)viewer),&rank));
+  if (rank) PetscFunctionReturn(0);
+
+  if (ascii->bviewer) { /* pass string up to parent viewer */
+    char        *string;
+    size_t      fullLength;
+
+    PetscCall(PetscCalloc1(QUEUESTRINGSIZE, &string));
+    PetscCall(PetscVSNPrintf(string,QUEUESTRINGSIZE,format,&fullLength,Argp));
+    PetscCall(PetscViewerASCIISynchronizedPrintf(viewer,"%s",string));
+    PetscCall(PetscFree(string));
+  } else { /* write directly to file */
+    /* flush my own messages that I may have queued up */
+    PrintfQueue next = ascii->petsc_printfqueuebase,previous;
+    PetscInt    i;
+    for (i=0; i<ascii->petsc_printfqueuelength; i++) {
+      PetscCall(PetscFPrintf(PETSC_COMM_SELF,fd,"%s",next->string));
+      previous = next;
+      next     = next->next;
+      PetscCall(PetscFree(previous->string));
+      PetscCall(PetscFree(previous));
+    }
+    ascii->petsc_printfqueue       = NULL;
+    ascii->petsc_printfqueuelength = 0;
+    tab = intab;
+    while (tab--) PetscCall(PetscFPrintf(PETSC_COMM_SELF,fd,"  "));
+
+    PetscCall((*PetscVFPrintf)(fd,format,Argp));
+    err  = fflush(fd);
+    PetscCheck(!err,PETSC_COMM_SELF,PETSC_ERR_SYS,"fflush() failed on file");
+  }
+  PetscFunctionReturn(0);
+}
+
 static PetscErrorCode PetscViewerFileClose_ASCII(PetscViewer viewer)
 {
   PetscMPIInt       rank;
@@ -547,68 +595,18 @@ PetscErrorCode  PetscViewerASCIIUseTabs(PetscViewer viewer,PetscBool flg)
 @*/
 PetscErrorCode  PetscViewerASCIIPrintf(PetscViewer viewer,const char format[],...)
 {
-  PetscViewer_ASCII *ascii = (PetscViewer_ASCII*)viewer->data;
-  PetscMPIInt       rank;
-  PetscInt          tab,intab = ascii->tab;
-  FILE              *fd = ascii->fd;
-  PetscBool         iascii;
-  int               err;
+  PetscBool      iascii;
+  va_list        Argp;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
-  PetscCheck(!ascii->sviewer,PetscObjectComm((PetscObject)viewer),PETSC_ERR_ARG_WRONGSTATE,"Cannot call with outstanding call to PetscViewerRestoreSubViewer()");
   PetscValidCharPointer(format,2);
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
   PetscCheck(iascii,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG,"Not ASCII PetscViewer");
-  PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)viewer),&rank));
-  if (rank) PetscFunctionReturn(0);
 
-  if (ascii->bviewer) { /* pass string up to parent viewer */
-    char        *string;
-    va_list     Argp;
-    size_t      fullLength;
-
-    PetscCall(PetscCalloc1(QUEUESTRINGSIZE, &string));
-    va_start(Argp,format);
-    PetscCall(PetscVSNPrintf(string,QUEUESTRINGSIZE,format,&fullLength,Argp));
-    va_end(Argp);
-    PetscCall(PetscViewerASCIISynchronizedPrintf(viewer,"%s",string));
-    PetscCall(PetscFree(string));
-  } else { /* write directly to file */
-    va_list Argp;
-    /* flush my own messages that I may have queued up */
-    PrintfQueue next = ascii->petsc_printfqueuebase,previous;
-    PetscInt    i;
-    for (i=0; i<ascii->petsc_printfqueuelength; i++) {
-      PetscCall(PetscFPrintf(PETSC_COMM_SELF,fd,"%s",next->string));
-      previous = next;
-      next     = next->next;
-      PetscCall(PetscFree(previous->string));
-      PetscCall(PetscFree(previous));
-    }
-    ascii->petsc_printfqueue       = NULL;
-    ascii->petsc_printfqueuelength = 0;
-    tab = intab;
-    while (tab--) {
-      PetscCall(PetscFPrintf(PETSC_COMM_SELF,fd,"  "));
-    }
-
-    va_start(Argp,format);
-    PetscCall((*PetscVFPrintf)(fd,format,Argp));
-    err  = fflush(fd);
-    PetscCheck(!err,PETSC_COMM_SELF,PETSC_ERR_SYS,"fflush() failed on file");
-    if (petsc_history) {
-      va_start(Argp,format);
-      tab = intab;
-      while (tab--) {
-        PetscCall(PetscFPrintf(PETSC_COMM_SELF,petsc_history,"  "));
-      }
-      PetscCall((*PetscVFPrintf)(petsc_history,format,Argp));
-      err  = fflush(petsc_history);
-      PetscCheck(!err,PETSC_COMM_SELF,PETSC_ERR_SYS,"fflush() failed on file");
-    }
-    va_end(Argp);
-  }
+  va_start(Argp,format);
+  PetscCall((*viewer->ops->printf)(viewer,format,Argp));
+  va_end(Argp);
   PetscFunctionReturn(0);
 }
 
@@ -827,6 +825,7 @@ PETSC_EXTERN PetscErrorCode PetscViewerCreate_ASCII(PetscViewer viewer)
   viewer->ops->restoresubviewer = PetscViewerRestoreSubViewer_ASCII;
   viewer->ops->view             = PetscViewerView_ASCII;
   viewer->ops->read             = PetscViewerASCIIRead;
+  viewer->ops->printf           = PetscViewerPrintf_ASCII;
 
   /* defaults to stdout unless set with PetscViewerFileSetName() */
   vascii->fd        = PETSC_STDOUT;

@@ -328,6 +328,8 @@ typedef int (MPI_Delete_function)(MPI_Comm,int,void *,void *);
 #define MPI_Comm_free     Petsc_MPI_Comm_free
 #define MPI_Comm_dup      Petsc_MPI_Comm_dup
 #define MPI_Comm_create   Petsc_MPI_Comm_create
+#define MPI_Info_free     Petsc_MPI_Info_free
+#define MPI_Info_create   Petsc_MPI_Info_create
 #define MPI_Init          Petsc_MPI_Init
 #define MPI_Init_thread   Petsc_MPI_Init_thread
 #define MPI_Query_thread  Petsc_MPI_Query_thread
@@ -365,6 +367,8 @@ MPIUni_PETSC_EXTERN int    MPI_Keyval_create(MPI_Copy_function *,MPI_Delete_func
 MPIUni_PETSC_EXTERN int    MPI_Comm_free(MPI_Comm*);
 MPIUni_PETSC_EXTERN int    MPI_Comm_dup(MPI_Comm,MPI_Comm *);
 MPIUni_PETSC_EXTERN int    MPI_Comm_create(MPI_Comm,MPI_Group,MPI_Comm *);
+MPIUni_PETSC_EXTERN int    MPI_Info_create(MPI_Info*);
+MPIUni_PETSC_EXTERN int    MPI_Info_free(MPI_Info*);
 MPIUni_PETSC_EXTERN int    MPI_Init(int *, char ***);
 MPIUni_PETSC_EXTERN int    MPI_Init_thread(int *, char ***, int, int *);
 MPIUni_PETSC_EXTERN int    MPI_Query_thread(int *);

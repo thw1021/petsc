@@ -2690,4 +2690,7 @@ PETSC_EXTERN PetscErrorCode  PetscHasExternalPackage(const char[],PetscBool*);
 PETSC_EXTERN PetscErrorCode PCMPIServerBegin(void);
 PETSC_EXTERN PetscErrorCode PCMPIServerEnd(void);
 PETSC_EXTERN PetscErrorCode PCMPICommsDestroy(void);
+
+PETSC_EXTERN PetscErrorCode VecStreamsView(PetscViewer);
+
 #endif

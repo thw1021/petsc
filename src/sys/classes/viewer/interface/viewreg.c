@@ -566,3 +566,40 @@ PetscErrorCode PetscViewerFlowControlEndWorker(PetscViewer viewer,PetscInt *mcnt
   }
   PetscFunctionReturn(0);
 }
+
+/*@C
+    PetscViewerPrintf - Prints a string to a viewer
+
+    Not Collective
+
+    Input Parameters:
++    viewer - a viewer
+-    format - the usual printf() format string
+
+    Level: developer
+
+    Notes:
+      How the string is printed depends on the type of viewer. Currently this translates to PetscViewerASCIIPrintf() and PetscViewerStringSPrintf() and
+      is ignored by other viewer types.
+
+    Fortran Note:
+      Not supported from Fortran
+
+.seealso: PetscPrintf(), PetscSynchronizedPrintf(), PetscViewerASCIIOpen(), PetscViewerASCIIPrintf(), PetscViewerStringSPrintf(),
+          PetscViewerASCIIPushTab(), PetscViewerASCIIPopTab(), PetscViewerASCIISynchronizedPrintf(),
+          PetscViewerCreate(), PetscViewerDestroy(), PetscViewerSetType(), PetscViewerASCIIGetPointer(), PetscViewerASCIIPushSynchronized()
+@*/
+PetscErrorCode  PetscViewerPrintf(PetscViewer viewer,const char format[],...)
+{
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,1);
+  if (viewer->ops->printf) {
+    va_list Argp;
+    va_start(Argp,format);
+    ierr = (*viewer->ops->printf)(viewer,format,Argp);CHKERRQ(ierr);
+    va_end(Argp);
+  }
+  PetscFunctionReturn(0);
+}

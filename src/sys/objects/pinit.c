@@ -4,6 +4,7 @@
 */
 #include <petsc/private/petscimpl.h>        /*I  "petscsys.h"   I*/
 #include <petscviewer.h>
+#include <petscbench.h>
 
 #if !defined(PETSC_HAVE_WINDOWS_COMPILERS)
 #include <petsc/private/valgrind/valgrind.h>
@@ -1379,6 +1380,24 @@ PetscErrorCode  PetscFinalize(void)
     PetscCall(PetscFree(buffs));
   }
 #endif
+
+  if (PetscDefined(USE_SINGLE_LIBRARY)) {
+    PetscViewer       viewer;
+    PetscViewerFormat format;
+    PetscBool         flg;
+
+    PetscCall(PetscOptionsGetViewer(PETSC_COMM_WORLD,NULL,NULL,"-log_view",&viewer,&format,&flg));
+    if (flg) {
+      PetscBench ben;
+      PetscCall(PetscViewerPushFormat(viewer,format));
+      PetscCall(PetscBenchVecStreamsCreate(PETSC_COMM_WORLD,&ben));
+      PetscCall(PetscBenchRun(ben));
+      PetscCall(PetscBenchView(ben,viewer));
+      PetscCall(PetscBenchDestroy(&ben));
+      PetscCall(PetscViewerPopFormat(viewer));
+      PetscCall(PetscViewerDestroy(&viewer));
+    }
+  }
 
 #if defined(PETSC_SERIALIZE_FUNCTIONS)
   PetscCall(PetscFPTDestroy());

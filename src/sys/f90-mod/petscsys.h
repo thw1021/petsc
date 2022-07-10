@@ -17,6 +17,10 @@
         PetscFortranAddr:: v PETSC_FORTRAN_TYPE_INITIALIZE
       end type tPetscOptions
 
+      type tPetscBench
+        PetscFortranAddr:: v PETSC_FORTRAN_TYPE_INITIALIZE
+      end type tPetscBench
+
       PetscOptions, parameter :: PETSC_NULL_OPTIONS = tPetscOptions(0)
 
 ! ------------------------------------------------------------------------
@@ -228,3 +232,4 @@
       parameter(PETSC_INFO_COMM_ALL=-1)
       parameter(PETSC_INFO_COMM_NO_SELF=0)
       parameter(PETSC_INFO_COMM_ONLY_SELF=1)
+  

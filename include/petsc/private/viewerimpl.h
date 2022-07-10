@@ -17,6 +17,7 @@ struct _PetscViewerOps {
    PetscErrorCode (*read)(PetscViewer,void*,PetscInt,PetscInt*,PetscDataType);
    PetscErrorCode (*setfromoptions)(PetscOptionItems*,PetscViewer);
    PetscErrorCode (*setup)(PetscViewer);
+   PetscErrorCode (*printf)(PetscViewer,const char[],va_list);
 };
 
 #define PETSCVIEWERGETVIEWEROFFPUSHESMAX 25
