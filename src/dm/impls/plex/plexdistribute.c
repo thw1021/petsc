@@ -1704,25 +1704,23 @@ PetscErrorCode DMPlexMigrate(DM dm, PetscSF sf, DM targetDM)
   PetscCall(DMGetPointSF(dm, &sfPoint));
   PetscCall(PetscSFGetGraph(sfPoint, &nroots, NULL, NULL, NULL));
   if (nroots >= 0) {
-    IS        isOriginal;
-    PetscInt  n, size, nleaves;
-    PetscInt  *numbering_orig, *numbering_new;
+    IS              isOriginal;
+    PetscInt        size, nleaves;
+    const PetscInt *numbering_orig;
+    PetscInt       *numbering_new;
 
     /* Get the original point numbering */
-    PetscCall(DMPlexCreatePointNumbering(dm, &isOriginal));
+    PetscCall(DMPlexGetPointNumbering(dm, &isOriginal, NULL, NULL, NULL));
     PetscCall(ISLocalToGlobalMappingCreateIS(isOriginal, &ltogOriginal));
     PetscCall(ISLocalToGlobalMappingGetSize(ltogOriginal, &size));
-    PetscCall(ISLocalToGlobalMappingGetBlockIndices(ltogOriginal, (const PetscInt**)&numbering_orig));
-    /* Convert to positive global numbers */
-    for (n=0; n<size; n++) {if (numbering_orig[n] < 0) numbering_orig[n] = -(numbering_orig[n]+1);}
+    PetscCall(ISLocalToGlobalMappingGetBlockIndices(ltogOriginal, &numbering_orig));
     /* Derive the new local-to-global mapping from the old one */
     PetscCall(PetscSFGetGraph(sf, NULL, &nleaves, NULL, NULL));
     PetscCall(PetscMalloc1(nleaves, &numbering_new));
     PetscCall(PetscSFBcastBegin(sf, MPIU_INT, numbering_orig, numbering_new,MPI_REPLACE));
     PetscCall(PetscSFBcastEnd(sf, MPIU_INT, numbering_orig, numbering_new,MPI_REPLACE));
     PetscCall(ISLocalToGlobalMappingCreate(comm, 1, nleaves, numbering_new, PETSC_OWN_POINTER, &ltogMigration));
-    PetscCall(ISLocalToGlobalMappingRestoreIndices(ltogOriginal, (const PetscInt**)&numbering_orig));
-    PetscCall(ISDestroy(&isOriginal));
+    PetscCall(ISLocalToGlobalMappingRestoreIndices(ltogOriginal, &numbering_orig));
   } else {
     /* One-to-all distribution pattern: We can derive LToG from SF */
     PetscCall(ISLocalToGlobalMappingCreateSF(sf, 0, &ltogMigration));

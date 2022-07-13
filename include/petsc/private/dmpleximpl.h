@@ -109,6 +109,23 @@ typedef struct {
   PetscInt  verbosity;               /* Level of verbosity for remesher (-1 = no output, 10 = maximum) */
 } DMPlexMetricCtx;
 
+typedef struct _n_DMPlexNumberingCtx* DMPlexNumberingCtx;
+struct _n_DMPlexNumberingCtx {
+  MPI_Comm            comm;
+  PetscBool           distributed;
+  PetscInt            nStrata;
+
+  DMPlexNumberingCtx  global;
+  DMPlexNumberingCtx *strata;
+
+  IS                  numbering;
+  PetscBool          *ghostMask;
+  PetscBool          *ghostMaskAllocated;
+  PetscLayout         ownedLayout;
+  PetscLayout         ghostLayout;
+  PetscInt            start, end;
+};
+
 /* Point Numbering in Plex:
 
    Points are numbered contiguously by stratum. Strate are organized as follows:
@@ -173,6 +190,7 @@ typedef struct {
   PetscObjectState     celltypeState;     /* State of celltype label, so that we can determine if a user changes it */
   IS                   globalVertexNumbers;
   IS                   globalCellNumbers;
+  DMPlexNumberingCtx   numberingCtx;
 
   /* Constraints */
   PetscSection         anchorSection;      /* maps constrained points to anchor points */
@@ -248,9 +266,9 @@ PETSC_EXTERN PetscErrorCode VecView_Plex_HDF5_Native(Vec, PetscViewer);
 PETSC_EXTERN PetscErrorCode VecLoad_Plex_HDF5_Native(Vec, PetscViewer);
 PETSC_EXTERN PetscErrorCode DMPlexView_HDF5(DM, PetscViewer);
 PETSC_EXTERN PetscErrorCode DMPlexLoad_HDF5(DM, PetscViewer);
-PETSC_INTERN PetscErrorCode DMPlexTopologyView_HDF5_Internal(DM, IS, PetscViewer);
+PETSC_INTERN PetscErrorCode DMPlexTopologyView_HDF5_Internal(DM, PetscViewer);
 PETSC_INTERN PetscErrorCode DMPlexCoordinatesView_HDF5_Internal(DM, PetscViewer);
-PETSC_INTERN PetscErrorCode DMPlexLabelsView_HDF5_Internal(DM, IS, PetscViewer);
+PETSC_INTERN PetscErrorCode DMPlexLabelsView_HDF5_Internal(DM, PetscViewer);
 PETSC_INTERN PetscErrorCode DMPlexSectionView_HDF5_Internal(DM, PetscViewer, DM);
 PETSC_INTERN PetscErrorCode DMPlexGlobalVectorView_HDF5_Internal(DM, PetscViewer, DM, Vec);
 PETSC_INTERN PetscErrorCode DMPlexLocalVectorView_HDF5_Internal(DM, PetscViewer, DM, Vec);
@@ -319,11 +337,23 @@ PETSC_INTERN PetscErrorCode DMPlexLocatePoint_Internal(DM,PetscInt,const PetscSc
 /* these two are PETSC_EXTERN just because of src/dm/impls/plex/tests/ex18.c */
 PETSC_EXTERN PetscErrorCode DMPlexOrientInterface_Internal(DM);
 
-/* Applications may use this function */
+//TODO This can almost be removed. Still used only in DMPlexCreateCellNumbering_Internal() and ex47
 PETSC_EXTERN PetscErrorCode DMPlexCreateNumbering_Plex(DM, PetscInt, PetscInt, PetscInt, PetscInt *, PetscSF, IS *);
 
+/* Support for global numbering */
+/*   Some functions are PETSC_EXTERN just due to src/dm/impls/plex/tests/ex47.c
+     and can be turned to PETSC_INTERN once that testing example is deleted */
+PETSC_EXTERN PetscErrorCode ISMakeGhostsNegative_Internal(IS, const PetscBool[], IS *);
+PETSC_EXTERN PetscErrorCode DMPlexCreatePointNumbering_Internal(DM, DMPlexNumberingCtx *);
+PETSC_INTERN PetscErrorCode DMPlexGetDepthPermutation_Internal(DM, PetscInt *[]);
+PETSC_EXTERN PetscErrorCode DMPlexGetPointNumbering_Internal(DM, DMPlexNumberingCtx *);
+PETSC_EXTERN PetscErrorCode DMPlexGetNumberingCtx_Internal(DM, DMPlexNumberingCtx *);
+PETSC_INTERN PetscErrorCode DMPlexNumberingCtxCreate_Internal(DM, IS, PetscSF, DMPlexNumberingCtx *);
+PETSC_INTERN PetscErrorCode DMPlexNumberingCtxDestroy_Internal(DMPlexNumberingCtx *);
+PETSC_INTERN PetscErrorCode DMPlexNumberingCtxGetStratumNumbering_Internal(DMPlexNumberingCtx, PetscInt, IS *, const PetscBool *[], PetscLayout *, PetscLayout *);
+
 PETSC_INTERN PetscErrorCode DMPlexCreateCellNumbering_Internal(DM, PetscBool, IS *);
-PETSC_INTERN PetscErrorCode DMPlexCreateVertexNumbering_Internal(DM, PetscBool, IS *);
+PETSC_INTERN PetscErrorCode DMPlexCreateVertexNumbering_Internal(DM, IS *);
 PETSC_INTERN PetscErrorCode DMPlexRefine_Internal(DM, Vec, DMLabel, DMLabel, DM *);
 PETSC_INTERN PetscErrorCode DMPlexCoarsen_Internal(DM, Vec, DMLabel, DMLabel, DM *);
 PETSC_INTERN PetscErrorCode DMCreateMatrix_Plex(DM, Mat*);

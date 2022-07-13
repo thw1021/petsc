@@ -58,7 +58,9 @@ cdef extern from * nogil:
 
     int DMPlexGetCellNumbering(PetscDM,PetscIS*)
     int DMPlexGetVertexNumbering(PetscDM,PetscIS*)
-    int DMPlexCreatePointNumbering(PetscDM,PetscIS*)
+    int DMPlexGetPointNumbering(PetscDM,PetscIS*,const PetscBool**,void*,void*)
+    int DMPlexGetDepthStratumNumbering(PetscDM,PetscInt,PetscIS*,const PetscBool**,void*,void*)
+    int DMPlexGetHeightStratumNumbering(PetscDM,PetscInt,PetscIS*,const PetscBool**,void*,void*)
 
     int DMPlexGetDepth(PetscDM,PetscInt*)
     #int DMPlexGetDepthLabel(PetscDM,PetscDMLabel*)

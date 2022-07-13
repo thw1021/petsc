@@ -110,7 +110,10 @@ PETSC_EXTERN PetscErrorCode DMPlexIsInterpolatedCollective(DM, DMPlexInterpolate
 PETSC_EXTERN PetscErrorCode DMPlexFilter(DM, DMLabel, PetscInt, DM *);
 PETSC_EXTERN PetscErrorCode DMPlexGetCellNumbering(DM, IS *);
 PETSC_EXTERN PetscErrorCode DMPlexGetVertexNumbering(DM, IS *);
-PETSC_EXTERN PetscErrorCode DMPlexCreatePointNumbering(DM, IS *);
+PETSC_EXTERN PETSC_DEPRECATED_FUNCTION("Use DMPlexGetPointNumbering (since v3.18)") PetscErrorCode DMPlexCreatePointNumbering(DM, IS *);
+PETSC_EXTERN PetscErrorCode DMPlexGetPointNumbering(DM, IS *, const PetscBool*[], PetscLayout *, PetscLayout *);
+PETSC_EXTERN PetscErrorCode DMPlexGetDepthStratumNumbering(DM, PetscInt, IS *, const PetscBool*[], PetscLayout *, PetscLayout *);
+PETSC_EXTERN PetscErrorCode DMPlexGetHeightStratumNumbering(DM, PetscInt, IS *, const PetscBool*[], PetscLayout *, PetscLayout *);
 PETSC_EXTERN PetscErrorCode DMPlexCreateRankField(DM, Vec *);
 PETSC_EXTERN PetscErrorCode DMPlexCreateLabelField(DM, DMLabel, Vec *);
 
@@ -214,7 +217,7 @@ PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetOrder(PetscViewer,PetscInt*);
 PETSC_EXTERN PetscErrorCode DMPlexCreateNeighborCSR(DM, PetscInt, PetscInt *, PetscInt **, PetscInt **);
 PETSC_EXTERN PetscErrorCode DMPlexGetPartitioner(DM, PetscPartitioner *);
 PETSC_EXTERN PetscErrorCode DMPlexSetPartitioner(DM, PetscPartitioner);
-PETSC_EXTERN PetscErrorCode DMPlexCreatePartitionerGraph(DM, PetscInt, PetscInt *, PetscInt **, PetscInt **, IS *);
+PETSC_EXTERN PetscErrorCode DMPlexCreatePartitionerGraph(DM, PetscInt, PetscInt *, PetscInt **, PetscInt **);
 PETSC_EXTERN PetscErrorCode DMPlexPartitionLabelInvert(DM, DMLabel, PetscSF, DMLabel);
 PETSC_EXTERN PetscErrorCode DMPlexPartitionLabelClosure(DM, DMLabel);
 PETSC_EXTERN PetscErrorCode DMPlexPartitionLabelAdjacency(DM, DMLabel);

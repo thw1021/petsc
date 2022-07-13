@@ -6,15 +6,16 @@ const char * const DMPlexCSRAlgorithms[] = {"mat", "graph", "overlap", "DMPlexCS
 
 static inline PetscInt DMPlex_GlobalID(PetscInt point) { return point >= 0 ? point : -(point+1); }
 
-static PetscErrorCode DMPlexCreatePartitionerGraph_Overlap(DM dm, PetscInt height, PetscInt *numVertices, PetscInt **offsets, PetscInt **adjacency, IS *globalNumbering)
+static PetscErrorCode DMPlexCreatePartitionerGraph_Overlap(DM dm, PetscInt height, PetscInt *numVertices, PetscInt **offsets, PetscInt **adjacency)
 {
   DM              ovdm;
-  PetscSF         sfPoint;
   IS              cellNumbering;
-  const PetscInt *cellNum;
+  const PetscInt *cellNum = NULL;
+  const PetscBool*ghostCellMask;
   PetscInt       *adj = NULL, *vOffsets = NULL, *vAdj = NULL;
   PetscBool       useCone, useClosure;
   PetscInt        dim, depth, overlap, cStart, cEnd, c, v;
+  PetscLayout     ownedLayout;
   PetscMPIInt     rank, size;
 
   PetscFunctionBegin;
@@ -25,8 +26,6 @@ static PetscErrorCode DMPlexCreatePartitionerGraph_Overlap(DM dm, PetscInt heigh
   if (dim != depth) {
     /* We do not handle the uninterpolated case here */
     PetscCall(DMPlexCreateNeighborCSR(dm, height, numVertices, offsets, adjacency));
-    /* DMPlexCreateNeighborCSR does not make a numbering */
-    if (globalNumbering) PetscCall(DMPlexCreateCellNumbering_Internal(dm, PETSC_TRUE, globalNumbering));
     /* Different behavior for empty graphs */
     if (!*numVertices) {
       PetscCall(PetscMalloc1(1, offsets));
@@ -47,25 +46,14 @@ static PetscErrorCode DMPlexCreatePartitionerGraph_Overlap(DM dm, PetscInt heigh
     PetscCall(PetscObjectReference((PetscObject) dm));
     ovdm = dm;
   }
-  PetscCall(DMGetPointSF(ovdm, &sfPoint));
   PetscCall(DMPlexGetHeightStratum(ovdm, height, &cStart, &cEnd));
-  PetscCall(DMPlexCreateNumbering_Plex(ovdm, cStart, cEnd, 0, NULL, sfPoint, &cellNumbering));
-  if (globalNumbering) {
-    PetscCall(PetscObjectReference((PetscObject) cellNumbering));
-    *globalNumbering = cellNumbering;
-  }
-  PetscCall(ISGetIndices(cellNumbering, &cellNum));
-  /* Determine sizes */
-  for (*numVertices = 0, c = cStart; c < cEnd; ++c) {
-    /* Skip non-owned cells in parallel (ParMetis expects no overlap) */
-    if (cellNum[c-cStart] < 0) continue;
-    (*numVertices)++;
-  }
+  PetscCall(DMPlexGetHeightStratumNumbering(ovdm, height, &cellNumbering, &ghostCellMask, &ownedLayout, NULL));
+  *numVertices = ownedLayout->n;
   PetscCall(PetscCalloc1(*numVertices+1, &vOffsets));
   for (c = cStart, v = 0; c < cEnd; ++c) {
     PetscInt adjSize = PETSC_DETERMINE, a, vsize = 0;
 
-    if (cellNum[c-cStart] < 0) continue;
+    if (ghostCellMask[c-cStart]) continue;
     PetscCall(DMPlexGetAdjacency(ovdm, c, &adjSize, &adj));
     for (a = 0; a < adjSize; ++a) {
       const PetscInt point = adj[a];
@@ -75,12 +63,13 @@ static PetscErrorCode DMPlexCreatePartitionerGraph_Overlap(DM dm, PetscInt heigh
     ++v;
   }
   /* Determine adjacency */
+  PetscCall(ISGetIndices(cellNumbering, &cellNum));
   PetscCall(PetscMalloc1(vOffsets[*numVertices], &vAdj));
   for (c = cStart, v = 0; c < cEnd; ++c) {
     PetscInt adjSize = PETSC_DETERMINE, a, off = vOffsets[v];
 
     /* Skip non-owned cells in parallel (ParMetis expects no overlap) */
-    if (cellNum[c-cStart] < 0) continue;
+    if (ghostCellMask[c-cStart]) continue;
     PetscCall(DMPlexGetAdjacency(ovdm, c, &adjSize, &adj));
     for (a = 0; a < adjSize; ++a) {
       const PetscInt point = adj[a];
@@ -95,7 +84,6 @@ static PetscErrorCode DMPlexCreatePartitionerGraph_Overlap(DM dm, PetscInt heigh
   }
   PetscCall(PetscFree(adj));
   PetscCall(ISRestoreIndices(cellNumbering, &cellNum));
-  PetscCall(ISDestroy(&cellNumbering));
   PetscCall(DMSetBasicAdjacency(dm, useCone, useClosure));
   PetscCall(DMDestroy(&ovdm));
   if (offsets)   {*offsets = vOffsets;}
@@ -105,12 +93,14 @@ static PetscErrorCode DMPlexCreatePartitionerGraph_Overlap(DM dm, PetscInt heigh
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode DMPlexCreatePartitionerGraph_Native(DM dm, PetscInt height, PetscInt *numVertices, PetscInt **offsets, PetscInt **adjacency, IS *globalNumbering)
+static PetscErrorCode DMPlexCreatePartitionerGraph_Native(DM dm, PetscInt height, PetscInt *numVertices, PetscInt **offsets, PetscInt **adjacency)
 {
-  PetscInt       dim, depth, p, pStart, pEnd, a, adjSize, idx, size;
+  PetscInt       dim, depth, p, pStart, pEnd, a, adjSize, idx, size, nv;
   PetscInt      *adj = NULL, *vOffsets = NULL, *graph = NULL;
   IS             cellNumbering;
   const PetscInt *cellNum;
+  const PetscBool*ghostCellMask;
+  PetscLayout    ownedLayout;
   PetscBool      useCone, useClosure;
   PetscSection   section;
   PetscSegBuffer adjBuffer;
@@ -127,8 +117,6 @@ static PetscErrorCode DMPlexCreatePartitionerGraph_Native(DM dm, PetscInt height
   if (dim != depth) {
     /* We do not handle the uninterpolated case here */
     PetscCall(DMPlexCreateNeighborCSR(dm, height, numVertices, offsets, adjacency));
-    /* DMPlexCreateNeighborCSR does not make a numbering */
-    if (globalNumbering) PetscCall(DMPlexCreateCellNumbering_Internal(dm, PETSC_TRUE, globalNumbering));
     /* Different behavior for empty graphs */
     if (!*numVertices) {
       PetscCall(PetscMalloc1(1, offsets));
@@ -140,6 +128,8 @@ static PetscErrorCode DMPlexCreatePartitionerGraph_Native(DM dm, PetscInt height
   }
   PetscCall(DMGetPointSF(dm, &sfPoint));
   PetscCall(DMPlexGetHeightStratum(dm, height, &pStart, &pEnd));
+  PetscCall(DMPlexGetHeightStratumNumbering(dm, height, &cellNumbering, &ghostCellMask, &ownedLayout, NULL));
+  *numVertices = ownedLayout->n;
   /* Build adjacency graph via a section/segbuffer */
   PetscCall(PetscSectionCreate(PetscObjectComm((PetscObject) dm), &section));
   PetscCall(PetscSectionSetChart(section, pStart, pEnd));
@@ -147,11 +137,6 @@ static PetscErrorCode DMPlexCreatePartitionerGraph_Native(DM dm, PetscInt height
   /* Always use FVM adjacency to create partitioner graph */
   PetscCall(DMGetBasicAdjacency(dm, &useCone, &useClosure));
   PetscCall(DMSetBasicAdjacency(dm, PETSC_TRUE, PETSC_FALSE));
-  PetscCall(DMPlexCreateNumbering_Plex(dm, pStart, pEnd, 0, NULL, sfPoint, &cellNumbering));
-  if (globalNumbering) {
-    PetscCall(PetscObjectReference((PetscObject)cellNumbering));
-    *globalNumbering = cellNumbering;
-  }
   PetscCall(ISGetIndices(cellNumbering, &cellNum));
   /* For all boundary faces (including faces adjacent to a ghost cell), record the local cell in adjCells
      Broadcast adjCells to remoteCells (to get cells from roots) and Reduce adjCells to remoteCells (to get cells from leaves)
@@ -205,9 +190,9 @@ static PetscErrorCode DMPlexCreatePartitionerGraph_Native(DM dm, PetscInt height
     PetscCall(PetscSFReduceEnd(dm->sf, MPIU_INT, adjCells, remoteCells, MPI_MAX));
   }
   /* Combine local and global adjacencies */
-  for (*numVertices = 0, p = pStart; p < pEnd; p++) {
+  for (nv = 0, p = pStart; p < pEnd; p++) {
     /* Skip non-owned cells in parallel (ParMetis expects no overlap) */
-    if (nroots > 0) {if (cellNum[p-pStart] < 0) continue;}
+    if (ghostCellMask[p-pStart]) continue;
     /* Add remote cells */
     if (remoteCells) {
       const PetscInt gp = DMPlex_GlobalID(cellNum[p-pStart]);
@@ -249,8 +234,9 @@ static PetscErrorCode DMPlexCreatePartitionerGraph_Native(DM dm, PetscInt height
         *pBuf = DMPlex_GlobalID(cellNum[point-pStart]);
       }
     }
-    (*numVertices)++;
+    nv++;
   }
+  PetscCheck(nv == *numVertices, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unexpected counted number of vertices = %" PetscInt_FMT " != %" PetscInt_FMT, nv, *numVertices);
   PetscCall(PetscFree(adj));
   PetscCall(PetscFree2(adjCells, remoteCells));
   PetscCall(DMSetBasicAdjacency(dm, useCone, useClosure));
@@ -260,7 +246,7 @@ static PetscErrorCode DMPlexCreatePartitionerGraph_Native(DM dm, PetscInt height
   PetscCall(PetscSectionGetStorageSize(section, &size));
   PetscCall(PetscMalloc1(*numVertices+1, &vOffsets));
   for (idx = 0, p = pStart; p < pEnd; p++) {
-    if (nroots > 0) {if (cellNum[p-pStart] < 0) continue;}
+    if (ghostCellMask[p-pStart]) continue;
     PetscCall(PetscSectionGetOffset(section, p, &(vOffsets[idx++])));
   }
   vOffsets[*numVertices] = size;
@@ -304,18 +290,18 @@ static PetscErrorCode DMPlexCreatePartitionerGraph_Native(DM dm, PetscInt height
   PetscCall(PetscSegBufferDestroy(&adjBuffer));
   PetscCall(PetscSectionDestroy(&section));
   PetscCall(ISRestoreIndices(cellNumbering, &cellNum));
-  PetscCall(ISDestroy(&cellNumbering));
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode DMPlexCreatePartitionerGraph_ViaMat(DM dm, PetscInt height, PetscInt *numVertices, PetscInt **offsets, PetscInt **adjacency, IS *globalNumbering)
+static PetscErrorCode DMPlexCreatePartitionerGraph_ViaMat(DM dm, PetscInt height, PetscInt *numVertices, PetscInt **offsets, PetscInt **adjacency)
 {
   Mat            conn, CSR;
   IS             fis, cis, cis_own;
-  PetscSF        sfPoint;
+  const PetscBool *fgm, *cgm;
+  PetscLayout    col, fol;
   const PetscInt *rows, *cols, *ii, *jj;
   PetscInt       *idxs,*idxs2;
-  PetscInt       dim, depth, floc, cloc, i, M, N, c, lm, m, cStart, cEnd, fStart, fEnd;
+  PetscInt       dim, depth, floc, cloc, i, j, M, N, c, lm, m, cStart, cEnd, fStart, fEnd;
   PetscMPIInt    rank;
   PetscBool      flg;
 
@@ -327,7 +313,6 @@ static PetscErrorCode DMPlexCreatePartitionerGraph_ViaMat(DM dm, PetscInt height
     /* We do not handle the uninterpolated case here */
     PetscCall(DMPlexCreateNeighborCSR(dm, height, numVertices, offsets, adjacency));
     /* DMPlexCreateNeighborCSR does not make a numbering */
-    if (globalNumbering) PetscCall(DMPlexCreateCellNumbering_Internal(dm, PETSC_TRUE, globalNumbering));
     /* Different behavior for empty graphs */
     if (!*numVertices) {
       PetscCall(PetscMalloc1(1, offsets));
@@ -340,48 +325,23 @@ static PetscErrorCode DMPlexCreatePartitionerGraph_ViaMat(DM dm, PetscInt height
   /* Interpolated and parallel case */
 
   /* numbering */
-  PetscCall(DMGetPointSF(dm, &sfPoint));
   PetscCall(DMPlexGetHeightStratum(dm, height, &cStart, &cEnd));
   PetscCall(DMPlexGetHeightStratum(dm, height+1, &fStart, &fEnd));
-  PetscCall(DMPlexCreateNumbering_Plex(dm, cStart, cEnd, 0, &N, sfPoint, &cis));
-  PetscCall(DMPlexCreateNumbering_Plex(dm, fStart, fEnd, 0, &M, sfPoint, &fis));
-  if (globalNumbering) PetscCall(ISDuplicate(cis, globalNumbering));
-
-  /* get positive global ids and local sizes for facets and cells */
-  PetscCall(ISGetLocalSize(fis, &m));
-  PetscCall(ISGetIndices(fis, &rows));
-  PetscCall(PetscMalloc1(m, &idxs));
-  for (i = 0, floc = 0; i < m; i++) {
-    const PetscInt p = rows[i];
-
-    if (p < 0) {
-      idxs[i] = -(p+1);
-    } else {
-      idxs[i] = p;
-      floc   += 1;
-    }
-  }
-  PetscCall(ISRestoreIndices(fis, &rows));
-  PetscCall(ISDestroy(&fis));
-  PetscCall(ISCreateGeneral(PETSC_COMM_SELF, m, idxs, PETSC_OWN_POINTER, &fis));
+  PetscCall(DMPlexGetHeightStratumNumbering(dm, height, &cis, &cgm, &col, NULL));
+  PetscCall(DMPlexGetHeightStratumNumbering(dm, height+1, &fis, &fgm, &fol, NULL));
+  N    = col->N;
+  M    = fol->N;
+  cloc = col->n;
+  floc = fol->n;
 
   PetscCall(ISGetLocalSize(cis, &m));
   PetscCall(ISGetIndices(cis, &cols));
-  PetscCall(PetscMalloc1(m, &idxs));
   PetscCall(PetscMalloc1(m, &idxs2));
-  for (i = 0, cloc = 0; i < m; i++) {
-    const PetscInt p = cols[i];
-
-    if (p < 0) {
-      idxs[i] = -(p+1);
-    } else {
-      idxs[i]       = p;
-      idxs2[cloc++] = p;
-    }
+  for (i = 0, j = 0; i < m; i++) {
+    if (!cgm[i]) idxs2[j++] = cols[i];
   }
+  PetscAssert(j == cloc, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Assertion failed: j == cloc");
   PetscCall(ISRestoreIndices(cis, &cols));
-  PetscCall(ISDestroy(&cis));
-  PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)dm), m, idxs, PETSC_OWN_POINTER, &cis));
   PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)dm), cloc, idxs2, PETSC_OWN_POINTER, &cis_own));
 
   /* Create matrix to hold F-C connectivity (MatMatTranspose Mult not supported for MPIAIJ) */
@@ -423,8 +383,6 @@ static PetscErrorCode DMPlexCreatePartitionerGraph_ViaMat(DM dm, PetscInt height
   }
   PetscCall(ISRestoreIndices(fis, &rows));
   PetscCall(ISRestoreIndices(cis, &cols));
-  PetscCall(ISDestroy(&fis));
-  PetscCall(ISDestroy(&cis));
   PetscCall(MatAssemblyBegin(conn, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(conn, MAT_FINAL_ASSEMBLY));
 
@@ -479,8 +437,7 @@ static PetscErrorCode DMPlexCreatePartitionerGraph_ViaMat(DM dm, PetscInt height
   Output Parameters:
 + numVertices     - Number of vertices in the graph
 . offsets         - Point offsets in the graph
-. adjacency       - Point connectivity in the graph
-- globalNumbering - A map from the local cell numbering to the global numbering used in "adjacency".  Negative indicates that the cell is a duplicate from another process.
+- adjacency       - Point connectivity in the graph
 
   The user can control the definition of adjacency for the mesh using DMSetAdjacency(). They should choose the combination appropriate for the function
   representation on the mesh. If requested, globalNumbering needs to be destroyed by the caller; offsets and adjacency need to be freed with PetscFree().
@@ -492,7 +449,7 @@ static PetscErrorCode DMPlexCreatePartitionerGraph_ViaMat(DM dm, PetscInt height
 
 .seealso: `PetscPartitionerGetType()`, `PetscPartitionerCreate()`, `DMSetAdjacency()`
 @*/
-PetscErrorCode DMPlexCreatePartitionerGraph(DM dm, PetscInt height, PetscInt *numVertices, PetscInt **offsets, PetscInt **adjacency, IS *globalNumbering)
+PetscErrorCode DMPlexCreatePartitionerGraph(DM dm, PetscInt height, PetscInt *numVertices, PetscInt **offsets, PetscInt **adjacency)
 {
   DMPlexCSRAlgorithm alg = DM_PLEX_CSR_GRAPH;
 
@@ -500,11 +457,11 @@ PetscErrorCode DMPlexCreatePartitionerGraph(DM dm, PetscInt height, PetscInt *nu
   PetscCall(PetscOptionsGetEnum(((PetscObject) dm)->options,((PetscObject) dm)->prefix, "-dm_plex_csr_alg", DMPlexCSRAlgorithms, (PetscEnum *) &alg, NULL));
   switch (alg) {
     case DM_PLEX_CSR_MAT:
-      PetscCall(DMPlexCreatePartitionerGraph_ViaMat(dm, height, numVertices, offsets, adjacency, globalNumbering));break;
+      PetscCall(DMPlexCreatePartitionerGraph_ViaMat(dm, height, numVertices, offsets, adjacency));break;
     case DM_PLEX_CSR_GRAPH:
-      PetscCall(DMPlexCreatePartitionerGraph_Native(dm, height, numVertices, offsets, adjacency, globalNumbering));break;
+      PetscCall(DMPlexCreatePartitionerGraph_Native(dm, height, numVertices, offsets, adjacency));break;
     case DM_PLEX_CSR_OVERLAP:
-      PetscCall(DMPlexCreatePartitionerGraph_Overlap(dm, height, numVertices, offsets, adjacency, globalNumbering));break;
+      PetscCall(DMPlexCreatePartitionerGraph_Overlap(dm, height, numVertices, offsets, adjacency));break;
   }
   PetscFunctionReturn(0);
 }
@@ -757,27 +714,22 @@ PetscErrorCode PetscPartitionerDMPlexPartition(PetscPartitioner part, DM dm, Pet
     PetscFunctionReturn(0);
   }
   if (part->height == 0) {
+    PetscLayout ownedLayout;
     PetscInt numVertices = 0;
     PetscInt *start     = NULL;
     PetscInt *adjacency = NULL;
     IS       globalNumbering;
+    const PetscBool *ghostMask;
 
+    PetscCall(DMPlexGetHeightStratumNumbering(dm, part->height, &globalNumbering, &ghostMask, &ownedLayout, NULL));
+    numVertices = ownedLayout->n;
     if (!part->noGraph || part->viewGraph) {
-      PetscCall(DMPlexCreatePartitionerGraph(dm, part->height, &numVertices, &start, &adjacency, &globalNumbering));
-    } else { /* only compute the number of owned local vertices */
-      const PetscInt *idxs;
-      PetscInt       p, pStart, pEnd;
-
-      PetscCall(DMPlexGetHeightStratum(dm, part->height, &pStart, &pEnd));
-      PetscCall(DMPlexCreateNumbering_Plex(dm, pStart, pEnd, 0, NULL, dm->sf, &globalNumbering));
-      PetscCall(ISGetIndices(globalNumbering, &idxs));
-      for (p = 0; p < pEnd - pStart; p++) numVertices += idxs[p] < 0 ? 0 : 1;
-      PetscCall(ISRestoreIndices(globalNumbering, &idxs));
+      PetscCall(DMPlexCreatePartitionerGraph(dm, part->height, &numVertices, &start, &adjacency));
     }
     if (part->usevwgt) {
       PetscSection   section = dm->localSection, clSection = NULL;
       IS             clPoints = NULL;
-      const PetscInt *gid,*clIdx;
+      const PetscInt *clIdx;
       PetscInt       v, p, pStart, pEnd;
 
       /* dm->localSection encodes degrees of freedom per point, not per cell. We need to get the closure index to properly specify cell weights (aka dofs) */
@@ -793,14 +745,11 @@ PetscErrorCode PetscPartitionerDMPlexPartition(PetscPartitioner part, DM dm, Pet
       PetscCall(DMPlexGetHeightStratum(dm, part->height, &pStart, &pEnd));
       PetscCall(PetscSectionCreate(PETSC_COMM_SELF, &vertSection));
       PetscCall(PetscSectionSetChart(vertSection, 0, numVertices));
-      if (globalNumbering) {
-        PetscCall(ISGetIndices(globalNumbering,&gid));
-      } else gid = NULL;
       for (p = pStart, v = 0; p < pEnd; ++p) {
         PetscInt dof = 1;
 
         /* skip cells in the overlap */
-        if (gid && gid[p-pStart] < 0) continue;
+        if (ghostMask[p-pStart]) continue;
 
         if (section) {
           PetscInt cl, clSize, clOff;
@@ -819,9 +768,6 @@ PetscErrorCode PetscPartitionerDMPlexPartition(PetscPartitioner part, DM dm, Pet
         PetscCall(PetscSectionSetDof(vertSection, v, dof));
         v++;
       }
-      if (globalNumbering) {
-        PetscCall(ISRestoreIndices(globalNumbering,&gid));
-      }
       if (clPoints) {
         PetscCall(ISRestoreIndices(clPoints,&clIdx));
       }
@@ -830,8 +776,7 @@ PetscErrorCode PetscPartitionerDMPlexPartition(PetscPartitioner part, DM dm, Pet
     PetscCall(PetscPartitionerPartition(part, size, numVertices, start, adjacency, vertSection, targetSection, partSection, partition));
     PetscCall(PetscFree(start));
     PetscCall(PetscFree(adjacency));
-    if (globalNumbering) { /* partition is wrt global unique numbering: change this to be wrt local numbering */
-      const PetscInt *globalNum;
+    { /* partition is wrt global unique numbering: change this to be wrt local numbering */
       const PetscInt *partIdx;
       PetscInt       *map, cStart, cEnd;
       PetscInt       *adjusted, i, localSize, offset;
@@ -839,21 +784,18 @@ PetscErrorCode PetscPartitionerDMPlexPartition(PetscPartitioner part, DM dm, Pet
 
       PetscCall(ISGetLocalSize(*partition,&localSize));
       PetscCall(PetscMalloc1(localSize,&adjusted));
-      PetscCall(ISGetIndices(globalNumbering,&globalNum));
       PetscCall(ISGetIndices(*partition,&partIdx));
       PetscCall(PetscMalloc1(localSize,&map));
       PetscCall(DMPlexGetHeightStratum(dm, part->height, &cStart, &cEnd));
       for (i = cStart, offset = 0; i < cEnd; i++) {
-        if (globalNum[i - cStart] >= 0) map[offset++] = i;
+        if (!ghostMask[i - cStart]) map[offset++] = i;
       }
       for (i = 0; i < localSize; i++) {
         adjusted[i] = map[partIdx[i]];
       }
       PetscCall(PetscFree(map));
       PetscCall(ISRestoreIndices(*partition,&partIdx));
-      PetscCall(ISRestoreIndices(globalNumbering,&globalNum));
       PetscCall(ISCreateGeneral(PETSC_COMM_SELF,localSize,adjusted,PETSC_OWN_POINTER,&newPartition));
-      PetscCall(ISDestroy(&globalNumbering));
       PetscCall(ISDestroy(partition));
       *partition = newPartition;
     }

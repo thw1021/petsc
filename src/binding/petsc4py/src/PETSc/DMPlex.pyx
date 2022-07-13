@@ -334,10 +334,31 @@ cdef class DMPlex(DM):
         PetscINCREF(iset.obj)
         return iset
 
-    def createPointNumbering(self):
+    def getPointNumbering(self):
         cdef IS iset = IS()
-        CHKERR( DMPlexCreatePointNumbering(self.dm, &iset.iset) )
-        return iset
+        cdef PetscInt n = 0
+        cdef const PetscBool *mask = NULL
+        CHKERR( DMPlexGetPointNumbering(self.dm, &iset.iset, &mask, NULL, NULL) )
+        CHKERR( ISGetLocalSize(iset.iset, &n) )
+        return iset, array_b(n, mask)
+
+    def getDepthStratumNumbering(self, depth):
+        cdef IS iset = IS()
+        cdef PetscInt cdepth = asInt(depth)
+        cdef PetscInt n = 0
+        cdef const PetscBool *mask = NULL
+        CHKERR( DMPlexGetDepthStratumNumbering(self.dm, cdepth, &iset.iset, &mask, NULL, NULL) )
+        CHKERR( ISGetLocalSize(iset.iset, &n) )
+        return iset, array_b(n, mask)
+
+    def getHeightStratumNumbering(self, height):
+        cdef IS iset = IS()
+        cdef PetscInt cheight = asInt(height)
+        cdef PetscInt n = 0
+        cdef const PetscBool *mask = NULL
+        CHKERR( DMPlexGetHeightStratumNumbering(self.dm, cheight, &iset.iset, &mask, NULL, NULL) )
+        CHKERR( ISGetLocalSize(iset.iset, &n) )
+        return iset, array_b(n, mask)
 
     def getDepth(self):
         cdef PetscInt depth = 0
