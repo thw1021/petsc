@@ -88,6 +88,7 @@ PetscErrorCode  PetscHeaderCreate_Private(PetscObject h,PetscClassId classid,con
 
 PETSC_INTERN PetscBool      PetscMemoryCollectMaximumUsage;
 PETSC_INTERN PetscLogDouble PetscMemoryMaximumUsage;
+PETSC_INTERN PetscLogDouble PetscDeviceMemoryMaximumUsage;
 
 /*
     PetscHeaderDestroy_Private - Destroys a base PETSc object header. Called by
@@ -103,6 +104,8 @@ PetscErrorCode  PetscHeaderDestroy_Private(PetscObject h)
     PetscLogDouble usage;
     PetscCall(PetscMemoryGetCurrentUsage(&usage));
     if (usage > PetscMemoryMaximumUsage) PetscMemoryMaximumUsage = usage;
+    PetscCall(PetscDeviceMemoryGetCurrentUsage(&usage));
+    if (usage > PetscDeviceMemoryMaximumUsage) PetscDeviceMemoryMaximumUsage = usage;
   }
   /* first destroy things that could execute arbitrary code */
   if (h->python_destroy) {

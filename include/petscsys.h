@@ -1219,6 +1219,8 @@ PETSC_EXTERN PetscErrorCode PetscObjectCompareId(PetscObject,PetscObjectId,Petsc
 */
 PETSC_EXTERN PetscErrorCode PetscMemoryGetCurrentUsage(PetscLogDouble *);
 PETSC_EXTERN PetscErrorCode PetscMemoryGetMaximumUsage(PetscLogDouble *);
+PETSC_EXTERN PetscErrorCode PetscDeviceMemoryGetCurrentUsage(PetscLogDouble *);
+PETSC_EXTERN PetscErrorCode PetscDeviceMemoryGetMaximumUsage(PetscLogDouble *);
 PETSC_EXTERN PetscErrorCode PetscMemorySetGetMaximumUsage(void);
 PETSC_EXTERN PetscErrorCode PetscMemoryTrace(const char[]);
 

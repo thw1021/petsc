@@ -486,8 +486,7 @@ PetscErrorCode PetscTrReallocDefault(size_t len, int lineno, const char function
  @*/
 PetscErrorCode  PetscMemoryView(PetscViewer viewer,const char message[])
 {
-  PetscLogDouble allocated,allocatedmax,resident,residentmax,gallocated,gallocatedmax,gresident,gresidentmax,maxgallocated,maxgallocatedmax,maxgresident,maxgresidentmax;
-  PetscLogDouble mingallocated,mingallocatedmax,mingresident,mingresidentmax;
+  PetscLogDouble allocated,allocatedmax,resident,residentmax,devresident,devresidentmax;
   MPI_Comm       comm;
 
   PetscFunctionBegin;
@@ -496,55 +495,53 @@ PetscErrorCode  PetscMemoryView(PetscViewer viewer,const char message[])
   PetscCall(PetscMallocGetMaximumUsage(&allocatedmax));
   PetscCall(PetscMemoryGetCurrentUsage(&resident));
   PetscCall(PetscMemoryGetMaximumUsage(&residentmax));
+  PetscCall(PetscDeviceMemoryGetCurrentUsage(&devresident));
+  PetscCall(PetscDeviceMemoryGetMaximumUsage(&devresidentmax));
   if (residentmax > 0) residentmax = PetscMax(resident,residentmax);
   PetscCall(PetscObjectGetComm((PetscObject)viewer,&comm));
   PetscCall(PetscViewerASCIIPrintf(viewer,"%s",message));
-  if (resident && residentmax && allocated) {
+  if (residentmax) {
+    PetscLogDouble gresidentmax,maxgresidentmax,mingresidentmax;
     PetscCallMPI(MPI_Reduce(&residentmax,&gresidentmax,1,MPIU_PETSCLOGDOUBLE,MPI_SUM,0,comm));
     PetscCallMPI(MPI_Reduce(&residentmax,&maxgresidentmax,1,MPIU_PETSCLOGDOUBLE,MPI_MAX,0,comm));
     PetscCallMPI(MPI_Reduce(&residentmax,&mingresidentmax,1,MPIU_PETSCLOGDOUBLE,MPI_MIN,0,comm));
     PetscCall(PetscViewerASCIIPrintf(viewer,"Maximum (over computational time) process memory:        total %5.4e max %5.4e min %5.4e\n",gresidentmax,maxgresidentmax,mingresidentmax));
+  }
+  if (resident) {
+    PetscLogDouble gresident,maxgresident,mingresident;
     PetscCallMPI(MPI_Reduce(&resident,&gresident,1,MPIU_PETSCLOGDOUBLE,MPI_SUM,0,comm));
     PetscCallMPI(MPI_Reduce(&resident,&maxgresident,1,MPIU_PETSCLOGDOUBLE,MPI_MAX,0,comm));
     PetscCallMPI(MPI_Reduce(&resident,&mingresident,1,MPIU_PETSCLOGDOUBLE,MPI_MIN,0,comm));
     PetscCall(PetscViewerASCIIPrintf(viewer,"Current process memory:                                  total %5.4e max %5.4e min %5.4e\n",gresident,maxgresident,mingresident));
+  }
+  if (devresidentmax) {
+    PetscLogDouble gdevresidentmax,maxgdevresidentmax,mingdevresidentmax;
+    PetscCallMPI(MPI_Reduce(&devresidentmax,&gdevresidentmax,1,MPIU_PETSCLOGDOUBLE,MPI_SUM,0,comm));
+    PetscCallMPI(MPI_Reduce(&devresidentmax,&maxgdevresidentmax,1,MPIU_PETSCLOGDOUBLE,MPI_MAX,0,comm));
+    PetscCallMPI(MPI_Reduce(&devresidentmax,&mingdevresidentmax,1,MPIU_PETSCLOGDOUBLE,MPI_MIN,0,comm));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"Maximum (over computational time) device memory:         total %5.4e max %5.4e min %5.4e\n",gdevresidentmax,maxgdevresidentmax,mingdevresidentmax));
+  }
+  if (devresident) {
+    PetscLogDouble gdevresident,maxgdevresident,mingdevresident;
+    PetscCallMPI(MPI_Reduce(&devresident,&gdevresident,1,MPIU_PETSCLOGDOUBLE,MPI_SUM,0,comm));
+    PetscCallMPI(MPI_Reduce(&devresident,&maxgdevresident,1,MPIU_PETSCLOGDOUBLE,MPI_MAX,0,comm));
+    PetscCallMPI(MPI_Reduce(&devresident,&mingdevresident,1,MPIU_PETSCLOGDOUBLE,MPI_MIN,0,comm));
+    PetscCall(PetscViewerASCIIPrintf(viewer,"Current device memory:                                   total %5.4e max %5.4e min %5.4e\n",gdevresident,maxgdevresident,mingdevresident));
+  }
+  if (allocated) {
+    PetscLogDouble gallocatedmax,maxgallocatedmax,mingallocatedmax,gallocated,maxgallocated,mingallocated;
     PetscCallMPI(MPI_Reduce(&allocatedmax,&gallocatedmax,1,MPIU_PETSCLOGDOUBLE,MPI_SUM,0,comm));
     PetscCallMPI(MPI_Reduce(&allocatedmax,&maxgallocatedmax,1,MPIU_PETSCLOGDOUBLE,MPI_MAX,0,comm));
     PetscCallMPI(MPI_Reduce(&allocatedmax,&mingallocatedmax,1,MPIU_PETSCLOGDOUBLE,MPI_MIN,0,comm));
+    PetscCallMPI(MPI_Reduce(&allocated,&gallocated,1,MPIU_PETSCLOGDOUBLE,MPI_SUM,0,comm));
+    PetscCallMPI(MPI_Reduce(&allocated,&maxgallocated,1,MPIU_PETSCLOGDOUBLE,MPI_MAX,0,comm));
+    PetscCallMPI(MPI_Reduce(&allocated,&mingallocated,1,MPIU_PETSCLOGDOUBLE,MPI_MIN,0,comm));
     PetscCall(PetscViewerASCIIPrintf(viewer,"Maximum (over computational time) space PetscMalloc()ed: total %5.4e max %5.4e min %5.4e\n",gallocatedmax,maxgallocatedmax,mingallocatedmax));
-    PetscCallMPI(MPI_Reduce(&allocated,&gallocated,1,MPIU_PETSCLOGDOUBLE,MPI_SUM,0,comm));
-    PetscCallMPI(MPI_Reduce(&allocated,&maxgallocated,1,MPIU_PETSCLOGDOUBLE,MPI_MAX,0,comm));
-    PetscCallMPI(MPI_Reduce(&allocated,&mingallocated,1,MPIU_PETSCLOGDOUBLE,MPI_MIN,0,comm));
     PetscCall(PetscViewerASCIIPrintf(viewer,"Current space PetscMalloc()ed:                           total %5.4e max %5.4e min %5.4e\n",gallocated,maxgallocated,mingallocated));
-  } else if (resident && residentmax) {
-    PetscCallMPI(MPI_Reduce(&residentmax,&gresidentmax,1,MPIU_PETSCLOGDOUBLE,MPI_SUM,0,comm));
-    PetscCallMPI(MPI_Reduce(&residentmax,&maxgresidentmax,1,MPIU_PETSCLOGDOUBLE,MPI_MAX,0,comm));
-    PetscCallMPI(MPI_Reduce(&residentmax,&mingresidentmax,1,MPIU_PETSCLOGDOUBLE,MPI_MIN,0,comm));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"Maximum (over computational time) process memory:        total %5.4e max %5.4e min %5.4e\n",gresidentmax,maxgresidentmax,mingresidentmax));
-    PetscCallMPI(MPI_Reduce(&resident,&gresident,1,MPIU_PETSCLOGDOUBLE,MPI_SUM,0,comm));
-    PetscCallMPI(MPI_Reduce(&resident,&maxgresident,1,MPIU_PETSCLOGDOUBLE,MPI_MAX,0,comm));
-    PetscCallMPI(MPI_Reduce(&resident,&mingresident,1,MPIU_PETSCLOGDOUBLE,MPI_MIN,0,comm));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"Current process memory:                                  total %5.4e max %5.4e min %5.4e\n",gresident,maxgresident,mingresident));
-  } else if (resident && allocated) {
-    PetscCallMPI(MPI_Reduce(&resident,&gresident,1,MPIU_PETSCLOGDOUBLE,MPI_SUM,0,comm));
-    PetscCallMPI(MPI_Reduce(&resident,&maxgresident,1,MPIU_PETSCLOGDOUBLE,MPI_MAX,0,comm));
-    PetscCallMPI(MPI_Reduce(&resident,&mingresident,1,MPIU_PETSCLOGDOUBLE,MPI_MIN,0,comm));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"Current process memory:                                  total %5.4e max %5.4e min %5.4e\n",gresident,maxgresident,mingresident));
-    PetscCallMPI(MPI_Reduce(&allocated,&gallocated,1,MPIU_PETSCLOGDOUBLE,MPI_SUM,0,comm));
-    PetscCallMPI(MPI_Reduce(&allocated,&maxgallocated,1,MPIU_PETSCLOGDOUBLE,MPI_MAX,0,comm));
-    PetscCallMPI(MPI_Reduce(&allocated,&mingallocated,1,MPIU_PETSCLOGDOUBLE,MPI_MIN,0,comm));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"Current space PetscMalloc()ed:                           total %5.4e max %5.4e min %5.4e\n",gallocated,maxgallocated,mingallocated));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"Run with -memory_view to get maximum memory usage\n"));
-  } else if (allocated) {
-    PetscCallMPI(MPI_Reduce(&allocated,&gallocated,1,MPIU_PETSCLOGDOUBLE,MPI_SUM,0,comm));
-    PetscCallMPI(MPI_Reduce(&allocated,&maxgallocated,1,MPIU_PETSCLOGDOUBLE,MPI_MAX,0,comm));
-    PetscCallMPI(MPI_Reduce(&allocated,&mingallocated,1,MPIU_PETSCLOGDOUBLE,MPI_MIN,0,comm));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"Current space PetscMalloc()ed:                           total %5.4e max %5.4e min %5.4e\n",gallocated,maxgallocated,mingallocated));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"Run with -memory_view to get maximum memory usage\n"));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"OS cannot compute process memory\n"));
-  } else {
-    PetscCall(PetscViewerASCIIPrintf(viewer,"Run with -malloc_debug to get statistics on PetscMalloc() calls\nOS cannot compute process memory\n"));
   }
+  if (resident && !residentmax) PetscCall(PetscViewerASCIIPrintf(viewer,"Run with -memory_view to get maximum memory usage\n"));
+  if (!resident) PetscCall(PetscViewerASCIIPrintf(viewer,"OS cannot compute process memory\n"));
+  if (!allocated) PetscCall(PetscViewerASCIIPrintf(viewer,"Run with -malloc_debug to get statistics on PetscMalloc() calls\nOS cannot compute process memory\n"));
   PetscCall(PetscViewerFlush(viewer));
   PetscFunctionReturn(0);
 }

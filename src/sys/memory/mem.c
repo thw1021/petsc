@@ -28,6 +28,10 @@
 #include <fcntl.h>
 #endif
 
+#if defined(PETSC_HAVE_CUDA)
+#include <petscdevice.h>
+#include <nvml.h>
+#endif
 /*@
    PetscMemoryGetCurrentUsage - Returns the current resident set size (memory used)
    for the program.
@@ -110,9 +114,12 @@ PetscErrorCode  PetscMemoryGetCurrentUsage(PetscLogDouble *mem)
 
 PETSC_INTERN PetscBool      PetscMemoryCollectMaximumUsage;
 PETSC_INTERN PetscLogDouble PetscMemoryMaximumUsage;
+PETSC_INTERN PetscLogDouble PetscDeviceMemoryMaximumUsage;
 
 PetscBool      PetscMemoryCollectMaximumUsage = PETSC_FALSE;
 PetscLogDouble PetscMemoryMaximumUsage        = 0;
+PetscLogDouble PetscDeviceMemoryMaximumUsage  = 0;
+static PetscBool PetscNVMLInitialized = PETSC_FALSE;
 
 /*@
    PetscMemoryGetMaximumUsage - Returns the maximum resident set size (memory used)
@@ -145,6 +152,54 @@ PetscErrorCode  PetscMemoryGetMaximumUsage(PetscLogDouble *mem)
   PetscFunctionBegin;
   PetscCheck(PetscMemoryCollectMaximumUsage,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"To use this function you must first call PetscMemorySetGetMaximumUsage()");
   *mem = PetscMemoryMaximumUsage;
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode PetscNVMLFinalize(void)
+{
+  PetscFunctionBegin;
+  nvmlReturn_t result = nvmlShutdown();
+  if (result != NVML_SUCCESS) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"nvmlShutdown: %s",nvmlErrorString(result));
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscDeviceMemoryGetCurrentUsage(PetscLogDouble *mem)
+{
+  PetscFunctionBegin;
+  *mem = 0;
+  #if PetscDefined(HAVE_CUDA)
+  if (PetscDeviceInitialized(PETSC_DEVICE_CUDA)) {
+    nvmlReturn_t result;
+    if (!PetscNVMLInitialized) {
+      result = nvmlInit();
+      if (result != NVML_SUCCESS) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"nvmlInit: %s",nvmlErrorString(result));
+      PetscCall(PetscRegisterFinalize(PetscNVMLFinalize));
+      PetscNVMLInitialized = PETSC_TRUE;
+    }
+    nvmlDevice_t device;
+    result = nvmlDeviceGetHandleByIndex(0, &device);
+    if (result != NVML_SUCCESS) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"nvmlDeviceGetHandleByIndex: %s",nvmlErrorString(result));
+    nvmlProcessInfo_t infos[256];
+    unsigned int count = 256;
+    result = nvmlDeviceGetComputeRunningProcesses_v3(device, &count, infos);
+    if (result != NVML_SUCCESS) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_LIB,"nvmlDeviceGetComputeRunningProcesses_v3: %s",nvmlErrorString(result));
+    int pid = getpid();
+    for (unsigned i=0; i<count; i++) {
+      if (infos[i].pid == pid) {
+        *mem = infos[i].usedGpuMemory;
+        break;
+      }
+    }
+  }
+  #endif
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode PetscDeviceMemoryGetMaximumUsage(PetscLogDouble *mem)
+{
+  PetscFunctionBegin;
+  PetscCheck(PetscMemoryCollectMaximumUsage,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"To use this function you must first call PetscMemorySetGetMaximumUsage()");
+  *mem = PetscDeviceMemoryMaximumUsage;
   PetscFunctionReturn(0);
 }
 
