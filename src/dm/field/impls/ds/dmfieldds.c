@@ -235,7 +235,7 @@ static PetscErrorCode DMFieldEvaluateFE_DS(DMField field, IS pointIS, PetscQuadr
 static PetscErrorCode DMFieldEvaluate_DS(DMField field, Vec points, PetscDataType datatype, void *B, void *D, void *H)
 {
   DMField_DS        *dsfield = (DMField_DS *) field->data;
-  PetscSF            cellSF = NULL;
+  PetscSF            cellSF = NULL, notFoundSF = NULL;
   const PetscSFNode *cells;
   PetscInt           c, nFound, numCells, feDim, nc;
   const PetscInt    *cellDegrees;
@@ -263,7 +263,8 @@ static PetscErrorCode DMFieldEvaluate_DS(DMField field, Vec points, PetscDataTyp
   PetscCall(PetscFEGetDimension(cellFE,&feDim));
   PetscCall(DMGetCoordinateDim(field->dm, &dim));
   PetscCall(DMGetDimension(field->dm, &dimR));
-  PetscCall(DMLocatePoints(field->dm, points, DM_POINTLOCATION_NONE, &cellSF));
+  PetscCall(DMLocatePoints(field->dm, points, DM_POINTLOCATION_NONE, &cellSF, &notFoundSF));
+  PetscCall(PetscSFDestroy(&notFoundSF));
   PetscCall(PetscSFGetGraph(cellSF, &numCells, &nFound, NULL, &cells));
   for (c = 0; c < nFound; c++) {
     PetscCheck(cells[c].index >= 0,PetscObjectComm((PetscObject)points),PETSC_ERR_ARG_WRONG, "Point %" PetscInt_FMT " could not be located", c);

@@ -185,7 +185,7 @@ PetscErrorCode DMSwarmMigrate_CellDMScatter(DM dm,PetscBool remove_sent_points)
 {
   DM_Swarm          *swarm = (DM_Swarm*)dm->data;
   PetscInt          p,npoints,npointsg=0,npoints2,npoints2g,*rankval,npoints_prior_migration;
-  PetscSF           sfcell = NULL;
+  PetscSF           sfcell = NULL, notFoundSF = NULL;
   const PetscSFNode *LA_sfcell;
   DM                dmcell;
   Vec               pos;
@@ -228,7 +228,8 @@ PetscErrorCode DMSwarmMigrate_CellDMScatter(DM dm,PetscBool remove_sent_points)
 #endif
 
   PetscCall(DMSwarmCreateLocalVectorFromField(dm, DMSwarmPICField_coor, &pos));
-  PetscCall(DMLocatePoints(dmcell, pos, DM_POINTLOCATION_NONE, &sfcell));
+  PetscCall(DMLocatePoints(dmcell, pos, DM_POINTLOCATION_NONE, &sfcell, &notFoundSF));
+  PetscCall(PetscSFDestroy(&notFoundSF));
   PetscCall(DMSwarmDestroyLocalVectorFromField(dm, DMSwarmPICField_coor, &pos));
 
   if (error_check) {
@@ -278,7 +279,8 @@ PetscErrorCode DMSwarmMigrate_CellDMScatter(DM dm,PetscBool remove_sent_points)
 
     PetscCall(DMSwarmGetField(dm,DMSwarmPICField_coor,&bs,NULL,(void**)&LA_coor));
     PetscCall(VecCreateSeqWithArray(PETSC_COMM_SELF,bs,bs*npoints2,(const PetscScalar*)LA_coor,&pos));
-    PetscCall(DMLocatePoints(dmcell,pos,DM_POINTLOCATION_NONE,&sfcell));
+    PetscCall(DMLocatePoints(dmcell,pos,DM_POINTLOCATION_NONE,&sfcell,&notFoundSF));
+    PetscCall(PetscSFDestroy(&notFoundSF));
 
     PetscCall(VecDestroy(&pos));
     PetscCall(DMSwarmRestoreField(dm,DMSwarmPICField_coor,&bs,NULL,(void**)&LA_coor));
@@ -318,7 +320,8 @@ PetscErrorCode DMSwarmMigrate_CellDMScatter(DM dm,PetscBool remove_sent_points)
     PetscCall(DMSwarmGetField(dm,DMSwarmPICField_coor,&bs,NULL,(void**)&LA_coor));
     PetscCall(VecCreateSeqWithArray(PETSC_COMM_SELF,bs,bs*npoints_from_neighbours,(const PetscScalar*)&LA_coor[bs*npoints_prior_migration],&pos));
 
-    PetscCall(DMLocatePoints(dmcell,pos,DM_POINTLOCATION_NONE,&sfcell));
+    PetscCall(DMLocatePoints(dmcell,pos,DM_POINTLOCATION_NONE,&sfcell,&notFoundSF));
+    PetscCall(PetscSFDestroy(&notFoundSF));
 
     PetscCall(VecDestroy(&pos));
     PetscCall(DMSwarmRestoreField(dm,DMSwarmPICField_coor,&bs,NULL,(void**)&LA_coor));

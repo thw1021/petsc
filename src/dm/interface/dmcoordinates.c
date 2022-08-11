@@ -1013,8 +1013,10 @@ PetscErrorCode DMProjectCoordinates(DM dm, PetscFE disc)
 
   Input/Output Parameters:
 + v - The Vec of points, on output contains the nearest mesh points to the given points if DM_POINTLOCATION_NEAREST is used
-- cellSF - Points to either NULL, or a PetscSF with guesses for which cells contain each point;
+. cellSF - Points to either NULL, or a PetscSF with guesses for which cells contain each point;
            on output, the PetscSF containing the ranks and local indices of the containing points
+- notFoundSF - Points to either NULL, or a PetscSF containing points that were not found during the
+               point location procedure
 
   Level: developer
 
@@ -1038,7 +1040,7 @@ $    PetscSFGetGraph(cellSF,NULL,&nFound,&found,&cells);
 
 .seealso: `DMSetCoordinates()`, `DMSetCoordinatesLocal()`, `DMGetCoordinates()`, `DMGetCoordinatesLocal()`, `DMPointLocationType`
 @*/
-PetscErrorCode DMLocatePoints(DM dm, Vec v, DMPointLocationType ltype, PetscSF *cellSF)
+PetscErrorCode DMLocatePoints(DM dm, Vec v, DMPointLocationType ltype, PetscSF *cellSF, PetscSF *notFoundSF)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm,DM_CLASSID,1);
@@ -1053,9 +1055,18 @@ PetscErrorCode DMLocatePoints(DM dm, Vec v, DMPointLocationType ltype, PetscSF *
   } else {
     PetscCall(PetscSFCreate(PetscObjectComm((PetscObject)v),cellSF));
   }
+  if (*notFoundSF) {
+    PetscMPIInt result;
+
+    PetscValidHeaderSpecific(*notFoundSF,PETSCSF_CLASSID,5);
+    PetscCallMPI(MPI_Comm_compare(PetscObjectComm((PetscObject)v),PetscObjectComm((PetscObject)*notFoundSF),&result));
+    PetscCheck(result == MPI_IDENT || result == MPI_CONGRUENT,PETSC_COMM_SELF,PETSC_ERR_ARG_INCOMP,"notFoundSF must have a communicator congruent to v's");
+  } else {
+    PetscCall(PetscSFCreate(PetscObjectComm((PetscObject)v),notFoundSF));
+  }
   PetscCheck(dm->ops->locatepoints,PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Point location not available for this DM");
   PetscCall(PetscLogEventBegin(DM_LocatePoints,dm,0,0,0));
-  PetscCall((*dm->ops->locatepoints)(dm,v,ltype,*cellSF));
+  PetscCall((*dm->ops->locatepoints)(dm,v,ltype,*cellSF,*notFoundSF));
   PetscCall(PetscLogEventEnd(DM_LocatePoints,dm,0,0,0));
   PetscFunctionReturn(0);
 }

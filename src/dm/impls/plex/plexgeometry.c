@@ -775,15 +775,15 @@ PetscErrorCode DMPlexComputeGridHash_Internal(DM dm, PetscGridHash *localBox)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode DMLocatePoints_Plex(DM dm, Vec v, DMPointLocationType ltype, PetscSF cellSF)
+PetscErrorCode DMLocatePoints_Plex(DM dm, Vec v, DMPointLocationType ltype, PetscSF cellSF, PetscSF notFoundCellSF)
 {
   PetscInt        debug = ((DM_Plex *) dm->data)->printLocate;
   DM_Plex        *mesh = (DM_Plex *) dm->data;
-  PetscBool       hash = mesh->useHashLocation, reuse = PETSC_FALSE;
-  PetscInt        bs, numPoints, p, numFound, *found = NULL;
+  PetscBool       hash = mesh->useHashLocation, reuse = PETSC_FALSE, reuseNotFound = PETSC_FALSE;
+  PetscInt        bs, numPoints, p, numFound = 0, numNotFound = 0, *found = NULL, *notFound = NULL;
   PetscInt        dim, cStart, cEnd, numCells, c, d;
   const PetscInt *boxCells;
-  PetscSFNode    *cells;
+  PetscSFNode    *cells, *notFoundCells;
   PetscScalar    *a;
   PetscMPIInt     result;
   PetscLogDouble  t0,t1;
@@ -822,13 +822,18 @@ PetscErrorCode DMLocatePoints_Plex(DM dm, Vec v, DMPointLocationType ltype, Pets
       }
     }
   }
-  /* define domain bounding box */
+  /* Decide which domain bounding box to use */
   {
-    Vec coorglobal;
+    Vec         coordinates;
+    MPI_Comm    vcomm;
+    PetscMPIInt comp;
 
-    PetscCall(DMGetCoordinates(dm,&coorglobal));
-    PetscCall(VecStrideMaxAll(coorglobal,NULL,gmax));
-    PetscCall(VecStrideMinAll(coorglobal,NULL,gmin));
+    PetscCall(PetscObjectGetComm((PetscObject) v, &vcomm));
+    PetscCallMPI(MPI_Comm_compare(vcomm, PETSC_COMM_SELF, &comp));
+    if (comp == MPI_UNEQUAL) PetscCall(DMGetCoordinates(dm, &coordinates));
+    else                     PetscCall(DMGetCoordinatesLocal(dm, &coordinates));
+    PetscCall(VecStrideMaxAll(coordinates, NULL, gmax));
+    PetscCall(VecStrideMinAll(coordinates, NULL, gmin));
   }
   if (hash) {
     if (!mesh->lbox) {PetscCall(PetscInfo(dm, "Initializing grid hashing"));PetscCall(DMPlexComputeGridHash_Internal(dm, &mesh->lbox));}
@@ -938,22 +943,48 @@ PetscErrorCode DMLocatePoints_Plex(DM dm, Vec v, DMPointLocationType ltype, Pets
       }
     }
   }
+  {
+    const PetscSFNode *sf_cells;
+
+    PetscCall(PetscSFGetGraph(notFoundCellSF,NULL,NULL,NULL,&sf_cells));
+    if (sf_cells) {
+      notFoundCells = (PetscSFNode*)sf_cells;
+      reuseNotFound = PETSC_TRUE;
+    } else {
+      PetscCall(PetscMalloc1(numPoints-numFound, &notFoundCells));
+      /* initialize cells if created */
+      for (p=0; p<numPoints-numFound; p++) {
+        notFoundCells[p].rank  = 0;
+        notFoundCells[p].index = DMLOCATEPOINT_POINT_NOT_FOUND;
+      }
+    }
+  }
   /* This code is only be relevant when interfaced to parallel point location */
   /* Check for highest numbered proc that claims a point (do we care?) */
   if (ltype == DM_POINTLOCATION_REMOVE && numFound < numPoints) {
     PetscCall(PetscMalloc1(numFound,&found));
-    for (p = 0, numFound = 0; p < numPoints; p++) {
+    PetscCall(PetscMalloc1(numPoints-numFound,&notFound));
+    for (p = 0, numFound = 0, numNotFound = 0; p < numPoints; p++) {
       if (cells[p].rank >= 0 && cells[p].index >= 0) {
         if (numFound < p) {
           cells[numFound] = cells[p];
         }
         found[numFound++] = p;
+      } else {
+        if (cells[p].index < 0) cells[p].index = DMLOCATEPOINT_POINT_NOT_FOUND;
+        PetscCheck(cells[p].index == DMLOCATEPOINT_POINT_NOT_FOUND, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Point location confusion");
+        notFoundCells[numNotFound].rank = 0;
+        notFoundCells[numNotFound].index = 0;  /* NOTE: DMLOCATEPOINT_POINT_NOT_FOUND=-367, which is invalid */
+        notFound[numNotFound++] = p;
       }
     }
+    PetscCheck(numNotFound == numPoints-numFound, PetscObjectComm((PetscObject)notFoundCellSF), PETSC_ERR_ARG_WRONG, "Expected %" PetscInt_FMT " unfound points, got %" PetscInt_FMT, numPoints-numFound, numNotFound);
   }
   PetscCall(VecRestoreArray(v, &a));
-  if (!reuse) {
-    PetscCall(PetscSFSetGraph(cellSF, cEnd - cStart, numFound, found, PETSC_OWN_POINTER, cells, PETSC_OWN_POINTER));
+  if (!reuse) PetscCall(PetscSFSetGraph(cellSF, cEnd - cStart, numFound, found, PETSC_OWN_POINTER, cells, PETSC_OWN_POINTER));
+  if (!reuseNotFound) {
+    PetscCall(PetscSFSetGraph(notFoundCellSF, cEnd - cStart, numNotFound, notFound, PETSC_OWN_POINTER, notFoundCells, PETSC_OWN_POINTER));
+    if (!numNotFound) PetscCall(PetscFree(notFoundCells));
   }
   PetscCall(PetscTime(&t1));
   if (hash) {
