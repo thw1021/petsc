@@ -23,12 +23,20 @@ class VecOption(object):
     IGNORE_OFF_PROC_ENTRIES = VEC_IGNORE_OFF_PROC_ENTRIES
     IGNORE_NEGATIVE_INDICES = VEC_IGNORE_NEGATIVE_INDICES
 
+class OffloadMask(object):
+    UNALLOCATED = PETSC_OFFLOAD_UNALLOCATED
+    CPU         = PETSC_OFFLOAD_CPU
+    GPU         = PETSC_OFFLOAD_GPU
+    BOTH        = PETSC_OFFLOAD_BOTH
+    KOKKOS      = PETSC_OFFLOAD_KOKKOS
+
 # --------------------------------------------------------------------
 
 cdef class Vec(Object):
 
     Type = VecType
     Option = VecOption
+    OffloadMaskType = OffloadMask
 
     #
 
@@ -815,6 +823,17 @@ cdef class Vec(Object):
         CHKERR( VecGetOffloadMask(self.vec, &mask) )
         return mask
 
+    def setOffloadMask(self, PetscOffloadMask mask):
+        """
+        Sets the offload mask of *self* to *mask*.
+
+        .. warning::
+
+            Does not trigger host<->device transfer, the caller is responsible
+            for maintaining the host/device buffers to be valid as per *mask*.
+        """
+        CHKERR( VecSetOffloadMask(self.vec, mask) )
+
     def getCLContextHandle(self):
         """
         Returns a Vec's CL Context as :class:`int`.
@@ -1369,5 +1388,6 @@ cdef class Vec(Object):
 
 del VecType
 del VecOption
+del OffloadMask
 
 # --------------------------------------------------------------------
