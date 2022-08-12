@@ -348,7 +348,7 @@ static PetscErrorCode DMGetNeighbors_DA(DM dm, PetscInt *nranks, const PetscMPII
 .seealso: `DMType`, `DMCOMPOSITE`, `DMSTAG`, `DMDACreate()`, `DMCreate()`, `DMSetType()`
 M*/
 
-extern PetscErrorCode DMLocatePoints_DA_Regular(DM,Vec,DMPointLocationType,PetscSF);
+extern PetscErrorCode DMLocatePoints_DA_Regular(DM,Vec,DMPointLocationType,PetscSF,PetscSF);
 PETSC_INTERN PetscErrorCode DMSetUpGLVisViewer_DMDA(PetscObject,PetscViewer);
 
 PETSC_EXTERN PetscErrorCode DMCreate_DA(DM da)
