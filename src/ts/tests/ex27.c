@@ -76,7 +76,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   /* If mass units were specified, get the mass array and compute masses */
   if (nmuflg) {
     PetscInt idx;
-    PetscCheck(nm == nmu, PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "Number of mass units and number of masses given are not equal.")
+    PetscCheck(nm == nmu, PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "Number of mass units and number of masses given are not equal.");
     for (idx = 0; idx < nmu; ++idx) options->masses[idx] = options->mass_units[idx] == 0 ? ELECTRON_MASS*options->masses[idx] : PROTON_MASS*options->masses[idx];
   }
   if (Tflg) {
