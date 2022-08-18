@@ -1013,8 +1013,6 @@ PetscErrorCode DMSwarmInitializeVelocities(DM sw, PetscProbFunc sampler, const P
     PetscCall(PetscRandomCreate(PetscObjectComm((PetscObject) sw), &rnd2));
     PetscCall(PetscRandomSetInterval(rnd2, 0, 1.));
     PetscCall(PetscRandomSetFromOptions(rnd2));
-    //PetscCall(PetscRandomSetSeed(rnd2, 35721));
-    //PetscCall(PetscRandomSeed(rnd2));
     for (p = 0; p < Np; ++p) {
       PetscInt  s = species[p], d;
       PetscReal a[3], vel[3];
