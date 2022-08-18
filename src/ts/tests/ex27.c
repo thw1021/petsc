@@ -1,4 +1,4 @@
-static char help[] = "Particle Basis Landau Example using nonlinear solve + Implicit Midpoint-like time stepping.";
+static char help[] = "Particle basis Landau example using nonlinear solve + Implicit Midpoint-like time stepping.";
 
 /*
   References:
