@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>PETSc Finite Element Viewer</title>
+    <script src="https://cdn.plot.ly/plotly-2.12.1.min.js"></script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="index.js"></script>
+    <style>
+      html {
+        font-family: sans-serif;
+        box-sizing: border-box;
+      }
+
+      h1 {
+        color: #404243;
+      }
+
+      *,
+      *:before,
+      *:after {
+        box-sizing: inherit;
+      }
+
+      .feviewer_radio_tabs {
+        clear: both;
+        display: inline-block;
+        width: 100%;
+        border-bottom: 1px solid #305e89;
+        padding: 0 10px;
+        position: relative;
+      }
+
+      input.feviewer_radio_tab {
+        position: absolute;
+        left: -99999em;
+        top: -99999em;
+      }
+
+      input.feviewer_radio_tab + label {
+        cursor: pointer;
+        float: left;
+        border: 1px solid #aaa;
+        border-bottom: 0;
+        background-color: #fff;
+        margin-right: -1px;
+        padding: .5em 1em;
+        position: relative;
+      }
+
+      h2 {
+        margin-bottom: 0;
+        margin-top: 0;
+      }
+
+      input.feviewer_radio_tab + label:hover {
+        background-color: #eee;
+      }
+
+      input.feviewer_radio_tab:checked + label {
+        box-shadow: 0 3px 0 -1px #fff, inset 0 5px 0 -1px #305e89;
+        background-color: #fff;
+        border-color: #305e89;
+        z-index: 1;
+      }
+
+      .feviewer_main {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1em;
+      }
+      .feviewer_properties {
+        min-width: 320px;
+      }
+      .feviewer_property {
+        font-weight: bold;
+      }
+      .feplotly {
+        min-width: 320px;
+      }
+      .feplotly_control_row {
+        display: inline-flex;
+        flex-wrap: wrap;
+        gap: 1em;
+      }
+      .feplotly_control {
+        display: inline;
+      }
+      .disabled {
+        color: #888;
+      }
+    </style>
+    <link rel="icon" href="https://petsc.org/release/_static/petsc_favicon.png"/>
+  </head>
+
+  <body>
+    <header>
+      <h1><a href="https://petsc.org"><img src="https://petsc.org/release/_static/PETSc-TAO_RGB.svg" style="vertical-align:top;height:1.45em;"/></a> Finite Element Viewer</h1>
+    </header>
+
+    <div id="feviewer" class="feviewer">
+      <div id="feviewer_status"></div>
+      <div id="feviewer_radio_tabs" class="feviewer_radio_tabs"></div>
+      <div id="feviewer_main" class="feviewer_main">
+        <div id="feviewer_properties" class="feviewer_properties">
+          <table><tbody>
+            <tr><td class="feviewer_property">name</td><td id="fe_name">&nbsp;</td></tr>
+            <tr><td class="feviewer_property">options prefix</td><td id="fe_prefix">&nbsp;</td></tr>
+            <tr><td class="feviewer_property">spatial dimension</td><td id="fe_spatial_dimension">&nbsp;</td></tr>
+            <tr><td class="feviewer_property">number of basis functions</td><td id="fe_dimension">&nbsp;</td></tr>
+            <tr><td class="feviewer_property">reference domain</td><td id="fe_refel">&nbsp;</td></tr>
+            <tr><td class="feviewer_property">contains all polynomials up to degree</td><td id="fe_min_degree">&nbsp;</td></tr>
+            <tr><td class="feviewer_property">maximum polynomial degree</td><td id="fe_max_degree">&nbsp;</td></tr>
+            <tr><td class="feviewer_property">variance</td><td id="fe_variance">&nbsp;</td></tr>
+            <tr><td class="feviewer_property">inter-element continuity</td><td id="fe_continuity">&nbsp;</td></tr>
+            <tr><td class="feviewer_property">functional type</td><td id="fe_functional_type">nodal</td></tr>
+          </tbody></table>
+        </div>
+        <div id="feplotly" class="feplotly">
+          <div class="feplotly_control_row">
+            <div class="feplotly_control">degree of freedom: <select id="feplotly_select_dof"></select></div>
+            <div class="feplotly_control">reference cell: <input type="checkbox" id="feplotly_plot_refel" checked/></div>
+            <div class="feplotly_control">dual functional: <input type="checkbox" id="feplotly_plot_dual" checked/></div>
+            <div class="feplotly_control"><span class="disabled">shape function: </span><input type="checkbox" disabled="disabled"/></div>
+          </div>
+          <div id="feplotly_plot"></div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <p>&copy; Copyright UChicago Argonne, LLC and the PETSc Development Team.</p>
+    </footer>
+  </body>
+</html>

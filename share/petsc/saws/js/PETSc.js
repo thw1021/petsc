@@ -53,7 +53,7 @@ PETSc.displayDirectory = function(sub,divEntry)
 
     console.log(sub);
 
-    if(sub.directories.SAWs_ROOT_DIRECTORY.directories.PETSc.directories != undefined) {
+    if(sub.directories.SAWs_ROOT_DIRECTORY.directories.PETSc.directories.Options != undefined) {
 
         recordSawsData(sawsInfo,sub); //records data into sawsInfo
 
@@ -108,10 +108,10 @@ PETSc.displayDirectory = function(sub,divEntry)
  *
  */
 
-PETSc.displayDirectoryRecursive = function(sub,divEntry,tab,fullkey)
+PETSc.displayDirectoryRecursive = function(sub,divEntry,tab,origfullkey)
 {
     jQuery.each(sub,function(key,value){
-        fullkey = fullkey+key;//key contains things such as "PETSc" or "Options"
+        fullkey = origfullkey+key;//key contains things such as "PETSc" or "Options"
         if(jQuery("#"+fullkey).length == 0){
             jQuery(divEntry).append("<div id =\""+fullkey+"\"></div>")
             if (key != "SAWs_ROOT_DIRECTORY") {
@@ -138,7 +138,7 @@ PETSc.displayDirectoryRecursive = function(sub,divEntry,tab,fullkey)
                         //options text is a link to the appropriate manual page
 
                         var manualDirectory = "all"; //this directory does not exist yet so links will not work for now
-                        $("#"+fullkey).append("<br><a href=\"http://www.mcs.anl.gov/petsc/petsc-dev/docs/manualpages/" +  manualDirectory + "/" + manualSave + ".html\" title=\"" + descriptionSave + "\" id=\"data"+fullkey+vKey+j+"\">"+vKey+"&nbsp</a>");
+                        $("#"+fullkey).append("<br><a href=\"http://www.mcs.anl.gov/petsc/petsc-dev/docs/manualpages/" +  manualDirectory + "/" + manualSave + ".html\" title=\"" + descriptionSave + "\" id=\"data"+fullkey+vKey+"\">"+vKey+"&nbsp</a>");
                     }
                 }
 

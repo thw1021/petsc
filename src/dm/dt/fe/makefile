@@ -1,7 +1,7 @@
 -include ../../../../petscdir.mk
 
 SOURCEH   = ../../../../include/petscdt.h ../../../../include/petscfe.h ../../../../include/petscfetypes.h
-DIRS      = interface impls tests
+DIRS      = interface impls tests tutorials
 LOCDIR    = src/dm/dt/fe/
 MANSEC    = DM
 SUBMANSEC = FE

@@ -2502,7 +2502,7 @@ PetscErrorCode PetscDTTensorQuadratureCreate(PetscQuadrature q1, PetscQuadrature
   PetscCall(PetscQuadratureCreate(PETSC_COMM_SELF, q));
   PetscCall(PetscQuadratureSetOrder(*q, order));
   PetscCall(PetscMalloc1(Np*dim, &x));
-  PetscCall(PetscMalloc1(Np, &w));
+  PetscCall(PetscMalloc1(Nc1 == 0 ? 0 : Np, &w));
   for (qa = 0, qc = 0; qa < Np1; ++qa) {
     for (qb = 0; qb < Np2; ++qb, ++qc) {
       for (d1 = 0, d = 0; d1 < dim1; ++d1, ++d) {
@@ -2511,7 +2511,7 @@ PetscErrorCode PetscDTTensorQuadratureCreate(PetscQuadrature q1, PetscQuadrature
       for (d2 = 0; d2 < dim2; ++d2, ++d) {
         x[qc*dim+d] = x2[qb*dim2+d2];
       }
-      w[qc] = w1[qa] * w2[qb];
+      if (Nc1) w[qc] = w1[qa] * w2[qb];
     }
   }
   PetscCall(PetscQuadratureSetData(*q, dim, Nc, Np, x, w));

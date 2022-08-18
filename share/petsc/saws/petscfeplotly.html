@@ -1,0 +1,21 @@
+<!-- https://stackoverflow.com/questions/61810586/how-to-load-json-from-url-on-input-field -->
+              <!-- fetch (url)
+                .then(result => result.json())
+                .then(data => alert(JSON.stringify(data))) -->
+<html>
+   <body>
+    <script>
+              fetch('http://localhost:8000/SAWs/PETSc/')
+                .then(result => result.json())
+                .then((output) => {
+                        console.log('Output: ', output);
+                      }).catch(err => console.log(err));
+    </script>
+    <form id="fe_form">
+      <input id="fe_url" type="url" value="http://localhost:8000/SAWs/PETSc/"/>
+      <input type="submit" value="Get Finite Elements"/>
+    <!-- onblur="loadJson(event.target.value,'output')"/> -->
+    </form>
+    <p id="output"></p>
+  </body>
+</html>
