@@ -1,0 +1,10 @@
+Np: 278
+The KS test rejects the null hypothesis for species 0 at level 0.05 (0.47)
+The KS test rejects the null hypothesis for species 1 at level 0.05 (0.47)
+    0 SNES Function norm 2.235106576850e+00 
+    1 SNES Function norm 4.499756919897e-05 
+    2 SNES Function norm 9.044756694736e-11 
+momentum[0]: 0.0323481 KE[0]: 2.04902 T[0]: 5.05627
+momentum[1]: 0.000585867 KE[1]: 0.000669559 T[1]: 6.06758
+The KS test rejects the null hypothesis for species 0 at level 0.05 (0.47)
+The KS test rejects the null hypothesis for species 1 at level 0.05 (0.47)

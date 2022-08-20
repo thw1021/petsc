@@ -913,7 +913,7 @@ PetscErrorCode DMSwarmInitializeCoordinates(DM sw)
 
       PetscCall((*coordFunc)(dim, 0., NULL, p, X, ctx));
       for (d = 0; d < dim; ++d) x[p*dim+d] = PetscRealPart(X[d]);
-      weight[p]  = 1.0;
+      weight[p]  = 1.0/(Np/Ns);
       species[p] = p % Ns;
     }
   } else {
@@ -944,7 +944,7 @@ PetscErrorCode DMSwarmInitializeCoordinates(DM sw)
         for (d = 0; d < dim; ++d) PetscCall(PetscRandomGetValueReal(rnd, &xref[d]));
         CoordinatesRefToReal(dim, dim, xi0, v0, J, xref, &x[p*dim]);
 
-        weight[p]  = 1.0;
+        weight[p]  = 1.0/(Np/Ns);
         species[p] = p % Ns;
       }
       PetscCall(PetscFree(pidx));
@@ -1004,21 +1004,26 @@ PetscErrorCode DMSwarmInitializeVelocities(DM sw, PetscProbFunc sampler, const P
       for (d = 0; d < dim; ++d) v[p*dim+d] = (v0[s] / v0[0]) * PetscRealPart(vel[d]);
     }
   } else {
-    PetscRandom  rnd;
+    PetscRandom  rnd, rnd2;
 
     PetscCall(PetscRandomCreate(PetscObjectComm((PetscObject) sw), &rnd));
     PetscCall(PetscRandomSetInterval(rnd, 0, 1.));
     PetscCall(PetscRandomSetFromOptions(rnd));
 
+    PetscCall(PetscRandomCreate(PetscObjectComm((PetscObject) sw), &rnd2));
+    PetscCall(PetscRandomSetInterval(rnd2, 0, 1.));
+    PetscCall(PetscRandomSetFromOptions(rnd2));
     for (p = 0; p < Np; ++p) {
       PetscInt  s = species[p], d;
       PetscReal a[3], vel[3];
 
-      for (d = 0; d < dim; ++d) PetscCall(PetscRandomGetValueReal(rnd, &a[d]));
+      if (s == 0) for (d = 0; d < dim; ++d) PetscCall(PetscRandomGetValueReal(rnd, &a[d]));
+      else for (d = 0; d < dim; ++d) PetscCall(PetscRandomGetValueReal(rnd2, &a[d]));
       PetscCall(sampler(a, NULL, vel));
       for (d = 0; d < dim; ++d) {v[p*dim+d] = (v0[s] / v0[0]) * vel[d];}
     }
     PetscCall(PetscRandomDestroy(&rnd));
+    PetscCall(PetscRandomDestroy(&rnd2));
   }
   PetscCall(DMSwarmRestoreField(sw, "velocity", NULL, NULL, (void **) &v));
   PetscCall(DMSwarmRestoreField(sw, "species", NULL, NULL, (void **) &species));
