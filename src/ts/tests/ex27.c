@@ -474,7 +474,7 @@ static PetscErrorCode Monitor(TS ts)
   PetscCall(PetscCalloc3(Ns, &T, Ns, &KE, dim*Ns, &mom));
   PetscCall(CalculateMomentsAndTemperatures(sw, mom, KE, T));
   for (s = 0; s < Ns; ++s){
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "momentum[%i]: %g KE[%i]: %g T[%i]: %g\n", s, mom[s*dim], s, KE[s], s, T[s]));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "momentum[%"PetscInt_FMT"]: %g KE[%"PetscInt_FMT"]: %g T[%"PetscInt_FMT"]: %g\n", s, mom[s*dim], s, KE[s], s, T[s]));
   }
   PetscCall(TestDistribution(sw, 0.05, user));
   PetscCall(PetscFree3(T, KE, mom));
@@ -558,7 +558,7 @@ int main(int argc,char **argv)
   PetscCall(TSSetPostStep(ts, UpdateSwarm));
   /* Test the initial distribution. */
   PetscCall(DMSwarmGetLocalSize(sw, &Np));
-  PetscCall(PetscPrintf(comm, "Np: %i\n", Np));
+  PetscCall(PetscPrintf(comm, "Np: %"PetscInt_FMT"\n", Np));
   PetscCall(TestDistribution(sw, 0.05, &user));
   PetscCall(TSSolve(ts, u));
   PetscCall(VecDestroy(&u));
