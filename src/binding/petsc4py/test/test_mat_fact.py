@@ -64,6 +64,18 @@ class BaseTestMatFactor(object):
         self.x.destroy(); self.x = None
         self.b.destroy(); self.b = None
 
+class BaseTestMatFactorQR(BaseTestMatFactor):
+
+    def testFactorQR(self):
+        r, c = self.A.getOrdering("nd")
+        self.A.reorderForNonzeroDiagonal(r, c)
+        self.A.factorQR(c,{'zeropivot':1e-5})
+        x = self.x.duplicate()
+        self.A.solve(self.b, x)
+        x.axpy(-1, self.x)
+        self.assertTrue(x.norm() < 1e-3)
+
+
 class BaseTestMatFactorLU(BaseTestMatFactor):
 
     def testFactorLU(self):
@@ -86,7 +98,7 @@ class BaseTestMatFactorILU(BaseTestMatFactor):
         self.assertTrue(x.norm() < 1e-3)
 
 ## class BaseTestMatFactorILUDT(BaseTestMatFactor):
-## 
+##
 ##     def testFactorILUDT(self):
 ##         r, c = self.A.getOrdering("natural")
 ##         self.A = self.A.factorILUDT(r,c)
@@ -94,7 +106,7 @@ class BaseTestMatFactorILU(BaseTestMatFactor):
 ##         self.A.solve(self.b, x)
 ##         x.axpy(-1, self.x)
 ##         self.assertTrue(x.norm() < 1e-3)
-## 
+##
 class BaseTestMatFactorChol(BaseTestMatFactor):
 
     def testFactorChol(self):
@@ -118,7 +130,8 @@ class BaseTestMatFactorICC(BaseTestMatFactor):
 
 # --------------------------------------------------------------------
 
-class TestMatFactorA1(BaseTestMatFactorLU,
+class TestMatFactorA1(BaseTestMatFactorQR,
+                      BaseTestMatFactorLU,
                       BaseTestMatFactorChol,
                       unittest.TestCase):
     MKSYS = staticmethod(mksys_diag)
