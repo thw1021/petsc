@@ -14,32 +14,30 @@ typedef struct {
 #define RANDER48_MULT_2 (0x0005)
 #define RANDER48_ADD    (0x000b)
 
-static double _dorander48(PetscRandom_Rander48 *r48)
-{
-  unsigned long accu;
+static double _dorander48(PetscRandom_Rander48 *r48) {
+  unsigned long  accu;
   unsigned short temp[2];
 
-  accu     = (unsigned long) r48->mult[0] * (unsigned long) r48->seed[0] + (unsigned long)r48->add;
-  temp[0]  = (unsigned short) accu;        /* lower 16 bits */
-  accu   >>= sizeof(unsigned short) * 8;
-  accu    += (unsigned long) r48->mult[0] * (unsigned long) r48->seed[1] + (unsigned long) r48->mult[1] * (unsigned long) r48->seed[0];
-  temp[1]  = (unsigned short)accu;        /* middle 16 bits */
-  accu   >>= sizeof(unsigned short) * 8;
-  accu    += r48->mult[0] * r48->seed[2] + r48->mult[1] * r48->seed[1] + r48->mult[2] * r48->seed[0];
+  accu    = (unsigned long)r48->mult[0] * (unsigned long)r48->seed[0] + (unsigned long)r48->add;
+  temp[0] = (unsigned short)accu; /* lower 16 bits */
+  accu >>= sizeof(unsigned short) * 8;
+  accu += (unsigned long)r48->mult[0] * (unsigned long)r48->seed[1] + (unsigned long)r48->mult[1] * (unsigned long)r48->seed[0];
+  temp[1] = (unsigned short)accu; /* middle 16 bits */
+  accu >>= sizeof(unsigned short) * 8;
+  accu += r48->mult[0] * r48->seed[2] + r48->mult[1] * r48->seed[1] + r48->mult[2] * r48->seed[0];
   r48->seed[0] = temp[0];
   r48->seed[1] = temp[1];
-  r48->seed[2] = (unsigned short) accu;
-  return ldexp((double) r48->seed[0], -48) + ldexp((double) r48->seed[1], -32) + ldexp((double) r48->seed[2], -16);
+  r48->seed[2] = (unsigned short)accu;
+  return ldexp((double)r48->seed[0], -48) + ldexp((double)r48->seed[1], -32) + ldexp((double)r48->seed[2], -16);
 }
 
-static PetscErrorCode  PetscRandomSeed_Rander48(PetscRandom r)
-{
-  PetscRandom_Rander48 *r48 = (PetscRandom_Rander48*)r->data;
+static PetscErrorCode PetscRandomSeed_Rander48(PetscRandom r) {
+  PetscRandom_Rander48 *r48 = (PetscRandom_Rander48 *)r->data;
 
   PetscFunctionBegin;
   r48->seed[0] = RANDER48_SEED_0;
-  r48->seed[1] = (unsigned short) r->seed;
-  r48->seed[2] = (unsigned short) (r->seed >> 16);
+  r48->seed[1] = (unsigned short)r->seed;
+  r48->seed[2] = (unsigned short)(r->seed >> 16);
   r48->mult[0] = RANDER48_MULT_0;
   r48->mult[1] = RANDER48_MULT_1;
   r48->mult[2] = RANDER48_MULT_2;
@@ -47,59 +45,52 @@ static PetscErrorCode  PetscRandomSeed_Rander48(PetscRandom r)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode  PetscRandomGetValue_Rander48(PetscRandom r, PetscScalar *val)
-{
-  PetscRandom_Rander48 *r48 = (PetscRandom_Rander48*)r->data;
+static PetscErrorCode PetscRandomGetValue_Rander48(PetscRandom r, PetscScalar *val) {
+  PetscRandom_Rander48 *r48 = (PetscRandom_Rander48 *)r->data;
 
   PetscFunctionBegin;
 #if defined(PETSC_USE_COMPLEX)
   if (r->iset) {
     *val = PetscRealPart(r->low) + PetscImaginaryPart(r->low) * PETSC_i;
-    if (PetscRealPart(r->width)) {
-      *val += PetscRealPart(r->width)* _dorander48(r48);
-    }
-    if (PetscImaginaryPart(r->width)) {
-      *val += PetscImaginaryPart(r->width)* _dorander48(r48) * PETSC_i;
-    }
+    if (PetscRealPart(r->width)) *val += PetscRealPart(r->width) * _dorander48(r48);
+    if (PetscImaginaryPart(r->width)) *val += PetscImaginaryPart(r->width) * _dorander48(r48) * PETSC_i;
   } else {
-    *val = _dorander48(r48) +  _dorander48(r48)*PETSC_i;
+    *val = _dorander48(r48) + _dorander48(r48) * PETSC_i;
   }
 #else
   if (r->iset) *val = r->width * _dorander48(r48) + r->low;
-  else         *val = _dorander48(r48);
+  else *val = _dorander48(r48);
 #endif
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode  PetscRandomGetValueReal_Rander48(PetscRandom r, PetscReal *val)
-{
-  PetscRandom_Rander48 *r48 = (PetscRandom_Rander48*)r->data;
+static PetscErrorCode PetscRandomGetValueReal_Rander48(PetscRandom r, PetscReal *val) {
+  PetscRandom_Rander48 *r48 = (PetscRandom_Rander48 *)r->data;
 
   PetscFunctionBegin;
 #if defined(PETSC_USE_COMPLEX)
-  if (r->iset) *val = PetscRealPart(r->width)*_dorander48(r48) + PetscRealPart(r->low);
-  else         *val = _dorander48(r48);
+  if (r->iset) *val = PetscRealPart(r->width) * _dorander48(r48) + PetscRealPart(r->low);
+  else *val = _dorander48(r48);
 #else
   if (r->iset) *val = r->width * _dorander48(r48) + r->low;
-  else         *val = _dorander48(r48);
+  else *val = _dorander48(r48);
 #endif
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode  PetscRandomDestroy_Rander48(PetscRandom r)
-{
+static PetscErrorCode PetscRandomDestroy_Rander48(PetscRandom r) {
   PetscFunctionBegin;
   PetscCall(PetscFree(r->data));
   PetscFunctionReturn(0);
 }
 
 static struct _PetscRandomOps PetscRandomOps_Values = {
-  PetscDesignatedInitializer(seed,PetscRandomSeed_Rander48),
-  PetscDesignatedInitializer(getvalue,PetscRandomGetValue_Rander48),
-  PetscDesignatedInitializer(getvaluereal,PetscRandomGetValueReal_Rander48),
-  PetscDesignatedInitializer(getvalues,NULL),
-  PetscDesignatedInitializer(getvaluesreal,NULL),
-  PetscDesignatedInitializer(destroy,PetscRandomDestroy_Rander48),
+  PetscDesignatedInitializer(seed, PetscRandomSeed_Rander48),
+  PetscDesignatedInitializer(getvalue, PetscRandomGetValue_Rander48),
+  PetscDesignatedInitializer(getvaluereal, PetscRandomGetValueReal_Rander48),
+  PetscDesignatedInitializer(getvalues, NULL),
+  PetscDesignatedInitializer(getvaluesreal, NULL),
+  PetscDesignatedInitializer(destroy, PetscRandomDestroy_Rander48),
 };
 
 /*MC
@@ -107,30 +98,30 @@ static struct _PetscRandomOps PetscRandomOps_Values = {
         exact same random numbers on any system.
 
    Options Database Keys:
-. -random_type <rand,rand48,rander48,sprng>
+. -random_type <rand,rand48,rander48,sprng> - select the random number generator at runtime
 
   Notes:
-    This is the default random number generate provided by PetscRandomCreate() if you do not set a particular implementation.
+    This is the default random number generate provided by `PetscRandomCreate()` if you do not set a particular implementation.
 
-  Each PetscRandom object created with this type has its own seed and its own history, so multiple PetscRandom objects of this type
+  Each `PetscRandom` object created with this type has its own seed and its own history, so multiple `PetscRandom` objects of this type
   will not interfer with random numbers generated by other objects. Each PETSc object of this type will produce the exact same set of
-  random numbers so if you wish different PetscObjects of this type set different seeds for each one after you create them with
-  PetscRandomSetSeed() followed by PetscRandomSeed().
+  random numbers so if you wish different `PetscRandom` objects of this type set different seeds for each one after you create them with
+  `PetscRandomSetSeed()` followed by `PetscRandomSeed()`.
 
   Level: beginner
 
-.seealso: `PetscRandomCreate()`, `PetscRandomSetType()`, `PETSCRAND`, `PETSCRAND48`, `PETSCRANDER48`, `PETSCSPRNG`, `PetscRandomSetSeed()`, `PetscRandomSeed()`
+.seealso: `PetscRandomCreate()`, `PetscRandomSetType()`, `PETSCRAND`, `PETSCRAND48`, `PETSCRANDER48`, `PETSCSPRNG`, `PetscRandomSetSeed()`,
+          `PetscRandomSeed()`, `PetscRandomSetFromOptions()`
 M*/
 
-PETSC_EXTERN PetscErrorCode PetscRandomCreate_Rander48(PetscRandom r)
-{
+PETSC_EXTERN PetscErrorCode PetscRandomCreate_Rander48(PetscRandom r) {
   PetscRandom_Rander48 *r48;
 
   PetscFunctionBegin;
-  PetscCall(PetscNewLog(r,&r48));
+  PetscCall(PetscNewLog(r, &r48));
   /* r48 does not need to be initialized because PetscRandomSeed() is always called before use and sets the needed values */
   r->data = r48;
   PetscCall(PetscMemcpy(r->ops, &PetscRandomOps_Values, sizeof(PetscRandomOps_Values)));
-  PetscCall(PetscObjectChangeTypeName((PetscObject) r, PETSCRANDER48));
+  PetscCall(PetscObjectChangeTypeName((PetscObject)r, PETSCRANDER48));
   PetscFunctionReturn(0);
 }

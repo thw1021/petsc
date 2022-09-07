@@ -11,7 +11,7 @@ PETSC_EXTERN PetscErrorCode MatColoringCreate_ID(MatColoring);
 PETSC_EXTERN PetscErrorCode MatColoringCreate_LF(MatColoring);
 
 /*@C
-  MatColoringRegisterAll - Registers all of the matrix Coloring routines in PETSc.
+  MatColoringRegisterAll - Registers all of the matrix coloring routines in PETSc.
 
   Not Collective
 
@@ -19,22 +19,21 @@ PETSC_EXTERN PetscErrorCode MatColoringCreate_LF(MatColoring);
 
   Adding new methods:
   To add a new method to the registry. Copy this routine and
-  modify it to incorporate a call to MatColoringRegister() for
+  modify it to incorporate a call to `MatColoringRegister()` for
   the new method, after the current list.
 
- .seealso: `MatColoringRegister()`, `MatColoringRegisterDestroy()`
+ .seealso: `MatColoring`, `MatColoringRegister()`, `MatColoringRegisterDestroy()`
  @*/
-PetscErrorCode  MatColoringRegisterAll(void)
-{
+PetscErrorCode MatColoringRegisterAll(void) {
   PetscFunctionBegin;
   if (MatColoringRegisterAllCalled) PetscFunctionReturn(0);
   MatColoringRegisterAllCalled = PETSC_TRUE;
-  PetscCall(MatColoringRegister(MATCOLORINGJP,MatColoringCreate_JP));
-  PetscCall(MatColoringRegister(MATCOLORINGGREEDY,MatColoringCreate_Greedy));
-  PetscCall(MatColoringRegister(MATCOLORINGPOWER,MatColoringCreate_Power));
-  PetscCall(MatColoringRegister(MATCOLORINGNATURAL,MatColoringCreate_Natural));
-  PetscCall(MatColoringRegister(MATCOLORINGSL,MatColoringCreate_SL));
-  PetscCall(MatColoringRegister(MATCOLORINGID,MatColoringCreate_ID));
-  PetscCall(MatColoringRegister(MATCOLORINGLF,MatColoringCreate_LF));
+  PetscCall(MatColoringRegister(MATCOLORINGJP, MatColoringCreate_JP));
+  PetscCall(MatColoringRegister(MATCOLORINGGREEDY, MatColoringCreate_Greedy));
+  PetscCall(MatColoringRegister(MATCOLORINGPOWER, MatColoringCreate_Power));
+  PetscCall(MatColoringRegister(MATCOLORINGNATURAL, MatColoringCreate_Natural));
+  PetscCall(MatColoringRegister(MATCOLORINGSL, MatColoringCreate_SL));
+  PetscCall(MatColoringRegister(MATCOLORINGID, MatColoringCreate_ID));
+  PetscCall(MatColoringRegister(MATCOLORINGLF, MatColoringCreate_LF));
   PetscFunctionReturn(0);
 }

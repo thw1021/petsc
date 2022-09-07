@@ -25,19 +25,22 @@
 !  system of equations.
 !
 !  --------------------------------------------------------------------------
+      module ex5fmodule
+      use petscsnes
+      use petscdmda
+#include <petsc/finclude/petscsnes.h>
+#include <petsc/finclude/petscdm.h>
+#include <petsc/finclude/petscdmda.h>
+      PetscInt xs,xe,xm,gxs,gxe,gxm
+      PetscInt ys,ye,ym,gys,gye,gym
+      PetscInt mx,my
+      PetscMPIInt rank,size
+      PetscReal lambda
+      end module ex5fmodule
 
       program main
-#include <petsc/finclude/petscsnes.h>
-      use petscdmda
-      use petscsnes
+      use ex5fmodule
       implicit none
-!
-!  We place common blocks, variable declarations, and other include files
-!  needed for this code in the single file ex5f.h.  We then need to include
-!  only this file throughout the various routines in this program.  See
-!  additional comments in the file ex5f.h.
-!
-#include "ex5f.h"
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !                   Variable declarations
@@ -105,9 +108,14 @@
 
 !  Create distributed array (DMDA) to manage parallel grid and vectors
 
-! This really needs only the star-type stencil, but we use the box
-! stencil temporarily.
+!     This really needs only the star-type stencil, but we use the box stencil temporarily.
+
+#if defined(PETSC_HAVE_FORTRAN_FREE_LINE_LENGTH_NONE)
       PetscCallA(DMDACreate2d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DMDA_STENCIL_STAR,i4,i4,PETSC_DECIDE,PETSC_DECIDE,i1,i1,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,da,ierr))
+#else
+      call DMDACreate2d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DMDA_STENCIL_STAR,i4,i4,PETSC_DECIDE,PETSC_DECIDE,i1,i1, &
+                        PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,da,ierr)
+#endif
       PetscCallA(DMSetFromOptions(da,ierr))
       PetscCallA(DMSetUp(da,ierr))
 
@@ -119,7 +127,13 @@
 
 !  Get local grid boundaries (for 2-dimensional DMDA)
 
+#if defined(PETSC_HAVE_FORTRAN_FREE_LINE_LENGTH_NONE)
       PetscCallA(DMDAGetInfo(da,PETSC_NULL_INTEGER,mx,my,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,ierr))
+#else
+      call DMDAGetInfo(da,PETSC_NULL_INTEGER,mx,my,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER, &
+                       PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,PETSC_NULL_INTEGER, &
+                       PETSC_NULL_INTEGER,PETSC_NULL_INTEGER,ierr)
+#endif
       PetscCallA(DMDAGetCorners(da,xs,ys,PETSC_NULL_INTEGER,xm,ym,PETSC_NULL_INTEGER,ierr))
       PetscCallA(DMDAGetGhostCorners(da,gxs,gys,PETSC_NULL_INTEGER,gxm,gym,PETSC_NULL_INTEGER,ierr))
 
@@ -197,15 +211,12 @@
 !  the local vector data via VecGetArray() and VecRestoreArray().
 !
       subroutine FormInitialGuess(X,ierr)
-      use petscsnes
+      use ex5fmodule
       implicit none
-
-#include "ex5f.h"
 
 !  Input/output variables:
       Vec      X
       PetscErrorCode  ierr
-
 !  Declarations for use with local arrays:
       PetscScalar lx_v(0:1)
       PetscOffset lx_i
@@ -249,10 +260,8 @@
 !  This routine uses standard Fortran-style computations over a 2-dim array.
 !
       subroutine InitialGuessLocal(x,ierr)
-      use petscsnes
+      use ex5fmodule
       implicit none
-
-#include "ex5f.h"
 
 !  Input/output variables:
       PetscScalar    x(xs:xe,ys:ye)
@@ -301,11 +310,9 @@
 !
 !
       subroutine FormFunctionLocal(info,x,f,da,ierr)
-#include <petsc/finclude/petscdmda.h>
-      use petscsnes
+      use ex5fmodule
       implicit none
 
-#include "ex5f.h"
       DM da
 
 !  Input/output variables:
@@ -392,10 +399,9 @@
 !  used in this example.
 !
       subroutine FormJacobianLocal(info,x,A,jac,da,ierr)
-      use petscsnes
+      use ex5fmodule
       implicit none
 
-#include "ex5f.h"
       DM da
 
 !  Input/output variables:
@@ -472,7 +478,7 @@
 !     Simple convergence test based on the infinity norm of the residual being small
 !
       subroutine MySNESConverged(snes,it,xnorm,snorm,fnorm,reason,dummy,ierr)
-      use petscsnes
+      use ex5fmodule
       implicit none
 
       SNES snes

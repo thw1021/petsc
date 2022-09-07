@@ -58,7 +58,8 @@ class MatType(object):
     FFT             = S_(MATFFT)
     FFTW            = S_(MATFFTW)
     SEQCUFFT        = S_(MATSEQCUFFT)
-    TRANSPOSEMAT    = S_(MATTRANSPOSEMAT)
+    TRANSPOSE       = S_(MATTRANSPOSEVIRTUAL)
+    HERMITIANTRANSPOSE = S_(MATHERMITIANTRANSPOSEVIRTUAL)
     SCHURCOMPLEMENT = S_(MATSCHURCOMPLEMENT)
     PYTHON          = S_(MATPYTHON)
     HYPRE           = S_(MATHYPRE)
@@ -666,6 +667,11 @@ cdef class Mat(Object):
         py_type = str2bytes(py_type, &cval)
         CHKERR( MatPythonSetType(self.mat, cval) )
 
+    def getPythonType(self):
+        cdef const char *cval = NULL
+        CHKERR( MatPythonGetType(self.mat, &cval) )
+        return bytes2str(cval)
+
     #
 
     def setOptionsPrefix(self, prefix):
@@ -823,6 +829,10 @@ cdef class Mat(Object):
         else:
             reuse = MAT_REUSE_MATRIX
         CHKERR( MatTranspose(self.mat, reuse, &out.mat) )
+        return out
+
+    def setTransposePrecursor(self, Mat out):
+        CHKERR( MatTransposeSetPrecursor(self.mat, out.mat) )
         return out
 
     def hermitianTranspose(self, Mat out=None):

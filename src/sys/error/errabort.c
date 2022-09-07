@@ -2,7 +2,7 @@
        The default error handlers and code that allows one to change
    error handlers.
 */
-#include <petscsys.h>           /*I "petscsys.h" I*/
+#include <petscsys.h> /*I "petscsys.h" I*/
 
 /*@C
    PetscAbortErrorHandler - Error handler that calls abort on error.
@@ -29,26 +29,18 @@
    Level: developer
 
    Notes:
-   Most users need not directly employ this routine and the other error
-   handlers, but can instead use the simplified interface SETERRQ, which
-   has the calling sequence
-$     SETERRQ(comm,number,mess)
-   or its variants, SETERRQ(number,formatstring,arg1), SETERRQ(), ... that
-   allow including arguments in the message.
+   Ussers do not directly employ this routine
 
-   Notes for experienced users:
-   Use PetscPushErrorHandler() to set the desired error handler.  The
-   currently available PETSc error handlers include PetscTraceBackErrorHandler(),
-   PetscAttachDebuggerErrorHandler(), and PetscAbortErrorHandler().
+   Use `PetscPushErrorHandler()` to set the desired error handler.  The
+   currently available PETSc error handlers include `PetscTraceBackErrorHandler()`,
+   `PetscAttachDebuggerErrorHandler()`, and `PetscAbortErrorHandler()`.
 
 .seealso: `PetscError()`, `PetscPushErrorHandler()`, `PetscPopErrorHander()`, `PetscTraceBackErrorHandler()`,
           `PetscAttachDebuggerErrorHandler()`, `PetscMPIAbortErrorHandler()`, `PetscReturnErrorHandler()`, `PetscEmacsClientErrorHandler()`
 @*/
-PetscErrorCode  PetscAbortErrorHandler(MPI_Comm comm,int line,const char *fun,const char *file,PetscErrorCode n,PetscErrorType p,const char *mess,void *ctx)
-{
+PetscErrorCode PetscAbortErrorHandler(MPI_Comm comm, int line, const char *fun, const char *file, PetscErrorCode n, PetscErrorType p, const char *mess, void *ctx) {
   PetscFunctionBegin;
-  (*PetscErrorPrintf)("PetscAbortErrorHandler: %s() at %s:%d %s\n  To prevent termination, change the error handler using PetscPushErrorHandler()\n",fun,file,line,mess);
+  (*PetscErrorPrintf)("PetscAbortErrorHandler: %s() at %s:%d %s\n  To prevent termination, change the error handler using PetscPushErrorHandler()\n", fun, file, line, mess);
   abort();
   PetscFunctionReturn(0);
 }
-

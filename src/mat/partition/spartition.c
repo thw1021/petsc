@@ -18,7 +18,7 @@ PETSC_EXTERN PetscErrorCode MatPartitioningCreate_PTScotch(MatPartitioning);
 #endif
 
 /*@C
-  MatPartitioningRegisterAll - Registers all of the matrix Partitioning routines in PETSc.
+  MatPartitioningRegisterAll - Registers all of the matrix partitioning routines in PETSc.
 
   Not Collective
 
@@ -26,7 +26,7 @@ PETSC_EXTERN PetscErrorCode MatPartitioningCreate_PTScotch(MatPartitioning);
 
   Adding new methods:
   To add a new method to the registry. Copy this routine and
-  modify it to incorporate a call to MatPartitioningRegister() for
+  modify it to incorporate a call to `MatPartitioningRegister()` for
   the new method, after the current list.
 
   Restricting the choices: To prevent all of the methods from being
@@ -35,29 +35,28 @@ PETSC_EXTERN PetscErrorCode MatPartitioningCreate_PTScotch(MatPartitioning);
   do not wish to register.  Make sure that the replacement routine is
   linked before libpetscmat.a.
 
-.seealso: `MatPartitioningRegister()`, `MatPartitioningRegisterDestroy()`
+.seealso: `MatPartitioning`, `MatPartitioningType`, `MatPartitioningRegister()`, `MatPartitioningRegisterDestroy()`
 @*/
-PetscErrorCode  MatPartitioningRegisterAll(void)
-{
+PetscErrorCode MatPartitioningRegisterAll(void) {
   PetscFunctionBegin;
   if (MatPartitioningRegisterAllCalled) PetscFunctionReturn(0);
   MatPartitioningRegisterAllCalled = PETSC_TRUE;
 
   PetscCall(MatPartitioningRegister(MATPARTITIONINGCURRENT, MatPartitioningCreate_Current));
   PetscCall(MatPartitioningRegister(MATPARTITIONINGAVERAGE, MatPartitioningCreate_Average));
-  PetscCall(MatPartitioningRegister(MATPARTITIONINGSQUARE,  MatPartitioningCreate_Square));
-  PetscCall(MatPartitioningRegister(MATPARTITIONINGHIERARCH,MatPartitioningCreate_Hierarchical));
+  PetscCall(MatPartitioningRegister(MATPARTITIONINGSQUARE, MatPartitioningCreate_Square));
+  PetscCall(MatPartitioningRegister(MATPARTITIONINGHIERARCH, MatPartitioningCreate_Hierarchical));
 #if defined(PETSC_HAVE_PARMETIS)
-  PetscCall(MatPartitioningRegister(MATPARTITIONINGPARMETIS,MatPartitioningCreate_Parmetis));
+  PetscCall(MatPartitioningRegister(MATPARTITIONINGPARMETIS, MatPartitioningCreate_Parmetis));
 #endif
 #if defined(PETSC_HAVE_CHACO)
-  PetscCall(MatPartitioningRegister(MATPARTITIONINGCHACO,   MatPartitioningCreate_Chaco));
+  PetscCall(MatPartitioningRegister(MATPARTITIONINGCHACO, MatPartitioningCreate_Chaco));
 #endif
 #if defined(PETSC_HAVE_PARTY)
-  PetscCall(MatPartitioningRegister(MATPARTITIONINGPARTY,   MatPartitioningCreate_Party));
+  PetscCall(MatPartitioningRegister(MATPARTITIONINGPARTY, MatPartitioningCreate_Party));
 #endif
 #if defined(PETSC_HAVE_PTSCOTCH)
-  PetscCall(MatPartitioningRegister(MATPARTITIONINGPTSCOTCH,MatPartitioningCreate_PTScotch));
+  PetscCall(MatPartitioningRegister(MATPARTITIONINGPTSCOTCH, MatPartitioningCreate_PTScotch));
 #endif
   PetscFunctionReturn(0);
 }

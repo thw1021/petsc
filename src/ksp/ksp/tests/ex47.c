@@ -3,16 +3,16 @@
 */
 #include <petscksp.h>
 
-int main(int argc, char **argv)
-{
-  Mat            A;
-  KSP            ksp;
-  PC             pc;
-  IS             zero, one;
-  MatNullSpace   nullsp;
-  Vec            x, b;
-  MPI_Comm       comm;
+int main(int argc, char **argv) {
+  Mat          A;
+  KSP          ksp;
+  PC           pc;
+  IS           zero, one;
+  MatNullSpace nullsp;
+  Vec          x, b;
+  MPI_Comm     comm;
 
+  PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, NULL));
   comm = PETSC_COMM_WORLD;
   PetscCall(MatCreate(comm, &A));
@@ -28,7 +28,7 @@ int main(int argc, char **argv)
   PetscCall(ISCreateStride(comm, 2, 0, 1, &zero));
   PetscCall(ISCreateStride(comm, 2, 2, 1, &one));
   PetscCall(MatNullSpaceCreate(comm, PETSC_TRUE, 0, NULL, &nullsp));
-  PetscCall(PetscObjectCompose((PetscObject)zero, "nullspace",(PetscObject)nullsp));
+  PetscCall(PetscObjectCompose((PetscObject)zero, "nullspace", (PetscObject)nullsp));
   PetscCall(KSPCreate(comm, &ksp));
   PetscCall(KSPSetOperators(ksp, A, A));
   PetscCall(KSPSetUp(ksp));

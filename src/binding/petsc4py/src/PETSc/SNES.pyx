@@ -598,6 +598,16 @@ cdef class SNES(Object):
         CHKERR( SNESGetConvergedReason(self.snes, &reason) )
         return reason
 
+    def setErrorIfNotConverged(self, bint flag):
+        cdef PetscBool ernc = PETSC_FALSE
+        if flag: ernc = PETSC_TRUE
+        CHKERR( SNESSetErrorIfNotConverged(self.snes, ernc) )
+
+    def getErrorIfNotConverged(self):
+        cdef PetscBool flag = PETSC_FALSE
+        CHKERR( SNESGetErrorIfNotConverged(self.snes, &flag) )
+        return toBool(flag)
+
     def setIterationNumber(self, its):
         cdef PetscInt ival = asInt(its)
         CHKERR( SNESSetIterationNumber(self.snes, ival) )
@@ -760,6 +770,11 @@ cdef class SNES(Object):
         cdef const char *cval = NULL
         py_type = str2bytes(py_type, &cval)
         CHKERR( SNESPythonSetType(self.snes, cval) )
+
+    def getPythonType(self):
+        cdef const char *cval = NULL
+        CHKERR( SNESPythonGetType(self.snes, &cval) )
+        return bytes2str(cval)
 
     # --- Composite ---
 

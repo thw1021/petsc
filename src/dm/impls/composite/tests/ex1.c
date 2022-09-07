@@ -3,10 +3,10 @@ static char help[] = "Tests DMClone() with DMComposite\n\n";
 #include <petscdmcomposite.h>
 #include <petscdmda.h>
 
-int main(int argc,char **argv)
-{
-  DM             newdm, dm, dm1,dm2;
+int main(int argc, char **argv) {
+  DM newdm, dm, dm1, dm2;
 
+  PetscFunctionBeginUser;
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, 0, help));
   PetscCall(DMCompositeCreate(PETSC_COMM_WORLD, &dm));

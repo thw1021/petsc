@@ -42,7 +42,7 @@ cdef extern from * nogil:
     PetscKSPType KSPMINRES
     PetscKSPType KSPSYMMLQ
     PetscKSPType KSPLCD
-    #PetscKSPType KSPPYTHON
+    PetscKSPType KSPPYTHON
     PetscKSPType KSPGCR
     PetscKSPType KSPPIPEGCR
     PetscKSPType KSPTSIRM
@@ -171,6 +171,8 @@ cdef extern from * nogil:
     int KSPGetConvergedReason(PetscKSP,PetscKSPConvergedReason*)
     int KSPGetIterationNumber(PetscKSP,PetscInt*)
     int KSPGetResidualNorm(PetscKSP,PetscReal*)
+    int KSPSetErrorIfNotConverged(PetscKSP,PetscBool);
+    int KSPGetErrorIfNotConverged(PetscKSP,PetscBool*);
 
     int KSPBuildSolution(PetscKSP,PetscVec,PetscVec*)
     int KSPBuildResidual(PetscKSP,PetscVec,PetscVec,PetscVec*)
@@ -188,6 +190,9 @@ cdef extern from * nogil:
 
     int KSPGMRESSetRestart(PetscKSP,PetscInt)
 
+    int KSPPythonSetType(PetscKSP,char[])
+    int KSPPythonGetType(PetscKSP,char*[])
+
 cdef extern from "custom.h" nogil:
     int KSPSetIterationNumber(PetscKSP,PetscInt)
     int KSPSetResidualNorm(PetscKSP,PetscReal)
@@ -195,10 +200,8 @@ cdef extern from "custom.h" nogil:
     int KSPSetConvergedReason(PetscKSP,PetscKSPConvergedReason)
 
 cdef extern from "libpetsc4py.h":
-    PetscKSPType KSPPYTHON
     int KSPPythonSetContext(PetscKSP,void*)
     int KSPPythonGetContext(PetscKSP,void**)
-    int KSPPythonSetType(PetscKSP,char[])
 
 # -----------------------------------------------------------------------------
 

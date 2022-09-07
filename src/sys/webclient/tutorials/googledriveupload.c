@@ -5,13 +5,13 @@
 
 #include <petscsys.h>
 
-int main(int argc,char **argv)
-{
-  char           access_token[512];
+int main(int argc, char **argv) {
+  char access_token[512];
 
-  PetscCall(PetscInitialize(&argc,&argv,NULL,NULL));
-  PetscCall(PetscGoogleDriveRefresh(PETSC_COMM_WORLD,NULL,access_token,sizeof(access_token)));
-  PetscCall(PetscGoogleDriveUpload(PETSC_COMM_WORLD,access_token,"googledriveupload.c"));
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, NULL, NULL));
+  PetscCall(PetscGoogleDriveRefresh(PETSC_COMM_WORLD, NULL, access_token, sizeof(access_token)));
+  PetscCall(PetscGoogleDriveUpload(PETSC_COMM_WORLD, access_token, "googledriveupload.c"));
   PetscCall(PetscFinalize());
   return 0;
 }

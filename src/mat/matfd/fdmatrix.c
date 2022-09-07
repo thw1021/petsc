@@ -4,14 +4,13 @@
   used for finite difference computations of Jacobians using coloring.
 */
 
-#include <petsc/private/matimpl.h>        /*I "petscmat.h" I*/
+#include <petsc/private/matimpl.h> /*I "petscmat.h" I*/
 #include <petsc/private/isimpl.h>
 
-PetscErrorCode  MatFDColoringSetF(MatFDColoring fd,Vec F)
-{
+PetscErrorCode MatFDColoringSetF(MatFDColoring fd, Vec F) {
   PetscFunctionBegin;
   if (F) {
-    PetscCall(VecCopy(F,fd->w1));
+    PetscCall(VecCopy(F, fd->w1));
     fd->fset = PETSC_TRUE;
   } else {
     fd->fset = PETSC_FALSE;
@@ -20,44 +19,48 @@ PetscErrorCode  MatFDColoringSetF(MatFDColoring fd,Vec F)
 }
 
 #include <petscdraw.h>
-static PetscErrorCode MatFDColoringView_Draw_Zoom(PetscDraw draw,void *Aa)
-{
-  MatFDColoring  fd = (MatFDColoring)Aa;
-  PetscInt       i,j,nz,row;
-  PetscReal      x,y;
-  MatEntry       *Jentry=fd->matentry;
+static PetscErrorCode MatFDColoringView_Draw_Zoom(PetscDraw draw, void *Aa) {
+  MatFDColoring fd = (MatFDColoring)Aa;
+  PetscInt      i, j, nz, row;
+  PetscReal     x, y;
+  MatEntry     *Jentry = fd->matentry;
 
   PetscFunctionBegin;
   /* loop over colors  */
   nz = 0;
-  for (i=0; i<fd->ncolors; i++) {
-    for (j=0; j<fd->nrows[i]; j++) {
+  for (i = 0; i < fd->ncolors; i++) {
+    for (j = 0; j < fd->nrows[i]; j++) {
       row = Jentry[nz].row;
       y   = fd->M - row - fd->rstart;
       x   = (PetscReal)Jentry[nz++].col;
-      PetscCall(PetscDrawRectangle(draw,x,y,x+1,y+1,i+1,i+1,i+1,i+1));
+      PetscCall(PetscDrawRectangle(draw, x, y, x + 1, y + 1, i + 1, i + 1, i + 1, i + 1));
     }
   }
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode MatFDColoringView_Draw(MatFDColoring fd,PetscViewer viewer)
-{
-  PetscBool      isnull;
-  PetscDraw      draw;
-  PetscReal      xr,yr,xl,yl,h,w;
+static PetscErrorCode MatFDColoringView_Draw(MatFDColoring fd, PetscViewer viewer) {
+  PetscBool isnull;
+  PetscDraw draw;
+  PetscReal xr, yr, xl, yl, h, w;
 
   PetscFunctionBegin;
-  PetscCall(PetscViewerDrawGetDraw(viewer,0,&draw));
-  PetscCall(PetscDrawIsNull(draw,&isnull));
+  PetscCall(PetscViewerDrawGetDraw(viewer, 0, &draw));
+  PetscCall(PetscDrawIsNull(draw, &isnull));
   if (isnull) PetscFunctionReturn(0);
 
-  xr   = fd->N; yr  = fd->M; h = yr/10.0; w = xr/10.0;
-  xr  += w;     yr += h;    xl = -w;     yl = -h;
-  PetscCall(PetscDrawSetCoordinates(draw,xl,yl,xr,yr));
-  PetscCall(PetscObjectCompose((PetscObject)fd,"Zoomviewer",(PetscObject)viewer));
-  PetscCall(PetscDrawZoom(draw,MatFDColoringView_Draw_Zoom,fd));
-  PetscCall(PetscObjectCompose((PetscObject)fd,"Zoomviewer",NULL));
+  xr = fd->N;
+  yr = fd->M;
+  h  = yr / 10.0;
+  w  = xr / 10.0;
+  xr += w;
+  yr += h;
+  xl = -w;
+  yl = -h;
+  PetscCall(PetscDrawSetCoordinates(draw, xl, yl, xr, yr));
+  PetscCall(PetscObjectCompose((PetscObject)fd, "Zoomviewer", (PetscObject)viewer));
+  PetscCall(PetscDrawZoom(draw, MatFDColoringView_Draw_Zoom, fd));
+  PetscCall(PetscObjectCompose((PetscObject)fd, "Zoomviewer", NULL));
   PetscCall(PetscDrawSave(draw));
   PetscFunctionReturn(0);
 }
@@ -65,7 +68,7 @@ static PetscErrorCode MatFDColoringView_Draw(MatFDColoring fd,PetscViewer viewer
 /*@C
    MatFDColoringView - Views a finite difference coloring context.
 
-   Collective on MatFDColoring
+   Collective on c
 
    Input  Parameters:
 +  c - the coloring context
@@ -75,61 +78,54 @@ static PetscErrorCode MatFDColoringView_Draw(MatFDColoring fd,PetscViewer viewer
 
    Notes:
    The available visualization contexts include
-+     PETSC_VIEWER_STDOUT_SELF - standard output (default)
-.     PETSC_VIEWER_STDOUT_WORLD - synchronized standard
++     `PETSC_VIEWER_STDOUT_SELF` - standard output (default)
+.     `PETSC_VIEWER_STDOUT_WORLD` - synchronized standard
         output where only the first processor opens
         the file.  All other processors send their
         data to the first processor to print.
--     PETSC_VIEWER_DRAW_WORLD - graphical display of nonzero structure
+-     `PETSC_VIEWER_DRAW_WORLD` - graphical display of nonzero structure
 
-   Notes:
      Since PETSc uses only a small number of basic colors (currently 33), if the coloring
    involves more than 33 then some seemingly identical colors are displayed making it look
    like an illegal coloring. This is just a graphical artifact.
 
-.seealso: `MatFDColoringCreate()`
-
+.seealso: `MatFDColoring`, `MatFDColoringCreate()`
 @*/
-PetscErrorCode  MatFDColoringView(MatFDColoring c,PetscViewer viewer)
-{
-  PetscInt          i,j;
-  PetscBool         isdraw,iascii;
+PetscErrorCode MatFDColoringView(MatFDColoring c, PetscViewer viewer) {
+  PetscInt          i, j;
+  PetscBool         isdraw, iascii;
   PetscViewerFormat format;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(c,MAT_FDCOLORING_CLASSID,1);
-  if (!viewer) {
-    PetscCall(PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject)c),&viewer));
-  }
-  PetscValidHeaderSpecific(viewer,PETSC_VIEWER_CLASSID,2);
-  PetscCheckSameComm(c,1,viewer,2);
+  PetscValidHeaderSpecific(c, MAT_FDCOLORING_CLASSID, 1);
+  if (!viewer) PetscCall(PetscViewerASCIIGetStdout(PetscObjectComm((PetscObject)c), &viewer));
+  PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
+  PetscCheckSameComm(c, 1, viewer, 2);
 
-  PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERDRAW,&isdraw));
-  PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERDRAW, &isdraw));
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
   if (isdraw) {
-    PetscCall(MatFDColoringView_Draw(c,viewer));
+    PetscCall(MatFDColoringView_Draw(c, viewer));
   } else if (iascii) {
-    PetscCall(PetscObjectPrintClassNamePrefixType((PetscObject)c,viewer));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Error tolerance=%g\n",(double)c->error_rel));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Umin=%g\n",(double)c->umin));
-    PetscCall(PetscViewerASCIIPrintf(viewer,"  Number of colors=%" PetscInt_FMT "\n",c->ncolors));
+    PetscCall(PetscObjectPrintClassNamePrefixType((PetscObject)c, viewer));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Error tolerance=%g\n", (double)c->error_rel));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Umin=%g\n", (double)c->umin));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  Number of colors=%" PetscInt_FMT "\n", c->ncolors));
 
-    PetscCall(PetscViewerGetFormat(viewer,&format));
+    PetscCall(PetscViewerGetFormat(viewer, &format));
     if (format != PETSC_VIEWER_ASCII_INFO) {
-      PetscInt row,col,nz;
+      PetscInt row, col, nz;
       nz = 0;
-      for (i=0; i<c->ncolors; i++) {
-        PetscCall(PetscViewerASCIIPrintf(viewer,"  Information for color %" PetscInt_FMT "\n",i));
-        PetscCall(PetscViewerASCIIPrintf(viewer,"    Number of columns %" PetscInt_FMT "\n",c->ncolumns[i]));
-        for (j=0; j<c->ncolumns[i]; j++) {
-          PetscCall(PetscViewerASCIIPrintf(viewer,"      %" PetscInt_FMT "\n",c->columns[i][j]));
-        }
-        PetscCall(PetscViewerASCIIPrintf(viewer,"    Number of rows %" PetscInt_FMT "\n",c->nrows[i]));
+      for (i = 0; i < c->ncolors; i++) {
+        PetscCall(PetscViewerASCIIPrintf(viewer, "  Information for color %" PetscInt_FMT "\n", i));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "    Number of columns %" PetscInt_FMT "\n", c->ncolumns[i]));
+        for (j = 0; j < c->ncolumns[i]; j++) PetscCall(PetscViewerASCIIPrintf(viewer, "      %" PetscInt_FMT "\n", c->columns[i][j]));
+        PetscCall(PetscViewerASCIIPrintf(viewer, "    Number of rows %" PetscInt_FMT "\n", c->nrows[i]));
         if (c->matentry) {
-          for (j=0; j<c->nrows[i]; j++) {
-            row  = c->matentry[nz].row;
-            col  = c->matentry[nz++].col;
-            PetscCall(PetscViewerASCIIPrintf(viewer,"      %" PetscInt_FMT " %" PetscInt_FMT " \n",row,col));
+          for (j = 0; j < c->nrows[i]; j++) {
+            row = c->matentry[nz].row;
+            col = c->matentry[nz++].col;
+            PetscCall(PetscViewerASCIIPrintf(viewer, "      %" PetscInt_FMT " %" PetscInt_FMT " \n", row, col));
           }
         }
       }
@@ -143,7 +139,7 @@ PetscErrorCode  MatFDColoringView(MatFDColoring c,PetscViewer viewer)
    MatFDColoringSetParameters - Sets the parameters for the sparse approximation of
    a Jacobian matrix using finite differences.
 
-   Logically Collective on MatFDColoring
+   Logically Collective on matfd
 
    The Jacobian is estimated with the differencing approximation
 .vb
@@ -164,24 +160,22 @@ PetscErrorCode  MatFDColoringView(MatFDColoring c,PetscViewer viewer)
 
    Level: advanced
 
-.seealso: `MatFDColoringCreate()`, `MatFDColoringSetFromOptions()`
-
+.seealso: `MatFDColoring`, `MatFDColoringCreate()`, `MatFDColoringSetFromOptions()`
 @*/
-PetscErrorCode MatFDColoringSetParameters(MatFDColoring matfd,PetscReal error,PetscReal umin)
-{
+PetscErrorCode MatFDColoringSetParameters(MatFDColoring matfd, PetscReal error, PetscReal umin) {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(matfd,MAT_FDCOLORING_CLASSID,1);
-  PetscValidLogicalCollectiveReal(matfd,error,2);
-  PetscValidLogicalCollectiveReal(matfd,umin,3);
+  PetscValidHeaderSpecific(matfd, MAT_FDCOLORING_CLASSID, 1);
+  PetscValidLogicalCollectiveReal(matfd, error, 2);
+  PetscValidLogicalCollectiveReal(matfd, umin, 3);
   if (error != PETSC_DEFAULT) matfd->error_rel = error;
-  if (umin != PETSC_DEFAULT)  matfd->umin      = umin;
+  if (umin != PETSC_DEFAULT) matfd->umin = umin;
   PetscFunctionReturn(0);
 }
 
 /*@
    MatFDColoringSetBlockSize - Sets block size for efficient inserting entries of Jacobian matrix.
 
-   Logically Collective on MatFDColoring
+   Logically Collective on matfd
 
    Input Parameters:
 +  coloring - the coloring context
@@ -190,15 +184,13 @@ PetscErrorCode MatFDColoringSetParameters(MatFDColoring matfd,PetscReal error,Pe
 
    Level: intermediate
 
-.seealso: `MatFDColoringCreate()`, `MatFDColoringSetFromOptions()`
-
+.seealso: `MatFDColoring`, `MatFDColoringCreate()`, `MatFDColoringSetFromOptions()`
 @*/
-PetscErrorCode MatFDColoringSetBlockSize(MatFDColoring matfd,PetscInt brows,PetscInt bcols)
-{
+PetscErrorCode MatFDColoringSetBlockSize(MatFDColoring matfd, PetscInt brows, PetscInt bcols) {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(matfd,MAT_FDCOLORING_CLASSID,1);
-  PetscValidLogicalCollectiveInt(matfd,brows,2);
-  PetscValidLogicalCollectiveInt(matfd,bcols,3);
+  PetscValidHeaderSpecific(matfd, MAT_FDCOLORING_CLASSID, 1);
+  PetscValidLogicalCollectiveInt(matfd, brows, 2);
+  PetscValidLogicalCollectiveInt(matfd, bcols, 3);
   if (brows != PETSC_DEFAULT) matfd->brows = brows;
   if (bcols != PETSC_DEFAULT) matfd->bcols = bcols;
   PetscFunctionReturn(0);
@@ -207,37 +199,35 @@ PetscErrorCode MatFDColoringSetBlockSize(MatFDColoring matfd,PetscInt brows,Pets
 /*@
    MatFDColoringSetUp - Sets up the internal data structures of matrix coloring context for the later use.
 
-   Collective on Mat
+   Collective on mat
 
    Input Parameters:
 +  mat - the matrix containing the nonzero structure of the Jacobian
-.  iscoloring - the coloring of the matrix; usually obtained with MatGetColoring() or DMCreateColoring()
+.  iscoloring - the coloring of the matrix; usually obtained with `MatGetColoring()` or `DMCreateColoring()`
 -  color - the matrix coloring context
 
    Level: beginner
 
-   Notes: When the coloring type is IS_COLORING_LOCAL the coloring is in the local ordering of the unknowns.
+   Notes:
+   When the coloring type is `IS_COLORING_LOCAL` the coloring is in the local ordering of the unknowns.
 
-.seealso: `MatFDColoringCreate()`, `MatFDColoringDestroy()`
+.seealso: `MatFDColoring`, `MatFDColoringCreate()`, `MatFDColoringDestroy()`
 @*/
-PetscErrorCode MatFDColoringSetUp(Mat mat,ISColoring iscoloring,MatFDColoring color)
-{
-  PetscBool      eq;
+PetscErrorCode MatFDColoringSetUp(Mat mat, ISColoring iscoloring, MatFDColoring color) {
+  PetscBool eq;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
-  PetscValidHeaderSpecific(color,MAT_FDCOLORING_CLASSID,3);
+  PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
+  PetscValidHeaderSpecific(color, MAT_FDCOLORING_CLASSID, 3);
   if (color->setupcalled) PetscFunctionReturn(0);
-  PetscCall(PetscObjectCompareId((PetscObject)mat,color->matid,&eq));
-  PetscCheck(eq,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONG,"Matrix used with MatFDColoringSetUp() must be that used with MatFDColoringCreate()");
+  PetscCall(PetscObjectCompareId((PetscObject)mat, color->matid, &eq));
+  PetscCheck(eq, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONG, "Matrix used with MatFDColoringSetUp() must be that used with MatFDColoringCreate()");
 
-  PetscCall(PetscLogEventBegin(MAT_FDColoringSetUp,mat,0,0,0));
-  if (mat->ops->fdcoloringsetup) {
-    PetscCall((*mat->ops->fdcoloringsetup)(mat,iscoloring,color));
-  } else SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Code not yet written for matrix type %s",((PetscObject)mat)->type_name);
+  PetscCall(PetscLogEventBegin(MAT_FDColoringSetUp, mat, 0, 0, 0));
+  PetscUseTypeMethod(mat, fdcoloringsetup, iscoloring, color);
 
   color->setupcalled = PETSC_TRUE;
-   PetscCall(PetscLogEventEnd(MAT_FDColoringSetUp,mat,0,0,0));
+  PetscCall(PetscLogEventEnd(MAT_FDColoringSetUp, mat, 0, 0, 0));
   PetscFunctionReturn(0);
 }
 
@@ -255,13 +245,11 @@ PetscErrorCode MatFDColoringSetUp(Mat mat,ISColoring iscoloring,MatFDColoring co
 
    Level: intermediate
 
-.seealso: `MatFDColoringCreate()`, `MatFDColoringSetFunction()`, `MatFDColoringSetFromOptions()`
-
+.seealso: `MatFDColoring`, `MatFDColoringCreate()`, `MatFDColoringSetFunction()`, `MatFDColoringSetFromOptions()`
 @*/
-PetscErrorCode  MatFDColoringGetFunction(MatFDColoring matfd,PetscErrorCode (**f)(void),void **fctx)
-{
+PetscErrorCode MatFDColoringGetFunction(MatFDColoring matfd, PetscErrorCode (**f)(void), void **fctx) {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(matfd,MAT_FDCOLORING_CLASSID,1);
+  PetscValidHeaderSpecific(matfd, MAT_FDCOLORING_CLASSID, 1);
   if (f) *f = matfd->f;
   if (fctx) *fctx = matfd->fctx;
   PetscFunctionReturn(0);
@@ -270,7 +258,7 @@ PetscErrorCode  MatFDColoringGetFunction(MatFDColoring matfd,PetscErrorCode (**f
 /*@C
    MatFDColoringSetFunction - Sets the function to use for computing the Jacobian.
 
-   Logically Collective on MatFDColoring
+   Logically Collective on matfd
 
    Input Parameters:
 +  coloring - the coloring context
@@ -278,27 +266,25 @@ PetscErrorCode  MatFDColoringGetFunction(MatFDColoring matfd,PetscErrorCode (**f
 -  fctx - the optional user-defined function context
 
    Calling sequence of (*f) function:
-    For SNES:    PetscErrorCode (*f)(SNES,Vec,Vec,void*)
-    If not using SNES: PetscErrorCode (*f)(void *dummy,Vec,Vec,void*) and dummy is ignored
+    For `SNES`:    PetscErrorCode (*f)(SNES,Vec,Vec,void*)
+    If not using `SNES`: PetscErrorCode (*f)(void *dummy,Vec,Vec,void*) and dummy is ignored
 
    Level: advanced
 
-   Notes:
-    This function is usually used automatically by SNES (when one uses SNESSetJacobian() with the argument
-     SNESComputeJacobianDefaultColor()) and only needs to be used by someone computing a matrix via coloring directly by
-     calling MatFDColoringApply()
+   Note:
+    This function is usually used automatically by `SNES` (when one uses `SNESSetJacobian()` with the argument
+     `SNESComputeJacobianDefaultColor()`) and only needs to be used by someone computing a matrix via coloring directly by
+     calling `MatFDColoringApply()`
 
-   Fortran Notes:
-    In Fortran you must call MatFDColoringSetFunction() for a coloring object to
-  be used without SNES or within the SNES solvers.
+   Fortran Note:
+    In Fortran you must call `MatFDColoringSetFunction()` for a coloring object to
+  be used without `SNES` or within the `SNES` solvers.
 
-.seealso: `MatFDColoringCreate()`, `MatFDColoringGetFunction()`, `MatFDColoringSetFromOptions()`
-
+.seealso: `MatFDColoring`, `MatFDColoringCreate()`, `MatFDColoringGetFunction()`, `MatFDColoringSetFromOptions()`
 @*/
-PetscErrorCode  MatFDColoringSetFunction(MatFDColoring matfd,PetscErrorCode (*f)(void),void *fctx)
-{
+PetscErrorCode MatFDColoringSetFunction(MatFDColoring matfd, PetscErrorCode (*f)(void), void *fctx) {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(matfd,MAT_FDCOLORING_CLASSID,1);
+  PetscValidHeaderSpecific(matfd, MAT_FDCOLORING_CLASSID, 1);
   matfd->f    = f;
   matfd->fctx = fctx;
   PetscFunctionReturn(0);
@@ -308,7 +294,7 @@ PetscErrorCode  MatFDColoringSetFunction(MatFDColoring matfd,PetscErrorCode (*f)
    MatFDColoringSetFromOptions - Sets coloring finite difference parameters from
    the options database.
 
-   Collective on MatFDColoring
+   Collective on matfd
 
    The Jacobian, F'(u), is estimated with the differencing approximation
 .vb
@@ -331,35 +317,33 @@ PetscErrorCode  MatFDColoringSetFunction(MatFDColoring matfd,PetscErrorCode (*f)
 
     Level: intermediate
 
-.seealso: `MatFDColoringCreate()`, `MatFDColoringView()`, `MatFDColoringSetParameters()`
-
+.seealso: `MatFDColoring`, `MatFDColoringCreate()`, `MatFDColoringView()`, `MatFDColoringSetParameters()`
 @*/
-PetscErrorCode  MatFDColoringSetFromOptions(MatFDColoring matfd)
-{
-  PetscBool      flg;
-  char           value[3];
+PetscErrorCode MatFDColoringSetFromOptions(MatFDColoring matfd) {
+  PetscBool flg;
+  char      value[3];
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(matfd,MAT_FDCOLORING_CLASSID,1);
+  PetscValidHeaderSpecific(matfd, MAT_FDCOLORING_CLASSID, 1);
 
   PetscObjectOptionsBegin((PetscObject)matfd);
-  PetscCall(PetscOptionsReal("-mat_fd_coloring_err","Square root of relative error in function","MatFDColoringSetParameters",matfd->error_rel,&matfd->error_rel,NULL));
-  PetscCall(PetscOptionsReal("-mat_fd_coloring_umin","Minimum allowable u magnitude","MatFDColoringSetParameters",matfd->umin,&matfd->umin,NULL));
-  PetscCall(PetscOptionsString("-mat_fd_type","Algorithm to compute h, wp or ds","MatFDColoringCreate",matfd->htype,value,sizeof(value),&flg));
+  PetscCall(PetscOptionsReal("-mat_fd_coloring_err", "Square root of relative error in function", "MatFDColoringSetParameters", matfd->error_rel, &matfd->error_rel, NULL));
+  PetscCall(PetscOptionsReal("-mat_fd_coloring_umin", "Minimum allowable u magnitude", "MatFDColoringSetParameters", matfd->umin, &matfd->umin, NULL));
+  PetscCall(PetscOptionsString("-mat_fd_type", "Algorithm to compute h, wp or ds", "MatFDColoringCreate", matfd->htype, value, sizeof(value), &flg));
   if (flg) {
     if (value[0] == 'w' && value[1] == 'p') matfd->htype = "wp";
     else if (value[0] == 'd' && value[1] == 's') matfd->htype = "ds";
-    else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Unknown finite differencing type %s",value);
+    else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Unknown finite differencing type %s", value);
   }
-  PetscCall(PetscOptionsInt("-mat_fd_coloring_brows","Number of block rows","MatFDColoringSetBlockSize",matfd->brows,&matfd->brows,NULL));
-  PetscCall(PetscOptionsInt("-mat_fd_coloring_bcols","Number of block columns","MatFDColoringSetBlockSize",matfd->bcols,&matfd->bcols,&flg));
+  PetscCall(PetscOptionsInt("-mat_fd_coloring_brows", "Number of block rows", "MatFDColoringSetBlockSize", matfd->brows, &matfd->brows, NULL));
+  PetscCall(PetscOptionsInt("-mat_fd_coloring_bcols", "Number of block columns", "MatFDColoringSetBlockSize", matfd->bcols, &matfd->bcols, &flg));
   if (flg && matfd->bcols > matfd->ncolors) {
     /* input bcols cannot be > matfd->ncolors, thus set it as ncolors */
     matfd->bcols = matfd->ncolors;
   }
 
   /* process any options handlers added with PetscObjectAddOptionsHandler() */
-  PetscCall(PetscObjectProcessOptionsHandlers(PetscOptionsObject,(PetscObject)matfd));
+  PetscCall(PetscObjectProcessOptionsHandlers((PetscObject)matfd, PetscOptionsObject));
   PetscOptionsEnd();
   PetscFunctionReturn(0);
 }
@@ -367,53 +351,51 @@ PetscErrorCode  MatFDColoringSetFromOptions(MatFDColoring matfd)
 /*@C
    MatFDColoringSetType - Sets the approach for computing the finite difference parameter
 
-   Collective on MatFDColoring
+   Collective on matfd
 
    Input Parameters:
 +  coloring - the coloring context
--  type - either MATMFFD_WP or MATMFFD_DS
+-  type - either `MATMFFD_WP` or `MATMFFD_DS`
 
    Options Database Keys:
 .  -mat_fd_type - "wp" or "ds"
 
-   Note: It is goofy that the argument type is MatMFFDType since the MatFDColoring actually computes the matrix entries
-         but the process of computing the entries is the same as as with the MatMFFD operation so we should reuse the names instead of
+   Note:
+   It is goofy that the argument type is `MatMFFDType` since the `MatFDColoring` actually computes the matrix entries
+         but the process of computing the entries is the same as as with the `MATMFFD` operation so we should reuse the names instead of
          introducing another one.
 
    Level: intermediate
 
-.seealso: `MatFDColoringCreate()`, `MatFDColoringView()`, `MatFDColoringSetParameters()`
-
+.seealso: `MatFDColoring`, `MatFDColoringCreate()`, `MatFDColoringView()`, `MatFDColoringSetParameters()`
 @*/
-PetscErrorCode  MatFDColoringSetType(MatFDColoring matfd,MatMFFDType type)
-{
+PetscErrorCode MatFDColoringSetType(MatFDColoring matfd, MatMFFDType type) {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(matfd,MAT_FDCOLORING_CLASSID,1);
+  PetscValidHeaderSpecific(matfd, MAT_FDCOLORING_CLASSID, 1);
   /*
      It is goofy to handle the strings this way but currently there is no code to free a dynamically created matfd->htype
      and this function is being provided as patch for a release so it shouldn't change the implementaton
   */
   if (type[0] == 'w' && type[1] == 'p') matfd->htype = "wp";
   else if (type[0] == 'd' && type[1] == 's') matfd->htype = "ds";
-  else SETERRQ(PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Unknown finite differencing type %s",type);
+  else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Unknown finite differencing type %s", type);
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode MatFDColoringViewFromOptions(MatFDColoring fd,const char prefix[],const char optionname[])
-{
+PetscErrorCode MatFDColoringViewFromOptions(MatFDColoring fd, const char prefix[], const char optionname[]) {
   PetscBool         flg;
   PetscViewer       viewer;
   PetscViewerFormat format;
 
   PetscFunctionBegin;
   if (prefix) {
-    PetscCall(PetscOptionsGetViewer(PetscObjectComm((PetscObject)fd),((PetscObject)fd)->options,prefix,optionname,&viewer,&format,&flg));
+    PetscCall(PetscOptionsGetViewer(PetscObjectComm((PetscObject)fd), ((PetscObject)fd)->options, prefix, optionname, &viewer, &format, &flg));
   } else {
-    PetscCall(PetscOptionsGetViewer(PetscObjectComm((PetscObject)fd),((PetscObject)fd)->options,((PetscObject)fd)->prefix,optionname,&viewer,&format,&flg));
+    PetscCall(PetscOptionsGetViewer(PetscObjectComm((PetscObject)fd), ((PetscObject)fd)->options, ((PetscObject)fd)->prefix, optionname, &viewer, &format, &flg));
   }
   if (flg) {
-    PetscCall(PetscViewerPushFormat(viewer,format));
-    PetscCall(MatFDColoringView(fd,viewer));
+    PetscCall(PetscViewerPushFormat(viewer, format));
+    PetscCall(MatFDColoringView(fd, viewer));
     PetscCall(PetscViewerPopFormat(viewer));
     PetscCall(PetscViewerDestroy(&viewer));
   }
@@ -424,93 +406,90 @@ PetscErrorCode MatFDColoringViewFromOptions(MatFDColoring fd,const char prefix[]
    MatFDColoringCreate - Creates a matrix coloring context for finite difference
    computation of Jacobians.
 
-   Collective on Mat
+   Collective on mat
 
    Input Parameters:
 +  mat - the matrix containing the nonzero structure of the Jacobian
--  iscoloring - the coloring of the matrix; usually obtained with MatColoringCreate() or DMCreateColoring()
+-  iscoloring - the coloring of the matrix; usually obtained with `MatColoringCreate()` or `DMCreateColoring()`
 
     Output Parameter:
 .   color - the new coloring context
 
     Level: intermediate
 
-.seealso: `MatFDColoringDestroy()`, `SNESComputeJacobianDefaultColor()`, `ISColoringCreate()`,
+.seealso: `MatFDColoring`, `MatFDColoringDestroy()`, `SNESComputeJacobianDefaultColor()`, `ISColoringCreate()`,
           `MatFDColoringSetFunction()`, `MatFDColoringSetFromOptions()`, `MatFDColoringApply()`,
           `MatFDColoringView()`, `MatFDColoringSetParameters()`, `MatColoringCreate()`, `DMCreateColoring()`, `MatFDColoringSetValues()`
 @*/
-PetscErrorCode  MatFDColoringCreate(Mat mat,ISColoring iscoloring,MatFDColoring *color)
-{
-  MatFDColoring  c;
-  MPI_Comm       comm;
-  PetscInt       M,N;
+PetscErrorCode MatFDColoringCreate(Mat mat, ISColoring iscoloring, MatFDColoring *color) {
+  MatFDColoring c;
+  MPI_Comm      comm;
+  PetscInt      M, N;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(mat,MAT_CLASSID,1);
-  PetscCheck(mat->assembled,PetscObjectComm((PetscObject)mat),PETSC_ERR_ARG_WRONGSTATE,"Matrix must be assembled by calls to MatAssemblyBegin/End();");
-  PetscCall(PetscLogEventBegin(MAT_FDColoringCreate,mat,0,0,0));
-  PetscCall(MatGetSize(mat,&M,&N));
-  PetscCheck(M == N,PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Only for square matrices");
-  PetscCall(PetscObjectGetComm((PetscObject)mat,&comm));
-  PetscCall(PetscHeaderCreate(c,MAT_FDCOLORING_CLASSID,"MatFDColoring","Jacobian computation via finite differences with coloring","Mat",comm,MatFDColoringDestroy,MatFDColoringView));
+  PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
+  PetscCheck(mat->assembled, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Matrix must be assembled by calls to MatAssemblyBegin/End();");
+  PetscCall(PetscLogEventBegin(MAT_FDColoringCreate, mat, 0, 0, 0));
+  PetscCall(MatGetSize(mat, &M, &N));
+  PetscCheck(M == N, PetscObjectComm((PetscObject)mat), PETSC_ERR_SUP, "Only for square matrices");
+  PetscCall(PetscObjectGetComm((PetscObject)mat, &comm));
+  PetscCall(PetscHeaderCreate(c, MAT_FDCOLORING_CLASSID, "MatFDColoring", "Jacobian computation via finite differences with coloring", "Mat", comm, MatFDColoringDestroy, MatFDColoringView));
 
   c->ctype = iscoloring->ctype;
-  PetscCall(PetscObjectGetId((PetscObject)mat,&c->matid));
+  PetscCall(PetscObjectGetId((PetscObject)mat, &c->matid));
 
-  if (mat->ops->fdcoloringcreate) {
-    PetscCall((*mat->ops->fdcoloringcreate)(mat,iscoloring,c));
-  } else SETERRQ(PetscObjectComm((PetscObject)mat),PETSC_ERR_SUP,"Code not yet written for matrix type %s",((PetscObject)mat)->type_name);
+  PetscUseTypeMethod(mat, fdcoloringcreate, iscoloring, c);
 
-  PetscCall(MatCreateVecs(mat,NULL,&c->w1));
+  PetscCall(MatCreateVecs(mat, NULL, &c->w1));
   /* Vec is used intensively in particular piece of scalar CPU code; won't benefit from bouncing back and forth to the GPU */
-  PetscCall(VecBindToCPU(c->w1,PETSC_TRUE));
-  PetscCall(PetscLogObjectParent((PetscObject)c,(PetscObject)c->w1));
-  PetscCall(VecDuplicate(c->w1,&c->w2));
+  PetscCall(VecBindToCPU(c->w1, PETSC_TRUE));
+  PetscCall(PetscLogObjectParent((PetscObject)c, (PetscObject)c->w1));
+  PetscCall(VecDuplicate(c->w1, &c->w2));
   /* Vec is used intensively in particular piece of scalar CPU code; won't benefit from bouncing back and forth to the GPU */
-  PetscCall(VecBindToCPU(c->w2,PETSC_TRUE));
-  PetscCall(PetscLogObjectParent((PetscObject)c,(PetscObject)c->w2));
+  PetscCall(VecBindToCPU(c->w2, PETSC_TRUE));
+  PetscCall(PetscLogObjectParent((PetscObject)c, (PetscObject)c->w2));
 
   c->error_rel    = PETSC_SQRT_MACHINE_EPSILON;
-  c->umin         = 100.0*PETSC_SQRT_MACHINE_EPSILON;
+  c->umin         = 100.0 * PETSC_SQRT_MACHINE_EPSILON;
   c->currentcolor = -1;
   c->htype        = "wp";
   c->fset         = PETSC_FALSE;
   c->setupcalled  = PETSC_FALSE;
 
   *color = c;
-  PetscCall(PetscObjectCompose((PetscObject)mat,"SNESMatFDColoring",(PetscObject)c));
-  PetscCall(PetscLogEventEnd(MAT_FDColoringCreate,mat,0,0,0));
+  PetscCall(PetscObjectCompose((PetscObject)mat, "SNESMatFDColoring", (PetscObject)c));
+  PetscCall(PetscLogEventEnd(MAT_FDColoringCreate, mat, 0, 0, 0));
   PetscFunctionReturn(0);
 }
 
 /*@
     MatFDColoringDestroy - Destroys a matrix coloring context that was created
-    via MatFDColoringCreate().
+    via `MatFDColoringCreate()`.
 
-    Collective on MatFDColoring
+    Collective on c
 
     Input Parameter:
 .   c - coloring context
 
     Level: intermediate
 
-.seealso: `MatFDColoringCreate()`
+.seealso: `MatFDColoring`, `MatFDColoringCreate()`
 @*/
-PetscErrorCode  MatFDColoringDestroy(MatFDColoring *c)
-{
-  PetscInt       i;
-  MatFDColoring  color = *c;
+PetscErrorCode MatFDColoringDestroy(MatFDColoring *c) {
+  PetscInt      i;
+  MatFDColoring color = *c;
 
   PetscFunctionBegin;
   if (!*c) PetscFunctionReturn(0);
-  if (--((PetscObject)color)->refct > 0) {*c = NULL; PetscFunctionReturn(0);}
+  if (--((PetscObject)color)->refct > 0) {
+    *c = NULL;
+    PetscFunctionReturn(0);
+  }
 
   /* we do not free the column arrays since their entries are owned by the ISs in color->isa */
-  for (i=0; i<color->ncolors; i++) {
-    PetscCall(ISDestroy(&color->isa[i]));
-  }
+  for (i = 0; i < color->ncolors; i++) PetscCall(ISDestroy(&color->isa[i]));
   PetscCall(PetscFree(color->isa));
-  PetscCall(PetscFree2(color->ncolumns,color->columns));
+  PetscCall(PetscFree2(color->ncolumns, color->columns));
   PetscCall(PetscFree(color->nrows));
   if (color->htype[0] == 'w') {
     PetscCall(PetscFree(color->matentry2));
@@ -533,7 +512,7 @@ PetscErrorCode  MatFDColoringDestroy(MatFDColoring *c)
     Not Collective
 
     Input Parameter:
-.   coloring - coloring context created with MatFDColoringCreate()
+.   coloring - coloring context created with `MatFDColoringCreate()`
 
     Output Parameters:
 +   n - the number of local columns being perturbed
@@ -541,7 +520,8 @@ PetscErrorCode  MatFDColoringDestroy(MatFDColoring *c)
 
    Level: advanced
 
-   Note: IF the matrix type is BAIJ, then the block column indices are returned
+   Note:
+   IF the matrix type is `MATBAIJ`, then the block column indices are returned
 
    Fortran Note:
    This routine has a different interface for Fortran
@@ -554,11 +534,9 @@ $          call MatFDColoringGetPerturbedColumnsF90(i,array,ierr)
 $      use the entries of array ...
 $          call MatFDColoringRestorePerturbedColumnsF90(i,array,ierr)
 
-.seealso: `MatFDColoringCreate()`, `MatFDColoringDestroy()`, `MatFDColoringView()`, `MatFDColoringApply()`
-
+.seealso: `MatFDColoring`, `MatFDColoringCreate()`, `MatFDColoringDestroy()`, `MatFDColoringView()`, `MatFDColoringApply()`
 @*/
-PetscErrorCode  MatFDColoringGetPerturbedColumns(MatFDColoring coloring,PetscInt *n,const PetscInt *cols[])
-{
+PetscErrorCode MatFDColoringGetPerturbedColumns(MatFDColoring coloring, PetscInt *n, const PetscInt *cols[]) {
   PetscFunctionBegin;
   if (coloring->currentcolor >= 0) {
     *n    = coloring->ncolumns[coloring->currentcolor];
@@ -570,48 +548,45 @@ PetscErrorCode  MatFDColoringGetPerturbedColumns(MatFDColoring coloring,PetscInt
 }
 
 /*@
-    MatFDColoringApply - Given a matrix for which a MatFDColoring context
+    MatFDColoringApply - Given a matrix for which a `MatFDColoring` context
     has been created, computes the Jacobian for a function via finite differences.
 
-    Collective on MatFDColoring
+    Collective on J
 
     Input Parameters:
 +   mat - location to store Jacobian
-.   coloring - coloring context created with MatFDColoringCreate()
+.   coloring - coloring context created with `MatFDColoringCreate()`
 .   x1 - location at which Jacobian is to be computed
--   sctx - context required by function, if this is being used with the SNES solver then it is SNES object, otherwise it is null
+-   sctx - context required by function, if this is being used with the SNES solver then it is `SNES` object, otherwise it is null
 
     Options Database Keys:
-+    -mat_fd_type - "wp" or "ds"  (see MATMFFD_WP or MATMFFD_DS)
++    -mat_fd_type - "wp" or "ds"  (see `MATMFFD_WP` or `MATMFFD_DS`)
 .    -mat_fd_coloring_view - Activates basic viewing or coloring
 .    -mat_fd_coloring_view draw - Activates drawing of coloring
 -    -mat_fd_coloring_view ::ascii_info - Activates viewing of coloring info
 
     Level: intermediate
 
-.seealso: `MatFDColoringCreate()`, `MatFDColoringDestroy()`, `MatFDColoringView()`, `MatFDColoringSetFunction()`, `MatFDColoringSetValues()`
-
+.seealso: `MatFDColoring`, `MatFDColoringCreate()`, `MatFDColoringDestroy()`, `MatFDColoringView()`, `MatFDColoringSetFunction()`, `MatFDColoringSetValues()`
 @*/
-PetscErrorCode  MatFDColoringApply(Mat J,MatFDColoring coloring,Vec x1,void *sctx)
-{
-  PetscBool      eq;
+PetscErrorCode MatFDColoringApply(Mat J, MatFDColoring coloring, Vec x1, void *sctx) {
+  PetscBool eq;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(J,MAT_CLASSID,1);
-  PetscValidHeaderSpecific(coloring,MAT_FDCOLORING_CLASSID,2);
-  PetscValidHeaderSpecific(x1,VEC_CLASSID,3);
-  PetscCall(PetscObjectCompareId((PetscObject)J,coloring->matid,&eq));
-  PetscCheck(eq,PetscObjectComm((PetscObject)J),PETSC_ERR_ARG_WRONG,"Matrix used with MatFDColoringApply() must be that used with MatFDColoringCreate()");
-  PetscCheck(coloring->f,PetscObjectComm((PetscObject)J),PETSC_ERR_ARG_WRONGSTATE,"Must call MatFDColoringSetFunction()");
-  PetscCheck(J->ops->fdcoloringapply,PETSC_COMM_SELF,PETSC_ERR_SUP,"Not supported for this matrix type %s",((PetscObject)J)->type_name);
-  PetscCheck(coloring->setupcalled,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONGSTATE,"Must call MatFDColoringSetUp()");
+  PetscValidHeaderSpecific(J, MAT_CLASSID, 1);
+  PetscValidHeaderSpecific(coloring, MAT_FDCOLORING_CLASSID, 2);
+  PetscValidHeaderSpecific(x1, VEC_CLASSID, 3);
+  PetscCall(PetscObjectCompareId((PetscObject)J, coloring->matid, &eq));
+  PetscCheck(eq, PetscObjectComm((PetscObject)J), PETSC_ERR_ARG_WRONG, "Matrix used with MatFDColoringApply() must be that used with MatFDColoringCreate()");
+  PetscCheck(coloring->f, PetscObjectComm((PetscObject)J), PETSC_ERR_ARG_WRONGSTATE, "Must call MatFDColoringSetFunction()");
+  PetscCheck(coloring->setupcalled, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Must call MatFDColoringSetUp()");
 
   PetscCall(MatSetUnfactored(J));
-  PetscCall(PetscLogEventBegin(MAT_FDColoringApply,coloring,J,x1,0));
-  PetscCall((*J->ops->fdcoloringapply)(J,coloring,x1,sctx));
-  PetscCall(PetscLogEventEnd(MAT_FDColoringApply,coloring,J,x1,0));
+  PetscCall(PetscLogEventBegin(MAT_FDColoringApply, coloring, J, x1, 0));
+  PetscUseTypeMethod(J, fdcoloringapply, coloring, x1, sctx);
+  PetscCall(PetscLogEventEnd(MAT_FDColoringApply, coloring, J, x1, 0));
   if (!coloring->viewed) {
-    PetscCall(MatFDColoringViewFromOptions(coloring,NULL,"-mat_fd_coloring_view"));
+    PetscCall(MatFDColoringViewFromOptions(coloring, NULL, "-mat_fd_coloring_view"));
     coloring->viewed = PETSC_TRUE;
   }
   PetscFunctionReturn(0);

@@ -19,15 +19,14 @@ PetscStageLog petsc_stageLog = NULL;
 
   Level: developer
 
-  Developer Notes:
-    Inline since called for EACH PetscEventLogBeginDefault() and PetscEventLogEndDefault()
+  Developer Note:
+    Inline since called for EACH `PetscEventLogBeginDefault()` and `PetscEventLogEndDefault()`
 
 .seealso: `PetscStageLogCreate()`
 @*/
-PetscErrorCode PetscLogGetStageLog(PetscStageLog *stageLog)
-{
+PetscErrorCode PetscLogGetStageLog(PetscStageLog *stageLog) {
   PetscFunctionBegin;
-  PetscValidPointer(stageLog,1);
+  PetscValidPointer(stageLog, 1);
   if (!petsc_stageLog) {
     fprintf(stderr, "PETSC ERROR: Logging has not been enabled.\nYou might have forgotten to call PetscInitialize().\n");
     PETSCABORT(MPI_COMM_WORLD, PETSC_ERR_SUP);
@@ -42,24 +41,23 @@ PetscErrorCode PetscLogGetStageLog(PetscStageLog *stageLog)
   Not Collective
 
   Input Parameter:
-. stageLog - The PetscStageLog
+. stageLog - The `PetscStageLog`
 
   Output Parameter:
 . stage    - The current stage
 
-  Notes:
+  Note:
   If no stage is currently active, stage is set to -1.
 
   Level: developer
 
-  Developer Notes:
-    Inline since called for EACH PetscEventLogBeginDefault() and PetscEventLogEndDefault()
+  Developer Note:
+    Inline since called for EACH `PetscEventLogBeginDefault()` and `PetscEventLogEndDefault()`
 
 .seealso: `PetscStageLogPush()`, `PetscStageLogPop()`, `PetscLogGetStageLog()`
 @*/
-PetscErrorCode  PetscStageLogGetCurrent(PetscStageLog stageLog, int *stage)
-{
-  PetscBool      empty;
+PetscErrorCode PetscStageLogGetCurrent(PetscStageLog stageLog, int *stage) {
+  PetscBool empty;
 
   PetscFunctionBegin;
   PetscCall(PetscIntStackEmpty(stageLog->stack, &empty));
@@ -68,52 +66,50 @@ PetscErrorCode  PetscStageLogGetCurrent(PetscStageLog stageLog, int *stage)
   } else {
     PetscCall(PetscIntStackTop(stageLog->stack, stage));
   }
-  PetscCheck(*stage == stageLog->curStage,PETSC_COMM_SELF,PETSC_ERR_PLIB, "Inconsistency in stage log: stage %d should be %d", *stage, stageLog->curStage);
+  PetscCheck(*stage == stageLog->curStage, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Inconsistency in stage log: stage %d should be %d", *stage, stageLog->curStage);
   PetscFunctionReturn(0);
 }
 
 /*@C
-  PetscStageLogGetEventPerfLog - This function returns the PetscEventPerfLog for the given stage.
+  PetscStageLogGetEventPerfLog - This function returns the `PetscEventPerfLog` for the given stage.
 
   Not Collective
 
   Input Parameters:
-+ stageLog - The PetscStageLog
++ stageLog - The `PetscStageLog`
 - stage    - The stage
 
   Output Parameter:
-. eventLog - The PetscEventPerfLog
+. eventLog - The `PetscEventPerfLog`
 
   Level: developer
 
-  Developer Notes:
-    Inline since called for EACH PetscEventLogBeginDefault() and PetscEventLogEndDefault()
+  Developer Note:
+    Inline since called for EACH `PetscEventLogBeginDefault()` and `PetscEventLogEndDefault()`
 
 .seealso: `PetscStageLogPush()`, `PetscStageLogPop()`, `PetscLogGetStageLog()`
 @*/
-PetscErrorCode  PetscStageLogGetEventPerfLog(PetscStageLog stageLog, int stage, PetscEventPerfLog *eventLog)
-{
+PetscErrorCode PetscStageLogGetEventPerfLog(PetscStageLog stageLog, int stage, PetscEventPerfLog *eventLog) {
   PetscFunctionBegin;
-  PetscValidPointer(eventLog,3);
-  PetscCheck(!(stage < 0) && !(stage >= stageLog->numStages),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", stage, stageLog->numStages);
+  PetscValidPointer(eventLog, 3);
+  PetscCheck(!(stage < 0) && !(stage >= stageLog->numStages), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", stage, stageLog->numStages);
   *eventLog = stageLog->stageInfo[stage].eventLog;
   PetscFunctionReturn(0);
 }
 
 /*@C
-  PetscStageInfoDestroy - This destroys a PetscStageInfo object.
+  PetscStageInfoDestroy - This destroys a `PetscStageInfo` object.
 
   Not collective
 
   Input Parameter:
-. stageInfo - The PetscStageInfo
+. stageInfo - The `PetscStageInfo`
 
   Level: developer
 
 .seealso: `PetscStageLogCreate()`
 @*/
-PetscErrorCode  PetscStageInfoDestroy(PetscStageInfo *stageInfo)
-{
+PetscErrorCode PetscStageInfoDestroy(PetscStageInfo *stageInfo) {
   PetscFunctionBegin;
   PetscCall(PetscFree(stageInfo->name));
   PetscCall(PetscEventPerfLogDestroy(stageInfo->eventLog));
@@ -122,29 +118,26 @@ PetscErrorCode  PetscStageInfoDestroy(PetscStageInfo *stageInfo)
 }
 
 /*@C
-  PetscStageLogDestroy - This destroys a PetscStageLog object.
+  PetscStageLogDestroy - This destroys a `PetscStageLog` object.
 
   Not collective
 
   Input Parameter:
-. stageLog - The PetscStageLog
+. stageLog - The `PetscStageLog`
 
   Level: developer
 
 .seealso: `PetscStageLogCreate()`
 @*/
-PetscErrorCode  PetscStageLogDestroy(PetscStageLog stageLog)
-{
-  int            stage;
+PetscErrorCode PetscStageLogDestroy(PetscStageLog stageLog) {
+  int stage;
 
   PetscFunctionBegin;
   if (!stageLog) PetscFunctionReturn(0);
   PetscCall(PetscIntStackDestroy(stageLog->stack));
   PetscCall(PetscEventRegLogDestroy(stageLog->eventLog));
   PetscCall(PetscClassRegLogDestroy(stageLog->classLog));
-  for (stage = 0; stage < stageLog->numStages; stage++) {
-    PetscCall(PetscStageInfoDestroy(&stageLog->stageInfo[stage]));
-  }
+  for (stage = 0; stage < stageLog->numStages; stage++) PetscCall(PetscStageInfoDestroy(&stageLog->stageInfo[stage]));
   PetscCall(PetscFree(stageLog->stageInfo));
   PetscCall(PetscFree(stageLog));
   PetscFunctionReturn(0);
@@ -156,7 +149,7 @@ PetscErrorCode  PetscStageLogDestroy(PetscStageLog stageLog)
   Not Collective
 
   Input Parameters:
-+ stageLog - The PetscStageLog
++ stageLog - The `PetscStageLog`
 - sname    - the name to associate with that stage
 
   Output Parameter:
@@ -166,34 +159,33 @@ PetscErrorCode  PetscStageLogDestroy(PetscStageLog stageLog)
 
 .seealso: `PetscStageLogPush()`, `PetscStageLogPop()`, `PetscStageLogCreate()`
 @*/
-PetscErrorCode  PetscStageLogRegister(PetscStageLog stageLog, const char sname[], int *stage)
-{
+PetscErrorCode PetscStageLogRegister(PetscStageLog stageLog, const char sname[], int *stage) {
   PetscStageInfo *stageInfo;
-  int            s;
+  int             s;
 
   PetscFunctionBegin;
-  PetscValidCharPointer(sname,2);
-  PetscValidIntPointer(stage,3);
+  PetscValidCharPointer(sname, 2);
+  PetscValidIntPointer(stage, 3);
   /* Check stage already registered */
   for (s = 0; s < stageLog->numStages; ++s) {
     PetscBool same;
 
     PetscCall(PetscStrcmp(stageLog->stageInfo[s].name, sname, &same));
-    PetscCheck(!same,PETSC_COMM_SELF,PETSC_ERR_ARG_WRONG, "Duplicate stage name given: %s", sname);
+    PetscCheck(!same, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Duplicate stage name given: %s", sname);
   }
   /* Create new stage */
   s = stageLog->numStages++;
   if (stageLog->numStages > stageLog->maxStages) {
-    PetscCall(PetscMalloc1(stageLog->maxStages*2, &stageInfo));
+    PetscCall(PetscMalloc1(stageLog->maxStages * 2, &stageInfo));
     PetscCall(PetscArraycpy(stageInfo, stageLog->stageInfo, stageLog->maxStages));
     PetscCall(PetscFree(stageLog->stageInfo));
-    stageLog->stageInfo  = stageInfo;
+    stageLog->stageInfo = stageInfo;
     stageLog->maxStages *= 2;
   }
   /* Setup new stage info */
   stageInfo = &stageLog->stageInfo[s];
-  PetscCall(PetscMemzero(stageInfo,sizeof(PetscStageInfo)));
-  PetscCall(PetscStrallocpy(sname,&stageInfo->name));
+  PetscCall(PetscMemzero(stageInfo, sizeof(PetscStageInfo)));
+  PetscCall(PetscStrallocpy(sname, &stageInfo->name));
   stageInfo->used             = PETSC_FALSE;
   stageInfo->perfInfo.active  = PETSC_TRUE;
   stageInfo->perfInfo.visible = PETSC_TRUE;
@@ -209,16 +201,16 @@ PetscErrorCode  PetscStageLogRegister(PetscStageLog stageLog, const char sname[]
   Not Collective
 
   Input Parameters:
-+ stageLog   - The PetscStageLog
++ stageLog   - The `PetscStageLog`
 - stage - The stage to log
 
   Database Options:
 . -log_view - Activates logging
 
   Usage:
-  If the option -log_sumary is used to run the program containing the
+  If the option -log_view is used to run the program containing the
   following code, then 2 sets of summary data will be printed during
-  PetscFinalize().
+  `PetscFinalize()`.
 .vb
       PetscInitialize(int *argc,char ***args,0,0);
       [stage 0 of code]
@@ -230,21 +222,20 @@ PetscErrorCode  PetscStageLogRegister(PetscStageLog stageLog, const char sname[]
       PetscFinalize();
 .ve
 
-  Notes:
-  Use PetscLogStageRegister() to register a stage. All previous stages are
+  Note;
+  Use `PetscLogStageRegister()` to register a stage. All previous stages are
   accumulating time and flops, but events will only be logged in this stage.
 
   Level: developer
 
 .seealso: `PetscStageLogPop()`, `PetscStageLogGetCurrent()`, `PetscStageLogRegister()`, `PetscLogGetStageLog()`
 @*/
-PetscErrorCode  PetscStageLogPush(PetscStageLog stageLog, int stage)
-{
-  int            curStage = 0;
-  PetscBool      empty;
+PetscErrorCode PetscStageLogPush(PetscStageLog stageLog, int stage) {
+  int       curStage = 0;
+  PetscBool empty;
 
   PetscFunctionBegin;
-  PetscCheck(!(stage < 0) && !(stage >= stageLog->numStages),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", stage, stageLog->numStages);
+  PetscCheck(!(stage < 0) && !(stage >= stageLog->numStages), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", stage, stageLog->numStages);
 
   /* Record flops/time of previous stage */
   PetscCall(PetscIntStackEmpty(stageLog->stack, &empty));
@@ -252,8 +243,8 @@ PetscErrorCode  PetscStageLogPush(PetscStageLog stageLog, int stage)
     PetscCall(PetscIntStackTop(stageLog->stack, &curStage));
     if (stageLog->stageInfo[curStage].perfInfo.active) {
       PetscTimeAdd(&stageLog->stageInfo[curStage].perfInfo.time);
-      stageLog->stageInfo[curStage].perfInfo.flops         += petsc_TotalFlops;
-      stageLog->stageInfo[curStage].perfInfo.numMessages   += petsc_irecv_ct  + petsc_isend_ct  + petsc_recv_ct  + petsc_send_ct;
+      stageLog->stageInfo[curStage].perfInfo.flops += petsc_TotalFlops;
+      stageLog->stageInfo[curStage].perfInfo.numMessages += petsc_irecv_ct + petsc_isend_ct + petsc_recv_ct + petsc_send_ct;
       stageLog->stageInfo[curStage].perfInfo.messageLength += petsc_irecv_len + petsc_isend_len + petsc_recv_len + petsc_send_len;
       stageLog->stageInfo[curStage].perfInfo.numReductions += petsc_allreduce_ct + petsc_gather_ct + petsc_scatter_ct;
     }
@@ -267,8 +258,8 @@ PetscErrorCode  PetscStageLogPush(PetscStageLog stageLog, int stage)
   /* Subtract current quantities so that we obtain the difference when we pop */
   if (stageLog->stageInfo[stage].perfInfo.active) {
     PetscTimeSubtract(&stageLog->stageInfo[stage].perfInfo.time);
-    stageLog->stageInfo[stage].perfInfo.flops         -= petsc_TotalFlops;
-    stageLog->stageInfo[stage].perfInfo.numMessages   -= petsc_irecv_ct  + petsc_isend_ct  + petsc_recv_ct  + petsc_send_ct;
+    stageLog->stageInfo[stage].perfInfo.flops -= petsc_TotalFlops;
+    stageLog->stageInfo[stage].perfInfo.numMessages -= petsc_irecv_ct + petsc_isend_ct + petsc_recv_ct + petsc_send_ct;
     stageLog->stageInfo[stage].perfInfo.messageLength -= petsc_irecv_len + petsc_isend_len + petsc_recv_len + petsc_send_len;
     stageLog->stageInfo[stage].perfInfo.numReductions -= petsc_allreduce_ct + petsc_gather_ct + petsc_scatter_ct;
   }
@@ -281,10 +272,10 @@ PetscErrorCode  PetscStageLogPush(PetscStageLog stageLog, int stage)
   Not Collective
 
   Input Parameter:
-. stageLog - The PetscStageLog
+. stageLog - The `PetscStageLog`
 
   Usage:
-  If the option -log_sumary is used to run the program containing the
+  If the option -log_view is used to run the program containing the
   following code, then 2 sets of summary data will be printed during
   PetscFinalize().
 .vb
@@ -298,25 +289,24 @@ PetscErrorCode  PetscStageLogPush(PetscStageLog stageLog, int stage)
       PetscFinalize();
 .ve
 
-  Notes:
-  Use PetscStageLogRegister() to register a stage.
+  Note:
+  Use `PetscStageLogRegister()` to register a stage.
 
   Level: developer
 
 .seealso: `PetscStageLogPush()`, `PetscStageLogGetCurrent()`, `PetscStageLogRegister()`, `PetscLogGetStageLog()`
 @*/
-PetscErrorCode  PetscStageLogPop(PetscStageLog stageLog)
-{
-  int            curStage;
-  PetscBool      empty;
+PetscErrorCode PetscStageLogPop(PetscStageLog stageLog) {
+  int       curStage;
+  PetscBool empty;
 
   PetscFunctionBegin;
   /* Record flops/time of current stage */
   PetscCall(PetscIntStackPop(stageLog->stack, &curStage));
   if (stageLog->stageInfo[curStage].perfInfo.active) {
     PetscTimeAdd(&stageLog->stageInfo[curStage].perfInfo.time);
-    stageLog->stageInfo[curStage].perfInfo.flops         += petsc_TotalFlops;
-    stageLog->stageInfo[curStage].perfInfo.numMessages   += petsc_irecv_ct  + petsc_isend_ct  + petsc_recv_ct  + petsc_send_ct;
+    stageLog->stageInfo[curStage].perfInfo.flops += petsc_TotalFlops;
+    stageLog->stageInfo[curStage].perfInfo.numMessages += petsc_irecv_ct + petsc_isend_ct + petsc_recv_ct + petsc_send_ct;
     stageLog->stageInfo[curStage].perfInfo.messageLength += petsc_irecv_len + petsc_isend_len + petsc_recv_len + petsc_send_len;
     stageLog->stageInfo[curStage].perfInfo.numReductions += petsc_allreduce_ct + petsc_gather_ct + petsc_scatter_ct;
   }
@@ -326,8 +316,8 @@ PetscErrorCode  PetscStageLogPop(PetscStageLog stageLog)
     PetscCall(PetscIntStackTop(stageLog->stack, &curStage));
     if (stageLog->stageInfo[curStage].perfInfo.active) {
       PetscTimeSubtract(&stageLog->stageInfo[curStage].perfInfo.time);
-      stageLog->stageInfo[curStage].perfInfo.flops         -= petsc_TotalFlops;
-      stageLog->stageInfo[curStage].perfInfo.numMessages   -= petsc_irecv_ct  + petsc_isend_ct  + petsc_recv_ct  + petsc_send_ct;
+      stageLog->stageInfo[curStage].perfInfo.flops -= petsc_TotalFlops;
+      stageLog->stageInfo[curStage].perfInfo.numMessages -= petsc_irecv_ct + petsc_isend_ct + petsc_recv_ct + petsc_send_ct;
       stageLog->stageInfo[curStage].perfInfo.messageLength -= petsc_irecv_len + petsc_isend_len + petsc_recv_len + petsc_send_len;
       stageLog->stageInfo[curStage].perfInfo.numReductions -= petsc_allreduce_ct + petsc_gather_ct + petsc_scatter_ct;
     }
@@ -342,67 +332,64 @@ PetscErrorCode  PetscStageLogPop(PetscStageLog stageLog)
   Not Collective
 
   Input Parameters:
-. stageLog - The PetscStageLog
+. stageLog - The `PetscStageLog`
 
   Output Parameter:
-. classLog - The PetscClassRegLog
+. classLog - The `PetscClassRegLog`
 
   Level: developer
 
 .seealso: `PetscStageLogPush()`, `PetscStageLogPop()`, `PetscLogGetStageLog()`
 @*/
-PetscErrorCode  PetscStageLogGetClassRegLog(PetscStageLog stageLog, PetscClassRegLog *classLog)
-{
+PetscErrorCode PetscStageLogGetClassRegLog(PetscStageLog stageLog, PetscClassRegLog *classLog) {
   PetscFunctionBegin;
-  PetscValidPointer(classLog,2);
+  PetscValidPointer(classLog, 2);
   *classLog = stageLog->classLog;
   PetscFunctionReturn(0);
 }
 
 /*@C
-  PetscStageLogGetEventRegLog - This function returns the PetscEventRegLog.
+  PetscStageLogGetEventRegLog - This function returns the `PetscEventRegLog`.
 
   Not Collective
 
   Input Parameters:
-. stageLog - The PetscStageLog
+. stageLog - The `PetscStageLog`
 
   Output Parameter:
-. eventLog - The PetscEventRegLog
+. eventLog - The `PetscEventRegLog`
 
   Level: developer
 
 .seealso: `PetscStageLogPush()`, `PetscStageLogPop()`, `PetscLogGetStageLog()`
 @*/
-PetscErrorCode  PetscStageLogGetEventRegLog(PetscStageLog stageLog, PetscEventRegLog *eventLog)
-{
+PetscErrorCode PetscStageLogGetEventRegLog(PetscStageLog stageLog, PetscEventRegLog *eventLog) {
   PetscFunctionBegin;
-  PetscValidPointer(eventLog,2);
+  PetscValidPointer(eventLog, 2);
   *eventLog = stageLog->eventLog;
   PetscFunctionReturn(0);
 }
 
 /*@C
-  PetscStageLogGetClassPerfLog - This function returns the PetscClassPerfLog for the given stage.
+  PetscStageLogGetClassPerfLog - This function returns the `PetscClassPerfLog` for the given stage.
 
   Not Collective
 
   Input Parameters:
-+ stageLog - The PetscStageLog
++ stageLog - The `PetscStageLog`
 - stage    - The stage
 
   Output Parameter:
-. classLog - The PetscClassPerfLog
+. classLog - The `PetscClassPerfLog`
 
   Level: developer
 
 .seealso: `PetscStageLogPush()`, `PetscStageLogPop()`, `PetscLogGetStageLog()`
 @*/
-PetscErrorCode  PetscStageLogGetClassPerfLog(PetscStageLog stageLog, int stage, PetscClassPerfLog *classLog)
-{
+PetscErrorCode PetscStageLogGetClassPerfLog(PetscStageLog stageLog, int stage, PetscClassPerfLog *classLog) {
   PetscFunctionBegin;
-  PetscValidPointer(classLog,3);
-  PetscCheck(!(stage < 0) && !(stage >= stageLog->numStages),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", stage, stageLog->numStages);
+  PetscValidPointer(classLog, 3);
+  PetscCheck(!(stage < 0) && !(stage >= stageLog->numStages), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", stage, stageLog->numStages);
   *classLog = stageLog->stageInfo[stage].classLog;
   PetscFunctionReturn(0);
 }
@@ -413,18 +400,17 @@ PetscErrorCode  PetscStageLogGetClassPerfLog(PetscStageLog stageLog, int stage, 
   Not Collective
 
   Input Parameters:
-+ stageLog - The PetscStageLog
++ stageLog - The `PetscStageLog`
 . stage    - The stage to log
-- isActive - The activity flag, PETSC_TRUE for logging, otherwise PETSC_FALSE (default is PETSC_TRUE)
+- isActive - The activity flag, `PETSC_TRUE` for logging, otherwise `PETSC_FALSE` (default is `PETSC_TRUE`)
 
   Level: developer
 
 .seealso: `PetscStageLogGetActive()`, `PetscStageLogGetCurrent()`, `PetscStageLogRegister()`, `PetscLogGetStageLog()`
 @*/
-PetscErrorCode  PetscStageLogSetActive(PetscStageLog stageLog, int stage, PetscBool isActive)
-{
+PetscErrorCode PetscStageLogSetActive(PetscStageLog stageLog, int stage, PetscBool isActive) {
   PetscFunctionBegin;
-  PetscCheck(!(stage < 0) && !(stage >= stageLog->numStages),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", stage, stageLog->numStages);
+  PetscCheck(!(stage < 0) && !(stage >= stageLog->numStages), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", stage, stageLog->numStages);
   stageLog->stageInfo[stage].perfInfo.active = isActive;
   PetscFunctionReturn(0);
 }
@@ -435,34 +421,33 @@ PetscErrorCode  PetscStageLogSetActive(PetscStageLog stageLog, int stage, PetscB
   Not Collective
 
   Input Parameters:
-+ stageLog - The PetscStageLog
++ stageLog - The `PetscStageLog`
 - stage    - The stage to log
 
   Output Parameter:
-. isActive - The activity flag, PETSC_TRUE for logging, otherwise PETSC_FALSE (default is PETSC_TRUE)
+. isActive - The activity flag, `PETSC_TRUE` for logging, otherwise `PETSC_FALSE` (default is `PETSC_TRUE`)
 
   Level: developer
 
 .seealso: `PetscStageLogSetActive()`, `PetscStageLogGetCurrent()`, `PetscStageLogRegister()`, `PetscLogGetStageLog()`
 @*/
-PetscErrorCode  PetscStageLogGetActive(PetscStageLog stageLog, int stage, PetscBool  *isActive)
-{
+PetscErrorCode PetscStageLogGetActive(PetscStageLog stageLog, int stage, PetscBool *isActive) {
   PetscFunctionBegin;
-  PetscCheck(!(stage < 0) && !(stage >= stageLog->numStages),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", stage, stageLog->numStages);
-  PetscValidBoolPointer(isActive,3);
+  PetscCheck(!(stage < 0) && !(stage >= stageLog->numStages), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", stage, stageLog->numStages);
+  PetscValidBoolPointer(isActive, 3);
   *isActive = stageLog->stageInfo[stage].perfInfo.active;
   PetscFunctionReturn(0);
 }
 
 /*@C
-  PetscStageLogSetVisible - This function determines whether a stage is printed during PetscLogView()
+  PetscStageLogSetVisible - This function determines whether a stage is printed during `PetscLogView()`
 
   Not Collective
 
   Input Parameters:
-+ stageLog  - The PetscStageLog
++ stageLog  - The `PetscStageLog`
 . stage     - The stage to log
-- isVisible - The visibility flag, PETSC_TRUE for printing, otherwise PETSC_FALSE (default is PETSC_TRUE)
+- isVisible - The visibility flag, `PETSC_TRUE` for printing, otherwise `PETSC_FALSE` (default is `PETSC_TRUE`)
 
   Database Options:
 . -log_view - Activates log summary
@@ -471,25 +456,24 @@ PetscErrorCode  PetscStageLogGetActive(PetscStageLog stageLog, int stage, PetscB
 
 .seealso: `PetscStageLogGetVisible()`, `PetscStageLogGetCurrent()`, `PetscStageLogRegister()`, `PetscLogGetStageLog()`
 @*/
-PetscErrorCode  PetscStageLogSetVisible(PetscStageLog stageLog, int stage, PetscBool isVisible)
-{
+PetscErrorCode PetscStageLogSetVisible(PetscStageLog stageLog, int stage, PetscBool isVisible) {
   PetscFunctionBegin;
-  PetscCheck(!(stage < 0) && !(stage >= stageLog->numStages),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", stage, stageLog->numStages);
+  PetscCheck(!(stage < 0) && !(stage >= stageLog->numStages), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", stage, stageLog->numStages);
   stageLog->stageInfo[stage].perfInfo.visible = isVisible;
   PetscFunctionReturn(0);
 }
 
 /*@C
-  PetscStageLogGetVisible - This function returns whether a stage is printed during PetscLogView()
+  PetscStageLogGetVisible - This function returns whether a stage is printed during `PetscLogView()`
 
   Not Collective
 
   Input Parameters:
-+ stageLog  - The PetscStageLog
++ stageLog  - The `PetscStageLog`
 - stage     - The stage to log
 
   Output Parameter:
-. isVisible - The visibility flag, PETSC_TRUE for printing, otherwise PETSC_FALSE (default is PETSC_TRUE)
+. isVisible - The visibility flag, `PETSC_TRUE` for printing, otherwise `PETSC_FALSE` (default is `PETSC_TRUE`)
 
   Database Options:
 . -log_view - Activates log summary
@@ -498,11 +482,10 @@ PetscErrorCode  PetscStageLogSetVisible(PetscStageLog stageLog, int stage, Petsc
 
 .seealso: `PetscStageLogSetVisible()`, `PetscStageLogGetCurrent()`, `PetscStageLogRegister()`, `PetscLogGetStageLog()`
 @*/
-PetscErrorCode  PetscStageLogGetVisible(PetscStageLog stageLog, int stage, PetscBool  *isVisible)
-{
+PetscErrorCode PetscStageLogGetVisible(PetscStageLog stageLog, int stage, PetscBool *isVisible) {
   PetscFunctionBegin;
-  PetscCheck(!(stage < 0) && !(stage >= stageLog->numStages),PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", stage, stageLog->numStages);
-  PetscValidBoolPointer(isVisible,3);
+  PetscCheck(!(stage < 0) && !(stage >= stageLog->numStages), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", stage, stageLog->numStages);
+  PetscValidBoolPointer(isVisible, 3);
   *isVisible = stageLog->stageInfo[stage].perfInfo.visible;
   PetscFunctionReturn(0);
 }
@@ -513,7 +496,7 @@ PetscErrorCode  PetscStageLogGetVisible(PetscStageLog stageLog, int stage, Petsc
   Not Collective
 
   Input Parameters:
-+ stageLog - The PetscStageLog
++ stageLog - The `PetscStageLog`
 - name     - The stage name
 
   Output Parameter:
@@ -523,14 +506,13 @@ PetscErrorCode  PetscStageLogGetVisible(PetscStageLog stageLog, int stage, Petsc
 
 .seealso: `PetscStageLogGetCurrent()`, `PetscStageLogRegister()`, `PetscLogGetStageLog()`
 @*/
-PetscErrorCode  PetscStageLogGetStage(PetscStageLog stageLog, const char name[], PetscLogStage *stage)
-{
-  PetscBool      match;
-  int            s;
+PetscErrorCode PetscStageLogGetStage(PetscStageLog stageLog, const char name[], PetscLogStage *stage) {
+  PetscBool match;
+  int       s;
 
   PetscFunctionBegin;
-  PetscValidCharPointer(name,2);
-  PetscValidIntPointer(stage,3);
+  PetscValidCharPointer(name, 2);
+  PetscValidIntPointer(stage, 3);
   *stage = -1;
   for (s = 0; s < stageLog->numStages; s++) {
     PetscCall(PetscStrcasecmp(stageLog->stageInfo[s].name, name, &match));
@@ -543,20 +525,19 @@ PetscErrorCode  PetscStageLogGetStage(PetscStageLog stageLog, const char name[],
 }
 
 /*@C
-  PetscStageLogCreate - This creates a PetscStageLog object.
+  PetscStageLogCreate - This creates a `PetscStageLog` object.
 
   Not collective
 
-  Input Parameter:
-. stageLog - The PetscStageLog
+  Output Parameter:
+. stageLog - The `PetscStageLog`
 
   Level: developer
 
 .seealso: `PetscStageLogCreate()`
 @*/
-PetscErrorCode  PetscStageLogCreate(PetscStageLog *stageLog)
-{
-  PetscStageLog  l;
+PetscErrorCode PetscStageLogCreate(PetscStageLog *stageLog) {
+  PetscStageLog l;
 
   PetscFunctionBegin;
   PetscCall(PetscNew(&l));

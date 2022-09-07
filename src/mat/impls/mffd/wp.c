@@ -1,33 +1,30 @@
 
 /*MC
-     MATMFFD_WP - Implements an alternative approach for computing the differencing parameter
-        h used with the finite difference based matrix-free Jacobian.  This code
-        implements the strategy of M. Pernice and H. Walker:
+     MATMFFD_WP - Implements an approach for computing the differencing parameter
+        h used with the finite difference based matrix-free Jacobian.
 
       h = error_rel * sqrt(1 + ||U||) / ||a||
 
-      Notes:
-        1) || U || does not change between linear iterations so is reused
-        2) In GMRES || a || == 1 and so does not need to ever be computed except at restart
-           when it is recomputed.
-
-      Reference:  M. Pernice and H. F. Walker, "NITSOL: A Newton Iterative
-      Solver for Nonlinear Systems", SIAM J. Sci. Stat. Comput.", 1998,
-      vol 19, pp. 302--318.
-
-   Options Database Keys:
-.   -mat_mffd_compute_normu -Compute the norm of u every time see MatMFFDWPSetComputeNormU()
+   Options Database Key:
+.   -mat_mffd_compute_normu -Compute the norm of u every time see `MatMFFDWPSetComputeNormU()`
 
    Level: intermediate
 
    Notes:
-    Requires no global collectives when used with GMRES
+   || U || does not change between linear iterations so is reused
+
+   In `KSPGMRES` || a || == 1 and so does not need to ever be computed except at restart
+    when it is recomputed.  Thus equires no global collectives when used with `KSPGMRES`
 
    Formula used:
      F'(u)*a = [F(u+h*a) - F(u)]/h where
 
-.seealso: `MATMFFD`, `MatCreateMFFD()`, `MatCreateSNESMF()`, `MATMFFD_DS`
+   Reference:
+.  * -  M. Pernice and H. F. Walker, "NITSOL: A Newton Iterative
+      Solver for Nonlinear Systems", SIAM J. Sci. Stat. Comput.", 1998,
+      vol 19, pp. 302--318.
 
+.seealso: `MATMFFD`, `MATMFFD_DS`, `MatCreateMFFD()`, `MatCreateSNESMF()`, `MATMFFD_DS`
 M*/
 
 /*
@@ -38,15 +35,15 @@ M*/
    See snesmfjdef.c for  a full set of comments on the routines below.
 */
 #include <petsc/private/matimpl.h>
-#include <../src/mat/impls/mffd/mffdimpl.h>   /*I  "petscmat.h"   I*/
+#include <../src/mat/impls/mffd/mffdimpl.h> /*I  "petscmat.h"   I*/
 
 typedef struct {
-  PetscReal normUfact;                    /* previous sqrt(1.0 + || U ||) */
+  PetscReal normUfact; /* previous sqrt(1.0 + || U ||) */
   PetscBool computenormU;
 } MatMFFD_WP;
 
 /*
-     MatMFFDCompute_WP - Standard PETSc code for
+     MatMFFDCompute_WP - code for
    computing h with matrix-free finite differences.
 
   Input Parameters:
@@ -58,24 +55,23 @@ typedef struct {
 .   h - the scale computed
 
 */
-static PetscErrorCode MatMFFDCompute_WP(MatMFFD ctx,Vec U,Vec a,PetscScalar *h,PetscBool  *zeroa)
-{
-  MatMFFD_WP     *hctx = (MatMFFD_WP*)ctx->hctx;
-  PetscReal      normU,norma;
+static PetscErrorCode MatMFFDCompute_WP(MatMFFD ctx, Vec U, Vec a, PetscScalar *h, PetscBool *zeroa) {
+  MatMFFD_WP *hctx = (MatMFFD_WP *)ctx->hctx;
+  PetscReal   normU, norma;
 
   PetscFunctionBegin;
   if (!(ctx->count % ctx->recomputeperiod)) {
     if (hctx->computenormU || !ctx->ncurrenth) {
-      PetscCall(VecNorm(U,NORM_2,&normU));
-      hctx->normUfact = PetscSqrtReal(1.0+normU);
+      PetscCall(VecNorm(U, NORM_2, &normU));
+      hctx->normUfact = PetscSqrtReal(1.0 + normU);
     }
-    PetscCall(VecNorm(a,NORM_2,&norma));
+    PetscCall(VecNorm(a, NORM_2, &norma));
     if (norma == 0.0) {
       *zeroa = PETSC_TRUE;
       PetscFunctionReturn(0);
     }
     *zeroa = PETSC_FALSE;
-    *h     = ctx->error_rel*hctx->normUfact/norma;
+    *h     = ctx->error_rel * hctx->normUfact / norma;
   } else {
     *h = ctx->currenth;
   }
@@ -93,18 +89,17 @@ static PetscErrorCode MatMFFDCompute_WP(MatMFFD ctx,Vec U,Vec a,PetscScalar *h,P
 -   viewer - the PETSc viewer
 
 */
-static PetscErrorCode MatMFFDView_WP(MatMFFD ctx,PetscViewer viewer)
-{
-  MatMFFD_WP     *hctx = (MatMFFD_WP*)ctx->hctx;
-  PetscBool      iascii;
+static PetscErrorCode MatMFFDView_WP(MatMFFD ctx, PetscViewer viewer) {
+  MatMFFD_WP *hctx = (MatMFFD_WP *)ctx->hctx;
+  PetscBool   iascii;
 
   PetscFunctionBegin;
-  PetscCall(PetscObjectTypeCompare((PetscObject)viewer,PETSCVIEWERASCII,&iascii));
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
   if (iascii) {
     if (hctx->computenormU) {
-      PetscCall(PetscViewerASCIIPrintf(viewer,"    Computes normU\n"));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "    Computes normU\n"));
     } else {
-      PetscCall(PetscViewerASCIIPrintf(viewer,"    Does not compute normU\n"));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "    Does not compute normU\n"));
     }
   }
   PetscFunctionReturn(0);
@@ -118,13 +113,12 @@ static PetscErrorCode MatMFFDView_WP(MatMFFD ctx,PetscViewer viewer)
 .  ctx - the matrix free context
 
 */
-static PetscErrorCode MatMFFDSetFromOptions_WP(PetscOptionItems *PetscOptionsObject,MatMFFD ctx)
-{
-  MatMFFD_WP     *hctx = (MatMFFD_WP*)ctx->hctx;
+static PetscErrorCode MatMFFDSetFromOptions_WP(MatMFFD ctx, PetscOptionItems *PetscOptionsObject) {
+  MatMFFD_WP *hctx = (MatMFFD_WP *)ctx->hctx;
 
   PetscFunctionBegin;
-  PetscOptionsHeadBegin(PetscOptionsObject,"Walker-Pernice options");
-  PetscCall(PetscOptionsBool("-mat_mffd_compute_normu","Compute the norm of u","MatMFFDWPSetComputeNormU", hctx->computenormU,&hctx->computenormU,NULL));
+  PetscOptionsHeadBegin(PetscOptionsObject, "Walker-Pernice options");
+  PetscCall(PetscOptionsBool("-mat_mffd_compute_normu", "Compute the norm of u", "MatMFFDWPSetComputeNormU", hctx->computenormU, &hctx->computenormU, NULL));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(0);
 }
@@ -140,18 +134,16 @@ static PetscErrorCode MatMFFDSetFromOptions_WP(PetscOptionItems *PetscOptionsObj
     does not free the ctx, that is handled by the calling routine
 
 */
-static PetscErrorCode MatMFFDDestroy_WP(MatMFFD ctx)
-{
+static PetscErrorCode MatMFFDDestroy_WP(MatMFFD ctx) {
   PetscFunctionBegin;
-  PetscCall(PetscObjectComposeFunction((PetscObject)ctx->mat,"MatMFFDWPSetComputeNormU_C",NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)ctx->mat, "MatMFFDWPSetComputeNormU_C", NULL));
   PetscCall(PetscFree(ctx->hctx));
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode  MatMFFDWPSetComputeNormU_P(Mat mat,PetscBool flag)
-{
-  MatMFFD    ctx   = (MatMFFD)mat->data;
-  MatMFFD_WP *hctx = (MatMFFD_WP*)ctx->hctx;
+PetscErrorCode MatMFFDWPSetComputeNormU_P(Mat mat, PetscBool flag) {
+  MatMFFD     ctx  = (MatMFFD)mat->data;
+  MatMFFD_WP *hctx = (MatMFFD_WP *)ctx->hctx;
 
   PetscFunctionBegin;
   hctx->computenormU = flag;
@@ -159,13 +151,13 @@ PetscErrorCode  MatMFFDWPSetComputeNormU_P(Mat mat,PetscBool flag)
 }
 
 /*@
-    MatMFFDWPSetComputeNormU - Sets whether it computes the ||U|| used by the WP
+    MatMFFDWPSetComputeNormU - Sets whether it computes the ||U|| used by the Walker-Pernice
              PETSc routine for computing h. With any Krylov solver this need only
              be computed during the first iteration and kept for later.
 
   Input Parameters:
-+   A - the matrix created with MatCreateSNESMF()
--   flag - PETSC_TRUE causes it to compute ||U||, PETSC_FALSE uses the previous value
++   A - the `MATMFFD` matrix
+-   flag - `PETSC_TRUE` causes it to compute ||U||, `PETSC_FALSE` uses the previous value
 
   Options Database Key:
 .   -mat_mffd_compute_normu <true,false> - true by default, false can save calculations but you
@@ -173,18 +165,16 @@ PetscErrorCode  MatMFFDWPSetComputeNormU_P(Mat mat,PetscBool flag)
 
   Level: advanced
 
-  Notes:
-   See the manual page for MATMFFD_WP for a complete description of the
+  Note:
+   See the manual page for `MATMFFD_WP` for a complete description of the
    algorithm used to compute h.
 
-.seealso: `MatMFFDSetFunctionError()`, `MatCreateSNESMF()`
-
+.seealso: `MATMFFD_WP`, `MATMFFD`, `MatMFFDSetFunctionError()`, `MatCreateSNESMF()`
 @*/
-PetscErrorCode  MatMFFDWPSetComputeNormU(Mat A,PetscBool flag)
-{
+PetscErrorCode MatMFFDWPSetComputeNormU(Mat A, PetscBool flag) {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(A,MAT_CLASSID,1);
-  PetscTryMethod(A,"MatMFFDWPSetComputeNormU_C",(Mat,PetscBool),(A,flag));
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscTryMethod(A, "MatMFFDWPSetComputeNormU_C", (Mat, PetscBool), (A, flag));
   PetscFunctionReturn(0);
 }
 
@@ -196,14 +186,13 @@ PetscErrorCode  MatMFFDWPSetComputeNormU(Mat A,PetscBool flag)
 .  ctx - the matrix free context created by MatCreateMFFD()
 
 */
-PETSC_EXTERN PetscErrorCode MatCreateMFFD_WP(MatMFFD ctx)
-{
-  MatMFFD_WP     *hctx;
+PETSC_EXTERN PetscErrorCode MatCreateMFFD_WP(MatMFFD ctx) {
+  MatMFFD_WP *hctx;
 
   PetscFunctionBegin;
   /* allocate my own private data structure */
-  PetscCall(PetscNewLog(ctx,&hctx));
-  ctx->hctx          = (void*)hctx;
+  PetscCall(PetscNewLog(ctx, &hctx));
+  ctx->hctx          = (void *)hctx;
   hctx->computenormU = PETSC_FALSE;
 
   /* set the functions I am providing */
@@ -212,6 +201,6 @@ PETSC_EXTERN PetscErrorCode MatCreateMFFD_WP(MatMFFD ctx)
   ctx->ops->view           = MatMFFDView_WP;
   ctx->ops->setfromoptions = MatMFFDSetFromOptions_WP;
 
-  PetscCall(PetscObjectComposeFunction((PetscObject)ctx->mat,"MatMFFDWPSetComputeNormU_C",MatMFFDWPSetComputeNormU_P));
+  PetscCall(PetscObjectComposeFunction((PetscObject)ctx->mat, "MatMFFDWPSetComputeNormU_C", MatMFFDWPSetComputeNormU_P));
   PetscFunctionReturn(0);
 }

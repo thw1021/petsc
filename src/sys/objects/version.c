@@ -10,22 +10,21 @@
 
     Level: developer
 
+    Note:
+    For doing runtime checking of supported versions we recommend using `PetscGetVersionNumber()` instead of this routine.
+
     Fortran Note:
     This routine is not supported in Fortran.
 
-    For doing runtime checking off supported versions we recommend using PetscGetVersionNumber() instead of this routine.
-
 .seealso: `PetscGetProgramName()`, `PetscGetVersionNumber()`
-
 @*/
 
-PetscErrorCode PetscGetVersion(char version[], size_t len)
-{
+PetscErrorCode PetscGetVersion(char version[], size_t len) {
   PetscFunctionBegin;
 #if (PETSC_VERSION_RELEASE == 1)
-  PetscCall(PetscSNPrintf(version,len,"Petsc Release Version %d.%d.%d, %s ",PETSC_VERSION_MAJOR,PETSC_VERSION_MINOR, PETSC_VERSION_SUBMINOR,PETSC_VERSION_DATE));
+  PetscCall(PetscSNPrintf(version, len, "Petsc Release Version %d.%d.%d, %s ", PETSC_VERSION_MAJOR, PETSC_VERSION_MINOR, PETSC_VERSION_SUBMINOR, PETSC_VERSION_DATE));
 #else
-  PetscCall(PetscSNPrintf(version,len,"Petsc Development GIT revision: %s  GIT Date: %s",PETSC_VERSION_GIT, PETSC_VERSION_DATE_GIT));
+  PetscCall(PetscSNPrintf(version, len, "Petsc Development GIT revision: %s  GIT Date: %s", PETSC_VERSION_GIT, PETSC_VERSION_DATE_GIT));
 #endif
   PetscFunctionReturn(0);
 }
@@ -44,16 +43,14 @@ PetscErrorCode PetscGetVersion(char version[], size_t len)
     Level: developer
 
     Notes:
-    The C macros PETSC_VERSION_MAJOR, PETSC_VERSION_MINOR, PETSC_VERSION_SUBMINOR, PETSC_VERSION_RELEASE provide the information at
-       compile time. This can be used to confirm that the shared library being loaded at runtime has the appropriate version updates.
+    The C macros `PETSC_VERSION_MAJOR`, `PETSC_VERSION_MINOR`, `PETSC_VERSION_SUBMINOR`, `PETSC_VERSION_RELEASE` provide the information at
+    compile time. This can be used to confirm that the shared library being loaded at runtime has the appropriate version updates.
 
-       This function can be called before PetscInitialize()
+    This function can be called before `PetscInitialize()`
 
 .seealso: `PetscGetProgramName()`, `PetscGetVersion()`, `PetscInitialize()`
-
 @*/
-PetscErrorCode PetscGetVersionNumber(PetscInt *major, PetscInt *minor, PetscInt *subminor,PetscInt *release)
-{
+PetscErrorCode PetscGetVersionNumber(PetscInt *major, PetscInt *minor, PetscInt *subminor, PetscInt *release) {
   if (major) *major = PETSC_VERSION_MAJOR;
   if (minor) *minor = PETSC_VERSION_MINOR;
   if (subminor) *subminor = PETSC_VERSION_SUBMINOR;

@@ -22,6 +22,9 @@ cdef extern from * nogil:
     int DMPlexInsertConeOrientation(PetscDM,PetscInt,PetscInt,PetscInt)
     int DMPlexGetConeOrientation(PetscDM,PetscInt,const PetscInt*[])
     int DMPlexSetConeOrientation(PetscDM,PetscInt,const PetscInt[])
+    int DMPlexSetCellType(PetscDM,PetscInt,PetscDMPolytopeType)
+    int DMPlexGetCellType(PetscDM,PetscInt,PetscDMPolytopeType*)
+    int DMPlexGetCellTypeLabel(PetscDM,PetscDMLabel*)
     int DMPlexGetSupportSize(PetscDM,PetscInt,PetscInt*)
     int DMPlexSetSupportSize(PetscDM,PetscInt,PetscInt)
     int DMPlexGetSupport(PetscDM,PetscInt,const PetscInt*[])
@@ -110,6 +113,8 @@ cdef extern from * nogil:
     #int DMPlexDistributeData(PetscDM,PetscSF,PetscSection,MPI_Datatype,void*,PetscSection,void**)
     int DMPlexIsDistributed(PetscDM,PetscBool*)
     int DMPlexIsSimplex(PetscDM,PetscBool*)
+    int DMPlexDistributionSetName(PetscDM,const char[])
+    int DMPlexDistributionGetName(PetscDM,const char*[])
 
     int DMPlexGetOrdering(PetscDM,PetscMatOrderingType,PetscDMLabel,PetscIS*)
     int DMPlexPermute(PetscDM,PetscIS,PetscDM*)

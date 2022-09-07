@@ -2,11 +2,11 @@ static char help[] = "Tests mesh reordering\n\n";
 
 #include <petscdmplex.h>
 
-int main(int argc, char **argv)
-{
-  DM             dm;
+int main(int argc, char **argv) {
+  DM dm;
 
-  PetscCall(PetscInitialize(&argc, &argv, NULL,help));
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   PetscCall(DMCreate(PETSC_COMM_WORLD, &dm));
   PetscCall(DMSetType(dm, DMPLEX));
   PetscCall(DMSetFromOptions(dm));

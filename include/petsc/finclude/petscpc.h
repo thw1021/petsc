@@ -47,6 +47,7 @@
 #define PCLU 'lu'
 #define PCQR 'qr'
 #define PCSHELL 'shell'
+#define PCAMGX 'amgx'
 #define PCBJACOBI 'bjacobi'
 #define PCMG 'mg'
 #define PCEISENSTAT 'eisenstat'
@@ -91,6 +92,7 @@
 #define PCDEFLATION 'deflation'
 #define PCHPDDM 'hpddm'
 #define PCH2OPUS 'h2opus'
+#define PCMPI 'mpi'
 
 #define PCMGType PetscEnum
 #define PCMGCycleType PetscEnum

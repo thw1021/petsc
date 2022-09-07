@@ -1,11 +1,12 @@
 .. _ch_advanced:
 
-Unimportant and Advanced Features of Matrices and Solvers
----------------------------------------------------------
+Advanced Features of Matrices and Solvers
+-----------------------------------------
 
 This chapter introduces additional features of the PETSc matrices and
-solvers. Since most PETSc users should not need to use these features,
-we recommend skipping this chapter during an initial reading.
+solvers.
+
+.. _sec_matsub:
 
 Extracting Submatrices
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -16,10 +17,53 @@ One can extract a (parallel) submatrix from a given (parallel) using
 
    MatCreateSubMatrix(Mat A,IS rows,IS cols,MatReuse call,Mat *B);
 
-This extracts the ``rows`` and ``col``\ umns of the matrix ``A`` into
+This extracts the ``rows`` and ``cols`` of the matrix ``A`` into
 ``B``. If call is ``MAT_INITIAL_MATRIX`` it will create the matrix
 ``B``. If call is ``MAT_REUSE_MATRIX`` it will reuse the ``B`` created
 with a previous call.
+
+One can also extract one or more submatrices per MPI rank with
+
+.. code-block::
+
+   MatCreateSubMatrices(Mat A,PetscInt n,IS rows[],IS cols[],MatReuse call,Mat *B[]);
+
+This extracts n (zero or more) matrices with the ``rows[k]`` and ``cols[k]`` of the matrix ``A`` into an array of
+sequential matrices ``B[k]`` on this process. If call is ``MAT_INITIAL_MATRIX`` it will create the array of matrices
+``B``. If call is ``MAT_REUSE_MATRIX`` it will reuse the ``B`` created
+with a previous call. The ``IS`` arguments are sequential. The array of matrices should be destroyed with ``MatDestroySubMatrices()``.
+
+Each submatrix may be parallel, existing on a ``MPI_Comm`` associated with each pair of ``IS`` ``rows[k]`` and ``cols[k]``,
+using
+
+.. code-block::
+
+   MatCreateSubMatricesMPI(Mat A,PetscInt n,IS rows[],IS cols[],MatReuse call,Mat *B[]);
+
+Finally this version has a specialization
+
+.. code-block::
+
+   MatGetMultiProcBlock(Mat A, MPI_Comm subComm, MatReuse scall,Mat *subMat);
+
+where collections of non-overlapping MPI ranks share a single parallel matrix on their sub-communicator.
+
+The routine
+
+.. code-block::
+
+   MatCreateRedundantMatrix(Mat A,PetscInt nsubcomm,MPI_Comm subcomm,MatReuse reuse,Mat *matredundant);
+
+where ``nsubcomm`` copies of the entire matrix are stored, one on each ``subcomm``. The routine ``PetscSubcommCreate()`` and its
+``PetscSubComm`` object may, but need not be, used to construct the ``subcomm``.
+
+The routine
+
+.. code-block::
+
+   MatMPIAdjToSeq(Mat A,Mat *B);
+
+is a specialization that duplicates an entire ``MATMPIADJ`` matrix on each MPI rank.
 
 .. _sec_matfactor:
 
@@ -31,7 +75,7 @@ interface, as discussed in :any:`chapter_ksp`, but the
 underlying factorization and triangular solve routines are also directly
 accessible to the user.
 
-The LU and Cholesky matrix factorizations are split into two or three
+The ILU, LU, ICC, Cholesky, and QR matrix factorizations are split into two or three
 stages depending on the user’s needs. The first stage is to calculate an
 ordering for the matrix. The ordering generally is done to reduce fill
 in a sparse factorization; it does not make much sense for a dense
@@ -55,8 +99,7 @@ The currently available alternatives for the ordering ``type`` are
 
 These orderings can also be set through the options database.
 
-Certain matrix formats may support only a subset of these; more options
-may be added. Check the manual pages for up-to-date information. All of
+Certain matrix formats may support only a subset of these. All of
 these orderings are symmetric at the moment; ordering routines that are
 not symmetric may be added. Currently we support orderings only for
 sequential matrices.
@@ -89,14 +132,27 @@ use at runtime with the command line option
 user should provide the ``ordname`` as the second input argument of
 ``MatGetOrdering()``.
 
-The following routines perform complete, in-place, symbolic, and
+PETSc matrices interface to a variety of external factorization/solver packages via the ``MatSolverType`` which can be
+``MATSOLVERSUPERLU_DIST``, ``MATSOLVERMUMPS``, ``MATSOLVERPASTIX``, ``MATSOLVERMKL_PARDISO``, ``MATSOLVERMKL_CPARDISO``,
+``MATSOLVERUMFPACK``, ``MATSOLVERCHOLMOD``, ``MATSOLVERKLU``, ``MATSOLVERCUSPARSE``, ``MATSOLVERCUSPARSEBAND``, ``MATSOLVERCUDA``,
+and ``MATSOLVERKOKKOSDEVICE``.
+The last three of which can run on GPUs, while ``MATSOLVERSUPERLU_DIST`` can partially run on GPUs.
+See :any:`doc_linsolve` for a table of the factorization based solvers in PETSc.
+
+Most of these packages compute their own orderings and cannot use ones provided so calls to the following routines with those
+packages can pass NULL as the ``IS`` permutations.
+
+The following routines perform incomplete and complete, in-place, symbolic, and
 numerical factorizations for symmetric and nonsymmetric matrices,
 respectively:
 
 .. code-block::
 
+   MatICCFactor(Mat matrix,IS permutation,const MatFactorInfo *info);
+   MatLUFactor(Mat matrix,IS rowpermutation,IS columnpermutation,const MatFactorInfo *info);
    MatCholeskyFactor(Mat matrix,IS permutation,const MatFactorInfo *info);
    MatLUFactor(Mat matrix,IS rowpermutation,IS columnpermutation,const MatFactorInfo *info);
+   MatQRFactor(Mat matatrix, IS columnpermutation, const MatFactorInfo *info);
 
 The argument ``info->fill > 1`` is the predicted fill expected in the
 factored matrix, as a ratio of the original fill. For example,
@@ -110,8 +166,8 @@ appears in-place because the factored matrix replaces the unfactored
 matrix.
 
 The two factorization stages can also be performed separately, by using
-the out-of-place mode, first one obtains that matrix object that will
-hold the factor
+the preferred out-of-place mode, first one obtains that matrix object that will
+hold the factor using
 
 .. code-block::
 
@@ -121,10 +177,19 @@ and then performs the factorization
 
 .. code-block::
 
+   MatICCFactorSymbolic(Mat factor,Mat matrix,IS perm,const MatFactorInfo *info);
    MatCholeskyFactorSymbolic(Mat factor,Mat matrix,IS perm,const MatFactorInfo *info);
+   MatILUFactorSymbolic(Mat factor,Mat matrix,IS rowperm,IS colperm,const MatFactorInfo *info);
    MatLUFactorSymbolic(Mat factor,Mat matrix,IS rowperm,IS colperm,const MatFactorInfo *info);
    MatCholeskyFactorNumeric(Mat factor,Mat matrix,const MatFactorInfo);
    MatLUFactorNumeric(Mat factor,Mat matrix,const MatFactorInfo *info);
+
+or
+
+.. code-block::
+
+   MatQRFactorSymbolic(Mat factor,Mat matrix,IS perm,const MatFactorInfo *info);
+   MatQRFactorNumeric(Mat factor,Mat matrix,const MatFactorInfo *info);
 
 In this case, the contents of the matrix ``result`` is undefined between
 the symbolic and numeric factorization stages. It is possible to reuse
@@ -149,7 +214,7 @@ combined factor routines do either in-place or out-of-place
 factorization, but then decided that this approach was not needed and
 could easily lead to confusion.
 
-We do not currently support sparse matrix factorization with pivoting
+We do not provide our own sparse matrix factorization with pivoting
 for numerical stability. This is because trying to both reduce fill and
 do pivoting can become quite complicated. Instead, we provide a poor
 stepchild substitute. After one has obtained a reordering, with
@@ -168,6 +233,14 @@ solver interface the option ``-pc_factor_nonzeros_along_diagonal <tol>``
 may be used. Here, ``tol`` is an optional tolerance to decide if a value
 is nonzero; by default it is ``1.e-10``.
 
+The external ``MatSolverType``'s ``MATSOLVERSUPERLU_DIST`` and ``MATSOLVERMUMPS``
+do manage numerical pivoting internal to their API.
+
+The external factorization packages each provide a wide number of options to chose from,
+details on these may be found by consulting the manual page for the solver package, such as,
+``MATSOLVERSUPERLU_DIST``. Most of the options can be easily set via the options database
+even when the factorization solvers are accessed via ``KSP``.
+
 Once a matrix has been factored, it is natural to solve linear systems.
 The following four routines enable this process:
 
@@ -184,72 +257,34 @@ general, the user should use the ``KSP`` solvers introduced in the next
 chapter rather than using these factorization and solve routines
 directly.
 
-Unimportant Details of KSP
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-``PetscDrawAxisDraw()``, are usually not used directly by the
-application programmer Again, virtually all users should use ``KSP``
-through the ``KSP`` interface and, thus, will not need to know the
-details that follow.
-
-It is possible to generate a Krylov subspace context with the command
+Some of the factorizations also support solves with multiple right hand sides stored in a ``Mat`` using
 
 .. code-block::
 
-   KSPCreate(MPI_Comm comm,KSP *kps);
+   MatMatSolve(Mat A,Mat B,Mat X);
 
-Before using the Krylov context, one must set the matrix-vector
-multiplication routine and the preconditioner with the commands
-
-.. code-block::
-
-   PCSetOperators(PC pc,Mat Amat,Mat Pmat);
-   KSPSetPC(KSP ksp,PC pc);
-
-In addition, the ``KSP`` solver must be initialized with
+and
 
 .. code-block::
 
-   KSPSetUp(KSP ksp);
+   MatMatSolveTranspose(Mat A,Mat B,Mat X);
 
-Solving a linear system is done with the command
+Finally, ``MATSOLVERMUMPS``, provides access to Schur complements obtained after partial factorizations as well
+as the inertia of a matrix via ``MatGetInertia()``.
 
-.. code-block::
+.. _sec_matmatproduct:
 
-   KSPSolve(KSP ksp,Vec b,Vec x);
+Matrix-Matrix Products
+~~~~~~~~~~~~~~~~~~~~~~
 
-Finally, the ``KSP`` context should be destroyed with
+PETSc matrices provide code for computing various matrix-matrix products. This section will introduce the two sets of routines
+available. For now consult ``MatCreateProduct()`` and ``MatMatMult()``.
 
-.. code-block::
 
-   KSPDestroy(KSP *ksp);
+Creating PC's Directly
+~~~~~~~~~~~~~~~~~~~~~~
 
-It may seem strange to put the matrix in the preconditioner rather than
-directly in the ``KSP``; this decision was the result of much agonizing.
-The reason is that for SSOR with Eisenstat’s trick, and certain other
-preconditioners, the preconditioner has to change the matrix-vector
-multiply. This procedure could not be done cleanly if the matrix were
-stashed in the ``KSP`` context that ``PC`` cannot access.
-
-Any preconditioner can supply not only the preconditioner, but also a
-routine that essentially performs a complete Richardson step. The reason
-for this is mainly SOR. To use SOR in the Richardson framework, that is,
-
-.. math:: u^{n+1} = u^{n} + B(f - A u^{n}),
-
-is much more expensive than just updating the values. With this addition
-it is reasonable to state that *all* our iterative methods are obtained
-by combining a preconditioner from the ``PC`` package with a Krylov
-method from the ``KSP`` package. This strategy makes things much simpler
-conceptually, so (we hope) clean code will result. *Note*: We had this
-idea already implicitly in older versions of ``KSP``, but, for instance,
-just doing Gauss-Seidel with Richardson in old ``KSP`` was much more
-expensive than it had to be. With PETSc this should not be a problem.
-
-Unimportant Details of PC
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Most users will obtain their preconditioner contexts from the ``KSP``
+Users obtain their preconditioner contexts from the ``KSP``
 context with the command ``KSPGetPC()``. It is possible to create,
 manipulate, and destroy ``PC`` contexts directly, although this
 capability should rarely be needed. To create a ``PC`` context, one uses

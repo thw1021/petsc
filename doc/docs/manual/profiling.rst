@@ -163,7 +163,7 @@ various user-defined stages of monitoring (as discussed in
 :any:`sec_profstages`) are also given. Information about the
 various phases of computation then follow (as shown separately here in
 `the second listing <listing_exparprof2>`__). Finally, a summary of
-memory usage and object creation and destruction is presented.
+object creation and destruction is presented.
 
 .. _listing_exparprof:
 
@@ -206,19 +206,16 @@ memory usage and object creation and destruction is presented.
 
    ------------------------------------------------------------------------------------------------------------------------
 
-   Memory usage is given in bytes:
-
-   Object Type          Creations   Destructions     Memory  Descendants' Mem.
-   Reports information only for process 0.
+   Object Type          Creations   Destructions    (Reports information only for process 0.)
    ...
    --- Event Stage 3: KSPSolve 0
 
-                 Matrix     0              4        23024     0.
-                 Vector    20             30        60048     0.
-              Index Set     0              3         2568     0.
-            Vec Scatter     0              1         1264     0.
-          Krylov Solver     0              2        19592     0.
-         Preconditioner     0              2         1912     0.
+                 Matrix     0              4
+                 Vector    20             30
+              Index Set     0              3
+            Vec Scatter     0              1
+          Krylov Solver     0              2
+         Preconditioner     0              2
 
 We next focus on the summaries for the various phases of the
 computation, as given in the table within
@@ -314,6 +311,10 @@ optimizing performance, since they indicate the sections of code that
 could benefit from various kinds of tuning.
 :any:`ch_performance` gives suggestions about achieving good
 performance with PETSc codes.
+
+The additional option `-log_view_memory` causes the display of additional columns of information about how much
+memory was allocated and freed during each logged event. This is useful
+to understand what phases of a computation require the most memory.
 
 .. _sec_mpelogs:
 
@@ -662,6 +663,30 @@ can be used to easily convert a regular PETSc program to one that uses
 preloading. The command line options ``-preload`` ``true`` and
 ``-preload`` ``false`` may be used to turn on and off preloading at run
 time for PETSc programs that use these macros.
+
+NVIDIA Nsight Systems profiling
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When a CUDA executable is preceeded by
+``nsys profile -f true -o file-name``, the default event profiling will add annotations to the
+Nsight Systems data that can help the navigation of ``file-name``  with the Nsight Systems GUI
+(https://developer.nvidia.com/nsight-systems). The Nsight Systems GUI
+lets you see a timeline of code performance information like kernels,
+mallocs, CPU-GPU communication, and high-level data like register
+usage in a kernel, among other things in a popup window when the mouse
+hovers over the section. The PETSc events are automatically also
+displayed in Nsight if the option -log_view is also used.
+
+For and MPI parallel job, only one process can call ``nsys``.
+For example one can in a bash script use something like:
+
+.. code-block:: bash
+
+   if [ "$OMPI_COMM_WORLD_RANK" == "0" ]; then
+       nsys profile -f true -o output "$@"
+   else
+       "$@"
+   fi
 
 .. raw:: html
 

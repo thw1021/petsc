@@ -171,12 +171,14 @@ class ScaledIdentity(Matrix):
             if mat is A: # product = identity^T * B
                 B.copy(product, structure=True)
             elif mat is B: # product = A^T * identity
+                A.setTransposePrecursor(product)
                 A.transpose(product)
             else:
                 raise RuntimeError('wrong configuration')
             product.scale(self.s)
         elif producttype == 'ABt':
             if mat is A: # product = identity * B^T
+                B.setTransposePrecursor(product)
                 B.transpose(product)
             elif mat is B: # product = A * identity^T
                 A.copy(product, structure=True)
@@ -403,6 +405,10 @@ class TestMatrix(unittest.TestCase):
 
         del AA.multTranspose
 
+    def testGetType(self):
+        ctx = self.A.getPythonContext()
+        pytype = "{0}.{1}".format(ctx.__module__, type(ctx).__name__)
+        self.assertTrue(self.A.getPythonType() == pytype)
 
 class TestScaledIdentity(TestMatrix):
 

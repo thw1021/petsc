@@ -86,9 +86,8 @@ PetscErrorCode SNESConverged(SNES snes,
     snes->reason = SNES_CONVERGED_ITERATING;
     snes->ttol = fnorm*snes->rtol;
   }
-  if (snes->ops->converged) {
-    PetscCall((*snes->ops->converged)(snes,iter,xnorm,ynorm,fnorm,&snes->reason,snes->cnvP));
-  } else {
+  if (snes->ops->converged) PetscUseTypeMethod(snes,converged ,iter,xnorm,ynorm,fnorm,&snes->reason,snes->cnvP);
+  else {
     PetscCall(SNESConvergedSkip(snes,iter,xnorm,ynorm,fnorm,&snes->reason,0));
     /*PetscCall(SNESConvergedDefault(snes,iter,xnorm,ynorm,fnorm,&snes->reason,0));*/
   }
@@ -112,7 +111,7 @@ PetscErrorCode TaoConverged(Tao tao)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
-  if (tao->ops->convergencetest) PetscCall((*tao->ops->convergencetest)(tao,tao->cnvP));
+  if (tao->ops->convergencetest) PetscUseTypeMethod(tao,convergencetest,tao->cnvP);
   else PetscCall(TaoDefaultConvergenceTest(tao,tao->cnvP));
   PetscFunctionReturn(0);
 }
@@ -178,7 +177,7 @@ PetscErrorCode TaoComputeUpdate(Tao tao)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
-  if (tao->ops->update) PetscCall((*tao->ops->update)(tao,tao->niter,tao->user_update));
+  PetscTryTypeMethod(tao,update,tao->niter,tao->user_update);
   PetscFunctionReturn(0);
 }
 
@@ -202,15 +201,13 @@ PetscErrorCode TaoGetVecs(Tao tao, Vec *X, Vec *G, Vec *S)
 }
 
 static inline
-PetscErrorCode TaoApplyLineSearch(Tao tao, PetscReal* f, PetscReal *s)
+PetscErrorCode TaoApplyLineSearch(Tao tao, PetscReal* f, PetscReal *s, TaoLineSearchConvergedReason *lsr)
 {
-  TaoLineSearchConvergedReason ls_reason;
   PetscFunctionBegin;
   PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
   PetscValidRealPointer(f,2);
   PetscValidRealPointer(s,3);
-  PetscCall(TaoLineSearchApply(tao->linesearch,tao->solution,f,tao->gradient,tao->stepdirection,s,&ls_reason));
-  PetscCheck(ls_reason == TAOLINESEARCH_SUCCESS || ls_reason == TAOLINESEARCH_SUCCESS_USER,PetscObjectComm((PetscObject)tao),PETSC_ERR_SUP,"Linesearch failed");
+  PetscCall(TaoLineSearchApply(tao->linesearch,tao->solution,f,tao->gradient,tao->stepdirection,s,lsr));
   PetscCall(TaoAddLineSearchCounts(tao));
   PetscFunctionReturn(0);
 }

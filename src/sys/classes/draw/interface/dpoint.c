@@ -2,10 +2,10 @@
 /*
        Provides the calling sequences for all the basic PetscDraw routines.
 */
-#include <petsc/private/drawimpl.h>  /*I "petscdraw.h" I*/
+#include <petsc/private/drawimpl.h> /*I "petscdraw.h" I*/
 
 /*@
-   PetscDrawPoint - PetscDraws a point onto a drawable.
+   PetscDrawPoint - draws a point onto a drawable.
 
    Not collective
 
@@ -16,21 +16,18 @@
 
    Level: beginner
 
-.seealso: `PetscDrawPointPixel()`, `PetscDrawPointSetSize()`, `PetscDrawLine()`, `PetscDrawRectangle()`, `PetscDrawTriangle()`, `PetscDrawEllipse()`,
+.seealso: `PetscDraw`, `PetscDrawPointPixel()`, `PetscDrawPointSetSize()`, `PetscDrawLine()`, `PetscDrawRectangle()`, `PetscDrawTriangle()`, `PetscDrawEllipse()`,
           `PetscDrawMarker()`, `PetscDrawString()`, `PetscDrawArrow()`
-
 @*/
-PetscErrorCode  PetscDrawPoint(PetscDraw draw,PetscReal xl,PetscReal yl,int cl)
-{
+PetscErrorCode PetscDrawPoint(PetscDraw draw, PetscReal xl, PetscReal yl, int cl) {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
-  PetscCheck(draw->ops->point,PETSC_COMM_SELF,PETSC_ERR_SUP,"This draw type %s does not support drawing points",((PetscObject)draw)->type_name);
-  PetscCall((*draw->ops->point)(draw,xl,yl,cl));
+  PetscValidHeaderSpecific(draw, PETSC_DRAW_CLASSID, 1);
+  PetscUseTypeMethod(draw, point, xl, yl, cl);
   PetscFunctionReturn(0);
 }
 
 /*@
-   PetscDrawPointPixel - PetscDraws a point onto a drawable, in pixel coordinates
+   PetscDrawPointPixel - draws a point onto a drawable, in pixel coordinates
 
    Not collective
 
@@ -41,15 +38,12 @@ PetscErrorCode  PetscDrawPoint(PetscDraw draw,PetscReal xl,PetscReal yl,int cl)
 
    Level: beginner
 
-.seealso: `PetscDrawPoint()`, `PetscDrawPointSetSize()`
-
+.seealso: `PetscDraw`, `PetscDrawPoint()`, `PetscDrawPointSetSize()`
 @*/
-PetscErrorCode  PetscDrawPointPixel(PetscDraw draw,int x,int y,int c)
-{
+PetscErrorCode PetscDrawPointPixel(PetscDraw draw, int x, int y, int c) {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
-  PetscCheck(draw->ops->pointpixel,PETSC_COMM_SELF,PETSC_ERR_SUP,"This draw type %s does not support drawing point pixels",((PetscObject)draw)->type_name);
-  PetscCall((*draw->ops->pointpixel)(draw,x,y,c));
+  PetscValidHeaderSpecific(draw, PETSC_DRAW_CLASSID, 1);
+  PetscUseTypeMethod(draw, pointpixel, x, y, c);
   PetscFunctionReturn(0);
 }
 
@@ -69,15 +63,12 @@ PetscErrorCode  PetscDrawPointPixel(PetscDraw draw,int x,int y,int c)
    Note:
    Even a size of zero insures that a single pixel is colored.
 
-.seealso: `PetscDrawPoint()`, `PetscDrawMarker()`
+.seealso: `PetscDraw`, `PetscDrawPoint()`, `PetscDrawMarker()`
 @*/
-PetscErrorCode  PetscDrawPointSetSize(PetscDraw draw,PetscReal width)
-{
+PetscErrorCode PetscDrawPointSetSize(PetscDraw draw, PetscReal width) {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(draw,PETSC_DRAW_CLASSID,1);
-  PetscCheck(width >= 0.0 && width <= 1.0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"Bad size %g, should be between 0 and 1",(double)width);
-  if (draw->ops->pointsetsize) {
-    PetscCall((*draw->ops->pointsetsize)(draw,width));
-  }
+  PetscValidHeaderSpecific(draw, PETSC_DRAW_CLASSID, 1);
+  PetscCheck(width >= 0.0 && width <= 1.0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Bad size %g, should be between 0 and 1", (double)width);
+  PetscTryTypeMethod(draw, pointsetsize, width);
   PetscFunctionReturn(0);
 }

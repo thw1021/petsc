@@ -17,20 +17,20 @@
 
    Level: developer
 
-   Note:
+   Notes:
    If PETSc cannot determine the home directory it makes dir a null string
 
-   On Windows machines the enviornmental variable HOME specifies the home directory.
+   On Windows machines the enviornmental variable `HOME` specifies the home directory.
 
+.seealso: `PetscGetTmp()`, `PetscSharedTmp()`, `PetscGetWorkingDirectory()`
 @*/
-PetscErrorCode  PetscGetHomeDirectory(char dir[],size_t maxlen)
-{
-  const char     *d1;
+PetscErrorCode PetscGetHomeDirectory(char dir[], size_t maxlen) {
+  const char *d1;
 
   PetscFunctionBegin;
   d1 = getenv("HOME");
   if (d1) {
-    PetscCall(PetscStrncpy(dir,d1,maxlen));
+    PetscCall(PetscStrncpy(dir, d1, maxlen));
   } else if (maxlen > 0) dir[0] = 0;
   PetscFunctionReturn(0);
 }
@@ -49,18 +49,17 @@ PetscErrorCode  PetscGetHomeDirectory(char dir[],size_t maxlen)
 
    Level: advanced
 
-   Notes:
-   Call PetscFixFilename() just before calling fopen().
+   Note:
+   Call `PetscFixFilename()` just before calling fopen().
 @*/
-PetscErrorCode  PetscFixFilename(const char filein[],char fileout[])
-{
-  size_t         i,n;
+PetscErrorCode PetscFixFilename(const char filein[], char fileout[]) {
+  size_t i, n;
 
   PetscFunctionBegin;
   if (!filein || !fileout) PetscFunctionReturn(0);
 
-  PetscCall(PetscStrlen(filein,&n));
-  for (i=0; i<n; i++) {
+  PetscCall(PetscStrlen(filein, &n));
+  for (i = 0; i < n; i++) {
     if (filein[i] == PETSC_REPLACE_DIR_SEPARATOR) fileout[i] = PETSC_DIR_SEPARATOR;
     else fileout[i] = filein[i];
   }

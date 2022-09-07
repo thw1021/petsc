@@ -3,15 +3,22 @@ import config.package
 class Configure(config.package.Package):
   def __init__(self, framework):
     config.package.Package.__init__(self, framework)
-    self.download               = ['http://ftp.mcs.anl.gov/pub/petsc/externalpackages/f2cblaslapack-3.4.2.q4.tar.gz']
+    self.download               = ['http://ftp.mcs.anl.gov/pub/petsc/externalpackages/f2cblaslapack-3.4.2.q5.tar.gz']
     self.downloadonWindows      = 1
     self.skippackagewithoptions = 1
 
   def setupDependencies(self, framework):
     config.package.Package.setupDependencies(self, framework)
     self.blis = framework.require('config.packages.blis', self)
+    self.scalartypes = framework.require('PETSc.options.scalarTypes', self)
     self.odeps = [self.blis]
     return
+
+  def setupHelp(self, help):
+    config.package.GNUPackage.setupHelp(self,help)
+    import nargs
+    help.addArgument('F2CBLASLAPACK', '-with-f2cblaslapack-float128-bindings', nargs.ArgBool(None, 0, 'Build BLAS/LAPACK with __float128 bindings'))
+    help.addArgument('F2CBLASLAPACK', '-with-f2cblaslapack-fp16-bindings', nargs.ArgBool(None, 0, 'Build BLAS/LAPACK with __fp16 bindings'))
 
   def configureLibrary(self):
     if self.argDB['with-64-bit-blas-indices']:
@@ -27,6 +34,21 @@ class Configure(config.package.Package):
     elif self.defaultPrecision == '__fp16': make_target   = 'blas_hlib lapack_hlib'
     elif self.blis.found: make_target = 'blasaux_lib lapack_lib'
     else: make_target = 'blas_lib lapack_lib'
+
+    if self.argDB['with-f2cblaslapack-float128-bindings'] and self.defaultPrecision != '__fp128':
+      if not self.scalartypes.have__float128:
+        raise RuntimeError('No __float128 support provided by the compiler, cannot use --with-f2cblaslapack-float128-bindings')
+      if self.defaultPrecision == '__fp16':
+        make_target = 'blas_qhlib lapack_qhlib'
+      else:
+        make_target = 'blas_qlib lapack_qlib'
+    if self.argDB['with-f2cblaslapack-fp16-bindings'] and self.defaultPrecision != '__fp16':
+      if not self.scalartypes.have__fp16:
+        raise RuntimeError('No __fp16 support provided by the compiler, cannot use --with-f2cblaslapack-fp16-bindings')
+      if self.defaultPrecision == '__float128' or self.argDB['with-f2cblaslapack-float128-bindings']:
+        make_target = 'blas_qhlib lapack_qhlib'
+      else:
+        make_target = 'blas_hlib lapack_hlib'
 
     libdir = self.libDir
     confdir = self.confDir
@@ -73,6 +95,12 @@ blas_qlib:\n\
 \t-@$(RANLIB) $(BLAS_LIB_NAME)\n\
 lapack_qlib:\n\
 \t-@cd lapack; $(MAKE) qlib $(MAKE_OPTIONS_LAPACK)\n\
+\t-@$(RANLIB) $(LAPACK_LIB_NAME)\n\
+blas_qhlib:\n\
+\t-@cd blas;   $(MAKE) qhlib $(MAKE_OPTIONS_BLAS)\n\
+\t-@$(RANLIB) $(BLAS_LIB_NAME)\n\
+lapack_qhlib:\n\
+\t-@cd lapack; $(MAKE) qhlib $(MAKE_OPTIONS_LAPACK)\n\
 \t-@$(RANLIB) $(LAPACK_LIB_NAME)\n'''
       g.write(otherlibs)
 

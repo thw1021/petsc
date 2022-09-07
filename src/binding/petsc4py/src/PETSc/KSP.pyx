@@ -433,6 +433,16 @@ cdef class KSP(Object):
         CHKERR( KSPGetConvergedReason(self.ksp, &reason) )
         return reason
 
+    def setErrorIfNotConverged(self, bint flag):
+        cdef PetscBool ernc = PETSC_FALSE
+        if flag: ernc = PETSC_TRUE
+        CHKERR( KSPSetErrorIfNotConverged(self.ksp, ernc) )
+
+    def getErrorIfNotConverged(self):
+        cdef PetscBool flag = PETSC_FALSE
+        CHKERR( KSPGetErrorIfNotConverged(self.ksp, &flag) )
+        return toBool(flag)
+
     def getRhs(self):
         cdef Vec vec = Vec()
         CHKERR( KSPGetRhs(self.ksp, &vec.vec) )
@@ -537,6 +547,11 @@ cdef class KSP(Object):
         cdef const char *cval = NULL
         py_type = str2bytes(py_type, &cval)
         CHKERR( KSPPythonSetType(self.ksp, cval) )
+
+    def getPythonType(self):
+        cdef const char *cval = NULL
+        CHKERR( KSPPythonGetType(self.ksp, &cval) )
+        return bytes2str(cval)
 
     # --- application context ---
 

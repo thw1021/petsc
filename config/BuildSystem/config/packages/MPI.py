@@ -757,62 +757,67 @@ Unable to run hostname to check the network')
     if hasattr(self.compilers, 'HIPC') and self.hip.found: needed = True
     if hasattr(self.compilers, 'SYCLC') and self.sycl.found: needed = True
     if not needed: return
-    import re
 
-    cflagsOutput = ''
-    libsOutput   = ''
-    if config.setCompilers.Configure.isCrayPEWrapper(self.setCompilers.CC, self.log):
-      # check these two env vars to only query MPICH headers and libs. Cray PE may include other libs.
-      var1 = os.environ.get('PE_PKGCONFIG_LIBS').split(':') # the env var is in a format like 'mpich:libsci_mpi:libsci:dsmml'
-      var2 = os.environ.get('PE_PKGCONFIG_PRODUCTS').split(':')
-      env  = None # None means to inherit the current process' environment
-      if ('mpich' in var1 and 'PE_MPICH' in var2): # assume the two env vars appear together if any one is set
-        env = dict(os.environ, PE_PKGCONFIG_LIBS='mpich', PE_PKGCONFIG_PRODUCTS='PE_MPICH') # modify the two env vars only
-
-      cflagsOutput = self.executeShellCommand([self.compilers.CC, '--cray-print-opts=cflags'], env=env, log = self.log)[0]
-      # --no-as-needed since we always need MPI
-      libsOutput   = self.executeShellCommand([self.compilers.CC, '--no-as-needed', '--cray-print-opts=libs'], env=env, log = self.log)[0]
+    if 'with-mpi-include' in self.argDB and 'with-mpi-lib' in self.argDB:
+      self.includepaths = self.headers.toString(self.argDB['with-mpi-include'])
+      self.mpilibs = self.libraries.toString(self.argDB['with-mpi-lib'])
+      self.libpaths = ''
     else:
-      cflagsOutput = self.executeShellCommand(self.compilers.CC + ' -show', log = self.log)[0] # not list since CC might be 'mpicc -cc=clang'
-      libsOutput   = cflagsOutput # same output as -show
+      import re
+      cflagsOutput = ''
+      libsOutput   = ''
+      if config.setCompilers.Configure.isCrayPEWrapper(self.setCompilers.CC, self.log):
+        # check these two env vars to only query MPICH headers and libs. Cray PE may include other libs.
+        var1 = os.environ.get('PE_PKGCONFIG_LIBS').split(':') # the env var is in a format like 'mpich:libsci_mpi:libsci:dsmml'
+        var2 = os.environ.get('PE_PKGCONFIG_PRODUCTS').split(':')
+        env  = None # None means to inherit the current process' environment
+        if ('mpich' in var1 and 'PE_MPICH' in var2): # assume the two env vars appear together if any one is set
+          env = dict(os.environ, PE_PKGCONFIG_LIBS='mpich', PE_PKGCONFIG_PRODUCTS='PE_MPICH') # modify the two env vars only
 
-    # find include paths
-    self.includepaths = ''
-    argIter = iter(cflagsOutput.split())
-    try:
-      while 1:
-        arg = next(argIter)
-        self.logPrint( 'Checking arg '+arg, 4, 'compilers')
-        m = re.match(r'^-I.*$', arg)
-        if m:
-          self.logPrint('Found include option: '+arg, 4, 'compilers')
-          self.includepaths += arg + ' '
-          continue
-    except StopIteration:
-      pass
-    # find libraries
-    self.libpaths = ''
-    self.mpilibs = ''
-    argIter = iter(libsOutput.split())
-    try:
-      while 1:
-        arg = next(argIter)
-        self.logPrint( 'Checking arg '+arg, 4, 'compilers')
-        m = re.match(r'^-L.*$', arg)
-        if m:
-          self.logPrint('Found -L link option: '+arg, 4, 'compilers')
-          self.libpaths += arg + ' '
-        m = re.match(r'^-Wl.*$', arg)
-        if m:
-          self.logPrint('Found -Wl link option: '+arg, 4, 'compilers')
-          self.libpaths += arg + ' '
-        m = re.match(r'^-l.*$', arg)
-        if m:
-          self.logPrint('Found -l link option: '+arg, 4, 'compilers')
-          # TODO filter out system libraries
-          self.mpilibs += arg + ' '
-    except StopIteration:
-      pass
+        cflagsOutput = self.executeShellCommand([self.compilers.CC, '--cray-print-opts=cflags'], env=env, log = self.log)[0]
+        # --no-as-needed since we always need MPI
+        libsOutput   = self.executeShellCommand([self.compilers.CC, '--no-as-needed', '--cray-print-opts=libs'], env=env, log = self.log)[0]
+      else:
+        cflagsOutput = self.executeShellCommand(self.compilers.CC + ' -show', log = self.log)[0] # not list since CC might be 'mpicc -cc=clang'
+        libsOutput   = cflagsOutput # same output as -show
+
+      # find include paths
+      self.includepaths = ''
+      argIter = iter(cflagsOutput.split())
+      try:
+        while 1:
+          arg = next(argIter)
+          self.logPrint( 'Checking arg '+arg, 4, 'compilers')
+          m = re.match(r'^-I.*$', arg)
+          if m:
+            self.logPrint('Found include option: '+arg, 4, 'compilers')
+            self.includepaths += arg + ' '
+            continue
+      except StopIteration:
+        pass
+      # find libraries
+      self.libpaths = ''
+      self.mpilibs = ''
+      argIter = iter(libsOutput.split())
+      try:
+        while 1:
+          arg = next(argIter)
+          self.logPrint( 'Checking arg '+arg, 4, 'compilers')
+          m = re.match(r'^-L.*$', arg)
+          if m:
+            self.logPrint('Found -L link option: '+arg, 4, 'compilers')
+            self.libpaths += arg + ' '
+          m = re.match(r'^-Wl.*$', arg)
+          if m:
+            self.logPrint('Found -Wl link option: '+arg, 4, 'compilers')
+            self.libpaths += arg + ' '
+          m = re.match(r'^-l.*$', arg)
+          if m:
+            self.logPrint('Found -l link option: '+arg, 4, 'compilers')
+            # TODO filter out system libraries
+            self.mpilibs += arg + ' '
+      except StopIteration:
+        pass
     self.addMakeMacro('MPICXX_INCLUDES',self.includepaths)
     self.addMakeMacro('MPICXX_LIBS',self.libpaths + ' ' + self.mpilibs)
     return
@@ -826,6 +831,7 @@ Unable to run hostname to check the network')
     return
 
   def PetscArchMPICheck(self):
+    '''Check that previously configured for MPI include files are not in the PETSC_ARCH directory'''
     import os
     '''Makes sure incompatable mpi.h is not in the PETSC_ARCH/include directory'''
     build_mpi_h_dir = os.path.join(self.petscdir.dir,self.arch,'include')
@@ -851,8 +857,8 @@ Unable to run hostname to check the network')
 
 
   def configureLibrary(self):
-    import platform
     '''Calls the regular package configureLibrary and then does an additional test needed by MPI'''
+    import platform
     if 'with-'+self.package+'-shared' in self.argDB:
       self.argDB['with-'+self.package] = 1
     config.package.Package.configureLibrary(self)

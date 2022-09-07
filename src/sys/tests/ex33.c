@@ -6,50 +6,39 @@ static char help[] = "Tests PetscStack.\n\n";
 #define PETSCSTACKSIZE 64
 #endif
 
-PetscErrorCode correct()
-{
+PetscErrorCode correct() {
   PetscFunctionBegin;
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode correctu()
-{
+PetscErrorCode correctu() {
   PetscFunctionBeginUser;
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode foo()
-{
+PetscErrorCode foo() {
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode bar()
-{
+PetscErrorCode bar() {
   PetscFunctionBegin;
   return 0;
 }
 
-PetscErrorCode baru()
-{
+PetscErrorCode baru() {
   PetscFunctionBeginUser;
   return 0;
 }
 
-int main(int argc,char **argv)
-{
-  PetscBool      flg = PETSC_FALSE;
-
-  PetscCall(PetscInitialize(&argc,&argv,(char*)0,help));
-#if defined(PETSC_USE_DEBUG)
-  PetscCall(PetscOptionsGetBool(NULL,NULL,"-checkstack",&flg,NULL));
-#endif
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD,"%s for stack\n",flg ? "Checking" : "Not checking"));
-  for (PetscInt i = 0; i < PETSCSTACKSIZE+1; i++) PetscCall(correct());
-  for (PetscInt i = 0; i < PETSCSTACKSIZE+1; i++) PetscCall(foo());
-  for (PetscInt i = 0; i < PETSCSTACKSIZE+1; i++) PetscCall(bar());
-  for (PetscInt i = 0; i < PETSCSTACKSIZE+1; i++) PetscCall(foo());
-  for (PetscInt i = 0; i < PETSCSTACKSIZE+1; i++) PetscCall(baru());
-  for (PetscInt i = 0; i < PETSCSTACKSIZE+1; i++) PetscCall(foo());
+int main(int argc, char **argv) {
+  PetscFunctionBeginUser;
+  PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
+  for (PetscInt i = 0; i < PETSCSTACKSIZE + 1; i++) PetscCall(correct());
+  for (PetscInt i = 0; i < PETSCSTACKSIZE + 1; i++) PetscCall(foo());
+  for (PetscInt i = 0; i < PETSCSTACKSIZE + 1; i++) PetscCall(bar());
+  for (PetscInt i = 0; i < PETSCSTACKSIZE + 1; i++) PetscCall(foo());
+  for (PetscInt i = 0; i < PETSCSTACKSIZE + 1; i++) PetscCall(baru());
+  for (PetscInt i = 0; i < PETSCSTACKSIZE + 1; i++) PetscCall(foo());
   PetscCall(PetscFinalize());
   return 0;
 }
@@ -57,5 +46,6 @@ int main(int argc,char **argv)
 /*TEST
 
   test:
+    TODO: Since this now errors out the test harness can chock on the output
 
 TEST*/

@@ -1039,7 +1039,10 @@ Algebraic Multigrid (AMG) Preconditioners
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 PETSc has a native algebraic multigrid preconditioner ``PCGAMG`` –
-*gamg* – and interfaces to two external AMG packages: *hypre* and *ML*.
+*gamg* – and interfaces to three external AMG packages: *hypre*, *ML*
+and *AMGx* (CUDA platforms only), that can be downloaded in the
+configuration phase (eg, ``--download-hypre`` ) and used by
+specifiying that command line parameter (eg, ``-pc_type hypre``).
 *Hypre* is relatively monolithic in that a PETSc matrix is converted into a hypre
 matrix and then *hypre* is called to do the entire solve. *ML* is more
 modular in that PETSc only has *ML* generate the coarse grid spaces
@@ -1129,8 +1132,8 @@ code that uses GAMG with ``-help`` to get full listing of GAMG
 parameters with short parameter descriptions. The rate of coarsening is
 critical in AMG performance – too slow coarsening will result in an
 overly expensive solver per iteration and too fast coarsening will
-result in decrease in the convergence rate. ``-pc_gamg_threshold <0>``
-and ``-pc_gamg_square_graph <1>,`` are the primary parameters that
+result in decrease in the convergence rate. ``-pc_gamg_threshold <-1>``
+and ``-pc_gamg_aggressive_coarsening <N>`` are the primary parameters that
 control coarsening rates, which is very important for AMG performance. A
 greedy maximal independent set (MIS) algorithm is used in coarsening.
 Squaring the graph implements so called MIS-2, the root vertex in an
@@ -1142,10 +1145,10 @@ will keep zero edges, a positive number will drop small edges. Typical
 finite threshold values are in the range of :math:`0.01 - 0.05`. There
 are additional parameters for changing the weights on coarse grids.
 Note, the parallel algorithm requires symmetric weights/matrix. You must
-use ``-pc_gamg_sym_graph <true>`` to symmetrize the graph if your
+use ``-pc_gamg_symmetrize_graph <true>`` to symmetrize the graph if your
 problem is not symmetric.
 
-**Trouble shooting algebraic multigrid methods:** If *GAMG*, *ML*, or
+**Trouble shooting algebraic multigrid methods:** If *GAMG*, *ML*, *AMGx* or
 *hypre* does not perform well the first thing to try is one of the other
 methods. Often the default parameters or just the strengths of different
 algorithms can fix performance problems or provide useful information to
@@ -1172,8 +1175,8 @@ operator, which can be set using ``PCHYPRESetDiscreteCurl()``.
 coarsening rates and methods; for GAMG use ``-pc_gamg_threshold <x>``
 or ``PCGAMGSetThreshold()`` to regulate coarsening rates, higher values decrease
 coarsening rate. Squaring the graph is the second mechanism for
-increasing coarsening rate. Use ``-pc_gamg_square_graph <N>``, or
-``PCGAMGSetSquareGraph(pc,N)``, to square the graph on the finest N
+increasing coarsening rate. Use ``-pc_gamg_aggressive_coarsening <N>``, or
+``PCGAMGSetAggressiveLevels(pc,N)``, to aggressive ly coarsen (MIS-2) the graph on the finest N
 levels. A high threshold (e.g., :math:`x=0.08`) will result in an
 expensive but potentially powerful preconditioner, and a low threshold
 (e.g., :math:`x=0.0`) will result in faster coarsening, fewer levels,
@@ -1192,7 +1195,7 @@ entries on the fine level). Grid complexity should be well under 2.0 and
 preferably around :math:`1.3` or lower. If convergence is poor and the
 Galerkin coarse grid construction is much smaller than the time for each
 solve then one can safely decrease the coarsening rate.
-``-pc_gamg_threshold`` :math:`0.0` is the simplest and most robust
+``-pc_gamg_threshold`` :math:`-1.0` is the simplest and most robust
 option, and is recommended if poor convergence rates are observed, at
 least until the source of the problem is discovered. In conclusion, if
 convergence is slow then decreasing the coarsening rate (increasing the
@@ -1223,8 +1226,8 @@ determined by running with ``-log_view`` and check that the time for the
 Galerkin coarse grid construction (``MatPtAP``) is not (much) more than
 the time spent in each solve (``KSPSolve``). If the ``MatPtAP`` time is
 too large then one can increase the coarsening rate by decreasing the
-threshold and squaring the coarsening graph
-(``-pc_gamg_square_graph <N>``, squares the graph on the finest N
+threshold and using aggressive coarsening 
+(``-pc_gamg_aggressive_coarsening <N>``, squares the graph on the finest N
 levels). Likewise if your ``MatPtAP`` time is small and your convergence
 rate is not ideal then you could decrease the coarsening rate.
 
@@ -1232,6 +1235,122 @@ PETSc’s AMG solver is constructed as a framework for developers to
 easily add AMG capabilities, like a new AMG methods or an AMG component
 like a matrix triple product. Contact us directly if you are interested
 in contributing.
+
+Adaptive Interpolation
+``````````````````````
+
+**Interpolation** transfers a function from the coarse space to the fine space. We would like this process to be accurate for the functions resolved by the coarse grid, in particular the approximate solution computed there. By default, we create these matrices using local interpolation of the fine grid dual basis functions in the coarse basis. However, an adaptive procedure can optimize the coefficients of the interpolator to reproduce pairs of coarse/fine functions which should approximate the lowest modes of the generalized eigenproblem
+
+.. math::
+
+  A x = \lambda M x
+
+where :math:`A` is the system matrix and :math:`M` is the smoother. Note that for defect-correction MG, the interpolated solution from the coarse space need not be as accurate as the fine solution, for the same reason that updates in iterative refinement can be less accurate. However, in FAS or in the final interpolation step for each level of Full Multigrid, we must have interpolation as accurate as the fine solution since we are moving the entire solution itself.
+
+**Injection** should accurately transfer the fine solution to the coarse grid. Accuracy here means that the action of a coarse dual function on either should produce approximately the same result. In the structured grid case, this means that we just use the same values on coarse points. This can result in aliasing.
+
+**Restriction** is intended to transfer the fine residual to the coarse space. Here we use averaging (often the transpose of the interpolation operation) to damp out the fine space contributions. Thus, it is less accurate than injection, but avoids aliasing of the high modes.
+
+For a multigrid cycle, the interpolator :math:`P` is intended to accurately reproduce "smooth" functions from the coarse space in the fine space, keeping the energy of the interpolant about the same. For the Laplacian on a structured mesh, it is easy to determine what these low-frequency functions are. They are the Fourier modes. However an arbitrary operator :math:`A` will have different coarse modes that we want to resolve accurately on the fine grid, so that our coarse solve produces a good guess for the fine problem. How do we make sure that our interpolator :math:`P` can do this?
+
+We first must decide what we mean by accurate interpolation of some functions. Suppose we know the continuum function :math:`f` that we care about, and we are only interested in a finite element description of discrete functions. Then the coarse function representing :math:`f` is given by
+
+.. math::
+
+  f^C = \sum_i f^C_i \phi^C_i,
+
+and similarly the fine grid form is
+
+.. math::
+
+  f^F = \sum_i f^F_i \phi^F_i.
+
+Now we would like the interpolant of the coarse representer to the fine grid to be as close as possible to the fine representer in a least squares sense, meaning we want to solve the minimization problem
+
+.. math::
+
+  \min_{P} \| f^F - P f^C \|_2
+
+Now we can express :math:`P` as a matrix by looking at the matrix elements :math:`P_{ij} = \phi^F_i P \phi^C_j`. Then we have
+
+.. math::
+
+  \begin{aligned}
+    &\phi^F_i f^F - \phi^F_i P f^C \\
+  = &f^F_i - \sum_j P_{ij} f^C_j
+  \end{aligned}
+
+so that our discrete optimization problem is
+
+.. math::
+
+  \min_{P_{ij}} \| f^F_i - \sum_j P_{ij} f^C_j \|_2
+
+and we will treat each row of the interpolator as a separate optimization problem. We could allow an arbitrary sparsity pattern, or try to determine adaptively, as is done in sparse approximate inverse preconditioning. However, we know the supports of the basis functions in finite elements, and thus the naive sparsity pattern from local interpolation can be used.
+
+We note here that the BAMG framework of Brannick et al. :cite:`BrandtBrannickKahlLivshits2011` does not use fine and coarse functions spaces, but rather a fine point/coarse point division which we will not employ here. Our general PETSc routine should work for both since the input would be the checking set (fine basis coefficients or fine space points) and the approximation set (coarse basis coefficients in the support or coarse points in the sparsity pattern).
+
+We can easily solve the above problem using QR factorization. However, there are many smooth functions from the coarse space that we want interpolated accurately, and a single :math:`f` would not constrain the values :math:`P_{ij}`` well. Therefore, we will use several functions :math:`\{f_k\}` in our minimization,
+
+.. math::
+
+  \begin{aligned}
+    &\min_{P_{ij}} \sum_k w_k \| f^{F,k}_i - \sum_j P_{ij} f^{C,k}_j \|_2 \\
+  = &\min_{P_{ij}} \sum_k \| \sqrt{w_k} f^{F,k}_i - \sqrt{w_k} \sum_j P_{ij} f^{C,k}_j \|_2 \\
+  = &\min_{P_{ij}} \| W^{1/2} \mathbf{f}^{F}_i - W^{1/2} \mathbf{f}^{C} p_i \|_2
+  \end{aligned}
+
+where
+
+.. math::
+
+  \begin{aligned}
+  W         &= \begin{pmatrix} w_0 & & \\ & \ddots & \\ & & w_K \end{pmatrix} \\
+  \mathbf{f}^{F}_i &= \begin{pmatrix} f^{F,0}_i \\ \vdots \\ f^{F,K}_i \end{pmatrix} \\
+  \mathbf{f}^{C}   &= \begin{pmatrix} f^{C,0}_0 & \cdots & f^{C,0}_n \\ \vdots & \ddots &  \vdots \\ f^{C,K}_0 & \cdots & f^{C,K}_n \end{pmatrix} \\
+  p_i       &= \begin{pmatrix} P_{i0} \\ \vdots \\ P_{in} \end{pmatrix}
+  \end{aligned}
+
+or alternatively
+
+.. math::
+
+  \begin{aligned}
+  [W]_{kk}     &= w_k \\
+  [f^{F}_i]_k  &= f^{F,k}_i \\
+  [f^{C}]_{kj} &= f^{C,k}_j \\
+  [p_i]_j      &= P_{ij}
+  \end{aligned}
+
+We thus have a standard least-squares problem
+
+.. math::
+
+  \min_{P_{ij}} \| b - A x \|_2
+
+where
+
+.. math::
+
+  \begin{aligned}
+  A &= W^{1/2} f^{C} \\
+  b &= W^{1/2} f^{F}_i \\
+  x &= p_i
+  \end{aligned}
+
+which can be solved using LAPACK.
+
+We will typically perform this optimization on a multigrid level :math:`l` when the change in eigenvalue from level :math:`l+1` is relatively large, meaning
+
+.. math::
+
+  \frac{|\lambda_l - \lambda_{l+1}|}{|\lambda_l|}.
+
+This indicates that the generalized eigenvector associated with that eigenvalue was not adequately represented by :math:`P^l_{l+1}``, and the interpolator should be recomputed.
+
+.. raw:: html
+
+    <hr>
 
 Balancing Domain Decomposition by Constraints
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2308,3 +2427,28 @@ or message.
 
 .. bibliography:: /petsc.bib
    :filter: docname in docnames
+
+.. _sec_pcmpi:
+
+Using a MPI parallel linear solver from a non-MPI program
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Using PETSc's MPI linear solver server it is possible to use multiple MPI processes to solve a
+a linear system when the application code, including the matrix generation, is run on a single
+MPI rank (with or without OpenMP). The application code must be built with MPI and must call
+``PetscIntialize()`` at the very beginning of the program and end with ``PetscFinalize()``. The
+application code may utilize OpenMP.
+The code may create multiple matrices and `KSP` objects and call `KSPSolve()`, similarly the
+code may utilize the `SNES` nonlinear solvers, the `TS` ODE integrators, and the `TAO` optimization algorithms
+which use `KSP`.
+
+Amdahl's law makes clear that parallelizing only a portion of a numerical code can only provide a limited improvement
+in the computation time; thus it is crucial to understand what phases of a computation must be parallelized (via MPI, OpenMP, or some other model)
+to ensure a useful increase in performance. One of the crucial phases is likely the generation of the matrix entries; the
+use of `MatSetPreallocationCOO()` and `MatSetValuesCOO()` in an OpenMP code allows parallelizing the generation of the matrix.
+
+The program must then be launched using the standard approaches for launching MPI programs with the
+option `-mpi_linear_solver_server` and options to utilize the `PCMPI` preconditioners; for example,
+`-ksp_type preonly` and `pc_type mpi`. Any standard solver options may be passed to the parallel solvers using the
+options prefix `-mpi_`; for example, `-mpi_ksp_type cg`. The option `-mpi_linear_solver_server_view` will print
+a summary of all the systems solved by the MPI linear solver server.
