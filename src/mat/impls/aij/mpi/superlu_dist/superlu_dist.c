@@ -273,6 +273,22 @@ static PetscErrorCode MatSolve_SuperLU_DIST(Mat A, Vec b_mpi, Vec x)
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode MatSolveTranspose_SuperLU_DIST(Mat A, Vec b, Vec x)
+{
+  Mat_SuperLU_DIST *lu = (Mat_SuperLU_DIST *)A->data;
+  PetscInt oldOption = lu->options.Trans;
+
+  PetscFunctionBegin;
+#if defined(PETSC_USE_COMPLEX)
+  lu->options.Trans = CONJ;
+#else
+  lu->options.Trans = TRANS;
+#endif
+  PetscCall(MatSolve_SuperLU_DIST(A, b, b));
+  lu->options.Trans = oldOption;
+  PetscFunctionReturn(0);
+}
+
 static PetscErrorCode MatMatSolve_SuperLU_DIST(Mat A, Mat B_mpi, Mat X)
 {
   Mat_SuperLU_DIST *lu = (Mat_SuperLU_DIST *)A->data;
@@ -320,6 +336,22 @@ static PetscErrorCode MatMatSolve_SuperLU_DIST(Mat A, Mat B_mpi, Mat X)
   PetscStackCallExternalVoid("SuperLU_DIST:PStatFree", PStatFree(&stat));
   lu->matsolve_iscalled    = PETSC_FALSE;
   lu->matmatsolve_iscalled = PETSC_TRUE;
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode MatMatSolveTranspose_SuperLU_DIST(Mat A, Mat B, Mat X)
+{
+  Mat_SuperLU_DIST *lu = (Mat_SuperLU_DIST *)A->data;
+  PetscInt oldOption = lu->options.Trans;
+
+  PetscFunctionBegin;
+#if defined(PETSC_USE_COMPLEX)
+  lu->options.Trans = CONJ;
+#else
+  lu->options.Trans = TRANS;
+#endif
+  PetscCall(MatMatSolve_SuperLU_DIST(A, B, X));
+  lu->options.Trans = oldOption;
   PetscFunctionReturn(0);
 }
 
@@ -660,10 +692,12 @@ static PetscErrorCode MatLUFactorSymbolic_SuperLU_DIST(Mat F, Mat A, IS r, IS c,
   /* Initialize ScalePermstruct and LUstruct. */
   PetscStackCallExternalVoid("SuperLU_DIST:ScalePermstructInit", ScalePermstructInit(M, N, &lu->ScalePermstruct));
   PetscStackCallExternalVoid("SuperLU_DIST:LUstructInit", LUstructInit(N, &lu->LUstruct));
-  F->ops->lufactornumeric = MatLUFactorNumeric_SuperLU_DIST;
-  F->ops->solve           = MatSolve_SuperLU_DIST;
-  F->ops->matsolve        = MatMatSolve_SuperLU_DIST;
-  F->ops->getinertia      = NULL;
+  F->ops->lufactornumeric   = MatLUFactorNumeric_SuperLU_DIST;
+  F->ops->solve             = MatSolve_SuperLU_DIST;
+  F->ops->solvetranspose    = MatSolveTranspose_SuperLU_DIST;
+  F->ops->matsolve          = MatMatSolve_SuperLU_DIST;
+  F->ops->matsolvetranspose = MatMatSolveTranspose_SuperLU_DIST;
+  F->ops->getinertia        = NULL;
 
   if (A->symmetric == PETSC_BOOL3_TRUE || A->hermitian == PETSC_BOOL3_TRUE) F->ops->getinertia = MatGetInertia_SuperLU_DIST;
   lu->CleanUpSuperLU_Dist = PETSC_TRUE;
