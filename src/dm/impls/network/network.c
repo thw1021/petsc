@@ -2803,7 +2803,6 @@ PetscErrorCode DMCreateCoordinateDM_Network(DM dm,DM *cdm)
 
   /* Add nvar=3 to each vertex for storing coordinate (x,y,z) */
   PetscCall(DMNetworkGetNumSubNetworks(dm,NULL,&Nsubnet));
-  printf("DMCreateCoordinateDM_Network...Nsubnet %d\n",Nsubnet);
   for (net=0; net<Nsubnet; net++) {
     PetscCall(DMNetworkGetSubnetwork(*cdm,net,&nv,NULL,&vtx,NULL));
     for (i=0; i<nv; i++) PetscCall(DMNetworkAddComponent(*cdm, vtx[i], key, NULL, 3));
