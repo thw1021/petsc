@@ -13,7 +13,7 @@ int main(int argc, char **args)
   IS            perm, iperm;
   MatFactorInfo info;
   PetscRandom   rand;
-  PetscBool     flg, testMatSolve = PETSC_TRUE, testMatMatSolve = PETSC_TRUE, testMatMatSolveTranspose = PETSC_TRUE;
+  PetscBool     flg, testMatSolve = PETSC_TRUE, testMatMatSolve = PETSC_TRUE, testMatMatSolveTranspose = PETSC_TRUE, testMatSolveTranspose = PETSC_TRUE;
   PetscBool     chol = PETSC_FALSE, view = PETSC_FALSE, matsolvexx = PETSC_FALSE;
 #if defined(PETSC_HAVE_MUMPS)
   PetscBool test_mumps_opts = PETSC_FALSE;
@@ -66,6 +66,8 @@ int main(int argc, char **args)
 
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-view_factor", &view, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_matmatsolve", &testMatMatSolve, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_matmatsolvetranspose", &testMatMatSolveTranspose, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_matsolvetranspose", &testMatSolveTranspose, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-cholesky", &chol, NULL));
 #if defined(PETSC_HAVE_MUMPS)
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_mumps_opts", &test_mumps_opts, NULL));
@@ -321,6 +323,28 @@ int main(int argc, char **args)
           PetscCall(VecAXPY(u, -1.0, b)); /* u <- (-1.0)b + u */
           PetscCall(VecNorm(u, NORM_2, &resi));
           PetscCall(PetscPrintf(PETSC_COMM_WORLD, "MatSolve: Norm of error %g, resi %g, numfact %" PetscInt_FMT "\n", (double)norm, (double)resi, nfact));
+        }
+      }
+    }
+
+    /* Test MatSolveTranspose() */
+    if (testMatSolveTranspose) {
+      for (nsolve = 0; nsolve < 2; nsolve++) {
+        PetscCall(VecSetRandom(x, rand));
+        PetscCall(VecCopy(x, u));
+        PetscCall(MatMultTranspose(A, x, b));
+
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   %" PetscInt_FMT "-the MatSolveTranspose \n", nsolve));
+        PetscCall(MatSolveTranspose(F, b, x));
+
+        /* Check the error */
+        PetscCall(VecAXPY(u, -1.0, x)); /* u <- (-1.0)x + u */
+        PetscCall(VecNorm(u, NORM_2, &norm));
+        if (norm > tol) {
+          PetscReal resi;
+          PetscCall(VecAXPY(u, -1.0, b)); /* u <- (-1.0)b + u */
+          PetscCall(VecNorm(u, NORM_2, &resi));
+          PetscCall(PetscPrintf(PETSC_COMM_WORLD, "MatSolveTranspose: Norm of error %g, resi %g, numfact %" PetscInt_FMT "\n", (double)norm, (double)resi, nfact));
         }
       }
     }
