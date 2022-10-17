@@ -2792,25 +2792,6 @@ PetscErrorCode DMDestroy_Network(DM dm)
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode DMCreateCoordinateDM_Network(DM dm,DM *cdm)
-{
-  PetscInt       i,key,Nsubnet,net,nv;
-  const PetscInt *vtx;
-
-  PetscFunctionBegin;
-  PetscCall(DMClone(dm, cdm));
-  PetscCall(DMNetworkRegisterComponent(*cdm, "Dummy", 0, &key));
-
-  /* Add nvar=3 to each vertex for storing coordinate (x,y,z) */
-  PetscCall(DMNetworkGetNumSubNetworks(dm,NULL,&Nsubnet));
-  for (net=0; net<Nsubnet; net++) {
-    PetscCall(DMNetworkGetSubnetwork(*cdm,net,&nv,NULL,&vtx,NULL));
-    for (i=0; i<nv; i++) PetscCall(DMNetworkAddComponent(*cdm, vtx[i], key, NULL, 3));
-  }
-  PetscCall(DMNetworkFinalizeComponents(*cdm));
-  PetscFunctionReturn(0);
-}
-
 PetscErrorCode DMGlobalToLocalBegin_Network(DM dm, Vec g, InsertMode mode, Vec l)
 {
   DM_Network *network = (DM_Network *)dm->data;
