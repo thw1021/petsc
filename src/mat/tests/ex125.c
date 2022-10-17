@@ -92,7 +92,9 @@ int main(int argc, char **args)
     PetscCheck(!chol, PETSC_COMM_WORLD, PETSC_ERR_SUP, "SuperLU does not provide Cholesky!");
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, " SUPERLU LU:\n"));
     PetscCall(MatGetFactor(A, MATSOLVERSUPERLU, MAT_FACTOR_LU, &F));
-    matsolvexx = PETSC_TRUE;
+    matsolvexx               = PETSC_TRUE;
+    testMatSolveTranspose    = PETSC_FALSE;
+    testMatMatSolveTranspose = PETSC_FALSE;
     break;
 #endif
 #if defined(PETSC_HAVE_SUPERLU_DIST)
@@ -147,6 +149,8 @@ int main(int argc, char **args)
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, " CUSPARSE LU:\n"));
       PetscCall(MatGetFactor(A, MATSOLVERCUSPARSE, MAT_FACTOR_LU, &F));
     }
+    testMatSolveTranspose    = PETSC_FALSE;
+    testMatMatSolveTranspose = PETSC_FALSE;
     break;
 #endif
   default:

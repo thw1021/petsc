@@ -276,7 +276,7 @@ static PetscErrorCode MatSolve_SuperLU_DIST(Mat A, Vec b_mpi, Vec x)
 static PetscErrorCode MatSolveTranspose_SuperLU_DIST(Mat A, Vec b, Vec x)
 {
   Mat_SuperLU_DIST *lu        = (Mat_SuperLU_DIST *)A->data;
-  PetscInt          oldOption = lu->options.Trans;
+  trans_t           oldOption = lu->options.Trans;
 
   PetscFunctionBegin;
   lu->options.Trans = TRANS;
@@ -338,7 +338,7 @@ static PetscErrorCode MatMatSolve_SuperLU_DIST(Mat A, Mat B_mpi, Mat X)
 static PetscErrorCode MatMatSolveTranspose_SuperLU_DIST(Mat A, Mat B, Mat X)
 {
   Mat_SuperLU_DIST *lu        = (Mat_SuperLU_DIST *)A->data;
-  PetscInt          oldOption = lu->options.Trans;
+  trans_t           oldOption = lu->options.Trans;
 
   PetscFunctionBegin;
   lu->options.Trans = TRANS;
