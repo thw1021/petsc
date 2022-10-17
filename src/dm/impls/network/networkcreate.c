@@ -380,8 +380,6 @@ PetscErrorCode DMClone_Network(DM dm, DM *newdm)
   DM_Network *network = (DM_Network *)dm->data, *newnetwork = NULL;
 
   PetscFunctionBegin;
-  PetscCheck(network->cloneshared->distributecalled, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_NULL, "Must call DMNetworkDistribute() first");
-
   network->cloneshared->refct++;
   PetscCall(PetscNew(&newnetwork));
   (*newdm)->data = newnetwork;
@@ -396,6 +394,7 @@ PetscErrorCode DMClone_Network(DM dm, DM *newdm)
   PetscCall(DMInitialize_Network(*newdm));
   PetscFunctionReturn(0);
 }
+
 /* Developer Note: Be aware that the plex inside of the network does not have a coordinate plex.
 */
 PetscErrorCode DMCreateCoordinateDM_Network(DM dm, DM *cdm)

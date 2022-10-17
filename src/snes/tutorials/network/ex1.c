@@ -516,13 +516,21 @@ int main(int argc, char **argv)
   if (distribute) {
     DM          dmclone;
     Vec         coords;
+    PetscInt    vStart,vEnd,compkey;
     PetscCall(DMNetworkDistribute(&networkdm, 0));
 
     /* Set coordinates - current implementation requires calling DMNetworkDistribute() first */
     PetscCall(DMGetCoordinateDM(networkdm, &dmclone));
 
+    PetscCall(DMSetCoordinateDim(dmclone, 2));
+    PetscCall(DMNetworkGetVertexRange(dmclone, &vStart, &vEnd));
+    PetscCall(DMNetworkRegisterComponent(dmclone, "coordinates", 0, &compkey));
+    for (i = vStart; i < vEnd; i++) { PetscCall(DMNetworkAddComponent(dmclone, i, compkey, NULL, 2)); }
+    PetscCall(DMNetworkFinalizeComponents(dmclone));
+
     PetscCall(DMCreateLocalVector(dmclone, &coords));
     PetscCall(VecSet(coords,0.0));
+    //PetscCall(DMSetCoordinatesLocal(networkdm, coords)); //crash when np>1???
     PetscCall(DMSetCoordinates(networkdm, coords));
 
     PetscCall(CoordinateVecSetUp(networkdm, dmclone, coords));
