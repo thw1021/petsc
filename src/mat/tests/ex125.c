@@ -204,8 +204,10 @@ int main(int argc, char **args)
 
   #if !defined(PETSC_USE_COMPLEX)
       /* Test MatGetInertia() */
-      PetscCall(MatGetInertia(F, &nneg, &nzero, &npos));
-      PetscCall(PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_WORLD, " MatInertia: nneg: %" PetscInt_FMT ", nzero: %" PetscInt_FMT ", npos: %" PetscInt_FMT "\n", nneg, nzero, npos));
+      if (flg) { /* A is symmetric */
+        PetscCall(MatGetInertia(F, &nneg, &nzero, &npos));
+        PetscCall(PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_WORLD, " MatInertia: nneg: %" PetscInt_FMT ", nzero: %" PetscInt_FMT ", npos: %" PetscInt_FMT "\n", nneg, nzero, npos));
+      }
   #endif
     }
 #endif
@@ -439,6 +441,14 @@ int main(int argc, char **args)
       nsize: {{1 3}}
       requires: superlu_dist !complex
       args: -n 36 -mat_solver_type 1 -mat_superlu_dist_rowperm NOROWPERM
+      output_file: output/ex125_superlu_dist.out
+
+   test:
+      suffix: superlu_dist_3
+      nsize: {{1 3}}
+      requires: superlu_dist !complex
+      requires: datafilespath double !complex !defined(PETSC_USE_64BIT_INDICES) superlu_dist
+      args: -f ${DATAFILESPATH}/matrices/arco1 -mat_solver_type 1 -mat_superlu_dist_rowperm NOROWPERM
       output_file: output/ex125_superlu_dist.out
 
    test:
