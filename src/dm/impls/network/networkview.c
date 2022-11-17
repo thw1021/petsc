@@ -175,6 +175,111 @@ static PetscErrorCode DMView_Network_python(DM dmnetwork)
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode DMView_Network_CSV(DM dm, PetscViewer viewer)
+{
+  PetscFunctionBegin;
+
+  // Get the network containing coordinate information
+  DM dmcoords;
+  PetscCall(DMGetCoordinateDM(dm, &dmcoords));
+
+  // Write the header
+  PetscCall(PetscViewerASCIIPrintf(viewer, "Type,ID,X,Y,Z,Name,Color\n"));
+
+  // Iterate each subnetwork
+  PetscInt nsubnets;
+  PetscCall(DMNetworkGetNumSubNetworks(dm, &nsubnets, NULL));
+  for(PetscInt subnet = 0; subnet < nsubnets; subnet++) {
+    // Get the subnetwork's vertices and edges
+    PetscInt nvertices, nedges;
+    const PetscInt *vertices, *edges;
+    PetscCall(DMNetworkGetSubnetwork(dm, subnet, &nvertices, &nedges, &vertices, &edges));
+
+    // Get the coordinate vector for the network
+    Vec allVertexCoords;
+    PetscCall(DMGetCoordinates(dm, &allVertexCoords));
+
+    // Write out each vertex
+    PetscInt vertexOffsets[2];
+    PetscScalar vertexCoords[2];
+    for(PetscInt i = 0; i < nvertices; i++) {
+      PetscInt vertex = vertices[i];
+      // Get the offset into the coordinate vector for the vertex
+      PetscCall(DMNetworkGetLocalVecOffset(dmcoords, vertex, ALL_COMPONENTS, vertexOffsets));
+      vertexOffsets[1] = vertexOffsets[0] + 1;
+      // Get the vertex position from the coordinate vector
+      PetscCall(VecGetValues(allVertexCoords, 2, vertexOffsets, vertexCoords));
+      // TODO: Determine vertex color/name
+      
+      PetscCall(PetscViewerASCIIPrintf(viewer, "Node,%" PetscInt_FMT ",%lf,%lf,0,%" PetscInt_FMT "\n", vertex, (double)vertexCoords[0], (double)vertexCoords[1], vertex));
+    }
+
+    // Write out each edge
+    const PetscInt* edgeVertices;
+    for(PetscInt i = 0; i < nedges; i++) {
+      PetscInt edge = edges[i];
+      PetscCall(DMNetworkGetConnectedVertices(dm, edge, &edgeVertices));
+      // TODO: Determine edge color/name
+
+      PetscCall(PetscViewerASCIIPrintf(viewer, "Edge,%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT ",0,%" PetscInt_FMT "\n", edge, edgeVertices[0], edgeVertices[1], edge));
+    }
+  }
+  
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode DMView_Network_Matplotlib(DM dm)
+{
+  PetscFunctionBegin;
+
+  // Get the MPI communicator and this process' rank
+  PetscMPIInt rank, numranks;
+  MPI_Comm comm;
+  PetscCall(PetscObjectGetComm((PetscObject)dm,&comm));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  PetscCallMPI(MPI_Comm_size(comm, &numranks));
+
+  // Acquire a temporary file to write to and open an ASCII/CSV viewer
+  char filename[L_tmpnam+1];
+  tmpnam(filename);
+  PetscViewer csvViewer;
+  PetscCall(PetscViewerASCIIOpen(comm, filename, &csvViewer));
+  PetscCall(PetscViewerPushFormat(csvViewer, PETSC_VIEWER_ASCII_CSV));
+
+  // Use the CSV viewer to write out the local network
+  DMView_Network_CSV(dm, csvViewer);
+  
+  // Close the viewer
+  PetscCall(PetscViewerDestroy(&csvViewer));
+
+  // Collect the temporary files on rank 0
+  if (rank != 0) {
+    // If not rank 0, send the file name
+    PetscCallMPI(MPI_Send(filename, L_tmpnam, MPI_BYTE, 0, 0, comm));
+  } else {
+    // Generate the system call for 'python3 $PETSC_DIR/lib/petsc/bin/dmnetwork_view.py file1 file2 ...'
+    // TODO: This currently uses unsafe string functions and could overflow if enough processes are used
+    char proccall[2000];
+    memset(proccall, 0, sizeof(proccall));
+    snprintf(proccall, sizeof(proccall), "python3 %s/lib/petsc/bin/dmnetwork_view.py %s", getenv("PETSC_DIR"), filename);
+
+    filename[0] = ' ';
+    // For every other rank, receive the file name and append with a space
+    for(PetscMPIInt rank2 = 1; rank2 < numranks; rank2++) {
+      PetscCallMPI(MPI_Recv(filename+1, L_tmpnam, MPI_BYTE, rank2, 0, comm, MPI_STATUS_IGNORE));
+      strcat(proccall, filename);
+    }
+
+    // Perform the call to run the python script
+    system(proccall);
+  }
+
+  // Introduce a barrier to make sure all ranks maintain sync before returning
+  PetscCallMPI(MPI_Barrier(comm));
+  
+  PetscFunctionReturn(0);
+}
+
 PetscErrorCode DMView_Network(DM dm, PetscViewer viewer)
 {
   PetscBool   iascii;
@@ -191,9 +296,11 @@ PetscErrorCode DMView_Network(DM dm, PetscViewer viewer)
     DM_Network        *network = (DM_Network *)dm->data;
     PetscViewerFormat format;
 
+    // TODO: Why is format not preserved?
+    PetscCall(PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_CSV));
     PetscCall(PetscViewerGetFormat(viewer, &format));
-    if (format == PETSC_VIEWER_ASCII_PYTHON) {
-      PetscCall(DMView_Network_python(dm));
+    if (format == PETSC_VIEWER_ASCII_CSV) {
+      PetscCall(DMView_Network_CSV(dm, viewer));
       PetscFunctionReturn(0);
     }
 

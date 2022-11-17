@@ -535,7 +535,7 @@ int main(int argc, char **argv)
 
     PetscCall(CoordinateVecSetUp(networkdm, dmclone, coords));
     if (viewPy) { /* Python View of network with coordinates */
-      PetscCall(PetscViewerPushFormat(PETSC_VIEWER_STDOUT_WORLD, PETSC_VIEWER_ASCII_PYTHON));
+      PetscCall(PetscViewerPushFormat(PETSC_VIEWER_STDOUT_WORLD, PETSC_VIEWER_ASCII_CSV));
       PetscCall(DMView(networkdm,PETSC_VIEWER_STDOUT_WORLD));
       PetscCall(PetscViewerPopFormat(PETSC_VIEWER_STDOUT_WORLD));
     }

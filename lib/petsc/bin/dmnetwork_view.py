@@ -8,13 +8,15 @@ from argparse import ArgumentParser
 
 # Construct the argument parse and parse the program arguments
 argparser = ArgumentParser(
-	prog='DMNetwork Viewer',
+	prog='dmnetwork_view.py',
 	description="Displays a CSV file generated from a DMNetwork using matplotlib"
 )
-argparser.add_argument('filename')
-argparser.add_argument('-t', '--set-title', action='store', help="Sets the title for the generated plot, overriding any title set in the source file")
+argparser.add_argument('filenames', nargs='+')
+argparser.add_argument('-t', '--set-title', metavar='TITLE', action='store', help="Sets the title for the generated plot, overriding any title set in the source file")
 argparser.add_argument('-nnl', '--no-node-labels', action='store_true', help="Disables labling nodes in the generated plot")
 argparser.add_argument('-nel', '--no-edge-labels', action='store_true', help="Disables labling edges in the generated plot")
+argparser.add_argument('-nc', '--set-node-color', metavar='COLOR', action='store', help="Sets the color for drawn nodes, overriding any per-node colors")
+argparser.add_argument('-ec', '--set-edge-color', metavar='COLOR', action='store', help="Sets the color for drawn edges, overriding any per-edge colors")
 args = argparser.parse_args()
 
 
@@ -31,6 +33,23 @@ def parseColor(color, defaultValue = (0, 0, 0, 1)):
 		else:
 			return defaultValue
 
+# Parses an ID value to a string *consistently*
+def parseID(idval):
+	# If float has no fractional part format it as an integer instead of leaving trailing zeros
+	if isinstance(idval, float):
+		if idval % 1 == 0:
+			return str(int(idval))
+	return str(idval)
+
+# Parse any set node or edge colors
+nodeColor = None
+edgeColor = None
+
+if 'set_node_color' in args:
+	nodeColor = parseColor(args.set_node_color)
+if 'set_edge_color' in args:
+	edgeColor = parseColor(args.set_edge_color)
+
 # The sets of nodes and edges we read from the CSV file
 nodes = {}
 edges = {}
@@ -39,7 +58,7 @@ edges = {}
 class Node:
 	def __init__(self, row):
 		# Set our ID
-		self.id = str(row['ID'])
+		self.id = parseID(row['ID'])
 		
 		# Set our position
 		x = row['X']
@@ -60,18 +79,20 @@ class Node:
 				self.name = None
 			else:
 				self.name = str(self.name)
-		self.color = parseColor(row['Color'])
+
+		global nodeColor
+		self.color = nodeColor if nodeColor is not None else parseColor(row['Color'])
 
 # Class for holding the properties of an edge
 class Edge:
 	def __init__(self, row):
 		# Set our ID
-		self.id = str(row['ID'])
+		self.id = parseID(row['ID'])
 
 		# Determine our starting and ending nodes from the X and Y properties
 		global nodes
-		self.startNode = nodes[str(row['X'])]
-		self.endNode = nodes[str(row['Y'])]
+		self.startNode = nodes[parseID(row['X'])]
+		self.endNode = nodes[parseID(row['Y'])]
 
 		# Set name and color, defaulting to a None name if not specified
 		self.name = row['Name']
@@ -80,30 +101,32 @@ class Edge:
 				self.name = None
 			else:
 				self.name = str(self.name)
-		self.color = parseColor(row['Color'])
+
+		global edgeColor
+		self.color = edgeColor if edgeColor is not None else parseColor(row['Color'])
 
 # Global variable storing a title to use or None
 title = None
 
-# Read the data from the supplied CSV file
-data = pd.read_csv(args.filename, skipinitialspace=True)
-
-# Iterate each row of data in the file
-for i,row in data.iterrows():
-	# Switch based on the type of the entry
-	type = row['Type']
-	if type == 'Title':
-		# Set the title based on name and color
-		titleColor = parseColor(row['Color'])
-		title = (row['Name'], titleColor)
-	elif type == 'Node':
-		# Register a new node
-		node = Node(row)
-		nodes[node.id] = node
-	elif type == 'Edge':
-		# Register a new edge
-		edge = Edge(row)
-		edges[edge.id] = edge
+for filename in args.filenames:
+	# Read the data from the supplied CSV file
+	data = pd.read_csv(filename, skipinitialspace=True)
+	# Iterate each row of data in the file
+	for i,row in data.iterrows():
+		# Switch based on the type of the entry
+		type = row['Type']
+		if type == 'Title':
+			# Set the title based on name and color
+			titleColor = parseColor(row['Color'])
+			title = (row['Name'], titleColor)
+		elif type == 'Node':
+			# Register a new node
+			node = Node(row)
+			nodes[node.id] = node
+		elif type == 'Edge':
+			# Register a new edge
+			edge = Edge(row)
+			edges[edge.id] = edge
 
 # Create Numpy arrays for node and edge positions and colors
 nodePositions = np.zeros((len(nodes), 2))
