@@ -791,4 +791,8 @@ PETSC_INTERN PetscErrorCode DMLoad_Plex(DM dm, PetscViewer viewer);
 PETSC_INTERN PetscErrorCode DMCreateSubDM_Plex(DM dm, PetscInt numFields, const PetscInt fields[], IS *is, DM *subdm);
 PETSC_INTERN PetscErrorCode DMCreateSuperDM_Plex(DM dms[], PetscInt len, IS **is, DM *superdm);
 
+#ifdef PETSC_HAVE_EGADS
+PETSC_INTERN PetscErrorCode DMPlex_EGADS_GeomDecode_Internal(const PetscInt, const PetscInt, char **, char **);
+#endif
+
 #endif /* _PLEXIMPL_H */

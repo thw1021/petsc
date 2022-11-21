@@ -103,7 +103,7 @@ static PetscErrorCode DMLabelMakeValid_Private(DMLabel label, PetscInt v)
   if (label->bt) {
     for (p = 0; p < label->stratumSizes[v]; ++p) {
       const PetscInt point = pointArray[p];
-      PetscCheck(!(point < label->pStart) && !(point >= label->pEnd), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label point %" PetscInt_FMT " is not in [%" PetscInt_FMT ", %" PetscInt_FMT ")", point, label->pStart, label->pEnd);
+      PetscCheck((point >= label->pStart) && (point < label->pEnd), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label point %" PetscInt_FMT " is not in [%" PetscInt_FMT ", %" PetscInt_FMT ")", point, label->pStart, label->pEnd);
       PetscCall(PetscBTSet(label->bt, point - label->pStart));
     }
   }
@@ -905,7 +905,7 @@ PetscErrorCode DMLabelHasPoint(DMLabel label, PetscInt point, PetscBool *contain
   PetscCall(DMLabelMakeAllValid_Private(label));
   if (PetscDefined(USE_DEBUG)) {
     PetscCheck(label->bt, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Must call DMLabelCreateIndex() before DMLabelHasPoint()");
-    PetscCheck(!(point < label->pStart) && !(point >= label->pEnd), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label point %" PetscInt_FMT " is not in [%" PetscInt_FMT ", %" PetscInt_FMT ")", point, label->pStart, label->pEnd);
+    PetscCheck((point >= label->pStart) && (point < label->pEnd), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label point %" PetscInt_FMT " is not in [%" PetscInt_FMT ", %" PetscInt_FMT ")", point, label->pStart, label->pEnd);
   }
   *contains = PetscBTLookup(label->bt, point - label->pStart) ? PETSC_TRUE : PETSC_FALSE;
   PetscFunctionReturn(0);
@@ -1116,7 +1116,7 @@ PetscErrorCode DMLabelClearValue(DMLabel label, PetscInt point, PetscInt value)
   if (v < 0) PetscFunctionReturn(0);
 
   if (label->bt) {
-    PetscCheck(!(point < label->pStart) && !(point >= label->pEnd), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label point %" PetscInt_FMT " is not in [%" PetscInt_FMT ", %" PetscInt_FMT ")", point, label->pStart, label->pEnd);
+    PetscCheck((point >= label->pStart) && (point < label->pEnd), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label point %" PetscInt_FMT " is not in [%" PetscInt_FMT ", %" PetscInt_FMT ")", point, label->pStart, label->pEnd);
     PetscCall(PetscBTClear(label->bt, point - label->pStart));
   }
 
@@ -1470,7 +1470,7 @@ PetscErrorCode DMLabelSetStratumIS(DMLabel label, PetscInt value, IS is)
     for (p = 0; p < label->stratumSizes[v]; ++p) {
       const PetscInt point = points[p];
 
-      PetscCheck(!(point < label->pStart) && !(point >= label->pEnd), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label point %" PetscInt_FMT " is not in [%" PetscInt_FMT ", %" PetscInt_FMT ")", point, label->pStart, label->pEnd);
+      PetscCheck((point >= label->pStart) && (point < label->pEnd), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label point %" PetscInt_FMT " is not in [%" PetscInt_FMT ", %" PetscInt_FMT ")", point, label->pStart, label->pEnd);
       PetscCall(PetscBTSet(label->bt, point - label->pStart));
     }
   }
@@ -1508,7 +1508,7 @@ PetscErrorCode DMLabelClearStratum(DMLabel label, PetscInt value)
       for (i = 0; i < label->stratumSizes[v]; ++i) {
         const PetscInt point = points[i];
 
-        PetscCheck(!(point < label->pStart) && !(point >= label->pEnd), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label point %" PetscInt_FMT " is not in [%" PetscInt_FMT ", %" PetscInt_FMT ")", point, label->pStart, label->pEnd);
+        PetscCheck((point >= label->pStart) && (point < label->pEnd), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label point %" PetscInt_FMT " is not in [%" PetscInt_FMT ", %" PetscInt_FMT ")", point, label->pStart, label->pEnd);
         PetscCall(PetscBTClear(label->bt, point - label->pStart));
       }
       PetscCall(ISRestoreIndices(label->points[v], &points));
@@ -1628,14 +1628,14 @@ PetscErrorCode DMLabelFilter(DMLabel label, PetscInt start, PetscInt end)
 
   Input Parameters:
 + label - the DMLabel
-- permutation - the point permutation
+- permutation - the point permutation, permutation[old point] = new point
 
   Output Parameter:
 . labelnew - the new label containing the permuted points
 
   Level: intermediate
 
-.seealso: `DMLabelCreate()`, `DMLabelGetValue()`, `DMLabelSetValue()`, `DMLabelClearValue()`
+.seealso: `DMLabelPermuteValues()`, `DMLabelCreate()`, `DMLabelGetValue()`, `DMLabelSetValue()`, `DMLabelClearValue()`
 @*/
 PetscErrorCode DMLabelPermute(DMLabel label, IS permutation, DMLabel *labelNew)
 {
@@ -1661,7 +1661,7 @@ PetscErrorCode DMLabelPermute(DMLabel label, IS permutation, DMLabel *labelNew)
     for (q = 0; q < size; ++q) {
       const PetscInt point = points[q];
 
-      PetscCheck(!(point < 0) && !(point >= numPoints), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label point %" PetscInt_FMT " is not in [0, %" PetscInt_FMT ") for the remapping", point, numPoints);
+      PetscCheck((point >= 0) && (point < numPoints), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Label point %" PetscInt_FMT " is not in [0, %" PetscInt_FMT ") for the remapping", point, numPoints);
       pointsNew[q] = perm[point];
     }
     PetscCall(ISRestoreIndices((*labelNew)->points[v], &points));
@@ -1680,6 +1680,50 @@ PetscErrorCode DMLabelPermute(DMLabel label, IS permutation, DMLabel *labelNew)
     PetscCall(PetscBTDestroy(&label->bt));
     PetscCall(DMLabelCreateIndex(label, label->pStart, label->pEnd));
   }
+  PetscFunctionReturn(0);
+}
+
+/*@
+  DMLabelPermuteValues - Permute the values in a label
+
+  Not collective
+
+  Input Parameters:
++ label - the `DMLabel`
+- permutation - the value permutation, permutation[old value] = new value
+
+  Output Parameter:
+. label - the label now with permuted values
+
+  Note:
+
+  The modification is done in-place
+
+  Level: intermediate
+
+.seealso: `DMLabelPermute()`, `DMLabelCreate()`, `DMLabelGetValue()`, `DMLabelSetValue()`, `DMLabelClearValue()`
+@*/
+PetscErrorCode DMLabelPermuteValues(DMLabel label, IS permutation)
+{
+  const PetscInt *perm;
+  PetscInt        Nv, v, Np;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(label, DMLABEL_CLASSID, 1);
+  PetscValidHeaderSpecific(permutation, IS_CLASSID, 2);
+  PetscCall(DMLabelMakeAllValid_Private(label));
+  PetscCall(DMLabelGetNumValues(label, &Nv));
+  PetscCall(ISGetLocalSize(permutation, &Np));
+  PetscCall(ISGetIndices(permutation, &perm));
+  for (v = 0; v < Nv; ++v) {
+    const PetscInt val = label->stratumValues[v];
+
+    PetscCheck((val >= 0) && (val < Np), PetscObjectComm((PetscObject)label), PETSC_ERR_ARG_INCOMP, "Value %" PetscInt_FMT " not in [0, %" PetscInt_FMT ")", val, Np);
+    label->stratumValues[v] = perm[val];
+  }
+  PetscCall(ISRestoreIndices(permutation, &perm));
+  PetscCall(PetscHMapIReset(label->hmap));
+  for (v = 0; v < Nv; ++v) PetscCall(PetscHMapISet(label->hmap, label->stratumValues[v], v));
   PetscFunctionReturn(0);
 }
 

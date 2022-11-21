@@ -18,7 +18,7 @@ static PetscErrorCode ProcessOptions(MPI_Comm comm, AppCtx *options)
   options->filename[0] = '\0';
   options->volumeMesh  = PETSC_TRUE;
 
-  PetscOptionsBegin(comm, "", "EGADSPlex Problem Options", "EGADSLite");
+  PetscOptionsBegin(comm, "", "EGADSPlex Problem Options", "EGADSlite");
   PetscCall(PetscOptionsString("-filename", "The CAD file", "ex37.c", options->filename, options->filename, sizeof(options->filename), NULL));
   PetscCall(PetscOptionsBool("-volume_mesh", "Create a volume mesh", "ex37.c", options->volumeMesh, &options->volumeMesh, NULL));
   PetscOptionsEnd();
@@ -83,7 +83,7 @@ int main(int argc, char *argv[])
     PetscCall(DMPlexSetRefinementUniform(dm, PETSC_TRUE));
     PetscCall(DMViewFromOptions(dm, NULL, "-pre_dm_view"));
 
-    PetscCall(DMPlexInflateToGeomModel(dm));
+    PetscCall(DMPlexInflateToEGADSGeomModel(dm));
     PetscCall(DMViewFromOptions(dm, NULL, "-inf_dm_view"));
 
     PetscCall(DMSetFromOptions(dm));

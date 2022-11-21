@@ -180,7 +180,12 @@ PETSC_EXTERN PetscErrorCode DMPlexCreateWedgeCylinderMesh(MPI_Comm, PetscInt, Pe
 PETSC_EXTERN PetscErrorCode DMPlexCreateWedgeBoxMesh(MPI_Comm, const PetscInt[], const PetscReal[], const PetscReal[], const DMBoundaryType[], PetscBool, PetscBool, DM *);
 PETSC_EXTERN PetscErrorCode DMPlexExtrude(DM, PetscInt, PetscReal, PetscBool, PetscBool, const PetscReal[], const PetscReal[], DM *);
 PETSC_EXTERN PetscErrorCode DMPlexCreateConeSection(DM, PetscSection *);
-PETSC_EXTERN PetscErrorCode DMPlexInflateToGeomModel(DM);
+PETSC_EXTERN PetscErrorCode DMPlexInflateToEGADSGeomModel(DM);
+PETSC_EXTERN PetscErrorCode DMPlexComputeSurfaceGradient(DM);
+PETSC_EXTERN PetscErrorCode DMPlexGeomDataAndGrads(DM, PetscBool);
+PETSC_EXTERN PetscErrorCode DMPlexEGADSModifyGeomModel(DM, PetscScalar[], PetscScalar[], PetscBool, PetscBool, const char[]);
+PETSC_EXTERN PetscErrorCode DMPlexGetEGADSGeomModel_tuv(DM);
+PETSC_EXTERN PetscErrorCode DMPlexInflateToEGADSGeomModel_tuv(DM);
 
 PETSC_EXTERN PetscErrorCode DMPlexCheck(DM);
 PETSC_EXTERN PetscErrorCode DMPlexCheckSymmetry(DM);
@@ -207,7 +212,7 @@ PETSC_EXTERN PetscErrorCode DMPlexCreateFluentFromFile(MPI_Comm, const char[], P
 PETSC_EXTERN PetscErrorCode DMPlexCreateMedFromFile(MPI_Comm, const char[], PetscBool, DM *);
 PETSC_EXTERN PetscErrorCode DMPlexCreatePLYFromFile(MPI_Comm, const char[], PetscBool, DM *);
 PETSC_EXTERN PetscErrorCode DMPlexCreateEGADSFromFile(MPI_Comm, const char[], DM *);
-PETSC_EXTERN PetscErrorCode DMPlexCreateEGADSLiteFromFile(MPI_Comm, const char[], DM *);
+PETSC_EXTERN PetscErrorCode DMPlexCreateEGADSliteFromFile(MPI_Comm, const char[], DM *);
 
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIIOpen(MPI_Comm comm, const char name[], PetscFileMode type, PetscViewer *exo);
 PETSC_EXTERN PetscErrorCode PetscViewerExodusIIGetId(PetscViewer, int *);

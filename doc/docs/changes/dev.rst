@@ -33,6 +33,8 @@ Changes: Development
 
 .. rubric:: IS:
 
+- Add ``DMLabelPermuteValues()``
+
 .. rubric:: VecScatter / PetscSF:
 
 - Change ``PetscSFConcatenate()`` to accept ``PetscSFConcatenateRootMode`` parameter; add option to concatenate root spaces globally

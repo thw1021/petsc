@@ -5123,13 +5123,13 @@ PetscErrorCode DMPlexCreateFromFile(MPI_Comm comm, const char filename[], const 
   const char  extHDF5[]      = ".h5";
   const char  extMed[]       = ".med";
   const char  extPLY[]       = ".ply";
-  const char  extEGADSLite[] = ".egadslite";
+  const char  extEGADSlite[] = ".egadslite";
   const char  extEGADS[]     = ".egads";
   const char  extIGES[]      = ".igs";
   const char  extSTEP[]      = ".stp";
   const char  extCV[]        = ".dat";
   size_t      len;
-  PetscBool   isGmsh, isGmsh2, isGmsh4, isCGNS, isExodus, isGenesis, isFluent, isHDF5, isMed, isPLY, isEGADSLite, isEGADS, isIGES, isSTEP, isCV;
+  PetscBool   isGmsh, isGmsh2, isGmsh4, isCGNS, isExodus, isGenesis, isFluent, isHDF5, isMed, isPLY, isEGADSlite, isEGADS, isIGES, isSTEP, isCV;
   PetscMPIInt rank;
 
   PetscFunctionBegin;
@@ -5165,7 +5165,7 @@ PetscErrorCode DMPlexCreateFromFile(MPI_Comm comm, const char filename[], const 
   CheckExtension(extHDF5, isHDF5);
   CheckExtension(extMed, isMed);
   CheckExtension(extPLY, isPLY);
-  CheckExtension(extEGADSLite, isEGADSLite);
+  CheckExtension(extEGADSlite, isEGADSlite);
   CheckExtension(extEGADS, isEGADS);
   CheckExtension(extIGES, isIGES);
   CheckExtension(extSTEP, isSTEP);
@@ -5214,8 +5214,8 @@ PetscErrorCode DMPlexCreateFromFile(MPI_Comm comm, const char filename[], const 
     PetscCall(DMPlexCreateMedFromFile(comm, filename, interpolate, dm));
   } else if (isPLY) {
     PetscCall(DMPlexCreatePLYFromFile(comm, filename, interpolate, dm));
-  } else if (isEGADSLite || isEGADS || isIGES || isSTEP) {
-    if (isEGADSLite) PetscCall(DMPlexCreateEGADSLiteFromFile(comm, filename, dm));
+  } else if (isEGADSlite || isEGADS || isIGES || isSTEP) {
+    if (isEGADSlite) PetscCall(DMPlexCreateEGADSliteFromFile(comm, filename, dm));
     else PetscCall(DMPlexCreateEGADSFromFile(comm, filename, dm));
     if (!interpolate) {
       DM udm;
