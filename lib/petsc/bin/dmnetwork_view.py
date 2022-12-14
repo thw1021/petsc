@@ -17,6 +17,8 @@ argparser.add_argument('-nnl', '--no-node-labels', action='store_true', help="Di
 argparser.add_argument('-nel', '--no-edge-labels', action='store_true', help="Disables labling edges in the generated plot")
 argparser.add_argument('-nc', '--set-node-color', metavar='COLOR', action='store', help="Sets the color for drawn nodes, overriding any per-node colors")
 argparser.add_argument('-ec', '--set-edge-color', metavar='COLOR', action='store', help="Sets the color for drawn edges, overriding any per-edge colors")
+argparser.add_argument('-ntc', '--set-node-title-color', metavar='COLOR', action='store', help="Sets the color for drawn node titles, overriding any per-node colors")
+argparser.add_argument('-etc', '--set-edge-title-color', metavar='COLOR', action='store', help="Sets the color for drawn edge titles, overriding any per-edge colors")
 args = argparser.parse_args()
 
 
@@ -44,11 +46,18 @@ def parseID(idval):
 # Parse any set node or edge colors
 nodeColor = None
 edgeColor = None
+nodeTitleColor = None
+edgeTitleColor = None
 
 if 'set_node_color' in args:
-	nodeColor = parseColor(args.set_node_color)
+	nodeColor = parseColor(args.set_node_color, None)
 if 'set_edge_color' in args:
-	edgeColor = parseColor(args.set_edge_color)
+	edgeColor = parseColor(args.set_edge_color, None)
+
+if 'set_node_title_color' in args:
+	nodeTitleColor = parseColor(args.set_node_title_color, (1, 1, 1, 1))
+if 'set_edge_title_color' in args:
+	edgeTitleColor = parseColor(args.set_edge_title_color)
 
 # The sets of nodes and edges we read from the CSV file
 nodes = {}
@@ -103,30 +112,33 @@ class Edge:
 				self.name = str(self.name)
 
 		global edgeColor
-		self.color = edgeColor if edgeColor is not None else parseColor(row['Color'])
+		self.color = edgeColor if edgeColor is not None else parseColor(row['Color'], (0.5, 0.5, 0.5, 1))
 
 # Global variable storing a title to use or None
 title = None
 
 for filename in args.filenames:
-	# Read the data from the supplied CSV file
-	data = pd.read_csv(filename, skipinitialspace=True)
-	# Iterate each row of data in the file
-	for i,row in data.iterrows():
-		# Switch based on the type of the entry
-		type = row['Type']
-		if type == 'Title':
-			# Set the title based on name and color
-			titleColor = parseColor(row['Color'])
-			title = (row['Name'], titleColor)
-		elif type == 'Node':
-			# Register a new node
-			node = Node(row)
-			nodes[node.id] = node
-		elif type == 'Edge':
-			# Register a new edge
-			edge = Edge(row)
-			edges[edge.id] = edge
+	try:
+		# Read the data from the supplied CSV file
+		data = pd.read_csv(filename, skipinitialspace=True)
+		# Iterate each row of data in the file
+		for i,row in data.iterrows():
+			# Switch based on the type of the entry
+			type = row['Type']
+			if type == 'Title':
+				# Set the title based on name and color
+				titleColor = parseColor(row['Color'])
+				title = (row['Name'], titleColor)
+			elif type == 'Node':
+				# Register a new node
+				node = Node(row)
+				nodes[node.id] = node
+			elif type == 'Edge':
+				# Register a new edge
+				edge = Edge(row)
+				edges[edge.id] = edge
+	except:
+		print("Warning! Could not read file \"" + filename + "\"")
 
 # Create Numpy arrays for node and edge positions and colors
 nodePositions = np.zeros((len(nodes), 2))
@@ -188,7 +200,8 @@ if not args.no_node_labels:
 				# Center text vertically and horizontally
 				va='center', ha='center',
 				# Make sure the text is clipped within the plot area
-				clip_on=True
+				clip_on=True,
+				color=nodeTitleColor
 			)
 
 if not args.no_edge_labels:
@@ -200,7 +213,8 @@ if not args.no_edge_labels:
 				y=(edge.startNode.position[1]+edge.endNode.position[1])/2,
 				s=edge.name,
 				va='center', ha='center',
-				clip_on=True
+				clip_on=True,
+				color=edgeTitleColor
 			)
 
 # Scale the plot to the content
