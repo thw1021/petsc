@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.collections import CircleCollection, LineCollection
-from argparse import ArgumentParser
+try:
+	import pandas as pd
+	import numpy as np
+	import matplotlib.pyplot as plt
+	from matplotlib.collections import CircleCollection, LineCollection
+	from argparse import ArgumentParser
+except ImportError as error:
+	print("Missing import: " + str(error))
+	exit(-1)
 
 
 # Construct the argument parse and parse the program arguments
