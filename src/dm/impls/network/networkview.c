@@ -63,7 +63,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm)
 {
   PetscMPIInt rank, size;
   MPI_Comm    comm;
-  char        filename[FILENAME_MAX + 1], proccall[FILENAME_MAX + 500];
+  char        filename[FILENAME_MAX + 1], proccall[FILENAME_MAX + 500], scriptFile[FILENAME_MAX + 1];
   PetscViewer csvViewer;
   size_t      numChars, appendChars;
 
@@ -91,9 +91,11 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm)
     // If not rank 0, send the file name
     PetscCallMPI(MPI_Send(filename, FILENAME_MAX, MPI_BYTE, 0, 0, comm));
   } else {
-    // Generate the system call for 'python3 $PETSC_DIR/lib/petsc/bin/dmnetwork_view.py file1 file2 ...'
+    // Get the value of $PETSC_DIR
+    PetscCall(PetscStrreplace(PETSC_COMM_WORLD, "${PETSC_DIR}/share/petsc/dmnetwork_view.py", scriptFile, sizeof(scriptFile)));
+    // Generate the system call for 'python3 $PETSC_DIR/share/petsc/dmnetwork_view.py file1 file2 ...'
     PetscCall(PetscArrayzero(proccall, sizeof(proccall)));
-    PetscCall(PetscSNPrintfCount(proccall, sizeof(proccall), "%s %s/lib/petsc/bin/dmnetwork_view.py %s", &numChars, PETSC_PYTHON_EXE, getenv("PETSC_DIR"), filename));
+    PetscCall(PetscSNPrintfCount(proccall, sizeof(proccall), "%s %s %s", &numChars, PETSC_PYTHON_EXE, scriptFile, filename));
 
     filename[0] = ' ';
     // For every other rank, receive the file name and append with a space
