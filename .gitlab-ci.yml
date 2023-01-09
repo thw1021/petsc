@@ -11,8 +11,6 @@
 
 stages:
   - stage-1
-  - stage-2
-  - stage-3
   - stage-4
 variables:
   GIT_STRATEGY: fetch
@@ -233,7 +231,7 @@ petsc4py-pip:
 
 checksource:
   extends: .test-basic
-  stage: .pre
+  stage: stage-1
   tags:
     - gce-u22-stage1
   script:
@@ -335,11 +333,11 @@ pause-for-approval:
 
 .stage-2:
   extends: .stage-23
-  stage: stage-2
+  stage: stage-1
 
 .stage-3:
   extends: .stage-23
-  stage: stage-3
+  stage: stage-1
 
 #
 # The following provide templates for various OSes for pre/post info
@@ -1215,7 +1213,7 @@ analyze-pipeline:
 # Base job for a documentation build (runs in venv to allow installing additional packages without root)
 #
 .docs:
-  stage: stage-2
+  stage: stage-1
   tags:
     - linux-docs
   before_script:
