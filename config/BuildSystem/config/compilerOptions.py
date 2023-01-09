@@ -58,7 +58,7 @@ class CompilerOptions(config.base.Configure):
           flags.append('-g')
           flags.append('-O3')
       # Windows Intel
-      elif compiler.find('win32fe icl') >= 0:
+      elif compiler.find('win_icl') >= 0:
         if bopt == '':
           flags.extend(['-Qstd=c99'])
           if self.argDB['with-shared-libraries']:
@@ -70,7 +70,7 @@ class CompilerOptions(config.base.Configure):
         elif bopt == 'O':
           flags.extend(['-O3', '-QxW'])
       # Windows Microsoft
-      elif compiler.find('win32fe cl') >= 0:
+      elif compiler.find('win_cl') >= 0:
         if bopt == '':
           dir(self)
           # cause compiler to generate only a single copy of static strings; needed usage of __func__ in PETSc
@@ -86,7 +86,7 @@ class CompilerOptions(config.base.Configure):
         elif bopt == 'O':
           flags.extend(['-O2', '-QxW'])
       # Windows Borland
-      elif compiler.find('win32fe bcc32') >= 0:
+      elif compiler.find('win_bcc32') >= 0:
         if bopt == '':
           flags.append('-RT -w-8019 -w-8060 -w-8057 -w-8004 -w-8066')
       elif config.setCompilers.Configure.isNVCC(compiler, self.log):
@@ -186,7 +186,7 @@ class CompilerOptions(config.base.Configure):
           flags.append('-g')
           flags.append('-O3')
       # Windows Intel
-      elif compiler.find('win32fe icl') >= 0:
+      elif compiler.find('win_icl') >= 0:
         if bopt == '':
           if self.argDB['with-shared-libraries']:
             flags.extend(['-MD','-GR','-EHsc'])
@@ -197,7 +197,7 @@ class CompilerOptions(config.base.Configure):
         elif bopt in ['O']:
           flags.extend(['-O3', '-QxW'])
       # Windows Microsoft
-      elif compiler.find('win32fe cl') >= 0:
+      elif compiler.find('win_cl') >= 0:
         if bopt == '':
           # cause compiler to generate only a single copy of static strings; needed usage of __func__ in PETSc
           flags.extend(['-GF'])
@@ -212,7 +212,7 @@ class CompilerOptions(config.base.Configure):
         elif bopt == 'O':
           flags.extend(['-O2','-QxW','-Zm200'])
       # Windows Borland
-      elif compiler.find('win32fe bcc32') >= 0:
+      elif compiler.find('win_bcc32') >= 0:
         if bopt == '':
           flags.append('-RT -w-8019 -w-8060 -w-8057 -w-8004 -w-8066')
       # NEC
@@ -282,7 +282,7 @@ class CompilerOptions(config.base.Configure):
           flags.append('-g')
           flags.append('-O3')
       # Windows Intel
-      elif compiler.find('win32fe ifl') >= 0 or compiler.find('win32fe ifort') >= 0:
+      elif compiler.find('win_ifl') >= 0 or compiler.find('win_ifort') >= 0:
         if bopt == '':
           if self.argDB['with-shared-libraries']:
             flags.extend(['-MD'])
@@ -292,14 +292,6 @@ class CompilerOptions(config.base.Configure):
          flags.extend(['-Z7','-Od'])
         elif bopt == 'O':
           flags.extend(['-O3', '-QxW'])
-      # Compaq Visual FORTRAN
-      elif compiler.find('win32fe f90') >= 0 or compiler.find('win32fe df') >= 0:
-        if bopt == '':
-          flags.append('-threads')
-        elif bopt == 'g':
-          flags.extend(['-debug:full','-Od'])
-        elif bopt == 'O':
-          flags.extend(['-optimize:5', '-fast'])
       # NEC
       elif config.setCompilers.Configure.isNEC(compiler, self.log):
         if bopt == '':
