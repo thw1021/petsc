@@ -75,7 +75,6 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm)
   PetscCallMPI(MPI_Comm_size(comm, &size));
 
   // Acquire a temporary file to write to and open an ASCII/CSV viewer
-  //PetscCall(PetscStrcpy(filename, "/tmp/matplotlib-XXXXXX"));
   PetscCheck(tmpnam(filename) != NULL, comm, PETSC_ERR_SYS, "Could not acquire temporary file");
   // Note: We need to open with PETSC_COMM_SELF for each process to open a unique temporary file
   PetscCall(PetscViewerASCIIOpen(PETSC_COMM_SELF, filename, &csvViewer));
