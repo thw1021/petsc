@@ -66,7 +66,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm)
   char        filename[FILENAME_MAX + 1], proccall[FILENAME_MAX + 500], scriptFile[FILENAME_MAX + 1];
   PetscViewer csvViewer;
   size_t      numChars, appendChars;
-  FILE        *processFile;
+  FILE       *processFile;
 
   PetscFunctionBegin;
   // Get the MPI communicator and this process' rank
