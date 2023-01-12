@@ -66,7 +66,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm)
   char        filename[FILENAME_MAX + 1], proccall[FILENAME_MAX + 500], scriptFile[FILENAME_MAX + 1];
   PetscViewer csvViewer;
   size_t      numChars, appendChars;
-  FILE       *processFile;
+  FILE        *processFile;
 
   PetscFunctionBegin;
   // Get the MPI communicator and this process' rank
@@ -75,8 +75,8 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm)
   PetscCallMPI(MPI_Comm_size(comm, &size));
 
   // Acquire a temporary file to write to and open an ASCII/CSV viewer
-  PetscCall(PetscStrcpy(filename, "/tmp/matplotlib-XXXXXX"));
-  PetscCheck(mkstemp(filename) >= 0, comm, PETSC_ERR_SYS, "Could not acquire temporary file");
+  //PetscCall(PetscStrcpy(filename, "/tmp/matplotlib-XXXXXX"));
+  PetscCheck(tmpnam(filename) != NULL, comm, PETSC_ERR_SYS, "Could not acquire temporary file");
   // Note: We need to open with PETSC_COMM_SELF for each process to open a unique temporary file
   PetscCall(PetscViewerASCIIOpen(PETSC_COMM_SELF, filename, &csvViewer));
   PetscCall(PetscViewerPushFormat(csvViewer, PETSC_VIEWER_ASCII_CSV));
@@ -112,7 +112,6 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm)
     PetscCall(PetscPOpen(PETSC_COMM_SELF, NULL, proccall, "r", &processFile));
     PetscCall(PetscPClose(PETSC_COMM_SELF, processFile));
   }
-
   PetscFunctionReturn(0);
 }
 
