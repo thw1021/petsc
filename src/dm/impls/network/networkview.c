@@ -74,8 +74,17 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm)
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
   PetscCallMPI(MPI_Comm_size(comm, &size));
 
+#if defined(_WIN32)
   // Acquire a temporary file to write to and open an ASCII/CSV viewer
+  PetscCheck(tmpnam_s(filename, sizeof(filename)) == 0, comm, PETSC_ERR_SYS, "Could not acquire temporary file");
+#elif defined(PETSC_HAVE_POPEN)
+  // Same thing, but for POSIX systems on which tmpnam is deprecated
+  PetscCall(PetscStrcpy(filename, "/tmp/matplotlib-XXXXXX"));
+  PetscCheck(mkstemp(filename) != -1, comm, PETSC_ERR_SYS, "Could not acquire temporary file");
+#else
+  // Same thing, but for older C versions which don't have the safe form
   PetscCheck(tmpnam(filename) != NULL, comm, PETSC_ERR_SYS, "Could not acquire temporary file");
+#endif
   // Note: We need to open with PETSC_COMM_SELF for each process to open a unique temporary file
   PetscCall(PetscViewerASCIIOpen(PETSC_COMM_SELF, filename, &csvViewer));
   PetscCall(PetscViewerPushFormat(csvViewer, PETSC_VIEWER_ASCII_CSV));
@@ -107,9 +116,19 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm)
       PetscCall(PetscStrlcat(proccall, filename, sizeof(proccall)));
     }
 
+#if defined(PETSC_HAVE_POPEN)
+    char streamBuffer[256];
+
     // Perform the call to run the python script
     PetscCall(PetscPOpen(PETSC_COMM_SELF, NULL, proccall, "r", &processFile));
+    while(fgets(streamBuffer, sizeof(streamBuffer), processFile)) {
+      PetscPrintf(PETSC_COMM_WORLD, "%s", streamBuffer);
+    }
     PetscCall(PetscPClose(PETSC_COMM_SELF, processFile));
+#else
+    // Same thing, but using the standard library for systems that don't have POpen/PClose
+    PetscCheck(system(proccall) == 0, comm, PETSC_ERR_SYS, "Failed to call viewer script");
+#endif
   }
   PetscFunctionReturn(0);
 }
