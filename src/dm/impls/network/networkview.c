@@ -63,7 +63,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm)
 {
   PetscMPIInt rank, size;
   MPI_Comm    comm;
-  char        filename[FILENAME_MAX + 1], proccall[FILENAME_MAX + 500], scriptFile[FILENAME_MAX + 1];
+  char        filename[FILENAME_MAX + 1], proccall[FILENAME_MAX + 500], scriptFile[FILENAME_MAX + 1], streamBuffer[256];
   PetscViewer csvViewer;
   size_t      numChars, appendChars;
   FILE       *processFile;
@@ -117,8 +117,6 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm)
     }
 
 #if defined(PETSC_HAVE_POPEN)
-    char streamBuffer[256];
-
     // Perform the call to run the python script
     PetscCall(PetscPOpen(PETSC_COMM_SELF, NULL, proccall, "r", &processFile));
     while(fgets(streamBuffer, sizeof(streamBuffer), processFile)) {
