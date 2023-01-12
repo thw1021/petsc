@@ -41,7 +41,7 @@ static PetscErrorCode DMView_Network_CSV(DM dm, PetscViewer viewer)
       PetscCall(VecGetValues(allVertexCoords, 2, vertexOffsets, vertexCoords));
 
       // TODO: Determine vertex color/name
-      PetscCall(PetscViewerASCIIPrintf(viewer, "Node,%" PetscInt_FMT ",%lf,%lf,0,%" PetscInt_FMT "\n", vertex, (double)vertexCoords[0], (double)vertexCoords[1], vertex));
+      PetscCall(PetscViewerASCIIPrintf(viewer, "Node,%" PetscInt_FMT ",%lf,%lf,0,%" PetscInt_FMT "\n", vertex, (double)PetscRealPart(vertexCoords[0]), (double)PetscRealPart(vertexCoords[1]), vertex));
     }
 
     // Write out each edge
