@@ -63,7 +63,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm)
 {
   PetscMPIInt rank, size;
   MPI_Comm    comm;
-  char        filename[FILENAME_MAX + 1], proccall[FILENAME_MAX + 500], scriptFile[FILENAME_MAX + 1], streamBuffer[256];
+  char        filename[PETSC_MAX_PATH_LEN + 1], proccall[PETSC_MAX_PATH_LEN + 500], scriptFile[PETSC_MAX_PATH_LEN + 1], streamBuffer[256];
   PetscViewer csvViewer;
   size_t      numChars, appendChars;
   FILE       *processFile;
@@ -74,10 +74,10 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm)
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
   PetscCallMPI(MPI_Comm_size(comm, &size));
 
-#if defined(_WIN32)
+#if defined(PETSC_HAVE_TMPNAM_S)
   // Acquire a temporary file to write to and open an ASCII/CSV viewer
   PetscCheck(tmpnam_s(filename, sizeof(filename)) == 0, comm, PETSC_ERR_SYS, "Could not acquire temporary file");
-#elif defined(PETSC_HAVE_POPEN)
+#elif defined(PETSC_HAVE_MKSTEMP)
   // Same thing, but for POSIX systems on which tmpnam is deprecated
   PetscCall(PetscStrcpy(filename, "/tmp/matplotlib-XXXXXX"));
   PetscCheck(mkstemp(filename) != -1, comm, PETSC_ERR_SYS, "Could not acquire temporary file");
@@ -102,6 +102,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm)
   } else {
     // Get the value of $PETSC_DIR
     PetscCall(PetscStrreplace(PETSC_COMM_WORLD, "${PETSC_DIR}/share/petsc/dmnetwork_view.py", scriptFile, sizeof(scriptFile)));
+    PetscCall(PetscFixFilename(scriptFile, scriptFile));
     // Generate the system call for 'python3 $PETSC_DIR/share/petsc/dmnetwork_view.py file1 file2 ...'
     PetscCall(PetscArrayzero(proccall, sizeof(proccall)));
     PetscCall(PetscSNPrintfCount(proccall, sizeof(proccall), "%s %s %s", &numChars, PETSC_PYTHON_EXE, scriptFile, filename));
