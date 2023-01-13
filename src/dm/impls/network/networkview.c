@@ -77,7 +77,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm)
 #if defined(PETSC_HAVE_TMPNAM_S)
   // Acquire a temporary file to write to and open an ASCII/CSV viewer
   PetscCheck(tmpnam_s(filename, sizeof(filename)) == 0, comm, PETSC_ERR_SYS, "Could not acquire temporary file");
-#elif defined(PETSC_HAVE_MKSTEMP)
+#elif defined(PETSC_HAVE_MKSTEMP) && __STDC_VERSION__ > 199901L
   // Same thing, but for POSIX systems on which tmpnam is deprecated
   PetscCall(PetscStrcpy(filename, "/tmp/matplotlib-XXXXXX"));
   PetscCheck(mkstemp(filename) != -1, comm, PETSC_ERR_SYS, "Could not acquire temporary file");
