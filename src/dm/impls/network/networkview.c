@@ -119,9 +119,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm)
 #if defined(PETSC_HAVE_POPEN)
     // Perform the call to run the python script
     PetscCall(PetscPOpen(PETSC_COMM_SELF, NULL, proccall, "r", &processFile));
-    while(fgets(streamBuffer, sizeof(streamBuffer), processFile)) {
-      PetscPrintf(PETSC_COMM_WORLD, "%s", streamBuffer);
-    }
+    while(fgets(streamBuffer, sizeof(streamBuffer), processFile) != NULL) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%s", streamBuffer));
     PetscCall(PetscPClose(PETSC_COMM_SELF, processFile));
 #else
     // Same thing, but using the standard library for systems that don't have POpen/PClose
