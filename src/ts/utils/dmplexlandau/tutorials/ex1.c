@@ -2,11 +2,7 @@ static char help[] = "Landau collision operator driver\n\n";
 
 #include <petscts.h>
 #include <petsclandau.h>
-
-typedef struct {
-  PetscInt  grid_target, batch_target, field_target;
-  PetscBool init;
-} ex1Ctx;
+#include <petscdmcomposite.h>
 
 /*
  call back method for DMPlexLandauAccess:
@@ -24,39 +20,53 @@ Input Parameters:
  */
 PetscErrorCode landau_field_print_access_callback(DM dm, Vec x, PetscInt local_field, PetscInt grid, PetscInt b_id, void *vctx)
 {
-  ex1Ctx    *user = (ex1Ctx *)vctx;
-  LandauCtx *ctx;
+  LandauCtx  *ctx;
+  PetscScalar val;
+  PetscInt species;
 
   PetscFunctionBegin;
   PetscCall(DMGetApplicationContext(dm, &ctx));
-  if (grid == user->grid_target && b_id == user->batch_target && local_field == user->field_target) {
-    PetscScalar one = 1.0e10;
+  species = ctx->species_offset[grid] + local_field;
+  val = (PetscScalar)(LAND_PACK_IDX(b_id, grid) + (species + 1) * 10);
+  PetscCall(VecSet(x, val));
+  PetscCall(PetscInfo(dm, "DMPlexLandauAccess user 'add' method to grid %" PetscInt_FMT ", batch %" PetscInt_FMT " and local field %" PetscInt_FMT " with %" PetscInt_FMT " grids\n", grid, b_id, local_field, ctx->num_grids));
 
-    PetscCall(VecSet(x, one));
-    if (!user->init) {
-      PetscCall(PetscObjectSetName((PetscObject)dm, "single"));
-      PetscCall(DMViewFromOptions(dm, NULL, "-ex1_dm_view")); // DMCreateSubDM does seem to give the DM's fild the name from the original DM
-      user->init = PETSC_TRUE;
-    }
-    PetscCall(PetscObjectSetName((PetscObject)x, "u"));      // this gives the vector a nicer name, DMCreateSubDM could do this for us and get the correct name
-    PetscCall(VecViewFromOptions(x, NULL, "-ex1_vec_view")); // this causes diffs with Kokkos, etc
-    PetscCall(PetscInfo(dm, "DMPlexLandauAccess user 'add' method to grid %" PetscInt_FMT ", batch %" PetscInt_FMT " and species %" PetscInt_FMT "\n", grid, b_id, ctx->species_offset[grid] + local_field));
-  }
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
+{
+  LandauCtx *ctx   = (LandauCtx *)actx; /* user-defined application context */
+  PetscInt nDMs, id, grid_view_idx = ctx->verbose;
+  DM pack;
+  PetscReal time2;
+  Vec           *XsubArray = NULL;
+
+  PetscFunctionBeginUser;
+  PetscCall(TSGetDM(ts, &pack));
+  PetscCall(DMCompositeGetNumberDM(pack, &nDMs));
+  PetscCall(DMGetOutputSequenceNumber(ctx->plex[grid_view_idx], &id, &time2));
+  PetscCall(DMSetOutputSequenceNumber(ctx->plex[grid_view_idx], id+1, time));
+  PetscCall(PetscInfo(pack, "ex1 plot step %d, grid %d, time = %g\n", (int)id, (int)grid_view_idx, (double)time));
+  PetscCall(PetscMalloc(sizeof(*XsubArray) * nDMs, &XsubArray));
+  PetscCall(DMCompositeGetAccessArray(pack, X, nDMs, NULL, XsubArray)); // read only
+  PetscCall(VecViewFromOptions(XsubArray[LAND_PACK_IDX(ctx->batch_view_idx, grid_view_idx)], NULL, "-ex1_vec_view"));
+  PetscCall(DMCompositeRestoreAccessArray(pack, X, nDMs, NULL, XsubArray));
+  PetscCall(PetscFree(XsubArray));
+  PetscCall(DMPlexLandauPrintNorms(X, id+1));
+
   PetscFunctionReturn(0);
 }
 
 int main(int argc, char **argv)
 {
   DM             pack;
-  Vec            X, X_0;
-  PetscInt       dim = 2;
+  Vec            X;
+  PetscInt       dim = 2, nDMs, grid_view_idx = 0;
   TS             ts;
   Mat            J;
-  SNES           snes;
-  KSP            ksp;
-  PC             pc;
-  SNESLineSearch linesearch;
-  PetscReal      time;
+  Vec           *XsubArray = NULL;
+  LandauCtx     *ctx;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -64,43 +74,36 @@ int main(int argc, char **argv)
   /* Create a mesh */
   PetscCall(DMPlexLandauCreateVelocitySpace(PETSC_COMM_SELF, dim, "", &X, &J, &pack));
   PetscCall(DMSetUp(pack));
-  PetscCall(VecDuplicate(X, &X_0));
-  PetscCall(VecCopy(X, X_0));
+  PetscCall(DMGetApplicationContext(pack, &ctx));
+  PetscCall(DMCompositeGetNumberDM(pack, &nDMs));
   PetscCall(DMPlexLandauPrintNorms(X, 0));
-  PetscCall(DMSetOutputSequenceNumber(pack, 0, 0.0));
+  ctx->verbose = grid_view_idx; //co-opt 'verbose'. Not used in Landau after setup
+  /* output plot */
+  PetscCall(PetscMalloc(sizeof(*XsubArray) * nDMs, &XsubArray));
+  PetscCall(DMCompositeGetAccessArray(pack, X, nDMs, NULL, XsubArray)); // read only
+  PetscCall(PetscObjectSetName((PetscObject)XsubArray[LAND_PACK_IDX(ctx->batch_view_idx, grid_view_idx)], grid_view_idx == 0 ? "ue" : "ui"));
+  PetscCall(DMCompositeRestoreAccessArray(pack, X, nDMs, NULL, XsubArray));
+  PetscCall(PetscFree(XsubArray));
+  PetscCall(DMSetOutputSequenceNumber(ctx->plex[grid_view_idx], -1, 0.0));
+  PetscCall(DMViewFromOptions(ctx->plex[grid_view_idx], NULL, "-ex1_dm_view"));
   /* Create timestepping solver context */
   PetscCall(TSCreate(PETSC_COMM_SELF, &ts));
   PetscCall(TSSetDM(ts, pack));
-  PetscCall(TSGetSNES(ts, &snes));
-  PetscCall(SNESGetLineSearch(snes, &linesearch));
-  PetscCall(SNESLineSearchSetType(linesearch, SNESLINESEARCHBASIC));
   PetscCall(TSSetIFunction(ts, NULL, DMPlexLandauIFunction, NULL));
   PetscCall(TSSetIJacobian(ts, J, J, DMPlexLandauIJacobian, NULL));
   PetscCall(TSSetExactFinalTime(ts, TS_EXACTFINALTIME_STEPOVER));
-  PetscCall(SNESGetKSP(snes, &ksp));
-  PetscCall(KSPGetPC(ksp, &pc));
   PetscCall(TSSetFromOptions(ts));
   PetscCall(TSSetSolution(ts, X));
+  PetscCall(TSMonitorSet(ts, Monitor, ctx, NULL));
   PetscCall(TSSolve(ts, X));
   PetscCall(DMPlexLandauPrintNorms(X, 1));
-  PetscCall(TSGetTime(ts, &time));
-  PetscCall(DMSetOutputSequenceNumber(pack, 1, time));
-  PetscCall(VecAXPY(X, -1, X_0));
-  { /* test add field method */
-    ex1Ctx    *user;
-    LandauCtx *ctx;
-    PetscCall(DMGetApplicationContext(pack, &ctx));
-    PetscCall(PetscNew(&user));
-    user->grid_target  = 1; // 2nd ion species
-    user->field_target = 1;
-    PetscCall(DMPlexLandauAccess(pack, X, landau_field_print_access_callback, user));
-    PetscCall(PetscFree(user));
-  }
+  /* test add field method & output */
+  /* PetscCall(DMPlexLandauAccess(pack, X, landau_field_print_access_callback, NULL)); */
+  /* PetscCall(Monitor(ts, -1, 1.0, X, ctx)); */
   /* clean up */
   PetscCall(DMPlexLandauDestroyVelocitySpace(&pack));
   PetscCall(TSDestroy(&ts));
   PetscCall(VecDestroy(&X));
-  PetscCall(VecDestroy(&X_0));
   PetscCall(PetscFinalize());
   return 0;
 }
