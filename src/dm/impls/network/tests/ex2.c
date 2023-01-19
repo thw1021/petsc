@@ -129,12 +129,12 @@ PetscErrorCode StarGraphSetCoordinates(DM dm)
 
 int main(int argc, char **argv)
 {
-  DM           dm, cdm;
-  PetscInt     dofv = 1, dofe = 1, ne = 1, cdim, v, vStart, vEnd, off, vglobal;
-  Vec          Coord;
-  PetscScalar *coord;
-  PetscMPIInt  rank;
-  PetscBool    testdistribute = PETSC_FALSE;
+  DM                 dm, cdm;
+  PetscInt           dofv = 1, dofe = 1, ne = 1, cdim, v, vStart, vEnd, off, vglobal;
+  Vec                Coord;
+  const PetscScalar *coord;
+  PetscMPIInt        rank;
+  PetscBool          testdistribute = PETSC_FALSE, viewPy = PETSC_FALSE;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -159,7 +159,7 @@ int main(int argc, char **argv)
   PetscCall(DMGetCoordinateDM(dm, &cdm));
   PetscCall(DMNetworkGetVertexRange(cdm, &vStart, &vEnd));
   PetscCall(DMGetCoordinatesLocal(dm, &Coord));
-  PetscCall(VecGetArray(Coord, &coord));
+  PetscCall(VecGetArrayRead(Coord, &coord));
   PetscCall(PetscSynchronizedPrintf(MPI_COMM_WORLD, "\n Rank %i \n\n", rank));
   for (v = vStart; v < vEnd; v++) {
     PetscCall(DMNetworkGetLocalVecOffset(cdm, v, 0, &off));
@@ -169,11 +169,19 @@ int main(int argc, char **argv)
       PetscCall(PetscSynchronizedPrintf(MPI_COMM_WORLD, "Vertex: %" PetscInt_FMT ", x =  %f y = %f \n", vglobal, (double)PetscRealPart(coord[off]), (double)PetscRealPart(coord[off + 1])));
       break;
     default:
-      SETERRQ(MPI_COMM_WORLD, PETSC_ERR_SUP, "Only supports Network embedding dimension of 2, not supplied  %" PetscInt_FMT, cdim);
+      PetscCheck(cdim == 2, MPI_COMM_WORLD, PETSC_ERR_SUP, "Only supports Network embedding dimension of 2, not supplied  %" PetscInt_FMT, cdim);
       break;
     }
   }
+  PetscCall(VecRestoreArrayRead(Coord, &coord));
   PetscCall(PetscSynchronizedFlush(MPI_COMM_WORLD, NULL));
+
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-viewPy", &viewPy, NULL));
+  if (viewPy) {
+    PetscCall(PetscViewerPushFormat(PETSC_VIEWER_STDOUT_WORLD, PETSC_VIEWER_ASCII_PYTHON));
+    PetscCall(DMView(dm, PETSC_VIEWER_STDOUT_WORLD));
+    PetscCall(PetscViewerPopFormat(PETSC_VIEWER_STDOUT_WORLD));
+  }
 
   PetscCall(DMDestroy(&dm));
   PetscCall(PetscFinalize());
