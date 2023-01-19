@@ -18,7 +18,7 @@ static PetscErrorCode DMView_Network_CSV(DM dm, PetscViewer viewer)
   // Get the network containing coordinate information
   PetscCall(DMGetCoordinateDM(dm, &dmcoords));
   // Get the coordinate vector for the network
-  PetscCall(DMGetCoordinates(dm, &allVertexCoords));
+  PetscCall(DMGetCoordinatesLocal(dm, &allVertexCoords));
 
   // Write the header
   PetscCall(PetscViewerASCIIPrintf(viewer, "Type,ID,X,Y,Z,Name,Color\n"));
