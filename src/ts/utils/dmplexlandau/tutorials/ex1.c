@@ -22,12 +22,12 @@ PetscErrorCode landau_field_print_access_callback(DM dm, Vec x, PetscInt local_f
 {
   LandauCtx  *ctx;
   PetscScalar val;
-  PetscInt species;
+  PetscInt    species;
 
   PetscFunctionBegin;
   PetscCall(DMGetApplicationContext(dm, &ctx));
   species = ctx->species_offset[grid] + local_field;
-  val = (PetscScalar)(LAND_PACK_IDX(b_id, grid) + (species + 1) * 10);
+  val     = (PetscScalar)(LAND_PACK_IDX(b_id, grid) + (species + 1) * 10);
   PetscCall(VecSet(x, val));
   PetscCall(PetscInfo(dm, "DMPlexLandauAccess user 'add' method to grid %" PetscInt_FMT ", batch %" PetscInt_FMT " and local field %" PetscInt_FMT " with %" PetscInt_FMT " grids\n", grid, b_id, local_field, ctx->num_grids));
 
@@ -36,37 +36,37 @@ PetscErrorCode landau_field_print_access_callback(DM dm, Vec x, PetscInt local_f
 
 PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
 {
-  LandauCtx *ctx   = (LandauCtx *)actx; /* user-defined application context */
-  PetscInt nDMs, id, grid_view_idx = ctx->verbose;
-  DM pack;
-  PetscReal time2;
-  Vec           *XsubArray = NULL;
+  LandauCtx *ctx = (LandauCtx *)actx; /* user-defined application context */
+  PetscInt   nDMs, id, grid_view_idx = ctx->verbose;
+  DM         pack;
+  PetscReal  time2;
+  Vec       *XsubArray = NULL;
 
   PetscFunctionBeginUser;
   PetscCall(TSGetDM(ts, &pack));
   PetscCall(DMCompositeGetNumberDM(pack, &nDMs));
   PetscCall(DMGetOutputSequenceNumber(ctx->plex[grid_view_idx], &id, &time2));
-  PetscCall(DMSetOutputSequenceNumber(ctx->plex[grid_view_idx], id+1, time));
+  PetscCall(DMSetOutputSequenceNumber(ctx->plex[grid_view_idx], id + 1, time));
   PetscCall(PetscInfo(pack, "ex1 plot step %d, grid %d, time = %g\n", (int)id, (int)grid_view_idx, (double)time));
   PetscCall(PetscMalloc(sizeof(*XsubArray) * nDMs, &XsubArray));
   PetscCall(DMCompositeGetAccessArray(pack, X, nDMs, NULL, XsubArray)); // read only
   PetscCall(VecViewFromOptions(XsubArray[LAND_PACK_IDX(ctx->batch_view_idx, grid_view_idx)], NULL, "-ex1_vec_view"));
   PetscCall(DMCompositeRestoreAccessArray(pack, X, nDMs, NULL, XsubArray));
   PetscCall(PetscFree(XsubArray));
-  PetscCall(DMPlexLandauPrintNorms(X, id+1));
+  PetscCall(DMPlexLandauPrintNorms(X, id + 1));
 
   PetscFunctionReturn(0);
 }
 
 int main(int argc, char **argv)
 {
-  DM             pack;
-  Vec            X;
-  PetscInt       dim = 2, nDMs, grid_view_idx = 0;
-  TS             ts;
-  Mat            J;
-  Vec           *XsubArray = NULL;
-  LandauCtx     *ctx;
+  DM         pack;
+  Vec        X;
+  PetscInt   dim = 2, nDMs, grid_view_idx = 0;
+  TS         ts;
+  Mat        J;
+  Vec       *XsubArray = NULL;
+  LandauCtx *ctx;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
