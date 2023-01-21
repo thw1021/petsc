@@ -544,11 +544,9 @@ PetscErrorCode PetscFunctionListPrintTypes(MPI_Comm comm, const char prefix[], c
   char p[64];
 
   PetscFunctionBegin;
-  (void)fd;
   PetscCall(PetscStrncpy(p, "-", sizeof(p)));
-  if (prefix) PetscCall(PetscStrlcat(p, prefix, sizeof(p)));
+  PetscCall(PetscStrlcat(p, prefix, sizeof(p)));
   PetscCall((*PetscHelpPrintf)(comm, "  %s%s <now %s : formerly %s>: %s (one of)", p, name + 1, newv, def, text));
-
   PetscHMapFuncForEach(list, name, func, PetscCall((*PetscHelpPrintf)(comm, " %s", name)));
   PetscCall((*PetscHelpPrintf)(comm, " (%s)\n", man));
   PetscFunctionReturn(PETSC_SUCCESS);
