@@ -390,7 +390,7 @@ static PetscErrorCode CoordinatePrint(DM dm)
   PetscCall(DMGetCoordinateDim(dm, &cdim));
   PetscCall(VecGetArrayRead(coords, &carray));
 
-  PetscCall(PetscPrintf(MPI_COMM_WORLD, "\nCoordinatePrint, cdim %D:\n",cdim));
+  PetscCall(PetscPrintf(MPI_COMM_WORLD, "\nCoordinatePrint, cdim %D:\n", cdim));
   PetscCall(PetscSynchronizedPrintf(MPI_COMM_WORLD, "[%i]\n", rank));
   for (v = vStart; v < vEnd; v++) {
     PetscCall(DMNetworkGetLocalVecOffset(dmclone, v, 0, &off));
@@ -588,9 +588,7 @@ int main(int argc, char **argv)
   PetscCall(DMGetCoordinateDM(networkdm, &dmclone));
   PetscCall(DMNetworkGetVertexRange(dmclone, &vStart, &vEnd));
   PetscCall(DMNetworkRegisterComponent(dmclone, "coordinates", 0, &compkey));
-  for (i = vStart; i < vEnd; i++) {
-    PetscCall(DMNetworkAddComponent(dmclone, i, compkey, NULL, 2));
-  }
+  for (i = vStart; i < vEnd; i++) { PetscCall(DMNetworkAddComponent(dmclone, i, compkey, NULL, 2)); }
   PetscCall(DMNetworkFinalizeComponents(dmclone));
 
   PetscCall(DMCreateLocalVector(dmclone, &coords));
