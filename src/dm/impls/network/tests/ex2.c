@@ -148,7 +148,7 @@ static PetscErrorCode CoordinatePrint(DM dm)
   PetscCall(DMGetCoordinateDim(dm, &cdim));
   PetscCall(VecGetArrayRead(coords, &carray));
 
-  PetscCall(PetscPrintf(MPI_COMM_WORLD, "\nCoordinatePrint, cdim %D:\n", cdim));
+  PetscCall(PetscPrintf(MPI_COMM_WORLD, "\nCoordinatePrint, cdim %" PetscInt_FMT ":\n", cdim));
   PetscCall(PetscSynchronizedPrintf(MPI_COMM_WORLD, "[%i]\n", rank));
   for (v = vStart; v < vEnd; v++) {
     PetscCall(DMNetworkGetLocalVecOffset(dmclone, v, 0, &off));
