@@ -283,105 +283,144 @@ PetscErrorCode SetInitialGuess(DM networkdm, Vec X, void *appctx)
   PetscFunctionReturn(0);
 }
 
-/* Set coordinates - current implementation requires calling DMNetworkDistribute() first */
-static PetscErrorCode CoordinateVecSetUp(DM networkdm, DM dmclone, Vec coords)
+/* Set coordinates */
+static PetscErrorCode CoordinateVecSetUp(DM dm, Vec coords)
 {
-  PetscInt        i, gidx, offset, rows[2], v, nv, Nsubnet;
+  DM              dmclone;
+  PetscInt        i, gidx, offset, v, nv, Nsubnet;
   const PetscInt *vtx;
-  PetscScalar     vcoord[2];
+  PetscScalar    *carray;
 
   PetscFunctionBeginUser;
-  PetscCall(DMNetworkGetNumSubNetworks(networkdm, NULL, &Nsubnet));
+  PetscCall(DMGetCoordinateDM(dm, &dmclone));
+  PetscCall(VecGetArrayWrite(coords, &carray));
+  PetscCall(DMNetworkGetNumSubNetworks(dm, NULL, &Nsubnet));
   for (i = 0; i < Nsubnet; i++) {
-    PetscCall(DMNetworkGetSubnetwork(networkdm, i, &nv, NULL, &vtx, NULL));
+    PetscCall(DMNetworkGetSubnetwork(dm, i, &nv, NULL, &vtx, NULL));
     for (v = 0; v < nv; v++) {
-      PetscCall(DMNetworkGetGlobalVertexIndex(networkdm, vtx[v], &gidx));
+      PetscCall(DMNetworkGetGlobalVertexIndex(dm, vtx[v], &gidx));
       PetscCall(DMNetworkGetLocalVecOffset(dmclone, vtx[v], 0, &offset));
-      rows[0] = offset;
-      rows[1] = offset + 1;
       switch (gidx) {
       case 0:
-        vcoord[0] = -1.0;
-        vcoord[1] = -1.0;
+        carray[offset]     = -1.0;
+        carray[offset + 1] = -1.0;
         break;
       case 1:
-        vcoord[0] = -2.0;
-        vcoord[1] = 2.0;
+        carray[offset]     = -2.0;
+        carray[offset + 1] = 2.0;
         break;
       case 2:
-        vcoord[0] = 0.0;
-        vcoord[1] = 2.0;
+        carray[offset]     = 0.0;
+        carray[offset + 1] = 2.0;
         break;
       case 3:
-        vcoord[0] = -1.0;
-        vcoord[1] = 0.0;
+        carray[offset]     = -1.0;
+        carray[offset + 1] = 0.0;
         break;
       case 4:
-        vcoord[0] = 0.0;
-        vcoord[1] = 0.0;
+        carray[offset]     = 0.0;
+        carray[offset + 1] = 0.0;
         break;
       case 5:
-        vcoord[0] = 0.0;
-        vcoord[1] = 1.0;
+        carray[offset]     = 0.0;
+        carray[offset + 1] = 1.0;
         break;
       case 6:
-        vcoord[0] = -1.0;
-        vcoord[1] = 1.0;
+        carray[offset]     = -1.0;
+        carray[offset + 1] = 1.0;
         break;
       case 7:
-        vcoord[0] = -2.0;
-        vcoord[1] = 1.0;
+        carray[offset]     = -2.0;
+        carray[offset + 1] = 1.0;
         break;
       case 8:
-        vcoord[0] = -2.0;
-        vcoord[1] = 0.0;
+        carray[offset]     = -2.0;
+        carray[offset + 1] = 0.0;
         break;
       case 9:
-        vcoord[0] = 1.0;
-        vcoord[1] = 0.0;
+        carray[offset]     = 1.0;
+        carray[offset + 1] = 0.0;
         break;
       case 10:
-        vcoord[0] = 1.0;
-        vcoord[1] = -1.0;
+        carray[offset]     = 1.0;
+        carray[offset + 1] = -1.0;
         break;
       case 11:
-        vcoord[0] = 2.0;
-        vcoord[1] = -1.0;
+        carray[offset]     = 2.0;
+        carray[offset + 1] = -1.0;
         break;
       case 12:
-        vcoord[0] = 2.0;
-        vcoord[1] = 0.0;
+        carray[offset]     = 2.0;
+        carray[offset + 1] = 0.0;
         break;
       case 13:
-        vcoord[0] = 0.0;
-        vcoord[1] = -1.0;
+        carray[offset]     = 0.0;
+        carray[offset + 1] = -1.0;
         break;
       case 14:
-        vcoord[0] = 2.0;
-        vcoord[1] = 1.0;
+        carray[offset]     = 2.0;
+        carray[offset + 1] = 1.0;
         break;
       default:
         PetscCheck(gidx < 15 && gidx > -1, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "gidx %" PetscInt_FMT "must between 0 and 14", gidx);
       }
-      PetscCall(VecSetValues(coords, 2, rows, vcoord, INSERT_VALUES));
     }
   }
-  PetscCall(VecAssemblyBegin(coords));
-  PetscCall(VecAssemblyEnd(coords));
+  PetscCall(VecRestoreArrayWrite(coords, &carray));
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode CoordinatePrint(DM dm)
+{
+  DM                 dmclone;
+  PetscInt           cdim, v, off, vglobal, vStart, vEnd;
+  const PetscScalar *carray;
+  Vec                coords;
+  MPI_Comm           comm;
+  PetscMPIInt        rank;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+
+  PetscCall(DMGetCoordinateDM(dm, &dmclone));
+  PetscCall(DMNetworkGetVertexRange(dm, &vStart, &vEnd));
+  PetscCall(DMGetCoordinatesLocal(dm, &coords));
+
+  PetscCall(DMGetCoordinateDim(dm, &cdim));
+  PetscCall(VecGetArrayRead(coords, &carray));
+
+  PetscCall(PetscPrintf(MPI_COMM_WORLD, "\nCoordinatePrint, cdim %" PetscInt_FMT ":\n", cdim));
+  PetscCall(PetscSynchronizedPrintf(MPI_COMM_WORLD, "[%i]\n", rank));
+  for (v = vStart; v < vEnd; v++) {
+    PetscCall(DMNetworkGetLocalVecOffset(dmclone, v, 0, &off));
+    PetscCall(DMNetworkGetGlobalVertexIndex(dmclone, v, &vglobal));
+    switch (cdim) {
+    case 2:
+      PetscCall(PetscSynchronizedPrintf(MPI_COMM_WORLD, "Vertex: %" PetscInt_FMT ", x =  %f y = %f \n", vglobal, (double)PetscRealPart(carray[off]), (double)PetscRealPart(carray[off + 1])));
+      break;
+    default:
+      PetscCheck(cdim == 2, MPI_COMM_WORLD, PETSC_ERR_SUP, "Only supports Network embedding dimension of 2, not supplied  %" PetscInt_FMT, cdim);
+      break;
+    }
+  }
+  PetscCall(PetscSynchronizedFlush(MPI_COMM_WORLD, NULL));
+  PetscCall(VecRestoreArrayRead(coords, &carray));
   PetscFunctionReturn(0);
 }
 
 int main(int argc, char **argv)
 {
-  DM                  networkdm;
+  DM                  networkdm, dmclone;
   PetscLogStage       stage[4];
   PetscMPIInt         rank, size;
   PetscInt            Nsubnet = 2, numVertices[2], numEdges[2], i, j, nv, ne, it_max = 10;
+  PetscInt            vStart, vEnd, compkey;
   const PetscInt     *vtx, *edges;
-  Vec                 X, F;
+  Vec                 X, F, coords;
   SNES                snes, snes_power, snes_water;
   Mat                 Jac;
-  PetscBool           ghost, viewJ = PETSC_FALSE, viewX = PETSC_FALSE, viewPy = PETSC_FALSE, test = PETSC_FALSE, distribute = PETSC_TRUE, flg;
+  PetscBool           ghost, viewJ = PETSC_FALSE, viewX = PETSC_FALSE, viewPy = PETSC_FALSE, test = PETSC_FALSE, distribute = PETSC_TRUE, flg, printCoord = PETSC_FALSE;
   UserCtx             user;
   SNESConvergedReason reason;
 
@@ -454,6 +493,7 @@ int main(int argc, char **argv)
   PetscCall(PetscLogStagePush(stage[1]));
 
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-viewPy", &viewPy, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-printCoord", &printCoord, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-test", &test, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-distribute", &distribute, NULL));
 
@@ -543,35 +583,31 @@ int main(int argc, char **argv)
   PetscCall(PetscFree(waterdata->edge));
   PetscCall(PetscFree(waterdata));
 
+  /* Set coordinates for visualization */
+  PetscCall(DMSetCoordinateDim(networkdm, 2));
+  PetscCall(DMGetCoordinateDM(networkdm, &dmclone));
+  PetscCall(DMNetworkGetVertexRange(dmclone, &vStart, &vEnd));
+  PetscCall(DMNetworkRegisterComponent(dmclone, "coordinates", 0, &compkey));
+  for (i = vStart; i < vEnd; i++) { PetscCall(DMNetworkAddComponent(dmclone, i, compkey, NULL, 2)); }
+  PetscCall(DMNetworkFinalizeComponents(dmclone));
+
+  PetscCall(DMCreateLocalVector(dmclone, &coords));
+  PetscCall(DMSetCoordinatesLocal(networkdm, coords)); /* set/get coords to/from networkdm */
+  PetscCall(CoordinateVecSetUp(networkdm, coords));
+  if (printCoord) PetscCall(CoordinatePrint(networkdm));
+
   /* Re-distribute networkdm to multiple processes for better job balance */
   if (distribute) {
-    DM       dmclone;
-    Vec      coords;
-    PetscInt vStart, vEnd, compkey;
     PetscCall(DMNetworkDistribute(&networkdm, 0));
 
-    /* Set coordinates - current implementation requires calling DMNetworkDistribute() first */
-    PetscCall(DMGetCoordinateDM(networkdm, &dmclone));
-
-    PetscCall(DMSetCoordinateDim(dmclone, 2));
-    PetscCall(DMNetworkGetVertexRange(dmclone, &vStart, &vEnd));
-    PetscCall(DMNetworkRegisterComponent(dmclone, "coordinates", 0, &compkey));
-    for (i = vStart; i < vEnd; i++) { PetscCall(DMNetworkAddComponent(dmclone, i, compkey, NULL, 2)); }
-    PetscCall(DMNetworkFinalizeComponents(dmclone));
-
-    PetscCall(DMCreateLocalVector(dmclone, &coords));
-    PetscCall(VecSet(coords, 0.0));
-    //PetscCall(DMSetCoordinatesLocal(networkdm, coords)); //crash when np>1???
-    PetscCall(DMSetCoordinates(networkdm, coords));
-
-    PetscCall(CoordinateVecSetUp(networkdm, dmclone, coords));
+    if (printCoord) PetscCall(CoordinatePrint(networkdm));
     if (viewPy) { /* Python View of network with coordinates */
       PetscCall(PetscViewerPushFormat(PETSC_VIEWER_STDOUT_WORLD, PETSC_VIEWER_ASCII_PYTHON));
       PetscCall(DMView(networkdm, PETSC_VIEWER_STDOUT_WORLD));
       PetscCall(PetscViewerPopFormat(PETSC_VIEWER_STDOUT_WORLD));
     }
-    PetscCall(VecDestroy(&coords));
   }
+  PetscCall(VecDestroy(&coords));
 
   /* Test DMNetworkGetSubnetwork() and DMNetworkGetSubnetworkSharedVertices() */
   if (test) {

@@ -127,18 +127,57 @@ PetscErrorCode StarGraphSetCoordinates(DM dm)
   PetscFunctionReturn(0);
 }
 
+/* This subroutine is used in petsc/src/snes/tutorials/network/ex1.c */
+static PetscErrorCode CoordinatePrint(DM dm)
+{
+  DM                 dmclone;
+  PetscInt           cdim, v, off, vglobal, vStart, vEnd;
+  const PetscScalar *carray;
+  Vec                coords;
+  MPI_Comm           comm;
+  PetscMPIInt        rank;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+
+  PetscCall(DMGetCoordinateDM(dm, &dmclone));
+  PetscCall(DMNetworkGetVertexRange(dm, &vStart, &vEnd));
+  PetscCall(DMGetCoordinatesLocal(dm, &coords));
+
+  PetscCall(DMGetCoordinateDim(dm, &cdim));
+  PetscCall(VecGetArrayRead(coords, &carray));
+
+  PetscCall(PetscPrintf(MPI_COMM_WORLD, "\nCoordinatePrint, cdim %" PetscInt_FMT ":\n", cdim));
+  PetscCall(PetscSynchronizedPrintf(MPI_COMM_WORLD, "[%i]\n", rank));
+  for (v = vStart; v < vEnd; v++) {
+    PetscCall(DMNetworkGetLocalVecOffset(dmclone, v, 0, &off));
+    PetscCall(DMNetworkGetGlobalVertexIndex(dmclone, v, &vglobal));
+    switch (cdim) {
+    case 2:
+      PetscCall(PetscSynchronizedPrintf(MPI_COMM_WORLD, "Vertex: %" PetscInt_FMT ", x =  %f y = %f \n", vglobal, (double)PetscRealPart(carray[off]), (double)PetscRealPart(carray[off + 1])));
+      break;
+    default:
+      PetscCheck(cdim == 2, MPI_COMM_WORLD, PETSC_ERR_SUP, "Only supports Network embedding dimension of 2, not supplied  %" PetscInt_FMT, cdim);
+      break;
+    }
+  }
+  PetscCall(PetscSynchronizedFlush(MPI_COMM_WORLD, NULL));
+  PetscCall(VecRestoreArrayRead(coords, &carray));
+  PetscFunctionReturn(0);
+}
+
 int main(int argc, char **argv)
 {
-  DM           dm, cdm;
-  PetscInt     dofv = 1, dofe = 1, ne = 1, cdim, v, vStart, vEnd, off, vglobal;
-  Vec          Coord;
-  PetscScalar *coord;
-  PetscMPIInt  rank;
-  PetscBool    testdistribute = PETSC_FALSE;
+  DM          dm;
+  PetscInt    dofv = 1, dofe = 1, ne = 1;
+  PetscMPIInt rank;
+  PetscBool   testdistribute = PETSC_FALSE, viewPy = PETSC_FALSE;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   PetscCallMPI(MPI_Comm_rank(MPI_COMM_WORLD, &rank));
+
   /* create a distributed k-Star graph DMNetwork */
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-dofv", &dofv, NULL));
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-dofe", &dofe, NULL));
@@ -154,26 +193,14 @@ int main(int argc, char **argv)
     PetscCall(DMView(dm, PETSC_VIEWER_STDOUT_WORLD));
   }
 
-  /* print the coordinates of each vertex */
-  PetscCall(DMGetCoordinateDim(dm, &cdim));
-  PetscCall(DMGetCoordinateDM(dm, &cdm));
-  PetscCall(DMNetworkGetVertexRange(cdm, &vStart, &vEnd));
-  PetscCall(DMGetCoordinatesLocal(dm, &Coord));
-  PetscCall(VecGetArray(Coord, &coord));
-  PetscCall(PetscSynchronizedPrintf(MPI_COMM_WORLD, "\n Rank %i \n\n", rank));
-  for (v = vStart; v < vEnd; v++) {
-    PetscCall(DMNetworkGetLocalVecOffset(cdm, v, 0, &off));
-    PetscCall(DMNetworkGetGlobalVertexIndex(cdm, v, &vglobal));
-    switch (cdim) {
-    case 2:
-      PetscCall(PetscSynchronizedPrintf(MPI_COMM_WORLD, "Vertex: %" PetscInt_FMT ", x =  %f y = %f \n", vglobal, (double)PetscRealPart(coord[off]), (double)PetscRealPart(coord[off + 1])));
-      break;
-    default:
-      SETERRQ(MPI_COMM_WORLD, PETSC_ERR_SUP, "Only supports Network embedding dimension of 2, not supplied  %" PetscInt_FMT, cdim);
-      break;
-    }
+  /* print or view the coordinates of each vertex */
+  PetscCall(CoordinatePrint(dm));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-viewPy", &viewPy, NULL));
+  if (viewPy) {
+    PetscCall(PetscViewerPushFormat(PETSC_VIEWER_STDOUT_WORLD, PETSC_VIEWER_ASCII_PYTHON));
+    PetscCall(DMView(dm, PETSC_VIEWER_STDOUT_WORLD));
+    PetscCall(PetscViewerPopFormat(PETSC_VIEWER_STDOUT_WORLD));
   }
-  PetscCall(PetscSynchronizedFlush(MPI_COMM_WORLD, NULL));
 
   PetscCall(DMDestroy(&dm));
   PetscCall(PetscFinalize());
