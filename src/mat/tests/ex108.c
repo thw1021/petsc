@@ -67,5 +67,6 @@ int main(int argc, char **argv)
 /*TEST
 
   test:
+    TODO: MatCreateSeqBAIJWithArrays() is broken, it leaks imax and ilen arrays
 
 TEST*/
