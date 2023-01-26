@@ -1415,6 +1415,7 @@ static PetscErrorCode DMPlexDistributeSetupTree(DM dm, PetscSF migrationSF, ISLo
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#if 0
 PETSC_UNUSED static PetscErrorCode DMPlexDistributeSF(DM dm, PetscSF migrationSF, DM dmParallel)
 {
   PetscMPIInt rank, size;
@@ -1490,6 +1491,7 @@ PETSC_UNUSED static PetscErrorCode DMPlexDistributeSF(DM dm, PetscSF migrationSF
   PetscCall(PetscLogEventEnd(DMPLEX_DistributeSF, dm, 0, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+#endif
 
 /*@
   DMPlexSetPartitionBalance - Should distribution of the DM attempt to balance the shared point partition?
