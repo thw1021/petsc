@@ -1,0 +1,12 @@
+-ts_monitor
+-snes_rtol 1.e-14
+-snes_stol 1.e-14
+-snes_converged_reason
+-ts_type arkimex
+-ts_arkimex_type 1bee
+-ts_max_snes_failures -1
+-ts_rtol 1e-4
+-dm_landau_num_cells 2,4
+-ts_adapt_dt_max 5
+-pc_type lu
+-ksp_type preonly
