@@ -11,10 +11,10 @@ from numpy import array
 import locale
 import pandas as pd
 locale.setlocale(locale.LC_ALL, '')
-plt.rcParams["font.size"] = 11
+#plt.rcParams["font.size"] = 11
 #plt.rcParams["font.weight"] = "bold"
 #plt.rcParams["axes.labelweight"] = "bold"
-plt.rcParams.update({'font.size': 11})
+#plt.rcParams.update({'font.size': 11})
 #plt.rcParams.update({'font.weight': "bold"})
 idx = 0
 t_off = 0
@@ -54,6 +54,9 @@ for filename in sys.argv[1:]: # just one
     for text in open(filename,"r"): 
         words = text.split()
         n = len(words)
+        if n > 2 and words[1] == 'FormLandau':
+            ncells = words[4]
+            nips = words[2]
         if n > 1 and words[0] == 'step':
             #print (words)
             Temps[idx,0] = float(words[3])
@@ -73,11 +76,11 @@ for filename in sys.argv[1:]: # just one
     # plot
     #
     ylabel = 'Temperature (ev)'
-    df = pd.DataFrame(data=Temps[:idx,1:], index=Temps[:idx,0], columns=series_name)
+    df = pd.DataFrame(data=Temps[:idx,1:], index=Temps[:idx,0]/230, columns=series_name)
     #df2.index.name = 'Nodes (8 GCDs/node)'
     #df2.columns.name = 'dof/'+device+':'  markersize=5,marker='.',
     plt.rcParams["figure.dpi"] = 320
-    ax = df.plot(lw=2, colormap='jet', style=styles, markersize=4, logx=True,logy=False,  grid=True, legend=False, fontsize=16)
+    ax = df.plot(lw=1, colormap='jet', style=styles, markersize=2, logx=True,logy=False,  grid=True, legend=False)
     #ax = df.plot.line()
     #for i, line in enumerate(ax.get_lines()):
      #   line.set_marker(marks[i])
@@ -88,9 +91,9 @@ for filename in sys.argv[1:]: # just one
     xmin, xmax, ymin, ymax = plt.axis()
     #ymax = max_thing[idx] 
     xmin, xmax, ymin, ymax = plt.axis([xmin, xmax, 175, ymax])
-    ax.set_xlabel(xlabel, fontdict={'fontsize':16})
-    ax.set_ylabel(ylabel, fontdict={'fontsize':16})
+    ax.set_xlabel(xlabel) #, fontdict={'fontsize':16})
+    ax.set_ylabel(ylabel) #, fontdict={'fontsize':16})
     plt.savefig('temperature-relaxation-' + normal_species_short + '-'+ elem_type + '-'+ ts_type_name + '-'+ shift_type + tag + '.png',bbox_inches='tight')
     #latex table
     #print(df2.to_latex(longtable=False,escape=False,float_format="{:0.2f}".format, caption = prob + '-- ' + type_name[idx], label='tab:' + '_' + lang + machine + '_' + type_tag[idx]))
- 
+    print('ncells = ',ncells,', nips = ',nips)
