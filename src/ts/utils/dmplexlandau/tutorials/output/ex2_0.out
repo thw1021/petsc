@@ -1,7 +1,7 @@
 masses:        e= 9.109e-31; ions in proton mass units:    2.000e+00  0.000e+00 ...
 charges:       e=-1.602e-19; charges in elementary units:  1.000e+00  0.000e+00
 n:             e:  2.000e+00                           i:  2.000e+00  0.000e+00
-thermal T (K): e= 5.802e+07 i= 5.802e+07  0.000e+00. v_0= 2.965e+07 ( 9.892e-02c) n_0= 5.000e+19 t_0= 1.294e-04, classical, Intuitive, 2 batched
+thermal T (K): e= 5.802e+07 i= 5.802e+07  0.000e+00. Normalization grid 0: v_0= 2.965e+07 ( 9.892e-02c) n_0= 5.000e+19 t_0= 1.294e-04, classical, Intuitive, 2 batched
 Domain radius (AMR levels) grid 0: par= 5.000e+00, perp= 5.000e+00 (2) , 1: par= 8.252e-02, perp= 8.252e-02 (2) 
 Using default Plex order for all matrices
 0) FormLandau 448 IPs, 28 cells total, Nb=16, Nq=16, dim=2, Tab: Nb=16 Nf=2 Np=16 cdim=2 N=568
