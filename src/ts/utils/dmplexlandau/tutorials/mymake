@@ -1,0 +1,49 @@
+SHELL=/bin/bash
+# -*- mode: makefile -*-
+all: ex2
+
+BID=0
+POST=0
+ORDER=3
+NP=1
+DT=.1
+AMR=2
+AMR2=0
+STEPS=1
+RTOL=1e-13
+KSPRTOL=1e-12
+TRICK=false
+EZ=0.0
+REL=false
+TEMP=1
+RAD=5
+RERAD=5
+BSZ=1
+SP=0
+NN=1
+DIM=2
+FOREST=p4est
+TIME=100
+DEVICE=cpu
+
+FILE=sol-Q${ORDER}-P${POST}-${RAD}${FILE_APPEND}
+
+MEI=5.448195933014354e-04
+KOK=-dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type preonly -pc_type bjkokkos -pc_bjkokkos_pc_type jacobi -pc_bjkokkos_ksp_converged_reasonxx -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_ksp_rtol ${KSPRTOL} -pc_bjkokkos_ksp_max_it 150 -log_view -log_view_gpu_time
+# make -f mymake runex1 FILE=sol-Q2-P1-A3-no-shift DT=.01 AMR=2,2 POST=1 ORDER=2 STEPS=1000000 TIME=20000 EXTRA='-options_left -dm_landau_thermal_temps .3,.2 -dm_landau_verbose 1 -ts_rtol 1e-2' | tee out-aniso-maxwellians-0-Q2-adaptive_tol2-refine3 # -dm_landau_electron_shift
+
+runex1:
+	-${MPIEXEC} -n 1 -N 1 ./ex1 ${PRE1} -dm_landau_type ${FOREST} -petscspace_degree ${ORDER} -dm_landau_num_species_grid 1,1 -dm_landau_ion_masses 2 -dm_landau_ion_charges 1 -dm_landau_thermal_temps .3,.2 -dm_landau_n 1,1  -ts_max_steps ${STEPS} -ts_dt ${DT} -ts_max_time ${TIME} -ts_adapt_monitor -dm_landau_amr_levels_max ${AMR},${AMR} -dm_landau_amr_post_refine ${POST} -dm_landau_amr_re_levels ${AMR2} -dm_landau_re_radius ${RERAD} -dm_landau_domain_radius ${RAD},${RAD} ${KOK} ${EXTRA} -ex1_dm_view_e hdf5:${FILE}_e.h5 -ex1_vec_view_e hdf5:${FILE}_e.h5::append ${EXTRA} -ex1_dm_view_i hdf5:${FILE}_i.h5 -ex1_vec_view_i hdf5:${FILE}_i.h5::append 
+	-@python3 ${PETSC_DIR}/lib/petsc/bin/petsc_gen_xdmf.py ${FILE}_e.h5
+	-@python3 ${PETSC_DIR}/lib/petsc/bin/petsc_gen_xdmf.py ${FILE}_i.h5
+
+xmf:
+	-@python3 ${PETSC_DIR}/lib/petsc/bin/petsc_gen_xdmf.py ${FILE}_e.h5
+	-@python3 ${PETSC_DIR}/lib/petsc/bin/petsc_gen_xdmf.py ${FILE}_i.h5
+
+ runspit:
+	-${PRE} ./ex2 ${PRE1} -dim ${DIM} -dm_landau_num_species_grid 1,1 -ex2_test_type spitzer -ex2_connor_e_field_units -dm_landau_Ez 0.05 -petscspace_degree ${ORDER} -dm_landau_type ${FOREST} -dm_landau_ion_masses 2 -dm_landau_ion_charges 1 -dm_landau_thermal_temps 1,1 -dm_landau_n 1,1 -ts_monitor -ts_adapt_monitor -snes_rtol ${RTOL} -snes_stol ${RTOL} -snes_monitor -snes_converged_reason -snes_max_it 25 -ts_type arkimex -ts_exact_final_time stepover -ts_arkimex_type 1bee -ts_max_snes_failures -1 -ts_rtol 1e-1 -ts_dt ${DT} -ts_adapt_clip .2,1.1 -ts_max_time 100 -ts_max_steps ${STEPS} -ts_adapt_scale_solve_failed 0.2 -ts_adapt_time_step_increase_delay 5 ${SOLV} -dm_landau_amr_levels_max ${AMR},${AMR} -dm_landau_amr_post_refine ${POST} -ex2_plot_dt ${DT} -dm_landau_device_type ${DEVICE} ${MATVEC} -dm_landau_batch_view_idx ${BID} -ex2_grid_view_idx ${SP} -dm_landau_batch_size ${BSZ} ${EXTRA}
+
+include ${PETSC_DIR}/lib/petsc/conf/variables
+include ${PETSC_DIR}/lib/petsc/conf/rules
+include ${PETSC_DIR}/lib/petsc/conf/test
