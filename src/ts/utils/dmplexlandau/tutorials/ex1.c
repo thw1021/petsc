@@ -111,7 +111,7 @@ static PetscErrorCode SetMaxwellians(DM dm, Vec X, PetscReal time, PetscReal tem
   if (1) {
     data[0].shift = -sign(ctx->charges[ctx->species_offset[grid]]) * ctx->electronShift * ctx->m_0 / ctx->masses[ctx->species_offset[grid]];
   } else data[0].shift = ctx->electronShift * shifts[grid] * PetscSqrtReal(data[0].kT_m) / ctx->v_0; // shifts to not matter!!!!
-  PetscCall(PetscPrintf(ctx->comm, "grid %d) shift= %e: ", grid, data[0].shift));
+  PetscCall(PetscPrintf(ctx->comm, "grid %d) shift= %e: ", (int)grid, (double)data[0].shift));
   /* need to make ADD_ALL_VALUES work - TODO */
   PetscCall(DMProjectFunction(dm, time, initu, (void **)mctxs, INSERT_ALL_VALUES, X));
   PetscFunctionReturn(0);
@@ -180,8 +180,8 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
       PetscCall(PetscDSSetObjective(prob, 0, &f0_v2_1d_shift));
       PetscCall(DMPlexComputeIntegralFEM(dm, Xloc, tt, ctx));
       e_par = PetscRealPart(tt[0]) * ctx->v_0 * ctx->v_0 * m_s / n; // scale?
-      if (grid == 0) PetscCall(PetscPrintf(ctx->comm, "step %4d) time= %e temperature (ev): ", stepi, time));
-      PetscCall(PetscPrintf(ctx->comm, "%s T= %9.4e T_par= %9.4e T_perp= %9.4e ", (grid == 0) ? "electron:" : ";ion:", energy * kev_joul * 1000, e_par * kev_joul * 1000, e_perp * kev_joul * 1000));
+      if (grid == 0) PetscCall(PetscPrintf(ctx->comm, "step %4d) time= %e temperature (ev): ", (int)stepi, (double)time));
+      PetscCall(PetscPrintf(ctx->comm, "%s T= %9.4e T_par= %9.4e T_perp= %9.4e ", (grid == 0) ? "electron:" : ";ion:", (double)energy * kev_joul * 1000, (double)e_par * kev_joul * 1000, (double)e_perp * kev_joul * 1000));
     }
     PetscCall(PetscPrintf(ctx->comm, "\n"));
     PetscCall(DMCompositeRestoreAccessArray(pack, X, nDMs, NULL, XsubArray));
