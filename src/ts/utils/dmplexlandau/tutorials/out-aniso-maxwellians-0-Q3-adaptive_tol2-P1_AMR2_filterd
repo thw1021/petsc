@@ -1,0 +1,205 @@
++ '[' -z '' ']'
++ case "$-" in
++ __lmod_vx=x
++ '[' -n x ']'
++ set +x
+Shell debugging temporarily silenced: export LMOD_SH_DBG_ON=1 for this output (/usr/share/lmod/lmod/init/bash)
+Shell debugging restarted
++ unset __lmod_vx
++ make -f mymake runex1 PETSC_ARCH=arch-olcf-crusher FILE=sol DT=.01 AMR=2 POST=1 ORDER=3 STEPS=1000000 TIME=15000 'EXTRA=-options_left -dm_landau_thermal_temps .3,.2 -dm_landau_verbose 1 -dm_landau_num_cells 2,4 -ts_adapt_dt_max 1' KSPRTOL=1e-6
+/sw/crusher/xalt/1.3.0/bin/srun -n 1 -N 1 ./ex1  -dm_landau_type p4est -petscspace_degree 3 -dm_landau_num_species_grid 1,1 -dm_landau_ion_masses 2 -dm_landau_ion_charges 1 -dm_landau_thermal_temps .3,.2 -dm_landau_n 1,1  -ts_max_steps 1000000 -ts_dt .01 -ts_max_time 15000 -ts_adapt_monitor -dm_landau_amr_levels_max 2,2 -dm_landau_amr_post_refine 1 -dm_landau_amr_re_levels 0 -dm_landau_re_radius 5 -dm_landau_domain_radius 5,5 -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type preonly -pc_type bjkokkos -pc_bjkokkos_pc_type jacobi -pc_bjkokkos_ksp_converged_reasonxx -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_ksp_rtol 1e-6 -pc_bjkokkos_ksp_max_it 150 -log_view -log_view_gpu_time -options_left -dm_landau_thermal_temps .3,.2 -dm_landau_verbose 1 -dm_landau_num_cells 2,4 -ts_adapt_dt_max 1 # -ex1_dm_view_e hdf5:sol_e.h5 -ex1_vec_view_e hdf5:sol_e.h5::append -options_left -dm_landau_thermal_temps .3,.2 -dm_landau_verbose 1 -dm_landau_num_cells 2,4 -ts_adapt_dt_max 1 -ex1_dm_view_i hdf5:sol_i.h5 -ex1_vec_view_i hdf5:sol_i.h5::append 
+masses:        e= 9.109e-31; ions in proton mass units:    2.000e+00  0.000e+00 ...
+charges:       e=-1.602e-19; charges in elementary units:  1.000e+00  0.000e+00
+n:             e:  1.000e+00                           i:  1.000e+00  0.000e+00
+thermal T (K): e= 3.481e+06 i= 2.321e+06  0.000e+00. Normalization grid 0: v_0= 7.264e+06 ( 2.423e-02c) n_0= 1.000e+20 t_0= 9.510e-07, classical, Intuitive, 1 batched
+Domain radius (AMR levels) grid 0: par= 5.000e+00, perp= 5.000e+00 (2) , 1: par= 6.738e-02, perp= 6.738e-02 (2) 
+Using default Plex order for all matrices
+0) FormLandau 2560 IPs, 160 cells total, Nb=16, Nq=16, dim=2, Tab: Nb=16 Nf=2 Np=16 cdim=2 N=1490
+step    0) time= 0.000000e+00 temperature (ev): electron: T= 3.5984e+02 T_par= 2.9999e+02 T_perp= 3.8977e+02 ;ion: T= 2.3989e+02 T_par= 1.9999e+02 T_perp= 2.5984e+02 
+  0) species-0: charge density= -1.6020815267275e+01 z-momentum= -6.9961024635070e-20 energy=  8.6473044395519e+03
+  0) species-1: charge density=  1.6020815267275e+01 z-momentum=  3.0100852988692e-18 energy=  5.7648696263679e+03
+	  0) Total: charge density=  0.0000000000000e+00, momentum=  2.9401242742341e-18, energy=  1.4412174065920e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+step    1) time= 1.000000e-02 temperature (ev): electron: T= 3.5984e+02 T_par= 3.0050e+02 T_perp= 3.8951e+02 ;ion: T= 2.3989e+02 T_par= 2.0000e+02 T_perp= 2.5984e+02 
+  1) species-0: charge density= -1.6020815267275e+01 z-momentum=  8.0926829859539e-20 energy=  8.6472981046264e+03
+  1) species-1: charge density=  1.6020815267275e+01 z-momentum= -3.1375934846153e-19 energy=  5.7648759612933e+03
+	  1) Total: charge density=  1.0658141036402e-14, momentum= -2.3283251860199e-19, energy=  1.4412174065920e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+step    2) time= 6.371691e-02 temperature (ev): electron: T= 3.5984e+02 T_par= 3.0306e+02 T_perp= 3.8823e+02 ;ion: T= 2.3990e+02 T_par= 2.0002e+02 T_perp= 2.5983e+02 
+  2) species-0: charge density= -1.6020815267275e+01 z-momentum= -2.2560750053561e-20 energy=  8.6472642395225e+03
+  2) species-1: charge density=  1.6020815267275e+01 z-momentum= -3.7821186310207e-18 energy=  5.7649098263972e+03
+	  2) Total: charge density=  0.0000000000000e+00, momentum= -3.8046793810743e-18, energy=  1.4412174065920e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+step    4) time= 5.092709e-01 temperature (ev): electron: T= 3.5983e+02 T_par= 3.1830e+02 T_perp= 3.8059e+02 ;ion: T= 2.3991e+02 T_par= 2.0023e+02 T_perp= 2.5975e+02 
+  3) species-0: charge density= -1.6020815267275e+01 z-momentum=  7.6915749609658e-20 energy=  8.6469847546811e+03
+  3) species-1: charge density=  1.6020815267275e+01 z-momentum= -5.5996146043228e-18 energy=  5.7651893112401e+03
+	  3) Total: charge density= -1.7763568394003e-14, momentum= -5.5226988547132e-18, energy=  1.4412174065921e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+step    6) time= 1.337236e+00 temperature (ev): electron: T= 3.5981e+02 T_par= 3.3426e+02 T_perp= 3.7258e+02 ;ion: T= 2.3993e+02 T_par= 2.0062e+02 T_perp= 2.5959e+02 
+  4) species-0: charge density= -1.6020815267275e+01 z-momentum=  2.5101563275077e-19 energy=  8.6464661315094e+03
+  4) species-1: charge density=  1.6020815267275e+01 z-momentum= -4.3642198203704e-18 energy=  5.7657079344142e+03
+	  4) Total: charge density= -8.1712414612412e-14, momentum= -4.1132041876197e-18, energy=  1.4412174065924e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+step    9) time= 2.971543e+00 temperature (ev): electron: T= 3.5976e+02 T_par= 3.4831e+02 T_perp= 3.6549e+02 ;ion: T= 2.3997e+02 T_par= 2.0136e+02 T_perp= 2.5928e+02 
+  5) species-0: charge density= -1.6020815267275e+01 z-momentum= -2.1235045014081e-19 energy=  8.6454419661682e+03
+  5) species-1: charge density=  1.6020815267275e+01 z-momentum=  1.2362868992135e-18 energy=  5.7667320997549e+03
+	  5) Total: charge density= -9.5923269327614e-14, momentum=  1.0239364490727e-18, energy=  1.4412174065923e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+step   12) time= 5.270624e+00 temperature (ev): electron: T= 3.5970e+02 T_par= 3.5523e+02 T_perp= 3.6194e+02 ;ion: T= 2.4003e+02 T_par= 2.0238e+02 T_perp= 2.5886e+02 
+  6) species-0: charge density= -1.6020815267275e+01 z-momentum= -6.8239739311671e-19 energy=  8.6440001381671e+03
+  6) species-1: charge density=  1.6020815267275e+01 z-momentum=  2.1705887639976e-18 energy=  5.7681739277547e+03
+	  6) Total: charge density= -7.1054273576010e-15, momentum=  1.4881913708809e-18, energy=  1.4412174065922e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+step   15) time= 8.270624e+00 temperature (ev): electron: T= 3.5963e+02 T_par= 3.5806e+02 T_perp= 3.6041e+02 ;ion: T= 2.4011e+02 T_par= 2.0367e+02 T_perp= 2.5833e+02 
+  7) species-0: charge density= -1.6020815267275e+01 z-momentum=  5.6701795371479e-19 energy=  8.6421182151180e+03
+  7) species-1: charge density=  1.6020815267275e+01 z-momentum= -2.0515436176206e-18 energy=  5.7700558508076e+03
+	  7) Total: charge density= -1.4210854715202e-13, momentum= -1.4845256639058e-18, energy=  1.4412174065926e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+step   20) time= 1.327062e+01 temperature (ev): electron: T= 3.5950e+02 T_par= 3.5916e+02 T_perp= 3.5966e+02 ;ion: T= 2.4024e+02 T_par= 2.0571e+02 T_perp= 2.5750e+02 
+  8) species-0: charge density= -1.6020815267275e+01 z-momentum= -3.1026587088752e-19 energy=  8.6389829667818e+03
+  8) species-1: charge density=  1.6020815267275e+01 z-momentum=  6.3968682760188e-19 energy=  5.7731910991580e+03
+	  8) Total: charge density= -1.9539925233403e-13, momentum=  3.2942095671436e-19, energy=  1.4412174065940e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+step   40) time= 3.327062e+01 temperature (ev): electron: T= 3.5897e+02 T_par= 3.5897e+02 T_perp= 3.5898e+02 ;ion: T= 2.4076e+02 T_par= 2.1276e+02 T_perp= 2.5476e+02 
+  9) species-0: charge density= -1.6020815267275e+01 z-momentum= -6.8950842215120e-19 energy=  8.6264835614186e+03
+  9) species-1: charge density=  1.6020815267275e+01 z-momentum=  3.5268048877748e-18 energy=  5.7856905045200e+03
+	  9) Total: charge density=  8.5265128291212e-14, momentum=  2.8372964656236e-18, energy=  1.4412174065939e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+step   60) time= 5.327062e+01 temperature (ev): electron: T= 3.5846e+02 T_par= 3.5846e+02 T_perp= 3.5846e+02 ;ion: T= 2.4128e+02 T_par= 2.1840e+02 T_perp= 2.5272e+02 
+ 10) species-0: charge density= -1.6020815267274e+01 z-momentum= -1.6724781020980e-18 energy=  8.6140642130526e+03
+ 10) species-1: charge density=  1.6020815267275e+01 z-momentum=  1.6174001461829e-17 energy=  5.7981098528860e+03
+	 10) Total: charge density=  2.4513724383723e-13, momentum=  1.4501523359731e-17, energy=  1.4412174065939e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+step   80) time= 7.327062e+01 temperature (ev): electron: T= 3.5794e+02 T_par= 3.5794e+02 T_perp= 3.5795e+02 ;ion: T= 2.4179e+02 T_par= 2.2297e+02 T_perp= 2.5120e+02 
+ 11) species-0: charge density= -1.6020815267274e+01 z-momentum= -7.8333709775126e-19 energy=  8.6017274113236e+03
+ 11) species-1: charge density=  1.6020815267275e+01 z-momentum=  4.5193032084673e-18 energy=  5.8104466546149e+03
+	 11) Total: charge density=  3.4106051316485e-13, momentum=  3.7359661107160e-18, energy=  1.4412174065939e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+step  100) time= 9.327062e+01 temperature (ev): electron: T= 3.5743e+02 T_par= 3.5743e+02 T_perp= 3.5744e+02 ;ion: T= 2.4230e+02 T_par= 2.2673e+02 T_perp= 2.5009e+02 
+ 12) species-0: charge density= -1.6020815267274e+01 z-momentum= -7.4883278386275e-19 energy=  8.5894731568411e+03
+ 12) species-1: charge density=  1.6020815267275e+01 z-momentum=  8.6865182605422e-18 energy=  5.8227009090975e+03
+	 12) Total: charge density=  5.5777604757168e-13, momentum=  7.9376854766795e-18, energy=  1.4412174065939e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+step  200) time= 1.932706e+02 temperature (ev): electron: T= 3.5494e+02 T_par= 3.5493e+02 T_perp= 3.5494e+02 ;ion: T= 2.4480e+02 T_par= 2.3836e+02 T_perp= 2.4802e+02 
+ 13) species-0: charge density= -1.6020815267275e+01 z-momentum=  2.9470496450625e-19 energy=  8.5294315395159e+03
+ 13) species-1: charge density=  1.6020815267275e+01 z-momentum=  1.4959286070371e-17 energy=  5.8827425264231e+03
+	 13) Total: charge density=  2.2737367544323e-13, momentum=  1.5253991034877e-17, energy=  1.4412174065939e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+step  300) time= 2.932706e+02 temperature (ev): electron: T= 3.5252e+02 T_par= 3.5251e+02 T_perp= 3.5253e+02 ;ion: T= 2.4721e+02 T_par= 2.4434e+02 T_perp= 2.4865e+02 
+ 14) species-0: charge density= -1.6020815267275e+01 z-momentum= -6.9849460948388e-19 energy=  8.4714191295211e+03
+ 14) species-1: charge density=  1.6020815267275e+01 z-momentum=  2.0430420002942e-17 energy=  5.9407549364181e+03
+	 14) Total: charge density=  1.6697754290362e-13, momentum=  1.9731925393458e-17, energy=  1.4412174065939e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+step  400) time= 3.932706e+02 temperature (ev): electron: T= 3.5019e+02 T_par= 3.5018e+02 T_perp= 3.5020e+02 ;ion: T= 2.4954e+02 T_par= 2.4820e+02 T_perp= 2.5022e+02 
+ 15) species-0: charge density= -1.6020815267275e+01 z-momentum= -9.9359443265513e-19 energy=  8.4154095639316e+03
+ 15) species-1: charge density=  1.6020815267275e+01 z-momentum=  1.7369821691315e-17 energy=  5.9967645020079e+03
+	 15) Total: charge density= -5.9330318435968e-13, momentum=  1.6376227258659e-17, energy=  1.4412174065940e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+step  500) time= 4.932706e+02 temperature (ev): electron: T= 3.4794e+02 T_par= 3.4793e+02 T_perp= 3.4795e+02 ;ion: T= 2.5179e+02 T_par= 2.5114e+02 T_perp= 2.5212e+02 
+ 16) species-0: charge density= -1.6020815267275e+01 z-momentum= -1.4022919270295e-18 energy=  8.3613746892243e+03
+ 16) species-1: charge density=  1.6020815267275e+01 z-momentum=  2.0421064848312e-17 energy=  6.0507993767155e+03
+	 16) Total: charge density= -7.5672801358451e-13, momentum=  1.9018772921283e-17, energy=  1.4412174065940e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+step  600) time= 5.932706e+02 temperature (ev): electron: T= 3.4578e+02 T_par= 3.4576e+02 T_perp= 3.4578e+02 ;ion: T= 2.5396e+02 T_par= 2.5364e+02 T_perp= 2.5412e+02 
+ 17) species-0: charge density= -1.6020815267275e+01 z-momentum= -3.5570964740681e-19 energy=  8.3092837908168e+03
+ 17) species-1: charge density=  1.6020815267275e+01 z-momentum=  2.4583385322062e-17 energy=  6.1028902751230e+03
+	 17) Total: charge density= -8.1712414612412e-14, momentum=  2.4227675674656e-17, energy=  1.4412174065940e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+step  700) time= 6.932706e+02 temperature (ev): electron: T= 3.4369e+02 T_par= 3.4367e+02 T_perp= 3.4369e+02 ;ion: T= 2.5605e+02 T_par= 2.5590e+02 T_perp= 2.5612e+02 
+ 18) species-0: charge density= -1.6020815267275e+01 z-momentum= -2.0010618840128e-19 energy=  8.2591036804884e+03
+ 18) species-1: charge density=  1.6020815267275e+01 z-momentum=  4.2711810394165e-17 energy=  6.1530703854516e+03
+	 18) Total: charge density=  2.3092638912203e-13, momentum=  4.2511704205764e-17, energy=  1.4412174065940e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+ERROR Kokkos batch solver did not converge in all solves
+  Nonlinear solve did not converge due to DIVERGED_LINEAR_SOLVE iterations 4
+step  800) time= 7.925206e+02 temperature (ev): electron: T= 3.4169e+02 T_par= 3.4168e+02 T_perp= 3.4170e+02 ;ion: T= 2.5804e+02 T_par= 2.5798e+02 T_perp= 2.5807e+02 
+ 19) species-0: charge density= -1.6020815267274e+01 z-momentum= -6.7213099776674e-19 energy=  8.2111543255853e+03
+ 19) species-1: charge density=  1.6020815267275e+01 z-momentum=  4.8826963137453e-17 energy=  6.2010197403547e+03
+	 19) Total: charge density=  1.1048939541070e-12, momentum=  4.8154832139686e-17, energy=  1.4412174065940e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+step  900) time= 8.925206e+02 temperature (ev): electron: T= 3.3976e+02 T_par= 3.3974e+02 T_perp= 3.3977e+02 ;ion: T= 2.5998e+02 T_par= 2.5996e+02 T_perp= 2.5998e+02 
+ 20) species-0: charge density= -1.6020815267273e+01 z-momentum= -9.8245487840844e-19 energy=  8.1646739136982e+03
+ 20) species-1: charge density=  1.6020815267275e+01 z-momentum=  4.3048274477876e-17 energy=  6.2475001522420e+03
+	 20) Total: charge density=  1.3145040611562e-12, momentum=  4.2065819599468e-17, energy=  1.4412174065940e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+step 1000) time= 9.925206e+02 temperature (ev): electron: T= 3.3790e+02 T_par= 3.3788e+02 T_perp= 3.3791e+02 ;ion: T= 2.6184e+02 T_par= 2.6185e+02 T_perp= 2.6183e+02 
+ 21) species-0: charge density= -1.6020815267274e+01 z-momentum= -5.2352261834741e-20 energy=  8.1199926487610e+03
+ 21) species-1: charge density=  1.6020815267275e+01 z-momentum=  3.5127994818825e-17 energy=  6.2921814171797e+03
+	 21) Total: charge density=  6.9988459472370e-13, momentum=  3.5075642556991e-17, energy=  1.4412174065941e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+ERROR Kokkos batch solver did not converge in all solves
+  Nonlinear solve did not converge due to DIVERGED_LINEAR_SOLVE iterations 4
+step 1332) time= 1.323771e+03 temperature (ev): electron: T= 3.3225e+02 T_par= 3.3223e+02 T_perp= 3.3226e+02 ;ion: T= 2.6748e+02 T_par= 2.6754e+02 T_perp= 2.6746e+02 
+ 22) species-0: charge density= -1.6020815267276e+01 z-momentum= -1.1889925830352e-18 energy=  7.9843135079334e+03
+ 22) species-1: charge density=  1.6020815267275e+01 z-momentum=  5.4610763376364e-17 energy=  6.4278605580087e+03
+	 22) Total: charge density= -9.6278540695494e-13, momentum=  5.3421770793329e-17, energy=  1.4412174065942e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+ERROR Kokkos batch solver did not converge in all solves
+  Nonlinear solve did not converge due to DIVERGED_LINEAR_SOLVE iterations 14
+step 1998) time= 1.989021e+03 temperature (ev): electron: T= 3.2307e+02 T_par= 3.2305e+02 T_perp= 3.2308e+02 ;ion: T= 2.7666e+02 T_par= 2.7675e+02 T_perp= 2.7662e+02 
+ 23) species-0: charge density= -1.6020815267277e+01 z-momentum= -3.5997742782499e-19 energy=  7.7636902283533e+03
+ 23) species-1: charge density=  1.6020815267275e+01 z-momentum=  4.2866282964606e-17 energy=  6.6484838375907e+03
+	 23) Total: charge density= -2.1138646388863e-12, momentum=  4.2506305536781e-17, energy=  1.4412174065944e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+ERROR Kokkos batch solver did not converge in all solves
+  Nonlinear solve did not converge due to DIVERGED_LINEAR_SOLVE iterations 5
+ERROR Kokkos batch solver did not converge in all solves
+  Nonlinear solve did not converge due to DIVERGED_LINEAR_SOLVE iterations 7
+ERROR Kokkos batch solver did not converge in all solves
+  Nonlinear solve did not converge due to DIVERGED_LINEAR_SOLVE iterations 15
+step 2664) time= 2.652771e+03 temperature (ev): electron: T= 3.1632e+02 T_par= 3.1630e+02 T_perp= 3.1633e+02 ;ion: T= 2.8342e+02 T_par= 2.8354e+02 T_perp= 2.8336e+02 
+ 24) species-0: charge density= -1.6020815267279e+01 z-momentum= -1.2899393637388e-18 energy=  7.6014574801444e+03
+ 24) species-1: charge density=  1.6020815267275e+01 z-momentum=  6.5242784094569e-17 energy=  6.8107165858020e+03
+	 24) Total: charge density= -4.2135184230574e-12, momentum=  6.3952844730830e-17, energy=  1.4412174065946e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+step 3330) time= 3.318771e+03 temperature (ev): electron: T= 3.1143e+02 T_par= 3.1140e+02 T_perp= 3.1144e+02 ;ion: T= 2.8831e+02 T_par= 2.8845e+02 T_perp= 2.8823e+02 
+ 25) species-0: charge density= -1.6020815267277e+01 z-momentum= -5.6068585275649e-19 energy=  7.4839239826413e+03
+ 25) species-1: charge density=  1.6020815267275e+01 z-momentum= -2.8508724619329e-17 energy=  6.9282500833059e+03
+	 25) Total: charge density= -2.1458390619955e-12, momentum= -2.9069410472086e-17, energy=  1.4412174065947e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+ERROR Kokkos batch solver did not converge in all solves
+  Nonlinear solve did not converge due to DIVERGED_LINEAR_SOLVE iterations 1
+ERROR Kokkos batch solver did not converge in all solves
+  Nonlinear solve did not converge due to DIVERGED_LINEAR_SOLVE iterations 6
+ERROR Kokkos batch solver did not converge in all solves
+  Nonlinear solve did not converge due to DIVERGED_LINEAR_SOLVE iterations 5
+step 3996) time= 3.982521e+03 temperature (ev): electron: T= 3.0797e+02 T_par= 3.0794e+02 T_perp= 3.0798e+02 ;ion: T= 2.9177e+02 T_par= 2.9194e+02 T_perp= 2.9169e+02 
+ 26) species-0: charge density= -1.6020815267277e+01 z-momentum= -4.0602484207629e-19 energy=  7.4006818684925e+03
+ 26) species-1: charge density=  1.6020815267275e+01 z-momentum= -1.7958553467065e-17 energy=  7.0114921974559e+03
+	 26) Total: charge density= -2.4584778657299e-12, momentum= -1.8364578309141e-17, energy=  1.4412174065948e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+step 4662) time= 4.648521e+03 temperature (ev): electron: T= 3.0552e+02 T_par= 3.0550e+02 T_perp= 3.0554e+02 ;ion: T= 2.9421e+02 T_par= 2.9439e+02 T_perp= 2.9412e+02 
+ 27) species-0: charge density= -1.6020815267281e+01 z-momentum=  2.1658264003347e-19 energy=  7.3420230804324e+03
+ 27) species-1: charge density=  1.6020815267275e+01 z-momentum= -2.9783726106046e-17 energy=  7.0701509855179e+03
+	 27) Total: charge density= -5.8975047068088e-12, momentum= -2.9567143466013e-17, energy=  1.4412174065950e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+step 5328) time= 5.314521e+03 temperature (ev): electron: T= 3.0383e+02 T_par= 3.0380e+02 T_perp= 3.0384e+02 ;ion: T= 2.9591e+02 T_par= 2.9610e+02 T_perp= 2.9581e+02 
+ 28) species-0: charge density= -1.6020815267282e+01 z-momentum=  6.6082918435254e-20 energy=  7.3012092840053e+03
+ 28) species-1: charge density=  1.6020815267275e+01 z-momentum= -1.6376857220305e-17 energy=  7.1109647819459e+03
+	 28) Total: charge density= -6.9526606694126e-12, momentum= -1.6310774301870e-17, energy=  1.4412174065951e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+ERROR Kokkos batch solver did not converge in all solves
+  Nonlinear solve did not converge due to DIVERGED_LINEAR_SOLVE iterations 3
+ERROR Kokkos batch solver did not converge in all solves
+  Nonlinear solve did not converge due to DIVERGED_LINEAR_SOLVE iterations 1
+step 5994) time= 5.979021e+03 temperature (ev): electron: T= 3.0265e+02 T_par= 3.0263e+02 T_perp= 3.0267e+02 ;ion: T= 2.9708e+02 T_par= 2.9728e+02 T_perp= 2.9698e+02 
+ 29) species-0: charge density= -1.6020815267281e+01 z-momentum= -3.7578914932703e-19 energy=  7.2730402946755e+03
+ 29) species-1: charge density=  1.6020815267275e+01 z-momentum= -3.9742754360233e-17 energy=  7.1391337712640e+03
+	 29) Total: charge density= -6.4339644723077e-12, momentum= -4.0118543509560e-17, energy=  1.4412174065939e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+ERROR Kokkos batch solver did not converge in all solves
+  Nonlinear solve did not converge due to DIVERGED_LINEAR_SOLVE iterations 0
+ERROR Kokkos batch solver did not converge in all solves
+  Nonlinear solve did not converge due to DIVERGED_LINEAR_SOLVE iterations 1
+step 6660) time= 6.643521e+03 temperature (ev): electron: T= 3.0185e+02 T_par= 3.0182e+02 T_perp= 3.0186e+02 ;ion: T= 2.9789e+02 T_par= 2.9809e+02 T_perp= 2.9779e+02 
+ 30) species-0: charge density= -1.6020815267283e+01 z-momentum= -2.8638687018801e-19 energy=  7.2536310687911e+03
+ 30) species-1: charge density=  1.6020815267275e+01 z-momentum= -1.4179713962409e-17 energy=  7.1585429971498e+03
+	 30) Total: charge density= -7.8266282343975e-12, momentum= -1.4466100832597e-17, energy=  1.4412174065941e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+step 7326) time= 7.309521e+03 temperature (ev): electron: T= 3.0129e+02 T_par= 3.0127e+02 T_perp= 3.0130e+02 ;ion: T= 2.9845e+02 T_par= 2.9865e+02 T_perp= 2.9834e+02 
+ 31) species-0: charge density= -1.6020815267285e+01 z-momentum= -7.9702207517336e-19 energy=  7.2402735071838e+03
+ 31) species-1: charge density=  1.6020815267275e+01 z-momentum=  2.8006311022899e-17 energy=  7.1719005587582e+03
+	 31) Total: charge density= -1.0256684390697e-11, momentum=  2.7209288947726e-17, energy=  1.4412174065942e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+ERROR Kokkos batch solver did not converge in all solves
+  Nonlinear solve did not converge due to DIVERGED_LINEAR_SOLVE iterations 0
+step 7992) time= 7.974771e+03 temperature (ev): electron: T= 3.0091e+02 T_par= 3.0089e+02 T_perp= 3.0092e+02 ;ion: T= 2.9883e+02 T_par= 2.9904e+02 T_perp= 2.9872e+02 
+ 32) species-0: charge density= -1.6020815267286e+01 z-momentum= -3.7714299049850e-19 energy=  7.2311334645688e+03
+ 32) species-1: charge density=  1.6020815267275e+01 z-momentum=  1.2731497447694e-17 energy=  7.1810406013743e+03
+	 32) Total: charge density= -1.1521450460350e-11, momentum=  1.2354354457195e-17, energy=  1.4412174065943e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+ERROR Kokkos batch solver did not converge in all solves
+  Nonlinear solve did not converge due to DIVERGED_LINEAR_SOLVE iterations 0
+ERROR Kokkos batch solver did not converge in all solves
+  Nonlinear solve did not converge due to DIVERGED_LINEAR_SOLVE iterations 0
+ERROR Kokkos batch solver did not converge in all solves
+  Nonlinear solve did not converge due to DIVERGED_LINEAR_SOLVE iterations 0
+step 8658) time= 8.638521e+03 temperature (ev): electron: T= 3.0065e+02 T_par= 3.0063e+02 T_perp= 3.0066e+02 ;ion: T= 2.9909e+02 T_par= 2.9930e+02 T_perp= 2.9898e+02 
+ 33) species-0: charge density= -1.6020815267285e+01 z-momentum=  8.0113824555764e-19 energy=  7.2248915658119e+03
+ 33) species-1: charge density=  1.6020815267275e+01 z-momentum= -4.9223673131051e-17 energy=  7.1872825000688e+03
+	 33) Total: charge density= -1.0185630117121e-11, momentum= -4.8422534885493e-17, energy=  1.4412174065881e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+ERROR Kokkos batch solver did not converge in all solves
+  Nonlinear solve did not converge due to DIVERGED_LINEAR_SOLVE iterations 0
+ERROR Kokkos batch solver did not converge in all solves
+  Nonlinear solve did not converge due to DIVERGED_LINEAR_SOLVE iterations 0
+step 9324) time= 9.303021e+03 temperature (ev): electron: T= 3.0047e+02 T_par= 3.0045e+02 T_perp= 3.0048e+02 ;ion: T= 2.9926e+02 T_par= 2.9948e+02 T_perp= 2.9916e+02 
+ 34) species-0: charge density= -1.6020815267285e+01 z-momentum= -1.0846377993330e-18 energy=  7.2206175925748e+03
+ 34) species-1: charge density=  1.6020815267275e+01 z-momentum= -3.8583872524803e-17 energy=  7.1915564733068e+03
+	 34) Total: charge density= -9.7664099030226e-12, momentum= -3.9668510324136e-17, energy=  1.4412174065882e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
+ERROR Kokkos batch solver did not converge in all solves
+  Nonlinear solve did not converge due to DIVERGED_LINEAR_SOLVE iterations 0
+ERROR Kokkos batch solver did not converge in all solves
+  Nonlinear solve did not converge due to DIVERGED_LINEAR_SOLVE iterations 0
+ERROR Kokkos batch solver did not converge in all solves
+  Nonlinear solve did not converge due to DIVERGED_LINEAR_SOLVE iterations 0
+step 9990) time= 9.966771e+03 temperature (ev): electron: T= 3.0035e+02 T_par= 3.0033e+02 T_perp= 3.0036e+02 ;ion: T= 2.9938e+02 T_par= 2.9960e+02 T_perp= 2.9928e+02 
+ 35) species-0: charge density= -1.6020815267286e+01 z-momentum= -9.1213416527336e-19 energy=  7.2176997871650e+03
+ 35) species-1: charge density=  1.6020815267275e+01 z-momentum= -4.0643421068551e-17 energy=  7.1944742787175e+03
+	 35) Total: charge density= -1.0992096122209e-11, momentum= -4.1555555233824e-17, energy=  1.4412174065882e+04 (m_i[0]/m_e = 3670.94, 80 cells on electron grid)
