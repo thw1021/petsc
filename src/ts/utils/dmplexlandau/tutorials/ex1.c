@@ -181,7 +181,7 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
       PetscCall(DMPlexComputeIntegralFEM(dm, Xloc, tt, ctx));
       e_par = PetscRealPart(tt[0]) * ctx->v_0 * ctx->v_0 * m_s / n; // scale?
       if (grid == 0) PetscCall(PetscPrintf(ctx->comm, "step %4d) time= %e temperature (ev): ", (int)stepi, (double)time));
-      PetscCall(PetscPrintf(ctx->comm, "%s T= %9.4g T_par= %9.4g T_perp= %9.4g ", (grid == 0) ? "electron:" : ";ion:", (double)energy * kev_joul * 1000, (double)e_par * kev_joul * 1000, (double)e_perp * kev_joul * 1000));
+      PetscCall(PetscPrintf(ctx->comm, "%s T= %g T_par= %g T_perp= %g ", (grid == 0) ? "electron:" : ";ion:", (double)energy * kev_joul * 1000, (double)e_par * kev_joul * 1000, (double)e_perp * kev_joul * 1000));
     }
     PetscCall(PetscPrintf(ctx->comm, "\n"));
     PetscCall(DMCompositeRestoreAccessArray(pack, X, nDMs, NULL, XsubArray));
