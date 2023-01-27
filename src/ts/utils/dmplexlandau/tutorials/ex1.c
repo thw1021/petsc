@@ -64,7 +64,7 @@ static void f0_v2_shift(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscIn
   PetscReal vz = PetscRealPart(constants[1]);
   f0[0]        = 2. * PETSC_PI * x[0] * (x[0] * x[0] + (x[1] - vz) * (x[1] - vz)) * u[0];
 }
-static PetscScalar sign(PetscScalar x)
+static PetscReal sign(PetscScalar x)
 {
   if (PetscRealPart(x) > 0) return 1.0;
   if (PetscRealPart(x) < 0) return -1.0;
