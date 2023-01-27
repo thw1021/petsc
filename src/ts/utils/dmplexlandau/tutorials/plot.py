@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# ./plot.py out
+# ./plot.py out-aniso-maxwellians-0-Q2-adaptive_tol2-P1_AMR2
 #
 import sys, os, math, glob
 import matplotlib.pyplot as plt
@@ -79,8 +79,8 @@ for filename in sys.argv[1:]: # just one
     df = pd.DataFrame(data=Temps[:idx,1:], index=Temps[:idx,0]/230, columns=series_name)
     #df2.index.name = 'Nodes (8 GCDs/node)'
     #df2.columns.name = 'dof/'+device+':'  markersize=5,marker='.',
-    plt.rcParams["figure.dpi"] = 320
-    ax = df.plot(lw=1, colormap='jet', style=styles, markersize=2, logx=True,logy=False,  grid=True, legend=False)
+    plt.rcParams["figure.dpi"] = 300
+    ax = df.plot(lw=1, colormap='jet', style=styles, markersize=1, logx=True,logy=False,  grid=True, legend=False)
     #ax = df.plot.line()
     #for i, line in enumerate(ax.get_lines()):
      #   line.set_marker(marks[i])
