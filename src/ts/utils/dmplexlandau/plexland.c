@@ -1383,8 +1383,8 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   }
   non_dim_grid = 0;
   PetscCall(PetscOptionsInt("-dm_landau_normalization_grid", "Index of grid to use for setting v_0, m_0, t_0. (Not recommended)", "plexland.c", non_dim_grid, &non_dim_grid, NULL));
-  ctx->v_0 = v0_grid[non_dim_grid];                                                   /* arbitrary units for non dimensionalization: global mean velocity in 1D of electrons */
-  ctx->m_0 = ctx->masses[non_dim_grid];                                           /* arbitrary reference mass, electrons */
+  ctx->v_0 = v0_grid[non_dim_grid];                                                                                                                        /* arbitrary units for non dimensionalization: global mean velocity in 1D of electrons */
+  ctx->m_0 = ctx->masses[non_dim_grid];                                                                                                                    /* arbitrary reference mass, electrons */
   ctx->t_0 = 8 * PETSC_PI * PetscSqr(ctx->epsilon0 * ctx->m_0 / PetscSqr(ctx->charges[non_dim_grid])) / ctx->lnLam / ctx->n_0 * PetscPowReal(ctx->v_0, 3); /* note, this t_0 makes nu[non_dim_grid,non_dim_grid]=1 */
   /* domain */
   nt = LANDAU_MAX_GRIDS;
