@@ -127,8 +127,7 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
   PetscFunctionBeginUser;
   PetscCall(TSGetConvergedReason(ts, &reason));
   PetscCall(DMGetOutputSequenceNumber(ctx->plex[0], &id, &time2));
-  //if ((ctx->verbose && time/((double)ctx->verbose/10.) >= (double)(id+1)) || reason ){
-  if (ctx->verbose > 0) {
+  if (ctx->verbose > 0) { // hacks to get Hager test to generate sparse data (eg, use '-dm_landau_verbose 1')
     PetscInt b = PetscFloorReal(PetscLog10Real(time));
     if (b >= 1) ctx->verbose = (PetscInt)PetscPowReal(10, b) / b;
     else if (b >= 0) ctx->verbose = 3;
@@ -241,7 +240,7 @@ int main(int argc, char **argv)
   PetscCall(TSSolve(ts, X));
   /* test add field method & output */
   PetscCall(DMPlexLandauAccess(pack, X, landau_field_print_access_callback, NULL));
-  //PetscCall(Monitor(ts, -1, 1.0, X, ctx));
+  PetscCall(Monitor(ts, -1, 1.0, X, ctx));
   /* clean up */
   PetscCall(DMPlexLandauDestroyVelocitySpace(&pack));
   PetscCall(TSDestroy(&ts));
@@ -254,7 +253,7 @@ int main(int argc, char **argv)
   testset:
     requires: p4est !complex double defined(PETSC_USE_DMLANDAU_2D)
     output_file: output/ex1_0.out
-    filter: grep -v "DM_"
+    filter: grep -v "DM"
     args: -dm_landau_amr_levels_max 0,2 -dm_landau_amr_post_refine 0 -dm_landau_amr_re_levels 2 -dm_landau_domain_radius 6,6 -dm_landau_electron_shift 1.5 -dm_landau_ion_charges 1 -dm_landau_ion_masses 2 -dm_landau_n 1,1 -dm_landau_n_0 1e20 -dm_landau_normalization_grid 0 -dm_landau_num_cells 2,4 -dm_landau_num_species_grid 1,1 -dm_landau_re_radius 2 -dm_landau_thermal_temps .3,.2 -dm_landau_type p4est -dm_landau_verbose -1 -dm_preallocate_only false -ex1_dm_view_e -ksp_type preonly -pc_type lu -petscspace_degree 3 -snes_converged_reason -snes_rtol 1.e-14 -snes_stol 1.e-14 -ts_adapt_clip .5,1.5 -ts_adapt_dt_max 5 -ts_adapt_monitor -ts_adapt_scale_solve_failed 0.5 -ts_arkimex_type 1bee -ts_dt .01 -ts_max_snes_failures -1 -ts_max_steps 1 -ts_max_time 8 -ts_monitor -ts_rtol 1e-2 -ts_type arkimex
     test:
       suffix: cpu
