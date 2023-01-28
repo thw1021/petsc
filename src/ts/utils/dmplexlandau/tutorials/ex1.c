@@ -240,7 +240,7 @@ int main(int argc, char **argv)
   PetscCall(TSSolve(ts, X));
   /* test add field method & output */
   PetscCall(DMPlexLandauAccess(pack, X, landau_field_print_access_callback, NULL));
-  PetscCall(Monitor(ts, -1, 1.0, X, ctx));
+  //PetscCall(Monitor(ts, -1, 1.0, X, ctx));
   /* clean up */
   PetscCall(DMPlexLandauDestroyVelocitySpace(&pack));
   PetscCall(TSDestroy(&ts));
