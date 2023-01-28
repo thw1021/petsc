@@ -11,7 +11,7 @@ AMR=2
 AMR2=0
 STEPS=1
 RTOL=1e-13
-KSPRTOL=1e-12
+KSPRTOL=1e-6
 TRICK=false
 EZ=0.0
 REL=false
@@ -26,16 +26,47 @@ FOREST=p4est
 TIME=100
 DEVICE=cpu
 
+ifneq (,$(findstring kokkos,$(DEVICE)))
+  DEVICE=kokkos
+  MATVEC=-dm_mat_type aijkokkos -dm_vec_type kokkos 
+  SOLVER=batch-tfqmr
+else
+  DEVICE=cpu
+  MATVEC=-dm_landau_verbose 2
+  SOLVER=lu
+endif
+
+ifneq (,$(findstring batch,$(SOLVER)))
+  BASE_SOLVE = -ksp_type preonly -pc_type bjkokkos -pc_bjkokkos_pc_type jacobi -pc_bjkokkos_ksp_converged_reasonxx
+  ifneq (,$(findstring bicg,$(SOLVER)))
+    SOLV=${BASE_SOLVE} -pc_bjkokkos_ksp_type bicg -pc_bjkokkos_ksp_rtol ${KSPRTOL} -pc_bjkokkos_ksp_max_it 150 
+  else
+    ifneq (,$(findstring gmres,$(SOLVER)))
+      SOLV=${BASE_SOLVE} -pc_bjkokkos_ksp_type gmres -pc_bjkokkos_ksp_rtol ${KSPRTOL} -pc_bjkokkos_ksp_max_it 50 
+    else
+      SOLV=${BASE_SOLVE} -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_ksp_rtol ${KSPRTOL} -pc_bjkokkos_ksp_max_it 150 
+    endif
+  endif
+else ifeq ($(SOLVER),lu) 
+	SOLV=-ksp_type preonly -pc_type lu
+else
+	SOLV=-ksp_type ${SOLVER} -pc_type jacobi -ksp_rtol ${KSPRTOL} -ksp_converged_reason
+endif
+
 FILE=sol-Q${ORDER}-P${POST}-${RAD}${FILE_APPEND}
 
 MEI=5.448195933014354e-04
-KOK=-dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos -ksp_type preonly -pc_type bjkokkos -pc_bjkokkos_pc_type jacobi -pc_bjkokkos_ksp_converged_reasonxx -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_ksp_rtol ${KSPRTOL} -pc_bjkokkos_ksp_max_it 150 -log_view -log_view_gpu_time
-# make -f mymake runex1 FILE=sol-Q2-P1-A3-no-shift DT=.01 AMR=2,2 POST=1 ORDER=2 STEPS=1000000 TIME=20000 EXTRA='-options_left -dm_landau_thermal_temps .3,.2 -dm_landau_verbose 1 -ts_rtol 1e-2' | tee out-aniso-maxwellians-0-Q2-adaptive_tol2-refine3 # -dm_landau_electron_shift
+
+# make -f mymake runex1 DEVICE=kokkos DT=.01 AMR=2 POST=0 ORDER=2 STEPS=2 TIME=10000 EXTRA='-options_left -dm_landau_thermal_temps .3,.2 -log_view' BSZ=2 BID=1 TFILE=out-aniso-maxwellians-0-Q2-adaptive_tol2-P0_AMR2
+
+VIEW = -ex1_dm_view_e hdf5:${FILE}_e.h5 -ex1_vec_view_e hdf5:${FILE}_e.h5::append ${EXTRA} -ex1_dm_view_i hdf5:${FILE}_i.h5 -ex1_vec_view_i hdf5:${FILE}_i.h5::append
 
 runex1:
-	-${MPIEXEC} -n 1 -N 1 ./ex1 ${PRE1} -dm_landau_type ${FOREST} -petscspace_degree ${ORDER} -dm_landau_num_species_grid 1,1 -dm_landau_ion_masses 2 -dm_landau_ion_charges 1 -dm_landau_thermal_temps .3,.2 -dm_landau_n 1,1  -ts_max_steps ${STEPS} -ts_dt ${DT} -ts_max_time ${TIME} -ts_adapt_monitor -dm_landau_amr_levels_max ${AMR},${AMR} -dm_landau_amr_post_refine ${POST} -dm_landau_amr_re_levels ${AMR2} -dm_landau_re_radius ${RERAD} -dm_landau_domain_radius ${RAD},${RAD} ${KOK} ${EXTRA} -ex1_dm_view_e hdf5:${FILE}_e.h5 -ex1_vec_view_e hdf5:${FILE}_e.h5::append ${EXTRA} -ex1_dm_view_i hdf5:${FILE}_i.h5 -ex1_vec_view_i hdf5:${FILE}_i.h5::append 
+	-${MPIEXEC} -n 1 ./ex1 ${PRE1} -dm_landau_type ${FOREST} -petscspace_degree ${ORDER} -dm_landau_num_species_grid 1,1 -dm_landau_ion_masses 2 -dm_landau_ion_charges 1 -dm_landau_thermal_temps .3,.2 -dm_landau_n 1,1  -ts_max_steps ${STEPS} -ts_dt ${DT} -ts_max_time ${TIME} -ts_adapt_monitor -dm_landau_amr_levels_max ${AMR},${AMR} -dm_landau_amr_post_refine ${POST} -dm_landau_amr_re_levels ${AMR2} -dm_landau_re_radius ${RERAD} -dm_landau_domain_radius ${RAD},${RAD}  -dm_landau_batch_size ${BSZ} -dm_landau_batch_view_idx ${BID} ${DEVICE} ${MATVEC} ${SOLV} ${VIEW} ${EXTRA} | tee ${TFILE}
 	-@python3 ${PETSC_DIR}/lib/petsc/bin/petsc_gen_xdmf.py ${FILE}_e.h5
 	-@python3 ${PETSC_DIR}/lib/petsc/bin/petsc_gen_xdmf.py ${FILE}_i.h5
+	-@sed '/Nonlinear solve converged due to/d' ./${TFILE} | sed '/TS dt/d' | sed '/TSAdapt/d'
+#-dm_landau_electron_shift
 
 xmf:
 	-@python3 ${PETSC_DIR}/lib/petsc/bin/petsc_gen_xdmf.py ${FILE}_e.h5
