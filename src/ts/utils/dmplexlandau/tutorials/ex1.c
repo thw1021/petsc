@@ -127,7 +127,7 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
   PetscFunctionBeginUser;
   PetscCall(TSGetConvergedReason(ts, &reason));
   PetscCall(DMGetOutputSequenceNumber(ctx->plex[0], &id, &time2));
-  if (ctx->verbose > 0) { // hacks to get Hager test to generate sparse data (eg, use '-dm_landau_verbose 1')
+  if (ctx->verbose > 0) { // hacks to generate sparse data (eg, use '-dm_landau_verbose 1' and '-dm_landau_verbose -1' to get all steps printed)
     PetscInt b = PetscFloorReal(PetscLog10Real(time));
     if (b >= 1) ctx->verbose = (PetscInt)PetscPowReal(10, b) / b;
     else if (b >= 0) ctx->verbose = 3;
@@ -219,7 +219,11 @@ int main(int argc, char **argv)
   PetscCall(PetscObjectSetName((PetscObject)XsubArray[LAND_PACK_IDX(ctx->batch_view_idx, 0)], 0 == 0 ? "ue" : "ui"));
   PetscCall(PetscObjectSetName((PetscObject)XsubArray[LAND_PACK_IDX(ctx->batch_view_idx, 1)], 1 == 0 ? "ue" : "ui"));
   /* add bimaxwellian anisotropic test */
-  for (PetscInt grid = 0; grid < ctx->num_grids; grid++) { PetscCall(SetMaxwellians(ctx->plex[grid], XsubArray[LAND_PACK_IDX(ctx->batch_view_idx, grid)], 0.0, ctx->thermal_temps, ctx->n, grid, ctx)); }
+  for (PetscInt b_id = 0; b_id < ctx->batch_sz; b_id++) {
+    for (PetscInt grid = 0; grid < ctx->num_grids; grid++) {
+      PetscCall(SetMaxwellians(ctx->plex[grid], XsubArray[LAND_PACK_IDX(b_id, grid)], 0.0, ctx->thermal_temps, ctx->n, grid, ctx));
+    }
+  }
   PetscCall(DMCompositeRestoreAccessArray(pack, X, nDMs, NULL, XsubArray));
   PetscCall(PetscFree(XsubArray));
   /* plot */
