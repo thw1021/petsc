@@ -295,7 +295,12 @@ struct _p_TS {
   PetscReal solvetime;           /* time at the conclusion of TSSolve() */
   PetscBool stifflyaccurate;     /* flag to indicate that the method is stiffly accurate */
 
-  TSConvergedReason      reason;
+  TSConvergedReason reason;
+  struct {
+    int       watch;     // Watch for this signal
+    PetscBool received;  // This rank has received a signal
+    PetscBool consensus; // All ranks agree that a signal has been received
+  } signal;
   PetscBool              errorifstepfailed;
   PetscInt               reject, max_reject;
   TSExactFinalTimeOption exact_final_time;

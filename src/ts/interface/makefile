@@ -1,6 +1,6 @@
 -include ../../../petscdir.mk
 
-SOURCEC  = ts.c tscreate.c tsreg.c tsregall.c dlregists.c tseig.c tsrhssplit.c tshistory.c tsmon.c
+SOURCEC  = ts.c tscreate.c tsreg.c tsregall.c dlregists.c tseig.c tsrhssplit.c tshistory.c tsmon.c tssig.c
 SOURCEF  =
 SOURCEH  =
 DIRS     = sensitivity

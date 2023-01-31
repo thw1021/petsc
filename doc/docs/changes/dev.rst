@@ -121,6 +121,7 @@ Changes: Development
 .. rubric:: TS:
 
 - Add ``TSPruneIJacobianColor()`` to improve the MFFD coloring
+- Add ``TSSetConvergeOnSignal()`` and ``-ts_converge_on_signal`` to gracefully complete ``TSSolve()`` when a signal is received.
 
 .. rubric:: TAO:
 

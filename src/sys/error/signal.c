@@ -260,7 +260,7 @@ PetscErrorCode PetscPushSignalHandler(PetscErrorCode (*routine)(int, void *), vo
     /* signal(SIGUSR1, PETSC_SIGNAL_CAST PetscSignalHandler_Private); */
 #endif
 #if !defined(PETSC_MISSING_SIGUSR2)
-    /* signal(SIGUSR2, PETSC_SIGNAL_CAST PetscSignalHandler_Private); */
+    signal(SIGUSR2, PETSC_SIGNAL_CAST PetscSignalHandler_Private);
 #endif
     SignalSet = PETSC_TRUE;
   }

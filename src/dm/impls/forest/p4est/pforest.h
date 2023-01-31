@@ -533,6 +533,7 @@ static PetscErrorCode DMPforestComputeLocalCellTransferSF_loop(p4est_t *p4estFro
     PetscCallP4estReturn(comp, p4est_quadrant_is_equal, (firstFrom, firstTo));
     PetscCheck(comp, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "non-matching partitions");
 
+    *toFineLeavesCount = 0;
     for (currentFrom = 0, currentTo = 0; currentFrom < numFrom && currentTo < numTo;) {
       p4est_quadrant_t *quadFrom = &quadsFrom[currentFrom];
       p4est_quadrant_t *quadTo   = &quadsTo[currentTo];

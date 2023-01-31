@@ -23,6 +23,16 @@ static PetscErrorCode TSAdaptSetDefaultType(TSAdapt adapt, TSAdaptType default_t
   PetscFunctionReturn(0);
 }
 
+static PetscErrorCode PetscSignalHandlerTS(int sig, void *ptr)
+{
+  TS ts = (TS)ptr;
+  if (sig == ts->signal.watch) {
+    ts->signal.received = PETSC_TRUE;
+    return 0;
+  }
+  return PetscSignalHandlerDefault(sig, NULL);
+}
+
 /*@
    TSSetFromOptions - Sets various `TS` parameters from user options.
 
@@ -46,6 +56,7 @@ static PetscErrorCode TSAdaptSetDefaultType(TSAdapt adapt, TSAdaptType default_t
 .  -ts_error_if_step_fails <true,false> - Error if no step succeeds
 .  -ts_rtol <rtol> - relative tolerance for local truncation error
 .  -ts_atol <atol> - Absolute tolerance for local truncation error
+.  -ts_converge_on_signal <sig> - TSSolve exit gracefully if specified signal is received
 .  -ts_rhs_jacobian_test_mult -mat_shell_test_mult_view - test the Jacobian at each iteration against finite difference with RHS function
 .  -ts_rhs_jacobian_test_mult_transpose -mat_shell_test_mult_transpose_view - test the Jacobian at each iteration against finite difference with RHS function
 .  -ts_adjoint_solve <yes,no> - After solving the ODE/DAE solve the adjoint problem (requires -ts_save_trajectory)
@@ -123,6 +134,10 @@ PetscErrorCode TSSetFromOptions(TS ts)
   PetscCall(PetscOptionsBool("-ts_error_if_step_fails", "Error if no step succeeds", "TSSetErrorIfStepFails", ts->errorifstepfailed, &ts->errorifstepfailed, NULL));
   PetscCall(PetscOptionsReal("-ts_rtol", "Relative tolerance for local truncation error", "TSSetTolerances", ts->rtol, &ts->rtol, NULL));
   PetscCall(PetscOptionsReal("-ts_atol", "Absolute tolerance for local truncation error", "TSSetTolerances", ts->atol, &ts->atol, NULL));
+
+  PetscInt sig = (int)ts->signal.watch;
+  PetscCall(PetscOptionsInt("-ts_converge_on_signal", "TSSolve exit gracefully if specified signal is received", "TSSetConvergeOnSignal", sig, &sig, &flg));
+  if (flg) PetscCall(TSSetConvergeOnSignal(ts, sig));
 
   PetscCall(PetscOptionsBool("-ts_rhs_jacobian_test_mult", "Test the RHS Jacobian for consistency with RHS at each solve ", "None", ts->testjacobian, &ts->testjacobian, NULL));
   PetscCall(PetscOptionsBool("-ts_rhs_jacobian_test_mult_transpose", "Test the RHS Jacobian transpose for consistency with RHS at each solve ", "None", ts->testjacobiantranspose, &ts->testjacobiantranspose, NULL));
@@ -3707,6 +3722,7 @@ PetscErrorCode TSSolve(TS ts, Vec u)
   PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
   if (u) PetscValidHeaderSpecific(u, VEC_CLASSID, 2);
 
+  if (ts->signal.watch != 0) PetscCall(PetscPushSignalHandler(PetscSignalHandlerTS, ts));
   PetscCall(TSSetExactFinalTimeDefault(ts));
   if (ts->exact_final_time == TS_EXACTFINALTIME_INTERPOLATE && u) { /* Need ts->vec_sol to be distinct so it is not overwritten when we interpolate at the end */
     if (!ts->vec_sol || u == ts->vec_sol) {
@@ -3816,6 +3832,11 @@ PetscErrorCode TSSolve(TS ts, Vec u)
       PetscCall(TSMonitor(ts, ts->steps, ts->ptime, ts->vec_sol));
       if (!ts->steprollback) PetscCall(TSPreStep(ts));
       PetscCall(TSStep(ts));
+      if (ts->signal.watch != 0) {
+        // Not using MPI_IN_PLACE in hopes of minimizing race conditions between MPI access to the value and a signal being received.
+        PetscCallMPI(MPI_Allreduce(&ts->signal.received, &ts->signal.consensus, 1, MPIU_BOOL, MPI_LOR, PetscObjectComm((PetscObject)ts)));
+        if (ts->signal.consensus) ts->reason = TS_CONVERGED_SIGNAL;
+      }
       if (ts->testjacobian) PetscCall(TSRHSJacobianTest(ts, NULL));
       if (ts->testjacobiantranspose) PetscCall(TSRHSJacobianTestTranspose(ts, NULL));
       if (ts->quadraturets && ts->costintegralfwd) { /* Must evaluate the cost integral before event is handled. The cost integral value can also be rolled back. */
@@ -3854,6 +3875,11 @@ PetscErrorCode TSSolve(TS ts, Vec u)
   PetscCall(VecViewFromOptions(solution, (PetscObject)ts, "-ts_view_solution"));
   PetscCall(PetscObjectSAWsBlock((PetscObject)ts));
   if (ts->adjoint_solve) PetscCall(TSAdjointSolve(ts));
+  if (ts->signal.watch != 0) {
+    PetscPopSignalHandler();
+    ts->signal.received  = PETSC_FALSE;
+    ts->signal.consensus = PETSC_FALSE;
+  }
   PetscFunctionReturn(0);
 }
 

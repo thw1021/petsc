@@ -115,6 +115,7 @@ typedef enum {
   TS_CONVERGED_EVENT              = 4,
   TS_CONVERGED_PSEUDO_FATOL       = 5,
   TS_CONVERGED_PSEUDO_FRTOL       = 6,
+  TS_CONVERGED_SIGNAL             = 7,
   TS_DIVERGED_NONLINEAR_SOLVE     = -1,
   TS_DIVERGED_STEP_REJECTED       = -2,
   TSFORWARD_DIVERGED_LINEAR_SOLVE = -3,
@@ -254,6 +255,7 @@ PETSC_EXTERN PetscErrorCode TSGetOptionsPrefix(TS, const char *[]);
 PETSC_EXTERN PetscErrorCode TSSetFromOptions(TS);
 PETSC_EXTERN PetscErrorCode TSSetUp(TS);
 PETSC_EXTERN PetscErrorCode TSReset(TS);
+PETSC_EXTERN PetscErrorCode TSSetConvergeOnSignal(TS, int);
 
 PETSC_EXTERN PetscErrorCode TSSetSolution(TS, Vec);
 PETSC_EXTERN PetscErrorCode TSGetSolution(TS, Vec *);
