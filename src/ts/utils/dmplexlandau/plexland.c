@@ -1378,7 +1378,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   PetscCheck(ctx->species_offset[ctx->num_grids] == ctx->num_species, ctx->comm, PETSC_ERR_ARG_WRONG, "ctx->species_offset[ctx->num_grids] %" PetscInt_FMT " != ctx->num_species = %" PetscInt_FMT " ???????????", ctx->species_offset[ctx->num_grids],
              ctx->num_species);
   for (PetscInt grid = 0; grid < ctx->num_grids; grid++) {
-    int iii       = ctx->species_offset[grid];                                          // normalize with first (arbitrary) species on grid
+    int iii       = ctx->species_offset[grid];                                              // normalize with first (arbitrary) species on grid
     v0_grid[grid] = PetscSqrtReal(2 * ctx->k * ctx->thermal_temps[iii] / ctx->masses[iii]); /* arbitrary units for non-dimensionalization: mean velocity in 1D of first species on grid */
   }
   non_dim_grid = 0;
@@ -1456,8 +1456,8 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "masses:        e=%10.3e; ions in proton mass units:   %10.3e %10.3e ...\n", (double)ctx->masses[0], (double)(ctx->masses[1] / 1.6720e-27), (double)(ctx->num_species > 2 ? ctx->masses[2] / 1.6720e-27 : 0)));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "charges:       e=%10.3e; charges in elementary units: %10.3e %10.3e\n", (double)ctx->charges[0], (double)(-ctx->charges[1] / ctx->charges[0]), (double)(ctx->num_species > 2 ? -ctx->charges[2] / ctx->charges[0] : 0)));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "n:             e: %10.3e                           i: %10.3e %10.3e\n", (double)ctx->n[0], (double)ctx->n[1], (double)(ctx->num_species > 2 ? ctx->n[2] : 0)));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "thermal T (K): e=%10.3e i=%10.3e %10.3e. Normalization grid %d: v_0=%10.3e (%10.3ec) n_0=%10.3e t_0=%10.3e %" PetscInt_FMT " batched, view batch %" PetscInt_FMT "\n", (double)ctx->thermal_temps[0], (double)ctx->thermal_temps[1],
-                          (double)((ctx->num_species > 2) ? ctx->thermal_temps[2] : 0), (int)non_dim_grid, (double)ctx->v_0, (double)(ctx->v_0 / SPEED_OF_LIGHT), (double)ctx->n_0, (double)ctx->t_0, ctx->batch_sz, ctx->batch_view_idx));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "thermal T (K): e=%10.3e i=%10.3e %10.3e. Normalization grid %d: v_0=%10.3e (%10.3ec) n_0=%10.3e t_0=%10.3e %" PetscInt_FMT " batched, view batch %" PetscInt_FMT "\n", (double)ctx->thermal_temps[0],
+                          (double)ctx->thermal_temps[1], (double)((ctx->num_species > 2) ? ctx->thermal_temps[2] : 0), (int)non_dim_grid, (double)ctx->v_0, (double)(ctx->v_0 / SPEED_OF_LIGHT), (double)ctx->n_0, (double)ctx->t_0, ctx->batch_sz, ctx->batch_view_idx));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Domain radius (AMR levels) grid %d: par=%10.3e perp=%10.3e (%" PetscInt_FMT ") ", 0, (double)ctx->radius_par[0], (double)ctx->radius_perp[0], ctx->numAMRRefine[0]));
     for (ii = 1; ii < ctx->num_grids; ii++) PetscCall(PetscPrintf(PETSC_COMM_WORLD, ", %" PetscInt_FMT ": par=%10.3e perp=%10.3e (%" PetscInt_FMT ") ", ii, (double)ctx->radius_par[ii], (double)ctx->radius_perp[ii], ctx->numAMRRefine[ii]));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\n"));
@@ -1892,13 +1892,11 @@ static PetscErrorCode CreateStaticGPUData(PetscInt dim, IS grid_batch_is_inv[], 
       }
       if (ctx->verbose == -4) {
         printf("nu_beta\n");
-        for (PetscInt ii = 0; ii < ctx->num_species; ii++)printf(" %e",nu_beta[ii]);
+        for (PetscInt ii = 0; ii < ctx->num_species; ii++) printf(" %e", nu_beta[ii]);
         printf("\nalpha*beta:\n");
         for (PetscInt ii = 0; ii < ctx->num_species; ii++) {
-          printf("alpha_nu[%d,:]: %e: ",ii,nu_alpha[ii]);
-          for (PetscInt jj = 0; jj < ctx->num_species; jj++) {
-            printf(" %e",nu_alpha[ii]*nu_beta[jj]);
-          }
+          printf("alpha_nu[%d,:]: %e: ", ii, nu_alpha[ii]);
+          for (PetscInt jj = 0; jj < ctx->num_species; jj++) { printf(" %e", nu_alpha[ii] * nu_beta[jj]); }
           printf("\n");
         }
       }
