@@ -420,7 +420,7 @@ int main(int argc, char **argv)
   Vec                 X, F, coords;
   SNES                snes, snes_power, snes_water;
   Mat                 Jac;
-  PetscBool           ghost, viewJ = PETSC_FALSE, viewX = PETSC_FALSE, viewPy = PETSC_FALSE, test = PETSC_FALSE, distribute = PETSC_TRUE, flg, printCoord = PETSC_FALSE;
+  PetscBool           ghost, viewJ = PETSC_FALSE, viewX = PETSC_FALSE, viewPy = PETSC_FALSE, test = PETSC_FALSE, distribute = PETSC_TRUE, flg, printCoord = PETSC_FALSE, viewCSV = PETSC_FALSE;
   UserCtx             user;
   SNESConvergedReason reason;
 
@@ -493,6 +493,7 @@ int main(int argc, char **argv)
   PetscCall(PetscLogStagePush(stage[1]));
 
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-viewPy", &viewPy, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-viewCSV", &viewCSV, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-printCoord", &printCoord, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-test", &test, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-distribute", &distribute, NULL));
@@ -601,7 +602,11 @@ int main(int argc, char **argv)
     PetscCall(DMNetworkDistribute(&networkdm, 0));
 
     if (printCoord) PetscCall(CoordinatePrint(networkdm));
-    if (viewPy) { /* Python View of network with coordinates */
+    if (viewCSV) { /* CSV View of network with coordinates */
+      PetscCall(PetscViewerPushFormat(PETSC_VIEWER_STDOUT_WORLD, PETSC_VIEWER_ASCII_CSV));
+      PetscCall(DMView(networkdm, PETSC_VIEWER_STDOUT_WORLD));
+      PetscCall(PetscViewerPopFormat(PETSC_VIEWER_STDOUT_WORLD));
+    } else if (viewPy) {
       PetscCall(PetscViewerPushFormat(PETSC_VIEWER_STDOUT_WORLD, PETSC_VIEWER_ASCII_PYTHON));
       PetscCall(DMView(networkdm, PETSC_VIEWER_STDOUT_WORLD));
       PetscCall(PetscViewerPopFormat(PETSC_VIEWER_STDOUT_WORLD));
@@ -794,5 +799,11 @@ int main(int argc, char **argv)
       args: -coupled_snes_converged_reason -options_left no -petscpartitioner_type simple -dmnetwork_view -dmnetwork_view_distributed
       localrunfiles: ex1options power/case9.m water/sample1.inp
       output_file: output/ex1_4.out
+
+   test:
+      suffix: 5
+      args: -coupled_snes_converged_reason -options_left no -viewCSV
+      localrunfiles: ex1options power/case9.m water/sample1.inp
+      output_file: output/ex1_5.out
 
 TEST*/
