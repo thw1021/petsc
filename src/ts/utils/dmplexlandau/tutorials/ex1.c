@@ -1,4 +1,4 @@
-static char help[] = "Landau collision operator driver\n\n";
+static char help[] = "Landau collision operator with amnisotropic thermalization verification test as per Hager et al. 'A fully non-linear multi-species Fokker–Planck–Landau collision operator for simulation of fusion plasma'\n\n";
 
 #include <petscts.h>
 #include <petsclandau.h>
@@ -90,12 +90,11 @@ static PetscErrorCode maxwellian(PetscInt dim, PetscReal time, const PetscReal x
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode SetMaxwellians(DM dm, Vec X, PetscReal time, PetscReal temps[], PetscReal ns[], PetscInt grid, LandauCtx *ctx)
+static PetscErrorCode SetMaxwellians(DM dm, Vec X, PetscReal time, PetscReal temps[], PetscReal ns[], PetscInt grid, PetscReal shifts[], LandauCtx *ctx)
 {
   PetscErrorCode (*initu[LANDAU_MAX_SPECIES])(PetscInt, PetscReal, const PetscReal[], PetscInt, PetscScalar[], void *);
   PetscInt       dim;
   MaxwellianCtx *mctxs[LANDAU_MAX_SPECIES], data[LANDAU_MAX_SPECIES];
-  PetscReal      shifts[2] = {0.5 * PetscSqrtReal(ctx->masses[0] / ctx->masses[1]), 50 * (ctx->masses[0] / ctx->masses[1])};
   PetscFunctionBegin;
   PetscCall(DMGetDimension(dm, &dim));
   if (!ctx) PetscCall(DMGetApplicationContext(dm, &ctx));
@@ -110,9 +109,11 @@ static PetscErrorCode SetMaxwellians(DM dm, Vec X, PetscReal time, PetscReal tem
   }
   if (1) {
     data[0].shift = -sign(ctx->charges[ctx->species_offset[grid]]) * ctx->electronShift * ctx->m_0 / ctx->masses[ctx->species_offset[grid]];
-  } else data[0].shift = ctx->electronShift * shifts[grid] * PetscSqrtReal(data[0].kT_m) / ctx->v_0; // shifts to not matter!!!!
-  PetscCall(PetscPrintf(ctx->comm, "grid %d) shift= %e: ", (int)grid, (double)data[0].shift));
-  /* need to make ADD_ALL_VALUES work - TODO */
+  } else {
+    shifts[0]     = 0.5 * PetscSqrtReal(ctx->masses[0] / ctx->masses[1]);
+    shifts[1]     = 50 * (ctx->masses[0] / ctx->masses[1]);
+    data[0].shift = ctx->electronShift * shifts[grid] * PetscSqrtReal(data[0].kT_m) / ctx->v_0; // shifts to not matter!!!!
+  }
   PetscCall(DMProjectFunction(dm, time, initu, (void **)mctxs, INSERT_ALL_VALUES, X));
   PetscFunctionReturn(0);
 }
@@ -122,17 +123,15 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
   TSConvergedReason reason;
   LandauCtx        *ctx = (LandauCtx *)actx; /* user-defined application context */
   PetscInt          id;
-  PetscReal         time2;
+  PetscReal         t;
 
   PetscFunctionBeginUser;
   PetscCall(TSGetConvergedReason(ts, &reason));
-  PetscCall(DMGetOutputSequenceNumber(ctx->plex[0], &id, &time2));
+  PetscCall(DMGetOutputSequenceNumber(ctx->plex[0], &id, NULL));
   if (ctx->verbose > 0) { // hacks to generate sparse data (eg, use '-dm_landau_verbose 1' and '-dm_landau_verbose -1' to get all steps printed)
-    PetscInt b = PetscFloorReal(PetscLog10Real(time));
-    if (b >= 1) ctx->verbose = (PetscInt)PetscPowReal(10, b) / b;
-    else if (b >= 0) ctx->verbose = 3;
-    else if (b >= -2) ctx->verbose = 2;
-    if (b >= 1 && b < 4) ctx->verbose *= 2;
+    PetscInt b = PetscFloorReal(PetscLog10Real(t = (time + 1e-8) * (ctx->t_0 / 1e-4))) + 3;
+    if (b >= 2) ctx->verbose = (PetscInt)PetscPowReal(10, b - 1);
+    else if (b == 1) ctx->verbose = 2;
   }
   if ((ctx->verbose && stepi % ctx->verbose == 0) || reason || stepi == 1 || ctx->verbose < 0) {
     PetscInt nDMs;
@@ -142,7 +141,7 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
     PetscCall(DMCompositeGetNumberDM(pack, &nDMs));
     PetscCall(DMSetOutputSequenceNumber(ctx->plex[0], id + 1, time));
     PetscCall(DMSetOutputSequenceNumber(ctx->plex[1], id + 1, time));
-    PetscCall(PetscInfo(pack, "ex1 plot step %d, time = %g\n", (int)id, (double)time));
+    PetscCall(PetscInfo(pack, "ex1 plot step %" PetscInt_FMT ", time = %g\n", (int)id, (double)time));
     PetscCall(PetscMalloc(sizeof(*XsubArray) * nDMs, &XsubArray));
     PetscCall(DMCompositeGetAccessArray(pack, X, nDMs, NULL, XsubArray)); // read only
     PetscCall(VecViewFromOptions(XsubArray[LAND_PACK_IDX(ctx->batch_view_idx, 0)], NULL, "-ex1_vec_view_e"));
@@ -180,10 +179,10 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
       PetscCall(PetscDSSetObjective(prob, 0, &f0_v2_1d_shift));
       PetscCall(DMPlexComputeIntegralFEM(dm, Xloc, tt, ctx));
       e_par = PetscRealPart(tt[0]) * ctx->v_0 * ctx->v_0 * m_s / n; // scale?
-      if (grid == 0) PetscCall(PetscPrintf(ctx->comm, "step %4d) time= %e temperature (ev): ", (int)stepi, (double)time));
-      PetscCall(PetscPrintf(ctx->comm, "%s T= %9.4g T_par= %9.4g T_perp= %9.4g ", (grid == 0) ? "electron:" : ";ion:", (double)(energy * kev_joul * 1000), (double)(e_par * kev_joul * 1000), (double)(e_perp * kev_joul * 1000)));
+      if (grid == 0) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "step %4d) time= %e temperature (ev): ", (int)stepi, (double)time));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%s T= %9.4g T_par= %9.4g T_perp= %9.4g ", (grid == 0) ? "electron:" : ";ion:", (double)(energy * kev_joul * 1000), (double)(e_par * kev_joul * 1000), (double)(e_perp * kev_joul * 1000)));
     }
-    PetscCall(PetscPrintf(ctx->comm, "\n"));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\n"));
     PetscCall(DMCompositeRestoreAccessArray(pack, X, nDMs, NULL, XsubArray));
     PetscCall(PetscFree(XsubArray));
 
@@ -194,16 +193,32 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
 
 int main(int argc, char **argv)
 {
-  DM         pack;
-  Vec        X;
-  PetscInt   dim = 2, nDMs;
-  TS         ts;
-  Mat        J;
-  Vec       *XsubArray = NULL;
-  LandauCtx *ctx;
+  DM          pack;
+  Vec         X;
+  PetscInt    dim = 2, nDMs;
+  TS          ts;
+  Mat         J;
+  Vec        *XsubArray = NULL;
+  LandauCtx  *ctx;
+  PetscMPIInt rank;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
+  PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
+  if (rank) { /* turn off output stuff for duplicate runs */
+    PetscCall(PetscOptionsClearValue(NULL, "-ex1_dm_view_e"));
+    PetscCall(PetscOptionsClearValue(NULL, "-ex1_dm_view_i"));
+    PetscCall(PetscOptionsClearValue(NULL, "-ex1_vec_view_e"));
+    PetscCall(PetscOptionsClearValue(NULL, "-ex1_vec_view_i"));
+    PetscCall(PetscOptionsClearValue(NULL, "-info"));
+    PetscCall(PetscOptionsClearValue(NULL, "-snes_converged_reason"));
+    PetscCall(PetscOptionsClearValue(NULL, "-pc_bjkokkos_ksp_converged_reason"));
+    PetscCall(PetscOptionsClearValue(NULL, "-ksp_converged_reason"));
+    PetscCall(PetscOptionsClearValue(NULL, "-ts_adapt_monitor"));
+    PetscCall(PetscOptionsClearValue(NULL, "-ts_monitor"));
+    PetscCall(PetscOptionsClearValue(NULL, "-snes_monitor"));
+    //PetscCall(PetscOptionsClearValue(NULL, "-"));
+  }
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-dim", &dim, NULL));
   /* Create a mesh */
   PetscCall(DMPlexLandauCreateVelocitySpace(PETSC_COMM_SELF, dim, "", &X, &J, &pack));
@@ -221,7 +236,8 @@ int main(int argc, char **argv)
   /* add bimaxwellian anisotropic test */
   for (PetscInt b_id = 0; b_id < ctx->batch_sz; b_id++) {
     for (PetscInt grid = 0; grid < ctx->num_grids; grid++) {
-      PetscCall(SetMaxwellians(ctx->plex[grid], XsubArray[LAND_PACK_IDX(b_id, grid)], 0.0, ctx->thermal_temps, ctx->n, grid, ctx));
+      PetscReal shifts[2];
+      PetscCall(SetMaxwellians(ctx->plex[grid], XsubArray[LAND_PACK_IDX(b_id, grid)], 0.0, ctx->thermal_temps, ctx->n, grid, shifts, ctx));
     }
   }
   PetscCall(DMCompositeRestoreAccessArray(pack, X, nDMs, NULL, XsubArray));
