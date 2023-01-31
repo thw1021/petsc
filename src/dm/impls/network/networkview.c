@@ -2,8 +2,6 @@
 
 static PetscErrorCode DMView_Network_CSV(DM dm, PetscViewer viewer)
 {
-  MPI_Comm        comm;
-  PetscMPIInt     rank;
   DM              dmcoords;
   PetscInt        nsubnets, i, subnet, nvertices, nedges, vertex, edge;
   PetscInt        vertexOffsets[2], globalEdgeVertices[2];
@@ -12,9 +10,6 @@ static PetscErrorCode DMView_Network_CSV(DM dm, PetscViewer viewer)
   Vec             allVertexCoords;
 
   PetscFunctionBegin;
-  PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
-  PetscCallMPI(MPI_Comm_rank(comm, &rank));
-
   // Get the network containing coordinate information
   PetscCall(DMGetCoordinateDM(dm, &dmcoords));
   // Get the coordinate vector for the network
@@ -61,7 +56,7 @@ static PetscErrorCode DMView_Network_CSV(DM dm, PetscViewer viewer)
 
 static PetscErrorCode DMView_Network_Matplotlib(DM dm)
 {
-  PetscMPIInt rank, size;
+  PetscMPIInt rank, size, rank2;
   MPI_Comm    comm;
   char        filename[PETSC_MAX_PATH_LEN + 1], proccall[PETSC_MAX_PATH_LEN + 500], scriptFile[PETSC_MAX_PATH_LEN + 1], streamBuffer[256];
   PetscViewer csvViewer;
@@ -97,7 +92,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm)
   PetscCall(PetscViewerDestroy(&csvViewer));
 
   // Collect the temporary files on rank 0
-  if (rank != 0) {
+  if (rank) {
     // If not rank 0, send the file name
     PetscCallMPI(MPI_Send(filename, FILENAME_MAX, MPI_BYTE, 0, 0, comm));
   } else {
@@ -110,7 +105,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm)
 
     filename[0] = ' ';
     // For every other rank, receive the file name and append with a space
-    for (PetscMPIInt rank2 = 1; rank2 < size; rank2++) {
+    for (rank2 = 1; rank2 < size; rank2++) {
       PetscCallMPI(MPI_Recv(filename + 1, FILENAME_MAX, MPI_BYTE, rank2, 0, comm, MPI_STATUS_IGNORE));
       PetscCall(PetscStrlen(filename, &appendChars));
       numChars += appendChars;
