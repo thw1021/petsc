@@ -81,7 +81,6 @@ PetscErrorCode StarGraphCreate(MPI_Comm comm, PetscInt numdofvert, PetscInt numd
     PetscCall(DMNetworkAddComponent(dm, v, compkey, &compvert[v - vStart], numdofvert));
   }
   PetscCall(DMSetFromOptions(dm));
-  PetscCall(DMViewFromOptions(dm, NULL, "-dm_view"));
   PetscCall(DMSetUp(dm));
   PetscCall(PetscFree2(compedge, compvert));
   *newdm = dm;
@@ -172,7 +171,7 @@ int main(int argc, char **argv)
   DM          dm;
   PetscInt    dofv = 1, dofe = 1, ne = 1;
   PetscMPIInt rank;
-  PetscBool   testdistribute = PETSC_FALSE, viewPy = PETSC_FALSE;
+  PetscBool   testdistribute = PETSC_FALSE;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
@@ -195,12 +194,6 @@ int main(int argc, char **argv)
 
   /* print or view the coordinates of each vertex */
   PetscCall(CoordinatePrint(dm));
-  PetscCall(PetscOptionsGetBool(NULL, NULL, "-viewPy", &viewPy, NULL));
-  if (viewPy) {
-    PetscCall(PetscViewerPushFormat(PETSC_VIEWER_STDOUT_WORLD, PETSC_VIEWER_ASCII_PYTHON));
-    PetscCall(DMView(dm, PETSC_VIEWER_STDOUT_WORLD));
-    PetscCall(PetscViewerPopFormat(PETSC_VIEWER_STDOUT_WORLD));
-  }
 
   PetscCall(DMDestroy(&dm));
   PetscCall(PetscFinalize());
