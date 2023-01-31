@@ -11,20 +11,16 @@ Labels:
 Field e:
   adjacency FEM
 0 TS dt 0.01 time 0.
-step    0) time= 0.000000e+00 temperature (ev): electron: T=     359.8 T_par=     300.4 T_perp=     389.5 ;ion: T=       240 T_par=     199.8 T_perp=     260.1 
-  0) species-0: charge density= -1.6018004042620e+01 z-momentum=  9.9228167689656e-04 energy=  1.4050262623995e+04
-  0) species-1: charge density=  1.6028907952774e+01 z-momentum= -9.9216833917771e-04 energy=  5.7714762935928e+03
-	  0) Total: charge density=  1.0903910154205e-02, momentum=  1.1333771884458e-07, energy=  1.9821738917588e+04 (m_i[0]/m_e = 3670.94, 26 cells on electron grid)
+step    0) time= 0.000000e+00 temperature (ev): electron: T=     360.5 T_par=     299.6 T_perp=       391 ;ion: T=     240.4 T_par=     199.7 T_perp=     260.8 
+  0) species-0: charge density= -1.6023316488082e+01 z-momentum=  1.4036852332483e-03 energy=  1.9479306306470e+04
+  0) species-1: charge density=  1.6024008267357e+01 z-momentum= -1.4018463464817e-03 energy=  5.7814193328546e+03
+	  0) Total: charge density=  6.9177927550257e-04, momentum=  1.8388867665307e-06, energy=  2.5260725639324e+04 (m_i[0]/m_e = 3670.94, 26 cells on electron grid)
+  Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 7
   Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 6
-  Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 5
-  Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 5
-      TSAdapt basic arkimex 0:1bee step   0 accepted t=0          + 1.000e-02 dt=1.500e-02  wlte=0.0955  wltea=   -1 wlter=   -1
+  Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 6
+      TSAdapt basic arkimex 0:1bee step   0 accepted t=0          + 1.000e-02 dt=1.500e-02  wlte=0.196  wltea=   -1 wlter=   -1
 1 TS dt 0.015 time 0.01
-step    1) time= 1.000000e-02 temperature (ev): electron: T=     360.9 T_par=     302.3 T_perp=     390.1 ;ion: T=       240 T_par=     199.8 T_perp=     260.1 
-  1) species-0: charge density= -1.6018004042620e+01 z-momentum=  9.8991559981792e-04 energy=  1.4050260075723e+04
-  1) species-1: charge density=  1.6028907952774e+01 z-momentum= -9.8980226209907e-04 energy=  5.7714788418651e+03
-	  1) Total: charge density=  1.0903910154205e-02, momentum=  1.1333771885000e-07, energy=  1.9821738917588e+04 (m_i[0]/m_e = 3670.94, 26 cells on electron grid)
-step   -1) time= 1.000000e+00 temperature (ev): electron: T=      3000 T_par=      3600 T_perp=      2700 ;ion: T=     354.7 T_par=     343.3 T_perp=     360.4 
-  2) species-0: charge density= -2.1746147918597e+05 z-momentum=  9.8991559981290e-04 energy=  9.7850459516873e+08
-  2) species-1: charge density=  1.7146457619116e+01 z-momentum= -9.8980226209908e-04 energy=  9.1240797685157e+03
-	  2) Total: charge density= -2.1744433272835e+05, momentum=  1.1333771382212e-07, energy=  9.7851371924850e+08 (m_i[0]/m_e = 3670.94, 26 cells on electron grid)
+step    1) time= 1.000000e-02 temperature (ev): electron: T=     364.1 T_par=       305 T_perp=     393.7 ;ion: T=     240.4 T_par=     199.7 T_perp=     260.8 
+  1) species-0: charge density= -1.6023316488082e+01 z-momentum=  1.3980753101371e-03 energy=  1.9479302761809e+04
+  1) species-1: charge density=  1.6024008267357e+01 z-momentum= -1.3962364233706e-03 energy=  5.7814228775152e+03
+	  1) Total: charge density=  6.9177927550257e-04, momentum=  1.8388867665314e-06, energy=  2.5260725639324e+04 (m_i[0]/m_e = 3670.94, 26 cells on electron grid)
