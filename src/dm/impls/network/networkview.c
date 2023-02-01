@@ -80,7 +80,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm)
 #elif defined(PETSC_HAVE_MKSTEMP) && __STDC_VERSION__ > 199901L
   // Same thing, but for POSIX systems on which tmpnam is deprecated
   // Note: Configure may detect mkstemp but it will not be defined if compiling for C99, so check additional defines to see if we can use it
-  PetscCall(PetscStrcpy(filename, "/tmp/matplotlib-XXXXXX"));
+  PetscCall(PetscStrcpy(filename, "dmview-XXXXXX"));
   PetscCheck(mkstemp(filename) != -1, comm, PETSC_ERR_SYS, "Could not acquire temporary file");
 #else
   // Same thing, but for older C versions which don't have the safe form
