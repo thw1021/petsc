@@ -2,8 +2,6 @@
 
 static PetscErrorCode DMView_Network_CSV(DM dm, PetscViewer viewer)
 {
-  MPI_Comm        comm;
-  PetscMPIInt     rank;
   DM              dmcoords;
   PetscInt        nsubnets, i, subnet, nvertices, nedges, vertex, edge;
   PetscInt        vertexOffsets[2], globalEdgeVertices[2];
@@ -12,9 +10,6 @@ static PetscErrorCode DMView_Network_CSV(DM dm, PetscViewer viewer)
   Vec             allVertexCoords;
 
   PetscFunctionBegin;
-  PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
-  PetscCallMPI(MPI_Comm_rank(comm, &rank));
-
   // Get the network containing coordinate information
   PetscCall(DMGetCoordinateDM(dm, &dmcoords));
   // Get the coordinate vector for the network
@@ -59,16 +54,23 @@ static PetscErrorCode DMView_Network_CSV(DM dm, PetscViewer viewer)
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode DMView_Network_Matplotlib(DM dm)
+#include <petscdraw.h>
+static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
 {
-  PetscMPIInt rank, size;
+  PetscMPIInt rank, size, rank2;
   MPI_Comm    comm;
   char        filename[PETSC_MAX_PATH_LEN + 1], proccall[PETSC_MAX_PATH_LEN + 500], scriptFile[PETSC_MAX_PATH_LEN + 1], streamBuffer[256];
   PetscViewer csvViewer;
   size_t      numChars, appendChars;
   FILE       *processFile;
+  PetscBool   isnull;
+  PetscDraw   draw;
 
   PetscFunctionBegin;
+  PetscCall(PetscViewerDrawGetDraw(viewer, 1, &draw)); //pop up an empty window -- how to get rid of it?
+  PetscCall(PetscDrawIsNull(draw, &isnull));
+  if (isnull) PetscFunctionReturn(0);
+
   // Get the MPI communicator and this process' rank
   PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
@@ -97,7 +99,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm)
   PetscCall(PetscViewerDestroy(&csvViewer));
 
   // Collect the temporary files on rank 0
-  if (rank != 0) {
+  if (rank) {
     // If not rank 0, send the file name
     PetscCallMPI(MPI_Send(filename, FILENAME_MAX, MPI_BYTE, 0, 0, comm));
   } else {
@@ -110,7 +112,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm)
 
     filename[0] = ' ';
     // For every other rank, receive the file name and append with a space
-    for (PetscMPIInt rank2 = 1; rank2 < size; rank2++) {
+    for (rank2 = 1; rank2 < size; rank2++) {
       PetscCallMPI(MPI_Recv(filename + 1, FILENAME_MAX, MPI_BYTE, rank2, 0, comm, MPI_STATUS_IGNORE));
       PetscCall(PetscStrlen(filename, &appendChars));
       numChars += appendChars;
@@ -133,26 +135,29 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm)
 
 PetscErrorCode DMView_Network(DM dm, PetscViewer viewer)
 {
-  PetscBool   iascii;
-  PetscMPIInt rank;
+  PetscBool iascii, idraw;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
-  PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)dm), &rank));
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERDRAW, &idraw));
+  if (idraw) {
+    PetscCall(DMView_Network_Matplotlib(dm, viewer));
+    PetscFunctionReturn(0);
+  }
+
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
   if (iascii) {
     const PetscInt   *cone, *vtx, *edges;
     PetscInt          vfrom, vto, i, j, nv, ne, nsv, p, nsubnet;
     DM_Network       *network = (DM_Network *)dm->data;
     PetscViewerFormat format;
+    PetscMPIInt       rank;
 
+    PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)dm), &rank));
     PetscCall(PetscViewerGetFormat(viewer, &format));
     if (format == PETSC_VIEWER_ASCII_CSV) {
       PetscCall(DMView_Network_CSV(dm, viewer));
-      PetscFunctionReturn(0);
-    } else if (format == PETSC_VIEWER_ASCII_PYTHON) {
-      PetscCall(DMView_Network_Matplotlib(dm));
       PetscFunctionReturn(0);
     }
 
