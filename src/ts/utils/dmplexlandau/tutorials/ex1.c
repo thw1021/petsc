@@ -141,7 +141,7 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
     PetscCall(DMCompositeGetNumberDM(pack, &nDMs));
     PetscCall(DMSetOutputSequenceNumber(ctx->plex[0], id + 1, time));
     PetscCall(DMSetOutputSequenceNumber(ctx->plex[1], id + 1, time));
-    PetscCall(PetscInfo(pack, "ex1 plot step %" PetscInt_FMT ", time = %g\n", (int)id, (double)time));
+    PetscCall(PetscInfo(pack, "ex1 plot step %" PetscInt_FMT ", time = %g\n", id, (double)time));
     PetscCall(PetscMalloc(sizeof(*XsubArray) * nDMs, &XsubArray));
     PetscCall(DMCompositeGetAccessArray(pack, X, nDMs, NULL, XsubArray)); // read only
     PetscCall(VecViewFromOptions(XsubArray[LAND_PACK_IDX(ctx->batch_view_idx, 0)], NULL, "-ex1_vec_view_e"));
