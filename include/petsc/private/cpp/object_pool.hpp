@@ -919,7 +919,7 @@ inline PetscErrorCode ObjectPool<T, Constructor>::finalize_() noexcept
   PetscFunctionBegin;
   // clang-format off
   PetscCall(
-    this->allocator().for_each([&](void *ptr)
+    this->allocator().for_each([&, this](void *ptr)
     {
       PetscFunctionBegin;
       PetscCall(this->constructor().destroy(static_cast<value_type *>(ptr)));
