@@ -1,8 +1,8 @@
 masses:        e= 9.109e-31; ions in proton mass units:    2.000e+00  1.800e+02 ...
 charges:       e=-1.602e-19; charges in elementary units:  1.000e+00  1.800e+01
 n:             e:  1.000e+00                           i:  1.000e+00  1.000e-06
-thermal T (K): e= 2.321e+07 i= 1.160e+07  1.160e+07. Normalization grid 0: v_0= 1.876e+07 ( 6.256e-02c) n_0= 1.000e+20 t_0= 1.637e-05, classical, Intuitive, 2 batched
-Domain radius (AMR levels) grid 0: par= 5.000e+00, perp= 5.000e+00 (0) , 1: par= 5.835e-02, perp= 5.835e-02 (0) , 2: par= 6.151e-03, perp= 6.151e-03 (0) 
+thermal T (K): e= 2.321e+07 i= 1.160e+07  1.160e+07. Normalization grid 0: v_0= 2.652e+07 ( 8.847e-02c) n_0= 1.000e+20 t_0= 4.630e-05 2 batched, view batch 1
+Domain radius (AMR levels) grid 0: par= 5.000e+00 perp= 5.000e+00 (0) , 1: par= 5.835e-02 perp= 5.835e-02 (0) , 2: par= 6.151e-03 perp= 6.151e-03 (0) 
 Using default Plex order for all matrices
 [0] <vec> adaptToleranceFEM(): Phase:adaptToleranceFEM: Uniform refinement
 [0] <vec> adaptToleranceFEM(): 	Phase: adaptToleranceFEM: 8 cells, 128 total quadrature points
@@ -17,24 +17,24 @@ Linear ptof_ solve converged due to CONVERGED_RTOL iterations 6
 Linear ptof_ solve converged due to CONVERGED_RTOL iterations 6
 Linear ptof_ solve converged due to CONVERGED_RTOL iterations 6
 Linear ptof_ solve converged due to CONVERGED_RTOL iterations 6
-  0) species-0: charge density= -1.6162729305797e+01 z-momentum=  2.7881698406777e-18 energy=  4.8199770808866e+04
-  0) species-1: charge density=  1.6162438381907e+01 z-momentum= -1.6855243176768e-16 energy=  2.4099451614304e+04
-  0) species-2: charge density=  2.9092389087432e-04 z-momentum=  8.2211135864924e-22 energy=  2.4099451614304e-02
-	  0) Total: charge density=  2.3597719915266e-13, momentum= -1.6576343981564e-16, energy=  7.2299246522622e+04 (m_i[0]/m_e = 3670.94, 8 cells on electron grid)
+  0) species-0: charge density= -1.6308716526065e+01 z-momentum= -4.2333226456709e-19 energy=  4.8330201258882e+04
+  0) species-1: charge density=  1.6308422974452e+01 z-momentum= -1.5637339811547e-16 energy=  2.4164665665459e+04
+  0) species-2: charge density=  2.9355161354013e-04 z-momentum= -1.1199205847921e-21 energy=  2.4164665665459e-02
+	  0) Total: charge density=  1.9836888208447e-14, momentum= -1.5679785030062e-16, energy=  7.2494891089007e+04 (m_i[0]/m_e = 3670.94, 8 cells on electron grid)
 0 TS dt 0.01 time 0.
-    0 SNES Function norm 5.344593165923e-01 
-    1 SNES Function norm 2.969210895755e-03 
-    2 SNES Function norm 2.186312537902e-05 
-    3 SNES Function norm 1.561519080968e-07 
-    4 SNES Function norm 1.154566644693e-09 
-    5 SNES Function norm 8.467367090143e-12 
-    6 SNES Function norm 6.408805600802e-14 
+    0 SNES Function norm 4.601865636711e-01 
+    1 SNES Function norm 2.813716414807e-03 
+    2 SNES Function norm 4.233685237305e-05 
+    3 SNES Function norm 5.269364668971e-07 
+    4 SNES Function norm 8.031588161423e-09 
+    5 SNES Function norm 1.005364226750e-10 
+    6 SNES Function norm 1.554763532533e-12 
   Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 6
 1 TS dt 0.01 time 0.01
-  1) species-0: charge density= -1.6162729305797e+01 z-momentum=  2.6573933387166e-18 energy=  4.8199648394544e+04
-  1) species-1: charge density=  1.6162438381907e+01 z-momentum= -1.6411124943795e-16 energy=  2.4099574008314e+04
-  1) species-2: charge density=  2.9092389087432e-04 z-momentum=  8.9027866209797e-22 energy=  2.4119764471399e-02
-	  1) Total: charge density=  2.3597709073245e-13, momentum= -1.6145296582057e-16, energy=  7.2299246522622e+04 (m_i[0]/m_e = 3670.94, 8 cells on electron grid)
+  1) species-0: charge density= -1.6308716526065e+01 z-momentum= -1.0216558365171e-19 energy=  4.8329829078311e+04
+  1) species-1: charge density=  1.6308422974452e+01 z-momentum= -1.5873244716939e-16 energy=  2.4165037790168e+04
+  1) species-2: charge density=  2.9355161354013e-04 z-momentum= -1.2047166446165e-21 energy=  2.4220528604901e-02
+	  1) Total: charge density=  3.0495029244848e-14, momentum= -1.5883581746968e-16, energy=  7.2494891089007e+04 (m_i[0]/m_e = 3670.94, 8 cells on electron grid)
 Linear ftop_ solve converged due to CONVERGED_RTOL iterations 3
 Linear ftop_ solve converged due to CONVERGED_RTOL iterations 3
 Linear ftop_ solve converged due to CONVERGED_RTOL iterations 3
@@ -49,14 +49,15 @@ Linear ptof_ solve converged due to CONVERGED_RTOL iterations 6
   0) species-2: charge density=  0.0000000000000e+00 z-momentum=  0.0000000000000e+00 energy=  0.0000000000000e+00
 	  0) Total: charge density=  0.0000000000000e+00, momentum=  0.0000000000000e+00, energy=  0.0000000000000e+00 (m_i[0]/m_e = 3670.94, 8 cells on electron grid)
 0 TS dt 0.01 time 0.
-    0 SNES Function norm 2.495055633633e-01 
-    1 SNES Function norm 3.918103581341e-03 
-    2 SNES Function norm 2.792700757385e-05 
-    3 SNES Function norm 1.890182210305e-07 
-    4 SNES Function norm 1.368665983297e-09 
-    5 SNES Function norm 9.866003338646e-12 
-    6 SNES Function norm 7.067461630376e-14 
-  Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 6
+    0 SNES Function norm 1.955973927752e-01 
+    1 SNES Function norm 1.426026693031e-02 
+    2 SNES Function norm 1.761791324010e-04 
+    3 SNES Function norm 2.130090444009e-06 
+    4 SNES Function norm 2.688905289736e-08 
+    5 SNES Function norm 3.363273825704e-10 
+    6 SNES Function norm 4.219205761047e-12 
+    7 SNES Function norm 5.516767662587e-14 
+  Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 7
 1 TS dt 0.01 time 0.01
   1) species-0: charge density= -0.0000000000000e+00 z-momentum=  0.0000000000000e+00 energy=  0.0000000000000e+00
   1) species-1: charge density=  0.0000000000000e+00 z-momentum=  0.0000000000000e+00 energy=  0.0000000000000e+00
@@ -65,31 +66,31 @@ Linear ptof_ solve converged due to CONVERGED_RTOL iterations 6
 Linear ftop_ solve converged due to CONVERGED_RTOL iterations 3
 Linear ftop_ solve converged due to CONVERGED_RTOL iterations 3
 Linear ftop_ solve converged due to CONVERGED_RTOL iterations 3
-[0] <vec> go(): Total number density:   3.369774668056e-07 (  3.369774668056e-07); x-momentum =  -7.830725492724e-17 (  6.455110808139e-18); energy =   1.445347319404e+05 (  1.445347319404e+05) error = 1.792124e-13 (log10 of error = -12), 288 particles. Use 1 threads
+[0] <vec> go(): Total number density:   3.395151327135e-07 (  3.395151327135e-07); x-momentum =  -1.065899188560e-16 (  1.535235325328e-17); energy =   1.448687413092e+05 (  1.448687413091e+05) error = 6.669811e-13 (log10 of error = -12), 288 particles. Use 1 threads
 Linear ptof_ solve converged due to CONVERGED_RTOL iterations 6
 Linear ptof_ solve converged due to CONVERGED_RTOL iterations 6
 Linear ptof_ solve converged due to CONVERGED_RTOL iterations 6
 Linear ptof_ solve converged due to CONVERGED_RTOL iterations 6
 Linear ptof_ solve converged due to CONVERGED_RTOL iterations 6
 Linear ptof_ solve converged due to CONVERGED_RTOL iterations 6
-  0) species-0: charge density= -1.6162729305797e+01 z-momentum=  2.8415177621576e-18 energy=  4.8199770808866e+04
-  0) species-1: charge density=  1.6162438381907e+01 z-momentum= -1.6226252760691e-16 energy=  2.4099451614304e+04
-  0) species-2: charge density=  2.9092389087432e-04 z-momentum=  5.6996073117668e-22 energy=  2.4099451614304e-02
-	  0) Total: charge density=  1.0808205459095e-13, momentum= -1.5942043988402e-16, energy=  7.2299246522622e+04 (m_i[0]/m_e = 3670.94, 8 cells on electron grid)
+  0) species-0: charge density= -1.6308716526065e+01 z-momentum= -4.2333226456709e-19 energy=  4.8330201258882e+04
+  0) species-1: charge density=  1.6308422974452e+01 z-momentum= -1.5637339811547e-16 energy=  2.4164665665459e+04
+  0) species-2: charge density=  2.9355161354013e-04 z-momentum= -1.1199205847921e-21 energy=  2.4164665665459e-02
+	  0) Total: charge density=  1.9836888208447e-14, momentum= -1.5679785030062e-16, energy=  7.2494891089007e+04 (m_i[0]/m_e = 3670.94, 8 cells on electron grid)
 0 TS dt 0.01 time 0.
-    0 SNES Function norm 5.344593165923e-01 
-    1 SNES Function norm 2.969210895754e-03 
-    2 SNES Function norm 2.186312537872e-05 
-    3 SNES Function norm 1.561519088516e-07 
-    4 SNES Function norm 1.154565074545e-09 
-    5 SNES Function norm 8.466694700910e-12 
-    6 SNES Function norm 6.241609943517e-14 
+    0 SNES Function norm 4.601865636711e-01 
+    1 SNES Function norm 2.813716414807e-03 
+    2 SNES Function norm 4.233685237305e-05 
+    3 SNES Function norm 5.269364668971e-07 
+    4 SNES Function norm 8.031588161423e-09 
+    5 SNES Function norm 1.005364226750e-10 
+    6 SNES Function norm 1.554763532533e-12 
   Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 6
 1 TS dt 0.01 time 0.01
-  1) species-0: charge density= -1.6162729305797e+01 z-momentum=  3.0889928423559e-18 energy=  4.8199648394544e+04
-  1) species-1: charge density=  1.6162438381907e+01 z-momentum= -1.6895617561584e-16 energy=  2.4099574008314e+04
-  1) species-2: charge density=  2.9092389087432e-04 z-momentum=  4.5140889909193e-22 energy=  2.4119764471399e-02
-	  1) Total: charge density=  1.0097662723335e-13, momentum= -1.6586673136458e-16, energy=  7.2299246522622e+04 (m_i[0]/m_e = 3670.94, 8 cells on electron grid)
+  1) species-0: charge density= -1.6308716526065e+01 z-momentum= -1.0216558365171e-19 energy=  4.8329829078311e+04
+  1) species-1: charge density=  1.6308422974452e+01 z-momentum= -1.5873244716939e-16 energy=  2.4165037790168e+04
+  1) species-2: charge density=  2.9355161354013e-04 z-momentum= -1.2047166446165e-21 energy=  2.4220528604901e-02
+	  1) Total: charge density=  3.0495029244848e-14, momentum= -1.5883581746968e-16, energy=  7.2494891089007e+04 (m_i[0]/m_e = 3670.94, 8 cells on electron grid)
 Linear ftop_ solve converged due to CONVERGED_RTOL iterations 3
 Linear ftop_ solve converged due to CONVERGED_RTOL iterations 3
 Linear ftop_ solve converged due to CONVERGED_RTOL iterations 3
@@ -104,14 +105,15 @@ Linear ptof_ solve converged due to CONVERGED_RTOL iterations 6
   0) species-2: charge density=  0.0000000000000e+00 z-momentum=  0.0000000000000e+00 energy=  0.0000000000000e+00
 	  0) Total: charge density=  0.0000000000000e+00, momentum=  0.0000000000000e+00, energy=  0.0000000000000e+00 (m_i[0]/m_e = 3670.94, 8 cells on electron grid)
 0 TS dt 0.01 time 0.
-    0 SNES Function norm 2.495055633633e-01 
-    1 SNES Function norm 3.918103581340e-03 
-    2 SNES Function norm 2.792700757408e-05 
-    3 SNES Function norm 1.890182211157e-07 
-    4 SNES Function norm 1.368666279254e-09 
-    5 SNES Function norm 9.867347120736e-12 
-    6 SNES Function norm 7.163966282585e-14 
-  Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 6
+    0 SNES Function norm 1.955973927752e-01 
+    1 SNES Function norm 1.426026693031e-02 
+    2 SNES Function norm 1.761791324010e-04 
+    3 SNES Function norm 2.130090444009e-06 
+    4 SNES Function norm 2.688905289736e-08 
+    5 SNES Function norm 3.363273825704e-10 
+    6 SNES Function norm 4.219205761047e-12 
+    7 SNES Function norm 5.516767662587e-14 
+  Nonlinear solve converged due to CONVERGED_SNORM_RELATIVE iterations 7
 1 TS dt 0.01 time 0.01
   1) species-0: charge density= -0.0000000000000e+00 z-momentum=  0.0000000000000e+00 energy=  0.0000000000000e+00
   1) species-1: charge density=  0.0000000000000e+00 z-momentum=  0.0000000000000e+00 energy=  0.0000000000000e+00
@@ -120,4 +122,4 @@ Linear ptof_ solve converged due to CONVERGED_RTOL iterations 6
 Linear ftop_ solve converged due to CONVERGED_RTOL iterations 3
 Linear ftop_ solve converged due to CONVERGED_RTOL iterations 3
 Linear ftop_ solve converged due to CONVERGED_RTOL iterations 3
-[0] <vec> go(): Total number density:   3.369774668056e-07 (  3.369774668056e-07); x-momentum =  -6.471507353388e-17 (  6.455110808139e-18); energy =   1.445347319404e+05 (  1.445347319404e+05) error = 1.790110e-13 (log10 of error = -12), 288 particles. Use 1 threads
+[0] <vec> go(): Total number density:   3.395151327135e-07 (  3.395151327135e-07); x-momentum =  -1.065899188560e-16 (  1.535235325328e-17); energy =   1.448687413092e+05 (  1.448687413091e+05) error = 6.669811e-13 (log10 of error = -12), 288 particles. Use 1 threads
