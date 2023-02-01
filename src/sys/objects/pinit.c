@@ -825,7 +825,7 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
         }
       }
       if (!flg) {
-        PetscInfo(NULL, "PETSc warning --- Open MPI library version \n%s does not match what PETSc was compiled with %d.%d.\n", mpilibraryversion, OMPI_MAJOR_VERSION, OMPI_MINOR_VERSION);
+        PetscCall(PetscInfo(NULL, "PETSc warning --- Open MPI library version \n%s does not match what PETSc was compiled with %d.%d.\n", mpilibraryversion, OMPI_MAJOR_VERSION, OMPI_MINOR_VERSION));
         flg = PETSC_TRUE;
       }
     }

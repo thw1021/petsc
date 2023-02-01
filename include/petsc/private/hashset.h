@@ -141,12 +141,13 @@ M*/
 \
   static inline PETSC_UNUSED PetscErrorCode Petsc##HashT##Add(Petsc##HashT ht, KeyType key) \
   { \
-    int      ret; \
-    khiter_t iter; \
+    int ret; \
     PetscFunctionBeginHot; \
     PetscDisableStaticAnalyzerForExpressionUnderstandingThatThisIsDangerousAndBugprone(PetscValidPointer(ht, 1)); \
-    iter = kh_put(HashT, ht, key, &ret); \
-    (void)iter; \
+    { \
+      khiter_t PETSC_UNUSED iter = kh_put(HashT, ht, key, &ret); \
+      (void)iter; \
+    } \
     PetscHashAssert(ret >= 0); \
     PetscFunctionReturn(0); \
   } \
@@ -163,13 +164,14 @@ M*/
 \
   static inline PETSC_UNUSED PetscErrorCode Petsc##HashT##QueryAdd(Petsc##HashT ht, KeyType key, PetscBool *missing) \
   { \
-    int      ret; \
-    khiter_t iter; \
+    int ret; \
     PetscFunctionBeginHot; \
     PetscDisableStaticAnalyzerForExpressionUnderstandingThatThisIsDangerousAndBugprone(PetscValidPointer(ht, 1)); \
     PetscDisableStaticAnalyzerForExpressionUnderstandingThatThisIsDangerousAndBugprone(PetscValidPointer(missing, 3)); \
-    iter = kh_put(HashT, ht, key, &ret); \
-    (void)iter; \
+    { \
+      khiter_t PETSC_UNUSED iter = kh_put(HashT, ht, key, &ret); \
+      (void)iter; \
+    } \
     PetscHashAssert(ret >= 0); \
     *missing = ret ? PETSC_TRUE : PETSC_FALSE; \
     PetscFunctionReturn(0); \
