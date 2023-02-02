@@ -65,6 +65,18 @@ class BaseTestMatFactor(object):
         self.b.destroy(); self.b = None
         PETSc.garbage_cleanup()
 
+class BaseTestMatFactorQR(BaseTestMatFactor):
+
+    def testFactorQR(self):
+        r, c = self.A.getOrdering("nd")
+        self.A.reorderForNonzeroDiagonal(r, c)
+        self.A.factorQR(c,{'zeropivot':1e-5})
+        x = self.x.duplicate()
+        self.A.solve(self.b, x)
+        x.axpy(-1, self.x)
+        self.assertTrue(x.norm() < 1e-3)
+
+
 class BaseTestMatFactorLU(BaseTestMatFactor):
 
     def testFactorLU(self):
@@ -119,7 +131,8 @@ class BaseTestMatFactorICC(BaseTestMatFactor):
 
 # --------------------------------------------------------------------
 
-class TestMatFactorA1(BaseTestMatFactorLU,
+class TestMatFactorA1(BaseTestMatFactorQR,
+                      BaseTestMatFactorLU,
                       BaseTestMatFactorChol,
                       unittest.TestCase):
     MKSYS = staticmethod(mksys_diag)

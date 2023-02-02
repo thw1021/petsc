@@ -1549,7 +1549,11 @@ cdef class Mat(Object):
         cdef PetscReal rval = asReal(atol)
         cdef PetscIS rp = isrow.iset, cp = iscol.iset
         CHKERR( MatReorderForNonzeroDiagonal(self.mat, rval, rp, cp) )
-
+    
+    def factorQR(self, IS iscol, options=None):
+        cdef PetscMatFactorInfo info
+        matfactorinfo(PETSC_FALSE, PETSC_FALSE, options, &info)
+        CHKERR( MatQRFactor(self.mat, iscol.iset, &info) )
     def factorLU(self, IS isrow, IS iscol, options=None):
         cdef PetscMatFactorInfo info
         matfactorinfo(PETSC_FALSE, PETSC_FALSE, options, &info)

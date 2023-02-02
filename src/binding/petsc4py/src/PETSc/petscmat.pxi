@@ -421,6 +421,7 @@ cdef extern from * nogil:
     int MatCholeskyFactor(PetscMat,PetscIS,PetscMatFactorInfo*)
     int MatCholeskyFactorSymbolic(PetscMat,PetscIS,PetscMatFactorInfo*,PetscMat*)
     int MatCholeskyFactorNumeric(PetscMat,PetscMatFactorInfo*,PetscMat*)
+    int MatQRFactor(PetscMat,PetscIS,PetscMatFactorInfo*)
     int MatLUFactor(PetscMat,PetscIS,PetscIS,PetscMatFactorInfo*)
     int MatILUFactor(PetscMat,PetscIS,PetscIS,PetscMatFactorInfo*)
     int MatICCFactor(PetscMat,PetscIS,PetscMatFactorInfo*)
