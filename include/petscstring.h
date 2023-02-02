@@ -176,7 +176,7 @@ static inline PetscErrorCode PetscStrallocpy(const char s[], char *t[])
 {
   PetscFunctionBegin;
   PetscAssertPointer_Private(t, 2);
-  *t = NULL;
+  *t = PETSC_NULLPTR;
   if (s) {
     size_t len;
     char  *tmp;
@@ -397,7 +397,7 @@ static inline PetscErrorCode PetscStrncmp(const char a[], const char b[], size_t
 @*/
 static inline PetscErrorCode PetscStrrstr(const char a[], const char b[], char *tmp[])
 {
-  const char *ltmp = NULL;
+  const char *ltmp = PETSC_NULLPTR;
 
   PetscFunctionBegin;
   PetscAssertPointer_Private(a, 1);
@@ -811,7 +811,7 @@ static inline PetscErrorCode PetscMemzero(void *a, size_t n)
    PetscArraycmp - Compares two arrays in memory.
 
    Synopsis:
-    #include <petscsys.h>
+    #include <petscstring.h>
     PetscErrorCode PetscArraycmp(const anytype *str1,const anytype *str2,size_t cnt,PetscBool *e)
 
    Not Collective
@@ -834,14 +834,14 @@ static inline PetscErrorCode PetscMemzero(void *a, size_t n)
 .seealso: `PetscMemcpy()`, `PetscMemcmp()`, `PetscArrayzero()`, `PetscMemzero()`, `PetscArraycpy()`, `PetscMemmove()`, `PetscStrallocpy()`,
           `PetscArraymove()`
 M*/
-#define PetscArraycmp(str1, str2, cnt, e) ((sizeof(*(str1)) != sizeof(*(str2))) || PetscMemcmp((str1), (str2), (size_t)(cnt) * sizeof(*(str1)), (e)))
+#define PetscArraycmp(str1, str2, cnt, e) ((sizeof(*(str1)) == sizeof(*(str2))) ? PetscMemcmp((str1), (str2), (size_t)(cnt) * sizeof(*(str1)), (e)) : PETSC_ERR_ARG_SIZ)
 
 /*MC
    PetscArraymove - Copies from one array in memory to another, the arrays may overlap. Use `PetscArraycpy()` when the arrays
                     do not overlap
 
    Synopsis:
-    #include <petscsys.h>
+    #include <petscstring.h>
     PetscErrorCode PetscArraymove(anytype *str1,const anytype *str2,size_t cnt)
 
    Not Collective
@@ -860,13 +860,13 @@ M*/
 
 .seealso: `PetscMemcpy()`, `PetscMemcmp()`, `PetscArrayzero()`, `PetscMemzero()`, `PetscArraycpy()`, `PetscMemmove()`, `PetscArraycmp()`, `PetscStrallocpy()`
 M*/
-#define PetscArraymove(str1, str2, cnt) ((sizeof(*(str1)) != sizeof(*(str2))) || PetscMemmove((str1), (str2), (size_t)(cnt) * sizeof(*(str1))))
+#define PetscArraymove(str1, str2, cnt) ((sizeof(*(str1)) == sizeof(*(str2))) ? PetscMemmove((str1), (str2), (size_t)(cnt) * sizeof(*(str1))) : PETSC_ERR_ARG_SIZ)
 
 /*MC
    PetscArraycpy - Copies from one array in memory to another
 
    Synopsis:
-    #include <petscsys.h>
+    #include <petscstring.h>
     PetscErrorCode PetscArraycpy(anytype *str1,const anytype *str2,size_t cnt)
 
    Not Collective
@@ -885,13 +885,13 @@ M*/
 
 .seealso: `PetscMemcpy()`, `PetscMemcmp()`, `PetscArrayzero()`, `PetscMemzero()`, `PetscArraymove()`, `PetscMemmove()`, `PetscArraycmp()`, `PetscStrallocpy()`
 M*/
-#define PetscArraycpy(str1, str2, cnt) ((sizeof(*(str1)) != sizeof(*(str2))) || PetscMemcpy((str1), (str2), (size_t)(cnt) * sizeof(*(str1))))
+#define PetscArraycpy(str1, str2, cnt) ((sizeof(*(str1)) == sizeof(*(str2))) ? PetscMemcpy((str1), (str2), (size_t)(cnt) * sizeof(*(str1))) : PETSC_ERR_ARG_SIZ)
 
 /*MC
    PetscArrayzero - Zeros an array in memory.
 
    Synopsis:
-    #include <petscsys.h>
+    #include <petscstring.h>
     PetscErrorCode PetscArrayzero(anytype *str1,size_t cnt)
 
    Not Collective
