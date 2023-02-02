@@ -56,8 +56,14 @@ class Edge:
 		self.id = parseID(row['ID'])
 
 		# Determine our starting and ending nodes from the X and Y properties
-		self.startNode = nodes[parseID(row['X'])]
-		self.endNode = nodes[parseID(row['Y'])]
+		start = parseID(row['X'])
+		if not start in nodes:
+			raise KeyError("No such node \'" + str(start) + "\' for start of edge \'" + str(self.id) + '\'')
+		self.startNode = nodes[start]
+		end = parseID(row['Y'])
+		if not end in nodes:
+			raise KeyError ("No such node \'" + str(end) + "\' for end of edge \'" + str(self.id) + '\'')
+		self.endNode = nodes[end]
 
 		# Set name and color, defaulting to a None name if not specified
 		self.name = row['Name']
@@ -83,6 +89,7 @@ def main(*args, **kwargs):
 	argparser.add_argument('-ec', '--set-edge-color', metavar='COLOR', action='store', help="Sets the color for drawn edges, overriding any per-edge colors")
 	argparser.add_argument('-ntc', '--set-node-title-color', metavar='COLOR', action='store', help="Sets the color for drawn node titles, overriding any per-node colors")
 	argparser.add_argument('-etc', '--set-edge-title-color', metavar='COLOR', action='store', help="Sets the color for drawn edge titles, overriding any per-edge colors")
+	argparser.add_argument('-nd', '--no-display', action='store_true', help="Disables displaying the figure, but will parse as normal")
 	args = argparser.parse_args()
 
 
@@ -214,7 +221,8 @@ def main(*args, **kwargs):
 	# Scale the plot to the content
 	axis.autoscale()
 	# Show the plot
-	plt.show()
+	if not args.no_display:
+		plt.show()
 
 if __name__ == "__main__":
 	try:
