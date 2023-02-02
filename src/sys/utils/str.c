@@ -318,6 +318,7 @@ PetscErrorCode PetscStrcasecmp(const char a[], const char b[], PetscBool *t)
 #else
   else {
     char *aa, *bb;
+
     PetscCall(PetscStrallocpy(a, &aa));
     PetscCall(PetscStrallocpy(b, &bb));
     PetscCall(PetscStrtolower(aa));
@@ -329,78 +330,6 @@ PetscErrorCode PetscStrcasecmp(const char a[], const char b[], PetscBool *t)
   }
 #endif
   *t = c ? PETSC_FALSE : PETSC_TRUE;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@C
-   PetscStrendswith - Determines if a string ends with a certain string
-
-   Not Collective
-
-   Input Parameters:
-+  a - pointer to string
--  b - string to endwith
-
-   Output Parameter:
-.  flg - `PETSC_TRUE` or `PETSC_FALSE`
-
-   Fortran Note:
-    Not for use in Fortran
-
-   Level: intermediate
-
-.seealso: `PetscStrendswithwhich()`, `PetscStrbeginswith()`, `PetscStrtoupper`, `PetscStrtolower()`, `PetscStrrchr()`, `PetscStrchr()`,
-          `PetscStrncmp()`, `PetscStrlen()`, `PetscStrncmp()`, `PetscStrcmp()`
-@*/
-PetscErrorCode PetscStrendswith(const char a[], const char b[], PetscBool *flg)
-{
-  char *test = NULL;
-
-  PetscFunctionBegin;
-  PetscValidBoolPointer(flg, 3);
-  *flg = PETSC_FALSE;
-  PetscCall(PetscStrrstr(a, b, &test));
-  if (test) {
-    size_t na, nb;
-
-    PetscCall(PetscStrlen(a, &na));
-    PetscCall(PetscStrlen(b, &nb));
-    if (a + na - nb == test) *flg = PETSC_TRUE;
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@C
-   PetscStrbeginswith - Determines if a string begins with a certain string
-
-   Not Collective
-
-   Input Parameters:
-+  a - pointer to string
--  b - string to begin with
-
-   Output Parameter:
-.  flg - PETSC_TRUE or PETSC_FALSE
-
-   Fortran Note:
-    Not for use in Fortran
-
-   Level: intermediate
-
-.seealso: `PetscStrendswithwhich()`, `PetscStrendswith()`, `PetscStrtoupper`, `PetscStrtolower()`, `PetscStrrchr()`, `PetscStrchr()`,
-          `PetscStrncmp()`, `PetscStrlen()`, `PetscStrncmp()`, `PetscStrcmp()`
-@*/
-PetscErrorCode PetscStrbeginswith(const char a[], const char b[], PetscBool *flg)
-{
-  char *test = NULL;
-
-  PetscFunctionBegin;
-  PetscValidCharPointer(a, 1);
-  PetscValidCharPointer(b, 2);
-  PetscValidBoolPointer(flg, 3);
-  *flg = PETSC_FALSE;
-  PetscCall(PetscStrrstr(a, b, &test));
-  if (test && (test == a)) *flg = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
