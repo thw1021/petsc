@@ -15,8 +15,6 @@ PETSC_EXTERN PetscErrorCode PetscMemcmp(const void *, const void *, size_t, Pets
 PETSC_EXTERN PetscErrorCode PetscStrToArray(const char[], char, int *, char ***);
 PETSC_EXTERN PetscErrorCode PetscStrToArrayDestroy(int, char **);
 PETSC_EXTERN PetscErrorCode PetscStrcasecmp(const char[], const char[], PetscBool *);
-PETSC_EXTERN PetscErrorCode PetscStrendswith(const char[], const char[], PetscBool *);
-PETSC_EXTERN PetscErrorCode PetscStrbeginswith(const char[], const char[], PetscBool *);
 PETSC_EXTERN PetscErrorCode PetscStrendswithwhich(const char[], const char *const *, PetscInt *);
 PETSC_EXTERN PetscErrorCode PetscStrArrayallocpy(const char *const *, char ***);
 PETSC_EXTERN PetscErrorCode PetscStrArrayDestroy(char ***);
@@ -550,6 +548,75 @@ static inline PetscErrorCode PetscStrrchr(const char a[], char b, char *tmp[])
   } else {
     *tmp = *tmp + 1;
   }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  PetscStrendswith - Determines if a string ends with a certain string
+
+  Not Collective, Not for use in Fortran
+
+  Input Parameters:
++ a - string to search
+- b - string to end with
+
+  Output Parameter:
+. flg - `PETSC_TRUE` if `a` ends with `b`, `PETSC_FALSE` otherwise
+
+  Level: intermediate
+
+.seealso: `PetscStrendswithwhich()`, `PetscStrbeginswith()`, `PetscStrtoupper`,
+`PetscStrtolower()`, `PetscStrrchr()`, `PetscStrchr()`, `PetscStrncmp()`, `PetscStrlen()`,
+`PetscStrcmp()`
+@*/
+static inline PetscErrorCode PetscStrendswith(const char a[], const char b[], PetscBool *flg)
+{
+  size_t na = 0, nb = 0;
+
+  PetscFunctionBegin;
+  PetscAssertPointer_Private(flg, 3);
+  PetscCall(PetscStrlen(a, &na));
+  PetscCall(PetscStrlen(b, &nb));
+  if (na >= nb) {
+#if PetscHasBuiltin(__builtin_memcmp)
+    *flg = __builtin_memcmp(b, a + (na - nb), nb) == 0 ? PETSC_TRUE : PETSC_FALSE;
+#else
+    *flg = memcmp(b, a + (na - nb), nb) == 0 ? PETSC_TRUE : PETSC_FALSE;
+#endif
+  } else {
+    *flg = PETSC_FALSE;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  PetscStrbeginswith - Determines if a string begins with a certain string
+
+  Not Collective, Not for use in Fortran
+
+  Input Parameters:
++ a - string to search
+- b - string to begin with
+
+  Output Parameter:
+. flg - `PETSC_TRUE` if `a` begins with `b`, `PETSC_FALSE` otherwise
+
+  Level: intermediate
+
+.seealso: `PetscStrendswithwhich()`, `PetscStrendswith()`, `PetscStrtoupper`,
+`PetscStrtolower()`, `PetscStrrchr()`, `PetscStrchr()`, `PetscStrncmp()`, `PetscStrlen()`,
+`PetscStrcmp()`
+@*/
+static inline PetscErrorCode PetscStrbeginswith(const char a[], const char b[], PetscBool *flg)
+{
+  size_t len = 0;
+
+  PetscFunctionBegin;
+  PetscAssertPointer_Private(a, 1);
+  PetscAssertPointer_Private(b, 2);
+  PetscAssertPointer_Private(flg, 3);
+  PetscCall(PetscStrlen(b, &len));
+  PetscCall(PetscStrncmp(a, b, len, flg));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
