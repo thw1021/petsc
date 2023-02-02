@@ -152,10 +152,10 @@ PetscErrorCode DMView_Network(DM dm, PetscViewer viewer)
 
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
   if (iascii) {
-    const PetscInt   *cone, *vtx, *edges;
-    PetscInt          vfrom, vto, i, j, nv, ne, nsv, p, nsubnet;
-    DM_Network       *network = (DM_Network *)dm->data;
-    PetscMPIInt       rank;
+    const PetscInt *cone, *vtx, *edges;
+    PetscInt        vfrom, vto, i, j, nv, ne, nsv, p, nsubnet;
+    DM_Network     *network = (DM_Network *)dm->data;
+    PetscMPIInt     rank;
 
     PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)dm), &rank));
     if (format == PETSC_VIEWER_ASCII_CSV) {
