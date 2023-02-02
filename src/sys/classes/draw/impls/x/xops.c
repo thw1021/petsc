@@ -520,14 +520,13 @@ finally:
   PetscFunctionReturn(0);
 }
 
-PetscErrorCode PetscDrawSetVisible_X(PetscDraw draw, PetscBool visible) 
+static PetscErrorCode PetscDrawSetVisible_X(PetscDraw draw, PetscBool visible) 
 {
   PetscDraw_X *Xwin = (PetscDraw_X *)draw->data;
   PetscMPIInt  rank;
 
   PetscFunctionBegin;
   PetscDrawCollectiveBegin(draw);
-
   PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)draw), &rank));
   if (rank == 0) {
     if (Xwin->win) {
@@ -539,7 +538,6 @@ PetscErrorCode PetscDrawSetVisible_X(PetscDraw draw, PetscBool visible)
       }
     }
   }
-  
   PetscDrawCollectiveEnd(draw);
   PetscFunctionReturn(0);
 }
