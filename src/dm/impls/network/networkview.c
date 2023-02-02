@@ -70,6 +70,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   PetscCall(PetscViewerDrawGetDraw(viewer, 1, &draw)); //pop up an empty window -- how to get rid of it?
   PetscCall(PetscDrawIsNull(draw, &isnull));
   if (isnull) PetscFunctionReturn(0);
+  PetscCall(PetscDrawSetVisible(draw, PETSC_FALSE));
 
   // Get the MPI communicator and this process' rank
   PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
@@ -108,7 +109,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
     PetscCall(PetscFixFilename(scriptFile, scriptFile));
     // Generate the system call for 'python3 $PETSC_DIR/share/petsc/dmnetwork_view.py file1 file2 ...'
     PetscCall(PetscArrayzero(proccall, sizeof(proccall)));
-    PetscCall(PetscSNPrintfCount(proccall, sizeof(proccall), "%s %s %s", &numChars, PETSC_PYTHON_EXE, scriptFile, filename));
+    PetscCall(PetscSNPrintfCount(proccall, sizeof(proccall), "%s %s %s %s", &numChars, PETSC_PYTHON_EXE, scriptFile, (isnull ? "-nd" : ""), filename));
 
     filename[0] = ' ';
     // For every other rank, receive the file name and append with a space
@@ -135,13 +136,16 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
 
 PetscErrorCode DMView_Network(DM dm, PetscViewer viewer)
 {
-  PetscBool iascii, idraw;
+  PetscBool         iascii, isdraw;
+  PetscViewerFormat format;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
-  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERDRAW, &idraw));
-  if (idraw) {
+  PetscCall(PetscViewerGetFormat(viewer, &format));
+
+  PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERDRAW, &isdraw));
+  if (isdraw) {
     PetscCall(DMView_Network_Matplotlib(dm, viewer));
     PetscFunctionReturn(0);
   }
@@ -151,11 +155,9 @@ PetscErrorCode DMView_Network(DM dm, PetscViewer viewer)
     const PetscInt   *cone, *vtx, *edges;
     PetscInt          vfrom, vto, i, j, nv, ne, nsv, p, nsubnet;
     DM_Network       *network = (DM_Network *)dm->data;
-    PetscViewerFormat format;
     PetscMPIInt       rank;
 
     PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)dm), &rank));
-    PetscCall(PetscViewerGetFormat(viewer, &format));
     if (format == PETSC_VIEWER_ASCII_CSV) {
       PetscCall(DMView_Network_CSV(dm, viewer));
       PetscFunctionReturn(0);
