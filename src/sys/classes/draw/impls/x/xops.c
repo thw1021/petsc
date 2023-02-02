@@ -520,7 +520,7 @@ finally:
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscDrawSetVisible_X(PetscDraw draw, PetscBool visible) 
+static PetscErrorCode PetscDrawSetVisible_X(PetscDraw draw, PetscBool visible)
 {
   PetscDraw_X *Xwin = (PetscDraw_X *)draw->data;
   PetscMPIInt  rank;
