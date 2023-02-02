@@ -10,8 +10,8 @@ if platform.node() == 'instinct':
     '--with-blaslapack-dir=/home/users/balay/soft/fblaslapack',
     '--with-make-np=24',
     '--with-make-test-np=8',
-    '--with-hipc=/opt/rocm-5.1.0/bin/hipcc',
-    '--with-hip-dir=/opt/rocm-5.1.0',
+    '--with-hipc=/opt/rocm/bin/hipcc',
+    '--with-hip-dir=/opt/rocm',
   ]
 else:
   opts = [
