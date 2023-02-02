@@ -1895,7 +1895,7 @@ static PetscErrorCode CreateStaticGPUData(PetscInt dim, IS grid_batch_is_inv[], 
         for (PetscInt ii = 0; ii < ctx->num_species; ii++) printf(" %e", nu_beta[ii]);
         printf("\nalpha*beta:\n");
         for (PetscInt ii = 0; ii < ctx->num_species; ii++) {
-          printf("alpha_nu[%d,:]: %e: ", ii, nu_alpha[ii]);
+          printf("alpha_nu[%d,:]: %e: ", (int)ii, nu_alpha[ii]);
           for (PetscInt jj = 0; jj < ctx->num_species; jj++) { printf(" %e", nu_alpha[ii] * nu_beta[jj]); }
           printf("\n");
         }
