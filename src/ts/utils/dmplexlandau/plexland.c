@@ -1023,7 +1023,7 @@ PetscErrorCode DMPlexLandauAddMaxwellians(DM dm, Vec X, PetscReal time, PetscRea
     mctxs[i0]      = &data[i0];
     data[i0].v_0   = ctx->v_0;                                            // v_0 same for all grids
     data[i0].kT_m  = ctx->k * temps[ii] / ctx->masses[ii];                /* kT/m */
-    data[i0].n     = ns[ii] * (1 + 0.1 * (double)b_id / (double)n_batch); // ramp density up 10% to mimic application, n[0] use for Conner-Hastie
+    data[i0].n     = ns[ii];
     initu[i0]      = maxwellian;
     data[i0].shift = 0;
   }
