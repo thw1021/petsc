@@ -112,7 +112,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
     PetscCheck(tmpnam(filename) != NULL, comm, PETSC_ERR_SYS, "Could not acquire temporary file");
 #endif
     // Broadcast the filename to all other MPI ranks
-    for(rank2 = 1; rank2 < size; rank2++) PetscCallMPI(MPI_Send(filename, FILENAME_MAX, MPI_BYTE, rank2, 0, comm));
+    for (rank2 = 1; rank2 < size; rank2++) PetscCallMPI(MPI_Send(filename, FILENAME_MAX, MPI_BYTE, rank2, 0, comm));
   } else {
     // Receive the file name
     PetscCallMPI(MPI_Recv(filename, FILENAME_MAX, MPI_BYTE, 0, 0, comm, MPI_STATUS_IGNORE));
