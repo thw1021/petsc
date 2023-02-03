@@ -15,6 +15,7 @@ static char help[] = "Test of CUDA matrix assemble with simple matrix.\n\n";
 #include <assert.h>
 
 #include <petscaijdevice.h>
+
 __global__ void assemble_on_gpu(PetscSplitCSRDataStructure d_mat, PetscInt start, PetscInt end, PetscInt N, PetscMPIInt rank)
 {
   const PetscInt inc = blockDim.x, my0 = threadIdx.x;
@@ -104,7 +105,7 @@ int main(int argc, char **args)
 /*TEST
 
    build:
-      requires: cuda
+      requires: cuda !defined(PETSC_HAVE_CUDA_CLANG)
 
    test:
       suffix: 0
