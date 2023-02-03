@@ -67,9 +67,9 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   PetscDraw   draw;
 
   PetscFunctionBegin;
-  PetscCall(PetscViewerDrawGetDraw(viewer, 1, &draw)); //pop up an empty window -- how to get rid of it?
+  // Deal with the PetscDraw we are given
+  PetscCall(PetscViewerDrawGetDraw(viewer, 1, &draw));
   PetscCall(PetscDrawIsNull(draw, &isnull));
-  if (isnull) PetscFunctionReturn(0);
   PetscCall(PetscDrawSetVisible(draw, PETSC_FALSE));
 
   // Get the MPI communicator and this process' rank
@@ -83,7 +83,17 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
 #elif defined(PETSC_HAVE_MKSTEMP) && __STDC_VERSION__ > 199901L
   // Same thing, but for POSIX systems on which tmpnam is deprecated
   // Note: Configure may detect mkstemp but it will not be defined if compiling for C99, so check additional defines to see if we can use it
-  PetscCall(PetscStrcpy(filename, "dmview-XXXXXX"));
+  PetscCall(PetscStrcpy(filename, "/tmp/"));
+  // Mkstemp requires us to explicitly specify part of the path, but some systems may not like putting files in /tmp/ so have an option for it
+  PetscCall(PetscOptionsGetString(NULL, NULL, "-dmnetwork_view_tmpdir", filename, sizeof(filename), NULL));
+  // Make sure the filename ends with a '/'
+  PetscCall(PetscStrlen(filename, &numChars));
+  if (filename[numChars-1] != '/') {
+    filename[numChars] = '/';
+    filename[numChars+1] = 0;
+  }
+  // Perform the actual temporary file creation
+  PetscCall(PetscStrcat(filename, "XXXXXX"));
   PetscCheck(mkstemp(filename) != -1, comm, PETSC_ERR_SYS, "Could not acquire temporary file");
 #else
   // Same thing, but for older C versions which don't have the safe form
