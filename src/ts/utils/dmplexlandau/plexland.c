@@ -977,7 +977,7 @@ static PetscErrorCode maxwellian(PetscInt dim, PetscReal time, const PetscReal x
   /* evaluate the Maxwellian */
   if (mctx->shift < 0) shift = -mctx->shift;
   else {
-    u[0] = mctx->n * PetscPowReal(PETSC_PI * theta, -1.5) * (PetscExpReal(-v2 / theta));
+    u[0]  = mctx->n * PetscPowReal(PETSC_PI * theta, -1.5) * (PetscExpReal(-v2 / theta));
     shift = mctx->shift;
   }
   if (shift != 0.) {
@@ -1025,8 +1025,8 @@ PetscErrorCode DMPlexLandauAddMaxwellians(DM dm, Vec X, PetscReal time, PetscRea
   if (!ctx) PetscCall(DMGetApplicationContext(dm, &ctx));
   for (PetscInt ii = ctx->species_offset[grid], i0 = 0; ii < ctx->species_offset[grid + 1]; ii++, i0++) {
     mctxs[i0]      = &data[i0];
-    data[i0].v_0   = ctx->v_0;                                            // v_0 same for all grids
-    data[i0].kT_m  = ctx->k * temps[ii] / ctx->masses[ii];                /* kT/m */
+    data[i0].v_0   = ctx->v_0;                             // v_0 same for all grids
+    data[i0].kT_m  = ctx->k * temps[ii] / ctx->masses[ii]; /* kT/m */
     data[i0].n     = ns[ii];
     initu[i0]      = maxwellian;
     data[i0].shift = 0;
