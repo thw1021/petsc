@@ -8,15 +8,22 @@ static PetscErrorCode DMView_Network_CSV(DM dm, PetscViewer viewer)
   PetscScalar     vertexCoords[2];
   const PetscInt *vertices, *edges, *edgeVertices;
   Vec             allVertexCoords;
+  PetscMPIInt     rank;
+  MPI_Comm        comm;
 
   PetscFunctionBegin;
   // Get the network containing coordinate information
   PetscCall(DMGetCoordinateDM(dm, &dmcoords));
   // Get the coordinate vector for the network
   PetscCall(DMGetCoordinatesLocal(dm, &allVertexCoords));
+  // Get the MPI communicator and this process' rank
+  PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  // Start synchronized printing
+  PetscCall(PetscViewerASCIIPushSynchronized(viewer));
 
   // Write the header
-  PetscCall(PetscViewerASCIIPrintf(viewer, "Type,ID,X,Y,Z,Name,Color\n"));
+  PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "Type,Rank,ID,X,Y,Z,Name,Color\n"));
 
   // Iterate each subnetwork (Note: We need to get the global number of subnets apparently)
   PetscCall(DMNetworkGetNumSubNetworks(dm, NULL, &nsubnets));
@@ -36,7 +43,7 @@ static PetscErrorCode DMView_Network_CSV(DM dm, PetscViewer viewer)
       PetscCall(VecGetValues(allVertexCoords, 2, vertexOffsets, vertexCoords));
 
       // TODO: Determine vertex color/name
-      PetscCall(PetscViewerASCIIPrintf(viewer, "Node,%" PetscInt_FMT ",%lf,%lf,0,%" PetscInt_FMT "\n", vertex, (double)PetscRealPart(vertexCoords[0]), (double)PetscRealPart(vertexCoords[1]), vertex));
+      PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "Node,%" PetscInt_FMT ",%" PetscInt_FMT ",%lf,%lf,0,%" PetscInt_FMT "\n", (PetscInt)rank, vertex, (double)PetscRealPart(vertexCoords[0]), (double)PetscRealPart(vertexCoords[1]), vertex));
     }
 
     // Write out each edge
@@ -48,9 +55,12 @@ static PetscErrorCode DMView_Network_CSV(DM dm, PetscViewer viewer)
       PetscCall(DMNetworkGetGlobalEdgeIndex(dm, edge, &edge));
 
       // TODO: Determine edge color/name
-      PetscCall(PetscViewerASCIIPrintf(viewer, "Edge,%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT ",0,%" PetscInt_FMT "\n", edge, globalEdgeVertices[0], globalEdgeVertices[1], edge));
+      PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "Edge,%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT ",%" PetscInt_FMT ",0,%" PetscInt_FMT "\n", (PetscInt)rank, edge, globalEdgeVertices[0], globalEdgeVertices[1], edge));
     }
   }
+  // End synchronized printing
+  PetscCall(PetscViewerFlush(viewer));
+  PetscCall(PetscViewerASCIIPopSynchronized(viewer));
   PetscFunctionReturn(0);
 }
 
@@ -61,7 +71,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   MPI_Comm    comm;
   char        filename[PETSC_MAX_PATH_LEN + 1], proccall[PETSC_MAX_PATH_LEN + 500], scriptFile[PETSC_MAX_PATH_LEN + 1], streamBuffer[256];
   PetscViewer csvViewer;
-  size_t      numChars, appendChars;
+  size_t      numChars;
   FILE       *processFile;
   PetscBool   isnull;
   PetscDraw   draw;
@@ -77,30 +87,40 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
   PetscCallMPI(MPI_Comm_size(comm, &size));
 
+  // Generate and broadcast the temporary file name from rank 0
+  if (rank == 0) {
 #if defined(PETSC_HAVE_TMPNAM_S)
-  // Acquire a temporary file to write to and open an ASCII/CSV viewer
-  PetscCheck(tmpnam_s(filename, sizeof(filename)) == 0, comm, PETSC_ERR_SYS, "Could not acquire temporary file");
+    // Acquire a temporary file to write to and open an ASCII/CSV viewer
+    PetscCheck(tmpnam_s(filename, sizeof(filename)) == 0, comm, PETSC_ERR_SYS, "Could not acquire temporary file");
 #elif defined(PETSC_HAVE_MKSTEMP) && __STDC_VERSION__ > 199901L
-  // Same thing, but for POSIX systems on which tmpnam is deprecated
-  // Note: Configure may detect mkstemp but it will not be defined if compiling for C99, so check additional defines to see if we can use it
-  PetscCall(PetscStrcpy(filename, "/tmp/"));
-  // Mkstemp requires us to explicitly specify part of the path, but some systems may not like putting files in /tmp/ so have an option for it
-  PetscCall(PetscOptionsGetString(NULL, NULL, "-dmnetwork_view_tmpdir", filename, sizeof(filename), NULL));
-  // Make sure the filename ends with a '/'
-  PetscCall(PetscStrlen(filename, &numChars));
-  if (filename[numChars-1] != '/') {
-    filename[numChars] = '/';
-    filename[numChars+1] = 0;
-  }
-  // Perform the actual temporary file creation
-  PetscCall(PetscStrcat(filename, "XXXXXX"));
-  PetscCheck(mkstemp(filename) != -1, comm, PETSC_ERR_SYS, "Could not acquire temporary file");
+    // Same thing, but for POSIX systems on which tmpnam is deprecated
+    // Note: Configure may detect mkstemp but it will not be defined if compiling for C99, so check additional defines to see if we can use it
+    PetscCall(PetscStrcpy(filename, "/tmp/"));
+    // Mkstemp requires us to explicitly specify part of the path, but some systems may not like putting files in /tmp/ so have an option for it
+    PetscCall(PetscOptionsGetString(NULL, NULL, "-dmnetwork_view_tmpdir", filename, sizeof(filename), NULL));
+    // Make sure the filename ends with a '/'
+    PetscCall(PetscStrlen(filename, &numChars));
+    if (filename[numChars-1] != '/') {
+      filename[numChars] = '/';
+      filename[numChars+1] = 0;
+    }
+    // Perform the actual temporary file creation
+    PetscCall(PetscStrcat(filename, "XXXXXX"));
+    PetscCheck(mkstemp(filename) != -1, comm, PETSC_ERR_SYS, "Could not acquire temporary file");
 #else
-  // Same thing, but for older C versions which don't have the safe form
-  PetscCheck(tmpnam(filename) != NULL, comm, PETSC_ERR_SYS, "Could not acquire temporary file");
+    // Same thing, but for older C versions which don't have the safe form
+    PetscCheck(tmpnam(filename) != NULL, comm, PETSC_ERR_SYS, "Could not acquire temporary file");
 #endif
-  // Note: We need to open with PETSC_COMM_SELF for each process to open a unique temporary file
-  PetscCall(PetscViewerASCIIOpen(PETSC_COMM_SELF, filename, &csvViewer));
+    // Broadcast the filename to all other MPI ranks
+    for(rank2 = 1; rank2 < size; rank2++) {
+      PetscCallMPI(MPI_Send(filename, FILENAME_MAX, MPI_BYTE, rank2, 0, comm));
+    }
+  } else {
+    // Receive the file name
+    PetscCallMPI(MPI_Recv(filename, FILENAME_MAX, MPI_BYTE, 0, 0, comm, MPI_STATUS_IGNORE));
+  }
+
+  PetscCall(PetscViewerASCIIOpen(PETSC_COMM_WORLD, filename, &csvViewer));
   PetscCall(PetscViewerPushFormat(csvViewer, PETSC_VIEWER_ASCII_CSV));
 
   // Use the CSV viewer to write out the local network
@@ -109,27 +129,14 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   // Close the viewer
   PetscCall(PetscViewerDestroy(&csvViewer));
 
-  // Collect the temporary files on rank 0
-  if (rank) {
-    // If not rank 0, send the file name
-    PetscCallMPI(MPI_Send(filename, FILENAME_MAX, MPI_BYTE, 0, 0, comm));
-  } else {
+  // Generate the system call and open the viewer process on rank 0
+  if (rank == 0) {
     // Get the value of $PETSC_DIR
     PetscCall(PetscStrreplace(PETSC_COMM_WORLD, "${PETSC_DIR}/share/petsc/dmnetwork_view.py", scriptFile, sizeof(scriptFile)));
     PetscCall(PetscFixFilename(scriptFile, scriptFile));
-    // Generate the system call for 'python3 $PETSC_DIR/share/petsc/dmnetwork_view.py file1 file2 ...'
+    // Generate the system call for 'python3 $PETSC_DIR/share/petsc/dmnetwork_view.py <file>'
     PetscCall(PetscArrayzero(proccall, sizeof(proccall)));
-    PetscCall(PetscSNPrintfCount(proccall, sizeof(proccall), "%s %s %s %s", &numChars, PETSC_PYTHON_EXE, scriptFile, (isnull ? "-nd" : ""), filename));
-
-    filename[0] = ' ';
-    // For every other rank, receive the file name and append with a space
-    for (rank2 = 1; rank2 < size; rank2++) {
-      PetscCallMPI(MPI_Recv(filename + 1, FILENAME_MAX, MPI_BYTE, rank2, 0, comm, MPI_STATUS_IGNORE));
-      PetscCall(PetscStrlen(filename, &appendChars));
-      numChars += appendChars;
-      PetscCheck(numChars < sizeof(proccall), comm, PETSC_ERR_WRONG_MPI_SIZE, "Too many processes to invoke Matplotlib script");
-      PetscCall(PetscStrlcat(proccall, filename, sizeof(proccall)));
-    }
+    PetscCall(PetscSNPrintf(proccall, sizeof(proccall), "%s %s %s %s", PETSC_PYTHON_EXE, scriptFile, (isnull ? "-nd" : ""), filename));
 
 #if defined(PETSC_HAVE_POPEN)
     // Perform the call to run the python script
@@ -140,6 +147,9 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
     // Same thing, but using the standard library for systems that don't have POpen/PClose
     PetscCheck(system(proccall) == 0, comm, PETSC_ERR_SYS, "Failed to call viewer script");
 #endif
+
+    // Clean up the temporary file we used
+    PetscCheck(remove(filename) == 0, comm, PETSC_ERR_SYS, "Failed to delete temporary file");
   }
   PetscFunctionReturn(0);
 }

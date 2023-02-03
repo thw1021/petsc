@@ -28,13 +28,13 @@ class Node:
 		self.id = parseID(row['ID'])
 		
 		# Set our position
-		x = row['X']
+		x = float(row['X'])
 		if np.isnan(x):
 			x = 0
-		y = row['Y']
+		y = float(row['Y'])
 		if np.isnan(y):
 			y = 0
-		z = row['Z']
+		z = float(row['Z'])
 		if np.isnan(z):
 			z = 0
 		self.position = (x,y,z)
@@ -125,7 +125,10 @@ def main(*args, **kwargs):
 			for i,row in data.iterrows():
 				# Switch based on the type of the entry
 				type = row['Type']
-				if type == 'Title':
+				if type == 'Type':
+					# If we encounter 'Type' again it is a duplicate header and should be skipped
+					continue
+				elif type == 'Title':
 					# Set the title based on name and color
 					titleColor = parseColor(row['Color'])
 					title = (row['Name'], titleColor)
@@ -139,6 +142,7 @@ def main(*args, **kwargs):
 					edges[edge.id] = edge
 		except Exception as e:
 			print("Warning! Could not read file \"" + filename + "\": " + str(e))
+			traceback.print_exc(file=sys.stdout)
 			exit(-1)
 
 	# Create Numpy arrays for node and edge positions and colors
@@ -231,6 +235,8 @@ if __name__ == "__main__":
 		import matplotlib.pyplot as plt
 		from matplotlib.collections import CircleCollection, LineCollection
 		from argparse import ArgumentParser
+		import traceback
+		import sys
 
 		main()
 	except ImportError as error:
