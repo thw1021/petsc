@@ -32,7 +32,7 @@ PetscErrorCode landau_field_print_access_callback(DM dm, Vec x, PetscInt local_f
   PetscCall(VecSet(x, val));
   PetscCall(PetscInfo(dm, "DMPlexLandauAccess user 'add' method to grid %" PetscInt_FMT ", batch %" PetscInt_FMT " and local field %" PetscInt_FMT " with %" PetscInt_FMT " grids\n", grid, b_id, local_field, ctx->num_grids));
 
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static const PetscReal alphai   = 1 / 1.3;
@@ -87,7 +87,7 @@ static PetscErrorCode maxwellian(PetscInt dim, PetscReal time, const PetscReal x
   /* evaluate the shifted Maxwellian */
   u[0] += alphai * mctx->n * PetscPowReal(PETSC_PI * theta, -1.5) * PetscExpReal(-(alphai * x[0] * x[0] + (x[1] - mctx->shift) * (x[1] - mctx->shift)) / theta);
 
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode SetMaxwellians(DM dm, Vec X, PetscReal time, PetscReal temps[], PetscReal ns[], PetscInt grid, PetscReal shifts[], LandauCtx *ctx)
@@ -115,7 +115,7 @@ static PetscErrorCode SetMaxwellians(DM dm, Vec X, PetscReal time, PetscReal tem
     data[0].shift = ctx->electronShift * shifts[grid] * PetscSqrtReal(data[0].kT_m) / ctx->v_0; // shifts to not matter!!!!
   }
   PetscCall(DMProjectFunction(dm, time, initu, (void **)mctxs, INSERT_ALL_VALUES, X));
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
