@@ -970,16 +970,20 @@ static PetscErrorCode maxwellian(PetscInt dim, PetscReal time, const PetscReal x
 {
   MaxwellianCtx *mctx = (MaxwellianCtx *)actx;
   PetscInt       i;
-  PetscReal      v2 = 0, theta = 2 * mctx->kT_m / (mctx->v_0 * mctx->v_0); /* theta = 2kT/mc^2 */
+  PetscReal      v2 = 0, theta = 2 * mctx->kT_m / (mctx->v_0 * mctx->v_0), shift; /* theta = 2kT/mc^2 */
   PetscFunctionBegin;
   /* compute the exponents, v^2 */
   for (i = 0; i < dim; ++i) v2 += x[i] * x[i];
   /* evaluate the Maxwellian */
-  u[0] = mctx->n * PetscPowReal(PETSC_PI * theta, -1.5) * (PetscExpReal(-v2 / theta));
-  if (mctx->shift != 0.) {
+  if (mctx->shift < 0) shift = -mctx->shift;
+  else {
+    u[0] = mctx->n * PetscPowReal(PETSC_PI * theta, -1.5) * (PetscExpReal(-v2 / theta));
+    shift = mctx->shift;
+  }
+  if (shift != 0.) {
     v2 = 0;
     for (i = 0; i < dim - 1; ++i) v2 += x[i] * x[i];
-    v2 += (x[dim - 1] - mctx->shift) * (x[dim - 1] - mctx->shift);
+    v2 += (x[dim - 1] - shift) * (x[dim - 1] - shift);
     /* evaluate the shifted Maxwellian */
     u[0] += mctx->n * PetscPowReal(PETSC_PI * theta, -1.5) * (PetscExpReal(-v2 / theta));
   }
