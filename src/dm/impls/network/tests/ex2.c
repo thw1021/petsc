@@ -36,7 +36,7 @@ PetscErrorCode StarGraphCreateEdgeList(PetscInt k, PetscBool directin, PetscInt 
       (*edgelist)[2 * i + 1] = i + 1;
     }
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
@@ -84,7 +84,7 @@ PetscErrorCode StarGraphCreate(MPI_Comm comm, PetscInt numdofvert, PetscInt numd
   PetscCall(DMSetUp(dm));
   PetscCall(PetscFree2(compedge, compvert));
   *newdm = dm;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /* Simple Circular embedding of the star graph */
@@ -123,7 +123,7 @@ PetscErrorCode StarGraphSetCoordinates(DM dm)
   PetscCall(VecRestoreArray(Coord, &coord));
   PetscCall(DMSetCoordinatesLocal(dm, Coord));
   PetscCall(VecDestroy(&Coord));
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /* This subroutine is used in petsc/src/snes/tutorials/network/ex1.c */

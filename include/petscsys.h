@@ -181,6 +181,14 @@ PETSC_EXTERN FILE *PETSC_STDERR;
 #endif
 
 /*
+  Handle inclusion when using clang compiler with CUDA support
+  __float128 is not available for the device
+*/
+#if defined(__clang__) && defined(__CUDA_ARCH__)
+  #define PETSC_SKIP_REAL___FLOAT128
+#endif
+
+/*
     Declare extern C stuff after including external header files
 */
 
@@ -882,7 +890,7 @@ M*/
 .seealso: `PetscNew()`, `PetscMalloc()`, `PetscMalloc1()`, `PetscCalloc1()`
 
 M*/
-#define PetscFree(a) ((*PetscTrFree)((void *)(a), __LINE__, PETSC_FUNCTION_NAME, __FILE__) || ((a) = PETSC_NULLPTR, 0))
+#define PetscFree(a) ((PetscErrorCode)((*PetscTrFree)((void *)(a), __LINE__, PETSC_FUNCTION_NAME, __FILE__) || ((a) = PETSC_NULLPTR, PETSC_SUCCESS)))
 
 /*MC
    PetscFree2 - Frees 2 chunks of memory obtained with `PetscMalloc2()`
@@ -1146,7 +1154,7 @@ PETSC_EXTERN MPI_Op MPIU_MIN;
 PETSC_EXTERN MPI_Op         Petsc_Garbage_SetIntersectOp;
 PETSC_EXTERN PetscErrorCode PetscMaxSum(MPI_Comm, const PetscInt[], PetscInt *, PetscInt *);
 
-#if defined(PETSC_HAVE_REAL___FLOAT128) || defined(PETSC_HAVE_REAL___FP16)
+#if (defined(PETSC_HAVE_REAL___FLOAT128) && !defined(PETSC_SKIP_REAL___FLOAT128)) || (defined(PETSC_HAVE_REAL___FP16) && !defined(PETSC_SKIP_REAL___FP16))
 /*MC
     MPIU_SUM___FP16___FLOAT128 - MPI_Op that acts as a replacement for MPI_SUM with
     custom MPI_Datatype `MPIU___FLOAT128`, `MPIU___COMPLEX128`, and `MPIU___FP16`.
@@ -1295,14 +1303,14 @@ PETSC_EXTERN PetscErrorCode PetscStackViewSAWs(void);
 PETSC_EXTERN PetscErrorCode PetscStackSAWsViewOff(void);
 
 #else
-  #define PetscSAWsBlock()                  0
-  #define PetscObjectSAWsViewOff(obj)       0
-  #define PetscObjectSAWsSetBlock(obj, flg) 0
-  #define PetscObjectSAWsBlock(obj)         0
-  #define PetscObjectSAWsGrantAccess(obj)   0
-  #define PetscObjectSAWsTakeAccess(obj)    0
-  #define PetscStackViewSAWs()              0
-  #define PetscStackSAWsViewOff()           0
+  #define PetscSAWsBlock()                  PETSC_SUCCESS
+  #define PetscObjectSAWsViewOff(obj)       PETSC_SUCCESS
+  #define PetscObjectSAWsSetBlock(obj, flg) PETSC_SUCCESS
+  #define PetscObjectSAWsBlock(obj)         PETSC_SUCCESS
+  #define PetscObjectSAWsGrantAccess(obj)   PETSC_SUCCESS
+  #define PetscObjectSAWsTakeAccess(obj)    PETSC_SUCCESS
+  #define PetscStackViewSAWs()              PETSC_SUCCESS
+  #define PetscStackSAWsViewOff()           PETSC_SUCCESS
   #define PetscStackSAWsTakeAccess()
   #define PetscStackSAWsGrantAccess()
 
@@ -1405,7 +1413,7 @@ M*/
       To use, write your own function, for example,
 $PetscErrorCode mypetschelpprintf(MPI_Comm comm,const char format[],....)
 ${
-$ PetscFunctionReturn(0);
+$ PetscFunctionReturn(PETSC_SUCCESS);
 $}
 then do the assignment
 $    PetscHelpPrintf = mypetschelpprintf;
@@ -1508,7 +1516,7 @@ PETSC_EXTERN PetscErrorCode PetscScalarView(PetscInt, const PetscScalar[], Petsc
 static inline PetscErrorCode PetscMemmove(void *a, const void *b, size_t n)
 {
   PetscFunctionBegin;
-  if (PetscUnlikely((n == 0) || (a == b))) PetscFunctionReturn(0);
+  if (PetscUnlikely((n == 0) || (a == b))) PetscFunctionReturn(PETSC_SUCCESS);
   PetscAssert(a, PETSC_COMM_SELF, PETSC_ERR_ARG_NULL, "Trying to copy %zu bytes to null pointer (Argument #1)", n);
   PetscAssert(b, PETSC_COMM_SELF, PETSC_ERR_ARG_NULL, "Trying to copy %zu bytes from a null pointer (Argument #2)", n);
 #if PetscDefined(HAVE_MEMMOVE)
@@ -1534,7 +1542,7 @@ static inline PetscErrorCode PetscMemmove(void *a, const void *b, size_t n)
     }
   }
 #endif
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
@@ -1579,7 +1587,7 @@ static inline PetscErrorCode PetscMemcpy(void *a, const void *b, size_t n)
   const PETSC_UINTPTR_T bl = (PETSC_UINTPTR_T)b;
 
   PetscFunctionBegin;
-  if (PetscUnlikely((n == 0) || (a == b))) PetscFunctionReturn(0);
+  if (PetscUnlikely((n == 0) || (a == b))) PetscFunctionReturn(PETSC_SUCCESS);
   PetscAssert(a, PETSC_COMM_SELF, PETSC_ERR_ARG_NULL, "Trying to copy %zu bytes to a null pointer (Argument #1)", n);
   PetscAssert(b, PETSC_COMM_SELF, PETSC_ERR_ARG_NULL, "Trying to copy %zu bytes from a null pointer (Argument #2)", n);
   PetscAssert(!(((al > bl) && (al - bl) < n) || (bl - al) < n), PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Memory regions overlap: either use PetscMemmove()\nor make sure your copy regions and lengths are correct.\nLength (bytes) %zu first address %" PRIxPTR " second address %" PRIxPTR, n, al, bl);
@@ -1602,11 +1610,11 @@ static inline PetscErrorCode PetscMemcpy(void *a, const void *b, size_t n)
 #else
       for (size_t i = 0; i < scalar_len; i++) y[i] = x[i];
 #endif
-      PetscFunctionReturn(0);
+      PetscFunctionReturn(PETSC_SUCCESS);
     }
   }
   memcpy(a, b, n);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
@@ -1637,7 +1645,7 @@ static inline PetscErrorCode PetscMemcpy(void *a, const void *b, size_t n)
 static inline PetscErrorCode PetscMemzero(void *a, size_t n)
 {
   PetscFunctionBegin;
-  if (PetscUnlikely(n == 0)) PetscFunctionReturn(0);
+  if (PetscUnlikely(n == 0)) PetscFunctionReturn(PETSC_SUCCESS);
   PetscAssert(a, PETSC_COMM_SELF, PETSC_ERR_ARG_NULL, "Trying to zero %zu bytes at a null pointer", n);
   if (PetscDefined(PREFER_ZERO_FOR_MEMZERO) || PetscDefined(PREFER_FORTRAN_FOR_MEMZERO)) {
     if (!(((PETSC_UINTPTR_T)a) % sizeof(PetscScalar)) && !(n % sizeof(PetscScalar))) {
@@ -1654,7 +1662,7 @@ static inline PetscErrorCode PetscMemzero(void *a, size_t n)
         (void)x;
 #endif
       }
-      PetscFunctionReturn(0);
+      PetscFunctionReturn(PETSC_SUCCESS);
     }
   }
 #if PetscDefined(PREFER_BZERO)
@@ -1662,7 +1670,7 @@ static inline PetscErrorCode PetscMemzero(void *a, size_t n)
 #else
   memset(a, 0, n);
 #endif
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*MC
@@ -1692,7 +1700,7 @@ static inline PetscErrorCode PetscMemzero(void *a, size_t n)
 .seealso: `PetscMemcpy()`, `PetscMemcmp()`, `PetscArrayzero()`, `PetscMemzero()`, `PetscArraycpy()`, `PetscMemmove()`, `PetscStrallocpy()`,
           `PetscArraymove()`
 M*/
-#define PetscArraycmp(str1, str2, cnt, e) ((sizeof(*(str1)) != sizeof(*(str2))) || PetscMemcmp((str1), (str2), (size_t)(cnt) * sizeof(*(str1)), (e)))
+#define PetscArraycmp(str1, str2, cnt, e) ((sizeof(*(str1)) == sizeof(*(str2))) ? PetscMemcmp((str1), (str2), (size_t)(cnt) * sizeof(*(str1)), (e)) : PETSC_ERR_ARG_SIZ)
 
 /*MC
    PetscArraymove - Copies from one array in memory to another, the arrays may overlap. Use `PetscArraycpy()` when the arrays
@@ -1718,7 +1726,7 @@ M*/
 
 .seealso: `PetscMemcpy()`, `PetscMemcmp()`, `PetscArrayzero()`, `PetscMemzero()`, `PetscArraycpy()`, `PetscMemmove()`, `PetscArraycmp()`, `PetscStrallocpy()`
 M*/
-#define PetscArraymove(str1, str2, cnt) ((sizeof(*(str1)) != sizeof(*(str2))) || PetscMemmove((str1), (str2), (size_t)(cnt) * sizeof(*(str1))))
+#define PetscArraymove(str1, str2, cnt) ((sizeof(*(str1)) == sizeof(*(str2))) ? PetscMemmove((str1), (str2), (size_t)(cnt) * sizeof(*(str1))) : PETSC_ERR_ARG_SIZ)
 
 /*MC
    PetscArraycpy - Copies from one array in memory to another
@@ -1743,7 +1751,7 @@ M*/
 
 .seealso: `PetscMemcpy()`, `PetscMemcmp()`, `PetscArrayzero()`, `PetscMemzero()`, `PetscArraymove()`, `PetscMemmove()`, `PetscArraycmp()`, `PetscStrallocpy()`
 M*/
-#define PetscArraycpy(str1, str2, cnt) ((sizeof(*(str1)) != sizeof(*(str2))) || PetscMemcpy((str1), (str2), (size_t)(cnt) * sizeof(*(str1))))
+#define PetscArraycpy(str1, str2, cnt) ((sizeof(*(str1)) == sizeof(*(str2))) ? PetscMemcpy((str1), (str2), (size_t)(cnt) * sizeof(*(str1))) : PETSC_ERR_ARG_SIZ)
 
 /*MC
    PetscArrayzero - Zeros an array in memory.
@@ -1939,7 +1947,7 @@ static inline PetscErrorCode PetscIntCast(PetscInt64 a, PetscInt *b)
   // if using 64-bit indices already then this comparison is tautologically true
   PetscCheck(a < PETSC_MAX_INT, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "%" PetscInt64_FMT " is too big for PetscInt, you may need to ./configure using --with-64-bit-indices", a);
   *b = (PetscInt)a;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
@@ -1969,7 +1977,7 @@ static inline PetscErrorCode PetscCountCast(PetscCount a, PetscInt *b)
   *b = 0;
   PetscCheck(sizeof(PetscCount) <= sizeof(PetscInt) || a <= PETSC_MAX_INT, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "%" PetscCount_FMT " is too big for PetscInt, you may need to ./configure using --with-64-bit-indices", a);
   *b = (PetscInt)a;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
@@ -2002,7 +2010,7 @@ static inline PetscErrorCode PetscBLASIntCast(PetscInt a, PetscBLASInt *b)
   }
   PetscCheck(a >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Passing negative integer to BLAS/LAPACK routine");
   *b = (PetscBLASInt)a;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
@@ -2030,7 +2038,7 @@ static inline PetscErrorCode PetscCuBLASIntCast(PetscInt a, PetscCuBLASInt *b)
   PetscCheck(a <= PETSC_CUBLAS_INT_MAX, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "%" PetscInt_FMT " is too big for cuBLAS, which is restricted to 32 bit integers.", a);
   PetscCheck(a >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Passing negative integer %" PetscInt_FMT "to cuBLAS routine", a);
   *b = (PetscCuBLASInt)a;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
@@ -2058,7 +2066,7 @@ static inline PetscErrorCode PetscHipBLASIntCast(PetscInt a, PetscHipBLASInt *b)
   PetscCheck(a <= PETSC_HIPBLAS_INT_MAX, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "%" PetscInt_FMT " is too big for hipBLAS, which is restricted to 32 bit integers.", a);
   PetscCheck(a >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Passing negative integer %" PetscInt_FMT "to hipBLAS routine", a);
   *b = (PetscHipBLASInt)a;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
@@ -2085,7 +2093,7 @@ static inline PetscErrorCode PetscMPIIntCast(PetscInt a, PetscMPIInt *b)
   *b = 0;
   PetscCheck(a <= PETSC_MPI_INT_MAX, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "%" PetscInt_FMT " is too big for MPI buffer length. Maximum supported value is %d", a, PETSC_MPI_INT_MAX);
   *b = (PetscMPIInt)a;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 #define PetscInt64Mult(a, b) (((PetscInt64)(a)) * ((PetscInt64)(b)))
@@ -2228,7 +2236,7 @@ static inline PetscErrorCode PetscIntMultError(PetscInt a, PetscInt b, PetscInt 
     PetscCheck(r <= PETSC_MAX_INT, PETSC_COMM_SELF, PETSC_ERR_SUP, "Product of two integers %" PetscInt_FMT " %" PetscInt_FMT " overflow, either you have an invalidly large integer error in your code or you must ./configure PETSc with --with-64-bit-indices for the case you are running", a, b);
   }
   if (result) *result = (PetscInt)r;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
@@ -2262,7 +2270,7 @@ static inline PetscErrorCode PetscIntSumError(PetscInt a, PetscInt b, PetscInt *
     PetscCheck(r <= PETSC_MAX_INT, PETSC_COMM_SELF, PETSC_ERR_SUP, "Sum of two integers %" PetscInt_FMT " %" PetscInt_FMT " overflow, either you have an invalidly large integer error in your code or you must ./configure PETSc with --with-64-bit-indices for the case you are running", a, b);
   }
   if (result) *result = (PetscInt)r;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*
@@ -2590,12 +2598,12 @@ static inline PetscErrorCode PetscCitationsRegister(const char cit[], PetscBool 
   char  *vstring;
 
   PetscFunctionBegin;
-  if (set && *set) PetscFunctionReturn(0);
+  if (set && *set) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscStrlen(cit, &len));
   PetscCall(PetscSegBufferGet(PetscCitationsList, len, &vstring));
   PetscCall(PetscArraycpy(vstring, cit, len));
   if (set) *set = PETSC_TRUE;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PETSC_EXTERN                PETSC_DEPRECATED_FUNCTION("Google has discontinued its URL shortener service") PetscErrorCode PetscURLShorten(const char[], char[], size_t c);
@@ -2655,8 +2663,24 @@ static inline unsigned int PetscStrHash(const char *str)
 
 .seealso: `MPI_Allreduce()`
 M*/
-  #define MPIU_Allreduce(a, b, c, d, e, fcomm) \
-    PetscMacroReturnStandard(PetscMPIInt a_b1[6], a_b2[6]; int _mpiu_allreduce_c_int = (int)c; a_b1[0] = -(PetscMPIInt)__LINE__; a_b1[1] = -a_b1[0]; a_b1[2] = -(PetscMPIInt)PetscStrHash(PETSC_FUNCTION_NAME); a_b1[3] = -a_b1[2]; a_b1[4] = -(PetscMPIInt)(c); a_b1[5] = -a_b1[4]; PetscCallMPI(MPI_Allreduce(a_b1, a_b2, 6, MPI_INT, MPI_MAX, fcomm)); PetscCheck(-a_b2[0] == a_b2[1], PETSC_COMM_SELF, PETSC_ERR_PLIB, "MPI_Allreduce() called in different locations (code lines) on different processors"); PetscCheck(-a_b2[2] == a_b2[3], PETSC_COMM_SELF, PETSC_ERR_PLIB, "MPI_Allreduce() called in different locations (functions) on different processors"); PetscCheck(-a_b2[4] == a_b2[5], PETSC_COMM_SELF, PETSC_ERR_PLIB, "MPI_Allreduce() called with different counts %d on different processors", _mpiu_allreduce_c_int); PetscCallMPI(MPI_Allreduce((a), (b), (c), d, e, (fcomm)));)
+  // clang-format off
+#define MPIU_Allreduce(a, b, c, d, e, fcomm) \
+  PetscMacroReturnStandard( \
+    PetscMPIInt a_b1[6], a_b2[6]; \
+    int _mpiu_allreduce_c_int = (int)(c); \
+    a_b1[0] = -(PetscMPIInt)__LINE__; \
+    a_b1[1] = -a_b1[0]; \
+    a_b1[2] = -(PetscMPIInt)PetscStrHash(PETSC_FUNCTION_NAME); \
+    a_b1[3] = -a_b1[2]; \
+    a_b1[4] = -(PetscMPIInt)(c); \
+    a_b1[5] = -a_b1[4]; \
+    \
+    PetscCallMPI(MPI_Allreduce(a_b1, a_b2, 6, MPI_INT, MPI_MAX, fcomm)); \
+    PetscCheck(-a_b2[0] == a_b2[1], PETSC_COMM_SELF, PETSC_ERR_PLIB, "MPI_Allreduce() called in different locations (code lines) on different processors"); \
+    PetscCheck(-a_b2[2] == a_b2[3], PETSC_COMM_SELF, PETSC_ERR_PLIB, "MPI_Allreduce() called in different locations (functions) on different processors"); \
+    PetscCheck(-a_b2[4] == a_b2[5], PETSC_COMM_SELF, PETSC_ERR_PLIB, "MPI_Allreduce() called with different counts %d on different processors", _mpiu_allreduce_c_int); \
+    PetscCallMPI(MPI_Allreduce((a), (b), (c), (d), (e), (fcomm)));)
+// clang-format on
 #else
   #define MPIU_Allreduce(a, b, c, d, e, fcomm) PetscMacroReturnStandard(PetscCallMPI(MPI_Allreduce((a), (b), (c), (d), (e), (fcomm))))
 #endif

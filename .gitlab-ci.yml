@@ -121,7 +121,7 @@ ompi-cuda:
 mpich-cxx-py3:
   extends: .stage-1
   variables:
-    CONFIG_OPTS: --with-clanguage=cxx --with-fc=0 CXXFLAGS=-std=c++11
+    CONFIG_OPTS: --with-clanguage=cxx --with-fc=0 CXXFLAGS=-std=c++11 --with-strict-petscerrorcode
     TEST_SEARCH: snes_tutorials-ex48%
     LOAD_MODULES: gcc/12.1.0 mpich/4.1a1-gcc-12.1.0
 
@@ -135,7 +135,7 @@ uni-complex-float-int64:
 c99-mlib-static-py:
   extends: .stage-1
   variables:
-    CONFIG_OPTS: --with-single-library=0 --with-shared-libraries=0 CFLAGS=-std=c99 FFLAGS= CXXFLAGS=
+    CONFIG_OPTS: --with-single-library=0 --with-shared-libraries=0 --with-strict-petscerrorcode CFLAGS=-std=c99 FFLAGS= CXXFLAGS=
     ENABLE_CHECK: 1
     TEST_SEARCH: snes_tutorials-ex19% snes_tutorials-ex5f90t%
     MAKE_TEST_FFLAGS: -Werror -std=f2008
@@ -585,6 +585,18 @@ linux-cuda-uni-pkgs:
   variables:
     TEST_ARCH: arch-ci-linux-cuda-uni-pkgs
     TEST_OPTS: -j20 query=requires queryval=cuda
+
+linux-clang-cuda:
+  extends:
+    - .stage-3
+    - .linux_test
+  tags:
+    - cuda-stage3
+  variables:
+    TEST_ARCH: arch-ci-linux-clang-cuda
+    TEST_OPTS: -j 1  queryval='cuda*,snes*' query='requires%OR%name'
+    MODULEPATH: /nfs/gce/projects/petsc/soft/u22.04/spack-2023-02-02/share/spack/modules/linux-ubuntu22.04-ivybridge
+    LOAD_MODULES: llvm-15.0.7-gcc-11.3.0-pjldtxf cuda-11.5.2-gcc-11.3.0-jkoottx gcc-11.3.0-gcc-11.3.0-pgrvke5
 
 linux-viennacl:
   extends:

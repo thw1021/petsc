@@ -42,7 +42,7 @@ PetscErrorCode landau_field_print_access_callback(DM dm, Vec x, PetscInt local_f
     PetscCall(VecViewFromOptions(x, NULL, "-ex1_vec_view")); // this causes diffs with Kokkos, etc
     PetscCall(PetscInfo(dm, "DMPlexLandauAccess user 'add' method to grid %" PetscInt_FMT ", batch %" PetscInt_FMT " and species %" PetscInt_FMT "\n", grid, b_id, ctx->species_offset[grid] + local_field));
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 int main(int argc, char **argv)
@@ -116,11 +116,11 @@ int main(int argc, char **argv)
       args: -dm_landau_device_type cpu
     test:
       suffix: kokkos
-      requires: kokkos_kernels
+      requires: kokkos_kernels !defined(PETSC_HAVE_CUDA_CLANG)
       args: -dm_landau_device_type kokkos -dm_mat_type aijkokkos -dm_vec_type kokkos
     test:
       suffix: cuda
-      requires: cuda
+      requires: cuda !defined(PETSC_HAVE_CUDA_CLANG)
       args: -dm_landau_device_type cuda -dm_mat_type aijcusparse -dm_vec_type cuda -mat_cusparse_use_cpu_solve
 
 TEST*/
