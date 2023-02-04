@@ -373,6 +373,7 @@ static PetscErrorCode DMNetworkCopyHeaderTopological(DM dm, DM newdm)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/* This implementation of DMClone_Network() must be called AFTER DMNetworkDistribute() */
 PetscErrorCode DMClone_Network(DM dm, DM *newdm)
 {
   DM_Network *network = (DM_Network *)dm->data, *newnetwork = NULL;
@@ -383,6 +384,8 @@ PetscErrorCode DMClone_Network(DM dm, DM *newdm)
   (*newdm)->data = newnetwork;
   PetscCall(DMNetworkInitializeToDefault_NonShared(*newdm));
   newnetwork->cloneshared = network->cloneshared; /* Share all data that can be cloneshared */
+
+  PetscCheck(network->plex, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_NULL, "Must call DMNetworkLayoutSetUp() first");
   PetscCall(DMClone(network->plex, &newnetwork->plex));
   PetscCall(DMNetworkCopyHeaderTopological(dm, *newdm));
   PetscCall(DMNetworkInitializeNonTopological(*newdm)); /* initialize all non-topological data to the state after DMNetworkLayoutSetUp as been called */
@@ -390,6 +393,7 @@ PetscErrorCode DMClone_Network(DM dm, DM *newdm)
   PetscCall(DMInitialize_Network(*newdm));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
 /* Developer Note: Be aware that the plex inside of the network does not have a coordinate plex.
 */
 PetscErrorCode DMCreateCoordinateDM_Network(DM dm, DM *cdm)
