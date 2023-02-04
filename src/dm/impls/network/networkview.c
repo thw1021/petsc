@@ -122,7 +122,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   PetscCall(PetscViewerPushFormat(csvViewer, PETSC_VIEWER_ASCII_CSV));
 
   // Use the CSV viewer to write out the local network
-  DMView_Network_CSV(dm, csvViewer);
+  PetscCall(DMView_Network_CSV(dm, csvViewer));
 
   // Close the viewer
   PetscCall(PetscViewerDestroy(&csvViewer));
