@@ -61,7 +61,7 @@ static PetscErrorCode DMView_Network_CSV(DM dm, PetscViewer viewer)
   // End synchronized printing
   PetscCall(PetscViewerFlush(viewer));
   PetscCall(PetscViewerASCIIPopSynchronized(viewer));
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 #include <petscdraw.h>
@@ -71,8 +71,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   MPI_Comm    comm;
   char        filename[PETSC_MAX_PATH_LEN + 1], proccall[PETSC_MAX_PATH_LEN + 500], scriptFile[PETSC_MAX_PATH_LEN + 1], streamBuffer[256];
   PetscViewer csvViewer;
-  size_t      numChars;
-  FILE       *processFile;
+  FILE       *processFile = NULL;
   PetscBool   isnull;
   PetscDraw   draw;
 
@@ -81,6 +80,9 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   PetscCall(PetscViewerDrawGetDraw(viewer, 1, &draw));
   PetscCall(PetscDrawIsNull(draw, &isnull));
   PetscCall(PetscDrawSetVisible(draw, PETSC_FALSE));
+
+  // Clear the file name buffer so all communicated bytes are well-defined
+  PetscCall(PetscMemzero(filename, sizeof(filename)));
 
   // Get the MPI communicator and this process' rank
   PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
@@ -93,6 +95,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
     // Acquire a temporary file to write to and open an ASCII/CSV viewer
     PetscCheck(tmpnam_s(filename, sizeof(filename)) == 0, comm, PETSC_ERR_SYS, "Could not acquire temporary file");
 #elif defined(PETSC_HAVE_MKSTEMP) && __STDC_VERSION__ > 199901L
+    size_t numChars;
     // Same thing, but for POSIX systems on which tmpnam is deprecated
     // Note: Configure may detect mkstemp but it will not be defined if compiling for C99, so check additional defines to see if we can use it
     PetscCall(PetscStrcpy(filename, "/tmp/"));
@@ -112,44 +115,46 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
     PetscCheck(tmpnam(filename) != NULL, comm, PETSC_ERR_SYS, "Could not acquire temporary file");
 #endif
     // Broadcast the filename to all other MPI ranks
-    for (rank2 = 1; rank2 < size; rank2++) PetscCallMPI(MPI_Send(filename, FILENAME_MAX, MPI_BYTE, rank2, 0, comm));
+    for (rank2 = 1; rank2 < size; rank2++) PetscCallMPI(MPI_Send(filename, PETSC_MAX_PATH_LEN, MPI_BYTE, rank2, 0, comm));
   } else {
     // Receive the file name
-    PetscCallMPI(MPI_Recv(filename, FILENAME_MAX, MPI_BYTE, 0, 0, comm, MPI_STATUS_IGNORE));
+    PetscCallMPI(MPI_Recv(filename, PETSC_MAX_PATH_LEN, MPI_BYTE, 0, 0, comm, MPI_STATUS_IGNORE));
   }
 
   PetscCall(PetscViewerASCIIOpen(PETSC_COMM_WORLD, filename, &csvViewer));
   PetscCall(PetscViewerPushFormat(csvViewer, PETSC_VIEWER_ASCII_CSV));
 
   // Use the CSV viewer to write out the local network
-  DMView_Network_CSV(dm, csvViewer);
+  PetscCall(DMView_Network_CSV(dm, csvViewer));
 
   // Close the viewer
   PetscCall(PetscViewerDestroy(&csvViewer));
 
-  // Generate the system call and open the viewer process on rank 0
-  if (rank == 0) {
-    // Get the value of $PETSC_DIR
-    PetscCall(PetscStrreplace(PETSC_COMM_WORLD, "${PETSC_DIR}/share/petsc/dmnetwork_view.py", scriptFile, sizeof(scriptFile)));
-    PetscCall(PetscFixFilename(scriptFile, scriptFile));
-    // Generate the system call for 'python3 $PETSC_DIR/share/petsc/dmnetwork_view.py <file>'
-    PetscCall(PetscArrayzero(proccall, sizeof(proccall)));
-    PetscCall(PetscSNPrintf(proccall, sizeof(proccall), "%s %s %s %s", PETSC_PYTHON_EXE, scriptFile, (isnull ? "-nd" : ""), filename));
+  // Get the value of $PETSC_DIR
+  PetscCall(PetscStrreplace(PETSC_COMM_WORLD, "${PETSC_DIR}/share/petsc/dmnetwork_view.py", scriptFile, sizeof(scriptFile)));
+  PetscCall(PetscFixFilename(scriptFile, scriptFile));
+  // Generate the system call for 'python3 $PETSC_DIR/share/petsc/dmnetwork_view.py <file>'
+  PetscCall(PetscArrayzero(proccall, sizeof(proccall)));
+  PetscCall(PetscSNPrintf(proccall, sizeof(proccall), "%s %s %s %s", PETSC_PYTHON_EXE, scriptFile, (isnull ? "-tx" : ""), filename));
 
 #if defined(PETSC_HAVE_POPEN)
-    // Perform the call to run the python script
-    PetscCall(PetscPOpen(PETSC_COMM_SELF, NULL, proccall, "r", &processFile));
+  // Perform the call to run the python script (Note: while this is called on all ranks POpen will only run on rank 0)
+  PetscCall(PetscPOpen(PETSC_COMM_WORLD, NULL, proccall, "r", &processFile));
+  if (processFile != NULL) {
     while (fgets(streamBuffer, sizeof(streamBuffer), processFile) != NULL) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%s", streamBuffer));
-    PetscCall(PetscPClose(PETSC_COMM_SELF, processFile));
-#else
-    // Same thing, but using the standard library for systems that don't have POpen/PClose
-    PetscCheck(system(proccall) == 0, comm, PETSC_ERR_SYS, "Failed to call viewer script");
-#endif
-
-    // Clean up the temporary file we used
-    PetscCheck(remove(filename) == 0, comm, PETSC_ERR_SYS, "Failed to delete temporary file");
   }
-  PetscFunctionReturn(0);
+  PetscCall(PetscPClose(PETSC_COMM_WORLD, processFile));
+#else
+  // Same thing, but using the standard library for systems that don't have POpen/PClose (only run on rank 0)
+  if (rank == 0) {
+    PetscCheck(system(proccall) == 0, comm, PETSC_ERR_SYS, "Failed to call viewer script");
+    // Barrier so that all ranks wait until the call completes
+    PetscCallMPI(MPI_Barrier(PETSC_COMM_WORLD));
+  }
+#endif
+  // Clean up the temporary file we used using rank 0
+  if (rank == 0) PetscCheck(remove(filename) == 0, comm, PETSC_ERR_SYS, "Failed to delete temporary file");
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMView_Network(DM dm, PetscViewer viewer)
@@ -165,7 +170,7 @@ PetscErrorCode DMView_Network(DM dm, PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERDRAW, &isdraw));
   if (isdraw) {
     PetscCall(DMView_Network_Matplotlib(dm, viewer));
-    PetscFunctionReturn(0);
+    PetscFunctionReturn(PETSC_SUCCESS);
   }
 
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
@@ -178,7 +183,7 @@ PetscErrorCode DMView_Network(DM dm, PetscViewer viewer)
     PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)dm), &rank));
     if (format == PETSC_VIEWER_ASCII_CSV) {
       PetscCall(DMView_Network_CSV(dm, viewer));
-      PetscFunctionReturn(0);
+      PetscFunctionReturn(PETSC_SUCCESS);
     }
 
     nsubnet = network->cloneshared->Nsubnet; /* num of subnetworks */
@@ -226,5 +231,5 @@ PetscErrorCode DMView_Network(DM dm, PetscViewer viewer)
     PetscCall(PetscViewerFlush(viewer));
     PetscCall(PetscViewerASCIIPopSynchronized(viewer));
   } else PetscCheck(iascii, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Viewer type %s not yet supported for DMNetwork writing", ((PetscObject)viewer)->type_name);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

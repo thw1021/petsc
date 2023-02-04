@@ -539,7 +539,7 @@ static PetscErrorCode PetscDrawSetVisible_X(PetscDraw draw, PetscBool visible)
     }
   }
   PetscDrawCollectiveEnd(draw);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscDrawPause_X(PetscDraw draw)

@@ -373,7 +373,6 @@ static PetscErrorCode DMNetworkCopyHeaderTopological(DM dm, DM newdm)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* This implementation of DMClone_Network() must be called AFTER DMNetworkDistribute() */
 PetscErrorCode DMClone_Network(DM dm, DM *newdm)
 {
   DM_Network *network = (DM_Network *)dm->data, *newnetwork = NULL;

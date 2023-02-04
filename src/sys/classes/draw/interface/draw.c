@@ -458,5 +458,5 @@ PetscErrorCode PetscDrawSetVisible(PetscDraw draw, PetscBool visible)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(draw, PETSC_DRAW_CLASSID, 1);
   PetscTryTypeMethod(draw, setvisible, visible);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
