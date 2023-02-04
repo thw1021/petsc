@@ -71,7 +71,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   MPI_Comm    comm;
   char        filename[PETSC_MAX_PATH_LEN + 1], proccall[PETSC_MAX_PATH_LEN + 500], scriptFile[PETSC_MAX_PATH_LEN + 1], streamBuffer[256];
   PetscViewer csvViewer;
-  FILE       *processFile;
+  FILE       *processFile = NULL;
   PetscBool   isnull;
   PetscDraw   draw;
 
@@ -130,28 +130,30 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   // Close the viewer
   PetscCall(PetscViewerDestroy(&csvViewer));
 
-  // Generate the system call and open the viewer process on rank 0
-  if (rank == 0) {
-    // Get the value of $PETSC_DIR
-    PetscCall(PetscStrreplace(PETSC_COMM_WORLD, "${PETSC_DIR}/share/petsc/dmnetwork_view.py", scriptFile, sizeof(scriptFile)));
-    PetscCall(PetscFixFilename(scriptFile, scriptFile));
-    // Generate the system call for 'python3 $PETSC_DIR/share/petsc/dmnetwork_view.py <file>'
-    PetscCall(PetscArrayzero(proccall, sizeof(proccall)));
-    PetscCall(PetscSNPrintf(proccall, sizeof(proccall), "%s %s %s %s", PETSC_PYTHON_EXE, scriptFile, (isnull ? "-tx" : ""), filename));
+  // Get the value of $PETSC_DIR
+  PetscCall(PetscStrreplace(PETSC_COMM_WORLD, "${PETSC_DIR}/share/petsc/dmnetwork_view.py", scriptFile, sizeof(scriptFile)));
+  PetscCall(PetscFixFilename(scriptFile, scriptFile));
+  // Generate the system call for 'python3 $PETSC_DIR/share/petsc/dmnetwork_view.py <file>'
+  PetscCall(PetscArrayzero(proccall, sizeof(proccall)));
+  PetscCall(PetscSNPrintf(proccall, sizeof(proccall), "%s %s %s %s", PETSC_PYTHON_EXE, scriptFile, (isnull ? "-tx" : ""), filename));
 
 #if defined(PETSC_HAVE_POPEN)
-    // Perform the call to run the python script
-    PetscCall(PetscPOpen(PETSC_COMM_SELF, NULL, proccall, "r", &processFile));
+  // Perform the call to run the python script (Note: while this is called on all ranks POpen will only run on rank 0)
+  PetscCall(PetscPOpen(PETSC_COMM_WORLD, NULL, proccall, "r", &processFile));
+  if (processFile != NULL) {
     while (fgets(streamBuffer, sizeof(streamBuffer), processFile) != NULL) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%s", streamBuffer));
-    PetscCall(PetscPClose(PETSC_COMM_SELF, processFile));
-#else
-    // Same thing, but using the standard library for systems that don't have POpen/PClose
-    PetscCheck(system(proccall) == 0, comm, PETSC_ERR_SYS, "Failed to call viewer script");
-#endif
-
-    // Clean up the temporary file we used
-    PetscCheck(remove(filename) == 0, comm, PETSC_ERR_SYS, "Failed to delete temporary file");
   }
+  PetscCall(PetscPClose(PETSC_COMM_WORLD, processFile));
+#else
+  // Same thing, but using the standard library for systems that don't have POpen/PClose (only run on rank 0)
+  if (rank == 0) {
+    PetscCheck(system(proccall) == 0, comm, PETSC_ERR_SYS, "Failed to call viewer script");
+    // Barrier so that all ranks wait until the call completes
+    PetscCallMPI(MPI_Barrier(PETSC_COMM_WORLD));
+  }
+#endif
+  // Clean up the temporary file we used using rank 0
+  if (rank == 0) PetscCheck(remove(filename) == 0, comm, PETSC_ERR_SYS, "Failed to delete temporary file");
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
