@@ -511,7 +511,7 @@ static PetscErrorCode PetscDrawSetVisible_Win32(PetscDraw draw, PetscBool visibl
 
   PetscFunctionBegin;
   ShowWindow(windraw->hWnd, visible ? SW_SHOWNA : SW_HIDE);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 void PopMessageLoopThread_Win32(PetscDraw popdraw)

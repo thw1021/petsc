@@ -163,7 +163,7 @@ static PetscErrorCode CoordinatePrint(DM dm)
   }
   PetscCall(PetscSynchronizedFlush(MPI_COMM_WORLD, NULL));
   PetscCall(VecRestoreArrayRead(coords, &carray));
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 int main(int argc, char **argv)

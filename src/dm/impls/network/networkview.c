@@ -61,7 +61,7 @@ static PetscErrorCode DMView_Network_CSV(DM dm, PetscViewer viewer)
   // End synchronized printing
   PetscCall(PetscViewerFlush(viewer));
   PetscCall(PetscViewerASCIIPopSynchronized(viewer));
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 #include <petscdraw.h>
@@ -149,7 +149,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
     // Clean up the temporary file we used
     PetscCheck(remove(filename) == 0, comm, PETSC_ERR_SYS, "Failed to delete temporary file");
   }
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode DMView_Network(DM dm, PetscViewer viewer)
@@ -165,7 +165,7 @@ PetscErrorCode DMView_Network(DM dm, PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERDRAW, &isdraw));
   if (isdraw) {
     PetscCall(DMView_Network_Matplotlib(dm, viewer));
-    PetscFunctionReturn(0);
+    PetscFunctionReturn(PETSC_SUCCESS);
   }
 
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
@@ -178,7 +178,7 @@ PetscErrorCode DMView_Network(DM dm, PetscViewer viewer)
     PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)dm), &rank));
     if (format == PETSC_VIEWER_ASCII_CSV) {
       PetscCall(DMView_Network_CSV(dm, viewer));
-      PetscFunctionReturn(0);
+      PetscFunctionReturn(PETSC_SUCCESS);
     }
 
     nsubnet = network->cloneshared->Nsubnet; /* num of subnetworks */
@@ -226,5 +226,5 @@ PetscErrorCode DMView_Network(DM dm, PetscViewer viewer)
     PetscCall(PetscViewerFlush(viewer));
     PetscCall(PetscViewerASCIIPopSynchronized(viewer));
   } else PetscCheck(iascii, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Viewer type %s not yet supported for DMNetwork writing", ((PetscObject)viewer)->type_name);
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
