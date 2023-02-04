@@ -804,7 +804,7 @@ int main(int argc, char **argv)
    test:
       suffix: 6
       nsize: 3
-      args: -coupled_snes_converged_reason -options_left no -petscpartitioner_type parmetis -dmnetwork_view_distributed draw -nox
+      args: -coupled_snes_converged_reason -options_left no -petscpartitioner_type parmetis -dmnetwork_view_distributed draw:null
       localrunfiles: ex1options power/case9.m water/sample1.inp
       output_file: output/ex1_2.out
       requires: parmetis
