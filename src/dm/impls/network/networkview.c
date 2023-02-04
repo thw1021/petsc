@@ -134,7 +134,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
     PetscCall(PetscFixFilename(scriptFile, scriptFile));
     // Generate the system call for 'python3 $PETSC_DIR/share/petsc/dmnetwork_view.py <file>'
     PetscCall(PetscArrayzero(proccall, sizeof(proccall)));
-    PetscCall(PetscSNPrintf(proccall, sizeof(proccall), "%s %s %s %s", PETSC_PYTHON_EXE, scriptFile, (isnull ? "-nd" : ""), filename));
+    PetscCall(PetscSNPrintf(proccall, sizeof(proccall), "%s %s %s %s", PETSC_PYTHON_EXE, scriptFile, (isnull ? "-tx" : ""), filename));
 
 #if defined(PETSC_HAVE_POPEN)
     // Perform the call to run the python script

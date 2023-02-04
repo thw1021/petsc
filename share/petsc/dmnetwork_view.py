@@ -75,24 +75,7 @@ class Edge:
 
 		self.color = color if color is not None else parseColor(row['Color'], (0.5, 0.5, 0.5, 1))
 
-def main(*args, **kwargs):
-	# Construct the argument parse and parse the program arguments
-	argparser = ArgumentParser(
-		prog='dmnetwork_view.py',
-		description="Displays a CSV file generated from a DMNetwork using matplotlib"
-	)
-	argparser.add_argument('filenames', nargs='+')
-	argparser.add_argument('-t', '--set-title', metavar='TITLE', action='store', help="Sets the title for the generated plot, overriding any title set in the source file")
-	argparser.add_argument('-nnl', '--no-node-labels', action='store_true', help="Disables labling nodes in the generated plot")
-	argparser.add_argument('-nel', '--no-edge-labels', action='store_true', help="Disables labling edges in the generated plot")
-	argparser.add_argument('-nc', '--set-node-color', metavar='COLOR', action='store', help="Sets the color for drawn nodes, overriding any per-node colors")
-	argparser.add_argument('-ec', '--set-edge-color', metavar='COLOR', action='store', help="Sets the color for drawn edges, overriding any per-edge colors")
-	argparser.add_argument('-ntc', '--set-node-title-color', metavar='COLOR', action='store', help="Sets the color for drawn node titles, overriding any per-node colors")
-	argparser.add_argument('-etc', '--set-edge-title-color', metavar='COLOR', action='store', help="Sets the color for drawn edge titles, overriding any per-edge colors")
-	argparser.add_argument('-nd', '--no-display', action='store_true', help="Disables displaying the figure, but will parse as normal")
-	args = argparser.parse_args()
-
-
+def main(args):
 	# Parse any set node or edge colors
 	nodeColor = None
 	edgeColor = None
@@ -230,15 +213,33 @@ def main(*args, **kwargs):
 
 if __name__ == "__main__":
 	try:
-		import pandas as pd
-		import numpy as np
-		import matplotlib.pyplot as plt
-		from matplotlib.collections import CircleCollection, LineCollection
 		from argparse import ArgumentParser
-		import traceback
-		import sys
+		# Construct the argument parse and parse the program arguments
+		argparser = ArgumentParser(
+			prog='dmnetwork_view.py',
+			description="Displays a CSV file generated from a DMNetwork using matplotlib"
+		)
+		argparser.add_argument('filenames', nargs='+')
+		argparser.add_argument('-t', '--set-title', metavar='TITLE', action='store', help="Sets the title for the generated plot, overriding any title set in the source file")
+		argparser.add_argument('-nnl', '--no-node-labels', action='store_true', help="Disables labling nodes in the generated plot")
+		argparser.add_argument('-nel', '--no-edge-labels', action='store_true', help="Disables labling edges in the generated plot")
+		argparser.add_argument('-nc', '--set-node-color', metavar='COLOR', action='store', help="Sets the color for drawn nodes, overriding any per-node colors")
+		argparser.add_argument('-ec', '--set-edge-color', metavar='COLOR', action='store', help="Sets the color for drawn edges, overriding any per-edge colors")
+		argparser.add_argument('-ntc', '--set-node-title-color', metavar='COLOR', action='store', help="Sets the color for drawn node titles, overriding any per-node colors")
+		argparser.add_argument('-etc', '--set-edge-title-color', metavar='COLOR', action='store', help="Sets the color for drawn edge titles, overriding any per-edge colors")
+		argparser.add_argument('-nd', '--no-display', action='store_true', help="Disables displaying the figure, but will parse as normal")
+		argparser.add_argument('-tx', '--test-execute', action='store_true', help="Returns from the program immediately, used only to test run the script")
+		args = argparser.parse_args()
 
-		main()
+		if not args.test_execute:
+			import pandas as pd
+			import numpy as np
+			import matplotlib.pyplot as plt
+			from matplotlib.collections import CircleCollection, LineCollection
+			import traceback
+			import sys
+
+			main(args)
 	except ImportError as error:
 		print("Missing import: " + str(error))
 		exit(-1)
