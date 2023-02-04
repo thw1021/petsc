@@ -131,7 +131,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   PetscCall(PetscViewerDestroy(&csvViewer));
 
   // Get the value of $PETSC_DIR
-  PetscCall(PetscStrreplace(PETSC_COMM_WORLD, "${PETSC_DIR}/share/petsc/dmnetwork_view.py", scriptFile, sizeof(scriptFile)));
+  PetscCall(PetscStrreplace(PETSC_COMM_WORLD, "${PETSC_DIR}/share/petsc/bin/dmnetwork_view.py", scriptFile, sizeof(scriptFile)));
   PetscCall(PetscFixFilename(scriptFile, scriptFile));
   // Generate the system call for 'python3 $PETSC_DIR/share/petsc/dmnetwork_view.py <file>'
   PetscCall(PetscArrayzero(proccall, sizeof(proccall)));
