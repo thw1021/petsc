@@ -440,31 +440,6 @@ PetscErrorCode DMPlexDistributeOwnership(DM dm, PetscSection rootSection, IS *ro
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#if 0
-static PetscErrorCode DMPlexCopyOverlapLabels(DM dm, DM ndm)
-{
-  DM_Plex *mesh  = (DM_Plex *) dm->data;
-  DM_Plex *nmesh = (DM_Plex *) ndm->data;
-
-  PetscFunctionBegin;
-  if (mesh->numOvLabels) {
-    const char *name;
-    PetscInt    l;
-
-    nmesh->numOvLabels = mesh->numOvLabels;
-    for (l = 0; l < mesh->numOvLabels; ++l) {
-      PetscCall(PetscObjectGetName((PetscObject) mesh->ovLabels[l], &name));
-      PetscCall(DMGetLabel(ndm, name, &nmesh->ovLabels[l]));
-      nmesh->ovValues[l] = mesh->ovValues[l];
-    }
-    PetscCall(PetscObjectGetName((PetscObject) mesh->ovExLabel, &name));
-    PetscCall(DMGetLabel(ndm, name, &nmesh->ovExLabel));
-    nmesh->ovExValue = mesh->ovExValue;
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-#endif
-
 /*@C
   DMPlexCreateOverlapLabel - Compute a label indicating what overlap points should be sent to new processes
 
