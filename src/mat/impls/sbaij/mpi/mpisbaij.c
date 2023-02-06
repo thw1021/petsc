@@ -2185,7 +2185,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPISBAIJ(Mat B)
    and `MATMPISBAIJ` otherwise.
 
    Options Database Key:
-. -mat_type sbaij - sets the matrix type to "sbaij" during a call to `MatSetFromOptions()`
+. -mat_type sbaij - sets the matrix type to `MATSBAIJ` during a call to `MatSetFromOptions()`
 
   Level: beginner
 
