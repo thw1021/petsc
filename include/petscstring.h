@@ -90,10 +90,10 @@ static inline PetscErrorCode PetscStrtoupper(char a[])
   Output Parameter:
 . len - length in bytes
 
-  Level: intermediate
-
-  Note:
+  Notes:
   This routine is analogous to `strlen()`. `NULL` string returns a length of zero.
+
+  Level: intermediate
 
 .seealso: `PetscStrallocpy()`
 @*/
@@ -124,11 +124,11 @@ static inline PetscErrorCode PetscStrlen(const char s[], size_t *len)
   Output Parameter:
 . s - the copied string
 
-  Level: intermediate
-
   Notes:
   `NULL` strings returns a string starting with zero. It is recommended you use
   `PetscStrncpy()` instead of this routine.
+
+  Level: intermediate
 
 .seealso: `PetscStrncpy()`, `PetscStrcat()`, `PetscStrlcat()`, `PetscStrallocpy()`
 @*/
@@ -160,15 +160,13 @@ static inline PetscErrorCode PetscStrcpy(char s[], const char t[])
   Output Parameter:
 . t - the copied string
 
-  Level: intermediate
-
   Notes:
   `NULL` string returns a new `NULL` string.
 
   If `t` has previously been allocated then that memory is lost, you may need to `PetscFree()`
   the array before calling this routine.
 
-  Fortran Note:
+  Level: intermediate
 
 .seealso: `PetscStrArrayallocpy()`, `PetscStrcpy()`, `PetscStrNArrayallocpy()`
 @*/
@@ -246,18 +244,18 @@ static inline PetscErrorCode PetscStrcmp(const char a[], const char b[], PetscBo
   Output Parameter:
 . s - the copied string
 
-  Level: intermediate
-
-  Note:
+  Notes:
   `NULL` string returns a string starting with zero.
 
   If the string that is being copied is of length `n` or larger, then the entire string is not
   copied and the final location of `s` is set to `NULL`. This is different then the behavior of
   `strncpy()` which leaves `s` non-terminated if there is not room for the entire string.
 
-  Developers Note:
+  Developers Notes:
   Should this be `PetscStrlcpy()` to reflect its behavior which is like `strlcpy()` not
   `strncpy()`?
+
+  Level: intermediate
 
 .seealso: `PetscStrcpy()`, `PetscStrcat()`, `PetscStrlcat()`, `PetscStrallocpy()`
 @*/
@@ -292,10 +290,10 @@ static inline PetscErrorCode PetscStrncpy(char s[], const char t[], size_t n)
 + s - string to be added to
 - t - pointer to string to be added to end
 
-  Level: intermediate
-
-  Note:
+  Notes:
   It is recommended you use `PetscStrlcat()` instead of this routine.
+
+  Level: intermediate
 
 .seealso: `PetscStrcpy()`, `PetscStrncpy()`, `PetscStrlcat()`
 @*/
@@ -322,12 +320,12 @@ static inline PetscErrorCode PetscStrcat(char s[], const char t[])
 . t - string to be added
 - n - length of the original allocated string
 
-  Level: intermediate
-
-  Note:
+  Notes:
   Unlike the system call `strncat()`, the length passed in is the length of the
   original allocated space, not the length of the left-over space. This is
   similar to the BSD system call `strlcat()`.
+
+  Level: intermediate
 
 .seealso: `PetscStrcpy()`, `PetscStrncpy()`, `PetscStrcat()`
 @*/
@@ -359,7 +357,10 @@ static inline PetscErrorCode PetscStrlcat(char s[], const char t[], size_t n)
 - n - length to compare up to
 
   Output Parameter:
-. t - if the two strings are equal
+. t - `PETSC_TRUE` if the two strings are equal, `PETSC_FALSE` otherwise
+
+  Notes:
+  If `n` is `0`, `t` is set to `PETSC_FALSE`. `a` and/or `b` may be `NULL` in this case.
 
   Level: intermediate
 
@@ -368,6 +369,10 @@ static inline PetscErrorCode PetscStrlcat(char s[], const char t[], size_t n)
 static inline PetscErrorCode PetscStrncmp(const char a[], const char b[], size_t n, PetscBool *t)
 {
   PetscFunctionBegin;
+  if (n) {
+    PetscAssertPointer_Private(a, 1);
+    PetscAssertPointer_Private(b, 2);
+  }
   PetscAssertPointer_Private(t, 4);
 #if PetscHasBuiltin(__builtin_strncmp)
   *t = __builtin_strncmp(a, b, n) ? PETSC_FALSE : PETSC_TRUE;
@@ -459,7 +464,7 @@ static inline PetscErrorCode PetscStrstr(const char haystack[], const char needl
   Output Parameter:
 . flg - `PETSC_TRUE` if `a` is strictly greater than `b`, `PETSC_FALSE` otherwise
 
-  Note:
+  Notes:
   `NULL` arguments are OK, a `NULL` string is considered smaller than all others. If both `a`
   and `b` are `NULL` then `t` is set to `PETSC_FALSE`.
 
@@ -563,6 +568,9 @@ static inline PetscErrorCode PetscStrrchr(const char a[], char b, char *tmp[])
   Output Parameter:
 . flg - `PETSC_TRUE` if `a` ends with `b`, `PETSC_FALSE` otherwise
 
+  Notes:
+  Both `a` and `b` may be `NULL` (in which case `flg` is set to `PETSC_FALSE`) bot not either.
+
   Level: intermediate
 
 .seealso: `PetscStrendswithwhich()`, `PetscStrbeginswith()`, `PetscStrtoupper`,
@@ -575,6 +583,8 @@ static inline PetscErrorCode PetscStrendswith(const char a[], const char b[], Pe
 
   PetscFunctionBegin;
   PetscAssertPointer_Private(flg, 3);
+  // do this here to silence stupid "may be used uninitialized"" warnings
+  *flg = PETSC_FALSE;
   PetscCall(PetscStrlen(a, &na));
   PetscCall(PetscStrlen(b, &nb));
   if (na >= nb) {
@@ -583,8 +593,6 @@ static inline PetscErrorCode PetscStrendswith(const char a[], const char b[], Pe
 #else
     *flg = memcmp(b, a + (na - nb), nb) == 0 ? PETSC_TRUE : PETSC_FALSE;
 #endif
-  } else {
-    *flg = PETSC_FALSE;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -601,6 +609,10 @@ static inline PetscErrorCode PetscStrendswith(const char a[], const char b[], Pe
   Output Parameter:
 . flg - `PETSC_TRUE` if `a` begins with `b`, `PETSC_FALSE` otherwise
 
+  Notes:
+  Both `a` and `b` may be `NULL` (in which case `flg` is set to `PETSC_FALSE`) but not
+  either. Both `a` and `b` may point to the same string.
+
   Level: intermediate
 
 .seealso: `PetscStrendswithwhich()`, `PetscStrendswith()`, `PetscStrtoupper`,
@@ -612,9 +624,9 @@ static inline PetscErrorCode PetscStrbeginswith(const char a[], const char b[], 
   size_t len = 0;
 
   PetscFunctionBegin;
-  PetscAssertPointer_Private(a, 1);
-  PetscAssertPointer_Private(b, 2);
   PetscAssertPointer_Private(flg, 3);
+  // do this here to silence stupid "may be used uninitialized"" warnings
+  *flg = PETSC_FALSE;
   PetscCall(PetscStrlen(b, &len));
   PetscCall(PetscStrncmp(a, b, len, flg));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -641,7 +653,7 @@ static inline PetscErrorCode PetscStrbeginswith(const char a[], const char b[], 
 
    This routine is analogous to `memmove()`.
 
-   Developers Note:
+   Developers Notes:
    This is inlined for performance
 
 .seealso: `PetscMemcpy()`, `PetscMemcmp()`, `PetscArrayzero()`, `PetscMemzero()`, `PetscArraycmp()`, `PetscArraycpy()`, `PetscStrallocpy()`,
@@ -710,7 +722,7 @@ static inline PetscErrorCode PetscMemmove(void *a, const void *b, size_t n)
 
    Not available from Fortran
 
-   Developer Note:
+   Developer Notes:
    This is inlined for fastest performance
 
 .seealso: `PetscMemzero()`, `PetscMemcmp()`, `PetscArrayzero()`, `PetscArraycmp()`, `PetscArraycpy()`, `PetscMemmove()`, `PetscStrallocpy()`
@@ -771,7 +783,7 @@ static inline PetscErrorCode PetscMemcpy(void *a, const void *b, size_t n)
 
    Prefer `PetscArrayzero()`
 
-   Developer Note:
+   Developer Notes:
    This is inlined for fastest performance
 
 .seealso: `PetscMemcpy()`, `PetscMemcmp()`, `PetscArrayzero()`, `PetscArraycmp()`, `PetscArraycpy()`, `PetscMemmove()`, `PetscStrallocpy()`
@@ -902,7 +914,7 @@ M*/
 
    Level: intermediate
 
-   Note:
+   Notes:
    This routine is a preferred replacement to `PetscMemzero()`
 
 .seealso: `PetscMemcpy()`, `PetscMemcmp()`, `PetscMemzero()`, `PetscArraycmp()`, `PetscArraycpy()`, `PetscMemmove()`, `PetscStrallocpy()`, `PetscArraymove()`
