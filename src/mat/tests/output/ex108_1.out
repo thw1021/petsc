@@ -1,0 +1,8 @@
+[ 0] 32 bytes MatCreateSeqBAIJWithArrays() at /Users/jacobfaibussowitsch/soft/petsc/src/mat/impls/baij/seq/baij.c:3892
+      [0]  PetscMallocA() at /Users/jacobfaibussowitsch/soft/petsc/src/sys/memory/mal.c:3892
+      [0]  MatCreateSeqBAIJWithArrays() at /Users/jacobfaibussowitsch/soft/petsc/src/mat/impls/baij/seq/baij.c:3892
+      [0]  main() at /Users/jacobfaibussowitsch/soft/petsc/src/mat/tests/ex108.c:47
+[ 0] 32 bytes MatCreateSeqBAIJWithArrays() at /Users/jacobfaibussowitsch/soft/petsc/src/mat/impls/baij/seq/baij.c:3892
+      [0]  PetscMallocA() at /Users/jacobfaibussowitsch/soft/petsc/src/sys/memory/mal.c:3892
+      [0]  MatCreateSeqBAIJWithArrays() at /Users/jacobfaibussowitsch/soft/petsc/src/mat/impls/baij/seq/baij.c:3892
+      [0]  main() at /Users/jacobfaibussowitsch/soft/petsc/src/mat/tests/ex108.c:47

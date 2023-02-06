@@ -20,6 +20,7 @@ int main(int argc, char **argv)
 
   /* Create a aij matrix for checking */
   PetscCall(MatCreateSeqAIJ(PETSC_COMM_SELF, 5, 5, 2, NULL, &A));
+  PetscCall(MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE));
   PetscCall(PetscRandomCreate(PETSC_COMM_WORLD, &rctx));
   PetscCall(PetscRandomSetFromOptions(rctx));
 
@@ -62,3 +63,10 @@ int main(int argc, char **argv)
   PetscCall(PetscFinalize());
   return 0;
 }
+
+/*TEST
+
+  test:
+    TODO: MatCreateSeqBAIJWithArrays() is broken, it leaks imax and ilen arrays
+
+TEST*/
