@@ -4752,13 +4752,13 @@ PetscErrorCode TSGetAdapt(TS ts, TSAdapt *adapt)
 PetscErrorCode TSSetTolerances(TS ts, PetscReal atol, Vec vatol, PetscReal rtol, Vec vrtol)
 {
   PetscFunctionBegin;
-  if (atol != PETSC_DECIDE && atol != PETSC_DEFAULT) ts->atol = atol;
+  if (atol != (PetscReal)PETSC_DECIDE && atol != (PetscReal)PETSC_DEFAULT) ts->atol = atol;
   if (vatol) {
     PetscCall(PetscObjectReference((PetscObject)vatol));
     PetscCall(VecDestroy(&ts->vatol));
     ts->vatol = vatol;
   }
-  if (rtol != PETSC_DECIDE && rtol != PETSC_DEFAULT) ts->rtol = rtol;
+  if (rtol != (PetscReal)PETSC_DECIDE && rtol != (PetscReal)PETSC_DEFAULT) ts->rtol = rtol;
   if (vrtol) {
     PetscCall(PetscObjectReference((PetscObject)vrtol));
     PetscCall(VecDestroy(&ts->vrtol));
