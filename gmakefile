@@ -266,4 +266,5 @@ allobj.d := $(srcs.o:%.o=%.d)
 # do-nothing build of PETSc (much worse for larger projects)
 $(allobj.d) : ;
 
+
 -include $(allobj.d)
