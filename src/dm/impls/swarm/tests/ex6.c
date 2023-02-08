@@ -337,6 +337,7 @@ static PetscErrorCode ComputeFieldAtParticles_Primal(SNES snes, DM sw, PetscReal
 
       for (d = 0; d < dim; ++d) E[p * dim + d] = 0.;
       PetscCall(PetscFEFreeInterpolateGradient_Static(fe, basisDer, clPhi, dim, invJ, NULL, cp, &E[p * dim]));
+      for (d = 0; d < dim; ++d) E[p * dim + d] *= -1.0;
     }
     PetscCall(DMPlexVecRestoreClosure(dm, NULL, locPhi, c, NULL, &clPhi));
     PetscCall(DMRestoreWorkArray(dm, Ncp * dim, MPIU_REAL, &pcoord));
@@ -571,15 +572,23 @@ static PetscErrorCode RHSJacobian(TS ts, PetscReal t, Vec U, Mat J, Mat P, void 
 
 static PetscErrorCode RHSFunctionX(TS ts, PetscReal t, Vec V, Vec Xres, void *ctx)
 {
+  DM                 sw;
   const PetscScalar *v;
   PetscScalar       *xres;
-  PetscInt           Np, p;
+  PetscInt           Np, p, dim, d;
 
   PetscFunctionBeginUser;
+  PetscCall(TSGetDM(ts, &sw));
+  PetscCall(DMGetDimension(sw, &dim));
   PetscCall(VecGetLocalSize(Xres, &Np));
+  Np /= dim;
   PetscCall(VecGetArrayRead(V, &v));
   PetscCall(VecGetArray(Xres, &xres));
-  for (p = 0; p < Np; ++p) xres[p] = v[p];
+  for (p = 0; p < Np; ++p){
+    for (d = 0; d < dim; ++d) {
+      xres[p*dim + d] = v[p*dim + d];
+    }
+  }
   PetscCall(VecRestoreArrayRead(V, &v));
   PetscCall(VecRestoreArray(Xres, &xres));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1008,7 +1017,7 @@ int main(int argc, char **argv)
      args: -dm_plex_dim 2 -dm_plex_simplex 0 -dm_plex_box_faces 1,1 -dm_plex_box_lower -5,-5 -dm_plex_box_upper 5,5 \
            -dm_swarm_num_particles 2 -dm_swarm_coordinate_function circleSingleX -dm_swarm_velocity_function circleSingleV \
            -ts_type basicsymplectic\
-           -dm_view -output_step 50
+           -dm_view -output_step 50 -ts_dt 0.01 -ts_max_time 10.0 -ts_max_steps 10
      test:
        suffix: none_bsi_2d_1
        args: -ts_basicsymplectic_type 1 -em_type none -error
@@ -1038,8 +1047,8 @@ int main(int argc, char **argv)
      args: -dm_plex_dim 2 -dm_plex_simplex 0 -dm_plex_box_faces 1,1 -dm_plex_box_lower -5,-5 -dm_plex_box_upper 5,5 \
            -dm_swarm_num_particles 2 -dm_swarm_coordinate_function circleSingleX -dm_swarm_velocity_function circleSingleV \
            -ts_type basicsymplectic\
-           -em_type primal -em_pc_type svd\
-           -dm_view -output_step 50 -error\
+           -em_type primal -em_pc_type svd -petscspace_degree 1\
+           -dm_view -output_step 50 -error -ts_dt 0.01 -ts_max_time 10.0 -ts_max_steps 10\
            -petscspace_degree 2 -petscfe_default_quadrature_order 3 -sigma 1.0e-8 -timeScale 2.0e-14
      test:
        suffix: poisson_bsi_2d_1
@@ -1057,8 +1066,8 @@ int main(int argc, char **argv)
    testset:
      args: -dm_swarm_num_particles 2 -dm_swarm_coordinate_function circleSingleX -dm_swarm_velocity_function circleSingleV \
            -ts_type theta -ts_theta_theta 0.5 -ts_convergence_estimate -convest_num_refine 2 \
-             -mat_type baij -ksp_error_if_not_converged -em_pc_type svd \
-           -dm_view -output_step 50 -error\
+             -mat_type baij -ksp_error_if_not_converged -em_pc_type svd -petscspace_degree 1\
+           -dm_view -output_step 50 -error -ts_dt 0.01 -ts_max_time 10.0 -ts_max_steps 10\
            -petscspace_degree 2 -petscfe_default_quadrature_order 3 -pc_type svd -sigma 1.0e-8 -timeScale 2.0e-14
      test:
        suffix: im_2d_0
@@ -1066,11 +1075,11 @@ int main(int argc, char **argv)
 
    testset:
      args: -dm_plex_dim 2 -dm_plex_simplex 0 -dm_plex_box_faces 10,10 -dm_plex_box_lower -5,-5 -dm_plex_box_upper 5,5 -petscpartitioner_type simple \
-           -dm_swarm_num_particles 2 -dm_swarm_coordinate_function circleSingleX -dm_swarm_velocity_function circleSingleV \
+           -dm_swarm_num_particles 2 -dm_swarm_coordinate_function circleSingleX -dm_swarm_velocity_function circleSingleV -dm_swarm_num_species 1\
            -ts_type basicsymplectic -ts_convergence_estimate -convest_num_refine 2 \
-           -em_snes_type ksponly -em_pc_type svd -em_type primal\
+           -em_snes_type ksponly -em_pc_type svd -em_type primal -petscspace_degree 1\
            -dm_view -output_step 50\
-           -pc_type svd -sigma 1.0e-8 -timeScale 2.0e-14
+           -pc_type svd -sigma 1.0e-8 -timeScale 2.0e-14 -ts_dt 0.01 -ts_max_time 1.0 -ts_max_steps 10
      test:
        suffix: bsi_2d_mesh_1
        args: -ts_basicsymplectic_type 4
@@ -1091,9 +1100,9 @@ int main(int argc, char **argv)
      args: -dm_plex_dim 2 -dm_plex_simplex 0 -dm_plex_box_faces 10,10 -dm_plex_box_lower -5,-5 -dm_plex_box_upper 5,5 \
            -dm_swarm_num_particles 10 -dm_swarm_coordinate_function circleMultipleX -dm_swarm_velocity_function circleMultipleV \
            -ts_convergence_estimate -convest_num_refine 2 \
-             -em_pc_type lu \
+             -em_pc_type lu -petscspace_degree 1\
            -dm_view -output_step 50 -error\
-           -pc_type svd -sigma 1.0e-8 -timeScale 2.0e-14
+           -pc_type svd -sigma 1.0e-8 -timeScale 2.0e-14 -ts_dt 0.01 -ts_max_time 10.0 -ts_max_steps 10
      test:
        suffix: bsi_2d_multiple_1
        args: -ts_type basicsymplectic -ts_basicsymplectic_type 1
@@ -1113,7 +1122,7 @@ int main(int argc, char **argv)
            -dm_swarm_num_particles 2 -dm_swarm_coordinate_function circleSingleX -dm_swarm_velocity_function circleSingleV \
            -em_pc_type fieldsplit -ksp_rtol 1e-10 -em_ksp_type preonly -em_type mixed -em_ksp_error_if_not_converged\
            -dm_view -output_step 50 -error -dm_refine 0\
-           -pc_type svd -sigma 1.0e-8 -timeScale 2.0e-14
+           -pc_type svd -sigma 1.0e-8 -timeScale 2.0e-14 -ts_dt 0.01 -ts_max_time 10.0 -ts_max_steps 10
      test:
        suffix: bsi_4_rt_1
        args: -ts_type basicsymplectic -ts_basicsymplectic_type 4\

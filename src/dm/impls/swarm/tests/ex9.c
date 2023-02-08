@@ -960,19 +960,18 @@ static PetscErrorCode InitializeParticles_PerturbedWeights(DM sw, AppCtx *user)
     PetscCall(DMPlexGetCellCoordinates(dm, c, &isDGx, &Ncx, &array_x, &coords_x));
     PetscCall(DMSwarmSortGetPointsPerCell(sw, c, &Npc, &pidx));
     PetscCall(DMPlexComputeCellGeometryFEM(dm, c, NULL, v0_x, J_x, invJ_x, &detJ_x));
-    // for (q = 0; q < Nq_x; ++q) {
-    //   /*Transform quadrature points from ref space to real space (0,12.5664)*/
-    //   CoordinatesRefToReal(dim, dim, xi0, v0_x, J_x, &xq_x[q * dim], xr_x);
+    for (q = 0; q < Nq_x; ++q) {
+      /*Transform quadrature points from ref space to real space (0,12.5664)*/
+      CoordinatesRefToReal(dim, dim, xi0, v0_x, J_x, &xq_x[q * dim], xr_x);
 
-    //   /*Transform quadrature points from real space to ideal real space (0, 2PI/k)*/
-    //   if (user->fake_1D) {
-    //     PetscCall(PetscPDFCosine1D(xr_x, scale, &den_x));
-    //     detJ_x = J_x[0];
-    //   } else PetscCall(PetscPDFCosine2D(xr_x, scale, &den_x));
-    //   /*We have to transform the quadrature weights as well*/
-    //   weight_x[c] += den_x * (wq_x[q] * detJ_x);
-    // }
-    weight_x[c] = coords_x[2] - coords_x[0] + (scale[0] / scale[1]) * (PetscSinReal(scale[1] * coords_x[2]) - PetscSinReal(scale[1] * coords_x[0]));
+      /*Transform quadrature points from real space to ideal real space (0, 2PI/k)*/
+      if (user->fake_1D) {
+        PetscCall(PetscPDFCosine1D(xr_x, scale, &den_x));
+        detJ_x = J_x[0];
+      } else PetscCall(PetscPDFCosine2D(xr_x, scale, &den_x));
+      /*We have to transform the quadrature weights as well*/
+      weight_x[c] += den_x * (wq_x[q] * detJ_x);
+    }
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "c:%d [x_a,x_b] = %1.15f,%1.15f -> cell weight = %1.15f\n", c, coords_x[0], coords_x[2], weight_x[c]));
     totalcellweight += weight_x[c];
     PetscCheck(Npc / size == vEnd - vStart, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Number of particles %d in cell (rank %d/%d) != %d number of velocity vertices", rank, size, Npc, vEnd - vStart);
