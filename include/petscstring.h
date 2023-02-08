@@ -266,16 +266,12 @@ static inline PetscErrorCode PetscStrncpy(char s[], const char t[], size_t n)
   if (s) PetscAssert(n, PETSC_COMM_SELF, PETSC_ERR_ARG_NULL, "Requires an output string of length at least 1 to hold the termination character");
   if (t) {
     PetscAssertPointer_Private(s, 1);
-    if (n > 1) {
 #if PetscHasBuiltin(__builtin_strncpy)
-      (__builtin_strncpy(s, t, n - 1));
+    __builtin_strncpy(s, t, n);
 #else
-      (strncpy(s, t, n - 1));
+    strncpy(s, t, n);
 #endif
-      s[n - 1] = '\0';
-    } else {
-      s[0] = '\0';
-    }
+    s[n - 1] = '\0';
   } else if (s) {
     s[0] = '\0';
   }
