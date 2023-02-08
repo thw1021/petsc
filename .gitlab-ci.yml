@@ -322,6 +322,11 @@ pause-for-approval:
   variables:
     GCOV_MODULES: py-gcovr-5.2-gcc-7.5.0-o7fu4xq python-3.9.13-gcc-7.5.0-fq67pdh
 
+.coverage-generate-u20:
+  extends: .coverage-generate
+  variables:
+    GCOV_MODULES: py-gcovr-5.2-gcc-9.4.0-myfrwxu
+
 .coverage-generate-u22:
   extends: .coverage-generate
   variables:
@@ -428,6 +433,7 @@ linux-gcc-quad-64idx-dbg:
   extends:
     - .stage-2
     - .linux_test
+    - .coverage-generate-u20
   tags:
     - gce-stage2
   variables:
@@ -437,6 +443,7 @@ linux-gcc-pkgs-opt:
   extends:
     - .stage-2
     - .linux_test
+    - .coverage-generate-u20
   tags:
     - gce-stage2
   variables:
@@ -446,6 +453,7 @@ linux-gcc-complex-opt-32bit:
   extends:
     - .stage-2
     - .linux_test
+    - .coverage-generate-u20
   tags:
     - gce-stage2
   variables:
@@ -455,12 +463,14 @@ linux-emcc:
   extends:
     - .stage-2
     - .linux_test
+    - .coverage-generate-u20
   tags:
     - gce-stage2
   variables:
     TEST_ARCH: arch-ci-linux-emcc
     INIT_SCRIPT: /nfs/gce/projects/petsc/soft/u22.04/emsdk/emsdk_env.sh
     DISABLE_TESTS: 1
+    RUN_GCOV: 0
 
 #
 # The following tests run as part of stage-3.
@@ -1013,6 +1023,9 @@ analyze-coverage:
     - linux-matlab-ilp64-gcov
     - linux-cuda-pkgs-gcov
     - linux-cxx-cmplx-pkgs-64idx-gcov
+    - linux-gcc-complex-opt-32bit
+    - linux-gcc-pkgs-opt
+    - linux-gcc-quad-64idx-dbg
   variables:
     PYTHON: python3
     PETSC_ARCH: arch-ci-analyze-pipeline
