@@ -14,7 +14,13 @@ typedef struct {
 #define RANDER48_MULT_2 (0x0005)
 #define RANDER48_ADD    (0x000b)
 
-static double _dorander48(PetscRandom_Rander48 *r48)
+#if PetscHasAttribute(no_sanitize)
+  #define PETSC_ATTRIBUTE_DISABLE_UBSAN __attribute__((no_sanitize("undefined")))
+#else
+  #define PETSC_ATTRIBUTE_DISABLE_UBSAN
+#endif
+
+PETSC_ATTRIBUTE_DISABLE_UBSAN static double do_rander48(PetscRandom_Rander48 *r48)
 {
   unsigned long  accu;
   unsigned short temp[2];
@@ -25,6 +31,8 @@ static double _dorander48(PetscRandom_Rander48 *r48)
   accu += (unsigned long)r48->mult[0] * (unsigned long)r48->seed[1] + (unsigned long)r48->mult[1] * (unsigned long)r48->seed[0];
   temp[1] = (unsigned short)accu; /* middle 16 bits */
   accu >>= sizeof(unsigned short) * 8;
+  // UBSAN runtime error: signed integer overflow: 58989 * 47188 cannot be represented in type
+  // 'int'
   accu += r48->mult[0] * r48->seed[2] + r48->mult[1] * r48->seed[1] + r48->mult[2] * r48->seed[0];
   r48->seed[0] = temp[0];
   r48->seed[1] = temp[1];
@@ -55,14 +63,14 @@ static PetscErrorCode PetscRandomGetValue_Rander48(PetscRandom r, PetscScalar *v
 #if defined(PETSC_USE_COMPLEX)
   if (r->iset) {
     *val = PetscRealPart(r->low) + PetscImaginaryPart(r->low) * PETSC_i;
-    if (PetscRealPart(r->width)) *val += PetscRealPart(r->width) * _dorander48(r48);
-    if (PetscImaginaryPart(r->width)) *val += PetscImaginaryPart(r->width) * _dorander48(r48) * PETSC_i;
+    if (PetscRealPart(r->width)) *val += PetscRealPart(r->width) * do_rander48(r48);
+    if (PetscImaginaryPart(r->width)) *val += PetscImaginaryPart(r->width) * do_rander48(r48) * PETSC_i;
   } else {
-    *val = _dorander48(r48) + _dorander48(r48) * PETSC_i;
+    *val = do_rander48(r48) + do_rander48(r48) * PETSC_i;
   }
 #else
-  if (r->iset) *val = r->width * _dorander48(r48) + r->low;
-  else *val = _dorander48(r48);
+  if (r->iset) *val = r->width * do_rander48(r48) + r->low;
+  else *val = do_rander48(r48);
 #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -73,11 +81,11 @@ static PetscErrorCode PetscRandomGetValueReal_Rander48(PetscRandom r, PetscReal 
 
   PetscFunctionBegin;
 #if defined(PETSC_USE_COMPLEX)
-  if (r->iset) *val = PetscRealPart(r->width) * _dorander48(r48) + PetscRealPart(r->low);
-  else *val = _dorander48(r48);
+  if (r->iset) *val = PetscRealPart(r->width) * do_rander48(r48) + PetscRealPart(r->low);
+  else *val = do_rander48(r48);
 #else
-  if (r->iset) *val = r->width * _dorander48(r48) + r->low;
-  else *val = _dorander48(r48);
+  if (r->iset) *val = r->width * do_rander48(r48) + r->low;
+  else *val = do_rander48(r48);
 #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
