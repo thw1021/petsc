@@ -68,19 +68,18 @@ PetscErrorCode private_PetscViewerDestroy_XDMF(PetscViewer *v)
 PetscErrorCode private_CreateDataFileNameXDMF(const char filename[], char dfilename[])
 {
   char     *ext = NULL;
+  size_t    len;
+  char      viewername_minus_ext[PETSC_MAX_PATH_LEN];
   PetscBool flg;
 
   PetscFunctionBegin;
   PetscCall(PetscStrrchr(filename, '.', &ext));
   PetscCall(PetscStrcmp("xmf", ext, &flg));
-  if (flg) {
-    size_t len;
-    char   viewername_minus_ext[PETSC_MAX_PATH_LEN];
-
-    PetscCall(PetscStrlen(filename, &len));
-    PetscCall(PetscStrncpy(viewername_minus_ext, filename, len - 2));
-    PetscCall(PetscSNPrintf(dfilename, PETSC_MAX_PATH_LEN - 1, "%s_swarm_fields.pbin", viewername_minus_ext));
-  } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "File extension must by .xmf");
+  PetscCheck(flg, PETSC_COMM_SELF, PETSC_ERR_SUP, "File extension must be .xmf");
+  PetscCall(PetscStrlen(filename, &len));
+  PetscCall(PetscMemcpy(viewername_minus_ext, filename, len - 2));
+  viewername_minus_ext[len - 2] = '\0';
+  PetscCall(PetscSNPrintf(dfilename, PETSC_MAX_PATH_LEN - 1, "%s_swarm_fields.pbin", viewername_minus_ext));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
