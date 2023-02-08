@@ -9,7 +9,7 @@ class Configure(config.package.CMakePackage):
     self.includes         = ['El.hpp']
     self.precisions       = ['single','double']
     self.buildLanguages   = ['Cxx']
-    self.maxCxxVersion    = 'c++14'
+    # self.maxCxxVersion    = 'c++14'
     self.hastests         = 1
     self.hastestsdatafiles= 1
     self.downloaddirnames = ['Elemental']

@@ -4,7 +4,7 @@ import os
 class Configure(config.package.CMakePackage):
   def __init__(self, framework):
     config.package.CMakePackage.__init__(self, framework)
-    self.gitcommit        = '3.7.01'
+    self.gitcommit        = '36f65d03f48e504e63ad124f7f5cf74dd46af130' # release-candidate-4.0.0, Feb. 7 2023
     self.minversion       = '3.5.00'
     self.versionname      = 'KOKKOS_VERSION'
     self.download         = ['git://https://github.com/kokkos/kokkos.git']
@@ -15,7 +15,7 @@ class Configure(config.package.CMakePackage):
                              ['libkokkoscontainers.a','libkokkoscore.a']]
     self.functions        = ['']
     self.functionsCxx     = [1,'namespace Kokkos {void initialize(int&,char*[]);}','int one = 1;char* args[1];Kokkos::initialize(one,args);']
-    self.minCxxVersion    = 'c++14'
+    self.minCxxVersion    = 'c++17'
     self.buildLanguages   = ['Cxx'] # Depending on if cuda, hip or sycl is available, it will be modified.
     self.hastests         = 1
     self.requiresrpath    = 1
