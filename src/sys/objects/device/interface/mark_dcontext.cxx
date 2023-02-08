@@ -23,7 +23,7 @@ public:
   PETSC_NODISCARD PetscErrorCode construct_(PetscEvent event) const noexcept
   {
     PetscFunctionBegin;
-    PetscCall(PetscArrayzero(event, 1));
+    PetscCall(PetscMemzero(event, sizeof(*event)));
     PetscCall(underlying().reset(event));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
