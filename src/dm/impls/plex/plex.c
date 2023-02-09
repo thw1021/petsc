@@ -597,7 +597,7 @@ PetscErrorCode VecView_Plex_Native(Vec originalv, PetscViewer viewer)
         PetscCall(VecGetLocalSize(originalv, &n));
         PetscCall(PetscSFGetGraph(dm->sfNatural, &nroots, NULL, NULL, NULL));
         if (n == nroots) {
-          PetscCall(DMGetGlobalVector(dm, &v));
+          PetscCall(DMPlexCreateNaturalVector(dm, &v));
           PetscCall(DMPlexGlobalToNaturalBegin(dm, originalv, v));
           PetscCall(DMPlexGlobalToNaturalEnd(dm, originalv, v));
           PetscCall(PetscObjectGetName((PetscObject)originalv, &vecname));
@@ -622,7 +622,7 @@ PetscErrorCode VecView_Plex_Native(Vec originalv, PetscViewer viewer)
     if (isseq) PetscCall(VecView_Seq(v, viewer));
     else PetscCall(VecView_MPI(v, viewer));
   }
-  if (v != originalv) PetscCall(DMRestoreGlobalVector(dm, &v));
+  if (v != originalv) PetscCall(VecDestroy(&v));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
