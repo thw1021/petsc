@@ -558,6 +558,7 @@ linux-cuda-cmplx:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u22
   tags:
     - cuda-stage3
   variables:
@@ -567,6 +568,7 @@ linux-cuda-double-64idx:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u22
   tags:
     - cuda-stage3
   variables:
@@ -589,6 +591,7 @@ linux-cuda-uni-pkgs:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u22
   tags:
     - cuda-stage3
   variables:
@@ -611,6 +614,7 @@ linux-viennacl:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u22
   tags:
     - cuda-stage3
   variables:
@@ -622,6 +626,7 @@ linux-without-fc:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u18
   tags:
     - gce-nfs
   variables:
@@ -641,6 +646,7 @@ linux-gcc-cxx-avx2:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u22
   tags:
     - name:petsc-knl-01
   variables:
@@ -650,6 +656,7 @@ linux-clang-avx:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u22
   tags:
     - name:petsc-knl-01
   variables:
@@ -704,6 +711,7 @@ linux-pkgs-cxx-mlib:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u22
   tags:
     - gce-u22-stage3
   variables:
@@ -769,6 +777,7 @@ linux-nagfor:
   extends:
     - .stage-3
     - .linux_test_nofflags
+    - .coverage-generate-u18
   tags:
     - gce-nfs, linux-mcpu
   variables:
@@ -792,6 +801,7 @@ linux-xsdk-dbg:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u18
   tags:
     - gce-nfs
   variables:
@@ -840,6 +850,7 @@ linux-opt-misc:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u18
   tags:
     - gce-nfs, linux-fast
   variables:
@@ -850,6 +861,7 @@ linux-pkgs-64idx:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u18
   tags:
     - gce-nfs, linux-mcpu
   variables:
@@ -860,6 +872,7 @@ linux-64idx-i8:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u18
   tags:
     - gce-nfs
   variables:
@@ -879,6 +892,7 @@ linux-opt-cxx-quad:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u18
   tags:
     - gce-nfs
   variables:
@@ -888,6 +902,7 @@ linux-ILP64:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u18
   tags:
     - gce-nfs
   variables:
@@ -898,6 +913,7 @@ linux-64idx-i8-uni:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u18
   tags:
     - gce-nfs
   variables:
