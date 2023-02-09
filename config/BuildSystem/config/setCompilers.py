@@ -122,7 +122,7 @@ class Configure(config.base.Configure):
     help.addArgument('Compilers', '-with-cc=<prog>',  nargs.Arg(None, None, 'Specify the C compiler'))
     help.addArgument('Compilers', '-CC=<prog>',             nargs.Arg(None, None, 'Specify the C compiler'))
     help.addArgument('Compilers', '-CFLAGS=<string>',       nargs.Arg(None, None, 'Specify the C compiler options'))
-    help.addArgument('Compilers', '-CC_LINKER_FLAGS=<string>',        nargs.Arg(None, [], 'Specify the C linker flags'))
+    help.addArgument('Compilers', '-CC_LINKER_FLAGS=<string>',        nargs.Arg(None, '', 'Specify the C linker flags'))
 
     help.addArgument('Compilers', '-CXXPP=<prog>',          nargs.Arg(None, None, 'Specify the C++ preprocessor'))
     help.addArgument('Compilers', '-CXXPPFLAGS=<string>',   nargs.Arg(None, None, 'Specify the C++ preprocessor options'))
@@ -130,14 +130,14 @@ class Configure(config.base.Configure):
     help.addArgument('Compilers', '-CXX=<prog>',            nargs.Arg(None, None, 'Specify the C++ compiler'))
     help.addArgument('Compilers', '-CXXFLAGS=<string>',     nargs.Arg(None, None, 'Specify the C++ compiler options, also passed to linker'))
     help.addArgument('Compilers', '-CXX_CXXFLAGS=<string>', nargs.Arg(None, '',   'Specify the C++ compiler-only options, not passed to linker'))
-    help.addArgument('Compilers', '-CXX_LINKER_FLAGS=<string>',       nargs.Arg(None, [], 'Specify the C++ linker flags'))
+    help.addArgument('Compilers', '-CXX_LINKER_FLAGS=<string>',       nargs.Arg(None, '', 'Specify the C++ linker flags'))
 
     help.addArgument('Compilers', '-FPP=<prog>',            nargs.Arg(None, None, 'Specify the Fortran preprocessor'))
     help.addArgument('Compilers', '-FPPFLAGS=<string>',     nargs.Arg(None, None, 'Specify the Fortran preprocessor options'))
     help.addArgument('Compilers', '-with-fc=<prog>',  nargs.Arg(None, None, 'Specify the Fortran compiler'))
     help.addArgument('Compilers', '-FC=<prog>',             nargs.Arg(None, None, 'Specify the Fortran compiler'))
     help.addArgument('Compilers', '-FFLAGS=<string>',       nargs.Arg(None, None, 'Specify the Fortran compiler options'))
-    help.addArgument('Compilers', '-FC_LINKER_FLAGS=<string>',        nargs.Arg(None, [], 'Specify the FC linker flags'))
+    help.addArgument('Compilers', '-FC_LINKER_FLAGS=<string>',        nargs.Arg(None, '', 'Specify the FC linker flags'))
 
     help.addArgument('Compilers', '-with-large-file-io=<bool>', nargs.ArgBool(None, 0, 'Allow IO with files greater then 2 GB'))
 
@@ -146,21 +146,21 @@ class Configure(config.base.Configure):
     help.addArgument('Compilers', '-with-cudac=<prog>',    nargs.Arg(None, None, 'Specify the CUDA compiler'))
     help.addArgument('Compilers', '-CUDAC=<prog>',         nargs.Arg(None, None, 'Specify the CUDA compiler'))
     help.addArgument('Compilers', '-CUDAFLAGS=<string>',   nargs.Arg(None, None, 'Specify the CUDA compiler options'))
-    help.addArgument('Compilers', '-CUDAC_LINKER_FLAGS=<string>',        nargs.Arg(None, [], 'Specify the CUDA linker flags'))
+    help.addArgument('Compilers', '-CUDAC_LINKER_FLAGS=<string>',        nargs.Arg(None, '', 'Specify the CUDA linker flags'))
 
     help.addArgument('Compilers', '-HIPPP=<prog>',        nargs.Arg(None, None, 'Specify the HIP preprocessor'))
     help.addArgument('Compilers', '-HIPPPFLAGS=<string>', nargs.Arg(None, None, 'Specify the HIP preprocessor options'))
     help.addArgument('Compilers', '-with-hipc=<prog>',    nargs.Arg(None, None, 'Specify the HIP compiler'))
     help.addArgument('Compilers', '-HIPC=<prog>',         nargs.Arg(None, None, 'Specify the HIP compiler'))
     help.addArgument('Compilers', '-HIPFLAGS=<string>',   nargs.Arg(None, None, 'Specify the HIP compiler options'))
-    help.addArgument('Compilers', '-HIPC_LINKER_FLAGS=<string>',        nargs.Arg(None, [], 'Specify the HIP linker flags'))
+    help.addArgument('Compilers', '-HIPC_LINKER_FLAGS=<string>',        nargs.Arg(None, '', 'Specify the HIP linker flags'))
 
     help.addArgument('Compilers', '-SYCLPP=<prog>',        nargs.Arg(None, None, 'Specify the SYCL preprocessor'))
     help.addArgument('Compilers', '-SYCLPPFLAGS=<string>', nargs.Arg(None, None, 'Specify the SYCL preprocessor options'))
     help.addArgument('Compilers', '-with-syclc=<prog>',    nargs.Arg(None, None, 'Specify the SYCL compiler'))
     help.addArgument('Compilers', '-SYCLC=<prog>',         nargs.Arg(None, None, 'Specify the SYCL compiler'))
     help.addArgument('Compilers', '-SYCLFLAGS=<string>',   nargs.Arg(None, None, 'Specify the SYCL compiler options'))
-    help.addArgument('Compilers', '-SYCLC_LINKER_FLAGS=<string>',        nargs.Arg(None, [], 'Specify the SYCL linker flags'))
+    help.addArgument('Compilers', '-SYCLC_LINKER_FLAGS=<string>',        nargs.Arg(None, '', 'Specify the SYCL linker flags'))
 
 ##    help.addArgument('Compilers', '-LD=<prog>',              nargs.Arg(None, None, 'Specify the executable linker'))
 ##    help.addArgument('Compilers', '-CC_LD=<prog>',           nargs.Arg(None, None, 'Specify the linker for C only'))
@@ -174,8 +174,8 @@ class Configure(config.base.Configure):
     help.addArgument('Compilers', '-AR_FLAGS=<string>',               nargs.Arg(None, None,   'Specify the archiver flags'))
     help.addArgument('Compilers', '-with-ranlib=<prog>',            nargs.Arg(None, None,   'Specify ranlib'))
     help.addArgument('Compilers', '-with-pic=<bool>',               nargs.ArgBool(None, 0, 'Compile with -fPIC or equivalent flag if possible'))
-    help.addArgument('Compilers', '-sharedLibraryFlags=<string>',     nargs.Arg(None, [], 'Specify the shared library flags'))
-    help.addArgument('Compilers', '-dynamicLibraryFlags=<string>',    nargs.Arg(None, [], 'Specify the dynamic library flags'))
+    help.addArgument('Compilers', '-sharedLibraryFlags=<string>',     nargs.Arg(None, '', 'Specify the shared library flags'))
+    help.addArgument('Compilers', '-dynamicLibraryFlags=<string>',    nargs.Arg(None, '', 'Specify the dynamic library flags'))
     help.addArgument('Compilers', '-LIBS=<string>',          nargs.Arg(None, None, 'Specify extra libraries for all links'))
     help.addArgument('Compilers', '-with-environment-variables=<bool>',nargs.ArgBool(None, 0, 'Use compiler variables found in environment'))
     help.addArgument('Compilers', '-with-cxx-dialect=<dialect>',nargs.Arg(None, 'auto', 'Dialect under which to compile C++ sources. Pass "c++17" to use "-std=c++17", "gnu++17" to use "-std=gnu++17" or pass just the numer (e.g. "17") to have PETSc auto-detect gnu extensions. Pass "auto" to let PETSc auto-detect everything or "0" to use the compiler"s default. Available: (11, 14, 17, auto, 0)'))
@@ -721,10 +721,10 @@ class Configure(config.base.Configure):
       else: setattr(self, flagsArg, '')
       self.logPrint('Initialized '+flagsArg+' to '+str(getattr(self, flagsArg)))
     for flagsArg in ['CC_LINKER_FLAGS', 'CXX_LINKER_FLAGS', 'FC_LINKER_FLAGS', 'CUDAC_LINKER_FLAGS', 'HIPC_LINKER_FLAGS', 'SYCLC_LINKER_FLAGS', 'sharedLibraryFlags', 'dynamicLibraryFlags']:
-      if isinstance(self.argDB[flagsArg],str): val = [self.argDB[flagsArg]]
+      if isinstance(self.argDB[flagsArg],list): val = ' '.join(self.argDB[flagsArg])
       else: val = self.argDB[flagsArg]
       setattr(self, flagsArg, val)
-      self.logPrint('Initialized '+flagsArg+' to '+str(getattr(self, flagsArg)))
+      self.logPrint('Initialized '+flagsArg+' to '+getattr(self, flagsArg))
     if 'LIBS' in self.argDB:
       self.LIBS = self.argDB['LIBS']
     else:
@@ -2336,7 +2336,7 @@ class Configure(config.base.Configure):
           # expand to CC_LINKER_FLAGS or CXX_LINKER_FLAGS or FC_LINKER_FLAGS
           linker_flag_var = langMap[language]+'_LINKER_FLAGS'
           val = getattr(self,linker_flag_var)
-          val.append(testFlag)
+          val += ' '+testFlag
           setattr(self,linker_flag_var,val)
       self.popLanguage()
     return
@@ -2354,7 +2354,7 @@ class Configure(config.base.Configure):
           # expand to CC_LINKER_FLAGS or CXX_LINKER_FLAGS or FC_LINKER_FLAGS
           linker_flag_var = langMap[language]+'_LINKER_FLAGS'
           val = getattr(self,linker_flag_var)
-          val.append(testFlag)
+          val += ' '+testFlag
           setattr(self,linker_flag_var,val)
       self.popLanguage()
     return
