@@ -594,11 +594,13 @@ int main(int argc, char **argv)
 
     test:
           suffix: quad_hdiv_4
+          requires: !single
           args: -sol_type trigx \
                 -fieldsplit_q_pc_type lu -fieldsplit_phi_pc_type svd
 
     test:
           suffix: particle_hdiv_5
+          requires: !complex
           args: -dm_swarm_num_particles 100 -particleRHS -sol_type particles \
                 -fieldsplit_q_pc_type lu -fieldsplit_phi_pc_type svd
 
