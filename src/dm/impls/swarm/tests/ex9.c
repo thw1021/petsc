@@ -959,7 +959,7 @@ static PetscErrorCode InitializeParticles_PerturbedWeights(DM sw, AppCtx *user)
     totalcellweight += weight_x[c];
     PetscCheck(Npc / size == vEnd - vStart, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Number of particles %d in cell (rank %d/%d) != %d number of velocity vertices", rank, size, Npc, vEnd - vStart);
 
-    /* Set weights to be gaussian in velocity cells (using exact solutiun)*/
+    /* Set weights to be gaussian in velocity cells (using exact solution) */
     for (cv = 0; cv < vEnd - vStart; ++cv) {
       PetscInt           Nc;
       const PetscScalar *array_v;
@@ -2081,12 +2081,13 @@ int main(int argc, char **argv)
    build:
      requires: !single !complex
 
+    # Recommend -draw_size 500,500
    testset:
      args: -dm_plex_dim 2 -fake_1D -dm_plex_simplex 0 -dm_plex_box_faces 20,1 -dm_plex_box_lower 0,-1 -dm_plex_box_upper 12.5664,1 \
-           -dm_swarm_coordinate_density constant -dm_swarm_velocity_density gaussian -dm_swarm_num_particles 100 \
+           -dm_swarm_coordinate_density constant -dm_swarm_num_particles 100 \
            -dm_plex_box_bd periodic,none -periodic -ts_type basicsymplectic -ts_basicsymplectic_type 1\
            -dm_view -output_step 50 -sigma 1.0e-8 -timeScale 2.0e-14\
-           -ts_monitor_sp_swarm -ts_monitor_sp_swarm_retain 0 -ts_monitor_sp_swarm_phase 0 -draw_size 500,500
+           -ts_monitor_sp_swarm -ts_monitor_sp_swarm_retain 0 -ts_monitor_sp_swarm_phase 0
      test:
        suffix: none_1d
        args: -em_type none -error
@@ -2094,20 +2095,19 @@ int main(int argc, char **argv)
        suffix: coulomb_1d
        args: -em_type coulomb
 
+   # For verification, we use
+   # -dm_plex_box_faces 100,1 -vdm_plex_box_faces 8000 -dm_swarm_num_particles 800000
+   # -ts_monitor_sp_swarm_multi_species 0 -ts_monitor_sp_swarm_retain 0 -ts_monitor_sp_swarm_phase 1 -draw_size 500,500
    testset:
-     args: -dm_plex_dim 2 -dm_plex_box_bd periodic,none -dm_plex_simplex 0 -dm_plex_box_faces 100,1 -dm_plex_box_lower 0,-0.5 -dm_plex_box_upper 12.5664,0.5\
+     args: -dm_plex_dim 2 -dm_plex_box_bd periodic,none -dm_plex_simplex 0 -dm_plex_box_faces 10,1 -dm_plex_box_lower 0,-0.5 -dm_plex_box_upper 12.5664,0.5\
            -ts_dt 0.03 -ts_max_time 500 -ts_max_steps 500 -ts_type basicsymplectic -ts_basicsymplectic_type 1\
            -em_snes_atol 1.e-12 -em_snes_error_if_not_converged -em_ksp_error_if_not_converged\
-           -dm_swarm_num_species 1 -dm_swarm_num_particles 800000 -dm_view\
-           -vdm_plex_dim 1 -vdm_plex_box_lower -10 -vdm_plex_box_upper 10 -vdm_plex_simplex 0 -vdm_plex_box_faces 8000\
-           -output_step 1 -fake_1D -perturbed_weights -periodic -cosine_coefficients 0.01,0.5 -charges -1.0,1.0 -total_weight 1.0\
-           -ts_monitor_sp_swarm_multi_species 0 -ts_monitor_sp_swarm_retain 0 -ts_monitor_sp_swarm_phase 1 -draw_size 500,500
+           -dm_swarm_num_species 1 -dm_swarm_num_particles 100 -dm_view\
+           -vdm_plex_dim 1 -vdm_plex_box_lower -10 -vdm_plex_box_upper 10 -vdm_plex_simplex 0 -vdm_plex_box_faces 10\
+           -output_step 1 -fake_1D -perturbed_weights -periodic -cosine_coefficients 0.01,0.5 -charges -1.0,1.0 -total_weight 1.0
      test:
        suffix: uniform_equilibrium_1d
-       args: -cosine_coefficients 0.0,0.5 -em_type primal -petscspace_degree 1 -em_pc_type svd\
-            -dm_plex_box_faces 10,1 -dm_swarm_num_particles 100 -vdm_plex_box_faces 10 \
-            -em_ksp_view_rhs_no -em_ksp_convergence_reason_no -em_snes_converged_reason_no \
-            -em_ksp_monitor_no -em_snes_monitor_no -em_snes_view_solution_no
+       args: -cosine_coefficients 0.0,0.5 -em_type primal -petscspace_degree 1 -em_pc_type svd
      test:
        suffix: uniform_primal_1d
        args: -em_type primal -petscspace_degree 1 -em_pc_type svd
@@ -2120,7 +2120,7 @@ int main(int argc, char **argv)
              -ksp_rtol 1e-10\
              -em_ksp_type preonly\
              -em_ksp_error_if_not_converged\
-             -em_snes_err_if_not_convered\
+             -em_snes_error_if_not_converged\
              -em_pc_type fieldsplit\
              -em_fieldsplit_field_pc_type lu \
              -em_fieldsplit_potential_pc_type svd\
@@ -2152,13 +2152,6 @@ int main(int argc, char **argv)
              -field_petscdualspace_form_degree -1 \
              -field_petscdualspace_order 1 \
              -field_petscdualspace_lagrange_trimmed true \
-             -ksp_gmres_restart 500 \
-             -fieldsplit_phi_pc_svd_monitor_no \
-             -em_ksp_view_rhs_no \
-             -em_ksp_convergence_reason_no \
-             -em_snes_converged_reason_no \
-             -em_ksp_monitor_no \
-             -em_snes_monitor_no \
-             -em_snes_view_solution_no
+             -ksp_gmres_restart 500
 
 TEST*/
