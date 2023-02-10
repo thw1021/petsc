@@ -866,7 +866,7 @@ static PetscErrorCode InitializeParticles_PerturbedWeights(DM sw, AppCtx *user)
   PetscOptionsEnd();
 
   Np = N[0];
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Np = %d\n", Np));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Np = %" PetscInt_FMT "\n", Np));
   PetscCall(DMGetDimension(sw, &dim));
   PetscCall(DMSwarmGetCellDM(sw, &dm));
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
@@ -955,9 +955,9 @@ static PetscErrorCode InitializeParticles_PerturbedWeights(DM sw, AppCtx *user)
       /*We have to transform the quadrature weights as well*/
       weight_x[c] += den_x * (wq_x[q] * detJ_x);
     }
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "c:%d [x_a,x_b] = %1.15f,%1.15f -> cell weight = %1.15f\n", c, coords_x[0], coords_x[2], weight_x[c]));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "c:%" PetscInt_FMT " [x_a,x_b] = %1.15f,%1.15f -> cell weight = %1.15f\n", c, (double)PetscRealPart(coords_x[0]), (double)PetscRealPart(coords_x[2]), (double)weight_x[c]));
     totalcellweight += weight_x[c];
-    PetscCheck(Npc / size == vEnd - vStart, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Number of particles %d in cell (rank %d/%d) != %d number of velocity vertices", rank, size, Npc, vEnd - vStart);
+    PetscCheck(Npc / size == vEnd - vStart, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Number of particles %" PetscInt_FMT " in cell (rank %d/%d) != %" PetscInt_FMT " number of velocity vertices", Npc, rank, size, vEnd - vStart);
 
     /* Set weights to be gaussian in velocity cells (using exact solution) */
     for (cv = 0; cv < vEnd - vStart; ++cv) {
@@ -979,7 +979,7 @@ static PetscErrorCode InitializeParticles_PerturbedWeights(DM sw, AppCtx *user)
     PetscCall(DMPlexRestoreCellCoordinates(dm, c, &isDGx, &Ncx, &array_x, &coords_x));
     PetscCall(PetscFree(pidx));
   }
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "particle weight sum = %1.10f cell weight sum = %1.10f\n", totalcellweight, weightsum));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "particle weight sum = %1.10f cell weight sum = %1.10f\n", (double)totalcellweight, (double)weightsum));
   PetscCall(PetscQuadratureDestroy(&quad_x));
   PetscCall(DMSwarmSortRestoreAccess(sw));
   PetscCall(DMSwarmRestoreField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&x));
@@ -1030,13 +1030,13 @@ static PetscErrorCode InitializeConstants(DM sw, AppCtx *user)
       Area = (gmax[0] - gmin[0]) * (gmax[1] - gmin[1]) * (gmax[2] - gmin[2]);
       break;
     default:
-      SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Dimension %d not supported", dim);
+      SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Dimension %" PetscInt_FMT " not supported", dim);
     }
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "dim = %d\ttotalWeight = %f, user->charges[species[p]] = %f\ttotalCharge = %f, Total Area = %f\n", dim, totalWeight, user->charges[0], totalCharge, Area));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "dim = %" PetscInt_FMT "\ttotalWeight = %f, user->charges[species[p]] = %f\ttotalCharge = %f, Total Area = %f\n", dim, (double)totalWeight, (double)user->charges[0], (double)totalCharge, (double)Area));
     param->sigma = PetscAbsReal(totalCharge / (Area));
 
-    PetscPrintf(PETSC_COMM_SELF, "sigma: %g\n", param->sigma);
-    PetscPrintf(PETSC_COMM_SELF, "(x0,v0,t0,m0,q0,phi0): (%e, %e, %e, %e, %e, %e) - (P, V) = (%e, %e)\n", param->x0, param->v0, param->t0, param->m0, param->q0, param->phi0, param->poissonNumber, param->vlasovNumber);
+    PetscPrintf(PETSC_COMM_SELF, "sigma: %g\n", (double)param->sigma);
+    PetscPrintf(PETSC_COMM_SELF, "(x0,v0,t0,m0,q0,phi0): (%e, %e, %e, %e, %e, %e) - (P, V) = (%e, %e)\n", (double)param->x0, (double)param->v0, (double)param->t0, (double)param->m0, (double)param->q0, (double)param->phi0, (double)param->poissonNumber, (double)param->vlasovNumber);
   }
   /* Setup Constants */
   {
@@ -1861,7 +1861,7 @@ static PetscErrorCode ComputeError(TS ts, Vec U, Vec E)
     if (user->error) {
       const PetscReal en   = 0.5 * DMPlex_DotRealD_Internal(dim, v, v);
       const PetscReal exen = 0.5 * PetscSqr(v0);
-      PetscCall(PetscPrintf(comm, "t %.4g: p%" PetscInt_FMT " error [%.2g %.2g] sol [(%.6lf %.6lf) (%.6lf %.6lf)] exact [(%.6lf %.6lf) (%.6lf %.6lf)] energy/exact energy %g / %g (%.10lf%%)\n", t, p, (double)DMPlex_NormD_Internal(dim, &e[(p * 2 + 0) * dim]), (double)DMPlex_NormD_Internal(dim, &e[(p * 2 + 1) * dim]), (double)x[0], (double)x[1], (double)v[0], (double)v[1], (double)xe[0], (double)xe[1], (double)ve[0], (double)ve[1], (double)en, (double)exen, (double)PetscAbsReal(exen - en) * 100. / exen));
+      PetscCall(PetscPrintf(comm, "t %.4g: p%" PetscInt_FMT " error [%.2g %.2g] sol [(%.6lf %.6lf) (%.6lf %.6lf)] exact [(%.6lf %.6lf) (%.6lf %.6lf)] energy/exact energy %g / %g (%.10lf%%)\n", (double)t, p, (double)DMPlex_NormD_Internal(dim, &e[(p * 2 + 0) * dim]), (double)DMPlex_NormD_Internal(dim, &e[(p * 2 + 1) * dim]), (double)x[0], (double)x[1], (double)v[0], (double)v[1], (double)xe[0], (double)xe[1], (double)ve[0], (double)ve[1], (double)en, (double)exen, (double)(PetscAbsReal(exen - en) * 100. / exen)));
     }
   }
   PetscCall(DMSwarmRestoreField(sw, "initCoordinates", NULL, NULL, (void **)&coords));
@@ -1994,7 +1994,7 @@ static PetscErrorCode MigrateParticles_Periodic(TS ts)
         } else {
           x[p * dim + d] = pos[p * dim + d];
         }
-        PetscCheck(x[p * dim + d] >= lower_bound[d] && x[p * dim + d] <= upper_bound[d], PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "p: %" PetscInt_FMT "x[%" PetscInt_FMT "] %g", p, d, x[p * dim + d]);
+        PetscCheck(x[p * dim + d] >= lower_bound[d] && x[p * dim + d] <= upper_bound[d], PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "p: %" PetscInt_FMT "x[%" PetscInt_FMT "] %g", p, d, (double)x[p * dim + d]);
         v[p * dim + d] = mom[p * dim + d];
       }
     }
