@@ -55,7 +55,7 @@ PetscErrorCode PetscDrawSetSave(PetscDraw draw, const char filename[])
       PetscCall(PetscStrlen(imageext, &l2));
       PetscCall(PetscStrncpy(buf, filename, sizeof(buf)));
       buf[l1 - l2 + 1] = '\0';
-      savename = buf;
+      savename         = buf;
     }
   }
 
