@@ -348,7 +348,7 @@ static void f0_r2(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff
 static PetscErrorCode computeFEMMoments(DM dm, Vec u, PetscReal moments[3], AppCtx *user)
 {
   PetscDS     prob;
-  PetscScalar mom, sigma_int;
+  PetscScalar mom;
   PetscInt    field = 0;
 
   PetscFunctionBeginUser;
@@ -392,7 +392,7 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
 
   for (c = 0; c < cEnd - cStart; ++c) {
-    PetscInt *pidx, Npc, q, p_prev;
+    PetscInt *pidx, Npc, q;
     PetscReal sumpc = 0., weightsumpc = 0., chargesumpc = 0.;
 
     PetscCall(DMSwarmSortGetPointsPerCell(sw, c, &Npc, &pidx));
@@ -401,7 +401,6 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
       sumpc += E[p * dim];
       weightsumpc += weight[p];
       chargesumpc += user->charges[0] * weight[p];
-      p_prev = p;
     }
     PetscCall(PetscFree(pidx));
   }
@@ -412,7 +411,6 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
       if (temp > Emax) Emax = temp;
     }
     Enorm += PetscSqrtReal(E[p * dim] * E[p * dim]);
-    PetscReal absE = PetscSqrtReal(E[p * dim] * E[p * dim]);
     sum += E[p * dim];
     weightsum += weight[p];
     chargesum += user->charges[0] * weight[p];
@@ -445,7 +443,7 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
   }
   PetscCall(DMSwarmDestroyGlobalVectorFromField(sw, "charges", &rho));
 
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%f\t%+e\t%e\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n", t, sum, Enorm, lgEnorm, Emax, lgEmax, chargesum, pmoments[0], pmoments[1], pmoments[2], fmoments[0], fmoments[1], fmoments[2]));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%f\t%+e\t%e\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n", (double)t, (double)sum, (double)Enorm, (double)lgEnorm, (double)Emax, (double)lgEmax, (double)chargesum, (double)pmoments[0], (double)pmoments[1], (double)pmoments[2], (double)fmoments[0], (double)fmoments[1], (double)fmoments[2]));
   PetscCall(PetscDrawLGAddPoint(user->drawlg_ef, &t, &lgEmax));
   PetscCall(PetscDrawLGDraw(user->drawlg_ef));
   PetscCall(PetscDrawSave(user->drawef));
@@ -458,7 +456,7 @@ PetscErrorCode MonitorInitialConditions(TS ts, PetscInt step, PetscReal t, Vec U
   DM                 dm, sw;
   const PetscScalar *u;
   PetscReal         *weight, *pos, *vel;
-  PetscInt           dim, p, d, Np, cStart, cEnd, c;
+  PetscInt           dim, p, Np, cStart, cEnd;
 
   PetscFunctionBegin;
   if (step < 0) PetscFunctionReturn(PETSC_SUCCESS); /* -1 indicates interpolated solution */
@@ -498,12 +496,6 @@ PetscErrorCode MonitorInitialConditions(TS ts, PetscInt step, PetscReal t, Vec U
       PetscCall(PetscDrawHGAddValue(user->drawhgic_w, weight[p]));
     }
 
-    PetscInt *pidx, Npc, q;
-    for (c = 0; c < cEnd - cStart; ++c) {
-      PetscCall(DMSwarmSortGetPointsPerCell(sw, c, &Npc, &pidx));
-      for (q = 0; q < Npc; ++q) { const PetscInt p = pidx[q]; }
-      PetscCall(PetscFree(pidx));
-    }
     PetscCall(VecRestoreArrayRead(U, &u));
     PetscCall(PetscDrawHGDraw(user->drawhgic_x));
     PetscCall(PetscDrawHGSave(user->drawhgic_x));
@@ -528,7 +520,7 @@ static PetscErrorCode MonitorPositions_2D(TS ts, PetscInt step, PetscReal t, Vec
   PetscScalar    *x, *v, *weight;
   PetscReal       lower[3], upper[3], speed;
   const PetscInt *s;
-  PetscInt        dim, p, q, cStart, cEnd, c;
+  PetscInt        dim, cStart, cEnd, c;
 
   PetscFunctionBeginUser;
   if (step > 0 && step % user->ostep == 0) {
@@ -576,13 +568,11 @@ static PetscErrorCode MonitorPositions_2D(TS ts, PetscInt step, PetscReal t, Vec
 
 static PetscErrorCode MonitorPoisson(TS ts, PetscInt step, PetscReal t, Vec U, void *ctx)
 {
-  AppCtx            *user = (AppCtx *)ctx;
-  DM                 dm, sw;
-  PetscScalar       *x, *E, *weight, *pot, *charges;
-  PetscReal          lower[3], upper[3], xval;
-  const PetscScalar *rho_nums, *phi;
-  PetscInt           dim, p, q, cStart, cEnd, c, size, fields = 1;
-  Vec                Phi;
+  AppCtx      *user = (AppCtx *)ctx;
+  DM           dm, sw;
+  PetscScalar *x, *E, *weight, *pot, *charges;
+  PetscReal    lower[3], upper[3], xval;
+  PetscInt     dim, cStart, cEnd, c;
 
   PetscFunctionBeginUser;
   if (step > 0 && step % user->ostep == 0) {
@@ -604,7 +594,7 @@ static PetscErrorCode MonitorPoisson(TS ts, PetscInt step, PetscReal t, Vec U, v
     PetscCall(DMSwarmSortGetAccess(sw));
     PetscReal weightsum_global = 0.0;
     for (c = 0; c < cEnd - cStart; ++c) {
-      PetscReal weightsum = 0.0, Eavg = 0.0, Esum = 0.0;
+      PetscReal weightsum = 0.0, Esum = 0.0;
       PetscInt *pidx, Npc, q;
       PetscCall(DMSwarmSortGetPointsPerCell(sw, c, &Npc, &pidx));
       for (q = 0; q < Npc; ++q) {
@@ -612,17 +602,12 @@ static PetscErrorCode MonitorPoisson(TS ts, PetscInt step, PetscReal t, Vec U, v
         Esum += E[p * dim];
         weightsum += weight[p];
       }
-      Eavg = Esum / Npc;
       weightsum_global += weightsum;
       xval = (c + 0.5) * ((upper - lower) / (cEnd - cStart));
       PetscCall(PetscDrawSPAddPoint(user->EDrawSP, &xval, &Esum));
       PetscCall(PetscFree(pidx));
     }
     for (c = 0; c < (cEnd - cStart); ++c) {
-      PetscBool          isDG;
-      PetscInt           Nc;
-      PetscScalar       *coords = NULL;
-      const PetscScalar *coords_arr;
       xval = (c + 0.5) * ((upper - lower) / (cEnd - cStart));
       PetscCall(PetscDrawSPAddPoint(user->RhoDrawSP, &xval, &charges[c]));
       PetscCall(PetscDrawSPAddPoint(user->PotDrawSP, &xval, &pot[c]));
@@ -764,9 +749,7 @@ static PetscErrorCode CreateFEM(DM dm, AppCtx *user)
   PetscCall(DMPlexIsSimplex(dm, &simplex));
   if (user->em == EM_MIXED) {
     DMLabel        label;
-    PetscWeakForm  wf;
     const PetscInt id = 1;
-    PetscInt       bd;
 
     PetscCall(PetscFECreateDefault(PETSC_COMM_SELF, dim, dim, simplex, "field_", PETSC_DETERMINE, &feq));
     PetscCall(PetscObjectSetName((PetscObject)feq, "field"));
@@ -865,8 +848,8 @@ static PetscErrorCode InitializeParticles_PerturbedWeights(DM sw, AppCtx *user)
   PetscScalar *weight;
   PetscReal   *x, *v, vmin[3], vmax[3], gmin[3], gmax[3], xi0[3];
   PetscInt    *N, Ns, dim, *cellid, *species, Np, cStart, cEnd, Npc, n;
-  PetscInt     p, q, s, c, d, cell, cv;
-  PetscBool    simplex, flg;
+  PetscInt     p, q, s, c, d, cv;
+  PetscBool    flg;
   PetscMPIInt  size, rank;
   Parameter   *param;
 
@@ -925,7 +908,7 @@ static PetscErrorCode InitializeParticles_PerturbedWeights(DM sw, AppCtx *user)
     PetscCall(DMPlexComputeCellGeometryFVM(dm, cell, &volume, centroid, NULL));
     for (q = 0; q < Npc; ++q) {
       const PetscInt p = pidx[q];
-      PetscReal      centroid_v[3];
+
       for (d = 0; d < dim; ++d) {
         x[p * dim + d] = centroid[d];
         v[p * dim + d] = vmin[0] + (q + 0.5) * (vmax[0] - vmin[0]) / Npc;
@@ -1012,7 +995,7 @@ static PetscErrorCode InitializeConstants(DM sw, AppCtx *user)
   DM         dm;
   PetscInt  *species;
   PetscReal *weight, totalCharge = 0., totalWeight = 0., gmin[3], gmax[3];
-  PetscInt   Np, s, p, dim;
+  PetscInt   Np, p, dim;
 
   PetscFunctionBegin;
   PetscCall(DMSwarmGetCellDM(sw, &dm));
@@ -1081,7 +1064,6 @@ static PetscErrorCode InitializeVelocites_Fake1D(DM sw, AppCtx *user)
   DM         dm;
   PetscReal *v;
   PetscInt  *species, cStart, cEnd;
-  void      *ctx;
   PetscInt   dim, Np, p;
 
   PetscFunctionBegin;
@@ -1097,7 +1079,6 @@ static PetscErrorCode InitializeVelocites_Fake1D(DM sw, AppCtx *user)
   PetscCall(PetscRandomSetFromOptions(rnd));
 
   for (p = 0; p < Np; ++p) {
-    PetscInt  s    = species[p], d;
     PetscReal a[3] = {0., 0., 0.}, vel[3] = {0., 0., 0.};
 
     PetscCall(PetscRandomGetValueReal(rnd, &a[0]));
@@ -1213,17 +1194,15 @@ static PetscErrorCode ComputeFieldAtParticles_Coulomb(SNES snes, DM sw, PetscRea
 
 static PetscErrorCode ComputeFieldAtParticles_Primal(SNES snes, DM sw, PetscReal E[])
 {
-  DM              dm, dm0;
+  DM              dm;
   AppCtx         *user;
   PetscDS         ds;
   PetscFE         fe;
   Mat             M_p, M;
-  Vec             phi, locPhi, rho, f, Evec;
+  Vec             phi, locPhi, rho, f;
   PetscReal      *coords;
-  PetscInt        dim, d, cStart, cEnd, c, Np, m;
-  PetscReal       momentTol = 100. * PETSC_MACHINE_EPSILON, chargeTol = 1e-13;
+  PetscInt        dim, d, cStart, cEnd, c, Np;
   PetscQuadrature q;
-  PetscFEGeom     feGeometry;
 
   PetscFunctionBegin;
   PetscCall(DMGetDimension(sw, &dim));
@@ -1232,8 +1211,6 @@ static PetscErrorCode ComputeFieldAtParticles_Primal(SNES snes, DM sw, PetscReal
 
   KSP       ksp;
   Vec       rho0;
-  PetscReal pmoments[3]; /* \int f, \int x f, \int r^2 f */
-  PetscReal fmoments[3]; /* \int \hat f, \int x \hat f, \int r^2 \hat f */
   /* Create the charges rho */
   PetscCall(SNESGetDM(snes, &dm));
 
@@ -1354,12 +1331,12 @@ static PetscErrorCode ComputeFieldAtParticles_Mixed(SNES snes, DM sw, PetscReal 
   KSP             ksp;
   IS              potential_IS;
   PetscDS         ds;
-  PetscFE         fe, fephi;
-  PetscFEGeom     feGeometry, fephiGemoetry;
+  PetscFE         fe;
+  PetscFEGeom     feGeometry;
   Mat             M_p, M;
   Vec             phi, locPhi, rho, f, temp_rho, rho0;
   PetscQuadrature q;
-  PetscReal      *coords, chargeTol = 1e-13, *pot, pmoments[3], fmoments[3];
+  PetscReal      *coords, *pot;
   PetscInt        dim, d, cStart, cEnd, c, Np, fields = 1;
 
   PetscFunctionBegin;
@@ -1455,7 +1432,6 @@ static PetscErrorCode ComputeFieldAtParticles_Mixed(SNES snes, DM sw, PetscReal 
     PetscTabulation tab;
     PetscScalar    *clPhi = NULL;
     PetscReal      *pcoord, *refcoord;
-    PetscReal       v[3], J[9], invJ[9], detJ;
     PetscInt       *points;
     PetscInt        Ncp, cp;
 
