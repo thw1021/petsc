@@ -859,6 +859,8 @@ Otherwise you need a different combination of C, C++, and Fortran compilers")
           if self.checkCrossLink(fbody,cbody,language1='FC',language2='C'):
             self.logWrite(self.setCompilers.restoreLog())
             self.logPrint('Fortran requires -lmpifort_cray to link with C compiler', 3, 'compilers')
+            self.setCompilers.LIBS = oldLibs
+            self.flibs.append('-lmpifort_cray')
             skipfortranlibraries = 1
           else:
             self.logWrite(self.setCompilers.restoreLog())
@@ -872,17 +874,22 @@ Otherwise you need a different combination of C, C++, and Fortran compilers")
       skipfortranlibraries = 0
     if skipfortranlibraries and hasattr(self.setCompilers, 'CXX'):
       self.setCompilers.saveLog()
+      oldLibs = self.setCompilers.LIBS
       try:
+        self.setCompilers.LIBS =  ' '.join([self.libraries.getLibArgument(lib) for lib in self.flibs]) + ' ' + self.setCompilers.LIBS
         if self.checkCrossLink(fbody,cxxbody,language1='FC',language2='C++'):
           self.logWrite(self.setCompilers.restoreLog())
-          self.logPrint('Fortran libraries are not needed when using C++ linker')
+          self.setCompilers.LIBS = oldLibs
+          self.logPrint('Additional Fortran libraries are not needed when using C++ linker')
         else:
           self.logWrite(self.setCompilers.restoreLog())
+          self.setCompilers.LIBS = oldLibs
           self.logPrint('Fortran code cannot directly be linked with C++ linker, therefore will determine needed Fortran libraries')
           skipfortranlibraries = 0
       except RuntimeError as e:
         self.logWrite(self.setCompilers.restoreLog())
         self.logPrint('Error message from compiling {'+str(e)+'}', 4, 'compilers')
+        self.setCompilers.LIBS = oldLibs
         self.logPrint('Fortran code cannot directly be linked with CXX linker, therefore will determine needed Fortran libraries')
         skipfortranlibraries = 0
 
