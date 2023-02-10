@@ -96,7 +96,3 @@ Time     Step Part     Energy
 0.000000    0 KE	     3750.0000
 0.000000    0 PE	    23.96177277
 0.000000    0 E	     3773.9618
-WARNING! There are options you set that were not used!
-WARNING! could be spelling mistake, etc!
-There is one unused database option. It is:
-Option left: name:-petscspace_degree value: 1 source: command line

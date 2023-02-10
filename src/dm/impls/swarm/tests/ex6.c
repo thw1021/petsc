@@ -1045,7 +1045,7 @@ int main(int argc, char **argv)
      args: -dm_plex_dim 2 -dm_plex_simplex 0 -dm_plex_box_faces 1,1 -dm_plex_box_lower -5,-5 -dm_plex_box_upper 5,5 \
            -dm_swarm_num_particles 2 -dm_swarm_coordinate_function circleSingleX -dm_swarm_velocity_function circleSingleV \
            -ts_type basicsymplectic\
-           -em_type primal -em_pc_type svd -petscspace_degree 1\
+           -em_type primal -em_pc_type svd\
            -dm_view -output_step 50 -error -ts_dt 0.01 -ts_max_time 10.0 -ts_max_steps 10\
            -petscspace_degree 2 -petscfe_default_quadrature_order 3 -sigma 1.0e-8 -timeScale 2.0e-14
      test:
@@ -1064,9 +1064,9 @@ int main(int argc, char **argv)
    testset:
      args: -dm_swarm_num_particles 2 -dm_swarm_coordinate_function circleSingleX -dm_swarm_velocity_function circleSingleV \
            -ts_type theta -ts_theta_theta 0.5 -ts_convergence_estimate -convest_num_refine 2 \
-             -mat_type baij -ksp_error_if_not_converged -em_pc_type svd -petscspace_degree 1\
+             -mat_type baij -ksp_error_if_not_converged -em_pc_type svd\
            -dm_view -output_step 50 -error -ts_dt 0.01 -ts_max_time 10.0 -ts_max_steps 10\
-           -petscspace_degree 2 -petscfe_default_quadrature_order 3 -pc_type svd -sigma 1.0e-8 -timeScale 2.0e-14
+           -pc_type svd -sigma 1.0e-8 -timeScale 2.0e-14
      test:
        suffix: im_2d_0
        args: -dm_plex_dim 2 -dm_plex_simplex 0 -dm_plex_box_faces 1,1 -dm_plex_box_lower -5,-5 -dm_plex_box_upper 5,5
@@ -1098,7 +1098,7 @@ int main(int argc, char **argv)
      args: -dm_plex_dim 2 -dm_plex_simplex 0 -dm_plex_box_faces 10,10 -dm_plex_box_lower -5,-5 -dm_plex_box_upper 5,5 \
            -dm_swarm_num_particles 10 -dm_swarm_coordinate_function circleMultipleX -dm_swarm_velocity_function circleMultipleV \
            -ts_convergence_estimate -convest_num_refine 2 \
-             -em_pc_type lu -petscspace_degree 1\
+             -em_pc_type lu\
            -dm_view -output_step 50 -error\
            -pc_type svd -sigma 1.0e-8 -timeScale 2.0e-14 -ts_dt 0.01 -ts_max_time 10.0 -ts_max_steps 10
      test:
