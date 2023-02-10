@@ -1209,8 +1209,8 @@ static PetscErrorCode ComputeFieldAtParticles_Primal(SNES snes, DM sw, PetscReal
   PetscCall(DMSwarmGetLocalSize(sw, &Np));
   PetscCall(DMGetApplicationContext(sw, (void *)&user));
 
-  KSP       ksp;
-  Vec       rho0;
+  KSP ksp;
+  Vec rho0;
   /* Create the charges rho */
   PetscCall(SNESGetDM(snes, &dm));
 
