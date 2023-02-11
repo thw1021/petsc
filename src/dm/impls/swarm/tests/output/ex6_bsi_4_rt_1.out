@@ -15,7 +15,3 @@ Time     Step Part     Energy
 0.000000    0 KE	      750.0000
 0.000000    0 PE	    0
 0.000000    0 E	      750.0000
-WARNING! There are options you set that were not used!
-WARNING! could be spelling mistake, etc!
-There is one unused database option. It is:
-Option left: name:-em_fieldsplit_pc_type value: lu source: command line

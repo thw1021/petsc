@@ -1126,7 +1126,6 @@ int main(int argc, char **argv)
        args: -ts_type basicsymplectic -ts_basicsymplectic_type 4\
              -pc_fieldsplit_detect_saddle_point\
              -pc_type fieldsplit\
-             -em_fieldsplit_pc_type lu\
              -pc_fieldsplit_type schur\
              -pc_fieldsplit_schur_precondition full \
              -field_petscspace_degree 2\

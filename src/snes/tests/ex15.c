@@ -356,7 +356,7 @@ static PetscErrorCode InitializeParticlesAndWeights(DM sw, AppCtx *user)
     weightsum += PetscRealPart(weight[p]);
   }
 
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "weightsum = %1.10f\n", weightsum));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "weightsum = %1.10f\n", (double)weightsum));
   PetscCall(DMSwarmSortRestoreAccess(sw));
   PetscCall(DMSwarmRestoreField(sw, "w_q", NULL, NULL, (void **)&weight));
   PetscFunctionReturn(PETSC_SUCCESS);
