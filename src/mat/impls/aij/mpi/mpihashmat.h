@@ -82,7 +82,6 @@ static PetscErrorCode MatAssemblyEnd_MPI_Hash(Mat A, MatAssemblyType type)
     }
   }
   PetscCall(MatStashScatterEnd_Private(&A->stash));
-  PetscCall(MatStashDestroy_Private(&A->stash));
   if (type != MAT_FINAL_ASSEMBLY) PetscFunctionReturn(PETSC_SUCCESS);
 
   A->insertmode = NOT_SET_VALUES; /* this was set by the previous calls to MatSetValues() */
