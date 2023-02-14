@@ -959,7 +959,7 @@ cdef class PC(Object):
         CHKERR( PCDeflationSetCorrectionFactor(self.pc, fact) )
 
     def setDeflationSpaceToCompute(self, space_type, size):
-        cdef csize = asInt(size)
+        cdef PetscInt csize = asInt(size)
         cdef PetscPCDeflationSpaceType ctype = space_type
         CHKERR( PCDeflationSetSpaceToCompute(self.pc, space_type, csize) )
 
