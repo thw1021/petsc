@@ -224,7 +224,7 @@ PetscErrorCode DMCreateColoring_DA(DM da, ISColoringType ctype, ISColoring *colo
     if (size == 1) {
       ctype = IS_COLORING_GLOBAL;
     } else {
-      PetscCheck( (dim == 1) || !((m == 1 && bx == DM_BOUNDARY_PERIODIC) || (n == 1 && by == DM_BOUNDARY_PERIODIC) || (p == 1 && bz == DM_BOUNDARY_PERIODIC)),PetscObjectComm((PetscObject)da), PETSC_ERR_SUP, "IS_COLORING_LOCAL cannot be used for periodic boundary condition having both ends of the domain on the same process");
+      PetscCheck((dim == 1) || !((m == 1 && bx == DM_BOUNDARY_PERIODIC) || (n == 1 && by == DM_BOUNDARY_PERIODIC) || (p == 1 && bz == DM_BOUNDARY_PERIODIC)), PetscObjectComm((PetscObject)da), PETSC_ERR_SUP, "IS_COLORING_LOCAL cannot be used for periodic boundary condition having both ends of the domain on the same process");
     }
   }
 
@@ -634,13 +634,13 @@ PetscErrorCode MatLoad_MPI_DA(Mat A, PetscViewer viewer)
 
 PetscErrorCode DMCreateMatrix_DA(DM da, Mat *J)
 {
-  PetscInt dim, dof, nx, ny, nz, dims[3], starts[3], M, N, P;
-  Mat      A;
-  MPI_Comm comm;
-  MatType  Atype;
+  PetscInt    dim, dof, nx, ny, nz, dims[3], starts[3], M, N, P;
+  Mat         A;
+  MPI_Comm    comm;
+  MatType     Atype;
   MatType     mtype;
   PetscMPIInt size;
-  DM_DA      *dd = (DM_DA *)da->data;
+  DM_DA      *dd    = (DM_DA *)da->data;
   void (*aij)(void) = NULL, (*baij)(void) = NULL, (*sbaij)(void) = NULL, (*sell)(void) = NULL, (*is)(void) = NULL;
 
   PetscFunctionBegin;
