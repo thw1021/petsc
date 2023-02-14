@@ -51,7 +51,7 @@ namespace
 {
 
 template <typename T>
-PETSC_HOSTDEVICE_INLINE_DECL constexpr plus_equals<T> make_plus_equals(const T& v) noexcept
+PETSC_HOSTDEVICE_INLINE_DECL constexpr plus_equals<T> make_plus_equals(const T &v) noexcept
 {
   return plus_equals<T>{v};
 }

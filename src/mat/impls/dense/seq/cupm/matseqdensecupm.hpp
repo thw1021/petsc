@@ -35,10 +35,10 @@ public:
 
 private:
   struct Mat_SeqDenseCUPM {
-    PetscScalar   *d_v;         // pointer to the matrix on the GPU
-    PetscScalar   *unplacedarray; // if one called MatCUPMDensePlaceArray(), this is where it stashed the original
-    PetscBool      user_alloc;
-    PetscBool      unplaced_user_alloc;
+    PetscScalar *d_v;           // pointer to the matrix on the GPU
+    PetscScalar *unplacedarray; // if one called MatCUPMDensePlaceArray(), this is where it stashed the original
+    PetscBool    user_alloc;
+    PetscBool    unplaced_user_alloc;
     // factorization support
     cupmBlasInt_t *d_fact_ipiv; // device pivots
     PetscScalar   *d_fact_tau;  // device QR tau vector
@@ -46,7 +46,7 @@ private:
     cupmBlasInt_t *d_fact_info; // device info
     cupmBlasInt_t  fact_lwork;
     // workspace
-    Vec            workvec;
+    Vec workvec;
   };
 
   static PetscErrorCode SetPreallocation_(Mat, PetscDeviceContext, PetscScalar *) noexcept;

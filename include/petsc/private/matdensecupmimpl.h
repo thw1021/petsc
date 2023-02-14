@@ -157,7 +157,7 @@ protected:
 
   static PetscErrorCode SetPreallocation(Mat, PetscDeviceContext, PetscScalar * = nullptr) noexcept;
   template <typename F>
-  static PetscErrorCode PointwiseUnaryTransform(PetscDeviceContext, PetscScalar *, PetscInt, PetscInt, PetscInt, PetscInt, F&&) noexcept;
+  static PetscErrorCode PointwiseUnaryTransform(PetscDeviceContext, PetscScalar *, PetscInt, PetscInt, PetscInt, PetscInt, F &&) noexcept;
 
   PETSC_NODISCARD static auto DeviceArrayRead(PetscDeviceContext dctx, Mat m) noexcept PETSC_DECLTYPE_AUTO_RETURNS(MatrixArray<PETSC_MEMTYPE_DEVICE, PETSC_MEMORY_ACCESS_READ>{dctx, m})
   PETSC_NODISCARD static auto DeviceArrayWrite(PetscDeviceContext dctx, Mat m) noexcept PETSC_DECLTYPE_AUTO_RETURNS(MatrixArray<PETSC_MEMTYPE_DEVICE, PETSC_MEMORY_ACCESS_WRITE>{dctx, m})
@@ -269,7 +269,7 @@ protected:
 
 template <device::cupm::DeviceType T, typename D>
 template <typename F>
-inline PetscErrorCode MatDense_CUPM<T, D>::PointwiseUnaryTransform(PetscDeviceContext dctx, PetscScalar *da, PetscInt lda, PetscInt rstart, PetscInt rend, PetscInt cols, F&& functor) noexcept
+inline PetscErrorCode MatDense_CUPM<T, D>::PointwiseUnaryTransform(PetscDeviceContext dctx, PetscScalar *da, PetscInt lda, PetscInt rstart, PetscInt rend, PetscInt cols, F &&functor) noexcept
 {
   const auto rend2 = std::min(rend, cols);
 
