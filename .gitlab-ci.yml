@@ -511,6 +511,7 @@ linux-hip-double:
   extends:
     - .stage-3
     - .linux_test_noflags
+    - .coverage-generate-u20
   tags:
     - gpu:amd, os:linux
   variables:
@@ -520,6 +521,7 @@ linux-sycl-double:
   extends:
     - .stage-3
     - .linux_test_noflags
+    - .coverage-generate-u18
   tags:
     - gce-nfs, linux-fast
   variables:
