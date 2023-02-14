@@ -8,9 +8,9 @@ configure_options = [
   '--with-cc=gcc',
   '--with-fc=gfortran', # https://brew.sh/
   '--with-cxx=g++',
-  'COPTFLAGS=-g -O -fsanitize=address',
+  'COPTFLAGS=-g -O -fno-omit-frame-pointer -fsanitize=address,undefined',
   'FOPTFLAGS=-g -O',
-  'CXXOPTFLAGS=-g -O',
+  'CXXOPTFLAGS=-g -O -fno-omit-frame-pointer -fsanitize=address,undefined',
   '--download-mpich=1',
   '--download-mpich-device=ch3:nemesis', #for some reason runex174_2_elemental takes very long with ch3:p4
   '--download-metis=1',

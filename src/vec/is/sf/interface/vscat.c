@@ -807,7 +807,9 @@ PetscErrorCode VecScatterCreate(Vec x, IS ix, Vec y, IS iy, VecScatter *newsf)
   /* Get max and min of bsx,bsy over all processes in one allreduce */
   PetscCall(MPIU_Allreduce(MPI_IN_PLACE, m, 2, MPIU_INT, MPI_MAX, bigcomm));
   max = m[0];
-  min = -m[1];
+  // UBSAN runtime error: negation of -2147483648 cannot be represented in type 'PetscInt' (aka
+  // 'int'); cast to an unsigned type to negate this value to itself
+  min = m[1] == PETSC_INT_MIN ? PETSC_INT_MAX : -m[1];
 
   /* Since we used allreduce above, all ranks will have the same min and max. min==max
      implies all ranks have the same bs. Do further test to see if local vectors are dividable

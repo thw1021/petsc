@@ -161,37 +161,33 @@ class Configure(config.base.Configure):
 
   def checkCLibraries(self):
     '''Determines the libraries needed to link with C compiled code'''
-    skipclibraries = 1
-    if hasattr(self.setCompilers, 'FC'):
-      self.setCompilers.saveLog()
-      try:
-        if self.checkCrossLink('#include <stdio.h>\nvoid asub(void)\n{char s[16];printf("testing %s",s);}\n',"     program main\n      print*,'testing'\n      stop\n      end\n",language1='C',language2='FC'):
+    def doCheckCrossLink(lang2, lang2name):
+      skipclibraries = 1
+      if hasattr(self.setCompilers, lang2):
+        self.setCompilers.saveLog()
+        try:
+          if lang2 == 'CXX':
+            code2 = 'int main() {}'
+          else:
+            code2 = "     program main\n      print*,'testing'\n      stop\n      end\n"
+          if self.checkCrossLink('#include <stdio.h>\nvoid asub(void)\n{char s[16];printf("testing %s",s);}\n',code2,language1='C',language2=lang2.replace('X','x')):
+            self.logWrite(self.setCompilers.restoreLog())
+            self.logPrint('C libraries are not needed when using '+lang2name+' linker')
+          else:
+            self.logWrite(self.setCompilers.restoreLog())
+            self.logPrint('C code cannot directly be linked with '+lang2name+' linker, therefore will determine needed C libraries')
+            skipclibraries = 0
+        except RuntimeError as e:
           self.logWrite(self.setCompilers.restoreLog())
-          self.logPrint('C libraries are not needed when using Fortran linker')
-        else:
-          self.logWrite(self.setCompilers.restoreLog())
-          self.logPrint('C code cannot directly be linked with Fortran linker, therefore will determine needed C libraries')
+          self.logPrint('Error message from compiling {'+str(e)+'}', 4, 'compilers')
+          self.logPrint('C code cannot directly be linked with '+lang2name+' linker, therefore will determine needed C libraries')
           skipclibraries = 0
-      except RuntimeError as e:
-        self.logWrite(self.setCompilers.restoreLog())
-        self.logPrint('Error message from compiling {'+str(e)+'}', 4, 'compilers')
-        self.logPrint('C code cannot directly be linked with Fortran linker, therefore will determine needed C libraries')
-        skipclibraries = 0
-    if hasattr(self.setCompilers, 'CXX'):
-      self.setCompilers.saveLog()
-      try:
-        if self.checkCrossLink('#include <stdio.h>\nvoid asub(void)\n{char s[16];printf("testing %s",s);}\n',"int main(int argc,char **args)\n{return 0;}\n",language1='C',language2='C++'):
-          self.logWrite(self.setCompilers.restoreLog())
-          self.logPrint('C libraries are not needed when using C++ linker')
-        else:
-          self.logWrite(self.setCompilers.restoreLog())
-          self.logPrint('C code cannot directly be linked with C++ linker, therefore will determine needed C libraries')
-          skipclibraries = 0
-      except RuntimeError as e:
-        self.logWrite(self.setCompilers.restoreLog())
-        self.logPrint('Error message from compiling {'+str(e)+'}', 4, 'compilers')
-        self.logPrint('C code cannot directly be linked with C++ linker, therefore will determine needed C libraries')
-        skipclibraries = 0
+      return skipclibraries
+
+    skipclibraries = doCheckCrossLink('FC', 'Fortran')
+    if skipclibraries == 1:
+      # fortran was OK
+      skipclibraries = doCheckCrossLink('CXX', 'C++')
     if skipclibraries == 1: return
 
     oldFlags = self.setCompilers.LDFLAGS
@@ -226,6 +222,7 @@ class Configure(config.base.Configure):
     skipdefaultpaths = self.getSkipDefaultPaths()
     lflags  = []
     rpathflags = []
+    asanflags = []
     try:
       while 1:
         arg = next(argIter)
@@ -234,11 +231,11 @@ class Configure(config.base.Configure):
         # Intel compiler sometimes puts " " around an option like "-lsomething"
         if arg.startswith('"') and arg.endswith('"'):
           arg = arg[1:-1]
-        # Intel also puts several options together inside a " " so the last one
-        # has a stray " at the end
+          # Intel also puts several options together inside a " " so the last one
+          # has a stray " at the end
         if arg.endswith('"') and arg[:-1].find('"') == -1:
           arg = arg[:-1]
-        # Intel 11 has a bogus -long_double option
+          # Intel 11 has a bogus -long_double option
         if arg == '-long_double':
           continue
         # if options of type -L foobar
@@ -254,14 +251,21 @@ class Configure(config.base.Configure):
         # Check for full library name
         m = re.match(r'^/.*\.a$', arg)
         if m:
-          if not arg in lflags:
-            lflags.append(arg)
-            self.logPrint('Found full library spec: '+arg, 4, 'compilers')
-            clibs.append(arg)
+          if 'libclang_rt.asan' in arg:
+            self.logPrint('SKIPPING ASAN ARG '+arg, 4, 'compilers')
+            path, base = os.path.split(arg)
+            base = self.libraries.getLibArgument(os.path.splitext(base)[2:])
+            asanflags.append(base)
+            arg = '-L'+path
           else:
-            self.logPrint('Skipping, already in lflags: '+arg, 4, 'compilers')
-          continue
-        # Check for full dylib library name
+            if not arg in lflags:
+              lflags.append(arg)
+              self.logPrint('Found full library spec: '+arg, 4, 'compilers')
+              clibs.append(arg)
+            else:
+              self.logPrint('Skipping, already in lflags: '+arg, 4, 'compilers')
+            continue
+          # Check for full dylib library name
         m = re.match(r'^/.*\.dylib$', arg)
         if m:
           if not arg in lflags:
@@ -287,8 +291,8 @@ class Configure(config.base.Configure):
               continue
             else:
               lflags.append(arg)
-            self.logPrint('Found library : '+arg, 4, 'compilers')
-            clibs.append(arg)
+              self.logPrint('Found library : '+arg, 4, 'compilers')
+              clibs.append(arg)
           continue
         m = re.match(r'^-L.*$', arg)
         if m:
@@ -332,7 +336,7 @@ class Configure(config.base.Configure):
     for lib in clibs:
       if not self.setCompilers.staticLibraries and lib.startswith('-L') and not self.setCompilers.CSharedLinkerFlag == '-L':
         self.clibs.append(self.setCompilers.CSharedLinkerFlag+lib[2:])
-      self.clibs.append(lib)
+        self.clibs.append(lib)
 
     self.logPrint('Libraries needed to link C code with another linker: '+str(self.clibs), 3, 'compilers')
 
@@ -340,6 +344,12 @@ class Configure(config.base.Configure):
       self.logPrint('Check that C libraries can be used with Fortran as linker', 4, 'compilers')
       oldLibs = self.setCompilers.LIBS
       self.setCompilers.LIBS = ' '.join([self.libraries.getLibArgument(lib) for lib in self.clibs])+' '+self.setCompilers.LIBS
+      # ensure we can still use the C compiler
+      try:
+        self.setCompilers.checkCompiler('C')
+      except:
+        import pdb; pdb.set_trace()
+
     if hasattr(self.setCompilers, 'FC'):
       self.setCompilers.saveLog()
       try:
@@ -354,6 +364,15 @@ class Configure(config.base.Configure):
         self.logWrite(self.setCompilers.restoreLog())
         raise e
       self.logWrite(self.setCompilers.restoreLog())
+
+    it = 0
+    while not doCheckCrossLink('FC', 'Fortran'):
+      import pdb; pdb.set_trace()
+      if it > 1:
+        raise RuntimeError('Could not crosslink with Fortran')
+      it += 1
+
+    assert doCheckCrossLink('CXX', 'C++')
     return
 
   def checkCFormatting(self):
@@ -611,6 +630,9 @@ class Configure(config.base.Configure):
         # Check for full library name
         m = re.match(r'^/.*\.a$', arg)
         if m:
+          if 'libclang_rt.asan' in arg:
+            self.logPrint('SKIPPING ASAN ARG '+arg, 4, 'compilers')
+            continue
           if not arg in lflags:
             lflags.append(arg)
             self.logPrint('Found full library spec: '+arg, 4, 'compilers')
@@ -1236,7 +1258,7 @@ Otherwise you need a different combination of C, C++, and Fortran compilers")
     self.setCompilers.saveLog()
     try:
       self.setCompilers.checkCompiler('C')
-    except RuntimeError as e:
+    except (OSError, RuntimeError) as e:
       self.logWrite(self.setCompilers.restoreLog())
       self.logPrint('Fortran libraries cannot directly be used with C as the linker, try without -lcrt2.o', 4, 'compilers')
       self.logPrint('Error message from compiling {'+str(e)+'}', 4, 'compilers')
@@ -1246,7 +1268,7 @@ Otherwise you need a different combination of C, C++, and Fortran compilers")
       self.setCompilers.saveLog()
       try:
         self.setCompilers.checkCompiler('C')
-      except RuntimeError as e:
+      except (OSError, RuntimeError) as e:
         self.logWrite(self.setCompilers.restoreLog())
         self.logPrint('Fortran libraries still cannot directly be used with C as the linker, try without pgi.ld files', 4, 'compilers')
         self.logPrint('Error message from compiling {'+str(e)+'}', 4, 'compilers')
@@ -1465,10 +1487,10 @@ Otherwise you need a different combination of C, C++, and Fortran compilers")
     else:
       self.isGCXX = 0
     if hasattr(self.setCompilers, 'FC'):
-      self.executeTest(self.checkFortranNameMangling)
-      self.executeTest(self.checkFortranNameManglingDouble)
       if self.argDB['with-fortranlib-autodetect']:
         self.executeTest(self.checkFortranLibraries)
+      self.executeTest(self.checkFortranNameMangling)
+      self.executeTest(self.checkFortranNameManglingDouble)
       if hasattr(self.setCompilers, 'CXX'):
         self.executeTest(self.checkFortranLinkingCxx)
 

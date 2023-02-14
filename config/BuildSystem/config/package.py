@@ -325,8 +325,7 @@ class Package(config.base.Configure):
     for flag in flags:
       if not flag in ['-Werror','-Wall','-Wwrite-strings','-Wno-strict-aliasing','-Wno-unknown-pragmas',
                       '-Wno-unused-variable','-Wno-unused-dummy-argument','-fvisibility=hidden','-std=c89',
-                      '-pedantic','--coverage','-Mfree','-fdefault-integer-8','-fsanitize=address',
-                      '-fstack-protector']:
+                      '-pedantic','--coverage','-Mfree','-fdefault-integer-8', '-fstack-protector']:
         if flag == '-g3':
           outflags.append('-g')
         else:
@@ -339,6 +338,20 @@ class Package(config.base.Configure):
 
     rm_func = self.rmArgsPair if is_pair else self.rmArgs
     return rm_func(flags, {'--coverage'}, **kwargs)
+
+  def removeSanitizerFlags(self, flags):
+    """
+    Removes all -fsanitize= flags from the set of flags
+    """
+    ret = []
+    if isinstance(flags, str):
+      flags = flags.split()
+    for flag in flags:
+      if '-fsanitize=' in flag:
+        self.logPrint('removeSanitizerFlags: removing flag '+flag)
+      else:
+        ret.append(flag)
+    return ret
 
   def removeStdCxxFlag(self,flags):
     '''Remove the -std=[CXX_VERSION] flag from the list of flags, but only for CMake packages'''
@@ -371,8 +384,11 @@ class Package(config.base.Configure):
 
   def updatePackageCFlags(self,flags):
     '''To turn off various warnings or errors the compilers may produce with external packages, remove or add appropriate compiler flags'''
-    outflags = self.removeWarningFlags(flags.split())
+    if isinstance(flags, str):
+      flags = flags.split()
+    outflags = self.removeWarningFlags(flags)
     outflags = self.removeCoverageFlag(outflags)
+    outflags = self.removeSanitizerFlags(outflags)
     with self.Language('C'):
       if config.setCompilers.Configure.isClang(self.getCompiler(), self.log):
         if config.setCompilers.Configure.isDarwin(self.log):
@@ -382,8 +398,11 @@ class Package(config.base.Configure):
     return ' '.join(outflags)
 
   def updatePackageFFlags(self,flags):
-    outflags = self.removeWarningFlags(flags.split())
+    if isinstance(flags, str):
+      flags = flags.split()
+    outflags = self.removeWarningFlags(flags)
     outflags = self.removeCoverageFlag(outflags)
+    outflags = self.removeSanitizerFlags(outflags)
     with self.Language('FC'):
       if config.setCompilers.Configure.isNAG(self.getLinker(), self.log):
          outflags.extend(['-mismatch','-dusty','-dcfuns'])
@@ -392,14 +411,17 @@ class Package(config.base.Configure):
     return ' '.join(outflags)
 
   def updatePackageCxxFlags(self,flags):
-    outflags = self.removeWarningFlags(flags.split())
+    if isinstance(flags, str):
+      flags = flags.split()
+    outflags = self.removeWarningFlags(flags)
     outflags = self.removeCoverageFlag(outflags)
     outflags = self.removeStdCxxFlag(outflags)
+    outflags = self.removeSanitizerFlags(outflags)
     return ' '.join(outflags)
 
   def updatePackageCUDAFlags(self, flags):
     outflags = self.removeCoverageFlag(flags, is_pair=True, remove_ahead=False)
-    #outflags = self.removeCoverageFlag(flags)
+    outflags = self.removeSanitizerFlags(outflags)
     return ' '.join(outflags)
 
   def getDefaultLanguage(self):
