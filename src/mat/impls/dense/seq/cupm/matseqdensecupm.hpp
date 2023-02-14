@@ -1222,12 +1222,13 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::MatMatMult_Numeric_Dispatch(Mat A, M
   PetscCall(MatDenseGetLDA(C, &clda));
   PetscCall(GetHandles_(&dctx, &handle));
   {
-    const auto one  = cupmScalarCast(1.0);
-    const auto zero = cupmScalarCast(0.0);
+    constexpr auto op_a = transpose_A ? CUPMBLAS_OP_T : CUPMBLAS_OP_N;
+    constexpr auto op_b = transpose_B ? CUPMBLAS_OP_T : CUPMBLAS_OP_N;
+    const auto     one  = cupmScalarCast(1.0);
+    const auto     zero = cupmScalarCast(0.0);
 
     PetscCall(PetscLogGpuTimeBegin());
-    PetscCallCUPMBLAS(cupmBlasXgemm(handle, transpose_A ? CUPMBLAS_OP_T : CUPMBLAS_OP_N, transpose_B ? CUPMBLAS_OP_T : CUPMBLAS_OP_N, m, n, k, &one, DeviceArrayRead(dctx, A).cupmdata(), alda, DeviceArrayRead(dctx, B).cupmdata(), blda, &zero,
-                                    DeviceArrayWrite(dctx, C).cupmdata(), clda));
+    PetscCallCUPMBLAS(cupmBlasXgemm(handle, op_a, op_b, m, n, k, &one, DeviceArrayRead(dctx, A).cupmdata(), alda, DeviceArrayRead(dctx, B).cupmdata(), blda, &zero, DeviceArrayWrite(dctx, C).cupmdata(), clda));
     PetscCall(PetscLogGpuTimeEnd());
   }
   PetscCall(PetscLogGpuFlops(1.0 * m * n * k + 1.0 * m * n * (k - 1)));
