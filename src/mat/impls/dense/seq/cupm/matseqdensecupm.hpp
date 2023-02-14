@@ -35,18 +35,18 @@ public:
 
 private:
   struct Mat_SeqDenseCUPM {
-    PetscScalar *d_v; // pointer to the matrix on the GPU
-    PetscBool    user_alloc;
-    PetscScalar *unplacedarray; // if one called MatCUPMDensePlaceArray(), this is where it stashed the original
-    PetscBool    unplaced_user_alloc;
+    PetscScalar   *d_v;         // pointer to the matrix on the GPU
+    PetscScalar   *unplacedarray; // if one called MatCUPMDensePlaceArray(), this is where it stashed the original
+    PetscBool      user_alloc;
+    PetscBool      unplaced_user_alloc;
     // factorization support
-    PetscCuBLASInt *d_fact_ipiv; // device pivots
-    PetscScalar    *d_fact_tau;  // device QR tau vector
-    PetscScalar    *d_fact_work; // device workspace
-    PetscCuBLASInt  fact_lwork;
-    PetscCuBLASInt *d_fact_info; // device info
+    cupmBlasInt_t *d_fact_ipiv; // device pivots
+    PetscScalar   *d_fact_tau;  // device QR tau vector
+    PetscScalar   *d_fact_work; // device workspace
+    cupmBlasInt_t *d_fact_info; // device info
+    cupmBlasInt_t  fact_lwork;
     // workspace
-    Vec workvec;
+    Vec            workvec;
   };
 
   static PetscErrorCode SetPreallocation_(Mat, PetscDeviceContext, PetscScalar *) noexcept;
@@ -436,7 +436,7 @@ struct MatDense_Seq_CUPM<T>::SolveLU : SolveCommon<SolveLU> {
     PetscCall(GetHandlesFrom_(dctx, &handle));
     PetscCall(PetscInfo(A, "%s solve %d x %d on backend\n", NAME(), m, k));
     PetscCall(PetscLogGpuTimeBegin());
-    PetscCallCUPMSOLVER(cupmSolverXgetrs(handle, transpose ? CUPMBLAS_OP_T : CUPMBLAS_OP_N, m, nrhs, DeviceArrayRead(dctx, A).cupmdata(), lda, fact_ipiv, x, ldx, fact_info));
+    PetscCallCUPMSOLVER(cupmSolverXgetrs(handle, transpose ? CUPMBLAS_OP_T : CUPMBLAS_OP_N, m, nrhs, DeviceArrayRead(dctx, A).cupmdata(), lda, fact_ipiv, cupmScalarPtrCast(x), ldx, fact_info));
     PetscCall(CheckCUPMSolverInfo_(fact_info, stream));
     PetscCall(PetscLogGpuTimeEnd());
     PetscCall(PetscLogGpuFlops(nrhs * (2.0 * m * m - m)));
@@ -517,7 +517,7 @@ struct MatDense_Seq_CUPM<T>::SolveCholesky : SolveCommon<SolveCholesky> {
     PetscCall(GetHandlesFrom_(dctx, &handle));
     PetscCall(PetscInfo(A, "%s solve %d x %d on backend\n", NAME(), m, k));
     PetscCall(PetscLogGpuTimeBegin());
-    PetscCallCUPMSOLVER(cupmSolverXpotrs(handle, CUPMBLAS_FILL_MODE_LOWER, m, nrhs, DeviceArrayRead(dctx, A).cupmdata(), lda, x, ldx, fact_info));
+    PetscCallCUPMSOLVER(cupmSolverXpotrs(handle, CUPMBLAS_FILL_MODE_LOWER, m, nrhs, DeviceArrayRead(dctx, A).cupmdata(), lda, cupmScalarPtrCast(x), ldx, fact_info));
     PetscCall(PetscLogGpuTimeEnd());
     PetscCall(CheckCUPMSolverInfo_(fact_info, stream));
     PetscCall(PetscLogGpuFlops(nrhs * (2.0 * m * m - m)));
@@ -592,19 +592,20 @@ struct MatDense_Seq_CUPM<T>::SolveQR : SolveCommon<SolveQR> {
     PetscCall(PetscInfo(A, "%s solve %d x %d on backend\n", NAME(), m, k));
     PetscCall(PetscLogGpuTimeBegin());
     {
+      const auto xcu = cupmScalarPtrCast(x);
       const auto da  = DeviceArrayRead(dctx, A);
       const auto one = cupmScalarCast(1.0);
 
       if (transpose) {
-        PetscCallCUPMBLAS(cupmBlasXtrsm(blas_handle, CUPMBLAS_SIDE_LEFT, CUPMBLAS_FILL_MODE_UPPER, CUPMBLAS_OP_T, CUPMBLAS_DIAG_NON_UNIT, rank, nrhs, &one, da.cupmdata(), lda, x, ldx));
-        PetscCallCUPMSOLVER(cupmSolverXormqr(solver_handle, CUPMBLAS_SIDE_LEFT, CUPMBLAS_OP_N, m, nrhs, rank, da.cupmdata(), lda, fact_tau, x, ldx, fact_work, fact_lwork, fact_info));
+        PetscCallCUPMBLAS(cupmBlasXtrsm(blas_handle, CUPMBLAS_SIDE_LEFT, CUPMBLAS_FILL_MODE_UPPER, CUPMBLAS_OP_T, CUPMBLAS_DIAG_NON_UNIT, rank, nrhs, &one, da.cupmdata(), lda, xcu, ldx));
+        PetscCallCUPMSOLVER(cupmSolverXormqr(solver_handle, CUPMBLAS_SIDE_LEFT, CUPMBLAS_OP_N, m, nrhs, rank, da.cupmdata(), lda, fact_tau, xcu, ldx, fact_work, fact_lwork, fact_info));
         PetscCall(CheckCUPMSolverInfo_(fact_info, stream));
       } else {
         constexpr auto op = PetscDefined(USE_COMPLEX) ? CUPMBLAS_OP_C : CUPMBLAS_OP_T;
 
-        PetscCallCUPMSOLVER(cupmSolverXormqr(solver_handle, CUPMBLAS_SIDE_LEFT, op, m, nrhs, rank, da.cupmdata(), lda, fact_tau, x, ldx, fact_work, fact_lwork, fact_info));
+        PetscCallCUPMSOLVER(cupmSolverXormqr(solver_handle, CUPMBLAS_SIDE_LEFT, op, m, nrhs, rank, da.cupmdata(), lda, fact_tau, xcu, ldx, fact_work, fact_lwork, fact_info));
         PetscCall(CheckCUPMSolverInfo_(fact_info, stream));
-        PetscCallCUPMBLAS(cupmBlasXtrsm(blas_handle, CUPMBLAS_SIDE_LEFT, CUPMBLAS_FILL_MODE_UPPER, CUPMBLAS_OP_N, CUPMBLAS_DIAG_NON_UNIT, rank, nrhs, &one, da.cupmdata(), lda, x, ldx));
+        PetscCallCUPMBLAS(cupmBlasXtrsm(blas_handle, CUPMBLAS_SIDE_LEFT, CUPMBLAS_FILL_MODE_UPPER, CUPMBLAS_OP_N, CUPMBLAS_DIAG_NON_UNIT, rank, nrhs, &one, da.cupmdata(), lda, xcu, ldx));
       }
     }
     PetscCall(PetscLogGpuTimeEnd());
@@ -1333,7 +1334,7 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::Shift(Mat A, PetscScalar alpha) noex
   PetscFunctionBegin;
   PetscCall(PetscInfo(A, "Performing Shift %" PetscInt_FMT " x %" PetscInt_FMT " on backend\n", m, n));
   PetscCall(GetHandles_(&dctx));
-  PetscCall(Shift_Base(dctx, DeviceArrayReadWrite(dctx, A), alpha, MatIMPLCast(A)->lda, 0, m, n));
+  PetscCall(PointwiseUnaryTransform(dctx, DeviceArrayReadWrite(dctx, A), MatIMPLCast(A)->lda, 0, m, n, device::cupm::functors::make_plus_equals(alpha)));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1370,21 +1371,21 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::AXPY(Mat Y, PetscScalar alpha, Mat X
 }
 
 template <device::cupm::DeviceType T>
-inline PetscErrorCode MatDense_Seq_CUPM<T>::Duplicate(Mat A, MatDuplicateOption cpvalues, Mat *B) noexcept
+inline PetscErrorCode MatDense_Seq_CUPM<T>::Duplicate(Mat A, MatDuplicateOption opt, Mat *B) noexcept
 {
-  const auto pobj      = PetscObjectCast(A);
-  const auto m         = A->rmap->n;
-  const auto n         = A->cmap->n;
-  const auto hcpvalues = (cpvalues == MAT_COPY_VALUES && A->offloadmask != PETSC_OFFLOAD_CPU) ? MAT_DO_NOT_COPY_VALUES : cpvalues;
+  const auto pobj = PetscObjectCast(A);
+  const auto m    = A->rmap->n;
+  const auto n    = A->cmap->n;
+  const auto hopt = (opt == MAT_COPY_VALUES && A->offloadmask != PETSC_OFFLOAD_CPU) ? MAT_DO_NOT_COPY_VALUES : opt;
 
   PetscFunctionBegin;
   PetscCall(MatCreate(PetscObjectComm(pobj), B));
   PetscCall(MatSetSizes(*B, m, n, m, n));
   PetscCall(MatSetType(*B, pobj->type_name));
-  PetscCall(MatDuplicateNoCreate_SeqDense(*B, A, hcpvalues));
-  if (cpvalues == MAT_COPY_VALUES && hcpvalues != MAT_COPY_VALUES) PetscCall(Copy(A, *B, SAME_NONZERO_PATTERN));
+  PetscCall(MatDuplicateNoCreate_SeqDense(*B, A, hopt));
+  if (opt == MAT_COPY_VALUES && hopt != MAT_COPY_VALUES) PetscCall(Copy(A, *B, SAME_NONZERO_PATTERN));
   // allocate memory if needed
-  if (cpvalues != MAT_COPY_VALUES) {
+  if (opt != MAT_COPY_VALUES) {
     PetscDeviceContext dctx;
 
     PetscCall(GetHandles_(&dctx));
@@ -1399,7 +1400,7 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::SetRandom(Mat A, PetscRandom rng) no
   PetscBool iscurand;
 
   PetscFunctionBegin;
-  PetscCall(PetscObjectTypeCompare(PetscObjectCast(A), PETSCDEVICERAND(), &iscurand));
+  PetscCall(PetscObjectTypeCompare(PetscObjectCast(rng), PETSCDEVICERAND(), &iscurand));
   if (iscurand) {
     const auto         m = A->rmap->n;
     const auto         n = A->cmap->n;
@@ -1431,11 +1432,9 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::SetRandom(Mat A, PetscRandom rng) no
 template <device::cupm::DeviceType T>
 inline PetscErrorCode MatDense_Seq_CUPM<T>::GetColumnVector(Mat A, Vec v, PetscInt col) noexcept
 {
-  const auto         mimpl       = MatIMPLCast(A);
-  const auto         mcu         = MatCUPMCast(A);
   const auto         offloadmask = A->offloadmask;
   const auto         n           = A->rmap->n;
-  const auto         col_offset  = [&](const PetscScalar *ptr) { return ptr + col * mimpl->lda; };
+  const auto         col_offset  = [&](const PetscScalar *ptr) { return ptr + col * MatIMPLCast(A)->lda; };
   PetscBool          viscupm;
   PetscDeviceContext dctx;
   cupmStream_t       stream;

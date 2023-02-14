@@ -156,7 +156,8 @@ protected:
   PETSC_NODISCARD static constexpr MatType MATIMPLCUPM() noexcept;
 
   static PetscErrorCode SetPreallocation(Mat, PetscDeviceContext, PetscScalar * = nullptr) noexcept;
-  static PetscErrorCode Shift_Base(PetscDeviceContext, PetscScalar *, PetscScalar, PetscInt, PetscInt, PetscInt, PetscInt) noexcept;
+  template <typename F>
+  static PetscErrorCode PointwiseUnaryTransform(PetscDeviceContext, PetscScalar *, PetscInt, PetscInt, PetscInt, PetscInt, F&&) noexcept;
 
   PETSC_NODISCARD static auto DeviceArrayRead(PetscDeviceContext dctx, Mat m) noexcept PETSC_DECLTYPE_AUTO_RETURNS(MatrixArray<PETSC_MEMTYPE_DEVICE, PETSC_MEMORY_ACCESS_READ>{dctx, m})
   PETSC_NODISCARD static auto DeviceArrayWrite(PetscDeviceContext dctx, Mat m) noexcept PETSC_DECLTYPE_AUTO_RETURNS(MatrixArray<PETSC_MEMTYPE_DEVICE, PETSC_MEMORY_ACCESS_WRITE>{dctx, m})
@@ -247,7 +248,7 @@ public:
   using PermutationIterator = thrust::permutation_iterator<Iterator, TransformIterator>;
   using iterator            = PermutationIterator; // type of the strided_range iterator
 
-  constexpr strided_range(Iterator first, Iterator last, difference_type stride) noexcept : first(first), last(last), stride(stride) { }
+  constexpr strided_range(Iterator first, Iterator last, difference_type stride) noexcept : first(std::move(first)), last(std::move(last)), stride(std::move(stride)) { }
 
   PETSC_NODISCARD iterator begin() const noexcept
   {
@@ -267,7 +268,8 @@ protected:
 } // namespace detail
 
 template <device::cupm::DeviceType T, typename D>
-inline PetscErrorCode MatDense_CUPM<T, D>::Shift_Base(PetscDeviceContext dctx, PetscScalar *da, PetscScalar alpha, PetscInt lda, PetscInt rstart, PetscInt rend, PetscInt cols) noexcept
+template <typename F>
+inline PetscErrorCode MatDense_CUPM<T, D>::PointwiseUnaryTransform(PetscDeviceContext dctx, PetscScalar *da, PetscInt lda, PetscInt rstart, PetscInt rend, PetscInt cols, F&& functor) noexcept
 {
   const auto rend2 = std::min(rend, cols);
 
@@ -287,7 +289,7 @@ inline PetscErrorCode MatDense_CUPM<T, D>::Shift_Base(PetscDeviceContext dctx, P
         thrust::transform,
         stream,
         diagonal.begin(), diagonal.end(), diagonal.begin(),
-        device::cupm::functors::plus_equals<PetscScalar>{alpha}
+        std::forward<F>(functor)
       )
     );
     // clang-format on
@@ -327,7 +329,7 @@ inline PetscErrorCode MatDense_CUPM<T, D>::Shift_Base(PetscDeviceContext dctx, P
     using ::Petsc::mat::cupm::impl::MatDense_CUPM<T, __VA_ARGS__>::HostArrayRead; \
     using ::Petsc::mat::cupm::impl::MatDense_CUPM<T, __VA_ARGS__>::HostArrayWrite; \
     using ::Petsc::mat::cupm::impl::MatDense_CUPM<T, __VA_ARGS__>::HostArrayReadWrite; \
-    using ::Petsc::mat::cupm::impl::MatDense_CUPM<T, __VA_ARGS__>::Shift_Base
+    using ::Petsc::mat::cupm::impl::MatDense_CUPM<T, __VA_ARGS__>::PointwiseUnaryTransform
 
 } // namespace impl
 

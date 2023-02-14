@@ -39,13 +39,24 @@ class plus_equals {
 public:
   using value_type = T;
 
-  PETSC_HOSTDEVICE_DECL constexpr explicit plus_equals(value_type v = value_type{}) noexcept : v_(std::move(v)) { }
+  PETSC_HOSTDEVICE_DECL constexpr explicit plus_equals(value_type v = value_type{}) noexcept : v_{std::move(v)} { }
 
-  PETSC_NODISCARD PETSC_HOSTDEVICE_INLINE_DECL constexpr T operator()(const T &val) const noexcept { return val + v_; }
+  PETSC_NODISCARD PETSC_HOSTDEVICE_INLINE_DECL constexpr value_type operator()(const value_type &val) const noexcept { return val + v_; }
 
 private:
   value_type v_;
 };
+
+namespace
+{
+
+template <typename T>
+PETSC_HOSTDEVICE_INLINE_DECL constexpr plus_equals<T> make_plus_equals(const T& v) noexcept
+{
+  return plus_equals<T>{v};
+}
+
+} // anonymous namespace
 
 } // namespace functors
 

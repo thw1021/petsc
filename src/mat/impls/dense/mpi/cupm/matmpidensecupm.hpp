@@ -379,7 +379,7 @@ inline PetscErrorCode MatDense_MPI_CUPM<T>::Shift(Mat A, PetscScalar alpha) noex
   PetscCall(GetHandles_(&dctx));
   PetscCall(MatDenseGetLDA(A, &lda));
   PetscCall(PetscInfo(A, "Performing Shift on backend\n"));
-  PetscCall(Shift_Base(dctx, DeviceArrayReadWrite(dctx, A), alpha, lda, A->rmap->rstart, A->rmap->rend, A->cmap->N));
+  PetscCall(PointwiseUnaryTransform(dctx, DeviceArrayReadWrite(dctx, A), lda, A->rmap->rstart, A->rmap->rend, A->cmap->N, device::cupm::functors::make_plus_equals(alpha)));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
