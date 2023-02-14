@@ -341,16 +341,16 @@ cdef extern from * nogil:
     PetscErrorCode PCSPAISetSp(PetscPC,PetscInt)
 
     # --- DEFLATION ---
-    int PCDeflationSetInitOnly(PetscPC,PetscBool)
-    int PCDeflationSetLevels(PetscPC,PetscInt)
-    int PCDeflationSetReductionFactor(PetscPC,PetscInt)
-    int PCDeflationSetCorrectionFactor(PetscPC,PetscScalar)
-    int PCDeflationSetSpaceToCompute(PetscPC,PetscPCDeflationSpaceType,PetscInt)
-    int PCDeflationSetSpace(PetscPC,PetscMat,PetscBool)
-    int PCDeflationSetProjectionNullSpaceMat(PetscPC,PetscMat)
-    int PCDeflationSetCoarseMat(PetscPC,PetscMat)
-    int PCDeflationGetCoarseKSP(PetscPC,PetscKSP*)
-    int PCDeflationGetPC(PetscPC,PetscPC*)
+    PetscErrorCode PCDeflationSetInitOnly(PetscPC,PetscBool)
+    PetscErrorCode PCDeflationSetLevels(PetscPC,PetscInt)
+    PetscErrorCode PCDeflationSetReductionFactor(PetscPC,PetscInt)
+    PetscErrorCode PCDeflationSetCorrectionFactor(PetscPC,PetscScalar)
+    PetscErrorCode PCDeflationSetSpaceToCompute(PetscPC,PetscPCDeflationSpaceType,PetscInt)
+    PetscErrorCode PCDeflationSetSpace(PetscPC,PetscMat,PetscBool)
+    PetscErrorCode PCDeflationSetProjectionNullSpaceMat(PetscPC,PetscMat)
+    PetscErrorCode PCDeflationSetCoarseMat(PetscPC,PetscMat)
+    PetscErrorCode PCDeflationGetCoarseKSP(PetscPC,PetscKSP*)
+    PetscErrorCode PCDeflationGetPC(PetscPC,PetscPC*)
 
     # --- PYTHON ---
     PetscErrorCode PCPythonSetType(PetscPC,char[])
