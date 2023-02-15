@@ -2085,7 +2085,7 @@ int main(int argc, char **argv)
 /*TEST
 
    build:
-     requires: !single !complex
+     requires: double !complex
 
     # Recommend -draw_size 500,500
    testset:

@@ -121,6 +121,9 @@ int main(int argc, char **argv)
 
 /*TEST
 
+  build:
+    requires: !complex double
+
   test:
     suffix: 0
     requires: ks !complex

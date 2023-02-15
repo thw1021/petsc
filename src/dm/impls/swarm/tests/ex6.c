@@ -1009,7 +1009,7 @@ int main(int argc, char **argv)
 /*TEST
 
    build:
-     requires: !single !complex
+     requires: double !complex
 
    testset:
      args: -dm_plex_dim 2 -dm_plex_simplex 0 -dm_plex_box_faces 1,1 -dm_plex_box_lower -5,-5 -dm_plex_box_upper 5,5 \
