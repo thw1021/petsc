@@ -920,11 +920,11 @@ static PetscErrorCode InitializeParticles_PerturbedWeights(DM sw, AppCtx *user)
   PetscCall(DMGetCoordinatesLocalSetUp(vdm));
 
   /* Setup Quadrature for spatial and velocity weight calculations*/
-  PetscQuadrature  quad_x;
-  PetscInt         Nq_x;
-  PetscReal       *xq_x_extended;
-  PetscReal        weightsum = 0., totalcellweight = 0., weight_x[cEnd - cStart], weight_v[Np];
-  PetscReal        scale[2] = {user->cosine_coefficients[0], user->cosine_coefficients[1]};
+  PetscQuadrature quad_x;
+  PetscInt        Nq_x;
+  PetscReal      *xq_x_extended;
+  PetscReal       weightsum = 0., totalcellweight = 0., weight_x[cEnd - cStart], weight_v[Np];
+  PetscReal       scale[2] = {user->cosine_coefficients[0], user->cosine_coefficients[1]};
   if (user->fake_1D) PetscCall(PetscDTGaussTensorQuadrature(1, 1, 5, -1.0, 1.0, &quad_x));
   else PetscCall(PetscDTGaussTensorQuadrature(dim, 1, 5, -1.0, 1.0, &quad_x));
   PetscCall(PetscQuadratureGetData(quad_x, NULL, NULL, &Nq_x, &xq_x, &wq_x));
