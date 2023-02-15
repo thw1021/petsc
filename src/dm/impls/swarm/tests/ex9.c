@@ -370,9 +370,9 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
   AppCtx    *user = (AppCtx *)ctx;
   DM         dm, sw;
   PetscReal *E;
-  PetscReal  Enorm = 0., lgEnorm, lgEmax, sum = 0., Emax = 0., temp = 0., *weight, weightsum = 0., chargesum = 0.;
+  PetscReal  Enorm = 0., lgEnorm, lgEmax, sum = 0., Emax = 0., temp = 0., *weight, chargesum = 0.;
   PetscReal *x, *v;
-  PetscInt  *species, dim, p, d, Np, c, cStart, cEnd;
+  PetscInt  *species, dim, p, d, Np, cStart, cEnd;
   PetscReal  pmoments[3]; /* \int f, \int x f, \int r^2 f */
   PetscReal  fmoments[3]; /* \int \hat f, \int x \hat f, \int r^2 \hat f */
   Vec        rho;
@@ -391,20 +391,6 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
   PetscCall(DMSwarmGetField(sw, "w_q", NULL, NULL, (void **)&weight));
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
 
-  for (c = 0; c < cEnd - cStart; ++c) {
-    PetscInt *pidx, Npc, q;
-    PetscReal sumpc = 0., weightsumpc = 0., chargesumpc = 0.;
-
-    PetscCall(DMSwarmSortGetPointsPerCell(sw, c, &Npc, &pidx));
-    for (q = 0; q < Npc; ++q) {
-      const PetscInt p = pidx[q];
-      sumpc += E[p * dim];
-      weightsumpc += weight[p];
-      chargesumpc += user->charges[0] * weight[p];
-    }
-    PetscCall(PetscFree(pidx));
-  }
-
   for (p = 0; p < Np; ++p) {
     for (d = 0; d < 1; ++d) {
       temp = PetscAbsReal(E[p * dim + d]);
@@ -412,7 +398,6 @@ static PetscErrorCode MonitorEField(TS ts, PetscInt step, PetscReal t, Vec U, vo
     }
     Enorm += PetscSqrtReal(E[p * dim] * E[p * dim]);
     sum += E[p * dim];
-    weightsum += weight[p];
     chargesum += user->charges[0] * weight[p];
   }
   lgEnorm = Enorm != 0 ? PetscLog10Real(Enorm) : -16.;
@@ -592,17 +577,14 @@ static PetscErrorCode MonitorPoisson(TS ts, PetscInt step, PetscReal t, Vec U, v
     PetscCall(DMSwarmGetField(sw, "w_q", NULL, NULL, (void **)&weight));
 
     PetscCall(DMSwarmSortGetAccess(sw));
-    PetscReal weightsum_global = 0.0;
     for (c = 0; c < cEnd - cStart; ++c) {
-      PetscReal weightsum = 0.0, Esum = 0.0;
+      PetscReal Esum = 0.0;
       PetscInt *pidx, Npc, q;
       PetscCall(DMSwarmSortGetPointsPerCell(sw, c, &Npc, &pidx));
       for (q = 0; q < Npc; ++q) {
         const PetscInt p = pidx[q];
         Esum += E[p * dim];
-        weightsum += weight[p];
       }
-      weightsum_global += weightsum;
       xval = (c + 0.5) * ((upper - lower) / (cEnd - cStart));
       PetscCall(PetscDrawSPAddPoint(user->EDrawSP, &xval, &Esum));
       PetscCall(PetscFree(pidx));
@@ -922,6 +904,7 @@ static PetscErrorCode InitializeParticles_PerturbedWeights(DM sw, AppCtx *user)
   /* Setup Quadrature for spatial and velocity weight calculations*/
   PetscQuadrature quad_x;
   PetscInt        Nq_x;
+  const PetscReal *wq_x, *xq_x;
   PetscReal      *xq_x_extended;
   PetscReal       weightsum = 0., totalcellweight = 0., weight_x[cEnd - cStart], weight_v[Np];
   PetscReal       scale[2] = {user->cosine_coefficients[0], user->cosine_coefficients[1]};
