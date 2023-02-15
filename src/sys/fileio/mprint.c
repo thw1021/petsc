@@ -612,7 +612,7 @@ PetscErrorCode PetscFPrintf(MPI_Comm comm, FILE *fd, const char format[], ...)
 
   PetscFunctionBegin;
   PetscCheck(comm != MPI_COMM_NULL, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Called with MPI_COMM_NULL, likely PetscObjectComm() failed");
-  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  PetscCheck(MPI_SUCCESS == MPI_Comm_rank(comm, &rank), comm, PETSC_ERR_MPI, "Error inside MPI_Comm_rank() in PetscFPrintf");
   if (rank == 0) {
     va_list Argp;
     va_start(Argp, format);
