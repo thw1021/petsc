@@ -740,14 +740,14 @@ PetscErrorCode circleSingleX(PetscInt dim, PetscReal time, const PetscReal dummy
 {
   x[0] = p + 1.;
   x[1] = 0.;
-  return 0;
+  return PETSC_SUCCESS;
 }
 
 PetscErrorCode circleSingleV(PetscInt dim, PetscReal time, const PetscReal dummy[], PetscInt p, PetscScalar v[], void *ctx)
 {
   v[0] = 0.;
   v[1] = PetscSqrtReal(1000. / (p + 1.));
-  return 0;
+  return PETSC_SUCCESS;
 }
 
 /* Put 5 particles into each circle */
@@ -759,7 +759,7 @@ PetscErrorCode circleMultipleX(PetscInt dim, PetscReal time, const PetscReal dum
 
   x[0] = r0 * PetscCosReal(th0);
   x[1] = r0 * PetscSinReal(th0);
-  return 0;
+  return PETSC_SUCCESS;
 }
 
 /* Put 5 particles into each circle */
@@ -772,7 +772,7 @@ PetscErrorCode circleMultipleV(PetscInt dim, PetscReal time, const PetscReal dum
 
   v[0] = -r0 * omega * PetscSinReal(th0);
   v[1] = r0 * omega * PetscCosReal(th0);
-  return 0;
+  return PETSC_SUCCESS;
 }
 
 /*

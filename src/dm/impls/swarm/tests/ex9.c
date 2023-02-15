@@ -680,7 +680,7 @@ static void laplacian_g3(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscI
 static PetscErrorCode zero(PetscInt dim, PetscReal time, const PetscReal x[], PetscInt Nc, PetscScalar *u, void *ctx)
 {
   *u = 0.0;
-  return 0;
+  return PETSC_SUCCESS;
 }
 
 /*
@@ -800,12 +800,12 @@ PetscErrorCode PetscPDFPertubedConstant2D(const PetscReal x[], const PetscReal d
 {
   p[0] = (1 + 0.01 * PetscCosReal(0.5 * x[0])) / (2 * PETSC_PI);
   p[1] = (1 + 0.01 * PetscCosReal(0.5 * x[1])) / (2 * PETSC_PI);
-  return 0;
+  return PETSC_SUCCESS;
 }
 PetscErrorCode PetscPDFPertubedConstant1D(const PetscReal x[], const PetscReal dummy[], PetscReal p[])
 {
   p[0] = (1. + 0.01 * PetscCosReal(0.5 * x[0])) / (2 * PETSC_PI);
-  return 0;
+  return PETSC_SUCCESS;
 }
 
 PetscErrorCode PetscPDFCosine1D(const PetscReal x[], const PetscReal scale[], PetscReal p[])
@@ -813,7 +813,7 @@ PetscErrorCode PetscPDFCosine1D(const PetscReal x[], const PetscReal scale[], Pe
   const PetscReal alpha = scale ? scale[0] : 0.0;
   const PetscReal k     = scale ? scale[1] : 1.;
   p[0]                  = (1 + alpha * PetscCosReal(k * x[0]));
-  return 0;
+  return PETSC_SUCCESS;
 }
 
 PetscErrorCode PetscPDFCosine2D(const PetscReal x[], const PetscReal scale[], PetscReal p[])
@@ -821,7 +821,7 @@ PetscErrorCode PetscPDFCosine2D(const PetscReal x[], const PetscReal scale[], Pe
   const PetscReal alpha = scale ? scale[0] : 0.;
   const PetscReal k     = scale ? scale[0] : 1.;
   p[0]                  = (1 + alpha * PetscCosReal(k * (x[0] + x[1])));
-  return 0;
+  return PETSC_SUCCESS;
 }
 
 static PetscErrorCode InitializeParticles_PerturbedWeights(DM sw, AppCtx *user)
