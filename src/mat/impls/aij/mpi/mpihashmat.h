@@ -158,11 +158,11 @@ static PetscErrorCode MatSetUp_MPI_Hash(Mat A)
   PetscCall(MatCreate(PETSC_COMM_SELF, &a->A));
   PetscCall(MatSetSizes(a->A, A->rmap->n, A->cmap->n, A->rmap->n, A->cmap->n));
   PetscCall(MatSetBlockSizesFromMats(a->A, A, A));
-  #if defined(SUB_TYPE_CUSPARSE)
+#if defined(SUB_TYPE_CUSPARSE)
   PetscCall(MatSetType(a->A, MATSEQAIJCUSPARSE));
-  #else
+#else
   PetscCall(MatSetType(a->A, PetscConcat(MATSEQ, TYPE)));
-  #endif
+#endif
   PetscCall(MatSetUp(a->A));
 
   PetscCall(MatCreate(PETSC_COMM_SELF, &a->B));
