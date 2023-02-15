@@ -922,13 +922,16 @@ static PetscErrorCode InitializeParticles_PerturbedWeights(DM sw, AppCtx *user)
   /* Setup Quadrature for spatial and velocity weight calculations*/
   PetscQuadrature  quad_x;
   PetscInt         Nq_x;
-  const PetscReal *xq_x, *wq_x;
+  PetscReal       *xq_x_extended;
   PetscReal        weightsum = 0., totalcellweight = 0., weight_x[cEnd - cStart], weight_v[Np];
   PetscReal        scale[2] = {user->cosine_coefficients[0], user->cosine_coefficients[1]};
   if (user->fake_1D) PetscCall(PetscDTGaussTensorQuadrature(1, 1, 5, -1.0, 1.0, &quad_x));
   else PetscCall(PetscDTGaussTensorQuadrature(dim, 1, 5, -1.0, 1.0, &quad_x));
   PetscCall(PetscQuadratureGetData(quad_x, NULL, NULL, &Nq_x, &xq_x, &wq_x));
-
+  if (user->fake_1D) {
+    PetscCalloc1(Nq_x * dim, &xq_x_extended);
+    for (PetscInt i = 0; i < Nq_x; ++i) xq_x_extended[i * dim] = xq_x[i];
+  }
   /* Integrate the density function to get the weights of particles in each cell */
   for (d = 0; d < dim; ++d) xi0[d] = -1.0;
   for (c = cStart; c < cEnd; ++c) {
@@ -945,7 +948,8 @@ static PetscErrorCode InitializeParticles_PerturbedWeights(DM sw, AppCtx *user)
     PetscCall(DMPlexComputeCellGeometryFEM(dm, c, NULL, v0_x, J_x, invJ_x, &detJ_x));
     for (q = 0; q < Nq_x; ++q) {
       /*Transform quadrature points from ref space to real space (0,12.5664)*/
-      CoordinatesRefToReal(dim, dim, xi0, v0_x, J_x, &xq_x[q * dim], xr_x);
+      if (user->fake_1D) CoordinatesRefToReal(dim, dim, xi0, v0_x, J_x, &xq_x_extended[q * dim], xr_x);
+      else CoordinatesRefToReal(dim, dim, xi0, v0_x, J_x, &xq_x[q * dim], xr_x);
 
       /*Transform quadrature points from real space to ideal real space (0, 2PI/k)*/
       if (user->fake_1D) {
@@ -980,6 +984,7 @@ static PetscErrorCode InitializeParticles_PerturbedWeights(DM sw, AppCtx *user)
     PetscCall(PetscFree(pidx));
   }
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "particle weight sum = %1.10f cell weight sum = %1.10f\n", (double)totalcellweight, (double)weightsum));
+  if (user->fake_1D) PetscFree(xq_x_extended);
   PetscCall(PetscQuadratureDestroy(&quad_x));
   PetscCall(DMSwarmSortRestoreAccess(sw));
   PetscCall(DMSwarmRestoreField(sw, DMSwarmPICField_coor, NULL, NULL, (void **)&x));
