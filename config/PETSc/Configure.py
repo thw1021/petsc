@@ -891,8 +891,15 @@ char assert_aligned[(sizeof(struct mystruct)==16)*2-1];
     On success:
     - defines PETSC_USE_COVERAGE to 1
     """
+    try:
+      import inspect
+
+      FUNC_NAME = inspect.currentframe().f_code.co_name
+    except:
+      FUNC_NAME = 'Unknown'
+
     def log_print(msg, *args, **kwargs):
-      self.logPrint('checkCoverage: '+str(msg), *args, **kwargs)
+      self.logPrint('{}(): {}'.format(FUNC_NAME, msg), *args, **kwargs)
       return
 
     def quoted(string):
@@ -921,22 +928,36 @@ char assert_aligned[(sizeof(struct mystruct)==16)*2-1];
     coverage_flags = make_flag_list('--coverage', extra_coverage_flags)
     log_print('Checking set of coverage flags: {}'.format(coverage_flags))
 
-    found = 0
+    found = None
     with self.Language(lang):
       with self.setCompilers.Language(lang):
         for flag in coverage_flags:
-          if self.setCompilers.checkCompilerFlag(flag) and self.checkLink():
-            # compilerOnly = False, the linker also needs to see the coverage flag
-            self.setCompilers.insertCompilerFlag(flag, False)
-            found = 1
-            break
+          # the linker also needs to see the coverage flag
+          with self.setCompilers.extraCompilerFlags([flag], compilerOnly=False) as skip_flags:
+            if not skip_flags and self.checkRun():
+              # flag was accepted
+              found = flag
+              break
+
           log_print(
             'Compiler {} did not accept coverage flag {}'.format(quoted(compiler), quoted(flag))
           )
 
-    if not found:
-      log_print('Compiler {} did not accept ANY coverage flags: {}, bailing!'.format(quoted(compiler), coverage_flags))
-      return
+        if found is None:
+          log_print(
+            'Compiler {} did not accept ANY coverage flags: {}, bailing!'.format(
+              quoted(compiler), coverage_flags
+            )
+          )
+          return
+
+        # must do this exactly here since:
+        #
+        # 1. setCompilers.extraCompilerFlags() will reset the compiler flags on __exit__()
+        #    (so cannot do it in the loop)
+        # 2. we need to set the compiler flag while setCompilers.Language() is still in
+        #    effect (so cannot do it outside the with statements)
+        self.setCompilers.insertCompilerFlag(flag, False)
 
     if not self.functions.haveFunction('__gcov_dump'):
       self.functions.checkClassify(['__gcov_dump'])
@@ -1000,12 +1021,15 @@ char assert_aligned[(sizeof(struct mystruct)==16)*2-1];
     log_print('{} to find an executable'.format('REQUIRED' if required else 'NOT required'))
     if arg_opt in {'auto', 'default-auto', '1'}:
       # detect it based on the C language compiler, hopefully this does not clash!
-      compiler = self.getCompiler(lang=self.setCompilers.languages.clanguage)
+      lang     = self.setCompilers.languages.clanguage
+      compiler = self.getCompiler(lang=lang)
       log_print('User did not explicitly set coverage exec (got {}), trying to auto-detect based on compiler {}'.format(quoted(arg_opt), quoted(compiler)))
       if self.setCompilers.isGNU(compiler, self.log):
-        exec_names = ['gcov']
+        compiler_version_re = re.compile(r'[gG][cC\+\-]+[0-9]* \(.+\) (\d+)\.(\d+)\.(\d+)')
+        exec_names          = ['gcov']
       elif self.setCompilers.isClang(compiler, self.log):
-        exec_names = ['llvm-cov']
+        compiler_version_re = re.compile(r'clang version (\d+)\.(\d+)\.(\d+)')
+        exec_names          = ['llvm-cov']
         if self.setCompilers.isDarwin(self.log):
           # macOS masquerades llvm-cov as just 'gcov', so we add this to the list in case
           # bare llvm-cov does not work
@@ -1018,6 +1042,19 @@ char assert_aligned[(sizeof(struct mystruct)==16)*2-1];
         # implies 'auto' explicitly set by user, or we were required to find
         # something. either way we should error
         raise RuntimeError('Could not auto-detect coverage tool for {}, please set coverage tool name explicitly'.format(quoted(compiler)))
+
+      try:
+        compiler_version_str = self.compilerFlags.version[lang]
+      except KeyError:
+        compiler_version_str = 'Unknown'
+
+      log_print('Searching version string {} (for compiler {}) using pattern {}'.format(quoted(compiler_version_str), quoted(compiler), quoted(compiler_version_re.pattern)))
+      major_version = compiler_version_re.search(compiler_version_str)
+      if major_version is not None:
+        log_print('Found major = {}, minor = {}, patch = {}'.format(major_version.group(1), major_version.group(2), major_version.group(3)))
+        # form [llvm-cov-14, llvm-cov, etc.]
+        versioned_coverage_exec = '-'.join((exec_names[0], major_version.group(1)))
+        exec_names.insert(0, versioned_coverage_exec)
     else:
       log_print('User explicitly set coverage exec as {}'.format(quoted(arg_opt)))
       par_dir = os.path.dirname(arg_opt)
