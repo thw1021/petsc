@@ -299,7 +299,7 @@ public:
   using PermutationIterator = thrust::permutation_iterator<Iterator, TransformIterator>;
   using iterator            = PermutationIterator; // type of the strided_range iterator
 
-  constexpr strided_range(Iterator first, Iterator last, difference_type stride) noexcept : first(std::move(first)), last(std::move(last)), stride(std::move(stride)) { }
+  constexpr strided_range(Iterator first, Iterator last, difference_type stride) noexcept : first{std::move(first)}, last{std::move(last)}, stride{std::move(stride)} { }
 
   PETSC_NODISCARD iterator begin() const noexcept
   {
@@ -332,7 +332,7 @@ inline PetscErrorCode MatDense_CUPM<T, D>::PointwiseUnaryTransform(Mat A, PetscI
     PetscCall(MatDenseGetLDA(A, &lda));
     {
       using strided_range_type = detail::strided_range<thrust::device_vector<PetscScalar>::iterator>;
-      const auto         dptr  = thrust::device_pointer_cast(da);
+      const auto         dptr  = thrust::device_pointer_cast(da.data());
       const std::size_t  begin = rstart * lda;
       const std::size_t  end   = rend2 - rstart + rend2 * lda;
       strided_range_type diagonal{dptr + begin, dptr + end, lda + 1};

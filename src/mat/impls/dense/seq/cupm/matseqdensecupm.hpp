@@ -1328,7 +1328,7 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::Shift(Mat A, PetscScalar alpha) noex
   PetscFunctionBegin;
   PetscCall(GetHandles_(&dctx));
   PetscCall(PetscInfo(A, "Performing Shift %" PetscInt_FMT " x %" PetscInt_FMT " on backend\n", m, n));
-  PetscCall(PointwiseUnaryTransform(dctx, 0, m, n, dctx, device::cupm::functors::make_plus_equals(alpha)));
+  PetscCall(PointwiseUnaryTransform(A, 0, m, n, dctx, device::cupm::functors::make_plus_equals(alpha)));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
