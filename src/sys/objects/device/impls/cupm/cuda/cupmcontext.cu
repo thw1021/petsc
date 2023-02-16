@@ -8,8 +8,8 @@ PetscErrorCode PetscDeviceContextCreate_CUDA(PetscDeviceContext dctx)
 
   PetscFunctionBegin;
   PetscCall(cuda_context.initialize(dctx->device));
-  dctx->data = new PetscDeviceContext_(CUDA);
-  PetscCall(PetscMemcpy(dctx->ops, &cuda_context.ops, sizeof(cuda_context.ops)));
+  dctx->data   = new PetscDeviceContext_(CUDA);
+  *(dctx->ops) = cuda_context.ops;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
