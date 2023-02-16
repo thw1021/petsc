@@ -10,7 +10,7 @@ import argparse
 
 CLASSIC_DOCS_LOC = os.path.join(os.getcwd(), '_build_classic')
 CLASSIC_DOCS_ARCH = 'arch-classic-docs'
-HTMLMAP_DEFAULT_LOCATION = os.path.join(CLASSIC_DOCS_LOC, "docs", "manualpages", "htmlmap")
+HTMLMAP_DEFAULT_LOCATION = os.path.join(CLASSIC_DOCS_LOC, "manualpages", "htmlmap")
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -57,7 +57,7 @@ def _configure_minimal_petsc(petsc_dir, petsc_arch) -> None:
         '--with-pthread=0',
         '--with-regexp=0',
         '--download-sowing',
-        '--download-c2html',
+        '--with-c2html',
         '--with-mkl_sparse_optimize=0',
         '--with-mkl_sparse=0',
         'PETSC_ARCH=' + petsc_arch,
@@ -101,7 +101,7 @@ def _build_classic_docs_subset(petsc_dir, petsc_arch, stage):
 
 def classic_docs_subdirs(stage):
     if stage == 'pre':
-        return [os.path.join('docs', 'manualpages')]
+        return [os.path.join('manualpages')]
     if stage == 'post':
         return ['include', 'src']
     raise Exception('Unrecognized stage %s' % stage)
