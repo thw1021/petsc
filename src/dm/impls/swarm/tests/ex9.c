@@ -17,7 +17,6 @@ static char help[] = "Landau Damping test using Vlasov-Poisson equations\n";
     -ts_monitor_sp_swarm -ts_monitor_sp_swarm_retain 0 -ts_monitor_sp_swarm_phase 1 -draw_size 500,500
 
 */
-#include <mpi.h>
 #include <petscts.h>
 #include <petscdmplex.h>
 #include <petscdmswarm.h>

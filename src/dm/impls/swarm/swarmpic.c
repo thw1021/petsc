@@ -749,7 +749,7 @@ PetscErrorCode DMSwarmSetVelocityFunction(DM sw, PetscSimplePointFunc velFunc)
 @*/
 PetscErrorCode DMSwarmComputeLocalSize(DM sw, PetscInt N, PetscProbFunc density)
 {
-  DM               dm, cdm;
+  DM               dm;
   PetscQuadrature  quad;
   const PetscReal *xq, *wq;
   PetscInt        *npc_s, *cellid, Ni;
@@ -763,7 +763,6 @@ PetscErrorCode DMSwarmComputeLocalSize(DM sw, PetscInt N, PetscProbFunc density)
   PetscCall(DMGetDimension(dm, &dim));
   PetscCall(DMGetBoundingBox(dm, gmin, gmax));
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
-  PetscCall(DMSwarmGetCellDM(dm, &cdm));
   PetscCall(DMPlexIsSimplex(dm, &simplex));
   PetscCall(DMGetCoordinatesLocalSetUp(dm));
   if (simplex) PetscCall(PetscDTStroudConicalQuadrature(dim, 1, 5, -1.0, 1.0, &quad));
@@ -775,9 +774,9 @@ PetscErrorCode DMSwarmComputeLocalSize(DM sw, PetscInt N, PetscProbFunc density)
   for (c = 0; c < cEnd - cStart; ++c) {
     const PetscInt cell = c + cStart;
     PetscReal      v0[3], J[9], invJ[9], detJ, detJp = 2. / (gmax[0] - gmin[0]), xr[3], den;
-    PetscReal      n_int[Ns];
-    for (s = 0; s < Ns; ++s) n_int[s] = 0.;
+    PetscReal     *n_int;
 
+    PetscCall(PetscCalloc1(Ns, &n_int));
     /*Have to transform quadrature points/weights to cell domain*/
     PetscCall(DMPlexComputeCellGeometryFEM(dm, cell, NULL, v0, J, invJ, &detJ));
     for (q = 0; q < Nq; ++q) {
@@ -795,6 +794,7 @@ PetscErrorCode DMSwarmComputeLocalSize(DM sw, PetscInt N, PetscProbFunc density)
       npc_s[c * Ns + s] += (PetscInt)(Ni * n_int[s]);
       Np += npc_s[c * Ns + s];
     }
+    PetscCall(PetscFree(n_int));
   }
   PetscCall(PetscQuadratureDestroy(&quad));
   PetscCall(DMSwarmSetLocalSizes(sw, Np, 0));
