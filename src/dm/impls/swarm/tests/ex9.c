@@ -912,7 +912,7 @@ static PetscErrorCode InitializeParticles_PerturbedWeights(DM sw, AppCtx *user)
   else PetscCall(PetscDTGaussTensorQuadrature(dim, 1, 5, -1.0, 1.0, &quad_x));
   PetscCall(PetscQuadratureGetData(quad_x, NULL, NULL, &Nq_x, &xq_x, &wq_x));
   if (user->fake_1D) {
-    PetscCalloc1(Nq_x * dim, &xq_x_extended);
+    PetscCall(PetscCalloc1(Nq_x * dim, &xq_x_extended));
     for (PetscInt i = 0; i < Nq_x; ++i) xq_x_extended[i * dim] = xq_x[i];
   }
   /* Integrate the density function to get the weights of particles in each cell */
@@ -1023,9 +1023,9 @@ static PetscErrorCode InitializeConstants(DM sw, AppCtx *user)
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "dim = %" PetscInt_FMT "\ttotalWeight = %f, user->charges[species[p]] = %f\ttotalCharge = %f, Total Area = %f\n", dim, (double)totalWeight, (double)user->charges[0], (double)totalCharge, (double)Area));
     param->sigma = PetscAbsReal(totalCharge / (Area));
 
-    PetscPrintf(PETSC_COMM_SELF, "sigma: %g\n", (double)param->sigma);
-    PetscPrintf(PETSC_COMM_SELF, "(x0,v0,t0,m0,q0,phi0): (%e, %e, %e, %e, %e, %e) - (P, V) = (%e, %e)\n", (double)param->x0, (double)param->v0, (double)param->t0, (double)param->m0, (double)param->q0, (double)param->phi0, (double)param->poissonNumber,
-                (double)param->vlasovNumber);
+    PetscCall(PetscPrintf(PETSC_COMM_SELF, "sigma: %g\n", (double)param->sigma));
+    PetscCall(PetscPrintf(PETSC_COMM_SELF, "(x0,v0,t0,m0,q0,phi0): (%e, %e, %e, %e, %e, %e) - (P, V) = (%e, %e)\n", (double)param->x0, (double)param->v0, (double)param->t0, (double)param->m0, (double)param->q0, (double)param->phi0, (double)param->poissonNumber,
+                (double)param->vlasovNumber));
   }
   /* Setup Constants */
   {
