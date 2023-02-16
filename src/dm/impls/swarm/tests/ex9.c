@@ -1025,7 +1025,7 @@ static PetscErrorCode InitializeConstants(DM sw, AppCtx *user)
 
     PetscCall(PetscPrintf(PETSC_COMM_SELF, "sigma: %g\n", (double)param->sigma));
     PetscCall(PetscPrintf(PETSC_COMM_SELF, "(x0,v0,t0,m0,q0,phi0): (%e, %e, %e, %e, %e, %e) - (P, V) = (%e, %e)\n", (double)param->x0, (double)param->v0, (double)param->t0, (double)param->m0, (double)param->q0, (double)param->phi0, (double)param->poissonNumber,
-                (double)param->vlasovNumber));
+                          (double)param->vlasovNumber));
   }
   /* Setup Constants */
   {
