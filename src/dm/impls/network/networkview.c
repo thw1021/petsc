@@ -72,7 +72,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   char        filename[PETSC_MAX_PATH_LEN + 1], proccall[PETSC_MAX_PATH_LEN + 500], scriptFile[PETSC_MAX_PATH_LEN + 1], streamBuffer[256];
   PetscViewer csvViewer;
   FILE       *processFile = NULL;
-  PetscBool   isnull;
+  PetscBool   isnull, isSharedTmp, isTmpOverridden;
   PetscDraw   draw;
 
   PetscFunctionBegin;
@@ -98,9 +98,15 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
     size_t numChars;
     // Same thing, but for POSIX systems on which tmpnam is deprecated
     // Note: Configure may detect mkstemp but it will not be defined if compiling for C99, so check additional defines to see if we can use it
-    PetscCall(PetscStrcpy(filename, "/tmp/"));
     // Mkstemp requires us to explicitly specify part of the path, but some systems may not like putting files in /tmp/ so have an option for it
-    PetscCall(PetscOptionsGetString(NULL, NULL, "-dmnetwork_view_tmpdir", filename, sizeof(filename), NULL));
+    PetscCall(PetscOptionsGetString(NULL, NULL, "-dmnetwork_view_tmpdir", filename, sizeof(filename), &isTmpOverridden));
+    // If not specified by option try using a shared tmp on the system
+    if (!isTmpOverridden) {
+      PetscCall(PetscGetTmp(comm, filename, sizeof(filename)));
+      PetscCall(PetscSharedTmp(comm, &isSharedTmp));
+    }
+    // Validate that if tmp is not overridden it is at least shared
+    PetscCheck(isTmpOverridden || isSharedTmp, comm, PETSC_ERR_SUP_SYS, "Temporary file directory is not shared between ranks, try using -dmnetwork_view_tmpdir to specify a shared directory");
     // Make sure the filename ends with a '/'
     PetscCall(PetscStrlen(filename, &numChars));
     if (filename[numChars - 1] != '/') {
