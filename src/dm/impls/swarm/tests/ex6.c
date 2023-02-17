@@ -1012,6 +1012,7 @@ int main(int argc, char **argv)
      requires: double !complex
 
    testset:
+     requires: defined(PETSC_HAVE_EXECUTABLE_EXPORT)
      args: -dm_plex_dim 2 -dm_plex_simplex 0 -dm_plex_box_faces 1,1 -dm_plex_box_lower -5,-5 -dm_plex_box_upper 5,5 \
            -dm_swarm_num_particles 2 -dm_swarm_coordinate_function circleSingleX -dm_swarm_velocity_function circleSingleV \
            -ts_type basicsymplectic\
@@ -1042,6 +1043,7 @@ int main(int argc, char **argv)
        args: -ts_basicsymplectic_type 4
 
    testset:
+     requires: defined(PETSC_HAVE_EXECUTABLE_EXPORT)
      args: -dm_plex_dim 2 -dm_plex_simplex 0 -dm_plex_box_faces 1,1 -dm_plex_box_lower -5,-5 -dm_plex_box_upper 5,5 \
            -dm_swarm_num_particles 2 -dm_swarm_coordinate_function circleSingleX -dm_swarm_velocity_function circleSingleV \
            -ts_type basicsymplectic\
@@ -1062,6 +1064,7 @@ int main(int argc, char **argv)
        args: -ts_basicsymplectic_type 4
 
    testset:
+     requires: defined(PETSC_HAVE_EXECUTABLE_EXPORT)
      args: -dm_swarm_num_particles 2 -dm_swarm_coordinate_function circleSingleX -dm_swarm_velocity_function circleSingleV \
            -ts_type theta -ts_theta_theta 0.5 -ts_convergence_estimate -convest_num_refine 2 \
              -mat_type baij -ksp_error_if_not_converged -em_pc_type svd\
@@ -1072,6 +1075,7 @@ int main(int argc, char **argv)
        args: -dm_plex_dim 2 -dm_plex_simplex 0 -dm_plex_box_faces 1,1 -dm_plex_box_lower -5,-5 -dm_plex_box_upper 5,5
 
    testset:
+     requires: defined(PETSC_HAVE_EXECUTABLE_EXPORT)
      args: -dm_plex_dim 2 -dm_plex_simplex 0 -dm_plex_box_faces 10,10 -dm_plex_box_lower -5,-5 -dm_plex_box_upper 5,5 -petscpartitioner_type simple \
            -dm_swarm_num_particles 2 -dm_swarm_coordinate_function circleSingleX -dm_swarm_velocity_function circleSingleV -dm_swarm_num_species 1\
            -ts_type basicsymplectic -ts_convergence_estimate -convest_num_refine 2 \
@@ -1095,6 +1099,7 @@ int main(int argc, char **argv)
        args: -ts_basicsymplectic_type 4 -dm_swarm_num_particles 0,0,2,0
 
    testset:
+     requires: defined(PETSC_HAVE_EXECUTABLE_EXPORT)
      args: -dm_plex_dim 2 -dm_plex_simplex 0 -dm_plex_box_faces 10,10 -dm_plex_box_lower -5,-5 -dm_plex_box_upper 5,5 \
            -dm_swarm_num_particles 10 -dm_swarm_coordinate_function circleMultipleX -dm_swarm_velocity_function circleMultipleV \
            -ts_convergence_estimate -convest_num_refine 2 \
@@ -1116,6 +1121,7 @@ int main(int argc, char **argv)
                -mat_type baij -ksp_error_if_not_converged -em_pc_type lu
 
    testset:
+     requires: defined(PETSC_HAVE_EXECUTABLE_EXPORT)
      args: -dm_plex_dim 2 -dm_plex_simplex 0 -dm_plex_box_faces 2,2 -dm_plex_box_lower -5,-5 -dm_plex_box_upper 5,5 \
            -dm_swarm_num_particles 2 -dm_swarm_coordinate_function circleSingleX -dm_swarm_velocity_function circleSingleV \
            -em_pc_type fieldsplit -ksp_rtol 1e-10 -em_ksp_type preonly -em_type mixed -em_ksp_error_if_not_converged\
