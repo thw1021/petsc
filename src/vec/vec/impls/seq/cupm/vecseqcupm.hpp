@@ -8,9 +8,14 @@
 #include "../src/sys/objects/device/impls/cupm/kernels.hpp"
 
 #if defined(__cplusplus)
-  #include <thrust/transform_reduce.h>
+  #if PetscDefined(USE_COMPLEX)
+    #include <thrust/transform_reduce.h>
+  #endif
   #include <thrust/reduce.h>
   #include <thrust/functional.h>
+  #include <thrust/tuple.h>
+  #include <thrust/device_ptr.h>
+  #include <thrust/iterator/zip_iterator.h>
   #include <thrust/iterator/counting_iterator.h>
   #include <thrust/inner_product.h>
 
@@ -1529,10 +1534,15 @@ PETSC_DEVICE_INLINE_DECL void add_coo_values_impl(const PetscScalar *PETSC_RESTR
   return;
 }
 
-PETSC_KERNEL_DECL static void add_coo_values(const PetscScalar *PETSC_RESTRICT v, PetscCount n, const PetscCount *PETSC_RESTRICT jmap1, const PetscCount *PETSC_RESTRICT perm1, InsertMode imode, PetscScalar *PETSC_RESTRICT xv)
+namespace
+{
+
+PETSC_KERNEL_DECL void add_coo_values(const PetscScalar *PETSC_RESTRICT v, PetscCount n, const PetscCount *PETSC_RESTRICT jmap1, const PetscCount *PETSC_RESTRICT perm1, InsertMode imode, PetscScalar *PETSC_RESTRICT xv)
 {
   add_coo_values_impl(v, n, jmap1, perm1, imode, xv, [](PetscCount i) { return i; });
   return;
+}
+
 }
 
 } // namespace kernels

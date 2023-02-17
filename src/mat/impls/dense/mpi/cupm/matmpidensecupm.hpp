@@ -30,6 +30,9 @@ private:
 
   static PetscErrorCode SetPreallocation_(Mat, PetscDeviceContext, PetscScalar *) noexcept;
 
+  template <bool to_host>
+  static PetscErrorCode Convert_Dispatch_(Mat , MatType, MatReuse , Mat *) noexcept;
+
 public:
   PETSC_NODISCARD static constexpr const char *MatConvert_mpidensecupm_mpidense_C() noexcept;
 
@@ -126,6 +129,68 @@ inline PetscErrorCode MatDense_MPI_CUPM<T>::SetPreallocation_(Mat A, PetscDevice
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+template <device::cupm::DeviceType T>
+template <bool to_host>
+inline PetscErrorCode MatDense_MPI_CUPM<T>::Convert_Dispatch_(Mat M, MatType, MatReuse reuse, Mat *newmat) noexcept
+{
+  PetscFunctionBegin;
+  if (reuse == MAT_INITIAL_MATRIX) {
+    PetscCall(MatDuplicate(M, MAT_COPY_VALUES, newmat));
+  } else if (reuse == MAT_REUSE_MATRIX) {
+    PetscCall(MatCopy(M, *newmat, SAME_NONZERO_PATTERN));
+  }
+  {
+    const auto B    = *newmat;
+    const auto pobj = PetscObjectCast(B);
+
+    if (to_host) {
+      PetscCall(BindToCPU(B, PETSC_TRUE));
+    } else {
+      PetscCall(PetscDeviceInitialize(PETSC_DEVICE_CUPM()));
+    }
+
+    PetscCall(PetscStrFreeAllocpy(to_host ? VECSTANDARD : VecMPI_CUPM::VECCUPM() , &B->defaultvectype));
+    PetscCall(PetscObjectChangeTypeName(pobj, to_host ? MATMPIDENSE : MATMPIDENSECUPM()));
+
+    // ============================================================
+    // Composed Ops
+    // ============================================================
+    MatComposeOp_CUPM(to_host, pobj, MatConvert_mpidensecupm_mpidense_C(), nullptr, Convert_MPIDenseCUPM_MPIDense);
+    MatComposeOp_CUPM(to_host, pobj, MatProductSetFromOptions_mpiaij_mpidensecupm_C(), nullptr, MatProductSetFromOptions_MPIAIJ_MPIDense);
+    MatComposeOp_CUPM(to_host, pobj, MatProductSetFromOptions_mpiaijcupmsparse_mpidensecupm_C(), nullptr, MatProductSetFromOptions_MPIAIJ_MPIDense);
+    MatComposeOp_CUPM(to_host, pobj, MatProductSetFromOptions_mpidensecupm_mpiaij_C(), nullptr, MatProductSetFromOptions_MPIDense_MPIAIJ);
+    MatComposeOp_CUPM(to_host, pobj, MatProductSetFromOptions_mpidensecupm_mpiaijcupmsparse_C(), nullptr, MatProductSetFromOptions_MPIDense_MPIAIJ);
+    MatComposeOp_CUPM(to_host, pobj, MatDenseCUPMGetArray_C(), nullptr, GetArrayC_<PETSC_MEMTYPE_DEVICE, PETSC_MEMORY_ACCESS_READ_WRITE>);
+    MatComposeOp_CUPM(to_host, pobj, MatDenseCUPMGetArrayRead_C(), nullptr, GetArrayC_<PETSC_MEMTYPE_DEVICE, PETSC_MEMORY_ACCESS_READ>);
+    MatComposeOp_CUPM(to_host, pobj, MatDenseCUPMGetArrayWrite_C(), nullptr, GetArrayC_<PETSC_MEMTYPE_DEVICE, PETSC_MEMORY_ACCESS_WRITE>);
+    MatComposeOp_CUPM(to_host, pobj, MatDenseCUPMRestoreArray_C(), nullptr, RestoreArrayC_<PETSC_MEMTYPE_DEVICE, PETSC_MEMORY_ACCESS_READ_WRITE>);
+    MatComposeOp_CUPM(to_host, pobj, MatDenseCUPMRestoreArrayRead_C(), nullptr, RestoreArrayC_<PETSC_MEMTYPE_DEVICE, PETSC_MEMORY_ACCESS_READ>);
+    MatComposeOp_CUPM(to_host, pobj, MatDenseCUPMRestoreArrayWrite_C(), nullptr, RestoreArrayC_<PETSC_MEMTYPE_DEVICE, PETSC_MEMORY_ACCESS_WRITE>);
+    MatComposeOp_CUPM(to_host, pobj, MatDenseCUPMPlaceArray_C(), nullptr, PlaceArray);
+    MatComposeOp_CUPM(to_host, pobj, MatDenseCUPMResetArray_C(), nullptr, ResetArray);
+    MatComposeOp_CUPM(to_host, pobj, MatDenseCUPMReplaceArray_C(), nullptr, ReplaceArray);
+
+    if (to_host) {
+      if (auto &m_A = MatIMPLCast(B)->A) PetscCall(MatConvert(m_A, MATSEQDENSE, MAT_INPLACE_MATRIX, &m_A));
+      B->offloadmask = PETSC_OFFLOAD_CPU;
+    } else {
+      if (auto &m_A = MatIMPLCast(B)->A) {
+        PetscCall(MatConvert(m_A, MATSEQDENSECUPM(), MAT_INPLACE_MATRIX, &m_A));
+        B->offloadmask = PETSC_OFFLOAD_BOTH;
+      } else {
+        B->offloadmask = PETSC_OFFLOAD_UNALLOCATED;
+      }
+      PetscCall(BindToCPU(B, PETSC_FALSE));
+    }
+
+    // ============================================================
+    // Function Pointer Ops
+    // ============================================================
+    MatSetOp_CUPM(to_host, B, bindtocpu, nullptr, BindToCPU);
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 // ==========================================================================================
 // MatDense_MPI_CUPM -- Public API
 // ==========================================================================================
@@ -208,80 +273,18 @@ inline PetscErrorCode MatDense_MPI_CUPM<T>::BindToCPU(Mat A, PetscBool usehost) 
 }
 
 template <device::cupm::DeviceType T>
-inline PetscErrorCode MatDense_MPI_CUPM<T>::Convert_MPIDenseCUPM_MPIDense(Mat M, MatType, MatReuse reuse, Mat *newmat) noexcept
+inline PetscErrorCode MatDense_MPI_CUPM<T>::Convert_MPIDenseCUPM_MPIDense(Mat M, MatType mtype, MatReuse reuse, Mat *newmat) noexcept
 {
-  const auto B    = *newmat;
-  const auto pobj = PetscObjectCast(B);
-
   PetscFunctionBegin;
-  if (reuse == MAT_INITIAL_MATRIX) {
-    PetscCall(MatDuplicate(M, MAT_COPY_VALUES, newmat));
-  } else if (reuse == MAT_REUSE_MATRIX) {
-    PetscCall(MatCopy(M, B, SAME_NONZERO_PATTERN));
-  }
-
-  PetscCall(BindToCPU(B, PETSC_TRUE));
-  PetscCall(PetscStrFreeAllocpy(VECSTANDARD, &B->defaultvectype));
-  PetscCall(PetscObjectChangeTypeName(pobj, MATMPIDENSE));
-  PetscCall(PetscObjectComposeFunction(pobj, MatConvert_mpidensecupm_mpidense_C(), nullptr));
-  PetscCall(PetscObjectComposeFunction(pobj, MatProductSetFromOptions_mpiaij_mpidensecupm_C(), nullptr));
-  PetscCall(PetscObjectComposeFunction(pobj, MatProductSetFromOptions_mpidensecupm_mpiaij_C(), nullptr));
-  PetscCall(PetscObjectComposeFunction(pobj, MatProductSetFromOptions_mpiaijcupmsparse_mpidensecupm_C(), nullptr));
-  PetscCall(PetscObjectComposeFunction(pobj, MatProductSetFromOptions_mpidensecupm_mpiaijcupmsparse_C(), nullptr));
-  PetscCall(PetscObjectComposeFunction(pobj, MatDenseCUPMGetArray_C(), nullptr));
-  PetscCall(PetscObjectComposeFunction(pobj, MatDenseCUPMGetArrayRead_C(), nullptr));
-  PetscCall(PetscObjectComposeFunction(pobj, MatDenseCUPMGetArrayWrite_C(), nullptr));
-  PetscCall(PetscObjectComposeFunction(pobj, MatDenseCUPMRestoreArray_C(), nullptr));
-  PetscCall(PetscObjectComposeFunction(pobj, MatDenseCUPMRestoreArrayRead_C(), nullptr));
-  PetscCall(PetscObjectComposeFunction(pobj, MatDenseCUPMRestoreArrayWrite_C(), nullptr));
-  PetscCall(PetscObjectComposeFunction(pobj, MatDenseCUPMPlaceArray_C(), nullptr));
-  PetscCall(PetscObjectComposeFunction(pobj, MatDenseCUPMResetArray_C(), nullptr));
-  PetscCall(PetscObjectComposeFunction(pobj, MatDenseCUPMReplaceArray_C(), nullptr));
-  if (auto &m_A = MatIMPLCast(B)->A) PetscCall(MatConvert(m_A, MATSEQDENSE, MAT_INPLACE_MATRIX, &m_A));
-
-  B->ops->bindtocpu = nullptr;
-  B->offloadmask    = PETSC_OFFLOAD_CPU;
+  PetscCall(Convert_Dispatch_</* to host */ true>(M, mtype, reuse, newmat));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 template <device::cupm::DeviceType T>
-inline PetscErrorCode MatDense_MPI_CUPM<T>::Convert_MPIDense_MPIDenseCUPM(Mat M, MatType, MatReuse reuse, Mat *newmat) noexcept
+inline PetscErrorCode MatDense_MPI_CUPM<T>::Convert_MPIDense_MPIDenseCUPM(Mat M, MatType mtype, MatReuse reuse, Mat *newmat) noexcept
 {
-  const auto B    = *newmat;
-  const auto pobj = PetscObjectCast(B);
-
   PetscFunctionBegin;
-  if (reuse == MAT_INITIAL_MATRIX) {
-    PetscCall(MatDuplicate(M, MAT_COPY_VALUES, newmat));
-  } else if (reuse == MAT_REUSE_MATRIX) {
-    PetscCall(MatCopy(M, B, SAME_NONZERO_PATTERN));
-  }
-
-  PetscCall(PetscDeviceInitialize(PETSC_DEVICE_CUPM()));
-  PetscCall(PetscStrFreeAllocpy(VecMPI_CUPM::VECCUPM(), &B->defaultvectype));
-  PetscCall(PetscObjectChangeTypeName(pobj, MATMPIDENSECUPM()));
-  PetscCall(PetscObjectComposeFunction(pobj, MatConvert_mpidensecupm_mpidense_C(), Convert_MPIDenseCUPM_MPIDense));
-  PetscCall(PetscObjectComposeFunction(pobj, MatProductSetFromOptions_mpiaij_mpidensecupm_C(), MatProductSetFromOptions_MPIAIJ_MPIDense));
-  PetscCall(PetscObjectComposeFunction(pobj, MatProductSetFromOptions_mpiaijcupmsparse_mpidensecupm_C(), MatProductSetFromOptions_MPIAIJ_MPIDense));
-  PetscCall(PetscObjectComposeFunction(pobj, MatProductSetFromOptions_mpidensecupm_mpiaij_C(), MatProductSetFromOptions_MPIDense_MPIAIJ));
-  PetscCall(PetscObjectComposeFunction(pobj, MatProductSetFromOptions_mpidensecupm_mpiaijcupmsparse_C(), MatProductSetFromOptions_MPIDense_MPIAIJ));
-  PetscCall(PetscObjectComposeFunction(pobj, MatDenseCUPMGetArray_C(), GetArrayC_<PETSC_MEMTYPE_DEVICE, PETSC_MEMORY_ACCESS_READ_WRITE>));
-  PetscCall(PetscObjectComposeFunction(pobj, MatDenseCUPMGetArrayRead_C(), GetArrayC_<PETSC_MEMTYPE_DEVICE, PETSC_MEMORY_ACCESS_READ>));
-  PetscCall(PetscObjectComposeFunction(pobj, MatDenseCUPMGetArrayWrite_C(), GetArrayC_<PETSC_MEMTYPE_DEVICE, PETSC_MEMORY_ACCESS_WRITE>));
-  PetscCall(PetscObjectComposeFunction(pobj, MatDenseCUPMRestoreArray_C(), RestoreArrayC_<PETSC_MEMTYPE_DEVICE, PETSC_MEMORY_ACCESS_READ_WRITE>));
-  PetscCall(PetscObjectComposeFunction(pobj, MatDenseCUPMRestoreArrayRead_C(), RestoreArrayC_<PETSC_MEMTYPE_DEVICE, PETSC_MEMORY_ACCESS_READ>));
-  PetscCall(PetscObjectComposeFunction(pobj, MatDenseCUPMRestoreArrayWrite_C(), RestoreArrayC_<PETSC_MEMTYPE_DEVICE, PETSC_MEMORY_ACCESS_WRITE>));
-  PetscCall(PetscObjectComposeFunction(pobj, MatDenseCUPMPlaceArray_C(), PlaceArray));
-  PetscCall(PetscObjectComposeFunction(pobj, MatDenseCUPMResetArray_C(), ResetArray));
-  PetscCall(PetscObjectComposeFunction(pobj, MatDenseCUPMReplaceArray_C(), ReplaceArray));
-  if (auto &m_A = MatIMPLCast(B)->A) {
-    PetscCall(MatConvert(m_A, MATSEQDENSECUPM(), MAT_INPLACE_MATRIX, &m_A));
-    B->offloadmask = PETSC_OFFLOAD_BOTH;
-  } else {
-    B->offloadmask = PETSC_OFFLOAD_UNALLOCATED;
-  }
-  PetscCall(BindToCPU(B, PETSC_FALSE));
-  B->ops->bindtocpu = BindToCPU;
+  PetscCall(Convert_Dispatch_</* to host */ false>(M, mtype, reuse, newmat));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -415,16 +418,21 @@ namespace
 {
 
 template <device::cupm::DeviceType T>
-inline PetscErrorCode MatCreateDenseCUPM(MPI_Comm comm, PetscInt m, PetscInt n, PetscInt M, PetscInt N, PetscScalar *data, Mat *A, PetscDeviceContext dctx = nullptr) noexcept
+inline PetscErrorCode MatCreateDenseCUPM(MPI_Comm comm, PetscInt n, PetscInt m, PetscInt N, PetscInt M, PetscScalar *data, Mat *A, PetscDeviceContext dctx = nullptr) noexcept
 {
   PetscMPIInt size;
 
   PetscFunctionBegin;
+  PetscValidPointer(A, 7);
   PetscCallMPI(MPI_Comm_size(comm, &size));
   if (size > 1) {
-    PetscCall(MatCreateMPIDenseCUPM<T>(comm, m, n, M, N, data, A, dctx));
+    PetscCall(MatCreateMPIDenseCUPM<T>(comm, n, m, N, M, data, A, dctx));
   } else {
-    PetscCall(MatCreateSeqDenseCUPM<T>(comm, m, n, data, A, dctx));
+    if (n == PETSC_DECIDE) n = N;
+    if (m == PETSC_DECIDE) m = M;
+    // It's OK here if both are PETSC_DECIDE since PetscSplitOwnership() will catch that down
+    // the line
+    PetscCall(MatCreateSeqDenseCUPM<T>(comm, n, m, data, A, dctx));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

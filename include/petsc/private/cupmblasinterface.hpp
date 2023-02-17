@@ -413,11 +413,12 @@ struct BlasInterface : BlasInterfaceImpl<T> {
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 
-  PETSC_NODISCARD static cupmBlasInt_t cupmBlasIntCast(PetscInt x) noexcept
+  static PetscErrorCode PetscCUPMBlasIntCast(PetscInt x, cupmBlasInt_t *y) noexcept
   {
     PetscFunctionBegin;
-    PetscCallAbort(PETSC_COMM_SELF, checkCupmBlasIntCast(x));
-    PetscFunctionReturn(static_cast<cupmBlasInt_t>(x));
+    PetscCall(checkCupmBlasIntCast(x));
+    *y = static_cast<cupmBlasInt_t>(x);
+    PetscFunctionReturn(PETSC_SUCCESS);
   }
 };
 
@@ -426,7 +427,7 @@ struct BlasInterface : BlasInterfaceImpl<T> {
     using ::Petsc::device::cupm::impl::BlasInterface<T>::cupmBlasName; \
     using ::Petsc::device::cupm::impl::BlasInterface<T>::PetscCUPMBlasSetPointerModeFromPointer; \
     using ::Petsc::device::cupm::impl::BlasInterface<T>::checkCupmBlasIntCast; \
-    using ::Petsc::device::cupm::impl::BlasInterface<T>::cupmBlasIntCast
+    using ::Petsc::device::cupm::impl::BlasInterface<T>::PetscCUPMBlasIntCast
 
   #if PetscDefined(HAVE_CUDA)
 extern template struct BlasInterface<DeviceType::CUDA>;

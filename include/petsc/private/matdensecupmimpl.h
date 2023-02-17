@@ -158,8 +158,10 @@ protected:
   {
     PetscFunctionBegin;
     PetscValidPointer(dest, 2);
-    PetscValidCharPointer(*dest, 2);
-    PetscCall(PetscFree(*dest));
+    if (*dest) {
+      PetscValidCharPointer(*dest, 2);
+      PetscCall(PetscFree(*dest));
+    }
     PetscCall(PetscStrallocpy(target, dest));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
