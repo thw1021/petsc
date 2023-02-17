@@ -4,25 +4,7 @@ static char help[] = "Magnetohydrodynamics (MHD) with Poisson brackets and "
 /*F
 The strong form of a two field model for vorticity $\Omega$ and magnetic flux
 $\psi$, using auxiliary variables potential $\phi$ and (negative) current
-density $j_z$ \cite{Jardin04,Strauss98}. \begin{equation} \begin{aligned}
-  \partial_t \Omega   &= -\left\{ \Omega, \phi \right\}  + \left\{ j_z,  \psi
-\right\} + \mu \nabla^2_\perp \Omega \\
-  \partial_t \psi     &= - \left\{ \psi, \phi \right\}  + \eta \nabla^2_\perp
-\psi \\
-\nabla^2_\perp\phi   &=   \Omega   \\
-  j_z  &= \nabla^2_\perp  \psi \\
-  \end{aligned}
-\end{equation}
-with $\left\{ f, g \right\} = \frac{\partial f}{\partial x}\frac{\partial
-g}{\partial y} - \frac{\partial f}{\partial y}\frac{\partial g}{\partial x}$. To
-enforce incompressibility, it is common to introduce stream functions,
-
- \begin{equation}
-  \begin{aligned}
-  \mathbf{v}   &= \left(  \frac{ \partial \phi}{\partial y},  -    \frac{
-\partial \phi}{\partial x}\right), \\
-  \mathbf{B}   &= \left( \frac{ \partial \psi}{\partial y},  -    \frac{
-\partial \psi}{\partial x} \right).\\ \end{aligned} \end{equation}
+density $j_z$ \cite{Jardin04,Strauss98}.See http://arxiv.org/abs/  for more details
 F*/
 
 #include <assert.h>
