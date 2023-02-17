@@ -70,7 +70,7 @@ private:
   static PetscErrorCode MatMultAdd_Dispatch_(Mat, Vec, Vec, Vec) noexcept;
 
   template <bool to_host>
-  static PetscErrorCode Convert_Dispatch_(Mat , MatType , MatReuse , Mat *) noexcept;
+  static PetscErrorCode Convert_Dispatch_(Mat, MatType, MatReuse, Mat *) noexcept;
 
   PETSC_NODISCARD static constexpr MatType       MATIMPLCUPM_() noexcept;
   PETSC_NODISCARD static constexpr Mat_SeqDense *MatIMPLCast_(Mat) noexcept;
@@ -974,11 +974,11 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::BindToCPU(Mat A, PetscBool to_host) 
   } else {
     PetscBool iscupm;
 
-    if (auto& cvec = mimpl->cvec) {
+    if (auto &cvec = mimpl->cvec) {
       PetscCall(PetscObjectTypeCompare(PetscObjectCast(cvec), VecSeq_CUPM::VECSEQCUPM(), &iscupm));
       if (!iscupm) PetscCall(VecDestroy(&cvec));
     }
-    if (auto& cmat = mimpl->cmat) {
+    if (auto &cmat = mimpl->cmat) {
       PetscCall(PetscObjectTypeCompare(PetscObjectCast(cmat), MATSEQDENSECUPM(), &iscupm));
       if (!iscupm) PetscCall(MatDestroy(&cmat));
     }

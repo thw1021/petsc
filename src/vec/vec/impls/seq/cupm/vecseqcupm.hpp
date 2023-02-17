@@ -1543,7 +1543,7 @@ PETSC_KERNEL_DECL void add_coo_values(const PetscScalar *PETSC_RESTRICT v, Petsc
   return;
 }
 
-}
+} // namespace
 
 } // namespace kernels
 

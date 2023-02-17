@@ -31,7 +31,7 @@ private:
   static PetscErrorCode SetPreallocation_(Mat, PetscDeviceContext, PetscScalar *) noexcept;
 
   template <bool to_host>
-  static PetscErrorCode Convert_Dispatch_(Mat , MatType, MatReuse , Mat *) noexcept;
+  static PetscErrorCode Convert_Dispatch_(Mat, MatType, MatReuse, Mat *) noexcept;
 
 public:
   PETSC_NODISCARD static constexpr const char *MatConvert_mpidensecupm_mpidense_C() noexcept;
@@ -149,7 +149,7 @@ inline PetscErrorCode MatDense_MPI_CUPM<T>::Convert_Dispatch_(Mat M, MatType, Ma
       PetscCall(PetscDeviceInitialize(PETSC_DEVICE_CUPM()));
     }
 
-    PetscCall(PetscStrFreeAllocpy(to_host ? VECSTANDARD : VecMPI_CUPM::VECCUPM() , &B->defaultvectype));
+    PetscCall(PetscStrFreeAllocpy(to_host ? VECSTANDARD : VecMPI_CUPM::VECCUPM(), &B->defaultvectype));
     PetscCall(PetscObjectChangeTypeName(pobj, to_host ? MATMPIDENSE : MATMPIDENSECUPM()));
 
     // ============================================================
