@@ -314,7 +314,7 @@ template <device::cupm::DeviceType T>
 template <PetscMemoryAccessMode access>
 inline PetscErrorCode MatDense_MPI_CUPM<T>::GetColumnVec(Mat A, PetscInt col, Vec *v) noexcept
 {
-  using namespace vec::cupm::impl;
+  using namespace vec::cupm;
 
   const auto mimpl   = MatIMPLCast(A);
   const auto mimpl_A = mimpl->A;
@@ -342,7 +342,7 @@ template <device::cupm::DeviceType T>
 template <PetscMemoryAccessMode access>
 inline PetscErrorCode MatDense_MPI_CUPM<T>::RestoreColumnVec(Mat A, PetscInt col, Vec *v) noexcept
 {
-  using namespace vec::cupm::impl;
+  using namespace vec::cupm;
 
   const auto mimpl = MatIMPLCast(A);
   const auto cvec  = mimpl->cvec;

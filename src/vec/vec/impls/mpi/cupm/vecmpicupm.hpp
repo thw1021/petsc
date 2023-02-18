@@ -349,6 +349,8 @@ inline PetscErrorCode VecMPI_CUPM<T>::setvaluescoo(Vec x, const PetscScalar v[],
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+} // namespace impl
+
 namespace
 {
 
@@ -357,7 +359,7 @@ inline PetscErrorCode VecCreateMPICUPMAsync(MPI_Comm comm, PetscInt n, PetscInt 
 {
   PetscFunctionBegin;
   PetscValidPointer(v, 4);
-  PetscCall(VecMPI_CUPM<T>::creatempicupm(comm, 0, n, N, v, PETSC_TRUE));
+  PetscCall(impl::VecMPI_CUPM<T>::creatempicupm(comm, 0, n, N, v, PETSC_TRUE));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -367,7 +369,7 @@ inline PetscErrorCode VecCreateMPICUPMWithArrays(MPI_Comm comm, PetscInt bs, Pet
   PetscFunctionBegin;
   if (n && cpuarray) PetscValidScalarPointer(cpuarray, 5);
   PetscValidPointer(v, 7);
-  PetscCall(VecMPI_CUPM<T>::creatempicupmwitharrays(comm, bs, n, N, cpuarray, gpuarray, v));
+  PetscCall(impl::VecMPI_CUPM<T>::creatempicupmwitharrays(comm, bs, n, N, cpuarray, gpuarray, v));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -380,8 +382,6 @@ inline PetscErrorCode VecCreateMPICUPMWithArray(MPI_Comm comm, PetscInt bs, Pets
 }
 
 } // anonymous namespace
-
-} // namespace impl
 
 } // namespace cupm
 
