@@ -743,7 +743,7 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc, Vec bin, Vec xout)
     KSPIndex           ksp_type_idx = jac->ksp_type_idx;
     PetscMemType       mtype;
     PetscContainer     container;
-    PetscInt           batch_sz; // the number of repeated DMs, [DM_e_1, DM_e_2, DM_e_batch_sz, DM_i_1, ...]
+    PetscInt           batch_sz;                // the number of repeated DMs, [DM_e_1, DM_e_2, DM_e_batch_sz, DM_i_1, ...]
     VecScatter         plex_batch = NULL;       // not used
     Vec                bvec;                    // a copy of b for scatter (just alias to bin now)
     PetscBool          monitor  = jac->monitor; // captured
@@ -932,7 +932,8 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc, Vec bin, Vec xout)
       for (int blkID = 0; blkID < nBlk; blkID++) {
         if (jac->reason) { // -pc_bjkokkos_ksp_converged_reason
           if (jac->batch_target == blkID) {
-            if (batch_sz != 1) PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "    Linear solve %s in %d iterations, batch %" PetscInt_FMT ", species %" PetscInt_FMT "\n", handle.is_converged_host(blkID) ? "converged" : "diverged", handle.get_iteration_host(blkID), blkID % batch_sz, blkID / batch_sz));
+            if (batch_sz != 1)
+              PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "    Linear solve %s in %d iterations, batch %" PetscInt_FMT ", species %" PetscInt_FMT "\n", handle.is_converged_host(blkID) ? "converged" : "diverged", handle.get_iteration_host(blkID), blkID % batch_sz, blkID / batch_sz));
             else PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "    Linear solve %s in %d iterations, block %" PetscInt_FMT "\n", handle.is_converged_host(blkID) ? "converged" : "diverged", handle.get_iteration_host(blkID), blkID));
           } else if (jac->batch_target == -1 && handle.get_iteration_host(blkID) >= count) {
             jac->max_nits = count = handle.get_iteration_host(blkID);
@@ -942,15 +943,16 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc, Vec bin, Vec xout)
         }
       }
       if (jac->batch_target == -1 && jac->reason) {
-        if (batch_sz != 1) PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "    Linear solve %s in %d iteration, batch %" PetscInt_FMT ", specie %" PetscInt_FMT "\n", handle.is_converged_host(mbid) ? "converged" : "diverged", jac->max_nits, mbid % batch_sz, mbid / batch_sz));
+        if (batch_sz != 1)
+          PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "    Linear solve %s in %d iteration, batch %" PetscInt_FMT ", specie %" PetscInt_FMT "\n", handle.is_converged_host(mbid) ? "converged" : "diverged", jac->max_nits, mbid % batch_sz, mbid / batch_sz));
         else PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "    Linear solve %s in %d iteration, block %" PetscInt_FMT "\n", handle.is_converged_host(mbid) ? "converged" : "diverged", jac->max_nits, mbid));
       }
   #if defined(PETSC_HAVE_CUDA)
       nvtxRangePop();
   #endif
-  #else
+#else
       SETERRQ(PetscObjectComm((PetscObject)A), PETSC_ERR_USER, "batch GMRES not supported");
-  #endif
+#endif
     } else { // Kokkos Krylov
       using scr_mem_t    = Kokkos::DefaultExecutionSpace::scratch_memory_space;
       using vect2D_scr_t = Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, scr_mem_t>;
@@ -1048,23 +1050,25 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc, Vec bin, Vec xout)
         PetscInt count = 0, mbid = 0;
         for (int blkID = 0; blkID < nBlk; blkID++) {
           PetscCall(PetscLogGpuFlops((PetscLogDouble)h_metadata[blkID].flops));
-  #if PCBJKOKKOS_VERBOSE_LEVEL < 3
+#if PCBJKOKKOS_VERBOSE_LEVEL < 3
           if (jac->batch_target == blkID) {
-            if (batch_sz != 1) PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "    Linear solve converged due to %s iterations %d, batch %" PetscInt_FMT ", species %" PetscInt_FMT "\n", KSPConvergedReasons[h_metadata[blkID].reason], h_metadata[blkID].its, blkID % batch_sz, blkID / batch_sz));
+            if (batch_sz != 1)
+              PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "    Linear solve converged due to %s iterations %d, batch %" PetscInt_FMT ", species %" PetscInt_FMT "\n", KSPConvergedReasons[h_metadata[blkID].reason], h_metadata[blkID].its, blkID % batch_sz, blkID / batch_sz));
             else PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "    Linear solve converged due to %s iterations %d, block %" PetscInt_FMT "\n", KSPConvergedReasons[h_metadata[blkID].reason], h_metadata[blkID].its, blkID));
           } else if (jac->batch_target == -1 && h_metadata[blkID].its >= count) {
             jac->max_nits = count = h_metadata[blkID].its;
             mbid                  = blkID;
           }
-  #endif
-  #if PCBJKOKKOS_VERBOSE_LEVEL > 0
+#endif
+#if PCBJKOKKOS_VERBOSE_LEVEL > 0
           if (h_metadata[blkID].reason < 0) {
             PetscCall(PetscPrintf(PETSC_COMM_SELF, "ERROR reason=%s, its=%" PetscInt_FMT ". species %" PetscInt_FMT ", batch %" PetscInt_FMT "\n", KSPConvergedReasons[h_metadata[blkID].reason], h_metadata[blkID].its, blkID / batch_sz, blkID % batch_sz));
           }
-  #endif
+#endif
         }
         if (jac->batch_target == -1) {
-          if (batch_sz != 1) PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "    Linear solve converged due to %s iterations %d, batch %" PetscInt_FMT ", species %" PetscInt_FMT "\n", KSPConvergedReasons[h_metadata[mbid].reason], h_metadata[mbid].its, mbid % batch_sz, mbid / batch_sz));
+          if (batch_sz != 1)
+            PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "    Linear solve converged due to %s iterations %d, batch %" PetscInt_FMT ", species %" PetscInt_FMT "\n", KSPConvergedReasons[h_metadata[mbid].reason], h_metadata[mbid].its, mbid % batch_sz, mbid / batch_sz));
           else PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "    Linear solve converged due to %s iterations %d, block %" PetscInt_FMT "\n", KSPConvergedReasons[h_metadata[mbid].reason], h_metadata[mbid].its, mbid));
         }
       }
@@ -1072,11 +1076,11 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc, Vec bin, Vec xout)
         for (int bid = 0; bid < batch_sz; bid++) {
           PetscInt blkID = blkID;
           PetscCall(PetscLogGpuFlops((PetscLogDouble)h_metadata[blkID].flops));
-  #if PCBJKOKKOS_VERBOSE_LEVEL > 0
+#if PCBJKOKKOS_VERBOSE_LEVEL > 0
           if (h_metadata[blkID].reason < 0) {
             PetscCall(PetscPrintf(PETSC_COMM_SELF, "ERROR reason=%s, its=%" PetscInt_FMT ". species %" PetscInt_FMT ", batch %" PetscInt_FMT "\n", KSPConvergedReasons[h_metadata[blkID].reason], h_metadata[blkID].its, blkID / batch_sz, blkID % batch_sz));
           }
-  #endif
+#endif
         }
       }
       {
@@ -1096,9 +1100,9 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc, Vec bin, Vec xout)
           PetscCall(PetscPrintf(PETSC_COMM_SELF, "ERROR Kokkos batch solver did not converge in all solves\n"));
         }
       }
-  #if defined(PETSC_HAVE_CUDA)
+#if defined(PETSC_HAVE_CUDA)
       nvtxRangePop();
-  #endif
+#endif
     } // end of Kokkos (not Kernels) solvers block
     PetscCall(VecRestoreArrayAndMemType(xout, &glb_xdata));
     PetscCall(VecRestoreArrayReadAndMemType(bvec, &glb_bdata));
@@ -1133,8 +1137,8 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
   }
   PetscCheck((aijkok), PetscObjectComm((PetscObject)A), PETSC_ERR_USER, "No aijkok");
   {
-    PetscInt Istart, Iend;
-    PetscMPIInt  rank;
+    PetscInt    Istart, Iend;
+    PetscMPIInt rank;
     PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
     PetscCall(MatGetOwnershipRange(A, &Istart, &Iend));
     if (!jac->vec_diag) {
