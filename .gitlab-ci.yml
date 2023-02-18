@@ -474,6 +474,7 @@ linux-emcc:
     TEST_ARCH: arch-ci-linux-emcc
     INIT_SCRIPT: /nfs/gce/projects/petsc/soft/u22.04/emsdk/emsdk_env.sh
     DISABLE_TESTS: 1
+    RUN_GCOV: 0
 
 #
 # The following tests run as part of stage-3.
