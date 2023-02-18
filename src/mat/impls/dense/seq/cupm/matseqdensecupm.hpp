@@ -204,6 +204,7 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::SetPreallocation_(Mat m, PetscDevice
   const auto   mcu   = MatCUPMCast(m);
   const auto   nrows = m->rmap->n;
   const auto   ncols = m->cmap->n;
+  auto&        lda   = MatIMPLCast(m)->lda;
   cupmStream_t stream;
 
   PetscFunctionBegin;
@@ -212,17 +213,16 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::SetPreallocation_(Mat m, PetscDevice
   PetscCall(checkCupmBlasIntCast(nrows));
   PetscCall(checkCupmBlasIntCast(ncols));
   PetscCall(GetHandlesFrom_(dctx, &stream));
+  if (lda <= 0) lda = nrows;
   if (!mcu->d_user_alloc) PetscCallCUPM(cupmFreeAsync(mcu->d_v, stream));
   if (user_device_array) {
     mcu->d_user_alloc = PETSC_TRUE;
     mcu->d_v          = user_device_array;
   } else {
-    const auto mimpl = MatIMPLCast(m);
-    PetscInt   size;
+    PetscInt size;
 
     mcu->d_user_alloc = PETSC_FALSE;
-    if (mimpl->lda <= 0) mimpl->lda = nrows;
-    PetscCall(PetscIntMultError(mimpl->lda, ncols, &size));
+    PetscCall(PetscIntMultError(lda, ncols, &size));
     PetscCall(PetscCUPMMallocAsync(&mcu->d_v, size, stream));
     PetscCall(PetscCUPMMemsetAsync(mcu->d_v, 0, size, stream));
   }
@@ -1379,7 +1379,7 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::Duplicate(Mat A, MatDuplicateOption 
   PetscCall(MatDuplicateNoCreate_SeqDense(*B, A, hopt));
   if (opt == MAT_COPY_VALUES && hopt != MAT_COPY_VALUES) PetscCall(Copy(A, *B, SAME_NONZERO_PATTERN));
   // allocate memory if needed
-  if (opt != MAT_COPY_VALUES) PetscCall(SetPreallocation(*B, dctx));
+  if (opt != MAT_COPY_VALUES && !MatCUPMCast(*B)->d_v) PetscCall(SetPreallocation(*B, dctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

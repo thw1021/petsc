@@ -99,7 +99,7 @@ private:
       PetscCall(PetscLogPauseCurrentEvent_Internal(&event));
       PetscCall(PetscLogEventBegin(CUPMBLAS_HANDLE_CREATE(), 0, 0, 0, 0));
       for (auto i = 0; i < 3; ++i) {
-        const auto cberr = cupmBlasCreate(&handle);
+        const auto cberr = cupmBlasCreate(handle.ptr_to());
         if (PetscLikely(cberr == CUPMBLAS_STATUS_SUCCESS)) break;
         if (PetscUnlikely(cberr != CUPMBLAS_STATUS_ALLOC_FAILED) && (cberr != CUPMBLAS_STATUS_NOT_INITIALIZED)) PetscCallCUPMBLAS(cberr);
         if (i != 2) {

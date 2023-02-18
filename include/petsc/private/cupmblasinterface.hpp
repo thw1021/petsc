@@ -212,6 +212,34 @@ namespace impl
 template <DeviceType>
 struct BlasInterfaceImpl;
 
+// Exists because HIP (for whatever godforsaken reason) has elected to define both their
+// hipBlasHandle_t and hipSolverHandle_t as void *. So we cannot disambiguate them for overload
+// resolution and hence need to wrap their types int this mess.
+template <typename T, std::size_t I>
+class cupmBlasHandleWrapper
+{
+public:
+  constexpr cupmBlasHandleWrapper() noexcept = default;
+  constexpr cupmBlasHandleWrapper(T h) noexcept : handle_(std::move(h))
+  {
+    static_assert(std::is_standard_layout<cupmBlasHandleWrapper<T, I>>::value, "");
+  }
+
+  cupmBlasHandleWrapper& operator=(std::nullptr_t) noexcept
+  {
+    handle_ = nullptr;
+    return *this;
+  }
+
+  operator T() const { return handle_; }
+
+  const T *ptr_to() const { return &handle_; }
+  T *ptr_to() { return &handle_; }
+
+private:
+  T handle_{};
+};
+
   #if PetscDefined(HAVE_CUDA)
     #define PETSC_CUPMBLAS_PREFIX         cublas
     #define PETSC_CUPMBLAS_PREFIX_U       CUBLAS
@@ -221,7 +249,7 @@ struct BlasInterfaceImpl;
 template <>
 struct BlasInterfaceImpl<DeviceType::CUDA> : Interface<DeviceType::CUDA> {
   // typedefs
-  using cupmBlasHandle_t      = cublasHandle_t;
+  using cupmBlasHandle_t      = cupmBlasHandleWrapper<cublasHandle_t, 0>;
   using cupmBlasError_t       = cublasStatus_t;
   using cupmBlasInt_t         = int;
   using cupmBlasPointerMode_t = cublasPointerMode_t;
@@ -286,7 +314,7 @@ struct BlasInterfaceImpl<DeviceType::CUDA> : Interface<DeviceType::CUDA> {
 template <>
 struct BlasInterfaceImpl<DeviceType::HIP> : Interface<DeviceType::HIP> {
   // typedefs
-  using cupmBlasHandle_t      = hipblasHandle_t;
+  using cupmBlasHandle_t      = cupmBlasHandleWrapper<hipblasHandle_t, 0>;
   using cupmBlasError_t       = hipblasStatus_t;
   using cupmBlasInt_t         = int; // rocblas will have its own
   using cupmBlasPointerMode_t = hipblasPointerMode_t;
