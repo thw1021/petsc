@@ -216,16 +216,12 @@ struct BlasInterfaceImpl;
 // hipBlasHandle_t and hipSolverHandle_t as void *. So we cannot disambiguate them for overload
 // resolution and hence need to wrap their types int this mess.
 template <typename T, std::size_t I>
-class cupmBlasHandleWrapper
-{
+class cupmBlasHandleWrapper {
 public:
   constexpr cupmBlasHandleWrapper() noexcept = default;
-  constexpr cupmBlasHandleWrapper(T h) noexcept : handle_(std::move(h))
-  {
-    static_assert(std::is_standard_layout<cupmBlasHandleWrapper<T, I>>::value, "");
-  }
+  constexpr cupmBlasHandleWrapper(T h) noexcept : handle_(std::move(h)) { static_assert(std::is_standard_layout<cupmBlasHandleWrapper<T, I>>::value, ""); }
 
-  cupmBlasHandleWrapper& operator=(std::nullptr_t) noexcept
+  cupmBlasHandleWrapper &operator=(std::nullptr_t) noexcept
   {
     handle_ = nullptr;
     return *this;
@@ -234,7 +230,7 @@ public:
   operator T() const { return handle_; }
 
   const T *ptr_to() const { return &handle_; }
-  T *ptr_to() { return &handle_; }
+  T       *ptr_to() { return &handle_; }
 
 private:
   T handle_{};

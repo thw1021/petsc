@@ -204,7 +204,7 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::SetPreallocation_(Mat m, PetscDevice
   const auto   mcu   = MatCUPMCast(m);
   const auto   nrows = m->rmap->n;
   const auto   ncols = m->cmap->n;
-  auto&        lda   = MatIMPLCast(m)->lda;
+  auto        &lda   = MatIMPLCast(m)->lda;
   cupmStream_t stream;
 
   PetscFunctionBegin;
