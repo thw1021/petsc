@@ -3961,7 +3961,7 @@ PetscErrorCode MatSeqDenseInvert(Mat A)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
   PetscCall(MatDenseGetArray(A, &values));
-  PetscCall(MatGetBlockSize(A, &bs));
+  PetscCall(MatGetLocalSize(A, &bs, NULL));
   allowzeropivot = PetscNot(A->erroriffailure);
   /* factor and invert each block */
   switch (bs) {
