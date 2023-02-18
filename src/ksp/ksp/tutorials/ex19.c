@@ -13,16 +13,16 @@ Input parameters include:\n\
 
 int main(int argc, char **args)
 {
-  Vec             x, b, u; /* approx solution, RHS, exact solution */
-  Mat             A, Pmat; /* linear system matrix */
-  KSP             ksp;     /* linear solver context */
-  PetscReal       norm;    /* norm of solution error */
-  PetscInt        i, j, Ii, J, Istart, Iend, n = 7, m = 8, its, nblocks = 2;
-  PetscBool       flg;
-  PetscScalar     v;
-  PetscMPIInt     size,rank;
-  IS              *is_loc = NULL;
-  PC              pc;
+  Vec         x, b, u; /* approx solution, RHS, exact solution */
+  Mat         A, Pmat; /* linear system matrix */
+  KSP         ksp;     /* linear solver context */
+  PetscReal   norm;    /* norm of solution error */
+  PetscInt    i, j, Ii, J, Istart, Iend, n = 7, m = 8, its, nblocks = 2;
+  PetscBool   flg;
+  PetscScalar v;
+  PetscMPIInt size, rank;
+  IS         *is_loc = NULL;
+  PC          pc;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &args, (char *)0, help));
@@ -102,8 +102,8 @@ int main(int argc, char **args)
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   PetscCall(PCASMCreateSubdomains(A, nblocks, &is_loc));
   {
-    MatScalar      *AA;
-    PetscInt       *AJ, maxcols = 0, nloc = Iend - Istart, ncols;
+    MatScalar *AA;
+    PetscInt  *AJ, maxcols = 0, nloc = Iend - Istart, ncols;
     for (PetscInt row = Istart; row < Iend; row++) {
       PetscCall(MatGetRow(A, row, &ncols, NULL, NULL));
       if (ncols > maxcols) maxcols = ncols;
@@ -116,11 +116,11 @@ int main(int argc, char **args)
       IS blk_is = is_loc[bid];
       //if (rank==1) PetscCall(ISView(blk_is, PETSC_VIEWER_STDOUT_SELF));
       const PetscInt *subdom, *cols;
-      PetscInt n, ncol_row, jj;
+      PetscInt        n, ncol_row, jj;
       PetscCall(ISGetIndices(blk_is, &subdom));
       PetscCall(ISGetSize(blk_is, &n));
       //if (rank==1) PetscCall(PetscPrintf(PETSC_COMM_SELF, "\t[%d] n[%d] = %d\n",rank,bid,n));
-      for (PetscInt ii = 0 ; ii < n; ii++) {
+      for (PetscInt ii = 0; ii < n; ii++) {
         const MatScalar *vals;
         //if (rank==1) PetscCall(PetscPrintf(PETSC_COMM_SELF, "\t\t[%d] subdom[%d] = %d\n",rank,ii,subdom[ii]));
         PetscInt rowB = subdom[ii]; // global
@@ -155,9 +155,7 @@ int main(int argc, char **args)
     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   PetscCall(KSPGetPC(ksp, &pc));
   PetscCall(PetscObjectTypeCompare((PetscObject)pc, PCASM, &flg));
-  if (flg && nblocks > 0) {
-    PetscCall(PCASMSetLocalSubdomains(pc, nblocks, is_loc, NULL));
-  }
+  if (flg && nblocks > 0) { PetscCall(PCASMSetLocalSubdomains(pc, nblocks, is_loc, NULL)); }
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                       Solve the linear system
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
