@@ -45,6 +45,5 @@ if __name__ == '__main__':
     '--download-triangle',
     '--download-zlib',
     '--with-strict-petscerrorcode',
-    '--with-coverage',
   ]
   configure.petsc_configure(configure_options)

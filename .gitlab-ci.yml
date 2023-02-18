@@ -674,13 +674,13 @@ linux-knl:
   extends:
     - .stage-3
     - .linux_test
-    - .coverage-generate-u22
   tags:
     - name:petsc-knl-01
   variables:
     MAKE_FFLAGS: -warn errors
     TEST_ARCH: arch-ci-linux-knl
     LOAD_MODULES: intel-oneapi-compilers/2022.0.2 intel-oneapi-mkl/2022.0.2 intel-oneapi-mpi/2021.5.1
+    RUN_GCOV: 0
 
 linux-intel-mkl-single:
   extends:
@@ -691,6 +691,7 @@ linux-intel-mkl-single:
   variables:
     TEST_ARCH: arch-ci-linux-intel-mkl-single
     LOAD_MODULES: intel-oneapi-compilers/2022.0.2 intel-oneapi-mkl/2022.0.2 intel-oneapi-mpi/2021.5.1
+    RUN_GCOV: 0
 
 linux-cxx-cmplx-pkgs-64idx-gcov:
   extends:
@@ -801,13 +802,13 @@ linux-intel-cmplx:
   extends:
     - .stage-3
     - .linux_test_nofflags
-    - .coverage-generate-u18
   tags:
     - gce-nfs
   variables:
     TEST_ARCH: arch-ci-linux-intel-cmplx
     LOAD_MODULES: intel-mkl/19.5 intel/19.0-nompilib cmake/3.20.5-yjp2hz6
     ENABLE_PETSC4PY_LDPRELOAD: 1
+    RUN_GCOV: 0
 
 linux-xsdk-dbg:
   extends:
@@ -852,12 +853,12 @@ linux-intel:
   extends:
     - .stage-3
     - .linux_test_nofflags
-    - .coverage-generate-u18
   tags:
     - gce-nfs
   variables:
     TEST_ARCH: arch-ci-linux-intel
     LOAD_MODULES: intel-mkl/19.5 intel/19.0-nompilib
+    RUN_GCOV: 0
 
 linux-opt-misc:
   extends:
