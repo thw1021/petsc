@@ -467,6 +467,7 @@ linux-emcc:
   extends:
     - .stage-2
     - .linux_test
+    - .coverage-generate-u20
   tags:
     - gce-stage2
   variables:
