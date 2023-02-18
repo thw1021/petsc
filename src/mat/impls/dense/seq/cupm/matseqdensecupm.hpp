@@ -575,7 +575,7 @@ struct MatDense_Seq_CUPM<T>::SolveQR : SolveCommon<SolveQR> {
       const auto da  = DeviceArrayReadWrite(dctx, A);
       const auto lda = static_cast<cupmBlasInt_t>(mimpl->lda);
 
-      if (!mcu->workvec) PetscCall(vec::cupm::impl::VecCreateSeqCUPMAsync<T>(PetscObjectComm(PetscObjectCast(A)), m, &mcu->workvec));
+      if (!mcu->workvec) PetscCall(vec::cupm::VecCreateSeqCUPMAsync<T>(PetscObjectComm(PetscObjectCast(A)), m, &mcu->workvec));
       if (!mcu->d_fact_tau) PetscCall(PetscCUPMMallocAsync(&mcu->d_fact_tau, min, stream));
       // clang-format off
       PetscCall(
@@ -641,7 +641,7 @@ template <device::cupm::DeviceType T>
 template <typename Solver, bool transpose>
 inline PetscErrorCode MatDense_Seq_CUPM<T>::MatSolve_Factored_Dispatch_(Mat A, Vec x, Vec y) noexcept
 {
-  using namespace vec::cupm::impl;
+  using namespace vec::cupm;
   const auto         pobj_A  = PetscObjectCast(A);
   const auto         m       = static_cast<cupmBlasInt_t>(A->rmap->n);
   const auto         k       = static_cast<cupmBlasInt_t>(A->cmap->n);
@@ -1499,7 +1499,7 @@ template <device::cupm::DeviceType T>
 template <PetscMemoryAccessMode access>
 inline PetscErrorCode MatDense_Seq_CUPM<T>::GetColumnVec(Mat A, PetscInt col, Vec *v) noexcept
 {
-  using namespace vec::cupm::impl;
+  using namespace vec::cupm;
   const auto         mimpl = MatIMPLCast(A);
   PetscDeviceContext dctx;
 
@@ -1524,7 +1524,7 @@ template <device::cupm::DeviceType T>
 template <PetscMemoryAccessMode access>
 inline PetscErrorCode MatDense_Seq_CUPM<T>::RestoreColumnVec(Mat A, PetscInt, Vec *v) noexcept
 {
-  using namespace vec::cupm::impl;
+  using namespace vec::cupm;
   const auto         mimpl = MatIMPLCast(A);
   const auto         cvec  = mimpl->cvec;
   PetscDeviceContext dctx;
