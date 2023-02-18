@@ -201,38 +201,30 @@ namespace impl
 template <device::cupm::DeviceType T>
 inline PetscErrorCode MatDense_Seq_CUPM<T>::SetPreallocation_(Mat m, PetscDeviceContext dctx, PetscScalar *user_device_array) noexcept
 {
-  const auto mcu = MatCUPMCast(m);
+  const auto   mcu   = MatCUPMCast(m);
+  const auto   nrows = m->rmap->n;
+  const auto   ncols = m->cmap->n;
+  cupmStream_t stream;
 
   PetscFunctionBegin;
+  PetscCheckTypeName(m, MATSEQDENSECUPM());
   PetscValidDeviceContext(dctx, 2);
-  if (PetscLikely(mcu->d_v)) PetscFunctionReturn(PETSC_SUCCESS);
-  {
-    const auto ncols = m->cmap->n;
-    const auto nrows = m->rmap->n;
-    const auto lda = MatIMPLCast(m)->lda = [](PetscBLASInt lda, PetscInt nrows) {
-      if (lda <= 0) {
-        // CPU preallocation has not yet been performed
-        lda = static_cast<decltype(lda)>(nrows);
-      }
-      return lda;
-    }(MatIMPLCast(m)->lda, nrows);
-    cupmStream_t stream;
+  PetscCall(checkCupmBlasIntCast(nrows));
+  PetscCall(checkCupmBlasIntCast(ncols));
+  PetscCall(GetHandlesFrom_(dctx, &stream));
+  if (!mcu->d_user_alloc) PetscCallCUPM(cupmFreeAsync(mcu->d_v, stream));
+  if (user_device_array) {
+    mcu->d_user_alloc = PETSC_TRUE;
+    mcu->d_v          = user_device_array;
+  } else {
+    const auto mimpl = MatIMPLCast(m);
+    PetscInt   size;
 
-    PetscCall(checkCupmBlasIntCast(nrows));
-    PetscCall(checkCupmBlasIntCast(ncols));
-    PetscCall(GetHandlesFrom_(dctx, &stream));
-    if (!mcu->d_user_alloc) PetscCallCUPM(cupmFreeAsync(mcu->d_v, stream));
-    if (user_device_array) {
-      mcu->d_user_alloc = PETSC_TRUE;
-      mcu->d_v          = user_device_array;
-    } else {
-      const auto size = lda * ncols;
-
-      mcu->d_user_alloc = PETSC_FALSE;
-      PetscCall(PetscIntMultError(lda, ncols, nullptr));
-      PetscCall(PetscCUPMMallocAsync(&mcu->d_v, size, stream));
-      PetscCall(PetscCUPMMemsetAsync(mcu->d_v, 0, size, stream));
-    }
+    mcu->d_user_alloc = PETSC_FALSE;
+    if (mimpl->lda <= 0) mimpl->lda = nrows;
+    PetscCall(PetscIntMultError(mimpl->lda, ncols, &size));
+    PetscCall(PetscCUPMMallocAsync(&mcu->d_v, size, stream));
+    PetscCall(PetscCUPMMemsetAsync(mcu->d_v, 0, size, stream));
   }
   m->offloadmask = PETSC_OFFLOAD_GPU;
   PetscFunctionReturn(PETSC_SUCCESS);
