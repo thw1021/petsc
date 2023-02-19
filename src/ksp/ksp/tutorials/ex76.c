@@ -41,6 +41,7 @@ int main(int argc, char **args)
   PetscCall(ISLoad(sizes, viewer));
   PetscCall(ISGetIndices(sizes, &idx));
   PetscCall(MatSetSizes(A, idx[0], idx[1], idx[2], idx[3]));
+  PetscCall(MatSetUp(A));
   PetscCall(ISRestoreIndices(sizes, &idx));
   PetscCall(ISDestroy(&sizes));
   PetscCall(PetscViewerDestroy(&viewer));
