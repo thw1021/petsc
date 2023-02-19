@@ -103,7 +103,7 @@ int main(int argc, char **args)
   PetscCall(PCASMCreateSubdomains(A, nblocks, &is_loc));
   {
     MatScalar *AA;
-    PetscInt  *AJ, maxcols = 0, nloc = Iend - Istart, ncols;
+    PetscInt  *AJ, maxcols = 0, ncols;
     for (PetscInt row = Istart; row < Iend; row++) {
       PetscCall(MatGetRow(A, row, &ncols, NULL, NULL));
       if (ncols > maxcols) maxcols = ncols;
@@ -112,7 +112,7 @@ int main(int argc, char **args)
     PetscCall(PetscMalloc2(maxcols, &AA, maxcols, &AJ));
     /* make explicit block matrix for batch solver */
     //if (rank==1) PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%d] nblocks = %d\n", rank, nblocks));
-    for (PetscInt bid = 0, bstart = 0; bid < nblocks; bid++) {
+    for (PetscInt bid = 0; bid < nblocks; bid++) {
       IS blk_is = is_loc[bid];
       //if (rank==1) PetscCall(ISView(blk_is, PETSC_VIEWER_STDOUT_SELF));
       const PetscInt *subdom, *cols;
