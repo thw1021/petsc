@@ -1082,12 +1082,17 @@ char assert_aligned[(sizeof(struct mystruct)==16)*2-1];
         compiler_version_str = 'Unknown'
 
       log_print('Searching version string {} (for compiler {}) using pattern {}'.format(quoted(compiler_version_str), quoted(compiler), quoted(compiler_version_re.pattern)))
-      major_version = compiler_version_re.search(compiler_version_str)
-      if major_version is not None:
-        log_print('Found major = {}, minor = {}, patch = {}'.format(major_version.group(1), major_version.group(2), major_version.group(3)))
-        # form [llvm-cov-14, llvm-cov, etc.]
-        versioned_coverage_exec = '-'.join((exec_names[0], major_version.group(1)))
-        exec_names.insert(0, versioned_coverage_exec)
+      compiler_version = compiler_version_re.search(compiler_version_str)
+      if compiler_version is not None:
+        log_print('Found major = {}, minor = {}, patch = {}'.format(compiler_version.group(1), compiler_version.group(2), compiler_version.group(3)))
+        # form [llvm-cov-14, llvm-cov-14.0, llvm-cov, etc.]
+        cov_exec_name = exec_names[0]
+        exec_names    = [
+          # llvm-cov-14
+          '{}-{}'.format(cov_exec_name, compiler_version.group(1)),
+           # llvm-cov-14.0
+          '{}-{}.{}'.format(cov_exec_name, compiler_version.group(1), compiler_version.group(2))
+        ] + exec_names
     else:
       log_print('User explicitly set coverage exec as {}'.format(quoted(arg_opt)))
       par_dir = os.path.dirname(arg_opt)
