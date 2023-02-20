@@ -607,11 +607,11 @@ PETSC_EXTERN PetscErrorCode KSPSetLagNorm(KSP, PetscBool);
 .  `KSP_CONVERGED_RTOL` - requested decrease in the residual
 .  `KSP_CONVERGED_ATOL` - requested absolute value in the residual
 .  `KSP_CONVERGED_ITS` - requested number of iterations
-.  `KSP_CONVERGED_CG_NEG_CURVE` - see the manual page
-.  `KSP_CONVERGED_CG_CONSTRAINED` - see the manual page
-.  `KSP_CONVERGED_STEP_LENGTH` - see the manual page
+.  `KSP_CONVERGED_CG_NEG_CURVE` - see note below
+.  `KSP_CONVERGED_CG_CONSTRAINED` - see note below
+.  `KSP_CONVERGED_STEP_LENGTH` - see note below
 .  `KSP_CONVERGED_HAPPY_BREAKDOWN` - happy breakdown (meaning early convergence of the `KSPType` occurred.
-.  `KSP_DIVERGED_NULL` - beats me
+.  `KSP_DIVERGED_NULL` - breakdown when solving the Hessenberg system within GMRES
 .  `KSP_DIVERGED_ITS` - requested number of iterations
 .  `KSP_DIVERGED_DTOL` - large increase in the residual norm
 .  `KSP_DIVERGED_BREAKDOWN` - breakdown in the Krylov method
