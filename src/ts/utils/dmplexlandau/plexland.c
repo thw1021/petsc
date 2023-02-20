@@ -603,6 +603,8 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
 static PetscErrorCode GeometryDMLandau(DM base, PetscInt point, PetscInt dim, const PetscReal abc[], PetscReal xyz[], void *a_ctx)
 {
   PetscReal r = abc[0], z = abc[1];
+
+  PetscFunctionBegin;
   xyz[0] = r;
   xyz[1] = z;
   if (dim == 3) xyz[2] = abc[2];
