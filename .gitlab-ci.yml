@@ -741,6 +741,7 @@ linux-pkgs-valgrind:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u22
   tags:
     - gce-valgrind
   variables:

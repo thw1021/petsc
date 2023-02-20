@@ -13,6 +13,7 @@ configure_options = [
   'COPTFLAGS=-g -O',
   'FOPTFLAGS=-g -O',
   'CXXOPTFLAGS=-g -O',
+  '--FC_LINKER_FLAGS=-lgcov',
   '--download-openmpi=1',
   '--download-fblaslapack=1',
   '--with-openmp=1',
