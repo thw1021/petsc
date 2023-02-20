@@ -1278,6 +1278,26 @@ PETSC_INTERN PetscErrorCode MatSetSeqAIJKokkosWithCSRMatrix(Mat A, Mat_SeqAIJKok
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PETSC_INTERN PetscErrorCode MatSeqAIJKokkosGetKokkosCsrMatrix(Mat A, KokkosCsrMatrix *csr)
+{
+  Mat_SeqAIJKokkos *akok;
+  PetscFunctionBegin;
+  MatSeqAIJKokkosSyncDevice(A);
+  akok = static_cast<Mat_SeqAIJKokkos *>(A->spptr);
+  *csr = akok->csrmat;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode MatCreateSeqAIJKokkosWithKokkosCsrMatrix(MPI_Comm comm, KokkosCsrMatrix csr, Mat *A)
+{
+  Mat_SeqAIJKokkos *akok;
+  PetscFunctionBegin;
+  akok = new Mat_SeqAIJKokkos(csr);
+  PetscCall(MatCreate(comm, A));
+  PetscCall(MatSetSeqAIJKokkosWithCSRMatrix(*A, akok));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /* Crete a SEQAIJKOKKOS matrix with a Mat_SeqAIJKokkos data structure
 
    Note we have names like MatSeqAIJSetPreallocationCSR, so I use capitalized CSR
