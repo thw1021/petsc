@@ -615,7 +615,7 @@ linux-without-fc:
     - .stage-3
     - .linux_test
   tags:
-    - gce-nfs
+    - gce-u22-stage3
   variables:
     TEST_ARCH: arch-ci-linux-without-fc
 
