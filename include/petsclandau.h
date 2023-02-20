@@ -122,11 +122,11 @@ typedef struct {
   PetscReal radius[LANDAU_MAX_GRIDS];
   PetscReal radius_par[LANDAU_MAX_GRIDS];
   PetscReal radius_perp[LANDAU_MAX_GRIDS];
-  PetscReal re_radius;                  /* RE: radius of refinement along v_perp=0, z>0 */
-  PetscReal vperp0_radius1;             /* RE: radius of refinement along v_perp=0 */
-  PetscReal vperp0_radius2;             /* RE: radius of refinement along v_perp=0 after origin AMR refinement */
-  PetscBool sphere;                     // not used
-  PetscBool inflate;                    // not used
+  PetscReal re_radius;      /* RE: radius of refinement along v_perp=0, z>0 */
+  PetscReal vperp0_radius1; /* RE: radius of refinement along v_perp=0 */
+  PetscReal vperp0_radius2; /* RE: radius of refinement along v_perp=0 after origin AMR refinement */
+  PetscBool sphere;         // not used
+  PetscBool inflate;        // not used
   PetscInt  cells0[3];
   /* AMR */
   PetscBool use_p4est;
