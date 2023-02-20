@@ -600,81 +600,9 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#if defined(LANDAU_ADD_BCS)
-static void zero_bc(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar uexact[])
-{
-  uexact[0] = 0;
-}
-#endif
-
-#define MATVEC2(__a, __x, __p) \
-  { \
-    int i, j; \
-    for (i = 0.; i < 2; i++) { \
-      __p[i] = 0; \
-      for (j = 0.; j < 2; j++) __p[i] += __a[i][j] * __x[j]; \
-    } \
-  }
-static void CircleInflate(PetscReal r0, PetscReal x, PetscReal y, PetscReal *outX, PetscReal *outY)
-{
-  PetscReal rr = PetscSqrtReal(x * x + y * y), outfact;
-  if (rr < PETSC_SQRT_MACHINE_EPSILON) {
-    *outX = x;
-    *outY = y;
-  } else {
-    const PetscReal xy[2] = {x, y}, sinphi = y / rr, cosphi = x / rr;
-    PetscReal       cth, sth, xyprime[2], Rth[2][2], rotcos, newrr;
-    rotcos  = 0.9238795325112;
-    outfact = 1.5;
-    /* rotate normalized vector into [-pi/8,pi/8) */
-    if (sinphi >= 0.707106781186548) { /* top cell, -3pi/8 */
-      cth = 0.38268343236509;
-      sth = -0.923879532511287;
-    } else if (sinphi >= 0.) { /* mid top cell -pi/8 */
-      cth = 0.923879532511287;
-      sth = -.38268343236509;
-    } else if (sinphi >= -0.707106781186548) { /* mid bottom cell + pi/8 */
-      cth = 0.923879532511287;
-      sth = 0.38268343236509;
-    } else { /* bottom cell + 3pi/8 */
-      cth = 0.38268343236509;
-      sth = .923879532511287;
-    }
-    Rth[0][0] = cth;
-    Rth[0][1] = -sth;
-    Rth[1][0] = sth;
-    Rth[1][1] = cth;
-    MATVEC2(Rth, xy, xyprime);
-    {
-      PetscReal newcosphi = xyprime[0] / rr, rin = 0, rout = rr - rin;
-      PetscReal routmax = r0 * rotcos / newcosphi - rin, nroutmax = r0 - rin, routfrac = rout / routmax;
-      newrr = rin + routfrac * nroutmax;
-    }
-    *outX = cosphi * newrr;
-    *outY = sinphi * newrr;
-    /* grade */
-    PetscReal fact, tt, rs, re, rr = PetscSqrtReal(PetscSqr(*outX) + PetscSqr(*outY));
-    rs   = 0;
-    re   = r0;
-    fact = outfact;
-    tt   = (rs + PetscPowReal((rr - rs) / (re - rs), fact) * (re - rs)) / rr;
-    *outX *= tt;
-    *outY *= tt;
-  }
-}
-
 static PetscErrorCode GeometryDMLandau(DM base, PetscInt point, PetscInt dim, const PetscReal abc[], PetscReal xyz[], void *a_ctx)
 {
-  LandauCtx *ctx = (LandauCtx *)a_ctx;
-  PetscReal  r = abc[0], z = abc[1];
-  if (ctx->inflate) {
-    PetscReal absR, absZ;
-    absR = PetscAbs(r);
-    absZ = PetscAbs(z);
-    CircleInflate(ctx->radius[0], absR, absZ, &absR, &absZ); // wrong: how do I know what grid I am on?
-    r = (r > 0) ? absR : -absR;
-    z = (z > 0) ? absZ : -absZ;
-  }
+  PetscReal r = abc[0], z = abc[1];
   xyz[0] = r;
   xyz[1] = z;
   if (dim == 3) xyz[2] = abc[2];
@@ -768,7 +696,7 @@ static PetscErrorCode LandauDMCreateVMeshes(MPI_Comm comm_self, const PetscInt d
             PetscCall(PetscObjectSetOptionsPrefix((PetscObject)dmforest, prefix));
             PetscCall(DMIsForest(dmforest, &isForest));
             if (isForest) {
-              if (ctx->sphere && ctx->inflate) PetscCall(DMForestSetBaseCoordinateMapping(dmforest, GeometryDMLandau, ctx));
+              if (ctx->sphere) PetscCall(DMForestSetBaseCoordinateMapping(dmforest, GeometryDMLandau, ctx));
               PetscCall(DMDestroy(&ctx->plex[grid]));
               ctx->plex[grid] = dmforest; // Forest for adaptivity
             } else SETERRQ(ctx->comm, PETSC_ERR_PLIB, "Converted to non Forest?");
@@ -1086,7 +1014,6 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   ctx->J              = NULL;
   /* geometry and grids */
   ctx->sphere    = PETSC_FALSE;
-  ctx->inflate   = PETSC_FALSE;
   ctx->use_p4est = PETSC_FALSE;
   for (PetscInt grid = 0; grid < LANDAU_MAX_GRIDS; grid++) {
     ctx->radius[grid]             = 5.; /* thermal radius (velocity) */
@@ -1262,15 +1189,13 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   PetscCall(PetscOptionsIntArray("-dm_landau_amr_post_refine", "Number of levels to uniformly refine after AMR", "plexland.c", ctx->postAMRRefine, &nt, &flg));
   for (ii = 1; ii < ctx->num_grids; ii++) ctx->postAMRRefine[ii] = ctx->postAMRRefine[0]; // all grids the same now
   PetscCall(PetscOptionsInt("-dm_landau_amr_re_levels", "Number of levels to refine along v_perp=0, z>0", "plexland.c", ctx->numRERefine, &ctx->numRERefine, &flg));
-  PetscCall(PetscOptionsInt("-dm_landau_amr_z_refine1", "Number of levels to refine along v_perp=0", "plexland.c", ctx->nZRefine1, &ctx->nZRefine1, &flg));
-  PetscCall(PetscOptionsInt("-dm_landau_amr_z_refine2", "Number of levels to refine along v_perp=0", "plexland.c", ctx->nZRefine2, &ctx->nZRefine2, &flg));
+  PetscCall(PetscOptionsInt("-dm_landau_amr_z_refine_pre", "Number of levels to refine along v_perp=0 before origin refine", "plexland.c", ctx->nZRefine1, &ctx->nZRefine1, &flg));
+  PetscCall(PetscOptionsInt("-dm_landau_amr_z_refine_post", "Number of levels to refine along v_perp=0 after origin refine", "plexland.c", ctx->nZRefine2, &ctx->nZRefine2, &flg));
   PetscCall(PetscOptionsReal("-dm_landau_re_radius", "velocity range to refine on positive (z>0) r=0 axis for runaways", "plexland.c", ctx->re_radius, &ctx->re_radius, &flg));
-  PetscCall(PetscOptionsReal("-dm_landau_z_radius1", "velocity range to refine r=0 axis (for electrons)", "plexland.c", ctx->vperp0_radius1, &ctx->vperp0_radius1, &flg));
-  PetscCall(PetscOptionsReal("-dm_landau_z_radius2", "velocity range to refine r=0 axis (for ions) after origin AMR", "plexland.c", ctx->vperp0_radius2, &ctx->vperp0_radius2, &flg));
+  PetscCall(PetscOptionsReal("-dm_landau_z_radius_pre", "velocity range to refine r=0 axis (for electrons)", "plexland.c", ctx->vperp0_radius1, &ctx->vperp0_radius1, &flg));
+  PetscCall(PetscOptionsReal("-dm_landau_z_radius_post", "velocity range to refine r=0 axis (for electrons) after origin AMR", "plexland.c", ctx->vperp0_radius2, &ctx->vperp0_radius2, &flg));
   /* spherical domain (not used) */
   PetscCall(PetscOptionsBool("-dm_landau_sphere", "use sphere/semi-circle domain instead of rectangle", "plexland.c", ctx->sphere, &ctx->sphere, &sph_flg));
-  PetscCall(PetscOptionsBool("-dm_landau_inflate", "With sphere, inflate for curved edges", "plexland.c", ctx->inflate, &ctx->inflate, &flg));
-  if (flg) PetscCheck(ctx->num_grids == nt, ctx->comm, PETSC_ERR_ARG_WRONG, "-dm_landau_i_radius: %" PetscInt_FMT " != num_species = %" PetscInt_FMT, nt, ctx->num_grids);
   /* processing options */
   PetscCall(PetscOptionsBool("-dm_landau_gpu_assembly", "Assemble Jacobian on GPU", "plexland.c", ctx->gpu_assembly, &ctx->gpu_assembly, NULL));
   if (ctx->deviceType == LANDAU_CPU || ctx->deviceType == LANDAU_KOKKOS) { // make Kokkos

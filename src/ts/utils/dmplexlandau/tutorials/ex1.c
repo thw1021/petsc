@@ -428,6 +428,6 @@ int main(int argc, char **argv)
       args: -dm_landau_sphere -ts_max_steps 0
     test:
       suffix: re
-      args: -dm_landau_amr_levels_max 1,2 -dm_landau_z_radius1 3 -dm_landau_z_radius2 3 -dm_landau_amr_z_refine1 1 -dm_landau_amr_z_refine2 1 -dm_landau_electron_shift 1.25 -ts_max_steps 1 -snes_converged_reason
+      args: -dm_landau_amr_levels_max 1,2 -dm_landau_z_radius_pre 3 -dm_landau_z_radius_post 3 -dm_landau_amr_z_refine_pre 1 -dm_landau_amr_z_refine_post 1 -dm_landau_electron_shift 1.25 -ts_max_steps 1 -snes_converged_reason
 
 TEST*/
