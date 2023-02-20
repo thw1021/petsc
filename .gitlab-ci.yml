@@ -432,6 +432,7 @@ mswin-opt-impi:
   variables:
     TEST_ARCH: arch-ci-mswin-opt-impi
     TEST_OPTS: search='ksp_ksp_tests*'
+    RUN_GCOV: 0
 
 linux-gcc-quad-64idx-dbg:
   extends:
@@ -947,6 +948,7 @@ mswin-intel-cxx-cmplx:
     - mswin-stage3
   variables:
     TEST_ARCH: arch-ci-mswin-intel-cxx-cmplx
+    RUN_GCOV: 0
 
 mswin-uni:
   extends:
@@ -957,6 +959,7 @@ mswin-uni:
   variables:
     PETSC_OPTIONS: -check_pointer_intensity 0 -error_output_stdout -nox -nox_warning -malloc_dump
     TEST_ARCH: arch-ci-mswin-uni
+    RUN_GCOV: 0
 
 mswin-gnu:
   extends:
