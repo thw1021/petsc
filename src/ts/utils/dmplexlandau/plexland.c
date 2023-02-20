@@ -963,9 +963,8 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem, Vec sol, PetscInt type, Pet
   if (type == 4) {
     for (c = cStart; c < cEnd; c++) PetscCall(DMLabelSetValue(adaptLabel, c, DM_ADAPT_REFINE));
   } else if (type == 2) {
-    PetscInt  rCellIdx[8], eCellIdx[64], iCellIdx[64], nr = 0, nrmax = (dim == 3) ? 8 : 2;
+    PetscInt  rCellIdx[8], nr = 0, nrmax = (dim == 3) ? 8 : 2;
     PetscReal minRad = PETSC_INFINITY, r;
-    for (c = 0; c < 64; c++) eCellIdx[c] = iCellIdx[c] = -1;
     for (c = cStart; c < cEnd; c++) {
       PetscReal tt, v0[LANDAU_MAX_NQ * 3], detJ[LANDAU_MAX_NQ];
       PetscCall(DMPlexComputeCellGeometryFEM(plex, c, quad, v0, NULL, NULL, detJ));
