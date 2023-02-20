@@ -43,20 +43,19 @@ static const PetscReal kev_joul = 6.241506479963235e+15; /* 1/1000e */
 /* < v, n_s v_|| > */
 static void f0_vz(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
 {
-  if (dim == 2) f0[0] = u[0] * 2. * PETSC_PI * x[0] * x[1]; /* n r v_|| */
+  if (dim == 2) f0[0] = u[0] * (2. * PETSC_PI * x[0]) * x[1]; /* n r v_|| */
   else f0[0] = u[0] * x[2];
 }
 /* < v, n (v-shift)^2 > */
 static void f0_v2_par_shift(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
 {
   PetscReal vz = PetscRealPart(constants[0]);
-
-  if (dim == 2) *f0 = u[0] * 2. * PETSC_PI * x[0] * (x[1] - vz) * (x[1] - vz); /* n r v^2_par|perp */
+  if (dim == 2) *f0 = u[0] * (2. * PETSC_PI * x[0]) * (x[1] - vz) * (x[1] - vz); /* n r v^2_par|perp */
   else *f0 = u[0] * (x[2] - vz) * (x[2] - vz);
 }
 static void f0_v2_perp(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
 {
-  if (dim == 2) *f0 = u[0] * 2. * PETSC_PI * x[0] * x[0] * x[0]; /* n r v^2_perp */
+  if (dim == 2) *f0 = u[0] * (2. * PETSC_PI * x[0]) * x[0] * x[0]; /* n r v^2_perp */
   else *f0 = u[0] * (x[0] * x[0] + x[1] * x[1]);
 }
 /* < v, n_e > */
@@ -68,8 +67,8 @@ static void f0_n(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[
 static void f0_v2_shift(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uOff[], const PetscInt uOff_x[], const PetscScalar u[], const PetscScalar u_t[], const PetscScalar u_x[], const PetscInt aOff[], const PetscInt aOff_x[], const PetscScalar a[], const PetscScalar a_t[], const PetscScalar a_x[], PetscReal t, const PetscReal x[], PetscInt numConstants, const PetscScalar constants[], PetscScalar *f0)
 {
   PetscReal vz = PetscRealPart(constants[0]);
-  if (dim == 2) f0[0] = 2. * PETSC_PI * x[0] * (x[0] * x[0] + (x[1] - vz) * (x[1] - vz)) * u[0];
-  else f0[0] = (x[0] * x[0] + x[1] * x[1] + (x[2] - vz) * (x[2] - vz)) * u[0];
+  if (dim == 2) f0[0] = u[0] * (2. * PETSC_PI * x[0]) * (x[0] * x[0] + (x[1] - vz) * (x[1] - vz));
+  else f0[0] = u[0] * (x[0] * x[0] + x[1] * x[1] + (x[2] - vz) * (x[2] - vz));
 }
 static PetscReal sign(PetscScalar x)
 {
@@ -92,8 +91,8 @@ static PetscErrorCode maxwellian(PetscInt dim, PetscReal time, const PetscReal x
   PetscReal      theta = 2 * mctx->kT_m / (mctx->v_0 * mctx->v_0); /* theta = 2kT/mc^2 */
   PetscFunctionBegin;
   /* evaluate the shifted Maxwellian */
-  u[0] += alphai * mctx->n * PetscPowReal(PETSC_PI * theta, -1.5) * PetscExpReal(-(alphai * x[0] * x[0] + (x[1] - mctx->shift) * (x[1] - mctx->shift)) / theta);
-
+  if (dim == 2) u[0] += alphai * mctx->n * PetscPowReal(PETSC_PI * theta, -1.5) * PetscExpReal(-(alphai * x[0] * x[0] + (x[1] - mctx->shift) * (x[1] - mctx->shift)) / theta);
+  else u[0] += alphai * mctx->n * PetscPowReal(PETSC_PI * theta, -1.5) * PetscExpReal(-(alphai * (x[0] * x[0] + x[1] * x[1]) + (x[2] - mctx->shift) * (x[2] - mctx->shift)) / theta);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
