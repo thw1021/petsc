@@ -3953,13 +3953,16 @@ PetscErrorCode MatDenseRestoreSubMatrix(Mat A, Mat *v)
 
 PetscErrorCode MatSeqDenseInvert(Mat A)
 {
-  Mat_SeqDense   *a              = (Mat_SeqDense *)A->data;
-  PetscInt        bs             = A->rmap->n;
-  MatScalar      *values         = a->v;
-  const PetscReal shift          = 0.0;
-  PetscBool       allowzeropivot = PetscNot(A->erroriffailure), zeropivotdetected = PETSC_FALSE;
+  PetscInt        bs;
+  const PetscReal shift = 0.0;
+  PetscBool       allowzeropivot, zeropivotdetected = PETSC_FALSE;
+  PetscScalar    *values;
 
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscCall(MatDenseGetArray(A, &values));
+  PetscCall(MatGetLocalSize(A, &bs, NULL));
+  allowzeropivot = PetscNot(A->erroriffailure);
   /* factor and invert each block */
   switch (bs) {
   case 1:
@@ -4003,5 +4006,6 @@ PetscErrorCode MatSeqDenseInvert(Mat A)
     PetscCall(PetscFree3(v_work, v_pivots, IJ));
   }
   }
+  PetscCall(MatDenseRestoreArray(A, &values));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
