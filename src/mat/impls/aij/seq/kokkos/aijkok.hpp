@@ -200,6 +200,8 @@ PETSC_INTERN PetscErrorCode MatSetSeqAIJKokkosWithCSRMatrix(Mat, Mat_SeqAIJKokko
 PETSC_INTERN PetscErrorCode MatCreateSeqAIJKokkosWithCSRMatrix(MPI_Comm, Mat_SeqAIJKokkos *, Mat *);
 PETSC_INTERN PetscErrorCode MatSeqAIJKokkosMergeMats(Mat, Mat, MatReuse, Mat *);
 PETSC_INTERN PetscErrorCode MatSeqAIJKokkosSyncDevice(Mat);
+PETSC_INTERN PetscErrorCode MatSeqAIJKokkosGetKokkosCsrMatrix(Mat, KokkosCsrMatrix *);
+PETSC_INTERN PetscErrorCode MatCreateSeqAIJKokkosWithKokkosCsrMatrix(MPI_Comm, KokkosCsrMatrix, Mat *);
 PETSC_INTERN PetscErrorCode PrintCsrMatrix(const KokkosCsrMatrix &csrmat);
 PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJKokkos(Mat, MatType, MatReuse, Mat *);
 PETSC_INTERN PetscErrorCode MatSeqAIJKokkosModifyDevice(Mat);
