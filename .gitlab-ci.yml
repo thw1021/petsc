@@ -326,13 +326,13 @@ pause-for-approval:
 
 .coverage-generate-u20:
   extends: .coverage-generate
-  variables:
-    GCOV_MODULES: py-gcovr-5.2-gcc-9.4.0-myfrwxu
+  # variables:
+  #   GCOV_MODULES: py-gcovr-5.2-gcc-9.4.0-myfrwxu
 
 .coverage-generate-u22:
   extends: .coverage-generate
-  variables:
-    GCOV_MODULES: py-gcovr-5.2-gcc-11.2.0-wcsmyet
+  # variables:
+  #   GCOV_MODULES: py-gcovr-5.2-gcc-11.2.0-wcsmyet
 
 .freebsd_test:
   variables:
