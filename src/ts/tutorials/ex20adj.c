@@ -192,7 +192,7 @@ static PetscErrorCode IJacobianP(TS ts, PetscReal t, Vec U, Vec Udot, PetscReal 
 
 static PetscErrorCode RHSJacobianP(TS ts, PetscReal t, Vec U, Mat A, void *ctx)
 {
-  User user  = (User)ctx;
+  User user = (User)ctx;
 
   PetscFunctionBeginUser;
   if (!user->imex) {
