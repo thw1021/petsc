@@ -860,7 +860,7 @@ static PetscErrorCode TSRecoverRHSJacobian(TS ts, Mat A, Mat B)
    If F(t,U,Udot)=0 is the DAE, the required Jacobian is
 .vb
    dF/dU + shift*dF/dUdot
-,ve
+.ve
    Most users should not need to explicitly call this routine, as it
    is used internally within the nonlinear solvers.
 
@@ -5929,7 +5929,7 @@ static PetscErrorCode RHSWrapperFunction_TSRHSJacobianTest(void *ctx, Vec x, Vec
    Level: advanced
 
    Note:
-    This only works for problems defined using `TSSetRHSFunction` and Jacobian NOT `TSSetIFunction()` and Jacobian
+    This only works for problems defined using `TSSetRHSFunction()` and Jacobian NOT `TSSetIFunction()` and Jacobian
 
 .seealso: [](chapter_ts), `TS`, `Mat`, `MATSHELL`, `MatCreateShell()`, `MatShellGetContext()`, `MatShellGetOperation()`, `MatShellTestMultTranspose()`, `TSRHSJacobianTestTranspose()`
 @*/
@@ -5963,7 +5963,7 @@ PetscErrorCode TSRHSJacobianTest(TS ts, PetscBool *flg)
    Level: advanced
 
    Notes:
-    This only works for problems defined using `TSSetRHSFunction` and Jacobian NOT `TSSetIFunction()` and Jacobian
+    This only works for problems defined using `TSSetRHSFunction()` and Jacobian NOT `TSSetIFunction()` and Jacobian
 
 .seealso: [](chapter_ts), `TS`, `Mat`, `MatCreateShell()`, `MatShellGetContext()`, `MatShellGetOperation()`, `MatShellTestMultTranspose()`, `TSRHSJacobianTest()`
 @*/

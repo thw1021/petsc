@@ -109,8 +109,8 @@ PETSC_EXTERN const char *const *TSEquationTypes;
 .  `TS_CONVERGED_PSEUDO_FRTOL`       - stops when function norm decreases below a set amount, used only for `TSPSEUDO`
 .  `TS_DIVERGED_NONLINEAR_SOLVE`     - too many nonlinear solve failures have occurred
 .  `TS_DIVERGED_STEP_REJECTED`       - too many steps were rejected
-.  `TSFORWARD_DIVERGED_LINEAR_SOLVE` - beats me
--  `TSADJOINT_DIVERGED_LINEAR_SOLVE` - beats me
+.  `TSFORWARD_DIVERGED_LINEAR_SOLVE` - tangent linear solve failed
+-  `TSADJOINT_DIVERGED_LINEAR_SOLVE` - transposed linear solve failed
 
    Level: beginner
 
