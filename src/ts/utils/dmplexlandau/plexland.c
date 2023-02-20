@@ -615,75 +615,38 @@ static void zero_bc(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt uO
       for (j = 0.; j < 2; j++) __p[i] += __a[i][j] * __x[j]; \
     } \
   }
-static void CircleInflate(PetscReal r1, PetscReal r2, PetscReal r0, PetscInt num_sections, PetscReal x, PetscReal y, PetscReal *outX, PetscReal *outY)
+static void CircleInflate(PetscReal r0, PetscReal x, PetscReal y, PetscReal *outX, PetscReal *outY)
 {
-  PetscReal rr = PetscSqrtReal(x * x + y * y), outfact, efact;
-  if (rr < r1 + PETSC_SQRT_MACHINE_EPSILON) {
+  PetscReal rr = PetscSqrtReal(x * x + y * y), outfact;
+  if (rr < PETSC_SQRT_MACHINE_EPSILON) {
     *outX = x;
     *outY = y;
   } else {
     const PetscReal xy[2] = {x, y}, sinphi = y / rr, cosphi = x / rr;
     PetscReal       cth, sth, xyprime[2], Rth[2][2], rotcos, newrr;
-    if (num_sections == 2) {
-      rotcos  = 0.70710678118654;
-      outfact = 1.5;
-      efact   = 2.5;
-      /* rotate normalized vector into [-pi/4,pi/4) */
-      if (sinphi >= 0.) { /* top cell, -pi/2 */
-        cth = 0.707106781186548;
-        sth = -0.707106781186548;
-      } else { /* bottom cell -pi/8 */
-        cth = 0.707106781186548;
-        sth = .707106781186548;
-      }
-    } else if (num_sections == 3) {
-      rotcos  = 0.86602540378443;
-      outfact = 1.5;
-      efact   = 2.5;
-      /* rotate normalized vector into [-pi/6,pi/6) */
-      if (sinphi >= 0.5) { /* top cell, -pi/3 */
-        cth = 0.5;
-        sth = -0.866025403784439;
-      } else if (sinphi >= -.5) { /* mid cell 0 */
-        cth = 1.;
-        sth = .0;
-      } else { /* bottom cell +pi/3 */
-        cth = 0.5;
-        sth = 0.866025403784439;
-      }
-    } else if (num_sections == 4) {
-      rotcos  = 0.9238795325112;
-      outfact = 1.5;
-      efact   = 3;
-      /* rotate normalized vector into [-pi/8,pi/8) */
-      if (sinphi >= 0.707106781186548) { /* top cell, -3pi/8 */
-        cth = 0.38268343236509;
-        sth = -0.923879532511287;
-      } else if (sinphi >= 0.) { /* mid top cell -pi/8 */
-        cth = 0.923879532511287;
-        sth = -.38268343236509;
-      } else if (sinphi >= -0.707106781186548) { /* mid bottom cell + pi/8 */
-        cth = 0.923879532511287;
-        sth = 0.38268343236509;
-      } else { /* bottom cell + 3pi/8 */
-        cth = 0.38268343236509;
-        sth = .923879532511287;
-      }
-    } else {
-      cth    = 0.;
-      sth    = 0.;
-      rotcos = 0;
-      efact  = 0;
+    rotcos  = 0.9238795325112;
+    outfact = 1.5;
+    /* rotate normalized vector into [-pi/8,pi/8) */
+    if (sinphi >= 0.707106781186548) { /* top cell, -3pi/8 */
+      cth = 0.38268343236509;
+      sth = -0.923879532511287;
+    } else if (sinphi >= 0.) { /* mid top cell -pi/8 */
+      cth = 0.923879532511287;
+      sth = -.38268343236509;
+    } else if (sinphi >= -0.707106781186548) { /* mid bottom cell + pi/8 */
+      cth = 0.923879532511287;
+      sth = 0.38268343236509;
+    } else { /* bottom cell + 3pi/8 */
+      cth = 0.38268343236509;
+      sth = .923879532511287;
     }
     Rth[0][0] = cth;
     Rth[0][1] = -sth;
     Rth[1][0] = sth;
     Rth[1][1] = cth;
     MATVEC2(Rth, xy, xyprime);
-    if (num_sections == 2) {
-      newrr = xyprime[0] / rotcos;
-    } else {
-      PetscReal newcosphi = xyprime[0] / rr, rin = r1, rout = rr - rin;
+    {
+      PetscReal newcosphi = xyprime[0] / rr, rin = 0, rout = rr - rin;
       PetscReal routmax = r0 * rotcos / newcosphi - rin, nroutmax = r0 - rin, routfrac = rout / routmax;
       newrr = rin + routfrac * nroutmax;
     }
@@ -691,17 +654,10 @@ static void CircleInflate(PetscReal r1, PetscReal r2, PetscReal r0, PetscInt num
     *outY = sinphi * newrr;
     /* grade */
     PetscReal fact, tt, rs, re, rr = PetscSqrtReal(PetscSqr(*outX) + PetscSqr(*outY));
-    if (rr > r2) {
-      rs   = r2;
-      re   = r0;
-      fact = outfact;
-    } /* outer zone */
-    else {
-      rs   = r1;
-      re   = r2;
-      fact = efact;
-    } /* electron zone */
-    tt = (rs + PetscPowReal((rr - rs) / (re - rs), fact) * (re - rs)) / rr;
+    rs   = 0;
+    re   = r0;
+    fact = outfact;
+    tt   = (rs + PetscPowReal((rr - rs) / (re - rs), fact) * (re - rs)) / rr;
     *outX *= tt;
     *outY *= tt;
   }
@@ -715,7 +671,7 @@ static PetscErrorCode GeometryDMLandau(DM base, PetscInt point, PetscInt dim, co
     PetscReal absR, absZ;
     absR = PetscAbs(r);
     absZ = PetscAbs(z);
-    CircleInflate(ctx->i_radius[0], ctx->e_radius, ctx->radius[0], ctx->num_sections, absR, absZ, &absR, &absZ); // wrong: how do I know what grid I am on?
+    CircleInflate(ctx->radius[0], absR, absZ, &absR, &absZ); // wrong: how do I know what grid I am on?
     r = (r > 0) ? absR : -absR;
     z = (z > 0) ? absZ : -absZ;
   }
@@ -746,123 +702,39 @@ static PetscErrorCode LandauDMCreateVMeshes(MPI_Comm comm_self, const PetscInt d
         PetscCall(DMLocalizeCoordinates(ctx->plex[grid]));                                                                           /* needed for periodic */
         if (dim == 3) PetscCall(PetscObjectSetName((PetscObject)ctx->plex[grid], "cube"));
         else PetscCall(PetscObjectSetName((PetscObject)ctx->plex[grid], "half-plane"));
-      } else if (dim == 2) { // sphere is all wrong. should just have one inner radius
+      } else if (dim == 2) {
         PetscInt   numCells, cells[16][4], i, j;
         PetscInt   numVerts;
-        PetscReal  inner_radius1 = ctx->i_radius[grid], inner_radius2 = ctx->e_radius;
         PetscReal *flatCoords = NULL;
         PetscInt  *flatCells  = NULL, *pcell;
-        if (ctx->num_sections == 2) {
-#if 1
-          numCells        = 5;
-          numVerts        = 10;
-          int cells2[][4] = {
-            {0, 1, 4, 3},
-            {1, 2, 5, 4},
-            {3, 4, 7, 6},
-            {4, 5, 8, 7},
-            {6, 7, 8, 9}
-          };
-          for (i = 0; i < numCells; i++)
-            for (j = 0; j < 4; j++) cells[i][j] = cells2[i][j];
-          PetscCall(PetscMalloc2(numVerts * 2, &flatCoords, numCells * 4, &flatCells));
-          {
-            PetscReal(*coords)[2] = (PetscReal(*)[2])flatCoords;
-            for (j = 0; j < numVerts - 1; j++) {
-              PetscReal z, r, theta = -PETSC_PI / 2 + (j % 3) * PETSC_PI / 2;
-              PetscReal rad = (j >= 6) ? inner_radius1 : (j >= 3) ? inner_radius2 : ctx->radius[grid];
-              z             = rad * PetscSinReal(theta);
-              coords[j][1]  = z;
-              r             = rad * PetscCosReal(theta);
-              coords[j][0]  = r;
-            }
-            coords[numVerts - 1][0] = coords[numVerts - 1][1] = 0;
+        numCells              = 10;
+        numVerts              = 16;
+        int cells2[][4]       = {
+          {0,  1,  6,  5 },
+          {1,  2,  7,  6 },
+          {2,  3,  8,  7 },
+          {3,  4,  9,  8 },
+          {5,  6,  11, 10},
+          {6,  7,  12, 11},
+          {7,  8,  13, 12},
+          {8,  9,  14, 13},
+          {10, 11, 12, 15},
+          {12, 13, 14, 15}
+        };
+        for (i = 0; i < numCells; i++)
+          for (j = 0; j < 4; j++) cells[i][j] = cells2[i][j];
+        PetscCall(PetscMalloc2(numVerts * 2, &flatCoords, numCells * 4, &flatCells));
+        {
+          PetscReal(*coords)[2] = (PetscReal(*)[2])flatCoords;
+          for (j = 0; j < numVerts - 1; j++) {
+            PetscReal z, r, theta = -PETSC_PI / 2 + (j % 5) * PETSC_PI / 4;
+            PetscReal rad = ctx->radius[grid];
+            z             = rad * PetscSinReal(theta);
+            coords[j][1]  = z;
+            r             = rad * PetscCosReal(theta);
+            coords[j][0]  = r;
           }
-#else
-          numCells = 4;
-          numVerts = 8;
-          static int cells2[][4] = {
-            {0, 1, 2, 3},
-            {4, 5, 1, 0},
-            {5, 6, 2, 1},
-            {6, 7, 3, 2}
-          };
-          for (i = 0; i < numCells; i++)
-            for (j = 0; j < 4; j++) cells[i][j] = cells2[i][j];
-          PetscCall(loc2(numVerts * 2, &flatCoords, numCells * 4, &flatCells));
-          {
-            PetscReal(*coords)[2] = (PetscReal(*)[2])flatCoords;
-            PetscInt j;
-            for (j = 0; j < 8; j++) {
-              PetscReal z, r;
-              PetscReal theta = -PETSC_PI / 2 + (j % 4) * PETSC_PI / 3.;
-              PetscReal rad = ctx->radius[grid] * ((j < 4) ? 0.5 : 1.0);
-              z = rad * PetscSinReal(theta);
-              coords[j][1] = z;
-              r = rad * PetscCosReal(theta);
-              coords[j][0] = r;
-            }
-          }
-#endif
-        } else if (ctx->num_sections == 3) {
-          numCells        = 7;
-          numVerts        = 12;
-          int cells2[][4] = {
-            {0, 1, 5,  4 },
-            {1, 2, 6,  5 },
-            {2, 3, 7,  6 },
-            {4, 5, 9,  8 },
-            {5, 6, 10, 9 },
-            {6, 7, 11, 10},
-            {8, 9, 10, 11}
-          };
-          for (i = 0; i < numCells; i++)
-            for (j = 0; j < 4; j++) cells[i][j] = cells2[i][j];
-          PetscCall(PetscMalloc2(numVerts * 2, &flatCoords, numCells * 4, &flatCells));
-          {
-            PetscReal(*coords)[2] = (PetscReal(*)[2])flatCoords;
-            for (j = 0; j < numVerts; j++) {
-              PetscReal z, r, theta = -PETSC_PI / 2 + (j % 4) * PETSC_PI / 3;
-              PetscReal rad = (j >= 8) ? inner_radius1 : (j >= 4) ? inner_radius2 : ctx->radius[grid];
-              z             = rad * PetscSinReal(theta);
-              coords[j][1]  = z;
-              r             = rad * PetscCosReal(theta);
-              coords[j][0]  = r;
-            }
-          }
-        } else if (ctx->num_sections == 4) {
-          numCells        = 10;
-          numVerts        = 16;
-          int cells2[][4] = {
-            {0,  1,  6,  5 },
-            {1,  2,  7,  6 },
-            {2,  3,  8,  7 },
-            {3,  4,  9,  8 },
-            {5,  6,  11, 10},
-            {6,  7,  12, 11},
-            {7,  8,  13, 12},
-            {8,  9,  14, 13},
-            {10, 11, 12, 15},
-            {12, 13, 14, 15}
-          };
-          for (i = 0; i < numCells; i++)
-            for (j = 0; j < 4; j++) cells[i][j] = cells2[i][j];
-          PetscCall(PetscMalloc2(numVerts * 2, &flatCoords, numCells * 4, &flatCells));
-          {
-            PetscReal(*coords)[2] = (PetscReal(*)[2])flatCoords;
-            for (j = 0; j < numVerts - 1; j++) {
-              PetscReal z, r, theta = -PETSC_PI / 2 + (j % 5) * PETSC_PI / 4;
-              PetscReal rad = (j >= 10) ? inner_radius1 : (j >= 5) ? inner_radius2 : ctx->radius[grid];
-              z             = rad * PetscSinReal(theta);
-              coords[j][1]  = z;
-              r             = rad * PetscCosReal(theta);
-              coords[j][0]  = r;
-            }
-            coords[numVerts - 1][0] = coords[numVerts - 1][1] = 0;
-          }
-        } else {
-          numCells = 0;
-          numVerts = 0;
+          coords[numVerts - 1][0] = coords[numVerts - 1][1] = 0;
         }
         for (j = 0, pcell = flatCells; j < numCells; j++, pcell += 4) {
           pcell[0] = cells[j][0];
@@ -1091,8 +963,8 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem, Vec sol, PetscInt type, Pet
   if (type == 4) {
     for (c = cStart; c < cEnd; c++) PetscCall(DMLabelSetValue(adaptLabel, c, DM_ADAPT_REFINE));
   } else if (type == 2) {
-    PetscInt  rCellIdx[8], eCellIdx[64], iCellIdx[64], eMaxIdx = -1, iMaxIdx = -1, nr = 0, nrmax = (dim == 3) ? 8 : 2;
-    PetscReal minRad = PETSC_INFINITY, r, eMinRad = PETSC_INFINITY, iMinRad = PETSC_INFINITY;
+    PetscInt  rCellIdx[8], eCellIdx[64], iCellIdx[64], nr = 0, nrmax = (dim == 3) ? 8 : 2;
+    PetscReal minRad = PETSC_INFINITY, r;
     for (c = 0; c < 64; c++) eCellIdx[c] = iCellIdx[c] = -1;
     for (c = cStart; c < cEnd; c++) {
       PetscReal tt, v0[LANDAU_MAX_NQ * 3], detJ[LANDAU_MAX_NQ];
@@ -1113,41 +985,10 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem, Vec sol, PetscInt type, Pet
             PetscCall(PetscInfo(sol, "\t\t\t%" PetscInt_FMT ") Found another inner r=%e, cell %" PetscInt_FMT ", qp %" PetscInt_FMT "/%" PetscInt_FMT ", d=%e\n", grid, (double)r, c, qj + 1, Nq, (double)(r - minRad)));
           }
         }
-        if (ctx->sphere) {
-          if ((tt = r - ctx->e_radius) > 0) {
-            PetscCall(PetscInfo(sol, "%" PetscInt_FMT ") %" PetscInt_FMT " cell r=%g\n", grid, c, (double)tt));
-            if (tt < eMinRad - PETSC_SQRT_MACHINE_EPSILON * 100.) {
-              eMinRad             = tt;
-              eMaxIdx             = 0;
-              eCellIdx[eMaxIdx++] = c;
-            } else if (eMaxIdx > 0 && (tt - eMinRad) <= PETSC_SQRT_MACHINE_EPSILON && c != eCellIdx[eMaxIdx - 1]) {
-              eCellIdx[eMaxIdx++] = c;
-            }
-          }
-          if ((tt = r - ctx->i_radius[grid]) > 0) {
-            if (tt < iMinRad - 1.e-5) {
-              iMinRad             = tt;
-              iMaxIdx             = 0;
-              iCellIdx[iMaxIdx++] = c;
-            } else if (iMaxIdx > 0 && (tt - iMinRad) <= PETSC_SQRT_MACHINE_EPSILON && c != iCellIdx[iMaxIdx - 1]) {
-              iCellIdx[iMaxIdx++] = c;
-            }
-          }
-        }
       }
     }
     for (k = 0; k < nr; k++) PetscCall(DMLabelSetValue(adaptLabel, rCellIdx[k], DM_ADAPT_REFINE));
-    if (ctx->sphere) {
-      for (c = 0; c < eMaxIdx; c++) {
-        PetscCall(DMLabelSetValue(adaptLabel, eCellIdx[c], DM_ADAPT_REFINE));
-        PetscCall(PetscInfo(sol, "\t\t%" PetscInt_FMT ") Refine sphere e cell %" PetscInt_FMT " r=%g\n", grid, eCellIdx[c], (double)eMinRad));
-      }
-      for (c = 0; c < iMaxIdx; c++) {
-        PetscCall(DMLabelSetValue(adaptLabel, iCellIdx[c], DM_ADAPT_REFINE));
-        PetscCall(PetscInfo(sol, "\t\t%" PetscInt_FMT ") Refine sphere i cell %" PetscInt_FMT " r=%g\n", grid, iCellIdx[c], (double)iMinRad));
-      }
-    }
-    PetscCall(PetscInfo(sol, "\t\t\t%" PetscInt_FMT ") Refined origin cells %" PetscInt_FMT ",%" PetscInt_FMT " r=%g\n", grid, rCellIdx[0], rCellIdx[1], (double)minRad));
+    PetscCall(PetscInfo(sol, "\t\t\t%" PetscInt_FMT ") Refined %" PetscInt_FMT " origin cells %" PetscInt_FMT ",%" PetscInt_FMT " r=%g\n", grid, nr, rCellIdx[0], rCellIdx[1], (double)minRad));
   } else if (type == 0 || type == 1 || type == 3) { /* refine along r=0 axis */
     PetscScalar *coef = NULL;
     Vec          coords;
@@ -1186,7 +1027,7 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem, Vec sol, PetscInt type, Pet
   if (adaptedDM) {
     if (isForest) {
       PetscCall(DMForestSetAdaptivityForest(adaptedDM, NULL)); // ????
-    } else exit(33);                                           // ???????
+    }
     PetscCall(DMConvert(adaptedDM, DMPLEX, &plex));
     PetscCall(DMPlexGetHeightStratum(plex, 0, &cStart, &cEnd));
     PetscCall(PetscInfo(sol, "\t\t\t\t%" PetscInt_FMT ") %" PetscInt_FMT " cells, %" PetscInt_FMT " total quadrature points\n", grid, cEnd - cStart, Nq * (cEnd - cStart)));
@@ -1245,10 +1086,9 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   ctx->M              = NULL;
   ctx->J              = NULL;
   /* geometry and grids */
-  ctx->sphere       = PETSC_FALSE;
-  ctx->inflate      = PETSC_FALSE;
-  ctx->use_p4est    = PETSC_FALSE;
-  ctx->num_sections = 3; /* 2, 3 or 4 */
+  ctx->sphere    = PETSC_FALSE;
+  ctx->inflate   = PETSC_FALSE;
+  ctx->use_p4est = PETSC_FALSE;
   for (PetscInt grid = 0; grid < LANDAU_MAX_GRIDS; grid++) {
     ctx->radius[grid]             = 5.; /* thermal radius (velocity) */
     ctx->radius_perp[grid]        = 5.; /* thermal radius (velocity) */
@@ -1429,20 +1269,9 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   PetscCall(PetscOptionsReal("-dm_landau_z_radius1", "velocity range to refine r=0 axis (for electrons)", "plexland.c", ctx->vperp0_radius1, &ctx->vperp0_radius1, &flg));
   PetscCall(PetscOptionsReal("-dm_landau_z_radius2", "velocity range to refine r=0 axis (for ions) after origin AMR", "plexland.c", ctx->vperp0_radius2, &ctx->vperp0_radius2, &flg));
   /* spherical domain (not used) */
-  PetscCall(PetscOptionsInt("-dm_landau_num_sections", "Number of tangential section in (2D) grid, 2, 3, of 4", "plexland.c", ctx->num_sections, &ctx->num_sections, NULL));
   PetscCall(PetscOptionsBool("-dm_landau_sphere", "use sphere/semi-circle domain instead of rectangle", "plexland.c", ctx->sphere, &ctx->sphere, &sph_flg));
   PetscCall(PetscOptionsBool("-dm_landau_inflate", "With sphere, inflate for curved edges", "plexland.c", ctx->inflate, &ctx->inflate, &flg));
-  PetscCall(PetscOptionsReal("-dm_landau_e_radius", "Electron thermal velocity, used for circular meshes", "plexland.c", ctx->e_radius, &ctx->e_radius, &flg));
-  if (flg && !sph_flg) ctx->sphere = PETSC_TRUE; /* you gave me an e radius but did not set sphere, user error really */
-  if (!flg) ctx->e_radius = 1.5 * PetscSqrtReal(8 * ctx->k * ctx->thermal_temps[0] / ctx->masses[0] / PETSC_PI) / ctx->v_0;
-  nt = LANDAU_MAX_GRIDS;
-  PetscCall(PetscOptionsRealArray("-dm_landau_i_radius", "Ion thermal velocity, used for circular meshes", "plexland.c", ctx->i_radius, &nt, &flg));
-  if (flg && !sph_flg) ctx->sphere = PETSC_TRUE;
-  if (!flg) {
-    ctx->i_radius[0] = 1.5 * PetscSqrtReal(8 * ctx->k * ctx->thermal_temps[1] / ctx->masses[1] / PETSC_PI) / ctx->v_0; // need to correct for ion grid domain
-  }
   if (flg) PetscCheck(ctx->num_grids == nt, ctx->comm, PETSC_ERR_ARG_WRONG, "-dm_landau_i_radius: %" PetscInt_FMT " != num_species = %" PetscInt_FMT, nt, ctx->num_grids);
-  if (ctx->sphere) PetscCheck(ctx->e_radius > ctx->i_radius[0], ctx->comm, PETSC_ERR_ARG_WRONG, "bad radii: %g < %g < %g", (double)ctx->i_radius[0], (double)ctx->e_radius, (double)ctx->radius[0]);
   /* processing options */
   PetscCall(PetscOptionsBool("-dm_landau_gpu_assembly", "Assemble Jacobian on GPU", "plexland.c", ctx->gpu_assembly, &ctx->gpu_assembly, NULL));
   if (ctx->deviceType == LANDAU_CPU || ctx->deviceType == LANDAU_KOKKOS) { // make Kokkos

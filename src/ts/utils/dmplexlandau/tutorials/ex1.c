@@ -240,42 +240,44 @@ PetscErrorCode Monitor(TS ts, PetscInt stepi, PetscReal time, Vec X, void *actx)
       PetscCall(VecViewFromOptions(XsubArray[LAND_PACK_IDX(ctx->batch_view_idx, 0)], NULL, "-ex1_vec_view_e"));
       PetscCall(VecViewFromOptions(XsubArray[LAND_PACK_IDX(ctx->batch_view_idx, 1)], NULL, "-ex1_vec_view_i"));
       // temps
-      for (PetscInt grid = 0; grid < ctx->num_grids; grid++) {
-        PetscDS     prob;
-        DM          dm      = ctx->plex[grid];
-        PetscScalar user[2] = {0, 0}, tt[1];
-        PetscReal   vz_0 = 0, n, energy, e_perp, e_par, m_s = ctx->masses[ctx->species_offset[grid]];
-        Vec         Xloc = XsubArray[LAND_PACK_IDX(ctx->batch_view_idx, grid)];
-        PetscCall(DMGetDS(dm, &prob));
-        /* get n */
-        PetscCall(PetscDSSetObjective(prob, 0, &f0_n));
-        PetscCall(DMPlexComputeIntegralFEM(dm, Xloc, tt, NULL));
-        n = PetscRealPart(tt[0]);
-        /* get vz */
-        PetscCall(PetscDSSetObjective(prob, 0, &f0_vz));
-        PetscCall(DMPlexComputeIntegralFEM(dm, Xloc, tt, NULL));
-        user[0] = vz_0 = PetscRealPart(tt[0]) / n;
-        /* energy temp */
-        PetscCall(PetscDSSetConstants(prob, 2, user));
-        PetscCall(PetscDSSetObjective(prob, 0, &f0_v2_shift));
-        PetscCall(DMPlexComputeIntegralFEM(dm, Xloc, tt, ctx));
-        energy = PetscRealPart(tt[0]) * ctx->v_0 * ctx->v_0 * m_s / n / 3; // scale?
-        energy *= kev_joul * 1000;                                         // T eV
-        /* energy temp - par */
-        PetscCall(PetscDSSetConstants(prob, 2, user));
-        PetscCall(PetscDSSetObjective(prob, 0, &f0_v2_par_shift));
-        PetscCall(DMPlexComputeIntegralFEM(dm, Xloc, tt, ctx));
-        e_par = PetscRealPart(tt[0]) * ctx->v_0 * ctx->v_0 * m_s / n;
-        e_par *= kev_joul * 1000; // eV
-        /* energy temp - perp */
-        PetscCall(PetscDSSetConstants(prob, 2, user));
-        PetscCall(PetscDSSetObjective(prob, 0, &f0_v2_perp));
-        PetscCall(DMPlexComputeIntegralFEM(dm, Xloc, tt, ctx));
-        e_perp = PetscRealPart(tt[0]) * ctx->v_0 * ctx->v_0 * m_s / n / 2;
-        e_perp *= kev_joul * 1000; // eV
-        if (grid == 0) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "step %4d) time= %e temperature (eV): ", (int)stepi, (double)time));
-        PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%s T= %9.4e T_par= %9.4e T_perp= %9.4e ", (grid == 0) ? "electron:" : ";ion:", (double)energy, (double)e_par, (double)e_perp));
-        if (n_cm3[grid] == 0) n_cm3[grid] = ctx->n_0 * n * 1e-6; // does not change m^3 --> cm^3
+      if (ts_nrl) {
+        for (PetscInt grid = 0; grid < ctx->num_grids; grid++) {
+          PetscDS     prob;
+          DM          dm      = ctx->plex[grid];
+          PetscScalar user[2] = {0, 0}, tt[1];
+          PetscReal   vz_0 = 0, n, energy, e_perp, e_par, m_s = ctx->masses[ctx->species_offset[grid]];
+          Vec         Xloc = XsubArray[LAND_PACK_IDX(ctx->batch_view_idx, grid)];
+          PetscCall(DMGetDS(dm, &prob));
+          /* get n */
+          PetscCall(PetscDSSetObjective(prob, 0, &f0_n));
+          PetscCall(DMPlexComputeIntegralFEM(dm, Xloc, tt, NULL));
+          n = PetscRealPart(tt[0]);
+          /* get vz */
+          PetscCall(PetscDSSetObjective(prob, 0, &f0_vz));
+          PetscCall(DMPlexComputeIntegralFEM(dm, Xloc, tt, NULL));
+          user[0] = vz_0 = PetscRealPart(tt[0]) / n;
+          /* energy temp */
+          PetscCall(PetscDSSetConstants(prob, 2, user));
+          PetscCall(PetscDSSetObjective(prob, 0, &f0_v2_shift));
+          PetscCall(DMPlexComputeIntegralFEM(dm, Xloc, tt, ctx));
+          energy = PetscRealPart(tt[0]) * ctx->v_0 * ctx->v_0 * m_s / n / 3; // scale?
+          energy *= kev_joul * 1000;                                         // T eV
+          /* energy temp - par */
+          PetscCall(PetscDSSetConstants(prob, 2, user));
+          PetscCall(PetscDSSetObjective(prob, 0, &f0_v2_par_shift));
+          PetscCall(DMPlexComputeIntegralFEM(dm, Xloc, tt, ctx));
+          e_par = PetscRealPart(tt[0]) * ctx->v_0 * ctx->v_0 * m_s / n;
+          e_par *= kev_joul * 1000; // eV
+          /* energy temp - perp */
+          PetscCall(PetscDSSetConstants(prob, 2, user));
+          PetscCall(PetscDSSetObjective(prob, 0, &f0_v2_perp));
+          PetscCall(DMPlexComputeIntegralFEM(dm, Xloc, tt, ctx));
+          e_perp = PetscRealPart(tt[0]) * ctx->v_0 * ctx->v_0 * m_s / n / 2;
+          e_perp *= kev_joul * 1000; // eV
+          if (grid == 0) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "step %4d) time= %e temperature (eV): ", (int)stepi, (double)time));
+          PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%s T= %9.4e T_par= %9.4e T_perp= %9.4e ", (grid == 0) ? "electron:" : ";ion:", (double)energy, (double)e_par, (double)e_perp));
+          if (n_cm3[grid] == 0) n_cm3[grid] = ctx->n_0 * n * 1e-6; // does not change m^3 --> cm^3
+        }
       }
       // cleanup
       PetscCall(DMCompositeRestoreAccessArray(pack, X, nDMs, NULL, XsubArray));
@@ -339,7 +341,6 @@ int main(int argc, char **argv)
     PetscCall(PetscOptionsClearValue(NULL, "-ts_adapt_monitor"));
     PetscCall(PetscOptionsClearValue(NULL, "-ts_monitor"));
     PetscCall(PetscOptionsClearValue(NULL, "-snes_monitor"));
-    //PetscCall(PetscOptionsClearValue(NULL, "-"));
   }
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-dim", &dim, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-use_nrl", &use_nrl, NULL));
@@ -384,7 +385,7 @@ int main(int argc, char **argv)
     PetscCall(createVec_NRL(ctx, &NRL_vec));
     PetscCall(createTS_NRL(ctx, NRL_vec));
     PetscCall(VecDestroy(&NRL_vec));
-  }
+  } else ctx->data = NULL;
   /* solve */
   PetscCall(TSSolve(ts, X));
   /* test add field method & output */
@@ -405,10 +406,10 @@ int main(int argc, char **argv)
     requires: p4est !complex double defined(PETSC_USE_DMLANDAU_2D)
     output_file: output/ex1_0.out
     filter: grep -v "DM"
-    args: -dm_landau_amr_levels_max 0,2 -dm_landau_amr_post_refine 0 -dm_landau_amr_re_levels 2 -dm_landau_domain_radius 6,6 -dm_landau_electron_shift 1.5 -dm_landau_ion_charges 1 -dm_landau_ion_masses 2 -dm_landau_n 1,1 -dm_landau_n_0 1e20 -dm_landau_num_cells 2,4 -dm_landau_num_species_grid 1,1 -dm_landau_re_radius 2 -use_nrl false -dm_landau_thermal_temps .3,.2 -dm_landau_type p4est -dm_landau_verbose -1 -dm_preallocate_only false -ex1_dm_view_e -ksp_type preonly -pc_type lu -petscspace_degree 3 -snes_converged_reason -snes_rtol 1.e-14 -snes_stol 1.e-14 -ts_adapt_clip .5,1.5 -ts_adapt_dt_max 5 -ts_adapt_monitor -ts_adapt_scale_solve_failed 0.5 -ts_arkimex_type 1bee -ts_dt .01 -ts_max_snes_failures -1 -ts_max_steps 1 -ts_max_time 8 -ts_monitor -ts_rtol 1e-2 -ts_type arkimex
+    args: -dm_landau_amr_levels_max 0,2 -dm_landau_amr_post_refine 0 -dm_landau_amr_re_levels 2 -dm_landau_domain_radius 6,6 -dm_landau_electron_shift 1.5 -dm_landau_ion_charges 1 -dm_landau_ion_masses 2 -dm_landau_n 1,1 -dm_landau_n_0 1e20 -dm_landau_num_cells 2,4 -dm_landau_num_species_grid 1,1 -dm_landau_re_radius 2 -use_nrl true -dm_landau_thermal_temps .3,.2 -dm_landau_type p4est -dm_landau_verbose -1 -dm_preallocate_only false -ex1_dm_view_e -ksp_type preonly -pc_type lu -petscspace_degree 3 -snes_converged_reason -snes_rtol 1.e-14 -snes_stol 1.e-14 -ts_adapt_clip .5,1.5 -ts_adapt_dt_max 5 -ts_adapt_monitor -ts_adapt_scale_solve_failed 0.5 -ts_arkimex_type 1bee -ts_dt .01 -ts_max_snes_failures -1 -ts_max_steps 1 -ts_max_time 8 -ts_monitor -ts_rtol 1e-2 -ts_type arkimex
     test:
       suffix: cpu
-      args: -dm_landau_device_type cpu
+      args: -dm_landau_device_type cpu -dm_landau_use_relativistic_corrections
     test:
       suffix: kokkos
       requires: kokkos_kernels !defined(PETSC_HAVE_CUDA_CLANG)
@@ -417,5 +418,16 @@ int main(int argc, char **argv)
       suffix: cuda
       requires: cuda !defined(PETSC_HAVE_CUDA_CLANG)
       args: -dm_landau_device_type cuda -dm_mat_type aijcusparse -dm_vec_type cuda -mat_cusparse_use_cpu_solve
+
+  testset:
+    requires: !complex defined(PETSC_USE_DMLANDAU_2D) !kokkos_kernels !cuda p4est
+    args: -dm_landau_type p4est -dm_landau_num_cells 4,4 -dm_landau_amr_levels_max 3,3 -dm_landau_num_species_grid 1,1 -dm_landau_n 1,1 -dm_landau_thermal_temps 1,1 -dm_landau_ion_charges 1 -dm_landau_ion_masses 2 -petscspace_degree 3 -ts_type beuler -ts_dt .1 -ts_max_steps 0 -dm_landau_verbose 2 -ksp_type preonly -pc_type lu -dm_landau_device_type cpu -use_nrl false -snes_rtol 1.e-14 -snes_stol 1.e-14
+    nsize: 1
+    test:
+      suffix: sphere
+      args: -dm_landau_sphere -ts_max_steps 0
+    test:
+      suffix: re
+      args: -dm_landau_amr_levels_max 1,2 -dm_landau_z_radius1 3 -dm_landau_z_radius2 3 -dm_landau_amr_z_refine1 1 -dm_landau_amr_z_refine2 1 -dm_landau_electron_shift 1.25 -ts_max_steps 1 -snes_converged_reason
 
 TEST*/
