@@ -157,7 +157,7 @@ struct SolverInterfaceImpl<DeviceType::HIP> : BlasInterface<DeviceType::HIP> {
 
 template <DeviceType T>
 struct SolverInterface : SolverInterfaceImpl<T> {
-  PETSC_NODISCARD static constexpr const char *cupmSolverName() noexcept { return T == DeviceType::CUDA ? "cuSOLVER" : "hipSOLVER"; }
+  PETSC_NODISCARD static constexpr const char *cupmSolverName() noexcept { return T == DeviceType::CUDA ? "cusolver" : "hipsolver"; }
 };
 
   #define PETSC_CUPMSOLVER_INHERIT_INTERFACE_TYPEDEFS_USING(T) \

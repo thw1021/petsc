@@ -754,10 +754,6 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::MatMatSolve_Factored_Dispatch_(Mat A
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-// MatMultAdd_SeqDenseCUDA
-// MatMultTransposeAdd_SeqDenseCUDA
-// MatMult_SeqDenseCUDA
-// MatMultTranspose_SeqDenseCUDA
 template <device::cupm::DeviceType T>
 template <bool transpose>
 inline PetscErrorCode MatDense_Seq_CUPM<T>::MatMultAdd_Dispatch_(Mat A, Vec xx, Vec yy, Vec zz) noexcept
@@ -1179,9 +1175,6 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::ResetArray(Mat A) noexcept
 
 // ==========================================================================================
 
-// MatTransposeMatMultNumeric_SeqDenseCUDA_SeqDenseCUDA
-// MatMatMultNumeric_SeqDenseCUDA_SeqDenseCUDA
-// MatMatTransposeMultNumeric_SeqDenseCUDA_SeqDenseCUDA
 template <device::cupm::DeviceType T>
 template <bool transpose_A, bool transpose_B>
 inline PetscErrorCode MatDense_Seq_CUPM<T>::MatMatMult_Numeric_Dispatch(Mat A, Mat B, Mat C) noexcept
@@ -1432,11 +1425,11 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::GetColumnVector(Mat A, Vec v, PetscI
   PetscCall(PetscObjectTypeCompareAny(PetscObjectCast(v), &viscupm, VecSeq_CUPM::VECSEQCUPM(), VecSeq_CUPM::VECMPICUPM(), VecSeq_CUPM::VECCUPM(), ""));
   PetscCall(GetHandles_(&dctx, &stream));
   if (viscupm && !v->boundtocpu) {
-    // update device data
     const auto x = VecSeq_CUPM::DeviceArrayWrite(dctx, v);
 
+    // update device data
     if (PetscOffloadDevice(offloadmask)) {
-      PetscCall(PetscCUPMMemcpyAsync(x.data(), col_offset(DeviceArrayRead(dctx, A)), n, cupmMemcpyHostToHost, stream));
+      PetscCall(PetscCUPMMemcpyAsync(x.data(), col_offset(DeviceArrayRead(dctx, A)), n, cupmMemcpyDeviceToDevice, stream));
     } else {
       PetscCall(PetscCUPMMemcpyAsync(x.data(), col_offset(HostArrayRead(dctx, A)), n, cupmMemcpyHostToDevice, stream));
     }
@@ -1554,11 +1547,14 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::InvertFactors(Mat A) noexcept
   cupmStream_t       stream;
 
   PetscFunctionBegin;
+#if PetscDefined(HAVE_CUDA) && PetscDefined(USING_NVCC)
+  // HIP appears to have this by default??
   PetscCheck(PETSC_PKG_CUDA_VERSION_GE(10, 1, 0), PETSC_COMM_SELF, PETSC_ERR_SUP, "Upgrade to CUDA version 10.1.0 or higher");
+#endif
   if (!n || !A->rmap->n) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCheck(A->factortype == MAT_FACTOR_CHOLESKY, PETSC_COMM_SELF, PETSC_ERR_LIB, "Factor type %s not implemented", MatFactorTypes[A->factortype]);
   // spd
-  PetscCheck(!mcu->d_fact_ipiv, PETSC_COMM_SELF, PETSC_ERR_LIB, "cusolverDnsytri not implemented");
+  PetscCheck(!mcu->d_fact_ipiv, PETSC_COMM_SELF, PETSC_ERR_LIB, "%sDnsytri not implemented", cupmSolverName());
 
   PetscCall(GetHandles_(&dctx, &handle, &stream));
   {
