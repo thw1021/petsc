@@ -655,7 +655,7 @@ PETSC_EXTERN PetscErrorCode SNESLineSearchSetOrder(SNESLineSearch, PetscInt orde
                                      set to `SNES_DIVERGED_FUNCTION_COUNT`
 
    Developer Note:
-   Some of these reasons overlap with values of `SNESConvergedReasons`
+   Some of these reasons overlap with values of `SNESConvergedReason`
 
 .seealso: [](chapter_snes), `SNES`, `SNESSolve()`, `SNESGetConvergedReason()`, `KSPConvergedReason`, `SNESSetConvergenceTest()`,
           `SNESSetFunctionDomainError()` and `SNESSetJacobianDomainError()`
