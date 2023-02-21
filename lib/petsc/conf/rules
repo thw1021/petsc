@@ -485,7 +485,7 @@ manualpages:
 manexamples:
 	-@base=$$(basename $$(pwd)); \
         if [ "$${base}" = "tutorials" ] ; then \
-          echo "Generating manual example links" ; \
+          echo "Generating manual example links in ${LOCDIR}" ; \
           petsc_dir=$$(realpath ${PETSC_DIR}); LOCDIR=$$(pwd | sed s"?$${petsc_dir}/??"g)/; \
           for i in ${EXAMPLESALL} foo ; do \
             if [ "$$i" != "foo" ] ; then \
