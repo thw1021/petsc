@@ -752,6 +752,7 @@ linux-pkgs-opt:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u18
   tags:
     - gce-nfs, linux-fast
   variables:
