@@ -936,8 +936,13 @@ static PetscErrorCode adaptToleranceFEM(PetscFE fem, Vec sol, PetscInt type, Pet
         x = PetscSqrtReal(x);
         if (type == 0) {
           if (ctx->re_radius > PETSC_SQRT_MACHINE_EPSILON && (z < -PETSC_MACHINE_EPSILON * 10. || z > ctx->re_radius + PETSC_MACHINE_EPSILON * 10.)) outside++; /* first pass don't refine bottom */
-        } else if (type == 1 && (z > ctx->vperp0_radius1 || z < -ctx->vperp0_radius1)) outside++;                                                               /* don't refine outside electron refine radius */
-        else if (type == 3 && (z > ctx->vperp0_radius2 || z < -ctx->vperp0_radius2)) outside++;                                                                 /* refine r=0 cells on refinement front */
+        } else if (type == 1 && (z > ctx->vperp0_radius1 || z < -ctx->vperp0_radius1)) {
+          outside++; /* don't refine outside electron refine radius */
+          PetscCall(PetscInfo(sol, "\t%" PetscInt_FMT ") (debug) found %s cells\n", grid, s_refine_names[type]));
+        } else if (type == 3 && (z > ctx->vperp0_radius2 || z < -ctx->vperp0_radius2)) {
+          outside++; /* refine r=0 cells on refinement front */
+          PetscCall(PetscInfo(sol, "\t%" PetscInt_FMT ") (debug) found %s cells\n", grid, s_refine_names[type]));
+        }
         if (x < PETSC_MACHINE_EPSILON * 10. && (type != 0 || ctx->re_radius > PETSC_SQRT_MACHINE_EPSILON)) nz++;
       }
       PetscCall(DMPlexVecRestoreClosure(cdm, cs, coords, c, &csize, &coef));
