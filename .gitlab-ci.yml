@@ -243,7 +243,7 @@ pause-for-approval:
     - if [ ! -z ${LOAD_MODULES+x} ]; then module --trace load ${LOAD_MODULES}; module list; fi
     - if [ ! -z ${GCOV_MODULES+x} ]; then module --trace load ${GCOV_MODULES}; module list; fi
     - if [ ! -z ${INIT_SCRIPT+x} ]; then echo "sourcing ${INIT_SCRIPT}"; source ${INIT_SCRIPT}; fi
-    - if [ ! -z ${RUN_GCOV+x} ]; then gcovr --version; fi
+    - if [ "${RUN_GCOV}" == 1 ]; then gcovr --version; fi
     - if [ -d ${HOME}/petsc-hash-pkgs/ ]; then find ${HOME}/petsc-hash-pkgs/ -maxdepth 1 -mindepth 1 -type d -mtime +25 -exec rm -rf {} \; ; fi
     - printf "PATH:$PATH\n"
     - printf "PYTHONPATH:$PYTHONPATH\n"
@@ -257,8 +257,8 @@ pause-for-approval:
     - make updatedatafiles
     - if [ -z ${DISABLE_PETSC4PY_TESTS+x} ]; then if [ -z ${ENABLE_PETSC4PY_LDPRELOAD+x} ]; then echo "NOT using LD_PRELOAD"; make petsc4pytest; else echo "using LD_PRELOAD"; LD_PRELOAD=${PWD}/${TEST_ARCH}/lib/libpetsc.so make petsc4pytest; fi; fi
     - if [ -z ${DISABLE_TESTS+x} ]; then make cleantest && make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" allgtests-tap TIMEOUT=${TIMEOUT}  ${TEST_OPTS} || if [ -f naglicenseproblem ]; then exit 126; else exit 1; fi; fi
-    - if [ ! -z ${RUN_GCOV_OPTIONS+x} ]; then printf "RUN_GCOV_OPTIONS:$RUN_GCOV_OPTIONS\n"; fi
-    - if [ ! -z ${RUN_GCOV+x} ]; then make gcov PETSC_GCOV_OPTIONS="${RUN_GCOV_OPTIONS}"; fi
+    - if [ ! -z ${RUN_GCOV_OPTIONS+x} ] && [ ${RUN_GCOV} == "1" ]; then printf "RUN_GCOV_OPTIONS:$RUN_GCOV_OPTIONS\n"; fi
+    - if [ ! -z ${RUN_GCOV+x} ] && [ ${RUN_GCOV} == "1" ]; then make gcov PETSC_GCOV_OPTIONS="${RUN_GCOV_OPTIONS}"; fi
   artifacts:
     reports:
       junit: arch-*/tests/testresults.xml
@@ -274,6 +274,8 @@ pause-for-approval:
     expire_in: 4 days
   variables:
     OPENBLAS_NUM_THREADS: 1
+    RUN_GCOV: 1
+    RUN_GCOV_OPTIONS: --decisions
 
 .stage-2:
   extends: .stage-23
@@ -322,10 +324,15 @@ pause-for-approval:
   variables:
     GCOV_MODULES: py-gcovr-5.2-gcc-7.5.0-o7fu4xq python-3.9.13-gcc-7.5.0-fq67pdh
 
+.coverage-generate-u20:
+  extends: .coverage-generate
+  # variables:
+  #   GCOV_MODULES: py-gcovr-5.2-gcc-9.4.0-myfrwxu
+
 .coverage-generate-u22:
   extends: .coverage-generate
-  variables:
-    GCOV_MODULES: py-gcovr-5.2-gcc-11.2.0-wcsmyet
+  # variables:
+  #   GCOV_MODULES: py-gcovr-5.2-gcc-11.2.0-wcsmyet
 
 .freebsd_test:
   variables:
@@ -341,6 +348,8 @@ pause-for-approval:
   after_script:
     - date
     - ccache --show-stats
+  variables:
+    RUN_GCOV: 0
 
 .osx_test:
   variables:
@@ -423,11 +432,13 @@ mswin-opt-impi:
   variables:
     TEST_ARCH: arch-ci-mswin-opt-impi
     TEST_OPTS: search='ksp_ksp_tests*'
+    RUN_GCOV: 0
 
 linux-gcc-quad-64idx-dbg:
   extends:
     - .stage-2
     - .linux_test
+    - .coverage-generate-u20
   tags:
     - gce-stage2
   variables:
@@ -437,6 +448,7 @@ linux-gcc-pkgs-opt:
   extends:
     - .stage-2
     - .linux_test
+    - .coverage-generate-u20
   tags:
     - gce-stage2
   variables:
@@ -446,6 +458,7 @@ linux-gcc-complex-opt-32bit:
   extends:
     - .stage-2
     - .linux_test
+    - .coverage-generate-u20
   tags:
     - gce-stage2
   variables:
@@ -455,12 +468,14 @@ linux-emcc:
   extends:
     - .stage-2
     - .linux_test
+    - .coverage-generate-u20
   tags:
     - gce-stage2
   variables:
     TEST_ARCH: arch-ci-linux-emcc
     INIT_SCRIPT: /nfs/gce/projects/petsc/soft/u22.04/emsdk/emsdk_env.sh
     DISABLE_TESTS: 1
+    RUN_GCOV: 0
 
 #
 # The following tests run as part of stage-3.
@@ -498,6 +513,7 @@ linux-hip-double:
   extends:
     - .stage-3
     - .linux_test_noflags
+    - .coverage-generate-u20
   tags:
     - gpu:amd, os:linux
   variables:
@@ -508,12 +524,14 @@ linux-sycl-double:
   extends:
     - .stage-3
     - .linux_test_noflags
+    - .coverage-generate-u18
   tags:
     - gce-nfs, linux-fast
   variables:
     TEST_ARCH: arch-ci-linux-sycl-double
     LOAD_MODULES: compiler/latest mpi/latest cmake/3.20.5-yjp2hz6
     TEST_OPTS: query=requires queryval=kokkos_kernels
+    RUN_GCOV: 0
 
 linux-cuda-pkgs-gcov:
   extends:
@@ -537,6 +555,7 @@ linux-cuda112-omp:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u22
   tags:
     - cuda-stage3
   variables:
@@ -550,6 +569,7 @@ linux-cuda-cmplx:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u22
   tags:
     - cuda-stage3
   variables:
@@ -559,6 +579,7 @@ linux-cuda-double-64idx:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u22
   tags:
     - cuda-stage3
   variables:
@@ -576,11 +597,13 @@ linux-cuda-single-cxx:
     MODULEPATH: /nfs/gce/projects/petsc/soft/u22.04/spack-2023-02-02/share/spack/modules/linux-ubuntu22.04-ivybridge
     LOAD_MODULES: nvhpc-22.11-gcc-11.3.0-vmvmbrx
     TEST_OPTS: -j15 query=requires queryval=cuda
+    RUN_GCOV: 0
 
 linux-cuda-uni-pkgs:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u22
   tags:
     - cuda-stage3
   variables:
@@ -591,6 +614,7 @@ linux-clang-cuda:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u22
   tags:
     - cuda-stage3
   variables:
@@ -603,6 +627,7 @@ linux-viennacl:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u22
   tags:
     - cuda-stage3
   variables:
@@ -614,6 +639,7 @@ linux-without-fc:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u18
   tags:
     - gce-nfs
   variables:
@@ -628,11 +654,13 @@ linux-cmplx-single:
   variables:
     FLEXIBLAS: netlib
     TEST_ARCH: arch-ci-linux-cmplx-single
+    RUN_GCOV: 0
 
 linux-gcc-cxx-avx2:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u22
   tags:
     - name:petsc-knl-01
   variables:
@@ -642,6 +670,7 @@ linux-clang-avx:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u22
   tags:
     - name:petsc-knl-01
   variables:
@@ -657,6 +686,7 @@ linux-knl:
     MAKE_FFLAGS: -warn errors
     TEST_ARCH: arch-ci-linux-knl
     LOAD_MODULES: intel-oneapi-compilers/2022.0.2 intel-oneapi-mkl/2022.0.2 intel-oneapi-mpi/2021.5.1
+    RUN_GCOV: 0
 
 linux-intel-mkl-single:
   extends:
@@ -667,6 +697,7 @@ linux-intel-mkl-single:
   variables:
     TEST_ARCH: arch-ci-linux-intel-mkl-single
     LOAD_MODULES: intel-oneapi-compilers/2022.0.2 intel-oneapi-mkl/2022.0.2 intel-oneapi-mpi/2021.5.1
+    RUN_GCOV: 0
 
 linux-cxx-cmplx-pkgs-64idx-gcov:
   extends:
@@ -684,11 +715,12 @@ linux-pkgs-dbg-ftn-interfaces:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u18
   tags:
     - gce-nfs
   variables:
     TEST_ARCH: arch-ci-linux-pkgs-dbg-ftn-interfaces
-    LOAD_MODULES: cmake/3.20.5-yjp2hz6
+    LOAD_MODULES: cmake/3.20.5-yjp2hz6 llvm/7.0.0-35rvwib
     OMP_PROC_BIND: "false"
     OMP_NUM_THREADS: 4
 
@@ -696,6 +728,7 @@ linux-pkgs-cxx-mlib:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u22
   tags:
     - gce-u22-stage3
   variables:
@@ -708,6 +741,7 @@ linux-pkgs-valgrind:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u22
   tags:
     - gce-valgrind
   variables:
@@ -718,6 +752,7 @@ linux-pkgs-opt:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u18
   tags:
     - gce-nfs, linux-fast
   variables:
@@ -755,12 +790,14 @@ linux-pgi:
   variables:
     TEST_ARCH: arch-ci-linux-pgi
     LOAD_MODULES: hpc_sdk/20.9
+    RUN_GCOV: 0
 
 # If the Nag license server fails then ${PETSC_DIR}/naglicenseproblem is created and the job is marked as failed but allow_failure
 linux-nagfor:
   extends:
     - .stage-3
     - .linux_test_nofflags
+    - .coverage-generate-u18
   tags:
     - gce-nfs, linux-mcpu
   variables:
@@ -779,11 +816,13 @@ linux-intel-cmplx:
     TEST_ARCH: arch-ci-linux-intel-cmplx
     LOAD_MODULES: intel-mkl/19.5 intel/19.0-nompilib cmake/3.20.5-yjp2hz6
     ENABLE_PETSC4PY_LDPRELOAD: 1
+    RUN_GCOV: 0
 
 linux-xsdk-dbg:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u18
   tags:
     - gce-nfs
   variables:
@@ -827,11 +866,13 @@ linux-intel:
   variables:
     TEST_ARCH: arch-ci-linux-intel
     LOAD_MODULES: intel-mkl/19.5 intel/19.0-nompilib
+    RUN_GCOV: 0
 
 linux-opt-misc:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u18
   tags:
     - gce-nfs, linux-fast
   variables:
@@ -842,6 +883,7 @@ linux-pkgs-64idx:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u18
   tags:
     - gce-nfs, linux-mcpu
   variables:
@@ -852,6 +894,7 @@ linux-64idx-i8:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u18
   tags:
     - gce-nfs
   variables:
@@ -861,6 +904,7 @@ linux-gcc-ifc-cmplx:
   extends:
     - .stage-3
     - .linux_test_nofflags
+    - .coverage-generate-u18
   tags:
     - gce-nfs
   variables:
@@ -871,6 +915,7 @@ linux-opt-cxx-quad:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u18
   tags:
     - gce-nfs
   variables:
@@ -880,6 +925,7 @@ linux-ILP64:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u18
   tags:
     - gce-nfs
   variables:
@@ -890,6 +936,7 @@ linux-64idx-i8-uni:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-generate-u18
   tags:
     - gce-nfs
   variables:
@@ -903,6 +950,7 @@ mswin-intel-cxx-cmplx:
     - mswin-stage3
   variables:
     TEST_ARCH: arch-ci-mswin-intel-cxx-cmplx
+    RUN_GCOV: 0
 
 mswin-uni:
   extends:
@@ -913,6 +961,7 @@ mswin-uni:
   variables:
     PETSC_OPTIONS: -check_pointer_intensity 0 -error_output_stdout -nox -nox_warning -malloc_dump
     TEST_ARCH: arch-ci-mswin-uni
+    RUN_GCOV: 0
 
 mswin-gnu:
   extends:
@@ -926,6 +975,12 @@ mswin-gnu:
     MAKE_CXXFLAGS: -Werror
     MAKE_FFLAGS: -Werror
     DISABLE_TESTS: 1
+    RUN_GCOV: 0
+  artifacts:
+    reports:
+    paths:
+    - arch-*/lib/petsc/conf/*.log
+    expire_in: 4 days
 
 #mswin-intel:
 #  extends:
@@ -944,6 +999,7 @@ opensolaris-pkgs-opt:
     - name:n-gage
   variables:
     TEST_ARCH: arch-ci-opensolaris-pkgs-opt
+    RUN_GCOV: 0
 
 opensolaris-cmplx-pkgs-dbg:
   extends:
@@ -953,6 +1009,7 @@ opensolaris-cmplx-pkgs-dbg:
     - name:n-gage
   variables:
     TEST_ARCH: arch-ci-opensolaris-cmplx-pkgs-dbg
+    RUN_GCOV: 0
 
 opensolaris-misc:
   extends:
@@ -962,6 +1019,7 @@ opensolaris-misc:
     - name:n-gage
   variables:
     TEST_ARCH: arch-ci-opensolaris-misc
+    RUN_GCOV: 0
 
 osx-cxx-cmplx-pkgs-dbg:
   extends:
@@ -1013,6 +1071,9 @@ analyze-coverage:
     - linux-matlab-ilp64-gcov
     - linux-cuda-pkgs-gcov
     - linux-cxx-cmplx-pkgs-64idx-gcov
+    - linux-gcc-complex-opt-32bit
+    - linux-gcc-pkgs-opt
+    - linux-gcc-quad-64idx-dbg
   variables:
     PYTHON: python3
     PETSC_ARCH: arch-ci-analyze-pipeline

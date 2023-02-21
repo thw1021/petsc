@@ -13,6 +13,7 @@ configure_options = [
   'COPTFLAGS=-g -O',
   'FOPTFLAGS=-g -O',
   'CXXOPTFLAGS=-g -O',
+  '--FC_LINKER_FLAGS=-lgcov',
   '--download-openmpi=1',
   '--download-fblaslapack=1',
   '--with-openmp=1',
@@ -38,6 +39,7 @@ configure_options = [
   '--with-kokkos-init-warnings=0', # we want to avoid "Kokkos::OpenMP::initialize WARNING: You are likely oversubscribing your CPU cores" in test output
   '--download-chaco=1',
   '--with-strict-petscerrorcode',
+  '--with-coverage',
   ]
 
 if __name__ == '__main__':
