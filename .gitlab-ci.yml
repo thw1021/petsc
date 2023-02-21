@@ -720,7 +720,7 @@ linux-pkgs-dbg-ftn-interfaces:
     - gce-nfs
   variables:
     TEST_ARCH: arch-ci-linux-pkgs-dbg-ftn-interfaces
-    LOAD_MODULES: cmake/3.20.5-yjp2hz6
+    LOAD_MODULES: cmake/3.20.5-yjp2hz6 llvm/7.0.0-35rvwib
     OMP_PROC_BIND: "false"
     OMP_NUM_THREADS: 4
 
