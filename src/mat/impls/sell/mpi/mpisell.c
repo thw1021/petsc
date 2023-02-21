@@ -1305,7 +1305,7 @@ PetscErrorCode MatDuplicate_MPISELL(Mat matin, MatDuplicateOption cpvalues, Mat 
    submatrices [A], [E], [I] respectively. The OFF-DIAGONAL submatrices
    corresponding to proc0,proc1,proc2 are [BC], [DF], [GH] respectively.
    Internally, each processor stores the DIAGONAL part, and the OFF-DIAGONAL
-   part as `MATSEQSELL` matrices. For example, proc1 will store [E] as a `MATSEQSELL `
+   part as `MATSEQSELL` matrices. For example, proc1 will store [E] as a `MATSEQSELL`
    matrix, ans [DF] as another SeqSELL matrix.
 
    When `d_nz`, `o_nz` parameters are specified, `d_nz` storage elements are
@@ -1541,8 +1541,8 @@ M*/
    type `MATSEQSELL` is returned.  If a matrix of type `MATMPISELL` is desired for this
    type of communicator, use the construction mechanism
 .vb
-   MatCreate`(...,&A);
-   MatSetType`(A,MATMPISELL);
+   MatCreate(...,&A);
+   MatSetType(A,MATMPISELL);
    MatSetSizes(A, m,n,M,N);
    MatMPISELLSetPreallocation(A,...);
 .ve
