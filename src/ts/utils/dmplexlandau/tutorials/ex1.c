@@ -419,7 +419,7 @@ int main(int argc, char **argv)
       args: -dm_landau_device_type cuda -dm_mat_type aijcusparse -dm_vec_type cuda -mat_cusparse_use_cpu_solve
 
   testset:
-    requires: !complex defined(PETSC_USE_DMLANDAU_2D) !kokkos_kernels !cuda p4est
+    requires: !complex defined(PETSC_USE_DMLANDAU_2D) !cuda p4est
     args: -dm_landau_type p4est -dm_landau_num_cells 4,4 -dm_landau_amr_levels_max 3,3 -dm_landau_num_species_grid 1,1 -dm_landau_n 1,1 -dm_landau_thermal_temps 1,1 -dm_landau_ion_charges 1 -dm_landau_ion_masses 2 -petscspace_degree 2 -ts_type beuler -ts_dt .1 -ts_max_steps 0 -dm_landau_verbose 2 -ksp_type preonly -pc_type lu -dm_landau_device_type cpu -use_nrl false -snes_rtol 1.e-14 -snes_stol 1.e-14
     nsize: 1
     test:
