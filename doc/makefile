@@ -28,7 +28,7 @@ clean-classic-docs:
 clean: clean-classic-docs
 
 images:
-	git clone https://gitlab.com/petsc/images.git -b barry/2023-02-16/rm-docs-dir --depth=1 images
+	git clone https://gitlab.com/petsc/images.git -b main-2 --depth=1 images
 
 website-deploy: images
 	$(SPHINXBUILD) -b dirhtml "$(SOURCEDIR)" "$(BUILDDIR)"  -T -E -j auto $(SPHINXOPTS)
