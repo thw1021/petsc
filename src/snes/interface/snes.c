@@ -3043,7 +3043,7 @@ M*/
    Other defect-correction schemes can be used by computing a different matrix in place of the Jacobian.  One common
    example is to use the "Picard linearization" which only differentiates through the highest order parts of each term using `SNESSetPicard()`
 
-.seealso: [](chapter_snes), `SNES`, `KSPSetOperators()`, `SNESSetFunction()`, `MatMFFDComputeJacobian()`, `SNESComputeJacobianDefaultColor()`, `MatStructure`, `J`,
+.seealso: [](chapter_snes), `SNES`, `KSPSetOperators()`, `SNESSetFunction()`, `MatMFFDComputeJacobian()`, `SNESComputeJacobianDefaultColor()`, `MatStructure`,
           `SNESSetPicard()`, `SNESJacobianFunction`
 @*/
 PetscErrorCode SNESSetJacobian(SNES snes, Mat Amat, Mat Pmat, PetscErrorCode (*J)(SNES, Vec, Mat, Mat, void *), void *ctx)
