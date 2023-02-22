@@ -4,6 +4,7 @@ import os
 import sys
 import re
 import pickle
+import textwrap
 
 class Configure(config.base.Configure):
   def __init__(self, framework):
@@ -914,17 +915,24 @@ char assert_aligned[(sizeof(struct mystruct)==16)*2-1];
       return ret
 
     log_print('Checking coverage flag for language {}'.format(lang))
+
+    compiler = self.getCompiler(lang=lang)
+    if self.setCompilers.isGNU(compiler, self.log):
+      compiler_kind = 'GNU'
+    elif self.setCompilers.isClang(compiler, self.log):
+      compiler_kind = 'clang'
+    else:
+      compiler_kind = ''
+
     if not self.argDB['with-coverage']:
       log_print('coverage was disabled from command line or default')
-      return False
+      return False, compiler_kind
 
-    compiler  = self.getCompiler(lang=lang)
-    is_gnuish = self.setCompilers.isGNU(compiler, self.log) or self.setCompilers.isClang(compiler, self.log)
-
+    is_gnuish = compiler_kind in {'GNU', 'clang'}
     # if not gnuish and we don't have a set of extra flags, bail
     if not is_gnuish and extra_coverage_flags is None:
       log_print('Don\'t know how to add coverage for compiler {}. Only know how to add coverage for gnu-like compilers (either gcc or clang). Skipping it!'.format(quoted(compiler)))
-      return False
+      return False, compiler_kind
 
     coverage_flags = make_flag_list('--coverage', extra_coverage_flags)
     log_print('Checking set of coverage flags: {}'.format(coverage_flags))
@@ -950,7 +958,7 @@ char assert_aligned[(sizeof(struct mystruct)==16)*2-1];
               quoted(compiler), coverage_flags
             )
           )
-          return False
+          return False, compiler_kind
 
         # must do this exactly here since:
         #
@@ -993,9 +1001,10 @@ char assert_aligned[(sizeof(struct mystruct)==16)*2-1];
           break
 
     self.addDefine('USE_COVERAGE', 1)
-    return True
+    return True, compiler_kind
 
   def configureCoverage(self):
+    success_langs = {}
     for LANG in ['C', 'Cxx', 'CUDA', 'HIP', 'SYCL', 'FC']:
       compilerName = LANG.upper() if LANG in {'Cxx', 'FC'} else LANG + 'C'
       if hasattr(self.setCompilers, compilerName):
@@ -1021,7 +1030,91 @@ char assert_aligned[(sizeof(struct mystruct)==16)*2-1];
             # flags above.
             kwargs['extra_coverage_flags'].append('-arch=native')
             kwargs['extra_debug_flags'] = ['-Xcompiler -Og']
-        self.executeTest(self.configureCoverageForLang, args=[LANG], kargs=kwargs)
+        success, cc_kind = self.executeTest(self.configureCoverageForLang, args=[LANG], kargs=kwargs)
+        if success:
+          success_langs[LANG] = cc_kind
+
+    # we must determine if the C/C++ compiler is the same brand (i.e. clang or gcc). If
+    # they are different then we will get linker errors since LLVM and GCC each ship their
+    # own gcov implementation, so we need to either add -lgcov or -lclang_rt.whatever to
+    # the link line.
+    return
+    if len(set(success_langs.values())) <= 1:
+      # either the compiler for all languages (for which coverage is enabled) is the same
+      # (len = 1), or no languages were successful (len = 0). Either way, no need to do
+      # anything special
+      return
+
+    c_lang_compiler_kind  = success_langs[self.languages.clanguage]
+    fortran_compiler_kind = success_langs.get('FC', c_lang_compiler_kind)
+    if c_lang_compiler_kind == fortran_compiler_kind:
+      # C/C++ compiler is the same brand as fortran compiler, no problem
+      return
+
+    clang_src = textwrap.dedent(
+      """
+      #include <stdio.h>
+
+      void asub(void)
+      {
+        char s[16];
+
+        printf("testing %s", s);
+      }
+      """
+    )
+
+    fc_src = textwrap.dedent(
+      """
+          program main
+              print*,'testing'
+              stop
+          end
+      """
+    )
+
+    def try_cross_link(lang1, lang1_src, lang1_libs, lang2, lang2_src, extra_attempts = None):
+      def generate_crosslink_attempts(libs, extra_attempts):
+        # try doing nothing first
+        yield None
+        # try modifying setCompilers.LIBS to include all the lib flags
+        self.setCompilers.LIBS = ' '.join(
+          map(self.setCompilers.libraries.getLibArgument, libs)
+        ) + ' ' + self.setCompilers.LIBS
+        yield
+        # cycle through the extra attempts
+        tmp_old_libs = self.setCompilers.LIBS
+        for extra in extra_attempts:
+          self.setCompilers.LIBS += ' ' + str(extra)
+          try:
+            yield extra
+          finally:
+            self.setCompilers.LIBS = tmp_old_libs
+        return
+
+      if extra_attempts is None:
+        extra_attempts = []
+
+      success  = False
+      old_libs = self.setCompilers.LIBS
+      try:
+        for add in generate_crosslink_attempts(lang1_libs, extra_attempts):
+          if self.compilers.checkCrossLink(lang1_src, lang2_src, language1=lang1, language2=lang2):
+            if add is not None:
+              old_libs += ' ' + add
+            success = True
+            break
+      finally:
+        # ensure the libs are reset
+        self.setCompilers.LIBS = old_libs
+
+      if not success:
+        raise RuntimeError('Could not cross link {} with {} with coverage, likely due to one language or the other not finding the proper coverage library symbols. Please try adding appropriate linker flags (e.g. {}_LINKER_FLAGS=\'-lgcov\')'.format(lang1, lang2, lang1))
+      return
+
+    try_cross_link(
+      'FC', fc_src, self.compilers.flibs, self.languages.clanguage, clang_src, extra_attempts=['-lgcov']
+    )
     return
 
   def configureCoverageExecutable(self):
