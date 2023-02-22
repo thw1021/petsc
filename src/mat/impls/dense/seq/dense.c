@@ -2531,7 +2531,7 @@ PetscErrorCode MatDenseRestoreArrayReadAndMemType(Mat A, const PetscScalar **arr
    Level: intermediate
 
 .seealso: `MATDENSE`, `MatDenseRestoreArrayWriteAndMemType()`, `MatDenseGetArrayReadAndMemType()`, `MatDenseGetArrayRead()`,
-  `MatDenseRestoreArrayRead()`, `MatDenseGetArrayWrite()`, `MatDenseRestoreArrayWrite()`,  `MatSeqAIJGetCSRAndMemType()`
+  `MatDenseRestoreArrayRead()`, `MatDenseGetArrayWrite()`, `MatDenseRestoreArrayWrite()`, `MatSeqAIJGetCSRAndMemType()`
 @*/
 PetscErrorCode MatDenseGetArrayWriteAndMemType(Mat A, PetscScalar **array, PetscMemType *mtype)
 {
