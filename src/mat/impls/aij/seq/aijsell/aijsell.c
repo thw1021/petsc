@@ -281,7 +281,7 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJSELL(Mat A, MatType type, Ma
    Notes:
    If nnz is given then nz is ignored
 
-   Because `MATSEQAIJSELL is a subtype of `MATSEQAIJ`, the option "-mat_seqaij_type seqaijsell" can be used to make
+   Because `MATSEQAIJSELL` is a subtype of `MATSEQAIJ`, the option "-mat_seqaij_type seqaijsell" can be used to make
    sequential `MATSEAIJ` matrices default to being instances of `MATSEQAIJSELL`.
 
    Level: intermediate
