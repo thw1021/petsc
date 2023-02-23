@@ -96,7 +96,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
     PetscCheck(tmpnam_s(filename, sizeof(filename)) == 0, comm, PETSC_ERR_SYS, "Could not acquire temporary file");
 #elif defined(PETSC_HAVE_MKSTEMP) && __STDC_VERSION__ > 199901L
     PetscBool isSharedTmp, isTmpOverridden;
-    size_t numChars;
+    size_t    numChars;
     // Same thing, but for POSIX systems on which tmpnam is deprecated
     // Note: Configure may detect mkstemp but it will not be defined if compiling for C99, so check additional defines to see if we can use it
     // Mkstemp requires us to explicitly specify part of the path, but some systems may not like putting files in /tmp/ so have an option for it
