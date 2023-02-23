@@ -464,7 +464,7 @@ manualpages:
             fi; \
             DOCTEXT_PATH=${PETSC_DIR}/doc/classic/doctext \
             ${DOCTEXT} -myst -mpath ${LOC}/manualpages/$${LMANSEC} -heading PETSc -defn ${PETSC_DIR}/doc/classic/doctext/myst.def \
-                -indexdir ../$${LMANSEC} -index ${LOC}/manualpages/manualpages.cit -locdir $${LOCDIR} -Wargdesc $${doctext_common_def} $${f} 2>&1 | tee -a ${PETSC_DIR}/${PETSC_ARCH}/manualpages.err; \
+                -indexdir ../$${LMANSEC} -index ${LOC}/manualpages/manualpages.cit -locdir $${LOCDIR}/ -Wargdesc $${doctext_common_def} $${f} 2>&1 | tee -a ${PETSC_DIR}/${PETSC_ARCH}/manualpages.err; \
             if [ -f "${LOC}/manualpages/$${LMANSEC}" ]; then chmod g+w "${LOC}"/manualpages/$${LMANSEC}/*; fi; \
           done; \
         else \
@@ -474,7 +474,7 @@ manualpages:
           fi; \
           DOCTEXT_PATH=${PETSC_DIR}/doc/classic/doctext  \
           ${DOCTEXT} -myst -mpath ${LOC}/manualpages/$${LMANSEC} -heading PETSc -defn ${PETSC_DIR}/doc/classic/doctext/myst.def \
-              -indexdir ../$${LMANSEC} -index ${LOC}/manualpages/manualpages.cit -locdir $${LOCDIR} -Wargdesc $${doctext_common_def} ${SOURCED} 2>&1 | tee -a ${PETSC_DIR}/${PETSC_ARCH}/manualpages.err; \
+              -indexdir ../$${LMANSEC} -index ${LOC}/manualpages/manualpages.cit -locdir $${LOCDIR}/ -Wargdesc $${doctext_common_def} ${SOURCED} 2>&1 | tee -a ${PETSC_DIR}/${PETSC_ARCH}/manualpages.err; \
           if [ -f "${LOC}/manualpages/$${LMANSEC}" ]; then chmod g+w "${LOC}"/manualpages/$${LMANSEC}/*; fi; \
         fi;
 #
@@ -498,7 +498,7 @@ manexamples:
                   if [ $$l -eq 0 ] ; then \
                     printf "\n## Examples\n" >> $$b; \
                   fi; \
-                  echo  "<A HREF=\"PETSC_DOC_OUT_ROOT_PLACEHOLDER/BB\">BB</A><BR>" | sed s?BB?$${LOCDIR}$$i.html?g >> $$b; \
+                  echo  "<A HREF=\"PETSC_DOC_OUT_ROOT_PLACEHOLDER/BB\">BB</A><BR>" | sed s?BB?$${LOCDIR}/$$i.html?g >> $$b; \
                 fi; \
               done; \
             fi; \
@@ -561,10 +561,10 @@ checkmakefilelist:
 
 html: chk_c2html
 	-@export htmlmap_tmp=$$(mktemp) ;\
-          LOCDIR=$$(pwd | sed s"?$PETSC_DIR??g"); \
+          LOCDIR=$$(pwd | sed s"?${PETSC_DIR}??g"); \
           sed -e s?man+manualpages/?man+ROOT/manualpages/? ${LOC}/manualpages/htmlmap_modified > $$htmlmap_tmp ;\
           cat ${PETSC_DIR}/doc/classic/mpi.www.index >> $$htmlmap_tmp ;\
-          ROOT=`echo $${LOCDIR} | sed -e s?/[a-z]*?/..?g -e s?src/??g -e s?include/??g` ;\
+          ROOT=`echo $${LOCDIR} | sed -e s?/[a-z_0-9]*?/..?g -e s?src/??g -e s?include/??g` ;\
           loc=`pwd | sed -e s?\$${PETSC_DIR}?$${LOC}/?g -e s?/disks??g`;  \
           ${MKDIR} -p $${loc} ;\
           current_git_sha=$$(git rev-parse HEAD) ;\
@@ -580,6 +580,7 @@ html: chk_c2html
               else \
                 IROOT=$${ROOT};\
               fi;\
+              IROOT=`echo $$IROOT | sed -e s?^/??g` ; \
               ${RM} $${loc}/$$i.html; \
               echo "<center><a href=\"https://gitlab.com/petsc/petsc/-/blob/$$current_git_sha/$$rel_dir/$$i\">Actual source code: $${iroot}</a></center><br>" > $${loc}/$$i.html; \
               sed -E "s/PETSC[A-Z]*_DLLEXPORT//g" $$i | \
@@ -590,7 +591,6 @@ html: chk_c2html
               ${MAPNAMES} -map $$htmlmap_tmp -inhtml | sed -e s?ROOT?$${IROOT}?g >> $${loc}/$$i.html ; \
             fi; \
           done ;\
-          ROOT=`echo $${LOCDIR} | sed -e s?/[a-z]*?/..?g -e s?src/??g -e s?include/??g` ;\
           loc=`pwd | sed -e s?\$${PETSC_DIR}?$${LOC}/?g -e s?/disks??g`; ${RM} $${loc}/index.html; \
           cat ${PETSC_DIR}/doc/classic/manualpages-sec/header_${MANSEC} | sed -e "s?<A HREF=\"PETSC_DIR[a-z/]*\">Examples</A>?<A HREF=\"$${ROOT}/manualpages/${MANSEC}\">Manual pages</A>?g" -e "s?PETSC_DIR?$${ROOT}/?g"> $${loc}/index.html; \
           echo "<p>" >> $${loc}/index.html ;\
@@ -619,7 +619,7 @@ html: chk_c2html
           echo " " >> $${loc}/index.html; \
           echo "<a href=\"makefile.html\">makefile</a><br>" >> $${loc}/index.html ;\
           loc=`pwd | sed -e s?\$${PETSC_DIR}?$${LOC}/?g -e s?/disks??g`;  \
-          cat makefile | ${C2HTML}  | ${MAPNAMES} -map $$htmlmap_tmp -inhtml > $${loc}/makefile.html ;\
+          cat makefile | ${C2HTML}  | ${MAPNAMES} -map $$htmlmap_tmp -inhtml > $${loc}/makefile.html ; \
           ${RM} $$htmlmap_tmp
 
 cleanhtml:
