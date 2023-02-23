@@ -1,5 +1,5 @@
 static char help[] = "Magnetohydrodynamics (MHD) with Poisson brackets and "
-                     "stream functions, solver testbed for M3D-C1.";
+                     "stream functions, solver testbed for M3D-C1. Used in https://arxiv.org/abs/2302.10242";
 
 /*F
 The strong form of a two field model for vorticity $\Omega$ and magnetic flux
