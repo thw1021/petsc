@@ -1736,7 +1736,7 @@ static PetscErrorCode DMNetworkDistributeCoordinates(DM dm, PetscSF migrationSF,
 
   Options Database Key:
 + -dmnetwork_view - Calls DMView() at the conclusion of DMSetUp()
-. -dmnetwork_view_distributed - Calls DMView() at the conclusion of DMNetworkDistribute()
+. -dmnetwork_view_distributed - Calls `DMView()` at the conclusion of `DMNetworkDistribute()`
 - -dmnetwork_view_tmpdir - Sets the temporary directory to use when viewing with the `draw` option
 
   Notes:
