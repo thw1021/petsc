@@ -219,7 +219,7 @@ PetscErrorCode Monitor_nrl(TS ts, PetscInt stepi, PetscReal time, Vec X, void *a
   if (stepi % period == 0) {
     PetscCall(VecGetArray(X, &x));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "nrl-step %d time= %g ", (int)stepi, (double)(time / ctx->t_0)));
-    for (PetscInt i = 0; i < NUM_TEMPS; i++) { PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%g ", PetscRealPart(x[i]))); }
+    for (PetscInt i = 0; i < NUM_TEMPS; i++) { PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%g ", (double)PetscRealPart(x[i]))); }
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "\n"));
   }
   PetscCall(VecRestoreArray(X, &x));
