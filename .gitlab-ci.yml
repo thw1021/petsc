@@ -719,10 +719,10 @@ linux-pkgs-opt:
     - .stage-3
     - .linux_test
   tags:
-    - gce-nfs, linux-fast
+    - gce-u22-stage3, linux-fast
   variables:
     TEST_ARCH: arch-ci-linux-pkgs-opt
-    LOAD_MODULES: gcc/10.1.0-5hiqhdh
+    LOAD_MODULES: gcc/12.1.0
 
 linux-pkgs-gcov:
   extends:
