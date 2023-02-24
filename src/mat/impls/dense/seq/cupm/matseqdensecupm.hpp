@@ -2,6 +2,7 @@
 #define PETSCMATSEQDENSECUPM_HPP
 
 #include <../src/mat/impls/dense/seq/dense.h> /*I "petscmat.h" I*/
+#include <thrust/host_vector.h>
 
 #if defined(__cplusplus)
   #include <petsc/private/matdensecupmimpl.h>
@@ -1333,29 +1334,27 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::ZeroEntries(Mat m) noexcept
 template <device::cupm::DeviceType T>
 inline PetscErrorCode MatDense_Seq_CUPM<T>::Scale(Mat A, PetscScalar alpha) noexcept
 {
-  const auto         m = static_cast<cupmBlasInt_t>(A->rmap->n);
-  const auto         n = static_cast<cupmBlasInt_t>(A->cmap->n);
-  const auto         N = m * n;
-  cupmBlasHandle_t   handle;
+  const auto         m = A->rmap->n;
+  const auto         n = A->cmap->n;
   PetscDeviceContext dctx;
 
   PetscFunctionBegin;
-  PetscCall(PetscInfo(A, "Performing Scale %d x %d on backend\n", m, n));
-  PetscCall(GetHandles_(&dctx, &handle));
-  PetscCall(PetscLogGpuTimeBegin());
-  {
-    const auto cu_alpha = cupmScalarCast(alpha);
-    const auto da       = DeviceArrayReadWrite(dctx, A);
-    const auto lda      = static_cast<cupmBlasInt_t>(MatIMPLCast(A)->lda);
+  PetscCall(PetscInfo(A, "Performing Scale %" PetscInt_FMT " x %" PetscInt_FMT " on backend\n", m, n));
+  PetscAssert(MatIMPLCast(A)->lda >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Matrix A has not yet been setup, LDA %" PetscInt_FMT "!", MatIMPLCast(A)->lda);
+  PetscCall(GetHandles_(&dctx));
+  if (MatIMPLCast(A)->lda > m) {
+    PetscCall(PointwiseUnaryTransform(A, 0, m, 0, n, dctx, device::cupm::functors::make_times_equals(alpha)));
+  } else {
+    const auto       cu_alpha = cupmScalarCast(alpha);
+    const auto       N        = m * n;
+    cupmBlasHandle_t handle;
 
-    if (lda > m) {
-      for (cupmBlasInt_t j = 0; j < n; ++j) PetscCallCUPMBLAS(cupmBlasXscal(handle, m, &cu_alpha, da.cupmdata() + lda * j, 1));
-    } else {
-      PetscCallCUPMBLAS(cupmBlasXscal(handle, N, &cu_alpha, da.cupmdata(), 1));
-    }
+    PetscCall(GetHandlesFrom_(dctx, &handle));
+    PetscCall(PetscLogGpuTimeBegin());
+    PetscCallCUPMBLAS(cupmBlasXscal(handle, N, &cu_alpha, DeviceArrayReadWrite(dctx, A).cupmdata(), 1));
+    PetscCall(PetscLogGpuTimeEnd());
+    PetscCall(PetscLogGpuFlops(N));
   }
-  PetscCall(PetscLogGpuTimeEnd());
-  PetscCall(PetscLogGpuFlops(N));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1369,7 +1368,7 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::Shift(Mat A, PetscScalar alpha) noex
   PetscFunctionBegin;
   PetscCall(GetHandles_(&dctx));
   PetscCall(PetscInfo(A, "Performing Shift %" PetscInt_FMT " x %" PetscInt_FMT " on backend\n", m, n));
-  PetscCall(PointwiseUnaryTransform(A, 0, m, n, dctx, device::cupm::functors::make_plus_equals(alpha)));
+  PetscCall(DiagonalUnaryTransform(A, 0, m, n, dctx, device::cupm::functors::make_plus_equals(alpha)));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
