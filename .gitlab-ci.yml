@@ -852,7 +852,7 @@ linux-64idx-i8:
     - .stage-3
     - .linux_test
   tags:
-    - gce-nfs
+    - gce-u22-stage3, linux-mcpu
   variables:
     TEST_ARCH: arch-ci-linux-64idx-i8
 
@@ -890,7 +890,7 @@ linux-64idx-i8-uni:
     - .stage-3
     - .linux_test
   tags:
-    - gce-nfs
+    - gce-u22-stage3, linux-mcpu
   variables:
     TEST_ARCH: arch-ci-linux-64idx-i8-uni
 
