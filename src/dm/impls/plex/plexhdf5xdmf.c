@@ -6,11 +6,13 @@
 #if defined(PETSC_HAVE_HDF5)
 static PetscErrorCode SplitPath_Private(char path[], char name[])
 {
-  char *tmp;
+  char  *tmp;
+  size_t len;
 
   PetscFunctionBegin;
   PetscCall(PetscStrrchr(path, '/', &tmp));
-  PetscCall(PetscStrcpy(name, tmp));
+  PetscCall(PetscStrlen(tmp, &len));
+  PetscCall(PetscMemcpy(name, tmp, (len + 1) * sizeof(char))); /* assuming adequate buffer */
   if (tmp != path) {
     /* '/' found, name is substring of path after last occurrence of '/'. */
     /* Trim the '/name' part from path just by inserting null character. */
@@ -18,7 +20,7 @@ static PetscErrorCode SplitPath_Private(char path[], char name[])
     *tmp = '\0';
   } else {
     /* '/' not found, name = path, path = "/". */
-    PetscCall(PetscStrcpy(path, "/"));
+    PetscCall(PetscMemcpy(path, "/", 2 * sizeof(char))); /* assuming adequate buffer */
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

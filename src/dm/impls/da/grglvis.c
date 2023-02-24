@@ -273,20 +273,23 @@ PETSC_INTERN PetscErrorCode DMSetUpGLVisViewer_DMDA(PetscObject oda, PetscViewer
       if (bss[i] == 1) {
         PetscCall(PetscStrallocpy(dafieldname[s], &fieldname[i]));
       } else {
-        PetscInt b;
-        size_t   tlen = 9; /* "Vector-" + end */
+        PetscInt    b;
+        const char *prefix = "Vector-";
+        size_t      tlen;
+        PetscCall(PetscStrlen(prefix, &tlen));
         for (b = 0; b < bss[i]; b++) {
           size_t len;
           PetscCall(PetscStrlen(dafieldname[s + b], &len));
           tlen += len + 1; /* field + "-" */
         }
+        tlen++; /* null terminator */
         PetscCall(PetscMalloc1(tlen, &fieldname[i]));
-        PetscCall(PetscStrcpy(fieldname[i], "Vector-"));
+        PetscCall(PetscStrncpy(fieldname[i], prefix, tlen));
         for (b = 0; b < bss[i] - 1; b++) {
-          PetscCall(PetscStrcat(fieldname[i], dafieldname[s + b]));
-          PetscCall(PetscStrcat(fieldname[i], "-"));
+          PetscCall(PetscStrlcat(fieldname[i], dafieldname[s + b], tlen));
+          PetscCall(PetscStrlcat(fieldname[i], "-", tlen));
         }
-        PetscCall(PetscStrcat(fieldname[i], dafieldname[s + b]));
+        PetscCall(PetscStrlcat(fieldname[i], dafieldname[s + b], tlen));
       }
       dims[i]   = dim;
       nlocal[i] = M * N * P * bss[i];

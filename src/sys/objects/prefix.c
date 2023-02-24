@@ -117,7 +117,7 @@ PetscErrorCode PetscObjectSetOptionsPrefix(PetscObject obj, const char prefix[])
 PetscErrorCode PetscObjectAppendOptionsPrefix(PetscObject obj, const char prefix[])
 {
   char  *buf = obj->prefix;
-  size_t len1, len2;
+  size_t len1, len2, lenprefix;
 
   PetscFunctionBegin;
   PetscValidHeader(obj, 1);
@@ -130,9 +130,10 @@ PetscErrorCode PetscObjectAppendOptionsPrefix(PetscObject obj, const char prefix
 
   PetscCall(PetscStrlen(prefix, &len1));
   PetscCall(PetscStrlen(buf, &len2));
-  PetscCall(PetscMalloc1(1 + len1 + len2, &obj->prefix));
-  PetscCall(PetscStrcpy(obj->prefix, buf));
-  PetscCall(PetscStrcat(obj->prefix, prefix));
+  lenprefix = len1 + len2 + 1;
+  PetscCall(PetscMalloc1(lenprefix, &obj->prefix));
+  PetscCall(PetscStrncpy(obj->prefix, buf, lenprefix));
+  PetscCall(PetscStrlcat(obj->prefix, prefix, lenprefix));
   PetscCall(PetscFree(buf));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -180,7 +181,7 @@ PetscErrorCode PetscObjectGetOptionsPrefix(PetscObject obj, const char *prefix[]
 PetscErrorCode PetscObjectPrependOptionsPrefix(PetscObject obj, const char prefix[])
 {
   char  *buf;
-  size_t len1, len2;
+  size_t len1, len2, lenprefix;
 
   PetscFunctionBegin;
   PetscValidHeader(obj, 1);
@@ -194,9 +195,10 @@ PetscErrorCode PetscObjectPrependOptionsPrefix(PetscObject obj, const char prefi
 
   PetscCall(PetscStrlen(prefix, &len1));
   PetscCall(PetscStrlen(buf, &len2));
-  PetscCall(PetscMalloc1(1 + len1 + len2, &obj->prefix));
-  PetscCall(PetscStrcpy(obj->prefix, prefix));
-  PetscCall(PetscStrcat(obj->prefix, buf));
+  lenprefix = len1 + len2 + 1;
+  PetscCall(PetscMalloc1(lenprefix, &obj->prefix));
+  PetscCall(PetscStrncpy(obj->prefix, prefix, lenprefix));
+  PetscCall(PetscStrlcat(obj->prefix, buf, lenprefix));
   PetscCall(PetscFree(buf));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
