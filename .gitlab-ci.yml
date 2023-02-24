@@ -832,20 +832,20 @@ linux-opt-misc:
     - .stage-3
     - .linux_test
   tags:
-    - gce-nfs, linux-fast
+    - gce-u22-stage3, linux-fast
   variables:
     TEST_ARCH: arch-ci-linux-opt-misc
-    LOAD_MODULES: gcc/6.5.0-57usejd
+    LOAD_MODULES: gcc/8.5.0
 
 linux-pkgs-64idx:
   extends:
     - .stage-3
     - .linux_test
   tags:
-    - gce-nfs, linux-mcpu
+    - gce-u22-stage3, linux-mcpu
   variables:
     TEST_ARCH: arch-ci-linux-pkgs-64idx
-    LOAD_MODULES: cmake/3.20.5-yjp2hz6 intel-mkl/19.5
+    LOAD_MODULES: intel-oneapi-mkl/2022.0.2
 
 linux-64idx-i8:
   extends:
@@ -880,10 +880,10 @@ linux-ILP64:
     - .stage-3
     - .linux_test
   tags:
-    - gce-nfs
+    - gce-u22-stage3
   variables:
     TEST_ARCH: arch-ci-linux-ILP64
-    LOAD_MODULES: mpich/2-1.5-gcc750
+    LOAD_MODULES: gcc/8.5.0 mpich/2-1.5-gcc-8.5.0
 
 linux-64idx-i8-uni:
   extends:
