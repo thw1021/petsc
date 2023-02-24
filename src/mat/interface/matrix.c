@@ -800,7 +800,7 @@ PetscErrorCode MatSetOptionsPrefixFactor(Mat A, const char prefix[])
 PetscErrorCode MatAppendOptionsPrefixFactor(Mat A, const char prefix[])
 {
   char  *buf = A->factorprefix;
-  size_t len1, len2;
+  size_t len1, len2, lenprefix;
 
   PetscFunctionBegin;
   PetscValidHeader(A, 1);
@@ -813,9 +813,10 @@ PetscErrorCode MatAppendOptionsPrefixFactor(Mat A, const char prefix[])
 
   PetscCall(PetscStrlen(prefix, &len1));
   PetscCall(PetscStrlen(buf, &len2));
-  PetscCall(PetscMalloc1(1 + len1 + len2, &A->factorprefix));
-  PetscCall(PetscStrcpy(A->factorprefix, buf));
-  PetscCall(PetscStrcat(A->factorprefix, prefix));
+  lenprefix = len1 + len2 + 1;
+  PetscCall(PetscMalloc1(lenprefix, &A->factorprefix));
+  PetscCall(PetscStrncpy(A->factorprefix, buf, lenprefix));
+  PetscCall(PetscStrlcat(A->factorprefix, prefix, lenprefix));
   PetscCall(PetscFree(buf));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

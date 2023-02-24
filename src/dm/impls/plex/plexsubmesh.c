@@ -2322,7 +2322,7 @@ PetscErrorCode DMPlexCreateHybridMesh(DM dm, DMLabel label, DMLabel bdlabel, Pet
 
     PetscCall(PetscObjectGetName((PetscObject)hlabel, &name));
     PetscCall(PetscStrncpy(sname, name, PETSC_MAX_PATH_LEN));
-    PetscCall(PetscStrcat(sname, " split"));
+    PetscCall(PetscStrlcat(sname, " split", sizeof(sname)));
     PetscCall(DMLabelCreate(PETSC_COMM_SELF, sname, &slabel));
   }
   PetscCall(DMPlexLabelCohesiveComplete(dm, hlabel, bdlabel, bdvalue, PETSC_FALSE, idm));
