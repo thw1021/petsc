@@ -784,10 +784,10 @@ linux-xsdk-dbg:
     - .stage-3
     - .linux_test
   tags:
-    - gce-nfs
+    - gce-u22-stage3
   variables:
     TEST_ARCH: arch-ci-linux-xsdk-dbg
-    LOAD_MODULES: gcc/8.3.0-fjpc5ys
+    LOAD_MODULES: gcc/12.1.0
 
 linux-analyzer:
   extends:
