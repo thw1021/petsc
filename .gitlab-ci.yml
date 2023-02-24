@@ -685,10 +685,9 @@ linux-pkgs-dbg-ftn-interfaces:
     - .stage-3
     - .linux_test
   tags:
-    - gce-nfs
+    - gce-u22-stage3
   variables:
     TEST_ARCH: arch-ci-linux-pkgs-dbg-ftn-interfaces
-    LOAD_MODULES: cmake/3.20.5-yjp2hz6
     OMP_PROC_BIND: "false"
     OMP_NUM_THREADS: 4
 
