@@ -20,11 +20,11 @@ sophisticated library features.
 - *Developer* - Interfaces intended primarily for library developers
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
-   Vector Operations (Vec) <Vec/index>
-   Matrix Operations (Mat) <Mat/index>
-   Matrix colorings (MatColoring), orderings (MatOrdering), and partitionings (MatPartitioning) <MatOrderings/index>
+   Vec/index
+   Mat/index
+   MatOrderings/index
    Finite difference computation of Jacobians (MatFD) <MatFD/index>
    Index sets (IS) <IS/index>
    Star Forest Communication (PetscSF) <PetscSF/index>
