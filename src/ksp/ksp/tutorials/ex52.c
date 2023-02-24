@@ -486,12 +486,20 @@ int main(int argc, char **args)
       args: -use_strumpack_lu
       output_file: output/ex52_3.out
 
-   test:
+   testset:
       suffix: strumpack_2
       nsize: 2
       requires: strumpack
       args: -use_strumpack_lu
       output_file: output/ex52_3.out
+
+      test:
+        suffix: aij
+
+      test:
+        requires: kokkos_kernels
+        suffix: kok
+        args: -mat_type aijkokkos  -vec_type kokkos
 
    test:
       suffix: strumpack_ilu
@@ -512,12 +520,20 @@ int main(int argc, char **args)
       args: -use_superlu_lu
       output_file: output/ex52_2.out
 
-   test:
+   testset:
       suffix: superlu_dist
       nsize: 2
       requires: superlu superlu_dist
       args: -use_superlu_lu
       output_file: output/ex52_2.out
+
+      test:
+        suffix: aij
+
+      test:
+        requires: kokkos_kernels
+        suffix: kok
+        args: -mat_type aijkokkos  -vec_type kokkos
 
    test:
       suffix: superlu_ilu
