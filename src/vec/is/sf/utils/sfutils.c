@@ -799,6 +799,8 @@ PetscErrorCode PetscSFCreateByMatchingIndices(PetscLayout layout, PetscInt numRo
   Output Arguments:
 . merged - new `PetscSF` with combined edges
 
+  Level: advanced
+
 .seealse: `PetscSFCompose()`
 @*/
 PetscErrorCode PetscSFMerge(PetscSF sfa, PetscSF sfb, PetscSF *merged)

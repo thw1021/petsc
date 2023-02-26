@@ -485,7 +485,7 @@ manualpages:
 manexamples:
 	-@base=`basename ${LOCDIR}`; \
         if [ "$${base}" = "tutorials" ] ; then \
-          echo "Generating manual example links" ; \
+          echo "Generating manual example links in ${LOCDIR}"; \
           for i in ${EXAMPLESALL} foo ; do \
             if [ "$$i" != "foo" ] ; then \
               a=`cat $$i | ${MAPNAMES} -map ${LOC}/manualpages/manualpages.cit \
