@@ -448,7 +448,7 @@ deleteshared:
 #  this indicates the makefile is missing a MANSEC definition or the include file is missing a SUBMANSEC definition
 manualpages:
 	-@doctext_common_def="${PETSC_DIR}/doc/classic/doctext/doctextcommon.txt"; \
-        LOCDIR=$$(pwd | sed s"?${PETSC_DIR}??g"); \
+        LOCDIR=$$(pwd | sed s"?${PETSC_DIR}??"g); \
         if [ "${MANSEC}" = "" ] ; then \
           for f in ${SOURCED}; do \
             LMANSEC=`grep SUBMANSEC $${f} | sed s'?[ ]*/\*[ ]*SUBMANSEC[ ]*=[ ]*\([a-zA-Z]*\)[ ]*\*/?\1?'g`; \
@@ -486,7 +486,7 @@ manexamples:
 	-@base=$$(basename $$(pwd)); \
         if [ "$${base}" = "tutorials" ] ; then \
           echo "Generating manual example links" ; \
-          LOCDIR=$$(pwd | sed s"?${PETSC_DIR}??g"); \
+          LOCDIR=$$(pwd | sed s"?${PETSC_DIR}??"g); \
           for i in ${EXAMPLESALL} foo ; do \
             if [ "$$i" != "foo" ] ; then \
               a=`cat $$i | ${MAPNAMES} -map ${LOC}/manualpages/manualpages.cit \
@@ -561,7 +561,7 @@ checkmakefilelist:
 
 html: chk_c2html
 	-@export htmlmap_tmp=$$(mktemp) ;\
-          LOCDIR=$$(pwd | sed s"?${PETSC_DIR}??g"); \
+          LOCDIR=$$(pwd | sed s"?${PETSC_DIR}??"g); \
           sed -e s?man+manualpages/?man+ROOT/manualpages/? ${LOC}/manualpages/htmlmap_modified > $$htmlmap_tmp ;\
           cat ${PETSC_DIR}/doc/classic/mpi.www.index >> $$htmlmap_tmp ;\
           ROOT=`echo $${LOCDIR} | sed -e s?/[-a-z_0-9]*?/..?g -e s?src/??g -e s?include/??g` ;\
@@ -619,7 +619,7 @@ html: chk_c2html
           echo " " >> $${loc}/index.html; \
           echo "<a href=\"makefile.html\">makefile</a><br>" >> $${loc}/index.html ;\
           loc=`pwd | sed -e s?\$${PETSC_DIR}?$${LOC}/?g -e s?/disks??g`;  \
-          cat makefile | ${C2HTML}  | ${MAPNAMES} -map $$htmlmap_tmp -inhtml > $${loc}/makefile.html ; \
+          cat makefile | ${C2HTML}  | ${MAPNAMES} -map $$htmlmap_tmp -inhtml > $${loc}/makefile.html ;\
           ${RM} $$htmlmap_tmp
 
 cleanhtml:
@@ -730,7 +730,7 @@ checkbadSource:
 
 #  The directories below contains files directly imported from an external package; they should not be directly edited or changed except to update from the package
 checkbadFileChange:
-	@git diff --stat --exit-code `lib/petsc/bin/maint/check-merge-branch.sh`..HEAD -- src/sys/yaml/src src/sys/yaml/include src/sys/yaml/LICENSE include/petsc/private/valgrind include/petsc/private/kash
+	@git diff --stat --exit-code `lib/petsc/bin/maint/check-merge-branch.sh`..HEAD -- src/sys/yaml/src src/sys/yaml/include src/sys/yaml/License include/petsc/private/valgrind include/petsc/private/kash
 
 vermin:
 	@vermin -vvv -t=3.4- ${VERMIN_OPTIONS} ${PETSC_DIR}/config
