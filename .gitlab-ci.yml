@@ -727,9 +727,9 @@ linux-pkgs-gcov:
   extends:
     - .stage-3
     - .linux_test
-    - .coverage-generate-u18
+    - .coverage-generate-u22
   tags:
-    - gce-nfs, linux-gcov
+    - gce-u22-stage3, linux-gcov
   variables:
     TEST_ARCH: arch-ci-linux-pkgs-gcov
 
