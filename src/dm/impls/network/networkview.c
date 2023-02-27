@@ -74,11 +74,13 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
 {
   PetscMPIInt rank, size;
   MPI_Comm    comm;
-  char        filename[PETSC_MAX_PATH_LEN + 1], proccall[PETSC_MAX_PATH_LEN + 500], scriptFile[PETSC_MAX_PATH_LEN + 1], streamBuffer[256];
+  char        filename[PETSC_MAX_PATH_LEN + 1], options[512], proccall[PETSC_MAX_PATH_LEN + 512], scriptFile[PETSC_MAX_PATH_LEN + 1], buffer[256];
   PetscViewer csvViewer;
   FILE       *processFile = NULL;
   PetscBool   isnull;
   PetscDraw   draw;
+  DM_Network *network = (DM_Network *)dm->data;
+  PetscInt    drawPause;
 #if defined(PETSC_HAVE_MKSTEMP)
   PetscBool isSharedTmp;
 #endif
@@ -148,18 +150,43 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   // Close the viewer
   PetscCall(PetscViewerDestroy(&csvViewer));
 
+  // Generate options string
+  PetscCall(PetscMemzero(options, sizeof(options)));
+  // If the draw is null run as a "test execute" ie. do nothing just test that the script was called correctly
+  PetscCall(PetscStrlcat(options, isnull ? " -tx " : " ", sizeof(options)));
+  // Set the delay before automatically closing using either the DMNetwork view option or -draw_pause
+  drawPause = network->viewOptions[DM_NETWORK_VIEW_CLOSE_DELAY];
+  PetscCall(PetscOptionsGetInt(NULL, NULL, "-draw_pause", &drawPause, NULL));
+  if (drawPause > 0) {
+    PetscCall(PetscSNPrintf(buffer, sizeof(buffer), "%" PetscInt_FMT, drawPause));
+    PetscCall(PetscStrlcat(options, " -dt ", sizeof(options)));
+    PetscCall(PetscStrlcat(options, buffer, sizeof(options)));
+  }
+  // Set rank parameters
+  if (network->viewOptions[DM_NETWORK_VIEW_SHOW_RANKS]) {
+    PetscCall(PetscStrlcat(options, " -dar ", sizeof(options)));
+    if (network->viewOptions[DM_NETWORK_VIEW_SHOW_RANKS] < 0) PetscCall(PetscStrlcat(options, " -ncp ", sizeof(options)));
+
+    PetscCall(PetscSNPrintf(buffer, sizeof(buffer), "%" PetscInt_FMT, network->viewOptions[DM_NETWORK_VIEW_FIRST_RANK]));
+    PetscCall(PetscStrlcat(options, " -dfr ", sizeof(options)));
+    PetscCall(PetscStrlcat(options, buffer, sizeof(options)));
+    PetscCall(PetscSNPrintf(buffer, sizeof(buffer), "%" PetscInt_FMT, network->viewOptions[DM_NETWORK_VIEW_NUM_RANKS]));
+    PetscCall(PetscStrlcat(options, " -dnr ", sizeof(options)));
+    PetscCall(PetscStrlcat(options, buffer, sizeof(options)));
+  }
+
   // Get the value of $PETSC_DIR
   PetscCall(PetscStrreplace(comm, "${PETSC_DIR}/share/petsc/bin/dmnetwork_view.py", scriptFile, sizeof(scriptFile)));
   PetscCall(PetscFixFilename(scriptFile, scriptFile));
-  // Generate the system call for 'python3 $PETSC_DIR/share/petsc/dmnetwork_view.py <file>'
+  // Generate the system call for 'python3 $PETSC_DIR/share/petsc/dmnetwork_view.py <options> <file>'
   PetscCall(PetscArrayzero(proccall, sizeof(proccall)));
-  PetscCall(PetscSNPrintf(proccall, sizeof(proccall), "%s %s %s %s", PETSC_PYTHON_EXE, scriptFile, (isnull ? "-tx" : ""), filename));
+  PetscCall(PetscSNPrintf(proccall, sizeof(proccall), "%s %s %s %s", PETSC_PYTHON_EXE, scriptFile, options, filename));
 
 #if defined(PETSC_HAVE_POPEN)
   // Perform the call to run the python script (Note: while this is called on all ranks POpen will only run on rank 0)
   PetscCall(PetscPOpen(comm, NULL, proccall, "r", &processFile));
   if (processFile != NULL) {
-    while (fgets(streamBuffer, sizeof(streamBuffer), processFile) != NULL) PetscCall(PetscPrintf(comm, "%s", streamBuffer));
+    while (fgets(buffer, sizeof(buffer), processFile) != NULL) PetscCall(PetscPrintf(comm, "%s", buffer));
   }
   PetscCall(PetscPClose(comm, processFile));
 #else
@@ -248,4 +275,11 @@ PetscErrorCode DMView_Network(DM dm, PetscViewer viewer)
     PetscCall(PetscViewerASCIIPopSynchronized(viewer));
   } else PetscCheck(iascii, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Viewer type %s not yet supported for DMNetwork writing", ((PetscObject)viewer)->type_name);
   PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode DMNetworkSetViewOption(DM dm, DMNetworkViewerOption option, PetscInt value)
+{
+  DM_Network *network = (DM_Network *)dm->data;
+  network->viewOptions[option] = value;
+  return PETSC_SUCCESS;
 }
