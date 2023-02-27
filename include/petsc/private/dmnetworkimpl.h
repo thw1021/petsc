@@ -145,6 +145,8 @@ typedef struct {
                                               Jvpt[v-vStart]+2i+1: Jacobian(v,e[i]),   e[i]: i-th supporting edge
                                               Jvpt[v-vStart]+2i+2: Jacobian(v,vc[i]), vc[i]: i-th connected vertex
                                               */
+
+  PetscInt viewOptions[4]; // Options to use when viewing via DMView
 } DM_Network;
 
 PETSC_INTERN PetscErrorCode DMNetworkGetIndex(DM, PetscInt, PetscInt *);
