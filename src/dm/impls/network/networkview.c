@@ -94,7 +94,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
 #if defined(PETSC_HAVE_TMPNAM_S)
     // Acquire a temporary file to write to and open an ASCII/CSV viewer
     PetscCheck(tmpnam_s(filename, sizeof(filename)) == 0, comm, PETSC_ERR_SYS, "Could not acquire temporary file");
-#elif defined(PETSC_HAVE_MKSTEMP) && __STDC_VERSION__ > 199901L
+#elif defined(PETSC_HAVE_MKSTEMP) && (defined(PETSC_CLANGUAGE_CXX) || __STDC_VERSION__ > 199901L)
     PetscBool isSharedTmp, isTmpOverridden;
     size_t    numChars;
     // Same thing, but for POSIX systems on which tmpnam is deprecated
