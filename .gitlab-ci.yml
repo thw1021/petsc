@@ -381,7 +381,7 @@ pause-for-approval:
 #
 # The tags variable used in the tests below connects the particular test with the runners
 # listed on the left hand side of https://gitlab.com/petsc/petsc/-/settings/ci_cd.
-# For example the test linux-sycl-double any runner that has the tags 'gce-nfs, linux-fast'
+# For example the test 'linux-sycl-double' any runner that has the tags 'gce-u22-stage3, linux-fast'
 # (in a blue box beneath it)
 #
 
@@ -507,13 +507,14 @@ linux-hip-double:
 linux-sycl-double:
   extends:
     - .stage-3
-    - .linux_test_noflags
+    - .linux_test_nofflags
   tags:
-    - gce-nfs, linux-fast
+    - gce-u22-stage3, linux-fast
   variables:
     TEST_ARCH: arch-ci-linux-sycl-double
-    LOAD_MODULES: compiler/latest mpi/latest cmake/3.20.5-yjp2hz6
+    LOAD_MODULES: intel-oneapi-compilers/2022.2.1 intel-oneapi-mpi/2021.5.1
     TEST_OPTS: query=requires queryval=kokkos_kernels
+    MAKE_CFLAGS: -Wno-expected-file-type -Werror
 
 linux-cuda-pkgs-gcov:
   extends:
