@@ -751,10 +751,10 @@ linux-pgi:
     - .stage-3
     - .linux_test_noflags
   tags:
-    - gce-nfs, linux-mcpu
+    - gce-u22-stage3, linux-mcpu
   variables:
     TEST_ARCH: arch-ci-linux-pgi
-    LOAD_MODULES: hpc_sdk/20.9
+    LOAD_MODULES: nvhpc/22.3
 
 # If the Nag license server fails then ${PETSC_DIR}/naglicenseproblem is created and the job is marked as failed but allow_failure
 linux-nagfor:
