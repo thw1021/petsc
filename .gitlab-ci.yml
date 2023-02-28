@@ -761,7 +761,7 @@ linux-nagfor:
     - .stage-3
     - .linux_test_nofflags
   tags:
-    - gce-nfs, linux-mcpu
+    - gce-stage2, linux-mcpu
   variables:
     LOAD_MODULES: nag/6.1
     TEST_ARCH: arch-ci-linux-nagfor
