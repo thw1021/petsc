@@ -965,6 +965,8 @@ PetscErrorCode DMPlexGetIsoperiodicFaceSF(DM dm, PetscSF *face_sf)
 + dm - `DMPlex` that has been configured with `DMPlexSetIsoperiodicFaceSF()`
 - t - 4x4 affine transformation basis.
 
+  Level: advanced
+
   Notes:
   Affine transforms are 4x4 matrices in which the leading 3x3 block expresses a rotation (or identity for no rotation),
   the last column contains a translation vector, and the bottom row is all zero except the last entry, which must always
