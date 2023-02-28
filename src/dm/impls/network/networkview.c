@@ -75,7 +75,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   PetscBool   isnull;
   PetscDraw   draw;
 #if defined(PETSC_HAVE_MKSTEMP)
-  PetscBool   isSharedTmp;
+  PetscBool isSharedTmp;
 #endif
 
   PetscFunctionBegin;
