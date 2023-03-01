@@ -205,6 +205,7 @@ PETSC_INTERN PetscErrorCode MatCreateSeqAIJKokkosWithKokkosCsrMatrix(MPI_Comm, K
 PETSC_INTERN PetscErrorCode PrintCsrMatrix(const KokkosCsrMatrix &csrmat);
 PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJKokkos(Mat, MatType, MatReuse, Mat *);
 PETSC_INTERN PetscErrorCode MatSeqAIJKokkosModifyDevice(Mat);
+PETSC_INTERN PetscErrorCode MatSeqAIJKokkosGenerateTranspose_Private(Mat, KokkosCsrMatrix **);
 
 PETSC_INTERN PetscErrorCode MatSeqAIJGetKokkosView(Mat, MatScalarKokkosView *);
 PETSC_INTERN PetscErrorCode MatSeqAIJRestoreKokkosView(Mat, MatScalarKokkosView *);
