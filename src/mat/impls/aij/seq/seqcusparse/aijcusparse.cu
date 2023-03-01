@@ -2921,7 +2921,7 @@ static PetscErrorCode MatProductSymbolic_SeqAIJCUSPARSE_SeqAIJCUSPARSE(Mat C)
     PetscCallCUDA(cudaFree(dBuffer2));
 
     /*----------------------------------------------------------------------*/
-    /* get matrix C non-zero entries C_nnz1 */
+    /* get matrix C// non-zero entries C_nnz1 */
     PetscCallCUSPARSE(cusparseSpMatGetSize(Cmat->matDescr, &C_num_rows1, &C_num_cols1, &C_nnz1));
     c->nz = (PetscInt)C_nnz1;
     /* allocate matrix C */
