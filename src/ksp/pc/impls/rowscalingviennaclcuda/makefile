@@ -5,7 +5,6 @@
 SOURCECU  = rowscalingviennacl.cu
 SOURCEH   =
 LIBBASE   = libpetscksp
-DIRS      =
 MANSEC    = KSP
 SUBMANSEC = PC
 

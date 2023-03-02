@@ -3,7 +3,6 @@
 SOURCEC   = qr.c
 SOURCEH   = qr.h
 LIBBASE   = libpetscksp
-DIRS      =
 MANSEC    = KSP
 SUBMANSEC = PC
 

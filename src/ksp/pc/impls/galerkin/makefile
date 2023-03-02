@@ -3,7 +3,6 @@
 SOURCEC   = galerkin.c
 SOURCEH   =
 LIBBASE   = libpetscksp
-DIRS      =
 MANSEC    = KSP
 SUBMANSEC = PC
 

@@ -2,7 +2,6 @@
 
 SOURCEC  = simple.c absolute.c relative.c cdf.c andor.c or.c and.c
 SOURCEH  =
-DIRS     =
 LIBBASE  = libpetscvec
 MANSEC   = Vec
 

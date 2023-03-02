@@ -3,7 +3,6 @@
 SOURCEC   = deflation.c deflationspace.c
 SOURCEH   = deflation.h
 LIBBASE   = libpetscksp
-DIRS      =
 MANSEC    = KSP
 SUBMANSEC = PC
 

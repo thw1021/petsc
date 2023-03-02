@@ -5,7 +5,6 @@ CPPFLAGS  = ${SPAI_INCLUDE}
 SOURCEC   = ispai.c dspai.c
 SOURCEH   =
 LIBBASE   = libpetscksp
-DIRS      =
 MANSEC    = KSP
 SUBMANSEC = PC
 

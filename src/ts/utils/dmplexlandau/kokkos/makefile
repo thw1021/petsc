@@ -3,7 +3,6 @@
 
 SOURCEKOKKOS = landau.kokkos.cxx
 SOURCEH  =
-DIRS     =
 LIBBASE  = libpetscts
 MANSEC   = TS
 SUBMANSEC= LANDAU

@@ -3,7 +3,6 @@
 SOURCEC   = aomemscalable.c
 SOURCEH   =
 LIBBASE   = libpetscvec
-DIRS      =
 MANSEC    = Vec
 SUBMANSEC = AO
 

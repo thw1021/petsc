@@ -4,7 +4,6 @@
 SOURCEC  = zsfutilsf90.c
 SOURCEH  =
 LIBBASE	 = libpetscvec
-DIRS     =
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules

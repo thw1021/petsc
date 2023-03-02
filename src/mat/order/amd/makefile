@@ -5,7 +5,6 @@ CFLAGS    = ${SUITESPARSE_INCLUDE}
 SOURCEC   = amd.c
 SOURCEH   =
 LIBBASE   = libpetscmat
-DIRS      =
 MANSEC    = Mat
 SUBMANSEC = MatOrderings
 

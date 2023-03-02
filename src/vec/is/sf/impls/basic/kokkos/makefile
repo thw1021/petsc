@@ -5,7 +5,6 @@ SOURCEH       =
 SOURCEC       =
 SOURCEKOKKOS  = sfkok.kokkos.cxx
 LIBBASE       = libpetscvec
-DIRS          =
 MANSEC        = Vec
 SUBMANSEC     = PetscSF
 

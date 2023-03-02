@@ -2,7 +2,6 @@
 
 SOURCEC   = spacewxy.c
 LIBBASE   = libpetscdm
-DIRS      =
 MANSEC    = DM
 SUBMANSEC = SPACE
 

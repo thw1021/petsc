@@ -3,7 +3,6 @@
 
 SOURCEC  = trigenerate.c
 SOURCEH  =
-DIRS     =
 LIBBASE  = libpetscdm
 MANSEC   = DM
 SUBMANSEC= DMPlex

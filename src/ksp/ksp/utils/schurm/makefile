@@ -3,7 +3,6 @@
 SOURCEC  = schurm.c
 SOURCEH  = schurm.h
 LIBBASE  = libpetscksp
-DIRS     =
 MANSEC   = KSP
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

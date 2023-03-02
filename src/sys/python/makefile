@@ -3,7 +3,6 @@
 SOURCEC  = pythonsys.c
 SOURCEH  =
 LIBBASE  = libpetscsys
-DIRS     =
 MANSEC   = Sys
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

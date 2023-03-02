@@ -3,7 +3,6 @@
 
 SOURCEC  = ctetgenerate.c
 SOURCEH  =
-DIRS     =
 LIBBASE  = libpetscdm
 MANSEC   = DM
 SUBMANSEC= DMPlex

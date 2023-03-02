@@ -2,7 +2,6 @@
 
 SOURCEC   = dualspacerefined.c
 LIBBASE   = libpetscdm
-DIRS      =
 MANSEC    = DM
 SUBMANSEC = DUALSPACE
 

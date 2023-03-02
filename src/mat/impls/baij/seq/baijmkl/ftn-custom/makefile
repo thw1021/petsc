@@ -4,7 +4,6 @@
 
 SOURCEC  = zbaijmklf.c
 SOURCEH  =
-DIRS     =
 LIBBASE  = libpetscmat
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

@@ -5,7 +5,6 @@ SOURCEH       =
 SOURCEC       =
 SOURCECU      = sfcuda.cu
 LIBBASE       = libpetscvec
-DIRS          =
 MANSEC        = Vec
 SUBMANSEC     = PetscSF
 

@@ -2,7 +2,6 @@
 
 SOURCEC   = fe.c fegeom.c feceed.c
 SOURCEH   =
-DIRS      =
 LIBBASE   = libpetscdm
 MANSEC    = DM
 SUBMANSEC = FE

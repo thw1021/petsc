@@ -2,7 +2,6 @@
 
 SOURCEC  = traj.c
 SOURCEH  =
-DIRS     =
 MANSEC   = TS
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

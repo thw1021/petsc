@@ -3,7 +3,6 @@
 
 SOURCECXX = tetgenerate.cxx
 SOURCEH   =
-DIRS      =
 LIBBASE   = libpetscdm
 MANSEC    = DM
 SUBMANSEC = DMPlex

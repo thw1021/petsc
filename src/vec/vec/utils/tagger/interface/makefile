@@ -2,7 +2,6 @@
 
 SOURCEC  = tagger.c taggerregi.c dlregistagger.c
 SOURCEH  =
-DIRS     =
 LIBBASE  = libpetscvec
 MANSEC   = Vec
 

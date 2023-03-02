@@ -3,7 +3,6 @@
 
 SOURCEC  = zhdf5io.c zisltogf.c zvsectionisf.c
 SOURCEH  =
-DIRS     =
 LIBBASE	 = libpetscvec
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

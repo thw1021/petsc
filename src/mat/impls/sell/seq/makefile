@@ -3,7 +3,6 @@
 SOURCEC  = sell.c fdsell.c
 SOURCEH  = sell.h
 LIBBASE  = libpetscmat
-DIRS     =
 MANSEC   = Mat
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

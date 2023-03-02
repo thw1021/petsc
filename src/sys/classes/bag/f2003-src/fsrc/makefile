@@ -3,7 +3,6 @@
 SOURCEC  =
 SOURCEF90= bagenum.F90
 SOURCEH  =
-DIRS     =
 LIBBASE  = libpetscsys
 MANSEC   = Sys
 

@@ -2,7 +2,6 @@
 
 SOURCEC   = spacesum.c
 LIBBASE   = libpetscdm
-DIRS      =
 MANSEC    = DM
 SUBMANSEC = SPACE
 

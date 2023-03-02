@@ -3,7 +3,6 @@
 SOURCEC   = aobasic.c
 SOURCEH   =
 LIBBASE   = libpetscvec
-DIRS      =
 MANSEC    = Vec
 SUBMANSEC = AO
 

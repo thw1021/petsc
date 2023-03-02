@@ -13,7 +13,6 @@ SOURCEH   = sopen.c sclose.c  bread.c sread.c swrite.c
 MANSEC    = Sys
 SUBMANSEC = Viewer
 LIBBASE   = libpetscsys
-DIRS      =
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules

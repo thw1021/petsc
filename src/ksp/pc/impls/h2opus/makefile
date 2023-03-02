@@ -4,7 +4,6 @@
 SOURCEC   = pch2opus.c
 SOURCEH   =
 LIBBASE   = libpetscksp
-DIRS      =
 MANSEC    = KSP
 SUBMANSEC = PC
 

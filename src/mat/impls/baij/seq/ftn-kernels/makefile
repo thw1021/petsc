@@ -11,7 +11,6 @@ SOURCEF90= fsolvebaij.F90
 SOURCEH  =
 LIBBASE  = libpetscmat
 MANSEC   = Sys
-DIRS     =
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules

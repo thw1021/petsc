@@ -3,7 +3,6 @@
 SOURCEC   = pcksp.c
 SOURCEH   =
 LIBBASE   = libpetscksp
-DIRS      =
 MANSEC    = KSP
 SUBMANSEC = PC
 

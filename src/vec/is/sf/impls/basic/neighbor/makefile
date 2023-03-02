@@ -4,7 +4,6 @@
 SOURCEH   =
 SOURCEC   = sfneighbor.c
 LIBBASE   = libpetscvec
-DIRS      =
 MANSEC    = Vec
 SUBMANSEC = PetscSF
 

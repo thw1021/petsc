@@ -3,7 +3,6 @@
 
 SOURCEC  = zlinesearchf.c
 SOURCEH  =
-DIRS     =
 LIBBASE  = libpetscsnes
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

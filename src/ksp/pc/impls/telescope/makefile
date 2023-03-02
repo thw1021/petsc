@@ -3,7 +3,6 @@
 SOURCEC   = telescope.c telescope_dmda.c telescope_coarsedm.c
 SOURCEH   =
 LIBBASE   = libpetscksp
-DIRS      =
 MANSEC    = KSP
 SUBMANSEC = PC
 

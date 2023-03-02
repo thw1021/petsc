@@ -3,7 +3,6 @@
 
 SOURCEC  = ztsadaptf.c
 SOURCEH  =
-DIRS     =
 LIBBASE  = libpetsts
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

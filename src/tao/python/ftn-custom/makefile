@@ -3,7 +3,6 @@
 
 SOURCEC  = zpythontaof.c
 SOURCEH  =
-DIRS     =
 LIBBASE  = libpetsctao
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

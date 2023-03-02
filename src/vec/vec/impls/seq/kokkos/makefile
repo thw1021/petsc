@@ -6,7 +6,6 @@ SOURCEKOKKOS = veckok.kokkos.cxx
 SOURCEH  =
 LIBBASE  = libpetscvec
 MANSEC   = Vec
-DIRS     =
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules

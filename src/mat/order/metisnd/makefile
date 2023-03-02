@@ -5,7 +5,6 @@ CFLAGS    = ${METIS_INCLUDE}
 SOURCEC   = metisnd.c
 SOURCEH   =
 LIBBASE   = libpetscmat
-DIRS      =
 MANSEC    = Mat
 SUBMANSEC = MatOrderings
 

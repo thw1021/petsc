@@ -5,7 +5,6 @@ SOURCEC   =
 SOURCECU  = vpbjacobi_cuda.cu
 SOURCEH   =
 LIBBASE   = libpetscksp
-DIRS      =
 MANSEC    = KSP
 SUBMANSEC = PC
 

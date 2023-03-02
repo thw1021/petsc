@@ -3,7 +3,6 @@
 
 SOURCEC  = zdmshellf.c
 SOURCEH  =
-DIRS     =
 LIBBASE  = libpetscdm
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

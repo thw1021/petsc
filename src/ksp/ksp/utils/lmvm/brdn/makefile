@@ -3,7 +3,6 @@
 SOURCEC  = brdn.c badbrdn.c
 SOURCEH  = brdn.h
 LIBBASE  = libpetscksp
-DIRS     =
 MANSEC   = KSP
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

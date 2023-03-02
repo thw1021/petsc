@@ -2,7 +2,6 @@
 
 SOURCEC  = dmlabeleph.c
 SOURCEH  =
-DIRS     =
 LIBBASE  = libpetscdm
 DIRS     = plex
 MANSEC   = DM

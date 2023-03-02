@@ -3,7 +3,6 @@
 
 SOURCEC  = zplexcreate.c zplexdistribute.c zplexsubmesh.c zplexexodusii.c zplexgmsh.c zplexfluent.c zplexextrude.c
 SOURCEH  =
-DIRS     =
 LIBBASE  = libpetscdm
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

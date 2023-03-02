@@ -6,7 +6,6 @@ SOURCEHIP = sfhip.hip.cpp
 SOURCEH  =
 LIBBASE  = libpetscvec
 MANSEC   = PetscSF
-DIRS     =
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules

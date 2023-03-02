@@ -3,7 +3,6 @@
 
 SOURCEC  = mmgadapt.c
 SOURCEH  =
-DIRS     =
 LIBBASE  = libpetscdm
 MANSEC   = DM
 SUBMANSEC= DMPlex

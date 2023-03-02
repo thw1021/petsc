@@ -2,7 +2,6 @@
 
 SOURCEC        = dmlabelephplex.c
 SOURCEH        =
-DIRS           =
 LIBBASE        = libpetscdm
 MANSEC         = DM
 SUBMANSEC      = DMLabel

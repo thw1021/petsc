@@ -3,7 +3,6 @@
 SOURCEH   =
 SOURCEC   = sfgatherv.c
 LIBBASE   = libpetscvec
-DIRS      =
 MANSEC    = Vec
 SUBMANSEC = PetscSF
 

@@ -3,7 +3,6 @@
 
 SOURCEC  = zroswf.c
 SOURCEH  =
-DIRS     =
 LIBBASE  = libpetscts
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

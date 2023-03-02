@@ -3,7 +3,6 @@
 
 SOURCEC  = pragmaticadapt.c
 SOURCEH  =
-DIRS     =
 LIBBASE  = libpetscdm
 MANSEC   = DM
 SUBMANSEC= DMPlex

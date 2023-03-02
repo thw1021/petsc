@@ -3,7 +3,6 @@
 
 SOURCEH   =
 SOURCEC   = pams.c
-DIRS      = 
 MANSEC    = Sys
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

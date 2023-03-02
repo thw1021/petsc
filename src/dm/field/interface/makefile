@@ -2,7 +2,6 @@
 
 SOURCEC  = dmfield.c dmfieldregi.c dlregisdmfield.c
 SOURCEH  =
-DIRS     =
 LIBBASE  = libpetscdm
 MANSEC   = DM
 

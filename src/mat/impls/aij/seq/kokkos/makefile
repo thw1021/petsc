@@ -4,7 +4,6 @@
 SOURCEKOKKOS  = aijkok.kokkos.cxx
 SOURCEH       = aijkok.hpp
 LIBBASE       = libpetscmat
-DIRS          =
 MANSEC        = Mat
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

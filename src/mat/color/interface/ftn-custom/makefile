@@ -3,7 +3,6 @@
 
 SOURCEC  = zmatcoloringf.c
 SOURCEH  =
-DIRS     =
 LIBBASE  = libpetscmat
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules

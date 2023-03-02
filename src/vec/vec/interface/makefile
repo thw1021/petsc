@@ -2,7 +2,6 @@
 
 SOURCEC  = vector.c veccreate.c vecreg.c vecregall.c dlregisvec.c rvector.c
 SOURCEH  =
-DIRS     =
 LIBBASE  = libpetscvec
 MANSEC   = Vec
 

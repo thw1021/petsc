@@ -5,7 +5,6 @@ SOURCEH       =
 SOURCEC       =
 SOURCECU      = sfnvshmem.cu
 LIBBASE       = libpetscvec
-DIRS          =
 MANSEC        = Vec
 SUBMANSEC     = PetscSF
 

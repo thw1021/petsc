@@ -4,7 +4,6 @@
 SOURCEC  = snessaws.c
 SOURCEH  =
 LIBBASE  = libpetscsnes
-DIRS     =
 MANSEC   = SNES
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

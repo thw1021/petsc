@@ -5,7 +5,6 @@
 SOURCECXX = aijviennacl.cxx
 SOURCEH   = viennaclmatimpl.h
 LIBBASE   = libpetscmat
-DIRS      =
 MANSEC    = Mat
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

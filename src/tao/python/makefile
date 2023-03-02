@@ -3,7 +3,6 @@
 SOURCEC  = pythontao.c
 SOURCEH  =
 LIBBASE  = libpetsctao
-DIRS     =
 MANSEC   = Tao
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

@@ -3,7 +3,6 @@
 SOURCEC  = diagbrdn.c
 SOURCEH  = diagbrdn.h
 LIBBASE  = libpetscksp
-DIRS     =
 MANSEC   = KSP
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

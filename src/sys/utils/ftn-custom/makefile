@@ -3,7 +3,6 @@
 
 SOURCEC  = zarchf.c zstrf.c zfhostf.c zsortsof.c
 SOURCEH  =
-DIRS     =
 LIBBASE  = libpetscsys
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

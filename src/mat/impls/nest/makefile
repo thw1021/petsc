@@ -3,7 +3,6 @@
 SOURCEC  = matnest.c
 SOURCEH  = matnestimpl.h
 LIBBASE  = libpetscmat
-DIRS     =
 MANSEC   = Mat
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

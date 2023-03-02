@@ -3,7 +3,6 @@
 
 SOURCEC  = zpythonf.c
 SOURCEH  =
-DIRS     =
 LIBBASE  = libpetscsys
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

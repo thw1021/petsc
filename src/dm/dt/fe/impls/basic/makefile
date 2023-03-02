@@ -2,7 +2,6 @@
 
 SOURCEC   = febasic.c
 LIBBASE   = libpetscdm
-DIRS      =
 MANSEC    = DM
 SUBMANSEC = FE
 

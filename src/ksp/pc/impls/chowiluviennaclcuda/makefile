@@ -5,7 +5,6 @@
 SOURCECU  = chowiluviennacl.cu
 SOURCEH   =
 LIBBASE   = libpetscksp
-DIRS      =
 MANSEC    = KSP
 SUBMANSEC = PC
 

@@ -3,7 +3,6 @@
 SOURCEC  =
 SOURCEF90= optionenum.F90
 SOURCEH  =
-DIRS     =
 LIBBASE  = libpetscsys
 MANSEC   = Sys
 

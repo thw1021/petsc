@@ -3,7 +3,6 @@
 
 SOURCEC  = zfieldsplitf.c
 SOURCEH  =
-DIRS     =
 LIBBASE  = libpetscksp
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

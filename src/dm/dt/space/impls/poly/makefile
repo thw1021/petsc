@@ -2,7 +2,6 @@
 
 SOURCEC   = spacepoly.c
 LIBBASE   = libpetscdm
-DIRS      =
 MANSEC    = DM
 SUBMANSEC = SPACE
 

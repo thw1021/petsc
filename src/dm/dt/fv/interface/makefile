@@ -2,7 +2,6 @@
 
 SOURCEC   = fv.c
 SOURCEH   =
-DIRS      =
 LIBBASE   = libpetscdm
 MANSEC    = DM
 SUBMANSEC = FV

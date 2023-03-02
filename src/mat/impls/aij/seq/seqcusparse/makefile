@@ -4,7 +4,6 @@
 SOURCECU  = aijcusparse.cu aijcusparseband.cu
 SOURCEH   = cusparsematimpl.h
 LIBBASE   = libpetscmat
-DIRS      =
 MANSEC    = Mat
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

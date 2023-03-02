@@ -5,7 +5,6 @@
 SOURCECXX = saviennacl.cxx
 SOURCEH   =
 LIBBASE   = libpetscksp
-DIRS      =
 MANSEC    = KSP
 SUBMANSEC = PC
 

@@ -4,7 +4,6 @@
 
 SOURCEC  = snesmfj2.c snesnoise.c snesdnest.c
 SOURCEH  =
-DIRS     =
 LIBBASE  = libpetscsnes
 MANSEC   = SNES
 

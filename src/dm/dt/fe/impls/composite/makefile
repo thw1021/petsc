@@ -2,7 +2,6 @@
 
 SOURCEC   = fecomposite.c
 LIBBASE   = libpetscdm
-DIRS      =
 MANSEC    = DM
 SUBMANSEC = FE
 

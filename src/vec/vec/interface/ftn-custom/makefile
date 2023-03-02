@@ -3,7 +3,6 @@
 
 SOURCEC  = zvecregf.c zvectorf.c
 SOURCEH  =
-DIRS     =
 LIBBASE  = libpetscvec
 MANSEC   = Vec
 

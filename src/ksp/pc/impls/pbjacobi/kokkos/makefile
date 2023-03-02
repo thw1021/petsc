@@ -5,7 +5,6 @@ SOURCEC   =
 SOURCEKOKKOS  = pbjacobi_kok.kokkos.cxx
 SOURCEH   =
 LIBBASE   = libpetscksp
-DIRS      =
 MANSEC    = KSP
 SUBMANSEC = PC
 

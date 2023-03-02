@@ -3,7 +3,6 @@
 
 SOURCEC  = zdrawf.c  zdrawregf.c  zdtextf.c  zdtrif.c
 SOURCEH  =
-DIRS     =
 LIBBASE  = libpetscsys
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

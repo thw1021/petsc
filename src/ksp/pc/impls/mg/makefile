@@ -5,7 +5,6 @@ SOURCEH   = ../../../../../include/petsc/private/pcmgimpl.h
 LIBBASE   = libpetscksp
 MANSEC    = KSP
 SUBMANSEC = PC
-DIRS      =
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules

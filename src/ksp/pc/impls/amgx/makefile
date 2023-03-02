@@ -7,7 +7,6 @@ FFLAGS    =
 SOURCECXX = amgx.cxx
 SOURCEH   =
 LIBBASE   = libpetscksp
-DIRS      =
 MANSEC    = KSP
 SUBMANSEC = PC
 

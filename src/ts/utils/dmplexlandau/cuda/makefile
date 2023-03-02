@@ -4,7 +4,6 @@
 SOURCEC  =
 SOURCECU = landaucu.cu
 SOURCEH  =
-DIRS     =
 LIBBASE  = libpetscts
 MANSEC   = TS
 SUBMANSEC= LANDAU
