@@ -252,24 +252,20 @@ static PetscErrorCode MatSetMPIAIJKokkosWithSplitSeqAIJKokkosMatrices(Mat mat, M
   Reduce two sets of global indices into local ones
 
   Input Parameters:
-+  n1          - size of garray1[]
-.  garray1[n1] - a sorted global index array (it has no duplicates)
-.  m           - size of indices[]
--  indices[m]  - a unsorted global index array (it might have duplicates), which will also be updated on output
++  n1          - size of garray1[], the first set
+.  garray1[n1] - a sorted global index array (without duplicates)
+.  m           - size of indices[], the second set
+-  indices[m]  - a unsorted global index array (might have duplicates), which will be updated on output into local ones
 
   Output Parameters:
-+  n2          - size of garray2[]
-.  garray2[n2] - allocated by callee using PetscMalloc1(). Contains sorted unique global indices after combining garray1[] and indices[]. Caller needs to free it.
-.  map[n1]     - allocated by caller. It does this mapping: garray1[i] = garray2[map[i]]
--  indices[m]  - on output, global indices in this array are rewritten with local ones
++  n2          - size of garray2[], the merged set, which combines garray1[] and indices[]
+.  garray2[n2] - allocated by callee using PetscMalloc1(). Contains sorted unique global indices (without duplicates). Caller needs to free it.
+.  map[n1]     - allocated by caller. It gives garray1[i] = garray2[map[i]]
+-  indices[m]  - on output, global indices in this array are rewritten with local ones, i.e, indices_input[i] = garray2[indices_output[i]]
 
-  Let's say there are n1 such indices stored in garray1[]. Giving an example, say
-
-    Fo's global column indices = {2, 4, 8, 9}
-
+   Example, say
     n1         = 5
     garray1[5] = {1, 4, 7, 8, 10}
-
     m          = 4
     indices[4] = {2, 4, 8, 9}
 
@@ -280,14 +276,14 @@ static PetscErrorCode MatSetMPIAIJKokkosWithSplitSeqAIJKokkosMatrices(Mat mat, M
    And we have map[] to connect "garray1[i] = garray2[map[i]], i=[0,n1)"
     map[5] = {0, 2, 3, 4, 6}
 
-   On output, indices[] is updated with local indices, i.e., indices_input[i] = garray2[indices_output[i]]
+   On output, indices[] is updated with local indices
     indices[4] = {1, 2, 4, 5}
 */
-static PetscErrorCode ReduceGlobalIndices(PetscInt n1, const PetscInt *garray1, PetscInt m, PetscInt *indices, PetscInt *n2_, PetscInt **garray2_, PetscInt *map)
+static PetscErrorCode ReduceTwoSetsOfGlobalIndices(PetscInt n1, const PetscInt *garray1, PetscInt m, PetscInt *indices, PetscInt *n2_, PetscInt **garray2_, PetscInt *map)
 {
   PetscHMapI    g2l = nullptr;
   PetscHashIter iter;
-  PetscInt      key, val, tot; // total unique global indices. key is global id; val is local id
+  PetscInt      tot, key, val; // total unique global indices. key is global id; val is local id
   PetscInt      n2, *garray2;
 
   PetscFunctionBegin;
@@ -333,29 +329,34 @@ static PetscErrorCode ReduceGlobalIndices(PetscInt n1, const PetscInt *garray1, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* MatMPIAIJKokkosReduce - Reduce rows of a MPIAIJKOKKOS matrix (E, in split form) to produce another Kokkos Csr matrix (F, also in split form)
+/*
+  MatMPIAIJKokkosReduce - Reduce rows of a MPIAIJKOKKOS matrix (E, in split form) to produce another matrix (F, also in split form, stored in mm)
 
-  It is the reverse of MatMPIAIJKokkosBcast in some sense.
+  It is the reverse of MatMPIAIJKokkosBcast() in some sense, but with a different signature since we do not really need a fully populated MPIAIJKOKKOS E.
 
-  Think each row of E as a leaf, then the given ownerSF specifies roots of the leaves. Roots may connect to multiple leaves.
-  In this routine, we sum leaves (rows) at their roots to form potentially longer rows in F. F's number of rows will be nroots of ownerSF.
+  Think each row of E as a leaf, then the given ownerSF specifies roots for the leaves. Roots may connect to multiple leaves.
+  In this routine, we sparse-merge leaves (rows) at their roots to form potentially longer rows in F. F's number of rows will be nroots of ownerSF.
 
   Input Parameters:
 +  comm       - MPI communicator of E
 .  A          - diag block of E, using local column indices
 .  B          - off-diag block of E, using local column indices
 .  cstart      - (global) start column of Ed
-.  cend        - (global) end column + 1 of Ed.  In other words, Ed's global column indices are in range of [cstart, cend)
+.  cend        - (global) end column + 1 of Ed.  In other words, E's column ownership is in range of [cstart, cend)
 .  garray1[n1] - global column indices of Eo. Here n1 is Eo's column size.
 .  ownerSF     - the SF specifies ownership (root) of rows in E
 .  reuse       - either MAT_INITIAL_MATRIX or MAT_REUSE_MATRIX
--  mm          - to stash matproduct intermediate data structures
+-  mm          - to stash intermediate data structures for reuse
 
   Output Parameters:
-+  map[n1]  - allocated by caller. It maps garray1[] to garray2[]. Not used when reuse = MAT_REUSE_MATRIX
--  mm       - contains various info, such as garray2[], Fd, Fo, etc.
++  map[n1]  - allocated by caller. It maps garray1[] to garray2[]. See more at ReduceTwoSetsOfGlobalIndices().
+-  mm       - contains various info, such as garray2[], F (Fd, Fo) etc.
+
+  Notes:
+  When reuse = MAT_REUSE_MATRIX, cstart, cend, garray1, ownerSF, map are not significant.
+
  */
-static PetscErrorCode MatMPIAIJKokkosReduce(MPI_Comm comm, KokkosCsrMatrix A, KokkosCsrMatrix B, PetscInt cstart, PetscInt cend, const PetscInt *garray1, PetscSF ownerSF, MatReuse reuse, PetscInt *map, MatMatStruct_AtB *mm)
+static PetscErrorCode MatMPIAIJKokkosReduceBegin(MPI_Comm comm, KokkosCsrMatrix A, KokkosCsrMatrix B, PetscInt cstart, PetscInt cend, const PetscInt *garray1, PetscSF ownerSF, MatReuse reuse, PetscInt *map, MatMatStruct_AtB *mm)
 {
   PetscFunctionBegin;
   if (reuse == MAT_INITIAL_MATRIX) {
@@ -620,7 +621,7 @@ static PetscErrorCode MatMPIAIJKokkosReduce(MPI_Comm comm, KokkosCsrMatrix A, Ko
     // Combine global column indices in garray1[] and Foj[]
     PetscInt n2, *garray2;
 
-    PetscCall(ReduceGlobalIndices(n1, garray1, Fonz, Foj, &n2, &garray2, map));
+    PetscCall(ReduceTwoSetsOfGlobalIndices(n1, garray1, Fonz, Foj, &n2, &garray2, map));
     mm->sf       = reduceSF;
     mm->leafBuf  = MatScalarKokkosView("leafBuf", nleaves);
     mm->rootBuf  = MatScalarKokkosView("rootBuf", nroots);
@@ -652,14 +653,6 @@ static PetscErrorCode MatMPIAIJKokkosReduce(MPI_Comm comm, KokkosCsrMatrix A, Ko
   const auto &E_NzLeft = mm->E_NzLeft;
   auto       &leafBuf  = mm->leafBuf;
   auto       &rootBuf  = mm->rootBuf;
-  auto       &Fda      = mm->Fd.values;
-  const auto &Fdjmap   = mm->Fdjmap;
-  const auto &Fdjperm  = mm->Fdjperm;
-  auto        Fdnz     = mm->Fd.nnz();
-  auto       &Foa      = mm->Fo.values;
-  const auto &Fojmap   = mm->Fojmap;
-  const auto &Fojperm  = mm->Fojperm;
-  auto        Fonz     = mm->Fo.nnz();
   PetscSF     reduceSF = mm->sf;
 
   // Copy rows in A/B of E to leafBuf, then pass it to rootBuf
@@ -683,6 +676,25 @@ static PetscErrorCode MatMPIAIJKokkosReduce(MPI_Comm comm, KokkosCsrMatrix A, Ko
       });
     });
   PetscCall(PetscSFReduceWithMemTypeBegin(reduceSF, MPIU_SCALAR, PETSC_MEMTYPE_KOKKOS, leafBuf.data(), PETSC_MEMTYPE_KOKKOS, rootBuf.data(), MPI_REPLACE));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+// To finsih MatMPIAIJKokkosReduce.
+static PetscErrorCode MatMPIAIJKokkosReduceEnd(MPI_Comm comm, KokkosCsrMatrix A, KokkosCsrMatrix B, PetscInt cstart, PetscInt cend, const PetscInt *garray1, PetscSF ownerSF, MatReuse reuse, PetscInt *map, MatMatStruct_AtB *mm)
+{
+  PetscFunctionBegin;
+  auto       &leafBuf  = mm->leafBuf;
+  auto       &rootBuf  = mm->rootBuf;
+  auto       &Fda      = mm->Fd.values;
+  const auto &Fdjmap   = mm->Fdjmap;
+  const auto &Fdjperm  = mm->Fdjperm;
+  auto        Fdnz     = mm->Fd.nnz();
+  auto       &Foa      = mm->Fo.values;
+  const auto &Fojmap   = mm->Fojmap;
+  const auto &Fojperm  = mm->Fojperm;
+  auto        Fonz     = mm->Fo.nnz();
+  PetscSF     reduceSF = mm->sf;
+
   PetscCall(PetscSFReduceEnd(reduceSF, MPIU_SCALAR, leafBuf.data(), rootBuf.data(), MPI_REPLACE));
 
   // Reduce data in rootBuf to Fd and Fo
@@ -702,36 +714,22 @@ static PetscErrorCode MatMPIAIJKokkosReduce(MPI_Comm comm, KokkosCsrMatrix A, Ko
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* MatMPIAIJKokkosBcast - Bcast local rows of a MPIAIJKOKKOS matrix (E) to produce a local matrix (F) in split form
+/*
+  MatMPIAIJKokkosBcast - Bcast local rows of a MPIAIJKOKKOS matrix (E) to produce a local matrix (F, stored in mm) in split form
 
-   This is a complex routine. It is essentially the MPIAIJKOKKOS counterpart of MatGetBrowsOfAoCols_MPIAIJ, but supports
-   device and uses PetscSF, and involves various index mapping.
+  This is a complex routine. It is essentially the MPIAIJKOKKOS counterpart of MatGetBrowsOfAoCols_MPIAIJ, but supports
+  device and involves various index mapping.
 
-   In the given ownerSF, leaves correspond to rows in F, and roots correspond to rows in E. Roots may connect to multiple leaves.
-   Suppose F's j-th row is connected to a root identified by PetscSFNode (k,i), it means we need to bcast the i-th row of E on rank k
-   to j-th row of F. ownerSF is not an arbitrary SF, instead it is the Mvctx of another MPIAIJ matrix A that is able to perform A*E.
-   F has the same column layout as E.
+  In the given ownerSF, leaves correspond to rows in F, and roots correspond to rows in E. Roots may connect to multiple leaves.
+  Suppose F's j-th row is connected to a root identified by PetscSFNode (k,i), it means we need to bcast the i-th row of E on rank k
+  to j-th row of F. ownerSF is not an arbitrary SF, instead it is the Mvctx of another MPIAIJ matrix A that is able to perform A*E.
+  F has the same column layout as E.
 
-   Conceptually F has global column indices. In this routine, we spit F into diagonal Fd and off-diagonal Fo.
-   Fd uses local column indices, which are easy to compute. We just need to substract the "local column range start" from the global indices.
-   Fo had global column indices at first. We will reduce them into local ones. In doing that, we also take into account the global
-   column indices that E's off-diag block has. Let's say there are n1 such indices stored in garray1[]. Giving an example, say
-
-    Fo's global column indices = {2, 4, 8, 9}
-
-   And there are n1=5 global indices in garray1[]
-    garray1[5] = {1, 4, 7, 8, 10}
-
-   Combining them together, we have n2=7 global indices in garray2[]
-    garray2[7] = {1, 2, 4, 7, 8, 9, 10}
-
-   And we have map[] to connect "garray1[i] = garray2[map[i]], i=[0,n1)"
-     map[5] = {0, 2, 3, 4, 6}
-
-   On output, Fo has these local indices (with globals in garray2[]}
-    Fo's local column indices = {1, 2, 4, 5}
-
-   Collective on comm of ownerSF
+  Conceptually F has global column indices. In this routine, we spit F into diagonal Fd and off-diagonal Fo.
+  Fd uses local column indices, which are easy to compute. We just need to substract the "local column range start" from the global indices.
+  Fo had global column indices at first. We will reduce them into local ones. In doing that, we also take into account the global
+  column indices that E's off-diag block has. Let's say there are n1 such indices stored in garray1[]. We will reduce them along with
+  column indices in Fo and update Fo with local indices.
 
    Input Parameters:
 +   E       - the MPIAIJKOKKOS matrix
@@ -739,12 +737,15 @@ static PetscErrorCode MatMPIAIJKokkosReduce(MPI_Comm comm, KokkosCsrMatrix A, Ko
 .   reuse   - either MAT_INITIAL_MATRIX or MAT_REUSE_MATRIX
 -   mm      - to stash matproduct intermediate data structures
 
-   In/Output Parameters (out when resue = MAT_INITIAL_MATRIX, inout when reuse = MAT_REUSE_MATRIX)
-+   map[n1] - allocated by caller. It maps garray1[] to garray2[]. Not used when reuse = MAT_REUSE_MATRIX
+    Output Parameters:
++   map[n1] - allocated by caller. It maps garray1[] to garray2[]. See more at ReduceTwoSetsOfGlobalIndices.
 -   mm      - contains various info, such as garray2[], Fd, Fo, etc.
 
+    Notes:
+    When reuse = MAT_REUSE_MATRIX, ownerSF, map are not significant.
+    The routine is provide in split-phase form MatMPIAIJKokkosBcastBegin/End() to provide computation/communication opportunities.
 */
-static PetscErrorCode MatMPIAIJKokkosBcast(Mat E, PetscSF ownerSF, MatReuse reuse, PetscInt *map, MatMatStruct_AB *mm)
+static PetscErrorCode MatMPIAIJKokkosBcastBegin(Mat E, PetscSF ownerSF, MatReuse reuse, PetscInt *map, MatMatStruct_AB *mm)
 {
   Mat_MPIAIJ       *empi = static_cast<Mat_MPIAIJ *>(E->data);
   Mat               A = empi->A, B = empi->B; // diag and off-diag
@@ -911,7 +912,7 @@ static PetscErrorCode MatMPIAIJKokkosBcast(Mat E, PetscSF ownerSF, MatReuse reus
 
     // Reduce global indices in Foj[] and garray1[] into local ones
     PetscInt n2, *garray2;
-    PetscCall(ReduceGlobalIndices(n1, garray1, Fonz, Foj, &n2, &garray2, map));
+    PetscCall(ReduceTwoSetsOfGlobalIndices(n1, garray1, Fonz, Foj, &n2, &garray2, map));
 
     // Record the plans built above, for reuse
     PetscIntKokkosViewHost tmp(const_cast<PetscInt *>(irootloc), ioffset[niranks]); // irootloc[] is owned by ownerSF. We create a copy for safety
@@ -949,16 +950,7 @@ static PetscErrorCode MatMPIAIJKokkosBcast(Mat E, PetscSF ownerSF, MatReuse reus
   const auto &Bi = bkok->i_dual.view_device();
 
   // Fetch the plans
-  const auto &Fd  = mm->Fd;
-  const auto &Fo  = mm->Fo;
-  const auto &Fdi = Fd.graph.row_map;
-  const auto &Foi = Fo.graph.row_map;
-  auto       &Fda = Fd.values;
-  auto       &Foa = Fo.values;
-  auto        Fm  = Fd.numRows();
-
   PetscIntKokkosView  &E_NzLeft  = mm->E_NzLeft;
-  PetscIntKokkosView  &F_NzLeft  = mm->F_NzLeft;
   PetscSF             &bcastSF   = mm->sf;
   MatScalarKokkosView &rootBuf   = mm->rootBuf;
   MatScalarKokkosView &leafBuf   = mm->leafBuf;
@@ -986,6 +978,37 @@ static PetscErrorCode MatMPIAIJKokkosBcast(Mat E, PetscSF ownerSF, MatReuse reus
       });
     });
   PetscCall(PetscSFBcastWithMemTypeBegin(bcastSF, MPIU_SCALAR, PETSC_MEMTYPE_KOKKOS, rootBuf.data(), PETSC_MEMTYPE_KOKKOS, leafBuf.data(), MPI_REPLACE));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+// To finish MatMPIAIJKokkosBcast.
+static PetscErrorCode MatMPIAIJKokkosBcastEnd(Mat E, PetscSF ownerSF, MatReuse reuse, PetscInt *map, MatMatStruct_AB *mm)
+{
+  Mat_MPIAIJ       *empi = static_cast<Mat_MPIAIJ *>(E->data);
+  Mat               A = empi->A, B = empi->B; // diag and off-diag
+  Mat_SeqAIJKokkos *akok = static_cast<Mat_SeqAIJKokkos *>(A->spptr), *bkok = static_cast<Mat_SeqAIJKokkos *>(B->spptr);
+
+  PetscFunctionBegin;
+  // Handy aliases
+  const auto &Aa = akok->a_dual.view_device();
+  const auto &Ba = bkok->a_dual.view_device();
+  const auto &Ai = akok->i_dual.view_device();
+  const auto &Bi = bkok->i_dual.view_device();
+
+  // Fetch the plans
+  const auto &Fd  = mm->Fd;
+  const auto &Fo  = mm->Fo;
+  const auto &Fdi = Fd.graph.row_map;
+  const auto &Foi = Fo.graph.row_map;
+  auto       &Fda = Fd.values;
+  auto       &Foa = Fo.values;
+  auto        Fm  = Fd.numRows();
+
+  PetscIntKokkosView  &F_NzLeft = mm->F_NzLeft;
+  PetscSF             &bcastSF  = mm->sf;
+  MatScalarKokkosView &rootBuf  = mm->rootBuf;
+  MatScalarKokkosView &leafBuf  = mm->leafBuf;
+
   PetscCall(PetscSFBcastEnd(bcastSF, MPIU_SCALAR, rootBuf.data(), leafBuf.data(), MPI_REPLACE));
 
   // Update Fda and Foa with new data in leafBuf (as if it is Fa)
@@ -1051,16 +1074,18 @@ static PetscErrorCode MatProductSymbolic_MPIAIJKokkos_AtB(Mat_Product *product, 
   PetscCallCXX(KokkosSparse::spgemm_numeric(mm->kh3, *Aot, false, Bd, false, mm->C3));
   PetscCallCXX(KokkosSparse::spgemm_numeric(mm->kh4, *Aot, false, Bo, false, mm->C4));
 
-  // Reduce E (i.e., C3 and C4)'s rows to form F
+  // Reduce E (i.e., C3 and C4)'s rows to form F, and overlap the communication
   PetscIntKokkosViewHost map_h("map_h", bmpi->B->cmap->n);
   PetscCall(MatGetOwnershipRangeColumn(B, &cstart, &cend));
-  PetscCall(MatMPIAIJKokkosReduce(comm, mm->C3, mm->C4, cstart, cend, bmpi->garray, ampi->Mvctx, MAT_INITIAL_MATRIX, map_h.data(), mm));
+  PetscCall(MatMPIAIJKokkosReduceBegin(comm, mm->C3, mm->C4, cstart, cend, bmpi->garray, ampi->Mvctx, MAT_INITIAL_MATRIX, map_h.data(), mm));
 
   // Adt * (B's diag + B's off-diag)
   PetscCallCXX(KokkosSparse::spgemm_symbolic(mm->kh1, *Adt, false, Bd, false, mm->C1));
   PetscCallCXX(KokkosSparse::spgemm_symbolic(mm->kh2, *Adt, false, Bo, false, mm->C2_mid));
   PetscCallCXX(KokkosSparse::spgemm_numeric(mm->kh1, *Adt, false, Bd, false, mm->C1));
   PetscCallCXX(KokkosSparse::spgemm_numeric(mm->kh2, *Adt, false, Bo, false, mm->C2_mid));
+
+  PetscCall(MatMPIAIJKokkosReduceEnd(comm, mm->C3, mm->C4, cstart, cend, bmpi->garray, ampi->Mvctx, MAT_INITIAL_MATRIX, map_h.data(), mm));
 
   // Create C2, which shares a, i arrays with C2_mid, but with new column indices and potentially larger column size
   MatColIdxKokkosView oldj = mm->C2_mid.graph.entries, newj("j", oldj.extent(0));
@@ -1097,12 +1122,14 @@ static PetscErrorCode MatProductNumeric_MPIAIJKokkos_AtB(Mat_Product *product, M
   PetscCallCXX(KokkosSparse::spgemm_numeric(mm->kh3, *Aot, false, Bd, false, mm->C3));
   PetscCallCXX(KokkosSparse::spgemm_numeric(mm->kh4, *Aot, false, Bo, false, mm->C4));
 
-  // Reduce E (i.e., C3 and C4)'s rows to form F
-  PetscCall(MatMPIAIJKokkosReduce(comm, mm->C3, mm->C4, 0, 0, NULL, NULL, MAT_REUSE_MATRIX, NULL, mm));
+  // Reduce E (i.e., C3 and C4)'s rows to form F, and overlap the communication
+  PetscCall(MatMPIAIJKokkosReduceBegin(comm, mm->C3, mm->C4, 0, 0, NULL, NULL, MAT_REUSE_MATRIX, NULL, mm));
 
   // Adt * (B's diag + B's off-diag)
   PetscCallCXX(KokkosSparse::spgemm_numeric(mm->kh1, *Adt, false, Bd, false, mm->C1));
   PetscCallCXX(KokkosSparse::spgemm_numeric(mm->kh2, *Adt, false, Bo, false, mm->C2_mid));
+
+  PetscCall(MatMPIAIJKokkosReduceEnd(comm, mm->C3, mm->C4, 0, 0, NULL, NULL, MAT_REUSE_MATRIX, NULL, mm));
 
   // C = (C1+Fd, C2+Fo)
   PetscCallCXX(KokkosSparse::spadd_numeric(&mm->kh1, 1.0, mm->C1, 1.0, mm->Fd, mm->Cd));
@@ -1147,6 +1174,10 @@ static PetscErrorCode MatProductSymbolic_MPIAIJKokkos_AB(Mat_Product *product, M
   mm->kh3.create_spgemm_handle(spgemm_alg);
   mm->kh4.create_spgemm_handle(spgemm_alg);
 
+  // Bcast B's rows to form F, and overlap the communication
+  PetscIntKokkosViewHost map_h("map_h", bmpi->B->cmap->n);
+  MatMPIAIJKokkosBcastBegin(B, ampi->Mvctx, MAT_INITIAL_MATRIX, map_h.data(), mm);
+
   // A's diag * (B's diag + B's off-diag)
   PetscCallCXX(KokkosSparse::spgemm_symbolic(mm->kh1, Ad, false, Bd, false, mm->C1));
   PetscCallCXX(KokkosSparse::spgemm_symbolic(mm->kh2, Ad, false, Bo, false, mm->C2_mid)); // C2 aliases with C2_mid, except with new column indices
@@ -1155,9 +1186,7 @@ static PetscErrorCode MatProductSymbolic_MPIAIJKokkos_AB(Mat_Product *product, M
   PetscCallCXX(KokkosSparse::spgemm_numeric(mm->kh1, Ad, false, Bd, false, mm->C1));
   PetscCallCXX(KokkosSparse::spgemm_numeric(mm->kh2, Ad, false, Bo, false, mm->C2_mid));
 
-  // Bcast B's rows to form F
-  PetscIntKokkosViewHost map_h("map_h", bmpi->B->cmap->n);
-  MatMPIAIJKokkosBcast(B, ampi->Mvctx, MAT_INITIAL_MATRIX, map_h.data(), mm);
+  MatMPIAIJKokkosBcastEnd(B, ampi->Mvctx, MAT_INITIAL_MATRIX, map_h.data(), mm);
 
   // A's off-diag * (F's diag + F's off-diag)
   PetscCallCXX(KokkosSparse::spgemm_symbolic(mm->kh3, Ao, false, mm->Fd, false, mm->C3));
@@ -1172,7 +1201,7 @@ static PetscErrorCode MatProductSymbolic_MPIAIJKokkos_AB(Mat_Product *product, M
     oldj.extent(0), KOKKOS_LAMBDA(const PetscInt i) { newj(i) = map(oldj(i)); });
   mm->C2 = KokkosCsrMatrix("C2", mm->C2_mid.numRows(), mm->n /*new column size*/, mm->C2_mid.nnz(), mm->C2_mid.values, mm->C2_mid.graph.row_map, newj);
 
-  // C = (C1+C3, C2+C4)
+  // C = (Cd, Co) = (C1+C3, C2+C4)
   mm->kh1.create_spadd_handle(true); // C1, C3 are sorted
   mm->kh2.create_spadd_handle(true); // C2, C4 are sorted
   PetscCallCXX(KokkosSparse::spadd_symbolic(&mm->kh1, mm->C1, mm->C3, mm->Cd));
@@ -1194,18 +1223,20 @@ static PetscErrorCode MatProductNumeric_MPIAIJKokkos_AB(Mat_Product *product, Ma
   PetscCall(MatSeqAIJKokkosGetKokkosCsrMatrix(bmpi->A, &Bd));
   PetscCall(MatSeqAIJKokkosGetKokkosCsrMatrix(bmpi->B, &Bo));
 
+  // Bcast B's rows to form F, and overlap the communication
+  PetscCallCXX(MatMPIAIJKokkosBcastBegin(B, NULL, MAT_REUSE_MATRIX, NULL, mm));
+
   // A's diag * (B's diag + B's off-diag)
   PetscCallCXX(KokkosSparse::spgemm_numeric(mm->kh1, Ad, false, Bd, false, mm->C1));
   PetscCallCXX(KokkosSparse::spgemm_numeric(mm->kh2, Ad, false, Bo, false, mm->C2_mid));
 
-  // Bcast B's rows to form F
-  PetscCallCXX(MatMPIAIJKokkosBcast(B, ampi->Mvctx, MAT_REUSE_MATRIX, NULL, mm));
+  PetscCallCXX(MatMPIAIJKokkosBcastEnd(B, NULL, MAT_REUSE_MATRIX, NULL, mm));
 
   // A's off-diag * (F's diag + F's off-diag)
   PetscCallCXX(KokkosSparse::spgemm_numeric(mm->kh3, Ao, false, mm->Fd, false, mm->C3));
   PetscCallCXX(KokkosSparse::spgemm_numeric(mm->kh4, Ao, false, mm->Fo, false, mm->C4));
 
-  // C = (C1+C3, C2+C4)
+  // C = (Cd, Co) = (C1+C3, C2+C4)
   PetscCallCXX(KokkosSparse::spadd_numeric(&mm->kh1, 1.0, mm->C1, 1.0, mm->C3, mm->Cd));
   PetscCallCXX(KokkosSparse::spadd_numeric(&mm->kh2, 1.0, mm->C2, 1.0, mm->C4, mm->Co));
   PetscFunctionReturn(PETSC_SUCCESS);
