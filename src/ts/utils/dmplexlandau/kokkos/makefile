@@ -2,7 +2,6 @@
 -include ../../../../../petscdir.mk
 
 SOURCEKOKKOS = landau.kokkos.cxx
-SOURCECU =
 SOURCEF  =
 SOURCEH  =
 DIRS     =

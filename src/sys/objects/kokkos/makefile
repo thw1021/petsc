@@ -2,7 +2,6 @@
 #requirespackage 'PETSC_HAVE_KOKKOS'
 
 SOURCEC  =
-SOURCECU =
 SOURCEKOKKOS = kinit.kokkos.cxx
 SOURCEF  =
 SOURCEH  =

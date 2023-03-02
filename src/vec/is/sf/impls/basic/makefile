@@ -2,7 +2,6 @@
 
 SOURCEH       =
 SOURCEC       = sfbasic.c sfpack.c sfmpi.c
-SOURCECU      =
 LIBBASE       = libpetscvec
 DIRS          = allgatherv allgather gatherv gather alltoall neighbor cuda hip kokkos nvshmem
 MANSEC        = Vec

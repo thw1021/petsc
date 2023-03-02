@@ -2,7 +2,6 @@
 #requirespackage 'PETSC_HAVE_HTOOL'
 
 SOURCECXX = htool.cxx
-SOURCECU  =
 SOURCEF   =
 SOURCEH   =
 LIBBASE   = libpetscmat

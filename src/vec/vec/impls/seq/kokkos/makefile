@@ -2,7 +2,6 @@
 #requirespackage 'PETSC_HAVE_KOKKOS_KERNELS'
 
 SOURCEC  =
-SOURCECU =
 SOURCEKOKKOS = veckok.kokkos.cxx
 SOURCEF  =
 SOURCEH  =
