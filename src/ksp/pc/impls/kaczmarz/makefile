@@ -2,7 +2,6 @@
 
 CFLAGS    = ${GAMG_INCLUDE}
 SOURCEC   = kaczmarz.c
-SOURCEH   =
 LIBBASE   = libpetscksp
 MANSEC    = KSP
 SUBMANSEC = PC

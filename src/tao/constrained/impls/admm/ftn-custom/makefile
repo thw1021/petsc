@@ -2,7 +2,6 @@
 #requirespackage 	'PETSC_HAVE_FORTRAN'
 
 SOURCEC = zadmmf.c
-SOURCEH =
 DIR     =
 LIBBASE = libpetsctao
 

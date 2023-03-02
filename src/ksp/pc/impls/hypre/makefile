@@ -3,7 +3,6 @@
 
 CFLAGS    = ${HYPRE_INCLUDE}
 SOURCEC   = hypre.c
-SOURCEH   =
 LIBBASE   = libpetscksp
 MANSEC    = KSP
 SUBMANSEC = PC

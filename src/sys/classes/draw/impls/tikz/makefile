@@ -1,7 +1,6 @@
 -include ../../../../../../petscdir.mk
 
 SOURCEC   = tikz.c
-SOURCEH   =
 MANSEC    = Sys
 SUBMANSEC = Draw
 LIBBASE   = libpetscsys

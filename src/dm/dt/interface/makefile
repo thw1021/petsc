@@ -1,7 +1,6 @@
 -include ../../../../petscdir.mk
 
 SOURCEC  = dt.c dtds.c dtaltv.c dtweakform.c dtprob.c
-SOURCEH  =
 LIBBASE  = libpetscdm
 MANSEC   = DM
 SUBMANSEC = DT

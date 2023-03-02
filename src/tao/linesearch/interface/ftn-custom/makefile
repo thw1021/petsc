@@ -2,7 +2,6 @@
 #requirespackage        'PETSC_HAVE_FORTRAN'
 
 SOURCEC = ztaolinesearchf.c
-SOURCEH =
 DIR     =
 LIBBASE = libpetsctao
 

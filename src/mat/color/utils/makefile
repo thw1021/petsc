@@ -1,7 +1,6 @@
 -include ../../../../petscdir.mk
 
 SOURCEC   = bipartite.c valid.c weights.c
-SOURCEH   =
 LIBBASE   = libpetscmat
 MANSEC    = Mat
 SUBMANSEC = MatOrderings

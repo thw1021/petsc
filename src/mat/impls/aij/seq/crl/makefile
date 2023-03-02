@@ -1,7 +1,6 @@
 -include ../../../../../../petscdir.mk
 
 SOURCEC  = crl.c
-SOURCEH  =
 LIBBASE  = libpetscmat
 DIRS     = ftn-kernels
 MANSEC   = Mat

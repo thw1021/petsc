@@ -2,7 +2,6 @@
 
 CPPFLAGS  = ${PTSCOTCH_INCLUDE}
 SOURCEC   = partptscotch.c
-SOURCEH   =
 LIBBASE   = libpetscdm
 MANSEC    = DM
 SUBMANSEC =

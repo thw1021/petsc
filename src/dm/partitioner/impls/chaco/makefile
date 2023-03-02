@@ -2,7 +2,6 @@
 
 CPPFLAGS  = ${CHACO_INCLUDE}
 SOURCEC   = partchaco.c
-SOURCEH   =
 LIBBASE   = libpetscdm
 MANSEC    = DM
 SUBMANSEC =

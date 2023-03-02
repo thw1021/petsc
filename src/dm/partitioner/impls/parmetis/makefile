@@ -2,7 +2,6 @@
 
 CPPFLAGS  = ${PARMETIS_INCLUDE}
 SOURCEC   = partparmetis.c
-SOURCEH   =
 LIBBASE   = libpetscdm
 MANSEC    = DM
 SUBMANSEC =

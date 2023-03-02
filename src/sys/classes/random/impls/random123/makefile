@@ -3,7 +3,6 @@
 
 CFLAGS   = ${RANDOM123_INCLUDE}
 SOURCEC  = random123.c
-SOURCEH  =
 LIBBASE  = libpetscsys
 MANSEC	 = Sys
 

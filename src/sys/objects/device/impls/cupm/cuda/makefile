@@ -4,7 +4,6 @@
 SOURCEC	  =
 SOURCECU  = cupmcontext.cu
 SOURCEF	  =
-SOURCEH   =
 MANSEC	  = Sys
 LIBBASE	  = libpetscsys
 DIRS	  =

@@ -1,7 +1,6 @@
 -include ../../../../../petscdir.mk
 
 SOURCEC  = basicsymplectic.c
-SOURCEH  =
 LIBBASE  = libpetscts
 MANSEC   = TS
 

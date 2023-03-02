@@ -1,7 +1,6 @@
 -include ../../../../../../../petscdir.mk
 #requirespackage 'PETSC_HAVE_KOKKOS'
 
-SOURCEH       =
 SOURCEKOKKOS  = sfkok.kokkos.cxx
 LIBBASE       = libpetscvec
 MANSEC        = Vec

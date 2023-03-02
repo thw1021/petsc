@@ -2,7 +2,6 @@
 #requiresfunction 'PETSC_HAVE_RAND'
 
 SOURCEC  = rand.c
-SOURCEH  =
 LIBBASE  = libpetscsys
 MANSEC   = Sys
 

@@ -1,6 +1,5 @@
 -include ../../../../../petscdir.mk
 
-SOURCEH  =
 DIRS     = refine filter extrude
 LIBBASE  = libpetscdm
 MANSEC   = DM

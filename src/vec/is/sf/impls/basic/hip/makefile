@@ -2,7 +2,6 @@
 #requirespackage 'PETSC_HAVE_HIP'
 
 SOURCEHIP = sfhip.hip.cpp
-SOURCEH  =
 LIBBASE  = libpetscvec
 MANSEC   = PetscSF
 

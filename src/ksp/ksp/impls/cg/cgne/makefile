@@ -1,7 +1,6 @@
 -include ../../../../../../petscdir.mk
 
 SOURCEC  = cgne.c
-SOURCEH  =
 LIBBASE  = libpetscksp
 MANSEC   = KSP
 

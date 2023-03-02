@@ -2,7 +2,6 @@
 #requirespackage  'PETSC_HAVE_PARMMG'
 
 SOURCEC  = parmmgadapt.c
-SOURCEH  =
 LIBBASE  = libpetscdm
 MANSEC   = DM
 SUBMANSEC= DMPlex

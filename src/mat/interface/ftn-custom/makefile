@@ -2,7 +2,6 @@
 #requiresdefine   'PETSC_HAVE_FORTRAN'
 
 SOURCEC  = zmatregf.c  zmatrixf.c zmatnullf.c
-SOURCEH  =
 LIBBASE  = libpetscmat
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

@@ -1,7 +1,6 @@
 -include ../../../../../petscdir.mk
 
 SOURCEC  = trajbasic.c
-SOURCEH  =
 MANSEC   = TS
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

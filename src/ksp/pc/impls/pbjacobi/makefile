@@ -1,7 +1,6 @@
 -include ../../../../../petscdir.mk
 
 SOURCEC   = pbjacobi.c
-SOURCEH   =
 LIBBASE   = libpetscksp
 DIRS      = cuda kokkos
 MANSEC    = KSP

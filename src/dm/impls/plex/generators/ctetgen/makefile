@@ -2,7 +2,6 @@
 #requirespackage  'PETSC_HAVE_CTETGEN'
 
 SOURCEC  = ctetgenerate.c
-SOURCEH  =
 LIBBASE  = libpetscdm
 MANSEC   = DM
 SUBMANSEC= DMPlex

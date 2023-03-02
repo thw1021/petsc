@@ -1,7 +1,6 @@
 -include ../../../../../../../petscdir.mk
 #requirespackage 'PETSC_HAVE_CUDA'
 
-SOURCEH       =
 SOURCECU      = sfcuda.cu
 LIBBASE       = libpetscvec
 MANSEC        = Vec

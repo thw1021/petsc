@@ -2,7 +2,6 @@
 #requiresdefine   'PETSC_HAVE_FORTRAN'
 
 SOURCEC  = zdrawf.c  zdrawregf.c  zdtextf.c  zdtrif.c
-SOURCEH  =
 LIBBASE  = libpetscsys
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

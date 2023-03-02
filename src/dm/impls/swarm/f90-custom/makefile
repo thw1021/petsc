@@ -2,7 +2,6 @@
 #requiresdefine   'PETSC_HAVE_FORTRAN'
 
 SOURCEC  = zswarmf90.c
-SOURCEH  =
 LIBBASE  = libpetscdm
 
 

@@ -1,7 +1,6 @@
 -include ../../../../petscdir.mk
 
 SOURCEC  = pythonts.c
-SOURCEH  =
 LIBBASE  = libpetscts
 MANSEC   = TS
 

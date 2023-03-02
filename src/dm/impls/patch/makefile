@@ -1,7 +1,6 @@
 -include ../../../../petscdir.mk
 
 SOURCEC  = patchcreate.c patch.c
-SOURCEH  =
 DIRS     = tests
 LIBBASE  = libpetscdm
 MANSEC   = DM

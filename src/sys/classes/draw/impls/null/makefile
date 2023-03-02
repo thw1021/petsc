@@ -1,7 +1,6 @@
 -include ../../../../../../petscdir.mk
 
 SOURCEC   = drawnull.c
-SOURCEH   =
 MANSEC    = Sys
 SUBMANSEC = Draw
 LIBBASE   = libpetscsys

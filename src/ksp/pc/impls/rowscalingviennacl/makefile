@@ -3,7 +3,6 @@
 #requiresdefine 'PETSC_HAVE_VIENNACL_NO_CUDA'
 
 SOURCECXX = rowscalingviennacl.cxx
-SOURCEH   =
 LIBBASE   = libpetscksp
 MANSEC    = KSP
 SUBMANSEC = PC

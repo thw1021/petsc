@@ -2,7 +2,6 @@
 -include ../../../../../petscdir.mk
 
 SOURCEKOKKOS = landau.kokkos.cxx
-SOURCEH  =
 LIBBASE  = libpetscts
 MANSEC   = TS
 SUBMANSEC= LANDAU

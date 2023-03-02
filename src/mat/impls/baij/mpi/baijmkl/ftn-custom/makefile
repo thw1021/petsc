@@ -3,7 +3,6 @@
 #requirespackage 'PETSC_HAVE_MKL_SPARSE_OPTIMIZE'
 
 SOURCEC  = zmpibaijmklf.c
-SOURCEH  =
 LIBBASE  = libpetscmat
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

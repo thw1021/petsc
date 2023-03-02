@@ -2,7 +2,6 @@
 #requirespackage 'PETSC_HAVE_CUDA'
 
 SOURCECU  = vpbjacobi_cuda.cu
-SOURCEH   =
 LIBBASE   = libpetscksp
 MANSEC    = KSP
 SUBMANSEC = PC

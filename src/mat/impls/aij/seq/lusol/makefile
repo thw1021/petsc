@@ -4,7 +4,6 @@
 #requiresprecision double
 
 SOURCEC  = lusol.c
-SOURCEH  =
 LIBBASE  = libpetscmat
 MANSEC   = Mat
 

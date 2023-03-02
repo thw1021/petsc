@@ -1,7 +1,6 @@
 -include ../../../../petscdir.mk
 
 SOURCEC   = taolinesearch.c dlregis_taolinesearch.c
-SOURCEH   =
 LIBBASE   = libpetsctao
 MANSEC    = Tao
 SUBMANSEC = TaoLineSearch

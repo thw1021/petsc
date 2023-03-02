@@ -2,7 +2,6 @@
 #requiresdefine   'PETSC_HAVE_FORTRAN'
 
 SOURCEC  = zpff.c
-SOURCEH  =
 LIBBASE  = libpetscvec
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

@@ -2,7 +2,6 @@
 #requiresdefine   'PETSC_HAVE_FORTRAN'
 
 SOURCEC  = zrkf.c
-SOURCEH  =
 LIBBASE  = libpetscts
 MANSEC   = TS
 

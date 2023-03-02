@@ -1,7 +1,6 @@
 -include ../../../../../petscdir.mk
 
 SOURCEC  = linesearchnleqerr.c
-SOURCEH  =
 LIBBASE  = libpetscsnes
 MANSEC   = SNES
 

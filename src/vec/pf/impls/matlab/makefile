@@ -2,7 +2,6 @@
 #requiresdefine  'PETSC_HAVE_MATLAB'
 
 SOURCEC  = cmatlab.c
-SOURCEH  =
 LIBBASE  = libpetscvec
 MANSEC   = Vec
 

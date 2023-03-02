@@ -1,7 +1,6 @@
 -include ../../../../petscdir.mk
 
 SOURCEC  = glee.c
-SOURCEH  =
 LIBBASE  = libpetscts
 MANSEC   = TS
 

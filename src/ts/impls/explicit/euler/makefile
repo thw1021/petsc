@@ -1,7 +1,6 @@
 -include ../../../../../petscdir.mk
 
 SOURCEC  = euler.c
-SOURCEH  =
 LIBBASE  = libpetscts
 MANSEC   = TS
 

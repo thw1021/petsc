@@ -1,7 +1,6 @@
 -include ../../../../../../petscdir.mk
 
 SOURCEC  = rander48.c
-SOURCEH  =
 LIBBASE  = libpetscsys
 MANSEC	 = Sys
 

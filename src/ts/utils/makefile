@@ -1,7 +1,6 @@
 -include ../../../petscdir.mk
 
 SOURCEC  = dmts.c dmlocalts.c dmdats.c dmplexts.c tsconvest.c dmnetworkts.c
-SOURCEH  =
 LIBBASE  = libpetscts
 MANSEC   = TS
 DIRS     = dmplexlandau

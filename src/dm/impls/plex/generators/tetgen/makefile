@@ -2,7 +2,6 @@
 #requirespackage  'PETSC_HAVE_TETGEN'
 
 SOURCECXX = tetgenerate.cxx
-SOURCEH   =
 LIBBASE   = libpetscdm
 MANSEC    = DM
 SUBMANSEC = DMPlex

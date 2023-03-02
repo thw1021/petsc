@@ -1,7 +1,6 @@
 -include ../../../../../../petscdir.mk
 
 SOURCEC   = stringv.c
-SOURCEH   =
 MANSEC    = Sys
 SUBMANSEC = Viewer
 LIBBASE   = libpetscsys

@@ -1,7 +1,6 @@
 -include ../../../../../../petscdir.mk
 
 SOURCEC   = aomapping.c
-SOURCEH   =
 LIBBASE   = libpetscvec
 MANSEC    = Vec
 SUBMANSEC = AO

@@ -2,7 +2,6 @@
 #requiresdefine   'PETSC_HAVE_FORTRAN'
 
 SOURCEC  = ztrajf.c
-SOURCEH  =
 LIBBASE  = libpetscts
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

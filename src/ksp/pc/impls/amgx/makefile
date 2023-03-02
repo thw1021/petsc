@@ -5,7 +5,6 @@ ALL: lib
 CFLAGS    =
 FFLAGS    =
 SOURCECXX = amgx.cxx
-SOURCEH   =
 LIBBASE   = libpetscksp
 MANSEC    = KSP
 SUBMANSEC = PC

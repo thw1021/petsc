@@ -2,7 +2,6 @@
 #requirespackage 'PETSC_HAVE_KOKKOS'
 
 SOURCEKOKKOS = kinit.kokkos.cxx
-SOURCEH  =
 MANSEC   = Sys
 LIBBASE  = libpetscsys
 

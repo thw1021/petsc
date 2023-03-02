@@ -4,7 +4,6 @@
 #requiresscalar    complex
 
 SOURCECU  = cufft.cu
-SOURCEH   =
 LIBBASE   = libpetscmat
 MANSEC    = Mat
 

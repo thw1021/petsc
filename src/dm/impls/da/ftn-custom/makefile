@@ -2,7 +2,6 @@
 #requiresdefine   'PETSC_HAVE_FORTRAN'
 
 SOURCEC  = zdaf.c zda1f.c zda2f.c zda3f.c zdaghostf.c zdacornf.c zdagetscatterf.c zdaviewf.c zdaindexf.c zdasubf.c
-SOURCEH  =
 LIBBASE  = libpetscdm
 MANSEC   = DM
 SUBMANSEC= DMDA

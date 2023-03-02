@@ -3,7 +3,6 @@
 
 CFLAGS   = ${FFTW_INCLUDE}
 SOURCEC  = fftw.c
-SOURCEH  =
 LIBBASE  = libpetscmat
 MANSEC   = Mat
 

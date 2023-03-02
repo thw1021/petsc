@@ -2,7 +2,6 @@
 #requirespackage   'PETSC_HAVE_CUDA'
 
 SOURCECU  = math2opus.cu math2opusutils.cu
-SOURCEH   =
 LIBBASE   = libpetscmat
 MANSEC    = Mat
 

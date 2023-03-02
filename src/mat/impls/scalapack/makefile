@@ -2,7 +2,6 @@
 #requirespackage 'PETSC_HAVE_SCALAPACK'
 
 SOURCEC  = matscalapack.c
-SOURCEH  =
 LIBBASE  = libpetscmat
 MANSEC   = Mat
 

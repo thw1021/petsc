@@ -2,7 +2,6 @@
 #requirespackage 'PETSC_HAVE_HIP'
 
 SOURCEHIP = mhiphost.hip.cpp
-SOURCEH  =
 MANSEC   = Sys
 LIBBASE  = libpetscsys
 

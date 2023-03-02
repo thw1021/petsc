@@ -2,7 +2,6 @@
 #requiresdefine   'PETSC_HAVE_FORTRAN'
 
 SOURCEC  = zmat.c
-SOURCEH  =
 LIBBASE  = libpetscmat
 MANSEC   = Mat
 

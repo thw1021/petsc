@@ -3,7 +3,6 @@
 #requiresdefine 'PETSC_HAVE_VIENNACL_NO_CUDA'
 
 SOURCECXX = saviennacl.cxx
-SOURCEH   =
 LIBBASE   = libpetscksp
 MANSEC    = KSP
 SUBMANSEC = PC

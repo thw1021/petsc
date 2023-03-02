@@ -2,7 +2,6 @@
 #requirespackage 'PETSC_HAVE_MKL_SPARSE'
 
 SOURCEC  = mpiaijmkl.c
-SOURCEH  =
 LIBBASE  = libpetscmat
 MANSEC   = Mat
 

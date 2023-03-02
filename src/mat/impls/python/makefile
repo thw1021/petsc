@@ -1,7 +1,6 @@
 -include ../../../../petscdir.mk
 
 SOURCEC  = pythonmat.c
-SOURCEH  =
 LIBBASE  = libpetscmat
 MANSEC   = Mat
 

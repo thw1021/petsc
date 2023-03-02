@@ -2,7 +2,6 @@
 #requirespackage  'PETSC_HAVE_SAWS'
 
 SOURCEC  = kspsaws.c
-SOURCEH  =
 LIBBASE  = libpetscksp
 MANSEC   = KSP
 

@@ -3,7 +3,6 @@
 
 CFLAGS    = ${SUITESPARSE_INCLUDE}
 SOURCEC   = amd.c
-SOURCEH   =
 LIBBASE   = libpetscmat
 MANSEC    = Mat
 SUBMANSEC = MatOrderings

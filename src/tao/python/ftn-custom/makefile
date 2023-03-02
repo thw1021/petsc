@@ -2,7 +2,6 @@
 #requiresdefine   'PETSC_HAVE_FORTRAN'
 
 SOURCEC  = zpythontaof.c
-SOURCEH  =
 LIBBASE  = libpetsctao
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

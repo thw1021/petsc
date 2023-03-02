@@ -7,7 +7,6 @@
 #requiresdefine   'PETSC_USE_FORTRAN_KERNELS'
 
 SOURCEF90= fmultcrl.F90
-SOURCEH  =
 LIBBASE  = libpetscsys
 MANSEC   = Sys
 

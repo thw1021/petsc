@@ -1,7 +1,6 @@
 -include ../../../../petscdir.mk
 
 SOURCEC  = tsadapt.c
-SOURCEH  =
 LIBBASE  = libpetscts
 MANSEC   = TS
 

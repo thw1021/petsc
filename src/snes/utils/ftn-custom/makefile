@@ -2,7 +2,6 @@
 #requiresdefine   'PETSC_HAVE_FORTRAN'
 
 SOURCEC  = zdmdasnesf.c zdmlocalsnesf.c zdmsnesf.c
-SOURCEH  =
 LIBBASE  = libpetscsnes
 MANSEC   = SNES
 

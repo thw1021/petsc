@@ -1,7 +1,6 @@
 -include ../../../../../petscdir.mk
 
 SOURCEC  = shvec.c
-SOURCEH  =
 LIBBASE  = libpetscvec
 MANSEC   = Vec
 

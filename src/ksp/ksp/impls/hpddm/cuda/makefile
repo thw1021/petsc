@@ -3,7 +3,6 @@
 
 CXXFLAGS = ${HPDDM_INCLUDE}
 SOURCECU = hpddm.cu
-SOURCEH  =
 LIBBASE  = libpetscksp
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

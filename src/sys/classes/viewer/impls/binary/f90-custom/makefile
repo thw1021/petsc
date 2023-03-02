@@ -2,7 +2,6 @@
 #requiresdefine   'PETSC_HAVE_FORTRAN'
 
 SOURCEC  = zbinvf90.c
-SOURCEH  =
 LIBBASE  = libpetscsys
 
 

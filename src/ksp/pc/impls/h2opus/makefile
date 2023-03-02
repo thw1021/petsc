@@ -2,7 +2,6 @@
 #requirespackage 'PETSC_HAVE_H2OPUS'
 
 SOURCEC   = pch2opus.c
-SOURCEH   =
 LIBBASE   = libpetscksp
 MANSEC    = KSP
 SUBMANSEC = PC

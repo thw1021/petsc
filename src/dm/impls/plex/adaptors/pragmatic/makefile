@@ -2,7 +2,6 @@
 #requirespackage  'PETSC_HAVE_PRAGMATIC'
 
 SOURCEC  = pragmaticadapt.c
-SOURCEH  =
 LIBBASE  = libpetscdm
 MANSEC   = DM
 SUBMANSEC= DMPlex

@@ -7,7 +7,6 @@
 #requiresdefine   'PETSC_USE_FORTRAN_KERNELS'
 
 SOURCEF90= sgemv.F90
-SOURCEH  =
 LIBBASE  = libpetscmat
 MANSEC   = Sys
 

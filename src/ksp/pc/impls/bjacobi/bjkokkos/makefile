@@ -2,7 +2,6 @@
 -include ../../../../../../petscdir.mk
 
 SOURCEKOKKOS = bjkokkos.kokkos.cxx
-SOURCEH   =
 LIBBASE   = libpetscksp
 MANSEC    = KSP
 SUBMANSEC = PC

@@ -4,7 +4,6 @@
 SOURCEC	  =
 SOURCEHIP = cupmcontext.hip.cpp
 SOURCEF	  =
-SOURCEH   =
 MANSEC	  = Sys
 LIBBASE	  = libpetscsys
 DIRS	  =

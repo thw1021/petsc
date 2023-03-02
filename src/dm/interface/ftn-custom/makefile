@@ -2,7 +2,6 @@
 #requiresdefine   'PETSC_HAVE_FORTRAN'
 
 SOURCEC  = zdmf.c zdmgetf.c
-SOURCEH  =
 LIBBASE  = libpetscdm
 MANSEC   = DM
 

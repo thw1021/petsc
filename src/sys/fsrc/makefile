@@ -2,7 +2,6 @@
 #requiresdefine   'PETSC_HAVE_FORTRAN'
 
 SOURCEF90= somefort.F90
-SOURCEH  =
 LIBBASE  = libpetscsys
 MANSEC   = Sys
 

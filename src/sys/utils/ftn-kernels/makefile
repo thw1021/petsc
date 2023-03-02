@@ -2,7 +2,6 @@
 #requiresdefine   'PETSC_USE_FORTRAN_KERNELS'
 
 SOURCEF90= fcopy.F90
-SOURCEH  =
 LIBBASE  = libpetscsys
 MANSEC   = Sys
 

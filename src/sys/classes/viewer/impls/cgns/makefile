@@ -6,7 +6,6 @@ ALL: lib
 CFLAGS    = ${CGNS_INCLUDE}
 FFLAGS    =
 SOURCEC   = cgnsv.c
-SOURCEH   =
 MANSEC    = Sys
 SUBMANSEC = Viewer
 LIBBASE   = libpetscsys

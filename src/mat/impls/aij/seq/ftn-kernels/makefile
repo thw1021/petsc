@@ -7,7 +7,6 @@
 #requiresdefine   'PETSC_USE_FORTRAN_KERNELS'
 
 SOURCEF90= fmult.F90 fmultadd.F90 fsolve.F90 frelax.F90
-SOURCEH  =
 LIBBASE  = libpetscmat
 MANSEC   = Sys
 

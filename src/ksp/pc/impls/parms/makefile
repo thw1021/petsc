@@ -3,7 +3,6 @@
 
 CFLAGS    = ${PARMS_INCLUDE}
 SOURCEC   = parms.c
-SOURCEH   =
 LIBBASE   = libpetscksp
 MANSEC    = KSP
 SUBMANSEC = PC

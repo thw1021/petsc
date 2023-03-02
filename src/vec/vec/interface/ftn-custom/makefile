@@ -2,7 +2,6 @@
 #requiresdefine   'PETSC_HAVE_FORTRAN'
 
 SOURCEC  = zvecregf.c zvectorf.c
-SOURCEH  =
 LIBBASE  = libpetscvec
 MANSEC   = Vec
 

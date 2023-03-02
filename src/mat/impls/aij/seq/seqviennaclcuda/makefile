@@ -3,7 +3,6 @@
 #requiresdefine 'PETSC_HAVE_CUDA'
 
 SOURCECU  = aijviennaclcuda.cu
-SOURCEH   =
 LIBBASE   = libpetscmat
 MANSEC    = Mat
 

@@ -2,7 +2,6 @@
 #requirespackage 'PETSC_HAVE_CUDA'
 
 SOURCECU = mcudahost.cu
-SOURCEH  =
 MANSEC   = Sys
 LIBBASE  = libpetscsys
 

@@ -3,7 +3,6 @@
 
 CFLAGS   = ${MATLAB_INCLUDE}
 SOURCEC  = gcreatev.c
-SOURCEH  =
 LIBBASE  = libpetscvec
 MANSEC   = Vec
 

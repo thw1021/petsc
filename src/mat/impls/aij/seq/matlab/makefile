@@ -3,7 +3,6 @@
 
 CFLAGS   = ${MATLAB_INCLUDE}
 SOURCEC  = aijmatlab.c
-SOURCEH  =
 LIBBASE  = libpetscmat
 MANSEC   = Mat
 

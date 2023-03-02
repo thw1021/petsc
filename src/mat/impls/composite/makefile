@@ -1,7 +1,6 @@
 -include ../../../../petscdir.mk
 
 SOURCEC  = mcomposite.c
-SOURCEH  =
 LIBBASE  = libpetscmat
 MANSEC   = Mat
 

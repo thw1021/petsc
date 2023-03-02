@@ -1,7 +1,6 @@
 -include ../../../../../petscdir.mk
 
 SOURCEC   = bddc.c bddcprivate.c bddcgraph.c bddcscalingbasic.c bddcnullspace.c bddcfetidp.c bddcschurs.c
-SOURCEH   =
 LIBBASE   = libpetscksp
 MANSEC    = KSP
 SUBMANSEC = PC

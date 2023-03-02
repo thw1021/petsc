@@ -2,7 +2,6 @@
 -include ../../../../../petscdir.mk
 
 SOURCECU = landaucu.cu
-SOURCEH  =
 LIBBASE  = libpetscts
 MANSEC   = TS
 SUBMANSEC= LANDAU

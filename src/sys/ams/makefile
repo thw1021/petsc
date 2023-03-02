@@ -1,7 +1,6 @@
 -include ../../../petscdir.mk
 #requirespackage 'PETSC_HAVE_SAWS'
 
-SOURCEH   =
 SOURCEC   = pams.c
 MANSEC    = Sys
 

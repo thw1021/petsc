@@ -2,7 +2,6 @@
 #requirespackage 'PETSC_HAVE_ELEMENTAL'
 
 SOURCECXX= matelem.cxx
-SOURCEH  =
 LIBBASE  = libpetscmat
 MANSEC   = Mat
 

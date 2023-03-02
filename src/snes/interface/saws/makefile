@@ -2,7 +2,6 @@
 #requirespackage  'PETSC_HAVE_SAWS'
 
 SOURCEC  = snessaws.c
-SOURCEH  =
 LIBBASE  = libpetscsnes
 MANSEC   = SNES
 

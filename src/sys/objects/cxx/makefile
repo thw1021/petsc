@@ -2,7 +2,6 @@
 #requirespackage 'PETSC_HAVE_ELEMENTAL'
 
 SOURCECXX= elemental.cxx
-SOURCEH  =
 MANSEC   = Sys
 LIBBASE  = libpetscsys
 

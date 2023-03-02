@@ -1,7 +1,6 @@
 -include ../../../petscdir.mk
 
 SOURCEC  = dmlabel.c
-SOURCEH  =
 DIRS     = impls tutorials
 LIBBASE  = libpetscdm
 MANSEC   = DM
