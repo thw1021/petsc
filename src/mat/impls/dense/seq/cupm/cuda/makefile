@@ -1,9 +1,7 @@
--include ../../../../../../petscdir.mk
+-include ../../../../../../../petscdir.mk
 #requirespackage   'PETSC_HAVE_CUDA'
 
-SOURCECU = densecuda.cu
-SOURCEF  =
-SOURCEH  =
+SOURCECU = matseqdensecuda.cu
 LIBBASE  = libpetscmat
 MANSEC   = Mat
 

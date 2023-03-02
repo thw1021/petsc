@@ -1,16 +1,10 @@
-
 -include ../../../../../../petscdir.mk
-#requirespackage   'PETSC_HAVE_HIP'
+#requirespackage   'PETSC_HAVE_CUPM'
 
-ALL: lib
-
-CFLAGS   =
-FFLAGS   =
-SOURCEHIP= densehip.hip.cpp
-SOURCEF  =
-SOURCEH  =
-LIBBASE  = libpetscmat
-MANSEC   = Mat
+DIRS    = cuda hip
+SOURCEH = matseqdensecupm.hpp
+LIBBASE = libpetscmat
+MANSEC  = Mat
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules

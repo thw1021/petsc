@@ -4,7 +4,7 @@ SOURCEC  = mpidense.c mmdense.c
 SOURCEF  =
 SOURCEH  = mpidense.h
 LIBBASE  = libpetscmat
-DIRS     =
+DIRS     = cupm
 MANSEC   = Mat
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
