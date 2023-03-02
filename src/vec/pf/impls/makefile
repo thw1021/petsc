@@ -1,6 +1,5 @@
 -include ../../../../petscdir.mk
 
-SOURCEC  =
 SOURCEH  =
 LIBBASE  = libpetscvec
 DIRS     = constant string matlab

@@ -1,6 +1,5 @@
 -include ../../../../../petscdir.mk
 
-SOURCEC  =
 SOURCEF90= optionenum.F90
 SOURCEH  =
 LIBBASE  = libpetscsys

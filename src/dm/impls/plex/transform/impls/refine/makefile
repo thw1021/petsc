@@ -1,6 +1,5 @@
 -include ../../../../../petscdir.mk
 
-SOURCEC  =
 SOURCEH  =
 DIRS     = regular sbr tobox alfeld bl 1d
 LIBBASE  = libpetscdm

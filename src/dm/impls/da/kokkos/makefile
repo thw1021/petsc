@@ -1,7 +1,6 @@
 #requirespackage 'PETSC_HAVE_KOKKOS_KERNELS'
 -include ../../../../../petscdir.mk
 
-SOURCEC      =
 SOURCEKOKKOS = dagetov.kokkos.cxx
 SOURCEH      =
 LIBBASE      = libpetscdm

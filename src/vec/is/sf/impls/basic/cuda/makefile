@@ -2,7 +2,6 @@
 #requirespackage 'PETSC_HAVE_CUDA'
 
 SOURCEH       =
-SOURCEC       =
 SOURCECU      = sfcuda.cu
 LIBBASE       = libpetscvec
 MANSEC        = Vec

@@ -1,7 +1,6 @@
 -include ../../../../petscdir.mk
 #requirespackage 'PETSC_HAVE_CUDA'
 
-SOURCEC  =
 SOURCECU = mcudahost.cu
 SOURCEH  =
 MANSEC   = Sys

@@ -1,7 +1,6 @@
 -include ../../../../petscdir.mk
 #requirespackage 'PETSC_HAVE_KOKKOS'
 
-SOURCEC  =
 SOURCEKOKKOS = kinit.kokkos.cxx
 SOURCEH  =
 MANSEC   = Sys

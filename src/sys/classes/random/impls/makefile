@@ -1,6 +1,5 @@
 -include ../../../../../petscdir.mk
 
-SOURCEC  =
 SOURCEH  =
 LIBBASE  = libpetscsys
 DIRS     = rand rand48 rander48 sprng random123 curand

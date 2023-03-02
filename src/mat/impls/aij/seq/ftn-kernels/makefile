@@ -6,7 +6,6 @@
 # compare against C versions of the same kernels.
 #requiresdefine   'PETSC_USE_FORTRAN_KERNELS'
 
-SOURCEC  =
 SOURCEF90= fmult.F90 fmultadd.F90 fsolve.F90 frelax.F90
 SOURCEH  =
 LIBBASE  = libpetscmat

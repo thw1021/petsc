@@ -1,7 +1,6 @@
 #requirespackage 'PETSC_HAVE_KOKKOS_KERNELS'
 -include ../../../../../../petscdir.mk
 
-SOURCEC   =
 SOURCEKOKKOS = bjkokkos.kokkos.cxx
 SOURCEH   =
 LIBBASE   = libpetscksp

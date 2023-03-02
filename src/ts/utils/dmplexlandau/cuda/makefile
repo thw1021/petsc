@@ -1,7 +1,6 @@
 #requirespackage 'PETSC_HAVE_CUDA'
 -include ../../../../../petscdir.mk
 
-SOURCEC  =
 SOURCECU = landaucu.cu
 SOURCEH  =
 LIBBASE  = libpetscts

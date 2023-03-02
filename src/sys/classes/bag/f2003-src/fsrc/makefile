@@ -1,6 +1,5 @@
 -include ../../../../../../petscdir.mk
 
-SOURCEC  =
 SOURCEF90= bagenum.F90
 SOURCEH  =
 LIBBASE  = libpetscsys

@@ -1,7 +1,6 @@
 -include ../../../../petscdir.mk
 #requirespackage 'PETSC_HAVE_HIP'
 
-SOURCEC  =
 SOURCEHIP = mhiphost.hip.cpp
 SOURCEH  =
 MANSEC   = Sys
