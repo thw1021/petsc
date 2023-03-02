@@ -1,7 +1,6 @@
 -include ../../../../../petscdir.mk
 
 SOURCEC  = schurm.c
-SOURCEF  =
 SOURCEH  = schurm.h
 LIBBASE  = libpetscksp
 DIRS     =

@@ -1,7 +1,6 @@
 -include ../../../../../petscdir.mk
 
 SOURCEC   = fieldsplit.c
-SOURCEF   =
 SOURCEH   =
 LIBBASE   = libpetscksp
 DIRS      =

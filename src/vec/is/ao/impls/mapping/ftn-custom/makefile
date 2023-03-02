@@ -2,7 +2,6 @@
 #requiresdefine   'PETSC_HAVE_FORTRAN'
 
 SOURCEC  = zaomappingf.c
-SOURCEF  =
 SOURCEH  =
 DIRS     =
 LIBBASE  = libpetscvec

@@ -2,7 +2,6 @@
 #requiresdefine   'PETSC_HAVE_FORTRAN'
 
 SOURCEC  = ziscoloringf.c
-SOURCEF  =
 SOURCEH  =
 DIRS     =
 LIBBASE	 = libpetscvec

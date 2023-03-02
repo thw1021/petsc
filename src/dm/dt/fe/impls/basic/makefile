@@ -1,7 +1,6 @@
 -include ../../../../../../petscdir.mk
 
 SOURCEC   = febasic.c
-SOURCEF   =
 LIBBASE   = libpetscdm
 DIRS      =
 MANSEC    = DM

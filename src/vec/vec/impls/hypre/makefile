@@ -3,7 +3,6 @@
 
 CFLAGS   = ${HYPRE_INCLUDE}
 SOURCEC  = vhyp.c
-SOURCEF  =
 SOURCEH  =
 LIBBASE  = libpetscvec
 MANSEC   = Vec

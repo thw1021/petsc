@@ -3,7 +3,6 @@
 
 SOURCEC  =
 SOURCEHIP = mhiphost.hip.cpp
-SOURCEF  =
 SOURCEH  =
 MANSEC   = Sys
 LIBBASE  = libpetscsys

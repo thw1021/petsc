@@ -1,7 +1,6 @@
 -include ../../../../../../petscdir.mk
 
 SOURCEC   = drawimage.c
-SOURCEF   =
 SOURCEH   = drawimage.h
 MANSEC    = Sys
 SUBMANSEC = Draw

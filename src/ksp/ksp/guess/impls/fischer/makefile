@@ -1,7 +1,6 @@
 -include ../../../../../../petscdir.mk
 
 SOURCEC  = fischer.c
-SOURCEF  =
 SOURCEH  =
 LIBBASE  = libpetscksp
 DIRS     =

@@ -5,7 +5,6 @@
 
 CXXFLAGS  = ${HPDDM_INCLUDE}
 SOURCECXX = pchpddm.cxx
-SOURCEF   =
 SOURCEH   =
 LIBBASE   = libpetscksp
 DIRS      =

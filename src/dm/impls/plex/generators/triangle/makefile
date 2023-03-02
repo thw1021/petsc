@@ -2,7 +2,6 @@
 #requirespackage  'PETSC_HAVE_TRIANGLE'
 
 SOURCEC  = trigenerate.c
-SOURCEF  =
 SOURCEH  =
 DIRS     =
 LIBBASE  = libpetscdm

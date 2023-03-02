@@ -2,7 +2,6 @@
 #requiresdefine   'PETSC_HAVE_FORTRAN'
 
 SOURCEC  = zptimef.c
-SOURCEF  =
 SOURCEH  =
 DIRS     =
 LIBBASE	  = libpetscsys

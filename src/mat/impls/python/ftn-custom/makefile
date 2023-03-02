@@ -2,7 +2,6 @@
 #requiresdefine   'PETSC_HAVE_FORTRAN'
 
 SOURCEC  = zpythonmf.c
-SOURCEF  =
 SOURCEH  =
 DIRS     =
 LIBBASE  = libpetscmat

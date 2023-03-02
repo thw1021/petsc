@@ -3,7 +3,6 @@
 
 CPPFLAGS  = ${SPAI_INCLUDE}
 SOURCEC   = ispai.c dspai.c
-SOURCEF   =
 SOURCEH   =
 LIBBASE   = libpetscksp
 DIRS      =

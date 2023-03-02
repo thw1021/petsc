@@ -1,7 +1,6 @@
 -include ../../../../../../petscdir.mk
 
 SOURCEC   = icc.c
-SOURCEF   =
 SOURCEH   = icc.h
 LIBBASE   = libpetscksp
 DIRS      =

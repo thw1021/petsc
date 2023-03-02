@@ -2,7 +2,6 @@
 #requiresdefine   'PETSC_HAVE_FORTRAN'
 
 SOURCEC  = zpythonsf.c
-SOURCEF  =
 SOURCEH  =
 DIRS     =
 LIBBASE  = libpetscsnes

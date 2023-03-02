@@ -3,7 +3,6 @@
 #requiresdefine 'PETSC_HAVE_CUDA'
 
 SOURCECU  = saviennacl.cu
-SOURCEF   =
 SOURCEH   =
 LIBBASE   = libpetscksp
 DIRS      =

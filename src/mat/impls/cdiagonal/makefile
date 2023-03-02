@@ -1,7 +1,6 @@
 -include ../../../../petscdir.mk
 
 SOURCEC  = cdiagonal.c
-SOURCEF  =
 SOURCEH  =
 LIBBASE  = libpetscmat
 MANSEC   = Mat

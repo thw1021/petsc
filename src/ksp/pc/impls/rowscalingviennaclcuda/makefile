@@ -3,7 +3,6 @@
 #requiresdefine 'PETSC_HAVE_CUDA'
 
 SOURCECU  = rowscalingviennacl.cu
-SOURCEF   =
 SOURCEH   =
 LIBBASE   = libpetscksp
 DIRS      =

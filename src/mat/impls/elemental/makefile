@@ -2,7 +2,6 @@
 #requirespackage 'PETSC_HAVE_ELEMENTAL'
 
 SOURCECXX= matelem.cxx
-SOURCEF  =
 SOURCEH  =
 LIBBASE  = libpetscmat
 DIRS     =

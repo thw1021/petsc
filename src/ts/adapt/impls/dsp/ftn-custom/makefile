@@ -2,7 +2,6 @@
 #requiresdefine   'PETSC_HAVE_FORTRAN'
 
 SOURCEC  = zadaptdspf.c
-SOURCEF  =
 SOURCEH  =
 DIRS     =
 LIBBASE  = libpetsts

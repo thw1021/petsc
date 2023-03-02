@@ -2,7 +2,6 @@
 -include ../../../../../petscdir.mk
 
 SOURCEC      =
-SOURCEF      =
 SOURCEKOKKOS = dagetov.kokkos.cxx
 SOURCEH      =
 LIBBASE      = libpetscdm

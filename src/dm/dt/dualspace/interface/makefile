@@ -1,7 +1,6 @@
 -include ../../../../../petscdir.mk
 
 SOURCEC   = dualspace.c
-SOURCEF   =
 SOURCEH   =
 DIRS      =
 LIBBASE   = libpetscdm

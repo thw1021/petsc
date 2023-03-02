@@ -2,7 +2,6 @@
 #requirespackage  'PETSC_HAVE_CTETGEN'
 
 SOURCEC  = ctetgenerate.c
-SOURCEF  =
 SOURCEH  =
 DIRS     =
 LIBBASE  = libpetscdm

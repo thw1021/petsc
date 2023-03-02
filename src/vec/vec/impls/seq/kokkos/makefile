@@ -3,7 +3,6 @@
 
 SOURCEC  =
 SOURCEKOKKOS = veckok.kokkos.cxx
-SOURCEF  =
 SOURCEH  =
 LIBBASE  = libpetscvec
 MANSEC   = Vec

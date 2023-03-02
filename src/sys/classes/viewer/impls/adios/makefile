@@ -3,7 +3,6 @@
 
 CFLAGS    = ${ADIOS_INCLUDE}
 SOURCEC   = adios.c
-SOURCEF   =
 SOURCEH   =
 MANSEC    = Sys
 SUBMANSEC = Viewer

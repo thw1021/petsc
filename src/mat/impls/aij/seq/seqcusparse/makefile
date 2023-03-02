@@ -2,7 +2,6 @@
 #requirespackage 'PETSC_HAVE_CUDA'
 
 SOURCECU  = aijcusparse.cu aijcusparseband.cu
-SOURCEF   =
 SOURCEH   = cusparsematimpl.h
 LIBBASE   = libpetscmat
 DIRS      =

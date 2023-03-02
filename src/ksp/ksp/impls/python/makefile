@@ -1,7 +1,6 @@
 -include ../../../../../petscdir.mk
 
 SOURCEC  = pythonksp.c
-SOURCEF  =
 SOURCEH  =
 LIBBASE  = libpetscksp
 DIRS     =

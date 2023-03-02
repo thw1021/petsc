@@ -4,7 +4,6 @@
 #requiresprecision double
 
 SOURCEC  = essl.c
-SOURCEF  =
 SOURCEH  =
 LIBBASE  = libpetscmat
 DIRS     =

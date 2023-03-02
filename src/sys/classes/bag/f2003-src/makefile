@@ -3,7 +3,6 @@
 #requiresdefine   'PETSC_USING_F2003'
 
 SOURCEC  =
-SOURCEF  =
 SOURCEH  =
 DIRS     = fsrc
 LIBBASE  = libpetscsys

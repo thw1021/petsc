@@ -1,7 +1,6 @@
 -include ../../../../../../petscdir.mk
 
 SOURCEC   = drawnull.c
-SOURCEF   =
 SOURCEH   =
 MANSEC    = Sys
 SUBMANSEC = Draw

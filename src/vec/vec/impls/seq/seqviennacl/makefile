@@ -3,7 +3,6 @@
 #requiresdefine 'PETSC_HAVE_VIENNACL_NO_CUDA'
 
 SOURCECXX= vecviennacl.cxx
-SOURCEF  =
 SOURCEH  = viennaclvecimpl.h
 LIBBASE  = libpetscvec
 MANSEC   = Vec

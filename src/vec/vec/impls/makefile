@@ -1,7 +1,6 @@
 -include ../../../../petscdir.mk
 
 SOURCEC  =
-SOURCEF  =
 SOURCEH  = dvecimpl.h
 LIBBASE  = libpetscvec
 DIRS     = seq mpi shared hypre nest

@@ -2,7 +2,6 @@
 #requirespackage 	'PETSC_HAVE_FORTRAN'
 
 SOURCEC = ztaosolverf.c
-SOURCEF =
 SOURCEH =
 DIR     =
 LIBBASE = libpetsctao

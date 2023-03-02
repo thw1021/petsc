@@ -1,7 +1,6 @@
 -include ../../../../../../petscdir.mk
 
 SOURCEC   = stride.c
-SOURCEF   =
 SOURCEH   =
 LIBBASE   = libpetscvec
 MANSEC    = Vec

@@ -1,7 +1,6 @@
 -include ../../../../petscdir.mk
 
 SOURCEC  = product.c productutils.c
-SOURCEF  =
 SOURCEH  = ../../../../include/petscdmproduct.h ../../../../include/petsc/private/dmproductimpl.h
 DIRS     =
 LIBBASE  = libpetscdm

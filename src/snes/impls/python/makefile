@@ -1,7 +1,6 @@
 -include ../../../../petscdir.mk
 
 SOURCEC  = pythonsnes.c
-SOURCEF  =
 SOURCEH  =
 LIBBASE  = libpetscsnes
 DIRS     =

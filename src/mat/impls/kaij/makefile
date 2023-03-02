@@ -1,7 +1,6 @@
 -include ../../../../petscdir.mk
 
 SOURCEC  = kaij.c
-SOURCEF  =
 SOURCEH  = kaij.h
 LIBBASE  = libpetscmat
 DIRS     =

@@ -3,7 +3,6 @@
 
 SOURCEC  =
 SOURCECU = landaucu.cu
-SOURCEF  =
 SOURCEH  =
 DIRS     =
 LIBBASE  = libpetscts

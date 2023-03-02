@@ -1,7 +1,6 @@
 -include ../../../../petscdir.mk
 
 SOURCEC  = matnest.c
-SOURCEF  =
 SOURCEH  = matnestimpl.h
 LIBBASE  = libpetscmat
 DIRS     =

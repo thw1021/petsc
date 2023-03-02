@@ -3,7 +3,6 @@
 
 CFLAGS    = ${METIS_INCLUDE}
 SOURCEC   = metisnd.c
-SOURCEF   =
 SOURCEH   =
 LIBBASE   = libpetscmat
 DIRS      =

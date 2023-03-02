@@ -2,7 +2,6 @@
 #requiresdefine   'PETSC_HAVE_FORTRAN'
 
 SOURCEC  = zarchf.c zstrf.c zfhostf.c zsortsof.c
-SOURCEF  =
 SOURCEH  =
 DIRS     =
 LIBBASE  = libpetscsys

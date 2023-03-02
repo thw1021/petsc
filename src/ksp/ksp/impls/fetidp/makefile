@@ -1,7 +1,6 @@
 -include ../../../../../petscdir.mk
 
 SOURCEC  = fetidp.c
-SOURCEF  =
 SOURCEH  =
 LIBBASE  = libpetscksp
 DIRS     =

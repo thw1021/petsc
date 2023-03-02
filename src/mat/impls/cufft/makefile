@@ -4,7 +4,6 @@
 #requiresscalar    complex
 
 SOURCECU  = cufft.cu
-SOURCEF   =
 SOURCEH   =
 LIBBASE   = libpetscmat
 DIRS      =

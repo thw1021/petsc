@@ -2,7 +2,6 @@
 #requiresdefine   'PETSC_HAVE_FORTRAN'
 
 SOURCEC  = zlandaucreate.c
-SOURCEF  =
 SOURCEH  =
 DIRS     =
 LIBBASE  = libpetscts

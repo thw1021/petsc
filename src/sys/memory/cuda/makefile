@@ -3,7 +3,6 @@
 
 SOURCEC  =
 SOURCECU = mcudahost.cu
-SOURCEF  =
 SOURCEH  =
 MANSEC   = Sys
 LIBBASE  = libpetscsys

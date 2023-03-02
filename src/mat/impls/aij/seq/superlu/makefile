@@ -3,7 +3,6 @@
 
 CFLAGS   = ${SUPERLU_INCLUDE}
 SOURCEC  = superlu.c
-SOURCEF  =
 SOURCEH  =
 LIBBASE  = libpetscmat
 DIRS     =

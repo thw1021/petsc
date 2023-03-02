@@ -3,7 +3,6 @@
 
 SOURCEC  = curand.c
 SOURCECU = curand2.cu
-SOURCEF  =
 SOURCEH  =
 LIBBASE  = libpetscsys
 DIRS     =

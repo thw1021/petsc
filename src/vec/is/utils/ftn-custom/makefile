@@ -2,7 +2,6 @@
 #requiresdefine   'PETSC_HAVE_FORTRAN'
 
 SOURCEC  = zhdf5io.c zisltogf.c zvsectionisf.c
-SOURCEF  =
 SOURCEH  =
 DIRS     =
 LIBBASE	 = libpetscvec

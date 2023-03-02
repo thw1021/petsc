@@ -5,7 +5,6 @@ ALL: lib
 CFLAGS    =
 FFLAGS    =
 SOURCECXX = amgx.cxx
-SOURCEF   =
 SOURCEH   =
 LIBBASE   = libpetscksp
 DIRS      =

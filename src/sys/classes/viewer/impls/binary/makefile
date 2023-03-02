@@ -1,7 +1,6 @@
 -include ../../../../../../petscdir.mk
 
 SOURCEC   = binv.c
-SOURCEF   =
 SOURCEH   =
 MANSEC    = Sys
 SUBMANSEC = Viewer

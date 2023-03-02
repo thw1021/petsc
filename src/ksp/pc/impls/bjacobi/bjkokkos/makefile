@@ -3,7 +3,6 @@
 
 SOURCEC   =
 SOURCEKOKKOS = bjkokkos.kokkos.cxx
-SOURCEF   =
 SOURCEH   =
 LIBBASE   = libpetscksp
 DIRS      =

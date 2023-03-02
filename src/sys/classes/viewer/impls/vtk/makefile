@@ -1,7 +1,6 @@
 -include ../../../../../../petscdir.mk
 
 SOURCEC   = vtkv.c
-SOURCEF   =
 SOURCEH   = vtkvimpl.h
 MANSEC    = Sys
 SUBMANSEC = Viewer

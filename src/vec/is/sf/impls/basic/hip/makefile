@@ -3,7 +3,6 @@
 
 SOURCEC  =
 SOURCEHIP = sfhip.hip.cpp
-SOURCEF  =
 SOURCEH  =
 LIBBASE  = libpetscvec
 MANSEC   = PetscSF

@@ -2,7 +2,6 @@
 #requirespackage 'PETSC_HAVE_H2OPUS'
 
 SOURCECXX = math2opuscpu.cxx math2opusutilscpu.cxx
-SOURCEF   =
 SOURCEH   =
 LIBBASE   = libpetscmat
 DIRS      = cuda

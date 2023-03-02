@@ -2,7 +2,6 @@
 #requiresdefine 'PETSC_USE_WINDOWS_GRAPHICS'
 
 SOURCEC   = win32draw.c
-SOURCEF   =
 SOURCEH   = win32draw.h
 MANSEC    = Sys
 SUBMANSEC = Draw

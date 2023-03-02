@@ -2,7 +2,6 @@
 -include ../../../../../../petscdir.mk
 
 SOURCEKOKKOS  = aijkok.kokkos.cxx
-SOURCEF       =
 SOURCEH       = aijkok.hpp
 LIBBASE       = libpetscmat
 DIRS          =

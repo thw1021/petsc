@@ -9,7 +9,6 @@
 matlabcodes: sread sopen sclose swrite
 
 SOURCEC   =
-SOURCEF   =
 SOURCEH   = sopen.c sclose.c  bread.c sread.c swrite.c
 MANSEC    = Sys
 SUBMANSEC = Viewer

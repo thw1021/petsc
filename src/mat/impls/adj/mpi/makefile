@@ -1,7 +1,6 @@
 -include ../../../../../petscdir.mk
 
 SOURCEC  = mpiadj.c
-SOURCEF  =
 SOURCEH  = mpiadj.h
 LIBBASE  = libpetscmat
 DIRS     =

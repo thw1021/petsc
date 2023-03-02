@@ -1,7 +1,6 @@
 -include ../../../../petscdir.mk
 
 SOURCEC  = mlocalref.c
-SOURCEF  =
 SOURCEH  =
 LIBBASE  = libpetscmat
 DIRS     =

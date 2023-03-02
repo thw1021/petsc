@@ -3,7 +3,6 @@
 
 CFLAGS    = ${ML_INCLUDE}
 SOURCEC   = ml.c
-SOURCEF   =
 SOURCEH   =
 LIBBASE   = libpetscksp
 MANSEC    = KSP

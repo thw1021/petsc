@@ -4,7 +4,6 @@
 
 CFLAGS   = ${SUITESPARSE_INCLUDE}
 SOURCEC  = umfpack.c
-SOURCEF  =
 SOURCEH  =
 LIBBASE  = libpetscmat
 DIRS     =

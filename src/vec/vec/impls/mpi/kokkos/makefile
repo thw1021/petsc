@@ -2,7 +2,6 @@
 #requirespackage 'PETSC_HAVE_KOKKOS_KERNELS'
 
 SOURCEKOKKOS = mpikok.kokkos.cxx
-SOURCEF  =
 SOURCEH  =
 LIBBASE  = libpetscvec
 MANSEC   = Vec

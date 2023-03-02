@@ -1,7 +1,6 @@
 -include ../../../../petscdir.mk
 
 SOURCEC  = pythontao.c
-SOURCEF  =
 SOURCEH  =
 LIBBASE  = libpetsctao
 DIRS     =

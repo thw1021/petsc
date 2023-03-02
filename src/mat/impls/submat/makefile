@@ -1,7 +1,6 @@
 -include ../../../../petscdir.mk
 
 SOURCEC  = submat.c
-SOURCEF  =
 SOURCEH  =
 LIBBASE  = libpetscmat
 DIRS     =

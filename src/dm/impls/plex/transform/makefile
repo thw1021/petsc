@@ -1,7 +1,6 @@
 -include ../../../../../petscdir.mk
 
 SOURCEC  =
-SOURCEF  =
 SOURCEH  =
 DIRS     = interface impls
 LIBBASE  = libpetscdm

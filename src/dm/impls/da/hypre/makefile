@@ -2,7 +2,6 @@
 #requirespackage 'PETSC_HAVE_HYPRE'
 
 SOURCEC  = mhyp.c
-SOURCEF  =
 SOURCEH  = mhyp.h
 LIBBASE  = libpetscdm
 MANSEC   = DM

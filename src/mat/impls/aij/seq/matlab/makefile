@@ -3,7 +3,6 @@
 
 CFLAGS   = ${MATLAB_INCLUDE}
 SOURCEC  = aijmatlab.c
-SOURCEF  =
 SOURCEH  =
 LIBBASE  = libpetscmat
 DIRS     =

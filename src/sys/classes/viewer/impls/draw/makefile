@@ -1,7 +1,6 @@
 -include ../../../../../../petscdir.mk
 
 SOURCEC   = drawv.c
-SOURCEF   =
 SOURCEH   = vdraw.h
 MANSEC    = Sys
 SUBMANSEC = Viewer

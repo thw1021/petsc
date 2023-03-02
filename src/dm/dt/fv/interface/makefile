@@ -1,7 +1,6 @@
 -include ../../../../../petscdir.mk
 
 SOURCEC   = fv.c
-SOURCEF   =
 SOURCEH   =
 DIRS      =
 LIBBASE   = libpetscdm

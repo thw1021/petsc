@@ -3,7 +3,6 @@
 
 CFLAGS    = ${HDF5_INCLUDE}
 SOURCEC   = hdf5v.c
-SOURCEF   =
 SOURCEH   = ../../../../../../include/petscviewerhdf5.h
 MANSEC    = Sys
 SUBMANSEC = Viewer

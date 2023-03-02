@@ -2,7 +2,6 @@
 #requiresdefine   'PETSC_HAVE_FORTRAN'
 
 SOURCEC  = zpythontaof.c
-SOURCEF  =
 SOURCEH  =
 DIRS     =
 LIBBASE  = libpetsctao

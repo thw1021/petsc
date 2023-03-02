@@ -2,7 +2,6 @@
 
 CFLAGS    = ${HYPRE_INCLUDE}
 SOURCEC   = hmg.c
-SOURCEF   =
 SOURCEH   =
 LIBBASE   = libpetscksp
 DIRS      =

@@ -2,7 +2,6 @@
 #requiresdefine   'PETSC_HAVE_FORTRAN'
 
 SOURCEC  = zplexcreate.c zplexdistribute.c zplexsubmesh.c zplexexodusii.c zplexgmsh.c zplexfluent.c zplexextrude.c
-SOURCEF  =
 SOURCEH  =
 DIRS     =
 LIBBASE  = libpetscdm

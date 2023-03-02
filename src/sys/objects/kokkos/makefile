@@ -3,7 +3,6 @@
 
 SOURCEC  =
 SOURCEKOKKOS = kinit.kokkos.cxx
-SOURCEF  =
 SOURCEH  =
 MANSEC   = Sys
 LIBBASE  = libpetscsys

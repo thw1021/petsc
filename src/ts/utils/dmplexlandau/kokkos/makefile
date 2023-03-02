@@ -2,7 +2,6 @@
 -include ../../../../../petscdir.mk
 
 SOURCEKOKKOS = landau.kokkos.cxx
-SOURCEF  =
 SOURCEH  =
 DIRS     =
 LIBBASE  = libpetscts

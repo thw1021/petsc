@@ -2,7 +2,6 @@
 #requiresfunction 'PETSC_HAVE_DRAND48'
 
 SOURCEC  = rand48.c
-SOURCEF  =
 SOURCEH  =
 LIBBASE  = libpetscsys
 DIRS     =

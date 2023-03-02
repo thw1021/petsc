@@ -2,7 +2,6 @@
 
 SOURCEC  = pipegcr.c
 SOURCEH  =
-SOURCEF  =
 LIBBASE  = libpetscksp
 DIRS     =
 MANSEC   = KSP

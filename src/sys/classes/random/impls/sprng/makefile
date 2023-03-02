@@ -3,7 +3,6 @@
 
 CFLAGS   = ${SPRNG_INCLUDE}
 SOURCEC  = sprng.c
-SOURCEF  =
 SOURCEH  =
 LIBBASE  = libpetscsys
 DIRS     =

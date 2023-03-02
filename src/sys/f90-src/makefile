@@ -2,7 +2,6 @@
 #requiresdefine   'PETSC_HAVE_FORTRAN'
 
 SOURCEC  = f90_cwrap.c
-SOURCEF  =
 SOURCEH  =
 DIRS     = fsrc
 LIBBASE  = libpetscsys

@@ -1,7 +1,6 @@
 -include ../../../../../../petscdir.mk
 
 SOURCEC  = diagbrdn.c
-SOURCEF  =
 SOURCEH  = diagbrdn.h
 LIBBASE  = libpetscksp
 DIRS     =

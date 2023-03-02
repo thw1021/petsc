@@ -1,7 +1,6 @@
 -include ../../../../../../petscdir.mk
 
 SOURCEC  = pod.c
-SOURCEF  =
 SOURCEH  =
 LIBBASE  = libpetscksp
 DIRS     =

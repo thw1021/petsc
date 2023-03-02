@@ -2,7 +2,6 @@
 
 SOURCEC  = gcr.c
 SOURCEH  =
-SOURCEF  =
 LIBBASE  = libpetscksp
 DIRS     = pipegcr
 MANSEC   = KSP

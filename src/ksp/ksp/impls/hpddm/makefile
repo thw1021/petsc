@@ -3,7 +3,6 @@
 
 CXXFLAGS  = ${HPDDM_INCLUDE}
 SOURCECXX = hpddm.cxx
-SOURCEF   =
 SOURCEH   =
 LIBBASE   = libpetscksp
 DIRS      = cuda
