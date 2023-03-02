@@ -3,7 +3,6 @@
 
 CFLAGS    = ${MATLAB_INCLUDE}
 SOURCEC	  = matlab.c
-SOURCEF	  =
 SOURCEH	  = ../../../../include/petscmatlab.h
 MANSEC	  = Sys
 LIBBASE	  = libpetscsys

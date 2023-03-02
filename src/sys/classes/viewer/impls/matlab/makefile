@@ -3,8 +3,6 @@
 
 CFLAGS    = ${MATLAB_INCLUDE}
 SOURCEC	  = vmatlab.c
-SOURCEF	  =
-SOURCEH	  =
 MANSEC	  = Viewer
 LIBBASE	  = libpetscsys
 

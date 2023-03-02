@@ -2,8 +2,6 @@
 #requiresdefine 'PETSC_HAVE_CXX'
 
 SOURCECXX = demangle.cxx
-SOURCEF	  =
-SOURCEH	  =
 MANSEC	  = Sys
 LIBBASE	  = libpetscsys
 

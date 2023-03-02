@@ -4,7 +4,6 @@
 
 CFLAGS	 = ${SUITESPARSE_INCLUDE}
 SOURCEC	 = sbaijcholmod.c
-SOURCEF	 =
 SOURCEH	 = cholmodimpl.h
 LIBBASE	 = libpetscmat
 MANSEC	 = Mat

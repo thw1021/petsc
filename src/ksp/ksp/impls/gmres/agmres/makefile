@@ -3,7 +3,6 @@
 
 SOURCEC  = agmres.c agmresorthog.c agmresleja.c agmresdeflation.c
 SOURCEH  = agmresimpl.h
-OBJSF    =
 LIBBASE  = libpetscksp
 MANSEC   = KSP
 

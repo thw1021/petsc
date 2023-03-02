@@ -1,6 +1,5 @@
 -include ../../../../../petscdir.mk
 
-SOURCEH	  =
 LIBBASE	  = libpetscvec
 DIRS	  = window basic
 MANSEC    = Vec

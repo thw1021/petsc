@@ -2,8 +2,6 @@
 #requirespackage  'PETSC_HAVE_AMGX'
 ALL: lib
 
-CFLAGS    =
-FFLAGS    =
 SOURCECXX = amgx.cxx
 LIBBASE   = libpetscksp
 MANSEC    = KSP

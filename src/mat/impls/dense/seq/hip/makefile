@@ -4,8 +4,6 @@
 
 ALL: lib
 
-CFLAGS   =
-FFLAGS   =
 SOURCEHIP= densehip.hip.cpp
 LIBBASE  = libpetscmat
 MANSEC   = Mat
