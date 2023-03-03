@@ -1016,7 +1016,7 @@ accurate for the largest singular values, but may overestimate the smallest sing
 unless the method has converged. Make sure to avoid restarts. To estimate the condition
 number of the preconditioned operator, use ``-pc_type somepc`` in the last command.
 
-You can use `SLEPc <https://https://slepc.upv.es>`__ for highly scalable, efficient, and quality eigenvalue computations.
+You can use `SLEPc <https://slepc.upv.es>`__ for highly scalable, efficient, and quality eigenvalue computations.
 
 How can I compute the inverse of a matrix in PETSc?
 ---------------------------------------------------
@@ -1132,7 +1132,7 @@ There are at least three ways to write finite element codes using PETSc:
    or see ``src/snes/tutorial/ex62.c``.
 
 #. Use packages such as `deal.ii <https://www.dealii.org>`__, `libMesh <https://libmesh.github.io>`__, or
-   `Firedrake <https://www.firedrakeproject.org>`__.
+   `Firedrake <https://www.firedrakeproject.org>`__, which use PETSc for the solvers.
 
 #. Manage the grid data structure yourself and use PETSc ``PetscSF``, ``IS`` and ``VecScatter`` to
    communicate the required ghost point communication. See
@@ -1279,7 +1279,7 @@ available.
    cores available for each MPI process. For example if your compute nodes have 6 cores
    and you use 2 MPI processes per node then set ``$OMP_NUM_THREADS`` to 2 or 3.
 
-Another approach that allows using an PETSc parallel solver is to use ``PCMPI``.
+Another approach that allows using a PETSc parallel solver is to use ``PCMPI``.
 
 TS or SNES produces infeasible (out of domain) solutions or states. How can I prevent this?
 -------------------------------------------------------------------------------------------
@@ -1422,7 +1422,7 @@ Running the PETSc program with the option ``-help`` will print out many of the o
 print the options that have been specified within a program, employ ``-options_left`` to
 print any options that the user specified but were not actually used by the program and
 all options used; this is helpful for detecting typo errors. The PETSc website has a search option,
-in the upper right hand corner, that is quickly finds answers to most PETSc questions.
+in the upper right hand corner, that quickly finds answers to most PETSc questions.
 
 PETSc automatically handles many of the details in parallel PDE solvers. How can I understand what is really happening within my program?
 -----------------------------------------------------------------------------------------------------------------------------------------

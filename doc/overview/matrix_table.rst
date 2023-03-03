@@ -113,7 +113,7 @@ Summary of Matrix Types Available In PETSc
      - ``MATLRC``
      - ``MatCreateLRC()``
      -
-     -  $A + U*C*V'$
+     -  $A + UCV^T$
    * - FFT
      - ``MATFFTW``
      - ``MatCreateSeqFFTW()``
@@ -154,7 +154,7 @@ Summary of Matrix Types Available In PETSc
      - ``MatCreateNormal()``
      -
      -
-   * - Hermition Normal, A'\*A, virtual
+   * - Hermitian Normal, A'\*A, virtual
      - ``MATNORMALHERMITIAN``
      - ``MatCreateNormalHermitian()``
      -
