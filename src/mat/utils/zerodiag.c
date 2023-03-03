@@ -23,8 +23,7 @@
 
     Input Parameters:
 +   mat  - matrix to reorder
--   rmap,cmap - row and column permutations.  Usually obtained from
-               `MatGetOrdering()`.
+-   rmap,cmap - row and column permutations.  Usually obtained from `MatGetOrdering()`.
 
     Level: intermediate
 
@@ -52,7 +51,7 @@
        swapped with; to make sure the previous nonzero diagonal remains
        nonzero
 
-.seealso: `Mat`
+.seealso: `Mat`, `MatGetFactor()`, `MatGetOrdering()`
 @*/
 PetscErrorCode MatReorderForNonzeroDiagonal(Mat mat, PetscReal abstol, IS ris, IS cis)
 {
