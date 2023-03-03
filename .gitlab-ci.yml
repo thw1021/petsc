@@ -801,7 +801,7 @@ linux-nagfor:
   extends:
     - .stage-3
     - .linux_test_nofflags
-    - .coverage-generate-u18
+    - .coverage-generate-u20
   tags:
     - gce-stage2, linux-mcpu
   variables:
@@ -907,7 +907,7 @@ linux-gcc-ifc-cmplx:
   extends:
     - .stage-3
     - .linux_test_nofflags
-    - .coverage-generate-u18
+    - .coverage-generate-u22
   tags:
     - gce-u22-stage3
   variables:
