@@ -16,15 +16,9 @@
 
 #include <../src/mat/impls/aij/seq/kokkos/aijkok.hpp>
 
-#if PETSC_PKG_KOKKOS_KERNELS_VERSION_GE(3, 6, 99)
-  #include <KokkosSparse_Utils.hpp>
+#include <KokkosSparse_Utils.hpp>
 using KokkosSparse::sort_crs_matrix;
 using KokkosSparse::Impl::transpose_matrix;
-#else
-  #include <KokkosKernels_Sorting.hpp>
-using KokkosKernels::sort_crs_matrix;
-using KokkosKernels::Impl::transpose_matrix;
-#endif
 
 static PetscErrorCode MatSetOps_SeqAIJKokkos(Mat); /* Forward declaration */
 
@@ -224,21 +218,83 @@ PetscErrorCode MatSeqAIJKokkosGetDeviceMat(Mat A, PetscSplitCSRDataStructure *d_
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* Generate the transpose on device and cache it internally */
+// Generate the transpose on device and cache it internally
+// Note: KK transpose_matrix() does not have support symbolic/numeric transpose, so we do it on our own
 PETSC_INTERN PetscErrorCode MatSeqAIJKokkosGenerateTranspose_Private(Mat A, KokkosCsrMatrix *csrmatT)
 {
+  Mat_SeqAIJ       *aijseq = static_cast<Mat_SeqAIJ *>(A->data);
   Mat_SeqAIJKokkos *aijkok = static_cast<Mat_SeqAIJKokkos *>(A->spptr);
+  PetscInt          nz = aijseq->nz, m = A->rmap->N, n = A->cmap->n;
+  KokkosCsrMatrix  &T = aijkok->csrmatT;
 
   PetscFunctionBegin;
   PetscCheck(aijkok, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Unexpected NULL (Mat_SeqAIJKokkos*)A->spptr");
-  if (!aijkok->csrmatT.nnz() || !aijkok->transpose_updated) { /* Generate At for the first time OR just update its values */
-    /* FIXME: KK does not separate symbolic/numeric transpose. We could have a permutation array to help value-only update */
-    PetscCallCXX(aijkok->a_dual.sync_device());
-    PetscCallCXX(aijkok->csrmatT = transpose_matrix(aijkok->csrmat));
-    PetscCallCXX(sort_crs_matrix(aijkok->csrmatT));
-    aijkok->transpose_updated = PETSC_TRUE;
+  PetscCallCXX(aijkok->a_dual.sync_device()); // Sync A since we are going to access it on device
+
+  const auto &Aa = aijkok->a_dual.view_device();
+
+  if (A->symmetric == PETSC_BOOL3_TRUE) {
+    *csrmatT = aijkok->csrmat;
+  } else {
+    // See if we already have a cached transpose and its value is up to date
+    if (T.numRows() == n && T.numCols() == m) { // this indicates csrmatT had been generated before, otherwise, T has 0 rows/cols in constructor
+      if (!aijkok->transpose_updated) {         // if the value is out of date, update the cached version
+        const auto &Tp = aijkok->transpose_perm;
+        auto       &Ta = T.values;
+
+        PetscCallCXX(Kokkos::parallel_for(
+          nz, KOKKOS_LAMBDA(const PetscInt i) { Ta(i) = Aa(Tp(i)); }));
+      }
+    } else { // Generate T of size n x m for the first time
+      MatRowMapKokkosViewHost Ti_h("Ti", n + 1);
+      PetscInt               *Ai = aijseq->i, *Ti = Ti_h.data();
+      PetscInt               *Aj = aijseq->j;
+
+      // Compute Ti
+      Kokkos::deep_copy(Ti_h, 0);
+      Ti++;
+      for (PetscInt i = 0; i < nz; i++) Ti[Aj[i]]++;
+      Ti--;
+      for (PetscInt i = 0; i < n; i++) Ti[i + 1] += Ti[i];
+
+      // Compute Tj and the permutation array
+      MatColIdxKokkosViewHost Tj_h("Tj", nz);
+      MatRowMapKokkosViewHost Tp_h("permutation", nz);
+      PetscInt               *Tj = Tj_h.data();
+      PetscInt               *Tp = Tp_h.data();
+      PetscInt               *offset;
+
+      PetscCall(PetscCalloc1(n, &offset)); // offset in each T row to fill in its column indices
+      for (PetscInt i = 0; i < m; i++) {
+        for (PetscInt j = Ai[i]; j < Ai[i + 1]; j++) { // A's (i,j) is T's (j,i)
+          PetscInt r    = Aj[j];                       // row r of T
+          PetscInt disp = Ti[r] + offset[r];
+
+          Tj[disp] = i; // col i of T
+          Tp[disp] = j;
+          offset[r]++;
+        }
+      }
+      PetscCall(PetscFree(offset));
+
+      // Sort each row of T, along with the permutation array
+      for (PetscInt i = 0; i < n; i++) PetscCall(PetscSortIntWithArray(Ti[i + 1] - Ti[i], Tj + Ti[i], Tp + Ti[i]));
+
+      // Generate T on device
+      auto Ti_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), Ti_h);
+      auto Tj_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), Tj_h);
+      auto Tp_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), Tp_h);
+
+      MatScalarKokkosView Ta_d = MatScalarKokkosView("Ta", nz);
+
+      T = KokkosCsrMatrix("csrmatT", n, m, nz, Ta_d, Ti_d, Tj_d);
+      PetscCallCXX(Kokkos::parallel_for(
+        nz, KOKKOS_LAMBDA(const PetscInt i) { Ta_d(i) = Aa(Tp_d(i)); }));
+      aijkok->transpose_perm    = Tp_d; // also cache the perm
+      aijkok->transpose_updated = PETSC_TRUE;
+    }
+    *csrmatT = aijkok->csrmatT;
   }
-  *csrmatT = aijkok->csrmatT;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -797,6 +853,16 @@ static PetscErrorCode MatProductSymbolic_SeqAIJKokkos_SeqAIJKokkos(Mat C)
   csrmatB = bkok->csrmat;
 
   ptype = product->type;
+  // Take advantage of the symmetry if any
+  if (A->symmetric == PETSC_BOOL3_TRUE && ptype == MATPRODUCT_AtB) {
+    ptype                                          = MATPRODUCT_AB;
+    product->symbolic_used_the_fact_A_is_symmetric = PETSC_TRUE;
+  }
+  if (B->symmetric == PETSC_BOOL3_TRUE && ptype == MATPRODUCT_ABt) {
+    ptype                                          = MATPRODUCT_AB;
+    product->symbolic_used_the_fact_B_is_symmetric = PETSC_TRUE;
+  }
+
   switch (ptype) {
   case MATPRODUCT_AB:
     transA = false;
@@ -813,22 +879,17 @@ static PetscErrorCode MatProductSymbolic_SeqAIJKokkos_SeqAIJKokkos(Mat C)
   default:
     SETERRQ(comm, PETSC_ERR_PLIB, "Unsupported product type %s", MatProductTypes[product->type]);
   }
-
   product->data = pdata = new MatProductData_SeqAIJKokkos();
-  pdata->kh.set_team_work_size(16);
-  pdata->kh.set_dynamic_scheduling(true);
+
   pdata->reusesym = product->api_user;
 
   /* TODO: add command line options to select spgemm algorithms */
   auto spgemm_alg = KokkosSparse::SPGEMMAlgorithm::SPGEMM_DEFAULT; /* default alg is TPL if enabled, otherwise KK */
 
   /* CUDA-10.2's spgemm has bugs. We prefer the SpGEMMreuse APIs introduced in cuda-11.4 */
-#if defined(KOKKOSKERNELS_ENABLE_TPL_CUSPARSE)
-  #if PETSC_PKG_CUDA_VERSION_LT(11, 4, 0)
+#if defined(KOKKOSKERNELS_ENABLE_TPL_CUSPARSE) && PETSC_PKG_CUDA_VERSION_LT(11, 4, 0)
   spgemm_alg = KokkosSparse::SPGEMMAlgorithm::SPGEMM_KK;
-  #endif
 #endif
-
   pdata->kh.create_spgemm_handle(spgemm_alg);
 
   PetscCall(PetscLogGpuTimeBegin());
@@ -844,18 +905,12 @@ static PetscErrorCode MatProductSymbolic_SeqAIJKokkos_SeqAIJKokkos(Mat C)
   }
 
   PetscCallCXX(KokkosSparse::spgemm_symbolic(pdata->kh, csrmatA, transA, csrmatB, transB, csrmatC));
-
   /* spgemm_symbolic() only populates C's rowmap, but not C's column indices.
     So we have to do a fake spgemm_numeric() here to get csrmatC.j_d setup, before
     calling new Mat_SeqAIJKokkos().
     TODO: Remove the fake spgemm_numeric() after KK fixed this problem.
   */
   PetscCallCXX(KokkosSparse::spgemm_numeric(pdata->kh, csrmatA, transA, csrmatB, transB, csrmatC));
-#if PETSC_PKG_KOKKOS_KERNELS_VERSION_LT(3, 7, 99)
-  /* Query if KK outputs a sorted matrix. If not, we need to sort it */
-  auto spgemmHandle = pdata->kh.get_spgemm_handle();
-  if (spgemmHandle->get_sort_option() != 1) PetscCallCXX(sort_crs_matrix(csrmatC)); /* sort_option defaults to -1 in KK!*/
-#endif
   PetscCall(PetscLogGpuTimeEnd());
 
   PetscCallCXX(ckok = new Mat_SeqAIJKokkos(csrmatC));

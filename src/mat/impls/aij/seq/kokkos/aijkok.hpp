@@ -87,8 +87,9 @@ struct Mat_SeqAIJKokkos {
   KokkosCsrMatrix  csrmat;       /* The CSR matrix, used to call KK functions */
   PetscObjectState nonzerostate; /* State of the nonzero pattern (graph) on device */
 
-  KokkosCsrMatrix csrmatT, csrmatH;                     /* Transpose and Hermitian of the matrix (built on demand) */
-  PetscBool       transpose_updated, hermitian_updated; /* Are At, Ah updated wrt the matrix? */
+  KokkosCsrMatrix     csrmatT, csrmatH;                     /* Transpose and Hermitian of the matrix (built on demand) */
+  PetscBool           transpose_updated, hermitian_updated; /* Are At, Ah updated wrt the matrix? */
+  MatRowMapKokkosView transpose_perm;                       // A permutation array making Ta(i) = Aa(perm(i)), where T = A^t
 
   /* COO stuff */
   PetscCountKokkosView jmap_d; /* perm[disp+jmap[i]..disp+jmap[i+1]) gives indices of entries in v[] associated with i-th nonzero of the matrix */
