@@ -905,7 +905,7 @@ PetscErrorCode MatProductSetType(Mat mat, MatProductType productype)
 }
 
 /*@
-   MatProductClear - Clears matrix that is compute from a matrix-matrix operations the internal datastructures related to that computation
+   MatProductClear - Clears from the matrix any internal data structures related to the computation of the values of the matrix from matrix-matrix product operations
 
    Collective
 

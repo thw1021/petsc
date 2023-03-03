@@ -841,7 +841,7 @@ static struct _MatOps MatOps_Values = {MatSetValues_BlockMat,
    Level: intermediate
 
    Notes:
-     If `nnz` is given then `n`z is ignored
+     If `nnz` is given then `nz` is ignored
 
    Specify the preallocated storage with either `nz` or `nnz` (not both).
    Set `nz` = `PETSC_DEFAULT` and `nnz` = `NULL` for PETSc to control dynamic memory

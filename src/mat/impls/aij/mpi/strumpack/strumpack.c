@@ -44,7 +44,7 @@ static PetscErrorCode MatSTRUMPACKSetReordering_STRUMPACK(Mat F, MatSTRUMPACKReo
   MatSTRUMPACKSetReordering - Set STRUMPACK fill-reducing reordering
 
    Input Parameters:
-+  F - the factored matrix obtained by calling `MatGetFactor(`)
++  F - the factored matrix obtained by calling `MatGetFactor()`
 -  reordering - the code to be used to find the fill-reducing reordering, see `MatSTRUMPACKReordering`
 
   Options Database Key:

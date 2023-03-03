@@ -146,7 +146,7 @@ static PetscErrorCode MatLRCGetMats_LRC(Mat N, Mat *A, Mat *U, Vec *c, Mat *V)
 
    Level: intermediate
 
-   Note:
+   Notes:
    The returned matrices need not be destroyed by the caller.
 
    `U`, `c`, `V` may be `NULL` if not needed

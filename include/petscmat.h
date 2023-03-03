@@ -304,7 +304,7 @@ PETSC_EXTERN PetscClassId MATMFFD_CLASSID;
 
    Values:
 +  `MAT_INITIAL_MATRIX` - create a new matrix
-.  `MAT_REUSE_MATRIX` - reuse the matrix created with a previous call that used MAT_INITIAL_MATRIX
+.  `MAT_REUSE_MATRIX` - reuse the matrix created with a previous call that used `MAT_INITIAL_MATRIX`
 .  `MAT_INPLACE_MATRIX` - replace the first input matrix with the new matrix (not applicable to all functions)
 -  `MAT_IGNORE_MATRIX` - do not create a new matrix or reuse a give matrix, just ignore that matrix argument (not applicable to all functions)
 
@@ -549,7 +549,7 @@ PETSC_EXTERN PetscErrorCode MatAssemblyEnd(Mat, MatAssemblyType);
 PETSC_EXTERN PetscErrorCode MatAssembled(Mat, PetscBool *);
 
 /*E
-    MatOption - Options that may be set for a matrix that indicate properties of the matrix or effect its behavior or storage
+    MatOption - Options that may be set for a matrix that indicate properties of the matrix or affect its behavior or storage
 
     Level: beginner
 
@@ -1440,7 +1440,7 @@ PETSC_EXTERN const char *const MatFactorShiftTypesDetail[];
     Level: intermediate
 
     Note:
-    When a factorization is done in a preconditioner `PC` the error may be propogated up to a `PCFailedReason` or a `KSPConvergedReason`
+    When a factorization is done in a preconditioner `PC` the error may be propagated up to a `PCFailedReason` or a `KSPConvergedReason`
 
 .seealso: [](chapter_matrices), `Mat`, `MatGetFactor()`, `MatFactorGetError()`, `MatFactorGetErrorZeroPivot()`, `MatFactorClearError()`,
           `PCFailedReason`, `PCGetFailedReason()`, `KSPConvergedReason`
@@ -1574,7 +1574,7 @@ PETSC_EXTERN PetscErrorCode MatSOR(Mat, Vec, PetscReal, MatSORType, PetscReal, P
    matrix comes from via `DMCreateColoring()`. In general using the mesh produces a more optimal coloring (fewer colors).
 
    Once a coloring is available `MatFDColoringCreate()` creates an object that can be used to efficiently compute Jacobians using that coloring. This
-   same object can also be used to efficiently convert data created by Automatic Differentation tools to PETSc sparse matrices.
+   same object can also be used to efficiently convert data created by Automatic Differentiation tools to PETSc sparse matrices.
 
 .seealso: [](chapter_matrices), `MatFDColoringCreate()`, `MatColoringWeightType`, `ISColoring`, `MatFDColoring`, `DMCreateColoring()`, `MatColoringCreate()`,
           `MatPartitioning`, `MatColoringType`, `MatPartitioningType`, `MatOrderingType`,  `MatColoringSetWeightType()`,
@@ -2364,7 +2364,7 @@ PETSC_EXTERN PetscErrorCode MatDenseCUDAResetArray(Mat);
     Values:
 +   `MAT_HIPSPARSE_CSR` - Compressed Sparse Row
 .   `MAT_HIPSPARSE_ELL` - Ellpack
--   `MAT_HIPSPARSE_HYB` - Hybrid, a combination of Ellpack and Coordinate format (requires CUDA 4.2 or later).
+-   `MAT_HIPSPARSE_HYB` - Hybrid, a combination of Ellpack and Coordinate format
 
 .seealso: [](chapter_matrices), `MatHIPSPARSESetFormat()`, `MatHIPSPARSEFormatOperation`
 E*/
@@ -2385,9 +2385,9 @@ PETSC_EXTERN const char *const MatHIPSPARSEStorageFormats[];
     Level: intermediate
 
     Values:
-+   `MAT_HIPSPARSE_MULT_DIAG` - sets the storage format for the diagonal matrix in the parallel MatMult
-.   `MAT_HIPSPARSE_MULT_OFFDIAG` - sets the storage format for the offdiagonal matrix in the parallel MatMult
-.   `MAT_HIPSPARSE_MULT` - sets the storage format for the entire matrix in the serial (single GPU) MatMult
++   `MAT_HIPSPARSE_MULT_DIAG` - sets the storage format for the diagonal matrix in the parallel `MatMult()`
+.   `MAT_HIPSPARSE_MULT_OFFDIAG` - sets the storage format for the offdiagonal matrix in the parallel `MatMul()t`
+.   `MAT_HIPSPARSE_MULT` - sets the storage format for the entire matrix in the serial (single GPU) `MatMult()`
 -   `MAT_HIPSPARSE_ALL` - sets the storage format for all HIPSPARSE (GPU) matrices
 
 .seealso: [](chapter_matrices), `MatHIPSPARSESetFormat()`, `MatHIPSPARSEStorageFormat`

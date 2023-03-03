@@ -349,7 +349,7 @@ PetscErrorCode MatConvert_NormalHermitian_HYPRE(Mat A, MatType type, MatReuse re
 
   Level: intermediate
 
-.seealso: [](chapter_matrices), `Mat`, `MatCreateNormal()`, `MatMult()`, `MatNormalGetMat()`, `MATNORMAL`, `MatCreateHermitianNormal()`
+.seealso: [](chapter_matrices), `Mat`, `MatCreateNormalHermitian()`, `MatMult()`, `MatNormalHermitianGetMat()`, `MATNORMAL`, `MatCreateNormal()`
 M*/
 
 /*@

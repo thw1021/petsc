@@ -473,7 +473,7 @@ PetscErrorCode MatProductSetFromOptions_Normal_Dense(Mat C)
 
   Level: intermediate
 
-.seealso: [](chapter_matrices), `Mat`, `MatCreateNormal()`, `MatMult()`, `MatNormalGetMat()`, `MATNORMALHERMITIAN`, `MatCreateHermitianNormal()`
+.seealso: [](chapter_matrices), `Mat`, `MatCreateNormal()`, `MatMult()`, `MatNormalGetMat()`, `MATNORMALHERMITIAN`, `MatCreateNormalHermitian()`
 M*/
 
 /*@
@@ -494,7 +494,7 @@ M*/
           object performs the matrix-vector product, `MatMult()`, by first multiplying by
           A and then A'
 
-.seealso: [](chapter_matrices), `Mat`, `MATNORMAL`, `MatMult()`, `MatNormalGetMat()`, `MATNORMALHERMITIAN`, `MatCreateHermitianNormal)`
+.seealso: [](chapter_matrices), `Mat`, `MATNORMAL`, `MatMult()`, `MatNormalGetMat()`, `MATNORMALHERMITIAN`, `MatCreateNormalHermitian()`
 @*/
 PetscErrorCode MatCreateNormal(Mat A, Mat *N)
 {

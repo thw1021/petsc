@@ -2961,7 +2961,7 @@ PetscErrorCode MatDenseHIPRestoreArrayWrite(Mat A, PetscScalar **a)
 
    Level: developer
 
-   Notes:
+   Note:
    Data can be copied to the GPU due to operations done on the CPU. If you need write only access, use `MatDenseHIPGetArrayWrite()`.
 
 .seealso: [](chapter_matrices), `Mat`, MatDenseHIPGetArray(), MatDenseHIPRestoreArray(), MatDenseHIPRestoreArrayWrite(), MatDenseHIPGetArrayWrite(), MatDenseHIPRestoreArrayRead()
@@ -3010,7 +3010,7 @@ PetscErrorCode MatDenseHIPRestoreArrayRead(Mat A, const PetscScalar **a)
 
    Level: developer
 
-   Notes:
+   Note:
    Data can be copied to the GPU due to operations done on the CPU. If you need write only access, use `MatDenseHIPGetArrayWrite()`.
 
    For read-only access, use `MatDenseHIPGetArrayRead()`.
