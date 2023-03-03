@@ -1736,7 +1736,6 @@ PetscErrorCode MatSOR_SeqSELL(Mat A, Vec bb, PetscReal omega, MatSORType flag, P
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* -------------------------------------------------------------------*/
 static struct _MatOps MatOps_Values = {MatSetValues_SeqSELL,
                                        MatGetRow_SeqSELL,
                                        MatRestoreRow_SeqSELL,
