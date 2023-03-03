@@ -1282,7 +1282,7 @@ PETSC_INTERN PetscErrorCode MatSeqAIJKokkosGetKokkosCsrMatrix(Mat A, KokkosCsrMa
 {
   Mat_SeqAIJKokkos *akok;
   PetscFunctionBegin;
-  MatSeqAIJKokkosSyncDevice(A);
+  PetscCall(MatSeqAIJKokkosSyncDevice(A));
   akok = static_cast<Mat_SeqAIJKokkos *>(A->spptr);
   *csr = akok->csrmat;
   PetscFunctionReturn(PETSC_SUCCESS);
