@@ -1134,7 +1134,7 @@ There are at least three ways to write finite element codes using PETSc:
 #. Use packages such as `deal.ii <https://www.dealii.org>`__, `libMesh <https://libmesh.github.io>`__, or
    `Firedrake <https://www.firedrakeproject.org>`__, which use PETSc for the solvers.
 
-#. Manage the grid data structure yourself and use PETSc ``PetscSF``, ``IS`` and ``VecScatter`` to
+#. Manage the grid data structure yourself and use PETSc ``PetscSF``, ``IS``, and ``VecScatter`` to
    communicate the required ghost point communication. See
    ``src/snes/tutorials/ex10d/ex10.c``.
 
