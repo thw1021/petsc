@@ -1,6 +1,10 @@
+.. _handson:
+
 ==============
 PETSc Hands On
 ==============
+
+TODO: Add link to Python example here
 
 PETSc comes with a large number of example codes to illustrate usage. Here, we highlight a few, key ones:
 
