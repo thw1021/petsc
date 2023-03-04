@@ -218,107 +218,140 @@ PetscErrorCode MatSeqAIJKokkosGetDeviceMat(Mat A, PetscSplitCSRDataStructure *d_
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*
+  Generate the sparsity pattern of a MatSeqAIJKokkos matrix's transpose on device.
+
+  Input Parameter:
+.  A       - the MATSEQAIJKOKKOS matrix
+
+  Output Parameters:
++  perm_d - the permutation array on device, which connects Ta(i) = Aa(perm(i))
+-  T_d    - the transpose on device, whose value array is allcoated but not initialized
+*/
+static PetscErrorCode MatSeqAIJKokkosGenerateTransposeStructure(Mat A, MatRowMapKokkosView &perm_d, KokkosCsrMatrix &T_d)
+{
+  Mat_SeqAIJ             *aseq = static_cast<Mat_SeqAIJ *>(A->data);
+  PetscInt                nz = aseq->nz, m = A->rmap->N, n = A->cmap->n;
+  const PetscInt         *Ai = aseq->i, *Aj = aseq->j;
+  MatRowMapKokkosViewHost Ti_h("Ti", n + 1);
+  MatRowMapType          *Ti = Ti_h.data();
+  MatColIdxKokkosViewHost Tj_h("Tj", nz);
+  MatRowMapKokkosViewHost perm_h("permutation", nz);
+  PetscInt               *Tj   = Tj_h.data();
+  PetscInt               *perm = perm_h.data();
+  PetscInt               *offset;
+
+  PetscFunctionBegin;
+  // Populate Ti
+  Kokkos::deep_copy(Ti_h, 0);
+  Ti++;
+  for (PetscInt i = 0; i < nz; i++) Ti[Aj[i]]++;
+  Ti--;
+  for (PetscInt i = 0; i < n; i++) Ti[i + 1] += Ti[i];
+
+  // Populate Tj and the permutation array
+  PetscCall(PetscCalloc1(n, &offset)); // offset in each T row to fill in its column indices
+  for (PetscInt i = 0; i < m; i++) {
+    for (PetscInt j = Ai[i]; j < Ai[i + 1]; j++) { // A's (i,j) is T's (j,i)
+      PetscInt r    = Aj[j];                       // row r of T
+      PetscInt disp = Ti[r] + offset[r];
+
+      Tj[disp]   = i; // col i of T
+      perm[disp] = j;
+      offset[r]++;
+    }
+  }
+  PetscCall(PetscFree(offset));
+
+  // Sort each row of T, along with the permutation array
+  for (PetscInt i = 0; i < n; i++) PetscCall(PetscSortIntWithArray(Ti[i + 1] - Ti[i], Tj + Ti[i], perm + Ti[i]));
+
+  // Output perm and T on device
+  auto Ti_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), Ti_h);
+  auto Tj_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), Tj_h);
+  T_d       = KokkosCsrMatrix("csrmatT", n, m, nz, MatScalarKokkosView("Ta", nz), Ti_d, Tj_d);
+  perm_d    = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), perm_h);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 // Generate the transpose on device and cache it internally
 // Note: KK transpose_matrix() does not have support symbolic/numeric transpose, so we do it on our own
 PETSC_INTERN PetscErrorCode MatSeqAIJKokkosGenerateTranspose_Private(Mat A, KokkosCsrMatrix *csrmatT)
 {
-  Mat_SeqAIJ       *aijseq = static_cast<Mat_SeqAIJ *>(A->data);
-  Mat_SeqAIJKokkos *aijkok = static_cast<Mat_SeqAIJKokkos *>(A->spptr);
-  PetscInt          nz = aijseq->nz, m = A->rmap->N, n = A->cmap->n;
-  KokkosCsrMatrix  &T = aijkok->csrmatT;
+  Mat_SeqAIJ       *aseq = static_cast<Mat_SeqAIJ *>(A->data);
+  Mat_SeqAIJKokkos *akok = static_cast<Mat_SeqAIJKokkos *>(A->spptr);
+  PetscInt          nz = aseq->nz, m = A->rmap->N, n = A->cmap->n;
+  KokkosCsrMatrix  &T = akok->csrmatT;
 
   PetscFunctionBegin;
-  PetscCheck(aijkok, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Unexpected NULL (Mat_SeqAIJKokkos*)A->spptr");
-  PetscCallCXX(aijkok->a_dual.sync_device()); // Sync A since we are going to access it on device
+  PetscCheck(akok, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Unexpected NULL (Mat_SeqAIJKokkos*)A->spptr");
+  PetscCallCXX(akok->a_dual.sync_device()); // Sync A's valeus since we are going to access them on device
 
-  const auto &Aa = aijkok->a_dual.view_device();
+  const auto &Aa = akok->a_dual.view_device();
 
   if (A->symmetric == PETSC_BOOL3_TRUE) {
-    *csrmatT = aijkok->csrmat;
+    *csrmatT = akok->csrmat;
   } else {
     // See if we already have a cached transpose and its value is up to date
-    if (T.numRows() == n && T.numCols() == m) { // this indicates csrmatT had been generated before, otherwise, T has 0 rows/cols in constructor
-      if (!aijkok->transpose_updated) {         // if the value is out of date, update the cached version
-        const auto &Tp = aijkok->transpose_perm;
-        auto       &Ta = T.values;
+    if (T.numRows() == n && T.numCols() == m) {  // this indicates csrmatT had been generated before, otherwise T has 0 rows/cols after construction
+      if (!akok->transpose_updated) {            // if the value is out of date, update the cached version
+        const auto &perm = akok->transpose_perm; // get the permutation array
+        auto       &Ta   = T.values;
 
         PetscCallCXX(Kokkos::parallel_for(
-          nz, KOKKOS_LAMBDA(const PetscInt i) { Ta(i) = Aa(Tp(i)); }));
+          nz, KOKKOS_LAMBDA(const PetscInt i) { Ta(i) = Aa(perm(i)); }));
       }
     } else { // Generate T of size n x m for the first time
-      MatRowMapKokkosViewHost Ti_h("Ti", n + 1);
-      PetscInt               *Ai = aijseq->i, *Ti = Ti_h.data();
-      PetscInt               *Aj = aijseq->j;
+      MatRowMapKokkosView perm;
 
-      // Compute Ti
-      Kokkos::deep_copy(Ti_h, 0);
-      Ti++;
-      for (PetscInt i = 0; i < nz; i++) Ti[Aj[i]]++;
-      Ti--;
-      for (PetscInt i = 0; i < n; i++) Ti[i + 1] += Ti[i];
-
-      // Compute Tj and the permutation array
-      MatColIdxKokkosViewHost Tj_h("Tj", nz);
-      MatRowMapKokkosViewHost Tp_h("permutation", nz);
-      PetscInt               *Tj = Tj_h.data();
-      PetscInt               *Tp = Tp_h.data();
-      PetscInt               *offset;
-
-      PetscCall(PetscCalloc1(n, &offset)); // offset in each T row to fill in its column indices
-      for (PetscInt i = 0; i < m; i++) {
-        for (PetscInt j = Ai[i]; j < Ai[i + 1]; j++) { // A's (i,j) is T's (j,i)
-          PetscInt r    = Aj[j];                       // row r of T
-          PetscInt disp = Ti[r] + offset[r];
-
-          Tj[disp] = i; // col i of T
-          Tp[disp] = j;
-          offset[r]++;
-        }
-      }
-      PetscCall(PetscFree(offset));
-
-      // Sort each row of T, along with the permutation array
-      for (PetscInt i = 0; i < n; i++) PetscCall(PetscSortIntWithArray(Ti[i + 1] - Ti[i], Tj + Ti[i], Tp + Ti[i]));
-
-      // Generate T on device
-      auto Ti_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), Ti_h);
-      auto Tj_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), Tj_h);
-      auto Tp_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), Tp_h);
-
-      MatScalarKokkosView Ta_d = MatScalarKokkosView("Ta", nz);
-
-      T = KokkosCsrMatrix("csrmatT", n, m, nz, Ta_d, Ti_d, Tj_d);
+      PetscCall(MatSeqAIJKokkosGenerateTransposeStructure(A, perm, T));
+      akok->transpose_perm = perm; // cache the perm in this matrix for reuse
       PetscCallCXX(Kokkos::parallel_for(
-        nz, KOKKOS_LAMBDA(const PetscInt i) { Ta_d(i) = Aa(Tp_d(i)); }));
-      aijkok->transpose_perm    = Tp_d; // also cache the perm
-      aijkok->transpose_updated = PETSC_TRUE;
+        nz, KOKKOS_LAMBDA(const PetscInt i) { T.values(i) = Aa(perm(i)); }));
     }
-    *csrmatT = aijkok->csrmatT;
+    akok->transpose_updated = PETSC_TRUE;
+    *csrmatT                = akok->csrmatT;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* Generate the Hermitian on device and cache it internally */
+// Generate the Hermitian on device and cache it internally
 static PetscErrorCode MatSeqAIJKokkosGenerateHermitian_Private(Mat A, KokkosCsrMatrix *csrmatH)
 {
-  Mat_SeqAIJKokkos *aijkok = static_cast<Mat_SeqAIJKokkos *>(A->spptr);
+  Mat_SeqAIJ       *aseq = static_cast<Mat_SeqAIJ *>(A->data);
+  Mat_SeqAIJKokkos *akok = static_cast<Mat_SeqAIJKokkos *>(A->spptr);
+  PetscInt          nz = aseq->nz, m = A->rmap->N, n = A->cmap->n;
+  KokkosCsrMatrix  &T = akok->csrmatH;
 
   PetscFunctionBegin;
-  PetscCall(PetscLogGpuTimeBegin());
-  PetscCheck(aijkok, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Unexpected NULL (Mat_SeqAIJKokkos*)A->spptr");
-  if (!aijkok->csrmatH.nnz() || !aijkok->hermitian_updated) { /* Generate Ah for the first time OR just update its values */
-    PetscCallCXX(aijkok->a_dual.sync_device());
-    PetscCallCXX(aijkok->csrmatH = transpose_matrix(aijkok->csrmat));
-    PetscCallCXX(sort_crs_matrix(aijkok->csrmatH));
-#if defined(PETSC_USE_COMPLEX)
-    const auto &a = aijkok->csrmatH.values;
-    Kokkos::parallel_for(
-      a.extent(0), KOKKOS_LAMBDA(MatRowMapType i) { a(i) = PetscConj(a(i)); });
-#endif
-    aijkok->hermitian_updated = PETSC_TRUE;
+  PetscCheck(akok, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Unexpected NULL (Mat_SeqAIJKokkos*)A->spptr");
+  PetscCallCXX(akok->a_dual.sync_device()); // Sync A's valeus since we are going to access them on device
+
+  const auto &Aa = akok->a_dual.view_device();
+
+  if (A->hermitian == PETSC_BOOL3_TRUE) {
+    *csrmatH = akok->csrmat;
+  } else {
+    // See if we already have a cached hermitian and its value is up to date
+    if (T.numRows() == n && T.numCols() == m) {  // this indicates csrmatT had been generated before, otherwise T has 0 rows/cols after construction
+      if (!akok->hermitian_updated) {            // if the value is out of date, update the cached version
+        const auto &perm = akok->transpose_perm; // get the permutation array
+        auto       &Ta   = T.values;
+
+        PetscCallCXX(Kokkos::parallel_for(
+          nz, KOKKOS_LAMBDA(const PetscInt i) { Ta(i) = PetscConj(Aa(perm(i))); }));
+      }
+    } else { // Generate T of size n x m for the first time
+      MatRowMapKokkosView perm;
+
+      PetscCall(MatSeqAIJKokkosGenerateTransposeStructure(A, perm, T));
+      akok->transpose_perm = perm; // cache the perm in this matrix for reuse
+      PetscCallCXX(Kokkos::parallel_for(
+        nz, KOKKOS_LAMBDA(const PetscInt i) { T.values(i) = PetscConj(Aa(perm(i))); }));
+    }
+    akok->hermitian_updated = PETSC_TRUE;
+    *csrmatH                = akok->csrmatH;
   }
-  *csrmatH = aijkok->csrmatH;
-  PetscCall(PetscLogGpuTimeEnd());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
