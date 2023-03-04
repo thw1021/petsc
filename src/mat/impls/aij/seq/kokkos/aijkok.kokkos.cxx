@@ -920,8 +920,10 @@ static PetscErrorCode MatProductSymbolic_SeqAIJKokkos_SeqAIJKokkos(Mat C)
   auto spgemm_alg = KokkosSparse::SPGEMMAlgorithm::SPGEMM_DEFAULT; /* default alg is TPL if enabled, otherwise KK */
 
   /* CUDA-10.2's spgemm has bugs. We prefer the SpGEMMreuse APIs introduced in cuda-11.4 */
-#if defined(KOKKOSKERNELS_ENABLE_TPL_CUSPARSE) && PETSC_PKG_CUDA_VERSION_LT(11, 4, 0)
+#if defined(KOKKOSKERNELS_ENABLE_TPL_CUSPARSE)
+  #if PETSC_PKG_CUDA_VERSION_LT(11, 4, 0)
   spgemm_alg = KokkosSparse::SPGEMMAlgorithm::SPGEMM_KK;
+  #endif
 #endif
   pdata->kh.create_spgemm_handle(spgemm_alg);
 
