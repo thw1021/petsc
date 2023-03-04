@@ -70,7 +70,7 @@ DO THE FOLLOWING:
 
 .. _handson_example_2:
 
-Nonlinear ODE arising from a time-dependent one dimensional PDE
+Nonlinear ODE arising from a time-dependent one-dimensional PDE
 ---------------------------------------------------------------
 
 WHAT THIS EXAMPLE DEMONSTRATES:
@@ -292,7 +292,7 @@ DO THE FOLLOWING:
 
 .. _handson_example_4:
 
-Nonlinear time dependent PDE on Unstructured Grid
+Nonlinear time dependent PDE on unstructured grid
 -------------------------------------------------
 
 WHAT THIS EXAMPLE DEMONSTRATES:
