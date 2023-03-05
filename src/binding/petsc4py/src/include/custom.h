@@ -2,14 +2,14 @@
 #define PETSC4PY_CUSTOM_H
 
 #include "petsc/private/deviceimpl.h"
+#include "petsc/private/sfimpl.h"
 #include "petsc/private/vecimpl.h"
 #include "petsc/private/matimpl.h"
-#include "petsc/private/kspimpl.h"
 #include "petsc/private/pcimpl.h"
+#include "petsc/private/kspimpl.h"
 #include "petsc/private/snesimpl.h"
 #include "petsc/private/tsimpl.h"
 #include "petsc/private/taoimpl.h"
-#include "petsc/private/sfimpl.h"
 
 /* ---------------------------------------------------------------- */
 
@@ -26,6 +26,10 @@ typedef PetscErrorCode (*PetscErrorHandlerFunction)
 (MPI_Comm,int,const char*,const char*,
  PetscErrorCode,PetscErrorType,const char*,void*);
 #define PetscTBEH PetscTraceBackErrorHandler
+
+/* ---------------------------------------------------------------- */
+
+PETSC_EXTERN PetscErrorCode (*PetscPythonMonitorSet_C)(PetscObject,const char*);
 
 /* ---------------------------------------------------------------- */
 
@@ -148,6 +152,33 @@ PetscLogEventFindName(PetscLogEvent eventid,
 
 /* ---------------------------------------------------------------- */
 
+static PetscErrorCode
+PetscObjectComposedDataGetIntPy(PetscObject o, PetscInt id, PetscInt *v, PetscBool *exist)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscObjectComposedDataGetInt(o,id,*v,*exist));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode
+PetscObjectComposedDataSetIntPy(PetscObject o, PetscInt id, PetscInt v)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscObjectComposedDataSetInt(o,id,v));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode
+PetscObjectComposedDataRegisterPy(PetscInt *id)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscObjectComposedDataRegister(id));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+
+/* ---------------------------------------------------------------- */
+
 /* The object is not used so far. I expect PETSc will sooner or later support
    a different device context for each object */
 static PetscErrorCode
@@ -171,7 +202,7 @@ PetscObjectGetDeviceId(PetscObject o, PetscInt *id)
 
 /* ---------------------------------------------------------------- */
 
-static inline PetscErrorCode
+static PetscErrorCode
 VecGetCurrentMemType(Vec v, PetscMemType *m)
 {
   PetscBool bound;
@@ -197,8 +228,8 @@ VecGetCurrentMemType(Vec v, PetscMemType *m)
 
 /* ---------------------------------------------------------------- */
 
-static inline
-PetscErrorCode MatIsPreallocated(Mat A,PetscBool *flag)
+static PetscErrorCode
+MatIsPreallocated(Mat A,PetscBool *flag)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A,MAT_CLASSID,1);
@@ -207,8 +238,8 @@ PetscErrorCode MatIsPreallocated(Mat A,PetscBool *flag)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static inline
-PetscErrorCode MatHasPreallocationAIJ(Mat A,PetscBool *aij,PetscBool *baij,PetscBool *sbaij,PetscBool *is)
+static PetscErrorCode
+MatHasPreallocationAIJ(Mat A,PetscBool *aij,PetscBool *baij,PetscBool *sbaij,PetscBool *is)
 {
   void (*f)(void) = 0;
 
@@ -235,7 +266,7 @@ PetscErrorCode MatHasPreallocationAIJ(Mat A,PetscBool *aij,PetscBool *baij,Petsc
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static inline PetscErrorCode
+static PetscErrorCode
 MatGetCurrentMemType(Mat A, PetscMemType *m)
 {
   PetscBool bound;
@@ -344,6 +375,37 @@ KSPSetConvergedReason(KSP ksp, KSPConvergedReason reason)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode
+KSPConverged(KSP ksp,PetscInt iter,PetscReal rnorm,KSPConvergedReason *reason)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
+  if (reason) PetscValidPointer(reason,2);
+  if (!iter) ksp->rnorm0 = rnorm;
+  if (!iter) {
+    ksp->reason = KSP_CONVERGED_ITERATING;
+    ksp->ttol = PetscMax(rnorm*ksp->rtol,ksp->abstol);
+  }
+  if (ksp->converged) {
+    PetscCall(ksp->converged(ksp,iter,rnorm,&ksp->reason,ksp->cnvP));
+  } else {
+    PetscCall(KSPConvergedSkip(ksp,iter,rnorm,&ksp->reason,NULL));
+    /*PetscCall(KSPConvergedDefault(ksp,iter,rnorm,&ksp->reason,NULL));*/
+  }
+  ksp->rnorm = rnorm;
+  if (reason) *reason = ksp->reason;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode
+KSPLogHistory(KSP ksp,PetscReal rnorm)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ksp,KSP_CLASSID,1);
+  PetscCall(KSPLogResidualHistory(ksp,rnorm));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /* ---------------------------------------------------------------- */
 
 static PetscErrorCode
@@ -359,6 +421,36 @@ SNESConvergenceTestCall(SNES snes, PetscInt its,
   PetscCheck(ynorm >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"step norm must be nonnegative");
   PetscCheck(fnorm >= 0,PETSC_COMM_SELF,PETSC_ERR_ARG_OUTOFRANGE,"function norm must be nonnegative");
   PetscUseTypeMethod(snes,converged ,its,xnorm,ynorm,fnorm,reason,snes->cnvP);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode
+SNESConverged(SNES snes,PetscInt iter,PetscReal xnorm,PetscReal ynorm,PetscReal fnorm,SNESConvergedReason *reason)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
+  if (reason) PetscValidPointer(reason,2);
+  if (!iter) {
+    snes->reason = SNES_CONVERGED_ITERATING;
+    snes->ttol = fnorm*snes->rtol;
+  }
+  if (snes->ops->converged) {
+    PetscUseTypeMethod(snes,converged ,iter,xnorm,ynorm,fnorm,&snes->reason,snes->cnvP);
+  } else {
+    PetscCall(SNESConvergedSkip(snes,iter,xnorm,ynorm,fnorm,&snes->reason,0));
+    /*PetscCall(SNESConvergedDefault(snes,iter,xnorm,ynorm,fnorm,&snes->reason,0));*/
+  }
+  snes->norm = fnorm;
+  if (reason) *reason = snes->reason;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode
+SNESLogHistory(SNES snes,PetscReal rnorm,PetscInt lits)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(snes,SNES_CLASSID,1);
+  PetscCall(SNESLogConvergenceHistory(snes,rnorm,lits));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -472,6 +564,119 @@ SNESSetUseFDColoring(SNES snes,PetscBool flag)
     PetscCall(DMGetDMSNES(dm,&sdm));
     PetscCall(DMSNESUnsetJacobianContext_Internal(dm));
   }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/* ---------------------------------------------------------------- */
+
+static PetscErrorCode
+TaoConverged(Tao tao, TaoConvergedReason *reason)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
+  PetscValidBoolPointer(reason,2);
+  if (tao->ops->convergencetest) {
+    PetscUseTypeMethod(tao,convergencetest,tao->cnvP);
+  } else {
+    PetscCall(TaoDefaultConvergenceTest(tao,tao->cnvP));
+  }
+  *reason = tao->reason;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode
+TaoCheckReals(Tao tao, PetscReal f, PetscReal g)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
+  PetscCheck(!PetscIsInfOrNanReal(f) && !PetscIsInfOrNanReal(g),PetscObjectComm((PetscObject)tao),PETSC_ERR_USER,"User provided compute function generated Inf or NaN");
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode
+TaoCreateDefaultKSP(Tao tao)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
+  PetscCall(KSPDestroy(&tao->ksp));
+  PetscCall(KSPCreate(((PetscObject)tao)->comm,&tao->ksp));
+  PetscCall(PetscObjectIncrementTabLevel((PetscObject)tao->ksp,(PetscObject)tao,1));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode
+TaoCreateDefaultLineSearch(Tao tao)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
+  PetscCall(TaoLineSearchDestroy(&tao->linesearch));
+  PetscCall(TaoLineSearchCreate(((PetscObject)tao)->comm,&tao->linesearch));
+  PetscCall(PetscObjectIncrementTabLevel((PetscObject)tao->linesearch,(PetscObject)tao,1));
+  PetscCall(TaoLineSearchSetType(tao->linesearch,TAOLINESEARCHMT));
+  PetscCall(TaoLineSearchUseTaoRoutines(tao->linesearch,tao));
+  PetscCall(TaoLineSearchSetInitialStepLength(tao->linesearch,1.0));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode
+TaoHasGradientRoutine(Tao tao, PetscBool* flg)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
+  PetscValidBoolPointer(flg,2);
+  *flg = (PetscBool)(tao->ops->computegradient || tao->ops->computeobjectiveandgradient);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+#if 0
+static PetscErrorCode
+TaoHasHessianRoutine(Tao tao, PetscBool* flg)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
+  PetscValidBoolPointer(flg,2);
+  *flg = tao->ops->computehessian;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+#endif
+
+static PetscErrorCode
+TaoComputeUpdate(Tao tao)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
+  PetscTryTypeMethod(tao,update,tao->niter,tao->user_update);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode
+TaoGetVecs(Tao tao, Vec *X, Vec *G, Vec *S)
+{
+  PetscBool has_g;
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
+  PetscCall(TaoHasGradientRoutine(tao,&has_g));
+  if (X) *X = tao->solution;
+  if (G) {
+    if (has_g && !tao->gradient) PetscCall(VecDuplicate(tao->solution,&tao->gradient));
+    *G = has_g ? tao->gradient : NULL;
+  }
+  if (S) {
+    if (has_g && !tao->stepdirection) PetscCall(VecDuplicate(tao->solution,&tao->stepdirection));
+    *S = has_g ? tao->stepdirection : NULL;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode
+TaoApplyLineSearch(Tao tao, PetscReal* f, PetscReal *s, TaoLineSearchConvergedReason *lsr)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tao,TAO_CLASSID,1);
+  PetscValidRealPointer(f,2);
+  PetscValidRealPointer(s,3);
+  PetscCall(TaoLineSearchApply(tao->linesearch,tao->solution,f,tao->gradient,tao->stepdirection,s,lsr));
+  PetscCall(TaoAddLineSearchCounts(tao));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
