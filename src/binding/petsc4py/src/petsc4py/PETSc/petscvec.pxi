@@ -476,14 +476,6 @@ cdef vec_get_dlpack_ctx(Vec self):
 
 # --------------------------------------------------------------------
 
-cdef extern from "pep3118.h":
-    int  PyPetscBuffer_FillInfo(Py_buffer*,
-                                void*,PetscInt,char,
-                                int,int) except -1
-    void PyPetscBuffer_Release(Py_buffer*)
-
-# --------------------------------------------------------------------
-
 cdef int Vec_AcquireArray(PetscVec v, PetscScalar *a[], int ro) nogil except -1:
     if ro: CHKERR( VecGetArrayRead(v, <const PetscScalar**>a) )
     else:  CHKERR( VecGetArray(v, a) )

@@ -176,7 +176,6 @@ PetscObjectComposedDataRegisterPy(PetscInt *id)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-
 /* ---------------------------------------------------------------- */
 
 /* The object is not used so far. I expect PETSc will sooner or later support

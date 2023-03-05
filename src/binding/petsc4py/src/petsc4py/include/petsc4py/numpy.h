@@ -1,37 +1,14 @@
 #ifndef PETSC4PY_NUMPY_H
 #define PETSC4PY_NUMPY_H
 
-#include "Python.h"
-
-/*
-#ifndef NPY_NO_DEPRECATED_API
-#define NPY_NO_DEPRECATED_API NPY_API_VERSION
-#endif
-*/
-#include "numpy/arrayobject.h"
-
-#ifndef NPY_ARRAY_ALIGNED
-#define NPY_ARRAY_ALIGNED NPY_ALIGNED
-#endif
-#ifndef NPY_ARRAY_WRITEABLE
-#define NPY_ARRAY_WRITEABLE NPY_WRITEABLE
-#endif
-#ifndef NPY_ARRAY_NOTSWAPPED
-#define NPY_ARRAY_NOTSWAPPED NPY_NOTSWAPPED
-#endif
-#ifndef NPY_ARRAY_CARRAY
-#define NPY_ARRAY_CARRAY NPY_CARRAY
-#endif
-#ifndef NPY_ARRAY_FARRAY
-#define NPY_ARRAY_FARRAY NPY_FARRAY
-#endif
-
-#include "petsc.h"
+#include <Python.h>
+#include <numpy/arrayobject.h>
+#include <petscsystypes.h>
 
 #  define NPY_PETSC_BOOL NPY_INT
 
 #if defined(PETSC_USE_64BIT_INDICES)
-#  define NPY_PETSC_INT  NPY_LONGLONG
+#  define NPY_PETSC_INT  NPY_INT64
 #else
 #  define NPY_PETSC_INT  NPY_INT
 #endif

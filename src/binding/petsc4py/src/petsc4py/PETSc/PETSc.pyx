@@ -103,9 +103,13 @@ cdef extern from * nogil:
     ctypedef double PetscReal
     ctypedef double PetscScalar
 
-cdef extern from "scalar.h":
+cdef extern from "petsc4py/pyscalar.h":
     object      PyPetscScalar_FromPetscScalar(PetscScalar)
     PetscScalar PyPetscScalar_AsPetscScalar(object) except? <PetscScalar>-1.0
+
+cdef extern from "petsc4py/pybuffer.h":
+    int  PyPetscBuffer_FillInfo(Py_buffer*,void*,PetscInt,char,int,int) except -1
+    void PyPetscBuffer_Release(Py_buffer*)
 
 cdef inline object toBool(PetscBool value):
     return True if value else False

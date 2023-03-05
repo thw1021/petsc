@@ -1,8 +1,8 @@
-#ifndef PETSC4PY_PEP3118_H
-#define PETSC4PY_PEP3118_H
+#ifndef PETSC4PY_PYBUFFER_H
+#define PETSC4PY_PYBUFFER_H
 
-#include "Python.h"
-#include "petsc.h"
+#include <Python.h>
+#include <petscsystypes.h>
 
 #if defined(PETSC_USE_64BIT_INDICES)
 # define _PyPetsc_FMT_PETSC_INT     "q"
@@ -94,4 +94,4 @@ void PyPetscBuffer_Release(Py_buffer *view)
 #undef _PyPetsc_FMT_PETSC_SCALAR
 #undef _PyPetsc_FMT_PETSC_COMPLEX
 
-#endif/*!PETSC4PY_PEP3118_H*/
+#endif/*!PETSC4PY_PYBUFFER_H*/

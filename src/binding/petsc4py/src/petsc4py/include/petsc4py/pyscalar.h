@@ -1,8 +1,8 @@
-#ifndef PETSC4PY_SCALAR_H
-#define PETSC4PY_SCALAR_H
+#ifndef PETSC4PY_PYSCALAR_H
+#define PETSC4PY_PYSCALAR_H
 
-#include "Python.h"
-#include "petsc.h"
+#include <Python.h>
+#include <petscsystypes.h>
 
 static inline
 PyObject *PyPetscScalar_FromPetscScalar(PetscScalar s)
@@ -29,4 +29,4 @@ PetscScalar PyPetscScalar_AsPetscScalar(PyObject *o)
 #endif
 }
 
-#endif/*PETSC4PY_SCALAR_H*/
+#endif/*PETSC4PY_PYSCALAR_H*/
