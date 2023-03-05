@@ -1,6 +1,6 @@
 # --------------------------------------------------------------------
 
-cdef extern from *:
+cdef extern from * nogil:
     ctypedef ssize_t Py_intptr_t
     ctypedef size_t  Py_uintptr_t
 
@@ -98,14 +98,18 @@ cdef inline PetscErrorCode CHKERRMPI(int ierr) nogil except PETSC_ERR_PYTHON:
 cdef extern from "compat.h": pass
 cdef extern from "custom.h": pass
 
-cdef extern from *:
+cdef extern from * nogil:
     ctypedef long   PetscInt
     ctypedef double PetscReal
     ctypedef double PetscScalar
 
-cdef extern from "scalar.h":
+cdef extern from "petsc4py/pyscalar.h":
     object      PyPetscScalar_FromPetscScalar(PetscScalar)
     PetscScalar PyPetscScalar_AsPetscScalar(object) except? <PetscScalar>-1.0
+
+cdef extern from "petsc4py/pybuffer.h":
+    int  PyPetscBuffer_FillInfo(Py_buffer*,void*,PetscInt,char,int,int) except -1
+    void PyPetscBuffer_Release(Py_buffer*)
 
 cdef inline object toBool(PetscBool value):
     return True if value else False
@@ -155,6 +159,7 @@ include "petscobj.pxi"
 include "petscvwr.pxi"
 include "petscrand.pxi"
 include "petscdevice.pxi"
+include "petsclayout.pxi"
 include "petscis.pxi"
 include "petscsf.pxi"
 include "petscvec.pxi"
@@ -230,6 +235,7 @@ include "DMUtils.pyx"
 # --------------------------------------------------------------------
 
 include "CAPI.pyx"
+include "libpetsc4py.pyx"
 
 # --------------------------------------------------------------------
 
@@ -239,8 +245,7 @@ cdef extern from "Python.h":
     int PyList_Append(object,object) except -1
 
 cdef extern from * nogil:
-    PetscErrorCode PetscTBEH(MPI_Comm,int,char*,char*,
-                  int,PetscErrorType,char*,void*)
+    PetscErrorCode PetscTBEH(MPI_Comm,int,char*,char*,int,PetscErrorType,char*,void*)
 
 cdef object tracebacklist = []
 
@@ -322,10 +327,6 @@ cdef extern from "stdio.h" nogil:
 cdef extern from "initpkg.h":
     PetscErrorCode PetscInitializePackageAll()
 
-cdef extern from "libpetsc4py.h":
-    int import_libpetsc4py() except -1
-    PetscErrorCode PetscPythonRegisterAll()
-
 cdef int    PyPetsc_Argc = 0
 cdef char** PyPetsc_Argv = NULL
 
@@ -363,8 +364,8 @@ cdef void delinitargs(int *argc, char **argv[]) nogil:
 cdef void finalize() nogil:
     cdef int ierr = 0
     # deallocate command line arguments
-    global PyPetsc_Argc; global PyPetsc_Argv;
-    global PetscVFPrintf; global prevfprintf;
+    global PyPetsc_Argc, PyPetsc_Argv
+    global PetscVFPrintf, prevfprintf
     delinitargs(&PyPetsc_Argc, &PyPetsc_Argv)
     # manage PETSc finalization
     if not (<int>PetscInitializeCalled): return
@@ -385,7 +386,17 @@ cdef void finalize() nogil:
                 "[error code: %d]\n", ierr)
     # and we are done, see you later !!
 
-cdef PetscErrorCode PetscVFPrintf_PythonStd(FILE *fd, const char formt[], va_list ap):
+# --------------------------------------------------------------------
+
+cdef extern from * nogil:
+    PetscErrorCode (*PetscVFPrintf)(FILE*,const char*,va_list)
+
+cdef PetscErrorCode (*prevfprintf)(FILE*,const char*,va_list) nogil
+prevfprintf = NULL
+
+cdef PetscErrorCode PetscVFPrintf_PythonStd(
+    FILE *fd, const char formt[], va_list ap,
+) with gil:
     import sys
     cdef char cstring[8192]
     cdef size_t stringlen = sizeof(cstring)
@@ -406,10 +417,9 @@ cdef PetscErrorCode PetscVFPrintf_PythonStd(FILE *fd, const char formt[], va_lis
         PetscVFPrintfDefault(fd, formt, ap)
     return PETSC_SUCCESS
 
-cdef PetscErrorCode (*prevfprintf)(FILE*, const char*, va_list)
-prevfprintf = NULL
-
-cdef int _push_vfprintf(PetscErrorCode (*vfprintf)(FILE *, const char*, va_list)) except -1:
+cdef int _push_vfprintf(
+    PetscErrorCode (*vfprintf)(FILE*, const char*, va_list) nogil,
+) except -1:
     global PetscVFPrintf, prevfprintf
     assert prevfprintf == NULL
     prevfprintf = PetscVFPrintf
@@ -425,7 +435,7 @@ cdef int initialize(object args, object comm) except -1:
     if (<int>PetscInitializeCalled): return 1
     if (<int>PetscFinalizeCalled):   return 0
     # allocate command line arguments
-    global PyPetsc_Argc; global PyPetsc_Argv;
+    global PyPetsc_Argc, PyPetsc_Argv
     getinitargs(args, &PyPetsc_Argc, &PyPetsc_Argv)
     # communicator
     global PETSC_COMM_WORLD
@@ -445,7 +455,7 @@ cdef int initialize(object args, object comm) except -1:
                           b"PetscFinalize()")
     return 1 # and we are done, enjoy !!
 
-cdef extern from *:
+cdef extern from * nogil:
     PetscClassId PETSC_OBJECT_CLASSID           "PETSC_OBJECT_CLASSID"
     PetscClassId PETSC_VIEWER_CLASSID           "PETSC_VIEWER_CLASSID"
     PetscClassId PETSC_RANDOM_CLASSID           "PETSC_RANDOM_CLASSID"
@@ -498,7 +508,6 @@ cdef int register() except -1:
     # make sure all PETSc packages are initialized
     CHKERR( PetscInitializePackageAll() )
     # register custom implementations
-    import_libpetsc4py()
     CHKERR( PetscPythonRegisterAll() )
     # register Python types
     PyPetscType_Register(PETSC_OBJECT_CLASSID,           Object)
@@ -585,4 +594,5 @@ def _pop_python_vfprintf():
 def _stdout_is_stderr():
     global PETSC_STDOUT, PETSC_STDERR;
     return PETSC_STDOUT == PETSC_STDERR
+
 # --------------------------------------------------------------------

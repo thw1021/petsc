@@ -24,10 +24,9 @@ test-%:
 srcbuild:
 	${PYTHON} setup.py build_src ${SRCOPT}
 srcclean:
-	-${RM} src/${package}.${MODULE}.c
-	-${RM} src/include/${package}/${package}.${MODULE}.h
-	-${RM} src/include/${package}/${package}.${MODULE}_api.h
-	-${RM} src/lib${package}/lib${package}.[ch]
+	-${RM} src/${package}/${MODULE}.c
+	-${RM} src/${package}/${MODULE}.h
+	-${RM} src/${package}/${MODULE}_api.h
 
 .PHONY: clean distclean fullclean
 clean:

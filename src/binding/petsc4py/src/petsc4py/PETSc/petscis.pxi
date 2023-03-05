@@ -108,14 +108,6 @@ cdef inline LGMap ref_LGMap(PetscLGMap lgm):
 
 # --------------------------------------------------------------------
 
-cdef extern from "pep3118.h":
-    int  PyPetscBuffer_FillInfo(Py_buffer*,
-                                void*,PetscInt,char,
-                                int,int) except -1
-    void PyPetscBuffer_Release(Py_buffer*)
-
-# --------------------------------------------------------------------
-
 cdef class _IS_buffer:
 
     cdef PetscIS iset
