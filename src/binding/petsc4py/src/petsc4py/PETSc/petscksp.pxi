@@ -196,7 +196,7 @@ cdef extern from * nogil:
     PetscErrorCode KSPPythonSetType(PetscKSP,char[])
     PetscErrorCode KSPPythonGetType(PetscKSP,char*[])
 
-cdef extern from "custom.h" nogil:
+cdef extern from * nogil: # custom.h
     PetscErrorCode KSPSetIterationNumber(PetscKSP,PetscInt)
     PetscErrorCode KSPSetResidualNorm(PetscKSP,PetscReal)
     PetscErrorCode KSPConvergenceTestCall(PetscKSP,PetscInt,PetscReal,PetscKSPConvergedReason*)

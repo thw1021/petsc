@@ -39,10 +39,10 @@ cdef extern from * nogil:
     PetscErrorCode PetscObjectGetTabLevel(PetscObject,PetscInt*)
     PetscErrorCode PetscObjectSetTabLevel(PetscObject,PetscInt)
 
-cdef extern from "custom.h" nogil:
+cdef extern from * nogil: # custom.h
     PetscErrorCode PetscObjectGetDeviceId(PetscObject,PetscInt*)
 
-cdef extern from "petsc/private/garbagecollector.h" nogil:
+cdef extern from "<petsc/private/garbagecollector.h>" nogil:
     PetscErrorCode PetscObjectDelayedDestroy(PetscObject*)
 
 # --------------------------------------------------------------------

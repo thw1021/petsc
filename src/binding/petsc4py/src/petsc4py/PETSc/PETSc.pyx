@@ -1,6 +1,14 @@
 # --------------------------------------------------------------------
 
 cdef extern from * nogil:
+    """
+    #include "lib-petsc/compat.h"
+    #include "lib-petsc/custom.h"
+    """
+
+# --------------------------------------------------------------------
+
+cdef extern from * nogil:
     ctypedef ssize_t Py_intptr_t
     ctypedef size_t  Py_uintptr_t
 
@@ -95,17 +103,18 @@ cdef inline PetscErrorCode CHKERRMPI(int ierr) nogil except PETSC_ERR_PYTHON:
 # PETSc support
 # -------------
 
-cdef extern from "compat.h": pass
-cdef extern from "custom.h": pass
-
 cdef extern from * nogil:
     ctypedef long   PetscInt
     ctypedef double PetscReal
     ctypedef double PetscScalar
 
-cdef extern from "scalar.h":
+cdef extern from "<petsc4py/pyscalar.h>":
     object      PyPetscScalar_FromPetscScalar(PetscScalar)
     PetscScalar PyPetscScalar_AsPetscScalar(object) except? <PetscScalar>-1.0
+
+cdef extern from "<petsc4py/pybuffer.h>":
+    int  PyPetscBuffer_FillInfo(Py_buffer*,void*,PetscInt,char,int,int) except -1
+    void PyPetscBuffer_Release(Py_buffer*)
 
 cdef inline object toBool(PetscBool value):
     return True if value else False
@@ -245,22 +254,24 @@ cdef extern from * nogil:
 
 cdef object tracebacklist = []
 
-cdef PetscErrorCode traceback(MPI_Comm       comm,
-                              int            line,
-                              const char    *cfun,
-                              const char    *cfile,
-                              PetscErrorCode n,
-                              PetscErrorType p,
-                              const char    *mess,
-                              void          *ctx) with gil:
+cdef PetscErrorCode traceback(
+    MPI_Comm       comm,
+    int            line,
+    const char    *cfunc,
+    const char    *cfile,
+    PetscErrorCode n,
+    PetscErrorType p,
+    const char    *mess,
+    void          *ctx,
+) with gil:
     cdef PetscLogDouble mem=0
     cdef PetscLogDouble rss=0
     cdef const char    *text=NULL
     global tracebacklist
     cdef object tbl = tracebacklist
-    fun = bytes2str(cfun)
-    fnm = bytes2str(cfile)
-    m = "%s() at %s:%d" % (fun, fnm, line)
+    cdef object fun = bytes2str(cfunc)
+    cdef object fnm = bytes2str(cfile)
+    cdef object m = "%s() at %s:%d" % (fun, fnm, line)
     PyList_Insert(tbl, 0, m)
     if p != PETSC_ERROR_INITIAL:
         return n
@@ -269,58 +280,65 @@ cdef PetscErrorCode traceback(MPI_Comm       comm,
     if n == PETSC_ERR_MEM: # special case
         PetscMallocGetCurrentUsage(&mem)
         PetscMemoryGetCurrentUsage(&rss)
-        m = ("Out of memory. "
-             "Allocated: %d, "
-             "Used by process: %d") % (mem, rss)
+        m = (
+            "Out of memory. "
+            "Allocated: %d, "
+             "Used by process: %d"
+        ) % (mem, rss)
         PyList_Append(tbl, m)
     else:
         PetscErrorMessage(n, &text, NULL)
     if text != NULL: PyList_Append(tbl, bytes2str(text))
     if mess != NULL: PyList_Append(tbl, bytes2str(mess))
-    <void>comm; <void>ctx; # unused
+    <void>comm # unused
+    <void>ctx  # unused
     return n
 
 cdef PetscErrorCode PetscPythonErrorHandler(
     MPI_Comm       comm,
     int            line,
-    const char    *cfun,
+    const char    *cfunc,
     const char    *cfile,
     PetscErrorCode n,
     PetscErrorType p,
     const char    *mess,
-    void          *ctx) nogil:
+    void          *ctx,
+) nogil:
     global tracebacklist
-    if Py_IsInitialized() and (<void*>tracebacklist) != NULL:
-        return traceback(comm, line, cfun, cfile, n, p, mess, ctx)
+    if (<void*>tracebacklist) != NULL and Py_IsInitialized():
+        return traceback(comm, line, cfunc, cfile, n, p, mess, ctx)
     else:
-        return PetscTBEH(comm, line, cfun, cfile, n, p, mess, ctx)
+        return PetscTBEH(comm, line, cfunc, cfile, n, p, mess, ctx)
 
 # --------------------------------------------------------------------
 
-cdef extern from "stdlib.h" nogil:
+cdef extern from "<stdlib.h>" nogil:
     void* malloc(size_t)
     void* realloc (void*,size_t)
     void free(void*)
 
-cdef extern from "stdarg.h" nogil:
+cdef extern from "<stdarg.h>" nogil:
     ctypedef struct va_list:
         pass
 
-cdef extern from "string.h"  nogil:
+cdef extern from "<string.h>" nogil:
     void* memset(void*,int,size_t)
     void* memcpy(void*,void*,size_t)
     char* strdup(char*)
+
+cdef extern from "<stdio.h>" nogil:
+    ctypedef struct FILE
+    FILE *stderr
+    int fprintf(FILE *, char *, ...)
 
 cdef extern from "Python.h":
     int Py_AtExit(void (*)())
     void PySys_WriteStderr(char*,...)
 
-cdef extern from "stdio.h" nogil:
-    ctypedef struct FILE
-    FILE *stderr
-    int fprintf(FILE *, char *, ...)
-
-cdef extern from "initpkg.h":
+cdef extern from * nogil:
+    """
+    #include "lib-petsc/initpkg.h"
+    """
     PetscErrorCode PetscInitializePackageAll()
 
 cdef int    PyPetsc_Argc = 0
@@ -373,12 +391,14 @@ cdef void finalize() nogil:
     # deinstall Python error handler
     ierr = PetscPopErrorHandler()
     if ierr != 0:
-        fprintf(stderr, "PetscPopErrorHandler() failed "
+        fprintf(stderr,
+                "PetscPopErrorHandler() failed "
                 "[error code: %d]\n", ierr)
     # finalize PETSc
     ierr = PetscFinalize()
     if ierr != 0:
-        fprintf(stderr, "PetscFinalize() failed "
+        fprintf(stderr,
+                "PetscFinalize() failed "
                 "[error code: %d]\n", ierr)
     # and we are done, see you later !!
 
@@ -390,7 +410,7 @@ cdef extern from * nogil:
 cdef PetscErrorCode (*prevfprintf)(FILE*,const char*,va_list) nogil
 prevfprintf = NULL
 
-cdef PetscErrorCode PetscVFPrintf_PythonStd(
+cdef PetscErrorCode PetscVFPrintf_PythonStdStream(
     FILE *fd, const char formt[], va_list ap,
 ) with gil:
     import sys
@@ -442,9 +462,10 @@ cdef int initialize(object args, object comm) except -1:
     cdef PetscErrorHandlerFunction handler = NULL
     handler = <PetscErrorHandlerFunction>PetscPythonErrorHandler
     CHKERR( PetscPushErrorHandler(handler, NULL) )
+    # redirect PETSc std streams
     import sys
     if (sys.stdout != sys.__stdout__) or (sys.stderr != sys.__stderr__):
-        _push_vfprintf(&PetscVFPrintf_PythonStd)
+        _push_vfprintf(&PetscVFPrintf_PythonStdStream)
     # register finalization function
     if Py_AtExit(finalize) < 0:
         PySys_WriteStderr(b"warning: could not register %s with Py_AtExit()",
@@ -491,7 +512,7 @@ cdef const char *citation = b"""\
   Number = {9},
   Pages = {1124--1139},
   Year = {2011},
-  DOI = {http://dx.doi.org/10.1016/j.advwatres.2011.04.013}
+  DOI = {https://doi.org/10.1016/j.advwatres.2011.04.013}
 }
 """
 
@@ -582,13 +603,13 @@ def _finalize():
     citations_registry.clear()
 
 def _push_python_vfprintf():
-    _push_vfprintf(&PetscVFPrintf_PythonStd)
+    _push_vfprintf(&PetscVFPrintf_PythonStdStream)
 
 def _pop_python_vfprintf():
     _pop_vfprintf()
 
 def _stdout_is_stderr():
-    global PETSC_STDOUT, PETSC_STDERR;
+    global PETSC_STDOUT, PETSC_STDERR
     return PETSC_STDOUT == PETSC_STDERR
 
 # --------------------------------------------------------------------

@@ -3,7 +3,7 @@
 
 # --------------------------------------------------------------------
 
-cdef extern from "petsc.h":
+cdef extern from "<petsc.h>":
 
     ctypedef struct _p_MPI_Comm
     ctypedef _p_MPI_Comm* MPI_Comm

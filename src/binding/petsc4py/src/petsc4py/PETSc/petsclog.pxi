@@ -48,7 +48,7 @@ cdef extern from * nogil:
     PetscErrorCode PetscLogEventSetActiveAll(PetscLogEvent,PetscBool)
     PetscErrorCode PetscLogEventGetPerfInfo(PetscLogStage,PetscLogEvent,PetscEventPerfInfo*)
 
-cdef extern from "custom.h" nogil:
+cdef extern from * nogil: # custom.h
     PetscErrorCode PetscLogStageFindId(char[],PetscLogStage*)
     PetscErrorCode PetscLogClassFindId(char[],PetscLogClass*)
     PetscErrorCode PetscLogEventFindId(char[],PetscLogEvent*)

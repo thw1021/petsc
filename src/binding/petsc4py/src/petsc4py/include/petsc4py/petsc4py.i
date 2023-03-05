@@ -3,11 +3,8 @@
 
 /* ---------------------------------------------------------------- */
 
-% header % {#include "petsc4py/petsc4py.h" % } % init %
-{
-  import_petsc4py();
-  %
-}
+% header %{ #include <petsc4py/petsc4py.h> %}
+% init   %{ import_petsc4py();  %}
 
 /* ---------------------------------------------------------------- */
 

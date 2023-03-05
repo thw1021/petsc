@@ -1,6 +1,6 @@
 # --------------------------------------------------------------------
 
-cdef extern from "stdio.h" nogil:
+cdef extern from * nogil:
     int printf(char *, ...)
 
 cdef extern from "Python.h":
@@ -15,7 +15,7 @@ cdef extern from "Python.h":
        inquiry      tp_clear
     PyTypeObject *Py_TYPE(PyObject *)
 
-cdef extern from "petsc/private/garbagecollector.h" nogil:
+cdef extern from "<petsc/private/garbagecollector.h>" nogil:
     PetscErrorCode PetscGarbageCleanup(MPI_Comm)
     PetscErrorCode PetscGarbageView(MPI_Comm,PetscViewer);
 

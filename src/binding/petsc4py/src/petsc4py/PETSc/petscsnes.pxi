@@ -221,7 +221,7 @@ cdef extern from * nogil:
     PetscErrorCode SNESPythonSetType(PetscSNES,char[])
     PetscErrorCode SNESPythonGetType(PetscSNES,char*[])
 
-cdef extern from "custom.h" nogil:
+cdef extern from * nogil: # custom.h
     PetscErrorCode SNESSetUseMFFD(PetscSNES,PetscBool)
     PetscErrorCode SNESGetUseMFFD(PetscSNES,PetscBool*)
 

@@ -51,3 +51,10 @@ void *Cython_ImportFunction(PyObject   *module,
   Py_XDECREF(capi);
   return NULL;
 }
+
+/*
+  Local variables:
+  c-basic-offset: 2
+  indent-tabs-mode: nil
+  End:
+*/

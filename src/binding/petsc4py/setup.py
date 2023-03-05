@@ -2,10 +2,6 @@
 # Author:  Lisandro Dalcin
 # Contact: dalcinl@gmail.com
 
-"""
-PETSc for Python
-"""
-
 import re
 import os
 import sys
@@ -14,6 +10,9 @@ try:
     import setuptools
 except ImportError:
     setuptools = None
+
+topdir = os.path.abspath(os.path.dirname(__file__))
+sys.path.insert(0, topdir)
 
 pyver = sys.version_info[:2]
 if pyver < (2, 6) or (3, 0) <= pyver < (3, 2):
@@ -32,30 +31,43 @@ else:
 # Metadata
 # --------------------------------------------------------------------
 
-topdir = os.path.abspath(os.path.dirname(__file__))
-sys.path.insert(0, topdir)
+def F(string):
+    Name  = 'PETSc'
+    email = 'petsc-maint@mcs.anl.gov'
+    return string.format(
+        Name=Name,
+        email=email,
+        name=Name.lower(),
+        pyname=Name.lower()+'4py',
+    )
 
-def name():
-    return 'petsc4py'
+def get_name():
+    return F('{pyname}')
 
-def version():
-    with open(os.path.join(topdir, 'src', '__init__.py')) as f:
+def get_version():
+    try:
+        return get_version.result
+    except AttributeError:
+        pass
+    pkg_init_py = os.path.join(F('{pyname}'), '__init__.py')
+    with open(os.path.join(topdir, 'src', pkg_init_py)) as f:
         m = re.search(r"__version__\s*=\s*'(.*)'", f.read())
-        return m.groups()[0]
+    version = m.groups()[0]
+    get_version.result = version
+    return version
 
 def description():
-    return __doc__.strip()
+    return F('{Name} for Python')
 
 def long_description():
     with open(os.path.join(topdir, 'DESCRIPTION.rst')) as f:
         return f.read()
 
-name     = name()
-version  = version()
-
-url      = 'https://gitlab.com/petsc/petsc'
-pypiroot = 'https://pypi.io/packages/source/%s/%s/' % (name[0], name)
-download = pypiroot + '%(name)s-%(version)s.tar.gz' % vars()
+url      = F('https://gitlab.com/{name}/{name}')
+pypiroot = F('https://pypi.io/packages/source')
+pypislug = F('{pyname}')[0] + F('/{pyname}')
+tarball  = F('{pyname}-%s.tar.gz' % get_version())
+download = '/'.join([pypiroot, pypislug, tarball])
 
 classifiers = """
 License :: OSI Approved :: BSD License
@@ -77,8 +89,8 @@ Development Status :: 5 - Production/Stable
 keywords = """
 scientific computing
 parallel computing
-PETSc
 MPI
+PETSc
 """
 
 platforms = """
@@ -89,8 +101,8 @@ FreeBSD
 """
 
 metadata = {
-    'name'             : name,
-    'version'          : version,
+    'name'             : get_name(),
+    'version'          : get_version(),
     'description'      : description(),
     'long_description' : long_description(),
     'url'              : url,
@@ -98,11 +110,11 @@ metadata = {
     'classifiers'      : classifiers.strip().split('\n'),
     'keywords'         : keywords.strip().split('\n'),
     'license'          : 'BSD-2-Clause',
-    'platforms'        : platforms.split('\n'),
+    'platforms'        : platforms.strip().split('\n'),
     'author'           : 'Lisandro Dalcin',
     'author_email'     : 'dalcinl@gmail.com',
-    'maintainer'       : 'PETSc Team',
-    'maintainer_email' : 'petsc-maint@mcs.anl.gov',
+    'maintainer'       : F('{Name} Team'),
+    'maintainer_email' : F('{email}'),
 }
 metadata.update({
     'requires': ['numpy'],
@@ -116,21 +128,37 @@ metadata_extra = {
 # Extension modules
 # --------------------------------------------------------------------
 
+def sources():
+    src = dict(
+        source=F('{pyname}/{Name}.pyx'),
+        depends=[
+            F('{pyname}/*.pyx'),
+            F('{pyname}/*.pxd'),
+            F('{pyname}/{Name}/*.pyx'),
+            F('{pyname}/{Name}/*.pxd'),
+            F('{pyname}/{Name}/*.pxi'),
+        ],
+        workdir='src',
+    )
+    return [src]
+
 def extensions():
     from os import walk
     from glob import glob
     from os.path import join
-    glob_join = lambda *args: glob(join(*args))
     depends = []
+    include_dirs = []
+    glob_join = lambda *args: glob(join(*args))
     for pth, dirs, files in walk('src'):
         depends += glob_join(pth, '*.h')
         depends += glob_join(pth, '*.c')
-    if 'PETSC_DIR' in os.environ:
-        pd = os.environ['PETSC_DIR']
-        pa = os.environ.get('PETSC_ARCH', '')
-        depends += glob_join(pd, 'include', '*.h')
-        depends += glob_join(pd, 'include', 'petsc', 'private', '*.h')
-        depends += glob_join(pd, pa, 'include', 'petscconf.h')
+    for pkg in ('petsc',):
+        if (pkg.upper()+'_DIR') in os.environ:
+            pd = os.environ[pkg.upper()+'_DIR']
+            pa = os.environ.get('PETSC_ARCH', '')
+            depends += glob_join(pd, 'include', '*.h')
+            depends += glob_join(pd, 'include', pkg, 'private', '*.h')
+            depends += glob_join(pd, pa, 'include', '%sconf.h' % pkg)
     numpy_include = os.environ.get('NUMPY_INCLUDE')
     if numpy_include is not None:
         numpy_includes = [numpy_include]
@@ -140,39 +168,43 @@ def extensions():
             numpy_includes = [numpy.get_include()]
         except ImportError:
             numpy_includes = []
-    PETSc = dict(
-        name='petsc4py.lib.PETSc',
-        sources=['src/PETSc.c'],
+    include_dirs.extend(numpy_includes)
+    ext = dict(
+        name=F('{pyname}.lib.{Name}'),
+        sources=[F('src/{pyname}/{Name}.c')],
         depends=depends,
         include_dirs=[
-            'src/include',
-        ] + numpy_includes,
+            'src',
+            F('src/{pyname}/include'),
+        ] + include_dirs,
         define_macros=[
             ('MPICH_SKIP_MPICXX', 1),
             ('OMPI_SKIP_MPICXX', 1),
+            ('NPY_NO_DEPRECATED_API', 'NPY_1_7_API_VERSION'),
         ],
     )
-    return [PETSc]
+    return [ext]
 
 # --------------------------------------------------------------------
 # Setup
 # --------------------------------------------------------------------
 
-from conf.petscconf import setup, Extension
-from conf.petscconf import config, build, build_src, build_ext, install
-from conf.petscconf import clean, sdist
+from conf.config import setup, Extension
+from conf.config import config, build, build_src, build_ext, install
+from conf.config import clean, sdist
 
 def get_release():
+    suffix = os.path.join('src', 'binding', F('{pyname}'))
+    if not topdir.endswith(os.path.join(os.path.sep, suffix)):
+        return False
     release = 1
-    if topdir.endswith(os.path.join(os.path.sep, 'src', 'binding', name)):
-        topname = name.replace('4py', '')
-        rootdir = os.path.abspath(os.path.join(topdir, *[os.path.pardir]*3))
-        version_h = os.path.join(rootdir, 'include', '%sversion.h' % topname)
-        release_macro = '%s_VERSION_RELEASE' % topname.upper()
-        version_re = re.compile(r"#define\s+%s\s+([-]*\d+)" % release_macro)
-        if os.path.exists(version_h) and os.path.isfile(version_h):
-            with open(version_h, 'r') as f:
-                release = int(version_re.search(f.read()).groups()[0])
+    rootdir = os.path.abspath(os.path.join(topdir, *[os.path.pardir]*3))
+    version_h = os.path.join(rootdir, 'include', F('{name}version.h'))
+    release_macro = '%s_VERSION_RELEASE' % F('{name}').upper()
+    version_re = re.compile(r"#define\s+%s\s+([-]*\d+)" % release_macro)
+    if os.path.exists(version_h) and os.path.isfile(version_h):
+        with open(version_h, 'r') as f:
+            release = int(version_re.search(f.read()).groups()[0])
     return bool(release)
 
 def requires(pkgname, major, minor, release=True):
@@ -192,44 +224,42 @@ def run_setup():
     if setuptools:
         setup_args['zip_safe'] = False
         setup_args['install_requires'] = ['numpy']
-        PETSC_DIR = os.environ.get('PETSC_DIR')
-        if not (PETSC_DIR and os.path.isdir(PETSC_DIR)):
-            petsc = requires('petsc', x, y, release)
-            setup_args['install_requires'] += [petsc]
+        for pkg in ('petsc',):
+            PKG_DIR = os.environ.get(pkg.upper() + '_DIR')
+            if not (PKG_DIR and os.path.isdir(PKG_DIR)):
+                package = requires(pkg, x, y, release)
+                setup_args['install_requires'] += [package]
         setup_args.update(metadata_extra)
     if setuptools:
-        src = os.path.join('src', 'petsc4py.PETSc.c')
+        src = os.path.join('src', F('{pyname}'), F('{Name}.c'))
         has_src = os.path.exists(os.path.join(topdir, src))
         has_git = os.path.isdir(os.path.join(topdir, '.git'))
         has_hg  = os.path.isdir(os.path.join(topdir, '.hg'))
-        suffix = os.path.join('src', 'binding', 'petsc4py')
-        in_petsc = topdir.endswith(os.path.sep + suffix)
-        if not has_src or has_git or has_hg or in_petsc:
+        suffix = os.path.join('src', 'binding', F('{pyname}'))
+        in_tree = topdir.endswith(os.path.sep + suffix)
+        if not has_src or has_git or has_hg or in_tree:
             setup_args['setup_requires'] = ['Cython>='+CYTHON]
     #
     setup(
         packages=[
-            'petsc4py',
-            'petsc4py.lib',
+            F('{pyname}'),
+            F('{pyname}.lib'),
         ],
-        package_dir={
-            'petsc4py'     : 'src',
-            'petsc4py.lib' : 'src/lib',
-        },
+        package_dir={'' : 'src'},
         package_data={
-            'petsc4py': [
-                'include/petsc4py/*.h',
-                'include/petsc4py/*.i',
-                'include/petsc4py/*.pxd',
-                'include/petsc4py/*.pxi',
-                'include/petsc4py/*.pyx',
-                'PETSc.pxd',
+            F('{pyname}'): [
+                F('{Name}.pxd'),
+                F('{Name}*.h'),
+                F('include/{pyname}/*.h'),
+                F('include/{pyname}/*.i'),
             ],
-            'petsc4py.lib': [
-                'petsc.cfg',
+            F('{pyname}.lib'): [
+                F('{name}.cfg'),
             ],
         },
-        ext_modules=[Extension(**ext) for ext in extensions()],
+        ext_modules=[
+            Extension(**ext) for ext in extensions()
+        ],
         cmdclass={
             'config':     config,
             'build':      build,
@@ -239,7 +269,7 @@ def run_setup():
             'clean':      clean,
             'sdist':      sdist,
         },
-        **setup_args,
+        **setup_args
     )
 
 # --------------------------------------------------------------------
@@ -342,39 +372,26 @@ def cython_run(
     #
     log.info("cythonizing '%s' -> '%s'", source, target)
     from conf.cythonize import cythonize
-    err = cythonize(
-        source, target,
-        includes=includes,
-        destdir_c=destdir_c,
-        destdir_h=destdir_h,
-        workdir=workdir,
-    )
+    args = []
+    if workdir:
+        args += ['--working', workdir]
+    args += [source]
+    if target:
+        args += ['--output-file', target]
+    err = cythonize(args)
     if err:
         raise DistutilsError(
             "Cython failure: '%s' -> '%s'" % (source, target))
 
+
 def build_sources(cmd):
-    from os.path import exists, isdir, join
-    # petsc4py.PETSc
-    source = 'petsc4py.PETSc.pyx'
-    target = 'petsc4py.PETSc.c'
-    depends = [
-        'include/*/*.pxd',
-        'PETSc/*.pyx',
-        'PETSc/*.pxi',
-    ]
-    includes = ['include']
-    destdir_h = os.path.join('include', 'petsc4py')
-    cython_run(
-        source, target,
-        depends=depends,
-        includes=includes,
-        destdir_c=None,
-        destdir_h=destdir_h,
-        workdir='src',
-        force=cmd.force,
-        VERSION=cython_req(),
-    )
+    require = cython_req()
+    for source in sources():
+        cython_run(
+            force=cmd.force,
+            VERSION=require,
+            **source
+        )
 
 build_src.run = build_sources
 

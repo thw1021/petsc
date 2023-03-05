@@ -8,7 +8,7 @@ cdef extern from "Python.h":
     object PyCapsule_New(void*, const char*, PyCapsule_Destructor)
     int PyCapsule_CheckExact(object)
 
-cdef extern from "stdlib.h" nogil:
+cdef extern from "<stdlib.h>" nogil:
     ctypedef signed long int64_t
     ctypedef unsigned long long uint64_t
     ctypedef unsigned char uint8_t

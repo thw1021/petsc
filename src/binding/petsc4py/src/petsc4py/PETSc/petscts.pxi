@@ -323,7 +323,7 @@ cdef extern from * nogil:
     PetscErrorCode TSAdaptSetStepLimits(PetscTSAdapt,PetscReal,PetscReal)
     PetscErrorCode TSAdaptCheckStage(PetscTSAdapt,PetscTS,PetscReal,PetscVec,PetscBool*)
 
-cdef extern from "custom.h" nogil:
+cdef extern from * nogil: # custom.h
     PetscErrorCode TSSetTimeStepNumber(PetscTS,PetscInt)
 
 # -----------------------------------------------------------------------------

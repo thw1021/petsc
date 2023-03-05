@@ -1,6 +1,5 @@
-/* ------------------------------------------------------------------------- */
-
-static PetscErrorCode PetscInitializePackageAll(void)
+static
+PetscErrorCode PetscInitializePackageAll(void)
 {
   PetscFunctionBegin;
   PetscCall(PetscSysInitializePackage());
@@ -25,8 +24,6 @@ static PetscErrorCode PetscInitializePackageAll(void)
   PetscCall(PetscFEInitializePackage());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
-/* ------------------------------------------------------------------------- */
 
 /*
   Local variables:

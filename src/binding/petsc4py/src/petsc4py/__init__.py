@@ -64,17 +64,22 @@ def get_include():
 
 def get_config():
     """Return a dictionary with information about PETSc."""
-    import sys, os.path as p
-    from io import StringIO
-    from configparser import ConfigParser
-    filename = p.join(p.dirname(__file__), 'lib', 'petsc.cfg')
+    import os, sys
+    if sys.version_info[0] >= 3:
+        from io import StringIO
+        from configparser import ConfigParser
+    else:
+        from StringIO import StringIO
+        from ConfigParser import ConfigParser
+    pgkdir = os.path.dirname(__file__)
+    filename = os.path.join(pgkdir, 'lib', 'petsc.cfg')
     with open(filename) as fp:
         stream = StringIO("[petsc]\n"+fp.read())
     parser = ConfigParser()
     parser.optionxform = str
-    try:
+    if sys.version_info[0] >= 3:
         parser.read_file(stream, filename)
-    except AttributeError:
+    else:
         parser.readfp(stream, filename)
     return dict(parser.items('petsc'))
 

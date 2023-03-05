@@ -497,7 +497,7 @@ cdef extern from * nogil:
     PetscErrorCode MatPythonSetType(PetscMat,char[])
     PetscErrorCode MatPythonGetType(PetscMat,char*[])
 
-cdef extern from "custom.h" nogil:
+cdef extern from * nogil: # custom.h
     PetscErrorCode MatGetCurrentMemType(PetscMat,PetscMemType*)
     PetscErrorCode MatIsPreallocated(PetscMat,PetscBool*)
     PetscErrorCode MatHasPreallocationAIJ(PetscMat,PetscBool*,PetscBool*,PetscBool*,PetscBool*)
@@ -1039,7 +1039,7 @@ cdef inline matgetvalues(PetscMat mat,
 
 # -----------------------------------------------------------------------------
 
-cdef extern from "custom.h":
+cdef extern from * nogil: # custom.h
     PetscErrorCode MatFactorInfoDefaults(PetscBool,PetscBool,PetscMatFactorInfo*)
 
 cdef inline PetscMatFactorShiftType matfactorshifttype(object st) \

@@ -209,7 +209,7 @@ cdef extern from * nogil:
     PetscErrorCode VecCreateSeqHIPWithArray(MPI_Comm,PetscInt,PetscInt,const PetscScalar*,PetscVec*)
     PetscErrorCode VecCreateMPIHIPWithArray(MPI_Comm,PetscInt,PetscInt,PetscInt,const PetscScalar*,PetscVec*)
 
-cdef extern from "custom.h" nogil:
+cdef extern from * nogil: # custom.h
     PetscErrorCode VecStrideSum(PetscVec,PetscInt,PetscScalar*)
     PetscErrorCode VecGetCurrentMemType(PetscVec,PetscMemType*)
 
@@ -473,14 +473,6 @@ cdef vec_get_dlpack_ctx(Vec self):
     ctx0 = (dtype, devId, ndim, s1, s2)
     self.set_attr('__dltensor_ctx__', ctx0)
     return ctx0
-
-# --------------------------------------------------------------------
-
-cdef extern from "pep3118.h":
-    int  PyPetscBuffer_FillInfo(Py_buffer*,
-                                void*,PetscInt,char,
-                                int,int) except -1
-    void PyPetscBuffer_Release(Py_buffer*)
 
 # --------------------------------------------------------------------
 
