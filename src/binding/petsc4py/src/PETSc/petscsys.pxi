@@ -53,6 +53,9 @@ cdef extern from * nogil:
 
     PetscErrorCode PetscHasExternalPackage(const char[],PetscBool*)
 
+    PetscErrorCode PetscHelpPrintfStringBegin(MPI_Comm)
+    PetscErrorCode PetscHelpPrintfStringEnd(MPI_Comm,const char **)
+
 cdef extern from *:
     PetscErrorCode (*PetscVFPrintf)(FILE*,const char[],va_list)
 

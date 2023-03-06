@@ -144,7 +144,7 @@ int main(int argc, char *argv[])
   PetscCall(TestPetscFunctionListCreate(viewer, &fl, &fl_dup));
   PetscCall(TestPetscFunctionListFind(viewer, fl, fl_dup, &fl_size, &fl_dup_size));
   PetscCall(TestPetscFunctionListGet(viewer, fl, fl_dup, fl_size, fl_dup_size));
-  PetscCall(PetscFunctionListPrintTypes(PETSC_COMM_WORLD, PETSC_STDOUT, "my_prefix_", "-petsc_function_type", "Description", "PetscFunctionList", fl_dup, "foo", "bar"));
+  PetscCall(PetscFunctionListPrintTypes(PETSC_COMM_WORLD, "my_prefix_", "-petsc_function_type", "Description", "PetscFunctionList", fl_dup, "foo", "bar"));
 
   PetscCall(PetscFunctionListDestroy(&fl));
   PetscCheck(fl == NULL, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Failed to destroy PetscFunctionList, pointer (%p) is non-null", (void *)fl);

@@ -138,9 +138,11 @@ M*/
 PETSC_EXTERN MPI_Datatype MPIU_FORTRANADDR;
 
 #if defined(PETSC_USE_64BIT_INDICES)
-  #define MPIU_INT MPIU_INT64
+  #define MPIU_INT     MPIU_INT64
+  #define PetscInt_FMT PetscInt64_FMT
 #else
-  #define MPIU_INT MPI_INT
+  #define MPIU_INT     MPI_INT
+  #define PetscInt_FMT "d"
 #endif
 
 /*
@@ -1267,8 +1269,8 @@ PETSC_EXTERN PetscErrorCode PetscFunctionListAdd_Private(PetscFunctionList *, co
 PETSC_EXTERN PetscErrorCode PetscFunctionListDestroy(PetscFunctionList *);
 PETSC_EXTERN PetscErrorCode PetscFunctionListClear(PetscFunctionList);
 #define PetscFunctionListFind(list, name, fptr) PetscFunctionListFind_Private((list), (name), (PetscVoidFunction *)(fptr))
-PETSC_EXTERN PetscErrorCode PetscFunctionListFind_Private(PetscFunctionList, const char[], PetscVoidFunction *);
-PETSC_EXTERN PetscErrorCode PetscFunctionListPrintTypes(MPI_Comm, FILE *, const char[], const char[], const char[], const char[], PetscFunctionList, const char[], const char[]);
+PETSC_EXTERN PetscErrorCode PetscFunctionListFind_Private(PetscFunctionList, const char[], void (**)(void));
+PETSC_EXTERN PetscErrorCode PetscFunctionListPrintTypes(MPI_Comm, const char[], const char[], const char[], const char[], PetscFunctionList, const char[], const char[]);
 PETSC_EXTERN PetscErrorCode PetscFunctionListDuplicate(PetscFunctionList, PetscFunctionList *);
 PETSC_EXTERN PetscErrorCode PetscFunctionListView(PetscFunctionList, PetscViewer);
 PETSC_EXTERN PetscErrorCode PetscFunctionListGet(PetscFunctionList, const char ***, int *);
@@ -1369,6 +1371,8 @@ PETSC_EXTERN PetscErrorCode PetscFormatRealArray(char[], size_t, const char *, P
 PETSC_EXTERN PetscErrorCode PetscErrorPrintfDefault(const char[], ...) PETSC_ATTRIBUTE_FORMAT(1, 2);
 PETSC_EXTERN PetscErrorCode PetscErrorPrintfNone(const char[], ...) PETSC_ATTRIBUTE_FORMAT(1, 2);
 PETSC_EXTERN PetscErrorCode PetscHelpPrintfDefault(MPI_Comm, const char[], ...) PETSC_ATTRIBUTE_FORMAT(2, 3);
+PETSC_EXTERN PetscErrorCode PetscHelpPrintfStringBegin(MPI_Comm);
+PETSC_EXTERN PetscErrorCode PetscHelpPrintfStringEnd(MPI_Comm, const char **);
 
 PETSC_EXTERN PetscErrorCode PetscFormatConvertGetSize(const char *, size_t *);
 PETSC_EXTERN PetscErrorCode PetscFormatConvert(const char *, char *);

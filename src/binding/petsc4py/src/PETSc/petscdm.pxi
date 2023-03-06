@@ -286,3 +286,43 @@ cdef PetscErrorCode DM_PyRestrictHook(
         hookop(Fine, Mrestrict, Rscale, Inject, Coarse, *args, **kargs)
     return PETSC_SUCCESS
 # -----------------------------------------------------------------------------
+
+cdef class _DM_VecLocalForm:
+
+    "Context manager for `DM` localVec"
+
+    cdef Vec lvec
+    cdef DM  dm
+
+    def __init__(self,DM dm):
+        self.dm = dm
+
+    def __enter__(self):
+        self.lvec = self.dm.getLocalVec()
+        return self.lvec
+
+    def __exit__(self, *exc):
+        self.dm.restoreLocalVec(self.lvec)
+
+cdef class _DM_VecLocalFormGlobalToLocal:
+
+    "Context manager for `DM` globalToLocal"
+
+    cdef Vec lvec,gvec
+    cdef DM  dm
+    cdef addv
+
+    def __init__(self,DM dm,Vec gvec,addv):
+        self.dm = dm
+        self.addv = addv
+        self.gvec = gvec
+
+    def __enter__(self):
+        self.lvec = self.dm.getLocalVec()
+        self.dm.globalToLocal(self.gvec,self.lvec,self.addv)
+        return self.lvec
+
+    def __exit__(self, *exc):
+        self.dm.restoreLocalVec(self.lvec)
+
+# --------------------------------------------------------------------
