@@ -1214,7 +1214,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   PetscOptionsEnd();
 
   for (ii = ctx->num_species; ii < LANDAU_MAX_SPECIES; ii++) ctx->masses[ii] = ctx->thermal_temps[ii] = ctx->charges[ii] = 0;
-  if (ctx->verbose > 0) {
+  if (ctx->verbose != 0) {
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "masses:        e=%10.3e; ions in proton mass units:   %10.3e %10.3e ...\n", (double)ctx->masses[0], (double)(ctx->masses[1] / 1.6720e-27), (double)(ctx->num_species > 2 ? ctx->masses[2] / 1.6720e-27 : 0)));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "charges:       e=%10.3e; charges in elementary units: %10.3e %10.3e\n", (double)ctx->charges[0], (double)(-ctx->charges[1] / ctx->charges[0]), (double)(ctx->num_species > 2 ? -ctx->charges[2] / ctx->charges[0] : 0)));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "n:             e: %10.3e                           i: %10.3e %10.3e\n", (double)ctx->n[0], (double)ctx->n[1], (double)(ctx->num_species > 2 ? ctx->n[2] : 0)));
@@ -1550,7 +1550,7 @@ static PetscErrorCode CreateStaticData(PetscInt dim, IS grid_batch_is_inv[], Lan
     PetscCall(PetscInfo(ctx->plex[0], "Initialize static data\n"));
     for (PetscInt grid = 0; grid < ctx->num_grids; grid++) nip_glb += Nq * numCells[grid];
     /* collect f data, first time is for Jacobian, but make mass now */
-    if (ctx->verbose > 0) {
+    if (ctx->verbose != 0) {
       PetscInt ncells = 0, N;
       PetscCall(MatGetSize(ctx->J, &N, NULL));
       for (PetscInt grid = 0; grid < ctx->num_grids; grid++) ncells += numCells[grid];
