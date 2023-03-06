@@ -132,7 +132,7 @@ PetscErrorCode   FormFunction(TS ts, PetscReal tdummy, Vec X, Vec F, void *ptr)
   PetscScalar       *f;
   const PetscScalar *x;
   const PetscReal    k_B = 1.6e-12, e_cgs = 4.8e-10, m_cgs[2] = {9.1094e-28, 9.1094e-28 * ctx->masses[1] / ctx->masses[0]}; // erg/eV, e, m as per NRL;
-  PetscReal          AA, sqrtA, v_abT, vTe, t1, TeDiff, Te, Ti, Tdiff;
+  PetscReal          AA, v_abT, vTe, t1, TeDiff, Te, Ti, Tdiff;
 
   PetscFunctionBeginUser;
   PetscCall(VecGetArrayRead(X, &x));
@@ -140,17 +140,16 @@ PetscErrorCode   FormFunction(TS ts, PetscReal tdummy, Vec X, Vec F, void *ptr)
   v_abT = 1.8e-19 * PetscSqrtReal(m_cgs[0] * m_cgs[1]) * n_cm3[0] * ctx->lnLam * PetscPowReal(m_cgs[0] * Ti + m_cgs[1] * Te, -1.5);
   PetscCall(VecGetArray(F, &f));
   for (PetscInt ii = 0; ii < 2; ii++) {
-    PetscReal tPerp = PetscRealPart(x[2 * ii + E_PERP_IDX]), tPar = PetscRealPart(x[2 * ii + E_PAR_IDX]);
+    PetscReal tPerp = PetscRealPart(x[2 * ii + E_PERP_IDX]), tPar = PetscRealPart(x[2 * ii + E_PAR_IDX]), ff;
     TeDiff = tPerp - tPar;
     AA     = tPerp / tPar - 1;
-    if (AA < 1e-6) t1 = 0;
-    else {
-      sqrtA = PetscSqrtReal(AA);
-      t1    = (-3 + (AA + 3) * PetscAtanReal(sqrtA) / sqrtA) / PetscSqr(AA);
-      //PetscReal vTeB = 8.2e-7 * n_cm3[0] * ctx->lnLam * PetscPowReal(Te, -1.5);
-      vTe = PetscRealPart(2 * PetscSqrtReal(PETSC_PI / m_cgs[ii]) * PetscSqr(PetscSqr(e_cgs)) * n_cm3[0] * ctx->lnLam * PetscPowReal(k_B * x[E_PAR_IDX], -1.5)) * t1;
-      t1  = vTe * TeDiff * PetscSqrtReal(PETSC_PI); // scaling form NRL that makes it work ???
-    }
+    if (AA < 0) ff = PetscAtanhReal(PetscSqrtReal(-AA)) / PetscSqrtReal(-AA);
+    else ff = PetscAtanReal(PetscSqrtReal(AA)) / PetscSqrtReal(AA);
+    t1 = (-3 + (AA + 3) * ff) / PetscSqr(AA);
+    //PetscReal vTeB = 8.2e-7 * n_cm3[0] * ctx->lnLam * PetscPowReal(Te, -1.5);
+    vTe = PetscRealPart(2 * PetscSqrtReal(PETSC_PI / m_cgs[ii]) * PetscSqr(PetscSqr(e_cgs)) * n_cm3[0] * ctx->lnLam * PetscPowReal(k_B * x[E_PAR_IDX], -1.5)) * t1;
+    t1  = vTe * TeDiff * 2.3; // PetscSqrtReal(PETSC_PI); // scaling form NRL that makes it work ???
+
     f[2 * ii + E_PAR_IDX]  = 2 * t1; // par
     f[2 * ii + E_PERP_IDX] = -t1;    // perp
     Tdiff                  = (ii == 0) ? (Ti - Te) : (Te - Ti);
@@ -207,16 +206,9 @@ PetscErrorCode Monitor_nrl(TS ts, PetscInt stepi, PetscReal time, Vec X, void *a
 {
   const PetscScalar *x;
   LandauCtx         *ctx = (LandauCtx *)actx; /* user-defined application context */
-  PetscInt           period, logT;
-  PetscReal          dt;
 
   PetscFunctionBeginUser;
-  PetscCall(TSGetTimeStep(ts, &dt));
-  logT = (PetscInt)PetscLog2Real(time / dt);
-  if (logT < 0) logT = 0;
-  period = PetscPowInt(2, logT) / 2;
-  if (period == 0) period = 1;
-  if (stepi % period == 0) {
+  if (stepi % 100 == 0) {
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "nrl-step %d time= %g ", (int)stepi, (double)(time / ctx->t_0)));
     PetscCall(VecGetArrayRead(X, &x));
     for (PetscInt i = 0; i < NUM_TEMPS; i++) { PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%g ", (double)PetscRealPart(x[i]))); }
@@ -342,8 +334,8 @@ int main(int argc, char **argv)
   Vec        *XsubArray = NULL;
   LandauCtx  *ctx;
   PetscMPIInt rank;
-  PetscBool   use_nrl   = PETSC_FALSE;
-  PetscBool   print_nrl = PETSC_TRUE;
+  PetscBool   use_nrl   = PETSC_TRUE;
+  PetscBool   print_nrl = PETSC_FALSE;
   PetscReal   dt0;
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
