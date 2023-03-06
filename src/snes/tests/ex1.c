@@ -532,7 +532,7 @@ PetscErrorCode postcheck(SNES snes, Vec x, Vec y, Vec w, PetscBool *changed_y, P
 
    test:
       suffix: 4
-      args: -pc -par 6.807 -snes_monitor -snes_converged_reason
+      args: -pc -par 6.807 -snes_max_it 6 -snes_monitor -snes_converged_reason
 
    test:
       suffix: 5

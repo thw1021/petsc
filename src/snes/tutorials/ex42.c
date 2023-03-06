@@ -12,8 +12,9 @@ static char help[] = "Newton's method to solve a two-variable system that comes 
 */
 #include <petscsnes.h>
 
-extern PetscErrorCode FormJacobian1(SNES, Vec, Mat, Mat, void *);
-extern PetscErrorCode FormFunction1(SNES, Vec, Vec, void *);
+static PetscErrorCode FormJacobian1(SNES, Vec, Mat, Mat, void *);
+static PetscErrorCode FormFunction1(SNES, Vec, Vec, void *);
+static PetscErrorCode FormObjective1(SNES, Vec, PetscReal *, void *);
 
 int main(int argc, char **argv)
 {
@@ -23,9 +24,11 @@ int main(int argc, char **argv)
   PetscInt            its;
   PetscScalar        *xx;
   SNESConvergedReason reason;
+  PetscBool           use_objective = PETSC_FALSE;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-use_objective", &use_objective, NULL));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Create nonlinear solver context
@@ -60,6 +63,11 @@ int main(int argc, char **argv)
      Set Jacobian matrix data structure and Jacobian evaluation routine
   */
   PetscCall(SNESSetJacobian(snes, J, J, FormJacobian1, NULL));
+
+  /*
+     Set optional objective function evaluation routine
+  */
+  if (use_objective) PetscCall(SNESSetObjective(snes, FormObjective1, NULL));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Customize nonlinear solver; set runtime options
@@ -105,6 +113,7 @@ int main(int argc, char **argv)
   PetscCall(PetscFinalize());
   return 0;
 }
+
 /* ------------------------------------------------------------------- */
 /*
    FormFunction1 - Evaluates nonlinear function, F(x).
@@ -196,6 +205,31 @@ PetscErrorCode FormJacobian1(SNES snes, Vec x, Mat jac, Mat B, void *dummy)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/* ------------------------------------------------------------------- */
+/*
+   FormObjective1 - Evaluates objective function, f(x) ( F(x) = grad(f(x)) )
+
+   Input Parameters:
+.  snes - the SNES context
+.  x    - input vector
+.  ctx  - optional user-defined context
+
+   Output Parameter:
+.  f - function value
+*/
+PetscErrorCode FormObjective1(SNES snes, Vec x, PetscReal *f, void *ctx)
+{
+  const PetscScalar *xx;
+
+  PetscFunctionBeginUser;
+  PetscCall(VecGetArrayRead(x, &xx));
+  *f = PetscRealPart(-2.0 * xx[0] + xx[0] * xx[0] + 100.0 * xx[0] * xx[0] * xx[0] * xx[0] - 200.0 * xx[0] * xx[0] * xx[1] + 100.0 * xx[1] * xx[1]);
+  PetscCall(VecRestoreArrayRead(x, &xx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/* ------------------------------------------------------------------- */
+
 /*TEST
 
    test:
@@ -205,7 +239,7 @@ PetscErrorCode FormJacobian1(SNES snes, Vec x, Mat jac, Mat B, void *dummy)
 
    test:
       suffix: 2
-      args: -snes_monitor_short -snes_max_it 1000 -snes_type newtontrdc -snes_trdc_use_cauchy false
+      args: -snes_monitor_short -snes_max_it 1000 -snes_type newtontr
       requires: !single
 
 TEST*/
