@@ -143,7 +143,7 @@ PETSC_EXTERN PetscErrorCode PetscViewerCheckWritable(PetscViewer);
        file in its native format (for example, dense
        matrices are stored as dense), `DMDA` vectors are dumped directly to the
        file instead of being first put in the natural ordering
-.    `PETSC_VIEWER_ASCII_LATEX` - output the data in latex
+.    `PETSC_VIEWER_ASCII_LATEX` - output the data in LaTeX
 .    `PETSC_VIEWER_BINARY_MATLAB` - output additional information that can be used to read the data into MATLAB
 .    `PETSC_VIEWER_DRAW_BASIC` - views the vector with a simple 1d plot
 .    `PETSC_VIEWER_DRAW_LG` - views the vector with a line graph
@@ -457,7 +457,7 @@ PETSC_EXTERN PetscErrorCode PetscObjectViewSAWs(PetscObject, PetscViewer);
 #endif
 
 /*S
-   PetscViewers - Abstract collection of `PetscViewer`s. It stored as an expandable array of viewers.
+   PetscViewers - Abstract collection of `PetscViewer`s. It is stored as an expandable array of viewers.
 
    Level: intermediate
 

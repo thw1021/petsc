@@ -288,9 +288,9 @@ PETSC_INTERN PetscErrorCode PetscSocketListen(int listenport, int *t)
 
     PetscViewerSocketOpen(MPI_Comm comm, char *machine,int port,PetscViewer &viewer)
     MatView(Mat matrix,PetscViewer viewer)
-
+.ve
                 or
-
+.vb
     PetscViewerSocketOpen(MPI_Comm comm,char *machine,int port,PetscViewer &viewer)
     VecView(Vec vector,PetscViewer viewer)
 .ve

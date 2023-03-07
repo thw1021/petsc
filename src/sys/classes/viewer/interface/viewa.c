@@ -99,6 +99,7 @@ PetscErrorCode PetscViewerPopFormat(PetscViewer viewer)
 
    Note:
    See `PetscViewerFormat` for available values
+
 .seealso: [](sec_viewers), `PetscViewer`, `PetscViewerASCIIOpen()`, `PetscViewerBinaryOpen()`, `MatView()`, `VecView()`, `PetscViewerType`,
           `PetscViewerPushFormat()`, `PetscViewerPopFormat()`, `PetscViewerDrawOpen()`, `PetscViewerSocketOpen()`
 @*/

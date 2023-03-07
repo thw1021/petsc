@@ -621,7 +621,7 @@ static PetscErrorCode PetscViewerBinaryGetSkipOptions_Binary(PetscViewer viewer,
 
     Level: advanced
 
-    Notes:
+    Note:
       This must be called after `PetscViewerSetType()`
 
 .seealso: [](sec_viewers), `PETSCVIEWERBINARY`, `PetscViewerBinaryOpen()`, `PetscViewerBinaryGetDescriptor()`, `PetscViewerBinarySkipInfo()`,
