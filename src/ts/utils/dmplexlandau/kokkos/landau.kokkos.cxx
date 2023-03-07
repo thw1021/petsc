@@ -175,8 +175,8 @@ PetscErrorCode LandauKokkosStaticDataSet(DM plex, const PetscInt Nq, const Petsc
     const Kokkos::View<PetscReal *, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_invMass(a_invMass, Nftot);
     auto                                                                                                            invMass = new Kokkos::View<PetscReal *, Kokkos::LayoutLeft>("invMass", Nftot);
     SData_d->invMass                                                                                                        = static_cast<void *>(invMass);
-    const Kokkos::View<PetscReal *, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_lambdas(a_lambdas, LANDAU_MAX_GRIDS*LANDAU_MAX_GRIDS);
-    auto                                                                                                            lambdas = new Kokkos::View<PetscReal *, Kokkos::LayoutLeft>("lambdas", LANDAU_MAX_GRIDS*LANDAU_MAX_GRIDS);
+    const Kokkos::View<PetscReal *, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_lambdas(a_lambdas, LANDAU_MAX_GRIDS * LANDAU_MAX_GRIDS);
+    auto                                                                                                            lambdas = new Kokkos::View<PetscReal *, Kokkos::LayoutLeft>("lambdas", LANDAU_MAX_GRIDS * LANDAU_MAX_GRIDS);
     SData_d->lambdas                                                                                                        = static_cast<void *>(lambdas);
     const Kokkos::View<PetscReal *, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_BB(BB, Nq * Nb);
     auto                                                                                                            B = new Kokkos::View<PetscReal *, Kokkos::LayoutLeft>("B", Nq * Nb);
@@ -632,7 +632,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
     const int jac_scr_bytes    = 2 * (g2_scr_t::shmem_size(dim, Nf_max, Nq) + g3_scr_t::shmem_size(dim, dim, Nf_max, Nq));
     const int jac_shared_level = (jac_scr_bytes > maximum_shared_mem_size) ? 1 : KOKKOS_SHARED_LEVEL;
     // device function/lambda
-    auto      jac_lambda       = KOKKOS_LAMBDA(const team_member team)
+    auto jac_lambda = KOKKOS_LAMBDA(const team_member team)
     {
       const PetscInt b_Nelem = d_elem_offset[num_grids], b_elem_idx = team.league_rank() % b_Nelem, b_id = team.league_rank() / b_Nelem;
       // find my grid
@@ -677,12 +677,12 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
               loc_Nf_r  = d_species_offset[grid_r + 1] - d_species_offset[grid_r];
               for (fieldB = 0; fieldB < loc_Nf_r; ++fieldB) { // fieldB is \beta  d_lambdas[grid][grid_r]
                 const PetscInt idx = d_ipf_offset[grid_r] + fieldB * nip_loc_r + ipidx_g;
-                temp1[0] += d_fdf_k(b_id, 1, idx) * d_beta[fieldB + f_off_r] * d_invMass[fieldB + f_off_r] * d_lambdas[LANDAU_MAX_GRIDS*grid + grid_r];
-                temp1[1] += d_fdf_k(b_id, 2, idx) * d_beta[fieldB + f_off_r] * d_invMass[fieldB + f_off_r] * d_lambdas[LANDAU_MAX_GRIDS*grid + grid_r];
+                temp1[0] += d_fdf_k(b_id, 1, idx) * d_beta[fieldB + f_off_r] * d_invMass[fieldB + f_off_r] * d_lambdas[LANDAU_MAX_GRIDS * grid + grid_r];
+                temp1[1] += d_fdf_k(b_id, 2, idx) * d_beta[fieldB + f_off_r] * d_invMass[fieldB + f_off_r] * d_lambdas[LANDAU_MAX_GRIDS * grid + grid_r];
   #if LANDAU_DIM == 3
-                temp1[2] += d_fdf_k(b_id, 3, idx) * d_beta[fieldB + f_off_r] * d_invMass[fieldB + f_off_r] * d_lambdas[LANDAU_MAX_GRIDS*grid + grid_r];
+                temp1[2] += d_fdf_k(b_id, 3, idx) * d_beta[fieldB + f_off_r] * d_invMass[fieldB + f_off_r] * d_lambdas[LANDAU_MAX_GRIDS * grid + grid_r];
   #endif
-                temp2 += d_fdf_k(b_id, 0, idx) * d_beta[fieldB + f_off_r] * d_lambdas[LANDAU_MAX_GRIDS*grid + grid_r];
+                temp2 += d_fdf_k(b_id, 0, idx) * d_beta[fieldB + f_off_r] * d_lambdas[LANDAU_MAX_GRIDS * grid + grid_r];
               }
               temp1[0] *= wi;
               temp1[1] *= wi;
