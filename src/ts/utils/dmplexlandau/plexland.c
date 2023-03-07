@@ -1189,6 +1189,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
     int iii       = ctx->species_offset[grid];                                          // normalize with first (arbitrary) species on grid
     v0_grid[grid] = PetscSqrtReal(ctx->k * ctx->thermal_temps[iii] / ctx->masses[iii]); /* arbitrary units for non-dimensionalization: plasma formulary def */
   }
+  // get lambdas here because we need them for t_0 etc
   PetscCall(PetscOptionsReal("-dm_landau_ln_lambda", "Universal cross section parameter. Default uses NRL formulas", "plexland.c", lnLam, &lnLam, &flg));
   if (flg) {
     for (PetscInt grid = 0; grid < LANDAU_MAX_GRIDS; grid++) {
@@ -1727,13 +1728,13 @@ static PetscErrorCode CreateStaticData(PetscInt dim, IS grid_batch_is_inv[], Lan
 #if defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_KOKKOS_KERNELS)
       if (ctx->deviceType == LANDAU_CUDA) {
   #if defined(PETSC_HAVE_CUDA)
-        PetscCall(LandauCUDAStaticDataSet(ctx->plex[0], Nq, ctx->batch_sz, ctx->num_grids, numCells, ctx->species_offset, ctx->mat_offset, nu_alpha, nu_beta, invMass, invJ_a, xx, yy, zz, ww, &ctx->SData_d));
+        PetscCall(LandauCUDAStaticDataSet(ctx->plex[0], Nq, ctx->batch_sz, ctx->num_grids, numCells, ctx->species_offset, ctx->mat_offset, nu_alpha, nu_beta, invMass, (PetscReal*)ctx->lambdas, invJ_a, xx, yy, zz, ww, &ctx->SData_d));
   #else
         SETERRQ(ctx->comm, PETSC_ERR_ARG_WRONG, "-landau_device_type cuda not built");
   #endif
       } else if (ctx->deviceType == LANDAU_KOKKOS) {
   #if defined(PETSC_HAVE_KOKKOS_KERNELS)
-        PetscCall(LandauKokkosStaticDataSet(ctx->plex[0], Nq, ctx->batch_sz, ctx->num_grids, numCells, ctx->species_offset, ctx->mat_offset, nu_alpha, nu_beta, invMass, invJ_a, xx, yy, zz, ww, &ctx->SData_d));
+        PetscCall(LandauKokkosStaticDataSet(ctx->plex[0], Nq, ctx->batch_sz, ctx->num_grids, numCells, ctx->species_offset, ctx->mat_offset, nu_alpha, nu_beta, invMass, (PetscReal*)ctx->lambdas, invJ_a, xx, yy, zz, ww, &ctx->SData_d));
   #else
         SETERRQ(ctx->comm, PETSC_ERR_ARG_WRONG, "-landau_device_type kokkos not built");
   #endif
