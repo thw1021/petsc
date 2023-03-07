@@ -198,9 +198,9 @@ static PetscErrorCode testSpitzer(TS ts, Vec X, PetscInt stepi, PetscReal time, 
   PetscCall(PetscDSSetConstants(prob, 1, &vz));
   PetscCall(PetscDSSetObjective(prob, 0, &f0_ve_shift));
   PetscCall(DMPlexComputeIntegralFEM(plexe, XsubArray[LAND_PACK_IDX(ctx->batch_view_idx, 0)], tt, NULL));
-  v        = ctx->n_0 * ctx->v_0 * PetscRealPart(tt[0]) / n_e;                                           /* remove number density to get velocity */
-  v2       = PetscSqr(v);                                                                                /* use real space: m^2 / s^2 */
-  Te_kev   = (v2 * ctx->masses[0] * PETSC_PI / 8) * kev_joul;                                            /* temperature in kev */
+  v        = ctx->n_0 * ctx->v_0 * PetscRealPart(tt[0]) / n_e;                                                   /* remove number density to get velocity */
+  v2       = PetscSqr(v);                                                                                        /* use real space: m^2 / s^2 */
+  Te_kev   = (v2 * ctx->masses[0] * PETSC_PI / 8) * kev_joul;                                                    /* temperature in kev */
   spit_eta = Spitzer(ctx->masses[0], -ctx->charges[0], Z, ctx->epsilon0, ctx->lambdas[0][1], Te_kev / kev_joul); /* kev --> J (kT) */
   if (0) {
     PetscCall(DMGetDS(plexe, &prob));
