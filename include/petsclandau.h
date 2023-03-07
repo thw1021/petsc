@@ -91,6 +91,7 @@ typedef struct {
   void     *coo_elem_point_offsets;
   void     *coo_elem_fullNb;
   void     *coo_vals;
+  void     *lambdas;
   LandauIdx coo_n_cellsTot;
   LandauIdx coo_size;
   LandauIdx coo_max_fullnb;
@@ -149,7 +150,7 @@ typedef struct {
   PetscReal Ez;
   PetscReal epsilon0;
   PetscReal k;
-  PetscReal lnLam;
+  PetscReal lambdas[LANDAU_MAX_GRIDS][LANDAU_MAX_GRIDS];
   PetscReal electronShift;
   PetscInt  num_species;
   PetscInt  num_grids;

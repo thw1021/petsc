@@ -132,12 +132,13 @@ PetscErrorCode   FormFunction(TS ts, PetscReal tdummy, Vec X, Vec F, void *ptr)
   PetscScalar       *f;
   const PetscScalar *x;
   const PetscReal    k_B = 1.6e-12, e_cgs = 4.8e-10, m_cgs[2] = {9.1094e-28, 9.1094e-28 * ctx->masses[1] / ctx->masses[0]}; // erg/eV, e, m as per NRL;
-  PetscReal          AA, v_abT, vTe, t1, TeDiff, Te, Ti, Tdiff;
+  PetscReal          AA, v_bar_ab, vTe, t1, TeDiff, Te, Ti, Tdiff;
 
   PetscFunctionBeginUser;
   PetscCall(VecGetArrayRead(X, &x));
   Te = PetscRealPart(2 * x[E_PERP_IDX] + x[E_PAR_IDX]) / 3, Ti = PetscRealPart(2 * x[I_PERP_IDX] + x[I_PAR_IDX]) / 3;
-  v_abT = 1.8e-19 * PetscSqrtReal(m_cgs[0] * m_cgs[1]) * n_cm3[0] * ctx->lnLam * PetscPowReal(m_cgs[0] * Ti + m_cgs[1] * Te, -1.5);
+  // thermalization from NRL Plasma formulary, assume Z = 1, mu = 2, n_i = n_e
+  v_bar_ab = 1.8e-19 * PetscSqrtReal(m_cgs[0] * m_cgs[1]) * n_cm3[0] * ctx->lambdas[0][1] * PetscPowReal(m_cgs[0] * Ti + m_cgs[1] * Te, -1.5);
   PetscCall(VecGetArray(F, &f));
   for (PetscInt ii = 0; ii < 2; ii++) {
     PetscReal tPerp = PetscRealPart(x[2 * ii + E_PERP_IDX]), tPar = PetscRealPart(x[2 * ii + E_PAR_IDX]), ff;
@@ -146,15 +147,15 @@ PetscErrorCode   FormFunction(TS ts, PetscReal tdummy, Vec X, Vec F, void *ptr)
     if (AA < 0) ff = PetscAtanhReal(PetscSqrtReal(-AA)) / PetscSqrtReal(-AA);
     else ff = PetscAtanReal(PetscSqrtReal(AA)) / PetscSqrtReal(AA);
     t1 = (-3 + (AA + 3) * ff) / PetscSqr(AA);
-    //PetscReal vTeB = 8.2e-7 * n_cm3[0] * ctx->lnLam * PetscPowReal(Te, -1.5);
-    vTe = PetscRealPart(2 * PetscSqrtReal(PETSC_PI / m_cgs[ii]) * PetscSqr(PetscSqr(e_cgs)) * n_cm3[0] * ctx->lnLam * PetscPowReal(k_B * x[E_PAR_IDX], -1.5)) * t1;
-    t1  = vTe * TeDiff * 2.3; // PetscSqrtReal(PETSC_PI); // scaling form NRL that makes it work ???
+    //PetscReal vTeB = 8.2e-7 * n_cm3[0] * ctx->lambdas[0][1] * PetscPowReal(Te, -1.5);
+    vTe = PetscRealPart(2 * PetscSqrtReal(PETSC_PI / m_cgs[ii]) * PetscSqr(PetscSqr(e_cgs)) * n_cm3[0] * ctx->lambdas[0][1] * PetscPowReal(k_B * x[E_PAR_IDX], -1.5)) * t1;
+    t1  = vTe * TeDiff; // * 2; // scaling from NRL that makes it fit pretty good
 
     f[2 * ii + E_PAR_IDX]  = 2 * t1; // par
     f[2 * ii + E_PERP_IDX] = -t1;    // perp
     Tdiff                  = (ii == 0) ? (Ti - Te) : (Te - Ti);
-    f[2 * ii + E_PAR_IDX] += v_abT * Tdiff;
-    f[2 * ii + E_PERP_IDX] += v_abT * Tdiff;
+    f[2 * ii + E_PAR_IDX] += v_bar_ab * Tdiff;
+    f[2 * ii + E_PERP_IDX] += v_bar_ab * Tdiff;
   }
   PetscCall(VecRestoreArrayRead(X, &x));
   PetscCall(VecRestoreArray(F, &f));
