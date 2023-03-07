@@ -38,13 +38,13 @@ class Configure(config.package.Package):
   def setupHelp(self, help):
     import nargs
     config.package.Package.setupHelp(self, help)
-    help.addArgument('CUDA', '-with-cuda-arch', nargs.ArgString(None, None, 'Cuda architecture for code generation, for example 70, (this may be used by external packages), use all to build a fat binary for distribution'))
+    help.addArgument('CUDA', '-with-cuda-arch', nargs.ArgString(None, None, 'Cuda architecture for code generation, for example 70, (this may be used by external packages). Use "all" or a comma-separated list of values to target multiple architectures (e.g. for distribution)'))
     return
 
   def __str__(self):
     output  = config.package.Package.__str__(self)
-    if hasattr(self,'cudaArch'):
-      output += '  CUDA SM '+self.cudaArch+'\n'
+    if hasattr(self,'cudaArchs'):
+      output += '  CUDA SM '+','.join(self.cudaArchs)+'\n'
     if hasattr(self.setCompilers,'CUDA_CXX'):
       output += '  CUDA underlying compiler: CUDA_CXX=' + self.setCompilers.CUDA_CXX + '\n'
     if hasattr(self.setCompilers,'CUDA_CXXFLAGS'):
@@ -267,11 +267,11 @@ class Configure(config.package.Package):
     self.popLanguage()
 
     # Handle cuda arch
-    genArchesAll = ['30','32', '35', '37', '50', '52', '53', '60','61','70','71', '72', '75', '80']
-    if 'with-cuda-arch' in self.framework.clArgDB and self.argDB['with-cuda-arch'] == 'all':
-      self.cudaArch = 'all'
-    elif 'with-cuda-arch' in self.framework.clArgDB:
-      self.cudaArch = re.search(r'(\d+)$', self.argDB['with-cuda-arch']).group() # get the trailing number from the string
+    if 'with-cuda-arch' in self.framework.clArgDB:
+      if self.argDB['with-cuda-arch'] == 'all':
+        self.cudaArchs = ['35', '37', '50', '52', '53', '60', '61', '70', '72', '75', '80']
+      else:
+        self.cudaArchs = self.argDB['with-cuda-arch'].split(',')
     else:
       dq = os.path.join(self.cudaDir,'extras','demo_suite')
       self.getExecutable('deviceQuery',path = dq)
@@ -284,11 +284,11 @@ class Configure(config.package.Package):
           try:
             out = out.split('\n')[0]
             sm = out[-3:]
-            self.cudaArch = str(int(10*float(sm)))
+            self.cudaArchs = [str(int(10*float(sm)))]
           except:
             self.log.write('Unable to parse the CUDA Capability output from the NVIDIA utility deviceQuery\n')
 
-    if not hasattr(self,'cudaArch') and not self.argDB['with-batch']:
+    if not hasattr(self,'cudaArchs') and not self.argDB['with-batch']:
         includes = '''#include <stdio.h>
                     #include <cuda_runtime.h>
                     #include <cuda_runtime_api.h>
@@ -315,12 +315,11 @@ class Configure(config.package.Package):
               pass
             else:
               self.log.write('petsc-supplied CUDA device query test found the CUDA Capability is '+str(gen)+'\n')
-              self.cudaArch = str(gen)
+              self.cudaArchs = [str(gen)]
 
     # Check flags validity
-    if hasattr(self,'cudaArch'):
-      genArches = genArchesAll if self.cudaArch == 'all' else [self.cudaArch]
-      for gen in reversed(genArches):
+    if hasattr(self,'cudaArchs'):
+      for gen in reversed(self.cudaArchs):
         self.pushLanguage('CUDA')
         cflags = self.setCompilers.CUDAFLAGS
         if self.cudaclang:
@@ -338,6 +337,7 @@ class Configure(config.package.Package):
           self.popLanguage()
           self.log.write('Flag from checkCompile on CUDA compile with gencode '+str(valid)+'\n')
           if not valid:
+            self.logPrintWarning('CUDA compile failed for arch "'+str(gen)+'", skipping it...')
             self.setCompilers.CUDAFLAGS = cflags
 
     self.addDefine('HAVE_CUDA','1')
