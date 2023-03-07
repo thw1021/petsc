@@ -331,12 +331,12 @@ __device__ void landau_jac_kernel(const PetscInt num_grids, const PetscInt jpidx
       LandauTensor3D(vj, x, y, z, U, mask);
   #endif
       for (int fieldB = 0; fieldB < loc_Nf_r; fieldB++) {
-        temp1[0] += s_dfx[fieldB * blockDim.x + threadIdx.x] * s_nu_beta[fieldB + f_off_r] * s_invMass[fieldB + f_off_r] * 10; // todo : bring lambdas in
-        temp1[1] += s_dfy[fieldB * blockDim.x + threadIdx.x] * s_nu_beta[fieldB + f_off_r] * s_invMass[fieldB + f_off_r] * 10;
+        temp1[0] += s_dfx[fieldB * blockDim.x + threadIdx.x] * s_nu_beta[fieldB + f_off_r] * s_invMass[fieldB + f_off_r] * 7; // todo : bring lambdas in
+        temp1[1] += s_dfy[fieldB * blockDim.x + threadIdx.x] * s_nu_beta[fieldB + f_off_r] * s_invMass[fieldB + f_off_r] * 7;
   #if LANDAU_DIM == 3
-        temp1[2] += s_dfz[fieldB * blockDim.x + threadIdx.x] * s_nu_beta[fieldB + f_off_r] * s_invMass[fieldB + f_off_r] * 10;
+        temp1[2] += s_dfz[fieldB * blockDim.x + threadIdx.x] * s_nu_beta[fieldB + f_off_r] * s_invMass[fieldB + f_off_r] * 7;
   #endif
-        temp2 += s_f[fieldB * blockDim.x + threadIdx.x] * s_nu_beta[fieldB + f_off_r] * 10;
+        temp2 += s_f[fieldB * blockDim.x + threadIdx.x] * s_nu_beta[fieldB + f_off_r] * 7;
       }
       temp1[0] *= wi;
       temp1[1] *= wi;
