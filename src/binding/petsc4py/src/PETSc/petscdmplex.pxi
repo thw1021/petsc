@@ -7,6 +7,18 @@ cdef extern from * nogil:
         DMPLEX_REORDER_DEFAULT_FALSE
         DMPLEX_REORDER_DEFAULT_TRUE
 
+    ctypedef const char* PetscDMPlexTransformType "DMPlexTransformType"
+    PetscDMPlexTransformType REFINEREGULAR
+    PetscDMPlexTransformType REFINEALFELD
+    PetscDMPlexTransformType REFINEPOWELLSABIN = "refine_powell_sabin"
+    PetscDMPlexTransformType REFINEBOUNDARYLAYER = "refine_boundary_layer"
+    PetscDMPlexTransformType REFINESBR = "refine_sbr"
+    PetscDMPlexTransformType REFINETOBOX = "refine_tobox"
+    PetscDMPlexTransformType REFINETOSIMPLEX = "refine_tosimplex"
+    PetscDMPlexTransformType REFINE1D = "refine_1d"
+    PetscDMPlexTransformType EXTRUDE = "extrude"
+    PetscDMPlexTransformType TRANSFORMFILTER = "transform_filter"
+
     PetscErrorCode DMPlexCreate(MPI_Comm,PetscDM*)
     PetscErrorCode DMPlexCreateCohesiveSubmesh(PetscDM,PetscBool,const char[],PetscInt,PetscDM*)
     PetscErrorCode DMPlexCreateFromCellListPetsc(MPI_Comm,PetscInt,PetscInt,PetscInt,PetscInt,PetscBool,PetscInt[],PetscInt,PetscReal[],PetscDM*)
@@ -205,3 +217,14 @@ cdef extern from * nogil:
     PetscErrorCode DMPlexSectionLoad(PetscDM,PetscViewer,PetscDM,PetscSF,PetscSF*,PetscSF*)
     PetscErrorCode DMPlexGlobalVectorLoad(PetscDM,PetscViewer,PetscDM,PetscSF,PetscVec)
     PetscErrorCode DMPlexLocalVectorLoad(PetscDM,PetscViewer,PetscDM,PetscSF,PetscVec)
+
+    PetscErrorCode DMPlexTransformApply(PetscDMPlexTransform, PetscDM, PetscDM *);
+    PetscErrorCode DMPlexTransformCreate(MPI_Comm, PetscDMPlexTransform *);
+    PetscErrorCode DMPlexTransformDestroy(PetscDMPlexTransform*);
+    PetscErrorCode DMPlexTransformGetType(PetscDMPlexTransform, PetscDMPlexTransformType *);
+    PetscErrorCode DMPlexTransformSetType(PetscDMPlexTransform tr, PetscDMPlexTransformType method);
+    PetscErrorCode DMPlexTransformSetFromOptions(PetscDMPlexTransform);
+    PetscErrorCode DMPlexTransformSetDM(PetscDMPlexTransform, PetscDM);
+    PetscErrorCode DMPlexTransformSetUp(PetscDMPlexTransform);
+    PetscErrorCode DMPlexTransformView(PetscDMPlexTransform tr, PetscViewer v);
+    
