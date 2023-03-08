@@ -561,10 +561,10 @@ linux-cuda-double-64idx:
     - .stage-3
     - .linux_test
   tags:
-    - cuda-stage3
+    - cuda12
   variables:
     TEST_ARCH: arch-ci-linux-cuda-double-64idx
-    TEST_OPTS: -j15 query=requires queryval=cuda
+    TEST_OPTS: -j3 query=requires queryval=cuda
     MAKE_CUDAFLAGS: --compiler-options -Wall,-Wunused-parameter,-Wno-deprecated-declarations,-Werror
 
 linux-cuda-single-cxx:
