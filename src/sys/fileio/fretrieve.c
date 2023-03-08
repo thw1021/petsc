@@ -117,10 +117,10 @@ PetscErrorCode PetscGetTmp(MPI_Comm comm, char dir[], size_t len)
 @*/
 PetscErrorCode PetscSharedTmp(MPI_Comm comm, PetscBool *shared)
 {
-  PetscMPIInt        size, rank, *tagvalp, sum, cnt, i;
-  PetscBool          flg, iflg;
-  FILE              *fd;
-  int                err;
+  PetscMPIInt size, rank, *tagvalp, sum, cnt, i;
+  PetscBool   flg, iflg;
+  FILE       *fd;
+  int         err;
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_size(comm, &size));
@@ -231,10 +231,10 @@ $   2) each has a separate working directory
 @*/
 PetscErrorCode PetscSharedWorkingDirectory(MPI_Comm comm, PetscBool *shared)
 {
-  PetscMPIInt        size, rank, *tagvalp, sum, cnt, i;
-  PetscBool          flg, iflg;
-  FILE              *fd;
-  int                err;
+  PetscMPIInt size, rank, *tagvalp, sum, cnt, i;
+  PetscBool   flg, iflg;
+  FILE       *fd;
+  int         err;
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_size(comm, &size));
