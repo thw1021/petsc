@@ -1,6 +1,6 @@
-==========================
-Graphics and Visualization
-==========================
+=======================
+Profiling and Utilities
+=======================
 
 .. toctree::
    :maxdepth: 1
