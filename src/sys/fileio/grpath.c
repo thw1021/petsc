@@ -55,7 +55,7 @@ PetscErrorCode PetscGetRealPath(const char path[], char rpath[])
 #elif defined(PETSC_HAVE_READLINK)
   /* Algorithm: we move through the path, replacing links with the real paths.   */
   PetscCall(PetscStrlen(path, &N));
-  PetscCall(PetscMemcpy(rpath, path, (N + 1) * sizeof(char))); /* assuming adequate buffer */
+  PetscCall(PetscArraycpy(rpath, path, N + 1)); /* assuming adequate buffer */
   PetscCall(PetscStrlen(rpath, &N));
   while (N) {
     PetscCall(PetscStrncpy(tmp1, rpath, N));
@@ -94,7 +94,7 @@ PetscErrorCode PetscGetRealPath(const char path[], char rpath[])
   PetscCall(PetscStrncpy(rpath, path, PETSC_MAX_PATH_LEN));
 #else /* Just punt */
   PetscCall(PetscStrlen(path, &len));
-  PetscCall(PetscMemcpy(rpath, path, (len + 1) * sizeof(char))); /* assuming adequate buffer */
+  PetscCall(PetscArraycpy(rpath, path, len + 1)); /* assuming adequate buffer */
 #endif
 
   /* remove garbage some automounters put at the beginning of the path */
@@ -103,7 +103,7 @@ PetscErrorCode PetscGetRealPath(const char path[], char rpath[])
     size_t len;
     PetscCall(PetscStrncpy(tmp3, rpath + 8, sizeof(tmp3)));
     PetscCall(PetscStrlen(tmp3, &len));
-    PetscCall(PetscMemcpy(rpath, tmp3, (len + 1) * sizeof(char))); /* assuming adequate buffer */
+    PetscCall(PetscArraycpy(rpath, tmp3, len + 1)); /* assuming adequate buffer */
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

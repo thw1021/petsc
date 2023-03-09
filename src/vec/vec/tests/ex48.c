@@ -177,7 +177,7 @@ static inline PetscErrorCode alterString(const char oldstr[], char str[])
 
   PetscFunctionBegin;
   PetscCall(PetscStrlen(oldstr, &n));
-  PetscCall(PetscMemcpy(str, oldstr, (n + 1) * sizeof(char)));
+  PetscCall(PetscArraycpy(str, oldstr, n + 1));
   for (i = 0; i < n; i++) {
     if (('A' <= str[i] && str[i] < 'Z') || ('a' <= str[i] && str[i] < 'z')) {
       str[i]++;
