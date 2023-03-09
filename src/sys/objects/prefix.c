@@ -179,24 +179,24 @@ PetscErrorCode PetscObjectGetOptionsPrefix(PetscObject obj, const char *prefix[]
 PetscErrorCode PetscObjectPrependOptionsPrefix(PetscObject obj, const char prefix[])
 {
   char  *buf;
-  size_t len1, len2, lenprefix;
+  size_t len1, len2, new_len;
 
   PetscFunctionBegin;
   PetscValidHeader(obj, 1);
-  buf = obj->prefix;
   if (!prefix) PetscFunctionReturn(PETSC_SUCCESS);
-  if (!buf) {
+  if (!obj->prefix) {
     PetscCall(PetscObjectSetOptionsPrefix(obj, prefix));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   PetscCheck(prefix[0] != '-', PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Options prefix should not begin with a hyphen");
 
   PetscCall(PetscStrlen(prefix, &len1));
-  PetscCall(PetscStrlen(buf, &len2));
-  lenprefix = len1 + len2 + 1;
-  PetscCall(PetscMalloc1(lenprefix, &obj->prefix));
-  PetscCall(PetscStrncpy(obj->prefix, prefix, lenprefix));
-  PetscCall(PetscStrlcat(obj->prefix, buf, lenprefix));
+  PetscCall(PetscStrlen(obj->prefix, &len2));
+  buf     = obj->prefix;
+  new_len = len1 + len2 + 1;
+  PetscCall(PetscMalloc1(new_len, &obj->prefix));
+  PetscCall(PetscStrncpy(obj->prefix, prefix, new_len));
+  PetscCall(PetscStrlcat(obj->prefix, buf, new_len));
   PetscCall(PetscFree(buf));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
