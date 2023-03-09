@@ -14,6 +14,7 @@ class Configure(config.package.Package):
     self.skippackagewithoptions = 1
     self.precisions             = ['double'] # coordinates are stored in double precision, other scalars are templated, just enforce PetscReal == double during ./configure, for now
     self.usesopenmp             = 'yes'
+    self.maxCxxVersion          = 'c++17' # https://github.com/htool-ddm/htool/issues/45
     return
 
   def setupDependencies(self,framework):
