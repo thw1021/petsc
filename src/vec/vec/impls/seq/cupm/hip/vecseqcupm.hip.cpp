@@ -64,7 +64,7 @@ PetscErrorCode VecCreateSeqHIP(MPI_Comm comm, PetscInt n, Vec *v)
   SET the array for storing the vector values. Otherwise, the array must be allocated on the
   device.
 
-  If both cpuarray and gpuarray are provided, the provided arrays must have identical
+  If both `cpuarray` and `gpuarray` are provided, the provided arrays must have identical
   values.
 
   The arrays are NOT freed when the vector is destroyed via `VecDestroy()`. The user must free
@@ -227,7 +227,7 @@ PetscErrorCode VecHIPGetArrayRead(Vec v, const PetscScalar **a)
   VecHIPRestoreArrayRead - Restore a HIP device pointer previously acquired with
   `VecHIPGetArrayRead()`.
 
-  No Fortran Support
+  Not Collective; No Fortran Support
 
   Input Parameters:
 + v - the vector
@@ -252,7 +252,7 @@ PetscErrorCode VecHIPRestoreArrayRead(Vec v, const PetscScalar **a)
 /*@C
   VecHIPGetArrayWrite - Provides write access to the HIP buffer inside a vector.
 
-  No Fortran Support
+  Not Collective; No Fortran Support
 
   Input Parameter:
 . v - the vector
@@ -286,7 +286,7 @@ PetscErrorCode VecHIPGetArrayWrite(Vec v, PetscScalar **a)
   VecHIPRestoreArrayWrite - Restore a HIP device pointer previously acquired with
   `VecHIPGetArrayWrite()`.
 
-  No Fortran Support
+  Collective; No Fortran Support
 
   Input Parameters:
 + v - the vector

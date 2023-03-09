@@ -226,10 +226,8 @@ static PetscErrorCode TSComputeRHSJacobian_DMDA(TS ts, PetscReal ptime, Vec X, M
 .  func - local residual evaluation
 -  ctx - optional context for local residual evaluation
 
-   Calling sequence for func:
-
-$ func(DMDALocalInfo info,PetscReal t,void *x,void *f,void *ctx)
-
+   Calling sequence of `func`:
+$ PetscErrorCode func(DMDALocalInfo info,PetscReal t,void *x,void *f,void *ctx)
 +  info - `DMDALocalInfo` defining the subdomain to evaluate the residual on
 .  t - time at which to evaluate residual
 .  x - array of local state information
@@ -266,10 +264,8 @@ PetscErrorCode DMDATSSetRHSFunctionLocal(DM dm, InsertMode imode, DMDATSRHSFunct
 .  func  - local RHS Jacobian evaluation routine
 -  ctx   - optional context for local jacobian evaluation
 
-   Calling sequence for func:
-
-$ func(DMDALocalInfo* info,PetscReal t,void* x,Mat J,Mat B,void *ctx);
-
+   Calling sequence of `func`:
+$ PetscErrorCode func(DMDALocalInfo* info,PetscReal t,void* x,Mat J,Mat B,void *ctx);
 +  info - `DMDALocalInfo` defining the subdomain to evaluate the residual on
 .  t    - time at which to evaluate residual
 .  x    - array of local state information
@@ -306,7 +302,8 @@ PetscErrorCode DMDATSSetRHSJacobianLocal(DM dm, DMDATSRHSJacobianLocal func, voi
 .  func - local residual evaluation
 -  ctx  - optional context for local residual evaluation
 
-   Calling sequence for func:
+   Calling sequence of `func`:
+$  PetscErrorCode func(DMDALocalInfo info,PetscReal t,Vec x,Vec xdot,Vec f,void*ctx);
 +  info - `DMDALocalInfo` defining the subdomain to evaluate the residual on
 .  t    - time at which to evaluate residual
 .  x    - array of local state information
@@ -344,17 +341,15 @@ PetscErrorCode DMDATSSetIFunctionLocal(DM dm, InsertMode imode, DMDATSIFunctionL
 .  func - local residual evaluation
 -  ctx   - optional context for local residual evaluation
 
-   Calling sequence for func:
-
-$ func(DMDALocalInfo* info,PetscReal t,void* x,void *xdot,PetscScalar shift,Mat J,Mat B,void *ctx);
-
+   Calling sequence of `func`:
+$ PetscErrorCode func(DMDALocalInfo* info,PetscReal t,void* x,void *xdot,PetscScalar shift,Mat J,Mat B,void *ctx);
 +  info - `DMDALocalInfo` defining the subdomain to evaluate the residual on
 .  t    - time at which to evaluate the jacobian
 .  x    - array of local state information
 .  xdot - time derivative at this state
 .  shift - see TSSetIJacobian() for the meaning of this parameter
 .  J    - Jacobian matrix
-.  B    - preconditioner matrix; often same as J
+.  B    - preconditioner matrix; often same as `J`
 -  ctx  - optional context passed above
 
    Level: beginner
