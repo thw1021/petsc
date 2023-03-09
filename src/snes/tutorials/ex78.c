@@ -220,12 +220,12 @@ PetscErrorCode FormJacobian(SNES snes, Vec x, Mat jac, Mat B, void *ctx)
 
    test:
       suffix: 2
-      args: -snes_monitor_short -ksp_monitor_short -pc_type sor -snes_converged_reason -da_refine 3 -snes_type newtontrdc
+      args: -snes_monitor_short -pc_type sor -snes_converged_reason -da_refine 3 -snes_type newtontr
       requires: !single
 
    test:
       suffix: 3
-      args: -snes_monitor_short -ksp_monitor_short -pc_type sor -snes_converged_reason -da_refine 3 -snes_type newtontrdc -snes_trdc_use_cauchy false
+      args: -snes_monitor_short -ksp_type cg -pc_type sor -snes_converged_reason -da_refine 3 -snes_type newtontr -snes_tr_fallback_type dogleg
       requires: !single
 
 TEST*/

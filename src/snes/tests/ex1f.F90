@@ -689,6 +689,6 @@
 !
 !   test:
 !     suffix: 4
-!     args: -pc -par 6.807 -nox
+!     args: -pc -par 6.807 -nox -snes_max_it 6
 !
 !TEST*/

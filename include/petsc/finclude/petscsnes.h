@@ -33,7 +33,6 @@
 !
 #define SNESNEWTONLS         'newtonls'
 #define SNESNEWTONTR         'newtontr'
-#define SNESNEWTONTRDC       'newtontrdc'
 #define SNESPYTHON           'python'
 #define SNESNRICHARDSON      'nrichardson'
 #define SNESKSPONLY          'ksponly'

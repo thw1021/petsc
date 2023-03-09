@@ -1,11 +1,11 @@
--include ../../../../petscdir.mk
+-include ../../../petscdir.mk
 
-SOURCEC  = ntrdc.c
-SOURCEH  = ntrdcimpl.h
-LIBBASE  = libpetscsnes
-MANSEC   = SNES
+SOURCEC  = taosnes.c
+LIBBASE  = libpetsctao
+MANSEC   = Tao
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
 include ${PETSC_DIR}/lib/petsc/conf/test
+
 
