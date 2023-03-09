@@ -63,11 +63,14 @@ PetscErrorCode MatIncreaseOverlap_MPISBAIJ(Mat C, PetscInt is_max, IS is[], Pets
         else max_no = is_max - pos;
         c->ijonly = PETSC_TRUE; /* only matrix data structures are requested */
         /* The resulting submatrices should be BAIJ, not SBAIJ, hence we change this value to trigger that */
-        size_t len;
-        PetscCall(PetscStrlen(((PetscObject)c->A)->type_name, &len));
-        PetscCall(PetscStrncpy(((PetscObject)c->A)->type_name, MATSEQBAIJ, len + 1));
+        size_t new_len, cur_len, max_len;
+        PetscStrlen(MATSEQBAIJ, &new_len);
+        PetscStrlen(MATSEQSBAIJ, &cur_len);
+        max_len = PetscMax(cur_len, new_len) + 1;
+        PetscRealloc(max_len * sizeof(*((PetscObject)c->A)->type_name), &(((PetscObject)c->A)->type_name));
+        PetscCall(PetscStrncpy(((PetscObject)c->A)->type_name, MATSEQBAIJ, max_len));
         PetscCall(MatCreateSubMatrices_MPIBAIJ_local(C, max_no, is_row + pos, is_new + pos, MAT_INITIAL_MATRIX, submats + pos));
-        PetscCall(PetscStrncpy(((PetscObject)c->A)->type_name, MATSEQSBAIJ, len + 1));
+        PetscCall(PetscStrncpy(((PetscObject)c->A)->type_name, MATSEQSBAIJ, max_len));
         pos += max_no;
       }
 
