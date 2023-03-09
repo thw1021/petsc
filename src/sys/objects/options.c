@@ -2467,19 +2467,13 @@ PetscErrorCode PetscOptionsGetEList(PetscOptions options, const char pre[], cons
   if (aset) {
     PetscCall(PetscEListFind(ntext, list, svalue, value, &flg));
     if (!flg) {
-      char  *avail, *pavl;
-      size_t plen = tlen;
+      char *avail;
 
-      PetscCall(PetscMalloc1(plen, &avail));
-      pavl = avail;
+      PetscCall(PetscMalloc1(tlen, &avail));
+      avail[0] = '\0';
       for (i = 0; i < ntext; i++) {
-        PetscCall(PetscStrlen(list[i], &alen));
-        PetscCall(PetscStrncpy(pavl, list[i], plen));
-        pavl += alen;
-        plen -= alen;
-        PetscCall(PetscStrncpy(pavl, " ", plen));
-        pavl += 1;
-        plen -= 1;
+        PetscCall(PetscStrlcat(avail, list[i], tlen));
+        PetscCall(PetscStrlcat(avail, " ", tlen));
       }
       PetscCall(PetscStrtolower(avail));
       SETERRQ(PETSC_COMM_SELF, PETSC_ERR_USER, "Unknown option %s for -%s%s. Available options: %s", svalue, pre ? pre : "", opt + 1, avail);
