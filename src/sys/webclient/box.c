@@ -291,17 +291,21 @@ PetscErrorCode PetscBoxUpload(MPI_Comm comm, const char access_token[], const ch
     PetscCheck(!err, PETSC_COMM_SELF, PETSC_ERR_FILE_OPEN, "Unable to stat file: %s", filename);
     len = 1024 + sb.st_size;
     PetscCall(PetscMalloc1(len, &body));
-    PetscCall(PetscStrncpy(body, "--foo_bar_baz\r\n"
-                                "Content-Type: application/json\r\n\r\n"
-                                "{", len));
+    PetscCall(PetscStrncpy(body,
+                           "--foo_bar_baz\r\n"
+                           "Content-Type: application/json\r\n\r\n"
+                           "{",
+                           len));
     PetscCall(PetscPushJSONValue(body, "title", filename, len));
     PetscCall(PetscStrlcat(body, ",", len));
     PetscCall(PetscPushJSONValue(body, "mimeType", "text.html", len));
     PetscCall(PetscStrlcat(body, ",", len));
     PetscCall(PetscPushJSONValue(body, "description", "a file", len));
-    PetscCall(PetscStrlcat(body, "}\r\n\r\n"
-                                "--foo_bar_baz\r\n"
-                                "Content-Type: text/html\r\n\r\n", len));
+    PetscCall(PetscStrlcat(body,
+                           "}\r\n\r\n"
+                           "--foo_bar_baz\r\n"
+                           "Content-Type: text/html\r\n\r\n",
+                           len));
     PetscCall(PetscStrlen(body, &blen));
     fd = fopen(filename, "r");
     PetscCheck(fd, PETSC_COMM_SELF, PETSC_ERR_FILE_OPEN, "Unable to open file: %s", filename);
@@ -309,8 +313,10 @@ PetscErrorCode PetscBoxUpload(MPI_Comm comm, const char access_token[], const ch
     PetscCheck(rd == (size_t)sb.st_size, PETSC_COMM_SELF, PETSC_ERR_FILE_OPEN, "Unable to read entire file: %s %d %d", filename, (int)rd, (int)sb.st_size);
     fclose(fd);
     body[blen + rd] = 0;
-    PetscCall(PetscStrlcat(body, "\r\n\r\n"
-                                "--foo_bar_baz\r\n", len));
+    PetscCall(PetscStrlcat(body,
+                           "\r\n\r\n"
+                           "--foo_bar_baz\r\n",
+                           len));
     PetscCall(PetscSSLInitializeContext(&ctx));
     PetscCall(PetscHTTPSConnect("www.boxapis.com", 443, ctx, &sock, &ssl));
     PetscCall(PetscHTTPSRequest("POST", "www.boxapis.com/upload/drive/v2/files/", head, "multipart/related; boundary=\"foo_bar_baz\"", body, ssl, buff, sizeof(buff)));
