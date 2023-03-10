@@ -55,26 +55,76 @@ check-ci-settings:
 #  Not all test-short need to follow this template but most will.
 #
 
-.stage-1:
-  extends: .test
-  stage: stage-1
-  tags:
-    - gce-u22-stage1
+.common_before_script:
   before_script:
     - date
     - hostname
-    - grep PRETTY_NAME /etc/os-release
-    - nproc
-    - lscpu
     - ccache --zero-stats
+
+.common_after_script:
+  after_script:
+    - date
+    - ccache --show-stats
+
+.common_load_modules:
   script:
     - if [ ! -z ${LOAD_MODULES+x} ]; then module --trace load ${LOAD_MODULES}; module list; fi
+    - if [ ! -z ${GCOV_MODULES+x} ]; then module --trace load ${GCOV_MODULES}; module list; fi
     - if [ ! -z ${INIT_SCRIPT+x} ]; then echo "sourcing ${INIT_SCRIPT}"; source ${INIT_SCRIPT}; fi
+    - if [ ! -z ${RUN_GCOV+x} ]; then gcovr --version; fi
+
+.common_show_env:
+  script:
     - printf "PATH:$PATH\n"
     - printf "PYTHONPATH:$PYTHONPATH\n"
     - printf "CONFIG_OPTS:${CONFIG_OPTS}\n"
     - printf "PETSC_OPTIONS:$PETSC_OPTIONS\n"
     - if [ ! -z ${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME+x} ]; then printf "CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME\n" ;fi
+
+.common_configure:
+  script:
+    - if [ -d ${HOME}/petsc-hash-pkgs/ ]; then find ${HOME}/petsc-hash-pkgs/ -maxdepth 1 -mindepth 1 -type d -mtime +25 -exec rm -rf {} \; ; fi
+    - printf "./config/examples/${TEST_ARCH}.py\n"
+    - cat ./config/examples/${TEST_ARCH}.py
+    - ./config/examples/${TEST_ARCH}.py || if [ -f naglicenseproblem ]; then exit 126; else exit 1; fi
+
+.common_script_preamble:
+  script:
+    - !reference [.common_load_modules, script]
+    - !reference [.common_show_env, script]
+    - !reference [.common_configure, script]
+
+.common_artifacts:
+  artifacts:
+    reports:
+      junit: arch-*/tests/testresults.xml
+    paths:
+      - arch-*/lib/petsc/conf/*.log
+      - arch-*/lib/pkgconfig/petsc.pc
+      - arch-*/tests/testresults.xml
+      - arch-*/tests/test_*_tap.log
+      - arch-*/tests/test_*_err.log
+      - arch-*/arch-*-gcovr-report.json.tar.gz
+    name: "$CI_JOB_NAME"
+    when: always
+    expire_in: 4 days
+
+.stage-1:
+  extends:
+    - .test
+    - .common_after_script
+    - .common_artifacts
+  stage: stage-1
+  tags:
+    - gce-u22-stage1
+  before_script:
+    - !reference [.common_before_script, before_script]
+    - grep PRETTY_NAME /etc/os-release
+    - nproc
+    - lscpu
+  script:
+    - !reference [.common_load_modules, script]
+    - !reference [.common_show_env, script]
     - ${PYTHON} ./configure --with-debugging=0 COPTFLAGS='-O -march=native' CXXOPTFLAGS='-O -march=native' FOPTFLAGS='-O -march=native' ${CONFIG_OPTS}
     - make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}"
     - if [ ! -z ${ENABLE_CHECK+x} ]; then make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" check; fi
@@ -87,21 +137,6 @@ check-ci-settings:
     MAKE_TEST_CFLAGS: -Werror
     MAKE_TEST_CXXFLAGS: -Werror
     MAKE_TEST_FFLAGS: -Werror
-  after_script:
-    - date
-    - ccache --show-stats
-  artifacts:
-    reports:
-      junit: arch-*/tests/testresults.xml
-    name: "$CI_JOB_NAME"
-    when: always
-    paths:
-    - arch-*/lib/petsc/conf/*.log
-    - arch-*/lib/pkgconfig/petsc.pc
-    - arch-*/tests/testresults.xml
-    - arch-*/tests/test_*_tap.log
-    - arch-*/tests/test_*_err.log
-    expire_in: 4 days
 
 #
 # The following tests run on the cloud as part of stage-1.
@@ -238,20 +273,11 @@ pause-for-approval:
 # Not all stage-2,3 need to follow this template, but most will.
 #
 .stage-23:
-  extends: .test
+  extends:
+    - .test
+    - .common_artifacts
   script:
-    - if [ ! -z ${LOAD_MODULES+x} ]; then module --trace load ${LOAD_MODULES}; module list; fi
-    - if [ ! -z ${GCOV_MODULES+x} ]; then module --trace load ${GCOV_MODULES}; module list; fi
-    - if [ ! -z ${INIT_SCRIPT+x} ]; then echo "sourcing ${INIT_SCRIPT}"; source ${INIT_SCRIPT}; fi
-    - if [ ! -z ${RUN_GCOV+x} ]; then gcovr --version; fi
-    - if [ -d ${HOME}/petsc-hash-pkgs/ ]; then find ${HOME}/petsc-hash-pkgs/ -maxdepth 1 -mindepth 1 -type d -mtime +25 -exec rm -rf {} \; ; fi
-    - printf "PATH:$PATH\n"
-    - printf "PYTHONPATH:$PYTHONPATH\n"
-    - printf "PETSC_OPTIONS:$PETSC_OPTIONS\n"
-    - if [ ! -z ${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME+x} ]; then printf "CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME\n" ;fi
-    - printf "./config/examples/${TEST_ARCH}.py\n"
-    - cat ./config/examples/${TEST_ARCH}.py
-    - ./config/examples/${TEST_ARCH}.py || if [ -f naglicenseproblem ]; then exit 126; else exit 1; fi
+    - !reference [.common_script_preamble, script]
     - make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" || if [ -f naglicenseproblem ]; then exit 126; else exit 1; fi
     - make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" check || if [ -f naglicenseproblem ]; then exit 126; else exit 1; fi
     - make updatedatafiles
@@ -259,19 +285,6 @@ pause-for-approval:
     - if [ -z ${DISABLE_TESTS+x} ]; then make cleantest && make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" allgtests-tap TIMEOUT=${TIMEOUT}  ${TEST_OPTS} || if [ -f naglicenseproblem ]; then exit 126; else exit 1; fi; fi
     - if [ ! -z ${RUN_GCOV_OPTIONS+x} ]; then printf "RUN_GCOV_OPTIONS:$RUN_GCOV_OPTIONS\n"; fi
     - if [ ! -z ${RUN_GCOV+x} ]; then make gcov PETSC_GCOV_OPTIONS="${RUN_GCOV_OPTIONS}"; fi
-  artifacts:
-    reports:
-      junit: arch-*/tests/testresults.xml
-    name: "$CI_JOB_NAME"
-    when: always
-    paths:
-    - arch-*/lib/petsc/conf/*.log
-    - arch-*/lib/pkgconfig/petsc.pc
-    - arch-*/tests/testresults.xml
-    - arch-*/tests/test_arch-*_tap.log
-    - arch-*/tests/test_arch-*_err.log
-    - arch-*/arch-*-gcovr-report.json.tar.gz
-    expire_in: 4 days
   variables:
     OPENBLAS_NUM_THREADS: 1
 
@@ -288,16 +301,13 @@ pause-for-approval:
 #
 
 .linux_test_noflags:
+  extends:
+    - .common_after_script
   before_script:
-    - date
-    - hostname
+    - !reference [.common_before_script, before_script]
     - grep PRETTY_NAME /etc/os-release
     - nproc
     - lscpu
-    - ccache --zero-stats
-  after_script:
-    - date
-    - ccache --show-stats
 
 .linux_test_nofflags:
   extends: .linux_test_noflags
@@ -323,34 +333,28 @@ pause-for-approval:
     GCOV_MODULES: py-gcovr-5.2-gcc-11.2.0-wcsmyet
 
 .freebsd_test:
+  extends:
+    - .common_after_script
   variables:
     MAKE_CFLAGS: -Werror
     MAKE_CXXFLAGS: -Werror
     MAKE_FFLAGS: -Werror
   before_script:
-    - date
-    - hostname
+    - !reference [.common_before_script, before_script]
     - freebsd-version
     - echo $(sysctl -n hw.ncpu)
-    - ccache --zero-stats
-  after_script:
-    - date
-    - ccache --show-stats
 
 .osx_test:
+  extends:
+    - .common_after_script
   variables:
     MAKE_CFLAGS: -Werror
     MAKE_CXXFLAGS: -Werror
     MAKE_FFLAGS: -Werror
   before_script:
-    - date
-    - hostname
+    - !reference [.common_before_script, before_script]
     - sw_vers -productVersion
     - echo $(sysctl -n hw.ncpu)
-    - ccache --zero-stats
-  after_script:
-    - date
-    - ccache --show-stats
 
 .opensolaris_test:
   before_script:
@@ -791,13 +795,7 @@ linux-analyzer:
   tags:
     - gce-u22-stage2
   script:
-    - printf "PATH:$PATH\n"
-    - printf "PYTHONPATH:$PYTHONPATH\n"
-    - printf "PETSC_OPTIONS:$PETSC_OPTIONS\n"
-    - if [ ! -z ${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME+x} ]; then printf "CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME\n" ;fi
-    - printf "./config/examples/${TEST_ARCH}.py\n"
-    - cat ./config/examples/${TEST_ARCH}.py
-    - ./config/examples/${TEST_ARCH}.py
+    - !reference [.common_script_preamble, script]
     - make LINTER_OPTIONS="${LINTER_OPTIONS}" test-lint
     - make LINTER_OPTIONS="${LINTER_OPTIONS} -fdoc-* no" lint
   variables:
@@ -807,7 +805,6 @@ linux-analyzer:
     paths:
     - arch-*/lib/petsc/conf/*.log
     - ./petscLintPatches/*.patch
-    expire_in: 4 days
   except:
     variables:
       - $PETSC_CI_SCHEDULED =~ /yes/
@@ -1015,12 +1012,10 @@ analyze-coverage:
     - date
     - hostname
   script:
-    - if [ ! -z ${LOAD_MODULES+x} ]; then module --trace load ${LOAD_MODULES}; module list; fi
+    - !reference [.common_load_modules, script]
+    - !reference [.common_show_env, script]
     - ${PYTHON} --version
     - gcovr --version
-    - printf "PATH:$PATH\n"
-    - printf "PYTHONPATH:$PYTHONPATH\n"
-    - if [ ! -z ${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME+x} ]; then printf "CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME\n" ;fi
     - ${PYTHON} ./configure --with-mpi=0 --with-cxx=0 --download-sowing --with-fortran-bindings
     - make mergegcov PETSC_GCOV_OPTIONS='--ci-mode --verbose'
   coverage: /^\s*lines:\s*\d+.\d+\%/
