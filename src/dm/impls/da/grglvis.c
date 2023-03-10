@@ -291,7 +291,7 @@ PETSC_INTERN PetscErrorCode DMSetUpGLVisViewer_DMDA(PetscObject oda, PetscViewer
           size_t      len;
 
           PetscCall(PetscStrlen(fname, &len));
-          PetscCall(PetscArraycpy(fieldname[i] + tlen, fname, len));
+          PetscCall(PetscStrncpy(fieldname[i] + tlen, fname, len + 1));
           tlen += len + 1;
           if ((b + 1) < bss[i]) {
             fieldname[i][tlen++] = '-';
