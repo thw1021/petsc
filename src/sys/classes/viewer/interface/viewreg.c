@@ -79,7 +79,7 @@ PetscErrorCode PetscOptionsHelpPrintedCheck(PetscOptionsHelpPrinted hp, const ch
   size_t lboth = l1 + l2 + 1;
   PetscCall(PetscSegBufferGet(hp->strings, lboth, &both));
   PetscCall(PetscStrncpy(both, pre, lboth));
-  PetscCall(PetscStrlcat(both, name, lboth));
+  PetscCall(PetscStrncpy(both + l1, name, l2 + 1));
   kh_put(HTPrinted, hp->printed, both, &newitem);
   if (!newitem) PetscCall(PetscSegBufferUnuse(hp->strings, lboth));
   *found = newitem ? PETSC_FALSE : PETSC_TRUE;

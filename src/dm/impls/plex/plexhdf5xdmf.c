@@ -12,7 +12,7 @@ static PetscErrorCode SplitPath_Private(char path[], char name[])
   PetscFunctionBegin;
   PetscCall(PetscStrrchr(path, '/', &tmp));
   PetscCall(PetscStrlen(tmp, &len));
-  PetscCall(PetscArraycpy(name, tmp, len + 1)); /* assuming adequate buffer */
+  PetscCall(PetscStrncpy(name, tmp, len + 1)); /* assuming adequate buffer */
   if (tmp != path) {
     /* '/' found, name is substring of path after last occurrence of '/'. */
     /* Trim the '/name' part from path just by inserting null character. */
@@ -20,7 +20,7 @@ static PetscErrorCode SplitPath_Private(char path[], char name[])
     *tmp = '\0';
   } else {
     /* '/' not found, name = path, path = "/". */
-    PetscCall(PetscArraycpy(path, "/", 2)); /* assuming adequate buffer */
+    PetscCall(PetscStrncpy(path, "/", 2)); /* assuming adequate buffer */
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
