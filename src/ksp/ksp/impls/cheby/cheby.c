@@ -385,6 +385,9 @@ static PetscErrorCode KSPSetFromOptions_Chebyshev(KSP ksp, PetscOptionItems *Pet
     }
   }
 
+  cheb->chebykind = 1; /* Default to 1st-kind Chebyshev polynomial */
+  PetscCall(PetscOptionsInt("-ksp_chebyshev_kind", "Type of Chebyshev polynomial", "", cheb->chebykind, &cheb->chebykind, NULL));
+
   /* We need to estimate eigenvalues; need to set this here so that KSPSetFromOptions() is called on the estimator */
   if ((cheb->emin == 0. || cheb->emax == 0.) && !cheb->kspest) PetscCall(KSPChebyshevEstEigSet(ksp, PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE));
 
@@ -396,7 +399,7 @@ static PetscErrorCode KSPSetFromOptions_Chebyshev(KSP ksp, PetscOptionItems *Pet
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode KSPSolve_Chebyshev(KSP ksp)
+static PetscErrorCode KSPSolve_FirstKindChebyshev(KSP ksp)
 {
   PetscInt    k, kp1, km1, ktmp, i;
   PetscScalar alpha, omegaprod, mu, omega, Gamma, c[3], scale;
@@ -564,6 +567,165 @@ static PetscErrorCode KSPSolve_Chebyshev(KSP ksp)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode KSPSolve_FourthKindChebyshev(KSP ksp)
+{
+  PetscInt    k, kp1, km1, ktmp, i;
+  PetscScalar scale, rScale, dScale;
+  PetscReal   rnorm = 0.0, emax, emin;
+  Vec         sol_orig, b, p[3], r;
+  Mat         Amat, Pmat;
+  PetscBool   diagonalscale;
+
+  PetscFunctionBegin;
+  PetscCall(PCGetDiagonalScale(ksp->pc, &diagonalscale));
+  PetscCheck(!diagonalscale, PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "Krylov method %s does not support diagonal scaling", ((PetscObject)ksp)->type_name);
+
+  PetscCall(PCGetOperators(ksp->pc, &Amat, &Pmat));
+  PetscCall(PetscObjectSAWsTakeAccess((PetscObject)ksp));
+  ksp->its = 0;
+  PetscCall(PetscObjectSAWsGrantAccess((PetscObject)ksp));
+  /* These three point to the three active solutions, we
+     rotate these three at each solution update */
+  km1      = 0;
+  k        = 1;
+  kp1      = 2;
+  sol_orig = ksp->vec_sol; /* ksp->vec_sol will be assigned to rotating vector p[k], thus save its address */
+  b        = ksp->vec_rhs;
+  p[km1]   = sol_orig;
+  p[k]     = ksp->work[0];
+  p[kp1]   = ksp->work[1];
+  r        = ksp->work[2];
+
+  PetscCall(KSPChebyshevGetEigenvalues_Chebyshev(ksp, &emax, &emin));
+  /* use scale*B as our preconditioner */
+  scale = 1.0 / emax;
+
+  if (!ksp->guess_zero) {
+    PetscCall(KSP_MatMult(ksp, Amat, sol_orig, r)); /*  r = b - A*p[km1] */
+    PetscCall(VecAYPX(r, -1.0, b));
+  } else {
+    PetscCall(VecCopy(b, r));
+  }
+
+  /* calculate residual norm if requested, we have done one iteration */
+  if (ksp->normtype) {
+    switch (ksp->normtype) {
+    case KSP_NORM_PRECONDITIONED:
+      PetscCall(KSP_PCApply(ksp, r, p[k])); /* p[k] = B^{-1}r */
+      PetscCall(VecNorm(p[k], NORM_2, &rnorm));
+      break;
+    case KSP_NORM_UNPRECONDITIONED:
+    case KSP_NORM_NATURAL:
+      PetscCall(VecNorm(r, NORM_2, &rnorm));
+      break;
+    default:
+      SETERRQ(PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "%s", KSPNormTypes[ksp->normtype]);
+    }
+    PetscCall(PetscObjectSAWsTakeAccess((PetscObject)ksp));
+    ksp->rnorm = rnorm;
+    PetscCall(PetscObjectSAWsGrantAccess((PetscObject)ksp));
+    PetscCall(KSPLogResidualHistory(ksp, rnorm));
+    PetscCall(KSPLogErrorHistory(ksp));
+    PetscCall(KSPMonitor(ksp, 0, rnorm));
+    PetscCall((*ksp->converged)(ksp, 0, rnorm, &ksp->reason, ksp->cnvP));
+  } else ksp->reason = KSP_CONVERGED_ITERATING;
+  if (ksp->reason || ksp->max_it == 0) {
+    if (ksp->max_it == 0) ksp->reason = KSP_DIVERGED_ITS; /* This for a V(0,x) cycle */
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  if (ksp->normtype != KSP_NORM_PRECONDITIONED) { PetscCall(KSP_PCApply(ksp, r, p[k])); /* p[k] = B^{-1}r */ }
+  PetscCall(VecAYPX(p[k], 4.0 / 3.0 * scale, p[km1])); /* p[k] = 4/3 * scale B^{-1}r + p[km1] */
+  PetscCall(PetscObjectSAWsTakeAccess((PetscObject)ksp));
+  ksp->its = 1;
+  PetscCall(PetscObjectSAWsGrantAccess((PetscObject)ksp));
+
+  for (i = 1; i < ksp->max_it; i++) {
+    PetscCall(PetscObjectSAWsTakeAccess((PetscObject)ksp));
+    ksp->its++;
+    PetscCall(PetscObjectSAWsGrantAccess((PetscObject)ksp));
+
+    PetscCall(KSP_MatMult(ksp, Amat, p[k], r)); /*  r = b - Ap[k]    */
+    PetscCall(VecAYPX(r, -1.0, b));
+    /* calculate residual norm if requested */
+    if (ksp->normtype) {
+      switch (ksp->normtype) {
+      case KSP_NORM_PRECONDITIONED:
+        PetscCall(KSP_PCApply(ksp, r, p[kp1])); /*  p[kp1] = B^{-1}r  */
+        PetscCall(VecNorm(p[kp1], NORM_2, &rnorm));
+        break;
+      case KSP_NORM_UNPRECONDITIONED:
+      case KSP_NORM_NATURAL:
+        PetscCall(VecNorm(r, NORM_2, &rnorm));
+        break;
+      default:
+        rnorm = 0.0;
+        break;
+      }
+      KSPCheckNorm(ksp, rnorm);
+      PetscCall(PetscObjectSAWsTakeAccess((PetscObject)ksp));
+      ksp->rnorm = rnorm;
+      PetscCall(PetscObjectSAWsGrantAccess((PetscObject)ksp));
+      PetscCall(KSPLogResidualHistory(ksp, rnorm));
+      PetscCall(KSPMonitor(ksp, i, rnorm));
+      PetscCall((*ksp->converged)(ksp, i, rnorm, &ksp->reason, ksp->cnvP));
+      if (ksp->reason) break;
+      if (ksp->normtype != KSP_NORM_PRECONDITIONED) { PetscCall(KSP_PCApply(ksp, r, p[kp1])); /*  p[kp1] = B^{-1}r  */ }
+    } else {
+      PetscCall(KSP_PCApply(ksp, r, p[kp1])); /*  p[kp1] = B^{-1}r  */
+    }
+    ksp->vec_sol = p[k];
+    PetscCall(KSPLogErrorHistory(ksp));
+
+    rScale = (8 * i + 4) / (2 * i + 3);
+    dScale = (2 * i - 1) / (2 * i + 3);
+
+    /* y^{k+1} = y^{k} + \dfrac{2k-1}{2k+3}(y^{k}-y^{k-1}) + scale * \dfrac{8k+4}{2k+3} B^{-1} r*/
+    PetscCall(VecAXPBYPCZ(p[kp1], -dScale, 1.0 + dScale, rScale, p[km1], p[k]));
+
+    ktmp = km1;
+    km1  = k;
+    k    = kp1;
+    kp1  = ktmp;
+  }
+  if (!ksp->reason) {
+    if (ksp->normtype) {
+      PetscCall(KSP_MatMult(ksp, Amat, p[k], r)); /*  r = b - Ap[k]    */
+      PetscCall(VecAYPX(r, -1.0, b));
+      switch (ksp->normtype) {
+      case KSP_NORM_PRECONDITIONED:
+        PetscCall(KSP_PCApply(ksp, r, p[kp1])); /* p[kp1] = B^{-1}r */
+        PetscCall(VecNorm(p[kp1], NORM_2, &rnorm));
+        break;
+      case KSP_NORM_UNPRECONDITIONED:
+      case KSP_NORM_NATURAL:
+        PetscCall(VecNorm(r, NORM_2, &rnorm));
+        break;
+      default:
+        rnorm = 0.0;
+        break;
+      }
+      KSPCheckNorm(ksp, rnorm);
+      PetscCall(PetscObjectSAWsTakeAccess((PetscObject)ksp));
+      ksp->rnorm = rnorm;
+      PetscCall(PetscObjectSAWsGrantAccess((PetscObject)ksp));
+      PetscCall(KSPLogResidualHistory(ksp, rnorm));
+      PetscCall(KSPMonitor(ksp, i, rnorm));
+    }
+    if (ksp->its >= ksp->max_it) {
+      if (ksp->normtype != KSP_NORM_NONE) {
+        PetscCall((*ksp->converged)(ksp, i, rnorm, &ksp->reason, ksp->cnvP));
+        if (!ksp->reason) ksp->reason = KSP_DIVERGED_ITS;
+      } else ksp->reason = KSP_CONVERGED_ITS;
+    }
+  }
+
+  /* make sure solution is in vector x */
+  ksp->vec_sol = sol_orig;
+  if (k) PetscCall(VecCopy(p[k], sol_orig));
+  if (ksp->reason == KSP_CONVERGED_ITS) PetscCall(KSPLogErrorHistory(ksp));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode KSPView_Chebyshev(KSP ksp, PetscViewer viewer)
 {
   KSP_Chebyshev *cheb = (KSP_Chebyshev *)ksp->data;
@@ -656,7 +818,8 @@ PETSC_EXTERN PetscErrorCode KSPCreate_Chebyshev(KSP ksp)
   ksp->setupnewmatrix  = PETSC_TRUE;
 
   ksp->ops->setup          = KSPSetUp_Chebyshev;
-  ksp->ops->solve          = KSPSolve_Chebyshev;
+  ksp->ops->solve          = KSPSolve_FirstKindChebyshev;
+  if (chebyshevP->chebykind == 4) { ksp->ops->solve = KSPSolve_FourthKindChebyshev; }
   ksp->ops->destroy        = KSPDestroy_Chebyshev;
   ksp->ops->buildsolution  = KSPBuildSolutionDefault;
   ksp->ops->buildresidual  = KSPBuildResidualDefault;

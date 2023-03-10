@@ -15,6 +15,7 @@ typedef struct {
   PetscReal tform[4];                     /* transform from Krylov estimates to Chebyshev bounds */
   PetscInt  eststeps;                     /* number of kspest steps in KSP used to estimate eigenvalues */
   PetscBool usenoisy;                     /* use noisy right hand side vector to estimate eigenvalues */
+  PetscInt  chebykind;                    /* Chebyshev polynomial kind (must be 1 or 4)*/
   /* For tracking when to update the eigenvalue estimates */
   PetscObjectId    amatid, pmatid;
   PetscObjectState amatstate, pmatstate;
