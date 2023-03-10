@@ -62,7 +62,7 @@ PetscErrorCode PetscDLLibraryRetrieve(MPI_Comm comm, const char libname[], char 
   blen = PetscMax(4 * len, PETSC_MAX_PATH_LEN);
   PetscCall(PetscMalloc1(blen, &buf));
   par2 = buf;
-  PetscCall(PetscStrreplace(comm, libname, par2, len));
+  PetscCall(PetscStrreplace(comm, libname, par2, blen));
 
   /* temporarily remove .gz if it ends library name */
   PetscCall(PetscStrrstr(par2, ".gz", &gz));
