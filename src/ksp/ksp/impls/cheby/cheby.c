@@ -387,6 +387,7 @@ static PetscErrorCode KSPSetFromOptions_Chebyshev(KSP ksp, PetscOptionItems *Pet
 
   cheb->chebykind = 1; /* Default to 1st-kind Chebyshev polynomial */
   PetscCall(PetscOptionsInt("-ksp_chebyshev_kind", "Type of Chebyshev polynomial", "", cheb->chebykind, &cheb->chebykind, NULL));
+  if (cheb->chebykind != 1 && cheb->chebykind != 4) SETERRQ(PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_INCOMP, "Chebyshev polynomial type must be 1 or 4");
 
   /* We need to estimate eigenvalues; need to set this here so that KSPSetFromOptions() is called on the estimator */
   if ((cheb->emin == 0. || cheb->emax == 0.) && !cheb->kspest) PetscCall(KSPChebyshevEstEigSet(ksp, PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE));
@@ -819,7 +820,7 @@ PETSC_EXTERN PetscErrorCode KSPCreate_Chebyshev(KSP ksp)
 
   ksp->ops->setup          = KSPSetUp_Chebyshev;
   ksp->ops->solve          = KSPSolve_FirstKindChebyshev;
-  if (chebyshevP->chebykind == 4) { ksp->ops->solve = KSPSolve_FourthKindChebyshev; }
+  if (chebyshevP->chebykind == 4) ksp->ops->solve = KSPSolve_FourthKindChebyshev;
   ksp->ops->destroy        = KSPDestroy_Chebyshev;
   ksp->ops->buildsolution  = KSPBuildSolutionDefault;
   ksp->ops->buildresidual  = KSPBuildResidualDefault;
