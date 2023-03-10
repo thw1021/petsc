@@ -50,7 +50,7 @@ PetscErrorCode PetscDLLibraryPrintPath(PetscDLLibrary libs)
 @*/
 PetscErrorCode PetscDLLibraryRetrieve(MPI_Comm comm, const char libname[], char *lname, size_t llen, PetscBool *found)
 {
-  char  *buf, *par2, suffix[16], *gz = NULL, *so = NULL;
+  char  *buf, *par2, *gz = NULL, *so = NULL;
   size_t len, blen;
 
   PetscFunctionBegin;
@@ -77,9 +77,9 @@ PetscErrorCode PetscDLLibraryRetrieve(MPI_Comm comm, const char libname[], char 
 
   PetscCall(PetscFileRetrieve(comm, par2, lname, llen, found));
   if (!(*found)) {
+    const char suffix[] = "." PETSC_SLSUFFIX;
+
     /* see if library name does already not have suffix attached */
-    PetscCall(PetscStrncpy(suffix, ".", sizeof(suffix)));
-    PetscCall(PetscStrlcat(suffix, PETSC_SLSUFFIX, sizeof(suffix)));
     PetscCall(PetscStrrstr(par2, suffix, &so));
     /* and attach the suffix if it is not there */
     if (!so) PetscCall(PetscStrlcat(par2, suffix, blen));
@@ -123,7 +123,8 @@ PetscErrorCode PetscDLLibraryRetrieve(MPI_Comm comm, const char libname[], char 
 PetscErrorCode PetscDLLibraryOpen(MPI_Comm comm, const char path[], PetscDLLibrary *entry)
 {
   PetscBool     foundlibrary, match;
-  char          libname[PETSC_MAX_PATH_LEN], par2[PETSC_MAX_PATH_LEN], suffix[16], *s;
+  const char    suffix[] = "." PETSC_SLSUFFIX;
+  char          libname[PETSC_MAX_PATH_LEN], par2[PETSC_MAX_PATH_LEN], *s;
   char         *basename, registername[128];
   PetscDLHandle handle;
   PetscErrorCode (*func)(void) = NULL;
@@ -147,8 +148,6 @@ PetscErrorCode PetscDLLibraryOpen(MPI_Comm comm, const char path[], PetscDLLibra
 
   /* copy path and setup shared library suffix  */
   PetscCall(PetscStrncpy(libname, path, sizeof(libname)));
-  PetscCall(PetscStrncpy(suffix, ".", sizeof(suffix)));
-  PetscCall(PetscStrlcat(suffix, PETSC_SLSUFFIX, sizeof(suffix)));
   /* remove wrong suffixes from libname */
   PetscCall(PetscStrrstr(libname, ".gz", &s));
   if (s && s[3] == 0) s[0] = 0;

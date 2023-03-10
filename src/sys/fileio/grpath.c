@@ -45,9 +45,10 @@ PetscErrorCode PetscGetRealPath(const char path[], char rpath[])
   PetscBool flg;
 #if !defined(PETSC_HAVE_REALPATH) && defined(PETSC_HAVE_READLINK)
   char   tmp1[PETSC_MAX_PATH_LEN], tmp4[PETSC_MAX_PATH_LEN], *tmp2;
-  size_t N, len, len1, len2;
+  size_t N, len1, len2;
   int    n, m;
 #endif
+  size_t len;
 
   PetscFunctionBegin;
 #if defined(PETSC_HAVE_REALPATH)
@@ -100,7 +101,6 @@ PetscErrorCode PetscGetRealPath(const char path[], char rpath[])
   /* remove garbage some automounters put at the beginning of the path */
   PetscCall(PetscStrncmp("/tmp_mnt/", rpath, 9, &flg));
   if (flg) {
-    size_t len;
     PetscCall(PetscStrncpy(tmp3, rpath + 8, sizeof(tmp3)));
     PetscCall(PetscStrlen(tmp3, &len));
     PetscCall(PetscStrncpy(rpath, tmp3, len + 1));
