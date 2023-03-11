@@ -213,6 +213,9 @@ static PetscErrorCode KSPDestroy_HPDDM(KSP ksp)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#if !PetscDefined(USE_DEBUG) && defined(__INTEL_CLANG_COMPILER) && __INTEL_CLANG_COMPILER >= 20230000
+  #pragma clang optimize off
+#endif
 template <PetscMemType type = PETSC_MEMTYPE_HOST>
 static inline PetscErrorCode KSPSolve_HPDDM_Private(KSP ksp, const PetscScalar *b, PetscScalar *x, PetscInt n)
 {
@@ -284,11 +287,7 @@ static inline PetscErrorCode KSPSolve_HPDDM_Private(KSP ksp, const PetscScalar *
       std::copy_n(b, N, low[0]);
       for (PetscInt i = 0; i < N; ++i) low[1][i] = x[i];
       PetscCall(HPDDM::IterativeMethod::solve(*data->op, low[0], low[1], n, PetscObjectComm((PetscObject)ksp)));
-      if (N) {
-        low[0][0] = low[1][0];
-        std::copy_backward(low[1] + 1, low[1] + N, x + N);
-        x[0] = low[0][0];
-      }
+      for (PetscInt i = N; i-- > 0;) x[i] = low[1][i];
       PetscCall(PetscFree(low[0]));
     } else {
       PetscCheck(PetscDefined(HAVE_CUDA) && PetscDefined(USE_REAL_DOUBLE), PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "CUDA in PETSc has no support for precisions other than single or double");
@@ -323,6 +322,9 @@ static inline PetscErrorCode KSPSolve_HPDDM_Private(KSP ksp, const PetscScalar *
   ksp->its = PetscMin(ksp->its, ksp->max_it);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+#if !PetscDefined(USE_DEBUG) && defined(__INTEL_CLANG_COMPILER) && __INTEL_CLANG_COMPILER >= 20230000
+  #pragma clang optimize on
+#endif
 
 static PetscErrorCode KSPSolve_HPDDM(KSP ksp)
 {
@@ -619,7 +621,7 @@ static PetscErrorCode KSPHPDDMGetType_HPDDM(KSP ksp, KSPHPDDMType *type)
    Options Database Keys:
 +   -ksp_gmres_restart <restart, default=30> - see `KSPGMRES`
 .   -ksp_hpddm_type <type, default=gmres> - any of gmres, bgmres, cg, bcg, gcrodr, bgcrodr, bfbcg, or preonly, see `KSPHPDDMType`
-.   -ksp_hpddm_precision <value, default=same as PetscScalar> - any of single or double, see `KSPHPDDMPrecision`
+.   -ksp_hpddm_precision <value, default=same as PetscScalar> - any of half, single, double or quadruple, see `KSPHPDDMPrecision`
 .   -ksp_hpddm_deflation_tol <eps, default=\-1.0> - tolerance when deflating right-hand sides inside block methods (no deflation by default, only relevant with block methods)
 .   -ksp_hpddm_enlarge_krylov_subspace <p, default=1> - split the initial right-hand side into multiple vectors (only relevant with nonblock methods)
 .   -ksp_hpddm_orthogonalization <type, default=cgs> - any of cgs or mgs, see KSPGMRES
