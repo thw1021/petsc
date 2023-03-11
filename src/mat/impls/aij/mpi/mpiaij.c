@@ -7873,8 +7873,10 @@ PETSC_INTERN PetscErrorCode MatCreateGraph_Simple_AIJ(Mat Amat, PetscBool symmet
         for (PetscInt brow = 0, grow; brow < nloc * bs; brow += bs) { // block rows
           PetscCall(MatGetRow(b, brow, &ncols, &cols, NULL));
           for (int k = 0, cidx = 0; k < ncols; k += bs, cidx++) {
-            AA[k / bs] = 0;
-            AJ[cidx]   = garray[cols[k]] / bs;
+            if (k / bs < nmax) {
+              AA[k / bs] = 0;
+              AJ[cidx]   = garray[cols[k]] / bs;
+            }
           }
           nc = ncols / bs;
           PetscCall(MatRestoreRow(b, brow, &ncols, &cols, NULL));
@@ -7882,7 +7884,7 @@ PETSC_INTERN PetscErrorCode MatCreateGraph_Simple_AIJ(Mat Amat, PetscBool symmet
             PetscCall(MatGetRow(b, brow + ii, &ncols, &cols, &vals));
             for (int k = 0; k < ncols; k += bs) {
               for (int jj = 0; jj < bs; jj++) { // cols in block
-                AA[k / bs] += PetscAbs(PetscRealPart(vals[k + jj]));
+                if (k / bs < nmax) AA[k / bs] += PetscAbs(PetscRealPart(vals[k + jj]));
               }
             }
             PetscCall(MatRestoreRow(b, brow + ii, &ncols, &cols, &vals));
@@ -7950,7 +7952,7 @@ PETSC_INTERN PetscErrorCode MatCreateGraph_Simple_AIJ(Mat Amat, PetscBool symmet
         for (jj = 0; jj < ncols; jj++) {
           PetscInt    dest_col = idx[jj] / bs;
           PetscScalar sv       = PetscAbs(PetscRealPart(vals[jj]));
-          PetscCall(MatSetValues(Gmat, 1, &dest_row, 1, &dest_col, &sv, ADD_VALUES));
+          PetscCall(MatSetValues(Gmat, 1, &dest_row, 1, &dest_col, &sv, INSERT_VALUES));
         }
         PetscCall(MatRestoreRow(Amat, Ii, &ncols, &idx, &vals));
       }
