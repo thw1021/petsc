@@ -385,6 +385,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
       SNESCheckJacobianDomainerror(snes);
     }
     PetscCall(KSPCGSetRadius(snes->ksp, delta));
+    PetscCall(KSPMinresQLPSetRadius(snes->ksp, delta));
     PetscCall(KSPSetOperators(snes->ksp, snes->jacobian, snes->jacobian_pre));
     PetscCall(KSPSolve(snes->ksp, F, Y));
     SNESCheckKSPSolve(snes);
