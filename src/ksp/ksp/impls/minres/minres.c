@@ -80,7 +80,7 @@ static PetscErrorCode KSPSolve_MINRES(KSP ksp)
 
   dp   = PetscAbsScalar(dp);
   dp   = PetscSqrtScalar(dp);
-  beta = dp; /*  beta <- sqrt(r'*z  */
+  beta = dp; /*  beta <- sqrt(r'*z)  */
   eta  = beta;
   PetscCall(VecAXPBY(V, 1.0 / beta, 0, R)); /* v <- r / beta */
   PetscCall(VecAXPBY(U, 1.0 / beta, 0, Z)); /* u <- z / beta */
@@ -130,6 +130,8 @@ static PetscErrorCode KSPSolve_MINRES(KSP ksp)
     rho2 = sold * alpha + coold * cold * betaold;
     rho3 = soold * betaold;
 
+    //neg  curve cold*rho0 < 0
+    //printf("CHECK %g (%g %g), beta  %g\n", cold * rho0, cold, rho0, betaold);
     /*     Givens rotation    */
 
     c = rho0 / rho1;

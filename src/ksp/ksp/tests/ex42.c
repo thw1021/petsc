@@ -1,5 +1,5 @@
 
-static char help[] = "Solves a linear system in parallel with MINRES. Modified from ../tutorials/ex2.c \n\n";
+static char help[] = "Solves a linear system in parallel with MINRES."
 
 #include <petscksp.h>
 
@@ -8,12 +8,14 @@ int main(int argc, char **args)
   Vec         x, b; /* approx solution, RHS */
   Mat         A;    /* linear system matrix */
   KSP         ksp;  /* linear solver context */
+  PC          pc;   /* preconditioner */
   PetscInt    Ii, Istart, Iend, m = 11;
-  PetscScalar v;
+  PetscScalar v = 0.0;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &args, (char *)0, help));
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-m", &m, NULL));
+  PetscCall(PetscOptionsGetScalar(NULL, NULL, "-vv", &v, NULL));
 
   /* Create parallel diagonal matrix */
   PetscCall(MatCreate(PETSC_COMM_WORLD, &A));
@@ -25,12 +27,11 @@ int main(int argc, char **args)
   PetscCall(MatGetOwnershipRange(A, &Istart, &Iend));
 
   for (Ii = Istart; Ii < Iend; Ii++) {
-    v = (PetscReal)Ii + 1;
-    PetscCall(MatSetValues(A, 1, &Ii, 1, &Ii, &v, INSERT_VALUES));
+    PetscScalar vv = (PetscReal)Ii + 1;
+    PetscCall(MatSetValues(A, 1, &Ii, 1, &Ii, &vv, INSERT_VALUES));
   }
-  /* Make A sigular */
+  /* Make A singular or indefinite */
   Ii = m - 1; /* last diagonal entry */
-  v  = 0.0;
   PetscCall(MatSetValues(A, 1, &Ii, 1, &Ii, &v, INSERT_VALUES));
   PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
@@ -43,8 +44,12 @@ int main(int argc, char **args)
   /* Create linear solver context */
   PetscCall(KSPCreate(PETSC_COMM_WORLD, &ksp));
   PetscCall(KSPSetOperators(ksp, A, A));
+  PetscCall(KSPSetType(ksp, KSPMINRES));
+  PetscCall(KSPGetPC(ksp, &pc));
+  PetscCall(PCSetType(pc, PCNONE));
   PetscCall(KSPSetFromOptions(ksp));
   PetscCall(KSPSolve(ksp, b, x));
+  /* test reuse */
   PetscCall(KSPSolve(ksp, b, x));
 
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -65,11 +70,11 @@ int main(int argc, char **args)
 /*TEST
 
    test:
-      args: -ksp_type minres -pc_type none -ksp_converged_reason
+      args: -ksp_converged_reason
 
    test:
       suffix: 2
       nsize: 3
-      args: -ksp_type minres -pc_type none -ksp_converged_reason
+      args: -ksp_converged_reason
 
 TEST*/
