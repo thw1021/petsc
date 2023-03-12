@@ -93,7 +93,7 @@ private:
   static ::sycl::device chooseSYCLDevice_(int id)
   {
     if (id == PETSC_SYCL_DEVICE_HOST) {
-      return ::sycl::device(::sycl::cpu_selector_v);
+      return ::sycl::device(::sycl::host_selector());
     } else {
       return ::sycl::device::get_devices(::sycl::info::device_type::gpu)[id];
     }
