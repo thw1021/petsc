@@ -264,6 +264,10 @@ PETSC_EXTERN PetscErrorCode KSPGCRSetRestart(KSP, PetscInt);
 PETSC_EXTERN PetscErrorCode KSPGCRGetRestart(KSP, PetscInt *);
 PETSC_EXTERN PetscErrorCode KSPGCRSetModifyPC(KSP, PetscErrorCode (*)(KSP, PetscInt, PetscReal, void *), void *, PetscErrorCode (*)(void *));
 
+PETSC_EXTERN PetscErrorCode KSPMinresSetQLPRadius(KSP, PetscReal);
+PETSC_EXTERN PetscErrorCode KSPMinresGetUseQLP(KSP, PetscBool *);
+PETSC_EXTERN PetscErrorCode KSPMinresSetUseQLP(KSP, PetscBool);
+
 PETSC_EXTERN PetscErrorCode KSPFETIDPGetInnerBDDC(KSP, PC *);
 PETSC_EXTERN PetscErrorCode KSPFETIDPSetInnerBDDC(KSP, PC);
 PETSC_EXTERN PetscErrorCode KSPFETIDPGetInnerKSP(KSP, KSP *);

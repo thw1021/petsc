@@ -1,5 +1,5 @@
 
-static char help[] = "Solves a linear system in parallel with MINRES."
+static char help[] = "Solves a linear system in parallel with MINRES.\n\n";
 
 #include <petscksp.h>
 
@@ -9,13 +9,15 @@ int main(int argc, char **args)
   Mat         A;    /* linear system matrix */
   KSP         ksp;  /* linear solver context */
   PC          pc;   /* preconditioner */
-  PetscInt    Ii, Istart, Iend, m = 11;
   PetscScalar v = 0.0;
+  PetscInt    Ii, Istart, Iend, m = 11;
+  PetscBool   consistent = PETSC_TRUE;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &args, (char *)0, help));
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-m", &m, NULL));
   PetscCall(PetscOptionsGetScalar(NULL, NULL, "-vv", &v, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-consistent", &consistent, NULL));
 
   /* Create parallel diagonal matrix */
   PetscCall(MatCreate(PETSC_COMM_WORLD, &A));
@@ -37,10 +39,13 @@ int main(int argc, char **args)
   PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
 
   PetscCall(MatCreateVecs(A, &x, &b));
-  PetscCall(VecSet(x, 1.0));
-  PetscCall(MatMult(A, x, b));
-  PetscCall(VecSet(x, 0.0));
-
+  if (consistent) {
+    PetscCall(VecSet(x, 1.0));
+    PetscCall(MatMult(A, x, b));
+    PetscCall(VecSet(x, 0.0));
+  } else {
+    PetscCall(VecSet(b, 1.0));
+  }
   /* Create linear solver context */
   PetscCall(KSPCreate(PETSC_COMM_WORLD, &ksp));
   PetscCall(KSPSetOperators(ksp, A, A));
@@ -76,5 +81,13 @@ int main(int argc, char **args)
       suffix: 2
       nsize: 3
       args: -ksp_converged_reason
+
+   test:
+      suffix: minres_qlp
+      args: -ksp_converged_reason -ksp_minres_qlp -ksp_minres_qlp_monitor
+
+   test:
+      suffix: minres_qlp_nonconsistent
+      args: -ksp_converged_reason -ksp_minres_qlp -ksp_minres_qlp_monitor -consistent 0
 
 TEST*/
