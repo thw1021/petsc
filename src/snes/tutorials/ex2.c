@@ -368,7 +368,7 @@ PetscErrorCode Monitor(SNES snes, PetscInt its, PetscReal fnorm, void *ctx)
 
    test:
       suffix: 4
-      args: -nox -snes_monitor_cancel -snes_monitor_short -snes_type newtontrdc -snes_view
+      args: -nox -snes_monitor_cancel -snes_monitor_short -snes_type newtontr -snes_view
       requires: !single
 
 TEST*/

@@ -1,8 +1,9 @@
 SNES Object: 1 MPI process
-  type: newtontrdc
-    Trust region tolerance 1e-12 (-snes_trtol)
+  type: newtontr
+    Trust region tolerance 1e-12
     eta1=0.001, eta2=0.25, eta3=0.75
     delta0=0.1, t1=0.25, t2=2., deltaM=0.5
+    fallback=NEWTON
   maximum iterations=50, maximum function evaluations=10000
   tolerances: relative=1e-08, absolute=1e-50, solution=1e-08
   total number of linear solver iterations=21
@@ -82,7 +83,7 @@ SNES Object: 1 MPI process
     Down solver (pre-smoother) on level 2 -------------------------------
       KSP Object: (mg_levels_2_) 1 MPI process
         type: chebyshev
-          eigenvalue targets used: min 0.0990486, max 1.08954
+          eigenvalue targets used: min 0.0990486, max 1.08953
           eigenvalues estimated via gmres: min 0.0626845, max 0.990486
           eigenvalues estimated using gmres with transform: [0. 0.1; 0. 1.1]
           KSP Object: (mg_levels_2_esteig_) 1 MPI process

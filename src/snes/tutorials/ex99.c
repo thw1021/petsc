@@ -203,9 +203,9 @@ PetscErrorCode FormJacobian(SNES snes, Vec x, Mat jac, Mat B, void *dummy)
       suffix: 3
    test:
       suffix: 4
-      args: -snes_type newtontrdc
+      args: -snes_type newtontr
    test:
       suffix: 5
-      args: -snes_type newtontrdc -snes_trdc_use_cauchy false
+      args: -snes_type newtontr -snes_tr_fallback_type dogleg
 
 TEST*/
