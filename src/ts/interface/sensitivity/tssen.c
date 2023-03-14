@@ -1183,7 +1183,7 @@ PetscErrorCode TSAdjointMonitorSetFromOptions(TS ts, const char name[], const ch
           (may be NULL)
 
    Calling sequence of `adjointmonitor`:
-$    int adjointmonitor(TS ts,PetscInt steps,PetscReal time,Vec u,PetscInt numcost,Vec *lambda, Vec *mu,void *adjointmctx)
+$    PetscErrorCode adjointmonitor(TS ts,PetscInt steps,PetscReal time,Vec u,PetscInt numcost,Vec *lambda, Vec *mu,void *adjointmctx)
 +    ts - the `TS` context
 .    steps - iteration number (after the final time step the monitor routine is called with a step of -1, this is at the final time which may have
                                been interpolated to)

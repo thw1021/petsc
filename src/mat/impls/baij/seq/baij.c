@@ -3758,7 +3758,6 @@ PetscErrorCode MatLoad_SeqBAIJ(Mat mat, PetscViewer viewer)
 
 .seealso: [](chapter_matrices), `Mat`, [Sparse Matrices](sec_matsparse), `MatCreate()`, `MatCreateSeqAIJ()`, `MatSetValues()`, `MatCreateBAIJ()`
 @*/
-
 PetscErrorCode MatCreateSeqBAIJ(MPI_Comm comm, PetscInt bs, PetscInt m, PetscInt n, PetscInt nz, const PetscInt nnz[], Mat *A)
 {
   PetscFunctionBegin;

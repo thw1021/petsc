@@ -2699,7 +2699,7 @@ PetscErrorCode MatMumpsGetInverse_MUMPS(Mat F, Mat spRHS)
 .  F - the factored matrix obtained by calling `MatGetFactor()` from PETSc-MUMPS interface
 
   Output Parameter:
-. spRHS - sequential sparse matrix in `MATTRANSPOSEVIRTUAL` with requested entries of inverse of `A`
+. spRHS - sequential sparse matrix in `MATTRANSPOSEVIRTUAL` format with requested entries of inverse of `A`
 
    Level: beginner
 

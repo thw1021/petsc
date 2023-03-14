@@ -33,7 +33,8 @@
 
   Level: developer
 
-  Note: The Jacobian and inverse Jacobian will be rectangular, and the inverse is really a generalized inverse.
+  Note:
+  The Jacobian and inverse Jacobian will be rectangular, and the inverse is really a generalized inverse.
 .vb
     v0 + j x_face = x_cell
     invj (x_cell - v0) = x_face

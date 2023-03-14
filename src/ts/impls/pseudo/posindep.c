@@ -359,7 +359,7 @@ static PetscErrorCode TSView_Pseudo(TS ts, PetscViewer viewer)
          for the timestep verification routine (may be NULL)
 
    Calling sequence of `func`:
-$  func (TS ts,Vec update,void *ctx,PetscReal *newdt,PetscBool  *flag);
+$  PetscErrorCode func(TS ts,Vec update,void *ctx,PetscReal *newdt,PetscBool  *flag);
 +  update - latest solution vector
 .  ctx - [optional] timestep context
 .  newdt - the timestep to use for the next step
@@ -473,7 +473,7 @@ PetscErrorCode TSPseudoIncrementDtFromInitialDt(TS ts)
          required by the function (may be NULL)
 
    Calling sequence of `func`:
-$  func (TS ts,PetscReal *newdt,void *ctx);
+$  PetscErrorCode func(TS ts,PetscReal *newdt,void *ctx);
 +  newdt - the newly computed timestep
 -  ctx - [optional] timestep context
 

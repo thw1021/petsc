@@ -363,7 +363,7 @@ PetscErrorCode TaoLineSearchApply(TaoLineSearch ls, Vec x, PetscReal *f, Vec g, 
 -  type - the `TaoLineSearchType` selection
 
   Options Database Key:
-.  -tao_ls_type <more-thuente, armijo, unit> - select which method Tao should use at runtime
+.  -tao_ls_type <type> - select which method Tao should use at runtime
 
   Level: beginner
 
@@ -425,7 +425,7 @@ PetscErrorCode TaoLineSearchSetType(TaoLineSearch ls, TaoLineSearchType type)
 
    Level: developer
 
-.seealso:
+.seealso: `TaoLineSearch`
 @*/
 PetscErrorCode TaoLineSearchMonitor(TaoLineSearch ls, PetscInt its, PetscReal f, PetscReal step)
 {
@@ -470,7 +470,7 @@ PetscErrorCode TaoLineSearchMonitor(TaoLineSearch ls, PetscInt its, PetscReal f,
 
   Level: beginner
 
-.seealso:
+.seealso: `TaoLineSearch`
 @*/
 PetscErrorCode TaoLineSearchSetFromOptions(TaoLineSearch ls)
 {
@@ -522,7 +522,7 @@ PetscErrorCode TaoLineSearchSetFromOptions(TaoLineSearch ls)
 
   Level: developer
 
-.seealso:
+.seealso: `TaoLineSearch`
 @*/
 PetscErrorCode TaoLineSearchGetType(TaoLineSearch ls, TaoLineSearchType *type)
 {
@@ -554,7 +554,7 @@ PetscErrorCode TaoLineSearchGetType(TaoLineSearch ls, TaoLineSearchType *type)
   routines directly (see `TaoLineSearchUseTaoRoutines()`), then the `Tao`
   is already counting the number of evaluations.
 
-.seealso:
+.seealso: `TaoLineSearch`
 @*/
 PetscErrorCode TaoLineSearchGetNumberFunctionEvaluations(TaoLineSearch ls, PetscInt *nfeval, PetscInt *ngeval, PetscInt *nfgeval)
 {
@@ -581,7 +581,7 @@ PetscErrorCode TaoLineSearchGetNumberFunctionEvaluations(TaoLineSearch ls, Petsc
 
   Level: developer
 
-.seealso:
+.seealso: `TaoLineSearch`
 @*/
 PetscErrorCode TaoLineSearchIsUsingTaoRoutines(TaoLineSearch ls, PetscBool *flg)
 {
@@ -980,7 +980,7 @@ PetscErrorCode TaoLineSearchComputeObjectiveAndGTS(TaoLineSearch ls, Vec x, Pets
 
   Level: developer
 
-.seealso:
+.seealso: `TaoLineSearchGetStartingVector()`, `TaoLineSearchGetStepDirection()`
 @*/
 PetscErrorCode TaoLineSearchGetSolution(TaoLineSearch ls, Vec x, PetscReal *f, Vec g, PetscReal *steplength, TaoLineSearchConvergedReason *reason)
 {
@@ -1012,7 +1012,7 @@ PetscErrorCode TaoLineSearchGetSolution(TaoLineSearch ls, Vec x, PetscReal *f, V
 
   Level: advanced
 
-.seealso:
+.seealso: `TaoLineSearchGetSolution()`, `TaoLineSearchGetStepDirection()`
 @*/
 PetscErrorCode TaoLineSearchGetStartingVector(TaoLineSearch ls, Vec *x)
 {
@@ -1036,7 +1036,7 @@ PetscErrorCode TaoLineSearchGetStartingVector(TaoLineSearch ls, Vec *x)
 
   Level: advanced
 
-.seealso:
+.seealso: `TaoLineSearchGetSolution()`, `TaoLineSearchGetStartingVector()`
 @*/
 PetscErrorCode TaoLineSearchGetStepDirection(TaoLineSearch ls, Vec *s)
 {
@@ -1059,7 +1059,7 @@ PetscErrorCode TaoLineSearchGetStepDirection(TaoLineSearch ls, Vec *s)
 
   Level: developer
 
-.seealso:
+.seealso: `TaoLineSearchGetSolution()`, `TaoLineSearchGetStartingVector()`, `TaoLineSearchGetStepDirection()`
 @*/
 
 PetscErrorCode TaoLineSearchGetFullStepObjective(TaoLineSearch ls, PetscReal *f_fullstep)
@@ -1174,7 +1174,7 @@ $     -tao_ls_type my_linesearch
    Note:
    `TaoLineSearchRegister()` may be called multiple times to add several user-defined solvers.
 
-.seealso:
+.seealso: [](chapter_tao), `Tao`, `TaoLineSearch`
 @*/
 PetscErrorCode TaoLineSearchRegister(const char sname[], PetscErrorCode (*func)(TaoLineSearch))
 {

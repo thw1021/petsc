@@ -1737,7 +1737,7 @@ static inline PetscErrorCode PetscMPIIntCast(PetscInt a, PetscMPIInt *b)
   PetscRealIntMultTruncate - Computes the product of a positive `PetscReal` and a positive
   `PetscInt` and truncates the value to slightly less than the maximal possible value.
 
-  Not Collective, Not Fortran Support
+  Not Collective; No Fortran Support
 
   Input Parameters:
 + a - The `PetscReal` value

@@ -101,7 +101,7 @@ PetscErrorCode TSSetPostEventIntervalStep(TS ts, PetscReal dt)
 
    The size of `vtol` is equal to the number of events.
 
-   The tolerance is some measure of how close the event function is too zero for the event detector to stop
+   The tolerance is some measure of how close the event function is to zero for the event detector to stop
    and declare the time of the event has been detected.
 
 .seealso: [](chapter_ts), `TS`, `TSEvent`, `TSSetEventHandler()`
@@ -139,14 +139,14 @@ PetscErrorCode TSSetEventTolerances(TS ts, PetscReal tol, PetscReal vtol[])
                +1 => Zero crossing in positive direction, 0 => both ways (one for each event)
 .  terminate - flag to indicate whether time stepping should be terminated after
                event is detected (one for each event)
-.  eventhandler - a change in sign of this function (see `direction`) is used to determine an even has occurred.
+.  eventhandler - a change in sign of this function (see `direction`) is used to determine an even has occurred
 .  postevent - [optional] post-event function, this function can change properties of the solution, ODE etc at the time of the event
 -  ctx       - [optional] user-defined context for private data for the
                event detector and post event routine (use `NULL` if no
                context is desired)
 
    Calling sequence of `eventhandler`:
-$   PetscErrorCode PetscEventHandler(TS ts,PetscReal t,Vec U,PetscScalar fvalue[],void* ctx)
+$   PetscErrorCode eventhandler(TS ts,PetscReal t,Vec U,PetscScalar fvalue[],void* ctx)
 +  ts  - the TS context
 .  t   - current time
 .  U   - current iterate
@@ -154,7 +154,7 @@ $   PetscErrorCode PetscEventHandler(TS ts,PetscReal t,Vec U,PetscScalar fvalue[
 -  fvalue    - function value of events at time t
 
    Calling sequence of `postevent`:
-$   PetscErrorCode PostEvent(TS ts,PetscInt nevents_zero,PetscInt events_zero[],PetscReal t,Vec U,PetscBool forwardsolve,void* ctx)
+$   PetscErrorCode postevent(TS ts,PetscInt nevents_zero,PetscInt events_zero[],PetscReal t,Vec U,PetscBool forwardsolve,void* ctx)
 +  ts - the TS context
 .  nevents_zero - number of local events whose event function is zero
 .  events_zero  - indices of local events which have reached zero

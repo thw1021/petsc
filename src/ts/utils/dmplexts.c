@@ -481,7 +481,7 @@ PetscErrorCode DMTSCheckJacobian(TS ts, DM dm, PetscReal t, Vec u, Vec u_t, Pets
   Developer Note:
   What is the purpose of `u`, does it need to already have a solution or some other value in it?
 
-.seealso: `SMTS`
+.seealso: `DMTS`
 @*/
 PetscErrorCode DMTSCheckFromOptions(TS ts, Vec u)
 {

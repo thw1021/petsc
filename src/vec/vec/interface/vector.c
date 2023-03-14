@@ -455,7 +455,7 @@ PetscErrorCode VecPointwiseDivide(Vec w, Vec x, Vec y)
 
    Input Parameters:
 +  x - the first vector
--  y  - the second vector
+-  y - the second vector
 
    Output Parameter:
 .  w - the result

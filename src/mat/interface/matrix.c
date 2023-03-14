@@ -8595,7 +8595,7 @@ PetscErrorCode MatInterpolate(Mat A, Vec x, Vec y)
 +  mat   - the matrix
 -  x - the vector to be restricted
 
-   Output Paramter:
+   Output Parameter:
 .  y - the resulting vector
 
    Level: intermediate

@@ -536,7 +536,7 @@ PetscErrorCode DMShellSetCreateLocalVector(DM dm, PetscErrorCode (*func)(DM, Vec
 
    Level: advanced
 
-   Notes:
+   Note:
     If these functions are not provided but `DMShellSetGlobalToLocalVecScatter()` is called then
    `DMGlobalToLocalBeginDefaultShell()`/`DMGlobalToLocalEndDefaultShell()` are used to to perform the transfers
 
@@ -563,7 +563,7 @@ PetscErrorCode DMShellSetGlobalToLocal(DM dm, PetscErrorCode (*begin)(DM, Vec, I
 
    Level: advanced
 
-   Notes:
+   Note:
     If these functions are not provided but `DMShellSetLocalToGlobalVecScatter()` is called then
    `DMLocalToGlobalBeginDefaultShell()`/`DMLocalToGlobalEndDefaultShell()` are used to to perform the transfers
 
@@ -590,7 +590,7 @@ PetscErrorCode DMShellSetLocalToGlobal(DM dm, PetscErrorCode (*begin)(DM, Vec, I
 
    Level: advanced
 
-   Notes:
+   Note:
     If these functions are not provided but `DMShellSetLocalToLocalVecScatter()` is called then
    `DMLocalToLocalBeginDefaultShell()`/`DMLocalToLocalEndDefaultShell()` are used to to perform the transfers
 

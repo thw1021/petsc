@@ -530,7 +530,7 @@ PetscErrorCode TaoGetGradient(Tao tao, Vec *g, PetscErrorCode (**func)(Tao, Vec,
         routine (may be `NULL`)
 
   Calling sequence of `func`:
-$ PetscErrorCode func (Tao tao, Vec x, PetscReal *f, Vec g, void *ctx);
+$ PetscErrorCode func(Tao tao, Vec x, PetscReal *f, Vec g, void *ctx);
 + tao - the optimization object
 . x - input vector
 . f - objective value (output)

@@ -1635,7 +1635,7 @@ PetscErrorCode SNESLineSearchSetReason(SNESLineSearch linesearch, SNESLineSearch
 
    Calling sequence of `projectfunc`:
 .vb
-   PetscErrorCode projectfunc (SNES snes, Vec X)
+   PetscErrorCode projectfunc(SNES snes, Vec X)
 .ve
 +   snes - nonlinear context
 -   X - current solution, store the projected solution here

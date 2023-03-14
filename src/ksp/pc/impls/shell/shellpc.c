@@ -423,7 +423,7 @@ static PetscErrorCode PCShellGetName_Shell(PC pc, const char *name[])
 -  destroy - the application-provided destroy routine
 
    Calling sequence of `destroy`:
-$  PetscErrorCode destroy(PC)
+$  PetscErrorCode destroy(PC pc)
 .  pc - the preconditioner, get the application context with `PCShellGetContext()`
 
    Level: intermediate
@@ -506,7 +506,7 @@ PetscErrorCode PCShellSetView(PC pc, PetscErrorCode (*view)(PC, PetscViewer))
 
    Calling sequence of `apply`:
 .vb
-   PetscErrorCode apply (PC pc,Vec xin,Vec xout)
+   PetscErrorCode apply(PC pc,Vec xin,Vec xout)
 .ve
 +  pc - the preconditioner, get the application context with `PCShellGetContext()`
 .  xin - input vector

@@ -1384,7 +1384,7 @@ PetscErrorCode TaoResetStatistics(Tao tao)
 - func - The function
 
   Calling sequence of `func`:
-$ func (Tao tao, PetscInt step);
+$   PetscErrorCode func(Tao tao, PetscInt step);
 + tao - the optimizer context
 - step - The current step of the iteration
 

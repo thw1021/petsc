@@ -2120,14 +2120,14 @@ PetscErrorCode PetscOptionsMonitorDefault(const char name[], const char value[],
           (may be `NULL`)
 
    Calling Sequence of `monitor`:
-$     monitor (const char name[], const char value[], void *mctx)
+$   PetscErrorCode monitor(const char name[], const char value[], void *mctx)
 +  name - option name string
 .  value - option value string
 . source - option source
 -  mctx  - optional monitoring context, as set by `PetscOptionsMonitorSet()`
 
    Calling Sequence of `monitordestroy`:
-$  PetscErrorCode destroy(void *cctx)
+$  PetscErrorCode monitordestroy(void *cctx)
 
    Options Database Key:
    See `PetscInitialize()` for options related to option database monitoring.

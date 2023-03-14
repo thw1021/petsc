@@ -870,7 +870,7 @@ PetscErrorCode DMSwarmComputeLocalSizeFromOptions(DM sw)
   Not Collective
 
   Input Parameter:
-, sw - The `DMSWARM`
+. sw - The `DMSWARM`
 
   Level: advanced
 

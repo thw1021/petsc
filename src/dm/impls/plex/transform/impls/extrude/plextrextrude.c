@@ -805,14 +805,15 @@ PetscErrorCode DMPlexTransformExtrudeSetThickness(DMPlexTransform tr, PetscReal 
   Output Parameter:
 . useTensor - The flag to use tensor cells
 
-  Note: This flag determines the orientation behavior of the created points.
+  Note:
+  This flag determines the orientation behavior of the created points.
 
   For example, if tensor is `PETSC_TRUE`, then
 .vb
   DM_POLYTOPE_POINT_PRISM_TENSOR is made instead of DM_POLYTOPE_SEGMENT,
   DM_POLYTOPE_SEG_PRISM_TENSOR instead of DM_POLYTOPE_QUADRILATERAL,
   DM_POLYTOPE_TRI_PRISM_TENSOR instead of DM_POLYTOPE_TRI_PRISM, and
-   DM_POLYTOPE_QUAD_PRISM_TENSOR instead of DM_POLYTOPE_HEXAHEDRON.
+  DM_POLYTOPE_QUAD_PRISM_TENSOR instead of DM_POLYTOPE_HEXAHEDRON.
 .ve
 
   Level: intermediate

@@ -917,7 +917,7 @@ M*/
   #include <petscerror.h>
   void PetscCallCXXAbort(MPI_Comm comm, ...) noexcept;
 
-  Collective, No Fortran Support
+  Collective; No Fortran Support
 
   Input Parameters:
 + comm        - The MPI communicator to abort on

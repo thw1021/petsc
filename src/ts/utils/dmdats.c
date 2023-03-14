@@ -265,7 +265,7 @@ PetscErrorCode DMDATSSetRHSFunctionLocal(DM dm, InsertMode imode, DMDATSRHSFunct
 -  ctx   - optional context for local jacobian evaluation
 
    Calling sequence of `func`:
-$ PetscErrorCode func(DMDALocalInfo* info,PetscReal t,void* x,Mat J,Mat B,void *ctx);
+$ PetscErrorCode func(DMDALocalInfo* info,PetscReal t,void* x,Mat J,Mat B,void *ctx)
 +  info - `DMDALocalInfo` defining the subdomain to evaluate the residual on
 .  t    - time at which to evaluate residual
 .  x    - array of local state information
@@ -303,7 +303,7 @@ PetscErrorCode DMDATSSetRHSJacobianLocal(DM dm, DMDATSRHSJacobianLocal func, voi
 -  ctx  - optional context for local residual evaluation
 
    Calling sequence of `func`:
-$  PetscErrorCode func(DMDALocalInfo info,PetscReal t,Vec x,Vec xdot,Vec f,void*ctx);
+$  PetscErrorCode func(DMDALocalInfo info,PetscReal t,Vec x,Vec xdot,Vec f,void*ctx)
 +  info - `DMDALocalInfo` defining the subdomain to evaluate the residual on
 .  t    - time at which to evaluate residual
 .  x    - array of local state information
@@ -342,7 +342,7 @@ PetscErrorCode DMDATSSetIFunctionLocal(DM dm, InsertMode imode, DMDATSIFunctionL
 -  ctx   - optional context for local residual evaluation
 
    Calling sequence of `func`:
-$ PetscErrorCode func(DMDALocalInfo* info,PetscReal t,void* x,void *xdot,PetscScalar shift,Mat J,Mat B,void *ctx);
+$ PetscErrorCode func(DMDALocalInfo* info,PetscReal t,void* x,void *xdot,PetscScalar shift,Mat J,Mat B,void *ctx)
 +  info - `DMDALocalInfo` defining the subdomain to evaluate the residual on
 .  t    - time at which to evaluate the jacobian
 .  x    - array of local state information

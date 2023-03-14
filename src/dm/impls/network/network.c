@@ -1738,7 +1738,7 @@ static PetscErrorCode DMNetworkDistributeCoordinates(DM dm, PetscSF migrationSF,
 + DM - the `DMNETWORK` object
 - overlap - the overlap of partitions, 0 is the default
 
-  Options Database Keya:
+  Options Database Keys:
 + -dmnetwork_view - Calls `DMView()` at the conclusion of `DMSetUp()`
 - -dmnetwork_view_distributed - Calls `DMView()` at the conclusion of `DMNetworkDistribute()`
 

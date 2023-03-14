@@ -457,13 +457,13 @@ PETSC_EXTERN PetscErrorCode TSCreate_DiscGrad(TS ts)
 - ctx   - the user context
 
   Calling sequence of `Sfunc`:
-$ PetscErrorCode func(TS ts, PetscReal time, Vec u, Mat S, void *)
+$ PetscErrorCode Sfunc(TS ts, PetscReal time, Vec u, Mat S, void *)
 
   Calling sequence of `Ffunc`:
-$ PetscErrorCode func(TS ts, PetscReal time, Vec u, PetscScalar *F, void *)
+$ PetscErrorCode Ffunc(TS ts, PetscReal time, Vec u, PetscScalar *F, void *)
 
   Calling sequence of `Gfunc`:
-$ PetscErrorCode func(TS ts, PetscReal time, Vec u, Vec G, void *)
+$ PetscErrorCode Gfunc(TS ts, PetscReal time, Vec u, Vec G, void *)
 
   Level: intermediate
 
@@ -492,13 +492,13 @@ PetscErrorCode TSDiscGradGetFormulation(TS ts, PetscErrorCode (**Sfunc)(TS, Pets
 - Gfunc - constructor for the gradient of F from the formulation
 
   Calling sequence of `Sfunc`:
-$ PetscErrorCode func(TS ts, PetscReal time, Vec u, Mat S, void *)
+$ PetscErrorCode Sfunc(TS ts, PetscReal time, Vec u, Mat S, void *)
 
   Calling sequence of `Ffunc`:
-$ PetscErrorCode func(TS ts, PetscReal time, Vec u, PetscScalar *F, void *)
+$ PetscErrorCode Ffunc(TS ts, PetscReal time, Vec u, PetscScalar *F, void *)
 
   Calling sequence of `Gfunc`:
-$ PetscErrorCode func(TS ts, PetscReal time, Vec u, Vec G, void *)
+$ PetscErrorCode Gfunc(TS ts, PetscReal time, Vec u, Vec G, void *)
 
   Level: Intermediate
 

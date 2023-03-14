@@ -144,7 +144,7 @@ PetscErrorCode MatDestroy_SchurComplement(Mat N)
 
    Input Parameters:
 +   A00  - the upper-left block of the original matrix A = [A00 A01; A10 A11]
-.   Ap00             - preconditioning matrix for use in ksp(A00,Ap00) to approximate the action of A00^{-1}
+.   Ap00 - preconditioning matrix for use in ksp(A00,Ap00) to approximate the action of A00^{-1}
 .   A01  - the upper-right block of the original matrix A = [A00 A01; A10 A11]
 .   A10  - the lower-left block of the original matrix A = [A00 A01; A10 A11]
 -   A11  - (optional) the lower-right block of the original matrix A = [A00 A01; A10 A11]
@@ -192,7 +192,7 @@ PetscErrorCode MatCreateSchurComplement(Mat A00, Mat Ap00, Mat A01, Mat A10, Mat
    Input Parameters:
 +   S                - matrix obtained with `MatSetType`(S,`MATSCHURCOMPLEMENT`)
 +   A00  - the upper-left block of the original matrix A = [A00 A01; A10 A11]
-.   Ap00             - preconditioning matrix for use in ksp(A00,Ap00) to approximate the action of A00^{-1}
+.   Ap00 - preconditioning matrix for use in ksp(A00,Ap00) to approximate the action of A00^{-1}
 .   A01  - the upper-right block of the original matrix A = [A00 A01; A10 A11]
 .   A10  - the lower-left block of the original matrix A = [A00 A01; A10 A11]
 -   A11  - (optional) the lower-right block of the original matrix A = [A00 A01; A10 A11]
@@ -336,7 +336,7 @@ PetscErrorCode MatSchurComplementSetKSP(Mat S, KSP ksp)
    Input Parameters:
 +   S                - matrix obtained with `MatCreateSchurComplement()` (or `MatSchurSetSubMatrices()`) and implementing the action of A11 - A10 ksp(A00,Ap00) A01
 .   A00  - the upper-left block of the original matrix A = [A00 A01; A10 A11]
-.   Ap00             - preconditioning matrix for use in ksp(A00,Ap00) to approximate the action of A00^{-1}
+.   Ap00 - preconditioning matrix for use in ksp(A00,Ap00) to approximate the action of A00^{-1}
 .   A01  - the upper-right block of the original matrix A = [A00 A01; A10 A11]
 .   A10  - the lower-left block of the original matrix A = [A00 A01; A10 A11]
 -   A11  - (optional) the lower-right block of the original matrix A = [A00 A01; A10 A11]
@@ -633,7 +633,7 @@ PetscErrorCode MatGetSchurComplement(Mat A, IS isrow0, IS iscol0, IS isrow1, IS 
 /*@
     MatSchurComplementSetAinvType - set the type of approximation used for the inverse of the (0,0) block used in forming Sp in `MatSchurComplementGetPmat()`
 
-    Not Collective.
+    Not Collective
 
     Input Parameters:
 +   S        - matrix obtained with `MatCreateSchurComplement()` (or equivalent) and implementing the action of A11 - A10 ksp(A00,Ap00) A01
@@ -666,7 +666,7 @@ PetscErrorCode MatSchurComplementSetAinvType(Mat S, MatSchurComplementAinvType a
 /*@
     MatSchurComplementGetAinvType - get the type of approximation for the inverse of the (0,0) block used in forming Sp in `MatSchurComplementGetPmat()`
 
-    Not Collective.
+    Not Collective
 
     Input Parameter:
 .   S      - matrix obtained with `MatCreateSchurComplement()` (or equivalent) and implementing the action of A11 - A10 ksp(A00,Ap00) A01

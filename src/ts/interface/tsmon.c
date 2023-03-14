@@ -1283,7 +1283,7 @@ PetscErrorCode TSMonitorSPSwarmSolution(TS ts, PetscInt step, PetscReal ptime, V
    This is not called directly by users, rather one calls `TSMonitorSet()`, with this function as an argument, to cause the monitor
    to be used during the `TS` integration.
 
-.seealso: `TSMonitoSet()`, `TSMonitorSPCtx`
+.seealso: `TSMonitoSet()`
 @*/
 PetscErrorCode TSMonitorHGSwarmSolution(TS ts, PetscInt step, PetscReal ptime, Vec u, void *dctx)
 {

@@ -60,7 +60,7 @@ typedef enum {
 -   `TAOLINESEARCHIPM` - "ipm"
 
   Options Database Key:
-.  -tao_ls_type <more-thuente, armijo, unit> - select which method Tao should use at runtime
+.  -tao_ls_type <type> - select which method Tao should use at runtime
   Values:
 
   Level: beginner

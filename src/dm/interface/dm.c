@@ -839,7 +839,7 @@ PetscErrorCode DMSetUp(DM dm)
 .   -dm_vec_type <type>  - type of vector to create inside `DM`
 .   -dm_mat_type <type>  - type of matrix to create inside `DM`
 .   -dm_is_coloring_type - <global or local>
-   -dm_bind_below <n>   - bind (force execution on CPU) for `Vec` and `Mat` objects with local size (number of vector entries or matrix rows) below n; currently only supported for `DMDA`
+.   -dm_bind_below <n>   - bind (force execution on CPU) for `Vec` and `Mat` objects with local size (number of vector entries or matrix rows) below n; currently only supported for `DMDA`
 . -dm_plex_filename <str>           - File containing a mesh
 . -dm_plex_boundary_filename <str>  - File containing a mesh boundary
 . -dm_plex_name <str>               - Name of the mesh in the file
@@ -874,7 +874,7 @@ PetscErrorCode DMSetUp(DM dm)
 . -dm_distribute <bool>             - Flag to redistribute a mesh among processes
 . -dm_distribute_overlap <n>        - The size of the overlap halo
 . -dm_plex_adj_cone <bool>          - Set adjacency direction
-. -dm_plex_adj_closure <bool>       - Set adjacency size
+.  -dm_plex_adj_closure <bool>       - Set adjacency size
 .   -dm_plex_check_symmetry        - Check that the adjacency information in the mesh is symmetric - `DMPlexCheckSymmetry()`
 .   -dm_plex_check_skeleton        - Check that each cell has the correct number of vertices (only for homogeneous simplex or tensor meshes) - `DMPlexCheckSkeleton()`
 .   -dm_plex_check_faces           - Check that the faces of each cell give a vertex order this is consistent with what we expect from the cell type - `DMPlexCheckFaces()`
@@ -2144,7 +2144,7 @@ PetscErrorCode DMCreateSuperDM(DM dms[], PetscInt n, IS **is, DM *superdm)
 . dm - the `DM` object
 
   Output Parameters:
-+ n            - The number of subproblems in the domain decomposition (or `NULL` if not requested)
++ n           - The number of subproblems in the domain decomposition (or `NULL` if not requested)
 . namelist    - The name for each subdomain (or `NULL` if not requested)
 . innerislist - The global indices for each inner subdomain (or NULL, if not requested)
 . outerislist - The global indices for each outer subdomain (or NULL, if not requested)
@@ -4043,7 +4043,7 @@ PetscErrorCode DMConvert(DM dm, DMType newtype, DM *M)
   Not Collective
 
   Input Parameters:
-+ sname        - The name of a new user-defined creation routine
++ sname    - The name of a new user-defined creation routine
 - function - The creation routine itself
 
   Level: advanced

@@ -112,8 +112,9 @@ PetscErrorCode PetscDrawResizeWindow(PetscDraw draw, int w, int h)
    Input Parameter:
 .  draw - the window
 
-   Output Parameter:
-.  w,h - the window width and height
+   Output Parameters:
++  w - the window width
+-  h - the window height
 
    Level: intermediate
 
