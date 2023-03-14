@@ -159,11 +159,22 @@ StatementMacros:
   - PETSC_UNUSED
   - PetscPragmaOMP
   - PetscPragmaSIMD
+  - PetscPragma
+  - PETSC_PRAGMA_DIAGNOSTIC_IGNORED_BEGIN
+  - PETSC_PRAGMA_DIAGNOSTIC_IGNORED_BEGIN_
+  - PETSC_PRAGMA_DIAGNOSTIC_IGNORED_END
+  - PETSC_PRAGMA_DIAGNOSTIC_IGNORED_END_
 TabWidth: 2
 UseCRLF: false
 UseTab: Never
 WhitespaceSensitiveMacros:
   - PetscStringize
   - PetscStringize_
+  - PetscPragma
+  - PetscPragma_
+  - PETSC_PRAGMA_DIAGNOSTIC_IGNORED_BEGIN
+  - PETSC_PRAGMA_DIAGNOSTIC_IGNORED_BEGIN_
+  - PETSC_PRAGMA_DIAGNOSTIC_IGNORED_END
+  - PETSC_PRAGMA_DIAGNOSTIC_IGNORED_END_
 TypenameMacros:
   - khash_t
