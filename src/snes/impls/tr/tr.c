@@ -1,4 +1,3 @@
-
 #include <../src/snes/impls/tr/trimpl.h> /*I   "petscsnes.h"   I*/
 
 typedef struct {
@@ -62,6 +61,31 @@ static PetscErrorCode SNESTR_Converged_Private(SNES snes, PetscInt it, PetscReal
 }
 
 /*@
+  SNESNewtonTRSetFallbackType - Set the type of fallback if the solution of the trust region subproblem is outside the radius
+
+  Input Parameters:
++ snes - the nonlinear solver object
+- ftype - the fallback type, see `SNESNewtonTRFallbackType`
+
+  Level: intermediate
+
+.seealso: `SNESNEWTONTR`, `SNESNewtonTRPreCheck()`, `SNESNewtonTRGetPreCheck()`, `SNESNewtonTRSetPreCheck()`,
+          `SNESNewtonTRSetPostCheck()`, `SNESNewtonTRGetPostCheck()`
+@*/
+PetscErrorCode SNESNewtonTRSetFallbackType(SNES snes, SNESNewtonTRFallbackType ftype)
+{
+  SNES_NEWTONTR *tr = (SNES_NEWTONTR *)snes->data;
+  PetscBool      flg;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
+  PetscValidLogicalCollectiveEnum(snes, ftype, 2);
+  PetscCall(PetscObjectTypeCompare((PetscObject)snes, SNESNEWTONTR, &flg));
+  if (flg) tr->fallback = ftype;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   SNESNewtonTRGetRhoFlag - Get whether the current solution update is within the trust-region.
 
   Input Parameter:
@@ -70,7 +94,7 @@ static PetscErrorCode SNESTR_Converged_Private(SNES snes, PetscInt it, PetscReal
   Output Parameter:
 . rho_flag: `PETSC_TRUE` if the solution update is in the trust-region; otherwise, `PETSC_FALSE`
 
-  Level: developer
+  Level: intermediate
 
 .seealso: `SNESNEWTONTR`, `SNESNewtonTRPreCheck()`, `SNESNewtonTRGetPreCheck()`, `SNESNewtonTRSetPreCheck()`,
           `SNESNewtonTRSetPostCheck()`, `SNESNewtonTRGetPostCheck()`
@@ -83,7 +107,7 @@ PetscErrorCode SNESNewtonTRGetRhoFlag(SNES snes, PetscBool *rho_flag)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
   PetscValidBoolPointer(rho_flag, 2);
-  PetscCall(PetscObjectBaseTypeCompare((PetscObject)snes, SNESNEWTONTR, &flg));
+  PetscCall(PetscObjectTypeCompare((PetscObject)snes, SNESNEWTONTR, &flg));
   PetscAssert(flg, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_WRONG, "Not for type %s", ((PetscObject)snes)->type_name);
   *rho_flag = tr->rho_satisfied;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -115,7 +139,7 @@ PetscErrorCode SNESNewtonTRSetPreCheck(SNES snes, PetscErrorCode (*func)(SNES, V
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
-  PetscCall(PetscObjectBaseTypeCompare((PetscObject)snes, SNESNEWTONTR, &flg));
+  PetscCall(PetscObjectTypeCompare((PetscObject)snes, SNESNEWTONTR, &flg));
   if (flg) {
     if (func) tr->precheck = func;
     if (ctx) tr->precheckctx = ctx;
@@ -146,7 +170,7 @@ PetscErrorCode SNESNewtonTRGetPreCheck(SNES snes, PetscErrorCode (**func)(SNES, 
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
-  PetscCall(PetscObjectBaseTypeCompare((PetscObject)snes, SNESNEWTONTR, &flg));
+  PetscCall(PetscObjectTypeCompare((PetscObject)snes, SNESNEWTONTR, &flg));
   PetscAssert(flg, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_WRONG, "Not for type %s", ((PetscObject)snes)->type_name);
   if (func) *func = tr->precheck;
   if (ctx) *ctx = tr->precheckctx;
@@ -179,7 +203,7 @@ PetscErrorCode SNESNewtonTRSetPostCheck(SNES snes, PetscErrorCode (*func)(SNES, 
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
-  PetscCall(PetscObjectBaseTypeCompare((PetscObject)snes, SNESNEWTONTR, &flg));
+  PetscCall(PetscObjectTypeCompare((PetscObject)snes, SNESNEWTONTR, &flg));
   if (flg) {
     if (func) tr->postcheck = func;
     if (ctx) tr->postcheckctx = ctx;
@@ -210,7 +234,7 @@ PetscErrorCode SNESNewtonTRGetPostCheck(SNES snes, PetscErrorCode (**func)(SNES,
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
-  PetscCall(PetscObjectBaseTypeCompare((PetscObject)snes, SNESNEWTONTR, &flg));
+  PetscCall(PetscObjectTypeCompare((PetscObject)snes, SNESNEWTONTR, &flg));
   PetscAssert(flg, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_WRONG, "Not for type %s", ((PetscObject)snes)->type_name);
   if (func) *func = tr->postcheck;
   if (ctx) *ctx = tr->postcheckctx;
@@ -230,7 +254,7 @@ PetscErrorCode SNESNewtonTRGetPostCheck(SNES snes, PetscErrorCode (**func)(SNES,
    Output Parameters:
 .  changed_Y - Indicator that the step direction Y has been changed.
 
-   Level: developer
+   Level: intermediate
 
 .seealso: `SNESNEWTONTR`, `SNESNewtonTRSetPreCheck()`, `SNESNewtonTRGetPreCheck()`, `SNESNewtonTRPostCheck()`
 @*/
@@ -241,7 +265,7 @@ PetscErrorCode SNESNewtonTRPreCheck(SNES snes, Vec X, Vec Y, PetscBool *changed_
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
-  PetscCall(PetscObjectBaseTypeCompare((PetscObject)snes, SNESNEWTONTR, &flg));
+  PetscCall(PetscObjectTypeCompare((PetscObject)snes, SNESNEWTONTR, &flg));
   PetscAssert(flg, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_WRONG, "Not for type %s", ((PetscObject)snes)->type_name);
   *changed_Y = PETSC_FALSE;
   if (tr->precheck) {
@@ -269,7 +293,7 @@ PetscErrorCode SNESNewtonTRPreCheck(SNES snes, Vec X, Vec Y, PetscBool *changed_
    Note:
      If Y is changed then W is recomputed as X - Y
 
-   Level: developer
+   Level: intermediate
 
 .seealso: `SNESNEWTONTR`, `SNESNewtonTRSetPostCheck()`, `SNESNewtonTRGetPostCheck()`, `SNESNewtonTRPreCheck()
 @*/
@@ -280,7 +304,7 @@ PetscErrorCode SNESNewtonTRPostCheck(SNES snes, Vec X, Vec Y, Vec W, PetscBool *
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
-  PetscCall(PetscObjectBaseTypeCompare((PetscObject)snes, SNESNEWTONTR, &flg));
+  PetscCall(PetscObjectTypeCompare((PetscObject)snes, SNESNEWTONTR, &flg));
   PetscAssert(flg, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_WRONG, "Not for type %s", ((PetscObject)snes)->type_name);
   *changed_Y = PETSC_FALSE;
   *changed_W = PETSC_FALSE;
@@ -669,7 +693,7 @@ static PetscErrorCode SNESView_NEWTONTR(SNES snes, PetscViewer viewer)
 
 .seealso: `SNESCreate()`, `SNES`, `SNESSetType()`, `SNESNEWTONLS`, `SNESSetTrustRegionTolerance()`,
           `SNESNewtonTRPreCheck()`, `SNESNewtonTRGetPreCheck()`, `SNESNewtonTRSetPostCheck()`, `SNESNewtonTRGetPostCheck()`,
-          `SNESNewtonTRGetRhoFlag()`, `SNESNewtonTRSetPreCheck()`
+          `SNESNewtonTRGetRhoFlag()`, `SNESNewtonTRSetPreCheck()`, `SNESNewtonTRSetFallbackType()`
 M*/
 PETSC_EXTERN PetscErrorCode SNESCreate_NEWTONTR(SNES snes)
 {

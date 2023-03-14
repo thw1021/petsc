@@ -150,11 +150,22 @@ PETSC_EXTERN PetscErrorCode SNESSetForceIteration(SNES, PetscBool);
 PETSC_EXTERN PetscErrorCode SNESGetIterationNumber(SNES, PetscInt *);
 PETSC_EXTERN PetscErrorCode SNESSetIterationNumber(SNES, PetscInt);
 
+/*E
+    SNESNewtonTRFallbackType - type of fallback in case the solution of the trust-region subproblem is outside of the radius
+
+   Level: intermediate
+
+   Values:
++  `SNES_TR_FALLBACK_NEWTON` - use scaled Newton step
+.  `SNES_TR_FALLBACK_CAUCHY` - use Cauchy direction
+-  `SNES_TR_FALLBACK_DOGLEG` - use dogleg method
+E*/
 typedef enum {
   SNES_TR_FALLBACK_NEWTON,
   SNES_TR_FALLBACK_CAUCHY,
   SNES_TR_FALLBACK_DOGLEG,
 } SNESNewtonTRFallbackType;
+
 PETSC_EXTERN const char *const SNESNewtonTRFallbackTypes[];
 
 PETSC_EXTERN PetscErrorCode SNESNewtonTRSetPreCheck(SNES, PetscErrorCode (*)(SNES, Vec, Vec, PetscBool *, void *), void *ctx);
