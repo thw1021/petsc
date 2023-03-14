@@ -107,13 +107,14 @@ PetscErrorCode PetscDrawResizeWindow(PetscDraw draw, int w, int h)
 /*@
    PetscDrawGetWindowSize - Gets the size of the window.
 
-   Not collective
+   Not Collective
 
    Input Parameter:
 .  draw - the window
 
    Output Parameters:
-.  w,h - the window width and height
++  w - the window width
+-  h - the window height
 
    Level: intermediate
 
@@ -153,7 +154,7 @@ PetscErrorCode PetscDrawCheckResizedWindow(PetscDraw draw)
 /*@C
    PetscDrawGetTitle - Gets pointer to title of a `PetscDraw` context.
 
-   Not collective
+   Not Collective
 
    Input Parameter:
 .  draw - the graphics context
@@ -216,11 +217,11 @@ PetscErrorCode PetscDrawSetTitle(PetscDraw draw, const char title[])
 +  draw - the graphics context
 -  title - the title
 
+   Level: advanced
+
    Note:
    A copy of the string is made, so you may destroy the
    title string after calling this routine.
-
-   Level: advanced
 
 .seealso: `PetscDraw`, `PetscDrawSetTitle()`, `PetscDrawGetTitle()`
 @*/
@@ -264,7 +265,7 @@ static PetscErrorCode PetscDrawDestroy_Private(PetscDraw draw)
 
    Collective
 
-   Input Parameters:
+   Input Parameter:
 .  draw - the drawing context
 
    Level: beginner

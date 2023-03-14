@@ -273,9 +273,11 @@ PetscErrorCode MatFDColoringGetFunction(MatFDColoring matfd, PetscErrorCode (**f
 .  f - the function
 -  fctx - the optional user-defined function context
 
-   Calling sequence of (*f) function:
-    For `SNES` use   PetscErrorCode (*f)(SNES,Vec,Vec,void*)
-    If not using `SNES` use PetscErrorCode (*f)(void *dummy,Vec,Vec,void*) and dummy is ignored
+   Calling sequence with `SNES` of `f`:
+$   PetscErrorCode (*f)(SNES,Vec,Vec,void*)
+
+   Calling sequence without `SNES` of `f`:
+$   PetscErrorCode (*f)(void *dummy,Vec,Vec,void*)
 
    Level: advanced
 

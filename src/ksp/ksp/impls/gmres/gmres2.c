@@ -10,10 +10,8 @@
 +  ksp - iterative context obtained from `KSPCreate()`
 -  fcn - orthogonalization function
 
-   Calling Sequence of function:
-$   errorcode = PetscErrorCode fcn(KSP ksp,PetscInt it);
-$   it is one minus the number of GMRES iterations since last restart;
-$    i.e. the size of Krylov space minus one
+   Calling Sequence of `fcn`:
+$   PetscErrorCode fcn(KSP ksp,PetscInt it);
 
    Options Database Keys:
 +  -ksp_gmres_classicalgramschmidt - Activates KSPGMRESClassicalGramSchmidtOrthogonalization() (default)
@@ -49,10 +47,9 @@ PetscErrorCode KSPGMRESSetOrthogonalization(KSP ksp, PetscErrorCode (*fcn)(KSP, 
    Output Parameter:
 .  fcn - orthogonalization function
 
-   Calling Sequence of function:
+   Calling Sequence of `fcn`:
 .vb
-   errorcode = PetscErrorCode fcn(KSP ksp,PetscInt it);
-   it is one minus the number of GMRES iterations since last restart; i.e. the size of Krylov space minus one
+   PetscErrorCode fcn(KSP ksp,PetscInt it);
 .ve
 
    Options Database Keys:

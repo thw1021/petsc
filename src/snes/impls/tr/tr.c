@@ -69,10 +69,10 @@ static PetscErrorCode SNESTR_Converged_Private(SNES snes, PetscInt it, PetscReal
 
    Input Parameters:
 +  snes - the nonlinear solver object
-.  func - [optional] function evaluation routine, see `SNESNewtonTRPreCheck()`  for the calling sequence
--  ctx  - [optional] user-defined context for private data for the function evaluation routine (may be NULL)
+.  func - [optional] function evaluation routine, for the calling sequence see `SNESNewtonTRPreCheck()`
+-  ctx  - [optional] user-defined context for private data for the function evaluation routine (may be `NULL`)
 
-   Level: intermediate
+   Level: deprecated (since 3.19)
 
    Note:
    This function is called BEFORE the function evaluation within the `SNESNEWTONTR` solver.
@@ -95,16 +95,16 @@ PetscErrorCode SNESNewtonTRSetPreCheck(SNES snes, PetscErrorCode (*func)(SNES, V
 
    Deprecated use `SNESNEWTONDCTRDC`
 
-   Not collective
+   Not Collective
 
    Input Parameter:
 .  snes - the nonlinear solver context
 
    Output Parameters:
-+  func - [optional] function evaluation routine, see for the calling sequence `SNESNewtonTRPreCheck()`
--  ctx  - [optional] user-defined context for private data for the function evaluation routine (may be NULL)
++  func - [optional] function evaluation routine, for the calling sequence see `SNESNewtonTRPreCheck()`
+-  ctx  - [optional] user-defined context for private data for the function evaluation routine (may be `NULL`)
 
-   Level: intermediate
+   Level: deprecated (since 3.19)
 
 .seealso: `SNESNEWTONDCTRDC`, `SNESNEWTONDCTR`, `SNESNewtonTRSetPreCheck()`, `SNESNewtonTRPreCheck()`
 @*/
@@ -129,10 +129,10 @@ PetscErrorCode SNESNewtonTRGetPreCheck(SNES snes, PetscErrorCode (**func)(SNES, 
 
    Input Parameters:
 +  snes - the nonlinear solver object
-.  func - [optional] function evaluation routine, see `SNESNewtonTRPostCheck()`  for the calling sequence
--  ctx  - [optional] user-defined context for private data for the function evaluation routine (may be NULL)
+.  func - [optional] function evaluation routine, for the calling sequence see `SNESNewtonTRPostCheck()`
+-  ctx  - [optional] user-defined context for private data for the function evaluation routine (may be `NULL`)
 
-   Level: intermediate
+   Level: deprecated (since 3.19)
 
    Note:
    This function is called BEFORE the function evaluation within the `SNESNEWTONTR` solver while the function set in
@@ -156,16 +156,16 @@ PetscErrorCode SNESNewtonTRSetPostCheck(SNES snes, PetscErrorCode (*func)(SNES, 
 
    Deprecated use `SNESNEWTONDCTRDC`
 
-   Not collective
+   Not Collective
 
    Input Parameter:
 .  snes - the nonlinear solver context
 
    Output Parameters:
-+  func - [optional] function evaluation routine, see for the calling sequence `SNESNewtonTRPostCheck()`
--  ctx  - [optional] user-defined context for private data for the function evaluation routine (may be NULL)
++  func - [optional] function evaluation routine, for the calling sequence see `SNESNewtonTRPostCheck()`
+-  ctx  - [optional] user-defined context for private data for the function evaluation routine (may be `NULL`)
 
-   Level: intermediate
+   Level: deprecated (since 3.19)
 
 .seealso: `SNESNEWTONDCTRDC`, `SNESNEWTONDCTR`, `SNESNewtonTRSetPostCheck()`, `SNESNewtonTRPostCheck()`
 @*/
@@ -195,7 +195,7 @@ PetscErrorCode SNESNewtonTRGetPostCheck(SNES snes, PetscErrorCode (**func)(SNES,
    Output Parameters:
 .  changed_Y - Indicator that the step direction Y has been changed.
 
-   Level: developer
+   Level: deprecated (since 3.19)
 
 .seealso: `SNESNEWTONDCTRDC`, `SNESNEWTONDCTR`, `SNESNewtonTRSetPreCheck()`, `SNESNewtonTRGetPreCheck()`
 @*/
@@ -232,7 +232,7 @@ static PetscErrorCode SNESNewtonTRPreCheck(SNES snes, Vec X, Vec Y, PetscBool *c
    Note:
      If Y is changed then W is recomputed as X - Y
 
-   Level: developer
+   Level: deprecated (since 3.19)
 
 .seealso: `SNESNEWTONDCTRDC`, `SNESNEWTONDCTR`, `SNESNewtonTRSetPostCheck()`, `SNESNewtonTRGetPostCheck()`
 @*/
@@ -498,7 +498,7 @@ static PetscErrorCode SNESView_NEWTONTR(SNES snes, PetscViewer viewer)
 .  - *  "The Minpack Project", by More', Sorensen, Garbow, Hillstrom, pages 88-111 of "Sources and Development
    of Mathematical Software", Wayne Cowell, editor.
 
-   Level: intermediate
+   Level: deprecated (since 3.19)
 
 .seealso: `SNESNEWTONTRDC`, `SNESCreate()`, `SNES`, `SNESSetType()`, `SNESNEWTONLS`, `SNESSetTrustRegionTolerance()`
 M*/
