@@ -583,7 +583,7 @@ static PetscErrorCode KSPSolve_Chebyshev_FourthKind(KSP ksp)
     ksp->vec_sol = p[k];
     PetscCall(KSPLogErrorHistory(ksp));
 
-    rScale = (8 * i + 4) / (2 * i + 3);
+    rScale = scale * (8 * i + 4) / (2 * i + 3);
     dScale = (2 * i - 1) / (2 * i + 3);
 
     /* y^{k+1} = y^{k} + \dfrac{2k-1}{2k+3}(y^{k}-y^{k-1}) + scale * \dfrac{8k+4}{2k+3} B^{-1} r*/
