@@ -479,7 +479,7 @@ static PetscErrorCode KSPSolve_Chebyshev_FourthKind(KSP ksp)
   PetscInt    k, kp1, km1, ktmp, i;
   PetscScalar scale, rScale, dScale;
   PetscReal   rnorm = 0.0, emax, emin;
-  Vec         sol_orig, b, p[3], r;
+  Vec         x, b, d, r;
   Mat         Amat, Pmat;
   PetscBool   diagonalscale;
 
@@ -491,24 +491,19 @@ static PetscErrorCode KSPSolve_Chebyshev_FourthKind(KSP ksp)
   PetscCall(PetscObjectSAWsTakeAccess((PetscObject)ksp));
   ksp->its = 0;
   PetscCall(PetscObjectSAWsGrantAccess((PetscObject)ksp));
-  /* These three point to the three active solutions, we
-     rotate these three at each solution update */
-  km1      = 0;
-  k        = 1;
-  kp1      = 2;
-  sol_orig = ksp->vec_sol; /* ksp->vec_sol will be assigned to rotating vector p[k], thus save its address */
+
+  x        = ksp->vec_sol;
   b        = ksp->vec_rhs;
-  p[km1]   = sol_orig;
-  p[k]     = ksp->work[0];
-  p[kp1]   = ksp->work[1];
-  r        = ksp->work[2];
+  r        = ksp->work[0];
+  d        = ksp->work[1];
+  Br       = ksp->work[2];
 
   PetscCall(KSPChebyshevGetEigenvalues_Chebyshev(ksp, &emax, &emin));
   /* use scale*B as our preconditioner */
   scale = 1.0 / emax;
 
   if (!ksp->guess_zero) {
-    PetscCall(KSP_MatMult(ksp, Amat, sol_orig, r)); /*  r = b - A*p[km1] */
+    PetscCall(KSP_MatMult(ksp, Amat, x, r)); /*  r = b - A*x */
     PetscCall(VecAYPX(r, -1.0, b));
   } else {
     PetscCall(VecCopy(b, r));
@@ -518,8 +513,8 @@ static PetscErrorCode KSPSolve_Chebyshev_FourthKind(KSP ksp)
   if (ksp->normtype) {
     switch (ksp->normtype) {
     case KSP_NORM_PRECONDITIONED:
-      PetscCall(KSP_PCApply(ksp, r, p[k])); /* p[k] = B^{-1}r */
-      PetscCall(VecNorm(p[k], NORM_2, &rnorm));
+      PetscCall(KSP_PCApply(ksp, r, Bd)); /* Br = B^{-1}r */
+      PetscCall(VecNorm(Bd, NORM_2, &rnorm));
       break;
     case KSP_NORM_UNPRECONDITIONED:
     case KSP_NORM_NATURAL:
@@ -540,8 +535,8 @@ static PetscErrorCode KSPSolve_Chebyshev_FourthKind(KSP ksp)
     if (ksp->max_it == 0) ksp->reason = KSP_DIVERGED_ITS; /* This for a V(0,x) cycle */
     PetscFunctionReturn(PETSC_SUCCESS);
   }
-  if (ksp->normtype != KSP_NORM_PRECONDITIONED) { PetscCall(KSP_PCApply(ksp, r, p[k])); /* p[k] = B^{-1}r */ }
-  PetscCall(VecAYPX(p[k], 4.0 / 3.0 * scale, p[km1])); /* p[k] = 4/3 * scale B^{-1}r + p[km1] */
+  if (ksp->normtype != KSP_NORM_PRECONDITIONED) { PetscCall(KSP_PCApply(ksp, r, rr)); /* Br = B^{-1}r */ }
+  PetscCall(VecAXPBY(d, 4.0 / 3.0 * scale, 0.0, Br)); /* d = 4/3 * scale B^{-1}r */
   PetscCall(PetscObjectSAWsTakeAccess((PetscObject)ksp));
   ksp->its = 1;
   PetscCall(PetscObjectSAWsGrantAccess((PetscObject)ksp));
@@ -551,14 +546,17 @@ static PetscErrorCode KSPSolve_Chebyshev_FourthKind(KSP ksp)
     ksp->its++;
     PetscCall(PetscObjectSAWsGrantAccess((PetscObject)ksp));
 
-    PetscCall(KSP_MatMult(ksp, Amat, p[k], r)); /*  r = b - Ap[k]    */
-    PetscCall(VecAYPX(r, -1.0, b));
+    PetscCall(VecAXPBY(x, 1.0, 1.0, d)); /* x = x + d */
+
+    PetscCall(KSP_MatMult(ksp, Amat, d, Br)); /*  r = r - Ad */
+    PetscCall(VecAXPBY(r, -1.0, 1.0, Br));
+
     /* calculate residual norm if requested */
     if (ksp->normtype) {
       switch (ksp->normtype) {
       case KSP_NORM_PRECONDITIONED:
-        PetscCall(KSP_PCApply(ksp, r, p[kp1])); /*  p[kp1] = B^{-1}r  */
-        PetscCall(VecNorm(p[kp1], NORM_2, &rnorm));
+        PetscCall(KSP_PCApply(ksp, r, Br)); /*  Br = B^{-1}r  */
+        PetscCall(VecNorm(Br, NORM_2, &rnorm));
         break;
       case KSP_NORM_UNPRECONDITIONED:
       case KSP_NORM_NATURAL:
@@ -576,32 +574,30 @@ static PetscErrorCode KSPSolve_Chebyshev_FourthKind(KSP ksp)
       PetscCall(KSPMonitor(ksp, i, rnorm));
       PetscCall((*ksp->converged)(ksp, i, rnorm, &ksp->reason, ksp->cnvP));
       if (ksp->reason) break;
-      if (ksp->normtype != KSP_NORM_PRECONDITIONED) { PetscCall(KSP_PCApply(ksp, r, p[kp1])); /*  p[kp1] = B^{-1}r  */ }
+      if (ksp->normtype != KSP_NORM_PRECONDITIONED) { PetscCall(KSP_PCApply(ksp, r, Br)); /*  Br = B^{-1}r  */ }
     } else {
-      PetscCall(KSP_PCApply(ksp, r, p[kp1])); /*  p[kp1] = B^{-1}r  */
+      PetscCall(KSP_PCApply(ksp, r, Br)); /*  Br = B^{-1}r  */
     }
-    ksp->vec_sol = p[k];
     PetscCall(KSPLogErrorHistory(ksp));
 
-    rScale = scale * (8 * i + 4) / (2 * i + 3);
-    dScale = (2 * i - 1) / (2 * i + 3);
+    rScale = scale * (8.0 * i + 4.0) / (2.0 * i + 3.0);
+    dScale = (2.0 * i - 1.0) / (2.0 * i + 3.0);
 
-    /* y^{k+1} = y^{k} + \dfrac{2k-1}{2k+3}(y^{k}-y^{k-1}) + scale * \dfrac{8k+4}{2k+3} B^{-1} r*/
-    PetscCall(VecAXPBYPCZ(p[kp1], -dScale, 1.0 + dScale, rScale, p[km1], p[k]));
-
-    ktmp = km1;
-    km1  = k;
-    k    = kp1;
-    kp1  = ktmp;
+    /* d_k+1 = \dfrac{2k-1}{2k+3} d_k + \dfrac{8k+4}{2k+3} \dfrac{1}{\rho(SA)} Br */
+    PetscCall(VecAXPBY(d, rScale, dScale, Br));
   }
+
+  /* on last pass, update solution vector */
+  PetscCall(VecAXPBY(x, 1.0, 1.0, d)); /* x = x + d */
+
   if (!ksp->reason) {
     if (ksp->normtype) {
-      PetscCall(KSP_MatMult(ksp, Amat, p[k], r)); /*  r = b - Ap[k]    */
+      PetscCall(KSP_MatMult(ksp, Amat, x, r)); /*  r = b - Ax    */
       PetscCall(VecAYPX(r, -1.0, b));
       switch (ksp->normtype) {
       case KSP_NORM_PRECONDITIONED:
-        PetscCall(KSP_PCApply(ksp, r, p[kp1])); /* p[kp1] = B^{-1}r */
-        PetscCall(VecNorm(p[kp1], NORM_2, &rnorm));
+        PetscCall(KSP_PCApply(ksp, r, Br)); /* Br= B^{-1}r */
+        PetscCall(VecNorm(Br, NORM_2, &rnorm));
         break;
       case KSP_NORM_UNPRECONDITIONED:
       case KSP_NORM_NATURAL:
@@ -626,9 +622,6 @@ static PetscErrorCode KSPSolve_Chebyshev_FourthKind(KSP ksp)
     }
   }
 
-  /* make sure solution is in vector x */
-  ksp->vec_sol = sol_orig;
-  if (k) PetscCall(VecCopy(p[k], sol_orig));
   if (ksp->reason == KSP_CONVERGED_ITS) PetscCall(KSPLogErrorHistory(ksp));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
