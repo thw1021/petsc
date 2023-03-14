@@ -7,6 +7,12 @@
 
 #include <petsc/private/kspimpl.h>
 
+typedef enum {
+  CHEBYSHEV_FIRST,
+  CHEBYSHEV_FOURTH
+} ChebyshevKind;
+static const char *const ChebyshevKindTypes[] = {"FIRST", "FOURTH", "ChebyshevKindTypes", "CHEBYSHEV_", 0};
+
 typedef struct {
   PetscReal emin, emax;                   /* store user provided estimates of extreme eigenvalues or computed with kspest and transformed with tform[] */
   PetscReal emin_computed, emax_computed; /* eigenvalues as computed by kspest, if computed */
@@ -15,7 +21,7 @@ typedef struct {
   PetscReal tform[4];                     /* transform from Krylov estimates to Chebyshev bounds */
   PetscInt  eststeps;                     /* number of kspest steps in KSP used to estimate eigenvalues */
   PetscBool usenoisy;                     /* use noisy right hand side vector to estimate eigenvalues */
-  PetscInt  chebykind;                    /* Chebyshev polynomial kind (must be 1 or 4)*/
+  ChebyshevKind chebykind;                    /* Chebyshev polynomial kind (must be 1 or 4)*/
   /* For tracking when to update the eigenvalue estimates */
   PetscObjectId    amatid, pmatid;
   PetscObjectState amatstate, pmatstate;

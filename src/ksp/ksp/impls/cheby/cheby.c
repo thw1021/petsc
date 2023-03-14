@@ -1,4 +1,5 @@
 
+#include "chebyshevimpl.h"
 #include <../src/ksp/ksp/impls/cheby/chebyshevimpl.h> /*I "petscksp.h" I*/
 
 static PetscErrorCode KSPReset_Chebyshev(KSP ksp)
@@ -291,8 +292,8 @@ static PetscErrorCode KSPSetFromOptions_Chebyshev(KSP ksp, PetscOptionItems *Pet
     }
   }
 
-  cheb->chebykind = 1; /* Default to 1st-kind Chebyshev polynomial */
-  PetscCall(PetscOptionsInt("-ksp_chebyshev_kind", "Type of Chebyshev polynomial", "", cheb->chebykind, &cheb->chebykind, NULL));
+  cheb->chebykind = CHEBYSHEV_FIRST; /* Default to 1st-kind Chebyshev polynomial */
+  PetscCall(PetscOptionsEnum("-ksp_chebyshev_kind", "Type of Chebyshev polynomial", "", ChebyshevKindTypes, (PetscEnum)cheb->chebykind, (PetscEnum *)&cheb->chebykind, NULL));
 
   /* We need to estimate eigenvalues; need to set this here so that KSPSetFromOptions() is called on the estimator */
   if ((cheb->emin == 0. || cheb->emax == 0.) && !cheb->kspest) PetscCall(KSPChebyshevEstEigSet(ksp, PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE));
@@ -668,14 +669,12 @@ static PetscErrorCode KSPSetUp_Chebyshev(KSP ksp)
 
   PetscFunctionBegin;
   switch (cheb->chebykind) {
-  case 1:
+  case CHEBYSHEV_FIRST:
     ksp->ops->solve = KSPSolve_Chebyshev_FirstKind;
     break;
-  case 4:
+  case CHEBYSHEV_FOURTH:
     ksp->ops->solve = KSPSolve_Chebyshev_FourthKind;
     break;
-  default:
-    SETERRQ(PetscObjectComm((PetscObject)ksp), PETSC_ERR_PLIB, "Invalid chebykind %" PetscInt_FMT, cheb->chebykind);
   }
 
   PetscCall(KSPSetWorkVecs(ksp, 3));
