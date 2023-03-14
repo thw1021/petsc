@@ -27,13 +27,13 @@
 #define SNESNCGType PetscEnum
 #define SNESNGMRESRestartType PetscEnum
 #define SNESNGMRESSelectType PetscEnum
+#define SNESNewtonTRFallbackType PetscEnum
 
 !
 !  SNESType
 !
 #define SNESNEWTONLS         'newtonls'
 #define SNESNEWTONTR         'newtontr'
-#define SNESNEWTONTRDC       'newtontrdc'
 #define SNESPYTHON           'python'
 #define SNESNRICHARDSON      'nrichardson'
 #define SNESKSPONLY          'ksponly'
@@ -52,7 +52,7 @@
 !
 
 #define SNESLINESEARCHBASIC     'basic'
-#define   SNESLINESEARCHNONE      'none'
+#define SNESLINESEARCHNONE      'none'
 #define SNESLINESEARCHBT        'bt'
 #define SNESLINESEARCHL2        'l2'
 #define SNESLINESEARCHCP        'cp'
