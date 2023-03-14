@@ -334,8 +334,7 @@ static inline void PetscQuadraticRoots(PetscReal a, PetscReal b, PetscReal c, Pe
 static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
 {
   SNES_NEWTONTR            *neP = (SNES_NEWTONTR *)snes->data;
-  Vec                       X, F, Y, G, W, GradF;
-  Vec                       YCtmp;
+  Vec                       X, F, Y, G, W, GradF, YU;
   PetscInt                  maxits, j, lits, bs;
   PetscReal                 rho, fnorm, gnorm, xnorm = 0, delta, ynorm, temp_xnorm; /* TR inner iteration */
   PetscReal                *inorms = NULL;
@@ -360,7 +359,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
   G      = snes->work[0];                               /* updated residual */
   W      = snes->work[1];                               /* temporary vector */
   GradF  = !objective ? snes->work[2] : snes->vec_func; /* grad f = J^T F */
-  YCtmp  = snes->work[3];                               /* Cauchy solution */
+  YU     = snes->work[3];                               /* work vector for dogleg method */
 
   PetscCheck(!snes->xl && !snes->xu && !snes->ops->computevariablebounds, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
 
@@ -468,31 +467,42 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
         /* Eqs 4.7 and 4.8 in Nocedal and Wright */
         auk = delta / gfnorm;
         if (gTBg > 0.0) auk *= PetscMin(gfnorm * gfnorm * gfnorm / (delta * gTBg), 1);
-        /* YCtmp, Cauchy solution */
         ycnorm = auk * gfnorm;
         //if (neP->fallback == SNES_TR_FALLBACK_CAUCHY || ycnorm > delta) I don't understand this choice
-        if (neP->fallback == SNES_TR_FALLBACK_CAUCHY) {
+        if (neP->fallback == SNES_TR_FALLBACK_CAUCHY || gTBg <= 0.0) {
           /* Cauchy solution */
           PetscCall(VecAXPBY(Y, auk, 0.0, GradF));
           PetscCall(PetscInfo(snes, "CP evaluated. delta: %g, ynorm: %g, ycnorm: %g, gTBg: %g\n", (double)delta, (double)ynorm, (double)ycnorm, (double)gTBg));
         } else { /* take linear combination of Cauchy and Newton direction and step */
-          PetscReal c0, c1, c2, t, tpos, tneg;
+          PetscReal c0, c1, c2, tau = 0.0, tpos, tneg;
+          PetscBool noroots;
 
-          /* Cauchy solution */
-          PetscCall(VecAXPBY(YCtmp, auk, 0.0, GradF));
-          PetscCall(VecAXPY(Y, -1.0, YCtmp));
+          auk = gfnorm * gfnorm / gTBg;
+          PetscCall(VecAXPBY(YU, auk, 0.0, GradF));
+          PetscCall(VecAXPY(Y, -1.0, YU));
           PetscCall(VecNorm(Y, NORM_2, &c0));
-          PetscCall(VecDotRealPart(YCtmp, Y, &c1));
+          PetscCall(VecDotRealPart(YU, Y, &c1));
           c0 = PetscSqr(c0);
           c2 = PetscSqr(ycnorm) - PetscSqr(delta);
           PetscQuadraticRoots(c0, c1, c2, &tneg, &tpos);
 
-          /* Here t corresponds to tau-1 in Nocedal and Wright */
-          /* Y = YCtmp + t * (Ynewton - YCtmp) */
-          t = PetscClipInterval(tpos, -1.0, 1.0); /* clip to tau [0,2] */
-          PetscCall(VecAXPBY(Y, 1.0, t, YCtmp));
+          noroots = PetscIsInfOrNanReal(tneg);
+          if (noroots) { /*  No roots, select Cauchy point */
+            auk = delta / gfnorm;
+            auk *= PetscMin(gfnorm * gfnorm * gfnorm / (delta * gTBg), 1);
+            PetscCall(VecAXPBY(Y, auk, 0.0, GradF));
+          } else { /* Here roots corresponds to tau-1 in Nocedal and Wright */
+            tpos += 1.0;
+            tneg += 1.0;
+            tau = PetscClipInterval(tpos, 0.0, 2.0); /* clip to tau [0,2] */
+            if (tau < 1.0) {
+              PetscCall(VecAXPBY(Y, tau, 0.0, YU));
+            } else {
+              PetscCall(VecAXPBY(Y, 1.0, tau - 1, YU));
+            }
+          }
           PetscCall(VecNorm(Y, NORM_2, &c0)); /* this norm will be cached and reused later */
-          PetscCall(PetscInfo(snes, "DL evaluated. roots: (%g, %g), tau %g, ynorm: %g, ycnorm: %g, ydlnorm %g, gTBg: %g\n", (double)(tneg + 1.0), (double)(tpos + 1.0), (double)(t + 1.0), (double)ynorm, (double)ycnorm, (double)c0, (double)gTBg));
+          PetscCall(PetscInfo(snes, "%s evaluated. roots: (%g, %g), tau %g, ynorm: %g, ycnorm: %g, ydlnorm %g, gTBg: %g\n", noroots ? "CP" : "DL", (double)tneg, (double)tpos, (double)tau, (double)ynorm, (double)ycnorm, (double)c0, (double)gTBg));
         }
         break;
       default:
