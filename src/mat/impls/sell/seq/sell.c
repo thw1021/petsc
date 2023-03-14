@@ -320,7 +320,7 @@ PetscErrorCode MatMult_SeqSELL(Mat A, Vec xx, Vec yy)
 #endif
 
 #if defined(PETSC_HAVE_PRAGMA_DISJOINT)
-  #pragma disjoint(*x, *y, *aval)
+  PetscPragma(disjoin(*x, *y, *aval));
 #endif
 
   PetscFunctionBegin;
