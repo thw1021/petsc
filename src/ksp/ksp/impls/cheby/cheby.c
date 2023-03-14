@@ -34,100 +34,6 @@ static PetscErrorCode KSPChebyshevComputeExtremeEigenvalues_Private(KSP kspest, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode KSPSetUp_Chebyshev(KSP ksp)
-{
-  KSP_Chebyshev   *cheb = (KSP_Chebyshev *)ksp->data;
-  PetscBool        isset, flg;
-  Mat              Pmat, Amat;
-  PetscObjectId    amatid, pmatid;
-  PetscObjectState amatstate, pmatstate;
-
-  PetscFunctionBegin;
-  PetscCall(KSPSetWorkVecs(ksp, 3));
-  if (cheb->emin == 0. || cheb->emax == 0.) { // User did not specify eigenvalues
-    PC pc;
-    PetscCall(KSPGetPC(ksp, &pc));
-    PetscCall(PetscObjectTypeCompare((PetscObject)pc, PCJACOBI, &flg));
-    if (!flg) { // Provided estimates are only relevant for Jacobi
-      cheb->emax_provided = 0;
-      cheb->emin_provided = 0;
-    }
-    if (!cheb->kspest) { /* We need to estimate eigenvalues */
-      PetscCall(KSPChebyshevEstEigSet(ksp, PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE));
-    }
-  }
-  if (cheb->kspest) {
-    PetscCall(KSPGetOperators(ksp, &Amat, &Pmat));
-    PetscCall(MatIsSPDKnown(Pmat, &isset, &flg));
-    if (isset && flg) {
-      const char *prefix;
-      PetscCall(KSPGetOptionsPrefix(cheb->kspest, &prefix));
-      PetscCall(PetscOptionsHasName(NULL, prefix, "-ksp_type", &flg));
-      if (!flg) PetscCall(KSPSetType(cheb->kspest, KSPCG));
-    }
-    PetscCall(PetscObjectGetId((PetscObject)Amat, &amatid));
-    PetscCall(PetscObjectGetId((PetscObject)Pmat, &pmatid));
-    PetscCall(PetscObjectStateGet((PetscObject)Amat, &amatstate));
-    PetscCall(PetscObjectStateGet((PetscObject)Pmat, &pmatstate));
-    if (amatid != cheb->amatid || pmatid != cheb->pmatid || amatstate != cheb->amatstate || pmatstate != cheb->pmatstate) {
-      PetscReal          max = 0.0, min = 0.0;
-      Vec                B;
-      KSPConvergedReason reason;
-      PetscCall(KSPSetPC(cheb->kspest, ksp->pc));
-      if (cheb->usenoisy) {
-        B = ksp->work[1];
-        PetscCall(KSPSetNoisy_Private(B));
-      } else {
-        PetscBool change;
-
-        PetscCheck(ksp->vec_rhs, PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "Chebyshev must use a noisy right hand side to estimate the eigenvalues when no right hand side is available");
-        PetscCall(PCPreSolveChangeRHS(ksp->pc, &change));
-        if (change) {
-          B = ksp->work[1];
-          PetscCall(VecCopy(ksp->vec_rhs, B));
-        } else B = ksp->vec_rhs;
-      }
-      PetscCall(KSPSolve(cheb->kspest, B, ksp->work[0]));
-      PetscCall(KSPGetConvergedReason(cheb->kspest, &reason));
-      if (reason == KSP_DIVERGED_ITS) {
-        PetscCall(PetscInfo(ksp, "Eigen estimator ran for prescribed number of iterations\n"));
-      } else if (reason == KSP_DIVERGED_PC_FAILED) {
-        PetscInt       its;
-        PCFailedReason pcreason;
-
-        PetscCall(KSPGetIterationNumber(cheb->kspest, &its));
-        if (ksp->normtype == KSP_NORM_NONE) {
-          PetscInt sendbuf, recvbuf;
-          PetscCall(PCGetFailedReasonRank(ksp->pc, &pcreason));
-          sendbuf = (PetscInt)pcreason;
-          PetscCallMPI(MPI_Allreduce(&sendbuf, &recvbuf, 1, MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject)ksp)));
-          PetscCall(PCSetFailedReason(ksp->pc, (PCFailedReason)recvbuf));
-        }
-        PetscCall(PCGetFailedReason(ksp->pc, &pcreason));
-        ksp->reason = KSP_DIVERGED_PC_FAILED;
-        PetscCall(PetscInfo(ksp, "Eigen estimator failed: %s %s at iteration %" PetscInt_FMT, KSPConvergedReasons[reason], PCFailedReasons[pcreason], its));
-        PetscFunctionReturn(PETSC_SUCCESS);
-      } else if (reason == KSP_CONVERGED_RTOL || reason == KSP_CONVERGED_ATOL) {
-        PetscCall(PetscInfo(ksp, "Eigen estimator converged prematurely. Should not happen except for small or low rank problem\n"));
-      } else if (reason < 0) {
-        PetscCall(PetscInfo(ksp, "Eigen estimator failed %s, using estimates anyway\n", KSPConvergedReasons[reason]));
-      }
-
-      PetscCall(KSPChebyshevComputeExtremeEigenvalues_Private(cheb->kspest, &min, &max));
-      PetscCall(KSPSetPC(cheb->kspest, NULL));
-
-      cheb->emin_computed = min;
-      cheb->emax_computed = max;
-
-      cheb->amatid    = amatid;
-      cheb->pmatid    = pmatid;
-      cheb->amatstate = amatstate;
-      cheb->pmatstate = pmatstate;
-    }
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 static PetscErrorCode KSPChebyshevGetEigenvalues_Chebyshev(KSP ksp, PetscReal *emax, PetscReal *emin)
 {
   KSP_Chebyshev *cheb = (KSP_Chebyshev *)ksp->data;
@@ -399,7 +305,7 @@ static PetscErrorCode KSPSetFromOptions_Chebyshev(KSP ksp, PetscOptionItems *Pet
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode KSPSolve_FirstKindChebyshev(KSP ksp)
+static PetscErrorCode KSPSolve_Chebyshev_FirstKind(KSP ksp)
 {
   PetscInt    k, kp1, km1, ktmp, i;
   PetscScalar alpha, omegaprod, mu, omega, Gamma, c[3], scale;
@@ -567,7 +473,7 @@ static PetscErrorCode KSPSolve_FirstKindChebyshev(KSP ksp)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode KSPSolve_FourthKindChebyshev(KSP ksp)
+static PetscErrorCode KSPSolve_Chebyshev_FourthKind(KSP ksp)
 {
   PetscInt    k, kp1, km1, ktmp, i;
   PetscScalar scale, rScale, dScale;
@@ -752,6 +658,111 @@ static PetscErrorCode KSPView_Chebyshev(KSP ksp, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode KSPSetUp_Chebyshev(KSP ksp)
+{
+  KSP_Chebyshev   *cheb = (KSP_Chebyshev *)ksp->data;
+  PetscBool        isset, flg;
+  Mat              Pmat, Amat;
+  PetscObjectId    amatid, pmatid;
+  PetscObjectState amatstate, pmatstate;
+
+  PetscFunctionBegin;
+  switch (cheb->chebykind) {
+  case 1:
+    ksp->ops->solve = KSPSolve_Chebyshev_FirstKind;
+    break;
+  case 4:
+    ksp->ops->solve = KSPSolve_Chebyshev_FourthKind;
+    break;
+  default:
+    SETERRQ(PetscObjectComm((PetscObject)ksp), PETSC_ERR_PLIB, "Invalid chebykind %" PetscInt_FMT, cheb->chebykind);
+  }
+
+  PetscCall(KSPSetWorkVecs(ksp, 3));
+  if (cheb->emin == 0. || cheb->emax == 0.) { // User did not specify eigenvalues
+    PC pc;
+    PetscCall(KSPGetPC(ksp, &pc));
+    PetscCall(PetscObjectTypeCompare((PetscObject)pc, PCJACOBI, &flg));
+    if (!flg) { // Provided estimates are only relevant for Jacobi
+      cheb->emax_provided = 0;
+      cheb->emin_provided = 0;
+    }
+    if (!cheb->kspest) { /* We need to estimate eigenvalues */
+      PetscCall(KSPChebyshevEstEigSet(ksp, PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE));
+    }
+  }
+  if (cheb->kspest) {
+    PetscCall(KSPGetOperators(ksp, &Amat, &Pmat));
+    PetscCall(MatIsSPDKnown(Pmat, &isset, &flg));
+    if (isset && flg) {
+      const char *prefix;
+      PetscCall(KSPGetOptionsPrefix(cheb->kspest, &prefix));
+      PetscCall(PetscOptionsHasName(NULL, prefix, "-ksp_type", &flg));
+      if (!flg) PetscCall(KSPSetType(cheb->kspest, KSPCG));
+    }
+    PetscCall(PetscObjectGetId((PetscObject)Amat, &amatid));
+    PetscCall(PetscObjectGetId((PetscObject)Pmat, &pmatid));
+    PetscCall(PetscObjectStateGet((PetscObject)Amat, &amatstate));
+    PetscCall(PetscObjectStateGet((PetscObject)Pmat, &pmatstate));
+    if (amatid != cheb->amatid || pmatid != cheb->pmatid || amatstate != cheb->amatstate || pmatstate != cheb->pmatstate) {
+      PetscReal          max = 0.0, min = 0.0;
+      Vec                B;
+      KSPConvergedReason reason;
+      PetscCall(KSPSetPC(cheb->kspest, ksp->pc));
+      if (cheb->usenoisy) {
+        B = ksp->work[1];
+        PetscCall(KSPSetNoisy_Private(B));
+      } else {
+        PetscBool change;
+
+        PetscCheck(ksp->vec_rhs, PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "Chebyshev must use a noisy right hand side to estimate the eigenvalues when no right hand side is available");
+        PetscCall(PCPreSolveChangeRHS(ksp->pc, &change));
+        if (change) {
+          B = ksp->work[1];
+          PetscCall(VecCopy(ksp->vec_rhs, B));
+        } else B = ksp->vec_rhs;
+      }
+      PetscCall(KSPSolve(cheb->kspest, B, ksp->work[0]));
+      PetscCall(KSPGetConvergedReason(cheb->kspest, &reason));
+      if (reason == KSP_DIVERGED_ITS) {
+        PetscCall(PetscInfo(ksp, "Eigen estimator ran for prescribed number of iterations\n"));
+      } else if (reason == KSP_DIVERGED_PC_FAILED) {
+        PetscInt       its;
+        PCFailedReason pcreason;
+
+        PetscCall(KSPGetIterationNumber(cheb->kspest, &its));
+        if (ksp->normtype == KSP_NORM_NONE) {
+          PetscInt sendbuf, recvbuf;
+          PetscCall(PCGetFailedReasonRank(ksp->pc, &pcreason));
+          sendbuf = (PetscInt)pcreason;
+          PetscCallMPI(MPI_Allreduce(&sendbuf, &recvbuf, 1, MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject)ksp)));
+          PetscCall(PCSetFailedReason(ksp->pc, (PCFailedReason)recvbuf));
+        }
+        PetscCall(PCGetFailedReason(ksp->pc, &pcreason));
+        ksp->reason = KSP_DIVERGED_PC_FAILED;
+        PetscCall(PetscInfo(ksp, "Eigen estimator failed: %s %s at iteration %" PetscInt_FMT, KSPConvergedReasons[reason], PCFailedReasons[pcreason], its));
+        PetscFunctionReturn(PETSC_SUCCESS);
+      } else if (reason == KSP_CONVERGED_RTOL || reason == KSP_CONVERGED_ATOL) {
+        PetscCall(PetscInfo(ksp, "Eigen estimator converged prematurely. Should not happen except for small or low rank problem\n"));
+      } else if (reason < 0) {
+        PetscCall(PetscInfo(ksp, "Eigen estimator failed %s, using estimates anyway\n", KSPConvergedReasons[reason]));
+      }
+
+      PetscCall(KSPChebyshevComputeExtremeEigenvalues_Private(cheb->kspest, &min, &max));
+      PetscCall(KSPSetPC(cheb->kspest, NULL));
+
+      cheb->emin_computed = min;
+      cheb->emax_computed = max;
+
+      cheb->amatid    = amatid;
+      cheb->pmatid    = pmatid;
+      cheb->amatstate = amatstate;
+      cheb->pmatstate = pmatstate;
+    }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode KSPDestroy_Chebyshev(KSP ksp)
 {
   KSP_Chebyshev *cheb = (KSP_Chebyshev *)ksp->data;
@@ -818,8 +829,6 @@ PETSC_EXTERN PetscErrorCode KSPCreate_Chebyshev(KSP ksp)
   ksp->setupnewmatrix  = PETSC_TRUE;
 
   ksp->ops->setup          = KSPSetUp_Chebyshev;
-  ksp->ops->solve          = KSPSolve_FirstKindChebyshev;
-  if (chebyshevP->chebykind == 4) { ksp->ops->solve = KSPSolve_FourthKindChebyshev; }
   ksp->ops->destroy        = KSPDestroy_Chebyshev;
   ksp->ops->buildsolution  = KSPBuildSolutionDefault;
   ksp->ops->buildresidual  = KSPBuildResidualDefault;
