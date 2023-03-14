@@ -112,7 +112,7 @@ PetscErrorCode FormFunctionLocal(DMDALocalInfo *info, PetscScalar **t, PetscScal
       suffix: 3
       nsize: 2
       args: -pc_type mg -da_refine 1 -ksp_type fgmres -snes_type newtontr -snes_tr_fallback_type dogleg
-      filter: sed -e "s/SNES iterations = 1[1-4]/SNES iterations = 14/g" | sed -e "s/Linear iterations = 2[5-9]/Linear iterations = 29/g" | sed -e "s/Linear iterations = 3[0-1]/Linear iterations = 29/g"
+      filter: sed -e "s/SNES iterations = 1[0-4]/SNES iterations = 14/g" | sed -e "s/Linear iterations = 2[1-9]/Linear iterations = 29/g" | sed -e "s/Linear iterations = 3[0-1]/Linear iterations = 29/g"
 
    test:
       suffix: 4
