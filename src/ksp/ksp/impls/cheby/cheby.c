@@ -641,6 +641,15 @@ static PetscErrorCode KSPView_Chebyshev(KSP ksp, PetscViewer viewer)
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
   if (iascii) {
+    switch (cheb->chebykind) {
+    case CHEBYSHEV_FIRST:
+      PetscCall(PetscViewerASCIIPrintf(viewer, "  Chebyshev polynomial of first kind\n"));
+      break;
+    case CHEBYSHEV_FOURTH:
+      PetscCall(PetscViewerASCIIPrintf(viewer, "  Chebyshev polynomial of fourth kind\n"));
+      break;
+    }
+
     PetscReal emax, emin;
     PetscCall(KSPChebyshevGetEigenvalues_Chebyshev(ksp, &emax, &emin));
     PetscCall(PetscViewerASCIIPrintf(viewer, "  eigenvalue targets used: min %g, max %g\n", (double)emin, (double)emax));
