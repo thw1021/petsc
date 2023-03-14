@@ -476,12 +476,14 @@ static PetscErrorCode KSPSolve_Chebyshev_FirstKind(KSP ksp)
 
 static PetscErrorCode KSPSolve_Chebyshev_FourthKind(KSP ksp)
 {
-  PetscInt    k, kp1, km1, ktmp, i;
+  KSP_Chebyshev *cheb = (KSP_Chebyshev *)ksp->data;
+  PetscInt    i;
   PetscScalar scale, rScale, dScale;
   PetscReal   rnorm = 0.0, emax, emin;
-  Vec         x, b, d, r;
+  Vec         x, b, d, r, Br;
   Mat         Amat, Pmat;
   PetscBool   diagonalscale;
+  PetscReal     *betas = cheb->betas;
 
   PetscFunctionBegin;
   PetscCall(PCGetDiagonalScale(ksp->pc, &diagonalscale));
@@ -513,8 +515,8 @@ static PetscErrorCode KSPSolve_Chebyshev_FourthKind(KSP ksp)
   if (ksp->normtype) {
     switch (ksp->normtype) {
     case KSP_NORM_PRECONDITIONED:
-      PetscCall(KSP_PCApply(ksp, r, Bd)); /* Br = B^{-1}r */
-      PetscCall(VecNorm(Bd, NORM_2, &rnorm));
+      PetscCall(KSP_PCApply(ksp, r, Br)); /* Br = B^{-1}r */
+      PetscCall(VecNorm(Br, NORM_2, &rnorm));
       break;
     case KSP_NORM_UNPRECONDITIONED:
     case KSP_NORM_NATURAL:
@@ -535,7 +537,7 @@ static PetscErrorCode KSPSolve_Chebyshev_FourthKind(KSP ksp)
     if (ksp->max_it == 0) ksp->reason = KSP_DIVERGED_ITS; /* This for a V(0,x) cycle */
     PetscFunctionReturn(PETSC_SUCCESS);
   }
-  if (ksp->normtype != KSP_NORM_PRECONDITIONED) { PetscCall(KSP_PCApply(ksp, r, rr)); /* Br = B^{-1}r */ }
+  if (ksp->normtype != KSP_NORM_PRECONDITIONED) { PetscCall(KSP_PCApply(ksp, r, Br)); /* Br = B^{-1}r */ }
   PetscCall(VecAXPBY(d, 4.0 / 3.0 * scale, 0.0, Br)); /* d = 4/3 * scale B^{-1}r */
   PetscCall(PetscObjectSAWsTakeAccess((PetscObject)ksp));
   ksp->its = 1;
@@ -546,7 +548,7 @@ static PetscErrorCode KSPSolve_Chebyshev_FourthKind(KSP ksp)
     ksp->its++;
     PetscCall(PetscObjectSAWsGrantAccess((PetscObject)ksp));
 
-    PetscCall(VecAXPBY(x, 1.0, 1.0, d)); /* x = x + d */
+    PetscCall(VecAXPBY(x, betas[i - 1], 1.0, d)); /* x = x + \beta_k d */
 
     PetscCall(KSP_MatMult(ksp, Amat, d, Br)); /*  r = r - Ad */
     PetscCall(VecAXPBY(r, -1.0, 1.0, Br));
@@ -588,7 +590,7 @@ static PetscErrorCode KSPSolve_Chebyshev_FourthKind(KSP ksp)
   }
 
   /* on last pass, update solution vector */
-  PetscCall(VecAXPBY(x, 1.0, 1.0, d)); /* x = x + d */
+  PetscCall(VecAXPBY(x, betas[ksp->max_it - 1], 1.0, d)); /* x = x + d */
 
   if (!ksp->reason) {
     if (ksp->normtype) {
@@ -641,6 +643,9 @@ static PetscErrorCode KSPView_Chebyshev(KSP ksp, PetscViewer viewer)
     case CHEBYSHEV_FOURTH:
       PetscCall(PetscViewerASCIIPrintf(viewer, "  Chebyshev polynomial of fourth kind\n"));
       break;
+    case CHEBYSHEV_OPT_FOURTH:
+      PetscCall(PetscViewerASCIIPrintf(viewer, "  Chebyshev polynomial of opt. fourth kind\n"));
+      break;
     }
 
     PetscReal emax, emin;
@@ -675,9 +680,18 @@ static PetscErrorCode KSPSetUp_Chebyshev(KSP ksp)
     ksp->ops->solve = KSPSolve_Chebyshev_FirstKind;
     break;
   case CHEBYSHEV_FOURTH:
+  case CHEBYSHEV_OPT_FOURTH:
     ksp->ops->solve = KSPSolve_Chebyshev_FourthKind;
     break;
   }
+
+  cheb->betas = (PetscReal *)malloc(ksp->max_it * sizeof(PetscReal));
+
+  // coefficients for 4th-kind Chebyshev
+  for (int i = 0; i < ksp->max_it; i++) cheb->betas[i] = 1.0;
+
+  // coefficients for optimized 4th-kind Chebyshev
+  if (cheb->chebykind == CHEBYSHEV_OPT_FOURTH) KSPChebyshevGetBetas_Private(ksp);
 
   PetscCall(KSPSetWorkVecs(ksp, 3));
   if (cheb->emin == 0. || cheb->emax == 0.) { // User did not specify eigenvalues
