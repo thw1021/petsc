@@ -162,6 +162,13 @@ struct MatMatStruct {
   KernelHandle kh3; // compute C3
   KernelHandle kh4; // compute C4
 
+  PetscInt E_TeamSize; // kernel launching parameters in merging E or spliting F
+  PetscInt E_VectorLength;
+  PetscInt E_RowsPerTeam;
+  PetscInt F_TeamSize;
+  PetscInt F_VectorLength;
+  PetscInt F_RowsPerTeam;
+
   ~MatMatStruct()
   {
     PetscFunctionBegin;
@@ -245,6 +252,52 @@ static PetscErrorCode MatSetMPIAIJKokkosWithSplitSeqAIJKokkosMatrices(Mat mat, M
   PetscCall(MatAssemblyEnd(mat, MAT_FINAL_ASSEMBLY));
   PetscCall(MatSetOption(mat, MAT_NO_OFF_PROC_ENTRIES, PETSC_FALSE));
   PetscCall(MatSetOption(mat, MAT_NEW_NONZERO_LOCATION_ERR, PETSC_TRUE));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <class ExecutionSpace>
+static PetscErrorCode MatMergeGetLaunchParameters(PetscInt numRows, PetscInt nnz, PetscInt rows_per_thread, PetscInt &team_size, PetscInt &vector_length, PetscInt &rows_per_team)
+{
+  Kokkos::TeamPolicy<ExecutionSpace> teamPolicy(128, Kokkos::AUTO);
+
+  PetscFunctionBegin;
+  PetscInt nnz_per_row = nnz / numRows;
+
+  if (nnz_per_row < 1) nnz_per_row = 1;
+
+  int max_vector_length = teamPolicy.vector_length_max();
+
+  if (vector_length < 1) {
+    vector_length = 1;
+    while (vector_length < max_vector_length && vector_length * 6 < nnz_per_row) vector_length *= 2;
+  }
+
+  // Determine rows per thread
+  if (rows_per_thread < 1) {
+    if (KokkosKernels::Impl::kk_is_gpu_exec_space<ExecutionSpace>()) rows_per_thread = 1;
+    else {
+      if (nnz_per_row < 20 && nnz > 5000000) {
+        rows_per_thread = 256;
+      } else rows_per_thread = 64;
+    }
+  }
+
+  if (team_size < 1) {
+    if (KokkosKernels::Impl::kk_is_gpu_exec_space<ExecutionSpace>()) {
+      team_size = 256 / vector_length;
+    } else {
+      team_size = 1;
+    }
+  }
+
+  rows_per_team = rows_per_thread * team_size;
+
+  if (rows_per_team < 0) {
+    PetscInt nnz_per_team = 4096;
+    PetscInt conc         = ExecutionSpace().concurrency();
+    while ((conc * nnz_per_team * 4 > nnz) && (nnz_per_team > 256)) nnz_per_team /= 2;
+    rows_per_team = (nnz_per_team + nnz_per_row - 1) / nnz_per_row;
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -633,35 +686,53 @@ static PetscErrorCode MatMPIAIJKokkosReduceBegin(MPI_Comm comm, KokkosCsrMatrix 
 
     PetscCallCXX(mm->Fd = KokkosCsrMatrix("Fd", Fm, cend - cstart, Fdnz, Fda_d, Fdi_d, Fdj_d));
     PetscCallCXX(mm->Fo = KokkosCsrMatrix("Fo", Fm, n2, Fonz, Foa_d, Foi_d, Foj_d)); // Fo's column size is n2, length of garray2[]
+
+    // Compute kernel launch parameters in merging E
+    PetscInt teamSize, vectorLength, rowsPerTeam;
+
+    teamSize = vectorLength = rowsPerTeam = -1;
+    PetscCall(MatMergeGetLaunchParameters<DefaultExecutionSpace>(Em, Enz, -1, teamSize, vectorLength, rowsPerTeam));
+    mm->E_TeamSize     = teamSize;
+    mm->E_VectorLength = vectorLength;
+    mm->E_RowsPerTeam  = rowsPerTeam;
   } else PetscCheck(reuse == MAT_REUSE_MATRIX, comm, PETSC_ERR_PLIB, "Unsupported MatReuse enum %d", reuse);
 
   // Handy aliases
-  auto       &Aa       = A.values;
-  auto       &Ba       = B.values;
-  const auto &Ai       = A.graph.row_map;
-  const auto &Bi       = B.graph.row_map;
-  const auto &E_NzLeft = mm->E_NzLeft;
-  auto       &leafBuf  = mm->leafBuf;
-  auto       &rootBuf  = mm->rootBuf;
-  PetscSF     reduceSF = mm->sf;
+  auto       &Aa           = A.values;
+  auto       &Ba           = B.values;
+  const auto &Ai           = A.graph.row_map;
+  const auto &Bi           = B.graph.row_map;
+  const auto &E_NzLeft     = mm->E_NzLeft;
+  auto       &leafBuf      = mm->leafBuf;
+  auto       &rootBuf      = mm->rootBuf;
+  PetscSF     reduceSF     = mm->sf;
+  PetscInt    Em           = A.numRows();
+  PetscInt    teamSize     = mm->E_TeamSize;
+  PetscInt    vectorLength = mm->E_VectorLength;
+  PetscInt    rowsPerTeam  = mm->E_RowsPerTeam;
+  PetscInt    workSets     = (Em + rowsPerTeam - 1) / rowsPerTeam;
 
   // Copy rows in A/B of E to leafBuf, then pass it to rootBuf
   PetscCallCXX(Kokkos::parallel_for(
-    Kokkos::TeamPolicy<>(A.numRows(), Kokkos::AUTO()), KOKKOS_LAMBDA(const KokkosTeamMemberType &t) {
-      PetscInt i      = t.league_rank(); // row i of E
-      PetscInt disp   = Ai(i) + Bi(i);
-      PetscInt alen   = Ai(i + 1) - Ai(i);
-      PetscInt blen   = Bi(i + 1) - Bi(i);
-      PetscInt nzleft = E_NzLeft(i);
+    Kokkos::TeamPolicy<>(workSets, teamSize, vectorLength), KOKKOS_LAMBDA(const KokkosTeamMemberType &t) {
+      Kokkos::parallel_for(Kokkos::TeamThreadRange(t, 0, rowsPerTeam), [&](PetscInt k) {
+        PetscInt i = t.league_rank() * rowsPerTeam + k; // i-th row in F
+        if (i < Em) {
+          PetscInt disp   = Ai(i) + Bi(i);
+          PetscInt alen   = Ai(i + 1) - Ai(i);
+          PetscInt blen   = Bi(i + 1) - Bi(i);
+          PetscInt nzleft = E_NzLeft(i);
 
-      Kokkos::parallel_for(Kokkos::TeamThreadRange(t, alen + blen), [&](PetscInt j) {
-        MatScalar &val = leafBuf(disp + j);
-        if (j < nzleft) { // B left
-          val = Ba(Bi(i) + j);
-        } else if (j < nzleft + alen) { // diag A
-          val = Aa(Ai(i) + j - nzleft);
-        } else { // B right
-          val = Ba(Bi(i) + j - alen);
+          Kokkos::parallel_for(Kokkos::ThreadVectorRange(t, alen + blen), [&](PetscInt j) {
+            MatScalar &val = leafBuf(disp + j);
+            if (j < nzleft) { // B left
+              val = Ba(Bi(i) + j);
+            } else if (j < nzleft + alen) { // diag A
+              val = Aa(Ai(i) + j - nzleft);
+            } else { // B right
+              val = Ba(Bi(i) + j - alen);
+            }
+          });
         }
       });
     }));
@@ -927,6 +998,21 @@ static PetscErrorCode MatMPIAIJKokkosBcastBegin(Mat E, PetscSF ownerSF, MatReuse
 
     PetscCallCXX(mm->Fd = KokkosCsrMatrix("Fd", Fm, cend - cstart, Fdnz, Fda_d, Fdi_d, Fdj_d));
     PetscCallCXX(mm->Fo = KokkosCsrMatrix("Fo", Fm, n2, Fonz, Foa_d, Foi_d, Foj_d));
+
+    // Compute kernel launch parameters in merging E or splitting F
+    PetscInt teamSize, vectorLength, rowsPerTeam;
+
+    teamSize = vectorLength = rowsPerTeam = -1;
+    PetscCall(MatMergeGetLaunchParameters<DefaultExecutionSpace>(mm->irootloc.extent(0), mm->rootBuf.extent(0), -1, teamSize, vectorLength, rowsPerTeam));
+    mm->E_TeamSize     = teamSize;
+    mm->E_VectorLength = vectorLength;
+    mm->E_RowsPerTeam  = rowsPerTeam;
+
+    teamSize = vectorLength = rowsPerTeam = -1;
+    PetscCall(MatMergeGetLaunchParameters<DefaultExecutionSpace>(Fm, Fnz, -1, teamSize, vectorLength, rowsPerTeam));
+    mm->F_TeamSize     = teamSize;
+    mm->F_VectorLength = vectorLength;
+    mm->F_RowsPerTeam  = rowsPerTeam;
   } else PetscCheck(reuse == MAT_REUSE_MATRIX, comm, PETSC_ERR_PLIB, "Unsupported MatReuse enum %d", reuse);
 
   // Sync E's value to device
@@ -947,22 +1033,32 @@ static PetscErrorCode MatMPIAIJKokkosBcastBegin(Mat E, PetscSF ownerSF, MatReuse
   PetscIntKokkosView  &irootloc  = mm->irootloc;
   PetscIntKokkosView  &rowoffset = mm->rowoffset;
 
+  PetscInt teamSize     = mm->E_TeamSize;
+  PetscInt vectorLength = mm->E_VectorLength;
+  PetscInt rowsPerTeam  = mm->E_RowsPerTeam;
+  PetscInt workSets     = (irootloc.extent(0) + rowsPerTeam - 1) / rowsPerTeam;
+
   // Copy rows in A/B of E to rootBuf, then bcast it to leafBuf
   PetscCallCXX(Kokkos::parallel_for(
-    Kokkos::TeamPolicy<>(irootloc.extent(0), Kokkos::AUTO()), KOKKOS_LAMBDA(const KokkosTeamMemberType &t) {
-      PetscInt i      = irootloc(t.league_rank()); // row i of E
-      PetscInt disp   = rowoffset(t.league_rank());
-      PetscInt alen   = Ai(i + 1) - Ai(i);
-      PetscInt blen   = Bi(i + 1) - Bi(i);
-      PetscInt nzleft = E_NzLeft(i);
+    Kokkos::TeamPolicy<>(workSets, teamSize, vectorLength), KOKKOS_LAMBDA(const KokkosTeamMemberType &t) {
+      Kokkos::parallel_for(Kokkos::TeamThreadRange(t, 0, rowsPerTeam), [&](PetscInt k) {
+        size_t r = t.league_rank() * rowsPerTeam + k; // r-th entry in irootloc[]
+        if (r < irootloc.extent(0)) {
+          PetscInt i      = irootloc(r); // row i of E
+          PetscInt disp   = rowoffset(r);
+          PetscInt alen   = Ai(i + 1) - Ai(i);
+          PetscInt blen   = Bi(i + 1) - Bi(i);
+          PetscInt nzleft = E_NzLeft(i);
 
-      Kokkos::parallel_for(Kokkos::TeamThreadRange(t, alen + blen), [&](PetscInt j) {
-        if (j < nzleft) { // B left
-          rootBuf(disp + j) = Ba(Bi(i) + j);
-        } else if (j < nzleft + alen) { // diag A
-          rootBuf(disp + j) = Aa(Ai(i) + j - nzleft);
-        } else { // B right
-          rootBuf(disp + j) = Ba(Bi(i) + j - alen);
+          Kokkos::parallel_for(Kokkos::ThreadVectorRange(t, alen + blen), [&](PetscInt j) {
+            if (j < nzleft) { // B left
+              rootBuf(disp + j) = Ba(Bi(i) + j);
+            } else if (j < nzleft + alen) { // diag A
+              rootBuf(disp + j) = Aa(Ai(i) + j - nzleft);
+            } else { // B right
+              rootBuf(disp + j) = Ba(Bi(i) + j - alen);
+            }
+          });
         }
       });
     }));
@@ -982,30 +1078,38 @@ static PetscErrorCode MatMPIAIJKokkosBcastEnd(Mat E, PetscSF ownerSF, MatReuse r
   auto       &Foa = Fo.values;
   auto        Fm  = Fd.numRows();
 
-  PetscIntKokkosView  &F_NzLeft = mm->F_NzLeft;
-  PetscSF             &bcastSF  = mm->sf;
-  MatScalarKokkosView &rootBuf  = mm->rootBuf;
-  MatScalarKokkosView &leafBuf  = mm->leafBuf;
+  PetscIntKokkosView  &F_NzLeft     = mm->F_NzLeft;
+  PetscSF             &bcastSF      = mm->sf;
+  MatScalarKokkosView &rootBuf      = mm->rootBuf;
+  MatScalarKokkosView &leafBuf      = mm->leafBuf;
+  PetscInt             teamSize     = mm->F_TeamSize;
+  PetscInt             vectorLength = mm->F_VectorLength;
+  PetscInt             rowsPerTeam  = mm->F_RowsPerTeam;
+  PetscInt             workSets     = (Fm + rowsPerTeam - 1) / rowsPerTeam;
 
   PetscCall(PetscSFBcastEnd(bcastSF, MPIU_SCALAR, rootBuf.data(), leafBuf.data(), MPI_REPLACE));
 
   // Update Fda and Foa with new data in leafBuf (as if it is Fa)
   PetscCallCXX(Kokkos::parallel_for(
-    Kokkos::TeamPolicy<>(Fm, Kokkos::AUTO()), KOKKOS_LAMBDA(const KokkosTeamMemberType &t) {
-      PetscInt i      = t.league_rank(); // row i of F
-      PetscInt nzLeft = F_NzLeft(i);
-      PetscInt alen   = Fdi(i + 1) - Fdi(i);
-      PetscInt blen   = Foi(i + 1) - Foi(i);
-      PetscInt Fii    = Fdi(i) + Foi(i);
+    Kokkos::TeamPolicy<>(workSets, teamSize, vectorLength), KOKKOS_LAMBDA(const KokkosTeamMemberType &t) {
+      Kokkos::parallel_for(Kokkos::TeamThreadRange(t, 0, rowsPerTeam), [&](PetscInt k) {
+        PetscInt i = t.league_rank() * rowsPerTeam + k; // i-th row in F
+        if (i < Fm) {
+          PetscInt nzLeft = F_NzLeft(i);
+          PetscInt alen   = Fdi(i + 1) - Fdi(i);
+          PetscInt blen   = Foi(i + 1) - Foi(i);
+          PetscInt Fii    = Fdi(i) + Foi(i);
 
-      Kokkos::parallel_for(Kokkos::TeamThreadRange(t, alen + blen), [&](PetscInt j) {
-        PetscScalar val = leafBuf(Fii + j);
-        if (j < nzLeft) { // left
-          Foa(Foi(i) + j) = val;
-        } else if (j < nzLeft + alen) { // diag
-          Fda(Fdi(i) + j - nzLeft) = val;
-        } else { // right
-          Foa(Foi(i) + j - alen) = val;
+          Kokkos::parallel_for(Kokkos::ThreadVectorRange(t, alen + blen), [&](PetscInt j) {
+            PetscScalar val = leafBuf(Fii + j);
+            if (j < nzLeft) { // left
+              Foa(Foi(i) + j) = val;
+            } else if (j < nzLeft + alen) { // diag
+              Fda(Fdi(i) + j - nzLeft) = val;
+            } else { // right
+              Foa(Foi(i) + j - alen) = val;
+            }
+          });
         }
       });
     }));
