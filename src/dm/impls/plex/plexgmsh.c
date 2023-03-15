@@ -1780,7 +1780,7 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
       }
     }
     PetscCall(DMGetCoordinateDM(*dm, &cdm));
-    PetscCall(PetscMalloc1(maxHeight, &periodicCells));
+    PetscCall(PetscMalloc1(maxHeight + 1, &periodicCells));
     for (PetscInt h = 0; h <= maxHeight; ++h) {
       PetscInt pStart, pEnd;
 
@@ -2007,7 +2007,7 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
   PetscCall(GmshMeshDestroy(&mesh));
   PetscCall(PetscBTDestroy(&periodicVerts));
   if (periodic) {
-    for (PetscInt h = 0; h <= maxHeight; ++h) PetscCall(PetscBTDestroy(&periodicCells[h]));
+    for (PetscInt h = 0; h <= maxHeight; ++h) PetscCall(PetscBTDestroy(periodicCells + h));
     PetscCall(PetscFree(periodicCells));
   }
 
@@ -2018,7 +2018,6 @@ PetscErrorCode DMPlexCreateGmsh(MPI_Comm comm, PetscViewer viewer, PetscBool int
     PetscDTNodeType nodeType   = PETSCDTNODES_GAUSSJACOBI;
 
     if (isSimplex) continuity = PETSC_FALSE; /* XXX FIXME Requires DMPlexSetClosurePermutationLexicographic() */
-
     PetscCall(GmshCreateFE(comm, prefix, isSimplex, continuity, nodeType, dim, coordDim, order, &fe));
     PetscCall(PetscFEViewFromOptions(fe, NULL, "-dm_plex_gmsh_project_fe_view"));
     PetscCall(DMProjectCoordinates(*dm, fe));
