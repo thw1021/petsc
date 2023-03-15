@@ -9,44 +9,44 @@ PetscErrorCode KSPChebyshevGetBetas_Private(KSP ksp)
   PetscFunctionBegin;
   PetscCheck(order >= 0 && order <= 16, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_OUTOFRANGE, "Chebyshev polynomial order %" PetscInt_FMT " must be in [0, 16]", order);
 
-  if (order == 1) cheb->betas[0] = 1.12500000000000;
-
-  if (order == 2) {
+  switch (order) {
+  case 0:
+    /* no-op */
+    break;
+  case 1:
+    cheb->betas[0] = 1.12500000000000;
+    break;
+  case 2:
     cheb->betas[0] = 1.02387287570313;
     cheb->betas[1] = 1.26408905371085;
-  }
-
-  if (order == 3) {
+    break;
+  case 3:
     cheb->betas[0] = 1.00842544782028;
     cheb->betas[1] = 1.08867839208730;
     cheb->betas[2] = 1.33753125909618;
-  }
-
-  if (order == 4) {
+    break;
+  case 4:
     cheb->betas[0] = 1.00391310427285;
     cheb->betas[1] = 1.04035811188593;
     cheb->betas[2] = 1.14863498546254;
     cheb->betas[3] = 1.38268869241000;
-  }
-
-  if (order == 5) {
+    break;
+  case 5:
     cheb->betas[0] = 1.00212930146164;
     cheb->betas[1] = 1.02173711549260;
     cheb->betas[2] = 1.07872433192603;
     cheb->betas[3] = 1.19810065292663;
     cheb->betas[4] = 1.41322542791682;
-  }
-
-  if (order == 6) {
+    break;
+  case 6:
     cheb->betas[0] = 1.00128517255940;
     cheb->betas[1] = 1.01304293035233;
     cheb->betas[2] = 1.04678215124113;
     cheb->betas[3] = 1.11616489419675;
     cheb->betas[4] = 1.23829020218444;
     cheb->betas[5] = 1.43524297106744;
-  }
-
-  if (order == 7) {
+    break;
+  case 7:
     cheb->betas[0] = 1.00083464397912;
     cheb->betas[1] = 1.00843949430122;
     cheb->betas[2] = 1.03008707768713;
@@ -54,9 +54,8 @@ PetscErrorCode KSPChebyshevGetBetas_Private(KSP ksp)
     cheb->betas[4] = 1.15036186707366;
     cheb->betas[5] = 1.27116474046139;
     cheb->betas[6] = 1.45186658649364;
-  }
-
-  if (order == 8) {
+    break;
+  case 8:
     cheb->betas[0] = 1.00057246631197;
     cheb->betas[1] = 1.00577427662415;
     cheb->betas[2] = 1.02050187922941;
@@ -65,9 +64,8 @@ PetscErrorCode KSPChebyshevGetBetas_Private(KSP ksp)
     cheb->betas[5] = 1.18086042806856;
     cheb->betas[6] = 1.29838585382576;
     cheb->betas[7] = 1.46486073151099;
-  }
-
-  if (order == 9) {
+    break;
+  case 9:
     cheb->betas[0] = 1.00040960072832;
     cheb->betas[1] = 1.00412439506106;
     cheb->betas[2] = 1.01460212148266;
@@ -77,9 +75,8 @@ PetscErrorCode KSPChebyshevGetBetas_Private(KSP ksp)
     cheb->betas[6] = 1.20785219140729;
     cheb->betas[7] = 1.32121930716746;
     cheb->betas[8] = 1.47529642820699;
-  }
-
-  if (order == 10) {
+    break;
+  case 10:
     cheb->betas[0] = 1.00030312229652;
     cheb->betas[1] = 1.00304840660796;
     cheb->betas[2] = 1.01077022715387;
@@ -90,9 +87,8 @@ PetscErrorCode KSPChebyshevGetBetas_Private(KSP ksp)
     cheb->betas[7] = 1.23172250870894;
     cheb->betas[8] = 1.34060802024460;
     cheb->betas[9] = 1.48386124407011;
-  }
-
-  if (order == 11) {
+    break;
+  case 11:
     cheb->betas[0]  = 1.00023058595209;
     cheb->betas[1]  = 1.00231675024028;
     cheb->betas[2]  = 1.00817245396304;
@@ -104,9 +100,8 @@ PetscErrorCode KSPChebyshevGetBetas_Private(KSP ksp)
     cheb->betas[8]  = 1.25288300576792;
     cheb->betas[9]  = 1.35725579919519;
     cheb->betas[10] = 1.49101672564139;
-  }
-
-  if (order == 12) {
+    break;
+  case 12:
     cheb->betas[0]  = 1.00017947200828;
     cheb->betas[1]  = 1.00180189139619;
     cheb->betas[2]  = 1.00634861907307;
@@ -119,9 +114,8 @@ PetscErrorCode KSPChebyshevGetBetas_Private(KSP ksp)
     cheb->betas[9]  = 1.27171293675110;
     cheb->betas[10] = 1.37169337969799;
     cheb->betas[11] = 1.49708418575562;
-  }
-
-  if (order == 13) {
+    break;
+  case 13:
     cheb->betas[0]  = 1.00014241921559;
     cheb->betas[1]  = 1.00142906932629;
     cheb->betas[2]  = 1.00503028986298;
@@ -135,9 +129,8 @@ PetscErrorCode KSPChebyshevGetBetas_Private(KSP ksp)
     cheb->betas[10] = 1.28854264865128;
     cheb->betas[11] = 1.38432619380991;
     cheb->betas[12] = 1.50229418757368;
-  }
-
-  if (order == 14) {
+    break;
+  case 14:
     cheb->betas[0]  = 1.00011490538261;
     cheb->betas[1]  = 1.00115246376914;
     cheb->betas[2]  = 1.00405357333264;
@@ -152,9 +145,8 @@ PetscErrorCode KSPChebyshevGetBetas_Private(KSP ksp)
     cheb->betas[11] = 1.30365305707817;
     cheb->betas[12] = 1.39546814053678;
     cheb->betas[13] = 1.50681646209583;
-  }
-
-  if (order == 15) {
+    break;
+  case 15:
     cheb->betas[0]  = 1.00009404750752;
     cheb->betas[1]  = 1.00094291696343;
     cheb->betas[2]  = 1.00331449056444;
@@ -170,9 +162,8 @@ PetscErrorCode KSPChebyshevGetBetas_Private(KSP ksp)
     cheb->betas[12] = 1.31728069083392;
     cheb->betas[13] = 1.40536543893560;
     cheb->betas[14] = 1.51077872501845;
-  }
-
-  if (order == 16) {
+    break;
+  case 16:
     cheb->betas[0]  = 1.00007794828179;
     cheb->betas[1]  = 1.00078126847253;
     cheb->betas[2]  = 1.00274487974401;
@@ -189,6 +180,9 @@ PetscErrorCode KSPChebyshevGetBetas_Private(KSP ksp)
     cheb->betas[13] = 1.32962412656664;
     cheb->betas[14] = 1.41421360695576;
     cheb->betas[15] = 1.51427891730346;
+    break;
+  default:
+    SETERRQ(PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_OUTOFRANGE, "Chebyshev order (%" PetscInt_FMT ") not in range [0,16]", order);
   }
 
   PetscFunctionReturn(PETSC_SUCCESS);
