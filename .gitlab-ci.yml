@@ -43,6 +43,252 @@ variables:
       - $CI_MERGE_REQUEST_LABELS =~ /(^|,)docs-only($|,)/
       - $PETSC_CI_SCHEDULED =~ /yes/
 
+#
+#  This provides the basic order of operations and options template for cloud based stage 1 tests.
+#  Not all test-short need to follow this template but most will.
+#
+
+.coverage-enable:
+  variables:
+    RUN_GCOV: 1
+    RUN_GCOV_OPTIONS: --decisions
+
+.coverage-disable:
+  variables:
+    RUN_GCOV: 0
+
+.common_before_script:
+  before_script:
+    - date
+    - hostname
+    - ccache --zero-stats
+
+.common_after_script:
+  after_script:
+    - date
+    - ccache --show-stats
+
+.common_load_modules:
+  script:
+    - if [ ! -z ${LOAD_MODULES+x} ]; then module --trace load ${LOAD_MODULES}; module list; fi
+    - if [ ! -z ${INIT_SCRIPT+x} ]; then echo "sourcing ${INIT_SCRIPT}"; source ${INIT_SCRIPT}; fi
+
+.common_show_env:
+  script:
+    - printf "PATH:$PATH\n"
+    - printf "PYTHONPATH:$PYTHONPATH\n"
+    - printf "CONFIG_OPTS:${CONFIG_OPTS}\n"
+    - printf "PETSC_OPTIONS:$PETSC_OPTIONS\n"
+    - if [ ! -z ${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME+x} ]; then
+        printf "CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME\n";
+      fi
+    - if [ "${RUN_GCOV}" == 1 ]; then
+        printf "RUN_GCOV_OPTIONS:$RUN_GCOV_OPTIONS\n";
+        gcovr --version;
+      fi
+
+.common_configure:
+  script:
+    - if [ -d ${HOME}/petsc-hash-pkgs/ ]; then
+        find ${HOME}/petsc-hash-pkgs/ -maxdepth 1 -mindepth 1 -type d -mtime +25 -exec rm -rf {} \; ;
+      fi
+    - printf "./config/examples/${TEST_ARCH}.py\n"
+    - cat ./config/examples/${TEST_ARCH}.py
+    - ./config/examples/${TEST_ARCH}.py || if [ -f naglicenseproblem ]; then exit 126; else exit 1; fi
+
+.common_script_preamble:
+  script:
+    - !reference [.common_load_modules, script]
+    - !reference [.common_show_env, script]
+    - !reference [.common_configure, script]
+
+.common_build_test:
+  script:
+    - make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" CUDAFLAGS="${MAKE_CUDAFLAGS}" ||
+      if [ -f naglicenseproblem ]; then
+        exit 126;
+      else
+        exit 1;
+      fi
+    - if [ "${ENABLE_CHECK}" == 1 ]; then
+        make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" CUDAFLAGS="${MAKE_CUDAFLAGS}" check ||
+        if [ -f naglicenseproblem ]; then
+          exit 126;
+        else
+          exit 1;
+        fi
+      fi
+    - if [ -z ${DISABLE_PETSC4PY_TESTS+x} ]; then
+        if [ -z ${ENABLE_PETSC4PY_LDPRELOAD+x} ]; then
+          echo "NOT using LD_PRELOAD";
+          make petsc4pytest;
+        else
+          echo "using LD_PRELOAD";
+          LD_PRELOAD=${PWD}/${TEST_ARCH}/lib/libpetsc.so make petsc4pytest;
+        fi;
+      fi
+    - if [ -z ${DISABLE_TESTS+x} ]; then
+        make cleantest && make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" CUDAFLAGS="${MAKE_CUDAFLAGS}" allgtests-tap TIMEOUT=${TIMEOUT}  ${TEST_OPTS} ||
+        if [ -f naglicenseproblem ]; then
+          exit 126;
+        else
+          exit 1;
+        fi;
+      fi
+    - if [ "${RUN_GCOV}" == 1 ]; then make gcov PETSC_GCOV_OPTIONS="${RUN_GCOV_OPTIONS}"; fi
+  variables:
+    ENABLE_CHECK: 1
+
+.common_artifacts:
+  artifacts:
+    reports:
+      junit: arch-*/tests/testresults.xml
+    paths:
+      - arch-*/lib/petsc/conf/*.log
+      - arch-*/lib/pkgconfig/petsc.pc
+      - arch-*/tests/testresults.xml
+      - arch-*/tests/test_*_tap.log
+      - arch-*/tests/test_*_err.log
+      - arch-*/arch-*-gcovr-report.json.tar.bz2
+    name: "$CI_JOB_NAME"
+    when: always
+    expire_in: 4 days
+
+#
+# The following provide templates for various OSes for pre/post info
+#
+
+.linux_test_noflags:
+  extends:
+    - .common_after_script
+  before_script:
+    - !reference [.common_before_script, before_script]
+    - grep PRETTY_NAME /etc/os-release
+    - nproc
+    - lscpu
+
+.linux_test_nofflags:
+  extends: .linux_test_noflags
+  variables:
+    MAKE_CFLAGS: -Werror
+    MAKE_CXXFLAGS: -Werror
+
+.linux_test:
+  extends: .linux_test_noflags
+  variables:
+    MAKE_CFLAGS: -Werror
+    MAKE_CXXFLAGS: -Werror
+    MAKE_FFLAGS: -Werror
+
+.freebsd_test:
+  extends:
+    - .coverage-disable
+    - .common_after_script
+  variables:
+    MAKE_CFLAGS: -Werror
+    MAKE_CXXFLAGS: -Werror
+    MAKE_FFLAGS: -Werror
+  before_script:
+    - !reference [.common_before_script, before_script]
+    - freebsd-version
+    - echo $(sysctl -n hw.ncpu)
+
+.osx_test:
+  extends:
+    - .common_after_script
+  variables:
+    MAKE_CFLAGS: -Werror
+    MAKE_CXXFLAGS: -Werror
+    MAKE_FFLAGS: -Werror
+  before_script:
+    - !reference [.common_before_script, before_script]
+    - sw_vers -productVersion
+    - echo $(sysctl -n hw.ncpu)
+
+.opensolaris_test:
+  extends:
+    - .coverage-disable
+  before_script:
+    - date
+    - hostname
+    - uname -a
+    - nproc
+    - isainfo -x
+  after_script:
+    - date
+
+.mswin_test:
+  extends:
+    - .coverage-disable
+  before_script:
+    - date
+    - hostname
+    - uname -a
+    - nproc
+  after_script:
+    - date
+
+#
+# Define the various stages
+#
+.stage-1:
+  extends:
+    - .test
+    - .common_after_script
+    - .common_artifacts
+    - .coverage-disable
+  stage: stage-1
+  tags:
+    - gce-u22-stage1
+  before_script:
+    - !reference [.common_before_script, before_script]
+    - grep PRETTY_NAME /etc/os-release
+    - nproc
+    - lscpu
+  script:
+    - !reference [.common_load_modules, script]
+    - !reference [.common_show_env, script]
+    - ${PYTHON} ./configure --with-debugging=0 COPTFLAGS='-O -march=native' CXXOPTFLAGS='-O -march=native' FOPTFLAGS='-O -march=native' ${CONFIG_OPTS}
+    - !reference [.common_build_test, script]
+  variables:
+    !reference [.common_build_test, variables]
+    DISABLE_PETSC4PY_TESTS: 1
+    PYTHON: python3
+    MAKE_CFLAGS: -Werror
+    MAKE_CXXFLAGS: -Werror -Wzero-as-null-pointer-constant
+    MAKE_FFLAGS: -Werror
+    MAKE_TEST_CFLAGS: -Werror
+    MAKE_TEST_CXXFLAGS: -Werror
+    MAKE_TEST_FFLAGS: -Werror
+
+#
+# This provides the basic order of operations and options template for stage-2,3 tests.
+# Not all stage-2,3 need to follow this template, but most will.
+#
+.stage-23:
+  extends:
+    - .test
+    - .common_artifacts
+    - .coverage-enable
+  script:
+    - !reference [.common_script_preamble, script]
+    - make updatedatafiles
+    - !reference [.common_build_test, script]
+  variables:
+    !reference [.common_build_test, variables]
+    OPENBLAS_NUM_THREADS: 1
+
+.stage-2:
+  extends: .stage-23
+  stage: stage-2
+
+.stage-3:
+  extends: .stage-23
+  stage: stage-3
+
+#
+# The following tests run on the cloud as part of the pre stage
+#
 check-ci-settings:
   extends: .test-basic
   stage: .pre
@@ -51,71 +297,54 @@ check-ci-settings:
   script:
     - lib/petsc/bin/maint/check-ci-settings.sh
 
-#
-#  This provides the basic order of operations and options template for cloud based stage 1 tests.
-#  Not all test-short need to follow this template but most will.
-#
-
-.stage-1:
-  extends: .test
-  stage: stage-1
+checksource:
+  extends:
+    - .test-basic
+    - .common_artifacts
+  stage: .pre
   tags:
     - gce-u22-stage1
-  before_script:
-    - date
-    - hostname
-    - grep PRETTY_NAME /etc/os-release
-    - nproc
-    - lscpu
-    - ccache --zero-stats
   script:
-    - if [ ! -z ${LOAD_MODULES+x} ]; then module --trace load ${LOAD_MODULES}; module list; fi
-    - if [ ! -z ${INIT_SCRIPT+x} ]; then echo "sourcing ${INIT_SCRIPT}"; source ${INIT_SCRIPT}; fi
-    - printf "PATH:$PATH\n"
-    - printf "PYTHONPATH:$PYTHONPATH\n"
-    - printf "CONFIG_OPTS:${CONFIG_OPTS}\n"
-    - printf "PETSC_OPTIONS:$PETSC_OPTIONS\n"
-    - if [ ! -z ${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME+x} ]; then printf "CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME\n" ;fi
-    - ${PYTHON} ./configure --with-debugging=0 COPTFLAGS='-O -march=native' CXXOPTFLAGS='-O -march=native' FOPTFLAGS='-O -march=native' ${CONFIG_OPTS}
-    - make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" CUDAFLAGS="${MAKE_CUDAFLAGS}"
-    - if [ ! -z ${ENABLE_CHECK+x} ]; then make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" CUDAFLAGS="${MAKE_CUDAFLAGS}" check; fi
-    - make CFLAGS="${MAKE_TEST_CFLAGS}" CXXFLAGS="${MAKE_TEST_CXXFLAGS}" FFLAGS="${MAKE_TEST_FFLAGS}" CUDAFLAGS="${MAKE_CUDAFLAGS}" allgtests-tap gmakesearch="${TEST_SEARCH}" TIMEOUT=${TIMEOUT}
+    - python3 ./configure --with-mpi=0 --with-fc=0 --with-cxx=0
+    - vermin --version
+    - make vermin
+    - PATH=/nfs/gce/projects/petsc/soft/u22.04/spack/opt/spack/linux-ubuntu22.04-ivybridge/gcc-11.2.0/llvm-15.0.0-m7mrrtynenjytkmiib2moeqk6kfcifmv/bin:$PATH make checkclangformat SHELL=bash
+    - make checkbadSource SHELL=bash
+    - make checkbadFileChange SHELL=bash
+    - make -f gmakefile check_output SHELL=bash
+    - make check_petsc4py_rst
+
+pause-for-approval:
+  extends: .test
+  stage: .pre
+  tags:
+    - gce-stage1
+  only:
+    refs:
+      - merge_requests
+    variables:
+      - $CI_MERGE_REQUEST_EVENT_TYPE == "merged_result"
+      - $CI_MERGE_REQUEST_EVENT_TYPE == "detached"
+  script:
+    - echo "pause-for-approval has no script to run"
   variables:
-    PYTHON: python3
-    MAKE_CFLAGS: -Werror
-    MAKE_CXXFLAGS: -Werror -Wzero-as-null-pointer-constant
-    MAKE_FFLAGS: -Werror
-    MAKE_TEST_CFLAGS: -Werror
-    MAKE_TEST_CXXFLAGS: -Werror
-    MAKE_TEST_FFLAGS: -Werror
-  after_script:
-    - date
-    - ccache --show-stats
-  artifacts:
-    reports:
-      junit: arch-*/tests/testresults.xml
-    name: "$CI_JOB_NAME"
-    when: always
-    paths:
-    - arch-*/lib/petsc/conf/*.log
-    - arch-*/lib/pkgconfig/petsc.pc
-    - arch-*/tests/testresults.xml
-    - arch-*/tests/test_*_tap.log
-    - arch-*/tests/test_*_err.log
-    expire_in: 4 days
+    GIT_STRATEGY: none
+  when: manual
+  allow_failure: false
+
 
 #
 # The following tests run on the cloud as part of stage-1.
 #
 
 ompi-cuda:
-  extends: .stage-1
+  extends:
+    - .stage-1
   tags:
   - cuda-stage1
   variables:
     CONFIG_OPTS: --with-mpi-dir=/nfs/gce/software/custom/linux-ubuntu22.04-x86_64/spack/opt/spack/linux-ubuntu22.04-x86_64/gcc-11.3.0/openmpi-4.1.3-qrpnszy --with-cuda=1 --with-fc=0
     TEST_SEARCH: snes_tutorials-ex19_cuda%
-    ENABLE_CHECK: 1
     MAKE_CXXFLAGS: -Werror
 
 mpich-cxx-py3:
@@ -124,6 +353,7 @@ mpich-cxx-py3:
     CONFIG_OPTS: --with-clanguage=cxx --with-fc=0 CXXFLAGS=-std=c++11 --with-strict-petscerrorcode
     TEST_SEARCH: snes_tutorials-ex48%
     LOAD_MODULES: gcc/12.1.0 mpich/4.1-gcc-12.1.0
+    ENABLE_CHECK: 0
 
 uni-complex-float-int64:
   extends: .stage-1
@@ -131,16 +361,24 @@ uni-complex-float-int64:
     CONFIG_OPTS: --with-mpi=0 --with-scalar-type=complex --with-precision=single --with-64-bit-indices
     TEST_SEARCH: ts_tutorials-ex11_adv_2d_quad_%
     LOAD_MODULES: gcc/12.1.0 mpich/4.1-gcc-12.1.0
+    ENABLE_CHECK: 0
 
 c99-mlib-static-py:
   extends: .stage-1
   variables:
     CONFIG_OPTS: --with-single-library=0 --with-shared-libraries=0 --with-strict-petscerrorcode CFLAGS=-std=c99 FFLAGS= CXXFLAGS=
-    ENABLE_CHECK: 1
     TEST_SEARCH: snes_tutorials-ex19% snes_tutorials-ex5f90t%
     MAKE_TEST_FFLAGS: -Werror -std=f2008
     LOAD_MODULES: gcc/12.1.0 mpich/4.1-gcc-12.1.0
 
+#
+# The following tests run as part of stage-2.
+#
+# The tags variable used in the tests below connects the particular test with the runners
+# listed on the left hand side of https://gitlab.com/petsc/petsc/-/settings/ci_cd.
+# For example the test 'linux-sycl-double' any runner that has the tags 'gce-u22-stage3, linux-fast'
+# (in a blue box beneath it)
+#
 petsc4py-install:
   extends: .stage-2
   tags:
@@ -193,207 +431,6 @@ petsc4py-pip:
     - python3 -m pip install .
     - python3 -m pip install src/binding/petsc4py
     - python3 -m petsc4py
-
-checksource:
-  extends: .test-basic
-  stage: .pre
-  tags:
-    - gce-u22-stage1
-  script:
-    - python3 ./configure --with-mpi=0 --with-fc=0 --with-cxx=0
-    - vermin --version
-    - make vermin
-    - PATH=/nfs/gce/projects/petsc/soft/u22.04/spack/opt/spack/linux-ubuntu22.04-ivybridge/gcc-11.2.0/llvm-15.0.0-m7mrrtynenjytkmiib2moeqk6kfcifmv/bin:$PATH make checkclangformat SHELL=bash
-    - make checkbadSource SHELL=bash
-    - make checkbadFileChange SHELL=bash
-    - make -f gmakefile check_output SHELL=bash
-    - make check_petsc4py_rst
-  artifacts:
-    name: "$CI_JOB_NAME"
-    when: always
-    paths:
-    - arch-*/lib/petsc/conf/*.patch
-    - arch-*/lib/petsc/conf/*.log
-    expire_in: 4 days
-
-pause-for-approval:
-  extends: .test
-  stage: .pre
-  tags:
-    - gce-stage1
-  only:
-    refs:
-      - merge_requests
-    variables:
-      - $CI_MERGE_REQUEST_EVENT_TYPE == "merged_result"
-      - $CI_MERGE_REQUEST_EVENT_TYPE == "detached"
-  script:
-    - echo "pause-for-approval has no script to run"
-  variables:
-    GIT_STRATEGY: none
-  when: manual
-  allow_failure: false
-
-#
-# Basic template for code coverage generation. Tests should additionally inherit from the more
-# specialized OS-specific versions instead of this one.
-#
-
-.coverage-generate:
-  variables:
-    RUN_GCOV: 1
-    RUN_GCOV_OPTIONS: --decisions
-
-.coverage-disable:
-  variables:
-    RUN_GCOV: 0
-
-#
-# This provides the basic order of operations and options template for stage-2,3 tests.
-# Not all stage-2,3 need to follow this template, but most will.
-#
-.stage-23:
-  extends:
-    - .test
-    - .coverage-generate
-  script:
-    - if [ ! -z ${LOAD_MODULES+x} ]; then module --trace load ${LOAD_MODULES}; module list; fi
-    - if [ ! -z ${GCOV_MODULES+x} ]; then module --trace load ${GCOV_MODULES}; module list; fi
-    - if [ ! -z ${INIT_SCRIPT+x} ]; then echo "sourcing ${INIT_SCRIPT}"; source ${INIT_SCRIPT}; fi
-    - if [ "${RUN_GCOV}" == 1 ]; then
-        printf "RUN_GCOV_OPTIONS:$RUN_GCOV_OPTIONS\n";
-        gcovr --version;
-      fi
-    - if [ -d ${HOME}/petsc-hash-pkgs/ ]; then find ${HOME}/petsc-hash-pkgs/ -maxdepth 1 -mindepth 1 -type d -mtime +25 -exec rm -rf {} \; ; fi
-    - printf "PATH:$PATH\n"
-    - printf "PYTHONPATH:$PYTHONPATH\n"
-    - printf "PETSC_OPTIONS:$PETSC_OPTIONS\n"
-    - if [ ! -z ${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME+x} ]; then printf "CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME\n" ;fi
-    - printf "./config/examples/${TEST_ARCH}.py\n"
-    - cat ./config/examples/${TEST_ARCH}.py
-    - ./config/examples/${TEST_ARCH}.py || if [ -f naglicenseproblem ]; then exit 126; else exit 1; fi
-    - make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" CUDAFLAGS="${MAKE_CUDAFLAGS}" || if [ -f naglicenseproblem ]; then exit 126; else exit 1; fi
-    - make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" CUDAFLAGS="${MAKE_CUDAFLAGS}" check || if [ -f naglicenseproblem ]; then exit 126; else exit 1; fi
-    - make updatedatafiles
-    - if [ -z ${DISABLE_PETSC4PY_TESTS+x} ]; then if [ -z ${ENABLE_PETSC4PY_LDPRELOAD+x} ]; then echo "NOT using LD_PRELOAD"; make petsc4pytest; else echo "using LD_PRELOAD"; LD_PRELOAD=${PWD}/${TEST_ARCH}/lib/libpetsc.so make petsc4pytest; fi; fi
-    - if [ -z ${DISABLE_TESTS+x} ]; then make cleantest && make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" CUDAFLAGS="${MAKE_CUDAFLAGS}" allgtests-tap TIMEOUT=${TIMEOUT}  ${TEST_OPTS} || if [ -f naglicenseproblem ]; then exit 126; else exit 1; fi; fi
-    - if [ "${RUN_GCOV}" == 1 ]; then make gcov PETSC_GCOV_OPTIONS="${RUN_GCOV_OPTIONS}"; fi
-  artifacts:
-    reports:
-      junit: arch-*/tests/testresults.xml
-    name: "$CI_JOB_NAME"
-    when: always
-    paths:
-    - arch-*/lib/petsc/conf/*.log
-    - arch-*/lib/pkgconfig/petsc.pc
-    - arch-*/tests/testresults.xml
-    - arch-*/tests/test_arch-*_tap.log
-    - arch-*/tests/test_arch-*_err.log
-    - arch-*/arch-*-gcovr-report.json.tar.bz2
-    expire_in: 4 days
-  variables:
-    OPENBLAS_NUM_THREADS: 1
-
-.stage-2:
-  extends: .stage-23
-  stage: stage-2
-
-.stage-3:
-  extends: .stage-23
-  stage: stage-3
-
-#
-# The following provide templates for various OSes for pre/post info
-#
-
-.linux_test_noflags:
-  before_script:
-    - date
-    - hostname
-    - grep PRETTY_NAME /etc/os-release
-    - nproc
-    - lscpu
-    - ccache --zero-stats
-  after_script:
-    - date
-    - ccache --show-stats
-
-.linux_test_nofflags:
-  extends: .linux_test_noflags
-  variables:
-    MAKE_CFLAGS: -Werror
-    MAKE_CXXFLAGS: -Werror
-
-.linux_test:
-  extends: .linux_test_noflags
-  variables:
-    MAKE_CFLAGS: -Werror
-    MAKE_CXXFLAGS: -Werror
-    MAKE_FFLAGS: -Werror
-
-.freebsd_test:
-  extends:
-    - .coverage-disable
-  variables:
-    MAKE_CFLAGS: -Werror
-    MAKE_CXXFLAGS: -Werror
-    MAKE_FFLAGS: -Werror
-  before_script:
-    - date
-    - hostname
-    - freebsd-version
-    - echo $(sysctl -n hw.ncpu)
-    - ccache --zero-stats
-  after_script:
-    - date
-    - ccache --show-stats
-
-.osx_test:
-  variables:
-    MAKE_CFLAGS: -Werror
-    MAKE_CXXFLAGS: -Werror
-    MAKE_FFLAGS: -Werror
-  before_script:
-    - date
-    - hostname
-    - sw_vers -productVersion
-    - echo $(sysctl -n hw.ncpu)
-    - ccache --zero-stats
-  after_script:
-    - date
-    - ccache --show-stats
-
-.opensolaris_test:
-  extends:
-    - .coverage-disable
-  before_script:
-    - date
-    - hostname
-    - uname -a
-    - nproc
-    - isainfo -x
-  after_script:
-    - date
-
-.mswin_test:
-  extends:
-    - .coverage-disable
-  before_script:
-    - date
-    - hostname
-    - uname -a
-    - nproc
-  after_script:
-    - date
-
-#
-# The following tests run as part of stage-2.
-#
-# The tags variable used in the tests below connects the particular test with the runners
-# listed on the left hand side of https://gitlab.com/petsc/petsc/-/settings/ci_cd.
-# For example the test 'linux-sycl-double' any runner that has the tags 'gce-u22-stage3, linux-fast'
-# (in a blue box beneath it)
-#
 
 osx-m1:
   extends:
@@ -818,13 +855,7 @@ linux-analyzer:
   tags:
     - gce-u22-stage2
   script:
-    - printf "PATH:$PATH\n"
-    - printf "PYTHONPATH:$PYTHONPATH\n"
-    - printf "PETSC_OPTIONS:$PETSC_OPTIONS\n"
-    - if [ ! -z ${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME+x} ]; then printf "CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME\n" ;fi
-    - printf "./config/examples/${TEST_ARCH}.py\n"
-    - cat ./config/examples/${TEST_ARCH}.py
-    - ./config/examples/${TEST_ARCH}.py
+    - !reference [.common_script_preamble, script]
     - make LINTER_OPTIONS="${LINTER_OPTIONS}" test-lint
     - make LINTER_OPTIONS="${LINTER_OPTIONS} -fdoc-* no" lint
   variables:
@@ -834,7 +865,6 @@ linux-analyzer:
     paths:
     - arch-*/lib/petsc/conf/*.log
     - ./petscLintPatches/*.patch
-    expire_in: 4 days
   except:
     variables:
       - $PETSC_CI_SCHEDULED =~ /yes/
@@ -1028,9 +1058,24 @@ osx-xsdk-opt:
   variables:
     TEST_ARCH: arch-ci-osx-xsdk-opt
 
+# template for the coverage review jobs, these must be separate jobs as you cannot deploy multiple
+# environments from one job...
+.coverage-review-base:
+  extends:
+    - .test
+    - .linux_test_noflags
+  tags:
+    - gce-u22-short
+  artifacts:
+    paths:
+    - arch-ci-analyze-pipeline/gcovr/*
+    - arch-ci-analyze-pipeline/lib/petsc/conf/*.log
+
 # job for analyzing the coverage results and generating the various reports
-coverage-analyze:
-  extends: .test
+analyze-coverage:
+  extends:
+    - .test
+    - .coverage-review-base
   stage: stage-4
   tags:
     - gce-u22-short
@@ -1066,26 +1111,15 @@ coverage-analyze:
   variables:
     PYTHON: python3
     PETSC_ARCH: arch-ci-analyze-pipeline
-  before_script:
-    - date
-    - hostname
   script:
-    - if [ ! -z ${LOAD_MODULES+x} ]; then module --trace load ${LOAD_MODULES}; module list; fi
+    - !reference [.common_load_modules, script]
+    - !reference [.common_show_env, script]
     - ${PYTHON} --version
     - gcovr --version
-    - printf "PATH:$PATH\n"
-    - printf "PYTHONPATH:$PYTHONPATH\n"
-    - if [ ! -z ${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME+x} ]; then printf "CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME\n" ;fi
     - ${PYTHON} ./configure --with-mpi=0 --with-cxx=0 --download-sowing --with-fortran-bindings
     - make mergegcov PETSC_GCOV_OPTIONS='--ci-mode --verbose'
   coverage: /^\s*lines:\s*\d+.\d+\%/
   artifacts:
-    name: "$CI_JOB_NAME"
-    when: always
-    paths:
-    - arch-ci-analyze-pipeline/gcovr/*
-    - arch-ci-analyze-pipeline/lib/petsc/conf/*.log
-    expire_in: 4 days
     reports:
       coverage_report:
         coverage_format: cobertura
@@ -1094,22 +1128,10 @@ coverage-analyze:
 # template for the coverage review jobs, these must be separate jobs as you cannot deploy multiple
 # environments from one job...
 .coverage-review:
-  extends: .test
+  extends: .coverage-review-base
   stage: .post
-  tags:
-    - gce-u22-short
   dependencies:
-    - coverage-analyze
-  script:
-    - date
-    - hostname
-  artifacts:
-    name: "$CI_JOB_NAME"
-    when: always
-    paths:
-    - arch-ci-analyze-pipeline/gcovr/*
-    - arch-ci-analyze-pipeline/lib/petsc/conf/*.log
-    expire_in: 4 days
+    - analyze-coverage
 
 coverage-total-review:
   extends: .coverage-review
@@ -1130,8 +1152,6 @@ coverage-untested-review:
 analyze-pipeline:
   extends: .coverage-review
   script:
-    - date
-    - hostname
     # This file is created by lib/petsc/bin/maint/gcov.py. If it exists then the CI
     # pipeline should fail
     - if [ -f ./arch-ci-analyze-pipeline/gcovr/.CI_FAIL ]; then
