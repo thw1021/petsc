@@ -8,9 +8,9 @@
 #include <petsc/private/kspimpl.h>
 
 typedef enum {
-  CHEBYSHEV_FIRST,
-  CHEBYSHEV_FOURTH,
-  CHEBYSHEV_OPT_FOURTH
+  KSP_CHEBYSHEV_FIRST,
+  KSP_CHEBYSHEV_FOURTH,
+  KSP_CHEBYSHEV_OPT_FOURTH
 } ChebyshevKind;
 
 typedef struct {

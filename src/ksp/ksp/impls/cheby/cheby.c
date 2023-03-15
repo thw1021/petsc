@@ -1,6 +1,6 @@
 #include "chebyshevimpl.h"
 
-static const char *const ChebyshevKinds[] = {"FIRST", "FOURTH", "OPT_FOURTH", "ChebyshevKinds", "CHEBYSHEV_", 0};
+static const char *const ChebyshevKinds[] = {"FIRST", "FOURTH", "OPT_FOURTH", "ChebyshevKinds", "KSP_CHEBYSHEV_", 0};
 
 static PetscErrorCode KSPReset_Chebyshev(KSP ksp)
 {
@@ -113,6 +113,15 @@ static PetscErrorCode KSPChebyshevEstEigSetUseNoisy_Chebyshev(KSP ksp, PetscBool
 
   PetscFunctionBegin;
   cheb->usenoisy = use;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode KSPChebyshevSetKind_Chebyshev(KSP ksp, ChebyshevKind kind)
+{
+  KSP_Chebyshev *cheb = (KSP_Chebyshev *)ksp->data;
+
+  PetscFunctionBegin;
+  cheb->chebykind = kind;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -250,6 +259,30 @@ PetscErrorCode KSPChebyshevEstEigGetKSP(KSP ksp, KSP *kspest)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+   KSPChebyshevSetKind - set the kind of Chebyshev polynomial to use
+
+   Logically Collective
+
+   Input Parameters:
++  ksp - linear solver context
+-  kind - `KSP_CHEBYSHEV_FOURTH` or `KSP_CHEBYSHEV_OPT_FOURTH` to use 4th-kind Chebyshev polynomial smoothing
+
+   Options Database Key:
+.  -ksp_chebyshev_kind <first,fourth,opt_fourth> - which kind of Chebyshev polynomial to use
+
+  Level: intermediate
+
+.seealso: [](chapter_ksp), `KSPCHEBYSHEV`
+@*/
+PetscErrorCode KSPChebyshevSetKind(KSP ksp, ChebyshevKind kind)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
+  PetscTryMethod(ksp, "KSPChebyshevSetKind_C", (KSP, ChebyshevKind), (ksp, kind));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode KSPChebyshevEstEigGetKSP_Chebyshev(KSP ksp, KSP *kspest)
 {
   KSP_Chebyshev *cheb = (KSP_Chebyshev *)ksp->data;
@@ -292,7 +325,7 @@ static PetscErrorCode KSPSetFromOptions_Chebyshev(KSP ksp, PetscOptionItems *Pet
     }
   }
 
-  cheb->chebykind = CHEBYSHEV_FIRST; /* Default to 1st-kind Chebyshev polynomial */
+  cheb->chebykind = KSP_CHEBYSHEV_FIRST; /* Default to 1st-kind Chebyshev polynomial */
   PetscCall(PetscOptionsEnum("-ksp_chebyshev_kind", "Type of Chebyshev polynomial", "", ChebyshevKinds, (PetscEnum)cheb->chebykind, (PetscEnum *)&cheb->chebykind, NULL));
 
   /* We need to estimate eigenvalues; need to set this here so that KSPSetFromOptions() is called on the estimator */
@@ -637,13 +670,13 @@ static PetscErrorCode KSPView_Chebyshev(KSP ksp, PetscViewer viewer)
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
   if (iascii) {
     switch (cheb->chebykind) {
-    case CHEBYSHEV_FIRST:
+    case KSP_CHEBYSHEV_FIRST:
       PetscCall(PetscViewerASCIIPrintf(viewer, "  Chebyshev polynomial of first kind\n"));
       break;
-    case CHEBYSHEV_FOURTH:
+    case KSP_CHEBYSHEV_FOURTH:
       PetscCall(PetscViewerASCIIPrintf(viewer, "  Chebyshev polynomial of fourth kind\n"));
       break;
-    case CHEBYSHEV_OPT_FOURTH:
+    case KSP_CHEBYSHEV_OPT_FOURTH:
       PetscCall(PetscViewerASCIIPrintf(viewer, "  Chebyshev polynomial of opt. fourth kind\n"));
       break;
     }
@@ -676,11 +709,11 @@ static PetscErrorCode KSPSetUp_Chebyshev(KSP ksp)
 
   PetscFunctionBegin;
   switch (cheb->chebykind) {
-  case CHEBYSHEV_FIRST:
+  case KSP_CHEBYSHEV_FIRST:
     ksp->ops->solve = KSPSolve_Chebyshev_FirstKind;
     break;
-  case CHEBYSHEV_FOURTH:
-  case CHEBYSHEV_OPT_FOURTH:
+  case KSP_CHEBYSHEV_FOURTH:
+  case KSP_CHEBYSHEV_OPT_FOURTH:
     ksp->ops->solve = KSPSolve_Chebyshev_FourthKind;
     break;
   }
@@ -691,7 +724,7 @@ static PetscErrorCode KSPSetUp_Chebyshev(KSP ksp)
   for (PetscInt i = 0; i < ksp->max_it; i++) cheb->betas[i] = 1.0;
 
   // coefficients for optimized 4th-kind Chebyshev
-  if (cheb->chebykind == CHEBYSHEV_OPT_FOURTH) PetscCall(KSPChebyshevGetBetas_Private(ksp));
+  if (cheb->chebykind == KSP_CHEBYSHEV_OPT_FOURTH) PetscCall(KSPChebyshevGetBetas_Private(ksp));
 
   PetscCall(KSPSetWorkVecs(ksp, 3));
   if (cheb->emin == 0. || cheb->emax == 0.) { // User did not specify eigenvalues
@@ -786,10 +819,12 @@ static PetscErrorCode KSPDestroy_Chebyshev(KSP ksp)
   KSP_Chebyshev *cheb = (KSP_Chebyshev *)ksp->data;
 
   PetscFunctionBegin;
+  PetscCall(PetscFree(cheb->betas));
   PetscCall(KSPDestroy(&cheb->kspest));
   PetscCall(PetscObjectComposeFunction((PetscObject)ksp, "KSPChebyshevSetEigenvalues_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)ksp, "KSPChebyshevEstEigSet_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)ksp, "KSPChebyshevEstEigSetUseNoisy_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)ksp, "KSPChebyshevSetKind_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)ksp, "KSPChebyshevEstEigGetKSP_C", NULL));
   PetscCall(KSPDestroyDefault(ksp));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -857,6 +892,7 @@ PETSC_EXTERN PetscErrorCode KSPCreate_Chebyshev(KSP ksp)
   PetscCall(PetscObjectComposeFunction((PetscObject)ksp, "KSPChebyshevSetEigenvalues_C", KSPChebyshevSetEigenvalues_Chebyshev));
   PetscCall(PetscObjectComposeFunction((PetscObject)ksp, "KSPChebyshevEstEigSet_C", KSPChebyshevEstEigSet_Chebyshev));
   PetscCall(PetscObjectComposeFunction((PetscObject)ksp, "KSPChebyshevEstEigSetUseNoisy_C", KSPChebyshevEstEigSetUseNoisy_Chebyshev));
+  PetscCall(PetscObjectComposeFunction((PetscObject)ksp, "KSPChebyshevSetKind_C", KSPChebyshevSetKind_Chebyshev));
   PetscCall(PetscObjectComposeFunction((PetscObject)ksp, "KSPChebyshevEstEigGetKSP_C", KSPChebyshevEstEigGetKSP_Chebyshev));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
