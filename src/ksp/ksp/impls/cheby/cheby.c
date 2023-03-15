@@ -685,32 +685,33 @@ static PetscErrorCode KSPSetUp_Chebyshev(KSP ksp)
     break;
   }
 
-  cheb->betas = (PetscReal *)malloc(ksp->max_it * sizeof(PetscReal));
+  PetscCall(PetscMalloc1(ksp->max_it, &cheb->betas));
 
   // coefficients for 4th-kind Chebyshev
-  for (int i = 0; i < ksp->max_it; i++) cheb->betas[i] = 1.0;
+  for (PetscInt i = 0; i < ksp->max_it; i++) cheb->betas[i] = 1.0;
 
   // coefficients for optimized 4th-kind Chebyshev
-  if (cheb->chebykind == CHEBYSHEV_OPT_FOURTH) KSPChebyshevGetBetas_Private(ksp);
+  if (cheb->chebykind == CHEBYSHEV_OPT_FOURTH) PetscCall(KSPChebyshevGetBetas_Private(ksp));
 
   PetscCall(KSPSetWorkVecs(ksp, 3));
   if (cheb->emin == 0. || cheb->emax == 0.) { // User did not specify eigenvalues
     PC pc;
+
     PetscCall(KSPGetPC(ksp, &pc));
     PetscCall(PetscObjectTypeCompare((PetscObject)pc, PCJACOBI, &flg));
     if (!flg) { // Provided estimates are only relevant for Jacobi
       cheb->emax_provided = 0;
       cheb->emin_provided = 0;
     }
-    if (!cheb->kspest) { /* We need to estimate eigenvalues */
-      PetscCall(KSPChebyshevEstEigSet(ksp, PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE));
-    }
+    /* We need to estimate eigenvalues */
+    if (!cheb->kspest) PetscCall(KSPChebyshevEstEigSet(ksp, PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE));
   }
   if (cheb->kspest) {
     PetscCall(KSPGetOperators(ksp, &Amat, &Pmat));
     PetscCall(MatIsSPDKnown(Pmat, &isset, &flg));
     if (isset && flg) {
       const char *prefix;
+
       PetscCall(KSPGetOptionsPrefix(cheb->kspest, &prefix));
       PetscCall(PetscOptionsHasName(NULL, prefix, "-ksp_type", &flg));
       if (!flg) PetscCall(KSPSetType(cheb->kspest, KSPCG));
@@ -723,6 +724,7 @@ static PetscErrorCode KSPSetUp_Chebyshev(KSP ksp)
       PetscReal          max = 0.0, min = 0.0;
       Vec                B;
       KSPConvergedReason reason;
+
       PetscCall(KSPSetPC(cheb->kspest, ksp->pc));
       if (cheb->usenoisy) {
         B = ksp->work[1];
@@ -748,6 +750,7 @@ static PetscErrorCode KSPSetUp_Chebyshev(KSP ksp)
         PetscCall(KSPGetIterationNumber(cheb->kspest, &its));
         if (ksp->normtype == KSP_NORM_NONE) {
           PetscInt sendbuf, recvbuf;
+
           PetscCall(PCGetFailedReasonRank(ksp->pc, &pcreason));
           sendbuf = (PetscInt)pcreason;
           PetscCallMPI(MPI_Allreduce(&sendbuf, &recvbuf, 1, MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject)ksp)));

@@ -5,14 +5,11 @@
 /* given the polynomial order, return tabulated beta coefficients for use in opt. 4th-kind Chebyshev smoother */
 PetscErrorCode KSPChebyshevGetBetas_Private(KSP ksp)
 {
-  KSP_Chebyshev *cheb = (KSP_Chebyshev *)ksp->data;
-
-  PetscInt order;
-  order = ksp->max_it;
+  const PetscInt       order = ksp->max_it;
+  const KSP_Chebyshev *cheb  = (KSP_Chebyshev *)ksp->data;
 
   PetscFunctionBegin;
-
-  if (order < 0 || order > 16) SETERRQ(PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_INCOMP, "Chebyshev polynomial order must be between 0 and 16");
+  PetscCheck(order >= 0 && order <= 16, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_OUTOFRANGE, "Chebyshev polynomial order %" PetscInt_FMT " must be in [0, 16]", order);
 
   if (order == 1) cheb->betas[0] = 1.12500000000000;
 
