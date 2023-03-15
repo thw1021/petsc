@@ -597,6 +597,14 @@ where noted, add a newline after the section headings.
 #. If documenting a function with output parameters, a list of output
    parameter descriptions in an ``Output Parameter(s):`` section.
 
+#. If any input or output parameters are function pointers they should be documented in the style
+
+   :: code-block:: sh
+
+      Calling sequence of `func()`:
+      $ PetscErrorCode func(PetscInt arg);
+      . arg - the integer argument
+
 #. If documenting a function that interacts with the options database, a
    list of options database keys in an ``Options Database Key(s):``
    section.
