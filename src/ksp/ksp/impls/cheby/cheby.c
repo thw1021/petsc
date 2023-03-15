@@ -1,6 +1,6 @@
-
 #include "chebyshevimpl.h"
-#include <../src/ksp/ksp/impls/cheby/chebyshevimpl.h> /*I "petscksp.h" I*/
+
+static const char *const ChebyshevKinds[] = {"FIRST", "FOURTH", "OPT_FOURTH", "ChebyshevKinds", "CHEBYSHEV_", 0};
 
 static PetscErrorCode KSPReset_Chebyshev(KSP ksp)
 {
@@ -293,7 +293,7 @@ static PetscErrorCode KSPSetFromOptions_Chebyshev(KSP ksp, PetscOptionItems *Pet
   }
 
   cheb->chebykind = CHEBYSHEV_FIRST; /* Default to 1st-kind Chebyshev polynomial */
-  PetscCall(PetscOptionsEnum("-ksp_chebyshev_kind", "Type of Chebyshev polynomial", "", ChebyshevKindTypes, (PetscEnum)cheb->chebykind, (PetscEnum *)&cheb->chebykind, NULL));
+  PetscCall(PetscOptionsEnum("-ksp_chebyshev_kind", "Type of Chebyshev polynomial", "", ChebyshevKinds, (PetscEnum)cheb->chebykind, (PetscEnum *)&cheb->chebykind, NULL));
 
   /* We need to estimate eigenvalues; need to set this here so that KSPSetFromOptions() is called on the estimator */
   if ((cheb->emin == 0. || cheb->emax == 0.) && !cheb->kspest) PetscCall(KSPChebyshevEstEigSet(ksp, PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE));

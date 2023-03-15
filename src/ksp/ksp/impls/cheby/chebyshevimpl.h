@@ -12,7 +12,6 @@ typedef enum {
   CHEBYSHEV_FOURTH,
   CHEBYSHEV_OPT_FOURTH
 } ChebyshevKind;
-static const char *const ChebyshevKinds[] = {"FIRST", "FOURTH", "OPT_FOURTH", "ChebyshevKindTypes", "CHEBYSHEV_", 0};
 
 typedef struct {
   PetscReal emin, emax;                   /* store user provided estimates of extreme eigenvalues or computed with kspest and transformed with tform[] */
