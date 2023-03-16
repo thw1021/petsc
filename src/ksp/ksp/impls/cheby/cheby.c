@@ -512,12 +512,12 @@ static PetscErrorCode KSPSolve_Chebyshev_FirstKind(KSP ksp)
 static PetscErrorCode KSPSolve_Chebyshev_FourthKind(KSP ksp)
 {
   KSP_Chebyshev *cheb = (KSP_Chebyshev *)ksp->data;
-  PetscInt    i;
-  PetscScalar scale, rScale, dScale;
-  PetscReal   rnorm = 0.0, emax, emin;
-  Vec         x, b, d, r, Br;
-  Mat         Amat, Pmat;
-  PetscBool   diagonalscale;
+  PetscInt       i;
+  PetscScalar    scale, rScale, dScale;
+  PetscReal      rnorm = 0.0, emax, emin;
+  Vec            x, b, d, r, Br;
+  Mat            Amat, Pmat;
+  PetscBool      diagonalscale;
   PetscReal     *betas = cheb->betas;
 
   PetscFunctionBegin;
@@ -529,11 +529,11 @@ static PetscErrorCode KSPSolve_Chebyshev_FourthKind(KSP ksp)
   ksp->its = 0;
   PetscCall(PetscObjectSAWsGrantAccess((PetscObject)ksp));
 
-  x        = ksp->vec_sol;
-  b        = ksp->vec_rhs;
-  r        = ksp->work[0];
-  d        = ksp->work[1];
-  Br       = ksp->work[2];
+  x  = ksp->vec_sol;
+  b  = ksp->vec_rhs;
+  r  = ksp->work[0];
+  d  = ksp->work[1];
+  Br = ksp->work[2];
 
   PetscCall(KSPChebyshevGetEigenvalues_Chebyshev(ksp, &emax, &emin));
   /* use scale*B as our preconditioner */

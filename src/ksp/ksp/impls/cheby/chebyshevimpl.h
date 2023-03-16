@@ -14,15 +14,15 @@ typedef enum {
 } ChebyshevKind;
 
 typedef struct {
-  PetscReal emin, emax;                   /* store user provided estimates of extreme eigenvalues or computed with kspest and transformed with tform[] */
-  PetscReal emin_computed, emax_computed; /* eigenvalues as computed by kspest, if computed */
-  PetscReal emin_provided, emax_provided; /* provided by PCGAMG; discarded unless preconditioned by Jacobi */
+  PetscReal  emin, emax;                   /* store user provided estimates of extreme eigenvalues or computed with kspest and transformed with tform[] */
+  PetscReal  emin_computed, emax_computed; /* eigenvalues as computed by kspest, if computed */
+  PetscReal  emin_provided, emax_provided; /* provided by PCGAMG; discarded unless preconditioned by Jacobi */
   PetscReal *betas;                        /* store beta coefficients for 4th-kind Chebyshev smoother */
 
-  KSP       kspest;                       /* KSP used to estimate eigenvalues */
-  PetscReal tform[4];                     /* transform from Krylov estimates to Chebyshev bounds */
-  PetscInt  eststeps;                     /* number of kspest steps in KSP used to estimate eigenvalues */
-  PetscBool usenoisy;                     /* use noisy right hand side vector to estimate eigenvalues */
+  KSP           kspest;   /* KSP used to estimate eigenvalues */
+  PetscReal     tform[4]; /* transform from Krylov estimates to Chebyshev bounds */
+  PetscInt      eststeps; /* number of kspest steps in KSP used to estimate eigenvalues */
+  PetscBool     usenoisy; /* use noisy right hand side vector to estimate eigenvalues */
   ChebyshevKind chebykind;
   /* For tracking when to update the eigenvalue estimates */
   PetscObjectId    amatid, pmatid;
