@@ -139,8 +139,8 @@ class Configure(config.package.Package):
       gputarget = ''
       if self.argDB['with-magma-gputarget']:
         gputarget = self.argDB['with-magma-gputarget']
-      elif self.cuda.found and hasattr(self.cuda,'cudaArchs') and self.cuda.cudaArchs:
-        gputarget = ' '.join('sm_'+a for a in self.cuda.cudaArchs)
+      elif self.cuda.found and hasattr(self.cuda,'cudaArch') and self.cuda.cudaArch:
+        gputarget = ' '.join('sm_'+a for a in self.cuda.cudaArchList())
       elif self.hip.found and hasattr(self.hip,'hipArch') and self.hip.hipArch:
         gputarget = self.hip.hipArch
       g.write('CC = '+cc+'\n')

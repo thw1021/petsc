@@ -87,8 +87,8 @@ class Configure(config.package.CMakePackage):
         cuda_flags = self.updatePackageCUDAFlags(cuda_flags)
         args.append('-DCMAKE_CUDA_FLAGS="{}"'.format(cuda_flags))
 
-      if hasattr(self.cuda,'cudaArchs'):
-        generation = 'sm_'+self.cuda.cuda_min_arch
+      if hasattr(self.cuda,'cudaArch'):
+        generation = 'sm_'+self.cuda.cudaArchSingle()
       else:
         raise RuntimeError('You must set --with-cuda-arch=60, 70, 75, 80 etc.')
       args.append('-DCUDA_ARCH='+generation)

@@ -172,11 +172,8 @@ class Configure(config.package.Package):
         self.popLanguage()
         g.write('MFEM_USE_CUDA = YES\n')
         g.write('CUDA_CXX = '+petscNvcc+'\n')
-        if hasattr(self.cuda,'cudaArchs') and self.cuda.cudaArchs:
-          # CUDA_ARCH option only supports one, but the CMakeLists for MFEM seems
-          # to support CMAKE_CUDA_ARCHITECTURES (cf. )---might want to
-          # switch to that
-          g.write('CUDA_ARCH = sm_'+self.cuda.cuda_min_arch+'\n')
+        if hasattr(self.cuda, 'cudaArch'):
+          g.write(self.cuda.cmakeArchProperty()+'\n')
         g.write('CXXFLAGS := '+cudaFlags+' $(addprefix -Xcompiler ,$(CXXFLAGS))\n')
       g.close()
 

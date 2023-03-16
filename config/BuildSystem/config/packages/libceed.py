@@ -45,7 +45,7 @@ class Configure(config.package.Package):
           'CUDA_DIR=' + self.cuda.cudaDir,
           'NVCC=' + self.getCompiler(),
           'NVCCFLAGS=' + self.getCompilerFlags(),
-          'CUDA_ARCH=sm_' + self.cuda.cuda_min_arch,  # libCEED only supports one arch :-(
+          'CUDA_ARCH=sm_' + self.cuda.cudaArchSingle()
         ]
     if self.hip.found:
       with self.Language('HIP'):

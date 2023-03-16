@@ -144,14 +144,14 @@ class Configure(config.package.CMakePackage):
           # Kokkos provides Kokkos_CUDA_DIR and CUDA_ROOT. But they do not actually work (as of Jan. 2022) in the aforementioned
           # case, since these cmake options are not passed correctly to nvcc_wrapper.
           os.environ['PATH'] = nvccpath+':'+path
-      if hasattr(self.cuda,'cudaArchs'):
+      if hasattr(self.cuda,'cudaArch'):
         genToName = {'3': 'KEPLER','5': 'MAXWELL', '6': 'PASCAL', '7': 'VOLTA', '8': 'AMPERE', '9': 'LOVELACE', '10': 'HOPPER'}
-        generation = self.cuda.cuda_min_arch[:-1] # cudaArch is a number 'nn', such as '75'
+        generation = self.cuda.cudaArchSingle()[:-1] # cudaArch is a number 'nn', such as '75'
         try:
           # Kokkos uses names like VOLTA75, AMPERE86
-          deviceArchName = genToName[generation] + self.cuda.cuda_min_arch
+          deviceArchName = genToName[generation] + self.cuda.cudaArchSingle()
         except KeyError:
-          raise RuntimeError('Could not find an arch name for CUDA gen number '+ self.cuda.cuda_min_arch)
+          raise RuntimeError('Could not find an arch name for CUDA gen number '+ self.cuda.cudaArchSingle())
       else:
         raise RuntimeError('You must set --with-cuda-arch=60, 70, 75, 80 etc.')
     elif self.hip.found:

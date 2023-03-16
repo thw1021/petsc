@@ -66,7 +66,9 @@ class Configure(config.package.GNUPackage):
       mpich_device = 'ch3:nemesis'
     if self.cuda.found:
       args.append('--with-cuda='+self.cuda.cudaDir)
-      args.append('--with-cuda-sm='+','.join(self.cuda.cudaArchs))
+      if not (self.cuda.cudaArch == 'all' or self.cuda.cudaArchIsVersionList()):
+        raise RuntimeError('MPICH not known to support cuda arch string '+self.cuda.cudaArch)
+      args.append('--with-cuda-sm='+self.cuda.cudaArch)
       mpich_device = 'ch4:ucx'
     elif self.hip.found:
       args.append('--with-hip='+self.hip.hipDir)

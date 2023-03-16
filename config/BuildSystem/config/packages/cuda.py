@@ -38,13 +38,22 @@ class Configure(config.package.Package):
   def setupHelp(self, help):
     import nargs
     config.package.Package.setupHelp(self, help)
-    help.addArgument('CUDA', '-with-cuda-arch', nargs.ArgString(None, None, 'Cuda architecture for code generation, for example 70, (this may be used by external packages). Use "all" or a comma-separated list of values to target multiple architectures (e.g. for distribution)'))
+    help.addArgument(
+      'CUDA', '-with-cuda-arch',
+      nargs.ArgString(
+        None, None,
+        'Cuda architecture for code generation, for example 70 (this may be used by external '
+        'packages). A comma-separated list can be passed to target multiple architectures (e.g. '
+        'for distribution). When using the nvcc compiler, other possible options include "all", '
+        '"all-major", and "native" (see documentation of the nvcc "--gpu-architecture" flag)'
+      )
+    )
     return
 
   def __str__(self):
     output  = config.package.Package.__str__(self)
-    if hasattr(self,'cudaArchs'):
-      output += '  CUDA SM '+','.join(self.cudaArchs)+'\n'
+    if hasattr(self,'cudaArch'):
+      output += '  CUDA SM '+self.cudaArch+'\n'
     if hasattr(self.setCompilers,'CUDA_CXX'):
       output += '  CUDA underlying compiler: CUDA_CXX=' + self.setCompilers.CUDA_CXX + '\n'
     if hasattr(self.setCompilers,'CUDA_CXXFLAGS'):
@@ -53,9 +62,62 @@ class Configure(config.package.Package):
       output += '  CUDA underlying linker libraries: CUDA_CXXLIBS=' + self.setCompilers.CUDA_CXXLIBS + '\n'
     return output
 
-  @property
-  def cuda_min_arch(self):
-    return str(min(int(a) for a in self.cudaArchs))
+  def cudaArchIsVersionList(self):
+    "whether the CUDA arch is a list of version numbers (vs a string like 'all')"
+    try:
+      self.cudaArchList()
+    except RuntimeError:
+      return False
+    else:
+      return True
+
+  def cudaArchList(self):
+    '''
+    a list of the given cuda arch numbers.
+    raises RuntimeError if cuda arch is not a list of version numbers
+    '''
+    arch_list = self.cudaArch.split(',')
+
+    try:
+      for v in arch_list:
+        int(v)
+    except ValueError as e:
+      msg = 'only explicit cuda arch version numbers supported for this package '
+      msg += '(got "'+self.cudaArch+'")'
+      raise RuntimeError(msg) from None
+
+    return arch_list
+
+  def cudaArchSingle(self):
+    '''
+    Returns the single given CUDA arch, or raises RuntimeError if something else was specified
+    (like a list of numbers or "all")
+    '''
+    arch_list = self.cudaArchList()
+    if len(arch_list) > 1:
+      raise RuntimeError('this package can only be compiled to target a single explicit CUDA arch '
+                         'version (got "'+self.cudaArch+'")')
+    return arch_list[0]
+
+  def nvccArchFlags(self):
+    if not self.cudaArchIsVersionList():
+      return ' -arch='+self.cudaArch
+
+    if self.setCompilers.isCygwin(self.log):
+      arg_sep = '='
+    else:
+      arg_sep = ' '
+
+    return ''.join(' -gencode'+arg_sep+'arch=compute_'+gen+',code=sm_'+gen for gen in self.cudaArchList())
+
+  def clangArchFlags(self):
+    if not self.cudaArchIsVersionList():
+      raise RuntimeError('clang only supports cuda archs specified as version number(s) (got "'+self.cudaArch+'")')
+    return ''.join(' --cuda-gpu-arch=sm_'+gen for gen in self.cudaArchList())
+
+  def cmakeArchProperty(self):
+    # CMake supports 'all', 'all-major', 'native', and a semicolon-separated list of numbers
+    return 'CMAKE_CUDA_ARCHITECTURES="'+self.cudaArch.replace(',', ';')+'"'
 
   def setupDependencies(self, framework):
     config.package.Package.setupDependencies(self, framework)
@@ -253,9 +315,6 @@ class Configure(config.package.Package):
   def configureLibrary(self):
     import re
 
-    if self.setCompilers.isCygwin(self.log): arg_sep = '='
-    else: arg_sep = ' '
-
     self.setCudaDir()
     # skip this because it does not properly set self.lib and self.include if they have already been set
     if not self.found: config.package.Package.configureLibrary(self)
@@ -271,11 +330,8 @@ class Configure(config.package.Package):
     self.popLanguage()
 
     # Handle cuda arch
-    if 'with-cuda-arch' in self.framework.clArgDB:
-      if self.argDB['with-cuda-arch'] == 'all':
-        self.cudaArchs = ['35', '37', '50', '52', '53', '60', '61', '70', '72', '75', '80']
-      else:
-        self.cudaArchs = self.argDB['with-cuda-arch'].split(',')
+    if 'with-cuda-arch' in self.framework.argDB:
+      self.cudaArch = self.argDB['with-cuda-arch']
     else:
       dq = os.path.join(self.cudaDir,'extras','demo_suite')
       self.getExecutable('deviceQuery',path = dq)
@@ -288,11 +344,11 @@ class Configure(config.package.Package):
           try:
             out = out.split('\n')[0]
             sm = out[-3:]
-            self.cudaArchs = [str(int(10*float(sm)))]
+            self.cudaArch = str(int(10*float(sm)))
           except:
             self.log.write('Unable to parse the CUDA Capability output from the NVIDIA utility deviceQuery\n')
 
-    if not hasattr(self,'cudaArchs') and not self.argDB['with-batch']:
+    if not hasattr(self,'cudaArch') and not self.argDB['with-batch']:
         includes = '''#include <stdio.h>
                     #include <cuda_runtime.h>
                     #include <cuda_runtime_api.h>
@@ -319,30 +375,30 @@ class Configure(config.package.Package):
               pass
             else:
               self.log.write('petsc-supplied CUDA device query test found the CUDA Capability is '+str(gen)+'\n')
-              self.cudaArchs = [str(gen)]
+              self.cudaArch = str(gen)
 
     # Check flags validity
-    if hasattr(self,'cudaArchs'):
-      for gen in reversed(self.cudaArchs):
-        self.pushLanguage('CUDA')
-        cflags = self.setCompilers.CUDAFLAGS
-        if self.cudaclang:
-          self.setCompilers.CUDAFLAGS += ' --cuda-gpu-arch=sm_'+gen
-        else: # assuming nvcc
-          self.setCompilers.CUDAFLAGS += ' -gencode'+arg_sep+'arch=compute_'+gen+',code=sm_'+gen
-        try:
-          valid = self.checkCompile()
-        except Exception as e:
-          self.log.write('checkCompile on CUDA compile with gencode failed '+str(e)+'\n')
-          self.popLanguage()
+    if hasattr(self,'cudaArch'):
+      self.pushLanguage('CUDA')
+      if self.cudaclang:
+        arch_flags = self.clangArchFlags()
+      else: # assuming nvcc
+        arch_flags = self.nvccArchFlags()
+      cflags = self.setCompilers.CUDAFLAGS
+      self.setCompilers.CUDAFLAGS += arch_flags
+      try:
+        valid = self.checkCompile()
+      except Exception as e:
+        self.log.write('checkCompile on CUDA compile with gencode failed '+str(e)+'\n')
+        self.popLanguage()
+        self.setCompilers.CUDAFLAGS = cflags
+      else:
+        self.popLanguage()
+        self.log.write('Flag from checkCompile on CUDA compile with gencode '+str(valid)+'\n')
+        if not valid:
+          self.logPrintWarning('CUDA compile failed with arch flags "'+arch_flags+'"')
           self.setCompilers.CUDAFLAGS = cflags
-          continue
-        else:
-          self.popLanguage()
-          self.log.write('Flag from checkCompile on CUDA compile with gencode '+str(valid)+'\n')
-          if not valid:
-            self.logPrintWarning('CUDA compile failed for arch "'+str(gen)+'", skipping it...')
-            self.setCompilers.CUDAFLAGS = cflags
+    # TODO: why don't we just fail outright when compiling with the gencode flags fails?
 
     self.addDefine('HAVE_CUDA','1')
     self.addDefine('HAVE_CUPM','1') # Have either CUDA or HIP
