@@ -381,24 +381,23 @@ class Configure(config.package.Package):
     if hasattr(self,'cudaArch'):
       self.pushLanguage('CUDA')
       if self.cudaclang:
-        arch_flags = self.clangArchFlags()
+        self.setCompilers.CUDAFLAGS += self.clangArchFlags()
       else: # assuming nvcc
-        arch_flags = self.nvccArchFlags()
-      cflags = self.setCompilers.CUDAFLAGS
-      self.setCompilers.CUDAFLAGS += arch_flags
+        self.setCompilers.CUDAFLAGS += self.nvccArchFlags()
+
       try:
         valid = self.checkCompile()
       except Exception as e:
         self.log.write('checkCompile on CUDA compile with gencode failed '+str(e)+'\n')
         self.popLanguage()
-        self.setCompilers.CUDAFLAGS = cflags
+        valid = False
       else:
-        self.popLanguage()
         self.log.write('Flag from checkCompile on CUDA compile with gencode '+str(valid)+'\n')
-        if not valid:
-          self.logPrintWarning('CUDA compile failed with arch flags "'+arch_flags+'"')
-          self.setCompilers.CUDAFLAGS = cflags
-    # TODO: why don't we just fail outright when compiling with the gencode flags fails?
+        self.popLanguage()
+
+      if not valid:
+        raise RuntimeError('CUDA compile failed with arch flags "'+self.setCompilers.CUDAFLAGS+'"'
+                           ' generated from "--with-cuda-arch='+self.cudaArch+'"')
 
     self.addDefine('HAVE_CUDA','1')
     self.addDefine('HAVE_CUPM','1') # Have either CUDA or HIP
