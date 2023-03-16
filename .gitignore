@@ -188,3 +188,6 @@ compile_commands.json
 .vscode/
 include/petsc/private/generated_hashset.txt
 configtest.mod
+*gcovr-report.json
+arch-*/gcovr/*
+*-arch/gcovr/*

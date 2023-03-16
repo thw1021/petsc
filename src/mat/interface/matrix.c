@@ -799,24 +799,22 @@ PetscErrorCode MatSetOptionsPrefixFactor(Mat A, const char prefix[])
 @*/
 PetscErrorCode MatAppendOptionsPrefixFactor(Mat A, const char prefix[])
 {
-  char  *buf = A->factorprefix;
-  size_t len1, len2;
+  size_t len1, len2, new_len;
 
   PetscFunctionBegin;
   PetscValidHeader(A, 1);
   if (!prefix) PetscFunctionReturn(PETSC_SUCCESS);
-  if (!buf) {
+  if (!A->factorprefix) {
     PetscCall(MatSetOptionsPrefixFactor(A, prefix));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   PetscCheck(prefix[0] != '-', PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_WRONG, "Options prefix should not begin with a hyphen");
 
-  PetscCall(PetscStrlen(prefix, &len1));
-  PetscCall(PetscStrlen(buf, &len2));
-  PetscCall(PetscMalloc1(1 + len1 + len2, &A->factorprefix));
-  PetscCall(PetscStrcpy(A->factorprefix, buf));
-  PetscCall(PetscStrcat(A->factorprefix, prefix));
-  PetscCall(PetscFree(buf));
+  PetscCall(PetscStrlen(A->factorprefix, &len1));
+  PetscCall(PetscStrlen(prefix, &len2));
+  new_len = len1 + len2 + 1;
+  PetscCall(PetscRealloc(new_len * sizeof(*(A->factorprefix)), &A->factorprefix));
+  PetscCall(PetscStrncpy(A->factorprefix + len1, prefix, len2 + 1));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -9754,7 +9752,7 @@ PetscErrorCode MatFactorSolveSchurComplement(Mat F, Vec rhs, Vec sol)
 
 PETSC_EXTERN PetscErrorCode MatSeqDenseInvertFactors_Private(Mat);
 #if PetscDefined(HAVE_CUDA)
-PETSC_EXTERN PetscErrorCode MatSeqDenseCUDAInvertFactors_Private(Mat);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode MatSeqDenseCUDAInvertFactors_Internal(Mat);
 #endif
 
 /* Schur status updated in the interface */
@@ -9777,9 +9775,10 @@ static PetscErrorCode MatFactorInvertSchurComplement_Private(Mat F)
       PetscCall(MatSeqDenseInvertFactors_Private(S));
     } else if (isdensecuda) {
 #if defined(PETSC_HAVE_CUDA)
-      PetscCall(MatSeqDenseCUDAInvertFactors_Private(S));
+      PetscCall(MatSeqDenseCUDAInvertFactors_Internal(S));
 #endif
     }
+    // HIP??????????????
     PetscCall(PetscLogEventEnd(MAT_FactorInvS, F, 0, 0, 0));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -9838,6 +9837,7 @@ PetscErrorCode MatFactorFactorizeSchurComplement(Mat F)
   PetscValidHeaderSpecific(F, MAT_CLASSID, 1);
   if (F->schur_status == MAT_FACTOR_SCHUR_INVERTED || F->schur_status == MAT_FACTOR_SCHUR_FACTORED) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscLogEventBegin(MAT_FactorFactS, F, 0, 0, 0));
+  PetscCall(PetscMemzero(&info, sizeof(MatFactorInfo)));
   if (F->factortype == MAT_FACTOR_CHOLESKY) { /* LDL^t regarded as Cholesky */
     PetscCall(MatCholeskyFactor(F->schur, NULL, &info));
   } else {

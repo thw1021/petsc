@@ -19,6 +19,7 @@ Changes: Development
 - Deprecate ``--with-gcov`` configure option in favor of ``--with-coverage``
 - Add ``--with-coverage-exec`` configure option to specify the coverage-collection tool to be used e.g. ``gcov`` or ``/path/to/llvm-cov-15``
 - Add ``--with-strict-petscerrorcode`` configure option to enable compile-time checking for correct usage of ``PetscErrorCode``, see below
+- Add support for C++20
 
 .. rubric:: Sys:
 
@@ -102,6 +103,7 @@ Changes: Development
   While currently opt-in, this feature **will be enabled by default in a future release**. Users are highly encourage to enable it and fix any discrepancies before that point. Note that ``PETSC_SUCCESS`` is defined whether or not the feature is enabled, so users may incrementally update.
 
 - Add ``PetscFFlush()``
+- Soft-deprecate ``PetscStrcpy()`` and ``PetscStrcat()``. No diagnostics will be emitted if these routines are used, but users are highly encouraged to switch to the more secure (and possibly performant) ``PetscStrncpy()`` and ``PetscStrlcat()``
 
 .. rubric:: Event Logging:
 
@@ -145,6 +147,7 @@ Changes: Development
 - Improve efficiency of ``MatConvert()`` from ``MATNORMAL`` to ``MATHYPRE``
 - Add ``MatDenseGetArrayAndMemType()``, ``MatDenseRestoreArrayAndMemType()``, ``MatDenseGetArrayReadAndMemType()``, ``MatDenseRestoreArrayReadAndMemType()``, ``MatDenseGetArrayWriteAndMemType()`` and ``MatDenseRestoreArrayWriteAndMemType()`` to return the array and memory type of a dense matrix
 - Deprecate all MatPreallocate* routines. These are no longer needed since non-preallocated matrices will now be as fast as using them
+- Significantly improve performance of ``MatScale()`` and ``MatAXPY()`` for ``MATDENSECUDA`` and ``MATDENSEHIP`` in the case where the leading dimension is greater than the number of columns/rows. This situation arises when using e.g. sub-matrices. These routines should be between 3x and 4x faster
 
 .. rubric:: MatCoarsen:
 
@@ -157,6 +160,8 @@ Changes: Development
 - Add ``KSPMonitorDynamicToleranceCreate()`` and ``KSPMonitorDynamicToleranceSetCoefficient()``
 - Change ``-sub_ksp_dynamic_tolerance_param`` to ``-sub_ksp_dynamic_tolerance``
 - Add support for ``MATAIJCUSPARSE`` and ``VECCUDA`` to ``KSPHPDDM``
+- Deprecate ``KSP_CONVERGED_CG_NEG_CURVE`` in favor of ``KSP_CONVERGED_NEG_CURVE``
+- Deprecate ``KSP_CONVERGED_CG_CONSTRAINED`` in favor of ``KSP_CONVERGED_STEP_LENGTH``
 
 .. rubric:: SNES:
 
@@ -198,6 +203,7 @@ Changes: Development
 - Add ``DMPlexSetIsoperiodicFaceSF()`` to wrap a non-periodic mesh into periodic while preserving the local point representation for both donor and image sheet. This is supported with ``zbox`` above, and allows single-element periodicity.
 
 .. rubric:: FE/FV:
+  - Add ``DMPlexGetLocalOffsetsSupport()`` for interaction with libCEED for FV
 
 .. rubric:: DMNetwork:
   - Add DMNetworkGetNumVertices to retrieve the local and global number of vertices in DMNetwork

@@ -447,11 +447,9 @@ static PetscErrorCode MatProductSetFromOptions_Private(Mat mat)
     }
     PetscCall(PetscStrlcat(mtypes, "_C", sizeof(mtypes)));
 #if defined(__clang__)
-  #pragma clang diagnostic push
-  #pragma clang diagnostic ignored "-Wformat-pedantic"
+    PETSC_PRAGMA_DIAGNOSTIC_IGNORED_BEGIN("-Wformat-pedantic");
 #elif defined(__GNUC__) || defined(__GNUG__)
-  #pragma GCC diagnostic push
-  #pragma GCC diagnostic ignored "-Wformat"
+    PETSC_PRAGMA_DIAGNOSTIC_IGNORED_BEGIN("-Wformat");
 #endif
     PetscCall(PetscObjectQueryFunction((PetscObject)A, mtypes, &f));
     PetscCall(PetscInfo(mat, "  querying %s from A? %p\n", mtypes, f));
@@ -482,11 +480,7 @@ static PetscErrorCode MatProductSetFromOptions_Private(Mat mat)
     }
     if (f) PetscCall((*f)(mat));
   }
-#if defined(__clang__)
-  #pragma clang diagnostic pop
-#elif defined(__GNUC__) || defined(__GNUG__)
-  #pragma GCC diagnostic pop
-#endif
+  PETSC_PRAGMA_DIAGNOSTIC_IGNORED_END();
   /* We may have found f but it did not succeed */
   if (!mat->ops->productsymbolic) {
     /* we can still compute the product if B is of type dense */
@@ -653,12 +647,15 @@ PetscErrorCode MatProductNumeric_ABC(Mat mat)
 @*/
 PetscErrorCode MatProductNumeric(Mat mat)
 {
+#if defined(PETSC_USE_LOG)
   PetscLogEvent eventtype = -1;
-  PetscBool     missing   = PETSC_FALSE;
+#endif
+  PetscBool missing = PETSC_FALSE;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
   MatCheckProduct(mat, 1);
+#if defined(PETSC_USE_LOG)
   switch (mat->product->type) {
   case MATPRODUCT_AB:
     eventtype = MAT_MatMultNumeric;
@@ -681,6 +678,7 @@ PetscErrorCode MatProductNumeric(Mat mat)
   default:
     SETERRQ(PetscObjectComm((PetscObject)mat), PETSC_ERR_SUP, "ProductType %s is not supported", MatProductTypes[mat->product->type]);
   }
+#endif
 
   if (mat->ops->productnumeric) {
     PetscCall(PetscLogEventBegin(eventtype, mat, 0, 0, 0));
@@ -769,13 +767,16 @@ PetscErrorCode MatProductSymbolic_ABC(Mat mat)
 @*/
 PetscErrorCode MatProductSymbolic(Mat mat)
 {
+#if defined(PETSC_USE_LOG)
   PetscLogEvent eventtype = -1;
-  PetscBool     missing   = PETSC_FALSE;
+#endif
+  PetscBool missing = PETSC_FALSE;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
   MatCheckProduct(mat, 1);
   PetscCheck(!mat->product->data, PetscObjectComm((PetscObject)mat), PETSC_ERR_ORDER, "Cannot run symbolic phase. Product data not empty");
+#if defined(PETSC_USE_LOG)
   switch (mat->product->type) {
   case MATPRODUCT_AB:
     eventtype = MAT_MatMultSymbolic;
@@ -798,6 +799,7 @@ PetscErrorCode MatProductSymbolic(Mat mat)
   default:
     SETERRQ(PetscObjectComm((PetscObject)mat), PETSC_ERR_SUP, "ProductType %s is not supported", MatProductTypes[mat->product->type]);
   }
+#endif
   mat->ops->productnumeric = NULL;
   if (mat->ops->productsymbolic) {
     PetscCall(PetscLogEventBegin(eventtype, mat, 0, 0, 0));
@@ -838,7 +840,7 @@ PetscErrorCode MatProductSetFill(Mat mat, PetscReal fill)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
   MatCheckProduct(mat, 1);
-  if (fill == PETSC_DEFAULT || fill == PETSC_DECIDE) mat->product->fill = 2.0;
+  if (fill == (PetscReal)PETSC_DEFAULT || fill == (PetscReal)PETSC_DECIDE) mat->product->fill = 2.0;
   else mat->product->fill = fill;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

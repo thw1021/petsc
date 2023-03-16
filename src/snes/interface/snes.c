@@ -895,7 +895,7 @@ PetscErrorCode SNESEWSetFromOptions_Private(SNESKSPEW *kctx, MPI_Comm comm, cons
 .  -snes_lag_preconditioner_persists <true,false> - retains the -snes_lag_preconditioner information across multiple SNESSolve()
 .  -snes_lag_jacobian <lag> - how often Jacobian is rebuilt (use -1 to never rebuild)
 .  -snes_lag_jacobian_persists <true,false> - retains the -snes_lag_jacobian information across multiple SNESSolve()
-.  -snes_trtol <trtol> - trust region tolerance
+.  -snes_tr_tol <trtol> - trust region tolerance
 .  -snes_convergence_test - <default,skip,correct_pressure> convergence test in nonlinear solver.
                                default `SNESConvergedDefault()`. skip `SNESConvergedSkip()` means continue iterating until max_it or some other criterion is reached, saving expense
                                of convergence test. correct_pressure S`NESConvergedCorrectPressure()` has special handling of a pressure null space.
@@ -3728,15 +3728,15 @@ PetscErrorCode SNESSetTolerances(SNES snes, PetscReal abstol, PetscReal rtol, Pe
   PetscValidLogicalCollectiveInt(snes, maxit, 5);
   PetscValidLogicalCollectiveInt(snes, maxf, 6);
 
-  if (abstol != PETSC_DEFAULT) {
+  if (abstol != (PetscReal)PETSC_DEFAULT) {
     PetscCheck(abstol >= 0.0, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_OUTOFRANGE, "Absolute tolerance %g must be non-negative", (double)abstol);
     snes->abstol = abstol;
   }
-  if (rtol != PETSC_DEFAULT) {
+  if (rtol != (PetscReal)PETSC_DEFAULT) {
     PetscCheck(rtol >= 0.0 && 1.0 > rtol, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_OUTOFRANGE, "Relative tolerance %g must be non-negative and less than 1.0", (double)rtol);
     snes->rtol = rtol;
   }
-  if (stol != PETSC_DEFAULT) {
+  if (stol != (PetscReal)PETSC_DEFAULT) {
     PetscCheck(stol >= 0.0, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_OUTOFRANGE, "Step tolerance %g must be non-negative", (double)stol);
     snes->stol = stol;
   }
@@ -3774,7 +3774,7 @@ PetscErrorCode SNESSetDivergenceTolerance(SNES snes, PetscReal divtol)
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
   PetscValidLogicalCollectiveReal(snes, divtol, 2);
 
-  if (divtol != PETSC_DEFAULT) {
+  if (divtol != (PetscReal)PETSC_DEFAULT) {
     snes->divtol = divtol;
   } else {
     snes->divtol = 1.0e4;
@@ -3846,11 +3846,11 @@ PetscErrorCode SNESGetDivergenceTolerance(SNES snes, PetscReal *divtol)
 -  tol - tolerance
 
    Options Database Key:
-.  -snes_trtol <tol> - Sets tol
+.  -snes_tr_tol <tol> - Sets tol
 
    Level: intermediate
 
-.seealso: [](chapter_snes), `SNES`, `SNESNEWTONTRDC`, `SNESSetTolerances()`
+.seealso: [](chapter_snes), `SNES`, `SNESNEWTONTR`, `SNESSetTolerances()`
 @*/
 PetscErrorCode SNESSetTrustRegionTolerance(SNES snes, PetscReal tol)
 {
@@ -4752,7 +4752,7 @@ PetscErrorCode SNESSolve(SNES snes, Vec b, Vec x)
    See "petsc/include/petscsnes.h" for available methods (for instance)
 +    `SNESNEWTONLS` - Newton's method with line search
      (systems of nonlinear equations)
--    `SNESNEWTONTRDC` - Newton's method with trust region
+-    `SNESNEWTONTR` - Newton's method with trust region
      (systems of nonlinear equations)
 
   Normally, it is best to use the `SNESSetFromOptions()` command and then
@@ -5252,12 +5252,12 @@ PetscErrorCode SNESKSPSetParametersEW(SNES snes, PetscInt version, PetscReal rto
   PetscValidLogicalCollectiveReal(snes, threshold, 8);
 
   if (version != PETSC_DEFAULT) kctx->version = version;
-  if (rtol_0 != PETSC_DEFAULT) kctx->rtol_0 = rtol_0;
-  if (rtol_max != PETSC_DEFAULT) kctx->rtol_max = rtol_max;
-  if (gamma != PETSC_DEFAULT) kctx->gamma = gamma;
-  if (alpha != PETSC_DEFAULT) kctx->alpha = alpha;
-  if (alpha2 != PETSC_DEFAULT) kctx->alpha2 = alpha2;
-  if (threshold != PETSC_DEFAULT) kctx->threshold = threshold;
+  if (rtol_0 != (PetscReal)PETSC_DEFAULT) kctx->rtol_0 = rtol_0;
+  if (rtol_max != (PetscReal)PETSC_DEFAULT) kctx->rtol_max = rtol_max;
+  if (gamma != (PetscReal)PETSC_DEFAULT) kctx->gamma = gamma;
+  if (alpha != (PetscReal)PETSC_DEFAULT) kctx->alpha = alpha;
+  if (alpha2 != (PetscReal)PETSC_DEFAULT) kctx->alpha2 = alpha2;
+  if (threshold != (PetscReal)PETSC_DEFAULT) kctx->threshold = threshold;
 
   PetscCheck(kctx->version >= 1 && kctx->version <= 4, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Only versions 1 to 4 are supported: %" PetscInt_FMT, kctx->version);
   PetscCheck(kctx->rtol_0 >= 0.0 && kctx->rtol_0 < 1.0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "0.0 <= rtol_0 < 1.0: %g", (double)kctx->rtol_0);

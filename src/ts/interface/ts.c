@@ -2046,8 +2046,8 @@ PetscErrorCode TSView(TS ts, PetscViewer viewer)
 
     PetscCall(PetscViewerDrawGetDraw(viewer, 0, &draw));
     PetscCall(PetscDrawGetCurrentPoint(draw, &x, &y));
-    PetscCall(PetscStrcpy(str, "TS: "));
-    PetscCall(PetscStrcat(str, ((PetscObject)ts)->type_name));
+    PetscCall(PetscStrncpy(str, "TS: ", sizeof(str)));
+    PetscCall(PetscStrlcat(str, ((PetscObject)ts)->type_name, sizeof(str)));
     PetscCall(PetscDrawStringBoxed(draw, x, y, PETSC_DRAW_BLACK, PETSC_DRAW_BLACK, str, NULL, &h));
     bottom = y - h;
     PetscCall(PetscDrawPushCurrentPoint(draw, x, bottom));
@@ -3000,7 +3000,7 @@ PetscErrorCode TSSetDuration(TS ts, PetscInt maxsteps, PetscReal maxtime)
   PetscValidLogicalCollectiveInt(ts, maxsteps, 2);
   PetscValidLogicalCollectiveReal(ts, maxtime, 3);
   if (maxsteps >= 0) ts->max_steps = maxsteps;
-  if (maxtime != PETSC_DEFAULT) ts->max_time = maxtime;
+  if (maxtime != (PetscReal)PETSC_DEFAULT) ts->max_time = maxtime;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -4780,13 +4780,13 @@ PetscErrorCode TSGetAdapt(TS ts, TSAdapt *adapt)
 PetscErrorCode TSSetTolerances(TS ts, PetscReal atol, Vec vatol, PetscReal rtol, Vec vrtol)
 {
   PetscFunctionBegin;
-  if (atol != PETSC_DECIDE && atol != PETSC_DEFAULT) ts->atol = atol;
+  if (atol != (PetscReal)PETSC_DECIDE && atol != (PetscReal)PETSC_DEFAULT) ts->atol = atol;
   if (vatol) {
     PetscCall(PetscObjectReference((PetscObject)vatol));
     PetscCall(VecDestroy(&ts->vatol));
     ts->vatol = vatol;
   }
-  if (rtol != PETSC_DECIDE && rtol != PETSC_DEFAULT) ts->rtol = rtol;
+  if (rtol != (PetscReal)PETSC_DECIDE && rtol != (PetscReal)PETSC_DEFAULT) ts->rtol = rtol;
   if (vrtol) {
     PetscCall(PetscObjectReference((PetscObject)vrtol));
     PetscCall(VecDestroy(&ts->vrtol));

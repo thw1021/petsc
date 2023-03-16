@@ -50,6 +50,7 @@ check-ci-settings:
     - gce-stage1
   script:
     - lib/petsc/bin/maint/check-ci-settings.sh
+
 #
 #  This provides the basic order of operations and options template for cloud based stage 1 tests.
 #  Not all test-short need to follow this template but most will.
@@ -75,10 +76,10 @@ check-ci-settings:
     - printf "CONFIG_OPTS:${CONFIG_OPTS}\n"
     - printf "PETSC_OPTIONS:$PETSC_OPTIONS\n"
     - if [ ! -z ${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME+x} ]; then printf "CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME\n" ;fi
-    - ${PYTHON} ./configure --with-debugging=0 COPTFLAGS='-O -march=native' CXXOPTFLAGS='-O -march=native' FOPTFLAGS='-O -march=native' ${CONFIG_OPTS}
-    - make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}"
-    - if [ ! -z ${ENABLE_CHECK+x} ]; then make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" check; fi
-    - make CFLAGS="${MAKE_TEST_CFLAGS}" CXXFLAGS="${MAKE_TEST_CXXFLAGS}" FFLAGS="${MAKE_TEST_FFLAGS}" allgtests-tap gmakesearch="${TEST_SEARCH}" TIMEOUT=${TIMEOUT}
+    - ${PYTHON} ./configure --with-debugging=0 COPTFLAGS='-O3 -march=native' CXXOPTFLAGS='-O3 -march=native' FOPTFLAGS='-O3 -march=native' ${CONFIG_OPTS}
+    - make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" CUDAFLAGS="${MAKE_CUDAFLAGS}"
+    - if [ ! -z ${ENABLE_CHECK+x} ]; then make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" CUDAFLAGS="${MAKE_CUDAFLAGS}" check; fi
+    - make CFLAGS="${MAKE_TEST_CFLAGS}" CXXFLAGS="${MAKE_TEST_CXXFLAGS}" FFLAGS="${MAKE_TEST_FFLAGS}" CUDAFLAGS="${MAKE_CUDAFLAGS}" allgtests-tap gmakesearch="${TEST_SEARCH}" TIMEOUT=${TIMEOUT}
   variables:
     PYTHON: python3
     MAKE_CFLAGS: -Werror
@@ -234,16 +235,35 @@ pause-for-approval:
   allow_failure: false
 
 #
+# Basic template for code coverage generation. Tests should additionally inherit from the more
+# specialized OS-specific versions instead of this one.
+#
+
+.coverage-generate:
+  variables:
+    RUN_GCOV: 1
+    RUN_GCOV_OPTIONS: --decisions
+
+.coverage-disable:
+  variables:
+    RUN_GCOV: 0
+
+#
 # This provides the basic order of operations and options template for stage-2,3 tests.
 # Not all stage-2,3 need to follow this template, but most will.
 #
 .stage-23:
-  extends: .test
+  extends:
+    - .test
+    - .coverage-generate
   script:
     - if [ ! -z ${LOAD_MODULES+x} ]; then module --trace load ${LOAD_MODULES}; module list; fi
     - if [ ! -z ${GCOV_MODULES+x} ]; then module --trace load ${GCOV_MODULES}; module list; fi
     - if [ ! -z ${INIT_SCRIPT+x} ]; then echo "sourcing ${INIT_SCRIPT}"; source ${INIT_SCRIPT}; fi
-    - if [ ! -z ${RUN_GCOV+x} ]; then gcovr --version; fi
+    - if [ "${RUN_GCOV}" == 1 ]; then
+        printf "RUN_GCOV_OPTIONS:$RUN_GCOV_OPTIONS\n";
+        gcovr --version;
+      fi
     - if [ -d ${HOME}/petsc-hash-pkgs/ ]; then find ${HOME}/petsc-hash-pkgs/ -maxdepth 1 -mindepth 1 -type d -mtime +25 -exec rm -rf {} \; ; fi
     - printf "PATH:$PATH\n"
     - printf "PYTHONPATH:$PYTHONPATH\n"
@@ -252,13 +272,12 @@ pause-for-approval:
     - printf "./config/examples/${TEST_ARCH}.py\n"
     - cat ./config/examples/${TEST_ARCH}.py
     - ./config/examples/${TEST_ARCH}.py || if [ -f naglicenseproblem ]; then exit 126; else exit 1; fi
-    - make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" || if [ -f naglicenseproblem ]; then exit 126; else exit 1; fi
-    - make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" check || if [ -f naglicenseproblem ]; then exit 126; else exit 1; fi
+    - make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" CUDAFLAGS="${MAKE_CUDAFLAGS}" || if [ -f naglicenseproblem ]; then exit 126; else exit 1; fi
+    - make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" CUDAFLAGS="${MAKE_CUDAFLAGS}" check || if [ -f naglicenseproblem ]; then exit 126; else exit 1; fi
     - make updatedatafiles
     - if [ -z ${DISABLE_PETSC4PY_TESTS+x} ]; then if [ -z ${ENABLE_PETSC4PY_LDPRELOAD+x} ]; then echo "NOT using LD_PRELOAD"; make petsc4pytest; else echo "using LD_PRELOAD"; LD_PRELOAD=${PWD}/${TEST_ARCH}/lib/libpetsc.so make petsc4pytest; fi; fi
-    - if [ -z ${DISABLE_TESTS+x} ]; then make cleantest && make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" allgtests-tap TIMEOUT=${TIMEOUT}  ${TEST_OPTS} || if [ -f naglicenseproblem ]; then exit 126; else exit 1; fi; fi
-    - if [ ! -z ${RUN_GCOV_OPTIONS+x} ]; then printf "RUN_GCOV_OPTIONS:$RUN_GCOV_OPTIONS\n"; fi
-    - if [ ! -z ${RUN_GCOV+x} ]; then make gcov PETSC_GCOV_OPTIONS="${RUN_GCOV_OPTIONS}"; fi
+    - if [ -z ${DISABLE_TESTS+x} ]; then make cleantest && make CFLAGS="${MAKE_CFLAGS}" CXXFLAGS="${MAKE_CXXFLAGS}" FFLAGS="${MAKE_FFLAGS}" CUDAFLAGS="${MAKE_CUDAFLAGS}" allgtests-tap TIMEOUT=${TIMEOUT}  ${TEST_OPTS} || if [ -f naglicenseproblem ]; then exit 126; else exit 1; fi; fi
+    - if [ "${RUN_GCOV}" == 1 ]; then make gcov PETSC_GCOV_OPTIONS="${RUN_GCOV_OPTIONS}"; fi
   artifacts:
     reports:
       junit: arch-*/tests/testresults.xml
@@ -270,7 +289,7 @@ pause-for-approval:
     - arch-*/tests/testresults.xml
     - arch-*/tests/test_arch-*_tap.log
     - arch-*/tests/test_arch-*_err.log
-    - arch-*/arch-*-gcovr-report.json.tar.gz
+    - arch-*/arch-*-gcovr-report.json.tar.bz2
     expire_in: 4 days
   variables:
     OPENBLAS_NUM_THREADS: 1
@@ -312,17 +331,9 @@ pause-for-approval:
     MAKE_CXXFLAGS: -Werror
     MAKE_FFLAGS: -Werror
 
-.coverage-generate:
-  variables:
-    RUN_GCOV: 1
-    RUN_GCOV_OPTIONS: --decisions
-
-.coverage-generate-u22:
-  extends: .coverage-generate
-  variables:
-    GCOV_MODULES: py-gcovr-5.2-gcc-11.2.0-wcsmyet
-
 .freebsd_test:
+  extends:
+    - .coverage-disable
   variables:
     MAKE_CFLAGS: -Werror
     MAKE_CXXFLAGS: -Werror
@@ -352,17 +363,9 @@ pause-for-approval:
     - date
     - ccache --show-stats
 
-.opensolaris_test:
-  before_script:
-    - date
-    - hostname
-    - uname -a
-    - nproc
-    - isainfo -x
-  after_script:
-    - date
-
 .mswin_test:
+  extends:
+    - .coverage-disable
   before_script:
     - date
     - hostname
@@ -384,6 +387,7 @@ osx-m1:
   extends:
     - .stage-3
     - .osx_test
+    - .coverage-disable
   tags:
     - os:macos-m1
   variables:
@@ -450,6 +454,7 @@ linux-emcc:
   extends:
     - .stage-2
     - .linux_test
+    - .coverage-disable
   tags:
     - gce-stage2
   variables:
@@ -493,6 +498,7 @@ linux-hip-double:
   extends:
     - .stage-3
     - .linux_test_noflags
+    - .coverage-disable
   tags:
     - gpu:amd, os:linux
   variables:
@@ -503,6 +509,7 @@ linux-sycl-double:
   extends:
     - .stage-3
     - .linux_test_nofflags
+    - .coverage-disable
   tags:
     - gce-u22-stage3, linux-fast
   variables:
@@ -511,15 +518,14 @@ linux-sycl-double:
     TEST_OPTS: query=requires queryval=kokkos_kernels
     MAKE_CFLAGS: -Wno-expected-file-type -Werror
 
-linux-cuda-pkgs-gcov:
+linux-cuda-pkgs:
   extends:
     - .stage-3
     - .linux_test
-    - .coverage-generate-u22
   tags:
     - cuda-stage3
   variables:
-    TEST_ARCH: arch-ci-linux-cuda-pkgs-gcov
+    TEST_ARCH: arch-ci-linux-cuda-pkgs
     # run all tests that:
     # 1. require cuda, OR
     # 2. require device, OR
@@ -533,6 +539,7 @@ linux-cuda112-omp:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-disable
   tags:
     - cuda-stage3
   variables:
@@ -560,11 +567,13 @@ linux-cuda-double-64idx:
   variables:
     TEST_ARCH: arch-ci-linux-cuda-double-64idx
     TEST_OPTS: -j15 query=requires queryval=cuda
+    MAKE_CUDAFLAGS: --compiler-options -Wall,-Wunused-parameter,-Wno-deprecated-declarations,-Werror
 
 linux-cuda-single-cxx:
   extends:
     - .stage-3
     - .linux_test_noflags
+    - .coverage-disable
   tags:
     - cuda-stage3
   variables:
@@ -587,6 +596,7 @@ linux-clang-cuda:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-disable
   tags:
     - cuda-stage3
   variables:
@@ -619,6 +629,7 @@ linux-cmplx-single:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-disable
   tags:
     - name:si
   variables:
@@ -647,6 +658,7 @@ linux-knl:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-disable
   tags:
     - name:petsc-knl-01
   variables:
@@ -658,27 +670,28 @@ linux-intel-mkl-single:
   extends:
     - .stage-3
     - .linux_test_nofflags
+    - .coverage-disable
   tags:
     - name:petsc-knl-01
   variables:
     TEST_ARCH: arch-ci-linux-intel-mkl-single
     LOAD_MODULES: intel-oneapi-compilers/2022.0.2 intel-oneapi-mkl/2022.0.2 intel-oneapi-mpi/2021.5.1
 
-linux-cxx-cmplx-pkgs-64idx-gcov:
+linux-cxx-cmplx-pkgs-64idx:
   extends:
     - .stage-3
     - .linux_test
-    - .coverage-generate-u22
   tags:
     - gce-u22-stage3
   variables:
-    TEST_ARCH: arch-ci-linux-cxx-cmplx-pkgs-64idx-gcov
+    TEST_ARCH: arch-ci-linux-cxx-cmplx-pkgs-64idx
 
 # Set env vars for 'Kokkos + OpenMP' tests, so that they won't give warnings
 linux-pkgs-dbg-ftn-interfaces:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-disable
   tags:
     - gce-u22-stage3
   variables:
@@ -712,6 +725,7 @@ linux-pkgs-opt:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-disable
   tags:
     - gce-u22-stage3, linux-fast
   variables:
@@ -719,25 +733,23 @@ linux-pkgs-opt:
     LOAD_MODULES: gcc/12.1.0
     MAKE_CXXFLAGS: -Wno-deprecated-declarations -Werror
 
-linux-pkgs-gcov:
+linux-pkgs-dbg:
   extends:
     - .stage-3
     - .linux_test
-    - .coverage-generate-u22
   tags:
     - gce-u22-stage3, linux-gcov
   variables:
-    TEST_ARCH: arch-ci-linux-pkgs-gcov
+    TEST_ARCH: arch-ci-linux-pkgs-dbg
 
-linux-matlab-ilp64-gcov:
+linux-matlab-ilp64:
   extends:
     - .stage-3
     - .linux_test
-    - .coverage-generate-u22
   tags:
     - gce-u22-stage3, linux-gcov
   variables:
-    TEST_ARCH: arch-ci-linux-matlab-ilp64-gcov
+    TEST_ARCH: arch-ci-linux-matlab-ilp64
     LOAD_MODULES: gcc/9.4.0 matlab/R2022a
   allow_failure: true
 
@@ -745,6 +757,7 @@ linux-pgi:
   extends:
     - .stage-3
     - .linux_test_noflags
+    - .coverage-disable
   tags:
     - gce-u22-stage3, linux-mcpu
   variables:
@@ -768,6 +781,7 @@ linux-intel-cmplx:
   extends:
     - .stage-3
     - .linux_test_nofflags
+    - .coverage-disable
   tags:
     - gce-u22-stage3
   variables:
@@ -788,6 +802,7 @@ linux-analyzer:
   extends:
     - .stage-3
     - .linux_test
+    - .coverage-disable
   tags:
     - gce-u22-stage2
   script:
@@ -816,6 +831,7 @@ linux-intel:
   extends:
     - .stage-3
     - .linux_test_nofflags
+    - .coverage-disable
   tags:
     - gce-u22-stage3
   variables:
@@ -890,6 +906,15 @@ linux-64idx-i8-uni:
   variables:
     TEST_ARCH: arch-ci-linux-64idx-i8-uni
 
+linux-misc-32bit:
+  extends:
+    - .stage-3
+    - .linux_test
+  tags:
+    - gce-u22-stage3
+  variables:
+    TEST_ARCH: arch-ci-linux-misc-32bit
+
 mswin-intel-cxx-cmplx:
   extends:
     - .stage-3
@@ -931,37 +956,11 @@ mswin-gnu:
 #  variables:
 #    TEST_ARCH: arch-ci-mswin-intel
 
-opensolaris-pkgs-opt:
-  extends:
-    - .stage-3
-    - .opensolaris_test
-  tags:
-    - name:n-gage
-  variables:
-    TEST_ARCH: arch-ci-opensolaris-pkgs-opt
-
-opensolaris-cmplx-pkgs-dbg:
-  extends:
-    - .stage-3
-    - .opensolaris_test
-  tags:
-    - name:n-gage
-  variables:
-    TEST_ARCH: arch-ci-opensolaris-cmplx-pkgs-dbg
-
-opensolaris-misc:
-  extends:
-    - .stage-3
-    - .opensolaris_test
-  tags:
-    - name:n-gage
-  variables:
-    TEST_ARCH: arch-ci-opensolaris-misc
-
 osx-cxx-cmplx-pkgs-dbg:
   extends:
     - .stage-3
     - .osx_test
+    - .coverage-disable
   tags:
     - os:macos
   variables:
@@ -983,31 +982,58 @@ osx-dbg:
   extends:
     - .stage-3
     - .osx_test
+    - .coverage-disable
   tags:
     - os:macos
   variables:
     TEST_ARCH: arch-ci-osx-dbg
+    ASAN_OPTIONS: log_path=stdout
 
 osx-xsdk-opt:
   extends:
     - .stage-3
     - .osx_test
+    - .coverage-disable
   tags:
     - os:macos, opt
   variables:
     TEST_ARCH: arch-ci-osx-xsdk-opt
 
 # job for analyzing the coverage results and generating the various reports
-analyze-coverage:
+coverage-analyze:
   extends: .test
   stage: stage-4
   tags:
     - gce-u22-short
   dependencies:
-    - linux-pkgs-gcov
-    - linux-matlab-ilp64-gcov
-    - linux-cuda-pkgs-gcov
-    - linux-cxx-cmplx-pkgs-64idx-gcov
+    # stage-2
+    - linux-gcc-quad-64idx-dbg
+    - linux-gcc-pkgs-opt
+    - linux-gcc-complex-opt-32bit
+    # stage-3
+    - linux-pkgs-dbg
+    - linux-matlab-ilp64
+    - linux-cuda-pkgs
+    - linux-cxx-cmplx-pkgs-64idx
+    - linux-cuda-cmplx
+    - linux-cuda-double-64idx
+    - linux-cuda-uni-pkgs
+    - linux-viennacl
+    - linux-without-fc
+    - linux-gcc-cxx-avx2
+    - linux-clang-avx
+    - linux-pkgs-cxx-mlib
+    - linux-pkgs-valgrind
+    - linux-nagfor
+    - linux-xsdk-dbg
+    - linux-opt-misc
+    - linux-pkgs-64idx
+    - linux-64idx-i8
+    - linux-gcc-ifc-cmplx
+    - linux-opt-cxx-quad
+    - linux-ILP64
+    - linux-64idx-i8-uni
+    - osx-cxx-pkgs-opt
   variables:
     PYTHON: python3
     PETSC_ARCH: arch-ci-analyze-pipeline
@@ -1044,7 +1070,7 @@ analyze-coverage:
   tags:
     - gce-u22-short
   dependencies:
-    - analyze-coverage
+    - coverage-analyze
   script:
     - date
     - hostname
