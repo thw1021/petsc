@@ -181,8 +181,6 @@ PetscErrorCode KSPChebyshevGetBetas_Private(KSP ksp)
     cheb->betas[14] = 1.41421360695576;
     cheb->betas[15] = 1.51427891730346;
     break;
-  default:
-    SETERRQ(PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_OUTOFRANGE, "Chebyshev order (%" PetscInt_FMT ") not in range [0,16]", order);
   }
 
   PetscFunctionReturn(PETSC_SUCCESS);
