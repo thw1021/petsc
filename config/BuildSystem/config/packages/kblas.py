@@ -66,8 +66,9 @@ class Configure(config.package.Package):
       g.write('_USE_MAGMA_ = TRUE\n')
       g.write('_MAGMA_ROOT_ = '+self.magma.directory+'\n')
       g.write('_CUDA_ROOT_ = '+cudaDir+'\n')
-      if self.cuda.cudaArch:
-        gencodestr = '-DTARGET_SM='+self.cuda.cudaArch+' -arch sm_'+self.cuda.cudaArch
+      if self.cuda.cudaArchs:
+        gencodestr = '-DTARGET_SM='+self.cuda.cuda_min_arch
+        gencodestr += ' ' + ' '.join('-gencode arch=compute_'+a+',code=sm_'+a for a in self.cuda.cudaArchs)
       else:
         # kblas as of v4.0.0 uses __ldg intrinsics, available starting from 35
         gencodestr = '-DTARGET_SM=35 -arch sm_35'

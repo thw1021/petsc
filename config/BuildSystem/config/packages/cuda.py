@@ -53,6 +53,10 @@ class Configure(config.package.Package):
       output += '  CUDA underlying linker libraries: CUDA_CXXLIBS=' + self.setCompilers.CUDA_CXXLIBS + '\n'
     return output
 
+  @property
+  def cuda_min_arch(self):
+    return str(min(int(a) for a in self.cudaArchs))
+
   def setupDependencies(self, framework):
     config.package.Package.setupDependencies(self, framework)
     self.scalarTypes  = framework.require('PETSc.options.scalarTypes',self)
@@ -225,7 +229,7 @@ class Configure(config.package.Package):
     self.popLanguage()
 
     if 'with-cuda-dir' in self.argDB and os.path.exists(os.path.join(self.argDB['with-cuda-dir'],'include','cuda.h')):
-      self.cudaDir = os.path.join(self.argDB['with-cuda-dir'],'include','cuda.h')
+      self.cudaDir = self.argDB['with-cuda-dir']
     if self.setCompilers.isCygwin(self.log):  # Handle win32fe nvcc as the compiler name
       petscNvcc = petscNvcc.split(' ')[1]
 

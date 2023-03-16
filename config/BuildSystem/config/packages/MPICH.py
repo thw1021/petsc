@@ -66,7 +66,7 @@ class Configure(config.package.GNUPackage):
       mpich_device = 'ch3:nemesis'
     if self.cuda.found:
       args.append('--with-cuda='+self.cuda.cudaDir)
-      args.append('--with-cuda-sm='+self.cuda.cudaArch) # only for this arch; default is for all, resulting in a very large mpich library or even failures at mpich building
+      args.append('--with-cuda-sm='+','.join(self.cuda.cudaArchs))
       mpich_device = 'ch4:ucx'
     elif self.hip.found:
       args.append('--with-hip='+self.hip.hipDir)
@@ -100,4 +100,3 @@ class Configure(config.package.GNUPackage):
 
   def configure(self):
     return config.package.Package.configure(self)
-
