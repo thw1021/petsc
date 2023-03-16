@@ -230,6 +230,7 @@ PetscErrorCode KSPChebyshevEstEigSetUseNoisy(KSP ksp, PetscBool use)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
+  PetscValidLogicalCollectiveBool(ksp, use, 2);
   PetscTryMethod(ksp, "KSPChebyshevEstEigSetUseNoisy_C", (KSP, PetscBool), (ksp, use));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -279,6 +280,7 @@ PetscErrorCode KSPChebyshevSetKind(KSP ksp, ChebyshevKind kind)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
+  PetscValidLogicalCollectiveEnum(ksp, kind, 2);
   PetscTryMethod(ksp, "KSPChebyshevSetKind_C", (KSP, ChebyshevKind), (ksp, kind));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
