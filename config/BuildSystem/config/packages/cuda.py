@@ -59,6 +59,8 @@ class Configure(config.package.Package):
     self.compilers    = framework.require('config.compilers',self)
     self.thrust       = framework.require('config.packages.thrust',self)
     self.libraries    = framework.require('config.libraries', self)
+    self.cxxlibs      = framework.require('config.packages.cxxlibs',self)
+    self.deps         = [self.cxxlibs]
     self.odeps        = [self.thrust] # if user supplies thrust, install it first
     return
 
