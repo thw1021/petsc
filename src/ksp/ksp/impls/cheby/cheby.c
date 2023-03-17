@@ -1,7 +1,7 @@
 #include "chebyshevimpl.h"
 #include <../src/ksp/ksp/impls/cheby/chebyshevimpl.h> /*I "petscksp.h" I*/
 
-static const char *const ChebyshevKinds[] = {"FIRST", "FOURTH", "OPT_FOURTH", "ChebyshevKinds", "KSP_CHEBYSHEV_", 0};
+static const char *const ChebyshevKinds[] = {"FIRST", "FOURTH", "OPT_FOURTH", "ChebyshevKinds", "KSP_CHEBYSHEV_", NULL};
 
 static PetscErrorCode KSPReset_Chebyshev(KSP ksp)
 {
