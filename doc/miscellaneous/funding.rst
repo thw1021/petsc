@@ -10,6 +10,14 @@ PETSc is funded primarily by the United States Department of Energy, `Office of 
 
 Specific and previous funding sources:
 
+* High Energy Phsyics(HEP)SciDAC Partnership `Multiscale acceleration: Powering future discoveries in High Energy Physics <https://www.scidac.gov/partnerships/high-energy-physics.html>`__, 2022-
+
+* Biological and Environmental Research (BER)SciDAC Partnership `Capturing the Dynamics of Compound Flooding in E3SM <https://www.scidac.gov/partnerships/bio-env-research.html>`__, 2022-
+
+* Fusion Energy Science (FES) SciDAC Partnership `Partnership Center for High-fidelity Boundary Plasma Simulation (SciDAC-4) <https://www.scidac.gov/partnerships/fusion-energy.html>`__, 2005-
+
+* FES SciDAC Partnership `Simulation Center for Runaway Electron Avoidance and Mitigation <https://www.scidac.gov/partnerships/fusion-energy.html>`__, 2015-2023
+
 * Applied Mathematics Base (Core) funding, 1994-
 
 * Preparing PETSc/TAO for Exascale a DOE `Exascale Project
