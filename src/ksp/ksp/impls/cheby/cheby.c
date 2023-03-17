@@ -262,27 +262,27 @@ PetscErrorCode KSPChebyshevEstEigGetKSP(KSP ksp, KSP *kspest)
 }
 
 /*@
-   KSPChebyshevSetKind - set the kind of Chebyshev polynomial to use
+  KSPChebyshevSetKind - set the kind of Chebyshev polynomial to use
 
-   Logically Collective
+  Logically Collective
 
-   Input Parameters:
-+  ksp - linear solver context
--  kind - `KSP_CHEBYSHEV_FOURTH` or `KSP_CHEBYSHEV_OPT_FOURTH` to use 4th-kind Chebyshev polynomial smoothing
+  Input Parameters:
++ ksp  - Linear solver context
+- kind - The kind of Chebyshev polynomial to use
 
-   Options Database Key:
-.  -ksp_chebyshev_kind <first,fourth,opt_fourth> - which kind of Chebyshev polynomial to use
+  Options Database Key:
+. -ksp_chebyshev_kind <kind> - which kind of Chebyshev polynomial to use
 
-  Level: intermediate
+ Level: intermediate
 
-.seealso: [](chapter_ksp), `KSPCHEBYSHEV`
+.seealso: [](chapter_ksp), `KSPCHEBYSHEV` `KSPChebyshevKind`
 @*/
 PetscErrorCode KSPChebyshevSetKind(KSP ksp, KSPChebyshevKind kind)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
   PetscValidLogicalCollectiveEnum(ksp, kind, 2);
-  PetscTryMethod(ksp, "KSPChebyshevSetKind_C", (KSP, KSPChebyshevKind), (ksp, kind));
+  PetscUseMethod(ksp, "KSPChebyshevSetKind_C", (KSP, KSPChebyshevKind), (ksp, kind));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -329,7 +329,7 @@ static PetscErrorCode KSPSetFromOptions_Chebyshev(KSP ksp, PetscOptionItems *Pet
   }
 
   cheb->chebykind = KSP_CHEBYSHEV_FIRST; /* Default to 1st-kind Chebyshev polynomial */
-  PetscCall(PetscOptionsEnum("-ksp_chebyshev_kind", "Type of Chebyshev polynomial", "", KSPChebyshevKinds, (PetscEnum)cheb->chebykind, (PetscEnum *)&cheb->chebykind, NULL));
+  PetscCall(PetscOptionsEnum("-ksp_chebyshev_kind", "Type of Chebyshev polynomial", "KSPChebyshevKind", KSPChebyshevKinds, (PetscEnum)cheb->chebykind, (PetscEnum *)&cheb->chebykind, NULL));
 
   /* We need to estimate eigenvalues; need to set this here so that KSPSetFromOptions() is called on the estimator */
   if ((cheb->emin == 0. || cheb->emax == 0.) && !cheb->kspest) PetscCall(KSPChebyshevEstEigSet(ksp, PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE));

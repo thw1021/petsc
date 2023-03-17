@@ -24,6 +24,6 @@ typedef struct {
 } KSP_Chebyshev;
 
 /* given the polynomial order, return tabulated beta coefficients for use in opt. 4th-kind Chebyshev smoother */
-PETSC_INTERN PetscErrorCode KSPChebyshevGetBetas_Private(KSP ksp);
+PETSC_INTERN PetscErrorCode KSPChebyshevGetBetas_Private(KSP);
 
 #endif // PETSC_CHEBYSHEVIMPL_H

@@ -193,15 +193,14 @@ PETSC_EXTERN PetscErrorCode KSPBuildSolution(KSP, Vec, Vec *);
 PETSC_EXTERN PetscErrorCode KSPBuildResidual(KSP, Vec, Vec, Vec *);
 
 /*E
-
   KSPChebyshevKind - Which Chebyshev polynomial to use
 
   Values:
-+ `KSP_CHEBYSHEV_FIRST` - "classic" first-kind Chebyshev polynomial
-. `KSP_CHEBYSHEV_FOURTH` - fourth-kind Chebyshev polynomial
++ `KSP_CHEBYSHEV_FIRST`      - "classic" first-kind Chebyshev polynomial
+. `KSP_CHEBYSHEV_FOURTH`     - fourth-kind Chebyshev polynomial
 - `KSP_CHEBYSHEV_OPT_FOURTH` - optimized fourth-kind Chebyshev polynomial
 
-   Level: intermediate
+  Level: intermediate
 
 .seealso: [](chapter_ksp), `KSPCHEBYSHEV`, `KSPChebyshevSetKind`
 E*/
