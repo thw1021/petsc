@@ -146,7 +146,7 @@ class Configure(config.package.CMakePackage):
           os.environ['PATH'] = nvccpath+':'+path
       if hasattr(self.cuda,'cudaArch'):
         genToName = {'3': 'KEPLER','5': 'MAXWELL', '6': 'PASCAL', '7': 'VOLTA', '8': 'AMPERE', '9': 'LOVELACE', '10': 'HOPPER'}
-        generation = self.cuda.cudaArchSingle()[:-1] # cudaArch is a number 'nn', such as '75'
+        generation = self.cuda.cudaArchSingle()[:-1]  # cudaArchSingle() returns a number 'nn', such as '75'
         try:
           # Kokkos uses names like VOLTA75, AMPERE86
           deviceArchName = genToName[generation] + self.cuda.cudaArchSingle()
