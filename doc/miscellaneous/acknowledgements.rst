@@ -11,8 +11,7 @@ Earlier contributors to PETSc that are not captured in the repository system inc
 
 * Asbjorn Hoiland Aarrestad, (the explicit Runge-Kutta implementations).
 
-* G. Anciaux and J. Roman, (the interfaces to the partitioning packages PTScotch, Chaco,
-  and Party).
+* G. Anciaux and J. Roman, (the interfaces to the partitioning packages PTScotch, Chaco, and Party).
 
 * Allison Baker, (the flexible GMRES and the LGMRES code).
 
@@ -28,23 +27,23 @@ Earlier contributors to PETSc that are not captured in the repository system inc
 
 * Joel Malard, (the BICGStab(l) implementation).
 
-* Paul Mullowney, (improvement enhancements to portions of the Nvidia GPU interface).
+* Paul Mullowney, (improvement enhancements to portions of the original CUDA GPU interface).
 
 * Dave May, (Generalized Conjugate Residuals (GCR) implementation).
 
-* Peter Mell, (portions of the DA routines).
+* Peter Mell, (portions of the ``DMDA`` routines).
 
-* Richard Mills, (the AIJPERM matrix format for the Cray X1; universal F90 array
-  interface; enhancements to IBCGS; the AIJMKL matrix subclass).
+* Richard Mills, (the ``MATAIJPERM`` matrix format for the Cray X1; universal F90 array
+  interface; enhancements to ``KSPIBCGS``; the ``MATAIJMKL`` matrix subclass).
 
-* Victor Minden, (the Nvidia GPU interface).
+* Victor Minden, (the original CUDA GPU interface).
 
-* Todd Munson, (the LUSOL interface as well as the specialized KSPNASH, KSPSTCG, and
-  KSPGLTR Krylov solvers).
+* Todd Munson, (the LUSOL interface as well as the specialized ``KSPNASH``, ``KSPSTCG``, and
+  ``KSPGLTR`` Krylov solvers).
 
-* Robert Scheichl, (the MINRES implementation).
+* Robert Scheichl, (the original ``KSPMINRES`` implementation).
 
-* Karen Toonen, (designed and implemented much of the PETSc old web pages).
+* Karen Toonen, (designed and implemented much of the original PETSc web pages).
 
 * Desire Nuentsa Wakam, (the deflated GMRES implementation).
 
