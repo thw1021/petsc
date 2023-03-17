@@ -1,7 +1,7 @@
 #include "chebyshevimpl.h"
 #include <../src/ksp/ksp/impls/cheby/chebyshevimpl.h> /*I "petscksp.h" I*/
 
-static const char *const ChebyshevKinds[] = {"FIRST", "FOURTH", "OPT_FOURTH", "ChebyshevKinds", "KSP_CHEBYSHEV_", NULL};
+static const char *const KSPChebyshevKinds[] = {"FIRST", "FOURTH", "OPT_FOURTH", "KSPChebyshevKinds", "KSP_CHEBYSHEV_", NULL};
 
 static PetscErrorCode KSPReset_Chebyshev(KSP ksp)
 {
@@ -117,7 +117,7 @@ static PetscErrorCode KSPChebyshevEstEigSetUseNoisy_Chebyshev(KSP ksp, PetscBool
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode KSPChebyshevSetKind_Chebyshev(KSP ksp, ChebyshevKind kind)
+static PetscErrorCode KSPChebyshevSetKind_Chebyshev(KSP ksp, KSPChebyshevKind kind)
 {
   KSP_Chebyshev *cheb = (KSP_Chebyshev *)ksp->data;
 
@@ -277,12 +277,12 @@ PetscErrorCode KSPChebyshevEstEigGetKSP(KSP ksp, KSP *kspest)
 
 .seealso: [](chapter_ksp), `KSPCHEBYSHEV`
 @*/
-PetscErrorCode KSPChebyshevSetKind(KSP ksp, ChebyshevKind kind)
+PetscErrorCode KSPChebyshevSetKind(KSP ksp, KSPChebyshevKind kind)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
   PetscValidLogicalCollectiveEnum(ksp, kind, 2);
-  PetscTryMethod(ksp, "KSPChebyshevSetKind_C", (KSP, ChebyshevKind), (ksp, kind));
+  PetscTryMethod(ksp, "KSPChebyshevSetKind_C", (KSP, KSPChebyshevKind), (ksp, kind));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -329,7 +329,7 @@ static PetscErrorCode KSPSetFromOptions_Chebyshev(KSP ksp, PetscOptionItems *Pet
   }
 
   cheb->chebykind = KSP_CHEBYSHEV_FIRST; /* Default to 1st-kind Chebyshev polynomial */
-  PetscCall(PetscOptionsEnum("-ksp_chebyshev_kind", "Type of Chebyshev polynomial", "", ChebyshevKinds, (PetscEnum)cheb->chebykind, (PetscEnum *)&cheb->chebykind, NULL));
+  PetscCall(PetscOptionsEnum("-ksp_chebyshev_kind", "Type of Chebyshev polynomial", "", KSPChebyshevKinds, (PetscEnum)cheb->chebykind, (PetscEnum *)&cheb->chebykind, NULL));
 
   /* We need to estimate eigenvalues; need to set this here so that KSPSetFromOptions() is called on the estimator */
   if ((cheb->emin == 0. || cheb->emax == 0.) && !cheb->kspest) PetscCall(KSPChebyshevEstEigSet(ksp, PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE));
