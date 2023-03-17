@@ -1,8 +1,6 @@
 -include ../../../../petscdir.mk
 
-LOCDIR          = src/ts/tutorials/autodiff/
 MANSEC          = TS
-DIRS            =
 CLEANFILES      = TS-data-* *.tap
 
 LIB             = ${PETSC_TS_LIB}

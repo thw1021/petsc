@@ -1,8 +1,6 @@
 -include ../../../petscdir.mk
 
-SOURCEH   =
 DIRS      = viewer draw matlabengine random bag
-LOCDIR    = src/sys/classes/
 MANSEC    = Sys
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

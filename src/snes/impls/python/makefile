@@ -1,11 +1,7 @@
 -include ../../../../petscdir.mk
 
 SOURCEC  = pythonsnes.c
-SOURCEF  =
-SOURCEH  =
 LIBBASE  = libpetscsnes
-DIRS     =
-LOCDIR   = src/snes/impls/python/
 MANSEC   = SNES
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

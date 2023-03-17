@@ -1,10 +1,7 @@
 -include ../../../../../../petscdir.mk
 
 SOURCEC   = spacesum.c
-SOURCEF   =
 LIBBASE   = libpetscdm
-DIRS      =
-LOCDIR    = src/dm/dt/space/impls/sum/
 MANSEC    = DM
 SUBMANSEC = SPACE
 

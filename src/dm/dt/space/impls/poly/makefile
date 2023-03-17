@@ -1,10 +1,7 @@
 -include ../../../../../../petscdir.mk
 
 SOURCEC   = spacepoly.c
-SOURCEF   =
 LIBBASE   = libpetscdm
-DIRS      =
-LOCDIR    = src/dm/dt/space/impls/poly/
 MANSEC    = DM
 SUBMANSEC = SPACE
 

@@ -7,8 +7,6 @@ SOURCEC  = matusfft.c
 LIBBASE  = libpetscdm
 MANSEC   = DM
 SUBMANSEC= DMDA
-DIRS     =
-LOCDIR   = src/dm/impls/da/usfft/
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules

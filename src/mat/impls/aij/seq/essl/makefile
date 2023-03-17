@@ -4,12 +4,8 @@
 #requiresprecision double
 
 SOURCEC  = essl.c
-SOURCEF  =
-SOURCEH  =
 LIBBASE  = libpetscmat
-DIRS     =
 MANSEC   = Mat
-LOCDIR   = src/mat/impls/aij/seq/essl/
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules

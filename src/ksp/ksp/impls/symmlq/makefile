@@ -1,9 +1,7 @@
 -include ../../../../../petscdir.mk
 
 SOURCEC  = symmlq.c
-SOURCEF  =
 LIBBASE  = libpetscksp
-LOCDIR   = src/ksp/ksp/impls/symmlq/
 MANSEC   = KSP
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

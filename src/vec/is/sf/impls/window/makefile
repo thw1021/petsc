@@ -1,11 +1,8 @@
 -include ../../../../../../petscdir.mk
 #requiresdefine 'PETSC_HAVE_MPI_WIN_CREATE'
 
-SOURCEH	  =
 SOURCEC   = sfwindow.c
 LIBBASE	  = libpetscvec
-DIRS	  =
-LOCDIR    = src/vec/is/sf/impls/window/
 MANSEC    = Vec
 SUBMANSEC = PetscSF
 

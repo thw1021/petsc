@@ -1,8 +1,6 @@
 -include ../../petscdir.mk
 
-SOURCEH  =
 DIRS     = vec is pf f90-mod
-LOCDIR   = src/vec/
 MANSEC   = Vec
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

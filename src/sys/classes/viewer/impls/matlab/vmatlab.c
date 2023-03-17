@@ -11,18 +11,18 @@ typedef struct {
 /*@C
     PetscViewerMatlabPutArray - Puts an array into the `PETSCVIEWERMATLAB` viewer.
 
-      Not collective: only processor zero saves the array
+      Not collective: only processor zero saves `array`
 
     Input Parameters:
 +    mfile - the viewer
-.    m,n - the dimensions of the array
+.    m,n - the dimensions of `array`
 .    array - the array (represented in one dimension)
--    name - the name of the array
+-    name - the MATLAB name of `array`
 
    Level: advanced
 
     Note:
-    Only writes array values on processor 0.
+    Only writes `array` values on processor 0.
 
 .seealso: `PETSCVIEWERMATLAB`, `PetscViewerMatlabGetArray()`
 @*/
@@ -65,14 +65,14 @@ PetscErrorCode PetscViewerMatlabPutVariable(PetscViewer viewer, const char *name
 
     Input Parameters:
 +    mfile - the MATLAB file viewer
-.    m,n - the dimensions of the array
+.    m,n - the dimensions of `array`
 .    array - the array (represented in one dimension)
--    name - the name of the array
+-    name - the MATLAB name of `array`
 
    Level: advanced
 
     Note:
-    Only reads in array values on processor 0.
+    Only reads in `array` values on processor 0.
 
 .seealso: `PETSCVIEWERMATLAB`, `PetscViewerMatlabPutArray()`
 @*/
@@ -203,9 +203,11 @@ PETSC_EXTERN PetscErrorCode PetscViewerCreate_Matlab(PetscViewer viewer)
 +  comm - MPI communicator
 .  name - name of file
 -  type - type of file
-$    `FILE_MODE_WRITE` - create new file for MATLAB output
-$    `FILE_MODE_READ` - open existing file for MATLAB input
-$    `FILE_MODE_WRITE` - open existing file for MATLAB output
+.vb
+    FILE_MODE_WRITE - create new file for MATLAB output
+    FILE_MODE_READ - open existing file for MATLAB input
+    FILE_MODE_WRITE - open existing file for MATLAB output
+.ve
 
    Output Parameter:
 .  binv - PetscViewer for MATLAB output to use with the specified file
@@ -220,7 +222,7 @@ $    `FILE_MODE_WRITE` - open existing file for MATLAB output
    This only saves `Vec`s it cannot be used to save `Mat`s. We recommend using the `PETSCVIEWERBINARY` to save objects to be loaded into MATLAB
    instead of this routine.
 
-   PETSc must be configured with the option -with-matlab for this functionality
+   PETSc must be configured with the option `--with-matlab` for this functionality
 
 .seealso: `PETSCVIEWERMATLAB`, `PetscViewerASCIIOpen()`, `PetscViewerPushFormat()`, `PetscViewerDestroy()`, `PETSCVIEWERBINARY`, `PetscViewerBinaryOpen()`
           `VecView()`, `MatView()`, `VecLoad()`, `MatLoad()`
@@ -297,7 +299,7 @@ PetscViewer PETSC_VIEWER_MATLAB_(MPI_Comm comm)
       PetscFunctionReturn(NULL);
     }
     if (!flg) {
-      ierr = PetscStrcpy(fname, "matlaboutput.mat");
+      ierr = PetscStrncpy(fname, "matlaboutput.mat", sizeof(fname));
       if (ierr) {
         PetscError(PETSC_COMM_SELF, __LINE__, "PETSC_VIEWER_MATLAB_", __FILE__, PETSC_ERR_PLIB, PETSC_ERROR_REPEAT, " ");
         PetscFunctionReturn(NULL);

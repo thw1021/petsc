@@ -1,8 +1,6 @@
 -include ../../../petscdir.mk
 
-SOURCEH   =
 DIRS      = is sf ao section utils tests
-LOCDIR    = src/vec/is/
 MANSEC    = Vec
 SUBMANSEC = IS
 

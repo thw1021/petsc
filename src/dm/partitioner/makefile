@@ -1,8 +1,6 @@
 -include ../../../petscdir.mk
 
-SOURCEH  =
 DIRS     = interface impls tests
-LOCDIR   = src/dm/partitioner/
 MANSEC   = DM
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

@@ -1,9 +1,6 @@
 -include ../../../../petscdir.mk
 
-LOCDIR		 = src/tao/complementarity/tutorials/
 MANSEC		 = Tao
-DOCS		 =
-DIRS		 =
 CLEANFILES       = minsurf1 blackscholes
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

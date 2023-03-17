@@ -1,12 +1,10 @@
 -include ../../../../petscdir.mk
 
 SOURCEC  = pack.c packm.c
-SOURCEF  =
 SOURCEH  = packimpl.h
 LIBBASE  = libpetscdm
 MANSEC   = DM
 DIRS     = tests
-LOCDIR   = src/dm/impls/composite/
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules

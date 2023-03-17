@@ -1,8 +1,6 @@
 -include ../../petscdir.mk
 
-SOURCEH  =
 DIRS     = pc ksp f90-mod
-LOCDIR   = src/ksp/
 MANSEC   = KSP
 
 include ${PETSC_DIR}/lib/petsc/conf/variables

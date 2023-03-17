@@ -1,10 +1,7 @@
 -include ../../../../../../../petscdir.mk
 
-SOURCEH   =
 SOURCEC   = sfgather.c
 LIBBASE   = libpetscvec
-DIRS      =
-LOCDIR    = src/vec/is/sf/impls/basic/gather
 MANSEC    = Vec
 SUBMANSEC = PetscSF
 

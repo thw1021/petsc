@@ -1,11 +1,8 @@
 -include ../../../../petscdir.mk
 
 SOURCEC  = ksponly.c
-SOURCEF  =
-SOURCEH  =
 LIBBASE  = libpetscsnes
 MANSEC   = SNES
-LOCDIR   = src/snes/impls/ksponly/
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules

@@ -4,7 +4,6 @@
 # See also conf for additional commands.
 #
 ALL: all
-LOCDIR	 = ./
 DIRS	 = src include tutorials interfaces share/petsc/matlab
 
 # next line defines PETSC_DIR and PETSC_ARCH if they are not set
@@ -69,11 +68,11 @@ info:
 	-@echo "Using PETSc directory: ${PETSC_DIR}"
 	-@echo "Using PETSc arch: ${PETSC_ARCH}"
 	-@echo "-----------------------------------------"
-	-@grep "define PETSC_VERSION" ${PETSC_DIR}/include/petscversion.h | ${SED} "s/........//"
+	-@grep "define PETSC_VERSION" ${PETSC_DIR}/include/petscversion.h | ${SED} "s/........//" | head -n 7
 	-@echo "-----------------------------------------"
 	-@echo "Using configure Options: ${CONFIGURE_OPTIONS}"
 	-@echo "Using configuration flags:"
-	-@grep "\#define " ${PETSCCONF_H}
+	-@grep "\#define " ${PETSCCONF_H} | tail -n +2
 	-@echo "-----------------------------------------"
 	-@echo "Using C compile: ${PETSC_CCOMPILE_SINGLE}"
 	-@if [  "${MPICC_SHOW}" != "" ]; then \
@@ -122,8 +121,8 @@ info:
 	-@echo "------------------------------------------"
 	-@echo "Using mpiexec: ${MPIEXEC}"
 	-@echo "------------------------------------------"
-	-@echo "Using MAKE: $(MAKE)"
-	-@echo "Using MAKEFLAGS: -j$(MAKE_NP) -l$(MAKE_LOAD) $(MAKEFLAGS)"
+	-@echo "Using MAKE: ${MAKE}"
+	-@echo "Default MAKEFLAGS: MAKE_NP:${MAKE_NP} MAKE_LOAD:${MAKE_LOAD} MAKEFLAGS:${MAKEFLAGS}"
 	-@echo "=========================================="
 
 #
@@ -461,14 +460,14 @@ dist:
 #  See script for details
 #
 gcov:
-	-output_file_base_name=${PETSC_ARCH}-gcovr-report.json; \
+	output_file_base_name=${PETSC_ARCH}-gcovr-report.json; \
 	petsc_arch_dir=${PETSC_DIR}/${PETSC_ARCH}; \
-	pushd $${petsc_arch_dir}/obj && \
-	gcovr --json --output $${petsc_arch_dir}/$${output_file_base_name} --exclude '.*/ftn-auto/.*' --exclude-lines-by-pattern '^\s*SETERR.*' --exclude-throw-branches --exclude-unreachable-branches -j 4 --gcov-executable ${PETSC_COVERAGE_EXEC} --root ${PETSC_DIR} . ${PETSC_GCOV_OPTIONS} && \
-	${RM} -f $${petsc_arch_dir}/$${output_file_base_name}.tar.gz && \
-	tar -czf $${petsc_arch_dir}/$${output_file_base_name}.tar.gz -C $${petsc_arch_dir} ./$${output_file_base_name} && \
-	${RM} $${petsc_arch_dir}/$${output_file_base_name}; \
-	popd
+        tar_file=$${petsc_arch_dir}/$${output_file_base_name}.tar.bz2; \
+	cd $${petsc_arch_dir}/obj && \
+	gcovr --json --output $${petsc_arch_dir}/$${output_file_base_name} --exclude '.*/ftn-auto/.*' --exclude-lines-by-pattern '^\s*SETERR.*' --exclude-throw-branches --exclude-unreachable-branches -j 4 --gcov-executable "${PETSC_COVERAGE_EXEC}" --root ${PETSC_DIR} . ${PETSC_GCOV_OPTIONS} && \
+	${RM} -f $${tar_file} && \
+	tar --bzip2 -cf $${tar_file} -C $${petsc_arch_dir} ./$${output_file_base_name} && \
+	${RM} $${petsc_arch_dir}/$${output_file_base_name}
 
 mergegcov:
 	$(PYTHON) ${PETSC_DIR}/lib/petsc/bin/maint/gcov.py --merge-branch `lib/petsc/bin/maint/check-merge-branch.sh` --html --xml ${PETSC_GCOV_OPTIONS}

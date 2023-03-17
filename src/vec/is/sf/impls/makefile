@@ -1,10 +1,7 @@
 -include ../../../../../petscdir.mk
 
-SOURCEH	  =
-SOURCEC   =
 LIBBASE	  = libpetscvec
 DIRS	  = window basic
-LOCDIR    = src/vec/is/sf/impls/
 MANSEC    = Vec
 SUBMANSEC = PetscSF
 

@@ -2,13 +2,8 @@
 #requirespackage 'PETSC_HAVE_HTOOL'
 
 SOURCECXX = htool.cxx
-SOURCECU  =
-SOURCEF   =
-SOURCEH   =
 LIBBASE   = libpetscmat
-DIRS      =
 MANSEC    = Mat
-LOCDIR    = src/mat/impls/htool/
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules

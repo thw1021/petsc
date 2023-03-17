@@ -539,7 +539,7 @@ PetscErrorCode PetscStrreplace(MPI_Comm comm, const char aa[], char b[], size_t 
 {
   int           i = 0;
   size_t        l, l1, l2, l3;
-  char         *work, *par, *epar, env[1024], *tfree, *a = (char *)aa;
+  char         *work, *par, *epar = NULL, env[1024], *tfree, *a = (char *)aa;
   const char   *s[] = {"${PETSC_ARCH}", "${PETSC_DIR}", "${PETSC_LIB_DIR}", "${DISPLAY}", "${HOMEDIRECTORY}", "${WORKINGDIRECTORY}", "${USERNAME}", "${HOSTNAME}", NULL};
   char         *r[] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
   PetscBool     flag;
@@ -635,6 +635,8 @@ PetscErrorCode PetscStrreplace(MPI_Comm comm, const char aa[], char b[], size_t 
    Output Parameters:
 +  value - index of matching string (if found)
 -  found - boolean indicating whether string was found (can be `NULL`)
+
+   Level: developer
 
 .seealso: `PetscEnumFind()`
 @*/
@@ -752,4 +754,63 @@ int PetscCILinenumber(int linenumber)
 {
   if (!PetscCIEnabledPortableErrorOutput) return linenumber;
   return 0;
+}
+
+/*@C
+  PetscStrcat - Concatenates a string onto a given string
+
+  Not Collective, No Fortran Support
+
+  Input Parameters:
++ s - string to be added to
+- t - pointer to string to be added to end
+
+  Level: deprecated (since 3.18.5)
+
+  Notes:
+  It is recommended you use `PetscStrlcat()` instead of this routine.
+
+.seealso: `PetscStrlcat()`
+@*/
+PetscErrorCode PetscStrcat(char s[], const char t[])
+{
+  PetscFunctionBegin;
+  if (!t) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscValidCharPointer(s, 1);
+  strcat(s, t);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  PetscStrcpy - Copies a string
+
+  Not Collective, No Fortran Support
+
+  Input Parameters:
+. t - pointer to string
+
+  Output Parameter:
+. s - the copied string
+
+  Level: deprecated (since 3.18.5)
+
+  Notes:
+  It is recommended you use `PetscStrncpy()` (equivalently `PetscArraycpy()` or
+  `PetscMemcpy()`) instead of this routine.
+
+  `NULL` strings returns a string starting with zero.
+
+.seealso: `PetscStrncpy()`
+@*/
+PetscErrorCode PetscStrcpy(char s[], const char t[])
+{
+  PetscFunctionBegin;
+  if (t) {
+    PetscValidCharPointer(s, 1);
+    PetscValidCharPointer(t, 2);
+    strcpy(s, t);
+  } else if (s) {
+    s[0] = '\0';
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

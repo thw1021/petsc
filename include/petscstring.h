@@ -31,6 +31,9 @@ PETSC_EXTERN const char    *PetscBasename(const char[]);
 PETSC_EXTERN PetscErrorCode PetscEListFind(PetscInt, const char *const *, const char *, PetscInt *, PetscBool *);
 PETSC_EXTERN PetscErrorCode PetscEnumFind(const char *const *, const char *, PetscEnum *, PetscBool *);
 
+PETSC_EXTERN PetscErrorCode PetscStrcat(char[], const char[]);
+PETSC_EXTERN PetscErrorCode PetscStrcpy(char[], const char[]);
+
 #define PetscAssertPointer_Private(ptr, arg) PetscAssert((ptr), PETSC_COMM_SELF, PETSC_ERR_ARG_NULL, "Null Pointer: Parameter '" PetscStringize(ptr) "' # " PetscStringize(arg))
 
 /*@C
@@ -114,43 +117,6 @@ static inline PetscErrorCode PetscStrlen(const char s[], size_t *len)
 }
 
 /*@C
-  PetscStrcpy - Copies a string
-
-  Not Collective, No Fortran Support
-
-  Input Parameters:
-. t - pointer to string
-
-  Output Parameter:
-. s - the copied string
-
-  Level: intermediate
-
-  Notes:
-  `NULL` strings returns a string starting with zero. It is recommended you use
-  `PetscStrncpy()` (equivelently `PetscArraycpy()` or `PetscMemcpy()`) instead of this routine.
-
-.seealso: `PetscStrncpy()`, `PetscStrcat()`, `PetscStrlcat()`, `PetscStrallocpy()`,
-          `PetscArrycpy()`, `PetscMemcpy()`
-@*/
-static inline PetscErrorCode PetscStrcpy(char s[], const char t[])
-{
-  PetscFunctionBegin;
-  if (t) {
-    PetscAssertPointer_Private(s, 1);
-    PetscAssertPointer_Private(t, 2);
-#if PetscHasBuiltin(__builtin_strcpy)
-    __builtin_strcpy(s, t);
-#else
-    strcpy(s, t);
-#endif
-  } else if (s) {
-    s[0] = '\0';
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@C
   PetscStrallocpy - Allocates space to hold a copy of a string then copies the string in the new space
 
   Not Collective, No Fortran Support
@@ -169,7 +135,7 @@ static inline PetscErrorCode PetscStrcpy(char s[], const char t[])
   If `t` has previously been allocated then that memory is lost, you may need to `PetscFree()`
   the array before calling this routine.
 
-.seealso: `PetscStrArrayallocpy()`, `PetscStrcpy()`, `PetscStrNArrayallocpy()`
+.seealso: `PetscStrArrayallocpy()`, `PetscStrNArrayallocpy()`
 @*/
 static inline PetscErrorCode PetscStrallocpy(const char s[], char *t[])
 {
@@ -233,6 +199,22 @@ static inline PetscErrorCode PetscStrcmp(const char a[], const char b[], PetscBo
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#if defined(__GNUC__) && !defined(__clang__)
+  #if __GNUC__ >= 8
+    #define PETSC_SILENCE_WSTRINGOP_TRUNCATION_BEGIN \
+      do { \
+        _Pragma("GCC diagnostic push"); \
+        _Pragma("GCC diagnostic ignored \"-Wstringop-truncation\""); \
+      } while (0)
+    #define PETSC_SILENCE_WSTRINGOP_TRUNCATION_END _Pragma("GCC diagnostic pop")
+  #endif
+#endif
+
+#ifndef PETSC_SILENCE_WSTRINGOP_TRUNCATION_BEGIN
+  #define PETSC_SILENCE_WSTRINGOP_TRUNCATION_BEGIN (void)0
+  #define PETSC_SILENCE_WSTRINGOP_TRUNCATION_END   (void)0
+#endif
+
 /*@C
   PetscStrncpy - Copies a string up to a certain length
 
@@ -258,7 +240,7 @@ static inline PetscErrorCode PetscStrcmp(const char a[], const char b[], PetscBo
   Should this be `PetscStrlcpy()` to reflect its behavior which is like `strlcpy()` not
   `strncpy()`?
 
-.seealso: `PetscStrcpy()`, `PetscStrcat()`, `PetscStrlcat()`, `PetscStrallocpy()`
+.seealso: `PetscStrlcat()`, `PetscStrallocpy()`
 @*/
 static inline PetscErrorCode PetscStrncpy(char s[], const char t[], size_t n)
 {
@@ -266,55 +248,17 @@ static inline PetscErrorCode PetscStrncpy(char s[], const char t[], size_t n)
   if (s) PetscAssert(n, PETSC_COMM_SELF, PETSC_ERR_ARG_NULL, "Requires an output string of length at least 1 to hold the termination character");
   if (t) {
     PetscAssertPointer_Private(s, 1);
-#if defined(__GNUC__) && !defined(__clang__)
-  #if __GNUC__ >= 8
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wstringop-truncation"
-  #endif
-#endif
+    PETSC_SILENCE_WSTRINGOP_TRUNCATION_BEGIN;
 #if PetscHasBuiltin(__builtin_strncpy)
     __builtin_strncpy(s, t, n);
 #else
     strncpy(s, t, n);
 #endif
-#if defined(__GNUC__) && !defined(__clang__)
-  #if __GNUC__ >= 8
-    #pragma GCC diagnostic pop
-  #endif
-#endif
+    PETSC_SILENCE_WSTRINGOP_TRUNCATION_END;
     s[n - 1] = '\0';
   } else if (s) {
     s[0] = '\0';
   }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@C
-  PetscStrcat - Concatenates a string onto a given string
-
-  Not Collective, No Fortran Support
-
-  Input Parameters:
-+ s - string to be added to
-- t - pointer to string to be added to end
-
-  Level: intermediate
-
-  Notes:
-  It is recommended you use `PetscStrlcat()` instead of this routine.
-
-.seealso: `PetscStrcpy()`, `PetscStrncpy()`, `PetscStrlcat()`
-@*/
-static inline PetscErrorCode PetscStrcat(char s[], const char t[])
-{
-  PetscFunctionBegin;
-  if (!t) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscAssertPointer_Private(s, 1);
-#if PetscHasBuiltin(__builtin_strcat)
-  __builtin_strcat(s, t);
-#else
-  strcat(s, t);
-#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -335,7 +279,7 @@ static inline PetscErrorCode PetscStrcat(char s[], const char t[])
   original allocated space, not the length of the left-over space. This is
   similar to the BSD system call `strlcat()`.
 
-.seealso: `PetscStrcpy()`, `PetscStrncpy()`, `PetscStrcat()`
+.seealso: `PetscStrncpy()`
 @*/
 static inline PetscErrorCode PetscStrlcat(char s[], const char t[], size_t n)
 {
@@ -344,15 +288,20 @@ static inline PetscErrorCode PetscStrlcat(char s[], const char t[], size_t n)
   PetscFunctionBegin;
   if (!t) PetscFunctionReturn(PETSC_SUCCESS);
   PetscAssert(n, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "String buffer length must be positive");
-  PetscCall(PetscStrlen(t, &len));
+  PetscCall(PetscStrlen(s, &len));
+  PETSC_SILENCE_WSTRINGOP_TRUNCATION_BEGIN;
 #if PetscHasBuiltin(__builtin_strncat)
   __builtin_strncat(s, t, n - len);
 #else
   strncat(s, t, n - len);
 #endif
+  PETSC_SILENCE_WSTRINGOP_TRUNCATION_END;
   s[n - 1] = '\0';
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+#undef PETSC_SILENCE_WSTRINGOP_TRUNCATION_BEGIN
+#undef PETSC_SILENCE_WSTRINGOP_TRUNCATION_END
 
 /*@C
   PetscStrncmp - Compares two strings, up to a certain length
@@ -678,21 +627,21 @@ static inline PetscErrorCode PetscMemmove(void *a, const void *b, size_t n)
   memmove((char *)a, (const char *)b, n);
 #else
   if (a < b) {
-    if (a <= b - n) {
+    if ((char *)a <= (char *)b - n) {
       memcpy(a, b, n);
     } else {
-      const size_t ptr_diff = (size_t)(b - a);
+      const size_t ptr_diff = (size_t)((char *)b - (char *)a);
 
       memcpy(a, b, ptr_diff);
-      PetscCall(PetscMemmove((void *)b, b + ptr_diff, n - ptr_diff));
+      PetscCall(PetscMemmove((void *)b, (char *)b + ptr_diff, n - ptr_diff));
     }
   } else {
-    if (b <= a - n) {
+    if ((char *)b <= (char *)a - n) {
       memcpy(a, b, n);
     } else {
-      const size_t ptr_diff = (size_t)(a - b);
+      const size_t ptr_diff = (size_t)((char *)a - (char *)b);
 
-      memcpy((void *)(b + n), b + (n - ptr_diff), ptr_diff);
+      memcpy((void *)((char *)b + n), (char *)b + (n - ptr_diff), ptr_diff);
       PetscCall(PetscMemmove(a, b, n - ptr_diff));
     }
   }

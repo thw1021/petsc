@@ -128,7 +128,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
       filename[numChars + 1] = 0;
     }
     // Perform the actual temporary file creation
-    PetscCall(PetscStrcat(filename, "XXXXXX"));
+    PetscCall(PetscStrlcat(filename, "XXXXXX", sizeof(filename)));
     PetscCheck(mkstemp(filename) != -1, comm, PETSC_ERR_SYS, "Could not acquire temporary file");
 #else
     // Same thing, but for older C versions which don't have the safe form
