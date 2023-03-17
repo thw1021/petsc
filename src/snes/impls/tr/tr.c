@@ -347,6 +347,9 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
     PetscCall(PetscInfo(snes, "Using Krylov convergence test SNESTR_KSPConverged_Private\n"));
   }
 
+  /* Minimizing a scalar function, stop when negative curvature is detected */
+  if (objective) PetscCall(KSPSetConvergedNegativeCurvature(ksp, PETSC_TRUE));
+
   if (!snes->vec_func_init_set) {
     PetscCall(SNESComputeFunction(snes, X, F)); /* F(X) */
   } else snes->vec_func_init_set = PETSC_FALSE;
