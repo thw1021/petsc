@@ -13,10 +13,10 @@ typedef struct {
   PetscReal  emin_provided, emax_provided; /* provided by PCGAMG; discarded unless preconditioned by Jacobi */
   PetscReal *betas;                        /* store beta coefficients for 4th-kind Chebyshev smoother */
 
-  KSP           kspest;   /* KSP used to estimate eigenvalues */
-  PetscReal     tform[4]; /* transform from Krylov estimates to Chebyshev bounds */
-  PetscInt      eststeps; /* number of kspest steps in KSP used to estimate eigenvalues */
-  PetscBool     usenoisy; /* use noisy right hand side vector to estimate eigenvalues */
+  KSP              kspest;   /* KSP used to estimate eigenvalues */
+  PetscReal        tform[4]; /* transform from Krylov estimates to Chebyshev bounds */
+  PetscInt         eststeps; /* number of kspest steps in KSP used to estimate eigenvalues */
+  PetscBool        usenoisy; /* use noisy right hand side vector to estimate eigenvalues */
   KSPChebyshevKind chebykind;
   /* For tracking when to update the eigenvalue estimates */
   PetscObjectId    amatid, pmatid;
