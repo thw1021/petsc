@@ -132,6 +132,7 @@ PetscErrorCode SNESSolve_NEWTONLS(SNES snes)
   Vec                  Y, X, F;
   SNESLineSearch       linesearch;
   SNESConvergedReason  reason;
+  PetscErrorCode (*objective)(SNES, Vec, PetscReal *, void *);
 #if defined(PETSC_USE_INFO)
   PetscReal gnorm;
 #endif
@@ -182,6 +183,10 @@ PetscErrorCode SNESSolve_NEWTONLS(SNES snes)
   /* test convergence */
   PetscUseTypeMethod(snes, converged, 0, 0.0, 0.0, fnorm, &snes->reason, snes->cnvP);
   if (snes->reason) PetscFunctionReturn(PETSC_SUCCESS);
+
+  /* Minimizing a scalar function, stop when negative curvature is detected */
+  PetscCall(SNESGetObjective(snes, &objective, NULL));
+  if (objective) PetscCall(KSPSetConvergedNegativeCurvature(snes->ksp, PETSC_TRUE));
 
   for (i = 0; i < maxits; i++) {
     /* Call general purpose update function */
