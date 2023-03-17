@@ -45,7 +45,7 @@ Earlier contributors to PETSc that are not captured in the repository system inc
 
 * Karen Toonen, (designed and implemented much of the original PETSc web pages).
 
-* Desire Nuentsa Wakam, (the deflated GMRES implementation).
+* Desire Nuentsa Wakam, (the ``KSPDGMRES`` implementation).
 
 * Liyang Xu, (the interface to PVODE, now Sundials/CVODE).
 

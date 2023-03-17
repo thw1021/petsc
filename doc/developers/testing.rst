@@ -38,7 +38,7 @@ examining the errors is with this command:
 
    $ $EDITOR $PETSC_DIR/$PETSC_ARCH/tests/test*err.log
 
-This method can also be used for the PETSc CI pipeline jobs. For failed jobs you can download the
+This method can also be used for the PETSc continuous integration (CI) pipeline jobs. For failed jobs you can download the
 log files from the **artifacts download** tab on the right side:
 
 .. figure:: /images/developers/test-artifacts.png

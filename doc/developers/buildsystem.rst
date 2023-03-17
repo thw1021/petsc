@@ -105,7 +105,7 @@ support for dependent packages. It provides an object scaffolding for
 including a 3rd party package (more than 100 are now available) so that
 PETSc downloads, builds, and tests the package for inclusion. The native
 configure and build system for the package is used, and special support
-exists for AutoConf and CMake packages. No similar system exists in the other
+exists for Autoconf and CMake packages. No similar system exists in the other
 tools, which rely on static declarations, such as ``pkg-config`` or
 ``FindPackage.cmake`` files, that are not tested and often become
 obsolete. They also require that any dependent packages use the same
