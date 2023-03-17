@@ -18,7 +18,7 @@ Specific and previous funding sources:
 
 * FES SciDAC Partnership `Simulation Center for Runaway Electron Avoidance and Mitigation <https://www.scidac.gov/partnerships/fusion-energy.html>`__, 2015-2023
 
-* Exascale Computing Project `WDMApp https://www.exascaleproject.org/research-project/wdmapp`__, 2021
+* Exascale Computing Project `WDMApp <https://www.exascaleproject.org/research-project/wdmapp>`__, 2021
 
 * Applied Mathematics Base (Core) funding, 1994-
 
