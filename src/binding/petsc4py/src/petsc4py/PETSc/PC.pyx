@@ -484,11 +484,8 @@ cdef class PC(Object):
         CHKERR( PCHYPRESetEdgeConstantVectors(self.pc, ozz.vec, zoz.vec,
                                               zzo_vec) )
 
-
-
     def setHYPREAMSSetInteriorNodes(self, Vec interior):
         CHKERR(PCHYPREAMSSetInteriorNodes(self.pc, interior.vec))
-
 
     # --- Factor ---
 
