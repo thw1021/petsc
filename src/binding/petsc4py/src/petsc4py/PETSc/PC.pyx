@@ -490,7 +490,6 @@ cdef class PC(Object):
         CHKERR(PCHYPREAMSSetInteriorNodes(self.pc, interior.vec))
 
 
-
     # --- Factor ---
 
     def setFactorSolverType(self, solver):
