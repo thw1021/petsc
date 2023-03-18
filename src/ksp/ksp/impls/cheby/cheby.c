@@ -720,7 +720,11 @@ static PetscErrorCode KSPSetUp_Chebyshev(KSP ksp)
     break;
   }
 
-  PetscCall(PetscMalloc1(ksp->max_it, &cheb->betas));
+  if (ksp->max_it > cheb->num_betas_alloc) {
+    PetscCall(PetscFree(cheb->betas));
+    PetscCall(PetscMalloc1(ksp->max_it, &cheb->betas));
+    cheb->num_betas_alloc = ksp->max_it;
+  }
 
   // coefficients for 4th-kind Chebyshev
   for (PetscInt i = 0; i < ksp->max_it; i++) cheb->betas[i] = 1.0;

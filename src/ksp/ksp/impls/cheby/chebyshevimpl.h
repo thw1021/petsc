@@ -12,6 +12,7 @@ typedef struct {
   PetscReal  emin_computed, emax_computed; /* eigenvalues as computed by kspest, if computed */
   PetscReal  emin_provided, emax_provided; /* provided by PCGAMG; discarded unless preconditioned by Jacobi */
   PetscReal *betas;                        /* store beta coefficients for 4th-kind Chebyshev smoother */
+  PetscInt   num_betas_alloc;
 
   KSP              kspest;   /* KSP used to estimate eigenvalues */
   PetscReal        tform[4]; /* transform from Krylov estimates to Chebyshev bounds */
