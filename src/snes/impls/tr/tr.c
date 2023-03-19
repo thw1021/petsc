@@ -89,10 +89,10 @@ PetscErrorCode SNESNewtonTRSetFallbackType(SNES snes, SNESNewtonTRFallbackType f
 
    Input Parameters:
 +  snes - the nonlinear solver object
-.  func - [optional] function evaluation routine, see `SNESNewtonTRPreCheck()`  for the calling sequence
--  ctx  - [optional] user-defined context for private data for the function evaluation routine (may be NULL)
+.  func - [optional] function evaluation routine, for the calling sequence see `SNESNewtonTRPreCheck()`
+-  ctx  - [optional] user-defined context for private data for the function evaluation routine (may be `NULL`)
 
-   Level: intermediate
+   Level: deprecated (since 3.19)
 
    Note:
    This function is called BEFORE the function evaluation within the solver.
@@ -117,16 +117,18 @@ PetscErrorCode SNESNewtonTRSetPreCheck(SNES snes, PetscErrorCode (*func)(SNES, V
 /*@C
    SNESNewtonTRGetPreCheck - Gets the pre-check function
 
-   Not collective
+   Deprecated use `SNESNEWTONDCTRDC`
+
+   Not Collective
 
    Input Parameter:
 .  snes - the nonlinear solver context
 
    Output Parameters:
-+  func - [optional] function evaluation routine, see for the calling sequence `SNESNewtonTRPreCheck()`
--  ctx  - [optional] user-defined context for private data for the function evaluation routine (may be NULL)
++  func - [optional] function evaluation routine, for the calling sequence see `SNESNewtonTRPreCheck()`
+-  ctx  - [optional] user-defined context for private data for the function evaluation routine (may be `NULL`)
 
-   Level: intermediate
+   Level: deprecated (since 3.19)
 
 .seealso: `SNESNEWTONTR`, `SNESNewtonTRSetPreCheck()`, `SNESNewtonTRPreCheck()`
 @*/
@@ -152,10 +154,10 @@ PetscErrorCode SNESNewtonTRGetPreCheck(SNES snes, PetscErrorCode (**func)(SNES, 
 
    Input Parameters:
 +  snes - the nonlinear solver object
-.  func - [optional] function evaluation routine, see `SNESNewtonTRPostCheck()`  for the calling sequence
--  ctx  - [optional] user-defined context for private data for the function evaluation routine (may be NULL)
+.  func - [optional] function evaluation routine, for the calling sequence see `SNESNewtonTRPostCheck()`
+-  ctx  - [optional] user-defined context for private data for the function evaluation routine (may be `NULL`)
 
-   Level: intermediate
+   Level: deprecated (since 3.19)
 
    Note:
    This function is called BEFORE the function evaluation within the solver while the function set in
@@ -181,14 +183,14 @@ PetscErrorCode SNESNewtonTRSetPostCheck(SNES snes, PetscErrorCode (*func)(SNES, 
 /*@C
    SNESNewtonTRGetPostCheck - Gets the post-check function
 
-   Not collective
+   Not Collective
 
    Input Parameter:
 .  snes - the nonlinear solver context
 
    Output Parameters:
-+  func - [optional] function evaluation routine, see for the calling sequence `SNESNewtonTRPostCheck()`
--  ctx  - [optional] user-defined context for private data for the function evaluation routine (may be NULL)
++  func - [optional] function evaluation routine, for the calling sequence see `SNESNewtonTRPostCheck()`
+-  ctx  - [optional] user-defined context for private data for the function evaluation routine (may be `NULL`)
 
    Level: intermediate
 
@@ -292,6 +294,18 @@ static inline void PetscQuadraticRoots(PetscReal a, PetscReal b, PetscReal c, Pe
   *xp            = PetscMax(x1, x2);
 }
 
+/* Computes the quadratic model difference */
+static PetscErrorCode SNESNewtonTRQuadraticDelta(SNES snes, PetscBool has_objective, Vec Y, Vec GradF, Vec W, PetscReal *yTHy, PetscReal *gTy, PetscReal *deltaqm)
+{
+  PetscFunctionBegin;
+  PetscCall(MatMult(snes->jacobian, Y, W));
+  if (has_objective) PetscCall(VecDotRealPart(Y, W, yTHy));
+  else PetscCall(VecDotRealPart(W, W, yTHy)); /* Gauss-Newton approximation J^t * J */
+  PetscCall(VecDotRealPart(GradF, Y, gTy));
+  *deltaqm = -(-(*gTy) + 0.5 * (*yTHy)); /* difference in quadratic model, -gTy because SNES solves it this way */
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*
    SNESSolve_NEWTONTR - Implements Newton's Method with trust-region subproblem and adds dogleg Cauchy
    (Steepest Descent direction) step and direction if the trust region is not satisfied for solving system of
@@ -308,7 +322,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
   PetscReal                 auk, gfnorm, ycnorm, gTBg;
   KSP                       ksp;
   PetscBool                 already_done = PETSC_FALSE;
-  PetscBool                 clear_converged_test, rho_satisfied;
+  PetscBool                 clear_converged_test, rho_satisfied, has_objective;
   PetscVoidFunction         ksp_has_radius;
   SNES_TR_KSPConverged_Ctx *ctx;
   void                     *convctx;
@@ -317,15 +331,16 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
 
   PetscFunctionBegin;
   PetscCall(SNESGetObjective(snes, &objective, NULL));
+  has_objective = objective ? PETSC_TRUE : PETSC_FALSE;
 
-  maxits = snes->max_its;                               /* maximum number of iterations */
-  X      = snes->vec_sol;                               /* solution vector */
-  F      = snes->vec_func;                              /* residual vector */
-  Y      = snes->vec_sol_update;                        /* update vector */
-  G      = snes->work[0];                               /* updated residual */
-  W      = snes->work[1];                               /* temporary vector */
-  GradF  = !objective ? snes->work[2] : snes->vec_func; /* grad f = J^T F */
-  YU     = snes->work[3];                               /* work vector for dogleg method */
+  maxits = snes->max_its;                                   /* maximum number of iterations */
+  X      = snes->vec_sol;                                   /* solution vector */
+  F      = snes->vec_func;                                  /* residual vector */
+  Y      = snes->vec_sol_update;                            /* update vector */
+  G      = snes->work[0];                                   /* updated residual */
+  W      = snes->work[1];                                   /* temporary vector */
+  GradF  = !has_objective ? snes->work[2] : snes->vec_func; /* grad f = J^T F */
+  YU     = snes->work[3];                                   /* work vector for dogleg method */
 
   PetscCheck(!snes->xl && !snes->xu && !snes->ops->computevariablebounds, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
 
@@ -369,33 +384,31 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
   PetscUseTypeMethod(snes, converged, snes->iter, 0.0, 0.0, fnorm, &snes->reason, snes->cnvP);
   if (snes->reason) PetscFunctionReturn(PETSC_SUCCESS);
 
-  if (objective) PetscCall(SNESComputeObjective(snes, X, &fk));
+  if (has_objective) PetscCall(SNESComputeObjective(snes, X, &fk));
   else fk = 0.5 * PetscSqr(fnorm); /* obj(x) = 0.5 * ||F(x)||^2 */
 
   while (snes->iter < maxits) {
     PetscBool changed_y;
     PetscBool changed_w;
 
-    /* solve trust-region subproblem */
+    /* calculating GradF of minimization function only once */
     if (!already_done) {
       PetscCall(SNESComputeJacobian(snes, X, snes->jacobian, snes->jacobian_pre));
       SNESCheckJacobianDomainerror(snes);
+      if (has_objective) gfnorm = fnorm;
+      else {
+        PetscCall(MatMultTranspose(snes->jacobian, F, GradF)); /* grad f = J^T F */
+        PetscCall(VecNorm(GradF, NORM_2, &gfnorm));
+      }
     }
+    already_done = PETSC_TRUE;
+
+    /* solve trust-region subproblem */
     PetscCall(KSPCGSetRadius(snes->ksp, delta));
     PetscCall(KSPSetOperators(snes->ksp, snes->jacobian, snes->jacobian_pre));
     PetscCall(KSPSolve(snes->ksp, F, Y));
     SNESCheckKSPSolve(snes);
     PetscCall(KSPGetIterationNumber(snes->ksp, &lits));
-
-    /* calculating GradF of minimization function only once */
-    if (!already_done) {
-      if (objective) gfnorm = fnorm;
-      else {
-        PetscCall(MatMultTranspose(snes->jacobian, F, GradF)); /* grad f = J^T F */
-        PetscCall(VecNorm(GradF, NORM_2, &gfnorm));
-      }
-      already_done = PETSC_TRUE;
-    }
 
     /* decide what to do when the update is outside of trust region */
     PetscCall(VecNorm(Y, NORM_2, &ynorm));
@@ -408,7 +421,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
       case SNES_TR_FALLBACK_CAUCHY:
       case SNES_TR_FALLBACK_DOGLEG:
         PetscCall(MatMult(snes->jacobian, GradF, W));
-        if (objective) PetscCall(VecDotRealPart(GradF, W, &gTBg));
+        if (has_objective) PetscCall(VecDotRealPart(GradF, W, &gTBg));
         else PetscCall(VecDotRealPart(W, W, &gTBg)); /* B = J^t * J */
         /* Eqs 4.7 and 4.8 in Nocedal and Wright */
         auk = delta / gfnorm;
@@ -462,23 +475,15 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
     PetscCall(SNESNewtonTRPreCheck(snes, X, Y, &changed_y));
     PetscCall(VecNorm(Y, NORM_2, &ynorm));
 
-    /* the quadratic model difference */
-    PetscCall(MatMult(snes->jacobian, Y, W));
-    if (objective) PetscCall(VecDotRealPart(Y, W, &yTHy));
-    else PetscCall(VecDotRealPart(W, W, &yTHy)); /* Gauss-Newton approximation J^t * J */
-    PetscCall(VecDotRealPart(GradF, Y, &gTy));
-    deltaqm = -(-gTy + 0.5 * yTHy); /* difference in quadratic model, -gTy because SNES solves it this way */
+    /* compute the quadratic model difference */
+    PetscCall(SNESNewtonTRQuadraticDelta(snes, has_objective, Y, GradF, W, &yTHy, &gTy, &deltaqm));
 
     /* update */
     PetscCall(VecWAXPY(W, -1.0, Y, X)); /* Xkp1 */
     PetscCall(SNESNewtonTRPostCheck(snes, X, Y, W, &changed_y, &changed_w));
     if (changed_y) {
       /* Need to recompute the quadratic model difference */
-      PetscCall(MatMult(snes->jacobian, Y, W));
-      if (objective) PetscCall(VecDotRealPart(Y, W, &yTHy));
-      else PetscCall(VecDotRealPart(W, W, &yTHy));
-      PetscCall(VecDotRealPart(GradF, Y, &gTy));
-      deltaqm = -(-gTy + 0.5 * yTHy);
+      PetscCall(SNESNewtonTRQuadraticDelta(snes, has_objective, Y, GradF, YU, &yTHy, &gTy, &deltaqm));
       /* User changed Y but not W */
       if (!changed_w) PetscCall(VecWAXPY(W, -1.0, Y, X));
     }
@@ -486,7 +491,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
     /* Compute new objective function */
     PetscCall(SNESComputeFunction(snes, W, G)); /*  F(Xkp1) = G */
     PetscCall(VecNorm(G, NORM_2, &gnorm));
-    if (objective) PetscCall(SNESComputeObjective(snes, W, &fkp1));
+    if (has_objective) PetscCall(SNESComputeObjective(snes, W, &fkp1));
     else fkp1 = 0.5 * PetscSqr(gnorm);
     SNESCheckFunctionNorm(snes, fkp1);
 
@@ -618,7 +623,7 @@ static PetscErrorCode SNESView_NEWTONTR(SNES snes, PetscViewer viewer)
     Reference:
 .   * - "Numerical Optimization" by Nocedal and Wright, chapter 4.
 
-   Level: intermediate
+   Level: deprecated (since 3.19)
 
 .seealso: `SNESCreate()`, `SNES`, `SNESSetType()`, `SNESNEWTONLS`, `SNESSetTrustRegionTolerance()`,
           `SNESNewtonTRPreCheck()`, `SNESNewtonTRGetPreCheck()`, `SNESNewtonTRSetPostCheck()`, `SNESNewtonTRGetPostCheck()`,
