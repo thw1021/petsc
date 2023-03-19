@@ -1002,7 +1002,7 @@ cdef class DMPlexTransform(Object):
 
     def apply(self, DM dm, comm=None):
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
-        cdef DM newdm = DM()
+        cdef DMPlex newdm = DMPlex()
         CHKERR( DMClone(dm.dm, &newdm.dm) )
         CHKERR( DMPlexTransformApply(self.tr, dm.dm, &newdm.dm) )
         return newdm
