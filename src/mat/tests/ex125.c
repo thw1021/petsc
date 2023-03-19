@@ -13,7 +13,7 @@ int main(int argc, char **args)
   IS            perm, iperm;
   MatFactorInfo info;
   PetscRandom   rand;
-  PetscBool     flg, testMatSolve = PETSC_TRUE, testMatMatSolve = PETSC_TRUE, testMatMatSolveTranspose = PETSC_TRUE;
+  PetscBool     flg, testMatSolve = PETSC_TRUE, testMatMatSolve = PETSC_TRUE, testMatMatSolveTranspose = PETSC_TRUE, testMatSolveTranspose = PETSC_TRUE;
   PetscBool     chol = PETSC_FALSE, view = PETSC_FALSE, matsolvexx = PETSC_FALSE;
 #if defined(PETSC_HAVE_MUMPS)
   PetscBool test_mumps_opts = PETSC_FALSE;
@@ -66,6 +66,8 @@ int main(int argc, char **args)
 
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-view_factor", &view, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_matmatsolve", &testMatMatSolve, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_matmatsolvetranspose", &testMatMatSolveTranspose, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_matsolvetranspose", &testMatSolveTranspose, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-cholesky", &chol, NULL));
 #if defined(PETSC_HAVE_MUMPS)
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-test_mumps_opts", &test_mumps_opts, NULL));
@@ -90,7 +92,9 @@ int main(int argc, char **args)
     PetscCheck(!chol, PETSC_COMM_WORLD, PETSC_ERR_SUP, "SuperLU does not provide Cholesky!");
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, " SUPERLU LU:\n"));
     PetscCall(MatGetFactor(A, MATSOLVERSUPERLU, MAT_FACTOR_LU, &F));
-    matsolvexx = PETSC_TRUE;
+    matsolvexx               = PETSC_TRUE;
+    testMatSolveTranspose    = PETSC_FALSE;
+    testMatMatSolveTranspose = PETSC_FALSE;
     break;
 #endif
 #if defined(PETSC_HAVE_SUPERLU_DIST)
@@ -145,6 +149,8 @@ int main(int argc, char **args)
       PetscCall(PetscPrintf(PETSC_COMM_WORLD, " CUSPARSE LU:\n"));
       PetscCall(MatGetFactor(A, MATSOLVERCUSPARSE, MAT_FACTOR_LU, &F));
     }
+    testMatSolveTranspose    = PETSC_FALSE;
+    testMatMatSolveTranspose = PETSC_FALSE;
     break;
 #endif
   default:
@@ -198,8 +204,10 @@ int main(int argc, char **args)
 
   #if !defined(PETSC_USE_COMPLEX)
       /* Test MatGetInertia() */
-      PetscCall(MatGetInertia(F, &nneg, &nzero, &npos));
-      PetscCall(PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_WORLD, " MatInertia: nneg: %" PetscInt_FMT ", nzero: %" PetscInt_FMT ", npos: %" PetscInt_FMT "\n", nneg, nzero, npos));
+      if (flg) { /* A is symmetric */
+        PetscCall(MatGetInertia(F, &nneg, &nzero, &npos));
+        PetscCall(PetscViewerASCIIPrintf(PETSC_VIEWER_STDOUT_WORLD, " MatInertia: nneg: %" PetscInt_FMT ", nzero: %" PetscInt_FMT ", npos: %" PetscInt_FMT "\n", nneg, nzero, npos));
+      }
   #endif
     }
 #endif
@@ -324,6 +332,28 @@ int main(int argc, char **args)
         }
       }
     }
+
+    /* Test MatSolveTranspose() */
+    if (testMatSolveTranspose) {
+      for (nsolve = 0; nsolve < 2; nsolve++) {
+        PetscCall(VecSetRandom(x, rand));
+        PetscCall(VecCopy(x, u));
+        PetscCall(MatMultTranspose(A, x, b));
+
+        PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   %" PetscInt_FMT "-the MatSolveTranspose \n", nsolve));
+        PetscCall(MatSolveTranspose(F, b, x));
+
+        /* Check the error */
+        PetscCall(VecAXPY(u, -1.0, x)); /* u <- (-1.0)x + u */
+        PetscCall(VecNorm(u, NORM_2, &norm));
+        if (norm > tol) {
+          PetscReal resi;
+          PetscCall(VecAXPY(u, -1.0, b)); /* u <- (-1.0)b + u */
+          PetscCall(VecNorm(u, NORM_2, &resi));
+          PetscCall(PetscPrintf(PETSC_COMM_WORLD, "MatSolveTranspose: Norm of error %g, resi %g, numfact %" PetscInt_FMT "\n", (double)norm, (double)resi, nfact));
+        }
+      }
+    }
   }
 
   /* Free data structures */
@@ -411,6 +441,14 @@ int main(int argc, char **args)
       nsize: {{1 3}}
       requires: superlu_dist !complex
       args: -n 36 -mat_solver_type 1 -mat_superlu_dist_rowperm NOROWPERM
+      output_file: output/ex125_superlu_dist.out
+
+   test:
+      suffix: superlu_dist_3
+      nsize: {{1 3}}
+      requires: superlu_dist !complex
+      requires: datafilespath double !complex !defined(PETSC_USE_64BIT_INDICES) superlu_dist
+      args: -f ${DATAFILESPATH}/matrices/arco1 -mat_solver_type 1 -mat_superlu_dist_rowperm NOROWPERM
       output_file: output/ex125_superlu_dist.out
 
    test:
