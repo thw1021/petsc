@@ -273,7 +273,19 @@ PetscErrorCode KSPChebyshevEstEigGetKSP(KSP ksp, KSP *kspest)
   Options Database Key:
 . -ksp_chebyshev_kind <kind> - which kind of Chebyshev polynomial to use
 
- Level: intermediate
+  Note:
+  When using multigrid methods for problems with a poor quality coarse space (e.g., due to anisotropy or aggressive
+  coarsening), it is necessary for the smoother to handle smaller eigenvalues. With first-kind Chebyshev smoothing, this
+  requires using higher degree Chebyhev polynomials and reducing the lower end of the target spectrum, at which point
+  the whole target spectrum experiences about the same damping. Fourth kind Chebyshev polynomials (and the "optimized"
+  fourth kind) avoid the ad-hoc choice of lower bound and extend smoothing to smaller eigenvalues while preferentially
+  smoothing higher modes faster as needed to minimize the energy norm of the error.
+
+  References:
+  Malachi Phillips and Paul Fischer, Optimal Chebyshev Smoothers and One-sided V-cycles, https://arxiv.org/abs/2210.03179.
+  James Lottes, Optimal Polynomial Smoothers for Multigrid V-cycles, https://arxiv.org/abs/2202.08830.
+
+  Level: intermediate
 
 .seealso: [](chapter_ksp), `KSPCHEBYSHEV` `KSPChebyshevKind`
 @*/
