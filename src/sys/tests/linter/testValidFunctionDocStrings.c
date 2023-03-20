@@ -391,32 +391,61 @@ PetscErrorCode testPredeclarationCursorIgnored(int arg, int *another_arg)
 . bar - a bar
 - baz - a baz
 
-  Calling sequence of foo:
+  Calling sequence of `foo`:
 + foo_parm1 - an int
 . foo_parm2 - a double
 - foo_parm3 - a float
 
-  Calling sequence of bar:
+  Calling sequence of `bar`:
 + bar_parm1 - an int
 . bar_parm2 - a double
 - bar_parm3 - a float
 
-  Calling sequence of baz:
+  Calling sequence of `baz`:
 + bop       - a bop
 . blitz     - a blitz
 . baz_parm1 - an int
 . baz_parm2 - a double
 - baz_parm3 - a float
 
+  Level: developer
+
   Notes:
   But bars arguments should correctly match! Additionally, this function requires a 'C'
   interface marker!
-
-  Level: developer
 
 .seealso: `testPredeclarationCursorIgnored()`
 */
 PetscErrorCode testFunctionPointerArguments(int (*foo)(int, double, float), int (*bar)(int bar_parm1, double bar_parm2, float bar_parm3), void (*baz)(int (*bop)(void), void (*blitz)(void (*)(void)), int baz_parm1, double baz_parm2, float baz_parm3))
 {
   return 0;
+}
+
+/*@
+  testDeprecated - check that deprecated (since VERSION) works
+
+  Level: deprecated (since 3.17)
+
+.seealso: `testIllFormedDeprecated()`
+*/
+PetscErrorCode testDeprecated(void)
+{
+  return PETSC_SUCCESS;
+}
+
+/*@
+  testIllFormedDeprecated - check that deprecated (since VERSION) works
+
+  Input Parameters:
++ foo - a nonexistent foo
+. bar - a nonexistent bar
+- baz - a nonexistent baz
+
+  Level: dpcrtd (since 3.18.5)
+
+.seealso: `testDeprecated()`
+*/
+PetscErrorCode testIllFormedDeprecated(void)
+{
+  return PETSC_SUCCESS;
 }

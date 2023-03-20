@@ -12,33 +12,37 @@ static PetscErrorCode SNESNEWTONLSCheckLocalMin_Private(SNES snes, Mat A, Vec F,
   PetscReal a1;
   PetscBool hastranspose;
   Vec       W;
+  PetscErrorCode (*objective)(SNES, Vec, PetscReal *, void *);
 
   PetscFunctionBegin;
   *ismin = PETSC_FALSE;
-  PetscCall(MatHasOperation(A, MATOP_MULT_TRANSPOSE, &hastranspose));
-  PetscCall(VecDuplicate(F, &W));
-  if (hastranspose) {
-    /* Compute || J^T F|| */
-    PetscCall(MatMultTranspose(A, F, W));
-    PetscCall(VecNorm(W, NORM_2, &a1));
-    PetscCall(PetscInfo(snes, "|| J^T F|| %14.12e near zero implies found a local minimum\n", (double)(a1 / fnorm)));
-    if (a1 / fnorm < 1.e-4) *ismin = PETSC_TRUE;
-  } else {
-    Vec         work;
-    PetscScalar result;
-    PetscReal   wnorm;
+  PetscCall(SNESGetObjective(snes, &objective, NULL));
+  if (!objective) {
+    PetscCall(MatHasOperation(A, MATOP_MULT_TRANSPOSE, &hastranspose));
+    PetscCall(VecDuplicate(F, &W));
+    if (hastranspose) {
+      /* Compute || J^T F|| */
+      PetscCall(MatMultTranspose(A, F, W));
+      PetscCall(VecNorm(W, NORM_2, &a1));
+      PetscCall(PetscInfo(snes, "|| J^T F|| %14.12e near zero implies found a local minimum\n", (double)(a1 / fnorm)));
+      if (a1 / fnorm < 1.e-4) *ismin = PETSC_TRUE;
+    } else {
+      Vec         work;
+      PetscScalar result;
+      PetscReal   wnorm;
 
-    PetscCall(VecSetRandom(W, NULL));
-    PetscCall(VecNorm(W, NORM_2, &wnorm));
-    PetscCall(VecDuplicate(W, &work));
-    PetscCall(MatMult(A, W, work));
-    PetscCall(VecDot(F, work, &result));
-    PetscCall(VecDestroy(&work));
-    a1 = PetscAbsScalar(result) / (fnorm * wnorm);
-    PetscCall(PetscInfo(snes, "(F^T J random)/(|| F ||*||random|| %14.12e near zero implies found a local minimum\n", (double)a1));
-    if (a1 < 1.e-4) *ismin = PETSC_TRUE;
+      PetscCall(VecSetRandom(W, NULL));
+      PetscCall(VecNorm(W, NORM_2, &wnorm));
+      PetscCall(VecDuplicate(W, &work));
+      PetscCall(MatMult(A, W, work));
+      PetscCall(VecDot(F, work, &result));
+      PetscCall(VecDestroy(&work));
+      a1 = PetscAbsScalar(result) / (fnorm * wnorm);
+      PetscCall(PetscInfo(snes, "(F^T J random)/(|| F ||*||random|| %14.12e near zero implies found a local minimum\n", (double)a1));
+      if (a1 < 1.e-4) *ismin = PETSC_TRUE;
+    }
+    PetscCall(VecDestroy(&W));
   }
-  PetscCall(VecDestroy(&W));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -124,10 +128,13 @@ PetscErrorCode SNESSolve_NEWTONLS(SNES snes)
 {
   PetscInt             maxits, i, lits;
   SNESLineSearchReason lssucceed;
-  PetscReal            fnorm, gnorm, xnorm, ynorm;
+  PetscReal            fnorm, xnorm, ynorm;
   Vec                  Y, X, F;
   SNESLineSearch       linesearch;
   SNESConvergedReason  reason;
+#if defined(PETSC_USE_INFO)
+  PetscReal gnorm;
+#endif
 
   PetscFunctionBegin;
   PetscCheck(!snes->xl && !snes->xu && !snes->ops->computevariablebounds, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_WRONGSTATE, "SNES solver %s does not support bounds", ((PetscObject)snes)->type_name);
@@ -214,11 +221,13 @@ PetscErrorCode SNESSolve_NEWTONLS(SNES snes)
 
     if (PetscLogPrintInfo) PetscCall(SNESNEWTONLSCheckResidual_Private(snes, snes->jacobian, F, Y));
 
+#if defined(PETSC_USE_INFO)
+    gnorm = fnorm;
+#endif
     /* Compute a (scaled) negative update in the line search routine:
          X <- X - lambda*Y
        and evaluate F = function(X) (depends on the line search).
     */
-    gnorm = fnorm;
     PetscCall(SNESLineSearchApply(linesearch, X, F, &fnorm, Y));
     PetscCall(SNESLineSearchGetReason(linesearch, &lssucceed));
     PetscCall(SNESLineSearchGetNorms(linesearch, &xnorm, &fnorm, &ynorm));

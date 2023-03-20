@@ -160,26 +160,6 @@ PETSC_EXTERN FILE *PETSC_STDOUT;
 */
 PETSC_EXTERN FILE *PETSC_STDERR;
 
-/* PetscPragmaSIMD - from CeedPragmaSIMD */
-
-#if defined(__NEC__)
-  #define PetscPragmaSIMD _Pragma("_NEC ivdep")
-#elif defined(__INTEL_COMPILER) && !defined(_WIN32)
-  #define PetscPragmaSIMD _Pragma("vector")
-#elif defined(__GNUC__) && __GNUC__ >= 5 && !defined(__PGI)
-  #define PetscPragmaSIMD _Pragma("GCC ivdep")
-#elif defined(_OPENMP) && _OPENMP >= 201307
-  #if defined(_MSC_VER)
-    #define PetscPragmaSIMD __pragma(omp simd)
-  #else
-    #define PetscPragmaSIMD _Pragma("omp simd")
-  #endif
-#elif defined(PETSC_HAVE_CRAY_VECTOR)
-  #define PetscPragmaSIMD _Pragma("_CRI ivdep")
-#else
-  #define PetscPragmaSIMD
-#endif
-
 /*
   Handle inclusion when using clang compiler with CUDA support
   __float128 is not available for the device
@@ -1176,7 +1156,7 @@ PETSC_EXTERN PetscErrorCode PetscObjectCompose(PetscObject, const char[], PetscO
 PETSC_EXTERN PetscErrorCode PetscObjectRemoveReference(PetscObject, const char[]);
 PETSC_EXTERN PetscErrorCode PetscObjectQuery(PetscObject, const char[], PetscObject *);
 PETSC_EXTERN PetscErrorCode PetscObjectComposeFunction_Private(PetscObject, const char[], void (*)(void));
-#define PetscObjectComposeFunction(a, b, d) PetscObjectComposeFunction_Private((a), (b), (PetscVoidFunction)(d))
+#define PetscObjectComposeFunction(a, b, ...) PetscObjectComposeFunction_Private((a), (b), (PetscVoidFunction)(__VA_ARGS__))
 PETSC_EXTERN PetscErrorCode PetscObjectSetFromOptions(PetscObject);
 PETSC_EXTERN PetscErrorCode PetscObjectSetUp(PetscObject);
 PETSC_EXTERN PetscErrorCode PetscObjectSetPrintedOptions(PetscObject);
@@ -1566,7 +1546,7 @@ PETSC_EXTERN PetscErrorCode MPIU_File_read_at_all(MPI_File, MPI_Offset, void *, 
     PetscIntCast - casts a `PetscInt64` (which is 64 bits in size) to a `PetscInt` (which may be 32 bits in size), generates an
          error if the `PetscInt` is not large enough to hold the number.
 
-   Not Collective
+   Not Collective; No Fortran Support
 
    Input Parameter:
 .     a - the `PetscInt64` value
@@ -1578,8 +1558,6 @@ PETSC_EXTERN PetscErrorCode MPIU_File_read_at_all(MPI_File, MPI_Offset, void *, 
 
    Notes:
    If integers needed for the applications are too large to fit in 32 bit ints you can ./configure using --with-64-bit-indices to make `PetscInt` use 64 bit ints
-
-   Not available from Fortran
 
 .seealso: `PetscBLASInt`, `PetscMPIInt`, `PetscInt`, `PetscMPIIntCast()`, `PetscBLASIntCast()`, `PetscIntMultError()`, `PetscIntSumError()`
 @*/
@@ -1739,7 +1717,7 @@ static inline PetscErrorCode PetscMPIIntCast(PetscInt a, PetscMPIInt *b)
   PetscRealIntMultTruncate - Computes the product of a positive `PetscReal` and a positive
   `PetscInt` and truncates the value to slightly less than the maximal possible value.
 
-  Not Collective, Not available from Fortran
+  Not Collective; No Fortran Support
 
   Input Parameters:
 + a - The `PetscReal` value
@@ -1875,10 +1853,10 @@ static inline PetscErrorCode PetscIntMultError(PetscInt a, PetscInt b, PetscInt 
   PetscInt64 r = PetscInt64Mult(a, b);
 
   PetscFunctionBegin;
+  if (result) *result = (PetscInt)r;
   if (!PetscDefined(USE_64BIT_INDICES)) {
     PetscCheck(r <= PETSC_MAX_INT, PETSC_COMM_SELF, PETSC_ERR_SUP, "Product of two integers %" PetscInt_FMT " %" PetscInt_FMT " overflow, either you have an invalidly large integer error in your code or you must ./configure PETSc with --with-64-bit-indices for the case you are running", a, b);
   }
-  if (result) *result = (PetscInt)r;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1909,10 +1887,10 @@ static inline PetscErrorCode PetscIntSumError(PetscInt a, PetscInt b, PetscInt *
   PetscInt64 r = ((PetscInt64)a) + ((PetscInt64)b);
 
   PetscFunctionBegin;
+  if (result) *result = (PetscInt)r;
   if (!PetscDefined(USE_64BIT_INDICES)) {
     PetscCheck(r <= PETSC_MAX_INT, PETSC_COMM_SELF, PETSC_ERR_SUP, "Sum of two integers %" PetscInt_FMT " %" PetscInt_FMT " overflow, either you have an invalidly large integer error in your code or you must ./configure PETSc with --with-64-bit-indices for the case you are running", a, b);
   }
-  if (result) *result = (PetscInt)r;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2339,15 +2317,6 @@ PETSC_EXTERN PetscErrorCode MPIU_Win_shared_query(MPI_Win, PetscMPIInt, MPI_Aint
     List of external packages and queries on it
 */
 PETSC_EXTERN PetscErrorCode PetscHasExternalPackage(const char[], PetscBool *);
-
-/*
- OpenMP support
-*/
-#if defined(_OPENMP)
-  #define PetscPragmaOMP(...) _Pragma(PetscStringize(omp __VA_ARGS__))
-#else // no OpenMP so no threads
-  #define PetscPragmaOMP(...)
-#endif
 
 /* this cannot go here because it may be in a different shared library */
 PETSC_EXTERN PetscErrorCode PCMPIServerBegin(void);

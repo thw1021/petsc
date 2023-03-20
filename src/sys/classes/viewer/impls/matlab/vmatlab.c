@@ -11,11 +11,12 @@ typedef struct {
 /*@C
     PetscViewerMatlabPutArray - Puts an array into the `PETSCVIEWERMATLAB` viewer.
 
-      Not collective: only processor zero saves `array`
+      Not Collective: only processor zero saves `array`
 
     Input Parameters:
 +    mfile - the viewer
-.    m,n - the dimensions of `array`
+.    m - the first dimensions of `array`
+.    n - the second dimensions of `array`
 .    array - the array (represented in one dimension)
 -    name - the MATLAB name of `array`
 
@@ -65,7 +66,8 @@ PetscErrorCode PetscViewerMatlabPutVariable(PetscViewer viewer, const char *name
 
     Input Parameters:
 +    mfile - the MATLAB file viewer
-.    m,n - the dimensions of `array`
+.    m - the first dimensions of `array`
+.    n - the second dimensions of `array`
 .    array - the array (represented in one dimension)
 -    name - the MATLAB name of `array`
 
@@ -278,7 +280,7 @@ PetscViewer PETSC_VIEWER_MATLAB_(MPI_Comm comm)
   ierr = PetscCommDuplicate(comm, &ncomm, NULL);
   if (ierr) {
     PetscError(PETSC_COMM_SELF, __LINE__, "PETSC_VIEWER_MATLAB_", __FILE__, PETSC_ERR_PLIB, PETSC_ERROR_INITIAL, " ");
-    PetscFunctionReturn(PETSC_SUCCESS);
+    PetscFunctionReturn(NULL);
   }
   if (Petsc_Viewer_Matlab_keyval == MPI_KEYVAL_INVALID) {
     ierr = MPI_Comm_create_keyval(MPI_COMM_NULL_COPY_FN, MPI_COMM_NULL_DELETE_FN, &Petsc_Viewer_Matlab_keyval, 0);
@@ -299,7 +301,7 @@ PetscViewer PETSC_VIEWER_MATLAB_(MPI_Comm comm)
       PetscFunctionReturn(NULL);
     }
     if (!flg) {
-      ierr = PetscStrcpy(fname, "matlaboutput.mat");
+      ierr = PetscStrncpy(fname, "matlaboutput.mat", sizeof(fname));
       if (ierr) {
         PetscError(PETSC_COMM_SELF, __LINE__, "PETSC_VIEWER_MATLAB_", __FILE__, PETSC_ERR_PLIB, PETSC_ERROR_REPEAT, " ");
         PetscFunctionReturn(NULL);

@@ -337,10 +337,14 @@ M*/
 /*MC
   PETSC_NULLPTR - Standard way of indicating a null value or pointer
 
+  No Fortran Support
+
+  Level: beginner
+
   Notes:
-  Equivalent to NULL in C source, and nullptr in C++ source. Note that for the purposes of
+  Equivalent to `NULL` in C source, and nullptr in C++ source. Note that for the purposes of
   interoperability between C and C++, setting a pointer to `PETSC_NULLPTR` in C++ is functonially
-  equivalent to setting the same pointer to NULL in C. That is to say that the following
+  equivalent to setting the same pointer to `NULL` in C. That is to say that the following
   expressions are equivalent\:
 
 .vb
@@ -359,9 +363,6 @@ M*/
 .vb
   PETSC_NULLPTR == NULL
 .ve
-
-  Fortran Notes:
-  Not available in Fortran
 
   Example Usage:
 .vb
@@ -384,22 +385,21 @@ M*/
   files compiled with a C++ compiler may lead to unexpected side-effects in function overload
   resolution and/or compiler warnings.
 
-  Level: beginner
-
 .seealso: `PETSC_CONSTEXPR_14`, `PETSC_NODISCARD`
 M*/
 
 /*MC
   PETSC_CONSTEXPR_14 - C++14 constexpr
 
+  No Fortran Support
+
+  Level: beginner
+
   Notes:
   Equivalent to constexpr when using a C++ compiler that supports C++14. Expands to nothing
   if the C++ compiler does not support C++14 or when not compiling with a C++ compiler. Note
   that this cannot be used in cases where an empty expansion would result in invalid code. It
   is safe to use this in C source files.
-
-  Fortran Notes:
-  Not available in Fortran
 
   Example Usage:
 .vb
@@ -413,8 +413,6 @@ M*/
     return r;
   }
 .ve
-
-  Level: beginner
 
 .seealso: `PETSC_NULLPTR`, `PETSC_NODISCARD`
 M*/
@@ -860,9 +858,10 @@ $ #define PETSC_DONT_HAVE_FOO PetscCompl(PetscDefined(HAVE_FOO))
 M*/
 #define PetscCompl(b) PetscConcat_(PETSC_INTERNAL_COMPL_, PetscExpand(b))
 
-#if !defined(PETSC_SKIP_VARIADIC_MACROS)
-  /*MC
+/*MC
   PetscDefined - Determine whether a boolean macro is defined
+
+  No Fortran Support
 
   Synopsis:
   #include <petscmacros.h>
@@ -875,9 +874,6 @@ M*/
 . <return-value> - Either integer literal 0 or 1
 
   Notes:
-  Not available from Fortran, requires variadic macro support, definition is disabled by
-  defining `PETSC_SKIP_VARIADIC_MACROS`.
-
   `PetscDefined()` returns 1 if and only if "PETSC_ ## def" is defined (but empty) or defined to
   integer literal 1. In all other cases, `PetscDefined()` returns integer literal 0. Therefore
   this macro should not be used if its argument may be defined to a non-empty value other than
@@ -938,18 +934,20 @@ $ #define FooDefined(d) PetscDefined_(PetscConcat(FOO_,d))
 .seealso: `PetscHasAttribute()`, `PetscUnlikely()`, `PetscLikely()`, `PetscConcat()`,
           `PetscExpandToNothing()`, `PetscCompl()`
 M*/
-  #define PetscDefined_arg_1                                    shift,
-  #define PetscDefined_arg_                                     shift,
-  #define PetscDefined__take_second_expanded(ignored, val, ...) val
-  #define PetscDefined__take_second_expand(args)                PetscDefined__take_second_expanded args
-  #define PetscDefined__take_second(...)                        PetscDefined__take_second_expand((__VA_ARGS__))
-  #define PetscDefined__(arg1_or_junk)                          PetscDefined__take_second(arg1_or_junk 1, 0, at_)
-  #define PetscDefined_(value)                                  PetscDefined__(PetscConcat_(PetscDefined_arg_, value))
-  #define PetscDefined(def)                                     PetscDefined_(PetscConcat(PETSC_, def))
+#define PetscDefined_arg_1                                    shift,
+#define PetscDefined_arg_                                     shift,
+#define PetscDefined__take_second_expanded(ignored, val, ...) val
+#define PetscDefined__take_second_expand(args)                PetscDefined__take_second_expanded args
+#define PetscDefined__take_second(...)                        PetscDefined__take_second_expand((__VA_ARGS__))
+#define PetscDefined__(arg1_or_junk)                          PetscDefined__take_second(arg1_or_junk 1, 0, at_)
+#define PetscDefined_(value)                                  PetscDefined__(PetscConcat_(PetscDefined_arg_, value))
+#define PetscDefined(def)                                     PetscDefined_(PetscConcat(PETSC_, def))
 
-  /*MC
+/*MC
   PetscUnlikelyDebug - Hints the compiler that the given condition is usually false, eliding
   the check in optimized mode
+
+  No Fortran Support
 
   Synopsis:
   #include <petscmacros.h>
@@ -959,10 +957,6 @@ M*/
 
   Input Parameters:
 . cond - Boolean expression
-
-  Notes:
-  Not available from Fortran, requires variadic macro support, definition is disabled by
-  defining `PETSC_SKIP_VARIADIC_MACROS`.
 
   This returns the same truth value, it is only a hint to compilers that the result of cond is
   likely to be false. When PETSc is compiled in optimized mode this will always return
@@ -999,26 +993,28 @@ M*/
 
 .seealso: `PetscUnlikely()`, `PetscLikely()`, `PetscCall()`, `SETERRQ`
 M*/
-  #define PetscUnlikelyDebug(cond) (PetscDefined(USE_DEBUG) && PetscUnlikely(cond))
+#define PetscUnlikelyDebug(cond) (PetscDefined(USE_DEBUG) && PetscUnlikely(cond))
 
-  #if defined(PETSC_CLANG_STATIC_ANALYZER)
-    // silence compiler warnings when using -pedantic, this is only used by the linter and it cares
-    // not what ISO C allows
-    #define PetscMacroReturns_(retexpr, ...) \
-      __extension__({ \
-        __VA_ARGS__; \
-        retexpr; \
-      })
-  #else
-    #define PetscMacroReturns_(retexpr, ...) \
+#if defined(PETSC_CLANG_STATIC_ANALYZER)
+  // silence compiler warnings when using -pedantic, this is only used by the linter and it cares
+  // not what ISO C allows
+  #define PetscMacroReturns_(retexpr, ...) \
+    __extension__({ \
+      __VA_ARGS__; \
       retexpr; \
-      do { \
-        __VA_ARGS__; \
-      } while (0)
-  #endif
+    })
+#else
+  #define PetscMacroReturns_(retexpr, ...) \
+    retexpr; \
+    do { \
+      __VA_ARGS__; \
+    } while (0)
+#endif
 
-  /*MC
+/*MC
   PetscExpandToNothing - Expands to absolutely nothing at all
+
+  No Fortran Support
 
   Synopsis:
   #include <petscmacros.h>
@@ -1028,9 +1024,6 @@ M*/
 . __VA_ARGS__ - Anything at all
 
   Notes:
-  Not available from Fortran, requires variadic macro support, definition is disabled by
-  defining `PETSC_SKIP_VARIADIC_MACROS`.
-
   Must have at least 1 parameter.
 
   Example usage:
@@ -1042,9 +1035,9 @@ M*/
 
 .seealso: `PetscConcat()`, `PetscDefined()`, `PetscStringize()`, `PetscExpand()`
 M*/
-  #define PetscExpandToNothing(...)
+#define PetscExpandToNothing(...)
 
-  /*MC
+/*MC
   PetscMacroReturns - Define a macro body that returns a value
 
   Synopsis:
@@ -1118,11 +1111,9 @@ M*/
 
 .seealso: `PetscExpand()`, `PetscConcat()`, `PetscStringize()`
 M*/
-  #define PetscMacroReturns(retexpr, ...) PetscMacroReturns_(retexpr, __VA_ARGS__)
+#define PetscMacroReturns(retexpr, ...) PetscMacroReturns_(retexpr, __VA_ARGS__)
 
-  #define PetscMacroReturnStandard(...) PetscMacroReturns(PETSC_SUCCESS, __VA_ARGS__)
-
-#endif /* !PETSC_SKIP_VARIADIC_MACROS */
+#define PetscMacroReturnStandard(...) PetscMacroReturns(PETSC_SUCCESS, __VA_ARGS__)
 
 /*MC
   PETSC_STATIC_ARRAY_LENGTH - Return the length of a static array
@@ -1155,5 +1146,59 @@ M*/
 #define PETSC_REST_HELPER2(qty, ...) PETSC_REST_HELPER_##qty(__VA_ARGS__)
 #define PETSC_REST_HELPER(qty, ...)  PETSC_REST_HELPER2(qty, __VA_ARGS__)
 #define PETSC_REST_ARG(...)          PETSC_REST_HELPER(PETSC_NUM(__VA_ARGS__), __VA_ARGS__)
+
+#define PETSC_PRAGMA_DIAGNOSTIC_IGNORED_BEGIN_(name, ...) \
+  _Pragma(PetscStringize(name diagnostic push)) \
+  _Pragma(PetscStringize(name diagnostic ignored __VA_ARGS__))
+
+#define PETSC_PRAGMA_DIAGNOSTIC_IGNORED_END_(name) _Pragma(PetscStringize(name diagnostic pop))
+
+#if defined(__clang__)
+  #define PETSC_PRAGMA_DIAGNOSTIC_IGNORED_BEGIN(...) PETSC_PRAGMA_DIAGNOSTIC_IGNORED_BEGIN_(clang, __VA_ARGS__)
+  #define PETSC_PRAGMA_DIAGNOSTIC_IGNORED_END()      PETSC_PRAGMA_DIAGNOSTIC_IGNORED_END_(clang)
+#elif defined(__GNUC__) || defined(__GNUG__)
+  #define PETSC_PRAGMA_DIAGNOSTIC_IGNORED_BEGIN(...) PETSC_PRAGMA_DIAGNOSTIC_IGNORED_BEGIN_(GCC, __VA_ARGS__)
+  #define PETSC_PRAGMA_DIAGNOSTIC_IGNORED_END()      PETSC_PRAGMA_DIAGNOSTIC_IGNORED_END_(GCC)
+#endif
+
+#ifndef PETSC_PRAGMA_DIAGNOSTIC_IGNORED_BEGIN
+  #define PETSC_PRAGMA_DIAGNOSTIC_IGNORED_BEGIN(...)
+  #define PETSC_PRAGMA_DIAGNOSTIC_IGNORED_END(...)
+  // only undefine these if they are not used
+  #undef PETSC_PRAGMA_DIAGNOSTIC_IGNORED_BEGIN_
+  #undef PETSC_PRAGMA_DIAGNOSTIC_IGNORED_END_
+#endif
+
+/* OpenMP support */
+#if defined(_OPENMP)
+  #if defined(_MSC_VER)
+    #define PetscPragmaOMP(...) __pragma(__VA_ARGS__)
+  #else
+    #define PetscPragmaOMP(...) _Pragma(PetscStringize(omp __VA_ARGS__))
+  #endif
+#endif
+
+#ifndef PetscPragmaOMP
+  #define PetscPragmaOMP(...)
+#endif
+
+/* PetscPragmaSIMD - from CeedPragmaSIMD */
+#if defined(__NEC__)
+  #define PetscPragmaSIMD _Pragma("_NEC ivdep")
+#elif defined(__INTEL_COMPILER) && !defined(_WIN32)
+  #define PetscPragmaSIMD _Pragma("vector")
+#elif defined(__GNUC__)
+  #if __GNUC__ >= 5 && !defined(__PGI)
+    #define PetscPragmaSIMD _Pragma("GCC ivdep")
+  #endif
+#elif defined(_OPENMP) && _OPENMP >= 201307
+  #define PetscPragmaSIMD PetscPragmaOMP(simd)
+#elif defined(PETSC_HAVE_CRAY_VECTOR)
+  #define PetscPragmaSIMD _Pragma("_CRI ivdep")
+#endif
+
+#ifndef PetscPragmaSIMD
+  #define PetscPragmaSIMD
+#endif
 
 #endif /* PETSC_PREPROCESSOR_MACROS_H */

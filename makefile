@@ -133,7 +133,7 @@ matlabbin:
           echo "BEGINNING TO COMPILE MATLAB INTERFACE"; \
             if [ ! -d "${PETSC_DIR}/${PETSC_ARCH}/lib/petsc" ] ; then ${MKDIR}  ${PETSC_DIR}/${PETSC_ARCH}/lib/petsc; fi; \
             if [ ! -d "${PETSC_DIR}/${PETSC_ARCH}/lib/petsc/matlab" ] ; then ${MKDIR}  ${PETSC_DIR}/${PETSC_ARCH}/lib/petsc/matlab; fi; \
-            cd src/sys/classes/viewer/impls/socket/matlab && ${OMAKE_SELF} matlabcodes PETSC_ARCH=${PETSC_ARCH} PETSC_DIR=${PETSC_DIR}; \
+            cd src/sys/classes/viewer/impls/socket/mex-scripts && ${OMAKE_SELF} mex-scripts PETSC_ARCH=${PETSC_ARCH} PETSC_DIR=${PETSC_DIR}; \
             echo "========================================="; \
         fi
 #
@@ -460,14 +460,14 @@ dist:
 #  See script for details
 #
 gcov:
-	-output_file_base_name=${PETSC_ARCH}-gcovr-report.json; \
+	output_file_base_name=${PETSC_ARCH}-gcovr-report.json; \
 	petsc_arch_dir=${PETSC_DIR}/${PETSC_ARCH}; \
-	pushd $${petsc_arch_dir}/obj && \
-	gcovr --json --output $${petsc_arch_dir}/$${output_file_base_name} --exclude '.*/ftn-auto/.*' --exclude-lines-by-pattern '^\s*SETERR.*' --exclude-throw-branches --exclude-unreachable-branches -j 4 --gcov-executable ${PETSC_COVERAGE_EXEC} --root ${PETSC_DIR} . ${PETSC_GCOV_OPTIONS} && \
-	${RM} -f $${petsc_arch_dir}/$${output_file_base_name}.tar.gz && \
-	tar -czf $${petsc_arch_dir}/$${output_file_base_name}.tar.gz -C $${petsc_arch_dir} ./$${output_file_base_name} && \
-	${RM} $${petsc_arch_dir}/$${output_file_base_name}; \
-	popd
+        tar_file=$${petsc_arch_dir}/$${output_file_base_name}.tar.bz2; \
+	cd $${petsc_arch_dir}/obj && \
+	gcovr --json --output $${petsc_arch_dir}/$${output_file_base_name} --exclude '.*/ftn-auto/.*' --exclude-lines-by-pattern '^\s*SETERR.*' --exclude-throw-branches --exclude-unreachable-branches -j 4 --gcov-executable "${PETSC_COVERAGE_EXEC}" --root ${PETSC_DIR} . ${PETSC_GCOV_OPTIONS} && \
+	${RM} -f $${tar_file} && \
+	tar --bzip2 -cf $${tar_file} -C $${petsc_arch_dir} ./$${output_file_base_name} && \
+	${RM} $${petsc_arch_dir}/$${output_file_base_name}
 
 mergegcov:
 	$(PYTHON) ${PETSC_DIR}/lib/petsc/bin/maint/gcov.py --merge-branch `lib/petsc/bin/maint/check-merge-branch.sh` --html --xml ${PETSC_GCOV_OPTIONS}

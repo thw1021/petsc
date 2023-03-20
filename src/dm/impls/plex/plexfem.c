@@ -88,7 +88,7 @@ static PetscErrorCode DMPlexRestoreFEGeom(DMField coordField, IS pointIS, PetscQ
 /*@
   DMPlexGetScale - Get the scale for the specified fundamental unit
 
-  Not collective
+  Not Collective
 
   Input Parameters:
 + dm   - the `DM`
@@ -115,7 +115,7 @@ PetscErrorCode DMPlexGetScale(DM dm, PetscUnit unit, PetscReal *scale)
 /*@
   DMPlexSetScale - Set the scale for the specified fundamental unit
 
-  Not collective
+  Not Collective
 
   Input Parameters:
 + dm   - the `DM`
@@ -164,7 +164,7 @@ static PetscErrorCode DMPlexProjectRigidBody_Private(PetscInt dim, PetscReal t, 
 /*@
   DMPlexCreateRigidBody - For the default global section, create rigid body modes by function space interpolation
 
-  Collective on dm
+  Collective
 
   Input Parameters:
 + dm - the `DM`
@@ -187,6 +187,7 @@ PetscErrorCode DMPlexCreateRigidBody(DM dm, PetscInt field, MatNullSpace *sp)
   Vec          mode[6];
   PetscSection section, globalSection;
   PetscInt     dim, dimEmbed, Nf, n, m, mmin, d, i, j;
+  void       **ctxs;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)dm, &comm));
@@ -201,7 +202,7 @@ PetscErrorCode DMPlexCreateRigidBody(DM dm, PetscInt field, MatNullSpace *sp)
   PetscCall(DMGetLocalSection(dm, &section));
   PetscCall(DMGetGlobalSection(dm, &globalSection));
   PetscCall(PetscSectionGetConstrainedStorageSize(globalSection, &n));
-  PetscCall(PetscCalloc1(Nf, &func));
+  PetscCall(PetscCalloc2(Nf, &func, Nf, &ctxs));
   m = (dim * (dim + 1)) / 2;
   PetscCall(VecCreate(comm, &mode[0]));
   PetscCall(VecSetType(mode[0], dm->vectype));
@@ -213,11 +214,11 @@ PetscErrorCode DMPlexCreateRigidBody(DM dm, PetscInt field, MatNullSpace *sp)
   for (i = 1; i < m; ++i) PetscCall(VecDuplicate(mode[0], &mode[i]));
   for (d = 0; d < m; d++) {
     PetscInt ctx[2];
-    void    *voidctx = (void *)(&ctx[0]);
 
-    ctx[0] = dimEmbed;
-    ctx[1] = d;
-    PetscCall(DMProjectFunction(dm, 0.0, func, &voidctx, INSERT_VALUES, mode[d]));
+    ctxs[field] = (void *)(&ctx[0]);
+    ctx[0]      = dimEmbed;
+    ctx[1]      = d;
+    PetscCall(DMProjectFunction(dm, 0.0, func, ctxs, INSERT_VALUES, mode[d]));
   }
   /* Orthonormalize system */
   for (i = 0; i < mmin; ++i) {
@@ -232,14 +233,14 @@ PetscErrorCode DMPlexCreateRigidBody(DM dm, PetscInt field, MatNullSpace *sp)
   }
   PetscCall(MatNullSpaceCreate(comm, PETSC_FALSE, mmin, mode, sp));
   for (i = 0; i < m; ++i) PetscCall(VecDestroy(&mode[i]));
-  PetscCall(PetscFree(func));
+  PetscCall(PetscFree2(func, ctxs));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
   DMPlexCreateRigidBodies - For the default global section, create rigid body modes by function space interpolation
 
-  Collective on dm
+  Collective
 
   Input Parameters:
 + dm    - the `DM`
@@ -766,7 +767,7 @@ PetscErrorCode DMPlexCreateBasisRotation(DM dm, PetscReal alpha, PetscReal beta,
 . time   - The time
 . field  - The field to constrain
 . Nc     - The number of constrained field components, or 0 for all components
-. comps  - An array of constrained component numbers, or NULL for all components
+. comps  - An array of constrained component numbers, or `NULL` for all components
 . label  - The `DMLabel` defining constrained points
 . numids - The number of `DMLabel` ids for constrained points
 . ids    - An array of ids for constrained points
@@ -805,7 +806,7 @@ PetscErrorCode DMPlexInsertBoundaryValuesEssential(DM dm, PetscReal time, PetscI
 . locU   - A local vector with the input solution values
 . field  - The field to constrain
 . Nc     - The number of constrained field components, or 0 for all components
-. comps  - An array of constrained component numbers, or NULL for all components
+. comps  - An array of constrained component numbers, or `NULL` for all components
 . label  - The `DMLabel` defining constrained points
 . numids - The number of `DMLabel` ids for constrained points
 . ids    - An array of ids for constrained points
@@ -838,7 +839,7 @@ PetscErrorCode DMPlexInsertBoundaryValuesEssentialField(DM dm, PetscReal time, V
 /*@C
   DMPlexInsertBoundaryValuesEssentialBdField - Insert boundary values into a local vector using a function of the coordinates and boundary field data
 
-  Collective on dm
+  Collective
 
   Input Parameters:
 + dm     - The `DM`, with a `PetscDS` that matches the problem being constrained
@@ -846,12 +847,12 @@ PetscErrorCode DMPlexInsertBoundaryValuesEssentialField(DM dm, PetscReal time, V
 . locU   - A local vector with the input solution values
 . field  - The field to constrain
 . Nc     - The number of constrained field components, or 0 for all components
-. comps  - An array of constrained component numbers, or NULL for all components
+. comps  - An array of constrained component numbers, or `NULL` for all components
 . label  - The `DMLabel` defining constrained points
 . numids - The number of `DMLabel` ids for constrained points
 . ids    - An array of ids for constrained points
-. func   - A pointwise function giving boundary values, the calling sequence is given in DMProjectBdFieldLabelLocal()
-- ctx    - An optional user context for bcFunc
+. func   - A pointwise function giving boundary values, the calling sequence is given in `DMProjectBdFieldLabelLocal()`
+- ctx    - An optional user context for `func`
 
   Output Parameter:
 . locX   - A local vector to receive the boundary values
@@ -887,7 +888,7 @@ PetscErrorCode DMPlexInsertBoundaryValuesEssentialBdField(DM dm, PetscReal time,
 . Grad         - A vector with the FVM cell gradient information
 . field  - The field to constrain
 . Nc     - The number of constrained field components, or 0 for all components
-. comps  - An array of constrained component numbers, or NULL for all components
+. comps  - An array of constrained component numbers, or `NULL` for all components
 . label  - The `DMLabel` defining constrained points
 . numids - The number of `DMLabel` ids for constrained points
 . ids    - An array of ids for constrained points
@@ -1201,13 +1202,13 @@ PetscErrorCode DMComputeL2Diff_Plex(DM dm, PetscReal time, PetscErrorCode (**fun
 /*@C
   DMComputeL2DiffLocal - This function computes the L_2 difference between a function u and an FEM interpolant solution u_h.
 
-  Collective on dm
+  Collective
 
   Input Parameters:
 + dm     - The `DM`
 . time   - The time
 . funcs  - The functions to evaluate for each field component
-. ctxs   - Optional array of contexts to pass to each function, or NULL.
+. ctxs   - Optional array of contexts to pass to each function, or `NULL`.
 - localX - The coefficient vector u_h, a local vector
 
   Output Parameter:
@@ -1241,6 +1242,7 @@ PetscErrorCode DMPlexComputeL2DiffLocal(DM dm, PetscReal time, PetscErrorCode (*
   PetscCall(DMGetBasisTransformDM_Internal(dm, &tdm));
   PetscCall(DMGetBasisTransformVec_Internal(dm, &tv));
   PetscCall(DMHasBasisTransform(dm, &transform));
+  PetscCheck(numFields, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Number of fields is zero!");
   for (field = 0; field < numFields; ++field) {
     PetscObject  obj;
     PetscClassId id;
@@ -1612,17 +1614,17 @@ PetscErrorCode DMComputeL2FieldDiff_Plex(DM dm, PetscReal time, PetscErrorCode (
 /*@C
   DMPlexComputeL2DiffVec - This function computes the cellwise L_2 difference between a function u and an FEM interpolant solution u_h, and stores it in a Vec.
 
-  Collective on dm
+  Collective
 
   Input Parameters:
 + dm    - The `DM`
 . time  - The time
-. funcs - The functions to evaluate for each field component: NULL means that component does not contribute to error calculation
-. ctxs  - Optional array of contexts to pass to each function, or NULL.
+. funcs - The functions to evaluate for each field component: `NULL` means that component does not contribute to error calculation
+. ctxs  - Optional array of contexts to pass to each function, or `NULL`.
 - X     - The coefficient vector u_h
 
   Output Parameter:
-. D - A Vec which holds the difference ||u - u_h||_2 for each cell
+. D - A `Vec` which holds the difference ||u - u_h||_2 for each cell
 
   Level: developer
 
@@ -1735,9 +1737,9 @@ PetscErrorCode DMPlexComputeL2DiffVec(DM dm, PetscReal time, PetscErrorCode (**f
 }
 
 /*@
-  DMPlexComputeClementInterpolant - This function computes the L2 projection of the cellwise values of a function u onto P1, and stores it in a Vec.
+  DMPlexComputeClementInterpolant - This function computes the L2 projection of the cellwise values of a function u onto P1
 
-  Collective on dm
+  Collective
 
   Input Parameters:
 + dm - The `DM`
@@ -1867,9 +1869,9 @@ PetscErrorCode DMPlexComputeClementInterpolant(DM dm, Vec locX, Vec locC)
 }
 
 /*@
-  DMPlexComputeGradientClementInterpolant - This function computes the L2 projection of the cellwise gradient of a function u onto P1, and stores it in a Vec.
+  DMPlexComputeGradientClementInterpolant - This function computes the L2 projection of the cellwise gradient of a function u onto P1
 
-  Collective on dm
+  Collective
 
   Input Parameters:
 + dm - The `DM`
@@ -4268,7 +4270,7 @@ static PetscErrorCode DMConvertPlex_Internal(DM dm, DM *plex, PetscBool copy)
 /*@
   DMPlexGetGeometryFVM - Return precomputed geometric data
 
-  Collective on dm
+  Collective
 
   Input Parameter:
 . dm - The `DM`
@@ -4298,11 +4300,11 @@ PetscErrorCode DMPlexGetGeometryFVM(DM dm, Vec *facegeom, Vec *cellgeom, PetscRe
 /*@
   DMPlexGetGradientDM - Return gradient data layout
 
-  Collective on dm
+  Collective
 
   Input Parameters:
 + dm - The `DM`
-- fv - The PetscFV
+- fv - The `PetscFV`
 
   Output Parameter:
 . dmGrad - The layout for gradient values

@@ -813,7 +813,7 @@ PetscErrorCode TaoSetTolerances(Tao tao, PetscReal gatol, PetscReal grtol, Petsc
   PetscValidLogicalCollectiveReal(tao, grtol, 3);
   PetscValidLogicalCollectiveReal(tao, gttol, 4);
 
-  if (gatol != PETSC_DEFAULT) {
+  if (gatol != (PetscReal)PETSC_DEFAULT) {
     if (gatol < 0) {
       PetscCall(PetscInfo(tao, "Tried to set negative gatol -- ignored.\n"));
     } else {
@@ -822,7 +822,7 @@ PetscErrorCode TaoSetTolerances(Tao tao, PetscReal gatol, PetscReal grtol, Petsc
     }
   }
 
-  if (grtol != PETSC_DEFAULT) {
+  if (grtol != (PetscReal)PETSC_DEFAULT) {
     if (grtol < 0) {
       PetscCall(PetscInfo(tao, "Tried to set negative grtol -- ignored.\n"));
     } else {
@@ -831,7 +831,7 @@ PetscErrorCode TaoSetTolerances(Tao tao, PetscReal gatol, PetscReal grtol, Petsc
     }
   }
 
-  if (gttol != PETSC_DEFAULT) {
+  if (gttol != (PetscReal)PETSC_DEFAULT) {
     if (gttol < 0) {
       PetscCall(PetscInfo(tao, "Tried to set negative gttol -- ignored.\n"));
     } else {
@@ -870,7 +870,7 @@ PetscErrorCode TaoSetConstraintTolerances(Tao tao, PetscReal catol, PetscReal cr
   PetscValidLogicalCollectiveReal(tao, catol, 2);
   PetscValidLogicalCollectiveReal(tao, crtol, 3);
 
-  if (catol != PETSC_DEFAULT) {
+  if (catol != (PetscReal)PETSC_DEFAULT) {
     if (catol < 0) {
       PetscCall(PetscInfo(tao, "Tried to set negative catol -- ignored.\n"));
     } else {
@@ -879,7 +879,7 @@ PetscErrorCode TaoSetConstraintTolerances(Tao tao, PetscReal catol, PetscReal cr
     }
   }
 
-  if (crtol != PETSC_DEFAULT) {
+  if (crtol != (PetscReal)PETSC_DEFAULT) {
     if (crtol < 0) {
       PetscCall(PetscInfo(tao, "Tried to set negative crtol -- ignored.\n"));
     } else {
@@ -1383,10 +1383,10 @@ PetscErrorCode TaoResetStatistics(Tao tao)
 + tao - The tao solver context
 - func - The function
 
-  Calling sequence of func:
-$ func (Tao tao, PetscInt step);
-
-. step - The current step of the iteration
+  Calling sequence of `func`:
+$   PetscErrorCode func(Tao tao, PetscInt step);
++ tao - the optimizer context
+- step - The current step of the iteration
 
   Level: advanced
 
@@ -1414,9 +1414,8 @@ PetscErrorCode TaoSetUpdate(Tao tao, PetscErrorCode (*func)(Tao, PetscInt, void 
 - ctx - [optional] context for private data for the convergence routine
         (may be `NULL`)
 
-  Calling sequence of conv:
+  Calling sequence of `conv`:
 $   PetscErrorCode conv(Tao tao, void *ctx)
-
 + tao - the `Tao` object
 - ctx - [optional] convergence context
 
@@ -1449,11 +1448,10 @@ PetscErrorCode TaoSetConvergenceTest(Tao tao, PetscErrorCode (*conv)(Tao, void *
 -  mctx - [optional] user-defined context for private data for the
           monitor routine (may be `NULL`)
 
-   Calling sequence of mymonitor:
+   Calling sequence of `mymonitor`:
 .vb
-     PetscErrorCode mymonitor(Tao tao,void *mctx)
+     PetscErrorCode mymonitor(Tao tao, void *mctx)
 .ve
-
 +    tao - the `Tao` solver context
 -    mctx - [optional] monitoring context
 
@@ -2134,7 +2132,7 @@ PetscErrorCode TaoSetType(Tao tao, TaoType type)
    Synopsis:
    TaoRegister(char *name_solver,char *path,char *name_Create,PetscErrorCode (*routine_Create)(Tao))
 
-   Not collective
+   Not Collective
 
    Input Parameters:
 +  sname - name of a new user-defined solver
@@ -2279,7 +2277,7 @@ PetscErrorCode TaoSetIterationNumber(Tao tao, PetscInt iter)
 
    Level: intermediate
 
-   Notes:
+   Note:
    The total iteration count is updated after each solve, if there is a current
    `TaoSolve()` in progress then those iterations are not included in the count
 

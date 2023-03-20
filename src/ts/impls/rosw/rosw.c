@@ -811,8 +811,8 @@ PetscErrorCode TSRosWRegisterRos4(TSRosWType name, PetscReal gamma, PetscReal a2
   PetscFunctionBegin;
   /* Step 1: choose Gamma (input) */
   /* Step 2: choose a2,a3,a4; b1,b2,b3,b4 to satisfy order conditions */
-  if (a3 == PETSC_DEFAULT) a3 = (one / five - a2 / four) / (one / four - a2 / three); /* Eq 7.22 */
-  a4 = a3;                                                                            /* consequence of 7.20 */
+  if (a3 == (PetscReal)PETSC_DEFAULT) a3 = (one / five - a2 / four) / (one / four - a2 / three); /* Eq 7.22 */
+  a4 = a3;                                                                                       /* consequence of 7.20 */
 
   /* Solve order conditions 7.15a, 7.15c, 7.15e */
   M[0][0] = one;
@@ -1447,7 +1447,7 @@ static PetscErrorCode TSLoad_RosW(TS ts, PetscViewer viewer)
 /*@C
   TSRosWSetType - Set the type of Rosenbrock-W, `TSROSW`, scheme
 
-  Logically collective
+  Logically Collective
 
   Input Parameters:
 +  ts - timestepping context
@@ -1469,7 +1469,7 @@ PetscErrorCode TSRosWSetType(TS ts, TSRosWType roswtype)
 /*@C
   TSRosWGetType - Get the type of Rosenbrock-W scheme
 
-  Logically collective
+  Logically Collective
 
   Input Parameter:
 .  ts - timestepping context
@@ -1492,7 +1492,7 @@ PetscErrorCode TSRosWGetType(TS ts, TSRosWType *rostype)
 /*@C
   TSRosWSetRecomputeJacobian - Set whether to recompute the Jacobian at each stage. The default is to update the Jacobian once per step.
 
-  Logically collective
+  Logically Collective
 
   Input Parameters:
 +  ts - timestepping context

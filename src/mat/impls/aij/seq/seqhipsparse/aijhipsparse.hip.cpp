@@ -7,6 +7,7 @@
 #include <petscconf.h>
 #include <../src/mat/impls/aij/seq/aij.h> /*I "petscmat.h" I*/
 #include <../src/mat/impls/sbaij/seq/sbaij.h>
+#include <../src/mat/impls/dense/seq/dense.h> // MatMatMultNumeric_SeqDenseHIP_SeqDenseHIP_Internal()
 #include <../src/vec/vec/impls/dvecimpl.h>
 #include <petsc/private/vecimpl.h>
 #undef VecType
@@ -62,7 +63,6 @@ static PetscErrorCode MatBindToCPU_SeqAIJHIPSPARSE(Mat, PetscBool);
 static PetscErrorCode MatSetPreallocationCOO_SeqAIJHIPSPARSE(Mat, PetscCount, PetscInt[], PetscInt[]);
 static PetscErrorCode MatSetValuesCOO_SeqAIJHIPSPARSE(Mat, const PetscScalar[], InsertMode);
 
-PETSC_INTERN PetscErrorCode MatMatMultNumeric_SeqDenseHIP_SeqDenseHIP_Private(Mat, Mat, Mat, PetscBool, PetscBool);
 PETSC_INTERN PetscErrorCode MatProductSetFromOptions_SeqAIJ_SeqDense(Mat);
 PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJHIPSPARSE(Mat, MatType, MatReuse, Mat *);
 PETSC_EXTERN PetscErrorCode MatGetFactor_seqaijhipsparse_hipsparse_band(Mat, MatFactorType, Mat *);
@@ -2336,10 +2336,10 @@ static PetscErrorCode MatProductNumeric_SeqAIJHIPSPARSE_SeqDENSEHIP(Mat C)
   PetscCall(MatDenseRestoreArrayReadAndMemType(B, &barray));
   if (product->type == MATPRODUCT_RARt) {
     PetscCall(MatDenseRestoreArrayWriteAndMemType(mmdata->X, &carray));
-    PetscCall(MatMatMultNumeric_SeqDenseHIP_SeqDenseHIP_Private(B, mmdata->X, C, PETSC_FALSE, PETSC_FALSE));
+    PetscCall(MatMatMultNumeric_SeqDenseHIP_SeqDenseHIP_Internal(B, mmdata->X, C, PETSC_FALSE, PETSC_FALSE));
   } else if (product->type == MATPRODUCT_PtAP) {
     PetscCall(MatDenseRestoreArrayWriteAndMemType(mmdata->X, &carray));
-    PetscCall(MatMatMultNumeric_SeqDenseHIP_SeqDenseHIP_Private(B, mmdata->X, C, PETSC_TRUE, PETSC_FALSE));
+    PetscCall(MatMatMultNumeric_SeqDenseHIP_SeqDenseHIP_Internal(B, mmdata->X, C, PETSC_TRUE, PETSC_FALSE));
   } else PetscCall(MatDenseRestoreArrayWriteAndMemType(C, &carray));
   if (mmdata->cisdense) PetscCall(MatConvert(C, MATSEQDENSE, MAT_INPLACE_MATRIX, &C));
   if (!biship) PetscCall(MatConvert(B, MATSEQDENSE, MAT_INPLACE_MATRIX, &B));
@@ -3037,8 +3037,8 @@ static PetscErrorCode MatMultAddKernel_SeqAIJHIPSPARSE(Mat A, Vec xx, Vec yy, Ve
   PetscFunctionBegin;
   PetscCheck(!herm || trans, PetscObjectComm((PetscObject)A), PETSC_ERR_GPU, "Hermitian and not transpose not supported");
   if (!a->nz) {
-    if (yy) PetscCall(VecSeq_HIP::copy(yy, zz));
-    else PetscCall(VecSeq_HIP::set(zz, 0));
+    if (yy) PetscCall(VecSeq_HIP::Copy(yy, zz));
+    else PetscCall(VecSeq_HIP::Set(zz, 0));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   /* The line below is necessary due to the operations that modify the matrix on the CPU (axpy, scale, etc) */
@@ -3135,12 +3135,12 @@ static PetscErrorCode MatMultAddKernel_SeqAIJHIPSPARSE(Mat A, Vec xx, Vec yy, Ve
     if (opA == HIPSPARSE_OPERATION_NON_TRANSPOSE) {
       if (yy) {                                     /* MatMultAdd: zz = A*xx + yy */
         if (compressed) {                           /* A is compressed. We first copy yy to zz, then ScatterAdd the work vector to zz */
-          PetscCall(VecSeq_HIP::copy(yy, zz));      /* zz = yy */
+          PetscCall(VecSeq_HIP::Copy(yy, zz));      /* zz = yy */
         } else if (zz != yy) {                      /* A is not compressed. zz already contains A*xx, and we just need to add yy */
-          PetscCall(VecSeq_HIP::axpy(zz, 1.0, yy)); /* zz += yy */
+          PetscCall(VecSeq_HIP::AXPY(zz, 1.0, yy)); /* zz += yy */
         }
       } else if (compressed) { /* MatMult: zz = A*xx. A is compressed, so we zero zz first, then ScatterAdd the work vector to zz */
-        PetscCall(VecSeq_HIP::set(zz, 0));
+        PetscCall(VecSeq_HIP::Set(zz, 0));
       }
 
       /* ScatterAdd the result from work vector into the full vector when A is compressed */
@@ -3163,7 +3163,7 @@ static PetscErrorCode MatMultAddKernel_SeqAIJHIPSPARSE(Mat A, Vec xx, Vec yy, Ve
         PetscCall(PetscLogGpuTimeEnd());
       }
     } else {
-      if (yy && yy != zz) PetscCall(VecSeq_HIP::axpy(zz, 1.0, yy)); /* zz += yy */
+      if (yy && yy != zz) PetscCall(VecSeq_HIP::AXPY(zz, 1.0, yy)); /* zz += yy */
     }
     PetscCall(VecHIPRestoreArrayRead(xx, (const PetscScalar **)&xarray));
     if (yy == zz) PetscCall(VecHIPRestoreArray(zz, &zarray));
@@ -3201,8 +3201,6 @@ static PetscErrorCode MatAssemblyEnd_SeqAIJHIPSPARSE(Mat A, MatAssemblyType mode
 /*@
    MatCreateSeqAIJHIPSPARSE - Creates a sparse matrix in `MATAIJHIPSPARSE` (compressed row) format.
    This matrix will ultimately pushed down to AMD GPUs and use the HIPSPARSE library for calculations.
-   For good matrix assembly performance the user should preallocate the matrix storage by setting
-   the parameter `nz` (or the array `nnz`).
 
    Collective
 
@@ -3210,9 +3208,8 @@ static PetscErrorCode MatAssemblyEnd_SeqAIJHIPSPARSE(Mat A, MatAssemblyType mode
 +  comm - MPI communicator, set to `PETSC_COMM_SELF`
 .  m - number of rows
 .  n - number of columns
-.  nz - number of nonzeros per row (same for all rows)
--  nnz - array containing the number of nonzeros in the various rows
-         (possibly different for each row) or `NULL`
+.  nz - number of nonzeros per row (same for all rows), ignored if `nnz` is set
+-  nnz - array containing the number of nonzeros in the various rows (possibly different for each row) or `NULL`
 
    Output Parameter:
 .  A - the matrix
@@ -3224,8 +3221,6 @@ static PetscErrorCode MatAssemblyEnd_SeqAIJHIPSPARSE(Mat A, MatAssemblyType mode
    `MatXXXXSetPreallocation()` paradgm instead of this routine directly.
    [MatXXXXSetPreallocation() is, for example, `MatSeqAIJSetPreallocation`]
 
-   If `nnz` is given then `nz` is ignored
-
    The AIJ format (compressed row storage), is fully compatible with standard Fortran
    storage.  That is, the stored row and column indices can begin at
    either one (as in Fortran) or zero.
@@ -3233,11 +3228,6 @@ static PetscErrorCode MatAssemblyEnd_SeqAIJHIPSPARSE(Mat A, MatAssemblyType mode
    Specify the preallocated storage with either `nz` or `nnz` (not both).
    Set `nz` = `PETSC_DEFAULT` and `nnz` = `NULL` for PETSc to control dynamic memory
    allocation.
-
-   By default, this format uses inodes (identical nodes) when possible, to
-   improve numerical efficiency of matrix-vector products and solves. We
-   search for consecutive rows with the same nonzero structure, thereby
-   reusing matrix information to achieve increased efficiency.
 
 .seealso: [](chapter_matrices), `Mat`, `MatCreate()`, `MatCreateAIJ()`, `MatSetValues()`, `MatSeqAIJSetColumnIndices()`, `MatCreateSeqAIJWithArrays()`, `MatCreateAIJ()`, `MATSEQAIJHIPSPARSE`, `MATAIJHIPSPARSE`
 @*/
@@ -3537,7 +3527,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqAIJHIPSPARSE(Mat B)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
+/*MC
    MATSEQAIJHIPSPARSE - MATAIJHIPSPARSE = "(seq)aijhipsparse" - A matrix type to be used for sparse matrices on AMD GPUs
 
    A matrix type type whose data resides on AMD GPUs. These matrices can be in either
@@ -3545,16 +3535,17 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqAIJHIPSPARSE(Mat B)
    All matrix calculations are performed on AMD/NVIDIA GPUs using the HIPSPARSE library.
 
    Options Database Keys:
-+  -mat_type aijhipsparse - sets the matrix type to "seqaijhipsparse" during a call to MatSetFromOptions()
++  -mat_type aijhipsparse - sets the matrix type to `MATSEQAIJHIPSPARSE`
 .  -mat_hipsparse_storage_format csr - sets the storage format of matrices (for `MatMult()` and factors in `MatSolve()`).
                                        Other options include ell (ellpack) or hyb (hybrid).
 . -mat_hipsparse_mult_storage_format csr - sets the storage format of matrices (for `MatMult()`). Other options include ell (ellpack) or hyb (hybrid).
-+  -mat_hipsparse_use_cpu_solve - Do `MatSolve()` on the CPU
+-  -mat_hipsparse_use_cpu_solve - Do `MatSolve()` on the CPU
 
   Level: beginner
 
 .seealso: [](chapter_matrices), `Mat`, `MatCreateSeqAIJHIPSPARSE()`, `MATAIJHIPSPARSE`, `MatCreateAIJHIPSPARSE()`, `MatHIPSPARSESetFormat()`, `MatHIPSPARSEStorageFormat`, `MatHIPSPARSEFormatOperation`
-*/
+M*/
+
 PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_HIPSPARSE(void)
 {
   PetscFunctionBegin;
@@ -4071,8 +4062,8 @@ PetscErrorCode MatSetValuesCOO_SeqAIJHIPSPARSE(Mat A, const PetscScalar v[], Ins
 -   compressed - `PETSC_TRUE` or `PETSC_FALSE` indicating the matrix data structure should be always returned in compressed form
 
     Output Parameters:
-+   ia - the CSR row pointers
--   ja - the CSR column indices
++   i - the CSR row pointers
+-   j - the CSR column indices
 
     Level: developer
 
@@ -4117,8 +4108,8 @@ PetscErrorCode MatSeqAIJHIPSPARSEGetIJ(Mat A, PetscBool compressed, const int **
     Input Parameters:
 +   A - the matrix
 .   compressed - `PETSC_TRUE` or `PETSC_FALSE` indicating the matrix data structure should be always returned in compressed form
-.   ia - the CSR row pointers
--   ja - the CSR column indices
+.   i - the CSR row pointers
+-   j - the CSR column indices
 
     Level: developer
 

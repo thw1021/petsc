@@ -169,13 +169,13 @@ static PetscErrorCode MatMFFDResetHHistory_MFFD(Mat J)
 }
 
 /*@C
-   MatMFFDRegister - Adds a method to the MATMFFD` registry.
+   MatMFFDRegister - Adds a method to the `MATMFFD` registry.
 
    Not Collective
 
    Input Parameters:
-+  name_solver - name of a new user-defined compute-h module
--  routine_create - routine to create method context
++  sname - name of a new user-defined compute-h module
+-  function - routine to create method context
 
    Level: developer
 
@@ -544,11 +544,13 @@ static PetscErrorCode MatMFFDSetFunction_MFFD(Mat mat, PetscErrorCode (*func)(vo
 
 static PetscErrorCode MatMFFDSetFunctionError_MFFD(Mat mat, PetscReal error)
 {
-  MatMFFD ctx;
-
   PetscFunctionBegin;
-  PetscCall(MatShellGetContext(mat, &ctx));
-  if (error != PETSC_DEFAULT) ctx->error_rel = error;
+  if (error != (PetscReal)PETSC_DEFAULT) {
+    MatMFFD ctx;
+
+    PetscCall(MatShellGetContext(mat, &ctx));
+    ctx->error_rel = error;
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -739,9 +741,8 @@ PetscErrorCode MatMFFDGetH(Mat mat, PetscScalar *h)
 .  func - the function to use
 -  funcctx - optional function context passed to function
 
-   Calling Sequence of func:
-$     func (void *funcctx, Vec x, Vec f)
-
+   Calling Sequence of `func`:
+$  PetscErrorCode func(void *funcctx, Vec x, Vec f)
 +  funcctx - user provided context
 .  x - input vector
 -  f - computed output function

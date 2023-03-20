@@ -264,10 +264,10 @@ PetscErrorCode PetscViewerASCIISetTab(PetscViewer viewer, PetscInt tabs)
 
     Not Collective, meaningful on first processor only; No Fortran Support
 
-    Input Parameters:
+    Input Parameter:
 .    viewer - obtained with `PetscViewerASCIIOpen()`
 
-    Output Parameters:
+    Output Parameter:
 .    tabs - number of tabs
 
     Level: developer
@@ -355,7 +355,7 @@ PetscErrorCode PetscViewerASCIISubtractTab(PetscViewer viewer, PetscInt tabs)
 
     Collective
 
-    Input Parameters:
+    Input Parameter:
 .    viewer - obtained with `PetscViewerASCIIOpen()`
 
     Level: intermediate
@@ -385,7 +385,7 @@ PetscErrorCode PetscViewerASCIIPushSynchronized(PetscViewer viewer)
 
     Collective
 
-    Input Parameters:
+    Input Parameter:
 .    viewer - obtained with `PetscViewerASCIIOpen()`
 
     Level: intermediate
@@ -419,7 +419,7 @@ PetscErrorCode PetscViewerASCIIPopSynchronized(PetscViewer viewer)
 
     Not Collective, but only first processor in set has any effect; No Fortran Support
 
-    Input Parameters:
+    Input Parameter:
 .    viewer - obtained with `PetscViewerASCIIOpen()`
 
     Level: developer
@@ -446,7 +446,7 @@ PetscErrorCode PetscViewerASCIIPushTab(PetscViewer viewer)
 
     Not Collective, but only first processor in set has any effect; No Fortran Support
 
-    Input Parameters:
+    Input Parameter:
 .    viewer - obtained with `PetscViewerASCIIOpen()`
 
     Level: developer
@@ -572,15 +572,16 @@ PetscErrorCode PetscViewerASCIIPrintf(PetscViewer viewer, const char format[], .
 
     va_start(Argp, format);
     PetscCall((*PetscVFPrintf)(fd, format, Argp));
+    va_end(Argp);
     PetscCall(PetscFFlush(fd));
     if (petsc_history) {
-      va_start(Argp, format);
       tab = intab;
       while (tab--) PetscCall(PetscFPrintf(PETSC_COMM_SELF, petsc_history, "  "));
+      va_start(Argp, format);
       PetscCall((*PetscVFPrintf)(petsc_history, format, Argp));
+      va_end(Argp);
       PetscCall(PetscFFlush(petsc_history));
     }
-    va_end(Argp);
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -905,10 +906,12 @@ PetscErrorCode PetscViewerASCIISynchronizedPrintf(PetscViewer viewer, const char
 
     va_start(Argp, format);
     PetscCall((*PetscVFPrintf)(fp, format, Argp));
+    va_end(Argp);
     PetscCall(PetscFFlush(fp));
     if (petsc_history) {
       va_start(Argp, format);
       PetscCall((*PetscVFPrintf)(petsc_history, format, Argp));
+      va_end(Argp);
       PetscCall(PetscFFlush(petsc_history));
     }
     va_end(Argp);
@@ -960,7 +963,7 @@ PetscErrorCode PetscViewerASCIISynchronizedPrintf(PetscViewer viewer, const char
 .  num - number of items of data to read
 -  datatype - type of data to read
 
-   Output Parameters:
+   Output Parameter:
 .  count - number of items of data actually read, or `NULL`
 
    Level: beginner

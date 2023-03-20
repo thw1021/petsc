@@ -1,8 +1,6 @@
 -include ../../../../../petscdir.mk
 
-DIRS     = cuda hip
-SOURCEC  = dense.c densehdf5.c
-SOURCEH  = dense.h
+DIRS     = cupm
 LIBBASE  = libpetscmat
 MANSEC   = Mat
 

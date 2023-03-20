@@ -437,13 +437,13 @@ PetscErrorCode PetscFunctionListFind_Private(PetscFunctionList fl, const char na
 }
 
 /*@
-   PetscFunctionListView - prints out contents of an PetscFunctionList
+   PetscFunctionListView - prints out contents of a `PetscFunctionList`
 
-   Collective on `viewer`
+   Collective
 
    Input Parameters:
 +  list - the list of functions
--  viewer - the `PetscViewer` used to view the PetscFunctionList
+-  viewer - the `PetscViewer` used to view the `PetscFunctionList`
 
    Level: developer
 
@@ -550,7 +550,7 @@ PetscErrorCode PetscFunctionListPrintTypes(MPI_Comm comm, FILE *fd, const char p
   if (prefix) PetscCall(PetscStrlcat(p, prefix, sizeof(p)));
   PetscCall((*PetscHelpPrintf)(comm, "  %s%s <now %s : formerly %s>: %s (one of)", p, name + 1, newv, def, text));
 
-  PetscHMapFuncForEach(list, name, func, PetscCall((*PetscHelpPrintf)(comm, " %s", name)));
+  if (list) PetscHMapFuncForEach(list, name, func, PetscCall((*PetscHelpPrintf)(comm, " %s", name)));
   PetscCall((*PetscHelpPrintf)(comm, " (%s)\n", man));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

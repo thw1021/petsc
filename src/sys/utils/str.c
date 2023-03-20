@@ -702,7 +702,7 @@ PetscErrorCode PetscEnumFind(const char *const *enumlist, const char *str, Petsc
 /*@C
   PetscCIFilename - returns the basename of a file name when the PETSc CI portable error output mode is enabled.
 
-  Not collective; No Fortran Support
+  Not Collective; No Fortran Support
 
   Input Parameter:
 . file - the file name
@@ -754,4 +754,63 @@ int PetscCILinenumber(int linenumber)
 {
   if (!PetscCIEnabledPortableErrorOutput) return linenumber;
   return 0;
+}
+
+/*@C
+  PetscStrcat - Concatenates a string onto a given string
+
+  Not Collective, No Fortran Support
+
+  Input Parameters:
++ s - string to be added to
+- t - pointer to string to be added to end
+
+  Level: deprecated (since 3.18.5)
+
+  Notes:
+  It is recommended you use `PetscStrlcat()` instead of this routine.
+
+.seealso: `PetscStrlcat()`
+@*/
+PetscErrorCode PetscStrcat(char s[], const char t[])
+{
+  PetscFunctionBegin;
+  if (!t) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscValidCharPointer(s, 1);
+  strcat(s, t);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  PetscStrcpy - Copies a string
+
+  Not Collective, No Fortran Support
+
+  Input Parameters:
+. t - pointer to string
+
+  Output Parameter:
+. s - the copied string
+
+  Level: deprecated (since 3.18.5)
+
+  Notes:
+  It is recommended you use `PetscStrncpy()` (equivalently `PetscArraycpy()` or
+  `PetscMemcpy()`) instead of this routine.
+
+  `NULL` strings returns a string starting with zero.
+
+.seealso: `PetscStrncpy()`
+@*/
+PetscErrorCode PetscStrcpy(char s[], const char t[])
+{
+  PetscFunctionBegin;
+  if (t) {
+    PetscValidCharPointer(s, 1);
+    PetscValidCharPointer(t, 2);
+    strcpy(s, t);
+  } else if (s) {
+    s[0] = '\0';
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
 }

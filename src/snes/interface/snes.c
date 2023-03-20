@@ -21,7 +21,7 @@ PetscLogEvent SNES_Solve, SNES_SetUp, SNES_FunctionEval, SNES_JacobianEval, SNES
 +  snes - iterative context obtained from `SNESCreate()`
 -  flg - `PETSC_TRUE` indicates you want the error generated
 
-   Options database keys:
+   Options Database Key:
 .  -snes_error_if_not_converged <true,false> - cause an immediate error condition and stop the program if the solver does not converge
 
    Level: intermediate
@@ -173,7 +173,7 @@ PetscErrorCode SNESSetJacobianDomainError(SNES snes)
    Logically Collective
 
    Input Parameters:
-+  snes - the SNES context
++  snes - the `SNES` context
 -  flg  - indicates if or not to check Jacobian domain error after each Jacobian evaluation
 
    Level: advanced
@@ -708,7 +708,7 @@ static PetscErrorCode KSPComputeOperators_SNES(KSP ksp, Mat A, Mat B, void *ctx)
    Collective
 
    Input Parameter:
-.  snes - snes to configure
+.  snes - `SNES` object to configure
 
    Level: developer
 
@@ -895,7 +895,7 @@ PetscErrorCode SNESEWSetFromOptions_Private(SNESKSPEW *kctx, MPI_Comm comm, cons
 .  -snes_lag_preconditioner_persists <true,false> - retains the -snes_lag_preconditioner information across multiple SNESSolve()
 .  -snes_lag_jacobian <lag> - how often Jacobian is rebuilt (use -1 to never rebuild)
 .  -snes_lag_jacobian_persists <true,false> - retains the -snes_lag_jacobian information across multiple SNESSolve()
-.  -snes_trtol <trtol> - trust region tolerance
+.  -snes_tr_tol <trtol> - trust region tolerance
 .  -snes_convergence_test - <default,skip,correct_pressure> convergence test in nonlinear solver.
                                default `SNESConvergedDefault()`. skip `SNESConvergedSkip()` means continue iterating until max_it or some other criterion is reached, saving expense
                                of convergence test. correct_pressure S`NESConvergedCorrectPressure()` has special handling of a pressure null space.
@@ -1443,7 +1443,7 @@ PetscErrorCode SNESSetMaxNonlinearStepFailures(SNES snes, PetscInt maxFails)
    Not Collective
 
    Input Parameter:
-.  snes     - SNES context
+.  snes     - `SNES` context
 
    Output Parameter:
 .  maxFails - maximum of unsuccessful steps
@@ -1673,7 +1673,7 @@ PetscErrorCode SNESSetKSP(SNES snes, KSP ksp)
 .  comm - MPI communicator
 
    Output Parameter:
-.  outsnes - the new SNES context
+.  outsnes - the new `SNES` context
 
    Options Database Keys:
 +   -snes_mf - Activates default matrix-free Jacobian-vector products, and no preconditioning matrix
@@ -1848,7 +1848,7 @@ M*/
    Input Parameters:
 +  snes - the `SNES` context
 .  r - vector to store function values, may be `NULL`
-.  f - function evaluation routine; see `SNESFunction` for calling sequence details
+.  f - function evaluation routine;  for calling sequence see `SNESFunction`
 -  ctx - [optional] user-defined context for private data for the
          function evaluation routine (may be `NULL`)
 
@@ -2152,10 +2152,8 @@ M*/
 -  ctx    - [optional] user-defined context for private data for the
             smoother evaluation routine (may be `NULL`)
 
-   Calling sequence of f:
-$  PetscErrorCode f(SNES snes,Vec X,Vec B,void *ctx);
-
-   Arguments of f:
+   Calling sequence of `f`:
+$  PetscErrorCode f(SNES snes, Vec X, Vec B, void *ctx)
 +  snes - the `SNES` context
 .  X - the current solution
 .  B - the right hand side vector (which may be `NULL`)
@@ -2249,7 +2247,7 @@ PetscErrorCode SNESPicardComputeJacobian(SNES snes, Vec x1, Mat J, Mat B, void *
 .  bp - function evaluation routine, may be `NULL`
 .  Amat - matrix with which A(x) x - bp(x) - b is to be computed
 .  Pmat - matrix from which preconditioner is computed (usually the same as `Amat`)
-.  J  - function to compute matrix values, see `SNESJacobianFunction()` for details on its calling sequence
+.  J  - function to compute matrix values, for the calling sequence see `SNESJacobianFunction()`
 -  ctx - [optional] user-defined context for private data for the function evaluation routine (may be `NULL`)
 
    Level: intermediate
@@ -2308,10 +2306,10 @@ PetscErrorCode SNESSetPicard(SNES snes, Vec r, PetscErrorCode (*bp)(SNES, Vec, V
 
    Output Parameters:
 +  r - the function (or `NULL`)
-.  f - the function (or `NULL`); see `SNESFunction` for calling sequence details
+.  f - the function (or `NULL`);  for calling sequence see `SNESFunction`
 .  Amat - the matrix used to defined the operation A(x) x - b(x) (or `NULL`)
 .  Pmat  - the matrix from which the preconditioner will be constructed (or `NULL`)
-.  J - the function for matrix evaluation (or `NULL`); see `SNESJacobianFunction` for calling sequence details
+.  J - the function for matrix evaluation (or `NULL`);  for calling sequence see `SNESJacobianFunction`
 -  ctx - the function context (or `NULL`)
 
    Level: advanced
@@ -2342,10 +2340,10 @@ PetscErrorCode SNESGetPicard(SNES snes, Vec *r, PetscErrorCode (**f)(SNES, Vec, 
 -  ctx - [optional] user-defined context for private data for the
          function evaluation routine (may be `NULL`)
 
-   Calling sequence of func:
-$    func (SNES snes,Vec x,void *ctx);
-
-.  f - function vector
+   Calling sequence of `func`:
+$    PetscErrorCode func(SNES snes, Vec x, void *ctx);
++  snes - the `SNES` solver
+.  x - vector to put initial guess
 -  ctx - optional user-defined function context
 
    Level: intermediate
@@ -3085,7 +3083,7 @@ PetscErrorCode SNESSetJacobian(SNES snes, Mat Amat, Mat Pmat, PetscErrorCode (*J
    Output Parameters:
 +  Amat - location to stash (approximate) Jacobian matrix (or `NULL`)
 .  Pmat - location to stash matrix used to compute the preconditioner (or `NULL`)
-.  J - location to put Jacobian function (or `NULL`), see `SNESJacobianFunction` for details on its calling sequence
+.  J - location to put Jacobian function (or `NULL`), for calling sequence see `SNESJacobianFunction`
 -  ctx - location to stash Jacobian ctx (or `NULL`)
 
    Level: advanced
@@ -3728,15 +3726,15 @@ PetscErrorCode SNESSetTolerances(SNES snes, PetscReal abstol, PetscReal rtol, Pe
   PetscValidLogicalCollectiveInt(snes, maxit, 5);
   PetscValidLogicalCollectiveInt(snes, maxf, 6);
 
-  if (abstol != PETSC_DEFAULT) {
+  if (abstol != (PetscReal)PETSC_DEFAULT) {
     PetscCheck(abstol >= 0.0, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_OUTOFRANGE, "Absolute tolerance %g must be non-negative", (double)abstol);
     snes->abstol = abstol;
   }
-  if (rtol != PETSC_DEFAULT) {
+  if (rtol != (PetscReal)PETSC_DEFAULT) {
     PetscCheck(rtol >= 0.0 && 1.0 > rtol, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_OUTOFRANGE, "Relative tolerance %g must be non-negative and less than 1.0", (double)rtol);
     snes->rtol = rtol;
   }
-  if (stol != PETSC_DEFAULT) {
+  if (stol != (PetscReal)PETSC_DEFAULT) {
     PetscCheck(stol >= 0.0, PetscObjectComm((PetscObject)snes), PETSC_ERR_ARG_OUTOFRANGE, "Step tolerance %g must be non-negative", (double)stol);
     snes->stol = stol;
   }
@@ -3774,7 +3772,7 @@ PetscErrorCode SNESSetDivergenceTolerance(SNES snes, PetscReal divtol)
   PetscValidHeaderSpecific(snes, SNES_CLASSID, 1);
   PetscValidLogicalCollectiveReal(snes, divtol, 2);
 
-  if (divtol != PETSC_DEFAULT) {
+  if (divtol != (PetscReal)PETSC_DEFAULT) {
     snes->divtol = divtol;
   } else {
     snes->divtol = 1.0e4;
@@ -3846,11 +3844,11 @@ PetscErrorCode SNESGetDivergenceTolerance(SNES snes, PetscReal *divtol)
 -  tol - tolerance
 
    Options Database Key:
-.  -snes_trtol <tol> - Sets tol
+.  -snes_tr_tol <tol> - Sets tol
 
    Level: intermediate
 
-.seealso: [](chapter_snes), `SNES`, `SNESNEWTONTRDC`, `SNESSetTolerances()`
+.seealso: [](chapter_snes), `SNES`, `SNESNEWTONTR`, `SNESSetTolerances()`
 @*/
 PetscErrorCode SNESSetTrustRegionTolerance(SNES snes, PetscReal tol)
 {
@@ -3991,7 +3989,7 @@ M*/
 
    Input Parameters:
 +  snes - the `SNES` context
-.  f - the monitor function, see `SNESMonitorFunction` for the calling sequence
+.  f - the monitor function,  for the calling sequence see `SNESMonitorFunction`
 .  mctx - [optional] user-defined context for private data for the
           monitor routine (use `NULL` if no context is desired)
 -  monitordestroy - [optional] routine that frees monitor context (may be `NULL`)
@@ -4270,19 +4268,20 @@ PETSC_EXTERN mxArray *SNESGetConvergenceHistoryMatlab(SNES snes)
 +  a   - array to hold history, usually was set with `SNESSetConvergenceHistory()`
 .  its - integer array holds the number of linear iterations (or
          negative if not converged) for each solve.
--  na  - size of a and its
+-  na  - size of `a` and `its`
 
    Level: intermediate
 
-   Notes:
+   Note:
+   This routine is useful, e.g., when running a code for purposes
+   of accurate performance monitoring, when no I/O should be done
+   during the section of code that is being timed.
+
+   Fortran Note:
     The calling sequence for this routine in Fortran is
 .vb
     call SNESGetConvergenceHistory(SNES snes, integer na, integer ierr)
 .ve
-
-   This routine is useful, e.g., when running a code for purposes
-   of accurate performance monitoring, when no I/O should be done
-   during the section of code that is being timed.
 
 .seealso: [](chapter_snes), `SNES`, `SNESSolve()`, `SNESSetConvergenceHistory()`
 @*/
@@ -4307,10 +4306,10 @@ PetscErrorCode SNESGetConvergenceHistory(SNES snes, PetscReal *a[], PetscInt *it
 + snes - The nonlinear solver context
 - func - The function
 
-  Calling sequence of func:
-$ func (SNES snes, PetscInt step);
-
-. step - The current step of the iteration
+  Calling sequence of `func`:
+$ PetscErrorCode func(SNES snes, PetscInt step);
++ snes - the nonlinear solver context
+- step - The current step of the iteration
 
   Level: advanced
 
@@ -4752,7 +4751,7 @@ PetscErrorCode SNESSolve(SNES snes, Vec b, Vec x)
    See "petsc/include/petscsnes.h" for available methods (for instance)
 +    `SNESNEWTONLS` - Newton's method with line search
      (systems of nonlinear equations)
--    `SNESNEWTONTRDC` - Newton's method with trust region
+-    `SNESNEWTONTR` - Newton's method with trust region
      (systems of nonlinear equations)
 
   Normally, it is best to use the `SNESSetFromOptions()` command and then
@@ -4920,7 +4919,7 @@ PetscErrorCode SNESGetSolutionUpdate(SNES snes, Vec *x)
 
    Output Parameters:
 +  r - the vector that is used to store residuals (or `NULL` if you don't want it)
-.  f - the function (or `NULL` if you don't want it); see `SNESFunction` for calling sequence details
+.  f - the function (or `NULL` if you don't want it);  for calling sequence see `SNESFunction`
 -  ctx - the function context (or `NULL` if you don't want it)
 
    Level: advanced
@@ -5074,11 +5073,11 @@ PetscErrorCode SNESGetOptionsPrefix(SNES snes, const char *prefix[])
 /*@C
   SNESRegister - Adds a method to the nonlinear solver package.
 
-   Not collective
+   Not Collective
 
    Input Parameters:
-+  name_solver - name of a new user-defined solver
--  routine_create - routine to create method context
++  sname - name of a new user-defined solver
+-  function - routine to create method context
 
    Level: advanced
 
@@ -5252,12 +5251,12 @@ PetscErrorCode SNESKSPSetParametersEW(SNES snes, PetscInt version, PetscReal rto
   PetscValidLogicalCollectiveReal(snes, threshold, 8);
 
   if (version != PETSC_DEFAULT) kctx->version = version;
-  if (rtol_0 != PETSC_DEFAULT) kctx->rtol_0 = rtol_0;
-  if (rtol_max != PETSC_DEFAULT) kctx->rtol_max = rtol_max;
-  if (gamma != PETSC_DEFAULT) kctx->gamma = gamma;
-  if (alpha != PETSC_DEFAULT) kctx->alpha = alpha;
-  if (alpha2 != PETSC_DEFAULT) kctx->alpha2 = alpha2;
-  if (threshold != PETSC_DEFAULT) kctx->threshold = threshold;
+  if (rtol_0 != (PetscReal)PETSC_DEFAULT) kctx->rtol_0 = rtol_0;
+  if (rtol_max != (PetscReal)PETSC_DEFAULT) kctx->rtol_max = rtol_max;
+  if (gamma != (PetscReal)PETSC_DEFAULT) kctx->gamma = gamma;
+  if (alpha != (PetscReal)PETSC_DEFAULT) kctx->alpha = alpha;
+  if (alpha2 != (PetscReal)PETSC_DEFAULT) kctx->alpha2 = alpha2;
+  if (threshold != (PetscReal)PETSC_DEFAULT) kctx->threshold = threshold;
 
   PetscCheck(kctx->version >= 1 && kctx->version <= 4, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Only versions 1 to 4 are supported: %" PetscInt_FMT, kctx->version);
   PetscCheck(kctx->rtol_0 >= 0.0 && kctx->rtol_0 < 1.0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "0.0 <= rtol_0 < 1.0: %g", (double)kctx->rtol_0);

@@ -172,8 +172,8 @@ PetscErrorCode MatFDColoringSetParameters(MatFDColoring matfd, PetscReal error, 
   PetscValidHeaderSpecific(matfd, MAT_FDCOLORING_CLASSID, 1);
   PetscValidLogicalCollectiveReal(matfd, error, 2);
   PetscValidLogicalCollectiveReal(matfd, umin, 3);
-  if (error != PETSC_DEFAULT) matfd->error_rel = error;
-  if (umin != PETSC_DEFAULT) matfd->umin = umin;
+  if (error != (PetscReal)PETSC_DEFAULT) matfd->error_rel = error;
+  if (umin != (PetscReal)PETSC_DEFAULT) matfd->umin = umin;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -273,9 +273,11 @@ PetscErrorCode MatFDColoringGetFunction(MatFDColoring matfd, PetscErrorCode (**f
 .  f - the function
 -  fctx - the optional user-defined function context
 
-   Calling sequence of (*f) function:
-    For `SNES` use   PetscErrorCode (*f)(SNES,Vec,Vec,void*)
-    If not using `SNES` use PetscErrorCode (*f)(void *dummy,Vec,Vec,void*) and dummy is ignored
+   Calling sequence with `SNES` of `f`:
+$   PetscErrorCode f(SNES, Vec in, Vec out, void *fctx)
+
+   Calling sequence without `SNES` of `f`:
+$   PetscErrorCode f(void *dummy, Vec in, Vec out, void *fctx)
 
    Level: advanced
 
