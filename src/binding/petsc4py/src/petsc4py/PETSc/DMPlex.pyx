@@ -983,16 +983,16 @@ del DMPlexReorderDefaultFlag
 
 # --------------------------------------------------------------------
 class DMPlexTransformType(object):
-    REFINEREGULAR = "refine_regular"
-    REFINEALFELD = "refine_alfeld"
-    REFINEPOWELLSABIN = "refine_powell_sabin"
-    REFINEBOUNDARYLAYER = "refine_boundary_layer"
-    REFINESBR = "refine_sbr"
-    REFINETOBOX = "refine_tobox"
-    REFINETOSIMPLEX = "refine_tosimplex"
-    REFINE1D = "refine_1d"
-    EXTRUDE = "extrude"
-    TRANSFORMFILTER = "transform_filter"
+    REFINEREGULAR = S_(DMPLEXREFINEREGULAR)
+    REFINEALFELD = S_(DMPLEXREFINEALFELD)
+    REFINEPOWELLSABIN = S_(DMPLEXREFINEPOWELLSABIN)
+    REFINEBOUNDARYLAYER = S_(DMPLEXREFINEBOUNDARYLAYER)
+    REFINESBR = S_(DMPLEXREFINESBR)
+    REFINETOBOX = S_(DMPLEXREFINETOBOX) 
+    REFINETOSIMPLEX = S_(DMPLEXREFINETOSIMPLEX) 
+    REFINE1D = S_(DMPLEXREFINE1D)
+    EXTRUDE = S_(DMPLEXEXTRUDE)
+    TRANSFORMFILTER = S_(DMPLEXTRANSFORMFILTER)
 
 cdef class DMPlexTransform(Object):
 
@@ -1000,8 +1000,7 @@ cdef class DMPlexTransform(Object):
         self.obj = <PetscObject*> &self.tr
         self.tr  = NULL
 
-    def apply(self, DM dm, comm=None):
-        cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
+    def apply(self, DM dm=None):
         cdef DMPlex newdm = DMPlex()
         CHKERR( DMClone(dm.dm, &newdm.dm) )
         CHKERR( DMPlexTransformApply(self.tr, dm.dm, &newdm.dm) )
@@ -1028,13 +1027,12 @@ cdef class DMPlexTransform(Object):
         CHKERR( DMPlexTransformSetUp(self.tr) )
         return self
 
-    def setType(self, tr_type):
+    def setType(self, tr_type=None):
         cdef PetscDMPlexTransformType cval = NULL
         tr_type = str2bytes(tr_type, &cval)
         CHKERR( DMPlexTransformSetType(self.tr, cval) )
 
-    def setDM(self, DM dm, comm=None):
-        cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
+    def setDM(self, DM dm=None):
         CHKERR( DMPlexTransformSetDM(self.tr, dm.dm) )
     
     def setFromOptions(self):

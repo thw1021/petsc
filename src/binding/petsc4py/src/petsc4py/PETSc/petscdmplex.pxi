@@ -8,16 +8,16 @@ cdef extern from * nogil:
         DMPLEX_REORDER_DEFAULT_TRUE
 
     ctypedef const char* PetscDMPlexTransformType "DMPlexTransformType"
-    PetscDMPlexTransformType REFINEREGULAR
-    PetscDMPlexTransformType REFINEALFELD
-    PetscDMPlexTransformType REFINEPOWELLSABIN = "refine_powell_sabin"
-    PetscDMPlexTransformType REFINEBOUNDARYLAYER = "refine_boundary_layer"
-    PetscDMPlexTransformType REFINESBR = "refine_sbr"
-    PetscDMPlexTransformType REFINETOBOX = "refine_tobox"
-    PetscDMPlexTransformType REFINETOSIMPLEX = "refine_tosimplex"
-    PetscDMPlexTransformType REFINE1D = "refine_1d"
-    PetscDMPlexTransformType EXTRUDE = "extrude"
-    PetscDMPlexTransformType TRANSFORMFILTER = "transform_filter"
+    PetscDMPlexTransformType DMPLEXREFINEREGULAR
+    PetscDMPlexTransformType DMPLEXREFINEALFELD
+    PetscDMPlexTransformType DMPLEXREFINEPOWELLSABIN
+    PetscDMPlexTransformType DMPLEXREFINEBOUNDARYLAYER
+    PetscDMPlexTransformType DMPLEXREFINESBR
+    PetscDMPlexTransformType DMPLEXREFINETOBOX
+    PetscDMPlexTransformType DMPLEXREFINETOSIMPLEX
+    PetscDMPlexTransformType DMPLEXREFINE1D
+    PetscDMPlexTransformType DMPLEXEXTRUDE
+    PetscDMPlexTransformType DMPLEXTRANSFORMFILTER
 
     PetscErrorCode DMPlexCreate(MPI_Comm,PetscDM*)
     PetscErrorCode DMPlexCreateCohesiveSubmesh(PetscDM,PetscBool,const char[],PetscInt,PetscDM*)
