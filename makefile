@@ -527,7 +527,7 @@ alletags:
 allgtags:
 	-@find ${PETSC_DIR}/include ${PETSC_DIR}/src -regex '\(.*makefile\|.*\.\(cc\|hh\|cpp\|cxx\|C\|hpp\|c\|h\|cu\|m\)$$\)' | grep -v ftn-auto  | gtags -f -
 
-# ********* Rules for building "classic" documentation; uses rules also in lib/petsc/conf/petscrules.doc **************************************************
+# ********* Rules for building "classic" documentation; uses rules also in lib/petsc/conf/rules.doc **************************************************
 
 docs:
 	cd doc; ${OMAKE_SELF} sphinxhtml
