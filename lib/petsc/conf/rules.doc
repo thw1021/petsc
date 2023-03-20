@@ -171,4 +171,3 @@ html:
 cleanhtml:
 	-@${RM} {makefile,index}.html *.{c,cxx,cu,F,F90,h,h90,m}.html *.{c,cxx,cu}.gcov.html
 
-include ${PETSC_DIR}/${PETSC_ARCH}/lib/petsc/conf/petscrules
