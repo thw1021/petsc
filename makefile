@@ -21,7 +21,7 @@ DIRS = src include interfaces share/petsc/matlab
 
 # next line defines PETSC_DIR and PETSC_ARCH if they are not set
 include ././${PETSC_ARCH}/lib/petsc/conf/petscvariables
-#include ${PETSC_DIR}/${PETSC_ARCH}/lib/petsc/conf/petscrules
+include ${PETSC_DIR}/${PETSC_ARCH}/lib/petsc/conf/petscrules
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules.doc
 
