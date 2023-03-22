@@ -323,7 +323,6 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
   KSP                       ksp;
   PetscBool                 already_done = PETSC_FALSE;
   PetscBool                 clear_converged_test, rho_satisfied, has_objective;
-  PetscVoidFunction         ksp_has_radius;
   SNES_TR_KSPConverged_Ctx *ctx;
   void                     *convctx;
   PetscErrorCode (*convtest)(KSP, PetscInt, PetscReal, KSPConvergedReason *, void *), (*convdestroy)(void *);
@@ -352,8 +351,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
   clear_converged_test = PETSC_FALSE;
   PetscCall(SNESGetKSP(snes, &ksp));
   PetscCall(KSPGetConvergenceTest(ksp, &convtest, &convctx, &convdestroy));
-  PetscCall(PetscObjectQueryFunction((PetscObject)ksp, "KSPCGSetRadius_C", &ksp_has_radius));
-  if (convtest != SNESTR_KSPConverged_Private && !ksp_has_radius) {
+  if (convtest != SNESTR_KSPConverged_Private) {
     clear_converged_test = PETSC_TRUE;
     PetscCall(PetscNew(&ctx));
     ctx->snes = snes;
@@ -391,10 +389,24 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
     PetscBool changed_y;
     PetscBool changed_w;
 
-    /* calculating GradF of minimization function only once */
+    /* calculating Jacobian and GradF of minimization function only once */
     if (!already_done) {
+      /* Call general purpose update function */
+      PetscTryTypeMethod(snes, update, snes->iter);
+
+      /* if update is present, recompute objective function and function norm */
+      if (snes->ops->update) {
+        PetscCall(SNESComputeFunction(snes, X, F));
+        PetscCall(VecNorm(F, NORM_2, &fnorm));
+        if (has_objective) PetscCall(SNESComputeObjective(snes, X, &fk));
+        else fk = 0.5 * PetscSqr(fnorm); /* obj(x) = 0.5 * ||F(x)||^2 */
+      }
+
+      /* Jacobian */
       PetscCall(SNESComputeJacobian(snes, X, snes->jacobian, snes->jacobian_pre));
       SNESCheckJacobianDomainerror(snes);
+
+      /* GradF */
       if (has_objective) gfnorm = fnorm;
       else {
         PetscCall(MatMultTranspose(snes->jacobian, F, GradF)); /* grad f = J^T F */
@@ -403,8 +415,8 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
     }
     already_done = PETSC_TRUE;
 
-    /* solve trust-region subproblem */
-    PetscCall(KSPCGSetRadius(snes->ksp, delta));
+    /* solve trust-region subproblem (don't specify radius if not looking for Newton step only) */
+    PetscCall(KSPCGSetRadius(snes->ksp, neP->fallback == SNES_TR_FALLBACK_NEWTON ? delta : 0.0));
     PetscCall(KSPSetOperators(snes->ksp, snes->jacobian, snes->jacobian_pre));
     PetscCall(KSPSolve(snes->ksp, F, Y));
     SNESCheckKSPSolve(snes);
@@ -412,8 +424,10 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
 
     /* decide what to do when the update is outside of trust region */
     PetscCall(VecNorm(Y, NORM_2, &ynorm));
-    if (ynorm > delta) {
-      switch (neP->fallback) {
+    if (ynorm > delta || ynorm == 0.0) {
+      SNESNewtonTRFallbackType fallback = ynorm > 0.0 ? neP->fallback : SNES_TR_FALLBACK_CAUCHY;
+
+      switch (fallback) {
       case SNES_TR_FALLBACK_NEWTON:
         auk = delta / ynorm;
         PetscCall(VecScale(Y, auk));
@@ -427,7 +441,7 @@ static PetscErrorCode SNESSolve_NEWTONTR(SNES snes)
         auk = delta / gfnorm;
         if (gTBg > 0.0) auk *= PetscMin(gfnorm * gfnorm * gfnorm / (delta * gTBg), 1);
         ycnorm = auk * gfnorm;
-        if (neP->fallback == SNES_TR_FALLBACK_CAUCHY || gTBg <= 0.0) {
+        if (fallback == SNES_TR_FALLBACK_CAUCHY || gTBg <= 0.0) {
           /* Cauchy solution */
           PetscCall(VecAXPBY(Y, auk, 0.0, GradF));
           PetscCall(PetscInfo(snes, "CP evaluated. delta: %g, ynorm: %g, ycnorm: %g, gTBg: %g\n", (double)delta, (double)ynorm, (double)ycnorm, (double)gTBg));
