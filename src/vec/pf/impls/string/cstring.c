@@ -31,7 +31,7 @@ static PetscErrorCode PFSetFromOptions_String(PF pf, PetscOptionItems *PetscOpti
   PetscFunctionBegin;
   PetscOptionsHeadBegin(PetscOptionsObject, "String function options");
   PetscCall(PetscOptionsString("-pf_string", "Enter the function", "PFStringCreateFunction", "", value, sizeof(value), &flag));
-  if (flag) { PetscCall(PFStringSetFunction(pf, value)); }
+  if (flag) PetscCall(PFStringSetFunction(pf, value));
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
