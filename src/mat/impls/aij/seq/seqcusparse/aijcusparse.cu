@@ -289,11 +289,6 @@ static PetscErrorCode MatSeqAIJCUSPARSEBuildFactoredMatrix_LU(Mat A)
         PetscCall(PetscArraycpy(Mj + Mi[i], Aj + Ai[i], llen));
         Mj[Mi[i] + llen] = i;                                                             // diagonal entry
         PetscCall(PetscArraycpy(Mj + Mi[i] + llen + 1, Aj + Adiag[i + 1] + 1, ulen - 1)); // entries of U on the right of the diagonal
-
-        PetscCall(PetscArraycpy(Ma + Mi[i], Aa + Ai[i], llen));
-        Ma[Mi[i] + llen] = (MatScalar)1.0 / Aa[Adiag[i]];                                 // recover the diagonal entry
-        PetscCall(PetscArraycpy(Ma + Mi[i] + llen + 1, Aa + Adiag[i + 1] + 1, ulen - 1)); // entries of U on the right of the diagonal
-
         Mi[i + 1] = Mi[i] + llen + ulen;
       }
       // Copy M (L,U) from host to device
@@ -302,7 +297,7 @@ static PetscErrorCode MatSeqAIJCUSPARSEBuildFactoredMatrix_LU(Mat A)
       PetscCallCUDA(cudaMalloc(&fs->csrVal, sizeof(PetscScalar) * Mnz));
       PetscCallCUDA(cudaMemcpy(fs->csrRowPtr, Mi, sizeof(PetscInt) * (m + 1), cudaMemcpyHostToDevice));
       PetscCallCUDA(cudaMemcpy(fs->csrColIdx, Mj, sizeof(PetscInt) * Mnz, cudaMemcpyHostToDevice));
-      PetscCallCUDA(cudaMemcpy(fs->csrVal, Ma, sizeof(PetscScalar) * Mnz, cudaMemcpyHostToDevice));
+      // PetscCallCUDA(cudaMemcpy(fs->csrVal, Ma, sizeof(PetscScalar) * Mnz, cudaMemcpyHostToDevice));
 
       // Create descriptors for L, U. See https://docs.nvidia.com/cuda/cusparse/index.html#cusparseDiagType_t
       // cusparseDiagType_t: This type indicates if the matrix diagonal entries are unity. The diagonal elements are always
@@ -342,19 +337,20 @@ static PetscErrorCode MatSeqAIJCUSPARSEBuildFactoredMatrix_LU(Mat A)
       fs->csrRowPtr_h = Mi;
       fs->csrVal_h    = Ma;
       PetscCall(PetscFree(Mj));
-    } else { // Copy the value only
-      Mi  = fs->csrRowPtr_h;
-      Ma  = fs->csrVal_h;
-      Mnz = Mi[m];
-      for (PetscInt i = 0; i < m; i++) {
-        PetscInt llen = Ai[i + 1] - Ai[i];
-        PetscInt ulen = Adiag[i] - Adiag[i + 1];
-        PetscCall(PetscArraycpy(Ma + Mi[i], Aa + Ai[i], llen));
-        Ma[Mi[i] + llen] = (MatScalar)1.0 / Aa[Adiag[i]];                                 // recover the diagonal entry
-        PetscCall(PetscArraycpy(Ma + Mi[i] + llen + 1, Aa + Adiag[i + 1] + 1, ulen - 1)); // entries of U on the right of the diagonal
-      }
-      PetscCallCUDA(cudaMemcpy(fs->csrVal, Ma, sizeof(PetscScalar) * Mnz, cudaMemcpyHostToDevice));
     }
+    // Copy the value
+    Mi  = fs->csrRowPtr_h;
+    Ma  = fs->csrVal_h;
+    Mnz = Mi[m];
+    for (PetscInt i = 0; i < m; i++) {
+      PetscInt llen = Ai[i + 1] - Ai[i];
+      PetscInt ulen = Adiag[i] - Adiag[i + 1];
+      PetscCall(PetscArraycpy(Ma + Mi[i], Aa + Ai[i], llen));
+      Ma[Mi[i] + llen] = (MatScalar)1.0 / Aa[Adiag[i]];                                 // recover the diagonal entry
+      PetscCall(PetscArraycpy(Ma + Mi[i] + llen + 1, Aa + Adiag[i + 1] + 1, ulen - 1)); // entries of U on the right of the diagonal
+    }
+    PetscCallCUDA(cudaMemcpy(fs->csrVal, Ma, sizeof(PetscScalar) * Mnz, cudaMemcpyHostToDevice));
+
     // Do cusparseSpSV_analysis(), which is numeric and requires valid and up-to-date matrix values
     PetscCallCUSPARSE(cusparseSpSV_analysis(fs->handle, CUSPARSE_OPERATION_NON_TRANSPOSE, &PETSC_CUSPARSE_ONE, fs->spMatDescr_L, fs->dnVecDescr_X, fs->dnVecDescr_Y, cusparse_scalartype, CUSPARSE_SPSV_ALG_DEFAULT, fs->spsvDescr_L, fs->spsvBuffer_L));
 
@@ -692,19 +688,13 @@ static PetscErrorCode MatSeqAIJCUSPARSEBuildFactoredMatrix_Cheolesky(Mat A)
     if (!fs->csrRowPtr) {                    // Is't the first time to do the setup? Use csrRowPtr since it is not null even m=0
       // Re-arrange the (skewed) factored matrix and put the result into M, a regular csr matrix on host.
       // See comments at MatICCFactorSymbolic_SeqAIJ() on the layout of the factored matrix (U) on host.
-      Mnz = (Ai[m] - Ai[0]); // Lnz (with the non-unit diagonal)
+      Mnz = Ai[m]; // Unz (with the non-unit diagonal)
       PetscCall(PetscMalloc1(Mnz, &Ma));
       PetscCall(PetscMalloc1(Mnz, &Mj)); // Mj is temp
       for (PetscInt i = 0; i < m; i++) {
         PetscInt ulen = Ai[i + 1] - Ai[i];
-
-        Mj[Ai[i]] = i;                                                  // diagonal entry
+        Mj[Ai[i]]     = i;                                              // diagonal entry
         PetscCall(PetscArraycpy(Mj + Ai[i] + 1, Aj + Ai[i], ulen - 1)); // entries of U on the right of the diagonal
-        Ma[Ai[i]] = (MatScalar)1.0 / Aa[Adiag[i]];                      // recover the diagonal entry
-
-        // for (PetscInt k = 0; k < ulen - 1; k++) Ma[Ai[i] + 1 + k] = -Aa[Ai[i] + k];
-
-        PetscCall(PetscArraycpy(Ma + Ai[i] + 1, Aa + Ai[i], ulen - 1)); // entries of U on the right of the diagonal
       }
       // Copy M (U) from host to device
       PetscCallCUDA(cudaMalloc(&fs->csrRowPtr, sizeof(PetscInt) * (m + 1)));
@@ -712,7 +702,7 @@ static PetscErrorCode MatSeqAIJCUSPARSEBuildFactoredMatrix_Cheolesky(Mat A)
       PetscCallCUDA(cudaMalloc(&fs->csrVal, sizeof(PetscScalar) * Mnz));
       PetscCallCUDA(cudaMemcpy(fs->csrRowPtr, Ai, sizeof(PetscInt) * (m + 1), cudaMemcpyHostToDevice));
       PetscCallCUDA(cudaMemcpy(fs->csrColIdx, Mj, sizeof(PetscInt) * Mnz, cudaMemcpyHostToDevice));
-      PetscCallCUDA(cudaMemcpy(fs->csrVal, Ma, sizeof(PetscScalar) * Mnz, cudaMemcpyHostToDevice));
+      // PetscCallCUDA(cudaMemcpy(fs->csrVal, Ma, sizeof(PetscScalar) * Mnz, cudaMemcpyHostToDevice));
 
       // Create descriptors for L, U. See https://docs.nvidia.com/cuda/cusparse/index.html#cusparseDiagType_t
       // cusparseDiagType_t: This type indicates if the matrix diagonal entries are unity. The diagonal elements are always
@@ -746,18 +736,18 @@ static PetscErrorCode MatSeqAIJCUSPARSEBuildFactoredMatrix_Cheolesky(Mat A)
       // Record for reuse
       fs->csrVal_h = Ma;
       PetscCall(PetscFree(Mj));
-    } else { // Copy the value only
-      Ma  = fs->csrVal_h;
-      Mnz = Ai[m];
-      for (PetscInt i = 0; i < m; i++) {
-        PetscInt ulen = Ai[i + 1] - Ai[i];
-
-        Ma[Ai[i]] = (MatScalar)1.0 / Aa[Adiag[i]]; // recover the diagonal entry
-        // for (PetscInt k = 0; k < ulen - 1; k++) Ma[Ai[i] + 1 + k] = -Aa[Ai[i] + k];
-        PetscCall(PetscArraycpy(Ma + Ai[i] + 1, Aa + Ai[i], ulen - 1)); // entries of U on the right of the diagonal
-      }
-      PetscCallCUDA(cudaMemcpy(fs->csrVal, Ma, sizeof(PetscScalar) * Mnz, cudaMemcpyHostToDevice));
     }
+    // Copy the value
+    Ma  = fs->csrVal_h;
+    Mnz = Ai[m];
+    for (PetscInt i = 0; i < m; i++) {
+      PetscInt ulen = Ai[i + 1] - Ai[i];
+      Ma[Ai[i]]     = (MatScalar)1.0 / Aa[Adiag[i]]; // recover the diagonal entry
+      for (PetscInt k = 0; k < ulen - 1; k++) Ma[Ai[i] + 1 + k] = -Aa[Ai[i] + k];
+      // PetscCall(PetscArraycpy(Ma + Ai[i] + 1, Aa + Ai[i], ulen - 1)); // entries of U on the right of the diagonal
+    }
+    PetscCallCUDA(cudaMemcpy(fs->csrVal, Ma, sizeof(PetscScalar) * Mnz, cudaMemcpyHostToDevice));
+
     // Do cusparseSpSV_analysis(), which is numeric and requires valid and up-to-date matrix values
     PetscCallCUSPARSE(cusparseSpSV_analysis(fs->handle, CUSPARSE_OPERATION_NON_TRANSPOSE, &PETSC_CUSPARSE_ONE, fs->spMatDescr_U, fs->dnVecDescr_X, fs->dnVecDescr_Y, cusparse_scalartype, CUSPARSE_SPSV_ALG_DEFAULT, fs->spsvDescr_U, fs->spsvBuffer_U));
 
@@ -792,17 +782,17 @@ static PetscErrorCode MatSolve_SeqAIJCUSPARSE_Cholesky(Mat A, Vec b, Vec x)
     PetscCallCUSPARSE(cusparseDnVecSetValues(fs->dnVecDescr_X, (void *)barray));
   }
 
-  // Solve U Y = X
+  // Solve Ut Y = X
   PetscCallCUSPARSE(cusparseDnVecSetValues(fs->dnVecDescr_Y, fs->Y));
-  PetscCallCUSPARSE(cusparseSpSV_solve(fs->handle, CUSPARSE_OPERATION_NON_TRANSPOSE, &PETSC_CUSPARSE_ONE, fs->spMatDescr_U, fs->dnVecDescr_X, fs->dnVecDescr_Y, cusparse_scalartype, alg, fs->spsvDescr_U));
+  PetscCallCUSPARSE(cusparseSpSV_solve(fs->handle, CUSPARSE_OPERATION_TRANSPOSE, &PETSC_CUSPARSE_ONE, fs->spMatDescr_U, fs->dnVecDescr_X, fs->dnVecDescr_Y, cusparse_scalartype, alg, fs->spsvDescr_Ut));
 
-  // Solve Ut X = Y
+  // Solve U X = Y
   if (fs->cpermIndices) { // if need to permute, we need to use the intermediate buffer X
     PetscCallCUSPARSE(cusparseDnVecSetValues(fs->dnVecDescr_X, fs->X));
   } else {
     PetscCallCUSPARSE(cusparseDnVecSetValues(fs->dnVecDescr_X, xarray));
   }
-  PetscCallCUSPARSE(cusparseSpSV_solve(fs->handle, CUSPARSE_OPERATION_TRANSPOSE, &PETSC_CUSPARSE_ONE, fs->spMatDescr_U, fs->dnVecDescr_Y, fs->dnVecDescr_X, cusparse_scalartype, alg, fs->spsvDescr_Ut));
+  PetscCallCUSPARSE(cusparseSpSV_solve(fs->handle, CUSPARSE_OPERATION_NON_TRANSPOSE, &PETSC_CUSPARSE_ONE, fs->spMatDescr_U, fs->dnVecDescr_Y, fs->dnVecDescr_X, cusparse_scalartype, alg, fs->spsvDescr_U));
 
   // Reorder X with the column permutation if needed, and put the result back to x
   if (fs->cpermIndices) {

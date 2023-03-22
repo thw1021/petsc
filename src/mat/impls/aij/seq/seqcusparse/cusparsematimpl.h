@@ -224,18 +224,16 @@ struct Mat_SeqAIJCUSPARSETriFactors {
   cudaDeviceProp                     dev_prop;
   PetscBool                          init_dev_prop;
 
-#if PETSC_PKG_CUDA_VERSION_GE(11, 7, 0)
-  PetscScalar *csrVal_h;    // Since LU is done on host, we prepare a factored M on host and then copy it to device
-  PetscInt    *csrRowPtr_h; // csrColIdx_h is temporary and is not need to be kept
-#endif
-
+  PetscBool factorizeOnDevice; /* Do factorization on device or not */
+#if PETSC_PKG_CUDA_VERSION_GE(11, 3, 0)
   /* csrilu0/csric0 appeared in cusparse-8.0, but we use it along with cusparseSpSV,
      which first appeared in cusparse-11.5 with cuda-11.3.
   */
-  PetscBool factorizeOnDevice; /* Do factorization on device or not */
-#if CUSPARSE_VERSION >= 11500
   PetscScalar *csrVal;
   int         *csrRowPtr, *csrColIdx; /* a,i,j of M. Using int since some cusparse APIs only support 32-bit indices */
+
+  PetscScalar *csrVal_h;    // Since LU is done on host, we prepare a factored matrix in regular csr format on host and then copy it to device
+  PetscInt    *csrRowPtr_h; // csrColIdx_h is temporary and is not need to be kept
 
   /* Mixed mat descriptor types? yes, different cusparse APIs use different types */
   cusparseMatDescr_t   matDescr_M;
