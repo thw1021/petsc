@@ -840,7 +840,7 @@ static PetscErrorCode KSPSolve_Private(KSP ksp, Vec b, Vec x)
 
   PetscCall(VecSetErrorIfLocked(ksp->vec_sol, 3));
 
-  PetscCall(PetscLogEventBegin(KSP_Solve, ksp, ksp->vec_rhs, ksp->vec_sol, 0));
+  PetscCall(PetscLogEventBegin(!ksp->transpose_solve ? KSP_Solve : KSP_SolveTranspose, ksp, ksp->vec_rhs, ksp->vec_sol, 0));
   PetscCall(PCGetOperators(ksp->pc, &mat, &pmat));
   /* diagonal scale RHS if called for */
   if (ksp->dscale) {
@@ -933,7 +933,7 @@ static PetscErrorCode KSPSolve_Private(KSP ksp, Vec b, Vec x)
       ksp->dscalefix2 = PETSC_TRUE;
     }
   }
-  PetscCall(PetscLogEventEnd(KSP_Solve, ksp, ksp->vec_rhs, ksp->vec_sol, 0));
+  PetscCall(PetscLogEventEnd(!ksp->transpose_solve ? KSP_Solve : KSP_SolveTranspose, ksp, ksp->vec_rhs, ksp->vec_sol, 0));
   if (ksp->guess) PetscCall(KSPGuessUpdate(ksp->guess, ksp->vec_rhs, ksp->vec_sol));
   if (ksp->postsolve) PetscCall((*ksp->postsolve)(ksp, ksp->vec_rhs, ksp->vec_sol, ksp->postctx));
 
@@ -985,6 +985,32 @@ static PetscErrorCode KSPSolve_Private(KSP ksp, Vec b, Vec x)
     SETERRQ(comm, PETSC_ERR_NOT_CONVERGED, "KSPSolve has not converged, reason %s PC failed due to %s", KSPConvergedReasons[ksp->reason], PCFailedReasons[reason]);
   }
   level--;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode KSPSolveTranspose_Private(KSP ksp)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
+  if (ksp->transpose.use_explicittranspose) {
+    Mat J, Jpre;
+    PetscCall(KSPGetOperators(ksp, &J, &Jpre));
+    if (!ksp->transpose.reuse_transpose) {
+      PetscCall(MatTranspose(J, MAT_INITIAL_MATRIX, &ksp->transpose.AT));
+      if (J != Jpre) PetscCall(MatTranspose(Jpre, MAT_INITIAL_MATRIX, &ksp->transpose.BT));
+      ksp->transpose.reuse_transpose = PETSC_TRUE;
+    } else {
+      PetscCall(MatTranspose(J, MAT_REUSE_MATRIX, &ksp->transpose.AT));
+      if (J != Jpre) PetscCall(MatTranspose(Jpre, MAT_REUSE_MATRIX, &ksp->transpose.BT));
+    }
+    if (J == Jpre && ksp->transpose.BT != ksp->transpose.AT) {
+      PetscCall(PetscObjectReference((PetscObject)ksp->transpose.AT));
+      ksp->transpose.BT = ksp->transpose.AT;
+    }
+    PetscCall(KSPSetOperators(ksp, ksp->transpose.AT, ksp->transpose.BT));
+  } else {
+    ksp->transpose_solve = PETSC_TRUE;
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1094,28 +1120,9 @@ PetscErrorCode KSPSolve(KSP ksp, Vec b, Vec x)
 PetscErrorCode KSPSolveTranspose(KSP ksp, Vec b, Vec x)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
   if (b) PetscValidHeaderSpecific(b, VEC_CLASSID, 2);
   if (x) PetscValidHeaderSpecific(x, VEC_CLASSID, 3);
-  if (ksp->transpose.use_explicittranspose) {
-    Mat J, Jpre;
-    PetscCall(KSPGetOperators(ksp, &J, &Jpre));
-    if (!ksp->transpose.reuse_transpose) {
-      PetscCall(MatTranspose(J, MAT_INITIAL_MATRIX, &ksp->transpose.AT));
-      if (J != Jpre) PetscCall(MatTranspose(Jpre, MAT_INITIAL_MATRIX, &ksp->transpose.BT));
-      ksp->transpose.reuse_transpose = PETSC_TRUE;
-    } else {
-      PetscCall(MatTranspose(J, MAT_REUSE_MATRIX, &ksp->transpose.AT));
-      if (J != Jpre) PetscCall(MatTranspose(Jpre, MAT_REUSE_MATRIX, &ksp->transpose.BT));
-    }
-    if (J == Jpre && ksp->transpose.BT != ksp->transpose.AT) {
-      PetscCall(PetscObjectReference((PetscObject)ksp->transpose.AT));
-      ksp->transpose.BT = ksp->transpose.AT;
-    }
-    PetscCall(KSPSetOperators(ksp, ksp->transpose.AT, ksp->transpose.BT));
-  } else {
-    ksp->transpose_solve = PETSC_TRUE;
-  }
+  PetscCall(KSPSolveTranspose_Private(ksp));
   PetscCall(KSPSolve_Private(ksp, b, x));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1143,24 +1150,7 @@ static PetscErrorCode KSPViewFinalMatResidual_Internal(KSP ksp, Mat B, Mat X, Pe
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
-     KSPMatSolve - Solves a linear system with multiple right-hand sides stored as a MATDENSE. Unlike `KSPSolve()`, B and X must be different matrices.
-
-   Input Parameters:
-+     ksp - iterative context
--     B - block of right-hand sides
-
-   Output Parameter:
-.     X - block of solutions
-
-   Notes:
-     This is a stripped-down version of `KSPSolve()`, which only handles -ksp_view, -ksp_converged_reason, and -ksp_view_final_residual.
-
-   Level: intermediate
-
-.seealso: [](chapter_ksp), `KSPSolve()`, `MatMatSolve()`, `MATDENSE`, `KSPHPDDM`, `PCBJACOBI`, `PCASM`
-@*/
-PetscErrorCode KSPMatSolve(KSP ksp, Mat B, Mat X)
+PetscErrorCode KSPMatSolve_Private(KSP ksp, Mat B, Mat X)
 {
   Mat       A, P, vB, vX;
   Vec       cb, cx;
@@ -1168,7 +1158,6 @@ PetscErrorCode KSPMatSolve(KSP ksp, Mat B, Mat X)
   PetscBool match;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
   PetscValidHeaderSpecific(B, MAT_CLASSID, 2);
   PetscValidHeaderSpecific(X, MAT_CLASSID, 3);
   PetscCheckSameComm(ksp, 1, B, 2);
@@ -1196,7 +1185,7 @@ PetscErrorCode KSPMatSolve(KSP ksp, Mat B, Mat X)
   PetscCall(KSPSetUpOnBlocks(ksp));
   if (ksp->ops->matsolve) {
     if (ksp->guess_zero) PetscCall(MatZeroEntries(X));
-    PetscCall(PetscLogEventBegin(KSP_MatSolve, ksp, B, X, 0));
+    PetscCall(PetscLogEventBegin(!ksp->transpose_solve ? KSP_MatSolve : KSP_MatSolveTranspose, ksp, B, X, 0));
     PetscCall(KSPGetMatSolveBatchSize(ksp, &Bbn));
     /* by default, do a single solve with all columns */
     if (Bbn == PETSC_DECIDE) Bbn = N2;
@@ -1237,17 +1226,68 @@ PetscErrorCode KSPMatSolve(KSP ksp, Mat B, Mat X)
     if (ksp->viewRhs) PetscCall(ObjectView((PetscObject)B, ksp->viewerRhs, ksp->formatRhs));
     if (ksp->viewSol) PetscCall(ObjectView((PetscObject)X, ksp->viewerSol, ksp->formatSol));
     if (ksp->view) PetscCall(KSPView(ksp, ksp->viewer));
-    PetscCall(PetscLogEventEnd(KSP_MatSolve, ksp, B, X, 0));
+    PetscCall(PetscLogEventEnd(!ksp->transpose_solve ? KSP_MatSolve : KSP_MatSolveTranspose, ksp, B, X, 0));
   } else {
     PetscCall(PetscInfo(ksp, "KSP type %s solving column by column\n", ((PetscObject)ksp)->type_name));
     for (n2 = 0; n2 < N2; ++n2) {
       PetscCall(MatDenseGetColumnVecRead(B, n2, &cb));
       PetscCall(MatDenseGetColumnVecWrite(X, n2, &cx));
-      PetscCall(KSPSolve(ksp, cb, cx));
+      PetscCall(KSPSolve_Private(ksp, cb, cx));
       PetscCall(MatDenseRestoreColumnVecWrite(X, n2, &cx));
       PetscCall(MatDenseRestoreColumnVecRead(B, n2, &cb));
     }
   }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+     KSPMatSolve - Solves a linear system with multiple right-hand sides stored as a `MATDENSE`. Unlike `KSPSolve()`, `B` and `X` must be different matrices.
+
+   Input Parameters:
++     ksp - iterative context
+-     B - block of right-hand sides
+
+   Output Parameter:
+.     X - block of solutions
+
+   Notes:
+     This is a stripped-down version of `KSPSolve()`, which only handles `-ksp_view`, `-ksp_converged_reason`, `-ksp_converged_rate`, and `-ksp_view_final_residual`.
+
+   Level: intermediate
+
+.seealso: [](chapter_ksp), `KSPSolve()`, `MatMatSolve()`, `KSPMatSolveTranspose(), `MATDENSE`, `KSPHPDDM`, `PCBJACOBI`, `PCASM`
+@*/
+PetscErrorCode KSPMatSolve(KSP ksp, Mat B, Mat X)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
+  ksp->transpose_solve = PETSC_FALSE;
+  PetscCall(KSPMatSolve_Private(ksp, B, X));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+     KSPMatSolveTranspose - Solves the transpose of a linear system with multiple right-hand sides stored as a `MATDENSE`. Unlike `KSPSolve()`, `B` and `X` must be different matrices.
+
+   Input Parameters:
++     ksp - iterative context
+-     B - block of right-hand sides
+
+   Output Parameter:
+.     X - block of solutions
+
+   Notes:
+     This is a stripped-down version of `KSPSolveTranspose()`, which only handles `-ksp_view`, `-ksp_converged_reason`, `-ksp_converged_rate`, and `-ksp_view_final_residual`.
+
+   Level: intermediate
+
+.seealso: [](chapter_ksp), `KSPSolveTranspose()`, `MatMatTransposeSolve()`, `KSPMatSolve(), `MATDENSE`, `KSPHPDDM`, `PCBJACOBI`, `PCASM`
+@*/
+PetscErrorCode KSPMatSolveTranspose(KSP ksp, Mat B, Mat X)
+{
+  PetscFunctionBegin;
+  PetscCall(KSPSolveTranspose_Private(ksp));
+  PetscCall(KSPMatSolve_Private(ksp, B, X));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
