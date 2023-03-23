@@ -68,6 +68,7 @@ static PetscErrorCode MatSolve_SeqAIJCUSPARSE(Mat, Vec, Vec);
 static PetscErrorCode MatSolveTranspose_SeqAIJCUSPARSE(Mat, Vec, Vec);
 static PetscErrorCode MatSolve_SeqAIJCUSPARSE_NaturalOrdering(Mat, Vec, Vec);
 static PetscErrorCode MatSolveTranspose_SeqAIJCUSPARSE_NaturalOrdering(Mat, Vec, Vec);
+static PetscErrorCode MatSeqAIJCUSPARSEMultStruct_Destroy(Mat_SeqAIJCUSPARSETriFactorStruct **);
 #endif
 static PetscErrorCode MatSetFromOptions_SeqAIJCUSPARSE(Mat, PetscOptionItems *PetscOptionsObject);
 static PetscErrorCode MatAXPY_SeqAIJCUSPARSE(Mat, PetscScalar, Mat, MatStructure);
@@ -81,7 +82,6 @@ static PetscErrorCode MatMultHermitianTransposeAdd_SeqAIJCUSPARSE(Mat, Vec, Vec,
 static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat, Vec, Vec, Vec, PetscBool, PetscBool);
 
 static PetscErrorCode CsrMatrix_Destroy(CsrMatrix **);
-static PetscErrorCode MatSeqAIJCUSPARSEMultStruct_Destroy(Mat_SeqAIJCUSPARSETriFactorStruct **);
 static PetscErrorCode MatSeqAIJCUSPARSEMultStruct_Destroy(Mat_SeqAIJCUSPARSEMultStruct **, MatCUSPARSEStorageFormat);
 static PetscErrorCode MatSeqAIJCUSPARSETriFactors_Destroy(Mat_SeqAIJCUSPARSETriFactors **);
 static PetscErrorCode MatSeqAIJCUSPARSE_Destroy(Mat_SeqAIJCUSPARSE **);
@@ -4138,24 +4138,24 @@ static PetscErrorCode CsrMatrix_Destroy(CsrMatrix **mat)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#if PETSC_PKG_CUDA_VERSION_LT(11, 3, 0)
 static PetscErrorCode MatSeqAIJCUSPARSEMultStruct_Destroy(Mat_SeqAIJCUSPARSETriFactorStruct **trifactor)
 {
   PetscFunctionBegin;
   if (*trifactor) {
     if ((*trifactor)->descr) PetscCallCUSPARSE(cusparseDestroyMatDescr((*trifactor)->descr));
-#if PETSC_PKG_CUDA_VERSION_LT(11, 3, 0)
     if ((*trifactor)->solveInfo) PetscCallCUSPARSE(cusparseDestroyCsrsvInfo((*trifactor)->solveInfo));
-#endif
     PetscCall(CsrMatrix_Destroy(&(*trifactor)->csrMat));
     if ((*trifactor)->solveBuffer) PetscCallCUDA(cudaFree((*trifactor)->solveBuffer));
     if ((*trifactor)->AA_h) PetscCallCUDA(cudaFreeHost((*trifactor)->AA_h));
-#if PETSC_PKG_CUDA_VERSION_GE(11, 0, 0)
+  #if PETSC_PKG_CUDA_VERSION_GE(11, 0, 0)
     if ((*trifactor)->csr2cscBuffer) PetscCallCUDA(cudaFree((*trifactor)->csr2cscBuffer));
-#endif
+  #endif
     PetscCall(PetscFree(*trifactor));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+#endif
 
 static PetscErrorCode MatSeqAIJCUSPARSEMultStruct_Destroy(Mat_SeqAIJCUSPARSEMultStruct **matstruct, MatCUSPARSEStorageFormat format)
 {
@@ -4205,10 +4205,12 @@ PetscErrorCode MatSeqAIJCUSPARSETriFactors_Reset(Mat_SeqAIJCUSPARSETriFactors_p 
 
   PetscFunctionBegin;
   if (fs) {
+#if PETSC_PKG_CUDA_VERSION_LT(11, 3, 0)
     PetscCall(MatSeqAIJCUSPARSEMultStruct_Destroy(&fs->loTriFactorPtr));
     PetscCall(MatSeqAIJCUSPARSEMultStruct_Destroy(&fs->upTriFactorPtr));
     PetscCall(MatSeqAIJCUSPARSEMultStruct_Destroy(&fs->loTriFactorPtrTranspose));
     PetscCall(MatSeqAIJCUSPARSEMultStruct_Destroy(&fs->upTriFactorPtrTranspose));
+#endif
     delete fs->rpermIndices;
     delete fs->cpermIndices;
     delete fs->workVector;
