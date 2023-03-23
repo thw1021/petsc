@@ -68,11 +68,7 @@ class Configure(config.package.CMakePackage):
     if self.cuda.found:
       args.append('-DSTRUMPACK_USE_CUDA=ON')
       with self.Language('CUDA'):
-        petscNvcc = self.getCompiler()
-      args.append('-DCMAKE_CUDA_COMPILER="'+petscNvcc+'"')
-      if hasattr(self.setCompilers,'CUDA_CXX'): # CUDA_CXX is set in cuda.py and might be mpicxx. It's useful in compiling CUDA+MPI files
-        args.append('-DCMAKE_CUDA_HOST_COMPILER="'+self.setCompilers.CUDA_CXX+'"')
-      args.append('-D'+self.cuda.cmakeArchProperty())
+        args.append('-D'+self.cuda.cmakeArchProperty())
     elif self.hip.found:
       args.append('-DSTRUMPACK_USE_HIP=ON')
       # Not using -DHIP_HIPCC_FLAGS=--amdgpu-target=gfx906 as mentioned in the doc, because we prefer standardized cmake options
