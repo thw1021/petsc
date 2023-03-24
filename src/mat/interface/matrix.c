@@ -11172,3 +11172,85 @@ PetscErrorCode MatEliminateZeros(Mat A)
   PetscUseTypeMethod(A, eliminatezeros);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+/*@
+  MatCreateDenseFromVecType - create a matrix from VecType.
+
+  Collective
+
+  Input Parameters:
+. X    - the vector
+. m    - number of local rows (or `PETSC_DECIDE` to have calculated if `M` is given)
+. n    - number of local columns (or `PETSC_DECIDE` to have calculated if `N` is given)
+. M    - number of global rows (or `PETSC_DECIDE` to have calculated if `m` is given)
+. N    - number of global columns (or `PETSC_DECIDE` to have calculated if `n` is given)
+- data - optional location of GPU matrix data. Pass`NULL` to have PETSc to control matrix
+         memory allocation.
+
+  Output Parameter:
++ A - the matrix
+
+  Level: advanced
+
+.seealso: [](chapter_matrices), `Mat`, `MatCreate()` 
+@*/
+PetscErrorCode MatCreateDenseFromVecType(Vec X, PetscInt m, PetscInt n, PetscInt M, PetscInt N, PetscScalar *data, Mat *A)
+{
+  VecType   root_type;
+  PetscBool iscuda,iship, isstan;
+  MPI_Comm  comm;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
+  PetscValidType(A, 1);
+
+  PetscCall(VecGetRootType_Private(X, &root_type));
+  PetscCall(PetscObjectGetComm((PetscObject)X, &comm));
+
+  // Version 1?
+  PetscCall(PetscStrcmp(root_type, VECSTANDARD, &isstan));
+  if (isstan) {
+    PetscCall(MatCreateDense(comm, m, n, M, N, data, A));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
+#if defined(PETSC_HAVE_CUDA)
+  PetscCall(PetscStrcmp(root_type, VECCUDA, &iscuda));
+  if (iscuda) {
+    PetscCall(MatCreateDenseCUDA(comm, m, n, M, N, data, A));
+    PetscFunctionReturn(PETSC_SUCCESS);
+#else
+    PetscUnreachable();
+#endif  
+
+#if defined(PETSC_HAVE_HIP)
+  PetscCall(PetscStrcmp(root_type, VECHIP, &iship));
+  if (iship) {
+    PetscCall(MatCreateDenseHIP(comm, m, n, M, N, data, A));
+    PetscFunctionReturn(PETSC_SUCCESS);
+#else
+    PetscUnreachable();
+#endif  
+
+  //Version 2?
+//  PetscCall(PetscStrcmp(root_type, VECCUDA, &iscuda));
+//  PetscCall(PetscStrcmp(root_type, VECHIP, &iship));
+//
+//  if (iscuda) {
+//#if defined(PETSC_HAVE_CUDA)    
+//    PetscCall(MatCreateDenseCUDA(comm, m, n, M, N, data, A));a
+//#else
+//    PetscUnreachable();    
+//#endif
+//  } else if (iship) {
+//#if defined(PETSC_HAVE_HIP)
+//    PetscCall(MatCreateDenseHIP(comm, m, n, M, N, data, A));
+//#else
+//    PetscUnreachable();
+//#endif
+//  } else {
+//    PetscCall(MatCreateDense(comm, m, n, M, N, data, A));
+//  }
+
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
