@@ -9,6 +9,7 @@ import sys
 import subprocess
 import re
 import datetime
+import shutil
 
 sys.path.append(os.getcwd())
 sys.path.append(os.path.abspath('./ext'))
@@ -193,6 +194,9 @@ def build_finished_handler(app, exception):
         fix_pydata_margins.fix_pydata_margins(app.outdir)
         if app.builder.name == 'dirhtml':
             _add_man_page_redirects(app, exception)
+        # remove sources for manual pages since they are automatically generated and should not be looked at on the website
+        if os.path.isdir(os.path.join(app.outdir,'_sources','manualpages')):
+            shutil.rmtree(os.path.join(app.outdir,'_sources','manualpages'))
         if app.builder.name == 'html':
             print("==========================================================================")
             print("    open %s/index.html in your browser to view the documentation " % app.outdir)
