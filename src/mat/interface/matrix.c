@@ -11197,7 +11197,7 @@ PetscErrorCode MatEliminateZeros(Mat A)
 PetscErrorCode MatCreateDenseFromVecType(Vec X, PetscInt m, PetscInt n, PetscInt M, PetscInt N, PetscScalar *data, Mat *A)
 {
   VecType   root_type;
-  PetscBool iscuda,iship, isstan;
+  PetscBool isstan;
   MPI_Comm  comm;
 
   PetscFunctionBegin;
@@ -11215,19 +11215,23 @@ PetscErrorCode MatCreateDenseFromVecType(Vec X, PetscInt m, PetscInt n, PetscInt
   }
 
 #if defined(PETSC_HAVE_CUDA)
+  PetscBool iscuda;
   PetscCall(PetscStrcmp(root_type, VECCUDA, &iscuda));
   if (iscuda) {
     PetscCall(MatCreateDenseCUDA(comm, m, n, M, N, data, A));
     PetscFunctionReturn(PETSC_SUCCESS);
+  }
 #else
     PetscUnreachable();
 #endif  
 
 #if defined(PETSC_HAVE_HIP)
+  PetscBool iship;
   PetscCall(PetscStrcmp(root_type, VECHIP, &iship));
   if (iship) {
     PetscCall(MatCreateDenseHIP(comm, m, n, M, N, data, A));
     PetscFunctionReturn(PETSC_SUCCESS);
+  }
 #else
     PetscUnreachable();
 #endif  
