@@ -11201,9 +11201,6 @@ PetscErrorCode MatCreateDenseFromVecType(Vec X, PetscInt m, PetscInt n, PetscInt
   MPI_Comm  comm;
 
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
-  PetscValidType(A, 1);
-
   PetscCall(VecGetRootType_Private(X, &root_type));
   PetscCall(PetscObjectGetComm((PetscObject)X, &comm));
 

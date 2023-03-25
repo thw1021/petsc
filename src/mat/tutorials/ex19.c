@@ -12,9 +12,10 @@ int main(int argc, char **args)
   PetscMPIInt    rank, size;
   PetscBool      iscuda = PETSC_FALSE, iship = PETSC_FALSE;
   PetscBool      optionflag, compareflag;
+  char           vectypename[PETSC_MAX_PATH_LEN];
 
   PetscFunctionBeginUser;
-  PetscCall(PetscInitialize(&argc, &args, (char *)0, help));
+  PetscCall(PetscInitialize(&argc, &args, (char *)0, NULL));
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-n", &N, NULL));
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-num_threads", &num_threads, NULL));
 
@@ -31,7 +32,7 @@ int main(int argc, char **args)
     if (compareflag) iship = PETSC_TRUE;
   }
 
-  PetscCall(VecCreate(PETSC_COMM_WORLD, &X);
+  PetscCall(VecCreate(PETSC_COMM_WORLD, &X));
   PetscCall(VecSetSizes(X, PETSC_DECIDE, N));
   if (iscuda) {
     PetscCall(VecSetType(X, VECCUDA));
@@ -51,10 +52,19 @@ int main(int argc, char **args)
   PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
 
   /* test */
-  PestcCall(MatViewFromOptions(A, NULL, "-ex19_mat_view"));
+  PetscCall(MatViewFromOptions(A, NULL, "-ex19_mat_view"));
 
 
   PetscCall(MatDestroy(&A));
   PetscCall(VecDestroy(&X));
   return 0;
 }
+
+/*TEST
+
+   test:
+      suffix: cuda
+      requires: cuda
+      args: -vectype cuda 
+
+TEST*/
