@@ -33,7 +33,7 @@ int main(int argc, char **argv)
   Mat          A, B, C, S;
   Vec          t, v;
   PetscScalar *vv, *aa;
-  PetscInt     n = 30, k = 6, l = 0, i, Istart, Iend, nloc, bs, test = 1;
+  PetscInt     n = 32, k = 6, l = 0, i, Istart, Iend, nloc, bs, test = 1;
   PetscBool    flg, reset, use_shell = PETSC_FALSE;
   VecType      vtype;
 
