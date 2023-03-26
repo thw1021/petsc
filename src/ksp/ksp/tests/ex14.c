@@ -414,7 +414,7 @@ PetscErrorCode ComputeFunction(AppCtx *user, Vec X, Vec F)
 .  x - input vector
 .  user - user-defined application context
 
-   Output Parameters:
+   Output Parameter:
 .  jac - Jacobian matrix
 .  flag - flag indicating matrix structure
 
