@@ -1002,7 +1002,6 @@ cdef class DMPlexTransform(Object):
 
     def apply(self, DM dm=None):
         cdef DMPlex newdm = DMPlex()
-        CHKERR( DMClone(dm.dm, &newdm.dm) )
         CHKERR( DMPlexTransformApply(self.tr, dm.dm, &newdm.dm) )
         return newdm
 
