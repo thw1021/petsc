@@ -16,7 +16,7 @@ Input Parameters:
  +   b_id - the batch index
  -   vctx - a user context
 
- Input/Output Parameters:
+ Input/Output Parameter:
  +   x - Vector to data to
 
  */
