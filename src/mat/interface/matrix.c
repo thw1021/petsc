@@ -11174,7 +11174,7 @@ PetscErrorCode MatEliminateZeros(Mat A)
 }
 
 /*@
-  MatCreateDenseFromVecType - create a matrix from VecType.
+  MatCreateDenseFromVecType - Create a matrix that matches the type of a Vec.
 
   Collective
 
@@ -11184,15 +11184,15 @@ PetscErrorCode MatEliminateZeros(Mat A)
 . n    - number of local columns (or `PETSC_DECIDE` to have calculated if `N` is given)
 . M    - number of global rows (or `PETSC_DECIDE` to have calculated if `m` is given)
 . N    - number of global columns (or `PETSC_DECIDE` to have calculated if `n` is given)
-- data - optional location of GPU matrix data. Pass`NULL` to have PETSc to control matrix
+- data - optional location of matrix data, which should have the same memory type as the vector. Pass `NULL` to have PETSc to control matrix.
          memory allocation.
 
   Output Parameter:
-+ A - the matrix
++ A - the matrix.  `A` will have the same communicator as `X`, the same `PetscDeviceCtx`, and the same `PetscMemType`.
 
   Level: advanced
 
-.seealso: [](chapter_matrices), `Mat`, `MatCreate()'
+.seealso: [](chapter_matrices), `Mat`, `MatCreate()', `PetscDeviceCtx`, `PetscMemType`
 @*/
 PetscErrorCode MatCreateDenseFromVecType(Vec X, PetscInt m, PetscInt n, PetscInt M, PetscInt N, PetscScalar *data, Mat *A)
 {
@@ -11239,7 +11239,7 @@ PetscErrorCode MatCreateDenseFromVecType(Vec X, PetscInt m, PetscInt n, PetscInt
 
   if (iscuda) {
 #if defined(PETSC_HAVE_CUDA)
-    PetscCall(MatCreateDenseCUDA(comm, m, n, M, N, data, A));a
+    PetscCall(MatCreateDenseCUDA(comm, m, n, M, N, data, A));
 #else
     PetscUnreachable();
 #endif
