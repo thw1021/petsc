@@ -191,7 +191,7 @@ int main(int argc, char **args)
 
     if (flg_mumps) {
       /* Zero the first and last rows in the rank, they should then show up in corresponding null pivot rows output via
-         MatMumpsGetPivNullList */
+         MatMumpsGetNullPivots */
       flg = PETSC_FALSE;
       PetscCall(PetscOptionsGetBool(NULL, NULL, "-zero_first_and_last_row", &flg, NULL));
       if (flg) {
@@ -367,7 +367,7 @@ int main(int argc, char **args)
       PetscCall(MatMumpsGetInfog(F, 34, &infog34));
       PetscCall(MatMumpsGetRinfog(F, 12, &rinfo12));
       PetscCall(MatMumpsGetRinfog(F, 13, &rinfo13));
-      PetscCall(MatMumpsGetPivNullList(F, &num_null_pivots, &null_pivots));
+      PetscCall(MatMumpsGetNullPivots(F, &num_null_pivots, &null_pivots));
       PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Mumps row pivot threshold = %g\n", cntl));
       PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Mumps determinant = (%g, %g) * 2^%" PetscInt_FMT " \n", (double)rinfo12, (double)rinfo13, infog34));
       if (num_null_pivots > 0) {
