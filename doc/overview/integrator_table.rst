@@ -56,6 +56,7 @@ Summary of Time Integrators Available In PETSc
    * - eimex
      - extrapolated IMEX :cite:`Constantinescu_A2010a`
      - one-step
+     - IMEX
      - :math:`\ge 1`, adaptive
    * - arkimex
      - See :any:`tab_IMEX_RK_PETSc`
