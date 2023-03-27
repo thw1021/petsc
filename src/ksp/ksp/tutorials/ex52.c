@@ -197,7 +197,7 @@ int main(int argc, char **args)
       if (flg) {
         PetscInt *rows;
         PetscCall(PetscMalloc1(2, &rows));
-        rows[0]             = Istart;               /* first row of the rank */
+        rows[0] = Istart;   /* first row of the rank */
         rows[1] = Iend - 1; /* last row of the rank */
         PetscCall(MatZeroRows(A, 2, rows, 0.0, NULL, NULL));
         PetscCall(PetscFree(rows));
@@ -372,9 +372,7 @@ int main(int argc, char **args)
       PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Mumps determinant = (%g, %g) * 2^%" PetscInt_FMT " \n", (double)rinfo12, (double)rinfo13, infog34));
       if (num_null_pivots > 0) {
         PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Mumps num of null pivots detected = %" PetscInt_FMT "\n", num_null_pivots));
-        for (j = 0; j < num_null_pivots; j++) {
-          PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Mumps row with null pivots is = %" PetscInt_FMT "\n", null_pivots[j] - 1));
-        }
+        for (j = 0; j < num_null_pivots; j++) { PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Mumps row with null pivots is = %" PetscInt_FMT "\n", null_pivots[j] - 1)); }
       }
     }
   }
