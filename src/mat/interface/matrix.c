@@ -11192,7 +11192,7 @@ PetscErrorCode MatEliminateZeros(Mat A)
 
   Level: advanced
 
-.seealso: [](chapter_matrices), `Mat`, `MatCreate()` 
+.seealso: [](chapter_matrices), `Mat`, `MatCreate()'
 @*/
 PetscErrorCode MatCreateDenseFromVecType(Vec X, PetscInt m, PetscInt n, PetscInt M, PetscInt N, PetscScalar *data, Mat *A)
 {
@@ -11220,7 +11220,7 @@ PetscErrorCode MatCreateDenseFromVecType(Vec X, PetscInt m, PetscInt n, PetscInt
   }
 #else
     PetscUnreachable();
-#endif  
+#endif
 
 #if defined(PETSC_HAVE_HIP)
   PetscBool iship;
@@ -11231,27 +11231,27 @@ PetscErrorCode MatCreateDenseFromVecType(Vec X, PetscInt m, PetscInt n, PetscInt
   }
 #else
     PetscUnreachable();
-#endif  
+#endif
 
-  //Version 2?
-//  PetscCall(PetscStrcmp(root_type, VECCUDA, &iscuda));
-//  PetscCall(PetscStrcmp(root_type, VECHIP, &iship));
-//
-//  if (iscuda) {
-//#if defined(PETSC_HAVE_CUDA)    
-//    PetscCall(MatCreateDenseCUDA(comm, m, n, M, N, data, A));a
-//#else
-//    PetscUnreachable();    
-//#endif
-//  } else if (iship) {
-//#if defined(PETSC_HAVE_HIP)
-//    PetscCall(MatCreateDenseHIP(comm, m, n, M, N, data, A));
-//#else
-//    PetscUnreachable();
-//#endif
-//  } else {
-//    PetscCall(MatCreateDense(comm, m, n, M, N, data, A));
-//  }
+  /*  Version 2?
+  PetscCall(PetscStrcmp(root_type, VECCUDA, &iscuda));
+  PetscCall(PetscStrcmp(root_type, VECHIP, &iship));
 
+  if (iscuda) {
+#if defined(PETSC_HAVE_CUDA)
+    PetscCall(MatCreateDenseCUDA(comm, m, n, M, N, data, A));a
+#else
+    PetscUnreachable();
+#endif
+  } else if (iship) {
+#if defined(PETSC_HAVE_HIP)
+    PetscCall(MatCreateDenseHIP(comm, m, n, M, N, data, A));
+#else
+    PetscUnreachable();
+#endif
+  } else {
+    PetscCall(MatCreateDense(comm, m, n, M, N, data, A));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
+  */
 }
