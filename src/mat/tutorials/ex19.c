@@ -53,8 +53,6 @@ int main(int argc, char **args)
 
   /* test */
   PetscCall(MatViewFromOptions(A, NULL, "-ex19_mat_view"));
-
-
   PetscCall(MatDestroy(&A));
   PetscCall(VecDestroy(&X));
   return 0;
@@ -65,6 +63,6 @@ int main(int argc, char **args)
    test:
       suffix: cuda
       requires: cuda
-      args: -vectype cuda 
+      args: -vectype cuda
 
 TEST*/
