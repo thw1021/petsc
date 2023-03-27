@@ -232,6 +232,7 @@ class TestPlex_1D(BaseTestPlex, unittest.TestCase):
     pass
 
 class TestPlex_2D(BaseTestPlex_2D, unittest.TestCase):
+
     def testTransform(self):
             plex = self.plex
             cstart, cend = plex.getHeightStratum(0)
@@ -242,6 +243,7 @@ class TestPlex_2D(BaseTestPlex_2D, unittest.TestCase):
             newplex = tr.apply(plex)
             tr.destroy()
             newcstart, newcend = newplex.getHeightStratum(0)
+            newplex.destroy()
             self.assertTrue((newcend-newcstart) == 3*(cend-cstart)) 
 
 class TestPlex_3D(BaseTestPlex_3D, unittest.TestCase):

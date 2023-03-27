@@ -1000,12 +1000,12 @@ cdef class DMPlexTransform(Object):
         self.obj = <PetscObject*> &self.tr
         self.tr  = NULL
 
-    def apply(self, DM dm=None):
+    def apply(self, DM dm):
         cdef DMPlex newdm = DMPlex()
         CHKERR( DMPlexTransformApply(self.tr, dm.dm, &newdm.dm) )
         return newdm
 
-    def create(self, comm=None):
+    def create(self, comm):
         cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_DEFAULT)
         cdef PetscDMPlexTransform newtr = NULL
         CHKERR( DMPlexTransformCreate(ccomm, &newtr) )
@@ -1026,12 +1026,12 @@ cdef class DMPlexTransform(Object):
         CHKERR( DMPlexTransformSetUp(self.tr) )
         return self
 
-    def setType(self, tr_type=None):
+    def setType(self, tr_type):
         cdef PetscDMPlexTransformType cval = NULL
         tr_type = str2bytes(tr_type, &cval)
         CHKERR( DMPlexTransformSetType(self.tr, cval) )
 
-    def setDM(self, DM dm=None):
+    def setDM(self, DM dm):
         CHKERR( DMPlexTransformSetDM(self.tr, dm.dm) )
     
     def setFromOptions(self):
