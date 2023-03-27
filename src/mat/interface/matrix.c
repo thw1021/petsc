@@ -11188,7 +11188,7 @@ PetscErrorCode MatEliminateZeros(Mat A)
          memory allocation.
 
   Output Parameter:
-+ A - the matrix.  `A` will have the same communicator as `X`, the same `PetscDeviceCtx`, and the same `PetscMemType`.
+. A - the matrix.  `A` will have the same communicator as `X`, the same `PetscDeviceCtx`, and the same `PetscMemType`.
 
   Level: advanced
 
