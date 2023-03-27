@@ -11199,7 +11199,7 @@ PetscErrorCode MatEliminateZeros(Mat A)
 PetscErrorCode MatCreateDenseFromVecType(Vec X, PetscInt m, PetscInt n, PetscInt M, PetscInt N, PetscScalar *data, Mat *A)
 {
   VecType   root_type;
-  PetscBool isstan;
+  PetscBool iscuda, iship;
   MPI_Comm  comm;
 
   PetscFunctionBegin;

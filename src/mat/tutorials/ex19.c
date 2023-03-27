@@ -30,6 +30,7 @@ int main(int argc, char **args)
     if (compareflag) iscuda = PETSC_TRUE;
     PetscCall(PetscStrncmp(vectypename, "hip", (size_t)3, &compareflag));
     if (compareflag) iship = PETSC_TRUE;
+    PetscCall(PetscStrncmp(vectypename, "standard", (size_t)8, &compareflag));
   }
 
   PetscCall(VecCreate(PETSC_COMM_WORLD, &X));
@@ -63,6 +64,9 @@ int main(int argc, char **args)
    test:
       suffix: cuda
       requires: cuda
-      args: -vectype cuda
+      args: -vectype cuda -ex19_mat_view
 
+   test:
+      suffix: standard
+      args: -vectype standard -ex19_mat_view
 TEST*/
