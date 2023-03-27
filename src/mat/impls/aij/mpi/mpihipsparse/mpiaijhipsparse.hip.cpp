@@ -675,7 +675,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPIAIJHIPSPARSE(Mat A)
 .  N - number of global columns (or `PETSC_DETERMINE` to have calculated if `n` is given)
 .  d_nz - number of nonzeros per row (same for all rows), for the "diagonal" portion of the matrix
 .  d_nnz - array containing the number of nonzeros in the various rows (possibly different for each row) or `NULL`, for the "diagonal" portion of the matrix
-.  d_nz - number of nonzeros per row (same for all rows), for the "off-diagonal" portion of the matrix
+.  o_nz - number of nonzeros per row (same for all rows), for the "off-diagonal" portion of the matrix
 -  o_nnz - array containing the number of nonzeros in the various rows (possibly different for each row) or `NULL`, for the "off-diagonal" portion of the matrix
 
    Output Parameter:

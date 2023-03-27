@@ -15,7 +15,7 @@
   bs   - stash block size. used when stashing blocks of values
 
   Output Parameter:
-  stash    - the newly created stash
+. stash    - the newly created stash
 */
 PetscErrorCode VecStashCreate_Private(MPI_Comm comm, PetscInt bs, VecStash *stash)
 {

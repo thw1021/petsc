@@ -134,8 +134,8 @@ static PetscErrorCode KSPChebyshevSetKind_Chebyshev(KSP ksp, KSPChebyshevKind ki
 
    Input Parameters:
 +  ksp - the Krylov space context
-   emax - the eigenvalue maximum estimates
--  emin - the eigenvalue minimum estimates
+   emax - the eigenvalue maximum estimate
+-  emin - the eigenvalue minimum estimate
 
   Options Database Key:
 .  -ksp_chebyshev_eigenvalues emin,emax - extreme eigenvalues

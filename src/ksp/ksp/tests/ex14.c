@@ -414,9 +414,9 @@ PetscErrorCode ComputeFunction(AppCtx *user, Vec X, Vec F)
 .  x - input vector
 .  user - user-defined application context
 
-   Output Parameter:
-.  jac - Jacobian matrix
-.  flag - flag indicating matrix structure
+   Output Parameters:
++  jac - Jacobian matrix
+-  flag - flag indicating matrix structure
 
    Notes:
    Due to grid point reordering with DMDAs, we must always work

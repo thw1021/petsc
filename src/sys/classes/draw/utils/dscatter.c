@@ -294,7 +294,7 @@ PetscErrorCode PetscDrawSPAddPoints(PetscDrawSP sp, int n, PetscReal **xx, Petsc
   Level: intermediate
 
   Note:
-  The dimensions of the arrays is the number of point curves passed to `PetscDrawSPCreate()`
+  The dimensions of the arrays is the number of point curves passed to `PetscDrawSPCreate()`.
   The new points will not be displayed until a call to `PetscDrawSPDraw()` is made
 
 .seealso: `PetscDrawSPAddPoints()`, `PetscDrawSP`, `PetscDrawSPCreate()`, `PetscDrawSPReset()`, `PetscDrawSPDraw()`, `PetscDrawSPAddPoint()`

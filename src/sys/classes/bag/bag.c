@@ -1024,7 +1024,7 @@ PetscErrorCode PetscBagSetOptionsPrefix(PetscBag bag, const char pre[])
 
   Not Collective
 
-  Input Parameters:
+  Input Parameter:
 . bag   - the bag of values
 
   Output Parameter:

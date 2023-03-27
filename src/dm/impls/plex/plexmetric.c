@@ -1242,7 +1242,7 @@ static void detMFunc(PetscInt dim, PetscInt Nf, PetscInt NfAux, const PetscInt u
 . restrictSizes      - Should maximum/minimum metric magnitudes be enforced?
 - restrictAnisotropy - Should maximum metric anisotropy be enforced?
 
-  Output parameter:
+  Output parameters:
 + metricOut          - The normalized metric
 - determinant - computed determinant
 

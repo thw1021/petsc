@@ -114,11 +114,11 @@ PetscErrorCode PetscBinaryRead(int fd, void *p, int n, int *dummy, PetscDataType
 /*
     PetscBinaryWrite - Writes to a socket, called from MATLAB
 
-  Input Parameter:
-.   fd - the file
+  Input Parameters:
++   fd - the file
 .   n  - the number of items to read
 .   p - the data
-.   type - the type of items to read (PETSC_INT or PETSC_SCALAR)
+-   type - the type of items to read (PETSC_INT or PETSC_SCALAR)
 
   Notes:
     does byte swapping to work on all machines.

@@ -554,7 +554,7 @@ PetscErrorCode TaoBRGNSetDictionaryMatrix(Tao tao, Mat dict)
 $  PetscErrorCode (*func)(Tao tao, Vec u, PetscReal val, Vec g, void *ctx)
 +  tao - the `Tao` context
 .  u - the location at which to compute the objective and gradient
-   val - location to store objective function value
+.  val - location to store objective function value
 .  g - location to store gradient
 -  ctx - user context for the regularizer Hessian
 

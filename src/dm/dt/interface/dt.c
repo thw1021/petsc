@@ -791,7 +791,7 @@ static PetscErrorCode PetscDTJacobiEval_Internal(PetscInt npoints, PetscReal a, 
 - k - the maximum derivative to evaluate in the jet, (k + 1) will be evaluated total.
 
   Output Parameter:
-- p - an array containing the evaluations of the Jacobi polynomials's jets on the points.  the size is (degree + 1) x
+. p - an array containing the evaluations of the Jacobi polynomials's jets on the points.  the size is (degree + 1) x
   (k + 1) x npoints, which also describes the order of the dimensions of this three-dimensional array: the first
   (slowest varying) dimension is polynomial degree; the second dimension is derivative order; the third (fastest
   varying) dimension is the index of the evaluation point.
@@ -1011,7 +1011,7 @@ const char       PKDCitation[] = "@article{Kirby2010,\n"
   in the jet.  Choosing k = 0 means to evaluate just the function and no derivatives
 
   Output Parameter:
-- p - an array containing the evaluations of the PKD polynomials' jets on the points.  The size is ((dim + degree)
+. p - an array containing the evaluations of the PKD polynomials' jets on the points.  The size is ((dim + degree)
   choose dim) x ((dim + k) choose dim) x npoints, which also describes the order of the dimensions of this
   three-dimensional array: the first (slowest varying) dimension is basis function index; the second dimension is jet
   index; the third (fastest varying) dimension is the index of the evaluation point.

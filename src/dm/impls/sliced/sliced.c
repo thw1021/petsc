@@ -98,7 +98,7 @@ PetscErrorCode DMSlicedSetGhosts(DM dm, PetscInt bs, PetscInt nlocal, PetscInt N
 }
 
 /*@C
-    DMSlicedSetPreallocation - sets the matrix memory preallocation for matrices computed by `DMSlICED`
+    DMSlicedSetPreallocation - sets the matrix memory preallocation for matrices computed by `DMSLICED`
 
     Not Collective
 

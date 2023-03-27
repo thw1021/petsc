@@ -71,7 +71,7 @@ PetscErrorCode TSRHSSplitSetIS(TS ts, const char splitname[], IS is)
 -  splitname - name of this split
 
    Output Parameter:
--  is        - the index set for part of the solution vector
+.  is        - the index set for part of the solution vector
 
    Level: intermediate
 

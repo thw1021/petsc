@@ -2085,7 +2085,7 @@ PetscErrorCode DMPlexLandauCreateVelocitySpace(MPI_Comm comm, PetscInt dim, cons
  .   user_ctx - user context
 
  Input/Output Parameter:
- +   X - Vector to data to
+ .   X - Vector to data to
 
  Level: advanced
 
@@ -2430,7 +2430,7 @@ PetscErrorCode DMPlexLandauPrintNorms(Vec X, PetscInt stepi)
 
  Collective
 
- Input/Output Parameter:
+ Input Parameter:
 . pack     - the DM object. Puts matrix in Landau context M field
 
  Output Parameter:
