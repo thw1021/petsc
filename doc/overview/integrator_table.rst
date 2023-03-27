@@ -80,7 +80,7 @@ Summary of Time Integrators Available In PETSc
    * - basicsymplectic
      - Basic symplectic integrator for separable Hamiltonian
      - semi-implicit Euler and Velocity Verlet
-     - explicit and implicit
+     - explicit
      - :math:`1-2`
    * - irk
      - fully implicit Runge-Kutta
