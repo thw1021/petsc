@@ -11179,7 +11179,7 @@ PetscErrorCode MatEliminateZeros(Mat A)
   Collective
 
   Input Parameters:
-. X    - the vector
++ X    - the vector
 . m    - number of local rows (or `PETSC_DECIDE` to have calculated if `M` is given)
 . n    - number of local columns (or `PETSC_DECIDE` to have calculated if `N` is given)
 . M    - number of global rows (or `PETSC_DECIDE` to have calculated if `m` is given)
