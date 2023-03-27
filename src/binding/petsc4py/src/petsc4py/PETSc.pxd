@@ -276,7 +276,7 @@ ctypedef public api class DM(Object) [
 
 ctypedef public api class DMPlexTransform(Object) [
     type   PyPetscDMPlexTransform_Type,
-    object PyPetscDMPlexObject,
+    object PyPetscDMPlexTransformObject,
     ]:
     cdef PetscDMPlexTransform tr
 
