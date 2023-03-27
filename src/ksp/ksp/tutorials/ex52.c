@@ -190,6 +190,18 @@ int main(int argc, char **args)
     PetscCall(PCFactorGetMatrix(pc, &F));
 
     if (flg_mumps) {
+      /* Zero the first and last rows in the rank, they should then show up in corresponding null pivot rows output via
+         MatMumpsGetPivNullList */
+      flg = PETSC_FALSE;
+      PetscCall(PetscOptionsGetBool(NULL, NULL, "-zero_first_and_last_row", &flg, NULL));
+      if (flg) {
+        PetscInt *rows;
+        PetscCall(PetscMalloc1(2, &rows));
+        rows[0]             = Istart;               /* first row of the rank */
+        rows[1] = Iend - 1; /* last row of the rank */
+        PetscCall(MatZeroRows(A, 2, rows, 0.0, NULL, NULL));
+        PetscCall(PetscFree(rows));
+      }
       /* Get memory estimates from MUMPS' MatLUFactorSymbolic(), e.g. INFOG(16), INFOG(17).
          KSPSetUp() below will do nothing inside MatLUFactorSymbolic() */
       MatFactorInfo info;
@@ -345,18 +357,25 @@ int main(int argc, char **args)
 
 #if defined(PETSC_HAVE_MUMPS)
   if (flg_mumps || flg_mumps_ch) {
-    PetscInt  icntl, infog34;
+    PetscInt  icntl, infog34, num_null_pivots, *null_pivots;
     PetscReal cntl, rinfo12, rinfo13;
     icntl = 3;
     PetscCall(MatMumpsGetCntl(F, icntl, &cntl));
 
-    /* compute determinant */
+    /* compute determinant and check for any null pivots*/
     if (rank == 0) {
       PetscCall(MatMumpsGetInfog(F, 34, &infog34));
       PetscCall(MatMumpsGetRinfog(F, 12, &rinfo12));
       PetscCall(MatMumpsGetRinfog(F, 13, &rinfo13));
+      PetscCall(MatMumpsGetPivNullList(F, &num_null_pivots, &null_pivots));
       PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Mumps row pivot threshold = %g\n", cntl));
       PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Mumps determinant = (%g, %g) * 2^%" PetscInt_FMT " \n", (double)rinfo12, (double)rinfo13, infog34));
+      if (num_null_pivots > 0) {
+        PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Mumps num of null pivots detected = %" PetscInt_FMT "\n", num_null_pivots));
+        for (j = 0; j < num_null_pivots; j++) {
+          PetscCall(PetscPrintf(PETSC_COMM_SELF, "  Mumps row with null pivots is = %" PetscInt_FMT "\n", null_pivots[j] - 1));
+        }
+      }
     }
   }
 #endif
@@ -437,6 +456,13 @@ int main(int argc, char **args)
       requires: mumps !complex !single
       args: -use_mumps_lu -m 50 -n 50 -use_mumps_lu -print_mumps_memory
       output_file: output/ex52_4.out
+
+   test:
+      suffix: mumps_5
+      nsize: 3
+      requires: mumps !complex !single
+      args: -use_mumps_lu -m 50 -n 50 -use_mumps_lu -zero_first_and_last_row
+      output_file: output/ex52_5.out
 
    test:
       suffix: mumps_omp_2
