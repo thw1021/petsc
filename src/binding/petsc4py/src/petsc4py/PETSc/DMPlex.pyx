@@ -354,6 +354,16 @@ cdef class DMPlex(DM):
         CHKERR( DMPlexGetHeightStratum(self.dm, csvalue, &sStart, &sEnd) )
         return (toInt(sStart), toInt(sEnd))
 
+    def getPointDepth(self,point):
+        cdef PetscInt depth = 0
+        CHKERR( DMPlexGetPointDepth(self.dm,point,&depth) )
+        return toInt(depth)
+
+    def getPointHeight(self,point):
+        cdef PetscInt height = 0
+        CHKERR( DMPlexGetPointHeight(self.dm,point,&height) )
+        return toInt(height)
+
     def getMeet(self, points):
         cdef PetscInt  numPoints = 0
         cdef PetscInt *ipoints = NULL
@@ -976,6 +986,7 @@ cdef class DMPlex(DM):
 
     def localVectorLoad(self, Viewer viewer, DM sectiondm, SF sf, Vec vec):
         CHKERR( DMPlexLocalVectorLoad(self.dm, viewer.vwr, sectiondm.dm, sf.sf, vec.vec))
+
 
 # --------------------------------------------------------------------
 
