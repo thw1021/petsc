@@ -199,7 +199,7 @@ struct Mat_SeqAIJCUSPARSETriFactorStruct {
   cusparseMatDescr_t  descr;
   cusparseOperation_t solveOp;
   CsrMatrix          *csrMat;
-#if PETSC_PKG_CUDA_VERSION_LT(11, 3, 0)
+#if PETSC_PKG_CUDA_VERSION_LT(11, 4, 0)
   csrsvInfo_t           solveInfo;
   cusparseSolvePolicy_t solvePolicy; /* whether level information is generated and used */
 #endif
@@ -212,7 +212,8 @@ struct Mat_SeqAIJCUSPARSETriFactorStruct {
 
 /* This is a larger struct holding all the triangular factors for a solve, transpose solve, and any indices used in a reordering */
 struct Mat_SeqAIJCUSPARSETriFactors {
-#if PETSC_PKG_CUDA_VERSION_LT(11, 3, 0)
+  PetscBool use_cpu_solve; /* Use AIJ_Seq (I)LU solve */
+#if PETSC_PKG_CUDA_VERSION_LT(11, 4, 0)
   Mat_SeqAIJCUSPARSETriFactorStruct *loTriFactorPtr;          /* pointer for lower triangular (factored matrix) on GPU */
   Mat_SeqAIJCUSPARSETriFactorStruct *upTriFactorPtr;          /* pointer for upper triangular (factored matrix) on GPU */
   Mat_SeqAIJCUSPARSETriFactorStruct *loTriFactorPtrTranspose; /* pointer for lower triangular (factored matrix) on GPU for the transpose (useful for BiCG) */
@@ -230,7 +231,7 @@ struct Mat_SeqAIJCUSPARSETriFactors {
   PetscBool        init_dev_prop;
 
   PetscBool factorizeOnDevice; /* Do factorization on device or not */
-#if PETSC_PKG_CUDA_VERSION_GE(11, 3, 0)
+#if PETSC_PKG_CUDA_VERSION_GE(11, 4, 0)
   /* csrilu0/csric0 appeared in cusparse-8.0, but we use it along with cusparseSpSV,
      which first appeared in cusparse-11.5 with cuda-11.3.
   */
@@ -305,7 +306,6 @@ struct Mat_SeqAIJCUSPARSE {
   THRUSTINTARRAY32             *rowoffsets_gpu; /* rowoffsets on GPU in non-compressed-row format. It is used to convert CSR to CSC */
   PetscInt                      nrows;          /* number of rows of the matrix seen by GPU */
   MatCUSPARSEStorageFormat      format;         /* the storage format for the matrix on the device */
-  PetscBool                     use_cpu_solve;  /* Use AIJ_Seq (I)LU solve */
   cudaStream_t                  stream;         /* a stream for the parallel SpMV ... this is not owned and should not be deleted */
   cusparseHandle_t              handle;         /* a handle to the cusparse library ... this may not be owned (if we're working in parallel i.e. multiGPUs) */
   PetscObjectState              nonzerostate;   /* track nonzero state to possibly recreate the GPU matrix */
