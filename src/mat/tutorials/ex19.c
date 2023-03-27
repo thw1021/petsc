@@ -22,8 +22,10 @@ int main(int argc, char **args)
   PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
 
+  PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "Creating Mat from Vec example", NULL);
   PetscCall(PetscOptionsGetString(NULL, NULL, "-vectype", vectypename, sizeof(vectypename), &optionflag));
   PetscCall(PetscLogEventRegister("GPU operator", MAT_CLASSID, &event));
+  PetscOptionsEnd();
 
   if (optionflag) {
     PetscCall(PetscStrncmp(vectypename, "cuda", (size_t)4, &compareflag));
@@ -43,10 +45,8 @@ int main(int argc, char **args)
     PetscCall(VecSetType(X, VECSTANDARD));
   }
   PetscCall(VecSetUp(X));
-  PetscCall(PetscObjectSetName((PetscObject)X, "X_commworld"));
 
   PetscCall(MatCreateDenseFromVecType(X, PETSC_DECIDE, PETSC_DECIDE, N, N, NULL, &A));
-
   PetscCall(MatSetFromOptions(A));
   PetscCall(MatSetOption(A, MAT_IGNORE_OFF_PROC_ENTRIES, PETSC_TRUE));
   PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
@@ -56,6 +56,7 @@ int main(int argc, char **args)
   PetscCall(MatViewFromOptions(A, NULL, "-ex19_mat_view"));
   PetscCall(MatDestroy(&A));
   PetscCall(VecDestroy(&X));
+  PetscCall(PetscFinalize());
   return 0;
 }
 
