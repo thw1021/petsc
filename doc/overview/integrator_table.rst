@@ -57,7 +57,6 @@ Summary of Time Integrators Available In PETSc
      - extrapolated IMEX :cite:`Constantinescu_A2010a`
      - one-step
      - :math:`\ge 1`, adaptive
-     -
    * - arkimex
      - See :any:`tab_IMEX_RK_PETSc`
      - IMEX Runge-Kutta
@@ -73,6 +72,18 @@ Summary of Time Integrators Available In PETSc
      - GL with global error
      - explicit and implicit
      - :math:`1-3`
-
+   * - mprk
+     - Multirate Partitioned Runge-Kutta
+     - multirate
+     - explicit
+     - :math:`2-3`
+   * - basicsymplectic
+     - Basic symplectic integrator for separable Hamiltonian
+     - semi-implicit Euler and Velocity Verlet
+     - :math:`1-2`
+   * - irk
+     - fully implicit Runge-Kutta
+     - Gauss-Legrendre
+     - :math:`2s`
 .. bibliography:: /petsc.bib
    :filter: docname in docnames
