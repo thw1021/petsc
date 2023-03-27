@@ -137,10 +137,8 @@ PetscErrorCode MatCUSPARSESetFormat(Mat A, MatCUSPARSEFormatOperation op, MatCUS
 
 PETSC_INTERN PetscErrorCode MatCUSPARSESetUseCPUSolve_SeqAIJCUSPARSE(Mat A, PetscBool use_cpu)
 {
-  Mat_SeqAIJCUSPARSE *cusparsestruct = (Mat_SeqAIJCUSPARSE *)A->spptr;
-
   PetscFunctionBegin;
-  cusparsestruct->use_cpu_solve = use_cpu;
+  static_cast<Mat_SeqAIJCUSPARSETriFactors *>(A->spptr)->use_cpu_solve = use_cpu;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -188,18 +186,17 @@ static PetscErrorCode MatSetFromOptions_SeqAIJCUSPARSE(Mat A, PetscOptionItems *
 {
   MatCUSPARSEStorageFormat format;
   PetscBool                flg;
-  Mat_SeqAIJCUSPARSE      *cusparsestruct = (Mat_SeqAIJCUSPARSE *)A->spptr;
 
   PetscFunctionBegin;
   PetscOptionsHeadBegin(PetscOptionsObject, "SeqAIJCUSPARSE options");
   if (A->factortype == MAT_FACTOR_NONE) {
-    PetscCall(PetscOptionsEnum("-mat_cusparse_mult_storage_format", "sets storage format of (seq)aijcusparse gpu matrices for SpMV", "MatCUSPARSESetFormat", MatCUSPARSEStorageFormats, (PetscEnum)cusparsestruct->format, (PetscEnum *)&format, &flg));
+    Mat_SeqAIJCUSPARSE *cusparsestruct = static_cast<Mat_SeqAIJCUSPARSE *>(A->spptr);
+    PetscCall(PetscOptionsEnum("-mat_cusparse_mult_storage_format", "sets storage format of (seq)aijcusparse gpu matrices for SpMV", "MatCUSPARSESetFormat",
+    MatCUSPARSEStorageFormats, (PetscEnum)cusparsestruct->format, (PetscEnum *)&format, &flg));
     if (flg) PetscCall(MatCUSPARSESetFormat(A, MAT_CUSPARSE_MULT, format));
 
     PetscCall(PetscOptionsEnum("-mat_cusparse_storage_format", "sets storage format of (seq)aijcusparse gpu matrices for SpMV and TriSolve", "MatCUSPARSESetFormat", MatCUSPARSEStorageFormats, (PetscEnum)cusparsestruct->format, (PetscEnum *)&format, &flg));
     if (flg) PetscCall(MatCUSPARSESetFormat(A, MAT_CUSPARSE_ALL, format));
-    PetscCall(PetscOptionsBool("-mat_cusparse_use_cpu_solve", "Use CPU (I)LU solve", "MatCUSPARSESetUseCPUSolve", cusparsestruct->use_cpu_solve, &cusparsestruct->use_cpu_solve, &flg));
-    if (flg) PetscCall(MatCUSPARSESetUseCPUSolve(A, cusparsestruct->use_cpu_solve));
 #if PETSC_PKG_CUDA_VERSION_GE(11, 0, 0)
     PetscCall(PetscOptionsEnum("-mat_cusparse_spmv_alg", "sets cuSPARSE algorithm used in sparse-mat dense-vector multiplication (SpMV)", "cusparseSpMVAlg_t", MatCUSPARSESpMVAlgorithms, (PetscEnum)cusparsestruct->spmvAlg, (PetscEnum *)&cusparsestruct->spmvAlg, &flg));
     /* If user did use this option, check its consistency with cuSPARSE, since PetscOptionsEnum() sets enum values based on their position in MatCUSPARSESpMVAlgorithms[] */
@@ -215,6 +212,9 @@ static PetscErrorCode MatSetFromOptions_SeqAIJCUSPARSE(Mat A, PetscOptionItems *
       PetscOptionsEnum("-mat_cusparse_csr2csc_alg", "sets cuSPARSE algorithm used in converting CSR matrices to CSC matrices", "cusparseCsr2CscAlg_t", MatCUSPARSECsr2CscAlgorithms, (PetscEnum)cusparsestruct->csr2cscAlg, (PetscEnum *)&cusparsestruct->csr2cscAlg, &flg));
     PetscCheck(!flg || CUSPARSE_CSR2CSC_ALG1 == 1, PETSC_COMM_SELF, PETSC_ERR_SUP, "cuSPARSE enum cusparseCsr2CscAlg_t has been changed but PETSc has not been updated accordingly");
 #endif
+  } else {
+    Mat_SeqAIJCUSPARSETriFactors *fs = static_cast<Mat_SeqAIJCUSPARSETriFactors *>(A->spptr);
+    PetscCall(PetscOptionsBool("-mat_cusparse_use_cpu_solve", "Use CPU (I)LU solve", "MatCUSPARSESetUseCPUSolve", fs->use_cpu_solve, &fs->use_cpu_solve, &flg));
   }
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -2131,14 +2131,14 @@ static PetscErrorCode MatICCFactorSymbolic_SeqAIJCUSPARSE_ICC0(Mat fact, Mat A, 
 
 static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSE(Mat B, Mat A, const MatFactorInfo *info)
 {
-  Mat_SeqAIJCUSPARSE *cusparsestruct = static_cast<Mat_SeqAIJCUSPARSE *>(B->spptr);
+  Mat_SeqAIJCUSPARSETriFactors *fs = static_cast<Mat_SeqAIJCUSPARSETriFactors *>(B->spptr);
 
   PetscFunctionBegin;
   PetscCall(MatSeqAIJCUSPARSECopyFromGPU(A));
   PetscCall(MatLUFactorNumeric_SeqAIJ(B, A, info));
   B->offloadmask = PETSC_OFFLOAD_CPU;
 
-  if (!cusparsestruct->use_cpu_solve) {
+  if (!fs->use_cpu_solve) {
 #if PETSC_PKG_CUDA_VERSION_GE(11, 3, 0)
     B->ops->solve          = MatSolve_SeqAIJCUSPARSE_LU;
     B->ops->solvetranspose = MatSolveTranspose_SeqAIJCUSPARSE_LU;
@@ -2163,7 +2163,7 @@ static PetscErrorCode MatLUFactorNumeric_SeqAIJCUSPARSE(Mat B, Mat A, const MatF
   B->ops->matsolvetranspose = NULL;
 
   /* get the triangular factors */
-  if (!cusparsestruct->use_cpu_solve) PetscCall(MatSeqAIJCUSPARSEILUAnalysisAndCopyToGPU(B));
+  if (!fs->use_cpu_solve) PetscCall(MatSeqAIJCUSPARSEILUAnalysisAndCopyToGPU(B));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2323,8 +2323,8 @@ static PetscErrorCode MatSeqAIJCUSPARSECopyFromGPU(Mat A)
     }
 #if PETSC_PKG_CUDA_VERSION_GE(11, 3, 0)
     else if (fs->csrVal) {
-      /* We have a factorized matrix on device and are able to copy it to host */
-      PetscCallCUDA(cudaMemcpy(a->a, fs->csrVal, a->nz * sizeof(PetscScalar), cudaMemcpyDeviceToHost));
+      // factorized matrix on device has a different format than that on host, such that a simple memory copy is not enough
+      SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "No support for copying factorized matrix from device to host");
     }
 #endif
     else
