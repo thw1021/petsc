@@ -11203,37 +11203,6 @@ PetscErrorCode MatCreateDenseFromVecType(Vec X, PetscInt m, PetscInt n, PetscInt
   PetscFunctionBegin;
   PetscCall(VecGetRootType_Private(X, &root_type));
   PetscCall(PetscObjectGetComm((PetscObject)X, &comm));
-
-  // Version 1?
-  PetscCall(PetscStrcmp(root_type, VECSTANDARD, &isstan));
-  if (isstan) {
-    PetscCall(MatCreateDense(comm, m, n, M, N, data, A));
-    PetscFunctionReturn(PETSC_SUCCESS);
-  }
-
-#if defined(PETSC_HAVE_CUDA)
-  PetscBool iscuda;
-  PetscCall(PetscStrcmp(root_type, VECCUDA, &iscuda));
-  if (iscuda) {
-    PetscCall(MatCreateDenseCUDA(comm, m, n, M, N, data, A));
-    PetscFunctionReturn(PETSC_SUCCESS);
-  }
-#else
-    PetscUnreachable();
-#endif
-
-#if defined(PETSC_HAVE_HIP)
-  PetscBool iship;
-  PetscCall(PetscStrcmp(root_type, VECHIP, &iship));
-  if (iship) {
-    PetscCall(MatCreateDenseHIP(comm, m, n, M, N, data, A));
-    PetscFunctionReturn(PETSC_SUCCESS);
-  }
-#else
-    PetscUnreachable();
-#endif
-
-  /*  Version 2?
   PetscCall(PetscStrcmp(root_type, VECCUDA, &iscuda));
   PetscCall(PetscStrcmp(root_type, VECHIP, &iship));
 
@@ -11253,5 +11222,4 @@ PetscErrorCode MatCreateDenseFromVecType(Vec X, PetscInt m, PetscInt n, PetscInt
     PetscCall(MatCreateDense(comm, m, n, M, N, data, A));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
-  */
 }
