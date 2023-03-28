@@ -5,12 +5,12 @@
 
 int main(int argc, char **args)
 {
-  Mat         A;
-  Vec         X;
-  PetscInt    N = 20;
-  PetscBool   iscuda = PETSC_FALSE, iship = PETSC_FALSE;
-  PetscBool   optionflag, compareflag;
-  char        vectypename[PETSC_MAX_PATH_LEN];
+  Mat       A;
+  Vec       X;
+  PetscInt  N = 20;
+  PetscBool iscuda = PETSC_FALSE, iship = PETSC_FALSE;
+  PetscBool optionflag, compareflag;
+  char      vectypename[PETSC_MAX_PATH_LEN];
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &args, (char *)0, NULL));
@@ -44,13 +44,13 @@ int main(int argc, char **args)
   PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
 
-  MPI_Comm X_comm = PetscObjectComm((PetscObject) X);
-  MPI_Comm A_comm = PetscObjectComm((PetscObject) X);
+  MPI_Comm    X_comm = PetscObjectComm((PetscObject) X);
+  MPI_Comm    A_comm = PetscObjectComm((PetscObject) X);
   PetscMPIInt comp;
   PetscCall(MPI_Comm_compare(X_comm, A_comm, &comp));
   PetscAssert(comp == MPI_IDENT || comp == MPI_CONGRUENT, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Failed communicator guarantee in MatCreateDenseMatchingVec()");
 
-  PetscMemType X_memtype, A_memtype;
+  PetscMemType       X_memtype, A_memtype;
   const PetscScalar *array;
   PetscCall(VecGetArrayReadAndMemType(X, &array, &X_memtype));
   PetscCall(VecRestoreArrayReadAndMemType(X, &array));

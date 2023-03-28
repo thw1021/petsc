@@ -11210,7 +11210,7 @@ PetscErrorCode MatCreateDenseMatchingVec(Vec X, PetscInt m, PetscInt n, PetscInt
   /* For performance-portable types (Kokkos, SYCL, ...) that dispatch to */
   if (!(isstd || iscuda || iship)) {
     const PetscScalar *array;
-    PetscMemType memtype;
+    PetscMemType       memtype;
 
     PetscCall(VecGetArrayReadAndMemType(X, &array, &memtype));
     PetscCall(VecRestoreArrayReadAndMemType(X, &array));
