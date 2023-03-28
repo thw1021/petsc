@@ -39,10 +39,24 @@ int main(int argc, char **args)
   }
   PetscCall(VecSetUp(X));
 
-  PetscCall(MatCreateDenseFromVecType(X, PETSC_DECIDE, PETSC_DECIDE, N, N, NULL, &A));
+  PetscCall(MatCreateDenseMatchingVec(X, PETSC_DECIDE, PETSC_DECIDE, N, N, NULL, &A));
   PetscCall(MatSetFromOptions(A));
   PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
+
+  MPI_Comm X_comm = PetscObjectComm((PetscObject) X);
+  MPI_Comm A_comm = PetscObjectComm((PetscObject) X);
+  PetscMPIInt comp;
+  PetscCall(MPI_Comm_compare(X_comm, A_comm, &comp));
+  PetscAssert(comp == MPI_IDENT || comp == MPI_CONGRUENT, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Failed communicator guarantee in MatCreateDenseMatchingVec()");
+
+  PetscMemType X_memtype, A_memtype;
+  const PetscScalar *array;
+  PetscCall(VecGetArrayReadAndMemType(X, &array, &X_memtype));
+  PetscCall(VecRestoreArrayReadAndMemType(X, &array));
+  PetscCall(MatDenseGetArrayReadAndMemType(A, &array, &A_memtype));
+  PetscCall(MatDenseRestoreArrayReadAndMemType(A, &array));
+  PetscAssert(A_memtype == X_memtype, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Failed memtype guarantee in MatCreateDenseMatchingVec()");
 
   /* test */
   PetscCall(MatViewFromOptions(A, NULL, "-ex19_mat_view"));

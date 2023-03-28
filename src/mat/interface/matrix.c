@@ -11174,7 +11174,7 @@ PetscErrorCode MatEliminateZeros(Mat A)
 }
 
 /*@
-  MatCreateDenseFromVecType - Create a matrix that matches the type of a Vec.
+  MatCreateDenseMatchingVec - Create a matrix that matches the type of a Vec.
 
   Collective
 
@@ -11188,38 +11188,61 @@ PetscErrorCode MatEliminateZeros(Mat A)
          memory allocation.
 
   Output Parameter:
-. A - the matrix.  `A` will have the same communicator as `X`, the same `PetscDeviceCtx`, and the same `PetscMemType`.
+. A - the matrix.  `A` will have the same communicator as `X` and the same `PetscMemType`.
 
   Level: advanced
 
-.seealso: [](chapter_matrices), `Mat`, `MatCreate()', `PetscDeviceCtx`, `PetscMemType`
+.seealso: [](chapter_matrices), `Mat`, `MatCreate()', `PetscMemType`
 @*/
-PetscErrorCode MatCreateDenseFromVecType(Vec X, PetscInt m, PetscInt n, PetscInt M, PetscInt N, PetscScalar *data, Mat *A)
+PetscErrorCode MatCreateDenseMatchingVec(Vec X, PetscInt m, PetscInt n, PetscInt M, PetscInt N, PetscScalar *data, Mat *A)
 {
   VecType   root_type;
-  PetscBool iscuda, iship;
+  PetscBool isstd, iscuda, iship;
   MPI_Comm  comm;
 
   PetscFunctionBegin;
   PetscCall(VecGetRootType_Private(X, &root_type));
   PetscCall(PetscObjectGetComm((PetscObject)X, &comm));
+  PetscCall(PetscStrcmp(root_type, VECSTANDARD, &isstd));
   PetscCall(PetscStrcmp(root_type, VECCUDA, &iscuda));
   PetscCall(PetscStrcmp(root_type, VECHIP, &iship));
 
-  if (iscuda) {
-#if defined(PETSC_HAVE_CUDA)
-    PetscCall(MatCreateDenseCUDA(comm, m, n, M, N, data, A));
-#else
-    PetscUnreachable();
-#endif
-  } else if (iship) {
-#if defined(PETSC_HAVE_HIP)
-    PetscCall(MatCreateDenseHIP(comm, m, n, M, N, data, A));
-#else
-    PetscUnreachable();
-#endif
-  } else {
+  /* For performance-portable types (Kokkos, SYCL, ...) that dispatch to */
+  if (!(isstd || iscuda || iship)) {
+    const PetscScalar *array;
+    PetscMemType memtype;
+
+    PetscCall(VecGetArrayReadAndMemType(X, &array, &memtype));
+    PetscCall(VecRestoreArrayReadAndMemType(X, &array));
+    switch (memtype) {
+    case PETSC_MEMTYPE_HOST:
+      isstd = PETSC_TRUE;
+      break;
+    case PETSC_MEMTYPE_CUDA:
+    case PETSC_MEMTYPE_NVSHMEM:
+      iscuda = PETSC_TRUE;
+      break;
+    case PETSC_MEMTYPE_HIP:
+      iship = PETSC_TRUE;
+      break;
+    default:
+      SETERRQ(PetscObjectComm((PetscObject)X), PETSC_ERR_SUP, "Cannot figure out memory type of vector type %s\n", root_type);
+    }
+  }
+
+  if (isstd) {
     PetscCall(MatCreateDense(comm, m, n, M, N, data, A));
   }
+#if defined(PETSC_HAVE_CUDA)
+  else if (iscuda) {
+    PetscCall(MatCreateDenseCUDA(comm, m, n, M, N, data, A));
+  }
+#endif
+#if defined(PETSC_HAVE_HIP)
+  else if (iship) {
+    PetscCall(MatCreateDenseHIP(comm, m, n, M, N, data, A));
+  }
+#endif
+
   PetscFunctionReturn(PETSC_SUCCESS);
 }
