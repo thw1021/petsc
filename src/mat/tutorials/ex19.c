@@ -7,8 +7,7 @@ int main(int argc, char **args)
 {
   Mat         A;
   Vec         X;
-  PetscInt    N = 20, num_threads = 128;
-  PetscMPIInt rank, size;
+  PetscInt    N = 20;
   PetscBool   iscuda = PETSC_FALSE, iship = PETSC_FALSE;
   PetscBool   optionflag, compareflag;
   char        vectypename[PETSC_MAX_PATH_LEN];
@@ -16,10 +15,6 @@ int main(int argc, char **args)
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &args, (char *)0, NULL));
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-n", &N, NULL));
-  PetscCall(PetscOptionsGetInt(NULL, NULL, "-num_threads", &num_threads, NULL));
-
-  PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
-  PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
 
   PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "Creating Mat from Vec example", NULL);
   PetscCall(PetscOptionsGetString(NULL, NULL, "-vectype", vectypename, sizeof(vectypename), &optionflag));
@@ -46,7 +41,6 @@ int main(int argc, char **args)
 
   PetscCall(MatCreateDenseFromVecType(X, PETSC_DECIDE, PETSC_DECIDE, N, N, NULL, &A));
   PetscCall(MatSetFromOptions(A));
-  PetscCall(MatSetOption(A, MAT_IGNORE_OFF_PROC_ENTRIES, PETSC_TRUE));
   PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
 
