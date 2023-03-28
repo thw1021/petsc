@@ -5,13 +5,13 @@
 
 int main(int argc, char **args)
 {
-  Mat           A;
-  Vec           X;
-  PetscInt      N = 20, num_threads = 128;
-  PetscMPIInt   rank, size;
-  PetscBool     iscuda = PETSC_FALSE, iship = PETSC_FALSE;
-  PetscBool     optionflag, compareflag;
-  char          vectypename[PETSC_MAX_PATH_LEN];
+  Mat         A;
+  Vec         X;
+  PetscInt    N = 20, num_threads = 128;
+  PetscMPIInt rank, size;
+  PetscBool   iscuda = PETSC_FALSE, iship = PETSC_FALSE;
+  PetscBool   optionflag, compareflag;
+  char        vectypename[PETSC_MAX_PATH_LEN];
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &args, (char *)0, NULL));
