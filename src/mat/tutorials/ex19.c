@@ -8,7 +8,6 @@ int main(int argc, char **args)
   Mat           A;
   Vec           X;
   PetscInt      N = 20, num_threads = 128;
-  PetscLogEvent event;
   PetscMPIInt   rank, size;
   PetscBool     iscuda = PETSC_FALSE, iship = PETSC_FALSE;
   PetscBool     optionflag, compareflag;
@@ -24,7 +23,6 @@ int main(int argc, char **args)
 
   PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "Creating Mat from Vec example", NULL);
   PetscCall(PetscOptionsGetString(NULL, NULL, "-vectype", vectypename, sizeof(vectypename), &optionflag));
-  PetscCall(PetscLogEventRegister("GPU operator", MAT_CLASSID, &event));
   PetscOptionsEnd();
 
   if (optionflag) {
