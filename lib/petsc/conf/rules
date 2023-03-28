@@ -146,7 +146,6 @@ clean-legacy:
 	${PETSC_COMPILE_SINGLE} `pwd`/$<
 
 .cpp.o .cxx.o .cc.o .C.o:
-
 	${PETSC_CXXCOMPILE_SINGLE} `pwd`/$<
 
 .cu.o:
