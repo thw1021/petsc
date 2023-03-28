@@ -11174,3 +11174,54 @@ PetscErrorCode MatEliminateZeros(Mat A)
   PetscUseTypeMethod(A, eliminatezeros);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+/*@
+  MatCreateDenseFromVecType - Create a matrix that matches the type of a Vec.
+
+  Collective
+
+  Input Parameters:
++ X    - the vector
+. m    - number of local rows (or `PETSC_DECIDE` to have calculated if `M` is given)
+. n    - number of local columns (or `PETSC_DECIDE` to have calculated if `N` is given)
+. M    - number of global rows (or `PETSC_DECIDE` to have calculated if `m` is given)
+. N    - number of global columns (or `PETSC_DECIDE` to have calculated if `n` is given)
+- data - optional location of matrix data, which should have the same memory type as the vector. Pass `NULL` to have PETSc to control matrix.
+         memory allocation.
+
+  Output Parameter:
+. A - the matrix.  `A` will have the same communicator as `X`, the same `PetscDeviceCtx`, and the same `PetscMemType`.
+
+  Level: advanced
+
+.seealso: [](chapter_matrices), `Mat`, `MatCreate()', `PetscDeviceCtx`, `PetscMemType`
+@*/
+PetscErrorCode MatCreateDenseFromVecType(Vec X, PetscInt m, PetscInt n, PetscInt M, PetscInt N, PetscScalar *data, Mat *A)
+{
+  VecType   root_type;
+  PetscBool iscuda, iship;
+  MPI_Comm  comm;
+
+  PetscFunctionBegin;
+  PetscCall(VecGetRootType_Private(X, &root_type));
+  PetscCall(PetscObjectGetComm((PetscObject)X, &comm));
+  PetscCall(PetscStrcmp(root_type, VECCUDA, &iscuda));
+  PetscCall(PetscStrcmp(root_type, VECHIP, &iship));
+
+  if (iscuda) {
+#if defined(PETSC_HAVE_CUDA)
+    PetscCall(MatCreateDenseCUDA(comm, m, n, M, N, data, A));
+#else
+    PetscUnreachable();
+#endif
+  } else if (iship) {
+#if defined(PETSC_HAVE_HIP)
+    PetscCall(MatCreateDenseHIP(comm, m, n, M, N, data, A));
+#else
+    PetscUnreachable();
+#endif
+  } else {
+    PetscCall(MatCreateDense(comm, m, n, M, N, data, A));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
