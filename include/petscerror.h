@@ -139,7 +139,7 @@ M*/
    This should only be called in routines that cannot return an error code, such as in C++ constructors.
 
    Fortran Note:
-   Use `SETERRA()` in Fortran main routines and `SETERRQ()` in Fortran subroutines
+   Use `SETERRA()` in Fortran main program and `SETERRQ()` in Fortran subroutines
 
    Developer Note:
    In Fortran `SETERRA()` could be called `SETERRABORT()` since they serve the same purpose
@@ -354,7 +354,7 @@ M*/
 
 /*MC
    PetscCallA - Fortran-only macro that should be used in the main program to call PETSc functions instead of using
-   PetscCall() which should be used in other Fortran functions
+   PetscCall() which should be used in other Fortran subroutines
 
    Synopsis:
    #include <petscsys.h>
@@ -370,7 +370,7 @@ M*/
    Notes:
    This should only be used with Fortran. With C/C++, use `PetscCall()` always.
 
-   Use `SETERRA()` to set an error in a Fortran main routine and `SETERRQ()` in Fortran subroutines
+   Use `SETERRA()` to set an error in a Fortran main program and `SETERRQ()` in Fortran subroutines
 
 .seealso: `SETERRQ()`, `SETERRA()`, `SETERRABORT()`, `PetscCall()`, `CHKERRA()`, `PetscCallAbort()`
 M*/
@@ -594,7 +594,7 @@ M*/
   This routine may be used in functions returning `void` or other non-`PetscErrorCode` types.
 
   Fortran Note:
-  In Fortran this is called `PetscCallMPIA()` and is intended to be used in the main program while this is
+  In Fortran this is called `PetscCallMPIA()` and is intended to be used in the main program while `PetscCallMPI()` is
   used in Fortran subroutines.
 
   Developer Note:
@@ -805,10 +805,10 @@ PETSC_EXTERN PetscBool petscindebugger;
    Level: advanced
 
    Notes:
-   If the option `-start_in_debugger` was used then this calls abort() to stop the program in the debugger.
+   If the option `-start_in_debugger` was used then this calls `abort()` to stop the program in the debugger.
 
    if `PetscCIEnabledPortableErrorOutput` is set, which means the code is running in the PETSc test harness (make test),
-   and `comm` is `MPI_COMM_WORLD` it strives to exit cleanly without call `MPI_Abort()` instead calling `MPI_Finalize()`.
+   and `comm` is `MPI_COMM_WORLD` it strives to exit cleanly without calling `MPI_Abort()` and instead calling `MPI_Finalize()`.
 
    This is currently only used when an error propagates up to the C `main()` program and is detected by a `PetscCall()`, `PetscCallMPI()`,
    or is set in `main()` with `SETERRQ()`. Abort calls such as `SETERRABORT()`,
