@@ -11228,7 +11228,7 @@ PetscErrorCode MatCreateDenseMatchingVec(Vec X, PetscInt m, PetscInt n, PetscInt
       iship = PETSC_TRUE;
       break;
     default:
-      SETERRQ(PetscObjectComm((PetscObject)X), PETSC_ERR_SUP, "Cannot figure out memory type of vector type %s\n", root_type);
+      SETERRQ(PetscObjectComm((PetscObject)X), PETSC_ERR_SUP, "Cannot figure out memory type of vector type %s", root_type);
     }
   }
 
@@ -11245,6 +11245,5 @@ PetscErrorCode MatCreateDenseMatchingVec(Vec X, PetscInt m, PetscInt n, PetscInt
     PetscCall(MatCreateDenseHIP(comm, m, n, M, N, data, A));
   }
 #endif
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
