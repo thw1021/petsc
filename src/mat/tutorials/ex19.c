@@ -47,7 +47,7 @@ int main(int argc, char **args)
   MPI_Comm    X_comm = PetscObjectComm((PetscObject)X);
   MPI_Comm    A_comm = PetscObjectComm((PetscObject)X);
   PetscMPIInt comp;
-  PetscCall(MPI_Comm_compare(X_comm, A_comm, &comp));
+  PetscCallMPI(MPI_Comm_compare(X_comm, A_comm, &comp));
   PetscAssert(comp == MPI_IDENT || comp == MPI_CONGRUENT, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Failed communicator guarantee in MatCreateDenseMatchingVec()");
 
   PetscMemType       X_memtype, A_memtype;
