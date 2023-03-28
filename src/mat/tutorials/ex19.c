@@ -66,6 +66,11 @@ int main(int argc, char **args)
       args: -vectype cuda -ex19_mat_view
 
    test:
+      suffix: hip
+      requires: hip
+      args: -vectype hip -ex19_mat_view
+
+   test:
       suffix: standard
       args: -vectype standard -ex19_mat_view
 TEST*/
