@@ -2899,7 +2899,7 @@ PetscErrorCode MatMumpsGetRinfog(Mat F, PetscInt icntl, PetscReal *val)
    Logically Collective
 
    Input Parameter:
-+  F - the factored matrix obtained by calling `MatGetFactor()` from PETSc-MUMPS interface
+.  F - the factored matrix obtained by calling `MatGetFactor()` from PETSc-MUMPS interface
 
   Output Parameters:
 +  size - local size of the array. The size of the array is non-zero only on the host.
