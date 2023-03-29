@@ -2640,7 +2640,7 @@ PetscErrorCode MatMumpsGetNullPivots_MUMPS(Mat F, PetscInt *size, PetscInt **arr
 
   PetscFunctionBegin;
   PetscCheck(mumps->id.ICNTL(24) == 1, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "-mat_mumps_icntl_24 must be set as 1 for null pivot row detection");
-  *size = 0;
+  *size  = 0;
   *array = NULL;
   if (!mumps->myid) {
     *size = mumps->id.INFOG(28);
@@ -2892,7 +2892,6 @@ PetscErrorCode MatMumpsGetRinfog(Mat F, PetscInt icntl, PetscReal *val)
   PetscUseMethod(F, "MatMumpsGetRinfog_C", (Mat, PetscInt, PetscReal *), (F, icntl, val));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
 
 /*@
   MatMumpsGetNullPivots - Get MUMPS parameter PIVNUL_LIST()
