@@ -8,7 +8,6 @@
 # It may be included in users makefiles (with include ${PETSC_DIR}/lib/petsc/conf/rules)
 # The makefile will then compile executables that link against the PETSc libraries
 # See https://petsc.org/release/docs/manual/getting_started/#writing-c-c-or-fortran-applications
-
 .SUFFIXES: .F .F90 .f90 ${SUFFIXES} .PETSc .C .cc .cpp .cxx .r .rm .so .html .ad .m .F95 .f95 .fiat .cu .hip.cpp .kokkos.cxx .raja.cxx *.sycl.cxx
 
 clean-legacy:
@@ -33,6 +32,8 @@ clean-legacy:
                *.dep *.proj ctoatmp PETScArena* *.L *.anl *.mod .mpi* *.d \
               *.class *.ouit *.ad.* g_* silly.cmp *.tmp.* *.ilk *.pdb *.inst.c *.rej *.gcda *.gcno
 	@-${RM} -rf ${CLEANDIRS} *.dSYM AD_cache SunWS_cache
+
+clean: clean-legacy
 
 #
 #  These rules are for compiling the test examples.
