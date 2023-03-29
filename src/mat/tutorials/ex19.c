@@ -1,3 +1,5 @@
+const char help[] = "Test MatCreateDenseMatchingVec()\n\n";
+
 #include <petscdevice_cuda.h>
 #include <petscmat.h>
 #include <petscconf.h>
@@ -8,35 +10,17 @@ int main(int argc, char **args)
   Mat       A;
   Vec       X;
   PetscInt  N      = 20;
-  PetscBool iscuda = PETSC_FALSE, iship = PETSC_FALSE;
-  PetscBool optionflag, compareflag;
-  char      vectypename[PETSC_MAX_PATH_LEN];
 
   PetscFunctionBeginUser;
-  PetscCall(PetscInitialize(&argc, &args, (char *)0, NULL));
-  PetscCall(PetscOptionsGetInt(NULL, NULL, "-n", &N, NULL));
+  PetscCall(PetscInitialize(&argc, &args, NULL, help));
 
   PetscOptionsBegin(PETSC_COMM_WORLD, NULL, "Creating Mat from Vec example", NULL);
-  PetscCall(PetscOptionsGetString(NULL, NULL, "-vectype", vectypename, sizeof(vectypename), &optionflag));
+  PetscCall(PetscOptionsGetInt(NULL, NULL, "-n", &N, NULL));
   PetscOptionsEnd();
-
-  if (optionflag) {
-    PetscCall(PetscStrncmp(vectypename, "cuda", (size_t)4, &compareflag));
-    if (compareflag) iscuda = PETSC_TRUE;
-    PetscCall(PetscStrncmp(vectypename, "hip", (size_t)3, &compareflag));
-    if (compareflag) iship = PETSC_TRUE;
-    PetscCall(PetscStrncmp(vectypename, "standard", (size_t)8, &compareflag));
-  }
 
   PetscCall(VecCreate(PETSC_COMM_WORLD, &X));
   PetscCall(VecSetSizes(X, PETSC_DECIDE, N));
-  if (iscuda) {
-    PetscCall(VecSetType(X, VECCUDA));
-  } else if (iship) {
-    PetscCall(VecSetType(X, VECHIP));
-  } else {
-    PetscCall(VecSetType(X, VECSTANDARD));
-  }
+  PetscCall(VecSetFromOptions(X));
   PetscCall(VecSetUp(X));
 
   PetscCall(MatCreateDenseMatchingVec(X, PETSC_DECIDE, PETSC_DECIDE, N, N, NULL, &A));
@@ -71,14 +55,19 @@ int main(int argc, char **args)
    test:
       suffix: cuda
       requires: cuda
-      args: -vectype cuda -ex19_mat_view
+      args: -vec_type cuda -ex19_mat_view
 
    test:
       suffix: hip
       requires: hip
-      args: -vectype hip -ex19_mat_view
+      args: -vec_type hip -ex19_mat_view
 
    test:
       suffix: standard
-      args: -vectype standard -ex19_mat_view
+      args: -vec_type standard -ex19_mat_view
+
+   test:
+      suffix: kokkos
+      requires: kokkos
+      args: -vec_type standard -ex19_mat_view
 TEST*/
