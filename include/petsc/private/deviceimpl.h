@@ -319,15 +319,6 @@ static inline PetscErrorCode PetscDeviceContextGetSOLVERHandle_Internal(PetscDev
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static inline PetscErrorCode PetscDeviceContextGetStreamHandle_Internal(PetscDeviceContext dctx, void *handle)
-{
-  PetscFunctionBegin;
-  /* we do error checking here as this routine is an entry-point */
-  PetscValidDeviceContext(dctx, 1);
-  PetscUseTypeMethod(dctx, getstreamhandle, handle);
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 static inline PetscErrorCode PetscDeviceContextBeginTimer_Internal(PetscDeviceContext dctx)
 {
   PetscFunctionBegin;
@@ -350,7 +341,6 @@ static inline PetscErrorCode PetscDeviceContextEndTimer_Internal(PetscDeviceCont
   #define PetscDeviceContextGetNullContext_Internal(dctx)          (*(dctx) = PETSC_NULLPTR, PETSC_SUCCESS)
   #define PetscDeviceContextGetBLASHandle_Internal(dctx, handle)   (*(handle) = PETSC_NULLPTR, PETSC_SUCCESS)
   #define PetscDeviceContextGetSOLVERHandle_Internal(dctx, handle) (*(handle) = PETSC_NULLPTR, PETSC_SUCCESS)
-  #define PetscDeviceContextGetStreamHandle_Internal(dctx, handle) (*(handle) = PETSC_NULLPTR, PETSC_SUCCESS)
   #define PetscDeviceContextBeginTimer_Internal(dctx)              PETSC_SUCCESS
   #define PetscDeviceContextEndTimer_Internal(dctx, elapsed)       PETSC_SUCCESS
 #endif /* PETSC_HAVE_CXX for PetscDeviceContext Internal Functions */
