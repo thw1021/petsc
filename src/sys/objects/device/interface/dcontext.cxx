@@ -1088,6 +1088,7 @@ PetscErrorCode PetscDeviceContextGetStream_Internal(PetscDeviceContext dctx, voi
 {
   PetscFunctionBegin;
   PetscValidDeviceContext(dctx, 1);
+  PetscValidPointer(handle, 2);
   PetscUseTypeMethod(dctx, getstreamhandle, handle);
   PetscCall(PetscObjectStateIncrease(PetscObjectCast(dctx)));
   PetscFunctionReturn(PETSC_SUCCESS);
