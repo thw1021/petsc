@@ -58,6 +58,11 @@ int main(int argc, char **args)
       args: -vec_type cuda -ex19_mat_view
 
    test:
+      suffix: mpicuda
+      requires: cuda
+      args: -vec_type mpicuda -ex19_mat_view
+
+   test:
       suffix: hip
       requires: hip
       args: -vec_type hip -ex19_mat_view
@@ -65,6 +70,16 @@ int main(int argc, char **args)
    test:
       suffix: standard
       args: -vec_type standard -ex19_mat_view
+
+   test:
+      suffix: kokkos_cuda
+      requires: kokkos, cuda
+      args: -vec_type kokkos -ex19_mat_view
+
+   test:
+      suffix: kokkos_hip
+      requires: kokkos, hip
+      args: -vec_type kokkos -ex19_mat_view
 
    test:
       suffix: kokkos
