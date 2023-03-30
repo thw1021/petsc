@@ -159,12 +159,11 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPISELLCUDA(Mat A)
    Level: intermediate
 
    Notes:
-   If nnz is given then nz is ignored
+   If `nnz` is given then `nz` is ignored
 
-   Specify the preallocated storage with either nz or nnz (not both).
-   Set nz=PETSC_DEFAULT and nnz=NULL for PETSc to control dynamic memory
-   allocation.  For large problems you MUST preallocate memory or you
-   will get TERRIBLE performance, see the users' manual chapter on matrices.
+   Specify the preallocated storage with either `nz` or `nnz` (not both).
+   Set `nz` = `PETSC_DEFAULT` and `nnz` = `NULL` for PETSc to control dynamic memory
+   allocation.
 
 .seealso: [](chapter_matrices), `Mat`, `MatCreate()`, `MatCreateSELL()`, `MatSetValues()`, `MATMPISELLCUDA`, `MATSELLCUDA`
 @*/
@@ -187,21 +186,20 @@ PetscErrorCode MatCreateSELLCUDA(MPI_Comm comm, PetscInt m, PetscInt n, PetscInt
 }
 
 /*MC
-   MATSELLCUDA - MATMPISELLCUDA = "sellcuda" = "mpisellcuda" - A matrix type to be used for sparse matrices.
+   MATSELLCUDA - "sellcuda" = "mpisellcuda" - A matrix type to be used for sparse matrices.
 
    Sliced ELLPACK matrix type whose data resides on NVIDIA GPUs.
 
-   This matrix type is identical to MATSEQSELLCUDA when constructed with a single process communicator,
-   and MATMPISELLCUDA otherwise.  As a result, for single process communicators,
-   MatSeqSELLSetPreallocation is supported, and similarly MatMPISELLSetPreallocation is supported
+   This matrix type is identical to `MATSEQSELLCUDA` when constructed with a single process communicator,
+   and `MATMPISELLCUDA` otherwise.  As a result, for single process communicators,
+   `MatSeqSELLSetPreallocation()` is supported, and similarly `MatMPISELLSetPreallocation()` is supported
    for communicators controlling multiple processes.  It is recommended that you call both of
    the above preallocation routines for simplicity.
 
-   Options Database Keys:
-.  -mat_type mpisellcuda - sets the matrix type to "mpisellcuda" during a call to MatSetFromOptions()
+   Options Database Key:
+.  -mat_type mpisellcuda - sets the matrix type to `MATMPISELLCUDA` during a call to MatSetFromOptions()
 
   Level: beginner
 
- .seealso: MatCreateSELLCUDA(), MATSEQSELLCUDA, MatCreateSeqSELLCUDA(), MatCUDAFormatOperation
-M
+ .seealso: `MatCreateSELLCUDA()`, `MATSEQSELLCUDA`, `MatCreateSeqSELLCUDA()`, `MatCUDAFormatOperation()`
 M*/
