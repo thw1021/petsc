@@ -7,9 +7,9 @@ const char help[] = "Test MatCreateDenseMatchingVec()\n\n";
 
 int main(int argc, char **args)
 {
-  Mat       A;
-  Vec       X;
-  PetscInt  N      = 20;
+  Mat      A;
+  Vec      X;
+  PetscInt N = 20;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &args, NULL, help));
