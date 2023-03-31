@@ -6721,12 +6721,7 @@ PetscErrorCode DMGetLabelIdIS(DM dm, const char name[], IS *ids)
   PetscValidPointer(ids, 3);
   PetscCall(DMGetLabel(dm, name, &label));
   *ids = NULL;
-  if (label) {
-    PetscCall(DMLabelGetValueIS(label, ids));
-  } else {
-    /* returning an empty IS */
-    PetscCall(ISCreateGeneral(PETSC_COMM_SELF, 0, NULL, PETSC_USE_POINTER, ids));
-  }
+  if (label) PetscCall(DMLabelGetValueIS(label, ids));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -6789,8 +6784,7 @@ PetscErrorCode DMGetStratumIS(DM dm, const char name[], PetscInt value, IS *poin
   PetscValidPointer(points, 4);
   PetscCall(DMGetLabel(dm, name, &label));
   *points = NULL;
-  if (!label) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscCall(DMLabelGetStratumIS(label, value, points));
+  if (label) PetscCall(DMLabelGetStratumIS(label, value, points));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
