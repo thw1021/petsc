@@ -11,7 +11,7 @@ Changes: 3.19
 
 .. rubric:: General:
 
-- Add perfstubs package, see https://petsc.org/release/docs/manual/profiling/#using-tau for more information on usage
+- Add perfstubs package, see (`source <PETSC_DOC_OUT_ROOT_PLACEHOLDER/manual/profiling/#using-tau>`__) for more information on usage
 
 .. rubric:: Configure/Build:
 
