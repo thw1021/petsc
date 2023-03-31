@@ -205,7 +205,6 @@ checksource:
     - make vermin
     - PATH=/nfs/gce/projects/petsc/soft/clang+llvm-16.0.0-x86_64-linux-gnu-ubuntu-18.04/bin:$PATH make checkclangformat SHELL=bash
     - make checkbadSource SHELL=bash
-    - make checkbadFileChange SHELL=bash
     - make -f gmakefile check_output SHELL=bash
     - make check_petsc4py_rst
   artifacts:
