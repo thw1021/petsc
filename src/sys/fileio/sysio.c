@@ -357,7 +357,7 @@ PetscErrorCode PetscBinaryRead(int fd, void *data, PetscInt num, PetscInt *count
 
    If running with `__float128` precision the output is in `__float128` unless one uses the `-binary_write_double` option
 
-   The Buffer `p` should be read-write buffer, and not static data.
+   The buffer `p` should be read-write buffer, and not static data.
    This way, byte-swapping is done in-place, and then the buffer is
    written to the file.
 

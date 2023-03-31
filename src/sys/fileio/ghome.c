@@ -18,7 +18,7 @@
    Level: developer
 
    Notes:
-   If PETSc cannot determine the home directory it makes `dir` a null string
+   If PETSc cannot determine the home directory it makes `dir` an empty string
 
    On Microsoft Windows machines the environmental variable `HOME` specifies the home directory.
 
