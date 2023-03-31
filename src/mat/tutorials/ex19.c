@@ -73,16 +73,16 @@ int main(int argc, char **args)
 
    test:
       suffix: kokkos_cuda
-      requires: kokkos, cuda
+      requires: kokkos kokkos_kernels cuda
       args: -vec_type kokkos -ex19_mat_view
 
    test:
       suffix: kokkos_hip
-      requires: kokkos, hip
+      requires: kokkos kokkos_kernels hip
       args: -vec_type kokkos -ex19_mat_view
 
    test:
       suffix: kokkos
-      requires: kokkos !cuda !hip
+      requires: kokkos kokkos_kernels !cuda !hip
       args: -vec_type kokkos -ex19_mat_view
 TEST*/
