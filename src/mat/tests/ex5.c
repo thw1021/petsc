@@ -288,4 +288,11 @@ int main(int argc, char **args)
       args: -mat_type sell -test_diagonalscale
       output_file: output/ex5_53.out
 
+   test:
+      suffix: sell_5
+      nsize: 3
+      args: -mat_type sellcuda -vec_type cuda -test_diagonalscale
+      output_file: output/ex5_55.out
+      requires: cuda !complex
+
 TEST*/
