@@ -37,6 +37,8 @@ Changes: Development
 
 .. rubric:: Mat:
 
+-  Added MATSELLCUDA. It supports fast MatMult() and MatMultAdd() on GPUs.
+
 .. rubric:: MatCoarsen:
 
 .. rubric:: PC:
