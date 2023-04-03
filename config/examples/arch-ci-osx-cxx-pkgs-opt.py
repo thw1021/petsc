@@ -34,13 +34,13 @@ configure_options = [
   '--download-med=1',
   '--download-sundials2=1',
   '--download-hypre=1',
-  '--download-amrex=1',
+  #'--download-amrex=1', build failure: ld: file not found: @rpath/libquadmath.0.dylib for architecture x86_64: upgrade to 23.04 does not help
   '--download-cmake=1',
   '--download-suitesparse=1',
   '--download-chaco=1',
   '--download-spai=1',
   # '--download-moab=1', # disabled since its maxCxxVersion is c++14, but Kokkos-4.0's minCxxVersion is c++17
-  '--download-saws',
+  #'--download-saws', #needs /usr/bin/python [missing in newer MacOS]
   '--download-revolve=1',
   '--download-cams=1',
   '--download-ctetgen=1',
