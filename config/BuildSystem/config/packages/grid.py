@@ -40,9 +40,9 @@ class Configure(config.package.GNUPackage):
       if not os.path.lexists(gridDir):
         os.symlink(eigenDir, gridDir)
       eigenDir = os.path.join(self.installDir, 'include', 'eigen3', 'unsupported', 'Eigen')
-      gridDir  = os.path.join(self.packageDir, 'Grid', 'Eigen', 'unsupported')
-      if not os.path.lexists(gridDir):
-        os.symlink(eigenDir, gridDir)
+      eigenUnDir  = os.path.join(self.installDir, 'include', 'eigen3', 'Eigen', 'unsupported')
+      if not os.path.lexists(eigenUnDir):
+        os.symlink(eigenDir, eigenUnDir)
     except OSError as e:
       raise RuntimeError('Error linking Eigen to ' + self.PACKAGE+': '+str(e))
 
@@ -71,4 +71,5 @@ class Configure(config.package.GNUPackage):
     except RuntimeError as e:
       raise RuntimeError('Error generating Make.inc in ' + self.PACKAGE+': '+str(e))
     config.package.GNUPackage.preInstall(self)
+    self.addDefine("HAVE_GRID", 1)
     return
