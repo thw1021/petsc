@@ -1,4 +1,4 @@
-const char help[] = "Test MatCreateDenseMatchingVec()\n\n";
+const char help[] = "Test VecCreateMatDense()\n\n";
 
 #include <petscdevice_cuda.h>
 #include <petscmat.h>
@@ -23,7 +23,7 @@ int main(int argc, char **args)
   PetscCall(VecSetFromOptions(X));
   PetscCall(VecSetUp(X));
 
-  PetscCall(MatCreateDenseMatchingVec(X, PETSC_DECIDE, PETSC_DECIDE, N, N, NULL, &A));
+  PetscCall(VecCreateMatDense(X, PETSC_DECIDE, PETSC_DECIDE, N, N, NULL, &A));
   PetscCall(MatSetFromOptions(A));
   PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
