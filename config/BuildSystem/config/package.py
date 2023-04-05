@@ -816,9 +816,8 @@ To use currently downloaded (local) git snapshot - use: --download-'+self.packag
           raise RuntimeError('Unable to checkout commit: '+self.gitcommit+' in repository: '+self.packageDir+'.\nPerhaps its a git error!')
       # write a commit-tag file
       self.gcommfile = os.path.join(self.packageDir,'pkg.gitcommit')
-      fd = open(self.gcommfile,'w')
-      fd.write(gitcommit_hash)
-      fd.close()
+      with open(self.gcommfile,'w') as fd:
+        fd.write(gitcommit_hash)
     return
 
   def getDir(self):
