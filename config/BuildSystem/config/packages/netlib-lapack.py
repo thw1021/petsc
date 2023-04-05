@@ -26,6 +26,8 @@ class Configure(config.package.CMakePackage):
   def formCMakeConfigureArgs(self):
     args = config.package.CMakePackage.formCMakeConfigureArgs(self)
     args.append('-DLIBRARY_PREFIX=n')
+    # needed for Microsoft Windows compilers since they do not take Unix standard flags
+    args.append('-DCMAKE_DEPENDS_USE_COMPILER=FALSE')
     return args
 
   def Install(self):
