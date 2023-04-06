@@ -1,0 +1,47 @@
+masses:        e= 9.109e-31; ions in proton mass units:    2.000e+00  0.000e+00 ...
+charges:       e=-1.602e-19; charges in elementary units:  1.000e+00  0.000e+00
+n:             e:  1.000e+00                           i:  1.000e+00  0.000e+00
+thermal T (K): e= 2.321e+07 i= 1.160e+07  0.000e+00. Normalization grid 0: v_0= 1.876e+07 ( 6.256e-02c) n_0= 1.000e+20 t_0= 1.909e-05 1 batched, view batch 0
+Domain radius (AMR levels) grid 0: par= 5.000e+00 perp= 5.000e+00 (0) 
+0) FormLandau 288 IPs, 48 cells total, Nb=6, Nq=6, dim=2, Tab: Nb=6 Nf=2 Np=6 cdim=2 N=226
+DM Object: semi-circle 1 MPI process
+  type: plex
+semi-circle in 2 dimensions:
+  Number of 0-cells per rank: 33
+  Number of 1-cells per rank: 80
+  Number of 2-cells per rank: 48
+Labels:
+  celltype: 3 strata with value/size (1 (80), 3 (48), 0 (33))
+  depth: 3 strata with value/size (0 (33), 1 (80), 2 (48))
+Field e:
+  adjacency FEM
+Field i1:
+  adjacency FEM
+  0) species-0: charge density= -1.6030301232283e+01 z-momentum= -9.4840749297567e-20 energy=  4.7497693391773e+04
+  0) species-1: charge density= -6.7017227352177e+04 z-momentum= -2.1390624471193e-12 energy= -1.4132008249662e+11
+	  0) Total: charge density= -6.7033257653409e+04, momentum= -2.1390625419600e-12, energy= -1.4132003499893e+11 (m_i[0]/m_e = 3670.94, 48 cells on electron grid)
+    0 SNES Function norm 4.579065963253e+02 
+    1 SNES Function norm 1.264331465004e+00 
+    2 SNES Function norm 7.332503298904e-04 
+    3 SNES Function norm 3.295213182933e-06 
+    4 SNES Function norm 2.005680477403e-08 
+    5 SNES Function norm 1.251899962354e-10 
+    6 SNES Function norm 2.098284099787e-12 
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 6
+  1) species-0: charge density= -1.6030301232282e+01 z-momentum=  1.7841915961605e-18 energy=  2.5776274524651e+05
+  1) species-1: charge density= -6.7017227352177e+04 z-momentum= -8.8548794782583e-13 energy= -1.4132029276168e+11
+	  1) Total: charge density= -6.7033257653409e+04, momentum= -8.8548616363424e-13, energy= -1.4132003499893e+11 (m_i[0]/m_e = 3670.94, 48 cells on electron grid)
+  0) species-0: charge density= -1.6030301232283e+01 z-momentum= -9.4840749297567e-20 energy=  4.7497693391773e+04
+  0) species-1: charge density= -6.7017227352177e+04 z-momentum= -2.1390624471193e-12 energy= -1.4132008249662e+11
+	  0) Total: charge density= -6.7033257653409e+04, momentum= -2.1390625419600e-12, energy= -1.4132003499893e+11 (m_i[0]/m_e = 3670.94, 48 cells on electron grid)
+    0 SNES Function norm 4.579065963253e+02 
+    1 SNES Function norm 1.264331465004e+00 
+    2 SNES Function norm 7.332503298904e-04 
+    3 SNES Function norm 3.295213182933e-06 
+    4 SNES Function norm 2.005680477403e-08 
+    5 SNES Function norm 1.251899962354e-10 
+    6 SNES Function norm 2.098284099787e-12 
+  Nonlinear solve converged due to CONVERGED_FNORM_RELATIVE iterations 6
+  1) species-0: charge density= -1.6030301232282e+01 z-momentum=  1.7841915961605e-18 energy=  2.5776274524651e+05
+  1) species-1: charge density= -6.7017227352177e+04 z-momentum= -8.8548794782583e-13 energy= -1.4132029276168e+11
+	  1) Total: charge density= -6.7033257653409e+04, momentum= -8.8548616363424e-13, energy= -1.4132003499893e+11 (m_i[0]/m_e = 3670.94, 48 cells on electron grid)
