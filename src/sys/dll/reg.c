@@ -185,7 +185,7 @@ static PetscFunctionListDLAll dlallhead = NULL;
 static PetscErrorCode PetscFunctionListDLAllPush_Private(PetscFunctionList fl)
 {
   PetscFunctionBegin;
-  if (PetscDefined(USE_DEBUG) && !PetscDefined(HAVE_THREADSAFETY)) {
+  if ((bool)PetscDefined(USE_DEBUG) && (bool)!PetscDefined(HAVE_THREADSAFETY)) {
     PetscFunctionListDLAll head;
 
     PetscCall(PetscNew(&head));
@@ -199,7 +199,7 @@ static PetscErrorCode PetscFunctionListDLAllPush_Private(PetscFunctionList fl)
 static PetscErrorCode PetscFunctionListDLAllPop_Private(PetscFunctionList fl)
 {
   PetscFunctionBegin;
-  if (PetscDefined(USE_DEBUG) && !PetscDefined(HAVE_THREADSAFETY)) {
+  if ((bool)PetscDefined(USE_DEBUG) && (bool)!PetscDefined(HAVE_THREADSAFETY)) {
     PetscFunctionListDLAll current = dlallhead, prev = NULL;
 
     /* Remove this entry from the main DL list (if it is in it) */
