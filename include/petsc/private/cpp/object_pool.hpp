@@ -28,15 +28,20 @@ enum class align_val_t : std::size_t {
 
 } // namespace Petsc
 
+namespace std
+{
+
 template <>
-struct std::hash<Petsc::memory::align_val_t> {
+struct hash<::Petsc::memory::align_val_t> {
   #if PETSC_CPP_VERSION < 17
-  using argument_type = Petsc::memory::align_val_t;
-  using result_type   = std::size_t;
+  using argument_type = ::Petsc::memory::align_val_t;
+  using result_type   = size_t;
   #endif
 
-  constexpr std::size_t operator()(const Petsc::memory::align_val_t &x) const noexcept { return static_cast<std::size_t>(x); }
+  constexpr size_t operator()(const ::Petsc::memory::align_val_t &x) const noexcept { return static_cast<size_t>(x); }
 };
+
+} // namespace std
 
 namespace Petsc
 {
