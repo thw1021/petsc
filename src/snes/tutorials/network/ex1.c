@@ -582,8 +582,6 @@ int main(int argc, char **argv)
   PetscCall(CoordinateVecSetUp(networkdm, coords));
   if (printCoord) PetscCall(CoordinatePrint(networkdm));
 
-  PetscCall(DMNetworkSetViewOption(networkdm, DM_NETWORK_VIEW_SHOW_RANKS, PETSC_TRUE));
-
   /* Set up DM for use */
   PetscCall(DMSetUp(networkdm));
 

@@ -77,10 +77,10 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   char        filename[PETSC_MAX_PATH_LEN + 1], options[512], proccall[PETSC_MAX_PATH_LEN + 512], scriptFile[PETSC_MAX_PATH_LEN + 1], buffer[256];
   PetscViewer csvViewer;
   FILE       *processFile = NULL;
-  PetscBool   isnull;
+  PetscBool   isnull, optionShowRanks = PETSC_FALSE, optionRankIsSet = PETSC_FALSE, showAllRanks;
   PetscDraw   draw;
   DM_Network *network = (DM_Network *)dm->data;
-  PetscInt    drawPause;
+  PetscInt    drawPause, optionRank;
 #if defined(PETSC_HAVE_MKSTEMP)
   PetscBool isSharedTmp;
 #endif
@@ -163,16 +163,30 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
     PetscCall(PetscStrlcat(options, buffer, sizeof(options)));
   }
   // Set rank parameters
-  if (network->viewOptions[DM_NETWORK_VIEW_SHOW_RANKS]) {
-    PetscCall(PetscStrlcat(options, " -dar ", sizeof(options)));
-    if (network->viewOptions[DM_NETWORK_VIEW_SHOW_RANKS] < 0) PetscCall(PetscStrlcat(options, " -ncp ", sizeof(options)));
+  // Get potential user-provided options
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-dmnetwork_view_all_ranks", &optionShowRanks, NULL));
+  PetscCall(PetscOptionsGetInt(NULL, NULL, "-dmnetwork_view_rank", &optionRank, &optionRankIsSet));
+  showAllRanks = network->viewOptions[DM_NETWORK_VIEW_SHOW_RANKS] || optionShowRanks;
+  if (showAllRanks || optionRankIsSet) {
+    // Show all ranks only if the option is set in code or by the user AND not showing one specific rank AND there is more than one process
+    if (showAllRanks && !optionRankIsSet && size != 1) PetscCall(PetscStrlcat(options, " -dar ", sizeof(options)));
+    // Do not show the combined plot if the user requests it in code OR if one specific rank is requested
+    if (network->viewOptions[DM_NETWORK_VIEW_SHOW_RANKS] < 0 || optionRankIsSet) PetscCall(PetscStrlcat(options, " -ncp ", sizeof(options)));
 
-    PetscCall(PetscSNPrintf(buffer, sizeof(buffer), "%" PetscInt_FMT, network->viewOptions[DM_NETWORK_VIEW_FIRST_RANK]));
-    PetscCall(PetscStrlcat(options, " -dfr ", sizeof(options)));
-    PetscCall(PetscStrlcat(options, buffer, sizeof(options)));
-    PetscCall(PetscSNPrintf(buffer, sizeof(buffer), "%" PetscInt_FMT, network->viewOptions[DM_NETWORK_VIEW_NUM_RANKS]));
-    PetscCall(PetscStrlcat(options, " -dnr ", sizeof(options)));
-    PetscCall(PetscStrlcat(options, buffer, sizeof(options)));
+    if (optionRankIsSet) {
+      // If one specific rank is requested by options then that takes precedence
+      PetscCall(PetscSNPrintf(buffer, sizeof(buffer), "%" PetscInt_FMT, optionRank));
+      PetscCall(PetscStrlcat(options, " -dnr 1 -dfr ", sizeof(options)));
+      PetscCall(PetscStrlcat(options, buffer, sizeof(options)));
+    } else {
+      // Otherwise, use the options provided in code
+      PetscCall(PetscSNPrintf(buffer, sizeof(buffer), "%" PetscInt_FMT, network->viewOptions[DM_NETWORK_VIEW_FIRST_RANK]));
+      PetscCall(PetscStrlcat(options, " -dfr ", sizeof(options)));
+      PetscCall(PetscStrlcat(options, buffer, sizeof(options)));
+      PetscCall(PetscSNPrintf(buffer, sizeof(buffer), "%" PetscInt_FMT, network->viewOptions[DM_NETWORK_VIEW_NUM_RANKS]));
+      PetscCall(PetscStrlcat(options, " -dnr ", sizeof(options)));
+      PetscCall(PetscStrlcat(options, buffer, sizeof(options)));
+    }
   }
 
   // Get the value of $PETSC_DIR

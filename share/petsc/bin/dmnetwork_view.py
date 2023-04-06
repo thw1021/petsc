@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-		
+
+global nextWindowOffset
+nextWindowOffset = 50
+
 # Parses a color string into an RGBA tuple to use with matplotlib
 def parseColor(color, defaultValue = (0, 0, 0, 1)):
 	# We only accept string values for parsing
@@ -133,6 +136,21 @@ class Rank:
 
 		# Start the figure for this rank
 		fig = plt.figure("Rank " + str(self.id) if self.id >= 0 else "Global")
+		try:
+			global nextWindowOffset
+			offset = nextWindowOffset
+			nextWindowOffset += 50
+
+			window = fig.canvas.manager.window
+			backend = matplotlib.get_backend()
+			if backend == 'TkAgg':
+				window.wm_geometry("+%d+%d" % (offset, offset))
+			elif backend == 'WXAgg':
+				window.SetPosition(offset, offset)
+			else:
+				window.move(offset, offset)
+		except Exception:
+			pass
 		# Get axis for the plot
 		axis = fig.add_subplot()
 
@@ -199,7 +217,7 @@ def main(args):
 	ranks = { -1: Rank(-1) }
 	firstRank = 0
 	endRank = None
-	if args.draw_all_ranks:
+	if args.draw_all_ranks or args.draw_first_rank or args.draw_num_ranks:
 		firstRank = int(args.draw_first_rank or 0)
 		if args.draw_num_ranks is not None:
 			endRank = firstRank + int(args.draw_num_ranks)
@@ -269,7 +287,7 @@ def main(args):
 		# Generate figures using ranks
 		if not args.no_combined_plot:
 			globalRank.display(opts, title)
-		if args.draw_all_ranks:
+		if args.draw_all_ranks or args.draw_first_rank or args.draw_num_ranks:
 			if endRank is None:
 				endRank = maxRank + 1
 			for i in range(firstRank, endRank):
@@ -311,16 +329,17 @@ if __name__ == "__main__":
 		argparser.add_argument('-etc', '--set-edge-title-color', metavar='COLOR', action='store', help="Sets the color for drawn edge titles, overriding any per-edge colors")
 		argparser.add_argument('-nd', '--no-display', action='store_true', help="Disables displaying the figure, but will parse as normal")
 		argparser.add_argument('-tx', '--test-execute', action='store_true', help="Returns from the program immediately, used only to test run the script")
-		argparser.add_argument('-dt', '--display-time', action='store', help="Sets the time to display the figure in seconds before automatically closing the window")
+		argparser.add_argument('-dt', '--display-time', metavar='SECONDS', action='store', help="Sets the time to display the figure in seconds before automatically closing the window")
 		argparser.add_argument('-dar', '--draw-all-ranks', action='store_true', help="Draws each rank's network in a separate figure")
-		argparser.add_argument('-dfr', '--draw-first-rank', action='store', help="Sets the first rank to start drawing figures for")
-		argparser.add_argument('-dnr', '--draw-num-ranks', action='store', help="Sets the number of ranks to draw figures for")
+		argparser.add_argument('-dfr', '--draw-first-rank', metavar='OFFSET', action='store', help="Sets the first rank to start drawing figures for")
+		argparser.add_argument('-dnr', '--draw-num-ranks', metavar='COUNT', action='store', help="Sets the number of ranks to draw figures for")
 		argparser.add_argument('-ncp', '--no-combined-plot', action='store_true', help="Disables drawing the combined network figure")
 		args = argparser.parse_args()
 
 		if not args.test_execute:
 			import pandas as pd
 			import numpy as np
+			import matplotlib
 			import matplotlib.pyplot as plt
 			from matplotlib.collections import CircleCollection, LineCollection
 			import traceback
