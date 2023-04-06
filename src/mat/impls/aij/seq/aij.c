@@ -3033,7 +3033,7 @@ PetscErrorCode MatAXPY_SeqAIJ(Mat Y, PetscScalar a, Mat X, MatStructure str)
   Mat_SeqAIJ *x = (Mat_SeqAIJ *)X->data, *y = (Mat_SeqAIJ *)Y->data;
 
   PetscFunctionBegin;
-  if (str == UNKNOWN_NONZERO_PATTERN || (PetscDefined(USE_DEBUG) && str == SAME_NONZERO_PATTERN)) {
+  if (str == UNKNOWN_NONZERO_PATTERN || (bool)((bool)PetscDefined(USE_DEBUG) && str == SAME_NONZERO_PATTERN)) {
     PetscBool e = x->nz == y->nz ? PETSC_TRUE : PETSC_FALSE;
     if (e) {
       PetscCall(PetscArraycmp(x->i, y->i, Y->rmap->n + 1, &e));
