@@ -423,7 +423,7 @@ PetscErrorCode DMPlexVTKWriteAll_VTU(DM dm, PetscViewer viewer)
 #if defined(PETSC_USE_COMPLEX)
         copy = PETSC_TRUE;
 #else
-        copy = (PetscBool)(dimEmbed != 3 || localized || (sizeof(PetscReal) != sizeof(PetscVTUReal)));
+        copy = (PetscBool)(dimEmbed != 3 || localized || (bool)(sizeof(PetscReal) != sizeof(PetscVTUReal)));
 #endif
         if (copy) {
           PetscCall(PetscMalloc1(piece.nvertices * 3, &y));

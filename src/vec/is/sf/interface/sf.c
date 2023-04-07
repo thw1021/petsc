@@ -256,7 +256,7 @@ static PetscErrorCode PetscSFCheckGraphValid_Private(PetscSF sf)
   const PetscSFNode *iremote;
 
   PetscFunctionBegin;
-  if (!sf->graphset || !PetscDefined(USE_DEBUG)) PetscFunctionReturn(PETSC_SUCCESS);
+  if (!sf->graphset || (bool)!PetscDefined(USE_DEBUG)) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscSFGetGraph(sf, NULL, &nleaves, &ilocal, &iremote));
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)sf), &size));
   for (i = 0; i < nleaves; i++) {
