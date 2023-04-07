@@ -16,6 +16,7 @@ if __name__ == '__main__':
     '--with-cuda-dialect=17',
     '--with-cc=clang',
     '--with-cxx=clang++',
+    '--CFLAGS=-Werror=constant-logical-operand -std=c2x', # catch warnings fixed in MR !6286
     '--download-openmpi',
     #'--with-coverage',
   ]
