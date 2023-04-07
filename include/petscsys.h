@@ -1599,6 +1599,8 @@ static inline PetscErrorCode PetscCountCast(PetscCount a, PetscInt *b)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#include <stdbool.h>
+
 /*@C
     PetscBLASIntCast - casts a `PetscInt` (which may be 64 bits in size) to a `PetscBLASInt` (which may be 32 bits in size), generates an
          error if the `PetscBLASInt` is not large enough to hold the number.
@@ -1622,7 +1624,7 @@ static inline PetscErrorCode PetscBLASIntCast(PetscInt a, PetscBLASInt *b)
 {
   PetscFunctionBegin;
   *b = 0;
-  if (PetscDefined(USE_64BIT_INDICES) && !PetscDefined(HAVE_64BIT_BLAS_INDICES)) {
+  if ((bool)PetscDefined(USE_64BIT_INDICES) && (bool)!PetscDefined(HAVE_64BIT_BLAS_INDICES)) {
     PetscCheck(a <= PETSC_BLAS_INT_MAX, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "%" PetscInt_FMT " is too big for BLAS/LAPACK, which is restricted to 32 bit integers. Either you have an invalidly large integer error in your code or you must ./configure PETSc with --with-64-bit-blas-indices for the case you are running", a);
   }
   PetscCheck(a >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Passing negative integer to BLAS/LAPACK routine");
