@@ -1203,10 +1203,11 @@ cdef mat_get_dlpack_ctx(Mat self):
         CHKERR( MatGetSize(self.mat, NULL, &n) )
         CHKERR( MatGetLocalSize(self.mat, &m, NULL) )
         CHKERR( MatDenseGetLDA(self.mat, &lda) )
-        shape_arr[0] = <int64_t>m
-        shape_arr[1] = <int64_t>n
-        strides_arr[0] = 1
-        strides_arr[1] = <int64_t>lda
+        # PETSc dense matrix is stored in Fortran order while most tensors are stored in C (row-major) order
+        shape_arr[0] = <int64_t>n
+        shape_arr[1] = <int64_t>m
+        strides_arr[0] = <int64_t>lda
+        strides_arr[1] = 1
     else:
         (_, _, ndim, s1, s2) = ctx0
 
