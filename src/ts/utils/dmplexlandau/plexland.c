@@ -126,7 +126,8 @@ static PetscErrorCode LandauFormJacobian_Internal(Vec a_X, Mat JacP, const Petsc
   // get dynamic data (Eq is odd, for quench and Spitzer test) for CPU assembly and raw data for Jacobian GPU assembly. Get host numCells[], Nq (yuck)
   PetscCall(PetscFEGetQuadrature(ctx->fe[0], &quad));
   PetscCall(PetscQuadratureGetData(quad, NULL, NULL, &Nq, NULL, NULL));
-  Nb = Nq;
+  PetscCall(PetscFEGetDimension(ctx->fe[0], &Nb));
+  PetscCheck(Nb == Nq, ctx->comm, PETSC_ERR_ARG_WRONG, "Nb (%d) != Nq (%d) - not true for some simplex elements (use P2)", (int)Nb, (int)Nq);
   PetscCheck(Nq <= LANDAU_MAX_NQ, ctx->comm, PETSC_ERR_ARG_WRONG, "Order too high. Nq = %" PetscInt_FMT " > LANDAU_MAX_NQ (%d)", Nq, LANDAU_MAX_NQ);
   // get metadata for collecting dynamic data
   for (PetscInt grid = 0; grid < ctx->num_grids; grid++) {
@@ -1445,6 +1446,7 @@ static PetscErrorCode CreateStaticData(PetscInt dim, IS grid_batch_is_inv[], Lan
     for (PetscInt grid = 0, glb_elem_idx = 0; grid < ctx->num_grids; grid++) {
       PetscInt cStart, cEnd, Nfloc = Nf[grid], totDim = Nfloc * Nq;
       if (grid_batch_is_inv[grid]) PetscCall(ISGetIndices(grid_batch_is_inv[grid], &plex_batch));
+      PetscCheck(!plex_batch, ctx->comm, PETSC_ERR_ARG_WRONG, "-dm_landau_jacobian_field_major_order DEPRECATED");
       PetscCall(DMPlexGetHeightStratum(ctx->plex[grid], 0, &cStart, &cEnd));
       // make maps
       maps[grid].d_self       = NULL;
@@ -1466,7 +1468,7 @@ static PetscErrorCode CreateStaticData(PetscInt dim, IS grid_batch_is_inv[], Lan
             PetscCall(PetscArrayzero(elMat, totDim * totDim));
             elMat[(fieldA * Nb + q) * totDim + fieldA * Nb + q] = 1;
             PetscCall(DMPlexGetClosureIndices(ctx->plex[grid], section[grid], globsection[grid], ej, PETSC_TRUE, &numindices, &indices, NULL, (PetscScalar **)&elMat));
-            for (PetscInt f = 0; f < numindices; ++f) { // look for a non-zero on the diagonal
+            for (PetscInt f = 0; f < numindices; ++f) { // look for a non-zero on the diagonal (is this too complicated for simplices?)
               if (PetscAbs(PetscRealPart(elMat[f * numindices + f])) > PETSC_MACHINE_EPSILON) {
                 // found it
                 if (PetscAbs(PetscRealPart(elMat[f * numindices + f] - 1.)) < PETSC_MACHINE_EPSILON) { // normal vertex 1.0
@@ -1481,7 +1483,7 @@ static PetscErrorCode CreateStaticData(PetscInt dim, IS grid_batch_is_inv[], Lan
                   PetscReal      sum               = 0;
                   const PetscInt ff                = f;
                   maps[grid].gIdx[eidx][fieldA][q] = -maps[grid].num_reduced - 1; // store (-)index: id = -(idx+1): idx = -id - 1
-
+                  PetscCheck(!ctx->simplex, ctx->comm, PETSC_ERR_ARG_WRONG, "No constraints with simplex");
                   do {                                                                                              // constraints are continuous in Plex - exploit that here
                     int ii;                                                                                         // get 'scale'
                     for (ii = 0, pointMaps[maps[grid].num_reduced][jj].scale = 0; ii < maps[grid].num_face; ii++) { // sum row of outer product to recover vector value
