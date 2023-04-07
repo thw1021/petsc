@@ -35,6 +35,7 @@ PetscErrorCode PetscKokkosInitializeCheck(void)
     PetscInt    deviceId;
     PetscCall(PetscDeviceCreate(PETSC_DEVICE_DEFAULT(), PETSC_DECIDE, &device));
     PetscCall(PetscDeviceGetDeviceId(device, &deviceId));
+    PetscCall(PetscDeviceDestroy(&device));
   #if PETSC_PKG_KOKKOS_VERSION_GE(4, 0, 0)
     // if device_id is not set, and no gpus have been found, kokkos will use CPU
     if (deviceId >= 0) args.set_device_id(static_cast<int>(deviceId));
