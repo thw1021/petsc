@@ -130,7 +130,7 @@ static PetscErrorCode MatCoarsenApply_MISK_private(IS perm, const PetscInt misk,
     nremoved = nDone = 0;
     if (!iterIdx) PetscCall(ISGetIndices(perm, &perm_ix)); // use permutation on first MIS
     else perm_ix = NULL;
-    while (nDone < nloc || PETSC_TRUE) { /* asynchronous not implemented */
+    while (nDone < nloc || (bool)PETSC_TRUE) { /* asynchronous not implemented */
       /* check all vertices */
       for (kk = 0; kk < nloc; kk++) {
         lid   = perm_ix ? perm_ix[kk] : kk;
