@@ -15,6 +15,8 @@ Changes: Development
 
 .. rubric:: Sys:
 
+  - Add ``PetscDeviceGetCurrentStreamRaw()`` to return users the current device stream petsc is using
+
 .. rubric:: Event Logging:
 
 .. rubric:: PetscViewer:

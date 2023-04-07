@@ -1,5 +1,6 @@
 #include "petscdevice_interface_internal.hpp" /*I <petscdevice.h> I*/
 #include <petsc/private/viewerimpl.h>         // _p_PetscViewer for PetscObjectCast()
+#include <petsc/private/deviceimpl.h>
 
 #include <petsc/private/cpp/object_pool.hpp>
 #include <petsc/private/cpp/utility.hpp>
@@ -1048,5 +1049,42 @@ PetscErrorCode PetscDeviceContextViewFromOptions(PetscDeviceContext dctx, PetscO
   if (obj) PetscValidHeader(obj, 2);
   PetscValidCharPointer(name, 3);
   PetscCall(PetscObjectViewFromOptions(PetscObjectCast(dctx), obj, name));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  PetscDeviceGetCurrentStreamRaw - Return the underlying stream of the current device context
+
+  Input Parameters:
+. stream - A pointer to the stream
+
+  Level: developer
+
+  Note:
+  This routine is dangerous. It exists only for the most experienced users and internal PETSc developement.
+
+  There is no way for PETSc's auto-dependency system to track what the caller does with the
+  stream. If the user modifies any memory/launches any kernel with the stream, it is the users
+  responsibility to synchronize the stream.
+
+  Example Usage:
+.vb
+  cudaStream_t       stream;
+
+  PetscCall(PetscDeviceGetCurrentStreamRaw(&stream));
+  my_cuda_kernel<<<1, 2, 3, stream>>>();
+.ve
+
+.N ASYNC_API
+
+@*/
+PetscErrorCode PetscDeviceGetCurrentStreamRaw(void *stream)
+{
+  PetscDeviceContext dctx;
+
+  PetscFunctionBegin;
+  PetscValidPointer(stream, 1);
+  PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
+  PetscCall(PetscDeviceContextGetStream_Internal(dctx, stream));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

@@ -319,7 +319,7 @@ static inline PetscErrorCode PetscDeviceContextGetSOLVERHandle_Internal(PetscDev
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static inline PetscErrorCode PetscDeviceContextGetStreamHandle_Internal(PetscDeviceContext dctx, void *handle)
+static inline PetscErrorCode PetscDeviceContextGetStream_Internal(PetscDeviceContext dctx, void *handle)
 {
   PetscFunctionBegin;
   /* we do error checking here as this routine is an entry-point */
