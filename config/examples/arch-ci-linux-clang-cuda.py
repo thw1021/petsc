@@ -16,7 +16,7 @@ if __name__ == '__main__':
     '--with-cuda-dialect=17',
     '--with-cc=clang',
     '--with-cxx=clang++',
-    '--CFLAGS=-Wconstant-logical-operand -std=c2x'
+    '--CFLAGS=-Wconstant-logical-operand -std=c2x',
     '--download-openmpi',
     #'--with-coverage',
   ]
