@@ -268,24 +268,37 @@ int main(int argc, char **args)
 
    test:
       suffix: sell_1
-      args: -mat_type sell
+      args: -mat_type sell -mat_sell_slice_height 8
       output_file: output/ex5_41.out
 
    test:
       suffix: sell_2
       nsize: 3
-      args: -mat_type sell
+      args: -mat_type sell -mat_sell_slice_height 8
       output_file: output/ex5_43.out
 
    test:
       suffix: sell_3
-      args: -mat_type sell -test_diagonalscale
+      args: -mat_type sell -test_diagonalscale -mat_sell_slice_height 8
       output_file: output/ex5_51.out
 
    test:
       suffix: sell_4
       nsize: 3
-      args: -mat_type sell -test_diagonalscale
+      args: -mat_type sell -test_diagonalscale -mat_sell_slice_height 8
       output_file: output/ex5_53.out
 
+   test:
+      suffix: sell_5
+      nsize: 3
+      args: -mat_type sellcuda -vec_type cuda -test_diagonalscale
+      output_file: output/ex5_55.out
+      requires: cuda !complex
+
+   test:
+      suffix: sell_6
+      nsize: 3
+      args: -mat_type sellcuda -vec_type cuda -mat_sell_spmv_cuda_kernel {{2 3 4 5 6 7 9}}
+      output_file: output/ex5_56.out
+      requires: cuda !complex
 TEST*/
