@@ -143,33 +143,32 @@ typedef const char *MatType;
 .seealso: [](sec_matfactor), [](chapter_matrices), `MatGetFactor()`, `PCFactorSetMatSolverType()`, `PCFactorGetMatSolverType()`
 J*/
 typedef const char *MatSolverType;
-#define MATSOLVERSUPERLU         "superlu"
-#define MATSOLVERSUPERLU_DIST    "superlu_dist"
-#define MATSOLVERSTRUMPACK       "strumpack"
-#define MATSOLVERUMFPACK         "umfpack"
-#define MATSOLVERCHOLMOD         "cholmod"
-#define MATSOLVERKLU             "klu"
-#define MATSOLVERSPARSEELEMENTAL "sparseelemental"
-#define MATSOLVERELEMENTAL       "elemental"
-#define MATSOLVERSCALAPACK       "scalapack"
-#define MATSOLVERESSL            "essl"
-#define MATSOLVERLUSOL           "lusol"
-#define MATSOLVERMUMPS           "mumps"
-#define MATSOLVERMKL_PARDISO     "mkl_pardiso"
-#define MATSOLVERMKL_CPARDISO    "mkl_cpardiso"
-#define MATSOLVERPASTIX          "pastix"
-#define MATSOLVERMATLAB          "matlab"
-#define MATSOLVERPETSC           "petsc"
-#define MATSOLVERBAS             "bas"
-#define MATSOLVERCUSPARSE        "cusparse"
-#define MATSOLVERCUSPARSEBAND    "cusparseband"
-#define MATSOLVERCUDA            "cuda"
-#define MATSOLVERHIPSPARSE       "hipsparse"
-#define MATSOLVERHIPSPARSEBAND   "hipsparseband"
-#define MATSOLVERHIP             "hip"
-#define MATSOLVERKOKKOS          "kokkos"
-#define MATSOLVERKOKKOSDEVICE    "kokkosdevice"
-#define MATSOLVERSPQR            "spqr"
+#define MATSOLVERSUPERLU       "superlu"
+#define MATSOLVERSUPERLU_DIST  "superlu_dist"
+#define MATSOLVERSTRUMPACK     "strumpack"
+#define MATSOLVERUMFPACK       "umfpack"
+#define MATSOLVERCHOLMOD       "cholmod"
+#define MATSOLVERKLU           "klu"
+#define MATSOLVERELEMENTAL     "elemental"
+#define MATSOLVERSCALAPACK     "scalapack"
+#define MATSOLVERESSL          "essl"
+#define MATSOLVERLUSOL         "lusol"
+#define MATSOLVERMUMPS         "mumps"
+#define MATSOLVERMKL_PARDISO   "mkl_pardiso"
+#define MATSOLVERMKL_CPARDISO  "mkl_cpardiso"
+#define MATSOLVERPASTIX        "pastix"
+#define MATSOLVERMATLAB        "matlab"
+#define MATSOLVERPETSC         "petsc"
+#define MATSOLVERBAS           "bas"
+#define MATSOLVERCUSPARSE      "cusparse"
+#define MATSOLVERCUSPARSEBAND  "cusparseband"
+#define MATSOLVERCUDA          "cuda"
+#define MATSOLVERHIPSPARSE     "hipsparse"
+#define MATSOLVERHIPSPARSEBAND "hipsparseband"
+#define MATSOLVERHIP           "hip"
+#define MATSOLVERKOKKOS        "kokkos"
+#define MATSOLVERKOKKOSDEVICE  "kokkosdevice"
+#define MATSOLVERSPQR          "spqr"
 
 /*E
     MatFactorType - indicates what type of factorization is requested
@@ -2054,11 +2053,11 @@ PETSC_EXTERN PetscErrorCode MatComputeOperatorTranspose(Mat, MatType, Mat *);
 
 PETSC_DEPRECATED_FUNCTION("Use MatComputeOperator() (since version 3.12)") static inline PetscErrorCode MatComputeExplicitOperator(Mat A, Mat *B)
 {
-  return MatComputeOperator(A, NULL, B);
+  return MatComputeOperator(A, PETSC_NULLPTR, B);
 }
 PETSC_DEPRECATED_FUNCTION("Use MatComputeOperatorTranspose() (since version 3.12)") static inline PetscErrorCode MatComputeExplicitOperatorTranspose(Mat A, Mat *B)
 {
-  return MatComputeOperatorTranspose(A, NULL, B);
+  return MatComputeOperatorTranspose(A, PETSC_NULLPTR, B);
 }
 
 PETSC_EXTERN PetscErrorCode MatCreateKAIJ(Mat, PetscInt, PetscInt, const PetscScalar[], const PetscScalar[], Mat *);
