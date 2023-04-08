@@ -436,7 +436,7 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
       case 1:
         if (closureSize == 2 * dim) {
           type[cs] = SEGMENT;
-        } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of vertices %" PetscInt_FMT " in dimension %" PetscInt_FMT " has no ExodusII type", closureSize/dim, dim);
+        } else SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Number of vertices %" PetscInt_FMT " in dimension %" PetscInt_FMT " has no ExodusII type", closureSize / dim, dim);
       case 2:
         if (closureSize == 3 * dim) {
           type[cs] = TRI;
@@ -454,7 +454,7 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
       default:
         SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Dimension %" PetscInt_FMT " not handled by ExodusII viewer", dim);
       }
-      if ((degree == 2) && (type[cs] == SEGMENT)) numNodes += csSize; // REVIEW: not sure about this
+      if ((degree == 2) && (type[cs] == SEGMENT)) numNodes += csSize;
       if ((degree == 2) && (type[cs] == QUAD)) numNodes += csSize;
       if ((degree == 2) && (type[cs] == HEX)) {
         numNodes += csSize;
@@ -465,8 +465,7 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
       if (type[cs] == SEGMENT) {
         if (degree == 1) nodes[cs] = nodesLineP1;
         else if (degree == 2) nodes[cs] = nodesLineP2;
-      }
-      else if (type[cs] == TRI) {
+      } else if (type[cs] == TRI) {
         if (degree == 1) nodes[cs] = nodesTriP1;
         else if (degree == 2) nodes[cs] = nodesTriP2;
       } else if (type[cs] == QUAD) {
@@ -507,8 +506,7 @@ PetscErrorCode DMView_PlexExodusII(DM dm, PetscViewer viewer)
       if (type[cs] == SEGMENT) {
         if (degree == 1) elem_type = elem_type_bar2;
         else if (degree == 2) elem_type = elem_type_bar3;
-      }
-      else if (type[cs] == TRI) {
+      } else if (type[cs] == TRI) {
         if (degree == 1) elem_type = elem_type_tri3;
         else if (degree == 2) elem_type = elem_type_tri6;
       } else if (type[cs] == QUAD) {
