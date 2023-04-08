@@ -910,6 +910,26 @@ static PetscErrorCode MatAssemblyEnd_SeqSELLCUDA(Mat A, MatAssemblyType mode)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatZeroEntries_SeqSELLCUDA(Mat A)
+{
+  PetscBool    both = PETSC_FALSE;
+  Mat_SeqSELL *a    = (Mat_SeqSELL *)A->data;
+
+  PetscFunctionBegin;
+  if (A->factortype == MAT_FACTOR_NONE) {
+    Mat_SeqSELLCUDA *cudastruct = (Mat_SeqSELLCUDA *)A->spptr;
+    if (cudastruct->val) {
+      both = PETSC_TRUE;
+      PetscCallCUDA(cudaMemset(cudastruct->val, 0, a->sliidx[a->totalslices] * sizeof(MatScalar)));
+    }
+  }
+  PetscCall(PetscArrayzero(a->val, a->sliidx[a->totalslices]));
+  PetscCall(MatSeqSELLInvalidateDiagonal(A));
+  if (both) A->offloadmask = PETSC_OFFLOAD_BOTH;
+  else A->offloadmask = PETSC_OFFLOAD_CPU;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode MatDestroy_SeqSELLCUDA(Mat A)
 {
   PetscFunctionBegin;
@@ -943,13 +963,14 @@ static PetscErrorCode MatDuplicate_SeqSELLCUDA(Mat A, MatDuplicateOption cpvalue
   C->ops->mult           = MatMult_SeqSELLCUDA;
   C->ops->multadd        = MatMultAdd_SeqSELLCUDA;
   C->ops->duplicate      = MatDuplicate_SeqSELLCUDA;
+  C->ops->zeroentries    = MatZeroEntries_SeqSELLCUDA;
 
   PetscCall(PetscObjectChangeTypeName((PetscObject)C, MATSEQSELLCUDA));
   C->offloadmask = PETSC_OFFLOAD_UNALLOCATED;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_EXTERN PetscErrorCode MatConvert_SeqSELL_SeqSELLCUDA(Mat B)
+PETSC_INTERN PetscErrorCode MatConvert_SeqSELL_SeqSELLCUDA(Mat B)
 {
   Mat_SeqSELLCUDA *cudastruct;
 
@@ -969,6 +990,7 @@ PETSC_EXTERN PetscErrorCode MatConvert_SeqSELL_SeqSELLCUDA(Mat B)
   B->ops->mult           = MatMult_SeqSELLCUDA;
   B->ops->multadd        = MatMultAdd_SeqSELLCUDA;
   B->ops->duplicate      = MatDuplicate_SeqSELLCUDA;
+  B->ops->zeroentries    = MatZeroEntries_SeqSELLCUDA;
 
   /* No need to assemble SeqSELL, but need to do the preprocessing for SpMV */
   PetscCall(MatAssemblyEnd_SpMV_Preprocessing_Private(B));
@@ -983,5 +1005,6 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqSELLCUDA(Mat B)
   PetscFunctionBegin;
   PetscCall(MatCreate_SeqSELL(B));
   PetscCall(MatConvert_SeqSELL_SeqSELLCUDA(B));
+  PetscCall(MatSetFromOptions(B));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
