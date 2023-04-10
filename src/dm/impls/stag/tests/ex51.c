@@ -6,7 +6,7 @@ int main(int argc, char **argv)
 {
   DM              dm;
   Vec             x;
-  PetscInt        s_x, s_y, s_z, n_x, n_y, n_z, n_extra_x, n_extra_y, n_extra_z, slot_vertex_2;
+  PetscInt        s_x, s_y, s_z, n_x, n_y, n_z, n_e_x, n_e_y, n_e_z, slot_vertex_2;
   PetscScalar ****x_array;
 
   const DMStagStencilLocation location_vertex = DMSTAG_BACK_DOWN_LEFT;
