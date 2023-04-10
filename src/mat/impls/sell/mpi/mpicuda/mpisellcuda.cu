@@ -77,29 +77,23 @@ PetscErrorCode MatMultTranspose_MPISELLCUDA(Mat A, Vec xx, Vec yy)
   PetscFunctionBegin;
   PetscCall(VecGetLocalSize(xx, &nt));
   PetscCheck(nt == A->rmap->n, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Incompatible partition of A (%" PetscInt_FMT ") and xx (%" PetscInt_FMT ")", A->rmap->n, nt);
-  PetscCall((*a->B->ops->multtranspose)(a->B, xx, a->lvec));
-  PetscCall((*a->A->ops->multtranspose)(a->A, xx, yy));
+  PetscUseTypeMethod(a->B, multtranspose, xx, a->lvec);
+  PetscUseTypeMethod(a->A, multtranspose, xx, yy);
   PetscCall(VecScatterBegin(a->Mvctx, a->lvec, yy, ADD_VALUES, SCATTER_REVERSE));
   PetscCall(VecScatterEnd(a->Mvctx, a->lvec, yy, ADD_VALUES, SCATTER_REVERSE));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatSetFromOptions_MPISELLCUDA(Mat A, PetscOptionItems *PetscOptionsObject)
+PetscErrorCode MatSetFromOptions_MPISELLCUDA(Mat, PetscOptionItems *)
 {
-  PetscFunctionBegin;
-  PetscOptionsHeadBegin(PetscOptionsObject, "MPISELLCUDA options");
-  PetscOptionsHeadEnd();
-  PetscFunctionReturn(PETSC_SUCCESS);
+  return PETSC_SUCCESS;
 }
 
 PetscErrorCode MatAssemblyEnd_MPISELLCUDA(Mat A, MatAssemblyType mode)
 {
-  Mat_MPISELL *mpisell;
-
   PetscFunctionBegin;
-  mpisell = (Mat_MPISELL *)A->data;
   PetscCall(MatAssemblyEnd_MPISELL(A, mode));
-  if (!A->was_assembled && mode == MAT_FINAL_ASSEMBLY) { PetscCall(VecSetType(mpisell->lvec, VECSEQCUDA)); }
+  if (!A->was_assembled && mode == MAT_FINAL_ASSEMBLY) PetscCall(VecSetType(((Mat_MPISELL *)A->data)->lvec, VECSEQCUDA));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
