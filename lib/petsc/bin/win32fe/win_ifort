@@ -3,4 +3,5 @@
 #  Wrapper for Intel Windows ifort compiler using win32fe as a full path compiler
 #
 p=`dirname $0`
-${p}/win32fe ifort $*
+args=`printf -- "$*" | sed s"?-fp-model strict??"g`
+${p}/win32fe ifort ${args}
