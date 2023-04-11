@@ -1302,10 +1302,16 @@ PetscErrorCode SNESLineSearchSetOrder(SNESLineSearch linesearch, PetscInt order)
 
    Output Parameters:
 +  xnorm - The norm of the current solution
-.  fnorm - The norm of the current function
+.  fnorm - The norm of the current function, this is the norm(function(X))
 -  ynorm - The norm of the current update
 
    Level: developer
+
+   Note:
+   All the values may not be update to date at particular points in the code
+
+   This, in combination with `SNESLineSearchSetNorms()`, allow the line search and the `SNESSolve_XXX()` share
+   computed values.
 
 .seealso: `SNESLineSearch`, `SNESLineSearchSetNorms()` `SNESLineSearchGetVecs()`
 @*/
@@ -1327,7 +1333,7 @@ PetscErrorCode SNESLineSearchGetNorms(SNESLineSearch linesearch, PetscReal *xnor
    Input Parameters:
 +  linesearch - linesearch context
 .  xnorm - The norm of the current solution
-.  fnorm - The norm of the current function
+.  fnorm - The norm of the current function, this is the norm(function(X))
 -  ynorm - The norm of the current update
 
    Level: developer
