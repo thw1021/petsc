@@ -21,3 +21,5 @@ Planned major focus areas for PETSc development include the following.
   * Easier Python usage including transparent interoperability with **NumPy**, PyTorch, JAX, and TensorFlow.
 
   * Julia bindings.
+  
+  * Rust bindings.
