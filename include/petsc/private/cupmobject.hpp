@@ -267,7 +267,12 @@ inline PetscErrorCode CUPMObject<T>::GetFromHandleDispatch_(PetscDeviceContext d
   }
   if (blas_handle) PetscCall(PetscDeviceContextGetBLASHandle_Internal(dctx, blas_handle));
   if (solver_handle) PetscCall(PetscDeviceContextGetSOLVERHandle_Internal(dctx, solver_handle));
-  if (stream_handle) PetscCall(PetscDeviceContextGetStreamHandle_Internal(dctx, stream_handle));
+  if (stream_handle) {
+    cupmStream_t *stream;
+
+    PetscCall(PetscDeviceContextGetStreamHandle_Internal(dctx, &stream));
+    *stream_handle = *stream;
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
