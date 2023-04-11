@@ -1094,7 +1094,7 @@ PetscErrorCode PetscDeviceContextViewFromOptions(PetscDeviceContext dctx, PetscO
 
 .N ASYNC_API
 
-.seealso: `PetscDeviceContext` `PetscDeviceContextMarkIntentFromID()`
+.seealso: `PetscDeviceContext`
 @*/
 PetscErrorCode PetscDeviceContextGetStreamHandle(PetscDeviceContext dctx, void *handle)
 {
