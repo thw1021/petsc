@@ -215,30 +215,16 @@ def main(args):
 
 	# The set of ranks
 	ranks = { -1: Rank(-1) }
-	firstRank = 0
-	endRank = None
-	if args.draw_all_ranks or args.draw_first_rank or args.draw_num_ranks:
-		firstRank = int(args.draw_first_rank or 0)
-		if args.draw_num_ranks is not None:
-			endRank = firstRank + int(args.draw_num_ranks)
-			if endRank <= firstRank:
-				endRank = None
 
 	maxRank = None
 
 	def getRank(rank: int):
-		nonlocal maxRank
-		if maxRank is None or rank > maxRank:
-			maxRank = rank
-
 		if rank in ranks:
 			return ranks[rank]
-		if rank >= firstRank and (endRank is None or rank < (firstRank + endRank)):
+		else:
 			r = Rank(rank)
 			ranks[rank] = r
 			return r
-		else:
-			return None
 		
 	globalRank = ranks[-1]
 
@@ -281,19 +267,28 @@ def main(args):
 			traceback.print_exc(file=sys.stdout)
 			exit(-1)
 
-	
 	# Show the plot
 	if not args.no_display:
 		# Generate figures using ranks
 		if not args.no_combined_plot:
 			globalRank.display(opts, title)
-		if args.draw_all_ranks or args.draw_first_rank or args.draw_num_ranks:
-			if endRank is None:
-				endRank = maxRank + 1
-			for i in range(firstRank, endRank):
-				r = getRank(i)
-				if r is not None:
-					r.display(opts, title)
+		if args.draw_rank_range:
+			ranges = str(args.draw_rank_range).split(',')
+			for rangeStr in ranges:
+				if '-' in rangeStr != -1:
+					limits = rangeStr.split('-')
+					for rank in range(int(limits[0]), int(limits[1])+1):
+						if rank in ranks:
+							ranks[rank].display(opts, title)
+				else:
+					rank = int(rangeStr)
+					if rank in ranks:
+						ranks[rank].display(opts, title)
+		elif args.draw_all_ranks:
+			for rank in ranks:
+				if rank != -1:
+					ranks[rank].display(opts, title)
+			
 
 		# Delay based on options
 		if args.display_time is not None:
@@ -334,6 +329,7 @@ if __name__ == "__main__":
 		argparser.add_argument('-dfr', '--draw-first-rank', metavar='OFFSET', action='store', help="Sets the first rank to start drawing figures for")
 		argparser.add_argument('-dnr', '--draw-num-ranks', metavar='COUNT', action='store', help="Sets the number of ranks to draw figures for")
 		argparser.add_argument('-ncp', '--no-combined-plot', action='store_true', help="Disables drawing the combined network figure")
+		argparser.add_argument('-drr', '--draw-rank-range', action='store', help="Specifies a comma-separated list of rank numbers or ranges to display, eg. \'1,3,5-9\'")
 		args = argparser.parse_args()
 
 		if not args.test_execute:
