@@ -2,5 +2,5 @@
 
 The `PetscSpace` class encapsulates a function space useful for finite element computations with `PetscFE`. The dual spaces are managed with `PetscDualSpace`.
 
-<A HREF="PETSC_DOC_OUT_ROOT_PLACEHOLDER/src/dm/dt/space/tutorials/index.html">Examples</A><BR>
+```
 

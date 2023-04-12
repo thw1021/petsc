@@ -1,6 +1,6 @@
 # Dual Spaces (PetscDualSpace)
 
-The `PetscDualSpace` class encapsulates a function space that is the dual (https://en.wikipedia.org/wiki/Dual_space) of a `PetscSpace` class.
+The `PetscDualSpace` class encapsulates a function space that is the dual (<a href="https://en.wikipedia.org/wiki/Dual_space" target=_blank>https://en.wikipedia.org/wiki/Dual_space</a>) of a `PetscSpace` class.
 
-<A HREF="PETSC_DOC_OUT_ROOT_PLACEHOLDER/src/dm/dt/dualspace/tutorials/index.html">Examples</A></BR>
+```
 
