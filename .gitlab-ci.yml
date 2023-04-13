@@ -1124,7 +1124,7 @@ analyze-pipeline:
 .docs:
   stage: stage-3
   tags:
-    - gce-stage2
+    - linux-docs
   before_script:
     - printf "PATH:$PATH\n"
     - printf "PYTHONPATH:$PYTHONPATH\n"
@@ -1142,6 +1142,7 @@ docs-review:
     - .docs
     - .test-basic
   script:
+    - git fetch --unshallow --no-tags origin +release:remotes/origin/release +main:remotes/origin/main
     - (make html BUILDDIR="../public" SPHINXOPTS="-T -E -W --keep-going -j 1") || (printf "Sphinx build failed (warnings count as errors)\n" && false)
     - (make latexpdf SPHINXOPTS="-T -E -W --keep-going") || (printf "Sphinx build failed (warnings count as errors)\n" && false)
     - cp _build/latex/manual.pdf ../public/html/manual/
