@@ -415,6 +415,7 @@ static PetscErrorCode PetscDeviceContextMapIterVisitor(PetscDeviceContext dctx, 
     }
   }
   PetscCallCXX(dctx_deps.clear());
+  PetscCall(object_map.shrink_to_fit());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
