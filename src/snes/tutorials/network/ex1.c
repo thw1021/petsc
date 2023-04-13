@@ -5,6 +5,11 @@ static char help[] = "This example demonstrates the use of DMNetwork interface w
                       This example shows the use of subnetwork feature in DMNetwork. \n\
                       Run this program: mpiexec -n <n> ./ex1 \n\\n";
 
+/*
+  Example:
+    mpiexec -n 3 ./ex1 -petscpartitioner_type parmetis -dmnetwork_view draw -dmnetwork_view_distributed draw -dmnetwork_view_rank_range 0,1,2
+*/
+
 #include "power/power.h"
 #include "water/water.h"
 
