@@ -1124,7 +1124,7 @@ analyze-pipeline:
 .docs:
   stage: stage-3
   tags:
-    - gce-stage2
+    - linux-docs
   before_script:
     - printf "PATH:$PATH\n"
     - printf "PYTHONPATH:$PYTHONPATH\n"
