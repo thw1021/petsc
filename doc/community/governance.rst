@@ -55,7 +55,7 @@ The role of the council is as follows.
 
 * Vote on the addition and removal of PETSc Council members; with a 2/3 majority vote of all council members. Anyone in the PETSc community can
   be on the PETSc Council, one need not be a contributor. The initial council will consist of the 15 most active code contributors,
-  plus two long-term contributors who now play important non-coding roles in the community. The initial high bias in the council towards to contributors
+  plus two long-term contributors who now play important non-coding roles in the community. The initial high bias in the council towards contributors
   is simply due to the few non-contributors who are heavily actively engaged in the community.
 
 * Vote on :any:`changes to the governance policy<governance_changes>` (this document) with a 2/3 majority vote of all council members.
@@ -68,10 +68,10 @@ Votes are public, presented in the usual discussion venues, and the voting perio
 NumFOCUS signatories
 ====================
 
-As a requirement of fiscal sponsorship by PETSc's planned membership in **NumFOCUS** there is a five person initial NumFOCUS signatories from five institutions.
+As a requirement of fiscal sponsorship by PETSc's planned membership in **NumFOCUS** there are five initial NumFOCUS signatories from five institutions.
 Their role is to manage interactions with NumFOCUS and any project funding that comes through NumFOCUS.
 It is expected that such funds will be spent in a manner that is consistent with the non-profit mission of NumFOCUS. Changes in the signatories will
-be done by a vote of the of the PETSc Council.
+be done by a vote of the PETSc Council.
 
 .. _governance_changes:
 
