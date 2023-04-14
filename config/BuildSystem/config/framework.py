@@ -206,6 +206,9 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     buf = 'Environmental variables'
     for key,val in os.environ.items():
       buf += '\n'+str(key)+'='+str(val)
+      if str(key).startswith('CONDA_'):
+        self.conda_active = True
+        self.addMakeMacro('CONDA_ACTIVE',1)
     self.logPrint(buf)
     def logPrintFilesInPath(path):
       for d in path:
