@@ -41,7 +41,7 @@ Submit a presentation
 `Submit an abstract  <https://docs.google.com/forms/d/e/1FAIpQLSesh47RGVb9YD9F1qu4obXSe1X6fn7vVmjewllePBDxBItfOw/viewform>`__ by May 1st (but preferably now) to be included in the schedule.  We welcome talks from all perspectives, including those who
 
 * contribute to PETSc,
-* use PETSc in their applications,
+* use PETSc in their applications or libraries,
 * develop the libraries and packages `called from PETSc <https://petsc.org/release/install/external_software/>`, and even
 * those who are curious about using PETSc in their applications (see the special "Not-Yet-User Group" of talks on Monday afternoon in the schedule below).
 
