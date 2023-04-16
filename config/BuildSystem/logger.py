@@ -80,12 +80,15 @@ def build_multiline_message(sup_title, text, divider_char = None, length = None,
     wrapped.insert(0, center_line(str(sup_title)))
   return '\n'.join(wrapped)
 
-def build_multiline_error_message(sup_title, text, **kwargs):
+def build_multiline_error_message(sup_title, text, framework = None,**kwargs):
   kwargs.setdefault('divider_char', '-')
   kwargs.setdefault('length', get_global_divider_length())
 
   if not text.endswith('\n'):
     text += '\n'
+
+  if framework is not None and hasattr(framework,'additional_error_message'):
+    text += '\n' + framework.additional_error_message
 
   banner_line = kwargs['length']*'*'
   return '\n'.join([

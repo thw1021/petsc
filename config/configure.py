@@ -475,21 +475,21 @@ def petsc_configure(configure_options):
     return 0
   except (RuntimeError, config.base.ConfigureSetupError) as e:
     tbo = sys.exc_info()[2]
-    msg = logger.build_multiline_error_message('UNABLE to CONFIGURE with GIVEN OPTIONS (see configure.log for details):', str(e))
+    msg = logger.build_multiline_error_message('UNABLE to CONFIGURE with GIVEN OPTIONS (see configure.log for details):', str(e),framework = framework)
     se = ''
   except (TypeError, ValueError) as e:
     # this exception is automatically deleted by Python so we need to save it to print below
     tbo = sys.exc_info()[2]
-    msg = logger.build_multiline_error_message('TypeError or ValueError possibly related to ERROR in COMMAND LINE ARGUMENT while running ./configure', str(e))
+    msg = logger.build_multiline_error_message('TypeError or ValueError possibly related to ERROR in COMMAND LINE ARGUMENT while running ./configure', str(e),framework = framework)
     se = ''
   except ImportError as e :
     # this exception is automatically deleted by Python so we need to save it to print below
     tbo = sys.exc_info()[2]
-    msg = logger.build_multiline_error_message('ImportError while running ./configure', str(e))
+    msg = logger.build_multiline_error_message('ImportError while running ./configure', str(e), framework = framework)
     se = ''
   except OSError as e :
     tbo = sys.exc_info()[2]
-    msg = logger.build_multiline_error_message('OSError while running ./configure', str(e))
+    msg = logger.build_multiline_error_message('OSError while running ./configure', str(e), framework = framework)
     se = ''
   except SystemExit as e:
     tbo = sys.exc_info()[2]
@@ -497,11 +497,11 @@ def petsc_configure(configure_options):
       return
     if e.code == 10:
       sys.exit(10)
-    msg = logger.build_multiline_error_message('CONFIGURATION FAILURE (Please send configure.log to petsc-maint@mcs.anl.gov)', str(e))
+    msg = logger.build_multiline_error_message('CONFIGURATION FAILURE (Please send configure.log to petsc-maint@mcs.anl.gov)', str(e),framework = framework)
     se  = str(e)
   except Exception as e:
     tbo = sys.exc_info()[2]
-    msg = logger.build_multiline_error_message('CONFIGURATION CRASH (Please send configure.log to petsc-maint@mcs.anl.gov)', str(e))
+    msg = logger.build_multiline_error_message('CONFIGURATION CRASH (Please send configure.log to petsc-maint@mcs.anl.gov)', str(e),framework = framework)
     se  = str(e)
 
   print('\n'+msg)
