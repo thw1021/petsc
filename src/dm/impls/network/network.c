@@ -1,4 +1,5 @@
 #include <petsc/private/dmnetworkimpl.h> /*I  "petscdmnetwork.h"  I*/
+#include "petscis.h"
 
 PetscLogEvent DMNetwork_LayoutSetUp;
 PetscLogEvent DMNetwork_SetUpNetwork;
@@ -2779,6 +2780,8 @@ PetscErrorCode DMDestroy_Network(DM dm)
   PetscCall(PetscSectionDestroy(&network->edge.DofSection));
   PetscCall(PetscSectionDestroy(&network->edge.GlobalDofSection));
   PetscCall(PetscSFDestroy(&network->edge.sf));
+  /* viewer options */
+  PetscCall(ISDestroy(&network->vieweroptions.viewranks));
   /* Destroy the potentially cloneshared data */
   if (--network->cloneshared->refct <= 0) {
     /* Developer Note: I'm not sure if vltog can be reused or not, as I'm not sure what it's purpose is. I

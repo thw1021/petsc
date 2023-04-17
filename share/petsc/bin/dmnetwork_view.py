@@ -300,7 +300,7 @@ def main(args):
 		# Delay based on options
 		if args.display_time is not None:
 			plt.show(block=False)
-			plt.pause(int(args.display_time))
+			plt.pause(float(args.display_time))
 			# Try to bring the window to front since we are displaying for a limited time
 			try:
 				window = plt.get_current_fig_manager().window
