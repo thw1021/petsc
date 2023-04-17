@@ -105,6 +105,17 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   PetscCall(PetscSharedTmp(comm, &isSharedTmp));
 #endif
 
+   // Process Options 
+
+   // Note if the option -dmnetwork_view_tmpdir can be moved up here that would be good as well.
+  PetscOptionsBegin(PetscObjectComm((PetscObject)dm), ((PetscObject)dm)->prefix, "MatPlotLib PetscViewer DMNetwork Options", "PetscViewer");
+  PetscCall(PetscOptionsBool("-dmnetwork_view_all_ranks", "View all ranks in the DMNetwork", NULL, optionShowRanks, &optionShowRanks, NULL));
+  /* Note: Can this be made into an array of Ints? This would have better input sanitization */
+  PetscCall(PetscOptionsString("-dmnetwork_view_rank_range", "Set of ranks to view the DMNetwork on", NULL, buffer, buffer, sizeof(buffer), &optionRankIsSet));
+  PetscOptionsEnd();
+   
+
+
   // Generate and broadcast the temporary file name from rank 0
   if (rank == 0) {
 #if defined(PETSC_HAVE_TMPNAM_S)
@@ -162,10 +173,6 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
     PetscCall(PetscStrlcat(options, " -dt ", sizeof(options)));
     PetscCall(PetscStrlcat(options, buffer, sizeof(options)));
   }
-  // Set rank parameters
-  // Get potential user-provided options
-  PetscCall(PetscOptionsGetBool(NULL, NULL, "-dmnetwork_view_all_ranks", &optionShowRanks, NULL));
-  PetscCall(PetscOptionsGetString(NULL, NULL, "-dmnetwork_view_rank_range", buffer, sizeof(buffer), &optionRankIsSet));
   showAllRanks = (network->viewOptions[DM_NETWORK_VIEW_SHOW_RANKS] || optionShowRanks) ? PETSC_TRUE : PETSC_FALSE;
   if (showAllRanks || optionRankIsSet) {
     // Show all ranks only if the option is set in code or by the user AND not showing specific ranks AND there is more than one process
