@@ -212,23 +212,38 @@ endif
 
 LDLIBS += $(PETSC_LIB)
 
-% : %.F90
-	$(LINK.F) $^ $(LOADLIBES) $(LDLIBS) -o $@
-% : %.kokkos.cxx
-	$(LINK.kokkos.cxx) $^ $(LOADLIBES) $(LDLIBS) -o $@
-% : %.cxx
-	$(LINK.cc) $^ $(LOADLIBES) $(LDLIBS) -o $@
-% : %.hip.cpp
-	$(LINK.hip.cpp) $^ $(LOADLIBES) $(LDLIBS) -o $@
-
-ifneq (,$(findstring -TP,$(PCC_FLAGS)))
 % : %.c
 	${PETSC_COMPILE_SINGLE} `pwd`/$<
-	${CLINKER} $(EXEFLAGS) -o $@ $@.o  $(PETSC_LIB)
-endif
+	${CLINKER} $(EXEFLAGS) $@.o  $(PETSC_LIB) -o $@
 
-# We don't have % : %.cu target as we can't use nvcc as linker - due to difference in linker options [wrt CLINKER etc.]. For example, nvcc does not accept -Wl,-rpath
-# % : %.cu
+define CXX_RECIPE
+  ${PETSC_CXXCOMPILE_SINGLE} `pwd`/$<
+  $(LINK.cc) $@.o $(LOADLIBES) $(LDLIBS) -o $@
+endef
+% : %.cpp ; $(CXX_RECIPE)
+% : %.cxx ; $(CXX_RECIPE)
+% : %.cc  ; $(CXX_RECIPE)
+% : %.C   ; $(CXX_RECIPE)
+
+define FORTRAN_RECIPE
+  ${PETSC_FCOMPILE_SINGLE} `pwd`/$<
+  $(LINK.F) $@.o $(LOADLIBES) $(LDLIBS) -o $@
+endef
+% : %.F9  ; $(FORTRAN_RECIPE)
+% : %.F90 ; $(FORTRAN_RECIPE)
+% : %.F95 ; $(FORTRAN_RECIPE)
+
+% : %.kokkos.cxx
+	${PETSC_KOKKOSCOMPILE_SINGLE} `pwd`/$<
+	$(LINK.kokkos.cxx) $@.o $(LOADLIBES) $(LDLIBS) -o $@
+
+% : %.hip.cpp
+	${PETSC_HIPCOMPILE_SINGLE} `pwd`/$<
+	$(LINK.hip.cpp) $@.o $(LOADLIBES) $(LDLIBS) -o $@
+
+% : %.cu
+	${PETSC_CUCOMPILE_SINGLE} `pwd`/$<
+	$(CLINKER) $@.o $(LOADLIBES) $(LDLIBS) -o $@
 
 #  makes an Emscripten https://emscripten.org/ executable from a PETSc C main program
 #  See config/examples/arch-ci-linux-emcc.py for an example of building the PETSc libraries with Emscripten
