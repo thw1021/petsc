@@ -1199,7 +1199,21 @@ class Configure(config.base.Configure):
             else:
               # if nothing else then it's because the user requested a particular version
               dialectNum = dialectNumStr
-            mess = base_mess.format(lang=language.replace('x','+'),compiler=compiler,ver=dialectNum)
+              base_mess  = '\n'.join((
+                base_mess,
+                'Note, flag(s) chosen because you have explicitly requested --{}={}. If you do not need C++{ver}, then remove this flag and let configure choose the most appropriate flag for you.'
+                '\nIf you DO need it, then (assuming your compiler isn\'t just old) try consulting your compilers user manual. There may be other flags (e.g. \'--gcc-toolchain\') you must pass to enable C++{ver}'.format(
+                  configureArg, withLangDialect, ver='{ver}'
+                )
+              ))
+            if dialectNum.isdigit():
+              ver = dialectNum
+            else:
+              ver = dialectNum.casefold().replace('c++', '').replace('gnu++', '')
+            mess = base_mess.format(lang=language.replace('x','+'),compiler=compiler,ver=ver)
+            if explicit:
+              # if the user explicitly set the version, then this is a hard error
+              raise ConfigureSetupError(mess)
             raise RuntimeError(mess)
         else:
           # success
