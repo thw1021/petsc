@@ -166,7 +166,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   // Get potential user-provided options
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-dmnetwork_view_all_ranks", &optionShowRanks, NULL));
   PetscCall(PetscOptionsGetString(NULL, NULL, "-dmnetwork_view_rank_range", buffer, sizeof(buffer), &optionRankIsSet));
-  showAllRanks = network->viewOptions[DM_NETWORK_VIEW_SHOW_RANKS] || optionShowRanks;
+  showAllRanks = (network->viewOptions[DM_NETWORK_VIEW_SHOW_RANKS] || optionShowRanks) ? PETSC_TRUE : PETSC_FALSE;
   if (showAllRanks || optionRankIsSet) {
     // Show all ranks only if the option is set in code or by the user AND not showing specific ranks AND there is more than one process
     if (showAllRanks && !optionRankIsSet && size != 1) PetscCall(PetscStrlcat(options, " -dar ", sizeof(options)));
@@ -187,7 +187,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
       PetscCall(PetscStrlcat(options, buffer, sizeof(options)));
     }
   }
-    
+
   // Check for options for visibility...
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-dmnetwork_view_no_nodes", &showNoNodes, NULL));
   if (showNoNodes) PetscCall(PetscStrlcat(options, " -nn ", sizeof(options)));
@@ -298,7 +298,7 @@ PetscErrorCode DMView_Network(DM dm, PetscViewer viewer)
 
 PetscErrorCode DMNetworkSetViewOption(DM dm, DMNetworkViewerOption option, PetscInt value)
 {
-  DM_Network *network = (DM_Network *)dm->data;
+  DM_Network *network          = (DM_Network *)dm->data;
   network->viewOptions[option] = value;
   return PETSC_SUCCESS;
 }

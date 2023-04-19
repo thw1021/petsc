@@ -7,6 +7,8 @@
 #include <petscdmplex.h>
 #include <petscviewer.h>
 
+/* SUBMANSEC = DMNetwork */
+
 #define ALL_COMPONENTS -1
 
 /*
@@ -87,13 +89,13 @@ PETSC_EXTERN PetscErrorCode DMNetworkMonitorView(DMNetworkMonitor, Vec);
 /*E
    DMNetworkViewerOption - Specifies an option used when a `DMNetwork` is passed to `DMView` for drawing
 
+   Values:
++ `DM_NETWORK_VIEW_SHOW_RANKS`  - Shows each rank individually instead of combined if positive. If negative will show ranks without the combined view
+. `DM_NETWORK_VIEW_FIRST_RANK`  - The first rank of the range to show individually
+. `DM_NETWORK_VIEW_NUM_RANKS`   - The number of ranks to show individually. If zero, will display the remaining ranks after the start
+- `DM_NETWORK_VIEW_CLOSE_DELAY` - If positive, the number of seconds to delay before automatically closing the viewer
+
    Level: advanced
-
-$ DM_NETWORK_VIEW_SHOW_RANKS - Shows each rank individually instead of combined if positive. If negative will show ranks without the combined view
-$ DM_NETWORK_VIEW_FIRST_RANK - The first rank of the range to show individually
-$ DM_NETWORK_VIEW_NUM_RANKS - The number of ranks to show individually. If zero, will display the remaining ranks after the start
-$ DM_NETWORK_VIEW_CLOSE_DELAY - If positive, the number of seconds to delay before automatically closing the viewer
-
 E*/
 typedef enum {
   DM_NETWORK_VIEW_SHOW_RANKS,
