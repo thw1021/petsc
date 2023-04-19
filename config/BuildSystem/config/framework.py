@@ -203,6 +203,12 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     return argDB
 
   def outputBasics(self):
+    try:
+      moduleoutput,err,ret  = config.base.Configure.executeShellCommand('module list', timeout=60, log = self.log)
+    except Exception as e:
+      pass
+    else:
+      self.logWrite('Module list:\n'+moduleoutput)
     buf = 'Environmental variables'
     for key,val in os.environ.items():
       buf += '\n'+str(key)+'='+str(val)
