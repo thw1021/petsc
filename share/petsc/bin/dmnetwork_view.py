@@ -43,6 +43,11 @@ class DisplayOptions:
 		if 'set_edge_title_color' in args:
 			self.edgeTitleColor = parseColor(args.set_edge_title_color)
 
+		self.noNodes = 'no_nodes' in args and args.no_nodes
+		self.setTitle = args.set_title if 'set_title' in args else None
+		self.noNodeLabels = 'no_node_labels' in args and args.no_node_labels
+		self.noEdgeLabels = 'no_edge_labels' in args and args.no_edge_labels
+
 
 # Class for holding the properties of a node
 class Node:
@@ -155,8 +160,8 @@ class Rank:
 		axis = fig.add_subplot()
 
 		# Set the title of the plot if specified
-		if 'set_title' in args and args.set_title is not None:
-			title = (args.set_title, (0, 0, 0, 1))
+		if opts.setTitle:
+			title = (opts.setTitle, (0, 0, 0, 1))
 		if title is None:
 			title = ("Network", (0, 0, 0, 1))
 		if self.id != -1:
@@ -169,17 +174,19 @@ class Rank:
 			colors=edgeColors,
 			linewidths=2
 		))
-		# Add a circle collection to the axis for the nodes
-		axis.add_collection(CircleCollection(
-			sizes=np.ones(len(self.nodes)) * (20 ** 2),
-			offsets=nodePositions,
-			transOffset=axis.transData,
-			facecolors=nodeColors,
-			# Place above the lines
-			zorder=3
-		))
 
-		if not args.no_node_labels:
+		if not opts.noNodes:
+			# Add a circle collection to the axis for the nodes
+			axis.add_collection(CircleCollection(
+				sizes=np.ones(len(self.nodes)) * (20 ** 2),
+				offsets=nodePositions,
+				transOffset=axis.transData,
+				facecolors=nodeColors,
+				# Place above the lines
+				zorder=3
+			))
+
+		if not opts.noNodeLabels and not opts.noNodes:
 			# For each node, plot its name at the center of its point
 			for node in self.nodes.values():
 				if node.name is not None:
@@ -193,7 +200,7 @@ class Rank:
 						color=opts.nodeTitleColor
 					)
 
-		if not args.no_edge_labels:
+		if not opts.noEdgeLabels:
 			# For each edge, plot its name at the center of the line segment
 			for edge in self.edges.values():
 				if edge.name is not None:
@@ -330,6 +337,7 @@ if __name__ == "__main__":
 		argparser.add_argument('-dnr', '--draw-num-ranks', metavar='COUNT', action='store', help="Sets the number of ranks to draw figures for")
 		argparser.add_argument('-ncp', '--no-combined-plot', action='store_true', help="Disables drawing the combined network figure")
 		argparser.add_argument('-drr', '--draw-rank-range', action='store', help="Specifies a comma-separated list of rank numbers or ranges to display, eg. \'1,3,5-9\'")
+		argparser.add_argument('-nn', '--no-nodes', action='store_true', help="Disables displaying the nodes")
 		args = argparser.parse_args()
 
 		if not args.test_execute:

@@ -77,7 +77,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   char        filename[PETSC_MAX_PATH_LEN + 1], options[512], proccall[PETSC_MAX_PATH_LEN + 512], scriptFile[PETSC_MAX_PATH_LEN + 1], buffer[256];
   PetscViewer csvViewer;
   FILE       *processFile = NULL;
-  PetscBool   isnull, optionShowRanks = PETSC_FALSE, optionRankIsSet = PETSC_FALSE, showAllRanks;
+  PetscBool   isnull, optionShowRanks = PETSC_FALSE, optionRankIsSet = PETSC_FALSE, showAllRanks, showNoNodes = PETSC_FALSE, showNoLabels = PETSC_FALSE;
   PetscDraw   draw;
   DM_Network *network = (DM_Network *)dm->data;
   PetscInt    drawPause;
@@ -187,6 +187,12 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
       PetscCall(PetscStrlcat(options, buffer, sizeof(options)));
     }
   }
+    
+  // Check for options for visibility...
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-dmnetwork_view_no_nodes", &showNoNodes, NULL));
+  if (showNoNodes) PetscCall(PetscStrlcat(options, " -nn ", sizeof(options)));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-dmnetwork_view_no_labels", &showNoLabels, NULL));
+  if (showNoLabels) PetscCall(PetscStrlcat(options, " -nnl -nel ", sizeof(options)));
 
   // Get the value of $PETSC_DIR
   PetscCall(PetscStrreplace(comm, "${PETSC_DIR}/share/petsc/bin/dmnetwork_view.py", scriptFile, sizeof(scriptFile)));
