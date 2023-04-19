@@ -43,7 +43,7 @@ Submit a presentation
 * contribute to PETSc,
 * use PETSc in their applications or libraries,
 * develop the libraries and packages `called from PETSc <https://petsc.org/release/install/external_software/>`, and even
-* those who are curious about using PETSc in their applications (see the special "Not-Yet-User Group" of talks on Monday afternoon in the schedule below).
+* those who are curious about using PETSc in their applications (see the special "Potential User Group" of talks on Monday afternoon in the schedule below).
 
 
 Suggested hotels
@@ -123,11 +123,11 @@ Sample Detailed Agenda
 +------------+------------+-----------+------------------------------------------------+--------------+
 |            | 2:30       | Break                                                      |              |
 +------------+------------+-----------+------------------------------------------------+--------------+
-|            | 3          | Presentation (Not-Yet-User Group)                          |              |
+|            | 3          | Presentation (Potential User Group)                        |              |
 +------------+------------+-----------+------------------------------------------------+--------------+
-|            | 3:30       | Presentation (Not-Yet-User Group)                          |              |
+|            | 3:30       | Presentation (Potential User Group)                        |              |
 +------------+------------+-----------+------------------------------------------------+--------------+
-|            | 4          | Presentation (Not-Yet-User Group)                          |              |
+|            | 4          | Presentation (Potential User Group)                        |              |
 +------------+------------+-----------+------------------------------------------------+--------------+
 |            | 4:30       | Mini tutorial                                              |              |
 +------------+------------+-----------+------------------------------------------------+--------------+
