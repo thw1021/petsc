@@ -1092,15 +1092,21 @@ class Configure(config.base.Configure):
         break
 
     if maxDialect == -1:
-      ver    = int(withLangDialect[-2:])
+      try:
+        ver = int(withLangDialect[-2:])
+      except ValueError:
+        ver = 9e9
       minver = int(dialects[0].num)
-      if ver == 89 or ver < minver:
-        mess = 'PETSc requires at least C++{}, how old is your compiler?'.format(minver)
-        # throw RTE (which is meant to be caught) as this indicates compiler is too old
-        raise RuntimeError(mess)
-      mess = 'Unknown C++ dialect: {val}'.format(val=withLangDialect)
-      # throw CSE (which is NOT meant to be caught) as this is an unhandled exception
-      raise ConfigureSetupError(mess)
+      if ver in {89, 98} or ver < minver:
+        mess = 'PETSc requires at least C++{}'.format(minver)
+      else:
+        mess = 'Unknown C++ dialect: {}'.format(withLangDialect)
+      if explicit:
+        mess += ' (you have explicitly requested --{}={}). Remove this flag and let configure choose the most appropriate flag for you.'.format(configureArg, withLangDialect)
+        # If the user explicitly requested the dialect throw CSE (which is NOT meant to be
+        # caught) as this indicates a user error
+        raise ConfigureSetupError(mess)
+      raise RuntimeError(mess)
     self.logPrint('checkCxxDialect: dialect {dlct} has been {expl} selected for {lang}'.format(dlct=withLangDialect,expl='EXPLICITLY' if explicit else 'NOT explicitly',lang=LANG))
 
     def checkPackageRange(packageRanges,kind,dialectIdx):
@@ -1201,10 +1207,8 @@ class Configure(config.base.Configure):
               dialectNum = dialectNumStr
               base_mess  = '\n'.join((
                 base_mess,
-                'Note, flag(s) chosen because you have explicitly requested --{}={}. If you do not need C++{ver}, then remove this flag and let configure choose the most appropriate flag for you.'
-                '\nIf you DO need it, then (assuming your compiler isn\'t just old) try consulting your compilers user manual. There may be other flags (e.g. \'--gcc-toolchain\') you must pass to enable C++{ver}'.format(
-                  configureArg, withLangDialect, ver='{ver}'
-                )
+                'Note, you have explicitly requested --{}={}. If you do not need C++{ver}, then remove this flag and let configure choose the most appropriate flag for you.'
+                '\nIf you DO need it, then (assuming your compiler isn\'t just old) try consulting your compilers user manual. There may be other flags (e.g. \'--gcc-toolchain\') you must pass to enable C++{ver}'.format(configureArg, withLangDialect, ver='{ver}')
               ))
             if dialectNum.isdigit():
               ver = dialectNum
