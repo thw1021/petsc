@@ -86,24 +86,4 @@ PETSC_EXTERN PetscErrorCode DMNetworkMonitorPop(DMNetworkMonitor);
 PETSC_EXTERN PetscErrorCode DMNetworkMonitorAdd(DMNetworkMonitor, const char *, PetscInt, PetscInt, PetscInt, PetscInt, PetscReal, PetscReal, PetscReal, PetscReal, PetscBool);
 PETSC_EXTERN PetscErrorCode DMNetworkMonitorView(DMNetworkMonitor, Vec);
 
-/*E
-   DMNetworkViewerOption - Specifies an option used when a `DMNetwork` is passed to `DMView` for drawing
-
-   Values:
-+ `DM_NETWORK_VIEW_SHOW_RANKS`  - Shows each rank individually instead of combined if positive. If negative will show ranks without the combined view
-. `DM_NETWORK_VIEW_FIRST_RANK`  - The first rank of the range to show individually
-. `DM_NETWORK_VIEW_NUM_RANKS`   - The number of ranks to show individually. If zero, will display the remaining ranks after the start
-- `DM_NETWORK_VIEW_CLOSE_DELAY` - If positive, the number of seconds to delay before automatically closing the viewer
-
-   Level: advanced
-E*/
-typedef enum {
-  DM_NETWORK_VIEW_SHOW_RANKS,
-  DM_NETWORK_VIEW_FIRST_RANK,
-  DM_NETWORK_VIEW_NUM_RANKS,
-  DM_NETWORK_VIEW_CLOSE_DELAY
-} DMNetworkViewerOption;
-
-PETSC_EXTERN PetscErrorCode DMNetworkSetViewOption(DM, DMNetworkViewerOption, PetscInt);
-
 #endif
