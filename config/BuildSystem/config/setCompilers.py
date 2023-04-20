@@ -1189,7 +1189,7 @@ class Configure(config.base.Configure):
               ),
               '' # for extra newline at the end
             ))
-            if flag.endswith(dialects[0].num):
+            if not explicit and flag.endswith(dialects[0].num):
               # it's the compilers fault we can't try the next dialect
               dialectNum = dialects[0].num
             elif withLangDialect in ('NONE','AUTO'):
@@ -1202,6 +1202,7 @@ class Configure(config.base.Configure):
                 ' '.join(('But',base_mess))
               ))
               dialectNum = minPackDialect[-2:]
+              explicit   = True
             else:
               # if nothing else then it's because the user requested a particular version
               dialectNum = dialectNumStr
@@ -2751,18 +2752,17 @@ if (dlclose(handle)) {
     self.executeTest(self.checkCCompiler)
     self.executeTest(self.checkCPreprocessor)
 
-    def compilerIsDisabledFromOptions(compiler):
-      """Return True if compiler is disabled via configure options (and delete it from the argdb), False otherwise"""
-      disabled = self.argDB.get('with-'+compiler.lower()) == '0'
-      if disabled:
-        COMPILER = compiler.upper()
-        if COMPILER in self.argDB:
-          del self.argDB[COMPILER]
-      return disabled
-
     for LANG in ['Cxx','CUDA','HIP','SYCL']:
       compilerName = LANG.upper() if LANG == 'Cxx' else LANG+'C'
-      if not compilerIsDisabledFromOptions(compilerName):
+      argdbName    = 'with-' + compilerName.casefold()
+      argdbVal     = self.argDB.get(argdbName)
+      if argdbVal == '0':
+        # compiler was explicitly disabled, i.e. --with-cxx=0
+        COMPILER_NAME = compilerName.upper()
+        if COMPILER_NAME in self.argDB:
+          del self.argDB[COMPILER_NAME]
+          continue
+      else:
         self.executeTest(getattr(self,LANG.join(('check','Compiler'))))
         try:
           self.executeTest(self.checkDeviceHostCompiler,args=[LANG])
@@ -2775,6 +2775,15 @@ if (dlclose(handle)) {
             self.executeTest(self.checkCxxDialect,args=[LANG],kargs={'isGNUish':isGNUish})
           except RuntimeError as e:
             self.mesg = str(e)
+            if argdbVal is not None:
+              # user explicitly enabled a compiler, e.g. --with-cxx=clang++, so the fact
+              # that it does not work is an immediate problem
+              self.mesg += '\n'.join((
+                '',
+                'Note, you have explicitly requested --{}={}. If you don\'t need {}, or that specific compiler, remove this flag -- configure may be able to find a more suitable compiler automatically.',
+                'If you DO need the above, then consult your compilers user manual. It\'s possible you may need to add additional flags (or perhaps load additional modules) to enable compliance'
+              )).format(argdbName, argdbVal, LANG.replace('x', '+'))
+              raise config.base.ConfigureSetupError(self.mesg)
             self.logPrint(' '.join(('Error testing',LANG,'compiler:',self.mesg)))
             self.delMakeMacro(compilerName)
             delattr(self,compilerName)
