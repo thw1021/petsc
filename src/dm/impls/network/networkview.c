@@ -175,9 +175,10 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   PetscCall(PetscStrlcat(options, isnull ? " -tx " : " ", sizeof(options)));
   PetscCall(PetscDrawGetPause(draw, &drawPause));
   if (drawPause > 0) {
-    PetscCall(PetscSNPrintf(buffer, sizeof(buffer), "%f" , drawPause));
+    char pausebuffer[64];
+    PetscCall(PetscSNPrintf(pausebuffer, sizeof(pausebuffer), "%f" , drawPause));
     PetscCall(PetscStrlcat(options, " -dt ", sizeof(options)));
-    PetscCall(PetscStrlcat(options, buffer, sizeof(options)));
+    PetscCall(PetscStrlcat(options, pausebuffer, sizeof(options)));
   }
   if (optionShowRanks || optionRankIsSet) {
     // Show all ranks only if the option is set in code or by the user AND not showing specific ranks AND there is more than one process
