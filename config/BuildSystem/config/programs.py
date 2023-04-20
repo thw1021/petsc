@@ -73,6 +73,12 @@ AC_OUTPUT
 
   def configurePrograms(self):
     '''Check for the programs needed to build and run PETSc'''
+    try:
+      moduleoutput,moduleerror,ret  = config.base.Configure.executeShellCommand('module list', timeout=60, log = self.log)
+      self.logWrite('Module list:\n'+moduleoutput+moduleerror)
+    except Exception as e:
+      pass
+
     for shell in ['bash','zsh','sh']:
       if self.getExecutable(shell,   getFullPath = 1, resultName = 'SHELL'): break
     if not hasattr(self, 'SHELL'): raise RuntimeError('Could not locate bash/zsh/sh executable')
