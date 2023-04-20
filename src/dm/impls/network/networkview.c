@@ -117,8 +117,8 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   showNoNodes     = network->vieweroptions.shownovertices;
   showNoLabels    = network->vieweroptions.shownolabels;
 
-  /* 
-    TODO: The set of ranks to view the DMNetwork on should have programmable default in the network->vieweroptions as well 
+  /*
+    TODO: The set of ranks to view the DMNetwork on should have programmable default in the network->vieweroptions as well
     TODO:  if the option -dmnetwork_view_tmpdir can be moved up here that would be good as well.
   */
   PetscOptionsBegin(PetscObjectComm((PetscObject)dm), ((PetscObject)dm)->prefix, "MatPlotLib PetscViewer DMNetwork Options", "PetscViewer");
@@ -361,7 +361,7 @@ PetscErrorCode DMNetworkViewSetShowLabels(DM dm, PetscBool showlabels)
 }
 
 /*
-  Note that DMnetwork takes ownership of the IS. IS should be be destroyed by the caller. 
+  Note that DMnetwork takes ownership of the IS. IS should be be destroyed by the caller.
  */
 PetscErrorCode DMNetworkViewSetViewRanks(DM dm, IS viewranks)
 {
