@@ -95,11 +95,11 @@ typedef struct {
   Stucture storing default viewing options for the DMNetwork
 */
 typedef struct {
-  PetscBool showallranks; /* Shows each rank individually as well */
-  PetscBool dontshowcombined; /* Don't show combined network */ 
-  IS        viewranks; /* IS containing the ranks to view the DMNetwork on */
-  PetscBool shownovertices;  
-  PetscBool shownolabels; 
+  PetscBool showallranks;   /* Shows each rank individually as well */
+  PetscBool dontshowglobal; /* Don't show combined network */
+  IS        viewranks;      /* IS containing the ranks to view the DMNetwork on */
+  PetscBool shownovertices;
+  PetscBool shownolabels;
 } DMNetworkViewerOptions;
 
 /* The data structure for DMNetwork is split into two parts:

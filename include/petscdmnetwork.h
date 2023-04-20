@@ -86,4 +86,9 @@ PETSC_EXTERN PetscErrorCode DMNetworkMonitorPop(DMNetworkMonitor);
 PETSC_EXTERN PetscErrorCode DMNetworkMonitorAdd(DMNetworkMonitor, const char *, PetscInt, PetscInt, PetscInt, PetscInt, PetscReal, PetscReal, PetscReal, PetscReal, PetscBool);
 PETSC_EXTERN PetscErrorCode DMNetworkMonitorView(DMNetworkMonitor, Vec);
 
+PETSC_EXTERN PetscErrorCode DMNetworkViewSetShowRanks(DM, PetscBool);
+PETSC_EXTERN PetscErrorCode DMNetworkViewSetShowCombined(DM, PetscBool);
+PETSC_EXTERN PetscErrorCode DMNetworkViewShowVertices(DM, PetscBool);
+PETSC_EXTERN PetscErrorCode DMNetworkViewShowLabels(DM, PetscBool);
+PETSC_EXTERN PetscErrorCode DMNetworkViewSetViewRanks(DM, IS);
 #endif
