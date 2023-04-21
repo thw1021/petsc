@@ -124,8 +124,8 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   PetscOptionsBegin(PetscObjectComm((PetscObject)dm), ((PetscObject)dm)->prefix, "MatPlotLib PetscViewer DMNetwork Options", "PetscViewer");
   PetscCall(PetscOptionsBool("-dmnetwork_view_all_ranks", "View all ranks in the DMNetwork", NULL, optionShowRanks, &optionShowRanks, NULL));
   PetscCall(PetscOptionsString("-dmnetwork_view_rank_range", "Set of ranks to view the DMNetwork on", NULL, buffer, buffer, sizeof(buffer), &optionRankIsSet));
-  PetscCall(PetscOptionsBool("-dmnetwork_view_no_nodes", "Don't view vertices", NULL, showNoNodes, &showNoNodes, NULL));
-  PetscCall(PetscOptionsBool("-dmnetwork_view_no_labels", "Don't view labels", NULL, showNoLabels, &showNoLabels, NULL));
+  PetscCall(PetscOptionsBool("-dmnetwork_view_no_vertices", "Do not view vertices", NULL, showNoNodes, &showNoNodes, NULL));
+  PetscCall(PetscOptionsBool("-dmnetwork_view_no_labels", "Do not view labels", NULL, showNoLabels, &showNoLabels, NULL));
   PetscOptionsEnd();
 
   // Generate and broadcast the temporary file name from rank 0

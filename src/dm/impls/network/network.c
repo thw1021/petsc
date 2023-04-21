@@ -1745,7 +1745,7 @@ static PetscErrorCode DMNetworkDistributeCoordinates(DM dm, PetscSF migrationSF,
 . -dmnetwork_view_tmpdir - Sets the temporary directory to use when viewing with the `draw` option
 . -dmnetwork_view_all_ranks - Displays all of the subnetworks for each MPI rank
 . -dmnetwork_view_rank_range - Displays the subnetworks for the ranks in a comma-separated list
-. -dmnetwork_view_no_nodes - Disables displaying the nodes in the network visualization
+. -dmnetwork_view_no_vertices - Disables displaying the vertices in the network visualization
 - -dmnetwork_view_no_labels - Disables displaying the labels in the network visualization
 
   Level: intermediate
