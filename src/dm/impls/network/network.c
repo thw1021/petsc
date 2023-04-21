@@ -37,6 +37,7 @@ PetscErrorCode DMNetworkInitializeHeaderComponentData(DM dm)
 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
 /*@
   DMNetworkGetPlex - Gets the `DMPLEX` associated with this `DMNETWORK`
 
@@ -1745,8 +1746,8 @@ static PetscErrorCode DMNetworkDistributeCoordinates(DM dm, PetscSF migrationSF,
 . -dmnetwork_view_tmpdir - Sets the temporary directory to use when viewing with the `draw` option
 . -dmnetwork_view_all_ranks - Displays all of the subnetworks for each MPI rank
 . -dmnetwork_view_rank_range - Displays the subnetworks for the ranks in a comma-separated list
-. -dmnetwork_view_no_nodes - Disables displaying the nodes in the network visualization
-- -dmnetwork_view_no_labels - Disables displaying the labels in the network visualization
+. -dmnetwork_view_no_vertices - Disables displaying the vertices in the network visualization
+- -dmnetwork_view_no_numbering - Disables displaying the numbering of edges and vertices in the network visualization
 
   Level: intermediate
 
@@ -3156,7 +3157,7 @@ static inline PetscErrorCode DMISComputeLocalIdx_private(DM dm, PetscInt p, Pets
   Notes:
     Use blocksize[i] of -1 to indicate select all the variables of the i-th component, for which nselectvar[i] and selectedvar[i] are ignored. Use `NULL`, `NULL`, `NULL` to indicate for all selected components one wishes to obtain all the values of that component. For example, `DMNetworkCreateLocalIS`(dm,1,&key,`NULL`,`NULL`,`NULL`,&is) will return an is that extracts all the variables for the 0-th component.
 
-.seealso: `DM`, `DMNETWORK`, `DMNetworkCreate()`, `DMNetworkCreateIS`, `ISCreateGeneral()`
+.seealso: `DM`, `DMNETWORK`, `DMNetworkCreate()`, `DMNetworkCreateIS()`, `ISCreateGeneral()`
 @*/
 PetscErrorCode DMNetworkCreateLocalIS(DM dm, PetscInt numkeys, PetscInt keys[], PetscInt blocksize[], PetscInt nselectedvar[], PetscInt *selectedvar[], IS *is)
 {

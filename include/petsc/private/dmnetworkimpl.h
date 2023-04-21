@@ -99,7 +99,7 @@ typedef struct {
   PetscBool dontshowglobal; /* Don't show combined network */
   IS        viewranks;      /* IS containing the ranks to view the DMNetwork on */
   PetscBool shownovertices;
-  PetscBool shownolabels;
+  PetscBool shownonumbering;
 } DMNetworkViewerOptions;
 
 /* The data structure for DMNetwork is split into two parts:
