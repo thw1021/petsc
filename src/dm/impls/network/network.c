@@ -1569,7 +1569,7 @@ static PetscErrorCode DMNetworkGetSubSection_private(PetscSection main, PetscInt
 }
 
 /* Create a submap of points with a GlobalToLocal structure */
-static PetscErrorCode DMNetworkSetSubMap_private(MPI_Comm comm, PetscInt pstart, PetscInt pend, ISLocalToGlobalMapping *map)
+static PetscErrorCode DMNetworkSetSubMap_private(DM dm, PetscInt pstart, PetscInt pend, ISLocalToGlobalMapping *map)
 {
   PetscInt i, *subpoints;
 
@@ -1577,7 +1577,7 @@ static PetscErrorCode DMNetworkSetSubMap_private(MPI_Comm comm, PetscInt pstart,
   /* Create index sets to map from "points" to "subpoints" */
   PetscCall(PetscMalloc1(pend - pstart, &subpoints));
   for (i = pstart; i < pend; i++) subpoints[i - pstart] = i;
-  PetscCall(ISLocalToGlobalMappingCreate(comm, 1, pend - pstart, subpoints, PETSC_COPY_VALUES, map));
+  PetscCall(ISLocalToGlobalMappingCreate(PetscObjectComm((PetscObject)dm), 1, pend - pstart, subpoints, PETSC_COPY_VALUES, map));
   PetscCall(PetscFree(subpoints));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1613,8 +1613,8 @@ PetscErrorCode DMNetworkAssembleGraphStructures(DM dm)
   PetscCallMPI(MPI_Comm_size(comm, &size));
 
   /* Create maps for vertices and edges */
-  PetscCall(DMNetworkSetSubMap_private(comm, network->cloneshared->vStart, network->cloneshared->vEnd, &network->vertex.mapping));
-  PetscCall(DMNetworkSetSubMap_private(comm, network->cloneshared->eStart, network->cloneshared->eEnd, &network->edge.mapping));
+  PetscCall(DMNetworkSetSubMap_private(dm, network->cloneshared->vStart, network->cloneshared->vEnd, &network->vertex.mapping));
+  PetscCall(DMNetworkSetSubMap_private(dm, network->cloneshared->eStart, network->cloneshared->eEnd, &network->edge.mapping));
 
   /* Create local sub-sections */
   PetscCall(DMNetworkGetSubSection_private(network->DofSection, network->cloneshared->vStart, network->cloneshared->vEnd, &network->vertex.DofSection));
@@ -2896,7 +2896,7 @@ PetscErrorCode DMNetworkSetVertexLocalToGlobalOrdering(DM dm)
   PetscCheck(network->cloneshared->distributecalled, comm, PETSC_ERR_ARG_WRONGSTATE, "Must call DMNetworkDistribute() first");
   if (network->cloneshared->vltog) PetscCall(PetscFree(network->cloneshared->vltog));
 
-  PetscCall(DMNetworkSetSubMap_private(comm, network->cloneshared->vStart, network->cloneshared->vEnd, &network->vertex.mapping));
+  PetscCall(DMNetworkSetSubMap_private(dm, network->cloneshared->vStart, network->cloneshared->vEnd, &network->vertex.mapping));
   PetscCall(PetscSFGetSubSF(network->plex->sf, network->vertex.mapping, &network->vertex.sf));
   vsf = network->vertex.sf;
 
