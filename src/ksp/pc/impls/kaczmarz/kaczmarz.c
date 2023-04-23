@@ -91,7 +91,7 @@ PetscErrorCode PCView_Kaczmarz(PC pc, PetscViewer viewer)
 }
 
 /*MC
-     PCKaczmarz - Kaczmarz iteration
+     PCKACZMARZ - Kaczmarz iteration
 
    Options Database Key:
 .  -pc_sor_lambda <1.0> - Sets damping parameter lambda
