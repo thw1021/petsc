@@ -4,10 +4,11 @@ import os
 class Configure(config.package.CMakePackage):
   def __init__(self, framework):
     config.package.CMakePackage.__init__(self, framework)
-    self.version          = '5.3.0'
+    self.version          = '6.0.0'
     self.minversion       = '5.2.1' # bugs in 5.2.0 prevent it from functioning
     self.versionname      = 'SUPERLU_MAJOR_VERSION.SUPERLU_MINOR_VERSION.SUPERLU_PATCH_VERSION'
-    self.gitcommit        = 'v'+self.version
+    # self.gitcommit        = 'v'+self.version
+    self.gitcommit        = '5ad0fe19f7bae255ca99dd7f6190550cbb1098b8' # master, apr-23-2023
     self.download         = ['git://https://github.com/xiaoyeli/superlu','https://github.com/xiaoyeli/superlu/archive/'+self.gitcommit+'.tar.gz']
     self.functions        = ['set_default_options']
     self.includes         = ['slu_ddefs.h']
