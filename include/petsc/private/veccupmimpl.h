@@ -178,9 +178,12 @@ public:
   PETSC_NODISCARD static constexpr VecType VECMPICUPM() noexcept;
   PETSC_NODISCARD static constexpr VecType VECCUPM() noexcept;
 
-  // Get the VecType of the calling vector
+  // Get the device VecType of the calling vector
   template <typename U = Derived>
   PETSC_NODISCARD static constexpr VecType VECIMPLCUPM() noexcept;
+  // Get the host VecType of the calling vector
+  template <typename U = Derived>
+  PETSC_NODISCARD static constexpr VecType VECIMPL() noexcept;
 
   // Call the host destroy function, i.e. VecDestroy_Seq()
   static PetscErrorCode VecDestroy_IMPL(Vec) noexcept;
@@ -556,6 +559,13 @@ template <typename U>
 inline constexpr VecType Vec_CUPMBase<T, D>::VECIMPLCUPM() noexcept
 {
   return U::VECIMPLCUPM_();
+}
+
+template <device::cupm::DeviceType T, typename D>
+template <typename U>
+inline constexpr VecType Vec_CUPMBase<T, D>::VECIMPL() noexcept
+{
+  return U::VECIMPL_();
 }
 
 // private version that takes a PetscDeviceContext, called by the public variant
@@ -1119,6 +1129,7 @@ inline PetscErrorCode Vec_CUPMBase<T, D>::Convert_IMPLCUPM_IMPL(Vec v) noexcept
   PetscFunctionBegin;
   PetscCall(D::BindToCPU(v, PETSC_TRUE));
   PetscCall(DestroyDevice_(v));
+  PetscCall(PetscObjectChangeTypeName(PetscObjectCast(v), VECIMPL()));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1130,6 +1141,7 @@ inline PetscErrorCode Vec_CUPMBase<T, D>::Convert_IMPLCUPM_IMPL(Vec v) noexcept
     using name::VecCUPMCast; \
     using name::VecIMPLCast; \
     using name::VECIMPLCUPM; \
+    using name::VECIMPL; \
     using name::VECSEQCUPM; \
     using name::VECMPICUPM; \
     using name::VECCUPM; \
