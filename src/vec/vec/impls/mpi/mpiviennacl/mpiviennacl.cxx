@@ -357,6 +357,15 @@ PetscErrorCode VecCreateMPIViennaCLWithArrays(MPI_Comm comm, PetscInt bs, PetscI
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PETSC_INTERN PetscErrorCode VecConvert_MPI_MPIViennaCL_inplace(Vec V)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscObjectChangeTypeName((PetscObject)V, VECMPIVIENNACL));
+  PetscCall(VecBindToCPU_MPIViennaCL(V, PETSC_FALSE));
+  V->ops->bindtocpu = VecBindToCPU_MPIViennaCL;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PetscErrorCode VecCreate_MPIViennaCL_Private(Vec vv, PetscBool alloc, PetscInt nghost, const ViennaCLVector *array)
 {
   Vec_ViennaCL *vecviennacl;
