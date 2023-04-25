@@ -661,6 +661,10 @@ PetscErrorCode MatDestroy_MPIDense(Mat mat)
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseRestoreColumnVecWrite_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseGetSubMatrix_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseRestoreSubMatrix_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseColumnsGEMVHermitianTranspose_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseColumnsGEMV_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseColumnsGEMMHermitianTranspose_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseColumnsGEMM_C", NULL));
 
   PetscCall(PetscObjectCompose((PetscObject)mat, "DiagonalBlock", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1593,6 +1597,34 @@ PetscErrorCode MatDenseRestoreSubMatrix_MPIDense(Mat A, Mat *v)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatDenseColumnsGEMVHermitianTranspose_MPIDense(PetscScalar alpha, Mat A_mat, PetscInt col_start, PetscInt col_end, Vec x, PetscScalar beta, PetscScalar *y, PetscInt inc_y, PetscMemType memtype_y)
+{
+  PetscFunctionBegin;
+  PetscCall(MatDenseColumnsGEMVHermitianTranspose_SeqDense(alpha, A_mat, col_start, col_end, x, beta, y, inc_y, memtype_y));
+  switch (memtype_y) {
+  case PETSC_MEMTYPE_HOST:
+    PetscCallMPI(MPI_Allreduce(MPI_IN_PLACE, y, 1 + (col_end-col_start-1)*(inc_y), MPIU_SCALAR, MPI_SUM, PetscObjectComm((PetscObject)A_mat)));
+    break;
+  default:
+    SETERRQ(PetscObjectComm((PetscObject)A_mat), PETSC_ERR_PLIB, "Not implemented");
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatDenseColumnsGEMMHermitianTranspose_MPIDense(PetscScalar alpha, Mat A_mat, PetscInt col_start_A, PetscInt col_end_A, Mat B_mat, PetscInt col_start_B, PetscInt col_end_B, PetscScalar beta, PetscScalar *C, PetscInt ld_C, PetscMemType memtype_C)
+{
+  PetscFunctionBegin;
+  PetscCall(MatDenseColumnsGEMMHermitianTranspose_SeqDense(alpha, A_mat, col_start_A, col_end_A, B_mat, col_start_B, col_end_B, beta, C, ld_C, memtype_C));
+  switch (memtype_C) {
+  case PETSC_MEMTYPE_HOST:
+    PetscCallMPI(MPI_Allreduce(MPI_IN_PLACE, C, (col_end_B-col_start_A) + (col_end_B-col_start_B - 1)*(ld_C), MPIU_SCALAR, MPI_SUM, PetscObjectComm((PetscObject)A_mat)));
+    break;
+  default:
+    SETERRQ(PetscObjectComm((PetscObject)A_mat), PETSC_ERR_PLIB, "Not implemented");
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*MC
    MATMPIDENSE - MATMPIDENSE = "mpidense" - A matrix type to be used for distributed dense matrices.
 
@@ -1668,6 +1700,10 @@ PetscErrorCode MatCreate_MPIDense(Mat mat)
 #endif
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseGetColumn_C", MatDenseGetColumn_MPIDense));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseRestoreColumn_C", MatDenseRestoreColumn_MPIDense));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseColumnsGEMVHermitianTranspose_C", MatDenseColumnsGEMVHermitianTranspose_MPIDense));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseColumnsGEMV_C", MatDenseColumnsGEMV_SeqDense));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseColumnsGEMMHermitianTranspose_C", MatDenseColumnsGEMMHermitianTranspose_MPIDense));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseColumnsGEMM_C", MatDenseColumnsGEMM_SeqDense));
   PetscCall(PetscObjectChangeTypeName((PetscObject)mat, MATMPIDENSE));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
