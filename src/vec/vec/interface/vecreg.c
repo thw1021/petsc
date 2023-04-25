@@ -10,8 +10,8 @@ PetscBool         VecRegisterAllCalled = PETSC_FALSE;
   Collective
 
   Input Parameters:
-+ vec    - The vector object
-- method - The name of the vector type
++ vec     - The vector object
+- newType - The name of the vector type
 
   Options Database Key:
 . -vec_type <type> - Sets the vector type; use -help for a list
@@ -26,62 +26,99 @@ PetscBool         VecRegisterAllCalled = PETSC_FALSE;
 
 .seealso: [](chapter_vectors), `Vec`, `VecType`, `VecGetType()`, `VecCreate()`, `VecDuplicate()`, `VecDuplicateVecs()`
 @*/
-PetscErrorCode VecSetType(Vec vec, VecType method)
+PetscErrorCode VecSetType(Vec vec, VecType newType)
 {
   PetscErrorCode (*r)(Vec);
-  PetscBool   match;
+  VecType     curType;
+  PetscBool   match, upcast;
   PetscMPIInt size;
+  PetscBool   srcMPI = PETSC_FALSE, srcSeq = PETSC_FALSE; // type info of the current type
+  PetscBool   dstMPI = PETSC_FALSE, dstSeq = PETSC_FALSE; // type info of the new type
+  MPI_Comm    comm;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(vec, VEC_CLASSID, 1);
-  PetscCall(PetscObjectTypeCompare((PetscObject)vec, method, &match));
+
+  /* return if same type */
+  PetscCall(PetscObjectTypeCompare((PetscObject)vec, newType, &match));
   if (match) PetscFunctionReturn(PETSC_SUCCESS);
 
-  /* Return if asked for VECSTANDARD and Vec is already VECSEQ on 1 process or VECMPI on more.
-     Otherwise, we free the Vec array in the call to destroy below and never reallocate it,
-     since the VecType will be the same and VecSetType(v,VECSEQ) will return when called from VecCreate_Standard */
-  PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)vec), &size));
-  PetscCall(PetscStrcmp(method, VECSTANDARD, &match));
-  if (match) {
-    PetscCall(PetscObjectTypeCompare((PetscObject)vec, size > 1 ? VECMPI : VECSEQ, &match));
-    if (match) PetscFunctionReturn(PETSC_SUCCESS);
-  }
-  /* same reasons for VECCUDA and VECVIENNACL */
+  PetscCall(PetscObjectGetComm((PetscObject)vec, &comm));
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+
+  PetscCall(VecGetType(vec, &curType));
+  if (!curType) goto newvec; // vec's type is not set yet
+
+  PetscCall(PetscStrbeginswith(newType, VECSEQ, &dstSeq));
+  PetscCheck(!(size > 1 && dstSeq), comm, PETSC_ERR_ARG_WRONG, "Cannot convert MPI vectors to sequential ones");
+
+  /* upcasting (e.g., from VecSeqCUDA to VecSeq) is not supported. VecBindToCPU(v,PETSC_TRUE) could
+     achive that. It looks like a wrong design in user's code, thus no support.
+   */
+  PetscCall(PetscStrbeginswith(curType, newType, &upcast)); /* e.g., error with curType="seqcuda", newType="seq" */
+  PetscCheck(!upcast, comm, PETSC_ERR_ARG_WRONG, "Converting a Vec of type %s to %s is not supported", curType, newType);
+
+  /* don't count on comm size to determine vec type. A vector could be VECMPI with comm size = 1 */
+  PetscCall(PetscObjectTypeCompare((PetscObject)vec, VECMPI, &srcMPI));
+  if (!srcMPI) PetscCall(PetscObjectTypeCompare((PetscObject)vec, VECSEQ, &srcSeq));
+
+  /* return if the conversion is seq=>standard/seq or mpi=>standard/mpi */
+  PetscCall(PetscStrcmp(newType, VECSTANDARD, &match));
+  if (!match) PetscCall(PetscStrcmp(newType, VECMPI, &dstMPI));
+  if (!match && !dstMPI) PetscCall(PetscStrcmp(newType, VECSEQ, &dstSeq));
+  if (match || ((srcSeq || srcMPI) && (dstSeq || dstMPI))) PetscFunctionReturn(PETSC_SUCCESS);
+
+    /* downcasting (e.g., from VecSeq to VecSeqCUDA) */
 #if defined(PETSC_HAVE_CUDA)
-  PetscCall(PetscStrcmp(method, VECCUDA, &match));
+  PetscCall(PetscStrcmp(newType, VECCUDA, &match));
   if (match) {
     PetscCall(PetscObjectTypeCompare((PetscObject)vec, size > 1 ? VECMPICUDA : VECSEQCUDA, &match));
     if (match) PetscFunctionReturn(PETSC_SUCCESS);
   }
 #endif
 #if defined(PETSC_HAVE_HIP)
-  PetscCall(PetscStrcmp(method, VECHIP, &match));
+  PetscCall(PetscStrcmp(newType, VECHIP, &match));
   if (match) {
     PetscCall(PetscObjectTypeCompare((PetscObject)vec, size > 1 ? VECMPIHIP : VECSEQHIP, &match));
     if (match) PetscFunctionReturn(PETSC_SUCCESS);
   }
 #endif
 #if defined(PETSC_HAVE_VIENNACL)
-  PetscCall(PetscStrcmp(method, VECVIENNACL, &match));
-  if (match) {
-    PetscCall(PetscObjectTypeCompare((PetscObject)vec, size > 1 ? VECMPIVIENNACL : VECSEQVIENNACL, &match));
-    if (match) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(PetscStrcmp(newType, VECVIENNACL, &match));
+  if (!match) PetscCall(PetscStrcmp(newType, VECMPIVIENNACL, &dstMPI));
+  if (!match && !dstMPI) PetscCall(PetscStrcmp(newType, VECSEQVIENNACL, &dstSeq));
+  if (match || (srcSeq && (dstSeq || dstMPI))) {
+    PetscCall(VecConvert_Seq_SeqViennaCL_inplace(vec));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  } else if (match || (srcMPI && (dstMPI || dstSeq))) {
+    PetscCall(VecConvert_MPI_MPIViennaCL_inplace(vec));
+    PetscFunctionReturn(PETSC_SUCCESS);
   }
 #endif
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
-  PetscCall(PetscStrcmp(method, VECKOKKOS, &match));
-  if (match) {
-    PetscCall(PetscObjectTypeCompare((PetscObject)vec, size > 1 ? VECMPIKOKKOS : VECSEQKOKKOS, &match));
-    if (match) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(PetscStrcmp(newType, VECKOKKOS, &match));
+  if (!match) PetscCall(PetscStrcmp(newType, VECMPIKOKKOS, &dstMPI));
+  if (!match && !dstMPI) PetscCall(PetscStrcmp(newType, VECSEQKOKKOS, &dstSeq));
+  if (match || (srcSeq && (dstSeq || dstMPI))) { /*  allow Seq => MPIKokkos with comm size = 1 */
+    PetscCall(VecConvert_Seq_SeqKokkos_inplace(vec));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  } else if (match || (srcMPI && (dstMPI || dstSeq))) { /* allow MPI => SeqKokkos with comm size = 1*/
+    PetscCall(VecConvert_MPI_MPIKokkos_inplace(vec));
+    PetscFunctionReturn(PETSC_SUCCESS);
   }
 #endif
-  PetscCall(PetscFunctionListFind(VecList, method, &r));
-  PetscCheck(r, PETSC_COMM_SELF, PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown vector type: %s", method);
-  PetscTryTypeMethod(vec, destroy);
-  vec->ops->destroy = NULL;
-  PetscCall(PetscMemzero(vec->ops, sizeof(struct _VecOps)));
-  PetscCall(PetscFree(vec->defaultrandtype));
-  PetscCall(PetscStrallocpy(PETSCRANDER48, &vec->defaultrandtype));
+
+newvec:
+  /* Other conversion scenarios; just destroy the old vector and build the new type from scratch */
+  PetscCall(PetscFunctionListFind(VecList, newType, &r));
+  PetscCheck(r, PETSC_COMM_SELF, PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown vector type: %s", newType);
+  if (curType) { /* no need to destroy a vec without type */
+    PetscTryTypeMethod(vec, destroy);
+    PetscCall(PetscMemzero(vec->ops, sizeof(struct _VecOps)));
+  } else {
+    PetscCall(PetscFree(vec->defaultrandtype));
+    PetscCall(PetscStrallocpy(PETSCRANDER48, &vec->defaultrandtype));
+  }
   if (vec->map->n < 0 && vec->map->N < 0) {
     vec->ops->create = r;
     vec->ops->load   = VecLoad_Default;
