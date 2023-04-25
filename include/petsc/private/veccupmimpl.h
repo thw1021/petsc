@@ -139,6 +139,8 @@ protected:
   static PetscErrorCode CopyToDevice_(PetscDeviceContext, Vec, bool = false) noexcept;
   // Copy DTOH, allocating host if necessary
   static PetscErrorCode CopyToHost_(PetscDeviceContext, Vec, bool = false) noexcept;
+  static PetscErrorCode DestroyDevice_(Vec) noexcept;
+  static PetscErrorCode DestroyHost_(Vec) noexcept;
 
 public:
   struct Vec_CUPM {
@@ -236,6 +238,9 @@ public:
   static PetscErrorCode ResetPreallocationCOO_CUPMBase(Vec, PetscDeviceContext) noexcept;
   template <std::size_t NCount = 0, std::size_t NScal = 0>
   static PetscErrorCode SetPreallocationCOO_CUPMBase(Vec, PetscCount, const PetscInt[], PetscDeviceContext, const std::array<CooPair<PetscCount>, NCount> & = {}, const std::array<CooPair<PetscScalar>, NScal> & = {}) noexcept;
+
+  static PetscErrorCode Convert_IMPL_IMPLCUPM(Vec) noexcept;
+  static PetscErrorCode Convert_IMPLCUPM_IMPL(Vec) noexcept;
 };
 
 // ==========================================================================================
@@ -435,6 +440,39 @@ inline PetscErrorCode Vec_CUPMBase<T, D>::CopyToHost_(PetscDeviceContext dctx, V
     PetscCall(PetscCUPMMemcpyAsync(VecIMPLCast(v)->array, VecCUPMCast(v)->array_d, v->map->n, cupmMemcpyDeviceToHost, stream, forceasync));
     PetscCall(PetscLogEventEnd(VEC_CUPMCopyFromGPU(), v, 0, 0, 0));
   }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <device::cupm::DeviceType T, typename D>
+inline PetscErrorCode Vec_CUPMBase<T, D>::DestroyDevice_(Vec v) noexcept
+{
+  PetscFunctionBegin;
+  if (const auto vcu = VecCUPMCast(v)) {
+    PetscDeviceContext dctx;
+
+    PetscCall(GetHandles_(&dctx));
+    PetscCall(ResetAllocatedDevicePtr_(dctx, v));
+    PetscCall(ResetPreallocationCOO_CUPMBase(v, dctx));
+    PetscCall(PetscFree(v->spptr));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <device::cupm::DeviceType T, typename D>
+inline PetscErrorCode Vec_CUPMBase<T, D>::DestroyHost_(Vec v) noexcept
+{
+  PetscFunctionBegin;
+  PetscCall(PetscObjectSAWsViewOff(PetscObjectCast(v)));
+  if (const auto vimpl = VecIMPLCast(v)) {
+    if (auto &array_allocated = vimpl->array_allocated) {
+      const auto useit = UseCUPMHostAlloc(v->pinned_memory);
+
+      // do this ourselves since we may want to use the cupm functions
+      PetscCall(PetscFree(array_allocated));
+    }
+  }
+  v->pinned_memory = PETSC_FALSE;
+  PetscCall(VecDestroy_IMPL(v));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -807,25 +845,8 @@ template <device::cupm::DeviceType T, typename D>
 inline PetscErrorCode Vec_CUPMBase<T, D>::Destroy(Vec v) noexcept
 {
   PetscFunctionBegin;
-  if (const auto vcu = VecCUPMCast(v)) {
-    PetscDeviceContext dctx;
-
-    PetscCall(GetHandles_(&dctx));
-    PetscCall(ResetAllocatedDevicePtr_(dctx, v));
-    PetscCall(ResetPreallocationCOO_CUPMBase(v, dctx));
-    PetscCall(PetscFree(v->spptr));
-  }
-  PetscCall(PetscObjectSAWsViewOff(PetscObjectCast(v)));
-  if (const auto vimpl = VecIMPLCast(v)) {
-    if (auto &array_allocated = vimpl->array_allocated) {
-      const auto useit = UseCUPMHostAlloc(v->pinned_memory);
-
-      // do this ourselves since we may want to use the cupm functions
-      PetscCall(PetscFree(array_allocated));
-    }
-  }
-  v->pinned_memory = PETSC_FALSE;
-  PetscCall(VecDestroy_IMPL(v));
+  PetscCall(DestroyDevice_(v));
+  PetscCall(DestroyHost_(v));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1078,6 +1099,26 @@ inline PetscErrorCode Vec_CUPMBase<T, D>::SetPreallocationCOO_CUPMBase(Vec v, Pe
     for (const auto &elem : cntptrs) PetscCall(PetscCUPMMemcpyAsync(elem.device, elem.host, elem.size, cupmMemcpyHostToDevice, stream, true));
     for (const auto &elem : bufptrs) PetscCall(PetscCUPMMemcpyAsync(elem.device, elem.host, elem.size, cupmMemcpyHostToDevice, stream, true));
   }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <device::cupm::DeviceType T, typename D>
+inline PetscErrorCode Vec_CUPMBase<T, D>::Convert_IMPL_IMPLCUPM(Vec v) noexcept
+{
+  PetscDeviceContext dctx;
+
+  PetscFunctionBegin;
+  PetscCall(GetHandles_(&dctx));
+  PetscCall(Initialize_CUPMBase(v, PETSC_FALSE, VecIMPLCast(v)->array, nullptr, dctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <device::cupm::DeviceType T, typename D>
+inline PetscErrorCode Vec_CUPMBase<T, D>::Convert_IMPLCUPM_IMPL(Vec v) noexcept
+{
+  PetscFunctionBegin;
+  PetscCall(D::BindToCPU(v, PETSC_TRUE));
+  PetscCall(DestroyDevice_(v));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
