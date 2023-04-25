@@ -7,32 +7,39 @@ int main(int argc, char **argv)
   PetscMPIInt    size;
   const PetscInt n = 32;
   PetscInt       i;
-  PetscScalar    array[10];
-  Vec            x, y;
-  PetscReal      nrm;
+  PetscScalar    array[n];
+  Vec            x, y, z;
+  PetscReal      nrm, ans;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
   PetscCallMPI(MPI_Comm_size(PETSC_COMM_WORLD, &size));
 
-  /* create vector */
-  for (i = 0; i < n; i++) array[i] = 2.0;
+  /* create x with an existing array */
+  for (i = 0; i < n; i++) array[i] = 1.0;
 
   if (size == 1) PetscCall(VecCreateSeqWithArray(PETSC_COMM_SELF, 1, n, array, &x));
   else PetscCall(VecCreateMPIWithArray(PETSC_COMM_WORLD, 1, n, PETSC_DECIDE, array, &x));
   PetscCall(VecSetFromOptions(x));
-  PetscCall(VecScale(x, 2.0));
+  PetscCall(VecScale(x, 5.0)); // x = {5,..}
 
   PetscCall(VecCreate(PETSC_COMM_WORLD, &y));
   PetscCall(VecSetFromOptions(y));
   PetscCall(VecSetSizes(y, n, PETSC_DECIDE));
-  PetscCall(VecSet(y, 4.0));
+  PetscCall(VecSet(y, 2.0)); // y = {2,..}
 
-  PetscCall(VecAXPY(y, -1, x));
-  PetscCall(VecNorm(y, NORM_2, &nrm));
-  PetscCheck(nrm < PETSC_SMALL, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Norm is too big, %g\n", nrm);
+  PetscCall(VecAXPY(x, -2.0, y)); // x += -2.0*y
+  PetscCall(VecNorm(x, NORM_2, &nrm));
+
+  PetscCall(VecCreate(PETSC_COMM_WORLD, &z));
+  PetscCall(VecSetType(z, VECSTANDARD));
+  PetscCall(VecSetSizes(z, n, PETSC_DECIDE));
+  PetscCall(VecSet(z, 1.0));
+  PetscCall(VecNorm(z, NORM_2, &ans));
+  PetscCheck(PetscAbs(nrm - ans) < PETSC_SMALL, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Diff is too big, %g\n", (double)nrm);
   PetscCall(VecDestroy(&x));
   PetscCall(VecDestroy(&y));
+  PetscCall(VecDestroy(&z));
   PetscCall(PetscFinalize());
   return 0;
 }

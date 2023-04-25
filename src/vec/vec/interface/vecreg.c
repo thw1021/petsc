@@ -87,7 +87,7 @@ PetscErrorCode VecSetType(Vec vec, VecType newType)
   PetscCall(PetscStrcmp(newType, VECVIENNACL, &match));
   if (!match) PetscCall(PetscStrcmp(newType, VECMPIVIENNACL, &dstMPI));
   if (!match && !dstMPI) PetscCall(PetscStrcmp(newType, VECSEQVIENNACL, &dstSeq));
-  if (match || (srcSeq && (dstSeq || dstMPI))) {
+  if (size == 1 && (match || (srcSeq && (dstSeq || dstMPI)))) {
     PetscCall(VecConvert_Seq_SeqViennaCL_inplace(vec));
     PetscFunctionReturn(PETSC_SUCCESS);
   } else if (match || (srcMPI && (dstMPI || dstSeq))) {
@@ -96,13 +96,13 @@ PetscErrorCode VecSetType(Vec vec, VecType newType)
   }
 #endif
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
-  PetscCall(PetscStrcmp(newType, VECKOKKOS, &match));
-  if (!match) PetscCall(PetscStrcmp(newType, VECMPIKOKKOS, &dstMPI));
-  if (!match && !dstMPI) PetscCall(PetscStrcmp(newType, VECSEQKOKKOS, &dstSeq));
-  if (match || (srcSeq && (dstSeq || dstMPI))) { /*  allow Seq => MPIKokkos with comm size = 1 */
+  PetscCall(PetscStrcmp(newType, VECKOKKOS, &match));                            /* Is newType kokkos? */
+  if (!match) PetscCall(PetscStrcmp(newType, VECMPIKOKKOS, &dstMPI));            /* Is newType mpikokkos? */
+  if (!match && !dstMPI) PetscCall(PetscStrcmp(newType, VECSEQKOKKOS, &dstSeq)); /* Is newType seqkokkos? */
+  if (size == 1 && (match || (srcSeq && (dstSeq || dstMPI)))) {                  /*  allow seq => mpikokkos with comm size = 1 */
     PetscCall(VecConvert_Seq_SeqKokkos_inplace(vec));
     PetscFunctionReturn(PETSC_SUCCESS);
-  } else if (match || (srcMPI && (dstMPI || dstSeq))) { /* allow MPI => SeqKokkos with comm size = 1*/
+  } else if (match || (srcMPI && (dstMPI || dstSeq))) { /* allow mpi => seqkokkos with comm size = 1 */
     PetscCall(VecConvert_MPI_MPIKokkos_inplace(vec));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
@@ -115,7 +115,6 @@ newvec:
   if (curType) { /* no need to destroy a vec without type */
     PetscTryTypeMethod(vec, destroy);
     PetscCall(PetscMemzero(vec->ops, sizeof(struct _VecOps)));
-  } else {
     PetscCall(PetscFree(vec->defaultrandtype));
     PetscCall(PetscStrallocpy(PETSCRANDER48, &vec->defaultrandtype));
   }
