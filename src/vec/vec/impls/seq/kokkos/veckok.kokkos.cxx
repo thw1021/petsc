@@ -1272,7 +1272,6 @@ PetscErrorCode VecCreateSeqKokkosWithArray(MPI_Comm comm, PetscInt bs, PetscInt 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-// Convert VECSEQ to VECSEQKOKKOS in place
 PETSC_INTERN PetscErrorCode VecConvert_Seq_SeqKokkos_inplace(Vec v)
 {
   Vec_Seq *vecseq;

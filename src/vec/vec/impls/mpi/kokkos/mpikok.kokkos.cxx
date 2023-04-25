@@ -235,7 +235,6 @@ static PetscErrorCode VecSetOps_MPIKokkos(Vec v)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-// Convert VECMPI to VECMPIKOKKOS in place
 PETSC_INTERN PetscErrorCode VecConvert_MPI_MPIKokkos_inplace(Vec v)
 {
   Vec_MPI *vecmpi;

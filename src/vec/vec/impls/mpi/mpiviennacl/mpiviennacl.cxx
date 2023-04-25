@@ -357,7 +357,6 @@ PetscErrorCode VecCreateMPIViennaCLWithArrays(MPI_Comm comm, PetscInt bs, PetscI
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-// Convert VECSEQ to VECMPIVIENNACL in place
 PETSC_INTERN PetscErrorCode VecConvert_MPI_MPIViennaCL_inplace(Vec V)
 {
   PetscFunctionBegin;

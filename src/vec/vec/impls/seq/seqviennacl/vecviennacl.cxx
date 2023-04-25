@@ -1520,7 +1520,6 @@ PETSC_EXTERN PetscErrorCode VecViennaCLRestoreCLMem(Vec v)
 #endif
 }
 
-// Convert VECSEQ to VECSEQVIENNACL in place
 PETSC_INTERN PetscErrorCode VecConvert_Seq_SeqViennaCL_inplace(Vec V)
 {
   PetscFunctionBegin;
