@@ -1520,6 +1520,15 @@ PETSC_EXTERN PetscErrorCode VecViennaCLRestoreCLMem(Vec v)
 #endif
 }
 
+PETSC_INTERN PetscErrorCode VecConvert_Seq_SeqViennaCL_inplace(Vec V)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscObjectChangeTypeName((PetscObject)V, VECSEQVIENNACL));
+  PetscCall(VecBindToCPU_SeqAIJViennaCL(V, PETSC_FALSE));
+  V->ops->bindtocpu = VecBindToCPU_SeqAIJViennaCL;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PetscErrorCode VecCreate_SeqViennaCL_Private(Vec V, const ViennaCLVector *array)
 {
   Vec_ViennaCL *vecviennacl;
