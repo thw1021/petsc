@@ -53,7 +53,7 @@ PetscErrorCode VecSetType(Vec vec, VecType newType)
   PetscCheck(!(size > 1 && dstSeq), comm, PETSC_ERR_ARG_WRONG, "Cannot convert MPI vectors to sequential ones");
 
   /* upcasting (e.g., from VecSeqCUDA to VecSeq) is not supported. VecBindToCPU(v,PETSC_TRUE) could
-     achive that. It looks like a wrong design in user's code, thus no support.
+     achieve that. It looks like a wrong design in user's code, thus no support.
    */
   PetscCall(PetscStrbeginswith(curType, newType, &upcast)); /* e.g., error with curType="seqcuda", newType="seq" */
   PetscCheck(!upcast, comm, PETSC_ERR_ARG_WRONG, "Converting a Vec of type %s to %s is not supported", curType, newType);
