@@ -336,7 +336,7 @@ PetscErrorCode DMNetworkViewSetShowGlobal(DM dm, PetscBool showglobal)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMNETWORK);
-  network->vieweroptions.dontshowglobal = !showglobal;
+  network->vieweroptions.dontshowglobal = (PetscBool)(!showglobal);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -346,7 +346,7 @@ PetscErrorCode DMNetworkViewSetShowVertices(DM dm, PetscBool showvertices)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMNETWORK);
-  network->vieweroptions.shownovertices = !showvertices;
+  network->vieweroptions.shownovertices = (PetscBool)(!showvertices);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 /*
@@ -358,7 +358,7 @@ PetscErrorCode DMNetworkViewSetShowLabels(DM dm, PetscBool showlabels)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMNETWORK);
-  network->vieweroptions.shownolabels = !showlabels;
+  network->vieweroptions.shownolabels = (PetscBool)(!showlabels);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
