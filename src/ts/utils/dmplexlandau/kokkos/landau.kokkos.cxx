@@ -383,41 +383,41 @@ PetscErrorCode landau_mat_assemble(PetscScalar *coo_vals, const PetscScalar Aij,
 
 PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt batch_sz, const PetscInt num_grids, const PetscInt a_numCells[], PetscReal a_Eq_m[], PetscScalar a_elem_closure[], const PetscScalar a_xarray[], const LandauStaticData *SData_d, const PetscReal shift, const PetscLogEvent events[], const PetscInt a_mat_offset[], const PetscInt a_species_offset[], Mat subJ[], Mat JacP)
 {
-  using scr_mem_t                   = Kokkos::DefaultExecutionSpace::scratch_memory_space;
-  using real2_scr_t                 = Kokkos::View<PetscScalar **, Kokkos::LayoutRight, scr_mem_t>;
-  using g2_scr_t                    = Kokkos::View<PetscReal ***, Kokkos::LayoutRight, scr_mem_t>;
-  using g3_scr_t                    = Kokkos::View<PetscReal ****, Kokkos::LayoutRight, scr_mem_t>;
-  PetscInt                   Nb     = Nq, dim, num_cells_max, Nf_max, num_cells_batch;
-  int                        nfaces = 0, vector_size = 512 / Nq;
-  LandauCtx                 *ctx;
-  PetscReal                 *d_Eq_m     = NULL;
-  PetscScalar               *d_vertex_f = NULL;
-  P4estVertexMaps           *maps[LANDAU_MAX_GRIDS]; // this gets captured
-  PetscContainer             container;
-  const int                  conc = Kokkos::DefaultExecutionSpace().concurrency(), openmp = !!(conc < 1000), team_size = (openmp == 0) ? Nq : 1;
-  const PetscInt             coo_sz_batch = SData_d->coo_size / batch_sz;                                                 // capture
-  auto                       d_alpha_k    = static_cast<Kokkos::View<PetscReal *, Kokkos::LayoutLeft> *>(SData_d->alpha); //static data
-  const PetscReal           *d_alpha      = d_alpha_k->data();
-  const PetscInt             Nftot        = d_alpha_k->size(); // total number of species
-  auto                       d_beta_k     = static_cast<Kokkos::View<PetscReal *, Kokkos::LayoutLeft> *>(SData_d->beta);
-  const PetscReal           *d_beta       = d_beta_k->data();
-  auto                       d_invMass_k  = static_cast<Kokkos::View<PetscReal *, Kokkos::LayoutLeft> *>(SData_d->invMass);
-  const PetscReal           *d_invMass    = d_invMass_k->data();
-  auto                       d_lambdas_k  = static_cast<Kokkos::View<PetscReal *, Kokkos::LayoutLeft> *>(SData_d->lambdas);
-  const PetscReal           *d_lambdas    = d_lambdas_k->data();
-  auto                       d_B_k        = static_cast<Kokkos::View<PetscReal *, Kokkos::LayoutLeft> *>(SData_d->B);
-  const PetscReal           *d_BB         = d_B_k->data();
-  auto                       d_D_k        = static_cast<Kokkos::View<PetscReal *, Kokkos::LayoutLeft> *>(SData_d->D);
-  const PetscReal           *d_DD         = d_D_k->data();
-  auto                       d_invJ_k     = *static_cast<Kokkos::View<PetscReal *, Kokkos::LayoutLeft> *>(SData_d->invJ); // use Kokkos vector in kernels
-  auto                       d_x_k        = static_cast<Kokkos::View<PetscReal *, Kokkos::LayoutLeft> *>(SData_d->x);     //static data
-  const PetscReal           *d_x          = d_x_k->data();
-  auto                       d_y_k        = static_cast<Kokkos::View<PetscReal *, Kokkos::LayoutLeft> *>(SData_d->y); //static data
-  const PetscReal           *d_y          = d_y_k->data();
-  auto                       d_z_k        = static_cast<Kokkos::View<PetscReal *, Kokkos::LayoutLeft> *>(SData_d->z); //static data
-  const PetscReal           *d_z          = (LANDAU_DIM == 3) ? d_z_k->data() : NULL;
-  auto                       d_w_k        = *static_cast<Kokkos::View<PetscReal *, Kokkos::LayoutLeft> *>(SData_d->w); //static data
-  const PetscReal           *d_w          = d_w_k.data();
+  using scr_mem_t         = Kokkos::DefaultExecutionSpace::scratch_memory_space;
+  using real2_scr_t       = Kokkos::View<PetscScalar **, Kokkos::LayoutRight, scr_mem_t>;
+  using g2_scr_t          = Kokkos::View<PetscReal ***, Kokkos::LayoutRight, scr_mem_t>;
+  using g3_scr_t          = Kokkos::View<PetscReal ****, Kokkos::LayoutRight, scr_mem_t>;
+  PetscInt         Nb     = Nq, dim, num_cells_max, Nf_max, num_cells_batch;
+  int              nfaces = 0, vector_size = 512 / Nq;
+  LandauCtx       *ctx;
+  PetscReal       *d_Eq_m     = NULL;
+  PetscScalar     *d_vertex_f = NULL;
+  P4estVertexMaps *maps[LANDAU_MAX_GRIDS]; // this gets captured
+  PetscContainer   container;
+  const int        conc = Kokkos::DefaultExecutionSpace().concurrency(), openmp = !!(conc < 1000), team_size = (openmp == 0) ? Nq : 1;
+  const PetscInt   coo_sz_batch = SData_d->coo_size / batch_sz;                                                 // capture
+  auto             d_alpha_k    = static_cast<Kokkos::View<PetscReal *, Kokkos::LayoutLeft> *>(SData_d->alpha); //static data
+  const PetscReal *d_alpha      = d_alpha_k->data();
+  const PetscInt   Nftot        = d_alpha_k->size(); // total number of species
+  auto             d_beta_k     = static_cast<Kokkos::View<PetscReal *, Kokkos::LayoutLeft> *>(SData_d->beta);
+  const PetscReal *d_beta       = d_beta_k->data();
+  auto             d_invMass_k  = static_cast<Kokkos::View<PetscReal *, Kokkos::LayoutLeft> *>(SData_d->invMass);
+  const PetscReal *d_invMass    = d_invMass_k->data();
+  auto             d_lambdas_k  = static_cast<Kokkos::View<PetscReal *, Kokkos::LayoutLeft> *>(SData_d->lambdas);
+  const PetscReal *d_lambdas    = d_lambdas_k->data();
+  auto             d_B_k        = static_cast<Kokkos::View<PetscReal *, Kokkos::LayoutLeft> *>(SData_d->B);
+  const PetscReal *d_BB         = d_B_k->data();
+  auto             d_D_k        = static_cast<Kokkos::View<PetscReal *, Kokkos::LayoutLeft> *>(SData_d->D);
+  const PetscReal *d_DD         = d_D_k->data();
+  auto             d_invJ_k     = *static_cast<Kokkos::View<PetscReal *, Kokkos::LayoutLeft> *>(SData_d->invJ); // use Kokkos vector in kernels
+  auto             d_x_k        = static_cast<Kokkos::View<PetscReal *, Kokkos::LayoutLeft> *>(SData_d->x);     //static data
+  const PetscReal *d_x          = d_x_k->data();
+  auto             d_y_k        = static_cast<Kokkos::View<PetscReal *, Kokkos::LayoutLeft> *>(SData_d->y); //static data
+  const PetscReal *d_y          = d_y_k->data();
+  auto             d_z_k        = static_cast<Kokkos::View<PetscReal *, Kokkos::LayoutLeft> *>(SData_d->z); //static data
+  const PetscReal *d_z          = (LANDAU_DIM == 3) ? d_z_k->data() : NULL;
+  auto             d_w_k        = *static_cast<Kokkos::View<PetscReal *, Kokkos::LayoutLeft> *>(SData_d->w); //static data
+  const PetscReal *d_w          = d_w_k.data();
   // grid offsets - single vertex grid data
   auto                                            d_numCells_k       = static_cast<Kokkos::View<PetscInt *, Kokkos::LayoutLeft> *>(SData_d->NCells);
   const PetscInt                                 *d_numCells         = d_numCells_k->data();

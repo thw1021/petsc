@@ -1398,7 +1398,7 @@ static PetscErrorCode CreateStaticData(PetscInt dim, IS grid_batch_is_inv[], Lan
     PetscCall(PetscMalloc(sizeof(*pointMaps) * MAP_BF_SIZE, &pointMaps));
     PetscCall(PetscMalloc(sizeof(*elemMatrix) * elMatSz, &elemMatrix));
 
-    {                                                                                                      // setup COO assembly -- put COO metadata directly in ctx->SData_d
+    {                                                                                                                             // setup COO assembly -- put COO metadata directly in ctx->SData_d
       PetscCall(PetscMalloc3(ncellsTot + 1, &coo_elem_offsets, ncellsTot, &coo_elem_fullNb, ncellsTot, &coo_elem_point_offsets)); // array of integer pointers
       coo_elem_offsets[0] = 0;                                                                                                    // finish later
       PetscCall(PetscInfo(ctx->plex[0], "COO initialization, %" PetscInt_FMT " cells\n", ncellsTot));
@@ -1494,7 +1494,7 @@ static PetscErrorCode CreateStaticData(PetscInt dim, IS grid_batch_is_inv[], Lan
             PetscCall(DMPlexRestoreClosureIndices(ctx->plex[grid], section[grid], globsection[grid], ej, PETSC_TRUE, &numindices, &indices, NULL, (PetscScalar **)&elMat));
             if (elMat != valuesOrig) PetscCall(DMRestoreWorkArray(ctx->plex[grid], numindices * numindices, MPIU_SCALAR, &elMat));
           }
-          {                                 // setup COO assembly
+          {                                                        // setup COO assembly
             coo_elem_offsets[glb_elem_idx + 1] += fullNb * fullNb; // one species block, adds a block for each species, on this element in this grid
             if (fieldA == 0) {                                     // cache full Nb for this element, on this grid per species
               coo_elem_fullNb[glb_elem_idx] = fullNb;
@@ -1725,7 +1725,7 @@ static PetscErrorCode CreateStaticData(PetscInt dim, IS grid_batch_is_inv[], Lan
       /* free */
       PetscCall(PetscFree4(ww, xx, yy, invJ_a));
       if (dim == 3) PetscCall(PetscFree(zz));
-    } else { /* CPU version, just copy in, only use part */
+    } else {                                                                                                                                                                   /* CPU version, just copy in, only use part */
       PetscReal *nu_alpha_p = (PetscReal *)ctx->SData_d.alpha, *nu_beta_p = (PetscReal *)ctx->SData_d.beta, *invMass_p = (PetscReal *)ctx->SData_d.invMass, *lambdas_p = NULL; // why set these ?
       ctx->SData_d.w    = (void *)ww;
       ctx->SData_d.x    = (void *)xx;
