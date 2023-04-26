@@ -35,7 +35,6 @@ struct Mat_MPIAIJHIPSPARSE {
     offdiagGPUMatFormat = MAT_HIPSPARSE_CSR;
     coo_p               = NULL;
     coo_pw              = NULL;
-    deviceMat           = NULL;
     use_extended_coo    = PETSC_FALSE;
   }
 };

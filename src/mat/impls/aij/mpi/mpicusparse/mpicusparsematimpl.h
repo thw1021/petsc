@@ -27,7 +27,6 @@ struct Mat_MPIAIJCUSPARSE {
     offdiagGPUMatFormat = MAT_CUSPARSE_CSR;
     coo_p               = NULL;
     coo_pw              = NULL;
-    deviceMat           = NULL;
     use_extended_coo    = PETSC_FALSE;
   }
 };
