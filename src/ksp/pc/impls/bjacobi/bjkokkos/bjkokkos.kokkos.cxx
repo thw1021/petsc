@@ -721,8 +721,8 @@ done:
 // KSP solver solve Ax = b; xout is output, bin is input
 static PetscErrorCode PCApply_BJKOKKOS(PC pc, Vec bin, Vec xout)
 {
-  PC_PCBJKOKKOS    *jac = (PC_PCBJKOKKOS *)pc->data;
-  Mat               A   = pc->pmat, Aseq = A;
+  PC_PCBJKOKKOS *jac = (PC_PCBJKOKKOS *)pc->data;
+  Mat            A = pc->pmat, Aseq = A;
 
   PetscFunctionBegin;
   if (!A->spptr) {
@@ -751,7 +751,7 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc, Vec bin, Vec xout)
     MatInfo            info;
 
     PetscCall(MatSeqAIJGetCSRAndMemType(Aseq, &glb_Aai, &glb_Aaj, &dummy, &mtype));
-    glb_Aaa = dummy;
+    glb_Aaa       = dummy;
     jac->max_nits = 0;
     if (view_bid < 0) view_bid = 0;
     PetscCall(MatGetInfo(A, MAT_LOCAL, &info));
@@ -1119,9 +1119,9 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc, Vec bin, Vec xout)
 
 static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
 {
-  PC_PCBJKOKKOS    *jac = (PC_PCBJKOKKOS *)pc->data;
-  Mat               A = pc->pmat, Aseq = A; // use filtered block matrix, really "P"
-  PetscBool         flg;
+  PC_PCBJKOKKOS *jac = (PC_PCBJKOKKOS *)pc->data;
+  Mat            A = pc->pmat, Aseq = A; // use filtered block matrix, really "P"
+  PetscBool      flg;
 
   PetscFunctionBegin;
   PetscCheck(!pc->useAmat, PetscObjectComm((PetscObject)pc), PETSC_ERR_SUP, "No support for using 'use_amat'");
