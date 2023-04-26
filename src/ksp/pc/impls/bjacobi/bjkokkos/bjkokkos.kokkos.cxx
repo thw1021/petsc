@@ -19,10 +19,10 @@
 #include <petscdevice_cupm.h>
 
 #define PCBJKOKKOS_SHARED_LEVEL 1 // 0 is shared, 1 is global
-#define PCBJKOKKOS_VEC_SIZE     1
-#define PCBJKOKKOS_TEAM_SIZE    1
+#define PCBJKOKKOS_VEC_SIZE     16
+#define PCBJKOKKOS_TEAM_SIZE    16
 
-#define PCBJKOKKOS_VERBOSE_LEVEL 4
+#define PCBJKOKKOS_VERBOSE_LEVEL 1
 
 typedef Kokkos::DefaultExecutionSpace exec_space;
 using layout           = Kokkos::LayoutRight;
