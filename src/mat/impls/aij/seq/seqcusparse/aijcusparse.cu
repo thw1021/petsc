@@ -3705,11 +3705,6 @@ static PetscErrorCode MatAssemblyEnd_SeqAIJCUSPARSE(Mat A, MatAssemblyType mode)
 
   PetscFunctionBegin;
   PetscCall(MatAssemblyEnd_SeqAIJ(A, mode));
-  if (onnz != A->nonzerostate && cusp->deviceMat) {
-    PetscCall(PetscInfo(A, "Destroy device mat since nonzerostate changed\n"));
-    PetscCallCUDA(cudaFree(cusp->deviceMat));
-    cusp->deviceMat = NULL;
-  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
