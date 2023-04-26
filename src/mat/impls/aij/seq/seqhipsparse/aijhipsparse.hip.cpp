@@ -3174,11 +3174,6 @@ static PetscErrorCode MatAssemblyEnd_SeqAIJHIPSPARSE(Mat A, MatAssemblyType mode
 
   PetscFunctionBegin;
   PetscCall(MatAssemblyEnd_SeqAIJ(A, mode));
-  if (onnz != A->nonzerostate && cusp->deviceMat) {
-    PetscCall(PetscInfo(A, "Destroy device mat since nonzerostate changed\n"));
-    PetscCallHIP(hipFree(cusp->deviceMat));
-    cusp->deviceMat = NULL;
-  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
