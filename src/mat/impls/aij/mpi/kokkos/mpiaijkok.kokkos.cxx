@@ -9,7 +9,6 @@
 
 PetscErrorCode MatAssemblyEnd_MPIAIJKokkos(Mat A, MatAssemblyType mode)
 {
-  Mat_SeqAIJKokkos *aijkok;
   Mat_MPIAIJ       *mpiaij = (Mat_MPIAIJ *)A->data;
 
   PetscFunctionBegin;
@@ -21,10 +20,6 @@ PetscErrorCode MatAssemblyEnd_MPIAIJKokkos(Mat A, MatAssemblyType mode)
     PetscCall(MatSetType(mpiaij->A, MATSEQAIJKOKKOS));
     PetscCall(MatSetType(mpiaij->B, MATSEQAIJKOKKOS));
     PetscCall(VecSetType(mpiaij->lvec, VECSEQKOKKOS));
-  }
-  aijkok = static_cast<Mat_SeqAIJKokkos *>(((Mat_MPIAIJ *)A->data)->A->spptr); /* Access spptr after MatAssemblyEnd_MPIAIJ(), which might have deleted old spptr */
-  if (aijkok && aijkok->device_mat_d.data()) {
-    A->offloadmask = PETSC_OFFLOAD_GPU; // in GPU mode, no going back. MatSetValues checks this
   }
 
   PetscFunctionReturn(PETSC_SUCCESS);

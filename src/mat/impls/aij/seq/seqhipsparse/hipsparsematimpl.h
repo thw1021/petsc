@@ -289,7 +289,6 @@ struct Mat_SeqAIJHIPSPARSE {
   hipsparseSpMVAlg_t         spmvAlg;
   hipsparseSpMMAlg_t         spmmAlg;
   THRUSTINTARRAY            *csr2csc_i;
-  PetscSplitCSRDataStructure deviceMat; /* Matrix on device for, eg, assembly */
   THRUSTINTARRAY            *cooPerm;   /* permutation array that sorts the input coo entris by row and col */
   THRUSTINTARRAY            *cooPerm_a; /* ordered array that indicate i-th nonzero (after sorting) is the j-th unique nonzero */
 

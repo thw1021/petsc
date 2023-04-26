@@ -6,12 +6,6 @@
 #include <KokkosSparse_CrsMatrix.hpp>
 #include <KokkosSparse_spiluk.hpp>
 
-/*
-   Kokkos::View<struct _n_SplitCSRMat,DefaultMemorySpace> is not handled correctly so we define SplitCSRMat
-   for the singular purpose of working around this.
-*/
-typedef struct _n_SplitCSRMat SplitCSRMat;
-
 using MatRowMapType = PetscInt;
 using MatColIdxType = PetscInt;
 using MatScalarType = PetscScalar;
@@ -97,7 +91,6 @@ struct Mat_SeqAIJKokkos {
 
   Kokkos::View<PetscInt *>                      i_uncompressed_d;
   Kokkos::View<PetscInt *>                      colmap_d; // ugh, this is a parallel construct
-  Kokkos::View<SplitCSRMat, DefaultMemorySpace> device_mat_d;
   Kokkos::View<PetscInt *>                      diag_d; // factorizations
 
   /* Construct a nrows by ncols matrix with nnz nonzeros from the given (i,j,a) on host. Caller also specifies a nonzero state */

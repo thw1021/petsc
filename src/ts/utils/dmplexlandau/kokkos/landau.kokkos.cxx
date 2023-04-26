@@ -36,7 +36,6 @@ PetscErrorCode LandauKokkosStaticDataClear(LandauStaticData *)
   #include <cstdio>
 typedef Kokkos::TeamPolicy<>::member_type team_member;
   #include "../land_tensors.h"
-  #include <petscaijdevice.h>
 
 namespace landau_inner_red
 { // namespace helps with name resolution in reduction identity

@@ -16,7 +16,6 @@ struct Mat_MPIAIJHIPSPARSE {
   /* The following are used by GPU capabilities to store matrix storage formats on the device */
   MatHIPSPARSEStorageFormat  diagGPUMatFormat;
   MatHIPSPARSEStorageFormat  offdiagGPUMatFormat;
-  PetscSplitCSRDataStructure deviceMat;
   PetscInt                   coo_nd, coo_no; /* number of nonzero entries in coo for the diag/offdiag part */
   THRUSTINTARRAY            *coo_p;          /* the permutation array that partitions the coo array into diag/offdiag parts */
   THRUSTARRAY               *coo_pw;         /* the work array that stores the partitioned coo scalar values */

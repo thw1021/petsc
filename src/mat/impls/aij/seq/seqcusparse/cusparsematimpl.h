@@ -317,7 +317,6 @@ struct Mat_SeqAIJCUSPARSE {
   cusparseSpMMAlg_t    spmmAlg;
 #endif
   THRUSTINTARRAY            *csr2csc_i;
-  PetscSplitCSRDataStructure deviceMat; /* Matrix on device for, eg, assembly */
 
   /* Stuff for basic COO support */
   THRUSTINTARRAY *cooPerm;   /* permutation array that sorts the input coo entris by row and col */
