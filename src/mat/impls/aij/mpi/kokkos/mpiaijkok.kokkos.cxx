@@ -9,8 +9,7 @@
 
 PetscErrorCode MatAssemblyEnd_MPIAIJKokkos(Mat A, MatAssemblyType mode)
 {
-  Mat_SeqAIJKokkos *aijkok;
-  Mat_MPIAIJ       *mpiaij = (Mat_MPIAIJ *)A->data;
+  Mat_MPIAIJ *mpiaij = (Mat_MPIAIJ *)A->data;
 
   PetscFunctionBegin;
   PetscCall(MatAssemblyEnd_MPIAIJ(A, mode));
@@ -21,10 +20,6 @@ PetscErrorCode MatAssemblyEnd_MPIAIJKokkos(Mat A, MatAssemblyType mode)
     PetscCall(MatSetType(mpiaij->A, MATSEQAIJKOKKOS));
     PetscCall(MatSetType(mpiaij->B, MATSEQAIJKOKKOS));
     PetscCall(VecSetType(mpiaij->lvec, VECSEQKOKKOS));
-  }
-  aijkok = static_cast<Mat_SeqAIJKokkos *>(((Mat_MPIAIJ *)A->data)->A->spptr); /* Access spptr after MatAssemblyEnd_MPIAIJ(), which might have deleted old spptr */
-  if (aijkok && aijkok->device_mat_d.data()) {
-    A->offloadmask = PETSC_OFFLOAD_GPU; // in GPU mode, no going back. MatSetValues checks this
   }
 
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1769,6 +1764,7 @@ PetscErrorCode MatCreateAIJKokkos(MPI_Comm comm, PetscInt m, PetscInt n, PetscIn
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+<<<<<<< HEAD
 // get GPU pointer to stripped down Mat. For both Seq and MPI Mat.
 PetscErrorCode MatKokkosGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure *B)
 {
@@ -1877,39 +1873,5 @@ PetscErrorCode MatKokkosGetDeviceMatWrite(Mat A, PetscSplitCSRDataStructure *B)
   }
   *B           = d_mat;       // return it, set it in Mat, and set it up
   A->assembled = PETSC_FALSE; // ready to write with matsetvalues - this done (lazy) in normal MatSetValues
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PETSC_INTERN PetscErrorCode MatSeqAIJKokkosGetOffloadMask(Mat A, const char **mask)
-{
-  Mat_SeqAIJKokkos *aijkok = static_cast<Mat_SeqAIJKokkos *>(A->spptr);
-
-  PetscFunctionBegin;
-  if (!aijkok) *mask = "AIJKOK_UNALLOCATED";
-  else if (aijkok->a_dual.need_sync_host()) *mask = "PETSC_OFFLOAD_GPU";
-  else if (aijkok->a_dual.need_sync_device()) *mask = "PETSC_OFFLOAD_CPU";
-  else *mask = "PETSC_OFFLOAD_BOTH";
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PETSC_INTERN PetscErrorCode MatAIJKokkosPrintOffloadMask(Mat A)
-{
-  PetscMPIInt size;
-  Mat         Ad, Ao;
-  const char *amask, *bmask;
-
-  PetscFunctionBegin;
-  PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)A), &size));
-
-  if (size == 1) {
-    PetscCall(MatSeqAIJKokkosGetOffloadMask(A, &amask));
-    PetscCall(PetscPrintf(PETSC_COMM_SELF, "%s\n", amask));
-  } else {
-    Ad = ((Mat_MPIAIJ *)A->data)->A;
-    Ao = ((Mat_MPIAIJ *)A->data)->B;
-    PetscCall(MatSeqAIJKokkosGetOffloadMask(Ad, &amask));
-    PetscCall(MatSeqAIJKokkosGetOffloadMask(Ao, &bmask));
-    PetscCall(PetscPrintf(PETSC_COMM_SELF, "Diag : Off-diag = %s : %s\n", amask, bmask));
-  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
