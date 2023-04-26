@@ -2292,15 +2292,6 @@ PETSC_DEPRECATED_FUNCTION("Use MatBindToCPU (since v3.13)") static inline PetscE
 PETSC_EXTERN PetscErrorCode MatSetBindingPropagates(Mat, PetscBool);
 PETSC_EXTERN PetscErrorCode MatGetBindingPropagates(Mat, PetscBool *);
 
-typedef struct _n_SplitCSRMat *PetscSplitCSRDataStructure;
-PETSC_EXTERN PetscErrorCode    MatCUSPARSEGetDeviceMatWrite(Mat, PetscSplitCSRDataStructure *);
-
-#ifdef PETSC_HAVE_KOKKOS_KERNELS
-PETSC_EXTERN PetscErrorCode MatKokkosGetDeviceMatWrite(Mat, PetscSplitCSRDataStructure *);
-PETSC_EXTERN PetscErrorCode MatSeqAIJKokkosSetDeviceMat(Mat, PetscSplitCSRDataStructure);
-PETSC_EXTERN PetscErrorCode MatSeqAIJKokkosGetDeviceMat(Mat, PetscSplitCSRDataStructure *);
-#endif
-
 #ifdef PETSC_HAVE_CUDA
 /*E
     MatCUSPARSEStorageFormat - indicates the storage format for `MATAIJCUSPARSE` (GPU)
@@ -2482,8 +2473,6 @@ PETSC_EXTERN PetscErrorCode MatPreallocatorPreallocate(Mat, PetscBool, Mat);
 
 PETSC_INTERN PetscErrorCode MatHeaderMerge(Mat, Mat *);
 PETSC_EXTERN PetscErrorCode MatHeaderReplace(Mat, Mat *);
-
-PETSC_EXTERN PetscErrorCode MatSeqAIJGetCSRAndMemType(Mat, const PetscInt **, const PetscInt **, PetscScalar **, PetscMemType *);
 
 PETSC_EXTERN PetscErrorCode MatCreateGraph(Mat, PetscBool, PetscBool, PetscReal, Mat *);
 PETSC_EXTERN PetscErrorCode MatEliminateZeros(Mat);
