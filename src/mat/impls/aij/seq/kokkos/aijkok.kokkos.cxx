@@ -54,9 +54,6 @@ static PetscErrorCode MatAssemblyEnd_SeqAIJKokkos(Mat A, MatAssemblyType mode)
     A->spptr = aijkok;
   }
 
-  if (aijkok->device_mat_d.data()) {
-    A->offloadmask = PETSC_OFFLOAD_GPU; // in GPU mode, no going back. MatSetValues checks this
-  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -193,34 +190,6 @@ static PetscErrorCode MatSeqAIJGetCSRAndMemType_SeqAIJKokkos(Mat A, const PetscI
     *a = aijkok->a_device_data();
   }
   if (mtype) *mtype = PETSC_MEMTYPE_KOKKOS;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-// MatSeqAIJKokkosSetDeviceMat takes a PetscSplitCSRDataStructure with device data and copies it to the device. Note, "deep_copy" here is really a shallow copy
-PetscErrorCode MatSeqAIJKokkosSetDeviceMat(Mat A, PetscSplitCSRDataStructure h_mat)
-{
-  Mat_SeqAIJKokkos                            *aijkok = static_cast<Mat_SeqAIJKokkos *>(A->spptr);
-  Kokkos::View<SplitCSRMat, Kokkos::HostSpace> h_mat_k(h_mat);
-
-  PetscFunctionBegin;
-  PetscCheck(aijkok, PETSC_COMM_WORLD, PETSC_ERR_PLIB, "Unexpected NULL (Mat_SeqAIJKokkos*)A->spptr");
-  aijkok->device_mat_d = create_mirror(DefaultMemorySpace(), h_mat_k);
-  Kokkos::deep_copy(aijkok->device_mat_d, h_mat_k);
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-// MatSeqAIJKokkosGetDeviceMat gets the device if it is here, otherwise it creates a place for it and returns NULL
-PetscErrorCode MatSeqAIJKokkosGetDeviceMat(Mat A, PetscSplitCSRDataStructure *d_mat)
-{
-  Mat_SeqAIJKokkos *aijkok = static_cast<Mat_SeqAIJKokkos *>(A->spptr);
-
-  PetscFunctionBegin;
-  if (aijkok && aijkok->device_mat_d.data()) {
-    *d_mat = aijkok->device_mat_d.data();
-  } else {
-    PetscCall(MatSeqAIJKokkosSyncDevice(A)); // create aijkok (we are making d_mat now so make a place for it)
-    *d_mat = NULL;
-  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
