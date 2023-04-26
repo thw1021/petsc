@@ -535,7 +535,7 @@ PetscErrorCode MatSetFromOptions_MPIAIJCUSPARSE(Mat A, PetscOptionItems *PetscOp
 
 PetscErrorCode MatAssemblyEnd_MPIAIJCUSPARSE(Mat A, MatAssemblyType mode)
 {
-  Mat_MPIAIJ         *mpiaij = (Mat_MPIAIJ *)A->data;
+  Mat_MPIAIJ *mpiaij = (Mat_MPIAIJ *)A->data;
 
   PetscFunctionBegin;
   PetscCall(MatAssemblyEnd_MPIAIJ(A, mode));
