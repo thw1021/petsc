@@ -286,11 +286,11 @@ struct Mat_SeqAIJHIPSPARSE {
   size_t                         csr2cscBufferSize; /* stuff used to compute the matTranspose above */
   void                          *csr2cscBuffer;     /* This is used as a C struct and is calloc'ed by PetscNewLog() */
                                                     //  hipsparseCsr2CscAlg_t         csr2cscAlg; /* algorithms can be selected from command line options */
-  hipsparseSpMVAlg_t         spmvAlg;
-  hipsparseSpMMAlg_t         spmmAlg;
-  THRUSTINTARRAY            *csr2csc_i;
-  THRUSTINTARRAY            *cooPerm;   /* permutation array that sorts the input coo entris by row and col */
-  THRUSTINTARRAY            *cooPerm_a; /* ordered array that indicate i-th nonzero (after sorting) is the j-th unique nonzero */
+  hipsparseSpMVAlg_t spmvAlg;
+  hipsparseSpMMAlg_t spmmAlg;
+  THRUSTINTARRAY    *csr2csc_i;
+  THRUSTINTARRAY    *cooPerm;   /* permutation array that sorts the input coo entris by row and col */
+  THRUSTINTARRAY    *cooPerm_a; /* ordered array that indicate i-th nonzero (after sorting) is the j-th unique nonzero */
 
   /* Stuff for extended COO support */
   PetscBool   use_extended_coo; /* Use extended COO format */

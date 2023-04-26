@@ -14,11 +14,11 @@
 
 struct Mat_MPIAIJHIPSPARSE {
   /* The following are used by GPU capabilities to store matrix storage formats on the device */
-  MatHIPSPARSEStorageFormat  diagGPUMatFormat;
-  MatHIPSPARSEStorageFormat  offdiagGPUMatFormat;
-  PetscInt                   coo_nd, coo_no; /* number of nonzero entries in coo for the diag/offdiag part */
-  THRUSTINTARRAY            *coo_p;          /* the permutation array that partitions the coo array into diag/offdiag parts */
-  THRUSTARRAY               *coo_pw;         /* the work array that stores the partitioned coo scalar values */
+  MatHIPSPARSEStorageFormat diagGPUMatFormat;
+  MatHIPSPARSEStorageFormat offdiagGPUMatFormat;
+  PetscInt                  coo_nd, coo_no; /* number of nonzero entries in coo for the diag/offdiag part */
+  THRUSTINTARRAY           *coo_p;          /* the permutation array that partitions the coo array into diag/offdiag parts */
+  THRUSTARRAY              *coo_pw;         /* the work array that stores the partitioned coo scalar values */
 
   /* Extended COO stuff */
   PetscCount  *Ajmap1_d, *Aperm1_d;            /* Local entries to diag */
