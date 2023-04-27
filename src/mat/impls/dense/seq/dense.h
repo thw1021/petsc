@@ -124,5 +124,7 @@ PETSC_INTERN PetscErrorCode MatDenseColumnsGEMVHermitianTranspose_SeqDense(Petsc
 PETSC_INTERN PetscErrorCode MatDenseColumnsGEMV_SeqDense(PetscScalar, Mat, PetscInt, PetscInt, const PetscScalar *, PetscInt, PetscMemType, PetscScalar, Vec);
 PETSC_INTERN PetscErrorCode MatDenseColumnsGEMMHermitianTranspose_SeqDense(PetscScalar, Mat, PetscInt, PetscInt, Mat, PetscInt, PetscInt, PetscScalar, PetscScalar *, PetscInt, PetscMemType);
 PETSC_INTERN PetscErrorCode MatDenseColumnsGEMM_SeqDense(PetscScalar, Mat, PetscInt, PetscInt, const PetscScalar *, PetscInt, PetscMemType, PetscScalar, Mat, PetscInt, PetscInt);
+PETSC_INTERN PetscErrorCode PetscCUPMMemcpy_C(void*,const void*,size_t);
+#define PetscCUPMArrayCopy_C(dst, src, n) PetscCUPMMemcpy_C((dst), (src), (n) * sizeof(*(src)))
 
 #endif

@@ -1,6 +1,30 @@
 const char help[] = "Test MatDenseColumns{GEMV,GEMM}";
 
 #include <petscmat.h>
+#include <petsc/private/veccupmimpl.h>
+#include <petscdevice_cuda.h>
+#include <petscdevice_hip.h>
+
+static PetscErrorCode CreateColumnsMat(MPI_Comm comm, PetscInt m, PetscInt n, const char prefix[], Mat *mat) {
+  PetscFunctionBegin;
+  PetscCall(MatCreateDense(comm, PETSC_DETERMINE, PETSC_DETERMINE, m, n, NULL, mat));
+  PetscCall(PetscObjectSetOptionsPrefix((PetscObject) *mat, prefix));
+  PetscCall(MatSetFromOptions(*mat));
+  PetscCall(MatSetRandom(*mat, NULL));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+typedef enum {
+  EX_MEMTYPE_HOST,
+  EX_MEMTYPE_DEVICE,
+  EX_MEMTYPE_CUDA,
+  EX_MEMTYPE_HIP,
+  EX_MEMTYPE_NVSHMEM,
+  EX_MEMTYPE_SYCL,
+  EX_MEMTYPE_KOKKOS,
+} ExMemType;
+
+const char *const ExMemTypes[] = {"host", "device", "cuda", "hip", "nvshmem", "sycl", "kokkos", "PETSC_MEMTYPE_", NULL};
 
 int main(int argc, char **argv)
 {
@@ -12,21 +36,34 @@ int main(int argc, char **argv)
   PetscInt n_iter = 100;
   PetscInt alpha = 1.0 / 3.0;
   PetscInt beta = 1.0 / 5.0;
+  PetscMemType memtype_M = PETSC_MEMTYPE_HOST;
+  ExMemType exmt_M = EX_MEMTYPE_HOST;
 
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
   MPI_Comm comm = PETSC_COMM_WORLD;
 
+  PetscOptionsBegin(comm, NULL, help, NULL);
+  PetscCall(PetscOptionsInt("-m", "Global number of matrix rows", NULL, m, &m, NULL));
+  PetscCall(PetscOptionsInt("-k", "Number of columns used in the update", NULL, k, &k, NULL));
+  PetscCall(PetscOptionsEnum("-temp_memtype", "PetscMemType of intermediate results", NULL, ExMemTypes, exmt_M, (PetscEnum *) &exmt_M, NULL));
+  PetscOptionsEnd();
+#define MEMTYPECASE(SUFF) case EX_MEMTYPE_ ## SUFF: memtype_M = PETSC_MEMTYPE_ ## SUFF;break
+  switch (exmt_M) {
+    MEMTYPECASE(HOST);
+    MEMTYPECASE(DEVICE);
+    MEMTYPECASE(CUDA);
+    MEMTYPECASE(HIP);
+    MEMTYPECASE(NVSHMEM);
+    MEMTYPECASE(SYCL);
+    MEMTYPECASE(KOKKOS);
+  }
+
   Mat A, B, C, D, D_copy1, D_copy2, D_copy3;
 
-  PetscCall(MatCreateDense(comm, PETSC_DETERMINE, PETSC_DETERMINE, m, k + a_extra, NULL, &A));
-  PetscCall(MatCreateDense(comm, PETSC_DETERMINE, PETSC_DETERMINE, m, k + b_extra, NULL, &B));
-  PetscCall(MatCreateDense(comm, PETSC_DETERMINE, PETSC_DETERMINE, m, k + c_extra, NULL, &C));
-  PetscCall(MatCreateDense(comm, PETSC_DETERMINE, PETSC_DETERMINE, m, k + d_extra, NULL, &D));
-
-  PetscCall(MatSetRandom(A, NULL));
-  PetscCall(MatSetRandom(B, NULL));
-  PetscCall(MatSetRandom(C, NULL));
-  PetscCall(MatSetRandom(D, NULL));
+  PetscCall(CreateColumnsMat(comm, m, k + a_extra, "A_", &A));
+  PetscCall(CreateColumnsMat(comm, m, k + b_extra, "B_", &B));
+  PetscCall(CreateColumnsMat(comm, m, k + c_extra, "C_", &C));
+  PetscCall(CreateColumnsMat(comm, m, k + d_extra, "D_", &D));
 
   PetscCall(MatDuplicate(D, MAT_DO_NOT_COPY_VALUES, &D_copy1));
   PetscCall(MatDuplicate(D, MAT_DO_NOT_COPY_VALUES, &D_copy2));
@@ -53,7 +90,23 @@ int main(int argc, char **argv)
   PetscCall(PetscMalloc1(k, &Bs));
   for (PetscInt j = 0; j < k; j++) {
     PetscCall(MatCreateVecs(B, NULL, &Bs[j]));
-    PetscCall(VecPlaceArray(Bs[j], &B_array[ld_B * (b_start + j)]));
+    switch (memtype_B) {
+    case PETSC_MEMTYPE_HOST:
+      PetscCall(VecPlaceArray(Bs[j], &B_array[ld_B * (b_start + j)]));
+      break;
+#if defined(PETSC_HAVE_CUDA)
+    case PETSC_MEMTYPE_CUDA:
+      PetscCall(VecCUDAPlaceArray(Bs[j], &B_array[ld_B * (b_start + j)]));
+      break;
+#endif
+#if defined(PETSC_HAVE_HIP)
+    case PETSC_MEMTYPE_HIP:
+      PetscCall(VecHIPPlaceArray(Bs[j], &B_array[ld_B * (b_start + j)]));
+      break;
+#endif
+    default:
+      SETERRQ(comm, PETSC_ERR_SUP, "Unsupported memory type");
+    }
   }
 
   PetscScalar *M;
@@ -109,6 +162,26 @@ int main(int argc, char **argv)
   PetscCall(MatDenseRestoreArrayReadAndMemType(B, &B_array));
   PetscCall(MatDenseRestoreArrayReadAndMemType(A, &A_array));
 
+  PetscCall(PetscFree(M));
+
+  switch(memtype_M) {
+  case PETSC_MEMTYPE_HOST:
+    PetscCall(PetscMalloc1(k * k, &M));
+    break;
+#if defined(PETSC_HAVE_CUDA)
+  case PETSC_MEMTYPE_CUDA:
+    PetscCallCUDA(cudaMalloc((void **)&M, k * k * sizeof(*M)));
+    break;
+#endif
+#if defined(PETSC_HAVE_HIP)
+  case PETSC_MEMTYPE_HIP:
+    PetscCallHIP(hipMalloc((void **)&M, k * k * sizeof(*M)));
+    break;
+#endif
+  default:
+    SETERRQ(comm, PETSC_ERR_SUP, "Unsupported memory type");
+  }
+
   //
   // Level-2 approach
   //
@@ -149,7 +222,23 @@ int main(int argc, char **argv)
   PetscCall(PetscLogStagePop());
   malloc_3 -= malloc;
 
-  PetscCall(PetscFree(M));
+  switch(memtype_M) {
+  case PETSC_MEMTYPE_HOST:
+    PetscCall(PetscFree(M));
+    break;
+#if defined(PETSC_HAVE_CUDA)
+  case PETSC_MEMTYPE_CUDA:
+    PetscCallCUDA(cudaFree(M));
+    break;
+#endif
+#if defined(PETSC_HAVE_HIP)
+  case PETSC_MEMTYPE_HIP:
+    PetscCallHIP(hipFree(M));
+    break;
+#endif
+  default:
+    SETERRQ(comm, PETSC_ERR_SUP, "Unsupported memory type");
+  }
 
   // compute differences
   PetscReal err_12, err_13;
@@ -184,5 +273,9 @@ int main(int argc, char **argv)
   test:
     nsize: 2
     suffix: 1
+
+  test:
+    suffix: cuda
+    args: -A_mat_type densecuda -B_mat_type densecuda -C_mat_type densecuda -D_mat_type densecuda -temp_memtype cuda
 
 TEST*/

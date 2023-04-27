@@ -8,6 +8,8 @@
 #include <../src/mat/impls/dense/mpi/mpidense.h> /*I   "petscmat.h"  I*/
 #include <../src/mat/impls/aij/mpi/mpiaij.h>
 #include <petscblaslapack.h>
+#include <petsc/private/veccupmimpl.h>
+#include <petsc/private/sfimpl.h>
 
 /*@
       MatDenseGetLocalMatrix - For a `MATMPIDENSE` or `MATSEQDENSE` matrix returns the sequential
@@ -1597,31 +1599,74 @@ PetscErrorCode MatDenseRestoreSubMatrix_MPIDense(Mat A, Mat *v)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatDenseColumnsGEMVHermitianTranspose_MPIDense(PetscScalar alpha, Mat A_mat, PetscInt col_start, PetscInt col_end, Vec x, PetscScalar beta, PetscScalar *y, PetscInt inc_y, PetscMemType memtype_y)
-{
+static PetscErrorCode PetscScalarMemTypeAllreduce_Private(PetscScalar *C, PetscInt count, PetscMemType memtype, Mat A_mat) {
   PetscFunctionBegin;
-  PetscCall(MatDenseColumnsGEMVHermitianTranspose_SeqDense(alpha, A_mat, col_start, col_end, x, beta, y, inc_y, memtype_y));
-  switch (memtype_y) {
-  case PETSC_MEMTYPE_HOST:
-    PetscCallMPI(MPI_Allreduce(MPI_IN_PLACE, y, 1 + (col_end-col_start-1)*(inc_y), MPIU_SCALAR, MPI_SUM, PetscObjectComm((PetscObject)A_mat)));
-    break;
-  default:
-    SETERRQ(PetscObjectComm((PetscObject)A_mat), PETSC_ERR_PLIB, "Not implemented");
+  Mat_MPIDense *a = (Mat_MPIDense *) A_mat->data;
+  MPI_Comm comm = PetscObjectComm((PetscObject)A_mat);
+
+  PetscMPIInt size;
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+  if (size == 1 || count == 0) PetscFunctionReturn(PETSC_SUCCESS);
+
+  if (memtype == PETSC_MEMTYPE_NVSHMEM) {
+#if defined(PETSC_HAVE_NVSHMEM)
+    /* We have now way of knowing if a general MPI_Comm has an nvshmem team (we
+       would have to be able to deduce if it can be constructed by
+       nvshmem_test_split_strided() and nvshemt_split_2d), so we
+       only use nvshmem if this is PETSC_COMM_WORLD */
+    PetscMPIInt compare;
+    PetscCallMPI(MPI_Comm_compare(comm, PETSC_COMM_WORLD, &compare));
+    if (compare != MPI_UNEQUAL) {
+      /* we don't call PetscNvshmemInitializeCheck() because
+         data with memtype PETSC_MEMTYPE_NVSHMEM can only be
+         created with nvshmem_malloc(), which can only
+         be called after nvshmem is initialized */
+      PetscCall(PetscNvshmemSum(count, C));
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
+#endif
+  }
+  // At this point we are using MPI_Allreduce, the question is just whether we can use the array C as a buffer
+  PetscScalar *C_orig = NULL;
+  if (!PetscMemTypeHost(memtype)) {
+    if (!a->Mvctx) PetscCall(MatSetUpMultiply_MPIDense(A_mat));
+    PetscBool use_gpu_aware_mpi;
+    PetscCall(PetscSFGetUseGpuAwareMPI(a->Mvctx, &use_gpu_aware_mpi));
+    if (!use_gpu_aware_mpi) {
+      PetscScalar *C_host;
+      PetscCall(PetscMalloc(count, &C_host));
+      C_orig = C;
+      PetscCall(PetscCUPMArrayCopy_C(C_host, C_orig, count));
+      C = C_host;
+    }
+  }
+  PetscCallMPI(MPI_Allreduce(MPI_IN_PLACE, C, count, MPIU_SCALAR, MPI_SUM, comm));
+  if (C_orig) {
+    PetscCall(PetscCUPMArrayCopy_C(C_orig, C, count));
+    PetscCall(PetscFree(C));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatDenseColumnsGEMVHermitianTranspose_MPIDense(PetscScalar alpha, Mat A_mat, PetscInt col_start, PetscInt col_end, Vec x, PetscScalar beta, PetscScalar *y, PetscInt inc_y, PetscMemType memtype_y)
+{
+  PetscFunctionBegin;
+  Mat_MPIDense *a = (Mat_MPIDense *)A_mat->data;
+  PetscCall(MatDenseColumnsGEMVHermitianTranspose_SeqDense(alpha, a->A, col_start, col_end, x, beta, y, inc_y, memtype_y));
+  PetscInt count = 1 + (col_end-col_start-1)*(inc_y);
+  PetscCall(PetscScalarMemTypeAllreduce_Private(y, count, memtype_y, A_mat));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+
 static PetscErrorCode MatDenseColumnsGEMMHermitianTranspose_MPIDense(PetscScalar alpha, Mat A_mat, PetscInt col_start_A, PetscInt col_end_A, Mat B_mat, PetscInt col_start_B, PetscInt col_end_B, PetscScalar beta, PetscScalar *C, PetscInt ld_C, PetscMemType memtype_C)
 {
   PetscFunctionBegin;
-  PetscCall(MatDenseColumnsGEMMHermitianTranspose_SeqDense(alpha, A_mat, col_start_A, col_end_A, B_mat, col_start_B, col_end_B, beta, C, ld_C, memtype_C));
-  switch (memtype_C) {
-  case PETSC_MEMTYPE_HOST:
-    PetscCallMPI(MPI_Allreduce(MPI_IN_PLACE, C, (col_end_B-col_start_A) + (col_end_B-col_start_B - 1)*(ld_C), MPIU_SCALAR, MPI_SUM, PetscObjectComm((PetscObject)A_mat)));
-    break;
-  default:
-    SETERRQ(PetscObjectComm((PetscObject)A_mat), PETSC_ERR_PLIB, "Not implemented");
-  }
+  Mat_MPIDense *a = (Mat_MPIDense *)A_mat->data;
+  Mat_MPIDense *b = (Mat_MPIDense *)B_mat->data;
+  PetscCall(MatDenseColumnsGEMMHermitianTranspose_SeqDense(alpha, a->A, col_start_A, col_end_A, b->A, col_start_B, col_end_B, beta, C, ld_C, memtype_C));
+  PetscInt count = (col_end_B-col_start_A) + (col_end_B-col_start_B - 1)*(ld_C);
+  PetscCall(PetscScalarMemTypeAllreduce_Private(C, count, memtype_C, A_mat));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

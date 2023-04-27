@@ -2565,3 +2565,13 @@ PetscErrorCode PetscSFConcatenate(MPI_Comm comm, PetscInt nsfs, PetscSF sfs[], P
   PetscCall(PetscFree(leafArrayOffsets));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+PETSC_INTERN PetscErrorCode PetscSFGetUseGpuAwareMPI(PetscSF sf, PetscBool *use_gpu_aware_mpi)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(sf, PETSCSF_CLASSID, 1);
+  PetscValidBoolPointer(use_gpu_aware_mpi, 2);
+  *use_gpu_aware_mpi = sf->use_gpu_aware_mpi;
+
+  PetscFunctionReturn(PETSC_SUCCESS);
+}

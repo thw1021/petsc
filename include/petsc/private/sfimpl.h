@@ -217,4 +217,6 @@ PETSC_EXTERN PetscErrorCode PetscSFFree_Kokkos(PetscMemType, void *);
   #define PetscSFFree(sf, mtype, ptr)       PetscFree(ptr)
 #endif
 
+PETSC_INTERN PetscErrorCode PetscSFGetUseGpuAwareMPI(PetscSF, PetscBool *);
+
 #endif
