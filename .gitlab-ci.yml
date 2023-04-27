@@ -403,6 +403,7 @@ freebsd-cxx-cmplx-64idx-dbg:
     - os:fbsd
   variables:
     TEST_ARCH: arch-ci-freebsd-cxx-cmplx-64idx-dbg
+    PETSC_OPTIONS: -fp_trap
 
 freebsd-c-single-opt:
   extends:
@@ -713,6 +714,7 @@ linux-pkgs-cxx-mlib:
     - gce-u22-stage3
   variables:
     TEST_ARCH: arch-ci-linux-pkgs-cxx-mlib
+    PETSC_OPTIONS: -fp_trap
   except:
     variables:
       - $PETSC_CI_SCHEDULED =~ /yes/
@@ -747,6 +749,7 @@ linux-pkgs-dbg:
     - gce-u22-stage3, linux-gcov
   variables:
     TEST_ARCH: arch-ci-linux-pkgs-dbg
+    PETSC_OPTIONS: -fp_trap
 
 linux-matlab-ilp64:
   extends:
