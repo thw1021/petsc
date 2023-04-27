@@ -164,7 +164,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   // Broadcast the filename to all other MPI ranks
   PetscCallMPI(MPI_Bcast(filename, PETSC_MAX_PATH_LEN, MPI_BYTE, 0, comm));
 
-  PetscCall(PetscViewerASCIIOpen(PETSC_COMM_WORLD, filename, &csvViewer));
+  PetscCall(PetscViewerASCIIOpen(comm, filename, &csvViewer));
   PetscCall(PetscViewerPushFormat(csvViewer, PETSC_VIEWER_ASCII_CSV));
 
   // Use the CSV viewer to write out the local network
@@ -217,7 +217,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   if (showNoLabels) PetscCall(PetscStrlcat(options, " -nnl -nel ", sizeof(options)));
 
   // Get the value of $PETSC_DIR
-  PetscCall(PetscStrreplace(PETSC_COMM_WORLD, "${PETSC_DIR}/share/petsc/bin/dmnetwork_view.py", scriptFile, sizeof(scriptFile)));
+  PetscCall(PetscStrreplace(comm, "${PETSC_DIR}/share/petsc/bin/dmnetwork_view.py", scriptFile, sizeof(scriptFile)));
   PetscCall(PetscFixFilename(scriptFile, scriptFile));
   // Generate the system call for 'python3 $PETSC_DIR/share/petsc/dmnetwork_view.py <options> <file>'
   PetscCall(PetscArrayzero(proccall, sizeof(proccall)));
@@ -225,17 +225,17 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
 
 #if defined(PETSC_HAVE_POPEN)
   // Perform the call to run the python script (Note: while this is called on all ranks POpen will only run on rank 0)
-  PetscCall(PetscPOpen(PETSC_COMM_WORLD, NULL, proccall, "r", &processFile));
+  PetscCall(PetscPOpen(comm, NULL, proccall, "r", &processFile));
   if (processFile != NULL) {
-    while (fgets(buffer, sizeof(buffer), processFile) != NULL) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "%s", buffer));
+    while (fgets(buffer, sizeof(buffer), processFile) != NULL) PetscCall(PetscPrintf(comm, "%s", buffer));
   }
-  PetscCall(PetscPClose(PETSC_COMM_WORLD, processFile));
+  PetscCall(PetscPClose(comm, processFile));
 #else
   // Same thing, but using the standard library for systems that don't have POpen/PClose (only run on rank 0)
   if (rank == 0) {
     PetscCheck(system(proccall) == 0, comm, PETSC_ERR_SYS, "Failed to call viewer script");
     // Barrier so that all ranks wait until the call completes
-    PetscCallMPI(MPI_Barrier(PETSC_COMM_WORLD));
+    PetscCallMPI(MPI_Barrier(comm));
   }
 #endif
   // Clean up the temporary file we used using rank 0
