@@ -29,7 +29,10 @@ typedef struct {
   /* Support for MatDenseGetColumnVec and MatDenseGetSubMatrix */
   Mat                cmat;     /* matrix representation of a given subset of columns */
   Vec                cvec;     /* vector representation of a given column */
+  Vec                gemvvec;  /* work vector for gemv with vector of different memtype */
+  Vec                gemxarray; /* work vector for gemv / gemm with array of different memtype */
   const PetscScalar *ptrinuse; /* holds array to be restored (just a placeholder) */
+  PetscMemType       ptrinuse_memtype;
   PetscInt           vecinuse; /* if cvec is in use (col = vecinuse-1) */
   PetscInt           matinuse; /* if cmat is in use (cbegin = matinuse-1) */
 } Mat_SeqDense;

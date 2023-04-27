@@ -8,6 +8,8 @@
 #include <../src/mat/impls/dense/mpi/mpidense.h>
 #include <petscblaslapack.h>
 #include <../src/mat/impls/aij/seq/aij.h>
+#include <petscdevice_cuda.h>
+#include <petscdevice_hip.h>
 
 PetscErrorCode MatSeqDenseSymmetrize_Private(Mat A, PetscBool hermitian)
 {
@@ -1696,6 +1698,8 @@ PetscErrorCode MatDestroy_SeqDense(Mat mat)
   if (!l->unplaced_user_alloc) PetscCall(PetscFree(l->unplacedarray));
   PetscCheck(!l->vecinuse, PETSC_COMM_SELF, PETSC_ERR_ORDER, "Need to call MatDenseRestoreColumnVec() first");
   PetscCheck(!l->matinuse, PETSC_COMM_SELF, PETSC_ERR_ORDER, "Need to call MatDenseRestoreSubMatrix() first");
+  PetscCall(VecDestroy(&l->gemvvec));
+  PetscCall(VecDestroy(&l->gemxarray));
   PetscCall(VecDestroy(&l->cvec));
   PetscCall(MatDestroy(&l->cmat));
   PetscCall(PetscFree(mat->data));
@@ -3393,6 +3397,7 @@ PetscErrorCode MatCreateMPIMatConcatenateSeqMat_SeqDense(MPI_Comm comm, Mat inma
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+
 PetscErrorCode MatDenseCreateColumnVec_Private(Mat A, Vec *v)
 {
   PetscBool   isstd, iskok, iscuda, iship;
@@ -3437,6 +3442,52 @@ PetscErrorCode MatDenseCreateColumnVec_Private(Mat A, Vec *v)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode VecPlaceArrayMemType(Vec v, const PetscScalar *array, PetscMemType memtype)
+{
+  PetscFunctionBegin;
+  switch (memtype) {
+  case PETSC_MEMTYPE_HOST:
+    PetscCall(VecPlaceArray(v, array));
+    break;
+  case PETSC_MEMTYPE_CUDA:
+#if defined(PETSC_HAVE_CUDA)
+    PetscCall(VecCUDAPlaceArray(v, array));
+#endif
+    break;
+  case PETSC_MEMTYPE_HIP:
+#if defined(PETSC_HAVE_HIP)
+    PetscCall(VecHIPPlaceArray(v, array));
+#endif
+    break;
+  default:
+    SETERRQ(PetscObjectComm((PetscObject) v), PETSC_ERR_PLIB, "Memory type unsupported for array placement");
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode VecResetArrayMemType(Vec v, PetscMemType memtype)
+{
+  PetscFunctionBegin;
+  switch (memtype) {
+  case PETSC_MEMTYPE_HOST:
+    PetscCall(VecResetArray(v));
+    break;
+  case PETSC_MEMTYPE_CUDA:
+#if defined(PETSC_HAVE_CUDA)
+    PetscCall(VecCUDAResetArray(v));
+#endif
+    break;
+  case PETSC_MEMTYPE_HIP:
+#if defined(PETSC_HAVE_HIP)
+    PetscCall(VecHIPResetArray(v));
+#endif
+    break;
+  default:
+    SETERRQ(PetscObjectComm((PetscObject) v), PETSC_ERR_PLIB, "Memory type unsupported for array placement");
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PetscErrorCode MatDenseGetColumnVec_SeqDense(Mat A, PetscInt col, Vec *v)
 {
   Mat_SeqDense *a = (Mat_SeqDense *)A->data;
@@ -3446,8 +3497,10 @@ PetscErrorCode MatDenseGetColumnVec_SeqDense(Mat A, PetscInt col, Vec *v)
   PetscCheck(!a->matinuse, PETSC_COMM_SELF, PETSC_ERR_ORDER, "Need to call MatDenseRestoreSubMatrix() first");
   if (!a->cvec) PetscCall(MatDenseCreateColumnVec_Private(A, &a->cvec));
   a->vecinuse = col + 1;
-  PetscCall(MatDenseGetArray(A, (PetscScalar **)&a->ptrinuse));
-  PetscCall(VecPlaceArray(a->cvec, a->ptrinuse + (size_t)col * (size_t)a->lda));
+
+  PetscCall(MatDenseGetArrayAndMemType(A, (PetscScalar **)&a->ptrinuse, &a->ptrinuse_memtype));
+  PetscCall(VecPlaceArrayMemType(a->cvec, a->ptrinuse + (size_t)col * (size_t)a->lda, a->ptrinuse_memtype));
+
   *v = a->cvec;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -3461,7 +3514,7 @@ PetscErrorCode MatDenseRestoreColumnVec_SeqDense(Mat A, PetscInt col, Vec *v)
   PetscCheck(a->cvec, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Missing internal column vector");
   a->vecinuse = 0;
   PetscCall(MatDenseRestoreArray(A, (PetscScalar **)&a->ptrinuse));
-  PetscCall(VecResetArray(a->cvec));
+  PetscCall(VecResetArrayMemType(a->cvec, a->ptrinuse_memtype));
   if (v) *v = NULL;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -3475,8 +3528,8 @@ PetscErrorCode MatDenseGetColumnVecRead_SeqDense(Mat A, PetscInt col, Vec *v)
   PetscCheck(!a->matinuse, PETSC_COMM_SELF, PETSC_ERR_ORDER, "Need to call MatDenseRestoreSubMatrix() first");
   if (!a->cvec) PetscCall(MatDenseCreateColumnVec_Private(A, &a->cvec));
   a->vecinuse = col + 1;
-  PetscCall(MatDenseGetArrayRead(A, &a->ptrinuse));
-  PetscCall(VecPlaceArray(a->cvec, a->ptrinuse + (size_t)col * (size_t)a->lda));
+  PetscCall(MatDenseGetArrayReadAndMemType(A, &a->ptrinuse, &a->ptrinuse_memtype));
+  PetscCall(VecPlaceArrayMemType(a->cvec, a->ptrinuse + (size_t)col * (size_t)a->lda, a->ptrinuse_memtype));
   PetscCall(VecLockReadPush(a->cvec));
   *v = a->cvec;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -3490,9 +3543,9 @@ PetscErrorCode MatDenseRestoreColumnVecRead_SeqDense(Mat A, PetscInt col, Vec *v
   PetscCheck(a->vecinuse, PETSC_COMM_SELF, PETSC_ERR_ORDER, "Need to call MatDenseGetColumnVec() first");
   PetscCheck(a->cvec, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Missing internal column vector");
   a->vecinuse = 0;
-  PetscCall(MatDenseRestoreArrayRead(A, &a->ptrinuse));
+  PetscCall(MatDenseRestoreArrayReadAndMemType(A, &a->ptrinuse));
   PetscCall(VecLockReadPop(a->cvec));
-  PetscCall(VecResetArray(a->cvec));
+  PetscCall(VecResetArrayMemType(a->cvec, a->ptrinuse_memtype));
   if (v) *v = NULL;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -3506,8 +3559,8 @@ PetscErrorCode MatDenseGetColumnVecWrite_SeqDense(Mat A, PetscInt col, Vec *v)
   PetscCheck(!a->matinuse, PETSC_COMM_SELF, PETSC_ERR_ORDER, "Need to call MatDenseRestoreSubMatrix() first");
   if (!a->cvec) PetscCall(MatDenseCreateColumnVec_Private(A, &a->cvec));
   a->vecinuse = col + 1;
-  PetscCall(MatDenseGetArrayWrite(A, (PetscScalar **)&a->ptrinuse));
-  PetscCall(VecPlaceArray(a->cvec, a->ptrinuse + (size_t)col * (size_t)a->lda));
+  PetscCall(MatDenseGetArrayWriteAndMemType(A, (PetscScalar **)&a->ptrinuse, &a->ptrinuse_memtype));
+  PetscCall(VecPlaceArrayMemType(a->cvec, a->ptrinuse + (size_t)col * (size_t)a->lda, a->ptrinuse_memtype));
   *v = a->cvec;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -3520,7 +3573,7 @@ PetscErrorCode MatDenseRestoreColumnVecWrite_SeqDense(Mat A, PetscInt col, Vec *
   PetscCheck(a->vecinuse, PETSC_COMM_SELF, PETSC_ERR_ORDER, "Need to call MatDenseGetColumnVec() first");
   PetscCheck(a->cvec, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Missing internal column vector");
   a->vecinuse = 0;
-  PetscCall(MatDenseRestoreArrayWrite(A, (PetscScalar **)&a->ptrinuse));
+  PetscCall(MatDenseRestoreArrayWriteAndMemType(A, (PetscScalar **)&a->ptrinuse));
   PetscCall(VecResetArray(a->cvec));
   if (v) *v = NULL;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -3565,6 +3618,27 @@ PetscErrorCode MatDenseRestoreSubMatrix_SeqDense(Mat A, Mat *v)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatSeqDenseGetGemxArray_Private(Mat A_mat, PetscInt n, Vec *gemxarray)
+{
+  PetscFunctionBegin;
+  Mat_SeqDense *d = (Mat_SeqDense *) A_mat->data;
+  if (d->gemxarray) {
+    PetscInt vec_n;
+    PetscCall(VecGetLocalSize(d->gemxarray, &vec_n));
+    if (vec_n < n) {
+      PetscCall(VecDestroy(&d->gemxarray));
+    }
+  }
+  if (!d->gemxarray) {
+    PetscCall(VecCreate(PetscObjectComm((PetscObject)A_mat), &d->gemxarray));
+    PetscCall(VecSetSizes(d->gemxarray, n, n));
+    PetscCall(VecSetType(d->gemxarray, A_mat->defaultvectype));
+    PetscCall(VecSetUp(d->gemxarray));
+  }
+  *gemxarray = d->gemxarray;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PetscErrorCode MatDenseColumnsGEMVHermitianTranspose_SeqDense(PetscScalar alpha, Mat A_mat, PetscInt col_start, PetscInt col_end, Vec x, PetscScalar beta, PetscScalar *y, PetscInt inc_y, PetscMemType memtype_y)
 {
   PetscFunctionBegin;
@@ -3581,27 +3655,78 @@ PetscErrorCode MatDenseColumnsGEMVHermitianTranspose_SeqDense(PetscScalar alpha,
   PetscMemType memtype_x;
   PetscCall(VecGetArrayReadAndMemType(x, &x_array, &memtype_x));
 
-  if (memtype_A == memtype_x && memtype_x == memtype_y) {
-    switch (memtype_y) {
-    case PETSC_MEMTYPE_HOST:
-      {
-        PetscBLASInt m_b, n_b, lda_b, incy_b;
-        PetscBLASInt one = 1;
+  if (memtype_x != memtype_A) {
+    Mat_SeqDense *d = (Mat_SeqDense *) A_mat->data;
+    PetscScalar *d_array;
 
-        PetscCall(PetscBLASIntCast(m, &m_b));
-        PetscCall(PetscBLASIntCast(n, &n_b));
-        PetscCall(PetscBLASIntCast(ld_A, &lda_b));
-        PetscCall(PetscBLASIntCast(inc_y, &incy_b));
-        PetscCallBLAS("BLASgemv", BLASgemv_("C", &m_b, &n_b, &alpha, A, &lda_b, x_array, &one, &beta, y, &incy_b));
-      }
-      break;
-    default:
-      SETERRQ(PetscObjectComm((PetscObject)A_mat), PETSC_ERR_PLIB, "Not implemented");
+    if (!d->gemvvec) {PetscCall(MatCreateVecs(A_mat, NULL, &d->gemvvec));}
+    PetscCall(VecGetArrayWriteAndMemType(d->gemvvec, &d_array, NULL));
+
+#if defined(PETSC_HAVE_CUDA)
+    PetscAssert(PetscDeviceInitialized(PETSC_DEVICE_CUDA), PETSC_COMM_SELF, PETSC_ERR_PLIB, "Device memory but device not initialized");
+    PetscCallCUDA(cudaMemcpy(d_array, x_array, m * sizeof(*x_array), cudaMemcpyDefault));
+#elif defined(PETSC_HAVE_HIP)
+    PetscAssert(PetscDeviceInitialized(PETSC_DEVICE_HIP), PETSC_COMM_SELF, PETSC_ERR_PLIB, "Device memory but device not initialized");
+    PetscCallHIP(hipMemcpy(d_array, x_array, m * sizeof(*x_array), hipMemcpyDefault));
+#else
+    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Device memory but not supported devices");
+#endif
+    PetscCall(VecRestoreArrayWriteAndMemType(d->gemvvec, &d_array));
+    PetscCall(VecRestoreArrayReadAndMemType(x, &x_array));
+    x = d->gemvvec;
+    PetscCall(VecGetArrayReadAndMemType(x, &x_array, &memtype_x));
+    PetscAssert(memtype_x == memtype_A, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatrixCreateVecs() creates column vector with different memtype from dense matrix");
+  }
+
+  Vec gemxarray = NULL;
+  if (memtype_y != memtype_A) {
+    PetscInt gemxsize = 1 + (col_end - col_start - 1) * inc_y;
+    PetscCall(MatSeqDenseGetGemxArray_Private(A_mat, gemxsize, &gemxarray));
+    if (beta == 0.0) {
+      PetscCall(VecZeroEntries(gemxarray));
+    } else {
+      PetscScalar *d_array;
+
+      PetscCall(VecGetArrayWriteAndMemType(gemxarray, &d_array, NULL));
+#if defined(PETSC_HAVE_CUDA)
+      PetscAssert(PetscDeviceInitialized(PETSC_DEVICE_CUDA), PETSC_COMM_SELF, PETSC_ERR_PLIB, "Device memory but device not initialized");
+      PetscCallCUDA(cudaMemcpy(d_array, y, gemxsize * sizeof(*y), cudaMemcpyDefault));
+#elif defined(PETSC_HAVE_HIP)
+      PetscAssert(PetscDeviceInitialized(PETSC_DEVICE_HIP), PETSC_COMM_SELF, PETSC_ERR_PLIB, "Device memory but device not initialized");
+      PetscCallHIP(hipMemcpy(d_array, y, gemxsize * sizeof(*y), hipMemcpyDefault));
+#else
+      SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Device memory but not supported devices");
+#endif
+      PetscCall(VecRestoreArrayWriteAndMemType(gemxarray, &d_array));
     }
-  } else SETERRQ(PetscObjectComm((PetscObject)A_mat), PETSC_ERR_PLIB, "Not implemented");
+    PetscCall(VecGetArrayAndMemType(gemxarray, &y, &memtype_y));
+    PetscAssert(memtype_y == memtype_A, PETSC_COMM_SELF, PETSC_ERR_PLIB, "defaultvectype creates vector with different memtype from dense matrix");
+  }
+
+  switch (memtype_y) {
+  case PETSC_MEMTYPE_HOST:
+    {
+      PetscBLASInt m_b, n_b, lda_b, incy_b;
+      PetscBLASInt one = 1;
+
+      PetscCall(PetscBLASIntCast(m, &m_b));
+      PetscCall(PetscBLASIntCast(n, &n_b));
+      PetscCall(PetscBLASIntCast(ld_A, &lda_b));
+      PetscCall(PetscBLASIntCast(inc_y, &incy_b));
+      PetscCallBLAS("BLASgemv", BLASgemv_("C", &m_b, &n_b, &alpha, A, &lda_b, x_array, &one, &beta, y, &incy_b));
+    }
+    break;
+  case PETSC_MEMTYPE_CUDA:
+  case PETSC_MEMTYPE_HIP:
+  default:
+    SETERRQ(PetscObjectComm((PetscObject)A_mat), PETSC_ERR_PLIB, "Not implemented");
+  }
 
   PetscCall(VecRestoreArrayReadAndMemType(x, &x_array));
   PetscCall(MatDenseRestoreArrayReadAndMemType(A_mat, &A_array));
+  if (gemxarray) {
+    PetscCall(VecRestoreArrayAndMemType(gemxarray, &y));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -3618,30 +3743,81 @@ PetscErrorCode MatDenseColumnsGEMV_SeqDense(PetscScalar alpha, Mat A_mat, PetscI
   const PetscScalar *A = &A_array[ld_A * col_start];
 
   PetscScalar *y_array;
+  PetscScalar *y_array_orig = NULL;
   PetscMemType memtype_y;
   PetscCall(VecGetArrayAndMemType(y, &y_array, &memtype_y));
 
-  if (memtype_A == memtype_x && memtype_x == memtype_y) {
-    switch (memtype_y) {
-    case PETSC_MEMTYPE_HOST:
-      {
-        PetscBLASInt m_b, n_b, lda_b, incx_b;
-        PetscBLASInt one = 1;
+  if (memtype_y != memtype_A) {
+    Mat_SeqDense *d = (Mat_SeqDense *) A_mat->data;
 
-        PetscCall(PetscBLASIntCast(m, &m_b));
-        PetscCall(PetscBLASIntCast(n, &n_b));
-        PetscCall(PetscBLASIntCast(ld_A, &lda_b));
-        PetscCall(PetscBLASIntCast(inc_x, &incx_b));
-        PetscCallBLAS("BLASgemv", BLASgemv_("N", &m_b, &n_b, &alpha, A, &lda_b, x, &incx_b, &beta, y_array, &one));
-      }
-      break;
-    default:
-      SETERRQ(PetscObjectComm((PetscObject)A_mat), PETSC_ERR_PLIB, "Not implemented");
+    if (!d->gemvvec) {PetscCall(MatCreateVecs(A_mat, NULL, &d->gemvvec));}
+
+    if (beta == 0.0) {
+      PetscCall(VecZeroEntries(d->gemvvec));
+    } else {
+      PetscScalar *d_array;
+
+      PetscCall(VecGetArrayWriteAndMemType(d->gemvvec, &d_array, NULL));
+#if defined(PETSC_HAVE_CUDA)
+      PetscAssert(PetscDeviceInitialized(PETSC_DEVICE_CUDA), PETSC_COMM_SELF, PETSC_ERR_PLIB, "Device memory but device not initialized");
+      PetscCallCUDA(cudaMemcpy(d_array, y_array, m * sizeof(*y_array), cudaMemcpyDefault));
+#elif defined(PETSC_HAVE_HIP)
+      PetscAssert(PetscDeviceInitialized(PETSC_DEVICE_HIP), PETSC_COMM_SELF, PETSC_ERR_PLIB, "Device memory but device not initialized");
+      PetscCallHIP(hipMemcpy(d_array, y_array, m * sizeof(*y_array), hipMemcpyDefault));
+#else
+      SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Device memory but not supported devices");
+#endif
+      PetscCall(VecRestoreArrayWriteAndMemType(d->gemvvec, &d_array));
     }
-  } else SETERRQ(PetscObjectComm((PetscObject)A_mat), PETSC_ERR_PLIB, "Not implemented");
+    PetscCall(VecRestoreArrayAndMemType(y, &y_array));
+    PetscCall(VecGetArrayAndMemType(y, &y_array, &memtype_y));
+    PetscAssert(memtype_y == memtype_A, PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatrixCreateVecs() creates column vector with different memtype from dense matrix");
+  }
+
+  Vec gemxarray = NULL;
+  if (memtype_x != memtype_A) {
+    PetscInt gemxsize = 1 + (col_end - col_start - 1) * inc_x;
+    PetscCall(MatSeqDenseGetGemxArray_Private(A_mat, gemxsize, &gemxarray));
+    PetscScalar *d_array;
+
+    PetscCall(VecGetArrayWriteAndMemType(gemxarray, &d_array, NULL));
+#if defined(PETSC_HAVE_CUDA)
+    PetscAssert(PetscDeviceInitialized(PETSC_DEVICE_CUDA), PETSC_COMM_SELF, PETSC_ERR_PLIB, "Device memory but device not initialized");
+    PetscCallCUDA(cudaMemcpy(d_array, x, gemxsize * sizeof(*x), cudaMemcpyDefault));
+#elif defined(PETSC_HAVE_HIP)
+    PetscAssert(PetscDeviceInitialized(PETSC_DEVICE_HIP), PETSC_COMM_SELF, PETSC_ERR_PLIB, "Device memory but device not initialized");
+    PetscCallHIP(hipMemcpy(d_array, x, gemxsize * sizeof(*x), hipMemcpyDefault));
+#else
+    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Device memory but not supported devices");
+#endif
+    PetscCall(VecRestoreArrayWriteAndMemType(gemxarray, &d_array));
+    
+    PetscCall(VecGetArrayReadAndMemType(gemxarray, &x, &memtype_x));
+    PetscAssert(memtype_x == memtype_A, PETSC_COMM_SELF, PETSC_ERR_PLIB, "defaultvectype creates vector with different memtype from dense matrix");
+  }
+
+  switch (memtype_y) {
+  case PETSC_MEMTYPE_HOST:
+    {
+      PetscBLASInt m_b, n_b, lda_b, incx_b;
+      PetscBLASInt one = 1;
+
+      PetscCall(PetscBLASIntCast(m, &m_b));
+      PetscCall(PetscBLASIntCast(n, &n_b));
+      PetscCall(PetscBLASIntCast(ld_A, &lda_b));
+      PetscCall(PetscBLASIntCast(inc_x, &incx_b));
+      PetscCallBLAS("BLASgemv", BLASgemv_("N", &m_b, &n_b, &alpha, A, &lda_b, x, &incx_b, &beta, y_array, &one));
+    }
+    break;
+  default:
+    SETERRQ(PetscObjectComm((PetscObject)A_mat), PETSC_ERR_PLIB, "Not implemented");
+  }
 
   PetscCall(VecRestoreArrayAndMemType(y, &y_array));
   PetscCall(MatDenseRestoreArrayReadAndMemType(A_mat, &A_array));
+  if (gemxarray) {
+    PetscCall(VecRestoreArrayReadAndMemType(gemxarray, &x));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
