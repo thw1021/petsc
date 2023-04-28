@@ -180,7 +180,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   PetscCall(PetscDrawGetPause(draw, &drawPause));
   if (drawPause > 0) {
     char pausebuffer[64];
-    PetscCall(PetscSNPrintf(pausebuffer, sizeof(pausebuffer), "%f", drawPause));
+    PetscCall(PetscSNPrintf(pausebuffer, sizeof(pausebuffer), "%f", (double)drawPause));
     PetscCall(PetscStrlcat(options, " -dt ", sizeof(options)));
     PetscCall(PetscStrlcat(options, pausebuffer, sizeof(options)));
   }
