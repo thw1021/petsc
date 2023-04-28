@@ -1,14 +1,14 @@
+#include <petscconf.h>
+// We need to define this ahead of any other includes to make sure mkstemp is actually defined
+#if defined(PETSC_HAVE_MKSTEMP)
+  #define _XOPEN_SOURCE 600
+#endif
 #include "petsc/private/petscimpl.h"
 #include "petscerror.h"
 #include "petscis.h"
 #include "petscstring.h"
 #include "petscsys.h"
 #include "petscsystypes.h"
-#include <petscconf.h>
-// We need to define this ahead of any other includes to make sure mkstemp is actually defined
-#if defined(PETSC_HAVE_MKSTEMP)
-  #define _XOPEN_SOURCE 600
-#endif
 #include <petsc/private/dmnetworkimpl.h> /*I  "petscdmnetwork.h"  I*/
 #include <petscdraw.h>
 
@@ -180,7 +180,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   PetscCall(PetscDrawGetPause(draw, &drawPause));
   if (drawPause > 0) {
     char pausebuffer[64];
-    PetscCall(PetscSNPrintf(pausebuffer, sizeof(pausebuffer), "%f", drawPause));
+    PetscCall(PetscSNPrintf(pausebuffer, sizeof(pausebuffer), "%f", (double)drawPause));
     PetscCall(PetscStrlcat(options, " -dt ", sizeof(options)));
     PetscCall(PetscStrlcat(options, pausebuffer, sizeof(options)));
   }
