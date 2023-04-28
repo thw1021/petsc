@@ -138,6 +138,8 @@ typedef struct {
   PetscInt  numAMRRefine[LANDAU_MAX_GRIDS];  /* normal AMR - refine from origin */
   PetscInt  postAMRRefine[LANDAU_MAX_GRIDS]; /* uniform refinement of AMR */
   PetscBool simplex;
+  char      filename[PETSC_MAX_PATH_LEN];
+  PetscReal thermal_speed[LANDAU_MAX_GRIDS];
   /* relativistic */
   PetscBool use_energy_tensor_trick;
   PetscBool use_relativistic_corrections;
