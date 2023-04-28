@@ -89,9 +89,6 @@ struct Mat_SeqAIJKokkos {
   PetscCountKokkosView jmap_d; /* perm[disp+jmap[i]..disp+jmap[i+1]) gives indices of entries in v[] associated with i-th nonzero of the matrix */
   PetscCountKokkosView perm_d; /* The permutation array in sorting (i,j) by row and then by col */
 
-  Kokkos::View<PetscInt *> i_uncompressed_d;
-  Kokkos::View<PetscInt *> colmap_d; // ugh, this is a parallel construct
-  Kokkos::View<PetscInt *> diag_d;   // factorizations
 
   /* Construct a nrows by ncols matrix with nnz nonzeros from the given (i,j,a) on host. Caller also specifies a nonzero state */
   Mat_SeqAIJKokkos(PetscInt nrows, PetscInt ncols, PetscInt nnz, const MatRowMapType *i, MatColIdxType *j, MatScalarType *a, PetscObjectState nzstate, PetscBool copyValues = PETSC_TRUE)
