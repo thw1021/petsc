@@ -3,6 +3,12 @@
 #if defined(PETSC_HAVE_MKSTEMP)
   #define _XOPEN_SOURCE 600
 #endif
+#include "petsc/private/petscimpl.h"
+#include "petscerror.h"
+#include "petscis.h"
+#include "petscstring.h"
+#include "petscsys.h"
+#include "petscsystypes.h"
 #include <petsc/private/dmnetworkimpl.h> /*I  "petscdmnetwork.h"  I*/
 #include <petscdraw.h>
 
@@ -74,11 +80,14 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
 {
   PetscMPIInt rank, size;
   MPI_Comm    comm;
-  char        filename[PETSC_MAX_PATH_LEN + 1], proccall[PETSC_MAX_PATH_LEN + 500], scriptFile[PETSC_MAX_PATH_LEN + 1], streamBuffer[256];
+  char        filename[PETSC_MAX_PATH_LEN + 1], options[512], proccall[PETSC_MAX_PATH_LEN + 512], scriptFile[PETSC_MAX_PATH_LEN + 1], buffer[256];
   PetscViewer csvViewer;
   FILE       *processFile = NULL;
-  PetscBool   isnull;
+  PetscBool   isnull, optionShowRanks = PETSC_FALSE, optionRankIsSet = PETSC_FALSE, showNoNodes = PETSC_FALSE, showNoLabels = PETSC_FALSE;
   PetscDraw   draw;
+  DM_Network *network = (DM_Network *)dm->data;
+  PetscReal   drawPause;
+  PetscInt    i;
 #if defined(PETSC_HAVE_MKSTEMP)
   PetscBool isSharedTmp;
 #endif
@@ -102,6 +111,22 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   // Note: This must be done collectively on every rank, it cannot be done on a single rank
   PetscCall(PetscSharedTmp(comm, &isSharedTmp));
 #endif
+
+  /* Process Options */
+  optionShowRanks = network->vieweroptions.showallranks;
+  showNoNodes     = network->vieweroptions.shownovertices;
+  showNoLabels    = network->vieweroptions.shownolabels;
+
+  /*
+    TODO: The set of ranks to view the DMNetwork on should have programmable default in the network->vieweroptions as well
+    TODO:  if the option -dmnetwork_view_tmpdir can be moved up here that would be good as well.
+  */
+  PetscOptionsBegin(PetscObjectComm((PetscObject)dm), ((PetscObject)dm)->prefix, "MatPlotLib PetscViewer DMNetwork Options", "PetscViewer");
+  PetscCall(PetscOptionsBool("-dmnetwork_view_all_ranks", "View all ranks in the DMNetwork", NULL, optionShowRanks, &optionShowRanks, NULL));
+  PetscCall(PetscOptionsString("-dmnetwork_view_rank_range", "Set of ranks to view the DMNetwork on", NULL, buffer, buffer, sizeof(buffer), &optionRankIsSet));
+  PetscCall(PetscOptionsBool("-dmnetwork_view_no_vertices", "Do not view vertices", NULL, showNoNodes, &showNoNodes, NULL));
+  PetscCall(PetscOptionsBool("-dmnetwork_view_no_labels", "Do not view labels", NULL, showNoLabels, &showNoLabels, NULL));
+  PetscOptionsEnd();
 
   // Generate and broadcast the temporary file name from rank 0
   if (rank == 0) {
@@ -148,18 +173,61 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   // Close the viewer
   PetscCall(PetscViewerDestroy(&csvViewer));
 
+  // Generate options string
+  PetscCall(PetscMemzero(options, sizeof(options)));
+  // If the draw is null run as a "test execute" ie. do nothing just test that the script was called correctly
+  PetscCall(PetscStrlcat(options, isnull ? " -tx " : " ", sizeof(options)));
+  PetscCall(PetscDrawGetPause(draw, &drawPause));
+  if (drawPause > 0) {
+    char pausebuffer[64];
+    PetscCall(PetscSNPrintf(pausebuffer, sizeof(pausebuffer), "%f", (double)drawPause));
+    PetscCall(PetscStrlcat(options, " -dt ", sizeof(options)));
+    PetscCall(PetscStrlcat(options, pausebuffer, sizeof(options)));
+  }
+  if (optionShowRanks || optionRankIsSet) {
+    // Show all ranks only if the option is set in code or by the user AND not showing specific ranks AND there is more than one process
+    if (optionShowRanks && !optionRankIsSet && size != 1) PetscCall(PetscStrlcat(options, " -dar ", sizeof(options)));
+    // Do not show the global plot if the user requests it OR if one specific rank is requested
+    if (network->vieweroptions.dontshowglobal || optionRankIsSet) PetscCall(PetscStrlcat(options, " -ncp ", sizeof(options)));
+
+    if (optionRankIsSet) {
+      // If a range of ranks to draw is specified append it
+      PetscCall(PetscStrlcat(options, " -drr ", sizeof(options)));
+      PetscCall(PetscStrlcat(options, buffer, sizeof(options)));
+    } else {
+      // Otherwise, use the options provided in code
+      if (network->vieweroptions.viewranks) {
+        const PetscInt *viewranks;
+        PetscInt        viewrankssize;
+        char            rankbuffer[64];
+        PetscCall(ISGetTotalIndices(network->vieweroptions.viewranks, &viewranks));
+        PetscCall(ISGetSize(network->vieweroptions.viewranks, &viewrankssize));
+        PetscCall(PetscStrlcat(options, " -drr ", sizeof(options)));
+        for (i = 0; i < viewrankssize; i++) {
+          PetscCall(PetscSNPrintf(rankbuffer, sizeof(rankbuffer), "%" PetscInt_FMT, viewranks[i]));
+          PetscCall(PetscStrlcat(options, rankbuffer, sizeof(options)));
+        }
+        PetscCall(ISRestoreTotalIndices(network->vieweroptions.viewranks, &viewranks));
+      } // if not provided an IS of viewing ranks, skip viewing
+    }
+  }
+
+  // Check for options for visibility...
+  if (showNoNodes) PetscCall(PetscStrlcat(options, " -nn ", sizeof(options)));
+  if (showNoLabels) PetscCall(PetscStrlcat(options, " -nnl -nel ", sizeof(options)));
+
   // Get the value of $PETSC_DIR
   PetscCall(PetscStrreplace(comm, "${PETSC_DIR}/share/petsc/bin/dmnetwork_view.py", scriptFile, sizeof(scriptFile)));
   PetscCall(PetscFixFilename(scriptFile, scriptFile));
-  // Generate the system call for 'python3 $PETSC_DIR/share/petsc/dmnetwork_view.py <file>'
+  // Generate the system call for 'python3 $PETSC_DIR/share/petsc/dmnetwork_view.py <options> <file>'
   PetscCall(PetscArrayzero(proccall, sizeof(proccall)));
-  PetscCall(PetscSNPrintf(proccall, sizeof(proccall), "%s %s %s %s", PETSC_PYTHON_EXE, scriptFile, (isnull ? "-tx" : ""), filename));
+  PetscCall(PetscSNPrintf(proccall, sizeof(proccall), "%s %s %s %s", PETSC_PYTHON_EXE, scriptFile, options, filename));
 
 #if defined(PETSC_HAVE_POPEN)
   // Perform the call to run the python script (Note: while this is called on all ranks POpen will only run on rank 0)
   PetscCall(PetscPOpen(comm, NULL, proccall, "r", &processFile));
   if (processFile != NULL) {
-    while (fgets(streamBuffer, sizeof(streamBuffer), processFile) != NULL) PetscCall(PetscPrintf(comm, "%s", streamBuffer));
+    while (fgets(buffer, sizeof(buffer), processFile) != NULL) PetscCall(PetscPrintf(comm, "%s", buffer));
   }
   PetscCall(PetscPClose(comm, processFile));
 #else
@@ -247,5 +315,63 @@ PetscErrorCode DMView_Network(DM dm, PetscViewer viewer)
     PetscCall(PetscViewerFlush(viewer));
     PetscCall(PetscViewerASCIIPopSynchronized(viewer));
   } else PetscCheck(iascii, PetscObjectComm((PetscObject)dm), PETSC_ERR_SUP, "Viewer type %s not yet supported for DMNetwork writing", ((PetscObject)viewer)->type_name);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode DMNetworkViewSetShowRanks(DM dm, PetscBool showranks)
+{
+  DM_Network *network = (DM_Network *)dm->data;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMNETWORK);
+  network->vieweroptions.showallranks = showranks;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode DMNetworkViewSetShowGlobal(DM dm, PetscBool showglobal)
+{
+  DM_Network *network = (DM_Network *)dm->data;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMNETWORK);
+  network->vieweroptions.dontshowglobal = (PetscBool)(!showglobal);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode DMNetworkViewSetShowVertices(DM dm, PetscBool showvertices)
+{
+  DM_Network *network = (DM_Network *)dm->data;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMNETWORK);
+  network->vieweroptions.shownovertices = (PetscBool)(!showvertices);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+/*
+  TODO: Better name as it conflicts with DMLabel meaning
+*/
+PetscErrorCode DMNetworkViewSetShowLabels(DM dm, PetscBool showlabels)
+{
+  DM_Network *network = (DM_Network *)dm->data;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMNETWORK);
+  network->vieweroptions.shownolabels = (PetscBool)(!showlabels);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  Note that DMnetwork takes ownership of the IS. IS should be be destroyed by the caller.
+ */
+PetscErrorCode DMNetworkViewSetViewRanks(DM dm, IS viewranks)
+{
+  DM_Network *network = (DM_Network *)dm->data;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMNETWORK);
+  PetscValidHeaderSpecific(viewranks, IS_CLASSID, 2);
+  PetscCall(ISDestroy(&network->vieweroptions.viewranks));
+  PetscCall(PetscObjectReference((PetscObject)viewranks));
+  network->vieweroptions.viewranks = viewranks;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
