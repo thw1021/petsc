@@ -639,17 +639,17 @@ static PetscErrorCode LandauDMCreateVMeshes(MPI_Comm comm_self, const PetscInt d
         if (len) {
           Vec          coords;
           PetscScalar *x;
-          PetscInt N;
-          char str[] = "-dm_landau_view_file_0";
+          PetscInt     N;
+          char         str[] = "-dm_landau_view_file_0";
           str[21] += grid;
           PetscCall(DMPlexCreateFromFile(comm_self, ctx->filename, "plexland.c", PETSC_TRUE, &ctx->plex[grid]));
           PetscCall(DMGetCoordinatesLocal(ctx->plex[grid], &coords));
           PetscCall(VecGetSize(coords, &N));
           PetscCall(VecGetArray(coords, &x));
           /* scale by domain size */
-          for (PetscInt i = 0; i < N; i +=2) {
-            x[i+0] *= ctx->radius_perp[grid];
-            x[i+1] *= ctx->radius_par[grid] ;
+          for (PetscInt i = 0; i < N; i += 2) {
+            x[i + 0] *= ctx->radius_perp[grid];
+            x[i + 1] *= ctx->radius_par[grid];
           }
           PetscCall(VecRestoreArray(coords, &x));
           PetscCall(PetscInfo(ctx->plex[grid], "%d) Read %s mesh file (%s)", (int)grid, ctx->filename, str));
@@ -1061,7 +1061,7 @@ static PetscErrorCode makeLambdas(LandauCtx *ctx)
 
 static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
 {
-  PetscBool flg,fileflg;
+  PetscBool flg, fileflg;
   PetscInt  ii, nt, nm, nc, num_species_grid[LANDAU_MAX_GRIDS], non_dim_grid;
   PetscReal lnLam = 10;
   DM        dummy;
@@ -1210,7 +1210,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
       num_species_grid[1] = ctx->num_species - 1;
       ctx->num_grids      = 2;
     } else {
-      ctx->num_grids      = ctx->num_species;
+      ctx->num_grids = ctx->num_species;
       for (ii = 0; ii < ctx->num_grids; ii++) num_species_grid[ii] = 1;
     }
   }
@@ -1218,7 +1218,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   PetscCheck(ctx->species_offset[ctx->num_grids] == ctx->num_species, ctx->comm, PETSC_ERR_ARG_WRONG, "ctx->species_offset[ctx->num_grids] %" PetscInt_FMT " != ctx->num_species = %" PetscInt_FMT " ???????????", ctx->species_offset[ctx->num_grids],
              ctx->num_species);
   for (PetscInt grid = 0; grid < ctx->num_grids; grid++) {
-    int iii       = ctx->species_offset[grid];                                          // normalize with first (arbitrary) species on grid
+    int iii                  = ctx->species_offset[grid];                                          // normalize with first (arbitrary) species on grid
     ctx->thermal_speed[grid] = PetscSqrtReal(ctx->k * ctx->thermal_temps[iii] / ctx->masses[iii]); /* arbitrary units for non-dimensionalization: plasma formulary def */
   }
   // get lambdas here because we need them for t_0 etc
@@ -1234,8 +1234,8 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   PetscCall(PetscOptionsInt("-dm_landau_normalization_grid", "Index of grid to use for setting v_0, m_0, t_0. (Not recommended)", "plexland.c", non_dim_grid, &non_dim_grid, &flg));
   if (non_dim_grid != 0) PetscCall(PetscInfo(dummy, "Normalization grid set to %" PetscInt_FMT ", but non-default not well verified\n", non_dim_grid));
   PetscCheck(non_dim_grid >= 0 && non_dim_grid < ctx->num_species, ctx->comm, PETSC_ERR_ARG_WRONG, "Normalization grid wrong: %" PetscInt_FMT, non_dim_grid);
-  ctx->v_0 = ctx->thermal_speed[non_dim_grid];     /* arbitrary units for non dimensionalization: global mean velocity in 1D of electrons */
-  ctx->m_0 = ctx->masses[non_dim_grid]; /* arbitrary reference mass, electrons */
+  ctx->v_0 = ctx->thermal_speed[non_dim_grid]; /* arbitrary units for non dimensionalization: global mean velocity in 1D of electrons */
+  ctx->m_0 = ctx->masses[non_dim_grid];        /* arbitrary reference mass, electrons */
   ctx->t_0 = 8 * PETSC_PI * PetscSqr(ctx->epsilon0 * ctx->m_0 / PetscSqr(ctx->charges[non_dim_grid])) / ctx->lambdas[non_dim_grid][non_dim_grid] / ctx->n_0 * PetscPowReal(ctx->v_0, 3); /* note, this t_0 makes nu[non_dim_grid,non_dim_grid]=1 */
   /* domain */
   nt = LANDAU_MAX_GRIDS;
