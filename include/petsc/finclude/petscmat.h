@@ -208,7 +208,6 @@
 #define MATSOLVERHIPSPARSEBAND   'hipsparseband'
 #define MATSOLVERHIP             'hip'
 #define MATSOLVERKOKKOS          'kokkos'
-#define MATSOLVERKOKKOSDEVICE    'kokkosdevice'
 #define MATSOLVERSPQR            'spqr'
 
 !
