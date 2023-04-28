@@ -634,14 +634,25 @@ static PetscErrorCode LandauDMCreateVMeshes(MPI_Comm comm_self, const PetscInt d
         if (dim == 3) PetscCall(PetscObjectSetName((PetscObject)ctx->plex[grid], "cube"));
         else PetscCall(PetscObjectSetName((PetscObject)ctx->plex[grid], "half-plane"));
       } else if (dim == 2) {
-        char      filename[PETSC_MAX_PATH_LEN];
-        PetscBool flg;
-        PetscCall(PetscOptionsGetString(NULL, NULL, "-dm_landau_filename", filename, sizeof(filename), &flg));
-        if (flg) {
+        size_t len;
+        PetscCall(PetscStrlen(ctx->filename, &len));
+        if (len) {
+          Vec          coords;
+          PetscScalar *x;
+          PetscInt N;
           char str[] = "-dm_landau_view_file_0";
           str[21] += grid;
-          PetscCall(DMPlexCreateFromFile(comm_self, filename, "plexland.c", PETSC_TRUE, &ctx->plex[grid]));
-          PetscCall(PetscInfo(ctx->plex[grid], "%d) Read %s mesh file (%s)", (int)grid, filename, str));
+          PetscCall(DMPlexCreateFromFile(comm_self, ctx->filename, "plexland.c", PETSC_TRUE, &ctx->plex[grid]));
+          PetscCall(DMGetCoordinatesLocal(ctx->plex[grid], &coords));
+          PetscCall(VecGetSize(coords, &N));
+          PetscCall(VecGetArray(coords, &x));
+          /* scale by domain size */
+          for (PetscInt i = 0; i < N; i +=2) {
+            x[i+0] *= ctx->radius_perp[grid];
+            x[i+1] *= ctx->radius_par[grid] ;
+          }
+          PetscCall(VecRestoreArray(coords, &x));
+          PetscCall(PetscInfo(ctx->plex[grid], "%d) Read %s mesh file (%s)", (int)grid, ctx->filename, str));
           PetscCall(DMViewFromOptions(ctx->plex[grid], NULL, str));
         } else {
           PetscInt       numCells = ctx->simplex ? 12 : 6, cell_size = ctx->simplex ? 3 : 4, j;
@@ -1050,9 +1061,9 @@ static PetscErrorCode makeLambdas(LandauCtx *ctx)
 
 static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
 {
-  PetscBool flg;
+  PetscBool flg,fileflg;
   PetscInt  ii, nt, nm, nc, num_species_grid[LANDAU_MAX_GRIDS], non_dim_grid;
-  PetscReal v0_grid[LANDAU_MAX_GRIDS], lnLam = 10;
+  PetscReal lnLam = 10;
   DM        dummy;
 
   PetscFunctionBegin;
@@ -1118,33 +1129,32 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   ctx->SData_d.coo_elem_fullNb        = NULL;
   ctx->SData_d.coo_size               = 0;
   PetscOptionsBegin(ctx->comm, prefix, "Options for Fokker-Plank-Landau collision operator", "none");
-  {
-    char opstring[256];
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
-    ctx->deviceType = LANDAU_KOKKOS;
-    PetscCall(PetscStrncpy(opstring, "kokkos", sizeof(opstring)));
+  ctx->deviceType = LANDAU_KOKKOS;
+  PetscCall(PetscStrncpy(ctx->filename, "kokkos", sizeof(ctx->filename)));
 #elif defined(PETSC_HAVE_CUDA)
-    ctx->deviceType = LANDAU_CUDA;
-    PetscCall(PetscStrncpy(opstring, "cuda", sizeof(opstring)));
+  ctx->deviceType = LANDAU_CUDA;
+  PetscCall(PetscStrncpy(ctx->filename, "cuda", sizeof(ctx->filename)));
 #else
-    ctx->deviceType = LANDAU_CPU;
-    PetscCall(PetscStrncpy(opstring, "cpu", sizeof(opstring)));
+  ctx->deviceType = LANDAU_CPU;
+  PetscCall(PetscStrncpy(ctx->filename, "cpu", sizeof(ctx->filename)));
 #endif
-    PetscCall(PetscOptionsString("-dm_landau_device_type", "Use kernels on 'cpu', 'cuda', or 'kokkos'", "plexland.c", opstring, opstring, sizeof(opstring), NULL));
-    PetscCall(PetscStrcmp("cpu", opstring, &flg));
+  PetscCall(PetscOptionsString("-dm_landau_device_type", "Use kernels on 'cpu', 'cuda', or 'kokkos'", "plexland.c", ctx->filename, ctx->filename, sizeof(ctx->filename), NULL));
+  PetscCall(PetscStrcmp("cpu", ctx->filename, &flg));
+  if (flg) {
+    ctx->deviceType = LANDAU_CPU;
+  } else {
+    PetscCall(PetscStrcmp("cuda", ctx->filename, &flg));
     if (flg) {
-      ctx->deviceType = LANDAU_CPU;
+      ctx->deviceType = LANDAU_CUDA;
     } else {
-      PetscCall(PetscStrcmp("cuda", opstring, &flg));
-      if (flg) {
-        ctx->deviceType = LANDAU_CUDA;
-      } else {
-        PetscCall(PetscStrcmp("kokkos", opstring, &flg));
-        if (flg) ctx->deviceType = LANDAU_KOKKOS;
-        else SETERRQ(ctx->comm, PETSC_ERR_ARG_WRONG, "-dm_landau_device_type %s", opstring);
-      }
+      PetscCall(PetscStrcmp("kokkos", ctx->filename, &flg));
+      if (flg) ctx->deviceType = LANDAU_KOKKOS;
+      else SETERRQ(ctx->comm, PETSC_ERR_ARG_WRONG, "-dm_landau_device_type %s", ctx->filename);
     }
   }
+  ctx->filename[0] = '\0';
+  PetscCall(PetscOptionsString("-dm_landau_filename", "file to read mesh from", "plexland.c", ctx->filename, ctx->filename, sizeof(ctx->filename), &fileflg));
   PetscCall(PetscOptionsReal("-dm_landau_electron_shift", "Shift in thermal velocity of electrons", "none", ctx->electronShift, &ctx->electronShift, NULL));
   PetscCall(PetscOptionsInt("-dm_landau_verbose", "Level of verbosity output", "plexland.c", ctx->verbose, &ctx->verbose, NULL));
   PetscCall(PetscOptionsInt("-dm_landau_batch_size", "Number of 'vertices' to batch", "ex2.c", ctx->batch_sz, &ctx->batch_sz, NULL));
@@ -1195,15 +1205,21 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
     PetscCheck(ctx->num_species == nt, ctx->comm, PETSC_ERR_ARG_WRONG, "-dm_landau_num_species_grid: sum %" PetscInt_FMT " != num_species = %" PetscInt_FMT ". %" PetscInt_FMT " grids (check that number of grids <= LANDAU_MAX_GRIDS = %d)", nt, ctx->num_species,
                ctx->num_grids, LANDAU_MAX_GRIDS);
   } else {
-    ctx->num_grids      = 1; // go back to a single grid run
-    num_species_grid[0] = ctx->num_species;
+    if (ctx->num_species > LANDAU_MAX_GRIDS) {
+      num_species_grid[0] = 1;
+      num_species_grid[1] = ctx->num_species - 1;
+      ctx->num_grids      = 2;
+    } else {
+      ctx->num_grids      = ctx->num_species;
+      for (ii = 0; ii < ctx->num_grids; ii++) num_species_grid[ii] = 1;
+    }
   }
   for (ctx->species_offset[0] = ii = 0; ii < ctx->num_grids; ii++) ctx->species_offset[ii + 1] = ctx->species_offset[ii] + num_species_grid[ii];
   PetscCheck(ctx->species_offset[ctx->num_grids] == ctx->num_species, ctx->comm, PETSC_ERR_ARG_WRONG, "ctx->species_offset[ctx->num_grids] %" PetscInt_FMT " != ctx->num_species = %" PetscInt_FMT " ???????????", ctx->species_offset[ctx->num_grids],
              ctx->num_species);
   for (PetscInt grid = 0; grid < ctx->num_grids; grid++) {
     int iii       = ctx->species_offset[grid];                                          // normalize with first (arbitrary) species on grid
-    v0_grid[grid] = PetscSqrtReal(ctx->k * ctx->thermal_temps[iii] / ctx->masses[iii]); /* arbitrary units for non-dimensionalization: plasma formulary def */
+    ctx->thermal_speed[grid] = PetscSqrtReal(ctx->k * ctx->thermal_temps[iii] / ctx->masses[iii]); /* arbitrary units for non-dimensionalization: plasma formulary def */
   }
   // get lambdas here because we need them for t_0 etc
   PetscCall(PetscOptionsReal("-dm_landau_ln_lambda", "Universal cross section parameter. Default uses NRL formulas", "plexland.c", lnLam, &lnLam, &flg));
@@ -1218,7 +1234,7 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
   PetscCall(PetscOptionsInt("-dm_landau_normalization_grid", "Index of grid to use for setting v_0, m_0, t_0. (Not recommended)", "plexland.c", non_dim_grid, &non_dim_grid, &flg));
   if (non_dim_grid != 0) PetscCall(PetscInfo(dummy, "Normalization grid set to %" PetscInt_FMT ", but non-default not well verified\n", non_dim_grid));
   PetscCheck(non_dim_grid >= 0 && non_dim_grid < ctx->num_species, ctx->comm, PETSC_ERR_ARG_WRONG, "Normalization grid wrong: %" PetscInt_FMT, non_dim_grid);
-  ctx->v_0 = v0_grid[non_dim_grid];     /* arbitrary units for non dimensionalization: global mean velocity in 1D of electrons */
+  ctx->v_0 = ctx->thermal_speed[non_dim_grid];     /* arbitrary units for non dimensionalization: global mean velocity in 1D of electrons */
   ctx->m_0 = ctx->masses[non_dim_grid]; /* arbitrary reference mass, electrons */
   ctx->t_0 = 8 * PETSC_PI * PetscSqr(ctx->epsilon0 * ctx->m_0 / PetscSqr(ctx->charges[non_dim_grid])) / ctx->lambdas[non_dim_grid][non_dim_grid] / ctx->n_0 * PetscPowReal(ctx->v_0, 3); /* note, this t_0 makes nu[non_dim_grid,non_dim_grid]=1 */
   /* domain */
@@ -1241,33 +1257,35 @@ static PetscErrorCode ProcessOptions(LandauCtx *ctx, const char prefix[])
       ctx->radius[grid] = ctx->radius[grid] * SPEED_OF_LIGHT / ctx->v_0; // use any species on grid to normalize (v_0 same for all on grid)
       PetscCall(PetscInfo(dummy, "Change domain radius to %g for grid %" PetscInt_FMT "\n", (double)ctx->radius[grid], grid));
     }
-    ctx->radius[grid] *= v0_grid[grid] / ctx->v_0;      // scale domain by thermal radius relative to v_0
-    ctx->radius_perp[grid] *= v0_grid[grid] / ctx->v_0; // scale domain by thermal radius relative to v_0
-    ctx->radius_par[grid] *= v0_grid[grid] / ctx->v_0;  // scale domain by thermal radius relative to v_0
+    ctx->radius[grid] *= ctx->thermal_speed[grid] / ctx->v_0;      // scale domain by thermal radius relative to v_0
+    ctx->radius_perp[grid] *= ctx->thermal_speed[grid] / ctx->v_0; // scale domain by thermal radius relative to v_0
+    ctx->radius_par[grid] *= ctx->thermal_speed[grid] / ctx->v_0;  // scale domain by thermal radius relative to v_0
   }
   /* amr parameters */
-  nt = LANDAU_MAX_GRIDS;
-  PetscCall(PetscOptionsIntArray("-dm_landau_amr_levels_max", "Number of AMR levels of refinement around origin, after (RE) refinements along z", "plexland.c", ctx->numAMRRefine, &nt, &flg));
-  PetscCheck(!flg || nt >= ctx->num_grids, ctx->comm, PETSC_ERR_ARG_WRONG, "-dm_landau_amr_levels_max: given %" PetscInt_FMT " != number grids %" PetscInt_FMT, nt, ctx->num_grids);
-  nt = LANDAU_MAX_GRIDS;
-  PetscCall(PetscOptionsIntArray("-dm_landau_amr_post_refine", "Number of levels to uniformly refine after AMR", "plexland.c", ctx->postAMRRefine, &nt, &flg));
-  for (ii = 1; ii < ctx->num_grids; ii++) ctx->postAMRRefine[ii] = ctx->postAMRRefine[0]; // all grids the same now
-  PetscCall(PetscOptionsInt("-dm_landau_amr_re_levels", "Number of levels to refine along v_perp=0, z>0", "plexland.c", ctx->numRERefine, &ctx->numRERefine, &flg));
-  PetscCall(PetscOptionsInt("-dm_landau_amr_z_refine_pre", "Number of levels to refine along v_perp=0 before origin refine", "plexland.c", ctx->nZRefine1, &ctx->nZRefine1, &flg));
-  PetscCall(PetscOptionsInt("-dm_landau_amr_z_refine_post", "Number of levels to refine along v_perp=0 after origin refine", "plexland.c", ctx->nZRefine2, &ctx->nZRefine2, &flg));
-  PetscCall(PetscOptionsReal("-dm_landau_re_radius", "velocity range to refine on positive (z>0) r=0 axis for runaways", "plexland.c", ctx->re_radius, &ctx->re_radius, &flg));
-  PetscCall(PetscOptionsReal("-dm_landau_z_radius_pre", "velocity range to refine r=0 axis (for electrons)", "plexland.c", ctx->vperp0_radius1, &ctx->vperp0_radius1, &flg));
-  PetscCall(PetscOptionsReal("-dm_landau_z_radius_post", "velocity range to refine r=0 axis (for electrons) after origin AMR", "plexland.c", ctx->vperp0_radius2, &ctx->vperp0_radius2, &flg));
-  /* spherical domain (not used) */
-  PetscCall(PetscOptionsBool("-dm_landau_sphere", "use sphere/semi-circle domain instead of rectangle", "plexland.c", ctx->sphere, &ctx->sphere, NULL));
-  if (ctx->sphere || ctx->simplex) {
-    ctx->sphere_inner_radius_90degree = 0.40;
-    ctx->sphere_inner_radius_45degree = 0.35;
-    PetscCall(PetscOptionsReal("-dm_landau_sphere_inner_radius_90degree_scale", "Scaling of radius for inner circle on 90 degree grid", "plexland.c", ctx->sphere_inner_radius_90degree, &ctx->sphere_inner_radius_90degree, NULL));
-    PetscCall(PetscOptionsReal("-dm_landau_sphere_inner_radius_45degree_scale", "Scaling of radius for inner circle on 45 degree grid", "plexland.c", ctx->sphere_inner_radius_45degree, &ctx->sphere_inner_radius_45degree, NULL));
-  } else {
-    nt = LANDAU_DIM;
-    PetscCall(PetscOptionsIntArray("-dm_landau_num_cells", "Number of cells in each dimension of base grid", "plexland.c", ctx->cells0, &nt, &flg));
+  if (!fileflg) {
+    nt = LANDAU_MAX_GRIDS;
+    PetscCall(PetscOptionsIntArray("-dm_landau_amr_levels_max", "Number of AMR levels of refinement around origin, after (RE) refinements along z", "plexland.c", ctx->numAMRRefine, &nt, &flg));
+    PetscCheck(!flg || nt >= ctx->num_grids, ctx->comm, PETSC_ERR_ARG_WRONG, "-dm_landau_amr_levels_max: given %" PetscInt_FMT " != number grids %" PetscInt_FMT, nt, ctx->num_grids);
+    nt = LANDAU_MAX_GRIDS;
+    PetscCall(PetscOptionsIntArray("-dm_landau_amr_post_refine", "Number of levels to uniformly refine after AMR", "plexland.c", ctx->postAMRRefine, &nt, &flg));
+    for (ii = 1; ii < ctx->num_grids; ii++) ctx->postAMRRefine[ii] = ctx->postAMRRefine[0]; // all grids the same now
+    PetscCall(PetscOptionsInt("-dm_landau_amr_re_levels", "Number of levels to refine along v_perp=0, z>0", "plexland.c", ctx->numRERefine, &ctx->numRERefine, &flg));
+    PetscCall(PetscOptionsInt("-dm_landau_amr_z_refine_pre", "Number of levels to refine along v_perp=0 before origin refine", "plexland.c", ctx->nZRefine1, &ctx->nZRefine1, &flg));
+    PetscCall(PetscOptionsInt("-dm_landau_amr_z_refine_post", "Number of levels to refine along v_perp=0 after origin refine", "plexland.c", ctx->nZRefine2, &ctx->nZRefine2, &flg));
+    PetscCall(PetscOptionsReal("-dm_landau_re_radius", "velocity range to refine on positive (z>0) r=0 axis for runaways", "plexland.c", ctx->re_radius, &ctx->re_radius, &flg));
+    PetscCall(PetscOptionsReal("-dm_landau_z_radius_pre", "velocity range to refine r=0 axis (for electrons)", "plexland.c", ctx->vperp0_radius1, &ctx->vperp0_radius1, &flg));
+    PetscCall(PetscOptionsReal("-dm_landau_z_radius_post", "velocity range to refine r=0 axis (for electrons) after origin AMR", "plexland.c", ctx->vperp0_radius2, &ctx->vperp0_radius2, &flg));
+    /* spherical domain (not used) */
+    PetscCall(PetscOptionsBool("-dm_landau_sphere", "use sphere/semi-circle domain instead of rectangle", "plexland.c", ctx->sphere, &ctx->sphere, NULL));
+    if (ctx->sphere || ctx->simplex) {
+      ctx->sphere_inner_radius_90degree = 0.40;
+      ctx->sphere_inner_radius_45degree = 0.35;
+      PetscCall(PetscOptionsReal("-dm_landau_sphere_inner_radius_90degree_scale", "Scaling of radius for inner circle on 90 degree grid", "plexland.c", ctx->sphere_inner_radius_90degree, &ctx->sphere_inner_radius_90degree, NULL));
+      PetscCall(PetscOptionsReal("-dm_landau_sphere_inner_radius_45degree_scale", "Scaling of radius for inner circle on 45 degree grid", "plexland.c", ctx->sphere_inner_radius_45degree, &ctx->sphere_inner_radius_45degree, NULL));
+    } else {
+      nt = LANDAU_DIM;
+      PetscCall(PetscOptionsIntArray("-dm_landau_num_cells", "Number of cells in each dimension of base grid", "plexland.c", ctx->cells0, &nt, &flg));
+    }
   }
   /* processing options */
   PetscCall(PetscOptionsBool("-dm_landau_gpu_assembly", "Assemble Jacobian on GPU", "plexland.c", ctx->gpu_assembly, &ctx->gpu_assembly, NULL));
