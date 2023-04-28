@@ -232,14 +232,12 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   PetscCall(PetscPClose(comm, processFile));
 #else
   // Same thing, but using the standard library for systems that don't have POpen/PClose (only run on rank 0)
-  if (rank == 0) {
-    PetscCheck(system(proccall) == 0, comm, PETSC_ERR_SYS, "Failed to call viewer script");
-    // Barrier so that all ranks wait until the call completes
-    PetscCallMPI(MPI_Barrier(comm));
-  }
+  if (rank == 0) PetscCheck(system(proccall) == 0, PETSC_COMM_SELF, PETSC_ERR_SYS, "Failed to call viewer script");
+  // Barrier so that all ranks wait until the call completes
+  PetscCallMPI(MPI_Barrier(comm));
 #endif
   // Clean up the temporary file we used using rank 0
-  if (rank == 0) PetscCheck(remove(filename) == 0, comm, PETSC_ERR_SYS, "Failed to delete temporary file");
+  if (rank == 0) PetscCheck(remove(filename) == 0, PETSC_COMM_SELF, PETSC_ERR_SYS, "Failed to delete temporary file");
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
