@@ -3169,9 +3169,6 @@ static PetscErrorCode MatMultTransposeAdd_SeqAIJHIPSPARSE(Mat A, Vec xx, Vec yy,
 
 static PetscErrorCode MatAssemblyEnd_SeqAIJHIPSPARSE(Mat A, MatAssemblyType mode)
 {
-  PetscObjectState     onnz = A->nonzerostate;
-  Mat_SeqAIJHIPSPARSE *cusp = (Mat_SeqAIJHIPSPARSE *)A->spptr;
-
   PetscFunctionBegin;
   PetscCall(MatAssemblyEnd_SeqAIJ(A, mode));
   PetscFunctionReturn(PETSC_SUCCESS);
