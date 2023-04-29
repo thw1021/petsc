@@ -3646,9 +3646,9 @@ PetscErrorCode MatSeqAIJHIPSPARSETriFactors_Reset(Mat_SeqAIJHIPSPARSETriFactors_
     delete fs->rpermIndices;
     delete fs->cpermIndices;
     delete fs->workVector;
-    fs->rpermIndices = NULL;
-    fs->cpermIndices = NULL;
-    fs->workVector   = NULL;
+    fs->rpermIndices  = NULL;
+    fs->cpermIndices  = NULL;
+    fs->workVector    = NULL;
     fs->init_dev_prop = PETSC_FALSE;
 #if PETSC_PKG_HIP_VERSION_GE(4, 5, 0)
     PetscCallHIP(hipFree(fs->csrRowPtr));

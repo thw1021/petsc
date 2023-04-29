@@ -204,8 +204,8 @@ struct Mat_SeqAIJHIPSPARSETriFactors {
   THRUSTINTARRAY                     *rpermIndices;            /* indices used for any reordering */
   THRUSTINTARRAY                     *cpermIndices;            /* indices used for any reordering */
   THRUSTARRAY                        *workVector;
-  hipsparseHandle_t                   handle;   /* a handle to the hipsparse library */
-  PetscInt                            nnz;      /* number of nonzeros ... need this for accurate logging between ICC and ILU */
+  hipsparseHandle_t                   handle; /* a handle to the hipsparse library */
+  PetscInt                            nnz;    /* number of nonzeros ... need this for accurate logging between ICC and ILU */
   hipDeviceProp_t                     dev_prop;
   PetscBool                           init_dev_prop;
 
