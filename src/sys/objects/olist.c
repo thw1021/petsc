@@ -237,7 +237,7 @@ PetscErrorCode PetscObjectListReverseFind(PetscObjectList fl, PetscObject obj, c
 .   fl   - pointer to list
 
     Output Parameter:
-.   nl - the new list (should point to` NULL` to start, otherwise appends)
+.   nl - the new list (should point to `NULL` to start, otherwise appends)
 
     Level: developer
 

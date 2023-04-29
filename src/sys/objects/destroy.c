@@ -106,7 +106,7 @@ PetscErrorCode PetscObjectView(PetscObject obj, PetscViewer viewer)
        saws[:communicatorname]                    publishes object to the Scientific Application Webserver (SAWs)
 .ve
 
-  This is not called directly but is called by, for example, `MatCoarseViewFromOptions()`
+  This is not called directly but is called by, for example, `MatViewFromOptions()`
 
 .seealso: `PetscObject`, `PetscObjectView()`, `PetscOptionsGetViewer()`
 @*/

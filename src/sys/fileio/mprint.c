@@ -488,7 +488,7 @@ static inline PetscErrorCode PetscSynchronizedFPrintf_Private(MPI_Comm comm, FIL
 }
 
 /*@C
-    PetscSynchronizedPrintf - Prints synchronized output from multple MPI processors.
+    PetscSynchronizedPrintf - Prints synchronized output from multple MPI processes.
     Output of the first processor is followed by that of the second, etc.
 
     Not Collective
@@ -524,7 +524,7 @@ PetscErrorCode PetscSynchronizedPrintf(MPI_Comm comm, const char format[], ...)
 
 /*@C
     PetscSynchronizedFPrintf - Prints synchronized output to the specified file from
-    several MPI processors.  Output of the first processor is followed by that of the
+    several MPI processes.  Output of the first process is followed by that of the
     second, etc.
 
     Not Collective
@@ -627,7 +627,7 @@ PetscErrorCode PetscSynchronizedFlush(MPI_Comm comm, FILE *fd)
 
 /*@C
     PetscFPrintf - Prints to a file, only from the first
-    MPI processor in the communicator.
+    MPI process in the communicator.
 
     Not Collective; No Fortran Support
 
@@ -658,7 +658,7 @@ PetscErrorCode PetscFPrintf(MPI_Comm comm, FILE *fd, const char format[], ...)
 
 /*@C
     PetscPrintf - Prints to standard out, only from the first
-    MPI processor in the communicator. Calls from other processes are ignored.
+    MPI process in the communicator. Calls from other processes are ignored.
 
     Not Collective
 
@@ -701,7 +701,7 @@ PetscErrorCode PetscHelpPrintfDefault(MPI_Comm comm, const char format[], ...)
 }
 
 /*@C
-    PetscSynchronizedFGets - Multiple MPI processors all get the same line from a file.
+    PetscSynchronizedFGets - Multiple MPI processes all get the same line from a file.
 
     Collective
 

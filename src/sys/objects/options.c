@@ -610,9 +610,9 @@ static PetscErrorCode PetscOptionsInsertFilePetsc(MPI_Comm comm, PetscOptions op
    Use  # for lines that are comments and which should be ignored.
    Usually, instead of using this command, one should list the file name in the call to `PetscInitialize()`, this insures that certain options
    such as `-log_view` or `-malloc_debug` are processed properly. This routine only sets options into the options database that will be processed by later
-   calls to `XXXSetFromOptions()` it should not be used for options listed under PetscInitialize().
+   calls to `XXXSetFromOptions()`, it should not be used for options listed under PetscInitialize().
    The collectivity of this routine is complex; only the MPI processes in comm will
-   have the affect of these options. If some processes that create objects call this routine and others do
+   have the effect of these options. If some processes that create objects call this routine and others do
    not the code may fail in complicated ways because the same parallel solvers may incorrectly use different options
    on different ranks.
 

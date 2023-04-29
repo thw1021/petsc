@@ -31,7 +31,7 @@ PetscErrorCode PetscDLLibraryPrintPath(PetscDLLibrary libs)
      Collective
 
    Input Parameters:
-+   comm - MPI processors that will be opening the library
++   comm - MPI processes that will be opening the library
 .   libname - name of the library, can be a relative or absolute path and be a URL
 -   llen - length of the `name` buffer
 
@@ -102,7 +102,7 @@ PetscErrorCode PetscDLLibraryRetrieve(MPI_Comm comm, const char libname[], char 
      Collective
 
    Input Parameters:
-+   comm - MPI processors that are opening the library
++   comm - MPI processes that are opening the library
 -   path - name of the library, can be a relative or absolute path
 
    Output Parameter:
