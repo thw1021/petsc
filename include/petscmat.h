@@ -171,7 +171,6 @@ typedef const char *MatSolverType;
 #define MATSOLVERHIPSPARSEBAND "hipsparseband"
 #define MATSOLVERHIP           "hip"
 #define MATSOLVERKOKKOS        "kokkos"
-#define MATSOLVERKOKKOSDEVICE  "kokkosdevice"
 #define MATSOLVERSPQR          "spqr"
 
 /*E
