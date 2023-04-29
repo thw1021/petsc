@@ -2309,12 +2309,15 @@ static PetscErrorCode DMPlexComputeGeometryFVM_2D_Internal(DM dm, PetscInt dim, 
       for (d = 0; d < cdim; d++) c[d] += a * PetscRealPart(origin[d] + coords[cdim * fv[p + 1] + d] + coords[cdim * fv[p + 2] + d]) / 3.;
     }
     norm = PetscSqrtReal(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]);
-    n[0] /= norm;
-    n[1] /= norm;
-    n[2] /= norm;
-    c[0] /= norm;
-    c[1] /= norm;
-    c[2] /= norm;
+    // Allow zero volume cells
+    if (norm != 0) {
+      n[0] /= norm;
+      n[1] /= norm;
+      n[2] /= norm;
+      c[0] /= norm;
+      c[1] /= norm;
+      c[2] /= norm;
+    }
     if (vol) *vol = 0.5 * norm;
     if (centroid)
       for (d = 0; d < cdim; ++d) centroid[d] = c[d];
