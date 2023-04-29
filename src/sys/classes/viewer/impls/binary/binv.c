@@ -479,7 +479,7 @@ PetscErrorCode PetscViewerBinarySkipInfo(PetscViewer viewer)
     you can only skip the info file with the `-viewer_binary_skip_info` flag. To use the function you must open the
     viewer with `PetscViewerCreate()`, `PetscViewerSetType()`, `PetscViewerBinarySkipInfo()`.
 
-    The `.info` files contains meta information about the data in the binary file, for example the block size if it was
+    The `.info` file contains meta information about the data in the binary file, for example the block size if it was
     set for a vector or matrix.
 
 .seealso: [](sec_viewers), `PETSCVIEWERBINARY`, `PetscViewerBinaryOpen()`, `PetscViewerBinaryGetDescriptor()`, `PetscViewerBinarySetSkipOptions()`,
@@ -925,7 +925,7 @@ static PetscErrorCode PetscViewerBinaryWriteReadMPIIO(PetscViewer viewer, void *
 -  dtype - type of data to read
 
    Output Parameters:
-+  data - location of the data read data, treated as an array of the type indicated by `dtype`
++  data - location of the read data, treated as an array of the type indicated by `dtype`
 -  count - number of items of data actually read, or `NULL`.
 
    Level: beginner
@@ -1105,7 +1105,7 @@ static PetscErrorCode PetscViewerBinaryWriteReadAll(PetscViewer viewer, PetscBoo
 -  dtype - type of data to read
 
    Output Parameter:
-.  data - location of data, treaded as an array of type indicated by `dtype`
+.  data - location of data, treated as an array of type indicated by `dtype`
 
    Level: advanced
 
@@ -1126,7 +1126,7 @@ PetscErrorCode PetscViewerBinaryReadAll(PetscViewer viewer, void *data, PetscInt
    Input Parameters:
 +  viewer - the `PETSCVIEWERBINARY` viewer
 .  data - location of data
-.  count - local number of items of data to write, treaded as an array of type indicated by `dtype`
+.  count - local number of items of data to write, treated as an array of type indicated by `dtype`
 .  start - local start, can be `PETSC_DETERMINE`
 .  total - global number of items of data to write, can be `PETSC_DETERMINE`
 -  dtype - type of data to write

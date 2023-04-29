@@ -473,7 +473,7 @@ PetscErrorCode PetscViewerASCIIPopTab(PetscViewer viewer)
 /*@
     PetscViewerASCIIUseTabs - Turns on or off the use of tabs with the `PETSCVIEWERASCII` `PetscViewer`
 
-    Not Collective, but only first MPI rankin the viewer has any effect; No Fortran Support
+    Not Collective, but only first MPI rank in the viewer has any effect; No Fortran Support
 
     Input Parameters:
 +    viewer - obtained with `PetscViewerASCIIOpen()`
@@ -507,7 +507,7 @@ PetscErrorCode PetscViewerASCIIUseTabs(PetscViewer viewer, PetscBool flg)
     PetscViewerASCIIPrintf - Prints to a file, only from the first
     processor in the `PetscViewer` of type `PETSCVIEWERASCII`
 
-    Not Collective, but only MPI rank in the viewer has any effect
+    Not Collective, but only the first MPI rank in the viewer has any effect
 
     Input Parameters:
 +    viewer - obtained with `PetscViewerASCIIOpen()`

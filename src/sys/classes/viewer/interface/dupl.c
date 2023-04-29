@@ -17,7 +17,7 @@
 
    Notes:
     The output of the subviewers is synchronized against the original viewer. For example, if a
-    viewer on two MPI processesw is decomposed into two subviewers, the output from the first viewer is
+    viewer on two MPI processes is decomposed into two subviewers, the output from the first viewer is
     all printed before the output from the second viewer. You must call `PetscViewerFlush()` after
     the call to `PetscViewerRestoreSubViewer()`.
 
