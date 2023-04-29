@@ -4068,12 +4068,9 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqAIJCUSPARSE(Mat B)
 .seealso: [](chapter_matrices), `Mat`, `MatCreateSeqAIJCUSPARSE()`, `MatCUSPARSESetUseCPUSolve()`, `MATAIJCUSPARSE`, `MatCreateAIJCUSPARSE()`, `MatCUSPARSESetFormat()`, `MatCUSPARSEStorageFormat`, `MatCUSPARSEFormatOperation`
 M*/
 
-PETSC_EXTERN PetscErrorCode MatGetFactor_seqaijcusparse_cusparse_band(Mat, MatFactorType, Mat *);
-
 PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_CUSPARSE(void)
 {
   PetscFunctionBegin;
-  PetscCall(MatSolverTypeRegister(MATSOLVERCUSPARSEBAND, MATSEQAIJ, MAT_FACTOR_LU, MatGetFactor_seqaijcusparse_cusparse_band));
   PetscCall(MatSolverTypeRegister(MATSOLVERCUSPARSE, MATSEQAIJCUSPARSE, MAT_FACTOR_LU, MatGetFactor_seqaijcusparse_cusparse));
   PetscCall(MatSolverTypeRegister(MATSOLVERCUSPARSE, MATSEQAIJCUSPARSE, MAT_FACTOR_CHOLESKY, MatGetFactor_seqaijcusparse_cusparse));
   PetscCall(MatSolverTypeRegister(MATSOLVERCUSPARSE, MATSEQAIJCUSPARSE, MAT_FACTOR_ILU, MatGetFactor_seqaijcusparse_cusparse));

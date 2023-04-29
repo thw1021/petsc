@@ -135,7 +135,7 @@ user should provide the ``ordname`` as the second input argument of
 PETSc matrices interface to a variety of external factorization/solver packages via the ``MatSolverType`` which can be
 ``MATSOLVERSUPERLU_DIST``, ``MATSOLVERMUMPS``, ``MATSOLVERPASTIX``, ``MATSOLVERMKL_PARDISO``, ``MATSOLVERMKL_CPARDISO``,
 ``MATSOLVERUMFPACK``, ``MATSOLVERCHOLMOD``, ``MATSOLVERKLU``,
-``MATSOLVERCUSPARSE``, ``MATSOLVERCUSPARSEBAND``, and ``MATSOLVERCUDA``.
+``MATSOLVERCUSPARSE``, and ``MATSOLVERCUDA``.
 The last three of which can run on GPUs, while ``MATSOLVERSUPERLU_DIST`` can partially run on GPUs.
 See :any:`doc_linsolve` for a table of the factorization based solvers in PETSc.
 

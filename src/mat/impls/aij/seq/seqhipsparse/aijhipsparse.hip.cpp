@@ -65,7 +65,6 @@ static PetscErrorCode MatSetValuesCOO_SeqAIJHIPSPARSE(Mat, const PetscScalar[], 
 
 PETSC_INTERN PetscErrorCode MatProductSetFromOptions_SeqAIJ_SeqDense(Mat);
 PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqAIJHIPSPARSE(Mat, MatType, MatReuse, Mat *);
-PETSC_EXTERN PetscErrorCode MatGetFactor_seqaijhipsparse_hipsparse_band(Mat, MatFactorType, Mat *);
 
 /*
 PetscErrorCode MatHIPSPARSESetStream(Mat A, const hipStream_t stream)
@@ -3525,7 +3524,6 @@ M*/
 PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_HIPSPARSE(void)
 {
   PetscFunctionBegin;
-  PetscCall(MatSolverTypeRegister(MATSOLVERHIPSPARSEBAND, MATSEQAIJ, MAT_FACTOR_LU, MatGetFactor_seqaijhipsparse_hipsparse_band));
   PetscCall(MatSolverTypeRegister(MATSOLVERHIPSPARSE, MATSEQAIJHIPSPARSE, MAT_FACTOR_LU, MatGetFactor_seqaijhipsparse_hipsparse));
   PetscCall(MatSolverTypeRegister(MATSOLVERHIPSPARSE, MATSEQAIJHIPSPARSE, MAT_FACTOR_CHOLESKY, MatGetFactor_seqaijhipsparse_hipsparse));
   PetscCall(MatSolverTypeRegister(MATSOLVERHIPSPARSE, MATSEQAIJHIPSPARSE, MAT_FACTOR_ILU, MatGetFactor_seqaijhipsparse_hipsparse));
@@ -3651,8 +3649,6 @@ PetscErrorCode MatSeqAIJHIPSPARSETriFactors_Reset(Mat_SeqAIJHIPSPARSETriFactors_
     fs->rpermIndices = NULL;
     fs->cpermIndices = NULL;
     fs->workVector   = NULL;
-    if (fs->a_band_d) PetscCallHIP(hipFree(fs->a_band_d));
-    if (fs->i_band_d) PetscCallHIP(hipFree(fs->i_band_d));
     fs->init_dev_prop = PETSC_FALSE;
 #if PETSC_PKG_HIP_VERSION_GE(4, 5, 0)
     PetscCallHIP(hipFree(fs->csrRowPtr));
