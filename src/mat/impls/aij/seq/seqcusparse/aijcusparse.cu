@@ -4206,8 +4206,8 @@ PetscErrorCode MatSeqAIJCUSPARSETriFactors_Reset(Mat_SeqAIJCUSPARSETriFactors_p 
 #endif
     delete fs->rpermIndices;
     delete fs->cpermIndices;
-    fs->rpermIndices = NULL;
-    fs->cpermIndices = NULL;
+    fs->rpermIndices  = NULL;
+    fs->cpermIndices  = NULL;
     fs->init_dev_prop = PETSC_FALSE;
 #if PETSC_PKG_CUDA_VERSION_GE(11, 4, 0)
     PetscCallCUDA(cudaFree(fs->csrRowPtr));
