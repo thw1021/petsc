@@ -316,9 +316,15 @@ PetscErrorCode VecNormalize(Vec x, PetscReal *val)
   if (val) PetscValidRealPointer(val, 2);
   PetscCall(PetscLogEventBegin(VEC_Normalize, x, 0, 0, 0));
   PetscCall(VecNorm(x, NORM_2, &norm));
-  PetscCheck(!PetscIsInfOrNanReal(norm), PetscObjectComm((PetscObject)x), PETSC_ERR_ARG_WRONGSTATE, "Vector with Inf or Nan norm cannot be normalized");
   if (norm == 0.0) PetscCall(PetscInfo(x, "Vector of zero norm can not be normalized; Returning only the zero norm\n"));
-  else PetscCall(VecScale(x, 1.0 / norm));
+  else {
+    PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
+    PetscScalar s = 1.0 / norm;
+    PetscCall(PetscFPTrapPop());
+    if (PetscIsNanReal(norm)) PetscCall(PetscInfo(x, "Vector with Nan norm"));
+    else if (PetscIsInfReal(norm)) PetscCall(PetscInfo(x, "Vector with Inf norm"));
+    PetscCall(VecScale(x, s));
+  }
   PetscCall(PetscLogEventEnd(VEC_Normalize, x, 0, 0, 0));
   if (val) *val = norm;
   PetscFunctionReturn(PETSC_SUCCESS);
