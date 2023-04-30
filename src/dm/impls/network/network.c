@@ -37,6 +37,7 @@ PetscErrorCode DMNetworkInitializeHeaderComponentData(DM dm)
 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
 /*@
   DMNetworkGetPlex - Gets the `DMPLEX` associated with this `DMNETWORK`
 
