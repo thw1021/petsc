@@ -415,15 +415,15 @@ PetscErrorCode SNESComputeJacobian_MyShell(SNES snes, Vec X, Mat A, Mat B, void 
 
    test:
       suffix: 4
-      args: -snes_converged_reason -ksp_converged_reason -error_in_pcsetup
+      args: -snes_converged_reason -ksp_converged_reason -error_in_pcsetup -fp_trap 0
 
    test:
       suffix: 5
-      args: -snes_converged_reason -ksp_converged_reason -error_in_pcsetup -pc_type bjacobi
+      args: -snes_converged_reason -ksp_converged_reason -error_in_pcsetup -pc_type bjacobi -fp_trap 0
 
    test:
       suffix: 5_fieldsplit
-      args: -snes_converged_reason -ksp_converged_reason -error_in_pcsetup -pc_type fieldsplit
+      args: -snes_converged_reason -ksp_converged_reason -error_in_pcsetup -pc_type fieldsplit -fp_trap 0
       output_file: output/ex69_5.out
 
    test:
@@ -432,7 +432,7 @@ PetscErrorCode SNESComputeJacobian_MyShell(SNES snes, Vec X, Mat A, Mat B, void 
 
    test:
       suffix: 7
-      args: -snes_converged_reason -ksp_converged_reason -error_in_domain
+      args: -snes_converged_reason -ksp_converged_reason -error_in_domain -fp_trap 0
 
    test:
       suffix: 8
