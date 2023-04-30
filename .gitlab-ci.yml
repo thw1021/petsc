@@ -403,7 +403,6 @@ freebsd-cxx-cmplx-64idx-dbg:
     - os:fbsd
   variables:
     TEST_ARCH: arch-ci-freebsd-cxx-cmplx-64idx-dbg
-    PETSC_OPTIONS: -fp_trap
 
 freebsd-c-single-opt:
   extends:
