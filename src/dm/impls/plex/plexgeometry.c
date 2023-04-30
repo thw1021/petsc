@@ -380,7 +380,7 @@ static PetscErrorCode PetscGridHashInitialize_Internal(PetscGridHash box, PetscI
 PetscErrorCode PetscGridHashCreate(MPI_Comm comm, PetscInt dim, const PetscScalar point[], PetscGridHash *box)
 {
   PetscFunctionBegin;
-  PetscCall(PetscMalloc1(1, box));
+  PetscCall(PetscCalloc1(1, box));
   PetscCall(PetscGridHashInitialize_Internal(*box, dim, point));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
