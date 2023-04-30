@@ -83,7 +83,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   char        filename[PETSC_MAX_PATH_LEN + 1], options[512], proccall[PETSC_MAX_PATH_LEN + 512], scriptFile[PETSC_MAX_PATH_LEN + 1], buffer[256];
   PetscViewer csvViewer;
   FILE       *processFile = NULL;
-  PetscBool   isnull, optionShowRanks = PETSC_FALSE, optionRankIsSet = PETSC_FALSE, showNoNodes = PETSC_FALSE, showNoLabels = PETSC_FALSE;
+  PetscBool   isnull, optionShowRanks = PETSC_FALSE, optionRankIsSet = PETSC_FALSE, showNoNodes = PETSC_FALSE, showNoNumbering = PETSC_FALSE;
   PetscDraw   draw;
   DM_Network *network = (DM_Network *)dm->data;
   PetscReal   drawPause;
@@ -115,7 +115,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   /* Process Options */
   optionShowRanks = network->vieweroptions.showallranks;
   showNoNodes     = network->vieweroptions.shownovertices;
-  showNoLabels    = network->vieweroptions.shownolabels;
+  showNoNumbering = network->vieweroptions.shownonumbering;
 
   /*
     TODO: The set of ranks to view the DMNetwork on should have programmable default in the network->vieweroptions as well
@@ -125,7 +125,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   PetscCall(PetscOptionsBool("-dmnetwork_view_all_ranks", "View all ranks in the DMNetwork", NULL, optionShowRanks, &optionShowRanks, NULL));
   PetscCall(PetscOptionsString("-dmnetwork_view_rank_range", "Set of ranks to view the DMNetwork on", NULL, buffer, buffer, sizeof(buffer), &optionRankIsSet));
   PetscCall(PetscOptionsBool("-dmnetwork_view_no_vertices", "Do not view vertices", NULL, showNoNodes, &showNoNodes, NULL));
-  PetscCall(PetscOptionsBool("-dmnetwork_view_no_labels", "Do not view labels", NULL, showNoLabels, &showNoLabels, NULL));
+  PetscCall(PetscOptionsBool("-dmnetwork_view_no_numbering", "Do not view edge and vertex numbering", NULL, showNoNumbering, &showNoNumbering, NULL));
   PetscOptionsEnd();
 
   // Generate and broadcast the temporary file name from rank 0
@@ -214,7 +214,7 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
 
   // Check for options for visibility...
   if (showNoNodes) PetscCall(PetscStrlcat(options, " -nn ", sizeof(options)));
-  if (showNoLabels) PetscCall(PetscStrlcat(options, " -nnl -nel ", sizeof(options)));
+  if (showNoNumbering) PetscCall(PetscStrlcat(options, " -nnl -nel ", sizeof(options)));
 
   // Get the value of $PETSC_DIR
   PetscCall(PetscStrreplace(comm, "${PETSC_DIR}/share/petsc/bin/dmnetwork_view.py", scriptFile, sizeof(scriptFile)));
@@ -318,6 +318,21 @@ PetscErrorCode DMView_Network(DM dm, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  DMNetworkViewSetShowRanks - Sets this rank to disply its subnetwork
+
+  Not Collective
+
+  Input Parameter:
+. dm - the `DMNETWORK` object
+
+  Output Parameter:
+. showranks - `PETSC_TRUE` if this rank displys its subnetwork
+
+  Level: beginner
+
+.seealso: `DM`, `DMNETWORK`, `DMNetworkViewSetShowGlobal`, `DMNetworkViewSetShowVertices`, `DMNetworkViewSetShowNumbering()`, `DMNetworkViewSetViewRanks()`
+@*/
 PetscErrorCode DMNetworkViewSetShowRanks(DM dm, PetscBool showranks)
 {
   DM_Network *network = (DM_Network *)dm->data;
@@ -328,6 +343,21 @@ PetscErrorCode DMNetworkViewSetShowRanks(DM dm, PetscBool showranks)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  DMNetworkViewSetShowGlobal - Sets this rank to disply the global network
+
+  Not Collective
+
+  Input Parameter:
+. dm - the `DMNETWORK` object
+
+  Output Parameter:
+. showglobal - `PETSC_TRUE` if this rank displys the global network
+
+  Level: beginner
+
+.seealso: `DM`, `DMNETWORK`, `DMNetworkViewSetShowRanks`, `DMNetworkViewSetShowVertices`, `DMNetworkViewSetShowNumbering()`, `DMNetworkViewSetViewRanks()`
+@*/
 PetscErrorCode DMNetworkViewSetShowGlobal(DM dm, PetscBool showglobal)
 {
   DM_Network *network = (DM_Network *)dm->data;
@@ -338,6 +368,21 @@ PetscErrorCode DMNetworkViewSetShowGlobal(DM dm, PetscBool showglobal)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  DMNetworkViewSetShowVertices - Sets this rank to disply the vertices
+
+  Not Collective
+
+  Input Parameter:
+. dm - the `DMNETWORK` object
+
+  Output Parameter:
+. showglobal - `PETSC_TRUE` if this rank displys the vertices
+
+  Level: beginner
+
+.seealso: `DM`, `DMNETWORK`, `DMNetworkViewSetShowRanks`, `DMNetworkViewSetShowGlobal()`, `DMNetworkViewSetShowNumbering()`, `DMNetworkViewSetViewRanks()`
+@*/
 PetscErrorCode DMNetworkViewSetShowVertices(DM dm, PetscBool showvertices)
 {
   DM_Network *network = (DM_Network *)dm->data;
@@ -347,22 +392,50 @@ PetscErrorCode DMNetworkViewSetShowVertices(DM dm, PetscBool showvertices)
   network->vieweroptions.shownovertices = (PetscBool)(!showvertices);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-/*
-  TODO: Better name as it conflicts with DMLabel meaning
-*/
-PetscErrorCode DMNetworkViewSetShowLabels(DM dm, PetscBool showlabels)
+
+/*@
+  DMNetworkViewSetShowNumbering - Sets this rank to disply the numbering of edges and vertices
+
+  Not Collective
+
+  Input Parameter:
+. dm - the `DMNETWORK` object
+
+  Output Parameter:
+. shownumbering - `PETSC_TRUE` if this rank displys the numbering of edges and vertices
+
+  Level: beginner
+
+.seealso: `DM`, `DMNETWORK`, `DMNetworkViewSetShowRanks`, `DMNetworkViewSetShowGlobal()`, `DMNetworkViewSetShowVertices()`, `DMNetworkViewSetViewRanks()`
+@*/
+PetscErrorCode DMNetworkViewSetShowNumbering(DM dm, PetscBool shownumbering)
 {
   DM_Network *network = (DM_Network *)dm->data;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecificType(dm, DM_CLASSID, 1, DMNETWORK);
-  network->vieweroptions.shownolabels = (PetscBool)(!showlabels);
+  network->vieweroptions.shownonumbering = (PetscBool)(!shownumbering);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-  Note that DMnetwork takes ownership of the IS. IS should be be destroyed by the caller.
- */
+/*@
+  DMNetworkViewSetViewRanks - Sets the ranks to view the `DMNetwork` on
+
+  Collective
+
+  Input Parameter:
+. dm - the `DMNETWORK` object
+
+  Output Parameter:
+. viewranks - set of ranks to view the DMNetwork on
+
+  Level: beginner
+
+  Note:
+  `DMnetwork` takes ownership of the input viewranks. IS should be be destroyed by the caller.
+
+.seealso: `DM`, `DMNETWORK`, `DMNetworkViewSetShowRanks`, `DMNetworkViewSetShowGlobal()`, `DMNetworkViewSetShowVertices()`, `DMNetworkViewSetShowNumbering()`
+@*/
 PetscErrorCode DMNetworkViewSetViewRanks(DM dm, IS viewranks)
 {
   DM_Network *network = (DM_Network *)dm->data;
