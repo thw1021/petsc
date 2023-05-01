@@ -44,6 +44,7 @@ PetscLogEvent MAT_Merge, MAT_Residual, MAT_SetRandom;
 PetscLogEvent MAT_FactorFactS, MAT_FactorInvS;
 PetscLogEvent MATCOLORING_Apply, MATCOLORING_Comm, MATCOLORING_Local, MATCOLORING_ISCreate, MATCOLORING_SetUp, MATCOLORING_Weights;
 PetscLogEvent MAT_H2Opus_Build, MAT_H2Opus_Compress, MAT_H2Opus_Orthog, MAT_H2Opus_LR;
+PetscLogEvent MAT_DenseColumnsGEMVH, MAT_DenseColumnsGEMV, MAT_DenseColumnsGEMMH, MAT_DenseColumnsGEMM;
 
 const char *const MatFactorTypes[] = {"NONE", "LU", "CHOLESKY", "ILU", "ICC", "ILUDT", "QR", "MatFactorType", "MAT_FACTOR_", NULL};
 
@@ -11192,8 +11193,9 @@ PetscErrorCode MatDenseColumnsGEMVHermitianTranspose(PetscScalar alpha, Mat A, P
   PetscValidLogicalCollectiveScalar(A, beta, 6);
   if (col_end <= col_start) PetscFunctionReturn(PETSC_SUCCESS); // No columns
   PetscCheck(col_start >= 0 && col_end <= A->cmap->N, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_SIZ, "Mat A: column dim %" PetscInt_FMT " does not contain [%" PetscInt_FMT ",%" PetscInt_FMT ")", A->cmap->N, col_start, col_end);
-  PetscValidPointer(y, 7);
+  PetscCall(PetscLogEventBegin(MAT_DenseColumnsGEMVH, A, x, 0, 0));
   PetscUseMethod(A, "MatDenseColumnsGEMVHermitianTranspose_C", (PetscScalar,Mat,PetscInt,PetscInt,Vec,PetscScalar,PetscScalar*,PetscInt,PetscMemType), (alpha,A,col_start,col_end,x,beta,y,inc_y,memtype_y));
+  PetscCall(PetscLogEventEnd(MAT_DenseColumnsGEMVH, A, x, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -11245,8 +11247,9 @@ PetscErrorCode MatDenseColumnsGEMV(PetscScalar alpha, Mat A, PetscInt col_start,
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   PetscCheck(col_start >= 0 && col_end <= A->cmap->N, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_SIZ, "Mat A: column dim %" PetscInt_FMT " does not contain [%" PetscInt_FMT ",%" PetscInt_FMT ")", A->cmap->N, col_start, col_end);
-  PetscValidPointer(x, 5);
+  PetscCall(PetscLogEventBegin(MAT_DenseColumnsGEMV, A, y, 0, 0));
   PetscUseMethod(A, "MatDenseColumnsGEMV_C", (PetscScalar,Mat,PetscInt,PetscInt,const PetscScalar *,PetscInt,PetscMemType,PetscScalar,Vec), (alpha,A,col_start,col_end,x,inc_x,memtype_x,beta,y));
+  PetscCall(PetscLogEventEnd(MAT_DenseColumnsGEMV, A, y, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -11299,8 +11302,9 @@ PetscErrorCode MatDenseColumnsGEMMHermitianTranspose(PetscScalar alpha, Mat A, P
   if ((col_end_A <= col_start_A) || (col_end_B <= col_start_B)) PetscFunctionReturn(PETSC_SUCCESS); // No columns
   PetscCheck(col_start_A >= 0 && col_end_A <= A->cmap->N, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_SIZ, "Mat A: column dim %" PetscInt_FMT " does not contain [%" PetscInt_FMT ",%" PetscInt_FMT ")", A->cmap->N, col_start_A, col_end_A);
   PetscCheck(col_start_B >= 0 && col_end_B <= B->cmap->N, PetscObjectComm((PetscObject)B), PETSC_ERR_ARG_SIZ, "Mat B: column dim %" PetscInt_FMT " does not contain [%" PetscInt_FMT ",%" PetscInt_FMT ")", B->cmap->N, col_start_B, col_end_B);
-  PetscValidPointer(C, 9);
+  PetscCall(PetscLogEventBegin(MAT_DenseColumnsGEMMH, A, B, 0, 0));
   PetscUseMethod(A, "MatDenseColumnsGEMMHermitianTranspose_C", (PetscScalar,Mat,PetscInt,PetscInt,Mat,PetscInt,PetscInt,PetscScalar,PetscScalar*,PetscInt,PetscMemType), (alpha,A,col_start_A,col_end_A,B,col_start_B,col_end_B,beta,C,ld_C,memtype_C));
+  PetscCall(PetscLogEventEnd(MAT_DenseColumnsGEMMH, A, B, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -11357,7 +11361,8 @@ PetscErrorCode MatDenseColumnsGEMM(PetscScalar alpha, Mat A, PetscInt col_start_
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   PetscCheck(col_start_A >= 0 && col_end_A <= A->cmap->N, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_SIZ, "Mat A: column dim %" PetscInt_FMT " does not contain [%" PetscInt_FMT ",%" PetscInt_FMT ")", A->cmap->N, col_start_A, col_end_A);
-  PetscValidPointer(B, 5);
+  PetscCall(PetscLogEventBegin(MAT_DenseColumnsGEMM, A, C, 0, 0));
   PetscUseMethod(A, "MatDenseColumnsGEMM_C", (PetscScalar,Mat,PetscInt,PetscInt,const PetscScalar *,PetscInt,PetscMemType,PetscScalar,Mat,PetscInt,PetscInt), (alpha,A,col_start_A,col_end_A,B,ld_B,memtype_B,beta,C,col_start_C,col_end_C));
+  PetscCall(PetscLogEventEnd(MAT_DenseColumnsGEMM, A, C, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
