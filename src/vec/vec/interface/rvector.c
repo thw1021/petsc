@@ -471,15 +471,21 @@ PetscErrorCode VecTDot(Vec x, Vec y, PetscScalar *val)
 @*/
 PetscErrorCode VecScale(Vec x, PetscScalar alpha)
 {
-  PetscReal norms[4];
-  PetscBool flgs[4];
+  PetscReal   norms[4];
+  PetscBool   flgs[4];
+  PetscScalar one  = 1.0;
+  PetscScalar zero = 0.0;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
   PetscValidType(x, 1);
   VecCheckAssembled(x);
   PetscCall(VecSetErrorIfLocked(x, 1));
-  if (alpha == (PetscScalar)1.0) PetscFunctionReturn(PETSC_SUCCESS);
+  if (alpha == one) PetscFunctionReturn(PETSC_SUCCESS);
+  if (alpha == zero) {
+    PetscCall(VecSet(x, 0));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
 
   /* get current stashed norms */
   for (PetscInt i = 0; i < 4; i++) PetscCall(PetscObjectComposedDataGetReal((PetscObject)x, NormIds[i], norms[i], flgs[i]));
@@ -491,7 +497,16 @@ PetscErrorCode VecScale(Vec x, PetscScalar alpha)
   PetscCall(PetscObjectStateIncrease((PetscObject)x));
   /* put the scaled stashed norms back into the Vec */
   for (PetscInt i = 0; i < 4; i++) {
-    if (flgs[i]) PetscCall(PetscObjectComposedDataSetReal((PetscObject)x, NormIds[i], PetscAbsScalar(alpha) * norms[i]));
+    PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
+    PetscReal ar = PetscAbsScalar(alpha);
+    PetscCall(PetscFPTrapPop());
+    if (flgs[i]) {
+      if (!PetscIsInfOrNanReal(ar)) {
+        PetscCall(PetscObjectComposedDataSetReal((PetscObject)x, NormIds[i], ar * norms[i]));
+      } else {
+        PetscCall(PetscObjectComposedDataSetReal((PetscObject)x, NormIds[i], ar));
+      }
+    }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
