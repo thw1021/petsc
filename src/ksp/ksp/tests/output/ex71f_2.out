@@ -151,7 +151,8 @@ Number of indices in set 16
 13 125
 14 126
 15 127
-GASM index sets from this MPI processIS Object: 1 MPI process
+GASM index sets from this MPI process
+IS Object: 1 MPI process
   type: general
 Number of indices in set 16
 0 128
