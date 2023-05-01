@@ -397,6 +397,7 @@ static PetscErrorCode MatAssemblyEnd_Htool(Mat A, MatAssemblyType)
   std::shared_ptr<htool::VirtualLowRankGenerator<PetscScalar>> compressor = nullptr;
 
   PetscFunctionBegin;
+  PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
   PetscCall(PetscCitationsRegister(HtoolCitation, &HtoolCite));
   delete a->wrapper;
   delete a->hmatrix;
@@ -468,6 +469,7 @@ static PetscErrorCode MatAssemblyEnd_Htool(Mat A, MatAssemblyType)
   a->hmatrix->set_minsourcedepth(a->depth[1]);
   if (s) a->hmatrix->build(a->wrapper ? *a->wrapper : *generator, a->gcoords_target, a->gcoords_source);
   else a->hmatrix->build(a->wrapper ? *a->wrapper : *generator, a->gcoords_target);
+  PetscCall(PetscFPTrapPop());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
