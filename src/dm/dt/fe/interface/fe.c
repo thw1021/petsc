@@ -2322,7 +2322,8 @@ PetscErrorCode PetscFEUpdateElementVec_Hybrid_Internal(PetscFE fe, PetscTabulati
       }
     }
     PetscCall(PetscFEPushforward(fe, fegeom, Nb, tmpBasis));
-    PetscCall(PetscFEPushforwardGradient(fe, fegeom, Nb, tmpBasisDer));
+    // TODO This is currently broken since we do not pull the geometry down to the lower dimension
+    // PetscCall(PetscFEPushforwardGradient(fe, fegeom, Nb, tmpBasisDer));
     for (b = 0; b < Nb; ++b) {
       for (c = 0; c < Nc; ++c) {
         const PetscInt bcidx = b * Nc + c;
@@ -2430,7 +2431,8 @@ PetscErrorCode PetscFEUpdateElementMat_Hybrid_Internal(PetscFE feI, PetscBool is
     }
   }
   PetscCall(PetscFEPushforward(feJ, fegeom, NbJ, tmpBasisJ));
-  PetscCall(PetscFEPushforwardGradient(feJ, fegeom, NbJ, tmpBasisDerJ));
+  // TODO This is currently broken since we do not pull the geometry down to the lower dimension
+  // PetscCall(PetscFEPushforwardGradient(feJ, fegeom, NbJ, tmpBasisDerJ));
   for (f = 0; f < NbI; ++f) {
     for (fc = 0; fc < NcI; ++fc) {
       const PetscInt fidx = f * NcI + fc;           /* Test function basis index */

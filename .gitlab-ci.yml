@@ -713,6 +713,7 @@ linux-pkgs-cxx-mlib:
     - gce-u22-stage3
   variables:
     TEST_ARCH: arch-ci-linux-pkgs-cxx-mlib
+    PETSC_OPTIONS: -fp_trap
   except:
     variables:
       - $PETSC_CI_SCHEDULED =~ /yes/
@@ -747,6 +748,7 @@ linux-pkgs-dbg:
     - gce-u22-stage3, linux-gcov
   variables:
     TEST_ARCH: arch-ci-linux-pkgs-dbg
+    PETSC_OPTIONS: -fp_trap
 
 linux-matlab-ilp64:
   extends:

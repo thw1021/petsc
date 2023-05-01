@@ -602,11 +602,13 @@ PetscErrorCode SNESLineSearchApply(SNESLineSearch linesearch, Vec X, Vec F, Pets
   if (fnorm) linesearch->fnorm = *fnorm;
   else PetscCall(VecNorm(F, NORM_2, &linesearch->fnorm));
 
+  PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
   PetscCall(PetscLogEventBegin(SNESLINESEARCH_Apply, linesearch, X, F, Y));
 
   PetscUseTypeMethod(linesearch, apply);
 
   PetscCall(PetscLogEventEnd(SNESLINESEARCH_Apply, linesearch, X, F, Y));
+  PetscCall(PetscFPTrapPop());
 
   if (fnorm) *fnorm = linesearch->fnorm;
   PetscFunctionReturn(PETSC_SUCCESS);
