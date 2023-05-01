@@ -17,7 +17,6 @@ PetscErrorCode VecMDot_Seq(Vec xin, PetscInt nv, const Vec yin[], PetscScalar *z
   Vec               *yy = (Vec *)yin;
 
   PetscFunctionBegin;
-  PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
   PetscCall(VecGetArrayRead(xin, &x));
   switch (nv_rem) {
   case 3:
@@ -78,7 +77,6 @@ PetscErrorCode VecMDot_Seq(Vec xin, PetscInt nv, const Vec yin[], PetscScalar *z
   }
   PetscCall(VecRestoreArrayRead(xin, &x));
   PetscCall(PetscLogFlops(PetscMax(nv * (2.0 * n - 1), 0.0)));
-  PetscCall(PetscFPTrapPop());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -92,7 +90,6 @@ PetscErrorCode VecMDot_Seq(Vec xin, PetscInt nv, const Vec yin[], PetscScalar *z
   const Vec         *yy = (Vec *)yin;
 
   PetscFunctionBegin;
-  PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
   PetscCall(VecGetArrayRead(xin, &xbase));
   x = xbase;
   switch (nv_rem) {
@@ -294,7 +291,6 @@ PetscErrorCode VecMDot_Seq(Vec xin, PetscInt nv, const Vec yin[], PetscScalar *z
   }
   PetscCall(VecRestoreArrayRead(xin, &xbase));
   PetscCall(PetscLogFlops(PetscMax(nv * (2.0 * n - 1), 0.0)));
-  PetscCall(PetscFPTrapPop());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 #endif
@@ -309,7 +305,6 @@ PetscErrorCode VecMTDot_Seq(Vec xin, PetscInt nv, const Vec yin[], PetscScalar *
   const Vec         *yy = (Vec *)yin;
 
   PetscFunctionBegin;
-  PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
   PetscCall(VecGetArrayRead(xin, &xbase));
   x = xbase;
 
@@ -512,7 +507,6 @@ PetscErrorCode VecMTDot_Seq(Vec xin, PetscInt nv, const Vec yin[], PetscScalar *
   }
   PetscCall(VecRestoreArrayRead(xin, &xbase));
   PetscCall(PetscLogFlops(PetscMax(nv * (2.0 * n - 1), 0.0)));
-  PetscCall(PetscFPTrapPop());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
