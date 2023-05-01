@@ -2131,7 +2131,7 @@ PetscErrorCode PetscFEEvaluateFieldJets_Internal(PetscDS ds, PetscInt Nf, PetscI
     PetscFE          fe;
     const PetscInt   k       = ds->jetDegree[f];
     const PetscInt   cdim    = T[f]->cdim;
-    const PetscInt   dE      = PetscMax(cdim, fegeom->dimEmbed); /* XXX: this is to silent floating point exceptions when using nan initialized memory */
+    const PetscInt   dE      = fegeom->dimEmbed;
     const PetscInt   Nq      = T[f]->Np;
     const PetscInt   Nbf     = T[f]->Nb;
     const PetscInt   Ncf     = T[f]->Nc;
@@ -2142,29 +2142,29 @@ PetscErrorCode PetscFEEvaluateFieldJets_Internal(PetscDS ds, PetscInt Nf, PetscI
 
     PetscCall(PetscDSGetDiscretization(ds, f, (PetscObject *)&fe));
     for (c = 0; c < Ncf; ++c) u[fOffset + c] = 0.0;
-    for (d = 0; d < dE * Ncf; ++d) u_x[fOffset * cdim + d] = 0.0;
+    for (d = 0; d < dE * Ncf; ++d) u_x[fOffset * dE + d] = 0.0;
     for (b = 0; b < Nbf; ++b) {
       for (c = 0; c < Ncf; ++c) {
         const PetscInt cidx = b * Ncf + c;
 
         u[fOffset + c] += Bq[cidx] * coefficients[dOffset + b];
-        for (d = 0; d < cdim; ++d) u_x[(fOffset + c) * cdim + d] += Dq[cidx * cdim + d] * coefficients[dOffset + b];
+        for (d = 0; d < cdim; ++d) u_x[(fOffset + c) * dE + d] += Dq[cidx * cdim + d] * coefficients[dOffset + b];
       }
     }
     if (k > 1) {
-      for (g = 0; g < Nf; ++g) hOffset += T[g]->Nc * cdim;
-      for (d = 0; d < dE * dE * Ncf; ++d) u_x[hOffset + fOffset * cdim * cdim + d] = 0.0;
+      for (g = 0; g < Nf; ++g) hOffset += T[g]->Nc * dE;
+      for (d = 0; d < dE * dE * Ncf; ++d) u_x[hOffset + fOffset * dE * dE + d] = 0.0;
       for (b = 0; b < Nbf; ++b) {
         for (c = 0; c < Ncf; ++c) {
           const PetscInt cidx = b * Ncf + c;
 
-          for (d = 0; d < cdim * cdim; ++d) u_x[hOffset + (fOffset + c) * cdim * cdim + d] += Hq[cidx * cdim * cdim + d] * coefficients[dOffset + b];
+          for (d = 0; d < cdim * cdim; ++d) u_x[hOffset + (fOffset + c) * dE * dE + d] += Hq[cidx * cdim * cdim + d] * coefficients[dOffset + b];
         }
       }
-      PetscCall(PetscFEPushforwardHessian(fe, fegeom, 1, &u_x[hOffset + fOffset * cdim * cdim]));
+      PetscCall(PetscFEPushforwardHessian(fe, fegeom, 1, &u_x[hOffset + fOffset * dE * dE]));
     }
     PetscCall(PetscFEPushforward(fe, fegeom, 1, &u[fOffset]));
-    PetscCall(PetscFEPushforwardGradient(fe, fegeom, 1, &u_x[fOffset * cdim]));
+    PetscCall(PetscFEPushforwardGradient(fe, fegeom, 1, &u_x[fOffset * dE]));
     if (u_t) {
       for (c = 0; c < Ncf; ++c) u_t[fOffset + c] = 0.0;
       for (b = 0; b < Nbf; ++b) {
