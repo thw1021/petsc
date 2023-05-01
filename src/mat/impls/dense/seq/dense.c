@@ -3716,7 +3716,7 @@ static hipblasOperation_t hipblasOperationFromChar_Private(char t) {
 static PetscErrorCode PetscCUPMGEMV_C(PetscMemType memtype, char trans_A, PetscInt m, PetscInt n, PetscScalar alpha, const PetscScalar *A, PetscInt ld_A, const PetscScalar *x, PetscInt inc_x, PetscScalar beta, PetscScalar *y, PetscInt inc_y)
 {
   PetscFunctionBegin;
-  PetscLogDouble flops = 2.0 * m * n + 1.0 * (trans_A == 'n' || trans_A == 'N') ? m : n;
+  PetscLogDouble flops = 2.0 * m * n + 1.0 * ((trans_A == 'n' || trans_A == 'N') ? m : n);
   switch (memtype) {
   case PETSC_MEMTYPE_HOST:
     {

@@ -50,6 +50,7 @@ int main(int argc, char **argv)
   PetscOptionsBegin(comm, NULL, help, NULL);
   PetscCall(PetscOptionsInt("-m", "Global number of matrix rows", NULL, m, &m, NULL));
   PetscCall(PetscOptionsInt("-k", "Number of columns used in the update", NULL, k, &k, NULL));
+  PetscCall(PetscOptionsInt("-n_iter", "Number of iterations in each stage", NULL, n_iter, &n_iter, NULL));
   PetscCall(PetscOptionsEnum("-temp_memtype", "PetscMemType of intermediate results", NULL, ExMemTypes, (PetscEnum) exmt_M, (PetscEnum *) &exmt_M, NULL));
   PetscCall(PetscOptionsBool("-report_host_memory", "Report host memory allocations that happen in each approach", NULL, report_host_memory, &report_host_memory, NULL));
   PetscCall(PetscOptionsBool("-report_memcpy", "Report host <-> device memcpys in each approach", NULL, report_memcpy, &report_memcpy, NULL));
@@ -129,7 +130,7 @@ int main(int argc, char **argv)
 
   PetscScalar *M;
   PetscCall(PetscMalloc1(k*k, &M));
-  //PetscCall(PetscLogStagePush(level_1));
+  PetscCall(PetscLogStagePush(level_1));
   for (PetscInt i = 0; i < n_iter; i++) {
     PetscCall(MatCopy(D, D_copy1, SAME_NONZERO_PATTERN));
     for (PetscInt j = 0; j < k; j++) {
@@ -151,7 +152,7 @@ int main(int argc, char **argv)
       PetscCall(MatDenseRestoreColumnVec(D_copy1, d_start + j, &dj));
     }
   }
-  //PetscCall(PetscLogStagePop());
+  PetscCall(PetscLogStagePop());
   PetscCall(PetscFree(M));
 
   for (PetscInt j = 0; j < k; j++) {
@@ -169,42 +170,42 @@ int main(int argc, char **argv)
   PetscCall(PetscDeviceMalloc(NULL, memtype_M, k*k, &M));
   PetscInt malloc_current;
 
-  //PetscCall(PetscLogStagePush(level_2));
+  PetscCall(PetscLogStagePush(level_2));
   for (PetscInt i = 0; i < n_iter; i++) {
     if (i == 1) PetscCall(PetscMallocDebugGetCount(&malloc_current));
     PetscCall(MatCopy(D, D_copy2, SAME_NONZERO_PATTERN));
     for (PetscInt j = 0; j < k; j++) {
       Vec cj;
       PetscCall(MatDenseGetColumnVecRead(C, c_start + j, &cj));
-      PetscCall(MatDenseColumnsGEMVHermitianTranspose(1.0, B, b_start, b_start+k, cj, 0.0, &M[j*k], 1, PETSC_MEMTYPE_HOST));
+      PetscCall(MatDenseColumnsGEMVHermitianTranspose(1.0, B, b_start, b_start+k, cj, 0.0, &M[j*k], 1, memtype_M));
       PetscCall(MatDenseRestoreColumnVecRead(C, c_start + j, &cj));
     }
     for (PetscInt j = 0; j < k; j++) {
       Vec dj;
       PetscCall(MatDenseGetColumnVec(D_copy2, d_start + j, &dj));
-      PetscCall(MatDenseColumnsGEMV(alpha, A, a_start, a_start+k, &M[j*k], 1, PETSC_MEMTYPE_HOST, beta, dj));
+      PetscCall(MatDenseColumnsGEMV(alpha, A, a_start, a_start+k, &M[j*k], 1, memtype_M, beta, dj));
       PetscCall(MatDenseRestoreColumnVec(D_copy2, d_start + j, &dj));
     }
   }
 
   PetscInt malloc_2;
   PetscCall(PetscMallocDebugGetCount(&malloc_2));
-  //PetscCall(PetscLogStagePop());
+  PetscCall(PetscLogStagePop());
   malloc_2 -= malloc_current;
 
   //
   // Level-3 approach
   //
- // PetscCall(PetscLogStagePush(level_3));
+  PetscCall(PetscLogStagePush(level_3));
   for (PetscInt i = 0; i < n_iter; i++) {
     if (i == 1) PetscCall(PetscMallocDebugGetCount(&malloc_current));
     PetscCall(MatCopy(D, D_copy3, SAME_NONZERO_PATTERN));
-    PetscCall(MatDenseColumnsGEMMHermitianTranspose(1.0, B, b_start, b_start+k, C, c_start, c_start+k, 0.0, M, k, PETSC_MEMTYPE_HOST));
+    PetscCall(MatDenseColumnsGEMMHermitianTranspose(1.0, B, b_start, b_start+k, C, c_start, c_start+k, 0.0, M, k, memtype_M));
     PetscCall(MatDenseColumnsGEMM(alpha, A, a_start, a_start+k, M, k, PETSC_MEMTYPE_HOST, beta, D_copy3, d_start, d_start+k));
   }
   PetscInt malloc_3;
   PetscCall(PetscMallocDebugGetCount(&malloc_3));
-  //PetscCall(PetscLogStagePop());
+  PetscCall(PetscLogStagePop());
   malloc_3 -= malloc_current;
 
   PetscCall(PetscDeviceFree(NULL, M));
@@ -226,23 +227,6 @@ int main(int argc, char **argv)
     if (malloc_3 > 0) PetscCall(PetscPrintf(comm, "Malloc level 3 %" PetscInt_FMT "\n", malloc_3));
   }
 
-#if 0
-  PetscEventPerfInfo gemvh, gemv, gemmh, gemm;
-  PetscCall(PetscLogEventGetPerfInfo(level_2, MAT_DenseColumnsGEMVH, &gemvh));
-  PetscCall(PetscLogEventGetPerfInfo(level_2, MAT_DenseColumnsGEMV, &gemv));
-  PetscCall(PetscLogEventGetPerfInfo(level_2, MAT_DenseColumnsGEMMH, &gemmh));
-  PetscCall(PetscLogEventGetPerfInfo(level_2, MAT_DenseColumnsGEMM, &gemm));
-
-  if (report_memcpy) {
-#if PetscDefined(HAVE_DEVICE)
-    if (gemvh.GpuToCpuCount > 0 || gemvh.CpuToGpuCount > 0) PetscCall(PetscPrintf(comm, "MatDenseColumnsGEMVHermitianTranspose(): %g CPU->GPU transfers, %g GPU <- CPU transfers\n", (double) gemvh.CpuToGpuCount, (double) gemvh.GpuToCpuCount));
-    if (gemv.GpuToCpuCount > 0 || gemv.CpuToGpuCount > 0) PetscCall(PetscPrintf(comm, "MatDenseColumnsGEMV(): %g CPU->GPU transfers, %g GPU <- CPU transfers\n", (double) gemv.CpuToGpuCount, (double) gemv.GpuToCpuCount));
-    if (gemmh.GpuToCpuCount > 0 || gemmh.CpuToGpuCount > 0) PetscCall(PetscPrintf(comm, "MatDenseColumnsGEMMHermitianTranspose(): %g CPU->GPU transfers, %g GPU <- CPU transfers\n", (double) gemmh.CpuToGpuCount, (double) gemmh.GpuToCpuCount));
-    if (gemm.GpuToCpuCount > 0 || gemm.CpuToGpuCount > 0) PetscCall(PetscPrintf(comm, "MatDenseColumnsGEMM(): %g CPU->GPU transfers, %g GPU <- CPU transfers\n", (double) gemm.CpuToGpuCount, (double) gemm.GpuToCpuCount));
-#endif
-  }
-#endif
-
   PetscCall(MatDestroy(&D_copy3));
   PetscCall(MatDestroy(&D_copy2));
   PetscCall(MatDestroy(&D_copy1));
@@ -256,21 +240,32 @@ int main(int argc, char **argv)
 
 /*TEST
 
+  # Verify that host based implementations have no mallocs, should dispatch just to BLAS [+ MPI_Allreduce without allocating an additional buffer ]
   test:
     suffix: 0
+    nsize: {{1 2}}
     args: -report_host_memory -malloc_debug
 
-  test:
-    nsize: 2
-    suffix: 1
-    args: -report_host_memory -malloc_debug
+  # TODO: how to verify that there are no device mallocs()?
+  # test:
+  #   suffix: cuda
+  #   args: -report_host_memory -malloc_debug -A_mat_type densecuda -B_mat_type densecuda -C_mat_type densecuda -D_mat_type densecuda -temp_memtype cuda
 
-  test:
-    suffix: cuda
-    args: -report_host_memory -malloc_debug -A_mat_type densecuda -B_mat_type densecuda -C_mat_type densecuda -D_mat_type densecuda -temp_memtype cuda
-
+  # Use logging to verify no host <-> device memory transfer during kernels
   test:
     suffix: cuda_log
-    args: -report_host_memory -malloc_debug -A_mat_type densecuda -B_mat_type densecuda -C_mat_type densecuda -D_mat_type densecuda -temp_memtype cuda -log_summary
+    requires: cuda
+    args: -report_host_memory -malloc_debug -A_mat_type densecuda -B_mat_type densecuda -C_mat_type densecuda -D_mat_type densecuda -temp_memtype cuda -log_view
+    filter: grep "MatDenseColsGEM" | awk "{print \$1, \$23, \$24, \$25, \$26, \$27;}"
 
+  # Use logging to verify no host <-> device memory transfer during kernels (if gpu aware mpi is used)
+  test:
+    nsize: 2
+    suffix: cuda_log_mpi
+    output_file: output/ex1_cuda_log.out
+    requires: cuda defined(PETSC_HAVE_MPI_GPU_AWARE)
+    args: -report_host_memory -malloc_debug -A_mat_type densecuda -B_mat_type densecuda -C_mat_type densecuda -D_mat_type densecuda -temp_memtype cuda -log_view
+    filter: grep "MatDenseColsGEM" | awk "{print \$1, \$23, \$24, \$25, \$26, \$27;}"
+
+  # TODO: nvhsmem tests?
 TEST*/

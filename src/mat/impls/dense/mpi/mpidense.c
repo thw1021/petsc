@@ -1634,7 +1634,7 @@ static PetscErrorCode PetscScalarMemTypeAllreduce_Private(PetscScalar *C, PetscI
     PetscCall(PetscSFGetUseGpuAwareMPI(a->Mvctx, &use_gpu_aware_mpi));
     if (!use_gpu_aware_mpi) {
       PetscScalar *C_host;
-      PetscCall(PetscMalloc(count, &C_host));
+      PetscCall(PetscMalloc1(count, &C_host));
       C_orig = C;
       PetscCall(PetscCUPMArrayCopy_C(C_host, C_orig, count));
       C = C_host;
@@ -1658,6 +1658,14 @@ static PetscErrorCode MatDenseColumnsGEMVHermitianTranspose_MPIDense(PetscScalar
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatDenseColumnsGEMV_MPIDense(PetscScalar alpha, Mat A_mat, PetscInt col_start, PetscInt col_end, const PetscScalar *x, PetscInt inc_x, PetscMemType memtype_x, PetscScalar beta, Vec y)
+{
+  PetscFunctionBegin;
+  Mat_MPIDense *a = (Mat_MPIDense *)A_mat->data;
+  PetscCall(MatDenseColumnsGEMV_SeqDense(alpha, a->A, col_start, col_end, x, inc_x, memtype_x, beta, y));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 
 static PetscErrorCode MatDenseColumnsGEMMHermitianTranspose_MPIDense(PetscScalar alpha, Mat A_mat, PetscInt col_start_A, PetscInt col_end_A, Mat B_mat, PetscInt col_start_B, PetscInt col_end_B, PetscScalar beta, PetscScalar *C, PetscInt ld_C, PetscMemType memtype_C)
 {
@@ -1667,6 +1675,15 @@ static PetscErrorCode MatDenseColumnsGEMMHermitianTranspose_MPIDense(PetscScalar
   PetscCall(MatDenseColumnsGEMMHermitianTranspose_SeqDense(alpha, a->A, col_start_A, col_end_A, b->A, col_start_B, col_end_B, beta, C, ld_C, memtype_C));
   PetscInt count = (col_end_B-col_start_A) + (col_end_B-col_start_B - 1)*(ld_C);
   PetscCall(PetscScalarMemTypeAllreduce_Private(C, count, memtype_C, A_mat));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatDenseColumnsGEMM_MPIDense(PetscScalar alpha, Mat A_mat, PetscInt col_start_A, PetscInt col_end_A, const PetscScalar *B, PetscInt ld_B, PetscMemType memtype_B, PetscScalar beta, Mat C_mat, PetscInt col_start_C, PetscInt col_end_C)
+{
+  PetscFunctionBegin;
+  Mat_MPIDense *a = (Mat_MPIDense *)A_mat->data;
+  Mat_MPIDense *c = (Mat_MPIDense *)C_mat->data;
+  PetscCall(MatDenseColumnsGEMM_SeqDense(alpha, a->A, col_start_A, col_end_A, B, ld_B, memtype_B, beta, c->A, col_start_C, col_end_C));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1746,9 +1763,9 @@ PetscErrorCode MatCreate_MPIDense(Mat mat)
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseGetColumn_C", MatDenseGetColumn_MPIDense));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseRestoreColumn_C", MatDenseRestoreColumn_MPIDense));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseColumnsGEMVHermitianTranspose_C", MatDenseColumnsGEMVHermitianTranspose_MPIDense));
-  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseColumnsGEMV_C", MatDenseColumnsGEMV_SeqDense));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseColumnsGEMV_C", MatDenseColumnsGEMV_MPIDense));
   PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseColumnsGEMMHermitianTranspose_C", MatDenseColumnsGEMMHermitianTranspose_MPIDense));
-  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseColumnsGEMM_C", MatDenseColumnsGEMM_SeqDense));
+  PetscCall(PetscObjectComposeFunction((PetscObject)mat, "MatDenseColumnsGEMM_C", MatDenseColumnsGEMM_MPIDense));
   PetscCall(PetscObjectChangeTypeName((PetscObject)mat, MATMPIDENSE));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
