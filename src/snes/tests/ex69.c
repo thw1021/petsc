@@ -407,11 +407,11 @@ PetscErrorCode SNESComputeJacobian_MyShell(SNES snes, Vec X, Mat A, Mat B, void 
 
    test:
       suffix: 2
-      args: -snes_converged_reason -ksp_converged_reason -error_in_matmult
+      args: -snes_converged_reason -ksp_converged_reason -error_in_matmult -fp_trap 0
 
    test:
       suffix: 3
-      args: -snes_converged_reason -ksp_converged_reason -error_in_pcapply
+      args: -snes_converged_reason -ksp_converged_reason -error_in_pcapply -fp_trap 0
 
    test:
       suffix: 4
@@ -428,7 +428,7 @@ PetscErrorCode SNESComputeJacobian_MyShell(SNES snes, Vec X, Mat A, Mat B, void 
 
    test:
       suffix: 6
-      args: -snes_converged_reason -ksp_converged_reason -error_in_domainmf -snes_mf -pc_type none
+      args: -snes_converged_reason -ksp_converged_reason -error_in_domainmf -snes_mf -pc_type none -fp_trap 0
 
    test:
       suffix: 7
