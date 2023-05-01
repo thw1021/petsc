@@ -349,7 +349,7 @@ Abstracts
 
 .. _`Zakariae Jorti`:
 
-.. topic:: *Zakariae Jorti*, Qi Tang, Konstantin Lipnikov, Xianzhu Tang(
+.. topic:: *Zakariae Jorti*, Qi Tang, Konstantin Lipnikov, Xianzhu Tang, **A mimetic finite difference based quasi-static magnetohydrodynamic solver for force-free plasmas in tokamak disruptions**
 
     Force-free plasmas are a good approximation in the low-beta case where the
     plasma pressure is tiny compared with the magnetic pressure. On time scales
