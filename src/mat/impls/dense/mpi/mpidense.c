@@ -1607,6 +1607,7 @@ static PetscErrorCode PetscScalarMemTypeAllreduce_Private(PetscScalar *C, PetscI
   PetscMPIInt size;
   PetscCallMPI(MPI_Comm_size(comm, &size));
   if (size == 1 || count == 0) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(PetscLogFlops(1.0 * (size - 1) * count));
 
   if (memtype == PETSC_MEMTYPE_NVSHMEM) {
 #if defined(PETSC_HAVE_NVSHMEM)

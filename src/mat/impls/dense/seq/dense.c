@@ -3716,7 +3716,7 @@ static hipblasOperation_t hipblasOperationFromChar_Private(char t) {
 static PetscErrorCode PetscCUPMGEMV_C(PetscMemType memtype, char trans_A, PetscInt m, PetscInt n, PetscScalar alpha, const PetscScalar *A, PetscInt ld_A, const PetscScalar *x, PetscInt inc_x, PetscScalar beta, PetscScalar *y, PetscInt inc_y)
 {
   PetscFunctionBegin;
-  PetscLogDouble flops = 2.0 * m * n + 1.0 * ((trans_A == 'n' || trans_A == 'N') ? m : n);
+  PetscLogDouble flops = 2.0 * m * n + (beta == 0.0 ? -1.0 : 1.0) * ((trans_A == 'n' || trans_A == 'N') ? m : n) + (alpha == 1.0 ? 0.0 : 1.0) * PetscMin(m, n);
   switch (memtype) {
   case PETSC_MEMTYPE_HOST:
     {
@@ -3775,7 +3775,7 @@ static PetscErrorCode PetscCUPMGEMV_C(PetscMemType memtype, char trans_A, PetscI
 static PetscErrorCode PetscCUPMGEMM_C(PetscMemType memtype, char trans_A, char trans_B, PetscInt m, PetscInt n, PetscInt k, PetscScalar alpha, const PetscScalar *A, PetscInt ld_A, const PetscScalar *B, PetscInt ld_B, PetscScalar beta, PetscScalar *C, PetscInt ld_C)
 {
   PetscFunctionBegin;
-  PetscLogDouble flops = 2.0 * m * n * k + 1.0 * m * n;
+  PetscLogDouble flops = 2.0 * m * n * k + (beta == 0.0 ? -1.0 : 1.0) * m * n + (alpha == 1.0 ? 0.0: 1.0) * PetscMin(m * n, PetscMin(m * k, n * k));
   switch (memtype) {
   case PETSC_MEMTYPE_HOST:
     {
@@ -3896,7 +3896,6 @@ PetscErrorCode MatDenseColumnsGEMVHermitianTranspose_SeqDense(PetscScalar alpha,
 PetscErrorCode MatDenseColumnsGEMV_SeqDense(PetscScalar alpha, Mat A_mat, PetscInt col_start, PetscInt col_end, const PetscScalar *x, PetscInt inc_x, PetscMemType memtype_x, PetscScalar beta, Vec y)
 {
   PetscFunctionBegin;
-
   const PetscScalar *A_array;
   PetscMemType memtype_A;
   PetscCall(MatDenseGetArrayReadAndMemType(A_mat, &A_array, &memtype_A));
@@ -3942,6 +3941,9 @@ PetscErrorCode MatDenseColumnsGEMV_SeqDense(PetscScalar alpha, Mat A_mat, PetscI
 
   PetscCall(PetscCUPMGEMV_C(memtype_A, 'N', m, n, alpha, A, ld_A, x, inc_x, beta, y_array, 1));
 
+  if (gemxarray) {
+    PetscCall(VecRestoreArrayReadAndMemType(gemxarray, &x));
+  }
   if (y_array_orig) {
     Mat_SeqDense *d = (Mat_SeqDense *) A_mat->data;
 
@@ -3951,9 +3953,6 @@ PetscErrorCode MatDenseColumnsGEMV_SeqDense(PetscScalar alpha, Mat A_mat, PetscI
   }
   PetscCall(VecRestoreArrayAndMemType(y, &y_array));
   PetscCall(MatDenseRestoreArrayReadAndMemType(A_mat, &A_array));
-  if (gemxarray) {
-    PetscCall(VecRestoreArrayReadAndMemType(gemxarray, &x));
-  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -4059,7 +4058,7 @@ PetscErrorCode MatDenseColumnsGEMM_SeqDense(PetscScalar alpha, Mat A_mat, PetscI
     PetscCall(MatDenseGetArrayRead(A_mat, &A_array));
     PetscCall(MatDenseGetArray(C_mat, &C_array));
     memtype_A = PETSC_MEMTYPE_HOST;
-    memtype_B = PETSC_MEMTYPE_HOST;
+    memtype_C = PETSC_MEMTYPE_HOST;
   }
 
   const PetscScalar *A = &A_array[ld_A * col_start_A];
@@ -4073,9 +4072,17 @@ PetscErrorCode MatDenseColumnsGEMM_SeqDense(PetscScalar alpha, Mat A_mat, PetscI
     PetscCall(MatSeqDenseGetGemxArray_Private(A_mat, gemxsize, &gemxarray));
     PetscScalar *d_array;
 
-    PetscCall(VecGetArrayWriteAndMemType(gemxarray, &d_array, NULL));
+    if (bind_to_cpu) {
+      PetscCall(VecGetArrayWrite(gemxarray, &d_array));
+    } else {
+      PetscCall(VecGetArrayWriteAndMemType(gemxarray, &d_array, NULL));
+    }
     PetscCall(PetscCUPMArrayCopy_C(d_array, B, gemxsize));
-    PetscCall(VecRestoreArrayWriteAndMemType(gemxarray, &d_array));
+    if (bind_to_cpu) {
+      PetscCall(VecRestoreArrayWrite(gemxarray, &d_array));
+    } else {
+      PetscCall(VecRestoreArrayWriteAndMemType(gemxarray, &d_array));
+    }
     
     if (bind_to_cpu) {
       PetscCall(VecGetArrayRead(gemxarray, &B));
