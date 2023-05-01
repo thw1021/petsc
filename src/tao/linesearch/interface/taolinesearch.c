@@ -341,9 +341,11 @@ PetscErrorCode TaoLineSearchApply(TaoLineSearch ls, Vec x, PetscReal *f, Vec g, 
   PetscCall(VecDestroy(&ls->start_x));
   ls->start_x = x;
 
+  PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
   PetscCall(PetscLogEventBegin(TAOLINESEARCH_Apply, ls, 0, 0, 0));
   PetscUseTypeMethod(ls, apply, x, f, g, s);
   PetscCall(PetscLogEventEnd(TAOLINESEARCH_Apply, ls, 0, 0, 0));
+  PetscCall(PetscFPTrapPop());
   *reason   = ls->reason;
   ls->new_f = *f;
 

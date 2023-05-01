@@ -2131,6 +2131,7 @@ PetscErrorCode PetscFEEvaluateFieldJets_Internal(PetscDS ds, PetscInt Nf, PetscI
     PetscFE          fe;
     const PetscInt   k       = ds->jetDegree[f];
     const PetscInt   cdim    = T[f]->cdim;
+    const PetscInt   dE      = PetscMax(cdim, fegeom->dimEmbed); /* XXX: this is to silent floating point exceptions when using nan initialized memory */
     const PetscInt   Nq      = T[f]->Np;
     const PetscInt   Nbf     = T[f]->Nb;
     const PetscInt   Ncf     = T[f]->Nc;
@@ -2141,7 +2142,7 @@ PetscErrorCode PetscFEEvaluateFieldJets_Internal(PetscDS ds, PetscInt Nf, PetscI
 
     PetscCall(PetscDSGetDiscretization(ds, f, (PetscObject *)&fe));
     for (c = 0; c < Ncf; ++c) u[fOffset + c] = 0.0;
-    for (d = 0; d < cdim * Ncf; ++d) u_x[fOffset * cdim + d] = 0.0;
+    for (d = 0; d < dE * Ncf; ++d) u_x[fOffset * cdim + d] = 0.0;
     for (b = 0; b < Nbf; ++b) {
       for (c = 0; c < Ncf; ++c) {
         const PetscInt cidx = b * Ncf + c;
@@ -2152,7 +2153,7 @@ PetscErrorCode PetscFEEvaluateFieldJets_Internal(PetscDS ds, PetscInt Nf, PetscI
     }
     if (k > 1) {
       for (g = 0; g < Nf; ++g) hOffset += T[g]->Nc * cdim;
-      for (d = 0; d < cdim * cdim * Ncf; ++d) u_x[hOffset + fOffset * cdim * cdim + d] = 0.0;
+      for (d = 0; d < dE * dE * Ncf; ++d) u_x[hOffset + fOffset * cdim * cdim + d] = 0.0;
       for (b = 0; b < Nbf; ++b) {
         for (c = 0; c < Ncf; ++c) {
           const PetscInt cidx = b * Ncf + c;
@@ -2322,7 +2323,8 @@ PetscErrorCode PetscFEUpdateElementVec_Hybrid_Internal(PetscFE fe, PetscTabulati
       }
     }
     PetscCall(PetscFEPushforward(fe, fegeom, Nb, tmpBasis));
-    PetscCall(PetscFEPushforwardGradient(fe, fegeom, Nb, tmpBasisDer));
+    // TODO This is currently broken since we do not pull the geometry down to the lower dimension
+    // PetscCall(PetscFEPushforwardGradient(fe, fegeom, Nb, tmpBasisDer));
     for (b = 0; b < Nb; ++b) {
       for (c = 0; c < Nc; ++c) {
         const PetscInt bcidx = b * Nc + c;
@@ -2430,7 +2432,8 @@ PetscErrorCode PetscFEUpdateElementMat_Hybrid_Internal(PetscFE feI, PetscBool is
     }
   }
   PetscCall(PetscFEPushforward(feJ, fegeom, NbJ, tmpBasisJ));
-  PetscCall(PetscFEPushforwardGradient(feJ, fegeom, NbJ, tmpBasisDerJ));
+  // TODO This is currently broken since we do not pull the geometry down to the lower dimension
+  // PetscCall(PetscFEPushforwardGradient(feJ, fegeom, NbJ, tmpBasisDerJ));
   for (f = 0; f < NbI; ++f) {
     for (fc = 0; fc < NcI; ++fc) {
       const PetscInt fidx = f * NcI + fc;           /* Test function basis index */
