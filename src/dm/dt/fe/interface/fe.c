@@ -2131,7 +2131,7 @@ PetscErrorCode PetscFEEvaluateFieldJets_Internal(PetscDS ds, PetscInt Nf, PetscI
     PetscFE          fe;
     const PetscInt   k       = ds->jetDegree[f];
     const PetscInt   cdim    = T[f]->cdim;
-    const PetscInt   dE      = PetscMax(cdim, fegeom->dimEmbed); /* XXX: this is to silent floating point exceptions when using nan initialized memory */
+    const PetscInt   dE      = fegeom->dimEmbed;
     const PetscInt   Nq      = T[f]->Np;
     const PetscInt   Nbf     = T[f]->Nb;
     const PetscInt   Ncf     = T[f]->Nc;
@@ -2142,29 +2142,29 @@ PetscErrorCode PetscFEEvaluateFieldJets_Internal(PetscDS ds, PetscInt Nf, PetscI
 
     PetscCall(PetscDSGetDiscretization(ds, f, (PetscObject *)&fe));
     for (c = 0; c < Ncf; ++c) u[fOffset + c] = 0.0;
-    for (d = 0; d < dE * Ncf; ++d) u_x[fOffset * cdim + d] = 0.0;
+    for (d = 0; d < dE * Ncf; ++d) u_x[fOffset * dE + d] = 0.0;
     for (b = 0; b < Nbf; ++b) {
       for (c = 0; c < Ncf; ++c) {
         const PetscInt cidx = b * Ncf + c;
 
         u[fOffset + c] += Bq[cidx] * coefficients[dOffset + b];
-        for (d = 0; d < cdim; ++d) u_x[(fOffset + c) * cdim + d] += Dq[cidx * cdim + d] * coefficients[dOffset + b];
+        for (d = 0; d < cdim; ++d) u_x[(fOffset + c) * dE + d] += Dq[cidx * cdim + d] * coefficients[dOffset + b];
       }
     }
     if (k > 1) {
-      for (g = 0; g < Nf; ++g) hOffset += T[g]->Nc * cdim;
-      for (d = 0; d < dE * dE * Ncf; ++d) u_x[hOffset + fOffset * cdim * cdim + d] = 0.0;
+      for (g = 0; g < Nf; ++g) hOffset += T[g]->Nc * dE;
+      for (d = 0; d < dE * dE * Ncf; ++d) u_x[hOffset + fOffset * dE * dE + d] = 0.0;
       for (b = 0; b < Nbf; ++b) {
         for (c = 0; c < Ncf; ++c) {
           const PetscInt cidx = b * Ncf + c;
 
-          for (d = 0; d < cdim * cdim; ++d) u_x[hOffset + (fOffset + c) * cdim * cdim + d] += Hq[cidx * cdim * cdim + d] * coefficients[dOffset + b];
+          for (d = 0; d < cdim * cdim; ++d) u_x[hOffset + (fOffset + c) * dE * dE + d] += Hq[cidx * cdim * cdim + d] * coefficients[dOffset + b];
         }
       }
-      PetscCall(PetscFEPushforwardHessian(fe, fegeom, 1, &u_x[hOffset + fOffset * cdim * cdim]));
+      PetscCall(PetscFEPushforwardHessian(fe, fegeom, 1, &u_x[hOffset + fOffset * dE * dE]));
     }
     PetscCall(PetscFEPushforward(fe, fegeom, 1, &u[fOffset]));
-    PetscCall(PetscFEPushforwardGradient(fe, fegeom, 1, &u_x[fOffset * cdim]));
+    PetscCall(PetscFEPushforwardGradient(fe, fegeom, 1, &u_x[fOffset * dE]));
     if (u_t) {
       for (c = 0; c < Ncf; ++c) u_t[fOffset + c] = 0.0;
       for (b = 0; b < Nbf; ++b) {
@@ -2340,17 +2340,18 @@ PetscErrorCode PetscFEUpdateElementVec_Hybrid_Internal(PetscFE fe, PetscTabulati
 
 PetscErrorCode PetscFEUpdateElementMat_Internal(PetscFE feI, PetscFE feJ, PetscInt r, PetscInt q, PetscTabulation TI, PetscScalar tmpBasisI[], PetscScalar tmpBasisDerI[], PetscTabulation TJ, PetscScalar tmpBasisJ[], PetscScalar tmpBasisDerJ[], PetscFEGeom *fegeom, const PetscScalar g0[], const PetscScalar g1[], const PetscScalar g2[], const PetscScalar g3[], PetscInt eOffset, PetscInt totDim, PetscInt offsetI, PetscInt offsetJ, PetscScalar elemMat[])
 {
-  const PetscInt   dE        = TI->cdim;
+  const PetscInt   cdim      = TI->cdim;
+  const PetscInt   dE        = fegeom->dimEmbed;
   const PetscInt   NqI       = TI->Np;
   const PetscInt   NbI       = TI->Nb;
   const PetscInt   NcI       = TI->Nc;
   const PetscReal *basisI    = &TI->T[0][(r * NqI + q) * NbI * NcI];
-  const PetscReal *basisDerI = &TI->T[1][(r * NqI + q) * NbI * NcI * dE];
+  const PetscReal *basisDerI = &TI->T[1][(r * NqI + q) * NbI * NcI * cdim];
   const PetscInt   NqJ       = TJ->Np;
   const PetscInt   NbJ       = TJ->Nb;
   const PetscInt   NcJ       = TJ->Nc;
   const PetscReal *basisJ    = &TJ->T[0][(r * NqJ + q) * NbJ * NcJ];
-  const PetscReal *basisDerJ = &TJ->T[1][(r * NqJ + q) * NbJ * NcJ * dE];
+  const PetscReal *basisDerJ = &TJ->T[1][(r * NqJ + q) * NbJ * NcJ * cdim];
   PetscInt         f, fc, g, gc, df, dg;
 
   for (f = 0; f < NbI; ++f) {
@@ -2358,7 +2359,7 @@ PetscErrorCode PetscFEUpdateElementMat_Internal(PetscFE feI, PetscFE feJ, PetscI
       const PetscInt fidx = f * NcI + fc; /* Test function basis index */
 
       tmpBasisI[fidx] = basisI[fidx];
-      for (df = 0; df < dE; ++df) tmpBasisDerI[fidx * dE + df] = basisDerI[fidx * dE + df];
+      for (df = 0; df < cdim; ++df) tmpBasisDerI[fidx * dE + df] = basisDerI[fidx * cdim + df];
     }
   }
   PetscCall(PetscFEPushforward(feI, fegeom, NbI, tmpBasisI));
@@ -2368,7 +2369,7 @@ PetscErrorCode PetscFEUpdateElementMat_Internal(PetscFE feI, PetscFE feJ, PetscI
       const PetscInt gidx = g * NcJ + gc; /* Trial function basis index */
 
       tmpBasisJ[gidx] = basisJ[gidx];
-      for (dg = 0; dg < dE; ++dg) tmpBasisDerJ[gidx * dE + dg] = basisDerJ[gidx * dE + dg];
+      for (dg = 0; dg < cdim; ++dg) tmpBasisDerJ[gidx * dE + dg] = basisDerJ[gidx * cdim + dg];
     }
   }
   PetscCall(PetscFEPushforward(feJ, fegeom, NbJ, tmpBasisJ));
