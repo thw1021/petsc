@@ -641,6 +641,7 @@ linux-cmplx-single:
   variables:
     FLEXIBLAS: netlib
     TEST_ARCH: arch-ci-linux-cmplx-single
+    PETSC_OPTIONS: -fp_trap
 
 linux-gcc-cxx-avx2:
   extends:
@@ -691,6 +692,7 @@ linux-cxx-cmplx-pkgs-64idx:
     - gce-u22-stage3
   variables:
     TEST_ARCH: arch-ci-linux-cxx-cmplx-pkgs-64idx
+    PETSC_OPTIONS: -fp_trap
 
 # Set env vars for 'Kokkos + OpenMP' tests, so that they won't give warnings
 linux-pkgs-dbg-ftn-interfaces:
@@ -704,6 +706,7 @@ linux-pkgs-dbg-ftn-interfaces:
     TEST_ARCH: arch-ci-linux-pkgs-dbg-ftn-interfaces
     OMP_PROC_BIND: "false"
     OMP_NUM_THREADS: 4
+    PETSC_OPTIONS: -fp_trap
 
 linux-pkgs-cxx-mlib:
   extends:
