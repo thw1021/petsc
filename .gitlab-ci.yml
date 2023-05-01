@@ -641,7 +641,6 @@ linux-cmplx-single:
   variables:
     FLEXIBLAS: netlib
     TEST_ARCH: arch-ci-linux-cmplx-single
-    PETSC_OPTIONS: -fp_trap
 
 linux-gcc-cxx-avx2:
   extends:
