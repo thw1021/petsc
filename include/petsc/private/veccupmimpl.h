@@ -12,7 +12,6 @@ PETSC_INTERN PetscErrorCode PetscNvshmemFree_Private(void *);
   #define PetscNvshmemFree(ptr) ((PetscErrorCode)((ptr) && (PetscNvshmemFree_Private(ptr) || ((ptr) = PETSC_NULLPTR, PETSC_SUCCESS))))
 PETSC_INTERN PetscErrorCode PetscNvshmemSum(PetscInt, PetscScalar *, const PetscScalar *);
 PETSC_INTERN PetscErrorCode PetscNvshmemMax(PetscInt, PetscReal *, const PetscReal *);
-PETSC_INTERN PetscErrorCode VecNormAsync_NVSHMEM(Vec, NormType, PetscReal *);
 PETSC_INTERN PetscErrorCode VecAllocateNVSHMEM_SeqCUDA(Vec);
 #else
   #define PetscNvshmemFree(ptr) PETSC_SUCCESS
@@ -139,6 +138,8 @@ protected:
   static PetscErrorCode CopyToDevice_(PetscDeviceContext, Vec, bool = false) noexcept;
   // Copy DTOH, allocating host if necessary
   static PetscErrorCode CopyToHost_(PetscDeviceContext, Vec, bool = false) noexcept;
+  static PetscErrorCode DestroyDevice_(Vec) noexcept;
+  static PetscErrorCode DestroyHost_(Vec) noexcept;
 
 public:
   struct Vec_CUPM {
@@ -176,9 +177,12 @@ public:
   PETSC_NODISCARD static constexpr VecType VECMPICUPM() noexcept;
   PETSC_NODISCARD static constexpr VecType VECCUPM() noexcept;
 
-  // Get the VecType of the calling vector
+  // Get the device VecType of the calling vector
   template <typename U = Derived>
   PETSC_NODISCARD static constexpr VecType VECIMPLCUPM() noexcept;
+  // Get the host VecType of the calling vector
+  template <typename U = Derived>
+  PETSC_NODISCARD static constexpr VecType VECIMPL() noexcept;
 
   // Call the host destroy function, i.e. VecDestroy_Seq()
   static PetscErrorCode VecDestroy_IMPL(Vec) noexcept;
@@ -236,6 +240,8 @@ public:
   static PetscErrorCode ResetPreallocationCOO_CUPMBase(Vec, PetscDeviceContext) noexcept;
   template <std::size_t NCount = 0, std::size_t NScal = 0>
   static PetscErrorCode SetPreallocationCOO_CUPMBase(Vec, PetscCount, const PetscInt[], PetscDeviceContext, const std::array<CooPair<PetscCount>, NCount> & = {}, const std::array<CooPair<PetscScalar>, NScal> & = {}) noexcept;
+
+  static PetscErrorCode Convert_IMPL_IMPLCUPM(Vec) noexcept;
 };
 
 // ==========================================================================================
@@ -310,7 +316,7 @@ inline PetscErrorCode Vec_CUPMBase<T, D>::ResetAllocatedDevicePtr_(PetscDeviceCo
 namespace
 {
 
-inline PetscErrorCode VecCUPMCheckMinimumPinnedMemory_Internal(Vec v) noexcept
+inline PetscErrorCode VecCUPMCheckMinimumPinnedMemory_Internal(Vec v, PetscBool *set = PETSC_NULLPTR) noexcept
 {
   auto      mem = static_cast<PetscInt>(v->minimum_bytes_pinned_memory);
   PetscBool flg;
@@ -320,6 +326,7 @@ inline PetscErrorCode VecCUPMCheckMinimumPinnedMemory_Internal(Vec v) noexcept
   PetscCall(PetscOptionsRangeInt("-vec_pinned_memory_min", "Minimum size (in bytes) for an allocation to use pinned memory on host", "VecSetPinnedMemoryMin", mem, &mem, &flg, 0, std::numeric_limits<decltype(mem)>::max()));
   if (flg) v->minimum_bytes_pinned_memory = mem;
   PetscOptionsEnd();
+  if (set) *set = flg;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -438,6 +445,39 @@ inline PetscErrorCode Vec_CUPMBase<T, D>::CopyToHost_(PetscDeviceContext dctx, V
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+template <device::cupm::DeviceType T, typename D>
+inline PetscErrorCode Vec_CUPMBase<T, D>::DestroyDevice_(Vec v) noexcept
+{
+  PetscFunctionBegin;
+  if (const auto vcu = VecCUPMCast(v)) {
+    PetscDeviceContext dctx;
+
+    PetscCall(GetHandles_(&dctx));
+    PetscCall(ResetAllocatedDevicePtr_(dctx, v));
+    PetscCall(ResetPreallocationCOO_CUPMBase(v, dctx));
+    PetscCall(PetscFree(v->spptr));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <device::cupm::DeviceType T, typename D>
+inline PetscErrorCode Vec_CUPMBase<T, D>::DestroyHost_(Vec v) noexcept
+{
+  PetscFunctionBegin;
+  PetscCall(PetscObjectSAWsViewOff(PetscObjectCast(v)));
+  if (const auto vimpl = VecIMPLCast(v)) {
+    if (auto &array_allocated = vimpl->array_allocated) {
+      const auto useit = UseCUPMHostAlloc(v->pinned_memory);
+
+      // do this ourselves since we may want to use the cupm functions
+      PetscCall(PetscFree(array_allocated));
+    }
+  }
+  v->pinned_memory = PETSC_FALSE;
+  PetscCall(VecDestroy_IMPL(v));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 // ==========================================================================================
 // Vec_CUPMBase - Public API
 // ==========================================================================================
@@ -518,6 +558,13 @@ template <typename U>
 inline constexpr VecType Vec_CUPMBase<T, D>::VECIMPLCUPM() noexcept
 {
   return U::VECIMPLCUPM_();
+}
+
+template <device::cupm::DeviceType T, typename D>
+template <typename U>
+inline constexpr VecType Vec_CUPMBase<T, D>::VECIMPL() noexcept
+{
+  return U::VECIMPL_();
 }
 
 // private version that takes a PetscDeviceContext, called by the public variant
@@ -807,25 +854,8 @@ template <device::cupm::DeviceType T, typename D>
 inline PetscErrorCode Vec_CUPMBase<T, D>::Destroy(Vec v) noexcept
 {
   PetscFunctionBegin;
-  if (const auto vcu = VecCUPMCast(v)) {
-    PetscDeviceContext dctx;
-
-    PetscCall(GetHandles_(&dctx));
-    PetscCall(ResetAllocatedDevicePtr_(dctx, v));
-    PetscCall(ResetPreallocationCOO_CUPMBase(v, dctx));
-    PetscCall(PetscFree(v->spptr));
-  }
-  PetscCall(PetscObjectSAWsViewOff(PetscObjectCast(v)));
-  if (const auto vimpl = VecIMPLCast(v)) {
-    if (auto &array_allocated = vimpl->array_allocated) {
-      const auto useit = UseCUPMHostAlloc(v->pinned_memory);
-
-      // do this ourselves since we may want to use the cupm functions
-      PetscCall(PetscFree(array_allocated));
-    }
-  }
-  v->pinned_memory = PETSC_FALSE;
-  PetscCall(VecDestroy_IMPL(v));
+  PetscCall(DestroyDevice_(v));
+  PetscCall(DestroyHost_(v));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1081,6 +1111,36 @@ inline PetscErrorCode Vec_CUPMBase<T, D>::SetPreallocationCOO_CUPMBase(Vec v, Pe
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+template <device::cupm::DeviceType T, typename D>
+inline PetscErrorCode Vec_CUPMBase<T, D>::Convert_IMPL_IMPLCUPM(Vec v) noexcept
+{
+  PetscDeviceContext dctx;
+  PetscScalar       *oldArray     = VecIMPLCast(v)->array, *newArray;
+  PetscScalar       *oldAllocated = VecIMPLCast(v)->array_allocated;
+  PetscBool          set          = PETSC_FALSE;
+  const auto         n            = v->map->n;
+
+  PetscFunctionBegin;
+  // If users do not explicitly require pinned memory, we prefer keeping the vector's regular host array
+  PetscCall(VecCUPMCheckMinimumPinnedMemory_Internal(v, &set));
+  if (set && oldArray && ((n * sizeof(*oldArray)) > v->minimum_bytes_pinned_memory)) { // users require pinned memory
+    {
+      // Allocate pinned memory and copy over the old array
+      const auto useit = UseCUPMHostAlloc(PETSC_TRUE);
+      PetscCall(PetscMalloc1(n, &newArray));
+      PetscCall(PetscArraycpy(newArray, oldArray, n));
+    }
+    PetscCall(PetscFree(oldAllocated));
+    VecIMPLCast(v)->array           = newArray;
+    VecIMPLCast(v)->array_allocated = newArray;
+    v->offloadmask                  = PETSC_OFFLOAD_CPU;
+    v->pinned_memory                = PETSC_TRUE;
+  }
+  PetscCall(GetHandles_(&dctx));
+  PetscCall(Initialize_CUPMBase(v, PETSC_FALSE, VecIMPLCast(v)->array, nullptr, dctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
   #define PETSC_VEC_CUPM_BASE_CLASS_HEADER(name, Tp, ...) \
     PETSC_CUPMOBJECT_HEADER(Tp); \
     using name = ::Petsc::vec::cupm::impl::Vec_CUPMBase<Tp, __VA_ARGS__>; \
@@ -1089,6 +1149,7 @@ inline PetscErrorCode Vec_CUPMBase<T, D>::SetPreallocationCOO_CUPMBase(Vec v, Pe
     using name::VecCUPMCast; \
     using name::VecIMPLCast; \
     using name::VECIMPLCUPM; \
+    using name::VECIMPL; \
     using name::VECSEQCUPM; \
     using name::VECMPICUPM; \
     using name::VECCUPM; \
@@ -1123,7 +1184,8 @@ inline PetscErrorCode Vec_CUPMBase<T, D>::SetPreallocationCOO_CUPMBase(Vec v, Pe
     using name::HostArrayWrite; \
     using name::HostArrayReadWrite; \
     using name::ResetPreallocationCOO_CUPMBase; \
-    using name::SetPreallocationCOO_CUPMBase
+    using name::SetPreallocationCOO_CUPMBase; \
+    using name::Convert_IMPL_IMPLCUPM;
 
 } // namespace impl
 
