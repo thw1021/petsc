@@ -317,7 +317,7 @@ inline PetscErrorCode Vec_CUPMBase<T, D>::ResetAllocatedDevicePtr_(PetscDeviceCo
 namespace
 {
 
-inline PetscErrorCode VecCUPMCheckMinimumPinnedMemory_Internal(Vec v) noexcept
+inline PetscErrorCode VecCUPMCheckMinimumPinnedMemory_Internal(Vec v, PetscBool *set = PETSC_NULLPTR) noexcept
 {
   auto      mem = static_cast<PetscInt>(v->minimum_bytes_pinned_memory);
   PetscBool flg;
@@ -327,6 +327,7 @@ inline PetscErrorCode VecCUPMCheckMinimumPinnedMemory_Internal(Vec v) noexcept
   PetscCall(PetscOptionsRangeInt("-vec_pinned_memory_min", "Minimum size (in bytes) for an allocation to use pinned memory on host", "VecSetPinnedMemoryMin", mem, &mem, &flg, 0, std::numeric_limits<decltype(mem)>::max()));
   if (flg) v->minimum_bytes_pinned_memory = mem;
   PetscOptionsEnd();
+  if (set) *set = flg;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1115,20 +1116,29 @@ template <device::cupm::DeviceType T, typename D>
 inline PetscErrorCode Vec_CUPMBase<T, D>::Convert_IMPL_IMPLCUPM(Vec v) noexcept
 {
   PetscDeviceContext dctx;
+  PetscScalar       *oldArray     = VecIMPLCast(v)->array, *newArray;
+  PetscScalar       *oldAllocated = VecIMPLCast(v)->array_allocated;
+  PetscBool          set;
+  const auto         n = v->map->n;
 
   PetscFunctionBegin;
+  // If users do not explicitly require pinned memory, we prefer keeping the vector's regular host array
+  PetscCall(VecCUPMCheckMinimumPinnedMemory_Internal(v, &set));
+  if (set && oldArray && ((n * sizeof(*oldArray)) > v->minimum_bytes_pinned_memory)) { // users require pinned memory
+    {
+      // Allocate pinned memory and copy over the old array
+      const auto useit = UseCUPMHostAlloc(PETSC_TRUE);
+      PetscCall(PetscMalloc1(n, &newArray));
+      PetscCall(PetscArraycpy(newArray, oldArray, n));
+    }
+    PetscCall(PetscFree(oldAllocated));
+    VecIMPLCast(v)->array           = newArray;
+    VecIMPLCast(v)->array_allocated = newArray;
+    v->offloadmask                  = PETSC_OFFLOAD_CPU;
+    v->pinned_memory                = PETSC_TRUE;
+  }
   PetscCall(GetHandles_(&dctx));
   PetscCall(Initialize_CUPMBase(v, PETSC_FALSE, VecIMPLCast(v)->array, nullptr, dctx));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-template <device::cupm::DeviceType T, typename D>
-inline PetscErrorCode Vec_CUPMBase<T, D>::Convert_IMPLCUPM_IMPL(Vec v) noexcept
-{
-  PetscFunctionBegin;
-  PetscCall(D::BindToCPU(v, PETSC_TRUE));
-  PetscCall(DestroyDevice_(v));
-  PetscCall(PetscObjectChangeTypeName(PetscObjectCast(v), VECIMPL()));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
