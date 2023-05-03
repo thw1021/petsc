@@ -138,14 +138,16 @@ PetscErrorCode VecSetType(Vec vec, VecType newType)
 newvec:
   PetscCall(PetscFunctionListFind(VecList, newType, &r));
   PetscCheck(r, PETSC_COMM_SELF, PETSC_ERR_ARG_UNKNOWN_TYPE, "Unknown vector type: %s", newType);
-  if (curType) {           /* no need to destroy a vec without type */
-    if (vec->map->n > 0) { /* record the old value if any before destroy */
-      const PetscScalar *array;
+  if (curType) { /* no need to destroy a vec without type */
+    const PetscScalar *array;
+    PetscCall(VecGetArrayRead(vec, &array));
+    if (array) {                                       /* record the old value if any before destroy */
       PetscCall(PetscMalloc1(vec->map->n, &oldValue)); /* no need to free since we'll drop it into vec */
-      PetscCall(VecGetArrayRead(vec, &array));
       PetscArraycpy(oldValue, array, vec->map->n);
-      PetscCall(VecRestoreArrayRead(vec, &array));
+    } else {
+      oldValue = NULL;
     }
+    PetscCall(VecRestoreArrayRead(vec, &array));
     PetscTryTypeMethod(vec, destroy);
     PetscCall(PetscMemzero(vec->ops, sizeof(struct _VecOps)));
     PetscCall(PetscFree(vec->defaultrandtype));
