@@ -242,7 +242,6 @@ public:
   static PetscErrorCode SetPreallocationCOO_CUPMBase(Vec, PetscCount, const PetscInt[], PetscDeviceContext, const std::array<CooPair<PetscCount>, NCount> & = {}, const std::array<CooPair<PetscScalar>, NScal> & = {}) noexcept;
 
   static PetscErrorCode Convert_IMPL_IMPLCUPM(Vec) noexcept;
-  static PetscErrorCode Convert_IMPLCUPM_IMPL(Vec) noexcept;
 };
 
 // ==========================================================================================
@@ -1186,8 +1185,7 @@ inline PetscErrorCode Vec_CUPMBase<T, D>::Convert_IMPL_IMPLCUPM(Vec v) noexcept
     using name::HostArrayReadWrite; \
     using name::ResetPreallocationCOO_CUPMBase; \
     using name::SetPreallocationCOO_CUPMBase; \
-    using name::Convert_IMPL_IMPLCUPM; \
-    using name::Convert_IMPLCUPM_IMPL
+    using name::Convert_IMPL_IMPLCUPM;
 
 } // namespace impl
 
