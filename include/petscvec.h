@@ -110,6 +110,8 @@ typedef const char *VecType;
 #define VECMPIKOKKOS   "mpikokkos"
 #define VECKOKKOS      "kokkos" /* seqkokkos on one process and mpikokkos on several */
 
+#define PETSC_MAX_VECTYPE_LEN 32
+
 /* Dynamic creation and loading functions */
 PETSC_EXTERN PetscErrorCode VecScatterSetType(VecScatter, VecScatterType);
 PETSC_EXTERN PetscErrorCode VecScatterGetType(VecScatter, VecScatterType *);
