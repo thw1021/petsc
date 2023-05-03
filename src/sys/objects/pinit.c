@@ -32,8 +32,6 @@ PetscFPT              PetscFPTData = 0;
   #include <petscviewersaws.h>
 #endif
 
-/* -----------------------------------------------------------------------------------------*/
-
 PETSC_INTERN FILE *petsc_history;
 
 PETSC_INTERN PetscErrorCode PetscInitialize_DynamicLibraries(void);
@@ -234,8 +232,6 @@ PetscErrorCode PetscMaxSum(MPI_Comm comm, const PetscInt sizes[], PetscInt *max,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* ----------------------------------------------------------------------------*/
-
 #if defined(PETSC_HAVE_REAL___FLOAT128) || defined(PETSC_HAVE_REAL___FP16)
   #if defined(PETSC_HAVE_REAL___FLOAT128)
     #include <quadmath.h>
@@ -264,9 +260,11 @@ PETSC_EXTERN void MPIAPI PetscSum_Local(void *in, void *out, PetscMPIInt *cnt, M
   else if (*datatype == MPIU___FLOAT128) {
     __float128 *xin = (__float128 *)in, *xout = (__float128 *)out;
     for (i = 0; i < count; i++) xout[i] += xin[i];
+    #if defined(PETSC_HAVE_COMPLEX)
   } else if (*datatype == MPIU___COMPLEX128) {
     __complex128 *xin = (__complex128 *)in, *xout = (__complex128 *)out;
     for (i = 0; i < count; i++) xout[i] += xin[i];
+    #endif
   }
   #endif
   #if defined(PETSC_HAVE_REAL___FP16)
@@ -485,6 +483,7 @@ PetscErrorCode PetscSetProgramName(const char name[])
 
    Level: advanced
 
+.seealso: `PetscFinalize()`, `PetscInitializeFortran()`, `PetscGetArguments()`, `PetscInitialize()`
 @*/
 PetscErrorCode PetscGetProgramName(char name[], size_t len)
 {
@@ -511,7 +510,7 @@ PetscErrorCode PetscGetProgramName(char name[], size_t len)
 
       The first argument contains the program name as is normal for C arguments.
 
-.seealso: `PetscFinalize()`, `PetscInitializeFortran()`, `PetscGetArguments()`
+.seealso: `PetscFinalize()`, `PetscInitializeFortran()`, `PetscGetArguments()`, `PetscInitialize()`
 @*/
 PetscErrorCode PetscGetArgs(int *argc, char ***args)
 {
@@ -533,10 +532,10 @@ PetscErrorCode PetscGetArgs(int *argc, char ***args)
 
    Level: intermediate
 
-   Notes:
-      This does NOT start with the program name and IS null terminated (final arg is void)
+   Note:
+      This does NOT start with the program name and IS `NULL` terminated (final arg is void)
 
-.seealso: `PetscFinalize()`, `PetscInitializeFortran()`, `PetscGetArgs()`, `PetscFreeArguments()`
+.seealso: `PetscFinalize()`, `PetscInitializeFortran()`, `PetscGetArgs()`, `PetscFreeArguments()`, `PetscInitialize()`
 @*/
 PetscErrorCode PetscGetArguments(char ***args)
 {
@@ -906,8 +905,10 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
 #if defined(PETSC_HAVE_REAL___FLOAT128)
   PetscCallMPI(MPI_Type_contiguous(2, MPI_DOUBLE, &MPIU___FLOAT128));
   PetscCallMPI(MPI_Type_commit(&MPIU___FLOAT128));
+  #if defined(PETSC_HAVE_COMPLEX)
   PetscCallMPI(MPI_Type_contiguous(4, MPI_DOUBLE, &MPIU___COMPLEX128));
   PetscCallMPI(MPI_Type_commit(&MPIU___COMPLEX128));
+  #endif
 #endif
 #if defined(PETSC_HAVE_REAL___FP16)
   PetscCallMPI(MPI_Type_contiguous(2, MPI_CHAR, &MPIU___FP16));
@@ -1291,7 +1292,9 @@ PetscErrorCode PetscFreeMPIResources(void)
   PetscFunctionBegin;
 #if defined(PETSC_HAVE_REAL___FLOAT128)
   PetscCallMPI(MPI_Type_free(&MPIU___FLOAT128));
+  #if defined(PETSC_HAVE_COMPLEX)
   PetscCallMPI(MPI_Type_free(&MPIU___COMPLEX128));
+  #endif
 #endif
 #if defined(PETSC_HAVE_REAL___FP16)
   PetscCallMPI(MPI_Type_free(&MPIU___FP16));
