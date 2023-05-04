@@ -352,6 +352,7 @@ static PetscErrorCode MatProductSymbolic_X_Dense(Mat C)
   Mat_Product *product = C->product;
   Mat          A = product->A, B = product->B;
   PetscBool    isdense;
+  VecType      vtype;
 
   PetscFunctionBegin;
   switch (product->type) {
@@ -371,6 +372,8 @@ static PetscErrorCode MatProductSymbolic_X_Dense(Mat C)
     C->ops->productsymbolic = MatProductSymbolic_X_Dense;
   }
   C->ops->productnumeric = MatProductNumeric_X_Dense;
+  PetscCall(MatGetVecType(A, &vtype));
+  PetscCall(MatSetVecType(C, vtype));
   PetscCall(MatSetUp(C));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
