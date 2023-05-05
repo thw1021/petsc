@@ -1049,7 +1049,7 @@ static PetscErrorCode PCGASMGetSubKSP_GASM(PC pc, PetscInt *n, PetscInt *first, 
 .   n   - the number of subdomains for this MPI rank
 .   iis - the index sets that define the inner subdomains (or `NULL` for PETSc to determine subdomains)
 -   ois - the index sets that define the outer subdomains (or `NULL` to use the same as `iis`, or to construct by expanding `iis` by
-          the requested overlap
+          the requested overlap)
 
     Level: advanced
 
@@ -1071,7 +1071,7 @@ static PetscErrorCode PCGASMGetSubKSP_GASM(PC pc, PetscInt *n, PetscInt *first, 
 
     By default the `PGASM` preconditioner uses 1 (local) subdomain per MPI rank.
 
-    The `iis` and `ois` arrays maybe freed after this call using `PCGASMDestroySubdomains()`
+    The `iis` and `ois` arrays may be freed after this call using `PCGASMDestroySubdomains()`
 
 .seealso: `PCGASM`, `PCGASMSetOverlap()`, `PCGASMGetSubKSP()`, `PCGASMDestroySubdomains()`,
           `PCGASMCreateSubdomains2D()`, `PCGASMGetSubdomains()`
@@ -1514,7 +1514,7 @@ PetscErrorCode PCGASMCreateSubdomains(Mat A, PetscInt N, PetscInt *n, IS *iis[])
 
    Input Parameters:
 +  n   - the number of index sets
-.  iis - the array of inner subdomains,
+.  iis - the array of inner subdomains
 -  ois - the array of outer subdomains, can be `NULL`
 
    Level: intermediate
@@ -1785,7 +1785,7 @@ PetscErrorCode PCGASMCreateSubdomains2D(PC pc, PetscInt M, PetscInt N, PetscInt 
     The `IS` numbering is in the parallel, global numbering of the vector.
 
 .seealso: `PCGASM`, `PCGASMSetOverlap()`, `PCGASMGetSubKSP()`, `PCGASMCreateSubdomains2D()`,
-          `PCGASMSetSubdomains()`, `PCGASMGetSubmatrices()`,`PCGASMDestroySubdomains()`
+          `PCGASMSetSubdomains()`, `PCGASMGetSubmatrices()`, `PCGASMDestroySubdomains()`
 @*/
 PetscErrorCode PCGASMGetSubdomains(PC pc, PetscInt *n, IS *iis[], IS *ois[])
 {
