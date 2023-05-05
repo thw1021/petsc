@@ -1,4 +1,5 @@
 #include <petsc/private/dmnetworkimpl.h> /*I  "petscdmnetwork.h"  I*/
+#include "petscis.h"
 
 PetscLogEvent DMNetwork_LayoutSetUp;
 PetscLogEvent DMNetwork_SetUpNetwork;
@@ -36,6 +37,7 @@ PetscErrorCode DMNetworkInitializeHeaderComponentData(DM dm)
 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
 /*@
   DMNetworkGetPlex - Gets the `DMPLEX` associated with this `DMNETWORK`
 
@@ -1736,7 +1738,11 @@ static PetscErrorCode DMNetworkDistributeCoordinates(DM dm, PetscSF migrationSF,
   Options Database Keys:
 + -dmnetwork_view - Calls `DMView()` at the conclusion of `DMSetUp()`
 . -dmnetwork_view_distributed - Calls `DMView()` at the conclusion of `DMNetworkDistribute()`
-- -dmnetwork_view_tmpdir - Sets the temporary directory to use when viewing with the `draw` option
+. -dmnetwork_view_tmpdir - Sets the temporary directory to use when viewing with the `draw` option
+. -dmnetwork_view_all_ranks - Displays all of the subnetworks for each MPI rank
+. -dmnetwork_view_rank_range - Displays the subnetworks for the ranks in a comma-separated list
+. -dmnetwork_view_no_vertices - Disables displaying the vertices in the network visualization
+- -dmnetwork_view_no_numbering - Disables displaying the numbering of edges and vertices in the network visualization
 
   Level: intermediate
 
@@ -2770,6 +2776,8 @@ PetscErrorCode DMDestroy_Network(DM dm)
   PetscCall(PetscSectionDestroy(&network->edge.DofSection));
   PetscCall(PetscSectionDestroy(&network->edge.GlobalDofSection));
   PetscCall(PetscSFDestroy(&network->edge.sf));
+  /* viewer options */
+  PetscCall(ISDestroy(&network->vieweroptions.viewranks));
   /* Destroy the potentially cloneshared data */
   if (--network->cloneshared->refct <= 0) {
     /* Developer Note: I'm not sure if vltog can be reused or not, as I'm not sure what it's purpose is. I
