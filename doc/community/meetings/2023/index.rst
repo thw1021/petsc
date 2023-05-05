@@ -94,7 +94,7 @@ Monday, June 5
 +------------+---------------------------------------------------------------------------------------------------------------------------+---------------------------+
 | 3:00 pm    | *Towards enabling digital twins capabilities for a cloud chamber*                                                         | `Vanessa Lopez-Marrero`_  |
 +------------+---------------------------------------------------------------------------------------------------------------------------+---------------------------+
-| 3:30 pm    | *PETSC ROCKS*                                                                                                             | `David May`_              |
+| 3:30 pm    | *PETSc ROCKS*                                                                                                             | `David May`_              |
 +------------+---------------------------------------------------------------------------------------------------------------------------+---------------------------+
 | 4:00 pm    | *Software Development and Deployment Including PETSc*                                                                     | `Tim Steinhoff`_          |
 +------------+---------------------------------------------------------------------------------------------------------------------------+---------------------------+
@@ -143,7 +143,7 @@ Tuesday, June 6
 +------------+---------------------------------------------------------------------------------------------------------------------------+---------------------------+
 | 4:00 pm    | *Scalable Riemann Solvers with the Discontinuous Galerkin Method for Hyperbolic Network Simulation*                       | `Aidan Hamilton`_         |
 +------------+---------------------------------------------------------------------------------------------------------------------------+---------------------------+
-| 4:30 pm    | *An Immersed Boundary method for Elastic Bodies Using Petsc*                                                              | `Mohamad Ibrahim Cheikh`_ |
+| 4:30 pm    | *An Immersed Boundary method for Elastic Bodies Using PETSc*                                                              | `Mohamad Ibrahim Cheikh`_ |
 +------------+---------------------------------------------------------------------------------------------------------------------------+---------------------------+
 | 5:00 pm    | Mini tutorial: *DMNetwork*                                                                                                | `Hong Zhang (Ms.)`_       |
 +------------+---------------------------------------------------------------------------------------------------------------------------+---------------------------+
@@ -278,7 +278,7 @@ Abstracts
 
 .. _`Mohamad Ibrahim Cheikh`:
 
-.. topic:: *Mohamad Ibrahim Cheikh*, Konstantin Doubrovinski, **An Immersed Boundary method for Elastic Bodies Using Petsc**
+.. topic:: *Mohamad Ibrahim Cheikh*, Konstantin Doubrovinski, **An Immersed Boundary method for Elastic Bodies Using PETSc**
 
     This study presents a parallel implementation of an immersed boundary
     method code using the PETSc distributed memory module. The objective of
@@ -447,7 +447,7 @@ Abstracts
 
 .. _`David May`:
 
-.. topic:: *David May*, **PETSC ROCKS**
+.. topic:: *David May*, **PETSc ROCKS**
 
     Broadly speaking, the field of Geodynamics is concerned with understanding
     the deformation history of the solid Earth over millions, to billons of
