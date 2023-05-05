@@ -98,7 +98,7 @@ Monday, June 5
 +------------+---------------------------------------------------------------------------------------------------------------------------+---------------------------+
 | 4:00 pm    | *Software Development and Deployment Including PETSc*                                                                     | `Tim Steinhoff`_          |
 +------------+---------------------------------------------------------------------------------------------------------------------------+---------------------------+
-| 4:30 pm    | Presentation                                                                                                              |                           |
+| 4:30 pm    | *Multiscle, Multiphysics Simulation Through Application Composition Using MOOSE*                                          | `Derek Gaston`_           |
 +------------+---------------------------------------------------------------------------------------------------------------------------+---------------------------+
 | 5:00 pm    | Mini tutorial: *PNODE, PyTorch, and petsc4py*                                                                             | Hong Zhang (Mr.)          |
 +------------+---------------------------------------------------------------------------------------------------------------------------+---------------------------+
@@ -323,6 +323,12 @@ Abstracts
     the particle field. Collisions are added to the formulation by means of
     a particle-basis Landau collision operator, recently added to the PETSc
     library.
+
+.. _`Derek Gaston`:
+
+.. topic:: *Derek Gaston*, **Multiscale, Multiphysics Simulation Through Application Composition Using MOOSE**
+
+    Abstract not available at this time.
 
 .. _`Alex Grant`:
 
