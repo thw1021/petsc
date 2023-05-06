@@ -50,6 +50,7 @@
 .seealso: `VecRestoreKokkosView()`, `VecRestoreArray()`, `VecGetKokkosViewWrite()`, `VecGetArrayRead()`, `VecGetArrays()`, `VecGetArrayF90()`, `VecGetArrayReadF90()`, `VecPlaceArray()`, `VecGetArray2d()`,
           `VecGetArrayPair()`, `VecRestoreArrayPair()`, `VecGetArrayWrite()`, `VecRestoreArrayWrite()`
 @*/
+
 template <class MemorySpace>
 PetscErrorCode VecGetKokkosView(Vec, Kokkos::View<const PetscScalar *, MemorySpace> *);
 template <class MemorySpace>
@@ -78,6 +79,7 @@ PetscErrorCode VecGetKokkosView(Vec, Kokkos::View<PetscScalar *, MemorySpace> *)
 .seealso: `VecGetKokkosView()`, `VecRestoreKokkosViewWrite()`, `VecRestoreArray()`, `VecGetArrayRead()`, `VecGetArrays()`, `VecGetArrayF90()`, `VecGetArrayReadF90()`, `VecPlaceArray()`, `VecGetArray2d()`,
           `VecGetArrayPair()`, `VecRestoreArrayPair()`, `VecGetArrayWrite()`, `VecRestoreArrayWrite()`
 @*/
+
 template <class MemorySpace>
 PetscErrorCode VecRestoreKokkosView(Vec, Kokkos::View<const PetscScalar *, MemorySpace> *)
 {
@@ -115,6 +117,7 @@ PetscErrorCode VecRestoreKokkosView(Vec, Kokkos::View<PetscScalar *, MemorySpace
 .seealso: `VecRestoreKokkosViewWrite()`, `VecRestoreKokkosView()`, `VecGetKokkosView()`, `VecRestoreArray()`, `VecGetArrayRead()`, `VecGetArrays()`, `VecGetArrayF90()`, `VecGetArrayReadF90()`, `VecPlaceArray()`, `VecGetArray2d()`,
           `VecGetArrayPair()`, `VecRestoreArrayPair()`, `VecGetArrayWrite()`, `VecRestoreArrayWrite()`
 @*/
+
 template <class MemorySpace>
 PetscErrorCode VecGetKokkosViewWrite(Vec, Kokkos::View<PetscScalar *, MemorySpace> *);
 
@@ -141,6 +144,7 @@ PetscErrorCode VecGetKokkosViewWrite(Vec, Kokkos::View<PetscScalar *, MemorySpac
 .seealso: `VecGetKokkosViewWrite()`, `VecGetKokkosView()`, `VecGetKokkosView()`, `VecRestoreArray()`, `VecGetArrayRead()`, `VecGetArrays()`, `VecGetArrayF90()`, `VecGetArrayReadF90()`, `VecPlaceArray()`, `VecGetArray2d()`,
           `VecGetArrayPair()`, `VecRestoreArrayPair()`, `VecGetArrayWrite()`, `VecRestoreArrayWrite()`
 @*/
+
 template <class MemorySpace>
 PetscErrorCode VecRestoreKokkosViewWrite(Vec, Kokkos::View<PetscScalar *, MemorySpace> *);
 

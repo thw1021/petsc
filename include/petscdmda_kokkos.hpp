@@ -117,6 +117,7 @@
           `DMDAVecGetArrayDOF()`, `DMDAVecGetArrayWrite()`, `DMDAVecRestoreArrayWrite()`, `DMDAVecGetArrayRead()`, `DMDAVecRestoreArrayRead()`,
           `DMStagVecGetArray()`
 @*/
+
 template <class MemorySpace>
 PetscErrorCode DMDAVecGetKokkosOffsetView(DM, Vec, Kokkos::Experimental::OffsetView<const PetscScalar *, MemorySpace> *);
 template <class MemorySpace>
@@ -169,6 +170,7 @@ PetscErrorCode DMDAVecGetKokkosOffsetViewWrite(DM, Vec, Kokkos::Experimental::Of
           `DMDAVecGetArrayDOF()`, `DMDAVecGetArrayWrite()`, `DMDAVecRestoreArrayWrite()`, `DMDAVecGetArrayRead()`, `DMDAVecRestoreArrayRead()`,
           `DMStagVecGetArray()`
 @*/
+
 template <class MemorySpace>
 PetscErrorCode DMDAVecRestoreKokkosOffsetView(DM, Vec, Kokkos::Experimental::OffsetView<const PetscScalar *, MemorySpace> *);
 template <class MemorySpace>
@@ -281,6 +283,7 @@ PetscErrorCode DMDAVecRestoreKokkosOffsetViewWrite(DM, Vec, Kokkos::Experimental
           `DMDAVecGetArrayDOF()`, `DMDAVecGetArrayWrite()`, `DMDAVecRestoreArrayWrite()`, `DMDAVecGetArrayRead()`, `DMDAVecRestoreArrayRead()`,
           `DMStagVecGetArray()`
 @*/
+
 template <class MemorySpace>
 PetscErrorCode DMDAVecGetKokkosOffsetViewDOF(DM, Vec, Kokkos::Experimental::OffsetView<const PetscScalar **, Kokkos::LayoutRight, MemorySpace> *);
 template <class MemorySpace>
@@ -333,6 +336,7 @@ PetscErrorCode DMDAVecGetKokkosOffsetViewDOFWrite(DM, Vec, Kokkos::Experimental:
           `DMDAVecGetArrayDOF()`, `DMDAVecGetArrayWrite()`, `DMDAVecRestoreArrayWrite()`, `DMDAVecGetArrayRead()`, `DMDAVecRestoreArrayRead()`,
           `DMStagVecGetArray()`
 @*/
+
 template <class MemorySpace>
 PetscErrorCode DMDAVecRestoreKokkosOffsetViewDOF(DM, Vec, Kokkos::Experimental::OffsetView<const PetscScalar **, Kokkos::LayoutRight, MemorySpace> *);
 template <class MemorySpace>
