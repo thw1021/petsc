@@ -444,9 +444,12 @@ class Configure(script.Script):
       codeStr += '#include "conffix.h"\n'+includes
       if not body is None:
         if codeBegin is None:
-          codeBegin = '\nint main() {\n'
+          codeBegin = '\nint main(void) {\n'
         if codeEnd is None:
-          codeEnd   = ';\n  return 0;\n}\n'
+          if len(body) == 0:
+            codeEnd = '  return 0;\n}\n'
+          else:
+            codeEnd = ';\n  return 0;\n}\n'
         codeStr += codeBegin+body+codeEnd
     elif language == 'FC':
       if not includes is None and body is None:
