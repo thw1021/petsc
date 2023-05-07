@@ -49,6 +49,13 @@ class Configure(config.package.Package):
        barg = 'SLEPC_DIR='+self.packageDir
        prefix = os.path.join(self.petscdir.dir,self.arch)
 
+    if  self.argDB['with-petsc4py']:
+      if 'download-slepc-configure-arguments' in self.argDB:
+        if self.argDB['download-slepc-configure-arguments'] and '--with-slepc4py' not in self.argDB['download-slepc-configure-arguments']:
+          self.argDB['download-slepc-configure-arguments'] += ' --with-slepc4py'
+      else:
+        self.argDB['download-slepc-configure-arguments'] = ' --with-slepc4py'
+
     if 'download-slepc-configure-arguments' in self.argDB and self.argDB['download-slepc-configure-arguments']:
       configargs = self.argDB['download-slepc-configure-arguments']
       if '--with-slepc4py' in self.argDB['download-slepc-configure-arguments']:
@@ -80,6 +87,7 @@ class Configure(config.package.Package):
             echo "Error installing SLEPc." && \\\n\
             echo "********************************************************************" && \\\n\
             exit 1)'])
+    self.addMakeRule('slepc-check', '', ['@cd '+self.packageDir+' ; SLEPC_DIR=`pwd` ${OMAKE} check'])
     if self.argDB['prefix'] and not 'package-prefix-hash' in self.argDB:
       self.addMakeRule('slepc-build','')
       # the build must be done at install time because PETSc shared libraries must be in final location before building slepc
