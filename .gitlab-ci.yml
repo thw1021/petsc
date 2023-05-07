@@ -519,14 +519,14 @@ linux-sycl-double:
     TEST_OPTS: query=requires queryval=kokkos_kernels
     MAKE_CFLAGS: -Wno-expected-file-type -Werror
 
-linux-cuda-pkgs:
-  extends:
-    - .stage-3
-    - .linux_test
-  tags:
-    - cuda-stage3
-  variables:
-    TEST_ARCH: arch-ci-linux-cuda-pkgs
+#linux-cuda-pkgs:
+#  extends:
+#    - .stage-3
+#    - .linux_test
+#  tags:
+#    - cuda-stage3
+#  variables:
+#    TEST_ARCH: arch-ci-linux-cuda-pkgs
     # run all tests that:
     # 1. require cuda, OR
     # 2. require device, OR
@@ -534,8 +534,8 @@ linux-cuda-pkgs:
     #
     # need to use the alternate OR spelling since '|' is interpreted as a pipe by the
     # shell, and I could not manage to escape it enough times...
-    TEST_OPTS: -j3 queryval='cuda,device,kokkos*,vec*' query='requires,requires,requires%OR%name'
-    MAKE_CUDAFLAGS: --compiler-options -Wall,-Werror
+#    TEST_OPTS: -j3 queryval='cuda,device,kokkos*,vec*' query='requires,requires,requires%OR%name'
+#    MAKE_CUDAFLAGS: --compiler-options -Wall,-Werror
 
 linux-cuda112-omp:
   extends:
@@ -642,46 +642,46 @@ linux-cmplx-single:
     FLEXIBLAS: netlib
     TEST_ARCH: arch-ci-linux-cmplx-single
 
-linux-gcc-cxx-avx2:
-  extends:
-    - .stage-3
-    - .linux_test
-  tags:
-    - name:petsc-knl-01
-  variables:
-    TEST_ARCH: arch-ci-linux-gcc-cxx-avx2
+#linux-gcc-cxx-avx2:
+#  extends:
+#    - .stage-3
+#    - .linux_test
+#  tags:
+#    - name:petsc-knl-01
+#  variables:
+#    TEST_ARCH: arch-ci-linux-gcc-cxx-avx2
 
-linux-clang-avx:
-  extends:
-    - .stage-3
-    - .linux_test
-  tags:
-    - name:petsc-knl-01
-  variables:
-    TEST_ARCH: arch-ci-linux-clang-avx
+#linux-clang-avx:
+#  extends:
+#    - .stage-3
+#    - .linux_test
+#  tags:
+#    - name:petsc-knl-01
+#  variables:
+#    TEST_ARCH: arch-ci-linux-clang-avx
 
-linux-knl:
-  extends:
-    - .stage-3
-    - .linux_test
-    - .coverage-disable
-  tags:
-    - name:petsc-knl-01
-  variables:
-    MAKE_FFLAGS: -warn errors
-    TEST_ARCH: arch-ci-linux-knl
-    LOAD_MODULES: intel-oneapi-compilers/2022.0.2 intel-oneapi-mkl/2022.0.2 intel-oneapi-mpi/2021.5.1
+#linux-knl:
+#  extends:
+#    - .stage-3
+#    - .linux_test
+#    - .coverage-disable
+#  tags:
+#    - name:petsc-knl-01
+#  variables:
+#    MAKE_FFLAGS: -warn errors
+#    TEST_ARCH: arch-ci-linux-knl
+#    LOAD_MODULES: intel-oneapi-compilers/2022.0.2 intel-oneapi-mkl/2022.0.2 intel-oneapi-mpi/2021.5.1
 
-linux-intel-mkl-single:
-  extends:
-    - .stage-3
-    - .linux_test_nofflags
-    - .coverage-disable
-  tags:
-    - name:petsc-knl-01
-  variables:
-    TEST_ARCH: arch-ci-linux-intel-mkl-single
-    LOAD_MODULES: intel-oneapi-compilers/2022.0.2 intel-oneapi-mkl/2022.0.2 intel-oneapi-mpi/2021.5.1
+#linux-intel-mkl-single:
+#  extends:
+#    - .stage-3
+#    - .linux_test_nofflags
+#    - .coverage-disable
+#  tags:
+#    - name:petsc-knl-01
+#  variables:
+#    TEST_ARCH: arch-ci-linux-intel-mkl-single
+#    LOAD_MODULES: intel-oneapi-compilers/2022.0.2 intel-oneapi-mkl/2022.0.2 intel-oneapi-mpi/2021.5.1
 
 linux-cxx-cmplx-pkgs-64idx:
   extends:
@@ -1026,15 +1026,15 @@ coverage-analyze:
     # stage-3
     - linux-pkgs-dbg
     - linux-matlab-ilp64
-    - linux-cuda-pkgs
+    #- linux-cuda-pkgs
     - linux-cxx-cmplx-pkgs-64idx
     - linux-cuda-cmplx
     - linux-cuda-double-64idx
     - linux-cuda-uni-pkgs
     - linux-viennacl
     - linux-without-fc
-    - linux-gcc-cxx-avx2
-    - linux-clang-avx
+    #- linux-gcc-cxx-avx2
+    #- linux-clang-avx
     - linux-pkgs-cxx-mlib
     - linux-pkgs-valgrind
     - linux-nagfor
@@ -1195,3 +1195,11 @@ pages:  # this job name has special meaning to GitLab
   extends: .test
   allow_failure: true
 
+flag-failure:
+  stage: .post
+  tags:
+    - gce-u22-short
+  script:
+    - exit 1
+  variables:
+    GIT_STRATEGY: none
