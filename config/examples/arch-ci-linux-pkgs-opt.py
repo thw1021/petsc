@@ -10,6 +10,7 @@ configure_options = [
   #'--with-cxx=mpicxx.openmpi',
   #'--with-fc=mpif90.openmpi',
   #'--with-mpiexec=mpiexec.openmpi',
+  '--with-cudac=0',
   '--download-openmpi=1',
   '--download-mpe=1',
   '--download-fblaslapack=1',
