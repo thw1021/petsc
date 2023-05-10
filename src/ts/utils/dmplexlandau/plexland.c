@@ -1744,7 +1744,7 @@ static PetscErrorCode CreateStaticData(PetscInt dim, IS grid_batch_is_inv[], Lan
       ctx->SData_d.lambdas = (void *)lambdas_p;
       for (PetscInt grid = 0; grid < LANDAU_MAX_GRIDS; grid++) {
         PetscReal(*lambdas)[LANDAU_MAX_GRIDS][LANDAU_MAX_GRIDS] = (PetscReal(*)[LANDAU_MAX_GRIDS][LANDAU_MAX_GRIDS])ctx->SData_d.lambdas;
-        for (PetscInt gridj = 0; gridj < LANDAU_MAX_GRIDS; gridj++) { (*lambdas)[grid][gridj] = ctx->lambdas[grid][gridj]; }
+        for (PetscInt gridj = 0; gridj < LANDAU_MAX_GRIDS; gridj++) (*lambdas)[grid][gridj] = ctx->lambdas[grid][gridj];
       }
     }
     PetscCall(PetscLogEventEnd(ctx->events[7], 0, 0, 0, 0));

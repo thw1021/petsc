@@ -813,7 +813,7 @@ void PETSCABORT(MPI_Comm, PetscErrorCode);
   #define PETSCABORT(comm, ...) \
     do { \
       PetscErrorCode ierr_petsc_abort_; \
-      if (petscwaitonerrorflg) { ierr_petsc_abort_ = PetscSleep(1000); } \
+      if (petscwaitonerrorflg) ierr_petsc_abort_ = PetscSleep(1000); \
       if (petscindebugger) { \
         abort(); \
       } else { \
@@ -1355,7 +1355,7 @@ M*/
 M*/
   #define PetscStackUpdateLine \
     do { \
-      if (petscstack.currentsize > 0 && petscstack.function[petscstack.currentsize - 1] == PETSC_FUNCTION_NAME) { petscstack.line[petscstack.currentsize - 1] = __LINE__; } \
+      if (petscstack.currentsize > 0 && petscstack.function[petscstack.currentsize - 1] == PETSC_FUNCTION_NAME) petscstack.line[petscstack.currentsize - 1] = __LINE__; \
     } while (0)
 
   /*MC

@@ -32,7 +32,7 @@ PetscErrorCode Fibonnaci(PetscInt64 **set, PetscInt n)
   PetscAssert((n < 50), PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONGSTATE, "n must be less than 50\n");
   PetscCall(PetscMalloc1(n + 1, set));
   (*set)[0] = (PetscInt64)n;
-  for (ii = 0; ii < n; ii++) { (*set)[ii + 1] = fib[ii]; }
+  for (ii = 0; ii < n; ii++) (*set)[ii + 1] = fib[ii];
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -44,7 +44,7 @@ PetscErrorCode Square(PetscInt64 **set, PetscInt n)
   PetscFunctionBeginUser;
   PetscCall(PetscMalloc1(n + 1, set));
   (*set)[0] = (PetscInt64)n;
-  for (ii = 1; ii < n + 1; ii++) { (*set)[ii] = ii * ii; }
+  for (ii = 1; ii < n + 1; ii++) (*set)[ii] = ii * ii;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -56,7 +56,7 @@ PetscErrorCode Cube(PetscInt64 **set, PetscInt n)
   PetscFunctionBeginUser;
   PetscCall(PetscMalloc1(n + 1, set));
   (*set)[0] = (PetscInt64)n;
-  for (ii = 1; ii < n + 1; ii++) { (*set)[ii] = ii * ii * ii; }
+  for (ii = 1; ii < n + 1; ii++) (*set)[ii] = ii * ii * ii;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -68,7 +68,7 @@ PetscErrorCode Sixth(PetscInt64 **set, PetscInt n)
   PetscFunctionBeginUser;
   PetscCall(PetscMalloc1(n + 1, set));
   (*set)[0] = (PetscInt64)n;
-  for (ii = 1; ii < n + 1; ii++) { (*set)[ii] = ii * ii * ii * ii * ii * ii; }
+  for (ii = 1; ii < n + 1; ii++) (*set)[ii] = ii * ii * ii * ii * ii * ii;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
