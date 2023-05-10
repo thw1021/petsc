@@ -155,7 +155,7 @@ int main(int argc, char **args)
     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   PetscCall(KSPGetPC(ksp, &pc));
   PetscCall(PetscObjectTypeCompare((PetscObject)pc, PCASM, &flg));
-  if (flg && nblocks > 0) { PetscCall(PCASMSetLocalSubdomains(pc, nblocks, is_loc, NULL)); }
+  if (flg && nblocks > 0) PetscCall(PCASMSetLocalSubdomains(pc, nblocks, is_loc, NULL));
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                       Solve the linear system
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */

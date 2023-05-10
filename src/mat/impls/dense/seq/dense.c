@@ -797,7 +797,7 @@ PetscErrorCode MatLUFactor_SeqDense(Mat A, IS row, IS col, const MatFactorInfo *
   PetscFunctionBegin;
   PetscCall(PetscBLASIntCast(A->cmap->n, &n));
   PetscCall(PetscBLASIntCast(A->rmap->n, &m));
-  if (!mat->pivots) { PetscCall(PetscMalloc1(A->rmap->n, &mat->pivots)); }
+  if (!mat->pivots) PetscCall(PetscMalloc1(A->rmap->n, &mat->pivots));
   if (!A->rmap->n || !A->cmap->n) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
   PetscCallBLAS("LAPACKgetrf", LAPACKgetrf_(&m, &n, mat->v, &mat->lda, mat->pivots, &info));
@@ -853,7 +853,7 @@ PetscErrorCode MatCholeskyFactor_SeqDense(Mat A, IS perm, const MatFactorInfo *f
     PetscCall(PetscFPTrapPop());
 #if defined(PETSC_USE_COMPLEX)
   } else if (A->hermitian == PETSC_BOOL3_TRUE) {
-    if (!mat->pivots) { PetscCall(PetscMalloc1(A->rmap->n, &mat->pivots)); }
+    if (!mat->pivots) PetscCall(PetscMalloc1(A->rmap->n, &mat->pivots));
     if (!mat->fwork) {
       PetscScalar dummy;
 
@@ -869,7 +869,7 @@ PetscErrorCode MatCholeskyFactor_SeqDense(Mat A, IS perm, const MatFactorInfo *f
     PetscCall(PetscFPTrapPop());
 #endif
   } else { /* symmetric case */
-    if (!mat->pivots) { PetscCall(PetscMalloc1(A->rmap->n, &mat->pivots)); }
+    if (!mat->pivots) PetscCall(PetscMalloc1(A->rmap->n, &mat->pivots));
     if (!mat->fwork) {
       PetscScalar dummy;
 
@@ -930,8 +930,8 @@ PetscErrorCode MatQRFactor_SeqDense(Mat A, IS col, const MatFactorInfo *minfo)
   PetscCall(PetscBLASIntCast(A->rmap->n, &m));
   max = PetscMax(m, n);
   min = PetscMin(m, n);
-  if (!mat->tau) { PetscCall(PetscMalloc1(min, &mat->tau)); }
-  if (!mat->pivots) { PetscCall(PetscMalloc1(n, &mat->pivots)); }
+  if (!mat->tau) PetscCall(PetscMalloc1(min, &mat->tau));
+  if (!mat->pivots) PetscCall(PetscMalloc1(n, &mat->pivots));
   if (!mat->qrrhs) PetscCall(MatCreateVecs(A, NULL, &(mat->qrrhs)));
   if (!A->rmap->n || !A->cmap->n) PetscFunctionReturn(PETSC_SUCCESS);
   if (!mat->fwork) {
@@ -3396,7 +3396,7 @@ PetscErrorCode MatDenseGetColumnVec_SeqDense(Mat A, PetscInt col, Vec *v)
   PetscFunctionBegin;
   PetscCheck(!a->vecinuse, PETSC_COMM_SELF, PETSC_ERR_ORDER, "Need to call MatDenseRestoreColumnVec() first");
   PetscCheck(!a->matinuse, PETSC_COMM_SELF, PETSC_ERR_ORDER, "Need to call MatDenseRestoreSubMatrix() first");
-  if (!a->cvec) { PetscCall(VecCreateSeqWithArray(PetscObjectComm((PetscObject)A), A->rmap->bs, A->rmap->n, NULL, &a->cvec)); }
+  if (!a->cvec) PetscCall(VecCreateSeqWithArray(PetscObjectComm((PetscObject)A), A->rmap->bs, A->rmap->n, NULL, &a->cvec));
   a->vecinuse = col + 1;
   PetscCall(MatDenseGetArray(A, (PetscScalar **)&a->ptrinuse));
   PetscCall(VecPlaceArray(a->cvec, a->ptrinuse + (size_t)col * (size_t)a->lda));
@@ -3425,7 +3425,7 @@ PetscErrorCode MatDenseGetColumnVecRead_SeqDense(Mat A, PetscInt col, Vec *v)
   PetscFunctionBegin;
   PetscCheck(!a->vecinuse, PETSC_COMM_SELF, PETSC_ERR_ORDER, "Need to call MatDenseRestoreColumnVec() first");
   PetscCheck(!a->matinuse, PETSC_COMM_SELF, PETSC_ERR_ORDER, "Need to call MatDenseRestoreSubMatrix() first");
-  if (!a->cvec) { PetscCall(VecCreateSeqWithArray(PetscObjectComm((PetscObject)A), A->rmap->bs, A->rmap->n, NULL, &a->cvec)); }
+  if (!a->cvec) PetscCall(VecCreateSeqWithArray(PetscObjectComm((PetscObject)A), A->rmap->bs, A->rmap->n, NULL, &a->cvec));
   a->vecinuse = col + 1;
   PetscCall(MatDenseGetArrayRead(A, &a->ptrinuse));
   PetscCall(VecPlaceArray(a->cvec, a->ptrinuse + (size_t)col * (size_t)a->lda));

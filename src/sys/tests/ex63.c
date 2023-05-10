@@ -39,7 +39,7 @@ PetscErrorCode Prime(PetscInt64 **set, PetscInt n)
 
   PetscCall(PetscMalloc1((size_t)count + 1, set));
   (*set)[0] = count;
-  for (ii = 1; ii < count + 1; ii++) { (*set)[ii] = prime[ii - 1]; }
+  for (ii = 1; ii < count + 1; ii++) (*set)[ii] = prime[ii - 1];
   PetscCall(PetscFree(prime));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
