@@ -2456,7 +2456,7 @@ PetscErrorCode TaoMonitor(Tao tao, PetscInt its, PetscReal f, PetscReal res, Pet
   }
   PetscCall(VecLockReadPush(tao->solution));
   for (i = 0; i < tao->numbermonitors; i++) PetscCall((*tao->monitor[i])(tao, tao->monitorcontext[i]));
-  PetscCall(VecLockReadPush(tao->solution));
+  PetscCall(VecLockReadPop(tao->solution));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
