@@ -316,7 +316,7 @@ inline PetscErrorCode Vec_CUPMBase<T, D>::ResetAllocatedDevicePtr_(PetscDeviceCo
 namespace
 {
 
-inline PetscErrorCode VecCUPMCheckMinimumPinnedMemory_Internal(Vec v, PetscBool *set = PETSC_NULLPTR) noexcept
+inline PetscErrorCode VecCUPMCheckMinimumPinnedMemory_Internal(Vec v, PetscBool *set = nullptr) noexcept
 {
   auto      mem = static_cast<PetscInt>(v->minimum_bytes_pinned_memory);
   PetscBool flg;
