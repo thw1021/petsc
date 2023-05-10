@@ -1114,30 +1114,36 @@ inline PetscErrorCode Vec_CUPMBase<T, D>::SetPreallocationCOO_CUPMBase(Vec v, Pe
 template <device::cupm::DeviceType T, typename D>
 inline PetscErrorCode Vec_CUPMBase<T, D>::Convert_IMPL_IMPLCUPM(Vec v) noexcept
 {
+  const auto         n        = v->map->n;
+  const auto         vimpl    = VecIMPLCast(v);
+  auto              &impl_arr = vimpl->array;
+  PetscBool          set      = PETSC_FALSE;
   PetscDeviceContext dctx;
-  PetscScalar       *oldArray     = VecIMPLCast(v)->array, *newArray;
-  PetscScalar       *oldAllocated = VecIMPLCast(v)->array_allocated;
-  PetscBool          set          = PETSC_FALSE;
-  const auto         n            = v->map->n;
 
   PetscFunctionBegin;
-  // If users do not explicitly require pinned memory, we prefer keeping the vector's regular host array
+  // If users do not explicitly require pinned memory, we prefer keeping the vector's regular
+  // host array
   PetscCall(VecCUPMCheckMinimumPinnedMemory_Internal(v, &set));
-  if (set && oldArray && ((n * sizeof(*oldArray)) > v->minimum_bytes_pinned_memory)) { // users require pinned memory
+  if (set && impl_arr && ((n * sizeof(*impl_arr)) > v->minimum_bytes_pinned_memory)) {
+    auto        &impl_alloc = vimpl->array_allocated;
+    PetscScalar *new_arr;
+
+    // users require pinned memory
     {
       // Allocate pinned memory and copy over the old array
       const auto useit = UseCUPMHostAlloc(PETSC_TRUE);
-      PetscCall(PetscMalloc1(n, &newArray));
-      PetscCall(PetscArraycpy(newArray, oldArray, n));
+
+      PetscCall(PetscMalloc1(n, &new_arr));
+      PetscCall(PetscArraycpy(new_arr, impl_arr, n));
     }
-    PetscCall(PetscFree(oldAllocated));
-    VecIMPLCast(v)->array           = newArray;
-    VecIMPLCast(v)->array_allocated = newArray;
-    v->offloadmask                  = PETSC_OFFLOAD_CPU;
-    v->pinned_memory                = PETSC_TRUE;
+    PetscCall(PetscFree(impl_alloc));
+    impl_arr         = new_arr;
+    impl_alloc       = new_arr;
+    v->offloadmask   = PETSC_OFFLOAD_CPU;
+    v->pinned_memory = PETSC_TRUE;
   }
   PetscCall(GetHandles_(&dctx));
-  PetscCall(Initialize_CUPMBase(v, PETSC_FALSE, VecIMPLCast(v)->array, nullptr, dctx));
+  PetscCall(Initialize_CUPMBase(v, PETSC_FALSE, impl_arr, nullptr, dctx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
