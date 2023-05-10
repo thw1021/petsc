@@ -2104,12 +2104,12 @@ PetscErrorCode SNESGetFunctionType(SNES snes, SNESFunctionType *type)
 
      Synopsis:
      #include <petscsnes.h>
-$    SNESNGSFunction(SNES snes,Vec x,Vec b,void *ctx);
+    SNESNGSFunction(SNES snes, Vec x, Vec b, void *ctx);
 
      Collective
 
      Input Parameters:
-+  X   - solution vector
++  X   - solution vector with current solution
 .  B   - RHS vector
 -  ctx - optional user-defined Gauss-Seidel context
 
@@ -3944,7 +3944,7 @@ PetscErrorCode SNESMonitor(SNES snes, PetscInt iter, PetscReal rnorm)
 
      Synopsis:
      #include <petscsnes.h>
-$    PetscErrorCode SNESMonitorFunction(SNES snes,PetscInt its, PetscReal norm,void *mctx)
+    PetscErrorCode SNESMonitorFunction(SNES snes, PetscInt its, PetscReal norm, void *mctx)
 
      Collective
 
@@ -4047,7 +4047,7 @@ PetscErrorCode SNESMonitorCancel(SNES snes)
 
      Synopsis:
      #include <petscsnes.h>
-$     PetscErrorCode SNESConvergenceTest(SNES snes,PetscInt it,PetscReal xnorm,PetscReal gnorm,PetscReal f,SNESConvergedReason *reason,void *cctx)
+     PetscErrorCode SNESConvergenceTest(SNES snes, PetscInt it, PetscReal xnorm, PetscReal gnorm, PetscReal f, SNESConvergedReason *reason, void *cctx)
 
      Collective
 
@@ -5065,11 +5065,11 @@ PetscErrorCode SNESGetOptionsPrefix(SNES snes, const char *prefix[])
 
    Sample usage:
 .vb
-   SNESRegister("my_solver",MySolverCreate);
+   SNESRegister("my_solver", MySolverCreate);
 .ve
 
    Then, your solver can be chosen with the procedural interface via
-$     SNESSetType(snes,"my_solver")
+$     SNESSetType(snes, "my_solver")
    or at runtime via the option
 $     -snes_type my_solver
 
