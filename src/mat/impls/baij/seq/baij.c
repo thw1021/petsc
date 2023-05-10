@@ -111,7 +111,7 @@ PetscErrorCode MatInvertBlockDiagonal_SeqBAIJ(Mat A, const PetscScalar **values)
   }
   PetscCall(MatMarkDiagonal_SeqBAIJ(A));
   diag_offset = a->diag;
-  if (!a->idiag) { PetscCall(PetscMalloc1(bs2 * mbs, &a->idiag)); }
+  if (!a->idiag) PetscCall(PetscMalloc1(bs2 * mbs, &a->idiag));
   diag = a->idiag;
   if (values) *values = a->idiag;
   /* factor and invert each block */

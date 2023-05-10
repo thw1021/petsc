@@ -141,7 +141,7 @@ PetscErrorCode PetscSSEIsEnabled(MPI_Comm comm, PetscBool *lflag, PetscBool *gfl
 
     if (petsc_sse_local_is_untested) {
       PetscCall(PetscSSEHardwareTest(&petsc_sse_enabled_local));
-      if (petsc_sse_enabled_local) { PetscCall(PetscSSEOSEnabledTest(&petsc_sse_enabled_local)); }
+      if (petsc_sse_enabled_local) PetscCall(PetscSSEOSEnabledTest(&petsc_sse_enabled_local));
       petsc_sse_local_is_untested = PETSC_FALSE;
     }
 
