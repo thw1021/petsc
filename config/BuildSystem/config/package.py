@@ -1256,6 +1256,8 @@ char     *ver = "petscpkgver(" PetscXstr_({y}) ")";
         self.download = [downloadPackageVal]
     if self.download and self.argDB['download-'+self.downloadname.lower()+'-commit']:
       self.gitcommit = self.argDB['download-'+self.downloadname.lower()+'-commit']
+      if hasattr(self, 'download_git'):
+        self.download = self.download_git
     elif self.gitcommitmain and not self.petscdir.versionRelease:
       self.gitcommit = self.gitcommitmain
     if not 'with-'+self.package in self.argDB:
