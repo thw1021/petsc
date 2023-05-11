@@ -1,20 +1,26 @@
 import config.package
-import os
 
 class Configure(config.package.GNUPackage):
   def __init__(self, framework):
-    config.package.GNUPackage.__init__(self, framework)
+    super().__init__(framework)
     self.version          = '4.1.1'
-    self.download         = ['https://github.com/pmodels/mpich/releases/download/v'+self.version+'/mpich-'+self.version+'.tar.gz',
-                             'https://www.mpich.org/static/downloads/'+self.version+'/mpich-'+self.version+'.tar.gz', # does not always work from Python? So add in ftp.mcs URL below
-                             'https://ftp.mcs.anl.gov/pub/petsc/externalpackages'+'/mpich-'+self.version+'.tar.gz']
+    self.gitcommit        = 'v' + self.version
+    self.__tarballs       = [
+      'https://github.com/pmodels/mpich/releases/download/v'+self.version+'/mpich-'+self.version+'.tar.gz',
+       # does not always work from Python? So add in ftp.mcs URL below
+      'https://www.mpich.org/static/downloads/'+self.version+'/mpich-'+self.version+'.tar.gz',
+      'https://ftp.mcs.anl.gov/pub/petsc/externalpackages/mpich-'+self.version+'.tar.gz'
+    ]
+    self.__git_url        = ['git://https://github.com/pmodels/mpich.git']
+    self.download         = self.__git_url + self.__tarballs
+    self.gitsubmodules    = ['.']
     self.downloaddirnames = ['mpich']
     self.skippackagewithoptions = 1
     self.isMPI = 1
     return
 
   def setupDependencies(self, framework):
-    config.package.GNUPackage.setupDependencies(self, framework)
+    super().setupDependencies(framework)
     self.compilerFlags   = framework.require('config.compilerFlags',self)
     self.cuda            = framework.require('config.packages.cuda',self)
     self.hip             = framework.require('config.packages.hip',self)
@@ -24,7 +30,7 @@ class Configure(config.package.GNUPackage):
     return
 
   def setupHelp(self, help):
-    config.package.GNUPackage.setupHelp(self,help)
+    super().setupHelp(help)
     import nargs
     help.addArgument('MPICH', '-download-mpich-pm=<hydra, gforker or mpd>',              nargs.Arg(None, 'hydra', 'Launcher for MPI processes'))
     help.addArgument('MPICH', '-download-mpich-device=<ch3:nemesis or see MPICH docs>', nargs.Arg(None, None, 'Communicator for MPI processes'))
@@ -47,7 +53,7 @@ class Configure(config.package.GNUPackage):
 
   def formGNUConfigureArgs(self):
     '''MPICH has many specific extra configure arguments'''
-    args = config.package.GNUPackage.formGNUConfigureArgs(self)
+    args = super().formGNUConfigureArgs()
     args.append('--with-pm='+self.argDB['download-mpich-pm'])
     args.append('--disable-java')
     if self.hwloc.found:
@@ -91,13 +97,78 @@ class Configure(config.package.GNUPackage):
     args.append('--disable-dependency-tracking')
     return args
 
+  def gitPreReqCheck(self):
+    return self.programs.autoreconf and self.programs.libtoolize
+
+  def preInstall(self):
+    if self.retriever.isDirectoryGitRepo(self.packageDir):
+      # no need to bootstrap tarballs
+      self.Bootstrap('./autogen.sh')
+    return super().preInstall()
+
   def Install(self):
     '''After downloading and installing MPICH we need to reset the compilers to use those defined by the MPICH install'''
     if 'package-prefix-hash' in self.argDB and self.argDB['package-prefix-hash'] == 'reuse':
       return self.defaultInstallDir
-    installDir = config.package.GNUPackage.Install(self)
+    installDir = super().Install()
     self.updateCompilers(installDir,'mpicc','mpicxx','mpif77','mpif90')
     return installDir
 
+  def consistencyChecks(self):
+    """
+    Check whether user passed --download-mpich and/or --download-mpich-commit
+
+    On success:
+    - if the user passes --download-mpich, self.download is set to self.__tarballs
+    - if the user passes --download-mpich-commit, self.download is set to self.__git_url
+
+    Throws RuntimeError if:
+    - neither --download-mpich or --download-mpich-commit was set, this is a bug in configure!
+    """
+    # displays the TESTING: consistencyChecks from .... banner
+    # for whatever reason this is not done by default?
+    self.printTest(self.consistencyChecks)
+    package          = self.downloadname.casefold()
+    dl_option        = 'download-{}'.format(package)
+    dl               = self.argDB.get(dl_option)
+    dl_commit_option = 'download-{}-commit'.format(package)
+    dl_commit        = self.argDB.get(dl_commit_option)
+
+    if dl_commit:
+      dl_val   = self.__git_url
+      opt_name = dl_commit_option
+      opt_val  = dl_commit
+      descr    = 'git url'
+    elif dl:
+      dl_val   = self.__tarballs
+      opt_name = dl_option
+      opt_val  = dl
+      descr    = 'tarballs'
+    elif dl is None and dl_commit is None:
+      raise RuntimeError(
+        'Neither --{} and --{} was set, yet we are configuring {}? This is a bug in configure.'.format(
+          dl_option, dl_commit_option, package.upper()
+        )
+      )
+    else:
+      dl_val = None
+
+    if dl_val is None:
+      # neither was passed, so we should do nothing
+      self.logPrint(
+        '{}::consistencyChecks: found --{}={}, and --{}={}, using default:{}'.format(
+          self.package.upper(), dl_option, dl, dl_commit_option, dl_commit,
+          '\n\t- '.join([''] + self.download)
+        )
+      )
+    else:
+      self.download = dl_val
+      self.logPrint(
+        '{}::consistencyChecks: found --{}={}, using {}(s):{}'.format(
+          self.package.upper(), opt_name, opt_val, descr, '\n\t- '.join([''] + self.download)
+        )
+      )
+    return super().consistencyChecks()
+
   def configure(self):
-    return config.package.Package.configure(self)
+    return super().configure()
