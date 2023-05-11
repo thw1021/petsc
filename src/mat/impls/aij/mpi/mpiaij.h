@@ -68,6 +68,7 @@ typedef struct {
   void *spptr;
 
   /* MatSetValuesCOO() related stuff */
+  PetscInt    *coo_refcnt;
   PetscCount   coo_n;                      /* Number of COOs passed to MatSetPreallocationCOO)() */
   PetscSF      coo_sf;                     /* SF to send/recv remote values in MatSetValuesCOO() */
   PetscCount   Annz, Bnnz;                 /* Number of entries in diagonal A and off-diagonal B */

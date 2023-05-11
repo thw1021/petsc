@@ -84,7 +84,7 @@ static PetscErrorCode MatMultAddKernel_SeqAIJCUSPARSE(Mat, Vec, Vec, Vec, PetscB
 static PetscErrorCode CsrMatrix_Destroy(CsrMatrix **);
 static PetscErrorCode MatSeqAIJCUSPARSEMultStruct_Destroy(Mat_SeqAIJCUSPARSEMultStruct **, MatCUSPARSEStorageFormat);
 static PetscErrorCode MatSeqAIJCUSPARSETriFactors_Destroy(Mat_SeqAIJCUSPARSETriFactors **);
-static PetscErrorCode MatSeqAIJCUSPARSE_Destroy(Mat_SeqAIJCUSPARSE **);
+static PetscErrorCode MatSeqAIJCUSPARSE_Destroy(Mat);
 
 static PetscErrorCode MatSeqAIJCUSPARSECopyFromGPU(Mat);
 static PetscErrorCode MatSeqAIJCUSPARSEInvalidateTranspose(Mat, PetscBool);
@@ -92,6 +92,7 @@ static PetscErrorCode MatSeqAIJCUSPARSEInvalidateTranspose(Mat, PetscBool);
 static PetscErrorCode MatSeqAIJCopySubArray_SeqAIJCUSPARSE(Mat, PetscInt, const PetscInt[], PetscScalar[]);
 static PetscErrorCode MatSetPreallocationCOO_SeqAIJCUSPARSE(Mat, PetscCount, PetscInt[], PetscInt[]);
 static PetscErrorCode MatSetValuesCOO_SeqAIJCUSPARSE(Mat, const PetscScalar[], InsertMode);
+static PetscErrorCode MatDuplicateCOO_SeqAIJCUSPARSE(Mat, Mat);
 
 PETSC_INTERN PetscErrorCode MatCUSPARSESetFormat_SeqAIJCUSPARSE(Mat A, MatCUSPARSEFormatOperation op, MatCUSPARSEStorageFormat format)
 {
@@ -3756,7 +3757,7 @@ static PetscErrorCode MatDestroy_SeqAIJCUSPARSE(Mat A)
 {
   PetscFunctionBegin;
   if (A->factortype == MAT_FACTOR_NONE) {
-    PetscCall(MatSeqAIJCUSPARSE_Destroy((Mat_SeqAIJCUSPARSE **)&A->spptr));
+    PetscCall(MatSeqAIJCUSPARSE_Destroy(A));
   } else {
     PetscCall(MatSeqAIJCUSPARSETriFactors_Destroy((Mat_SeqAIJCUSPARSETriFactors **)&A->spptr));
   }
@@ -3781,6 +3782,7 @@ static PetscErrorCode       MatDuplicate_SeqAIJCUSPARSE(Mat A, MatDuplicateOptio
   PetscFunctionBegin;
   PetscCall(MatDuplicate_SeqAIJ(A, cpvalues, B));
   PetscCall(MatConvert_SeqAIJ_SeqAIJCUSPARSE(*B, MATSEQAIJCUSPARSE, MAT_INPLACE_MATRIX, B));
+  PetscCall(MatDuplicateCOO_SeqAIJCUSPARSE(A, *B));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -4079,39 +4081,56 @@ PETSC_EXTERN PetscErrorCode MatSolverTypeRegister_CUSPARSE(void)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatResetPreallocationCOO_SeqAIJCUSPARSE(Mat mat)
+// shallow copy the COO info from A to B
+static PetscErrorCode MatDuplicateCOO_SeqAIJCUSPARSE(Mat A, Mat B)
 {
-  Mat_SeqAIJCUSPARSE *cusp = (Mat_SeqAIJCUSPARSE *)mat->spptr;
+  const Mat_SeqAIJCUSPARSE *a = static_cast<Mat_SeqAIJCUSPARSE *>(A->spptr);
+  Mat_SeqAIJCUSPARSE       *b = static_cast<Mat_SeqAIJCUSPARSE *>(B->spptr);
 
   PetscFunctionBegin;
-  if (!cusp) PetscFunctionReturn(PETSC_SUCCESS);
-  delete cusp->cooPerm;
-  delete cusp->cooPerm_a;
-  cusp->cooPerm   = NULL;
-  cusp->cooPerm_a = NULL;
-  if (cusp->use_extended_coo) {
-    PetscCallCUDA(cudaFree(cusp->jmap_d));
-    PetscCallCUDA(cudaFree(cusp->perm_d));
-  }
-  cusp->use_extended_coo = PETSC_FALSE;
+  b->cooPerm          = a->cooPerm;
+  b->cooPerm_a        = a->cooPerm_a;
+  b->jmap_d           = a->jmap_d;
+  b->perm_d           = a->perm_d;
+  b->use_extended_coo = a->use_extended_coo;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatSeqAIJCUSPARSE_Destroy(Mat_SeqAIJCUSPARSE **cusparsestruct)
+static PetscErrorCode MatResetPreallocationCOO_SeqAIJCUSPARSE(Mat mat)
 {
+  Mat_SeqAIJ         *a    = static_cast<Mat_SeqAIJ *>(mat->data);
+  Mat_SeqAIJCUSPARSE *cusp = static_cast<Mat_SeqAIJCUSPARSE *>(mat->spptr);
+
   PetscFunctionBegin;
-  if (*cusparsestruct) {
-    PetscCall(MatSeqAIJCUSPARSEMultStruct_Destroy(&(*cusparsestruct)->mat, (*cusparsestruct)->format));
-    PetscCall(MatSeqAIJCUSPARSEMultStruct_Destroy(&(*cusparsestruct)->matTranspose, (*cusparsestruct)->format));
-    delete (*cusparsestruct)->workVector;
-    delete (*cusparsestruct)->rowoffsets_gpu;
-    delete (*cusparsestruct)->cooPerm;
-    delete (*cusparsestruct)->cooPerm_a;
-    delete (*cusparsestruct)->csr2csc_i;
-    if ((*cusparsestruct)->handle) PetscCallCUSPARSE(cusparseDestroy((*cusparsestruct)->handle));
-    if ((*cusparsestruct)->jmap_d) PetscCallCUDA(cudaFree((*cusparsestruct)->jmap_d));
-    if ((*cusparsestruct)->perm_d) PetscCallCUDA(cudaFree((*cusparsestruct)->perm_d));
-    PetscCall(PetscFree(*cusparsestruct));
+  // refcnt = 1 means 'mat' is the last owner of the coo data, therefore we free it.
+  if (cusp && a->coo_refcnt && (*a->coo_refcnt == 1)) {
+    delete cusp->cooPerm;
+    delete cusp->cooPerm_a;
+    cusp->cooPerm   = NULL;
+    cusp->cooPerm_a = NULL;
+    if (cusp->use_extended_coo) {
+      PetscCallCUDA(cudaFree(cusp->jmap_d));
+      PetscCallCUDA(cudaFree(cusp->perm_d));
+    }
+    cusp->use_extended_coo = PETSC_FALSE;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatSeqAIJCUSPARSE_Destroy(Mat mat)
+{
+  Mat_SeqAIJCUSPARSE *cusp = static_cast<Mat_SeqAIJCUSPARSE *>(mat->spptr);
+
+  PetscFunctionBegin;
+  if (cusp) {
+    PetscCall(MatResetPreallocationCOO_SeqAIJCUSPARSE(mat));
+    PetscCall(MatSeqAIJCUSPARSEMultStruct_Destroy(&cusp->mat, cusp->format));
+    PetscCall(MatSeqAIJCUSPARSEMultStruct_Destroy(&cusp->matTranspose, cusp->format));
+    delete cusp->workVector;
+    delete cusp->rowoffsets_gpu;
+    delete cusp->csr2csc_i;
+    if (cusp->handle) PetscCallCUSPARSE(cusparseDestroy(cusp->handle));
+    PetscCall(PetscFree(mat->spptr));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -4381,18 +4400,13 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJCUSPARSE_Basic(Mat A, PetscCount n, 
 {
   Mat_SeqAIJCUSPARSE *cusp = (Mat_SeqAIJCUSPARSE *)A->spptr;
   Mat_SeqAIJ         *a    = (Mat_SeqAIJ *)A->data;
-  PetscInt            cooPerm_n, nzr = 0;
+  PetscInt            nzr  = 0;
 
   PetscFunctionBegin;
   PetscCall(PetscLayoutSetUp(A->rmap));
   PetscCall(PetscLayoutSetUp(A->cmap));
-  cooPerm_n = cusp->cooPerm ? cusp->cooPerm->size() : 0;
-  if (n != cooPerm_n) {
-    delete cusp->cooPerm;
-    delete cusp->cooPerm_a;
-    cusp->cooPerm   = NULL;
-    cusp->cooPerm_a = NULL;
-  }
+  PetscCall(MatResetPreallocationCOO_SeqAIJCUSPARSE(A));
+  PetscCall(MatResetPreallocationCOO_SeqAIJ(A));
   if (n) {
     thrust::device_ptr<PetscInt> d_i, d_j;
     PetscInt                    *d_raw_i, *d_raw_j;
@@ -4501,6 +4515,10 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJCUSPARSE_Basic(Mat A, PetscCount n, 
     PetscCall(MatSeqAIJSetPreallocation(A, 0, NULL));
   }
   PetscCall(MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_TRUE));
+  // TODO: remove the whole MatSetPreallocationCOO_SeqAIJCUSPARSE_Basic() in favor of the extended COO
+  // UGLY: set COO refcnt since we've built COO data
+  PetscCall(PetscMalloc1(1, &a->coo_refcnt));
+  *a->coo_refcnt = 1;
 
   /* We want to allocate the CUSPARSE struct for matvec now.
      The code is so convoluted now that I prefer to copy zeros */
@@ -4520,8 +4538,9 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJCUSPARSE(Mat mat, PetscCount coo_n, 
   PetscMemType        mtype     = PETSC_MEMTYPE_DEVICE;
 
   PetscFunctionBegin;
-  PetscCall(MatResetPreallocationCOO_SeqAIJ(mat));
+  // The two MatResetPreallocationCOO_* must be done in order. The former relies on values that might be destroyed by the latter
   PetscCall(MatResetPreallocationCOO_SeqAIJCUSPARSE(mat));
+  PetscCall(MatResetPreallocationCOO_SeqAIJ(mat));
   if (coo_i) {
     PetscCall(PetscGetMemType(coo_i, &mtype));
     if (PetscMemTypeHost(mtype)) {
@@ -4572,6 +4591,7 @@ PetscErrorCode MatSetValuesCOO_SeqAIJCUSPARSE(Mat A, const PetscScalar v[], Inse
   PetscScalar        *Aa;
 
   PetscFunctionBegin;
+  if (!dev->mat) PetscCall(MatSeqAIJCUSPARSECopyToGPU(A));
   if (dev->use_extended_coo) {
     PetscCall(PetscGetMemType(v, &memtype));
     if (PetscMemTypeHost(memtype)) { /* If user gave v[] in host, we might need to copy it to device if any */
