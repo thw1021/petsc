@@ -10,6 +10,8 @@
 #include <thrust/unique.h>
 #include <petscsf.h>
 
+static PetscErrorCode MatSetOps_MPIAIJCUSPARSE(Mat);
+
 struct VecCUDAEquals {
   template <typename Tuple>
   __host__ __device__ void operator()(Tuple t)
@@ -20,31 +22,33 @@ struct VecCUDAEquals {
 
 static PetscErrorCode MatResetPreallocationCOO_MPIAIJCUSPARSE(Mat mat)
 {
-  Mat_MPIAIJ         *aij            = (Mat_MPIAIJ *)mat->data;
-  Mat_MPIAIJCUSPARSE *cusparseStruct = (Mat_MPIAIJCUSPARSE *)aij->spptr;
+  Mat_MPIAIJ         *a    = (Mat_MPIAIJ *)mat->data;
+  Mat_MPIAIJCUSPARSE *cusp = (Mat_MPIAIJCUSPARSE *)a->spptr;
 
   PetscFunctionBegin;
-  if (!cusparseStruct) PetscFunctionReturn(PETSC_SUCCESS);
-  if (cusparseStruct->use_extended_coo) {
-    PetscCallCUDA(cudaFree(cusparseStruct->Ajmap1_d));
-    PetscCallCUDA(cudaFree(cusparseStruct->Aperm1_d));
-    PetscCallCUDA(cudaFree(cusparseStruct->Bjmap1_d));
-    PetscCallCUDA(cudaFree(cusparseStruct->Bperm1_d));
-    PetscCallCUDA(cudaFree(cusparseStruct->Aimap2_d));
-    PetscCallCUDA(cudaFree(cusparseStruct->Ajmap2_d));
-    PetscCallCUDA(cudaFree(cusparseStruct->Aperm2_d));
-    PetscCallCUDA(cudaFree(cusparseStruct->Bimap2_d));
-    PetscCallCUDA(cudaFree(cusparseStruct->Bjmap2_d));
-    PetscCallCUDA(cudaFree(cusparseStruct->Bperm2_d));
-    PetscCallCUDA(cudaFree(cusparseStruct->Cperm1_d));
-    PetscCallCUDA(cudaFree(cusparseStruct->sendbuf_d));
-    PetscCallCUDA(cudaFree(cusparseStruct->recvbuf_d));
+  // refcnt = 1 means 'mat' is the last owner of the coo data, therefore we free it.
+  if (cusp && a->coo_refcnt && (*a->coo_refcnt == 1)) {
+    if (cusp->use_extended_coo) {
+      PetscCallCUDA(cudaFree(cusp->Ajmap1_d));
+      PetscCallCUDA(cudaFree(cusp->Aperm1_d));
+      PetscCallCUDA(cudaFree(cusp->Bjmap1_d));
+      PetscCallCUDA(cudaFree(cusp->Bperm1_d));
+      PetscCallCUDA(cudaFree(cusp->Aimap2_d));
+      PetscCallCUDA(cudaFree(cusp->Ajmap2_d));
+      PetscCallCUDA(cudaFree(cusp->Aperm2_d));
+      PetscCallCUDA(cudaFree(cusp->Bimap2_d));
+      PetscCallCUDA(cudaFree(cusp->Bjmap2_d));
+      PetscCallCUDA(cudaFree(cusp->Bperm2_d));
+      PetscCallCUDA(cudaFree(cusp->Cperm1_d));
+      PetscCallCUDA(cudaFree(cusp->sendbuf_d));
+      PetscCallCUDA(cudaFree(cusp->recvbuf_d));
+    }
+    cusp->use_extended_coo = PETSC_FALSE;
+    delete cusp->coo_p;
+    delete cusp->coo_pw;
+    cusp->coo_p  = NULL;
+    cusp->coo_pw = NULL;
   }
-  cusparseStruct->use_extended_coo = PETSC_FALSE;
-  delete cusparseStruct->coo_p;
-  delete cusparseStruct->coo_pw;
-  cusparseStruct->coo_p  = NULL;
-  cusparseStruct->coo_pw = NULL;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -173,7 +177,10 @@ static PetscErrorCode MatSetPreallocationCOO_MPIAIJCUSPARSE_Basic(Mat B, PetscCo
   PetscCall(MatSetPreallocationCOO_SeqAIJCUSPARSE_Basic(b->A, cusp->coo_nd, d_i.data().get(), d_j.data().get()));
   PetscCall(MatSetPreallocationCOO_SeqAIJCUSPARSE_Basic(b->B, cusp->coo_no, d_i.data().get() + cusp->coo_nd, jj));
   PetscCall(PetscFree(jj));
-
+  // TODO: remove the whole MatSetPreallocationCOO_MPIAIJCUSPARSE_Basic() in favor of the extended COO.
+  // UGLY: since we build COO data in *_Basic(), we need to set the reference count
+  PetscCall(PetscMalloc1(1, &b->coo_refcnt));
+  *b->coo_refcnt = 1;
   PetscCall(MatCUSPARSESetFormat(b->A, MAT_CUSPARSE_MULT, cusp->diagGPUMatFormat));
   PetscCall(MatCUSPARSESetFormat(b->B, MAT_CUSPARSE_MULT, cusp->offdiagGPUMatFormat));
 
@@ -202,8 +209,9 @@ static PetscErrorCode MatSetPreallocationCOO_MPIAIJCUSPARSE(Mat mat, PetscCount 
   PetscCall(VecScatterDestroy(&mpiaij->Mvctx));
   mat->assembled     = PETSC_FALSE;
   mat->was_assembled = PETSC_FALSE;
-  PetscCall(MatResetPreallocationCOO_MPIAIJ(mat));
+  // The two MatResetPreallocationCOO_* must be done in order. The former relies on values that might be destroyed by the latter
   PetscCall(MatResetPreallocationCOO_MPIAIJCUSPARSE(mat));
+  PetscCall(MatResetPreallocationCOO_MPIAIJ(mat));
   if (coo_i) {
     PetscCall(PetscLayoutGetRange(mat->rmap, &rstart, &rend));
     PetscCall(PetscGetMemType(coo_i, &mtype));
@@ -585,6 +593,48 @@ static PetscErrorCode MatSetUp_MPI_HASH_CUSPARSE(Mat A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatDuplicate_MPIAIJCUSPARSE(Mat A, MatDuplicateOption dupOption, Mat *B)
+{
+  Mat_MPIAIJ         *Adata = static_cast<Mat_MPIAIJ *>(A->data), *Bdata;
+  Mat_MPIAIJCUSPARSE *Adev  = static_cast<Mat_MPIAIJCUSPARSE *>(Adata->spptr);
+  Mat                 mat;
+
+  PetscFunctionBegin;
+  PetscCall(MatDuplicate_MPIAIJ(A, dupOption, B));
+  mat   = *B;
+  Bdata = static_cast<Mat_MPIAIJ *>(mat->data);
+  PetscCallCXX(Bdata->spptr = new Mat_MPIAIJCUSPARSE(*Adev)); // use the shallow copy ctor to copy A's coo info on device
+  // matrix defaultvectype was handled by MatDuplicate()
+  PetscCall(PetscObjectChangeTypeName((PetscObject)mat, MATMPIAIJCUSPARSE));
+  PetscCall(MatSetOps_MPIAIJCUSPARSE(mat));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatSetOps_MPIAIJCUSPARSE(Mat A)
+{
+  PetscFunctionBegin;
+  A->ops->assemblyend           = MatAssemblyEnd_MPIAIJCUSPARSE;
+  A->ops->mult                  = MatMult_MPIAIJCUSPARSE;
+  A->ops->multadd               = MatMultAdd_MPIAIJCUSPARSE;
+  A->ops->multtranspose         = MatMultTranspose_MPIAIJCUSPARSE;
+  A->ops->setfromoptions        = MatSetFromOptions_MPIAIJCUSPARSE;
+  A->ops->destroy               = MatDestroy_MPIAIJCUSPARSE;
+  A->ops->zeroentries           = MatZeroEntries_MPIAIJCUSPARSE;
+  A->ops->productsetfromoptions = MatProductSetFromOptions_MPIAIJBACKEND;
+  A->ops->setup                 = MatSetUp_MPI_HASH_CUSPARSE;
+  A->ops->duplicate             = MatDuplicate_MPIAIJCUSPARSE;
+
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatMPIAIJGetLocalMatMerge_C", MatMPIAIJGetLocalMatMerge_MPIAIJCUSPARSE));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatMPIAIJSetPreallocation_C", MatMPIAIJSetPreallocation_MPIAIJCUSPARSE));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatCUSPARSESetFormat_C", MatCUSPARSESetFormat_MPIAIJCUSPARSE));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSetPreallocationCOO_C", MatSetPreallocationCOO_MPIAIJCUSPARSE));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSetValuesCOO_C", MatSetValuesCOO_MPIAIJCUSPARSE));
+#if defined(PETSC_HAVE_HYPRE)
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatConvert_mpiaijcusparse_hypre_C", MatConvert_AIJ_HYPRE));
+#endif
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIAIJCUSPARSE(Mat B, MatType, MatReuse reuse, Mat *newmat)
 {
   Mat_MPIAIJ *a;
@@ -605,26 +655,8 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIAIJCUSPARSE(Mat B, MatType, Mat
   if (a->lvec) PetscCall(VecSetType(a->lvec, VECSEQCUDA));
 
   if (reuse != MAT_REUSE_MATRIX && !a->spptr) PetscCallCXX(a->spptr = new Mat_MPIAIJCUSPARSE);
-
-  A->ops->assemblyend           = MatAssemblyEnd_MPIAIJCUSPARSE;
-  A->ops->mult                  = MatMult_MPIAIJCUSPARSE;
-  A->ops->multadd               = MatMultAdd_MPIAIJCUSPARSE;
-  A->ops->multtranspose         = MatMultTranspose_MPIAIJCUSPARSE;
-  A->ops->setfromoptions        = MatSetFromOptions_MPIAIJCUSPARSE;
-  A->ops->destroy               = MatDestroy_MPIAIJCUSPARSE;
-  A->ops->zeroentries           = MatZeroEntries_MPIAIJCUSPARSE;
-  A->ops->productsetfromoptions = MatProductSetFromOptions_MPIAIJBACKEND;
-  A->ops->setup                 = MatSetUp_MPI_HASH_CUSPARSE;
-
   PetscCall(PetscObjectChangeTypeName((PetscObject)A, MATMPIAIJCUSPARSE));
-  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatMPIAIJGetLocalMatMerge_C", MatMPIAIJGetLocalMatMerge_MPIAIJCUSPARSE));
-  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatMPIAIJSetPreallocation_C", MatMPIAIJSetPreallocation_MPIAIJCUSPARSE));
-  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatCUSPARSESetFormat_C", MatCUSPARSESetFormat_MPIAIJCUSPARSE));
-  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSetPreallocationCOO_C", MatSetPreallocationCOO_MPIAIJCUSPARSE));
-  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSetValuesCOO_C", MatSetValuesCOO_MPIAIJCUSPARSE));
-#if defined(PETSC_HAVE_HYPRE)
-  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatConvert_mpiaijcusparse_hypre_C", MatConvert_AIJ_HYPRE));
-#endif
+  PetscCall(MatSetOps_MPIAIJCUSPARSE(A));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

@@ -29,5 +29,8 @@ struct Mat_MPIAIJCUSPARSE {
     coo_pw              = NULL;
     use_extended_coo    = PETSC_FALSE;
   }
+
+  // ATTENTION: In MatDuplicate_MPIAIJCUSPARSE() we use the default copy ctor to shallow copy all COO stuff.
+  // If you add new members in this class,  you need to think over whether shallow copy is correct for the new members.
 };
 #endif // PETSC_MPICUSPARSEMATIMPL_H
