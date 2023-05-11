@@ -559,7 +559,7 @@ static PetscErrorCode MatDuplicate_SeqAIJKokkos(Mat A, MatDuplicateOption dupOpt
   /* Do not copy values on host as A's latest values might be on device. We don't want to do sync blindly */
   PetscCall(MatDuplicate_SeqAIJ(A, MAT_DO_NOT_COPY_VALUES, B));
   mat = *B;
-  if (A->assembled) {
+  if (A->preallocated) {
     bseq = static_cast<Mat_SeqAIJ *>(mat->data);
     bkok = new Mat_SeqAIJKokkos(mat->rmap->n, mat->cmap->n, bseq->nz, bseq->i, bseq->j, bseq->a, mat->nonzerostate, PETSC_FALSE);
     bkok->a_dual.clear_sync_state(); /* Clear B's sync state as it will be decided below */
@@ -576,6 +576,7 @@ static PetscErrorCode MatDuplicate_SeqAIJKokkos(Mat A, MatDuplicateOption dupOpt
       /* B's values on host should be already zeroed by MatDuplicate_SeqAIJ() */
       bkok->a_dual.modify_host();
     }
+    PetscCallCXX(akok->DuplicateCOO(bkok));
     mat->spptr = bkok;
   }
 
