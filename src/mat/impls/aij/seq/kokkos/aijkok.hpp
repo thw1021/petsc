@@ -157,6 +157,12 @@ struct Mat_SeqAIJKokkos {
     perm_d = Kokkos::create_mirror_view_and_copy(DefaultMemorySpace(), PetscCountKokkosViewHost(aij->perm, aij->Atot));
   }
 
+  void DuplicateCOO(Mat_SeqAIJKokkos *out)
+  {
+    out->jmap_d = jmap_d; // Kokkos views have reference counting
+    out->perm_d = perm_d;
+  }
+
   void SetDiagonal(const MatRowMapType *diag)
   {
     MatRowMapKokkosViewHost diag_h(const_cast<MatRowMapType *>(diag), nrows());
