@@ -88,10 +88,10 @@ PetscErrorCode PetscLayoutCreate(MPI_Comm comm, PetscLayout *map)
 $ PetscLayoutCreateFromSizes(comm, n, N, bs, &layout);
   is a shorthand for
 .vb
-  PetscLayoutCreate(comm,&layout);
-  PetscLayoutSetLocalSize(layout,n);
-  PetscLayoutSetSize(layout,N);
-  PetscLayoutSetBlockSize(layout,bs);
+  PetscLayoutCreate(comm, &layout);
+  PetscLayoutSetLocalSize(layout, n);
+  PetscLayoutSetSize(layout, N);
+  PetscLayoutSetBlockSize(layout, bs);
   PetscLayoutSetUp(layout);
 .ve
 

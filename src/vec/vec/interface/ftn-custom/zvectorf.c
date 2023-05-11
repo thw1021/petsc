@@ -216,7 +216,7 @@ PETSC_EXTERN void vecview_(Vec *x, PetscViewer *vin, PetscErrorCode *ierr)
       type(Field)       :: lx_v(0:1)
 
       call VecGetArray(localX, lx_v, lx_i, ierr)
-      call InitialGuessLocal(lx_v(lx_i/2),ierr)
+      call InitialGuessLocal(lx_v(lx_i/2), ierr)
 
       subroutine InitialGuessLocal(a,ierr)
       type(Field)     :: a(*)
