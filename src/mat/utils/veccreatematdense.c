@@ -58,18 +58,12 @@ PetscErrorCode VecCreateMatDense(Vec X, PetscInt m, PetscInt n, PetscInt M, Pets
     }
   }
 
-  if (isstd) {
-    PetscCall(MatCreateDense(comm, m, n, M, N, data, A));
-  }
+  if (isstd) PetscCall(MatCreateDense(comm, m, n, M, N, data, A));
 #if defined(PETSC_HAVE_CUDA)
-  else if (iscuda) {
-    PetscCall(MatCreateDenseCUDA(comm, m, n, M, N, data, A));
-  }
+  else if (iscuda) PetscCall(MatCreateDenseCUDA(comm, m, n, M, N, data, A));
 #endif
 #if defined(PETSC_HAVE_HIP)
-  else if (iship) {
-    PetscCall(MatCreateDenseHIP(comm, m, n, M, N, data, A));
-  }
+  else if (iship) PetscCall(MatCreateDenseHIP(comm, m, n, M, N, data, A));
 #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }

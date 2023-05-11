@@ -444,11 +444,13 @@ class Configure(script.Script):
       codeStr += '#include "conffix.h"\n'+includes
       if not body is None:
         if codeBegin is None:
-          codeBegin = '\nint main(void) {\n'
+          codeBegin = '\nint main(void) {'
+          if not body.startswith('\n'):
+            codeBegin += '\n'
         if codeEnd is None:
-          if len(body) == 0:
+          if len(body) == 0 or body.endswith('\n'):
             codeEnd = '  return 0;\n}\n'
-          elif body.strip().endswith(';') or body.strip().endswith('}') or body.strip().endswith('\n#endif'):
+          elif body.strip().endswith(';') or body.endswith('}') or body.endswith('\n#endif'):
             codeEnd = '\n  return 0;\n}\n'
           else:
             codeEnd = ';\n  return 0;\n}\n'
