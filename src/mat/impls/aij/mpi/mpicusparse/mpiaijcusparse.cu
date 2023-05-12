@@ -177,7 +177,10 @@ static PetscErrorCode MatSetPreallocationCOO_MPIAIJCUSPARSE_Basic(Mat B, PetscCo
   PetscCall(MatSetPreallocationCOO_SeqAIJCUSPARSE_Basic(b->A, cusp->coo_nd, d_i.data().get(), d_j.data().get()));
   PetscCall(MatSetPreallocationCOO_SeqAIJCUSPARSE_Basic(b->B, cusp->coo_no, d_i.data().get() + cusp->coo_nd, jj));
   PetscCall(PetscFree(jj));
-
+  // TODO: remove the whole MatSetPreallocationCOO_MPIAIJCUSPARSE_Basic() in favor of the extended COO.
+  // UGLY: since we build COO data in *_Basic(), we need to set the reference count
+  PetscCall(PetscMalloc1(1, &b->coo_refcnt));
+  *b->coo_refcnt = 1;
   PetscCall(MatCUSPARSESetFormat(b->A, MAT_CUSPARSE_MULT, cusp->diagGPUMatFormat));
   PetscCall(MatCUSPARSESetFormat(b->B, MAT_CUSPARSE_MULT, cusp->offdiagGPUMatFormat));
 

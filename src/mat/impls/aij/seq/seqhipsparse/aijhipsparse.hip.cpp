@@ -3833,18 +3833,13 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJHIPSPARSE_Basic(Mat A, PetscCount n,
 {
   Mat_SeqAIJHIPSPARSE *cusp = (Mat_SeqAIJHIPSPARSE *)A->spptr;
   Mat_SeqAIJ          *a    = (Mat_SeqAIJ *)A->data;
-  PetscInt             cooPerm_n, nzr = 0;
+  PetscInt             nzr  = 0;
 
   PetscFunctionBegin;
   PetscCall(PetscLayoutSetUp(A->rmap));
   PetscCall(PetscLayoutSetUp(A->cmap));
-  cooPerm_n = cusp->cooPerm ? cusp->cooPerm->size() : 0;
-  if (n != cooPerm_n) {
-    delete cusp->cooPerm;
-    delete cusp->cooPerm_a;
-    cusp->cooPerm   = NULL;
-    cusp->cooPerm_a = NULL;
-  }
+  PetscCall(MatResetPreallocationCOO_SeqAIJHIPSPARSE(A));
+  PetscCall(MatResetPreallocationCOO_SeqAIJ(A));
   if (n) {
     thrust::device_ptr<PetscInt> d_i, d_j;
     PetscInt                    *d_raw_i, *d_raw_j;
@@ -3948,6 +3943,11 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJHIPSPARSE_Basic(Mat A, PetscCount n,
     if (free_raw_j) PetscCallHIP(hipFree(d_raw_j));
   } else PetscCall(MatSeqAIJSetPreallocation(A, 0, NULL));
   PetscCall(MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_TRUE));
+  // TODO: remove the whole MatSetPreallocationCOO_SeqAIJHIPSPARSE_Basic() in favor of the extended COO
+  // UGLY: set COO refcnt since we've built COO data
+  PetscCall(PetscMalloc1(1, &a->coo_refcnt));
+  *a->coo_refcnt = 1;
+
   /* We want to allocate the HIPSPARSE struct for matvec now.
      The code is so convoluted now that I prefer to copy zeros */
   PetscCall(PetscArrayzero(a->a, a->nz));

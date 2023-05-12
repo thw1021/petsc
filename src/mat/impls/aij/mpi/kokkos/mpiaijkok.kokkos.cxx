@@ -1637,7 +1637,8 @@ static PetscErrorCode MatDuplicate_MPIAIJKokkos(Mat A, MatDuplicateOption dupOpt
   PetscCall(MatDuplicate_MPIAIJ(A, dupOption, B));
   mat   = *B;
   Bdata = static_cast<Mat_MPIAIJ *>(mat->data);
-  PetscCallCXX(Bdata->spptr = new Mat_MPIAIJKokkos(*Akok)); // shallow copy ctor to copy A's coo info on device
+  // shallow copy ctor to copy A's coo info (if any) on device
+  if (Akok) PetscCallCXX(Bdata->spptr = new Mat_MPIAIJKokkos(*Akok));
   // matrix defaultvectype was handled by MatDuplicate()
   PetscCall(PetscObjectChangeTypeName((PetscObject)mat, MATMPIAIJKOKKOS));
   PetscCall(MatSetOps_MPIAIJKokkos(mat));
