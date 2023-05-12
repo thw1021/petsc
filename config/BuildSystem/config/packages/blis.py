@@ -18,6 +18,12 @@ class Configure(config.package.Package):
     help.addArgument(self.PACKAGE,'-download-blis-enable-cblas-headers=<bool>',nargs.ArgBool(None,0,'Enable CBLAS headers for '+self.name ))
     return
 
+  def frameworkHasF2cblaslapack(self):
+    for arg in ['download-f2cblaslapack', 'with-f2cblaslapack', 'with-f2cblaslapack-lib', 'with-f2cblaslapack-dir']:
+      if arg in self.framework.clArgDB and self.argDB[arg]:
+        return True
+    return False
+
   def configureLibrary(self):
     import os
     config.package.Package.configureLibrary(self)
@@ -66,6 +72,8 @@ class Configure(config.package.Package):
         self.usesopenmp = 'yes'
       if self.argDB['download-blis-enable-cblas-headers']:
         args.append('--enable-cblas')
+      if self.frameworkHasF2cblaslapack():
+        args.append('--complex-return=intel') # f2cblaslapack puts complex returns into the arguments like intel fotran, not on the stack like gnu fortran
       args.append('CC=' + cc)
       args.append('auto')
       config.package.Package.executeShellCommand(args, cwd=self.packageDir, timeout=60, log=self.log)
