@@ -159,10 +159,11 @@ typedef struct {
   PetscScalar  fshift, omega;             /* last used omega and fshift */
 
   /* MatSetValuesCOO() related fields on host */
-  PetscCount  coo_n; /* Number of entries in MatSetPreallocationCOO() */
-  PetscCount  Atot;  /* Total number of valid (i.e., w/ non-negative indices) entries in the COO array */
-  PetscCount *jmap;  /* perm[jmap[i]..jmap[i+1]) give indices of entries in v[] associated with i-th nonzero of the matrix */
-  PetscCount *perm;  /* The permutation array in sorting (i,j) by row and then by col */
+  PetscInt   *coo_refcnt; /* Reference counting on COO data structures to save memory in case MatDuplicate() */
+  PetscCount  coo_n;      /* Number of entries in MatSetPreallocationCOO() */
+  PetscCount  Atot;       /* Total number of valid (i.e., w/ non-negative indices) entries in the COO array */
+  PetscCount *jmap;       /* perm[jmap[i]..jmap[i+1]) give indices of entries in v[] associated with i-th nonzero of the matrix */
+  PetscCount *perm;       /* The permutation array in sorting (i,j) by row and then by col */
 
   /* MatSetValues() via hash related fields */
   PetscHMapIJV   ht;

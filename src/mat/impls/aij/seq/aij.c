@@ -1198,13 +1198,37 @@ PetscErrorCode MatZeroEntries_SeqAIJ(Mat A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/* shallow copy the COO info from A to B */
+static PetscErrorCode MatDuplicateCOO_SeqAIJ(Mat A, Mat B)
+{
+  const Mat_SeqAIJ *a = (Mat_SeqAIJ *)A->data;
+  Mat_SeqAIJ       *b = (Mat_SeqAIJ *)B->data;
+
+  PetscFunctionBegin;
+  if (a->coo_refcnt) { /* only dup when A has the COO info */
+    b->coo_refcnt = a->coo_refcnt;
+    b->coo_n      = a->coo_n;
+    b->Atot       = a->Atot;
+    b->jmap       = a->jmap;
+    b->perm       = a->perm;
+    (*a->coo_refcnt)++;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PETSC_INTERN PetscErrorCode MatResetPreallocationCOO_SeqAIJ(Mat A)
 {
   Mat_SeqAIJ *a = (Mat_SeqAIJ *)A->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscFree(a->perm));
-  PetscCall(PetscFree(a->jmap));
+  if (a->coo_refcnt) {
+    (*a->coo_refcnt)--;
+    if (!(*a->coo_refcnt)) {
+      PetscCall(PetscFree(a->perm));
+      PetscCall(PetscFree(a->jmap));
+      PetscCall(PetscFree(a->coo_refcnt));
+    }
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -4714,10 +4738,12 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJ(Mat mat, PetscCount coo_n, PetscInt
   seqaij->singlemalloc = PETSC_FALSE;            /* Ai, Aj and Aa are not allocated in one big malloc */
   seqaij->free_a = seqaij->free_ij = PETSC_TRUE; /* Let newmat own Ai, Aj and Aa */
   /* Record COO fields */
-  seqaij->coo_n = coo_n;
-  seqaij->Atot  = coo_n - nneg; /* Annz is seqaij->nz, so no need to record that again */
-  seqaij->jmap  = jmap;         /* of length nnz+1 */
-  seqaij->perm  = perm;
+  PetscCall(PetscMalloc1(1, &seqaij->coo_refcnt));
+  *seqaij->coo_refcnt = 1;
+  seqaij->coo_n       = coo_n;
+  seqaij->Atot        = coo_n - nneg; /* Annz is seqaij->nz, so no need to record that again */
+  seqaij->jmap        = jmap;         /* of length nnz+1 */
+  seqaij->perm        = perm;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -4949,6 +4975,7 @@ PetscErrorCode MatDuplicate_SeqAIJ(Mat A, MatDuplicateOption cpvalues, Mat *B)
   if (!(A->rmap->n % A->rmap->bs) && !(A->cmap->n % A->cmap->bs)) PetscCall(MatSetBlockSizesFromMats(*B, A, A));
   PetscCall(MatSetType(*B, ((PetscObject)A)->type_name));
   PetscCall(MatDuplicateNoCreate_SeqAIJ(*B, A, cpvalues, PETSC_TRUE));
+  PetscCall(MatDuplicateCOO_SeqAIJ(A, *B));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
