@@ -4019,7 +4019,7 @@ PetscErrorCode MatSetValuesCOO_SeqAIJHIPSPARSE(Mat A, const PetscScalar v[], Ins
   PetscScalar         *Aa;
 
   PetscFunctionBegin;
-  if (!dev->mat) PetscCall(MatSeqAIJCUSPARSECopyToGPU(A));
+  if (!dev->mat) PetscCall(MatSeqAIJHIPSPARSECopyToGPU(A));
   if (dev->use_extended_coo) {
     PetscCall(PetscGetMemType(v, &memtype));
     if (PetscMemTypeHost(memtype)) { /* If user gave v[] in host, we might need to copy it to device if any */
