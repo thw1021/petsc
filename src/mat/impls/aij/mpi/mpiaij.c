@@ -1179,27 +1179,70 @@ PetscErrorCode MatScale_MPIAIJ(Mat A, PetscScalar aa)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/* shallow copy the COO info from A to B */
+static PetscErrorCode MatDuplicateCOO_MPIAIJ(Mat A, Mat B)
+{
+  const Mat_MPIAIJ *a = (Mat_MPIAIJ *)A->data;
+  Mat_MPIAIJ       *b = (Mat_MPIAIJ *)B->data;
+
+  PetscFunctionBegin;
+  if (a->coo_refcnt && *a->coo_refcnt > 0) { /* only dup when A has the COO info */
+    b->coo_refcnt = a->coo_refcnt;
+    b->coo_n      = a->coo_n;
+    b->coo_sf     = a->coo_sf;
+    b->Annz       = a->Annz;
+    b->Bnnz       = a->Bnnz;
+    b->Annz2      = a->Annz2;
+    b->Bnnz2      = a->Bnnz2;
+    b->Atot1      = a->Atot1;
+    b->Atot2      = a->Atot2;
+    b->Btot1      = a->Btot1;
+    b->Btot2      = a->Btot2;
+    b->Ajmap1     = a->Ajmap1;
+    b->Aperm1     = a->Aperm1;
+    b->Bjmap1     = a->Bjmap1;
+    b->Bperm1     = a->Bperm1;
+    b->Aimap2     = a->Aimap2;
+    b->Ajmap2     = a->Ajmap2;
+    b->Aperm2     = a->Aperm2;
+    b->Bimap2     = a->Bimap2;
+    b->Bjmap2     = a->Bjmap2;
+    b->Bperm2     = a->Bperm2;
+    b->Cperm1     = a->Cperm1;
+    b->sendbuf    = a->sendbuf;
+    b->recvbuf    = a->recvbuf;
+    b->sendlen    = a->sendlen;
+    b->recvlen    = a->recvlen;
+    (*a->coo_refcnt)++;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /* Free COO stuff; must match allocation methods in MatSetPreallocationCOO_MPIAIJ() */
 PETSC_INTERN PetscErrorCode MatResetPreallocationCOO_MPIAIJ(Mat mat)
 {
-  Mat_MPIAIJ *aij = (Mat_MPIAIJ *)mat->data;
+  Mat_MPIAIJ *a = (Mat_MPIAIJ *)mat->data;
 
   PetscFunctionBegin;
-  PetscCall(PetscSFDestroy(&aij->coo_sf));
-  PetscCall(PetscFree(aij->Aperm1));
-  PetscCall(PetscFree(aij->Bperm1));
-  PetscCall(PetscFree(aij->Ajmap1));
-  PetscCall(PetscFree(aij->Bjmap1));
-
-  PetscCall(PetscFree(aij->Aimap2));
-  PetscCall(PetscFree(aij->Bimap2));
-  PetscCall(PetscFree(aij->Aperm2));
-  PetscCall(PetscFree(aij->Bperm2));
-  PetscCall(PetscFree(aij->Ajmap2));
-  PetscCall(PetscFree(aij->Bjmap2));
-
-  PetscCall(PetscFree2(aij->sendbuf, aij->recvbuf));
-  PetscCall(PetscFree(aij->Cperm1));
+  if (a->coo_refcnt) {
+    (*a->coo_refcnt)--;
+    if (!(*a->coo_refcnt)) {
+      PetscCall(PetscSFDestroy(&a->coo_sf));
+      PetscCall(PetscFree(a->coo_refcnt));
+      PetscCall(PetscFree(a->Aperm1));
+      PetscCall(PetscFree(a->Bperm1));
+      PetscCall(PetscFree(a->Ajmap1));
+      PetscCall(PetscFree(a->Bjmap1));
+      PetscCall(PetscFree(a->Aimap2));
+      PetscCall(PetscFree(a->Bimap2));
+      PetscCall(PetscFree(a->Aperm2));
+      PetscCall(PetscFree(a->Bperm2));
+      PetscCall(PetscFree(a->Ajmap2));
+      PetscCall(PetscFree(a->Bjmap2));
+      PetscCall(PetscFree2(a->sendbuf, a->recvbuf));
+      PetscCall(PetscFree(a->Cperm1));
+    }
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -3027,6 +3070,7 @@ PetscErrorCode MatDuplicate_MPIAIJ(Mat matin, MatDuplicateOption cpvalues, Mat *
   if (oldmat->Mvctx) PetscCall(VecScatterCopy(oldmat->Mvctx, &a->Mvctx));
   PetscCall(MatDuplicate(oldmat->A, cpvalues, &a->A));
   PetscCall(MatDuplicate(oldmat->B, cpvalues, &a->B));
+  PetscCall(MatDuplicateCOO_MPIAIJ(matin, mat));
   PetscCall(PetscFunctionListDuplicate(((PetscObject)matin)->qlist, &((PetscObject)mat)->qlist));
   *newmat = mat;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -6663,6 +6707,9 @@ PetscErrorCode MatSetPreallocationCOO_MPIAIJ(Mat mat, PetscCount coo_n, PetscInt
   PetscCall(MatConvert(mpiaij->B, rtype, MAT_INPLACE_MATRIX, &mpiaij->B));
   PetscCall(VecDestroy(&mpiaij->lvec));
   PetscCall(MatCreateVecs(mpiaij->B, &mpiaij->lvec, NULL));
+
+  PetscCall(PetscMalloc1(1, &mpiaij->coo_refcnt));
+  *mpiaij->coo_refcnt = 1;
 
   mpiaij->coo_n   = coo_n;
   mpiaij->coo_sf  = sf2;
