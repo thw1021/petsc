@@ -35,6 +35,9 @@ struct Mat_MPIAIJKokkos {
     recvbuf_d(Kokkos::create_mirror_view(DefaultMemorySpace(), MatScalarKokkosViewHost(mpiaij->recvbuf, mpiaij->recvlen)))
   {
   }
+
+  // ATTENTION: In MatDuplicate_MPIAIJKokkos() we use the default copy ctor to shallow copy all COO stuff.
+  // If you add new members in this class,  you need to think over whether shallow copy is correct for the new members.
 };
 
 #endif
