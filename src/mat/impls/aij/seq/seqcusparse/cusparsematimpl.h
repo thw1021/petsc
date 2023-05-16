@@ -315,8 +315,7 @@ struct Mat_SeqAIJCUSPARSE {
   cusparseSpMMAlg_t    spmmAlg;
 #endif
   THRUSTINTARRAY *csr2csc_i;
-
-  THRUSTINTARRAY *cooPerm;
+  THRUSTINTARRAY *coords; /* permutation array used in MatSeqAIJCUSPARSEMergeMats */
 
   /* COO support */
   PetscCount *jmap_d; /* perm[disp+jmap[i]..disp+jmap[i+1]) gives indices of entries in v[] associated with i-th nonzero of the matrix */

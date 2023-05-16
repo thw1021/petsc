@@ -287,7 +287,7 @@ struct Mat_SeqAIJHIPSPARSE {
   hipsparseSpMVAlg_t spmvAlg;
   hipsparseSpMMAlg_t spmmAlg;
   THRUSTINTARRAY    *csr2csc_i;
-  THRUSTINTARRAY    *cooPerm; /* permutation array that sorts the input coo entris by row and col */
+  THRUSTINTARRAY    *coords; /* permutation array used in MatSeqAIJHIPSPARSEMergeMats */
 
   /* COO support */
   PetscCount *jmap_d; /* perm[disp+jmap[i]..disp+jmap[i+1]) gives indices of entries in v[] associated with i-th nonzero of the matrix */
