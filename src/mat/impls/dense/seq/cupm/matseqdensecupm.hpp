@@ -462,7 +462,7 @@ struct MatDense_Seq_CUPM<T>::SolveCholesky : SolveCommon<SolveCholesky> {
 
     PetscFunctionBegin;
     if (!n || !A->cmap->n) PetscFunctionReturn(PETSC_SUCCESS);
-    PetscCheck(A->spd == PETSC_BOOL3_TRUE, PETSC_COMM_SELF, PETSC_ERR_SUP, "%ssytrs unavailable. Use MAT_FACTOR_LU", cupmSolverName());
+    PetscCheck(A->positive_definite == PETSC_BOOL3_TRUE && A->is.hermitian == PETSC_BOOL3_TRUE, PETSC_COMM_SELF, PETSC_ERR_SUP, "%ssytrs unavailable. Use MAT_FACTOR_LU", cupmSolverName());
     PetscCall(GetHandles_(&dctx, &handle, &stream));
     PetscCall(base_type::FactorPrepare(A, stream));
     {

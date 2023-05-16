@@ -723,9 +723,9 @@ static PetscErrorCode PCGAMGOptProlongator_AGG(PC pc, Mat Amat, Mat *a_P)
       PetscCall(KSPSetOptionsPrefix(eksp, prefix));
       PetscCall(KSPAppendOptionsPrefix(eksp, "pc_gamg_esteig_"));
       {
-        PetscBool isset, sflg;
-        PetscCall(MatIsSPDKnown(Amat, &isset, &sflg));
-        if (isset && sflg) PetscCall(KSPSetType(eksp, KSPCG));
+        PetscBool isset, hflg;
+        PetscCall(MatIsHPDKnown(Amat, &isset, &hflg));
+        if (isset && hflg) PetscCall(KSPSetType(eksp, KSPCG));
       }
       PetscCall(KSPSetErrorIfNotConverged(eksp, pc->erroriffailure));
       PetscCall(KSPSetNormType(eksp, KSP_NORM_NONE));

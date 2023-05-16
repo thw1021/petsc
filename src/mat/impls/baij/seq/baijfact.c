@@ -683,9 +683,7 @@ PETSC_INTERN PetscErrorCode MatGetFactor_seqbaij_petsc(Mat A, MatFactorType ftyp
   PetscInt n = A->rmap->n;
 
   PetscFunctionBegin;
-#if defined(PETSC_USE_COMPLEX)
-  PetscCheck(A->hermitian != PETSC_BOOL3_TRUE || !(ftype == MAT_FACTOR_CHOLESKY || ftype == MAT_FACTOR_ICC), PETSC_COMM_SELF, PETSC_ERR_SUP, "Hermitian Factor is not supported");
-#endif
+  PetscCheck(A->is.symmetric == PETSC_BOOL3_TRUE || !(ftype == MAT_FACTOR_CHOLESKY || ftype == MAT_FACTOR_ICC), PETSC_COMM_SELF, PETSC_ERR_SUP, "Hermitian Factor is not supported");
   PetscCall(MatCreate(PetscObjectComm((PetscObject)A), B));
   PetscCall(MatSetSizes(*B, n, n, n, n));
   if (ftype == MAT_FACTOR_LU || ftype == MAT_FACTOR_ILU || ftype == MAT_FACTOR_ILUDT) {

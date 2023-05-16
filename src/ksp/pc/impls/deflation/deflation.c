@@ -459,7 +459,7 @@ static PetscErrorCode PCSetUp_Deflation(PC pc)
   Mat              Amat, nextDef = NULL, *mats;
   PetscInt         i, m, red, size;
   PetscMPIInt      commsize;
-  PetscBool        match, flgspd, isset, transp = PETSC_FALSE;
+  PetscBool        match, flghpd, isset, transp = PETSC_FALSE;
   MatCompositeType ctype;
   MPI_Comm         comm;
   char             prefix[128] = "";
@@ -549,12 +549,12 @@ static PetscErrorCode PCSetUp_Deflation(PC pc)
     if (def->Wt) {
       PetscCall(MatMatMult(def->Wt, Amat, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &def->WtA));
     } else {
-#if defined(PETSC_USE_COMPLEX)
-      PetscCall(MatHermitianTranspose(def->W, MAT_INITIAL_MATRIX, &def->Wt));
-      PetscCall(MatMatMult(def->Wt, Amat, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &def->WtA));
-#else
-      PetscCall(MatTransposeMatMult(def->W, Amat, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &def->WtA));
-#endif
+      if (PetscDefined(USE_COMPLEX)) {
+        PetscCall(MatHermitianTranspose(def->W, MAT_INITIAL_MATRIX, &def->Wt));
+        PetscCall(MatMatMult(def->Wt, Amat, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &def->WtA));
+      } else {
+        PetscCall(MatTransposeMatMult(def->W, Amat, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &def->WtA));
+      }
     }
   }
   /* setup coarse problem */
@@ -563,8 +563,8 @@ static PetscErrorCode PCSetUp_Deflation(PC pc)
     if (!def->WtAW) {
       PetscCall(MatMatMult(def->WtA, def->W, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &def->WtAW));
       /* TODO create MatInheritOption(Mat,MatOption) */
-      PetscCall(MatIsSPDKnown(Amat, &isset, &flgspd));
-      if (isset) PetscCall(MatSetOption(def->WtAW, MAT_SPD, flgspd));
+      PetscCall(MatIsHPDKnown(Amat, &isset, &flghpd));
+      if (isset) PetscCall(MatSetOption(def->WtAW, MAT_HPD, flghpd));
       if (PetscDefined(USE_DEBUG)) {
         /* Check columns of W are not in kernel of A */
         PetscReal *norms;
@@ -574,7 +574,7 @@ static PetscErrorCode PCSetUp_Deflation(PC pc)
         for (i = 0; i < m; i++) PetscCheck(norms[i] > 100 * PETSC_MACHINE_EPSILON, PetscObjectComm((PetscObject)def->WtAW), PETSC_ERR_SUP, "Column %" PetscInt_FMT " of W is in kernel of A.", i);
         PetscCall(PetscFree(norms));
       }
-    } else PetscCall(MatIsSPDKnown(def->WtAW, &isset, &flgspd));
+    } else PetscCall(MatIsHPDKnown(def->WtAW, &isset, &flghpd));
 
     /* TODO use MATINV ? */
     PetscCall(KSPCreate(comm, &def->WtAWinv));
@@ -586,7 +586,7 @@ static PetscErrorCode PCSetUp_Deflation(PC pc)
       /* set default KSPtype */
       if (!def->ksptype) {
         def->ksptype = KSPFGMRES;
-        if (isset && flgspd) { /* SPD system */
+        if (isset && flghpd) { /* HPD system */
           def->ksptype = KSPFCG;
         }
       }

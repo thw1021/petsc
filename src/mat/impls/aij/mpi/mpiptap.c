@@ -116,8 +116,13 @@ PetscErrorCode MatPtAPNumeric_MPIAIJ_MPIAIJ_scalable(Mat A, Mat P, Mat C)
 
   /* 1) get R = Pd^T,Ro = Po^T */
   if (ptap->reuse == MAT_REUSE_MATRIX) {
-    PetscCall(MatTranspose(p->A, MAT_REUSE_MATRIX, &ptap->Rd));
-    PetscCall(MatTranspose(p->B, MAT_REUSE_MATRIX, &ptap->Ro));
+    if (C->product->hermitian_transpose) {
+      PetscCall(MatHermitianTranspose(p->A, MAT_REUSE_MATRIX, &ptap->Rd));
+      PetscCall(MatHermitianTranspose(p->B, MAT_REUSE_MATRIX, &ptap->Ro));
+    } else {
+      PetscCall(MatTranspose(p->A, MAT_REUSE_MATRIX, &ptap->Rd));
+      PetscCall(MatTranspose(p->B, MAT_REUSE_MATRIX, &ptap->Ro));
+    }
   }
 
   /* 2) get AP_loc */
@@ -730,6 +735,7 @@ PetscErrorCode MatPtAPNumeric_MPIAIJ_MPIXAIJ_allatonce(Mat A, Mat P, PetscInt do
   PetscCall(PetscCalloc4(cmaxr, &apindices, cmaxr, &apvalues, cmaxr, &apvaluestmp, pon, &c_rmtc));
   PetscCall(PetscHMapIVCreateWithSize(cmaxr, &hmap));
   PetscCall(ISGetIndices(map, &mappingindices));
+  PetscBool H = C->product->hermitian_transpose;
   for (i = 0; i < am && pon; i++) {
     PetscCall(PetscHMapIVClear(hmap));
     offset = i % dof;
@@ -749,7 +755,7 @@ PetscErrorCode MatPtAPNumeric_MPIAIJ_MPIXAIJ_allatonce(Mat A, Mat P, PetscInt do
       c_rmtjj = c_rmtj + ptap->c_rmti[pocol];
       c_rmtaa = c_rmta + ptap->c_rmti[pocol];
       for (jj = 0; jj < voff; jj++) {
-        apvaluestmp[jj] = apvalues[jj] * poa[j];
+        apvaluestmp[jj] = apvalues[jj] * (H ? PetscConj(poa[j]) : poa[j]);
         /* If the row is empty */
         if (!c_rmtc[pocol]) {
           c_rmtjj[jj] = apindices[jj];
@@ -811,7 +817,7 @@ PetscErrorCode MatPtAPNumeric_MPIAIJ_MPIXAIJ_allatonce(Mat A, Mat P, PetscInt do
     pda = pd->a + pd->i[ii];
     for (j = 0; j < nzi; j++) {
       row = pcstart + pdj[j] * dof + offset;
-      for (jj = 0; jj < voff; jj++) apvaluestmp[jj] = apvalues[jj] * pda[j];
+      for (jj = 0; jj < voff; jj++) apvaluestmp[jj] = apvalues[jj] * (H ? PetscConj(pda[j]) : pda[j]);
       PetscCall(PetscLogFlops(voff));
       PetscCall(MatSetValues(C, 1, &row, voff, apindices, apvaluestmp, ADD_VALUES));
     }
@@ -890,6 +896,8 @@ PetscErrorCode MatPtAPNumeric_MPIAIJ_MPIXAIJ_allatonce_merged(Mat A, Mat P, Pets
   PetscCall(PetscCalloc4(cmaxr, &apindices, cmaxr, &apvalues, cmaxr, &apvaluestmp, pon, &c_rmtc));
   PetscCall(PetscHMapIVCreateWithSize(cmaxr, &hmap));
   PetscCall(ISGetIndices(map, &mappingindices));
+  PetscBool H = C->product->hermitian_transpose;
+
   for (i = 0; i < am && (pon || pn); i++) {
     PetscCall(PetscHMapIVClear(hmap));
     offset = i % dof;
@@ -910,7 +918,7 @@ PetscErrorCode MatPtAPNumeric_MPIAIJ_MPIXAIJ_allatonce_merged(Mat A, Mat P, Pets
       c_rmtjj = c_rmtj + ptap->c_rmti[pocol];
       c_rmtaa = c_rmta + ptap->c_rmti[pocol];
       for (jj = 0; jj < voff; jj++) {
-        apvaluestmp[jj] = apvalues[jj] * poa[j];
+        apvaluestmp[jj] = apvalues[jj] * (H ? PetscConj(poa[j]) : poa[j]);
         /* If the row is empty */
         if (!c_rmtc[pocol]) {
           c_rmtjj[jj] = apindices[jj];
@@ -942,7 +950,7 @@ PetscErrorCode MatPtAPNumeric_MPIAIJ_MPIXAIJ_allatonce_merged(Mat A, Mat P, Pets
     pda = pd->a + pd->i[ii];
     for (j = 0; j < dnzi; j++) {
       row = pcstart + pdj[j] * dof + offset;
-      for (jj = 0; jj < voff; jj++) apvaluestmp[jj] = apvalues[jj] * pda[j]; /* End kk */
+      for (jj = 0; jj < voff; jj++) apvaluestmp[jj] = apvalues[jj] * (H ? PetscConj(pda[j]) : pda[j]); /* End kk */
       PetscCall(PetscLogFlops(voff));
       PetscCall(MatSetValues(C, 1, &row, voff, apindices, apvaluestmp, ADD_VALUES));
     } /* End j */
@@ -1880,8 +1888,13 @@ PetscErrorCode MatPtAPNumeric_MPIAIJ_MPIAIJ(Mat A, Mat P, Mat C)
   PetscCall(MatZeroEntries(C));
   /* 1) get R = Pd^T,Ro = Po^T */
   if (ptap->reuse == MAT_REUSE_MATRIX) {
-    PetscCall(MatTranspose(p->A, MAT_REUSE_MATRIX, &ptap->Rd));
-    PetscCall(MatTranspose(p->B, MAT_REUSE_MATRIX, &ptap->Ro));
+    if (C->product->hermitian_transpose) {
+      PetscCall(MatHermitianTranspose(p->A, MAT_REUSE_MATRIX, &ptap->Rd));
+      PetscCall(MatHermitianTranspose(p->B, MAT_REUSE_MATRIX, &ptap->Ro));
+    } else {
+      PetscCall(MatTranspose(p->A, MAT_REUSE_MATRIX, &ptap->Rd));
+      PetscCall(MatTranspose(p->B, MAT_REUSE_MATRIX, &ptap->Ro));
+    }
   }
 
   /* 2) get AP_loc */

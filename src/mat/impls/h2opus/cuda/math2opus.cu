@@ -379,7 +379,7 @@ static PetscErrorCode MatMultNKernel_H2OPUS(Mat A, PetscBool transA, Mat B, Mat 
     }
     if (size > 1) {
       PetscCheck(h2opus->dist_hmatrix, PetscObjectComm((PetscObject)A), PETSC_ERR_PLIB, "Missing distributed CPU matrix");
-      PetscCheck(!transA || A->symmetric, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "MatMultTranspose not yet coded in parallel");
+      PetscCheck(!transA || A->is.symmetric == PETSC_BOOL3_TRUE, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "MatMultTranspose not yet coded in parallel");
   #if defined(H2OPUS_USE_MPI)
       distributed_hgemv(/* transA ? H2Opus_Trans : H2Opus_NoTrans, */ h2opus->s, *h2opus->dist_hmatrix, uxx, blda, 0.0, uyy, clda, B->cmap->N, h2opus->handle);
   #endif
@@ -419,7 +419,7 @@ static PetscErrorCode MatMultNKernel_H2OPUS(Mat A, PetscBool transA, Mat B, Mat 
     PetscCall(PetscLogGpuTimeBegin());
     if (size > 1) {
       PetscCheck(h2opus->dist_hmatrix_gpu, PetscObjectComm((PetscObject)A), PETSC_ERR_PLIB, "Missing distributed GPU matrix");
-      PetscCheck(!transA || A->symmetric, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "MatMultTranspose not yet coded in parallel");
+      PetscCheck(!transA || A->is.symmetric == PETSC_BOOL3_TRUE, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "MatMultTranspose not yet coded in parallel");
     #if defined(H2OPUS_USE_MPI)
       distributed_hgemv(/* transA ? H2Opus_Trans : H2Opus_NoTrans, */ h2opus->s, *h2opus->dist_hmatrix_gpu, uxx, blda, 0.0, uyy, clda, B->cmap->N, h2opus->handle);
     #endif
@@ -560,7 +560,7 @@ static PetscErrorCode MatMultKernel_H2OPUS(Mat A, Vec x, PetscScalar sy, Vec y, 
     }
     if (size > 1) {
       PetscCheck(h2opus->dist_hmatrix, PetscObjectComm((PetscObject)A), PETSC_ERR_PLIB, "Missing distributed CPU matrix");
-      PetscCheck(!trans || A->symmetric, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "MatMultTranspose not yet coded in parallel");
+      PetscCheck(!trans || A->is.symmetric == PETSC_BOOL3_TRUE, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "MatMultTranspose not yet coded in parallel");
   #if defined(H2OPUS_USE_MPI)
       distributed_hgemv(/*trans ? H2Opus_Trans : H2Opus_NoTrans, */ h2opus->s, *h2opus->dist_hmatrix, uxx, n, sy, uyy, n, 1, h2opus->handle);
   #endif
@@ -603,7 +603,7 @@ static PetscErrorCode MatMultKernel_H2OPUS(Mat A, Vec x, PetscScalar sy, Vec y, 
     PetscCall(PetscLogGpuTimeBegin());
     if (size > 1) {
       PetscCheck(h2opus->dist_hmatrix_gpu, PetscObjectComm((PetscObject)A), PETSC_ERR_PLIB, "Missing distributed GPU matrix");
-      PetscCheck(!trans || A->symmetric, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "MatMultTranspose not yet coded in parallel");
+      PetscCheck(!trans || A->is.symmetric == PETSC_BOOL3_TRUE, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "MatMultTranspose not yet coded in parallel");
     #if defined(H2OPUS_USE_MPI)
       distributed_hgemv(/*trans ? H2Opus_Trans : H2Opus_NoTrans, */ h2opus->s, *h2opus->dist_hmatrix_gpu, uxx, n, sy, uyy, n, 1, h2opus->handle);
     #endif
@@ -873,11 +873,11 @@ static PetscErrorCode MatAssemblyEnd_H2OPUS(Mat A, MatAssemblyType assemblytype)
   PetscCall(PetscLogEventBegin(MAT_H2Opus_Build, A, 0, 0, 0));
   if (size > 1) {
   #if defined(H2OPUS_USE_MPI)
-    a->dist_hmatrix = new DistributedHMatrix(A->rmap->n /* ,A->symmetric */);
+    a->dist_hmatrix = new DistributedHMatrix(A->rmap->n /* ,A->is.symmetric == PETSC_BOOL3_TRUE */);
   #else
     a->dist_hmatrix = NULL;
   #endif
-  } else a->hmatrix = new HMatrix(A->rmap->n, A->symmetric == PETSC_BOOL3_TRUE);
+  } else a->hmatrix = new HMatrix(A->rmap->n, A->is.symmetric == PETSC_BOOL3_TRUE);
   PetscCall(MatH2OpusInferCoordinates_Private(A));
   PetscCheck(a->ptcloud, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Missing pointcloud");
   if (a->kernel) {
@@ -1703,7 +1703,7 @@ PetscErrorCode MatCreateH2OpusFromMat(Mat B, PetscInt spacedim, const PetscReal 
   PetscCall(MatBindToCPU(A, boundtocpu));
   if (spacedim) PetscCall(MatH2OpusSetCoords_H2OPUS(A, spacedim, coords, cdist, NULL, NULL));
   PetscCall(MatPropagateSymmetryOptions(B, A));
-  /* PetscCheck(A->symmetric,comm,PETSC_ERR_SUP,"Unsymmetric sampling does not work"); */
+  /* PetscCheck(A->is.symmetric == PETSC_BOOL3_TRUE,comm,PETSC_ERR_SUP,"Unsymmetric sampling does not work"); */
 
   h2opus          = (Mat_H2OPUS *)A->data;
   h2opus->sampler = new PetscMatrixSampler(B);

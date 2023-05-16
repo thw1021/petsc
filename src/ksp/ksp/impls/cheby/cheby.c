@@ -789,7 +789,7 @@ static PetscErrorCode KSPSetUp_Chebyshev(KSP ksp)
   }
   if (cheb->kspest) {
     PetscCall(KSPGetOperators(ksp, &Amat, &Pmat));
-    PetscCall(MatIsSPDKnown(Pmat, &isset, &flg));
+    PetscCall(MatIsHPDKnown(Pmat, &isset, &flg));
     if (isset && flg) {
       const char *prefix;
 

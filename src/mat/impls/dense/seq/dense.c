@@ -50,13 +50,18 @@ PetscErrorCode MatSeqDenseInvertFactors_Private(Mat A)
     PetscCall(PetscFPTrapPop());
     PetscCall(PetscLogFlops((1.0 * A->cmap->n * A->cmap->n * A->cmap->n) / 3.0));
   } else if (A->factortype == MAT_FACTOR_CHOLESKY) {
-    if (A->spd == PETSC_BOOL3_TRUE) {
+    PetscBool is_hpd, is_hpd_known;
+
+    PetscCall(MatIsHPDKnown(A, &is_hpd_known, &is_hpd));
+    is_hpd = (is_hpd && is_hpd_known) ? PETSC_TRUE : PETSC_FALSE;
+
+    if (is_hpd) {
       PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
       PetscCallBLAS("LAPACKpotri", LAPACKpotri_("L", &n, mat->v, &mat->lda, &info));
       PetscCall(PetscFPTrapPop());
       PetscCall(MatSeqDenseSymmetrize_Private(A, PETSC_TRUE));
-#if defined(PETSC_USE_COMPLEX)
-    } else if (A->hermitian == PETSC_BOOL3_TRUE) {
+#if PetscDefined(USE_COMPLEX)
+    } else if (A->is.hermitian == PETSC_BOOL3_TRUE) {
       PetscCheck(mat->pivots, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Pivots not present");
       PetscCheck(mat->fwork, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Fwork not present");
       PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
@@ -422,15 +427,20 @@ static PetscErrorCode MatSolve_SeqDense_Internal_Cholesky(Mat A, PetscScalar *x,
   PetscBLASInt  info;
 
   PetscFunctionBegin;
-  if (A->spd == PETSC_BOOL3_TRUE) {
+  PetscBool is_hpd, is_hpd_known;
+
+  PetscCall(MatIsHPDKnown(A, &is_hpd_known, &is_hpd));
+  is_hpd = (is_hpd && is_hpd_known) ? PETSC_TRUE : PETSC_FALSE;
+
+  if (is_hpd) {
     if (PetscDefined(USE_COMPLEX) && T) PetscCall(MatConjugate_SeqDense(A));
     PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
     PetscCallBLAS("LAPACKpotrs", LAPACKpotrs_("L", &m, &nrhs, mat->v, &mat->lda, x, &m, &info));
     PetscCall(PetscFPTrapPop());
     PetscCheck(!info, PETSC_COMM_SELF, PETSC_ERR_LIB, "POTRS Bad solve %d", (int)info);
     if (PetscDefined(USE_COMPLEX) && T) PetscCall(MatConjugate_SeqDense(A));
-#if defined(PETSC_USE_COMPLEX)
-  } else if (A->hermitian == PETSC_BOOL3_TRUE) {
+#if PetscDefined(USE_COMPLEX)
+  } else if (A->is.hermitian == PETSC_BOOL3_TRUE) {
     if (T) PetscCall(MatConjugate_SeqDense(A));
     PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
     PetscCallBLAS("LAPACKhetrs", LAPACKhetrs_("L", &m, &nrhs, mat->v, &mat->lda, mat->pivots, x, &m, &info));
@@ -847,12 +857,16 @@ PetscErrorCode MatCholeskyFactor_SeqDense(Mat A, IS perm, const MatFactorInfo *f
   PetscFunctionBegin;
   PetscCall(PetscBLASIntCast(A->cmap->n, &n));
   if (!A->rmap->n || !A->cmap->n) PetscFunctionReturn(PETSC_SUCCESS);
-  if (A->spd == PETSC_BOOL3_TRUE) {
+  PetscBool is_hpd, is_hpd_known;
+
+  PetscCall(MatIsHPDKnown(A, &is_hpd_known, &is_hpd));
+  is_hpd = (is_hpd_known && is_hpd) ? PETSC_TRUE : PETSC_FALSE;
+  if (is_hpd) {
     PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
     PetscCallBLAS("LAPACKpotrf", LAPACKpotrf_("L", &n, mat->v, &mat->lda, &info));
     PetscCall(PetscFPTrapPop());
 #if defined(PETSC_USE_COMPLEX)
-  } else if (A->hermitian == PETSC_BOOL3_TRUE) {
+  } else if (A->is.hermitian == PETSC_BOOL3_TRUE) {
     if (!mat->pivots) { PetscCall(PetscMalloc1(A->rmap->n, &mat->pivots)); }
     if (!mat->fwork) {
       PetscScalar dummy;
@@ -1998,12 +2012,16 @@ static PetscErrorCode MatSetOption_SeqDense(Mat A, MatOption op, PetscBool flg)
     PetscCall(PetscInfo(A, "Option %s ignored\n", MatOptions[op]));
     break;
   case MAT_SPD:
+  case MAT_HPD:
   case MAT_SYMMETRIC:
-  case MAT_STRUCTURALLY_SYMMETRIC:
   case MAT_HERMITIAN:
+  case MAT_STRUCTURALLY_SYMMETRIC:
   case MAT_SYMMETRY_ETERNAL:
+  case MAT_HERMITIAN_ETERNAL:
   case MAT_STRUCTURAL_SYMMETRY_ETERNAL:
   case MAT_SPD_ETERNAL:
+  case MAT_HPD_ETERNAL:
+  case MAT_POSITIVE_DEFINITE:
     break;
   default:
     SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "unknown option %s", MatOptions[op]);

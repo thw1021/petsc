@@ -11,11 +11,7 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqSBAIJ_SeqAIJ(Mat A, MatType newtype, M
   PetscInt     *ai = a->i, *aj = a->j, m = A->rmap->N, n = A->cmap->n, i, j, k, *bi, *bj, *rowlengths, nz, *rowstart, itmp;
   PetscInt      bs = A->rmap->bs, bs2 = bs * bs, mbs = A->rmap->N / bs, diagcnt = 0;
   MatScalar    *av, *bv;
-#if defined(PETSC_USE_COMPLEX)
-  const int aconj = A->hermitian == PETSC_BOOL3_TRUE ? 1 : 0;
-#else
-  const int aconj = 0;
-#endif
+  const int     aconj = PetscDefined(USE_COMPLEX) ? a->hermitian_storage : 0;
 
   PetscFunctionBegin;
   /* compute rowlengths of newmat */
@@ -174,11 +170,7 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqSBAIJ(Mat A, MatType newtype, M
   PetscBool     miss = PETSC_FALSE;
 
   PetscFunctionBegin;
-#if !defined(PETSC_USE_COMPLEX)
-  PetscCheck(A->symmetric == PETSC_BOOL3_TRUE, PetscObjectComm((PetscObject)A), PETSC_ERR_USER, "Matrix must be symmetric. Call MatSetOption(mat,MAT_SYMMETRIC,PETSC_TRUE)");
-#else
-  PetscCheck(A->symmetric == PETSC_BOOL3_TRUE || A->hermitian == PETSC_BOOL3_TRUE, PetscObjectComm((PetscObject)A), PETSC_ERR_USER, "Matrix must be either symmetric or hermitian. Call MatSetOption(mat,MAT_SYMMETRIC,PETSC_TRUE) and/or MatSetOption(mat,MAT_HERMITIAN,PETSC_TRUE)");
-#endif
+  PetscCheck(A->is.symmetric == PETSC_BOOL3_TRUE || A->is.hermitian == PETSC_BOOL3_TRUE, PetscObjectComm((PetscObject)A), PETSC_ERR_USER, "Matrix must be either symmetric or hermitian. Call MatSetOption(mat,MAT_SYMMETRIC,PETSC_TRUE) and/or MatSetOption(mat,MAT_HERMITIAN,PETSC_TRUE)");
   PetscCheck(n == m, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Matrix must be square");
 
   if (bs == 1) {
@@ -198,6 +190,8 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqAIJ_SeqSBAIJ(Mat A, MatType newtype, M
     PetscCall(MatSetType(B, MATSEQSBAIJ));
     PetscCall(MatSeqSBAIJSetPreallocation(B, bs, 0, rowlengths));
   } else B = *newmat;
+
+  if (A->is.symmetric != PETSC_BOOL3_TRUE) PetscCall(MatSetOption(B, MAT_TRIANGULAR_STORAGE_HERMITIAN, PETSC_TRUE));
 
   if (bs == 1 && !miss) {
     b  = (Mat_SeqSBAIJ *)(B->data);
@@ -244,11 +238,7 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqSBAIJ_SeqBAIJ(Mat A, MatType newtype, 
   PetscInt     *ai = a->i, *aj = a->j, m = A->rmap->N, n = A->cmap->n, i, k, *bi, *bj, *browlengths, nz, *browstart, itmp;
   PetscInt      bs = A->rmap->bs, bs2 = bs * bs, mbs = m / bs, col, row;
   MatScalar    *av, *bv;
-#if defined(PETSC_USE_COMPLEX)
-  const int aconj = A->hermitian == PETSC_BOOL3_TRUE ? 1 : 0;
-#else
-  const int aconj = 0;
-#endif
+  const int     aconj = PetscDefined(USE_COMPLEX) ? a->hermitian_storage : 0;
 
   PetscFunctionBegin;
   /* compute browlengths of newmat */
@@ -346,7 +336,7 @@ PETSC_INTERN PetscErrorCode MatConvert_SeqBAIJ_SeqSBAIJ(Mat A, MatType newtype, 
   PetscBool     flg;
 
   PetscFunctionBegin;
-  PetscCheck(A->symmetric, PetscObjectComm((PetscObject)A), PETSC_ERR_USER, "Matrix must be symmetric. Call MatSetOption(mat,MAT_SYMMETRIC,PETSC_TRUE)");
+  PetscCheck(A->is.symmetric, PetscObjectComm((PetscObject)A), PETSC_ERR_USER, "Matrix must be symmetric. Call MatSetOption(mat,MAT_SYMMETRIC,PETSC_TRUE)");
   PetscCheck(n == m, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Matrix must be square");
   PetscCall(MatMissingDiagonal_SeqBAIJ(A, &flg, &dd)); /* check for missing diagonals, then mark diag */
   PetscCheck(!flg, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Matrix is missing diagonal %" PetscInt_FMT, dd);

@@ -663,7 +663,7 @@ PetscErrorCode MatCholeskyFactorSymbolic_AIJMKL_CPARDISO(Mat F, Mat A, IS perm, 
   mat_mkl_cpardiso->n = A->rmap->N;
   if (mat_mkl_cpardiso->iparm[36]) mat_mkl_cpardiso->n /= mat_mkl_cpardiso->iparm[36];
   PetscCheck(!PetscDefined(USE_COMPLEX), PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "No support for PARDISO CHOLESKY with complex scalars! Use MAT_FACTOR_LU instead");
-  if (A->spd == PETSC_BOOL3_TRUE) mat_mkl_cpardiso->mtype = 2;
+  if (A->positive_definite == PETSC_BOOL3_TRUE && A->is.symmetric) mat_mkl_cpardiso->mtype = 2;
   else mat_mkl_cpardiso->mtype = -2;
 
   /* analysis phase */

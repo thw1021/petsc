@@ -2442,11 +2442,11 @@ static PetscErrorCode MatProductNumeric_SeqAIJHIPSPARSE_SeqAIJHIPSPARSE(Mat C)
   PetscCall(MatSeqAIJHIPSPARSECopyToGPU(B));
 
   ptype = product->type;
-  if (A->symmetric == PETSC_BOOL3_TRUE && ptype == MATPRODUCT_AtB) {
+  if (A->is.symmetric == PETSC_BOOL3_TRUE && ptype == MATPRODUCT_AtB) {
     ptype = MATPRODUCT_AB;
     PetscCheck(product->symbolic_used_the_fact_A_is_symmetric, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Symbolic should have been built using the fact that A is symmetric");
   }
-  if (B->symmetric == PETSC_BOOL3_TRUE && ptype == MATPRODUCT_ABt) {
+  if (B->is.symmetric == PETSC_BOOL3_TRUE && ptype == MATPRODUCT_ABt) {
     ptype = MATPRODUCT_AB;
     PetscCheck(product->symbolic_used_the_fact_B_is_symmetric, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Symbolic should have been built using the fact that B is symmetric");
   }
@@ -2554,11 +2554,11 @@ static PetscErrorCode MatProductSymbolic_SeqAIJHIPSPARSE_SeqAIJHIPSPARSE(Mat C)
   PetscCheck(Bcusp->format == MAT_HIPSPARSE_CSR, PetscObjectComm((PetscObject)C), PETSC_ERR_GPU, "Only for MAT_HIPSPARSE_CSR format");
 
   ptype = product->type;
-  if (A->symmetric == PETSC_BOOL3_TRUE && ptype == MATPRODUCT_AtB) {
+  if (A->is.symmetric == PETSC_BOOL3_TRUE && ptype == MATPRODUCT_AtB) {
     ptype                                          = MATPRODUCT_AB;
     product->symbolic_used_the_fact_A_is_symmetric = PETSC_TRUE;
   }
-  if (B->symmetric == PETSC_BOOL3_TRUE && ptype == MATPRODUCT_ABt) {
+  if (B->is.symmetric == PETSC_BOOL3_TRUE && ptype == MATPRODUCT_ABt) {
     ptype                                          = MATPRODUCT_AB;
     product->symbolic_used_the_fact_B_is_symmetric = PETSC_TRUE;
   }

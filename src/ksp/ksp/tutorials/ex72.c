@@ -163,7 +163,7 @@ int main(int argc, char **args)
     PetscCall(MatZeroRows(A, 1, &row, 0.0, NULL, NULL));
   }
 
-  /* Check whether A is symmetric, then set A->symmetric option */
+  /* Check whether A is symmetric, then set A->is.symmetric option */
   flg = PETSC_FALSE;
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-check_symmetry", &flg, NULL));
   if (flg) {

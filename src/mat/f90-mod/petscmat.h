@@ -226,7 +226,7 @@
       PetscEnum, parameter :: MATOP_DESTROY=60
       PetscEnum, parameter :: MATOP_VIEW=61
       PetscEnum, parameter :: MATOP_CONVERT_FROM=62
-      PetscEnum, parameter :: MATOP_PLACEHOLDER_63=63
+      PetscEnum, parameter :: MATOP_IS_REAL=63
       PetscEnum, parameter :: MATOP_MATMAT_MULT_SYMBOLIC=64
       PetscEnum, parameter :: MATOP_MATMAT_MULT_NUMERIC=65
       PetscEnum, parameter :: MATOP_SET_LOCAL_TO_GLOBAL_MAP=66

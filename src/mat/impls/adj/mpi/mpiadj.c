@@ -303,14 +303,17 @@ static PetscErrorCode MatSetOption_MPIAdj(Mat A, MatOption op, PetscBool flg)
   PetscFunctionBegin;
   switch (op) {
   case MAT_SYMMETRIC:
-  case MAT_STRUCTURALLY_SYMMETRIC:
   case MAT_HERMITIAN:
+  case MAT_STRUCTURALLY_SYMMETRIC:
   case MAT_SPD:
+  case MAT_HPD:
     a->symmetric = flg;
     break;
   case MAT_SYMMETRY_ETERNAL:
+  case MAT_HERMITIAN_ETERNAL:
   case MAT_STRUCTURAL_SYMMETRY_ETERNAL:
   case MAT_SPD_ETERNAL:
+  case MAT_HPD_ETERNAL:
     break;
   default:
     PetscCall(PetscInfo(A, "Option %s ignored\n", MatOptions[op]));

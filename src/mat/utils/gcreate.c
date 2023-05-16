@@ -80,11 +80,12 @@ PetscErrorCode MatCreate(MPI_Comm comm, Mat *A)
   PetscCall(PetscStrallocpy(VECSTANDARD, &B->defaultvectype));
   PetscCall(PetscStrallocpy(PETSCRANDER48, &B->defaultrandtype));
 
-  B->symmetric                   = PETSC_BOOL3_UNKNOWN;
-  B->hermitian                   = PETSC_BOOL3_UNKNOWN;
+  B->is.symmetric                = PETSC_BOOL3_UNKNOWN;
+  B->is.hermitian                = PETSC_BOOL3_UNKNOWN;
   B->structurally_symmetric      = PETSC_BOOL3_UNKNOWN;
-  B->spd                         = PETSC_BOOL3_UNKNOWN;
-  B->symmetry_eternal            = PETSC_FALSE;
+  B->positive_definite           = PETSC_BOOL3_UNKNOWN;
+  B->eternally.symmetric         = PETSC_FALSE;
+  B->eternally.hermitian         = PETSC_FALSE;
   B->structural_symmetry_eternal = PETSC_FALSE;
 
   B->congruentlayouts = PETSC_DECIDE;

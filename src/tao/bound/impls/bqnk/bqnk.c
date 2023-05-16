@@ -16,7 +16,7 @@ static PetscErrorCode TaoBQNKComputeHessian(Tao tao)
   PetscCall(PetscObjectReference((PetscObject)bqnk->B));
   tao->hessian_pre = bqnk->B;
   /* Update the Hessian with the latest solution */
-  if (bqnk->is_spd) {
+  if (bqnk->is_hpd) {
     gnorm2 = bnk->gnorm * bnk->gnorm;
     if (gnorm2 == 0.0) gnorm2 = PETSC_MACHINE_EPSILON;
     if (bnk->f == 0.0) {
@@ -126,8 +126,8 @@ static PetscErrorCode TaoSetFromOptions_BQNK(Tao tao, PetscOptionItems *PetscOpt
   PetscCall(MatSetOptionsPrefix(bqnk->B, ((PetscObject)tao)->prefix));
   PetscCall(MatAppendOptionsPrefix(bqnk->B, "tao_bqnk_"));
   PetscCall(MatSetFromOptions(bqnk->B));
-  PetscCall(MatIsSPDKnown(bqnk->B, &is_set, &bqnk->is_spd));
-  if (!is_set) bqnk->is_spd = PETSC_FALSE;
+  PetscCall(MatIsHPDKnown(bqnk->B, &is_set, &bqnk->is_hpd));
+  if (!is_set) bqnk->is_hpd = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -182,7 +182,7 @@ PETSC_INTERN PetscErrorCode TaoCreate_BQNK(Tao tao)
 
   PetscCall(PetscNew(&bqnk));
   bnk->ctx     = (void *)bqnk;
-  bqnk->is_spd = PETSC_TRUE;
+  bqnk->is_hpd = PETSC_TRUE;
 
   PetscCall(MatCreate(PetscObjectComm((PetscObject)tao), &bqnk->B));
   PetscCall(PetscObjectIncrementTabLevel((PetscObject)bqnk->B, (PetscObject)tao, 1));

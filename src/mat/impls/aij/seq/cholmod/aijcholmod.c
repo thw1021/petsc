@@ -66,7 +66,7 @@ PETSC_INTERN PetscErrorCode MatGetFactor_seqaij_cholmod(Mat A, MatFactorType fty
 
   PetscFunctionBegin;
 #if defined(PETSC_USE_COMPLEX)
-  if (A->hermitian != PETSC_BOOL3_TRUE) {
+  if (A->is.hermitian != PETSC_BOOL3_TRUE) {
     PetscCall(PetscInfo(A, "Only for Hermitian matrices.\n"));
     *F = NULL;
     PetscFunctionReturn(PETSC_SUCCESS);

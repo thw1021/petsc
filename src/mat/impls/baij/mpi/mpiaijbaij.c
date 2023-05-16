@@ -15,7 +15,7 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIBAIJ(Mat A, MatType newtype, Ma
 
   PetscFunctionBegin;
   if (reuse != MAT_REUSE_MATRIX) {
-    PetscBool3 sym = A->symmetric, hermitian = A->hermitian, structurally_symmetric = A->structurally_symmetric, spd = A->spd;
+    PetscBool3 sym = A->is.symmetric, hermitian = A->is.hermitian, structurally_symmetric = A->structurally_symmetric, pd = A->positive_definite;
     PetscCall(MatDisAssemble_MPIAIJ(A));
     PetscCall(MatGetSize(A, &m, &n));
     PetscCall(MatGetLocalSize(A, &lm, &ln));
@@ -30,10 +30,10 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIBAIJ(Mat A, MatType newtype, Ma
     PetscCall(PetscFree(o_nnz));
     PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
-    A->symmetric              = sym;
-    A->hermitian              = hermitian;
+    A->is.symmetric           = sym;
+    A->is.hermitian           = hermitian;
     A->structurally_symmetric = structurally_symmetric;
-    A->spd                    = spd;
+    A->positive_definite      = pd;
   } else M = *newmat;
 
   /* reuse may not be equal to MAT_REUSE_MATRIX, but the basic converter will reallocate or replace newmat if this value is not used */

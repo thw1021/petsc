@@ -151,18 +151,18 @@ static PetscErrorCode MatWrapCholmod_seqsbaij(Mat A, PetscBool values, cholmod_s
   C->p     = sbaij->i;
   C->i     = sbaij->j;
   if (values) {
-#if defined(PETSC_USE_COMPLEX)
-    /* we need to pass CHOLMOD the conjugate matrix */
-    PetscScalar *v;
-    PetscInt     i;
+    if (PetscDefined(USE_COMPLEX)) {
+      /* we need to pass CHOLMOD the conjugate matrix */
+      PetscScalar *v;
+      PetscInt     i;
 
-    PetscCall(PetscMalloc1(sbaij->maxnz, &v));
-    for (i = 0; i < sbaij->maxnz; i++) v[i] = PetscConj(sbaij->a[i]);
-    C->x     = v;
-    vallocin = PETSC_TRUE;
-#else
-    C->x = sbaij->a;
-#endif
+      PetscCall(PetscMalloc1(sbaij->maxnz, &v));
+      for (i = 0; i < sbaij->maxnz; i++) v[i] = PetscConj(sbaij->a[i]);
+      C->x     = v;
+      vallocin = PETSC_TRUE;
+    } else {
+      C->x = sbaij->a;
+    }
   }
   C->stype  = -1;
   C->itype  = CHOLMOD_INT_TYPE;
@@ -545,12 +545,12 @@ PETSC_INTERN PetscErrorCode MatGetFactor_seqsbaij_cholmod(Mat A, MatFactorType f
     PetscCall(PetscInfo(A, "CHOLMOD only supports block size=1.\n"));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
-#if defined(PETSC_USE_COMPLEX)
-  if (A->hermitian != PETSC_BOOL3_TRUE) {
-    PetscCall(PetscInfo(A, "Only for Hermitian matrices.\n"));
-    PetscFunctionReturn(PETSC_SUCCESS);
+  if (PetscDefined(USE_COMPLEX)) {
+    if (A->is.hermitian != PETSC_BOOL3_TRUE) {
+      PetscCall(PetscInfo(A, "Only for Hermitian matrices.\n"));
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
   }
-#endif
   /* Create the factorization matrix F */
   PetscCall(MatCreate(PetscObjectComm((PetscObject)A), &B));
   PetscCall(MatSetSizes(B, PETSC_DECIDE, PETSC_DECIDE, m, n));

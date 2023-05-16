@@ -391,22 +391,18 @@ static PetscErrorCode PCGAMGCreateLevel_GAMG(PC pc, Mat Amat_fine, PetscInt cr_b
     /* 'a_Amat_crs' output */
     {
       Mat       mat;
-      PetscBool isset, isspd, isher;
-#if !defined(PETSC_USE_COMPLEX)
+      PetscBool isset, ishpd, isher;
       PetscBool issym;
-#endif
 
       PetscCall(MatCreateSubMatrix(Cmat, new_eq_indices, new_eq_indices, MAT_INITIAL_MATRIX, &mat));
-      PetscCall(MatIsSPDKnown(Cmat, &isset, &isspd)); // like MatPropagateSymmetryOptions, but should set MAT_STRUCTURALLY_SYMMETRIC ?
-      if (isset) PetscCall(MatSetOption(mat, MAT_SPD, isspd));
+      PetscCall(MatIsHPDKnown(Cmat, &isset, &ishpd)); // like MatPropagateSymmetryOptions, but should set MAT_STRUCTURALLY_SYMMETRIC ?
+      if (isset) PetscCall(MatSetOption(mat, MAT_HPD, ishpd));
       else {
         PetscCall(MatIsHermitianKnown(Cmat, &isset, &isher));
         if (isset) PetscCall(MatSetOption(mat, MAT_HERMITIAN, isher));
-        else {
-#if !defined(PETSC_USE_COMPLEX)
+        else if (PetscDefined(USE_COMPLEX)) {
           PetscCall(MatIsSymmetricKnown(Cmat, &isset, &issym));
           if (isset) PetscCall(MatSetOption(mat, MAT_SYMMETRIC, issym));
-#endif
         }
       }
       *a_Amat_crs = mat;

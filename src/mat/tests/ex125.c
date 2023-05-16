@@ -39,6 +39,10 @@ PetscErrorCode CreateIdentity(PetscInt n, Mat *A)
   PetscCall(MatAssemblyBegin(*A, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(*A, MAT_FINAL_ASSEMBLY));
   PetscCall(MatShift(*A, 1.0));
+  PetscCall(MatSetOption(*A, MAT_HPD, PETSC_TRUE));
+  PetscCall(MatSetOption(*A, MAT_SYMMETRIC, PETSC_TRUE));
+  PetscCall(MatSetOption(*A, MAT_HPD_ETERNAL, PETSC_TRUE));
+  PetscCall(MatSetOption(*A, MAT_SYMMETRY_ETERNAL, PETSC_TRUE));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

@@ -1498,14 +1498,21 @@ PetscErrorCode MatSetOption_MPIBAIJ(Mat A, MatOption op, PetscBool flg)
     a->ht_flag = flg;
     a->ht_fact = 1.39;
     break;
-  case MAT_SYMMETRIC:
-  case MAT_STRUCTURALLY_SYMMETRIC:
-  case MAT_HERMITIAN:
-  case MAT_SUBMAT_SINGLEIS:
-  case MAT_SYMMETRY_ETERNAL:
-  case MAT_STRUCTURAL_SYMMETRY_ETERNAL:
+  case MAT_SPD:
   case MAT_SPD_ETERNAL:
+  case MAT_HPD:
+  case MAT_HPD_ETERNAL:
+  case MAT_SYMMETRIC:
+  case MAT_SYMMETRY_ETERNAL:
+  case MAT_HERMITIAN:
+  case MAT_HERMITIAN_ETERNAL:
+  case MAT_STRUCTURALLY_SYMMETRIC:
+  case MAT_STRUCTURAL_SYMMETRY_ETERNAL:
+  case MAT_POSITIVE_DEFINITE:
+  case MAT_POSITIVE_DEFINITE_ETERNAL:
+  case MAT_SUBMAT_SINGLEIS:
     /* if the diagonal matrix is square it inherits some of the properties above */
+    if (a->A) PetscCall(MatSetOption_PropagateDiagonal(A, a->A, op, flg));
     break;
   default:
     SETERRQ(PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "unknown option %d", op);
@@ -2735,6 +2742,8 @@ PetscErrorCode MatMPIBAIJSetPreallocation_MPIBAIJ(Mat B, PetscInt bs, PetscInt d
 
   PetscCall(MatSeqBAIJSetPreallocation(b->A, bs, d_nz, d_nnz));
   PetscCall(MatSeqBAIJSetPreallocation(b->B, bs, o_nz, o_nnz));
+
+  PetscCall(MatPropagateSymmetryOptions_Diagonal(B, b->A));
   B->preallocated  = PETSC_TRUE;
   B->was_assembled = PETSC_FALSE;
   B->assembled     = PETSC_FALSE;
@@ -2811,7 +2820,7 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIBAIJ_MPIAIJ(Mat A, MatType newtype, Ma
     PetscCall(MatConvert_SeqBAIJ_SeqAIJ(a->A, MATSEQAIJ, MAT_REUSE_MATRIX, &b->A));
     PetscCall(MatConvert_SeqBAIJ_SeqAIJ(a->B, MATSEQAIJ, MAT_REUSE_MATRIX, &b->B));
   } else {
-    PetscBool3 sym = A->symmetric, hermitian = A->hermitian, structurally_symmetric = A->structurally_symmetric, spd = A->spd;
+    PetscBool3 sym = A->is.symmetric, hermitian = A->is.hermitian, structurally_symmetric = A->structurally_symmetric, pd = A->positive_definite;
     PetscCall(MatDestroy(&b->A));
     PetscCall(MatDestroy(&b->B));
     PetscCall(MatDisAssemble_MPIBAIJ(A));
@@ -2819,10 +2828,10 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIBAIJ_MPIAIJ(Mat A, MatType newtype, Ma
     PetscCall(MatConvert_SeqBAIJ_SeqAIJ(a->B, MATSEQAIJ, MAT_INITIAL_MATRIX, &b->B));
     PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
     PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
-    A->symmetric              = sym;
-    A->hermitian              = hermitian;
+    A->is.symmetric           = sym;
+    A->is.hermitian           = hermitian;
     A->structurally_symmetric = structurally_symmetric;
-    A->spd                    = spd;
+    A->positive_definite      = pd;
   }
   PetscCall(MatAssemblyBegin(B, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(B, MAT_FINAL_ASSEMBLY));

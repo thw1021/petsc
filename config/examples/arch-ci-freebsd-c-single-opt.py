@@ -4,16 +4,16 @@ import os
 petsc_hash_pkgs=os.path.join(os.getenv('HOME'),'petsc-hash-pkgs')
 
 configure_options = [
-  '--package-prefix-hash='+petsc_hash_pkgs,
+  #'--package-prefix-hash='+petsc_hash_pkgs,
   'CFLAGS=-std=c99 -pedantic -Wno-long-long -Wno-overlength-strings',
-  '--with-precision=single',
-  '--with-debugging=0',
-  '--download-mpich',
-  '--download-mpich-device=ch3:sock',
+  '--with-scalar-type=complex',
+  #'--with-precision=single',
+  #'--download-mpich',
+  #'--download-mpich-device=ch3:sock',
   '--download-superlu_dist',
   '--download-metis',
   '--download-parmetis',
-  '--download-cmake',  # needed by metis/parmetis
+  #'--download-cmake',  # needed by metis/parmetis
   '--with-strict-petscerrorcode',
 ]
 

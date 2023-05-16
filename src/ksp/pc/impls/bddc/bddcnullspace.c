@@ -155,13 +155,13 @@ PetscErrorCode PCBDDCNullSpaceAssembleCorrection(PC pc, PetscBool isdir, PetscBo
     const char *prefix;
     PetscReal   test_err, lambda_min, lambda_max;
     PetscInt    k, maxit;
-    PetscBool   isspd, isset;
+    PetscBool   ishpd, isset;
 
     PetscCall(VecDuplicate(shell_ctx->fw[0], &work1));
     PetscCall(VecDuplicate(shell_ctx->fw[0], &work2));
     PetscCall(KSPCreate(PETSC_COMM_SELF, &check_ksp));
-    PetscCall(MatIsSPDKnown(local_mat, &isset, &isspd));
-    if (isset && isspd) PetscCall(KSPSetType(check_ksp, KSPCG));
+    PetscCall(MatIsHPDKnown(local_mat, &isset, &ishpd));
+    if (isset && ishpd) PetscCall(KSPSetType(check_ksp, KSPCG));
     PetscCall(PetscObjectIncrementTabLevel((PetscObject)check_ksp, (PetscObject)local_ksp, 0));
     PetscCall(KSPGetOptionsPrefix(local_ksp, &prefix));
     PetscCall(KSPSetOptionsPrefix(check_ksp, prefix));

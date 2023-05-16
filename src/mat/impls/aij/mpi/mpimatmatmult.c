@@ -1611,6 +1611,8 @@ PetscErrorCode MatTransposeMatMultNumeric_MPIAIJ_MPIAIJ(Mat P, Mat A, Mat C)
   PetscCall(MatSeqAIJRestoreArrayRead(p->A, &dummy));
   PetscCall(MatSeqAIJGetArrayRead(p->B, &dummy));
   PetscCall(MatSeqAIJRestoreArrayRead(p->B, &dummy));
+
+  PetscBool H = C->product->hermitian_transpose;
   for (i = 0; i < am; i++) {
     anz = ai[i + 1] - ai[i];
     adj = aj + ai[i];
@@ -1627,7 +1629,7 @@ PetscErrorCode MatTransposeMatMultNumeric_MPIAIJ_MPIAIJ(Mat P, Mat A, Mat C)
       ca  = coa + coi[row];
       /* perform sparse axpy */
       nexta  = 0;
-      valtmp = pA[j];
+      valtmp = (H ? PetscConj(pA[j]) : pA[j]);
       for (k = 0; nexta < anz; k++) {
         if (cj[k] == adj[nexta]) {
           ca[k] += valtmp * ada[nexta];

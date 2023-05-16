@@ -86,13 +86,14 @@ int main(int argc, char **args)
   PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
   PetscCall(MatViewFromOptions(A, NULL, "-disp_mat"));
 
-  /* Check whether A is Hermitian, then set A->hermitian flag */
+  /* Check whether A is Hermitian, then set A->is.hermitian flag */
   PetscCall(PetscOptionsHasName(NULL, NULL, "-check_Hermitian", &flg));
   if (flg && size == 1) {
     PetscCall(MatIsHermitian(A, 0.0, &flg));
     PetscCheck(flg, PETSC_COMM_SELF, PETSC_ERR_USER, "A is not Hermitian");
   }
   PetscCall(MatSetOption(A, MAT_HERMITIAN, PETSC_TRUE));
+  PetscCall(MatSetOption(A, MAT_SYMMETRIC, PETSC_FALSE));
 
 #if defined(PETSC_HAVE_SUPERLU_DIST)
   /* Test Cholesky factorization */

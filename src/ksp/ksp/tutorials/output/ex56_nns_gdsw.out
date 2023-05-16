@@ -95,19 +95,20 @@ PC Object: 8 MPI processes
         left preconditioning
         using NONE norm type for convergence test
       PC Object: (mg_levels_1_sub_) 1 MPI process
-        type: ilu
+        type: icc
           out-of-place factorization
           0 levels of fill
           tolerance for zero pivot 2.22045e-14
+          using Manteuffel shift [POSITIVE_DEFINITE]
           matrix ordering: natural
           factor fill ratio given 1., needed 1.
             Factored matrix follows:
               Mat Object: (mg_levels_1_sub_) 1 MPI process
-                type: seqaij
-                rows=24, cols=24, bs=3
+                type: seqsbaij
+                rows=24, cols=24
                 package used to perform factorization: petsc
-                total: nonzeros=576, allocated nonzeros=576
-                  using I-node routines: found 5 nodes, limit used is 5
+                total: nonzeros=300, allocated nonzeros=300
+                    block size is 1
         linear system matrix = precond matrix:
         Mat Object: (mg_levels_1_sub_) 1 MPI process
           type: seqaij

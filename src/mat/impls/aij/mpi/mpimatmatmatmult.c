@@ -114,7 +114,8 @@ PetscErrorCode MatProductNumeric_RARt_MPIAIJ_MPIAIJ(Mat C)
   A    = C->product->A;
   R    = C->product->B;
   Rt   = rart->Rt;
-  PetscCall(MatTranspose(R, MAT_REUSE_MATRIX, &Rt));
+  if (C->product->hermitian_transpose) PetscCall(MatHermitianTranspose(R, MAT_REUSE_MATRIX, &Rt));
+  else                                 PetscCall(MatTranspose(R, MAT_REUSE_MATRIX, &Rt));
   if (rart->data) C->product->data = rart->data;
   PetscCall((*C->ops->matmatmultnumeric)(R, A, Rt, C));
   C->product->data = rart;

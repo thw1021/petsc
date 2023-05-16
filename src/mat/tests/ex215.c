@@ -10,7 +10,7 @@ int main(int argc, char **args)
   PetscInt      m, n, nsolve, nrhs;
   PetscReal     norm, tol = PETSC_SQRT_MACHINE_EPSILON;
   PetscRandom   rand;
-  PetscBool     data_provided, herm, symm, hpd;
+  PetscBool     data_provided, herm, symm, pd;
   MatFactorType ftyp;
   PetscViewer   fd;
   char          file[PETSC_MAX_PATH_LEN];
@@ -22,46 +22,37 @@ int main(int argc, char **args)
   /* Determine which type of solver we want to test for */
   herm = PETSC_FALSE;
   symm = PETSC_FALSE;
-  hpd  = PETSC_FALSE;
+  pd   = PETSC_FALSE;
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-symmetric_solve", &symm, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-hermitian_solve", &herm, NULL));
-  PetscCall(PetscOptionsGetBool(NULL, NULL, "-hpd_solve", &hpd, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-positive_definite_solve", &pd, NULL));
+
+  if (pd) {
+    if (PetscDefined(USE_COMPLEX)) herm = PETSC_TRUE;
+    else symm = PETSC_TRUE;
+  }
 
   /* Determine file from which we read the matrix A */
   ftyp = MAT_FACTOR_LU;
   PetscCall(PetscOptionsGetString(NULL, NULL, "-f", file, sizeof(file), &data_provided));
   if (!data_provided) { /* get matrices from PETSc distribution */
     PetscCall(PetscStrncpy(file, "${PETSC_DIR}/share/petsc/datafiles/matrices/", sizeof(file)));
-    if (hpd) {
-#if defined(PETSC_USE_COMPLEX)
-      PetscCall(PetscStrlcat(file, "hpd-complex-", sizeof(file)));
-#else
-      PetscCall(PetscStrlcat(file, "spd-real-", sizeof(file)));
-#endif
+    if (pd) {
+      if (PetscDefined(USE_COMPLEX)) PetscCall(PetscStrlcat(file, "hpd-complex-", sizeof(file)));
+      else PetscCall(PetscStrlcat(file, "spd-real-", sizeof(file)));
       ftyp = MAT_FACTOR_CHOLESKY;
     } else {
-#if defined(PETSC_USE_COMPLEX)
-      PetscCall(PetscStrlcat(file, "nh-complex-", sizeof(file)));
-#else
-      PetscCall(PetscStrlcat(file, "ns-real-", sizeof(file)));
-#endif
+      if (PetscDefined(USE_COMPLEX)) PetscCall(PetscStrlcat(file, "nh-complex-", sizeof(file)));
+      else PetscCall(PetscStrlcat(file, "ns-real-", sizeof(file)));
     }
-#if defined(PETSC_USE_64BIT_INDICES)
-    PetscCall(PetscStrlcat(file, "int64-", sizeof(file)));
-#else
-    PetscCall(PetscStrlcat(file, "int32-", sizeof(file)));
-#endif
-#if defined(PETSC_USE_REAL_SINGLE)
-    PetscCall(PetscStrlcat(file, "float32", sizeof(file)));
-#else
-    PetscCall(PetscStrlcat(file, "float64", sizeof(file)));
-#endif
+    if (PetscDefined(USE_64BIT_INDICES)) PetscCall(PetscStrlcat(file, "int64-", sizeof(file)));
+    else PetscCall(PetscStrlcat(file, "int32-", sizeof(file)));
+    if (PetscDefined(USE_REAL_SINGLE)) PetscCall(PetscStrlcat(file, "float32", sizeof(file)));
+    else PetscCall(PetscStrlcat(file, "float64", sizeof(file)));
   }
 
   /* Load matrix A */
-#if defined(PETSC_USE_REAL___FLOAT128)
-  PetscCall(PetscOptionsInsertString(NULL, "-binary_read_double"));
-#endif
+  if (PetscDefined(USE_REAL___FLOAT128)) PetscCall(PetscOptionsInsertString(NULL, "-binary_read_double"));
   PetscCall(PetscViewerBinaryOpen(PETSC_COMM_WORLD, file, FILE_MODE_READ, &fd));
   PetscCall(MatCreate(PETSC_COMM_WORLD, &A));
   PetscCall(MatLoad(A, fd));
@@ -115,9 +106,8 @@ int main(int argc, char **args)
 
   PetscCall(MatDuplicate(A, MAT_COPY_VALUES, &F));
   PetscCall(MatSetOption(F, MAT_SYMMETRIC, symm));
-  /* it seems that the SPD concept in PETSc extends naturally to Hermitian Positive definitess */
-  PetscCall(MatSetOption(F, MAT_HERMITIAN, (PetscBool)(hpd || herm)));
-  PetscCall(MatSetOption(F, MAT_SPD, hpd));
+  PetscCall(MatSetOption(F, MAT_HERMITIAN, herm));
+  PetscCall(MatSetOption(F, MAT_POSITIVE_DEFINITE, pd));
   {
     PetscInt iftyp = ftyp;
     PetscCall(PetscOptionsGetEList(NULL, NULL, "-ftype", MatFactorTypes, MAT_FACTOR_NUM_TYPES, &iftyp, NULL));
@@ -196,7 +186,7 @@ int main(int argc, char **args)
       args: -hermitian_solve
     test:
       suffix: hpd
-      args: -hpd_solve
+      args: -positive_definite_solve
     test:
       suffix: qr
       args: -ftype qr

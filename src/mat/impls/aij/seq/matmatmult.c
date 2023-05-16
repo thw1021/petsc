@@ -1399,7 +1399,7 @@ PetscErrorCode MatTransposeMatMultSymbolic_SeqAIJ_SeqAIJ(Mat A, Mat B, PetscReal
 
   PetscFunctionBegin;
   MatCheckProduct(C, 4);
-  square = (PetscBool)(A == B && A->symmetric == PETSC_BOOL3_TRUE);
+  square = (PetscBool)(A == B && A->is.symmetric == PETSC_BOOL3_TRUE);
   /* outerproduct */
   PetscCall(PetscStrcmp(product->alg, "outerproduct", &flg));
   if (flg) {
@@ -1724,7 +1724,7 @@ PETSC_INTERN PetscErrorCode MatProductSetFromOptions_SeqXBAIJ_SeqDense(Mat C)
   PetscFunctionBegin;
   MatCheckProduct(C, 1);
   PetscCheck(product->A, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Missing A");
-  if (product->type == MATPRODUCT_AB || (product->type == MATPRODUCT_AtB && product->A->symmetric == PETSC_BOOL3_TRUE)) PetscCall(MatProductSetFromOptions_SeqXBAIJ_SeqDense_AB(C));
+  if (product->type == MATPRODUCT_AB || (product->type == MATPRODUCT_AtB && product->A->is.symmetric == PETSC_BOOL3_TRUE)) PetscCall(MatProductSetFromOptions_SeqXBAIJ_SeqDense_AB(C));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

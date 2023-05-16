@@ -476,7 +476,7 @@ PetscErrorCode MatSchurComplementComputeExplicitOperator(Mat A, Mat *S)
   Mat       B, C, D, E = NULL, Bd, AinvBd;
   KSP       ksp;
   PetscInt  n, N, m, M;
-  PetscBool flg = PETSC_FALSE, set, symm;
+  PetscBool flg = PETSC_FALSE;
 
   PetscFunctionBegin;
   PetscCall(MatSchurComplementGetSubMatrices(A, NULL, NULL, &B, &C, &D));
@@ -497,8 +497,12 @@ PetscErrorCode MatSchurComplementComputeExplicitOperator(Mat A, Mat *S)
   if (D) {
     PetscCall(PetscObjectTypeCompareAny((PetscObject)D, &flg, MATSEQSBAIJ, MATMPISBAIJ, ""));
     if (flg) {
-      PetscCall(MatIsSymmetricKnown(A, &set, &symm));
-      if (!set || !symm) PetscCall(MatConvert(D, MATBAIJ, MAT_INITIAL_MATRIX, &E)); /* convert the (1,1) block to nonsymmetric storage for MatAXPY() */
+      PetscBool is_set, is_symm, is_herm;
+      PetscCall(MatIsSymmetricKnown(A, &is_set, &is_symm));
+      is_symm = (is_set && is_symm) ? PETSC_TRUE : PETSC_FALSE;
+      PetscCall(MatIsHermitianKnown(A, &is_set, &is_herm));
+      is_herm = (is_set && is_herm) ? PETSC_TRUE : PETSC_FALSE;
+      if (!is_herm && !is_symm) PetscCall(MatConvert(D, MATBAIJ, MAT_INITIAL_MATRIX, &E)); /* convert the (1,1) block to nonsymmetric storage for MatAXPY() */
     }
     PetscCall(MatAXPY(*S, -1.0, E ? E : D, DIFFERENT_NONZERO_PATTERN)); /* calls Mat[Get|Restore]RowUpperTriangular(), so only the upper triangular part is valid with symmetric storage */
   }

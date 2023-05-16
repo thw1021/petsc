@@ -119,6 +119,8 @@ int main(int argc, char **args)
     PetscCall(MatSetSizes(Amat, m, m, M, M));
     if (!test_late_bs) PetscCall(MatSetBlockSize(Amat, 3));
     PetscCall(MatSetType(Amat, MATAIJ));
+    PetscCall(MatSetOption(Amat, MAT_HPD, PETSC_TRUE));
+    PetscCall(MatSetOption(Amat, MAT_HPD_ETERNAL, PETSC_TRUE));
     PetscCall(MatSetOption(Amat, MAT_SPD, PETSC_TRUE));
     PetscCall(MatSetOption(Amat, MAT_SPD_ETERNAL, PETSC_TRUE));
     PetscCall(MatSetFromOptions(Amat));

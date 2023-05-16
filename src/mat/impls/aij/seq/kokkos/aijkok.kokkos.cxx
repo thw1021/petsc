@@ -264,7 +264,7 @@ PETSC_INTERN PetscErrorCode MatSeqAIJKokkosGenerateTranspose_Private(Mat A, Kokk
 
   const auto &Aa = akok->a_dual.view_device();
 
-  if (A->symmetric == PETSC_BOOL3_TRUE) {
+  if (A->is.symmetric == PETSC_BOOL3_TRUE) {
     *csrmatT = akok->csrmat;
   } else {
     // See if we already have a cached transpose and its value is up to date
@@ -304,7 +304,7 @@ static PetscErrorCode MatSeqAIJKokkosGenerateHermitian_Private(Mat A, KokkosCsrM
 
   const auto &Aa = akok->a_dual.view_device();
 
-  if (A->hermitian == PETSC_BOOL3_TRUE) {
+  if (A->is.hermitian == PETSC_BOOL3_TRUE) {
     *csrmatH = akok->csrmat;
   } else {
     // See if we already have a cached hermitian and its value is up to date
@@ -865,11 +865,11 @@ static PetscErrorCode MatProductSymbolic_SeqAIJKokkos_SeqAIJKokkos(Mat C)
 
   ptype = product->type;
   // Take advantage of the symmetry if true
-  if (A->symmetric == PETSC_BOOL3_TRUE && ptype == MATPRODUCT_AtB) {
+  if (A->is.symmetric == PETSC_BOOL3_TRUE && ptype == MATPRODUCT_AtB) {
     ptype                                          = MATPRODUCT_AB;
     product->symbolic_used_the_fact_A_is_symmetric = PETSC_TRUE;
   }
-  if (B->symmetric == PETSC_BOOL3_TRUE && ptype == MATPRODUCT_ABt) {
+  if (B->is.symmetric == PETSC_BOOL3_TRUE && ptype == MATPRODUCT_ABt) {
     ptype                                          = MATPRODUCT_AB;
     product->symbolic_used_the_fact_B_is_symmetric = PETSC_TRUE;
   }

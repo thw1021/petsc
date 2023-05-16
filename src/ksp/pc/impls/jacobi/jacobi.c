@@ -184,7 +184,7 @@ static PetscErrorCode PCSetUp_Jacobi(PC pc)
   diagsqrt = jac->diagsqrt;
 
   if (diag) {
-    PetscBool isset, isspd;
+    PetscBool isset, ishpd;
 
     if (jac->userowmax) {
       PetscCall(MatGetRowMaxAbs(pc->pmat, diag, NULL));
@@ -195,8 +195,8 @@ static PetscErrorCode PCSetUp_Jacobi(PC pc)
     }
     PetscCall(VecReciprocal(diag));
     if (jac->useabs) PetscCall(VecAbs(diag));
-    PetscCall(MatIsSPDKnown(pc->pmat, &isset, &isspd));
-    if (jac->fixdiag && (!isset || !isspd)) {
+    PetscCall(MatIsHPDKnown(pc->pmat, &isset, &ishpd));
+    if (jac->fixdiag && (!isset || !ishpd)) {
       PetscCall(VecGetLocalSize(diag, &n));
       PetscCall(VecGetArray(diag, &x));
       for (i = 0; i < n; i++) {

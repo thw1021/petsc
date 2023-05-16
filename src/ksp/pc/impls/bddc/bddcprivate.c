@@ -8111,7 +8111,7 @@ PetscErrorCode PCBDDCSetUpCoarseSolver(PC pc, PetscScalar *coarse_submat_vals)
   if (coarse_mat) {
     PetscBool   isredundant, isbddc, force, valid;
     PetscViewer dbg_viewer = NULL;
-    PetscBool   isset, issym, isher, isspd;
+    PetscBool   isset, issym, isher, ispd;
 
     if (pcbddc->dbg_flag) {
       dbg_viewer = PETSC_VIEWER_STDOUT_(PetscObjectComm((PetscObject)coarse_mat));
@@ -8262,8 +8262,8 @@ PetscErrorCode PCBDDCSetUpCoarseSolver(PC pc, PetscScalar *coarse_submat_vals)
     if (isset) PetscCall(MatSetOption(coarse_mat, MAT_SYMMETRIC, issym));
     PetscCall(MatIsHermitianKnown(pc->pmat, &isset, &isher));
     if (isset) PetscCall(MatSetOption(coarse_mat, MAT_HERMITIAN, isher));
-    PetscCall(MatIsSPDKnown(pc->pmat, &isset, &isspd));
-    if (isset) PetscCall(MatSetOption(coarse_mat, MAT_SPD, isspd));
+    PetscCall(MatIsPositiveDefiniteKnown(pc->pmat, &isset, &ispd));
+    if (isset) PetscCall(MatSetOption(coarse_mat, MAT_POSITIVE_DEFINITE, ispd));
 
     if (pcbddc->benign_saddle_point && !pcbddc->benign_have_null) PetscCall(MatSetOption(coarse_mat, MAT_SPD, PETSC_TRUE));
     /* set operators */

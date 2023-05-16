@@ -723,7 +723,7 @@ PetscErrorCode MatMultTransposeAdd_SeqSELL(Mat A, Vec xx, Vec zz, Vec yy)
 #endif
 
   PetscFunctionBegin;
-  if (A->symmetric == PETSC_BOOL3_TRUE) {
+  if (A->is.symmetric == PETSC_BOOL3_TRUE) {
     PetscCall(MatMultAdd_SeqSELL(A, xx, zz, yy));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
@@ -754,7 +754,7 @@ PetscErrorCode MatMultTransposeAdd_SeqSELL(Mat A, Vec xx, Vec zz, Vec yy)
 PetscErrorCode MatMultTranspose_SeqSELL(Mat A, Vec xx, Vec yy)
 {
   PetscFunctionBegin;
-  if (A->symmetric == PETSC_BOOL3_TRUE) {
+  if (A->is.symmetric == PETSC_BOOL3_TRUE) {
     PetscCall(MatMult_SeqSELL(A, xx, yy));
   } else {
     PetscCall(VecSet(yy, 0.0));
@@ -942,12 +942,15 @@ PetscErrorCode MatSetOption_SeqSELL(Mat A, MatOption op, PetscBool flg)
     PetscCall(PetscInfo(A, "Option %s ignored\n", MatOptions[op]));
     break;
   case MAT_SPD:
+  case MAT_HPD:
   case MAT_SYMMETRIC:
-  case MAT_STRUCTURALLY_SYMMETRIC:
   case MAT_HERMITIAN:
+  case MAT_STRUCTURALLY_SYMMETRIC:
   case MAT_SYMMETRY_ETERNAL:
+  case MAT_HERMITIAN_ETERNAL:
   case MAT_STRUCTURAL_SYMMETRY_ETERNAL:
   case MAT_SPD_ETERNAL:
+  case MAT_POSITIVE_DEFINITE:
     /* These options are handled directly by MatSetOption() */
     break;
   default:

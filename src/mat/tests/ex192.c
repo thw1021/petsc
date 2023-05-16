@@ -140,10 +140,10 @@ int main(int argc, char **args)
     PetscCall(MatGetFactor(A, solver, MAT_FACTOR_LU, &F));
   } else {
     if (herm) {
-      PetscCall(MatSetOption(A, MAT_SPD, PETSC_TRUE));
+      PetscCall(MatSetOption(A, MAT_HPD, PETSC_TRUE));
     } else {
       PetscCall(MatSetOption(A, MAT_SYMMETRIC, PETSC_TRUE));
-      PetscCall(MatSetOption(A, MAT_SPD, PETSC_FALSE));
+      PetscCall(MatSetOption(A, MAT_POSITIVE_DEFINITE, PETSC_FALSE));
     }
     PetscCall(MatGetFactor(A, solver, MAT_FACTOR_CHOLESKY, &F));
   }

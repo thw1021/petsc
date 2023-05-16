@@ -13,7 +13,7 @@ typedef struct {
   PetscErrorCode (*solve)(Tao);
   Mat       B;
   PC        pc;
-  PetscBool is_spd;
+  PetscBool is_hpd;
 } TAO_BQNK;
 
 #define BQNK_INIT_CONSTANT  0

@@ -2,6 +2,7 @@
 #define __SEQAIJKOKKOSIMPL_HPP
 
 #include <petsc/private/vecimpl_kokkos.hpp>
+#include <petsc/private/matimpl.h>
 #include <../src/mat/impls/aij/seq/aij.h>
 #include <KokkosSparse_CrsMatrix.hpp>
 #include <KokkosSparse_spiluk.hpp>

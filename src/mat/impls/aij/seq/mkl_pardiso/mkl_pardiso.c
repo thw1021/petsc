@@ -240,14 +240,12 @@ static PetscErrorCode MatMKLPardisoSolveSchur_Private(Mat F, PetscScalar *B, Pet
   PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, mpardiso->schur_size, mpardiso->nrhs, X, &Xmat));
   PetscCall(MatSetType(Bmat, ((PetscObject)S)->type_name));
   PetscCall(MatSetType(Xmat, ((PetscObject)S)->type_name));
-#if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA)
-  PetscCall(MatBindToCPU(Xmat, S->boundtocpu));
-  PetscCall(MatBindToCPU(Bmat, S->boundtocpu));
-#endif
+  if (PetscDefined(HAVE_VIENNACL) || PetscDefined(PETSC_HAVE_CUDA)) {
+    PetscCall(MatBindToCPU(Xmat, S->boundtocpu));
+    PetscCall(MatBindToCPU(Bmat, S->boundtocpu));
+  }
 
-#if defined(PETSC_USE_COMPLEX)
-  PetscCheck(mpardiso->iparm[12 - 1] != 1, PetscObjectComm((PetscObject)F), PETSC_ERR_SUP, "Hermitian solve not implemented yet");
-#endif
+  if (PetscDefined(USE_COMPLEX)) PetscCheck(mpardiso->iparm[12 - 1] != 1, PetscObjectComm((PetscObject)F), PETSC_ERR_SUP, "Hermitian solve not implemented yet");
 
   switch (schurstatus) {
   case MAT_FACTOR_SCHUR_FACTORED:
@@ -543,9 +541,7 @@ PetscErrorCode MatFactorNumeric_MKL_PARDISO(Mat F, Mat A, const MatFactorInfo *i
   if (mat_mkl_pardiso->iparm[18] > 0) PetscCall(PetscLogFlops(PetscPowRealInt(10., 6) * mat_mkl_pardiso->iparm[18]));
 
   if (F->schur) { /* schur output from pardiso is in row major format */
-#if defined(PETSC_HAVE_CUDA)
-    F->schur->offloadmask = PETSC_OFFLOAD_CPU;
-#endif
+    if (PetscDefined(PETSC_HAVE_CUDA)) F->schur->offloadmask = PETSC_OFFLOAD_CPU;
     PetscCall(MatFactorRestoreSchurComplement(F, NULL, MAT_FACTOR_SCHUR_UNFACTORED));
     PetscCall(MatTranspose(F->schur, MAT_INPLACE_MATRIX, &F->schur));
   }
@@ -582,11 +578,7 @@ PetscErrorCode MatSetFromOptions_MKL_PARDISO(Mat F, Mat A)
     icntl                  = mat_mkl_pardiso->iparm[34];
     bs                     = mat_mkl_pardiso->iparm[36];
     MKL_PARDISO_INIT(pt, &mat_mkl_pardiso->mtype, mat_mkl_pardiso->iparm);
-#if defined(PETSC_USE_REAL_SINGLE)
-    mat_mkl_pardiso->iparm[27] = 1;
-#else
-    mat_mkl_pardiso->iparm[27] = 0;
-#endif
+    mat_mkl_pardiso->iparm[27] = PetscDefined(USE_REAL_SINGLE) ? 1 : 0;
     mat_mkl_pardiso->iparm[34] = icntl;
     mat_mkl_pardiso->iparm[36] = bs;
   }
@@ -659,11 +651,7 @@ PetscErrorCode MatFactorMKL_PARDISOInitialize_Private(Mat A, MatFactorType ftype
   PetscFunctionBegin;
   for (i = 0; i < IPARM_SIZE; i++) mat_mkl_pardiso->iparm[i] = 0;
   for (i = 0; i < IPARM_SIZE; i++) mat_mkl_pardiso->pt[i] = 0;
-#if defined(PETSC_USE_REAL_SINGLE)
-  mat_mkl_pardiso->iparm[27] = 1;
-#else
-  mat_mkl_pardiso->iparm[27] = 0;
-#endif
+  mat_mkl_pardiso->iparm[27] = PetscDefined(USE_REAL_SINGLE) ? 1 : 0;
   /* Default options for both sym and unsym */
   mat_mkl_pardiso->iparm[0]  = 1;  /* Solver default parameters overridden with provided by iparm */
   mat_mkl_pardiso->iparm[1]  = 2;  /* Metis reordering */
@@ -702,12 +690,10 @@ PetscErrorCode MatFactorMKL_PARDISOInitialize_Private(Mat A, MatFactorType ftype
     mat_mkl_pardiso->iparm[10] = 1;  /* Use nonsymmetric permutation and scaling MPS */
     mat_mkl_pardiso->iparm[12] = 1;  /* Switch on Maximum Weighted Matching algorithm (default for non-symmetric) */
   } else {
-    mat_mkl_pardiso->iparm[9]  = 8; /* Perturb the pivot elements with 1E-8 */
-    mat_mkl_pardiso->iparm[10] = 0; /* Use nonsymmetric permutation and scaling MPS */
-    mat_mkl_pardiso->iparm[12] = 1; /* Switch on Maximum Weighted Matching algorithm (default for non-symmetric) */
-#if defined(PETSC_USE_DEBUG)
-    mat_mkl_pardiso->iparm[26] = 1; /* Matrix checker */
-#endif
+    mat_mkl_pardiso->iparm[9]  = 8;                              /* Perturb the pivot elements with 1E-8 */
+    mat_mkl_pardiso->iparm[10] = 0;                              /* Use nonsymmetric permutation and scaling MPS */
+    mat_mkl_pardiso->iparm[12] = 1;                              /* Switch on Maximum Weighted Matching algorithm (default for non-symmetric) */
+    if (PetscDefined(USE_DEBUG)) mat_mkl_pardiso->iparm[26] = 1; /* Matrix checker */
   }
   PetscCall(PetscCalloc1(A->rmap->N * sizeof(INT_TYPE), &mat_mkl_pardiso->perm));
   mat_mkl_pardiso->schur_size = 0;
@@ -757,7 +743,6 @@ PetscErrorCode MatLUFactorSymbolic_AIJMKL_PARDISO(Mat F, Mat A, IS r, IS c, cons
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#if !defined(PETSC_USE_COMPLEX)
 PetscErrorCode MatGetInertia_MKL_PARDISO(Mat F, PetscInt *nneg, PetscInt *nzero, PetscInt *npos)
 {
   Mat_MKL_PARDISO *mat_mkl_pardiso = (Mat_MKL_PARDISO *)F->data;
@@ -768,16 +753,12 @@ PetscErrorCode MatGetInertia_MKL_PARDISO(Mat F, PetscInt *nneg, PetscInt *nzero,
   if (nzero) *nzero = F->rmap->N - (mat_mkl_pardiso->iparm[22] + mat_mkl_pardiso->iparm[21]);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-#endif
 
 PetscErrorCode MatCholeskyFactorSymbolic_AIJMKL_PARDISO(Mat F, Mat A, IS r, const MatFactorInfo *info)
 {
   PetscFunctionBegin;
   PetscCall(MatFactorSymbolic_AIJMKL_PARDISO_Private(F, A, info));
-  F->ops->getinertia = NULL;
-#if !defined(PETSC_USE_COMPLEX)
-  F->ops->getinertia = MatGetInertia_MKL_PARDISO;
-#endif
+  F->ops->getinertia = PetscDefined(USE_COMPLEX) ? NULL : MatGetInertia_MKL_PARDISO;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -846,11 +827,7 @@ PetscErrorCode MatMkl_PardisoSetCntl_MKL_PARDISO(Mat F, PetscInt icntl, PetscInt
       bs                     = mat_mkl_pardiso->iparm[36];
       mat_mkl_pardiso->mtype = ival;
       MKL_PARDISO_INIT(pt, &mat_mkl_pardiso->mtype, mat_mkl_pardiso->iparm);
-#if defined(PETSC_USE_REAL_SINGLE)
-      mat_mkl_pardiso->iparm[27] = 1;
-#else
-      mat_mkl_pardiso->iparm[27] = 0;
-#endif
+      mat_mkl_pardiso->iparm[27] = PetscDefined(USE_REAL_SINGLE) ? 1 : 0;
       mat_mkl_pardiso->iparm[34] = backup;
       mat_mkl_pardiso->iparm[36] = bs;
     } else if (icntl == 70) mat_mkl_pardiso->solve_interior = (PetscBool) !!ival;
@@ -963,11 +940,7 @@ PETSC_EXTERN PetscErrorCode MatGetFactor_aij_mkl_pardiso(Mat A, MatFactorType ft
       PetscCheck(!isSeqSBAIJ, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "No support for PARDISO LU factor with SEQSBAIJ format! Use MAT_FACTOR_CHOLESKY instead");
       SETERRQ(PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "No support for PARDISO LU with %s format", ((PetscObject)A)->type_name);
     }
-#if defined(PETSC_USE_COMPLEX)
-    mat_mkl_pardiso->mtype = 13;
-#else
-    mat_mkl_pardiso->mtype = 11;
-#endif
+    mat_mkl_pardiso->mtype = PetscDefined(USE_COMPLEX) ? 13 : 11;
   } else {
     B->ops->choleskyfactorsymbolic = MatCholeskyFactorSymbolic_AIJMKL_PARDISO;
     B->factortype                  = MAT_FACTOR_CHOLESKY;
@@ -977,13 +950,10 @@ PETSC_EXTERN PetscErrorCode MatGetFactor_aij_mkl_pardiso(Mat A, MatFactorType ft
     else SETERRQ(PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "No support for PARDISO CHOLESKY with %s format", ((PetscObject)A)->type_name);
 
     mat_mkl_pardiso->needsym = PETSC_TRUE;
-#if !defined(PETSC_USE_COMPLEX)
-    if (A->spd == PETSC_BOOL3_TRUE) mat_mkl_pardiso->mtype = 2;
+    PetscCheck(A->is.symmetric == PETSC_BOOL3_TRUE, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "No support for PARDISO CHOLESKY with nonsymmetric matricies (including Hermitian matrices), use MAT_FACTOR_LU instead");
+    if (A->positive_definite == PETSC_BOOL3_TRUE) mat_mkl_pardiso->mtype = 2;
+    else if (PetscDefined(USE_COMPLEX)) mat_mkl_pardiso->mtype = 6;
     else mat_mkl_pardiso->mtype = -2;
-#else
-    mat_mkl_pardiso->mtype = 6;
-    PetscCheck(A->hermitian != PETSC_BOOL3_TRUE, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "No support for PARDISO CHOLESKY with Hermitian matrices! Use MAT_FACTOR_LU instead");
-#endif
   }
   B->ops->destroy = MatDestroy_MKL_PARDISO;
   B->ops->view    = MatView_MKL_PARDISO;

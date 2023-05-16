@@ -151,7 +151,7 @@ static PetscErrorCode PCMPISetMat(PC pc)
   if (!ksp) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscObjectGetComm((PetscObject)ksp, &comm));
   if (pc) {
-    PetscBool isset, issymmetric, ishermitian, isspd, isstructurallysymmetric;
+    PetscBool isset, issymmetric, ishermitian, ispd, isstructurallysymmetric;
 
     PetscCallMPI(MPI_Comm_size(comm, &size));
     PCMPIMatCounts[size - 1]++;
@@ -163,8 +163,8 @@ static PetscErrorCode PCMPISetMat(PC pc)
     matproperties[3] = !isset ? 0 : (issymmetric ? 1 : 2);
     PetscCall(MatIsHermitianKnown(sA, &isset, &ishermitian));
     matproperties[4] = !isset ? 0 : (ishermitian ? 1 : 2);
-    PetscCall(MatIsSPDKnown(sA, &isset, &isspd));
-    matproperties[5] = !isset ? 0 : (isspd ? 1 : 2);
+    PetscCall(MatIsPositiveDefiniteKnown(sA, &isset, &ispd));
+    matproperties[5] = !isset ? 0 : (ispd ? 1 : 2);
     PetscCall(MatIsStructurallySymmetricKnown(sA, &isset, &isstructurallysymmetric));
     matproperties[6] = !isset ? 0 : (isstructurallysymmetric ? 1 : 2);
   }
@@ -224,7 +224,7 @@ static PetscErrorCode PCMPISetMat(PC pc)
   PetscCall(MatSetOptionsPrefix(A, "mpi_"));
   if (matproperties[3]) PetscCall(MatSetOption(A, MAT_SYMMETRIC, matproperties[3] == 1 ? PETSC_TRUE : PETSC_FALSE));
   if (matproperties[4]) PetscCall(MatSetOption(A, MAT_HERMITIAN, matproperties[4] == 1 ? PETSC_TRUE : PETSC_FALSE));
-  if (matproperties[5]) PetscCall(MatSetOption(A, MAT_SPD, matproperties[5] == 1 ? PETSC_TRUE : PETSC_FALSE));
+  if (matproperties[5]) PetscCall(MatSetOption(A, MAT_POSITIVE_DEFINITE, matproperties[5] == 1 ? PETSC_TRUE : PETSC_FALSE));
   if (matproperties[6]) PetscCall(MatSetOption(A, MAT_STRUCTURALLY_SYMMETRIC, matproperties[6] == 1 ? PETSC_TRUE : PETSC_FALSE));
 
   PetscCall(PetscFree3(ia, ja, a));
@@ -272,7 +272,7 @@ static PetscErrorCode PCMPIUpdateMatValues(PC pc)
   PetscCall(PetscMalloc1(nz, &a));
   PetscCallMPI(MPI_Scatterv(sa, pc ? km->NZ : NULL, pc ? km->NZdispl : NULL, MPIU_SCALAR, a, nz, MPIU_SCALAR, 0, comm));
   if (pc) {
-    PetscBool isset, issymmetric, ishermitian, isspd, isstructurallysymmetric;
+    PetscBool isset, issymmetric, ishermitian, ispd, isstructurallysymmetric;
 
     PetscCall(MatSeqAIJRestoreArrayRead(sA, &sa));
 
@@ -280,8 +280,8 @@ static PetscErrorCode PCMPIUpdateMatValues(PC pc)
     matproperties[0] = !isset ? 0 : (issymmetric ? 1 : 2);
     PetscCall(MatIsHermitianKnown(sA, &isset, &ishermitian));
     matproperties[1] = !isset ? 0 : (ishermitian ? 1 : 2);
-    PetscCall(MatIsSPDKnown(sA, &isset, &isspd));
-    matproperties[2] = !isset ? 0 : (isspd ? 1 : 2);
+    PetscCall(MatIsPositiveDefiniteKnown(sA, &isset, &ispd));
+    matproperties[2] = !isset ? 0 : (ispd ? 1 : 2);
     PetscCall(MatIsStructurallySymmetricKnown(sA, &isset, &isstructurallysymmetric));
     matproperties[3] = !isset ? 0 : (isstructurallysymmetric ? 1 : 2);
   }
@@ -291,7 +291,7 @@ static PetscErrorCode PCMPIUpdateMatValues(PC pc)
   /* if any of these properties was previously set and is now not set this will result in incorrect properties in A since there is no way to unset a property */
   if (matproperties[0]) PetscCall(MatSetOption(A, MAT_SYMMETRIC, matproperties[0] == 1 ? PETSC_TRUE : PETSC_FALSE));
   if (matproperties[1]) PetscCall(MatSetOption(A, MAT_HERMITIAN, matproperties[1] == 1 ? PETSC_TRUE : PETSC_FALSE));
-  if (matproperties[2]) PetscCall(MatSetOption(A, MAT_SPD, matproperties[2] == 1 ? PETSC_TRUE : PETSC_FALSE));
+  if (matproperties[2]) PetscCall(MatSetOption(A, MAT_POSITIVE_DEFINITE, matproperties[2] == 1 ? PETSC_TRUE : PETSC_FALSE));
   if (matproperties[3]) PetscCall(MatSetOption(A, MAT_STRUCTURALLY_SYMMETRIC, matproperties[3] == 1 ? PETSC_TRUE : PETSC_FALSE));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

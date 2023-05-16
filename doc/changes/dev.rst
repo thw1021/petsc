@@ -45,6 +45,7 @@ Changes: Development
 - Add support for ``MAT_FACTOR_LU`` and ``MAT_FACTOR_CHOLESKY`` with ``MATSOLVERMUMPS`` for ``MATNEST``
 - ``MatGetFactor()`` can now return ``NULL`` for some combinations of matrices and solvers types. This is to support those combinations that can only be inspected at runtime (i.e. MatNest with AIJ blocks vs MatNest with SHELL blocks).
 - Remove ``MatSetValuesDevice()``, ``MatCUSPARSEGetDeviceMatWrite()``, ``MatKokkosGetDeviceMatWrite``
+- Add ``MAT_TRIANGULAR_STORAGE_HERMITIAN`` to be used to describe the behavior of ``MATSBAIJ`` so that ``MAT_HERMITIAN`` can be purely descriptive.
 
 .. rubric:: MatCoarsen:
 

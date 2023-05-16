@@ -120,8 +120,9 @@ static PetscErrorCode MatPreallocateWithMats_Private(Mat B, PetscInt nm, Mat X[]
 
 PETSC_INTERN PetscErrorCode MatConvert_MPISBAIJ_Basic(Mat A, MatType newtype, MatReuse reuse, Mat *newmat)
 {
-  Mat      B;
-  PetscInt r;
+  Mat_MPISBAIJ *mpisbaij = (Mat_MPISBAIJ *)A->data;
+  Mat           B;
+  PetscInt      r;
 
   PetscFunctionBegin;
   if (reuse != MAT_REUSE_MATRIX) {
@@ -156,16 +157,16 @@ PETSC_INTERN PetscErrorCode MatConvert_MPISBAIJ_Basic(Mat A, MatType newtype, Ma
 
     PetscCall(MatGetRow(A, r, &ncols, &row, &vals));
     PetscCall(MatSetValues(B, 1, &r, ncols, row, vals, INSERT_VALUES));
-#if defined(PETSC_USE_COMPLEX)
-    if (A->hermitian == PETSC_BOOL3_TRUE) {
-      PetscInt i;
-      for (i = 0; i < ncols; i++) PetscCall(MatSetValue(B, row[i], r, PetscConj(vals[i]), INSERT_VALUES));
+    if (PetscDefined(USE_COMPLEX)) {
+      if (mpisbaij->hermitian_storage) {
+        PetscInt i;
+        for (i = 0; i < ncols; i++) PetscCall(MatSetValue(B, row[i], r, PetscConj(vals[i]), INSERT_VALUES));
+      } else {
+        PetscCall(MatSetValues(B, ncols, row, 1, &r, vals, INSERT_VALUES));
+      }
     } else {
       PetscCall(MatSetValues(B, ncols, row, 1, &r, vals, INSERT_VALUES));
     }
-#else
-    PetscCall(MatSetValues(B, ncols, row, 1, &r, vals, INSERT_VALUES));
-#endif
     PetscCall(MatRestoreRow(A, r, &ncols, &row, &vals));
   }
   PetscCall(MatRestoreRowUpperTriangular(A));
@@ -1511,42 +1512,58 @@ PetscErrorCode MatSetOption_MPISBAIJ(Mat A, MatOption op, PetscBool flg)
   case MAT_USE_HASH_TABLE:
     a->ht_flag = flg;
     break;
+  case MAT_TRIANGULAR_STORAGE_HERMITIAN:
+    if (PetscDefined(USE_COMPLEX)) {
+      if (a->A) PetscCall(MatSetOption(a->A, MAT_TRIANGULAR_STORAGE_HERMITIAN, flg));
+      if (flg) {
+        A->ops->mult                      = MatMult_MPISBAIJ_Hermitian;
+        A->ops->multadd                   = MatMultAdd_MPISBAIJ_Hermitian;
+        A->ops->multhermitiantranspose    = MatMult_MPISBAIJ_Hermitian;
+        A->ops->multhermitiantransposeadd = MatMultAdd_MPISBAIJ_Hermitian;
+        A->ops->multtranspose             = NULL;
+        A->ops->multtransposeadd          = NULL;
+        A->is.hermitian                   = PETSC_BOOL3_TRUE;
+        A->eternally.hermitian            = PETSC_TRUE;
+        if (a->hermitian_storage != flg) A->is.symmetric = PETSC_BOOL3_UNKNOWN;
+      } else {
+        A->ops->mult                      = MatMult_MPISBAIJ;
+        A->ops->multadd                   = MatMultAdd_MPISBAIJ;
+        A->ops->multhermitiantranspose    = NULL;
+        A->ops->multhermitiantransposeadd = NULL;
+        A->ops->multtranspose             = MatMult_MPISBAIJ;
+        A->ops->multtransposeadd          = MatMultAdd_MPISBAIJ;
+        A->is.symmetric                   = PETSC_BOOL3_TRUE;
+        A->eternally.symmetric            = PETSC_TRUE;
+        if (a->hermitian_storage != flg) A->is.hermitian = PETSC_BOOL3_UNKNOWN;
+      }
+      a->hermitian_storage = flg;
+    }
+    break;
   case MAT_HERMITIAN:
-    MatCheckPreallocated(A, 1);
-    PetscCall(MatSetOption(a->A, op, flg));
-#if defined(PETSC_USE_COMPLEX)
-    if (flg) { /* need different mat-vec ops */
-      A->ops->mult             = MatMult_MPISBAIJ_Hermitian;
-      A->ops->multadd          = MatMultAdd_MPISBAIJ_Hermitian;
-      A->ops->multtranspose    = NULL;
-      A->ops->multtransposeadd = NULL;
-      A->symmetric             = PETSC_BOOL3_FALSE;
-    }
-#endif
-    break;
-  case MAT_SPD:
   case MAT_SYMMETRIC:
-    MatCheckPreallocated(A, 1);
-    PetscCall(MatSetOption(a->A, op, flg));
-#if defined(PETSC_USE_COMPLEX)
-    if (flg) { /* restore to use default mat-vec ops */
-      A->ops->mult             = MatMult_MPISBAIJ;
-      A->ops->multadd          = MatMultAdd_MPISBAIJ;
-      A->ops->multtranspose    = MatMult_MPISBAIJ;
-      A->ops->multtransposeadd = MatMultAdd_MPISBAIJ;
+    if (!flg) {
+      if (PetscDefined(USE_COMPLEX)) {
+        if (op == MAT_HERMITIAN) {
+          PetscCheck(!a->hermitian_storage, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_WRONGSTATE, "Matrix has Hermitian storage, it must be Hermitian.  To change to symmetric storage, call MatSetOption(mat, MAT_TRIANGULAR_STORAGE_HERMITIAN, PETSC_FALSE)");
+        } else {
+          PetscCheck(a->hermitian_storage, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_WRONGSTATE, "Matrix has symmetric storage, it must be symmetric.  To change to Hermitian storage, call MatSetOption(mat, MAT_TRIANGULAR_STORAGE_HERMITIAN, PETSC_TRUE)");
+        }
+      } else SETERRQ(PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_WRONGSTATE, "Matrix has symmetric storage, it must be symmetric.");
+    } else {
+      if (a->A) PetscCall(MatSetOption_PropagateDiagonal(A, a->A, op, flg));
     }
-#endif
     break;
-  case MAT_STRUCTURALLY_SYMMETRIC:
-    MatCheckPreallocated(A, 1);
-    PetscCall(MatSetOption(a->A, op, flg));
-    break;
-  case MAT_SYMMETRY_ETERNAL:
-  case MAT_STRUCTURAL_SYMMETRY_ETERNAL:
-    PetscCheck(flg, PETSC_COMM_SELF, PETSC_ERR_SUP, "Matrix must be symmetric");
-    PetscCall(PetscInfo(A, "Option %s ignored\n", MatOptions[op]));
-    break;
+  case MAT_HPD:
+  case MAT_HPD_ETERNAL:
+  case MAT_SPD:
   case MAT_SPD_ETERNAL:
+  case MAT_POSITIVE_DEFINITE:
+  case MAT_POSITIVE_DEFINITE_ETERNAL:
+  case MAT_STRUCTURALLY_SYMMETRIC:
+  case MAT_STRUCTURAL_SYMMETRY_ETERNAL:
+  case MAT_SYMMETRY_ETERNAL:
+  case MAT_HERMITIAN_ETERNAL:
+    if (a->A) PetscCall(MatSetOption_PropagateDiagonal(A, a->A, op, flg));
     break;
   case MAT_IGNORE_LOWER_TRIANGULAR:
     aA->ignore_ltriangular = flg;
@@ -1559,6 +1576,52 @@ PetscErrorCode MatSetOption_MPISBAIJ(Mat A, MatOption op, PetscBool flg)
     break;
   default:
     SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "unknown option %d", op);
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatIsReal_SeqAIJ(Mat A, PetscReal tol, PetscBool *flg)
+{
+  PetscFunctionBegin;
+
+  *flg = PETSC_TRUE;
+  if (!PetscDefined(USE_COMPLEX)) PetscFunctionReturn(PETSC_SUCCESS);
+#if PetscDefined(USE_COMPLEX)
+  // I don't want to have this #ifdef but CI complains that the variable v is unused
+  // if it's not here (because PetscImaginaryPart(v) turns into (0))
+  Mat_SeqAIJ      *a  = (Mat_SeqAIJ *)A->data;
+  const MatScalar *v  = a->a;
+  PetscInt         nz = a->nz;
+  for (PetscInt i = 0; i < nz; i++) {
+    if (PetscAbsReal(PetscImaginaryPart(v[i])) > tol) {
+      *flg = PETSC_FALSE;
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
+  }
+#endif
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatIsSymmetric_MPISBAIJ(Mat A, PetscReal tol, PetscBool *flg)
+{
+  PetscFunctionBegin;
+  *flg            = PETSC_TRUE;
+  Mat_MPISBAIJ *a = (Mat_MPISBAIJ *)A->data;
+  if (PetscDefined(USE_COMPLEX) && a->hermitian_storage) {
+    PetscCall(MatIsReal_SeqSBAIJ(a->A, tol, flg));
+    if (flg) PetscCall(MatIsReal_SeqAIJ(a->B, tol, flg));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatIsHermitian_MPISBAIJ(Mat A, PetscReal tol, PetscBool *flg)
+{
+  PetscFunctionBegin;
+  *flg            = PETSC_TRUE;
+  Mat_MPISBAIJ *a = (Mat_MPISBAIJ *)A->data;
+  if (PetscDefined(USE_COMPLEX) && !a->hermitian_storage) {
+    PetscCall(MatIsReal_SeqSBAIJ(a->A, tol, flg));
+    if (flg) PetscCall(MatIsReal_SeqAIJ(a->B, tol, flg));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1847,8 +1910,8 @@ static struct _MatOps MatOps_Values = {MatSetValues_MPISBAIJ,
                                        NULL,
                                        NULL,
                                        MatLoad_MPISBAIJ,
-                                       /* 84*/ NULL,
-                                       NULL,
+                                       /* 84*/ MatIsSymmetric_MPISBAIJ,
+                                       MatIsHermitian_MPISBAIJ,
                                        NULL,
                                        NULL,
                                        NULL,
@@ -1982,6 +2045,8 @@ PetscErrorCode MatMPISBAIJSetPreallocation_MPISBAIJ(Mat B, PetscInt bs, PetscInt
   PetscCall(MatSeqSBAIJSetPreallocation(b->A, bs, d_nz, d_nnz));
   PetscCall(MatSeqBAIJSetPreallocation(b->B, bs, o_nz, o_nnz));
 
+  PetscCall(MatPropagateSymmetryOptions_Diagonal(B, b->A));
+
   B->preallocated  = PETSC_TRUE;
   B->was_assembled = PETSC_FALSE;
   B->assembled     = PETSC_FALSE;
@@ -2070,7 +2135,7 @@ PetscErrorCode MatMPISBAIJSetPreallocationCSR_MPISBAIJ(Mat B, PetscInt bs, const
    the matrix is stored.
 
    For complex numbers by default this matrix is symmetric, NOT Hermitian symmetric. To make it Hermitian symmetric you
-   can call `MatSetOption`(`Mat`, `MAT_HERMITIAN`);
+   can call `MatSetOption`(`Mat`, `MAT_TRIANGULAR_STORAGE_HERMITIAN`);
 
    Options Database Key:
 . -mat_type mpisbaij - sets the matrix type to "mpisbaij" during a call to `MatSetFromOptions()`
@@ -2147,6 +2212,8 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPISBAIJ(Mat B)
   b->v_loc  = NULL;
   b->n_loc  = 0;
 
+  b->hermitian_storage = PetscDefined(USE_COMPLEX) ? PETSC_TRUE : PETSC_FALSE;
+
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatStoreValues_C", MatStoreValues_MPISBAIJ));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatRetrieveValues_C", MatRetrieveValues_MPISBAIJ));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatMPISBAIJSetPreallocation_C", MatMPISBAIJSetPreallocation_MPISBAIJ));
@@ -2160,15 +2227,10 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPISBAIJ(Mat B)
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatConvert_mpisbaij_mpiaij_C", MatConvert_MPISBAIJ_Basic));
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatConvert_mpisbaij_mpibaij_C", MatConvert_MPISBAIJ_Basic));
 
-  B->symmetric                   = PETSC_BOOL3_TRUE;
+  B->is.symmetric                = PETSC_BOOL3_TRUE;
   B->structurally_symmetric      = PETSC_BOOL3_TRUE;
-  B->symmetry_eternal            = PETSC_TRUE;
+  B->eternally.symmetric         = PETSC_TRUE;
   B->structural_symmetry_eternal = PETSC_TRUE;
-#if defined(PETSC_USE_COMPLEX)
-  B->hermitian = PETSC_BOOL3_FALSE;
-#else
-  B->hermitian = PETSC_BOOL3_TRUE;
-#endif
 
   PetscCall(PetscObjectChangeTypeName((PetscObject)B, MATMPISBAIJ));
   PetscOptionsBegin(PetscObjectComm((PetscObject)B), NULL, "Options for loading MPISBAIJ matrix 1", "Mat");

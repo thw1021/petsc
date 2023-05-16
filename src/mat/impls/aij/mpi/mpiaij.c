@@ -1684,6 +1684,37 @@ PetscErrorCode MatGetInfo_MPIAIJ(Mat matin, MatInfoType flag, MatInfo *info)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+// For options where true implies true on any diagonal block
+PETSC_INTERN PetscErrorCode MatPropagateSymmetryOptions_Diagonal(Mat mat, Mat diag)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscLayoutSetUp(mat->cmap));
+  PetscCall(PetscLayoutSetUp(mat->rmap));
+  if (mat->cmap->rstart == mat->rmap->rstart && mat->rmap->rend == mat->cmap->rend) {
+    if (mat->is.hermitian == PETSC_BOOL3_TRUE) diag->is.hermitian = PETSC_BOOL3_TRUE;
+    if (mat->is.symmetric == PETSC_BOOL3_TRUE) diag->is.symmetric = PETSC_BOOL3_TRUE;
+    if (mat->eternally.hermitian) diag->eternally.hermitian = PETSC_TRUE;
+    if (mat->eternally.symmetric) diag->eternally.symmetric = PETSC_TRUE;
+    if (mat->positive_definite == PETSC_BOOL3_TRUE) diag->positive_definite = PETSC_BOOL3_TRUE;
+    if (mat->positive_definite_eternal) diag->positive_definite_eternal = PETSC_TRUE;
+    if (mat->structurally_symmetric == PETSC_BOOL3_TRUE) diag->structurally_symmetric = PETSC_BOOL3_TRUE;
+    if (mat->structural_symmetry_eternal) diag->structural_symmetry_eternal = PETSC_TRUE;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+// For options where true implies true on any diagonal block
+PETSC_INTERN PetscErrorCode MatSetOption_PropagateDiagonal(Mat mat, Mat diag, MatOption op, PetscBool flg)
+{
+  PetscFunctionBegin;
+  if (flg) {
+    PetscCall(PetscLayoutSetUp(mat->cmap));
+    PetscCall(PetscLayoutSetUp(mat->rmap));
+    if (mat->cmap->rstart == mat->rmap->rstart && mat->rmap->rend == mat->cmap->rend) PetscCall(MatSetOption(diag, op, flg));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PetscErrorCode MatSetOption_MPIAIJ(Mat A, MatOption op, PetscBool flg)
 {
   Mat_MPIAIJ *a = (Mat_MPIAIJ *)A->data;
@@ -1716,15 +1747,20 @@ PetscErrorCode MatSetOption_MPIAIJ(Mat A, MatOption op, PetscBool flg)
   case MAT_IGNORE_OFF_PROC_ENTRIES:
     a->donotstash = flg;
     break;
-  /* Symmetry flags are handled directly by MatSetOption() and they don't affect preallocation */
   case MAT_SPD:
-  case MAT_SYMMETRIC:
-  case MAT_STRUCTURALLY_SYMMETRIC:
-  case MAT_HERMITIAN:
-  case MAT_SYMMETRY_ETERNAL:
-  case MAT_STRUCTURAL_SYMMETRY_ETERNAL:
   case MAT_SPD_ETERNAL:
+  case MAT_HPD:
+  case MAT_HPD_ETERNAL:
+  case MAT_SYMMETRIC:
+  case MAT_SYMMETRY_ETERNAL:
+  case MAT_HERMITIAN:
+  case MAT_HERMITIAN_ETERNAL:
+  case MAT_STRUCTURALLY_SYMMETRIC:
+  case MAT_STRUCTURAL_SYMMETRY_ETERNAL:
+  case MAT_POSITIVE_DEFINITE:
+  case MAT_POSITIVE_DEFINITE_ETERNAL:
     /* if the diagonal matrix is square it inherits some of the properties above */
+    if (a->A) PetscCall(MatSetOption_PropagateDiagonal(A, a->A, op, flg));
     break;
   case MAT_SUBMAT_SINGLEIS:
     A->submat_singleis = flg;
@@ -2944,6 +2980,7 @@ PetscErrorCode MatMPIAIJSetPreallocation_MPIAIJ(Mat B, PetscInt d_nz, const Pets
 
   PetscCall(MatSeqAIJSetPreallocation(b->A, d_nz, d_nnz));
   PetscCall(MatSeqAIJSetPreallocation(b->B, o_nz, o_nnz));
+  PetscCall(MatPropagateSymmetryOptions_Diagonal(B, b->A));
   B->preallocated  = PETSC_TRUE;
   B->was_assembled = PETSC_FALSE;
   B->assembled     = PETSC_FALSE;
@@ -6660,6 +6697,7 @@ PetscErrorCode MatSetPreallocationCOO_MPIAIJ(Mat mat, PetscCount coo_n, PetscInt
 
   /* conversion must happen AFTER multiply setup */
   PetscCall(MatConvert(mpiaij->A, rtype, MAT_INPLACE_MATRIX, &mpiaij->A));
+  PetscCall(MatPropagateSymmetryOptions_Diagonal(mat, mpiaij->A));
   PetscCall(MatConvert(mpiaij->B, rtype, MAT_INPLACE_MATRIX, &mpiaij->B));
   PetscCall(VecDestroy(&mpiaij->lvec));
   PetscCall(MatCreateVecs(mpiaij->B, &mpiaij->lvec, NULL));
@@ -7080,7 +7118,7 @@ PetscErrorCode MatProductSymbolic_MPIAIJBACKEND(Mat C)
   MatCheckProduct(C, 1);
   PetscCheck(!product->data, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Product data not empty");
   ptype = product->type;
-  if (product->A->symmetric == PETSC_BOOL3_TRUE && ptype == MATPRODUCT_AtB) {
+  if (product->A->is.symmetric == PETSC_BOOL3_TRUE && ptype == MATPRODUCT_AtB) {
     ptype                                          = MATPRODUCT_AB;
     product->symbolic_used_the_fact_A_is_symmetric = PETSC_TRUE;
   }

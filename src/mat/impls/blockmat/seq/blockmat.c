@@ -232,7 +232,7 @@ static PetscErrorCode MatSetValues_BlockMat(Mat A, PetscInt m, const PetscInt im
       PetscCheck(in[l] < A->cmap->n, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Column too large: col %" PetscInt_FMT " max %" PetscInt_FMT, in[l], A->cmap->n - 1);
       col  = in[l];
       bcol = col / bs;
-      if (A->symmetric == PETSC_BOOL3_TRUE && brow > bcol) continue;
+      if (A->is.symmetric == PETSC_BOOL3_TRUE && brow > bcol) continue;
       ridx = row % bs;
       cidx = col % bs;
       if (roworiented) value = v[l + k * n];
@@ -399,7 +399,7 @@ static PetscErrorCode MatView_BlockMat(Mat A, PetscViewer viewer)
   PetscCall(PetscViewerGetFormat(viewer, &format));
   if (format == PETSC_VIEWER_ASCII_FACTOR_INFO || format == PETSC_VIEWER_ASCII_INFO) {
     PetscCall(PetscViewerASCIIPrintf(viewer, "Nonzero block matrices = %" PetscInt_FMT " \n", a->nz));
-    if (A->symmetric == PETSC_BOOL3_TRUE) PetscCall(PetscViewerASCIIPrintf(viewer, "Only upper triangular part of symmetric matrix is stored\n"));
+    if (A->is.symmetric == PETSC_BOOL3_TRUE) PetscCall(PetscViewerASCIIPrintf(viewer, "Only upper triangular part of symmetric matrix is stored\n"));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -580,7 +580,7 @@ static PetscErrorCode MatCreateSubMatrix_BlockMat(Mat A, IS isrow, IS iscol, Mat
   } else {
     PetscCall(MatCreate(PetscObjectComm((PetscObject)A), &C));
     PetscCall(MatSetSizes(C, nrows, ncols, PETSC_DETERMINE, PETSC_DETERMINE));
-    if (A->symmetric == PETSC_BOOL3_TRUE) PetscCall(MatSetType(C, MATSEQSBAIJ));
+    if (A->is.symmetric == PETSC_BOOL3_TRUE) PetscCall(MatSetType(C, MATSEQSBAIJ));
     else PetscCall(MatSetType(C, MATSEQAIJ));
     PetscCall(MatSeqAIJSetPreallocation(C, 0, ailen));
     PetscCall(MatSeqSBAIJSetPreallocation(C, 1, 0, ailen));
@@ -661,9 +661,14 @@ static PetscErrorCode MatAssemblyEnd_BlockMat(Mat A, MatAssemblyType mode)
 static PetscErrorCode MatSetOption_BlockMat(Mat A, MatOption opt, PetscBool flg)
 {
   PetscFunctionBegin;
-  if (opt == MAT_SYMMETRIC && flg) {
-    A->ops->sor  = MatSOR_BlockMat_Symmetric;
-    A->ops->mult = MatMult_BlockMat_Symmetric;
+  if (opt == MAT_SYMMETRIC) {
+    if (flg) {
+      A->ops->sor  = MatSOR_BlockMat_Symmetric;
+      A->ops->mult = MatMult_BlockMat_Symmetric;
+    } else {
+      A->ops->sor  = MatSOR_BlockMat;
+      A->ops->mult = MatMult_BlockMat;
+    }
   } else {
     PetscCall(PetscInfo(A, "Unused matrix option %s\n", MatOptions[opt]));
   }

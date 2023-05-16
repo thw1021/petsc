@@ -89,7 +89,6 @@ PetscErrorCode MatIncreaseOverlap_SeqSBAIJ(Mat A, PetscInt is_max, IS is[], Pets
 PetscErrorCode MatSeqSBAIJZeroOps_Private(Mat Bseq)
 {
   PetscFunctionBegin;
-  PetscCall(MatSetOption(Bseq, MAT_SYMMETRIC, PETSC_FALSE));
   Bseq->ops->mult                   = NULL;
   Bseq->ops->multadd                = NULL;
   Bseq->ops->multtranspose          = NULL;
@@ -698,11 +697,7 @@ PetscErrorCode MatMultAdd_SeqSBAIJ_1(Mat A, Vec xx, Vec yy, Vec zz)
   PetscInt           mbs = a->mbs, i, n, cval, j, jmin;
   const PetscInt    *aj = a->j, *ai = a->i, *ib;
   PetscInt           nonzerorow = 0;
-#if defined(PETSC_USE_COMPLEX)
-  const int aconj = A->hermitian == PETSC_BOOL3_TRUE;
-#else
-  const int aconj = 0;
-#endif
+  const int          aconj      = PetscDefined(USE_COMPLEX) ? a->hermitian_storage : 0;
 
   PetscFunctionBegin;
   PetscCall(VecCopy(yy, zz));
@@ -1525,11 +1520,7 @@ PetscErrorCode MatMatMult_SeqSBAIJ_1_Private(Mat A, PetscScalar *b, PetscInt bm,
   PetscScalar        x1;
   const MatScalar   *v   = a->a, *vv;
   PetscInt           mbs = a->mbs, i, *idx = a->j, *ii = a->i, j, *jj, n, k;
-#if defined(PETSC_USE_COMPLEX)
-  const int aconj = A->hermitian == PETSC_BOOL3_TRUE;
-#else
-  const int aconj = 0;
-#endif
+  const int          aconj = PetscDefined(USE_COMPLEX) ? a->hermitian_storage : 0;
 
   PetscFunctionBegin;
   for (i = 0; i < mbs; i++) {

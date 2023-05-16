@@ -196,6 +196,7 @@ PetscErrorCode MatPtAPNumeric_SeqAIJ_SeqAIJ_SparseAxpy(Mat A, Mat P, Mat C)
   PetscInt    am = A->rmap->N, cn = C->cmap->N, cm = C->rmap->N;
   PetscInt    i, j, k, anzi, pnzi, apnzj, nextap, pnzj, prow, crow;
   MatScalar  *aa, *apa, *pa, *pA, *paj, *ca, *caj;
+  PetscBool   hermitian_transpose = C->product->hermitian_transpose;
 
   PetscFunctionBegin;
   /* Allocate temporary array for storage of one row of A*P (cn: non-scalable) */
@@ -254,7 +255,7 @@ PetscErrorCode MatPtAPNumeric_SeqAIJ_SeqAIJ_SparseAxpy(Mat A, Mat P, Mat C)
       /* Perform sparse axpy operation.  Note cjj includes apj. */
       for (k = 0; nextap < apnzj; k++) {
         PetscAssert(k < ci[crow + 1] - ci[crow], PETSC_COMM_SELF, PETSC_ERR_PLIB, "k too large k %" PetscInt_FMT ", crow %" PetscInt_FMT, k, crow);
-        if (cjj[k] == apj[nextap]) caj[k] += (*pA) * apa[apj[nextap++]];
+        if (cjj[k] == apj[nextap]) caj[k] += (hermitian_transpose ? PetscConj(*pA) : (*pA)) * apa[apj[nextap++]];
       }
       PetscCall(PetscLogFlops(2.0 * apnzj));
       pA++;
@@ -284,7 +285,8 @@ PetscErrorCode MatPtAPNumeric_SeqAIJ_SeqAIJ(Mat A, Mat P, Mat C)
   MatCheckProduct(C, 3);
   atb = (Mat_MatTransMatMult *)C->product->data;
   PetscCheck(atb, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Missing data structure");
-  PetscCall(MatTranspose(P, MAT_REUSE_MATRIX, &atb->At));
+  if (C->product->hermitian_transpose) PetscCall(MatHermitianTranspose(P, MAT_REUSE_MATRIX, &atb->At));
+  else PetscCall(MatTranspose(P, MAT_REUSE_MATRIX, &atb->At));
   PetscCheck(C->ops->matmultnumeric, PetscObjectComm((PetscObject)C), PETSC_ERR_PLIB, "Missing numeric operation");
   /* when using rap, MatMatMatMultSymbolic used a different data */
   if (atb->data) C->product->data = atb->data;

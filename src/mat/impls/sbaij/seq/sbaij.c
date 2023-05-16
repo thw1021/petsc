@@ -219,14 +219,8 @@ PetscErrorCode MatDestroy_SeqSBAIJ(Mat A)
 PetscErrorCode MatSetOption_SeqSBAIJ(Mat A, MatOption op, PetscBool flg)
 {
   Mat_SeqSBAIJ *a = (Mat_SeqSBAIJ *)A->data;
-#if defined(PETSC_USE_COMPLEX)
-  PetscInt bs;
-#endif
 
   PetscFunctionBegin;
-#if defined(PETSC_USE_COMPLEX)
-  PetscCall(MatGetBlockSize(A, &bs));
-#endif
   switch (op) {
   case MAT_ROW_ORIENTED:
     a->roworiented = flg;
@@ -252,31 +246,55 @@ PetscErrorCode MatSetOption_SeqSBAIJ(Mat A, MatOption op, PetscBool flg)
   case MAT_SORTED_FULL:
     PetscCall(PetscInfo(A, "Option %s ignored\n", MatOptions[op]));
     break;
+  case MAT_TRIANGULAR_STORAGE_HERMITIAN:
+    if (PetscDefined(USE_COMPLEX)) {
+      if (flg) {
+        PetscInt bs;
+
+        PetscCall(MatGetBlockSize(A, &bs));
+        PetscCheck(bs <= 1, PETSC_COMM_SELF, PETSC_ERR_SUP, "No support for Hermitian with block size greater than 1");
+        A->ops->multtranspose             = NULL;
+        A->ops->multtransposeadd          = NULL;
+        A->ops->multhermitiantranspose    = A->ops->mult;
+        A->ops->multhermitiantransposeadd = A->ops->multadd;
+        A->is.hermitian                   = PETSC_BOOL3_TRUE;
+        A->eternally.hermitian            = PETSC_TRUE;
+        if (a->hermitian_storage != flg) A->is.symmetric = PETSC_BOOL3_UNKNOWN;
+      } else {
+        A->ops->multtranspose             = NULL;
+        A->ops->multtransposeadd          = NULL;
+        A->ops->multhermitiantranspose    = A->ops->mult;
+        A->ops->multhermitiantransposeadd = A->ops->multadd;
+        A->is.symmetric                   = PETSC_BOOL3_TRUE;
+        A->eternally.hermitian            = PETSC_TRUE;
+        if (a->hermitian_storage != flg) A->is.hermitian = PETSC_BOOL3_UNKNOWN;
+      }
+      a->hermitian_storage = flg;
+    }
+    break;
   case MAT_HERMITIAN:
-#if defined(PETSC_USE_COMPLEX)
-    if (flg) { /* disable transpose ops */
-      PetscCheck(bs <= 1, PETSC_COMM_SELF, PETSC_ERR_SUP, "No support for Hermitian with block size greater than 1");
-      A->ops->multtranspose    = NULL;
-      A->ops->multtransposeadd = NULL;
-      A->symmetric             = PETSC_BOOL3_FALSE;
-    }
-#endif
-    break;
   case MAT_SYMMETRIC:
-  case MAT_SPD:
-#if defined(PETSC_USE_COMPLEX)
-    if (flg) { /* An hermitian and symmetric matrix has zero imaginary part (restore back transpose ops) */
-      A->ops->multtranspose    = A->ops->mult;
-      A->ops->multtransposeadd = A->ops->multadd;
+    if (!flg) {
+      if (PetscDefined(USE_COMPLEX)) {
+        if (op == MAT_HERMITIAN) {
+          PetscCheck(!a->hermitian_storage, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_WRONGSTATE, "Matrix has Hermitian storage, it must be Hermitian.  To change to symmetric storage, call MatSetOption(mat, MAT_TRIANGULAR_STORAGE_HERMITIAN, PETSC_FALSE)");
+        } else {
+          PetscCheck(a->hermitian_storage, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_WRONGSTATE, "Matrix has symmetric storage, it must be symmetric.  To change to Hermitian storage, call MatSetOption(mat, MAT_TRIANGULAR_STORAGE_HERMITIAN, PETSC_TRUE)");
+        }
+      } else SETERRQ(PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_WRONGSTATE, "Matrix has symmetric storage, it must be symmetric.");
     }
-#endif
     break;
-    /* These options are handled directly by MatSetOption() */
-  case MAT_STRUCTURALLY_SYMMETRIC:
+  case MAT_SPD:
+  case MAT_SPD_ETERNAL:
+  case MAT_HPD:
+  case MAT_HPD_ETERNAL:
   case MAT_SYMMETRY_ETERNAL:
+  case MAT_HERMITIAN_ETERNAL:
+  case MAT_STRUCTURALLY_SYMMETRIC:
   case MAT_STRUCTURAL_SYMMETRY_ETERNAL:
   case MAT_STRUCTURE_ONLY:
-  case MAT_SPD_ETERNAL:
+  case MAT_POSITIVE_DEFINITE:
+  case MAT_POSITIVE_DEFINITE_ETERNAL:
     /* These options are handled directly by MatSetOption() */
     break;
   case MAT_IGNORE_LOWER_TRIANGULAR:
@@ -390,7 +408,8 @@ PetscErrorCode MatView_SeqSBAIJ_ASCII(Mat A, PetscViewer viewer)
       for (i = 0; i < a->mbs; i++) { /* for row block i */
         PetscCall(PetscViewerASCIIPrintf(viewer, "row %" PetscInt_FMT ":", i));
         /* diagonal entry */
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
+        // have to use #ifdefs here because C++ objects to a complex being cast to (double) in the real branch
         if (PetscImaginaryPart(a->a[diag[i]]) > 0.0) {
           PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g + %g i) ", a->j[diag[i]], (double)PetscRealPart(1.0 / a->a[diag[i]]), (double)PetscImaginaryPart(1.0 / a->a[diag[i]])));
         } else if (PetscImaginaryPart(a->a[diag[i]]) < 0.0) {
@@ -403,7 +422,7 @@ PetscErrorCode MatView_SeqSBAIJ_ASCII(Mat A, PetscViewer viewer)
 #endif
         /* off-diagonal entries */
         for (k = a->i[i]; k < a->i[i + 1] - 1; k++) {
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
           if (PetscImaginaryPart(a->a[k]) > 0.0) {
             PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g + %g i) ", bs * a->j[k], (double)PetscRealPart(a->a[k]), (double)PetscImaginaryPart(a->a[k])));
           } else if (PetscImaginaryPart(a->a[k]) < 0.0) {
@@ -424,7 +443,7 @@ PetscErrorCode MatView_SeqSBAIJ_ASCII(Mat A, PetscViewer viewer)
           PetscCall(PetscViewerASCIIPrintf(viewer, "row %" PetscInt_FMT ":", i * bs + j));
           for (k = a->i[i]; k < a->i[i + 1]; k++) { /* for column block */
             for (l = 0; l < bs; l++) {              /* for column */
-#if defined(PETSC_USE_COMPLEX)
+#if PetscDefined(USE_COMPLEX)
               if (PetscImaginaryPart(a->a[bs2 * k + l * bs + j]) > 0.0) {
                 PetscCall(PetscViewerASCIIPrintf(viewer, " (%" PetscInt_FMT ", %g + %g i) ", bs * a->j[k] + l, (double)PetscRealPart(a->a[bs2 * k + l * bs + j]), (double)PetscImaginaryPart(a->a[bs2 * k + l * bs + j])));
               } else if (PetscImaginaryPart(a->a[bs2 * k + l * bs + j]) < 0.0) {
@@ -1193,10 +1212,34 @@ PetscErrorCode MatAXPY_SeqSBAIJ(Mat Y, PetscScalar a, Mat X, MatStructure str)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatIsSymmetric_SeqSBAIJ(Mat A, PetscReal tol, PetscBool *flg)
+PETSC_INTERN PetscErrorCode MatIsReal_SeqSBAIJ(Mat A, PetscReal tol, PetscBool *flg)
 {
   PetscFunctionBegin;
   *flg = PETSC_TRUE;
+  if (!PetscDefined(USE_COMPLEX)) PetscFunctionReturn(PETSC_SUCCESS);
+#if PetscDefined(USE_COMPLEX)
+  Mat_SeqSBAIJ    *a  = (Mat_SeqSBAIJ *)A->data;
+  const MatScalar *v  = a->a;
+  PetscInt         nz = a->nz;
+
+  for (PetscInt i = 0; i < nz; i++) {
+    if (PetscAbsReal(PetscImaginaryPart(v[i])) > tol) {
+      *flg = PETSC_FALSE;
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
+  }
+#endif
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode MatIsSymmetric_SeqSBAIJ(Mat A, PetscReal tol, PetscBool *flg)
+{
+  Mat_SeqSBAIJ *a = (Mat_SeqSBAIJ *)A->data;
+
+  PetscFunctionBegin;
+  *flg = PETSC_TRUE;
+  // If the matrix is Hermitian by storage, it is symmetric iff it is real
+  if (PetscDefined(USE_COMPLEX) && a->hermitian_storage) PetscCall(MatIsReal_SeqSBAIJ(A, tol, flg));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1209,23 +1252,25 @@ PetscErrorCode MatIsStructurallySymmetric_SeqSBAIJ(Mat A, PetscBool *flg)
 
 PetscErrorCode MatIsHermitian_SeqSBAIJ(Mat A, PetscReal tol, PetscBool *flg)
 {
+  Mat_SeqSBAIJ *a = (Mat_SeqSBAIJ *)A->data;
+
   PetscFunctionBegin;
-  *flg = PETSC_FALSE;
+  *flg = PETSC_TRUE;
+  // If the matrix is symmetric by storage, it is Hermitian iff it is real
+  if (PetscDefined(USE_COMPLEX) && !a->hermitian_storage) PetscCall(MatIsReal_SeqSBAIJ(A, tol, flg));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode MatConjugate_SeqSBAIJ(Mat A)
 {
-#if defined(PETSC_USE_COMPLEX)
-  Mat_SeqSBAIJ *a = (Mat_SeqSBAIJ *)A->data;
-  PetscInt      i, nz = a->bs2 * a->i[a->mbs];
-  MatScalar    *aa = a->a;
+  PetscFunctionBegin;
+  if (PetscDefined(USE_COMPLEX)) {
+    Mat_SeqSBAIJ *a = (Mat_SeqSBAIJ *)A->data;
+    PetscInt      i, nz = a->bs2 * a->i[a->mbs];
+    MatScalar    *aa = a->a;
 
-  PetscFunctionBegin;
-  for (i = 0; i < nz; i++) aa[i] = PetscConj(aa[i]);
-#else
-  PetscFunctionBegin;
-#endif
+    for (i = 0; i < nz; i++) aa[i] = PetscConj(aa[i]);
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1820,13 +1865,13 @@ PETSC_INTERN PetscErrorCode MatGetFactor_seqsbaij_petsc(Mat A, MatFactorType fty
   PetscInt n = A->rmap->n;
 
   PetscFunctionBegin;
-#if defined(PETSC_USE_COMPLEX)
-  if ((ftype == MAT_FACTOR_CHOLESKY || ftype == MAT_FACTOR_ICC) && A->hermitian == PETSC_BOOL3_TRUE && A->symmetric != PETSC_BOOL3_TRUE) {
-    PetscCall(PetscInfo(A, "Hermitian MAT_FACTOR_CHOLESKY or MAT_FACTOR_ICC are not supported. Use MAT_FACTOR_LU instead.\n"));
-    *B = NULL;
-    PetscFunctionReturn(PETSC_SUCCESS);
+  if (PetscDefined(USE_COMPLEX)) {
+    if ((ftype == MAT_FACTOR_CHOLESKY || ftype == MAT_FACTOR_ICC) && A->is.symmetric != PETSC_BOOL3_TRUE) {
+      PetscCall(PetscInfo(A, "Hermitian MAT_FACTOR_CHOLESKY or MAT_FACTOR_ICC are not supported. Use MAT_FACTOR_LU instead.\n"));
+      *B = NULL;
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
   }
-#endif
 
   PetscCall(MatCreate(PetscObjectComm((PetscObject)A), B));
   PetscCall(MatSetSizes(*B, n, n, n, n));
@@ -1895,7 +1940,7 @@ PetscErrorCode MatSeqSBAIJRestoreArray(Mat A, PetscScalar **array)
   based on block compressed sparse row format.  Only the upper triangular portion of the matrix is stored.
 
   For complex numbers by default this matrix is symmetric, NOT Hermitian symmetric. To make it Hermitian symmetric you
-  can call `MatSetOption`(`Mat`, `MAT_HERMITIAN`).
+  can call `MatSetOption`(`Mat`, `MAT_TRIANGULAR_STORAGE_HERMITIAN`).
 
   Options Database Key:
   . -mat_type seqsbaij - sets the matrix type to "seqsbaij" during a call to `MatSetFromOptions()`
@@ -1955,6 +2000,8 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqSBAIJ(Mat B)
 
   b->getrow_utriangular = PETSC_FALSE;
 
+  b->hermitian_storage = PETSC_FALSE;
+
   PetscCall(PetscOptionsGetBool(((PetscObject)B)->options, ((PetscObject)B)->prefix, "-mat_getrow_uppertriangular", &b->getrow_utriangular, NULL));
 
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSeqSBAIJGetArray_C", MatSeqSBAIJGetArray_SeqSBAIJ));
@@ -1973,15 +2020,10 @@ PETSC_EXTERN PetscErrorCode MatCreate_SeqSBAIJ(Mat B)
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatConvert_seqsbaij_scalapack_C", MatConvert_SBAIJ_ScaLAPACK));
 #endif
 
-  B->symmetry_eternal            = PETSC_TRUE;
-  B->structural_symmetry_eternal = PETSC_TRUE;
-  B->symmetric                   = PETSC_BOOL3_TRUE;
+  B->is.symmetric                = PETSC_BOOL3_TRUE;
+  B->eternally.symmetric         = PETSC_TRUE;
   B->structurally_symmetric      = PETSC_BOOL3_TRUE;
-#if defined(PETSC_USE_COMPLEX)
-  B->hermitian = PETSC_BOOL3_FALSE;
-#else
-  B->hermitian = PETSC_BOOL3_TRUE;
-#endif
+  B->structural_symmetry_eternal = PETSC_TRUE;
 
   PetscCall(PetscObjectChangeTypeName((PetscObject)B, MATSEQSBAIJ));
 

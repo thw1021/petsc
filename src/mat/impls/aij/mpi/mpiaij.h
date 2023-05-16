@@ -156,6 +156,8 @@ PETSC_INTERN PetscErrorCode MatSetValues_MPIAIJ(Mat, PetscInt, const PetscInt[],
 PETSC_INTERN PetscErrorCode MatSetValues_MPIAIJ_CopyFromCSRFormat(Mat, const PetscInt[], const PetscInt[], const PetscScalar[]);
 PETSC_INTERN PetscErrorCode MatSetValues_MPIAIJ_CopyFromCSRFormat_Symbolic(Mat, const PetscInt[], const PetscInt[]);
 PETSC_INTERN PetscErrorCode MatSetOption_MPIAIJ(Mat, MatOption, PetscBool);
+PETSC_INTERN PetscErrorCode MatSetOption_PropagateDiagonal(Mat, Mat, MatOption, PetscBool);
+PETSC_INTERN PetscErrorCode MatPropagateSymmetryOptions_Diagonal(Mat, Mat);
 
 PETSC_INTERN PetscErrorCode MatTransposeMatMultSymbolic_MPIAIJ_MPIAIJ_nonscalable(Mat, Mat, PetscReal, Mat);
 PETSC_INTERN PetscErrorCode MatTransposeMatMultSymbolic_MPIAIJ_MPIAIJ(Mat, Mat, PetscReal, Mat);

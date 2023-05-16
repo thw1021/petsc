@@ -466,15 +466,11 @@ PetscErrorCode MatConvertToTriples_seqsbaij_seqsbaij(Mat A, PetscInt shift, MatR
   PetscScalar    *val;
   Mat_SeqSBAIJ   *aa  = (Mat_SeqSBAIJ *)A->data;
   const PetscInt  bs2 = aa->bs2, mbs = aa->mbs;
-#if defined(PETSC_USE_COMPLEX)
-  PetscBool isset, hermitian;
-#endif
+  PetscBool       is_set, is_symmetric;
 
   PetscFunctionBegin;
-#if defined(PETSC_USE_COMPLEX)
-  PetscCall(MatIsHermitianKnown(A, &isset, &hermitian));
-  PetscCheck(!isset || !hermitian, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "MUMPS does not support Hermitian symmetric matrices for Choleksy");
-#endif
+  PetscCall(MatIsSymmetricKnown(A, &is_set, &is_symmetric));
+  PetscCheck(is_set && is_symmetric, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "MUMPS does not support Hermitian symmetric matrices for Choleksy");
   ai = aa->i;
   aj = aa->j;
   PetscCall(MatGetBlockSize(A, &bs));
@@ -541,15 +537,11 @@ PetscErrorCode MatConvertToTriples_seqaij_seqsbaij(Mat A, PetscInt shift, MatReu
   PetscMUMPSInt     *row, *col;
   Mat_SeqAIJ        *aa = (Mat_SeqAIJ *)A->data;
   PetscBool          missing;
-#if defined(PETSC_USE_COMPLEX)
-  PetscBool hermitian, isset;
-#endif
+  PetscBool          is_set, is_symmetric;
 
   PetscFunctionBegin;
-#if defined(PETSC_USE_COMPLEX)
-  PetscCall(MatIsHermitianKnown(A, &isset, &hermitian));
-  PetscCheck(!isset || !hermitian, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "MUMPS does not support Hermitian symmetric matrices for Choleksy");
-#endif
+  PetscCall(MatIsSymmetricKnown(A, &is_set, &is_symmetric));
+  PetscCheck(is_set && is_symmetric, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "MUMPS does not support Hermitian symmetric matrices for Choleksy");
   PetscCall(MatSeqAIJGetArrayRead(A, &av));
   ai    = aa->i;
   aj    = aa->j;
@@ -653,15 +645,11 @@ PetscErrorCode MatConvertToTriples_mpisbaij_mpisbaij(Mat A, PetscInt shift, MatR
   Mat_SeqSBAIJ      *aa  = (Mat_SeqSBAIJ *)(mat->A)->data;
   Mat_SeqBAIJ       *bb  = (Mat_SeqBAIJ *)(mat->B)->data;
   const PetscInt     bs2 = aa->bs2, mbs = aa->mbs;
-#if defined(PETSC_USE_COMPLEX)
-  PetscBool hermitian, isset;
-#endif
+  PetscBool          is_set, is_symmetric;
 
   PetscFunctionBegin;
-#if defined(PETSC_USE_COMPLEX)
-  PetscCall(MatIsHermitianKnown(A, &isset, &hermitian));
-  PetscCheck(!isset || !hermitian, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "MUMPS does not support Hermitian symmetric matrices for Choleksy");
-#endif
+  PetscCall(MatIsSymmetricKnown(A, &is_set, &is_symmetric));
+  PetscCheck(is_set && is_symmetric, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "MUMPS does not support Hermitian symmetric matrices for Choleksy");
   PetscCall(MatGetBlockSize(A, &bs));
   rstart = A->rmap->rstart;
   ai     = aa->i;
@@ -900,15 +888,11 @@ PetscErrorCode MatConvertToTriples_mpiaij_mpisbaij(Mat A, PetscInt shift, MatReu
   Mat                Ad, Ao;
   Mat_SeqAIJ        *aa;
   Mat_SeqAIJ        *bb;
-#if defined(PETSC_USE_COMPLEX)
-  PetscBool hermitian, isset;
-#endif
+  PetscBool          is_set, is_symmetric;
 
   PetscFunctionBegin;
-#if defined(PETSC_USE_COMPLEX)
-  PetscCall(MatIsHermitianKnown(A, &isset, &hermitian));
-  PetscCheck(!isset || !hermitian, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "MUMPS does not support Hermitian symmetric matrices for Choleksy");
-#endif
+  PetscCall(MatIsSymmetricKnown(A, &is_set, &is_symmetric));
+  PetscCheck(is_set && is_symmetric, PetscObjectComm((PetscObject)A), PETSC_ERR_SUP, "MUMPS does not support Hermitian symmetric matrices for Choleksy");
   PetscCall(MatMPIAIJGetSeqAIJ(A, &Ad, &Ao, &garray));
   PetscCall(MatSeqAIJGetArrayRead(Ad, &av));
   PetscCall(MatSeqAIJGetArrayRead(Ao, &bv));
@@ -3297,13 +3281,11 @@ static PetscErrorCode MatGetFactor_aij_mumps(Mat A, MatFactorType ftype, Mat *F)
   PetscMPIInt size;
 
   PetscFunctionBegin;
-#if defined(PETSC_USE_COMPLEX)
-  if (ftype == MAT_FACTOR_CHOLESKY && A->hermitian == PETSC_BOOL3_TRUE && A->symmetric != PETSC_BOOL3_TRUE) {
-    PetscCall(PetscInfo(A, "Hermitian MAT_FACTOR_CHOLESKY is not supported. Use MAT_FACTOR_LU instead.\n"));
+  if (ftype == MAT_FACTOR_CHOLESKY && A->is.symmetric != PETSC_BOOL3_TRUE) {
+    if (A->is.hermitian == PETSC_BOOL3_TRUE) PetscCall(PetscInfo(A, "Hermitian MAT_FACTOR_CHOLESKY is not supported. Use MAT_FACTOR_LU instead.\n"));
     *F = NULL;
     PetscFunctionReturn(PETSC_SUCCESS);
   }
-#endif
   /* Create the factorization matrix */
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)A, MATSEQAIJ, &isSeqAIJ));
   PetscCall(MatCreate(PetscObjectComm((PetscObject)A), &B));
@@ -3344,12 +3326,8 @@ static PetscErrorCode MatGetFactor_aij_mumps(Mat A, MatFactorType ftype, Mat *F)
     if (isSeqAIJ) mumps->ConvertToTriples = MatConvertToTriples_seqaij_seqsbaij;
     else mumps->ConvertToTriples = MatConvertToTriples_mpiaij_mpisbaij;
     PetscCall(PetscStrallocpy(MATORDERINGEXTERNAL, (char **)&B->preferredordering[MAT_FACTOR_CHOLESKY]));
-#if defined(PETSC_USE_COMPLEX)
-    mumps->sym = 2;
-#else
-    if (A->spd == PETSC_BOOL3_TRUE) mumps->sym = 1;
+    if (A->positive_definite == PETSC_BOOL3_TRUE) mumps->sym = 1;
     else mumps->sym = 2;
-#endif
   }
 
   /* set solvertype */
@@ -3380,13 +3358,11 @@ static PetscErrorCode MatGetFactor_sbaij_mumps(Mat A, MatFactorType ftype, Mat *
   PetscMPIInt size;
 
   PetscFunctionBegin;
-#if defined(PETSC_USE_COMPLEX)
-  if (ftype == MAT_FACTOR_CHOLESKY && A->hermitian == PETSC_BOOL3_TRUE && A->symmetric != PETSC_BOOL3_TRUE) {
-    PetscCall(PetscInfo(A, "Hermitian MAT_FACTOR_CHOLESKY is not supported. Use MAT_FACTOR_LU instead.\n"));
+  if (ftype == MAT_FACTOR_CHOLESKY && A->is.symmetric != PETSC_BOOL3_TRUE) {
+    if (A->is.hermitian == PETSC_BOOL3_TRUE) PetscCall(PetscInfo(A, "Hermitian MAT_FACTOR_CHOLESKY is not supported. Use MAT_FACTOR_LU instead.\n"));
     *F = NULL;
     PetscFunctionReturn(PETSC_SUCCESS);
   }
-#endif
   PetscCall(MatCreate(PetscObjectComm((PetscObject)A), &B));
   PetscCall(MatSetSizes(B, A->rmap->n, A->cmap->n, A->rmap->N, A->cmap->N));
   PetscCall(PetscStrallocpy("mumps", &((PetscObject)B)->type_name));
@@ -3420,12 +3396,8 @@ static PetscErrorCode MatGetFactor_sbaij_mumps(Mat A, MatFactorType ftype, Mat *
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatMumpsGetInverseTranspose_C", MatMumpsGetInverseTranspose_MUMPS));
 
   B->factortype = MAT_FACTOR_CHOLESKY;
-#if defined(PETSC_USE_COMPLEX)
-  mumps->sym = 2;
-#else
-  if (A->spd == PETSC_BOOL3_TRUE) mumps->sym = 1;
+  if (A->positive_definite == PETSC_BOOL3_TRUE) mumps->sym = 1;
   else mumps->sym = 2;
-#endif
 
   /* set solvertype */
   PetscCall(PetscFree(B->solvertype));
@@ -3581,13 +3553,11 @@ static PetscErrorCode MatGetFactor_nest_mumps(Mat A, MatFactorType ftype, Mat *F
   PetscBool   flg = PETSC_TRUE;
 
   PetscFunctionBegin;
-#if defined(PETSC_USE_COMPLEX)
-  if (ftype == MAT_FACTOR_CHOLESKY && A->hermitian == PETSC_BOOL3_TRUE && A->symmetric != PETSC_BOOL3_TRUE) {
-    PetscCall(PetscInfo(A, "Hermitian MAT_FACTOR_CHOLESKY is not supported. Use MAT_FACTOR_LU instead.\n"));
+  if (ftype == MAT_FACTOR_CHOLESKY && A->is.symmetric != PETSC_BOOL3_TRUE) {
+    if (A->is.hermitian == PETSC_BOOL3_TRUE) PetscCall(PetscInfo(A, "Hermitian MAT_FACTOR_CHOLESKY is not supported. Use MAT_FACTOR_LU instead.\n"));
     *F = NULL;
     PetscFunctionReturn(PETSC_SUCCESS);
   }
-#endif
 
   /* Return if some condition is not satisfied */
   *F = NULL;
@@ -3685,12 +3655,8 @@ static PetscErrorCode MatGetFactor_nest_mumps(Mat A, MatFactorType ftype, Mat *F
   } else {
     B->ops->choleskyfactorsymbolic = MatCholeskyFactorSymbolic_MUMPS;
     B->factortype                  = MAT_FACTOR_CHOLESKY;
-#if defined(PETSC_USE_COMPLEX)
-    mumps->sym = 2;
-#else
-    if (A->spd == PETSC_BOOL3_TRUE) mumps->sym = 1;
+    if (A->positive_definite == PETSC_BOOL3_TRUE) mumps->sym = 1;
     else mumps->sym = 2;
-#endif
   }
   mumps->ConvertToTriples = MatConvertToTriples_nest_xaij;
   PetscCall(PetscStrallocpy(MATORDERINGEXTERNAL, (char **)&B->preferredordering[ftype]));

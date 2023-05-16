@@ -17,6 +17,8 @@ typedef struct {
   /* these are used in MatSetValues() as tmp space before passing to the stasher */
   PetscInt   n_loc, *in_loc; /* nloc is length of in_loc and v_loc */
   MatScalar *v_loc;
+
+  PetscBool hermitian_storage; /* is the lower triangle the hermitian transpose of the upper */
 } Mat_MPISBAIJ;
 
 PETSC_INTERN PetscErrorCode MatLoad_MPISBAIJ(Mat, PetscViewer);

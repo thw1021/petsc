@@ -24,6 +24,7 @@ typedef struct {
   Mat_SeqAIJ_Inode inode;
   unsigned short  *jshort;
   PetscBool        free_jshort;
+  PetscBool        hermitian_storage; /* Whether the lower triangle of the matrix is the Hermitian transpose of the upper */
 } Mat_SeqSBAIJ;
 
 PETSC_INTERN PetscErrorCode MatCholeskyFactorSymbolic_SeqSBAIJ(Mat, Mat, IS, const MatFactorInfo *);
@@ -157,5 +158,7 @@ PETSC_INTERN PetscErrorCode MatSetValuesBlocked_SeqSBAIJ(Mat, PetscInt, const Pe
 PETSC_INTERN PetscErrorCode MatGetRow_SeqSBAIJ(Mat, PetscInt, PetscInt *, PetscInt **, PetscScalar **);
 PETSC_INTERN PetscErrorCode MatRestoreRow_SeqSBAIJ(Mat, PetscInt, PetscInt *, PetscInt **, PetscScalar **);
 PETSC_INTERN PetscErrorCode MatZeroRows_SeqSBAIJ(Mat, IS, PetscScalar *, Vec, Vec);
+
+PETSC_INTERN PetscErrorCode MatIsReal_SeqSBAIJ(Mat, PetscReal, PetscBool *);
 
 #endif

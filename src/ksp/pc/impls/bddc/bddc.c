@@ -1464,7 +1464,7 @@ PetscErrorCode PCSetUp_BDDC(PC pc)
   PetscBool       computesubschurs;
   PetscBool       computeconstraintsmatrix;
   PetscBool       new_nearnullspace_provided, ismatis, rl;
-  PetscBool       isset, issym, isspd;
+  PetscBool       isset, issym, isherm, ispd;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompare((PetscObject)pc->pmat, MATIS, &ismatis));
@@ -1558,8 +1558,10 @@ PetscErrorCode PCSetUp_BDDC(PC pc)
   /* propagate relevant information */
   PetscCall(MatIsSymmetricKnown(matis->A, &isset, &issym));
   if (isset) PetscCall(MatSetOption(pcbddc->local_mat, MAT_SYMMETRIC, issym));
-  PetscCall(MatIsSPDKnown(matis->A, &isset, &isspd));
-  if (isset) PetscCall(MatSetOption(pcbddc->local_mat, MAT_SPD, isspd));
+  PetscCall(MatIsHermitianKnown(matis->A, &isset, &isherm));
+  if (isset) PetscCall(MatSetOption(pcbddc->local_mat, MAT_HERMITIAN, issym));
+  PetscCall(MatIsPositiveDefiniteKnown(matis->A, &isset, &ispd));
+  if (isset) PetscCall(MatSetOption(pcbddc->local_mat, MAT_POSITIVE_DEFINITE, ispd));
 
   /* Set up all the "iterative substructuring" common block without computing solvers */
   {

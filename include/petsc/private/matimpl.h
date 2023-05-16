@@ -112,7 +112,7 @@ struct _MatOps {
   PetscErrorCode (*destroy)(Mat);
   PetscErrorCode (*view)(Mat, PetscViewer);
   PetscErrorCode (*convertfrom)(Mat, MatType, MatReuse, Mat *);
-  PetscErrorCode (*placeholder_63)(void);
+  PetscErrorCode (*isreal)(Mat, PetscReal, PetscBool *);
   /*64*/
   PetscErrorCode (*matmatmultsymbolic)(Mat, Mat, Mat, PetscReal, Mat);
   PetscErrorCode (*matmatmultnumeric)(Mat, Mat, Mat, Mat);
@@ -448,7 +448,32 @@ typedef struct { /* used by MatProduct() */
   PetscBool clear;                   /* whether or not to clear the data structures after MatProductNumeric has been called */
   void     *data;                    /* where to stash those structures */
   PetscErrorCode (*destroy)(void *); /* destroy routine */
+  PetscBool      hermitian_transpose;
 } Mat_Product;
+
+#if PetscDefined(USE_COMPLEX)
+typedef struct {
+  PetscBool3 symmetric;
+  PetscBool3 hermitian;
+} MatSymBool3;
+
+typedef struct {
+  PetscBool symmetric;
+  PetscBool hermitian;
+} MatSymBool;
+#else
+typedef union
+{
+  PetscBool3 symmetric;
+  PetscBool3 hermitian;
+} MatSymBool3;
+
+typedef union
+{
+  PetscBool symmetric;
+  PetscBool hermitian;
+} MatSymBool;
+#endif
 
 struct _p_Mat {
   PETSCHEADER(struct _MatOps);
@@ -471,9 +496,13 @@ struct _p_Mat {
   MatNullSpace     nearnullsp;                              /* near null space to be used by multigrid methods */
   PetscInt         congruentlayouts;                        /* are the rows and columns layouts congruent? */
   PetscBool        preallocated;
-  MatStencilInfo   stencil; /* information for structured grid */
-  PetscBool3       symmetric, hermitian, structurally_symmetric, spd;
-  PetscBool        symmetry_eternal, structural_symmetry_eternal, spd_eternal;
+  MatStencilInfo   stencil;           /* information for structured grid */
+  MatSymBool3      is;                /* is.hermitian ? is.symmetric ? */
+  MatSymBool       eternally;         /* eternally.hermitian ? eternally.symmetric ? */
+  PetscBool3       positive_definite; /* do all eigenvalues have positive real part? */
+  PetscBool        positive_definite_eternal;
+  PetscBool3       structurally_symmetric;
+  PetscBool        structural_symmetry_eternal;
   PetscBool        nooffprocentries, nooffproczerorows;
   PetscBool        assembly_subset; /* set by MAT_SUBSET_OFF_PROC_ENTRIES */
   PetscBool        submat_singleis; /* for efficient PCSetUp_ASM() */

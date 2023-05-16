@@ -60,8 +60,8 @@ PetscErrorCode MatCreateCentering(MPI_Comm comm, PetscInt n, PetscInt N, Mat *C)
   (*C)->ops->mult                   = MatMult_Centering;
   (*C)->assembled                   = PETSC_TRUE;
   (*C)->preallocated                = PETSC_TRUE;
-  (*C)->symmetric                   = PETSC_BOOL3_TRUE;
-  (*C)->symmetry_eternal            = PETSC_TRUE;
+  (*C)->is.symmetric                = PETSC_BOOL3_TRUE;
+  (*C)->eternally.symmetric         = PETSC_TRUE;
   (*C)->structural_symmetry_eternal = PETSC_TRUE;
   PetscCall(MatSetUp(*C));
   PetscFunctionReturn(PETSC_SUCCESS);
