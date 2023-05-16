@@ -456,6 +456,7 @@ help-nontest:
 	-@echo "   getcflags - print the C compiler flags PETSc is using"
 	-@echo "   getcxxflags - print the C++ compiler flags PETSc is using"
 	-@echo "   getfortranflags - print the Fortran compiler flags PETSc is using"
+	-@echo "   getpetsc4pypythonpath - print any PYTHONPATH information needed to use petsc4py installed by ./configure --with-petsc4py"
 	-@echo "   "
 	-@echo "   petsc4pytest - run the entire petsc4py test suite"
 	-@echo "   alltests - run the entire PETSc test suite"

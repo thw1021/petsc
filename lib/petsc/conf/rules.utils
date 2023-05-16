@@ -42,6 +42,9 @@ getfortranflags:
 getblaslapacklibs:
 	-@echo ${BLASLAPACK_LIB}
 
+getpetsc4pypythonpath:
+	-@echo ${PETSC4PY_PYTHONPATH}
+
 getautoconfargs:
 	-@echo CC='"${CC}"' CXX='"${CXX}"'  FC='"${FC}"' CFLAGS='"${CC_FLAGS}"' CXXFLAGS='"${CXX_FLAGS}"' FCFLAGS='"${FC_FLAGS}"' LIBS='"${C_SH_LIB_PATH} ${PETSC_TS_LIB}"'
 

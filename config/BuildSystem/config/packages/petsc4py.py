@@ -34,7 +34,8 @@ class Configure(config.package.Package):
 
   def Install(self):
     import os
-    installLibPath = os.path.join(self.installDir, 'lib')
+    import sys
+    import site
     if self.setCompilers.isDarwin(self.log):
       apple = 'You may need to\n (csh/tcsh) setenv MACOSX_DEPLOYMENT_TARGET 10.X\n (sh/bash) MACOSX_DEPLOYMENT_TARGET=10.X; export MACOSX_DEPLOYMENT_TARGET\nbefore running make on PETSc'
     else:
@@ -54,8 +55,7 @@ class Configure(config.package.Package):
     # if DESTDIR is non-empty, then PETSc has been installed into staging dir
     # if prefix has been specified at config time, path to PETSc includes that prefix
     if self.argDB['prefix'] and not 'package-prefix-hash' in self.argDB:
-      newdir = 'PETSC_DIR=${DESTDIR}'+os.path.abspath(os.path.expanduser(self.argDB['prefix'])) + \
-              ' PETSC_ARCH= '
+      newdir = 'PETSC_DIR=${DESTDIR}'+os.path.abspath(os.path.expanduser(self.argDB['prefix'])) + ' PETSC_ARCH= '
     else:
       newdir = ''
 
@@ -66,23 +66,33 @@ class Configure(config.package.Package):
     if numpy_include is not None:
       newdir += 'NUMPY_INCLUDE="'+numpy_include+'" '
 
+    try:
+      config.base.Configure.executeShellCommand([self.python.pyexe, '-m', 'pipe', 'help'], cwd=self.packageDir, log = self.log)
+      havePip = True
+      # this is the (seemingly undocumented) directory that --prefix generates for pip install
+      installLibPath = None
+      for p in site.getsitepackages():
+        if p.startswith(sys.prefix):
+          installLibPath = os.path.join(self.installDir,p[len(sys.prefix)+1:])
+          break
+      if not installLibPath: raise RuntimeError('Unable to determine where pip will install petsc4py')
+      installRule = ' -m pip install --prefix '
+      dot = ' . '
+    except:
+      havePip = False
+      installLibPath = self.installDir
+      installRule = '  setup.py install --install-lib='
+      dot = ''
+
     self.addDefine('HAVE_PETSC4PY',1)
-    self.addDefine('PETSC4PY_INSTALL_PATH','"'+os.path.join(self.installdir.dir,'lib')+'"')
+    self.addDefine('PETSC4PY_PYTHONPATH','"'+installLibPath+'"')
+    self.addMakeMacro('PETSC4PY_PYTHONPATH','"'+installLibPath+'"')
     self.addMakeMacro('PETSC4PY','yes')
-    self.addMakeRule('petsc4pybuild','', \
-                       ['@echo "*** Building petsc4py ***"',\
-                          '@${RM} ${PETSC_ARCH}/lib/petsc/conf/petsc4py.errorflg',\
-                          '@(cd '+self.packageDir+' && ${RM} -rf build && \\\n\
-           '+newdir+archflags+self.python.pyexe+' setup.py build ) || \\\n\
-             (echo "**************************ERROR*************************************" && \\\n\
-             echo "Error building petsc4py." && \\\n\
-             echo "********************************************************************" && \\\n\
-             touch ${PETSC_ARCH}/lib/petsc/conf/petsc4py.errorflg && \\\n\
-             exit 1)'])
+    self.addMakeRule('petsc4pybuild','')
     self.addMakeRule('petsc4pyinstall','', \
                        ['@echo "*** Installing petsc4py ***"',\
-                          '@(MPICC=${PCC} && export MPICC && cd '+self.packageDir+' && \\\n\
-           '+newdir+archflags+self.python.pyexe+' setup.py install --install-lib='+installLibPath+' \\\n\
+                          '@(MPICC=${PCC} && export MPICC && cd '+self.packageDir+' && ${RM} -rf build && \\\n\
+           '+newdir+archflags+self.python.pyexe+installRule+self.installDir+dot+' \\\n\
                $(if $(DESTDIR),--root=\'$(DESTDIR)\') ) || \\\n\
              (echo "**************************ERROR*************************************" && \\\n\
              echo "Error installing petsc4py." && \\\n\
