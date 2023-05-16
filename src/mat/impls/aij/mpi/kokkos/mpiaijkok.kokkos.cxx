@@ -7,6 +7,8 @@
 #include <KokkosSparse_spadd.hpp>
 #include <KokkosSparse_spgemm.hpp>
 
+static PetscErrorCode MatSetOps_MPIAIJKokkos(Mat);
+
 PetscErrorCode MatAssemblyEnd_MPIAIJKokkos(Mat A, MatAssemblyType mode)
 {
   Mat_MPIAIJ *mpiaij = (Mat_MPIAIJ *)A->data;
@@ -1625,7 +1627,25 @@ static PetscErrorCode MatSetValuesCOO_MPIAIJKokkos(Mat mat, const PetscScalar v[
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatDestroy_MPIAIJKokkos(Mat A)
+static PetscErrorCode MatDuplicate_MPIAIJKokkos(Mat A, MatDuplicateOption dupOption, Mat *B)
+{
+  Mat_MPIAIJ       *Adata = static_cast<Mat_MPIAIJ *>(A->data), *Bdata;
+  Mat_MPIAIJKokkos *Akok  = static_cast<Mat_MPIAIJKokkos *>(Adata->spptr);
+  Mat               mat;
+
+  PetscFunctionBegin;
+  PetscCall(MatDuplicate_MPIAIJ(A, dupOption, B));
+  mat   = *B;
+  Bdata = static_cast<Mat_MPIAIJ *>(mat->data);
+  // shallow copy ctor to copy A's coo info (if any) on device
+  if (Akok) PetscCallCXX(Bdata->spptr = new Mat_MPIAIJKokkos(*Akok));
+  // matrix defaultvectype was handled by MatDuplicate()
+  PetscCall(PetscObjectChangeTypeName((PetscObject)mat, MATMPIAIJKOKKOS));
+  PetscCall(MatSetOps_MPIAIJKokkos(mat));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatDestroy_MPIAIJKokkos(Mat A)
 {
   Mat_MPIAIJ *mpiaij = (Mat_MPIAIJ *)A->data;
 
@@ -1636,6 +1656,24 @@ PetscErrorCode MatDestroy_MPIAIJKokkos(Mat A)
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSetValuesCOO_C", NULL));
   delete (Mat_MPIAIJKokkos *)mpiaij->spptr;
   PetscCall(MatDestroy_MPIAIJ(A));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode MatSetOps_MPIAIJKokkos(Mat B)
+{
+  PetscFunctionBegin;
+  B->ops->assemblyend           = MatAssemblyEnd_MPIAIJKokkos;
+  B->ops->mult                  = MatMult_MPIAIJKokkos;
+  B->ops->multadd               = MatMultAdd_MPIAIJKokkos;
+  B->ops->multtranspose         = MatMultTranspose_MPIAIJKokkos;
+  B->ops->productsetfromoptions = MatProductSetFromOptions_MPIAIJKokkos;
+  B->ops->destroy               = MatDestroy_MPIAIJKokkos;
+  B->ops->duplicate             = MatDuplicate_MPIAIJKokkos;
+
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatMPIAIJSetPreallocation_C", MatMPIAIJSetPreallocation_MPIAIJKokkos));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatMPIAIJGetLocalMatMerge_C", MatMPIAIJGetLocalMatMerge_MPIAIJKokkos));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSetPreallocationCOO_C", MatSetPreallocationCOO_MPIAIJKokkos));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSetValuesCOO_C", MatSetValuesCOO_MPIAIJKokkos));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1661,20 +1699,10 @@ PETSC_INTERN PetscErrorCode MatConvert_MPIAIJ_MPIAIJKokkos(Mat A, MatType mtype,
   if (a->A) PetscCall(MatSetType(a->A, MATSEQAIJKOKKOS));
   if (a->B) PetscCall(MatSetType(a->B, MATSEQAIJKOKKOS));
   if (a->lvec) PetscCall(VecSetType(a->lvec, VECSEQKOKKOS));
-
-  B->ops->assemblyend           = MatAssemblyEnd_MPIAIJKokkos;
-  B->ops->mult                  = MatMult_MPIAIJKokkos;
-  B->ops->multadd               = MatMultAdd_MPIAIJKokkos;
-  B->ops->multtranspose         = MatMultTranspose_MPIAIJKokkos;
-  B->ops->productsetfromoptions = MatProductSetFromOptions_MPIAIJKokkos;
-  B->ops->destroy               = MatDestroy_MPIAIJKokkos;
-
-  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatMPIAIJSetPreallocation_C", MatMPIAIJSetPreallocation_MPIAIJKokkos));
-  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatMPIAIJGetLocalMatMerge_C", MatMPIAIJGetLocalMatMerge_MPIAIJKokkos));
-  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSetPreallocationCOO_C", MatSetPreallocationCOO_MPIAIJKokkos));
-  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSetValuesCOO_C", MatSetValuesCOO_MPIAIJKokkos));
+  PetscCall(MatSetOps_MPIAIJKokkos(B));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
 /*MC
    MATAIJKOKKOS - "mpiaijkokkos", a matrix type to be used for CSR sparse matrices with Kokkos
 
