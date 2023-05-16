@@ -3541,11 +3541,8 @@ static PetscErrorCode MatDuplicateCOO_SeqAIJHIPSPARSE(Mat A, Mat B)
   Mat_SeqAIJHIPSPARSE       *b = static_cast<Mat_SeqAIJHIPSPARSE *>(B->spptr);
 
   PetscFunctionBegin;
-  b->cooPerm          = a->cooPerm;
-  b->cooPerm_a        = a->cooPerm_a;
-  b->jmap_d           = a->jmap_d;
-  b->perm_d           = a->perm_d;
-  b->use_extended_coo = a->use_extended_coo;
+  b->jmap_d = a->jmap_d;
+  b->perm_d = a->perm_d;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -3557,15 +3554,8 @@ static PetscErrorCode MatResetPreallocationCOO_SeqAIJHIPSPARSE(Mat mat)
   PetscFunctionBegin;
   // refcnt = 1 means 'mat' is the last owner of the coo data, therefore we free it.
   if (cusp && a->coo_refcnt && (*a->coo_refcnt == 1)) {
-    delete cusp->cooPerm;
-    delete cusp->cooPerm_a;
-    cusp->cooPerm   = NULL;
-    cusp->cooPerm_a = NULL;
-    if (cusp->use_extended_coo) {
-      PetscCallHIP(hipFree(cusp->jmap_d));
-      PetscCallHIP(hipFree(cusp->perm_d));
-    }
-    cusp->use_extended_coo = PETSC_FALSE;
+    PetscCallHIP(hipFree(cusp->jmap_d));
+    PetscCallHIP(hipFree(cusp->perm_d));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -3582,6 +3572,7 @@ static PetscErrorCode MatSeqAIJHIPSPARSE_Destroy(Mat mat)
     delete cusp->workVector;
     delete cusp->rowoffsets_gpu;
     delete cusp->csr2csc_i;
+    delete cusp->cooPerm;
     if (cusp->handle) PetscCallHIPSPARSE(hipsparseDestroy(cusp->handle));
     PetscCall(PetscFree(mat->spptr));
   }
@@ -3721,98 +3712,6 @@ struct IJCompare {
   }
 };
 
-struct IJEqual {
-  __host__ __device__ inline bool operator()(const thrust::tuple<PetscInt, PetscInt> &t1, const thrust::tuple<PetscInt, PetscInt> &t2)
-  {
-    if (t1.get<0>() != t2.get<0>() || t1.get<1>() != t2.get<1>()) return false;
-    return true;
-  }
-};
-
-struct IJDiff {
-  __host__ __device__ inline PetscInt operator()(const PetscInt &t1, const PetscInt &t2) { return t1 == t2 ? 0 : 1; }
-};
-
-struct IJSum {
-  __host__ __device__ inline PetscInt operator()(const PetscInt &t1, const PetscInt &t2) { return t1 || t2; }
-};
-
-PetscErrorCode MatSetValuesCOO_SeqAIJHIPSPARSE_Basic(Mat A, const PetscScalar v[], InsertMode imode)
-{
-  Mat_SeqAIJHIPSPARSE                  *cusp      = (Mat_SeqAIJHIPSPARSE *)A->spptr;
-  Mat_SeqAIJ                           *a         = (Mat_SeqAIJ *)A->data;
-  THRUSTARRAY                          *cooPerm_v = NULL;
-  thrust::device_ptr<const PetscScalar> d_v;
-  CsrMatrix                            *matrix;
-  PetscInt                              n;
-
-  PetscFunctionBegin;
-  PetscCheck(cusp, PETSC_COMM_SELF, PETSC_ERR_COR, "Missing HIPSPARSE struct");
-  PetscCheck(cusp->mat, PETSC_COMM_SELF, PETSC_ERR_COR, "Missing HIPSPARSE CsrMatrix");
-  if (!cusp->cooPerm) {
-    PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
-    PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
-    PetscFunctionReturn(PETSC_SUCCESS);
-  }
-  matrix = (CsrMatrix *)cusp->mat->mat;
-  PetscCheck(matrix->values, PETSC_COMM_SELF, PETSC_ERR_COR, "Missing HIP memory");
-  if (!v) {
-    if (imode == INSERT_VALUES) thrust::fill(thrust::device, matrix->values->begin(), matrix->values->end(), 0.);
-    goto finalize;
-  }
-  n = cusp->cooPerm->size();
-  if (isHipMem(v)) d_v = thrust::device_pointer_cast(v);
-  else {
-    cooPerm_v = new THRUSTARRAY(n);
-    cooPerm_v->assign(v, v + n);
-    d_v = cooPerm_v->data();
-    PetscCall(PetscLogCpuToGpu(n * sizeof(PetscScalar)));
-  }
-  PetscCall(PetscLogGpuTimeBegin());
-  if (imode == ADD_VALUES) { /* ADD VALUES means add to existing ones */
-    if (cusp->cooPerm_a) {   /* there are repeated entries in d_v[], and we need to add these them */
-      THRUSTARRAY *cooPerm_w = new THRUSTARRAY(matrix->values->size());
-      auto         vbit      = thrust::make_permutation_iterator(d_v, cusp->cooPerm->begin());
-      /* thrust::reduce_by_key(keys_first,keys_last,values_first,keys_output,values_output)
-        cooPerm_a = [0,0,1,2,3,4]. The length is n, number of nonozeros in d_v[].
-        cooPerm_a is ordered. d_v[i] is the cooPerm_a[i]-th unique nonzero.
-      */
-      thrust::reduce_by_key(cusp->cooPerm_a->begin(), cusp->cooPerm_a->end(), vbit, thrust::make_discard_iterator(), cooPerm_w->begin(), thrust::equal_to<PetscInt>(), thrust::plus<PetscScalar>());
-      thrust::transform(cooPerm_w->begin(), cooPerm_w->end(), matrix->values->begin(), matrix->values->begin(), thrust::plus<PetscScalar>());
-      delete cooPerm_w;
-    } else {
-      /* all nonzeros in d_v[] are unique entries */
-      auto zibit = thrust::make_zip_iterator(thrust::make_tuple(thrust::make_permutation_iterator(d_v, cusp->cooPerm->begin()), matrix->values->begin()));
-      auto zieit = thrust::make_zip_iterator(thrust::make_tuple(thrust::make_permutation_iterator(d_v, cusp->cooPerm->end()), matrix->values->end()));
-      thrust::for_each(zibit, zieit, VecHIPPlusEquals()); /* values[i] += d_v[cooPerm[i]]  */
-    }
-  } else {
-    if (cusp->cooPerm_a) { /* repeated entries in COO, with INSERT_VALUES -> reduce */
-      auto vbit = thrust::make_permutation_iterator(d_v, cusp->cooPerm->begin());
-      thrust::reduce_by_key(cusp->cooPerm_a->begin(), cusp->cooPerm_a->end(), vbit, thrust::make_discard_iterator(), matrix->values->begin(), thrust::equal_to<PetscInt>(), thrust::plus<PetscScalar>());
-    } else {
-      auto zibit = thrust::make_zip_iterator(thrust::make_tuple(thrust::make_permutation_iterator(d_v, cusp->cooPerm->begin()), matrix->values->begin()));
-      auto zieit = thrust::make_zip_iterator(thrust::make_tuple(thrust::make_permutation_iterator(d_v, cusp->cooPerm->end()), matrix->values->end()));
-      thrust::for_each(zibit, zieit, VecHIPEquals());
-    }
-  }
-  PetscCall(PetscLogGpuTimeEnd());
-finalize:
-  delete cooPerm_v;
-  A->offloadmask = PETSC_OFFLOAD_GPU;
-  PetscCall(PetscObjectStateIncrease((PetscObject)A));
-  /* shorter version of MatAssemblyEnd_SeqAIJ */
-  PetscCall(PetscInfo(A, "Matrix size: %" PetscInt_FMT " X %" PetscInt_FMT "; storage space: 0 unneeded,%" PetscInt_FMT " used\n", A->rmap->n, A->cmap->n, a->nz));
-  PetscCall(PetscInfo(A, "Number of mallocs during MatSetValues() is 0\n"));
-  PetscCall(PetscInfo(A, "Maximum nonzeros in any row is %" PetscInt_FMT "\n", a->rmax));
-  a->reallocs = 0;
-  A->info.mallocs += 0;
-  A->info.nz_unneeded = 0;
-  A->assembled = A->was_assembled = PETSC_TRUE;
-  A->num_ass++;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 PetscErrorCode MatSeqAIJHIPSPARSEInvalidateTranspose(Mat A, PetscBool destroy)
 {
   Mat_SeqAIJHIPSPARSE *cusp = (Mat_SeqAIJHIPSPARSE *)A->spptr;
@@ -3829,172 +3728,39 @@ PetscErrorCode MatSeqAIJHIPSPARSEInvalidateTranspose(Mat A, PetscBool destroy)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatSetPreallocationCOO_SeqAIJHIPSPARSE_Basic(Mat A, PetscCount n, PetscInt coo_i[], PetscInt coo_j[])
-{
-  Mat_SeqAIJHIPSPARSE *cusp = (Mat_SeqAIJHIPSPARSE *)A->spptr;
-  Mat_SeqAIJ          *a    = (Mat_SeqAIJ *)A->data;
-  PetscInt             nzr  = 0;
-
-  PetscFunctionBegin;
-  PetscCall(PetscLayoutSetUp(A->rmap));
-  PetscCall(PetscLayoutSetUp(A->cmap));
-  PetscCall(MatResetPreallocationCOO_SeqAIJHIPSPARSE(A));
-  PetscCall(MatResetPreallocationCOO_SeqAIJ(A));
-  if (n) {
-    thrust::device_ptr<PetscInt> d_i, d_j;
-    PetscInt                    *d_raw_i, *d_raw_j;
-    PetscBool                    free_raw_i = PETSC_FALSE, free_raw_j = PETSC_FALSE;
-    PetscMemType                 imtype, jmtype;
-
-    PetscCall(PetscGetMemType(coo_i, &imtype));
-    if (PetscMemTypeHost(imtype)) {
-      PetscCallHIP(hipMalloc(&d_raw_i, sizeof(PetscInt) * n));
-      PetscCallHIP(hipMemcpy(d_raw_i, coo_i, sizeof(PetscInt) * n, hipMemcpyHostToDevice));
-      d_i        = thrust::device_pointer_cast(d_raw_i);
-      free_raw_i = PETSC_TRUE;
-      PetscCall(PetscLogCpuToGpu(1. * n * sizeof(PetscInt)));
-    } else {
-      d_i = thrust::device_pointer_cast(coo_i);
-    }
-
-    PetscCall(PetscGetMemType(coo_j, &jmtype));
-    if (PetscMemTypeHost(jmtype)) { // MatSetPreallocationCOO_MPIAIJHIPSPARSE_Basic() passes device coo_i[] and host coo_j[]!
-      PetscCallHIP(hipMalloc(&d_raw_j, sizeof(PetscInt) * n));
-      PetscCallHIP(hipMemcpy(d_raw_j, coo_j, sizeof(PetscInt) * n, hipMemcpyHostToDevice));
-      d_j        = thrust::device_pointer_cast(d_raw_j);
-      free_raw_j = PETSC_TRUE;
-      PetscCall(PetscLogCpuToGpu(1. * n * sizeof(PetscInt)));
-    } else {
-      d_j = thrust::device_pointer_cast(coo_j);
-    }
-
-    THRUSTINTARRAY ii(A->rmap->n);
-
-    if (!cusp->cooPerm) cusp->cooPerm = new THRUSTINTARRAY(n);
-    if (!cusp->cooPerm_a) cusp->cooPerm_a = new THRUSTINTARRAY(n);
-    /* Ex.
-      n = 6
-      coo_i = [3,3,1,4,1,4]
-      coo_j = [3,2,2,5,2,6]
-    */
-    auto fkey = thrust::make_zip_iterator(thrust::make_tuple(d_i, d_j));
-    auto ekey = thrust::make_zip_iterator(thrust::make_tuple(d_i + n, d_j + n));
-
-    PetscCall(PetscLogGpuTimeBegin());
-    thrust::sequence(thrust::device, cusp->cooPerm->begin(), cusp->cooPerm->end(), 0);
-    thrust::sort_by_key(fkey, ekey, cusp->cooPerm->begin(), IJCompare()); /* sort by row, then by col */
-    (*cusp->cooPerm_a).assign(d_i, d_i + n);                              /* copy the sorted array */
-    THRUSTINTARRAY w(d_j, d_j + n);
-    /*
-      d_i     = [1,1,3,3,4,4]
-      d_j     = [2,2,2,3,5,6]
-      cooPerm = [2,4,1,0,3,5]
-    */
-    auto nekey = thrust::unique(fkey, ekey, IJEqual()); /* unique (d_i, d_j) */
-    /*
-      d_i     = [1,3,3,4,4,x]
-                            ^ekey
-      d_j     = [2,2,3,5,6,x]
-                           ^nekye
-    */
-    if (nekey == ekey) { /* all entries are unique */
-      delete cusp->cooPerm_a;
-      cusp->cooPerm_a = NULL;
-    } else { /* Stefano: I couldn't come up with a more elegant algorithm */
-      /* idea: any change in i or j in the (i,j) sequence implies a new nonzero */
-      adjacent_difference(cusp->cooPerm_a->begin(), cusp->cooPerm_a->end(), cusp->cooPerm_a->begin(), IJDiff()); /* cooPerm_a: [1,1,3,3,4,4] => [1,0,1,0,1,0]*/
-      adjacent_difference(w.begin(), w.end(), w.begin(), IJDiff());                                              /* w:         [2,2,2,3,5,6] => [2,0,0,1,1,1]*/
-      (*cusp->cooPerm_a)[0] = 0;                                                                                 /* clear the first entry, though accessing an entry on device implies a hipMemcpy */
-      w[0]                  = 0;
-      thrust::transform(cusp->cooPerm_a->begin(), cusp->cooPerm_a->end(), w.begin(), cusp->cooPerm_a->begin(), IJSum());            /* cooPerm_a =          [0,0,1,1,1,1]*/
-      thrust::inclusive_scan(cusp->cooPerm_a->begin(), cusp->cooPerm_a->end(), cusp->cooPerm_a->begin(), thrust::plus<PetscInt>()); /*cooPerm_a=[0,0,1,2,3,4]*/
-    }
-    thrust::counting_iterator<PetscInt> search_begin(0);
-    thrust::upper_bound(d_i, nekey.get_iterator_tuple().get<0>(), /* binary search entries of [0,1,2,3,4,5,6) in ordered array d_i = [1,3,3,4,4], supposing A->rmap->n = 6. */
-                        search_begin, search_begin + A->rmap->n,  /* return in ii[] the index of last position in d_i[] where value could be inserted without violating the ordering */
-                        ii.begin());                              /* ii = [0,1,1,3,5,5]. A leading 0 will be added later */
-    PetscCall(PetscLogGpuTimeEnd());
-
-    PetscCall(MatSeqXAIJFreeAIJ(A, &a->a, &a->j, &a->i));
-    a->singlemalloc = PETSC_FALSE;
-    a->free_a       = PETSC_TRUE;
-    a->free_ij      = PETSC_TRUE;
-    PetscCall(PetscMalloc1(A->rmap->n + 1, &a->i));
-    a->i[0] = 0; /* a->i = [0,0,1,1,3,5,5] */
-    PetscCallHIP(hipMemcpy(a->i + 1, ii.data().get(), A->rmap->n * sizeof(PetscInt), hipMemcpyDeviceToHost));
-    a->nz = a->maxnz = a->i[A->rmap->n];
-    a->rmax          = 0;
-    PetscCall(PetscMalloc1(a->nz, &a->a));
-    PetscCall(PetscMalloc1(a->nz, &a->j));
-    PetscCallHIP(hipMemcpy(a->j, thrust::raw_pointer_cast(d_j), a->nz * sizeof(PetscInt), hipMemcpyDeviceToHost));
-    if (!a->ilen) PetscCall(PetscMalloc1(A->rmap->n, &a->ilen));
-    if (!a->imax) PetscCall(PetscMalloc1(A->rmap->n, &a->imax));
-    for (PetscInt i = 0; i < A->rmap->n; i++) {
-      const PetscInt nnzr = a->i[i + 1] - a->i[i];
-      nzr += (PetscInt) !!(nnzr);
-      a->ilen[i] = a->imax[i] = nnzr;
-      a->rmax                 = PetscMax(a->rmax, nnzr);
-    }
-    a->nonzerorowcnt = nzr;
-    A->preallocated  = PETSC_TRUE;
-    PetscCall(PetscLogGpuToCpu((A->rmap->n + a->nz) * sizeof(PetscInt)));
-    PetscCall(MatMarkDiagonal_SeqAIJ(A));
-    if (free_raw_i) PetscCallHIP(hipFree(d_raw_i));
-    if (free_raw_j) PetscCallHIP(hipFree(d_raw_j));
-  } else PetscCall(MatSeqAIJSetPreallocation(A, 0, NULL));
-  PetscCall(MatSetOption(A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_TRUE));
-  // TODO: remove the whole MatSetPreallocationCOO_SeqAIJHIPSPARSE_Basic() in favor of the extended COO
-  // UGLY: set COO refcnt since we've built COO data
-  PetscCall(PetscMalloc1(1, &a->coo_refcnt));
-  *a->coo_refcnt = 1;
-
-  /* We want to allocate the HIPSPARSE struct for matvec now.
-     The code is so convoluted now that I prefer to copy zeros */
-  PetscCall(PetscArrayzero(a->a, a->nz));
-  PetscCall(MatCheckCompressedRow(A, nzr, &a->compressedrow, a->i, A->rmap->n, 0.6));
-  A->offloadmask = PETSC_OFFLOAD_CPU;
-  PetscCall(MatSeqAIJHIPSPARSECopyToGPU(A));
-  PetscCall(MatSeqAIJHIPSPARSEInvalidateTranspose(A, PETSC_TRUE));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 PetscErrorCode MatSetPreallocationCOO_SeqAIJHIPSPARSE(Mat mat, PetscCount coo_n, PetscInt coo_i[], PetscInt coo_j[])
 {
   Mat_SeqAIJ          *seq;
   Mat_SeqAIJHIPSPARSE *dev;
-  PetscBool            coo_basic = PETSC_TRUE;
-  PetscMemType         mtype     = PETSC_MEMTYPE_DEVICE;
+  PetscBool            dev_ij = PETSC_FALSE;
+  PetscMemType         mtype  = PETSC_MEMTYPE_HOST;
+  PetscInt            *i, *j;
 
   PetscFunctionBegin;
   // The two MatResetPreallocationCOO_* must be done in order. The former relies on values that might be destroyed by the latter
   PetscCall(MatResetPreallocationCOO_SeqAIJHIPSPARSE(mat));
   PetscCall(MatResetPreallocationCOO_SeqAIJ(mat));
-  if (coo_i) {
-    PetscCall(PetscGetMemType(coo_i, &mtype));
-    if (PetscMemTypeHost(mtype)) {
-      for (PetscCount k = 0; k < coo_n; k++) {
-        if (coo_i[k] < 0 || coo_j[k] < 0) {
-          coo_basic = PETSC_FALSE;
-          break;
-        }
-      }
-    }
+  PetscCall(PetscGetMemType(coo_i, &mtype));
+  if (PetscMemTypeDevice(mtype)) {
+    dev_ij = PETSC_TRUE;
+    PetscCall(PetscMalloc2(coo_n, &i, coo_n, &j));
+    PetscCallHIP(hipMemcpy(i, coo_i, coo_n * sizeof(PetscInt), hipMemcpyDeviceToHost));
+    PetscCallHIP(hipMemcpy(j, coo_j, coo_n * sizeof(PetscInt), hipMemcpyDeviceToHost));
+  } else {
+    i = coo_i;
+    j = coo_j;
   }
 
-  if (coo_basic) { /* i,j are on device or do not contain negative indices */
-    PetscCall(MatSetPreallocationCOO_SeqAIJHIPSPARSE_Basic(mat, coo_n, coo_i, coo_j));
-  } else {
-    PetscCall(MatSetPreallocationCOO_SeqAIJ(mat, coo_n, coo_i, coo_j));
-    mat->offloadmask = PETSC_OFFLOAD_CPU;
-    PetscCall(MatSeqAIJHIPSPARSECopyToGPU(mat));
-    seq = static_cast<Mat_SeqAIJ *>(mat->data);
-    dev = static_cast<Mat_SeqAIJHIPSPARSE *>(mat->spptr);
-    PetscCallHIP(hipMalloc((void **)&dev->jmap_d, (seq->nz + 1) * sizeof(PetscCount)));
-    PetscCallHIP(hipMemcpy(dev->jmap_d, seq->jmap, (seq->nz + 1) * sizeof(PetscCount), hipMemcpyHostToDevice));
-    PetscCallHIP(hipMalloc((void **)&dev->perm_d, seq->Atot * sizeof(PetscCount)));
-    PetscCallHIP(hipMemcpy(dev->perm_d, seq->perm, seq->Atot * sizeof(PetscCount), hipMemcpyHostToDevice));
-    dev->use_extended_coo = PETSC_TRUE;
-  }
+  PetscCall(MatSetPreallocationCOO_SeqAIJ(mat, coo_n, i, j));
+  if (dev_ij) PetscCall(PetscFree2(i, j));
+  mat->offloadmask = PETSC_OFFLOAD_CPU;
+  PetscCall(MatSeqAIJHIPSPARSECopyToGPU(mat));
+  seq = static_cast<Mat_SeqAIJ *>(mat->data);
+  dev = static_cast<Mat_SeqAIJHIPSPARSE *>(mat->spptr);
+  PetscCallHIP(hipMalloc((void **)&dev->jmap_d, (seq->nz + 1) * sizeof(PetscCount)));
+  PetscCallHIP(hipMemcpy(dev->jmap_d, seq->jmap, (seq->nz + 1) * sizeof(PetscCount), hipMemcpyHostToDevice));
+  PetscCallHIP(hipMalloc((void **)&dev->perm_d, seq->Atot * sizeof(PetscCount)));
+  PetscCallHIP(hipMemcpy(dev->perm_d, seq->perm, seq->Atot * sizeof(PetscCount), hipMemcpyHostToDevice));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -4020,28 +3786,24 @@ PetscErrorCode MatSetValuesCOO_SeqAIJHIPSPARSE(Mat A, const PetscScalar v[], Ins
 
   PetscFunctionBegin;
   if (!dev->mat) PetscCall(MatSeqAIJHIPSPARSECopyToGPU(A));
-  if (dev->use_extended_coo) {
-    PetscCall(PetscGetMemType(v, &memtype));
-    if (PetscMemTypeHost(memtype)) { /* If user gave v[] in host, we might need to copy it to device if any */
-      PetscCallHIP(hipMalloc((void **)&v1, seq->coo_n * sizeof(PetscScalar)));
-      PetscCallHIP(hipMemcpy((void *)v1, v, seq->coo_n * sizeof(PetscScalar), hipMemcpyHostToDevice));
-    }
-
-    if (imode == INSERT_VALUES) PetscCall(MatSeqAIJHIPSPARSEGetArrayWrite(A, &Aa));
-    else PetscCall(MatSeqAIJHIPSPARSEGetArray(A, &Aa));
-
-    if (Annz) {
-      hipLaunchKernelGGL(HIP_KERNEL_NAME(MatAddCOOValues), dim3((Annz + 255) / 256), dim3(256), 0, PetscDefaultHipStream, v1, Annz, dev->jmap_d, dev->perm_d, imode, Aa);
-      PetscCallHIP(hipPeekAtLastError());
-    }
-
-    if (imode == INSERT_VALUES) PetscCall(MatSeqAIJHIPSPARSERestoreArrayWrite(A, &Aa));
-    else PetscCall(MatSeqAIJHIPSPARSERestoreArray(A, &Aa));
-
-    if (PetscMemTypeHost(memtype)) PetscCallHIP(hipFree((void *)v1));
-  } else {
-    PetscCall(MatSetValuesCOO_SeqAIJHIPSPARSE_Basic(A, v, imode));
+  PetscCall(PetscGetMemType(v, &memtype));
+  if (PetscMemTypeHost(memtype)) { /* If user gave v[] in host, we might need to copy it to device if any */
+    PetscCallHIP(hipMalloc((void **)&v1, seq->coo_n * sizeof(PetscScalar)));
+    PetscCallHIP(hipMemcpy((void *)v1, v, seq->coo_n * sizeof(PetscScalar), hipMemcpyHostToDevice));
   }
+
+  if (imode == INSERT_VALUES) PetscCall(MatSeqAIJHIPSPARSEGetArrayWrite(A, &Aa));
+  else PetscCall(MatSeqAIJHIPSPARSEGetArray(A, &Aa));
+
+  if (Annz) {
+    hipLaunchKernelGGL(HIP_KERNEL_NAME(MatAddCOOValues), dim3((Annz + 255) / 256), dim3(256), 0, PetscDefaultHipStream, v1, Annz, dev->jmap_d, dev->perm_d, imode, Aa);
+    PetscCallHIP(hipPeekAtLastError());
+  }
+
+  if (imode == INSERT_VALUES) PetscCall(MatSeqAIJHIPSPARSERestoreArrayWrite(A, &Aa));
+  else PetscCall(MatSeqAIJHIPSPARSERestoreArray(A, &Aa));
+
+  if (PetscMemTypeHost(memtype)) PetscCallHIP(hipFree((void *)v1));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
