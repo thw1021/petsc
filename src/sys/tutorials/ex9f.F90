@@ -1,24 +1,33 @@
 !
 !   Example of using PetscOptionsBegin in Fortran
-
+program ex9f
 #include "petsc/finclude/petsc.h"
       use petsc
       implicit none
 
+      PetscReal,Parameter                       :: PReal = 1.0
+      Integer,Parameter                         :: Pr = Selected_Real_Kind(Precision(PReal))
+                                            
+      PetscInt,Parameter                        :: PInt = 1
+      Integer,Parameter                         :: Pi = kind(PInt)
+
       PetscErrorCode                            :: ierr
       PetscBool                                 :: set = PETSC_FALSE
-      PetscInt                                  :: value = 2
+      PetscInt                                  :: value = 2_Pi
+
+      Character(len=256)                        :: IOBuffer
 
       PetscCallA(PetscInitialize(ierr))
 
-      PetscCall(PetscOptionsBegin(PETSC_COMM_WORLD,'prefix_','Setting options for my application','Section 1',ierr))
-      PetscCall(PetscOptionsInt('-int','Get an application int','Man page',value,value,set,ierr))
-      PetscCall(PetscOptionsEnd(ierr))
-      if (set .eqv. PETSC_TRUE) then
-         PetscCall(PetscPrintf(PETSC_COMM_WORLD,'The integer value was set\n',ierr))
+      PetscCallA(PetscOptionsBegin(PETSC_COMM_WORLD,'prefix_','Setting options for my application','Section 1',ierr))
+      PetscCallA(PetscOptionsInt('-int','Get an application int','Man page',2_Pi,value,set,ierr))
+      PetscCallA(PetscOptionsEnd(ierr))
+      if (set) then
+         write(IOBuffer,'("The integer value was set to ",I3,"\n")') value
+         PetscCallA(PetscPrintf(PETSC_COMM_WORLD,IOBuffer,ierr))
       endif
       PetscCallA(PetscFinalize(ierr))
-      end
+end program ex9f
 
 !
 !/*TEST
