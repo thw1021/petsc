@@ -10,7 +10,12 @@
 #if defined(PETSC_HAVE_FORTRAN_CAPS)
   #define petscoptionsbegin_               PETSCOPTIONSBEGIN
   #define petscoptionsend_                 PETSCOPTIONSEND
+  #define petscoptionsbool_                PETSCOPTIONSBOOL
   #define petscoptionsint_                 PETSCOPTIONSINT
+  #define petscoptionsintarray_            PETSCOPTIONSINTARRAY
+  #define petscoptionsreal_                PETSCOPTIONSREAL
+  #define petscoptionsrealarray_           PETSCOPTIONSREALARRAY
+  #define petscoptionsscalar_              PETSCOPTIONSSCALAR
   #define petscsubcommview_                PETSCSUBCOMMVIEW
   #define petscsubcommgetparent_           PETSCSUBCOMMGETPARENT
   #define petscsubcommgetcontiguousparent_ PETSCSUBCOMMGETCONTIGUOUSPARENT
@@ -39,7 +44,12 @@
 #elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE)
   #define petscoptionsbegin_               petscoptionsbegin
   #define petscoptionsend_                 petscoptionsend
+  #define petscoptionsbool_                petscoptionsbool
   #define petscoptionsint_                 petscoptionsint
+  #define petscoptionsintarray_            petscoptionsintarray
+  #define petscoptionsreal_                petscoptionsreal
+  #define petscoptionsrealarray_           petscoptionsrealarray
+  #define petscoptionsscalar_              petscoptionsscalar
   #define petscsubcommview_                petscsubcommview
   #define petscsubcommgetparent_           petscsubcommgetparent
   #define petscsubcommgetcontiguousparent_ petscsubcommgetcontiguousparent
@@ -103,6 +113,25 @@ PETSC_EXTERN void petscoptionsend_(PetscErrorCode *ierr)
   PetscOptionsObject = NULL;
 }
 
+PETSC_EXTERN void petscoptionsbool_(char *opt, char* text, char* man, PetscBool *currentvalue, PetscBool *value, PetscBool *set, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T lenopt, PETSC_FORTRAN_CHARLEN_T lentext, PETSC_FORTRAN_CHARLEN_T lenman)
+{
+  char *copt, *ctext, *cman;
+
+  FIXCHAR(opt, lenopt, copt);
+  FIXCHAR(text, lentext, ctext);
+  FIXCHAR(man, lenman, cman);
+  if (!PetscOptionsObject) {
+    *ierr = PETSC_ERR_ARG_WRONGSTATE;
+    return;
+  }
+  PetscOptionsObject->count = 1;
+  *ierr = PetscOptionsBool_Private(PetscOptionsObject,copt, ctext, cman,*currentvalue,value,set);
+  if (*ierr) return;
+  FREECHAR(opt,copt);
+  FREECHAR(text,ctext);
+  FREECHAR(man,cman);
+}
+
 PETSC_EXTERN void petscoptionsint_(char *opt, char* text, char* man, PetscInt *currentvalue, PetscInt *value, PetscBool *set, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T lenopt, PETSC_FORTRAN_CHARLEN_T lentext, PETSC_FORTRAN_CHARLEN_T lenman)
 {
   char *copt, *ctext, *cman;
@@ -115,7 +144,83 @@ PETSC_EXTERN void petscoptionsint_(char *opt, char* text, char* man, PetscInt *c
     return;
   }
   PetscOptionsObject->count = 1;
-  *ierr = PetscOptionsInt_Private(PetscOptionsObject,copt, ctext, cman,*currentvalue,value,set,PETSC_MIN_INT, PETSC_MAX_INT);
+  *ierr = PetscOptionsInt_Private(PetscOptionsObject,copt, ctext, cman,*currentvalue,value,set,PETSC_MIN_INT,PETSC_MAX_INT);
+  if (*ierr) return;
+  FREECHAR(opt,copt);
+  FREECHAR(text,ctext);
+  FREECHAR(man,cman);
+}
+
+PETSC_EXTERN void petscoptionsintarray_(char *opt, char* text, char* man, PetscInt *currentvalue, PetscInt *n, PetscBool *set, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T lenopt, PETSC_FORTRAN_CHARLEN_T lentext, PETSC_FORTRAN_CHARLEN_T lenman)
+{
+  char *copt, *ctext, *cman;
+
+  FIXCHAR(opt, lenopt, copt);
+  FIXCHAR(text, lentext, ctext);
+  FIXCHAR(man, lenman, cman);
+  if (!PetscOptionsObject) {
+    *ierr = PETSC_ERR_ARG_WRONGSTATE;
+    return;
+  }
+  PetscOptionsObject->count = 1;
+  *ierr = PetscOptionsIntArray_Private(PetscOptionsObject,copt,ctext,cman,currentvalue,n,set);
+  if (*ierr) return;
+  FREECHAR(opt,copt);
+  FREECHAR(text,ctext);
+  FREECHAR(man,cman);
+}
+
+PETSC_EXTERN void petscoptionsreal_(char *opt, char* text, char* man, PetscReal *currentvalue, PetscReal *value, PetscBool *set, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T lenopt, PETSC_FORTRAN_CHARLEN_T lentext, PETSC_FORTRAN_CHARLEN_T lenman)
+{
+  char *copt, *ctext, *cman;
+
+  FIXCHAR(opt, lenopt, copt);
+  FIXCHAR(text, lentext, ctext);
+  FIXCHAR(man, lenman, cman);
+  if (!PetscOptionsObject) {
+    *ierr = PETSC_ERR_ARG_WRONGSTATE;
+    return;
+  }
+  PetscOptionsObject->count = 1;
+  *ierr = PetscOptionsReal_Private(PetscOptionsObject,copt, ctext, cman,*currentvalue,value,set);
+  if (*ierr) return;
+  FREECHAR(opt,copt);
+  FREECHAR(text,ctext);
+  FREECHAR(man,cman);
+}
+
+PETSC_EXTERN void petscoptionsrealarray_(char *opt, char* text, char* man, PetscReal *currentvalue, PetscInt *n, PetscBool *set, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T lenopt, PETSC_FORTRAN_CHARLEN_T lentext, PETSC_FORTRAN_CHARLEN_T lenman)
+{
+  char *copt, *ctext, *cman;
+
+  FIXCHAR(opt, lenopt, copt);
+  FIXCHAR(text, lentext, ctext);
+  FIXCHAR(man, lenman, cman);
+  if (!PetscOptionsObject) {
+    *ierr = PETSC_ERR_ARG_WRONGSTATE;
+    return;
+  }
+  PetscOptionsObject->count = 1;
+  *ierr = PetscOptionsRealArray_Private(PetscOptionsObject,copt,ctext,cman,currentvalue,n,set);
+  if (*ierr) return;
+  FREECHAR(opt,copt);
+  FREECHAR(text,ctext);
+  FREECHAR(man,cman);
+}
+
+PETSC_EXTERN void petscoptionsscalar_(char *opt, char* text, char* man, PetscScalar *currentvalue, PetscScalar *value, PetscBool *set, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T lenopt, PETSC_FORTRAN_CHARLEN_T lentext, PETSC_FORTRAN_CHARLEN_T lenman)
+{
+  char *copt, *ctext, *cman;
+
+  FIXCHAR(opt, lenopt, copt);
+  FIXCHAR(text, lentext, ctext);
+  FIXCHAR(man, lenman, cman);
+  if (!PetscOptionsObject) {
+    *ierr = PETSC_ERR_ARG_WRONGSTATE;
+    return;
+  }
+  PetscOptionsObject->count = 1;
+  *ierr = PetscOptionsScalar_Private(PetscOptionsObject,copt, ctext, cman,*currentvalue,value,set);
   if (*ierr) return;
   FREECHAR(opt,copt);
   FREECHAR(text,ctext);

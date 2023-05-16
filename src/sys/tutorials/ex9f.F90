@@ -1,24 +1,66 @@
 !
 !   Example of using PetscOptionsBegin in Fortran
-
+program ex9f
 #include "petsc/finclude/petsc.h"
-      use petsc
-      implicit none
+    use petsc
+    implicit none
 
-      PetscErrorCode                            :: ierr
-      PetscBool                                 :: set = PETSC_FALSE
-      PetscInt                                  :: value = 2
+    PetscReal,Parameter                       :: PReal = 1.0
+    Integer,Parameter                         :: Pr = Selected_Real_Kind(Precision(PReal))
+                                        
+    PetscInt,Parameter                        :: PInt = 1
+    Integer,Parameter                         :: Pi = kind(PInt)
 
-      PetscCallA(PetscInitialize(ierr))
+    PetscErrorCode                            :: ierr
+    PetscBool                                 :: setb,seti,setia,setr,setra,sets
+    PetscBool                                 :: bvalue = PETSC_TRUE
+    PetscInt                                  :: nopt = 3_Pi
+    PetscInt                                  :: ivalue = 2_Pi
+    PetscInt,dimension(:),pointer             :: iarray
+    PetscReal                                 :: rvalue = 1.23_Pr
+    PetscReal,dimension(:),pointer            :: rarray
+    PetscScalar                               :: svalue = -4.56_Pr
+    Character(len=256)                        :: IOBuffer
 
-      PetscCall(PetscOptionsBegin(PETSC_COMM_WORLD,'prefix_','Setting options for my application','Section 1',ierr))
-      PetscCall(PetscOptionsInt('-int','Get an application int','Man page',value,value,set,ierr))
-      PetscCall(PetscOptionsEnd(ierr))
-      if (set .eqv. PETSC_TRUE) then
-         PetscCall(PetscPrintf(PETSC_COMM_WORLD,'The integer value was set\n',ierr))
-      endif
-      PetscCallA(PetscFinalize(ierr))
-      end
+    PetscCallA(PetscInitialize(ierr))
+
+    Allocate(iarray(nopt),source=-1_Pi)
+    Allocate(rarray(nopt),source=-99.0_pr)
+
+    PetscCallA(PetscOptionsBegin(PETSC_COMM_WORLD,'prefix_','Setting options for my application','Section 1',ierr))
+    PetscCallA(PetscOptionsBool('-bool','Get an application bool','Man page',bvalue,bvalue,setb,ierr))
+    PetscCallA(PetscOptionsInt('-int','Get an application int','Man page',ivalue,ivalue,seti,ierr))
+    PetscCallA(PetscOptionsIntArray('-intarray','Get an application int array','Man page',iarray,nopt,setia,ierr))
+    PetscCallA(PetscOptionsReal('-real','Get an application real','Man page',rvalue,rvalue,setr,ierr))
+    PetscCallA(PetscOptionsRealArray('-realarray','Get an application real array','Man page',rarray,nopt,setra,ierr))
+    PetscCallA(PetscOptionsScalar('-scalar','Get an application scalar','Man page',svalue,svalue,sets,ierr))
+    PetscCallA(PetscOptionsEnd(ierr))
+
+    if (setb) then
+        write(IOBuffer,'("The bool value was set to ",L0,"\n")') bvalue
+        PetscCallA(PetscPrintf(PETSC_COMM_WORLD,IOBuffer,ierr))
+    endif
+    if (seti) then
+        write(IOBuffer,'("The integer value was set to ",I0,"\n")') ivalue
+        PetscCallA(PetscPrintf(PETSC_COMM_WORLD,IOBuffer,ierr))
+    endif
+    if (setia) then
+        write(IOBuffer, '("The integer array was set to ",*(i0," "))') iarray
+        PetscCallA(PetscPrintf(PETSC_COMM_WORLD,trim(IOBuffer)//"\n",ierr))
+    endif
+    if (setr) then
+        write(IOBuffer,'("The real value was set to ",ES12.5,"\n")') rvalue
+        PetscCallA(PetscPrintf(PETSC_COMM_WORLD,IOBuffer,ierr))
+    endif
+    if (setra) then
+        write(IOBuffer,'("The real array was set to ",*(ES12.5," "))') rarray
+        PetscCallA(PetscPrintf(PETSC_COMM_WORLD,trim(IOBuffer)//"\n",ierr))
+    endif
+
+    deallocate(iarray)
+    deallocate(rarray)
+    PetscCallA(PetscFinalize(ierr))
+end program ex9f
 
 !
 !/*TEST
@@ -30,6 +72,6 @@
 !
 !   test:
 !      suffix: 2
-!      args: -prefix_int 22
+!      args: -prefix_bool no -prefix_int 22 -prefix_intarray 2-5 -prefix_real 2.34 -prefix_realarray -3,-4,5.5 -prefix_scalar 7.89 
 !
 !TEST*/
