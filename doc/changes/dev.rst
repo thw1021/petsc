@@ -11,6 +11,8 @@ Changes: Development
 
 .. rubric:: General:
 
+- Add ``PetscOptionsBegin()``, ``PetscOptionsEnd()``, and ``PetscOptionsInt()`` for Fortran
+
 .. rubric:: Configure/Build:
 
 .. rubric:: Sys:
