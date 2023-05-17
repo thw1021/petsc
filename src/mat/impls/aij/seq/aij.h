@@ -158,18 +158,18 @@ typedef struct {
   PetscBool    diagonaldense;             /* all entries along the diagonal have been set; i.e. no missing diagonal terms */
   PetscScalar  fshift, omega;             /* last used omega and fshift */
 
-  /* MatSetValuesCOO() related fields on host */
-  PetscInt   *coo_refcnt; /* Reference counting on COO data structures to save memory in case MatDuplicate() */
-  PetscCount  coo_n;      /* Number of entries in MatSetPreallocationCOO() */
-  PetscCount  Atot;       /* Total number of valid (i.e., w/ non-negative indices) entries in the COO array */
-  PetscCount *jmap;       /* perm[jmap[i]..jmap[i+1]) give indices of entries in v[] associated with i-th nonzero of the matrix */
-  PetscCount *perm;       /* The permutation array in sorting (i,j) by row and then by col */
-
   /* MatSetValues() via hash related fields */
   PetscHMapIJV   ht;
   PetscInt      *dnz;
   struct _MatOps cops;
 } Mat_SeqAIJ;
+
+typedef struct {
+  PetscCount  n;    /* Number of entries in MatSetPreallocationCOO() */
+  PetscCount  Atot; /* Total number of valid (i.e., w/ non-negative indices) entries in the COO array */
+  PetscCount *jmap; /* perm[jmap[i]..jmap[i+1]) give indices of entries in v[] associated with i-th nonzero of the matrix */
+  PetscCount *perm; /* The permutation array in sorting (i,j) by row and then by col */
+} MatCOOStruct_SeqAIJ;
 
 /*
   Frees the a, i, and j arrays from the XAIJ (AIJ, BAIJ, and SBAIJ) matrix types

@@ -20,38 +20,37 @@ struct VecCUDAEquals {
   }
 };
 
-static PetscErrorCode MatResetPreallocationCOO_MPIAIJCUSPARSE(Mat mat)
+static PetscErrorCode MatCOOStructDestroy_MPIAIJCUSPARSE(void *data)
 {
-  Mat_MPIAIJ         *a    = (Mat_MPIAIJ *)mat->data;
-  Mat_MPIAIJCUSPARSE *cusp = (Mat_MPIAIJCUSPARSE *)a->spptr;
+  MatCOOStruct_MPIAIJ *coo = (MatCOOStruct_MPIAIJ *)data;
 
   PetscFunctionBegin;
-  // refcnt = 1 means 'mat' is the last owner of the coo data, therefore we free it.
-  if (cusp && a->coo_refcnt && (*a->coo_refcnt == 1)) {
-    PetscCallCUDA(cudaFree(cusp->Ajmap1_d));
-    PetscCallCUDA(cudaFree(cusp->Aperm1_d));
-    PetscCallCUDA(cudaFree(cusp->Bjmap1_d));
-    PetscCallCUDA(cudaFree(cusp->Bperm1_d));
-    PetscCallCUDA(cudaFree(cusp->Aimap2_d));
-    PetscCallCUDA(cudaFree(cusp->Ajmap2_d));
-    PetscCallCUDA(cudaFree(cusp->Aperm2_d));
-    PetscCallCUDA(cudaFree(cusp->Bimap2_d));
-    PetscCallCUDA(cudaFree(cusp->Bjmap2_d));
-    PetscCallCUDA(cudaFree(cusp->Bperm2_d));
-    PetscCallCUDA(cudaFree(cusp->Cperm1_d));
-    PetscCallCUDA(cudaFree(cusp->sendbuf_d));
-    PetscCallCUDA(cudaFree(cusp->recvbuf_d));
-  }
+  PetscCall(PetscSFDestroy(&coo->sf));
+  PetscCallCUDA(cudaFree(coo->Ajmap1));
+  PetscCallCUDA(cudaFree(coo->Aperm1));
+  PetscCallCUDA(cudaFree(coo->Bjmap1));
+  PetscCallCUDA(cudaFree(coo->Bperm1));
+  PetscCallCUDA(cudaFree(coo->Aimap2));
+  PetscCallCUDA(cudaFree(coo->Ajmap2));
+  PetscCallCUDA(cudaFree(coo->Aperm2));
+  PetscCallCUDA(cudaFree(coo->Bimap2));
+  PetscCallCUDA(cudaFree(coo->Bjmap2));
+  PetscCallCUDA(cudaFree(coo->Bperm2));
+  PetscCallCUDA(cudaFree(coo->Cperm1));
+  PetscCallCUDA(cudaFree(coo->sendbuf));
+  PetscCallCUDA(cudaFree(coo->recvbuf));
+  PetscCall(PetscFree(coo));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode MatSetPreallocationCOO_MPIAIJCUSPARSE(Mat mat, PetscCount coo_n, PetscInt coo_i[], PetscInt coo_j[])
 {
-  Mat_MPIAIJ         *mpiaij = (Mat_MPIAIJ *)mat->data;
-  Mat_MPIAIJCUSPARSE *mpidev;
-  PetscBool           dev_ij = PETSC_FALSE;
-  PetscMemType        mtype  = PETSC_MEMTYPE_HOST;
-  PetscInt           *i, *j;
+  Mat_MPIAIJ          *mpiaij = (Mat_MPIAIJ *)mat->data;
+  PetscBool            dev_ij = PETSC_FALSE;
+  PetscMemType         mtype  = PETSC_MEMTYPE_HOST;
+  PetscInt            *i, *j;
+  PetscContainer       container_h, container_d;
+  MatCOOStruct_MPIAIJ *coo_h, *coo_d;
 
   PetscFunctionBegin;
   PetscCall(PetscFree(mpiaij->garray));
@@ -64,9 +63,6 @@ static PetscErrorCode MatSetPreallocationCOO_MPIAIJCUSPARSE(Mat mat, PetscCount 
   PetscCall(VecScatterDestroy(&mpiaij->Mvctx));
   mat->assembled     = PETSC_FALSE;
   mat->was_assembled = PETSC_FALSE;
-  // The two MatResetPreallocationCOO_* must be done in order. The former relies on values that might be destroyed by the latter
-  PetscCall(MatResetPreallocationCOO_MPIAIJCUSPARSE(mat));
-  PetscCall(MatResetPreallocationCOO_MPIAIJ(mat));
   PetscCall(PetscGetMemType(coo_i, &mtype));
   if (PetscMemTypeDevice(mtype)) {
     dev_ij = PETSC_TRUE;
@@ -80,46 +76,47 @@ static PetscErrorCode MatSetPreallocationCOO_MPIAIJCUSPARSE(Mat mat, PetscCount 
 
   PetscCall(MatSetPreallocationCOO_MPIAIJ(mat, coo_n, i, j));
   if (dev_ij) PetscCall(PetscFree2(i, j));
-
   mat->offloadmask = PETSC_OFFLOAD_CPU;
-  /* creates the GPU memory */
-  PetscCall(MatSeqAIJCUSPARSECopyToGPU(mpiaij->A));
-  PetscCall(MatSeqAIJCUSPARSECopyToGPU(mpiaij->B));
-  mpidev = static_cast<Mat_MPIAIJCUSPARSE *>(mpiaij->spptr);
 
-  PetscCallCUDA(cudaMalloc((void **)&mpidev->Ajmap1_d, (mpiaij->Annz + 1) * sizeof(PetscCount)));
-  PetscCallCUDA(cudaMalloc((void **)&mpidev->Aperm1_d, mpiaij->Atot1 * sizeof(PetscCount)));
+  // Copy the COO struct to device
+  PetscCall(PetscObjectQuery((PetscObject)mat, "__PETSc_MatCOOStruct_Host", (PetscObject *)&container_h));
+  PetscCall(PetscContainerGetPointer(container_h, (void **)&coo_h));
+  PetscCall(PetscMalloc1(1, &coo_d));
+  *coo_d = *coo_h; // do a shallow copy and then amend fields in coo_d
 
-  PetscCallCUDA(cudaMalloc((void **)&mpidev->Bjmap1_d, (mpiaij->Bnnz + 1) * sizeof(PetscCount)));
-  PetscCallCUDA(cudaMalloc((void **)&mpidev->Bperm1_d, mpiaij->Btot1 * sizeof(PetscCount)));
+  PetscCall(PetscObjectReference((PetscObject)coo_d->sf)); // Since we destroy the sf in both coo_h and coo_d
+  PetscCallCUDA(cudaMalloc((void **)&coo_d->Ajmap1, (coo_h->Annz + 1) * sizeof(PetscCount)));
+  PetscCallCUDA(cudaMalloc((void **)&coo_d->Aperm1, coo_h->Atot1 * sizeof(PetscCount)));
+  PetscCallCUDA(cudaMalloc((void **)&coo_d->Bjmap1, (coo_h->Bnnz + 1) * sizeof(PetscCount)));
+  PetscCallCUDA(cudaMalloc((void **)&coo_d->Bperm1, coo_h->Btot1 * sizeof(PetscCount)));
+  PetscCallCUDA(cudaMalloc((void **)&coo_d->Aimap2, coo_h->Annz2 * sizeof(PetscCount)));
+  PetscCallCUDA(cudaMalloc((void **)&coo_d->Ajmap2, (coo_h->Annz2 + 1) * sizeof(PetscCount)));
+  PetscCallCUDA(cudaMalloc((void **)&coo_d->Aperm2, coo_h->Atot2 * sizeof(PetscCount)));
+  PetscCallCUDA(cudaMalloc((void **)&coo_d->Bimap2, coo_h->Bnnz2 * sizeof(PetscCount)));
+  PetscCallCUDA(cudaMalloc((void **)&coo_d->Bjmap2, (coo_h->Bnnz2 + 1) * sizeof(PetscCount)));
+  PetscCallCUDA(cudaMalloc((void **)&coo_d->Bperm2, coo_h->Btot2 * sizeof(PetscCount)));
+  PetscCallCUDA(cudaMalloc((void **)&coo_d->Cperm1, coo_h->sendlen * sizeof(PetscCount)));
+  PetscCallCUDA(cudaMalloc((void **)&coo_d->sendbuf, coo_h->sendlen * sizeof(PetscScalar)));
+  PetscCallCUDA(cudaMalloc((void **)&coo_d->recvbuf, coo_h->recvlen * sizeof(PetscScalar)));
 
-  PetscCallCUDA(cudaMalloc((void **)&mpidev->Aimap2_d, mpiaij->Annz2 * sizeof(PetscCount)));
-  PetscCallCUDA(cudaMalloc((void **)&mpidev->Ajmap2_d, (mpiaij->Annz2 + 1) * sizeof(PetscCount)));
-  PetscCallCUDA(cudaMalloc((void **)&mpidev->Aperm2_d, mpiaij->Atot2 * sizeof(PetscCount)));
+  PetscCallCUDA(cudaMemcpy(coo_d->Ajmap1, coo_h->Ajmap1, (coo_h->Annz + 1) * sizeof(PetscCount), cudaMemcpyHostToDevice));
+  PetscCallCUDA(cudaMemcpy(coo_d->Aperm1, coo_h->Aperm1, coo_h->Atot1 * sizeof(PetscCount), cudaMemcpyHostToDevice));
+  PetscCallCUDA(cudaMemcpy(coo_d->Bjmap1, coo_h->Bjmap1, (coo_h->Bnnz + 1) * sizeof(PetscCount), cudaMemcpyHostToDevice));
+  PetscCallCUDA(cudaMemcpy(coo_d->Bperm1, coo_h->Bperm1, coo_h->Btot1 * sizeof(PetscCount), cudaMemcpyHostToDevice));
+  PetscCallCUDA(cudaMemcpy(coo_d->Aimap2, coo_h->Aimap2, coo_h->Annz2 * sizeof(PetscCount), cudaMemcpyHostToDevice));
+  PetscCallCUDA(cudaMemcpy(coo_d->Ajmap2, coo_h->Ajmap2, (coo_h->Annz2 + 1) * sizeof(PetscCount), cudaMemcpyHostToDevice));
+  PetscCallCUDA(cudaMemcpy(coo_d->Aperm2, coo_h->Aperm2, coo_h->Atot2 * sizeof(PetscCount), cudaMemcpyHostToDevice));
+  PetscCallCUDA(cudaMemcpy(coo_d->Bimap2, coo_h->Bimap2, coo_h->Bnnz2 * sizeof(PetscCount), cudaMemcpyHostToDevice));
+  PetscCallCUDA(cudaMemcpy(coo_d->Bjmap2, coo_h->Bjmap2, (coo_h->Bnnz2 + 1) * sizeof(PetscCount), cudaMemcpyHostToDevice));
+  PetscCallCUDA(cudaMemcpy(coo_d->Bperm2, coo_h->Bperm2, coo_h->Btot2 * sizeof(PetscCount), cudaMemcpyHostToDevice));
+  PetscCallCUDA(cudaMemcpy(coo_d->Cperm1, coo_h->Cperm1, coo_h->sendlen * sizeof(PetscCount), cudaMemcpyHostToDevice));
 
-  PetscCallCUDA(cudaMalloc((void **)&mpidev->Bimap2_d, mpiaij->Bnnz2 * sizeof(PetscCount)));
-  PetscCallCUDA(cudaMalloc((void **)&mpidev->Bjmap2_d, (mpiaij->Bnnz2 + 1) * sizeof(PetscCount)));
-  PetscCallCUDA(cudaMalloc((void **)&mpidev->Bperm2_d, mpiaij->Btot2 * sizeof(PetscCount)));
-
-  PetscCallCUDA(cudaMalloc((void **)&mpidev->Cperm1_d, mpiaij->sendlen * sizeof(PetscCount)));
-  PetscCallCUDA(cudaMalloc((void **)&mpidev->sendbuf_d, mpiaij->sendlen * sizeof(PetscScalar)));
-  PetscCallCUDA(cudaMalloc((void **)&mpidev->recvbuf_d, mpiaij->recvlen * sizeof(PetscScalar)));
-
-  PetscCallCUDA(cudaMemcpy(mpidev->Ajmap1_d, mpiaij->Ajmap1, (mpiaij->Annz + 1) * sizeof(PetscCount), cudaMemcpyHostToDevice));
-  PetscCallCUDA(cudaMemcpy(mpidev->Aperm1_d, mpiaij->Aperm1, mpiaij->Atot1 * sizeof(PetscCount), cudaMemcpyHostToDevice));
-
-  PetscCallCUDA(cudaMemcpy(mpidev->Bjmap1_d, mpiaij->Bjmap1, (mpiaij->Bnnz + 1) * sizeof(PetscCount), cudaMemcpyHostToDevice));
-  PetscCallCUDA(cudaMemcpy(mpidev->Bperm1_d, mpiaij->Bperm1, mpiaij->Btot1 * sizeof(PetscCount), cudaMemcpyHostToDevice));
-
-  PetscCallCUDA(cudaMemcpy(mpidev->Aimap2_d, mpiaij->Aimap2, mpiaij->Annz2 * sizeof(PetscCount), cudaMemcpyHostToDevice));
-  PetscCallCUDA(cudaMemcpy(mpidev->Ajmap2_d, mpiaij->Ajmap2, (mpiaij->Annz2 + 1) * sizeof(PetscCount), cudaMemcpyHostToDevice));
-  PetscCallCUDA(cudaMemcpy(mpidev->Aperm2_d, mpiaij->Aperm2, mpiaij->Atot2 * sizeof(PetscCount), cudaMemcpyHostToDevice));
-
-  PetscCallCUDA(cudaMemcpy(mpidev->Bimap2_d, mpiaij->Bimap2, mpiaij->Bnnz2 * sizeof(PetscCount), cudaMemcpyHostToDevice));
-  PetscCallCUDA(cudaMemcpy(mpidev->Bjmap2_d, mpiaij->Bjmap2, (mpiaij->Bnnz2 + 1) * sizeof(PetscCount), cudaMemcpyHostToDevice));
-  PetscCallCUDA(cudaMemcpy(mpidev->Bperm2_d, mpiaij->Bperm2, mpiaij->Btot2 * sizeof(PetscCount), cudaMemcpyHostToDevice));
-
-  PetscCallCUDA(cudaMemcpy(mpidev->Cperm1_d, mpiaij->Cperm1, mpiaij->sendlen * sizeof(PetscCount), cudaMemcpyHostToDevice));
+  // Put the COO struct in a container and then attach that to the matrix
+  PetscCall(PetscContainerCreate(PETSC_COMM_SELF, &container_d));
+  PetscCall(PetscContainerSetPointer(container_d, coo_d));
+  PetscCall(PetscContainerSetUserDestroy(container_d, MatCOOStructDestroy_MPIAIJCUSPARSE));
+  PetscCall(PetscObjectCompose((PetscObject)mat, "__PETSc_MatCOOStruct_Device", (PetscObject)container_d));
+  PetscCall(PetscContainerDestroy(&container_d));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -163,26 +160,32 @@ __global__ static void MatAddRemoteCOOValues(const PetscScalar kv[], PetscCount 
 
 static PetscErrorCode MatSetValuesCOO_MPIAIJCUSPARSE(Mat mat, const PetscScalar v[], InsertMode imode)
 {
-  Mat_MPIAIJ         *mpiaij = static_cast<Mat_MPIAIJ *>(mat->data);
-  Mat_MPIAIJCUSPARSE *mpidev = static_cast<Mat_MPIAIJCUSPARSE *>(mpiaij->spptr);
-  Mat                 A = mpiaij->A, B = mpiaij->B;
-  PetscCount          Annz = mpiaij->Annz, Annz2 = mpiaij->Annz2, Bnnz = mpiaij->Bnnz, Bnnz2 = mpiaij->Bnnz2;
-  PetscScalar        *Aa, *Ba = NULL;
-  PetscScalar        *vsend = mpidev->sendbuf_d, *v2 = mpidev->recvbuf_d;
-  const PetscScalar  *v1     = v;
-  const PetscCount   *Ajmap1 = mpidev->Ajmap1_d, *Ajmap2 = mpidev->Ajmap2_d, *Aimap2 = mpidev->Aimap2_d;
-  const PetscCount   *Bjmap1 = mpidev->Bjmap1_d, *Bjmap2 = mpidev->Bjmap2_d, *Bimap2 = mpidev->Bimap2_d;
-  const PetscCount   *Aperm1 = mpidev->Aperm1_d, *Aperm2 = mpidev->Aperm2_d, *Bperm1 = mpidev->Bperm1_d, *Bperm2 = mpidev->Bperm2_d;
-  const PetscCount   *Cperm1 = mpidev->Cperm1_d;
-  PetscMemType        memtype;
-  PetscMPIInt         size;
+  Mat_MPIAIJ          *mpiaij = static_cast<Mat_MPIAIJ *>(mat->data);
+  Mat                  A = mpiaij->A, B = mpiaij->B;
+  PetscScalar         *Aa, *Ba;
+  const PetscScalar   *v1 = v;
+  PetscMemType         memtype;
+  PetscMPIInt          size;
+  PetscContainer       container;
+  MatCOOStruct_MPIAIJ *coo;
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)mat), &size));
+  PetscObjectQuery((PetscObject)mat, "__PETSc_MatCOOStruct_Device", (PetscObject *)&container);
+  PetscCheck(container, PetscObjectComm((PetscObject)mat), PETSC_ERR_PLIB, "Not found MatCOOStruct on this matrix");
+  PetscContainerGetPointer(container, (void **)&coo);
+
+  PetscCount        Annz = coo->Annz, Annz2 = coo->Annz2, Bnnz = coo->Bnnz, Bnnz2 = coo->Bnnz2;
+  PetscScalar      *vsend = coo->sendbuf, *v2 = coo->recvbuf;
+  const PetscCount *Ajmap1 = coo->Ajmap1, *Ajmap2 = coo->Ajmap2, *Aimap2 = coo->Aimap2;
+  const PetscCount *Bjmap1 = coo->Bjmap1, *Bjmap2 = coo->Bjmap2, *Bimap2 = coo->Bimap2;
+  const PetscCount *Aperm1 = coo->Aperm1, *Aperm2 = coo->Aperm2, *Bperm1 = coo->Bperm1, *Bperm2 = coo->Bperm2;
+  const PetscCount *Cperm1 = coo->Cperm1;
+
   PetscCall(PetscGetMemType(v, &memtype));
   if (PetscMemTypeHost(memtype)) { /* If user gave v[] in host, we need to copy it to device */
-    PetscCallCUDA(cudaMalloc((void **)&v1, mpiaij->coo_n * sizeof(PetscScalar)));
-    PetscCallCUDA(cudaMemcpy((void *)v1, v, mpiaij->coo_n * sizeof(PetscScalar), cudaMemcpyHostToDevice));
+    PetscCallCUDA(cudaMalloc((void **)&v1, coo->n * sizeof(PetscScalar)));
+    PetscCallCUDA(cudaMemcpy((void *)v1, v, coo->n * sizeof(PetscScalar), cudaMemcpyHostToDevice));
   }
 
   if (imode == INSERT_VALUES) {
@@ -194,19 +197,19 @@ static PetscErrorCode MatSetValuesCOO_MPIAIJCUSPARSE(Mat mat, const PetscScalar 
   }
 
   /* Pack entries to be sent to remote */
-  if (mpiaij->sendlen) {
-    MatPackCOOValues<<<(mpiaij->sendlen + 255) / 256, 256>>>(v1, mpiaij->sendlen, Cperm1, vsend);
+  if (coo->sendlen) {
+    MatPackCOOValues<<<(coo->sendlen + 255) / 256, 256>>>(v1, coo->sendlen, Cperm1, vsend);
     PetscCallCUDA(cudaPeekAtLastError());
   }
 
   /* Send remote entries to their owner and overlap the communication with local computation */
-  PetscCall(PetscSFReduceWithMemTypeBegin(mpiaij->coo_sf, MPIU_SCALAR, PETSC_MEMTYPE_CUDA, vsend, PETSC_MEMTYPE_CUDA, v2, MPI_REPLACE));
+  PetscCall(PetscSFReduceWithMemTypeBegin(coo->sf, MPIU_SCALAR, PETSC_MEMTYPE_CUDA, vsend, PETSC_MEMTYPE_CUDA, v2, MPI_REPLACE));
   /* Add local entries to A and B */
   if (Annz + Bnnz > 0) {
     MatAddLocalCOOValues<<<(Annz + Bnnz + 255) / 256, 256>>>(v1, imode, Annz, Ajmap1, Aperm1, Aa, Bnnz, Bjmap1, Bperm1, Ba);
     PetscCallCUDA(cudaPeekAtLastError());
   }
-  PetscCall(PetscSFReduceEnd(mpiaij->coo_sf, MPIU_SCALAR, vsend, v2, MPI_REPLACE));
+  PetscCall(PetscSFReduceEnd(coo->sf, MPIU_SCALAR, vsend, v2, MPI_REPLACE));
 
   /* Add received remote entries to A and B */
   if (Annz2 + Bnnz2 > 0) {
@@ -402,8 +405,6 @@ PetscErrorCode MatDestroy_MPIAIJCUSPARSE(Mat A)
 
   PetscFunctionBegin;
   PetscCheck(cusparseStruct, PETSC_COMM_SELF, PETSC_ERR_COR, "Missing spptr");
-  /* Free COO */
-  PetscCall(MatResetPreallocationCOO_MPIAIJCUSPARSE(A));
   PetscCallCXX(delete cusparseStruct);
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatMPIAIJSetPreallocation_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatMPIAIJGetLocalMatMerge_C", NULL));

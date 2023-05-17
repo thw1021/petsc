@@ -316,12 +316,6 @@ struct Mat_SeqAIJCUSPARSE {
 #endif
   THRUSTINTARRAY *csr2csc_i;
   THRUSTINTARRAY *coords; /* permutation array used in MatSeqAIJCUSPARSEMergeMats */
-
-  /* COO support */
-  PetscCount *jmap_d; /* perm[disp+jmap[i]..disp+jmap[i+1]) gives indices of entries in v[] associated with i-th nonzero of the matrix */
-  PetscCount *perm_d;
-
-  Mat_SeqAIJCUSPARSE() : jmap_d(NULL), perm_d(NULL) { }
 };
 
 typedef struct Mat_SeqAIJCUSPARSETriFactors *Mat_SeqAIJCUSPARSETriFactors_p;
