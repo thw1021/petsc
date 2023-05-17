@@ -5,9 +5,12 @@ class Configure(config.package.GNUPackage):
   def __init__(self, framework):
     config.package.GNUPackage.__init__(self, framework)
     self.version          = '4.1.1'
-    self.download         = ['https://github.com/pmodels/mpich/releases/download/v'+self.version+'/mpich-'+self.version+'.tar.gz',
+    self.gitcommit        = 'v' + self.version
+    self.download         = ['https://github.com/pmodels/mpich/releases/download/'+self.gitcommit+'/mpich-'+self.version+'.tar.gz',
                              'https://www.mpich.org/static/downloads/'+self.version+'/mpich-'+self.version+'.tar.gz', # does not always work from Python? So add in ftp.mcs URL below
-                             'https://ftp.mcs.anl.gov/pub/petsc/externalpackages'+'/mpich-'+self.version+'.tar.gz']
+                             'https://ftp.mcs.anl.gov/pub/petsc/externalpackages'+'/mpich-'+self.version+'.tar.gz',
+                             'git://https://github.com/pmodels/mpich.git']
+    self.gitsubmodules    = ['.']
     self.downloaddirnames = ['mpich']
     self.skippackagewithoptions = 1
     self.isMPI = 1
@@ -91,6 +94,15 @@ class Configure(config.package.GNUPackage):
     args.append('--disable-maintainer-mode')
     args.append('--disable-dependency-tracking')
     return args
+
+  def gitPreReqCheck(self):
+    return self.programs.autoreconf and self.programs.libtoolize
+
+  def preInstall(self):
+    if self.retriever.isDirectoryGitRepo(self.packageDir):
+      # no need to bootstrap tarballs
+      self.Bootstrap('./autogen.sh')
+    return super().preInstall()
 
   def Install(self):
     '''After downloading and installing MPICH we need to reset the compilers to use those defined by the MPICH install'''
