@@ -4716,6 +4716,7 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJ(Mat mat, PetscCount coo_n, PetscInt
 
   // Put the COO struct in a container and then attach that to the matrix
   PetscMalloc1(1, &coo);
+  coo->nz   = nnz;
   coo->n    = coo_n;
   coo->Atot = coo_n - nneg; // Annz is seqaij->nz, so no need to record that again
   coo->jmap = jmap;         // of length nnz+1

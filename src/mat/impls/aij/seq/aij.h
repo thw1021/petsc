@@ -165,6 +165,7 @@ typedef struct {
 } Mat_SeqAIJ;
 
 typedef struct {
+  PetscInt    nz;   /* nz of the matrix after assembly */
   PetscCount  n;    /* Number of entries in MatSetPreallocationCOO() */
   PetscCount  Atot; /* Total number of valid (i.e., w/ non-negative indices) entries in the COO array */
   PetscCount *jmap; /* perm[jmap[i]..jmap[i+1]) give indices of entries in v[] associated with i-th nonzero of the matrix */
