@@ -646,7 +646,7 @@ void PetscValidFunction(T, int);
         b1[2] = -PetscImaginaryPart(b0); \
         b1[3] = PetscImaginaryPart(b0); \
         PetscCall(MPIU_Allreduce(b1, b2, 5, MPIU_REAL, MPIU_MAX, PetscObjectComm((PetscObject)(a)))); \
-        PetscCheck(b2[4] > 0 || (PetscEqualReal(-b2[0], b2[1]) && PetscEqualReal(-b2[2], b2[3])), PetscObjectComm((PetscObject)(a)), PETSC_ERR_ARG_WRONG, "Scalar value must be same on all processes, argument # %d", arg); \
+        PetscCheck(b2[4] > 0 || (PetscIsCloseAtTol(-b2[0], b2[1], PETSC_SMALL, PETSC_SMALL) && PetscIsCloseAtTol(-b2[2], b2[3], PETSC_SMALL, PETSC_SMALL)), PetscObjectComm((PetscObject)(a)), PETSC_ERR_ARG_WRONG, "Scalar value must be same on all processes, argument # %d", arg); \
       } while (0)
 
     #define PetscValidLogicalCollectiveReal(a, b, arg) \
@@ -660,7 +660,7 @@ void PetscValidFunction(T, int);
         b1[0] = -b0; \
         b1[1] = b0; \
         PetscCall(MPIU_Allreduce(b1, b2, 3, MPIU_REAL, MPIU_MAX, PetscObjectComm((PetscObject)(a)))); \
-        PetscCheck(b2[2] > 0 || PetscEqualReal(-b2[0], b2[1]), PetscObjectComm((PetscObject)(a)), PETSC_ERR_ARG_WRONG, "Real value must be same on all processes, argument # %d", arg); \
+        PetscCheck(b2[2] > 0 || PetscIsCloseAtTol(-b2[0], b2[1], PETSC_SMALL, PETSC_SMALL), PetscObjectComm((PetscObject)(a)), PETSC_ERR_ARG_WRONG, "Real value must be same on all processes, argument # %d", arg); \
       } while (0)
 
     #define PetscValidLogicalCollectiveInt(a, b, arg) \
