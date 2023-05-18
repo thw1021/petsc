@@ -4296,6 +4296,8 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJCUSPARSE(Mat mat, PetscCount coo_n, 
   PetscCall(MatSetPreallocationCOO_SeqAIJ(mat, coo_n, i, j));
   if (dev_ij) PetscCall(PetscFree2(i, j));
   mat->offloadmask = PETSC_OFFLOAD_CPU;
+  // Create the GPU memory
+  PetscCall(MatSeqAIJCUSPARSECopyToGPU(mat));
 
   // Copy the COO struct to device
   PetscCall(PetscObjectQuery((PetscObject)mat, "__PETSc_MatCOOStruct_Host", (PetscObject *)&container_h));
@@ -4341,8 +4343,8 @@ PetscErrorCode MatSetValuesCOO_SeqAIJCUSPARSE(Mat A, const PetscScalar v[], Inse
   PetscFunctionBegin;
   if (!dev->mat) PetscCall(MatSeqAIJCUSPARSECopyToGPU(A));
 
-  PetscObjectQuery((PetscObject)A, "__PETSc_MatCOOStruct_Device", (PetscObject *)&container);
-  PetscContainerGetPointer(container, (void **)&coo);
+  PetscCall(PetscObjectQuery((PetscObject)A, "__PETSc_MatCOOStruct_Device", (PetscObject *)&container));
+  PetscCall(PetscContainerGetPointer(container, (void **)&coo));
 
   PetscCall(PetscGetMemType(v, &memtype));
   if (PetscMemTypeHost(memtype)) { /* If user gave v[] in host, we might need to copy it to device if any */

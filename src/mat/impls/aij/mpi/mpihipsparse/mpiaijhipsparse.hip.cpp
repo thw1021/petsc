@@ -10,8 +10,6 @@
 #include <thrust/unique.h>
 #include <petscsf.h>
 
-static PetscErrorCode MatSetOps_MPIAIJHIPSPARSE(Mat);
-
 struct VecHIPEquals {
   template <typename Tuple>
   __host__ __device__ void operator()(Tuple t)
@@ -20,67 +18,37 @@ struct VecHIPEquals {
   }
 };
 
-static PetscErrorCode MatResetPreallocationCOO_MPIAIJHIPSPARSE(Mat mat)
+static PetscErrorCode MatCOOStructDestroy_MPIAIJCUSPARSE(void *data)
 {
-  Mat_MPIAIJ          *a    = (Mat_MPIAIJ *)mat->data;
-  Mat_MPIAIJHIPSPARSE *cusp = (Mat_MPIAIJHIPSPARSE *)a->spptr;
+  MatCOOStruct_MPIAIJ *coo = (MatCOOStruct_MPIAIJ *)data;
 
   PetscFunctionBegin;
-  // refcnt = 1 means 'mat' is the last owner of the coo data, therefore we free it.
-  if (cusp && a->coo_refcnt && (*a->coo_refcnt == 1)) {
-    if (cusp->use_extended_coo) {
-      PetscCallHIP(hipFree(cusp->Ajmap1_d));
-      PetscCallHIP(hipFree(cusp->Aperm1_d));
-      PetscCallHIP(hipFree(cusp->Bjmap1_d));
-      PetscCallHIP(hipFree(cusp->Bperm1_d));
-      PetscCallHIP(hipFree(cusp->Aimap2_d));
-      PetscCallHIP(hipFree(cusp->Ajmap2_d));
-      PetscCallHIP(hipFree(cusp->Aperm2_d));
-      PetscCallHIP(hipFree(cusp->Bimap2_d));
-      PetscCallHIP(hipFree(cusp->Bjmap2_d));
-      PetscCallHIP(hipFree(cusp->Bperm2_d));
-      PetscCallHIP(hipFree(cusp->Cperm1_d));
-      PetscCallHIP(hipFree(cusp->sendbuf_d));
-      PetscCallHIP(hipFree(cusp->recvbuf_d));
-    }
-    cusp->use_extended_coo = PETSC_FALSE;
-    delete cusp->coo_p;
-    delete cusp->coo_pw;
-    cusp->coo_p  = NULL;
-    cusp->coo_pw = NULL;
-  }
+  PetscCall(PetscSFDestroy(&coo->sf));
+  PetscCallHIP(hipFree(coo->Ajmap1));
+  PetscCallHIP(hipFree(coo->Aperm1));
+  PetscCallHIP(hipFree(coo->Bjmap1));
+  PetscCallHIP(hipFree(coo->Bperm1));
+  PetscCallHIP(hipFree(coo->Aimap2));
+  PetscCallHIP(hipFree(coo->Ajmap2));
+  PetscCallHIP(hipFree(coo->Aperm2));
+  PetscCallHIP(hipFree(coo->Bimap2));
+  PetscCallHIP(hipFree(coo->Bjmap2));
+  PetscCallHIP(hipFree(coo->Bperm2));
+  PetscCallHIP(hipFree(coo->Cperm1));
+  PetscCallHIP(hipFree(coo->sendbuf));
+  PetscCallHIP(hipFree(coo->recvbuf));
+  PetscCall(PetscFree(coo));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
-template <typename Tuple>
-struct IsNotOffDiagT {
-  PetscInt _cstart, _cend;
-
-  IsNotOffDiagT(PetscInt cstart, PetscInt cend) : _cstart(cstart), _cend(cend) { }
-  __host__ __device__ bool operator()(Tuple t) { return !(thrust::get<1>(t) < _cstart || thrust::get<1>(t) >= _cend); }
-};
-
-struct IsOffDiag {
-  PetscInt _cstart, _cend;
-
-  IsOffDiag(PetscInt cstart, PetscInt cend) : _cstart(cstart), _cend(cend) { }
-  __host__ __device__ bool operator()(const PetscInt &c) { return c < _cstart || c >= _cend; }
-};
-
-struct GlobToLoc {
-  PetscInt _start;
-
-  GlobToLoc(PetscInt start) : _start(start) { }
-  __host__ __device__ PetscInt operator()(const PetscInt &c) { return c - _start; }
-};
 
 static PetscErrorCode MatSetPreallocationCOO_MPIAIJHIPSPARSE(Mat mat, PetscCount coo_n, PetscInt coo_i[], PetscInt coo_j[])
 {
   Mat_MPIAIJ          *mpiaij = (Mat_MPIAIJ *)mat->data;
-  Mat_MPIAIJHIPSPARSE *mpidev;
   PetscBool            dev_ij = PETSC_FALSE;
   PetscMemType         mtype  = PETSC_MEMTYPE_HOST;
   PetscInt            *i, *j;
+  PetscContainer       container_h, container_d;
+  MatCOOStruct_MPIAIJ *coo_h, *coo_d;
 
   PetscFunctionBegin;
   PetscCall(PetscFree(mpiaij->garray));
@@ -93,9 +61,6 @@ static PetscErrorCode MatSetPreallocationCOO_MPIAIJHIPSPARSE(Mat mat, PetscCount
   PetscCall(VecScatterDestroy(&mpiaij->Mvctx));
   mat->assembled     = PETSC_FALSE;
   mat->was_assembled = PETSC_FALSE;
-  // The two MatResetPreallocationCOO_* must be done in order. The former relies on values that might be destroyed by the latter
-  PetscCall(MatResetPreallocationCOO_MPIAIJHIPSPARSE(mat));
-  PetscCall(MatResetPreallocationCOO_MPIAIJ(mat));
   PetscCall(PetscGetMemType(coo_i, &mtype));
   if (PetscMemTypeDevice(mtype)) {
     dev_ij = PETSC_TRUE;
@@ -109,46 +74,50 @@ static PetscErrorCode MatSetPreallocationCOO_MPIAIJHIPSPARSE(Mat mat, PetscCount
 
   PetscCall(MatSetPreallocationCOO_MPIAIJ(mat, coo_n, coo_i, coo_j));
   if (dev_ij) PetscCall(PetscFree2(i, j));
-
   mat->offloadmask = PETSC_OFFLOAD_CPU;
-  /* creates the GPU memory */
+  // Create the GPU memory
   PetscCall(MatSeqAIJHIPSPARSECopyToGPU(mpiaij->A));
   PetscCall(MatSeqAIJHIPSPARSECopyToGPU(mpiaij->B));
-  mpidev = static_cast<Mat_MPIAIJHIPSPARSE *>(mpiaij->spptr);
 
-  PetscCallHIP(hipMalloc((void **)&mpidev->Ajmap1_d, (mpiaij->Annz + 1) * sizeof(PetscCount)));
-  PetscCallHIP(hipMalloc((void **)&mpidev->Aperm1_d, mpiaij->Atot1 * sizeof(PetscCount)));
+  // Copy the COO struct to device
+  PetscCall(PetscObjectQuery((PetscObject)mat, "__PETSc_MatCOOStruct_Host", (PetscObject *)&container_h));
+  PetscCall(PetscContainerGetPointer(container_h, (void **)&coo_h));
+  PetscCall(PetscMalloc1(1, &coo_d));
+  *coo_d = *coo_h; // do a shallow copy and then amend fields in coo_d
 
-  PetscCallHIP(hipMalloc((void **)&mpidev->Bjmap1_d, (mpiaij->Bnnz + 1) * sizeof(PetscCount)));
-  PetscCallHIP(hipMalloc((void **)&mpidev->Bperm1_d, mpiaij->Btot1 * sizeof(PetscCount)));
+  PetscCall(PetscObjectReference((PetscObject)coo_d->sf)); // Since we destroy the sf in both coo_h and coo_d
+  PetscCallHIP(hipMalloc((void **)&coo_d->Ajmap1, (coo_h->Annz + 1) * sizeof(PetscCount)));
+  PetscCallHIP(hipMalloc((void **)&coo_d->Aperm1, coo_h->Atot1 * sizeof(PetscCount)));
+  PetscCallHIP(hipMalloc((void **)&coo_d->Bjmap1, (coo_h->Bnnz + 1) * sizeof(PetscCount)));
+  PetscCallHIP(hipMalloc((void **)&coo_d->Bperm1, coo_h->Btot1 * sizeof(PetscCount)));
+  PetscCallHIP(hipMalloc((void **)&coo_d->Aimap2, coo_h->Annz2 * sizeof(PetscCount)));
+  PetscCallHIP(hipMalloc((void **)&coo_d->Ajmap2, (coo_h->Annz2 + 1) * sizeof(PetscCount)));
+  PetscCallHIP(hipMalloc((void **)&coo_d->Aperm2, coo_h->Atot2 * sizeof(PetscCount)));
+  PetscCallHIP(hipMalloc((void **)&coo_d->Bimap2, coo_h->Bnnz2 * sizeof(PetscCount)));
+  PetscCallHIP(hipMalloc((void **)&coo_d->Bjmap2, (coo_h->Bnnz2 + 1) * sizeof(PetscCount)));
+  PetscCallHIP(hipMalloc((void **)&coo_d->Bperm2, coo_h->Btot2 * sizeof(PetscCount)));
+  PetscCallHIP(hipMalloc((void **)&coo_d->Cperm1, coo_h->sendlen * sizeof(PetscCount)));
+  PetscCallHIP(hipMalloc((void **)&coo_d->sendbuf, coo_h->sendlen * sizeof(PetscScalar)));
+  PetscCallHIP(hipMalloc((void **)&coo_d->recvbuf, coo_h->recvlen * sizeof(PetscScalar)));
 
-  PetscCallHIP(hipMalloc((void **)&mpidev->Aimap2_d, mpiaij->Annz2 * sizeof(PetscCount)));
-  PetscCallHIP(hipMalloc((void **)&mpidev->Ajmap2_d, (mpiaij->Annz2 + 1) * sizeof(PetscCount)));
-  PetscCallHIP(hipMalloc((void **)&mpidev->Aperm2_d, mpiaij->Atot2 * sizeof(PetscCount)));
+  PetscCallHIP(hipMemcpy(coo_d->Ajmap1, coo_h->Ajmap1, (coo_h->Annz + 1) * sizeof(PetscCount), hipMemcpyHostToDevice));
+  PetscCallHIP(hipMemcpy(coo_d->Aperm1, coo_h->Aperm1, coo_h->Atot1 * sizeof(PetscCount), hipMemcpyHostToDevice));
+  PetscCallHIP(hipMemcpy(coo_d->Bjmap1, coo_h->Bjmap1, (coo_h->Bnnz + 1) * sizeof(PetscCount), hipMemcpyHostToDevice));
+  PetscCallHIP(hipMemcpy(coo_d->Bperm1, coo_h->Bperm1, coo_h->Btot1 * sizeof(PetscCount), hipMemcpyHostToDevice));
+  PetscCallHIP(hipMemcpy(coo_d->Aimap2, coo_h->Aimap2, coo_h->Annz2 * sizeof(PetscCount), hipMemcpyHostToDevice));
+  PetscCallHIP(hipMemcpy(coo_d->Ajmap2, coo_h->Ajmap2, (coo_h->Annz2 + 1) * sizeof(PetscCount), hipMemcpyHostToDevice));
+  PetscCallHIP(hipMemcpy(coo_d->Aperm2, coo_h->Aperm2, coo_h->Atot2 * sizeof(PetscCount), hipMemcpyHostToDevice));
+  PetscCallHIP(hipMemcpy(coo_d->Bimap2, coo_h->Bimap2, coo_h->Bnnz2 * sizeof(PetscCount), hipMemcpyHostToDevice));
+  PetscCallHIP(hipMemcpy(coo_d->Bjmap2, coo_h->Bjmap2, (coo_h->Bnnz2 + 1) * sizeof(PetscCount), hipMemcpyHostToDevice));
+  PetscCallHIP(hipMemcpy(coo_d->Bperm2, coo_h->Bperm2, coo_h->Btot2 * sizeof(PetscCount), hipMemcpyHostToDevice));
+  PetscCallHIP(hipMemcpy(coo_d->Cperm1, coo_h->Cperm1, coo_h->sendlen * sizeof(PetscCount), hipMemcpyHostToDevice));
 
-  PetscCallHIP(hipMalloc((void **)&mpidev->Bimap2_d, mpiaij->Bnnz2 * sizeof(PetscCount)));
-  PetscCallHIP(hipMalloc((void **)&mpidev->Bjmap2_d, (mpiaij->Bnnz2 + 1) * sizeof(PetscCount)));
-  PetscCallHIP(hipMalloc((void **)&mpidev->Bperm2_d, mpiaij->Btot2 * sizeof(PetscCount)));
-
-  PetscCallHIP(hipMalloc((void **)&mpidev->Cperm1_d, mpiaij->sendlen * sizeof(PetscCount)));
-  PetscCallHIP(hipMalloc((void **)&mpidev->sendbuf_d, mpiaij->sendlen * sizeof(PetscScalar)));
-  PetscCallHIP(hipMalloc((void **)&mpidev->recvbuf_d, mpiaij->recvlen * sizeof(PetscScalar)));
-
-  PetscCallHIP(hipMemcpy(mpidev->Ajmap1_d, mpiaij->Ajmap1, (mpiaij->Annz + 1) * sizeof(PetscCount), hipMemcpyHostToDevice));
-  PetscCallHIP(hipMemcpy(mpidev->Aperm1_d, mpiaij->Aperm1, mpiaij->Atot1 * sizeof(PetscCount), hipMemcpyHostToDevice));
-
-  PetscCallHIP(hipMemcpy(mpidev->Bjmap1_d, mpiaij->Bjmap1, (mpiaij->Bnnz + 1) * sizeof(PetscCount), hipMemcpyHostToDevice));
-  PetscCallHIP(hipMemcpy(mpidev->Bperm1_d, mpiaij->Bperm1, mpiaij->Btot1 * sizeof(PetscCount), hipMemcpyHostToDevice));
-
-  PetscCallHIP(hipMemcpy(mpidev->Aimap2_d, mpiaij->Aimap2, mpiaij->Annz2 * sizeof(PetscCount), hipMemcpyHostToDevice));
-  PetscCallHIP(hipMemcpy(mpidev->Ajmap2_d, mpiaij->Ajmap2, (mpiaij->Annz2 + 1) * sizeof(PetscCount), hipMemcpyHostToDevice));
-  PetscCallHIP(hipMemcpy(mpidev->Aperm2_d, mpiaij->Aperm2, mpiaij->Atot2 * sizeof(PetscCount), hipMemcpyHostToDevice));
-
-  PetscCallHIP(hipMemcpy(mpidev->Bimap2_d, mpiaij->Bimap2, mpiaij->Bnnz2 * sizeof(PetscCount), hipMemcpyHostToDevice));
-  PetscCallHIP(hipMemcpy(mpidev->Bjmap2_d, mpiaij->Bjmap2, (mpiaij->Bnnz2 + 1) * sizeof(PetscCount), hipMemcpyHostToDevice));
-  PetscCallHIP(hipMemcpy(mpidev->Bperm2_d, mpiaij->Bperm2, mpiaij->Btot2 * sizeof(PetscCount), hipMemcpyHostToDevice));
-
-  PetscCallHIP(hipMemcpy(mpidev->Cperm1_d, mpiaij->Cperm1, mpiaij->sendlen * sizeof(PetscCount), hipMemcpyHostToDevice));
+  // Put the COO struct in a container and then attach that to the matrix
+  PetscCall(PetscContainerCreate(PETSC_COMM_SELF, &container_d));
+  PetscCall(PetscContainerSetPointer(container_d, coo_d));
+  PetscCall(PetscContainerSetUserDestroy(container_d, MatCOOStructDestroy_MPIAIJCUSPARSE));
+  PetscCall(PetscObjectCompose((PetscObject)mat, "__PETSc_MatCOOStruct_Device", (PetscObject)container_d));
+  PetscCall(PetscContainerDestroy(&container_d));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -193,25 +162,29 @@ __global__ static void MatAddRemoteCOOValues(const PetscScalar kv[], PetscCount 
 static PetscErrorCode MatSetValuesCOO_MPIAIJHIPSPARSE(Mat mat, const PetscScalar v[], InsertMode imode)
 {
   Mat_MPIAIJ          *mpiaij = static_cast<Mat_MPIAIJ *>(mat->data);
-  Mat_MPIAIJHIPSPARSE *mpidev = static_cast<Mat_MPIAIJHIPSPARSE *>(mpiaij->spptr);
   Mat                  A = mpiaij->A, B = mpiaij->B;
-  PetscCount           Annz = mpiaij->Annz, Annz2 = mpiaij->Annz2, Bnnz = mpiaij->Bnnz, Bnnz2 = mpiaij->Bnnz2;
-  PetscScalar         *Aa, *Ba = NULL;
-  PetscScalar         *vsend = mpidev->sendbuf_d, *v2 = mpidev->recvbuf_d;
-  const PetscScalar   *v1     = v;
-  const PetscCount    *Ajmap1 = mpidev->Ajmap1_d, *Ajmap2 = mpidev->Ajmap2_d, *Aimap2 = mpidev->Aimap2_d;
-  const PetscCount    *Bjmap1 = mpidev->Bjmap1_d, *Bjmap2 = mpidev->Bjmap2_d, *Bimap2 = mpidev->Bimap2_d;
-  const PetscCount    *Aperm1 = mpidev->Aperm1_d, *Aperm2 = mpidev->Aperm2_d, *Bperm1 = mpidev->Bperm1_d, *Bperm2 = mpidev->Bperm2_d;
-  const PetscCount    *Cperm1 = mpidev->Cperm1_d;
+  PetscScalar         *Aa, *Ba;
+  const PetscScalar   *v1 = v;
   PetscMemType         memtype;
-  PetscMPIInt          size;
+  PetscContainer       container;
+  MatCOOStruct_MPIAIJ *coo;
 
   PetscFunctionBegin;
-  PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)mat), &size));
+  PetscCall(PetscObjectQuery((PetscObject)mat, "__PETSc_MatCOOStruct_Device", (PetscObject *)&container));
+  PetscCheck(container, PetscObjectComm((PetscObject)mat), PETSC_ERR_PLIB, "Not found MatCOOStruct on this matrix");
+  PetscCall(PetscContainerGetPointer(container, (void **)&coo));
+
+  PetscCount        Annz = coo->Annz, Annz2 = coo->Annz2, Bnnz = coo->Bnnz, Bnnz2 = coo->Bnnz2;
+  PetscScalar      *vsend = coo->sendbuf, *v2 = coo->recvbuf;
+  const PetscCount *Ajmap1 = coo->Ajmap1, *Ajmap2 = coo->Ajmap2, *Aimap2 = coo->Aimap2;
+  const PetscCount *Bjmap1 = coo->Bjmap1, *Bjmap2 = coo->Bjmap2, *Bimap2 = coo->Bimap2;
+  const PetscCount *Aperm1 = coo->Aperm1, *Aperm2 = coo->Aperm2, *Bperm1 = coo->Bperm1, *Bperm2 = coo->Bperm2;
+  const PetscCount *Cperm1 = coo->Cperm1;
+
   PetscCall(PetscGetMemType(v, &memtype));
   if (PetscMemTypeHost(memtype)) { /* If user gave v[] in host, we need to copy it to device */
-    PetscCallHIP(hipMalloc((void **)&v1, mpiaij->coo_n * sizeof(PetscScalar)));
-    PetscCallHIP(hipMemcpy((void *)v1, v, mpiaij->coo_n * sizeof(PetscScalar), hipMemcpyHostToDevice));
+    PetscCallHIP(hipMalloc((void **)&v1, coo->n * sizeof(PetscScalar)));
+    PetscCallHIP(hipMemcpy((void *)v1, v, coo->n * sizeof(PetscScalar), hipMemcpyHostToDevice));
   }
 
   if (imode == INSERT_VALUES) {
@@ -223,19 +196,19 @@ static PetscErrorCode MatSetValuesCOO_MPIAIJHIPSPARSE(Mat mat, const PetscScalar
   }
 
   /* Pack entries to be sent to remote */
-  if (mpiaij->sendlen) {
-    hipLaunchKernelGGL(HIP_KERNEL_NAME(MatPackCOOValues), dim3((mpiaij->sendlen + 255) / 256), dim3(256), 0, PetscDefaultHipStream, v1, mpiaij->sendlen, Cperm1, vsend);
+  if (coo->sendlen) {
+    hipLaunchKernelGGL(HIP_KERNEL_NAME(MatPackCOOValues), dim3((coo->sendlen + 255) / 256), dim3(256), 0, PetscDefaultHipStream, v1, coo->sendlen, Cperm1, vsend);
     PetscCallHIP(hipPeekAtLastError());
   }
 
   /* Send remote entries to their owner and overlap the communication with local computation */
-  PetscCall(PetscSFReduceWithMemTypeBegin(mpiaij->coo_sf, MPIU_SCALAR, PETSC_MEMTYPE_HIP, vsend, PETSC_MEMTYPE_HIP, v2, MPI_REPLACE));
+  PetscCall(PetscSFReduceWithMemTypeBegin(coo->sf, MPIU_SCALAR, PETSC_MEMTYPE_HIP, vsend, PETSC_MEMTYPE_HIP, v2, MPI_REPLACE));
   /* Add local entries to A and B */
   if (Annz + Bnnz > 0) {
     hipLaunchKernelGGL(HIP_KERNEL_NAME(MatAddLocalCOOValues), dim3((Annz + Bnnz + 255) / 256), dim3(256), 0, PetscDefaultHipStream, v1, imode, Annz, Ajmap1, Aperm1, Aa, Bnnz, Bjmap1, Bperm1, Ba);
     PetscCallHIP(hipPeekAtLastError());
   }
-  PetscCall(PetscSFReduceEnd(mpiaij->coo_sf, MPIU_SCALAR, vsend, v2, MPI_REPLACE));
+  PetscCall(PetscSFReduceEnd(coo->sf, MPIU_SCALAR, vsend, v2, MPI_REPLACE));
 
   /* Add received remote entries to A and B */
   if (Annz2 + Bnnz2 > 0) {
@@ -431,8 +404,6 @@ PetscErrorCode MatDestroy_MPIAIJHIPSPARSE(Mat A)
 
   PetscFunctionBegin;
   PetscCheck(hipsparseStruct, PETSC_COMM_SELF, PETSC_ERR_COR, "Missing spptr");
-  /* Free COO */
-  PetscCall(MatResetPreallocationCOO_MPIAIJHIPSPARSE(A));
   PetscCallCXX(delete hipsparseStruct);
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatMPIAIJSetPreallocation_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatMPIAIJGetLocalMatMerge_C", NULL));
@@ -441,23 +412,6 @@ PetscErrorCode MatDestroy_MPIAIJHIPSPARSE(Mat A)
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatHIPSPARSESetFormat_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatConvert_mpiaijhipsparse_hypre_C", NULL));
   PetscCall(MatDestroy_MPIAIJ(A));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode MatDuplicate_MPIAIJHIPSPARSE(Mat A, MatDuplicateOption dupOption, Mat *B)
-{
-  Mat_MPIAIJ          *Adata = static_cast<Mat_MPIAIJ *>(A->data), *Bdata;
-  Mat_MPIAIJHIPSPARSE *Adev  = static_cast<Mat_MPIAIJHIPSPARSE *>(Adata->spptr);
-  Mat                  mat;
-
-  PetscFunctionBegin;
-  PetscCall(MatDuplicate_MPIAIJ(A, dupOption, B));
-  mat   = *B;
-  Bdata = static_cast<Mat_MPIAIJ *>(mat->data);
-  PetscCallCXX(Bdata->spptr = new Mat_MPIAIJHIPSPARSE(*Adev)); // use the shallow copy ctor to copy A's coo info on device
-  // matrix defaultvectype was handled by MatDuplicate()
-  PetscCall(PetscObjectChangeTypeName((PetscObject)mat, MATMPIAIJHIPSPARSE));
-  PetscCall(MatSetOps_MPIAIJHIPSPARSE(mat));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -472,7 +426,6 @@ static PetscErrorCode MatSetOps_MPIAIJHIPSPARSE(Mat A)
   A->ops->destroy               = MatDestroy_MPIAIJHIPSPARSE;
   A->ops->zeroentries           = MatZeroEntries_MPIAIJHIPSPARSE;
   A->ops->productsetfromoptions = MatProductSetFromOptions_MPIAIJBACKEND;
-  A->ops->duplicate             = MatDuplicate_MPIAIJHIPSPARSE;
 
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatMPIAIJGetLocalMatMerge_C", MatMPIAIJGetLocalMatMerge_MPIAIJHIPSPARSE));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatMPIAIJSetPreallocation_C", MatMPIAIJSetPreallocation_MPIAIJHIPSPARSE));

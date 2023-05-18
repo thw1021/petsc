@@ -1248,8 +1248,8 @@ static PetscErrorCode MatSetValuesCOO_SeqAIJKokkos(Mat A, const PetscScalar v[],
   MatCOOStruct_SeqAIJKokkos *coo;
 
   PetscFunctionBegin;
-  PetscObjectQuery((PetscObject)A, "__PETSc_MatCOOStruct_Device", (PetscObject *)&container);
-  PetscContainerGetPointer(container, (void **)&coo);
+  PetscCall(PetscObjectQuery((PetscObject)A, "__PETSc_MatCOOStruct_Device", (PetscObject *)&container));
+  PetscCall(PetscContainerGetPointer(container, (void **)&coo));
 
   const auto &n    = coo->n;
   const auto &Annz = coo->nz;

@@ -6661,7 +6661,7 @@ PetscErrorCode MatSetPreallocationCOO_MPIAIJ(Mat mat, PetscCount coo_n, PetscInt
   PetscCall(MatCreateVecs(mpiaij->B, &mpiaij->lvec, NULL));
 
   // Put the COO struct in a container and then attach that to the matrix
-  PetscMalloc1(1, &coo);
+  PetscCall(PetscMalloc1(1, &coo));
   coo->n       = coo_n;
   coo->sf      = sf2;
   coo->sendlen = nleaves;

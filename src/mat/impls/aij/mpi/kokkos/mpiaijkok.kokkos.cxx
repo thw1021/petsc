@@ -1618,8 +1618,8 @@ static PetscErrorCode MatSetValuesCOO_MPIAIJKokkos(Mat mat, const PetscScalar v[
   MatCOOStruct_MPIAIJKokkos *coo;
 
   PetscFunctionBegin;
-  PetscObjectQuery((PetscObject)mat, "__PETSc_MatCOOStruct_Device", (PetscObject *)&container);
-  PetscContainerGetPointer(container, (void **)&coo);
+  PetscCall(PetscObjectQuery((PetscObject)mat, "__PETSc_MatCOOStruct_Device", (PetscObject *)&container));
+  PetscCall(PetscContainerGetPointer(container, (void **)&coo));
 
   const auto &n      = coo->n;
   const auto &Annz   = coo->Annz;

@@ -10,8 +10,6 @@
 #include <thrust/unique.h>
 #include <petscsf.h>
 
-static PetscErrorCode MatSetOps_MPIAIJCUSPARSE(Mat);
-
 struct VecCUDAEquals {
   template <typename Tuple>
   __host__ __device__ void operator()(Tuple t)
@@ -77,6 +75,9 @@ static PetscErrorCode MatSetPreallocationCOO_MPIAIJCUSPARSE(Mat mat, PetscCount 
   PetscCall(MatSetPreallocationCOO_MPIAIJ(mat, coo_n, i, j));
   if (dev_ij) PetscCall(PetscFree2(i, j));
   mat->offloadmask = PETSC_OFFLOAD_CPU;
+  // Create the GPU memory
+  PetscCall(MatSeqAIJCUSPARSECopyToGPU(mpiaij->A));
+  PetscCall(MatSeqAIJCUSPARSECopyToGPU(mpiaij->B));
 
   // Copy the COO struct to device
   PetscCall(PetscObjectQuery((PetscObject)mat, "__PETSc_MatCOOStruct_Host", (PetscObject *)&container_h));
@@ -165,15 +166,13 @@ static PetscErrorCode MatSetValuesCOO_MPIAIJCUSPARSE(Mat mat, const PetscScalar 
   PetscScalar         *Aa, *Ba;
   const PetscScalar   *v1 = v;
   PetscMemType         memtype;
-  PetscMPIInt          size;
   PetscContainer       container;
   MatCOOStruct_MPIAIJ *coo;
 
   PetscFunctionBegin;
-  PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)mat), &size));
-  PetscObjectQuery((PetscObject)mat, "__PETSc_MatCOOStruct_Device", (PetscObject *)&container);
+  PetscCall(PetscObjectQuery((PetscObject)mat, "__PETSc_MatCOOStruct_Device", (PetscObject *)&container));
   PetscCheck(container, PetscObjectComm((PetscObject)mat), PETSC_ERR_PLIB, "Not found MatCOOStruct on this matrix");
-  PetscContainerGetPointer(container, (void **)&coo);
+  PetscCall(PetscContainerGetPointer(container, (void **)&coo));
 
   PetscCount        Annz = coo->Annz, Annz2 = coo->Annz2, Bnnz = coo->Bnnz, Bnnz2 = coo->Bnnz2;
   PetscScalar      *vsend = coo->sendbuf, *v2 = coo->recvbuf;
@@ -438,23 +437,6 @@ static PetscErrorCode MatSetUp_MPI_HASH_CUSPARSE(Mat A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatDuplicate_MPIAIJCUSPARSE(Mat A, MatDuplicateOption dupOption, Mat *B)
-{
-  Mat_MPIAIJ         *Adata = static_cast<Mat_MPIAIJ *>(A->data), *Bdata;
-  Mat_MPIAIJCUSPARSE *Adev  = static_cast<Mat_MPIAIJCUSPARSE *>(Adata->spptr);
-  Mat                 mat;
-
-  PetscFunctionBegin;
-  PetscCall(MatDuplicate_MPIAIJ(A, dupOption, B));
-  mat   = *B;
-  Bdata = static_cast<Mat_MPIAIJ *>(mat->data);
-  PetscCallCXX(Bdata->spptr = new Mat_MPIAIJCUSPARSE(*Adev)); // use the shallow copy ctor to copy A's coo info on device
-  // matrix defaultvectype was handled by MatDuplicate()
-  PetscCall(PetscObjectChangeTypeName((PetscObject)mat, MATMPIAIJCUSPARSE));
-  PetscCall(MatSetOps_MPIAIJCUSPARSE(mat));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 static PetscErrorCode MatSetOps_MPIAIJCUSPARSE(Mat A)
 {
   PetscFunctionBegin;
@@ -467,7 +449,6 @@ static PetscErrorCode MatSetOps_MPIAIJCUSPARSE(Mat A)
   A->ops->zeroentries           = MatZeroEntries_MPIAIJCUSPARSE;
   A->ops->productsetfromoptions = MatProductSetFromOptions_MPIAIJBACKEND;
   A->ops->setup                 = MatSetUp_MPI_HASH_CUSPARSE;
-  A->ops->duplicate             = MatDuplicate_MPIAIJCUSPARSE;
 
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatMPIAIJGetLocalMatMerge_C", MatMPIAIJGetLocalMatMerge_MPIAIJCUSPARSE));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatMPIAIJSetPreallocation_C", MatMPIAIJSetPreallocation_MPIAIJCUSPARSE));
