@@ -100,7 +100,7 @@ Monday, June 5
 +------------+-----------------------------------------------------------------------------------------------------------------------------------------------+---------------------------+
 | 4:30 pm    | *Multiscle, Multiphysics Simulation Through Application Composition Using MOOSE*                                                              | `Derek Gaston`_           |
 +------------+-----------------------------------------------------------------------------------------------------------------------------------------------+---------------------------+
-| 5:00 pm    | *Newton Trust-Region for Simulating High-Temperature Multiphase Flow and Reactive Transport within Large-scale Engineered Subsurface Systems* | `Heeho Park`_             |
+| 5:00 pm    | *PETSc Newton Trust-Region for Simulating Large-scale Engineered Subsurface Systems with PFLOTRAN*                                            | `Heeho Park`_             |
 +------------+-----------------------------------------------------------------------------------------------------------------------------------------------+---------------------------+
 | 5:30 pm    | End of first day                                                                                                                              |                           |
 +------------+-----------------------------------------------------------------------------------------------------------------------------------------------+---------------------------+
@@ -465,7 +465,7 @@ Abstracts
 
 .. _`Heeho Park`:
 
-.. topic:: *Heeho Park*, **Newton Trust-Region for Simulating High-Temperature Multiphase Flow and Reactive Transport within Large-scale Engineered Subsurface Systems**
+.. topic:: *Heeho Park*, **PETSc Newton Trust-Region for Simulating Large-scale Engineered Subsurface Systems with PFLOTRAN**
 
     Abstract forthcoming
 
