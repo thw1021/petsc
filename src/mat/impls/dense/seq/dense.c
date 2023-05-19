@@ -3396,7 +3396,6 @@ PetscErrorCode MatCreateMPIMatConcatenateSeqMat_SeqDense(MPI_Comm comm, Mat inma
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-
 PetscErrorCode MatDenseCreateColumnVec_Private(Mat A, Vec *v)
 {
   PetscBool   isstd, iskok, iscuda, iship;
@@ -3459,7 +3458,7 @@ static PetscErrorCode VecPlaceArrayMemType(Vec v, const PetscScalar *array, Pets
 #endif
     break;
   default:
-    SETERRQ(PetscObjectComm((PetscObject) v), PETSC_ERR_PLIB, "Memory type unsupported for array placement");
+    SETERRQ(PetscObjectComm((PetscObject)v), PETSC_ERR_PLIB, "Memory type unsupported for array placement");
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -3482,7 +3481,7 @@ static PetscErrorCode VecResetArrayMemType(Vec v, PetscMemType memtype)
 #endif
     break;
   default:
-    SETERRQ(PetscObjectComm((PetscObject) v), PETSC_ERR_PLIB, "Memory type unsupported for array placement");
+    SETERRQ(PetscObjectComm((PetscObject)v), PETSC_ERR_PLIB, "Memory type unsupported for array placement");
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -3620,13 +3619,11 @@ PetscErrorCode MatDenseRestoreSubMatrix_SeqDense(Mat A, Mat *v)
 static PetscErrorCode MatSeqDenseGetGemxArray_Private(Mat A_mat, PetscInt n, Vec *gemxarray)
 {
   PetscFunctionBegin;
-  Mat_SeqDense *d = (Mat_SeqDense *) A_mat->data;
+  Mat_SeqDense *d = (Mat_SeqDense *)A_mat->data;
   if (d->gemxarray) {
     PetscInt vec_n;
     PetscCall(VecGetLocalSize(d->gemxarray, &vec_n));
-    if (vec_n < n) {
-      PetscCall(VecDestroy(&d->gemxarray));
-    }
+    if (vec_n < n) { PetscCall(VecDestroy(&d->gemxarray)); }
   }
   if (!d->gemxarray) {
     PetscCall(VecCreate(PetscObjectComm((PetscObject)A_mat), &d->gemxarray));
@@ -3638,77 +3635,19 @@ static PetscErrorCode MatSeqDenseGetGemxArray_Private(Mat A_mat, PetscInt n, Vec
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-// PetscCUPMMemcpy() is for C++
-// PetscDeviceMemcpy() requires the data to be allocated with PetscDeviceMalloc()
-// so this is here to fill the gaps
-PETSC_INTERN PetscErrorCode PetscCUPMMemcpy_C(void *dst, const void *src, size_t n)
+#define TRANSOP_FROM_CHAR(PRE, t) (t == 'c' || t == 'C') ? PRE##BLAS_OP_C : (t == 't' || t == 'T') ? PRE##BLAS_OP_T : PRE##BLAS_OP_N
+
+#if defined(PETSC_HAVE_CUDA)
+static cublasOperation_t cublasOperationFromChar_Private(char t)
 {
-  PetscMemType memtype_dst;
-  PetscMemType memtype_src;
-
-  PetscFunctionBegin;
-  PetscCall(PetscGetMemType(dst, &memtype_dst));
-  PetscCall(PetscGetMemType(src, &memtype_src));
-
-  PetscInt memtype_or = memtype_dst | memtype_src;
-  PetscDeviceType dev_type = PETSC_DEVICE_HOST;
-  switch (memtype_or) {
-  case PETSC_MEMTYPE_HOST:
-    PetscCall(PetscMemcpy(dst, src, n));
-    PetscFunctionReturn(PETSC_SUCCESS);
-  case PETSC_MEMTYPE_CUDA:
-  case PETSC_MEMTYPE_NVSHMEM:
-    dev_type = PETSC_DEVICE_CUDA;
-    break;
-  case PETSC_MEMTYPE_HIP:
-    dev_type = PETSC_DEVICE_HIP;
-    break;
-  case PETSC_MEMTYPE_SYCL:
-    dev_type = PETSC_DEVICE_SYCL;
-    break;
-  default:
-    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Simple approach could not determine memcpy to %s from %s\n", PetscMemTypeToString(memtype_dst), PetscMemTypeToString(memtype_src));
-  }
-  PetscAssert(PetscDeviceInitialized(dev_type), PETSC_COMM_SELF, PETSC_ERR_PLIB, "Device memory but device not initialized?!");
-  switch (dev_type) {
-#if defined(PETSC_HAVE_CUDA)
-  case PETSC_MEMTYPE_CUDA:
-    PetscCallCUDA(cudaMemcpy(dst, src, n, cudaMemcpyDefault));
-    break;
-#endif
-#if defined(PETSC_HAVE_HIP)
-  case PETSC_MEMTYPE_HIP:
-    PetscCallHIP(hipMemcpy(dst, src, n, hipMemcpyDefault));
-    PetscUnreachable();
-    break;
-#endif
-  default:
-    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unsupported device type");
-    break;
-  }
-  if (PetscMemTypeHost(memtype_dst) && PetscMemTypeDevice(memtype_src)) {
-    PetscCall(PetscLogGpuToCpu(1.0 * n));
-  }
-  if (PetscMemTypeDevice(memtype_dst) && PetscMemTypeHost(memtype_src)) {
-    PetscCall(PetscLogCpuToGpu(1.0 * n));
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-#define TRANSOP_FROM_CHAR(PRE,t) \
-  (t == 'c' || t == 'C') ? PRE ## BLAS_OP_C : \
-  (t == 't' || t == 'T') ? PRE ## BLAS_OP_T : \
-                           PRE ## BLAS_OP_N
-
-#if defined(PETSC_HAVE_CUDA)
-static cublasOperation_t cublasOperationFromChar_Private(char t) {
-  return TRANSOP_FROM_CHAR(CU,t);
+  return TRANSOP_FROM_CHAR(CU, t);
 }
 #endif
 
 #if defined(PETSC_HAVE_HIP)
-static hipblasOperation_t hipblasOperationFromChar_Private(char t) {
-  return TRANSOP_FROM_CHAR(HIP,t);
+static hipblasOperation_t hipblasOperationFromChar_Private(char t)
+{
+  return TRANSOP_FROM_CHAR(HIP, t);
 }
 #endif
 
@@ -3718,52 +3657,46 @@ static PetscErrorCode PetscCUPMGEMV_C(PetscMemType memtype, char trans_A, PetscI
   PetscFunctionBegin;
   PetscLogDouble flops = 2.0 * m * n + (beta == 0.0 ? -1.0 : 1.0) * ((trans_A == 'n' || trans_A == 'N') ? m : n) + (alpha == 1.0 ? 0.0 : 1.0) * PetscMin(m, n);
   switch (memtype) {
-  case PETSC_MEMTYPE_HOST:
-    {
-      PetscBLASInt _m, _n, _lda, _incx, _incy;
+  case PETSC_MEMTYPE_HOST: {
+    PetscBLASInt _m, _n, _lda, _incx, _incy;
 
-      PetscCall(PetscBLASIntCast(m, &_m));
-      PetscCall(PetscBLASIntCast(n, &_n));
-      PetscCall(PetscBLASIntCast(ld_A, &_lda));
-      PetscCall(PetscBLASIntCast(inc_x, &_incx));
-      PetscCall(PetscBLASIntCast(inc_y, &_incy));
-      PetscCallBLAS("BLASgemv", BLASgemv_(&trans_A, &_m, &_n, &alpha, A, &_lda, x, &_incx, &beta, y, &_incy));
-      PetscCall(PetscLogFlops(flops));
-    }
-    break;
+    PetscCall(PetscBLASIntCast(m, &_m));
+    PetscCall(PetscBLASIntCast(n, &_n));
+    PetscCall(PetscBLASIntCast(ld_A, &_lda));
+    PetscCall(PetscBLASIntCast(inc_x, &_incx));
+    PetscCall(PetscBLASIntCast(inc_y, &_incy));
+    PetscCallBLAS("BLASgemv", BLASgemv_(&trans_A, &_m, &_n, &alpha, A, &_lda, x, &_incx, &beta, y, &_incy));
+    PetscCall(PetscLogFlops(flops));
+  } break;
 #if defined(PETSC_HAVE_CUDA)
-  case PETSC_MEMTYPE_CUDA:
-    {
-      cublasOperation_t _transa = cublasOperationFromChar_Private(trans_A);
-      PetscCuBLASInt _m, _n, _lda, _incx, _incy;
-      cublasHandle_t _handle;
-      PetscCall(PetscCuBLASIntCast(m, &_m));
-      PetscCall(PetscCuBLASIntCast(n, &_n));
-      PetscCall(PetscCuBLASIntCast(ld_A, &_lda));
-      PetscCall(PetscCuBLASIntCast(inc_x, &_incx));
-      PetscCall(PetscCuBLASIntCast(inc_y, &_incy));
-      PetscCall(PetscCUBLASGetHandle(&_handle));
-      PetscCallCUBLAS(cublasXgemv(_handle, _transa, _m, _n, &alpha, A, _lda, x, _incx, &beta, y, _incy));
-      PetscCall(PetscLogGpuFlops(flops));
-    }
-    break;
+  case PETSC_MEMTYPE_CUDA: {
+    cublasOperation_t _transa = cublasOperationFromChar_Private(trans_A);
+    PetscCuBLASInt    _m, _n, _lda, _incx, _incy;
+    cublasHandle_t    _handle;
+    PetscCall(PetscCuBLASIntCast(m, &_m));
+    PetscCall(PetscCuBLASIntCast(n, &_n));
+    PetscCall(PetscCuBLASIntCast(ld_A, &_lda));
+    PetscCall(PetscCuBLASIntCast(inc_x, &_incx));
+    PetscCall(PetscCuBLASIntCast(inc_y, &_incy));
+    PetscCall(PetscCUBLASGetHandle(&_handle));
+    PetscCallCUBLAS(cublasXgemv(_handle, _transa, _m, _n, &alpha, A, _lda, x, _incx, &beta, y, _incy));
+    PetscCall(PetscLogGpuFlops(flops));
+  } break;
 #endif
 #if defined(PETSC_HAVE_HIP)
-  case PETSC_MEMTYPE_HIP:
-    {
-      hipblasOperation_t _transa = hipblasOperationFromChar_Private(trans_A);
-      PetscHipBLASInt _m, _n, _lda, _incx, _incy;
-      hipblasHandle_t _handle;
-      PetscCall(PetscHipBLASIntCast(m, &_m));
-      PetscCall(PetscHipBLASIntCast(n, &_n));
-      PetscCall(PetscHipBLASIntCast(ld_A, &_lda));
-      PetscCall(PetscHipBLASIntCast(inc_x, &_incx));
-      PetscCall(PetscHipBLASIntCast(inc_y, &_incy));
-      PetscCall(PetscHIPBLASGetHandle(&_handle));
-      PetscCallHIPBLAS(hipblasXgemv(_handle, _transa, _m, _n, &alpha, A, _lda, x, _incx, &beta, y, _incy));
-      PetscCall(PetscLogGpuFlops(flops));
-    }
-    break;
+  case PETSC_MEMTYPE_HIP: {
+    hipblasOperation_t _transa = hipblasOperationFromChar_Private(trans_A);
+    PetscHipBLASInt    _m, _n, _lda, _incx, _incy;
+    hipblasHandle_t    _handle;
+    PetscCall(PetscHipBLASIntCast(m, &_m));
+    PetscCall(PetscHipBLASIntCast(n, &_n));
+    PetscCall(PetscHipBLASIntCast(ld_A, &_lda));
+    PetscCall(PetscHipBLASIntCast(inc_x, &_incx));
+    PetscCall(PetscHipBLASIntCast(inc_y, &_incy));
+    PetscCall(PetscHIPBLASGetHandle(&_handle));
+    PetscCallHIPBLAS(hipblasXgemv(_handle, _transa, _m, _n, &alpha, A, _lda, x, _incx, &beta, y, _incy));
+    PetscCall(PetscLogGpuFlops(flops));
+  } break;
 #endif
   default:
     SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unsupported device type");
@@ -3775,59 +3708,53 @@ static PetscErrorCode PetscCUPMGEMV_C(PetscMemType memtype, char trans_A, PetscI
 static PetscErrorCode PetscCUPMGEMM_C(PetscMemType memtype, char trans_A, char trans_B, PetscInt m, PetscInt n, PetscInt k, PetscScalar alpha, const PetscScalar *A, PetscInt ld_A, const PetscScalar *B, PetscInt ld_B, PetscScalar beta, PetscScalar *C, PetscInt ld_C)
 {
   PetscFunctionBegin;
-  PetscLogDouble flops = 2.0 * m * n * k + (beta == 0.0 ? -1.0 : 1.0) * m * n + (alpha == 1.0 ? 0.0: 1.0) * PetscMin(m * n, PetscMin(m * k, n * k));
+  PetscLogDouble flops = 2.0 * m * n * k + (beta == 0.0 ? -1.0 : 1.0) * m * n + (alpha == 1.0 ? 0.0 : 1.0) * PetscMin(m * n, PetscMin(m * k, n * k));
   switch (memtype) {
-  case PETSC_MEMTYPE_HOST:
-    {
-      PetscBLASInt _m, _n, _k, _lda, _ldb, _ldc;
+  case PETSC_MEMTYPE_HOST: {
+    PetscBLASInt _m, _n, _k, _lda, _ldb, _ldc;
 
-      PetscCall(PetscBLASIntCast(m, &_m));
-      PetscCall(PetscBLASIntCast(n, &_n));
-      PetscCall(PetscBLASIntCast(k, &_k));
-      PetscCall(PetscBLASIntCast(ld_A, &_lda));
-      PetscCall(PetscBLASIntCast(ld_B, &_ldb));
-      PetscCall(PetscBLASIntCast(ld_C, &_ldc));
-      PetscCallBLAS("BLASgemm", BLASgemm_(&trans_A, &trans_B, &_m, &_n, &_k, &alpha, A, &_lda, B, &_ldb, &beta, C, &_ldc));
-      PetscCall(PetscLogFlops(flops));
-    }
-    break;
+    PetscCall(PetscBLASIntCast(m, &_m));
+    PetscCall(PetscBLASIntCast(n, &_n));
+    PetscCall(PetscBLASIntCast(k, &_k));
+    PetscCall(PetscBLASIntCast(ld_A, &_lda));
+    PetscCall(PetscBLASIntCast(ld_B, &_ldb));
+    PetscCall(PetscBLASIntCast(ld_C, &_ldc));
+    PetscCallBLAS("BLASgemm", BLASgemm_(&trans_A, &trans_B, &_m, &_n, &_k, &alpha, A, &_lda, B, &_ldb, &beta, C, &_ldc));
+    PetscCall(PetscLogFlops(flops));
+  } break;
 #if defined(PETSC_HAVE_CUDA)
-  case PETSC_MEMTYPE_CUDA:
-    {
-      cublasOperation_t _transa = cublasOperationFromChar_Private(trans_A);
-      cublasOperation_t _transb = cublasOperationFromChar_Private(trans_B);
-      PetscCuBLASInt _m, _n, _k, _lda, _ldb, _ldc;
-      cublasHandle_t _handle;
-      PetscCall(PetscCuBLASIntCast(m, &_m));
-      PetscCall(PetscCuBLASIntCast(n, &_n));
-      PetscCall(PetscCuBLASIntCast(k, &_k));
-      PetscCall(PetscCuBLASIntCast(ld_A, &_lda));
-      PetscCall(PetscCuBLASIntCast(ld_B, &_ldb));
-      PetscCall(PetscCuBLASIntCast(ld_C, &_ldc));
-      PetscCall(PetscCUBLASGetHandle(&_handle));
-      PetscCallCUBLAS(cublasXgemm(_handle, _transa, _transb, _m, _n, _k, &alpha, A, _lda, B, _ldb, &beta, C, _ldc));
-      PetscCall(PetscLogGpuFlops(flops));
-    }
-    break;
+  case PETSC_MEMTYPE_CUDA: {
+    cublasOperation_t _transa = cublasOperationFromChar_Private(trans_A);
+    cublasOperation_t _transb = cublasOperationFromChar_Private(trans_B);
+    PetscCuBLASInt    _m, _n, _k, _lda, _ldb, _ldc;
+    cublasHandle_t    _handle;
+    PetscCall(PetscCuBLASIntCast(m, &_m));
+    PetscCall(PetscCuBLASIntCast(n, &_n));
+    PetscCall(PetscCuBLASIntCast(k, &_k));
+    PetscCall(PetscCuBLASIntCast(ld_A, &_lda));
+    PetscCall(PetscCuBLASIntCast(ld_B, &_ldb));
+    PetscCall(PetscCuBLASIntCast(ld_C, &_ldc));
+    PetscCall(PetscCUBLASGetHandle(&_handle));
+    PetscCallCUBLAS(cublasXgemm(_handle, _transa, _transb, _m, _n, _k, &alpha, A, _lda, B, _ldb, &beta, C, _ldc));
+    PetscCall(PetscLogGpuFlops(flops));
+  } break;
 #endif
 #if defined(PETSC_HAVE_HIP)
-  case PETSC_MEMTYPE_HIP:
-    {
-      hipblasOperation_t _transa = hipblasOperationFromChar_Private(trans_A);
-      hipblasOperation_t _transb = hipblasOperationFromChar_Private(trans_B);
-      PetscHipBLASInt _m, _n, _k, _lda, _ldb, _ldc;
-      hipblasHandle_t _handle;
-      PetscCall(PetscHipBLASIntCast(m, &_m));
-      PetscCall(PetscHipBLASIntCast(n, &_n));
-      PetscCall(PetscHipBLASIntCast(k, &_k));
-      PetscCall(PetscHipBLASIntCast(ld_A, &_lda));
-      PetscCall(PetscHipBLASIntCast(ld_B, &_ldb));
-      PetscCall(PetscHipBLASIntCast(ld_C, &_ldf));
-      PetscCall(PetscHIPBLASGetHandle(&_handle));
-      PetscCallHIPBLAS(hipblasXgemm(_handle, _transa, _transb, _m, _n, _k, &alpha, A, _lda, B, _ldb, &beta, C, _ldc));
-      PetscCall(PetscLogGpuFlops(flops));
-    }
-    break;
+  case PETSC_MEMTYPE_HIP: {
+    hipblasOperation_t _transa = hipblasOperationFromChar_Private(trans_A);
+    hipblasOperation_t _transb = hipblasOperationFromChar_Private(trans_B);
+    PetscHipBLASInt    _m, _n, _k, _lda, _ldb, _ldc;
+    hipblasHandle_t    _handle;
+    PetscCall(PetscHipBLASIntCast(m, &_m));
+    PetscCall(PetscHipBLASIntCast(n, &_n));
+    PetscCall(PetscHipBLASIntCast(k, &_k));
+    PetscCall(PetscHipBLASIntCast(ld_A, &_lda));
+    PetscCall(PetscHipBLASIntCast(ld_B, &_ldb));
+    PetscCall(PetscHipBLASIntCast(ld_C, &_ldf));
+    PetscCall(PetscHIPBLASGetHandle(&_handle));
+    PetscCallHIPBLAS(hipblasXgemm(_handle, _transa, _transb, _m, _n, _k, &alpha, A, _lda, B, _ldb, &beta, C, _ldc));
+    PetscCall(PetscLogGpuFlops(flops));
+  } break;
 #endif
   default:
     SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unsupported device type");
@@ -3841,7 +3768,7 @@ PetscErrorCode MatDenseColumnsGEMVHermitianTranspose_SeqDense(PetscScalar alpha,
   PetscFunctionBegin;
 
   const PetscScalar *A_array;
-  PetscMemType memtype_A;
+  PetscMemType       memtype_A;
   PetscCall(MatDenseGetArrayReadAndMemType(A_mat, &A_array, &memtype_A));
   PetscInt ld_A, m, n = col_end - col_start;
   PetscCall(MatDenseGetLDA(A_mat, &ld_A));
@@ -3849,16 +3776,16 @@ PetscErrorCode MatDenseColumnsGEMVHermitianTranspose_SeqDense(PetscScalar alpha,
   const PetscScalar *A = &A_array[ld_A * col_start];
 
   const PetscScalar *x_array;
-  PetscMemType memtype_x;
+  PetscMemType       memtype_x;
   PetscCall(VecGetArrayReadAndMemType(x, &x_array, &memtype_x));
 
   if (PetscMemTypeHost(memtype_x) != PetscMemTypeHost(memtype_A)) {
-    Mat_SeqDense *d = (Mat_SeqDense *) A_mat->data;
-    PetscScalar *d_array;
+    Mat_SeqDense *d = (Mat_SeqDense *)A_mat->data;
+    PetscScalar  *d_array;
 
-    if (!d->gemvvec) {PetscCall(MatCreateVecs(A_mat, NULL, &d->gemvvec));}
+    if (!d->gemvvec) { PetscCall(MatCreateVecs(A_mat, NULL, &d->gemvvec)); }
     PetscCall(VecGetArrayWriteAndMemType(d->gemvvec, &d_array, NULL));
-    PetscCall(PetscCUPMArrayCopy_C(d_array, x_array, m));
+    PetscCall(PetscDeviceArrayCopy(NULL, d_array, x_array, m));
     PetscCall(VecRestoreArrayWriteAndMemType(d->gemvvec, &d_array));
     PetscCall(VecRestoreArrayReadAndMemType(x, &x_array));
     x = d->gemvvec;
@@ -3866,16 +3793,16 @@ PetscErrorCode MatDenseColumnsGEMVHermitianTranspose_SeqDense(PetscScalar alpha,
     PetscAssert(PetscMemTypeHost(memtype_x) == PetscMemTypeHost(memtype_A), PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatrixCreateVecs() creates column vector with different memtype from dense matrix");
   }
 
-  Vec gemxarray = NULL;
-  PetscInt gemxsize = 1 + (n - 1) * inc_y;
-  PetscScalar *y_orig = y;
+  Vec          gemxarray = NULL;
+  PetscInt     gemxsize  = 1 + (n - 1) * inc_y;
+  PetscScalar *y_orig    = y;
   if (PetscMemTypeHost(memtype_y) != PetscMemTypeHost(memtype_A)) {
     PetscCall(MatSeqDenseGetGemxArray_Private(A_mat, gemxsize, &gemxarray));
     if (beta != 0.0) {
       PetscScalar *d_array;
 
       PetscCall(VecGetArrayWriteAndMemType(gemxarray, &d_array, NULL));
-      PetscCall(PetscCUPMArrayCopy_C(d_array, y, gemxsize));
+      PetscCall(PetscDeviceArrayCopy(NULL, d_array, y, gemxsize));
       PetscCall(VecRestoreArrayWriteAndMemType(gemxarray, &d_array));
     }
     PetscCall(VecGetArrayAndMemType(gemxarray, &y, &memtype_y));
@@ -3887,7 +3814,7 @@ PetscErrorCode MatDenseColumnsGEMVHermitianTranspose_SeqDense(PetscScalar alpha,
   PetscCall(VecRestoreArrayReadAndMemType(x, &x_array));
   PetscCall(MatDenseRestoreArrayReadAndMemType(A_mat, &A_array));
   if (gemxarray) {
-    PetscCall(PetscCUPMArrayCopy_C(y_orig, y, gemxsize));
+    PetscCall(PetscDeviceArrayCopy(NULL, y_orig, y, gemxsize));
     PetscCall(VecRestoreArrayAndMemType(gemxarray, &y));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -3897,7 +3824,7 @@ PetscErrorCode MatDenseColumnsGEMV_SeqDense(PetscScalar alpha, Mat A_mat, PetscI
 {
   PetscFunctionBegin;
   const PetscScalar *A_array;
-  PetscMemType memtype_A;
+  PetscMemType       memtype_A;
   PetscCall(MatDenseGetArrayReadAndMemType(A_mat, &A_array, &memtype_A));
   PetscInt ld_A, m, n = col_end - col_start;
   PetscCall(MatDenseGetLDA(A_mat, &ld_A));
@@ -3910,15 +3837,15 @@ PetscErrorCode MatDenseColumnsGEMV_SeqDense(PetscScalar alpha, Mat A_mat, PetscI
   PetscCall(VecGetArrayAndMemType(y, &y_array, &memtype_y));
 
   if (PetscMemTypeHost(memtype_y) != PetscMemTypeHost(memtype_A)) {
-    Mat_SeqDense *d = (Mat_SeqDense *) A_mat->data;
-    y_array_orig = y_array;
+    Mat_SeqDense *d = (Mat_SeqDense *)A_mat->data;
+    y_array_orig    = y_array;
 
-    if (!d->gemvvec) {PetscCall(MatCreateVecs(A_mat, NULL, &d->gemvvec));}
+    if (!d->gemvvec) { PetscCall(MatCreateVecs(A_mat, NULL, &d->gemvvec)); }
     if (beta != 0.0) {
       PetscScalar *d_array;
 
       PetscCall(VecGetArrayWriteAndMemType(d->gemvvec, &d_array, NULL));
-      PetscCall(PetscCUPMArrayCopy_C(d_array, y_array, m));
+      PetscCall(PetscDeviceArrayCopy(NULL, d_array, y_array, m));
       PetscCall(VecRestoreArrayWriteAndMemType(d->gemvvec, &d_array));
     }
     PetscCall(VecGetArrayAndMemType(d->gemvvec, &y_array, &memtype_y));
@@ -3932,22 +3859,20 @@ PetscErrorCode MatDenseColumnsGEMV_SeqDense(PetscScalar alpha, Mat A_mat, PetscI
     PetscScalar *d_array;
 
     PetscCall(VecGetArrayWriteAndMemType(gemxarray, &d_array, NULL));
-    PetscCall(PetscCUPMArrayCopy_C(d_array, x, gemxsize));
+    PetscCall(PetscDeviceArrayCopy(NULL, d_array, x, gemxsize));
     PetscCall(VecRestoreArrayWriteAndMemType(gemxarray, &d_array));
-    
+
     PetscCall(VecGetArrayReadAndMemType(gemxarray, &x, &memtype_x));
     PetscAssert(PetscMemTypeHost(memtype_x) == PetscMemTypeHost(memtype_A), PETSC_COMM_SELF, PETSC_ERR_PLIB, "defaultvectype creates vector with different memtype from dense matrix");
   }
 
   PetscCall(PetscCUPMGEMV_C(memtype_A, 'N', m, n, alpha, A, ld_A, x, inc_x, beta, y_array, 1));
 
-  if (gemxarray) {
-    PetscCall(VecRestoreArrayReadAndMemType(gemxarray, &x));
-  }
+  if (gemxarray) { PetscCall(VecRestoreArrayReadAndMemType(gemxarray, &x)); }
   if (y_array_orig) {
-    Mat_SeqDense *d = (Mat_SeqDense *) A_mat->data;
+    Mat_SeqDense *d = (Mat_SeqDense *)A_mat->data;
 
-    PetscCall(PetscCUPMArrayCopy_C(y_array_orig, y_array, m));
+    PetscCall(PetscDeviceArrayCopy(NULL, y_array_orig, y_array, m));
     PetscCall(VecRestoreArrayAndMemType(d->gemvvec, &y_array));
     y_array = y_array_orig;
   }
@@ -3961,13 +3886,13 @@ PetscErrorCode MatDenseColumnsGEMMHermitianTranspose_SeqDense(PetscScalar alpha,
   PetscFunctionBegin;
 
   const PetscScalar *A_array;
-  PetscMemType memtype_A;
-  PetscInt ld_A, m = col_end_A - col_start_A;
+  PetscMemType       memtype_A;
+  PetscInt           ld_A, m = col_end_A - col_start_A;
   PetscCall(MatDenseGetLDA(A_mat, &ld_A));
 
   const PetscScalar *B_array;
-  PetscMemType memtype_B;
-  PetscInt ld_B, n = col_end_B - col_start_B;
+  PetscMemType       memtype_B;
+  PetscInt           ld_B, n = col_end_B - col_start_B;
   PetscCall(MatDenseGetLDA(B_mat, &ld_B));
 
   PetscCall(MatDenseGetArrayReadAndMemType(A_mat, &A_array, &memtype_A));
@@ -3989,16 +3914,16 @@ PetscErrorCode MatDenseColumnsGEMMHermitianTranspose_SeqDense(PetscScalar alpha,
   const PetscScalar *A = &A_array[ld_A * col_start_A];
   const PetscScalar *B = &B_array[ld_B * col_start_B];
 
-  PetscInt gemxsize = m + ld_C * (n - 1);
-  Vec gemxarray = NULL;
-  PetscScalar *C_orig = C;
+  PetscInt     gemxsize  = m + ld_C * (n - 1);
+  Vec          gemxarray = NULL;
+  PetscScalar *C_orig    = C;
   if (PetscMemTypeHost(memtype_C) != PetscMemTypeHost(memtype_A)) {
     PetscCall(MatSeqDenseGetGemxArray_Private(A_mat, gemxsize, &gemxarray));
     if (beta != 0.0) {
       PetscScalar *d_array;
 
       PetscCall(VecGetArrayWriteAndMemType(gemxarray, &d_array, NULL));
-      PetscCall(PetscCUPMArrayCopy_C(d_array, C, gemxsize));
+      PetscCall(PetscDeviceArrayCopy(NULL, d_array, C, gemxsize));
       PetscCall(VecRestoreArrayWriteAndMemType(gemxarray, &d_array));
     }
     if (bind_to_cpu) {
@@ -4022,7 +3947,7 @@ PetscErrorCode MatDenseColumnsGEMMHermitianTranspose_SeqDense(PetscScalar alpha,
     PetscCall(MatDenseRestoreArrayReadAndMemType(A_mat, &A_array));
   }
   if (gemxarray) {
-    PetscCall(PetscCUPMArrayCopy_C(C_orig, C, gemxsize));
+    PetscCall(PetscDeviceArrayCopy(NULL, C_orig, C, gemxsize));
     if (bind_to_cpu) {
       PetscCall(VecRestoreArray(gemxarray, &C));
     } else {
@@ -4037,15 +3962,15 @@ PetscErrorCode MatDenseColumnsGEMM_SeqDense(PetscScalar alpha, Mat A_mat, PetscI
   PetscFunctionBegin;
 
   PetscMemType memtype_A;
-  PetscInt ld_A, k = col_end_A - col_start_A;
+  PetscInt     ld_A, k = col_end_A - col_start_A;
   PetscCall(MatDenseGetLDA(A_mat, &ld_A));
 
   PetscMemType memtype_C;
-  PetscInt ld_C, n = col_end_C - col_start_C;
+  PetscInt     ld_C, n = col_end_C - col_start_C;
   PetscCall(MatDenseGetLDA(C_mat, &ld_C));
 
   const PetscScalar *A_array;
-  PetscScalar *C_array;
+  PetscScalar       *C_array;
   PetscCall(MatDenseGetArrayAndMemType(C_mat, &C_array, &memtype_C));
   PetscCall(MatDenseGetArrayReadAndMemType(A_mat, &A_array, &memtype_A));
   PetscBool bind_to_cpu = PETSC_FALSE;
@@ -4062,8 +3987,8 @@ PetscErrorCode MatDenseColumnsGEMM_SeqDense(PetscScalar alpha, Mat A_mat, PetscI
   }
 
   const PetscScalar *A = &A_array[ld_A * col_start_A];
-  PetscScalar *C = &C_array[ld_C * col_start_C];
-  PetscInt m;
+  PetscScalar       *C = &C_array[ld_C * col_start_C];
+  PetscInt           m;
   PetscCall(MatGetLocalSize(A_mat, &m, NULL));
 
   Vec gemxarray = NULL;
@@ -4077,13 +4002,13 @@ PetscErrorCode MatDenseColumnsGEMM_SeqDense(PetscScalar alpha, Mat A_mat, PetscI
     } else {
       PetscCall(VecGetArrayWriteAndMemType(gemxarray, &d_array, NULL));
     }
-    PetscCall(PetscCUPMArrayCopy_C(d_array, B, gemxsize));
+    PetscCall(PetscDeviceArrayCopy(NULL, d_array, B, gemxsize));
     if (bind_to_cpu) {
       PetscCall(VecRestoreArrayWrite(gemxarray, &d_array));
     } else {
       PetscCall(VecRestoreArrayWriteAndMemType(gemxarray, &d_array));
     }
-    
+
     if (bind_to_cpu) {
       PetscCall(VecGetArrayRead(gemxarray, &B));
       memtype_B = PETSC_MEMTYPE_HOST;
@@ -4111,7 +4036,6 @@ PetscErrorCode MatDenseColumnsGEMM_SeqDense(PetscScalar alpha, Mat A_mat, PetscI
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
 
 /*MC
    MATSEQDENSE - MATSEQDENSE = "seqdense" - A matrix type to be used for sequential dense matrices.

@@ -27,11 +27,11 @@ typedef struct {
   PetscBool     unplaced_user_alloc;
 
   /* Support for MatDenseGetColumnVec and MatDenseGetSubMatrix */
-  Mat                cmat;     /* matrix representation of a given subset of columns */
-  Vec                cvec;     /* vector representation of a given column */
-  Vec                gemvvec;  /* work vector for gemv with vector of different memtype */
+  Mat                cmat;      /* matrix representation of a given subset of columns */
+  Vec                cvec;      /* vector representation of a given column */
+  Vec                gemvvec;   /* work vector for gemv with vector of different memtype */
   Vec                gemxarray; /* work vector for gemv / gemm with array of different memtype */
-  const PetscScalar *ptrinuse; /* holds array to be restored (just a placeholder) */
+  const PetscScalar *ptrinuse;  /* holds array to be restored (just a placeholder) */
   PetscMemType       ptrinuse_memtype;
   PetscInt           vecinuse; /* if cvec is in use (col = vecinuse-1) */
   PetscInt           matinuse; /* if cmat is in use (cbegin = matinuse-1) */
@@ -124,7 +124,5 @@ PETSC_INTERN PetscErrorCode MatDenseColumnsGEMVHermitianTranspose_SeqDense(Petsc
 PETSC_INTERN PetscErrorCode MatDenseColumnsGEMV_SeqDense(PetscScalar, Mat, PetscInt, PetscInt, const PetscScalar *, PetscInt, PetscMemType, PetscScalar, Vec);
 PETSC_INTERN PetscErrorCode MatDenseColumnsGEMMHermitianTranspose_SeqDense(PetscScalar, Mat, PetscInt, PetscInt, Mat, PetscInt, PetscInt, PetscScalar, PetscScalar *, PetscInt, PetscMemType);
 PETSC_INTERN PetscErrorCode MatDenseColumnsGEMM_SeqDense(PetscScalar, Mat, PetscInt, PetscInt, const PetscScalar *, PetscInt, PetscMemType, PetscScalar, Mat, PetscInt, PetscInt);
-PETSC_INTERN PetscErrorCode PetscCUPMMemcpy_C(void*,const void*,size_t);
-#define PetscCUPMArrayCopy_C(dst, src, n) PetscCUPMMemcpy_C((dst), (src), (n) * sizeof(*(src)))
 
 #endif
