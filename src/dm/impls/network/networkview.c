@@ -70,7 +70,7 @@ static PetscErrorCode DMView_Network_CSV(DM dm, PetscViewer viewer)
         PetscCall(DMNetworkGetComponent(dmcoords, vertex, 0, NULL, (void **)&color_ptr, NULL));
         color = *color_ptr;
       }
-      PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "Node,%" PetscInt_FMT ",%" PetscInt_FMT ",%lf,%lf,0,%" PetscInt_FMT ",%lf\n", (PetscInt)rank, gidx, (double)PetscRealPart(vertexCoords[0]), (double)PetscRealPart(vertexCoords[1]), gidx, (double)color));
+      PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "Node,%" PetscInt_FMT ",%" PetscInt_FMT ",%lf,%lf,0,%" PetscInt_FMT ",%lf\n", (PetscInt)rank, gidx, (double)PetscRealPart(vertexCoords[0]), (double)PetscRealPart(vertexCoords[1]), gidx, (double)PetscRealPart(color)));
     }
 
     // Write out each edge
