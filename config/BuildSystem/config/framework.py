@@ -496,7 +496,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       self.log.write("Compiler output before filtering:\n"+(output if not output or output.endswith('\n') else output+'\n'))
       lines = output.splitlines()
       if self.argDB['ignoreWarnings']:
-        # ACCEPT warnings that those bastards say we want
+        # ACCEPT compiler warnings
         extraLines = [s for s in lines if s.find('implicit declaration of function') >= 0]
         lines = [s for s in lines if not self.warningRE.search(s)]
         lines = [s for s in lines if s.find('In file included from') < 0]
