@@ -45,7 +45,7 @@ static PetscErrorCode StarGraphSetCoordinates(DM dm, PetscReal *vcolor)
   DM           cdm;
   Vec          Coord;
   PetscScalar *coord;
-  PetscInt     vStart, vEnd, v, vglobal, compkey=0, off, NVert;
+  PetscInt     vStart, vEnd, v, vglobal, compkey = 0, off, NVert;
   PetscReal    theta;
 
   PetscFunctionBegin;

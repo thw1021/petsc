@@ -39,9 +39,9 @@ PetscErrorCode UserMonitor(SNES snes, PetscInt its, PetscReal fnorm, void *appct
   if (rank == 0) {
     PetscCall(SNESGetIterationNumber(snes, &it));
     if (user->subsnes_id == 0 || user->subsnes_id == 1) {
-    PetscCall(PetscPrintf(PETSC_COMM_SELF," subsnes_id %" PetscInt_FMT ", it %" PetscInt_FMT ", fnorm %g\n", user->subsnes_id, it, (double)fnorm));
+      PetscCall(PetscPrintf(PETSC_COMM_SELF, " subsnes_id %" PetscInt_FMT ", it %" PetscInt_FMT ", fnorm %g\n", user->subsnes_id, it, (double)fnorm));
     } else {
-      PetscCall(PetscPrintf(PETSC_COMM_SELF,"   coupled_snes_it %" PetscInt_FMT ", total_snes_it %" PetscInt_FMT ", fnorm %g\n", it, user->it, (double)fnorm));
+      PetscCall(PetscPrintf(PETSC_COMM_SELF, "   coupled_snes_it %" PetscInt_FMT ", total_snes_it %" PetscInt_FMT ", fnorm %g\n", it, user->it, (double)fnorm));
     }
   }
 
@@ -56,7 +56,7 @@ PetscErrorCode UserMonitor(SNES snes, PetscInt its, PetscReal fnorm, void *appct
     PetscCall(SNESGetDM(snes, &networkdm));
     PetscCall(DMGetCoordinateDM(networkdm, &dmcoords));
 
-    PetscCall(SNESGetFunction(snes,&F,NULL,NULL));
+    PetscCall(SNESGetFunction(snes, &F, NULL, NULL));
     PetscCall(VecGetOwnershipRange(F, &rstart, NULL));
 
     PetscCall(VecGetArray(F, &farr));
@@ -69,9 +69,9 @@ PetscErrorCode UserMonitor(SNES snes, PetscInt its, PetscReal fnorm, void *appct
       PetscCall(DMNetworkGetGlobalVertexIndex(networkdm, v, &gidx));
       if (!ghost) {
         PetscCall(DMNetworkGetGlobalVecOffset(networkdm, v, 0, &offset));
-        *color = (PetscRealPart(farr[offset-rstart]));
+        *color = (PetscRealPart(farr[offset - rstart]));
       }
-      PetscSynchronizedPrintf(MPI_COMM_WORLD, "[%d] v %d: color[%d] = %g\n",rank, gidx, offset-rstart, *color);
+      PetscSynchronizedPrintf(MPI_COMM_WORLD, "[%d] v %d: color[%d] = %g\n", rank, gidx, offset - rstart, *color);
     }
     PetscCall(PetscSynchronizedFlush(MPI_COMM_WORLD, NULL));
     PetscCall(VecRestoreArray(F, &farr));
@@ -617,9 +617,9 @@ int main(int argc, char **argv)
   PetscCall(DMGetCoordinateDM(networkdm, &dmcoords));
   PetscCall(DMNetworkGetVertexRange(dmcoords, &vStart, &vEnd));
 
-  PetscCall(PetscCalloc1(vEnd-vStart, &color));
+  PetscCall(PetscCalloc1(vEnd - vStart, &color));
   PetscCall(DMNetworkRegisterComponent(dmcoords, "coordinate&color", sizeof(PetscReal), &compkey));
-  for (i = vStart; i < vEnd; i++) PetscCall(DMNetworkAddComponent(dmcoords, i, compkey, &color[i-vStart], 2));
+  for (i = vStart; i < vEnd; i++) PetscCall(DMNetworkAddComponent(dmcoords, i, compkey, &color[i - vStart], 2));
   PetscCall(DMNetworkFinalizeComponents(dmcoords));
 
   PetscCall(DMCreateLocalVector(dmcoords, &coords));
@@ -789,12 +789,12 @@ int main(int argc, char **argv)
   reason  = SNES_DIVERGED_DTOL;
   while (user.it < it_max && (PetscInt)reason < 0) {
     user.subsnes_id = 0;
-    PetscCall(SNESSolve(snes_power,NULL,X));
+    PetscCall(SNESSolve(snes_power, NULL, X));
     PetscCall(DMGlobalToLocalBegin(networkdm, X, INSERT_VALUES, user.localXold));
     PetscCall(DMGlobalToLocalEnd(networkdm, X, INSERT_VALUES, user.localXold));
 
     user.subsnes_id = 1;
-    PetscCall(SNESSolve(snes_water,NULL,X));
+    PetscCall(SNESSolve(snes_water, NULL, X));
     PetscCall(DMGlobalToLocalBegin(networkdm, X, INSERT_VALUES, user.localXold));
     PetscCall(DMGlobalToLocalEnd(networkdm, X, INSERT_VALUES, user.localXold));
 
