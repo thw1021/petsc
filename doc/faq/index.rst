@@ -508,6 +508,8 @@ or
    C/C++ example src/snes/tutorials/ex19 run successfully with 1 MPI process
    PROGRAM SEEMS TO BE HANGING HERE
 
+This usually occurs when network settings are misconfigured (perhaps due to VPN) resulting in a failure or hang in system call ``gethostbyname()``.
+
 - Verify you are using the correct ``mpiexec`` for the MPI you have linked PETSc with.
 
 - If you have a VPN enabled on your machine, try turning it off and then running ``make check`` to
@@ -523,7 +525,7 @@ or
 
 - Try completely disconnecting your machine from the network and see if ``make check`` then works
 
-- Try the PETSc ``configure`` option ``--download-mpich`` with ``--download-mpich-device=ch3:nemesis``.
+- Try the PETSc ``configure`` option ``--download-mpich-device=ch3:nemesis`` with ``--download-mpich``.
 
 --------------------------------------------------
 
