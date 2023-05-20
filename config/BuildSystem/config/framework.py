@@ -171,7 +171,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
 
     help.addArgument('Framework', '-configModules',       nargs.Arg(None, None, 'A list of Python modules with a Configure class'))
     help.addArgument('Framework', '-ignoreCompileOutput=<bool>', nargs.ArgBool(None, 1, 'Ignore compiler output'))
-    help.addArgument('Framework', '-ignoreLinkOutput=<bool>',    nargs.ArgBool(None, 0, 'Ignore linker output'))
+    help.addArgument('Framework', '-ignoreLinkOutput=<bool>',    nargs.ArgBool(None, 1, 'Ignore linker output'))
     help.addArgument('Framework', '-ignoreWarnings=<bool>',      nargs.ArgBool(None, 0, 'Ignore compiler and linker warnings'))
     help.addArgument('Framework', '-doCleanup=<bool>',           nargs.ArgBool(None, 1, 'Delete any configure generated files (turn off for debugging)'))
     help.addArgument('Framework', '-with-executables-search-path', nargs.Arg(None, searchdirs, 'A list of directories used to search for executables'))
@@ -476,7 +476,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     log.write("Preprocess output after filtering:\n"+(output if not output else output+'\n'))
     return output
 
-  def filterCompileOutput(self, output,flag = ''):
+  def filterCompileOutput(self, output,flag = '', filterAlways = 0):
     output = output.strip()
     if flag and output.find("ignoring unknown option '"+flag+"'"): return output
     if flag and output.find("invalid value"): return output
@@ -488,7 +488,7 @@ class Framework(config.base.Configure, script.LanguageProcessor):
     if output.find('warning #2650: attributes ignored here') >= 0: return output
     if output.find('Warning: attribute visibility is unsupported and will be skipped') >= 0: return output
     if output.find('(E) Invalid statement found within an interface block. Executable statement, statement function or syntax error encountered.') >= 0: return output
-    elif self.argDB['ignoreCompileOutput']:
+    elif self.argDB['ignoreCompileOutput'] and not filterAlways:
       output = ''
     elif output:
       self.log.write("Compiler output before filtering:\n"+(output if not output or output.endswith('\n') else output+'\n'))
@@ -532,10 +532,10 @@ class Framework(config.base.Configure, script.LanguageProcessor):
       self.log.write("Compiler output after filtering:\n"+(output if not output else output+'\n'))
     return output
 
-  def filterLinkOutput(self, output):
+  def filterLinkOutput(self, output, filterAlways = 0):
     output = output.strip()
     if output.find('relocation R_AARCH64_ADR_PREL_PG_HI21 against symbol') >= 0: return output
-    elif self.argDB['ignoreLinkOutput']:
+    elif self.argDB['ignoreLinkOutput'] and not filterAlways:
       output = ''
     elif output:
       self.log.write("Linker output before filtering:\n"+(output if not output else output+'\n'))
