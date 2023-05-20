@@ -510,8 +510,8 @@ or
 
 - Verify you are using the correct ``mpiexec`` for the MPI you have linked PETSc with.
 
-- If you have VPN enabled on your machine, try turning it off and then running ``make check`` to
-  verify that that it is not VPN playing poorly with MPI.
+- If you have a VPN enabled on your machine, try turning it off and then running ``make check`` to
+  verify that it is not the VPN playing poorly with MPI.
 
 - If ``ping `hostname` `` (``/sbin/ping`` on macOS) fails or hangs do:
 
@@ -523,7 +523,7 @@ or
 
 - Try completely disconnecting your machine from the network and see if ``make check`` then works
 
-- Try the PETSc ``configure`` options ``--download-mpich`` or ``--download-mpich-device=ch3:nemesis``
+- Try the PETSc ``configure`` option ``--download-mpich`` with ``--download-mpich-device=ch3:nemesis``.
 
 --------------------------------------------------
 
