@@ -99,6 +99,7 @@ PETSC_EXTERN PetscErrorCode MatCreate_HYPRE(Mat);
 #endif
 
 PETSC_EXTERN PetscErrorCode MatCreate_ConstantDiagonal(Mat);
+PETSC_INTERN PetscErrorCode MatCreate_VectorDiagonal(Mat);
 
 #if defined(PETSC_HAVE_H2OPUS)
 PETSC_EXTERN PetscErrorCode MatCreate_H2OPUS(Mat);
@@ -238,6 +239,7 @@ PetscErrorCode MatRegisterAll(void)
   PetscCall(MatRegister(MATDUMMY, MatCreate_Dummy));
 
   PetscCall(MatRegister(MATCONSTANTDIAGONAL, MatCreate_ConstantDiagonal));
+  PetscCall(MatRegister(MATVECTORDIAGONAL, MatCreate_VectorDiagonal));
 
 #if defined(PETSC_HAVE_HYPRE)
   PetscCall(MatRegister(MATHYPRE, MatCreate_HYPRE));
