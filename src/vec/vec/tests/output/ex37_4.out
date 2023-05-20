@@ -40,6 +40,10 @@ Vec Object: 2 MPI processes
         2.5
         Process [1]
         1.25
+v Wnorms inf = 0.909091 10.000000 1.000000: inds = 12 12 12 
+nest Wnorms inf = 0.909091 10.000000 1.000000: inds = 12 12 12 
+v Wnorms 2 = 2.736514 17.298844 3.464102: inds = 12 12 12 
+nest Wnorms 2 = 2.736514 17.298844 3.464102: inds = 12 12 12 
 
 
 ============== test_axpy_dot_max ==============
