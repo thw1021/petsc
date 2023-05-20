@@ -71,7 +71,7 @@ PetscErrorCode UserMonitor(SNES snes, PetscInt its, PetscReal fnorm, void *appct
         PetscCall(DMNetworkGetGlobalVecOffset(networkdm, v, 0, &offset));
         *color = (PetscRealPart(farr[offset - rstart]));
       }
-      PetscSynchronizedPrintf(MPI_COMM_WORLD, "[%d] v %d: color[%d] = %g\n", rank, gidx, offset - rstart, *color);
+      PetscSynchronizedPrintf(MPI_COMM_WORLD, "[%d] v %" PetscInt_FMT ": color[%" PetscInt_FMT "] = %g\n", rank, gidx, offset - rstart, *color);
     }
     PetscCall(PetscSynchronizedFlush(MPI_COMM_WORLD, NULL));
     PetscCall(VecRestoreArray(F, &farr));
