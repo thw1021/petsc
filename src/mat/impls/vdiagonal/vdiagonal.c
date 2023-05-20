@@ -48,45 +48,6 @@ static PetscErrorCode MatAXPY_VectorDiagonal(Mat Y, PetscScalar a, Mat X, MatStr
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatEqual_VectorDiagonal(Mat Y, Mat X, PetscBool *equal)
-{
-  Mat_VectorDiagonal *yctx = (Mat_VectorDiagonal *)Y->data;
-  Mat_VectorDiagonal *xctx = (Mat_VectorDiagonal *)X->data;
-
-  PetscFunctionBegin;
-  PetscCall(MatVecDiagonalValidateDiag(Y));
-  PetscCall(MatVecDiagonalValidateDiag(X));
-  PetscCall(VecEqual(yctx->diag, xctx->diag, equal));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode MatGetRow_VectorDiagonal(Mat A, PetscInt row, PetscInt *ncols, PetscInt *cols[], PetscScalar *vals[])
-{
-  Mat_VectorDiagonal *ctx = (Mat_VectorDiagonal *)A->data;
-
-  PetscFunctionBegin;
-  PetscCall(MatVecDiagonalValidateDiag(A));
-  if (ncols) *ncols = 1;
-  if (cols) {
-    PetscCall(PetscMalloc1(1, cols));
-    (*cols)[0] = row;
-  }
-  if (vals) {
-    PetscCall(PetscMalloc1(1, vals));
-    PetscCall(VecGetValues(ctx->diag, 1, &row, *vals));
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode MatRestoreRow_VectorDiagonal(Mat A, PetscInt row, PetscInt *ncols, PetscInt *cols[], PetscScalar *vals[])
-{
-  PetscFunctionBegin;
-  if (ncols) *ncols = 0;
-  if (cols) PetscCall(PetscFree(*cols));
-  if (vals) PetscCall(PetscFree(*vals));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 static PetscErrorCode MatMult_VectorDiagonal(Mat A, Vec x, Vec y)
 {
   Mat_VectorDiagonal *ctx = (Mat_VectorDiagonal *)A->data;
@@ -120,21 +81,8 @@ static PetscErrorCode MatNorm_VectorDiagonal(Mat A, NormType type, PetscReal *nr
 
   PetscFunctionBegin;
   PetscCall(MatVecDiagonalValidateDiag(A));
-  type = (type == NORM_FROBENIUS) ? NORM_2 : type;
+  type = (type == NORM_FROBENIUS) ? NORM_2 : NORM_INFINITY;
   PetscCall(VecNorm(ctx->diag, type, nrm));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode MatCreateSubMatrices_VectorDiagonal(Mat A, PetscInt n, const IS irow[], const IS icol[], MatReuse scall, Mat *submat[])
-
-{
-  Mat B;
-
-  PetscFunctionBegin;
-  PetscCall(MatVecDiagonalValidateDiag(A));
-  PetscCall(MatConvert(A, MATAIJ, MAT_INITIAL_MATRIX, &B));
-  PetscCall(MatCreateSubMatrices(B, n, irow, icol, scall, submat));
-  PetscCall(MatDestroy(&B));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -156,13 +104,6 @@ static PetscErrorCode MatDuplicate_VectorDiagonal(Mat A, MatDuplicateOption op, 
     bctx->diag_valid     = actx->diag_valid;
     bctx->inv_diag_valid = actx->inv_diag_valid;
   }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode MatMissingDiagonal_VectorDiagonal(Mat mat, PetscBool *missing, PetscInt *dd)
-{
-  PetscFunctionBegin;
-  *missing = PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -241,18 +182,6 @@ static PetscErrorCode MatGetDiagonal_VectorDiagonal(Mat J, Vec x)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatDiagonalScale_VectorDiagonal(Mat J, Vec L, Vec R)
-{
-  Mat_VectorDiagonal *ctx = (Mat_VectorDiagonal *)J->data;
-
-  PetscFunctionBegin;
-  PetscCall(MatVecDiagonalValidateDiag(J));
-  if (L) PetscCall(VecPointwiseMult(ctx->diag, L, ctx->diag));
-  if (R) PetscCall(VecPointwiseMult(ctx->diag, R, ctx->diag));
-  if (L || R) ctx->inv_diag_valid = PETSC_FALSE;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 static PetscErrorCode MatDiagonalSet_VectorDiagonal(Mat J, Vec D, InsertMode is)
 {
   Mat_VectorDiagonal *ctx = (Mat_VectorDiagonal *)J->data;
@@ -308,6 +237,23 @@ static PetscErrorCode MatScale_VectorDiagonal(Mat Y, PetscScalar a)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatDiagonalScale_VectorDiagonal(Mat Y, Vec l, Vec r)
+{
+  Mat_VectorDiagonal *ctx = (Mat_VectorDiagonal *)Y->data;
+
+  PetscFunctionBegin;
+  PetscCall(MatVecDiagonalValidateDiag(Y));
+  if (l) {
+    PetscCall(VecPointwiseMult(ctx->diag, ctx->diag, l));
+    ctx->inv_diag_valid = PETSC_FALSE;
+  }
+  if (r) {
+    PetscCall(VecPointwiseMult(ctx->diag, ctx->diag, r));
+    ctx->inv_diag_valid = PETSC_FALSE;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode MatZeroEntries_VectorDiagonal(Mat Y)
 {
   Mat_VectorDiagonal *ctx = (Mat_VectorDiagonal *)Y->data;
@@ -331,22 +277,16 @@ PetscErrorCode MatSolve_VectorDiagonal(Mat matin, Vec b, Vec x)
 PetscErrorCode MatGetInfo_VectorDiagonal(Mat A, MatInfoType flag, MatInfo *info)
 {
   PetscFunctionBegin;
-  info->block_size   = 1.0;
-  info->nz_allocated = A->cmap->N;
-  info->nz_used      = A->cmap->N;
-  info->nz_unneeded  = 0.0;
-  info->assemblies   = A->num_ass;
-  info->mallocs      = 0.0;
-  info->memory       = 0; /* REVIEW ME */
-  if (A->factortype) {
-    info->fill_ratio_given  = 1.0;
-    info->fill_ratio_needed = 1.0;
-    info->factor_mallocs    = 0.0;
-  } else {
-    info->fill_ratio_given  = 0;
-    info->fill_ratio_needed = 0;
-    info->factor_mallocs    = 0;
-  }
+  info->block_size        = 1.0;
+  info->nz_allocated      = A->cmap->N;
+  info->nz_used           = A->cmap->N;
+  info->nz_unneeded       = 0.0;
+  info->assemblies        = A->num_ass;
+  info->mallocs           = 0.0;
+  info->memory            = 0;
+  info->fill_ratio_given  = 0;
+  info->fill_ratio_needed = 0;
+  info->factor_mallocs    = 0;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -421,29 +361,24 @@ PETSC_INTERN PetscErrorCode MatCreate_VectorDiagonal(Mat A)
   A->symmetric                   = PETSC_BOOL3_TRUE;
   if (!PetscDefined(USE_COMPLEX)) A->hermitian = PETSC_BOOL3_TRUE;
 
-  A->ops->mult              = MatMult_VectorDiagonal;
-  A->ops->multadd           = MatMultAdd_VectorDiagonal;
-  A->ops->multtranspose     = MatMult_VectorDiagonal;
-  A->ops->multtransposeadd  = MatMultAdd_VectorDiagonal;
-  A->ops->norm              = MatNorm_VectorDiagonal;
-  A->ops->createsubmatrices = MatCreateSubMatrices_VectorDiagonal;
-  A->ops->duplicate         = MatDuplicate_VectorDiagonal;
-  A->ops->missingdiagonal   = MatMissingDiagonal_VectorDiagonal;
-  A->ops->getrow            = MatGetRow_VectorDiagonal;
-  A->ops->restorerow        = MatRestoreRow_VectorDiagonal;
-  A->ops->solve             = MatSolve_VectorDiagonal;
-  A->ops->solvetranspose    = MatSolve_VectorDiagonal;
-  A->ops->shift             = MatShift_VectorDiagonal;
-  A->ops->scale             = MatScale_VectorDiagonal;
-  A->ops->getdiagonal       = MatGetDiagonal_VectorDiagonal;
-  A->ops->diagonalset       = MatDiagonalSet_VectorDiagonal;
-  A->ops->diagonalscale     = MatDiagonalScale_VectorDiagonal;
-  A->ops->view              = MatView_VectorDiagonal;
-  A->ops->zeroentries       = MatZeroEntries_VectorDiagonal;
-  A->ops->destroy           = MatDestroy_VectorDiagonal;
-  A->ops->getinfo           = MatGetInfo_VectorDiagonal;
-  A->ops->equal             = MatEqual_VectorDiagonal;
-  A->ops->axpy              = MatAXPY_VectorDiagonal;
+  A->ops->mult             = MatMult_VectorDiagonal;
+  A->ops->multadd          = MatMultAdd_VectorDiagonal;
+  A->ops->multtranspose    = MatMult_VectorDiagonal;
+  A->ops->multtransposeadd = MatMultAdd_VectorDiagonal;
+  A->ops->norm             = MatNorm_VectorDiagonal;
+  A->ops->duplicate        = MatDuplicate_VectorDiagonal;
+  A->ops->solve            = MatSolve_VectorDiagonal;
+  A->ops->solvetranspose   = MatSolve_VectorDiagonal;
+  A->ops->shift            = MatShift_VectorDiagonal;
+  A->ops->scale            = MatScale_VectorDiagonal;
+  A->ops->diagonalscale    = MatDiagonalScale_VectorDiagonal;
+  A->ops->getdiagonal      = MatGetDiagonal_VectorDiagonal;
+  A->ops->diagonalset      = MatDiagonalSet_VectorDiagonal;
+  A->ops->view             = MatView_VectorDiagonal;
+  A->ops->zeroentries      = MatZeroEntries_VectorDiagonal;
+  A->ops->destroy          = MatDestroy_VectorDiagonal;
+  A->ops->getinfo          = MatGetInfo_VectorDiagonal;
+  A->ops->axpy             = MatAXPY_VectorDiagonal;
 
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatVectorDiagonalSetInverse_C", MatVectorDiagonalSetInverse_VectorDiagonal));
   PetscCall(PetscObjectChangeTypeName((PetscObject)A, MATVECTORDIAGONAL));

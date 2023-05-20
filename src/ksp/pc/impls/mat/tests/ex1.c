@@ -69,6 +69,7 @@ int main(int argc, char **argv)
   PetscCall(PCCreate(comm, &pc));
   PetscCall(PCSetType(pc, PCMAT));
   PetscCall(PCSetOperators(pc, D, D));
+  PetscCall(PCSetUp(pc));
 
   MatOperation default_op;
   PetscCall(PCMatGetApplyOperation(pc, &default_op));
@@ -84,6 +85,7 @@ int main(int argc, char **argv)
   // MATOP_MULT
   //
   PetscCall(PCMatSetApplyOperation(pc, MATOP_MULT));
+  PetscCall(PCView(pc, NULL));
 
   PetscCall(PCApply(pc, b, x));
   PetscCall(VecPointwiseMult(x2, diag, b));
@@ -101,6 +103,7 @@ int main(int argc, char **argv)
   // MATOP_MULT_TRANSPOSE
   //
   PetscCall(PCMatSetApplyOperation(pc, MATOP_MULT_TRANSPOSE));
+  PetscCall(PCView(pc, NULL));
 
   PetscCall(PCApply(pc, b, x));
   PetscCall(VecPointwiseMult(x2, diag, b));
@@ -118,6 +121,7 @@ int main(int argc, char **argv)
   // MATOP_MULT_HERMITIAN_TRANSPOSE
   //
   PetscCall(PCMatSetApplyOperation(pc, MATOP_MULT_HERMITIAN_TRANSPOSE));
+  PetscCall(PCView(pc, NULL));
 
   PetscCall(PCApply(pc, b, x));
   PetscCall(VecPointwiseMult(x2, diag_conj, b));
@@ -135,6 +139,7 @@ int main(int argc, char **argv)
   // MATOP_SOLVE
   //
   PetscCall(PCMatSetApplyOperation(pc, MATOP_SOLVE));
+  PetscCall(PCView(pc, NULL));
 
   PetscCall(PCApply(pc, b, x));
   PetscCall(VecPointwiseMult(x2, diag_inv, b));
@@ -152,6 +157,7 @@ int main(int argc, char **argv)
   // MATOP_SOLVE_TRANSPOSE
   //
   PetscCall(PCMatSetApplyOperation(pc, MATOP_SOLVE_TRANSPOSE));
+  PetscCall(PCView(pc, NULL));
 
   PetscCall(PCApply(pc, b, x));
   PetscCall(VecPointwiseMult(x2, diag_inv, b));
