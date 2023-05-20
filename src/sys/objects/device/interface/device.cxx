@@ -60,7 +60,7 @@ static sycl::Device SYCLDevice{PetscDeviceContextCreate_SYCL};
 */
 #define PETSC_DEVICE_CASE_IF_PETSC_DEFINED(IMPLS, func, ...) PetscIfPetscDefined(PetscConcat_(HAVE_, IMPLS), PETSC_DEVICE_CASE, PETSC_VOID_0)(IMPLS, func, __VA_ARGS__)
 
-/*@C
+/*@
   PetscDeviceCreate - Get a new handle for a particular device (often a GPU) type
 
   Not Collective
@@ -113,7 +113,7 @@ PetscErrorCode PetscDeviceCreate(PetscDeviceType type, PetscInt devid, PetscDevi
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscDeviceDestroy - Free a `PetscDevice`
 
   Not Collective
@@ -142,7 +142,7 @@ PetscErrorCode PetscDeviceDestroy(PetscDevice *device)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscDeviceConfigure - Configure a particular `PetscDevice`
 
   Not Collective
@@ -186,7 +186,7 @@ PetscErrorCode PetscDeviceConfigure(PetscDevice device)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscDeviceView - View a `PetscDevice`
 
   Collective on viewer
@@ -245,7 +245,7 @@ PetscErrorCode PetscDeviceView(PetscDevice device, PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscDeviceGetType - Get the type of device
 
   Not Collective
@@ -271,7 +271,7 @@ PetscErrorCode PetscDeviceGetType(PetscDevice device, PetscDeviceType *type)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscDeviceGetDeviceId - Get the device ID for a `PetscDevice`
 
   Not Collective
@@ -313,7 +313,7 @@ struct DefaultDeviceType : public Petsc::RegisterFinalizeable<DefaultDeviceType>
 
 static auto default_device_type = DefaultDeviceType();
 
-/*@C
+/*@
   PETSC_DEVICE_DEFAULT - Retrieve the current default `PetscDeviceType`
 
   Not Collective
@@ -331,7 +331,7 @@ PetscDeviceType PETSC_DEVICE_DEFAULT(void)
   return default_device_type.type;
 }
 
-/*@C
+/*@
   PetscDeviceSetDefaultDeviceType - Set the default device type for `PetscDevice`
 
   Not Collective
@@ -380,7 +380,7 @@ static PetscErrorCode PetscDeviceInitializeDefaultDevice_Internal(PetscDeviceTyp
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscDeviceInitialize - Initialize `PetscDevice`
 
   Not Collective
@@ -405,7 +405,7 @@ PetscErrorCode PetscDeviceInitialize(PetscDeviceType type)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscDeviceInitialized - Determines whether `PetscDevice` is initialized for a particular
   `PetscDeviceType`
 
@@ -440,7 +440,7 @@ PetscErrorCode PetscDeviceGetDefaultForType_Internal(PetscDeviceType type, Petsc
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*@
   PetscDeviceGetAttribute - Query a particular attribute of a `PetscDevice`
 
   Not Collective
