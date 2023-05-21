@@ -148,8 +148,8 @@ PetscErrorCode test_view(void)
           if (vn_loc != nn_loc) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   error with total norm loc: %" PetscInt_FMT " %" PetscInt_FMT "\n", vn_loc, nn_loc));
           if (vna_loc != nna_loc) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   error with absolute norm loc: %" PetscInt_FMT " %" PetscInt_FMT "\n", vna_loc, nna_loc));
           if (vnr_loc != nnr_loc) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   error with relative norm loc: %" PetscInt_FMT " %" PetscInt_FMT "\n", vnr_loc, nnr_loc));
-          if (!PetscIsCloseAtTol(vna, nna, 0, PETSC_SMALL)) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   error with absolute norm: %1.16e %1.16e diff %1.16e\n", (double)vna, (double)nna, (double)(vna - nna)));
-          if (!PetscIsCloseAtTol(vnr, nnr, 0, PETSC_SMALL)) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   error with relative norm: %1.16e %1.16e diff %1.16e\n", (double)vnr, (double)nnr, (double)(vnr - nnr)));
+          if (!PetscIsCloseAtTol(vna, nna, 0, PETSC_SQRT_MACHINE_EPSILON)) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   error with absolute norm: %1.16e %1.16e diff %1.16e\n", (double)vna, (double)nna, (double)(vna - nna)));
+          if (!PetscIsCloseAtTol(vnr, nnr, 0, PETSC_SQRT_MACHINE_EPSILON)) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "   error with relative norm: %1.16e %1.16e diff %1.16e\n", (double)vnr, (double)nnr, (double)(vnr - nnr)));
         }
       }
     }
