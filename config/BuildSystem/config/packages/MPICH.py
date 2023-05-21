@@ -1,20 +1,25 @@
 import config.package
-import os
 
 class Configure(config.package.GNUPackage):
   def __init__(self, framework):
-    config.package.GNUPackage.__init__(self, framework)
-    self.version          = '4.1.1'
-    self.download         = ['https://github.com/pmodels/mpich/releases/download/v'+self.version+'/mpich-'+self.version+'.tar.gz',
-                             'https://www.mpich.org/static/downloads/'+self.version+'/mpich-'+self.version+'.tar.gz', # does not always work from Python? So add in ftp.mcs URL below
-                             'https://ftp.mcs.anl.gov/pub/petsc/externalpackages'+'/mpich-'+self.version+'.tar.gz']
-    self.downloaddirnames = ['mpich']
+    super().__init__(framework)
+    self.version   = '4.1.1'
+    self.gitcommit = 'v' + self.version
+    self.download  = [
+      'https://github.com/pmodels/mpich/releases/download/v'+self.version+'/mpich-'+self.version+'.tar.gz',
+       # does not always work from Python? So add in ftp.mcs URL below
+      'https://www.mpich.org/static/downloads/'+self.version+'/mpich-'+self.version+'.tar.gz',
+      'https://ftp.mcs.anl.gov/pub/petsc/externalpackages/mpich-'+self.version+'.tar.gz'
+    ]
+    self.download_git           = ['git://https://github.com/pmodels/mpich.git']
+    self.gitsubmodules          = ['.']
+    self.downloaddirnames       = ['mpich']
     self.skippackagewithoptions = 1
-    self.isMPI = 1
+    self.isMPI                  = 1
     return
 
   def setupDependencies(self, framework):
-    config.package.GNUPackage.setupDependencies(self, framework)
+    super().setupDependencies(framework)
     self.compilerFlags   = framework.require('config.compilerFlags',self)
     self.cuda            = framework.require('config.packages.cuda',self)
     self.hip             = framework.require('config.packages.hip',self)
@@ -24,7 +29,7 @@ class Configure(config.package.GNUPackage):
     return
 
   def setupHelp(self, help):
-    config.package.GNUPackage.setupHelp(self,help)
+    super().setupHelp(help)
     import nargs
     help.addArgument('MPICH', '-download-mpich-pm=<hydra, gforker or mpd>',              nargs.Arg(None, 'hydra', 'Launcher for MPI processes'))
     help.addArgument('MPICH', '-download-mpich-device=<ch3:nemesis or see MPICH docs>', nargs.Arg(None, None, 'Communicator for MPI processes'))
@@ -47,7 +52,7 @@ class Configure(config.package.GNUPackage):
 
   def formGNUConfigureArgs(self):
     '''MPICH has many specific extra configure arguments'''
-    args = config.package.GNUPackage.formGNUConfigureArgs(self)
+    args = super().formGNUConfigureArgs()
     args.append('--with-pm='+self.argDB['download-mpich-pm'])
     args.append('--disable-java')
     if self.hwloc.found:
@@ -91,13 +96,22 @@ class Configure(config.package.GNUPackage):
     args.append('--disable-dependency-tracking')
     return args
 
+  def gitPreReqCheck(self):
+    return self.programs.autoreconf and self.programs.libtoolize
+
+  def preInstall(self):
+    if self.retriever.isDirectoryGitRepo(self.packageDir):
+      # no need to bootstrap tarballs
+      self.Bootstrap('./autogen.sh')
+    return super().preInstall()
+
   def Install(self):
     '''After downloading and installing MPICH we need to reset the compilers to use those defined by the MPICH install'''
     if 'package-prefix-hash' in self.argDB and self.argDB['package-prefix-hash'] == 'reuse':
       return self.defaultInstallDir
-    installDir = config.package.GNUPackage.Install(self)
+    installDir = super().Install()
     self.updateCompilers(installDir,'mpicc','mpicxx','mpif77','mpif90')
     return installDir
 
   def configure(self):
-    return config.package.Package.configure(self)
+    return super().configure()
