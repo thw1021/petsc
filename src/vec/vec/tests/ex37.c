@@ -19,6 +19,26 @@ static PetscErrorCode GetISs(Vec vecs[], IS is[], PetscBool inv)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PetscErrorCode convert_from_nest(Vec X, Vec *Y)
+{
+  const PetscScalar *v;
+  PetscInt           rstart, n, N;
+
+  PetscFunctionBegin;
+  PetscCall(VecGetLocalSize(X, &n));
+  PetscCall(VecGetSize(X, &N));
+  PetscCall(VecGetOwnershipRange(X, &rstart, NULL));
+  PetscCall(VecCreate(PetscObjectComm((PetscObject)X), Y));
+  PetscCall(VecSetSizes(*Y, n, N));
+  PetscCall(VecSetType(*Y, VECSTANDARD)); // We always use a CPU only version
+  PetscCall(VecGetArrayRead(X, &v));
+  for (PetscInt i = 0; i < n; i++) PetscCall(VecSetValue(*Y, rstart + i, v[i], INSERT_VALUES));
+  PetscCall(VecRestoreArrayRead(X, &v));
+  PetscCall(VecAssemblyBegin(*Y));
+  PetscCall(VecAssemblyEnd(*Y));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PetscErrorCode test_view(void)
 {
   Vec          X, lX, a, b;
@@ -96,6 +116,28 @@ PetscErrorCode test_view(void)
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "(min-X) = %f : index = %" PetscInt_FMT " \n", (double)val, index));
 
   PetscCall(VecView(X, PETSC_VIEWER_STDOUT_WORLD));
+
+  Vec       X2, vX, vX2;
+  PetscReal vn, vna, vnr;
+  PetscInt  vn_loc, vna_loc, vnr_loc;
+  PetscCall(convert_from_nest(X, &vX));
+  PetscCall(VecDuplicate(X, &X2));
+  PetscCall(VecCopy(X, X2));
+  PetscCall(VecDuplicate(vX, &vX2));
+  PetscCall(VecCopy(vX, vX2));
+  PetscCall(VecScale(X2, 2.0));
+  PetscCall(VecScale(vX2, 2.0));
+  PetscCall(VecErrorWeightedNorms(vX, vX2, NULL, NORM_INFINITY, 0.5, NULL, 0.5, NULL, 0.0, &vn, &vn_loc, &vna, &vna_loc, &vnr, &vnr_loc));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "v Wnorms inf = %f %f %f: inds = %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " \n", (double)vn, (double)vna, (double)vnr, vn_loc, vna_loc, vnr_loc));
+  PetscCall(VecErrorWeightedNorms(X, X2, NULL, NORM_INFINITY, 0.5, NULL, 0.5, NULL, 0.0, &vn, &vn_loc, &vna, &vna_loc, &vnr, &vnr_loc));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "nest Wnorms inf = %f %f %f: inds = %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " \n", (double)vn, (double)vna, (double)vnr, vn_loc, vna_loc, vnr_loc));
+  PetscCall(VecErrorWeightedNorms(vX, vX2, NULL, NORM_2, 0.5, NULL, 0.5, NULL, 0.0, &vn, &vn_loc, &vna, &vna_loc, &vnr, &vnr_loc));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "v Wnorms 2 = %f %f %f: inds = %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " \n", (double)vn, (double)vna, (double)vnr, vn_loc, vna_loc, vnr_loc));
+  PetscCall(VecErrorWeightedNorms(X, X2, NULL, NORM_2, 0.5, NULL, 0.5, NULL, 0.0, &vn, &vn_loc, &vna, &vna_loc, &vnr, &vnr_loc));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "nest Wnorms 2 = %f %f %f: inds = %" PetscInt_FMT " %" PetscInt_FMT " %" PetscInt_FMT " \n", (double)vn, (double)vna, (double)vnr, vn_loc, vna_loc, vnr_loc));
+  PetscCall(VecDestroy(&X2));
+  PetscCall(VecDestroy(&vX));
+  PetscCall(VecDestroy(&vX2));
 
   PetscCall(VecCreateLocalVector(X, &lX));
   PetscCall(VecGetLocalVectorRead(X, lX));
