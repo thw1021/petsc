@@ -43,7 +43,7 @@ static PetscErrorCode MatMultEqual_Private(Mat A, Mat B, PetscInt n, PetscBool *
 
   *flg = PETSC_TRUE;
   for (k = 0; k < n; k++) {
-    Vec Aadd, Badd = NULL;
+    Vec Aadd = NULL, Badd = NULL;
 
     PetscCall(VecSetRandom(Ax, rctx));
     PetscCall(VecCopy(Ax, Bx));
