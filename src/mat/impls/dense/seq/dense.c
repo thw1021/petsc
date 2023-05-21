@@ -9,6 +9,7 @@
 #include <petscblaslapack.h>
 #include <../src/mat/impls/aij/seq/aij.h>
 #include <petsc/private/petsclegacycupmblas.h>
+#include <petsc/private/deviceimpl.h>
 
 PetscErrorCode MatSeqDenseSymmetrize_Private(Mat A, PetscBool hermitian)
 {
@@ -1698,7 +1699,6 @@ PetscErrorCode MatDestroy_SeqDense(Mat mat)
   PetscCheck(!l->vecinuse, PETSC_COMM_SELF, PETSC_ERR_ORDER, "Need to call MatDenseRestoreColumnVec() first");
   PetscCheck(!l->matinuse, PETSC_COMM_SELF, PETSC_ERR_ORDER, "Need to call MatDenseRestoreSubMatrix() first");
   PetscCall(VecDestroy(&l->gemvvec));
-  PetscCall(VecDestroy(&l->gemxarray));
   PetscCall(VecDestroy(&l->cvec));
   PetscCall(MatDestroy(&l->cmat));
   PetscCall(PetscFree(mat->data));
@@ -3616,25 +3616,6 @@ PetscErrorCode MatDenseRestoreSubMatrix_SeqDense(Mat A, Mat *v)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatSeqDenseGetGemxArray_Private(Mat A_mat, PetscInt n, Vec *gemxarray)
-{
-  PetscFunctionBegin;
-  Mat_SeqDense *d = (Mat_SeqDense *)A_mat->data;
-  if (d->gemxarray) {
-    PetscInt vec_n;
-    PetscCall(VecGetLocalSize(d->gemxarray, &vec_n));
-    if (vec_n < n) { PetscCall(VecDestroy(&d->gemxarray)); }
-  }
-  if (!d->gemxarray) {
-    PetscCall(VecCreate(PetscObjectComm((PetscObject)A_mat), &d->gemxarray));
-    PetscCall(VecSetSizes(d->gemxarray, n, n));
-    PetscCall(VecSetType(d->gemxarray, A_mat->defaultvectype));
-    PetscCall(VecSetUp(d->gemxarray));
-  }
-  *gemxarray = d->gemxarray;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 #define TRANSOP_FROM_CHAR(PRE, t) (t == 'c' || t == 'C') ? PRE##BLAS_OP_C : (t == 't' || t == 'T') ? PRE##BLAS_OP_T : PRE##BLAS_OP_N
 
 #if defined(PETSC_HAVE_CUDA)
@@ -3781,32 +3762,25 @@ PetscErrorCode MatDenseColumnsGEMVHermitianTranspose_SeqDense(PetscScalar alpha,
 
   if (PetscMemTypeHost(memtype_x) != PetscMemTypeHost(memtype_A)) {
     Mat_SeqDense *d = (Mat_SeqDense *)A_mat->data;
-    PetscScalar  *d_array;
 
-    if (!d->gemvvec) { PetscCall(MatCreateVecs(A_mat, NULL, &d->gemvvec)); }
-    PetscCall(VecGetArrayWriteAndMemType(d->gemvvec, &d_array, NULL));
-    PetscCall(PetscDeviceArrayCopy(NULL, d_array, x_array, m));
-    PetscCall(VecRestoreArrayWriteAndMemType(d->gemvvec, &d_array));
     PetscCall(VecRestoreArrayReadAndMemType(x, &x_array));
+    if (!d->gemvvec) { PetscCall(MatCreateVecs(A_mat, NULL, &d->gemvvec)); }
+    PetscCall(VecCopy(x, d->gemvvec));
     x = d->gemvvec;
     PetscCall(VecGetArrayReadAndMemType(x, &x_array, &memtype_x));
     PetscAssert(PetscMemTypeHost(memtype_x) == PetscMemTypeHost(memtype_A), PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatrixCreateVecs() creates column vector with different memtype from dense matrix");
   }
 
-  Vec          gemxarray = NULL;
+  PetscScalar *gemxarray = NULL;
   PetscInt     gemxsize  = 1 + (n - 1) * inc_y;
   PetscScalar *y_orig    = y;
   if (PetscMemTypeHost(memtype_y) != PetscMemTypeHost(memtype_A)) {
-    PetscCall(MatSeqDenseGetGemxArray_Private(A_mat, gemxsize, &gemxarray));
+    PetscCall(PetscDeviceMalloc(NULL, memtype_A, gemxsize, &gemxarray));
     if (beta != 0.0) {
-      PetscScalar *d_array;
-
-      PetscCall(VecGetArrayWriteAndMemType(gemxarray, &d_array, NULL));
-      PetscCall(PetscDeviceArrayCopy(NULL, d_array, y, gemxsize));
-      PetscCall(VecRestoreArrayWriteAndMemType(gemxarray, &d_array));
+      PetscCall(PetscDeviceArrayCopy(NULL, gemxarray, y, gemxsize));
+      PetscCall(PetscDeviceContextSynchronize(NULL));
     }
-    PetscCall(VecGetArrayAndMemType(gemxarray, &y, &memtype_y));
-    PetscAssert(PetscMemTypeHost(memtype_y) == PetscMemTypeHost(memtype_A), PETSC_COMM_SELF, PETSC_ERR_PLIB, "defaultvectype creates vector with different memtype from dense matrix");
+    y = gemxarray;
   }
 
   PetscCall(PetscCUPMGEMV_C(memtype_A, 'C', m, n, alpha, A, ld_A, x_array, 1, beta, y, inc_y));
@@ -3815,7 +3789,8 @@ PetscErrorCode MatDenseColumnsGEMVHermitianTranspose_SeqDense(PetscScalar alpha,
   PetscCall(MatDenseRestoreArrayReadAndMemType(A_mat, &A_array));
   if (gemxarray) {
     PetscCall(PetscDeviceArrayCopy(NULL, y_orig, y, gemxsize));
-    PetscCall(VecRestoreArrayAndMemType(gemxarray, &y));
+    PetscCall(PetscDeviceContextSynchronize(NULL));
+    PetscCall(PetscDeviceFree(NULL, gemxarray));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -3832,51 +3807,36 @@ PetscErrorCode MatDenseColumnsGEMV_SeqDense(PetscScalar alpha, Mat A_mat, PetscI
   const PetscScalar *A = &A_array[ld_A * col_start];
 
   PetscScalar *y_array;
-  PetscScalar *y_array_orig = NULL;
+  Vec          y_orig = NULL;
   PetscMemType memtype_y;
   PetscCall(VecGetArrayAndMemType(y, &y_array, &memtype_y));
 
   if (PetscMemTypeHost(memtype_y) != PetscMemTypeHost(memtype_A)) {
     Mat_SeqDense *d = (Mat_SeqDense *)A_mat->data;
-    y_array_orig    = y_array;
 
+    PetscCall(VecRestoreArrayAndMemType(y, &y_array));
+    y_orig = y;
     if (!d->gemvvec) { PetscCall(MatCreateVecs(A_mat, NULL, &d->gemvvec)); }
-    if (beta != 0.0) {
-      PetscScalar *d_array;
-
-      PetscCall(VecGetArrayWriteAndMemType(d->gemvvec, &d_array, NULL));
-      PetscCall(PetscDeviceArrayCopy(NULL, d_array, y_array, m));
-      PetscCall(VecRestoreArrayWriteAndMemType(d->gemvvec, &d_array));
-    }
+    if (beta != 0.0) { PetscCall(VecCopy(y, d->gemvvec)); }
     PetscCall(VecGetArrayAndMemType(d->gemvvec, &y_array, &memtype_y));
+    y = d->gemvvec;
     PetscAssert(PetscMemTypeHost(memtype_y) == PetscMemTypeHost(memtype_A), PETSC_COMM_SELF, PETSC_ERR_PLIB, "MatrixCreateVecs() creates column vector with different memtype from dense matrix");
   }
 
-  Vec gemxarray = NULL;
+  PetscScalar *gemxarray = NULL;
   if (PetscMemTypeHost(memtype_x) != PetscMemTypeHost(memtype_A)) {
     PetscInt gemxsize = 1 + (n - 1) * inc_x;
-    PetscCall(MatSeqDenseGetGemxArray_Private(A_mat, gemxsize, &gemxarray));
-    PetscScalar *d_array;
-
-    PetscCall(VecGetArrayWriteAndMemType(gemxarray, &d_array, NULL));
-    PetscCall(PetscDeviceArrayCopy(NULL, d_array, x, gemxsize));
-    PetscCall(VecRestoreArrayWriteAndMemType(gemxarray, &d_array));
-
-    PetscCall(VecGetArrayReadAndMemType(gemxarray, &x, &memtype_x));
-    PetscAssert(PetscMemTypeHost(memtype_x) == PetscMemTypeHost(memtype_A), PETSC_COMM_SELF, PETSC_ERR_PLIB, "defaultvectype creates vector with different memtype from dense matrix");
+    PetscCall(PetscDeviceMalloc(NULL, memtype_A, gemxsize, &gemxarray));
+    PetscCall(PetscDeviceArrayCopy(NULL, gemxarray, x, gemxsize));
+    PetscCall(PetscDeviceContextSynchronize(NULL));
+    x = gemxarray;
   }
 
   PetscCall(PetscCUPMGEMV_C(memtype_A, 'N', m, n, alpha, A, ld_A, x, inc_x, beta, y_array, 1));
 
-  if (gemxarray) { PetscCall(VecRestoreArrayReadAndMemType(gemxarray, &x)); }
-  if (y_array_orig) {
-    Mat_SeqDense *d = (Mat_SeqDense *)A_mat->data;
-
-    PetscCall(PetscDeviceArrayCopy(NULL, y_array_orig, y_array, m));
-    PetscCall(VecRestoreArrayAndMemType(d->gemvvec, &y_array));
-    y_array = y_array_orig;
-  }
+  if (gemxarray) { PetscCall(PetscDeviceFree(NULL, gemxarray)); }
   PetscCall(VecRestoreArrayAndMemType(y, &y_array));
+  if (y_orig) { PetscCall(VecCopy(y, y_orig)); }
   PetscCall(MatDenseRestoreArrayReadAndMemType(A_mat, &A_array));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -3915,24 +3875,15 @@ PetscErrorCode MatDenseColumnsGEMMHermitianTranspose_SeqDense(PetscScalar alpha,
   const PetscScalar *B = &B_array[ld_B * col_start_B];
 
   PetscInt     gemxsize  = m + ld_C * (n - 1);
-  Vec          gemxarray = NULL;
+  PetscScalar *gemxarray = NULL;
   PetscScalar *C_orig    = C;
   if (PetscMemTypeHost(memtype_C) != PetscMemTypeHost(memtype_A)) {
-    PetscCall(MatSeqDenseGetGemxArray_Private(A_mat, gemxsize, &gemxarray));
+    PetscCall(PetscDeviceMalloc(NULL, memtype_A, gemxsize, &gemxarray));
     if (beta != 0.0) {
-      PetscScalar *d_array;
-
-      PetscCall(VecGetArrayWriteAndMemType(gemxarray, &d_array, NULL));
-      PetscCall(PetscDeviceArrayCopy(NULL, d_array, C, gemxsize));
-      PetscCall(VecRestoreArrayWriteAndMemType(gemxarray, &d_array));
+      PetscCall(PetscDeviceArrayCopy(NULL, gemxarray, C, gemxsize));
+      PetscCall(PetscDeviceContextSynchronize(NULL));
     }
-    if (bind_to_cpu) {
-      PetscCall(VecGetArray(gemxarray, &C));
-      memtype_C = PETSC_MEMTYPE_HOST;
-    } else {
-      PetscCall(VecGetArrayAndMemType(gemxarray, &C, &memtype_C));
-    }
-    PetscAssert(PetscMemTypeHost(memtype_C) == PetscMemTypeHost(memtype_A), PETSC_COMM_SELF, PETSC_ERR_PLIB, "defaultvectype creates vector with different memtype from dense matrix");
+    C = gemxarray;
   }
 
   PetscInt k;
@@ -3948,11 +3899,8 @@ PetscErrorCode MatDenseColumnsGEMMHermitianTranspose_SeqDense(PetscScalar alpha,
   }
   if (gemxarray) {
     PetscCall(PetscDeviceArrayCopy(NULL, C_orig, C, gemxsize));
-    if (bind_to_cpu) {
-      PetscCall(VecRestoreArray(gemxarray, &C));
-    } else {
-      PetscCall(VecRestoreArrayAndMemType(gemxarray, &C));
-    }
+    PetscCall(PetscDeviceContextSynchronize(NULL));
+    PetscCall(PetscDeviceFree(NULL, gemxarray));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -3991,31 +3939,14 @@ PetscErrorCode MatDenseColumnsGEMM_SeqDense(PetscScalar alpha, Mat A_mat, PetscI
   PetscInt           m;
   PetscCall(MatGetLocalSize(A_mat, &m, NULL));
 
-  Vec gemxarray = NULL;
+  PetscScalar *gemxarray = NULL;
   if (PetscMemTypeHost(memtype_B) != PetscMemTypeHost(memtype_A)) {
     PetscInt gemxsize = k + ld_B * (n - 1);
-    PetscCall(MatSeqDenseGetGemxArray_Private(A_mat, gemxsize, &gemxarray));
-    PetscScalar *d_array;
 
-    if (bind_to_cpu) {
-      PetscCall(VecGetArrayWrite(gemxarray, &d_array));
-    } else {
-      PetscCall(VecGetArrayWriteAndMemType(gemxarray, &d_array, NULL));
-    }
-    PetscCall(PetscDeviceArrayCopy(NULL, d_array, B, gemxsize));
-    if (bind_to_cpu) {
-      PetscCall(VecRestoreArrayWrite(gemxarray, &d_array));
-    } else {
-      PetscCall(VecRestoreArrayWriteAndMemType(gemxarray, &d_array));
-    }
-
-    if (bind_to_cpu) {
-      PetscCall(VecGetArrayRead(gemxarray, &B));
-      memtype_B = PETSC_MEMTYPE_HOST;
-    } else {
-      PetscCall(VecGetArrayReadAndMemType(gemxarray, &B, &memtype_B));
-    }
-    PetscAssert(PetscMemTypeHost(memtype_B) == PetscMemTypeHost(memtype_A), PETSC_COMM_SELF, PETSC_ERR_PLIB, "defaultvectype creates vector with different memtype from dense matrix");
+    PetscCall(PetscDeviceMalloc(NULL, memtype_A, gemxsize, &gemxarray));
+    PetscCall(PetscDeviceArrayCopy(NULL, gemxarray, B, gemxsize));
+    PetscCall(PetscDeviceContextSynchronize(NULL));
+    B = gemxarray;
   }
 
   PetscCall(PetscCUPMGEMM_C(memtype_A, 'N', 'N', m, n, k, alpha, A, ld_A, B, ld_B, beta, C, ld_C));
@@ -4027,13 +3958,7 @@ PetscErrorCode MatDenseColumnsGEMM_SeqDense(PetscScalar alpha, Mat A_mat, PetscI
     PetscCall(MatDenseRestoreArrayAndMemType(C_mat, &C_array));
     PetscCall(MatDenseRestoreArrayReadAndMemType(A_mat, &A_array));
   }
-  if (gemxarray) {
-    if (bind_to_cpu) {
-      PetscCall(VecRestoreArrayRead(gemxarray, &B));
-    } else {
-      PetscCall(VecRestoreArrayReadAndMemType(gemxarray, &B));
-    }
-  }
+  if (gemxarray) { PetscCall(PetscDeviceFree(NULL, gemxarray)); }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

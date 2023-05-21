@@ -1669,10 +1669,12 @@ static PetscErrorCode MatDenseColumnsGEMVHermitianTranspose_MPIDense(PetscScalar
     PetscCall(PetscDeviceMalloc(NULL, memtype_y, num_entries, &y_buffer));
     if (beta != 0.0) {
       for (PetscInt j = 0; j < num_entries; j++) { PetscCall(PetscDeviceArrayCopy(NULL, &y_buffer[j], &y[j * inc_y], 1)); }
+      PetscCall(PetscDeviceContextSynchronize(NULL));
     }
     PetscCall(MatDenseColumnsGEMVHermitianTranspose_SeqDense(alpha, a->A, col_start, col_end, x, beta, y_buffer, 1, memtype_y));
     PetscCall(PetscScalarMemTypeAllreduce_Private(y_buffer, num_entries, memtype_y, A_mat));
     for (PetscInt j = 0; j < num_entries; j++) { PetscCall(PetscDeviceArrayCopy(NULL, &y[j * inc_y], &y_buffer[j], 1)); }
+    PetscCall(PetscDeviceContextSynchronize(NULL));
     PetscCall(PetscDeviceFree(NULL, y_buffer));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1708,10 +1710,12 @@ static PetscErrorCode MatDenseColumnsGEMMHermitianTranspose_MPIDense(PetscScalar
     PetscCall(PetscDeviceMalloc(NULL, memtype_C, num_entries, &C_buffer));
     if (beta != 0.0) {
       for (PetscInt j = 0; j < n_cols; j++) { PetscCall(PetscDeviceArrayCopy(NULL, &C_buffer[j * n_rows], &C[j * ld_C], n_rows)); }
+      PetscCall(PetscDeviceContextSynchronize(NULL));
     }
     PetscCall(MatDenseColumnsGEMMHermitianTranspose_SeqDense(alpha, a->A, col_start_A, col_end_A, b->A, col_start_B, col_end_B, beta, C_buffer, n_rows, memtype_C));
     PetscCall(PetscScalarMemTypeAllreduce_Private(C_buffer, num_entries, memtype_C, A_mat));
     for (PetscInt j = 0; j < n_cols; j++) { PetscCall(PetscDeviceArrayCopy(NULL, &C[j * ld_C], &C_buffer[j * n_rows], n_rows)); }
+    PetscCall(PetscDeviceContextSynchronize(NULL));
     PetscCall(PetscDeviceFree(NULL, C_buffer));
   }
   PetscFunctionReturn(PETSC_SUCCESS);

@@ -15,5 +15,3 @@ PETSC_INTERN PetscErrorCode PetscNvshmemMax(PetscInt, PetscReal *, const PetscRe
 #endif
 
 #endif
-
-

@@ -381,7 +381,6 @@ PetscErrorCode PetscDeviceDeallocate_Private(PetscDeviceContext dctx, void *PETS
 {
   PetscFunctionBegin;
   if (ptr) {
-
     auto      &map      = memory_map.map;
     const auto found_it = map.find(const_cast<MemoryMap::map_type::key_type>(ptr));
 
