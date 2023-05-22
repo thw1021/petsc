@@ -11,6 +11,7 @@
   #define petscoptionsbegin_               PETSCOPTIONSBEGIN
   #define petscoptionsend_                 PETSCOPTIONSEND
   #define petscoptionsbool_                PETSCOPTIONSBOOL
+  #define petscoptionsenumprivate_         PETSCOPTIONSENUMPRIVATE
   #define petscoptionsint_                 PETSCOPTIONSINT
   #define petscoptionsintarray_            PETSCOPTIONSINTARRAY
   #define petscoptionsreal_                PETSCOPTIONSREAL
@@ -45,6 +46,7 @@
   #define petscoptionsbegin_               petscoptionsbegin
   #define petscoptionsend_                 petscoptionsend
   #define petscoptionsbool_                petscoptionsbool
+  #define petscoptionsenumprivate_         petscoptionsenumprivate_
   #define petscoptionsint_                 petscoptionsint
   #define petscoptionsintarray_            petscoptionsintarray
   #define petscoptionsreal_                petscoptionsreal
@@ -131,6 +133,28 @@ PETSC_EXTERN void petscoptionsbool_(char *opt, char *text, char *man, PetscBool 
   FREECHAR(text, ctext);
   FREECHAR(man, cman);
 }
+
+PETSC_EXTERN void petscoptionsenumprivate_(char *opt, char *pre, char *name, char *man, const char *const *list, PetscEnum *currentvalue, PetscEnum *ivalue, PetscBool *flg, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T len1, PETSC_FORTRAN_CHARLEN_T len2, PETSC_FORTRAN_CHARLEN_T len3)
+{
+  char     *cpre, *cname, *cman;
+  PetscBool flag;
+
+  FIXCHAR(pre, len1, cpre);
+  FIXCHAR(name, len2, cname);
+  FIXCHAR(man, len3, cman);
+  if (!PetscOptionsObject) {
+    *ierr = PETSC_ERR_ARG_WRONGSTATE;
+    return;
+  }
+  PetscOptionsObject->count = 1;
+  *ierr                     = PetscOptionsEnum_Private(PetscOptionsObject, cpre, cname, cman, list, *currentvalue, ivalue, &flag);
+  if (*ierr) return;
+  if (!FORTRANNULLBOOL(flg)) *flg = flag;
+  FREECHAR(pre, cpre);
+  FREECHAR(name, cname);
+  FREECHAR(man, cman);
+}
+
 
 PETSC_EXTERN void petscoptionsint_(char *opt, char *text, char *man, PetscInt *currentvalue, PetscInt *value, PetscBool *set, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T lenopt, PETSC_FORTRAN_CHARLEN_T lentext, PETSC_FORTRAN_CHARLEN_T lenman)
 {

@@ -46,43 +46,44 @@ Subroutine PetscOptionsGetEnum(po,pre,name,FArray,opt,set,ierr)
   DeAllocate(list1)
 End Subroutine
 
-! Subroutine PetscOptionsEnum(po,prefix,man,Flist,current_value,value,set,ierr)
-!   use,intrinsic :: iso_c_binding
-!   use petscsysdef
-!   implicit none
+Subroutine PetscOptionsEnum(po,prefix,name,man,Flist,curr,opt,set,ierr)
+  use,intrinsic :: iso_c_binding
+  use petscsysdef
+  implicit none
 
-!   character(*)                prefix,man
-!   character(*)                Flist(*)
-!   PetscEnum                   :: current_value,value
-!   PetscBool                   :: set
-!   PetscOptions                :: po
-!   PetscErrorCode,intent(out)  :: ierr
+  character(*)                prefix,name,man
+  character(*)                Flist(*)
+  PetscEnum                   :: curr,opt
+  PetscBool                   :: set
+  PetscOptions                :: po
+  PetscErrorCode,intent(out)  :: ierr
 
-!   Type(C_Ptr),Dimension(:),Pointer :: CArray
-!   character(kind=c_char),pointer   :: nullc => null()
-!   PetscInt   :: i,Len
-!   Character(kind=C_char,len=99),Dimension(:),Pointer::list1
+  Type(C_Ptr),Dimension(:),Pointer :: CArray
+  character(kind=c_char),pointer   :: nullc => null()
+  PetscInt   :: i,Len
+  Character(kind=C_char,len=99),Dimension(:),Pointer::list1
 
-!   Len=0
-!   do i=1,100
-!     if (len_trim(Flist(i)) .eq. 0) then
-!       Len = i-1
-!       goto 100
-!     endif
-!   enddo
-! 100  continue
+  Len=0
+  do i=1,100
+    if (len_trim(Flist(i)) .eq. 0) then
+      Len = i-1
+      goto 100
+    endif
+  enddo
+100  continue
 
-!   Allocate(list1(Len),stat=ierr)
-!   if (ierr .ne. 0) return
-!   Allocate(CArray(Len+1),stat=ierr)
-!   if (ierr .ne. 0) return
-!   do i=1,Len
-!       list1(i) = trim(Flist(i))//C_NULL_CHAR
-!       CArray(i) = c_loc(list1(i))
-!   enddo
+  Allocate(list1(Len),stat=ierr)
+  if (ierr .ne. 0) return
+  Allocate(CArray(Len+1),stat=ierr)
+  if (ierr .ne. 0) return
+  do i=1,Len
+      list1(i) = trim(Flist(i))//C_NULL_CHAR
+      CArray(i) = c_loc(list1(i))
+  enddo
 
-!   CArray(Len+1) = c_loc(nullc)
-!   call PetscOptionsEnumPrivate(po,prefix,man,CArray,current_value,value,set,ierr)
-!   DeAllocate(CArray)
-!   DeAllocate(list1)
-! End Subroutine PetscOptionsEnum
+  CArray(Len+1) = c_loc(nullc)
+  call PetscOptionsEnumPrivate(po,prefix,name,man,CArray,curr,opt,set,ierr)
+
+  DeAllocate(CArray)
+  DeAllocate(list1)
+End Subroutine PetscOptionsEnum

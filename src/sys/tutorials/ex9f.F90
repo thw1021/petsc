@@ -12,7 +12,7 @@ program ex9f
     Integer,Parameter                         :: Pi = kind(PInt)
 
     PetscErrorCode                            :: ierr
-    PetscBool                                 :: setb,seti,setia,setr,setra,sets
+    PetscBool                                 :: setb,sete,seti,setia,setr,setra,sets
     PetscBool                                 :: bvalue = PETSC_TRUE
     PetscInt                                  :: nopt = 3_Pi
     PetscInt                                  :: ivalue = 2_Pi
@@ -20,9 +20,18 @@ program ex9f
     PetscReal                                 :: rvalue = 1.23_Pr
     PetscReal,dimension(:),pointer            :: rarray
     PetscScalar                               :: svalue = -4.56_Pr
-    Character(len=256)                        :: IOBuffer
+    character(len=256)                        :: IOBuffer
+    character(len=256)                        :: list(6)
+    PetscEnum                                 :: evalue = 2
 
     PetscCallA(PetscInitialize(ierr))
+    ! list(1) = 'a123   '
+    ! list(2) = 'b456   '
+    ! list(3) = 'c789   '
+    ! list(4) = 'list   '
+    ! list(5) = 'prefix_'
+    ! list(6) = ''
+
 
     Allocate(iarray(nopt),source=-1_Pi)
     Allocate(rarray(nopt),source=-99.0_pr)
@@ -31,6 +40,7 @@ program ex9f
     PetscCallA(PetscOptionsBool('-bool','Get an application bool','Man page',bvalue,bvalue,setb,ierr))
     PetscCallA(PetscOptionsInt('-int','Get an application int','Man page',ivalue,ivalue,seti,ierr))
     PetscCallA(PetscOptionsIntArray('-intarray','Get an application int array','Man page',iarray,nopt,setia,ierr))
+    ! PetscCallA(PetscOptionsEnum('-enum','Get an application enum','Man page',evalue,evalue,sete,ierr))
     PetscCallA(PetscOptionsReal('-real','Get an application real','Man page',rvalue,rvalue,setr,ierr))
     PetscCallA(PetscOptionsRealArray('-realarray','Get an application real array','Man page',rarray,nopt,setra,ierr))
     PetscCallA(PetscOptionsScalar('-scalar','Get an application scalar','Man page',svalue,svalue,sets,ierr))
