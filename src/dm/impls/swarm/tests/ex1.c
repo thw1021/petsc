@@ -1,4 +1,4 @@
-static const char help[] = "Test initialization and migration with swarm.";
+static const char help[] = "Test initialization and migration with swarm.\n";
 
 #include <petscdmplex.h>
 #include <petscdmswarm.h>
@@ -32,7 +32,7 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm, AppCtx *user)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* 
+/*
   This function initializes all particles on rank 0.
   They are sent to other ranks to test migration across non nearest neighbors
 */
@@ -194,6 +194,7 @@ int main(int argc, char **argv)
 }
 
 /*TEST
+
   # Swarm does not handle complex or quad
   build:
     requires: !complex double
