@@ -718,7 +718,7 @@ int main(int argc, char *argv[])
   PetscCall(ProcessOptions(comm, &user));
   PetscCall(CreateMesh(comm, &dm, &user));
   PetscCall(CreateFEM(dm, &user));
-  if (!user.shape){
+  if (!user.shape) {
     PetscCall(CreateParticles(dm, &sw, &user));
     PetscCall(TestL2ProjectionParticlesToField(dm, sw, &user));
     PetscCall(TestL2ProjectionFieldToParticles(dm, sw, &user));
