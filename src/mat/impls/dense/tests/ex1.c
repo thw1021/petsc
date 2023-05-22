@@ -294,7 +294,7 @@ int main(int argc, char **argv)
   PetscCall(PetscOptionsEnum("-temp_memtype", "PetscMemType of intermediate results", NULL, ExMemTypes, (PetscEnum)exmt_M, (PetscEnum *)&exmt_M, NULL));
   PetscCall(PetscOptionsBool("-report_host_memory", "Report host memory allocations that happen in each approach", NULL, report_host_memory, &report_host_memory, NULL));
   PetscCall(PetscOptionsBool("-report_memcpy", "Report host <-> device memcpys in each approach", NULL, report_memcpy, &report_memcpy, NULL));
-  PetscCall(PetscOptionsBool("-explicity_dctx", "Pass explicit PetscDeviceContext to tests", NULL, explicit_dctx, &explicit_dctx, NULL));
+  PetscCall(PetscOptionsBool("-explicit_dctx", "Pass explicit PetscDeviceContext to tests", NULL, explicit_dctx, &explicit_dctx, NULL));
   PetscOptionsEnd();
 
   if (lda < 0) lda = k_rows;
@@ -375,7 +375,7 @@ int main(int argc, char **argv)
   test:
     suffix: 0
     nsize: {{1 2}}
-    args: -report_host_memory -malloc_debug
+    args: -report_host_memory -malloc_debug -explicit_dctx {{0 1}}
 
   # TODO: how to verify that there are no device mallocs()?
   # test:
@@ -386,7 +386,7 @@ int main(int argc, char **argv)
   test:
     suffix: cuda_log
     requires: cuda
-    args: -report_host_memory -malloc_debug -A_mat_type densecuda -B_mat_type densecuda -C_mat_type densecuda -D_mat_type densecuda -temp_memtype cuda -log_view
+    args: -report_host_memory -malloc_debug -A_mat_type densecuda -B_mat_type densecuda -C_mat_type densecuda -D_mat_type densecuda -temp_memtype cuda -log_view -explicit_dctx {{0 1}}
     filter: grep "MatDenseColsGEM" | awk "{print \$1, \$23, \$24, \$25, \$26, \$27;}"
 
   # Use logging to verify no host <-> device memory transfer during kernels (if gpu aware mpi is used)
@@ -395,7 +395,7 @@ int main(int argc, char **argv)
     suffix: cuda_log_mpi
     output_file: output/ex1_cuda_log.out
     requires: cuda defined(PETSC_HAVE_MPI_GPU_AWARE)
-    args: -report_host_memory -malloc_debug -A_mat_type densecuda -B_mat_type densecuda -C_mat_type densecuda -D_mat_type densecuda -temp_memtype cuda -log_view
+    args: -report_host_memory -malloc_debug -A_mat_type densecuda -B_mat_type densecuda -C_mat_type densecuda -D_mat_type densecuda -temp_memtype cuda -log_view -explicit_dctx {{0 1}}
     filter: grep "MatDenseColsGEM" | awk "{print \$1, \$23, \$24, \$25, \$26, \$27;}"
 
   ## Tests that verify correctness, not performance
@@ -406,7 +406,7 @@ int main(int argc, char **argv)
     suffix: HHHHD
     output_file: output/ex1_0.out
     requires: cuda
-    args: -n_iter 2 -temp_memtype cuda
+    args: -n_iter 2 -temp_memtype cuda -explicit_dctx {{0 1}}
 
   # GEMMH (host, device, host), GEMM (host, host, device)
   test:
@@ -414,7 +414,7 @@ int main(int argc, char **argv)
     suffix: HHDDH
     output_file: output/ex1_0.out
     requires: cuda
-    args: -n_iter 2 -C_mat_type densecuda -D_mat_type densecuda
+    args: -n_iter 2 -C_mat_type densecuda -D_mat_type densecuda -explicit_dctx {{0 1}}
 
   # GEMMH (host, device, device), GEMM (host, device, device)
   test:
@@ -422,7 +422,7 @@ int main(int argc, char **argv)
     suffix: HHDDD
     output_file: output/ex1_0.out
     requires: cuda
-    args: -n_iter 2 -C_mat_type densecuda -D_mat_type densecuda -temp_memtype cuda
+    args: -n_iter 2 -C_mat_type densecuda -D_mat_type densecuda -temp_memtype cuda -explicit_dctx {{0 1}}
 
   # GEMMH (device, host, host), GEMM (device, host, host)
   test:
@@ -430,7 +430,7 @@ int main(int argc, char **argv)
     suffix: DDHHH
     output_file: output/ex1_0.out
     requires: cuda
-    args: -n_iter 2 -A_mat_type densecuda -B_mat_type densecuda
+    args: -n_iter 2 -A_mat_type densecuda -B_mat_type densecuda -explicit_dctx {{0 1}}
 
   # GEMMH (device, host, device), GEMM (device, device, host)
   test:
@@ -438,7 +438,7 @@ int main(int argc, char **argv)
     suffix: DDHHD
     output_file: output/ex1_0.out
     requires: cuda
-    args: -n_iter 2 -A_mat_type densecuda -B_mat_type densecuda -temp_memtype cuda
+    args: -n_iter 2 -A_mat_type densecuda -B_mat_type densecuda -temp_memtype cuda -explicit_dctx {{0 1}}
 
   # GEMMH (device, device, host), GEMM (device, host, device)
   test:
@@ -446,14 +446,14 @@ int main(int argc, char **argv)
     suffix: DDDDH
     output_file: output/ex1_0.out
     requires: cuda
-    args: -n_iter 2 -A_mat_type densecuda -B_mat_type densecuda -C_mat_type densecuda -D_mat_type densecuda -temp_memtype cuda
+    args: -n_iter 2 -A_mat_type densecuda -B_mat_type densecuda -C_mat_type densecuda -D_mat_type densecuda -temp_memtype cuda -explicit_dctx {{0 1}}
 
   # Verify that routines are respecting the boundaries of the array if lda is largers than k_rows
   test:
     suffix: lda_test
     nsize: 2
     output_file: output/ex1_0.out
-    args: -lda 20
+    args: -lda 20 -explicit_dctx {{0 1}}
 
   # TODO: nvhsmem tests?
 TEST*/
