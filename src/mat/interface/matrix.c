@@ -7,6 +7,7 @@
 #include <petsc/private/matimpl.h> /*I "petscmat.h" I*/
 #include <petsc/private/isimpl.h>
 #include <petsc/private/vecimpl.h>
+#include <petscdevice.h>
 
 /* Logging support */
 PetscClassId MAT_CLASSID;
@@ -11148,15 +11149,17 @@ PetscErrorCode MatEliminateZeros(Mat A)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
-  MatDenseColumnsGEMVHermitianTranspose - Compute `y = alpha * A[col_start:col_end-1]^H * x + beta * y`,
+// Notice: not actual docstring, private for now
+/*
+  MatDenseColumnsGEMVHermitianTranspose_Private - Compute `y = alpha * A[col_start:col_end-1]^H * x + beta * y`,
   where `A` is a range of columns of a dense matrix, `x` is a vector, and `y` is an array
   that is duplicated on each process.
 
   Collective
 
   Input Parameters:
-+ alpha - scalar multiplying `A^H * x`
++ dctx - `PetscDeviceContext` for computations (NULL for default stream)
+. alpha - scalar multiplying `A^H * x`
 . A - matrix containing the columns
 . col_start - the first column in the range defining `A`
 . col_end - one after the last column in the range defining `A`
@@ -11178,36 +11181,41 @@ PetscErrorCode MatEliminateZeros(Mat A)
 
   Instead of calling this for multiple vectors `y`, use `MatDenseColumnsGEMMHermitianTranspose()`.
 
+  `y` Must be allocated for `dctx` (`PetscDeviceMalloc()`) or registered with `dctx` (`PetscDeviceRegisterMemory()`)
+
 .seealso: [](chapter_vectors), `VecMDot()`, `MatDenseColumnsGEMV()`, `MatDenseColumnsGEMMHermitianTranspose()`, `MatDenseColumnsGEMM()`, `MATDENSE`
-@*/
-PetscErrorCode MatDenseColumnsGEMVHermitianTranspose(PetscScalar alpha, Mat A, PetscInt col_start, PetscInt col_end, Vec x, PetscScalar beta, PetscScalar *y, PetscInt inc_y, PetscMemType memtype_y)
+*/
+PetscErrorCode MatDenseColumnsGEMVHermitianTranspose_Private(PetscDeviceContext dctx, PetscScalar alpha, Mat A, PetscInt col_start, PetscInt col_end, Vec x, PetscScalar beta, PetscScalar *y, PetscInt inc_y, PetscMemType memtype_y)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(A, MAT_CLASSID, 2);
-  PetscValidHeaderSpecific(x, VEC_CLASSID, 5);
+  if (dctx) PetscValidHeaderSpecific(dctx, PETSC_DEVICE_CONTEXT_CLASSID, 1);
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 3);
+  PetscValidHeaderSpecific(x, VEC_CLASSID, 6);
   PetscCheck(A->rmap->N == x->map->N, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_SIZ, "Mat A,Vec x: global dim %" PetscInt_FMT " %" PetscInt_FMT, A->rmap->N, x->map->N);
   PetscCheck(A->rmap->n == x->map->n, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Mat A,Vec x: local dim %" PetscInt_FMT " %" PetscInt_FMT, A->rmap->n, x->map->n);
-  PetscValidLogicalCollectiveScalar(A, alpha, 1);
-  PetscValidLogicalCollectiveInt(A, col_start, 3);
-  PetscValidLogicalCollectiveInt(A, col_end, 4);
-  PetscValidLogicalCollectiveScalar(A, beta, 6);
+  PetscValidLogicalCollectiveScalar(A, alpha, 2);
+  PetscValidLogicalCollectiveInt(A, col_start, 4);
+  PetscValidLogicalCollectiveInt(A, col_end, 5);
+  PetscValidLogicalCollectiveScalar(A, beta, 7);
   if (col_end <= col_start) PetscFunctionReturn(PETSC_SUCCESS); // No columns
   PetscCheck(col_start >= 0 && col_end <= A->cmap->N, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_SIZ, "Mat A: column dim %" PetscInt_FMT " does not contain [%" PetscInt_FMT ",%" PetscInt_FMT ")", A->cmap->N, col_start, col_end);
   PetscCall(PetscLogEventBegin(MAT_DenseColumnsGEMVH, A, x, 0, 0));
-  PetscUseMethod(A, "MatDenseColumnsGEMVHermitianTranspose_C", (PetscScalar, Mat, PetscInt, PetscInt, Vec, PetscScalar, PetscScalar *, PetscInt, PetscMemType), (alpha, A, col_start, col_end, x, beta, y, inc_y, memtype_y));
+  PetscUseMethod(A, "MatDenseColumnsGEMVHermitianTranspose_C", (PetscDeviceContext, PetscScalar, Mat, PetscInt, PetscInt, Vec, PetscScalar, PetscScalar *, PetscInt, PetscMemType), (dctx, alpha, A, col_start, col_end, x, beta, y, inc_y, memtype_y));
   PetscCall(PetscLogEventEnd(MAT_DenseColumnsGEMVH, A, x, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
-  MatDenseColumnsGEMV - Compute `y = alpha * A[col_start:col_end-1] * x + beta * y`, where `A` is a
+// Notice: not actual docstring, private for now
+/*
+  MatDenseColumnsGEMV_Private - Compute `y = alpha * A[col_start:col_end-1] * x + beta * y`, where `A` is a
   range of columns of a dense matrix, `x` is an array that is duplicated on each
   process, and `y` is a vector.
 
   Logically Collective
 
   Input Parameters:
-+ alpha - scalar multiplying `A * x`
++ dctx - `PetscDeviceContext` for computations (NULL for default stream)
+. alpha - scalar multiplying `A * x`
 . A - matrix containing the columns
 . col_start - the first column in the range defining `A`
 . col_end - one after the last column in the range defining `A`
@@ -11229,39 +11237,44 @@ PetscErrorCode MatDenseColumnsGEMVHermitianTranspose(PetscScalar alpha, Mat A, P
 
   Instead of calling this for multiple vectors `y`, use `MatDenseColumnsGEMM()`.
 
+  `x` Must be allocated for `dctx` (`PetscDeviceMalloc()`) or registered with `dctx` (`PetscDeviceRegisterMemory()`)
+
 .seealso: [](chapter_vectors), `VecAXPBY()`, `MATDENSE`, `MatDenseColumnsGEMVHermitianTranspose()`, `MatDenseColumnsGEMM()`, `MatDenseColumnsGEMMHermitianTranspose()`
-@*/
-PetscErrorCode MatDenseColumnsGEMV(PetscScalar alpha, Mat A, PetscInt col_start, PetscInt col_end, const PetscScalar *x, PetscInt inc_x, PetscMemType memtype_x, PetscScalar beta, Vec y)
+*/
+PetscErrorCode MatDenseColumnsGEMV_Private(PetscDeviceContext dctx, PetscScalar alpha, Mat A, PetscInt col_start, PetscInt col_end, const PetscScalar *x, PetscInt inc_x, PetscMemType memtype_x, PetscScalar beta, Vec y)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(A, MAT_CLASSID, 2);
-  PetscValidHeaderSpecific(y, VEC_CLASSID, 9);
+  if (dctx) PetscValidHeaderSpecific(dctx, PETSC_DEVICE_CONTEXT_CLASSID, 1);
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 3);
+  PetscValidHeaderSpecific(y, VEC_CLASSID, 10);
   PetscCheck(A->rmap->N == y->map->N, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_SIZ, "Mat A,Vec y: global dim %" PetscInt_FMT " %" PetscInt_FMT, A->rmap->N, y->map->N);
   PetscCheck(A->rmap->n == y->map->n, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Mat A,Vec y: local dim %" PetscInt_FMT " %" PetscInt_FMT, A->rmap->n, y->map->n);
-  PetscValidLogicalCollectiveScalar(A, alpha, 1);
-  PetscValidLogicalCollectiveInt(A, col_start, 3);
-  PetscValidLogicalCollectiveInt(A, col_end, 4);
-  PetscValidLogicalCollectiveScalar(A, beta, 8);
+  PetscValidLogicalCollectiveScalar(A, alpha, 2);
+  PetscValidLogicalCollectiveInt(A, col_start, 4);
+  PetscValidLogicalCollectiveInt(A, col_end, 5);
+  PetscValidLogicalCollectiveScalar(A, beta, 9);
   if (col_end <= col_start) { // No columns
     PetscCall(VecScale(y, beta));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   PetscCheck(col_start >= 0 && col_end <= A->cmap->N, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_SIZ, "Mat A: column dim %" PetscInt_FMT " does not contain [%" PetscInt_FMT ",%" PetscInt_FMT ")", A->cmap->N, col_start, col_end);
   PetscCall(PetscLogEventBegin(MAT_DenseColumnsGEMV, A, y, 0, 0));
-  PetscUseMethod(A, "MatDenseColumnsGEMV_C", (PetscScalar, Mat, PetscInt, PetscInt, const PetscScalar *, PetscInt, PetscMemType, PetscScalar, Vec), (alpha, A, col_start, col_end, x, inc_x, memtype_x, beta, y));
+  PetscUseMethod(A, "MatDenseColumnsGEMV_C", (PetscDeviceContext, PetscScalar, Mat, PetscInt, PetscInt, const PetscScalar *, PetscInt, PetscMemType, PetscScalar, Vec), (dctx, alpha, A, col_start, col_end, x, inc_x, memtype_x, beta, y));
   PetscCall(PetscLogEventEnd(MAT_DenseColumnsGEMV, A, y, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
-  MatDenseColumnsGEMMHermitianTranspose - Compute `C = alpha * A[col_start_A:col_end_A-1]^H * B + beta * C`,
+// Notice: not actual docstring, private for now
+/*
+  MatDenseColumnsGEMMHermitianTranspose_Private - Compute `C = alpha * A[col_start_A:col_end_A-1]^H * B + beta * C`,
   where `A` and `B` are range of columns of dense matrices and `C` is an array
   that is duplicated on each process.
 
   Collective
 
   Input Parameters:
-+ alpha - scalar multiplying `A^H * B`
++ dctx - `PetscDeviceContext` for computations (NULL for default stream)
+. alpha - scalar multiplying `A^H * B`
 . A - matrix containing the columns
 . col_start_A - the first column in the range defining `A`
 . col_end_A - one after the last column in the range defining `A`
@@ -11283,40 +11296,45 @@ PetscErrorCode MatDenseColumnsGEMV(PetscScalar alpha, Mat A, PetscInt col_start,
 
   The adjoint operation is `MatDenseColumnsGEMM()`.
 
+  `C` Must be allocated for `dctx` (`PetscDeviceMalloc()`) or registered with `dctx` (`PetscDeviceRegisterMemory()`)
+
 .seealso: [](chapter_vectors), `VecMDot`, `MatDenseColumnsGEMM`
-@*/
-PetscErrorCode MatDenseColumnsGEMMHermitianTranspose(PetscScalar alpha, Mat A, PetscInt col_start_A, PetscInt col_end_A, Mat B, PetscInt col_start_B, PetscInt col_end_B, PetscScalar beta, PetscScalar *C, PetscInt ld_C, PetscMemType memtype_C)
+*/
+PetscErrorCode MatDenseColumnsGEMMHermitianTranspose_Private(PetscDeviceContext dctx, PetscScalar alpha, Mat A, PetscInt col_start_A, PetscInt col_end_A, Mat B, PetscInt col_start_B, PetscInt col_end_B, PetscScalar beta, PetscScalar *C, PetscInt ld_C, PetscMemType memtype_C)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(A, MAT_CLASSID, 2);
-  PetscValidHeaderSpecific(B, MAT_CLASSID, 5);
+  if (dctx) PetscValidHeaderSpecific(dctx, PETSC_DEVICE_CONTEXT_CLASSID, 1);
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 3);
+  PetscValidHeaderSpecific(B, MAT_CLASSID, 6);
   PetscCheck(A->rmap->N == B->rmap->N, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_SIZ, "Mat A,Mat B: global dim %" PetscInt_FMT " %" PetscInt_FMT, A->rmap->N, B->rmap->N);
   PetscCheck(A->rmap->n == B->rmap->n, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Mat A,Vec B: local dim %" PetscInt_FMT " %" PetscInt_FMT, A->rmap->n, B->rmap->n);
-  PetscValidLogicalCollectiveScalar(A, alpha, 1);
-  PetscValidLogicalCollectiveInt(A, col_start_A, 3);
-  PetscValidLogicalCollectiveInt(A, col_end_A, 4);
-  PetscValidLogicalCollectiveInt(B, col_start_B, 6);
-  PetscValidLogicalCollectiveInt(B, col_end_B, 7);
-  PetscValidLogicalCollectiveScalar(A, beta, 8);
+  PetscValidLogicalCollectiveScalar(A, alpha, 2);
+  PetscValidLogicalCollectiveInt(A, col_start_A, 4);
+  PetscValidLogicalCollectiveInt(A, col_end_A, 5);
+  PetscValidLogicalCollectiveInt(B, col_start_B, 7);
+  PetscValidLogicalCollectiveInt(B, col_end_B, 8);
+  PetscValidLogicalCollectiveScalar(A, beta, 9);
 
   if ((col_end_A <= col_start_A) || (col_end_B <= col_start_B)) PetscFunctionReturn(PETSC_SUCCESS); // No columns
   PetscCheck(col_start_A >= 0 && col_end_A <= A->cmap->N, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_SIZ, "Mat A: column dim %" PetscInt_FMT " does not contain [%" PetscInt_FMT ",%" PetscInt_FMT ")", A->cmap->N, col_start_A, col_end_A);
   PetscCheck(col_start_B >= 0 && col_end_B <= B->cmap->N, PetscObjectComm((PetscObject)B), PETSC_ERR_ARG_SIZ, "Mat B: column dim %" PetscInt_FMT " does not contain [%" PetscInt_FMT ",%" PetscInt_FMT ")", B->cmap->N, col_start_B, col_end_B);
   PetscCall(PetscLogEventBegin(MAT_DenseColumnsGEMMH, A, B, 0, 0));
-  PetscUseMethod(A, "MatDenseColumnsGEMMHermitianTranspose_C", (PetscScalar, Mat, PetscInt, PetscInt, Mat, PetscInt, PetscInt, PetscScalar, PetscScalar *, PetscInt, PetscMemType), (alpha, A, col_start_A, col_end_A, B, col_start_B, col_end_B, beta, C, ld_C, memtype_C));
+  PetscUseMethod(A, "MatDenseColumnsGEMMHermitianTranspose_C", (PetscDeviceContext, PetscScalar, Mat, PetscInt, PetscInt, Mat, PetscInt, PetscInt, PetscScalar, PetscScalar *, PetscInt, PetscMemType), (dctx, alpha, A, col_start_A, col_end_A, B, col_start_B, col_end_B, beta, C, ld_C, memtype_C));
   PetscCall(PetscLogEventEnd(MAT_DenseColumnsGEMMH, A, B, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
-  MatDenseColumnsGEMM - Compute `C = alpha * A[col_start_A:col_end_A-1] * B * C[col_start_C:col_end_C-1] + beta`,
+// Notice: not actual docstring, private for now
+/*
+  MatDenseColumnsGEMM_Private - Compute `C = alpha * A[col_start_A:col_end_A-1] * B * C[col_start_C:col_end_C-1] + beta`,
   where `A` and `C` are range of columns of dense matrices and `B` is an array
   that is duplicated on each process.
 
   Logically Collective
 
   Input Parameters:
-+ alpha - scalar multiplying `A^H * B`
++ dctx - `PetscDeviceContext` for computations (NULL for default stream)
+. alpha - scalar multiplying `A^H * B`
 . A - matrix containing the columns
 . col_start_A - the first column in the range defining `A`
 . col_end_A - one after the last column in the range defining `A`
@@ -11338,21 +11356,24 @@ PetscErrorCode MatDenseColumnsGEMMHermitianTranspose(PetscScalar alpha, Mat A, P
 
   The adjoint operation is `MatDenseColumnsGEMMHermitianTranspose()`.
 
+  `B` Must be allocated for `dctx` (`PetscDeviceMalloc()`) or registered with `dctx` (`PetscDeviceRegisterMemory()`)
+
 .seealso: [](chapter_vectors), `VecMDot()`, `MatDenseColumnsGEMMHermitianTranspose()`
-@*/
-PetscErrorCode MatDenseColumnsGEMM(PetscScalar alpha, Mat A, PetscInt col_start_A, PetscInt col_end_A, const PetscScalar *B, PetscInt ld_B, PetscMemType memtype_B, PetscScalar beta, Mat C, PetscInt col_start_C, PetscInt col_end_C)
+*/
+PetscErrorCode MatDenseColumnsGEMM_Private(PetscDeviceContext dctx, PetscScalar alpha, Mat A, PetscInt col_start_A, PetscInt col_end_A, const PetscScalar *B, PetscInt ld_B, PetscMemType memtype_B, PetscScalar beta, Mat C, PetscInt col_start_C, PetscInt col_end_C)
 {
   PetscFunctionBegin;
-  PetscValidHeaderSpecific(A, MAT_CLASSID, 2);
-  PetscValidHeaderSpecific(C, MAT_CLASSID, 9);
+  if (dctx) PetscValidHeaderSpecific(dctx, PETSC_DEVICE_CONTEXT_CLASSID, 1);
+  PetscValidHeaderSpecific(A, MAT_CLASSID, 3);
+  PetscValidHeaderSpecific(C, MAT_CLASSID, 10);
   PetscCheck(A->rmap->N == C->rmap->N, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_SIZ, "Mat A,Mat C: global dim %" PetscInt_FMT " %" PetscInt_FMT, A->rmap->N, C->rmap->N);
   PetscCheck(A->rmap->n == C->rmap->n, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Mat A,Vec C: local dim %" PetscInt_FMT " %" PetscInt_FMT, A->rmap->n, C->rmap->n);
-  PetscValidLogicalCollectiveScalar(A, alpha, 1);
-  PetscValidLogicalCollectiveInt(A, col_start_A, 3);
-  PetscValidLogicalCollectiveInt(A, col_end_A, 4);
-  PetscValidLogicalCollectiveScalar(A, beta, 8);
-  PetscValidLogicalCollectiveInt(C, col_start_C, 10);
-  PetscValidLogicalCollectiveInt(C, col_end_C, 11);
+  PetscValidLogicalCollectiveScalar(A, alpha, 2);
+  PetscValidLogicalCollectiveInt(A, col_start_A, 4);
+  PetscValidLogicalCollectiveInt(A, col_end_A, 5);
+  PetscValidLogicalCollectiveScalar(A, beta, 9);
+  PetscValidLogicalCollectiveInt(C, col_start_C, 11);
+  PetscValidLogicalCollectiveInt(C, col_end_C, 12);
 
   if (col_end_C <= col_start_C) PetscFunctionReturn(PETSC_SUCCESS); // No output columns
   PetscCheck(col_start_C >= 0 && col_end_C <= C->cmap->N, PetscObjectComm((PetscObject)C), PETSC_ERR_ARG_SIZ, "Mat C : column dim %" PetscInt_FMT " does not contain [%" PetscInt_FMT ",%" PetscInt_FMT ")", C->cmap->N, col_start_C, col_end_C);
@@ -11362,7 +11383,7 @@ PetscErrorCode MatDenseColumnsGEMM(PetscScalar alpha, Mat A, PetscInt col_start_
   }
   PetscCheck(col_start_A >= 0 && col_end_A <= A->cmap->N, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_SIZ, "Mat A: column dim %" PetscInt_FMT " does not contain [%" PetscInt_FMT ",%" PetscInt_FMT ")", A->cmap->N, col_start_A, col_end_A);
   PetscCall(PetscLogEventBegin(MAT_DenseColumnsGEMM, A, C, 0, 0));
-  PetscUseMethod(A, "MatDenseColumnsGEMM_C", (PetscScalar, Mat, PetscInt, PetscInt, const PetscScalar *, PetscInt, PetscMemType, PetscScalar, Mat, PetscInt, PetscInt), (alpha, A, col_start_A, col_end_A, B, ld_B, memtype_B, beta, C, col_start_C, col_end_C));
+  PetscUseMethod(A, "MatDenseColumnsGEMM_C", (PetscDeviceContext dctx, PetscScalar, Mat, PetscInt, PetscInt, const PetscScalar *, PetscInt, PetscMemType, PetscScalar, Mat, PetscInt, PetscInt), (dctx, alpha, A, col_start_A, col_end_A, B, ld_B, memtype_B, beta, C, col_start_C, col_end_C));
   PetscCall(PetscLogEventEnd(MAT_DenseColumnsGEMM, A, C, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

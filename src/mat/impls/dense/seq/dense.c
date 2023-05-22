@@ -3744,7 +3744,7 @@ static PetscErrorCode PetscCUPMGEMM_C(PetscMemType memtype, char trans_A, char t
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatDenseColumnsGEMVHermitianTranspose_SeqDense(PetscScalar alpha, Mat A_mat, PetscInt col_start, PetscInt col_end, Vec x, PetscScalar beta, PetscScalar *y, PetscInt inc_y, PetscMemType memtype_y)
+PETSC_INTERN PetscErrorCode MatDenseColumnsGEMVHermitianTranspose_SeqDense(PetscDeviceContext dctx, PetscScalar alpha, Mat A_mat, PetscInt col_start, PetscInt col_end, Vec x, PetscScalar beta, PetscScalar *y, PetscInt inc_y, PetscMemType memtype_y)
 {
   PetscFunctionBegin;
 
@@ -3775,10 +3775,10 @@ PetscErrorCode MatDenseColumnsGEMVHermitianTranspose_SeqDense(PetscScalar alpha,
   PetscInt     gemxsize  = 1 + (n - 1) * inc_y;
   PetscScalar *y_orig    = y;
   if (PetscMemTypeHost(memtype_y) != PetscMemTypeHost(memtype_A)) {
-    PetscCall(PetscDeviceMalloc(NULL, memtype_A, gemxsize, &gemxarray));
+    PetscCall(PetscDeviceMalloc(dctx, memtype_A, gemxsize, &gemxarray));
     if (beta != 0.0) {
-      PetscCall(PetscDeviceArrayCopy(NULL, gemxarray, y, gemxsize));
-      PetscCall(PetscDeviceContextSynchronize(NULL));
+      PetscCall(PetscDeviceArrayCopy(dctx, gemxarray, y, gemxsize));
+      PetscCall(PetscDeviceContextSynchronize(dctx));
     }
     y = gemxarray;
   }
@@ -3788,14 +3788,14 @@ PetscErrorCode MatDenseColumnsGEMVHermitianTranspose_SeqDense(PetscScalar alpha,
   PetscCall(VecRestoreArrayReadAndMemType(x, &x_array));
   PetscCall(MatDenseRestoreArrayReadAndMemType(A_mat, &A_array));
   if (gemxarray) {
-    PetscCall(PetscDeviceArrayCopy(NULL, y_orig, y, gemxsize));
-    PetscCall(PetscDeviceContextSynchronize(NULL));
-    PetscCall(PetscDeviceFree(NULL, gemxarray));
+    PetscCall(PetscDeviceArrayCopy(dctx, y_orig, y, gemxsize));
+    PetscCall(PetscDeviceContextSynchronize(dctx));
+    PetscCall(PetscDeviceFree(dctx, gemxarray));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatDenseColumnsGEMV_SeqDense(PetscScalar alpha, Mat A_mat, PetscInt col_start, PetscInt col_end, const PetscScalar *x, PetscInt inc_x, PetscMemType memtype_x, PetscScalar beta, Vec y)
+PETSC_INTERN PetscErrorCode MatDenseColumnsGEMV_SeqDense(PetscDeviceContext dctx, PetscScalar alpha, Mat A_mat, PetscInt col_start, PetscInt col_end, const PetscScalar *x, PetscInt inc_x, PetscMemType memtype_x, PetscScalar beta, Vec y)
 {
   PetscFunctionBegin;
   const PetscScalar *A_array;
@@ -3826,22 +3826,22 @@ PetscErrorCode MatDenseColumnsGEMV_SeqDense(PetscScalar alpha, Mat A_mat, PetscI
   PetscScalar *gemxarray = NULL;
   if (PetscMemTypeHost(memtype_x) != PetscMemTypeHost(memtype_A)) {
     PetscInt gemxsize = 1 + (n - 1) * inc_x;
-    PetscCall(PetscDeviceMalloc(NULL, memtype_A, gemxsize, &gemxarray));
-    PetscCall(PetscDeviceArrayCopy(NULL, gemxarray, x, gemxsize));
-    PetscCall(PetscDeviceContextSynchronize(NULL));
+    PetscCall(PetscDeviceMalloc(dctx, memtype_A, gemxsize, &gemxarray));
+    PetscCall(PetscDeviceArrayCopy(dctx, gemxarray, x, gemxsize));
+    PetscCall(PetscDeviceContextSynchronize(dctx));
     x = gemxarray;
   }
 
   PetscCall(PetscCUPMGEMV_C(memtype_A, 'N', m, n, alpha, A, ld_A, x, inc_x, beta, y_array, 1));
 
-  if (gemxarray) { PetscCall(PetscDeviceFree(NULL, gemxarray)); }
+  if (gemxarray) { PetscCall(PetscDeviceFree(dctx, gemxarray)); }
   PetscCall(VecRestoreArrayAndMemType(y, &y_array));
   if (y_orig) { PetscCall(VecCopy(y, y_orig)); }
   PetscCall(MatDenseRestoreArrayReadAndMemType(A_mat, &A_array));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatDenseColumnsGEMMHermitianTranspose_SeqDense(PetscScalar alpha, Mat A_mat, PetscInt col_start_A, PetscInt col_end_A, Mat B_mat, PetscInt col_start_B, PetscInt col_end_B, PetscScalar beta, PetscScalar *C, PetscInt ld_C, PetscMemType memtype_C)
+PETSC_INTERN PetscErrorCode MatDenseColumnsGEMMHermitianTranspose_SeqDense(PetscDeviceContext dctx, PetscScalar alpha, Mat A_mat, PetscInt col_start_A, PetscInt col_end_A, Mat B_mat, PetscInt col_start_B, PetscInt col_end_B, PetscScalar beta, PetscScalar *C, PetscInt ld_C, PetscMemType memtype_C)
 {
   PetscFunctionBegin;
 
@@ -3878,10 +3878,10 @@ PetscErrorCode MatDenseColumnsGEMMHermitianTranspose_SeqDense(PetscScalar alpha,
   PetscScalar *gemxarray = NULL;
   PetscScalar *C_orig    = C;
   if (PetscMemTypeHost(memtype_C) != PetscMemTypeHost(memtype_A)) {
-    PetscCall(PetscDeviceMalloc(NULL, memtype_A, gemxsize, &gemxarray));
+    PetscCall(PetscDeviceMalloc(dctx, memtype_A, gemxsize, &gemxarray));
     if (beta != 0.0) {
-      PetscCall(PetscDeviceArrayCopy(NULL, gemxarray, C, gemxsize));
-      PetscCall(PetscDeviceContextSynchronize(NULL));
+      PetscCall(PetscDeviceArrayCopy(dctx, gemxarray, C, gemxsize));
+      PetscCall(PetscDeviceContextSynchronize(dctx));
     }
     C = gemxarray;
   }
@@ -3898,14 +3898,14 @@ PetscErrorCode MatDenseColumnsGEMMHermitianTranspose_SeqDense(PetscScalar alpha,
     PetscCall(MatDenseRestoreArrayReadAndMemType(A_mat, &A_array));
   }
   if (gemxarray) {
-    PetscCall(PetscDeviceArrayCopy(NULL, C_orig, C, gemxsize));
-    PetscCall(PetscDeviceContextSynchronize(NULL));
-    PetscCall(PetscDeviceFree(NULL, gemxarray));
+    PetscCall(PetscDeviceArrayCopy(dctx, C_orig, C, gemxsize));
+    PetscCall(PetscDeviceContextSynchronize(dctx));
+    PetscCall(PetscDeviceFree(dctx, gemxarray));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatDenseColumnsGEMM_SeqDense(PetscScalar alpha, Mat A_mat, PetscInt col_start_A, PetscInt col_end_A, const PetscScalar *B, PetscInt ld_B, PetscMemType memtype_B, PetscScalar beta, Mat C_mat, PetscInt col_start_C, PetscInt col_end_C)
+PETSC_INTERN PetscErrorCode MatDenseColumnsGEMM_SeqDense(PetscDeviceContext dctx, PetscScalar alpha, Mat A_mat, PetscInt col_start_A, PetscInt col_end_A, const PetscScalar *B, PetscInt ld_B, PetscMemType memtype_B, PetscScalar beta, Mat C_mat, PetscInt col_start_C, PetscInt col_end_C)
 {
   PetscFunctionBegin;
 
@@ -3943,9 +3943,9 @@ PetscErrorCode MatDenseColumnsGEMM_SeqDense(PetscScalar alpha, Mat A_mat, PetscI
   if (PetscMemTypeHost(memtype_B) != PetscMemTypeHost(memtype_A)) {
     PetscInt gemxsize = k + ld_B * (n - 1);
 
-    PetscCall(PetscDeviceMalloc(NULL, memtype_A, gemxsize, &gemxarray));
-    PetscCall(PetscDeviceArrayCopy(NULL, gemxarray, B, gemxsize));
-    PetscCall(PetscDeviceContextSynchronize(NULL));
+    PetscCall(PetscDeviceMalloc(dctx, memtype_A, gemxsize, &gemxarray));
+    PetscCall(PetscDeviceArrayCopy(dctx, gemxarray, B, gemxsize));
+    PetscCall(PetscDeviceContextSynchronize(dctx));
     B = gemxarray;
   }
 
@@ -3958,7 +3958,7 @@ PetscErrorCode MatDenseColumnsGEMM_SeqDense(PetscScalar alpha, Mat A_mat, PetscI
     PetscCall(MatDenseRestoreArrayAndMemType(C_mat, &C_array));
     PetscCall(MatDenseRestoreArrayReadAndMemType(A_mat, &A_array));
   }
-  if (gemxarray) { PetscCall(PetscDeviceFree(NULL, gemxarray)); }
+  if (gemxarray) { PetscCall(PetscDeviceFree(dctx, gemxarray)); }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

@@ -1600,7 +1600,7 @@ PetscErrorCode MatDenseRestoreSubMatrix_MPIDense(Mat A, Mat *v)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscScalarMemTypeAllreduce_Private(PetscScalar *C, PetscInt count, PetscMemType memtype, Mat A_mat)
+static PetscErrorCode PetscScalarMemTypeAllreduce_Private(PetscDeviceContext dctx, PetscScalar *C, PetscInt count, PetscMemType memtype, Mat A_mat)
 {
   PetscFunctionBegin;
   Mat_MPIDense *a    = (Mat_MPIDense *)A_mat->data;
@@ -1637,58 +1637,64 @@ static PetscErrorCode PetscScalarMemTypeAllreduce_Private(PetscScalar *C, PetscI
     PetscCall(PetscSFGetUseGpuAwareMPI(a->Mvctx, &use_gpu_aware_mpi));
     if (!use_gpu_aware_mpi) {
       PetscScalar *C_host;
-      PetscCall(PetscMalloc1(count, &C_host));
+      PetscCall(PetscDeviceMalloc(dctx, PETSC_MEMTYPE_HOST, count, &C_host));
       C_orig = C;
-      PetscCall(PetscDeviceArrayCopy(NULL, C_host, C_orig, count));
+      PetscCall(PetscDeviceArrayCopy(dctx, C_host, C_orig, count));
+      PetscCall(PetscDeviceContextSynchronize(dctx));
       C = C_host;
     }
   }
   PetscCallMPI(MPI_Allreduce(MPI_IN_PLACE, C, count, MPIU_SCALAR, MPI_SUM, comm));
   if (C_orig) {
-    PetscCall(PetscDeviceArrayCopy(NULL, C_orig, C, count));
-    PetscCall(PetscFree(C));
+    PetscCall(PetscDeviceArrayCopy(dctx, C_orig, C, count));
+    PetscCall(PetscDeviceContextSynchronize(dctx));
+    PetscCall(PetscDeviceFree(dctx, C));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatDenseColumnsGEMVHermitianTranspose_MPIDense(PetscScalar alpha, Mat A_mat, PetscInt col_start, PetscInt col_end, Vec x, PetscScalar beta, PetscScalar *y, PetscInt inc_y, PetscMemType memtype_y)
+static PetscErrorCode MatDenseColumnsGEMVHermitianTranspose_MPIDense(PetscDeviceContext dctx, PetscScalar alpha, Mat A_mat, PetscInt col_start, PetscInt col_end, Vec x, PetscScalar beta, PetscScalar *y, PetscInt inc_y, PetscMemType memtype_y)
 {
-  PetscFunctionBegin;
   Mat_MPIDense *a = (Mat_MPIDense *)A_mat->data;
   PetscMPIInt   size;
+  PetscInt      num_entries = col_end - col_start;
+
+  PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)A_mat), &size));
-  PetscInt num_entries = col_end - col_start;
   if (size == 1 || inc_y == 1) {
     // work in place
-    PetscCall(MatDenseColumnsGEMVHermitianTranspose_SeqDense(alpha, a->A, col_start, col_end, x, beta, y, inc_y, memtype_y));
-    if (size > 1) PetscCall(PetscScalarMemTypeAllreduce_Private(y, col_end - col_start, memtype_y, A_mat));
+    PetscCall(MatDenseColumnsGEMVHermitianTranspose_SeqDense(dctx, alpha, a->A, col_start, col_end, x, beta, y, inc_y, memtype_y));
+    if (size > 1) PetscCall(PetscScalarMemTypeAllreduce_Private(dctx, y, col_end - col_start, memtype_y, A_mat));
   } else {
     // work on a buffer
     PetscScalar *y_buffer;
 
-    PetscCall(PetscDeviceMalloc(NULL, memtype_y, num_entries, &y_buffer));
+    PetscCall(PetscDeviceMalloc(dctx, memtype_y, num_entries, &y_buffer));
     if (beta != 0.0) {
-      for (PetscInt j = 0; j < num_entries; j++) { PetscCall(PetscDeviceArrayCopy(NULL, &y_buffer[j], &y[j * inc_y], 1)); }
-      PetscCall(PetscDeviceContextSynchronize(NULL));
+      // PetscDeviceArrayCopy2D() would be good here
+      for (PetscInt j = 0; j < num_entries; j++) { PetscCall(PetscDeviceArrayCopy(dctx, &y_buffer[j], &y[j * inc_y], 1)); }
+      PetscCall(PetscDeviceContextSynchronize(dctx));
     }
-    PetscCall(MatDenseColumnsGEMVHermitianTranspose_SeqDense(alpha, a->A, col_start, col_end, x, beta, y_buffer, 1, memtype_y));
-    PetscCall(PetscScalarMemTypeAllreduce_Private(y_buffer, num_entries, memtype_y, A_mat));
-    for (PetscInt j = 0; j < num_entries; j++) { PetscCall(PetscDeviceArrayCopy(NULL, &y[j * inc_y], &y_buffer[j], 1)); }
-    PetscCall(PetscDeviceContextSynchronize(NULL));
-    PetscCall(PetscDeviceFree(NULL, y_buffer));
+    PetscCall(MatDenseColumnsGEMVHermitianTranspose_SeqDense(dctx, alpha, a->A, col_start, col_end, x, beta, y_buffer, 1, memtype_y));
+    PetscCall(PetscScalarMemTypeAllreduce_Private(dctx, y_buffer, num_entries, memtype_y, A_mat));
+    // PetscDeviceArrayCopy2D() would be good here
+    for (PetscInt j = 0; j < num_entries; j++) { PetscCall(PetscDeviceArrayCopy(dctx, &y[j * inc_y], &y_buffer[j], 1)); }
+    PetscCall(PetscDeviceContextSynchronize(dctx));
+    PetscCall(PetscDeviceFree(dctx, y_buffer));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatDenseColumnsGEMV_MPIDense(PetscScalar alpha, Mat A_mat, PetscInt col_start, PetscInt col_end, const PetscScalar *x, PetscInt inc_x, PetscMemType memtype_x, PetscScalar beta, Vec y)
+static PetscErrorCode MatDenseColumnsGEMV_MPIDense(PetscDeviceContext dctx, PetscScalar alpha, Mat A_mat, PetscInt col_start, PetscInt col_end, const PetscScalar *x, PetscInt inc_x, PetscMemType memtype_x, PetscScalar beta, Vec y)
 {
-  PetscFunctionBegin;
   Mat_MPIDense *a = (Mat_MPIDense *)A_mat->data;
-  PetscCall(MatDenseColumnsGEMV_SeqDense(alpha, a->A, col_start, col_end, x, inc_x, memtype_x, beta, y));
+
+  PetscFunctionBegin;
+  PetscCall(MatDenseColumnsGEMV_SeqDense(dctx, alpha, a->A, col_start, col_end, x, inc_x, memtype_x, beta, y));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatDenseColumnsGEMMHermitianTranspose_MPIDense(PetscScalar alpha, Mat A_mat, PetscInt col_start_A, PetscInt col_end_A, Mat B_mat, PetscInt col_start_B, PetscInt col_end_B, PetscScalar beta, PetscScalar *C, PetscInt ld_C, PetscMemType memtype_C)
+static PetscErrorCode MatDenseColumnsGEMMHermitianTranspose_MPIDense(PetscDeviceContext dctx, PetscScalar alpha, Mat A_mat, PetscInt col_start_A, PetscInt col_end_A, Mat B_mat, PetscInt col_start_B, PetscInt col_end_B, PetscScalar beta, PetscScalar *C, PetscInt ld_C, PetscMemType memtype_C)
 {
   PetscFunctionBegin;
   Mat_MPIDense *a            = (Mat_MPIDense *)A_mat->data;
@@ -1701,32 +1707,32 @@ static PetscErrorCode MatDenseColumnsGEMMHermitianTranspose_MPIDense(PetscScalar
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)A_mat), &size));
   if (implied_size == num_entries || size == 1) {
     // work in place
-    PetscCall(MatDenseColumnsGEMMHermitianTranspose_SeqDense(alpha, a->A, col_start_A, col_end_A, b->A, col_start_B, col_end_B, beta, C, ld_C, memtype_C));
-    if (size > 1) PetscCall(PetscScalarMemTypeAllreduce_Private(C, num_entries, memtype_C, A_mat));
+    PetscCall(MatDenseColumnsGEMMHermitianTranspose_SeqDense(dctx, alpha, a->A, col_start_A, col_end_A, b->A, col_start_B, col_end_B, beta, C, ld_C, memtype_C));
+    if (size > 1) PetscCall(PetscScalarMemTypeAllreduce_Private(dctx, C, num_entries, memtype_C, A_mat));
   } else {
     // work on a buffer
     PetscScalar *C_buffer;
 
-    PetscCall(PetscDeviceMalloc(NULL, memtype_C, num_entries, &C_buffer));
+    PetscCall(PetscDeviceMalloc(dctx, memtype_C, num_entries, &C_buffer));
     if (beta != 0.0) {
-      for (PetscInt j = 0; j < n_cols; j++) { PetscCall(PetscDeviceArrayCopy(NULL, &C_buffer[j * n_rows], &C[j * ld_C], n_rows)); }
-      PetscCall(PetscDeviceContextSynchronize(NULL));
+      for (PetscInt j = 0; j < n_cols; j++) { PetscCall(PetscDeviceArrayCopy(dctx, &C_buffer[j * n_rows], &C[j * ld_C], n_rows)); }
+      PetscCall(PetscDeviceContextSynchronize(dctx));
     }
-    PetscCall(MatDenseColumnsGEMMHermitianTranspose_SeqDense(alpha, a->A, col_start_A, col_end_A, b->A, col_start_B, col_end_B, beta, C_buffer, n_rows, memtype_C));
-    PetscCall(PetscScalarMemTypeAllreduce_Private(C_buffer, num_entries, memtype_C, A_mat));
-    for (PetscInt j = 0; j < n_cols; j++) { PetscCall(PetscDeviceArrayCopy(NULL, &C[j * ld_C], &C_buffer[j * n_rows], n_rows)); }
-    PetscCall(PetscDeviceContextSynchronize(NULL));
-    PetscCall(PetscDeviceFree(NULL, C_buffer));
+    PetscCall(MatDenseColumnsGEMMHermitianTranspose_SeqDense(dctx, alpha, a->A, col_start_A, col_end_A, b->A, col_start_B, col_end_B, beta, C_buffer, n_rows, memtype_C));
+    PetscCall(PetscScalarMemTypeAllreduce_Private(dctx, C_buffer, num_entries, memtype_C, A_mat));
+    for (PetscInt j = 0; j < n_cols; j++) { PetscCall(PetscDeviceArrayCopy(dctx, &C[j * ld_C], &C_buffer[j * n_rows], n_rows)); }
+    PetscCall(PetscDeviceContextSynchronize(dctx));
+    PetscCall(PetscDeviceFree(dctx, C_buffer));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatDenseColumnsGEMM_MPIDense(PetscScalar alpha, Mat A_mat, PetscInt col_start_A, PetscInt col_end_A, const PetscScalar *B, PetscInt ld_B, PetscMemType memtype_B, PetscScalar beta, Mat C_mat, PetscInt col_start_C, PetscInt col_end_C)
+static PetscErrorCode MatDenseColumnsGEMM_MPIDense(PetscDeviceContext dctx, PetscScalar alpha, Mat A_mat, PetscInt col_start_A, PetscInt col_end_A, const PetscScalar *B, PetscInt ld_B, PetscMemType memtype_B, PetscScalar beta, Mat C_mat, PetscInt col_start_C, PetscInt col_end_C)
 {
   PetscFunctionBegin;
   Mat_MPIDense *a = (Mat_MPIDense *)A_mat->data;
   Mat_MPIDense *c = (Mat_MPIDense *)C_mat->data;
-  PetscCall(MatDenseColumnsGEMM_SeqDense(alpha, a->A, col_start_A, col_end_A, B, ld_B, memtype_B, beta, c->A, col_start_C, col_end_C));
+  PetscCall(MatDenseColumnsGEMM_SeqDense(dctx, alpha, a->A, col_start_A, col_end_A, B, ld_B, memtype_B, beta, c->A, col_start_C, col_end_C));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

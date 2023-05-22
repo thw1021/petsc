@@ -119,9 +119,9 @@ PETSC_INTERN PetscErrorCode MatLoad_Dense_HDF5(Mat, PetscViewer);
 
 PETSC_INTERN PetscErrorCode MatDenseCreateColumnVec_Private(Mat, Vec *);
 
-PETSC_INTERN PetscErrorCode MatDenseColumnsGEMVHermitianTranspose_SeqDense(PetscScalar, Mat, PetscInt, PetscInt, Vec, PetscScalar, PetscScalar *, PetscInt, PetscMemType);
-PETSC_INTERN PetscErrorCode MatDenseColumnsGEMV_SeqDense(PetscScalar, Mat, PetscInt, PetscInt, const PetscScalar *, PetscInt, PetscMemType, PetscScalar, Vec);
-PETSC_INTERN PetscErrorCode MatDenseColumnsGEMMHermitianTranspose_SeqDense(PetscScalar, Mat, PetscInt, PetscInt, Mat, PetscInt, PetscInt, PetscScalar, PetscScalar *, PetscInt, PetscMemType);
-PETSC_INTERN PetscErrorCode MatDenseColumnsGEMM_SeqDense(PetscScalar, Mat, PetscInt, PetscInt, const PetscScalar *, PetscInt, PetscMemType, PetscScalar, Mat, PetscInt, PetscInt);
+PETSC_INTERN PetscErrorCode MatDenseColumnsGEMVHermitianTranspose_SeqDense(PetscDeviceContext, PetscScalar, Mat, PetscInt, PetscInt, Vec, PetscScalar, PetscScalar *, PetscInt, PetscMemType);
+PETSC_INTERN PetscErrorCode MatDenseColumnsGEMV_SeqDense(PetscDeviceContext, PetscScalar, Mat, PetscInt, PetscInt, const PetscScalar *, PetscInt, PetscMemType, PetscScalar, Vec);
+PETSC_INTERN PetscErrorCode MatDenseColumnsGEMMHermitianTranspose_SeqDense(PetscDeviceContext, PetscScalar, Mat, PetscInt, PetscInt, Mat, PetscInt, PetscInt, PetscScalar, PetscScalar *, PetscInt, PetscMemType);
+PETSC_INTERN PetscErrorCode MatDenseColumnsGEMM_SeqDense(PetscDeviceContext, PetscScalar, Mat, PetscInt, PetscInt, const PetscScalar *, PetscInt, PetscMemType, PetscScalar, Mat, PetscInt, PetscInt);
 
 #endif
