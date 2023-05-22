@@ -249,6 +249,8 @@ static inline PetscErrorCode SNESLogConvergenceHistory(SNES snes, PetscReal res,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PETSC_INTERN PetscErrorCode SNESConverged_Private(SNES, PetscInt, PetscReal, PetscReal, PetscReal);
+
 PETSC_EXTERN PetscErrorCode SNESVIProjectOntoBounds(SNES, Vec);
 PETSC_INTERN PetscErrorCode SNESVICheckLocalMin_Private(SNES, Mat, Vec, Vec, PetscReal, PetscBool *);
 PETSC_INTERN PetscErrorCode SNESReset_VI(SNES);
