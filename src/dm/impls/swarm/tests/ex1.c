@@ -40,7 +40,7 @@ static PetscErrorCode CreateSwarm(DM dm, DM *sw, AppCtx *user)
 {
   PetscInt   particleInitSize = 10;
   PetscReal *coords, upper[3], lower[3];
-  PetscInt  *cellid, rank, size, Np, d, dim;
+  PetscInt  *cellid, rank, size, Np, dim;
   MPI_Comm   comm;
 
   PetscFunctionBegin;
@@ -149,7 +149,7 @@ static PetscErrorCode CheckPointInsertion_Boundary(DM sw)
   PetscCall(DMGetBoundingBox(cdm, gbox_low, gbox_high));
   if (rank == 0) {
     PetscReal *coords;
-    PetscInt   adjacentdim, Np;
+    PetscInt   adjacentdim = 0, Np;
 
     PetscCall(DMGetLocalBoundingBox(cdm, lbox_low, lbox_high));
     // find a face that belongs to the neighbor.
@@ -175,7 +175,6 @@ static PetscErrorCode CheckPointInsertion_Boundary(DM sw)
 int main(int argc, char **argv)
 {
   DM       dm, sw;
-  PetscInt rank, size;
   MPI_Comm comm;
   AppCtx   user;
 
