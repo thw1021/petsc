@@ -475,8 +475,8 @@ class Framework(config.base.Configure, script.LanguageProcessor):
 
   def filterCompileOutput(self, output,flag = ''):
     '''
-       Filters compiler messages known to be harmless
-       To filter ALL output use --ignoreCompileOutput
+       With --ignoreCompileOutput=1 (default), it filters all compiler messages
+       With --ignoreCompileOutput=0 it filters only compiler messages known to be harmless
     '''
     if flag and output.find("ignoring unknown option '"+flag+"'"): return output
     if flag and output.find("invalid value"): return output
