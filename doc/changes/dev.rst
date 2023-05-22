@@ -48,10 +48,14 @@ Changes: Development
 - Remove ``MatSetValuesDevice()``, ``MatCUSPARSEGetDeviceMatWrite()``, ``MatKokkosGetDeviceMatWrite``
 - Add ``MatDenseCUDASetPreallocation()`` and ``MatDenseHIPSetPreallocation()``
 - Add support for KOKKOS in ``MATH2OPUS``
+- Add ``MATVECDIAGONAL`` which can be created with ``MatCreateVecDiagonal()``
+- Add ``MatVerDiagonalSetInverse()``
 
 .. rubric:: MatCoarsen:
 
 .. rubric:: PC:
+
+- Add ``PCMatGetApplyOperation()`` and ``PCMatSetApplyOperation()``
 
 .. rubric:: KSP:
 
