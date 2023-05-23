@@ -332,6 +332,24 @@ PetscErrorCode PetscTrFreeDefault(void *aa, int lineno, const char function[], c
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  PetscMallocDebugGetCount - When memory debugging, get a count of how many times PetscMalloc() has been called
+
+  Output Parameter:
+. malloc_count - The numer of time PetsMalloc() has been called.  If not using memory debugging (PetscMallocSetDebug(), returns 0.
+
+  Notes:
+  The count is represented internally as an int, not a PetscInt, so the count will reset after 2^31 - 1 mallocs.
+
+.seealso: `PetscMallocSetDebug()`, `PetscMallocGetDebug()`
+@*/
+PetscErrorCode PetscMallocDebugGetCount(PetscInt *malloc_count)
+{
+  PetscFunctionBegin;
+  *malloc_count = TRid;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*
   PetscTrReallocDefault - Realloc with tracing.
 

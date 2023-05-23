@@ -277,6 +277,11 @@ PetscErrorCode MatInitializePackage(void)
   PetscCall(PetscLogEventRegister("MatH2OpusOrth", MAT_CLASSID, &MAT_H2Opus_Orthog));
   PetscCall(PetscLogEventRegister("MatH2OpusLR", MAT_CLASSID, &MAT_H2Opus_LR));
 
+  PetscCall(PetscLogEventRegister("MatDenseColsGEMVH", MAT_CLASSID, &MAT_DenseColumnsGEMVH));
+  PetscCall(PetscLogEventRegister("MatDenseColsGEMV", MAT_CLASSID, &MAT_DenseColumnsGEMV));
+  PetscCall(PetscLogEventRegister("MatDenseColsGEMMH", MAT_CLASSID, &MAT_DenseColumnsGEMMH));
+  PetscCall(PetscLogEventRegister("MatDenseColsGEMM", MAT_CLASSID, &MAT_DenseColumnsGEMM));
+
   /* Mark non-collective events */
   PetscCall(PetscLogEventSetCollective(MAT_SetValues, PETSC_FALSE));
   PetscCall(PetscLogEventSetCollective(MAT_SetValuesBatch, PETSC_FALSE));

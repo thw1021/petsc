@@ -1223,7 +1223,7 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::ResetArray(Mat A) noexcept
 }
 
 // ==========================================================================================
-
+//
 template <device::cupm::DeviceType T>
 template <bool transpose_A, bool transpose_B>
 inline PetscErrorCode MatDense_Seq_CUPM<T>::MatMatMult_Numeric_Dispatch(Mat A, Mat B, Mat C) noexcept

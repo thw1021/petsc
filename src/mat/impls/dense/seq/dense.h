@@ -29,7 +29,9 @@ typedef struct {
   /* Support for MatDenseGetColumnVec and MatDenseGetSubMatrix */
   Mat                cmat;     /* matrix representation of a given subset of columns */
   Vec                cvec;     /* vector representation of a given column */
+  Vec                gemvvec;  /* work vector for gemv with vector of different memtype */
   const PetscScalar *ptrinuse; /* holds array to be restored (just a placeholder) */
+  PetscMemType       ptrinuse_memtype;
   PetscInt           vecinuse; /* if cvec is in use (col = vecinuse-1) */
   PetscInt           matinuse; /* if cmat is in use (cbegin = matinuse-1) */
 } Mat_SeqDense;
@@ -116,4 +118,10 @@ PETSC_INTERN PetscErrorCode MatLoad_Dense_Binary(Mat, PetscViewer);
 PETSC_INTERN PetscErrorCode MatLoad_Dense_HDF5(Mat, PetscViewer);
 
 PETSC_INTERN PetscErrorCode MatDenseCreateColumnVec_Private(Mat, Vec *);
+
+PETSC_INTERN PetscErrorCode MatDenseColumnsGEMVHermitianTranspose_SeqDense(PetscDeviceContext, PetscScalar, Mat, PetscInt, PetscInt, Vec, PetscScalar, PetscScalar *, PetscInt, PetscMemType);
+PETSC_INTERN PetscErrorCode MatDenseColumnsGEMV_SeqDense(PetscDeviceContext, PetscScalar, Mat, PetscInt, PetscInt, const PetscScalar *, PetscInt, PetscMemType, PetscScalar, Vec);
+PETSC_INTERN PetscErrorCode MatDenseColumnsGEMMHermitianTranspose_SeqDense(PetscDeviceContext, PetscScalar, Mat, PetscInt, PetscInt, Mat, PetscInt, PetscInt, PetscScalar, PetscScalar *, PetscInt, PetscMemType);
+PETSC_INTERN PetscErrorCode MatDenseColumnsGEMM_SeqDense(PetscDeviceContext, PetscScalar, Mat, PetscInt, PetscInt, const PetscScalar *, PetscInt, PetscMemType, PetscScalar, Mat, PetscInt, PetscInt);
+
 #endif

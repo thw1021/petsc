@@ -324,9 +324,12 @@ PetscErrorCode PetscDeviceAllocate_Private(PetscDeviceContext dctx, PetscBool cl
   if (PetscUnlikely(!n)) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(memory_map.register_finalize());
   PetscCall(PetscDeviceContextGetOptionalNullContext_Internal(&dctx));
-
   // get our pointer here
-  if (dctx->ops->memalloc) {
+  if (PetscDefined(HAVE_NVSHMEM) && PetscMemTypeNVSHMEM(mtype)) {
+#if defined(PETSC_HAVE_NVSHMEM)
+    PetscCall(PetscNvshmemMalloc(n, ptr));
+#endif
+  } else if (dctx->ops->memalloc) {
     PetscUseTypeMethod(dctx, memalloc, clear, mtype, n, alignment, ptr);
   } else {
     PetscCall(PetscDeviceCheckCapable_Private(dctx, PetscMemTypeHost(mtype), "allocating"));
@@ -402,7 +405,11 @@ PetscErrorCode PetscDeviceDeallocate_Private(PetscDeviceContext dctx, void *PETS
     // outstanding reads (don't want to kill the pointer before they are done)
     PetscCall(PetscDeviceContextMarkIntentFromID(dctx, attr.id, PETSC_MEMORY_ACCESS_WRITE, "memory deallocation"));
     // do free
-    if (dctx->ops->memfree) {
+    if (PetscDefined(HAVE_NVSHMEM) && PetscMemTypeNVSHMEM(attr.mtype)) {
+#if defined(PETSC_HAVE_NVSHMEM)
+      PetscCall(PetscNvshmemFree_Private(ptr));
+#endif
+    } else if (dctx->ops->memfree) {
       PetscUseTypeMethod(dctx, memfree, attr.mtype, (void **)&ptr);
     } else {
       PetscCall(PetscDeviceCheckCapable_Private(dctx, PetscMemTypeHost(attr.mtype), "freeing"));

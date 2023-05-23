@@ -52,6 +52,7 @@ typedef enum {
   PETSC_MEMTYPE_HIP     = 0x03,
   PETSC_MEMTYPE_SYCL    = 0x05,
 } PetscMemType;
+PETSC_EXTERN const char *const PetscMemTypes[];
 #if PetscDefined(HAVE_CUDA)
   #define PETSC_MEMTYPE_KOKKOS PETSC_MEMTYPE_CUDA
 #elif PetscDefined(HAVE_HIP)

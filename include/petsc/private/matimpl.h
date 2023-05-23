@@ -5,6 +5,7 @@
 #include <petscmat.h>
 #include <petscmatcoarsen.h>
 #include <petsc/private/petscimpl.h>
+#include <petscdevicetypes.h>
 
 PETSC_EXTERN PetscBool      MatRegisterAllCalled;
 PETSC_EXTERN PetscBool      MatSeqAIJRegisterAllCalled;
@@ -825,6 +826,11 @@ static inline PetscErrorCode MatPivotCheck(Mat fact, Mat mat, const MatFactorInf
   else PetscCall(MatPivotCheck_none(fact, mat, info, sctx, row));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+PETSC_EXTERN PetscErrorCode MatDenseColumnsGEMVHermitianTranspose_Private(PetscDeviceContext, PetscScalar, Mat, PetscInt, PetscInt, Vec, PetscScalar, PetscScalar *, PetscInt, PetscMemType);
+PETSC_EXTERN PetscErrorCode MatDenseColumnsGEMV_Private(PetscDeviceContext, PetscScalar, Mat, PetscInt, PetscInt, const PetscScalar *, PetscInt, PetscMemType, PetscScalar, Vec);
+PETSC_EXTERN PetscErrorCode MatDenseColumnsGEMMHermitianTranspose_Private(PetscDeviceContext, PetscScalar, Mat, PetscInt, PetscInt, Mat, PetscInt, PetscInt, PetscScalar, PetscScalar *, PetscInt, PetscMemType);
+PETSC_EXTERN PetscErrorCode MatDenseColumnsGEMM_Private(PetscDeviceContext, PetscScalar, Mat, PetscInt, PetscInt, const PetscScalar *, PetscInt, PetscMemType, PetscScalar, Mat, PetscInt, PetscInt);
 
 #include <petscbt.h>
 /*
@@ -1726,4 +1732,8 @@ PETSC_EXTERN PetscLogEvent MAT_H2Opus_Compress;
 PETSC_EXTERN PetscLogEvent MAT_H2Opus_Orthog;
 PETSC_EXTERN PetscLogEvent MAT_H2Opus_LR;
 PETSC_EXTERN PetscLogEvent MAT_CUDACopyToGPU;
+PETSC_EXTERN PetscLogEvent MAT_DenseColumnsGEMVH;
+PETSC_EXTERN PetscLogEvent MAT_DenseColumnsGEMV;
+PETSC_EXTERN PetscLogEvent MAT_DenseColumnsGEMMH;
+PETSC_EXTERN PetscLogEvent MAT_DenseColumnsGEMM;
 #endif
