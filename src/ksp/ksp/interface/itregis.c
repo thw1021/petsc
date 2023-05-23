@@ -36,6 +36,7 @@ PETSC_EXTERN PetscErrorCode KSPCreate_FGMRES(KSP);
 PETSC_EXTERN PetscErrorCode KSPCreate_PIPEFGMRES(KSP);
 PETSC_EXTERN PetscErrorCode KSPCreate_MINRES(KSP);
 PETSC_EXTERN PetscErrorCode KSPCreate_SYMMLQ(KSP);
+PETSC_EXTERN PetscErrorCode KSPCreate_AGMRES(KSP);
 PETSC_EXTERN PetscErrorCode KSPCreate_LGMRES(KSP);
 PETSC_EXTERN PetscErrorCode KSPCreate_LCD(KSP);
 PETSC_EXTERN PetscErrorCode KSPCreate_GCR(KSP);
@@ -103,6 +104,7 @@ PetscErrorCode KSPRegisterAll(void)
   PetscCall(KSPRegister(KSPPIPEFGMRES, KSPCreate_PIPEFGMRES));
   PetscCall(KSPRegister(KSPMINRES, KSPCreate_MINRES));
   PetscCall(KSPRegister(KSPSYMMLQ, KSPCreate_SYMMLQ));
+  PetscCall(KSPRegister(KSPAGMRES, KSPCreate_AGMRES));
   PetscCall(KSPRegister(KSPLGMRES, KSPCreate_LGMRES));
   PetscCall(KSPRegister(KSPLCD, KSPCreate_LCD));
   PetscCall(KSPRegister(KSPGCR, KSPCreate_GCR));
