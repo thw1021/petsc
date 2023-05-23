@@ -303,7 +303,7 @@ PETSC_EXTERN void petscoptionsstring_(char *opt, char *text, char *man, char *cu
   FIXCHAR(opt, lenopt, copt);
   FIXCHAR(text, lentext, ctext);
   FIXCHAR(man, lenman, cman);
-  FIXCHAR(currentvalue,lencurrent,ccurrent);
+  FIXCHAR(currentvalue, lencurrent, ccurrent);
 
   if (!PetscOptionsObject) {
     *ierr = PETSC_ERR_ARG_WRONGSTATE;
@@ -311,12 +311,12 @@ PETSC_EXTERN void petscoptionsstring_(char *opt, char *text, char *man, char *cu
   }
   PetscOptionsObject->count = 1;
 
-  *ierr = PetscOptionsString_Private(PetscOptionsObject, copt, ctext, cman, ccurrent, value, lencurrent, flg);
-  //(PetscOptionItems *PetscOptionsObject, const char opt[], const char text[], const char man[], const char currentvalue[], char value[], size_t len, PetscBool *set)
+  *ierr = PetscOptionsString_Private(PetscOptionsObject, copt, ctext, cman, ccurrent, value, lenvalue-1, flg);
   if (*ierr) return;
   FREECHAR(opt, copt);
   FREECHAR(text, ctext);
   FREECHAR(man, cman);
+  FREECHAR(currentvalue, ccurrent);
   FIXRETURNCHAR(flg, value, lenvalue);
 }
 

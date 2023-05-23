@@ -7,7 +7,6 @@ program ex9f
 
     PetscReal,Parameter                       :: PReal = 1.0
     Integer,Parameter                         :: Pr = Selected_Real_Kind(Precision(PReal))
-
     PetscInt,Parameter                        :: PInt = 1
     Integer,Parameter                         :: Pi = kind(PInt)
 
@@ -111,6 +110,6 @@ end program ex9f
 !
 !   test:
 !      suffix: 2
-!      args: -prefix_bool no -prefix_int 22 -prefix_intarray 2-5 -prefix_real 2.34 -prefix_realarray -3,-4,5.5 -prefix_scalar 7.89
+!      args: -prefix_int 22 -prefix_intarray 2-5 -prefix_real 2.34 -prefix_realarray -3,-4,5.5 -prefix_scalar 7.89 -prefix_scalararray 1.,2.,3. -prefix_bool no -prefix_boolarray 1,no,true -prefix_string This_is_a_test_of_the_emergency_alert_system
 !
 !TEST*/
