@@ -48,16 +48,23 @@ PETSC_CUPMBLAS_DEFINE_STATIC_VARIABLE_MATCHING_SCHEME(DIAG_NON_UNIT)
 #if PetscDefined(HAVE_CUDA)
 template struct BlasInterface<DeviceType::CUDA>;
 
-PETSC_INTER PetscErrorCode PetscDeviceGEMM_Private_Cuda(PetscDeviceContext dctx, PetscMemType memtype_scalar, char trans_A, char trans_B, PetscInt m, PetscInt n, PetscInt k, const PetscScalar *alpha, const PetscScalar A[], PetscInt lda, const PetscScalar B[], PetscInt ldb, const PetscScalar *beta, PetscScalar C[], PetscInd ldc)
+PETSC_INTERN PetscErrorCode PetscDeviceGEMM_Private_Cuda(PetscDeviceContext dctx, PetscMemType memtype_scalar, char trans_A, char trans_B, PetscInt m, PetscInt n, PetscInt k, const PetscScalar *alpha, const PetscScalar A[], PetscInt lda, const PetscScalar B[], PetscInt ldb, const PetscScalar *beta, PetscScalar C[], PetscInt ldc)
 {
   PetscFunctionBegin;
-  PetscCall(BlasInterface<DeviceType::CUDA>::GEMM_Private());
+  PetscCall(BlasInterface<DeviceType::CUDA>::GEMM_Private(dctx, memtype_scalar, trans_A, trans_B, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 #endif
 
 #if PetscDefined(HAVE_HIP)
 template struct BlasInterface<DeviceType::HIP>;
+
+PETSC_INTERN PetscErrorCode PetscDeviceGEMM_Private_HIP(PetscDeviceContext dctx, PetscMemType memtype_scalar, char trans_A, char trans_B, PetscInt m, PetscInt n, PetscInt k, const PetscScalar *alpha, const PetscScalar A[], PetscInt lda, const PetscScalar B[], PetscInt ldb, const PetscScalar *beta, PetscScalar C[], PetscInt ldc)
+{
+  PetscFunctionBegin;
+  PetscCall(BlasInterface<DeviceType::HIP>::GEMM_Private(dctx, memtype_scalar, trans_A, trans_B, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 #endif
 
 } // namespace impl

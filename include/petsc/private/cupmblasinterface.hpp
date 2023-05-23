@@ -4,6 +4,7 @@
 #if defined(__cplusplus)
   #include <petsc/private/cupminterface.hpp>
   #include <petsc/private/petscadvancedmacros.h>
+  #include <petsc/private/deviceimpl.h>
 
   #include <limits> // std::numeric_limits
 
@@ -449,8 +450,9 @@ struct BlasInterface : BlasInterfaceImpl<T> {
 
   static PetscErrorCode GEMM_Private(PetscDeviceContext dctx, PetscMemType scalar_type, char _trans_A, char _trans_B, PetscInt _m, PetscInt _n, PetscInt _k, const PetscScalar *alpha, const PetscScalar A[], PetscInt _ld_A, const PetscScalar B[], PetscInt _ld_B, const PetscScalar *beta, PetscScalar C[], PetscInt _ld_C) noexcept
   {
-    cupmBlasInt_t      m, n, k, ld_A, ld_B, ld_C;
-    cupmBlasHandle_t   handle;
+    cupmBlasInt_t    m, n, k, ld_A, ld_B, ld_C;
+    cupmBlasHandle_t handle;
+    PetscLogDouble   flops = 2.0 * _m * _n * _k;
 
     PetscFunctionBegin;
     PetscCall(PetscCUPMBlasIntCast(_m, &m));
@@ -460,7 +462,7 @@ struct BlasInterface : BlasInterfaceImpl<T> {
     PetscCall(PetscCUPMBlasIntCast(_ld_A, &ld_A));
     PetscCall(PetscCUPMBlasIntCast(_ld_B, &ld_B));
     PetscCall(PetscCUPMBlasIntCast(_ld_C, &ld_C));
-    PetscCall(GetHandles_(&dctx, &handle));
+    PetscCall(PetscDeviceContextGetBLASHandle_Internal(dctx, &handle));
     PetscCallCUPMBLAS(cupmBlasSetPointerMode(handle, PetscMemTypeDevice(scalar_type) ? CUPMBLAS_POINTER_MODE_DEVICE : CUPMBLAS_POINTER_MODE_HOST));
 
     auto trans_A = PetscCUPMBlasOpCast(_trans_A);
@@ -469,11 +471,10 @@ struct BlasInterface : BlasInterfaceImpl<T> {
     PetscCall(PetscLogGpuTimeBegin());
     PetscCallCUPMBLAS(cupmBlasXgemm(handle, trans_A, trans_B, m, n, k, alpha, A, ld_A, B, ld_B, beta, C, ld_C));
     PetscCall(PetscLogGpuTimeEnd());
-
+    PetscCall(PetscLogGpuFlops(flops));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 };
-
 
   #define PETSC_CUPMBLAS_INHERIT_INTERFACE_TYPEDEFS_USING(T) \
     PETSC_CUPMBLAS_IMPL_CLASS_HEADER(T); \

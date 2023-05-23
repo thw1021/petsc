@@ -10,6 +10,7 @@
 #include <../src/mat/impls/aij/seq/aij.h>
 #include <petsc/private/petsclegacycupmblas.h>
 #include <petsc/private/deviceimpl.h>
+#include <petsc/private/deviceblas.h>
 
 PetscErrorCode MatSeqDenseSymmetrize_Private(Mat A, PetscBool hermitian)
 {
@@ -3686,64 +3687,6 @@ static PetscErrorCode PetscCUPMGEMV_C(PetscMemType memtype, char trans_A, PetscI
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscCUPMGEMM_C(PetscMemType memtype, char trans_A, char trans_B, PetscInt m, PetscInt n, PetscInt k, PetscScalar alpha, const PetscScalar *A, PetscInt ld_A, const PetscScalar *B, PetscInt ld_B, PetscScalar beta, PetscScalar *C, PetscInt ld_C)
-{
-  PetscFunctionBegin;
-  PetscLogDouble flops = 2.0 * m * n * k + (beta == 0.0 ? -1.0 : 1.0) * m * n + (alpha == 1.0 ? 0.0 : 1.0) * PetscMin(m * n, PetscMin(m * k, n * k));
-  switch (memtype) {
-  case PETSC_MEMTYPE_HOST: {
-    PetscBLASInt _m, _n, _k, _lda, _ldb, _ldc;
-
-    PetscCall(PetscBLASIntCast(m, &_m));
-    PetscCall(PetscBLASIntCast(n, &_n));
-    PetscCall(PetscBLASIntCast(k, &_k));
-    PetscCall(PetscBLASIntCast(ld_A, &_lda));
-    PetscCall(PetscBLASIntCast(ld_B, &_ldb));
-    PetscCall(PetscBLASIntCast(ld_C, &_ldc));
-    PetscCallBLAS("BLASgemm", BLASgemm_(&trans_A, &trans_B, &_m, &_n, &_k, &alpha, A, &_lda, B, &_ldb, &beta, C, &_ldc));
-    PetscCall(PetscLogFlops(flops));
-  } break;
-#if defined(PETSC_HAVE_CUDA)
-  case PETSC_MEMTYPE_CUDA: {
-    cublasOperation_t _transa = cublasOperationFromChar_Private(trans_A);
-    cublasOperation_t _transb = cublasOperationFromChar_Private(trans_B);
-    PetscCuBLASInt    _m, _n, _k, _lda, _ldb, _ldc;
-    cublasHandle_t    _handle;
-    PetscCall(PetscCuBLASIntCast(m, &_m));
-    PetscCall(PetscCuBLASIntCast(n, &_n));
-    PetscCall(PetscCuBLASIntCast(k, &_k));
-    PetscCall(PetscCuBLASIntCast(ld_A, &_lda));
-    PetscCall(PetscCuBLASIntCast(ld_B, &_ldb));
-    PetscCall(PetscCuBLASIntCast(ld_C, &_ldc));
-    PetscCall(PetscCUBLASGetHandle(&_handle));
-    PetscCallCUBLAS(cublasXgemm(_handle, _transa, _transb, _m, _n, _k, &alpha, A, _lda, B, _ldb, &beta, C, _ldc));
-    PetscCall(PetscLogGpuFlops(flops));
-  } break;
-#endif
-#if defined(PETSC_HAVE_HIP)
-  case PETSC_MEMTYPE_HIP: {
-    hipblasOperation_t _transa = hipblasOperationFromChar_Private(trans_A);
-    hipblasOperation_t _transb = hipblasOperationFromChar_Private(trans_B);
-    PetscHipBLASInt    _m, _n, _k, _lda, _ldb, _ldc;
-    hipblasHandle_t    _handle;
-    PetscCall(PetscHipBLASIntCast(m, &_m));
-    PetscCall(PetscHipBLASIntCast(n, &_n));
-    PetscCall(PetscHipBLASIntCast(k, &_k));
-    PetscCall(PetscHipBLASIntCast(ld_A, &_lda));
-    PetscCall(PetscHipBLASIntCast(ld_B, &_ldb));
-    PetscCall(PetscHipBLASIntCast(ld_C, &_ldf));
-    PetscCall(PetscHIPBLASGetHandle(&_handle));
-    PetscCallHIPBLAS(hipblasXgemm(_handle, _transa, _transb, _m, _n, _k, &alpha, A, _lda, B, _ldb, &beta, C, _ldc));
-    PetscCall(PetscLogGpuFlops(flops));
-  } break;
-#endif
-  default:
-    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unsupported device type");
-    break;
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 PETSC_INTERN PetscErrorCode MatDenseColumnsGEMVHermitianTranspose_SeqDense(PetscDeviceContext dctx, PetscScalar alpha, Mat A_mat, PetscInt col_start, PetscInt col_end, Vec x, PetscScalar beta, PetscScalar *y, PetscInt inc_y, PetscMemType memtype_y)
 {
   PetscFunctionBegin;
@@ -3888,7 +3831,7 @@ PETSC_INTERN PetscErrorCode MatDenseColumnsGEMMHermitianTranspose_SeqDense(Petsc
 
   PetscInt k;
   PetscCall(MatGetLocalSize(A_mat, &k, NULL));
-  PetscCall(PetscCUPMGEMM_C(memtype_A, 'C', 'N', m, n, k, alpha, A, ld_A, B, ld_B, beta, C, ld_C));
+  PetscCall(PetscDeviceGEMM_Private(dctx, memtype_A, PETSC_MEMTYPE_HOST, 'C', 'N', m, n, k, &alpha, A, ld_A, B, ld_B, &beta, C, ld_C));
 
   if (bind_to_cpu) {
     PetscCall(MatDenseRestoreArrayRead(B_mat, &B_array));
@@ -3949,7 +3892,7 @@ PETSC_INTERN PetscErrorCode MatDenseColumnsGEMM_SeqDense(PetscDeviceContext dctx
     B = gemxarray;
   }
 
-  PetscCall(PetscCUPMGEMM_C(memtype_A, 'N', 'N', m, n, k, alpha, A, ld_A, B, ld_B, beta, C, ld_C));
+  PetscCall(PetscDeviceGEMM_Private(dctx, memtype_A, PETSC_MEMTYPE_HOST, 'N', 'N', m, n, k, &alpha, A, ld_A, B, ld_B, &beta, C, ld_C));
 
   if (bind_to_cpu) {
     PetscCall(MatDenseRestoreArray(C_mat, &C_array));
