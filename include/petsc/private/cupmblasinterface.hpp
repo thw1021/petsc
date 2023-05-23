@@ -444,7 +444,36 @@ struct BlasInterface : BlasInterfaceImpl<T> {
     PetscCall(checkCupmBlasIntCast(x));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
+
+  static inline auto PetscCUPMBlasOpCast(char c) noexcept { return (c == 'c' || c == 'C') ? CUPMBLAS_OP_C : (c == 't' || c == 'T') ? CUPMBLAS_OP_T : CUPMBLAS_OP_N; }
+
+  static PetscErrorCode GEMM_Private(PetscDeviceContext dctx, PetscMemType scalar_type, char _trans_A, char _trans_B, PetscInt _m, PetscInt _n, PetscInt _k, const PetscScalar *alpha, const PetscScalar A[], PetscInt _ld_A, const PetscScalar B[], PetscInt _ld_B, const PetscScalar *beta, PetscScalar C[], PetscInt _ld_C) noexcept
+  {
+    cupmBlasInt_t      m, n, k, ld_A, ld_B, ld_C;
+    cupmBlasHandle_t   handle;
+
+    PetscFunctionBegin;
+    PetscCall(PetscCUPMBlasIntCast(_m, &m));
+    PetscCall(PetscCUPMBlasIntCast(_n, &n));
+    PetscCall(PetscCUPMBlasIntCast(_k, &k));
+    if (!m || !n || !k) PetscFunctionReturn(PETSC_SUCCESS);
+    PetscCall(PetscCUPMBlasIntCast(_ld_A, &ld_A));
+    PetscCall(PetscCUPMBlasIntCast(_ld_B, &ld_B));
+    PetscCall(PetscCUPMBlasIntCast(_ld_C, &ld_C));
+    PetscCall(GetHandles_(&dctx, &handle));
+    PetscCallCUPMBLAS(cupmBlasSetPointerMode(handle, PetscMemTypeDevice(scalar_type) ? CUPMBLAS_POINTER_MODE_DEVICE : CUPMBLAS_POINTER_MODE_HOST));
+
+    auto trans_A = PetscCUPMBlasOpCast(_trans_A);
+    auto trans_B = PetscCUPMBlasOpCast(_trans_B);
+
+    PetscCall(PetscLogGpuTimeBegin());
+    PetscCallCUPMBLAS(cupmBlasXgemm(handle, trans_A, trans_B, m, n, k, alpha, A, ld_A, B, ld_B, beta, C, ld_C));
+    PetscCall(PetscLogGpuTimeEnd());
+
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
 };
+
 
   #define PETSC_CUPMBLAS_INHERIT_INTERFACE_TYPEDEFS_USING(T) \
     PETSC_CUPMBLAS_IMPL_CLASS_HEADER(T); \

@@ -47,6 +47,13 @@ PETSC_CUPMBLAS_DEFINE_STATIC_VARIABLE_MATCHING_SCHEME(DIAG_NON_UNIT)
 
 #if PetscDefined(HAVE_CUDA)
 template struct BlasInterface<DeviceType::CUDA>;
+
+PETSC_INTER PetscErrorCode PetscDeviceGEMM_Private_Cuda(PetscDeviceContext dctx, PetscMemType memtype_scalar, char trans_A, char trans_B, PetscInt m, PetscInt n, PetscInt k, const PetscScalar *alpha, const PetscScalar A[], PetscInt lda, const PetscScalar B[], PetscInt ldb, const PetscScalar *beta, PetscScalar C[], PetscInd ldc)
+{
+  PetscFunctionBegin;
+  PetscCall(BlasInterface<DeviceType::CUDA>::GEMM_Private());
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 #endif
 
 #if PetscDefined(HAVE_HIP)
