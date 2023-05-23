@@ -46,16 +46,15 @@ Subroutine PetscOptionsGetEnum(po,pre,name,FArray,opt,set,ierr)
   DeAllocate(list1)
 End Subroutine
 
-Subroutine PetscOptionsEnum(po,prefix,name,man,Flist,curr,opt,set,ierr)
+Subroutine PetscOptionsEnum(opt,text,man,Flist,curr,ivalue,set,ierr)
   use,intrinsic :: iso_c_binding
   use petscsysdef
   implicit none
 
-  character(*)                prefix,name,man
+  character(*)                opt,text,man
   character(*)                Flist(*)
-  PetscEnum                   :: curr,opt
+  PetscEnum                   :: curr,ivalue
   PetscBool                   :: set
-  PetscOptions                :: po
   PetscErrorCode,intent(out)  :: ierr
 
   Type(C_Ptr),Dimension(:),Pointer :: CArray
@@ -82,7 +81,7 @@ Subroutine PetscOptionsEnum(po,prefix,name,man,Flist,curr,opt,set,ierr)
   enddo
 
   CArray(Len+1) = c_loc(nullc)
-  call PetscOptionsEnumPrivate(po,prefix,name,man,CArray,curr,opt,set,ierr)
+  call PetscOptionsEnumPrivate(opt,text,man,CArray,curr,ivalue,set,ierr)
 
   DeAllocate(CArray)
   DeAllocate(list1)
