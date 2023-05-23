@@ -77,7 +77,7 @@ static PetscErrorCode VecResetArrayMemType(Vec v, PetscMemType memtype)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TestLevel1(PetscInt k_rows, PetscInt k_cols, PetscInt lda, Mat A, PetscInt a_start, Mat B, PetscInt b_start, Mat C, PetscInt c_start, Mat D, PetscInt d_start, PetscReal alpha, PetscReal beta, Mat D_copy, PetscInt n_iter)
+static PetscErrorCode TestLevel1(PetscInt k_rows, PetscInt k_cols, PetscInt lda, Mat A, PetscInt a_start, Mat B, PetscInt b_start, Mat C, PetscInt c_start, Mat D, PetscInt d_start, PetscScalar alpha, PetscScalar beta, Mat D_copy, PetscInt n_iter)
 {
   PetscFunctionBegin;
 
@@ -173,7 +173,7 @@ static PetscErrorCode TestLevel1(PetscInt k_rows, PetscInt k_cols, PetscInt lda,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TestLevel2(PetscDeviceContext dctx, PetscInt k_rows, PetscInt k_cols, PetscInt lda, Mat A, PetscInt a_start, Mat B, PetscInt b_start, Mat C, PetscInt c_start, Mat D, PetscInt d_start, PetscReal alpha, PetscReal beta, Mat D_copy, PetscInt n_iter, PetscMemType memtype_M, PetscBool report_host_memory)
+static PetscErrorCode TestLevel2(PetscDeviceContext dctx, PetscInt k_rows, PetscInt k_cols, PetscInt lda, Mat A, PetscInt a_start, Mat B, PetscInt b_start, Mat C, PetscInt c_start, Mat D, PetscInt d_start, PetscScalar alpha, PetscScalar beta, Mat D_copy, PetscInt n_iter, PetscMemType memtype_M, PetscBool report_host_memory)
 {
   PetscFunctionBegin;
   PetscScalar *M, *M_host;
@@ -223,7 +223,7 @@ static PetscErrorCode TestLevel2(PetscDeviceContext dctx, PetscInt k_rows, Petsc
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode TestLevel3(PetscDeviceContext dctx, PetscInt k_rows, PetscInt k_cols, PetscInt lda, Mat A, PetscInt a_start, Mat B, PetscInt b_start, Mat C, PetscInt c_start, Mat D, PetscInt d_start, PetscReal alpha, PetscReal beta, Mat D_copy, PetscInt n_iter, PetscMemType memtype_M, PetscBool report_host_memory)
+static PetscErrorCode TestLevel3(PetscDeviceContext dctx, PetscInt k_rows, PetscInt k_cols, PetscInt lda, Mat A, PetscInt a_start, Mat B, PetscInt b_start, Mat C, PetscInt c_start, Mat D, PetscInt d_start, PetscScalar alpha, PetscScalar beta, Mat D_copy, PetscInt n_iter, PetscMemType memtype_M, PetscBool report_host_memory)
 {
   PetscFunctionBegin;
   PetscScalar *M, *M_host;
