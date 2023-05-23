@@ -38,7 +38,8 @@ program ex9f
     Allocate(iarray(nopt),source=-1_Pi)
     Allocate(rarray(nopt),source=-99.0_pr)
     Allocate(barray(nopt),source=PETSC_FALSE)
-    Allocate(sarray(nopt),source=123.456_Pr)
+    Allocate(sarray(nopt))
+    sarray = 123.456_Pr
 
     PetscCallA(PetscOptionsBegin(PETSC_COMM_WORLD,'prefix_','Setting options for my application','Section 1',ierr))
         PetscCallA(PetscOptionsBool('-bool','Get an application bool','Man page',bdefault,bvalue,flg,ierr))
