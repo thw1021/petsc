@@ -130,6 +130,7 @@ typedef const char *MatType;
 #define MATLMVMSYMBADBROYDEN         "lmvmsymbadbroyden"
 #define MATLMVMDIAGBROYDEN           "lmvmdiagbroyden"
 #define MATCONSTANTDIAGONAL          "constantdiagonal"
+#define MATVECDIAGONAL               "vecdiagonal"
 #define MATHTOOL                     "htool"
 #define MATH2OPUS                    "h2opus"
 
@@ -480,6 +481,11 @@ PETSC_EXTERN PetscErrorCode MatCreateSubMatrixVirtual(Mat, IS, IS, Mat *);
 PETSC_EXTERN PetscErrorCode MatSubMatrixVirtualUpdate(Mat, Mat, IS, IS);
 PETSC_EXTERN PetscErrorCode MatCreateLocalRef(Mat, IS, IS, Mat *);
 PETSC_EXTERN PetscErrorCode MatCreateConstantDiagonal(MPI_Comm, PetscInt, PetscInt, PetscInt, PetscInt, PetscScalar, Mat *);
+PETSC_EXTERN PetscErrorCode MatCreateVecDiagonal(Vec, Mat *);
+PETSC_EXTERN PetscErrorCode MatVecDiagonalGetDiagonal(Mat, Vec *);
+PETSC_EXTERN PetscErrorCode MatVecDiagonalRestoreDiagonal(Mat, Vec *);
+PETSC_EXTERN PetscErrorCode MatVecDiagonalGetInverse(Mat, Vec *);
+PETSC_EXTERN PetscErrorCode MatVecDiagonalRestoreInverse(Mat, Vec *);
 
 #if defined(PETSC_HAVE_HYPRE)
 PETSC_EXTERN PetscErrorCode MatHYPRESetPreallocation(Mat, PetscInt, const PetscInt[], PetscInt, const PetscInt[]);
