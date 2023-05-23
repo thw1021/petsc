@@ -3633,60 +3633,6 @@ static hipblasOperation_t hipblasOperationFromChar_Private(char t)
 }
 #endif
 
-// memtype for arrays
-static PetscErrorCode PetscCUPMGEMV_C(PetscMemType memtype, char trans_A, PetscInt m, PetscInt n, PetscScalar alpha, const PetscScalar *A, PetscInt ld_A, const PetscScalar *x, PetscInt inc_x, PetscScalar beta, PetscScalar *y, PetscInt inc_y)
-{
-  PetscFunctionBegin;
-  PetscLogDouble flops = 2.0 * m * n + (beta == 0.0 ? -1.0 : 1.0) * ((trans_A == 'n' || trans_A == 'N') ? m : n) + (alpha == 1.0 ? 0.0 : 1.0) * PetscMin(m, n);
-  switch (memtype) {
-  case PETSC_MEMTYPE_HOST: {
-    PetscBLASInt _m, _n, _lda, _incx, _incy;
-
-    PetscCall(PetscBLASIntCast(m, &_m));
-    PetscCall(PetscBLASIntCast(n, &_n));
-    PetscCall(PetscBLASIntCast(ld_A, &_lda));
-    PetscCall(PetscBLASIntCast(inc_x, &_incx));
-    PetscCall(PetscBLASIntCast(inc_y, &_incy));
-    PetscCallBLAS("BLASgemv", BLASgemv_(&trans_A, &_m, &_n, &alpha, A, &_lda, x, &_incx, &beta, y, &_incy));
-    PetscCall(PetscLogFlops(flops));
-  } break;
-#if defined(PETSC_HAVE_CUDA)
-  case PETSC_MEMTYPE_CUDA: {
-    cublasOperation_t _transa = cublasOperationFromChar_Private(trans_A);
-    PetscCuBLASInt    _m, _n, _lda, _incx, _incy;
-    cublasHandle_t    _handle;
-    PetscCall(PetscCuBLASIntCast(m, &_m));
-    PetscCall(PetscCuBLASIntCast(n, &_n));
-    PetscCall(PetscCuBLASIntCast(ld_A, &_lda));
-    PetscCall(PetscCuBLASIntCast(inc_x, &_incx));
-    PetscCall(PetscCuBLASIntCast(inc_y, &_incy));
-    PetscCall(PetscCUBLASGetHandle(&_handle));
-    PetscCallCUBLAS(cublasXgemv(_handle, _transa, _m, _n, &alpha, A, _lda, x, _incx, &beta, y, _incy));
-    PetscCall(PetscLogGpuFlops(flops));
-  } break;
-#endif
-#if defined(PETSC_HAVE_HIP)
-  case PETSC_MEMTYPE_HIP: {
-    hipblasOperation_t _transa = hipblasOperationFromChar_Private(trans_A);
-    PetscHipBLASInt    _m, _n, _lda, _incx, _incy;
-    hipblasHandle_t    _handle;
-    PetscCall(PetscHipBLASIntCast(m, &_m));
-    PetscCall(PetscHipBLASIntCast(n, &_n));
-    PetscCall(PetscHipBLASIntCast(ld_A, &_lda));
-    PetscCall(PetscHipBLASIntCast(inc_x, &_incx));
-    PetscCall(PetscHipBLASIntCast(inc_y, &_incy));
-    PetscCall(PetscHIPBLASGetHandle(&_handle));
-    PetscCallHIPBLAS(hipblasXgemv(_handle, _transa, _m, _n, &alpha, A, _lda, x, _incx, &beta, y, _incy));
-    PetscCall(PetscLogGpuFlops(flops));
-  } break;
-#endif
-  default:
-    SETERRQ(PETSC_COMM_SELF, PETSC_ERR_PLIB, "Unsupported device type");
-    break;
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 PETSC_INTERN PetscErrorCode MatDenseColumnsGEMVHermitianTranspose_SeqDense(PetscDeviceContext dctx, PetscScalar alpha, Mat A_mat, PetscInt col_start, PetscInt col_end, Vec x, PetscScalar beta, PetscScalar *y, PetscInt inc_y, PetscMemType memtype_y)
 {
   PetscFunctionBegin;
@@ -3726,7 +3672,7 @@ PETSC_INTERN PetscErrorCode MatDenseColumnsGEMVHermitianTranspose_SeqDense(Petsc
     y = gemxarray;
   }
 
-  PetscCall(PetscCUPMGEMV_C(memtype_A, 'C', m, n, alpha, A, ld_A, x_array, 1, beta, y, inc_y));
+  PetscCall(PetscDeviceGEMV_Private(dctx, memtype_A, PETSC_MEMTYPE_HOST, 'C', m, n, &alpha, A, ld_A, x_array, 1, &beta, y, inc_y));
 
   PetscCall(VecRestoreArrayReadAndMemType(x, &x_array));
   PetscCall(MatDenseRestoreArrayReadAndMemType(A_mat, &A_array));
@@ -3775,7 +3721,7 @@ PETSC_INTERN PetscErrorCode MatDenseColumnsGEMV_SeqDense(PetscDeviceContext dctx
     x = gemxarray;
   }
 
-  PetscCall(PetscCUPMGEMV_C(memtype_A, 'N', m, n, alpha, A, ld_A, x, inc_x, beta, y_array, 1));
+  PetscCall(PetscDeviceGEMV_Private(dctx, memtype_A, PETSC_MEMTYPE_HOST, 'N', m, n, &alpha, A, ld_A, x, inc_x, &beta, y_array, 1));
 
   if (gemxarray) { PetscCall(PetscDeviceFree(dctx, gemxarray)); }
   PetscCall(VecRestoreArrayAndMemType(y, &y_array));
