@@ -46,3 +46,38 @@ PETSC_INTERN PetscErrorCode PetscDeviceGEMM_Private(PetscDeviceContext dctx, Pet
   SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Could not dispatch GEMM for device");
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+PETSC_INTERN PetscErrorCode PetscDeviceGEMV_Private(PetscDeviceContext dctx, PetscMemType memtype_arrays, PetscMemType memtype_scalars, char trans, PetscInt m, PetscInt n, const PetscScalar *alpha, const PetscScalar A[], PetscInt ld_A, const PetscScalar x[], PetscInt inc_x, const PetscScalar *beta, PetscScalar y[], PetscInt inc_y)
+{
+  PetscDeviceType device_type;
+  PetscFunctionBegin;
+  if (PetscMemTypeHost(memtype_arrays)) {
+    PetscBLASInt   _m, _n, _lda, _inc_x, _inc_y;
+    PetscLogDouble flops;
+
+    PetscCheck(PetscMemTypeHost(memtype_scalars), PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Scalar references must be on the host for linear algebra on the host");
+
+    flops = 2.0 * m * n + (*beta == 0.0 ? -1.0 : 1.0) * ((trans == 'n' || trans == 'N') ? m : n) + (*alpha == 1.0 ? 0.0 : 1.0) * PetscMin(m, n);
+    PetscCall(PetscLogGpuFlops(flops));
+    PetscCall(PetscBLASIntCast(m, &_m));
+    PetscCall(PetscBLASIntCast(n, &_n));
+    PetscCall(PetscBLASIntCast(ld_A, &_lda));
+    PetscCall(PetscBLASIntCast(inc_x, &_inc_x));
+    PetscCall(PetscBLASIntCast(inc_y, &_inc_y));
+    PetscCallBLAS("BLASgemv", BLASgemv_(&trans, &_m, &_n, alpha, A, &_lda, x, &_inc_x, beta, y, &_inc_y));
+    PetscCall(PetscLogFlops(flops));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  if (!dctx) PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
+  PetscCall(PetscDeviceContextGetDeviceType(dctx, &device_type));
+  if (device_type == PETSC_DEVICE_CUDA) {
+    PetscCheck(PetscMemTypeCUDA(memtype_arrays), PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Incompatible array for device");
+#if PetscDefined(HAVE_CUDA)
+    PetscCall(PetscDeviceGEMM_Private_Cuda(dctx, memtype_scalars, trans_A, trans_B, m, n, k, alpha, A, ld_A, B, ld_B, beta, C, ld_C));
+#endif
+    PetscFunctionReturn(PETSC_SUCCESS);
+  } else if (device_type == PETSC_DEVICE_HIP) {
+  }
+  SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Could not dispatch GEMM for device");
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
