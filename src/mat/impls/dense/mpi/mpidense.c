@@ -1644,7 +1644,7 @@ static PetscErrorCode PetscScalarMemTypeAllreduce_Private(PetscDeviceContext dct
       C = C_host;
     }
   }
-  PetscCallMPI(MPI_Allreduce(MPI_IN_PLACE, C, count, MPIU_SCALAR, MPI_SUM, comm));
+  PetscCallMPI(MPI_Allreduce(MPI_IN_PLACE, C, count, MPIU_SCALAR, MPIU_SUM, comm));
   if (C_orig) {
     PetscCall(PetscDeviceArrayCopy(dctx, C_orig, C, count));
     PetscCall(PetscDeviceContextSynchronize(dctx));
