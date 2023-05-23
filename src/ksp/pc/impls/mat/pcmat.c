@@ -191,7 +191,7 @@ static PetscErrorCode PCMatSetApplyOperation_Mat(PC pc, MatOperation matop)
 static PetscErrorCode PCMatGetApplyOperation_Mat(PC pc, MatOperation *matop_p)
 {
   PC_Mat      *pcmat = (PC_Mat *)pc->data;
-  MatOperation matop;
+  MatOperation matop = MATOP_MULT;
 
   PetscFunctionBegin;
 
