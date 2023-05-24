@@ -47,7 +47,7 @@ static PetscErrorCode TaoShellSolve_SoftThreshold(Tao tao)
   PetscCall(TaoShellGetContext(tao, &user));
   PetscCall(TaoADMMGetRegularizerCoefficient(admm_tao, &lambda));
 
-  work   = user->workN;
+  work = user->workN;
   PetscCall(TaoGetSolution(tao, &out));
   PetscCall(TaoGetSolution(misfit, &x));
   PetscCall(TaoADMMGetDualVector(admm_tao, &y));
