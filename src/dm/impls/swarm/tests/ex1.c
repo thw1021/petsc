@@ -38,10 +38,11 @@ static PetscErrorCode CreateMesh(MPI_Comm comm, DM *dm, AppCtx *user)
 */
 static PetscErrorCode CreateSwarm(DM dm, DM *sw, AppCtx *user)
 {
-  PetscInt   particleInitSize = 10;
-  PetscReal *coords, upper[3], lower[3];
-  PetscInt  *cellid, rank, size, Np, dim;
-  MPI_Comm   comm;
+  PetscInt    particleInitSize = 10;
+  PetscReal  *coords, upper[3], lower[3];
+  PetscInt   *cellid, Np, dim;
+  PetscMPIInt rank, size;
+  MPI_Comm    comm;
 
   PetscFunctionBegin;
   comm = PETSC_COMM_WORLD;
@@ -108,8 +109,9 @@ static PetscErrorCode CheckMigrate(DM sw)
 */
 static PetscErrorCode CheckPointInsertion(DM sw)
 {
-  PetscInt rank, size, Np_pre, Np_post;
-  MPI_Comm comm;
+  PetscInt    Np_pre, Np_post;
+  PetscMPIInt rank, size;
+  MPI_Comm    comm;
 
   PetscFunctionBeginUser;
   comm = PETSC_COMM_WORLD;
@@ -134,10 +136,11 @@ static PetscErrorCode CheckPointInsertion(DM sw)
 */
 static PetscErrorCode CheckPointInsertion_Boundary(DM sw)
 {
-  PetscInt  rank, size, Np_loc_pre, Np_loc_post, dim;
-  PetscReal lbox_low[3], lbox_high[3], gbox_low[3], gbox_high[3];
-  MPI_Comm  comm;
-  DM        cdm;
+  PetscInt    Np_loc_pre, Np_loc_post, dim;
+  PetscMPIInt rank, size;
+  PetscReal   lbox_low[3], lbox_high[3], gbox_low[3], gbox_high[3];
+  MPI_Comm    comm;
+  DM          cdm;
 
   PetscFunctionBeginUser;
   comm = PETSC_COMM_WORLD;
@@ -197,17 +200,23 @@ int main(int argc, char **argv)
   # Swarm does not handle complex or quad
   build:
     requires: !complex double
-
+  # swarm_migrate_hash and swarm_migrate_scan test swarm migration against point location types
+  # with a distributed mesh where ranks overlap by 1. Points in the shared boundary should
+  # be sent to the process which has the highest rank that has that portion of the domain.
   test:
     suffix: swarm_migrate_hash
     requires: ctetgen
     nsize: 2
-    args: -dm_plex_simplex 0 -dm_distribute_overlap 1 -dm_plex_hash_location true -dm_plex_box_faces 10,10,10 -dm_plex_box_lower 0.,0.,0. -dm_plex_box_upper 1.,1.,10. -dm_plex_box_bd none,none,none -dm_plex_dim 3
+    args: -dm_plex_dim 3 -dm_plex_simplex 0 -dm_distribute_overlap 1 -dm_plex_box_faces 10,10,10\
+          -dm_plex_box_lower 0.,0.,0. -dm_plex_box_upper 1.,1.,10. -dm_plex_box_bd none,none,none\
+          -dm_plex_hash_location true
     filter: grep -v marker | grep -v atomic | grep -v usage
   test:
     suffix: swarm_migrate_scan
     requires: ctetgen
     nsize: 2
-    args: -dm_plex_simplex 0 -dm_distribute_overlap 1 -dm_plex_hash_location false -dm_plex_box_faces 10,10,10 -dm_plex_box_lower 0.,0.,0. -dm_plex_box_upper 1.,1.,10. -dm_plex_box_bd none,none,none -dm_plex_dim 3
+    args: -dm_plex_dim 3 -dm_plex_simplex 0 -dm_distribute_overlap 1 -dm_plex_box_faces 10,10,10\
+          -dm_plex_box_lower 0.,0.,0. -dm_plex_box_upper 1.,1.,10. -dm_plex_box_bd none,none,none\
+          -dm_plex_hash_location false
     filter: grep -v marker | grep -v atomic | grep -v usage
 TEST*/
