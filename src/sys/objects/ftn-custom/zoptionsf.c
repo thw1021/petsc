@@ -298,7 +298,7 @@ PETSC_EXTERN void petscoptionsscalararray_(char *opt, char *text, char *man, Pet
 
 PETSC_EXTERN void petscoptionsstring_(char *opt, char *text, char *man, char *currentvalue, char *value, PetscBool *flg, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T lenopt, PETSC_FORTRAN_CHARLEN_T lentext, PETSC_FORTRAN_CHARLEN_T lenman, PETSC_FORTRAN_CHARLEN_T lencurrent, PETSC_FORTRAN_CHARLEN_T lenvalue)
 {
-  char      *copt, *ctext, *cman, *ccurrent;
+  char     *copt, *ctext, *cman, *ccurrent;
   PetscBool flag;
 
   FIXCHAR(opt, lenopt, copt);
