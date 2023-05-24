@@ -44,12 +44,12 @@ program ex9f
     PetscCallA(PetscOptionsBegin(PETSC_COMM_WORLD,'prefix_','Setting options for my application','Section 1',ierr))
         PetscCallA(PetscOptionsBool('-bool','Get an application bool','Man page',bdefault,bvalue,flg,ierr))
         if (flg) then
-            write(IOBuffer,'("The bool value was set to ",L0,"\n")') bvalue
+            write(IOBuffer,'("The bool value was set to ",L1,"\n")') bvalue
             PetscCallA(PetscPrintf(PETSC_COMM_WORLD,IOBuffer,ierr))
         endif
         PetscCallA(PetscOptionsBoolArray('-boolarray','Get an application bool array','Man page',barray,nopt,flg,ierr))
         if (flg) then
-            write(IOBuffer,'("The bool array was set to ",*(L0," "))') barray
+            write(IOBuffer,'("The bool array was set to ",*(L1," "))') barray
             PetscCallA(PetscPrintf(PETSC_COMM_WORLD,trim(IOBuffer)//"\n",ierr))
         endif
         PetscCallA(PetscOptionsEnum('-enum','Get an application enum','Man page',list,edefault,evalue,flg,ierr))
@@ -59,12 +59,12 @@ program ex9f
         endif
         PetscCallA(PetscOptionsInt('-int','Get an application int','Man page',idefault,ivalue,flg,ierr))
         if (flg) then
-            write(IOBuffer,'("The integer value was set to ",I0,"\n")') ivalue
+            write(IOBuffer,'("The integer value was set to ",I8,"\n")') ivalue
             PetscCallA(PetscPrintf(PETSC_COMM_WORLD,IOBuffer,ierr))
         endif
         PetscCallA(PetscOptionsIntArray('-intarray','Get an application int array','Man page',iarray,nopt,flg,ierr))
         if (flg) then
-            write(IOBuffer, '("The integer array was set to ",*(i0," "))') iarray
+            write(IOBuffer, '("The integer array was set to ",*(I8," "))') iarray
             PetscCallA(PetscPrintf(PETSC_COMM_WORLD,trim(IOBuffer)//"\n",ierr))
         endif
         PetscCallA(PetscOptionsReal('-real','Get an application real','Man page',rdefault,rvalue,flg,ierr))
