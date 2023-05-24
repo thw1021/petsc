@@ -6,7 +6,9 @@
 // failed to link this file, so we add "defined(PETSC_HAVE_SYCL)" to disable landau with SYCL
 // to facilitate petsc users' experiments on Sunspot.
 // TODO: remove it when Intel fixed the bug. See MR !6412
-#if defined(PETSC_HAVE_CUDA_CLANG) || defined(PETSC_HAVE_SYCL)
+//#if defined(PETSC_HAVE_CUDA_CLANG) || defined(PETSC_HAVE_SYCL)
+#if 0
+  #error
   #include <petsclandau.h>
   #define LANDAU_NOT_IMPLEMENTED SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Not supported with CLANG or SYCL")
 PetscErrorCode LandauKokkosJacobian(DM[], const PetscInt, const PetscInt, const PetscInt, const PetscInt[], PetscReal[], PetscScalar[], const PetscScalar[], const LandauStaticData *, const PetscReal, const PetscLogEvent[], const PetscInt[], const PetscInt[], Mat[], Mat)
@@ -249,7 +251,7 @@ PetscErrorCode LandauKokkosStaticDataSet(DM plex, const PetscInt Nq, const Petsc
     SData_d->ipf_offset                                                                                                   = static_cast<void *>(ipfoff);
     Kokkos::deep_copy(*ipfoff, h_ipf_offset);
   #if defined(LANDAU_LAYOUT_LEFT) // preallocate dynamic data, no copy
-    auto ipfdf_data     = new Kokkos::View<PetscReal ***, Kokkos::LayoutLeft>("fdf", batch_sz, dim + 1, IPf_sz);
+    auto ipfdf_data = new Kokkos::View<PetscReal ***, Kokkos::LayoutLeft>("fdf", batch_sz, dim + 1, IPf_sz);
   #else
     auto ipfdf_data = new Kokkos::View<PetscReal ***, Kokkos::LayoutRight>("fdf", batch_sz, dim + 1, IPf_sz);
   #endif
@@ -343,7 +345,7 @@ PetscErrorCode LandauKokkosStaticDataClear(LandauStaticData *SData_d)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-  #define KOKKOS_SHARED_LEVEL 0   // 0 is shared, 1 is global
+  #define KOKKOS_SHARED_LEVEL 0 // 0 is shared, 1 is global
 
 KOKKOS_INLINE_FUNCTION
 PetscErrorCode landau_mat_assemble(PetscScalar *coo_vals, const PetscScalar Aij, const PetscInt f, const PetscInt g, const PetscInt Nb, PetscInt moffset, const PetscInt elem, const PetscInt fieldA, const P4estVertexMaps *d_maps, const LandauIdx coo_elem_offsets[], const LandauIdx coo_elem_fullNb[], const LandauIdx (*coo_elem_point_offsets)[LANDAU_MAX_NQND + 1], const PetscInt glb_elem_idx, const PetscInt bid_coo_sz_batch)
@@ -422,24 +424,24 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
   auto             d_w_k        = *static_cast<Kokkos::View<PetscReal *, Kokkos::LayoutLeft> *>(SData_d->w); //static data
   const PetscReal *d_w          = d_w_k.data();
   // grid offsets - single vertex grid data
-  auto                                            d_numCells_k       = static_cast<Kokkos::View<PetscInt *, Kokkos::LayoutLeft> *>(SData_d->NCells);
-  const PetscInt                                 *d_numCells         = d_numCells_k->data();
-  auto                                            d_species_offset_k = static_cast<Kokkos::View<PetscInt *, Kokkos::LayoutLeft> *>(SData_d->species_offset);
-  const PetscInt                                 *d_species_offset   = d_species_offset_k->data();
-  auto                                            d_mat_offset_k     = static_cast<Kokkos::View<PetscInt *, Kokkos::LayoutLeft> *>(SData_d->mat_offset);
-  const PetscInt                                 *d_mat_offset       = d_mat_offset_k->data();
-  auto                                            d_ip_offset_k      = static_cast<Kokkos::View<PetscInt *, Kokkos::LayoutLeft> *>(SData_d->ip_offset);
-  const PetscInt                                 *d_ip_offset        = d_ip_offset_k->data();
-  auto                                            d_ipf_offset_k     = static_cast<Kokkos::View<PetscInt *, Kokkos::LayoutLeft> *>(SData_d->ipf_offset);
-  const PetscInt                                 *d_ipf_offset       = d_ipf_offset_k->data();
-  auto                                            d_elem_offset_k    = static_cast<Kokkos::View<PetscInt *, Kokkos::LayoutLeft> *>(SData_d->elem_offset);
-  const PetscInt                                 *d_elem_offset      = d_elem_offset_k->data();
+  auto            d_numCells_k       = static_cast<Kokkos::View<PetscInt *, Kokkos::LayoutLeft> *>(SData_d->NCells);
+  const PetscInt *d_numCells         = d_numCells_k->data();
+  auto            d_species_offset_k = static_cast<Kokkos::View<PetscInt *, Kokkos::LayoutLeft> *>(SData_d->species_offset);
+  const PetscInt *d_species_offset   = d_species_offset_k->data();
+  auto            d_mat_offset_k     = static_cast<Kokkos::View<PetscInt *, Kokkos::LayoutLeft> *>(SData_d->mat_offset);
+  const PetscInt *d_mat_offset       = d_mat_offset_k->data();
+  auto            d_ip_offset_k      = static_cast<Kokkos::View<PetscInt *, Kokkos::LayoutLeft> *>(SData_d->ip_offset);
+  const PetscInt *d_ip_offset        = d_ip_offset_k->data();
+  auto            d_ipf_offset_k     = static_cast<Kokkos::View<PetscInt *, Kokkos::LayoutLeft> *>(SData_d->ipf_offset);
+  const PetscInt *d_ipf_offset       = d_ipf_offset_k->data();
+  auto            d_elem_offset_k    = static_cast<Kokkos::View<PetscInt *, Kokkos::LayoutLeft> *>(SData_d->elem_offset);
+  const PetscInt *d_elem_offset      = d_elem_offset_k->data();
   #if defined(LANDAU_LAYOUT_LEFT) // preallocate dynamic data, including batched vertices
-  Kokkos::View<PetscReal ***, Kokkos::LayoutLeft> d_fdf_k            = *static_cast<Kokkos::View<PetscReal ***, Kokkos::LayoutLeft> *>(SData_d->ipfdf_data);
+  Kokkos::View<PetscReal ***, Kokkos::LayoutLeft> d_fdf_k = *static_cast<Kokkos::View<PetscReal ***, Kokkos::LayoutLeft> *>(SData_d->ipfdf_data);
   #else
   Kokkos::View<PetscReal ***, Kokkos::LayoutRight> d_fdf_k = *static_cast<Kokkos::View<PetscReal ***, Kokkos::LayoutRight> *>(SData_d->ipfdf_data);
   #endif
-  auto                                            d_Eq_m_k           = static_cast<Kokkos::View<PetscReal *, Kokkos::LayoutLeft> *>(SData_d->Eq_m); // static storage, dynamci data - E(t), copy later, single vertex
+  auto d_Eq_m_k = static_cast<Kokkos::View<PetscReal *, Kokkos::LayoutLeft> *>(SData_d->Eq_m); // static storage, dynamci data - E(t), copy later, single vertex
   // COO
   auto       d_coo_elem_offsets_k                           = static_cast<Kokkos::View<LandauIdx *, Kokkos::LayoutLeft> *>(SData_d->coo_elem_offsets);
   LandauIdx *d_coo_elem_offsets                             = (SData_d->coo_size == 0) ? NULL : d_coo_elem_offsets_k->data();
@@ -485,10 +487,10 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
     if (a_numCells[grid] > num_cells_max) num_cells_max = a_numCells[grid];
     num_cells_batch += a_numCells[grid]; // we don't have a host element offset here (but in ctx)
   }
-  const int                                                                                                       elem_mat_num_cells_max_grid = container ? 0 : num_cells_max;
+  const int elem_mat_num_cells_max_grid = container ? 0 : num_cells_max;
   #ifdef LAND_SUPPORT_CPU_ASS
-  const int                                                                                                       totDim_max = Nf_max * Nb, elem_mat_size_max = totDim_max * totDim_max;
-  Kokkos::View<PetscScalar ****, Kokkos::LayoutRight>                                                             d_elem_mats("element matrices", batch_sz, num_grids, elem_mat_num_cells_max_grid, elem_mat_size_max); // not used (cpu assembly)
+  const int                                           totDim_max = Nf_max * Nb, elem_mat_size_max = totDim_max * totDim_max;
+  Kokkos::View<PetscScalar ****, Kokkos::LayoutRight> d_elem_mats("element matrices", batch_sz, num_grids, elem_mat_num_cells_max_grid, elem_mat_size_max); // not used (cpu assembly)
   #endif
   const Kokkos::View<PetscReal *, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_Eq_m_k(a_Eq_m, Nftot);
   if (a_elem_closure || a_xarray) {
@@ -603,12 +605,12 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
         const PetscInt moffset = LAND_MOFFSET(b_id, grid, batch_sz, num_grids, d_mat_offset);
         const PetscInt f_off   = d_species_offset[grid];
   #ifdef LAND_SUPPORT_CPU_ASS
-        const PetscInt totDim  = loc_Nf * Nb;
+        const PetscInt totDim = loc_Nf * Nb;
   #endif
-        g2_scr_t       g2(team.team_scratch(jac_shared_level), dim, loc_Nf, Nq);
-        g3_scr_t       g3(team.team_scratch(jac_shared_level), dim, dim, loc_Nf, Nq);
-        g2_scr_t       gg2(team.team_scratch(jac_shared_level), dim, loc_Nf, Nq);
-        g3_scr_t       gg3(team.team_scratch(jac_shared_level), dim, dim, loc_Nf, Nq);
+        g2_scr_t g2(team.team_scratch(jac_shared_level), dim, loc_Nf, Nq);
+        g3_scr_t g3(team.team_scratch(jac_shared_level), dim, dim, loc_Nf, Nq);
+        g2_scr_t gg2(team.team_scratch(jac_shared_level), dim, loc_Nf, Nq);
+        g3_scr_t gg3(team.team_scratch(jac_shared_level), dim, dim, loc_Nf, Nq);
         // get g2[] & g3[]
         Kokkos::parallel_for(Kokkos::TeamThreadRange(team, 0, Nq), [=](int myQi) {
           using Kokkos::parallel_reduce;
@@ -623,7 +625,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
               PetscReal       temp1[3] = {0, 0, 0}, temp2 = 0;
               PetscInt        fieldB, d2, d3, f_off_r, grid_r, ipidx_g, nip_loc_r, loc_Nf_r;
   #if LANDAU_DIM == 2
-              PetscReal       Ud[2][2], Uk[2][2], mask = (PetscAbs(vj[0] - x) < 100 * PETSC_SQRT_MACHINE_EPSILON && PetscAbs(vj[1] - y) < 100 * PETSC_SQRT_MACHINE_EPSILON) ? 0. : 1.;
+              PetscReal Ud[2][2], Uk[2][2], mask = (PetscAbs(vj[0] - x) < 100 * PETSC_SQRT_MACHINE_EPSILON && PetscAbs(vj[1] - y) < 100 * PETSC_SQRT_MACHINE_EPSILON) ? 0. : 1.;
               LandauTensor2D(vj, x, y, Ud, Uk, mask);
   #else
                 PetscReal U[3][3], z = d_z[ipidx], mask = (PetscAbs(vj[0]-x) < 100*PETSC_SQRT_MACHINE_EPSILON && PetscAbs(vj[1]-y) < 100*PETSC_SQRT_MACHINE_EPSILON && PetscAbs(vj[2]-z) < 100*PETSC_SQRT_MACHINE_EPSILON) ? 0. : 1.;
@@ -748,7 +750,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
         {
           const PetscInt loc_Nf = d_species_offset[grid + 1] - d_species_offset[grid], loc_elem = b_elem_idx - d_elem_offset[grid], jpidx_0 = d_ip_offset[grid] + loc_elem * Nq;
   #ifdef LAND_SUPPORT_CPU_ASS
-          const PetscInt totDim  = loc_Nf * Nb;
+          const PetscInt totDim = loc_Nf * Nb;
   #endif
           const PetscInt moffset = LAND_MOFFSET(b_id, grid, batch_sz, num_grids, d_mat_offset);
           for (int fieldA = 0; fieldA < loc_Nf; fieldA++) {
@@ -785,7 +787,7 @@ PetscErrorCode LandauKokkosJacobian(DM plex[], const PetscInt Nq, const PetscInt
   if (d_coo_vals) {
     PetscCall(MatSetValuesCOO(JacP, d_coo_vals, ADD_VALUES));
   #ifndef LAND_SUPPORT_CPU_ASS
-    Kokkos::fence();                        // for timers
+    Kokkos::fence(); // for timers
   #endif
   } else if (elem_mat_num_cells_max_grid) { // CPU assembly
   #ifdef LAND_SUPPORT_CPU_ASS
