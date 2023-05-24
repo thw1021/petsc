@@ -437,22 +437,21 @@ PetscErrorCode PetscOptionsGetViewer(MPI_Comm comm, PetscOptions options, const 
 .  pre - the string to prepend to the name or `NULL`
 .  name - the option one is seeking
 .  n_max - the maximum number of viewers
-.  viewer - an array to hold at least n_max `PetscViewer`s, or NULL if not needed
--  format - an array to hold at least n_max `PetscViewerFormat`s, or NULL if not needed
+.  viewer - an array to hold at least `n_max` `PetscViewer`s, or `NULL` if not needed
+-  format - an array to hold at least `n_max` `PetscViewerFormat`s, or `NULL` if not needed
 
    Output Parameters:
 +  n_max - the number of viewers in the comma-separated list
-.  viewer - if not NULL, the first n_max entries are initialied `PetscViewer`s
-.  format - if not NULL, the first n_max entries are formats for the associated `PetscViewer`s
+.  viewer - if not `NULL`, the first `n_max` entries are initialied `PetscViewer`s
+.  format - if not `NULL`, the first `n_max` entries are formats for the associated `PetscViewer`s
 -  set - `PETSC_TRUE` if found, else `PETSC_FALSE`
 
    Level: intermediate
 
    Note:
-
    See `PetscOptionsGetViewer()` for how the format strings for the viewers are interpreted.  Use `PetscViewerDestroy()` on each viewer, otherwise a memory leak will occur.
 
-   If PETSc is configured with `--with-viewfromoptions=0` this function always returns with *n_max of 0 and *set of `PETSC_FALSE`
+   If PETSc is configured with `--with-viewfromoptions=0` this function always returns with `n_max` of 0 and `set` of `PETSC_FALSE`
 
 .seealso: [](sec_viewers), `PetscOptionsGetViewer()`
 @*/
