@@ -46,8 +46,8 @@ static PetscErrorCode CreateSwarm(DM dm, DM *sw, AppCtx *user)
 
   PetscFunctionBegin;
   comm = PETSC_COMM_WORLD;
-  MPI_Comm_rank(comm, &rank);
-  MPI_Comm_size(comm, &size);
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCall(DMGetBoundingBox(dm, lower, upper));
   PetscCall(DMCreate(PETSC_COMM_WORLD, sw));
   PetscCall(DMGetDimension(dm, &dim));
@@ -115,8 +115,8 @@ static PetscErrorCode CheckPointInsertion(DM sw)
 
   PetscFunctionBeginUser;
   comm = PETSC_COMM_WORLD;
-  MPI_Comm_rank(comm, &rank);
-  MPI_Comm_size(comm, &size);
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCall(PetscPrintf(comm, "Basic point insertion check...\n"));
   PetscCall(DMSwarmGetSize(sw, &Np_pre));
   if (rank == 0) PetscCall(DMSwarmAddPoint(sw));
@@ -144,8 +144,8 @@ static PetscErrorCode CheckPointInsertion_Boundary(DM sw)
 
   PetscFunctionBeginUser;
   comm = PETSC_COMM_WORLD;
-  MPI_Comm_rank(comm, &rank);
-  MPI_Comm_size(comm, &size);
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCall(PetscPrintf(comm, "Rank boundary point insertion check...\n"));
   PetscCall(DMSwarmGetCellDM(sw, &cdm));
   PetscCall(DMGetDimension(cdm, &dim));
@@ -169,8 +169,8 @@ static PetscErrorCode CheckPointInsertion_Boundary(DM sw)
   PetscCall(DMSwarmGetLocalSize(sw, &Np_loc_pre));
   PetscCall(CheckMigrate(sw));
   PetscCall(DMSwarmGetLocalSize(sw, &Np_loc_post));
-  if (rank == 0) PetscCheck(Np_loc_pre == (Np_loc_post + 1), PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Migration tie breaking failed on rank %" PetscInt_FMT ". Particle on boundary not sent.", rank);
-  if (rank == 1) PetscCheck(Np_loc_pre == (Np_loc_post - 1), PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Migration tie breaking failed on rank %" PetscInt_FMT ". Particle on boundary not recieved.", rank);
+  if (rank == 0) PetscCheck(Np_loc_pre == (Np_loc_post + 1), PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Migration tie breaking failed on rank %d. Particle on boundary not sent.", rank);
+  if (rank == 1) PetscCheck(Np_loc_pre == (Np_loc_post - 1), PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Migration tie breaking failed on rank %d. Particle on boundary not recieved.", rank);
   PetscCall(PetscPrintf(comm, "Rank boundary point insertion check passes.\n"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
