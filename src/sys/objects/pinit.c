@@ -1184,9 +1184,9 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
 .  -log_trace [filename] - Print traces of all PETSc calls to the screen (useful to determine where a program
         hangs without running in the debugger).  See `PetscLogTraceBegin()`.
 .  -log_view [:filename:format][,[:filename:format]...] - Prints summary of flop and timing information to screen or file, see `PetscLogView()`.  Up to 4 viewers can be specified.
-.  -log_view_memory - Includes in the summary from -log_view the memory used in each event, see `PetscLogView()`.
-.  -log_view_gpu_time - Includes in the summary from -log_view the time used in each GPU kernel, see `PetscLogView().
-.  -log_summary [filename] - (Deprecated, use -log_view) Prints summary of flop and timing information to screen. If the filename is specified the
+.  -log_view_memory - Includes in the summary from `-log_view` the memory used in each event, see `PetscLogView()`.
+ .  -log_view_gpu_time - Includes in the summary from `-log_view` the time used in each GPU kernel, see `PetscLogView()`.
+.  -log_summary [filename] - (Deprecated, use `-log_view`) Prints summary of flop and timing information to screen. If the filename is specified the
         summary is written to the file.  See PetscLogView().
 .  -log_exclude: <vec,mat,pc,ksp,snes> - excludes subset of object classes from logging
 .  -log_all [filename] - Logs extensive profiling information  See `PetscLogDump()`.
