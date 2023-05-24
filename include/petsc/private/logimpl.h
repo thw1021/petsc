@@ -180,4 +180,6 @@ static inline PetscErrorCode PetscLogPauseCurrentEvent_Internal(PetscLogEvent *e
   PetscCall(PetscLogEventPause_Internal(*event));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+#define PETSC_LOG_VIEW_FROM_OPTIONS_MAX 4
 #endif /* PETSC_LOGIMPL_H */
