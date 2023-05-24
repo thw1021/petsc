@@ -298,7 +298,8 @@ PETSC_EXTERN void petscoptionsscalararray_(char *opt, char *text, char *man, Pet
 
 PETSC_EXTERN void petscoptionsstring_(char *opt, char *text, char *man, char *currentvalue, char *value, PetscBool *flg, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T lenopt, PETSC_FORTRAN_CHARLEN_T lentext, PETSC_FORTRAN_CHARLEN_T lenman, PETSC_FORTRAN_CHARLEN_T lencurrent, PETSC_FORTRAN_CHARLEN_T lenvalue)
 {
-  char *copt, *ctext, *cman, *ccurrent;
+  char      *copt, *ctext, *cman, *ccurrent;
+  PetscBool flag;
 
   FIXCHAR(opt, lenopt, copt);
   FIXCHAR(text, lentext, ctext);
@@ -311,13 +312,14 @@ PETSC_EXTERN void petscoptionsstring_(char *opt, char *text, char *man, char *cu
   }
   PetscOptionsObject->count = 1;
 
-  *ierr = PetscOptionsString_Private(PetscOptionsObject, copt, ctext, cman, ccurrent, value, lenvalue - 1, flg);
+  *ierr = PetscOptionsString_Private(PetscOptionsObject, copt, ctext, cman, ccurrent, value, lenvalue - 1, flag);
   if (*ierr) return;
+  if (!FORTRANNULLBOOL(flg)) *flg = flag;
   FREECHAR(opt, copt);
   FREECHAR(text, ctext);
   FREECHAR(man, cman);
   FREECHAR(currentvalue, ccurrent);
-  FIXRETURNCHAR(flg, value, lenvalue);
+  FIXRETURNCHAR(flag, value, lenvalue);
 }
 
 PETSC_EXTERN void petscoptionsinsertstring_(PetscOptions *options, char *file, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T len)
