@@ -22,6 +22,7 @@ Changes: 3.19
 - Add support for C++20
 - Add support for CUDA-12
 - Improved C++ dialect handling for non-conformal cases. In general ``configure`` will fail faster and with a more informative error message when the C++ compiler does not comply with restraints
+- ``--download-mpich-commit`` should now work as advertised, downloading MPICH via ``git`` and using the specified commit. Previously this option was silently ignored
 
 .. rubric:: Sys:
 

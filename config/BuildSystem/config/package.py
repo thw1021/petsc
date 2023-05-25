@@ -180,7 +180,7 @@ class Package(config.base.Configure):
         help.addArgument(self.PACKAGE,'-with-'+self.package+'-lib=<libraries: e.g. [/Users/..../lib'+self.package+'.a,...]>',nargs.ArgLibrary(None,None,'Indicate the '+self.name+' libraries'))
     if self.download:
       help.addArgument(self.PACKAGE, '-download-'+self.package+'=<no,yes,filename,url>', nargs.ArgDownload(None, 0, 'Download and install '+self.name))
-      help.addArgument(self.PACKAGE, '-download-'+self.package+'-commit=commitid', nargs.ArgString(None, 0, 'The commit id from a git repository to use for the build of '+self.name))
+      help.addArgument(self.PACKAGE, '-download-'+self.package+'-commit=commitid', nargs.ArgString(None, 0, 'The commit id from a git repository to use for the build of '+self.name+'. This will change the default download type to git, and may impose additional build requirements'))
       help.addDownload(self.package,self.download)
     return
 
@@ -1256,6 +1256,8 @@ char     *ver = "petscpkgver(" PetscXstr_({y}) ")";
         self.download = [downloadPackageVal]
     if self.download and self.argDB['download-'+self.downloadname.lower()+'-commit']:
       self.gitcommit = self.argDB['download-'+self.downloadname.lower()+'-commit']
+      if hasattr(self, 'download_git'):
+        self.download = self.download_git
     elif self.gitcommitmain and not self.petscdir.versionRelease:
       self.gitcommit = self.gitcommitmain
     if not 'with-'+self.package in self.argDB:
