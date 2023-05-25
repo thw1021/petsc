@@ -358,7 +358,10 @@ PetscErrorCode VecMultiDot_Private(Vec xin, PetscInt nv, const Vec yin[], PetscS
 PetscErrorCode VecMDot_SeqKokkos(Vec xin, PetscInt nv, const Vec yin[], PetscScalar *z)
 {
   PetscFunctionBegin;
+  PetscCall(PetscLogGpuTimeBegin());
   PetscCall(VecMultiDot_Private<ConjugateDotTag>(xin, nv, yin, z));
+  PetscCall(PetscLogGpuTimeEnd());
+  PetscCall(PetscLogGpuFlops(PetscMax(nv * (2.0 * xin->map->n - 1), 0.0)));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -366,7 +369,10 @@ PetscErrorCode VecMDot_SeqKokkos(Vec xin, PetscInt nv, const Vec yin[], PetscSca
 PetscErrorCode VecMTDot_SeqKokkos(Vec xin, PetscInt nv, const Vec yin[], PetscScalar *z)
 {
   PetscFunctionBegin;
+  PetscCall(PetscLogGpuTimeBegin());
   PetscCall(VecMultiDot_Private<TransposeDotTag>(xin, nv, yin, z));
+  PetscCall(PetscLogGpuTimeEnd());
+  PetscCall(PetscLogGpuFlops(PetscMax(nv * (2.0 * xin->map->n - 1), 0.0)));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -416,7 +422,7 @@ PetscErrorCode VecDot_SeqKokkos(Vec xin, Vec yin, PetscScalar *z)
   PetscCall(VecRestoreKokkosView(xin, &xv));
   PetscCall(VecRestoreKokkosView(yin, &yv));
   PetscCall(PetscLogGpuTimeEnd());
-  if (xin->map->n > 0) PetscCall(PetscLogGpuFlops(2.0 * xin->map->n - 1));
+  PetscCall(PetscLogGpuFlops(PetscMax(2.0 * xin->map->n - 1, 0.0)));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -495,7 +501,7 @@ PetscErrorCode VecWAXPY_SeqKokkos(Vec win, PetscScalar alpha, Vec xin, Vec yin)
     PetscCall(VecRestoreKokkosView(yin, &yv));
     PetscCall(VecRestoreKokkosViewWrite(win, &wv));
     PetscCall(PetscLogGpuTimeEnd());
-    PetscCall(PetscLogGpuFlops(2 * win->map->n));
+    PetscCall(PetscLogGpuFlops(2.0 * win->map->n));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -628,7 +634,7 @@ PetscErrorCode VecAXPBYPCZ_SeqKokkos(Vec zin, PetscScalar alpha, PetscScalar bet
   PetscCall(VecRestoreKokkosView(yin, &yv));
   PetscCall(VecRestoreKokkosView(zin, &zv));
   PetscCall(PetscLogGpuTimeEnd());
-  PetscCall(PetscLogGpuFlops(zin->map->n * 5));
+  PetscCall(PetscLogGpuFlops(zin->map->n * 5.0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
