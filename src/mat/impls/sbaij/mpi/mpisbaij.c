@@ -2091,8 +2091,8 @@ PETSC_EXTERN PetscErrorCode MatCreate_MPISBAIJ(Mat B)
 
   PetscFunctionBegin;
   PetscCall(PetscNew(&b));
-  B->data = (void *)b;
-  B->ops  = MatOps_Values;
+  B->data   = (void *)b;
+  B->ops[0] = MatOps_Values;
 
   B->ops->destroy = MatDestroy_MPISBAIJ;
   B->ops->view    = MatView_MPISBAIJ;
