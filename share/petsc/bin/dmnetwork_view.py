@@ -9,6 +9,24 @@ def clamp(x, maxval, minval):
 	else:
 		return x
 
+def parseIndexSet(text):
+	if text is None:
+		return None
+	indexSet = []
+	ranges = str(text).split(',')
+	for rangeStr in ranges:
+		if '-' in rangeStr != -1:
+			limits = rangeStr.split('-')
+			for rank in range(int(limits[0]), int(limits[1])+1):
+				if not rank in indexSet:
+					indexSet.append(rank)
+		else:
+			rank = int(rangeStr)
+			if not rank in indexSet:
+				indexSet.append(rank)
+	indexSet.sort()
+	return indexSet
+
 global nextWindowOffset
 nextWindowOffset = 50
 
@@ -128,6 +146,27 @@ class DisplayOptions:
 
 		self.nodeColorParser = ColorParser(datasets)
 
+		self.viewportShowVertices = parseIndexSet(args.viewport_show_vertices)
+		self.viewport = None
+		self.viewportPadding = float(args.viewport_padding)
+
+	def adjustViewport(self, node):
+		# Only adjust if we are focusing on a set of vertices
+		if self.viewportShowVertices is not None:
+			x = node.x
+			y = node.y
+			pad = self.viewportPadding
+			# If no viewport is defined yet, set it directly
+			if self.viewport is None:
+				self.viewport = (x - pad, x + pad, y - pad, y + pad)
+			# Else compute by the minimum and maximum bounds
+			else:
+				self.viewport = (
+					min(self.viewport[0], x - pad),
+					max(self.viewport[1], x + pad),
+					min(self.viewport[2], y - pad),
+					max(self.viewport[3], y + pad)
+				)
 
 # Class for holding the properties of a node
 class Node:
@@ -152,6 +191,9 @@ class Node:
 		self.name = row['Name']
 
 		self.color = opts.nodeColor or opts.nodeColorParser.getRGB(row['Color'])
+
+		# Adjust the viewport for the display options
+		opts.adjustViewport(self)
 
 # Class for holding the properties of an edge
 class Edge:
@@ -286,6 +328,11 @@ class Rank:
 		# Scale the plot to the content
 		axis.autoscale()
 		
+		# Adjust the viewport if requested
+		if opts.viewport is not None:
+			plt.xlim(opts.viewport[0], opts.viewport[1])
+			plt.ylim(opts.viewport[2], opts.viewport[3])
+
 		# Draw the colorbar if allowed by options
 		colors = opts.nodeColorParser
 		if colors.hasColorBar:
@@ -381,17 +428,9 @@ def main(args):
 		if not args.no_combined_plot:
 			globalRank.display(opts, title)
 		if args.draw_rank_range:
-			ranges = str(args.draw_rank_range).split(',')
-			for rangeStr in ranges:
-				if '-' in rangeStr != -1:
-					limits = rangeStr.split('-')
-					for rank in range(int(limits[0]), int(limits[1])+1):
-						if rank in ranks:
-							ranks[rank].display(opts, title)
-				else:
-					rank = int(rangeStr)
-					if rank in ranks:
-						ranks[rank].display(opts, title)
+			ranges = parseIndexSet(args.draw_rank_range)
+			for rank in ranges:
+				ranks[rank].display(opts, title)
 		elif args.draw_all_ranks:
 			for rank in ranks:
 				if rank != -1:
@@ -434,8 +473,10 @@ if __name__ == "__main__":
 		argparser.add_argument('-dt', '--display-time', metavar='SECONDS', action='store', help="Sets the time to display the figure in seconds before automatically closing the window")
 		argparser.add_argument('-dar', '--draw-all-ranks', action='store_true', help="Draws each rank's network in a separate figure")
 		argparser.add_argument('-ncp', '--no-combined-plot', action='store_true', help="Disables drawing the combined network figure")
-		argparser.add_argument('-drr', '--draw-rank-range', action='store', help="Specifies a comma-separated list of rank numbers or ranges to display, eg. \'1,3,5-9\'")
+		argparser.add_argument('-drr', '--draw-rank-range', action='store', metavar='RANGE', help="Specifies a comma-separated list of rank numbers or ranges to display, eg. \'1,3,5-9\'")
 		argparser.add_argument('-nn', '--no-nodes', action='store_true', help="Disables displaying the nodes")
+		argparser.add_argument('-vsv', '--viewport-show-vertices', action='store', metavar='RANGE', help="Sets the range of vertices to focus the viewport on, eg. \'1,3,5-9\'")
+		argparser.add_argument('-vp', '--viewport-padding', metavar='PADDING', action='store', default='10', help="Sets the padding in coordinate units to apply around the edges when setting the viewport")
 		args = argparser.parse_args()
 
 		if not args.test_execute:
