@@ -837,14 +837,14 @@ int main(int argc, char **argv)
      depends: power/PFReadData.c power/pffunctions.c water/waterreaddata.c water/waterfunctions.c
 
    test:
-      args: -options_left no -dmnetwork_view
+      args: -options_left no -dmnetwork_view -fp_trap 0
       localrunfiles: ex1options power/case9.m water/sample1.inp
       output_file: output/ex1.out
 
    test:
       suffix: 2
       nsize: 3
-      args: -options_left no -petscpartitioner_type parmetis
+      args: -options_left no -petscpartitioner_type parmetis -fp_trap 0
       localrunfiles: ex1options power/case9.m water/sample1.inp
       output_file: output/ex1_2.out
       requires: parmetis
@@ -852,27 +852,27 @@ int main(int argc, char **argv)
    test:
       suffix: 3
       nsize: 3
-      args: -options_left no -distribute false
+      args: -options_left no -distribute false -fp_trap 0
       localrunfiles: ex1options power/case9.m water/sample1.inp
       output_file: output/ex1_2.out
 
    test:
       suffix: 4
       nsize: 4
-      args: -options_left no -petscpartitioner_type simple -dmnetwork_view -dmnetwork_view_distributed
+      args: -options_left no -petscpartitioner_type simple -dmnetwork_view -dmnetwork_view_distributed -fp_trap 0
       localrunfiles: ex1options power/case9.m water/sample1.inp
       output_file: output/ex1_4.out
 
    test:
       suffix: 5
-      args: -options_left no -viewCSV
+      args: -options_left no -viewCSV -fp_trap 0
       localrunfiles: ex1options power/case9.m water/sample1.inp
       output_file: output/ex1_5.out
 
    test:
       suffix: 6
       nsize: 3
-      args: -options_left no -petscpartitioner_type parmetis -dmnetwork_view_distributed draw:null
+      args: -options_left no -petscpartitioner_type parmetis -dmnetwork_view_distributed draw:null -fp_trap 0
       localrunfiles: ex1options power/case9.m water/sample1.inp
       output_file: output/ex1_2.out
       requires: parmetis
