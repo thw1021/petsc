@@ -582,7 +582,7 @@ appropriate.
    conclusion of a program. If all memory has been freed no message
    is printed. Note that
    the option ``-malloc_dump`` activates a call to
-   ``PetscMallocDump()`` during ``PetscFinalize()`` the user can also
+   ``PetscMallocDump()`` during ``PetscFinalize()``. The user can also
    call ``PetscMallocDump()`` elsewhere in a program.
 
 -  Another useful option
