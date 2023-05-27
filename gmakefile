@@ -52,6 +52,7 @@ libpetscall := $(if $(filter-out no,$(BUILDSHAREDLIB)),$(libpetscall_shared),$(l
 generated      := $(PETSC_ARCH)/lib/petsc/conf/files
 
 libs : $(libpetscall)
+
 .PHONY: libs
 
 .SECONDEXPANSION:		# to expand $$(@D)/.DIR
@@ -94,6 +95,11 @@ concatlangsrc = $(foreach lang, $(langs), $(srcs-$(1).$(lang)))
 csrc := $(foreach pkg, $(pkgs),  $(srcs-$(pkg).c))
 showcsrc:
 	-@echo $(csrc)
+
+# I leave it to someone who understands GNU make to make this parallel
+# Combine with Jacob's massive lint project?
+clang-tidy:
+	clang-tidy --checks="-*analyzer*,-*diagnostic*,bugprone-too-small-loop-variable"  $(csrc) -- ${CCPPFLAGS}  -Wno-implicit-function-declaration -Wno-error=implicit-function-declaration
 
 define SHARED_RECIPE_DLL
   @$(RM) $@ dllcmd.${PETSC_ARCH}
