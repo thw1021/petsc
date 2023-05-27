@@ -1656,11 +1656,13 @@ static PetscErrorCode PetscScalarMemTypeAllreduce_Private(PetscDeviceContext dct
 static PetscErrorCode MatDenseColumnsGEMVHermitianTranspose_MPIDense(PetscDeviceContext dctx, PetscScalar alpha, Mat A_mat, PetscInt col_start, PetscInt col_end, Vec x, PetscScalar beta, PetscScalar *y, PetscInt inc_y, PetscMemType memtype_y)
 {
   Mat_MPIDense *a = (Mat_MPIDense *)A_mat->data;
-  PetscMPIInt   size;
+  PetscMPIInt   size, rank;
   PetscInt      num_entries = col_end - col_start;
 
   PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)A_mat), &size));
+  PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)A_mat), &rank));
+  beta = (rank == 0) ? beta : 0.0;
   if (size == 1 || inc_y == 1) {
     // work in place
     PetscCall(MatDenseColumnsGEMVHermitianTranspose_SeqDense(dctx, alpha, a->A, col_start, col_end, x, beta, y, inc_y, memtype_y));
@@ -1696,15 +1698,18 @@ static PetscErrorCode MatDenseColumnsGEMV_MPIDense(PetscDeviceContext dctx, Pets
 
 static PetscErrorCode MatDenseColumnsGEMMHermitianTranspose_MPIDense(PetscDeviceContext dctx, PetscScalar alpha, Mat A_mat, PetscInt col_start_A, PetscInt col_end_A, Mat B_mat, PetscInt col_start_B, PetscInt col_end_B, PetscScalar beta, PetscScalar *C, PetscInt ld_C, PetscMemType memtype_C)
 {
-  PetscFunctionBegin;
   Mat_MPIDense *a            = (Mat_MPIDense *)A_mat->data;
   Mat_MPIDense *b            = (Mat_MPIDense *)B_mat->data;
   PetscInt      n_rows       = (col_end_A - col_start_A);
   PetscInt      n_cols       = (col_end_B - col_start_B);
   PetscInt      implied_size = n_rows + (n_cols - 1) * (ld_C);
   PetscInt      num_entries  = n_rows * n_cols;
-  PetscMPIInt   size;
+  PetscMPIInt   size, rank;
+
+  PetscFunctionBegin;
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)A_mat), &size));
+  PetscCallMPI(MPI_Comm_rank(PetscObjectComm((PetscObject)A_mat), &rank));
+  beta = (rank == 0) ? beta : 0.0;
   if (implied_size == num_entries || size == 1) {
     // work in place
     PetscCall(MatDenseColumnsGEMMHermitianTranspose_SeqDense(dctx, alpha, a->A, col_start_A, col_end_A, b->A, col_start_B, col_end_B, beta, C, ld_C, memtype_C));
