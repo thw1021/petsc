@@ -9,6 +9,25 @@ static PetscErrorCode PCSetUp_BJacobi_Singleblock(PC, Mat, Mat);
 static PetscErrorCode PCSetUp_BJacobi_Multiblock(PC, Mat, Mat);
 static PetscErrorCode PCSetUp_BJacobi_Multiproc(PC);
 
+static PetscErrorCode PCISSymmetric_BJacobi(PC pc, PetscBool3 *issym)
+{
+  PC_BJacobi *jac = (PC_BJacobi *)pc->data;
+
+  PetscFunctionBegin;
+  for (PetscInt i = 0; i < jac->n_local; i++) {
+    PetscBool3 lissym;
+    PC          subpc;
+
+    PetscCall(KSPGetPC(jac->ksp[i], &subpc));
+    PetscCall(PCIsSymmetric(subpc, &lissym));
+    if (lissym == PETSC_BOOL3_FALSE) {
+      *issym = PETSC_BOOL3_FALSE;
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode PCSetUp_BJacobi(PC pc)
 {
   PC_BJacobi *jac = (PC_BJacobi *)pc->data;
@@ -130,6 +149,7 @@ static PetscErrorCode PCSetUp_BJacobi(PC pc)
   } else {
     PetscCall(PCSetUp_BJacobi_Multiblock(pc, mat, pmat));
   }
+  pc->ops->issymmetric = PCISSymmetric_BJacobi;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

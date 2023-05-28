@@ -1217,6 +1217,29 @@ PetscErrorCode PCASMGetSubKSP(PC pc, PetscInt *n_local, PetscInt *first_local, K
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode PCISSymmetric_ASM(PC pc, PetscBool3 *issym)
+{
+  PC_ASM *jac = (PC_ASM *)pc->data;
+
+  PetscFunctionBegin;
+  if (jac->overlap > 0 && (jac->type == PC_ASM_RESTRICT || jac->type == PC_ASM_INTERPOLATE) && (jac->n > 1)) {
+    *issym = PETSC_BOOL3_FALSE;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  for (PetscInt i = 0; i < jac->n_local; i++) {
+    PetscBool3 lissym;
+    PC          subpc;
+
+    PetscCall(KSPGetPC(jac->ksp[i], &subpc));
+    PetscCall(PCIsSymmetric(subpc, &lissym));
+    if (lissym == PETSC_BOOL3_FALSE) {
+      *issym = PETSC_BOOL3_FALSE;
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*MC
    PCASM - Use the (restricted) additive Schwarz method, each block is (approximately) solved with
            its own `KSP` object.
@@ -1291,6 +1314,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_ASM(PC pc)
   pc->ops->setfromoptions  = PCSetFromOptions_ASM;
   pc->ops->setuponblocks   = PCSetUpOnBlocks_ASM;
   pc->ops->view            = PCView_ASM;
+  pc->ops->issymmetric     = PCISSymmetric_ASM;
   pc->ops->applyrichardson = NULL;
 
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCASMSetLocalSubdomains_C", PCASMSetLocalSubdomains_ASM));

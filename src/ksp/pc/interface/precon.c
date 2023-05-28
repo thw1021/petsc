@@ -55,6 +55,47 @@ PetscErrorCode PCGetDefaultType_Private(PC pc, const char *type[])
 }
 
 /*@
+   PCIsSymmetric - returns the symmetry or lack of a `PC` if it is known
+
+   Collective
+
+   Input Parameter:
+.  pc - the preconditioner context
+
+   Output Parameter:
+.  issym - `PETSC_BOOL3_TRUE` if `pc` is known to be symmetric, `PETSC_BOOL3_FALSE` if it is known to be non-symmetric and
+           `PETSC_BOOL3_UNKNOWN` if it cannot be determined inexpensively.
+
+  Level: advanced
+
+  Note:
+  It is possible that some MPI processes may return `PETSC_BOOL3_UNKNOWN` while others return `PETSC_BOOL3_FALSE`
+
+  This will generally not return `PETSC_BOOL3_TRUE`; it is used for checking if the `pc` is not symmetric
+
+  This does not take into account the symmetry of the matrix in determining the result. For example, the matrix may be
+  non-symmetric but this routine may still return `PETSC_BOOL3_UNKNOWN`
+
+  When PETSc is built for complex numbers this means specially that the operator, if expressed as a matrix, would equal its complex conjugate
+  transpose.
+
+  Developer Note:
+  This has different calling sequences than `MatIsSymmetric()` and `MatIsSymmetricKnown()` because it was implemented after
+  `PETSC_BOOL3` was introduced
+
+.seealso: `PC`, `PCCreate()`, `PCSetUp()`, `KSPCG`, `MatIsSymmetric()`, `MatIsSymmetricKnown()`
+@*/
+PetscErrorCode PCIsSymmetric(PC pc, PetscBool3 *issym)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  PetscValidPointer(issym, 2);
+  *issym = PETSC_BOOL3_UNKNOWN;
+  PetscTryTypeMethod(pc, issymmetric, issym);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
    PCReset - Resets a PC context to the pcsetupcalled = 0 state and removes any allocated `Vec`s and `Mat`s
 
    Collective

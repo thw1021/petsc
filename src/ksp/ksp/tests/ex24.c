@@ -153,4 +153,21 @@ int main(int argc, char **args)
       nsize: 2
       args: -pc_type bjacobi -sub_pc_type icc -sub_pc_factor_levels 1 -mat_type mpisbaij -mat_ignore_lower_triangular
 
-TEST*/
+    test:
+      suffix: 5
+      args: -pc_type asm -pc_asm_blocks 2 -petsc_ci_portable_error_output -error_output_stdout
+
+    test:
+      suffix: 6
+      args: -pc_type sor -pc_sor_forward -petsc_ci_portable_error_output -error_output_stdout
+      filter: egrep -v "(leaked context ID|for handle type)"
+
+    test:
+      suffix: 7
+      args: -pc_type bjacobi -sub_pc_type sor -sub_pc_sor_forward -petsc_ci_portable_error_output -error_output_stdout
+
+    test:
+      suffix: 8
+      args: -pc_type asm -pc_asm_blocks 2 -pc_asm_type basic -sub_pc_type sor -sub_pc_sor_forward -petsc_ci_portable_error_output -error_output_stdout
+
+ TEST*/
