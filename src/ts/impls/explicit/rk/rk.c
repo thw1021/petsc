@@ -467,7 +467,7 @@ PetscErrorCode TSRKRegister(TSRKType name, PetscInt order, PetscInt s, const Pet
   if (b) PetscCall(PetscArraycpy(t->b, b, s));
   else
     for (i = 0; i < s; i++) t->b[i] = A[(s - 1) * s + i];
-  if (c) PetscCall(PetscArraycpy(t->c, c, s));
+  if (c) PetscCall(PetscArraycpy(t->c, c, PetscMax(s, 0)));
   else
     for (i = 0; i < s; i++)
       for (j = 0, t->c[i] = 0; j < s; j++) t->c[i] += A[i * s + j];
