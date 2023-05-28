@@ -29,6 +29,7 @@ struct _PCOps {
   PetscErrorCode (*view)(PC, PetscViewer);
   PetscErrorCode (*reset)(PC);
   PetscErrorCode (*load)(PC, PetscViewer);
+  PetscErrorCode (*issymmetric)(PC, PetscBool3 *);
 };
 
 /*

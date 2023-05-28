@@ -118,8 +118,12 @@ static PetscErrorCode KSPSolve_CG(KSP ksp)
   KSP_CG     *cg;
   Mat         Amat, Pmat;
   PetscBool   diagonalscale, testobj;
+  PetscBool3  issym;
 
   PetscFunctionBegin;
+  PetscCall(PCIsSymmetric(ksp->pc, &issym));
+  PetscCheck(issym != PETSC_BOOL3_FALSE, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "The PC %s is known to be not symmetric in this situation, this is not supported by KSPCG", ((PetscObject)ksp->pc)->type_name);
+
   PetscCall(PCGetDiagonalScale(ksp->pc, &diagonalscale));
   PetscCheck(!diagonalscale, PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "Krylov method %s does not support diagonal scaling", ((PetscObject)ksp)->type_name);
 
