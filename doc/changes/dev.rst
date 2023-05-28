@@ -55,10 +55,14 @@ Changes: Development
 - Add ``MatDenseCUDASetPreallocation()`` and ``MatDenseHIPSetPreallocation()``
 - Add support for KOKKOS in ``MATH2OPUS``
 - Add ``-pc_precision single`` option for use with ``MATSOLVERSUPERLU_DIST``
+- Add ``MATVECDIAGONAL`` which can be created with ``MatCreateVecDiagonal()``
+- Add ``MatVecDiagonalGetDiagonal()``, ``MatVecDiagonalRestoreDiagonal()``, ``MatVecDiagonalGetInverseDiagonal()``, and ``MatVecDiagoanlRestoreInverseDiagonal()``
 
 .. rubric:: MatCoarsen:
 
 .. rubric:: PC:
+
+- Add ``PCMatGetApplyOperation()`` and ``PCMatSetApplyOperation()``
 
 .. rubric:: KSP:
 
