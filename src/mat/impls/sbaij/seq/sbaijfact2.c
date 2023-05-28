@@ -35,7 +35,7 @@ PetscErrorCode MatSolve_SeqSBAIJ_N_inplace(Mat A, Vec bb, Vec xx)
   for (k = 0; k < mbs; k++) {
     v  = aa + bs2 * ai[k];
     xk = t + k * bs;                          /* Dk*xk = k-th block of x */
-    PetscCall(PetscArraycpy(xk_tmp, xk, bs)); /* xk_tmp <- xk */
+    PetscCall(PetscArraycpy(xk_tmp, xk, PetscMax(bs, 0))); /* xk_tmp <- xk */
     nz = ai[k + 1] - ai[k];
     vj = aj + ai[k];
     xj = t + (*vj) * bs; /* *vj-th block of x, *vj>k */
@@ -101,7 +101,7 @@ PetscErrorCode MatForwardSolve_SeqSBAIJ_N_NaturalOrdering(const PetscInt *ai, co
   for (k = 0; k < mbs; k++) {
     v  = aa + bs2 * ai[k];
     xk = x + k * bs;                          /* Dk*xk = k-th block of x */
-    PetscCall(PetscArraycpy(xk_tmp, xk, bs)); /* xk_tmp <- xk */
+    PetscCall(PetscArraycpy(xk_tmp, xk, PetscMax(bs, 0))); /* xk_tmp <- xk */
     nz = ai[k + 1] - ai[k];
     vj = aj + ai[k];
     xj = x + (size_t)(*vj) * bs; /* *vj-th block of x, *vj>k */
