@@ -795,6 +795,7 @@ PETSC_EXTERN PetscBool petscindebugger;
 
    if `PetscCIEnabledPortableErrorOutput` is set, which means the code is running in the PETSc test harness (make test),
    and `comm` is `MPI_COMM_WORLD` it strives to exit cleanly without calling `MPI_Abort()` and instead calling `MPI_Finalize()`.
+   Note that test harness tests that are meant to trigger an error must have args including `-petsc_ci_portable_error_output -error_output_stdout`
 
    This is currently only used when an error propagates up to the C `main()` program and is detected by a `PetscCall()`, `PetscCallMPI()`,
    or is set in `main()` with `SETERRQ()`. Abort calls such as `SETERRABORT()`,
