@@ -617,7 +617,7 @@ PetscErrorCode PCBDDCGraphComputeConnectedComponents(PCBDDCGraph graph)
           for (k = 0; k < buffer_size; k++) refine_buffer[k][j + 1] = recv_buffer[start_of_recv + k];
           start_of_recv += buffer_size;
         }
-        PetscCall(PetscArrayzero(private_labels, buffer_size));
+        PetscCall(PetscArrayzero(private_labels, PetscMax(buffer_size, 0)));
         for (j = 0; j < buffer_size; j++) {
           if (!private_labels[j]) { /* found a new cc  */
             PetscBool same_set;
