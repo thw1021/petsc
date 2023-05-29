@@ -1,16 +1,11 @@
-  0 KSP Residual norm 1.889463191267e+02 % max 1.000000000000e+00 min 1.000000000000e+00 max/min 1.000000000000e+00
-  1 KSP Residual norm 4.718622545711e+01 % max 3.564446669682e-01 min 3.564446669682e-01 max/min 1.000000000000e+00
-  2 KSP Residual norm 1.835899103306e+01 % max 8.864497068172e-01 min 1.949092693101e-01 max/min 4.548012056865e+00
-  3 KSP Residual norm 1.221846624773e+01 % max 9.263312882714e-01 min 1.840995695127e-01 max/min 5.031686335408e+00
-  4 KSP Residual norm 3.175462051597e+00 % max 9.695490265647e-01 min 1.731472349820e-01 max/min 5.599564016519e+00
-  5 KSP Residual norm 1.002541102691e+00 % max 9.867004928799e-01 min 1.705109067897e-01 max/min 5.786729491134e+00
-  6 KSP Residual norm 4.678729239995e-01 % max 9.922561647625e-01 min 1.700490089088e-01 max/min 5.835118776227e+00
-  7 KSP Residual norm 2.126183506475e-01 % max 9.950731755551e-01 min 1.697390308466e-01 max/min 5.862371020925e+00
-  8 KSP Residual norm 1.106903332336e-01 % max 9.961927812640e-01 min 1.694999284158e-01 max/min 5.877246029393e+00
-  9 KSP Residual norm 5.231678577210e-02 % max 9.968698698142e-01 min 1.690476324162e-01 max/min 5.896976228331e+00
- 10 KSP Residual norm 1.334895171284e-02 % max 9.975366356134e-01 min 1.634373105041e-01 max/min 6.103481711347e+00
- 11 KSP Residual norm 3.560871352570e-03 % max 9.980586232922e-01 min 1.593267426642e-01 max/min 6.264225368590e+00
- 12 KSP Residual norm 1.422689556402e-03 % max 9.983574664066e-01 min 1.589865641383e-01 max/min 6.279508408887e+00
+  0 KSP Residual norm 8.639819370353e+01 % max 1.000000000000e+00 min 1.000000000000e+00 max/min 1.000000000000e+00
+  1 KSP Residual norm 2.045641761237e+01 % max 3.627986269595e-01 min 3.627986269595e-01 max/min 1.000000000000e+00
+  2 KSP Residual norm 3.322350802078e+00 % max 9.259370639236e-01 min 2.314929812342e-01 max/min 3.999849407904e+00
+  3 KSP Residual norm 5.988168501644e-01 % max 9.728378572366e-01 min 2.296224182594e-01 max/min 4.236685009291e+00
+  4 KSP Residual norm 1.857962892602e-01 % max 9.841295091757e-01 min 2.295479550803e-01 max/min 4.287250168845e+00
+  5 KSP Residual norm 1.724306663022e-02 % max 9.949298655897e-01 min 2.295252604239e-01 max/min 4.334729274470e+00
+  6 KSP Residual norm 2.878165879308e-03 % max 9.972171887569e-01 min 2.295244323632e-01 max/min 4.344710401806e+00
+  7 KSP Residual norm 6.582202162464e-04 % max 9.977592079277e-01 min 2.295244052660e-01 max/min 4.347072402916e+00
 KSP Object: 8 MPI processes
   type: cg
   maximum iterations=10000, initial guess is zero
@@ -43,33 +38,33 @@ PC Object: 8 MPI processes
             out-of-place factorization
             tolerance for zero pivot 2.22045e-14
             matrix ordering: nd
-            factor fill ratio given 5., needed 1.07895
+            factor fill ratio given 5., needed 1.05263
               Factored matrix follows:
                 Mat Object: (mg_coarse_redundant_) 1 MPI process
                   type: seqsbaij
-                  rows=32, cols=32
+                  rows=6, cols=6
                   package used to perform factorization: petsc
-                  total: nonzeros=492, allocated nonzeros=492
+                  total: nonzeros=20, allocated nonzeros=20
                       block size is 1
           linear system matrix = precond matrix:
           Mat Object: 1 MPI process
             type: seqaij
-            rows=32, cols=32
-            total: nonzeros=880, allocated nonzeros=880
+            rows=6, cols=6
+            total: nonzeros=32, allocated nonzeros=32
             total number of mallocs used during MatSetValues calls=0
-              using I-node routines: found 10 nodes, limit used is 5
+              not using I-node routines
       linear system matrix = precond matrix:
       Mat Object: 8 MPI processes
         type: is
-        rows=32, cols=32
-        total: nonzeros=1636, allocated nonzeros=1636
+        rows=6, cols=6
+        total: nonzeros=68, allocated nonzeros=68
         total number of mallocs used during MatSetValues calls=0
   Down solver (pre-smoother) on level 1 -------------------------------
     KSP Object: (mg_levels_1_) 8 MPI processes
       type: chebyshev
         Chebyshev polynomial of first kind
-        eigenvalue targets used: min 0.805341, max 8.85875
-        eigenvalues estimated via cg: min 0.109167, max 8.05341
+        eigenvalue targets used: min 0.8026, max 8.8286
+        eigenvalues estimated via cg: min 0.120311, max 8.026
         eigenvalues estimated using cg with transform: [0. 0.1; 0. 1.1]
         KSP Object: (mg_levels_1_esteig_) 8 MPI processes
           type: cg
@@ -104,33 +99,31 @@ PC Object: 8 MPI processes
           tolerance for zero pivot 2.22045e-14
           using Manteuffel shift [POSITIVE_DEFINITE]
           matrix ordering: natural
-          factor fill ratio given 1., needed 1.00057
+          factor fill ratio given 1., needed 1.
             Factored matrix follows:
               Mat Object: (mg_levels_1_sub_) 1 MPI process
                 type: seqsbaij
-                rows=540, cols=540, bs=3
+                rows=180, cols=180
                 package used to perform factorization: petsc
-                total: nonzeros=15795, allocated nonzeros=15795
-                    block size is 3
+                total: nonzeros=1754, allocated nonzeros=1754
+                    block size is 1
         linear system matrix = precond matrix:
         Mat Object: (mg_levels_1_sub_) 1 MPI process
-          type: seqbaij
-          rows=540, cols=540, bs=3
-          total: nonzeros=29952, allocated nonzeros=29952
+          type: seqaij
+          rows=180, cols=180
+          total: nonzeros=3328, allocated nonzeros=3328
           total number of mallocs used during MatSetValues calls=0
-              block size is 3
+            not using I-node routines
       linear system matrix = precond matrix:
       Mat Object: 8 MPI processes
         type: is
-        rows=2160, cols=2160, bs=3
-        total: nonzeros=156078, allocated nonzeros=156078
+        rows=720, cols=720
+        total: nonzeros=17342, allocated nonzeros=17342
         total number of mallocs used during MatSetValues calls=0
-          has attached near null space
   Up solver (post-smoother) same as down solver (pre-smoother)
   linear system matrix = precond matrix:
   Mat Object: 8 MPI processes
     type: is
-    rows=2160, cols=2160, bs=3
-    total: nonzeros=156078, allocated nonzeros=156078
+    rows=720, cols=720
+    total: nonzeros=17342, allocated nonzeros=17342
     total number of mallocs used during MatSetValues calls=0
-      has attached near null space

@@ -55,6 +55,63 @@ PetscErrorCode PCGetDefaultType_Private(PC pc, const char *type[])
 }
 
 /*@
+   PCSetUseSymmetricForm - forces the `PC` to use a form that results in a symmetric preconditioner
+
+   Collective
+
+   Input Parameter:
+. pc - the preconditioner context
+
+  Level: developer
+
+  Notes:
+  Some preconditioners such as `PCASM` have a default form that does not provide a symmetric preconditioner;
+  this routine changes the parameters of the `pc` to use its symmetric form (if it exists)
+
+  This is called by some `KSP` types such as `KSPCG` since they require a preconditioner in its symmetric form
+
+   When PETSc is built for complex numbers this means specially that the operator, if expressed as a matrix, would equal its complex conjugate
+  transpose.
+
+.seealso: `PC`, `PCCreate()`, `PCSetUp()`, `KSPCG`, `MatIsSymmetric()`, `MatIsSymmetricKnown()`,
+          `PCGetUseSymmetricForm()`, `PCIsSymmetric()`
+@*/
+PetscErrorCode PCSetUseSymmetricForm(PC pc)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  PetscCheck(pc->setupcalled == 0 || !pc->ops->setusesymmetricform, PetscObjectComm((PetscObject)pc), PETSC_ERR_SUP, "Cannot change the symmetric form after PC has been setup");
+  pc->usesymmetricform = PETSC_TRUE;
+  PetscTryTypeMethod(pc, setusesymmetricform);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+   PCGetUseSymmetricForm - checks if the `PC` uses its symmetric form
+
+   Collective
+
+   Input Parameter:
+.  pc - the preconditioner context
+
+   Output Paramter:
+.  flg - `PETSC_TRUE` indicates use a symmetric form
+
+  Level: developer
+
+.seealso: `PC`, `PCCreate()`, `PCSetUp()`, `KSPCG`, `MatIsSymmetric()`, `MatIsSymmetricKnown()`,
+          `PCSetUseSymmetricForm()`, `PCIsSymmetric()`
+@*/
+PetscErrorCode PCGetUseSymmetricForm(PC pc, PetscBool *sym)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  PetscValidPointer(sym, 2);
+  *sym = pc->usesymmetricform;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
    PCIsSymmetric - returns the symmetry or lack of a `PC` if it is known
 
    Collective
@@ -83,7 +140,8 @@ PetscErrorCode PCGetDefaultType_Private(PC pc, const char *type[])
   This has different calling sequences than `MatIsSymmetric()` and `MatIsSymmetricKnown()` because it was implemented after
   `PETSC_BOOL3` was introduced
 
-.seealso: `PC`, `PCCreate()`, `PCSetUp()`, `KSPCG`, `MatIsSymmetric()`, `MatIsSymmetricKnown()`
+.seealso: `PC`, `PCCreate()`, `PCSetUp()`, `KSPCG`, `MatIsSymmetric()`, `MatIsSymmetricKnown()`, `PCGetUseSymmetricForm()`,
+          `PCSetUseSymmetricForm()`,
 @*/
 PetscErrorCode PCIsSymmetric(PC pc, PetscBool3 *issym)
 {

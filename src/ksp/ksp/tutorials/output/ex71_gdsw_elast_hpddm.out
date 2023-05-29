@@ -75,7 +75,7 @@ PC Object: 8 MPI processes
     PC Object: (mg_levels_1_) 8 MPI processes
       type: asm
         total subdomain blocks = 8, amount of overlap = 1
-        restriction/interpolation type - RESTRICT
+        restriction/interpolation type - BASIC
         Local solver information for first block is in the following KSP and PC objects on rank 0:
         Use -mg_levels_1_ksp_view ::ascii_info_detail to display information for all blocks
       KSP Object: (mg_levels_1_sub_) 1 MPI process
