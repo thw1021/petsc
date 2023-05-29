@@ -414,6 +414,11 @@ static PetscErrorCode PCSetUpOnBlocks_ASM(PC pc)
 
   PetscFunctionBegin;
   for (i = 0; i < osm->n_local_true; i++) {
+    if (pc->usesymmetricform) {
+      PC subpc;
+      PetscCall(KSPGetPC(osm->ksp[i], &subpc));
+      if (subpc->setupcalled == 0) PetscCall(PCSetUseSymmetricForm(subpc));
+    }
     PetscCall(KSPSetUp(osm->ksp[i]));
     PetscCall(KSPGetConvergedReason(osm->ksp[i], &reason));
     if (reason == KSP_DIVERGED_PC_FAILED) pc->failedreason = PC_SUBPC_ERROR;
@@ -1217,18 +1222,28 @@ PetscErrorCode PCASMGetSubKSP(PC pc, PetscInt *n_local, PetscInt *first_local, K
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PCISSymmetric_ASM(PC pc, PetscBool3 *issym)
+static PetscErrorCode PCSetUseSymmetricForm_ASM(PC pc)
 {
   PC_ASM *jac = (PC_ASM *)pc->data;
 
   PetscFunctionBegin;
-  if (jac->overlap > 0 && (jac->type == PC_ASM_RESTRICT || jac->type == PC_ASM_INTERPOLATE) && (jac->n > 1)) {
+  if (jac->type == PC_ASM_RESTRICT || jac->type == PC_ASM_INTERPOLATE) PetscCall(PetscInfo(pc, "Changing PCASMType to basic for symmetry\n"));
+  PetscCall(PCASMSetType(pc, PC_ASM_BASIC));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PCIsSymmetric_ASM(PC pc, PetscBool3 *issym)
+{
+  PC_ASM *jac = (PC_ASM *)pc->data;
+
+  PetscFunctionBegin;
+  if (jac->overlap != 0 && (jac->type == PC_ASM_RESTRICT || jac->type == PC_ASM_INTERPOLATE) && (jac->n > 1)) {
     *issym = PETSC_BOOL3_FALSE;
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   for (PetscInt i = 0; i < jac->n_local; i++) {
     PetscBool3 lissym;
-    PC          subpc;
+    PC         subpc;
 
     PetscCall(KSPGetPC(jac->ksp[i], &subpc));
     PetscCall(PCIsSymmetric(subpc, &lissym));
@@ -1304,18 +1319,19 @@ PETSC_EXTERN PetscErrorCode PCCreate_ASM(PC pc)
   osm->dm_subdomains = PETSC_FALSE;
   osm->sub_mat_type  = NULL;
 
-  pc->data                 = (void *)osm;
-  pc->ops->apply           = PCApply_ASM;
-  pc->ops->matapply        = PCMatApply_ASM;
-  pc->ops->applytranspose  = PCApplyTranspose_ASM;
-  pc->ops->setup           = PCSetUp_ASM;
-  pc->ops->reset           = PCReset_ASM;
-  pc->ops->destroy         = PCDestroy_ASM;
-  pc->ops->setfromoptions  = PCSetFromOptions_ASM;
-  pc->ops->setuponblocks   = PCSetUpOnBlocks_ASM;
-  pc->ops->view            = PCView_ASM;
-  pc->ops->issymmetric     = PCISSymmetric_ASM;
-  pc->ops->applyrichardson = NULL;
+  pc->data                     = (void *)osm;
+  pc->ops->apply               = PCApply_ASM;
+  pc->ops->matapply            = PCMatApply_ASM;
+  pc->ops->applytranspose      = PCApplyTranspose_ASM;
+  pc->ops->setup               = PCSetUp_ASM;
+  pc->ops->reset               = PCReset_ASM;
+  pc->ops->destroy             = PCDestroy_ASM;
+  pc->ops->setfromoptions      = PCSetFromOptions_ASM;
+  pc->ops->setuponblocks       = PCSetUpOnBlocks_ASM;
+  pc->ops->view                = PCView_ASM;
+  pc->ops->issymmetric         = PCIsSymmetric_ASM;
+  pc->ops->setusesymmetricform = PCSetUseSymmetricForm_ASM;
+  pc->ops->applyrichardson     = NULL;
 
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCASMSetLocalSubdomains_C", PCASMSetLocalSubdomains_ASM));
   PetscCall(PetscObjectComposeFunction((PetscObject)pc, "PCASMSetTotalSubdomains_C", PCASMSetTotalSubdomains_ASM));

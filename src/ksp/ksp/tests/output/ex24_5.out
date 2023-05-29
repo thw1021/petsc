@@ -1,14 +1,12 @@
 
  CG: 
-[0]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
-[0]PETSC ERROR: Arguments are incompatible
-[0]PETSC ERROR: The PC asm is known to be not symmetric in this situation, this is not supported by KSPCG
-[0]PETSC ERROR: See https://petsc.org/release/faq/ for trouble shooting.
-[0]PETSC ERROR: #1 KSPSolve_CG() at cg.c:0
-[0]PETSC ERROR: #2 KSPSolve_Private() at itfunc.c:0
-[0]PETSC ERROR: #3 KSPSolve() at itfunc.c:0
-[0]PETSC ERROR: #4 main() at ex24.c:0
-[0]PETSC ERROR: PETSc Option Table entries:
-[0]PETSC ERROR: -pc_asm_blocks 2 (source: command line)
-[0]PETSC ERROR: -pc_type asm (source: command line)
-[0]PETSC ERROR: ----------------End of Error Message -------send entire error message to petsc-maint@mcs.anl.gov----------
+Number of iterations =  10
+Residual norm 1.29488e-05;  Error norm 2.61482e-06.
+
+ MINRES: 
+Number of iterations =  10
+Residual norm 0.00142643;  Error norm 0.000318203.
+
+ SYMMLQ: 
+Number of iterations =  10
+Residual norm 0.0480425;  Error norm 0.00964294.

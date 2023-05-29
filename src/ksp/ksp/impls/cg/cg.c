@@ -75,6 +75,8 @@ static PetscErrorCode KSPSetUp_CG(KSP ksp)
   PetscInt maxit = ksp->max_it, nwork = 3;
 
   PetscFunctionBegin;
+  PetscCall(PCSetUseSymmetricForm(ksp->pc));
+
   /* get work vectors needed by CG */
   if (cgP->singlereduction) nwork += 2;
   PetscCall(KSPSetWorkVecs(ksp, nwork));

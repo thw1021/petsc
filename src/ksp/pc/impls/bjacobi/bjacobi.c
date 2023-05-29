@@ -16,7 +16,7 @@ static PetscErrorCode PCISSymmetric_BJacobi(PC pc, PetscBool3 *issym)
   PetscFunctionBegin;
   for (PetscInt i = 0; i < jac->n_local; i++) {
     PetscBool3 lissym;
-    PC          subpc;
+    PC         subpc;
 
     PetscCall(KSPGetPC(jac->ksp[i], &subpc));
     PetscCall(PCIsSymmetric(subpc, &lissym));
