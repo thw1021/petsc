@@ -572,7 +572,7 @@ appropriate.
 -  The option ``-malloc_debug`` turns on PETSc's extensive runtime error checking of memory for corruption.
    This checking can be expensive, so should not be used for
    production runs. The option ``-malloc_test`` is equivalent to ``-malloc_debug``
-   but only works when PETSc is configured with ``--with-debugging=1`` (the default configuration).
+   but only works when PETSc is configured with ``--with-debugging`` (the default configuration).
    We suggest setting the environmental variable ``PETSC_OPTIONS=-malloc_test``
    in your shell startup file to automatically enable runtime check memory for developing code but not
    running optimized code.
@@ -602,15 +602,15 @@ appropriate.
    ``PetscMemoryGetMaximumUsage()`` (typically at the beginning of the
    program).
 
--  The option ``-memory_view`` provides a high level view of all memory usage,
+-  The option ``-memory_view`` provides a high-level view of all memory usage,
    not just the memory used by ``PetscMalloc()``, at the conclusion of the program.
 
--  When running with ``-log_view`` the additional option ``-log_view_memory``
+-  When running with ``-log_view``, the additional option ``-log_view_memory``
    causes the display of additional columns of information about how much
    memory was allocated and freed during each logged event. This is useful
    to understand what phases of a computation require the most memory.
 
-One can also use  `valgrind <http://valgrind.org>`__ to track memory usage and find bugs, see :any:`FAQ: Valgrind usage<valgrind>`.
+One can also use `Valgrind <http://valgrind.org>`__ to track memory usage and find bugs, see :any:`FAQ: Valgrind usage<valgrind>`.
 
 .. _sec_dsreuse:
 
