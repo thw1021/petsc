@@ -55,6 +55,7 @@ Changes: Development
 - Add ``MatDenseCUDASetPreallocation()`` and ``MatDenseHIPSetPreallocation()``
 - Add support for KOKKOS in ``MATH2OPUS``
 - Add ``-pc_precision single`` option for use with ``MATSOLVERSUPERLU_DIST``
+- Add support for ``MatLoad()`` and ``MatView()`` to load and store ``MPIAIJ`` matrices that have more than ``PETSC_INT_MAX`` nonzeros, so long as each rank has fewer than ``PETSC_INT_MAX``
 
 .. rubric:: MatCoarsen:
 
