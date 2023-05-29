@@ -155,19 +155,25 @@ int main(int argc, char **args)
 
     test:
       suffix: 5
-      args: -pc_type asm -pc_asm_blocks 2 -petsc_ci_portable_error_output -error_output_stdout
+      args: -pc_type asm -pc_asm_blocks 2 -sub_pc_type asm -sub_pc_asm_blocks 2 -ksp_max_it 10
 
     test:
+      requires: !defined(PETSCTEST_VALGRIND) !mpiuni
       suffix: 6
       args: -pc_type sor -pc_sor_forward -petsc_ci_portable_error_output -error_output_stdout
+      # filter needed for when MPICH is built with --download-mpich-configure-arguments=--enable-error-messages=all
       filter: egrep -v "(leaked context ID|for handle type)"
 
     test:
+      requires: !defined(PETSCTEST_VALGRIND) !mpiuni
       suffix: 7
       args: -pc_type bjacobi -sub_pc_type sor -sub_pc_sor_forward -petsc_ci_portable_error_output -error_output_stdout
+      filter: egrep -v "(leaked context ID|for handle type)"
 
     test:
+      requires: !defined(PETSCTEST_VALGRIND) !mpiuni
       suffix: 8
       args: -pc_type asm -pc_asm_blocks 2 -pc_asm_type basic -sub_pc_type sor -sub_pc_sor_forward -petsc_ci_portable_error_output -error_output_stdout
+      filter: egrep -v "(leaked context ID|for handle type)"
 
  TEST*/

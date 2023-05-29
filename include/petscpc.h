@@ -45,6 +45,8 @@ PETSC_EXTERN PetscErrorCode PCSetType(PC, PCType);
 PETSC_EXTERN PetscErrorCode PCGetType(PC, PCType *);
 PETSC_EXTERN PetscErrorCode PCSetUp(PC);
 PETSC_EXTERN PetscErrorCode PCIsSymmetric(PC, PetscBool3 *);
+PETSC_EXTERN PetscErrorCode PCSetUseSymmetricForm(PC);
+PETSC_EXTERN PetscErrorCode PCGetUseSymmetricForm(PC, PetscBool *);
 
 PETSC_EXTERN PetscErrorCode PCSetFailedReason(PC, PCFailedReason);
 PETSC_EXTERN PetscErrorCode PCGetFailedReason(PC, PCFailedReason *);
