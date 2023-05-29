@@ -2,10 +2,11 @@
 #include <petsc/private/matimpl.h> /*I "petscmat.h" I*/
 
 typedef struct {
-  Vec       diag;
-  PetscBool diag_valid;
-  Vec       inv_diag;
-  PetscBool inv_diag_valid;
+  Vec              diag;
+  PetscBool        diag_valid;
+  Vec              inv_diag;
+  PetscBool        inv_diag_valid;
+  PetscObjectState diag_state, inv_diag_state;
 } Mat_VecDiagonal;
 
 static PetscErrorCode MatVecDiagonalSetUp(Mat A)
@@ -137,7 +138,7 @@ PetscErrorCode MatVecDiagonalGetDiagonal(Mat A, Vec *diag)
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
   PetscValidPointer(diag, 2);
   *diag = NULL;
-  PetscTryMethod((PetscObject)A, "MatVecDiagonalGetDiagonal_C", (Mat, Vec *), (A, diag));
+  PetscUseMethod((PetscObject)A, "MatVecDiagonalGetDiagonal_C", (Mat, Vec *), (A, diag));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -148,6 +149,7 @@ static PetscErrorCode MatVecDiagonalGetDiagonal_VecDiagonal(Mat A, Vec *diag)
   PetscFunctionBegin;
   PetscCall(MatVecDiagonalSetUp(A));
   *diag = ctx->diag;
+  PetscCall(PetscObjectStateGet((PetscObject)*diag, &ctx->diag_state));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -170,20 +172,22 @@ PetscErrorCode MatVecDiagonalRestoreDiagonal(Mat A, Vec *diag)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
   PetscValidPointer(diag, 2);
-  PetscTryMethod((PetscObject)A, "MatVecDiagonalRestoreDiagonal_C", (Mat, Vec *), (A, diag));
-  PetscCall(PetscObjectStateIncrease((PetscObject)A));
-  *diag = NULL;
+  PetscUseMethod((PetscObject)A, "MatVecDiagonalRestoreDiagonal_C", (Mat, Vec *), (A, diag));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode MatVecDiagonalRestoreDiagonal_VecDiagonal(Mat A, Vec *diag)
 {
   Mat_VecDiagonal *ctx = (Mat_VecDiagonal *)A->data;
+  PetscObjectState diag_state;
 
   PetscFunctionBegin;
   PetscCheck(ctx->diag == *diag, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_WRONG, "Restored a different diagonal vector");
   ctx->diag_valid     = PETSC_TRUE;
   ctx->inv_diag_valid = PETSC_FALSE;
+  PetscCall(PetscObjectStateGet((PetscObject)*diag, &diag_state));
+  if (ctx->diag_state != diag_state) PetscCall(PetscObjectStateIncrease((PetscObject)A));
+  *diag = NULL;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -214,7 +218,7 @@ PetscErrorCode MatVecDiagonalGetInverseDiagonal(Mat A, Vec *inv_diag)
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
   PetscValidPointer(inv_diag, 2);
   *inv_diag = NULL;
-  PetscTryMethod((PetscObject)A, "MatVecDiagonalGetInverseDiagonal_C", (Mat, Vec *), (A, inv_diag));
+  PetscUseMethod((PetscObject)A, "MatVecDiagonalGetInverseDiagonal_C", (Mat, Vec *), (A, inv_diag));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -225,6 +229,7 @@ static PetscErrorCode MatVecDiagonalGetInverseDiagonal_VecDiagonal(Mat A, Vec *i
   PetscFunctionBegin;
   PetscCall(MatVecDiagonalSetUpInverseDiagonal(A));
   *inv_diag = ctx->inv_diag;
+  PetscCall(PetscObjectStateGet((PetscObject)*inv_diag, &ctx->inv_diag_state));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -244,20 +249,23 @@ PetscErrorCode MatVecDiagonalRestoreInverseDiagonal(Mat A, Vec *inv_diag)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
   PetscValidPointer(inv_diag, 2);
-  PetscTryMethod((PetscObject)A, "MatVecDiagonalRestoreInverseDiagonal_C", (Mat, Vec *), (A, inv_diag));
-  PetscCall(PetscObjectStateIncrease((PetscObject)A));
-  *inv_diag = NULL;
+  PetscUseMethod((PetscObject)A, "MatVecDiagonalRestoreInverseDiagonal_C", (Mat, Vec *), (A, inv_diag));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode MatVecDiagonalRestoreInverseDiagonal_VecDiagonal(Mat A, Vec *inv_diag)
 {
   Mat_VecDiagonal *ctx = (Mat_VecDiagonal *)A->data;
+  PetscObjectState inv_diag_state;
 
   PetscFunctionBegin;
   PetscCheck(ctx->inv_diag == *inv_diag, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_WRONG, "Restored a different diagonal vector");
   ctx->inv_diag_valid = PETSC_TRUE;
   ctx->diag_valid     = PETSC_FALSE;
+  PetscCall(PetscObjectStateGet((PetscObject)*inv_diag, &inv_diag_state));
+  if (ctx->inv_diag_state != inv_diag_state) PetscCall(PetscObjectStateIncrease((PetscObject)A));
+  PetscCall(PetscObjectStateIncrease((PetscObject)A));
+  *inv_diag = NULL;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
