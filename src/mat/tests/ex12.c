@@ -167,4 +167,10 @@ PetscErrorCode TestMatZeroRows_with_no_allocation(Mat A, IS is, PetscScalar diag
       args: -keep_nonzero_pattern -mat_type mpibaij -mat_block_size 3
       filter: grep -v " MPI process"
 
+   test:
+      suffix: 5
+      nsize: 3
+      args: -mat_type mpibaij -mat_block_size 3 -mat_view
+      filter: grep -v " MPI process"
+
 TEST*/
