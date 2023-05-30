@@ -382,34 +382,60 @@ static PetscErrorCode MatConvert_HYPRE_IS(Mat A, MatType mtype, MatReuse reuse, 
 
 PETSC_INTERN PetscErrorCode MatConvert_AIJ_HYPRE(Mat A, MatType type, MatReuse reuse, Mat *B)
 {
-  Mat        M = NULL;
-  Mat_HYPRE *hB;
-  MPI_Comm   comm = PetscObjectComm((PetscObject)A);
+  MPI_Comm     comm = PetscObjectComm((PetscObject)A);
+  PetscMPIInt  size;
+  PetscScalar *coo_v;
+  Mat          M = NULL;
 
   PetscFunctionBegin;
-  if (reuse == MAT_REUSE_MATRIX) {
-    /* always destroy the old matrix and create a new memory;
-       hope this does not churn the memory too much. The problem
-       is I do not know if it is possible to put the matrix back to
-       its initial state so that we can directly copy the values
-       the second time through. */
-    hB = (Mat_HYPRE *)((*B)->data);
-    PetscCallExternal(HYPRE_IJMatrixDestroy, hB->ij);
-  } else {
+  if (reuse != MAT_REUSE_MATRIX) {
+    PetscInt        n;
+    const PetscInt *ia, *ja;
+    PetscInt       *coo_i, *coo_j;
+    PetscCount      ncoo;
+    PetscBool       done;
+
     PetscCall(MatCreate(comm, &M));
     PetscCall(MatSetType(M, MATHYPRE));
     PetscCall(MatSetSizes(M, A->rmap->n, A->cmap->n, A->rmap->N, A->cmap->N));
-    hB = (Mat_HYPRE *)(M->data);
-    if (reuse == MAT_INITIAL_MATRIX) *B = M;
+    PetscCall(MatGetRowIJ(A, 0, PETSC_FALSE, PETSC_FALSE, &n, &ia, &ja, &done));
+    PetscCheck(done, comm, PETSC_ERR_PLIB, "missing IJ struct");
+    ncoo = ia[n];
+    PetscCall(PetscMalloc2(ncoo, &coo_i, ncoo, &coo_j));
+    for (PetscInt i = 0; i < n; i++)
+      for (PetscInt ii = ia[i]; ii < ia[i + 1]; ii++) coo_i[ii] = i;
+    PetscCall(PetscArraycpy(coo_j, ja, ncoo));
+    PetscCall(MatRestoreRowIJ(A, 0, PETSC_FALSE, PETSC_FALSE, &n, &ia, &ja, &done));
+    PetscCall(MatSetPreallocationCOO(M, ncoo, coo_i, coo_j));
+    PetscCall(PetscFree2(coo_i, coo_j));
+  } else M = *B;
+
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+  if (size > 1) {
+    Mat                dA, oA;
+    const PetscScalar *dcoo_v, *ocoo_v;
+    MatInfo            info;
+    PetscCount         dnnz, onnz;
+
+    PetscCall(MatMPIAIJGetSeqAIJ(A, &dA, &oA, NULL));
+    PetscCall(MatGetInfo(dA, MAT_LOCAL, &info));
+    dnnz = (PetscCount)info.nz_used;
+    PetscCall(MatGetInfo(oA, MAT_LOCAL, &info));
+    onnz = (PetscCount)info.nz_used;
+    PetscCall(MatSeqAIJGetArrayRead(dA, (const PetscScalar **)&dcoo_v));
+    PetscCall(MatSeqAIJGetArrayRead(oA, (const PetscScalar **)&ocoo_v));
+    PetscCall(PetscMalloc1(dnnz + onnz, &coo_v));
+    PetscCall(PetscArraycpy(coo_v, dcoo_v, dnnz));
+    PetscCall(PetscArraycpy(coo_v + dnnz, ocoo_v, onnz));
+    PetscCall(MatSeqAIJRestoreArrayRead(dA, (const PetscScalar **)&dcoo_v));
+    PetscCall(MatSeqAIJRestoreArrayRead(oA, (const PetscScalar **)&ocoo_v));
+  } else {
+    PetscCall(MatSeqAIJGetArrayRead(A, (const PetscScalar **)&coo_v));
   }
-  PetscCall(MatSetOption(*B, MAT_SORTED_FULL, PETSC_TRUE)); /* "perfect" preallocation, so no need for hypre_AuxParCSRMatrixNeedAux */
-  PetscCall(MatSetOption(*B, MAT_NO_OFF_PROC_ENTRIES, PETSC_TRUE));
-  PetscCall(MatHYPRE_CreateFromMat(A, hB));
-  PetscCall(MatHYPRE_IJMatrixCopy(A, hB->ij));
+  PetscCall(MatSetValuesCOO(M, coo_v, INSERT_VALUES));
+  if (size > 1) PetscCall(PetscFree(coo_v));
+  else PetscCall(MatSeqAIJRestoreArrayRead(A, (const PetscScalar **)&coo_v));
   if (reuse == MAT_INPLACE_MATRIX) PetscCall(MatHeaderReplace(A, &M));
-  (*B)->preallocated = PETSC_TRUE;
-  PetscCall(MatAssemblyBegin(*B, MAT_FINAL_ASSEMBLY));
-  PetscCall(MatAssemblyEnd(*B, MAT_FINAL_ASSEMBLY));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2246,9 +2272,6 @@ static PetscErrorCode MatSetPreallocationCOO_HYPRE(Mat mat, PetscCount coo_n, Pe
   PetscCall(PetscLayoutSetUp(mat->cmap));
   PetscCall(MatGetLayouts(mat, &rmap, &cmap));
 
-  /* I do not know how hypre_ParCSRMatrix stores diagonal elements for non-square matrices, so I just give up now */
-  PetscCheck(rmap->N == cmap->N, comm, PETSC_ERR_SUP, "MATHYPRE COO cannot handle non-square matrices");
-
 #if defined(PETSC_HAVE_DEVICE)
   if (!mat->boundtocpu) { /* mat will be on device, so will cooMat */
   #if defined(PETSC_HAVE_KOKKOS)
@@ -2284,34 +2307,39 @@ static PetscErrorCode MatSetPreallocationCOO_HYPRE(Mat mat, PetscCount coo_n, Pe
 
 static PetscErrorCode MatSetValuesCOO_HYPRE(Mat mat, const PetscScalar v[], InsertMode imode)
 {
-  Mat_HYPRE  *hmat = (Mat_HYPRE *)mat->data;
-  PetscMPIInt size;
-  Mat         A;
+  Mat_HYPRE *hmat = (Mat_HYPRE *)mat->data;
+  PetscBool  cong;
 
   PetscFunctionBegin;
-  PetscCheck(hmat->cooMat, hmat->comm, PETSC_ERR_PLIB, "HYPRE COO delegate matrix has not been created yet");
-  PetscCallMPI(MPI_Comm_size(hmat->comm, &size));
+  PetscCheck(hmat->cooMat, PetscObjectComm((PetscObject)mat), PETSC_ERR_PLIB, "HYPRE COO delegate matrix has not been created yet");
   PetscCall(MatSetValuesCOO(hmat->cooMat, v, imode));
 
-  /* Move diagonal elements of the diagonal block to the front of their row, as needed by ParCSRMatrix. So damn hacky */
-  A = (size == 1) ? hmat->cooMat : ((Mat_MPIAIJ *)hmat->cooMat->data)->A;
-  if (hmat->memType == HYPRE_MEMORY_HOST) {
-    Mat_SeqAIJ  *aij = (Mat_SeqAIJ *)A->data;
-    PetscInt     i, m, *Ai = aij->i, *Adiag = aij->diag;
-    PetscScalar *Aa = aij->a, tmp;
+  PetscCall(MatHasCongruentLayouts(mat, &cong));
+  if (cong) {
+    PetscMPIInt size;
+    Mat         A;
 
-    PetscCall(MatGetSize(A, &m, NULL));
-    for (i = 0; i < m; i++) {
-      if (Adiag[i] >= Ai[i] && Adiag[i] < Ai[i + 1]) { /* Digonal element of this row exists in a[] and j[] */
-        tmp          = Aa[Ai[i]];
-        Aa[Ai[i]]    = Aa[Adiag[i]];
-        Aa[Adiag[i]] = tmp;
+    /* Move diagonal elements of the diagonal block to the front of their row, as needed by ParCSRMatrix. So damn hacky */
+    PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)mat), &size));
+    A = (size == 1) ? hmat->cooMat : ((Mat_MPIAIJ *)hmat->cooMat->data)->A;
+    if (hmat->memType == HYPRE_MEMORY_HOST) {
+      Mat_SeqAIJ  *aij = (Mat_SeqAIJ *)A->data;
+      PetscInt     i, m, *Ai = aij->i, *Adiag = aij->diag;
+      PetscScalar *Aa = aij->a, tmp;
+
+      PetscCall(MatGetSize(A, &m, NULL));
+      for (i = 0; i < m; i++) {
+        if (Adiag[i] >= Ai[i] && Adiag[i] < Ai[i + 1]) { /* Digonal element of this row exists in a[] and j[] */
+          tmp          = Aa[Ai[i]];
+          Aa[Ai[i]]    = Aa[Adiag[i]];
+          Aa[Adiag[i]] = tmp;
+        }
       }
-    }
-  } else {
+    } else {
 #if defined(PETSC_HAVE_KOKKOS_KERNELS)
-    PetscCall(MatSeqAIJMoveDiagonalValuesFront_SeqAIJKokkos(A, hmat->diag));
+      PetscCall(MatSeqAIJMoveDiagonalValuesFront_SeqAIJKokkos(A, hmat->diag));
 #endif
+    }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
