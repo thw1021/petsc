@@ -235,17 +235,20 @@ static PetscErrorCode PCSetUp_HYPRE(PC pc)
   PetscBool          ishypre;
 
   PetscFunctionBegin;
+  /* default type is boomerAMG */
   if (!jac->hypre_type) PetscCall(PCHYPRESetType(pc, "boomeramg"));
 
+  /* get hypre matrix */
+  if (pc->flag == DIFFERENT_NONZERO_PATTERN) PetscCall(MatDestroy(&jac->hpmat));
   PetscCall(PetscObjectTypeCompare((PetscObject)pc->pmat, MATHYPRE, &ishypre));
   if (!ishypre) {
-    PetscCall(MatDestroy(&jac->hpmat));
-    PetscCall(MatConvert(pc->pmat, MATHYPRE, MAT_INITIAL_MATRIX, &jac->hpmat));
+    PetscCall(MatConvert(pc->pmat, MATHYPRE, jac->hpmat ? MAT_REUSE_MATRIX : MAT_INITIAL_MATRIX, &jac->hpmat));
   } else {
     PetscCall(PetscObjectReference((PetscObject)pc->pmat));
     PetscCall(MatDestroy(&jac->hpmat));
     jac->hpmat = pc->pmat;
   }
+
   /* allow debug */
   PetscCall(MatViewFromOptions(jac->hpmat, NULL, "-pc_hypre_mat_view"));
   hjac = (Mat_HYPRE *)(jac->hpmat->data);
