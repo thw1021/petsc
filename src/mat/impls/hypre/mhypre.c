@@ -123,10 +123,10 @@ static PetscErrorCode MatHYPRE_CreateFromMat(Mat A, Mat_HYPRE *hA)
 
 static PetscErrorCode MatHYPRE_IJMatrixCopy(Mat A, HYPRE_IJMatrix ij)
 {
-  PetscInt           i, rstart, rend, ncols, nr, nc;
+  PetscInt           i, rstart, rend, ncols;
   const PetscScalar *values;
   const PetscInt    *cols;
-  PetscBool          flg;
+  PetscBool          flg, cong;
 
   PetscFunctionBegin;
 #if PETSC_PKG_HYPRE_VERSION_LT(2, 19, 0)
@@ -135,8 +135,8 @@ static PetscErrorCode MatHYPRE_IJMatrixCopy(Mat A, HYPRE_IJMatrix ij)
   PetscCallExternal(HYPRE_IJMatrixInitialize_v2, ij, HYPRE_MEMORY_HOST);
 #endif
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)A, MATMPIAIJ, &flg));
-  PetscCall(MatGetSize(A, &nr, &nc));
-  if (flg && nr == nc) {
+  PetscCall(MatHasCongruentLayouts(A, &cong));
+  if (flg && cong) {
     PetscCall(MatHYPRE_IJMatrixFastCopy_MPIAIJ(A, ij));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
@@ -2319,6 +2319,7 @@ static PetscErrorCode MatSetPreallocationCOO_HYPRE(Mat mat, PetscCount coo_n, Pe
   PetscCall(MatSetType(cooMat, matType));
   PetscCall(MatSetLayouts(cooMat, rmap, cmap));
   PetscCall(MatSetPreallocationCOO(cooMat, coo_n, coo_i, coo_j));
+  cooMat->assembled = PETSC_TRUE;
 
   /* Copy the sparsity pattern from cooMat to hypre IJMatrix hmat->ij */
   PetscCall(MatSetOption(mat, MAT_SORTED_FULL, PETSC_TRUE));
