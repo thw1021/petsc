@@ -22,8 +22,8 @@
 
 static PetscErrorCode MatHYPRE_CreateFromMat(Mat, Mat_HYPRE *);
 static PetscErrorCode MatHYPRE_IJMatrixPreallocate(Mat, Mat, HYPRE_IJMatrix);
-static PetscErrorCode MatHYPRE_IJMatrixFastCopy_MPIAIJ(Mat, HYPRE_IJMatrix);
-static PetscErrorCode MatHYPRE_IJMatrixFastCopy_SeqAIJ(Mat, HYPRE_IJMatrix);
+static PetscErrorCode MatHYPRE_IJMatrixCopyIJ_MPIAIJ(Mat, HYPRE_IJMatrix);
+static PetscErrorCode MatHYPRE_IJMatrixCopyIJ_SeqAIJ(Mat, HYPRE_IJMatrix);
 static PetscErrorCode MatHYPRE_MultKernel_Private(Mat, HYPRE_Complex, Vec, HYPRE_Complex, Vec, PetscBool);
 static PetscErrorCode hypre_array_destroy(void *);
 static PetscErrorCode MatSetValues_HYPRE(Mat, PetscInt, const PetscInt[], PetscInt, const PetscInt[], const PetscScalar[], InsertMode ins);
@@ -121,12 +121,9 @@ static PetscErrorCode MatHYPRE_CreateFromMat(Mat A, Mat_HYPRE *hA)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatHYPRE_IJMatrixCopy(Mat A, HYPRE_IJMatrix ij)
+static PetscErrorCode MatHYPRE_IJMatrixCopyIJ(Mat A, HYPRE_IJMatrix ij)
 {
-  PetscInt           i, rstart, rend, ncols;
-  const PetscScalar *values;
-  const PetscInt    *cols;
-  PetscBool          flg, cong;
+  PetscBool flg;
 
   PetscFunctionBegin;
 #if PETSC_PKG_HYPRE_VERSION_LT(2, 19, 0)
@@ -135,35 +132,19 @@ static PetscErrorCode MatHYPRE_IJMatrixCopy(Mat A, HYPRE_IJMatrix ij)
   PetscCallExternal(HYPRE_IJMatrixInitialize_v2, ij, HYPRE_MEMORY_HOST);
 #endif
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)A, MATMPIAIJ, &flg));
-  PetscCall(MatHasCongruentLayouts(A, &cong));
-  if (flg && cong) {
-    PetscCall(MatHYPRE_IJMatrixFastCopy_MPIAIJ(A, ij));
+  if (flg) {
+    PetscCall(MatHYPRE_IJMatrixCopyIJ_MPIAIJ(A, ij));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)A, MATSEQAIJ, &flg));
   if (flg) {
-    PetscCall(MatHYPRE_IJMatrixFastCopy_SeqAIJ(A, ij));
+    PetscCall(MatHYPRE_IJMatrixCopyIJ_SeqAIJ(A, ij));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
-
-  /* Do not need Aux since we have done precise i[],j[] allocation in MatHYPRE_CreateFromMat() */
-  hypre_AuxParCSRMatrixNeedAux((hypre_AuxParCSRMatrix *)hypre_IJMatrixTranslator(ij)) = 0;
-
-  PetscCall(MatGetOwnershipRange(A, &rstart, &rend));
-  for (i = rstart; i < rend; i++) {
-    PetscCall(MatGetRow(A, i, &ncols, &cols, &values));
-    if (ncols) {
-      HYPRE_Int nc = (HYPRE_Int)ncols;
-
-      PetscCheck((PetscInt)nc == ncols, PETSC_COMM_SELF, PETSC_ERR_SUP, "Hypre overflow! number of columns %" PetscInt_FMT " for row %" PetscInt_FMT, ncols, i);
-      PetscCallExternal(HYPRE_IJMatrixSetValues, ij, 1, &nc, (HYPRE_BigInt *)&i, (HYPRE_BigInt *)cols, (HYPRE_Complex *)values);
-    }
-    PetscCall(MatRestoreRow(A, i, &ncols, &cols, &values));
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCheck(PETSC_FALSE, PetscObjectComm((PetscObject)A), PETSC_ERR_PLIB, "Not for type %s", ((PetscObject)A)->type_name);
 }
 
-static PetscErrorCode MatHYPRE_IJMatrixFastCopy_SeqAIJ(Mat A, HYPRE_IJMatrix ij)
+static PetscErrorCode MatHYPRE_IJMatrixCopyIJ_SeqAIJ(Mat A, HYPRE_IJMatrix ij)
 {
   Mat_SeqAIJ            *pdiag = (Mat_SeqAIJ *)A->data;
   HYPRE_Int              type;
@@ -171,7 +152,6 @@ static PetscErrorCode MatHYPRE_IJMatrixFastCopy_SeqAIJ(Mat A, HYPRE_IJMatrix ij)
   hypre_AuxParCSRMatrix *aux_matrix;
   hypre_CSRMatrix       *hdiag;
   PetscBool              sameint = (PetscBool)(sizeof(PetscInt) == sizeof(HYPRE_Int));
-  const PetscScalar     *pa;
 
   PetscFunctionBegin;
   PetscCallExternal(HYPRE_IJMatrixGetObjectType, ij, &type);
@@ -191,16 +171,12 @@ static PetscErrorCode MatHYPRE_IJMatrixFastCopy_SeqAIJ(Mat A, HYPRE_IJMatrix ij)
     for (i = 0; i < pdiag->nz; i++) hdiag->j[i] = (HYPRE_Int)pdiag->j[i];
   }
 
-  PetscCall(MatSeqAIJGetArrayRead(A, &pa));
-  PetscCall(PetscArraycpy(hdiag->data, pa, pdiag->nz));
-  PetscCall(MatSeqAIJRestoreArrayRead(A, &pa));
-
   aux_matrix                               = (hypre_AuxParCSRMatrix *)hypre_IJMatrixTranslator(ij);
   hypre_AuxParCSRMatrixNeedAux(aux_matrix) = 0;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode MatHYPRE_IJMatrixFastCopy_MPIAIJ(Mat A, HYPRE_IJMatrix ij)
+static PetscErrorCode MatHYPRE_IJMatrixCopyIJ_MPIAIJ(Mat A, HYPRE_IJMatrix ij)
 {
   Mat_MPIAIJ            *pA = (Mat_MPIAIJ *)A->data;
   Mat_SeqAIJ            *pdiag, *poffd;
@@ -210,7 +186,6 @@ static PetscErrorCode MatHYPRE_IJMatrixFastCopy_MPIAIJ(Mat A, HYPRE_IJMatrix ij)
   hypre_AuxParCSRMatrix *aux_matrix;
   hypre_CSRMatrix       *hdiag, *hoffd;
   PetscBool              sameint = (PetscBool)(sizeof(PetscInt) == sizeof(HYPRE_Int));
-  const PetscScalar     *pa;
 
   PetscFunctionBegin;
   pdiag = (Mat_SeqAIJ *)pA->A->data;
@@ -224,15 +199,12 @@ static PetscErrorCode MatHYPRE_IJMatrixFastCopy_MPIAIJ(Mat A, HYPRE_IJMatrix ij)
   hdiag = hypre_ParCSRMatrixDiag(par_matrix);
   hoffd = hypre_ParCSRMatrixOffd(par_matrix);
 
-  /*
-       this is the Hack part where we monkey directly with the hypre datastructures
-  */
   if (sameint) {
     PetscCall(PetscArraycpy(hdiag->i, pdiag->i, pA->A->rmap->n + 1));
   } else {
     for (i = 0; i < pA->A->rmap->n + 1; i++) hdiag->i[i] = (HYPRE_Int)(pdiag->i[i]);
   }
-  /* need to shift the diag column indices (hdiag->j) back to global numbering since hypre is expecting this */
+
   hjj = hdiag->j;
   pjj = pdiag->j;
 #if PETSC_PKG_HYPRE_VERSION_GE(2, 16, 0)
@@ -240,17 +212,12 @@ static PetscErrorCode MatHYPRE_IJMatrixFastCopy_MPIAIJ(Mat A, HYPRE_IJMatrix ij)
 #else
   for (i = 0; i < pdiag->nz; i++) hjj[i] = cstart + pjj[i];
 #endif
-  PetscCall(MatSeqAIJGetArrayRead(pA->A, &pa));
-  PetscCall(PetscArraycpy(hdiag->data, pa, pdiag->nz));
-  PetscCall(MatSeqAIJRestoreArrayRead(pA->A, &pa));
   if (sameint) {
     PetscCall(PetscArraycpy(hoffd->i, poffd->i, pA->A->rmap->n + 1));
   } else {
     for (i = 0; i < pA->A->rmap->n + 1; i++) hoffd->i[i] = (HYPRE_Int)(poffd->i[i]);
   }
 
-  /* need to move the offd column indices (hoffd->j) back to global numbering since hypre is expecting this
-     If we hacked a hypre a bit more we might be able to avoid this step */
 #if PETSC_PKG_HYPRE_VERSION_GE(2, 16, 0)
   PetscCallExternal(hypre_CSRMatrixBigInitialize, hoffd);
   jj = (PetscInt *)hoffd->big_j;
@@ -259,10 +226,6 @@ static PetscErrorCode MatHYPRE_IJMatrixFastCopy_MPIAIJ(Mat A, HYPRE_IJMatrix ij)
 #endif
   pjj = poffd->j;
   for (i = 0; i < poffd->nz; i++) jj[i] = garray[pjj[i]];
-
-  PetscCall(MatSeqAIJGetArrayRead(pA->B, &pa));
-  PetscCall(PetscArraycpy(hoffd->data, pa, poffd->nz));
-  PetscCall(MatSeqAIJRestoreArrayRead(pA->B, &pa));
 
   aux_matrix                               = (hypre_AuxParCSRMatrix *)hypre_IJMatrixTranslator(ij);
   hypre_AuxParCSRMatrixNeedAux(aux_matrix) = 0;
@@ -2346,8 +2309,8 @@ static PetscErrorCode MatSetPreallocationCOO_HYPRE(Mat mat, PetscCount coo_n, Pe
   /* Copy the sparsity pattern from cooMat to hypre IJMatrix hmat->ij */
   PetscCall(MatSetOption(mat, MAT_SORTED_FULL, PETSC_TRUE));
   PetscCall(MatSetOption(mat, MAT_NO_OFF_PROC_ENTRIES, PETSC_TRUE));
-  PetscCall(MatHYPRE_CreateFromMat(cooMat, hmat));    /* Create hmat->ij and preallocate it */
-  PetscCall(MatHYPRE_IJMatrixCopy(cooMat, hmat->ij)); /* Copy A's (a,i,j) to hmat->ij. To reuse code. Copying 'a' is not really needed */
+  PetscCall(MatHYPRE_CreateFromMat(cooMat, hmat));      /* Create hmat->ij and preallocate it */
+  PetscCall(MatHYPRE_IJMatrixCopyIJ(cooMat, hmat->ij)); /* Copy A's (a,i,j) to hmat->ij */
 
   mat->preallocated = PETSC_TRUE;
   PetscCall(MatAssemblyBegin(mat, MAT_FINAL_ASSEMBLY));
