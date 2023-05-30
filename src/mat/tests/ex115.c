@@ -117,9 +117,11 @@ int main(int argc, char **args)
 
   /* check conversion routines */
   PetscCall(MatConvert(A, MATHYPRE, MAT_INITIAL_MATRIX, &B));
+  PetscCall(MatMultEqual(B, A, 4, &flg));
+  PetscCheck(flg, PetscObjectComm((PetscObject)A), PETSC_ERR_PLIB, "Error Mat HYPRE init");
   PetscCall(MatConvert(A, MATHYPRE, MAT_REUSE_MATRIX, &B));
   PetscCall(MatMultEqual(B, A, 4, &flg));
-  PetscCheck(flg, PetscObjectComm((PetscObject)A), PETSC_ERR_PLIB, "Error Mat HYPRE");
+  PetscCheck(flg, PetscObjectComm((PetscObject)A), PETSC_ERR_PLIB, "Error Mat HYPRE reuse");
   PetscCall(MatConvert(B, MATIS, MAT_INITIAL_MATRIX, &D));
   PetscCall(MatConvert(B, MATIS, MAT_REUSE_MATRIX, &D));
   PetscCall(MatMultEqual(D, A, 4, &flg));
