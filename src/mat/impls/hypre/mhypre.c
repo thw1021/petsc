@@ -382,15 +382,22 @@ static PetscErrorCode MatConvert_HYPRE_IS(Mat A, MatType mtype, MatReuse reuse, 
 
 PETSC_INTERN PetscErrorCode MatConvert_AIJ_HYPRE(Mat A, MatType type, MatReuse reuse, Mat *B)
 {
-  MPI_Comm     comm = PetscObjectComm((PetscObject)A);
-  PetscMPIInt  size;
-  PetscScalar *coo_v;
-  Mat          M = NULL;
+  MPI_Comm        comm = PetscObjectComm((PetscObject)A);
+  PetscScalar    *coo_v;
+  Mat             M  = NULL;
+  Mat             dA = A, oA = NULL;
+  const PetscInt *cmap = NULL;
+  PetscBool       ismpiaij;
+  MatInfo         info;
+  PetscCount      dnnz, onnz = 0;
 
   PetscFunctionBegin;
+  PetscCall(PetscObjectBaseTypeCompare((PetscObject)A, MATMPIAIJ, &ismpiaij));
+  if (ismpiaij) PetscCall(MatMPIAIJGetSeqAIJ(A, &dA, &oA, &cmap));
   if (reuse != MAT_REUSE_MATRIX) {
-    PetscInt        n;
-    const PetscInt *ia, *ja;
+    PetscInt        dn, on = 0, rst, cst;
+    const PetscInt *dia, *dja;
+    const PetscInt *oia = NULL, *oja = NULL;
     PetscInt       *coo_i, *coo_j;
     PetscCount      ncoo;
     PetscBool       done;
@@ -398,30 +405,51 @@ PETSC_INTERN PetscErrorCode MatConvert_AIJ_HYPRE(Mat A, MatType type, MatReuse r
     PetscCall(MatCreate(comm, &M));
     PetscCall(MatSetType(M, MATHYPRE));
     PetscCall(MatSetSizes(M, A->rmap->n, A->cmap->n, A->rmap->N, A->cmap->N));
-    PetscCall(MatGetRowIJ(A, 0, PETSC_FALSE, PETSC_FALSE, &n, &ia, &ja, &done));
+    PetscCall(MatGetRowIJ(dA, 0, PETSC_FALSE, PETSC_FALSE, &dn, &dia, &dja, &done));
     PetscCheck(done, comm, PETSC_ERR_PLIB, "missing IJ struct");
-    ncoo = ia[n];
+    dnnz = dia[dn];
+    if (oA) {
+      PetscCall(MatGetRowIJ(oA, 0, PETSC_FALSE, PETSC_FALSE, &on, &oia, &oja, &done));
+      PetscCheck(done, PETSC_COMM_SELF, PETSC_ERR_PLIB, "missing IJ struct");
+      onnz = oia[on];
+    }
+    ncoo = dnnz + onnz;
     PetscCall(PetscMalloc2(ncoo, &coo_i, ncoo, &coo_j));
-    for (PetscInt i = 0; i < n; i++)
-      for (PetscInt ii = ia[i]; ii < ia[i + 1]; ii++) coo_i[ii] = i;
-    PetscCall(PetscArraycpy(coo_j, ja, ncoo));
-    PetscCall(MatRestoreRowIJ(A, 0, PETSC_FALSE, PETSC_FALSE, &n, &ia, &ja, &done));
+    PetscCall(MatGetOwnershipRange(A, &rst, NULL));
+    PetscCall(MatGetOwnershipRangeColumn(A, &cst, NULL));
+
+    for (PetscInt i = 0; i < dn; i++)
+      for (PetscInt ii = dia[i]; ii < dia[i + 1]; ii++) coo_i[ii] = i + rst;
+
+    for (PetscInt i = 0; i < on; i++)
+      for (PetscInt ii = oia[i]; ii < oia[i + 1]; ii++) coo_i[ii + dnnz] = i + rst;
+
+    if (!cst) PetscCall(PetscArraycpy(coo_j, dja, dnnz));
+    else
+      for (PetscInt i = 0; i < dnnz; i++) coo_j[i] = dja[i] + cst;
+
+    if (onnz) {
+      PetscCheck(cmap, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Missing column map");
+      for (PetscInt i = 0; i < onnz; i++) coo_j[i + dnnz] = cmap[oja[i]];
+    }
+
+    PetscCall(MatRestoreRowIJ(dA, 0, PETSC_FALSE, PETSC_FALSE, &dn, &dia, &dja, &done));
+    if (oA) PetscCall(MatRestoreRowIJ(oA, 0, PETSC_FALSE, PETSC_FALSE, &on, &oia, &oja, &done));
+    //PetscIntView(ncoo, coo_i, PETSC_VIEWER_STDOUT_(comm));
+    //PetscIntView(ncoo, coo_j, PETSC_VIEWER_STDOUT_(comm));
     PetscCall(MatSetPreallocationCOO(M, ncoo, coo_i, coo_j));
     PetscCall(PetscFree2(coo_i, coo_j));
+    if (reuse == MAT_INITIAL_MATRIX) *B = M;
   } else M = *B;
 
-  PetscCallMPI(MPI_Comm_size(comm, &size));
-  if (size > 1) {
-    Mat                dA, oA;
-    const PetscScalar *dcoo_v, *ocoo_v;
-    MatInfo            info;
-    PetscCount         dnnz, onnz;
-
-    PetscCall(MatMPIAIJGetSeqAIJ(A, &dA, &oA, NULL));
-    PetscCall(MatGetInfo(dA, MAT_LOCAL, &info));
-    dnnz = (PetscCount)info.nz_used;
+  PetscCall(MatGetInfo(dA, MAT_LOCAL, &info));
+  dnnz = (PetscCount)info.nz_used;
+  if (oA) {
     PetscCall(MatGetInfo(oA, MAT_LOCAL, &info));
     onnz = (PetscCount)info.nz_used;
+  }
+  if (onnz) {
+    const PetscScalar *dcoo_v, *ocoo_v;
     PetscCall(MatSeqAIJGetArrayRead(dA, (const PetscScalar **)&dcoo_v));
     PetscCall(MatSeqAIJGetArrayRead(oA, (const PetscScalar **)&ocoo_v));
     PetscCall(PetscMalloc1(dnnz + onnz, &coo_v));
@@ -430,11 +458,13 @@ PETSC_INTERN PetscErrorCode MatConvert_AIJ_HYPRE(Mat A, MatType type, MatReuse r
     PetscCall(MatSeqAIJRestoreArrayRead(dA, (const PetscScalar **)&dcoo_v));
     PetscCall(MatSeqAIJRestoreArrayRead(oA, (const PetscScalar **)&ocoo_v));
   } else {
-    PetscCall(MatSeqAIJGetArrayRead(A, (const PetscScalar **)&coo_v));
+    PetscCall(MatSeqAIJGetArrayRead(dA, (const PetscScalar **)&coo_v));
   }
   PetscCall(MatSetValuesCOO(M, coo_v, INSERT_VALUES));
-  if (size > 1) PetscCall(PetscFree(coo_v));
-  else PetscCall(MatSeqAIJRestoreArrayRead(A, (const PetscScalar **)&coo_v));
+
+  if (onnz) PetscCall(PetscFree(coo_v));
+  else PetscCall(MatSeqAIJRestoreArrayRead(dA, (const PetscScalar **)&coo_v));
+
   if (reuse == MAT_INPLACE_MATRIX) PetscCall(MatHeaderReplace(A, &M));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -2329,7 +2359,7 @@ static PetscErrorCode MatSetValuesCOO_HYPRE(Mat mat, const PetscScalar v[], Inse
 
       PetscCall(MatGetSize(A, &m, NULL));
       for (i = 0; i < m; i++) {
-        if (Adiag[i] >= Ai[i] && Adiag[i] < Ai[i + 1]) { /* Digonal element of this row exists in a[] and j[] */
+        if (Adiag[i] >= Ai[i] && Adiag[i] < Ai[i + 1]) { /* Diagonal element of this row exists in a[] and j[] */
           tmp          = Aa[Ai[i]];
           Aa[Ai[i]]    = Aa[Adiag[i]];
           Aa[Adiag[i]] = tmp;
