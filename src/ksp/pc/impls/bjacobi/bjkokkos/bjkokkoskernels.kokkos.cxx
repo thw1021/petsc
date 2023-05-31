@@ -1,46 +1,46 @@
 #include <petsc/private/pcbjkokkosimpl.h>
 
 #ifndef PETSC_USE_COMPLEX
-#include <fstream>
+  #include <fstream>
 
-#include "Kokkos_Timer.hpp"
-#include "Kokkos_Random.hpp"
-#include "Kokkos_UnorderedMap.hpp"
-#include "Kokkos_Sort.hpp"
+  #include "Kokkos_Timer.hpp"
+  #include "Kokkos_Random.hpp"
+  #include "Kokkos_UnorderedMap.hpp"
+  #include "Kokkos_Sort.hpp"
 
-/// KokkosKernels headers
-#include "KokkosBatched_Util.hpp"
-#include "KokkosBatched_Vector.hpp"
+  /// KokkosKernels headers
+  #include "KokkosBatched_Util.hpp"
+  #include "KokkosBatched_Vector.hpp"
 
-#include <Kokkos_ArithTraits.hpp>
-#include <KokkosBatched_Util.hpp>
-#include <KokkosBatched_Vector.hpp>
-#include <KokkosBatched_Copy_Decl.hpp>
-#include <KokkosBatched_Copy_Impl.hpp>
-#include <KokkosBatched_AddRadial_Decl.hpp>
-#include <KokkosBatched_AddRadial_Impl.hpp>
-#include <KokkosBatched_Gemm_Decl.hpp>
-#include <KokkosBatched_Gemm_Serial_Impl.hpp>
-#include <KokkosBatched_Gemm_Team_Impl.hpp>
-#include <KokkosBatched_Gemv_Decl.hpp>
-// #include <KokkosBatched_Gemv_Serial_Impl.hpp>
-#include <KokkosBatched_Gemv_Team_Impl.hpp>
-#include <KokkosBatched_Trsm_Decl.hpp>
-#include <KokkosBatched_Trsm_Serial_Impl.hpp>
-#include <KokkosBatched_Trsm_Team_Impl.hpp>
-#include <KokkosBatched_Trsv_Decl.hpp>
-#include <KokkosBatched_Trsv_Serial_Impl.hpp>
-#include <KokkosBatched_Trsv_Team_Impl.hpp>
-#include <KokkosBatched_LU_Decl.hpp>
-#include <KokkosBatched_LU_Serial_Impl.hpp>
-#include <KokkosBatched_LU_Team_Impl.hpp>
-#include <KokkosSparse_CrsMatrix.hpp>
-#include "KokkosBatched_Spmv.hpp"
-#include "KokkosBatched_CrsMatrix.hpp"
-#include "KokkosBatched_Krylov_Handle.hpp"
+  #include <Kokkos_ArithTraits.hpp>
+  #include <KokkosBatched_Util.hpp>
+  #include <KokkosBatched_Vector.hpp>
+  #include <KokkosBatched_Copy_Decl.hpp>
+  #include <KokkosBatched_Copy_Impl.hpp>
+  #include <KokkosBatched_AddRadial_Decl.hpp>
+  #include <KokkosBatched_AddRadial_Impl.hpp>
+  #include <KokkosBatched_Gemm_Decl.hpp>
+  #include <KokkosBatched_Gemm_Serial_Impl.hpp>
+  #include <KokkosBatched_Gemm_Team_Impl.hpp>
+  #include <KokkosBatched_Gemv_Decl.hpp>
+  // #include <KokkosBatched_Gemv_Serial_Impl.hpp>
+  #include <KokkosBatched_Gemv_Team_Impl.hpp>
+  #include <KokkosBatched_Trsm_Decl.hpp>
+  #include <KokkosBatched_Trsm_Serial_Impl.hpp>
+  #include <KokkosBatched_Trsm_Team_Impl.hpp>
+  #include <KokkosBatched_Trsv_Decl.hpp>
+  #include <KokkosBatched_Trsv_Serial_Impl.hpp>
+  #include <KokkosBatched_Trsv_Team_Impl.hpp>
+  #include <KokkosBatched_LU_Decl.hpp>
+  #include <KokkosBatched_LU_Serial_Impl.hpp>
+  #include <KokkosBatched_LU_Team_Impl.hpp>
+  #include <KokkosSparse_CrsMatrix.hpp>
+  #include "KokkosBatched_Spmv.hpp"
+  #include "KokkosBatched_CrsMatrix.hpp"
+  #include "KokkosBatched_Krylov_Handle.hpp"
 
-#include "KokkosBatched_GMRES.hpp"
-#include "KokkosBatched_JacobiPrec.hpp"
+  #include "KokkosBatched_GMRES.hpp"
+  #include "KokkosBatched_JacobiPrec.hpp"
 
 template <typename DeviceType, typename ValuesViewType, typename IntView, typename VectorViewType, typename KrylovHandleType>
 struct Functor_TestBatchedTeamVectorGMRES {
@@ -171,9 +171,9 @@ PetscErrorCode PCApply_BJKOKKOSKERNELS(PC pc, const PetscScalar *glb_bdata, Pets
   PetscCheck(jac->const_block_size, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONG, "Kokkos (GMRES) solver requires constant block size (but can be made to work with species ordering or N_team==1)");
   PetscCheck(Nsolves % Nsolves_team == 0, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONG, "Nsolves.mod(Nsolves_team) != 0: Nsolves = %d, Nsolves_team = %d", Nsolves, Nsolves_team);
   PetscCheck(((int)info.nz_used) % Nsolves == 0, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONG, "info.nz_used.mod(Nsolves) != 0: info.nz_used = %g, Nsolves = %d", info.nz_used, Nsolves);
-#if defined(PETSC_HAVE_CUDA)
+  #if defined(PETSC_HAVE_CUDA)
   nvtxRangePushA("gmres-kk");
-#endif
+  #endif
   Kokkos::View<PetscScalar **, layout, exec_space, Kokkos::MemoryTraits<Kokkos::Unmanaged>> inv_diag((PetscScalar *)glb_idiag, Nsolves, Nloc); // in correct order
   if (!jac->rowOffsets) {
     jac->rowOffsets   = new IntView("rowOffsets", Nsolves / Nsolves_team, Nloc + 1); // same grids
@@ -265,32 +265,32 @@ PetscErrorCode PCApply_BJKOKKOSKERNELS(PC pc, const PetscScalar *glb_bdata, Pets
       });
     });
   // output assume species major - clone from Kokkos solvers
-#if PCBJKOKKOS_VERBOSE_LEVEL >= 3
-  #if PCBJKOKKOS_VERBOSE_LEVEL >= 4
+  #if PCBJKOKKOS_VERBOSE_LEVEL >= 3
+    #if PCBJKOKKOS_VERBOSE_LEVEL >= 4
   PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "Iterations\n"));
-  #else
+    #else
   PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "max iterations per species (gmres) :"));
-  #endif
+    #endif
   for (PetscInt dmIdx = 0, s = 0, head = 0; dmIdx < jac->num_dms; dmIdx += batch_sz) {
     for (PetscInt f = 0, idx = head; f < jac->dm_Nf[dmIdx]; f++, s++, idx++) {
-  #if PCBJKOKKOS_VERBOSE_LEVEL >= 4
+    #if PCBJKOKKOS_VERBOSE_LEVEL >= 4
       PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "%2D:", s));
       for (int bid = 0; bid < batch_sz; bid++) PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "%3D ", handle.get_iteration_host(idx + bid * jac->dm_Nf[dmIdx])));
       PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "\n"));
-  #else
+    #else
       int count = 0, ii;
       for (int bid = 0; bid < batch_sz; bid++) {
         if ((ii = handle.get_iteration_host(idx + bid * jac->dm_Nf[dmIdx])) > count) count = ii;
       }
       PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "%3d", count));
-  #endif
+    #endif
     }
     head += batch_sz * jac->dm_Nf[dmIdx];
   }
-  #if PCBJKOKKOS_VERBOSE_LEVEL == 3
+    #if PCBJKOKKOS_VERBOSE_LEVEL == 3
   PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "\n"));
+    #endif
   #endif
-#endif
   // return error code, get max it
   PetscInt count = 0, mbid = 0;
   if (handle.is_converged_host()) {
@@ -326,9 +326,9 @@ PetscErrorCode PCApply_BJKOKKOSKERNELS(PC pc, const PetscScalar *glb_bdata, Pets
       PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "    Linear solve %s in %d iteration, batch %" PetscInt_FMT ", specie %" PetscInt_FMT "\n", handle.is_converged_host(mbid) ? "converged" : "diverged", jac->max_nits, mbid % batch_sz, mbid / batch_sz));
     else PetscCall(PetscPrintf(PetscObjectComm((PetscObject)A), "    Linear solve %s in %d iteration, block %" PetscInt_FMT "\n", handle.is_converged_host(mbid) ? "converged" : "diverged", jac->max_nits, mbid));
   }
-#if defined(PETSC_HAVE_CUDA)
+  #if defined(PETSC_HAVE_CUDA)
   nvtxRangePop();
-#endif
+  #endif
 
   return PETSC_SUCCESS;
 }
