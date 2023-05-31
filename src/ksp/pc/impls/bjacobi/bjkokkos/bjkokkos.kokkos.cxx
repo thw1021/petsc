@@ -903,7 +903,9 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
           jac->ksp_type_idx = BATCH_KSP_GMRESKK_IDX;
           jac->nwork        = 0;
 #else
-          PetscCheck(flg, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONG, "Type: %s not supported in complex\n", jac->ksp);
+          KSPType ksptype;
+          PetscCall(KSPGetType(jac->ksp, &ksptype));
+          PetscCheck(flg, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONG, "Type: %s not supported in complex\n", ksptype);
 #endif
         }
       }
