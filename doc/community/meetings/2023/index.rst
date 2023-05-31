@@ -42,7 +42,7 @@ Submit a presentation
 
 * contribute to PETSc,
 * use PETSc in their applications or libraries,
-* develop the libraries and packages `called from PETSc <https://petsc.org/release/install/external_software/>`, and even
+* develop the libraries and packages `called from PETSc <https://petsc.org/release/install/external_software/>`__, and even
 * those who are curious about using PETSc in their applications.
 
 
