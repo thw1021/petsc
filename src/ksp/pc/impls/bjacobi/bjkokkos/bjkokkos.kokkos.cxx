@@ -10,10 +10,6 @@
 #include <../src/mat/impls/aij/seq/aij.h>
 #include <../src/mat/impls/aij/seq/kokkos/aijkok.hpp>
 
-#if defined(PETSC_HAVE_CUDA)
-  #include <nvToolsExt.h>
-#endif
-
 #include <petscdevice_cupm.h>
 
 static PetscErrorCode PCBJKOKKOSCreateKSP_BJKOKKOS(PC pc)
