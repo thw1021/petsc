@@ -600,7 +600,11 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc, Vec bin, Vec xout)
     PetscCheck(nBlk % batch_sz == 0, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONG, "batch_sz = %" PetscInt_FMT ", nBlk = %" PetscInt_FMT, batch_sz, nBlk);
     if (ksp_type_idx == BATCH_KSP_GMRESKK_IDX) {
       // KK solver - move PETSc data into Kokkos Views, setup solver, solve, move data out of Kokkos, process metadata (convergence tests, etc.)
+#ifndef PETSC_USE_COMPLEX
       PetscCall(PCApply_BJKOKKOSKERNELS(pc, glb_bdata, glb_xdata, glb_Aai, glb_Aaj, glb_Aaa, team_size, info, batch_sz, &pcreason));
+#else
+      PetscCheck(ksp_type_idx != BATCH_KSP_GMRESKK_IDX, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONG, "Type: BATCH_KSP_GMRES not supported for complex\n");
+#endif
     } else { // Kokkos Krylov
       using scr_mem_t    = Kokkos::DefaultExecutionSpace::scratch_memory_space;
       using vect2D_scr_t = Kokkos::View<PetscScalar **, Kokkos::LayoutLeft, scr_mem_t>;
@@ -893,10 +897,14 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
           jac->ksp_type_idx = BATCH_KSP_TFQMR_IDX;
           jac->nwork        = 10;
         } else {
+#ifndef PETSC_USE_COMPLEX
           PetscCall(PetscObjectTypeCompareAny((PetscObject)jac->ksp, &flg, KSPGMRES, ""));
           PetscCheck(flg, PetscObjectComm((PetscObject)A), PETSC_ERR_ARG_WRONG, "Unsupported batch ksp type");
           jac->ksp_type_idx = BATCH_KSP_GMRESKK_IDX;
           jac->nwork        = 0;
+#else
+          PetscCheck(flg, PetscObjectComm((PetscObject)pc), PETSC_ERR_ARG_WRONG, "Type: %s not supported in complex\n", jac->ksp);
+#endif
         }
       }
       PetscOptionsBegin(PetscObjectComm((PetscObject)jac->ksp), ((PetscObject)jac->ksp)->prefix, "Options for Kokkos batch solver", "none");
