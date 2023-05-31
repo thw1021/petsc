@@ -1,5 +1,6 @@
 #include <petsc/private/pcbjkokkosimpl.h>
 
+#ifndef PETSC_USE_COMPLEX
 #include <fstream>
 
 #include "Kokkos_Timer.hpp"
@@ -37,6 +38,7 @@
 #include "KokkosBatched_Spmv.hpp"
 #include "KokkosBatched_CrsMatrix.hpp"
 #include "KokkosBatched_Krylov_Handle.hpp"
+
 #include "KokkosBatched_GMRES.hpp"
 #include "KokkosBatched_JacobiPrec.hpp"
 
@@ -330,3 +332,4 @@ PetscErrorCode PCApply_BJKOKKOSKERNELS(PC pc, const PetscScalar *glb_bdata, Pets
 
   return PETSC_SUCCESS;
 }
+#endif
