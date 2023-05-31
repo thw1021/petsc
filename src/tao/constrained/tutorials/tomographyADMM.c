@@ -158,14 +158,24 @@ PetscErrorCode FullObjGrad(Tao tao, Vec X, PetscReal *f, Vec g, void *ptr)
 {
   AppCtx   *user = (AppCtx *)ptr;
   PetscReal f_reg, lambda;
+  PetscBool is_admm;
 
   PetscFunctionBegin;
-  /* Objective  0.5*||Ax-b||_2^2 + lambda*||x||_2^2*/
+  /* Objective  0.5*||Ax-b||_2^2 + lambda*||x||_{1,2}^2*/
   PetscCall(MatMult(user->A, X, user->workM));
   PetscCall(VecAXPY(user->workM, -1, user->b));
   PetscCall(VecDot(user->workM, user->workM, f));
-  PetscCall(VecNorm(X, NORM_2, &f_reg));
-  PetscCall(TaoADMMGetRegularizerCoefficient(tao, &lambda));
+  if (user->reg == 1) {
+    PetscCall(VecNorm(X, NORM_1, &f_reg));
+  } else {
+    PetscCall(VecNorm(X, NORM_2, &f_reg));
+  }
+  PetscCall(PetscObjectTypeCompare((PetscObject)tao, TAOADMM, &is_admm));
+  if (is_admm) {
+    PetscCall(TaoADMMGetRegularizerCoefficient(tao, &lambda));
+  } else {
+    lambda = user->lambda;
+  }
   *f *= 0.5;
   *f += lambda * f_reg * f_reg;
   /* Gradient. ATAx-ATb + 2*lambda*x */
