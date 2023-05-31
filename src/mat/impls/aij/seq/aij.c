@@ -4638,9 +4638,10 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJ(Mat mat, PetscCount coo_n, PetscInt
 
   /* Sort by row */
   PetscCall(PetscSortIntWithIntCountArrayPair(coo_n, i, j, perm));
-  for (k = 0; k < coo_n; k++) {
+
+  /* Advance k to the first row with a non-negative index */
+  for (k = 0; k < coo_n; k++)
     if (i[k] >= 0) break;
-  } /* Advance k to the first row with a non-negative index */
   nneg = k;
   PetscCall(PetscMalloc1(coo_n - nneg + 1, &jmap)); /* +1 to make a CSR-like data structure. jmap[i] originally is the number of repeats for i-th nonzero */
   nnz = 0;                                          /* Total number of unique nonzeros to be counted */
@@ -4648,6 +4649,14 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJ(Mat mat, PetscCount coo_n, PetscInt
 
   PetscCall(PetscCalloc1(M + 1, &Ai));        /* CSR of A */
   PetscCall(PetscMalloc1(coo_n - nneg, &Aj)); /* We have at most coo_n-nneg unique nonzeros */
+
+  /* Support for HYPRE */
+  PetscBool   hypre;
+  const char *name;
+  PetscInt   *hypre_w = NULL;
+  PetscInt    hsize   = 0;
+  PetscCall(PetscObjectGetName((PetscObject)mat, &name));
+  PetscCall(PetscStrcmp("_internal_COO_mat_for_hypre", name, &hypre));
 
   /* In each row, sort by column, then unique column indices to get row length */
   Ai++;  /* Inc by 1 for convenience */
@@ -4657,7 +4666,25 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJ(Mat mat, PetscCount coo_n, PetscInt
     start = k; /* [start,end) indices for this row */
     while (k < coo_n && i[k] == row) k++;
     end = k;
-    PetscCall(PetscSortIntWithCountArray(end - start, j + start, perm + start));
+    /* hack for HYPRE */
+    if (hypre) {
+      PetscInt rsize = end - start;
+      if (hsize < rsize) {
+        PetscCall(PetscFree(hypre_w));
+        PetscCall(PetscMalloc1(rsize, &hypre_w));
+        hsize = rsize;
+      }
+      PetscCall(PetscArraycpy(hypre_w, j + start, rsize));
+      for (PetscInt r = 0; r < rsize; r++) {
+        if (hypre_w[r] == row) hypre_w[r] = -1; /* so that diagonal values will go first */
+      }
+      /* permutation array is for values only */
+      PetscCall(PetscSortIntWithCountArray(rsize, hypre_w, perm + start));
+      /* sort actual columns anyway because we need it for CSR */
+      PetscCall(PetscSortInt(rsize, j + start));
+    } else {
+      PetscCall(PetscSortIntWithCountArray(end - start, j + start, perm + start));
+    }
     /* Find number of unique col entries in this row */
     Aj[q]   = j[start]; /* Log the first nonzero in this row */
     jmap[q] = 1;        /* Number of repeats of this nozero entry */
@@ -4677,6 +4704,7 @@ PetscErrorCode MatSetPreallocationCOO_SeqAIJ(Mat mat, PetscCount coo_n, PetscInt
     }
     q++; /* Move to next row and thus next unique nonzero */
   }
+  PetscCall(PetscFree(hypre_w));
 
   Ai--; /* Back to the beginning of Ai[] */
   for (k = 0; k < M; k++) Ai[k + 1] += Ai[k];
