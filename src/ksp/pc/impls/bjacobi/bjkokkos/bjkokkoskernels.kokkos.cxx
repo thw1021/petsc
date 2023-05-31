@@ -214,7 +214,7 @@ PetscErrorCode PCApply_BJKOKKOSKERNELS(PC pc, const PetscScalar *glb_bdata, Pets
       "prefix sum", Kokkos::TeamPolicy<>(Nsolves / Nsolves_team, 1, 1), KOKKOS_LAMBDA(const team_member team) {
         const int graphID      = team.league_rank();
         rowOffsets(graphID, 0) = 0;
-        for (size_t i = 0; i < Nloc; ++i) rowOffsets(graphID, i + 1) += rowOffsets(graphID, i);
+        for (int i = 0; i < Nloc; ++i) rowOffsets(graphID, i + 1) += rowOffsets(graphID, i);
       });
     Kokkos::fence();
   }
