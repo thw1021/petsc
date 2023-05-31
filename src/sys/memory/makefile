@@ -2,7 +2,7 @@
 
 MANSEC  = Sys
 LIBBASE = libpetscsys
-DIRS    = cuda hip
+DIRS    = cuda hip nvshmem
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules.doc

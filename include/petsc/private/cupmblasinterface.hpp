@@ -4,6 +4,7 @@
 #if defined(__cplusplus)
   #include <petsc/private/cupminterface.hpp>
   #include <petsc/private/petscadvancedmacros.h>
+  #include <petsc/private/deviceimpl.h>
 
   #include <limits> // std::numeric_limits
 
@@ -442,6 +443,60 @@ struct BlasInterface : BlasInterfaceImpl<T> {
     PetscFunctionBegin;
     *y = static_cast<cupmBlasInt_t>(x);
     PetscCall(checkCupmBlasIntCast(x));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
+  static inline auto PetscCUPMBlasOpCast(char c) noexcept { return (c == 'c' || c == 'C') ? CUPMBLAS_OP_C : (c == 't' || c == 'T') ? CUPMBLAS_OP_T : CUPMBLAS_OP_N; }
+
+  static PetscErrorCode GEMM_Private(PetscDeviceContext dctx, PetscMemType scalar_type, char _trans_A, char _trans_B, PetscInt _m, PetscInt _n, PetscInt _k, const PetscScalar *alpha, const PetscScalar A[], PetscInt _ld_A, const PetscScalar B[], PetscInt _ld_B, const PetscScalar *beta, PetscScalar C[], PetscInt _ld_C) noexcept
+  {
+    cupmBlasInt_t    m, n, k, ld_A, ld_B, ld_C;
+    cupmBlasHandle_t handle;
+    PetscLogDouble   flops = 2.0 * _m * _n * _k;
+
+    PetscFunctionBegin;
+    PetscCall(PetscCUPMBlasIntCast(_m, &m));
+    PetscCall(PetscCUPMBlasIntCast(_n, &n));
+    PetscCall(PetscCUPMBlasIntCast(_k, &k));
+    if (!m || !n || !k) PetscFunctionReturn(PETSC_SUCCESS);
+    PetscCall(PetscCUPMBlasIntCast(_ld_A, &ld_A));
+    PetscCall(PetscCUPMBlasIntCast(_ld_B, &ld_B));
+    PetscCall(PetscCUPMBlasIntCast(_ld_C, &ld_C));
+    PetscCall(PetscDeviceContextGetBLASHandle_Internal(dctx, &handle));
+    PetscCallCUPMBLAS(cupmBlasSetPointerMode(handle, PetscMemTypeDevice(scalar_type) ? CUPMBLAS_POINTER_MODE_DEVICE : CUPMBLAS_POINTER_MODE_HOST));
+
+    auto trans_A = PetscCUPMBlasOpCast(_trans_A);
+    auto trans_B = PetscCUPMBlasOpCast(_trans_B);
+
+    PetscCall(PetscLogGpuTimeBegin());
+    PetscCallCUPMBLAS(cupmBlasXgemm(handle, trans_A, trans_B, m, n, k, alpha, A, ld_A, B, ld_B, beta, C, ld_C));
+    PetscCall(PetscLogGpuTimeEnd());
+    PetscCall(PetscLogGpuFlops(flops));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
+  static PetscErrorCode GEMV_Private(PetscDeviceContext dctx, PetscMemType scalar_type, char _trans, PetscInt _m, PetscInt _n, const PetscScalar *alpha, const PetscScalar A[], PetscInt _ld_A, const PetscScalar x[], PetscInt _inc_x, const PetscScalar *beta, PetscScalar y[], PetscInt _inc_y) noexcept
+  {
+    cupmBlasInt_t    m, n, ld_A, inc_x, inc_y;
+    cupmBlasHandle_t handle;
+    PetscLogDouble   flops = 2.0 * _m * _n;
+
+    PetscFunctionBegin;
+    PetscCall(PetscCUPMBlasIntCast(_m, &m));
+    PetscCall(PetscCUPMBlasIntCast(_n, &n));
+    if (!m || !n) PetscFunctionReturn(PETSC_SUCCESS);
+    PetscCall(PetscCUPMBlasIntCast(_ld_A, &ld_A));
+    PetscCall(PetscCUPMBlasIntCast(_inc_x, &inc_x));
+    PetscCall(PetscCUPMBlasIntCast(_inc_y, &inc_y));
+    PetscCall(PetscDeviceContextGetBLASHandle_Internal(dctx, &handle));
+    PetscCallCUPMBLAS(cupmBlasSetPointerMode(handle, PetscMemTypeDevice(scalar_type) ? CUPMBLAS_POINTER_MODE_DEVICE : CUPMBLAS_POINTER_MODE_HOST));
+
+    auto trans = PetscCUPMBlasOpCast(_trans);
+
+    PetscCall(PetscLogGpuTimeBegin());
+    PetscCallCUPMBLAS(cupmBlasXgemv(handle, trans, m, n, alpha, A, ld_A, x, inc_x, beta, y, inc_y));
+    PetscCall(PetscLogGpuTimeEnd());
+    PetscCall(PetscLogGpuFlops(flops));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
 };

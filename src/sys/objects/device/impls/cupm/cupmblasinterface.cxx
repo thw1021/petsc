@@ -45,6 +45,30 @@ PETSC_CUPMBLAS_DEFINE_STATIC_VARIABLE_MATCHING_SCHEME(FILL_MODE_UPPER)
 PETSC_CUPMBLAS_DEFINE_STATIC_VARIABLE_MATCHING_SCHEME(SIDE_LEFT)
 PETSC_CUPMBLAS_DEFINE_STATIC_VARIABLE_MATCHING_SCHEME(DIAG_NON_UNIT)
 
+#define PETSC_CUPMBLAS_DEFINE_DEVICE_BLAS_FUNC_SINGLE(DEV, SUBR, args, args_called) \
+  PETSC_INTERN PetscErrorCode PetscDevice##SUBR##_Private_##DEV args \
+  { \
+    PetscFunctionBegin; \
+    PetscCall(BlasInterface<DeviceType ::DEV>::SUBR##_Private args_called); \
+    PetscFunctionReturn(PETSC_SUCCESS); \
+  }
+
+#if PetscDefined(HAVE_CUDA)
+  #define PETSC_CUPMBLAS_DEFINE_DEVICE_BLAS_FUNC_CUDA(SUBR, args, args_called) PETSC_CUPMBLAS_DEFINE_DEVICE_BLAS_FUNC_SINGLE(CUDA, SUBR, args, args_called)
+#else
+  #define PETSC_CUPMBLAS_DEFINE_DEVICE_BLAS_FUNC_CUDA(SUBR, args, args_called)
+#endif
+
+#if PetscDefined(HAVE_HIP)
+  #define PETSC_CUPMBLAS_DEFINE_DEVICE_BLAS_FUNC_HIP(SUBR, args, args_called) PETSC_CUPMBLAS_DEFINE_DEVICE_BLAS_FUNC_SINGLE(HIP, SUBR, args, args_called)
+#else
+  #define PETSC_CUPMBLAS_DEFINE_DEVICE_BLAS_FUNC_HIP(SUBR, args, args_called)
+#endif
+
+#define PETSC_CUPMBLAS_DEFINE_DEVICE_BLAS_FUNC(SUBR, args, args_called) \
+  PETSC_CUPMBLAS_DEFINE_DEVICE_BLAS_FUNC_CUDA(SUBR, args, args_called) \
+  PETSC_CUPMBLAS_DEFINE_DEVICE_BLAS_FUNC_HIP(SUBR, args, args_called)
+
 #if PetscDefined(HAVE_CUDA)
 template struct BlasInterface<DeviceType::CUDA>;
 #endif
@@ -52,6 +76,9 @@ template struct BlasInterface<DeviceType::CUDA>;
 #if PetscDefined(HAVE_HIP)
 template struct BlasInterface<DeviceType::HIP>;
 #endif
+
+PETSC_CUPMBLAS_DEFINE_DEVICE_BLAS_FUNC(GEMM, (PetscDeviceContext dctx, PetscMemType memtype_scalar, char trans_A, char trans_B, PetscInt m, PetscInt n, PetscInt k, const PetscScalar *alpha, const PetscScalar A[], PetscInt lda, const PetscScalar B[], PetscInt ldb, const PetscScalar *beta, PetscScalar C[], PetscInt ldc), (dctx, memtype_scalar, trans_A, trans_B, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc))
+PETSC_CUPMBLAS_DEFINE_DEVICE_BLAS_FUNC(GEMV, (PetscDeviceContext dctx, PetscMemType memtype_scalar, char trans, PetscInt m, PetscInt n, const PetscScalar *alpha, const PetscScalar A[], PetscInt lda, const PetscScalar x[], PetscInt inc_x, const PetscScalar *beta, PetscScalar y[], PetscInt inc_y), (dctx, memtype_scalar, trans, m, n, alpha, A, lda, x, inc_x, beta, y, inc_y))
 
 } // namespace impl
 

@@ -215,4 +215,6 @@
 #define PetscFunctionList PetscFortranAddr
 
 #define PetscInfoCommFlag PetscEnum
+
+#define PetscMemType PetscEnum
 #endif

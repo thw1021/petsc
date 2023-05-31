@@ -1028,6 +1028,7 @@ PETSC_EXTERN PetscErrorCode PetscMallocResetHIPHost(void);
 */
 PETSC_EXTERN PetscErrorCode PetscMallocDump(FILE *);
 PETSC_EXTERN PetscErrorCode PetscMallocView(FILE *);
+PETSC_EXTERN PetscErrorCode PetscMallocDebugGetCount(PetscInt *);
 PETSC_EXTERN PetscErrorCode PetscMallocGetCurrentUsage(PetscLogDouble *);
 PETSC_EXTERN PetscErrorCode PetscMallocGetMaximumUsage(PetscLogDouble *);
 PETSC_EXTERN PetscErrorCode PetscMallocPushMaximumUsage(int);
