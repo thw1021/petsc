@@ -1,26 +1,2 @@
-[1] Linear solve converged due to CONVERGED_RTOL_NORMAL iterations 12, block 0 (max)
-[3] Linear solve converged due to CONVERGED_RTOL_NORMAL iterations 10, block 0 (max)
-[1] Linear solve converged due to CONVERGED_RTOL_NORMAL iterations 10, block 2 (max)
-[0] Linear solve converged due to CONVERGED_RTOL_NORMAL iterations 9, block 0 (max)
-[1] Linear solve converged due to CONVERGED_RTOL_NORMAL iterations 9, block 0 (max)
-[0] Linear solve converged due to CONVERGED_RTOL_NORMAL iterations 9, block 0 (max)
-[0] Linear solve converged due to CONVERGED_RTOL_NORMAL iterations 10, block 2 (max)
-[1] Linear solve converged due to CONVERGED_RTOL_NORMAL iterations 10, block 2 (max)
-[1] Linear solve converged due to CONVERGED_RTOL_NORMAL iterations 9, block 2 (max)
-[2] Linear solve converged due to CONVERGED_RTOL_NORMAL iterations 10, block 1 (max)
-[1] Linear solve converged due to CONVERGED_RTOL_NORMAL iterations 9, block 0 (max)
-[0] Linear solve converged due to CONVERGED_RTOL_NORMAL iterations 9, block 1 (max)
-[1] Linear solve converged due to CONVERGED_RTOL_NORMAL iterations 9, block 0 (max)
-[0] Linear solve converged due to CONVERGED_RTOL_NORMAL iterations 9, block 2 (max)
-[2] Linear solve converged due to CONVERGED_RTOL_NORMAL iterations 10, block 0 (max)
-[0] Linear solve converged due to CONVERGED_RTOL_NORMAL iterations 9, block 2 (max)
-[1] Linear solve converged due to CONVERGED_RTOL_NORMAL iterations 9, block 0 (max)
-[0] Linear solve converged due to CONVERGED_RTOL_NORMAL iterations 9, block 1 (max)
-[0] Linear solve converged due to CONVERGED_RTOL_NORMAL iterations 9, block 0 (max)
-[1] Linear solve converged due to CONVERGED_RTOL_NORMAL iterations 9, block 0 (max)
-[2] Linear solve converged due to CONVERGED_RTOL_NORMAL iterations 9, block 0 (max)
-[0] Linear solve converged due to CONVERGED_RTOL_NORMAL iterations 9, block 1 (max)
-[2] Linear solve converged due to CONVERGED_RTOL_NORMAL iterations 9, block 1 (max)
-[2] Linear solve converged due to CONVERGED_RTOL_NORMAL iterations 10, block 1 (max)
-Linear solve converged due to CONVERGED_RTOL iterations 24
-Norm of error 0.00181297 iterations 24
+Linear solve converged due to CONVERGED_RTOL iterations 39
+Norm of error 6.86011e-05 iterations 39
