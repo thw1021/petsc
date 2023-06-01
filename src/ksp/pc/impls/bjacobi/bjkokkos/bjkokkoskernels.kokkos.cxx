@@ -1,6 +1,6 @@
 #include <petsc/private/pcbjkokkosimpl.h>
 
-#ifndef PETSC_USE_COMPLEX
+#ifndef PETSC_HAVE_KOKKOS_KERNELS_BATCH
   #include <fstream>
 
   #include "Kokkos_Timer.hpp"
@@ -152,11 +152,11 @@ struct Functor_TestBatchedTeamVectorGMRES {
   }
 };
 
-PetscErrorCode PCApply_BJKOKKOSKERNELS(PC pc, const PetscScalar *glb_bdata, PetscScalar *glb_xdata, const PetscInt *glb_Aai, const PetscInt *glb_Aaj, const PetscScalar *glb_Aaa, const PetscInt team_size, MatInfo info, const PetscInt batch_sz, PCFailedReason *pcreason)
+PETSC_INTERN PetscErrorCode PCApply_BJKOKKOSKERNELS(PC pc, const PetscScalar *glb_bdata, PetscScalar *glb_xdata, const PetscInt *glb_Aai, const PetscInt *glb_Aaj, const PetscScalar *glb_Aaa, const PetscInt team_size, MatInfo info, const PetscInt batch_sz, PCFailedReason *pcreason)
 {
   PC_PCBJKOKKOS     *jac   = (PC_PCBJKOKKOS *)pc->data;
   Mat                A     = pc->pmat;
-  PetscInt           maxit = jac->ksp->max_it, nBlk = jac->nBlocks;
+  const PetscInt     maxit = jac->ksp->max_it, nBlk = jac->nBlocks;
   const int          Nsolves      = nBlk;
   int                Nsolves_team = jac->nsolves_team, fill_idx = 0;
   int                Nloc           = jac->const_block_size;       // same grids
@@ -191,7 +191,7 @@ PetscErrorCode PCApply_BJKOKKOSKERNELS(PC pc, const PetscScalar *glb_bdata, Pets
   AMatrixValueView &batch_values = *jac->batch_values;
 
   Kokkos::deep_copy(batch_x, 0.);
-  PetscCall(PetscInfo(pc, "\tjac->n = %" PetscInt_FMT ", Nloc = %d, Nsolves = %d, nnz = %d, Nsolves_team = %d, league size = %d, maxit = %" PetscInt_FMT "\n", jac->n, Nloc, Nsolves, nnz, Nsolves_team, Nsolves / Nsolves_team, maxit));
+  PetscCall(PetscInfo(pc, "\tjac->n = %d, Nloc = %d, Nsolves = %d, nnz = %d, Nsolves_team = %d, league size = %d, maxit = %d\n", (int)jac->n, Nloc, Nsolves, nnz, Nsolves_team, Nsolves / Nsolves_team, (int)maxit));
   Kokkos::parallel_for(
     "rowOffsets+map", Kokkos::TeamPolicy<>(Nsolves, team_size, PCBJKOKKOS_VEC_SIZE), KOKKOS_LAMBDA(const team_member team) {
       const int blkID = team.league_rank(), start = d_bid_eqOffset[blkID], end = d_bid_eqOffset[blkID + 1];
