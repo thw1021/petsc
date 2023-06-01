@@ -1,3 +1,4 @@
+#define PETSC_INSTANTIATE_VECSEQ_CUPM_NAME HIP
 #include "../vecseqcupm.hpp" /*I <petscvec.h> I*/
 
 using namespace Petsc::vec::cupm;
