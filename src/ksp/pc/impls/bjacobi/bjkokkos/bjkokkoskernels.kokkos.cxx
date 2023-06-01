@@ -1,6 +1,6 @@
 #include <petsc/private/pcbjkokkosimpl.h>
 
-#ifndef PETSC_HAVE_KOKKOS_KERNELS_BATCH
+#if defined(PETSC_HAVE_KOKKOS_KERNELS_BATCH)
   #include <fstream>
 
   #include "Kokkos_Timer.hpp"
