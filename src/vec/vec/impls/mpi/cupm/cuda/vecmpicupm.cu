@@ -1,3 +1,4 @@
+#define PETSC_INSTANTIATE_VECMPI_CUPM_NAME CUDA
 #include "../vecmpicupm.hpp" /*I <petscvec.h> I*/
 
 using namespace Petsc::vec::cupm;

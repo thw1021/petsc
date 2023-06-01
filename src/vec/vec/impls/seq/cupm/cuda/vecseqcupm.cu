@@ -1,6 +1,7 @@
+#define PETSC_INSTANTIATE_VECSEQ_CUPM_NAME CUDA
 #include "../vecseqcupm.hpp" /*I <petscvec.h> I*/
 
-using namespace Petsc::vec::cupm;
+using namespace ::Petsc::vec::cupm;
 using ::Petsc::device::cupm::DeviceType;
 
 static constexpr auto VecSeq_CUDA = impl::VecSeq_CUPM<DeviceType::CUDA>{};
