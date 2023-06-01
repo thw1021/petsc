@@ -59,6 +59,6 @@ typedef struct {
 } PC_PCBJKOKKOS;
 
 typedef Kokkos::TeamPolicy<>::member_type team_member;
-#ifndef PETSC_HAVE_KOKKOS_KERNELS_BATCH
+#if defined(PETSC_HAVE_KOKKOS_KERNELS_BATCH)
 PETSC_INTERN PetscErrorCode PCApply_BJKOKKOSKERNELS(PC, const PetscScalar *, PetscScalar *, const PetscInt *glb_Aai, const PetscInt *glb_Aaj, const PetscScalar *glb_Aaa, const PetscInt, MatInfo, const PetscInt, PCFailedReason *);
 #endif
