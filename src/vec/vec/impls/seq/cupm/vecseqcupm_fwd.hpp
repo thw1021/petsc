@@ -149,11 +149,6 @@ namespace do_not_use
 // appear see this. Likely because the function using it is in a template.
 //
 // This warning appeared in clang-11, and still persists until clang-15 (21/02/2023)
-inline void silence_warning_function_sum_kernel_is_not_needed_and_will_not_be_emitted()
-{
-  (void)sum_kernel;
-}
-
 inline void silence_warning_function_add_coo_values_is_not_needed_and_will_not_be_emitted()
 {
   (void)add_coo_values;

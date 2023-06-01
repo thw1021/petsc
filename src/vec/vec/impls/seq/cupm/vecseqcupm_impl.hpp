@@ -777,6 +777,18 @@ PETSC_KERNEL_DECL void sum_kernel(const PetscInt size, PetscScalar *PETSC_RESTRI
 
 } // namespace
 
+#if PetscDefined(USING_HCC)
+namespace do_not_use
+{
+
+inline void silence_warning_function_sum_kernel_is_not_needed_and_will_not_be_emitted()
+{
+  (void)sum_kernel;
+}
+
+} // namespace do_not_use
+#endif
+
 } // namespace kernels
 
 template <device::cupm::DeviceType T>
