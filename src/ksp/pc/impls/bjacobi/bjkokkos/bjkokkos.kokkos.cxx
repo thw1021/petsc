@@ -169,12 +169,12 @@ KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_TFQMR(const team_member team, cons
 #endif
   if (dp < atol) {
     metad->reason = KSP_CONVERGED_ATOL_NORMAL;
-    it            = -1;
+    it            = 0;
     goto done;
   }
   if (0 == maxit) {
     metad->reason = KSP_CONVERGED_ITS;
-    it            = -1;
+    it            = 0;
     goto done;
   }
 
@@ -318,7 +318,7 @@ done:
     int rowa    = ic[rowb];
     glb_x[rowa] = XX[rowb - start];
   });
-  metad->its = it + 1;
+  metad->its = it;
   if (1) {
     int nnz;
     parallel_reduce(
@@ -406,12 +406,12 @@ KOKKOS_INLINE_FUNCTION PetscErrorCode BJSolve_BICG(const team_member team, const
 #endif
   if (dp < atol) {
     metad->reason = KSP_CONVERGED_ATOL_NORMAL;
-    it            = -1;
+    it            = 0;
     goto done;
   }
   if (0 == maxit) {
     metad->reason = KSP_CONVERGED_ITS;
-    it            = -1;
+    it            = 0;
     goto done;
   }
 
@@ -519,7 +519,7 @@ done:
     int rowa    = ic[rowb];
     glb_x[rowa] = XX[rowb - start];
   });
-  metad->its = it + 1;
+  metad->its = it;
   if (1) {
     int nnz;
     parallel_reduce(
@@ -635,7 +635,9 @@ static PetscErrorCode PCApply_BJKOKKOS(PC pc, Vec bin, Vec xout)
       nvtxRangePushA("batch-kokkos-solve");
 #endif
       Kokkos::View<PetscScalar *, Kokkos::DefaultExecutionSpace> d_work_vecs_k("workvectors", global_buff_words); // global work vectors
+#if PCBJKOKKOS_VERBOSE_LEVEL > 1
       PetscCall(PetscInfo(pc, "\tn = %d. %d shared bytes/team, %d global mem bytes, rtol=%e, num blocks %d, team_size=%d, %d vector threads, %d shared vectors, %d global vectors\n", (int)jac->n, scr_bytes_team_shared, global_buff_words, rtol, (int)nBlk, (int)team_size, PCBJKOKKOS_VEC_SIZE, nShareVec, nGlobBVec));
+#endif
       PetscScalar *d_work_vecs = d_work_vecs_k.data();
       Kokkos::parallel_for(
         "Solve", Kokkos::TeamPolicy<Kokkos::LaunchBounds<256, 4>>(nBlk, team_size, PCBJKOKKOS_VEC_SIZE).set_scratch_size(PCBJKOKKOS_SHARED_LEVEL, Kokkos::PerTeam(scr_bytes_team_shared)), KOKKOS_LAMBDA(const team_member team) {
@@ -956,7 +958,7 @@ static PetscErrorCode PCSetUp_BJKOKKOS(PC pc)
           for (PetscInt jj = 0; jj < jac->dm_Nf[ii]; jj++, idx++) {
             h_block_offsets[idx + 1] = h_block_offsets[idx] + nblk;
 #if PCBJKOKKOS_VERBOSE_LEVEL <= 2
-            if (idx == 0) PetscCall(PetscInfo(pc, "\t%" PetscInt_FMT ") Add block with %" PetscInt_FMT " equations of %" PetscInt_FMT "\n", idx + 1, nblk, jac->nBlocks));
+            if (idx == 0) PetscCall(PetscInfo(pc, "Add first of %" PetscInt_FMT " blocks with %" PetscInt_FMT " equations\n", jac->nBlocks, nblk));
 #else
             PetscCall(PetscInfo(pc, "\t%" PetscInt_FMT ") Add block with %" PetscInt_FMT " equations of %" PetscInt_FMT "\n", idx + 1, nblk, jac->nBlocks));
 #endif
