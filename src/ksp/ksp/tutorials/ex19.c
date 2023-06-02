@@ -16,7 +16,7 @@ int main(int argc, char **args)
   Vec         x, b, u;        /* approx solution, RHS, exact solution */
   Mat         A, Pmat, Aperm; /* linear system matrix */
   KSP         ksp;            /* linear solver context */
-  PetscReal   norm;           /* norm of solution error */
+  PetscReal   norm, norm0;    /* norm of solution error */
   PetscInt    i, j, Ii, J, Istart, Iend, n = 7, m = 8, its, nblocks = 2;
   PetscBool   flg;
   PetscScalar v;
@@ -40,6 +40,12 @@ int main(int argc, char **args)
   PetscCall(MatSetFromOptions(A));
   PetscCall(MatSeqAIJSetPreallocation(A, 5, NULL));
   PetscCall(MatMPIAIJSetPreallocation(A, 5, NULL, 3, NULL));
+  /* need to create manualy to filter completely */
+  PetscCall(MatCreate(PETSC_COMM_WORLD, &Pmat));
+  PetscCall(MatSetSizes(Pmat, PETSC_DECIDE, PETSC_DECIDE, n * m, n * m));
+  PetscCall(MatSetFromOptions(Pmat));
+  PetscCall(MatSeqAIJSetPreallocation(Pmat, 5, NULL));
+  PetscCall(MatMPIAIJSetPreallocation(Pmat, 5, NULL, 3, NULL));
   /*
      Currently, all PETSc parallel matrix formats are partitioned by
      contiguous chunks of rows across the processors.  Determine which
@@ -94,7 +100,6 @@ int main(int argc, char **args)
   } else {
     PetscCall(MatMPIAIJGetSeqAIJ(A, &AA, NULL, NULL));
   }
-  PetscCall(MatDuplicate(A, MAT_DO_NOT_COPY_VALUES, &Pmat));
   for (PetscInt bid = 0, lid0 = 0; bid < nblocks; bid++) {
     PetscInt nn, ncol, gid_cols[5];
     IS       isloc;
@@ -107,7 +112,6 @@ int main(int argc, char **args)
       const PetscInt    *cols;
       PetscCall(MatGetRow(Aperm, row, &ncol, &cols, &vals));
       for (j = 0; j < ncol; j++) gid_cols[j] = Istart + lid0 + cols[j];
-      //PetscCall(PetscPrintf(PETSC_COMM_SELF, "[%d] row %d ncol = %d [%d %d %d] \n", rank, row_gid, ncol, gid_cols[0], gid_cols[1], gid_cols[2]));
       PetscCall(MatSetValues(Pmat, 1, &row_gid, ncol, gid_cols, vals, INSERT_VALUES));
       PetscCall(MatRestoreRow(Aperm, row, &ncol, &cols, &vals));
     }
@@ -169,11 +173,12 @@ int main(int argc, char **args)
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   PetscCall(VecAXPY(x, -1.0, u));
   PetscCall(VecNorm(x, NORM_2, &norm));
+  PetscCall(VecNorm(b, NORM_2, &norm0));
   PetscCall(KSPGetIterationNumber(ksp, &its));
   /*
      Print convergence information.
   */
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Norm of error %g iterations %" PetscInt_FMT "\n", (double)norm, its));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Relative norm of error %g iterations %" PetscInt_FMT "\n", (double)norm/norm0, its));
   /*
     cleanup
   */
@@ -221,7 +226,6 @@ int main(int argc, char **args)
   test:
     nsize: 1
     suffix: serial_batch
-    output_file: output/ex19_0.out
-    args: -ksp_converged_reason -ksp_norm_type unpreconditioned -ksp_rtol 1e-4 -m 37 -n 23 -num_local_blocks 16 -ksp_type cg -pc_type bjkokkos -pc_bjkokkos_ksp_max_it 60 -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_pc_type jacobi -pc_bjkokkos_ksp_rtol 1e-3 -mat_type aijkokkos
+    args: -ksp_monitor -ksp_converged_reason -ksp_norm_type unpreconditioned -ksp_rtol 1e-4 -m 37 -n 23 -num_local_blocks 16 -ksp_type cg -pc_type bjkokkos -pc_bjkokkos_ksp_max_it 60 -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_pc_type jacobi -pc_bjkokkos_ksp_rtol 1e-6 -mat_type aijkokkos -pc_bjkokkos_ksp_converged_reason
 
  TEST*/
