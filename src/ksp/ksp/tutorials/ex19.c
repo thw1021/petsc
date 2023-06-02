@@ -77,16 +77,23 @@ int main(int argc, char **args)
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 Setup ASM solver and batched KSP solver data
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  PetscCall(PCASMCreateSubdomains(A, nblocks, &loc_blocks));
-  IS perm;
-  PetscCall(ISConcatenate(PETSC_COMM_WORLD, nblocks, loc_blocks, &perm));
-  PetscCall(MatCreateSubMatrix(A, perm, perm, MAT_INITIAL_MATRIX, &Aperm));
-  PetscCall(MatDestroy(&A));
-  PetscCall(ISDestroy(&perm));
-  A = Aperm;
-  Mat AA;
-  PetscCall(MatMPIAIJGetSeqAIJ(A, &AA, NULL, NULL));
+  {
+    IS perm;
+    PetscCall(PCASMCreateSubdomains(A, nblocks, &loc_blocks));
+    PetscCall(ISConcatenate(PETSC_COMM_WORLD, nblocks, loc_blocks, &perm));
+    PetscCall(MatCreateSubMatrix(A, perm, perm, MAT_INITIAL_MATRIX, &Aperm));
+    PetscCall(MatDestroy(&A));
+    PetscCall(ISDestroy(&perm));
+    A = Aperm;
+  }
   /* make explicit block matrix for batch solver */
+  Mat AA;
+  PetscCall(PetscObjectBaseTypeCompare((PetscObject)A, MATMPIAIJ, &flg));
+  if (!flg) {
+    AA = A;
+  } else {
+    PetscCall(MatMPIAIJGetSeqAIJ(A, &AA, NULL, NULL));
+  }
   PetscCall(MatDuplicate(A, MAT_DO_NOT_COPY_VALUES, &Pmat));
   for (PetscInt bid = 0, lid0 = 0; bid < nblocks; bid++) {
     PetscInt nn, ncol, gid_cols[5];
@@ -210,5 +217,11 @@ int main(int argc, char **args)
     nsize: 4
     suffix: no_metis_batch
     args: -ksp_converged_reason -ksp_norm_type unpreconditioned -ksp_rtol 1e-6 -m 37 -n 23 -num_local_blocks 4 -mat_partitioning_type current -ksp_type cg -pc_type bjkokkos -pc_bjkokkos_ksp_max_it 60 -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_pc_type jacobi -pc_bjkokkos_ksp_rtol 1e-3 -mat_type aijkokkos
+
+  test:
+    nsize: 1
+    suffix: serial_batch
+    output_file: output/ex19_0.out
+    args: -ksp_converged_reason -ksp_norm_type unpreconditioned -ksp_rtol 1e-4 -m 37 -n 23 -num_local_blocks 16 -ksp_type cg -pc_type bjkokkos -pc_bjkokkos_ksp_max_it 60 -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_pc_type jacobi -pc_bjkokkos_ksp_rtol 1e-3 -mat_type aijkokkos
 
  TEST*/
