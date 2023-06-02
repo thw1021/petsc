@@ -13,10 +13,10 @@ Input parameters include:\n\
 
 int main(int argc, char **args)
 {
-  Vec         x, b, u;              /* approx solution, RHS, exact solution */
+  Vec         x, b, u;       /* approx solution, RHS, exact solution */
   Mat         A, Pmat, Aseq; /* linear system matrix */
-  KSP         ksp;                  /* linear solver context */
-  PetscReal   norm, norm0;          /* norm of solution error */
+  KSP         ksp;           /* linear solver context */
+  PetscReal   norm, norm0;   /* norm of solution error */
   PetscInt    i, j, Ii, J, Istart, Iend, n = 7, m = 8, its, nblocks = 2;
   PetscBool   flg;
   PetscScalar v;
@@ -94,7 +94,7 @@ int main(int argc, char **args)
   for (PetscInt bid = 0, lid0 = 0; bid < nblocks; bid++) {
     PetscInt nn, ncol, gid_cols[5];
     IS       isloc;
-    Mat matblock;
+    Mat      matblock;
     PetscCall(ISGetSize(loc_blocks[bid], &nn)); // size only
     PetscCall(ISCreateStride(PETSC_COMM_SELF, nn, lid0, 1, &isloc));
     PetscCall(MatCreateSubMatrix(Aseq, isloc, isloc, MAT_INITIAL_MATRIX, &matblock));
