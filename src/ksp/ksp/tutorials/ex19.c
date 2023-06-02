@@ -14,7 +14,7 @@ Input parameters include:\n\
 int main(int argc, char **args)
 {
   Vec         x, b, u;              /* approx solution, RHS, exact solution */
-  Mat         A, Pmat, Aperm, Aseq; /* linear system matrix */
+  Mat         A, Pmat, Aseq; /* linear system matrix */
   KSP         ksp;                  /* linear solver context */
   PetscReal   norm, norm0;          /* norm of solution error */
   PetscInt    i, j, Ii, J, Istart, Iend, n = 7, m = 8, its, nblocks = 2;
@@ -40,12 +40,6 @@ int main(int argc, char **args)
   PetscCall(MatSetFromOptions(A));
   PetscCall(MatSeqAIJSetPreallocation(A, 5, NULL));
   PetscCall(MatMPIAIJSetPreallocation(A, 5, NULL, 3, NULL));
-  /* need to create manualy to filter completely */
-  PetscCall(MatCreate(PETSC_COMM_WORLD, &Pmat));
-  PetscCall(MatSetSizes(Pmat, PETSC_DECIDE, PETSC_DECIDE, n * m, n * m));
-  PetscCall(MatSetFromOptions(Pmat));
-  PetscCall(MatSeqAIJSetPreallocation(Pmat, 5, NULL));
-  PetscCall(MatMPIAIJSetPreallocation(Pmat, 5, NULL, 3, NULL));
   /*
      Currently, all PETSc parallel matrix formats are partitioned by
      contiguous chunks of rows across the processors.  Determine which
@@ -80,18 +74,15 @@ int main(int argc, char **args)
   }
   PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
+  /* need to create manualy to filter completely */
+  PetscCall(MatCreate(PETSC_COMM_WORLD, &Pmat));
+  PetscCall(MatSetSizes(Pmat, PETSC_DECIDE, PETSC_DECIDE, n * m, n * m));
+  PetscCall(MatSetFromOptions(Pmat));
+  PetscCall(MatSeqAIJSetPreallocation(Pmat, 5, NULL));
+  PetscCall(MatMPIAIJSetPreallocation(Pmat, 5, NULL, 3, NULL));
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 Setup ASM solver and batched KSP solver data
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  {
-    IS perm;
-    PetscCall(PCASMCreateSubdomains(A, nblocks, &loc_blocks));
-    PetscCall(ISConcatenate(PETSC_COMM_WORLD, nblocks, loc_blocks, &perm));
-    PetscCall(MatCreateSubMatrix(A, perm, perm, MAT_INITIAL_MATRIX, &Aperm));
-    PetscCall(MatDestroy(&A));
-    PetscCall(ISDestroy(&perm));
-    A = Aperm;
-  }
   /* make explicit block matrix for batch solver */
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)A, MATMPIAIJ, &flg));
   if (!flg) {
@@ -99,22 +90,24 @@ int main(int argc, char **args)
   } else {
     PetscCall(MatMPIAIJGetSeqAIJ(A, &Aseq, NULL, NULL));
   }
+  PetscCall(PCASMCreateSubdomains(A, nblocks, &loc_blocks));
   for (PetscInt bid = 0, lid0 = 0; bid < nblocks; bid++) {
     PetscInt nn, ncol, gid_cols[5];
     IS       isloc;
+    Mat matblock;
     PetscCall(ISGetSize(loc_blocks[bid], &nn)); // size only
     PetscCall(ISCreateStride(PETSC_COMM_SELF, nn, lid0, 1, &isloc));
-    PetscCall(MatCreateSubMatrix(Aseq, isloc, isloc, MAT_INITIAL_MATRIX, &Aperm)); // solver block. copy into global Pmat
+    PetscCall(MatCreateSubMatrix(Aseq, isloc, isloc, MAT_INITIAL_MATRIX, &matblock));
     PetscCall(ISDestroy(&isloc));
     for (int row = 0, row_gid = Istart + lid0; row < nn; row++, row_gid++) {
       const PetscScalar *vals;
       const PetscInt    *cols;
-      PetscCall(MatGetRow(Aperm, row, &ncol, &cols, &vals));
+      PetscCall(MatGetRow(matblock, row, &ncol, &cols, &vals));
       for (j = 0; j < ncol; j++) gid_cols[j] = Istart + lid0 + cols[j];
       PetscCall(MatSetValues(Pmat, 1, &row_gid, ncol, gid_cols, vals, INSERT_VALUES));
-      PetscCall(MatRestoreRow(Aperm, row, &ncol, &cols, &vals));
+      PetscCall(MatRestoreRow(matblock, row, &ncol, &cols, &vals));
     }
-    PetscCall(MatDestroy(&Aperm));
+    PetscCall(MatDestroy(&matblock));
     lid0 += nn; // start of next block
   }
   PetscCall(MatAssemblyBegin(Pmat, MAT_FINAL_ASSEMBLY));
