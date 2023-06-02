@@ -178,7 +178,7 @@ int main(int argc, char **args)
   /*
      Print convergence information.
   */
-  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Relative norm of error %g iterations %" PetscInt_FMT "\n", (double)norm/norm0, its));
+  PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Relative norm of error %g iterations %" PetscInt_FMT "\n", (double)norm / norm0, its));
   /*
     cleanup
   */
