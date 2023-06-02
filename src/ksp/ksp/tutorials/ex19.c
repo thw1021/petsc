@@ -13,10 +13,10 @@ Input parameters include:\n\
 
 int main(int argc, char **args)
 {
-  Vec         x, b, u;        /* approx solution, RHS, exact solution */
-  Mat         A, Pmat, Aperm; /* linear system matrix */
-  KSP         ksp;            /* linear solver context */
-  PetscReal   norm, norm0;    /* norm of solution error */
+  Vec         x, b, u;              /* approx solution, RHS, exact solution */
+  Mat         A, Pmat, Aperm, Aseq; /* linear system matrix */
+  KSP         ksp;                  /* linear solver context */
+  PetscReal   norm, norm0;          /* norm of solution error */
   PetscInt    i, j, Ii, J, Istart, Iend, n = 7, m = 8, its, nblocks = 2;
   PetscBool   flg;
   PetscScalar v;
@@ -93,19 +93,18 @@ int main(int argc, char **args)
     A = Aperm;
   }
   /* make explicit block matrix for batch solver */
-  Mat AA;
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)A, MATMPIAIJ, &flg));
   if (!flg) {
-    AA = A;
+    Aseq = A;
   } else {
-    PetscCall(MatMPIAIJGetSeqAIJ(A, &AA, NULL, NULL));
+    PetscCall(MatMPIAIJGetSeqAIJ(A, &Aseq, NULL, NULL));
   }
   for (PetscInt bid = 0, lid0 = 0; bid < nblocks; bid++) {
     PetscInt nn, ncol, gid_cols[5];
     IS       isloc;
     PetscCall(ISGetSize(loc_blocks[bid], &nn)); // size only
     PetscCall(ISCreateStride(PETSC_COMM_SELF, nn, lid0, 1, &isloc));
-    PetscCall(MatCreateSubMatrix(AA, isloc, isloc, MAT_INITIAL_MATRIX, &Aperm)); // solver block. copy into global Pmat
+    PetscCall(MatCreateSubMatrix(Aseq, isloc, isloc, MAT_INITIAL_MATRIX, &Aperm)); // solver block. copy into global Pmat
     PetscCall(ISDestroy(&isloc));
     for (int row = 0, row_gid = Istart + lid0; row < nn; row++, row_gid++) {
       const PetscScalar *vals;
