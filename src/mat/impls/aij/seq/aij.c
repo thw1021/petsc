@@ -5164,7 +5164,6 @@ PetscErrorCode MatCreateSeqAIJWithArrays(MPI_Comm comm, PetscInt m, PetscInt n, 
     if (PetscDefined(USE_DEBUG)) {
       PetscCheck(i[ii + 1] - i[ii] >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Negative row length in i (row indices) row = %" PetscInt_FMT " length = %" PetscInt_FMT, ii, i[ii + 1] - i[ii]);
       for (jj = i[ii] + 1; jj < i[ii + 1]; jj++) {
-        PetscCheck(j[jj] >= j[jj - 1], PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Column entry number %" PetscInt_FMT " (actual column %" PetscInt_FMT ") in row %" PetscInt_FMT " is not sorted", jj - i[ii], j[jj], ii);
         PetscCheck(j[jj] != j[jj - 1], PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Column entry number %" PetscInt_FMT " (actual column %" PetscInt_FMT ") in row %" PetscInt_FMT " is identical to previous entry", jj - i[ii], j[jj], ii);
       }
     }
