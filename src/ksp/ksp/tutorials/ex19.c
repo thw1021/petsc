@@ -202,7 +202,7 @@ int main(int argc, char **args)
     requires: kokkos_kernels
   testset:
     requires: parmetis
-    args: -ksp_converged_reason -ksp_norm_type unpreconditioned -ksp_rtol 1e-4 37 -n 23 -num_local_blocks 4
+    args: -ksp_converged_reason -ksp_norm_type unpreconditioned -ksp_rtol 1e-4 -m 37 -n 23 -num_local_blocks 4
     nsize: 4
     output_file: output/ex19_0.out
     test:
