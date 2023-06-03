@@ -1430,6 +1430,8 @@ static PetscErrorCode PetscLogNestedTreePrintFlamegraph(PetscViewer viewer, Pets
   /* Add the current event to the parent stack and write the child events */
   PetscCall(PetscIntStackPush(eventStack, iStart));
   for (i = 0; i < nChildren; i++) PetscCall(PetscLogNestedTreePrintFlamegraph(viewer, tree, nTimers, children[i].id, totalTime, eventStack));
+  if (nChildren > 0) PetscCall(PetscFree(children));
+
   /* Pop the top item from the stack and immediately discard it */
   {
     int tmp;
@@ -1470,6 +1472,7 @@ PetscErrorCode PetscLogView_Flamegraph(PetscViewer viewer)
   PetscCall(PetscLogNestedTreeGetChildrenCount(tree, nTimers, -1, 0, &nChildren));
   PetscCall(PetscLogNestedTreeSetChildrenSortItems(viewer, tree, nTimers, -1, 0, nChildren, &children));
   for (i = 0; i < nChildren; i++) PetscCall(PetscLogNestedTreePrintFlamegraph(viewer, tree, nTimers, children[i].id, totalTime, eventStack));
+  if (nChildren > 0) PetscCall(PetscFree(children));
 
   PetscCall(PetscLogNestedTreeDestroy(tree, nTimers));
   PetscCall(PetscIntStackDestroy(eventStack));
