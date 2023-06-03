@@ -218,7 +218,7 @@ int main(int argc, char **args)
   test:
     nsize: 4
     suffix: no_metis_batch
-    args: -ksp_converged_reason -ksp_norm_type unpreconditioned -ksp_rtol 1e-6 -m 37 -n 23 -num_local_blocks 4 -mat_partitioning_type current -ksp_type cg -pc_type bjkokkos -pc_bjkokkos_ksp_max_it 60 -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_pc_type jacobi -pc_bjkokkos_ksp_rtol 1e-3 -mat_type aijkokkos
+    args: -ksp_converged_reason -ksp_norm_type unpreconditioned -ksp_rtol 1e-6 -m 37 -n 23 -num_local_blocks 4 -ksp_type cg -pc_type bjkokkos -pc_bjkokkos_ksp_max_it 60 -pc_bjkokkos_ksp_type tfqmr -pc_bjkokkos_pc_type jacobi -pc_bjkokkos_ksp_rtol 1e-3 -mat_type aijkokkos
 
   test:
     nsize: 1
