@@ -13,12 +13,12 @@ Input parameters include:\n\
 
 int main(int argc, char **args)
 {
-  Vec         x, b, u;       /* approx solution, RHS, exact solution */
-  Mat         A, Pmat, Aseq; /* linear system matrix */
-  KSP         ksp;           /* linear solver context */
-  PetscReal   norm, norm0;   /* norm of solution error */
+  Vec         x, b, u;           /* approx solution, RHS, exact solution */
+  Mat         A, Pmat, Aseq, AA; /* linear system matrix */
+  KSP         ksp;               /* linear solver context */
+  PetscReal   norm, norm0;       /* norm of solution error */
   PetscInt    i, j, Ii, J, Istart, Iend, n = 7, m = 8, its, nblocks = 2;
-  PetscBool   flg;
+  PetscBool   flg, ismpi;
   PetscScalar v;
   PetscMPIInt size, rank;
   IS         *loc_blocks = NULL;
@@ -74,45 +74,50 @@ int main(int argc, char **args)
   }
   PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
-  /* need to create manualy to filter completely */
-  PetscCall(MatCreate(PETSC_COMM_WORLD, &Pmat));
-  PetscCall(MatSetSizes(Pmat, PETSC_DECIDE, PETSC_DECIDE, n * m, n * m));
-  PetscCall(MatSetFromOptions(Pmat));
-  PetscCall(MatSeqAIJSetPreallocation(Pmat, 5, NULL));
-  PetscCall(MatMPIAIJSetPreallocation(Pmat, 5, NULL, 3, NULL));
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 Setup ASM solver and batched KSP solver data
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   /* make explicit block matrix for batch solver */
-  PetscCall(PetscObjectBaseTypeCompare((PetscObject)A, MATMPIAIJ, &flg));
-  if (!flg) {
+  PetscCall(PetscObjectBaseTypeCompare((PetscObject)A, MATMPIAIJ, &ismpi));
+  if (!ismpi) {
     Aseq = A;
   } else {
     PetscCall(MatMPIAIJGetSeqAIJ(A, &Aseq, NULL, NULL));
   }
-  PetscCall(PCASMCreateSubdomains(A, nblocks, &loc_blocks));
-  for (PetscInt bid = 0, lid0 = 0; bid < nblocks; bid++) {
-    PetscInt nn, ncol, gid_cols[5];
-    IS       isloc;
-    Mat      matblock;
-    PetscCall(ISGetSize(loc_blocks[bid], &nn)); // size only
-    PetscCall(ISCreateStride(PETSC_COMM_SELF, nn, lid0, 1, &isloc));
-    PetscCall(MatCreateSubMatrix(Aseq, isloc, isloc, MAT_INITIAL_MATRIX, &matblock));
-    PetscCall(ISDestroy(&isloc));
-    for (int row = 0, row_gid = Istart + lid0; row < nn; row++, row_gid++) {
-      const PetscScalar *vals;
-      const PetscInt    *cols;
-      PetscCall(MatGetRow(matblock, row, &ncol, &cols, &vals));
-      for (j = 0; j < ncol; j++) gid_cols[j] = Istart + lid0 + cols[j];
-      PetscCall(MatSetValues(Pmat, 1, &row_gid, ncol, gid_cols, vals, INSERT_VALUES));
-      PetscCall(MatRestoreRow(matblock, row, &ncol, &cols, &vals));
-    }
-    PetscCall(MatDestroy(&matblock));
-    lid0 += nn; // start of next block
+  PetscCall(PCASMCreateSubdomains(Aseq, nblocks, &loc_blocks)); // A
+  Mat nest, arrray[10000];
+  for (Ii = 0; Ii < 10000; Ii++) arrray[Ii] = NULL;
+  for (PetscInt bid = 0; bid < nblocks; bid++) {
+    Mat matblock;
+    PetscCall(MatCreateSubMatrix(Aseq, loc_blocks[bid], loc_blocks[bid], MAT_INITIAL_MATRIX, &matblock));
+    //PetscCall(MatViewFromOptions(matblock, NULL, "-view_b"));
+    arrray[bid * nblocks + bid] = matblock;
   }
-  PetscCall(MatAssemblyBegin(Pmat, MAT_FINAL_ASSEMBLY));
-  PetscCall(MatAssemblyEnd(Pmat, MAT_FINAL_ASSEMBLY));
-  PetscCall(MatViewFromOptions(Pmat, NULL, "-view_c"));
+  PetscCall(MatCreate(PETSC_COMM_SELF, &nest));
+  PetscCall(MatSetFromOptions(nest));
+  PetscCall(MatSetType(nest, MATNEST));
+  PetscCall(MatNestSetSubMats(nest, nblocks, NULL, nblocks, NULL, arrray));
+  PetscCall(MatSetUp(nest));
+  PetscCall(MatConvert(nest, MATAIJKOKKOS, MAT_INITIAL_MATRIX, &AA));
+  PetscCall(MatDestroy(&nest));
+  for (PetscInt bid = 0; bid < nblocks; bid++) PetscCall(MatDestroy(&arrray[bid * nblocks + bid]));
+  if (ismpi) {
+    Mat AAseq;
+    PetscCall(MatCreate(PETSC_COMM_WORLD, &Pmat));
+    PetscCall(MatSetSizes(Pmat, Iend - Istart, Iend - Istart, n * m, n * m));
+    PetscCall(MatSetFromOptions(Pmat));
+    PetscCall(MatSeqAIJSetPreallocation(Pmat, 5, NULL));
+    PetscCall(MatMPIAIJSetPreallocation(Pmat, 5, NULL, 3, NULL));
+    PetscCall(MatAssemblyBegin(Pmat, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatAssemblyEnd(Pmat, MAT_FINAL_ASSEMBLY));
+    PetscCall(MatMPIAIJGetSeqAIJ(Pmat, &AAseq, NULL, NULL));
+    PetscCheck(AAseq, PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONG, "No A mat");
+    PetscCall(MatAXPY(AAseq, 1.0, AA, DIFFERENT_NONZERO_PATTERN));
+    PetscCall(MatDestroy(&AA));
+  } else {
+    Pmat = AA;
+  }
+  PetscCall(MatViewFromOptions(Pmat, NULL, "-view_p"));
   PetscCall(MatViewFromOptions(A, NULL, "-view_a"));
 
   /* A is symmetric. Set symmetric flag to enable ICC/Cholesky preconditioner */
@@ -197,7 +202,7 @@ int main(int argc, char **args)
     requires: kokkos_kernels
   testset:
     requires: parmetis
-    args: -ksp_converged_reason -ksp_norm_type unpreconditioned -ksp_rtol 1e-4 -m 37 -n 23 -num_local_blocks 4
+    args: -ksp_converged_reason -ksp_norm_type unpreconditioned -ksp_rtol 1e-4 37 -n 23 -num_local_blocks 4
     nsize: 4
     output_file: output/ex19_0.out
     test:
