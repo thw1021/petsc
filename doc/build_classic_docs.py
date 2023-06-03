@@ -81,11 +81,6 @@ def _build_classic_docs_subset(petsc_dir, petsc_arch, outdir, stage):
     print('============================================')
     subprocess.run(command, cwd=petsc_dir, check=True)
     if stage ==  "post":
-        try:
-            subprocess.run(['python2', '--version'])
-        except:
-            print('Skipping petsc4py documentation build since python2 is not available in PATH')
-            return
         rawhtml.append('petsc4py')
         command = ['make', 'all',
                    'PETSC_DIR=%s' % petsc_dir,
