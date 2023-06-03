@@ -493,7 +493,14 @@ Abstracts
 
 .. topic:: *Spencer Patty*, **Intel oneAPI Math Kernel Library, what’s new and what’s next?**
 
-    Abstract forthcoming
+    This talk provides an overview of Intel® oneAPI Math Kernel Library (oneMKL)
+    product and software for supporting optimized math routines for both Intel
+    CPUs and GPUs.  Given that PETSc already utilizes several BLAS/LAPACK/Sparse
+    BLAS routines from oneMKL for Intel CPU and as part of the Aurora project
+    with Argonne, we discuss the use of OpenMP offload APIs for Intel GPUs.
+    We explore software and hardware improvements for better sparse linear
+    algebra performance and have an informal discussion of how to further
+    support the PETSc community.
 
 .. _`Marek Pecha`:
 
