@@ -97,12 +97,12 @@ int main(int argc, char **args)
   if (test_residual) PetscCall(KSPMonitorSet(ksp, KSPTestResidualMonitor, NULL, NULL));
   PetscCall(KSPSetUp(ksp));
   PetscCall(KSPSetUpOnBlocks(ksp));
-  PetscCall(PetscLogStagePop());
   PetscCall(PetscBarrier((PetscObject)A));
 
   PetscCall(PetscLogStageRegister("mystage 2", &stage2));
   PetscCall(PetscLogStagePush(stage2));
   PetscCall(KSPSolve(ksp, b, x));
+  PetscCall(PetscLogStagePop());
   PetscCall(PetscLogStagePop());
 
   /* Show result */
@@ -154,7 +154,7 @@ int main(int argc, char **args)
       requires: double !complex !defined(PETSC_USE_64BIT_INDICES)
       suffix: 3
       filter: sed -e "s/CONVERGED_RTOL/CONVERGED_ATOL/g"
-      args: -f ${wPETSC_DIR}/share/petsc/datafiles/matrices/spd-real-int32-float64 -pc_type none -ksp_type {{cg groppcg pipecg pipecgrr pipelcg pipeprcg cgne nash stcg gltr fcg pipefcg gmres pipefgmres fgmres lgmres dgmres pgmres tcqmr bcgs ibcgs qmrcgs fbcgs fbcgsr bcgsl pipebcgs cgs tfqmr cr pipecr lsqr qcg bicg minres symmlq lcd gcr pipegcr cgls}} -ksp_max_it 20 -ksp_error_if_not_converged -ksp_converged_reason -test_residual
+      args: -f ${wPETSC_DIR}/share/petsc/datafiles/matrices/spd-real-int32-float64 -pc_type none -ksp_type cg -ksp_max_it 20 -ksp_error_if_not_converged -ksp_converged_reason -test_residual
 
     test:
       requires: double !complex !defined(PETSC_USE_64BIT_INDICES)

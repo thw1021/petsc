@@ -322,6 +322,21 @@ PetscErrorCode PetscLogSet(PetscErrorCode (*b)(PetscLogEvent, int, PetscObject, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode (*PetscLogStageBeginHandler) (PetscStageLog) = NULL;
+static PetscErrorCode (*PetscLogStageEndHandler) (PetscStageLog) = NULL;
+
+/*@
+  PetscLogStageSet - Set the logging functions called at the beginning and ending of every stage.
+
+@*/
+PetscErrorCode PetscLogStageSet(PetscErrorCode (*b)(PetscStageLog), PetscErrorCode (*e)(PetscStageLog))
+{
+  PetscFunctionBegin;
+  PetscLogStageBeginHandler = b;
+  PetscLogStageEndHandler = e;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@C
   PetscLogIsActive - Check if logging is currently in progress.
 
@@ -568,6 +583,7 @@ PetscErrorCode PetscLogStagePush(PetscLogStage stage)
   #if defined(PETSC_HAVE_TAU_PERFSTUBS)
   if (perfstubs_initialized == PERFSTUBS_SUCCESS && stageLog->stageInfo[stage].timer != NULL) PetscStackCallExternalVoid("ps_timer_start_", ps_timer_start_(stageLog->stageInfo[stage].timer));
   #endif
+  //if (PetscLogStageBeginHandler) PetscCall((*PetscLogStageBeginHandler)(stageLog));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -601,6 +617,7 @@ PetscErrorCode PetscLogStagePop(void)
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetStageLog(&stageLog));
+  //if (PetscLogStageEndHandler) PetscCall((*PetscLogStageEndHandler)(stageLog));
   #if defined(PETSC_HAVE_TAU_PERFSTUBS)
   if (perfstubs_initialized == PERFSTUBS_SUCCESS && stageLog->stageInfo[stageLog->curStage].timer != NULL) PetscStackCallExternalVoid("ps_timer_stop_", ps_timer_stop_(stageLog->stageInfo[stageLog->curStage].timer));
   #endif
