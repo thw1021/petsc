@@ -497,7 +497,7 @@ Abstracts
 
 .. _`Marek Pecha`:
 
-.. topic:: *Marek Pecha*, David Horak, **Distributed Machine Learning for Natural Hazard Applications Using PERMON**
+.. topic:: *Marek Pecha*, David Horak, Richard Tran Mills, Zachary Langford, **Distributed Machine Learning for Natural Hazard Applications Using PERMON**
 
     We will present a software solution for distributed machine learning
     supporting computation on multiple GPUs running on the top of the PETSc
