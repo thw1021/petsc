@@ -15,7 +15,7 @@ extern PetscErrorCode VecView_MPI_HDF5(Vec, PetscViewer);
 
 static PetscErrorCode VecPointwiseApply_Seq(Vec win, Vec xin, Vec yin, PetscScalar (*const func)(PetscScalar, PetscScalar))
 {
-  const PetscInt n = win->map->n;
+  const PetscInt n = PetscLayoutLocalSize(win->map);
   PetscScalar   *ww, *xx, *yy; /* cannot make xx or yy const since might be ww */
 
   PetscFunctionBegin;
@@ -76,7 +76,7 @@ PetscErrorCode VecPointwiseMaxAbs_Seq(Vec win, Vec xin, Vec yin)
 
 PetscErrorCode VecPointwiseMult_Seq(Vec win, Vec xin, Vec yin)
 {
-  PetscInt     n = win->map->n, i;
+  PetscInt     n = PetscLayoutLocalSize(win->map), i;
   PetscScalar *ww, *xx, *yy; /* cannot make xx or yy const since might be ww */
 
   PetscFunctionBegin;
@@ -119,7 +119,7 @@ PetscErrorCode VecSetRandom_Seq(Vec xin, PetscRandom r)
 
   PetscFunctionBegin;
   PetscCall(VecGetArrayWrite(xin, &xx));
-  PetscCall(PetscRandomGetValues(r, xin->map->n, xx));
+  PetscCall(PetscRandomGetValues(r, PetscLayoutLocalSize(xin->map), xx));
   PetscCall(VecRestoreArrayWrite(xin, &xx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -135,7 +135,7 @@ PetscErrorCode VecConjugate_Seq(Vec xin)
 {
   PetscFunctionBegin;
   if (PetscDefined(USE_COMPLEX)) {
-    const PetscInt n = xin->map->n;
+    const PetscInt n = PetscLayoutLocalSize(xin->map);
     PetscScalar   *x;
 
     PetscCall(VecGetArray(xin, &x));
@@ -164,7 +164,7 @@ PetscErrorCode VecCopy_Seq(Vec xin, Vec yin)
 
     PetscCall(VecGetArrayRead(xin, &xa));
     PetscCall(VecGetArray(yin, &ya));
-    PetscCall(PetscArraycpy(ya, xa, xin->map->n));
+    PetscCall(PetscArraycpy(ya, xa, PetscLayoutLocalSize(xin->map)));
     PetscCall(VecRestoreArrayRead(xin, &xa));
     PetscCall(VecRestoreArray(yin, &ya));
   }
@@ -179,7 +179,7 @@ PetscErrorCode VecSwap_Seq(Vec xin, Vec yin)
     PetscScalar       *ya, *xa;
     PetscBLASInt       bn;
 
-    PetscCall(PetscBLASIntCast(xin->map->n, &bn));
+    PetscCall(PetscBLASIntCast(PetscLayoutLocalSize(xin->map), &bn));
     PetscCall(VecGetArray(xin, &xa));
     PetscCall(VecGetArray(yin, &ya));
     PetscCallBLAS("BLASswap", BLASswap_(&bn, xa, &one, ya, &one));
@@ -195,7 +195,7 @@ PetscErrorCode VecNorm_Seq(Vec xin, NormType type, PetscReal *z)
 {
   // use a local variable to ensure compiler doesn't think z aliases any of the other arrays
   PetscReal      ztmp[] = {0.0, 0.0};
-  const PetscInt n      = xin->map->n;
+  const PetscInt n      = PetscLayoutLocalSize(xin->map);
 
   PetscFunctionBegin;
   if (n) {
@@ -400,7 +400,7 @@ PetscErrorCode VecView_Seq_ASCII(Vec xin, PetscViewer viewer)
     PetscCheck(glvis_container, PetscObjectComm((PetscObject)viewer), PETSC_ERR_PLIB, "Missing GLVis container");
     PetscCall(PetscContainerGetPointer(glvis_container, (void **)&glvis_info));
     if (glvis_info->enabled) {
-      PetscCall(VecGetLocalSize(xin, &n));
+      PetscCall(VecGetOwnershipSize(xin, &n));
       PetscCall(VecGetArrayRead(xin, &array));
       for (i = 0; i < n; i++) {
         PetscCall(PetscViewerASCIIPrintf(viewer, glvis_info->fmt, (double)PetscRealPart(array[i])));
@@ -504,7 +504,7 @@ PetscErrorCode VecView_Seq_Matlab(Vec vec, PetscViewer viewer)
   const PetscScalar *array;
 
   PetscFunctionBegin;
-  PetscCall(VecGetLocalSize(vec, &n));
+  PetscCall(VecGetOwnershipSize(vec, &n));
   PetscCall(PetscObjectName((PetscObject)vec));
   PetscCall(VecGetArrayRead(vec, &array));
   PetscCall(PetscViewerMatlabPutArray(viewer, n, 1, array, ((PetscObject)vec)->name));
@@ -586,7 +586,7 @@ PetscErrorCode VecGetValues_Seq(Vec xin, PetscInt ni, const PetscInt ix[], Petsc
     if (ignorenegidx && (ix[i] < 0)) continue;
     if (PetscDefined(USE_DEBUG)) {
       PetscCheck(ix[i] >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Out of range index value %" PetscInt_FMT " cannot be negative", ix[i]);
-      PetscCheck(ix[i] < xin->map->n, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Out of range index value %" PetscInt_FMT " to large maximum allowed %" PetscInt_FMT, ix[i], xin->map->n);
+      PetscCheck(ix[i] < PetscLayoutLocalSize(xin->map), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Out of range index value %" PetscInt_FMT " to large maximum allowed %" PetscInt_FMT, ix[i], PetscLayoutLocalSize(xin->map));
     }
     y[i] = xx[ix[i]];
   }
@@ -608,7 +608,7 @@ PetscErrorCode VecSetValues_Seq(Vec xin, PetscInt ni, const PetscInt ix[], const
     if (ignorenegidx && (ix[i] < 0)) continue;
     if (PetscDefined(USE_DEBUG)) {
       PetscCheck(ix[i] >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Out of range index value %" PetscInt_FMT " cannot be negative", ix[i]);
-      PetscCheck(ix[i] < xin->map->n, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Out of range index value %" PetscInt_FMT " maximum %" PetscInt_FMT, ix[i], xin->map->n);
+      PetscCheck(ix[i] < PetscLayoutLocalSize(xin->map), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Out of range index value %" PetscInt_FMT " maximum %" PetscInt_FMT, ix[i], PetscLayoutLocalSize(xin->map));
     }
     if (m == INSERT_VALUES) {
       xx[ix[i]] = y[i];
@@ -633,7 +633,7 @@ PetscErrorCode VecSetValuesBlocked_Seq(Vec xin, PetscInt ni, const PetscInt ix[]
     const PetscInt start = bs * ix[i];
 
     if (start < 0) continue;
-    PetscCheck(start < xin->map->n, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Out of range index value %" PetscInt_FMT " maximum %" PetscInt_FMT, start, xin->map->n);
+    PetscCheck(start < PetscLayoutLocalSize(xin->map), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Out of range index value %" PetscInt_FMT " maximum %" PetscInt_FMT, start, PetscLayoutLocalSize(xin->map));
     for (PetscInt j = 0; j < bs; j++) {
       if (m == INSERT_VALUES) {
         xx[start + j] = yin[j];
@@ -727,7 +727,7 @@ PetscErrorCode VecDestroy_Seq(Vec v)
 
   PetscFunctionBegin;
 #if defined(PETSC_USE_LOG)
-  PetscCall(PetscLogObjectState((PetscObject)v, "Length=%" PetscInt_FMT, v->map->n));
+  PetscCall(PetscLogObjectState((PetscObject)v, "Length=%" PetscInt_FMT, PetscLayoutLocalSize(v->map)));
 #endif
   if (vs) PetscCall(PetscFree(vs->array_allocated));
   PetscCall(VecResetPreallocationCOO_Seq(v));
@@ -748,7 +748,7 @@ PetscErrorCode VecDuplicate_Seq(Vec win, Vec *V)
 {
   PetscFunctionBegin;
   PetscCall(VecCreate(PetscObjectComm((PetscObject)win), V));
-  PetscCall(VecSetSizes(*V, win->map->n, win->map->n));
+  PetscCall(VecSetSizes(*V, PetscLayoutLocalSize(win->map), PetscLayoutLocalSize(win->map)));
   PetscCall(VecSetType(*V, ((PetscObject)win)->type_name));
   PetscCall(PetscLayoutReference(win->map, &(*V)->map));
   PetscCall(PetscObjectListDuplicate(((PetscObject)win)->olist, &((PetscObject)(*V))->olist));

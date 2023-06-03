@@ -834,7 +834,7 @@ PetscErrorCode VecViewNative(Vec vec, PetscViewer viewer)
 
    Level: beginner
 
-.seealso: [](chapter_vectors), `Vec`, `VecGetLocalSize()`
+.seealso: [](chapter_vectors), `Vec`, `VecGetLocalSize()`, `VecGetOwnershipSize()`
 @*/
 PetscErrorCode VecGetSize(Vec x, PetscInt *size)
 {
@@ -860,7 +860,17 @@ PetscErrorCode VecGetSize(Vec x, PetscInt *size)
 
    Level: beginner
 
-.seealso: [](chapter_vectors), `Vec`, `VecGetSize()`
+   Note:
+
+   This value is always the size of arrays returned by `VecGetArray()` and related methods.
+
+   For `VECSEQ`, `VECMPI`, and their variants this is the same as `VecGetOwnershipSize()`.
+
+   For `VECREDUNDANT`, `VecGetLocalSize()` and `VecGetSize()` return
+   the same number, because all vector values are stored in the local memory of
+   every MPI process.
+
+.seealso: [](chapter_vectors), `Vec`, `VecGetSize()`, `VecGetOwnershipSize()`, `VECSEQ`, `VECMPI`, `VECREDUNDANT`, `VecGetArray()`
 @*/
 PetscErrorCode VecGetLocalSize(Vec x, PetscInt *size)
 {
@@ -869,6 +879,42 @@ PetscErrorCode VecGetLocalSize(Vec x, PetscInt *size)
   PetscValidIntPointer(size, 2);
   PetscValidType(x, 1);
   PetscUseTypeMethod(x, getlocalsize, size);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+   VecGetOwnershipSize - Returns the number of elements of the vector assigned
+   to this MPI process
+
+   Not Collective
+
+   Input Parameter:
+.  x - the vector
+
+   Output Parameter:
+.  size - the length of the local piece of the vector
+
+   Level: developer
+
+   Note:
+
+   Summing this value over all MPI processes gives you the same value as `VecGetSize()`.
+
+   For `VECSEQ`, `VECMPI`, and their variants this is the same as `VecGetLocalSize()`.
+
+   For `VECREDUNDANT` and its variants this value should not be used to
+   set the loop bounds of a loop that modifies vector entries: each
+   process must change all values the same way.
+
+.seealso: [](chapter_vectors), `Vec`, `VecGetSize()`
+@*/
+PetscErrorCode VecGetOwnershipSize(Vec x, PetscInt *size)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(x, VEC_CLASSID, 1);
+  PetscValidIntPointer(size, 2);
+  PetscValidType(x, 1);
+  *size = x->map->n;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -892,6 +938,8 @@ PetscErrorCode VecGetLocalSize(Vec x, PetscInt *size)
 
    Note:
    The high argument is one more than the last element stored locally.
+
+   The difference `high-low` shoulw be the same as `MatGetOwnershipSize()`
 
    Fortran Note:
    `PETSC_NULL_INTEGER` should be used instead of NULL

@@ -36,7 +36,7 @@ PetscErrorCode PetscSFSetGraphLayout(PetscSF sf, PetscLayout layout, PetscInt nl
 
   PetscFunctionBegin;
   PetscCall(PetscLayoutSetUp(layout));
-  PetscCall(PetscLayoutGetLocalSize(layout, &nroots));
+  PetscCall(PetscLayoutGetOwnershipSize(layout, &nroots));
   PetscCall(PetscLayoutGetRanges(layout, &range));
   PetscCall(PetscMalloc1(nleaves, &remote));
   if (nleaves) ls = gremote[0] + 1;
@@ -138,7 +138,7 @@ PetscErrorCode PetscSFSetGraphSection(PetscSF sf, PetscSection localSection, Pet
   PetscCall(PetscSectionGetConstrainedStorageSize(globalSection, &nroots));
   PetscCall(PetscLayoutCreate(comm, &layout));
   PetscCall(PetscLayoutSetBlockSize(layout, 1));
-  PetscCall(PetscLayoutSetLocalSize(layout, nroots));
+  PetscCall(PetscLayoutSetOwnershipSize(layout, nroots));
   PetscCall(PetscLayoutSetUp(layout));
   PetscCall(PetscLayoutGetRanges(layout, &ranges));
   for (p = pStart; p < pEnd; ++p) {
@@ -511,7 +511,7 @@ PetscErrorCode PetscSFCreateFromLayouts(PetscLayout rmap, PetscLayout lmap, Pets
   PetscCallMPI(MPI_Comm_compare(rcomm, lcomm, &flg));
   PetscCheck(flg == MPI_CONGRUENT || flg == MPI_IDENT, rcomm, PETSC_ERR_SUP, "cannot map two layouts with non-matching communicators");
   PetscCall(PetscSFCreate(rcomm, sf));
-  PetscCall(PetscLayoutGetLocalSize(rmap, &nroots));
+  PetscCall(PetscLayoutGetOwnershipSize(rmap, &nroots));
   PetscCall(PetscLayoutGetSize(rmap, &rN));
   PetscCall(PetscLayoutGetRange(lmap, &lst, &len));
   PetscCall(PetscMalloc1(len - lst, &remote));
@@ -711,7 +711,7 @@ PetscErrorCode PetscSFCreateByMatchingIndices(PetscLayout layout, PetscInt numRo
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
   PetscCall(PetscLayoutSetUp(layout));
   PetscCall(PetscLayoutGetSize(layout, &N));
-  PetscCall(PetscLayoutGetLocalSize(layout, &n));
+  PetscCall(PetscLayoutGetOwnershipSize(layout, &n));
   flag = (PetscBool)(leafIndices == rootIndices);
   PetscCall(MPIU_Allreduce(MPI_IN_PLACE, &flag, 1, MPIU_BOOL, MPI_LAND, comm));
   PetscCheck(!flag || numLeafIndices == numRootIndices, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "leafIndices == rootIndices, but numLeafIndices (%" PetscInt_FMT ") != numRootIndices(%" PetscInt_FMT ")", numLeafIndices, numRootIndices);

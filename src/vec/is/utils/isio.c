@@ -15,7 +15,7 @@ PetscErrorCode ISView_Binary(IS is, PetscViewer viewer)
   PetscCall(PetscViewerBinaryGetSkipHeader(viewer, &skipHeader));
 
   PetscCall(ISGetLayout(is, &map));
-  PetscCall(PetscLayoutGetLocalSize(map, &n));
+  PetscCall(PetscLayoutGetOwnershipSize(map, &n));
   PetscCall(PetscLayoutGetRange(map, &s, NULL));
   PetscCall(PetscLayoutGetSize(map, &N));
 
@@ -89,7 +89,7 @@ PetscErrorCode ISLoad_Binary(IS is, PetscViewer viewer)
 
   /* get IS sizes and check global size */
   PetscCall(PetscLayoutGetSize(map, &N));
-  PetscCall(PetscLayoutGetLocalSize(map, &n));
+  PetscCall(PetscLayoutGetOwnershipSize(map, &n));
   PetscCall(PetscLayoutGetRange(map, &s, NULL));
   PetscCheck(N == rows, PETSC_COMM_SELF, PETSC_ERR_FILE_UNEXPECTED, "IS in file different size (%" PetscInt_FMT ") than input IS (%" PetscInt_FMT ")", rows, N);
 

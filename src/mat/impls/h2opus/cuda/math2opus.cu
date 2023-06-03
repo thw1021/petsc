@@ -810,7 +810,7 @@ static PetscErrorCode MatSetUpMultiply_H2OPUS(Mat A)
     if (!rid) {
       if (size > 1) { /* Parallel distribution may be different, save it here for fast path in MatMult (see MatH2OpusSetNativeMult) */
         PetscCall(PetscLayoutCreate(comm, &a->h2opus_rmap));
-        PetscCall(PetscLayoutSetLocalSize(a->h2opus_rmap, n));
+        PetscCall(PetscLayoutSetOwnershipSize(a->h2opus_rmap, n));
         PetscCall(PetscLayoutSetUp(a->h2opus_rmap));
         PetscCall(PetscLayoutReference(a->h2opus_rmap, &a->h2opus_cmap));
       }

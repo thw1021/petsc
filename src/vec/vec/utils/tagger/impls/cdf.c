@@ -283,7 +283,7 @@ static PetscErrorCode VecTaggerComputeBoxes_CDF_Iterative(VecTagger tagger, Vec 
   PetscFunctionBegin;
   comm = PetscObjectComm((PetscObject)vec);
   PetscCall(VecGetSize(vec, &N));
-  PetscCall(VecGetLocalSize(vec, &n));
+  PetscCall(VecGetOwnershipSize(vec, &n));
   M = N / bs;
   m = n / bs;
   PetscCall(VecCreateMPI(comm, m, M, &vComp));

@@ -11,7 +11,7 @@ static PetscErrorCode ISDuplicate_General(IS is, IS *newIS)
   PetscInt    n, bs;
 
   PetscFunctionBegin;
-  PetscCall(PetscLayoutGetLocalSize(is->map, &n));
+  PetscCall(PetscLayoutGetOwnershipSize(is->map, &n));
   PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)is), n, sub->idx, PETSC_COPY_VALUES, newIS));
   PetscCall(PetscLayoutGetBlockSize(is->map, &bs));
   PetscCall(PetscLayoutSetBlockSize((*newIS)->map, bs));
@@ -38,7 +38,7 @@ static PetscErrorCode ISCopy_General(IS is, IS isy)
   PetscInt    n;
 
   PetscFunctionBegin;
-  PetscCall(PetscLayoutGetLocalSize(is->map, &n));
+  PetscCall(PetscLayoutGetOwnershipSize(is->map, &n));
   PetscCall(PetscArraycpy(isy_general->idx, is_general->idx, n));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -49,7 +49,7 @@ PetscErrorCode ISShift_General(IS is, PetscInt shift, IS isy)
   PetscInt    i, n;
 
   PetscFunctionBegin;
-  PetscCall(PetscLayoutGetLocalSize(is->map, &n));
+  PetscCall(PetscLayoutGetOwnershipSize(is->map, &n));
   for (i = 0; i < n; i++) isy_general->idx[i] = is_general->idx[i] + shift;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -61,7 +61,7 @@ static PetscErrorCode ISOnComm_General(IS is, MPI_Comm comm, PetscCopyMode mode,
 
   PetscFunctionBegin;
   PetscCheck(mode != PETSC_OWN_POINTER, comm, PETSC_ERR_ARG_WRONG, "Cannot use PETSC_OWN_POINTER");
-  PetscCall(PetscLayoutGetLocalSize(is->map, &n));
+  PetscCall(PetscLayoutGetOwnershipSize(is->map, &n));
   PetscCall(ISCreateGeneral(comm, n, sub->idx, mode, newis));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -81,7 +81,7 @@ static PetscErrorCode ISContiguousLocal_General(IS is, PetscInt gstart, PetscInt
   PetscFunctionBegin;
   *start  = 0;
   *contig = PETSC_TRUE;
-  PetscCall(PetscLayoutGetLocalSize(is->map, &n));
+  PetscCall(PetscLayoutGetOwnershipSize(is->map, &n));
   if (!n) PetscFunctionReturn(PETSC_SUCCESS);
   p = sub->idx[0];
   if (p < gstart) goto nomatch;
@@ -104,7 +104,7 @@ static PetscErrorCode ISLocate_General(IS is, PetscInt key, PetscInt *location)
   PetscBool   sorted;
 
   PetscFunctionBegin;
-  PetscCall(PetscLayoutGetLocalSize(is->map, &numIdx));
+  PetscCall(PetscLayoutGetOwnershipSize(is->map, &numIdx));
   PetscCall(ISGetInfo(is, IS_SORTED, IS_LOCAL, PETSC_TRUE, &sorted));
   if (sorted) PetscCall(PetscFindInt(key, numIdx, sub->idx, location));
   else {
@@ -149,7 +149,7 @@ static PetscErrorCode ISInvertPermutation_General(IS is, PetscInt nlocal, IS *is
   IS              istmp, nistmp;
 
   PetscFunctionBegin;
-  PetscCall(PetscLayoutGetLocalSize(is->map, &n));
+  PetscCall(PetscLayoutGetOwnershipSize(is->map, &n));
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)is), &size));
   if (size == 1) {
     PetscCall(PetscMalloc1(n, &ii));
@@ -335,7 +335,7 @@ static PetscErrorCode ISView_General(IS is, PetscViewer viewer)
   PetscBool   iascii, isbinary, ishdf5;
 
   PetscFunctionBegin;
-  PetscCall(PetscLayoutGetLocalSize(is->map, &n));
+  PetscCall(PetscLayoutGetOwnershipSize(is->map, &n));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERBINARY, &isbinary));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERHDF5, &ishdf5));
@@ -402,7 +402,7 @@ static PetscErrorCode ISSort_General(IS is)
   PetscInt    n;
 
   PetscFunctionBegin;
-  PetscCall(PetscLayoutGetLocalSize(is->map, &n));
+  PetscCall(PetscLayoutGetOwnershipSize(is->map, &n));
   PetscCall(PetscIntSortSemiOrdered(n, sub->idx));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -415,7 +415,7 @@ static PetscErrorCode ISSortRemoveDups_General(IS is)
   PetscBool   sorted;
 
   PetscFunctionBegin;
-  PetscCall(PetscLayoutGetLocalSize(is->map, &n));
+  PetscCall(PetscLayoutGetOwnershipSize(is->map, &n));
   PetscCall(ISGetInfo(is, IS_SORTED, IS_LOCAL, PETSC_TRUE, &sorted));
   if (sorted) {
     PetscCall(PetscSortedRemoveDupsInt(&n, sub->idx));
@@ -456,7 +456,7 @@ PetscErrorCode ISSetUp_General(IS is)
   PetscInt        n, i, min, max;
 
   PetscFunctionBegin;
-  PetscCall(PetscLayoutGetLocalSize(is->map, &n));
+  PetscCall(PetscLayoutGetOwnershipSize(is->map, &n));
 
   if (n) {
     min = max = idx[0];

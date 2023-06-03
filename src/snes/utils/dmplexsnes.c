@@ -347,7 +347,7 @@ PetscErrorCode DMInterpolationSetUp(DMInterpolationInfo ctx, DM dm, PetscBool re
   if (!redundantPoints) {
     PetscCall(PetscLayoutCreate(comm, &layout));
     PetscCall(PetscLayoutSetBlockSize(layout, 1));
-    PetscCall(PetscLayoutSetLocalSize(layout, n));
+    PetscCall(PetscLayoutSetOwnershipSize(layout, n));
     PetscCall(PetscLayoutSetUp(layout));
     PetscCall(PetscLayoutGetSize(layout, &N));
     /* Communicate all points to all processes */

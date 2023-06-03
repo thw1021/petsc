@@ -1584,7 +1584,7 @@ static herr_t ReadLabelStratumHDF5_Static(hid_t g_id, const char *vname, const H
   if (!ctx->sfXC) {
     /* Force serial load */
     PetscCall(PetscViewerHDF5ReadSizes(viewer, "indices", NULL, &N));
-    PetscCall(PetscLayoutSetLocalSize(stratumIS->map, !ctx->rank ? N : 0));
+    PetscCall(PetscLayoutSetOwnershipSize(stratumIS->map, !ctx->rank ? N : 0));
     PetscCall(PetscLayoutSetSize(stratumIS->map, N));
   }
   PetscCall(ISLoad(stratumIS, viewer));
@@ -1702,11 +1702,11 @@ static PetscErrorCode DMPlexDistributionLoad_HDF5_Private(DM dm, PetscViewer vie
   PetscCall(PetscObjectSetName((PetscObject)ownersIS, "owners"));
   PetscCall(ISCreate(comm, &gpointsIS));
   PetscCall(PetscObjectSetName((PetscObject)gpointsIS, "global_point_numbers"));
-  PetscCall(PetscLayoutSetLocalSize(chartSizesIS->map, 1));
+  PetscCall(PetscLayoutSetOwnershipSize(chartSizesIS->map, 1));
   PetscCall(ISLoad(chartSizesIS, viewer));
   PetscCall(ISGetIndices(chartSizesIS, &chartSize));
-  PetscCall(PetscLayoutSetLocalSize(ownersIS->map, *chartSize));
-  PetscCall(PetscLayoutSetLocalSize(gpointsIS->map, *chartSize));
+  PetscCall(PetscLayoutSetOwnershipSize(ownersIS->map, *chartSize));
+  PetscCall(PetscLayoutSetOwnershipSize(gpointsIS->map, *chartSize));
   PetscCall(ISLoad(ownersIS, viewer));
   PetscCall(ISLoad(gpointsIS, viewer));
   PetscCall(ISGetIndices(ownersIS, &owners));
@@ -1715,7 +1715,7 @@ static PetscErrorCode DMPlexDistributionLoad_HDF5_Private(DM dm, PetscViewer vie
   PetscCall(PetscSFSetFromOptions(*distsf));
   PetscCall(PetscLayoutCreate(comm, &layout));
   PetscCall(PetscSFGetGraph(sf, &lsize, NULL, NULL, NULL));
-  PetscCall(PetscLayoutSetLocalSize(layout, lsize));
+  PetscCall(PetscLayoutSetOwnershipSize(layout, lsize));
   PetscCall(PetscLayoutSetBlockSize(layout, 1));
   PetscCall(PetscLayoutSetUp(layout));
   PetscCall(PetscSFSetGraphLayout(*distsf, layout, *chartSize, NULL, PETSC_OWN_POINTER, gpoints));
@@ -1869,17 +1869,17 @@ static PetscErrorCode DMPlexTopologyLoad_HDF5_Legacy_Private(DM dm, PetscViewer 
   {
     /* Force serial load */
     PetscCall(PetscViewerHDF5ReadSizes(viewer, pointsName, NULL, &Np));
-    PetscCall(PetscLayoutSetLocalSize(pointsIS->map, rank == 0 ? Np : 0));
+    PetscCall(PetscLayoutSetOwnershipSize(pointsIS->map, rank == 0 ? Np : 0));
     PetscCall(PetscLayoutSetSize(pointsIS->map, Np));
     pEnd = rank == 0 ? Np : 0;
     PetscCall(PetscViewerHDF5ReadSizes(viewer, coneSizesName, NULL, &Np));
-    PetscCall(PetscLayoutSetLocalSize(coneSizesIS->map, rank == 0 ? Np : 0));
+    PetscCall(PetscLayoutSetOwnershipSize(coneSizesIS->map, rank == 0 ? Np : 0));
     PetscCall(PetscLayoutSetSize(coneSizesIS->map, Np));
     PetscCall(PetscViewerHDF5ReadSizes(viewer, conesName, NULL, &N));
-    PetscCall(PetscLayoutSetLocalSize(conesIS->map, rank == 0 ? N : 0));
+    PetscCall(PetscLayoutSetOwnershipSize(conesIS->map, rank == 0 ? N : 0));
     PetscCall(PetscLayoutSetSize(conesIS->map, N));
     PetscCall(PetscViewerHDF5ReadSizes(viewer, orientationsName, NULL, &N));
-    PetscCall(PetscLayoutSetLocalSize(orientationsIS->map, rank == 0 ? N : 0));
+    PetscCall(PetscLayoutSetOwnershipSize(orientationsIS->map, rank == 0 ? N : 0));
     PetscCall(PetscLayoutSetSize(orientationsIS->map, N));
   }
   PetscCall(ISLoad(pointsIS, viewer));
@@ -2670,11 +2670,11 @@ PetscErrorCode DMPlexSectionLoad_HDF5_Internal(DM dm, PetscViewer viewer, DM sec
     /* Create sfAX: A -> X */
     PetscCall(ISCreate(comm, &orderIS));
     PetscCall(PetscObjectSetName((PetscObject)orderIS, "order"));
-    PetscCall(PetscLayoutSetLocalSize(orderIS->map, n));
+    PetscCall(PetscLayoutSetOwnershipSize(orderIS->map, n));
     PetscCall(ISLoad(orderIS, viewer));
     PetscCall(PetscLayoutCreate(comm, &layout));
     PetscCall(PetscSFGetGraph(sfXB, &nX, NULL, NULL, NULL));
-    PetscCall(PetscLayoutSetLocalSize(layout, nX));
+    PetscCall(PetscLayoutSetOwnershipSize(layout, nX));
     PetscCall(PetscLayoutSetBlockSize(layout, 1));
     PetscCall(PetscLayoutSetUp(layout));
     PetscCall(PetscSFCreate(comm, &sfXA));

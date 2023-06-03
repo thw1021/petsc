@@ -175,7 +175,7 @@ static PetscErrorCode PCMPISetMat(PC pc)
   PetscCall(PetscLayoutSetBlockSize(layout, matproperties[2]));
   PetscCall(PetscLayoutSetSize(layout, matproperties[1]));
   PetscCall(PetscLayoutSetUp(layout));
-  PetscCall(PetscLayoutGetLocalSize(layout, &n));
+  PetscCall(PetscLayoutGetOwnershipSize(layout, &n));
   PetscCall(PetscLayoutDestroy(&layout));
 
   /* determine ownership ranges of matrix rows */
@@ -183,7 +183,7 @@ static PetscErrorCode PCMPISetMat(PC pc)
   PetscCall(PetscLayoutSetBlockSize(layout, matproperties[2]));
   PetscCall(PetscLayoutSetSize(layout, matproperties[0]));
   PetscCall(PetscLayoutSetUp(layout));
-  PetscCall(PetscLayoutGetLocalSize(layout, &m));
+  PetscCall(PetscLayoutGetOwnershipSize(layout, &m));
 
   /* copy over the matrix nonzero structure and values */
   if (pc) {

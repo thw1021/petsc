@@ -9404,9 +9404,21 @@ PetscErrorCode MatCreateVecs(Mat mat, Vec *right, Vec *left)
     if (right) {
       PetscCheck(mat->cmap->n >= 0, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "PetscLayout for columns not yet setup");
       PetscCall(VecCreate(PetscObjectComm((PetscObject)mat), right));
-      PetscCall(VecSetSizes(*right, mat->cmap->n, PETSC_DETERMINE));
       PetscCall(VecSetBlockSize(*right, cbs));
-      PetscCall(VecSetType(*right, mat->defaultvectype));
+      if (mat->cmap->redundant) {
+        MPI_Comm    comm = PetscObjectComm((PetscObject)mat);
+        PetscMPIInt rank, size;
+
+        PetscCall(MPI_Comm_size(comm, &size));
+        PetscCall(MPI_Comm_rank(comm, &rank));
+        PetscCheck(rank == size - 1 || mat->cmap->n == 0, comm, PETSC_ERR_ARG_INCOMP, "All indices must be assigned to the last process for a redundant layout");
+        // TODO map types to their redundant equivalent
+        PetscCall(VecSetSizes(*right, mat->cmap->n, mat->cmap->N));
+        PetscCall(VecSetType(*right, VECREDUNDANT));
+      } else {
+        PetscCall(VecSetSizes(*right, mat->cmap->n, PETSC_DETERMINE));
+        PetscCall(VecSetType(*right, mat->defaultvectype));
+      }
 #if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
       if (mat->boundtocpu && mat->bindingpropagates) {
         PetscCall(VecSetBindingPropagates(*right, PETSC_TRUE));

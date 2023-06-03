@@ -28,7 +28,7 @@ int main(int argc, char **argv)
     ISLocalToGlobalMapping rowMapA, colMapA, rowMapD, colMapD;
 
     PetscCall(PetscLayoutCreate(PETSC_COMM_WORLD, &layoutA));
-    PetscCall(PetscLayoutSetLocalSize(layoutA, 3));
+    PetscCall(PetscLayoutSetOwnershipSize(layoutA, 3));
     PetscCall(PetscLayoutSetUp(layoutA));
     PetscCall(PetscLayoutGetRange(layoutA, &rStartA, NULL));
     PetscCall(PetscLayoutDestroy(&layoutA));
@@ -39,7 +39,7 @@ int main(int argc, char **argv)
     PetscCall(ISLocalToGlobalMappingCreate(PETSC_COMM_WORLD, 1, 3, locRowsA, PETSC_OWN_POINTER, &rowMapA));
     PetscCall(ISLocalToGlobalMappingCreate(PETSC_COMM_WORLD, 1, 3, locColsA, PETSC_OWN_POINTER, &colMapA));
     PetscCall(PetscLayoutCreate(PETSC_COMM_WORLD, &layoutD));
-    PetscCall(PetscLayoutSetLocalSize(layoutD, 2));
+    PetscCall(PetscLayoutSetOwnershipSize(layoutD, 2));
     PetscCall(PetscLayoutSetUp(layoutD));
     PetscCall(PetscLayoutGetRange(layoutD, &rStartD, NULL));
     PetscCall(PetscLayoutDestroy(&layoutD));

@@ -146,7 +146,7 @@ static PetscErrorCode PetscViewerHDF5ReadSelectHyperslab_Private(PetscViewer vie
   /* Compute local size and ownership range */
   PetscCall(PetscLayoutSetUp(map));
   PetscCall(PetscLayoutGetBlockSize(map, &bs));
-  PetscCall(PetscLayoutGetLocalSize(map, &n));
+  PetscCall(PetscLayoutGetOwnershipSize(map, &n));
   PetscCall(PetscLayoutGetRange(map, &low, NULL));
 
   /* Each process defines a dataset and reads it from the hyperslab in the file */

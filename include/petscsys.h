@@ -2264,6 +2264,18 @@ static inline unsigned int PetscStrHash(const char *str)
   return hash;
 }
 
+static inline unsigned int PetscStrHashLen(const char str[], size_t n, unsigned int *hash_p)
+{
+  unsigned int hash = hash_p ? *hash_p : 5381;
+
+  for (size_t i = 0; i < n; i++) hash = ((hash << 5) + hash) + str[i]; /* hash * 33 + c */
+  return hash;
+}
+
+#define PetscArrayHash(a, n, h) PetscStrHashLen((const char *) a, (n) * sizeof(*a), h)
+
+
+
   /*MC
    MPIU_Allreduce - a PETSc replacement for `MPI_Allreduce()` that tries to determine if the call from all the MPI ranks occur from the
                     same place in the PETSc code. This helps to detect bugs where different MPI ranks follow different code paths
@@ -2313,9 +2325,26 @@ M*/
     PetscCheck(-a_b2[2] == a_b2[3], PETSC_COMM_SELF, PETSC_ERR_PLIB, "MPI_Allreduce() called in different locations (functions) on different processors"); \
     PetscCheck(-a_b2[4] == a_b2[5], PETSC_COMM_SELF, PETSC_ERR_PLIB, "MPI_Allreduce() called with different counts %d on different processors", _mpiu_allreduce_c_int); \
     PetscCallMPI(MPI_Allreduce((a), (b), (c), (d), (e), (fcomm)));)
+
+#define PetscCheckLogicalCollectiveHash(h, comm) \
+  do { \
+    PetscMPIInt _local_hash[2], _global_hash[2]; \
+    _local_hash[0] = (PetscMPIInt) (h); \
+    _local_hash[1] = -_local_hash[0]; \
+    PetscCall(MPIU_Allreduce(_local_hash, _global_hash, 2, MPI_INT, MPI_MAX, comm)); \
+    PetscCheck(_global_hash[0] == -_global_hash[1], comm, PETSC_ERR_ARG_INCOMP, "Arguments to %s() for a redundant vector are not the same on all processes", PETSC_FUNCTION_NAME); \
+  } while(0)
+
 // clang-format on
 #else
+  #define PetscHashArray(a, h, n) ((unsigned int) 0)
   #define MPIU_Allreduce(a, b, c, d, e, fcomm) PetscMacroReturnStandard(PetscCallMPI(MPI_Allreduce((a), (b), (c), (d), (e), (fcomm))))
+  #define PetscValidLogicalCollectiveHash(h, comm, err, ...) \
+    do { \
+      (void)(h); \
+      (void)(comm); \
+      (void)(err); \
+    }
 #endif
 
 #if defined(PETSC_HAVE_MPI_PROCESS_SHARED_MEMORY)

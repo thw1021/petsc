@@ -62,14 +62,14 @@ typedef struct _n_ISColoring *ISColoring;
    Notes:
    PETSc vectors (`Vec`) have a global number associated with each vector entry. The first MPI process that shares the vector owns the first `n0` entries of the vector,
    the second MPI process the next `n1` entries, etc. A `PetscLayout` is a way of managing this information, for example the number of locally owned entries is provided
-   by `PetscLayoutGetLocalSize()` and the range of indices for a given MPI process is provided by `PetscLayoutGetRange()`.
+   by `PetscLayoutGetOwnershipSize()` and the range of indices for a given MPI process is provided by `PetscLayoutGetRange()`.
 
    Each PETSc `Vec` contains a `PetscLayout` object which can be obtained with `VecGetLayout()`. For convenience `Vec` provides an API to access the layout information directly,
    for example with `VecGetLocalSize()` and `VecGetOwnershipRange()`.
 
    Similarly PETSc matrices have layouts, these are discussed in [](chapter_matrices).
 
-.seealso: `PetscLayoutCreate()`, `PetscLayoutDestroy()`, `PetscLayoutGetRange()`, `PetscLayoutGetLocalSize()`, `PetscLayoutGetSize()`,
+.seealso: `PetscLayoutCreate()`, `PetscLayoutDestroy()`, `PetscLayoutGetRange()`, `PetscLayoutGetOwnershipSize()`, `PetscLayoutGetSize()`,
           `PetscLayoutGetBlockSize()`, `PetscLayoutGetRanges()`, `PetscLayoutFindOwner()`,  `PetscLayoutFindOwnerIndex()`,
           `VecGetLayout()`, `VecGetLocalSize()`, `VecGetOwnershipRange()`
 S*/

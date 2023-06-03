@@ -584,11 +584,11 @@ PetscErrorCode PetscSFSetGraphWithPattern(PetscSF sf, PetscLayout map, PetscSFPa
   if (pattern == PETSCSF_PATTERN_ALLTOALL) {
     type = PETSCSFALLTOALL;
     PetscCall(PetscLayoutCreate(comm, &sf->map));
-    PetscCall(PetscLayoutSetLocalSize(sf->map, size));
+    PetscCall(PetscLayoutSetOwnershipSize(sf->map, size));
     PetscCall(PetscLayoutSetSize(sf->map, ((PetscInt)size) * size));
     PetscCall(PetscLayoutSetUp(sf->map));
   } else {
-    PetscCall(PetscLayoutGetLocalSize(map, &n));
+    PetscCall(PetscLayoutGetOwnershipSize(map, &n));
     PetscCall(PetscLayoutGetSize(map, &N));
     res[0] = n;
     res[1] = -n;

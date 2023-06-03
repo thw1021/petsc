@@ -269,8 +269,8 @@ PETSC_EXTERN PetscErrorCode ISExpandIndicesGeneral(PetscInt, PetscInt, PetscInt,
 struct _n_PetscLayout {
   MPI_Comm               comm;
   PetscMPIInt            size;
-  PetscInt               n, N;         /* local, global vector size */
-  PetscInt               rstart, rend; /* local start, local end + 1 */
+  PetscInt               n, N;         /* owned, global vector size */
+  PetscInt               rstart, rend; /* owned start, owned end + 1 */
   PetscInt              *range;        /* the offset of each processor */
   PetscBool              range_alloc;  /* should range be freed in Destroy? */
   PetscInt               bs;           /* number of elements in each block (generally for multi-component
@@ -282,7 +282,11 @@ struct _n_PetscLayout {
   PetscBool              setupcalled;  /* Forbid setup more than once */
   PetscInt               oldn, oldN;   /* Checking if setup is allowed */
   PetscInt               oldbs;        /* And again */
+  PetscBool              redundant;    /* is the represention a partition (PETSC_FALSE) or redundant
+                                          duplication (PETSC_TRUE) of all degrees of freedom ? */
 };
+
+static inline PetscInt PetscLayoutLocalSize(PetscLayout map) { return map->redundant ? map->N : map->n; }
 
 /*@C
      PetscLayoutFindOwner - Find the owning rank for a global index
@@ -364,8 +368,16 @@ PETSC_EXTERN PetscErrorCode PetscLayoutSetUp(PetscLayout);
 PETSC_EXTERN PetscErrorCode PetscLayoutDestroy(PetscLayout *);
 PETSC_EXTERN PetscErrorCode PetscLayoutDuplicate(PetscLayout, PetscLayout *);
 PETSC_EXTERN PetscErrorCode PetscLayoutReference(PetscLayout, PetscLayout *);
-PETSC_EXTERN PetscErrorCode PetscLayoutSetLocalSize(PetscLayout, PetscInt);
-PETSC_EXTERN PetscErrorCode PetscLayoutGetLocalSize(PetscLayout, PetscInt *);
+PETSC_EXTERN PetscErrorCode PetscLayoutGetOwnershipSize(PetscLayout, PetscInt *);
+PETSC_EXTERN PetscErrorCode PetscLayoutSetOwnershipSize(PetscLayout, PetscInt);
+PETSC_DEPRECATED_FUNCTION("Use PetscLayoutGetOwnershipSize() (since version 3.20)") static inline PetscErrorCode PetscLayoutGetLocalSize(PetscLayout l, PetscInt *s)
+{
+  return PetscLayoutGetOwnershipSize(l, s);
+}
+PETSC_DEPRECATED_FUNCTION("Use PetscLayoutSetOwnershipSize() (since version 3.20)") static inline PetscErrorCode PetscLayoutSetLocalSize(PetscLayout l, PetscInt s)
+{
+  return PetscLayoutSetOwnershipSize(l, s);
+}
 PETSC_EXTERN PetscErrorCode PetscLayoutSetSize(PetscLayout, PetscInt);
 PETSC_EXTERN PetscErrorCode PetscLayoutGetSize(PetscLayout, PetscInt *);
 PETSC_EXTERN PetscErrorCode PetscLayoutSetBlockSize(PetscLayout, PetscInt);

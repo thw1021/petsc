@@ -1650,7 +1650,7 @@ PetscErrorCode PetscSectionGetPointLayout(MPI_Comm comm, PetscSection s, PetscLa
     if (dof >= 0) ++localSize;
   }
   PetscCall(PetscLayoutCreate(comm, layout));
-  PetscCall(PetscLayoutSetLocalSize(*layout, localSize));
+  PetscCall(PetscLayoutSetOwnershipSize(*layout, localSize));
   PetscCall(PetscLayoutSetBlockSize(*layout, 1));
   PetscCall(PetscLayoutSetUp(*layout));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1700,7 +1700,7 @@ PetscErrorCode PetscSectionGetValueLayout(MPI_Comm comm, PetscSection s, PetscLa
     if (dof - cdof > 0) localSize += dof - cdof;
   }
   PetscCall(PetscLayoutCreate(comm, layout));
-  PetscCall(PetscLayoutSetLocalSize(*layout, localSize));
+  PetscCall(PetscLayoutSetOwnershipSize(*layout, localSize));
   PetscCall(PetscLayoutSetBlockSize(*layout, 1));
   PetscCall(PetscLayoutSetUp(*layout));
   PetscFunctionReturn(PETSC_SUCCESS);

@@ -2967,7 +2967,7 @@ PetscErrorCode DMPlexComputeMassMatrixGeneral(DM dmc, DM dmf, Mat mass, void *us
 
   PetscCall(MatGetLocalSize(mass, &locRows, NULL));
   PetscCall(PetscLayoutCreate(PetscObjectComm((PetscObject)mass), &rLayout));
-  PetscCall(PetscLayoutSetLocalSize(rLayout, locRows));
+  PetscCall(PetscLayoutSetOwnershipSize(rLayout, locRows));
   PetscCall(PetscLayoutSetBlockSize(rLayout, 1));
   PetscCall(PetscLayoutSetUp(rLayout));
   PetscCall(PetscLayoutGetRange(rLayout, &rStart, &rEnd));

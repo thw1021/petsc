@@ -3,6 +3,7 @@
 #include <petsc/private/vecimpl.h>
 PETSC_EXTERN PetscErrorCode VecCreate_Seq(Vec);
 PETSC_EXTERN PetscErrorCode VecCreate_MPI(Vec);
+PETSC_EXTERN PetscErrorCode VecCreate_Redundant(Vec);
 PETSC_EXTERN PetscErrorCode VecCreate_Standard(Vec);
 PETSC_EXTERN PetscErrorCode VecCreate_Shared(Vec);
 #if defined(PETSC_HAVE_MPI_PROCESS_SHARED_MEMORY)
@@ -36,6 +37,7 @@ PetscErrorCode VecRegisterAll(void)
 
   PetscCall(VecRegister(VECSEQ, VecCreate_Seq));
   PetscCall(VecRegister(VECMPI, VecCreate_MPI));
+  PetscCall(VecRegister(VECREDUNDANT, VecCreate_Redundant));
   PetscCall(VecRegister(VECSTANDARD, VecCreate_Standard));
   PetscCall(VecRegister(VECSHARED, VecCreate_Shared));
 #if defined PETSC_HAVE_VIENNACL

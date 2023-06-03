@@ -24,7 +24,7 @@ PetscErrorCode VecView_Binary(Vec vec, PetscViewer viewer)
   PetscCall(PetscViewerBinaryGetSkipHeader(viewer, &skipHeader));
 
   PetscCall(VecGetLayout(vec, &map));
-  PetscCall(PetscLayoutGetLocalSize(map, &n));
+  PetscCall(PetscLayoutGetOwnershipSize(map, &n));
   PetscCall(PetscLayoutGetRange(map, &s, NULL));
   PetscCall(PetscLayoutGetSize(map, &N));
 
@@ -91,7 +91,7 @@ PetscErrorCode VecLoad_Binary(Vec vec, PetscViewer viewer)
   PetscCall(PetscLayoutGetBlockSize(map, &bs));
   PetscCall(PetscOptionsGetInt(((PetscObject)viewer)->options, ((PetscObject)vec)->prefix, "-vecload_block_size", &bs, &flg));
   if (flg) PetscCall(VecSetBlockSize(vec, bs));
-  PetscCall(PetscLayoutGetLocalSize(map, &n));
+  PetscCall(PetscLayoutGetOwnershipSize(map, &n));
   if (N < 0) PetscCall(VecSetSizes(vec, n, rows));
   PetscCall(VecSetUp(vec));
 

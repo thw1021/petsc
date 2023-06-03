@@ -46,6 +46,33 @@ static PetscErrorCode VecScatterBegin_Internal(VecScatter sf, Vec x, Vec y, Inse
   PetscMemType xmtype = PETSC_MEMTYPE_HOST, ymtype = PETSC_MEMTYPE_HOST;
 
   PetscFunctionBegin;
+  if (sf->pattern == PETSCSF_PATTERN_ALLGATHER && x->map->redundant) {
+    if (mode & SCATTER_FORWARD) {
+      PetscCall(VecCopy(x, y));
+    } else {
+      const PetscScalar *y_array;
+      PetscScalar *x_array;
+      MPI_Op mop = MPI_OP_NULL;
+      PetscInt x_local_size, y_local_size;
+
+      if (addv == INSERT_VALUES) mop = MPI_REPLACE;
+      else if (addv == ADD_VALUES) mop = MPIU_SUM; /* Petsc defines its own MPI datatype and SUM operation for __float128 etc. */
+      else if (addv == MAX_VALUES) mop = MPIU_MAX;
+      else if (addv == MIN_VALUES) mop = MPIU_MIN;
+      else SETERRQ(PetscObjectComm((PetscObject)sf), PETSC_ERR_SUP, "Unsupported InsertMode %d in VecScatterBegin/End", addv);
+
+      PetscCall(VecGetLocalSize(y, &y_local_size));
+      PetscCall(VecGetLocalSize(x, &x_local_size));
+
+      PetscCheck(x_local_size == y_local_size, PetscObjectComm((PetscObject)x), PETSC_ERR_ARG_INCOMP, "Vectors are the wrong size");
+      PetscCall(VecGetArrayRead(y, &y_array));
+      PetscCall(VecGetArray(x, &x_array));
+      PetscCall(MPIU_Allreduce(y_array, x_array, x_local_size, MPIU_SCALAR, mop, PetscObjectComm((PetscObject)x)));
+      PetscCall(VecRestoreArray(x, &x_array));
+      PetscCall(VecRestoreArrayRead(y, &y_array));
+    }
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
   if (x != y) PetscCall(VecLockReadPush(x));
   PetscCall(VecGetArrayReadAndMemType(x, &sf->vscat.xdata, &xmtype));
   PetscCall(VecGetArrayAndMemType(y, &sf->vscat.ydata, &ymtype));
@@ -82,6 +109,7 @@ static PetscErrorCode VecScatterEnd_Internal(VecScatter sf, Vec x, Vec y, Insert
   PetscMPIInt size;
 
   PetscFunctionBegin;
+  if (sf->pattern == PETSCSF_PATTERN_ALLGATHER && x->map->redundant) PetscFunctionReturn(PETSC_SUCCESS);
   /* SCATTER_FORWARD_LOCAL indicates ignoring inter-process communication */
   PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)sf), &size));
   wsf = ((mode & SCATTER_FORWARD_LOCAL) && size > 1) ? sf->vscat.lsf : sf;

@@ -11,13 +11,15 @@
 
 #include <petsc/private/vecimpl.h>
 
-typedef struct {
-  VECHEADER
-  /* VecSetValuesCOO() related fields on host. m is the vector's local size */
-  PetscCount  coo_n; /* Number of entries in VecSetPreallocationCOO() */
-  PetscCount  tot1;  /* Total number of valid (i.e., w/ non-negative indices) entries in the COO array */
-  PetscCount *jmap1; /* [m+1]: perm1[jmap1[i]..jmap1[i+1]) give indices of entries in v[] associated with i-th nonzero of the vector */
+#define VECSEQHEADER \
+  VECHEADER \
+  PetscCount  coo_n; /* Number of entries in VecSetPreallocationCOO() */ \
+  PetscCount  tot1;  /* Total number of valid (i.e., w/ non-negative indices) entries in the COO array */ \
+  PetscCount *jmap1; /* [m+1]: perm1[jmap1[i]..jmap1[i+1]) give indices of entries in v[] associated with i-th nonzero of the vector */ \
   PetscCount *perm1; /* [tot1]: The permutation array in sorting coo_i[] */
+
+typedef struct {
+  VECSEQHEADER
 } Vec_Seq;
 
 PETSC_INTERN PetscErrorCode VecMaxPointwiseDivide_Seq(Vec, Vec, PetscReal *);

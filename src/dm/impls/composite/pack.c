@@ -91,7 +91,7 @@ PetscErrorCode DMSetUp_Composite(DM dm)
   PetscFunctionBegin;
   PetscCheck(!com->setup, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONGSTATE, "Packer has already been setup");
   PetscCall(PetscLayoutCreate(PetscObjectComm((PetscObject)dm), &map));
-  PetscCall(PetscLayoutSetLocalSize(map, com->n));
+  PetscCall(PetscLayoutSetOwnershipSize(map, com->n));
   PetscCall(PetscLayoutSetSize(map, PETSC_DETERMINE));
   PetscCall(PetscLayoutSetBlockSize(map, 1));
   PetscCall(PetscLayoutSetUp(map));

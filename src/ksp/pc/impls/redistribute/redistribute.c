@@ -140,7 +140,7 @@ static PetscErrorCode PCSetUp_Redistribute(PC pc)
 
     /* create PetscLayout for non-diagonal rows on each process */
     PetscCall(PetscLayoutCreate(comm, &map));
-    PetscCall(PetscLayoutSetLocalSize(map, cnt));
+    PetscCall(PetscLayoutSetOwnershipSize(map, cnt));
     PetscCall(PetscLayoutSetBlockSize(map, 1));
     PetscCall(PetscLayoutSetUp(map));
     nrstart = map->rstart;

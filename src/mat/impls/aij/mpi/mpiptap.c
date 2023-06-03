@@ -382,7 +382,7 @@ PetscErrorCode MatPtAPSymbolic_MPIAIJ_MPIAIJ_scalable(Mat A, Mat P, PetscReal fi
   /* (3) send coj of C_oth to other processors  */
   /* determine row ownership */
   PetscCall(PetscLayoutCreate(comm, &rowmap));
-  PetscCall(PetscLayoutSetLocalSize(rowmap, pn));
+  PetscCall(PetscLayoutSetOwnershipSize(rowmap, pn));
   PetscCall(PetscLayoutSetBlockSize(rowmap, 1));
   PetscCall(PetscLayoutSetUp(rowmap));
   PetscCall(PetscLayoutGetRanges(rowmap, &owners));

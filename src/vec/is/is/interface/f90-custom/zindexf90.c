@@ -21,7 +21,7 @@ PETSC_EXTERN void petsclayoutgetrangesf90_(PetscLayout *map, F90Array1d *ptr, in
 
   *__ierr = PetscLayoutGetRanges(*map, &fa);
   if (*__ierr) return;
-  *__ierr = PetscLayoutGetLocalSize(*map, &len);
+  *__ierr = PetscLayoutGetOwnershipSize(*map, &len);
   if (*__ierr) return;
   *__ierr = F90Array1dCreate((void *)fa, MPIU_INT, 1, len, ptr PETSC_F90_2PTR_PARAM(ptrd));
 }

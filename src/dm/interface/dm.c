@@ -4442,7 +4442,7 @@ static PetscErrorCode DMDefaultSectionCheckConsistency_Internal(DM dm, PetscSect
   PetscCall(PetscSectionGetConstrainedStorageSize(globalSection, &nroots));
   PetscCall(PetscLayoutCreate(comm, &layout));
   PetscCall(PetscLayoutSetBlockSize(layout, 1));
-  PetscCall(PetscLayoutSetLocalSize(layout, nroots));
+  PetscCall(PetscLayoutSetOwnershipSize(layout, nroots));
   PetscCall(PetscLayoutSetUp(layout));
   PetscCall(PetscLayoutGetRanges(layout, &ranges));
   for (p = pStart; p < pEnd; ++p) {

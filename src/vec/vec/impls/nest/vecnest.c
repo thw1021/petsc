@@ -964,7 +964,7 @@ static PetscErrorCode VecNestSetSubVec_Private(Vec X, PetscInt idxm, Vec x)
     PetscCall(VecSize_Nest_Recursive(X, PETSC_TRUE, &N));
     PetscCall(VecSize_Nest_Recursive(X, PETSC_FALSE, &n));
     PetscCall(PetscLayoutSetSize(X->map, N));
-    PetscCall(PetscLayoutSetLocalSize(X->map, n));
+    PetscCall(PetscLayoutSetOwnershipSize(X->map, n));
   }
 
   PetscCall(ISDestroy(&is));
@@ -1183,7 +1183,7 @@ PetscErrorCode VecCreateNest(MPI_Comm comm, PetscInt nb, IS is[], Vec x[], Vec *
   PetscCall(VecSize_Nest_Recursive(V, PETSC_TRUE, &N));
   PetscCall(VecSize_Nest_Recursive(V, PETSC_FALSE, &n));
   PetscCall(PetscLayoutSetSize(V->map, N));
-  PetscCall(PetscLayoutSetLocalSize(V->map, n));
+  PetscCall(PetscLayoutSetOwnershipSize(V->map, n));
   PetscCall(PetscLayoutSetBlockSize(V->map, 1));
   PetscCall(PetscLayoutSetUp(V->map));
 

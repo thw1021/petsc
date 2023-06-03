@@ -109,7 +109,7 @@ PetscErrorCode ISRenumber(IS subset, IS subset_mult, PetscInt *N, IS *subset_n)
   PetscCall(PetscLayoutSetBlockSize(map, 1));
   PetscCall(PetscLayoutSetSize(map, N_n));
   PetscCall(PetscLayoutSetUp(map));
-  PetscCall(PetscLayoutGetLocalSize(map, &Nl));
+  PetscCall(PetscLayoutGetOwnershipSize(map, &Nl));
 
   /* global indexes in layout */
   for (i = 0; i < npos; i++) gidxs[i] = (ilocal ? idxs[ilocal[i]] : idxs[i]) - gbounds[0];

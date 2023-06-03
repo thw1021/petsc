@@ -13,7 +13,7 @@ static PetscErrorCode VecXDot_Seq_Private(Vec xin, Vec yin, PetscScalar *z, doub
 static PetscErrorCode VecXDot_Seq_Private(Vec xin, Vec yin, PetscScalar *z, PetscScalar (*const BLASfn)(const PetscBLASInt *, const PetscScalar *, const PetscBLASInt *, const PetscScalar *, const PetscBLASInt *))
 #endif
 {
-  const PetscInt     n   = xin->map->n;
+  const PetscInt     n   = PetscLayoutLocalSize(xin->map);
   const PetscBLASInt one = 1;
   const PetscScalar *ya, *xa;
   PetscBLASInt       bn;
@@ -59,7 +59,7 @@ PetscErrorCode VecScale_Seq(Vec xin, PetscScalar alpha)
     PetscBLASInt       bn;
     PetscScalar       *xarray;
 
-    PetscCall(PetscBLASIntCast(xin->map->n, &bn));
+    PetscCall(PetscBLASIntCast(PetscLayoutLocalSize(xin->map), &bn));
     PetscCall(PetscLogFlops(bn));
     PetscCall(VecGetArray(xin, &xarray));
     PetscCallBLAS("BLASscal", BLASscal_(&bn, &alpha, xarray, &one));
@@ -78,7 +78,7 @@ PetscErrorCode VecAXPY_Seq(Vec yin, PetscScalar alpha, Vec xin)
     const PetscBLASInt one = 1;
     PetscBLASInt       bn;
 
-    PetscCall(PetscBLASIntCast(yin->map->n, &bn));
+    PetscCall(PetscBLASIntCast(PetscLayoutLocalSize(yin->map), &bn));
     PetscCall(PetscLogFlops(2.0 * bn));
     PetscCall(VecGetArrayRead(xin, &xarray));
     PetscCall(VecGetArray(yin, &yarray));
@@ -99,7 +99,7 @@ PetscErrorCode VecAXPBY_Seq(Vec yin, PetscScalar a, PetscScalar b, Vec xin)
   } else if (a == (PetscScalar)1.0) {
     PetscCall(VecAYPX_Seq(yin, b, xin));
   } else {
-    const PetscInt     n = yin->map->n;
+    const PetscInt     n = PetscLayoutLocalSize(yin->map);
     const PetscScalar *xx;
     PetscInt           flops;
     PetscScalar       *yy;
@@ -122,7 +122,7 @@ PetscErrorCode VecAXPBY_Seq(Vec yin, PetscScalar a, PetscScalar b, Vec xin)
 
 PetscErrorCode VecAXPBYPCZ_Seq(Vec zin, PetscScalar alpha, PetscScalar beta, PetscScalar gamma, Vec xin, Vec yin)
 {
-  const PetscInt     n = zin->map->n;
+  const PetscInt     n = PetscLayoutLocalSize(zin->map);
   const PetscScalar *yy, *xx;
   PetscInt           flops = 4 * n; // common case
   PetscScalar       *zz;

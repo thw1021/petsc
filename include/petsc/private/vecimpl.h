@@ -301,6 +301,9 @@ PETSC_INTERN PetscErrorCode VecStrideScatter_Default(Vec, PetscInt, Vec, InsertM
 PETSC_INTERN PetscErrorCode VecStrideSubSetGather_Default(Vec, PetscInt, const PetscInt[], const PetscInt[], Vec, InsertMode);
 PETSC_INTERN PetscErrorCode VecStrideSubSetScatter_Default(Vec, PetscInt, const PetscInt[], const PetscInt[], Vec, InsertMode);
 
+PETSC_INTERN PetscErrorCode VecRedundantPushDoNotCheckRedundancy(Vec);
+PETSC_INTERN PetscErrorCode VecRedundantPopDoNotCheckRedundancy(Vec);
+
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecReciprocal_Default(Vec);
 #if defined(PETSC_HAVE_MATLAB)
 PETSC_EXTERN PetscErrorCode VecMatlabEnginePut_Default(PetscObject, void *);

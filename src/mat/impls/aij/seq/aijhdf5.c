@@ -92,7 +92,7 @@ PetscErrorCode MatLoad_AIJ_HDF5(Mat mat, PetscViewer viewer)
   M++;
   PetscCall(ISCreate(comm, &is_i));
   PetscCall(PetscObjectSetName((PetscObject)is_i, i_name));
-  PetscCall(PetscLayoutSetLocalSize(is_i->map, m));
+  PetscCall(PetscLayoutSetOwnershipSize(is_i->map, m));
   PetscCall(PetscLayoutSetSize(is_i->map, M));
   PetscCall(ISLoad(is_i, viewer));
   PetscCall(ISGetIndices(is_i, &i_glob));

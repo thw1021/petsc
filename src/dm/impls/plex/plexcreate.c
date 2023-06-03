@@ -4779,7 +4779,7 @@ PetscErrorCode DMPlexBuildFromCellListParallel(DM dm, PetscInt numCells, PetscIn
   /* Build point sf */
   PetscCall(PetscLayoutCreate(PetscObjectComm((PetscObject)dm), &layout));
   PetscCall(PetscLayoutSetSize(layout, NVertices));
-  PetscCall(PetscLayoutSetLocalSize(layout, numVertices));
+  PetscCall(PetscLayoutSetOwnershipSize(layout, numVertices));
   PetscCall(PetscLayoutSetBlockSize(layout, 1));
   PetscCall(PetscSFCreateByMatchingIndices(layout, numVerticesAdj, verticesAdj, NULL, numCells, numVerticesAdj, verticesAdj, NULL, numCells, vertexSF, &sfPoint));
   PetscCall(PetscLayoutDestroy(&layout));

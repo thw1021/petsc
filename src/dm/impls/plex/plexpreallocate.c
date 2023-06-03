@@ -739,7 +739,7 @@ PetscErrorCode DMPlexPreallocateOperator(DM dm, PetscInt bs, PetscInt dnz[], Pet
   /* Create allocation vectors from adjacency graph */
   PetscCall(MatGetLocalSize(A, &locRows, NULL));
   PetscCall(PetscLayoutCreate(comm, &rLayout));
-  PetscCall(PetscLayoutSetLocalSize(rLayout, locRows));
+  PetscCall(PetscLayoutSetOwnershipSize(rLayout, locRows));
   PetscCall(PetscLayoutSetBlockSize(rLayout, 1));
   PetscCall(PetscLayoutSetUp(rLayout));
   /* There are 4 types of adjacency */

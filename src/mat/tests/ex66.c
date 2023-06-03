@@ -85,13 +85,13 @@ int main(int argc, char **argv)
     else n = 2 * n + rank;
   }
   if (!flgglob) {
-    PetscCall(PetscLayoutSetLocalSize(map, n));
+    PetscCall(PetscLayoutSetOwnershipSize(map, n));
     PetscCall(PetscLayoutSetUp(map));
     PetscCall(PetscLayoutGetSize(map, &N));
   } else {
     PetscCall(PetscLayoutSetSize(map, N));
     PetscCall(PetscLayoutSetUp(map));
-    PetscCall(PetscLayoutGetLocalSize(map, &n));
+    PetscCall(PetscLayoutGetOwnershipSize(map, &n));
   }
   PetscCall(PetscLayoutDestroy(&map));
 

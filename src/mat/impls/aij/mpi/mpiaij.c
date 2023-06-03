@@ -4868,7 +4868,7 @@ PetscErrorCode MatCreateMPIAIJSumSeqAIJSymbolic(MPI_Comm comm, Mat seqmat, Petsc
 
   /* determine row ownership */
   PetscCall(PetscLayoutCreate(comm, &merge->rowmap));
-  PetscCall(PetscLayoutSetLocalSize(merge->rowmap, m));
+  PetscCall(PetscLayoutSetOwnershipSize(merge->rowmap, m));
   PetscCall(PetscLayoutSetSize(merge->rowmap, M));
   PetscCall(PetscLayoutSetBlockSize(merge->rowmap, 1));
   PetscCall(PetscLayoutSetUp(merge->rowmap));

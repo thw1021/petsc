@@ -163,7 +163,7 @@ PetscErrorCode VecView_MPI_ASCII(Vec xin, PetscViewer viewer)
       if (!hasState) outputState = 0;
 
       PetscCall(PetscObjectGetName((PetscObject)xin, &name));
-      PetscCall(VecGetLocalSize(xin, &nLen));
+      PetscCall(VecGetOwnershipSize(xin, &nLen));
       PetscCall(PetscMPIIntCast(nLen, &n));
       PetscCall(VecGetBlockSize(xin, &bs));
       if (format == PETSC_VIEWER_ASCII_VTK_DEPRECATED) {
@@ -226,7 +226,7 @@ PetscErrorCode VecView_MPI_ASCII(Vec xin, PetscViewer viewer)
     } else if (format == PETSC_VIEWER_ASCII_VTK_COORDS_DEPRECATED) {
       PetscInt bs, b;
 
-      PetscCall(VecGetLocalSize(xin, &nLen));
+      PetscCall(VecGetOwnershipSize(xin, &nLen));
       PetscCall(PetscMPIIntCast(nLen, &n));
       PetscCall(VecGetBlockSize(xin, &bs));
       PetscCheck(bs >= 1 && bs <= 3, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "VTK can only handle 3D objects, but vector dimension is %" PetscInt_FMT, bs);
@@ -254,7 +254,7 @@ PetscErrorCode VecView_MPI_ASCII(Vec xin, PetscViewer viewer)
     } else if (format == PETSC_VIEWER_ASCII_PCICE) {
       PetscInt bs, b, vertexCount = 1;
 
-      PetscCall(VecGetLocalSize(xin, &nLen));
+      PetscCall(VecGetOwnershipSize(xin, &nLen));
       PetscCall(PetscMPIIntCast(nLen, &n));
       PetscCall(VecGetBlockSize(xin, &bs));
       PetscCheck(bs >= 1 && bs <= 3, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "PCICE can only handle up to 3D objects, but vector dimension is %" PetscInt_FMT, bs);
@@ -307,7 +307,7 @@ PetscErrorCode VecView_MPI_ASCII(Vec xin, PetscViewer viewer)
       PetscCheck(glvis_container, PetscObjectComm((PetscObject)viewer), PETSC_ERR_PLIB, "Missing GLVis container");
       PetscCall(PetscContainerGetPointer(glvis_container, (void **)&glvis_info));
       if (glvis_info->enabled) {
-        PetscCall(VecGetLocalSize(xin, &n));
+        PetscCall(VecGetOwnershipSize(xin, &n));
         PetscCall(VecGetArrayRead(xin, &array));
         for (i = 0; i < n; i++) {
           PetscCall(PetscViewerASCIIPrintf(viewer, glvis_info->fmt, (double)PetscRealPart(array[i])));
@@ -318,7 +318,7 @@ PetscErrorCode VecView_MPI_ASCII(Vec xin, PetscViewer viewer)
     } else if (format == PETSC_VIEWER_ASCII_INFO || format == PETSC_VIEWER_ASCII_INFO_DETAIL) {
       /* No info */
     } else {
-      if (format != PETSC_VIEWER_ASCII_COMMON) PetscCall(PetscViewerASCIIPrintf(viewer, "Process [%d]\n", rank));
+      if (format != PETSC_VIEWER_ASCII_COMMON && !xin->map->redundant) PetscCall(PetscViewerASCIIPrintf(viewer, "Process [%d]\n", rank));
       cnt = 0;
       for (i = 0; i < xin->map->n; i++) {
         if (format == PETSC_VIEWER_ASCII_INDEX) PetscCall(PetscViewerASCIIPrintf(viewer, "%" PetscInt_FMT ": ", cnt++));
@@ -338,7 +338,7 @@ PetscErrorCode VecView_MPI_ASCII(Vec xin, PetscViewer viewer)
       for (j = 1; j < size; j++) {
         PetscCallMPI(MPI_Recv(values, (PetscMPIInt)len, MPIU_SCALAR, j, tag, PetscObjectComm((PetscObject)xin), &status));
         PetscCallMPI(MPI_Get_count(&status, MPIU_SCALAR, &n));
-        if (format != PETSC_VIEWER_ASCII_COMMON) PetscCall(PetscViewerASCIIPrintf(viewer, "Process [%d]\n", j));
+        if (format != PETSC_VIEWER_ASCII_COMMON && !xin->map->redundant) PetscCall(PetscViewerASCIIPrintf(viewer, "Process [%d]\n", j));
         for (i = 0; i < n; i++) {
           if (format == PETSC_VIEWER_ASCII_INDEX) PetscCall(PetscViewerASCIIPrintf(viewer, "%" PetscInt_FMT ": ", cnt++));
 #if defined(PETSC_USE_COMPLEX)
@@ -434,7 +434,7 @@ PetscErrorCode VecView_MPI_Draw_LG(Vec xin, PetscViewer viewer)
 PetscErrorCode VecView_MPI_Draw(Vec xin, PetscViewer viewer)
 {
   PetscMPIInt        rank, size, tag = ((PetscObject)viewer)->tag;
-  PetscInt           i, start, end;
+  PetscInt           i, start;
   MPI_Status         status;
   PetscReal          min, max, tmp = 0.0;
   PetscDraw          draw;
@@ -466,7 +466,7 @@ PetscErrorCode VecView_MPI_Draw(Vec xin, PetscViewer viewer)
 
   /* draw local part of vector */
   PetscCall(VecGetArrayRead(xin, &xarray));
-  PetscCall(VecGetOwnershipRange(xin, &start, &end));
+  PetscCall(VecGetOwnershipRange(xin, &start, NULL));
   if (rank < size - 1) { /* send value to right */
     PetscCallMPI(MPI_Send((void *)&xarray[xin->map->n - 1], 1, MPIU_REAL, rank + 1, tag, PetscObjectComm((PetscObject)xin)));
   }
@@ -535,7 +535,7 @@ PetscErrorCode VecView_MPI_ADIOS(Vec xin, PetscViewer viewer)
   PetscFunctionBegin;
   PetscCall(PetscObjectGetName((PetscObject)xin, &vecname));
 
-  PetscCall(VecGetLocalSize(xin, &n));
+  PetscCall(VecGetOwnershipSize(xin, &n));
   PetscCall(VecGetSize(xin, &N));
   PetscCall(VecGetOwnershipRange(xin, &rstart, NULL));
 

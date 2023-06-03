@@ -1386,9 +1386,9 @@ PetscErrorCode MatNestSetSubMats_Nest(Mat A, PetscInt nr, const IS is_row[], Pet
   PetscCall(MatNestGetSizes_Private(A, &m, &n, &M, &N));
 
   PetscCall(PetscLayoutSetSize(A->rmap, M));
-  PetscCall(PetscLayoutSetLocalSize(A->rmap, m));
+  PetscCall(PetscLayoutSetOwnershipSize(A->rmap, m));
   PetscCall(PetscLayoutSetSize(A->cmap, N));
-  PetscCall(PetscLayoutSetLocalSize(A->cmap, n));
+  PetscCall(PetscLayoutSetOwnershipSize(A->cmap, n));
 
   PetscCall(PetscLayoutSetUp(A->rmap));
   PetscCall(PetscLayoutSetUp(A->cmap));
@@ -1517,7 +1517,7 @@ static PetscErrorCode MatNestCreateAggregateL2G_Private(Mat A, PetscInt n, const
       PetscCall(ISGetLocalSize(isglobal[i], &mil));
       PetscCall(PetscSFCreate(PetscObjectComm((PetscObject)A), &sf));
       PetscCall(PetscLayoutCreate(PetscObjectComm((PetscObject)A), &map));
-      PetscCall(PetscLayoutSetLocalSize(map, mil));
+      PetscCall(PetscLayoutSetOwnershipSize(map, mil));
       PetscCall(PetscLayoutSetUp(map));
       PetscCall(PetscSFSetGraphLayout(sf, map, nleaves, ilocal, PETSC_USE_POINTER, iremote));
       PetscCall(PetscLayoutDestroy(&map));

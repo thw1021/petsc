@@ -180,7 +180,7 @@ PetscErrorCode PCBDDCSetupFETIDPMatContext(FETIDPMat_ctx fetidpmat_ctx)
       PetscCall(PetscLayoutSetBlockSize(play, 1));
       PetscCall(PetscLayoutSetSize(play, nPg));
       PetscCall(ISGetLocalSize(pP, &nPgl));
-      PetscCall(PetscLayoutSetLocalSize(play, nPgl));
+      PetscCall(PetscLayoutSetOwnershipSize(play, nPgl));
       PetscCall(PetscLayoutSetUp(play));
     } else {
       PetscCall(PetscObjectReference((PetscObject)fetidpmat_ctx->C));
@@ -534,7 +534,7 @@ PetscErrorCode PCBDDCSetupFETIDPMatContext(FETIDPMat_ctx fetidpmat_ctx)
   PetscCall(PetscLayoutSetBlockSize(llay, 1));
   PetscCall(PetscLayoutSetSize(llay, fetidpmat_ctx->n_lambda));
   PetscCall(PetscLayoutSetUp(llay));
-  PetscCall(PetscLayoutGetLocalSize(llay, &fetidpmat_ctx->n));
+  PetscCall(PetscLayoutGetOwnershipSize(llay, &fetidpmat_ctx->n));
 
   /* Local work vector of multipliers */
   PetscCall(VecCreate(PETSC_COMM_SELF, &fetidpmat_ctx->lambda_local));
@@ -548,7 +548,7 @@ PetscErrorCode PCBDDCSetupFETIDPMatContext(FETIDPMat_ctx fetidpmat_ctx)
     PetscInt               nl, N;
     BDdelta_DN             ctx;
 
-    PetscCall(PetscLayoutGetLocalSize(llay, &nl));
+    PetscCall(PetscLayoutGetOwnershipSize(llay, &nl));
     PetscCall(PetscLayoutGetSize(llay, &N));
     PetscCall(MatCreate(comm, &T));
     PetscCall(MatSetSizes(T, nl, nl, N, N));

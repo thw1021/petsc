@@ -23,7 +23,7 @@
 .vb
        PetscLayoutCreate(MPI_Comm,PetscLayout *);
        PetscLayoutSetBlockSize(PetscLayout,bs);
-       PetscLayoutSetSize(PetscLayout,N); // or PetscLayoutSetLocalSize(PetscLayout,n);
+       PetscLayoutSetSize(PetscLayout,N); // or PetscLayoutSetOwnershipSize(PetscLayout,n);
        PetscLayoutSetUp(PetscLayout);
 .ve
   Alternatively,
@@ -34,7 +34,7 @@
   Optionally use any of the following
 .vb
   PetscLayoutGetSize(PetscLayout,PetscInt *);
-  PetscLayoutGetLocalSize(PetscLayout,PetscInt *);
+  PetscLayoutGetOwnershipSize(PetscLayout,PetscInt *);
   PetscLayoutGetRange(PetscLayout,PetscInt *rstart,PetscInt *rend);
   PetscLayoutGetRanges(PetscLayout,const PetscInt *range[]);
   PetscLayoutDestroy(PetscLayout*);
@@ -43,7 +43,7 @@
   The `PetscLayout` object and methods are intended to be used in the PETSc `Vec` and `Mat` implementations; it is often not needed in
   user codes unless you really gain something in their use.
 
-.seealso: [PetscLayout](sec_matlayout), `PetscLayoutSetLocalSize()`, `PetscLayoutSetSize()`, `PetscLayoutGetSize()`, `PetscLayoutGetLocalSize()`,
+.seealso: [PetscLayout](sec_matlayout), `PetscLayoutSetOwnershipSize()`, `PetscLayoutSetSize()`, `PetscLayoutGetSize()`, `PetscLayoutGetOwnershipSize()`,
           `PetscLayout`, `PetscLayoutDestroy()`,
           `PetscLayoutGetRange()`, `PetscLayoutGetRanges()`, `PetscLayoutSetBlockSize()`, `PetscLayoutGetBlockSize()`, `PetscLayoutSetUp()`,
           `PetscLayoutCreateFromSizes()`
@@ -75,7 +75,7 @@ PetscErrorCode PetscLayoutCreate(MPI_Comm comm, PetscLayout *map)
 
   Input Parameters:
 + comm  - the MPI communicator
-. n     - the local size (or `PETSC_DECIDE`)
+. n     - the locally owned size (or `PETSC_DECIDE`)
 . N     - the global size (or `PETSC_DECIDE`)
 - bs    - the block size (or `PETSC_DECIDE`)
 
@@ -89,20 +89,20 @@ $ PetscLayoutCreateFromSizes(comm, n, N, bs, &layout);
   is a shorthand for
 .vb
   PetscLayoutCreate(comm, &layout);
-  PetscLayoutSetLocalSize(layout, n);
+  PetscLayoutSetOwnershipSize(layout, n);
   PetscLayoutSetSize(layout, N);
   PetscLayoutSetBlockSize(layout, bs);
   PetscLayoutSetUp(layout);
 .ve
 
-.seealso: [PetscLayout](sec_matlayout), `PetscLayoutCreate()`, `PetscLayoutSetLocalSize()`, `PetscLayoutSetSize()`, `PetscLayoutGetSize()`, `PetscLayoutGetLocalSize()`, `PetscLayout`, `PetscLayoutDestroy()`,
+.seealso: [PetscLayout](sec_matlayout), `PetscLayoutCreate()`, `PetscLayoutSetOwnershipSize()`, `PetscLayoutSetSize()`, `PetscLayoutGetSize()`, `PetscLayoutGetOwnershipSize()`, `PetscLayout`, `PetscLayoutDestroy()`,
           `PetscLayoutGetRange()`, `PetscLayoutGetRanges()`, `PetscLayoutSetBlockSize()`, `PetscLayoutGetBlockSize()`, `PetscLayoutSetUp()`, `PetscLayoutCreateFromRanges()`
 @*/
 PetscErrorCode PetscLayoutCreateFromSizes(MPI_Comm comm, PetscInt n, PetscInt N, PetscInt bs, PetscLayout *map)
 {
   PetscFunctionBegin;
   PetscCall(PetscLayoutCreate(comm, map));
-  PetscCall(PetscLayoutSetLocalSize(*map, n));
+  PetscCall(PetscLayoutSetOwnershipSize(*map, n));
   PetscCall(PetscLayoutSetSize(*map, N));
   PetscCall(PetscLayoutSetBlockSize(*map, bs));
   PetscCall(PetscLayoutSetUp(*map));
@@ -119,7 +119,7 @@ PetscErrorCode PetscLayoutCreateFromSizes(MPI_Comm comm, PetscInt n, PetscInt N,
 
   Level: developer
 
-.seealso: [PetscLayout](sec_matlayout), `PetscLayoutSetLocalSize()`, `PetscLayoutSetSize()`, `PetscLayoutGetSize()`, `PetscLayoutGetLocalSize()`,
+.seealso: [PetscLayout](sec_matlayout), `PetscLayoutSetOwnershipSize()`, `PetscLayoutSetSize()`, `PetscLayoutGetSize()`, `PetscLayoutGetOwnershipSize()`,
           `PetscLayout`, `PetscLayoutCreate()`,
           `PetscLayoutGetRange()`, `PetscLayoutGetRanges()`, `PetscLayoutSetBlockSize()`, `PetscLayoutGetBlockSize()`, `PetscLayoutSetUp()`
 @*/
@@ -152,8 +152,8 @@ PetscErrorCode PetscLayoutDestroy(PetscLayout *map)
 
   Level: developer
 
-.seealso: [PetscLayout](sec_matlayout), `PetscLayoutCreate()`, `PetscLayoutSetLocalSize()`, `PetscLayoutSetSize()`, `PetscLayoutGetSize()`,
-          `PetscLayoutGetLocalSize()`, `PetscLayout`, `PetscLayoutDestroy()`,
+.seealso: [PetscLayout](sec_matlayout), `PetscLayoutCreate()`, `PetscLayoutSetOwnershipSize()`, `PetscLayoutSetSize()`, `PetscLayoutGetSize()`,
+          `PetscLayoutGetOwnershipSize()`, `PetscLayout`, `PetscLayoutDestroy()`,
           `PetscLayoutGetRange()`, `PetscLayoutGetRanges()`, `PetscLayoutSetBlockSize()`, `PetscLayoutGetBlockSize()`, `PetscLayoutSetUp()`, `PetscLayoutCreateFromSizes()`
 @*/
 PetscErrorCode PetscLayoutCreateFromRanges(MPI_Comm comm, const PetscInt range[], PetscCopyMode mode, PetscInt bs, PetscLayout *newmap)
@@ -184,7 +184,7 @@ PetscErrorCode PetscLayoutCreateFromRanges(MPI_Comm comm, const PetscInt range[]
   if (PetscDefined(USE_DEBUG)) { /* just check that n, N and bs are consistent */
     PetscInt tmp;
     PetscCall(MPIU_Allreduce(&map->n, &tmp, 1, MPIU_INT, MPI_SUM, map->comm));
-    PetscCheck(tmp == map->N, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Sum of local lengths %" PetscInt_FMT " does not equal global length %" PetscInt_FMT ", my local length %" PetscInt_FMT ".\nThe provided PetscLayout is wrong.", tmp, map->N, map->n);
+    PetscCheck(tmp == map->N, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Sum of owned lengths %" PetscInt_FMT " does not equal global length %" PetscInt_FMT ", my owned length %" PetscInt_FMT ".\nThe provided PetscLayout is wrong.", tmp, map->N, map->n);
     if (map->bs > 1) PetscCheck(map->n % map->bs == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Local size %" PetscInt_FMT " must be divisible by blocksize %" PetscInt_FMT, map->n, map->bs);
     if (map->bs > 1) PetscCheck(map->N % map->bs == 0, map->comm, PETSC_ERR_PLIB, "Global size %" PetscInt_FMT " must be divisible by blocksize %" PetscInt_FMT, map->N, map->bs);
   }
@@ -198,7 +198,7 @@ PetscErrorCode PetscLayoutCreateFromRanges(MPI_Comm comm, const PetscInt range[]
 }
 
 /*@
-  PetscLayoutSetUp - given a map where you have set either the global or local
+  PetscLayoutSetUp - given a map where you have set either the global or owned
                      size sets up the map so that it may be used.
 
   Collective
@@ -213,16 +213,16 @@ PetscErrorCode PetscLayoutCreateFromRanges(MPI_Comm comm, const PetscInt range[]
 .vb
   PetscLayoutCreate(MPI_Comm,PetscLayout *);
   PetscLayoutSetBlockSize(PetscLayout,1);
-  PetscLayoutSetSize(PetscLayout,n) or PetscLayoutSetLocalSize(PetscLayout,N); or both
+  PetscLayoutSetSize(PetscLayout,n) or PetscLayoutSetOwnershipSize(PetscLayout,N); or both
   PetscLayoutSetUp(PetscLayout);
   PetscLayoutGetSize(PetscLayout,PetscInt *);
 .ve
 
-  If range exists, and local size is not set, everything gets computed from the range.
+  If range exists, and owned size is not set, everything gets computed from the range.
 
-  If the local size, global size are already set and range exists then this does nothing.
+  If the owned size, global size are already set and range exists then this does nothing.
 
-.seealso: [PetscLayout](sec_matlayout), `PetscLayoutSetLocalSize()`, `PetscLayoutSetSize()`, `PetscLayoutGetSize()`, `PetscLayoutGetLocalSize()`,
+.seealso: [PetscLayout](sec_matlayout), `PetscLayoutSetOwnershipSize()`, `PetscLayoutSetSize()`, `PetscLayoutGetSize()`, `PetscLayoutGetOwnershipSize()`,
           `PetscLayout`, `PetscLayoutDestroy()`,
           `PetscLayoutGetRange()`, `PetscLayoutGetRanges()`, `PetscLayoutSetBlockSize()`, `PetscLayoutGetBlockSize()`, `PetscLayoutCreate()`, `PetscSplitOwnership()`
 @*/
@@ -232,7 +232,7 @@ PetscErrorCode PetscLayoutSetUp(PetscLayout map)
   PetscInt    p;
 
   PetscFunctionBegin;
-  PetscCheck(!map->setupcalled || !(map->n != map->oldn || map->N != map->oldN), map->comm, PETSC_ERR_ARG_WRONGSTATE, "Layout is already setup with (local=%" PetscInt_FMT ",global=%" PetscInt_FMT "), cannot call setup again with (local=%" PetscInt_FMT ",global=%" PetscInt_FMT ")",
+  PetscCheck(!map->setupcalled || !(map->n != map->oldn || map->N != map->oldN), map->comm, PETSC_ERR_ARG_WRONGSTATE, "Layout is already setup with (owned=%" PetscInt_FMT ",global=%" PetscInt_FMT "), cannot call setup again with (owned=%" PetscInt_FMT ",global=%" PetscInt_FMT ")",
              map->oldn, map->oldN, map->n, map->N);
   if (map->setupcalled) PetscFunctionReturn(PETSC_SUCCESS);
 
@@ -359,20 +359,20 @@ PetscErrorCode PetscLayoutSetISLocalToGlobalMapping(PetscLayout in, ISLocalToGlo
 }
 
 /*@
-  PetscLayoutSetLocalSize - Sets the local size for a `PetscLayout` object.
+  PetscLayoutSetOwnershipSize - Sets the ownership size for a `PetscLayout` object.
 
   Collective
 
   Input Parameters:
 + map - pointer to the map
-- n - the local size
+- n - the ownership size of this MPI process
 
   Level: developer
 
-.seealso: [PetscLayout](sec_matlayout), `PetscLayoutCreate()`, `PetscLayoutSetSize()`, `PetscLayoutGetSize()`, `PetscLayoutGetLocalSize()`, `PetscLayoutSetUp()`
+.seealso: [PetscLayout](sec_matlayout), `PetscLayoutCreate()`, `PetscLayoutSetSize()`, `PetscLayoutGetSize()`, `PetscLayoutGetOwnershipSize()`, `PetscLayoutSetUp()`
           `PetscLayoutGetRange()`, `PetscLayoutGetRanges()`, `PetscLayoutSetBlockSize()`, `PetscLayoutGetBlockSize()`
 @*/
-PetscErrorCode PetscLayoutSetLocalSize(PetscLayout map, PetscInt n)
+PetscErrorCode PetscLayoutSetOwnershipSize(PetscLayout map, PetscInt n)
 {
   PetscFunctionBegin;
   PetscCheck(map->bs <= 1 || (n % map->bs) == 0, map->comm, PETSC_ERR_ARG_INCOMP, "Local size %" PetscInt_FMT " not compatible with block size %" PetscInt_FMT, n, map->bs);
@@ -381,7 +381,7 @@ PetscErrorCode PetscLayoutSetLocalSize(PetscLayout map, PetscInt n)
 }
 
 /*@
-     PetscLayoutGetLocalSize - Gets the local size for a `PetscLayout` object.
+     PetscLayoutGetOwnershipSize - Gets the ownership size for a `PetscLayout` object.
 
     Not Collective
 
@@ -389,17 +389,17 @@ PetscErrorCode PetscLayoutSetLocalSize(PetscLayout map, PetscInt n)
 .    map - pointer to the map
 
    Output Parameter:
-.    n - the local size
+.    n - the ownership size for this MPI process
 
    Level: developer
 
     Note:
     Call this after the call to `PetscLayoutSetUp()`
 
-.seealso: [PetscLayout](sec_matlayout), `PetscLayoutCreate()`, `PetscLayoutSetSize()`, `PetscLayoutGetSize()`, `PetscLayoutGetLocalSize()`, `PetscLayoutSetUp()`
+.seealso: [PetscLayout](sec_matlayout), `PetscLayoutCreate()`, `PetscLayoutSetSize()`, `PetscLayoutGetSize()`, `PetscLayoutGetOwnershipSize()`, `PetscLayoutSetUp()`
           `PetscLayoutGetRange()`, `PetscLayoutGetRanges()`, `PetscLayoutSetBlockSize()`, `PetscLayoutGetBlockSize()`
 @*/
-PetscErrorCode PetscLayoutGetLocalSize(PetscLayout map, PetscInt *n)
+PetscErrorCode PetscLayoutGetOwnershipSize(PetscLayout map, PetscInt *n)
 {
   PetscFunctionBegin;
   *n = map->n;
@@ -417,7 +417,7 @@ PetscErrorCode PetscLayoutGetLocalSize(PetscLayout map, PetscInt *n)
 
   Level: developer
 
-.seealso: [PetscLayout](sec_matlayout), `PetscLayoutCreate()`, `PetscLayoutSetLocalSize()`, `PetscLayoutGetLocalSize()`, `PetscLayoutGetSize()`, `PetscLayoutSetUp()`
+.seealso: [PetscLayout](sec_matlayout), `PetscLayoutCreate()`, `PetscLayoutSetOwnershipSize()`, `PetscLayoutGetOwnershipSize()`, `PetscLayoutGetSize()`, `PetscLayoutSetUp()`
           `PetscLayoutGetRange()`, `PetscLayoutGetRanges()`, `PetscLayoutSetBlockSize()`, `PetscLayoutGetBlockSize()`
 @*/
 PetscErrorCode PetscLayoutSetSize(PetscLayout map, PetscInt n)
@@ -443,7 +443,7 @@ PetscErrorCode PetscLayoutSetSize(PetscLayout map, PetscInt n)
   Note:
   Call this after the call to `PetscLayoutSetUp()`
 
-.seealso: [PetscLayout](sec_matlayout), `PetscLayoutCreate()`, `PetscLayoutSetLocalSize()`, `PetscLayoutGetLocalSize()`, `PetscLayoutSetSize()`, `PetscLayoutSetUp()`
+.seealso: [PetscLayout](sec_matlayout), `PetscLayoutCreate()`, `PetscLayoutSetOwnershipSize()`, `PetscLayoutGetOwnershipSize()`, `PetscLayoutSetSize()`, `PetscLayoutSetUp()`
           `PetscLayoutGetRange()`, `PetscLayoutGetRanges()`, `PetscLayoutSetBlockSize()`, `PetscLayoutGetBlockSize()`
 @*/
 PetscErrorCode PetscLayoutGetSize(PetscLayout map, PetscInt *n)
@@ -464,7 +464,7 @@ PetscErrorCode PetscLayoutGetSize(PetscLayout map, PetscInt *n)
 
   Level: developer
 
-.seealso: [PetscLayout](sec_matlayout), `PetscLayoutCreate()`, `PetscLayoutSetLocalSize()`, `PetscLayoutGetLocalSize()`, `PetscLayoutGetBlockSize()`,
+.seealso: [PetscLayout](sec_matlayout), `PetscLayoutCreate()`, `PetscLayoutSetOwnershipSize()`, `PetscLayoutGetOwnershipSize()`, `PetscLayoutGetBlockSize()`,
           `PetscLayoutGetRange()`, `PetscLayoutGetRanges()`, `PetscLayoutSetSize()`, `PetscLayoutGetSize()`, `PetscLayoutSetUp()`
 @*/
 PetscErrorCode PetscLayoutSetBlockSize(PetscLayout map, PetscInt bs)
@@ -498,7 +498,7 @@ PetscErrorCode PetscLayoutSetBlockSize(PetscLayout map, PetscInt bs)
   Notes:
   Call this after the call to `PetscLayoutSetUp()`
 
-.seealso: [PetscLayout](sec_matlayout), `PetscLayoutCreate()`, `PetscLayoutSetLocalSize()`, `PetscLayoutGetLocalSize()`, `PetscLayoutSetSize()`, `PetscLayoutSetUp()`
+.seealso: [PetscLayout](sec_matlayout), `PetscLayoutCreate()`, `PetscLayoutSetOwnershipSize()`, `PetscLayoutGetOwnershipSize()`, `PetscLayoutSetSize()`, `PetscLayoutSetUp()`
           `PetscLayoutGetRange()`, `PetscLayoutGetRanges()`, `PetscLayoutSetBlockSize()`, `PetscLayoutGetSize()`
 @*/
 PetscErrorCode PetscLayoutGetBlockSize(PetscLayout map, PetscInt *bs)
@@ -525,7 +525,7 @@ PetscErrorCode PetscLayoutGetBlockSize(PetscLayout map, PetscInt *bs)
   Note:
   Call this after the call to `PetscLayoutSetUp()`
 
-.seealso: [PetscLayout](sec_matlayout), `PetscLayoutCreate()`, `PetscLayoutSetLocalSize()`, `PetscLayoutGetLocalSize()`, `PetscLayoutSetSize()`,
+.seealso: [PetscLayout](sec_matlayout), `PetscLayoutCreate()`, `PetscLayoutSetOwnershipSize()`, `PetscLayoutGetOwnershipSize()`, `PetscLayoutSetSize()`,
           `PetscLayoutGetSize()`, `PetscLayoutGetRanges()`, `PetscLayoutSetBlockSize()`, `PetscLayoutGetSize()`, `PetscLayoutSetUp()`
 @*/
 PetscErrorCode PetscLayoutGetRange(PetscLayout map, PetscInt *rstart, PetscInt *rend)
@@ -556,7 +556,7 @@ PetscErrorCode PetscLayoutGetRange(PetscLayout map, PetscInt *rstart, PetscInt *
     Fortran Note:
     In Fortran, use PetscLayoutGetRangesF90()
 
-.seealso: [PetscLayout](sec_matlayout), `PetscLayoutCreate()`, `PetscLayoutSetLocalSize()`, `PetscLayoutGetLocalSize()`, `PetscLayoutSetSize()`,
+.seealso: [PetscLayout](sec_matlayout), `PetscLayoutCreate()`, `PetscLayoutSetOwnershipSize()`, `PetscLayoutGetOwnershipSize()`, `PetscLayoutSetSize()`,
           `PetscLayoutGetSize()`, `PetscLayoutGetRange()`, `PetscLayoutSetBlockSize()`, `PetscLayoutGetSize()`, `PetscLayoutSetUp()`
 @*/
 PetscErrorCode PetscLayoutGetRanges(PetscLayout map, const PetscInt *range[])
@@ -580,7 +580,7 @@ PetscErrorCode PetscLayoutGetRanges(PetscLayout map, const PetscInt *range[])
 
   Level: beginner
 
-.seealso: [PetscLayout](sec_matlayout), `PetscLayoutCreate()`, `PetscLayoutSetLocalSize()`, `PetscLayoutGetLocalSize()`, `PetscLayoutGetBlockSize()`,
+.seealso: [PetscLayout](sec_matlayout), `PetscLayoutCreate()`, `PetscLayoutSetOwnershipSize()`, `PetscLayoutGetOwnershipSize()`, `PetscLayoutGetBlockSize()`,
           `PetscLayoutGetRange()`, `PetscLayoutGetRanges()`, `PetscLayoutSetSize()`, `PetscLayoutGetSize()`, `PetscLayoutSetUp()`
 @*/
 PetscErrorCode PetscLayoutCompare(PetscLayout mapa, PetscLayout mapb, PetscBool *congruent)

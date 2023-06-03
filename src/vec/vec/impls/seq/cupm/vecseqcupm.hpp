@@ -172,7 +172,7 @@ inline PetscErrorCode VecSeq_CUPM<T>::VecCreate_IMPL_Private_(Vec v, PetscBool *
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-// for functions with an early return based one vec size we still need to artificially bump the
+// for functions with an early return based on vec size we still need to artificially bump the
 // object state. This is to prevent the following:
 //
 // 0. Suppose you have a Vec {
@@ -192,7 +192,7 @@ template <device::cupm::DeviceType T>
 inline PetscErrorCode VecSeq_CUPM<T>::MaybeIncrementEmptyLocalVec(Vec v) noexcept
 {
   PetscFunctionBegin;
-  if (PetscUnlikely((v->map->n == 0) && (v->map->N != 0))) PetscCall(PetscObjectStateIncrease(PetscObjectCast(v)));
+  if (PetscUnlikely((PetscLayoutLocalSize(v->map) == 0) && (v->map->N != 0))) PetscCall(PetscObjectStateIncrease(PetscObjectCast(v)));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -210,7 +210,7 @@ template <typename BinaryFuncT>
 inline PetscErrorCode VecSeq_CUPM<T>::PointwiseBinary_(BinaryFuncT &&binary, Vec xin, Vec yin, Vec zout) noexcept
 {
   PetscFunctionBegin;
-  if (const auto n = zout->map->n) {
+  if (const auto n = PetscLayoutLocalSize(zout->map)) {
     PetscDeviceContext dctx;
     cupmStream_t       stream;
 
@@ -244,7 +244,7 @@ inline PetscErrorCode VecSeq_CUPM<T>::PointwiseUnary_(UnaryFuncT &&unary, Vec xi
   const auto inplace = !yin || (xinout == yin);
 
   PetscFunctionBegin;
-  if (const auto n = xinout->map->n) {
+  if (const auto n = PetscLayoutLocalSize(xinout->map)) {
     PetscDeviceContext dctx;
     cupmStream_t       stream;
     const auto         apply = [&](PetscScalar *xinout, PetscScalar *yin = nullptr) {
@@ -458,7 +458,7 @@ inline PetscErrorCode VecSeq_CUPM<T>::RestoreLocalVector(Vec v, Vec w) noexcept
 template <device::cupm::DeviceType T>
 inline PetscErrorCode VecSeq_CUPM<T>::AYPX(Vec yin, PetscScalar alpha, Vec xin) noexcept
 {
-  const auto         n    = static_cast<cupmBlasInt_t>(yin->map->n);
+  const auto         n    = static_cast<cupmBlasInt_t>(PetscLayoutLocalSize(yin->map));
   const auto         sync = n != 0;
   PetscDeviceContext dctx;
 
@@ -507,7 +507,7 @@ inline PetscErrorCode VecSeq_CUPM<T>::AXPY(Vec yin, PetscScalar alpha, Vec xin) 
   PetscFunctionBegin;
   PetscCall(PetscObjectTypeCompareAny(PetscObjectCast(xin), &xiscupm, VECSEQCUPM(), VECMPICUPM(), ""));
   if (xiscupm) {
-    const auto         n = static_cast<cupmBlasInt_t>(yin->map->n);
+    const auto         n = static_cast<cupmBlasInt_t>(PetscLayoutLocalSize(yin->map));
     PetscDeviceContext dctx;
     cupmBlasHandle_t   cupmBlasHandle;
 
@@ -582,7 +582,7 @@ inline PetscErrorCode VecSeq_CUPM<T>::WAXPY(Vec win, PetscScalar alpha, Vec xin,
   PetscFunctionBegin;
   if (alpha == PetscScalar(0.0)) {
     PetscCall(Copy(yin, win));
-  } else if (const auto n = static_cast<cupmBlasInt_t>(win->map->n)) {
+  } else if (const auto n = static_cast<cupmBlasInt_t>(PetscLayoutLocalSize(win->map))) {
     PetscDeviceContext dctx;
     cupmBlasHandle_t   cupmBlasHandle;
     cupmStream_t       stream;
@@ -685,7 +685,7 @@ inline PetscErrorCode VecSeq_CUPM<T>::MAXPY_kernel_dispatch_(PetscDeviceContext 
 template <device::cupm::DeviceType T>
 inline PetscErrorCode VecSeq_CUPM<T>::MAXPY(Vec xin, PetscInt nv, const PetscScalar *alpha, Vec *yin) noexcept
 {
-  const auto         n = xin->map->n;
+  const auto         n = PetscLayoutLocalSize(xin->map);
   PetscDeviceContext dctx;
   cupmStream_t       stream;
 
@@ -742,7 +742,7 @@ template <device::cupm::DeviceType T>
 inline PetscErrorCode VecSeq_CUPM<T>::Dot(Vec xin, Vec yin, PetscScalar *z) noexcept
 {
   PetscFunctionBegin;
-  if (const auto n = static_cast<cupmBlasInt_t>(xin->map->n)) {
+  if (const auto n = static_cast<cupmBlasInt_t>(PetscLayoutLocalSize(xin->map))) {
     PetscDeviceContext dctx;
     cupmBlasHandle_t   cupmBlasHandle;
 
@@ -903,7 +903,7 @@ inline PetscErrorCode VecSeq_CUPM<T>::MDot_(std::false_type, Vec xin, PetscInt n
   // do not create substreams. Note we don't create more than 8 streams, in practice we could
   // not get more parallelism with higher numbers.
   const auto num_sub_streams = nv > batchsize ? std::min((nv + batchsize) / batchsize, batchsize) : 0;
-  const auto n               = xin->map->n;
+  const auto n               = PetscLayoutLocalSize(xin->map);
   // number of vectors that we handle via the batches. note any singletons are handled by
   // cublas, hence the nv-1.
   const auto   nvbatch = ((nv % batchsize) == 1) ? nv - 1 : nv;
@@ -992,7 +992,7 @@ inline PetscErrorCode VecSeq_CUPM<T>::MDot_(std::true_type, Vec xin, PetscInt nv
 {
   // probably not worth it to run more than 8 of these at a time?
   const auto          n_sub = PetscMin(nv, 8);
-  const auto          n     = static_cast<cupmBlasInt_t>(xin->map->n);
+  const auto          n     = static_cast<cupmBlasInt_t>(PetscLayoutLocalSize(xin->map));
   const auto          xptr  = DeviceArrayRead(dctx, xin);
   PetscScalar        *d_z;
   PetscDeviceContext *subctx;
@@ -1030,7 +1030,7 @@ inline PetscErrorCode VecSeq_CUPM<T>::MDot(Vec xin, PetscInt nv, const Vec yin[]
   if (PetscUnlikely(nv == 1)) {
     // dot handles nv = 0 correctly
     PetscCall(Dot(xin, const_cast<Vec>(yin[0]), z));
-  } else if (const auto n = xin->map->n) {
+  } else if (const auto n = PetscLayoutLocalSize(xin->map)) {
     PetscDeviceContext dctx;
 
     PetscCheck(nv > 0, PETSC_COMM_SELF, PETSC_ERR_LIB, "Number of vectors provided to %s %" PetscInt_FMT " not positive", PETSC_FUNCTION_NAME, nv);
@@ -1049,7 +1049,7 @@ inline PetscErrorCode VecSeq_CUPM<T>::MDot(Vec xin, PetscInt nv, const Vec yin[]
 template <device::cupm::DeviceType T>
 inline PetscErrorCode VecSeq_CUPM<T>::Set(Vec xin, PetscScalar alpha) noexcept
 {
-  const auto         n = xin->map->n;
+  const auto         n = PetscLayoutLocalSize(xin->map);
   PetscDeviceContext dctx;
   cupmStream_t       stream;
 
@@ -1078,7 +1078,7 @@ inline PetscErrorCode VecSeq_CUPM<T>::Scale(Vec xin, PetscScalar alpha) noexcept
   if (PetscUnlikely(alpha == PetscScalar(1.0))) PetscFunctionReturn(PETSC_SUCCESS);
   if (PetscUnlikely(alpha == PetscScalar(0.0))) {
     PetscCall(Set(xin, alpha));
-  } else if (const auto n = static_cast<cupmBlasInt_t>(xin->map->n)) {
+  } else if (const auto n = static_cast<cupmBlasInt_t>(PetscLayoutLocalSize(xin->map))) {
     PetscDeviceContext dctx;
     cupmBlasHandle_t   cupmBlasHandle;
 
@@ -1099,7 +1099,7 @@ template <device::cupm::DeviceType T>
 inline PetscErrorCode VecSeq_CUPM<T>::TDot(Vec xin, Vec yin, PetscScalar *z) noexcept
 {
   PetscFunctionBegin;
-  if (const auto n = static_cast<cupmBlasInt_t>(xin->map->n)) {
+  if (const auto n = static_cast<cupmBlasInt_t>(PetscLayoutLocalSize(xin->map))) {
     PetscDeviceContext dctx;
     cupmBlasHandle_t   cupmBlasHandle;
 
@@ -1120,7 +1120,7 @@ inline PetscErrorCode VecSeq_CUPM<T>::Copy(Vec xin, Vec yout) noexcept
 {
   PetscFunctionBegin;
   if (xin == yout) PetscFunctionReturn(PETSC_SUCCESS);
-  if (const auto n = xin->map->n) {
+  if (const auto n = PetscLayoutLocalSize(xin->map)) {
     const auto xmask = xin->offloadmask;
     // silence buggy gcc warning: mode may be used uninitialized in this function
     auto               mode = cupmMemcpyDeviceToDevice;
@@ -1190,7 +1190,7 @@ inline PetscErrorCode VecSeq_CUPM<T>::Swap(Vec xin, Vec yin) noexcept
 {
   PetscFunctionBegin;
   if (xin == yin) PetscFunctionReturn(PETSC_SUCCESS);
-  if (const auto n = static_cast<cupmBlasInt_t>(xin->map->n)) {
+  if (const auto n = static_cast<cupmBlasInt_t>(PetscLayoutLocalSize(xin->map))) {
     PetscDeviceContext dctx;
     cupmBlasHandle_t   cupmBlasHandle;
 
@@ -1217,7 +1217,7 @@ inline PetscErrorCode VecSeq_CUPM<T>::AXPBY(Vec yin, PetscScalar alpha, PetscSca
     PetscCall(AXPY(yin, alpha, xin));
   } else if (alpha == PetscScalar(1.0)) {
     PetscCall(AYPX(yin, beta, xin));
-  } else if (const auto n = static_cast<cupmBlasInt_t>(yin->map->n)) {
+  } else if (const auto n = static_cast<cupmBlasInt_t>(PetscLayoutLocalSize(yin->map))) {
     const auto         betaIsZero = beta == PetscScalar(0.0);
     const auto         aptr       = cupmScalarPtrCast(&alpha);
     PetscDeviceContext dctx;
@@ -1273,7 +1273,7 @@ inline PetscErrorCode VecSeq_CUPM<T>::Norm(Vec xin, NormType type, PetscReal *z)
 
   PetscFunctionBegin;
   PetscCall(GetHandles_(&dctx, &cupmBlasHandle));
-  if (const auto n = static_cast<cupmBlasInt_t>(xin->map->n)) {
+  if (const auto n = static_cast<cupmBlasInt_t>(PetscLayoutLocalSize(xin->map))) {
     const auto xptr      = DeviceArrayRead(dctx, xin);
     PetscInt   flopCount = 0;
 
@@ -1484,7 +1484,7 @@ inline PetscErrorCode ExecuteWNorm(Tuple &&first, Tuple &&last, NormType wnormty
 template <device::cupm::DeviceType T>
 inline PetscErrorCode VecSeq_CUPM<T>::ErrorWnorm(Vec U, Vec Y, Vec E, NormType wnormtype, PetscReal atol, Vec vatol, PetscReal rtol, Vec vrtol, PetscReal ignore_max, PetscReal *norm, PetscInt *norm_loc, PetscReal *norma, PetscInt *norma_loc, PetscReal *normr, PetscInt *normr_loc) noexcept
 {
-  const auto         nl  = U->map->n;
+  const auto         nl  = PetscLayoutLocalSize(U->map);
   auto               ait = thrust::make_constant_iterator(static_cast<PetscScalar>(atol));
   auto               rit = thrust::make_constant_iterator(static_cast<PetscScalar>(rtol));
   PetscDeviceContext dctx;
@@ -1641,7 +1641,7 @@ inline PetscErrorCode VecSeq_CUPM<T>::DotNorm2(Vec s, Vec t, PetscScalar *dp, Pe
       thrust::tie(*dp, *nm) = THRUST_CALL(
         thrust::inner_product,
         stream,
-        sdptr, sdptr+s->map->n, thrust::device_pointer_cast(DeviceArrayRead(dctx, t).data()),
+        sdptr, sdptr+PetscLayoutLocalSize(s->map), thrust::device_pointer_cast(DeviceArrayRead(dctx, t).data()),
         thrust::make_tuple(dpt, nmt),
         detail::dotnorm2_tuple_plus{}, detail::dotnorm2_mult{}
       );
@@ -1710,7 +1710,7 @@ inline PetscErrorCode VecSeq_CUPM<T>::MinMax_(TupleFuncT &&tuple_ftr, UnaryFuncT
   PetscFunctionBegin;
   PetscCheckTypeNames(v, VECSEQCUPM(), VECMPICUPM());
   if (p) *p = -1;
-  if (const auto n = v->map->n) {
+  if (const auto n = PetscLayoutLocalSize(v->map)) {
     PetscDeviceContext dctx;
     cupmStream_t       stream;
 
@@ -1793,7 +1793,7 @@ template <device::cupm::DeviceType T>
 inline PetscErrorCode VecSeq_CUPM<T>::Sum(Vec v, PetscScalar *sum) noexcept
 {
   PetscFunctionBegin;
-  if (const auto n = v->map->n) {
+  if (const auto n = PetscLayoutLocalSize(v->map)) {
     PetscDeviceContext dctx;
     cupmStream_t       stream;
 
@@ -1821,7 +1821,7 @@ template <device::cupm::DeviceType T>
 inline PetscErrorCode VecSeq_CUPM<T>::SetRandom(Vec v, PetscRandom rand) noexcept
 {
   PetscFunctionBegin;
-  if (const auto n = v->map->n) {
+  if (const auto n = PetscLayoutLocalSize(v->map)) {
     PetscBool          iscurand;
     PetscDeviceContext dctx;
 
@@ -1929,7 +1929,7 @@ inline PetscErrorCode VecSeq_CUPM<T>::SetValuesCOO(Vec x, const PetscScalar v[],
     PetscCall(PetscCUPMMemcpyAsync(vv, v, size, cupmMemcpyHostToDevice, stream));
   }
 
-  if (const auto n = x->map->n) {
+  if (const auto n = PetscLayoutLocalSize(x->map)) {
     const auto vcu = VecCUPMCast(x);
 
     PetscCall(PetscCUPMLaunchKernel1D(n, 0, stream, kernels::add_coo_values, vv, n, vcu->jmap1_d, vcu->perm1_d, imode, imode == INSERT_VALUES ? DeviceArrayWrite(dctx, x).data() : DeviceArrayReadWrite(dctx, x).data()));

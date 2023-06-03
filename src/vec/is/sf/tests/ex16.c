@@ -213,7 +213,7 @@ int main(int argc, char **argv)
   }
   PetscCall(PetscLayoutCreate(PETSC_COMM_WORLD, &layout));
   PetscCall(PetscLayoutSetSize(layout, N));
-  PetscCall(PetscLayoutSetLocalSize(layout, n));
+  PetscCall(PetscLayoutSetOwnershipSize(layout, n));
   PetscCall(PetscLayoutSetBlockSize(layout, 1));
   PetscCall(PetscSFCreateByMatchingIndices(layout, nA, A, NULL, offsetA, nB, B, NULL, offsetB, NULL, &sf));
   PetscCall(PetscLayoutDestroy(&layout));

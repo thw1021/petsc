@@ -10,7 +10,7 @@
   #include <../src/vec/vec/impls/seq/ftn-kernels/fmdot.h>
 PetscErrorCode VecMDot_Seq(Vec xin, PetscInt nv, const Vec yin[], PetscScalar *z)
 {
-  const PetscInt     n = xin->map->n;
+  const PetscInt     n = PetscLayoutLocalSize(xin->map);
   PetscInt           i = nv, nv_rem = nv & 0x3;
   PetscScalar        sum0 = 0., sum1 = 0., sum2 = 0., sum3;
   const PetscScalar *yy0, *yy1, *yy2, *yy3, *x;
@@ -83,7 +83,7 @@ PetscErrorCode VecMDot_Seq(Vec xin, PetscInt nv, const Vec yin[], PetscScalar *z
 #else
 PetscErrorCode VecMDot_Seq(Vec xin, PetscInt nv, const Vec yin[], PetscScalar *z)
 {
-  const PetscInt     n = xin->map->n;
+  const PetscInt     n = PetscLayoutLocalSize(xin->map);
   PetscInt           i = nv, j = n, nv_rem = nv & 0x3, j_rem;
   PetscScalar        sum0 = 0.0, sum1 = 0.0, sum2 = 0.0, sum3, x0, x1, x2, x3;
   const PetscScalar *yy0, *yy1, *yy2, *yy3, *x, *xbase;
@@ -298,7 +298,7 @@ PetscErrorCode VecMDot_Seq(Vec xin, PetscInt nv, const Vec yin[], PetscScalar *z
 /* ----------------------------------------------------------------------------*/
 PetscErrorCode VecMTDot_Seq(Vec xin, PetscInt nv, const Vec yin[], PetscScalar *z)
 {
-  const PetscInt     n = xin->map->n;
+  const PetscInt     n = PetscLayoutLocalSize(xin->map);
   PetscInt           i = nv, j = n, nv_rem = nv & 0x3, j_rem;
   PetscScalar        sum0 = 0., sum1 = 0., sum2 = 0., sum3, x0, x1, x2, x3;
   const PetscScalar *yy0, *yy1, *yy2, *yy3, *x, *xbase;
@@ -512,7 +512,7 @@ PetscErrorCode VecMTDot_Seq(Vec xin, PetscInt nv, const Vec yin[], PetscScalar *
 
 static PetscErrorCode VecMinMax_Seq(Vec xin, PetscInt *idx, PetscReal *z, PetscReal minmax, int (*const cmp)(PetscReal, PetscReal))
 {
-  const PetscInt n = xin->map->n;
+  const PetscInt n = PetscLayoutLocalSize(xin->map);
   PetscInt       j = -1;
 
   PetscFunctionBegin;
@@ -562,7 +562,7 @@ PetscErrorCode VecMin_Seq(Vec xin, PetscInt *idx, PetscReal *z)
 
 PetscErrorCode VecSet_Seq(Vec xin, PetscScalar alpha)
 {
-  const PetscInt n = xin->map->n;
+  const PetscInt n = PetscLayoutLocalSize(xin->map);
   PetscScalar   *xx;
 
   PetscFunctionBegin;
@@ -578,7 +578,7 @@ PetscErrorCode VecSet_Seq(Vec xin, PetscScalar alpha)
 
 PetscErrorCode VecMAXPY_Seq(Vec xin, PetscInt nv, const PetscScalar *alpha, Vec *y)
 {
-  const PetscInt     j_rem = nv & 0x3, n = xin->map->n;
+  const PetscInt     j_rem = nv & 0x3, n = PetscLayoutLocalSize(xin->map);
   const PetscScalar *yptr[4];
   PetscScalar       *xx;
 #if defined(PETSC_HAVE_PRAGMA_DISJOINT)
@@ -623,7 +623,7 @@ PetscErrorCode VecAYPX_Seq(Vec yin, PetscScalar alpha, Vec xin)
   } else if (alpha == (PetscScalar)1.0) {
     PetscCall(VecAXPY_Seq(yin, alpha, xin));
   } else {
-    const PetscInt     n = yin->map->n;
+    const PetscInt     n = PetscLayoutLocalSize(yin->map);
     const PetscScalar *xx;
     PetscScalar       *yy;
 
@@ -655,7 +655,7 @@ PetscErrorCode VecAYPX_Seq(Vec yin, PetscScalar alpha, Vec xin)
 
 PetscErrorCode VecWAXPY_Seq(Vec win, PetscScalar alpha, Vec xin, Vec yin)
 {
-  const PetscInt     n = win->map->n;
+  const PetscInt     n = PetscLayoutLocalSize(win->map);
   const PetscScalar *yy, *xx;
   PetscScalar       *ww;
 
@@ -688,7 +688,7 @@ PetscErrorCode VecWAXPY_Seq(Vec win, PetscScalar alpha, Vec xin, Vec yin)
 
 PetscErrorCode VecMaxPointwiseDivide_Seq(Vec xin, Vec yin, PetscReal *max)
 {
-  const PetscInt     n = xin->map->n;
+  const PetscInt     n = PetscLayoutLocalSize(xin->map);
   const PetscScalar *xx, *yy;
   PetscReal          m = 0.0;
 

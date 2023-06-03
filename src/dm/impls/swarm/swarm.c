@@ -288,14 +288,14 @@ static PetscErrorCode DMSwarmComputeMassMatrix_Private(DM dmc, DM dmf, Mat mass,
   PetscCall(MatGetLocalSize(mass, &locRows, &locCols));
 
   PetscCall(PetscLayoutCreate(comm, &colLayout));
-  PetscCall(PetscLayoutSetLocalSize(colLayout, locCols));
+  PetscCall(PetscLayoutSetOwnershipSize(colLayout, locCols));
   PetscCall(PetscLayoutSetBlockSize(colLayout, 1));
   PetscCall(PetscLayoutSetUp(colLayout));
   PetscCall(PetscLayoutGetRange(colLayout, &colStart, &colEnd));
   PetscCall(PetscLayoutDestroy(&colLayout));
 
   PetscCall(PetscLayoutCreate(comm, &rLayout));
-  PetscCall(PetscLayoutSetLocalSize(rLayout, locRows));
+  PetscCall(PetscLayoutSetOwnershipSize(rLayout, locRows));
   PetscCall(PetscLayoutSetBlockSize(rLayout, 1));
   PetscCall(PetscLayoutSetUp(rLayout));
   PetscCall(PetscLayoutGetRange(rLayout, &rStart, NULL));
@@ -463,14 +463,14 @@ static PetscErrorCode DMSwarmComputeMassMatrixSquare_Private(DM dmc, DM dmf, Mat
   PetscCall(MatGetLocalSize(mass, &locRows, &locCols));
 
   PetscCall(PetscLayoutCreate(comm, &colLayout));
-  PetscCall(PetscLayoutSetLocalSize(colLayout, locCols));
+  PetscCall(PetscLayoutSetOwnershipSize(colLayout, locCols));
   PetscCall(PetscLayoutSetBlockSize(colLayout, 1));
   PetscCall(PetscLayoutSetUp(colLayout));
   PetscCall(PetscLayoutGetRange(colLayout, &colStart, &colEnd));
   PetscCall(PetscLayoutDestroy(&colLayout));
 
   PetscCall(PetscLayoutCreate(comm, &rLayout));
-  PetscCall(PetscLayoutSetLocalSize(rLayout, locRows));
+  PetscCall(PetscLayoutSetOwnershipSize(rLayout, locRows));
   PetscCall(PetscLayoutSetBlockSize(rLayout, 1));
   PetscCall(PetscLayoutSetUp(rLayout));
   PetscCall(PetscLayoutGetRange(rLayout, &rStart, NULL));

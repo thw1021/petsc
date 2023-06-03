@@ -29,9 +29,9 @@ int main(int argc, char *argv[])
 
   PetscCall(PetscLayoutCreate(comm, &layout));
   PetscCall(PetscLayoutSetSize(layout, n_global));
-  PetscCall(PetscLayoutSetLocalSize(layout, PETSC_DECIDE));
+  PetscCall(PetscLayoutSetOwnershipSize(layout, PETSC_DECIDE));
   PetscCall(PetscLayoutSetUp(layout));
-  PetscCall(PetscLayoutGetLocalSize(layout, &local_size));
+  PetscCall(PetscLayoutGetOwnershipSize(layout, &local_size));
   PetscCall(PetscLayoutGetRange(layout, &start, &end));
 
   PetscCall(PetscMalloc1(local_size, &app_indices));

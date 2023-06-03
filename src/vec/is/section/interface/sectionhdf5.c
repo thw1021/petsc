@@ -150,7 +150,7 @@ static PetscErrorCode PetscSectionLoad_HDF5_SingleField_SetConstraintIndices(Pet
   PetscCall(PetscSFCreate(comm, &sf));
   PetscCall(PetscLayoutCreate(comm, &layout));
   PetscCall(PetscLayoutSetSize(layout, M));
-  PetscCall(PetscLayoutSetLocalSize(layout, m));
+  PetscCall(PetscLayoutSetOwnershipSize(layout, m));
   PetscCall(PetscLayoutSetBlockSize(layout, 1));
   PetscCall(PetscLayoutSetUp(layout));
   PetscCall(PetscSFSetGraphLayout(sf, layout, m, NULL, PETSC_OWN_POINTER, coffsets));
@@ -201,7 +201,7 @@ static PetscErrorCode PetscSectionLoad_HDF5_SingleField(PetscSection s, PetscVie
   #endif
   PetscCall(ISGetLayout(dofIS, &map));
   PetscCall(PetscLayoutSetSize(map, N));
-  PetscCall(PetscLayoutSetLocalSize(map, n));
+  PetscCall(PetscLayoutSetOwnershipSize(map, n));
   PetscCall(ISLoad(dofIS, viewer));
   PetscCall(ISCreate(comm, &offIS));
   PetscCall(PetscObjectSetName((PetscObject)offIS, "atlasOff"));
@@ -211,7 +211,7 @@ static PetscErrorCode PetscSectionLoad_HDF5_SingleField(PetscSection s, PetscVie
   #endif
   PetscCall(ISGetLayout(offIS, &map));
   PetscCall(PetscLayoutSetSize(map, N));
-  PetscCall(PetscLayoutSetLocalSize(map, n));
+  PetscCall(PetscLayoutSetOwnershipSize(map, n));
   PetscCall(ISLoad(offIS, viewer));
   PetscCall(ISGetIndices(dofIS, &dofs));
   PetscCall(ISGetIndices(offIS, &offs));
@@ -234,7 +234,7 @@ static PetscErrorCode PetscSectionLoad_HDF5_SingleField(PetscSection s, PetscVie
   #endif
     PetscCall(ISGetLayout(cdofIS, &map));
     PetscCall(PetscLayoutSetSize(map, N));
-    PetscCall(PetscLayoutSetLocalSize(map, n));
+    PetscCall(PetscLayoutSetOwnershipSize(map, n));
     PetscCall(ISLoad(cdofIS, viewer));
     PetscCall(ISGetIndices(cdofIS, &cdofs));
     for (p = pStart, n = 0; p < pEnd; ++p, ++n) PetscCall(PetscSectionSetConstraintDof(s, p, cdofs[n]));
@@ -248,7 +248,7 @@ static PetscErrorCode PetscSectionLoad_HDF5_SingleField(PetscSection s, PetscVie
   #endif
     PetscCall(ISGetLayout(coffIS, &map));
     PetscCall(PetscLayoutSetSize(map, N));
-    PetscCall(PetscLayoutSetLocalSize(map, n));
+    PetscCall(PetscLayoutSetOwnershipSize(map, n));
     PetscCall(ISLoad(coffIS, viewer));
     PetscCall(PetscViewerHDF5PopGroup(viewer));
     PetscCall(ISCreate(comm, &cindIS));
@@ -262,7 +262,7 @@ static PetscErrorCode PetscSectionLoad_HDF5_SingleField(PetscSection s, PetscVie
   #endif
     PetscCall(ISGetLayout(cindIS, &map));
     PetscCall(PetscLayoutSetSize(map, M));
-    PetscCall(PetscLayoutSetLocalSize(map, m));
+    PetscCall(PetscLayoutSetOwnershipSize(map, m));
     PetscCall(ISLoad(cindIS, viewer));
     PetscCall(PetscSectionLoad_HDF5_SingleField_SetConstraintIndices(s, cindIS, coffIS));
     PetscCall(ISDestroy(&coffIS));

@@ -1748,7 +1748,7 @@ PetscErrorCode DMPlexRebalanceSharedPoints(DM dm, PetscInt entityDepth, PetscBoo
    * exclusively owned points and then one vertex per nonExclusively owned
    * point. */
   PetscCall(PetscLayoutCreate(comm, &layout));
-  PetscCall(PetscLayoutSetLocalSize(layout, 1 + numNonExclusivelyOwned));
+  PetscCall(PetscLayoutSetOwnershipSize(layout, 1 + numNonExclusivelyOwned));
   PetscCall(PetscLayoutSetUp(layout));
   PetscCall(PetscLayoutGetRanges(layout, &cumSumVertices));
   PetscCall(PetscMalloc1(pEnd - pStart, &globalNumbersOfLocalOwnedVertices));
