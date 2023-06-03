@@ -2335,7 +2335,7 @@ cdef class DMPlex(DM):
     def metricSetNoInsertion(self, noInsert: bool) -> None:
         """Set the flag indicating whether node insertion and deletion should be turned off.
 
-        Prameters
+        Parameters
         ---------
         noInsert
             Flag indicating whether node insertion and deletion should be turned off.
