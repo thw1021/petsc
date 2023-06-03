@@ -287,6 +287,7 @@ PETSC_EXTERN PetscErrorCode PetscLogActions(PetscBool);
 PETSC_EXTERN PetscErrorCode PetscLogObjects(PetscBool);
 PETSC_EXTERN PetscErrorCode PetscLogSetThreshold(PetscLogDouble, PetscLogDouble *);
 PETSC_EXTERN PetscErrorCode PetscLogSet(PetscErrorCode (*)(int, int, PetscObject, PetscObject, PetscObject, PetscObject), PetscErrorCode (*)(int, int, PetscObject, PetscObject, PetscObject, PetscObject));
+PETSC_EXTERN PetscErrorCode PetscLogStageSet(PetscErrorCode (*)(PetscStageLog), PetscErrorCode (*)(PetscStageLog));
 
 /* Output functions */
 PETSC_EXTERN PetscErrorCode PetscLogView(PetscViewer);
