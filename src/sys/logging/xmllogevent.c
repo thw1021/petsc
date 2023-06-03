@@ -100,6 +100,8 @@ static PetscLogDouble    thresholdTime          = 0.01; /* initial value was 0.1
 
 static PetscErrorCode       PetscLogEventBeginNested(NestedEventId nstEvent, int t, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4);
 static PetscErrorCode       PetscLogEventEndNested(NestedEventId nstEvent, int t, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4);
+static PetscErrorCode       PetscLogStageBeginHandler_Nested(PetscStageLog);
+static PetscErrorCode       PetscLogStageEndHandler_Nested(PetscStageLog);
 PETSC_INTERN PetscErrorCode PetscLogView_Nested(PetscViewer);
 PETSC_INTERN PetscErrorCode PetscLogView_Flamegraph(PetscViewer);
 
@@ -144,6 +146,27 @@ PetscErrorCode PetscLogNestedBegin(void)
   nestedEvents[0].dftEventsSorted  = NULL;
 
   PetscCall(PetscLogSet(PetscLogEventBeginNested, PetscLogEventEndNested));
+  PetscCall(PetscLogStageSet(PetscLogStageBeginHandler_Nested, PetscLogStageEndHandler_Nested));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscLogStageBeginHandler_Nested(PetscStageLog stage_log)
+{
+  PetscInt stage;
+  PetscInt stage_event;
+
+  PetscFunctionBegin;
+  stage = stage_log->stack->stack[stage_log->stack->top];
+  PetscAssert(stage >= 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Negative stage event");
+  //PetscCall(PetscLogEventFindNestedTimer(nstEvent, &entry));
+  
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscLogStageEndHandler_Nested(PetscStageLog stage_log)
+{
+  PetscFunctionBegin;
+  
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
