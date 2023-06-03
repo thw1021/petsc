@@ -470,9 +470,29 @@ Abstracts
 
 .. _`Heeho Park`:
 
-.. topic:: *Heeho Park*, **PETSc Newton Trust-Region for Simulating Large-scale Engineered Subsurface Systems with PFLOTRAN**
+.. topic:: *Heeho Park*, Glenn Hammond, Albert Valocchi, **PETSc Newton Trust-Region for Simulating Large-scale Engineered Subsurface Systems with PFLOTRAN**
 
-    Abstract forthcoming
+    Modeling large-scale engineered subsurface systems entails significant
+    additional numerical challenges. For nuclear waste repository, the
+    challenges arise from: (a) the need to accurately represent both the waste
+    form processes and shafts, tunnel, and barriers at the small spatial scale
+    and the large-scale transport processes throughout geological formations;
+    (b) the strong contrast in material properties such as porosity and
+    permeability, and the nonlinear constitutive relations for multiphase flow;
+    (c) the decay of high level nuclear wastes cause nearby water to boil off
+    into steam leading to dry-out. These can lead to an ill-conditioned
+    Jacobian matrix and non-convergence with Newton’s method due to
+    discontinuous nonlinearity in constitutive models.
+
+    We apply the open-source simulator PFLOTRAN which employs a FV
+    discretization and uses the PETSc parallel framework. We implement within
+    PETSc the general-purpose nonlinear solver, Newton trust-region dogleg
+    Cauchy (NTRDC) and Newton trust-region (NTR) to demonstrate the
+    effectiveness of these advanced solvers. The results demonstrate speed-up
+    compared to the default solvers of PETSc and complete simulations that were
+    never completed with them.
+
+    SNL is managed and operated by NTESS under DOE NNSA contract DE-NA0003525.
 
 .. _`Ashish Patel`:
 
