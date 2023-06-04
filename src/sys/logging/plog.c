@@ -583,7 +583,7 @@ PetscErrorCode PetscLogStagePush(PetscLogStage stage)
   #if defined(PETSC_HAVE_TAU_PERFSTUBS)
   if (perfstubs_initialized == PERFSTUBS_SUCCESS && stageLog->stageInfo[stage].timer != NULL) PetscStackCallExternalVoid("ps_timer_start_", ps_timer_start_(stageLog->stageInfo[stage].timer));
   #endif
-  //if (PetscLogStageBeginHandler) PetscCall((*PetscLogStageBeginHandler)(stageLog));
+  if (PetscLogStageBeginHandler) PetscCall((*PetscLogStageBeginHandler)(stageLog));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -617,7 +617,7 @@ PetscErrorCode PetscLogStagePop(void)
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetStageLog(&stageLog));
-  //if (PetscLogStageEndHandler) PetscCall((*PetscLogStageEndHandler)(stageLog));
+  if (PetscLogStageEndHandler) PetscCall((*PetscLogStageEndHandler)(stageLog));
   #if defined(PETSC_HAVE_TAU_PERFSTUBS)
   if (perfstubs_initialized == PERFSTUBS_SUCCESS && stageLog->stageInfo[stageLog->curStage].timer != NULL) PetscStackCallExternalVoid("ps_timer_stop_", ps_timer_stop_(stageLog->stageInfo[stageLog->curStage].timer));
   #endif
@@ -1946,6 +1946,7 @@ PetscErrorCode PetscLogView_Default(PetscViewer viewer)
     } else localNumEvents = 0;
     PetscCallMPI(MPI_Allreduce(&localNumEvents, &numEvents, 1, MPI_INT, MPI_MAX, comm));
     for (event = 0; event < numEvents; event++) {
+      //if (stageLog->eventLog->eventInfo[event].classid < 0) continue; // intermediate stages from nested logging
       /* CANNOT use MPI_Allreduce() since it might fail the line number check */
       if (localStageUsed[stage] && (event < stageLog->stageInfo[stage].eventLog->numEvents) && (eventInfo[event].depth == 0)) {
         if ((eventInfo[event].count > 0) && (eventInfo[event].time > 0.0)) flopr = eventInfo[event].flops;
