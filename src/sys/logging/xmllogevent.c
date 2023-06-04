@@ -150,26 +150,6 @@ PetscErrorCode PetscLogNestedBegin(void)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogStageBeginHandler_Nested(PetscStageLog stage_log)
-{
-  PetscInt stage;
-  PetscInt stage_event;
-
-  PetscFunctionBegin;
-  stage = stage_log->stack->stack[stage_log->stack->top];
-  PetscAssert(stage >= 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Negative stage event");
-  //PetscCall(PetscLogEventFindNestedTimer(nstEvent, &entry));
-  
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode PetscLogStageEndHandler_Nested(PetscStageLog stage_log)
-{
-  PetscFunctionBegin;
-  
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /* Delete the data structures for the nested timers */
 PetscErrorCode PetscLogNestedEnd(void)
 {
@@ -287,8 +267,8 @@ static inline PetscErrorCode PetscLogStageRestore(void)
 }
 
 /******************************************************************************************/
-/* Start a nested event */
-static PetscErrorCode PetscLogEventBeginNested(NestedEventId nstEvent, int t, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
+/* Start a nested event or stage */
+static PetscErrorCode PetscLogEventBeginNested_Internal(NestedEventId nstEvent, int t, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4, PetscBool is_event)
 {
   int           entry, pentry, tentry, i;
   PetscLogEvent dftEvent;
@@ -343,7 +323,7 @@ static PetscErrorCode PetscLogEventBeginNested(NestedEventId nstEvent, int t, Pe
 
       /* Register a new default timer */
       PetscCall(PetscSNPrintf(name, PETSC_STATIC_ARRAY_LENGTH(name), "%d -> %d", (int)dftParentActive, (int)nstEvent));
-      PetscCall(PetscLogEventRegister(name, 0, &dftEvent));
+      PetscCall(PetscLogEventRegister(name, -1, &dftEvent));
       PetscCall(PetscLogEventFindDefaultTimer(dftEvent, dftEventsSorted, nParents, &tentry));
 
       /* Reallocate parents and dftEvents to make space for new parent */
@@ -384,15 +364,33 @@ static PetscErrorCode PetscLogEventBeginNested(NestedEventId nstEvent, int t, Pe
   }
 
   /* Start the default 'dftEvent'-timer and update the dftParentActive */
-  PetscCall(PetscLogStageOverride());
-  PetscCall(PetscLogEventBeginDefault(dftEvent, t, o1, o2, o3, o4));
-  PetscCall(PetscLogStageRestore());
+  if (is_event) PetscCall(PetscLogEventBeginDefault(dftEvent, t, o1, o2, o3, o4));
   dftParentActive = dftEvent;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/******************************************************************************************/
+/* Start a nested event */
+static PetscErrorCode PetscLogEventBeginNested(NestedEventId nstEvent, int t, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscLogEventBeginNested_Internal(nstEvent, t, o1, o2, o3, o4, PETSC_TRUE));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/******************************************************************************************/
+/* Start a nested stage */
+static PetscErrorCode PetscLogStageBeginHandler_Nested(PetscStageLog stage_log)
+{
+  PetscInt stage_id = stage_log->stack->stack[stage_log->stack->top];
+
+  PetscFunctionBegin;
+  PetscCall(PetscLogEventBeginNested_Internal(-(stage_id + 2), 0, NULL, NULL, NULL, NULL, PETSC_FALSE));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /* End a nested event */
-static PetscErrorCode PetscLogEventEndNested(NestedEventId nstEvent, int t, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
+static PetscErrorCode PetscLogEventEndNested_Internal(NestedEventId nstEvent, int t, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4, PetscBool is_event)
 {
   int            entry, pentry, nParents;
   PetscLogEvent *dftEventsSorted;
@@ -412,10 +410,25 @@ static PetscErrorCode PetscLogEventEndNested(NestedEventId nstEvent, int t, Pets
   PetscCheck(dftEventsSorted[pentry] == dftParentActive, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Active parent is %d, but we seem to be closing %d", dftParentActive, dftEventsSorted[pentry]);
 
   /* Stop the default timer and update the dftParentActive */
-  PetscCall(PetscLogStageOverride());
-  PetscCall(PetscLogEventEndDefault(dftParentActive, t, o1, o2, o3, o4));
-  PetscCall(PetscLogStageRestore());
+  if (is_event) PetscCall(PetscLogEventEndDefault(dftParentActive, t, o1, o2, o3, o4));
   dftParentActive = nestedEvents[entry].dftParents[pentry];
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/* End a nested event */
+static PetscErrorCode PetscLogEventEndNested(NestedEventId nstEvent, int t, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscLogEventEndNested_Internal(nstEvent, t, o1, o2, o3, o4, PETSC_TRUE));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscLogStageEndHandler_Nested(PetscStageLog stage_log)
+{
+  PetscInt stage_id = stage_log->stack->stack[stage_log->stack->top];
+
+  PetscFunctionBegin;
+  PetscCall(PetscLogEventEndNested_Internal(-(stage_id + 2), 0, NULL, NULL, NULL, NULL, PETSC_FALSE));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -593,6 +606,24 @@ typedef struct {
   NestedEventId *nstPath;
 } PetscNestedEventTree;
 
+static PetscErrorCode NestedEventGetLogStageInfo(const PetscNestedEventTree *tree, PetscStageInfo **info)
+{
+  PetscFunctionBegin;
+  for (PetscInt i = tree->depth - 1; i >= 0; i--) {
+    int id = tree->nstPath[i];
+    if (id < DFT_ID_AWAKE) {
+      int stage = -(id + 2);
+      PetscStageLog stageLog;
+
+      PetscCall(PetscLogGetStageLog(&stageLog));
+      *info = &stageLog->stageInfo[stage];
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
+  }
+  PetscUnreachable();
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /* Compare timers to sort them in the tree */
 static int compareTreeItems(const void *item1_, const void *item2_)
 {
@@ -623,8 +654,8 @@ static int compareTreeItems(const void *item1_, const void *item2_)
 static PetscErrorCode PetscLogNestedTreeCreate(PetscViewer viewer, PetscNestedEventTree **p_tree, int *p_nTimers)
 {
   PetscNestedEventTree *tree = NULL, *newTree;
-  int                  *treeIndices;
-  int                   nTimers, totalNTimers, i, j, iTimer0, maxDefaultTimer;
+  int                  *treeIndices, *treeIndices_allocated;
+  int                   nTimers, totalNTimers, i, j, iTimer0, maxDefaultTimer, minDefaultTimer;
   int                   yesno;
   PetscBool             done;
   int                   maxdepth;
@@ -646,6 +677,7 @@ static PetscErrorCode PetscLogNestedTreeCreate(PetscViewer viewer, PetscNestedEv
   /* Fill tree with readily available information */
   iTimer0         = 0;
   maxDefaultTimer = 0;
+  minDefaultTimer = 0;
   for (i = 0; i < nNestedEvents; i++) {
     int            nParents         = nestedEvents[i].nParents;
     NestedEventId  nstEvent         = nestedEvents[i].nstEvent;
@@ -653,6 +685,7 @@ static PetscErrorCode PetscLogNestedTreeCreate(PetscViewer viewer, PetscNestedEv
     PetscLogEvent *dftEvents        = nestedEvents[i].dftEvents;
     for (j = 0; j < nParents; j++) {
       maxDefaultTimer = PetscMax(dftEvents[j], maxDefaultTimer);
+      minDefaultTimer = PetscMin(dftEvents[j], minDefaultTimer);
 
       tree[iTimer0 + j].dftEvent  = dftEvents[j];
       tree[iTimer0 + j].nstEvent  = nstEvent;
@@ -670,9 +703,12 @@ static PetscErrorCode PetscLogNestedTreeCreate(PetscViewer viewer, PetscNestedEv
    * be allocated only once */
   PetscCall(MPIU_Allreduce(&maxDefaultTimer, &j, 1, MPI_INT, MPI_MAX, comm));
   maxDefaultTimer = j;
+  PetscCall(MPIU_Allreduce(&minDefaultTimer, &j, 1, MPI_INT, MPI_MIN, comm));
+  minDefaultTimer = j;
 
   /* Find default timer's place in the tree */
-  PetscCall(PetscCalloc1(maxDefaultTimer + 1, &treeIndices));
+  PetscCall(PetscCalloc1(maxDefaultTimer + 1 - PetscMin(minDefaultTimer, 0), &treeIndices_allocated));
+  treeIndices = &treeIndices_allocated[-PetscMin(0, minDefaultTimer)];
   treeIndices[0] = 0;
   for (i = 0; i < nTimers; i++) {
     PetscLogEvent dftEvent = tree[i].dftEvent;
@@ -727,7 +763,7 @@ static PetscErrorCode PetscLogNestedTreeCreate(PetscViewer viewer, PetscNestedEv
       }
     }
   }
-  PetscCall(PetscFree(treeIndices));
+  PetscCall(PetscFree(treeIndices_allocated));
 
   /* Sort the tree on basis of the paths */
   qsort(tree, nTimers, sizeof(PetscNestedEventTree), compareTreeItems);
@@ -958,13 +994,11 @@ static PetscErrorCode PetscLogNestedTreeSetChildrenSortItems(const PetscViewer v
   MPI_Comm            comm;
   PetscLogDouble     *times, *maxTimes;
   PetscStageLog       stageLog;
-  PetscEventPerfInfo *eventPerfInfo;
-  const int           stage = MAINSTAGE;
+  PetscStageInfo     *stageInfo;
 
   PetscFunctionBegin;
   PetscCall(PetscObjectGetComm((PetscObject)viewer, &comm));
   PetscCall(PetscLogGetStageLog(&stageLog));
-  eventPerfInfo = stageLog->stageInfo[stage].eventLog->eventInfo;
 
   if (nChildren > 0) {
     /* Create an array for the id-s and maxTimes of the children,
@@ -975,8 +1009,17 @@ static PetscErrorCode PetscLogNestedTreeSetChildrenSortItems(const PetscViewer v
     for (int i = iStart + 1; i < nTimers; i++) {
       if (tree[i].depth <= depth) break;
       if (tree[i].depth == depth + 1) {
+        PetscInt event_id;
+
         (*children)[nChildren].id  = i;
-        (*children)[nChildren].val = eventPerfInfo[tree[i].dftEvent].time;
+        PetscCall(NestedEventGetLogStageInfo(&tree[i], &stageInfo));
+        event_id = tree[i].dftEvent;
+        if (event_id >= 0) {
+          (*children)[nChildren].val = stageInfo->eventLog->eventInfo[tree[i].dftEvent].time;
+        } else {
+          // event node
+          (*children)[nChildren].val = stageInfo->perfInfo.time;
+        }
         nChildren++;
       }
     }
@@ -1000,13 +1043,13 @@ static PetscErrorCode PetscLogNestedTreeSetChildrenSortItems(const PetscViewer v
  */
 static PetscErrorCode PetscLogNestedTreeSetSelfOtherPerfInfo(const PetscNestedEventTree *tree, int iStart, PetscLogDouble totalTime, const PetscSortItem *children, int nChildren, PetscEventPerfInfo *myPerfInfo, PetscEventPerfInfo *selfPerfInfo, PetscEventPerfInfo *otherPerfInfo, int *parentCount, PetscLogDouble *countsPerCall)
 {
-  const int           stage = MAINSTAGE;
   PetscStageLog       stageLog;
+  PetscStageInfo     *stageInfo;
   PetscEventPerfInfo *eventPerfInfo;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetStageLog(&stageLog));
-  eventPerfInfo = stageLog->stageInfo[stage].eventLog->eventInfo;
+  //eventPerfInfo = stageLog->stageInfo[stage].eventLog->eventInfo;
   if (!tree[iStart].own) {
     /* Set values for a timer that was not activated in this process
    * (but was, in other processes of this run) */
@@ -1021,8 +1064,15 @@ static PetscErrorCode PetscLogNestedTreeSetSelfOtherPerfInfo(const PetscNestedEv
     /* Set the values for a timer that was activated in this process */
     PetscLogEvent dftEvent = tree[iStart].dftEvent;
 
+    PetscCall(NestedEventGetLogStageInfo(&tree[iStart], &stageInfo));
+    eventPerfInfo = stageInfo->eventLog->eventInfo;
+
     *parentCount   = countParents(tree, eventPerfInfo, iStart);
-    *myPerfInfo    = eventPerfInfo[dftEvent];
+    if (dftEvent >= 0) {
+      *myPerfInfo    = eventPerfInfo[dftEvent];
+    } else {
+      *myPerfInfo    = stageInfo->perfInfo;
+    }
     *countsPerCall = (PetscLogDouble)myPerfInfo->count / (PetscLogDouble)*parentCount;
 
     *selfPerfInfo                = *myPerfInfo;
@@ -1034,9 +1084,14 @@ static PetscErrorCode PetscLogNestedTreeSetSelfOtherPerfInfo(const PetscNestedEv
 
     for (int i = 0; i < nChildren; i++) {
       /* For all child counters: subtract the child values from self-timers */
+      PetscEventPerfInfo childPerfInfo;
 
       PetscLogEvent      dftChild      = tree[children[i].id].dftEvent;
-      PetscEventPerfInfo childPerfInfo = eventPerfInfo[dftChild];
+      if (dftChild >= 0) {
+        childPerfInfo = eventPerfInfo[dftChild];
+      } else {
+        childPerfInfo = stageLog->stageInfo[-(dftChild+2)].perfInfo;
+      }
 
       selfPerfInfo->time -= childPerfInfo.time;
       selfPerfInfo->flops -= childPerfInfo.flops;
@@ -1388,11 +1443,17 @@ PetscErrorCode PetscLogView_Nested(PetscViewer viewer)
  */
 static PetscErrorCode PetscGetNestedEventName(const PetscNestedEventTree *tree, int id, char **name)
 {
+  int           event;
   PetscStageLog stageLog;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetStageLog(&stageLog));
-  *name = stageLog->eventLog->eventInfo[(PetscLogEvent)tree[id].nstEvent].name;
+  event = tree[id].nstEvent;
+  if (event >= 0) {
+    *name = stageLog->eventLog->eventInfo[(PetscLogEvent)event].name;
+  } else {
+    *name = stageLog->stageInfo[-(event+2)].name;
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
