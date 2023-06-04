@@ -283,7 +283,7 @@ class Configure(config.package.Package):
       # Look for Multi-Threaded MKL for MKL_C/Pardiso
       useCPardiso=0
       usePardiso=0
-      if self.argDB['with-mkl_cpardiso'] or 'with-mkl_cpardiso-dir' in self.argDB or 'with-mkl_cpardiso-lib' in self.argDB:
+      if self.argDB['with-mkl_cpardiso']:
         useCPardiso=1
         if self.mpi.found and hasattr(self.mpi, 'ompi_major_version'):
           mkl_blacs_64=[['mkl_blacs_openmpi'+ILP64+'']]
@@ -291,7 +291,7 @@ class Configure(config.package.Package):
         else:
           mkl_blacs_64=[['mkl_blacs_intelmpi'+ILP64+''],['mkl_blacs_mpich'+ILP64+''],['mkl_blacs_sgimpt'+ILP64+''],['mkl_blacs_openmpi'+ILP64+'']]
           mkl_blacs_32=[['mkl_blacs_intelmpi'],['mkl_blacs_mpich'],['mkl_blacs_sgimpt'],['mkl_blacs_openmpi']]
-      elif self.argDB['with-mkl_pardiso'] or 'with-mkl_pardiso-dir' in self.argDB or 'with-mkl_pardiso-lib' in self.argDB:
+      elif self.argDB['with-mkl_pardiso']:
         usePardiso=1
         mkl_blacs_64=[[]]
         mkl_blacs_32=[[]]
@@ -312,7 +312,6 @@ class Configure(config.package.Package):
               yield ('User specified MKL-C/Pardiso Intel-Linux32', None, [os.path.join(dir,libdir,'libmkl_intel.a'),'mkl_core','mkl_intel_thread']+i+['iomp5','dl','pthread'],'32','yes')
               yield ('User specified MKL-C/Pardiso GNU-Linux32', None, [os.path.join(dir,libdir,'libmkl_intel.a'),'mkl_core','mkl_gnu_thread']+i+['gomp','dl','pthread'],'32','yes')
               yield ('User specified MKL-Pardiso Intel-Windows32', None, [os.path.join(dir,libdir,'mkl_core.lib'),'mkl_intel_c.lib','mkl_intel_thread.lib']+i+['libiomp5md.lib'],'32','yes')
-        return
 
       self.log.write('Files and directories in that directory:\n'+str(os.listdir(dir))+'\n')
       # Check MATLAB [ILP64] MKL
