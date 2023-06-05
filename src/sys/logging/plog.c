@@ -543,6 +543,19 @@ PetscErrorCode PetscLogStageRegister(const char sname[], PetscLogStage *stage)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PETSC_INTERN PetscErrorCode PetscLogStagePush_Internal(PetscLogStage stage)
+{
+  PetscStageLog stageLog;
+
+  PetscFunctionBegin;
+  PetscCall(PetscLogGetStageLog(&stageLog));
+  PetscCall(PetscStageLogPush(stageLog, stage));
+  #if defined(PETSC_HAVE_TAU_PERFSTUBS)
+  if (perfstubs_initialized == PERFSTUBS_SUCCESS && stageLog->stageInfo[stage].timer != NULL) PetscStackCallExternalVoid("ps_timer_start_", ps_timer_start_(stageLog->stageInfo[stage].timer));
+  #endif
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@C
   PetscLogStagePush - This function pushes a stage on the logging stack. Events started and stopped until `PetscLogStagePop()` will be associated with the stage
 
@@ -575,15 +588,28 @@ PetscErrorCode PetscLogStageRegister(const char sname[], PetscLogStage *stage)
 @*/
 PetscErrorCode PetscLogStagePush(PetscLogStage stage)
 {
+
+  PetscFunctionBegin;
+  PetscCall(PetscLogStagePush_Internal(stage));
+  if (PetscLogStageBeginHandler) {
+    PetscStageLog stageLog;
+
+    PetscCall(PetscLogGetStageLog(&stageLog));
+    PetscCall((*PetscLogStageBeginHandler)(stageLog));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode PetscLogStagePop_Internal()
+{
   PetscStageLog stageLog;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetStageLog(&stageLog));
-  PetscCall(PetscStageLogPush(stageLog, stage));
   #if defined(PETSC_HAVE_TAU_PERFSTUBS)
-  if (perfstubs_initialized == PERFSTUBS_SUCCESS && stageLog->stageInfo[stage].timer != NULL) PetscStackCallExternalVoid("ps_timer_start_", ps_timer_start_(stageLog->stageInfo[stage].timer));
+  if (perfstubs_initialized == PERFSTUBS_SUCCESS && stageLog->stageInfo[stageLog->curStage].timer != NULL) PetscStackCallExternalVoid("ps_timer_stop_", ps_timer_stop_(stageLog->stageInfo[stageLog->curStage].timer));
   #endif
-  if (PetscLogStageBeginHandler) PetscCall((*PetscLogStageBeginHandler)(stageLog));
+  PetscCall(PetscStageLogPop(stageLog));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -613,15 +639,15 @@ PetscErrorCode PetscLogStagePush(PetscLogStage stage)
 @*/
 PetscErrorCode PetscLogStagePop(void)
 {
-  PetscStageLog stageLog;
 
   PetscFunctionBegin;
-  PetscCall(PetscLogGetStageLog(&stageLog));
-  if (PetscLogStageEndHandler) PetscCall((*PetscLogStageEndHandler)(stageLog));
-  #if defined(PETSC_HAVE_TAU_PERFSTUBS)
-  if (perfstubs_initialized == PERFSTUBS_SUCCESS && stageLog->stageInfo[stageLog->curStage].timer != NULL) PetscStackCallExternalVoid("ps_timer_stop_", ps_timer_stop_(stageLog->stageInfo[stageLog->curStage].timer));
-  #endif
-  PetscCall(PetscStageLogPop(stageLog));
+  if (PetscLogStageEndHandler) {
+    PetscStageLog stageLog;
+
+    PetscCall(PetscLogGetStageLog(&stageLog));
+    PetscCall((*PetscLogStageEndHandler)(stageLog));
+  }
+  PetscCall(PetscLogStagePop_Internal());
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1303,6 +1329,217 @@ PetscErrorCode PetscLogEventResume_Internal(PetscLogEvent event)
   PetscCall(PetscStageLogGetCurrent(stageLog, &stage));
   PetscCall(PetscStageLogGetEventPerfLog(stageLog, stage, &eventLog));
   eventLog->eventInfo[event].count--;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*------------------------------------------------ Utility functions for output functions -------------------------------------------------*/
+
+// Stages are numbered in registration order on the first process, then the remaining by registration order on the second process, etc.
+PETSC_INTERN PetscErrorCode PetscStageLogGetGlobalStageNumbering(MPI_Comm comm, PetscStageLog stage_log, PetscInt * num_stages_global_p, PetscInt **global_index_to_local_index_p)
+{
+  PetscMPIInt size, rank;
+  PetscInt num_stages_global = 0;
+  PetscInt num_stages_local = stage_log->numStages;
+  PetscInt num_stages_local_remaining = num_stages_local;
+  PetscBool *local_stage_seen;
+  PetscInt *global_index_to_local_index = NULL;
+  PetscInt max_stage_name_len = 0;
+  char     *str_buffer;
+  PetscMPIInt p;
+
+  PetscFunctionBegin;
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  PetscCall(PetscCalloc1(num_stages_local, &local_stage_seen));
+
+  for (PetscInt i = 0; i < num_stages_local; i++) {
+    size_t i_len;
+    PetscCall(PetscStrlen(stage_log->stageInfo[i].name, &i_len));
+    max_stage_name_len = PetscMax(max_stage_name_len, (PetscInt) i_len);
+  }
+  PetscCallMPI(MPIU_Allreduce(MPI_IN_PLACE, &max_stage_name_len, 1, MPIU_INT, MPI_MAX, comm));
+  PetscCall(PetscCalloc1(max_stage_name_len + 1, &str_buffer));
+
+  p = 0;
+  while (p < size) {
+    PetscInt my_loc, next_loc;
+    PetscInt num_to_add;
+
+    my_loc = num_stages_local_remaining > 0 ? rank : PETSC_MPI_INT_MAX;
+    PetscCallMPI(MPIU_Allreduce(&my_loc, &next_loc, 1, MPIU_INT, MPI_MIN, comm));
+    if (next_loc == PETSC_MPI_INT_MAX) break;
+    PetscAssert(next_loc >= p, comm, PETSC_ERR_PLIB, "Failed invariant, expected increasing next process");
+    p = next_loc;
+    num_to_add = (rank == p) ? num_stages_local_remaining : -1;
+    PetscCallMPI(MPI_Bcast(&num_to_add, 1, MPIU_INT, p, comm));
+    {
+      PetscInt new_num_stages_global = num_stages_global + num_to_add;
+      PetscInt *new_global_index_to_local_index;
+
+      PetscCall(PetscMalloc1(new_num_stages_global, &new_global_index_to_local_index));
+      PetscCall(PetscArraycpy(new_global_index_to_local_index, global_index_to_local_index, num_stages_global));
+      for (PetscInt i = num_stages_global; i < new_num_stages_global; i++) new_global_index_to_local_index[i] = -1;
+      PetscCall(PetscFree(global_index_to_local_index));
+      global_index_to_local_index = new_global_index_to_local_index;
+    }
+
+    if (rank == p) {
+      for (PetscInt s = 0; s < num_stages_local; s++) {
+        size_t s_len;
+        if (local_stage_seen[s]) continue;
+        local_stage_seen[s] = PETSC_TRUE;
+        PetscCall(PetscArrayzero(str_buffer, max_stage_name_len + 1));
+        PetscCall(PetscStrlen(stage_log->stageInfo[s].name, &s_len));
+        PetscCall(PetscStrncpy(str_buffer, stage_log->stageInfo[s].name, s_len+1));
+        PetscCallMPI(MPI_Bcast(str_buffer, max_stage_name_len + 1, MPI_CHAR, p, comm));
+        global_index_to_local_index[num_stages_global++] = s;
+      }
+    } else {
+      for (PetscInt i = 0; i < num_to_add; i++) {
+        PetscCallMPI(MPI_Bcast(str_buffer, max_stage_name_len + 1, MPI_CHAR, p, comm));
+        for (PetscInt s = 0; s < num_stages_local; s++) {
+          size_t s_len;
+          PetscBool same;
+
+          if (local_stage_seen[s]) continue;
+          PetscCall(PetscStrlen(stage_log->stageInfo[s].name, &s_len));
+          PetscCall(PetscStrncmp(stage_log->stageInfo[s].name, str_buffer, s_len + 1, &same));
+          if (same) {
+            local_stage_seen[s] = PETSC_TRUE;
+            global_index_to_local_index[num_stages_global] = s;
+            break;
+          }
+        }
+        num_stages_global++;
+      }
+    }
+  }
+
+  PetscCall(PetscFree(str_buffer));
+  PetscCall(PetscFree(local_stage_seen));
+  *num_stages_global_p = num_stages_global;
+  *global_index_to_local_index_p = global_index_to_local_index;
+  
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+// Events are ordered alphabetically
+PETSC_INTERN PetscErrorCode PetscStageLogGetGlobalEventNumbering(MPI_Comm comm, PetscStageLog stage_log, PetscInt * num_events_global_p, PetscInt **global_index_to_local_index_p)
+{
+  PetscInt num_local_events = stage_log->eventLog->numEvents;
+  const char **names;
+  PetscInt *perm;
+
+  PetscFunctionBegin;
+  PetscCall(PetscMalloc1(num_local_events, &names));
+  PetscCall(PetscMalloc1(num_local_events, &perm));
+  for (PetscInt e = 0; e < num_local_events; e++) names[e] = stage_log->eventLog->eventInfo[e].name;
+  PetscCall(PetscSortStrWithPermutation(num_local_events, names, perm));
+  PetscCall(PetscFree(perm));
+  PetscCall(PetscFree(names));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscClassPerfLogDuplicate(PetscClassPerfLog class_log, PetscClassPerfLog *dup_class_log_p)
+{
+  PetscClassPerfLog dup_class_log;
+
+  PetscFunctionBegin;
+  PetscCall(PetscNew(&dup_class_log));
+  *dup_class_log = *class_log;
+  PetscCall(PetscMalloc1(class_log->maxClasses, &(dup_class_log->classInfo)));
+  // PetscClassPerfInfo is POD, it can be memcpy'd
+  PetscCall(PetscArraycpy(dup_class_log->classInfo, class_log->classInfo, class_log->numClasses));
+  *dup_class_log_p = dup_class_log;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscEventPerfLogDuplicate(PetscEventPerfLog event_log, PetscEventPerfLog *dup_event_log_p)
+{
+  PetscEventPerfLog dup_event_log;
+
+  PetscFunctionBegin;
+  PetscCall(PetscNew(&dup_event_log));
+  *dup_event_log = *event_log;
+  PetscCall(PetscMalloc1(event_log->maxEvents, &(dup_event_log->eventInfo)));
+  // PetscEventPerfInfo is POD, it can be memcpy'd
+  PetscCall(PetscArraycpy(dup_event_log->eventInfo, event_log->eventInfo, event_log->numEvents));
+  *dup_event_log_p = dup_event_log;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscStageInfoArrayDuplicate(PetscInt num_stages, PetscStageInfo *stage_info, PetscStageInfo **dup_stage_info_p)
+{
+  PetscStageInfo *dup_stage_info;
+  PetscFunctionBegin;
+  PetscCall(PetscMalloc1(num_stages, &dup_stage_info));
+  PetscCall(PetscArraycpy(dup_stage_info, stage_info, num_stages));
+  for (PetscInt i = 0; i < num_stages; i++) {
+    PetscCall(PetscStrallocpy(stage_info[i].name, &(dup_stage_info[i].name)));
+    PetscCall(PetscEventPerfLogDuplicate(stage_info[i].eventLog, &(dup_stage_info[i].eventLog)));
+    PetscCall(PetscClassPerfLogDuplicate(stage_info[i].classLog, &(dup_stage_info[i].classLog)));
+    // TODO: timer?;
+  }
+  *dup_stage_info_p = dup_stage_info;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscEventRegLogDuplicate(PetscEventRegLog event_log, PetscEventRegLog *dup_event_log_p)
+{
+  PetscEventRegLog dup_event_log;
+
+  PetscFunctionBegin;
+  PetscCall(PetscNew(&dup_event_log));
+  *dup_event_log = *event_log;
+  PetscCall(PetscMalloc1(event_log->maxEvents, &(dup_event_log->eventInfo)));
+  PetscCall(PetscArraycpy(dup_event_log->eventInfo, event_log->eventInfo, event_log->numEvents));
+  for (PetscInt i = 0; i < event_log->numEvents; i++) {
+    PetscCall(PetscStrallocpy(event_log->eventInfo[i].name, &(dup_event_log->eventInfo[i].name)));
+  }
+  *dup_event_log_p = dup_event_log;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscClassRegLogDuplicate(PetscClassRegLog class_log, PetscClassRegLog *dup_class_log_p)
+{
+  PetscClassRegLog dup_class_log;
+
+  PetscFunctionBegin;
+  PetscCall(PetscNew(&dup_class_log));
+  *dup_class_log = *class_log;
+  PetscCall(PetscMalloc1(class_log->maxClasses, &(dup_class_log->classInfo)));
+  PetscCall(PetscArraycpy(dup_class_log->classInfo, class_log->classInfo, class_log->numClasses));
+  for (PetscInt i = 0; i < class_log->numClasses; i++) {
+    PetscCall(PetscStrallocpy(class_log->classInfo[i].name, &(dup_class_log->classInfo[i].name)));
+  }
+  *dup_class_log_p = dup_class_log;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscIntStackDuplicate(PetscIntStack stack, PetscIntStack *dup_stack_p)
+{
+  PetscIntStack dup_stack;
+
+  PetscFunctionBegin;
+  PetscCall(PetscNew(&dup_stack));
+  *dup_stack = *stack;
+  PetscCall(PetscMalloc1(stack->max, &(dup_stack->stack)));
+  PetscCall(PetscArraycpy(dup_stack->stack, stack->stack, stack->top + 1));
+  *dup_stack_p = dup_stack;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode PetscStageLogDuplicate(PetscStageLog stage_log, PetscStageLog *dup_stage_log_p)
+{
+  PetscStageLog dup_stage_log;
+
+  PetscFunctionBegin;
+  PetscCall(PetscNew(&dup_stage_log));
+  *dup_stage_log = *stage_log;
+  PetscCall(PetscIntStackDuplicate(stage_log->stack, &(dup_stage_log->stack)));
+  PetscCall(PetscStageInfoArrayDuplicate(stage_log->numStages, stage_log->stageInfo, &(dup_stage_log->stageInfo)));
+  PetscCall(PetscEventRegLogDuplicate(stage_log->eventLog, &(dup_stage_log->eventLog)));
+  PetscCall(PetscClassRegLogDuplicate(stage_log->classLog, &(dup_stage_log->classLog)));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
