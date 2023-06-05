@@ -56,8 +56,9 @@
  *   [1 call]:       eat                       0:45 hours         (14 % of evening routine)
  *                   rest (evening routine)    4:45 hours         (86 % of morning routine)
  *
- * We ignore the concept of 'stages', because these seem to be conflicting notions, or at least,
- * the nested timers make the stages unnecessary.
+ * In default logging, events and stages both accumulate performance statistics, the
+ * only difference is that in PetscLogView_Default() the stages are used to aggregate
+ * event timers separately.  In nested logging, events and stages are treated almost identically.
  *
  */
 
@@ -78,6 +79,7 @@
  */
 
   #define DFT_ID_AWAKE -1
+  #define MAINSTAGE_EVENT -2
 
 typedef PetscLogEvent NestedEventId;
 typedef struct {
@@ -95,6 +97,45 @@ static int               nNestedEvents          = 0;
 static int               nNestedEventsAllocated = 0;
 static PetscNestedEvent *nestedEvents           = NULL;
 static PetscLogDouble    thresholdTime          = 0.01; /* initial value was 0.1 */
+static size_t num_stages_allocated   = 0;
+static NestedEventId    *nested_stages_to_root_stage  = NULL;
+
+static PetscErrorCode NestedStageToRootStage(NestedEventId id, NestedEventId *root_id)
+{
+  PetscStageLog stageLog;
+
+  PetscFunctionBegin;
+  PetscCall(PetscLogGetStageLog(&stageLog));
+  if (!nested_stages_to_root_stage) {
+    PetscCall(PetscMalloc1(stageLog->numStages, &nested_stages_to_root_stage));
+    for (int i = 0; i < stageLog->numStages; i++) nested_stages_to_root_stage[i] = i;
+    num_stages_allocated = stageLog->numStages;
+  }
+  if (id < num_stages_allocated) {
+    *root_id = nested_stages_to_root_stage[id];
+  } else {
+    *root_id = id;
+  } 
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode NestedStageSetRootStage(NestedEventId id, NestedEventId root_id)
+{
+  PetscFunctionBegin;
+  if (id >= num_stages_allocated) {
+    size_t new_num_stages_allocated = (id + 1) * 2;
+    NestedEventId *new_table;
+
+    PetscCall(PetscMalloc1(new_num_stages_allocated, &new_table));
+    PetscCall(PetscArraycpy(new_table, nested_stages_to_root_stage, num_stages_allocated));
+    PetscCall(PetscFree(nested_stages_to_root_stage));
+    for (int i = new_num_stages_allocated; i < new_num_stages_allocated; i++) new_table[i] = i;
+    nested_stages_to_root_stage = new_table;
+    num_stages_allocated = new_num_stages_allocated;
+  }
+  nested_stages_to_root_stage[id] = root_id;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
   #define THRESHOLD (thresholdTime / 100.0 + 1e-12)
 
@@ -104,6 +145,7 @@ static PetscErrorCode       PetscLogStageBeginHandler_Nested(PetscStageLog);
 static PetscErrorCode       PetscLogStageEndHandler_Nested(PetscStageLog);
 PETSC_INTERN PetscErrorCode PetscLogView_Nested(PetscViewer);
 PETSC_INTERN PetscErrorCode PetscLogView_Flamegraph(PetscViewer);
+static PetscClassId         LogNestedEvent = -1;
 
 /*@C
   PetscLogNestedBegin - Turns on nested logging of objects and events. This logs flop
@@ -162,6 +204,7 @@ PetscErrorCode PetscLogNestedEnd(void)
   nestedEvents           = NULL;
   nNestedEvents          = 0;
   nNestedEventsAllocated = 0;
+  PetscCall(PetscFree(nested_stages_to_root_stage));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -234,37 +277,8 @@ static PetscErrorCode PetscLogEventFindNestedTimer(NestedEventId nstEvent, int *
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
- Nested logging is not prepared yet to support user-defined logging stages, so for now we force logging on the main stage.
- Using PetscLogStage{Push/Pop}() would be more appropriate, but these two calls do extra bookkeeping work we don't need.
-*/
-
-  #define MAINSTAGE 0
-
-static PetscLogStage savedStage = 0;
-
-static inline PetscErrorCode PetscLogStageOverride(void)
-{
-  PetscStageLog stageLog = petsc_stageLog;
-
-  PetscFunctionBegin;
-  if (stageLog->curStage == MAINSTAGE) PetscFunctionReturn(PETSC_SUCCESS);
-  savedStage         = stageLog->curStage;
-  stageLog->curStage = MAINSTAGE;
-  PetscCall(PetscIntStackPush(stageLog->stack, MAINSTAGE));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static inline PetscErrorCode PetscLogStageRestore(void)
-{
-  PetscStageLog stageLog = petsc_stageLog;
-
-  PetscFunctionBegin;
-  if (savedStage == MAINSTAGE) PetscFunctionReturn(PETSC_SUCCESS);
-  stageLog->curStage = savedStage;
-  PetscCall(PetscIntStackPop(stageLog->stack, &savedStage));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
+PETSC_INTERN PetscErrorCode PetscLogStagePush_Internal(PetscLogStage);
+PETSC_INTERN PetscErrorCode PetscLogStagePop_Internal();
 
 /******************************************************************************************/
 /* Start a nested event or stage */
@@ -323,7 +337,17 @@ static PetscErrorCode PetscLogEventBeginNested_Internal(NestedEventId nstEvent, 
 
       /* Register a new default timer */
       PetscCall(PetscSNPrintf(name, PETSC_STATIC_ARRAY_LENGTH(name), "%d -> %d", (int)dftParentActive, (int)nstEvent));
-      PetscCall(PetscLogEventRegister(name, -1, &dftEvent));
+      if (is_event) {
+        PetscCall(PetscLogEventRegister(name, LogNestedEvent, &dftEvent));
+      } else {
+        PetscCall(PetscLogStageRegister(name, &dftEvent));
+        // stop the timer for the default stage and start it for the nested stage
+        PetscCall(PetscInfo(NULL, "Swapping stage %d for new stage %d\n", (int) -(nstEvent+2), dftEvent));
+        PetscCall(PetscLogStagePop_Internal());
+        PetscCall(PetscLogStagePush_Internal(dftEvent));
+        PetscCall(NestedStageSetRootStage(dftEvent, -(nstEvent+2)));
+        dftEvent = -(dftEvent + 2);
+      }
       PetscCall(PetscLogEventFindDefaultTimer(dftEvent, dftEventsSorted, nParents, &tentry));
 
       /* Reallocate parents and dftEvents to make space for new parent */
@@ -356,7 +380,6 @@ static PetscErrorCode PetscLogEventBeginNested_Internal(NestedEventId nstEvent, 
       dftEvents[pentry]        = dftEvent;
       dftParents[tentry]       = dftParentActive;
       dftEventsSorted[tentry]  = dftEvent;
-
     } else {
       /* dftParentActive was found: find the corresponding default 'dftEvent'-timer */
       dftEvent = nestedEvents[entry].dftEvents[pentry];
@@ -365,6 +388,7 @@ static PetscErrorCode PetscLogEventBeginNested_Internal(NestedEventId nstEvent, 
 
   /* Start the default 'dftEvent'-timer and update the dftParentActive */
   if (is_event) PetscCall(PetscLogEventBeginDefault(dftEvent, t, o1, o2, o3, o4));
+
   dftParentActive = dftEvent;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -385,6 +409,7 @@ static PetscErrorCode PetscLogStageBeginHandler_Nested(PetscStageLog stage_log)
   PetscInt stage_id = stage_log->stack->stack[stage_log->stack->top];
 
   PetscFunctionBegin;
+  PetscCall(PetscInfo(NULL, "Pushing stage %d\n", (int) stage_id));
   PetscCall(PetscLogEventBeginNested_Internal(-(stage_id + 2), 0, NULL, NULL, NULL, NULL, PETSC_FALSE));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -399,7 +424,7 @@ static PetscErrorCode PetscLogEventEndNested_Internal(NestedEventId nstEvent, in
   /* Find the nested event */
   PetscCall(PetscLogEventFindNestedTimer(nstEvent, &entry));
   PetscCheck(entry < nNestedEvents, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Logging event %d larger than number of events %d", entry, nNestedEvents);
-  PetscCheck(nestedEvents[entry].nstEvent == nstEvent, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Logging event %d had unbalanced begin/end pairs does not match %d", entry, nstEvent);
+  PetscCheck(nstEvent < 0 || nestedEvents[entry].nstEvent == nstEvent, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Logging event %d had unbalanced begin/end pairs does not match %d", entry, nstEvent);
   dftEventsSorted = nestedEvents[entry].dftEventsSorted;
   nParents        = nestedEvents[entry].nParents;
 
@@ -426,9 +451,12 @@ static PetscErrorCode PetscLogEventEndNested(NestedEventId nstEvent, int t, Pets
 static PetscErrorCode PetscLogStageEndHandler_Nested(PetscStageLog stage_log)
 {
   PetscInt stage_id = stage_log->stack->stack[stage_log->stack->top];
+  PetscInt root_stage;
 
   PetscFunctionBegin;
-  PetscCall(PetscLogEventEndNested_Internal(-(stage_id + 2), 0, NULL, NULL, NULL, NULL, PETSC_FALSE));
+  PetscCall(NestedStageToRootStage(stage_id, &root_stage));
+  PetscCall(PetscInfo(NULL, "Popping stage %d\n", (int) root_stage));
+  PetscCall(PetscLogEventEndNested_Internal(-(root_stage + 2), 0, NULL, NULL, NULL, NULL, PETSC_FALSE));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1246,7 +1274,6 @@ typedef struct {
 
 static PetscErrorCode PetscCalcSelfTime(PetscViewer viewer, PetscSelfTimer **p_self, int *p_nstMax)
 {
-  const int           stage = MAINSTAGE;
   PetscStageLog       stageLog;
   PetscEventRegInfo  *eventRegInfo;
   PetscEventPerfInfo *eventPerfInfo;
@@ -1263,7 +1290,6 @@ static PetscErrorCode PetscCalcSelfTime(PetscViewer viewer, PetscSelfTimer **p_s
   PetscCall(PetscObjectGetComm((PetscObject)viewer, &comm));
   PetscCall(PetscLogGetStageLog(&stageLog));
   eventRegInfo  = stageLog->eventLog->eventInfo;
-  eventPerfInfo = stageLog->stageInfo[stage].eventLog->eventInfo;
 
   /* For each default timer, calculate the (one) nested timer that it corresponds to. */
   maxDefaultTimer = 0;
