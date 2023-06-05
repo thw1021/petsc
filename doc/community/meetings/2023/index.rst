@@ -6,8 +6,8 @@
 2023 Annual PETSc Meeting
 *************************
 
-June 5-7, 2023, in the Hermann Ballroom (when you enter the Hermann Hall building through the main entrance walk straight back to the rear of the building and take a right)
-at the `Hermann Hall Conference Center <https://www.iit.edu/event-services/meeting-spaces/hermann-hall-conference-center>`__
+June 5-7, 2023, at the `Hermann Hall Conference Center <https://www.iit.edu/event-services/meeting-spaces/hermann-hall-conference-center>`__
+in the Hermann Ballroom (when you enter the Hermann Hall building through the main entrance walk straight back to the rear of the building and take a right)
 (3241 South Federal Street, Chicago, IL)
 on the campus of `The Illinois Institute of Technology (IIT) <https://www.iit.edu>`__ in Chicago.
 Easy access from the hotels via the Chicago Elevated `Green <https://www.transitchicago.com/greenline>`__ or `Red <https://www.transitchicago.com/redline>`__ Lines.
