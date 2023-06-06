@@ -1499,8 +1499,6 @@ static PetscErrorCode PetscViewerSetFromOptions_Binary(PetscViewer viewer, Petsc
   PetscCall(PetscOptionsBool("-viewer_binary_skip_header", "Skip writing/reading header information", "PetscViewerBinarySetSkipHeader", binary->skipheader, &binary->skipheader, NULL));
 #if defined(PETSC_HAVE_MPIIO)
   PetscCall(PetscOptionsBool("-viewer_binary_mpiio", "Use MPI-IO functionality to write/read binary file", "PetscViewerBinarySetUseMPIIO", binary->usempiio, &binary->usempiio, NULL));
-#else
-  PetscCall(PetscOptionsBool("-viewer_binary_mpiio", "Use MPI-IO functionality to write/read binary file (NOT AVAILABLE)", "PetscViewerBinarySetUseMPIIO", PETSC_FALSE, NULL, NULL));
 #endif
   PetscOptionsHeadEnd();
   binary->setfromoptionscalled = PETSC_TRUE;
