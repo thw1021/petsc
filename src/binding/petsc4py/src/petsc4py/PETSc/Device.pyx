@@ -47,6 +47,15 @@ DeviceJoinMode = make_enum_class(
 # --------------------------------------------------------------------
 
 cdef class Device:
+  """Device object
+
+  Represents a handle to an accelerator (which may be the host)
+
+  See Also
+  --------
+  DeviceContext, petsc.PetscDevice
+
+  """
 
   Type = DeviceType
 
@@ -57,7 +66,24 @@ cdef class Device:
     self.destroy()
 
   @classmethod
-  def create(cls, dtype = None, device_id = DECIDE):
+  def create(cls, dtype: Type | None = None, device_id: int = DECIDE) -> Device:
+    """Create a `Device`
+
+    Not Collective
+
+    Parameters
+    ----------
+    dtype
+        The type of device to create (or `None` for `Device.DEFAULT`)
+
+    device_id
+        The numeric id of the device to create
+
+    See Also
+    --------
+    destroy, petsc.PetscDeviceCreate
+
+    """
     cdef PetscInt        cdevice_id   = asInt(device_id)
     cdef PetscDeviceType cdevice_type = asDeviceType(dtype if dtype is not None else cls.Type.DEFAULT)
     cdef Device          device       = cls()
@@ -65,41 +91,107 @@ cdef class Device:
     CHKERR(PetscDeviceCreate(cdevice_type, cdevice_id, &device.device))
     return device
 
-  def destroy(self):
+  def destroy(self) -> None:
+    """Destroy a `Device`
+
+    Not Collective
+
+    See Also
+    --------
+    create, petsc.PetscDeviceDestroy
+
+    """
     CHKERR(PetscDeviceDestroy(&self.device))
 
-  def configure(self):
+  def configure(self) -> None:
+    """Configure and setup a `Device`
+
+    Not Collective
+
+    See Also
+    --------
+    create, petsc.PetscDeviceConfigure
+
+    """
     CHKERR(PetscDeviceConfigure(self.device))
 
   def view(self, Viewer viewer=None) -> None:
+    """View a `Device`
+
+    Collective
+
+    Parameters
+    ----------
+    viewer
+        A `Viewer` instance or `None` for the default viewer
+
+    See Also
+    --------
+    petsc.PetscDeviceView
+
+    """
     cdef PetscViewer vwr = NULL
 
     if viewer is not None:
       vwr = viewer.vwr
     CHKERR(PetscDeviceView(self.device, vwr))
 
-  def getDeviceType(self):
+  def getDeviceType(self) -> str:
+    """Return the `Type` of the `Device`
+
+    Not Collective
+
+    Notes
+    -----
+    Reading the ``type`` instance property has the same effect as calling this routine
+
+    See Also
+    --------
+    type, petsc.PetscDeviceGetType
+
+    """
     cdef PetscDeviceType cdtype
 
     CHKERR(PetscDeviceGetType(self.device, &cdtype))
     return toDeviceType(cdtype)
 
   property type:
-    def __get__(self):
+  """The `Type`"""
+    def __get__(self) -> str:
       return self.getDeviceType()
 
-  def getDeviceId(self):
+  def getDeviceId(self) -> int:
+    """Return the device id of the `Device`
+
+    Not Collective
+
+    Notes
+    -----
+    Reading the ``device_id`` instance property has the same effect as calling this routine
+
+    See Also
+    --------
+    device_id, create, petsc.PetscDeviceGetDeviceId
+
+    """
     cdef PetscInt cdevice_id = 0
 
     CHKERR(PetscDeviceGetDeviceId(self.device, &cdevice_id))
     return toInt(cdevice_id)
 
   property device_id:
-    def __get__(self):
+  """The device ID"""
+    def __get__(self) -> int:
       return self.getDeviceId()
 
   @staticmethod
-  def setDefaultType(device_type):
+  def setDefaultType(device_type: Type | str) -> None:
+    """Set the `Type` to be used as the default in subsequent calls to ``create``
+
+    See Also
+    --------
+    create, petsc.PetscDeviceSetDefaultDeviceType
+    """
     cdef PetscDeviceType cdevice_type = asDeviceType(device_type)
 
     CHKERR(PetscDeviceSetDefaultDeviceType(cdevice_type))
@@ -107,7 +199,15 @@ cdef class Device:
 # --------------------------------------------------------------------
 
 cdef class DeviceContext(Object):
+  """DeviceContext object
 
+  Represents an abstract handle to a device context
+
+  See Also
+  --------
+  Device, petsc.PetscDeviceContext
+
+  """
   JoinMode   = DeviceJoinMode
   StreamType = StreamType
 
@@ -119,71 +219,206 @@ cdef class DeviceContext(Object):
     self.destroy()
 
   @classmethod
-  def create(cls):
+  def create(cls) -> DeviceContext:
+    """Create an empty `DeviceContext`
+
+    Not Collective
+
+    See Also
+    --------
+    Device, petsc.PetscDeviceContextCreate
+
+    """
     cdef DeviceContext dctx = cls()
 
     CHKERR(PetscDeviceContextCreate(&dctx.dctx))
     return dctx
 
-  def getStreamType(self):
+  def getStreamType(self) -> str:
+    """Return the `DeviceContext.StreamType` of the `DeviceContext`
+
+    Not Collective
+
+    Notes
+    -----
+    Reading the ``stream_id`` instance property has the same effect as calling this routine
+
+    See Also
+    --------
+    stream_type, setStreamType, petsc.PetscDeviceContextGetStreamType
+
+    """
     cdef PetscStreamType cstream_type = PETSC_STREAM_DEFAULT_BLOCKING
 
     CHKERR(PetscDeviceContextGetStreamType(self.dctx, &cstream_type))
     return toStreamType(cstream_type)
 
-  def setStreamType(self, stream_type):
+  def setStreamType(self, stream_type: StreamType | str) -> None:
+    """Set the `DeviceContext.StreamType` of the `DeviceContext`
+
+    Not Collective
+
+    Parameters
+    ----------
+    stream_type
+        The type of stream to set
+
+    Notes
+    -----
+    Writing the `stream_id` instance property has the same effect as calling this routine
+
+    See Also
+    --------
+    stream_type, getStreamType, petsc.PetscDeviceContextSetStreamType
+
+    """
     cdef PetscStreamType cstream_type = asStreamType(stream_type)
 
     CHKERR(PetscDeviceContextSetStreamType(self.dctx, cstream_type))
 
   property stream_type:
-    def __get__(self):
+  """The `StreamType`"""
+    def __get__(self) -> str:
       return self.getStreamType()
 
-    def __set__(self, stype):
+    def __set__(self, stype: StreamType | str) -> None:
       self.setStreamType(stype)
 
-  def getDevice(self):
+  def getDevice(self) -> Device:
+    """Get the `Device` which this `DeviceContext` is attached to
+
+    Not Collective
+
+    Notes
+    -----
+    Reading the ``device`` instance property has the same effect as calling this routine
+
+    See Also
+    --------
+    setDevice, device, Device, petsc.PetscDeviceContextGetDevice
+
+    """
     cdef PetscDevice device = NULL
 
     CHKERR(PetscDeviceContextGetDevice(self.dctx, &device))
     return PyPetscDevice_New(device)
 
-  def setDevice(self, Device device not None):
+  def setDevice(self, Device device not None) -> None:
+    """Set the `Device` which this `DeviceContext` is attached to
+
+    Collective
+
+    Parameters
+    ----------
+    device
+        The `Device` to which this `DeviceContext` is attached to
+
+    Notes
+    -----
+    Writing the ``device`` instance property has the same effect as calling this routine
+
+    See Also
+    --------
+    getDevice, device, Device, petsc.PetscDeviceContextSetDevice
+
+    """
     cdef PetscDevice cdevice = PyPetscDevice_Get(device)
 
     CHKERR(PetscDeviceContextSetDevice(self.dctx, cdevice))
 
   property device:
-    def __get__(self):
+  """The `Device`"""
+    def __get__(self) -> Device:
       return self.getDevice()
 
-    def __set__(self, device):
+    def __set__(self, Device device) -> None:
       self.setDevice(device)
 
-  def setUp(self):
+  def setUp(self) -> None:
+    """Set up the internal data structures for using the `DeviceContext`
+
+    Not Collective
+
+    See Also
+    --------
+    create, destroy, petsc.PetscDeviceContextSetUp
+
+    """
     CHKERR(PetscDeviceContextSetUp(self.dctx))
 
-  def duplicate(self):
+  def duplicate(self) -> DeviceContext:
+    """Duplicate a `DeviceContext`
+
+    Not Collective
+
+    Notes
+    -----
+    The duplicated `DeviceContext` shares the same options (and `Device`) but is a separate object
+    and stream
+
+    See Also
+    --------
+    create, destroy, petsc.PetscDeviceContextDuplicate
+
+    """
     cdef PetscDeviceContext octx = NULL
 
     CHKERR(PetscDeviceContextDuplicate(self.dctx, &octx))
     return PyPetscDeviceContext_New(octx)
 
-  def idle(self):
+  def idle(self) -> bool:
+    """Return whether the underlying stream for the `DeviceContext` is idle
+
+    Not Collective
+
+    See Also
+    --------
+    synchronize, petsc.PetscDeviceContextQueryIdle
+
+    """
     cdef PetscBool is_idle = PETSC_FALSE
 
     CHKERR(PetscDeviceContextQueryIdle(self.dctx, &is_idle))
     return toBool(is_idle)
 
-  def waitFor(self, other):
+  def waitFor(self, other: DeviceContext | None) -> None:
+    """Make this `DeviceContext` wait for `other`
+
+    Not Collective
+
+    Parameters
+    ----------
+    other
+        The other `DeviceContext` to wait for
+
+    See Also
+    --------
+    fork, join, petsc.PetscDeviceContextWaitForContext
+
+    """
     cdef PetscDeviceContext cother = NULL
 
     if other is not None:
       cother = PyPetscDeviceContext_Get(other)
     CHKERR(PetscDeviceContextWaitForContext(self.dctx, cother))
 
-  def fork(self, n, stream_type = None):
+  def fork(self, n: int, stream_type: DeviceContext.StreamType | str | None = None) -> list[DeviceContext]:
+    """Create `n` `DeviceContext`s which are all logically dependent on this one
+
+    Not Collective
+
+    Parameters
+    ----------
+    n
+        The number of `DeviceContext`s to create
+    stream_type
+        The `DeviceContext.StreamType` of the forked `DeviceContext`s
+
+    See Also
+    --------
+    join, waitFor, petsc.PetscDeviceContextFork
+
+    """
     cdef PetscDeviceContext *subctx       = NULL
     cdef PetscStreamType     cstream_type = PETSC_STREAM_DEFAULT_BLOCKING
     cdef PetscInt cn = asInt(n)
@@ -197,7 +432,23 @@ cdef class DeviceContext(Object):
     finally:
       CHKERR(PetscFree(subctx))
 
-  def join(self, join_mode, py_sub_ctxs):
+  def join(self, join_mode: DeviceContext.JoinMode | str, py_sub_ctxs: list[DeviceContext]) -> None:
+    """Join a set of `DeviceContext`s on this one
+
+    Not Collective
+
+    Parameters
+    ----------
+    join_mode
+        The type of join to perform
+    py_sub_ctxs
+        The list of `DeviceContext`s to join
+
+    See Also
+    --------
+    fork, waitFor, petsc.PetscDeviceContextJoin
+
+    """
     cdef PetscDeviceContext         *np_subctx_copy = NULL
     cdef PetscDeviceContext         *np_subctx      = NULL
     cdef PetscInt                    nsub           = 0
@@ -215,33 +466,81 @@ cdef class DeviceContext(Object):
       for i in range(nsub):
         py_sub_ctxs[i] = None
 
-  def synchronize(self):
+  def synchronize(self) -> None:
+    """Synchronize a `DeviceContext`
+
+    Not Collective
+
+    Notes
+    -----
+    The underlying stream is considered idle after this routine returns, i.e. `idle` will return `True`
+
+    See Also
+    --------
+    idle, petsc.PetscDeviceContextSynchronize
+
+    """
     CHKERR(PetscDeviceContextSynchronize(self.dctx))
 
-  def setFromOptions(self, comm = None):
+  def setFromOptions(self, comm: Comm | None = None) -> None:
+    """Configure the `DeviceContext` from the options database
+
+    Collective
+
+    Parameters
+    ----------
+    comm
+        The `Comm` to use (or `None` for `PETSC_COMM_SELF`)
+
+    See Also
+    --------
+    petsc.PetscDeviceContextSetFromOptions
+
+    """
     cdef MPI_Comm ccomm = def_Comm(comm, PETSC_COMM_SELF)
 
     CHKERR(PetscDeviceContextSetFromOptions(ccomm, self.dctx))
 
-  def viewFromOptions(self, name, Object obj = None):
-    cdef const char *cname = NULL
-    cdef PetscObject cobj  = NULL
-
-    if obj is not None:
-      cobj = obj.obj[0]
-
-    _ = str2bytes(name, &cname)
-    CHKERR(PetscDeviceContextViewFromOptions(self.dctx, cobj, cname))
-
   @staticmethod
-  def getCurrent():
+  def getCurrent() -> DeviceContext:
+    """Return the current `DeviceContext`
+
+    Not Collective
+
+    Notes
+    -----
+    Reading the ``current`` instance property has the same effect as calling this routine
+
+    See Also
+    --------
+    current, setCurrent, petsc.PetscDeviceContextGetCurrentContext
+
+    """
     cdef PetscDeviceContext dctx = NULL
 
     CHKERR(PetscDeviceContextGetCurrentContext(&dctx))
     return PyPetscDeviceContext_New(dctx)
 
   @staticmethod
-  def setCurrent(dctx):
+  def setCurrent(dctx: DeviceContext | None) -> None:
+    """Set the current `DeviceContext`
+
+    Not Collective
+
+    Parameters
+    ----------
+    dctx
+        The `DeviceContext` to set as current (or `None` to use the default `NULL` context)
+
+    Notes
+    -----
+    Writing the ``current`` instance property has the same effect as calling this routine
+
+    See Also
+    --------
+    current, getCurrent, petsc.PetscDeviceContextSetCurrentContext
+
+    """
     cdef PetscDeviceContext cdctx = NULL
 
     if dctx is not None:
@@ -249,10 +548,11 @@ cdef class DeviceContext(Object):
     CHKERR(PetscDeviceContextSetCurrentContext(cdctx))
 
   property current:
-    def __get__(self):
+  """The current global `DeviceContxt`"""
+    def __get__(self) -> DeviceContext:
       return self.getCurrent()
 
-    def __set__(self, dctx):
+    def __set__(self, dctx: DeviceContext | None) -> None:
       self.setCurrent(dctx)
 
 # --------------------------------------------------------------------
