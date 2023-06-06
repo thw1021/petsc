@@ -1483,9 +1483,7 @@ PetscErrorCode PetscFinalize(void)
     PetscCallMPI(MPI_Reduce(&petsc_TotalFlops, &flops, 1, MPI_DOUBLE, MPI_SUM, 0, PETSC_COMM_WORLD));
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Total flops over all processors %g\n", flops));
   }
-#endif
 
-#if defined(PETSC_USE_LOG)
   #if defined(PETSC_HAVE_MPE)
   mname[0] = 0;
   PetscCall(PetscOptionsGetString(NULL, NULL, "-log_mpe", mname, sizeof(mname), &flg1));
@@ -1494,14 +1492,7 @@ PetscErrorCode PetscFinalize(void)
     else PetscCall(PetscLogMPEDump(0));
   }
   #endif
-#endif
 
-  /*
-     Free all objects registered with PetscObjectRegisterDestroy() such as PETSC_VIEWER_XXX_().
-  */
-  PetscCall(PetscObjectRegisterDestroyAll());
-
-#if defined(PETSC_USE_LOG)
   PetscCall(PetscOptionsPushGetViewerOff(PETSC_FALSE));
   PetscCall(PetscLogViewFromOptions());
   PetscCall(PetscOptionsPopGetViewerOff());
@@ -1524,7 +1515,7 @@ PetscErrorCode PetscFinalize(void)
   }
 
   /*
-     Free any objects created by the last block of code.
+     Free all objects registered with PetscObjectRegisterDestroy() such as PETSC_VIEWER_XXX_().
   */
   PetscCall(PetscObjectRegisterDestroyAll());
 
@@ -1610,9 +1601,7 @@ PetscErrorCode PetscFinalize(void)
       PetscCallMPI(MPI_Comm_free(&local_comm));
     }
   }
-#endif
 
-#if defined(PETSC_USE_LOG)
   PetscObjectsCounts    = 0;
   PetscObjectsMaxCounts = 0;
   PetscCall(PetscFree(PetscObjects));
