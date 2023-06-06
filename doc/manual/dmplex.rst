@@ -5,8 +5,8 @@ DMPlex: Unstructured Grids
 
 This chapter introduces the ``DMPLEX`` subclass of ``DM``, which allows
 the user to handle unstructured grids using the generic ``DM`` interface
-for hierarchy and multi-physics. ``DMPLEX`` was created to remedy a huge
-problem in all current PDE simulation codes, namely that the
+for hierarchy and multi-physics. ``DMPLEX`` was created to remedy a 
+problem in most current PDE simulation codes, namely that the
 discretization was so closely tied to the data layout and solver that
 switching discretizations in the same code was not possible. Not only
 does this preclude the kind of comparison that is necessary for
@@ -17,10 +17,10 @@ Representing Unstructured Grids
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The main advantage of ``DMPLEX`` in representing topology is that it
-treats all the different pieces of a mesh, e.g. cells, faces, edges, and
-vertices, in the same way. This allows the interface to be
-small and simple, while remaining flexible and general. This also allows
-“dimension independent programming”, which means that the same algorithm
+treats all the different pieces of a mesh, e.g., cells, faces, edges, and
+vertices, similarly. This allows the interface to be
+small and simple while remaining flexible and general. This also allows
+“dimension independent programming, " meaning the same algorithm
 can be used unchanged for meshes of different shapes and dimensions.
 
 All pieces of the mesh (vertices, edges, faces, and cells) are treated as *points*, which are each identified by a
@@ -30,7 +30,7 @@ example, an edge is defined by being covered by two vertices, and a
 triangle can be defined by being covered by three edges (or even by
 three vertices). This structure is known as a `Hasse Diagram <http://en.wikipedia.org/wiki/Hasse_diagram>`__, which is a
 Directed Acyclic Graph (DAG) representing a cell complex using the
-covering relation. The graph edges represent the relation, which also
+covering relation. The graph edges represent the relation, which 
 encodes a partially ordered set (poset).
 
 For example, we can encode the doublet mesh as in :numref:`fig_doubletMesh`,
@@ -50,7 +50,7 @@ which can also be represented as the DAG in
 
 To use the PETSc API, we consecutively number the mesh pieces. The
 PETSc convention in 3 dimensions is to number first cells, then
-vertices, then faces, and then edges. In 2 dimensions the convention is
+vertices, then faces, and then edges. In 2 dimensions, the convention is
 to number faces, vertices, and then edges.
 In terms of the labels in
 :numref:`fig_doubletMesh`, these numberings are
@@ -67,7 +67,7 @@ Note that a *chart* here corresponds to a semi-closed interval (e.g
 :math:`[0,11) = \{0,1,\ldots,10\}`) specifying the range of indices we’d
 like to use to define points on the current rank. We then define the
 covering relation, which we call the *cone*, which are also the in-edges
-in the DAG. In order to preallocate correctly, we first provide sizes,
+in the DAG. To preallocate correctly, we first provide sizes,
 
 .. code-block::
 
@@ -102,9 +102,9 @@ calculated automatically using the provided ``DMPlexSetConeSize()`` and ``DMPlex
 
    DMPlexSymmetrize(dm);
 
-The "symmetrization" is in the sense of the DAG. Each point knows its covering (cone) and each point knows what it covers (support). Note that when using automatic symmetrization, cones will be ordered but supports will not. The user can enforce an ordering on supports by rewriting them after symmetrization using ``DMPlexSetSupport()``.
+The "symmetrization" is in the sense of the DAG. Each point knows its covering (cone), and each point knows what it covers (support). Note that when using automatic symmetrization, cones will be ordered but supports will not. The user can enforce an ordering on supports by rewriting them after symmetrization using ``DMPlexSetSupport()``.
 
-In order to support efficient queries, we construct fast
+To support efficient queries, we construct fast
 search structures and indices for the different types of points using
 
 .. code-block::
@@ -114,7 +114,7 @@ search structures and indices for the different types of points using
 Dealing with Periodicity
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-Plex allows you to represent periodic domains is two ways. Using the default scheme, periodic topology can be represented directly. This ensures that all topological queries can be satisified, but then care must be taken in representing functions over the mesh, such as the coordinates. The second method is to use a non-periodic topology, but connect certain mesh points using the local-to-global map for that DM. This allows a more general set of mappings to be implemented, such as partial twists, but topological queries on the periodic boundary cease to function.
+Plex allows you to represent periodic domains is two ways. Using the default scheme, periodic topology can be represented directly. This ensures that all topological queries can be satisified, but then care must be taken in representing functions over the mesh, such as the coordinates. The second method uses a non-periodic topology, but connect certain mesh points using the local-to-global map for that DM. This allows a more general set of mappings to be implemented, such as partial twists, but topological queries on the periodic boundary cease to function.
 
 For the default scheme, a call to `DMLocalizeCoordinates()` (which usually happens automatically on mesh creation) creates a second, discontinuous coordinate field. These values can be accessed using `DMGetCellCoordinates()` and `DMGetCellCoordinatesLocal()`. Plex provides a convenience method, `DMPlexGetCellCoordinates()`, that extracts cell coordinates correctly, depending on the periodicity of the mesh. An example of its use is shown below:
 
@@ -165,7 +165,7 @@ Data Layout by Hand
   We may want to even move this introductory ``PetscSection`` material to its own pride of place in the user guide and not inside the ``DMPLEX`` discussion.
 
 Specific entries (or collections of entries) in a ``Vec`` (or a simple array) can be associated with a "location" on a mesh (or other types of data structure) using the ``PetscSection`` object.
-A **point** is a ``PetscInt`` that serves as an abstract "index" into arrays from iteratable sets, such as points on a mesh.
+A **point** is a ``PetscInt`` that serves as an abstract "index" into arrays from iterable sets, such as points on a mesh.
 
 ``PetscSection`` has two modes of operation.
 
@@ -173,16 +173,16 @@ Mode 1:
 
 A ``PetscSection`` associates a set of degrees of freedom (dof), (a small space
 :math:`\{e_k\} 0 < k < d_p`), with every point. The number of dof and their meaning may be different for different points. For example, the dof on a cell point may represent pressure
-while a dof on a face point may represent velocity. Though points must be
+, while a dof on a face point may represent velocity. Though points must be
 contiguously numbered, they can be in any range
-:math:`[\mathrm{pStart}, \mathrm{pEnd})`, which is called a **chart**. A ``PetscSection`` in mode 1 may be thought of as defining a two dimensional array indexed by point in the outer dimension with
+:math:`[\mathrm{pStart}, \mathrm{pEnd})`, which is called a **chart**. A ``PetscSection`` in mode 1 may be thought of as defining a two-dimensional array indexed by point in the outer dimension with
 a variable length inner dimension indexed by the dof at that point, :math:`v[pStart <= point < pEnd][0 <= dof <d_p]` [#petscsection_footnote]_.
 
 The sequence for constructing a ``PetscSection`` in mode 1 is the following:
 
 #. Specify the range of points, or chart, with ``PetscSectionSetChart()``.
 
-#. Specify the number of dofs per point, with ``PetscSectionSetDof()``. Any values not set will be zero.
+#. Specify the number of dofs per point with ``PetscSectionSetDof()``. Any values not set will be zero.
 
 #. Set up the ``PetscSection`` with ``PetscSectionSetUp()``.
 
@@ -191,9 +191,9 @@ Below we demonstrate such a process used by ``DMPLEX`` but first we introduce th
 Mode 2:
 
 A ``PetscSection`` consists of one more **fields** each of which is represented (internally) by a ``PetscSection``.
-A ``PetscSection`` in mode 2 may be thought of as defining a three dimensional array indexed by point and field in the outer dimensions with
+A ``PetscSection`` in mode 2 may be thought of as defining a three-dimensional array indexed by point and field in the outer dimensions with
 a variable length inner dimension indexed by the dof at that point. The actual order the values in the array are stored can be set with
-``PetscSectionSetPointMajor``\(``PetscSection``\, ``PETSC_TRUE``\, ``PETSC_FALSE``\). In **point major** order all the degrees of freedom for each point for all fields are stored contiguously, otherwise
+``PetscSectionSetPointMajor``\(``PetscSection``\, ``PETSC_TRUE``\, ``PETSC_FALSE``\). In **point major** order all the degrees of freedom for each point for all fields are stored contiguously, otherwise,
 all degrees of freedom for each field are stored  are stored contiguously. With point major order the fields are said to be **interlaced**.
 
 Consider a ``PetscSection`` with 2 fields and 3 points (from 0 to 2) with 1 dof for each point. In point major order the array has the storage
