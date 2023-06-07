@@ -16,10 +16,12 @@ int main(int argc, char **argv)
   PetscCall(DMCreate(PETSC_COMM_WORLD, &dm));
   PetscCall(DMSetType(dm, DMPLEX));
   PetscCall(DMSetFromOptions(dm));
+  PetscCall(DMViewFromOptions(dm, NULL, "-init_dm_view"));
+
   PetscCall(DMPlexUninterpolate(dm, &dm2));
   PetscCall(DMDestroy(&dm));
   dm = dm2;
-  PetscCall(DMViewFromOptions(dm, NULL, "-init_dm_view"));
+  PetscCall(DMViewFromOptions(dm, NULL, "-unint_dm_view"));
 
   PetscCall(PetscLogStagePush(stage));
   PetscCall(DMPlexInterpolate(dm, &dm2));
