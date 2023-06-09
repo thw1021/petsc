@@ -5,14 +5,12 @@ Input parameters include:
   -n <mesh_y>       : number of mesh points in y-direction
 
 ----------------------------------------
-Petsc Development GIT revision: v3.19.2-410-g00edbcbc9fb  GIT Date: 2023-06-09 11:56:35 -0400
        The PETSc Team
     petsc-maint@mcs.anl.gov
  https://petsc.org/
 See https://petsc.org/release/changes for recent updates.
 See https://petsc.org/release/faq for problems.
 See https://petsc.org/release/manualpages for help. 
-Libraries linked from /Users/barrysmith/Src/petsc/arch-fix-petscoptionsgetbool/lib
 ----------------------------------------
 Options for all PETSc programs:
  -version: prints PETSc version
@@ -105,13 +103,13 @@ Preconditioner (PC) options:
   -pc_type <now icc : formerly icc>: Preconditioner (one of) nn tfs hmg bddc composite ksp lu icc patch bjacobi eisenstat deflation vpbjacobi redistribute sor mg pbjacobi cholesky mat qr svd fieldsplit mpi kaczmarz jacobi telescope redundant cp shell galerkin ilu exotic gasm gamg none lmvm asm lsc (PCSetType)
   -pc_use_amat: <now FALSE : formerly FALSE> use Amat (instead of Pmat) to define preconditioner in nested inner solves (PCSetUseAmat)
   ICC Options
-  -pc_factor_in_place: <now TRUE : formerly FALSE> Form factored matrix in the same memory as the matrix (PCFactorSetUseInPlace)
+  -pc_factor_in_place: <now FALSE : formerly FALSE> Form factored matrix in the same memory as the matrix (PCFactorSetUseInPlace)
   -pc_factor_fill: <now 1. : formerly 1.>: Expected non-zeros in factored matrix (PCFactorSetFill)
   -pc_factor_shift_type: <now POSITIVE_DEFINITE : formerly POSITIVE_DEFINITE> Type of shift to add to diagonal (choose one of) NONE NONZERO POSITIVE_DEFINITE INBLOCKS (PCFactorSetShiftType)
   -pc_factor_shift_amount: <now 2.22045e-14 : formerly 2.22045e-14>: Shift added to diagonal (PCFactorSetShiftAmount)
   -pc_factor_zeropivot: <now 2.22045e-14 : formerly 2.22045e-14>: Pivot is considered zero if less than (PCFactorSetZeroPivot)
   -pc_factor_column_pivot: <now -2. : formerly -2.>: Column pivot tolerance (used only for some factorization) (PCFactorSetColumnPivot)
-  -pc_factor_pivot_in_blocks: <now FALSE : formerly TRUE> Pivot inside matrix dense blocks for BAIJ and SBAIJ (PCFactorSetPivotInBlocks)
+  -pc_factor_pivot_in_blocks: <now TRUE : formerly TRUE> Pivot inside matrix dense blocks for BAIJ and SBAIJ (PCFactorSetPivotInBlocks)
   -pc_factor_reuse_fill: <now FALSE : formerly FALSE> Use fill from previous factorization (PCFactorSetReuseFill)
   -pc_factor_reuse_ordering: <now FALSE : formerly FALSE> Reuse ordering from previous factorization (PCFactorSetReuseOrdering)
   -pc_factor_mat_solver_type: <now (null) : formerly (null)>: Specific direct solver to use (MatGetFactor)
