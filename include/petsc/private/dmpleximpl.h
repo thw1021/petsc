@@ -137,6 +137,8 @@ typedef struct {
   PetscSection supportSection;   /* Layout of cones (inedges for DAG) */
   PetscInt    *supports;         /* Cone for each point */
 
+  DMPolytopeType *cellTypes;
+
   /* Transformation */
   DMPlexTransform tr;                                               /* Type of transform used to define an ephemeral mesh */
   char           *transformType;                                    /* Type of transform for uniform cell refinement */
