@@ -13,6 +13,7 @@ PetscErrorCode MatSolveTranspose_SeqBAIJ_N_inplace(Mat A, Vec bb, Vec xx)
   const PetscScalar *b;
 
   PetscFunctionBegin;
+  PetscCheck(bs > 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Expected bs %" PetscInt_FMT " > 0", bs);
   PetscCall(VecGetArrayRead(bb, &b));
   PetscCall(VecGetArray(xx, &x));
   t = a->solve_work;
@@ -30,7 +31,7 @@ PetscErrorCode MatSolveTranspose_SeqBAIJ_N_inplace(Mat A, Vec bb, Vec xx)
   /* forward solve the upper triangular transpose */
   ls = a->solve_work + A->cmap->n;
   for (i = 0; i < n; i++) {
-    PetscCall(PetscArraycpy(ls, t + i * bs, PetscMax(bs, 0)));
+    PetscCall(PetscArraycpy(ls, t + i * bs, bs));
     PetscKernel_w_gets_transA_times_v(bs, ls, aa + bs2 * a->diag[i], t + i * bs);
     v  = aa + bs2 * (a->diag[i] + 1);
     vi = aj + a->diag[i] + 1;
@@ -78,6 +79,7 @@ PetscErrorCode MatSolveTranspose_SeqBAIJ_N(Mat A, Vec bb, Vec xx)
   const PetscScalar *b;
 
   PetscFunctionBegin;
+  PetscCheck(bs > 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Expected bs %" PetscInt_FMT " > 0", bs);
   PetscCall(VecGetArrayRead(bb, &b));
   PetscCall(VecGetArray(xx, &x));
   t = a->solve_work;
@@ -95,7 +97,7 @@ PetscErrorCode MatSolveTranspose_SeqBAIJ_N(Mat A, Vec bb, Vec xx)
   /* forward solve the upper triangular transpose */
   ls = a->solve_work + A->cmap->n;
   for (i = 0; i < n; i++) {
-    PetscCall(PetscArraycpy(ls, t + i * bs, PetscMax(bs, 0)));
+    PetscCall(PetscArraycpy(ls, t + i * bs, bs));
     PetscKernel_w_gets_transA_times_v(bs, ls, aa + bs2 * diag[i], t + i * bs);
     v  = aa + bs2 * (diag[i] - 1);
     vi = aj + diag[i] - 1;

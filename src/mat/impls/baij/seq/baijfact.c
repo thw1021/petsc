@@ -1407,6 +1407,7 @@ PetscErrorCode MatSolve_SeqBAIJ_N_NaturalOrdering(Mat A, Vec bb, Vec xx)
   const PetscScalar *b;
 
   PetscFunctionBegin;
+  PetscCheck(bs > 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Expected bs %" PetscInt_FMT " > 0", bs);
   PetscCall(VecGetArrayRead(bb, &b));
   PetscCall(VecGetArray(xx, &x));
   t = a->solve_work;
@@ -1419,7 +1420,7 @@ PetscErrorCode MatSolve_SeqBAIJ_N_NaturalOrdering(Mat A, Vec bb, Vec xx)
     vi = aj + ai[i];
     nz = ai[i + 1] - ai[i];
     s  = t + bs * i;
-    PetscCall(PetscArraycpy(s, b + bs * i, PetscMax(bs, 0))); /* copy i_th block of b to t */
+    PetscCall(PetscArraycpy(s, b + bs * i, bs)); /* copy i_th block of b to t */
     for (k = 0; k < nz; k++) {
       PetscKernel_v_gets_v_minus_A_times_w(bs, s, v, t + bs * vi[k]);
       v += bs2;
@@ -1432,13 +1433,13 @@ PetscErrorCode MatSolve_SeqBAIJ_N_NaturalOrdering(Mat A, Vec bb, Vec xx)
     v  = aa + bs2 * (adiag[i + 1] + 1);
     vi = aj + adiag[i + 1] + 1;
     nz = adiag[i] - adiag[i + 1] - 1;
-    PetscCall(PetscArraycpy(ls, t + i * bs, PetscMax(bs, 0)));
+    PetscCall(PetscArraycpy(ls, t + i * bs, bs));
     for (k = 0; k < nz; k++) {
       PetscKernel_v_gets_v_minus_A_times_w(bs, ls, v, t + bs * vi[k]);
       v += bs2;
     }
     PetscKernel_w_gets_A_times_v(bs, ls, aa + bs2 * adiag[i], t + i * bs); /* *inv(diagonal[i]) */
-    PetscCall(PetscArraycpy(x + i * bs, t + i * bs, PetscMax(bs, 0)));
+    PetscCall(PetscArraycpy(x + i * bs, t + i * bs, bs));
   }
 
   PetscCall(VecRestoreArrayRead(bb, &b));
@@ -1459,6 +1460,7 @@ PetscErrorCode MatSolve_SeqBAIJ_N(Mat A, Vec bb, Vec xx)
   const PetscScalar *b;
 
   PetscFunctionBegin;
+  PetscCheck(bs > 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Expected bs %" PetscInt_FMT " > 0", bs);
   PetscCall(VecGetArrayRead(bb, &b));
   PetscCall(VecGetArray(xx, &x));
   t = a->solve_work;
@@ -1475,7 +1477,7 @@ PetscErrorCode MatSolve_SeqBAIJ_N(Mat A, Vec bb, Vec xx)
     vi = aj + ai[i];
     nz = ai[i + 1] - ai[i];
     s  = t + bs * i;
-    PetscCall(PetscArraycpy(s, b + bs * r[i], PetscMax(bs, 0)));
+    PetscCall(PetscArraycpy(s, b + bs * r[i], bs));
     for (m = 0; m < nz; m++) {
       PetscKernel_v_gets_v_minus_A_times_w(bs, s, v, t + bs * vi[m]);
       v += bs2;
@@ -1488,13 +1490,13 @@ PetscErrorCode MatSolve_SeqBAIJ_N(Mat A, Vec bb, Vec xx)
     v  = aa + bs2 * (adiag[i + 1] + 1);
     vi = aj + adiag[i + 1] + 1;
     nz = adiag[i] - adiag[i + 1] - 1;
-    PetscCall(PetscArraycpy(ls, t + i * bs, PetscMax(bs, 0)));
+    PetscCall(PetscArraycpy(ls, t + i * bs, bs));
     for (m = 0; m < nz; m++) {
       PetscKernel_v_gets_v_minus_A_times_w(bs, ls, v, t + bs * vi[m]);
       v += bs2;
     }
     PetscKernel_w_gets_A_times_v(bs, ls, v, t + i * bs); /* *inv(diagonal[i]) */
-    PetscCall(PetscArraycpy(x + bs * c[i], t + i * bs, PetscMax(bs, 0)));
+    PetscCall(PetscArraycpy(x + bs * c[i], t + i * bs, bs));
   }
   PetscCall(ISRestoreIndices(isrow, &rout));
   PetscCall(ISRestoreIndices(iscol, &cout));
