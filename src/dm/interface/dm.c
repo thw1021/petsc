@@ -1669,7 +1669,7 @@ PetscErrorCode DMGetWorkArray(DM dm, PetscInt count, MPI_Datatype dtype, void *m
   if (dtype == MPIU_INT) dsize = sizeof(PetscInt);
   else if (dtype == MPIU_REAL) dsize = sizeof(PetscReal);
 #if defined(PETSC_USE_64BIT_INDICES)
-  else if (dype == MPI_INT) dsize = sizeof(int);
+  else if (dtype == MPI_INT) dsize = sizeof(int);
 #endif
 #if defined(PETSC_USE_COMPLEX)
   else if (dtype == MPIU_SCALAR) dsize = sizeof(PetscScalar);
