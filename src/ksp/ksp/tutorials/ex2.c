@@ -390,4 +390,10 @@ int main(int argc, char **args)
       nsize: 1
       args: -ksp_monitor -ksp_type gmres -pc_type bjacobi -sub_pc_type icc -ksp_pc_side symmetric -pc_bjacobi_blocks 2
 
+   test:
+      suffix: help
+      requires: !hpddm !complex !kokkos_kernels !amgx !ml !spai !hypre !viennacl !parms !h2opus
+      nsize: 1
+      args: -ksp_monitor -help -petsc_ci_portable_error_output -error_output_stdout
+
  TEST*/
