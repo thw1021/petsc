@@ -4360,7 +4360,7 @@ PetscErrorCode DMPlexComputeCellTypes(DM dm)
     PetscCheck(ct != DM_POLYTOPE_UNKNOWN, PETSC_COMM_SELF, PETSC_ERR_SUP, "Point %" PetscInt_FMT " is screwed up", p);
     PetscCall(DMLabelSetValue(ctLabel, p, ct));
     if (!mesh->cellTypes) PetscCall(PetscMalloc1(pEnd - pStart, &mesh->cellTypes));
-    mesh->cellTypes[p - pStart] = ct;
+    mesh->cellTypes[p - pStart].value_as_uint8 = ct;
   }
   PetscCall(PetscObjectStateGet((PetscObject)ctLabel, &mesh->celltypeState));
   PetscCall(PetscObjectViewFromOptions((PetscObject)ctLabel, NULL, "-dm_plex_celltypes_view"));
@@ -5208,14 +5208,14 @@ PetscErrorCode DMPlexGetCellType(DM dm, PetscInt cell, DMPolytopeType *celltype)
       PetscCall(PetscMalloc1(pEnd - pStart, &mesh->cellTypes));
       for (PetscInt p = pStart; p < pEnd; p++) {
         PetscCall(DMLabelGetValue(label, p, &ct));
-        mesh->cellTypes[p - pStart] = (DMPolytopeType)ct;
+        mesh->cellTypes[p - pStart].value_as_uint8 = (DMPolytopeType)ct;
       }
     }
-    *celltype = mesh->cellTypes[cell - pStart];
+    *celltype = (DMPolytopeType)mesh->cellTypes[cell - pStart].value_as_uint8;
     if (PetscDefined(USE_DEBUG)) {
       PetscCall(DMLabelGetValue(label, cell, &ct));
       PetscCheck(ct >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Cell %" PetscInt_FMT " has not been assigned a cell type", cell);
-      PetscCheck(ct == *celltype, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid cellType for %" PetscInt_FMT ": %" PetscInt_FMT " != %" PetscInt_FMT, cell, (PetscInt)*celltype, ct);
+      PetscCheck(ct == *celltype, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid cellType for %" PetscInt_FMT ": %d != %" PetscInt_FMT, cell, (int)*celltype, ct);
     }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -5250,7 +5250,7 @@ PetscErrorCode DMPlexSetCellType(DM dm, PetscInt cell, DMPolytopeType celltype)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscCall(PetscSectionGetChart(mesh->coneSection, &pStart, NULL));
-  mesh->cellTypes[cell - pStart] = celltype;
+  mesh->cellTypes[cell - pStart].value_as_uint8 = celltype;
   PetscCall(DMPlexGetCellTypeLabel(dm, &label));
   PetscCall(DMLabelSetValue(label, cell, celltype));
   PetscFunctionReturn(PETSC_SUCCESS);

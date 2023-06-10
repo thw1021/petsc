@@ -138,7 +138,9 @@ typedef struct {
   PetscSection supportSection;   /* Layout of cones (inedges for DAG) */
   PetscInt    *supports;         /* Cone for each point */
 
-  DMPolytopeType *cellTypes;
+  struct {                  // DMPolytopeType is an enum (usually size 4), but this needs frequent access
+    uint8_t value_as_uint8; // in a struct to guard for stronger typing
+  } *cellTypes;
 
   /* Transformation */
   DMPlexTransform tr;                                               /* Type of transform used to define an ephemeral mesh */
