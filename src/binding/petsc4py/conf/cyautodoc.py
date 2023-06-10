@@ -31,6 +31,10 @@ class ExpressionWriter(BaseExpressionWriter):
 class AnnotationWriter(ExpressionWriter, BaseAnnotationWriter):
     pass
 
+def relative_position(pos):
+    return (pos[0].get_filenametable_entry(), pos[1])
+
+www='https://gitlab.com/petsc/petsc/-/tree/main'
 
 class EmbedSignature(CythonTransform):
 
@@ -174,7 +178,7 @@ class EmbedSignature(CythonTransform):
     def visit_DefNode(self, node):
         if not self.current_directives['embedsignature']:
             return node
-
+        embed_position = True
         is_constructor = False
         hide_self = False
         if node.entry.is_special:
@@ -196,6 +200,9 @@ class EmbedSignature(CythonTransform):
             return_expr=node.return_type_annotation,
             return_type=None, hide_self=hide_self)
         if signature:
+            if embed_position:
+                pos_line = u'        `Link <%s/src/binding/petsc4py/src/%s#L%s>`__' % (www,*relative_position(node.pos))
+                #source_line = u'`testme <%s#L%s>`' % relative_position(node.pos)
             if is_constructor:
                 doc_holder = self.class_node.entry.type.scope
             else:
@@ -208,7 +215,11 @@ class EmbedSignature(CythonTransform):
             else:
                 old_doc = None
             new_doc = self._embed_signature(signature, old_doc)
-            doc_holder.doc = EncodedString(new_doc)
+            if embed_position:
+              doc_holder.doc = EncodedString(new_doc + u'\n' + pos_line)
+              #doc_holder.doc = EncodedString(new_doc + u'\n:source:' + source_line)
+            else:
+              doc_holder.doc = EncodedString(new_doc)
             if not is_constructor and getattr(node, 'py_func', None) is not None:
                 node.py_func.entry.doc = EncodedString(new_doc)
         return node

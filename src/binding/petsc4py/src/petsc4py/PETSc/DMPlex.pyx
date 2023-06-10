@@ -1902,7 +1902,7 @@ cdef class DMPlex(DM):
         See Also
         --------
         DM, DMPlex, DMPlex.getPointLocalField, Section.getOffset
-        Section.getDof, `DMPlex.pointLocalRef`, petsc.DMPlexGetPointLocal
+        Section.getDof, petsc.DMPlexGetPointLocal
 
         """
         cdef PetscInt start = 0, end = 0
