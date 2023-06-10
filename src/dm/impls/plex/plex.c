@@ -3606,6 +3606,39 @@ PetscErrorCode DMPlexConvertOldOrientations_Internal(DM dm)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static inline PetscErrorCode DMPlexGetTransitiveClosure_Hot_Private(DM dm, PetscInt p, PetscBool useCone, PetscInt *size, const PetscInt *arr[], const PetscInt *ornt[])
+{
+  DM_Plex *mesh = (DM_Plex *)dm->data;
+
+  PetscFunctionBegin;
+  if (PetscDefined(USE_DEBUG) || mesh->tr) {
+    if (useCone) {
+      PetscCall(DMPlexGetConeSize(dm, p, size));
+      PetscCall(DMPlexGetCone(dm, p, arr));
+      PetscCall(DMPlexGetConeOrientation(dm, p, ornt));
+    } else {
+      PetscCall(DMPlexGetSupportSize(dm, p, size));
+      PetscCall(DMPlexGetSupport(dm, p, arr));
+    }
+  } else {
+    if (useCone) {
+      const PetscSection s   = mesh->coneSection;
+      const PetscInt     off = s->atlasOff[p - s->pStart];
+
+      *size = s->atlasDof[p - s->pStart];
+      *arr  = mesh->cones + off;
+      *ornt = mesh->coneOrientations + off;
+    } else {
+      const PetscSection s   = mesh->supportSection;
+      const PetscInt     off = s->atlasOff[p - s->pStart];
+
+      *size = s->atlasDof[p - s->pStart];
+      *arr  = mesh->supports + off;
+    }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode DMPlexGetTransitiveClosure_Depth1_Private(DM dm, PetscInt p, PetscInt ornt, PetscBool useCone, PetscInt *numPoints, PetscInt *points[])
 {
   DMPolytopeType  ct = DM_POLYTOPE_UNKNOWN;
@@ -3625,14 +3658,7 @@ static PetscErrorCode DMPlexGetTransitiveClosure_Depth1_Private(DM dm, PetscInt 
     PetscCall(DMPlexGetMaxSizes(dm, &maxConeSize, &maxSupportSize));
     PetscCall(DMGetWorkArray(dm, 2 * (PetscMax(maxConeSize, maxSupportSize) + 1), MPIU_INT, &closure));
   }
-  if (useCone) {
-    PetscCall(DMPlexGetConeSize(dm, p, &tmpSize));
-    PetscCall(DMPlexGetCone(dm, p, &tmp));
-    PetscCall(DMPlexGetConeOrientation(dm, p, &tmpO));
-  } else {
-    PetscCall(DMPlexGetSupportSize(dm, p, &tmpSize));
-    PetscCall(DMPlexGetSupport(dm, p, &tmp));
-  }
+  PetscCall(DMPlexGetTransitiveClosure_Hot_Private(dm, p, useCone, &tmpSize, &tmp, &tmpO));
   if (ct == DM_POLYTOPE_UNKNOWN) {
     closure[off++] = p;
     closure[off++] = 0;
@@ -3671,9 +3697,7 @@ static PetscErrorCode DMPlexTransitiveClosure_Tensor_Internal(DM dm, PetscInt po
 
   PetscFunctionBeginHot;
   PetscCall(DMGetDimension(dm, &dim));
-  PetscCall(DMPlexGetConeSize(dm, point, &coneSize));
-  PetscCall(DMPlexGetCone(dm, point, &cone));
-  PetscCall(DMPlexGetConeOrientation(dm, point, &ornt));
+  PetscCall(DMPlexGetTransitiveClosure_Hot_Private(dm, point, PETSC_TRUE, &coneSize, &cone, &ornt));
   PetscCall(DMPlexGetMaxSizes(dm, &maxConeSize, &maxSupportSize));
   coneSeries    = (maxConeSize > 1) ? ((PetscPowInt(maxConeSize, dim + 1) - 1) / (maxConeSize - 1)) : dim + 1;
   supportSeries = (maxSupportSize > 1) ? ((PetscPowInt(maxSupportSize, dim + 1) - 1) / (maxSupportSize - 1)) : dim + 1;
@@ -3709,9 +3733,7 @@ static PetscErrorCode DMPlexTransitiveClosure_Tensor_Internal(DM dm, PetscInt po
 
       PetscCall(DMPlexGetCellType(dm, fpoint, &ft));
       const PetscInt *farr = DMPolytopeTypeGetArrangment(ft, DMPolytopeTypeComposeOrientation(ft, arr[d * 2 + 1], ornt[d]));
-      PetscCall(DMPlexGetConeSize(dm, fpoint, &fconeSize));
-      PetscCall(DMPlexGetCone(dm, fpoint, &fcone));
-      PetscCall(DMPlexGetConeOrientation(dm, fpoint, &fornt));
+      PetscCall(DMPlexGetTransitiveClosure_Hot_Private(dm, fpoint, PETSC_TRUE, &fconeSize, &fcone, &fornt));
       for (fc = 0; fc < fconeSize; ++fc) {
         const PetscInt cp = fcone[farr[fc * 2 + 0]];
         const PetscInt co = farr[fc * 2 + 1];
@@ -3770,22 +3792,14 @@ PetscErrorCode DMPlexGetTransitiveClosure_Internal(DM dm, PetscInt p, PetscInt o
     const PetscInt       o    = fifo[fifoStart++];
     const DMPolytopeType qt   = (DMPolytopeType)fifo[fifoStart++];
     const PetscInt      *qarr = DMPolytopeTypeGetArrangment(qt, o);
-    const PetscInt      *tmp, *tmpO;
+    const PetscInt      *tmp, *tmpO = NULL;
     PetscInt             tmpSize, t;
 
     if (PetscDefined(USE_DEBUG)) {
       PetscInt nO = DMPolytopeTypeGetNumArrangments(qt) / 2;
       PetscCheck(!o || !(o >= nO || o < -nO), PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid orientation %" PetscInt_FMT " not in [%" PetscInt_FMT ",%" PetscInt_FMT ") for %s %" PetscInt_FMT, o, -nO, nO, DMPolytopeTypes[qt], q);
     }
-    if (useCone) {
-      PetscCall(DMPlexGetConeSize(dm, q, &tmpSize));
-      PetscCall(DMPlexGetCone(dm, q, &tmp));
-      PetscCall(DMPlexGetConeOrientation(dm, q, &tmpO));
-    } else {
-      PetscCall(DMPlexGetSupportSize(dm, q, &tmpSize));
-      PetscCall(DMPlexGetSupport(dm, q, &tmp));
-      tmpO = NULL;
-    }
+    PetscCall(DMPlexGetTransitiveClosure_Hot_Private(dm, q, useCone, &tmpSize, &tmp, &tmpO));
     for (t = 0; t < tmpSize; ++t) {
       const PetscInt ip = useCone && qarr ? qarr[t * 2] : t;
       const PetscInt io = useCone && qarr ? qarr[t * 2 + 1] : 0;
