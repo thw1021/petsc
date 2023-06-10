@@ -5215,7 +5215,7 @@ PetscErrorCode DMPlexGetCellType(DM dm, PetscInt cell, DMPolytopeType *celltype)
     if (PetscDefined(USE_DEBUG)) {
       PetscCall(DMLabelGetValue(label, cell, &ct));
       PetscCheck(ct >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Cell %" PetscInt_FMT " has not been assigned a cell type", cell);
-      PetscCheck(ct == *celltype, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid cellType for %" PetscInt_FMT ": %" PetscInt_FMT " != %" PetscInt_FMT, cell, *celltype, ct);
+      PetscCheck(ct == *celltype, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Invalid cellType for %" PetscInt_FMT ": %" PetscInt_FMT " != %" PetscInt_FMT, cell, (PetscInt)*celltype, ct);
     }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
