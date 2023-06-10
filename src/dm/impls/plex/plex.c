@@ -3610,7 +3610,7 @@ static inline PetscErrorCode DMPlexGetTransitiveClosure_Hot_Private(DM dm, Petsc
 {
   DM_Plex *mesh = (DM_Plex *)dm->data;
 
-  PetscFunctionBegin;
+  PetscFunctionBeginHot;
   if (PetscDefined(USE_DEBUG) || mesh->tr) {
     if (useCone) {
       PetscCall(DMPlexGetConeSize(dm, p, size));
@@ -3623,16 +3623,18 @@ static inline PetscErrorCode DMPlexGetTransitiveClosure_Hot_Private(DM dm, Petsc
   } else {
     if (useCone) {
       const PetscSection s   = mesh->coneSection;
-      const PetscInt     off = s->atlasOff[p - s->pStart];
+      const PetscInt     ps  = p - s->pStart;
+      const PetscInt     off = s->atlasOff[ps];
 
-      *size = s->atlasDof[p - s->pStart];
+      *size = s->atlasDof[ps];
       *arr  = mesh->cones + off;
       *ornt = mesh->coneOrientations + off;
     } else {
       const PetscSection s   = mesh->supportSection;
-      const PetscInt     off = s->atlasOff[p - s->pStart];
+      const PetscInt     ps  = p - s->pStart;
+      const PetscInt     off = s->atlasOff[ps];
 
-      *size = s->atlasDof[p - s->pStart];
+      *size = s->atlasDof[ps];
       *arr  = mesh->supports + off;
     }
   }
