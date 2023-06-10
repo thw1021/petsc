@@ -1685,6 +1685,7 @@ PetscErrorCode DMPlexUninterpolate(DM dm, DM *dmUnint)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscValidPointer(dmUnint, 2);
+  PetscCall(PetscLogEventBegin(DMPLEX_Uninterpolate, dm, 0, 0, 0));
   PetscCall(DMGetDimension(dm, &dim));
   PetscCall(DMPlexIsInterpolated(dm, &interpolated));
   PetscCheck(interpolated != DMPLEX_INTERPOLATED_PARTIAL, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Not for partially interpolated meshes");
@@ -1777,6 +1778,7 @@ PetscErrorCode DMPlexUninterpolate(DM dm, DM *dmUnint)
   PetscCall(DMPlexCopy_Internal(dm, PETSC_TRUE, PETSC_TRUE, udm));
   if (PetscDefined(USE_DEBUG)) PetscCall(DMPlexCheckPointSF(udm, NULL, PETSC_FALSE));
   *dmUnint = udm;
+  PetscCall(PetscLogEventEnd(DMPLEX_Uninterpolate, dm, 0, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
