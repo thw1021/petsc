@@ -757,6 +757,35 @@ PetscErrorCode VecDuplicate_Seq(Vec win, Vec *V)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PetscErrorCode VecDuplicateVecs_Seq_GEMV(Vec w, PetscInt m, Vec *V[])
+{
+  PetscInt     nlocal, bs;
+  PetscScalar *array;
+  Vec_Seq     *v;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(w, VEC_CLASSID, 1);
+  PetscValidPointer(V, 3);
+  PetscCheck(m > 0, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "m must be > 0: m = %" PetscInt_FMT, m);
+
+  PetscCall(PetscMalloc1(m, V));
+  PetscCall(VecGetLocalSize(w, &nlocal));
+  PetscCall(VecGetBlockSize(w, &bs));
+  PetscCall(PetscCalloc1(m * nlocal, &array));
+  for (PetscInt i = 0; i < m; i++) {
+    PetscCall(VecCreateSeqWithArray(PETSC_COMM_SELF, bs, nlocal, array + i * nlocal, *V + i));
+    PetscCall(PetscLayoutReference(w->map, &(*V)[i]->map));
+    PetscCall(PetscObjectListDuplicate(((PetscObject)w)->olist, &((PetscObject)(*V)[i])->olist));
+    PetscCall(PetscFunctionListDuplicate(((PetscObject)w)->qlist, &((PetscObject)(*V)[i])->qlist));
+    (*V)[i]->ops->view          = w->ops->view;
+    (*V)[i]->stash.ignorenegidx = w->stash.ignorenegidx;
+  }
+  /* so when the first vector is destroyed it will destroy the array */
+  v                  = (Vec_Seq *)(*V)[0]->data;
+  v->array_allocated = array;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static struct _VecOps DvOps = {
   PetscDesignatedInitializer(duplicate, VecDuplicate_Seq), /* 1 */
   PetscDesignatedInitializer(duplicatevecs, VecDuplicateVecs_Default),
@@ -854,11 +883,18 @@ static struct _VecOps DvOps = {
 */
 PetscErrorCode VecCreate_Seq_Private(Vec v, const PetscScalar array[])
 {
-  Vec_Seq *s;
+  Vec_Seq  *s;
+  PetscBool use_gemv;
 
   PetscFunctionBegin;
   PetscCall(PetscNew(&s));
   v->ops[0] = DvOps;
+
+  PetscCall(PetscOptionsHasName(NULL, NULL, "-vec_mdot_use_gemv", &use_gemv));
+  if (use_gemv) {
+    v->ops[0].mdot          = VecMDot_Seq_GEMV;
+    v->ops[0].duplicatevecs = VecDuplicateVecs_Seq_GEMV;
+  }
 
   v->data            = (void *)s;
   v->petscnative     = PETSC_TRUE;
