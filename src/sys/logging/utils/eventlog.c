@@ -811,6 +811,7 @@ PetscErrorCode PetscLogEventBeginDefault(PetscLogEvent event, int t, PetscObject
   PetscCall(PetscLogGetStageLog(&stageLog));
   PetscCall(PetscStageLogGetCurrent(stageLog, &stage));
   PetscCall(PetscStageLogGetEventPerfLog(stageLog, stage, &eventLog));
+  PetscCall(PetscEventPerfLogEnsureSize(eventLog, stage+1));
 #if defined(PETSC_HAVE_THREADSAFETY)
   PetscCall(PetscLogGetStageEventPerfInfo_threaded(stage, event, &eventInfo));
   if (eventInfo->depth == 0) {
@@ -877,6 +878,7 @@ PetscErrorCode PetscLogEventEndDefault(PetscLogEvent event, int t, PetscObject o
   PetscCall(PetscLogGetStageLog(&stageLog));
   PetscCall(PetscStageLogGetCurrent(stageLog, &stage));
   PetscCall(PetscStageLogGetEventPerfLog(stageLog, stage, &eventLog));
+  PetscCall(PetscEventPerfLogEnsureSize(eventLog, event+1));
 #if defined(PETSC_HAVE_THREADSAFETY)
   PetscCall(PetscLogGetStageEventPerfInfo_threaded(stage, event, &eventInfo));
 #else
