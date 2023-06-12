@@ -4,7 +4,7 @@ class staticproperty(property):
   def __get__(self, *args, **kwargs):
     return self.fget.__get__(*args, **kwargs)()
 
-cdef object make_enum_class(str class_name, tuple args):
+cdef object make_enum_class(str class_name, str class_docstring, tuple args):
   cdef dict enum2str = {}
   cdef dict attrs    = {}
 
@@ -13,10 +13,18 @@ cdef object make_enum_class(str class_name, tuple args):
     attrs[name]      = c_enum
 
   attrs['__enum2str'] = enum2str
+  attrs['__doc__']    = class_docstring
   return type(class_name, (object, ), attrs)
 
 DeviceType = make_enum_class(
   "DeviceType",
+  """The type of device.
+
+  See Also
+  --------
+  Device, Device.create, Device.getDeviceType, Device.type, petsc.PetscDeviceType
+
+  """,
   (
     ("HOST"    , PETSC_DEVICE_HOST),
     ("CUDA"    , PETSC_DEVICE_CUDA),
@@ -28,6 +36,13 @@ DeviceType = make_enum_class(
 
 StreamType = make_enum_class(
   "StreamType",
+  """The type of stream.
+
+  See Also
+  --------
+  DeviceContext, DeviceContext.getStreamType, DeviceContext.setStreamType, petsc.PetscStreamType
+
+  """,
   (
     ("GLOBAL_BLOCKING"    , PETSC_STREAM_GLOBAL_BLOCKING),
     ("DEFAULT_BLOCKING"   , PETSC_STREAM_DEFAULT_BLOCKING),
@@ -37,6 +52,13 @@ StreamType = make_enum_class(
 
 DeviceJoinMode = make_enum_class(
   "DeviceJoinMode",
+  """The type of join to perform.
+
+  See Also
+  --------
+  DeviceContext, DeviceContext.join, DeviceContext.fork, petsc.PetscDeviceContextJoinMode
+
+  """,
   (
     ("DESTROY" , PETSC_DEVICE_CONTEXT_JOIN_DESTROY),
     ("SYNC"    , PETSC_DEVICE_CONTEXT_JOIN_SYNC),
@@ -524,3 +546,4 @@ del DeviceType
 del DeviceJoinMode
 del StreamType
 del staticproperty
+del make_enum_class
