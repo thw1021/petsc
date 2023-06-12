@@ -115,4 +115,12 @@ static inline PetscErrorCode PetscTimeAdd(PetscLogDouble *v)
   return PETSC_SUCCESS;
 }
 
+static inline PetscErrorCode PetscTimeAddSubtract(PetscLogDouble *v, PetscLogDouble *w)
+{
+  PetscLogDouble time = MPI_Wtime();
+  if (v) *v += time;
+  if (w) *w -= time;
+  return PETSC_SUCCESS;
+}
+
 #endif
