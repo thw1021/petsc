@@ -16,6 +16,7 @@
 #if defined(PETSC_HAVE_TAU_PERFSTUBS)
   #include <../src/sys/perfstubs/timer.h>
 #endif
+#include <../src/sys/logging/plog.h>
 
 PetscLogEvent PETSC_LARGEST_EVENT = PETSC_EVENT;
 
@@ -1332,18 +1333,9 @@ PetscErrorCode PetscLogEventResume_Internal(PetscLogEvent event)
 
 /*------------------------------------------------ Utility functions for output functions -------------------------------------------------*/
 
-typedef struct _n_GlobalNames *GlobalNames;
-struct _n_GlobalNames {
-  MPI_Comm     comm;
-  PetscInt     count;
-  const char **names;
-  PetscInt    *global_to_local;
-  PetscInt    *local_to_global;
-};
-
 // Given a list of strings on each process, create a global numbering.  Order them by their order on the first process, then the remaining by their order on the second process, etc.
 // The expectation is that most processes have the same names in the same order so it shouldn't take too many rounds to figure out
-static PetscErrorCode GlobalNamesCreate_Internal(MPI_Comm comm, PetscInt num_names_local, const char **names, PetscInt *num_names_global_p, PetscInt **global_index_to_local_index_p, PetscInt **local_index_to_global_index_p, const char ***global_names_p)
+static PetscErrorCode PetscLogGlobalNamesCreate_Internal(MPI_Comm comm, PetscInt num_names_local, const char **names, PetscInt *num_names_global_p, PetscInt **global_index_to_local_index_p, PetscInt **local_index_to_global_index_p, const char ***global_names_p)
 {
   PetscMPIInt size, rank;
   PetscInt    num_names_global          = 0;
@@ -1353,7 +1345,7 @@ static PetscErrorCode GlobalNamesCreate_Internal(MPI_Comm comm, PetscInt num_nam
   PetscInt   *local_index_to_global_index = NULL;
   PetscInt    max_name_len                = 0;
   char       *str_buffer;
-  char      **global_names;
+  char      **global_names = NULL;
   PetscMPIInt p;
 
   PetscFunctionBegin;
@@ -1424,6 +1416,7 @@ static PetscErrorCode GlobalNamesCreate_Internal(MPI_Comm comm, PetscInt num_nam
         PetscCallMPI(MPI_Bcast(str_buffer, max_name_len + 1, MPI_CHAR, p, comm));
         local_index_to_global_index[s]                  = num_names_global;
         global_index_to_local_index[num_names_global++] = s;
+        num_names_local_remaining--;
       }
     } else {
       for (PetscInt i = 0; i < num_to_add; i++) {
@@ -1439,6 +1432,7 @@ static PetscErrorCode GlobalNamesCreate_Internal(MPI_Comm comm, PetscInt num_nam
             local_name_seen[s]                            = PETSC_TRUE;
             global_index_to_local_index[num_names_global] = s;
             local_index_to_global_index[s]                = num_names_global;
+            num_names_local_remaining--;
             break;
           }
         }
@@ -1460,20 +1454,20 @@ static PetscErrorCode GlobalNamesCreate_Internal(MPI_Comm comm, PetscInt num_nam
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode GlobalNamesCreate(MPI_Comm comm, PetscInt num_names_local, const char **local_names, GlobalNames *global_names_p)
+PETSC_INTERN PetscErrorCode PetscLogGlobalNamesCreate(MPI_Comm comm, PetscInt num_names_local, const char **local_names, PetscLogGlobalNames *global_names_p)
 {
-  GlobalNames global_names;
+  PetscLogGlobalNames global_names;
 
   PetscFunctionBegin;
   PetscCall(PetscNew(&global_names));
-  PetscCall(GlobalNamesCreate_Internal(comm, num_names_local, local_names, &global_names->count, &global_names->global_to_local, &global_names->local_to_global, &global_names->names));
+  PetscCall(PetscLogGlobalNamesCreate_Internal(comm, num_names_local, local_names, &global_names->count, &global_names->global_to_local, &global_names->local_to_global, &global_names->names));
   *global_names_p = global_names;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode GlobalNamesDestroy(GlobalNames *global_names_p)
+PETSC_INTERN PetscErrorCode PetscLogGlobalNamesDestroy(PetscLogGlobalNames *global_names_p)
 {
-  GlobalNames global_names;
+  PetscLogGlobalNames global_names;
 
   PetscFunctionBegin;
   global_names    = *global_names_p;
@@ -1486,7 +1480,7 @@ static PetscErrorCode GlobalNamesDestroy(GlobalNames *global_names_p)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscStageLogGetGlobalStageNames(MPI_Comm comm, PetscStageLog stage_log, GlobalNames *global_names_p)
+PETSC_INTERN PetscErrorCode PetscStageLogCreateGlobalStageNames(MPI_Comm comm, PetscStageLog stage_log, PetscLogGlobalNames *global_names_p)
 {
   PetscInt     num_stages_local = stage_log->numStages;
   const char **names;
@@ -1494,12 +1488,12 @@ PETSC_INTERN PetscErrorCode PetscStageLogGetGlobalStageNames(MPI_Comm comm, Pets
   PetscFunctionBegin;
   PetscCall(PetscMalloc1(num_stages_local, &names));
   for (PetscInt i = 0; i < num_stages_local; i++) names[i] = stage_log->stageInfo[i].name;
-  PetscCall(GlobalNamesCreate(comm, num_stages_local, names, global_names_p));
+  PetscCall(PetscLogGlobalNamesCreate(comm, num_stages_local, names, global_names_p));
   PetscCall(PetscFree(names));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscStageLogGetGlobalEventNames(MPI_Comm comm, PetscStageLog stage_log, GlobalNames *global_names_p)
+PETSC_INTERN PetscErrorCode PetscStageLogCreateGlobalEventNames(MPI_Comm comm, PetscStageLog stage_log, PetscLogGlobalNames *global_names_p)
 {
   PetscInt     num_events_local = stage_log->eventLog->numEvents;
   const char **names;
@@ -1507,7 +1501,7 @@ PETSC_INTERN PetscErrorCode PetscStageLogGetGlobalEventNames(MPI_Comm comm, Pets
   PetscFunctionBegin;
   PetscCall(PetscMalloc1(num_events_local, &names));
   for (PetscInt i = 0; i < num_events_local; i++) names[i] = stage_log->eventLog->eventInfo[i].name;
-  PetscCall(GlobalNamesCreate(comm, num_events_local, names, global_names_p));
+  PetscCall(PetscLogGlobalNamesCreate(comm, num_events_local, names, global_names_p));
   PetscCall(PetscFree(names));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1607,6 +1601,7 @@ PETSC_INTERN PetscErrorCode PetscStageLogDuplicate(PetscStageLog stage_log, Pets
   PetscCall(PetscStageInfoArrayDuplicate(stage_log->numStages, stage_log->stageInfo, &(dup_stage_log->stageInfo)));
   PetscCall(PetscEventRegLogDuplicate(stage_log->eventLog, &(dup_stage_log->eventLog)));
   PetscCall(PetscClassRegLogDuplicate(stage_log->classLog, &(dup_stage_log->classLog)));
+  *dup_stage_log_p = dup_stage_log;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1711,7 +1706,7 @@ PetscErrorCode PetscLogView_Detailed(PetscViewer viewer)
   int                numStages, numEvents;
   MPI_Comm           comm = PetscObjectComm((PetscObject)viewer);
   PetscMPIInt        rank, size;
-  GlobalNames        global_stages, global_events;
+  PetscLogGlobalNames        global_stages, global_events;
   PetscEventPerfInfo zero_info;
 
   PetscFunctionBegin;
@@ -1731,8 +1726,8 @@ PetscErrorCode PetscLogView_Detailed(PetscViewer viewer)
   PetscCall(PetscViewerASCIIPrintf(viewer, "LocalObjects = {}\n"));
   PetscCall(PetscViewerASCIIPrintf(viewer, "LocalMemory = {}\n"));
   PetscCall(PetscLogGetStageLog(&stageLog));
-  PetscCall(PetscStageLogGetGlobalStageNames(comm, stageLog, &global_stages));
-  PetscCall(PetscStageLogGetGlobalEventNames(comm, stageLog, &global_events));
+  PetscCall(PetscStageLogCreateGlobalStageNames(comm, stageLog, &global_stages));
+  PetscCall(PetscStageLogCreateGlobalEventNames(comm, stageLog, &global_events));
   numStages = global_stages->count;
   numEvents = global_events->count;
   PetscCall(PetscMemzero(&zero_info, sizeof(zero_info)));
@@ -1798,8 +1793,8 @@ PetscErrorCode PetscLogView_Detailed(PetscViewer viewer)
   }
   PetscCall(PetscViewerFlush(viewer));
   PetscCall(PetscViewerASCIIPopSynchronized(viewer));
-  PetscCall(GlobalNamesDestroy(&global_events));
-  PetscCall(GlobalNamesDestroy(&global_stages));
+  PetscCall(PetscLogGlobalNamesDestroy(&global_events));
+  PetscCall(PetscLogGlobalNamesDestroy(&global_stages));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1813,7 +1808,7 @@ PetscErrorCode PetscLogView_CSV(PetscViewer viewer)
   int                numStages, numEvents, stage, event;
   MPI_Comm           comm = PetscObjectComm((PetscObject)viewer);
   PetscMPIInt        rank, size;
-  GlobalNames        global_stages, global_events;
+  PetscLogGlobalNames        global_stages, global_events;
   PetscEventPerfInfo zero_info;
 
   PetscFunctionBegin;
@@ -1826,8 +1821,8 @@ PetscErrorCode PetscLogView_CSV(PetscViewer viewer)
   PetscCall(PetscLogGetStageLog(&stageLog));
   PetscCallMPI(MPI_Allreduce(&stageLog->numStages, &numStages, 1, MPI_INT, MPI_MAX, comm));
   PetscCall(PetscMallocGetMaximumUsage(&maxMem));
-  PetscCall(PetscStageLogGetGlobalStageNames(comm, stageLog, &global_stages));
-  PetscCall(PetscStageLogGetGlobalEventNames(comm, stageLog, &global_events));
+  PetscCall(PetscStageLogCreateGlobalStageNames(comm, stageLog, &global_stages));
+  PetscCall(PetscStageLogCreateGlobalEventNames(comm, stageLog, &global_events));
   numStages = global_stages->count;
   numEvents = global_events->count;
   PetscCall(PetscMemzero(&zero_info, sizeof(zero_info)));
@@ -1863,8 +1858,8 @@ PetscErrorCode PetscLogView_CSV(PetscViewer viewer)
   }
   PetscCall(PetscViewerFlush(viewer));
   PetscCall(PetscViewerASCIIPopSynchronized(viewer));
-  PetscCall(GlobalNamesDestroy(&global_stages));
-  PetscCall(GlobalNamesDestroy(&global_events));
+  PetscCall(PetscLogGlobalNamesDestroy(&global_stages));
+  PetscCall(PetscLogGlobalNamesDestroy(&global_events));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1996,7 +1991,7 @@ PetscErrorCode PetscLogView_Default(PetscViewer viewer)
   PetscLogEvent eventid;
   PetscInt64    nas = 0x7FF0000000000002;
   #endif
-  GlobalNames        global_stages, global_events;
+  PetscLogGlobalNames        global_stages, global_events;
   PetscEventPerfInfo zero_info;
 
   PetscFunctionBegin;
@@ -2120,8 +2115,8 @@ PetscErrorCode PetscLogView_Default(PetscViewer viewer)
   PetscCall(PetscFPrintf(comm, fd, "                            and VecAXPY() for complex vectors of length N --> 8N flops\n"));
 
   PetscCall(PetscLogGetStageLog(&stageLog));
-  PetscCall(PetscStageLogGetGlobalStageNames(comm, stageLog, &global_stages));
-  PetscCall(PetscStageLogGetGlobalEventNames(comm, stageLog, &global_events));
+  PetscCall(PetscStageLogCreateGlobalStageNames(comm, stageLog, &global_stages));
+  PetscCall(PetscStageLogCreateGlobalEventNames(comm, stageLog, &global_events));
   numStages = global_stages->count;
   numEvents = global_events->count;
   PetscCall(PetscMemzero(&zero_info, sizeof(zero_info)));
@@ -2397,8 +2392,8 @@ PetscErrorCode PetscLogView_Default(PetscViewer viewer)
   PetscCall(PetscFree(stageUsed));
   PetscCall(PetscFree(localStageVisible));
   PetscCall(PetscFree(stageVisible));
-  PetscCall(GlobalNamesDestroy(&global_stages));
-  PetscCall(GlobalNamesDestroy(&global_events));
+  PetscCall(PetscLogGlobalNamesDestroy(&global_stages));
+  PetscCall(PetscLogGlobalNamesDestroy(&global_events));
 
   /* Information unrelated to this particular run */
   PetscCall(PetscFPrintf(comm, fd, "========================================================================================================================\n"));

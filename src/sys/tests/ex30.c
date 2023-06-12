@@ -22,37 +22,52 @@ int main(int argc, char **argv)
 {
   PetscLogStage stage1, stage2;
   PetscLogEvent event1, event2, event3;
+  PetscMPIInt   rank;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
-  PetscCall(PetscLogEventRegister("Event2", 0, &event2));
-  PetscCall(PetscLogEventRegister("Event1", 0, &event1));
-  PetscCall(PetscLogEventRegister("Event3", 0, &event3));
-  PetscCall(PetscLogStageRegister("Stage1", &stage1));
-  PetscCall(PetscLogStageRegister("Stage2", &stage2));
+  PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
+  if (rank) {
+    PetscCall(PetscLogEventRegister("Event3", 0, &event3));
+    PetscCall(PetscLogEventRegister("Event2", 0, &event2));
+    PetscCall(PetscLogEventRegister("Event1", 0, &event1));
+    PetscCall(PetscLogStageRegister("Stage2", &stage2));
+    PetscCall(PetscLogStageRegister("Stage1", &stage1));
+  } else {
+    PetscCall(PetscLogEventRegister("Event2", 0, &event2));
+    PetscCall(PetscLogEventRegister("Event1", 0, &event1));
+    PetscCall(PetscLogEventRegister("Event3", 0, &event3));
+    PetscCall(PetscLogStageRegister("Stage1", &stage1));
+    PetscCall(PetscLogStageRegister("Stage2", &stage2));
+  }
 
   PetscCall(CallEvents(event1, event2, event3));
 
   PetscCall(PetscLogStagePush(stage1));
   {
+    PetscCall(PetscSleep(0.1));
     PetscCall(CallEvents(event1, event2, event3));
   }
   PetscCall(PetscLogStagePop());
 
   PetscCall(PetscLogStagePush(stage2));
   {
+    PetscCall(PetscSleep(0.1));
     PetscCall(CallEvents(event1, event2, event3));
 
     PetscCall(PetscLogStagePush(stage1));
     {
+      PetscCall(PetscSleep(0.1));
       PetscCall(CallEvents(event1, event2, event3));
     }
     PetscCall(PetscLogStagePop());
 
     PetscCall(PetscLogEventBegin(event1, 0, 0, 0, 0));
     {
+      PetscCall(PetscSleep(0.1));
       PetscCall(PetscLogStagePush(stage1));
       {
+        PetscCall(PetscSleep(0.1));
         PetscCall(CallEvents(event1, event2, event3));
       }
       PetscCall(PetscLogStagePop());
@@ -69,5 +84,6 @@ int main(int argc, char **argv)
 
   test:
     suffix: 0
+    nsize: {{1 2}}
 
  TEST*/
