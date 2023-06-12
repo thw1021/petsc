@@ -1,10 +1,11 @@
-  0 KSP Residual norm 2.107190732740e+02 % max 1.000000000000e+00 min 1.000000000000e+00 max/min 1.000000000000e+00
-  1 KSP Residual norm 1.211037391381e+01 % max 6.664673460425e-01 min 6.664673460425e-01 max/min 1.000000000000e+00
-  2 KSP Residual norm 7.444582283230e-01 % max 9.503530922294e-01 min 6.161714208148e-01 max/min 1.542351787385e+00
-  3 KSP Residual norm 1.059579012564e-01 % max 9.981111957541e-01 min 6.126435247771e-01 max/min 1.629187537920e+00
-  4 KSP Residual norm 2.454320073671e-02 % max 1.009961474855e+00 min 6.121426086473e-01 max/min 1.649879391808e+00
-  5 KSP Residual norm 3.560773861263e-03 % max 1.014475272003e+00 min 6.119706536844e-01 max/min 1.657718823436e+00
-  6 KSP Residual norm 2.764170448721e-04 % max 1.026875094850e+00 min 6.112053597875e-01 max/min 1.680081953481e+00
+  0 KSP Residual norm 8.639819370353e+01 % max 1.000000000000e+00 min 1.000000000000e+00 max/min 1.000000000000e+00
+  1 KSP Residual norm 2.045641761237e+01 % max 3.627986269595e-01 min 3.627986269595e-01 max/min 1.000000000000e+00
+  2 KSP Residual norm 3.322350802078e+00 % max 9.259370639236e-01 min 2.314929812342e-01 max/min 3.999849407904e+00
+  3 KSP Residual norm 5.988168501644e-01 % max 9.728378572366e-01 min 2.296224182594e-01 max/min 4.236685009291e+00
+  4 KSP Residual norm 1.857962892602e-01 % max 9.841295091757e-01 min 2.295479550803e-01 max/min 4.287250168845e+00
+  5 KSP Residual norm 1.724306663022e-02 % max 9.949298655897e-01 min 2.295252604239e-01 max/min 4.334729274470e+00
+  6 KSP Residual norm 2.878165879308e-03 % max 9.972171887569e-01 min 2.295244323632e-01 max/min 4.344710401806e+00
+  7 KSP Residual norm 6.582202162463e-04 % max 9.977592079277e-01 min 2.295244052660e-01 max/min 4.347072402916e+00
 KSP Object: 8 MPI processes
   type: cg
   maximum iterations=10000, initial guess is zero
@@ -62,8 +63,8 @@ PC Object: 8 MPI processes
     KSP Object: (mg_levels_1_) 8 MPI processes
       type: chebyshev
         Chebyshev polynomial of first kind
-        eigenvalue targets used: min 0.124203, max 1.36624
-        eigenvalues estimated via cg: min 0.0906593, max 1.24203
+        eigenvalue targets used: min 0.8026, max 8.8286
+        eigenvalues estimated via cg: min 0.120311, max 8.026
         eigenvalues estimated using cg with transform: [0. 0.1; 0. 1.1]
         KSP Object: (mg_levels_1_esteig_) 8 MPI processes
           type: cg
@@ -82,7 +83,7 @@ PC Object: 8 MPI processes
     PC Object: (mg_levels_1_) 8 MPI processes
       type: asm
         total subdomain blocks = 8, amount of overlap = 1
-        restriction/interpolation type - RESTRICT
+        restriction/interpolation type - BASIC
         Local solver information for first block is in the following KSP and PC objects on rank 0:
         Use -mg_levels_1_ksp_view ::ascii_info_detail to display information for all blocks
       KSP Object: (mg_levels_1_sub_) 1 MPI process

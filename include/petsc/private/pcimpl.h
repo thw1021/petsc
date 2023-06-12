@@ -29,6 +29,8 @@ struct _PCOps {
   PetscErrorCode (*view)(PC, PetscViewer);
   PetscErrorCode (*reset)(PC);
   PetscErrorCode (*load)(PC, PetscViewer);
+  PetscErrorCode (*issymmetric)(PC, PetscBool3 *);
+  PetscErrorCode (*setusesymmetricform)(PC);
 };
 
 /*
@@ -55,7 +57,7 @@ struct _p_PC {
   void          *user;             /* optional user-defined context */
   PCFailedReason failedreason;     /* after VecNorm or VecDot contains maximum of all rank failed reasons */
   PCFailedReason failedreasonrank; /* failed reason on this rank */
-
+  PetscBool      usesymmetricform; /* for PC such as PCASM where the default form of restrict is not symmetric this allows KSPCG to change the default */
   PetscErrorCode (*presolve)(PC, KSP);
 };
 

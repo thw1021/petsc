@@ -11,6 +11,23 @@ typedef struct {
   PetscReal  fshift;
 } PC_SOR;
 
+static PetscErrorCode PCISSymmetric_SOR(PC pc, PetscBool3 *issym)
+{
+  PC_SOR *jac = (PC_SOR *)pc->data;
+
+  PetscFunctionBegin;
+  if (jac->sym != SOR_SYMMETRIC_SWEEP && jac->sym != SOR_LOCAL_SYMMETRIC_SWEEP) {
+    MatInfo  info;
+    PetscInt n;
+
+    /* heuristic to decide if the SOR preconditioner will not be symmetric for this matrix */
+    PetscCall(MatGetLocalSize(pc->pmat, &n, NULL));
+    PetscCall(MatGetInfo(pc->pmat, MAT_LOCAL, &info));
+    if (info.nz_used > n) *issym = PETSC_BOOL3_FALSE;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode PCDestroy_SOR(PC pc)
 {
   PetscFunctionBegin;
@@ -437,6 +454,7 @@ PETSC_EXTERN PetscErrorCode PCCreate_SOR(PC pc)
   pc->ops->applyrichardson = PCApplyRichardson_SOR;
   pc->ops->setfromoptions  = PCSetFromOptions_SOR;
   pc->ops->setup           = NULL;
+  pc->ops->issymmetric     = PCISSymmetric_SOR;
   pc->ops->view            = PCView_SOR;
   pc->ops->destroy         = PCDestroy_SOR;
   pc->data                 = (void *)jac;
