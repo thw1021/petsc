@@ -546,4 +546,3 @@ del DeviceType
 del DeviceJoinMode
 del StreamType
 del staticproperty
-del make_enum_class
