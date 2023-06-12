@@ -239,6 +239,8 @@ PetscErrorCode PetscStageLogRegister(PetscStageLog stageLog, const char sname[],
 PetscErrorCode PetscStageLogPush(PetscStageLog stageLog, int stage)
 {
   int       curStage = 0;
+  PetscLogDouble *timer_old = NULL;
+  PetscLogDouble *timer_new = NULL;
   PetscBool empty;
 
   PetscFunctionBegin;
@@ -249,7 +251,7 @@ PetscErrorCode PetscStageLogPush(PetscStageLog stageLog, int stage)
   if (!empty) {
     PetscCall(PetscIntStackTop(stageLog->stack, &curStage));
     if (stageLog->stageInfo[curStage].perfInfo.active) {
-      PetscCall(PetscTimeAdd(&stageLog->stageInfo[curStage].perfInfo.time));
+      timer_old = &stageLog->stageInfo[curStage].perfInfo.time;
       stageLog->stageInfo[curStage].perfInfo.flops += petsc_TotalFlops;
       stageLog->stageInfo[curStage].perfInfo.numMessages += petsc_irecv_ct + petsc_isend_ct + petsc_recv_ct + petsc_send_ct;
       stageLog->stageInfo[curStage].perfInfo.messageLength += petsc_irecv_len + petsc_isend_len + petsc_recv_len + petsc_send_len;
@@ -264,12 +266,13 @@ PetscErrorCode PetscStageLogPush(PetscStageLog stageLog, int stage)
   stageLog->curStage = stage;
   /* Subtract current quantities so that we obtain the difference when we pop */
   if (stageLog->stageInfo[stage].perfInfo.active) {
-    PetscCall(PetscTimeSubtract(&stageLog->stageInfo[stage].perfInfo.time));
+    timer_new = &stageLog->stageInfo[stage].perfInfo.time;
     stageLog->stageInfo[stage].perfInfo.flops -= petsc_TotalFlops;
     stageLog->stageInfo[stage].perfInfo.numMessages -= petsc_irecv_ct + petsc_isend_ct + petsc_recv_ct + petsc_send_ct;
     stageLog->stageInfo[stage].perfInfo.messageLength -= petsc_irecv_len + petsc_isend_len + petsc_recv_len + petsc_send_len;
     stageLog->stageInfo[stage].perfInfo.numReductions -= petsc_allreduce_ct + petsc_gather_ct + petsc_scatter_ct;
   }
+  PetscCall(PetscTimeAddSubtract(timer_old, timer_new));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
