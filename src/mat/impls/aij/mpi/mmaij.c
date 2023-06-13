@@ -131,8 +131,8 @@ PetscErrorCode MatSetUpMultiply_MPIAIJ(Mat mat)
 */
 PetscErrorCode MatDisAssemble_MPIAIJ(Mat A)
 {
-  Mat_MPIAIJ        *aij  = (Mat_MPIAIJ *)A->data;
-  Mat                B    = aij->B, Bnew = NULL;
+  Mat_MPIAIJ *aij = (Mat_MPIAIJ *)A->data;
+  Mat         B = aij->B, Bnew = NULL;
 
   PetscFunctionBegin;
   /* free stuff related to matrix-vec multiply */
