@@ -4,6 +4,17 @@
 #include <petsc/private/petscimpl.h>
 #include <petsctime.h>
 
+PETSC_EXTERN PetscEventRegLog petsc_eventLog;
+PETSC_EXTERN PetscClassRegLog petsc_classLog;
+PETSC_EXTERN PetscStageLog  petsc_stageLog;
+PETSC_EXTERN PetscErrorCode PetscLogGetStageLog(PetscStageLog *);
+PETSC_EXTERN PetscErrorCode PetscStageLogGetCurrent(PetscStageLog, int *);
+PETSC_EXTERN PetscErrorCode PetscStageLogGetEventPerfLog(PetscStageLog, int, PetscEventPerfLog *);
+PETSC_EXTERN PetscErrorCode PetscLogSet(PetscErrorCode (*)(int, int, PetscObject, PetscObject, PetscObject, PetscObject), PetscErrorCode (*)(int, int, PetscObject, PetscObject, PetscObject, PetscObject));
+PETSC_EXTERN PetscErrorCode PetscLogStageSet(PetscErrorCode (*)(PetscStageLog), PetscErrorCode (*)(PetscStageLog));
+PETSC_EXTERN PetscErrorCode PetscLogPushCurrentEvent_Internal(PetscLogEvent);
+PETSC_EXTERN PetscErrorCode PetscLogPopCurrentEvent_Internal(void);
+
 /* A simple stack */
 struct _n_PetscIntStack {
   int  top;   /* The top of the stack */
@@ -54,6 +65,9 @@ PETSC_EXTERN char           petsc_tracespace[128];
 PETSC_EXTERN PetscLogDouble petsc_tracetime;
 
 /* Thread-safety internals */
+
+/* SpinLock for shared Log registry variables */
+PETSC_INTERN PetscSpinlock PetscLogRegistrySpinLock;
 
 /* SpinLock for shared Log variables */
 PETSC_INTERN PetscSpinlock PetscLogSpinLock;
@@ -155,6 +169,9 @@ PETSC_EXTERN PetscErrorCode PetscStageLogGetEventRegLog(PetscStageLog, PetscEven
 PETSC_EXTERN PetscErrorCode PetscStageLogGetClassPerfLog(PetscStageLog, int, PetscClassPerfLog *);
 
 PETSC_EXTERN PetscErrorCode PetscEventRegLogGetEvent(PetscEventRegLog, const char[], PetscLogEvent *);
+
+PETSC_EXTERN PetscErrorCode PetscLogGetEventLog(PetscEventRegLog *);
+PETSC_EXTERN PetscErrorCode PetscLogGetClassLog(PetscClassRegLog *);
 
 PETSC_INTERN PetscErrorCode PetscLogView_Nested(PetscViewer);
 PETSC_INTERN PetscErrorCode PetscLogNestedEnd(void);

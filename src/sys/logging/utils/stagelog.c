@@ -36,6 +36,30 @@ PetscErrorCode PetscLogGetStageLog(PetscStageLog *stageLog)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PetscErrorCode PetscLogGetEventLog(PetscEventRegLog *eventLog)
+{
+  PetscFunctionBegin;
+  PetscValidPointer(eventLog, 1);
+  if (!petsc_eventLog) {
+    fprintf(stderr, "PETSC ERROR: Logging has not been enabled.\nYou might have forgotten to call PetscInitialize().\n");
+    PETSCABORT(MPI_COMM_WORLD, PETSC_ERR_SUP);
+  }
+  *eventLog = petsc_eventLog;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode PetscLogGetClassLog(PetscClassRegLog *classLog)
+{
+  PetscFunctionBegin;
+  PetscValidPointer(classLog, 1);
+  if (!petsc_classLog) {
+    fprintf(stderr, "PETSC ERROR: Logging has not been enabled.\nYou might have forgotten to call PetscInitialize().\n");
+    PETSCABORT(MPI_COMM_WORLD, PETSC_ERR_SUP);
+  }
+  *classLog = petsc_classLog;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@C
   PetscStageLogGetCurrent - This function returns the stage from the top of the stack.
 
@@ -140,8 +164,6 @@ PetscErrorCode PetscStageLogDestroy(PetscStageLog stageLog)
   PetscFunctionBegin;
   if (!stageLog) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscIntStackDestroy(stageLog->stack));
-  PetscCall(PetscEventRegLogDestroy(stageLog->eventLog));
-  PetscCall(PetscClassRegLogDestroy(stageLog->classLog));
   for (stage = 0; stage < stageLog->numStages; stage++) PetscCall(PetscStageInfoDestroy(&stageLog->stageInfo[stage]));
   PetscCall(PetscFree(stageLog->stageInfo));
   PetscCall(PetscFree(stageLog));
@@ -356,7 +378,7 @@ PetscErrorCode PetscStageLogGetClassRegLog(PetscStageLog stageLog, PetscClassReg
 {
   PetscFunctionBegin;
   PetscValidPointer(classLog, 2);
-  *classLog = stageLog->classLog;
+  PetscCall(PetscLogGetClassLog(classLog));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -379,7 +401,7 @@ PetscErrorCode PetscStageLogGetEventRegLog(PetscStageLog stageLog, PetscEventReg
 {
   PetscFunctionBegin;
   PetscValidPointer(eventLog, 2);
-  *eventLog = stageLog->eventLog;
+  PetscCall(PetscLogGetEventLog(eventLog));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -568,8 +590,6 @@ PetscErrorCode PetscStageLogCreate(PetscStageLog *stageLog)
 
   PetscCall(PetscIntStackCreate(&l->stack));
   PetscCall(PetscMalloc1(l->maxStages, &l->stageInfo));
-  PetscCall(PetscEventRegLogCreate(&l->eventLog));
-  PetscCall(PetscClassRegLogCreate(&l->classLog));
 
   *stageLog = l;
   PetscFunctionReturn(PETSC_SUCCESS);
