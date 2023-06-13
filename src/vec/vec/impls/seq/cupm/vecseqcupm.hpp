@@ -74,6 +74,7 @@ public:
   static PetscErrorCode PointwiseDivide(Vec, Vec, Vec) noexcept;
   static PetscErrorCode PointwiseMult(Vec, Vec, Vec) noexcept;
   static PetscErrorCode Reciprocal(Vec) noexcept;
+  static PetscErrorCode Abs(Vec) noexcept;
   static PetscErrorCode WAXPY(Vec, PetscScalar, Vec, Vec) noexcept;
   static PetscErrorCode MAXPY(Vec, PetscInt, const PetscScalar[], Vec *) noexcept;
   static PetscErrorCode Dot(Vec, Vec, PetscScalar *) noexcept;
