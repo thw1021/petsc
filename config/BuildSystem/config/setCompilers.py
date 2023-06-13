@@ -559,7 +559,7 @@ class Configure(config.base.Configure):
       pass
 
   @classmethod
-  def isWindows(cls, compiler, log, disambiguate_win32fe = False):
+  def isWindows(cls, compiler, log):
     '''Returns true if the compiler is a Windows compiler'''
     if cls.isCygwin(log):
       compiler = os.path.basename(compiler)
