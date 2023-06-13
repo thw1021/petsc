@@ -529,15 +529,19 @@ PetscErrorCode PetscLogObjects(PetscBool flag)
 PetscErrorCode PetscLogStageRegister(const char sname[], PetscLogStage *stage)
 {
   PetscStageLog stageLog;
+  PetscEventRegLog event_log;
+  PetscClassRegLog class_log;
   PetscLogEvent event;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetStageLog(&stageLog));
+  PetscCall(PetscLogGetEventLog(&event_log));
+  PetscCall(PetscLogGetClassLog(&class_log));
   PetscCall(PetscStageLogRegister(stageLog, sname, stage));
   /* Copy events already changed in the main stage, this sucks */
-  PetscCall(PetscEventPerfLogEnsureSize(stageLog->stageInfo[*stage].eventLog, stageLog->eventLog->numEvents));
-  for (event = 0; event < stageLog->eventLog->numEvents; event++) PetscCall(PetscEventPerfInfoCopy(&stageLog->stageInfo[0].eventLog->eventInfo[event], &stageLog->stageInfo[*stage].eventLog->eventInfo[event]));
-  PetscCall(PetscClassPerfLogEnsureSize(stageLog->stageInfo[*stage].classLog, stageLog->classLog->numClasses));
+  PetscCall(PetscEventPerfLogEnsureSize(stageLog->stageInfo[*stage].eventLog, event_log->numEvents));
+  for (event = 0; event < event_log->numEvents; event++) PetscCall(PetscEventPerfInfoCopy(&stageLog->stageInfo[0].eventLog->eventInfo[event], &stageLog->stageInfo[*stage].eventLog->eventInfo[event]));
+  PetscCall(PetscClassPerfLogEnsureSize(stageLog->stageInfo[*stage].classLog, class_log->numClasses)); // Why?
   #if defined(PETSC_HAVE_TAU_PERFSTUBS)
   if (perfstubs_initialized == PERFSTUBS_SUCCESS) PetscStackCallExternalVoid("ps_timer_create_", stageLog->stageInfo[*stage].timer = ps_timer_create_(sname));
   #endif
@@ -836,17 +840,21 @@ PetscErrorCode PetscLogStageGetId(const char name[], PetscLogStage *stage)
 PetscErrorCode PetscLogEventRegister(const char name[], PetscClassId classid, PetscLogEvent *event)
 {
   PetscStageLog stageLog;
+  PetscEventRegLog event_log;
+  PetscClassRegLog class_log;
   int           stage;
 
   PetscFunctionBegin;
   *event = PETSC_DECIDE;
   PetscCall(PetscLogGetStageLog(&stageLog));
-  PetscCall(PetscEventRegLogGetEvent(stageLog->eventLog, name, event));
+  PetscCall(PetscLogGetEventLog(&event_log));
+  PetscCall(PetscLogGetClassLog(&class_log));
+  PetscCall(PetscEventRegLogGetEvent(event_log, name, event));
   if (*event > 0) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscCall(PetscEventRegLogRegister(stageLog->eventLog, name, classid, event));
+  PetscCall(PetscEventRegLogRegister(event_log, name, classid, event));
   for (stage = 0; stage < stageLog->numStages; stage++) {
-    PetscCall(PetscEventPerfLogEnsureSize(stageLog->stageInfo[stage].eventLog, stageLog->eventLog->numEvents));
-    PetscCall(PetscClassPerfLogEnsureSize(stageLog->stageInfo[stage].classLog, stageLog->classLog->numClasses));
+    PetscCall(PetscEventPerfLogEnsureSize(stageLog->stageInfo[stage].eventLog, event_log->numEvents));
+    PetscCall(PetscClassPerfLogEnsureSize(stageLog->stageInfo[stage].classLog, class_log->numClasses));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -899,11 +907,13 @@ PetscErrorCode PetscLogEventSetCollective(PetscLogEvent event, PetscBool collect
 PetscErrorCode PetscLogEventIncludeClass(PetscClassId classid)
 {
   PetscStageLog stageLog;
+  PetscEventRegLog event_log;
   int           stage;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetStageLog(&stageLog));
-  for (stage = 0; stage < stageLog->numStages; stage++) PetscCall(PetscEventPerfLogActivateClass(stageLog->stageInfo[stage].eventLog, stageLog->eventLog, classid));
+  PetscCall(PetscLogGetEventLog(&event_log));
+  for (stage = 0; stage < stageLog->numStages; stage++) PetscCall(PetscEventPerfLogActivateClass(stageLog->stageInfo[stage].eventLog, event_log, classid));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -925,11 +935,13 @@ PetscErrorCode PetscLogEventIncludeClass(PetscClassId classid)
 PetscErrorCode PetscLogEventExcludeClass(PetscClassId classid)
 {
   PetscStageLog stageLog;
+  PetscEventRegLog event_log;
   int           stage;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetStageLog(&stageLog));
-  for (stage = 0; stage < stageLog->numStages; stage++) PetscCall(PetscEventPerfLogDeactivateClass(stageLog->stageInfo[stage].eventLog, stageLog->eventLog, classid));
+  PetscCall(PetscLogGetEventLog(&event_log));
+  for (stage = 0; stage < stageLog->numStages; stage++) PetscCall(PetscEventPerfLogDeactivateClass(stageLog->stageInfo[stage].eventLog, event_log, classid));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
