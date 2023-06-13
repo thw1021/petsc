@@ -1027,6 +1027,7 @@ inline PetscErrorCode Vec_CUPMBase<T, D>::BindToCPU_CUPMBase(Vec v, PetscBool us
   VecSetOp_CUPM(norm_local, VecNorm_Seq, VecSeq_T::Norm);
   VecSetOp_CUPM(mdot_local, VecMDot_Seq, VecSeq_T::MDot);
   VecSetOp_CUPM(reciprocal, VecReciprocal_Default, VecSeq_T::Reciprocal);
+  VecSetOp_CUPM(abs, nullptr, VecSeq_T::Abs);
   VecSetOp_CUPM(shift, nullptr, VecSeq_T::Shift);
   VecSetOp_CUPM(getlocalvector, nullptr, VecSeq_T::template GetLocalVector<PETSC_MEMORY_ACCESS_READ_WRITE>);
   VecSetOp_CUPM(restorelocalvector, nullptr, VecSeq_T::template RestoreLocalVector<PETSC_MEMORY_ACCESS_READ_WRITE>);

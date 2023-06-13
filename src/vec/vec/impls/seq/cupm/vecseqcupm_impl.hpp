@@ -489,6 +489,24 @@ inline PetscErrorCode VecSeq_CUPM<T>::Reciprocal(Vec xin) noexcept
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+namespace detail
+{
+
+struct abs {
+  PETSC_HOSTDEVICE_INLINE_DECL PetscScalar operator()(PetscScalar s) const noexcept { return PetscAbsScalar(s); }
+};
+
+} // namespace detail
+
+// v->ops->abs
+template <device::cupm::DeviceType T>
+inline PetscErrorCode VecSeq_CUPM<T>::Abs(Vec xin) noexcept
+{
+  PetscFunctionBegin;
+  PetscCall(PointwiseUnary_(detail::abs{}, xin));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 // v->ops->waxpy
 template <device::cupm::DeviceType T>
 inline PetscErrorCode VecSeq_CUPM<T>::WAXPY(Vec win, PetscScalar alpha, Vec xin, Vec yin) noexcept
