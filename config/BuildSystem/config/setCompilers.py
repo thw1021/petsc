@@ -1441,7 +1441,6 @@ class Configure(config.base.Configure):
     else:
       if self.isDarwin(self.log) and self.isARM(self.log) and output.find('x86_64-apple-darwin') > -1:
         raise RuntimeError('Running on a macOS arm system but your compilers are configured for Intel processors\n' + output + '\n')
-        raise RuntimeError('Running on a macOS arm system but your compilers are configured for Intel processors\n' + output + '\n' + str(platform.uname()))
 
     (output, error, status) = config.base.Configure.executeShellCommand(compiler+' -v | head -n 20', log = self.log)
     output = output + error
