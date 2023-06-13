@@ -6251,6 +6251,14 @@ static PetscErrorCode MatSplitEntries_Internal(Mat mat, PetscCount n, const Pets
     if (i[k] >= 0) break;
   } /* Skip negative rows */
 
+  /* Support for HYPRE */
+  PetscBool   hypre;
+  const char *name;
+  PetscInt   *hypre_w = NULL;
+  PetscInt    hsize   = 0;
+  PetscCall(PetscObjectGetName((PetscObject)mat, &name));
+  PetscCall(PetscStrcmp("_internal_COO_mat_for_hypre", name, &hypre));
+
   /* Process [k,n): sort and partition each local row into diag and offdiag portions,
      fill rowBegin[], rowMid[], rowEnd[], and count Atot, Btot, Annz, Bnnz.
   */
@@ -6259,11 +6267,34 @@ static PetscErrorCode MatSplitEntries_Internal(Mat mat, PetscCount n, const Pets
     /* Entries in [k,s) are in one row. Shift diagonal block col indices so that diag is ahead of offdiag after sorting the row */
     for (s = k; s < n; s++)
       if (i[s] != row) break;
-    for (p = k; p < s; p++) {
-      if (j[p] >= cstart && j[p] < cend) j[p] -= PETSC_MAX_INT; /* Shift diag columns to range of [-PETSC_MAX_INT, -1]  */
-      else PetscAssert((j[p] >= 0) && (j[p] <= mat->cmap->N), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Column index %" PetscInt_FMT " is out of range", j[p]);
+
+    if (hypre) {
+      PetscInt rsize = s - k;
+      if (hsize < 2 * rsize) {
+        PetscCall(PetscFree(hypre_w));
+        PetscCall(PetscMalloc1(2 * rsize, &hypre_w));
+        hsize = rsize;
+      }
     }
-    PetscCall(PetscSortIntWithCountArray(s - k, j + k, perm + k));
+
+    for (p = k; p < s; p++) {
+      /* Shift diag columns to range of [-PETSC_MAX_INT, -1], flag diagonal entry for hypre */
+      if (hypre) hypre_w[p - k] = (PetscInt)(j[p] >= cstart && j[p] < cend && (j[p] - cstart) == (row - rstart));
+      if (j[p] >= cstart && j[p] < cend) {
+        j[p] -= PETSC_MAX_INT;
+      } else PetscAssert((j[p] >= 0) && (j[p] <= mat->cmap->N), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Column index %" PetscInt_FMT " is out of range", j[p]);
+    }
+    if (!hypre) {
+      PetscCall(PetscSortIntWithCountArray(s - k, j + k, perm + k));
+    } else {
+      PetscInt rsize = s - k;
+      PetscCall(PetscArraycpy(hypre_w + rsize, j + k, rsize));
+      for (PetscInt r = 0; r < rsize; r++) {
+        if (hypre_w[r] == 1) hypre_w[r + rsize] = PETSC_MIN_INT; /* so that diagonal values will go first */
+      }
+      PetscCall(PetscSortIntWithCountArray(rsize, hypre_w + rsize, perm + k));
+      PetscCall(PetscSortInt(rsize, j + k));
+    }
     PetscCall(PetscSortedIntUpperBound(j, k, s, -1, &mid)); /* Separate [k,s) into [k,mid) for diag and [mid,s) for offdiag */
     rowBegin[row - rstart] = k;
     rowMid[row - rstart]   = mid;
@@ -6292,6 +6323,7 @@ static PetscErrorCode MatSplitEntries_Internal(Mat mat, PetscCount n, const Pets
     }
     k = s;
   }
+  PetscCall(PetscFree(hypre_w));
 
   /* Allocation according to Atot, Btot, Annz, Bnnz */
   PetscCall(PetscMalloc1(Atot, &Aperm));
