@@ -266,7 +266,7 @@ PetscErrorCode PetscLogObjCreateDefault(PetscObject obj)
   PetscFunctionBegin;
   PetscCall(PetscSpinlockLock(&PetscLogSpinLock));
   /* Record stage info */
-  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
   PetscCall(PetscStageLogGetCurrent(stageLog, &stage));
   PetscCall(PetscStageLogGetClassRegLog(stageLog, &classRegLog));
   PetscCall(PetscStageLogGetClassPerfLog(stageLog, stage, &classPerfLog));
@@ -340,7 +340,7 @@ PetscErrorCode PetscLogObjDestroyDefault(PetscObject obj)
   PetscFunctionBegin;
   /* Record stage info */
   PetscCall(PetscSpinlockLock(&PetscLogSpinLock));
-  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
   PetscCall(PetscStageLogGetCurrent(stageLog, &stage));
   if (stage != -1) {
     /* That can happen if the log summary is output before some things are destroyed */

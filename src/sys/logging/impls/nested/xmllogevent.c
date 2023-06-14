@@ -111,7 +111,7 @@ static PetscErrorCode DefaultStageToNestedStage(NestedEventId id, NestedEventId 
   PetscStageLog stageLog;
 
   PetscFunctionBegin;
-  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
   if (!nested_stage_to_root_stage) {
     PetscCall(PetscMalloc1(stageLog->num_entries, &nested_stage_to_root_stage));
     for (int i = 0; i < stageLog->num_entries; i++) nested_stage_to_root_stage[i] = i;
@@ -221,8 +221,6 @@ PetscErrorCode PetscLogNestedBegin(void)
   PetscCall(PetscMalloc1(nNestedEventsAllocated, &nestedEvents));
   dftParentActive = DFT_ID_AWAKE;
   nNestedEvents   = 0;
-
-  PetscCall(PetscLogSet(PetscLogEventBeginNested, PetscLogEventEndNested));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -375,7 +373,7 @@ static PetscErrorCode PetscLogEventBeginNested_Internal(NestedEventId nstEvent, 
 
       /* Register a new default timer */
       if (!is_event) PetscCall(PetscLogStagePop_Internal());
-      PetscCall(bPetscLogGetDefaultHandlerb(&stage_log));
+      PetscCall(PetscLogGetDefaultHandler(&stage_log));
       PetscCall(PetscStageLogGetCurrent(stage_log, &current_stage));
       PetscCall(PetscSNPrintf(name, PETSC_STATIC_ARRAY_LENGTH(name), "__Nested %d: %d -> %d", current_stage, (int)dftParentActive, (int)nstEvent));
       if (is_event) {
@@ -1315,7 +1313,7 @@ PetscErrorCode PetscLogView_Nested(PetscViewer viewer)
 
   // Print global information about this run
   PetscCall(PetscPrintExeSpecs(viewer));
-  PetscCall(bPetscLogGetDefaultHandlerb(&stage_log_orig));
+  PetscCall(PetscLogGetDefaultHandler(&stage_log_orig));
   locTotalTime = stage_log_orig->array[0].perfInfo.time; // Main stage time
   PetscCall(PetscPrintGlobalPerformance(viewer, locTotalTime));
 
@@ -1373,7 +1371,7 @@ PetscErrorCode PetscLogView_Flamegraph(PetscViewer viewer)
 
   PetscFunctionBegin;
   comm = PetscObjectComm((PetscObject)viewer);
-  PetscCall(bPetscLogGetDefaultHandlerb(&stage_log_orig));
+  PetscCall(PetscLogGetDefaultHandler(&stage_log_orig));
   {
     PetscLogGlobalNames global_stages, global_events;
     PetscStageLog stage_log_nested;

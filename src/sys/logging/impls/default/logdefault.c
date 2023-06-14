@@ -1,4 +1,5 @@
 #include <petsc/private/logimpl.h> /*I "petscsys.h" I*/
+#include "logdefault.h"
 
 /*@C
   PetscLogDefaultBegin - Turns on logging of objects and events using the default logging functions `PetscLogEventBeginDefault()` and `PetscLogEventEndDefault()`. This logs flop
@@ -31,7 +32,6 @@
 PetscErrorCode PetscLogDefaultBegin(void)
 {
   PetscFunctionBegin;
-  PetscCall(PetscLogSet(PetscLogEventBeginDefault, PetscLogEventEndDefault));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -65,7 +65,6 @@ PetscErrorCode PetscLogDefaultBegin(void)
 PetscErrorCode PetscLogAllBegin(void)
 {
   PetscFunctionBegin;
-  PetscCall(PetscLogSet(PetscLogEventBeginComplete, PetscLogEventEndComplete));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -97,8 +96,6 @@ PetscErrorCode PetscLogTraceBegin(FILE *file)
 {
   PetscFunctionBegin;
   petsc_tracefile = file;
-
-  PetscCall(PetscLogSet(PetscLogEventBeginTrace, PetscLogEventEndTrace));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
