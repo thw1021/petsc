@@ -715,7 +715,7 @@ PetscErrorCode PCSetFromOptions_MG(PC pc, PetscOptionItems *PetscOptionsObject)
       }
     }
 
-#if defined(PETSC_USE_LOG)
+#if defined(PETSC_USE_LOG) && 0 // TODO: fix PCSetFromOptinons_MG
     {
       const char   *sname = "MG Apply";
       PetscStageLog stageLog;

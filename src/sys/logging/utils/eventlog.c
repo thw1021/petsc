@@ -42,9 +42,22 @@ PetscErrorCode PetscEventRegLogCreate(PetscEventRegLog *eventLog)
   PetscFunctionBegin;
   PetscCall(PetscNew(&l));
   l->numEvents = 0;
-  l->maxEvents = 100;
+  l->maxEvents = 96; 
   PetscCall(PetscMalloc1(l->maxEvents, &l->eventInfo));
   *eventLog = l;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode PetscStageRegLogCreate(PetscStageRegLog *stageLog)
+{
+  PetscStageRegLog l;
+
+  PetscFunctionBegin;
+  PetscCall(PetscNew(&l));
+  l->numStages = 0;
+  l->maxStages = 8;
+  PetscCall(PetscMalloc1(l->maxStages, &l->stageInfo));
+  *stageLog = l;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -71,6 +84,15 @@ PetscErrorCode PetscEventRegLogDestroy(PetscEventRegLog eventLog)
   for (e = 0; e < eventLog->numEvents; e++) PetscCall(PetscFree(eventLog->eventInfo[e].name));
   PetscCall(PetscFree(eventLog->eventInfo));
   PetscCall(PetscFree(eventLog));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode PetscStageRegLogDestroy(PetscStageRegLog stageLog)
+{
+  PetscFunctionBegin;
+  for (int s = 0; s < stageLog->numStages; s++) PetscCall(PetscFree(stageLog->stageInfo[s].name));
+  PetscCall(PetscFree(stageLog->stageInfo));
+  PetscCall(PetscFree(stageLog));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

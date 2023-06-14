@@ -1042,4 +1042,7 @@ S*/
 typedef struct _n_PetscSegBuffer *PetscSegBuffer;
 
 typedef struct _n_PetscOptionsHelpPrinted *PetscOptionsHelpPrinted;
+
+/* The number of bits in a byte */
+#define PETSC_BITS_PER_BYTE CHAR_BIT
 #endif
