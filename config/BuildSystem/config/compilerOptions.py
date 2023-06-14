@@ -3,8 +3,9 @@ import os
 import re
 import nargs
 
-re_win32fe_cl  = re.compile('win32fe\s+cl')
-re_win32fe_icl = re.compile('win32fe\s+icl')
+re_win32fe_cl    = re.compile('win32fe\s+cl')
+re_win32fe_icl   = re.compile('win32fe\s+icl')
+re_win32fe_ifort = re.compile('win32fe\s+ifort')
 
 class CompilerOptions(config.base.Configure):
   def getCFlags(self, compiler, bopt, language):
@@ -277,7 +278,7 @@ class CompilerOptions(config.base.Configure):
           flags.append('-g')
           flags.append('-O3')
       # Windows Intel
-      elif compiler.find('win_ifort') >= 0:
+      elif compiler.find('win_ifort') >= 0 or re_win32fe_ifort.search(compiler):
         if bopt == '':
           if self.argDB['with-shared-libraries']:
             flags.extend(['-MD'])
