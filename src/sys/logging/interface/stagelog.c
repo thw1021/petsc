@@ -52,42 +52,32 @@ PETSC_INTERN PetscErrorCode PetscStageRegLogInsert(PetscStageRegLog stage_log, c
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-///*@C
-//  bPetscLogGetDefaultHandlerb - This function returns the default stage logging object.
-//
-//  Not collective
-//
-//  Output Parameter:
-//. stageLog - The default PetscStageLog
-//
-//  Level: developer
-//
-//  Developer Note:
-//    Inline since called for EACH `PetscEventLogBeginDefault()` and `PetscEventLogEndDefault()`
-//
-//.seealso: `PetscStageLogCreate()`
-//@*/
-//PetscErrorCode bPetscLogGetDefaultHandlerb(PetscStageLog *stageLog)
-//{
-//  PetscFunctionBegin;
-//  PetscValidPointer(stageLog, 1);
-//  if (!petsc_stageLog) {
-//    fprintf(stderr, "PETSC ERROR: Logging has not been enabled.\nYou might have forgotten to call PetscInitialize().\n");
-//    PETSCABORT(MPI_COMM_WORLD, PETSC_ERR_SUP);
-//  }
-//  *stageLog = petsc_stageLog;
-//  PetscFunctionReturn(PETSC_SUCCESS);
-//}
+PetscErrorCode PetscLogGetDefaultHandler(PetscStageLog *default_handler)
+{
+  PetscFunctionBegin;
+  PetscValidPointer(default_handler, 1);
+  *default_handler = NULL;
+  for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
+    if (PetscLogHandlers[i] && PetscLogHandlers[i]->id == PETSC_LOG_HANDLER_DEFAULT) {
+      *default_handler = (PetscStageLog) PetscLogHandlers[i]->ctx;
+    }
+  }
+  if (*default_handler == NULL) {
+    fprintf(stderr, "PETSC ERROR: Logging has not been enabled.\nYou might have forgotten to call PetscInitialize().\n");
+    PETSCABORT(MPI_COMM_WORLD, PETSC_ERR_SUP);
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 PetscErrorCode PetscLogGetEventLog(PetscEventRegLog *eventLog)
 {
   PetscFunctionBegin;
   PetscValidPointer(eventLog, 1);
-  if (!petsc_eventLog) {
+  if (!petsc_log_registry) {
     fprintf(stderr, "PETSC ERROR: Logging has not been enabled.\nYou might have forgotten to call PetscInitialize().\n");
     PETSCABORT(MPI_COMM_WORLD, PETSC_ERR_SUP);
   }
-  *eventLog = petsc_eventLog;
+  *eventLog = petsc_log_registry->events;;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -95,11 +85,11 @@ PetscErrorCode PetscLogGetClassLog(PetscClassRegLog *classLog)
 {
   PetscFunctionBegin;
   PetscValidPointer(classLog, 1);
-  if (!petsc_classLog) {
+  if (!petsc_log_registry) {
     fprintf(stderr, "PETSC ERROR: Logging has not been enabled.\nYou might have forgotten to call PetscInitialize().\n");
     PETSCABORT(MPI_COMM_WORLD, PETSC_ERR_SUP);
   }
-  *classLog = petsc_classLog;
+  *classLog = petsc_log_registry->classes;;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -122,7 +112,7 @@ PetscErrorCode PetscLogGetClassLog(PetscClassRegLog *classLog)
   Developer Note:
     Inline since called for EACH `PetscEventLogBeginDefault()` and `PetscEventLogEndDefault()`
 
-.seealso: `PetscStageLogPush()`, `PetscStageLogPop()`, `bPetscLogGetDefaultHandlerb()`
+.seealso: `PetscStageLogPush()`, `PetscStageLogPop()`, `PetscLogGetDefaultHandler()`
 @*/
 PetscErrorCode PetscStageLogGetCurrent(PetscStageLog stageLog, int *stage)
 {
@@ -156,9 +146,9 @@ PetscErrorCode PetscStageLogGetCurrent(PetscStageLog stageLog, int *stage)
   Developer Note:
     Inline since called for EACH `PetscEventLogBeginDefault()` and `PetscEventLogEndDefault()`
 
-.seealso: `PetscStageLogPush()`, `PetscStageLogPop()`, `bPetscLogGetDefaultHandlerb()`
+.seealso: `PetscStageLogPush()`, `PetscStageLogPop()`, `PetscLogGetDefaultHandler()`
 @*/
-PetscErrorCode PetscStageLogGetEventPerfLog(PetscStageLog stageLog, int stage, PetscEventPerfLog *eventLog)
+PetscErrorCode PetscStageLogGetEventPerfLog(PetscStageLog stageLog, PetscLogStage stage, PetscEventPerfLog *eventLog)
 {
   PetscFunctionBegin;
   PetscValidPointer(eventLog, 3);
@@ -299,7 +289,7 @@ PetscErrorCode PetscStageLogRegister(PetscStageLog stageLog, const char sname[],
 
   Level: developer
 
-.seealso: `PetscStageLogPop()`, `PetscStageLogGetCurrent()`, `PetscStageLogRegister()`, `bPetscLogGetDefaultHandlerb()`
+.seealso: `PetscStageLogPop()`, `PetscStageLogGetCurrent()`, `PetscStageLogRegister()`, `PetscLogGetDefaultHandler()`
 @*/
 PetscErrorCode PetscStageLogPush(PetscStageLog stageLog, int stage)
 {
@@ -369,7 +359,7 @@ PetscErrorCode PetscStageLogPush(PetscStageLog stageLog, int stage)
 
   Level: developer
 
-.seealso: `PetscStageLogPush()`, `PetscStageLogGetCurrent()`, `PetscStageLogRegister()`, `bPetscLogGetDefaultHandlerb()`
+.seealso: `PetscStageLogPush()`, `PetscStageLogGetCurrent()`, `PetscStageLogRegister()`, `PetscLogGetDefaultHandler()`
 @*/
 PetscErrorCode PetscStageLogPop(PetscStageLog stageLog)
 {
@@ -415,7 +405,7 @@ PetscErrorCode PetscStageLogPop(PetscStageLog stageLog)
 
   Level: developer
 
-.seealso: `PetscStageLogPush()`, `PetscStageLogPop()`, `bPetscLogGetDefaultHandlerb()`
+.seealso: `PetscStageLogPush()`, `PetscStageLogPop()`, `PetscLogGetDefaultHandler()`
 @*/
 PetscErrorCode PetscStageLogGetClassRegLog(PetscStageLog stageLog, PetscClassRegLog *classLog)
 {
@@ -438,7 +428,7 @@ PetscErrorCode PetscStageLogGetClassRegLog(PetscStageLog stageLog, PetscClassReg
 
   Level: developer
 
-.seealso: `PetscStageLogPush()`, `PetscStageLogPop()`, `bPetscLogGetDefaultHandlerb()`
+.seealso: `PetscStageLogPush()`, `PetscStageLogPop()`, `PetscLogGetDefaultHandler()`
 @*/
 PetscErrorCode PetscStageLogGetEventRegLog(PetscStageLog stageLog, PetscEventRegLog *eventLog)
 {
@@ -462,7 +452,7 @@ PetscErrorCode PetscStageLogGetEventRegLog(PetscStageLog stageLog, PetscEventReg
 
   Level: developer
 
-.seealso: `PetscStageLogPush()`, `PetscStageLogPop()`, `bPetscLogGetDefaultHandlerb()`
+.seealso: `PetscStageLogPush()`, `PetscStageLogPop()`, `PetscLogGetDefaultHandler()`
 @*/
 PetscErrorCode PetscStageLogGetClassPerfLog(PetscStageLog stageLog, int stage, PetscClassPerfLog *classLog)
 {
@@ -485,7 +475,7 @@ PetscErrorCode PetscStageLogGetClassPerfLog(PetscStageLog stageLog, int stage, P
 
   Level: developer
 
-.seealso: `PetscStageLogGetActive()`, `PetscStageLogGetCurrent()`, `PetscStageLogRegister()`, `bPetscLogGetDefaultHandlerb()`
+.seealso: `PetscStageLogGetActive()`, `PetscStageLogGetCurrent()`, `PetscStageLogRegister()`, `PetscLogGetDefaultHandler()`
 @*/
 PetscErrorCode PetscStageLogSetActive(PetscStageLog stageLog, int stage, PetscBool isActive)
 {
@@ -509,7 +499,7 @@ PetscErrorCode PetscStageLogSetActive(PetscStageLog stageLog, int stage, PetscBo
 
   Level: developer
 
-.seealso: `PetscStageLogSetActive()`, `PetscStageLogGetCurrent()`, `PetscStageLogRegister()`, `bPetscLogGetDefaultHandlerb()`
+.seealso: `PetscStageLogSetActive()`, `PetscStageLogGetCurrent()`, `PetscStageLogRegister()`, `PetscLogGetDefaultHandler()`
 @*/
 PetscErrorCode PetscStageLogGetActive(PetscStageLog stageLog, int stage, PetscBool *isActive)
 {
@@ -535,7 +525,7 @@ PetscErrorCode PetscStageLogGetActive(PetscStageLog stageLog, int stage, PetscBo
 
   Level: developer
 
-.seealso: `PetscStageLogGetVisible()`, `PetscStageLogGetCurrent()`, `PetscStageLogRegister()`, `bPetscLogGetDefaultHandlerb()`
+.seealso: `PetscStageLogGetVisible()`, `PetscStageLogGetCurrent()`, `PetscStageLogRegister()`, `PetscLogGetDefaultHandler()`
 @*/
 PetscErrorCode PetscStageLogSetVisible(PetscStageLog stageLog, int stage, PetscBool isVisible)
 {
@@ -562,7 +552,7 @@ PetscErrorCode PetscStageLogSetVisible(PetscStageLog stageLog, int stage, PetscB
 
   Level: developer
 
-.seealso: `PetscStageLogSetVisible()`, `PetscStageLogGetCurrent()`, `PetscStageLogRegister()`, `bPetscLogGetDefaultHandlerb()`
+.seealso: `PetscStageLogSetVisible()`, `PetscStageLogGetCurrent()`, `PetscStageLogRegister()`, `PetscLogGetDefaultHandler()`
 @*/
 PetscErrorCode PetscStageLogGetVisible(PetscStageLog stageLog, int stage, PetscBool *isVisible)
 {
@@ -587,7 +577,7 @@ PetscErrorCode PetscStageLogGetVisible(PetscStageLog stageLog, int stage, PetscB
 
   Level: developer
 
-.seealso: `PetscStageLogGetCurrent()`, `PetscStageLogRegister()`, `bPetscLogGetDefaultHandlerb()`
+.seealso: `PetscStageLogGetCurrent()`, `PetscStageLogRegister()`, `PetscLogGetDefaultHandler()`
 @*/
 PetscErrorCode PetscStageLogGetStage(PetscStageLog stageLog, const char name[], PetscLogStage *stage)
 {

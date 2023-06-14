@@ -2,20 +2,52 @@
 #define PETSC_LOGIMPL_H
 
 #include <petsc/private/petscimpl.h>
-#include <petsctime.h>
 
-PETSC_INTERN PetscErrorCode PetscLogRegistryCreate(PetscLogRegistry *);
-PETSC_INTERN PetscErrorCode PetscLogRegistryDestroy(PetscLogRegistry);
-PETSC_INTERN PetscErrorCode PetscLogRegistryStageRegister(PetscLogRegistry,const char[],PetscLogStage *);
-PETSC_INTERN PetscErrorCode PetscLogRegistryStagePush(PetscLogRegistry,PetscLogStage);
-PETSC_INTERN PetscErrorCode PetscLogRegistryStagePop(PetscLogRegistry);
+typedef struct {
+  char        *name;       /* The name of this event */
+  PetscClassId classid;    /* The class the event is associated with */
+  PetscBool    collective; /* Flag this event as collective */
+  PetscBool    visible;    /* The flag to print info in summary */
+#if defined(PETSC_HAVE_TAU_PERFSTUBS)
+  void *timer; /* Associated external tool timer for this event */
+#endif
+#if defined(PETSC_HAVE_MPE)
+  int mpe_id_begin; /* MPE IDs that define the event */
+  int mpe_id_end;
+#endif
+} PetscEventRegInfo;
 
-PETSC_EXTERN PetscEventRegLog petsc_eventLog;
-PETSC_EXTERN PetscClassRegLog petsc_classLog;
-PETSC_EXTERN PetscErrorCode bPetscLogGetDefaultHandlerb(PetscStageLog *);
-PETSC_EXTERN PetscErrorCode PetscStageLogGetCurrent(PetscStageLog, int *);
-PETSC_EXTERN PetscErrorCode PetscStageLogGetEventPerfLog(PetscStageLog, int, PetscEventPerfLog *);
-PETSC_EXTERN PetscErrorCode PetscLogSet(PetscErrorCode (*)(int, int, PetscObject, PetscObject, PetscObject, PetscObject), PetscErrorCode (*)(int, int, PetscObject, PetscObject, PetscObject, PetscObject));
+typedef struct {
+  char        *name;    /* The class name */
+  PetscClassId classid; /* The integer identifying this class */
+} PetscClassRegInfo;
+
+typedef struct _PetscStageRegInfo {
+  char              *name;     /* The stage name */
+  PetscBool          visible;  /* The flag to print info in summary */
+} PetscStageRegInfo;
+
+typedef struct {
+  PetscClassId   id;           /* The integer identifying this class */
+  int            creations;    /* The number of objects of this class created */
+  int            destructions; /* The number of objects of this class destroyed */
+  PetscLogDouble mem;          /* The total memory allocated by objects of this class; this is completely wrong and should possibly be removed */
+  PetscLogDouble descMem;      /* The total memory allocated by descendents of these objects; this is completely wrong and should possibly be removed */
+} PetscClassPerfInfo;
+
+#define PETSC_LOG_RESIZABLE_ARRAY(entrytype,containertype) \
+  typedef struct _n_##containertype *containertype; \
+  struct _n_##containertype { \
+    int max_entries; \
+    int num_entries; \
+    entrytype *array; \
+  };
+PETSC_LOG_RESIZABLE_ARRAY(PetscEventRegInfo,PetscEventRegLog)
+PETSC_LOG_RESIZABLE_ARRAY(PetscClassRegInfo,PetscClassRegLog)
+PETSC_LOG_RESIZABLE_ARRAY(PetscStageRegInfo,PetscStageRegLog)
+PETSC_LOG_RESIZABLE_ARRAY(PetscClassPerfInfo,PetscClassPerfLog)
+PETSC_LOG_RESIZABLE_ARRAY(PetscEventPerfInfo,PetscEventPerfLog)
+#undef PETSC_LOG_RESIZABLE_ARRAY
 
 #define PetscLogResizableArrayEnsureSize(ra,new_size,blank_entry) \
   PetscMacroReturnStandard( \
@@ -42,6 +74,57 @@ PETSC_EXTERN PetscErrorCode PetscLogSet(PetscErrorCode (*)(int, int, PetscObject
     (*(ra_p))->max_entries = (max_init); \
     PetscCall(PetscMalloc1((max_init), &((*(ra_p))->array))); \
   )
+
+typedef struct _PetscStageInfo {
+  char              *name;     /* The stage name */
+  PetscBool          used;     /* The stage was pushed on this processor */
+  PetscBool          active;
+  PetscEventPerfInfo perfInfo; /* The stage performance information */
+  PetscEventPerfLog  eventLog; /* The event information for this stage */
+  PetscClassPerfLog  classLog; /* The class information for this stage */
+#if defined(PETSC_HAVE_TAU_PERFSTUBS)
+  void *timer; /* Associated external tool timer for this stage */
+#endif
+} PetscStageInfo;
+
+typedef struct _n_PetscStageLog *PetscStageLog;
+struct _n_PetscStageLog {
+  int              max_entries;
+  int              num_entries;
+  PetscStageInfo  *array;
+  PetscIntStack    stack;     /* The stack for activated stages */
+  int              curStage;  /* The current stage (only used in macros so we don't call PetscIntStackTop) */
+};
+
+typedef struct _n_PetscLogRegistry *PetscLogRegistry;
+struct _n_PetscLogRegistry {
+  PetscEventRegLog events;
+  PetscClassRegLog classes;
+  PetscStageRegLog stages;
+};
+
+PETSC_INTERN PetscLogRegistry petsc_log_registry;
+PETSC_INTERN PetscErrorCode PetscLogGetRegistry(PetscLogRegistry *);
+PETSC_INTERN PetscErrorCode PetscLogRegistryCreate(PetscLogRegistry *);
+PETSC_INTERN PetscErrorCode PetscLogRegistryDestroy(PetscLogRegistry);
+PETSC_INTERN PetscErrorCode PetscLogRegistryStageRegister(PetscLogRegistry,const char[],PetscLogStage *);
+PETSC_INTERN PetscErrorCode PetscLogRegistryEventRegister(PetscLogRegistry,const char[],PetscClassId,PetscLogStage *);
+
+PETSC_INTERN PetscErrorCode PetscLogGetState(PetscLogState *);
+PETSC_INTERN PetscErrorCode PetscLogStateCreate(PetscInt, PetscInt, PetscLogState *);
+PETSC_INTERN PetscErrorCode PetscLogStateDestroy(PetscLogState);
+PETSC_INTERN PetscErrorCode PetscLogStateStagePush(PetscLogState,PetscLogStage);
+PETSC_INTERN PetscErrorCode PetscLogStateStagePop(PetscLogState);
+PETSC_INTERN PetscErrorCode PetscLogStateGetCurrentStage(PetscLogState, PetscLogStage *);
+PETSC_INTERN PetscErrorCode PetscLogStateEnsureSize(PetscLogState, PetscInt, PetscInt);
+
+PETSC_INTERN PetscErrorCode PetscLogGetDefaultHandler(PetscStageLog *);
+PETSC_INTERN PetscErrorCode PetscStageLogGetCurrent(PetscStageLog, PetscLogStage *);
+PETSC_INTERN PetscErrorCode PetscStageLogGetEventPerfLog(PetscStageLog, PetscLogStage, PetscEventPerfLog *);
+PETSC_INTERN PetscErrorCode PetscLogSet(PetscErrorCode (*)(int, int, PetscObject, PetscObject, PetscObject, PetscObject), PetscErrorCode (*)(int, int, PetscObject, PetscObject, PetscObject, PetscObject));
+
+enum {PETSC_LOG_HANDLER_DEFAULT, PETSC_LOG_HANDLER_NESTED};
+
 
 /* A simple stack */
 struct _n_PetscIntStack {
