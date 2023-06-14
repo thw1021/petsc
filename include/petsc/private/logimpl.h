@@ -4,12 +4,44 @@
 #include <petsc/private/petscimpl.h>
 #include <petsctime.h>
 
+PETSC_INTERN PetscErrorCode PetscLogRegistryCreate(PetscLogRegistry *);
+PETSC_INTERN PetscErrorCode PetscLogRegistryDestroy(PetscLogRegistry);
+PETSC_INTERN PetscErrorCode PetscLogRegistryStageRegister(PetscLogRegistry,const char[],PetscLogStage *);
+PETSC_INTERN PetscErrorCode PetscLogRegistryStagePush(PetscLogRegistry,PetscLogStage);
+PETSC_INTERN PetscErrorCode PetscLogRegistryStagePop(PetscLogRegistry);
+
 PETSC_EXTERN PetscEventRegLog petsc_eventLog;
 PETSC_EXTERN PetscClassRegLog petsc_classLog;
-PETSC_EXTERN PetscErrorCode PetscLogGetStageLog(PetscStageLog *);
+PETSC_EXTERN PetscErrorCode bPetscLogGetDefaultHandlerb(PetscStageLog *);
 PETSC_EXTERN PetscErrorCode PetscStageLogGetCurrent(PetscStageLog, int *);
 PETSC_EXTERN PetscErrorCode PetscStageLogGetEventPerfLog(PetscStageLog, int, PetscEventPerfLog *);
 PETSC_EXTERN PetscErrorCode PetscLogSet(PetscErrorCode (*)(int, int, PetscObject, PetscObject, PetscObject, PetscObject), PetscErrorCode (*)(int, int, PetscObject, PetscObject, PetscObject, PetscObject));
+
+#define PetscLogResizableArrayEnsureSize(ra,new_size,blank_entry) \
+  PetscMacroReturnStandard( \
+    if ((new_size) > ra->max_entries) { \
+      int new_max_entries = 2; \
+      int rem_size = PetscMax(0,(new_size) - 1); \
+      char *new_array; \
+      char **old_array = (char **) &((ra)->array); \
+      while (rem_size >>= 1) new_max_entries *= 2; \
+      PetscCall(PetscMalloc(new_max_entries * sizeof(*((ra)->array)), &new_array)); \
+      PetscCall(PetscMemcpy(new_array, (ra)->array, sizeof(*((ra)->array)) * (ra)->num_entries)); \
+      PetscCall(PetscFree((ra)->array)); \
+      *old_array = new_array; \
+      (ra)->max_entries = new_max_entries; \
+    } \
+    for (int i = (ra)->num_entries; i < (new_size); i++) (ra)->array[i] = (blank_entry); \
+    (ra)->num_entries = (new_size); \
+  )
+
+#define PetscLogResizableArrayCreate(ra_p,max_init) \
+  PetscMacroReturnStandard( \
+    PetscCall(PetscNew(ra_p)); \
+    (*(ra_p))->num_entries = 0; \
+    (*(ra_p))->max_entries = (max_init); \
+    PetscCall(PetscMalloc1((max_init), &((*(ra_p))->array))); \
+  )
 
 /* A simple stack */
 struct _n_PetscIntStack {
@@ -100,8 +132,10 @@ PETSC_EXTERN PetscErrorCode PetscIntStackPop(PetscIntStack, int *);
 PETSC_EXTERN PetscErrorCode PetscIntStackTop(PetscIntStack, int *);
 PETSC_EXTERN PetscErrorCode PetscIntStackEmpty(PetscIntStack, PetscBool *);
 
-PETSC_EXTERN PetscErrorCode PetscStageRegLogCreate(PetscStageRegLog *);
-PETSC_EXTERN PetscErrorCode PetscStageRegLogDestroy(PetscStageRegLog);
+PETSC_INTERN PetscErrorCode PetscStageRegLogCreate(PetscStageRegLog *);
+PETSC_INTERN PetscErrorCode PetscStageRegLogDestroy(PetscStageRegLog);
+PETSC_INTERN PetscErrorCode PetscStageRegLogEnsureSize(PetscStageRegLog, int);
+PETSC_INTERN PetscErrorCode PetscStageRegLogInsert(PetscStageRegLog, const char[], int *);
 
 /* Creation and destruction functions */
 PETSC_EXTERN PetscErrorCode PetscEventRegLogCreate(PetscEventRegLog *);

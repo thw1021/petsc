@@ -8,7 +8,7 @@
 #include <petscviewer.h>
 #include <petsc/private/logimpl.h>
 #include <petsc/private/fortranimpl.h>
-#include "../src/sys/logging/xmlviewer.h"
+#include <../src/sys/logging/impls/nested/xmlviewer.h>
 
 #if defined(PETSC_USE_LOG)
 
