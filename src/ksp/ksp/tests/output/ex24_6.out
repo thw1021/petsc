@@ -1,0 +1,14 @@
+
+ CG: 
+[0]PETSC ERROR: --------------------- Error Message --------------------------------------------------------------
+[0]PETSC ERROR: Arguments are incompatible
+[0]PETSC ERROR: The PC sor is known to be not symmetric in this situation, this is not supported by KSPCG
+[0]PETSC ERROR: See https://petsc.org/release/faq/ for trouble shooting.
+[0]PETSC ERROR: #1 KSPSolve_CG() at cg.c:0
+[0]PETSC ERROR: #2 KSPSolve_Private() at itfunc.c:0
+[0]PETSC ERROR: #3 KSPSolve() at itfunc.c:0
+[0]PETSC ERROR: #4 main() at ex24.c:0
+[0]PETSC ERROR: PETSc Option Table entries:
+[0]PETSC ERROR: -pc_sor_forward (source: command line)
+[0]PETSC ERROR: -pc_type sor (source: command line)
+[0]PETSC ERROR: ----------------End of Error Message -------send entire error message to petsc-maint@mcs.anl.gov----------
