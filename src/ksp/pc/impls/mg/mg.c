@@ -721,7 +721,7 @@ PetscErrorCode PCSetFromOptions_MG(PC pc, PetscOptionItems *PetscOptionsObject)
       PetscStageLog stageLog;
       PetscInt      st;
 
-      PetscCall(PetscLogGetStageLog(&stageLog));
+      PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
       for (st = 0; st < stageLog->numStages; ++st) {
         PetscBool same;
 

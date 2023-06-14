@@ -24,17 +24,8 @@
 @*/
 PetscErrorCode PetscClassRegLogCreate(PetscClassRegLog *classLog)
 {
-  PetscClassRegLog l;
-
   PetscFunctionBegin;
-  PetscCall(PetscNew(&l));
-
-  l->numClasses = 0;
-  l->maxClasses = 100;
-
-  PetscCall(PetscMalloc1(l->maxClasses, &l->classInfo));
-
-  *classLog = l;
+  PetscCall(PetscLogResizableArrayCreate(classLog,128));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -58,8 +49,8 @@ PetscErrorCode PetscClassRegLogDestroy(PetscClassRegLog classLog)
   int c;
 
   PetscFunctionBegin;
-  for (c = 0; c < classLog->numClasses; c++) PetscCall(PetscClassRegInfoDestroy(&classLog->classInfo[c]));
-  PetscCall(PetscFree(classLog->classInfo));
+  for (c = 0; c < classLog->num_entries; c++) PetscCall(PetscClassRegInfoDestroy(&classLog->array[c]));
+  PetscCall(PetscFree(classLog->array));
   PetscCall(PetscFree(classLog));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -86,6 +77,15 @@ PetscErrorCode PetscClassRegInfoDestroy(PetscClassRegInfo *c)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode PetscClassRegLogEnsureSize(PetscClassRegLog class_log, int new_size)
+{
+  PetscClassRegInfo blank_entry;
+  PetscFunctionBegin;
+  PetscCall(PetscMemzero(&blank_entry, sizeof(blank_entry)));
+  PetscCall(PetscLogResizableArrayEnsureSize(class_log,new_size,blank_entry));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@C
   PetscClassPerfLogCreate - This creates a `PetscClassPerfLog` object.
 
@@ -103,17 +103,8 @@ PetscErrorCode PetscClassRegInfoDestroy(PetscClassRegInfo *c)
 @*/
 PetscErrorCode PetscClassPerfLogCreate(PetscClassPerfLog *classLog)
 {
-  PetscClassPerfLog l;
-
   PetscFunctionBegin;
-  PetscCall(PetscNew(&l));
-
-  l->numClasses = 0;
-  l->maxClasses = 100;
-
-  PetscCall(PetscMalloc1(l->maxClasses, &l->classInfo));
-
-  *classLog = l;
+  PetscCall(PetscLogResizableArrayCreate(classLog,128));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -135,7 +126,7 @@ PetscErrorCode PetscClassPerfLogCreate(PetscClassPerfLog *classLog)
 PetscErrorCode PetscClassPerfLogDestroy(PetscClassPerfLog classLog)
 {
   PetscFunctionBegin;
-  PetscCall(PetscFree(classLog->classInfo));
+  PetscCall(PetscFree(classLog->array));
   PetscCall(PetscFree(classLog));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -159,11 +150,8 @@ PetscErrorCode PetscClassPerfLogDestroy(PetscClassPerfLog classLog)
 PetscErrorCode PetscClassPerfInfoClear(PetscClassPerfInfo *classInfo)
 {
   PetscFunctionBegin;
-  classInfo->id           = -1;
-  classInfo->creations    = 0;
-  classInfo->destructions = 0;
-  classInfo->mem          = 0.0;
-  classInfo->descMem      = 0.0;
+  PetscCall(PetscMemzero(classInfo, sizeof(*classInfo)));
+  classInfo->id = -1;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -185,18 +173,11 @@ PetscErrorCode PetscClassPerfInfoClear(PetscClassPerfInfo *classInfo)
 @*/
 PetscErrorCode PetscClassPerfLogEnsureSize(PetscClassPerfLog classLog, int size)
 {
-  PetscClassPerfInfo *classInfo;
+  PetscClassPerfInfo blank_entry;
 
   PetscFunctionBegin;
-  while (size > classLog->maxClasses) {
-    PetscCall(PetscMalloc1(classLog->maxClasses * 2, &classInfo));
-    PetscCall(PetscArraycpy(classInfo, classLog->classInfo, classLog->maxClasses));
-    PetscCall(PetscFree(classLog->classInfo));
-
-    classLog->classInfo = classInfo;
-    classLog->maxClasses *= 2;
-  }
-  while (classLog->numClasses < size) PetscCall(PetscClassPerfInfoClear(&classLog->classInfo[classLog->numClasses++]));
+  PetscCall(PetscClassPerfInfoClear(&blank_entry));
+  PetscCall(PetscLogResizableArrayEnsureSize(classLog,size,blank_entry));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -223,21 +204,15 @@ PetscErrorCode PetscClassPerfLogEnsureSize(PetscClassPerfLog classLog, int size)
 PetscErrorCode PetscClassRegLogRegister(PetscClassRegLog classLog, const char cname[], PetscClassId classid)
 {
   PetscClassRegInfo *classInfo;
-  int                c;
+  int                c = classLog->num_entries;
 
   PetscFunctionBegin;
   PetscValidCharPointer(cname, 2);
-  c = classLog->numClasses++;
-  if (classLog->numClasses > classLog->maxClasses) {
-    PetscCall(PetscMalloc1(classLog->maxClasses * 2, &classInfo));
-    PetscCall(PetscArraycpy(classInfo, classLog->classInfo, classLog->maxClasses));
-    PetscCall(PetscFree(classLog->classInfo));
-
-    classLog->classInfo = classInfo;
-    classLog->maxClasses *= 2;
-  }
-  PetscCall(PetscStrallocpy(cname, &(classLog->classInfo[c].name)));
-  classLog->classInfo[c].classid = classid;
+  PetscCall(PetscClassRegLogEnsureSize(classLog, c + 1));
+  classInfo = &(classLog->array[c]);
+  classLog->num_entries++;
+  PetscCall(PetscStrallocpy(cname, &(classInfo->name)));
+  classInfo->classid = classid;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -267,11 +242,10 @@ PetscErrorCode PetscClassRegLogGetClass(PetscClassRegLog classLog, PetscClassId 
 
   PetscFunctionBegin;
   PetscValidIntPointer(oclass, 3);
-  for (c = 0; c < classLog->numClasses; c++) {
-    /* Could do bisection here */
-    if (classLog->classInfo[c].classid == classid) break;
+  for (c = 0; c < classLog->num_entries; c++) {
+    if (classLog->array[c].classid == classid) break;
   }
-  PetscCheck(c < classLog->numClasses, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Invalid object classid %d\nThis could happen if you compile with PETSC_HAVE_DYNAMIC_LIBRARIES, but link with static libraries.", classid);
+  PetscCheck(c < classLog->num_entries, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Invalid object classid %d\nThis could happen if you compile with PETSC_HAVE_DYNAMIC_LIBRARIES, but link with static libraries.", classid);
   *oclass = c;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -292,12 +266,12 @@ PetscErrorCode PetscLogObjCreateDefault(PetscObject obj)
   PetscFunctionBegin;
   PetscCall(PetscSpinlockLock(&PetscLogSpinLock));
   /* Record stage info */
-  PetscCall(PetscLogGetStageLog(&stageLog));
+  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
   PetscCall(PetscStageLogGetCurrent(stageLog, &stage));
   PetscCall(PetscStageLogGetClassRegLog(stageLog, &classRegLog));
   PetscCall(PetscStageLogGetClassPerfLog(stageLog, stage, &classPerfLog));
   PetscCall(PetscClassRegLogGetClass(classRegLog, obj->classid, &oclass));
-  classPerfLog->classInfo[oclass].creations++;
+  classPerfLog->array[oclass].creations++;
   /* Dynamically enlarge logging structures */
   if (petsc_numActions >= petsc_maxActions) {
     PetscCall(PetscTime(&start));
@@ -366,14 +340,14 @@ PetscErrorCode PetscLogObjDestroyDefault(PetscObject obj)
   PetscFunctionBegin;
   /* Record stage info */
   PetscCall(PetscSpinlockLock(&PetscLogSpinLock));
-  PetscCall(PetscLogGetStageLog(&stageLog));
+  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
   PetscCall(PetscStageLogGetCurrent(stageLog, &stage));
   if (stage != -1) {
     /* That can happen if the log summary is output before some things are destroyed */
     PetscCall(PetscStageLogGetClassRegLog(stageLog, &classRegLog));
     PetscCall(PetscStageLogGetClassPerfLog(stageLog, stage, &classPerfLog));
     PetscCall(PetscClassRegLogGetClass(classRegLog, obj->classid, &oclass));
-    classPerfLog->classInfo[oclass].destructions++;
+    classPerfLog->array[oclass].destructions++;
   }
   /* Cannot Credit all ancestors with your memory because they may have already been destroyed*/
   petsc_numObjectsDestroyed++;

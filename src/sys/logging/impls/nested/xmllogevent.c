@@ -9,8 +9,8 @@
 #include <petsc/private/logimpl.h>
 #include <petsctime.h>
 #include <petscviewer.h>
-#include "../src/sys/logging/xmlviewer.h"
-#include <../src/sys/logging/plog.h>
+#include <../src/sys/logging/impls/nested/xmlviewer.h>
+#include <../src/sys/logging/interface/plog.h>
 
 #if defined(PETSC_USE_LOG)
 
@@ -111,11 +111,11 @@ static PetscErrorCode DefaultStageToNestedStage(NestedEventId id, NestedEventId 
   PetscStageLog stageLog;
 
   PetscFunctionBegin;
-  PetscCall(PetscLogGetStageLog(&stageLog));
+  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
   if (!nested_stage_to_root_stage) {
-    PetscCall(PetscMalloc1(stageLog->numStages, &nested_stage_to_root_stage));
-    for (int i = 0; i < stageLog->numStages; i++) nested_stage_to_root_stage[i] = i;
-    num_stages_allocated = stageLog->numStages;
+    PetscCall(PetscMalloc1(stageLog->num_entries, &nested_stage_to_root_stage));
+    for (int i = 0; i < stageLog->num_entries; i++) nested_stage_to_root_stage[i] = i;
+    num_stages_allocated = stageLog->num_entries;
   }
   if (id < num_stages_allocated) {
     *root_id = nested_stage_to_root_stage[id];
@@ -150,9 +150,9 @@ static PetscErrorCode DefaultEventToNestedEvent(NestedEventId id, NestedEventId 
   PetscFunctionBegin;
   PetscCall(PetscLogGetEventLog(&eventLog));
   if (!nested_event_to_root_event) {
-    PetscCall(PetscMalloc1(eventLog->numEvents, &nested_event_to_root_event));
-    for (int i = 0; i < eventLog->numEvents; i++) nested_event_to_root_event[i] = i;
-    num_events_allocated = eventLog->numEvents;
+    PetscCall(PetscMalloc1(eventLog->num_entries, &nested_event_to_root_event));
+    for (int i = 0; i < eventLog->num_entries; i++) nested_event_to_root_event[i] = i;
+    num_events_allocated = eventLog->num_entries;
   }
   if (id < num_events_allocated) {
     *root_id = nested_event_to_root_event[id];
@@ -223,7 +223,6 @@ PetscErrorCode PetscLogNestedBegin(void)
   nNestedEvents   = 0;
 
   PetscCall(PetscLogSet(PetscLogEventBeginNested, PetscLogEventEndNested));
-  PetscCall(PetscLogStageSet(PetscLogStageBeginHandler_Nested, PetscLogStageEndHandler_Nested));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -376,7 +375,7 @@ static PetscErrorCode PetscLogEventBeginNested_Internal(NestedEventId nstEvent, 
 
       /* Register a new default timer */
       if (!is_event) PetscCall(PetscLogStagePop_Internal());
-      PetscCall(PetscLogGetStageLog(&stage_log));
+      PetscCall(bPetscLogGetDefaultHandlerb(&stage_log));
       PetscCall(PetscStageLogGetCurrent(stage_log, &current_stage));
       PetscCall(PetscSNPrintf(name, PETSC_STATIC_ARRAY_LENGTH(name), "__Nested %d: %d -> %d", current_stage, (int)dftParentActive, (int)nstEvent));
       if (is_event) {
@@ -710,7 +709,7 @@ static PetscErrorCode PetscLogNestedEventNodesFillPerf(PetscInt num_nodes, Petsc
       // this is a stage
       PetscInt stage_id = global_stages->global_to_local[tree[node].id];
       if (stage_id >= 0) { // stage was called locally, skip subtree
-        PetscStageInfo *new_current_stage = &stage_log->stageInfo[stage_id];
+        PetscStageInfo *new_current_stage = &stage_log->array[stage_id];
         PetscCall(PetscLogNestedEventNodesFillPerf(tree[node].num_descendants, tree[node].id, &tree[node + 1], &perf[node + 1], new_current_stage, stage_log, global_stages, global_events));
         if (current_stage) {
           // add back in subtracted values so that stages have timings that are inclusive, like events
@@ -726,8 +725,8 @@ static PetscErrorCode PetscLogNestedEventNodesFillPerf(PetscInt num_nodes, Petsc
       // this is an event
       PetscInt event_id = global_events->global_to_local[tree[node].id - global_stages->count];
 
-      if (current_stage && event_id >= 0 && event_id < current_stage->eventLog->numEvents) {
-        perf[node] = current_stage->eventLog->eventInfo[event_id];
+      if (current_stage && event_id >= 0 && event_id < current_stage->eventLog->num_entries) {
+        perf[node] = current_stage->eventLog->array[event_id];
         PetscCall(PetscLogNestedEventNodesFillPerf(tree[node].num_descendants, tree[node].id, &tree[node + 1], &perf[node + 1], current_stage, stage_log, global_stages, global_events));
       }
     }
@@ -1189,7 +1188,7 @@ static PetscErrorCode PetscStageLogComputeStageNestedName(PetscStageLog stage_lo
   PetscFunctionBegin;
   if (nested_stage_names[stage_id]) PetscFunctionReturn(PETSC_SUCCESS);
   if (-(stage_id+2) == MAINSTAGE_EVENT) {
-    PetscCall(PetscStrallocpy(stage_log->stageInfo[stage_id].name, &nested_stage_names[stage_id]));
+    PetscCall(PetscStrallocpy(stage_log->array[stage_id].name, &nested_stage_names[stage_id]));
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   PetscCall(DefaultStageToNestedStage(stage_id, &root_id));
@@ -1204,14 +1203,14 @@ static PetscErrorCode PetscStageLogComputeStageNestedName(PetscStageLog stage_lo
   parent_id = dftParents[tentry];
   if (parent_id >= 0) {
     PetscCall(PetscStageLogComputeEventNestedName(stage_log, parent_id, nested_event_names, nested_stage_names));
-    PetscCall(PetscSNPrintf(buf, BUFSIZ, "%s;%s", nested_event_names[parent_id], stage_log->stageInfo[root_id].name));
+    PetscCall(PetscSNPrintf(buf, BUFSIZ, "%s;%s", nested_event_names[parent_id], stage_log->array[root_id].name));
   } else {
     if (parent_id <= MAINSTAGE_EVENT) {
       parent_id = -(parent_id+2);
       PetscCall(PetscStageLogComputeStageNestedName(stage_log, parent_id, nested_event_names, nested_stage_names));
-      PetscCall(PetscSNPrintf(buf, BUFSIZ, "%s;%s", nested_stage_names[parent_id], stage_log->stageInfo[root_id].name));
+      PetscCall(PetscSNPrintf(buf, BUFSIZ, "%s;%s", nested_stage_names[parent_id], stage_log->array[root_id].name));
     } else {
-      PetscCall(PetscSNPrintf(buf, BUFSIZ, "%s", stage_log->stageInfo[root_id].name));
+      PetscCall(PetscSNPrintf(buf, BUFSIZ, "%s", stage_log->array[root_id].name));
     }
   }
   PetscCall(PetscStrallocpy(buf, &nested_stage_names[stage_id]));
@@ -1245,14 +1244,14 @@ static PetscErrorCode PetscStageLogComputeEventNestedName(PetscStageLog stage_lo
   PetscCall(PetscLogGetEventLog(&event_log));
   if (parent_id >= 0) {
     PetscCall(PetscStageLogComputeEventNestedName(stage_log, parent_id, nested_event_names, nested_stage_names));
-    PetscCall(PetscSNPrintf(buf, BUFSIZ, "%s;%s", nested_event_names[parent_id], event_log->eventInfo[root_id].name));
+    PetscCall(PetscSNPrintf(buf, BUFSIZ, "%s;%s", nested_event_names[parent_id], event_log->array[root_id].name));
   } else {
     if (parent_id <= MAINSTAGE_EVENT) {
       parent_id = -(parent_id+2);
       PetscCall(PetscStageLogComputeStageNestedName(stage_log, parent_id, nested_event_names, nested_stage_names));
-      PetscCall(PetscSNPrintf(buf, BUFSIZ, "%s;%s", nested_stage_names[parent_id], event_log->eventInfo[root_id].name));
+      PetscCall(PetscSNPrintf(buf, BUFSIZ, "%s;%s", nested_stage_names[parent_id], event_log->array[root_id].name));
     } else {
-      PetscCall(PetscSNPrintf(buf, BUFSIZ, "%s", event_log->eventInfo[root_id].name));
+      PetscCall(PetscSNPrintf(buf, BUFSIZ, "%s", event_log->array[root_id].name));
     }
   }
   PetscCall(PetscStrallocpy(buf, &nested_event_names[event_id]));
@@ -1261,10 +1260,10 @@ static PetscErrorCode PetscStageLogComputeEventNestedName(PetscStageLog stage_lo
 
 static PetscErrorCode PetscStageLogNestNames(PetscStageLog stage_log)
 {
-  PetscInt num_stages = stage_log->numStages;
+  PetscInt num_stages = stage_log->num_entries;
   PetscEventRegLog event_log;
   PetscCall(PetscLogGetEventLog(&event_log));
-  PetscInt num_events = event_log->numEvents;
+  PetscInt num_events = event_log->num_entries;
   char **nested_stage_names;
   char **nested_event_names;
 
@@ -1278,15 +1277,15 @@ static PetscErrorCode PetscStageLogNestNames(PetscStageLog stage_log)
 
   for (NestedEventId i = 0; i < num_events; i++) {
     if (nested_event_names[i]) {
-      PetscCall(PetscFree(event_log->eventInfo[i].name));
-      event_log->eventInfo[i].name = nested_event_names[i];
+      PetscCall(PetscFree(event_log->array[i].name));
+      event_log->array[i].name = nested_event_names[i];
     }
   }
 
   for (NestedEventId i = 0; i < num_stages; i++) {
     if (nested_stage_names[i]) {
-      PetscCall(PetscFree(stage_log->stageInfo[i].name));
-      stage_log->stageInfo[i].name = nested_stage_names[i];
+      PetscCall(PetscFree(stage_log->array[i].name));
+      stage_log->array[i].name = nested_stage_names[i];
     }
   }
 
@@ -1316,8 +1315,8 @@ PetscErrorCode PetscLogView_Nested(PetscViewer viewer)
 
   // Print global information about this run
   PetscCall(PetscPrintExeSpecs(viewer));
-  PetscCall(PetscLogGetStageLog(&stage_log_orig));
-  locTotalTime = stage_log_orig->stageInfo[0].perfInfo.time; // Main stage time
+  PetscCall(bPetscLogGetDefaultHandlerb(&stage_log_orig));
+  locTotalTime = stage_log_orig->array[0].perfInfo.time; // Main stage time
   PetscCall(PetscPrintGlobalPerformance(viewer, locTotalTime));
 
   // Get nested names that can be used to unique global identities of stages and events
@@ -1374,7 +1373,7 @@ PetscErrorCode PetscLogView_Flamegraph(PetscViewer viewer)
 
   PetscFunctionBegin;
   comm = PetscObjectComm((PetscObject)viewer);
-  PetscCall(PetscLogGetStageLog(&stage_log_orig));
+  PetscCall(bPetscLogGetDefaultHandlerb(&stage_log_orig));
   {
     PetscLogGlobalNames global_stages, global_events;
     PetscStageLog stage_log_nested;
