@@ -4,9 +4,10 @@
 #ifndef PETSCLOG_H
 #define PETSCLOG_H
 
-#include <petscsys.h>
+#include <petscsystypes.h>
 #include <petsctime.h>
-#include <petscbt.h>
+#include <petscbttype.h>
+#include <petscoptions.h>
 
 /* SUBMANSEC = Sys */
 
@@ -164,9 +165,13 @@ struct _n_PetscLogRegistry {
   PetscStageRegLog stages;
   PetscBT          inactive;
   PetscIntStack    stage_stack;
-  PetscInt         stage_stride;
+  PetscInt         bt_num_stages;
+  PetscInt         bt_num_events;
   PetscInt         current_stage;
 };
+
+PETSC_EXTERN PetscErrorCode PetscLogRegistryCreate(PetscLogRegistry *);
+PETSC_EXTERN PetscErrorCode PetscLogRegistryDestroy(PetscLogRegistry);
 
 typedef PetscErrorCode (*PetscLogEventHandler)(PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject, void *);
 typedef PetscErrorCode (*PetscLogEventSyncHandler)(PetscLogEvent, MPI_Comm, void *);
@@ -235,6 +240,8 @@ typedef struct {
   int            id;                  /* The integer identifying this event / stage */
   int            depth;               /* The nesting depth of the event call */
   int            count;               /* The number of times this event was executed */
+  PetscBool      active;
+  PetscBool      visible;
   PetscLogDouble flops;               /* The flops used in this event */
   PetscLogDouble flops2;              /* The square of flops used in this event */
   PetscLogDouble flopsTmp;            /* The accumulator for flops used in this event */
@@ -277,6 +284,7 @@ struct _n_PetscEventPerfLog {
 typedef struct _PetscStageInfo {
   char              *name;     /* The stage name */
   PetscBool          used;     /* The stage was pushed on this processor */
+  PetscBool          active;
   PetscEventPerfInfo perfInfo; /* The stage performance information */
   PetscEventPerfLog  eventLog; /* The event information for this stage */
   PetscClassPerfLog  classLog; /* The class information for this stage */
@@ -316,7 +324,7 @@ PETSC_EXTERN PetscLogHandler PetscLogHandlers[PETSC_LOG_HANDLER_MAX];
 
 static inline PetscErrorCode PetscLogHandlersEventSync(PetscLogEvent e, MPI_Comm comm)
 {
-  if (petsc_log_registry && !PetscBTLookup(petsc_log_registry->inactive, e + petsc_log_registry->current_stage * petsc_log_registry->stage_stride)) {
+  if (petsc_log_registry && !PetscBTLookup(petsc_log_registry->inactive, e * petsc_log_registry->bt_num_stages + petsc_log_registry->current_stage)) {
     for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
       PetscLogHandler h = PetscLogHandlers[i];
       if (h && h->event_sync) {
@@ -330,7 +338,7 @@ static inline PetscErrorCode PetscLogHandlersEventSync(PetscLogEvent e, MPI_Comm
 
 static inline PetscErrorCode PetscLogHandlersEventBegin(PetscLogEvent e, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
 {
-  if (petsc_log_registry && !PetscBTLookup(petsc_log_registry->inactive, e + petsc_log_registry->current_stage * petsc_log_registry->stage_stride)) {
+  if (petsc_log_registry && !PetscBTLookup(petsc_log_registry->inactive, e * petsc_log_registry->bt_num_stages + petsc_log_registry->current_stage)) {
     for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
       PetscLogHandler h = PetscLogHandlers[i];
       if (h && h->event_begin) {
@@ -344,7 +352,7 @@ static inline PetscErrorCode PetscLogHandlersEventBegin(PetscLogEvent e, PetscOb
 
 static inline PetscErrorCode PetscLogHandlersEventEnd(PetscLogEvent e, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
 {
-  if (petsc_log_registry && !PetscBTLookup(petsc_log_registry->inactive, e + petsc_log_registry->current_stage * petsc_log_registry->stage_stride)) {
+  if (petsc_log_registry && !PetscBTLookup(petsc_log_registry->inactive, e * petsc_log_registry->bt_num_stages + petsc_log_registry->current_stage)) {
     for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
       PetscLogHandler h = PetscLogHandlers[i];
       if (h && h->event_end) {
@@ -447,6 +455,10 @@ PETSC_EXTERN PetscBool PetscLogMemory;
 
 PETSC_EXTERN PetscBool      PetscLogSyncOn; /* true if logging synchronization is enabled */
 PETSC_EXTERN PetscErrorCode PetscLogEventSynchronize(PetscLogEvent, MPI_Comm);
+PETSC_EXTERN PetscStageLog  petsc_stageLog;
+PETSC_EXTERN PetscErrorCode PetscLogPushCurrentEvent_Internal(PetscLogEvent);
+PETSC_EXTERN PetscErrorCode PetscLogPopCurrentEvent_Internal(void);
+PETSC_EXTERN PetscErrorCode PetscLogStageSet(PetscErrorCode (*)(PetscStageLog), PetscErrorCode (*)(PetscStageLog));
 
   #define PetscLogEventSync(e, comm) \
     ((PetscErrorCode)(((PetscLogPLB && petsc_stageLog->stageInfo[petsc_stageLog->curStage].perfInfo.active && petsc_stageLog->stageInfo[petsc_stageLog->curStage].eventLog->eventInfo[e].active) ? PetscLogEventSynchronize((e), (comm)) : PETSC_SUCCESS)))

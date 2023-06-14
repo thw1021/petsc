@@ -4,7 +4,8 @@
 #ifndef PETSCTIME_H
 #define PETSCTIME_H
 
-#include <petscsys.h>
+#include <petscsystypes.h>
+#include <petscsysmpi.h>
 
 /* SUBMANSEC = Sys */
 

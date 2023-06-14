@@ -6,6 +6,8 @@
 
 #include <petscmacros.h>
 #include <petscsystypes.h>
+#include <petscsyssaws.h>
+#include <petscmath.h>
 
 #if defined(__cplusplus)
   #include <exception> // std::exception
