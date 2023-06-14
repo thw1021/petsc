@@ -41,6 +41,7 @@ Changes: Development
 .. rubric:: Vec:
 
 - Add ``VecErrorWeightedNorms()`` to unify weighted local truncation error norms used in ``TS``
+- Add ``-vec_mdot_use_gemv`` to allow ``VecMDot()`` to use BLAS 2 ``gemv()`` instead of custom unrolled kernel
 
 .. rubric:: PetscSection:
 
