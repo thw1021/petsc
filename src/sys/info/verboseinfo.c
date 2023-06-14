@@ -426,7 +426,7 @@ PetscErrorCode PetscInfoSetFromOptions(PetscOptions options)
   Users calling this routine midway through a program should note that `PetscInfoDestroy()`
   constitutes a full reset of `PetscInfo()`. It flushes, then closes, the current info file,
   re-enables all classes, and resets all internal state. Finally -- and perhaps crucially -- it
-  disables `PetscInfo()`.
+  disables `PetscInfo()` as-if-by `PetscInfoAllow(PETSC_FALSE)`.
 
 .seealso: `PetscInfo()`, `PetscInfoSetFromOptions()`
 @*/
@@ -435,15 +435,19 @@ PetscErrorCode PetscInfoDestroy(void)
   PetscFunctionBegin;
   PetscCall(PetscInfoAllow(PETSC_FALSE));
   PetscCall(PetscStrNArrayDestroy(PetscInfoNumClasses, &PetscInfoClassnames));
-  PetscCall(PetscFFlush(PetscInfoFile));
-  if (PetscInfoFilename) PetscCall(PetscFClose(PETSC_COMM_SELF, PetscInfoFile));
-  PetscCall(PetscFree(PetscInfoFilename));
+  if (PetscInfoFile) PetscCall(PetscFFlush(PetscInfoFile));
+  if (PetscInfoFilename) {
+    PetscAssert(PetscInfoFile, PETSC_COMM_SELF, PETSC_ERR_ARG_NULL, "Have non-null PetscInfo file '%s', but corresponding FILE handle is null!", PetscInfoFilename);
+    PetscCall(PetscFree(PetscInfoFilename));
+    PetscCall(PetscFClose(PETSC_COMM_SELF, PetscInfoFile));
+  }
   PetscAssert(PETSC_STATIC_ARRAY_LENGTH(PetscInfoFlags) == PETSC_STATIC_ARRAY_LENGTH(PetscInfoNames), PETSC_COMM_SELF, PETSC_ERR_PLIB, "PetscInfoFlags and PetscInfoNames must be the same size");
   for (size_t i = 0; i < PETSC_STATIC_ARRAY_LENGTH(PetscInfoFlags); ++i) {
     PetscInfoFlags[i] = 1;
     PetscCall(PetscFree(PetscInfoNames[i]));
   }
 
+  PetscInfoFile          = NULL;
   PetscInfoClassesLocked = PETSC_FALSE;
   PetscInfoInvertClasses = PETSC_FALSE;
   PetscInfoClassesSet    = PETSC_FALSE;
