@@ -15,6 +15,8 @@
 
 #include <../src/vec/vec/impls/seq/cupm/vecseqcupm.hpp> // for VecSeq_CUPM
 
+#include <thrust/copy.h>
+
 namespace Petsc
 {
 
@@ -170,6 +172,8 @@ public:
 
   static PetscErrorCode GetSubMatrix(Mat, PetscInt, PetscInt, PetscInt, PetscInt, Mat *) noexcept;
   static PetscErrorCode RestoreSubMatrix(Mat, Mat *) noexcept;
+
+  static PetscErrorCode GetDiagonal(Mat, Vec) noexcept;
 };
 
 } // namespace impl
@@ -1061,6 +1065,7 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::BindToCPU(Mat A, PetscBool to_host) 
   MatSetOp_CUPM(to_host, A, zeroentries, MatZeroEntries_SeqDense, ZeroEntries);
   MatSetOp_CUPM(to_host, A, setup, MatSetUp_SeqDense, SetUp);
   MatSetOp_CUPM(to_host, A, setrandom, MatSetRandom_SeqDense, SetRandom);
+  MatSetOp_CUPM(to_host, A, getdiagonal, MatGetDiagonal_SeqDense, GetDiagonal);
   // seemingly always the same
   A->ops->productsetfromoptions = MatProductSetFromOptions_SeqDense;
 
@@ -1793,6 +1798,36 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::RestoreSubMatrix(Mat A, Mat *m) noex
 
   cmat->offloadmask = PETSC_OFFLOAD_UNALLOCATED;
   *m                = nullptr;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <device::cupm::DeviceType T>
+inline PetscErrorCode MatDense_Seq_CUPM<T>::GetDiagonal(Mat A, Vec v) noexcept
+{
+  const auto         m = A->rmap->n;
+  const auto         n = A->cmap->n;
+  PetscInt           nv, lda;
+  cupmStream_t       stream;
+  PetscDeviceContext dctx;
+
+  PetscFunctionBegin;
+  PetscCall(GetHandles_(&dctx, &stream));
+  PetscCall(VecGetSize(v, &nv));
+  PetscCheck(nv == m, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Nonconforming mat and vec, nv %" PetscInt_FMT " != m %" PetscInt_FMT, nv, m);
+  PetscCall(MatDenseGetLDA(A, &lda));
+  {
+    const auto dv       = VecSeq_CUPM::DeviceArrayWrite(dctx, v);
+    const auto da       = DeviceArrayRead(dctx, A);
+    auto       diagonal = detail::MakeDiagonalIterator(da.data(), 0, m, n, lda);
+
+    // clang-format off
+    PetscCallThrust(
+      THRUST_CALL(
+        thrust::copy, stream, diagonal.begin(), diagonal.end(), thrust::device_pointer_cast(dv.data())
+      )
+    );
+    // clang-format on
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

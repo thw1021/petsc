@@ -345,29 +345,34 @@ public:
   PETSC_NODISCARD iterator end() const noexcept { return this->begin() + (this->last - this->first + this->func.stride - 1) / this->func.stride; }
 };
 
+template <typename T>
+inline DiagonalIterator<thrust::device_vector<T>::iterator> MakeDiagonalIterator(T *data, PetscInt rstart, PetscInt rend, PetscInt cols, PetscInt lda) noexcept
+{
+  const auto        rend2 = std::min(rend, cols);
+  const std::size_t begin = rstart * lda;
+  const std::size_t end   = rend2 - rstart + rend2 * lda;
+  const auto        dptr  = thrust::device_pointer_cast(data);
+
+  return {dptr + begin, dptr + end, lda + 1};
+}
+
 } // namespace detail
 
 template <device::cupm::DeviceType T, typename D>
 template <typename F>
 inline PetscErrorCode MatDense_CUPM<T, D>::DiagonalUnaryTransform(Mat A, PetscInt rstart, PetscInt rend, PetscInt cols, PetscDeviceContext dctx, F &&functor) noexcept
 {
-  const auto rend2 = std::min(rend, cols);
-
   PetscFunctionBegin;
-  if (rend2 > rstart) {
-    const auto da = D::DeviceArrayReadWrite(dctx, A);
-    PetscInt   lda;
+  if (std::min(rend, cols) > rstart) {
+    const auto   da = D::DeviceArrayReadWrite(dctx, A);
+    cupmStream_t stream;
+    PetscInt     lda;
 
     PetscCall(MatDenseGetLDA(A, &lda));
+    PetscCall(D::GetHandlesFrom_(dctx, &stream));
     {
-      using DiagonalIterator  = detail::DiagonalIterator<thrust::device_vector<PetscScalar>::iterator>;
-      const auto        dptr  = thrust::device_pointer_cast(da.data());
-      const std::size_t begin = rstart * lda;
-      const std::size_t end   = rend2 - rstart + rend2 * lda;
-      DiagonalIterator  diagonal{dptr + begin, dptr + end, lda + 1};
-      cupmStream_t      stream;
+      auto diagonal = detail::MakeDiagonalIterator(da.data(), rstart, rend, cols, lda);
 
-      PetscCall(D::GetHandlesFrom_(dctx, &stream));
       // clang-format off
       PetscCallThrust(
         THRUST_CALL(
