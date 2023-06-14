@@ -6,14 +6,10 @@
 
 PETSC_EXTERN PetscEventRegLog petsc_eventLog;
 PETSC_EXTERN PetscClassRegLog petsc_classLog;
-PETSC_EXTERN PetscStageLog  petsc_stageLog;
 PETSC_EXTERN PetscErrorCode PetscLogGetStageLog(PetscStageLog *);
 PETSC_EXTERN PetscErrorCode PetscStageLogGetCurrent(PetscStageLog, int *);
 PETSC_EXTERN PetscErrorCode PetscStageLogGetEventPerfLog(PetscStageLog, int, PetscEventPerfLog *);
 PETSC_EXTERN PetscErrorCode PetscLogSet(PetscErrorCode (*)(int, int, PetscObject, PetscObject, PetscObject, PetscObject), PetscErrorCode (*)(int, int, PetscObject, PetscObject, PetscObject, PetscObject));
-PETSC_EXTERN PetscErrorCode PetscLogStageSet(PetscErrorCode (*)(PetscStageLog), PetscErrorCode (*)(PetscStageLog));
-PETSC_EXTERN PetscErrorCode PetscLogPushCurrentEvent_Internal(PetscLogEvent);
-PETSC_EXTERN PetscErrorCode PetscLogPopCurrentEvent_Internal(void);
 
 /* A simple stack */
 struct _n_PetscIntStack {
@@ -103,6 +99,9 @@ PETSC_EXTERN PetscErrorCode PetscIntStackPush(PetscIntStack, int);
 PETSC_EXTERN PetscErrorCode PetscIntStackPop(PetscIntStack, int *);
 PETSC_EXTERN PetscErrorCode PetscIntStackTop(PetscIntStack, int *);
 PETSC_EXTERN PetscErrorCode PetscIntStackEmpty(PetscIntStack, PetscBool *);
+
+PETSC_EXTERN PetscErrorCode PetscStageRegLogCreate(PetscStageRegLog *);
+PETSC_EXTERN PetscErrorCode PetscStageRegLogDestroy(PetscStageRegLog);
 
 /* Creation and destruction functions */
 PETSC_EXTERN PetscErrorCode PetscEventRegLogCreate(PetscEventRegLog *);

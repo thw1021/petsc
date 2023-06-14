@@ -10237,7 +10237,7 @@ PetscErrorCode DMCreateSubDomainDM_Plex(DM dm, DMLabel label, PetscInt value, IS
 @*/
 PetscErrorCode DMPlexMonitorThroughput(DM dm, void *dummy)
 {
-#if defined(PETSC_USE_LOG)
+#if defined(PETSC_USE_LOG) && 0 // TODO: fix DMPlexMonitorThroughput()
   PetscStageLog      stageLog;
   PetscLogEvent      event;
   PetscLogStage      stage;
@@ -10249,7 +10249,7 @@ PetscErrorCode DMPlexMonitorThroughput(DM dm, void *dummy)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-#if defined(PETSC_USE_LOG)
+#if defined(PETSC_USE_LOG) && 0 // TODO: fix DMPlexMonitorThroughput()
   PetscCall(PetscObjectGetName((PetscObject)dm, &name));
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
   PetscCall(DMGetNumFields(dm, &Nf));
