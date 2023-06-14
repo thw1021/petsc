@@ -85,7 +85,7 @@ PetscErrorCode PetscLogView_VecScatter(PetscViewer viewer)
   locTotalTime -= petsc_BaseTime;
   PetscCallMPI(MPI_Comm_size(comm, &size));
   PetscCallMPI(MPI_Comm_rank(comm, &rank));
-  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
   PetscCall(PetscViewerASCIIPrintf(viewer, "numProcs   = %d\n", size));
 
   PetscCall(PetscGetArchType(arch, sizeof(arch)));

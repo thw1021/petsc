@@ -487,7 +487,7 @@ static PetscErrorCode PetscFEOpenCLLogResidual(PetscFE fem, PetscLogDouble time,
   int               stage;
 
   PetscFunctionBegin;
-  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
   PetscCall(PetscStageLogGetCurrent(stageLog, &stage));
   PetscCall(PetscStageLogGetEventPerfLog(stageLog, stage, &eventLog));
   /* Log performance info */

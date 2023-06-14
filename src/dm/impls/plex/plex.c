@@ -10253,7 +10253,7 @@ PetscErrorCode DMPlexMonitorThroughput(DM dm, void *dummy)
   PetscCall(PetscObjectGetName((PetscObject)dm, &name));
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
   PetscCall(DMGetNumFields(dm, &Nf));
-  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
   PetscCall(PetscStageLogGetCurrent(stageLog, &stage));
   PetscCall(PetscLogEventGetId("DMPlexResidualFE", &event));
   PetscCall(PetscLogEventGetPerfInfo(stage, event, &eventInfo));

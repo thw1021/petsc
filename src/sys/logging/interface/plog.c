@@ -47,41 +47,17 @@ PetscErrorCode PetscLogGetRegistry(PetscLogRegistry *registry_p)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogRegistryBTResize(PetscBT *bt_p, PetscInt old_num_stages, PetscInt old_num_events, PetscInt new_num_stages, PetscInt new_num_events)
-{
-  PetscBT bt_new;
+PetscLogState petsc_log_state = NULL;
 
+PetscErrorCode PetscLogGetState(PetscLogState *state_p)
+{
   PetscFunctionBegin;
-  if (old_num_stages == new_num_stages && old_num_events == new_num_events) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscCheck(new_num_stages >= old_num_stages && new_num_events >= old_num_events, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "New PetscBT sizes must not be smaller than old PetscBT sizes");
-  PetscCall(PetscBTCreate(new_num_stages * new_num_events, &bt_new));
-  if (new_num_stages == old_num_stages) {
-    size_t old_num_chars = 0;
-    size_t old_actual_size = (size_t) PetscMax(0, old_num_events * old_num_stages);
-    if (old_actual_size) old_num_chars = (old_actual_size - 1) / PETSC_BITS_PER_BYTE + 1;
-    PetscCall(PetscMemcpy(bt_new, *bt_p, old_num_chars));
-  } else {
-    size_t old_chars_per_event = 0;
-    size_t new_chars_per_event = 0;
-    PetscCheck(((old_num_stages % PETSC_BITS_PER_BYTE) == 0) && ((new_num_stages % PETSC_BITS_PER_BYTE) == 0), PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Number of stages must be multiples of %d\n", PETSC_BITS_PER_BYTE);
-    if (old_num_stages) old_chars_per_event = (old_num_stages - 1) / PETSC_BITS_PER_BYTE + 1;
-    if (new_num_stages) new_chars_per_event = (new_num_stages - 1) / PETSC_BITS_PER_BYTE + 1;
-    for (PetscInt i = 0; i < old_num_events; i++) PetscCall(PetscMemcpy(&((char *) bt_new)[i * new_chars_per_event], &((char *) *bt_p)[i * old_chars_per_event], old_chars_per_event));
+  PetscValidPointer(state_p, 1);
+  if (!petsc_log_state) {
+    fprintf(stderr, "PETSC ERROR: Logging has not been enabled.\nYou might have forgotten to call PetscInitialize().\n");
+    PETSCABORT(MPI_COMM_WORLD, PETSC_ERR_SUP);
   }
-  PetscCall(PetscBTDestroy(bt_p));
-  *bt_p = bt_new;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PetscErrorCode PetscLogRegistryEventRegister(PetscLogRegistry registry, const char name[], PetscClassId classid, PetscLogEvent *event)
-{
-  PetscFunctionBegin;
-  *event = PETSC_DECIDE;
-  PetscCall(PetscEventRegLogGetEvent(registry->events, name, event));
-  if (*event > 0) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscCall(PetscEventRegLogRegister(registry->events, name, classid, event));
-  if (registry->events->max_entries != registry->bt_num_events) PetscCall(PetscLogRegistryBTResize(&registry->inactive, registry->bt_num_stages, registry->bt_num_events, registry->bt_num_stages, registry->events->num_entries));
-  registry->bt_num_events = registry->events->num_entries;
+  *state_p = petsc_log_state;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -266,7 +242,6 @@ PETSC_INTERN PetscErrorCode PetscLogFinalize(void)
   PetscCall(PetscFree(petsc_actions));
   PetscCall(PetscFree(petsc_objects));
   PetscCall(PetscLogNestedEnd());
-  PetscCall(PetscLogSet(NULL, NULL));
 
   /* Resetting phase */
   PetscCall(PetscLogGetRegistry(&registry));
@@ -442,7 +417,7 @@ PetscErrorCode PetscLogStageRegister(const char sname[], PetscLogStage *stage)
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetRegistry(&registry));
-  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
   PetscCall(PetscLogGetEventLog(&event_log));
   PetscCall(PetscLogGetClassLog(&class_log));
   PetscCall(PetscStageLogRegister(stageLog, sname, stage));
@@ -459,11 +434,14 @@ PetscErrorCode PetscLogStageRegister(const char sname[], PetscLogStage *stage)
 PETSC_INTERN PetscErrorCode PetscLogStagePush_Internal(PetscLogStage stage)
 {
   PetscLogRegistry registry;
+  PetscLogState   state;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetRegistry(&registry));
+  PetscCheck(stage >= 0 && stage < registry->stages->num_entries, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d not in [0,%d)", stage, (int) registry->stages->num_entries);
+  PetscCall(PetscLogGetState(&state));
   PetscCall(PetscSpinlockLock(&PetscLogSpinLock));
-  PetscCall(PetscLogRegistryStagePush(registry, stage));
+  PetscCall(PetscLogStateStagePush(state, stage));
   PetscCall(PetscSpinlockUnlock(&PetscLogSpinLock));
   #if defined(PETSC_HAVE_TAU_PERFSTUBS) && 0 // TODO perfstubs
   if (perfstubs_initialized == PERFSTUBS_SUCCESS && stageLog->array[stage].timer != NULL) PetscStackCallExternalVoid("ps_timer_start_", ps_timer_start_(stageLog->array[stage].timer));
@@ -514,15 +492,15 @@ PetscErrorCode PetscLogStagePush(PetscLogStage stage)
 
 PETSC_INTERN PetscErrorCode PetscLogStagePop_Internal()
 {
-  PetscLogRegistry registry;
+  PetscLogState state;
 
   PetscFunctionBegin;
-  PetscCall(PetscLogGetRegistry(&registry));
+  PetscCall(PetscLogGetState(&state));
   #if defined(PETSC_HAVE_TAU_PERFSTUBS) && 0 // TODO: perfstubs
   if (perfstubs_initialized == PERFSTUBS_SUCCESS && stageLog->array[stageLog->curStage].timer != NULL) PetscStackCallExternalVoid("ps_timer_stop_", ps_timer_stop_(stageLog->array[stageLog->curStage].timer));
   #endif
   PetscCall(PetscSpinlockLock(&PetscLogSpinLock));
-  PetscCall(PetscLogRegistryStagePop(registry));
+  PetscCall(PetscLogStateStagePop(state));
   PetscCall(PetscSpinlockUnlock(&PetscLogSpinLock));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -553,13 +531,13 @@ PETSC_INTERN PetscErrorCode PetscLogStagePop_Internal()
 @*/
 PetscErrorCode PetscLogStagePop(void)
 {
-  PetscLogRegistry registry;
+  PetscLogState state;
 
   PetscFunctionBegin;
-  PetscCall(PetscLogGetRegistry(&registry));
+  PetscCall(PetscLogGetState(&state));
   for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
     PetscLogHandler h = PetscLogHandlers[i];
-    if (h && h->stage_pop) PetscCall((*(h->stage_pop))(registry->current_stage, h->ctx));
+    if (h && h->stage_pop) PetscCall((*(h->stage_pop))(state->current_stage, h->ctx));
   }
   PetscCall(PetscLogStagePop_Internal());
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -586,7 +564,7 @@ PetscErrorCode PetscLogStageSetActive(PetscLogStage stage, PetscBool isActive)
   PetscStageLog stageLog;
 
   PetscFunctionBegin;
-  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
   PetscCall(PetscStageLogSetActive(stageLog, stage, isActive));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -611,7 +589,7 @@ PetscErrorCode PetscLogStageGetActive(PetscLogStage stage, PetscBool *isActive)
   PetscStageLog stageLog;
 
   PetscFunctionBegin;
-  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
   PetscCall(PetscStageLogGetActive(stageLog, stage, isActive));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -637,7 +615,7 @@ PetscErrorCode PetscLogStageSetVisible(PetscLogStage stage, PetscBool isVisible)
   PetscStageLog stageLog;
 
   PetscFunctionBegin;
-  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
   PetscCall(PetscStageLogSetVisible(stageLog, stage, isVisible));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -662,7 +640,7 @@ PetscErrorCode PetscLogStageGetVisible(PetscLogStage stage, PetscBool *isVisible
   PetscStageLog stageLog;
 
   PetscFunctionBegin;
-  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
   PetscCall(PetscStageLogGetVisible(stageLog, stage, isVisible));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -687,7 +665,7 @@ PetscErrorCode PetscLogStageGetId(const char name[], PetscLogStage *stage)
   PetscStageLog stageLog;
 
   PetscFunctionBegin;
-  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
   PetscCall(PetscStageLogGetStage(stageLog, name, stage));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -751,25 +729,16 @@ PetscErrorCode PetscLogStageGetId(const char name[], PetscLogStage *stage)
 PetscErrorCode PetscLogEventRegister(const char name[], PetscClassId classid, PetscLogEvent *event)
 {
   PetscLogRegistry registry;
+  PetscLogState state;
   PetscStageLog stageLog;
-  PetscEventRegLog event_log;
-  PetscClassRegLog class_log;
-  int           stage;
 
   PetscFunctionBegin;
   *event = PETSC_DECIDE;
   PetscCall(PetscLogGetRegistry(&registry));
+  PetscCall(PetscLogGetState(&state));
   PetscCall(PetscLogRegistryEventRegister(registry, name, classid, event));
-  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
-  PetscCall(PetscLogGetEventLog(&event_log));
-  PetscCall(PetscLogGetClassLog(&class_log));
-  PetscCall(PetscEventRegLogGetEvent(event_log, name, event));
-  if (*event > 0) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscCall(PetscEventRegLogRegister(event_log, name, classid, event));
-  for (stage = 0; stage < stageLog->num_entries; stage++) {
-    PetscCall(PetscEventPerfLogEnsureSize(stageLog->array[stage].eventLog, event_log->num_entries));
-    PetscCall(PetscClassPerfLogEnsureSize(stageLog->array[stage].classLog, class_log->num_entries));
-  }
+  PetscCall(PetscLogStateEnsureSize(state, registry->stages->max_entries, registry->events->max_entries));
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -799,7 +768,7 @@ PetscErrorCode PetscLogEventSetCollective(PetscLogEvent event, PetscBool collect
   PetscEventRegLog eventRegLog;
 
   PetscFunctionBegin;
-  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
   PetscCall(PetscStageLogGetEventRegLog(stageLog, &eventRegLog));
   PetscCheck(event >= 0 && event <= eventRegLog->num_entries, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid event id");
   eventRegLog->array[event].collective = collective;
@@ -825,7 +794,7 @@ PetscErrorCode PetscLogEventIncludeClass(PetscClassId classid)
   int           stage;
 
   PetscFunctionBegin;
-  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
   PetscCall(PetscLogGetEventLog(&event_log));
   for (stage = 0; stage < stageLog->num_entries; stage++) PetscCall(PetscEventPerfLogActivateClass(stageLog->array[stage].eventLog, event_log, classid));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -853,7 +822,7 @@ PetscErrorCode PetscLogEventExcludeClass(PetscClassId classid)
   int           stage;
 
   PetscFunctionBegin;
-  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
   PetscCall(PetscLogGetEventLog(&event_log));
   for (stage = 0; stage < stageLog->num_entries; stage++) PetscCall(PetscEventPerfLogDeactivateClass(stageLog->array[stage].eventLog, event_log, classid));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -889,7 +858,7 @@ PetscErrorCode PetscLogEventActivate(PetscLogEvent event)
   int           stage;
 
   PetscFunctionBegin;
-  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
   PetscCall(PetscStageLogGetCurrent(stageLog, &stage));
   PetscCall(PetscEventPerfLogActivate(stageLog->array[stage].eventLog, event));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -925,7 +894,7 @@ PetscErrorCode PetscLogEventDeactivate(PetscLogEvent event)
   int           stage;
 
   PetscFunctionBegin;
-  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
   PetscCall(PetscStageLogGetCurrent(stageLog, &stage));
   PetscCall(PetscEventPerfLogDeactivate(stageLog->array[stage].eventLog, event));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -961,7 +930,7 @@ PetscErrorCode PetscLogEventDeactivatePush(PetscLogEvent event)
   int           stage;
 
   PetscFunctionBegin;
-  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
   PetscCall(PetscStageLogGetCurrent(stageLog, &stage));
   PetscCall(PetscEventPerfLogDeactivatePush(stageLog->array[stage].eventLog, event));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -997,7 +966,7 @@ PetscErrorCode PetscLogEventDeactivatePop(PetscLogEvent event)
   int           stage;
 
   PetscFunctionBegin;
-  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
   PetscCall(PetscStageLogGetCurrent(stageLog, &stage));
   PetscCall(PetscEventPerfLogDeactivatePop(stageLog->array[stage].eventLog, event));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1022,7 +991,7 @@ PetscErrorCode PetscLogEventSetActiveAll(PetscLogEvent event, PetscBool isActive
   int           stage;
 
   PetscFunctionBegin;
-  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
   for (stage = 0; stage < stageLog->num_entries; stage++) {
     if (isActive) {
       PetscCall(PetscEventPerfLogActivate(stageLog->array[stage].eventLog, event));
@@ -1052,7 +1021,7 @@ PetscErrorCode PetscLogEventActivateClass(PetscClassId classid)
   int           stage;
 
   PetscFunctionBegin;
-  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
   PetscCall(PetscLogGetEventLog(&event_log));
   PetscCall(PetscStageLogGetCurrent(stageLog, &stage));
   PetscCall(PetscEventPerfLogActivateClass(stageLog->array[stage].eventLog, event_log, classid));
@@ -1078,7 +1047,7 @@ PetscErrorCode PetscLogEventDeactivateClass(PetscClassId classid)
   int           stage;
 
   PetscFunctionBegin;
-  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
   PetscCall(PetscLogGetEventLog(&event_log));
   PetscCall(PetscStageLogGetCurrent(stageLog, &stage));
   PetscCall(PetscEventPerfLogDeactivateClass(stageLog->array[stage].eventLog, event_log, classid));
@@ -1208,7 +1177,7 @@ PetscErrorCode PetscLogEventGetId(const char name[], PetscLogEvent *event)
   PetscEventRegLog event_log;
 
   PetscFunctionBegin;
-  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
   PetscCall(PetscLogGetEventLog(&event_log));
   PetscCall(PetscEventRegLogGetEvent(event_log, name, event));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1256,7 +1225,7 @@ PetscErrorCode PetscLogEventResume_Internal(PetscLogEvent event)
   PetscFunctionBegin;
   if (event == PETSC_DECIDE) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscLogEventBegin(event, NULL, NULL, NULL, NULL));
-  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
   PetscCall(PetscStageLogGetCurrent(stageLog, &stage));
   PetscCall(PetscStageLogGetEventPerfLog(stageLog, stage, &eventLog));
   eventLog->array[event].count--;
@@ -1616,7 +1585,7 @@ PetscErrorCode PetscLogDump(const char sname[])
   }
   /* Output events */
   PetscCall(PetscFPrintf(PETSC_COMM_SELF, fd, "Event log:\n"));
-  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
   PetscCall(PetscIntStackTop(stageLog->stack, &curStage));
   eventInfo = stageLog->array[curStage].eventLog->array;
   for (event = 0; event < stageLog->array[curStage].eventLog->num_entries; event++) {
@@ -1658,7 +1627,7 @@ PetscErrorCode PetscLogView_Detailed(PetscViewer viewer)
   PetscCall(PetscViewerASCIIPrintf(viewer, "LocalFlop = {}\n"));
   PetscCall(PetscViewerASCIIPrintf(viewer, "LocalObjects = {}\n"));
   PetscCall(PetscViewerASCIIPrintf(viewer, "LocalMemory = {}\n"));
-  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
   PetscCall(PetscStageLogCreateGlobalStageNames(comm, stageLog, &global_stages));
   PetscCall(PetscStageLogCreateGlobalEventNames(comm, stageLog, &global_events));
   numStages = global_stages->count;
@@ -1751,7 +1720,7 @@ PetscErrorCode PetscLogView_CSV(PetscViewer viewer)
   /* Get the total elapsed time */
   PetscCall(PetscTime(&locTotalTime));
   locTotalTime -= petsc_BaseTime;
-  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
   PetscCallMPI(MPI_Allreduce(&stageLog->num_entries, &numStages, 1, MPI_INT, MPI_MAX, comm));
   PetscCall(PetscMallocGetMaximumUsage(&maxMem));
   PetscCall(PetscStageLogCreateGlobalStageNames(comm, stageLog, &global_stages));
@@ -2049,7 +2018,7 @@ PetscErrorCode PetscLogView_Default(PetscViewer viewer)
   PetscCall(PetscFPrintf(comm, fd, "                            e.g., VecAXPY() for real vectors of length N --> 2N flops\n"));
   PetscCall(PetscFPrintf(comm, fd, "                            and VecAXPY() for complex vectors of length N --> 8N flops\n"));
 
-  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
   PetscCall(PetscLogGetEventLog(&event_log));
   PetscCall(PetscLogGetClassLog(&class_log));
   PetscCall(PetscStageLogCreateGlobalStageNames(comm, stageLog, &global_stages));
@@ -2472,7 +2441,7 @@ PetscErrorCode PetscLogView(PetscViewer viewer)
   PetscCheck(PetscLogPLB, PETSC_COMM_SELF, PETSC_ERR_SUP, "Must use -log_view or PetscLogDefaultBegin() before calling this routine");
   /* Pop off any stages the user forgot to remove */
   lastStage = 0;
-  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
   PetscCall(PetscStageLogGetCurrent(stageLog, &stage));
   while (stage >= 0) {
     lastStage = stage;
@@ -2838,7 +2807,7 @@ PetscErrorCode PetscClassIdRegister(const char name[], PetscClassId *oclass)
   PetscFunctionBegin;
   *oclass = ++PETSC_LARGEST_CLASSID;
 #if defined(PETSC_USE_LOG)
-  PetscCall(bPetscLogGetDefaultHandlerb(&stageLog));
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
   PetscCall(PetscLogGetClassLog(&class_log));
   PetscCall(PetscClassRegLogRegister(class_log, name, *oclass));
   for (stage = 0; stage < stageLog->num_entries; stage++) PetscCall(PetscClassPerfLogEnsureSize(stageLog->array[stage].classLog, class_log->num_entries));
@@ -2943,6 +2912,17 @@ PetscErrorCode PetscLogMPEGetRGBColor(const char *str[])
   PetscFunctionBegin;
   *str = PetscLogMPERGBColors[idx];
   idx  = (idx + 1) % PETSC_RGB_COLORS_MAX;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscLogStageGetCurrent - Description
+
+@*/
+PetscErrorCode PetscLogStageGetCurrent(PetscLogState *current)
+{
+  PetscFunctionBegin;
+  
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
