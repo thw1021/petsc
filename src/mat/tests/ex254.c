@@ -49,6 +49,7 @@ int main(int argc, char **args)
   for (k = 0; k < coo[rank].n; k++) {
     vals[k] = coo[rank].j[k];
     PetscCall(MatSetValue(A, coo[rank].i[k], coo[rank].j[k], vals[k], ADD_VALUES));
+    PetscCall(MatSetValue(A, coo[rank].i[k], coo[rank].j[k], vals[k], ADD_VALUES)); // mainly to test MATHYPRE with repeated MatSetValuesCOO(.., ADD_VALUES)
   }
   PetscCall(MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY));
   PetscCall(MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY));
@@ -60,6 +61,7 @@ int main(int argc, char **args)
   PetscCall(MatSetPreallocationCOO(B, coo[rank].n, coo[rank].i, coo[rank].j));
 
   PetscCall(MatSetValuesCOO(B, vals, ADD_VALUES));
+  PetscCall(MatSetValuesCOO(B, vals, ADD_VALUES)); // add values again. If B is of MATHYPRE, PETSc needs to handle diagonal entries specially
   PetscCall(MatEqual(A, B, &equal));
 
   if (!equal) {
