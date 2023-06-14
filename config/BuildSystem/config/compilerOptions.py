@@ -61,7 +61,7 @@ class CompilerOptions(config.base.Configure):
           flags.append('-g')
           flags.append('-O3')
       # Windows Intel
-      elif 'win_icl' in or re_win32fe_icl.search(compiler):
+      elif 'win_icl' in compiler or re_win32fe_icl.search(compiler):
         if bopt == '':
           flags.extend(['-Qstd=c99'])
           if self.argDB['with-shared-libraries']:
