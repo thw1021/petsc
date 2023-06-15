@@ -13,9 +13,8 @@ struct _n_PetscLogGlobalNames {
 
 PETSC_INTERN PetscErrorCode PetscLogGlobalNamesCreate(MPI_Comm, PetscInt, const char **, PetscLogGlobalNames *);
 PETSC_INTERN PetscErrorCode PetscLogGlobalNamesDestroy(PetscLogGlobalNames *);
-PETSC_INTERN PetscErrorCode PetscStageLogCreateGlobalStageNames(MPI_Comm, PetscStageLog, PetscLogGlobalNames *);
-PETSC_INTERN PetscErrorCode PetscStageLogCreateGlobalEventNames(MPI_Comm, PetscStageLog, PetscLogGlobalNames *);
+PETSC_INTERN PetscErrorCode PetscStageLogCreateGlobalStageNames(MPI_Comm, PetscLogRegistry, PetscLogGlobalNames *);
+PETSC_INTERN PetscErrorCode PetscStageLogCreateGlobalEventNames(MPI_Comm, PetscLogRegistry, PetscLogGlobalNames *);
 
-PETSC_INTERN PetscErrorCode PetscStageLogDuplicate(PetscStageLog, PetscStageLog *);
 
 #endif // define PLOG_H
