@@ -1,15 +1,16 @@
 
 #include <petsc/private/logimpl.h> /*I "petsclog.h" I*/
 
-PETSC_INTERN PetscErrorCode PetscLogStateCreate(PetscInt num_stages, PetscInt num_events, PetscLogState *state_p)
+PETSC_INTERN PetscErrorCode PetscLogStateCreate(PetscLogState *state_p)
 {
   PetscLogState state;
 
   PetscFunctionBegin;
   PetscCall(PetscNew(state_p));
   state = *state_p;
-  state->bt_num_stages = num_stages;
-  state->bt_num_events = num_events;
+  PetscCall(PetscLogRegistryCreate(&state->registry));
+  state->bt_num_stages = state->registry->stages->max_entries;
+  state->bt_num_events = state->registry->events->max_entries;
 
   PetscCall(PetscIntStackCreate(&state->stage_stack));
   PetscCall(PetscBTCreate(state->bt_num_stages * state->bt_num_events, &state->inactive));
@@ -20,7 +21,8 @@ PETSC_INTERN PetscErrorCode PetscLogStateCreate(PetscInt num_stages, PetscInt nu
 PETSC_INTERN PetscErrorCode PetscLogStateDestroy(PetscLogState state)
 {
   PetscFunctionBegin;
-
+  PetscCall(PetscSpinlockDestroy(&state->lock));
+  PetscCall(PetscLogRegistryDestroy(state->registry));
   PetscCall(PetscIntStackDestroy(state->stage_stack));
   PetscCall(PetscBTDestroy(&state->inactive));
   
@@ -31,8 +33,10 @@ PETSC_INTERN PetscErrorCode PetscLogStateStagePush(PetscLogState state, PetscLog
 {
   PetscFunctionBegin;
   /* Activate the stage */
+  PetscCall(PetscLogStateLock(state));
   PetscCall(PetscIntStackPush(state->stage_stack, stage));
   state->current_stage = stage;
+  PetscCall(PetscLogStateUnlock(state));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -43,12 +47,14 @@ PETSC_INTERN PetscErrorCode PetscLogStateStagePop(PetscLogState state)
 
   PetscFunctionBegin;
   /* Record flops/time of current stage */
+  PetscCall(PetscLogStateLock(state));
   PetscCall(PetscIntStackPop(state->stage_stack, &curStage));
   PetscCall(PetscIntStackEmpty(state->stage_stack, &empty));
   if (!empty) {
     /* Subtract current quantities so that we obtain the difference when we pop */
     PetscCall(PetscIntStackTop(state->stage_stack, &state->current_stage));
   } else state->current_stage = -1;
+  PetscCall(PetscLogStateUnlock(state));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -93,5 +99,46 @@ PETSC_INTERN PetscErrorCode PetscLogStateEnsureSize(PetscLogState state, PetscIn
     state->bt_num_stages = new_num_stages;
     state->bt_num_events = new_num_events;
   }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode PetscLogStateLock(PetscLogState state)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscLogRegistryLock(state->registry));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode PetscLogStateUnlock(PetscLogState state)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscLogRegistryUnlock(state->registry));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode PetscLogStateStageRegister(PetscLogState state, const char sname[], PetscLogStage *stage)
+{
+  PetscLogRegistry registry;
+
+  PetscFunctionBegin;
+  PetscCall(PetscLogStateGetRegistry(state, &registry));
+  PetscCall(PetscLogRegistryStageRegister(registry, sname, stage));
+  PetscCall(PetscLogStateLock(state));
+  PetscCall(PetscLogStateEnsureSize(state, registry->stages->max_entries, registry->events->max_entries));
+  PetscCall(PetscLogStateUnlock(state));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode PetscLogStateEventRegister(PetscLogState state, const char sname[], PetscClassId id, PetscLogEvent *event)
+{
+  PetscLogRegistry registry;
+
+  PetscFunctionBegin;
+  *event = PETSC_DECIDE;
+  PetscCall(PetscLogStateGetRegistry(state, &registry));
+  PetscCall(PetscLogRegistryEventRegister(registry, sname, id, event));
+  PetscCall(PetscLogStateLock(state));
+  PetscCall(PetscLogStateEnsureSize(state, registry->stages->max_entries, registry->events->max_entries));
+  PetscCall(PetscLogStateUnlock(state));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

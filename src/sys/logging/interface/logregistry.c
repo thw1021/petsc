@@ -11,6 +11,7 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryCreate(PetscLogRegistry *registry_p)
   PetscCall(PetscEventRegLogCreate(&registry->events));
   PetscCall(PetscClassRegLogCreate(&registry->classes));
   PetscCall(PetscStageRegLogCreate(&registry->stages));
+  PetscCall(PetscSpinlockCreate(&registry->lock));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -27,7 +28,9 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryDestroy(PetscLogRegistry registry)
 PETSC_INTERN PetscErrorCode PetscLogRegistryStageRegister(PetscLogRegistry registry, const char sname[], int *stage)
 {
   PetscFunctionBegin;
+  PetscCall(PetscLogRegistryLock(registry));
   PetscCall(PetscStageRegLogInsert(registry->stages, sname, stage));
+  PetscCall(PetscLogRegistryUnlock(registry));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -38,5 +41,19 @@ PetscErrorCode PetscLogRegistryEventRegister(PetscLogRegistry registry, const ch
   PetscCall(PetscEventRegLogGetEvent(registry->events, name, event));
   if (*event > 0) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscEventRegLogRegister(registry->events, name, classid, event));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode PetscLogRegistryLock(PetscLogRegistry registry)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscSpinlockLock(&registry->lock));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode PetscLogRegistryUnlock(PetscLogRegistry registry)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscSpinlockLock(&registry->lock));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
