@@ -1901,7 +1901,7 @@ cdef class KSP(Object):
         Parameters
         ----------
         x
-            Optional vector to use to store the solution.
+            Optional vector to store the solution.
 
         See Also
         --------
