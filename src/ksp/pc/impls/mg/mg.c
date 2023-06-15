@@ -715,20 +715,12 @@ PetscErrorCode PCSetFromOptions_MG(PC pc, PetscOptionItems *PetscOptionsObject)
       }
     }
 
-#if defined(PETSC_USE_LOG) && 0 // TODO: fix PCSetFromOptinons_MG
+#if defined(PETSC_USE_LOG)
     {
-      const char   *sname = "MG Apply";
-      PetscStageLog stageLog;
-      PetscInt      st;
+      const char sname[] = "MG Apply";
 
-      PetscCall(PetscLogGetDefaultHandler(&stageLog));
-      for (st = 0; st < stageLog->numStages; ++st) {
-        PetscBool same;
-
-        PetscCall(PetscStrcmp(stageLog->stageInfo[st].name, sname, &same));
-        if (same) mg->stageApply = st;
-      }
-      if (!mg->stageApply) PetscCall(PetscLogStageRegister(sname, &mg->stageApply));
+      PetscCall(PetscLogStageGetId(sname, &mg->stageApply));
+      if (mg->stageApply < 0) PetscCall(PetscLogStageRegister(sname, &mg->stageApply));
     }
 #endif
   }

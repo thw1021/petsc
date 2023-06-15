@@ -482,14 +482,11 @@ static PetscErrorCode PetscFEOpenCLCalculateGrid(PetscFE fem, PetscInt N, PetscI
 static PetscErrorCode PetscFEOpenCLLogResidual(PetscFE fem, PetscLogDouble time, PetscLogDouble flops)
 {
   PetscFE_OpenCL   *ocl = (PetscFE_OpenCL *)fem->data;
-  PetscStageLog     stageLog;
-  PetscEventPerfLog eventLog = NULL;
+  PetscEventPerfInfo eventInfo = NULL;
   int               stage;
 
   PetscFunctionBegin;
-  PetscCall(PetscLogGetDefaultHandler(&stageLog));
-  PetscCall(PetscStageLogGetCurrent(stageLog, &stage));
-  PetscCall(PetscStageLogGetEventPerfLog(stageLog, stage, &eventLog));
+  PetscCall(PetscLogEventGetPerfInfo(-1, ocl->residualEvent, &eventInfo));
   /* Log performance info */
   eventLog->eventInfo[ocl->residualEvent].count++;
   eventLog->eventInfo[ocl->residualEvent].time += time;

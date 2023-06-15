@@ -108,14 +108,14 @@ static NestedEventId    *nested_event_to_root_event  = NULL;
 
 static PetscErrorCode DefaultStageToNestedStage(NestedEventId id, NestedEventId *root_id)
 {
-  PetscStageLog stageLog;
+  PetscLogRegistry registry;
 
   PetscFunctionBegin;
-  PetscCall(PetscLogGetDefaultHandler(&stageLog));
+  PetscCall(PetscLogGetRegistry(&registry));
   if (!nested_stage_to_root_stage) {
-    PetscCall(PetscMalloc1(stageLog->num_entries, &nested_stage_to_root_stage));
-    for (int i = 0; i < stageLog->num_entries; i++) nested_stage_to_root_stage[i] = i;
-    num_stages_allocated = stageLog->num_entries;
+    PetscCall(PetscMalloc1(registry->stages->num_entries, &nested_stage_to_root_stage));
+    for (int i = 0; i < registry->stages->num_entries; i++) nested_stage_to_root_stage[i] = i;
+    num_stages_allocated = registry->stages->num_entries;
   }
   if (id < num_stages_allocated) {
     *root_id = nested_stage_to_root_stage[id];
@@ -184,8 +184,8 @@ static PetscErrorCode DefaultEventSetNestedEvent(NestedEventId id, NestedEventId
 
 static PetscErrorCode       PetscLogEventBeginNested(NestedEventId nstEvent, int t, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4);
 static PetscErrorCode       PetscLogEventEndNested(NestedEventId nstEvent, int t, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4);
-static PetscErrorCode       PetscLogStageBeginHandler_Nested(PetscStageLog);
-static PetscErrorCode       PetscLogStageEndHandler_Nested(PetscStageLog);
+//static PetscErrorCode       PetscLogStageBeginHandler_Nested(PetscStageLog);
+//static PetscErrorCode       PetscLogStageEndHandler_Nested(PetscStageLog);
 PETSC_INTERN PetscErrorCode PetscLogView_Nested(PetscViewer);
 PETSC_INTERN PetscErrorCode PetscLogView_Flamegraph(PetscViewer);
 static PetscClassId         LogNestedEvent = -1;
@@ -365,7 +365,6 @@ static PetscErrorCode PetscLogEventBeginNested_Internal(NestedEventId nstEvent, 
 
     if (pentry >= nParents || dftParentActive != dftParentsSorted[pentry]) {
       /* dftParentActive not in the list: add it to the list */
-      PetscStageLog  stage_log;
       int            i, current_stage;
       PetscLogEvent *dftParents      = nestedEvents[entry].dftParents;
       PetscLogEvent *dftEventsSorted = nestedEvents[entry].dftEventsSorted;
@@ -373,8 +372,7 @@ static PetscErrorCode PetscLogEventBeginNested_Internal(NestedEventId nstEvent, 
 
       /* Register a new default timer */
       if (!is_event) PetscCall(PetscLogStagePop_Internal());
-      PetscCall(PetscLogGetDefaultHandler(&stage_log));
-      PetscCall(PetscStageLogGetCurrent(stage_log, &current_stage));
+      PetscCall(PetscLogStageGetCurrent(&current_stage));
       PetscCall(PetscSNPrintf(name, PETSC_STATIC_ARRAY_LENGTH(name), "__Nested %d: %d -> %d", current_stage, (int)dftParentActive, (int)nstEvent));
       if (is_event) {
         PetscCall(PetscLogEventRegister(name, LogNestedEvent, &dftEvent));
@@ -443,9 +441,9 @@ static PetscErrorCode PetscLogEventBeginNested(NestedEventId nstEvent, int t, Pe
 
 /******************************************************************************************/
 /* Start a nested stage */
-static PetscErrorCode PetscLogStageBeginHandler_Nested(PetscStageLog stage_log)
+static PetscErrorCode PetscLogStageBeginHandler_Nested(PetscLogState log_state)
 {
-  PetscInt stage_id = stage_log->stack->stack[stage_log->stack->top];
+  PetscInt stage_id = log_state->stage_stack->stack[log_state->stage_stack->top];
 
   PetscFunctionBegin;
   PetscCall(PetscInfo(NULL, "Pushing stage %d\n", (int)stage_id));
@@ -487,9 +485,9 @@ static PetscErrorCode PetscLogEventEndNested(NestedEventId nstEvent, int t, Pets
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogStageEndHandler_Nested(PetscStageLog stage_log)
+static PetscErrorCode PetscLogStageEndHandler_Nested(PetscLogState log_state)
 {
-  PetscInt stage_id = stage_log->stack->stack[stage_log->stack->top];
+  PetscInt stage_id = log_state->stage_stack->stack[log_state->stage_stack->top];
   PetscInt root_stage;
 
   PetscFunctionBegin;

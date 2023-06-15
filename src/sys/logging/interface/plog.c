@@ -35,7 +35,7 @@ PetscHMapEvent eventInfoMap_th = NULL;
 
 PetscLogRegistry petsc_log_registry = NULL;
 
-PetscErrorCode PetscLogGetRegistry(PetscLogRegistry *registry_p)
+PETSC_INTERN PetscErrorCode PetscLogGetRegistry(PetscLogRegistry *registry_p)
 {
   PetscFunctionBegin;
   PetscValidPointer(registry_p, 1);
@@ -49,7 +49,7 @@ PetscErrorCode PetscLogGetRegistry(PetscLogRegistry *registry_p)
 
 PetscLogState petsc_log_state = NULL;
 
-PetscErrorCode PetscLogGetState(PetscLogState *state_p)
+PETSC_INTERN PetscErrorCode PetscLogGetState(PetscLogState *state_p)
 {
   PetscFunctionBegin;
   PetscValidPointer(state_p, 1);
@@ -166,12 +166,6 @@ PetscInt PetscLogGetTid(void)
 
   #endif
 
-/* Logging functions */
-PetscErrorCode (*PetscLogPHC)(PetscObject)                                                            = NULL;
-PetscErrorCode (*PetscLogPHD)(PetscObject)                                                            = NULL;
-PetscErrorCode (*PetscLogPLB)(PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject) = NULL;
-PetscErrorCode (*PetscLogPLE)(PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject) = NULL;
-
 /* Tracing event logging variables */
 FILE            *petsc_tracefile          = NULL;
 int              petsc_tracelevel         = 0;
@@ -198,8 +192,6 @@ PETSC_INTERN PetscErrorCode PetscLogInitialize(void)
   if (opt) petsc_logObjects = PETSC_FALSE;
   if (petsc_logActions) PetscCall(PetscMalloc1(petsc_maxActions, &petsc_actions));
   if (petsc_logObjects) PetscCall(PetscMalloc1(petsc_maxObjects, &petsc_objects));
-  PetscLogPHC = PetscLogObjCreateDefault;
-  PetscLogPHD = PetscLogObjDestroyDefault;
   /* Setup default logging structures */
   PetscCall(PetscLogRegistryCreate(&petsc_log_registry));
   PetscCall(PetscLogRegistryStageRegister(petsc_log_registry, "Main Stage", &stage));
@@ -2921,8 +2913,11 @@ PetscErrorCode PetscLogMPEGetRGBColor(const char *str[])
 @*/
 PetscErrorCode PetscLogStageGetCurrent(PetscLogState *current)
 {
+  PetscLogState state;
+
   PetscFunctionBegin;
-  
+  PetscCall(PetscLogGetState(&state));
+  PetscCall(PetscLogStateGetCurrentStage(state, current));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
