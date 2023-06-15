@@ -1158,15 +1158,14 @@ cdef class KSP(Object):
     def logConvergenceHistory(self, rnorm: float) -> None:
         """Add residual to convergence history.
 
+        Logically collective.
+
         Parameters
         ----------
         rnorm
             Residual norm to be added to convergence history.
 
         """
-        # Note that no documentation exists for the PETSc function
-        # `KSPLogResidualHistory`
-        # as of 29/03/2023
         cdef PetscReal rval = asReal(rnorm)
         CHKERR( KSPLogResidualHistory(self.ksp, rval) )
 
@@ -1897,17 +1896,16 @@ cdef class KSP(Object):
         else:       return None
 
     def buildSolution(self, Vec x=None) -> Vec:
-        """Create working solution vectors.
+        """Return the solution vector.
 
         Parameters
         ----------
         x
-            A vector to allocate.
+            Optional vector to use to store the solution.
 
-        Returns
-        -------
-        x : Vec
-            Correctly allocated solution vector.
+        See Also
+        --------
+        buildResidual, petsc.KSPBuildSolution
 
         """
         if x is None: x = Vec()
@@ -1918,17 +1916,16 @@ cdef class KSP(Object):
         return x
 
     def buildResidual(self, Vec r=None) -> Vec:
-        """Create working residual vectors.
+        """Return the residual of the linear system.
 
         Parameters
         ----------
-        x
-            A vector to allocate.
+        r
+            Optional vector to use for the result.
 
-        Returns
-        -------
-        x : Vec
-            Correctly allocated residual vector.
+        See Also
+        --------
+        buildSolution, petsc.KSPBuildResidual
 
         """
         if r is None: r = Vec()
@@ -1940,11 +1937,6 @@ cdef class KSP(Object):
 
     def computeEigenvalues(self) -> ArrayComplex:
         """Compute the extreme eigenvalues for the preconditioned operator.
-
-        Returns
-        -------
-        eigen : ArrayComplex
-            An array of eigenvalues.
 
         See Also
         --------
