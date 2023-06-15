@@ -100,12 +100,14 @@ typedef struct _n_PetscLogRegistry *PetscLogRegistry;
 typedef struct _n_PetscLogState *PetscLogState;
 struct _n_PetscLogState {
   PetscLogRegistry registry;
-  PetscBT          inactive;
+  PetscBT          active;
   PetscIntStack    stage_stack;
+  PetscInt         current_stage;
   PetscInt         bt_num_stages;
   PetscInt         bt_num_events;
-  PetscInt         current_stage;
 };
+
+#define PetscLogStateEventCurrentlyActive(state,event) ((state) && PetscBTLookup((state)->active, (state)->current_stage) && PetscBTLookup((state)->active, (state)->current_stage + (event + 1) * (state)->bt_num_stages))
 
 typedef PetscErrorCode (*PetscLogEventHandler)(PetscLogState, PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject, void *);
 typedef PetscErrorCode (*PetscLogEventSyncHandler)(PetscLogState, PetscLogEvent, MPI_Comm, void *);
@@ -258,7 +260,7 @@ PETSC_EXTERN PetscErrorCode PetscLogClassGetName(PetscClassId, const char **);
 
 static inline PetscErrorCode PetscLogEventSync(PetscLogEvent e, MPI_Comm comm)
 {
-  if (petsc_log_state && !PetscBTLookup(petsc_log_state->inactive, e * petsc_log_state->bt_num_stages + petsc_log_state->current_stage)) {
+  if (PetscLogStateEventCurrentlyActive(petsc_log_state, e)) {
     for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
       PetscLogHandler h = PetscLogHandlers[i];
       if (h && h->event_sync) {
@@ -272,7 +274,7 @@ static inline PetscErrorCode PetscLogEventSync(PetscLogEvent e, MPI_Comm comm)
 
 static inline PetscErrorCode PetscLogEventBegin_Internal(PetscLogEvent e, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
 {
-  if (petsc_log_state && !PetscBTLookup(petsc_log_state->inactive, e * petsc_log_state->bt_num_stages + petsc_log_state->current_stage)) {
+  if (PetscLogStateEventCurrentlyActive(petsc_log_state, e)) {
     for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
       PetscLogHandler h = PetscLogHandlers[i];
       if (h && h->event_begin) {
@@ -287,7 +289,7 @@ static inline PetscErrorCode PetscLogEventBegin_Internal(PetscLogEvent e, PetscO
 
 static inline PetscErrorCode PetscLogEventEnd_Internal(PetscLogEvent e, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
 {
-  if (petsc_log_state && !PetscBTLookup(petsc_log_state->inactive, e * petsc_log_state->bt_num_stages + petsc_log_state->current_stage)) {
+  if (PetscLogStateEventCurrentlyActive(petsc_log_state, e)) {
     for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
       PetscLogHandler h = PetscLogHandlers[i];
       if (h && h->event_end) {
