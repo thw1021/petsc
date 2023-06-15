@@ -54,11 +54,11 @@ PetscErrorCode PetscLogGetEventLog(PetscEventRegLog *eventLog)
 {
   PetscFunctionBegin;
   PetscValidPointer(eventLog, 1);
-  if (!petsc_log_registry) {
+  if (!petsc_log_state) {
     fprintf(stderr, "PETSC ERROR: Logging has not been enabled.\nYou might have forgotten to call PetscInitialize().\n");
     PETSCABORT(MPI_COMM_WORLD, PETSC_ERR_SUP);
   }
-  *eventLog = petsc_log_registry->events;;
+  *eventLog = petsc_log_state->registry->events;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -66,11 +66,11 @@ PetscErrorCode PetscLogGetClassLog(PetscClassRegLog *classLog)
 {
   PetscFunctionBegin;
   PetscValidPointer(classLog, 1);
-  if (!petsc_log_registry) {
+  if (!petsc_log_state) {
     fprintf(stderr, "PETSC ERROR: Logging has not been enabled.\nYou might have forgotten to call PetscInitialize().\n");
     PETSCABORT(MPI_COMM_WORLD, PETSC_ERR_SUP);
   }
-  *classLog = petsc_log_registry->classes;;
+  *classLog = petsc_log_state->registry->classes;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

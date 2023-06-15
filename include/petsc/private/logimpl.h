@@ -75,14 +75,13 @@ PETSC_LOG_RESIZABLE_ARRAY(PetscEventPerfInfo,PetscEventPerfLog)
     PetscCall(PetscMalloc1((max_init), &((*(ra_p))->array))); \
   )
 
-typedef struct _n_PetscLogRegistry *PetscLogRegistry;
 struct _n_PetscLogRegistry {
   PetscEventRegLog events;
   PetscClassRegLog classes;
   PetscStageRegLog stages;
+  PetscSpinlock    lock;
 };
 
-PETSC_INTERN PetscLogRegistry petsc_log_registry;
 PETSC_INTERN PetscErrorCode PetscLogGetRegistry(PetscLogRegistry *);
 PETSC_INTERN PetscErrorCode PetscLogRegistryCreate(PetscLogRegistry *);
 PETSC_INTERN PetscErrorCode PetscLogRegistryDestroy(PetscLogRegistry);
@@ -91,14 +90,21 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryEventRegister(PetscLogRegistry,const
 PETSC_INTERN PetscErrorCode PetscLogRegistryGetClassLog(PetscLogRegistry, PetscClassRegLog *);
 PETSC_INTERN PetscErrorCode PetscLogRegistryGetEventLog(PetscLogRegistry, PetscEventRegLog *);
 PETSC_INTERN PetscErrorCode PetscLogRegistryGetStageLog(PetscLogRegistry, PetscStageRegLog *);
+PETSC_INTERN PetscErrorCode PetscLogRegistryLock(PetscLogRegistry);
+PETSC_INTERN PetscErrorCode PetscLogRegistryUnlock(PetscLogRegistry);
 
 PETSC_INTERN PetscErrorCode PetscLogGetState(PetscLogState *);
-PETSC_INTERN PetscErrorCode PetscLogStateCreate(PetscInt, PetscInt, PetscLogState *);
+PETSC_INTERN PetscErrorCode PetscLogStateCreate(PetscLogState *);
+PETSC_INTERN PetscErrorCode PetscLogStateGetRegistry(PetscLogState, PetscLogRegistry *);
 PETSC_INTERN PetscErrorCode PetscLogStateDestroy(PetscLogState);
 PETSC_INTERN PetscErrorCode PetscLogStateStagePush(PetscLogState,PetscLogStage);
 PETSC_INTERN PetscErrorCode PetscLogStateStagePop(PetscLogState);
 PETSC_INTERN PetscErrorCode PetscLogStateGetCurrentStage(PetscLogState, PetscLogStage *);
 PETSC_INTERN PetscErrorCode PetscLogStateEnsureSize(PetscLogState, PetscInt, PetscInt);
+PETSC_INTERN PetscErrorCode PetscLogStateStageRegister(PetscLogState, const char[], PetscLogStage *);
+PETSC_INTERN PetscErrorCode PetscLogStateEventRegister(PetscLogState, const char[], PetscClassId, PetscLogStage *);
+PETSC_INTERN PetscErrorCode PetscLogStateLock(PetscLogState);
+PETSC_INTERN PetscErrorCode PetscLogStateUnlock(PetscLogState);
 
 enum {PETSC_LOG_HANDLER_DEFAULT, PETSC_LOG_HANDLER_NESTED};
 
@@ -152,12 +158,6 @@ PETSC_EXTERN char           petsc_tracespace[128];
 PETSC_EXTERN PetscLogDouble petsc_tracetime;
 
 /* Thread-safety internals */
-
-/* SpinLock for shared Log registry variables */
-PETSC_INTERN PetscSpinlock PetscLogRegistrySpinLock;
-
-/* SpinLock for shared Log variables */
-PETSC_INTERN PetscSpinlock PetscLogSpinLock;
 
 #if defined(PETSC_HAVE_THREADSAFETY)
   #if defined(__cplusplus)
@@ -219,13 +219,6 @@ PETSC_EXTERN PetscErrorCode PetscEventPerfLogActivateClass(PetscEventPerfLog, Pe
 PETSC_EXTERN PetscErrorCode PetscEventPerfLogDeactivateClass(PetscEventPerfLog, PetscEventRegLog, PetscClassId);
 
 /* Logging functions */
-PETSC_EXTERN PetscErrorCode PetscLogEventBeginDefault(PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject);
-PETSC_EXTERN PetscErrorCode PetscLogEventEndDefault(PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject);
-PETSC_EXTERN PetscErrorCode PetscLogEventBeginComplete(PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject);
-PETSC_EXTERN PetscErrorCode PetscLogEventEndComplete(PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject);
-PETSC_EXTERN PetscErrorCode PetscLogEventBeginTrace(PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject);
-PETSC_EXTERN PetscErrorCode PetscLogEventEndTrace(PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject);
-
 /* Creation and destruction functions */
 PETSC_EXTERN PetscErrorCode PetscClassRegLogCreate(PetscClassRegLog *);
 PETSC_EXTERN PetscErrorCode PetscClassRegLogDestroy(PetscClassRegLog);
