@@ -10237,10 +10237,8 @@ PetscErrorCode DMCreateSubDomainDM_Plex(DM dm, DMLabel label, PetscInt value, IS
 @*/
 PetscErrorCode DMPlexMonitorThroughput(DM dm, void *dummy)
 {
-#if defined(PETSC_USE_LOG) && 0 // TODO: fix DMPlexMonitorThroughput()
-  PetscStageLog      stageLog;
+#if defined(PETSC_USE_LOG)
   PetscLogEvent      event;
-  PetscLogStage      stage;
   PetscEventPerfInfo eventInfo;
   PetscReal          cellRate, flopRate;
   PetscInt           cStart, cEnd, Nf, N;
@@ -10249,14 +10247,12 @@ PetscErrorCode DMPlexMonitorThroughput(DM dm, void *dummy)
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
-#if defined(PETSC_USE_LOG) && 0 // TODO: fix DMPlexMonitorThroughput()
+#if defined(PETSC_USE_LOG)
   PetscCall(PetscObjectGetName((PetscObject)dm, &name));
   PetscCall(DMPlexGetHeightStratum(dm, 0, &cStart, &cEnd));
   PetscCall(DMGetNumFields(dm, &Nf));
-  PetscCall(PetscLogGetDefaultHandler(&stageLog));
-  PetscCall(PetscStageLogGetCurrent(stageLog, &stage));
   PetscCall(PetscLogEventGetId("DMPlexResidualFE", &event));
-  PetscCall(PetscLogEventGetPerfInfo(stage, event, &eventInfo));
+  PetscCall(PetscLogEventGetPerfInfo(-1, event, &eventInfo));
   N        = (cEnd - cStart) * Nf * eventInfo.count;
   flopRate = eventInfo.flops / eventInfo.time;
   cellRate = N / eventInfo.time;

@@ -229,6 +229,7 @@ PETSC_EXTERN PetscErrorCode PetscLogStageSetVisible(PetscLogStage, PetscBool);
 PETSC_EXTERN PetscErrorCode PetscLogStageGetVisible(PetscLogStage, PetscBool *);
 PETSC_EXTERN PetscErrorCode PetscLogStageGetId(const char[], PetscLogStage *);
 PETSC_EXTERN PetscErrorCode PetscLogStageGetCurrent(PetscLogStage *);
+PETSC_EXTERN PetscErrorCode PetscLogStageGetName(PetscLogEvent, const char **);
 
 /* Event functions */
 PETSC_EXTERN PetscErrorCode PetscLogEventRegister(const char[], PetscClassId, PetscLogEvent *);
@@ -243,12 +244,14 @@ PETSC_EXTERN PetscErrorCode PetscLogEventSetActiveAll(PetscLogEvent, PetscBool);
 PETSC_EXTERN PetscErrorCode PetscLogEventActivateClass(PetscClassId);
 PETSC_EXTERN PetscErrorCode PetscLogEventDeactivateClass(PetscClassId);
 PETSC_EXTERN PetscErrorCode PetscLogEventGetId(const char[], PetscLogEvent *);
+PETSC_EXTERN PetscErrorCode PetscLogEventGetName(PetscLogEvent, const char **);
 PETSC_EXTERN PetscErrorCode PetscLogEventGetPerfInfo(PetscLogStage, PetscLogEvent, PetscEventPerfInfo *);
 PETSC_EXTERN PetscErrorCode PetscLogEventSetDof(PetscLogEvent, PetscInt, PetscLogDouble);
 PETSC_EXTERN PetscErrorCode PetscLogEventSetError(PetscLogEvent, PetscInt, PetscLogDouble);
-PETSC_EXTERN PetscErrorCode PetscLogEventGetFlops(PetscLogEvent, PetscLogDouble *);
-PETSC_EXTERN PetscErrorCode PetscLogEventZeroFlops(PetscLogEvent);
 PETSC_EXTERN PetscErrorCode PetscLogEventSynchronize(PetscLogEvent, MPI_Comm);
+
+PETSC_EXTERN PetscErrorCode PetscLogClassGetId(const char[], PetscClassId *);
+PETSC_EXTERN PetscErrorCode PetscLogClassGetName(PetscClassId, const char **);
 
 static inline PetscErrorCode PetscLogEventSync(PetscLogEvent e, MPI_Comm comm)
 {
