@@ -193,19 +193,19 @@ PETSC_INTERN PetscErrorCode PetscLogInitialize(void)
   PetscCall(PetscLogStateGetRegistry(petsc_log_state, &registry));
   PetscCall(PetscLogRegistryStageRegister(registry, "Main Stage", &stage));
 
-  #if defined(PETSC_HAVE_THREADSAFETY)
-  petsc_log_tid = 0;
-  petsc_log_gid = 0;
-  PetscCall(PetscHMapEventCreate(&eventInfoMap_th));
-  #endif
+  //#if defined(PETSC_HAVE_THREADSAFETY)
+  //petsc_log_tid = 0;
+  //petsc_log_gid = 0;
+  //PetscCall(PetscHMapEventCreate(&eventInfoMap_th));
+  //#endif
 
   /* All processors sync here for more consistent logging */
   PetscCallMPI(MPI_Barrier(PETSC_COMM_WORLD));
   PetscCall(PetscTime(&petsc_BaseTime));
   PetscCall(PetscLogStagePush(stage));
-  #if defined(PETSC_HAVE_TAU_PERFSTUBS)
-  PetscStackCallExternalVoid("ps_initialize_", ps_initialize_());
-  #endif
+  //#if defined(PETSC_HAVE_TAU_PERFSTUBS)
+  //PetscStackCallExternalVoid("ps_initialize_", ps_initialize_());
+  //#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
