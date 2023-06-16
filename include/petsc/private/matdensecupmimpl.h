@@ -346,7 +346,7 @@ public:
 };
 
 template <typename T>
-inline DiagonalIterator<thrust::device_vector<T>::iterator> MakeDiagonalIterator(T *data, PetscInt rstart, PetscInt rend, PetscInt cols, PetscInt lda) noexcept
+inline DiagonalIterator<typename thrust::device_vector<T>::iterator> MakeDiagonalIterator(T *data, PetscInt rstart, PetscInt rend, PetscInt cols, PetscInt lda) noexcept
 {
   const auto        rend2 = std::min(rend, cols);
   const std::size_t begin = rstart * lda;
@@ -362,8 +362,10 @@ template <device::cupm::DeviceType T, typename D>
 template <typename F>
 inline PetscErrorCode MatDense_CUPM<T, D>::DiagonalUnaryTransform(Mat A, PetscInt rstart, PetscInt rend, PetscInt cols, PetscDeviceContext dctx, F &&functor) noexcept
 {
+  const auto rend2 = std::min(rend, cols);
+
   PetscFunctionBegin;
-  if (std::min(rend, cols) > rstart) {
+  if (rend2 > rstart) {
     const auto   da = D::DeviceArrayReadWrite(dctx, A);
     cupmStream_t stream;
     PetscInt     lda;
