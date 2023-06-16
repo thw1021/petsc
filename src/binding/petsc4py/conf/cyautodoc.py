@@ -149,7 +149,7 @@ class EmbedSignature(CythonTransform):
             return docfmt % (signature, node_doc, pos)
         else:
             docfmt = self._select_format("%s\n%s", "%s\n--\n\n%s")
-            return docfmt % (signature, node_doc)
+            return docfmt % (signature, pos)
 
     def __call__(self, node):
         if not Options.docstrings:
