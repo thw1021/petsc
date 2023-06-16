@@ -645,7 +645,7 @@ cdef class KSP(Object):
     def getAppCtx(self) -> Any:
         """Return the user-defined context for the linear solver.
 
-        Not collective
+        Not collective.
 
         See Also
         --------
@@ -709,7 +709,7 @@ cdef class KSP(Object):
     def setDMActive(self, flag: bool) -> None:
         """`DM` should be used to generate system matrix & RHS vector.
 
-        Logically collective
+        Logically collective.
 
         Parameters
         ----------
@@ -1158,15 +1158,14 @@ cdef class KSP(Object):
     def logConvergenceHistory(self, rnorm: float) -> None:
         """Add residual to convergence history.
 
+        Logically collective.
+
         Parameters
         ----------
         rnorm
             Residual norm to be added to convergence history.
 
         """
-        # Note that no documentation exists for the PETSc function
-        # `KSPLogResidualHistory`
-        # as of 29/03/2023
         cdef PetscReal rval = asReal(rnorm)
         CHKERR( KSPLogResidualHistory(self.ksp, rval) )
 
@@ -1179,7 +1178,7 @@ cdef class KSP(Object):
     ) -> None:
         """Set additional function to monitor the residual.
 
-        Logically collective
+        Logically collective.
 
         Set an ADDITIONAL function to be called at every iteration to
         monitor the residual/error etc.
@@ -1805,7 +1804,7 @@ cdef class KSP(Object):
         CHKERR( KSPSetErrorIfNotConverged(self.ksp, ernc) )
 
     def getErrorIfNotConverged(self) -> bool:
-        """Will `solve` generate an error if the solver does not converge?
+        """Return the flag indicating the solver will error if divergent.
 
         Not collective.
 
@@ -1897,17 +1896,16 @@ cdef class KSP(Object):
         else:       return None
 
     def buildSolution(self, Vec x=None) -> Vec:
-        """Create working solution vectors.
+        """Return the solution vector.
 
         Parameters
         ----------
         x
-            A vector to allocate.
+            Optional vector to store the solution.
 
-        Returns
-        -------
-        x : Vec
-            Correctly allocated solution vector.
+        See Also
+        --------
+        buildResidual, petsc.KSPBuildSolution
 
         """
         if x is None: x = Vec()
@@ -1918,17 +1916,16 @@ cdef class KSP(Object):
         return x
 
     def buildResidual(self, Vec r=None) -> Vec:
-        """Create working residual vectors.
+        """Return the residual of the linear system.
 
         Parameters
         ----------
-        x
-            A vector to allocate.
+        r
+            Optional vector to use for the result.
 
-        Returns
-        -------
-        x : Vec
-            Correctly allocated residual vector.
+        See Also
+        --------
+        buildSolution, petsc.KSPBuildResidual
 
         """
         if r is None: r = Vec()
@@ -1940,11 +1937,6 @@ cdef class KSP(Object):
 
     def computeEigenvalues(self) -> ArrayComplex:
         """Compute the extreme eigenvalues for the preconditioned operator.
-
-        Returns
-        -------
-        eigen : ArrayComplex
-            An array of eigenvalues.
 
         See Also
         --------
@@ -2037,7 +2029,7 @@ cdef class KSP(Object):
         return self
 
     def setPythonContext(self, context: Any | None = None) -> None:
-        """Set the instance of the Python class implementing Python methods.
+        """Set the instance of the class implementing Python methods.
 
         Not collective.
 
@@ -2049,7 +2041,7 @@ cdef class KSP(Object):
         CHKERR( KSPPythonSetContext(self.ksp, <void*>context) )
 
     def getPythonContext(self) -> Any:
-        """Return the instance of the Python class implementing Python methods.
+        """Return the instance of the class implementing Python methods.
 
         Not collective.
 
