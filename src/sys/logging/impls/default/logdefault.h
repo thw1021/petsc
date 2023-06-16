@@ -4,9 +4,7 @@
 #include <petsc/private/logimpl.h> /*I "petscsys.h" I*/
 
 typedef struct _PetscStageInfo {
-  char              *name;     /* The stage name */
   PetscBool          used;     /* The stage was pushed on this processor */
-  PetscBool          active;
   PetscEventPerfInfo perfInfo; /* The stage performance information */
   PetscEventPerfLog  eventLog; /* The event information for this stage */
   PetscClassPerfLog  classLog; /* The class information for this stage */
@@ -64,6 +62,8 @@ struct _n_PetscStageLog {
   const char    *petsc_traceblanks;
   char           petsc_tracespace[128];
   PetscLogDouble petsc_tracetime;
+  PetscBool      PetscLogSyncOn;
+  PetscBool      PetscLogMemory;
 };
 
 PETSC_INTERN PetscErrorCode PetscLogGetDefaultHandler(PetscStageLog *);

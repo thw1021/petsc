@@ -1341,7 +1341,6 @@ static PetscErrorCode PetscStageInfoArrayDuplicate(PetscInt num_stages, PetscSta
   PetscCall(PetscMalloc1(num_stages, &dup_stage_info));
   PetscCall(PetscArraycpy(dup_stage_info, stage_info, num_stages));
   for (PetscInt i = 0; i < num_stages; i++) {
-    PetscCall(PetscStrallocpy(stage_info[i].name, &(dup_stage_info[i].name)));
     PetscCall(PetscEventPerfLogDuplicate(stage_info[i].eventLog, &(dup_stage_info[i].eventLog)));
     PetscCall(PetscClassPerfLogDuplicate(stage_info[i].classLog, &(dup_stage_info[i].classLog)));
   }
