@@ -189,14 +189,6 @@ PETSC_EXTERN PetscErrorCode PetscIntStackEmpty(PetscIntStack, PetscBool *);
 
 /* Access PETSc internal thread id */
 PETSC_INTERN PetscInt PetscLogGetTid(void);
-
-  /* Map from (threadid,stage,event) to perfInfo data struct */
-  #include <petsc/private/hashmapijk.h>
-
-PETSC_HASH_MAP(HMapEvent, PetscHashIJKKey, PetscEventPerfInfo *, PetscHashIJKKeyHash, PetscHashIJKKeyEqual, NULL)
-
-PETSC_INTERN PetscHMapEvent eventInfoMap_th;
-
 #else
   #define PETSC_TLS
   #define PETSC_INTERN_TLS PETSC_INTERN

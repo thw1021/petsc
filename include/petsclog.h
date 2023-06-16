@@ -202,7 +202,10 @@ PETSC_EXTERN PetscErrorCode PetscGetFlops(PetscLogDouble *);
 
 /* Initialization functions */
 PETSC_EXTERN PetscErrorCode PetscLogDefaultBegin(void);
-PETSC_EXTERN PetscErrorCode PetscLogAllBegin(void);
+PETSC_DEPRECATED_FUNCTION("PetscLogAllBegin() is deprecated (since version 3.20)") static inline PetscErrorCode PetscLogAllBegin(void)
+{
+  return PetscLogDefaultBegin();
+}
 PETSC_EXTERN PetscErrorCode PetscLogNestedBegin(void);
 PETSC_EXTERN PetscErrorCode PetscLogTraceBegin(FILE *);
 PETSC_EXTERN PetscErrorCode PetscLogActions(PetscBool);

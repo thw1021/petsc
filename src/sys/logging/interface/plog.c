@@ -20,18 +20,13 @@
 #include <../src/sys/logging/impls/default/logdefault.h>
 
 #if defined(PETSC_USE_LOG)
-  #include <petscmachineinfo.h>
-  #include <petscconfiginfo.h>
+#include <petscmachineinfo.h>
+#include <petscconfiginfo.h>
 
-  #if defined(PETSC_HAVE_THREADSAFETY)
-
+#if defined(PETSC_HAVE_THREADSAFETY)
 PetscInt           petsc_log_gid = -1; /* Global threadId counter */
 PETSC_TLS PetscInt petsc_log_tid = -1; /* Local threadId */
-
-/* shared variables */
-PetscHMapEvent eventInfoMap_th = NULL;
-
-  #endif
+#endif
 
 PETSC_INTERN PetscErrorCode PetscLogGetRegistry(PetscLogRegistry *registry_p)
 {
@@ -174,31 +169,20 @@ PETSC_INTERN PetscErrorCode PetscLogInitialize(void)
   if (PetscLogInitializeCalled) PetscFunctionReturn(PETSC_SUCCESS);
   PetscLogInitializeCalled = PETSC_TRUE;
 
-  // TODO: move these into default handler creation
-  //PetscCall(PetscOptionsHasName(NULL, NULL, "-log_exclude_actions", &opt));
-  //if (opt) petsc_logActions = PETSC_FALSE;
-  //PetscCall(PetscOptionsHasName(NULL, NULL, "-log_exclude_objects", &opt));
-  //if (opt) petsc_logObjects = PETSC_FALSE;
-  //if (petsc_logActions) PetscCall(PetscMalloc1(petsc_maxActions, &petsc_actions));
-  //if (petsc_logObjects) PetscCall(PetscMalloc1(petsc_maxObjects, &petsc_objects));
   /* Setup default logging structures */
   PetscCall(PetscLogStateCreate(&petsc_log_state));
   registry = petsc_log_state->registry;
   PetscCall(PetscLogRegistryStageRegister(registry, "Main Stage", &stage));
 
-  //#if defined(PETSC_HAVE_THREADSAFETY)
-  //petsc_log_tid = 0;
-  //petsc_log_gid = 0;
-  //PetscCall(PetscHMapEventCreate(&eventInfoMap_th));
-  //#endif
+  #if defined(PETSC_HAVE_THREADSAFETY)
+  petsc_log_tid = 0;
+  petsc_log_gid = 0;
+  #endif
 
   /* All processors sync here for more consistent logging */
   PetscCallMPI(MPI_Barrier(PETSC_COMM_WORLD));
   PetscCall(PetscTime(&petsc_BaseTime));
   PetscCall(PetscLogStagePush(stage));
-  //#if defined(PETSC_HAVE_TAU_PERFSTUBS)
-  //PetscStackCallExternalVoid("ps_initialize_", ps_initialize_());
-  //#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -220,10 +204,6 @@ PETSC_INTERN PetscErrorCode PetscLogFinalize(void)
     PetscCall(PetscHMapEventDestroy(&eventInfoMap_th));
   }
   #endif
-  // Todo: move this into default handler creation
-  //PetscCall(PetscFree(petsc_actions));
-  //PetscCall(PetscFree(petsc_objects));
-  //PetscCall(PetscLogNestedEnd());
 
   /* Resetting phase */
   PetscCall(PetscLogGetState(&state));
@@ -411,12 +391,7 @@ PETSC_INTERN PetscErrorCode PetscLogStagePush_Internal(PetscLogStage stage)
   PetscCall(PetscLogGetRegistry(&registry));
   PetscCheck(stage >= 0 && stage < registry->stages->num_entries, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d not in [0,%d)", stage, (int) registry->stages->num_entries);
   PetscCall(PetscLogGetState(&state));
-  PetscCall(PetscSpinlockLock(&PetscLogSpinLock));
   PetscCall(PetscLogStateStagePush(state, stage));
-  PetscCall(PetscSpinlockUnlock(&PetscLogSpinLock));
-  #if defined(PETSC_HAVE_TAU_PERFSTUBS) && 0 // TODO perfstubs
-  if (perfstubs_initialized == PERFSTUBS_SUCCESS && stageLog->array[stage].timer != NULL) PetscStackCallExternalVoid("ps_timer_start_", ps_timer_start_(stageLog->array[stage].timer));
-  #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2717,7 +2692,7 @@ PetscErrorCode PetscClassIdRegister(const char name[], PetscClassId *oclass)
 }
 
 #if defined(PETSC_USE_LOG) && defined(PETSC_HAVE_MPE)
-  #include <mpe.h>
+#include <mpe.h>
 
 PetscBool PetscBeganMPE = PETSC_FALSE;
 
@@ -2787,7 +2762,7 @@ PetscErrorCode PetscLogMPEDump(const char sname[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-  #define PETSC_RGB_COLORS_MAX 39
+#define PETSC_RGB_COLORS_MAX 39
 static const char *PetscLogMPERGBColors[PETSC_RGB_COLORS_MAX] = {"OliveDrab:      ", "BlueViolet:     ", "CadetBlue:      ", "CornflowerBlue: ", "DarkGoldenrod:  ", "DarkGreen:      ", "DarkKhaki:      ", "DarkOliveGreen: ",
                                                                  "DarkOrange:     ", "DarkOrchid:     ", "DarkSeaGreen:   ", "DarkSlateGray:  ", "DarkTurquoise:  ", "DeepPink:       ", "DarkKhaki:      ", "DimGray:        ",
                                                                  "DodgerBlue:     ", "GreenYellow:    ", "HotPink:        ", "IndianRed:      ", "LavenderBlush:  ", "LawnGreen:      ", "LemonChiffon:   ", "LightCoral:     ",
