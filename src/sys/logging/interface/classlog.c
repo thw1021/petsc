@@ -77,7 +77,7 @@ PetscErrorCode PetscClassRegInfoDestroy(PetscClassRegInfo *c)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscClassRegLogEnsureSize(PetscClassRegLog class_log, int new_size)
+PETSC_INTERN PetscErrorCode PetscClassRegLogEnsureSize(PetscClassRegLog class_log, int new_size)
 {
   PetscClassRegInfo blank_entry;
   PetscFunctionBegin;
