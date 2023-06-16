@@ -45,6 +45,20 @@ typedef struct _Object {
 PETSC_LOG_RESIZABLE_ARRAY(Action, PetscActionLog)
 PETSC_LOG_RESIZABLE_ARRAY(Object, PetscObjectLog)
 
+#if defined(PETSC_HAVE_THREADSAFETY)
+  /* Map from (threadid,stage,event) to perfInfo data struct */
+  #include <petsc/private/hashmap.h>
+
+typedef struct _PetscHashIJKKey {
+  PetscInt i, j, k;
+} PetscHashIJKKey;
+
+  #define PetscHashIJKKeyHash(key)     PetscHashCombine(PetscHashInt((key).i), PetscHashCombine(PetscHashInt((key).j), PetscHashInt((key).k)))
+  #define PetscHashIJKKeyEqual(k1, k2) (((k1).i == (k2).i) ? (((k1).j == (k2).j) ? ((k1).k == (k2).k) : 0) : 0)
+
+PETSC_HASH_MAP(HMapEvent, PetscHashIJKKey, PetscEventPerfInfo *, PetscHashIJKKeyHash, PetscHashIJKKeyEqual, NULL)
+#endif
+
 typedef struct _n_PetscStageLog *PetscStageLog;
 struct _n_PetscStageLog {
   int              max_entries;
@@ -64,20 +78,17 @@ struct _n_PetscStageLog {
   PetscLogDouble petsc_tracetime;
   PetscBool      PetscLogSyncOn;
   PetscBool      PetscLogMemory;
+#if defined(PETSC_HAVE_THREADSAFETYE)
+  PetscHMapEvent eventInfoMap_th = NULL;
+#endif
+
 };
 
 PETSC_INTERN PetscErrorCode PetscLogGetDefaultHandler(PetscStageLog *);
-
 PETSC_INTERN PetscErrorCode PetscLogHandlerDefaultGetEventPerfInfo(PetscStageLog, PetscLogStage, PetscLogEvent, PetscEventPerfInfo **);
-
 PETSC_INTERN PetscErrorCode PetscStageLogDuplicate(PetscStageLog, PetscStageLog *);
-
 PETSC_INTERN PetscErrorCode PetscLogEventBeginDefault(PetscLogState, PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject, void *);
 PETSC_INTERN PetscErrorCode PetscLogEventEndDefault(PetscLogState, PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject, void *);
-PETSC_INTERN PetscErrorCode PetscLogEventBeginComplete(PetscLogState, PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject, void *);
-PETSC_INTERN PetscErrorCode PetscLogEventEndComplete(PetscLogState, PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject, void *);
-PETSC_INTERN PetscErrorCode PetscLogEventBeginTrace(PetscLogState, PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject, void *);
-PETSC_INTERN PetscErrorCode PetscLogEventEndTrace(PetscLogState, PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject, void *);
 
 
 /* Action and object logging variables */
