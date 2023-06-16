@@ -107,25 +107,22 @@ struct _n_PetscLogState {
   PetscInt         bt_num_events;
 };
 
-#define PetscLogStateEventCurrentlyActive(state,event) ((state) && PetscBTLookup((state)->active, (state)->current_stage) && PetscBTLookup((state)->active, (state)->current_stage + (event + 1) * (state)->bt_num_stages))
+#define PetscLogStateEventCurrentlyActive(state,event) ((state) && PetscBTLookup((state)->active, (state)->current_stage) && PetscBTLookup((state)->active, (state)->current_stage + (event+1) * (state)->bt_num_stages))
 
-typedef PetscErrorCode (*PetscLogEventHandler)(PetscLogState, PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject, void *);
-typedef PetscErrorCode (*PetscLogEventSyncHandler)(PetscLogState, PetscLogEvent, MPI_Comm, void *);
-typedef PetscErrorCode (*PetscLogStageHandler)(PetscLogState, PetscLogStage, void *);
-typedef PetscErrorCode (*PetscLogObjectHandler)(PetscLogState, PetscObject, void *);
-typedef PetscErrorCode (*PetscLogViewHandler)(PetscLogState, PetscViewer, void *);
+typedef PetscErrorCode (*PetscLogEventFn)(PetscLogState, PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject, void *);
+typedef PetscErrorCode (*PetscLogEventSyncFn)(PetscLogState, PetscLogEvent, MPI_Comm, void *);
+typedef PetscErrorCode (*PetscLogObjectFn)(PetscLogState, PetscObject, void *);
+
+typedef struct _n_PetscLogHandlerImpl *PetscLogHandlerImpl;
 
 typedef struct _n_PetscLogHandler *PetscLogHandler;
 struct _n_PetscLogHandler {
-  PetscClassId         id;
-  PetscLogStageHandler stage_push;
-  PetscLogStageHandler stage_pop;
-  PetscLogEventHandler event_begin;
-  PetscLogEventHandler event_end;
-  PetscLogEventSyncHandler event_sync;
-  PetscLogObjectHandler object_create;
-  PetscLogObjectHandler object_destroy;
-  PetscLogViewHandler  view;
+  PetscLogHandlerImpl impl;
+  PetscLogEventFn     event_begin;
+  PetscLogEventFn     event_end;
+  PetscLogEventSyncFn event_sync;
+  PetscLogObjectFn    object_create;
+  PetscLogObjectFn    object_destroy;
   void *ctx;
 };
 
