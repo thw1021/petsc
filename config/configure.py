@@ -344,6 +344,19 @@ def check_broken_configure_log_links():
     if os.path.islink(logfile) and not os.path.isfile(logfile): os.remove(logfile)
   return
 
+def check_ccache():
+  """
+  Disable ccache for configure, unless the user has set the environment variable themselves.
+
+  configure creates and compiles many temporary files, which -- by nature -- will never be reused.
+  This unnecessarily pollutes the cache for no apparent speedup.
+  """
+  ccache_disable = 'CCACHE_DISABLE'
+  environ        = os.environ
+  if ccache_disable not in environ:
+    environ[ccache_disable] = '1'
+  return
+
 def move_configure_log(framework):
   '''Move configure.log to PETSC_ARCH/lib/petsc/conf - and update configure.log.bkp in both locations appropriately'''
   global petsc_arch
@@ -451,6 +464,8 @@ def petsc_configure(configure_options):
 
   # Check Cray without modules
   check_cray_modules()
+  # Disable ccache
+  check_ccache()
 
   tbo = None
   framework = None
