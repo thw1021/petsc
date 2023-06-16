@@ -12,6 +12,7 @@
 #include <../src/sys/logging/impls/nested/xmlviewer.h>
 #include <../src/sys/logging/impls/default/logdefault.h>
 #include <../src/sys/logging/interface/plog.h>
+#include "lognested.h"
 
 #if defined(PETSC_USE_LOG)
 
@@ -82,20 +83,6 @@
 
   #define DFT_ID_AWAKE    -1
   #define MAINSTAGE_EVENT -2
-
-typedef enum {PETSC_NESTED_AWAKE, PETSC_NESTED_STAGE, PETSC_NESTED_EVENT} PetscNestedObjectType;
-
-typedef PetscLogEvent NestedEventId;
-typedef struct {
-  PetscNestedObjectType type;
-  NestedEventId  nstEvent;         // event-code for this nested event, argument 'event' in PetscLogEventStartNested
-  PetscLogEvent  lastDftEvent;     // last default event activated under this nested event
-  int            nParents;         // number of 'dftParents': the default timer which was the dftParentActive when this nested timer was activated
-  PetscLogEvent *dftParentsSorted; // The default timers which were the dftParentActive when this nested event was started
-  PetscLogEvent *dftEvents;        // The default timers which represent the different 'instances' of this nested event
-  PetscLogEvent *dftParents;       // The default timers which were the dftParentActive when this nested event was started
-  PetscLogEvent *dftEventsSorted;  // The default timers which represent the different 'instances' of this nested event
-} PetscNestedEvent;
 
 static PetscLogEvent     dftParentActive             = DFT_ID_AWAKE;
 static int               nNestedEvents               = 0;
