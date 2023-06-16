@@ -3,41 +3,35 @@
 
 PETSC_INTERN PetscErrorCode PetscLogStateCreate(PetscLogState *state_p)
 {
-  PetscInt      num_active;
+  PetscInt      num_entries;
   PetscLogState state;
 
   PetscFunctionBegin;
   PetscCall(PetscNew(state_p));
   state = *state_p;
   PetscCall(PetscLogRegistryCreate(&state->registry));
-
   PetscCall(PetscIntStackCreate(&state->stage_stack));
   state->bt_num_events = state->registry->events->max_entries + 1; // one extra column for default stage activity
   state->bt_num_stages = state->registry->stages->max_entries;
-  num_active = state->bt_num_events * state->bt_num_stages;
-  PetscCall(PetscBTCreate(num_active, &state->active));
-  for (PetscInt i = 0; i < num_active; i++) PetscCall(PetscBTSet(state->active, i));
-  
+  num_entries = state->bt_num_events * state->bt_num_stages;
+  PetscCall(PetscBTCreate(num_entries, &state->active));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PETSC_INTERN PetscErrorCode PetscLogStateDestroy(PetscLogState state)
 {
   PetscFunctionBegin;
-  PetscCall(PetscSpinlockDestroy(&state->lock));
   PetscCall(PetscLogRegistryDestroy(state->registry));
   PetscCall(PetscIntStackDestroy(state->stage_stack));
+  PetscCall(PetscBTDestroy(&state->active));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PETSC_INTERN PetscErrorCode PetscLogStateStagePush(PetscLogState state, PetscLogStage stage)
 {
   PetscFunctionBegin;
-  /* Activate the stage */
-  PetscCall(PetscLogStateLock(state));
   PetscCall(PetscIntStackPush(state->stage_stack, stage));
   state->current_stage = stage;
-  PetscCall(PetscLogStateUnlock(state));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -47,15 +41,11 @@ PETSC_INTERN PetscErrorCode PetscLogStateStagePop(PetscLogState state)
   PetscBool empty;
 
   PetscFunctionBegin;
-  /* Record flops/time of current stage */
-  PetscCall(PetscLogStateLock(state));
   PetscCall(PetscIntStackPop(state->stage_stack, &curStage));
   PetscCall(PetscIntStackEmpty(state->stage_stack, &empty));
   if (!empty) {
-    /* Subtract current quantities so that we obtain the difference when we pop */
     PetscCall(PetscIntStackTop(state->stage_stack, &state->current_stage));
   } else state->current_stage = -1;
-  PetscCall(PetscLogStateUnlock(state));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -63,22 +53,6 @@ PETSC_INTERN PetscErrorCode PetscLogStateGetCurrentStage(PetscLogState state, Pe
 {
   PetscFunctionBegin;
   *current = state->current_stage;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PETSC_INTERN PetscErrorCode PetscBTResize(PetscBT *bt_p, PetscInt old_size, PetscInt new_size)
-{
-  PetscFunctionBegin;
-  if (new_size > old_size) {
-    PetscBT bt_new;
-    size_t old_num_chars = PetscMax(0, old_size);
-
-    PetscCall(PetscBTCreate(new_size, &bt_new));
-    if (old_size > 0) old_num_chars = (old_size - 1) / PETSC_BITS_PER_BYTE + 1;
-    PetscCall(PetscMemcpy(bt_new, *bt_p, old_num_chars));
-    PetscCall(PetscBTDestroy(bt_p));
-    *bt_p = bt_new;
-  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
