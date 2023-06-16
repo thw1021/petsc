@@ -9,6 +9,7 @@ typedef PetscErrorCode (*PetscLogEventActivityFn)(PetscLogState, PetscLogEvent, 
 typedef PetscErrorCode (*PetscLogStageFn)(PetscLogState, PetscLogStage, void *);
 typedef PetscErrorCode (*PetscLogObjectFn)(PetscLogState, PetscObject, void *);
 typedef PetscErrorCode (*PetscLogViewFn)(PetscLogState, PetscViewer, void *);
+typedef PetscErrorCode (*PetscLogDestroyFn)(void *);
 
 typedef enum {PETSC_LOG_HANDLER_DEFAULT, PETSC_LOG_HANDLER_NESTED} PetscLogHandlerType;
 
@@ -19,6 +20,7 @@ struct _n_PetscLogHandlerImpl {
   PetscLogEventActivityFn event_deactivate_push;
   PetscLogEventActivityFn event_deactivate_pop;
   PetscLogViewFn          view;
+  PetscLogDestroyFn       destroy;
   void *ctx;
 };
 
