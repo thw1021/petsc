@@ -3,10 +3,32 @@
 
 #include <petsc/private/logimpl.h>
 #include <../src/sys/logging/impls/default/logdefault.h>
+#include <petsc/private/hashmap.h>
 
-typedef enum {PETSC_NESTED_AWAKE, PETSC_NESTED_STAGE, PETSC_NESTED_EVENT} PetscNestedObjectType;
+typedef int NestedId;
 
-typedef PetscLogEvent NestedEventId;
+typedef enum {PETSC_NESTED_NULL=-1, PETSC_NESTED_STAGE, PETSC_NESTED_EVENT} NestedIdType;
+
+typedef NestedIdType PetscNestedObjectType;
+typedef NestedId     NestedEventId;
+
+static inline NestedIdType  NestedIdToType(NestedId id) {return id < -1 ? PETSC_NESTED_STAGE : id == -1 ? PETSC_NESTED_NULL : PETSC_NESTED_EVENT;}
+static inline NestedId      NestedIdFromStage(PetscLogStage stage) {return -(stage+2);}
+static inline PetscLogStage NestedIdToStage(NestedId id) {return -(id+2);}
+static inline NestedId      NestedIdFromEvent(PetscLogEvent event) {return event;}
+static inline PetscLogEvent NestedIdToEvent(NestedId id) {return id;}
+
+typedef struct _n_NestedIdPair NestedIdPair;
+struct _n_NestedIdPair {
+  NestedId root;
+  NestedId leaf;
+};
+
+#define NestedIdPairHash(key) PetscHashCombine(PetscHash_UInt32((PetscHash32_t)((key).root)),PetscHash_UInt32((PetscHash32_t)((key).leaf)))
+#define NestedIdPairEqual(k1,k2) (((k1).root == (k2).root) && ((k1).leaf == (k2).leaf))
+
+PETSC_HASH_MAP(NestedHash, NestedIdPair, NestedId, NestedIdPairHash, NestedIdPairEqual, -1);
+
 typedef struct {
   PetscNestedObjectType type;
   NestedEventId  nstEvent;         // event-code for this nested event, argument 'event' in PetscLogEventStartNested
@@ -23,12 +45,10 @@ PETSC_LOG_RESIZABLE_ARRAY(NestedEventId,NestedEventMap)
 
 typedef struct _n_PetscLogHandler_Nested *PetscLogHandler_Nested;
 struct _n_PetscLogHandler_Nested {
-  PetscLogState nested_state;
-  PetscStageLog nested_handler;
-  PetscNestedEventLog nested_events;
-  PetscLogDouble threshold_time;
-  NestedEventMap nested_stage_to_root_stage;
-  NestedEventMap nested_event_to_root_event;
+  PetscLogState       state;
+  PetscLogHandler     handler;
+  PetscNestedHash     pair_map;
+  PetscIntStack       stack; // stack of nested ids
 };
 
 #endif // #define PETSC_LOGNESTED_H
