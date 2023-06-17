@@ -355,6 +355,48 @@ PetscErrorCode PCGetUseAmat(PC pc, PetscBool *flg)
 }
 
 /*@
+   PCSetKSPNestLevel - sets the amount of nesting the `KSP` that contains this `PC` has
+
+   Collective
+
+   Input Parameters:
++  pc - the `PC`
+-  level - the nest level
+
+   Level: developer
+
+.seealso: [](ch_ksp), `KSPSetUp()`, `KSPSolve()`, `KSPDestroy()`, `KSP`, `KSPGMRES`, `KSPType`, `KSPGetNestLevel()`, `PCGetKSPNestLevel()`, `KSPSetNestLevel()`
+@*/
+PetscErrorCode PCSetKSPNestLevel(PC pc, PetscInt level)
+{
+  PetscFunctionBegin;
+  pc->kspnestlevel = level;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+   PCGetKSPNestLevel - gets the amount of nesting the `KSP` that contains this `PC` has
+
+   Collective
+
+   Input Parameter:
+.  pc - the `PC`
+
+   Output Parameter:
+.  level - the nest level
+
+   Level: developer
+
+.seealso: [](ch_ksp), `KSPSetUp()`, `KSPSolve()`, `KSPDestroy()`, `KSP`, `KSPGMRES`, `KSPType`, `KSPSetNestLevel()`, `PCSetKSPNestLevel()`, `KSPGetNestLevel()`
+@*/
+PetscErrorCode PCGetKSPNestLevel(PC pc, PetscInt *level)
+{
+  PetscFunctionBegin;
+  *level = pc->kspnestlevel;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
    PCCreate - Creates a preconditioner context, `PC`
 
    Collective
