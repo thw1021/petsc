@@ -439,21 +439,6 @@ PetscErrorCode PetscLogStagePush(PetscLogStage stage)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscLogStagePop_Internal()
-{
-  PetscLogState state;
-
-  PetscFunctionBegin;
-  PetscCall(PetscLogGetState(&state));
-  #if defined(PETSC_HAVE_TAU_PERFSTUBS) && 0 // TODO: perfstubs
-  if (perfstubs_initialized == PERFSTUBS_SUCCESS && stageLog->array[stageLog->curStage].timer != NULL) PetscStackCallExternalVoid("ps_timer_stop_", ps_timer_stop_(stageLog->array[stageLog->curStage].timer));
-  #endif
-  PetscCall(PetscSpinlockLock(&PetscLogSpinLock));
-  PetscCall(PetscLogStateStagePop(state));
-  PetscCall(PetscSpinlockUnlock(&PetscLogSpinLock));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /*@C
   PetscLogStagePop - This function pops a stage from the logging stack that was pushed with `PetscLogStagePush()`
 

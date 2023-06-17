@@ -34,7 +34,7 @@ struct _n_PetscLogHandlerImpl {
     entrytype *array; \
   }; \
   PETSC_INTERN PetscErrorCode containertype##Create(containertype *);\
-  PETSC_INTERN PetscErrorCode containertype##Destroy(containertype);\
+  PETSC_INTERN PetscErrorCode containertype##Destroy(containertype);
 
 #define PetscLogResizableArrayEnsureSize(ra,new_size,blank_entry) \
   PetscMacroReturnStandard( \
@@ -158,7 +158,7 @@ PETSC_INTERN PetscErrorCode PetscLogStateStageSetActive(PetscLogState, PetscLogS
 PETSC_INTERN PetscErrorCode PetscLogStateStageGetActive(PetscLogState, PetscLogStage, PetscBool *);
 PETSC_INTERN PetscErrorCode PetscLogStateGetCurrentStage(PetscLogState, PetscLogStage *);
 PETSC_INTERN PetscErrorCode PetscLogStateStageRegister(PetscLogState, const char[], PetscLogStage *);
-PETSC_INTERN PetscErrorCode PetscLogStateEventRegister(PetscLogState, const char[], PetscClassId, PetscLogStage *);
+PETSC_INTERN PetscErrorCode PetscLogStateEventRegister(PetscLogState, const char[], PetscClassId, PetscLogEvent *);
 PETSC_INTERN PetscErrorCode PetscLogStateLock(PetscLogState);
 PETSC_INTERN PetscErrorCode PetscLogStateUnlock(PetscLogState);
 
