@@ -636,6 +636,48 @@ PetscErrorCode KSPSetPostSolve(KSP ksp, PetscErrorCode (*postsolve)(KSP, Vec, Ve
 }
 
 /*@
+   KSPSetNestLevel - sets the amount of nesting the `KSP` has
+
+   Collective
+
+   Input Parameters:
++  ksp - the `KSP`
+-  level - the nest level
+
+   Level: developer
+
+.seealso: [](ch_ksp), `KSPSetUp()`, `KSPSolve()`, `KSPDestroy()`, `KSP`, `KSPGMRES`, `KSPType`, `KSPGetNestLevel()`, `PCSetKSPNestLevel()`, `PCGetKSPNestLevel()`
+@*/
+PetscErrorCode KSPSetNestLevel(KSP ksp, PetscInt level)
+{
+  PetscFunctionBegin;
+  ksp->nestlevel = level;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+   KSPGetNestLevel - gets the amount of nesting the `KSP` has
+
+   Collective
+
+   Input Parameter:
+.  ksp - the `KSP`
+
+   Output Parameter:
+.  level - the nest level
+
+   Level: developer
+
+.seealso: [](ch_ksp), `KSPSetUp()`, `KSPSolve()`, `KSPDestroy()`, `KSP`, `KSPGMRES`, `KSPType`, `KSPSetNestLevel()`, `PCSetKSPNestLevel()`, `PCGetKSPNestLevel()`
+@*/
+PetscErrorCode KSPGetNestLevel(KSP ksp, PetscInt *level)
+{
+  PetscFunctionBegin;
+  *level = ksp->nestlevel;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
    KSPCreate - Creates the `KSP` context.
 
    Collective
