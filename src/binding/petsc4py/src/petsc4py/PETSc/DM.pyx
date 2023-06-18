@@ -364,7 +364,7 @@ cdef class DM(Object):
         useCone : bool
             Whether adjacency uses cone information.
         useClosure : bool
-            Whether adjacency is compued using full closure information.
+            Whether adjacency is computed using full closure information.
 
         See Also
         --------
@@ -385,7 +385,7 @@ cdef class DM(Object):
         useCone : bool
             Whether adjacency uses cone information.
         useClosure : bool
-            Whether adjacency is compued using full closure information.
+            Whether adjacency is computed using full closure information.
 
         See Also
         --------
@@ -409,7 +409,7 @@ cdef class DM(Object):
         useCone : bool
             Whether adjacency uses cone information.
         useClosure : bool
-            Whether adjacency is compued using full closure information.
+            Whether adjacency is computed using full closure information.
 
         See Also
         --------
@@ -436,7 +436,7 @@ cdef class DM(Object):
         useCone : bool
             Whether adjacency uses cone information.
         useClosure : bool
-            Whether adjacency is compued using full closure information.
+            Whether adjacency is computed using full closure information.
 
         See Also
         --------
