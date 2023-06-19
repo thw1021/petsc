@@ -1523,8 +1523,10 @@ M*/
 PETSC_EXTERN PetscErrorCode PetscViewerCreate_Binary(PetscViewer v)
 {
   PetscViewer_Binary *vbinary;
+  PetscMPIInt         size;
 
   PetscFunctionBegin;
+  PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)v), &size));
   PetscCall(PetscNew(&vbinary));
   v->data = (void *)vbinary;
 
@@ -1539,9 +1541,9 @@ PETSC_EXTERN PetscErrorCode PetscViewerCreate_Binary(PetscViewer v)
 
   vbinary->fdes = -1;
 #if defined(PETSC_HAVE_MPIIO)
-  vbinary->usempiio = PETSC_FALSE;
-  vbinary->mfdes    = MPI_FILE_NULL;
-  vbinary->mfsub    = MPI_FILE_NULL;
+  if (size > 1) vbinary->usempiio = PETSC_TRUE;
+  vbinary->mfdes = MPI_FILE_NULL;
+  vbinary->mfsub = MPI_FILE_NULL;
 #endif
   vbinary->filename        = NULL;
   vbinary->filemode        = FILE_MODE_UNDEFINED;
