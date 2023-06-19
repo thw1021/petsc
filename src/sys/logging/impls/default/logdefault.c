@@ -403,9 +403,7 @@ PetscErrorCode PetscLogEventBeginDefault(PetscLogState state, PetscLogEvent even
   if (eventInfo->depth > 1) PetscFunctionReturn(PETSC_SUCCESS);
 #if defined(PETSC_HAVE_CUDA)
   if (PetscDeviceInitialized(PETSC_DEVICE_CUDA)) {
-    PetscEventRegLog eventRegLog;
-    PetscCall(PetscStageLogGetEventRegLog(stageLog, &eventRegLog));
-    nvtxRangePushA(eventRegLog->array[event].name);
+    nvtxRangePushA(state->registry->events->array[event].name);
   }
 #endif
   /* Log the performance info */
