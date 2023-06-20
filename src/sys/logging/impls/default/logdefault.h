@@ -85,6 +85,7 @@ struct _n_PetscStageLog {
 };
 
 PETSC_INTERN PetscErrorCode PetscLogGetDefaultHandler(PetscStageLog *);
+PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Default(PetscLogHandler *);
 PETSC_INTERN PetscErrorCode PetscLogHandlerDefaultGetEventPerfInfo(PetscStageLog, PetscLogStage, PetscLogEvent, PetscEventPerfInfo **);
 PETSC_INTERN PetscErrorCode PetscStageLogDuplicate(PetscStageLog, PetscStageLog *);
 PETSC_INTERN PetscErrorCode PetscLogEventBeginDefault(PetscLogState, PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject, void *);

@@ -8,7 +8,7 @@
 typedef PetscErrorCode (*PetscLogEventActivityFn)(PetscLogState, PetscLogEvent, void *);
 typedef PetscErrorCode (*PetscLogStageFn)(PetscLogState, PetscLogStage, void *);
 typedef PetscErrorCode (*PetscLogObjectFn)(PetscLogState, PetscObject, void *);
-typedef PetscErrorCode (*PetscLogViewFn)(PetscLogState, PetscViewer, void *);
+typedef PetscErrorCode (*PetscLogViewFn)(PetscViewer, void *);
 typedef PetscErrorCode (*PetscLogDestroyFn)(void *);
 
 typedef enum {PETSC_LOG_HANDLER_DEFAULT, PETSC_LOG_HANDLER_NESTED} PetscLogHandlerType;
@@ -23,6 +23,8 @@ struct _n_PetscLogHandlerImpl {
   PetscLogDestroyFn       destroy;
   void *ctx;
 };
+
+PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *);
 
 /* --- Macros for resizable arrays that show up frequently in the implementation of logging --- */
 
@@ -62,11 +64,14 @@ struct _n_PetscLogHandlerImpl {
     PetscCall(PetscMalloc1((max_init), &((*(ra_p))->array))); \
   )
 
-/* --- Registration info types that are not part of the public API --- */
-
 /* --- PetscEventPerfInfo (declared in petsclog.h) --- */
+
 PETSC_EXTERN PetscErrorCode PetscEventPerfInfoClear(PetscEventPerfInfo *);
 PETSC_EXTERN PetscErrorCode PetscEventPerfInfoCopy(const PetscEventPerfInfo *, PetscEventPerfInfo *);
+PETSC_INTERN PetscErrorCode PetscEventPerfInfoTic(PetscEventPerfInfo *, PetscLogDouble, PetscBool, int);
+PETSC_INTERN PetscErrorCode PetscEventPerfInfoToc(PetscEventPerfInfo *, PetscLogDouble, PetscBool, int);
+
+/* --- Registration info types that are not part of the public API --- */
 
 /* --- PetscEventRegInfo --- */
 typedef struct {
@@ -142,9 +147,26 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryStageRegister(PetscLogRegistry,const
 PETSC_INTERN PetscErrorCode PetscLogRegistryEventRegister(PetscLogRegistry,const char[],PetscClassId,PetscLogStage *);
 PETSC_INTERN PetscErrorCode PetscLogRegistryGetClassLog(PetscLogRegistry, PetscClassRegLog *);
 PETSC_INTERN PetscErrorCode PetscLogRegistryGetEventLog(PetscLogRegistry, PetscEventRegLog *);
+PETSC_INTERN PetscErrorCode PetscLogRegistryGetEvent(PetscLogRegistry, const char[], PetscLogEvent *);
 PETSC_INTERN PetscErrorCode PetscLogRegistryGetStageLog(PetscLogRegistry, PetscStageRegLog *);
 PETSC_INTERN PetscErrorCode PetscLogRegistryLock(PetscLogRegistry);
 PETSC_INTERN PetscErrorCode PetscLogRegistryUnlock(PetscLogRegistry);
+
+/* --- globally synchronized registry information --- */
+
+typedef struct _n_PetscLogGlobalNames *PetscLogGlobalNames;
+struct _n_PetscLogGlobalNames {
+  MPI_Comm     comm;
+  PetscInt     count;
+  const char **names;
+  PetscInt    *global_to_local;
+  PetscInt    *local_to_global;
+};
+
+PETSC_INTERN PetscErrorCode PetscLogGlobalNamesCreate(MPI_Comm, PetscInt, const char **, PetscLogGlobalNames *);
+PETSC_INTERN PetscErrorCode PetscLogGlobalNamesDestroy(PetscLogGlobalNames *);
+PETSC_INTERN PetscErrorCode PetscLogRegistryCreateGlobalStageNames(MPI_Comm, PetscLogRegistry, PetscLogGlobalNames *);
+PETSC_INTERN PetscErrorCode PetscLogRegistryCreateGlobalEventNames(MPI_Comm, PetscLogRegistry, PetscLogGlobalNames *);
 
 /* --- methods for PetscLogState --- */
 

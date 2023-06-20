@@ -49,6 +49,29 @@ struct _n_PetscLogHandler_Nested {
   PetscLogHandler     handler;
   PetscNestedHash     pair_map;
   PetscIntStack       stack; // stack of nested ids
+  PetscClassId        nested_stage_id;
+  PetscLogDouble      threshold, threshold_time;
 };
+
+typedef struct {
+  const char *name;
+  PetscInt id;
+  PetscInt parent;
+  PetscInt num_descendants;
+} PetscNestedEventNode;
+
+typedef struct {
+  MPI_Comm            comm;
+  PetscLogGlobalNames global_events;
+  PetscNestedEventNode *nodes;
+  PetscEventPerfInfo   *perf;
+} PetscNestedEventTree;
+
+typedef enum {
+  PETSC_LOG_NESTED_XML,
+  PETSC_LOG_NESTED_FLAMEGRAPH
+} PetscLogNestedType;
+
+PETSC_INTERN PetscErrorCode PetscLogNestedTreePrintNew(PetscViewer, PetscLogDouble, const PetscNestedEventNode *, PetscEventPerfInfo *, const PetscNestedEventNode[], PetscEventPerfInfo[], PetscLogNestedType);
 
 #endif // #define PETSC_LOGNESTED_H
