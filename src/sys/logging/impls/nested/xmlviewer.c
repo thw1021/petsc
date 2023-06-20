@@ -8,21 +8,23 @@
 #include <petscviewer.h>
 #include <petsc/private/logimpl.h>
 #include <petsc/private/fortranimpl.h>
-#include <../src/sys/logging/impls/nested/xmlviewer.h>
+#include "xmlviewer.h"
+#include "lognested.h"
 
 #if defined(PETSC_USE_LOG)
 
-static int XMLSectionDepth = 0;
-
 PetscErrorCode PetscViewerXMLStartSection(PetscViewer viewer, const char *name, const char *desc)
 {
+  PetscInt XMLSectionDepth;
+
   PetscFunctionBegin;
+  PetscCall(PetscViewerASCIIGetTab(viewer, &XMLSectionDepth));
   if (!desc) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "%*s<%s>\n", XMLSectionDepth, "", name));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "%*s<%s>\n", 2*XMLSectionDepth, "", name));
   } else {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "%*s<%s desc=\"%s\">\n", XMLSectionDepth, "", name, desc));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "%*s<%s desc=\"%s\">\n", 2*XMLSectionDepth, "", name, desc));
   }
-  XMLSectionDepth += 2;
+  PetscCall(PetscViewerASCIIPushTab(viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -37,7 +39,6 @@ PetscErrorCode PetscViewerInitASCII_XML(PetscViewer viewer)
   PetscCall(PetscViewerASCIIPrintf(viewer, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"));
   PetscCall(PetscStrreplace(comm, "<?xml-stylesheet type=\"text/xsl\" href=\"performance_xml2html.xsl\"?>", PerfScript, sizeof(PerfScript)));
   PetscCall(PetscViewerASCIIPrintf(viewer, "%s\n", PerfScript));
-  XMLSectionDepth = 0;
   PetscCall(PetscViewerXMLStartSection(viewer, "root", NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -52,46 +53,391 @@ PetscErrorCode PetscViewerFinalASCII_XML(PetscViewer viewer)
 
 PetscErrorCode PetscViewerXMLEndSection(PetscViewer viewer, const char *name)
 {
+  PetscInt XMLSectionDepth;
+
   PetscFunctionBegin;
-  XMLSectionDepth -= 2;
-  if (XMLSectionDepth < 0) XMLSectionDepth = 0;
-  PetscCall(PetscViewerASCIIPrintf(viewer, "%*s</%s>\n", XMLSectionDepth, "", name));
+  PetscCall(PetscViewerASCIIGetTab(viewer, &XMLSectionDepth));
+  if (XMLSectionDepth > 0) PetscCall(PetscViewerASCIIPopTab(viewer));
+  PetscCall(PetscViewerASCIIGetTab(viewer, &XMLSectionDepth));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "%*s</%s>\n", 2*XMLSectionDepth, "", name));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode PetscViewerXMLPutString(PetscViewer viewer, const char *name, const char *desc, const char *value)
 {
+  PetscInt XMLSectionDepth;
+
   PetscFunctionBegin;
+  PetscCall(PetscViewerASCIIGetTab(viewer, &XMLSectionDepth));
   if (!desc) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "%*s<%s>%s</%s>\n", XMLSectionDepth, "", name, value, name));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "%*s<%s>%s</%s>\n", 2*XMLSectionDepth, "", name, value, name));
   } else {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "%*s<%s desc=\"%s\">%s</%s>\n", XMLSectionDepth, "", name, desc, value, name));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "%*s<%s desc=\"%s\">%s</%s>\n", 2*XMLSectionDepth, "", name, desc, value, name));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode PetscViewerXMLPutInt(PetscViewer viewer, const char *name, const char *desc, int value)
 {
+  PetscInt XMLSectionDepth;
+
   PetscFunctionBegin;
+  PetscCall(PetscViewerASCIIGetTab(viewer, &XMLSectionDepth));
   if (!desc) {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "%*s<%s>%d</%s>\n", XMLSectionDepth, "", name, value, name));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "%*s<%s>%d</%s>\n", 2*XMLSectionDepth, "", name, value, name));
   } else {
-    PetscCall(PetscViewerASCIIPrintf(viewer, "%*s<%s desc=\"%s\">%d</%s>\n", XMLSectionDepth, "", name, desc, value, name));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "%*s<%s desc=\"%s\">%d</%s>\n", 2*XMLSectionDepth, "", name, desc, value, name));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode PetscViewerXMLPutDouble(PetscViewer viewer, const char *name, const char *desc, PetscLogDouble value, const char *format)
 {
+  PetscInt XMLSectionDepth;
   char buffer[1024];
 
   PetscFunctionBegin;
+  PetscCall(PetscViewerASCIIGetTab(viewer, &XMLSectionDepth));
   if (!desc) {
-    PetscCall(PetscSNPrintf(buffer, sizeof(buffer), "%*s<%s>%s</%s>\n", XMLSectionDepth, "", name, format, name));
+    PetscCall(PetscSNPrintf(buffer, sizeof(buffer), "%*s<%s>%s</%s>\n", 2*XMLSectionDepth, "", name, format, name));
   } else {
-    PetscCall(PetscSNPrintf(buffer, sizeof(buffer), "%*s<%s desc=\"%s\">%s</%s>\n", XMLSectionDepth, "", name, desc, format, name));
+    PetscCall(PetscSNPrintf(buffer, sizeof(buffer), "%*s<%s desc=\"%s\">%s</%s>\n", 2*XMLSectionDepth, "", name, desc, format, name));
   }
   PetscCall(PetscViewerASCIIPrintf(viewer, buffer, value));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscPrintExeSpecs(PetscViewer viewer)
+{
+  char        arch[128], hostname[128], username[128], pname[PETSC_MAX_PATH_LEN], date[128];
+  char        version[256], buildoptions[128] = "";
+  PetscMPIInt size;
+  size_t      len;
+
+  PetscFunctionBegin;
+  PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)viewer), &size));
+  PetscCall(PetscGetArchType(arch, sizeof(arch)));
+  PetscCall(PetscGetHostName(hostname, sizeof(hostname)));
+  PetscCall(PetscGetUserName(username, sizeof(username)));
+  PetscCall(PetscGetProgramName(pname, sizeof(pname)));
+  PetscCall(PetscGetDate(date, sizeof(date)));
+  PetscCall(PetscGetVersion(version, sizeof(version)));
+
+  PetscCall(PetscViewerXMLStartSection(viewer, "runspecification", "Run Specification"));
+  PetscCall(PetscViewerXMLPutString(viewer, "executable", "Executable", pname));
+  PetscCall(PetscViewerXMLPutString(viewer, "architecture", "Architecture", arch));
+  PetscCall(PetscViewerXMLPutString(viewer, "hostname", "Host", hostname));
+  PetscCall(PetscViewerXMLPutInt(viewer, "nprocesses", "Number of processes", size));
+  PetscCall(PetscViewerXMLPutString(viewer, "user", "Run by user", username));
+  PetscCall(PetscViewerXMLPutString(viewer, "date", "Started at", date));
+  PetscCall(PetscViewerXMLPutString(viewer, "petscrelease", "Petsc Release", version));
+
+  if (PetscDefined(USE_DEBUG)) PetscCall(PetscStrlcat(buildoptions, "Debug ", sizeof(buildoptions)));
+  if (PetscDefined(USE_COMPLEX)) PetscCall(PetscStrlcat(buildoptions, "Complex ", sizeof(buildoptions)));
+  if (PetscDefined(USE_REAL_SINGLE)) {
+    PetscCall(PetscStrlcat(buildoptions, "Single ", sizeof(buildoptions)));
+  } else if (PetscDefined(USE_REAL___FLOAT128)) {
+    PetscCall(PetscStrlcat(buildoptions, "Quadruple ", sizeof(buildoptions)));
+  } else if (PetscDefined(USE_REAL___FP16)) {
+    PetscCall(PetscStrlcat(buildoptions, "Half ", sizeof(buildoptions)));
+  }
+  if (PetscDefined(USE_64BIT_INDICES)) PetscCall(PetscStrlcat(buildoptions, "Int64 ", sizeof(buildoptions)));
+  #if defined(__cplusplus)
+  PetscCall(PetscStrlcat(buildoptions, "C++ ", sizeof(buildoptions)));
+  #endif
+  PetscCall(PetscStrlen(buildoptions, &len));
+  if (len) PetscCall(PetscViewerXMLPutString(viewer, "petscbuildoptions", "Petsc build options", buildoptions));
+  PetscCall(PetscViewerXMLEndSection(viewer, "runspecification"));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscPrintXMLGlobalPerformanceElement(PetscViewer viewer, const char *name, const char *desc, PetscLogDouble local_val, const PetscBool print_average, const PetscBool print_total)
+{
+  PetscLogDouble min, tot, ratio, avg;
+  MPI_Comm       comm;
+  PetscMPIInt    rank, size;
+  PetscLogDouble valrank[2], max[2];
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectGetComm((PetscObject)viewer, &comm));
+  PetscCallMPI(MPI_Comm_size(PetscObjectComm((PetscObject)viewer), &size));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+
+  valrank[0] = local_val;
+  valrank[1] = (PetscLogDouble)rank;
+  PetscCall(MPIU_Allreduce(&local_val, &min, 1, MPIU_PETSCLOGDOUBLE, MPI_MIN, comm));
+  PetscCall(MPIU_Allreduce(valrank, &max, 1, MPIU_2PETSCLOGDOUBLE, MPI_MAXLOC, comm));
+  PetscCall(MPIU_Allreduce(&local_val, &tot, 1, MPIU_PETSCLOGDOUBLE, MPI_SUM, comm));
+  avg = tot / ((PetscLogDouble)size);
+  if (min != 0.0) ratio = max[0] / min;
+  else ratio = 0.0;
+
+  PetscCall(PetscViewerXMLStartSection(viewer, name, desc));
+  PetscCall(PetscViewerXMLPutDouble(viewer, "max", NULL, max[0], "%e"));
+  PetscCall(PetscViewerXMLPutInt(viewer, "maxrank", "rank at which max was found", (PetscMPIInt)max[1]));
+  PetscCall(PetscViewerXMLPutDouble(viewer, "ratio", NULL, ratio, "%f"));
+  if (print_average) PetscCall(PetscViewerXMLPutDouble(viewer, "average", NULL, avg, "%e"));
+  if (print_total) PetscCall(PetscViewerXMLPutDouble(viewer, "total", NULL, tot, "%e"));
+  PetscCall(PetscViewerXMLEndSection(viewer, name));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/* Print the global performance: max, max/min, average and total of
+ *      time, objects, flops, flops/sec, memory, MPI messages, MPI message lengths, MPI reductions.
+ */
+static PetscErrorCode PetscPrintGlobalPerformance(PetscViewer viewer, PetscLogDouble locTotalTime, PetscStageLog default_handler)
+{
+  PetscLogDouble  flops, mem, red, mess;
+  const PetscBool print_total_yes = PETSC_TRUE, print_total_no = PETSC_FALSE, print_average_no = PETSC_FALSE, print_average_yes = PETSC_TRUE;
+
+  PetscFunctionBegin;
+  /* Must preserve reduction count before we go on */
+  red = petsc_allreduce_ct + petsc_gather_ct + petsc_scatter_ct;
+
+  /* Calculate summary information */
+  PetscCall(PetscViewerXMLStartSection(viewer, "globalperformance", "Global performance"));
+
+  /*   Time */
+  PetscCall(PetscPrintXMLGlobalPerformanceElement(viewer, "time", "Time (sec)", locTotalTime, print_average_yes, print_total_no));
+
+  /*   Objects */
+  PetscCall(PetscPrintXMLGlobalPerformanceElement(viewer, "objects", "Objects", (PetscLogDouble)default_handler->petsc_objects->num_entries, print_average_yes, print_total_no));
+
+  /*   Flop */
+  PetscCall(PetscPrintXMLGlobalPerformanceElement(viewer, "mflop", "MFlop", petsc_TotalFlops / 1.0E6, print_average_yes, print_total_yes));
+
+  /*   Flop/sec -- Must talk to Barry here */
+  if (locTotalTime != 0.0) flops = petsc_TotalFlops / locTotalTime;
+  else flops = 0.0;
+  PetscCall(PetscPrintXMLGlobalPerformanceElement(viewer, "mflops", "MFlop/sec", flops / 1.0E6, print_average_yes, print_total_yes));
+
+  /*   Memory */
+  PetscCall(PetscMallocGetMaximumUsage(&mem));
+  if (mem > 0.0) PetscCall(PetscPrintXMLGlobalPerformanceElement(viewer, "memory", "Memory (MiB)", mem / 1024.0 / 1024.0, print_average_yes, print_total_yes));
+  /*   Messages */
+  mess = 0.5 * (petsc_irecv_ct + petsc_isend_ct + petsc_recv_ct + petsc_send_ct);
+  PetscCall(PetscPrintXMLGlobalPerformanceElement(viewer, "messagetransfers", "MPI Message Transfers", mess, print_average_yes, print_total_yes));
+
+  /*   Message Volume */
+  mess = 0.5 * (petsc_irecv_len + petsc_isend_len + petsc_recv_len + petsc_send_len);
+  PetscCall(PetscPrintXMLGlobalPerformanceElement(viewer, "messagevolume", "MPI Message Volume (MiB)", mess / 1024.0 / 1024.0, print_average_yes, print_total_yes));
+
+  /*   Reductions */
+  PetscCall(PetscPrintXMLGlobalPerformanceElement(viewer, "reductions", "MPI Reductions", red, print_average_no, print_total_no));
+  PetscCall(PetscViewerXMLEndSection(viewer, "globalperformance"));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/* Print the global performance: max, max/min, average and total of
+ *      time, objects, flops, flops/sec, memory, MPI messages, MPI message lengths, MPI reductions.
+ */
+static PetscErrorCode PetscPrintXMLNestedLinePerfResults(PetscViewer viewer, const char *name, PetscLogDouble value, PetscLogDouble minthreshold, PetscLogDouble maxthreshold, PetscLogDouble minmaxtreshold)
+{
+  MPI_Comm       comm; /* MPI communicator in reduction */
+  PetscMPIInt    rank; /* rank of this process */
+  PetscLogDouble val_in[2], max[2], min[2];
+  PetscLogDouble minvalue, maxvalue, tot;
+  PetscMPIInt    size;
+  PetscMPIInt    minLoc, maxLoc;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectGetComm((PetscObject)viewer, &comm));
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+  PetscCallMPI(MPI_Comm_rank(comm, &rank));
+  val_in[0] = value;
+  val_in[1] = (PetscLogDouble)rank;
+  PetscCall(MPIU_Allreduce(val_in, max, 1, MPIU_2PETSCLOGDOUBLE, MPI_MAXLOC, comm));
+  PetscCall(MPIU_Allreduce(val_in, min, 1, MPIU_2PETSCLOGDOUBLE, MPI_MINLOC, comm));
+  maxvalue = max[0];
+  maxLoc   = (PetscMPIInt)max[1];
+  minvalue = min[0];
+  minLoc   = (PetscMPIInt)min[1];
+  PetscCall(MPIU_Allreduce(&value, &tot, 1, MPIU_PETSCLOGDOUBLE, MPI_SUM, comm));
+
+  if (maxvalue < maxthreshold && minvalue >= minthreshold) {
+    /* One call per parent or NO value: don't print */
+  } else {
+    PetscCall(PetscViewerXMLStartSection(viewer, name, NULL));
+    if (maxvalue > minvalue * minmaxtreshold) {
+      PetscCall(PetscViewerXMLPutDouble(viewer, "avgvalue", NULL, tot / size, "%g"));
+      PetscCall(PetscViewerXMLPutDouble(viewer, "minvalue", NULL, minvalue, "%g"));
+      PetscCall(PetscViewerXMLPutDouble(viewer, "maxvalue", NULL, maxvalue, "%g"));
+      PetscCall(PetscViewerXMLPutInt(viewer, "minloc", NULL, minLoc));
+      PetscCall(PetscViewerXMLPutInt(viewer, "maxloc", NULL, maxLoc));
+    } else {
+      PetscCall(PetscViewerXMLPutDouble(viewer, "value", NULL, tot / size, "%g"));
+    }
+    PetscCall(PetscViewerXMLEndSection(viewer, name));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscLogNestedTreePrintLine(PetscViewer viewer, const PetscEventPerfInfo *perfInfo, PetscLogDouble countsPerCall, int parentCount, const char *name, PetscLogDouble totalTime)
+{
+  PetscLogDouble time = perfInfo->time;
+  PetscLogDouble timeMx;
+  MPI_Comm       comm;
+
+  PetscFunctionBegin;
+  PetscCall(PetscObjectGetComm((PetscObject)viewer, &comm));
+  PetscCall(MPIU_Allreduce(&time, &timeMx, 1, MPIU_PETSCLOGDOUBLE, MPI_MAX, comm));
+  PetscCall(PetscViewerXMLPutString(viewer, "name", NULL, name));
+  PetscCall(PetscPrintXMLNestedLinePerfResults(viewer, "time", time / totalTime * 100.0, 0, 0, 1.02));
+  PetscCall(PetscPrintXMLNestedLinePerfResults(viewer, "ncalls", parentCount > 0 ? countsPerCall : 1.0, 0.99, 1.01, 1.02));
+  PetscCall(PetscPrintXMLNestedLinePerfResults(viewer, "mflops", time >= timeMx * 0.001 ? 1e-6 * perfInfo->flops / time : 0, 0, 0.01, 1.05));
+  PetscCall(PetscPrintXMLNestedLinePerfResults(viewer, "mbps", time >= timeMx * 0.001 ? perfInfo->messageLength / (1024 * 1024 * time) : 0, 0, 0.01, 1.05));
+  PetscCall(PetscPrintXMLNestedLinePerfResults(viewer, "nreductsps", time >= timeMx * 0.001 ? perfInfo->numReductions / time : 0, 0, 0.01, 1.05));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscNestedNameGetBase(const char name[], const char *base[])
+{
+  size_t n;
+  PetscFunctionBegin;
+  PetscCall(PetscStrlen(name, &n));
+  while (n > 0 && name[n-1] != ';') n--;
+  *base = &name[n];
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscLogNestedTreePrint(PetscViewer viewer, double total_time, double threshold, const PetscNestedEventNode *parent_node, PetscEventPerfInfo *parent_info, const PetscNestedEventNode tree[], PetscEventPerfInfo perf[], PetscLogNestedType type)
+{
+  PetscInt num_children = 0;
+  PetscInt num_nodes = parent_node->num_descendants;
+  PetscInt *perm;
+  PetscReal *times;
+  PetscEventPerfInfo other;
+
+  PetscFunctionBegin;
+  for (PetscInt node = 0; node < num_nodes; node += 1 + tree[node].num_descendants) {
+    PetscAssert(tree[node].parent == parent_node->id, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Failed tree invariant");
+    num_children++;
+  }
+  PetscCall(PetscMemzero(&other, sizeof(other)));
+  PetscCall(PetscMalloc2(num_children + 2, &times, num_children + 2, &perm));
+  for (PetscInt i = 0, node = 0; node < num_nodes; i++, node += 1 + tree[node].num_descendants) {
+    PetscLogDouble child_time = perf[node].time;
+
+    perm[i] = node;
+    PetscCall(MPIU_Allreduce(MPI_IN_PLACE, &child_time, 1, MPI_DOUBLE, MPI_MAX, PetscObjectComm((PetscObject)viewer)));
+    times[i] = -child_time;
+
+    parent_info->time          -= perf[node].time;
+    parent_info->flops         -= perf[node].flops;
+    parent_info->numMessages   -= perf[node].numMessages;
+    parent_info->messageLength -= perf[node].messageLength;
+    parent_info->numReductions -= perf[node].numReductions;
+    if (child_time / total_time < threshold) {
+      PetscEventPerfInfo *add_to = (type == PETSC_LOG_NESTED_XML) ? &other : parent_info;
+
+      add_to->time          += perf[node].time;
+      add_to->flops         += perf[node].flops;
+      add_to->numMessages   += perf[node].numMessages;
+      add_to->messageLength += perf[node].messageLength;
+      add_to->numReductions += perf[node].numReductions;
+      add_to->count         += perf[node].count;
+    }
+  }
+  perm[num_children] = -1;
+  times[num_children] = -parent_info->time;
+  perm[num_children + 1] = -2;
+  times[num_children + 1] = -other.time;
+  PetscCall(MPIU_Allreduce(MPI_IN_PLACE, &times[num_children], 2, MPI_DOUBLE, MPI_MIN, PetscObjectComm((PetscObject)viewer)));
+  if (type == PETSC_LOG_NESTED_FLAMEGRAPH) {
+    /* The output is given as an integer in microseconds because otherwise the file cannot be read
+     * by apps such as speedscope (https://speedscope.app/). */
+    PetscCall(PetscViewerASCIIPrintf(viewer, "%s %" PetscInt64_FMT "\n", parent_node->name, (PetscInt64)(-times[num_children] * 1e6)));
+  }
+  // sort descending by time
+  PetscCall(PetscSortRealWithArrayInt(num_children + 2, times, perm));
+
+  if (type == PETSC_LOG_NESTED_XML) PetscCall(PetscViewerXMLStartSection(viewer, "events", NULL));
+  for (PetscInt i = 0; i < num_children + 2; i++) {
+    PetscInt node = perm[i];
+    PetscLogDouble child_time = -times[i];
+
+    if (child_time / total_time >= threshold || (node < 0 && child_time > 0.0)) {
+      if (type == PETSC_LOG_NESTED_XML) {
+        PetscCall(PetscViewerXMLStartSection(viewer, "event", NULL));
+        if (node == -1) {
+          PetscCall(PetscLogNestedTreePrintLine(viewer, parent_info, 0, 0, "self", total_time));
+        } else if (node == -2) {
+          PetscCall(PetscLogNestedTreePrintLine(viewer, &other, ((double) other.count) / ((double) parent_info->count), parent_info->count, "other", total_time));
+        } else {
+          const char *base_name;
+          PetscCall(PetscNestedNameGetBase(tree[node].name, &base_name));
+          PetscCall(PetscLogNestedTreePrintLine(viewer, &perf[node], ((double) perf[node].count) / ((double) parent_info->count), parent_info->count, base_name, total_time));
+          PetscCall(PetscLogNestedTreePrint(viewer, total_time, threshold, &tree[node], &perf[node], &tree[node+1], &perf[node+1], type));
+        }
+        PetscCall(PetscViewerXMLEndSection(viewer, "event"));
+      } else if (node >= 0) {
+        PetscCall(PetscLogNestedTreePrint(viewer, total_time, threshold, &tree[node], &perf[node], &tree[node+1], &perf[node+1], type));
+      }
+    }
+  }
+  if (type == PETSC_LOG_NESTED_XML) PetscCall(PetscViewerXMLEndSection(viewer, "events"));
+
+  PetscCall(PetscFree2(times, perm));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode PetscLogNestedTreePrintTop(PetscViewer viewer, PetscNestedEventTree *tree, PetscLogDouble *total_time, PetscLogDouble threshold_time, PetscLogNestedType type)
+{
+  PetscNestedEventNode *main_stage;
+  PetscNestedEventNode *tree_rem;
+  PetscEventPerfInfo   *main_stage_perf;
+  PetscEventPerfInfo   *perf_rem;
+  PetscLogDouble        time;
+
+  PetscFunctionBegin;
+  main_stage = &tree->nodes[0];
+  tree_rem = &tree->nodes[1];
+  main_stage_perf = &tree->perf[0];
+  perf_rem = &tree->perf[1];
+  time = main_stage_perf->time;
+  PetscCall(MPIU_Allreduce(MPI_IN_PLACE, &time, 1, MPI_DOUBLE, MPI_MAX, tree->comm));
+  *total_time = time;
+  /* Print (or ignore) the children in ascending order of total time */
+  if (type == PETSC_LOG_NESTED_XML) {
+    PetscCall(PetscViewerXMLStartSection(viewer, "timertree", "Timings tree"));
+    PetscCall(PetscViewerXMLPutDouble(viewer, "totaltime", NULL, time, "%f"));
+    PetscCall(PetscViewerXMLPutDouble(viewer, "timethreshold", NULL, threshold_time, "%f"));
+  }
+  PetscCall(PetscLogNestedTreePrint(viewer, main_stage_perf->time, threshold_time, main_stage, main_stage_perf, tree_rem, perf_rem, type));
+  if (type == PETSC_LOG_NESTED_XML) PetscCall(PetscViewerXMLEndSection(viewer, "timertree"));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode PetscLogView_Nested_XML(PetscLogHandler_Nested nested, PetscNestedEventTree *tree, PetscViewer viewer)
+{
+  PetscLogDouble locTotalTime, globTotalTime;
+  PetscStageLog  default_handler = (PetscStageLog) (nested->handler->ctx);
+
+  PetscFunctionBegin;
+  PetscCall(PetscViewerInitASCII_XML(viewer));
+  PetscCall(PetscViewerASCIIPrintf(viewer, "<!-- PETSc Performance Summary: -->\n"));
+  PetscCall(PetscViewerXMLStartSection(viewer, "petscroot", NULL));
+  
+  // Print global information about this run
+  PetscCall(PetscPrintExeSpecs(viewer));
+
+  {
+    PetscEventPerfInfo *main_stage_info;
+
+    PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(default_handler, 0, 0, &main_stage_info));
+    locTotalTime = main_stage_info->time;
+  }
+  PetscCall(PetscPrintGlobalPerformance(viewer, locTotalTime, default_handler));
+  PetscCall(PetscLogNestedTreePrintTop(viewer, tree, &globTotalTime, nested->threshold_time, PETSC_LOG_NESTED_XML));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode PetscLogView_Nested_Flamegraph(PetscLogHandler_Nested nested, PetscNestedEventTree *tree, PetscViewer viewer)
+{
+  PetscLogDouble globTotalTime;
+
+  PetscFunctionBegin;
+  PetscCall(PetscLogNestedTreePrintTop(viewer, tree, &globTotalTime, nested->threshold_time, PETSC_LOG_NESTED_FLAMEGRAPH));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
