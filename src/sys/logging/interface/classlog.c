@@ -24,8 +24,11 @@
 @*/
 PetscErrorCode PetscClassRegLogCreate(PetscClassRegLog *classLog)
 {
+  PetscClassRegInfo blank_entry;
+
   PetscFunctionBegin;
-  PetscCall(PetscLogResizableArrayCreate(classLog,128));
+  PetscCall(PetscMemzero(&blank_entry, sizeof(blank_entry)));
+  PetscCall(PetscLogResizableArrayCreate(classLog,128,blank_entry));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -79,10 +82,8 @@ PetscErrorCode PetscClassRegInfoDestroy(PetscClassRegInfo *c)
 
 PETSC_INTERN PetscErrorCode PetscClassRegLogEnsureSize(PetscClassRegLog class_log, int new_size)
 {
-  PetscClassRegInfo blank_entry;
   PetscFunctionBegin;
-  PetscCall(PetscMemzero(&blank_entry, sizeof(blank_entry)));
-  PetscCall(PetscLogResizableArrayEnsureSize(class_log,new_size,blank_entry));
+  PetscCall(PetscLogResizableArrayEnsureSize(class_log, new_size));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -103,8 +104,11 @@ PETSC_INTERN PetscErrorCode PetscClassRegLogEnsureSize(PetscClassRegLog class_lo
 @*/
 PetscErrorCode PetscClassPerfLogCreate(PetscClassPerfLog *classLog)
 {
+  PetscClassPerfInfo blank_entry;
+
   PetscFunctionBegin;
-  PetscCall(PetscLogResizableArrayCreate(classLog,128));
+  PetscCall(PetscClassPerfInfoClear(&blank_entry));
+  PetscCall(PetscLogResizableArrayCreate(classLog, 128, blank_entry));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -173,11 +177,8 @@ PetscErrorCode PetscClassPerfInfoClear(PetscClassPerfInfo *classInfo)
 @*/
 PetscErrorCode PetscClassPerfLogEnsureSize(PetscClassPerfLog classLog, int size)
 {
-  PetscClassPerfInfo blank_entry;
-
   PetscFunctionBegin;
-  PetscCall(PetscClassPerfInfoClear(&blank_entry));
-  PetscCall(PetscLogResizableArrayEnsureSize(classLog,size,blank_entry));
+  PetscCall(PetscLogResizableArrayEnsureSize(classLog,size));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

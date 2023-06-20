@@ -9,24 +9,18 @@
 
 PETSC_INTERN PetscErrorCode PetscStageRegLogCreate(PetscStageRegLog *stageLog)
 {
-  PetscStageRegLog l;
+  PetscStageRegInfo blank_entry;
+  PetscCall(PetscMemzero(&blank_entry, sizeof(blank_entry)));
 
   PetscFunctionBegin;
-  PetscCall(PetscNew(&l));
-  l->num_entries = 0;
-  l->max_entries = 8;
-  PetscCall(PetscMalloc1(l->max_entries, &l->array));
-  *stageLog = l;
+  PetscCall(PetscLogResizableArrayCreate(stageLog, 8, blank_entry));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PETSC_INTERN PetscErrorCode PetscStageRegLogEnsureSize(PetscStageRegLog stage_log, int new_size)
 {
-  PetscStageRegInfo blank_entry;
-
   PetscFunctionBegin;
-  PetscCall(PetscMemzero(&blank_entry, sizeof(blank_entry)));
-  PetscCall(PetscLogResizableArrayEnsureSize(stage_log,new_size,blank_entry));
+  PetscCall(PetscLogResizableArrayEnsureSize(stage_log,new_size));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
