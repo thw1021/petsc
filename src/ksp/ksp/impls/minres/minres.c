@@ -253,7 +253,6 @@ static PetscErrorCode KSPSolve_MINRES(KSP ksp)
       SymOrtho(gamal, dlta, &cr1, &sr1, &gamal);
       vepln = sr1 * gama;
       gama  = -cr1 * gama;
-
     }
 
     // Update xnorm
