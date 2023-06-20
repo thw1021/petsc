@@ -72,6 +72,7 @@ typedef enum {
   PETSC_LOG_NESTED_FLAMEGRAPH
 } PetscLogNestedType;
 
-PETSC_INTERN PetscErrorCode PetscLogNestedTreePrintNew(PetscViewer, PetscLogDouble, const PetscNestedEventNode *, PetscEventPerfInfo *, const PetscNestedEventNode[], PetscEventPerfInfo[], PetscLogNestedType);
+PETSC_INTERN PetscErrorCode PetscLogView_Nested_XML(PetscLogHandler_Nested, PetscNestedEventTree *, PetscViewer);
+PETSC_INTERN PetscErrorCode PetscLogView_Nested_Flamegraph(PetscLogHandler_Nested, PetscNestedEventTree *, PetscViewer);
 
 #endif // #define PETSC_LOGNESTED_H
