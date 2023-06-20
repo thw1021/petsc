@@ -878,8 +878,20 @@ PetscErrorCode TSTrajectorySetUp(TSTrajectory tj, TS ts)
   PetscCall(PetscStrlen(tj->dirname, &s1));
   PetscCall(PetscStrlen(tj->filetemplate, &s2));
   PetscCall(PetscFree(tj->dirfiletemplate));
-  PetscCall(PetscMalloc((s1 + s2 + 10) * sizeof(char), &tj->dirfiletemplate));
-  PetscCall(PetscSNPrintf(tj->dirfiletemplate, s1 + s2 + 10, "%s/%s", tj->dirname, tj->filetemplate));
+  size_t dirfiletemplate_length = s1 + s2 + 10;
+  PetscCall(PetscMalloc(dirfiletemplate_length * sizeof(char), &tj->dirfiletemplate));
+  PetscCall(PetscSNPrintf(tj->dirfiletemplate, dirfiletemplate_length, "%s/%s", tj->dirname, tj->filetemplate));
+  if (PetscDefined(USE_DEBUG)) {
+    PetscInt  lens[2] = {dirfiletemplate_length, -dirfiletemplate_length};
+    char      dirfiletemplate[PETSC_MAX_PATH_LEN];
+    PetscBool same;
+    PetscCallMPI(MPI_Allreduce(MPI_IN_PLACE, lens, 2, MPIU_INT, MPI_MAX, PetscObjectComm((PetscObject)tj)));
+    PetscCheck(lens[0] == -lens[1], PetscObjectComm((PetscObject)tj), PETSC_ERR_ARG_WRONGSTATE, "dirfiletemplate_length is not collective; min %" PetscInt_FMT " max %" PetscInt_FMT, -lens[1], lens[0]);
+    PetscCall(PetscArraycpy(dirfiletemplate, tj->dirfiletemplate, dirfiletemplate_length));
+    PetscCallMPI(MPI_Bcast(dirfiletemplate, dirfiletemplate_length, MPI_CHAR, 0, PetscObjectComm((PetscObject)tj)));
+    PetscCall(PetscStrncmp(dirfiletemplate, tj->dirfiletemplate, dirfiletemplate_length, &same));
+    PetscCheck(same == PETSC_TRUE, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "template %s != %s at root", tj->dirfiletemplate, dirfiletemplate);
+  }
   PetscCall(PetscLogEventEnd(TSTrajectory_SetUp, tj, ts, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
