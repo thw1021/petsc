@@ -33,12 +33,13 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *);
   struct _n_##containertype { \
     int max_entries; \
     int num_entries; \
+    entrytype _default; \
     entrytype *array; \
   }; \
   PETSC_INTERN PetscErrorCode containertype##Create(containertype *);\
   PETSC_INTERN PetscErrorCode containertype##Destroy(containertype);
 
-#define PetscLogResizableArrayEnsureSize(ra,new_size,blank_entry) \
+#define PetscLogResizableArrayEnsureSize(ra,new_size) \
   PetscMacroReturnStandard( \
     if ((new_size) > ra->max_entries) { \
       int new_max_entries = 2; \
@@ -52,15 +53,23 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *);
       *old_array = new_array; \
       (ra)->max_entries = new_max_entries; \
     } \
-    for (int i = (ra)->num_entries; i < (new_size); i++) (ra)->array[i] = (blank_entry); \
+    for (int i = (ra)->num_entries; i < (new_size); i++) (ra)->array[i] = ((ra)->_default); \
     (ra)->num_entries = (new_size); \
   )
 
-#define PetscLogResizableArrayCreate(ra_p,max_init) \
+#define PetscLogResizableArrayPush(ra,new_elem) \
+  PetscMacroReturnStandard( \
+    PetscInt new_size = ++(ra)->num_entries; \
+    PetscCall(PetscLogResizableArrayEnsureSize((ra),new_size)); \
+    (ra)->array[new_size-1] = new_elem; \
+  )
+
+#define PetscLogResizableArrayCreate(ra_p,max_init,_def) \
   PetscMacroReturnStandard( \
     PetscCall(PetscNew(ra_p)); \
     (*(ra_p))->num_entries = 0; \
     (*(ra_p))->max_entries = (max_init); \
+    (*(ra_p))->_default = (_def); \
     PetscCall(PetscMalloc1((max_init), &((*(ra_p))->array))); \
   )
 

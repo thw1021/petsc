@@ -63,6 +63,7 @@ typedef struct _n_PetscStageLog *PetscStageLog;
 struct _n_PetscStageLog {
   int              max_entries;
   int              num_entries;
+  PetscStageInfo   _default;
   PetscStageInfo  *array;
   PetscLogRegistry registry;
   PetscSpinlock    lock;

@@ -32,24 +32,18 @@
 @*/
 PetscErrorCode PetscEventRegLogCreate(PetscEventRegLog *eventLog)
 {
-  PetscEventRegLog l;
+  PetscEventRegInfo blank_entry;
 
   PetscFunctionBegin;
-  PetscCall(PetscNew(&l));
-  l->num_entries = 0;
-  l->max_entries = 128; 
-  PetscCall(PetscMalloc1(l->max_entries, &l->array));
-  *eventLog = l;
+  PetscCall(PetscMemzero(&blank_entry, sizeof(blank_entry)));
+  PetscCall(PetscLogResizableArrayCreate(eventLog, 128, blank_entry));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscEventRegLogEnsureSize(PetscEventRegLog event_log, int new_size)
 {
-  PetscEventRegInfo blank_entry;
-
   PetscFunctionBegin;
-  PetscCall(PetscMemzero(&blank_entry, sizeof(blank_entry)));
-  PetscCall(PetscLogResizableArrayEnsureSize(event_log,new_size,blank_entry));
+  PetscCall(PetscLogResizableArrayEnsureSize(event_log,new_size));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -105,14 +99,11 @@ PetscErrorCode PetscStageRegLogDestroy(PetscStageRegLog stageLog)
 @*/
 PetscErrorCode PetscEventPerfLogCreate(PetscEventPerfLog *eventLog)
 {
-  PetscEventPerfLog l;
+  PetscEventPerfInfo blank_entry;
 
   PetscFunctionBegin;
-  PetscCall(PetscNew(&l));
-  l->num_entries = 0;
-  l->max_entries = 100;
-  PetscCall(PetscCalloc1(l->max_entries, &l->array));
-  *eventLog = l;
+  PetscCall(PetscEventPerfInfoClear(&blank_entry));
+  PetscCall(PetscLogResizableArrayCreate(eventLog, 128, blank_entry));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -353,11 +344,8 @@ PetscErrorCode PetscEventPerfInfoAdd(const PetscEventPerfInfo *eventInfo, PetscE
 @*/
 PetscErrorCode PetscEventPerfLogEnsureSize(PetscEventPerfLog eventLog, int size)
 {
-  PetscEventPerfInfo blank_entry;
-
   PetscFunctionBegin;
-  PetscCall(PetscEventPerfInfoClear(&blank_entry));
-  PetscCall(PetscLogResizableArrayEnsureSize(eventLog,size,blank_entry));
+  PetscCall(PetscLogResizableArrayEnsureSize(eventLog,size));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
