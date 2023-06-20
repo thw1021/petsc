@@ -190,23 +190,6 @@ PetscErrorCode PetscLogTraceBegin(FILE *file)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscLogGetDefaultHandler(PetscStageLog *default_handler)
-{
-  PetscFunctionBegin;
-  PetscValidPointer(default_handler, 1);
-  *default_handler = NULL;
-  for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
-    if (PetscLogHandlers[i] && PetscLogHandlers[i]->impl->type == PETSC_LOG_HANDLER_DEFAULT) {
-      *default_handler = (PetscStageLog) PetscLogHandlers[i]->ctx;
-    }
-  }
-  if (*default_handler == NULL) {
-    fprintf(stderr, "PETSC ERROR: Logging has not been enabled.\nYou might have forgotten to call PetscInitialize().\n");
-    PETSCABORT(MPI_COMM_WORLD, PETSC_ERR_SUP);
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 static PetscErrorCode PetscStageLogGetEventPerfLog(PetscStageLog stageLog, PetscLogStage stage, PetscEventPerfLog *eventLog)
 {
   PetscFunctionBegin;
@@ -540,7 +523,6 @@ static PetscErrorCode PetscLogEventEndTrace(PetscLogState state, PetscLogEvent e
   PetscFunctionBegin;
   stageLog->petsc_tracelevel--;
   PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
-  PetscCall(PetscLogGetDefaultHandler(&stageLog));
   PetscCall(PetscLogStateGetCurrentStage(state, &stage));
   eventRegLog = state->registry->events;
   PetscCall(PetscStageLogGetEventPerfLog(stageLog, stage, &eventPerfLog));

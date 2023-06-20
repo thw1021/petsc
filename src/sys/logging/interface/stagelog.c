@@ -74,3 +74,9 @@ PetscErrorCode PetscLogGetClassLog(PetscClassRegLog *classLog)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PETSC_INTERN PetscErrorCode PetscStageRegLogSetVisible(PetscStageRegLog reg_log, PetscLogStage stage, PetscBool is_visible)
+{
+  PetscFunctionBegin;
+  reg_log->array[stage].visible = is_visible;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}

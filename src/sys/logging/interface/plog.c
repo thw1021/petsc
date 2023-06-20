@@ -23,6 +23,23 @@
 #include <petscmachineinfo.h>
 #include <petscconfiginfo.h>
 
+PETSC_INTERN PetscErrorCode PetscLogGetDefaultHandler(PetscStageLog *default_handler)
+{
+  PetscFunctionBegin;
+  PetscValidPointer(default_handler, 1);
+  *default_handler = NULL;
+  for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
+    if (PetscLogHandlers[i] && PetscLogHandlers[i]->impl->type == PETSC_LOG_HANDLER_DEFAULT) {
+      *default_handler = (PetscStageLog) PetscLogHandlers[i]->ctx;
+    }
+  }
+  if (*default_handler == NULL) {
+    fprintf(stderr, "PETSC ERROR: Logging has not been enabled.\nYou might have forgotten to call PetscInitialize().\n");
+    PETSCABORT(MPI_COMM_WORLD, PETSC_ERR_SUP);
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 #if defined(PETSC_HAVE_THREADSAFETY)
 PetscInt           petsc_log_gid = -1; /* Global threadId counter */
 PETSC_TLS PetscInt petsc_log_tid = -1; /* Local threadId */
@@ -1222,7 +1239,7 @@ PetscErrorCode PetscLogDump(const char sname[])
   char                file[PETSC_MAX_PATH_LEN], fname[PETSC_MAX_PATH_LEN];
   PetscLogDouble      flops, _TotalTime;
   PetscMPIInt         rank;
-  int                 action, object, curStage;
+  int                 curStage;
   PetscLogState       state;
   PetscLogEvent       event;
 
@@ -2118,20 +2135,20 @@ PetscErrorCode PetscLogView(PetscViewer viewer)
 {
   PetscBool         isascii;
   PetscViewerFormat format;
-  int               stage, lastStage;
+  int               stage;
   PetscLogState     state;
-  PetscStageLog     stageLog;
+  PetscIntStack     temp_stack;
+  PetscBool         is_empty;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
   /* Pop off any stages the user forgot to remove */
-  lastStage = 0;
-  PetscCall(PetscLogGetDefaultHandler(&stageLog));
-  PetscCall(PetscStageLogGetCurrent(stageLog, &stage));
+  PetscCall(PetscIntStackCreate(&temp_stack));
+  PetscCall(PetscLogStateGetCurrentStage(state, &stage));
   while (stage >= 0) {
-    lastStage = stage;
-    PetscCall(PetscStageLogPop(stageLog));
-    PetscCall(PetscStageLogGetCurrent(stageLog, &stage));
+    PetscCall(PetscLogStagePop());
+    PetscCall(PetscIntStackPush(temp_stack, stage));
+    PetscCall(PetscLogStateGetCurrentStage(state, &stage));
   }
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &isascii));
   PetscCheck(isascii, PetscObjectComm((PetscObject)viewer), PETSC_ERR_SUP, "Currently can only view logging to ASCII");
@@ -2147,7 +2164,12 @@ PetscErrorCode PetscLogView(PetscViewer viewer)
   } else if (format == PETSC_VIEWER_ASCII_FLAMEGRAPH) {
     PetscCall(PetscLogView_Flamegraph(viewer));
   }
-  PetscCall(PetscStageLogPush(stageLog, lastStage));
+  PetscCall(PetscIntStackEmpty(temp_stack, &is_empty));
+  while (!is_empty) {
+    PetscCall(PetscIntStackPop(temp_stack, &stage));
+    PetscCall(PetscLogStagePush(stage));
+  }
+  PetscCall(PetscIntStackDestroy(temp_stack));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2512,6 +2534,108 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *handler_p)
   if (handler->impl->destroy) PetscCall((*(handler->impl->destroy))(handler->ctx));
   PetscCall(PetscFree(handler->impl));
   PetscCall(PetscFree(handler));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  PetscLogEventGetPerfInfo - Return the performance information about the given event in the given stage
+
+  Input Parameters:
++ stage - The stage number or `PETSC_DETERMINE` for the current stage
+- event - The event number
+
+  Output Parameter:
+. info - This structure is filled with the performance information
+
+  Level: Intermediate
+
+  Note:
+  This is a low level routine used by the logging functions in PETSc
+@*/
+PetscErrorCode PetscLogEventGetPerfInfo(PetscLogStage stage, PetscLogEvent event, PetscEventPerfInfo *info)
+{
+  PetscStageLog stage_log;
+  PetscEventPerfInfo *event_info;
+
+  PetscFunctionBegin;
+  PetscValidPointer(info, 3);
+  PetscCall(PetscLogGetDefaultHandler(&stage_log));
+  if (stage < 0) PetscCall(PetscLogStageGetCurrent(&stage));
+  PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(stage_log, stage, event, &event_info));
+  *info = *event_info;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  PetscLogEventSetDof - Set the nth number of degrees of freedom of a numerical problem associated with this event
+
+  Not Collective
+
+  Input Parameters:
++ event - The event id to log
+. n     - The dof index, in [0, 8)
+- dof   - The number of dofs
+
+  Options Database Key:
+. -log_view - Activates log summary
+
+  Level: developer
+
+  Note:
+  This is to enable logging of convergence
+
+.seealso: `PetscLogEventSetError()`, `PetscEventRegLogRegister()`, `PetscStageLogGetEventLog()`
+@*/
+PetscErrorCode PetscLogEventSetDof(PetscLogEvent event, PetscInt n, PetscLogDouble dof)
+{
+  PetscStageLog     stageLog;
+  PetscEventPerfInfo *event_info;
+  int               stage;
+
+  PetscFunctionBegin;
+  PetscCheck(!(n < 0) && !(n > 7), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Error index %" PetscInt_FMT " is not in [0, 8)", n);
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
+  PetscCall(PetscLogStageGetCurrent(&stage));
+  PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(stageLog, stage, event, &event_info));
+  event_info->dof[n] = dof;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  PetscLogEventSetError - Set the nth error associated with a numerical problem associated with this event
+
+  Not Collective
+
+  Input Parameters:
++ event - The event id to log
+. n     - The error index, in [0, 8)
+- error - The error
+
+  Options Database Key:
+. -log_view - Activates log summary
+
+  Level: developer
+
+  Notes:
+  This is to enable logging of convergence, and enable users to interpret the errors as they wish. For example,
+  as different norms, or as errors for different fields
+
+  This is a low level routine used by the logging functions in PETSc
+
+.seealso: `PetscLogEventSetDof()`, `PetscEventRegLogRegister()`, `PetscStageLogGetEventLog()`
+@*/
+PetscErrorCode PetscLogEventSetError(PetscLogEvent event, PetscInt n, PetscLogDouble error)
+{
+  PetscStageLog     stageLog;
+  PetscEventPerfInfo *event_info;
+  int               stage;
+
+  PetscFunctionBegin;
+  PetscCheck(!(n < 0) && !(n > 7), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Error index %" PetscInt_FMT " is not in [0, 8)", n);
+  PetscCall(PetscLogGetDefaultHandler(&stageLog));
+  PetscCall(PetscLogStageGetCurrent(&stage));
+  PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(stageLog, stage, event, &event_info));
+  event_info->errors[n] = error;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

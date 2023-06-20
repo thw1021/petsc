@@ -125,6 +125,7 @@ PETSC_INTERN PetscErrorCode PetscEventPerfLogEnsureSize(PetscEventPerfLog, int);
 /* --- PetscStageRegxLog --- */
 PETSC_LOG_RESIZABLE_ARRAY(PetscStageRegInfo,PetscStageRegLog)
 PETSC_INTERN PetscErrorCode PetscStageRegLogInsert(PetscStageRegLog, const char[], int *);
+PETSC_INTERN PetscErrorCode PetscStageRegLogSetVisible(PetscStageRegLog, PetscLogStage, PetscBool);
 
 /* --- the registry: information about registered things ---
 
