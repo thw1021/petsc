@@ -13,7 +13,7 @@
 
 #if defined(PETSC_USE_LOG)
 
-PetscErrorCode PetscViewerXMLStartSection(PetscViewer viewer, const char *name, const char *desc)
+static PetscErrorCode PetscViewerXMLStartSection(PetscViewer viewer, const char *name, const char *desc)
 {
   PetscInt XMLSectionDepth;
 
@@ -29,7 +29,7 @@ PetscErrorCode PetscViewerXMLStartSection(PetscViewer viewer, const char *name, 
 }
 
 /* Initialize a viewer to XML, and initialize the XMLDepth static parameter */
-PetscErrorCode PetscViewerInitASCII_XML(PetscViewer viewer)
+static PetscErrorCode PetscViewerInitASCII_XML(PetscViewer viewer)
 {
   MPI_Comm comm;
   char     PerfScript[PETSC_MAX_PATH_LEN + 40];
@@ -43,15 +43,7 @@ PetscErrorCode PetscViewerInitASCII_XML(PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/* Initialize a viewer to XML, and initialize the XMLDepth static parameter */
-PetscErrorCode PetscViewerFinalASCII_XML(PetscViewer viewer)
-{
-  PetscFunctionBegin;
-  PetscCall(PetscViewerXMLEndSection(viewer, "root"));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PetscErrorCode PetscViewerXMLEndSection(PetscViewer viewer, const char *name)
+static PetscErrorCode PetscViewerXMLEndSection(PetscViewer viewer, const char *name)
 {
   PetscInt XMLSectionDepth;
 
@@ -63,7 +55,7 @@ PetscErrorCode PetscViewerXMLEndSection(PetscViewer viewer, const char *name)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscViewerXMLPutString(PetscViewer viewer, const char *name, const char *desc, const char *value)
+static PetscErrorCode PetscViewerXMLPutString(PetscViewer viewer, const char *name, const char *desc, const char *value)
 {
   PetscInt XMLSectionDepth;
 
@@ -77,7 +69,7 @@ PetscErrorCode PetscViewerXMLPutString(PetscViewer viewer, const char *name, con
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscViewerXMLPutInt(PetscViewer viewer, const char *name, const char *desc, int value)
+static PetscErrorCode PetscViewerXMLPutInt(PetscViewer viewer, const char *name, const char *desc, int value)
 {
   PetscInt XMLSectionDepth;
 
@@ -91,7 +83,7 @@ PetscErrorCode PetscViewerXMLPutInt(PetscViewer viewer, const char *name, const 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscViewerXMLPutDouble(PetscViewer viewer, const char *name, const char *desc, PetscLogDouble value, const char *format)
+static PetscErrorCode PetscViewerXMLPutDouble(PetscViewer viewer, const char *name, const char *desc, PetscLogDouble value, const char *format)
 {
   PetscInt XMLSectionDepth;
   char buffer[1024];
@@ -381,7 +373,7 @@ static PetscErrorCode PetscLogNestedTreePrint(PetscViewer viewer, double total_t
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscLogNestedTreePrintTop(PetscViewer viewer, PetscNestedEventTree *tree, PetscLogDouble *total_time, PetscLogDouble threshold_time, PetscLogNestedType type)
+static PetscErrorCode PetscLogNestedTreePrintTop(PetscViewer viewer, PetscNestedEventTree *tree, PetscLogDouble *total_time, PetscLogDouble threshold_time, PetscLogNestedType type)
 {
   PetscNestedEventNode *main_stage;
   PetscNestedEventNode *tree_rem;
@@ -429,6 +421,7 @@ PETSC_INTERN PetscErrorCode PetscLogView_Nested_XML(PetscLogHandler_Nested neste
   }
   PetscCall(PetscPrintGlobalPerformance(viewer, locTotalTime, default_handler));
   PetscCall(PetscLogNestedTreePrintTop(viewer, tree, &globTotalTime, nested->threshold_time, PETSC_LOG_NESTED_XML));
+  PetscCall(PetscViewerXMLEndSection(viewer, "petscroot"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

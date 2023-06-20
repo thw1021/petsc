@@ -283,6 +283,7 @@ PETSC_INTERN PetscErrorCode PetscLogView_Nested_Internal(PetscViewer viewer, voi
   PetscEventPerfInfo *perf;
   PetscLogGlobalNames global_events;
   PetscNestedEventTree tree;
+  PetscViewerFormat format;
   MPI_Comm comm = PetscObjectComm((PetscObject)viewer);
 
   PetscFunctionBegin;
@@ -292,6 +293,12 @@ PETSC_INTERN PetscErrorCode PetscLogView_Nested_Internal(PetscViewer viewer, voi
   tree.global_events = global_events;
   tree.perf = perf;
   tree.nodes = nodes;
+  PetscCall(PetscViewerGetFormat(viewer, &format));
+  if (format == PETSC_VIEWER_ASCII_XML) {
+    PetscCall(PetscLogView_Nested_XML(nested, &tree, viewer));
+  } else if (format == PETSC_VIEWER_ASCII_FLAMEGRAPH) {
+    PetscCall(PetscLogView_Nested_Flamegraph(nested, &tree, viewer));
+  } else SETERRQ(comm, PETSC_ERR_ARG_INCOMP, "No nested viewer for this format");
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
