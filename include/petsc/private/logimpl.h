@@ -116,7 +116,9 @@ typedef struct {
 
 /* --- PetscEventRegLog --- */
 PETSC_LOG_RESIZABLE_ARRAY(PetscEventRegInfo,PetscEventRegLog)
-PETSC_EXTERN PetscErrorCode PetscEventRegLogRegister(PetscEventRegLog, const char[], PetscClassId, PetscLogEvent *);
+PETSC_INTERN PetscErrorCode PetscEventRegLogRegister(PetscEventRegLog, const char[], PetscClassId, PetscLogEvent *);
+PETSC_INTERN PetscErrorCode PetscEventRegLogSetCollective(PetscEventRegLog, PetscLogEvent, PetscBool);
+
 
 /* --- PetscClassRegLog --- */
 PETSC_LOG_RESIZABLE_ARRAY(PetscClassRegInfo,PetscClassRegLog)
@@ -132,6 +134,8 @@ PETSC_INTERN PetscErrorCode PetscEventPerfLogEnsureSize(PetscEventPerfLog, int);
 PETSC_LOG_RESIZABLE_ARRAY(PetscStageRegInfo,PetscStageRegLog)
 PETSC_INTERN PetscErrorCode PetscStageRegLogInsert(PetscStageRegLog, const char[], int *);
 PETSC_INTERN PetscErrorCode PetscStageRegLogSetVisible(PetscStageRegLog, PetscLogStage, PetscBool);
+PETSC_INTERN PetscErrorCode PetscStageRegLogGetVisible(PetscStageRegLog, PetscLogStage, PetscBool *);
+PETSC_INTERN PetscErrorCode PetscStageRegLogGetId(PetscStageRegLog, const char[], PetscLogStage *);
 
 /* --- the registry: information about registered things ---
 
@@ -190,6 +194,13 @@ PETSC_INTERN PetscErrorCode PetscLogStateStageRegister(PetscLogState, const char
 PETSC_INTERN PetscErrorCode PetscLogStateEventRegister(PetscLogState, const char[], PetscClassId, PetscLogEvent *);
 PETSC_INTERN PetscErrorCode PetscLogStateLock(PetscLogState);
 PETSC_INTERN PetscErrorCode PetscLogStateUnlock(PetscLogState);
+PETSC_INTERN PetscErrorCode PetscLogStateEventIncludeClass(PetscLogState, PetscClassId);
+PETSC_INTERN PetscErrorCode PetscLogStateEventExcludeClass(PetscLogState, PetscClassId);
+PETSC_INTERN PetscErrorCode PetscLogStateEventActivateClass(PetscLogState, PetscClassId);
+PETSC_INTERN PetscErrorCode PetscLogStateEventDeactivateClass(PetscLogState, PetscClassId);
+PETSC_INTERN PetscErrorCode PetscLogStateEventActivate(PetscLogState, PetscLogEvent);
+PETSC_INTERN PetscErrorCode PetscLogStateEventDeactivate(PetscLogState, PetscLogEvent);
+PETSC_INTERN PetscErrorCode PetscLogStateEventActivateAll(PetscLogState, PetscLogEvent);
 
 /* --- A simple stack --- */
 

@@ -416,7 +416,7 @@ PETSC_INTERN PetscErrorCode PetscLogView_Nested_XML(PetscLogHandler_Nested neste
   {
     PetscEventPerfInfo *main_stage_info;
 
-    PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(default_handler, 0, 0, &main_stage_info));
+    PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(nested->handler, 0, 0, &main_stage_info));
     locTotalTime = main_stage_info->time;
   }
   PetscCall(PetscPrintGlobalPerformance(viewer, locTotalTime, default_handler));
