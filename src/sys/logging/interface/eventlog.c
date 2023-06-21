@@ -73,15 +73,6 @@ PetscErrorCode PetscEventRegLogDestroy(PetscEventRegLog eventLog)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PetscStageRegLogDestroy(PetscStageRegLog stageLog)
-{
-  PetscFunctionBegin;
-  for (int s = 0; s < stageLog->num_entries; s++) PetscCall(PetscFree(stageLog->array[s].name));
-  PetscCall(PetscFree(stageLog->array));
-  PetscCall(PetscFree(stageLog));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 PETSC_INTERN PetscErrorCode PetscEventRegLogSetCollective(PetscEventRegLog event_log, PetscLogEvent event, PetscBool is_collective)
 {
   PetscFunctionBegin;
@@ -247,6 +238,7 @@ PetscErrorCode PetscEventPerfLogEnsureSize(PetscEventPerfLog eventLog, int size)
 }
 
 #if defined(PETSC_HAVE_MPE)
+// TODO: MPE?
   #include <mpe.h>
 PETSC_INTERN PetscErrorCode PetscLogMPEGetRGBColor(const char *[]);
 PetscErrorCode              PetscLogEventBeginMPE(PetscLogEvent event, int t, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
@@ -549,7 +541,7 @@ PetscErrorCode PetscEventPerfLogDeactivateClass(PetscEventPerfLog eventLog, Pets
 
   Input Parameters:
 + eventLog - The `PetscEventRegLog`
-- name     - The stage name
+- name     - The event name
 
   Output Parameter:
 . event    - The event id, or -1 if not found
@@ -577,6 +569,13 @@ PetscErrorCode PetscEventRegLogGetEvent(PetscEventRegLog eventLog, const char na
       break;
     }
   }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode PetscEventRegLogGetName(PetscEventRegLog event_log, PetscLogEvent event, const char **name)
+{
+  PetscFunctionBegin;
+  *name = event_log->array[event].name;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

@@ -692,6 +692,26 @@ PetscErrorCode PetscLogStageGetId(const char name[], PetscLogStage *stage)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PetscErrorCode PetscLogStageGetName(PetscLogStage stage, const char **name)
+{
+  PetscLogState state;
+
+  PetscFunctionBegin;
+  PetscCall(PetscLogGetState(&state));
+  PetscCall(PetscStageRegLogGetName(state->registry->stages, stage, name));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode PetscLogEventGetName(PetscLogEvent event, const char **name)
+{
+  PetscLogState state;
+
+  PetscFunctionBegin;
+  PetscCall(PetscLogGetState(&state));
+  PetscCall(PetscEventRegLogGetName(state->registry->events, event, name));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*------------------------------------------------ Event Functions --------------------------------------------------*/
 
 /*@C
@@ -1682,13 +1702,15 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *handler_p)
 @*/
 PetscErrorCode PetscLogEventGetPerfInfo(PetscLogStage stage, PetscLogEvent event, PetscEventPerfInfo *info)
 {
+  PetscLogState   state;
   PetscLogHandler default_handler;
   PetscEventPerfInfo *event_info;
 
   PetscFunctionBegin;
   PetscValidPointer(info, 3);
+  PetscCall(PetscLogGetState(&state));
   PetscCall(PetscLogGetDefaultHandler(&default_handler));
-  if (stage < 0) PetscCall(PetscLogStageGetCurrent(&stage));
+  if (stage < 0) PetscCall(PetscLogStateGetCurrentStage(state, &stage));
   PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(default_handler, stage, event, &event_info));
   *info = *event_info;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1756,14 +1778,16 @@ PetscErrorCode PetscLogEventSetDof(PetscLogEvent event, PetscInt n, PetscLogDoub
 @*/
 PetscErrorCode PetscLogEventSetError(PetscLogEvent event, PetscInt n, PetscLogDouble error)
 {
+  PetscLogState       state;
   PetscLogHandler     default_handler;
   PetscEventPerfInfo *event_info;
   int               stage;
 
   PetscFunctionBegin;
   PetscCheck(!(n < 0) && !(n > 7), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Error index %" PetscInt_FMT " is not in [0, 8)", n);
+  PetscCall(PetscLogGetState(&state));
   PetscCall(PetscLogGetDefaultHandler(&default_handler));
-  PetscCall(PetscLogStageGetCurrent(&stage));
+  PetscCall(PetscLogStateGetCurrentStage(state, &stage));
   PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(default_handler, stage, event, &event_info));
   event_info->errors[n] = error;
   PetscFunctionReturn(PETSC_SUCCESS);
