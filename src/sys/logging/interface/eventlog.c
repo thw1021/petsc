@@ -102,8 +102,6 @@ PetscErrorCode PetscEventPerfInfoCopy(const PetscEventPerfInfo *eventInfo, Petsc
 {
   PetscFunctionBegin;
   outInfo->id      = eventInfo->id;
-  outInfo->active  = eventInfo->active;
-  outInfo->visible = eventInfo->visible;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -340,74 +338,6 @@ PetscErrorCode PetscEventRegLogRegister(PetscEventRegLog eventLog, const char en
 
 /*---------------------------------------------- Activation Functions -----------------------------------------------*/
 /*
-  PetscEventPerfLogActivate - Indicates that a particular event should be logged.
-
-  Not Collective
-
-  Input Parameters:
-+ eventLog - The `PetscEventPerfLog`
-- event    - The event
-
-   Usage:
-.vb
-      PetscEventPerfLogDeactivate(log, VEC_SetValues);
-        [code where you do not want to log VecSetValues()]
-      PetscEventPerfLogActivate(log, VEC_SetValues);
-        [code where you do want to log VecSetValues()]
-.ve
-
-  Level: developer
-
-  Notes:
-  The event may be either a pre-defined PETSc event (found in
-  include/petsclog.h) or an event number obtained with `PetscEventRegLogRegister()`.
-
-  This is a low level routine used by the logging functions in PETSc
-
-.seealso: `PetscEventPerfLogDeactivate()`, `PetscEventPerfLogDeactivatePop()`, `PetscEventPerfLogDeactivatePush()`
-*/
-PetscErrorCode PetscEventPerfLogActivate(PetscEventPerfLog eventLog, PetscLogEvent event)
-{
-  PetscFunctionBegin;
-  eventLog->array[event].active = PETSC_TRUE;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*
-  PetscEventPerfLogDeactivate - Indicates that a particular event should not be logged.
-
-  Not Collective
-
-  Input Parameters:
-+ eventLog - The `PetscEventPerfLog`
-- event    - The event
-
-   Usage:
-.vb
-      PetscEventPerfLogDeactivate(log, VEC_SetValues);
-        [code where you do not want to log VecSetValues()]
-      PetscEventPerfLogActivate(log, VEC_SetValues);
-        [code where you do want to log VecSetValues()]
-.ve
-
-   Level: developer
-
-  Notes:
-  The event may be either a pre-defined PETSc event (found in
-  include/petsclog.h) or an event number obtained with `PetscEventRegLogRegister()`.
-
-  This is a low level routine used by the logging functions in PETSc
-
-.seealso: `PetscEventPerfLogActivate()`, `PetscEventPerfLogDeactivatePop()`, `PetscEventPerfLogDeactivatePush()`
-*/
-PetscErrorCode PetscEventPerfLogDeactivate(PetscEventPerfLog eventLog, PetscLogEvent event)
-{
-  PetscFunctionBegin;
-  eventLog->array[event].active = PETSC_FALSE;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*
   PetscEventPerfLogDeactivatePush - Indicates that a particular event should not be logged.
 
   Not Collective
@@ -475,64 +405,6 @@ PetscErrorCode PetscEventPerfLogDeactivatePop(PetscEventPerfLog eventLog, PetscL
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-  PetscEventPerfLogActivateClass - Activates event logging for a PETSc object class.
-
-  Not Collective
-
-  Input Parameters:
-+ eventLog    - The `PetscEventPerfLog`
-. eventRegLog - The `PetscEventRegLog`
-- classid      - The class id, for example `MAT_CLASSID`, `SNES_CLASSID`
-
-  Level: developer
-
-  Note:
-  This is a low level routine used by the logging functions in PETSc
-
-.seealso: `PetscEventPerfLogDeactivateClass()`, `PetscEventPerfLogActivate()`, `PetscEventPerfLogDeactivate()`
-*/
-PetscErrorCode PetscEventPerfLogActivateClass(PetscEventPerfLog eventLog, PetscEventRegLog eventRegLog, PetscClassId classid)
-{
-  int e;
-
-  PetscFunctionBegin;
-  for (e = 0; e < eventLog->num_entries; e++) {
-    int c = eventRegLog->array[e].classid;
-    if (c == classid) eventLog->array[e].active = PETSC_TRUE;
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*
-  PetscEventPerfLogDeactivateClass - Deactivates event logging for a PETSc object class.
-
-  Not Collective
-
-  Input Parameters:
-+ eventLog    - The `PetscEventPerfLog`
-. eventRegLog - The `PetscEventRegLog`
-- classid - The class id, for example `MAT_CLASSID`, `SNES_CLASSID`
-
-  Level: developer
-
-  Note:
-  This is a low level routine used by the logging functions in PETSc
-
-.seealso: `PetscEventPerfLogDeactivateClass()`, `PetscEventPerfLogDeactivate()`, `PetscEventPerfLogActivate()`
-*/
-PetscErrorCode PetscEventPerfLogDeactivateClass(PetscEventPerfLog eventLog, PetscEventRegLog eventRegLog, PetscClassId classid)
-{
-  int e;
-
-  PetscFunctionBegin;
-  for (e = 0; e < eventLog->num_entries; e++) {
-    int c = eventRegLog->array[e].classid;
-    if (c == classid) eventLog->array[e].active = PETSC_FALSE;
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /*------------------------------------------------ Query Functions --------------------------------------------------*/
 /*
   PetscEventRegLogGetEvent - This function returns the event id given the event name.
@@ -576,63 +448,6 @@ PETSC_INTERN PetscErrorCode PetscEventRegLogGetName(PetscEventRegLog event_log, 
 {
   PetscFunctionBegin;
   *name = event_log->array[event].name;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*
-  PetscEventPerfLogSetVisible - This function determines whether an event is printed during `PetscLogView()`
-
-  Not Collective
-
-  Input Parameters:
-+ eventLog  - The `PetscEventPerfLog`
-. event     - The event to log
-- isVisible - The visibility flag, `PETSC_TRUE` for printing, otherwise `PETSC_FALSE` (default is `PETSC_TRUE`)
-
-  Options Database Key:
-. -log_view - Activates log summary
-
-  Level: developer
-
-  Note:
-  This is a low level routine used by the logging functions in PETSc
-
-.seealso: `PetscEventPerfLogGetVisible()`, `PetscEventRegLogRegister()`
-*/
-PetscErrorCode PetscEventPerfLogSetVisible(PetscEventPerfLog eventLog, PetscLogEvent event, PetscBool isVisible)
-{
-  PetscFunctionBegin;
-  eventLog->array[event].visible = isVisible;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*
-  PetscEventPerfLogGetVisible - This function returns whether an event is printed during `PetscLogView()`
-
-  Not Collective
-
-  Input Parameters:
-+ eventLog  - The `PetscEventPerfLog`
-- event     - The event id to log
-
-  Output Parameter:
-. isVisible - The visibility flag, `PETSC_TRUE` for printing, otherwise `PETSC_FALSE` (default is `PETSC_TRUE`)
-
-  Options Database Key:
-. -log_view - Activates log summary
-
-  Level: developer
-
-  Note:
-  This is a low level routine used by the logging functions in PETSc
-
-.seealso: `PetscEventPerfLogSetVisible()`, `PetscEventRegLogRegister()`
-*/
-PetscErrorCode PetscEventPerfLogGetVisible(PetscEventPerfLog eventLog, PetscLogEvent event, PetscBool *isVisible)
-{
-  PetscFunctionBegin;
-  PetscValidBoolPointer(isVisible, 3);
-  *isVisible = eventLog->array[event].visible;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
