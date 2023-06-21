@@ -177,9 +177,10 @@ static PetscErrorCode PetscPrintXMLGlobalPerformanceElement(PetscViewer viewer, 
 /* Print the global performance: max, max/min, average and total of
  *      time, objects, flops, flops/sec, memory, MPI messages, MPI message lengths, MPI reductions.
  */
-static PetscErrorCode PetscPrintGlobalPerformance(PetscViewer viewer, PetscLogDouble locTotalTime, PetscStageLog default_handler)
+static PetscErrorCode PetscPrintGlobalPerformance(PetscViewer viewer, PetscLogDouble locTotalTime, PetscLogHandler default_handler)
 {
   PetscLogDouble  flops, mem, red, mess;
+  PetscInt        num_objects;
   const PetscBool print_total_yes = PETSC_TRUE, print_total_no = PETSC_FALSE, print_average_no = PETSC_FALSE, print_average_yes = PETSC_TRUE;
 
   PetscFunctionBegin;
@@ -193,7 +194,8 @@ static PetscErrorCode PetscPrintGlobalPerformance(PetscViewer viewer, PetscLogDo
   PetscCall(PetscPrintXMLGlobalPerformanceElement(viewer, "time", "Time (sec)", locTotalTime, print_average_yes, print_total_no));
 
   /*   Objects */
-  PetscCall(PetscPrintXMLGlobalPerformanceElement(viewer, "objects", "Objects", (PetscLogDouble)default_handler->petsc_objects->num_entries, print_average_yes, print_total_no));
+  PetscCall(PetscLogHandlerDefaultGetNumObjects(default_handler, &num_objects));
+  PetscCall(PetscPrintXMLGlobalPerformanceElement(viewer, "objects", "Objects", (PetscLogDouble)num_objects, print_average_yes, print_total_no));
 
   /*   Flop */
   PetscCall(PetscPrintXMLGlobalPerformanceElement(viewer, "mflop", "MFlop", petsc_TotalFlops / 1.0E6, print_average_yes, print_total_yes));
@@ -403,7 +405,7 @@ static PetscErrorCode PetscLogNestedTreePrintTop(PetscViewer viewer, PetscNested
 PETSC_INTERN PetscErrorCode PetscLogView_Nested_XML(PetscLogHandler_Nested nested, PetscNestedEventTree *tree, PetscViewer viewer)
 {
   PetscLogDouble locTotalTime, globTotalTime;
-  PetscStageLog  default_handler = (PetscStageLog) (nested->handler->ctx);
+  PetscLogHandler  default_handler = nested->handler;
 
   PetscFunctionBegin;
   PetscCall(PetscViewerInitASCII_XML(viewer));
