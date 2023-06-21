@@ -150,8 +150,8 @@ typedef struct {
   int            id;                  /* The integer identifying this event / stage */
   int            depth;               /* The nesting depth of the event call */
   int            count;               /* The number of times this event was executed */
-  PetscBool      active;
-  PetscBool      visible;
+  PetscBool      active;              /* Deprecated property: activity is controlled through the registry now */
+  PetscBool      visible;             /* Deprecated property: visibility is controlled through the registry now */
   PetscLogDouble flops;               /* The flops used in this event */
   PetscLogDouble flops2;              /* The square of flops used in this event */
   PetscLogDouble flopsTmp;            /* The accumulator for flops used in this event */
