@@ -276,9 +276,9 @@ static PetscErrorCode PetscLogNestedCreatePerfNodes(MPI_Comm comm, PetscLogHandl
   PetscFunctionReturn(0);
 }
 
-PETSC_INTERN PetscErrorCode PetscLogView_Nested_Internal(PetscViewer viewer, void *ctx)
+PETSC_INTERN PetscErrorCode PetscLogView_Nested(PetscLogHandler handler, PetscViewer viewer)
 {
-  PetscLogHandler_Nested nested = (PetscLogHandler_Nested) ctx;
+  PetscLogHandler_Nested nested = (PetscLogHandler_Nested) handler->ctx;
   PetscNestedEventNode *nodes;
   PetscEventPerfInfo *perf;
   PetscLogGlobalNames global_events;
