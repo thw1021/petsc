@@ -303,12 +303,13 @@ static PetscErrorCode PetscStageLogGetEventPerfLog(PetscStageLog stageLog, Petsc
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscLogHandlerDefaultGetEventPerfInfo(PetscStageLog stage_log, PetscLogStage stage, PetscLogEvent event, PetscEventPerfInfo **event_info)
+PETSC_INTERN PetscErrorCode PetscLogHandlerDefaultGetEventPerfInfo(PetscLogHandler handler, PetscLogStage stage, PetscLogEvent event, PetscEventPerfInfo **event_info)
 {
+  PetscStageLog default_handler = (PetscStageLog) handler->ctx;
   PetscEventPerfLog event_log;
 
   PetscFunctionBegin;
-  PetscCall(PetscStageLogGetEventPerfLog(stage_log, stage, &event_log));
+  PetscCall(PetscStageLogGetEventPerfLog(default_handler, stage, &event_log));
   *event_info = &event_log->array[stage];
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -702,6 +703,36 @@ static PetscErrorCode PetscLogStagePop_Default(PetscLogState state, PetscLogStag
     if (PetscBTLookup(state->active, curStage)) {
       PetscCall(PetscEventPerfInfoTic(&stageLog->array[curStage].perfInfo, time, stageLog->PetscLogMemory, (int) -(curStage + 2)));
     }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode PetscLogHandlerDefaultSetLogActions(PetscLogHandler handler, PetscBool flag)
+{
+  PetscStageLog stage_log = (PetscStageLog) handler->ctx;
+
+  PetscFunctionBegin;
+  stage_log->petsc_logActions = flag;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode PetscLogHandlerDefaultSetLogObjects(PetscLogHandler handler, PetscBool flag)
+{
+  PetscStageLog stage_log = (PetscStageLog) handler->ctx;
+
+  PetscFunctionBegin;
+  stage_log->petsc_logObjects = flag;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode PetscLogDefaultHandlerLogObjectState(PetscLogHandler handler, PetscObject obj, const char format[], va_list Argp)
+{
+  PetscStageLog default_handler = (PetscStageLog) handler->ctx;
+  size_t  fullLength;
+
+  PetscFunctionBegin;
+  if (default_handler->petsc_logObjects) {
+    PetscCall(PetscVSNPrintf(default_handler->petsc_objects->array[obj->id].info, 64, format, &fullLength, Argp));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
