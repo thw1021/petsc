@@ -4,6 +4,106 @@
 #endif
 #include "logdefault.h"
 
+/* --- PetscClassPerfLog --- */
+
+static PetscErrorCode PetscClassPerfInfoClear(PetscClassPerfInfo *classInfo)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscMemzero(classInfo, sizeof(*classInfo)));
+  classInfo->id = -1;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscClassPerfLogCreate(PetscClassPerfLog *classLog)
+{
+  PetscClassPerfInfo blank_entry;
+
+  PetscFunctionBegin;
+  PetscCall(PetscClassPerfInfoClear(&blank_entry));
+  PetscCall(PetscLogResizableArrayCreate(classLog, 128, blank_entry));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscClassPerfLogDestroy(PetscClassPerfLog classLog)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscFree(classLog->array));
+  PetscCall(PetscFree(classLog));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscClassPerfLogEnsureSize(PetscClassPerfLog classLog, int size)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscLogResizableArrayEnsureSize(classLog,size));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/* --- PetscEventPerfLog --- */
+
+static PetscErrorCode PetscEventPerfInfoClear(PetscEventPerfInfo *eventInfo)
+{
+  PetscFunctionBegin;
+  eventInfo->id            = -1;
+  eventInfo->active        = PETSC_TRUE;
+  eventInfo->visible       = PETSC_TRUE;
+  eventInfo->depth         = 0;
+  eventInfo->count         = 0;
+  eventInfo->flops         = 0.0;
+  eventInfo->flops2        = 0.0;
+  eventInfo->flopsTmp      = 0.0;
+  eventInfo->time          = 0.0;
+  eventInfo->time2         = 0.0;
+  eventInfo->timeTmp       = 0.0;
+  eventInfo->syncTime      = 0.0;
+  eventInfo->dof[0]        = -1.0;
+  eventInfo->dof[1]        = -1.0;
+  eventInfo->dof[2]        = -1.0;
+  eventInfo->dof[3]        = -1.0;
+  eventInfo->dof[4]        = -1.0;
+  eventInfo->dof[5]        = -1.0;
+  eventInfo->dof[6]        = -1.0;
+  eventInfo->dof[7]        = -1.0;
+  eventInfo->errors[0]     = -1.0;
+  eventInfo->errors[1]     = -1.0;
+  eventInfo->errors[2]     = -1.0;
+  eventInfo->errors[3]     = -1.0;
+  eventInfo->errors[4]     = -1.0;
+  eventInfo->errors[5]     = -1.0;
+  eventInfo->errors[6]     = -1.0;
+  eventInfo->errors[7]     = -1.0;
+  eventInfo->numMessages   = 0.0;
+  eventInfo->messageLength = 0.0;
+  eventInfo->numReductions = 0.0;
+#if defined(PETSC_HAVE_DEVICE)
+  eventInfo->CpuToGpuCount = 0.0;
+  eventInfo->GpuToCpuCount = 0.0;
+  eventInfo->CpuToGpuSize  = 0.0;
+  eventInfo->GpuToCpuSize  = 0.0;
+  eventInfo->GpuFlops      = 0.0;
+  eventInfo->GpuTime       = 0.0;
+#endif
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscEventPerfLogCreate(PetscEventPerfLog *eventLog)
+{
+  PetscEventPerfInfo blank_entry;
+
+  PetscFunctionBegin;
+  PetscCall(PetscEventPerfInfoClear(&blank_entry));
+  PetscCall(PetscLogResizableArrayCreate(eventLog, 128, blank_entry));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscEventPerfLogDestroy(PetscEventPerfLog eventLog)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscFree(eventLog->array));
+  PetscCall(PetscFree(eventLog));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode PetscLogObjCreateDefault(PetscLogState, PetscObject, void *);
 static PetscErrorCode PetscLogObjDestroyDefault(PetscLogState, PetscObject, void *);
 static PetscErrorCode PetscLogEventSynchronizeDefault(PetscLogState, PetscLogEvent, MPI_Comm, void *);
@@ -55,10 +155,8 @@ static PetscErrorCode PetscLogHandlerDestroyContext_Default(void *ctx)
   for (int s = 0; s < stageLog->num_entries; s++) {
     PetscStageInfo *stage = &stageLog->array[s];
 
-    PetscCall(PetscFree(stage->eventLog->array));
-    PetscCall(PetscFree(stage->eventLog));
-    PetscCall(PetscFree(stage->classLog->array));
-    PetscCall(PetscFree(stage->classLog));
+    PetscCall(PetscClassPerfLogDestroy(stage->classLog));
+    PetscCall(PetscEventPerfLogDestroy(stage->eventLog));
   }
   PetscCall(PetscFree(stageLog->array));
   PetscCall(PetscFree(stageLog->petsc_actions->array));
