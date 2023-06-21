@@ -261,9 +261,10 @@ PETSC_EXTERN PetscErrorCode PetscEventRegLogGetEvent(PetscEventRegLog, const cha
 PETSC_EXTERN PetscErrorCode PetscLogGetEventLog(PetscEventRegLog *);
 PETSC_EXTERN PetscErrorCode PetscLogGetClassLog(PetscClassRegLog *);
 
-PETSC_INTERN PetscErrorCode PetscLogView_Nested(PetscViewer);
+PETSC_INTERN PetscErrorCode PetscLogView_Nested(PetscLogHandler, PetscViewer);
+PETSC_INTERN PetscErrorCode PetscLogView_Default(PetscLogHandler, PetscViewer);
+PETSC_INTERN PetscErrorCode PetscLogDump_Default(PetscLogHandler, const char []);
 PETSC_INTERN PetscErrorCode PetscLogNestedEnd(void);
-PETSC_INTERN PetscErrorCode PetscLogView_Flamegraph(PetscViewer);
 
   #if defined(PETSC_HAVE_DEVICE)
 PETSC_EXTERN PetscBool PetscLogGpuTimeFlag;
