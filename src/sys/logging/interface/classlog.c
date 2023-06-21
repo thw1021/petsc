@@ -7,7 +7,7 @@
 */
 #include <petsc/private/logimpl.h> /*I    "petscsys.h"   I*/
 
-/*@C
+/*
   PetscClassRegLogCreate - This creates a `PetscClassRegLog` object.
 
   Not Collective
@@ -20,8 +20,8 @@
   Note:
   This is a low level routine used by the logging functions in PETSc
 
-.seealso: `PetscClassRegLogDestroy()`, `PetscStageLogCreate()`
-@*/
+.seealso: `PetscClassRegLogDestroy()`
+*/
 PetscErrorCode PetscClassRegLogCreate(PetscClassRegLog *classLog)
 {
   PetscClassRegInfo blank_entry;
@@ -32,7 +32,7 @@ PetscErrorCode PetscClassRegLogCreate(PetscClassRegLog *classLog)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*
   PetscClassRegLogDestroy - This destroys a `PetscClassRegLog` object.
 
   Not Collective
@@ -46,7 +46,7 @@ PetscErrorCode PetscClassRegLogCreate(PetscClassRegLog *classLog)
   This is a low level routine used by the logging functions in PETSc
 
 .seealso: `PetscClassRegLogCreate()`
-@*/
+*/
 PetscErrorCode PetscClassRegLogDestroy(PetscClassRegLog classLog)
 {
   int c;
@@ -58,7 +58,7 @@ PetscErrorCode PetscClassRegLogDestroy(PetscClassRegLog classLog)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*
   PetscClassRegInfoDestroy - This destroys a `PetscClassRegInfo` object.
 
   Not Collective
@@ -70,9 +70,7 @@ PetscErrorCode PetscClassRegLogDestroy(PetscClassRegLog classLog)
 
   Note:
   This is a low level routine used by the logging functions in PETSc
-
-.seealso: `PetscStageLogDestroy()`, `EventLogDestroy()`
-@*/
+*/
 PetscErrorCode PetscClassRegInfoDestroy(PetscClassRegInfo *c)
 {
   PetscFunctionBegin;
@@ -88,7 +86,8 @@ PETSC_INTERN PetscErrorCode PetscClassRegLogEnsureSize(PetscClassRegLog class_lo
 }
 
 /*--------------------------------------------- Registration Functions ----------------------------------------------*/
-/*@C
+
+/*
   PetscClassRegLogRegister - Registers a class for logging operations in an application code.
 
   Not Collective
@@ -106,7 +105,7 @@ PETSC_INTERN PetscErrorCode PetscClassRegLogEnsureSize(PetscClassRegLog class_lo
   This is a low level routine used by the logging functions in PETSc
 
 .seealso: `PetscClassIdRegister()`
-@*/
+*/
 PetscErrorCode PetscClassRegLogRegister(PetscClassRegLog classLog, const char cname[], PetscClassId classid)
 {
   PetscClassRegInfo *classInfo;
@@ -123,7 +122,7 @@ PetscErrorCode PetscClassRegLogRegister(PetscClassRegLog classLog, const char cn
 }
 
 /*------------------------------------------------ Query Functions --------------------------------------------------*/
-/*@C
+/*
   PetscClassRegLogGetClass - This function returns the class corresponding to a given classid.
 
   Not Collective
@@ -141,7 +140,7 @@ PetscErrorCode PetscClassRegLogRegister(PetscClassRegLog classLog, const char cn
   This is a low level routine used by the logging functions in PETSc
 
 .seealso: `PetscClassIdRegister()`, `PetscLogObjCreateDefault()`, `PetscLogObjDestroyDefault()`
-@*/
+*/
 PetscErrorCode PetscClassRegLogGetClass(PetscClassRegLog classLog, PetscClassId classid, int *oclass)
 {
   int c;
