@@ -74,3 +74,28 @@ PETSC_INTERN PetscErrorCode PetscStageRegLogSetVisible(PetscStageRegLog reg_log,
   reg_log->array[stage].visible = is_visible;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+PETSC_INTERN PetscErrorCode PetscStageRegLogGetVisible(PetscStageRegLog reg_log, PetscLogStage stage, PetscBool *is_visible)
+{
+  PetscFunctionBegin;
+  *is_visible = reg_log->array[stage].visible;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode PetscStageRegLogGetId(PetscStageRegLog reg_log, const char name[], PetscLogStage *stage)
+{
+  PetscBool match;
+
+  PetscFunctionBegin;
+  PetscValidCharPointer(name, 2);
+  PetscValidIntPointer(stage, 3);
+  *stage = -1;
+  for (PetscLogStage s = 0; s < reg_log->num_entries; s++) {
+    PetscCall(PetscStrcasecmp(reg_log->array[s].name, name, &match));
+    if (match) {
+      *stage = s;
+      break;
+    }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}

@@ -82,6 +82,12 @@ PetscErrorCode PetscStageRegLogDestroy(PetscStageRegLog stageLog)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PETSC_INTERN PetscErrorCode PetscEventRegLogSetCollective(PetscEventRegLog event_log, PetscLogEvent event, PetscBool is_collective)
+{
+  PetscFunctionBegin;
+  event_log->array[event].collective = is_collective;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 /*@C
   PetscEventPerfInfoCopy - Copy the activity and visibility data in eventInfo to outInfo
