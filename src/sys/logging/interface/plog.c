@@ -23,56 +23,14 @@
 #include <petscmachineinfo.h>
 #include <petscconfiginfo.h>
 
-PETSC_INTERN PetscErrorCode PetscLogGetDefaultHandler(PetscLogHandler *default_handler)
-{
-  PetscFunctionBegin;
-  PetscValidPointer(default_handler, 1);
-  *default_handler = NULL;
-  for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
-    if (PetscLogHandlers[i] && PetscLogHandlers[i]->impl->type == PETSC_LOG_HANDLER_DEFAULT) {
-      *default_handler = PetscLogHandlers[i];
-    }
-  }
-  if (*default_handler == NULL) {
-    fprintf(stderr, "PETSC ERROR: Logging has not been enabled.\nYou might have forgotten to call PetscInitialize().\n");
-    PETSCABORT(MPI_COMM_WORLD, PETSC_ERR_SUP);
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
+// This file, and only this file, is for functions that interact with the global logging state
 
 #if defined(PETSC_HAVE_THREADSAFETY)
 PetscInt           petsc_log_gid = -1; /* Global threadId counter */
 PETSC_TLS PetscInt petsc_log_tid = -1; /* Local threadId */
 #endif
 
-PETSC_INTERN PetscErrorCode PetscLogGetRegistry(PetscLogRegistry *registry_p)
-{
-  PetscFunctionBegin;
-  PetscValidPointer(registry_p, 1);
-  if (!petsc_log_state) {
-    fprintf(stderr, "PETSC ERROR: Logging has not been enabled.\nYou might have forgotten to call PetscInitialize().\n");
-    PETSCABORT(MPI_COMM_WORLD, PETSC_ERR_SUP);
-  }
-  *registry_p = petsc_log_state->registry;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PetscLogState petsc_log_state = NULL;
-
-PETSC_INTERN PetscErrorCode PetscLogGetState(PetscLogState *state_p)
-{
-  PetscFunctionBegin;
-  PetscValidPointer(state_p, 1);
-  if (!petsc_log_state) {
-    fprintf(stderr, "PETSC ERROR: Logging has not been enabled.\nYou might have forgotten to call PetscInitialize().\n");
-    PETSCABORT(MPI_COMM_WORLD, PETSC_ERR_SUP);
-  }
-  *state_p = petsc_log_state;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /* used in the MPI_XXX() count macros in petsclog.h */
-
 
 /* Global counters */
 PetscLogDouble petsc_BaseTime        = 0.0;
@@ -168,12 +126,53 @@ PetscInt PetscLogGetTid(void)
 
   #endif
 
+PetscLogState petsc_log_state = NULL;
+
+static PetscErrorCode PetscLogGetHandler(PetscLogHandlerType type, PetscLogHandler *handler)
+{
+  PetscFunctionBegin;
+  PetscValidPointer(handler, 1);
+  *handler = NULL;
+  for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
+    if (PetscLogHandlers[i] && PetscLogHandlers[i]->impl->type == type) {
+      *handler = PetscLogHandlers[i];
+    }
+  }
+  if (*handler == NULL) {
+    if (type == PETSC_LOG_HANDLER_DEFAULT) fprintf(stderr, "PETSC ERROR: Logging has not been enabled.\nYou might have forgotten to call PetscInitialize().\n");
+    else if (type == PETSC_LOG_HANDLER_NESTED) fprintf(stderr, "PETSC ERROR: Nested logging has not been enabled.\n");
+    PETSCABORT(MPI_COMM_WORLD, PETSC_ERR_SUP);
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscLogGetDefaultHandler(PetscLogHandler *default_handler)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscLogGetHandler(PETSC_LOG_HANDLER_DEFAULT, default_handler));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscLogGetNestedHandler(PetscLogHandler *nested_handler)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscLogGetHandler(PETSC_LOG_HANDLER_NESTED, nested_handler));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode PetscLogGetState(PetscLogState *state_p)
+{
+  PetscFunctionBegin;
+  PetscValidPointer(state_p, 1);
+  if (!petsc_log_state) {
+    fprintf(stderr, "PETSC ERROR: Logging has not been enabled.\nYou might have forgotten to call PetscInitialize().\n");
+    PETSCABORT(MPI_COMM_WORLD, PETSC_ERR_SUP);
+  }
+  *state_p = petsc_log_state;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /* Tracing event logging variables */
-FILE            *petsc_tracefile          = NULL;
-int              petsc_tracelevel         = 0;
-const char      *petsc_traceblanks        = "                                                                                                    ";
-char             petsc_tracespace[128]    = " ";
-PetscLogDouble   petsc_tracetime          = 0.0;
 static PetscBool PetscLogInitializeCalled = PETSC_FALSE;
 
 PETSC_INTERN PetscErrorCode PetscLogInitialize(void)
@@ -276,12 +275,6 @@ PETSC_INTERN PetscErrorCode PetscLogFinalize(void)
   petsc_gtime_th   = 0.0;
   #endif
 
-  petsc_tracefile          = NULL;
-  petsc_tracelevel         = 0;
-  petsc_traceblanks        = "                                                                                                    ";
-  petsc_tracespace[0]      = ' ';
-  petsc_tracespace[1]      = 0;
-  petsc_tracetime          = 0.0;
   PETSC_LARGEST_CLASSID    = PETSC_SMALLEST_CLASSID;
   PETSC_OBJECT_CLASSID     = 0;
   petsc_log_state          = NULL;
@@ -393,12 +386,9 @@ PetscErrorCode PetscLogStageRegister(const char sname[], PetscLogStage *stage)
 
 PETSC_INTERN PetscErrorCode PetscLogStagePush_Internal(PetscLogStage stage)
 {
-  PetscLogRegistry registry;
   PetscLogState   state;
 
   PetscFunctionBegin;
-  PetscCall(PetscLogGetRegistry(&registry));
-  PetscCheck(stage >= 0 && stage < registry->stages->num_entries, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d not in [0,%d)", stage, (int) registry->stages->num_entries);
   PetscCall(PetscLogGetState(&state));
   PetscCall(PetscLogStateStagePush(state, stage));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -928,16 +918,10 @@ PetscErrorCode PetscLogEventSetActiveAll(PetscLogEvent event, PetscBool isActive
 PetscErrorCode PetscLogEventActivateClass(PetscClassId classid)
 {
   PetscLogState state;
-  PetscEventRegLog event_log;
-  int           stage;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
-  PetscCall(PetscLogStateGetCurrentStage(state, &stage));
-  event_log = state->registry->events;
-  for (PetscLogEvent e = 0; e < event_log->num_entries; e++) {
-    if (event_log->array[e].classid == classid) PetscCall(PetscBTSet(state->active, stage + (e + 1) * state->bt_num_stages));
-  }
+  PetscCall(PetscLogStateEventActivateClass(state, classid));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -956,16 +940,10 @@ PetscErrorCode PetscLogEventActivateClass(PetscClassId classid)
 PetscErrorCode PetscLogEventDeactivateClass(PetscClassId classid)
 {
   PetscLogState state;
-  PetscEventRegLog event_log;
-  int           stage;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
-  PetscCall(PetscLogStateGetCurrentStage(state, &stage));
-  event_log = state->registry->events;
-  for (PetscLogEvent e = 0; e < event_log->num_entries; e++) {
-    if (event_log->array[e].classid == classid) PetscCall(PetscBTClear(state->active, stage + (e + 1) * state->bt_num_stages));
-  }
+  PetscCall(PetscLogStateEventDeactivateClass(state, classid));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1221,8 +1199,8 @@ PetscErrorCode PetscLogView_Detailed(PetscViewer viewer)
   PetscCall(PetscViewerASCIIPrintf(viewer, "LocalObjects = {}\n"));
   PetscCall(PetscViewerASCIIPrintf(viewer, "LocalMemory = {}\n"));
   PetscCall(PetscLogGetDefaultHandler(&stageLog));
-  PetscCall(PetscStageLogCreateGlobalStageNames(comm, stageLog, &global_stages));
-  PetscCall(PetscStageLogCreateGlobalEventNames(comm, stageLog, &global_events));
+  PetscCall(PetscLogRegistryCreateGlobalStageNames(comm, stageLog, &global_stages));
+  PetscCall(PetscLogRegistryCreateGlobalEventNames(comm, stageLog, &global_events));
   numStages = global_stages->count;
   numEvents = global_events->count;
   PetscCall(PetscMemzero(&zero_info, sizeof(zero_info)));
