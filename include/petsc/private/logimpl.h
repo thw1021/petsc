@@ -36,8 +36,6 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *);
     entrytype _default; \
     entrytype *array; \
   }; \
-  PETSC_INTERN PetscErrorCode containertype##Create(containertype *);\
-  PETSC_INTERN PetscErrorCode containertype##Destroy(containertype);
 
 #define PetscLogResizableArrayEnsureSize(ra,new_size) \
   PetscMacroReturnStandard( \
@@ -75,7 +73,6 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *);
 
 /* --- PetscEventPerfInfo (declared in petsclog.h) --- */
 
-PETSC_EXTERN PetscErrorCode PetscEventPerfInfoClear(PetscEventPerfInfo *);
 PETSC_EXTERN PetscErrorCode PetscEventPerfInfoCopy(const PetscEventPerfInfo *, PetscEventPerfInfo *);
 PETSC_INTERN PetscErrorCode PetscEventPerfInfoTic(PetscEventPerfInfo *, PetscLogDouble, PetscBool, int);
 PETSC_INTERN PetscErrorCode PetscEventPerfInfoToc(PetscEventPerfInfo *, PetscLogDouble, PetscBool, int);
@@ -243,8 +240,6 @@ PETSC_EXTERN PetscErrorCode PetscEventPerfLogDeactivateClass(PetscEventPerfLog, 
 /* Logging functions */
 /* Creation and destruction functions */
 PETSC_EXTERN PetscErrorCode PetscClassRegInfoDestroy(PetscClassRegInfo *);
-/* General functions */
-PETSC_EXTERN PetscErrorCode PetscClassPerfInfoClear(PetscClassPerfInfo *);
 /* Registration functions */
 PETSC_EXTERN PetscErrorCode PetscClassRegLogRegister(PetscClassRegLog, const char[], PetscClassId);
 /* Query functions */
