@@ -15,7 +15,7 @@
 /*----------------------------------------------- Creation Functions -------------------------------------------------*/
 /* Note: these functions do not have prototypes in a public directory, so they are considered "internal" and not exported. */
 
-/*@C
+/*
   PetscEventRegLogCreate - This creates a `PetscEventRegLog` object.
 
   Not collective
@@ -28,8 +28,8 @@
   Note:
   This is a low level routine used by the logging functions in PETSc
 
-.seealso: `PetscEventRegLogDestroy()`, `PetscStageLogCreate()`
-@*/
+.seealso: `PetscEventRegLogDestroy()`
+*/
 PetscErrorCode PetscEventRegLogCreate(PetscEventRegLog *eventLog)
 {
   PetscEventRegInfo blank_entry;
@@ -47,7 +47,7 @@ static PetscErrorCode PetscEventRegLogEnsureSize(PetscEventRegLog event_log, int
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*
   PetscEventRegLogDestroy - This destroys a `PetscEventRegLog` object.
 
   Not collective
@@ -61,7 +61,7 @@ static PetscErrorCode PetscEventRegLogEnsureSize(PetscEventRegLog event_log, int
   This is a low level routine used by the logging functions in PETSc
 
 .seealso: `PetscEventRegLogCreate()`
-@*/
+*/
 PetscErrorCode PetscEventRegLogDestroy(PetscEventRegLog eventLog)
 {
   int e;
@@ -89,7 +89,7 @@ PETSC_INTERN PetscErrorCode PetscEventRegLogSetCollective(PetscEventRegLog event
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*
   PetscEventPerfInfoCopy - Copy the activity and visibility data in eventInfo to outInfo
 
   Not collective
@@ -106,7 +106,7 @@ PETSC_INTERN PetscErrorCode PetscEventRegLogSetCollective(PetscEventRegLog event
   This is a low level routine used by the logging functions in PETSc
 
 .seealso: `PetscEventPerfInfoClear()`
-@*/
+*/
 PetscErrorCode PetscEventPerfInfoCopy(const PetscEventPerfInfo *eventInfo, PetscEventPerfInfo *outInfo)
 {
   PetscFunctionBegin;
@@ -142,7 +142,6 @@ PETSC_INTERN PetscErrorCode PetscEventPerfInfoTic(PetscEventPerfInfo *eventInfo,
     eventInfo->mallocIncrease -= usage;
     PetscCall(PetscMallocPushMaximumUsage(event));
   }
-  
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -180,7 +179,7 @@ PETSC_INTERN PetscErrorCode PetscEventPerfInfoToc(PetscEventPerfInfo *eventInfo,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*
   PetscEventPerfInfoAdd - Add data in eventInfo to outInfo
 
   Not collective
@@ -197,7 +196,7 @@ PETSC_INTERN PetscErrorCode PetscEventPerfInfoToc(PetscEventPerfInfo *eventInfo,
   This is a low level routine used by the logging functions in PETSc
 
 .seealso: `PetscEventPerfInfoClear()`
-@*/
+*/
 PetscErrorCode PetscEventPerfInfoAdd(const PetscEventPerfInfo *eventInfo, PetscEventPerfInfo *outInfo)
 {
   PetscFunctionBegin;
@@ -224,7 +223,7 @@ PetscErrorCode PetscEventPerfInfoAdd(const PetscEventPerfInfo *eventInfo, PetscE
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*
   PetscEventPerfLogEnsureSize - This ensures that a `PetscEventPerfLog` is at least of a certain size.
 
   Not collective
@@ -239,7 +238,7 @@ PetscErrorCode PetscEventPerfInfoAdd(const PetscEventPerfInfo *eventInfo, PetscE
   This is a low level routine used by the logging functions in PETSc
 
 .seealso: `PetscEventPerfLogCreate()`
-@*/
+*/
 PetscErrorCode PetscEventPerfLogEnsureSize(PetscEventPerfLog eventLog, int size)
 {
   PetscFunctionBegin;
@@ -266,7 +265,7 @@ PetscErrorCode PetscLogEventEndMPE(PetscLogEvent event, int t, PetscObject o1, P
 #endif
 
 /*--------------------------------------------- Registration Functions ----------------------------------------------*/
-/*@C
+/*
   PetscEventRegLogRegister - Registers an event for logging operations in an application code.
 
   Not Collective
@@ -304,7 +303,7 @@ PetscErrorCode PetscLogEventEndMPE(PetscLogEvent event, int t, PetscObject o1, P
 
 .seealso: `PetscLogEventBegin()`, `PetscLogEventEnd()`, `PetscLogFlops()`,
           `PetscEventLogActivate()`, `PetscEventLogDeactivate()`
-@*/
+*/
 PetscErrorCode PetscEventRegLogRegister(PetscEventRegLog eventLog, const char ename[], PetscClassId classid, PetscLogEvent *event)
 {
   PetscEventRegInfo *eventInfo;
@@ -348,7 +347,7 @@ PetscErrorCode PetscEventRegLogRegister(PetscEventRegLog eventLog, const char en
 }
 
 /*---------------------------------------------- Activation Functions -----------------------------------------------*/
-/*@C
+/*
   PetscEventPerfLogActivate - Indicates that a particular event should be logged.
 
   Not Collective
@@ -374,7 +373,7 @@ PetscErrorCode PetscEventRegLogRegister(PetscEventRegLog eventLog, const char en
   This is a low level routine used by the logging functions in PETSc
 
 .seealso: `PetscEventPerfLogDeactivate()`, `PetscEventPerfLogDeactivatePop()`, `PetscEventPerfLogDeactivatePush()`
-@*/
+*/
 PetscErrorCode PetscEventPerfLogActivate(PetscEventPerfLog eventLog, PetscLogEvent event)
 {
   PetscFunctionBegin;
@@ -382,7 +381,7 @@ PetscErrorCode PetscEventPerfLogActivate(PetscEventPerfLog eventLog, PetscLogEve
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*
   PetscEventPerfLogDeactivate - Indicates that a particular event should not be logged.
 
   Not Collective
@@ -408,7 +407,7 @@ PetscErrorCode PetscEventPerfLogActivate(PetscEventPerfLog eventLog, PetscLogEve
   This is a low level routine used by the logging functions in PETSc
 
 .seealso: `PetscEventPerfLogActivate()`, `PetscEventPerfLogDeactivatePop()`, `PetscEventPerfLogDeactivatePush()`
-@*/
+*/
 PetscErrorCode PetscEventPerfLogDeactivate(PetscEventPerfLog eventLog, PetscLogEvent event)
 {
   PetscFunctionBegin;
@@ -416,7 +415,7 @@ PetscErrorCode PetscEventPerfLogDeactivate(PetscEventPerfLog eventLog, PetscLogE
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*
   PetscEventPerfLogDeactivatePush - Indicates that a particular event should not be logged.
 
   Not Collective
@@ -442,7 +441,7 @@ PetscErrorCode PetscEventPerfLogDeactivate(PetscEventPerfLog eventLog, PetscLogE
   This is a low level routine used by the logging functions in PETSc
 
 .seealso: `PetscEventPerfLogDeactivate()`, `PetscEventPerfLogActivate()`, `PetscEventPerfLogDeactivatePop()`
-@*/
+*/
 PetscErrorCode PetscEventPerfLogDeactivatePush(PetscEventPerfLog eventLog, PetscLogEvent event)
 {
   PetscFunctionBegin;
@@ -450,7 +449,7 @@ PetscErrorCode PetscEventPerfLogDeactivatePush(PetscEventPerfLog eventLog, Petsc
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*
   PetscEventPerfLogDeactivatePop - Indicates that a particular event should  be logged.
 
   Not Collective
@@ -476,7 +475,7 @@ PetscErrorCode PetscEventPerfLogDeactivatePush(PetscEventPerfLog eventLog, Petsc
   This is a low level routine used by the logging functions in PETSc
 
 .seealso: `PetscEventPerfLogDeactivate()`, `PetscEventPerfLogActivate()`, `PetscEventPerfLogDeactivatePush()`
-@*/
+*/
 PetscErrorCode PetscEventPerfLogDeactivatePop(PetscEventPerfLog eventLog, PetscLogEvent event)
 {
   PetscFunctionBegin;
@@ -484,7 +483,7 @@ PetscErrorCode PetscEventPerfLogDeactivatePop(PetscEventPerfLog eventLog, PetscL
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*
   PetscEventPerfLogActivateClass - Activates event logging for a PETSc object class.
 
   Not Collective
@@ -500,7 +499,7 @@ PetscErrorCode PetscEventPerfLogDeactivatePop(PetscEventPerfLog eventLog, PetscL
   This is a low level routine used by the logging functions in PETSc
 
 .seealso: `PetscEventPerfLogDeactivateClass()`, `PetscEventPerfLogActivate()`, `PetscEventPerfLogDeactivate()`
-@*/
+*/
 PetscErrorCode PetscEventPerfLogActivateClass(PetscEventPerfLog eventLog, PetscEventRegLog eventRegLog, PetscClassId classid)
 {
   int e;
@@ -513,7 +512,7 @@ PetscErrorCode PetscEventPerfLogActivateClass(PetscEventPerfLog eventLog, PetscE
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*
   PetscEventPerfLogDeactivateClass - Deactivates event logging for a PETSc object class.
 
   Not Collective
@@ -529,7 +528,7 @@ PetscErrorCode PetscEventPerfLogActivateClass(PetscEventPerfLog eventLog, PetscE
   This is a low level routine used by the logging functions in PETSc
 
 .seealso: `PetscEventPerfLogDeactivateClass()`, `PetscEventPerfLogDeactivate()`, `PetscEventPerfLogActivate()`
-@*/
+*/
 PetscErrorCode PetscEventPerfLogDeactivateClass(PetscEventPerfLog eventLog, PetscEventRegLog eventRegLog, PetscClassId classid)
 {
   int e;
@@ -543,7 +542,7 @@ PetscErrorCode PetscEventPerfLogDeactivateClass(PetscEventPerfLog eventLog, Pets
 }
 
 /*------------------------------------------------ Query Functions --------------------------------------------------*/
-/*@C
+/*
   PetscEventRegLogGetEvent - This function returns the event id given the event name.
 
   Not Collective
@@ -561,7 +560,7 @@ PetscErrorCode PetscEventPerfLogDeactivateClass(PetscEventPerfLog eventLog, Pets
   This is a low level routine used by the logging functions in PETSc
 
 .seealso: `PetscEventRegLogRegister()`
-@*/
+*/
 PetscErrorCode PetscEventRegLogGetEvent(PetscEventRegLog eventLog, const char name[], PetscLogEvent *event)
 {
   PetscBool match;
@@ -581,7 +580,7 @@ PetscErrorCode PetscEventRegLogGetEvent(PetscEventRegLog eventLog, const char na
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*
   PetscEventPerfLogSetVisible - This function determines whether an event is printed during `PetscLogView()`
 
   Not Collective
@@ -599,8 +598,8 @@ PetscErrorCode PetscEventRegLogGetEvent(PetscEventRegLog eventLog, const char na
   Note:
   This is a low level routine used by the logging functions in PETSc
 
-.seealso: `PetscEventPerfLogGetVisible()`, `PetscEventRegLogRegister()`, `PetscStageLogGetEventLog()`
-@*/
+.seealso: `PetscEventPerfLogGetVisible()`, `PetscEventRegLogRegister()`
+*/
 PetscErrorCode PetscEventPerfLogSetVisible(PetscEventPerfLog eventLog, PetscLogEvent event, PetscBool isVisible)
 {
   PetscFunctionBegin;
@@ -608,7 +607,7 @@ PetscErrorCode PetscEventPerfLogSetVisible(PetscEventPerfLog eventLog, PetscLogE
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*
   PetscEventPerfLogGetVisible - This function returns whether an event is printed during `PetscLogView()`
 
   Not Collective
@@ -628,8 +627,8 @@ PetscErrorCode PetscEventPerfLogSetVisible(PetscEventPerfLog eventLog, PetscLogE
   Note:
   This is a low level routine used by the logging functions in PETSc
 
-.seealso: `PetscEventPerfLogSetVisible()`, `PetscEventRegLogRegister()`, `PetscStageLogGetEventLog()`
-@*/
+.seealso: `PetscEventPerfLogSetVisible()`, `PetscEventRegLogRegister()`
+*/
 PetscErrorCode PetscEventPerfLogGetVisible(PetscEventPerfLog eventLog, PetscLogEvent event, PetscBool *isVisible)
 {
   PetscFunctionBegin;

@@ -20,8 +20,6 @@
 #include <../src/sys/logging/impls/default/logdefault.h>
 
 #if defined(PETSC_USE_LOG)
-#include <petscmachineinfo.h>
-#include <petscconfiginfo.h>
 
 // This file, and only this file, is for functions that interact with the global logging state
 
@@ -279,6 +277,95 @@ PETSC_INTERN PetscErrorCode PetscLogFinalize(void)
   PETSC_OBJECT_CLASSID     = 0;
   petsc_log_state          = NULL;
   PetscLogInitializeCalled = PETSC_FALSE;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  PetscLogDefaultBegin - Turns on logging of objects and events using the default logging functions `PetscLogEventBeginDefault()` and `PetscLogEventEndDefault()`. This logs flop
+  rates and object creation and should not slow programs down too much.
+  This routine may be called more than once.
+
+  Logically Collective over `PETSC_COMM_WORLD`
+
+  Options Database Key:
+. -log_view [viewertype:filename:viewerformat] - Prints summary of flop and timing information to the
+                  screen (for code configured with --with-log=1 (which is the default))
+
+  Usage:
+.vb
+      PetscInitialize(...);
+      PetscLogDefaultBegin();
+       ... code ...
+      PetscLogView(viewer); or PetscLogDump();
+      PetscFinalize();
+.ve
+
+  Level: advanced
+
+  Note:
+  `PetscLogView()` or `PetscLogDump()` actually cause the printing of
+  the logging information.
+
+.seealso: [](ch_profiling), `PetscLogDump()`, `PetscLogAllBegin()`, `PetscLogView()`, `PetscLogTraceBegin()`
+@*/
+PetscErrorCode PetscLogDefaultBegin(void)
+{
+  PetscLogHandler handler;
+  int i_free = -1;
+
+  PetscFunctionBegin;
+  for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
+    PetscLogHandler h = PetscLogHandlers[i];
+    if (h) {
+      if (h->impl->type == PETSC_LOG_HANDLER_DEFAULT) {
+        // Default handler has already been created
+        PetscFunctionReturn(PETSC_SUCCESS);
+      }
+    } else if (i_free < 0) i_free = i;
+  }
+  PetscCheck(i_free >= 0, PETSC_COMM_SELF, PETSC_ERR_SUP, "Too many log handlers already running, cannot begin default log handler");
+  PetscCall(PetscLogHandlerCreate_Default(&handler));
+  PetscLogHandlers[i_free] = handler;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  PetscLogTraceBegin - Activates trace logging.  Every time a PETSc event
+  begins or ends, the event name is printed.
+
+  Logically Collective on `PETSC_COMM_WORLD`
+
+  Input Parameter:
+. file - The file to print trace in (e.g. stdout)
+
+  Options Database Key:
+. -log_trace [filename] - Activates `PetscLogTraceBegin()`
+
+  Level: intermediate
+
+  Notes:
+  `PetscLogTraceBegin()` prints the processor number, the execution time (sec),
+  then "Event begin:" or "Event end:" followed by the event name.
+
+  `PetscLogTraceBegin()` allows tracing of all PETSc calls, which is useful
+  to determine where a program is hanging without running in the
+  debugger.  Can be used in conjunction with the -info option.
+
+.seealso: [](ch_profiling), `PetscLogDump()`, `PetscLogAllBegin()`, `PetscLogView()`, `PetscLogDefaultBegin()`
+@*/
+PetscErrorCode PetscLogTraceBegin(FILE *file)
+{
+
+  PetscFunctionBegin;
+  PetscCall(PetscLogDefaultBegin());
+  for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
+    PetscLogHandler h = PetscLogHandlers[i];
+
+    if (h && h->impl->type == PETSC_LOG_HANDLER_DEFAULT) {
+      PetscCall(PetscLogHandlerDefaultSetTrace(h, file));
+      PetscFunctionReturn(PETSC_SUCCESS);
+    }
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -770,7 +857,7 @@ PetscErrorCode PetscLogEventExcludeClass(PetscClassId classid)
   The event may be either a pre-defined PETSc event (found in include/petsclog.h)
   or an event number obtained with `PetscLogEventRegister()`.
 
-.seealso: [](ch_profiling), `PlogEventDeactivate()`, `PlogEventDeactivatePush()`, `PetscLogEventDeactivatePop()`
+.seealso: [](ch_profiling), `PetscLogEventDeactivate()`, `PetscLogEventDeactivatePush()`, `PetscLogEventDeactivatePop()`
 @*/
 PetscErrorCode PetscLogEventActivate(PetscLogEvent event)
 {
@@ -842,8 +929,14 @@ PetscErrorCode PetscLogEventDeactivate(PetscLogEvent event)
 @*/
 PetscErrorCode PetscLogEventDeactivatePush(PetscLogEvent event)
 {
+  PetscLogState state;
+
   PetscFunctionBegin;
-  // TODO
+  PetscCall(PetscLogGetState(&state));
+  for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
+    PetscLogHandler h = PetscLogHandlers[i];
+    if (h && h->impl->event_deactivate_push) PetscCall((*(h->impl->event_deactivate_push))(state, event, h->ctx));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -873,8 +966,14 @@ PetscErrorCode PetscLogEventDeactivatePush(PetscLogEvent event)
 @*/
 PetscErrorCode PetscLogEventDeactivatePop(PetscLogEvent event)
 {
+  PetscLogState state;
+
   PetscFunctionBegin;
-  // TODO
+  PetscCall(PetscLogGetState(&state));
+  for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
+    PetscLogHandler h = PetscLogHandlers[i];
+    if (h && h->impl->event_deactivate_pop) PetscCall((*(h->impl->event_deactivate_pop))(state, event, h->ctx));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -889,7 +988,7 @@ PetscErrorCode PetscLogEventDeactivatePop(PetscLogEvent event)
 
   Level: advanced
 
-.seealso: [](ch_profiling), `PlogEventActivate()`, `PlogEventDeactivate()`
+.seealso: [](ch_profiling), `PetscLogEventActivate()`, `PetscLogEventDeactivate()`
 @*/
 PetscErrorCode PetscLogEventSetActiveAll(PetscLogEvent event, PetscBool isActive)
 {
@@ -1271,7 +1370,7 @@ PetscErrorCode PetscLogObjectState(PetscObject obj, const char format[], ...)
   PetscFunctionBegin;
   PetscCall(PetscLogGetDefaultHandler(&default_handler));
   va_start(Argp, format);
-  PetscCall(PetscLogDefaultHandlerLogObjectState(default_handler, obj, format, Argp));
+  PetscCall(PetscLogHandlerDefaultLogObjectState(default_handler, obj, format, Argp));
   va_end(Argp);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
