@@ -129,8 +129,6 @@ static PetscErrorCode PetscEventPerfInfoClear(PetscEventPerfInfo *eventInfo)
 {
   PetscFunctionBegin;
   eventInfo->id            = -1;
-  eventInfo->active        = PETSC_TRUE;
-  eventInfo->visible       = PETSC_TRUE;
   eventInfo->depth         = 0;
   eventInfo->count         = 0;
   eventInfo->flops         = 0.0;
@@ -1312,7 +1310,7 @@ static PetscErrorCode PetscLogView_Default_Info(PetscLogHandler handler, PetscVi
       PetscInt stage_id = global_stages->global_to_local[stage];
       if (stage_id >= 0) {
         localStageUsed[stage]    = stageInfo[stage_id].used;
-        localStageVisible[stage] = stageInfo[stage_id].perfInfo.visible;
+        localStageVisible[stage] = state->registry->stages->array[stage_id].visible;
       } else {
         localStageUsed[stage]    = PETSC_FALSE;
         localStageVisible[stage] = PETSC_TRUE;
