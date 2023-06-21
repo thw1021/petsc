@@ -17,6 +17,15 @@ PETSC_INTERN PetscErrorCode PetscStageRegLogCreate(PetscStageRegLog *stageLog)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PetscErrorCode PetscStageRegLogDestroy(PetscStageRegLog stageLog)
+{
+  PetscFunctionBegin;
+  for (int s = 0; s < stageLog->num_entries; s++) PetscCall(PetscFree(stageLog->array[s].name));
+  PetscCall(PetscFree(stageLog->array));
+  PetscCall(PetscFree(stageLog));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PETSC_INTERN PetscErrorCode PetscStageRegLogEnsureSize(PetscStageRegLog stage_log, int new_size)
 {
   PetscFunctionBegin;
@@ -97,5 +106,13 @@ PETSC_INTERN PetscErrorCode PetscStageRegLogGetId(PetscStageRegLog reg_log, cons
       break;
     }
   }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode PetscStageRegLogGetName(PetscStageRegLog reg_log, PetscLogStage stage, const char **name)
+{
+  PetscFunctionBegin;
+  PetscValidCharPointer(name, 3);
+  *name = reg_log->array[stage].name;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

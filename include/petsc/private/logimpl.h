@@ -156,10 +156,7 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryCreate(PetscLogRegistry *);
 PETSC_INTERN PetscErrorCode PetscLogRegistryDestroy(PetscLogRegistry);
 PETSC_INTERN PetscErrorCode PetscLogRegistryStageRegister(PetscLogRegistry,const char[],PetscLogStage *);
 PETSC_INTERN PetscErrorCode PetscLogRegistryEventRegister(PetscLogRegistry,const char[],PetscClassId,PetscLogStage *);
-PETSC_INTERN PetscErrorCode PetscLogRegistryGetClassLog(PetscLogRegistry, PetscClassRegLog *);
-PETSC_INTERN PetscErrorCode PetscLogRegistryGetEventLog(PetscLogRegistry, PetscEventRegLog *);
 PETSC_INTERN PetscErrorCode PetscLogRegistryGetEvent(PetscLogRegistry, const char[], PetscLogEvent *);
-PETSC_INTERN PetscErrorCode PetscLogRegistryGetStageLog(PetscLogRegistry, PetscStageRegLog *);
 PETSC_INTERN PetscErrorCode PetscLogRegistryLock(PetscLogRegistry);
 PETSC_INTERN PetscErrorCode PetscLogRegistryUnlock(PetscLogRegistry);
 
@@ -235,8 +232,6 @@ PETSC_INTERN PetscInt PetscLogGetTid(void);
 #endif
 
 #ifdef PETSC_USE_LOG
-
-
 /* Query functions */
 PETSC_EXTERN PetscErrorCode PetscEventPerfLogSetVisible(PetscEventPerfLog, PetscLogEvent, PetscBool);
 PETSC_EXTERN PetscErrorCode PetscEventPerfLogGetVisible(PetscEventPerfLog, PetscLogEvent, PetscBool *);

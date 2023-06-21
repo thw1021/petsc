@@ -37,9 +37,6 @@ PETSC_EXTERN PetscErrorCode (*PetscPythonMonitorSet_C)(PetscObject,const char*);
 static PetscLogState petsc_log_state = NULL;
 #endif
 
-#define PetscCLASSID(stageLog,index) \
-        ((stageLog)->classLog->classInfo[(index)].classid)
-
 static
 PetscErrorCode PetscLogStageFindId(const char name[], PetscLogStage *stageid)
 {

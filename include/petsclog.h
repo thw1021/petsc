@@ -194,15 +194,35 @@ PETSC_DEPRECATED_FUNCTION("PetscLogObjectMemory() is deprecated (since version 3
 
 #if defined(PETSC_USE_LOG) /* --- Logging is turned on --------------------------------*/
 PETSC_EXTERN PetscLogState petsc_log_state;
+PETSC_DEPRECATED_FUNCTION("PetscStageLog and PetscLogGetStageLog() are deprecated (since version 3.20)") static inline PetscErrorCode PetscLogGetStageLog(void *plog)
+{
+  *((void **) plog) = NULL;
+  return PETSC_SUCCESS;
+}
+PETSC_DEPRECATED_FUNCTION("PetscStageLog and PetscStageLogGetCurrent() are deprecated (since version 3.20)") static inline PetscErrorCode PetscStageLogGetCurrent(void *plog, int *s)
+{
+  *s = -1;
+  return PETSC_SUCCESS;
+}
+PETSC_DEPRECATED_FUNCTION("PetscStageLog and PetscStageLogGetEventPerfLog() are deprecated (since version 3.20)") static inline PetscErrorCode PetscStageLogGetEventPerfLog(void *plog, int s, void *l)
+{
+  *((void **) l) = NULL;
+  return PETSC_SUCCESS;
+}
 
 #define PETSC_LOG_HANDLER_MAX 4
 PETSC_EXTERN PetscLogHandler PetscLogHandlers[PETSC_LOG_HANDLER_MAX];
 
 PETSC_EXTERN PetscErrorCode PetscGetFlops(PetscLogDouble *);
 
+  #if defined(PETSC_HAVE_MPE)
+PETSC_EXTERN PetscErrorCode PetscLogMPEBegin(void);
+PETSC_EXTERN PetscErrorCode PetscLogMPEDump(const char[]);
+  #endif
+
 /* Initialization functions */
 PETSC_EXTERN PetscErrorCode PetscLogDefaultBegin(void);
-PETSC_DEPRECATED_FUNCTION("PetscLogAllBegin() is deprecated (since version 3.20)") static inline PetscErrorCode PetscLogAllBegin(void)
+PETSC_DEPRECATED_FUNCTION("Use PetscLogDefaultBegin() (since version 3.20)") static inline PetscErrorCode PetscLogAllBegin(void)
 {
   return PetscLogDefaultBegin();
 }
@@ -211,10 +231,10 @@ PETSC_EXTERN PetscErrorCode PetscLogTraceBegin(FILE *);
 PETSC_EXTERN PetscErrorCode PetscLogActions(PetscBool);
 PETSC_EXTERN PetscErrorCode PetscLogObjects(PetscBool);
 PETSC_EXTERN PetscErrorCode PetscLogSetThreshold(PetscLogDouble, PetscLogDouble *);
-  #if defined(PETSC_HAVE_MPE)
-PETSC_EXTERN PetscErrorCode PetscLogMPEBegin(void);
-PETSC_EXTERN PetscErrorCode PetscLogMPEDump(const char[]);
-  #endif
+PETSC_DEPRECATED_FUNCTION("PetscLogSet() is deprecated (since version 3.20)") static inline PetscErrorCode PetscLogSet(PetscErrorCode (*a)(int, int, PetscObject, PetscObject, PetscObject, PetscObject), PetscErrorCode (*b)(int, int, PetscObject, PetscObject, PetscObject, PetscObject))
+{
+  return PETSC_SUCCESS;
+}
 
 /* Output functions */
 PETSC_EXTERN PetscErrorCode PetscLogView(PetscViewer);
@@ -233,7 +253,6 @@ PETSC_EXTERN PetscErrorCode PetscLogStageGetActive(PetscLogStage, PetscBool *);
 PETSC_EXTERN PetscErrorCode PetscLogStageSetVisible(PetscLogStage, PetscBool);
 PETSC_EXTERN PetscErrorCode PetscLogStageGetVisible(PetscLogStage, PetscBool *);
 PETSC_EXTERN PetscErrorCode PetscLogStageGetId(const char[], PetscLogStage *);
-PETSC_EXTERN PetscErrorCode PetscLogStageGetCurrent(PetscLogStage *);
 PETSC_EXTERN PetscErrorCode PetscLogStageGetName(PetscLogEvent, const char **);
 
 /* Event functions */
@@ -586,8 +605,6 @@ static inline int PetscMPIParallelComm(MPI_Comm comm)
 
 #else /* ---Logging is turned off --------------------------------------------*/
 
-  #define petsc_log_state NULL
-
   #define PetscLogMemory PETSC_FALSE
 
   #define PetscLogFlops(n) ((void)(n), PETSC_SUCCESS)
@@ -601,6 +618,7 @@ static inline int PetscMPIParallelComm(MPI_Comm comm)
   #define PetscLogStageGetVisible(a, b) PETSC_SUCCESS
   #define PetscLogStageSetVisible(a, b) PETSC_SUCCESS
   #define PetscLogStageGetId(a, b)      (*(b) = 0, PETSC_SUCCESS)
+  #define PetscLogStageGetName(a, b)    (*(b) = 0, PETSC_SUCCESS)
 
   #define PetscLogEventRegister(a, b, c)    PETSC_SUCCESS
   #define PetscLogEventSetCollective(a, b)  PETSC_SUCCESS
@@ -614,6 +632,7 @@ static inline int PetscMPIParallelComm(MPI_Comm comm)
   #define PetscLogEventDeactivateClass(a)   PETSC_SUCCESS
   #define PetscLogEventSetActiveAll(a, b)   PETSC_SUCCESS
   #define PetscLogEventGetId(a, b)          (*(b) = 0, PETSC_SUCCESS)
+  #define PetscLogEventGetName(a, b)        (*(b) = 0, PETSC_SUCCESS)
   #define PetscLogEventGetPerfInfo(a, b, c) PETSC_SUCCESS
   #define PetscLogEventSetDof(a, b, c)      PETSC_SUCCESS
   #define PetscLogEventSetError(a, b, c)    PETSC_SUCCESS
