@@ -425,6 +425,7 @@ static PetscErrorCode PetscLogObjectCreate_Default(PetscLogHandler h, PetscLogSt
   int               oclass = 0;
 
   PetscFunctionBegin;
+  PetscCall(PetscSpinlockLock(&def->lock));
   /* Record stage info */
   PetscCall(PetscLogStateGetCurrentStage(state, &stage));
   PetscCall(PetscLogRegistryGetClassFromClassId(registry, obj->classid, &oclass));
@@ -460,6 +461,7 @@ static PetscErrorCode PetscLogObjectCreate_Default(PetscLogHandler h, PetscLogSt
     PetscCall(PetscLogObjectArrayResize(def->petsc_objects, obj->id + 1));
     PetscCall(PetscLogObjectArraySet(def->petsc_objects, obj->id, new_object));
   }
+  PetscCall(PetscSpinlockUnlock(&def->lock));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -506,7 +508,7 @@ static PetscErrorCode PetscLogObjectDestroy_Default(PetscLogHandler h, PetscLogS
     if (obj->name) PetscCall(PetscStrncpy(obj_entry->name, obj->name, 64));
     obj_entry->obj = NULL;
   }
-  PetscCall(PetscSpinlockUnlock(&PetscLogSpinLock));
+  PetscCall(PetscSpinlockUnlock(&def->lock));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -544,13 +546,13 @@ static PetscErrorCode PetscLogGetStageEventPerfInfo_threaded(PetscLogHandler_Def
   key.i = PetscLogGetTid();
   key.j = stage;
   key.k = event;
-  PetscCall(PetscSpinlockLock(&PetscLogSpinLock));
+  PetscCall(PetscSpinlockLock(&def->lock));
   PetscCall(PetscHMapEventGet(def->eventInfoMap_th, key, &leventInfo));
   if (!leventInfo) {
     PetscCall(PetscNew(&leventInfo));
     PetscCall(PetscHMapEventSet(def->eventInfoMap_th, key, leventInfo));
   }
-  PetscCall(PetscSpinlockUnlock(&PetscLogSpinLock));
+  PetscCall(PetscSpinlockUnlock(&def->lock));
 #endif
   *eventInfo = leventInfo;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -675,10 +677,10 @@ static PetscErrorCode PetscLogEventEnd_Default(PetscLogHandler h, PetscLogState 
   PetscCall(PetscEventPerfInfoToc(event_perf_info, time, def->PetscLogMemory, (int) event));
   if (PetscDefined(HAVE_THREADSAFETY)) {
     PetscEventPerfInfo *event_perf_info_global;
-    PetscCall(PetscSpinlockLock(&PetscLogSpinLock));
+    PetscCall(PetscSpinlockLock(&def->lock));
     PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(h, state->registry, stage, event, &event_perf_info));
     PetscCall(PetscEventPerfInfoAdd_Internal(event_perf_info, event_perf_info_global));
-    PetscCall(PetscSpinlockUnlock(&PetscLogSpinLock));
+    PetscCall(PetscSpinlockUnlock(&def->lock));
   }
 #if defined(PETSC_HAVE_CUDA)
   if (PetscDeviceInitialized(PETSC_DEVICE_CUDA)) nvtxRangePop();

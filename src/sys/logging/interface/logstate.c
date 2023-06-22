@@ -64,20 +64,6 @@ PETSC_INTERN PetscErrorCode PetscLogStateGetCurrentStage(PetscLogState state, Pe
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscLogStateLock(PetscLogState state)
-{
-  PetscFunctionBegin;
-  PetscCall(PetscLogRegistryLock(state->registry));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PETSC_INTERN PetscErrorCode PetscLogStateUnlock(PetscLogState state)
-{
-  PetscFunctionBegin;
-  PetscCall(PetscLogRegistryUnlock(state->registry));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 static PetscErrorCode PetscLogStateResize(PetscLogState state)
 {
   PetscBT  active_new;
