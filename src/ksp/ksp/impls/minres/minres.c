@@ -107,7 +107,7 @@ static PetscErrorCode KSPSolve_MINRES(KSP ksp)
   PetscReal   ul4 = 0.0, ul3 = 0.0, ul2 = 0.0, ul = 0.0, u = 0.0, ul_QLP = 0.0, u_QLP = 0.0;
   PetscReal   vepln_QLP = 0.0, gamal_QLP = 0.0, gama_QLP = 0.0, gamal_tmp, abs_gama;
   PetscInt    flag = -2, flag0 = -2, QLPiter = 0;
-  PetscInt    i, stored_max_it, eigs;
+  PetscInt    stored_max_it, eigs;
   PetscScalar *e = NULL, *d = NULL;
   KSP_MINRES *minres = (KSP_MINRES *)ksp->data;
   PetscFunctionBegin;
@@ -170,7 +170,6 @@ static PetscErrorCode KSPSolve_MINRES(KSP ksp)
   phi    = beta1;
   betan  = beta1;
   beta   = 0.0;
-  i = 0;
   do {
     /* Lanczos */
     ksp->its++;
@@ -184,8 +183,8 @@ static PetscErrorCode KSPSolve_MINRES(KSP ksp)
     KSPMinresSwap3(R1, R2, R3);
     if (eigs) {
       PetscCheck(ksp->max_it == stored_max_it, PetscObjectComm((PetscObject)ksp), PETSC_ERR_SUP, "Cannot change maxit AND calculate eigenvalues");
-      d[i] = alpha;
-      e[i] = beta;
+      d[ksp->its-1] = alpha;
+      e[ksp->its-1] = beta;
     }
 
     PetscCall(KSP_PCApply(ksp, R2, R3));
@@ -432,7 +431,6 @@ static PetscErrorCode KSPSolve_MINRES(KSP ksp)
       }
     }
     if (ksp->reason) break;
-    i++;
   } while (ksp->its < ksp->max_it);
 
   if (minres->monitor && flag != 2 && flag != 4 && flag != 6 && flag != 7) {
@@ -846,9 +844,9 @@ PetscErrorCode KSPComputeEigenvalues_MINRES(KSP ksp, PetscInt nmax, PetscReal *r
 {
   KSP_MINRES  *minres = (KSP_MINRES *)ksp->data;
   PetscScalar *d, *e;
-  PetscReal   *ee, sdummy;
-  PetscInt     j, n = ksp->its;
-  PetscBLASInt bn, idummy = 1, lierr = -1;
+  PetscReal   *ee;
+  PetscInt     n = ksp->its;
+  PetscBLASInt bn, lierr = 0, ldz = 1;
 
   PetscFunctionBegin;
   PetscCheck(nmax >= n, PetscObjectComm((PetscObject)ksp), PETSC_ERR_ARG_SIZ, "Not enough room in work space r and c for eigenvalues");
@@ -861,14 +859,16 @@ PetscErrorCode KSPComputeEigenvalues_MINRES(KSP ksp, PetscInt nmax, PetscReal *r
   ee = minres->ee;
 
   /* copy tridiagonal matrix to work space */
-  for (j = 0; j < n; j++) {
+  for (PetscInt j = 0; j < n; j++) {
     r[j]  = PetscRealPart(d[j]);
     ee[j] = PetscRealPart(e[j]);
   }
 
   PetscCall(PetscBLASIntCast(n, &bn));
-  PetscCallBLAS("LAPACKsteqr", LAPACKsteqr_("N", &bn, r, &ee[1], &sdummy, &idummy, &sdummy, &lierr));
-  PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine");
+  PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
+  PetscCallBLAS("LAPACKREALstev", LAPACKREALstev_("N", &bn, r, &ee[1], NULL, &ldz, NULL, &lierr));
+  PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_PLIB, "xSTEV error");
+  PetscCall(PetscFPTrapPop());
   PetscCall(PetscSortReal(n, r));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -877,9 +877,9 @@ PetscErrorCode KSPComputeExtremeSingularValues_MINRES(KSP ksp, PetscReal *emax, 
 {
   KSP_MINRES  *minres = (KSP_MINRES *)ksp->data;
   PetscScalar *d, *e;
-  PetscReal   *dd, *ee, sdummy;
-  PetscInt     j, n = ksp->its;
-  PetscBLASInt bn, idummy = 1, lierr = -1;
+  PetscReal   *dd, *ee;
+  PetscInt     n = ksp->its;
+  PetscBLASInt bn, lierr = 0, ldz = 1;
 
   PetscFunctionBegin;
   if (!n) {
@@ -892,15 +892,17 @@ PetscErrorCode KSPComputeExtremeSingularValues_MINRES(KSP ksp, PetscReal *emax, 
   ee = minres->ee;
 
   /* copy tridiagonal matrix to work space */
-  for (j = 0; j < n; j++) {
+  for (PetscInt j = 0; j < n; j++) {
     dd[j] = PetscRealPart(d[j]);
     ee[j] = PetscRealPart(e[j]);
   }
 
   PetscCall(PetscBLASIntCast(n, &bn));
-  PetscCallBLAS("LAPACKsteqr", LAPACKsteqr_("N", &bn, dd, &ee[1], &sdummy, &idummy, &sdummy, &lierr));
-  PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_LIB, "Error in LAPACK routine");
-  for (j = 0; j < n; j++) dd[j] = PetscAbsReal(dd[j]);
+  PetscCall(PetscFPTrapPush(PETSC_FP_TRAP_OFF));
+  PetscCallBLAS("LAPACKREALstev", LAPACKREALstev_("N", &bn, dd, &ee[1], NULL, &ldz, NULL, &lierr));
+  PetscCheck(!lierr, PETSC_COMM_SELF, PETSC_ERR_PLIB, "xSTEV error");
+  PetscCall(PetscFPTrapPop());
+  for (PetscInt j = 0; j < n; j++) dd[j] = PetscAbsReal(dd[j]);
   PetscCall(PetscSortReal(n, dd));
   *emin = dd[0];
   *emax = dd[n - 1];
