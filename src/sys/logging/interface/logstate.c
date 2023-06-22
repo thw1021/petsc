@@ -201,7 +201,7 @@ PETSC_INTERN PetscErrorCode PetscLogStateEventDeactivate(PetscLogState state, Pe
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscLogStateIncludeClass(PetscLogState state, PetscClassId classid)
+PETSC_INTERN PetscErrorCode PetscLogStateEventIncludeClass(PetscLogState state, PetscClassId classid)
 {
   PetscInt num_events, num_stages;
 
