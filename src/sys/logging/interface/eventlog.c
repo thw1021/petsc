@@ -15,96 +15,6 @@
 /*----------------------------------------------- Creation Functions -------------------------------------------------*/
 /* Note: these functions do not have prototypes in a public directory, so they are considered "internal" and not exported. */
 
-/*
-  PetscEventRegLogCreate - This creates a `PetscEventRegLog` object.
-
-  Not collective
-
-  Input Parameter:
-. eventLog - The `PetscEventRegLog`
-
-  Level: developer
-
-  Note:
-  This is a low level routine used by the logging functions in PETSc
-
-.seealso: `PetscEventRegLogDestroy()`
-*/
-PetscErrorCode PetscEventRegLogCreate(PetscEventRegLog *eventLog)
-{
-  PetscEventRegInfo blank_entry;
-
-  PetscFunctionBegin;
-  PetscCall(PetscMemzero(&blank_entry, sizeof(blank_entry)));
-  PetscCall(PetscLogResizableArrayCreate(eventLog, 128, blank_entry));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-static PetscErrorCode PetscEventRegLogEnsureSize(PetscEventRegLog event_log, int new_size)
-{
-  PetscFunctionBegin;
-  PetscCall(PetscLogResizableArrayEnsureSize(event_log,new_size));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*
-  PetscEventRegLogDestroy - This destroys a `PetscEventRegLog` object.
-
-  Not collective
-
-  Input Parameter:
-. eventLog - The `PetscEventRegLog`
-
-  Level: developer
-
-  Note:
-  This is a low level routine used by the logging functions in PETSc
-
-.seealso: `PetscEventRegLogCreate()`
-*/
-PetscErrorCode PetscEventRegLogDestroy(PetscEventRegLog eventLog)
-{
-  int e;
-
-  PetscFunctionBegin;
-  for (e = 0; e < eventLog->num_entries; e++) PetscCall(PetscFree(eventLog->array[e].name));
-  PetscCall(PetscFree(eventLog->array));
-  PetscCall(PetscFree(eventLog));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PETSC_INTERN PetscErrorCode PetscEventRegLogSetCollective(PetscEventRegLog event_log, PetscLogEvent event, PetscBool is_collective)
-{
-  PetscFunctionBegin;
-  event_log->array[event].collective = is_collective;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*
-  PetscEventPerfInfoCopy - Copy the activity and visibility data in eventInfo to outInfo
-
-  Not collective
-
-  Input Parameter:
-. eventInfo - The input `PetscEventPerfInfo`
-
-  Output Parameter:
-. outInfo   - The output `PetscEventPerfInfo`
-
-  Level: developer
-
-  Note:
-  This is a low level routine used by the logging functions in PETSc
-
-.seealso: `PetscEventPerfInfoClear()`
-*/
-PetscErrorCode PetscEventPerfInfoCopy(const PetscEventPerfInfo *eventInfo, PetscEventPerfInfo *outInfo)
-{
-  PetscFunctionBegin;
-  outInfo->id      = eventInfo->id;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 PETSC_INTERN PetscErrorCode PetscEventPerfInfoTic(PetscEventPerfInfo *eventInfo, PetscLogDouble time, PetscBool logMemory, int event)
 {
   PetscFunctionBegin;
@@ -212,29 +122,6 @@ PetscErrorCode PetscEventPerfInfoAdd(const PetscEventPerfInfo *eventInfo, PetscE
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*
-  PetscEventPerfLogEnsureSize - This ensures that a `PetscEventPerfLog` is at least of a certain size.
-
-  Not collective
-
-  Input Parameters:
-+ eventLog - The `PetscEventPerfLog`
-- size     - The size
-
-  Level: developer
-
-  Note:
-  This is a low level routine used by the logging functions in PETSc
-
-.seealso: `PetscEventPerfLogCreate()`
-*/
-PetscErrorCode PetscEventPerfLogEnsureSize(PetscEventPerfLog eventLog, int size)
-{
-  PetscFunctionBegin;
-  PetscCall(PetscLogResizableArrayEnsureSize(eventLog,size));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 #if defined(PETSC_HAVE_MPE)
 // TODO: MPE?
   #include <mpe.h>
@@ -255,86 +142,6 @@ PetscErrorCode PetscLogEventEndMPE(PetscLogEvent event, int t, PetscObject o1, P
 #endif
 
 /*--------------------------------------------- Registration Functions ----------------------------------------------*/
-/*
-  PetscEventRegLogRegister - Registers an event for logging operations in an application code.
-
-  Not Collective
-
-  Input Parameters:
-+ eventLog - The `PetscEventLog`
-. ename    - The name associated with the event
-- classid   - The classid associated to the class for this event
-
-  Output Parameter:
-. event    - The event
-
-  Example of Usage:
-.vb
-      int USER_EVENT;
-      PetscLogDouble user_event_flops;
-      PetscLogEventRegister("User event name",0,&USER_EVENT);
-      PetscLogEventBegin(USER_EVENT,0,0,0,0);
-         [code segment to monitor]
-         PetscLogFlops(user_event_flops);
-      PetscLogEventEnd(USER_EVENT,0,0,0,0);
-.ve
-
-  Level: developer
-
-  Notes:
-  PETSc can gather data for use with the utilities Jumpshot
-  (part of the MPICH distribution).  If PETSc has been compiled
-  with flag -DPETSC_HAVE_MPE (MPE is an additional utility within
-  MPICH), the user can employ another command line option, -log_mpe,
-  to create a logfile, "mpe.log", which can be visualized
-  Jumpshot.
-
-  This is a low level routine used by the logging functions in PETSc
-
-.seealso: `PetscLogEventBegin()`, `PetscLogEventEnd()`, `PetscLogFlops()`,
-          `PetscEventLogActivate()`, `PetscEventLogDeactivate()`
-*/
-PetscErrorCode PetscEventRegLogRegister(PetscEventRegLog eventLog, const char ename[], PetscClassId classid, PetscLogEvent *event)
-{
-  PetscEventRegInfo *eventInfo;
-  int                e = eventLog->num_entries;
-
-  PetscFunctionBegin;
-  PetscValidCharPointer(ename, 2);
-  PetscValidIntPointer(event, 4);
-  /* Should check classid I think */
-  PetscCall(PetscEventRegLogEnsureSize(eventLog, e+1));
-  eventInfo = &eventLog->array[e];
-  eventLog->num_entries++;
-
-  PetscCall(PetscStrallocpy(ename, &(eventInfo->name)));
-  eventInfo->classid = classid;
-  eventInfo->collective = PETSC_TRUE;
-#if defined(PETSC_HAVE_TAU_PERFSTUBS)
-  if (perfstubs_initialized == PERFSTUBS_SUCCESS) PetscStackCallExternalVoid("ps_timer_create_", eventInfo->timer = ps_timer_create_(eventInfo->name));
-#endif
-#if defined(PETSC_HAVE_MPE)
-  if (PetscLogPLB == PetscLogEventBeginMPE) {
-    const char *color;
-    PetscMPIInt rank;
-    int         beginID, endID;
-
-    beginID = MPE_Log_get_event_number();
-    endID   = MPE_Log_get_event_number();
-
-    eventInfo->mpe_id_begin = beginID;
-    eventInfo->mpe_id_end   = endID;
-
-    PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
-    if (rank == 0) {
-      PetscCall(PetscLogMPEGetRGBColor(&color));
-      MPE_Describe_state(beginID, endID, eventInfo->name, (char *)color);
-    }
-  }
-#endif
-  *event = e;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
 
 /*---------------------------------------------- Activation Functions -----------------------------------------------*/
 /*
@@ -406,48 +213,5 @@ PetscErrorCode PetscEventPerfLogDeactivatePop(PetscEventPerfLog eventLog, PetscL
 }
 
 /*------------------------------------------------ Query Functions --------------------------------------------------*/
-/*
-  PetscEventRegLogGetEvent - This function returns the event id given the event name.
 
-  Not Collective
-
-  Input Parameters:
-+ eventLog - The `PetscEventRegLog`
-- name     - The event name
-
-  Output Parameter:
-. event    - The event id, or -1 if not found
-
-  Level: developer
-
-  Note:
-  This is a low level routine used by the logging functions in PETSc
-
-.seealso: `PetscEventRegLogRegister()`
-*/
-PetscErrorCode PetscEventRegLogGetEvent(PetscEventRegLog eventLog, const char name[], PetscLogEvent *event)
-{
-  PetscBool match;
-  int       e;
-
-  PetscFunctionBegin;
-  PetscValidCharPointer(name, 2);
-  PetscValidIntPointer(event, 3);
-  *event = -1;
-  for (e = 0; e < eventLog->num_entries; e++) {
-    PetscCall(PetscStrcasecmp(eventLog->array[e].name, name, &match));
-    if (match) {
-      *event = e;
-      break;
-    }
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PETSC_INTERN PetscErrorCode PetscEventRegLogGetName(PetscEventRegLog event_log, PetscLogEvent event, const char **name)
-{
-  PetscFunctionBegin;
-  *name = event_log->array[event].name;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
 
