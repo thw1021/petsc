@@ -180,7 +180,7 @@ static PetscErrorCode PCMPISetMat(PC pc)
     matproperties[5] = !isset ? 0 : (isspd ? 1 : 2);
     PetscCall(MatIsStructurallySymmetricKnown(sA, &isset, &isstructurallysymmetric));
     matproperties[6] = !isset ? 0 : (isstructurallysymmetric ? 1 : 2);
-    /* Created Mat gets prefix of input Mat PLUSE the mpi_linear_solver_server_ portion */
+    /* Created Mat gets prefix of input Mat PLUS the mpi_linear_solver_server_ portion */
     PetscCall(MatGetOptionsPrefix(sA, &prefix));
     PetscCall(PetscStrallocpy(prefix, &cprefix));
     PetscCall(PetscStrlen(cprefix, &clen));
@@ -388,7 +388,7 @@ static PetscErrorCode PCMPIDestroy(PC pc)
 PetscBool PCMPIServerActive = PETSC_FALSE;
 
 /*@C
-     PCMPIServerBegin - starts a server that runs on the `rank !=` 0 MPI processes waiting to process requests for
+     PCMPIServerBegin - starts a server that runs on the `rank != 0` MPI processes waiting to process requests for
      parallel `KSP` solves and management of parallel `KSP` objects.
 
      Logically Collective on all MPI processes except rank 0
@@ -418,7 +418,7 @@ PetscBool PCMPIServerActive = PETSC_FALSE;
        The code could be extended to allow an MPI + OpenMP application to use the linear solver server concept accross all shared-memory
        nodes with a single MPI process per node for the user application but multiple MPI processes per node for the linear solver.
 
-       The concept could also be extended for users's callbacks for `SNES`, `TS`, and `TAO` where the `SNESSolve()` for example, runs on
+       The concept could also be extended for users's callbacks for `SNES`, `TS`, and `Tao` where the `SNESSolve()` for example, runs on
        all MPI processes but the user callback only runs on one MPI process per node.
 
        PETSc could also be extended with an MPI-less API that provides access to PETSc's solvers without any reference to MPI, essentially remove
@@ -732,9 +732,6 @@ PetscErrorCode PCSetFromOptions_MPI(PC pc, PetscOptionItems *PetscOptionsObject)
 
    Notes:
    The options database prefix for the actual solver is any prefix provided before use to the origjnal `KSP` with `KSPSetOptionsPrefix()`, mostly commonly no prefix is used.
-
-   The MPI linear solver server will not support scaling user code to utilize extremely large numbers of MPI ranks but should give reasonable speedup for
-   potentially 4 to 8 MPI processes depending on the linear system being solved, solver algorithm, and the hardware.
 
    It can be particularly useful for user OpenMP code or potentially user GPU code.
 

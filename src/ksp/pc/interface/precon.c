@@ -370,6 +370,8 @@ PetscErrorCode PCGetUseAmat(PC pc, PetscBool *flg)
 PetscErrorCode PCSetKSPNestLevel(PC pc, PetscInt level)
 {
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  PetscValidLogicalCollectiveInt(pc, level, 2);
   pc->kspnestlevel = level;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -377,7 +379,7 @@ PetscErrorCode PCSetKSPNestLevel(PC pc, PetscInt level)
 /*@
    PCGetKSPNestLevel - gets the amount of nesting the `KSP` that contains this `PC` has
 
-   Collective
+   Not Collective
 
    Input Parameter:
 .  pc - the `PC`
@@ -392,6 +394,8 @@ PetscErrorCode PCSetKSPNestLevel(PC pc, PetscInt level)
 PetscErrorCode PCGetKSPNestLevel(PC pc, PetscInt *level)
 {
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(pc, PC_CLASSID, 1);
+  PetscAssertPointer(level, 2);
   *level = pc->kspnestlevel;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
