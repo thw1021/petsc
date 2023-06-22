@@ -5,24 +5,34 @@
 #endif
 #include "plog.h"
 
-#define PETSC_LOG_RESIZABLE_ARRAY_KEY_BY_NAME(Container,Entry) \
+#define PETSC_LOG_RESIZABLE_ARRAY_HAS_NAME(Container,Entry,Key,Equal) \
   static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Destructor(Entry *entry) \
   { \
     PetscFunctionBegin; \
     PetscCall(PetscFree(entry->name)); \
     PetscFunctionReturn(PETSC_SUCCESS); \
   } \
+  _PETSC_LOG_RESIZABLE_ARRAY(Container,Entry,Key,NULL,PetscLog##Container##Destructor,Equal)
+
+#define PETSC_LOG_RESIZABLE_ARRAY_KEY_BY_NAME(Container,Entry) \
   static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Equal(Entry *entry, const char *name, PetscBool *is_equal) \
   { \
     PetscFunctionBegin; \
     PetscCall(PetscStrcmp(entry->name, name, is_equal)); \
     PetscFunctionReturn(PETSC_SUCCESS); \
   } \
-  _PETSC_LOG_RESIZABLE_ARRAY(Container,Entry,const char *,NULL,PetscLog##Container##Destructor,PetscLog##Container##Equal)
+  PETSC_LOG_RESIZABLE_ARRAY_HAS_NAME(Container,Entry,const char *,PetscLog##Container##Equal)
+
+static PetscErrorCode PetscLogClassArrayEqual(PetscClassRegInfo *class_info, PetscClassId classid, PetscBool *is_equal)
+{
+  PetscFunctionBegin;
+  *is_equal = (class_info->classid == classid) ? PETSC_TRUE : PETSC_FALSE;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 PETSC_LOG_RESIZABLE_ARRAY_KEY_BY_NAME(EventArray,PetscEventRegInfo)
 PETSC_LOG_RESIZABLE_ARRAY_KEY_BY_NAME(StageArray,PetscStageRegInfo)
-PETSC_LOG_RESIZABLE_ARRAY_KEY_BY_NAME(ClassArray,PetscClassRegInfo)
+PETSC_LOG_RESIZABLE_ARRAY_HAS_NAME(ClassArray,PetscClassRegInfo,PetscClassId,PetscLogClassArrayEqual)
 
 struct _n_PetscLogRegistry {
   PetscLogEventArray events;
@@ -144,16 +154,8 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryGetStageFromName(PetscLogRegistry re
 
 PETSC_INTERN PetscErrorCode PetscLogRegistryGetClassFromClassId(PetscLogRegistry registry, PetscClassId classid, PetscLogStage *class)
 {
-  PetscClassRegInfo *classes = registry->classes->array;
-
   PetscFunctionBegin;
-  *class = -1;
-  for (int i = 0; i < registry->classes->num_entries; i++) {
-    if (classes[i].classid == classid) {
-      *class = i;
-      break;
-    }
-  }
+  PetscCall(PetscLogClassArrayFind(registry->classes, classid, class));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -412,12 +414,17 @@ PETSC_INTERN PetscErrorCode PetscLogGlobalNamesGetSize(PetscLogGlobalNames globa
 
 PETSC_INTERN PetscErrorCode PetscLogRegistryCreateGlobalStageNames(MPI_Comm comm, PetscLogRegistry registry, PetscLogGlobalNames *global_names_p)
 {
-  PetscInt     num_stages_local = registry->stages->num_entries;
+  PetscInt     num_stages_local;
   const char **names;
 
   PetscFunctionBegin;
+  PetscCall(PetscLogStageArrayGetNumEntries(registry->stages, &num_stages_local, NULL));
   PetscCall(PetscMalloc1(num_stages_local, &names));
-  for (PetscInt i = 0; i < num_stages_local; i++) names[i] = registry->stages->array[i].name;
+  for (PetscInt i = 0; i < num_stages_local; i++) {
+    PetscStageRegInfo stage_info;
+    PetscCall(PetscLogRegistryStageGetInfo(registry, i, &stage_info));
+    names[i] = stage_info.name;
+  }
   PetscCall(PetscLogGlobalNamesCreate(comm, num_stages_local, names, global_names_p));
   PetscCall(PetscFree(names));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -429,9 +436,13 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryCreateGlobalEventNames(MPI_Comm comm
   const char **names;
 
   PetscFunctionBegin;
-  num_events_local = registry->events->num_entries;
+  PetscCall(PetscLogEventArrayGetNumEntries(registry->events, &num_events_local, NULL));
   PetscCall(PetscMalloc1(num_events_local, &names));
-  for (PetscInt i = 0; i < num_events_local; i++) names[i] = registry->events->array[i].name;
+  for (PetscInt i = 0; i < num_events_local; i++) {
+    PetscEventRegInfo event_info;;
+    PetscCall(PetscLogRegistryEventGetInfo(registry, i, &event_info));
+    names[i] = event_info.name;
+  }
   PetscCall(PetscLogGlobalNamesCreate(comm, num_events_local, names, global_names_p));
   PetscCall(PetscFree(names));
   PetscFunctionReturn(PETSC_SUCCESS);
