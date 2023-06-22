@@ -132,13 +132,23 @@ class Script(logger.Logger):
   @staticmethod
   def getModule(root, name):
     '''Retrieve a specific module from the directory root, bypassing the usual paths'''
-    import imp
-
-    (fp, pathname, description) = imp.find_module(name, [root])
     try:
-      return imp.load_module(name, fp, pathname, description)
-    finally:
-      if fp: fp.close()
+      import importlib.util
+    except ImportError:
+      importlib = None
+      import imp
+
+    if importlib and sys.version_info > (3,4):
+      spec = importlib.util.spec_from_file_location(name, root)
+      module = importlib.util.module_from_spec(spec) # novermin
+      sys.modules[name] = module
+      spec.loader.exec_module(module)
+    else:
+      (fp, pathname, description) = imp.find_module(name, [root])
+      try:
+        return imp.load_module(name, fp, pathname, description)
+      finally:
+        if fp: fp.close()
 
   @staticmethod
   def importModule(moduleName):
