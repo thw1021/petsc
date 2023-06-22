@@ -862,7 +862,7 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDefaultGetNumObjects(PetscLogHandler 
   PetscLogHandler_Default def = (PetscLogHandler_Default) handler->ctx;
 
   PetscFunctionBegin;
-  *num_objects = def->petsc_objects->num_entries;
+  PetscCall(PetscLogObjectArrayGetNumEntries(def->petsc_objects, num_objects, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -920,8 +920,8 @@ PetscErrorCode PetscLogDump_Default(PetscLogHandler handler, const char sname[])
   /* Output actions */
   if (def->petsc_logActions) {
     PetscInt num_actions;
-    PetscCall(PetscFPrintf(PETSC_COMM_SELF, fd, "Actions accomplished %d\n", def->petsc_actions->num_entries));
     PetscCall(PetscLogActionArrayGetNumEntries(def->petsc_actions, &num_actions, NULL));
+    PetscCall(PetscFPrintf(PETSC_COMM_SELF, fd, "Actions accomplished %d\n", (int) num_actions));
     for (int a = 0; a < num_actions; a++) {
       Action *action;
 
@@ -933,8 +933,9 @@ PetscErrorCode PetscLogDump_Default(PetscLogHandler handler, const char sname[])
   /* Output objects */
   if (def->petsc_logObjects) {
     PetscInt num_objects;
-    PetscCall(PetscFPrintf(PETSC_COMM_SELF, fd, "Objects created %d destroyed %d\n", def->petsc_objects->num_entries, def->petsc_numObjectsDestroyed));
+
     PetscCall(PetscLogObjectArrayGetNumEntries(def->petsc_objects, &num_objects, NULL));
+    PetscCall(PetscFPrintf(PETSC_COMM_SELF, fd, "Objects created %d destroyed %d\n", (int) num_objects, def->petsc_numObjectsDestroyed));
     for (int o = 0; o < num_objects; o++) {
       Object *object;
 
@@ -1037,7 +1038,12 @@ static PetscErrorCode PetscLogView_Detailed(PetscLogHandler handler, PetscViewer
   PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "LocalMessageLens[%d] = %g\n", rank, (petsc_irecv_len + petsc_isend_len + petsc_recv_len + petsc_send_len)));
   PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "LocalReductions[%d] = %g\n", rank, numRed));
   PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "LocalFlop[%d] = %g\n", rank, petsc_TotalFlops));
-  PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "LocalObjects[%d] = %d\n", rank, def->petsc_objects->num_entries));
+  {
+    PetscInt num_objects;
+
+    PetscCall(PetscLogObjectArrayGetNumEntries(def->petsc_objects, &num_objects, NULL));
+    PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "LocalObjects[%d] = %d\n", rank, (int) num_objects));
+  }
   PetscCall(PetscViewerASCIISynchronizedPrintf(viewer, "LocalMemory[%d] = %g\n", rank, maxMem));
   PetscCall(PetscViewerFlush(viewer));
   for (PetscInt stage = 0; stage < numStages; stage++) {
@@ -1349,7 +1355,12 @@ static PetscErrorCode PetscLogView_Default_Info(PetscLogHandler handler, PetscVi
   PetscCall(PetscFPrintf(comm, fd, "Time (sec):           %5.3e   %7.3f   %5.3e\n", max, ratio, avg));
   TotalTime = tot;
   /*   Objects */
-  avg = (PetscLogDouble)def->petsc_objects->num_entries;
+  {
+    PetscInt num_objects;
+
+    PetscCall(PetscLogObjectArrayGetNumEntries(def->petsc_objects, &num_objects, NULL));
+    avg = (PetscLogDouble)num_objects;
+  }
   PetscCall(MPIU_Allreduce(&avg, &min, 1, MPIU_PETSCLOGDOUBLE, MPI_MIN, comm));
   PetscCall(MPIU_Allreduce(&avg, &max, 1, MPIU_PETSCLOGDOUBLE, MPI_MAX, comm));
   PetscCall(MPIU_Allreduce(&avg, &tot, 1, MPIU_PETSCLOGDOUBLE, MPI_SUM, comm));
