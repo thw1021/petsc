@@ -77,6 +77,8 @@ public:
   static PetscErrorCode ResetArray(Mat) noexcept;
 
   static PetscErrorCode Shift(Mat, PetscScalar) noexcept;
+
+  static PetscErrorCode GetDiagonal(Mat, Vec) noexcept;
 };
 
 } // namespace impl
@@ -187,6 +189,7 @@ inline PetscErrorCode MatDense_MPI_CUPM<T>::Convert_Dispatch_(Mat M, MatType, Ma
     // ============================================================
     // Function Pointer Ops
     // ============================================================
+    MatSetOp_CUPM(to_host, B, getdiagonal, MatGetDiagonal_MPIDense, GetDiagonal);
     MatSetOp_CUPM(to_host, B, bindtocpu, nullptr, BindToCPU);
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -409,6 +412,14 @@ inline PetscErrorCode MatDense_MPI_CUPM<T>::Shift(Mat A, PetscScalar alpha) noex
   PetscCall(GetHandles_(&dctx));
   PetscCall(PetscInfo(A, "Performing Shift on backend\n"));
   PetscCall(DiagonalUnaryTransform(A, A->rmap->rstart, A->rmap->rend, A->cmap->N, dctx, device::cupm::functors::make_plus_equals(alpha)));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+template <device::cupm::DeviceType T>
+inline PetscErrorCode MatDense_MPI_CUPM<T>::GetDiagonal(Mat A, Vec v) noexcept
+{
+  PetscFunctionBegin;
+  PetscCall(GetDiagonal_CUPMBase(MatIMPLCast(A)->A, v, A->rmap->n));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
