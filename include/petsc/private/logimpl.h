@@ -245,8 +245,6 @@ typedef int PetscLogClass;
 PETSC_INTERN PetscErrorCode PetscLogGetRegistry(PetscLogRegistry *);
 PETSC_INTERN PetscErrorCode PetscLogRegistryCreate(PetscLogRegistry *);
 PETSC_INTERN PetscErrorCode PetscLogRegistryDestroy(PetscLogRegistry);
-PETSC_INTERN PetscErrorCode PetscLogRegistryLock(PetscLogRegistry);
-PETSC_INTERN PetscErrorCode PetscLogRegistryUnlock(PetscLogRegistry);
 PETSC_INTERN PetscErrorCode PetscLogRegistryStageRegister(PetscLogRegistry,const char[],PetscLogStage *);
 PETSC_INTERN PetscErrorCode PetscLogRegistryEventRegister(PetscLogRegistry,const char[],PetscClassId,PetscLogStage *);
 PETSC_INTERN PetscErrorCode PetscLogRegistryClassRegister(PetscLogRegistry,const char[],PetscClassId,PetscLogClass *);
@@ -289,8 +287,6 @@ PETSC_INTERN PetscErrorCode PetscLogStateStageGetActive(PetscLogState, PetscLogS
 PETSC_INTERN PetscErrorCode PetscLogStateGetCurrentStage(PetscLogState, PetscLogStage *);
 PETSC_INTERN PetscErrorCode PetscLogStateStageRegister(PetscLogState, const char[], PetscLogStage *);
 PETSC_INTERN PetscErrorCode PetscLogStateEventRegister(PetscLogState, const char[], PetscClassId, PetscLogEvent *);
-PETSC_INTERN PetscErrorCode PetscLogStateLock(PetscLogState);
-PETSC_INTERN PetscErrorCode PetscLogStateUnlock(PetscLogState);
 PETSC_INTERN PetscErrorCode PetscLogStateEventIncludeClass(PetscLogState, PetscClassId);
 PETSC_INTERN PetscErrorCode PetscLogStateEventExcludeClass(PetscLogState, PetscClassId);
 PETSC_INTERN PetscErrorCode PetscLogStateEventActivateClass(PetscLogState, PetscClassId);

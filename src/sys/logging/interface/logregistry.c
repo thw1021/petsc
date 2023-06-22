@@ -38,7 +38,6 @@ struct _n_PetscLogRegistry {
   PetscLogEventArray events;
   PetscLogClassArray classes;
   PetscLogStageArray stages;
-  PetscSpinlock    lock;
 };
 
 PETSC_INTERN PetscErrorCode PetscLogRegistryCreate(PetscLogRegistry *registry_p)
@@ -60,7 +59,6 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryCreate(PetscLogRegistry *registry_p)
   PetscCall(PetscLogEventArrayCreate(128,&registry->events));
   PetscCall(PetscLogStageArrayCreate(8,&registry->stages));
   PetscCall(PetscLogClassArrayCreate(128,&registry->classes));
-  PetscCall(PetscSpinlockCreate(&registry->lock));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -70,7 +68,6 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryDestroy(PetscLogRegistry registry)
   PetscCall(PetscLogEventArrayDestroy(&registry->events));
   PetscCall(PetscLogClassArrayDestroy(&registry->classes));
   PetscCall(PetscLogStageArrayDestroy(&registry->stages));
-  PetscCall(PetscSpinlockDestroy(&Registry->lock));
   PetscCall(PetscFree(registry));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -198,20 +195,6 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryClassSetInfo(PetscLogRegistry regist
 {
   PetscFunctionBegin;
   PetscCall(PetscLogClassArraySet(registry->classes, class, class_info));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PETSC_INTERN PetscErrorCode PetscLogRegistryLock(PetscLogRegistry registry)
-{
-  PetscFunctionBegin;
-  PetscCall(PetscSpinlockLock(&registry->lock));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PETSC_INTERN PetscErrorCode PetscLogRegistryUnlock(PetscLogRegistry registry)
-{
-  PetscFunctionBegin;
-  PetscCall(PetscSpinlockLock(&registry->lock));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
