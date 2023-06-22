@@ -398,10 +398,12 @@ inline PetscErrorCode MatDense_CUPM<T, D>::GetDiagonal_CUPMBase(Mat A, Vec v, Pe
 {
   const auto         m = A->rmap->n;
   const auto         n = A->cmap->n;
-  PetscInt           lda;
+  PetscInt           lda, nv;
   PetscDeviceContext dctx;
 
   PetscFunctionBegin;
+  PetscCall(VecGetLocalSize(v, &nv));
+  PetscCheck(nv == m, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Nonconforming Mat and Vec. Vec local size %" PetscInt_FMT " != Mat local rows m %" PetscInt_FMT, nv, m);
   PetscCall(GetHandles_(&dctx));
   PetscCall(MatDenseGetLDA(A, &lda));
   {
