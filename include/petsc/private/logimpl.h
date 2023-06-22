@@ -196,12 +196,7 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *);
     PetscCall(PetscMalloc1((max_init), &((*(ra_p))->array))); \
   )
 
-/* --- PetscEventPerfInfo (declared in petsclog.h) --- */
-
-PETSC_INTERN PetscErrorCode PetscEventPerfInfoTic(PetscEventPerfInfo *, PetscLogDouble, PetscBool, int);
-PETSC_INTERN PetscErrorCode PetscEventPerfInfoToc(PetscEventPerfInfo *, PetscLogDouble, PetscBool, int);
-
-/* --- Registration info types that are not part of the public API --- */
+/* --- Registration info types that are not part of the public API, but handlers need to know --- */
 
 /* --- PetscEventRegInfo --- */
 typedef struct {
@@ -209,12 +204,14 @@ typedef struct {
   PetscClassId classid;    /* The class the event is associated with */
   PetscBool    collective; /* Flag this event as collective */
   PetscBool    visible;    /* The flag to print info in summary */
+#if 0
 #if defined(PETSC_HAVE_TAU_PERFSTUBS)
   void *timer; /* Associated external tool timer for this event */
 #endif
 #if defined(PETSC_HAVE_MPE)
   int mpe_id_begin; /* MPE IDs that define the event */
   int mpe_id_end;
+#endif
 #endif
 } PetscEventRegInfo;
 
@@ -227,25 +224,6 @@ typedef struct _PetscStageRegInfo {
   char              *name;     /* The stage name */
   PetscBool          visible;  /* The flag to print info in summary */
 } PetscStageRegInfo;
-
-typedef struct {
-  PetscClassId   id;           /* The integer identifying this class */
-  int            creations;    /* The number of objects of this class created */
-  int            destructions; /* The number of objects of this class destroyed */
-  PetscLogDouble mem;          /* The total memory allocated by objects of this class; this is completely wrong and should possibly be removed */
-  PetscLogDouble descMem;      /* The total memory allocated by descendents of these objects; this is completely wrong and should possibly be removed */
-} PetscClassPerfInfo;
-
-/* --- resizable arrays of the info types --- */
-
-/* --- PetscClassPerfLog --- */
-PETSC_LOG_RESIZABLE_ARRAY(PetscClassPerfInfo,PetscClassPerfLog)
-
-/* --- PetscEventPerfLog --- */
-PETSC_LOG_RESIZABLE_ARRAY(PetscEventPerfInfo,PetscEventPerfLog)
-PETSC_INTERN PetscErrorCode PetscEventPerfLogEnsureSize(PetscEventPerfLog, int);
-
-/* --- PetscStageRegLog --- */
 
 /* --- the registry: information about registered things ---
 

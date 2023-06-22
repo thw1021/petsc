@@ -168,6 +168,87 @@ static PetscErrorCode PetscEventPerfInfoClear(PetscEventPerfInfo *eventInfo)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode PetscEventPerfInfoTic(PetscEventPerfInfo *eventInfo, PetscLogDouble time, PetscBool logMemory, int event)
+{
+  PetscFunctionBegin;
+  eventInfo->timeTmp = -time;
+  eventInfo->flopsTmp = -petsc_TotalFlops_th;
+  eventInfo->numMessages -= petsc_irecv_ct_th + petsc_isend_ct_th + petsc_recv_ct_th + petsc_send_ct_th;
+  eventInfo->messageLength -= petsc_irecv_len_th + petsc_isend_len_th + petsc_recv_len_th + petsc_send_len_th;
+  eventInfo->numReductions -= petsc_allreduce_ct_th + petsc_gather_ct_th + petsc_scatter_ct_th;
+#if defined(PETSC_HAVE_DEVICE)
+  eventInfo->CpuToGpuCount -= petsc_ctog_ct_th;
+  eventInfo->GpuToCpuCount -= petsc_gtoc_ct_th;
+  eventInfo->CpuToGpuSize -= petsc_ctog_sz_th;
+  eventInfo->GpuToCpuSize -= petsc_gtoc_sz_th;
+  eventInfo->GpuFlops -= petsc_gflops_th;
+  eventInfo->GpuTime -= petsc_gtime;
+#endif
+  if (logMemory) {
+    PetscLogDouble usage;
+    PetscCall(PetscMemoryGetCurrentUsage(&usage));
+    eventInfo->memIncrease -= usage;
+    PetscCall(PetscMallocGetCurrentUsage(&usage));
+    eventInfo->mallocSpace -= usage;
+    PetscCall(PetscMallocGetMaximumUsage(&usage));
+    eventInfo->mallocIncrease -= usage;
+    PetscCall(PetscMallocPushMaximumUsage(event));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode PetscEventPerfInfoToc(PetscEventPerfInfo *eventInfo, PetscLogDouble time, PetscBool logMemory, int event)
+{
+  PetscFunctionBegin;
+  eventInfo->timeTmp += time;
+  eventInfo->flopsTmp += petsc_TotalFlops_th;
+  eventInfo->time += eventInfo->timeTmp;
+  eventInfo->time2 += eventInfo->timeTmp * eventInfo->timeTmp;
+  eventInfo->flops += eventInfo->flopsTmp;
+  eventInfo->flops2 += eventInfo->flopsTmp * eventInfo->flopsTmp;
+  eventInfo->numMessages += petsc_irecv_ct_th + petsc_isend_ct_th + petsc_recv_ct_th + petsc_send_ct_th;
+  eventInfo->messageLength += petsc_irecv_len_th + petsc_isend_len_th + petsc_recv_len + petsc_send_len_th;
+  eventInfo->numReductions += petsc_allreduce_ct_th + petsc_gather_ct_th + petsc_scatter_ct_th;
+#if defined(PETSC_HAVE_DEVICE)
+  eventInfo->CpuToGpuCount += petsc_ctog_ct_th;
+  eventInfo->GpuToCpuCount += petsc_gtoc_ct_th;
+  eventInfo->CpuToGpuSize += petsc_ctog_sz_th;
+  eventInfo->GpuToCpuSize += petsc_gtoc_sz_th;
+  eventInfo->GpuFlops += petsc_gflops_th;
+  eventInfo->GpuTime += petsc_gtime;
+#endif
+  if (logMemory) {
+    PetscLogDouble usage, musage;
+    PetscCall(PetscMemoryGetCurrentUsage(&usage)); /* the comments below match the column labels printed in PetscLogView_Default() */
+    eventInfo->memIncrease += usage;               /* RMI */
+    PetscCall(PetscMallocGetCurrentUsage(&usage));
+    eventInfo->mallocSpace += usage; /* Malloc */
+    PetscCall(PetscMallocPopMaximumUsage((int)event, &musage));
+    eventInfo->mallocIncreaseEvent = PetscMax(musage - usage, eventInfo->mallocIncreaseEvent); /* EMalloc */
+    PetscCall(PetscMallocGetMaximumUsage(&usage));
+    eventInfo->mallocIncrease += usage; /* MMalloc */
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+typedef struct {
+  PetscClassId   id;           /* The integer identifying this class */
+  int            creations;    /* The number of objects of this class created */
+  int            destructions; /* The number of objects of this class destroyed */
+  PetscLogDouble mem;          /* The total memory allocated by objects of this class; this is completely wrong and should possibly be removed */
+  PetscLogDouble descMem;      /* The total memory allocated by descendents of these objects; this is completely wrong and should possibly be removed */
+} PetscClassPerfInfo;
+
+/* --- resizable arrays of the info types --- */
+
+/* --- PetscClassPerfLog --- */
+PETSC_LOG_RESIZABLE_ARRAY(PetscClassPerfInfo,PetscClassPerfLog)
+
+/* --- PetscEventPerfLog --- */
+PETSC_LOG_RESIZABLE_ARRAY(PetscEventPerfInfo,PetscEventPerfLog)
+PETSC_INTERN PetscErrorCode PetscEventPerfLogEnsureSize(PetscEventPerfLog, int);
+
+
 static PetscErrorCode PetscEventPerfLogCreate(PetscEventPerfLog *eventLog)
 {
   PetscEventPerfInfo blank_entry;
