@@ -5,11 +5,11 @@
 
 /* --- PetscLogHandlerImpl: things a log handlers must do that don't need to be exposed --- */
 
-typedef PetscErrorCode (*PetscLogEventActivityFn)(PetscLogState, PetscLogEvent, void *);
-typedef PetscErrorCode (*PetscLogStageFn)(PetscLogState, PetscLogStage, void *);
-typedef PetscErrorCode (*PetscLogObjectFn)(PetscLogState, PetscObject, void *);
-typedef PetscErrorCode (*PetscLogViewFn)(PetscViewer, void *);
-typedef PetscErrorCode (*PetscLogDestroyFn)(void *);
+typedef PetscErrorCode (*PetscLogEventActivityFn)(PetscLogHandler, PetscLogState, PetscLogEvent);
+typedef PetscErrorCode (*PetscLogStageFn)(PetscLogHandler, PetscLogState, PetscLogStage);
+typedef PetscErrorCode (*PetscLogObjectFn)(PetscLogHandler, PetscLogState, PetscObject);
+typedef PetscErrorCode (*PetscLogViewFn)(PetscLogHandler, PetscViewer);
+typedef PetscErrorCode (*PetscLogDestroyFn)(PetscLogHandler);
 
 typedef enum {PETSC_LOG_HANDLER_DEFAULT, PETSC_LOG_HANDLER_NESTED} PetscLogHandlerType;
 
@@ -38,6 +38,7 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *);
   static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Find(PetscLog##Container,Key,int *); \
   static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##GetNumEntries(PetscLog##Container,PetscInt*,PetscInt*); \
   static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Get(PetscLog##Container,PetscInt,Entry*); \
+  static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##GetRef(PetscLog##Container,PetscInt,Entry**); \
   static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Set(PetscLog##Container,PetscInt,Entry); \
   struct _n_PetscLog##Container { \
     int num_entries; \
@@ -142,6 +143,13 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *);
     PetscFunctionBegin; \
     PetscCheck(i >= 0 && i < a->num_entries, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Index %d is not in range [0,%d)", (int) i, a->num_entries); \
     *entry = a->array[i]; \
+    PetscFunctionReturn(PETSC_SUCCESS); \
+  } \
+  static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##GetRef(PetscLog##Container a, PetscInt i, Entry **entry) \
+  { \
+    PetscFunctionBegin; \
+    PetscCheck(i >= 0 && i < a->num_entries, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Index %d is not in range [0,%d)", (int) i, a->num_entries); \
+    *entry = &a->array[i]; \
     PetscFunctionReturn(PETSC_SUCCESS); \
   } \
   static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Set(PetscLog##Container a, PetscInt i, Entry entry) \

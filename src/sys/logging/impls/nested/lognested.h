@@ -29,20 +29,6 @@ struct _n_NestedIdPair {
 
 PETSC_HASH_MAP(NestedHash, NestedIdPair, NestedId, NestedIdPairHash, NestedIdPairEqual, -1);
 
-typedef struct {
-  PetscNestedObjectType type;
-  NestedEventId  nstEvent;         // event-code for this nested event, argument 'event' in PetscLogEventStartNested
-  PetscLogEvent  lastDftEvent;     // last default event activated under this nested event
-  int            nParents;         // number of 'dftParents': the default timer which was the dftParentActive when this nested timer was activated
-  PetscLogEvent *dftParentsSorted; // The default timers which were the dftParentActive when this nested event was started
-  PetscLogEvent *dftEvents;        // The default timers which represent the different 'instances' of this nested event
-  PetscLogEvent *dftParents;       // The default timers which were the dftParentActive when this nested event was started
-  PetscLogEvent *dftEventsSorted;  // The default timers which represent the different 'instances' of this nested event
-} PetscNestedEvent;
-
-PETSC_LOG_RESIZABLE_ARRAY(PetscNestedEvent,PetscNestedEventLog)
-PETSC_LOG_RESIZABLE_ARRAY(NestedEventId,NestedEventMap)
-
 typedef struct _n_PetscLogHandler_Nested *PetscLogHandler_Nested;
 struct _n_PetscLogHandler_Nested {
   PetscLogState       state;
