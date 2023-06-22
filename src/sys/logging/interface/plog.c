@@ -634,11 +634,14 @@ PetscErrorCode PetscLogStageGetActive(PetscLogStage stage, PetscBool *isActive)
 @*/
 PetscErrorCode PetscLogStageSetVisible(PetscLogStage stage, PetscBool isVisible)
 {
+  PetscStageRegInfo stage_info;
   PetscLogState state;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
-  PetscCall(PetscStageRegLogSetVisible(state->registry->stages, stage, isVisible));
+  PetscCall(PetscLogRegistryStageGetInfo(state->registry, stage, &stage_info));
+  stage_info.visible = isVisible;
+  PetscCall(PetscLogRegistryStageSetInfo(state->registry, stage, stage_info));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -659,11 +662,13 @@ PetscErrorCode PetscLogStageSetVisible(PetscLogStage stage, PetscBool isVisible)
 @*/
 PetscErrorCode PetscLogStageGetVisible(PetscLogStage stage, PetscBool *isVisible)
 {
+  PetscStageRegInfo stage_info;
   PetscLogState state;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
-  PetscCall(PetscStageRegLogGetVisible(state->registry->stages, stage, isVisible));
+  PetscCall(PetscLogRegistryStageGetInfo(state->registry, stage, &stage_info));
+  *isVisible = stage_info.visible;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -688,27 +693,31 @@ PetscErrorCode PetscLogStageGetId(const char name[], PetscLogStage *stage)
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
-  PetscCall(PetscStageRegLogGetId(state->registry->stages, name, stage));
+  PetscCall(PetscLogRegistryGetStageFromName(state->registry, name, stage));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode PetscLogStageGetName(PetscLogStage stage, const char **name)
 {
+  PetscStageRegInfo stage_info;
   PetscLogState state;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
-  PetscCall(PetscStageRegLogGetName(state->registry->stages, stage, name));
+  PetscCall(PetscLogRegistryStageGetInfo(state->registry, stage, &stage_info));
+  *name = stage_info.name;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode PetscLogEventGetName(PetscLogEvent event, const char **name)
 {
+  PetscEventRegInfo event_info;
   PetscLogState state;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
-  PetscCall(PetscEventRegLogGetName(state->registry->events, event, name));
+  PetscCall(PetscLogRegistryEventGetInfo(state->registry, event, &event_info));
+  *name = event_info.name;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -800,11 +809,14 @@ PetscErrorCode PetscLogEventRegister(const char name[], PetscClassId classid, Pe
 @*/
 PetscErrorCode PetscLogEventSetCollective(PetscLogEvent event, PetscBool collective)
 {
+  PetscEventRegInfo event_info;
   PetscLogState state;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
-  PetscCall(PetscEventRegLogSetCollective(state->registry->events, event, collective));
+  PetscCall(PetscLogRegistryEventGetInfo(state->registry, event, &event_info));
+  event_info.collective = collective;
+  PetscCall(PetscLogRegistryEventSetInfo(state->registry, event, event_info));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1016,9 +1028,7 @@ PetscErrorCode PetscLogEventSetActiveAll(PetscLogEvent event, PetscBool isActive
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
-  for (PetscInt stage = 0; stage < state->registry->stages->num_entries; stage++) {
-    PetscCall((isActive ? PetscBTSet : PetscBTClear)(state->active, stage + (event + 1) * state->bt_num_stages));
-  }
+  PetscCall(PetscLogStateEventSetActiveAll(state, event, isActive));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1189,7 +1199,7 @@ PetscErrorCode PetscLogEventGetId(const char name[], PetscLogEvent *event)
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
-  PetscCall(PetscEventRegLogGetEvent(state->registry->events, name, event));
+  PetscCall(PetscLogRegistryGetEventFromName(state->registry, name, event));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1659,15 +1669,16 @@ PetscClassId PETSC_OBJECT_CLASSID  = 0;
 @*/
 PetscErrorCode PetscClassIdRegister(const char name[], PetscClassId *oclass)
 {
-#if defined(PETSC_USE_LOG)
-  PetscLogState state;
-#endif
-
   PetscFunctionBegin;
   *oclass = ++PETSC_LARGEST_CLASSID;
 #if defined(PETSC_USE_LOG)
-  PetscCall(PetscLogGetState(&state));
-  PetscCall(PetscClassRegLogRegister(state->registry->classes, name, *oclass));
+  {
+    PetscLogState state;
+    PetscLogClass logclass;
+
+    PetscCall(PetscLogGetState(&state));
+    PetscCall(PetscLogRegistryClassRegister(state->registry, name, *oclass, &logclass));
+  }
 #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }

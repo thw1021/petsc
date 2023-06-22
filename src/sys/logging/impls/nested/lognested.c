@@ -19,8 +19,12 @@ static PetscErrorCode PetscLogEventBegin_Nested(PetscLogState state, PetscLogEve
   if (missing) {
     // register a new nested event
     char name[BUFSIZ];
+    PetscEventRegInfo event_info;
+    PetscEventRegInfo nested_event_info;
 
-    PetscCall(PetscSNPrintf(name, sizeof(name) - 1, "%s;%s", nested->state->registry->events->array[key.root].name, state->registry->events->array[e].name));
+    PetscCall(PetscLogRegistryEventGetInfo(state->registry, e, &event_info));
+    PetscCall(PetscLogRegistryEventGetInfo(nested->state->registry, key.root, &nested_event_info));
+    PetscCall(PetscSNPrintf(name, sizeof(name) - 1, "%s;%s", nested_event_info.name, event_info.name));
     PetscCall(PetscLogStateEventRegister(nested->state, name, 0, &nested_event));
     nested_id = NestedIdFromEvent(nested_event);
   } else {
@@ -62,29 +66,23 @@ static PetscErrorCode PetscLogStagePush_Nested(PetscLogState state, PetscLogStag
   PetscBool missing;
 
   PetscFunctionBegin;
-  if (stage == 0) { // Main stage
-    if (!nested->state->registry->stages->num_entries) {
-      PetscLogStage nested_main;
-      PetscLogEvent nested_main_event;
-
-      PetscCall(PetscLogStateStageRegister(nested->state, "Main Stage", &nested_main));
-      PetscCall(PetscLogStateEventRegister(nested->state, "Main Stage", nested->nested_stage_id, &nested_main_event));
-      PetscAssert(nested_main == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Main stage registered with wrong id");
-      PetscAssert(nested_main_event == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Main stage event registered with wrong id");
-    }
-    PetscCall(nested->handler->impl->stage_push(nested->state, 0, nested->handler->ctx));
-    PetscCall(PetscLogStateStagePush(nested->state, 0));
-    PetscCall(PetscIntStackPush(nested->stack, 0));
-    PetscFunctionReturn(PETSC_SUCCESS);
-  }
   PetscCall(PetscIntStackTop(nested->stack, &(key.root)));
   key.leaf = NestedIdFromStage(stage);
   PetscCall(PetscNestedHashPut(nested->pair_map, key, &iter, &missing));
   if (missing) {
     PetscLogEvent e;
+    PetscStageRegInfo stage_info;
     char name[BUFSIZ];
 
-    PetscCall(PetscSNPrintf(name, sizeof(name) - 1, "%s;%s", nested->state->registry->events->array[key.root].name, state->registry->stages->array[stage].name));
+    PetscCall(PetscLogRegistryStageGetInfo(nested->state->registry, stage, &stage_info));
+    if (key.root >= 0) {
+      PetscEventRegInfo nested_event_info;
+
+      PetscCall(PetscLogRegistryEventGetInfo(nested->state->registry, key.root, &nested_event_info));
+      PetscCall(PetscSNPrintf(name, sizeof(name) - 1, "%s;%s", nested_event_info.name, stage_info.name));
+    } else {
+      PetscCall(PetscSNPrintf(name, sizeof(name) - 1, "%s", stage_info.name));
+    }
     PetscCall(PetscLogStateEventRegister(nested->state, name, nested->nested_stage_id, &e));
     nested_id = NestedIdFromEvent(e);
   } else {
@@ -122,7 +120,7 @@ static PetscErrorCode PetscLogStagePop_Nested(PetscLogState state, PetscLogStage
 
 static PetscErrorCode PetscLogHandlerContextCreate_Nested(PetscLogHandler_Nested *nested_p)
 {
-  PetscLogStage          main_stage;
+  PetscLogStage          root_stage;
   PetscLogHandler_Nested nested;
 
   PetscFunctionBegin;
@@ -133,10 +131,11 @@ static PetscErrorCode PetscLogHandlerContextCreate_Nested(PetscLogHandler_Nested
   PetscCall(PetscClassIdRegister("LogNestedStage", &nested->nested_stage_id));
   PetscCall(PetscNestedHashCreate(&nested->pair_map));
   PetscCall(PetscLogHandlerCreate_Default(&nested->handler));
-  PetscCall(PetscLogStateStageRegister(nested->state, "", &main_stage));
-  PetscAssert(main_stage == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "main stage not zero");
-  PetscCall((*(nested->handler->impl->stage_push))(nested->state, main_stage, nested->handler->ctx));
-  PetscCall(PetscLogStateStagePush(nested->state, main_stage));
+  PetscCall(PetscLogStateStageRegister(nested->state, "", &root_stage));
+  PetscAssert(root_stage == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "root stage not zero");
+  PetscCall((*(nested->handler->impl->stage_push))(nested->state, root_stage, nested->handler->ctx));
+  PetscCall(PetscLogStateStagePush(nested->state, root_stage));
+  PetscCall(PetscIntStackPush(nested->stack, -1));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -219,7 +218,7 @@ static PetscErrorCode PetscLogNestedEventNodesOrderDepthFirst(PetscInt num_nodes
 static PetscErrorCode PetscLogNestedCreatePerfNodes(MPI_Comm comm, PetscLogHandler_Nested nested, PetscLogGlobalNames global_events, PetscNestedEventNode **tree_p, PetscEventPerfInfo **perf_p)
 {
   PetscMPIInt size;
-  PetscInt num_nodes = global_events->count;
+  PetscInt num_nodes;
   PetscInt num_map_entries;
   PetscEventPerfInfo *perf;
   NestedIdPair *keys;
@@ -229,6 +228,7 @@ static PetscErrorCode PetscLogNestedCreatePerfNodes(MPI_Comm comm, PetscLogHandl
   PetscNestedEventNode *tree;
 
   PetscFunctionBegin;
+  PetscCall(PetscLogGlobalNamesGetSize(global_events, NULL, &num_nodes));
   PetscCall(PetscCalloc1(num_nodes, &tree));
   for (PetscInt node = 0; node < num_nodes; node++) {
     tree[node].id = node;
@@ -241,8 +241,11 @@ static PetscErrorCode PetscLogNestedCreatePerfNodes(MPI_Comm comm, PetscLogHandl
   for (PetscInt k = 0; k < num_map_entries; k++) {
     NestedId root_local = keys[k].root;
     NestedId leaf_local = vals[k];
-    PetscInt root_global = global_events->local_to_global[root_local];
-    PetscInt leaf_global = global_events->local_to_global[leaf_local];
+    PetscInt root_global;
+    PetscInt leaf_global;
+
+    PetscCall(PetscLogGlobalNamesLocalGetGlobal(global_events, root_local, &root_global));
+    PetscCall(PetscLogGlobalNamesLocalGetGlobal(global_events, leaf_local, &leaf_global));
     tree[leaf_global].parent = root_global;
   }
   PetscCallMPI(MPI_Comm_size(comm, &size));
@@ -262,8 +265,9 @@ static PetscErrorCode PetscLogNestedCreatePerfNodes(MPI_Comm comm, PetscLogHandl
 
   PetscCall(PetscCalloc1(num_nodes, &perf));
   for (PetscInt node = 0; node < num_nodes; node++) {
-    PetscInt event_id = global_events->global_to_local[node];
+    PetscInt event_id;
 
+    PetscCall(PetscLogGlobalNamesGlobalGetLocal(global_events, node, &event_id));
     if (event_id >= 0) {
       PetscEventPerfInfo *event_info;
 

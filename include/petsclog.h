@@ -95,6 +95,13 @@ typedef int PetscLogStage;
 
 typedef struct _n_PetscIntStack *PetscIntStack;
 
+PETSC_EXTERN PetscErrorCode PetscIntStackCreate(PetscIntStack *);
+PETSC_EXTERN PetscErrorCode PetscIntStackDestroy(PetscIntStack);
+PETSC_EXTERN PetscErrorCode PetscIntStackPush(PetscIntStack, int);
+PETSC_EXTERN PetscErrorCode PetscIntStackPop(PetscIntStack, int *);
+PETSC_EXTERN PetscErrorCode PetscIntStackTop(PetscIntStack, int *);
+PETSC_EXTERN PetscErrorCode PetscIntStackEmpty(PetscIntStack, PetscBool *);
+
 typedef struct _n_PetscLogRegistry *PetscLogRegistry;
 
 typedef struct _n_PetscLogState *PetscLogState;
