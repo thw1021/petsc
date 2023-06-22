@@ -4923,6 +4923,7 @@ PetscErrorCode MatGetDiagonal(Mat mat, Vec v)
   PetscValidHeaderSpecific(v, VEC_CLASSID, 2);
   PetscCheck(mat->assembled, PetscObjectComm((PetscObject)mat), PETSC_ERR_ARG_WRONGSTATE, "Not for unassembled matrix");
   MatCheckPreallocated(mat, 1);
+  VecCheckMatCompatible(mat, v, 2, v, 2);
 
   PetscUseTypeMethod(mat, getdiagonal, v);
   PetscCall(PetscObjectStateIncrease((PetscObject)v));

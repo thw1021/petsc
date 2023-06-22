@@ -170,6 +170,8 @@ protected:
   template <typename F>
   static PetscErrorCode DiagonalUnaryTransform(Mat, PetscInt, PetscInt, PetscInt, PetscDeviceContext, F &&) noexcept;
 
+  static PetscErrorCode GetDiagonal_CUPMBase(Mat, Vec, PetscInt) noexcept;
+
   PETSC_NODISCARD static auto DeviceArrayRead(PetscDeviceContext dctx, Mat m) noexcept PETSC_DECLTYPE_AUTO_RETURNS(MatrixArray<PETSC_MEMTYPE_DEVICE, PETSC_MEMORY_ACCESS_READ>{dctx, m})
   PETSC_NODISCARD static auto DeviceArrayWrite(PetscDeviceContext dctx, Mat m) noexcept PETSC_DECLTYPE_AUTO_RETURNS(MatrixArray<PETSC_MEMTYPE_DEVICE, PETSC_MEMORY_ACCESS_WRITE>{dctx, m})
   PETSC_NODISCARD static auto DeviceArrayReadWrite(PetscDeviceContext dctx, Mat m) noexcept PETSC_DECLTYPE_AUTO_RETURNS(MatrixArray<PETSC_MEMTYPE_DEVICE, PETSC_MEMORY_ACCESS_READ_WRITE>{dctx, m})
@@ -391,6 +393,35 @@ inline PetscErrorCode MatDense_CUPM<T, D>::DiagonalUnaryTransform(Mat A, PetscIn
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+template <device::cupm::DeviceType T, typename D>
+inline PetscErrorCode MatDense_CUPM<T, D>::GetDiagonal_CUPMBase(Mat A, Vec v, PetscInt rstart) noexcept
+{
+  const auto         m = A->rmap->n;
+  const auto         n = A->cmap->n;
+  PetscInt           lda;
+  PetscDeviceContext dctx;
+
+  PetscFunctionBegin;
+  PetscCall(GetHandles_(&dctx));
+  PetscCall(MatDenseGetLDA(A, &lda));
+  {
+    const auto   dv       = VecSeq_CUPM::DeviceArrayWrite(dctx, v);
+    const auto   da       = DeviceArrayRead(dctx, A);
+    auto         diagonal = detail::MakeDiagonalIterator(da.data(), rstart, m, n, lda);
+    cupmStream_t stream;
+
+    PetscCall(GetHandlesFrom_(dctx, &stream));
+    // clang-format off
+    PetscCallThrust(
+      THRUST_CALL(
+        thrust::copy, stream, diagonal.begin(), diagonal.end(), thrust::device_pointer_cast(dv.data())
+      )
+    );
+    // clang-format on
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
   #define MatComposeOp_CUPM(use_host, pobj, op_str, op_host, ...) \
     do { \
       if (use_host) { \
@@ -422,7 +453,8 @@ inline PetscErrorCode MatDense_CUPM<T, D>::DiagonalUnaryTransform(Mat A, PetscIn
     using ::Petsc::mat::cupm::impl::MatDense_CUPM<T, __VA_ARGS__>::HostArrayRead; \
     using ::Petsc::mat::cupm::impl::MatDense_CUPM<T, __VA_ARGS__>::HostArrayWrite; \
     using ::Petsc::mat::cupm::impl::MatDense_CUPM<T, __VA_ARGS__>::HostArrayReadWrite; \
-    using ::Petsc::mat::cupm::impl::MatDense_CUPM<T, __VA_ARGS__>::DiagonalUnaryTransform
+    using ::Petsc::mat::cupm::impl::MatDense_CUPM<T, __VA_ARGS__>::DiagonalUnaryTransform; \
+    using ::Petsc::mat::cupm::impl::MatDense_CUPM<T, __VA_ARGS__>::GetDiagonal_CUPMBase
 
 } // namespace impl
 

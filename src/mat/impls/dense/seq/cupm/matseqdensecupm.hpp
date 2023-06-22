@@ -1804,6 +1804,7 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::RestoreSubMatrix(Mat A, Mat *m) noex
 template <device::cupm::DeviceType T>
 inline PetscErrorCode MatDense_Seq_CUPM<T>::GetDiagonal(Mat A, Vec v) noexcept
 {
+#if 0
   const auto         m = A->rmap->n;
   const auto         n = A->cmap->n;
   PetscInt           nv, lda;
@@ -1829,6 +1830,11 @@ inline PetscErrorCode MatDense_Seq_CUPM<T>::GetDiagonal(Mat A, Vec v) noexcept
     // clang-format on
   }
   PetscFunctionReturn(PETSC_SUCCESS);
+#else
+  PetscFunctionBegin;
+  PetscCall(GetDiagonal_CUPMBase(A, v, 0));
+  PetscFunctionReturn(PETSC_SUCCESS);
+#endif
 }
 
 // ==========================================================================================
