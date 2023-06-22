@@ -419,7 +419,7 @@ PetscBool PCMPIServerActive = PETSC_FALSE;
        The code could be extended to allow an MPI + OpenMP application to use the linear solver server concept accross all shared-memory
        nodes with a single MPI process per node for the user application but multiple MPI processes per node for the linear solver.
 
-       The concept could also be extended for users's callbacks for `SNES`, `TS`, and `TAO` where the `SNESSolve()` for example, runs on
+       The concept could also be extended for users's callbacks for `SNES`, `TS`, and `Tao` where the `SNESSolve()` for example, runs on
        all MPI processes but the user callback only runs on one MPI process per node.
 
        PETSc could also be extended with an MPI-less API that provides access to PETSc's solvers without any reference to MPI, essentially remove

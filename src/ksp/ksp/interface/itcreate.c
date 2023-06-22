@@ -651,6 +651,8 @@ PetscErrorCode KSPSetPostSolve(KSP ksp, PetscErrorCode (*postsolve)(KSP, Vec, Ve
 PetscErrorCode KSPSetNestLevel(KSP ksp, PetscInt level)
 {
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
+  PetscValidLogicalCollectiveInt(ksp, level, 2);
   ksp->nestlevel = level;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -658,7 +660,7 @@ PetscErrorCode KSPSetNestLevel(KSP ksp, PetscInt level)
 /*@
    KSPGetNestLevel - gets the amount of nesting the `KSP` has
 
-   Collective
+   Not Collective
 
    Input Parameter:
 .  ksp - the `KSP`
@@ -673,6 +675,8 @@ PetscErrorCode KSPSetNestLevel(KSP ksp, PetscInt level)
 PetscErrorCode KSPGetNestLevel(KSP ksp, PetscInt *level)
 {
   PetscFunctionBegin;
+  PetscValidHeaderSpecific(ksp, KSP_CLASSID, 1);
+  PetscValidIntPointer(level, 2);
   *level = ksp->nestlevel;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
