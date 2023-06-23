@@ -152,9 +152,9 @@ class DisplayOptions:
 
 	def adjustViewport(self, node):
 		# Only adjust if we are focusing on a set of vertices
-		if self.viewportShowVertices is not None:
-			x = node.x
-			y = node.y
+		if self.viewportShowVertices is not None and int(node.id) in self.viewportShowVertices:
+			x = node.position[0]
+			y = node.position[1]
 			pad = self.viewportPadding
 			# If no viewport is defined yet, set it directly
 			if self.viewport is None:
@@ -356,11 +356,6 @@ class Rank:
 				cbar = plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=colors.colormap), ax=axis)
 				cbar.ax.set_ylim([ylow, yhigh])
 
-		# Adjust the viewport if requested
-		if opts.viewport is not None:
-			plt.xlim(opts.viewport[0], opts.viewport[1])
-			plt.ylim(opts.viewport[2], opts.viewport[3])
-
 def main(args):
 	datasets = []
 
@@ -481,7 +476,7 @@ if __name__ == "__main__":
 		argparser.add_argument('-drr', '--draw-rank-range', action='store', metavar='RANGE', help="Specifies a comma-separated list of rank numbers or ranges to display, eg. \'1,3,5-9\'")
 		argparser.add_argument('-nn', '--no-nodes', action='store_true', help="Disables displaying the nodes")
 		argparser.add_argument('-vsv', '--viewport-show-vertices', action='store', metavar='RANGE', help="Sets the range of vertices to focus the viewport on, eg. \'1,3,5-9\'")
-		argparser.add_argument('-vp', '--viewport-padding', metavar='PADDING', action='store', default='10', help="Sets the padding in coordinate units to apply around the edges when setting the viewport")
+		argparser.add_argument('-vp', '--viewport-padding', metavar='PADDING', action='store', default='1', help="Sets the padding in coordinate units to apply around the edges when setting the viewport")
 		args = argparser.parse_args()
 
 		if not args.test_execute:
