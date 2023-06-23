@@ -3,7 +3,6 @@
 #if defined(PETSC_HAVE_TAU_PERFSTUBS)
   #include <../src/sys/perfstubs/timer.h>
 #endif
-#include "plog.h"
 
 #define PETSC_LOG_RESIZABLE_ARRAY_HAS_NAME(Container,Entry,Key,Equal) \
   static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Destructor(Entry *entry) \
@@ -12,7 +11,7 @@
     PetscCall(PetscFree(entry->name)); \
     PetscFunctionReturn(PETSC_SUCCESS); \
   } \
-  _PETSC_LOG_RESIZABLE_ARRAY(Container,Entry,Key,NULL,PetscLog##Container##Destructor,Equal)
+  PETSC_LOG_RESIZABLE_ARRAY(Container,Entry,Key,NULL,PetscLog##Container##Destructor,Equal)
 
 #define PETSC_LOG_RESIZABLE_ARRAY_KEY_BY_NAME(Container,Entry) \
   static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Equal(Entry *entry, const char *name, PetscBool *is_equal) \
@@ -42,18 +41,9 @@ struct _n_PetscLogRegistry {
 
 PETSC_INTERN PetscErrorCode PetscLogRegistryCreate(PetscLogRegistry *registry_p)
 {
-  PetscEventRegInfo default_event;
-  PetscStageRegInfo default_stage;
-  PetscClassRegInfo default_class;
   PetscLogRegistry registry;
 
   PetscFunctionBegin;
-  PetscCall(PetscMemzero(&default_event, sizeof(default_event)));
-  default_event.visible = PETSC_TRUE;
-  // collective ?
-  PetscCall(PetscMemzero(&default_stage, sizeof(default_stage)));
-  default_stage.visible = PETSC_TRUE;
-  PetscCall(PetscMemzero(&default_class, sizeof(default_class)));
   PetscCall(PetscNew(registry_p));
   registry = *registry_p;
   PetscCall(PetscLogEventArrayCreate(128,&registry->events));
@@ -95,7 +85,7 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryGetNumClasses(PetscLogRegistry regis
 
 PETSC_INTERN PetscErrorCode PetscLogRegistryStageRegister(PetscLogRegistry registry, const char sname[], int *stage)
 {
-  PetscInt idx;
+  int idx;
   PetscStageRegInfo stage_info;
 
   PetscFunctionBegin;
@@ -103,6 +93,9 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryStageRegister(PetscLogRegistry regis
   PetscCheck(idx == -1, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "An event named %s is already registered", sname);
   PetscCall(PetscStrallocpy(sname, &stage_info.name));
   stage_info.visible = PETSC_TRUE;
+#if defined(PETSC_HAVE_TAU_PERFSTUBS)
+  if (perfstubs_initialized == PERFSTUBS_SUCCESS) PetscStackCallExternalVoid("ps_timer_create_", stage_info.timer = ps_timer_create_(stage_info.name));
+#endif
   PetscCall(PetscLogStageArrayPush(registry->stages, stage_info));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -117,6 +110,9 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryEventRegister(PetscLogRegistry regis
   new_info.classid = classid;
   PetscCall(PetscStrallocpy(name, &new_info.name));
   new_info.visible = PETSC_TRUE;
+#if defined(PETSC_HAVE_TAU_PERFSTUBS)
+  if (perfstubs_initialized == PERFSTUBS_SUCCESS) PetscStackCallExternalVoid("ps_timer_create_", new_info.timer = ps_timer_create_(new_info.name));
+#endif
   PetscCall(PetscLogEventArrayPush(registry->events, new_info));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

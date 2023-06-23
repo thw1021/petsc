@@ -16,7 +16,6 @@
 #if defined(PETSC_HAVE_TAU_PERFSTUBS)
   #include <../src/sys/perfstubs/timer.h>
 #endif
-#include <../src/sys/logging/interface/plog.h>
 #include <../src/sys/logging/impls/default/logdefault.h>
 
 #if defined(PETSC_USE_LOG)
@@ -26,6 +25,8 @@
 #if defined(PETSC_HAVE_THREADSAFETY)
 PetscInt           petsc_log_gid = -1; /* Global threadId counter */
 PETSC_TLS PetscInt petsc_log_tid = -1; /* Local threadId */
+
+PetscSpinlock  PetscLogSpinLock;
 #endif
 
 /* used in the MPI_XXX() count macros in petsclog.h */
@@ -177,7 +178,6 @@ PETSC_INTERN PetscErrorCode PetscLogInitialize(void)
 {
   int              stage;
   PetscLogRegistry registry;
-  //PetscBool        opt;
 
   PetscFunctionBegin;
   if (PetscLogInitializeCalled) PetscFunctionReturn(PETSC_SUCCESS);
@@ -197,6 +197,9 @@ PETSC_INTERN PetscErrorCode PetscLogInitialize(void)
   PetscCallMPI(MPI_Barrier(PETSC_COMM_WORLD));
   PetscCall(PetscTime(&petsc_BaseTime));
   PetscCall(PetscLogStagePush(stage));
+  #if defined(PETSC_HAVE_TAU_PERFSTUBS)
+  PetscStackCallExternalVoid("ps_initialize_", ps_initialize_());
+  #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -205,19 +208,6 @@ PETSC_INTERN PetscErrorCode PetscLogFinalize(void)
   PetscLogState state;
 
   PetscFunctionBegin;
-  #if defined(PETSC_HAVE_THREADSAFETY)
-  if (eventInfoMap_th) {
-    PetscEventPerfInfo **array;
-    PetscInt             n, off = 0;
-
-    PetscCall(PetscHMapEventGetSize(eventInfoMap_th, &n));
-    PetscCall(PetscMalloc1(n, &array));
-    PetscCall(PetscHMapEventGetVals(eventInfoMap_th, &off, array));
-    for (PetscInt i = 0; i < n; i++) PetscCall(PetscFree(array[i]));
-    PetscCall(PetscFree(array));
-    PetscCall(PetscHMapEventDestroy(&eventInfoMap_th));
-  }
-  #endif
 
   /* Resetting phase */
   PetscCall(PetscLogGetState(&state));
@@ -1690,7 +1680,7 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *handler_p)
   PetscFunctionBegin;
   handler = *handler_p;
   *handler_p = NULL;
-  if (handler->impl->destroy) PetscCall((*(handler->impl->destroy))(handler->ctx));
+  if (handler->impl->destroy) PetscCall((*(handler->impl->destroy))(handler->impl->ctx));
   PetscCall(PetscFree(handler->impl));
   PetscCall(PetscFree(handler));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1722,7 +1712,7 @@ PetscErrorCode PetscLogEventGetPerfInfo(PetscLogStage stage, PetscLogEvent event
   PetscCall(PetscLogGetState(&state));
   PetscCall(PetscLogGetDefaultHandler(&default_handler));
   if (stage < 0) PetscCall(PetscLogStateGetCurrentStage(state, &stage));
-  PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(default_handler, state->registry, stage, event, &event_info));
+  PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(default_handler, stage, event, &event_info));
   *info = *event_info;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1759,7 +1749,7 @@ PetscErrorCode PetscLogEventSetDof(PetscLogEvent event, PetscInt n, PetscLogDoub
   PetscCall(PetscLogGetDefaultHandler(&default_handler));
   PetscCall(PetscLogGetState(&state));
   PetscCall(PetscLogStateGetCurrentStage(state, &stage));
-  PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(default_handler, state->registry, stage, event, &event_info));
+  PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(default_handler, stage, event, &event_info));
   event_info->dof[n] = dof;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1799,12 +1789,12 @@ PetscErrorCode PetscLogEventSetError(PetscLogEvent event, PetscInt n, PetscLogDo
   PetscCall(PetscLogGetState(&state));
   PetscCall(PetscLogGetDefaultHandler(&default_handler));
   PetscCall(PetscLogStateGetCurrentStage(state, &stage));
-  PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(default_handler, state->registry, stage, event, &event_info));
+  PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(default_handler, stage, event, &event_info));
   event_info->errors[n] = error;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#if defined(PETSC_USE_LOG) && defined(PETSC_HAVE_MPE)
+#if defined(PETSC_USE_LOG) && defined(PETSC_HAVE_MPE) && 0
 #include <mpe.h>
 
 PetscBool PetscBeganMPE = PETSC_FALSE;
