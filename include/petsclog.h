@@ -109,9 +109,9 @@ struct _n_PetscLogState {
   PetscLogRegistry registry;
   PetscBT          active;
   PetscIntStack    stage_stack;
-  PetscInt         current_stage;
-  PetscInt         bt_num_stages;
-  PetscInt         bt_num_events;
+  int              current_stage;
+  int              bt_num_stages;
+  int              bt_num_events;
 };
 
 #define PetscLogStateEventCurrentlyActive(state,event) ((state) && PetscBTLookup((state)->active, (state)->current_stage) && PetscBTLookup((state)->active, (state)->current_stage + (event+1) * (state)->bt_num_stages))
@@ -129,7 +129,6 @@ struct _n_PetscLogHandler {
   PetscLogEventSyncFn event_sync;
   PetscLogObjectFn    object_create;
   PetscLogObjectFn    object_destroy;
-  void *ctx;
 };
 
 /* Handle multithreading */
