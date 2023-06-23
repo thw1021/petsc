@@ -1004,6 +1004,46 @@ static PetscErrorCode PCSetFromOptions_HYPRE_BoomerAMG(PC pc, PetscOptionItems *
 
     PetscCall(PetscOptionsInt("-pc_hypre_boomeramg_Adroptype", "Drops the entries that are not on the diagonal and smaller than its row norm: type 1: 1-norm, 2: 2-norm, -1: infinity norm", "None", jac->Adroptype, &jac->Adroptype, NULL));
     PetscCallExternal(HYPRE_BoomerAMGSetADropType, jac->hsolver, jac->Adroptype);
+    HYPRE_Int **grid_relax_points = hypre_TAlloc(HYPRE_Int *, 4, HYPRE_MEMORY_DEVICE);
+    char       *prerelax[256];
+    char       *postrelax[256];
+    char        stringF[2] = "F", stringC[2] = "C", stringA[2] = "A";
+    PetscInt    ns_down = 256, ns_up = 256;
+    PetscCall(PetscOptionsStringArray("-pc_hypre_boomeramg_prerelax", "Defines prerelax scheme", "None", prerelax, &ns_down, NULL));
+    PetscCall(PetscOptionsStringArray("-pc_hypre_boomeramg_postrelax", "Defines postrelax scheme", "None", postrelax, &ns_up, NULL));
+    PetscCheck(ns_down == jac->gridsweeps[0], PetscObjectComm((PetscObject)jac), PETSC_ERR_ARG_SIZ, "The number of arguments passed to -pc_hypre_boomeramg_prerelax must match the number passed to -pc_hypre_bomeramg_grid_sweeps_down");
+    PetscCheck(ns_up == jac->gridsweeps[1], PetscObjectComm((PetscObject)jac), PETSC_ERR_ARG_SIZ, "The number of arguments passed to -pc_hypre_boomeramg_postrelax must match the number passed to -pc_hypre_bomeramg_grid_sweeps_up");
+    grid_relax_points[0]    = NULL;
+    grid_relax_points[1]    = hypre_TAlloc(HYPRE_Int, ns_down, HYPRE_MEMORY_DEVICE);
+    grid_relax_points[2]    = hypre_TAlloc(HYPRE_Int, ns_up, HYPRE_MEMORY_DEVICE);
+    grid_relax_points[3]    = hypre_TAlloc(HYPRE_Int, 1, HYPRE_MEMORY_DEVICE);
+    grid_relax_points[3][0] = 0;
+    // set down relax scheme
+    for (PetscInt i = 0; i < ns_down; i++) {
+      PetscBool matchF, matchC, matchA;
+      PetscCall(PetscStrcasecmp(prerelax[i], stringF, &matchF));
+      PetscCall(PetscStrcasecmp(prerelax[i], stringC, &matchC));
+      PetscCall(PetscStrcasecmp(prerelax[i], stringA, &matchA));
+      PetscCheck(matchF || matchC || matchA, PetscObjectComm((PetscObject)jac), PETSC_ERR_ARG_WRONG, "Valid argument options for -pc_hypre_boomeramg_pretrelax are C, F, and A");
+      if (matchF) grid_relax_points[1][i] = -1;
+      else if (matchC) grid_relax_points[1][i] = 1;
+      else if (matchA) grid_relax_points[1][i] = 0;
+    }
+
+    // set up relax scheme
+    for (PetscInt i = 0; i < ns_up; i++) {
+      PetscBool matchF, matchC, matchA;
+      PetscCall(PetscStrcasecmp(postrelax[i], stringF, &matchF));
+      PetscCall(PetscStrcasecmp(postrelax[i], stringC, &matchC));
+      PetscCall(PetscStrcasecmp(postrelax[i], stringA, &matchA));
+      PetscCheck(matchF || matchC || matchA, PetscObjectComm((PetscObject)jac), PETSC_ERR_ARG_WRONG, "Valid argument options for -pc_hypre_boomeramg_postrelax are C, F, and A");
+      if (matchF) grid_relax_points[2][i] = -1;
+      else if (matchC) grid_relax_points[2][i] = 1;
+      else if (matchA) grid_relax_points[2][i] = 0;
+    }
+    PetscCallExternal(HYPRE_BoomerAMGSetGridRelaxPoints, jac->hsolver, grid_relax_points);
+    for (PetscInt i = 0; i < ns_down; i++) { PetscCall(PetscFree(prerelax[i])); }
+    for (PetscInt i = 0; i < ns_up; i++) { PetscCall(PetscFree(postrelax[i])); }
   }
 #endif
 
@@ -1114,6 +1154,9 @@ static PetscErrorCode PCView_HYPRE_BoomerAMG(PC pc, PetscViewer viewer)
 
     PetscCall(PetscViewerASCIIPrintf(viewer, "    Relax weight  (all)      %g\n", (double)jac->relaxweight));
     PetscCall(PetscViewerASCIIPrintf(viewer, "    Outer relax weight (all) %g\n", (double)jac->outerrelaxweight));
+
+    PetscCall(PetscViewerASCIIPrintf(viewer, "    Maximum size of coarsest grid %" PetscInt_FMT "\n", jac->maxc));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "    Minimum size of coarsest grid %" PetscInt_FMT "\n", jac->minc));
 
     if (jac->relaxorder) {
       PetscCall(PetscViewerASCIIPrintf(viewer, "    Using CF-relaxation\n"));
