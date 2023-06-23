@@ -3,7 +3,7 @@
 
 #include <petsc/private/petscimpl.h>
 
-/* --- PetscLogHandlerImpl: things a log handlers must do that don't need to be exposed --- */
+/*---------------- PetscLogHandlerImpl: things a log handlers must do that don't need to be exposed -----------------*/
 
 typedef PetscErrorCode (*PetscLogEventActivityFn)(PetscLogHandler, PetscLogState, PetscLogEvent);
 typedef PetscErrorCode (*PetscLogStageFn)(PetscLogHandler, PetscLogState, PetscLogStage);
@@ -28,7 +28,7 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *);
 
 /* --- Macros for resizable arrays that show up frequently in the implementation of logging --- */
 
-#define _PETSC_LOG_RESIZABLE_ARRAY(Container,Entry,Key,Constructor,Destructor,Equal) \
+#define PETSC_LOG_RESIZABLE_ARRAY(Container,Entry,Key,Constructor,Destructor,Equal) \
   typedef struct _n_PetscLog##Container *PetscLog##Container; \
   static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Create(int,PetscLog##Container*); \
   static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Destroy(PetscLog##Container*); \
@@ -160,50 +160,6 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *);
     PetscFunctionReturn(PETSC_SUCCESS); \
   }
 
-#define PETSC_LOG_RESIZABLE_ARRAY(entrytype,containertype) \
-  typedef struct _n_##containertype *containertype; \
-  struct _n_##containertype { \
-    int max_entries; \
-    int num_entries; \
-    entrytype _default; \
-    entrytype *array; \
-  }; \
-
-#define PetscLogResizableArrayEnsureSize(ra,new_size) \
-  PetscMacroReturnStandard( \
-    if ((new_size) > ra->max_entries) { \
-      int new_max_entries = 2; \
-      int rem_size = PetscMax(0,(new_size) - 1); \
-      char *new_array; \
-      char **old_array = (char **) &((ra)->array); \
-      while (rem_size >>= 1) new_max_entries *= 2; \
-      PetscCall(PetscMalloc(new_max_entries * sizeof(*((ra)->array)), &new_array)); \
-      PetscCall(PetscMemcpy(new_array, (ra)->array, sizeof(*((ra)->array)) * (ra)->num_entries)); \
-      PetscCall(PetscFree((ra)->array)); \
-      *old_array = new_array; \
-      (ra)->max_entries = new_max_entries; \
-    } \
-    for (int i = (ra)->num_entries; i < (new_size); i++) (ra)->array[i] = ((ra)->_default); \
-    (ra)->num_entries = (new_size); \
-  )
-
-#define PetscLogResizableArrayPush_Internal(ra,new_elem) \
-  PetscInt new_size = ++(ra)->num_entries; \
-  PetscCall(PetscLogResizableArrayEnsureSize((ra),new_size)); \
-  (ra)->array[new_size-1] = new_elem;
-
-#define PetscLogResizableArrayPush(ra,new_elem) \
-  PetscMacroReturnStandard(PetscLogResizableArrayPush_Internal((ra),(new_elem)))
-
-#define PetscLogResizableArrayCreate(ra_p,max_init,_def) \
-  PetscMacroReturnStandard( \
-    PetscCall(PetscNew(ra_p)); \
-    (*(ra_p))->num_entries = 0; \
-    (*(ra_p))->max_entries = (max_init); \
-    (*(ra_p))->_default = (_def); \
-    PetscCall(PetscMalloc1((max_init), &((*(ra_p))->array))); \
-  )
-
 /* --- Registration info types that are not part of the public API, but handlers need to know --- */
 
 /* --- PetscEventRegInfo --- */
@@ -212,10 +168,10 @@ typedef struct {
   PetscClassId classid;    /* The class the event is associated with */
   PetscBool    collective; /* Flag this event as collective */
   PetscBool    visible;    /* The flag to print info in summary */
-#if 0
 #if defined(PETSC_HAVE_TAU_PERFSTUBS)
   void *timer; /* Associated external tool timer for this event */
 #endif
+#if 0
 #if defined(PETSC_HAVE_MPE)
   int mpe_id_begin; /* MPE IDs that define the event */
   int mpe_id_end;
@@ -231,6 +187,9 @@ typedef struct {
 typedef struct _PetscStageRegInfo {
   char              *name;     /* The stage name */
   PetscBool          visible;  /* The flag to print info in summary */
+#if defined(PETSC_HAVE_TAU_PERFSTUBS)
+  void *timer; /* Associated external tool timer for this event */
+#endif
 } PetscStageRegInfo;
 
 /* --- the registry: information about registered things ---
@@ -304,6 +263,9 @@ struct _n_PetscIntStack {
 };
 
 /* --- Thread-safety internals --- */
+
+/* SpinLock for shared Log variables */
+PETSC_INTERN PetscSpinlock PetscLogSpinLock;
 
 #if defined(PETSC_HAVE_THREADSAFETY)
   #if defined(__cplusplus)

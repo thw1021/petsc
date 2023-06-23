@@ -15,7 +15,7 @@
 /*----------------------------------------------- Creation Functions -------------------------------------------------*/
 /* Note: these functions do not have prototypes in a public directory, so they are considered "internal" and not exported. */
 
-#if defined(PETSC_HAVE_MPE)
+#if defined(PETSC_HAVE_MPE) && 0
 // TODO: MPE?
   #include <mpe.h>
 PETSC_INTERN PetscErrorCode PetscLogMPEGetRGBColor(const char *[]);
