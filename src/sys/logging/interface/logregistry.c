@@ -4,23 +4,23 @@
   #include <../src/sys/perfstubs/timer.h>
 #endif
 
-#define PETSC_LOG_RESIZABLE_ARRAY_HAS_NAME(Container,Entry,Key,Equal) \
+#define PETSC_LOG_RESIZABLE_ARRAY_HAS_NAME(Container, Entry, Key, Equal) \
   static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Destructor(Entry *entry) \
   { \
     PetscFunctionBegin; \
     PetscCall(PetscFree(entry->name)); \
     PetscFunctionReturn(PETSC_SUCCESS); \
   } \
-  PETSC_LOG_RESIZABLE_ARRAY(Container,Entry,Key,NULL,PetscLog##Container##Destructor,Equal)
+  PETSC_LOG_RESIZABLE_ARRAY(Container, Entry, Key, NULL, PetscLog##Container##Destructor, Equal)
 
-#define PETSC_LOG_RESIZABLE_ARRAY_KEY_BY_NAME(Container,Entry) \
+#define PETSC_LOG_RESIZABLE_ARRAY_KEY_BY_NAME(Container, Entry) \
   static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Equal(Entry *entry, const char *name, PetscBool *is_equal) \
   { \
     PetscFunctionBegin; \
     PetscCall(PetscStrcmp(entry->name, name, is_equal)); \
     PetscFunctionReturn(PETSC_SUCCESS); \
   } \
-  PETSC_LOG_RESIZABLE_ARRAY_HAS_NAME(Container,Entry,const char *,PetscLog##Container##Equal)
+  PETSC_LOG_RESIZABLE_ARRAY_HAS_NAME(Container, Entry, const char *, PetscLog##Container##Equal)
 
 static PetscErrorCode PetscLogClassArrayEqual(PetscClassRegInfo *class_info, PetscClassId classid, PetscBool *is_equal)
 {
@@ -29,9 +29,9 @@ static PetscErrorCode PetscLogClassArrayEqual(PetscClassRegInfo *class_info, Pet
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_LOG_RESIZABLE_ARRAY_KEY_BY_NAME(EventArray,PetscEventRegInfo)
-PETSC_LOG_RESIZABLE_ARRAY_KEY_BY_NAME(StageArray,PetscStageRegInfo)
-PETSC_LOG_RESIZABLE_ARRAY_HAS_NAME(ClassArray,PetscClassRegInfo,PetscClassId,PetscLogClassArrayEqual)
+PETSC_LOG_RESIZABLE_ARRAY_KEY_BY_NAME(EventArray, PetscEventRegInfo)
+PETSC_LOG_RESIZABLE_ARRAY_KEY_BY_NAME(StageArray, PetscStageRegInfo)
+PETSC_LOG_RESIZABLE_ARRAY_HAS_NAME(ClassArray, PetscClassRegInfo, PetscClassId, PetscLogClassArrayEqual)
 
 struct _n_PetscLogRegistry {
   PetscLogEventArray events;
@@ -46,9 +46,9 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryCreate(PetscLogRegistry *registry_p)
   PetscFunctionBegin;
   PetscCall(PetscNew(registry_p));
   registry = *registry_p;
-  PetscCall(PetscLogEventArrayCreate(128,&registry->events));
-  PetscCall(PetscLogStageArrayCreate(8,&registry->stages));
-  PetscCall(PetscLogClassArrayCreate(128,&registry->classes));
+  PetscCall(PetscLogEventArrayCreate(128, &registry->events));
+  PetscCall(PetscLogStageArrayCreate(8, &registry->stages));
+  PetscCall(PetscLogClassArrayCreate(128, &registry->classes));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -85,7 +85,7 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryGetNumClasses(PetscLogRegistry regis
 
 PETSC_INTERN PetscErrorCode PetscLogRegistryStageRegister(PetscLogRegistry registry, const char sname[], int *stage)
 {
-  int idx;
+  int               idx;
   PetscStageRegInfo stage_info;
 
   PetscFunctionBegin;
@@ -129,7 +129,6 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryClassRegister(PetscLogRegistry regis
   PetscCall(PetscLogClassArrayPush(registry->classes, new_info));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
 
 PETSC_INTERN PetscErrorCode PetscLogRegistryGetEventFromName(PetscLogRegistry registry, const char name[], PetscLogEvent *event)
 {
@@ -197,7 +196,7 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryClassSetInfo(PetscLogRegistry regist
 PETSC_INTERN PetscErrorCode PetscLogRegistryStageSetVisible(PetscLogRegistry registry, PetscLogStage stage)
 {
   PetscFunctionBegin;
-  
+
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -340,7 +339,7 @@ PETSC_INTERN PetscErrorCode PetscLogGlobalNamesCreate(MPI_Comm comm, PetscInt nu
   PetscCall(PetscNew(&global_names));
   PetscCall(PetscLogGlobalNamesCreate_Internal(comm, num_names_local, local_names, &global_names->count_global, &global_names->global_to_local, &global_names->local_to_global, &global_names->names));
   global_names->count_local = num_names_local;
-  *global_names_p = global_names;
+  *global_names_p           = global_names;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -418,7 +417,8 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryCreateGlobalEventNames(MPI_Comm comm
   PetscCall(PetscLogEventArrayGetNumEntries(registry->events, &num_events_local, NULL));
   PetscCall(PetscMalloc1(num_events_local, &names));
   for (PetscInt i = 0; i < num_events_local; i++) {
-    PetscEventRegInfo event_info;;
+    PetscEventRegInfo event_info;
+    ;
     PetscCall(PetscLogRegistryEventGetInfo(registry, i, &event_info));
     names[i] = event_info.name;
   }
@@ -426,4 +426,3 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryCreateGlobalEventNames(MPI_Comm comm
   PetscCall(PetscFree(names));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
