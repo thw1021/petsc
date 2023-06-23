@@ -92,6 +92,7 @@ private:
 
     PetscFunctionBegin;
     if (!handle) {
+      PetscCall(PetscLogPauseEventsPush());
       PetscCall(PetscLogEventBegin(CUPMBLAS_HANDLE_CREATE(), 0, 0, 0, 0));
       for (auto i = 0; i < 3; ++i) {
         const auto cberr = cupmBlasCreate(handle.ptr_to());
@@ -104,6 +105,7 @@ private:
         PetscCheck(cberr == CUPMBLAS_STATUS_SUCCESS, PETSC_COMM_SELF, PETSC_ERR_GPU_RESOURCE, "Unable to initialize %s", cupmBlasName());
       }
       PetscCall(PetscLogEventEnd(CUPMBLAS_HANDLE_CREATE(), 0, 0, 0, 0));
+      PetscCall(PetscLogPauseEventsPop());
     }
     PetscCallCUPMBLAS(cupmBlasSetStream(handle, dci->stream.get_stream()));
     dci->blas = handle;
