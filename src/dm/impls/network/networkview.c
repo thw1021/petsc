@@ -98,10 +98,10 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   char        filename[PETSC_MAX_PATH_LEN + 1], options[512], proccall[PETSC_MAX_PATH_LEN + 512], scriptFile[PETSC_MAX_PATH_LEN + 1], buffer[256], buffer2[256];
   PetscViewer csvViewer;
   FILE       *processFile = NULL;
-  PetscBool   isnull, optionShowRanks = PETSC_FALSE, optionRankIsSet = PETSC_FALSE, showNoNodes = PETSC_FALSE, showNoNumbering = PETSC_FALSE, optionShowVertices = PETSC_FALSE;
+  PetscBool   isnull, optionShowRanks = PETSC_FALSE, optionRankIsSet = PETSC_FALSE, showNoNodes = PETSC_FALSE, showNoNumbering = PETSC_FALSE, optionShowVertices = PETSC_FALSE, optionViewPadding = PETSC_FALSE;
   PetscDraw   draw;
   DM_Network *network = (DM_Network *)dm->data;
-  PetscReal   drawPause;
+  PetscReal   drawPause, viewPadding = 1.0;
   PetscInt    i;
 #if defined(PETSC_HAVE_MKSTEMP)
   PetscBool isSharedTmp;
@@ -140,7 +140,8 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
   PetscCall(PetscOptionsString("-dmnetwork_view_rank_range", "Set of ranks to view the DMNetwork on", NULL, buffer, buffer, sizeof(buffer), &optionRankIsSet));
   PetscCall(PetscOptionsBool("-dmnetwork_view_no_vertices", "Do not view vertices", NULL, showNoNodes, &showNoNodes, NULL));
   PetscCall(PetscOptionsBool("-dmnetwork_view_no_numbering", "Do not view edge and vertex numbering", NULL, showNoNumbering, &showNoNumbering, NULL));
-  PetscCall(PetscOptionsString("-dmnetwork_view_show_vertices", "Focus the view on the given set of vertices", NULL, buffer2, buffer2, sizeof(buffer2), &optionShowVertices));
+  PetscCall(PetscOptionsString("-dmnetwork_view_zoomin_vertices", "Focus the view on the given set of vertices", NULL, buffer2, buffer2, sizeof(buffer2), &optionShowVertices));
+  PetscCall(PetscOptionsReal("-dmnetwork_view_zoomin_vertices_padding", "Set the padding when viewing specific vertices", NULL, viewPadding, &viewPadding, &optionViewPadding));
   PetscOptionsEnd();
 
   // Generate and broadcast the temporary file name from rank 0
@@ -230,6 +231,13 @@ static PetscErrorCode DMView_Network_Matplotlib(DM dm, PetscViewer viewer)
     // Pass vertices to focus on if defined
     PetscCall(PetscStrlcat(options, " -vsv ", sizeof(options)));
     PetscCall(PetscStrlcat(options, buffer2, sizeof(options)));
+    optionViewPadding = PETSC_TRUE;
+    // Pass padding if set
+    if (optionViewPadding) {
+      PetscCall(PetscSNPrintf(buffer2, sizeof(buffer2), "%f", (double)viewPadding));
+      PetscCall(PetscStrlcat(options, " -vp ", sizeof(options)));
+      PetscCall(PetscStrlcat(options, buffer2, sizeof(options)));
+    }
   }
 
   // Check for options for visibility...
