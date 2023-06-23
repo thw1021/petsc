@@ -3076,7 +3076,7 @@ static struct _MatOps MatOps_Values = {MatSetValues_SeqBAIJ,
                                        MatDestroySubMatrices_SeqBAIJ,
                                        NULL,
                                        NULL,
-                                       MatCreateGraph_Simple_BAIJ,
+                                       NULL,
                                        NULL,
                                        /*150*/ NULL,
                                        NULL};
