@@ -356,6 +356,48 @@ PetscErrorCode PetscLogTraceBegin(FILE *file)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Nested(PetscLogHandler *);
+
+/*@C
+  PetscLogNestedBegin - Turns on nested logging of objects and events. This logs flop
+  rates and object creation and should not slow programs down too much.
+
+  Logically Collective over `PETSC_COMM_WORLD`
+
+  Options Database Keys:
+. -log_view :filename.xml:ascii_xml - Prints an XML summary of flop and timing information to the file
+
+  Usage:
+.vb
+      PetscInitialize(...);
+      PetscLogNestedBegin();
+       ... code ...
+      PetscLogView(viewer);
+      PetscFinalize();
+.ve
+
+  Level: advanced
+
+.seealso: `PetscLogDump()`, `PetscLogAllBegin()`, `PetscLogView()`, `PetscLogTraceBegin()`, `PetscLogDefaultBegin()`
+@*/
+PetscErrorCode PetscLogNestedBegin(void)
+{
+  int i_free = -1;
+
+  PetscFunctionBegin;
+  for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
+    PetscLogHandler h = PetscLogHandlers[i];
+    if (h) {
+      if (h->impl->type == PETSC_LOG_HANDLER_NESTED) PetscFunctionReturn(PETSC_SUCCESS);
+    } else if (i_free < 0) {
+      i_free = i;
+    }
+  }
+  PetscCheck(i_free >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Too many log handlers, cannot created nested handler");
+  PetscCall(PetscLogHandlerCreate_Nested(&PetscLogHandlers[i_free]));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@C
   PetscLogIsActive - Check if logging is currently in progress.
 
@@ -1791,13 +1833,12 @@ PetscErrorCode PetscLogEventSetError(PetscLogEvent event, PetscInt n, PetscLogDo
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#if defined(PETSC_USE_LOG) && defined(PETSC_HAVE_MPE) && 0
+#if defined(PETSC_USE_LOG) && defined(PETSC_HAVE_MPE)
   #include <mpe.h>
 
-PetscBool PetscBeganMPE = PETSC_FALSE;
+PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_MPE(PetscLogHandler *);
 
-PETSC_INTERN PetscErrorCode PetscLogEventBeginMPE(PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject);
-PETSC_INTERN PetscErrorCode PetscLogEventEndMPE(PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject);
+PetscBool PetscBeganMPE = PETSC_FALSE;
 
 /*@C
    PetscLogMPEBegin - Turns on MPE logging of events. This creates large log files
@@ -1820,6 +1861,8 @@ PETSC_INTERN PetscErrorCode PetscLogEventEndMPE(PetscLogEvent, int, PetscObject,
 @*/
 PetscErrorCode PetscLogMPEBegin(void)
 {
+  int i_free = -1;
+
   PetscFunctionBegin;
   /* Do MPE initialization */
   if (!MPE_Initialized_logging()) { /* This function exists in mpich 1.1.2 and higher */
@@ -1830,7 +1873,17 @@ PetscErrorCode PetscLogMPEBegin(void)
   } else {
     PetscCall(PetscInfo(0, "MPE already initialized. Not attempting to reinitialize.\n"));
   }
-  PetscCall(PetscLogSet(PetscLogEventBeginMPE, PetscLogEventEndMPE));
+  for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
+    PetscLogHandler h = PetscLogHandlers[i];
+    if (h) {
+      if (h->impl->type == PETSC_LOG_HANDLER_MPE) PetscFunctionReturn(PETSC_SUCCESS);
+    } else {
+      i_free = i;
+      break;
+    }
+  }
+  PetscCheck(i_free >= 0, PETSC_COMM_SELF, PETSC_ERR_SUP, "Too many log handlers already running, cannot begin MPE log handler");
+  PetscCall(PetscLogHandlerCreate_MPE(&PetscLogHandlers[i_free]));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1838,6 +1891,9 @@ PetscErrorCode PetscLogMPEBegin(void)
    PetscLogMPEDump - Dumps the MPE logging info to file for later use with Jumpshot.
 
    Collective over `PETSC_COMM_WORLD`
+
+   Input Parameter:
+. sname: filename for the MPE logfile
 
    Level: advanced
 
@@ -1861,34 +1917,4 @@ PetscErrorCode PetscLogMPEDump(const char sname[])
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
-  #define PETSC_RGB_COLORS_MAX 39
-static const char *PetscLogMPERGBColors[PETSC_RGB_COLORS_MAX] = {"OliveDrab:      ", "BlueViolet:     ", "CadetBlue:      ", "CornflowerBlue: ", "DarkGoldenrod:  ", "DarkGreen:      ", "DarkKhaki:      ", "DarkOliveGreen: ",
-                                                                 "DarkOrange:     ", "DarkOrchid:     ", "DarkSeaGreen:   ", "DarkSlateGray:  ", "DarkTurquoise:  ", "DeepPink:       ", "DarkKhaki:      ", "DimGray:        ",
-                                                                 "DodgerBlue:     ", "GreenYellow:    ", "HotPink:        ", "IndianRed:      ", "LavenderBlush:  ", "LawnGreen:      ", "LemonChiffon:   ", "LightCoral:     ",
-                                                                 "LightCyan:      ", "LightPink:      ", "LightSalmon:    ", "LightSlateGray: ", "LightYellow:    ", "LimeGreen:      ", "MediumPurple:   ", "MediumSeaGreen: ",
-                                                                 "MediumSlateBlue:", "MidnightBlue:   ", "MintCream:      ", "MistyRose:      ", "NavajoWhite:    ", "NavyBlue:       ", "OliveDrab:      "};
-
-/*@C
-  PetscLogMPEGetRGBColor - This routine returns a rgb color useable with `PetscLogEventRegister()`
-
-  Not collective. Maybe it should be?
-
-  Output Parameter:
-. str - character string representing the color
-
-  Level: developer
-
-.seealso: [](ch_profiling), `PetscLogEventRegister()`
-@*/
-PetscErrorCode PetscLogMPEGetRGBColor(const char *str[])
-{
-  static int idx = 0;
-
-  PetscFunctionBegin;
-  *str = PetscLogMPERGBColors[idx];
-  idx  = (idx + 1) % PETSC_RGB_COLORS_MAX;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 #endif /* PETSC_USE_LOG && PETSC_HAVE_MPE */

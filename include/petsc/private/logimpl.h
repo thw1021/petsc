@@ -13,7 +13,10 @@ typedef PetscErrorCode (*PetscLogDestroyFn)(PetscLogHandler);
 
 typedef enum {
   PETSC_LOG_HANDLER_DEFAULT,
-  PETSC_LOG_HANDLER_NESTED
+  PETSC_LOG_HANDLER_NESTED,
+#if defined(PETSC_HAVE_MPE)
+  PETSC_LOG_HANDLER_MPE
+#endif
 } PetscLogHandlerType;
 
 struct _n_PetscLogHandlerImpl {
@@ -173,11 +176,9 @@ typedef struct {
 #if defined(PETSC_HAVE_TAU_PERFSTUBS)
   void *timer; /* Associated external tool timer for this event */
 #endif
-#if 0
-  #if defined(PETSC_HAVE_MPE)
+#if defined(PETSC_HAVE_MPE)
   int mpe_id_begin; /* MPE IDs that define the event */
   int mpe_id_end;
-  #endif
 #endif
 } PetscEventRegInfo;
 

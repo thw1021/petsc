@@ -1,9 +1,8 @@
--include ../../../../petscdir.mk
+-include ../../../../../petscdir.mk
+#requirespackage 'PETSC_HAVE_MPE'
 
 MANSEC	  = Sys
-SUBMANSEC = Profiling
 LIBBASE	  = libpetscsys
-DIRS	  = default nested mpe
 
 include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules.doc
