@@ -356,6 +356,11 @@ class Rank:
 				cbar = plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=colors.colormap), ax=axis)
 				cbar.ax.set_ylim([ylow, yhigh])
 
+		# Adjust the viewport if requested
+		if opts.viewport is not None:
+			plt.xlim(opts.viewport[0], opts.viewport[1])
+			plt.ylim(opts.viewport[2], opts.viewport[3])
+
 def main(args):
 	datasets = []
 
