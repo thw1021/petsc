@@ -22,12 +22,12 @@
 
 // This file, and only this file, is for functions that interact with the global logging state
 
-#if defined(PETSC_HAVE_THREADSAFETY)
+  #if defined(PETSC_HAVE_THREADSAFETY)
 PetscInt           petsc_log_gid = -1; /* Global threadId counter */
 PETSC_TLS PetscInt petsc_log_tid = -1; /* Local threadId */
 
-PetscSpinlock  PetscLogSpinLock;
-#endif
+PetscSpinlock PetscLogSpinLock;
+  #endif
 
 /* used in the MPI_XXX() count macros in petsclog.h */
 
@@ -133,9 +133,7 @@ static PetscErrorCode PetscLogGetHandler(PetscLogHandlerType type, PetscLogHandl
   PetscValidPointer(handler, 1);
   *handler = NULL;
   for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
-    if (PetscLogHandlers[i] && PetscLogHandlers[i]->impl->type == type) {
-      *handler = PetscLogHandlers[i];
-    }
+    if (PetscLogHandlers[i] && PetscLogHandlers[i]->impl->type == type) { *handler = PetscLogHandlers[i]; }
   }
   if (*handler == NULL) {
     if (type == PETSC_LOG_HANDLER_DEFAULT) fprintf(stderr, "PETSC ERROR: Logging has not been enabled.\nYou might have forgotten to call PetscInitialize().\n");
@@ -213,40 +211,40 @@ PETSC_INTERN PetscErrorCode PetscLogFinalize(void)
   PetscCall(PetscLogGetState(&state));
   PetscCall(PetscLogStateDestroy(state));
 
-  petsc_TotalFlops          = 0.0;
-  petsc_BaseTime            = 0.0;
-  petsc_TotalFlops          = 0.0;
-  petsc_send_ct             = 0.0;
-  petsc_recv_ct             = 0.0;
-  petsc_send_len            = 0.0;
-  petsc_recv_len            = 0.0;
-  petsc_isend_ct            = 0.0;
-  petsc_irecv_ct            = 0.0;
-  petsc_isend_len           = 0.0;
-  petsc_irecv_len           = 0.0;
-  petsc_wait_ct             = 0.0;
-  petsc_wait_any_ct         = 0.0;
-  petsc_wait_all_ct         = 0.0;
-  petsc_sum_of_waits_ct     = 0.0;
-  petsc_allreduce_ct        = 0.0;
-  petsc_gather_ct           = 0.0;
-  petsc_scatter_ct          = 0.0;
-  petsc_TotalFlops_th       = 0.0;
-  petsc_send_ct_th          = 0.0;
-  petsc_recv_ct_th          = 0.0;
-  petsc_send_len_th         = 0.0;
-  petsc_recv_len_th         = 0.0;
-  petsc_isend_ct_th         = 0.0;
-  petsc_irecv_ct_th         = 0.0;
-  petsc_isend_len_th        = 0.0;
-  petsc_irecv_len_th        = 0.0;
-  petsc_wait_ct_th          = 0.0;
-  petsc_wait_any_ct_th      = 0.0;
-  petsc_wait_all_ct_th      = 0.0;
-  petsc_sum_of_waits_ct_th  = 0.0;
-  petsc_allreduce_ct_th     = 0.0;
-  petsc_gather_ct_th        = 0.0;
-  petsc_scatter_ct_th       = 0.0;
+  petsc_TotalFlops         = 0.0;
+  petsc_BaseTime           = 0.0;
+  petsc_TotalFlops         = 0.0;
+  petsc_send_ct            = 0.0;
+  petsc_recv_ct            = 0.0;
+  petsc_send_len           = 0.0;
+  petsc_recv_len           = 0.0;
+  petsc_isend_ct           = 0.0;
+  petsc_irecv_ct           = 0.0;
+  petsc_isend_len          = 0.0;
+  petsc_irecv_len          = 0.0;
+  petsc_wait_ct            = 0.0;
+  petsc_wait_any_ct        = 0.0;
+  petsc_wait_all_ct        = 0.0;
+  petsc_sum_of_waits_ct    = 0.0;
+  petsc_allreduce_ct       = 0.0;
+  petsc_gather_ct          = 0.0;
+  petsc_scatter_ct         = 0.0;
+  petsc_TotalFlops_th      = 0.0;
+  petsc_send_ct_th         = 0.0;
+  petsc_recv_ct_th         = 0.0;
+  petsc_send_len_th        = 0.0;
+  petsc_recv_len_th        = 0.0;
+  petsc_isend_ct_th        = 0.0;
+  petsc_irecv_ct_th        = 0.0;
+  petsc_isend_len_th       = 0.0;
+  petsc_irecv_len_th       = 0.0;
+  petsc_wait_ct_th         = 0.0;
+  petsc_wait_any_ct_th     = 0.0;
+  petsc_wait_all_ct_th     = 0.0;
+  petsc_sum_of_waits_ct_th = 0.0;
+  petsc_allreduce_ct_th    = 0.0;
+  petsc_gather_ct_th       = 0.0;
+  petsc_scatter_ct_th      = 0.0;
 
   #if defined(PETSC_HAVE_DEVICE)
   petsc_ctog_ct    = 0.0;
@@ -301,7 +299,7 @@ PETSC_INTERN PetscErrorCode PetscLogFinalize(void)
 PetscErrorCode PetscLogDefaultBegin(void)
 {
   PetscLogHandler handler;
-  int i_free = -1;
+  int             i_free = -1;
 
   PetscFunctionBegin;
   for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
@@ -345,7 +343,6 @@ PetscErrorCode PetscLogDefaultBegin(void)
 @*/
 PetscErrorCode PetscLogTraceBegin(FILE *file)
 {
-
   PetscFunctionBegin;
   PetscCall(PetscLogDefaultBegin());
   for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
@@ -453,7 +450,7 @@ PetscErrorCode PetscLogObjects(PetscBool flag)
 @*/
 PetscErrorCode PetscLogStageRegister(const char sname[], PetscLogStage *stage)
 {
-  PetscLogState    state;
+  PetscLogState state;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
@@ -463,7 +460,7 @@ PetscErrorCode PetscLogStageRegister(const char sname[], PetscLogStage *stage)
 
 PETSC_INTERN PetscErrorCode PetscLogStagePush_Internal(PetscLogStage stage)
 {
-  PetscLogState   state;
+  PetscLogState state;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
@@ -625,7 +622,7 @@ PetscErrorCode PetscLogStageGetActive(PetscLogStage stage, PetscBool *isActive)
 PetscErrorCode PetscLogStageSetVisible(PetscLogStage stage, PetscBool isVisible)
 {
   PetscStageRegInfo stage_info;
-  PetscLogState state;
+  PetscLogState     state;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
@@ -653,7 +650,7 @@ PetscErrorCode PetscLogStageSetVisible(PetscLogStage stage, PetscBool isVisible)
 PetscErrorCode PetscLogStageGetVisible(PetscLogStage stage, PetscBool *isVisible)
 {
   PetscStageRegInfo stage_info;
-  PetscLogState state;
+  PetscLogState     state;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
@@ -690,7 +687,7 @@ PetscErrorCode PetscLogStageGetId(const char name[], PetscLogStage *stage)
 PetscErrorCode PetscLogStageGetName(PetscLogStage stage, const char **name)
 {
   PetscStageRegInfo stage_info;
-  PetscLogState state;
+  PetscLogState     state;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
@@ -702,7 +699,7 @@ PetscErrorCode PetscLogStageGetName(PetscLogStage stage, const char **name)
 PetscErrorCode PetscLogEventGetName(PetscLogEvent event, const char **name)
 {
   PetscEventRegInfo event_info;
-  PetscLogState state;
+  PetscLogState     state;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
@@ -800,7 +797,7 @@ PetscErrorCode PetscLogEventRegister(const char name[], PetscClassId classid, Pe
 PetscErrorCode PetscLogEventSetCollective(PetscLogEvent event, PetscBool collective)
 {
   PetscEventRegInfo event_info;
-  PetscLogState state;
+  PetscLogState     state;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
@@ -1223,7 +1220,7 @@ PetscErrorCode PetscLogEventGetId(const char name[], PetscLogEvent *event)
 @*/
 PetscErrorCode PetscLogDump(const char sname[])
 {
-  PetscLogHandler     handler;
+  PetscLogHandler handler;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetDefaultHandler(&handler));
@@ -1385,7 +1382,7 @@ PetscErrorCode PetscGetFlops(PetscLogDouble *flops)
 PetscErrorCode PetscLogObjectState(PetscObject obj, const char format[], ...)
 {
   PetscLogHandler default_handler;
-  va_list Argp;
+  va_list         Argp;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetDefaultHandler(&default_handler));
@@ -1678,7 +1675,7 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *handler_p)
   PetscLogHandler handler;
 
   PetscFunctionBegin;
-  handler = *handler_p;
+  handler    = *handler_p;
   *handler_p = NULL;
   if (handler->impl->destroy) PetscCall((*(handler->impl->destroy))(handler->impl->ctx));
   PetscCall(PetscFree(handler->impl));
@@ -1703,8 +1700,8 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *handler_p)
 @*/
 PetscErrorCode PetscLogEventGetPerfInfo(PetscLogStage stage, PetscLogEvent event, PetscEventPerfInfo *info)
 {
-  PetscLogState   state;
-  PetscLogHandler default_handler;
+  PetscLogState       state;
+  PetscLogHandler     default_handler;
   PetscEventPerfInfo *event_info;
 
   PetscFunctionBegin;
@@ -1742,7 +1739,7 @@ PetscErrorCode PetscLogEventSetDof(PetscLogEvent event, PetscInt n, PetscLogDoub
   PetscLogHandler     default_handler;
   PetscLogState       state;
   PetscEventPerfInfo *event_info;
-  PetscLogStage     stage;
+  PetscLogStage       stage;
 
   PetscFunctionBegin;
   PetscCheck(!(n < 0) && !(n > 7), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Error index %" PetscInt_FMT " is not in [0, 8)", n);
@@ -1782,7 +1779,7 @@ PetscErrorCode PetscLogEventSetError(PetscLogEvent event, PetscInt n, PetscLogDo
   PetscLogState       state;
   PetscLogHandler     default_handler;
   PetscEventPerfInfo *event_info;
-  int               stage;
+  int                 stage;
 
   PetscFunctionBegin;
   PetscCheck(!(n < 0) && !(n > 7), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Error index %" PetscInt_FMT " is not in [0, 8)", n);
@@ -1795,7 +1792,7 @@ PetscErrorCode PetscLogEventSetError(PetscLogEvent event, PetscInt n, PetscLogDo
 }
 
 #if defined(PETSC_USE_LOG) && defined(PETSC_HAVE_MPE) && 0
-#include <mpe.h>
+  #include <mpe.h>
 
 PetscBool PetscBeganMPE = PETSC_FALSE;
 
@@ -1865,7 +1862,7 @@ PetscErrorCode PetscLogMPEDump(const char sname[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#define PETSC_RGB_COLORS_MAX 39
+  #define PETSC_RGB_COLORS_MAX 39
 static const char *PetscLogMPERGBColors[PETSC_RGB_COLORS_MAX] = {"OliveDrab:      ", "BlueViolet:     ", "CadetBlue:      ", "CornflowerBlue: ", "DarkGoldenrod:  ", "DarkGreen:      ", "DarkKhaki:      ", "DarkOliveGreen: ",
                                                                  "DarkOrange:     ", "DarkOrchid:     ", "DarkSeaGreen:   ", "DarkSlateGray:  ", "DarkTurquoise:  ", "DeepPink:       ", "DarkKhaki:      ", "DimGray:        ",
                                                                  "DodgerBlue:     ", "GreenYellow:    ", "HotPink:        ", "IndianRed:      ", "LavenderBlush:  ", "LawnGreen:      ", "LemonChiffon:   ", "LightCoral:     ",

@@ -6,4 +6,3 @@
 
 */
 #include <petsc/private/logimpl.h> /*I    "petscsys.h"   I*/
-

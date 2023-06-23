@@ -1,9 +1,9 @@
 #if !defined(PETSCBTTYPE_H)
-#define PETSCBTTYPE_H
+  #define PETSCBTTYPE_H
 
-#include <petscsystypes.h>
-#include <petscviewertypes.h>
-#include <petscstring.h>
+  #include <petscsystypes.h>
+  #include <petscviewertypes.h>
+  #include <petscstring.h>
 
 /* SUBMANSEC = Sys */
 
