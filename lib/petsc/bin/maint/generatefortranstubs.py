@@ -111,11 +111,17 @@ def FixDir(petscdir,petscarch,parentdir,dir,verbose):
   fd.close()
   cppflags = ""
   libbase = ""
+
+  # new makefile will be created from outbuf
+  outbuf  =  '\n'
+  outbuf +=  "#requiresdefine   'PETSC_HAVE_FORTRAN'\n"
   for line in inbuf.splitlines():
+    if line.startswith('#requires'):
+      outbuf += line + '\n'
     if line.find('CPPFLAGS') >=0:
-      cppflags = line
+      outbuf +=   line + '\n'
     if line.find('LIBBASE') >=0:
-      libbase = line
+      outbuf +=  line + '\n'
     elif line.find('SUBMANSEC') >=0:
       submansec = line.split('=')[1].lower().strip()
     elif line.find('BFORTSUBMANSEC') >=0:
@@ -127,12 +133,6 @@ def FixDir(petscdir,petscarch,parentdir,dir,verbose):
 
   if not bfortsubmansec == 'unknown':
     submansec = bfortsubmansec
-    
-  # now assemble the makefile
-  outbuf  =  '\n'
-  outbuf +=  "#requiresdefine   'PETSC_HAVE_FORTRAN'\n"
-  outbuf +=   cppflags + '\n'
-  outbuf +=  libbase + '\n'
 
   ff = open(os.path.join(dir, 'makefile'), 'w')
   ff.write(outbuf)
