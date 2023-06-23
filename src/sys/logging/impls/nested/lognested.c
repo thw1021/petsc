@@ -149,7 +149,7 @@ static PetscErrorCode PetscLogHandlerContextDestroy_Nested(PetscLogHandler h)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogHandlerCreate_Nested(PetscLogHandler *handler_p)
+PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Nested(PetscLogHandler *handler_p)
 {
   PetscLogHandler handler;
 
@@ -164,24 +164,6 @@ static PetscErrorCode PetscLogHandlerCreate_Nested(PetscLogHandler *handler_p)
   handler->event_end        = PetscLogEventEnd_Nested;
   handler->impl->stage_push = PetscLogStagePush_Nested;
   handler->impl->stage_pop  = PetscLogStagePop_Nested;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PetscErrorCode PetscLogNestedBegin(void)
-{
-  int i_free = -1;
-
-  PetscFunctionBegin;
-  for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
-    PetscLogHandler h = PetscLogHandlers[i];
-    if (h) {
-      if (h->impl->type == PETSC_LOG_HANDLER_NESTED) PetscFunctionReturn(PETSC_SUCCESS);
-    } else if (i_free < 0) {
-      i_free = i;
-    }
-  }
-  PetscCheck(i_free >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Too many log handlers, cannot created nested handler");
-  PetscCall(PetscLogHandlerCreate_Nested(&PetscLogHandlers[i_free]));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
