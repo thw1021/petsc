@@ -8,6 +8,7 @@
 typedef PetscErrorCode (*PetscLogEventActivityFn)(PetscLogHandler, PetscLogState, PetscLogEvent);
 typedef PetscErrorCode (*PetscLogStageFn)(PetscLogHandler, PetscLogState, PetscLogStage);
 typedef PetscErrorCode (*PetscLogObjectFn)(PetscLogHandler, PetscLogState, PetscObject);
+typedef PetscErrorCode (*PetscLogPauseFn)(PetscLogHandler, PetscLogState);
 typedef PetscErrorCode (*PetscLogViewFn)(PetscLogHandler, PetscViewer);
 typedef PetscErrorCode (*PetscLogDestroyFn)(PetscLogHandler);
 
@@ -20,14 +21,16 @@ typedef enum {
 } PetscLogHandlerType;
 
 struct _n_PetscLogHandlerImpl {
+  void                   *ctx;
   PetscLogHandlerType     type;
+  PetscLogViewFn          view;
+  PetscLogDestroyFn       destroy;
   PetscLogStageFn         stage_push;
   PetscLogStageFn         stage_pop;
   PetscLogEventActivityFn event_deactivate_push;
   PetscLogEventActivityFn event_deactivate_pop;
-  PetscLogViewFn          view;
-  PetscLogDestroyFn       destroy;
-  void                   *ctx;
+  PetscLogPauseFn         pause_push;
+  PetscLogPauseFn         pause_pop;;
 };
 
 PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *);

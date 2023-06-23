@@ -1039,6 +1039,40 @@ PetscErrorCode PetscLogEventDeactivatePop(PetscLogEvent event)
 }
 
 /*@
+  PetscLogPauseEventsPush - Description
+
+@*/
+PetscErrorCode PetscLogPauseEventsPush(void)
+{
+  PetscLogState state;
+
+  PetscFunctionBegin;
+  PetscCall(PetscLogGetState(&state));
+  for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
+    PetscLogHandler h = PetscLogHandlers[i];
+    if (h && h->impl->pause_push) PetscCall((*(h->impl->pause_push))(h, state));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscLogPauseEventsPop - Description
+
+@*/
+PetscErrorCode PetscLogPauseEventsPop(void)
+{
+  PetscLogState state;
+
+  PetscFunctionBegin;
+  PetscCall(PetscLogGetState(&state));
+  for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
+    PetscLogHandler h = PetscLogHandlers[i];
+    if (h && h->impl->pause_pop) PetscCall((*(h->impl->pause_pop))(h, state));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   PetscLogEventSetActiveAll - Turns on logging of all events
 
   Not Collective
