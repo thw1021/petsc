@@ -33,5 +33,3 @@ PetscErrorCode PetscLogEventEndMPE(PetscLogEvent event, int t, PetscObject o1, P
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 #endif
-
-

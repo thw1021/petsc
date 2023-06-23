@@ -5,12 +5,12 @@
 
 static PetscErrorCode PetscLogEventBegin_Nested(PetscLogHandler h, PetscLogState state, PetscLogEvent e, int t, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
 {
-  PetscLogHandler_Nested nested = (PetscLogHandler_Nested) h->impl->ctx;
-  NestedIdPair key;
-  NestedId     nested_id;
-  PetscHashIter iter;
-  PetscLogEvent nested_event;
-  PetscBool missing;
+  PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->impl->ctx;
+  NestedIdPair           key;
+  NestedId               nested_id;
+  PetscHashIter          iter;
+  PetscLogEvent          nested_event;
+  PetscBool              missing;
 
   PetscFunctionBegin;
   PetscCall(PetscIntStackTop(nested->stack, &(key.root)));
@@ -18,7 +18,7 @@ static PetscErrorCode PetscLogEventBegin_Nested(PetscLogHandler h, PetscLogState
   PetscCall(PetscNestedHashPut(nested->pair_map, key, &iter, &missing));
   if (missing) {
     // register a new nested event
-    char name[BUFSIZ];
+    char              name[BUFSIZ];
     PetscEventRegInfo event_info;
     PetscEventRegInfo nested_event_info;
 
@@ -38,8 +38,8 @@ static PetscErrorCode PetscLogEventBegin_Nested(PetscLogHandler h, PetscLogState
 
 static PetscErrorCode PetscLogEventEnd_Nested(PetscLogHandler h, PetscLogState state, PetscLogEvent e, int t, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
 {
-  PetscLogHandler_Nested nested = (PetscLogHandler_Nested) h->impl->ctx;
-  NestedId nested_id;
+  PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->impl->ctx;
+  NestedId               nested_id;
 
   PetscFunctionBegin;
   PetscCall(PetscIntStackPop(nested->stack, &nested_id));
@@ -53,26 +53,26 @@ static PetscErrorCode PetscLogEventEnd_Nested(PetscLogHandler h, PetscLogState s
     PetscCheck(val == nested_id, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Logging events appear to be unnested, nested logging cannot be used");
   }
   PetscCall(nested->handler->event_end(nested->handler, nested->state, NestedIdToEvent(nested_id), t, o1, o2, o3, o4));
-  
+
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLogStagePush_Nested(PetscLogHandler h, PetscLogState state, PetscLogStage stage)
 {
-  PetscLogHandler_Nested nested = (PetscLogHandler_Nested) h->impl->ctx;
-  NestedIdPair key;
-  NestedId     nested_id;
-  PetscHashIter iter;
-  PetscBool missing;
+  PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->impl->ctx;
+  NestedIdPair           key;
+  NestedId               nested_id;
+  PetscHashIter          iter;
+  PetscBool              missing;
 
   PetscFunctionBegin;
   PetscCall(PetscIntStackTop(nested->stack, &(key.root)));
   key.leaf = NestedIdFromStage(stage);
   PetscCall(PetscNestedHashPut(nested->pair_map, key, &iter, &missing));
   if (missing) {
-    PetscLogEvent e;
+    PetscLogEvent     e;
     PetscStageRegInfo stage_info;
-    char name[BUFSIZ];
+    char              name[BUFSIZ];
 
     PetscCall(PetscLogRegistryStageGetInfo(nested->state->registry, stage, &stage_info));
     if (key.root >= 0) {
@@ -95,8 +95,8 @@ static PetscErrorCode PetscLogStagePush_Nested(PetscLogHandler h, PetscLogState 
 
 static PetscErrorCode PetscLogStagePop_Nested(PetscLogHandler h, PetscLogState state, PetscLogStage stage)
 {
-  PetscLogHandler_Nested nested = (PetscLogHandler_Nested) h->impl->ctx;
-  NestedId nested_id;
+  PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->impl->ctx;
+  NestedId               nested_id;
 
   PetscFunctionBegin;
   PetscCall(PetscIntStackPop(nested->stack, &nested_id));
@@ -136,7 +136,7 @@ static PetscErrorCode PetscLogHandlerContextCreate_Nested(PetscLogHandler_Nested
 
 static PetscErrorCode PetscLogHandlerContextDestroy_Nested(PetscLogHandler h)
 {
-  PetscLogHandler_Nested nested = (PetscLogHandler_Nested) h->impl->ctx;
+  PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->impl->ctx;
 
   PetscFunctionBegin;
   PetscCall(PetscLogStateStagePop(nested->state));
@@ -158,24 +158,24 @@ static PetscErrorCode PetscLogHandlerCreate_Nested(PetscLogHandler *handler_p)
   handler = *handler_p;
   PetscCall(PetscNew(&handler->impl));
   handler->impl->type = PETSC_LOG_HANDLER_NESTED;
-  PetscCall(PetscLogHandlerContextCreate_Nested((PetscLogHandler_Nested *) &handler->impl->ctx));
-  handler->impl->destroy = PetscLogHandlerContextDestroy_Nested;
-  handler->event_begin = PetscLogEventBegin_Nested;
-  handler->event_end = PetscLogEventEnd_Nested;
+  PetscCall(PetscLogHandlerContextCreate_Nested((PetscLogHandler_Nested *)&handler->impl->ctx));
+  handler->impl->destroy    = PetscLogHandlerContextDestroy_Nested;
+  handler->event_begin      = PetscLogEventBegin_Nested;
+  handler->event_end        = PetscLogEventEnd_Nested;
   handler->impl->stage_push = PetscLogStagePush_Nested;
-  handler->impl->stage_pop = PetscLogStagePop_Nested;
+  handler->impl->stage_pop  = PetscLogStagePop_Nested;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PetscErrorCode PetscLogNestedBegin(void)
 {
   int i_free = -1;
-  
+
   PetscFunctionBegin;
   for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
     PetscLogHandler h = PetscLogHandlers[i];
     if (h) {
-     if (h->impl->type == PETSC_LOG_HANDLER_NESTED) PetscFunctionReturn(PETSC_SUCCESS);
+      if (h->impl->type == PETSC_LOG_HANDLER_NESTED) PetscFunctionReturn(PETSC_SUCCESS);
     } else if (i_free < 0) {
       i_free = i;
     }
@@ -190,14 +190,14 @@ static PetscErrorCode PetscLogNestedEventNodesOrderDepthFirst(PetscInt num_nodes
   PetscInt node, start_loc;
   PetscFunctionBegin;
 
-  node = 0;
+  node      = 0;
   start_loc = 0;
   while (node < num_nodes) {
     if (tree[node].parent == parent) {
-      PetscInt num_this_descendants = 0;
-      PetscNestedEventNode tmp = tree[start_loc];
-      tree[start_loc] = tree[node];
-      tree[node] = tmp;
+      PetscInt             num_this_descendants = 0;
+      PetscNestedEventNode tmp                  = tree[start_loc];
+      tree[start_loc]                           = tree[node];
+      tree[node]                                = tmp;
       PetscCall(PetscLogNestedEventNodesOrderDepthFirst(num_nodes - start_loc - 1, tree[start_loc].id, &tree[start_loc + 1], &num_this_descendants));
       tree[start_loc].num_descendants = num_this_descendants;
       *num_descendants += 1 + num_this_descendants;
@@ -212,21 +212,21 @@ static PetscErrorCode PetscLogNestedEventNodesOrderDepthFirst(PetscInt num_nodes
 
 static PetscErrorCode PetscLogNestedCreatePerfNodes(MPI_Comm comm, PetscLogHandler_Nested nested, PetscLogGlobalNames global_events, PetscNestedEventNode **tree_p, PetscEventPerfInfo **perf_p)
 {
-  PetscMPIInt size;
-  PetscInt num_nodes;
-  PetscInt num_map_entries;
-  PetscEventPerfInfo *perf;
-  NestedIdPair *keys;
-  NestedId    *vals;
-  PetscInt     offset;
-  PetscInt num_descendants;
+  PetscMPIInt           size;
+  PetscInt              num_nodes;
+  PetscInt              num_map_entries;
+  PetscEventPerfInfo   *perf;
+  NestedIdPair         *keys;
+  NestedId             *vals;
+  PetscInt              offset;
+  PetscInt              num_descendants;
   PetscNestedEventNode *tree;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGlobalNamesGetSize(global_events, NULL, &num_nodes));
   PetscCall(PetscCalloc1(num_nodes, &tree));
   for (PetscInt node = 0; node < num_nodes; node++) {
-    tree[node].id = node;
+    tree[node].id     = node;
     tree[node].parent = -1;
   }
   PetscCall(PetscNestedHashGetSize(nested->pair_map, &num_map_entries));
@@ -277,21 +277,21 @@ static PetscErrorCode PetscLogNestedCreatePerfNodes(MPI_Comm comm, PetscLogHandl
 
 PETSC_INTERN PetscErrorCode PetscLogView_Nested(PetscLogHandler handler, PetscViewer viewer)
 {
-  PetscLogHandler_Nested nested = (PetscLogHandler_Nested) handler->impl->ctx;
-  PetscNestedEventNode *nodes;
-  PetscEventPerfInfo *perf;
-  PetscLogGlobalNames global_events;
-  PetscNestedEventTree tree;
-  PetscViewerFormat format;
-  MPI_Comm comm = PetscObjectComm((PetscObject)viewer);
+  PetscLogHandler_Nested nested = (PetscLogHandler_Nested)handler->impl->ctx;
+  PetscNestedEventNode  *nodes;
+  PetscEventPerfInfo    *perf;
+  PetscLogGlobalNames    global_events;
+  PetscNestedEventTree   tree;
+  PetscViewerFormat      format;
+  MPI_Comm               comm = PetscObjectComm((PetscObject)viewer);
 
   PetscFunctionBegin;
   PetscCall(PetscLogRegistryCreateGlobalEventNames(comm, nested->state->registry, &global_events));
   PetscCall(PetscLogNestedCreatePerfNodes(comm, nested, global_events, &nodes, &perf));
-  tree.comm = comm;
+  tree.comm          = comm;
   tree.global_events = global_events;
-  tree.perf = perf;
-  tree.nodes = nodes;
+  tree.perf          = perf;
+  tree.nodes         = nodes;
   PetscCall(PetscViewerGetFormat(viewer, &format));
   if (format == PETSC_VIEWER_ASCII_XML) {
     PetscCall(PetscLogView_Nested_XML(nested, &tree, viewer));
@@ -300,4 +300,3 @@ PETSC_INTERN PetscErrorCode PetscLogView_Nested(PetscLogHandler handler, PetscVi
   } else SETERRQ(comm, PETSC_ERR_ARG_INCOMP, "No nested viewer for this format");
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-

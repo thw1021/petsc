@@ -16,7 +16,7 @@ PETSC_INTERN PetscErrorCode PetscLogStateCreate(PetscLogState *state_p)
 
   state->bt_num_events = max_events + 1; // one extra column for default stage activity
   state->bt_num_stages = max_stages;
-  num_entries = state->bt_num_events * state->bt_num_stages;
+  num_entries          = state->bt_num_events * state->bt_num_stages;
   PetscCall(PetscBTCreate(num_entries, &state->active));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -36,7 +36,7 @@ PETSC_INTERN PetscErrorCode PetscLogStateStagePush(PetscLogState state, PetscLog
   if (PetscDefined(USE_DEBUG)) {
     PetscInt num_stages;
     PetscCall(PetscLogRegistryGetNumStages(state->registry, &num_stages, NULL));
-    PetscCheck(stage >= 0 && stage < num_stages, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d not in [0,%d)", stage, (int) num_stages);
+    PetscCheck(stage >= 0 && stage < num_stages, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d not in [0,%d)", stage, (int)num_stages);
   }
   PetscCall(PetscIntStackPush(state->stage_stack, stage));
   state->current_stage = stage;
@@ -87,12 +87,10 @@ static PetscErrorCode PetscLogStateResize(PetscLogState state)
     size_t num_chars_old = state->bt_num_stages / PETSC_BITS_PER_BYTE;
     size_t num_chars_new = new_num_stages / PETSC_BITS_PER_BYTE;
 
-    for (PetscInt i = 0; i < state->bt_num_events; i++) {
-      PetscCall(PetscMemcpy(&active_new[i * num_chars_new], &(state->active[i * num_chars_old]), num_chars_old));
-    }
+    for (PetscInt i = 0; i < state->bt_num_events; i++) { PetscCall(PetscMemcpy(&active_new[i * num_chars_new], &(state->active[i * num_chars_old]), num_chars_old)); }
   }
   PetscCall(PetscBTDestroy(&state->active));
-  state->active = active_new;
+  state->active        = active_new;
   state->bt_num_events = new_num_events;
   state->bt_num_stages = new_num_stages;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -137,13 +135,9 @@ PETSC_INTERN PetscErrorCode PetscLogStateStageSetActive(PetscLogState state, Pet
   PetscFunctionBegin;
   PetscCheck(stage >= 0 && stage < state->bt_num_stages, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", stage, state->bt_num_stages);
   if (isActive) {
-    for (PetscInt e = 0; e < state->bt_num_events; e++) {
-      PetscCall(PetscBTSet(state->active, stage + e * state->bt_num_stages));
-    }
+    for (PetscInt e = 0; e < state->bt_num_events; e++) { PetscCall(PetscBTSet(state->active, stage + e * state->bt_num_stages)); }
   } else {
-    for (PetscInt e = 0; e < state->bt_num_events; e++) {
-      PetscCall(PetscBTClear(state->active, stage + e * state->bt_num_stages));
-    }
+    for (PetscInt e = 0; e < state->bt_num_events; e++) { PetscCall(PetscBTClear(state->active, stage + e * state->bt_num_stages)); }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -159,7 +153,7 @@ PETSC_INTERN PetscErrorCode PetscLogStateEventSetActiveAll(PetscLogState state, 
 {
   PetscFunctionBegin;
   PetscCheck(event >= 0 && event < state->bt_num_events, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid event %d should be in [0,%d)", event, state->bt_num_events);
-  for (PetscInt s = 0; s < state->bt_num_stages; s++) PetscCall((isActive ? PetscBTSet : PetscBTClear)(state->active, s + (event+1) * state->bt_num_stages));
+  for (PetscInt s = 0; s < state->bt_num_stages; s++) PetscCall((isActive ? PetscBTSet : PetscBTClear)(state->active, s + (event + 1) * state->bt_num_stages));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -167,7 +161,7 @@ PETSC_INTERN PetscErrorCode PetscLogStateEventDeactivateAll(PetscLogState state,
 {
   PetscFunctionBegin;
   PetscCheck(event >= 0 && event < state->bt_num_events, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid event %d should be in [0,%d)", event, state->bt_num_events);
-  for (PetscInt s = 0; s < state->bt_num_stages; s++) PetscCall(PetscBTClear(state->active, s + (event+1) * state->bt_num_stages));
+  for (PetscInt s = 0; s < state->bt_num_stages; s++) PetscCall(PetscBTClear(state->active, s + (event + 1) * state->bt_num_stages));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -175,7 +169,7 @@ PETSC_INTERN PetscErrorCode PetscLogStateEventActivate(PetscLogState state, Pets
 {
   PetscFunctionBegin;
   PetscCheck(event >= 0 && event < state->bt_num_events, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid event %d should be in [0,%d)", event, state->bt_num_events);
-  PetscCall(PetscBTSet(state->active, state->current_stage + (event+1) * state->bt_num_stages));
+  PetscCall(PetscBTSet(state->active, state->current_stage + (event + 1) * state->bt_num_stages));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -183,7 +177,7 @@ PETSC_INTERN PetscErrorCode PetscLogStateEventDeactivate(PetscLogState state, Pe
 {
   PetscFunctionBegin;
   PetscCheck(event >= 0 && event < state->bt_num_events, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid event %d should be in [0,%d)", event, state->bt_num_events);
-  PetscCall(PetscBTClear(state->active, state->current_stage + (event+1) * state->bt_num_stages));
+  PetscCall(PetscBTClear(state->active, state->current_stage + (event + 1) * state->bt_num_stages));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -198,9 +192,7 @@ PETSC_INTERN PetscErrorCode PetscLogStateEventIncludeClass(PetscLogState state, 
     PetscEventRegInfo event_info;
     PetscCall(PetscLogRegistryEventGetInfo(state->registry, e, &event_info));
     if (event_info.classid == classid) {
-      for (PetscLogStage s = 0; s < num_stages; s++) {
-        PetscCall(PetscBTSet(state->active, s + (e + 1) * state->bt_num_stages));
-      }
+      for (PetscLogStage s = 0; s < num_stages; s++) { PetscCall(PetscBTSet(state->active, s + (e + 1) * state->bt_num_stages)); }
     }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -217,9 +209,7 @@ PETSC_INTERN PetscErrorCode PetscLogStateEventExcludeClass(PetscLogState state, 
     PetscEventRegInfo event_info;
     PetscCall(PetscLogRegistryEventGetInfo(state->registry, e, &event_info));
     if (event_info.classid == classid) {
-      for (PetscLogStage s = 0; s < num_stages; s++) {
-        PetscCall(PetscBTClear(state->active, s + (e + 1) * state->bt_num_stages));
-      }
+      for (PetscLogStage s = 0; s < num_stages; s++) { PetscCall(PetscBTClear(state->active, s + (e + 1) * state->bt_num_stages)); }
     }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -228,7 +218,7 @@ PETSC_INTERN PetscErrorCode PetscLogStateEventExcludeClass(PetscLogState state, 
 PETSC_INTERN PetscErrorCode PetscLogStateEventActivateClass(PetscLogState state, PetscClassId classid)
 {
   PetscLogStage stage = state->current_stage;
-  PetscInt num_events;
+  PetscInt      num_events;
 
   PetscFunctionBegin;
   PetscCall(PetscLogRegistryGetNumEvents(state->registry, &num_events, NULL));
@@ -243,7 +233,7 @@ PETSC_INTERN PetscErrorCode PetscLogStateEventActivateClass(PetscLogState state,
 PETSC_INTERN PetscErrorCode PetscLogStateEventDeactivateClass(PetscLogState state, PetscClassId classid)
 {
   PetscLogStage stage = state->current_stage;
-  PetscInt num_events;
+  PetscInt      num_events;
 
   PetscFunctionBegin;
   PetscCall(PetscLogRegistryGetNumEvents(state->registry, &num_events, NULL));

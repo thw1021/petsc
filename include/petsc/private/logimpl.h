@@ -11,7 +11,10 @@ typedef PetscErrorCode (*PetscLogObjectFn)(PetscLogHandler, PetscLogState, Petsc
 typedef PetscErrorCode (*PetscLogViewFn)(PetscLogHandler, PetscViewer);
 typedef PetscErrorCode (*PetscLogDestroyFn)(PetscLogHandler);
 
-typedef enum {PETSC_LOG_HANDLER_DEFAULT, PETSC_LOG_HANDLER_NESTED} PetscLogHandlerType;
+typedef enum {
+  PETSC_LOG_HANDLER_DEFAULT,
+  PETSC_LOG_HANDLER_NESTED
+} PetscLogHandlerType;
 
 struct _n_PetscLogHandlerImpl {
   PetscLogHandlerType     type;
@@ -21,28 +24,28 @@ struct _n_PetscLogHandlerImpl {
   PetscLogEventActivityFn event_deactivate_pop;
   PetscLogViewFn          view;
   PetscLogDestroyFn       destroy;
-  void *ctx;
+  void                   *ctx;
 };
 
 PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *);
 
 /* --- Macros for resizable arrays that show up frequently in the implementation of logging --- */
 
-#define PETSC_LOG_RESIZABLE_ARRAY(Container,Entry,Key,Constructor,Destructor,Equal) \
-  typedef struct _n_PetscLog##Container *PetscLog##Container; \
-  static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Create(int,PetscLog##Container*); \
-  static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Destroy(PetscLog##Container*); \
-  static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Recapacity(PetscLog##Container,int); \
-  static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Resize(PetscLog##Container,int); \
-  static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Push(PetscLog##Container,Entry); \
-  static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Find(PetscLog##Container,Key,int *); \
-  static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##GetNumEntries(PetscLog##Container,PetscInt*,PetscInt*); \
-  static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Get(PetscLog##Container,PetscInt,Entry*); \
-  static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##GetRef(PetscLog##Container,PetscInt,Entry**); \
-  static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Set(PetscLog##Container,PetscInt,Entry); \
+#define PETSC_LOG_RESIZABLE_ARRAY(Container, Entry, Key, Constructor, Destructor, Equal) \
+  typedef struct _n_PetscLog##Container    *PetscLog##Container; \
+  static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Create(int, PetscLog##Container *); \
+  static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Destroy(PetscLog##Container *); \
+  static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Recapacity(PetscLog##Container, int); \
+  static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Resize(PetscLog##Container, int); \
+  static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Push(PetscLog##Container, Entry); \
+  static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Find(PetscLog##Container, Key, int *); \
+  static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##GetNumEntries(PetscLog##Container, PetscInt *, PetscInt *); \
+  static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Get(PetscLog##Container, PetscInt, Entry *); \
+  static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##GetRef(PetscLog##Container, PetscInt, Entry **); \
+  static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Set(PetscLog##Container, PetscInt, Entry); \
   struct _n_PetscLog##Container { \
-    int num_entries; \
-    int max_entries; \
+    int    num_entries; \
+    int    max_entries; \
     Entry *array; \
   }; \
   static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Create(int max_init, PetscLog##Container *a_p) \
@@ -51,7 +54,7 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *);
     PetscErrorCode (*constructor)(Entry *) = Constructor; \
     PetscFunctionBegin; \
     PetscCall(PetscNew(a_p)); \
-    a = *a_p; \
+    a              = *a_p; \
     a->num_entries = 0; \
     a->max_entries = max_init; \
     if (constructor) { \
@@ -66,12 +69,10 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *);
     PetscLog##Container a; \
     PetscErrorCode (*destructor)(Entry *) = Destructor; \
     PetscFunctionBegin; \
-    a = *a_p; \
+    a    = *a_p; \
     *a_p = NULL; \
     if (destructor) { \
-      for (int i = 0; i < a->num_entries; i++) { \
-        PetscCall((*destructor)(&(a->array[i]))); \
-      } \
+      for (int i = 0; i < a->num_entries; i++) { PetscCall((*destructor)(&(a->array[i]))); } \
     } \
     PetscCall(PetscFree(a->array)); \
     PetscCall(PetscFree(a)); \
@@ -82,8 +83,8 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *);
     PetscErrorCode (*constructor)(Entry *) = Constructor; \
     PetscFunctionBegin; \
     if (new_size > a->max_entries) { \
-      int new_max_entries = 2; \
-      int rem_size = PetscMax(0,new_size - 1); \
+      int    new_max_entries = 2; \
+      int    rem_size        = PetscMax(0, new_size - 1); \
       Entry *new_array; \
       while (rem_size >>= 1) new_max_entries *= 2; \
       if (constructor) { \
@@ -93,7 +94,7 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *);
       } \
       PetscCall(PetscArraycpy(new_array, a->array, a->num_entries)); \
       PetscCall(PetscFree(a->array)); \
-      a->array = new_array; \
+      a->array       = new_array; \
       a->max_entries = new_max_entries; \
     } \
     PetscFunctionReturn(PETSC_SUCCESS); \
@@ -103,7 +104,8 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *);
     PetscErrorCode (*constructor)(Entry *) = Constructor; \
     PetscFunctionBegin; \
     PetscCall(PetscLog##Container##Recapacity(a, new_size)); \
-    if (constructor) for (int i = a->num_entries; i < new_size; i++) PetscCall((*constructor)(&(a->array[i]))); \
+    if (constructor) \
+      for (int i = a->num_entries; i < new_size; i++) PetscCall((*constructor)(&(a->array[i]))); \
     a->num_entries = PetscMax(a->num_entries, new_size); \
     PetscFunctionReturn(PETSC_SUCCESS); \
   } \
@@ -116,7 +118,7 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *);
   } \
   static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Find(PetscLog##Container a, Key key, int *idx_p) \
   { \
-    PetscErrorCode (*equal)(Entry *,Key,PetscBool *) = Equal; \
+    PetscErrorCode (*equal)(Entry *, Key, PetscBool *) = Equal; \
     PetscFunctionBegin; \
     *idx_p = -1; \
     if (equal) { \
@@ -141,21 +143,21 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *);
   static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Get(PetscLog##Container a, PetscInt i, Entry *entry) \
   { \
     PetscFunctionBegin; \
-    PetscCheck(i >= 0 && i < a->num_entries, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Index %d is not in range [0,%d)", (int) i, a->num_entries); \
+    PetscCheck(i >= 0 && i < a->num_entries, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Index %d is not in range [0,%d)", (int)i, a->num_entries); \
     *entry = a->array[i]; \
     PetscFunctionReturn(PETSC_SUCCESS); \
   } \
   static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##GetRef(PetscLog##Container a, PetscInt i, Entry **entry) \
   { \
     PetscFunctionBegin; \
-    PetscCheck(i >= 0 && i < a->num_entries, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Index %d is not in range [0,%d)", (int) i, a->num_entries); \
+    PetscCheck(i >= 0 && i < a->num_entries, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Index %d is not in range [0,%d)", (int)i, a->num_entries); \
     *entry = &a->array[i]; \
     PetscFunctionReturn(PETSC_SUCCESS); \
   } \
   static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Set(PetscLog##Container a, PetscInt i, Entry entry) \
   { \
     PetscFunctionBegin; \
-    PetscCheck(i >= 0 && i < a->num_entries, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Index %d is not in range [0,%d)", (int) i, a->num_entries); \
+    PetscCheck(i >= 0 && i < a->num_entries, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Index %d is not in range [0,%d)", (int)i, a->num_entries); \
     a->array[i] = entry; \
     PetscFunctionReturn(PETSC_SUCCESS); \
   }
@@ -172,10 +174,10 @@ typedef struct {
   void *timer; /* Associated external tool timer for this event */
 #endif
 #if 0
-#if defined(PETSC_HAVE_MPE)
+  #if defined(PETSC_HAVE_MPE)
   int mpe_id_begin; /* MPE IDs that define the event */
   int mpe_id_end;
-#endif
+  #endif
 #endif
 } PetscEventRegInfo;
 
@@ -185,8 +187,8 @@ typedef struct {
 } PetscClassRegInfo;
 
 typedef struct _PetscStageRegInfo {
-  char              *name;     /* The stage name */
-  PetscBool          visible;  /* The flag to print info in summary */
+  char     *name;    /* The stage name */
+  PetscBool visible; /* The flag to print info in summary */
 #if defined(PETSC_HAVE_TAU_PERFSTUBS)
   void *timer; /* Associated external tool timer for this event */
 #endif
@@ -204,9 +206,9 @@ typedef int PetscLogClass;
 PETSC_INTERN PetscErrorCode PetscLogGetRegistry(PetscLogRegistry *);
 PETSC_INTERN PetscErrorCode PetscLogRegistryCreate(PetscLogRegistry *);
 PETSC_INTERN PetscErrorCode PetscLogRegistryDestroy(PetscLogRegistry);
-PETSC_INTERN PetscErrorCode PetscLogRegistryStageRegister(PetscLogRegistry,const char[],PetscLogStage *);
-PETSC_INTERN PetscErrorCode PetscLogRegistryEventRegister(PetscLogRegistry,const char[],PetscClassId,PetscLogStage *);
-PETSC_INTERN PetscErrorCode PetscLogRegistryClassRegister(PetscLogRegistry,const char[],PetscClassId,PetscLogClass *);
+PETSC_INTERN PetscErrorCode PetscLogRegistryStageRegister(PetscLogRegistry, const char[], PetscLogStage *);
+PETSC_INTERN PetscErrorCode PetscLogRegistryEventRegister(PetscLogRegistry, const char[], PetscClassId, PetscLogStage *);
+PETSC_INTERN PetscErrorCode PetscLogRegistryClassRegister(PetscLogRegistry, const char[], PetscClassId, PetscLogClass *);
 PETSC_INTERN PetscErrorCode PetscLogRegistryGetEventFromName(PetscLogRegistry, const char[], PetscLogEvent *);
 PETSC_INTERN PetscErrorCode PetscLogRegistryGetStageFromName(PetscLogRegistry, const char[], PetscLogStage *);
 PETSC_INTERN PetscErrorCode PetscLogRegistryGetClassFromClassId(PetscLogRegistry, PetscClassId, PetscLogClass *);
@@ -239,7 +241,7 @@ PETSC_INTERN PetscErrorCode PetscLogGetState(PetscLogState *);
 PETSC_INTERN PetscErrorCode PetscLogStateCreate(PetscLogState *);
 PETSC_INTERN PetscErrorCode PetscLogStateGetRegistry(PetscLogState, PetscLogRegistry *);
 PETSC_INTERN PetscErrorCode PetscLogStateDestroy(PetscLogState);
-PETSC_INTERN PetscErrorCode PetscLogStateStagePush(PetscLogState,PetscLogStage);
+PETSC_INTERN PetscErrorCode PetscLogStateStagePush(PetscLogState, PetscLogStage);
 PETSC_INTERN PetscErrorCode PetscLogStateStagePop(PetscLogState);
 PETSC_INTERN PetscErrorCode PetscLogStateStageSetActive(PetscLogState, PetscLogStage, PetscBool);
 PETSC_INTERN PetscErrorCode PetscLogStateStageGetActive(PetscLogState, PetscLogStage, PetscBool *);
@@ -286,7 +288,7 @@ PETSC_INTERN PetscInt PetscLogGetTid(void);
 /* Registration functions */
 PETSC_INTERN PetscErrorCode PetscLogView_Nested(PetscLogHandler, PetscViewer);
 PETSC_INTERN PetscErrorCode PetscLogView_Default(PetscLogHandler, PetscViewer);
-PETSC_INTERN PetscErrorCode PetscLogDump_Default(PetscLogHandler, const char []);
+PETSC_INTERN PetscErrorCode PetscLogDump_Default(PetscLogHandler, const char[]);
 PETSC_INTERN PetscErrorCode PetscLogNestedEnd(void);
 
   #if defined(PETSC_HAVE_DEVICE)
