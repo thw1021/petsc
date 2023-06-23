@@ -270,6 +270,8 @@ PETSC_EXTERN PetscErrorCode PetscLogEventActivate(PetscLogEvent);
 PETSC_EXTERN PetscErrorCode PetscLogEventDeactivate(PetscLogEvent);
 PETSC_EXTERN PetscErrorCode PetscLogEventDeactivatePush(PetscLogEvent);
 PETSC_EXTERN PetscErrorCode PetscLogEventDeactivatePop(PetscLogEvent);
+PETSC_EXTERN PetscErrorCode PetscLogPauseEventsPush(void);
+PETSC_EXTERN PetscErrorCode PetscLogPauseEventsPop(void);
 PETSC_EXTERN PetscErrorCode PetscLogEventSetActiveAll(PetscLogEvent, PetscBool);
 PETSC_EXTERN PetscErrorCode PetscLogEventActivateClass(PetscClassId);
 PETSC_EXTERN PetscErrorCode PetscLogEventDeactivateClass(PetscClassId);

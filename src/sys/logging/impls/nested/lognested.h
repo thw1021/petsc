@@ -7,46 +7,19 @@
 
 typedef int NestedId;
 
-typedef enum {
-  PETSC_NESTED_NULL = -1,
-  PETSC_NESTED_STAGE,
-  PETSC_NESTED_EVENT
-} NestedIdType;
-
-typedef NestedIdType PetscNestedObjectType;
-typedef NestedId     NestedEventId;
-
-static inline NestedIdType NestedIdToType(NestedId id)
-{
-  return id < -1 ? PETSC_NESTED_STAGE : id == -1 ? PETSC_NESTED_NULL : PETSC_NESTED_EVENT;
-}
-static inline NestedId NestedIdFromStage(PetscLogStage stage)
-{
-  return -(stage + 2);
-}
-static inline PetscLogStage NestedIdToStage(NestedId id)
-{
-  return -(id + 2);
-}
-static inline NestedId NestedIdFromEvent(PetscLogEvent event)
-{
-  return event;
-}
-static inline PetscLogEvent NestedIdToEvent(NestedId id)
-{
-  return id;
-}
+static inline PETSC_UNUSED NestedId NestedIdFromEvent(PetscLogEvent e) { return e; }
+static inline PETSC_UNUSED NestedId NestedIdFromStage(PetscLogStage s) { return -(s+2); }
 
 typedef struct _n_NestedIdPair NestedIdPair;
 struct _n_NestedIdPair {
-  NestedId root;
+  PetscLogEvent root;
   NestedId leaf;
 };
 
   #define NestedIdPairHash(key)     PetscHashCombine(PetscHash_UInt32((PetscHash32_t)((key).root)), PetscHash_UInt32((PetscHash32_t)((key).leaf)))
   #define NestedIdPairEqual(k1, k2) (((k1).root == (k2).root) && ((k1).leaf == (k2).leaf))
 
-PETSC_HASH_MAP(NestedHash, NestedIdPair, NestedId, NestedIdPairHash, NestedIdPairEqual, -1);
+PETSC_HASH_MAP(NestedHash, NestedIdPair, PetscLogEvent, NestedIdPairHash, NestedIdPairEqual, -1);
 
 typedef struct _n_PetscLogHandler_Nested *PetscLogHandler_Nested;
 struct _n_PetscLogHandler_Nested {
