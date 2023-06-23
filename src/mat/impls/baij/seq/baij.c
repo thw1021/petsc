@@ -3076,7 +3076,7 @@ static struct _MatOps MatOps_Values = {MatSetValues_SeqBAIJ,
                                        MatDestroySubMatrices_SeqBAIJ,
                                        NULL,
                                        NULL,
-                                       NULL,
+                                       MatCreateGraph_Simple_BAIJ,
                                        NULL,
                                        /*150*/ NULL,
                                        NULL};
@@ -3603,6 +3603,7 @@ PetscErrorCode MatDuplicateNoCreate_SeqBAIJ(Mat C, Mat A, MatDuplicateOption cpv
     c->compressedrow.i      = NULL;
     c->compressedrow.rindex = NULL;
   }
+  c->nonzerorowcnt = a->nonzerorowcnt;
   C->nonzerostate = A->nonzerostate;
 
   PetscCall(PetscFunctionListDuplicate(((PetscObject)A)->qlist, &((PetscObject)C)->qlist));
