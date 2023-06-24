@@ -471,8 +471,11 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
       }
     }
     if (!flag) {
+      PetscBool aflg = PETSC_TRUE;
+
       PetscCall(PetscSetDebuggerFromString(string));
-      PetscCall(PetscPushErrorHandler(PetscAbortErrorHandler, NULL));
+      PetscCall(PetscOptionsGetBool(NULL, NULL, "-on_error_abort", &aflg, NULL));
+      if (aflg) PetscCall(PetscPushErrorHandler(PetscAbortErrorHandler, NULL));
       if (flg1) {
         PetscCall(PetscAttachDebugger());
       } else {

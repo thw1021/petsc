@@ -68,6 +68,8 @@ Changes: Development
 
 - Add ``PCMatGetApplyOperation()`` and ``PCMatSetApplyOperation()``
 - Add ``PCReduceFailedReason()``
+- Add ``PCIsSymmetric()``
+- Add ``PCSetUseSymmetricForm()`` for use by `KSPCG` and friends to ensure the preconditioner is symmetric
 
 .. rubric:: KSP:
 
