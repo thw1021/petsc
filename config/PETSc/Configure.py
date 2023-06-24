@@ -808,7 +808,9 @@ char assert_aligned[(sizeof(struct mystruct)==16)*2-1];
     return
 
   def configureWin32(self):
-    '''Win32 non-cygwin specific stuff'''
+    '''Win32 non-cygwin specific stuff
+       This also does stuff completely unrelated to Windows!
+    '''
     kernel32=0
     if self.libraries.add('Kernel32.lib','GetComputerName',prototype='#include <windows.h>', call='GetComputerName(NULL,NULL);'):
       self.addDefine('HAVE_WINDOWS_H',1)

@@ -35,11 +35,18 @@ def _mkdir_p(path):
 def _configure_minimal_petsc(petsc_dir, petsc_arch) -> None:
     if 'PETSC_ARCH' in os.environ: del os.environ['PETSC_ARCH']
     if 'MAKEFLAGS' in os.environ: del os.environ['MAKEFLAGS']
-    configure = [
+    command = [
+        'time',
         './configure',
+        '--with-coverage-exec=0',
         '--with-mpi=0',
         '--with-cxx=0',
+        '--with-syclc=0',
+        '--with-hipc=0',
+        '--with-cudac=0',
         '--with-x=0',
+        '--with-bison=0',
+        '--with-fc=0',
         '--with-cmake=0',
         '--with-pthread=0',
         '--with-regexp=0',
@@ -54,8 +61,9 @@ def _configure_minimal_petsc(petsc_dir, petsc_arch) -> None:
     print('Performing a minimal PETSc (re-)configuration needed to build docs')
     print('PETSC_DIR=%s' % petsc_dir)
     print('PETSC_ARCH=%s' % petsc_arch)
+    print(command)    
     print('==================================================================')
-    subprocess.run(configure, cwd=petsc_dir, check=True)
+    subprocess.run(command, cwd=petsc_dir, check=True)
     return petsc_arch
 
 
@@ -80,6 +88,31 @@ def _build_classic_docs_subset(petsc_dir, petsc_arch, outdir, stage):
     print(command)
     print('============================================')
     subprocess.run(command, cwd=petsc_dir, check=True)
+    if stage ==  "post":
+        try:
+            subprocess.run(['python2', '--version'])
+        except:
+            print('Skipping petsc4py documentation build since python2 is not available in PATH')
+            return
+        rawhtml.append('petsc4py')
+        command = ['time', 'make', 'all',
+                   'PETSC_DIR=%s' % petsc_dir,
+                   'PETSC_ARCH=%s' % petsc_arch]
+        print('==============================================')
+        print('Building library to make petsc4py classic docs')
+        print(command)
+        print('==============================================')
+        subprocess.run(command, cwd=petsc_dir, check=True)
+        command = ['time','make', 'website',
+                   'PETSC_DIR=%s' % petsc_dir,
+                   'PETSC_ARCH=%s' % petsc_arch,
+                   'LOC=%s' % loc]
+        print('============================================')
+        print('Building petsc4py classic docs')
+        print(command)
+        print('============================================')
+        subprocess.run(command, cwd=os.path.join(petsc_dir,'src','binding','petsc4py'), check=True)
+
 
 def classic_docs_subdirs(stage):
     if stage == 'pre':   # generated .md files that Sphinx will use to create website
