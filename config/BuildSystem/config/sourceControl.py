@@ -63,7 +63,7 @@ class Configure(config.base.Configure):
 
   def configure(self):
     self.executeTest(self.configureGit)
-    self.executeTest(self.configureMercurial)
+#    self.executeTest(self.configureMercurial)
 #    self.executeTest(self.configureCVS)
 #    self.executeTest(self.configureSubversion)
     return
