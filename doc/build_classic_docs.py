@@ -50,18 +50,24 @@ def _configure_minimal_petsc(petsc_dir, petsc_arch) -> None:
         '--with-cmake=0',
         '--with-pthread=0',
         '--with-regexp=0',
-        '--download-sowing',
-        '--download-c2html',
         '--with-mkl_sparse_optimize=0',
         '--with-mkl_sparse=0',
         '--with-petsc4py',
         'PETSC_ARCH=' + petsc_arch,
     ]
+    import shutil
+    c2html = shutil.which('c2html')
+    if c2html: command.append('--with-c2html')
+    else:  command.append('--download-c2html')
+    doctext = shutil.which('doctext')
+    if doctext: command.append('--with-sowing')
+    else:  command.append('--download-sowing')
+
     print('==================================================================')
     print('Performing a minimal PETSc (re-)configuration needed to build docs')
     print('PETSC_DIR=%s' % petsc_dir)
     print('PETSC_ARCH=%s' % petsc_arch)
-    print(command)    
+    print(command)
     print('==================================================================')
     subprocess.run(command, cwd=petsc_dir, check=True)
     return petsc_arch
