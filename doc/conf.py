@@ -210,7 +210,7 @@ def _add_man_page_redirects(app, exception):
         print("============================================")
         x = time.clock_gettime(time.CLOCK_REALTIME)
         add_man_page_redirects.add_man_page_redirects(app.outdir)
-        print("Time "+str(time.clock_gettime(time.CLOCK_REALTIME) - x))
+        print("Time: add_man_page_redirects "+str(time.clock_gettime(time.CLOCK_REALTIME) - x))
 
 def _build_classic_docs(app, stage):
     '''Builds the .md versions of the manual pages and the .html version of the source code'''
@@ -224,7 +224,7 @@ def _fix_man_page_edit_links(app, exception):
         print("============================================")
         x = time.clock_gettime(time.CLOCK_REALTIME)
         fix_man_page_edit_links.fix_man_page_edit_links(app.outdir)
-        print("Time "+str(time.clock_gettime(time.CLOCK_REALTIME) - x))
+        print("Time: fix_man_page_edit_links "+str(time.clock_gettime(time.CLOCK_REALTIME) - x))
 
 #
 #   The following two scripts are needed because the Sphinx html and dirhtml builds save the output html
@@ -244,7 +244,7 @@ def _fix_links(app, exception):
         print("============================================")
         x = time.clock_gettime(time.CLOCK_REALTIME)
         make_links_relative.make_links_relative(app.outdir)
-        print("Time "+str(time.clock_gettime(time.CLOCK_REALTIME) - x))
+        print("Time:  make_links_relative "+str(time.clock_gettime(time.CLOCK_REALTIME) - x))
 
 
 def _update_htmlmap_links(app):
@@ -258,4 +258,4 @@ def _update_htmlmap_links(app):
     print("============================================")
     x = time.clock_gettime(time.CLOCK_REALTIME)
     update_htmlmap_links.update_htmlmap_links(app.builder,os.path.join('manualpages','htmlmap'))
-    print("Time "+str(time.clock_gettime(time.CLOCK_REALTIME) - x))
+    print("Time: update_htmlmap_links"+str(time.clock_gettime(time.CLOCK_REALTIME) - x))

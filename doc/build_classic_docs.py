@@ -36,7 +36,7 @@ def _configure_minimal_petsc(petsc_dir, petsc_arch) -> None:
     if 'PETSC_ARCH' in os.environ: del os.environ['PETSC_ARCH']
     if 'MAKEFLAGS' in os.environ: del os.environ['MAKEFLAGS']
     command = [
-        'time',
+        '/usr/bin/time', '--portability', '-a', '-o', 'docstime', '-f', '"Command: %C\nTime: %e"',
         './configure',
         '--with-coverage-exec=0',
         '--with-mpi=0',
@@ -61,7 +61,7 @@ def _configure_minimal_petsc(petsc_dir, petsc_arch) -> None:
     print('Performing a minimal PETSc (re-)configuration needed to build docs')
     print('PETSC_DIR=%s' % petsc_dir)
     print('PETSC_ARCH=%s' % petsc_arch)
-    print(command)    
+    print(command)
     print('==================================================================')
     subprocess.run(command, cwd=petsc_dir, check=True)
     return petsc_arch
@@ -95,7 +95,7 @@ def _build_classic_docs_subset(petsc_dir, petsc_arch, outdir, stage):
             print('Skipping petsc4py documentation build since python2 is not available in PATH')
             return
         rawhtml.append('petsc4py')
-        command = ['time', 'make', 'all',
+        command = ['make', 'all',
                    'PETSC_DIR=%s' % petsc_dir,
                    'PETSC_ARCH=%s' % petsc_arch]
         print('==============================================')
@@ -103,7 +103,7 @@ def _build_classic_docs_subset(petsc_dir, petsc_arch, outdir, stage):
         print(command)
         print('==============================================')
         subprocess.run(command, cwd=petsc_dir, check=True)
-        command = ['time','make', 'website',
+        command = ['make', 'website',
                    'PETSC_DIR=%s' % petsc_dir,
                    'PETSC_ARCH=%s' % petsc_arch,
                    'LOC=%s' % loc]
