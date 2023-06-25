@@ -975,8 +975,16 @@ int main(int argc, char **argv)
 
   test:
     suffix: hypercubic_1_par
+    requires: !quad
     nsize: 8
     args: -dm_plex_dim 3 -dm_plex_shape hypercubic -dm_plex_box_faces 4,4,4 -dm_view -dm_plex_print_adj 3 -final_diagnostics 0 \
+          -dm_plex_check_symmetry -dm_plex_check_skeleton -dm_plex_check_faces -dm_plex_check_pointsf
+
+  test:
+    suffix: hypercubic_1_par_ov_3
+    requires: !quad
+    nsize: 8
+    args: -dm_plex_dim 3 -dm_plex_shape hypercubic -dm_plex_box_faces 6,6,6 -dm_distribute_overlap 3 -dm_view -dm_plex_print_adj 3 -final_diagnostics 0 \
           -dm_plex_check_symmetry -dm_plex_check_skeleton -dm_plex_check_faces -dm_plex_check_pointsf
 
   test:
@@ -986,6 +994,7 @@ int main(int argc, char **argv)
 
   test:
     suffix: hypercubic_2_par
+    requires: !quad
     nsize: 16
     args: -dm_plex_dim 4 -dm_plex_shape hypercubic -dm_plex_box_faces 4,4,4,4 -dm_view -dm_plex_print_adj 3 -final_diagnostics 0 \
           -dm_plex_check_symmetry -dm_plex_check_skeleton -dm_plex_check_faces -dm_plex_check_pointsf
