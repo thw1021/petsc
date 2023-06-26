@@ -204,10 +204,13 @@ def build_finished_handler(app, exception):
 
 def _add_man_page_redirects(app, exception):
     if exception is None:
+        import time
         print("============================================")
         print("    Adding man pages redirects")
-        print("============================================")
+        x = time.clock_gettime(time.CLOCK_REALTIME)
         add_man_page_redirects.add_man_page_redirects(app.outdir)
+        print("Time: "+str(time.clock_gettime(time.CLOCK_REALTIME) - x))
+        print("============================================")
 
 def _build_classic_docs(app, stage):
     '''Builds the .md versions of the manual pages and the .html version of the source code'''
@@ -215,10 +218,13 @@ def _build_classic_docs(app, stage):
 
 def _fix_man_page_edit_links(app, exception):
     if exception is None:
+        import time
         print("============================================")
         print("    Fixing man page edit links")
-        print("============================================")
+        x = time.clock_gettime(time.CLOCK_REALTIME)
         fix_man_page_edit_links.fix_man_page_edit_links(app.outdir)
+        print("Time: "+str(time.clock_gettime(time.CLOCK_REALTIME) - x))
+        print("============================================")
 
 #
 #   The following two scripts are needed because the Sphinx html and dirhtml builds save the output html
@@ -232,10 +238,13 @@ def _fix_links(app, exception):
        for the root directory that needs to be constructed based on if the Sphinx build is html or dirhtml
     """
     if exception is None:
+        import time
         print("============================================")
         print("    Fixing relative links")
-        print("============================================")
+        x = time.clock_gettime(time.CLOCK_REALTIME)
         make_links_relative.make_links_relative(app.outdir)
+        print("Time: "+str(time.clock_gettime(time.CLOCK_REALTIME) - x))
+        print("============================================")
 
 
 def _update_htmlmap_links(app):
@@ -243,7 +252,11 @@ def _update_htmlmap_links(app):
        hierarchy. The format of the directory location needs to be different for the Sphinx html and dirhtml
        builds
     """
+    import time
     print("============================================")
     print("    Updating htmlmap")
-    print("============================================")
+    x = time.clock_gettime(time.CLOCK_REALTIME)
     update_htmlmap_links.update_htmlmap_links(app.builder,os.path.join('manualpages','htmlmap'))
+    print("Time: "+str(time.clock_gettime(time.CLOCK_REALTIME) - x))
+    print("============================================")
+    
