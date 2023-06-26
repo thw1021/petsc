@@ -453,7 +453,7 @@ allmanpages: chk_loc deletemanualpages
 	@a=`cat ${PETSC_DIR}/${PETSC_ARCH}/manualpages.err | wc -l`; test ! $$a -gt 0
 
 #
-#   This code needs to be rewritten in Python to reduce by a factor of 100 the time it takes to run
+#   This code is no longer used should be removed soon
 #
 allmanexamples: chk_loc allmanpages
 	-time ${OMAKE_SELF} ACTION=manexamples tree LOC=${LOC}
@@ -506,7 +506,7 @@ manimplementations:
   ${RM} implsClassAll.txt implsFuncAll.txt
 
 # Build all classic docs except html sources
-alldoc_pre: chk_loc allmanpages allmanexamples
+alldoc_pre: chk_loc
 	-time ${OMAKE_SELF} LOC=${LOC} manimplementations
 	-time ${PYTHON} lib/petsc/bin/maint/wwwindex.py ${PETSC_DIR} ${LOC}
 
