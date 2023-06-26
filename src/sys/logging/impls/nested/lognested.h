@@ -34,7 +34,7 @@ struct _n_PetscLogHandler_Nested {
   PetscNestedHash pair_map;
   PetscIntStack   stack; // stack of nested ids
   PetscClassId    nested_stage_id;
-  PetscLogDouble  threshold_time;
+  PetscLogDouble  threshold;
 };
 
 typedef struct {

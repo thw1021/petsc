@@ -305,7 +305,7 @@ static PetscErrorCode PetscNestedNameGetBase(const char name[], const char *base
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogNestedTreePrint(PetscViewer viewer, double total_time, double threshold, const PetscNestedEventNode *parent_node, PetscEventPerfInfo *parent_info, const PetscNestedEventNode tree[], PetscEventPerfInfo perf[], PetscLogNestedType type)
+static PetscErrorCode PetscLogNestedTreePrint(PetscViewer viewer, double total_time, double threshold_time, const PetscNestedEventNode *parent_node, PetscEventPerfInfo *parent_info, const PetscNestedEventNode tree[], PetscEventPerfInfo perf[], PetscLogNestedType type)
 {
   PetscInt           num_children = 0;
   PetscInt           num_nodes    = parent_node->num_descendants;
@@ -332,7 +332,7 @@ static PetscErrorCode PetscLogNestedTreePrint(PetscViewer viewer, double total_t
     parent_info->numMessages -= perf[node].numMessages;
     parent_info->messageLength -= perf[node].messageLength;
     parent_info->numReductions -= perf[node].numReductions;
-    if (child_time / total_time < threshold) {
+    if (child_time < threshold_time) {
       PetscEventPerfInfo *add_to = (type == PETSC_LOG_NESTED_XML) ? &other : parent_info;
 
       add_to->time += perf[node].time;
@@ -361,7 +361,7 @@ static PetscErrorCode PetscLogNestedTreePrint(PetscViewer viewer, double total_t
     PetscInt       node       = perm[i];
     PetscLogDouble child_time = -times[i];
 
-    if (child_time / total_time >= threshold || (node < 0 && child_time > 0.0)) {
+    if (child_time >= threshold_time || (node < 0 && child_time > 0.0)) {
       if (type == PETSC_LOG_NESTED_XML) {
         PetscCall(PetscViewerXMLStartSection(viewer, "event", NULL));
         if (node == -1) {
@@ -372,11 +372,11 @@ static PetscErrorCode PetscLogNestedTreePrint(PetscViewer viewer, double total_t
           const char *base_name;
           PetscCall(PetscNestedNameGetBase(tree[node].name, &base_name));
           PetscCall(PetscLogNestedTreePrintLine(viewer, &perf[node], ((double)perf[node].count) / ((double)parent_info->count), parent_info->count, base_name, total_time));
-          PetscCall(PetscLogNestedTreePrint(viewer, total_time, threshold, &tree[node], &perf[node], &tree[node + 1], &perf[node + 1], type));
+          PetscCall(PetscLogNestedTreePrint(viewer, total_time, threshold_time, &tree[node], &perf[node], &tree[node + 1], &perf[node + 1], type));
         }
         PetscCall(PetscViewerXMLEndSection(viewer, "event"));
       } else if (node >= 0) {
-        PetscCall(PetscLogNestedTreePrint(viewer, total_time, threshold, &tree[node], &perf[node], &tree[node + 1], &perf[node + 1], type));
+        PetscCall(PetscLogNestedTreePrint(viewer, total_time, threshold_time, &tree[node], &perf[node], &tree[node + 1], &perf[node + 1], type));
       }
     }
   }
@@ -386,13 +386,14 @@ static PetscErrorCode PetscLogNestedTreePrint(PetscViewer viewer, double total_t
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogNestedTreePrintTop(PetscViewer viewer, PetscNestedEventTree *tree, PetscLogDouble *total_time, PetscLogDouble threshold_time, PetscLogNestedType type)
+static PetscErrorCode PetscLogNestedTreePrintTop(PetscViewer viewer, PetscNestedEventTree *tree, PetscLogDouble threshold, PetscLogNestedType type)
 {
   PetscNestedEventNode *main_stage;
   PetscNestedEventNode *tree_rem;
   PetscEventPerfInfo   *main_stage_perf;
   PetscEventPerfInfo   *perf_rem;
   PetscLogDouble        time;
+  PetscLogDouble        threshold_time;
 
   PetscFunctionBegin;
   main_stage      = &tree->nodes[0];
@@ -401,21 +402,21 @@ static PetscErrorCode PetscLogNestedTreePrintTop(PetscViewer viewer, PetscNested
   perf_rem        = &tree->perf[1];
   time            = main_stage_perf->time;
   PetscCall(MPIU_Allreduce(MPI_IN_PLACE, &time, 1, MPI_DOUBLE, MPI_MAX, tree->comm));
-  *total_time = time;
   /* Print (or ignore) the children in ascending order of total time */
   if (type == PETSC_LOG_NESTED_XML) {
     PetscCall(PetscViewerXMLStartSection(viewer, "timertree", "Timings tree"));
     PetscCall(PetscViewerXMLPutDouble(viewer, "totaltime", NULL, time, "%f"));
-    PetscCall(PetscViewerXMLPutDouble(viewer, "timethreshold", NULL, threshold_time, "%f"));
+    PetscCall(PetscViewerXMLPutDouble(viewer, "timethreshold", NULL, threshold, "%f"));
   }
-  PetscCall(PetscLogNestedTreePrint(viewer, main_stage_perf->time, threshold_time, main_stage, main_stage_perf, tree_rem, perf_rem, type));
+  threshold_time = time * (threshold / 100.0 + 1.e-12);
+  PetscCall(PetscLogNestedTreePrint(viewer, time, threshold_time, main_stage, main_stage_perf, tree_rem, perf_rem, type));
   if (type == PETSC_LOG_NESTED_XML) PetscCall(PetscViewerXMLEndSection(viewer, "timertree"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PETSC_INTERN PetscErrorCode PetscLogView_Nested_XML(PetscLogHandler_Nested nested, PetscNestedEventTree *tree, PetscViewer viewer)
 {
-  PetscLogDouble  locTotalTime, globTotalTime;
+  PetscLogDouble  locTotalTime;
   PetscLogHandler default_handler = nested->handler;
 
   PetscFunctionBegin;
@@ -433,17 +434,15 @@ PETSC_INTERN PetscErrorCode PetscLogView_Nested_XML(PetscLogHandler_Nested neste
     locTotalTime = main_stage_info->time;
   }
   PetscCall(PetscPrintGlobalPerformance(viewer, locTotalTime, default_handler));
-  PetscCall(PetscLogNestedTreePrintTop(viewer, tree, &globTotalTime, nested->threshold_time, PETSC_LOG_NESTED_XML));
+  PetscCall(PetscLogNestedTreePrintTop(viewer, tree, nested->threshold, PETSC_LOG_NESTED_XML));
   PetscCall(PetscViewerXMLEndSection(viewer, "petscroot"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PETSC_INTERN PetscErrorCode PetscLogView_Nested_Flamegraph(PetscLogHandler_Nested nested, PetscNestedEventTree *tree, PetscViewer viewer)
 {
-  PetscLogDouble globTotalTime;
-
   PetscFunctionBegin;
-  PetscCall(PetscLogNestedTreePrintTop(viewer, tree, &globTotalTime, nested->threshold_time, PETSC_LOG_NESTED_FLAMEGRAPH));
+  PetscCall(PetscLogNestedTreePrintTop(viewer, tree, nested->threshold, PETSC_LOG_NESTED_FLAMEGRAPH));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

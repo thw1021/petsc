@@ -8,10 +8,10 @@ PETSC_INTERN PetscErrorCode PetscLogSetThreshold_Nested(PetscLogHandler h, Petsc
   PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->impl->ctx;
 
   PetscFunctionBegin;
-  if (oldThresh) *oldThresh = nested->threshold_time;
+  if (oldThresh) *oldThresh = nested->threshold;
   if (newThresh == (PetscLogDouble)PETSC_DECIDE) newThresh = 0.01;
   if (newThresh == (PetscLogDouble)PETSC_DEFAULT) newThresh = 0.01;
-  nested->threshold_time = PetscMax(newThresh, 0.0);
+  nested->threshold = PetscMax(newThresh, 0.0);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -162,6 +162,7 @@ static PetscErrorCode PetscLogHandlerContextCreate_Nested(PetscLogHandler_Nested
   PetscCall(PetscLogStateCreate(&nested->state));
   PetscCall(PetscIntStackCreate(&nested->stack));
   nested->nested_stage_id = -1;
+  nested->threshold = 0.01;
   PetscCall(PetscNestedHashCreate(&nested->pair_map));
   PetscCall(PetscLogHandlerCreate_Default(&nested->handler));
   PetscCall(PetscLogStateStageRegister(nested->state, "", &root_stage));
@@ -291,6 +292,8 @@ static PetscErrorCode PetscLogNestedCreatePerfNodes(MPI_Comm comm, PetscLogHandl
 
       PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(nested->handler, 0, event_id, &event_info));
       perf[node] = *event_info;
+    } else {
+      PetscCall(PetscArrayzero(&perf[node], 1));
     }
   }
   *tree_p = tree;
