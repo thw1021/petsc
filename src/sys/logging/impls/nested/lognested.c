@@ -162,7 +162,7 @@ static PetscErrorCode PetscLogHandlerContextCreate_Nested(PetscLogHandler_Nested
   PetscCall(PetscLogStateCreate(&nested->state));
   PetscCall(PetscIntStackCreate(&nested->stack));
   nested->nested_stage_id = -1;
-  nested->threshold = 0.01;
+  nested->threshold       = 0.01;
   PetscCall(PetscNestedHashCreate(&nested->pair_map));
   PetscCall(PetscLogHandlerCreate_Default(&nested->handler));
   PetscCall(PetscLogStateStageRegister(nested->state, "", &root_stage));
@@ -247,7 +247,7 @@ static PetscErrorCode PetscLogNestedCreatePerfNodes(MPI_Comm comm, PetscLogHandl
   PetscCall(PetscLogGlobalNamesGetSize(global_events, NULL, &num_nodes));
   PetscCall(PetscCalloc1(num_nodes, &tree));
   for (PetscInt node = 0; node < num_nodes; node++) {
-    tree[node].id     = node;
+    tree[node].id = node;
     PetscCall(PetscLogGlobalNamesGlobalGetName(global_events, node, &tree[node].name));
     tree[node].parent = -1;
   }
