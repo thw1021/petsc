@@ -30,7 +30,7 @@ struct _n_PetscLogHandlerImpl {
   PetscLogEventActivityFn event_deactivate_push;
   PetscLogEventActivityFn event_deactivate_pop;
   PetscLogPauseFn         pause_push;
-  PetscLogPauseFn         pause_pop;;
+  PetscLogPauseFn         pause_pop;
 };
 
 PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *);
@@ -45,7 +45,7 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *);
   static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Resize(PetscLog##Container, int); \
   static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Push(PetscLog##Container, Entry); \
   static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Find(PetscLog##Container, Key, int *); \
-  static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##GetNumEntries(PetscLog##Container, PetscInt *, PetscInt *); \
+  static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##GetSize(PetscLog##Container, PetscInt *, PetscInt *); \
   static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Get(PetscLog##Container, PetscInt, Entry *); \
   static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##GetRef(PetscLog##Container, PetscInt, Entry **); \
   static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##Set(PetscLog##Container, PetscInt, Entry); \
@@ -77,6 +77,7 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *);
     PetscFunctionBegin; \
     a    = *a_p; \
     *a_p = NULL; \
+    if (a == NULL) PetscFunctionReturn(PETSC_SUCCESS); \
     if (destructor) { \
       for (int i = 0; i < a->num_entries; i++) { PetscCall((*destructor)(&(a->array[i]))); } \
     } \
@@ -139,7 +140,7 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *);
     } \
     PetscFunctionReturn(PETSC_SUCCESS); \
   } \
-  static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##GetNumEntries(PetscLog##Container a, PetscInt *num_entries, PetscInt *max_entries) \
+  static inline PETSC_UNUSED PetscErrorCode PetscLog##Container##GetSize(PetscLog##Container a, PetscInt *num_entries, PetscInt *max_entries) \
   { \
     PetscFunctionBegin; \
     if (num_entries) *num_entries = a->num_entries; \

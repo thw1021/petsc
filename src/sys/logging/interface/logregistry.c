@@ -65,21 +65,21 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryDestroy(PetscLogRegistry registry)
 PETSC_INTERN PetscErrorCode PetscLogRegistryGetNumEvents(PetscLogRegistry registry, PetscInt *num_events, PetscInt *max_events)
 {
   PetscFunctionBegin;
-  PetscCall(PetscLogEventArrayGetNumEntries(registry->events, num_events, max_events));
+  PetscCall(PetscLogEventArrayGetSize(registry->events, num_events, max_events));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PETSC_INTERN PetscErrorCode PetscLogRegistryGetNumStages(PetscLogRegistry registry, PetscInt *num_stages, PetscInt *max_stages)
 {
   PetscFunctionBegin;
-  PetscCall(PetscLogStageArrayGetNumEntries(registry->stages, num_stages, max_stages));
+  PetscCall(PetscLogStageArrayGetSize(registry->stages, num_stages, max_stages));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PETSC_INTERN PetscErrorCode PetscLogRegistryGetNumClasses(PetscLogRegistry registry, PetscInt *num_classes, PetscInt *max_classes)
 {
   PetscFunctionBegin;
-  PetscCall(PetscLogClassArrayGetNumEntries(registry->classes, num_classes, max_classes));
+  PetscCall(PetscLogClassArrayGetSize(registry->classes, num_classes, max_classes));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -91,6 +91,7 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryStageRegister(PetscLogRegistry regis
   PetscFunctionBegin;
   PetscCall(PetscLogStageArrayFind(registry->stages, sname, &idx));
   PetscCheck(idx == -1, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "An event named %s is already registered", sname);
+  *stage = registry->stages->num_entries;
   PetscCall(PetscStrallocpy(sname, &stage_info.name));
   stage_info.visible = PETSC_TRUE;
 #if defined(PETSC_HAVE_TAU_PERFSTUBS)
@@ -128,6 +129,7 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryEventRegister(PetscLogRegistry regis
   PetscFunctionBegin;
   PetscCall(PetscLogRegistryGetEventFromName(registry, name, event));
   if (*event >= 0) PetscFunctionReturn(PETSC_SUCCESS);
+  *event           = registry->events->num_entries;
   new_info.classid = classid;
   PetscCall(PetscStrallocpy(name, &new_info.name));
   new_info.visible = PETSC_TRUE;
@@ -135,7 +137,7 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryEventRegister(PetscLogRegistry regis
   if (perfstubs_initialized == PERFSTUBS_SUCCESS) PetscStackCallExternalVoid("ps_timer_create_", new_info.timer = ps_timer_create_(new_info.name));
 #endif
 #if defined(PETSC_HAVE_MPE)
-  {
+  if (MPE_Initialized_logging()) {
     const char *color;
     PetscMPIInt rank;
     int         beginID, endID;
@@ -164,6 +166,7 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryClassRegister(PetscLogRegistry regis
   PetscFunctionBegin;
   PetscCall(PetscLogRegistryGetClassFromClassId(registry, classid, class));
   if (*class >= 0) PetscFunctionReturn(PETSC_SUCCESS);
+  *class           = registry->classes->num_entries;
   new_info.classid = classid;
   PetscCall(PetscStrallocpy(name, &new_info.name));
   PetscCall(PetscLogClassArrayPush(registry->classes, new_info));
@@ -436,7 +439,7 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryCreateGlobalStageNames(MPI_Comm comm
   const char **names;
 
   PetscFunctionBegin;
-  PetscCall(PetscLogStageArrayGetNumEntries(registry->stages, &num_stages_local, NULL));
+  PetscCall(PetscLogStageArrayGetSize(registry->stages, &num_stages_local, NULL));
   PetscCall(PetscMalloc1(num_stages_local, &names));
   for (PetscInt i = 0; i < num_stages_local; i++) {
     PetscStageRegInfo stage_info;
@@ -454,7 +457,7 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryCreateGlobalEventNames(MPI_Comm comm
   const char **names;
 
   PetscFunctionBegin;
-  PetscCall(PetscLogEventArrayGetNumEntries(registry->events, &num_events_local, NULL));
+  PetscCall(PetscLogEventArrayGetSize(registry->events, &num_events_local, NULL));
   PetscCall(PetscMalloc1(num_events_local, &names));
   for (PetscInt i = 0; i < num_events_local; i++) {
     PetscEventRegInfo event_info;
