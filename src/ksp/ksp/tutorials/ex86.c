@@ -143,11 +143,11 @@ int main(int argc, char **args)
 
    testset:
       requires: hypre !complex !defined(PETSC_HAVE_HYPRE_DEVICE)
-      args: -ksp_monitor -pc_type hypre -pc_hypre_type boomeramg -pc_hypre_boomeramg_grid_sweeps_down 0 -pc_hypre_boomeramg_grid_sweeps_up 1 -pc_hypre_boomeramg_grid_sweeps_coarse 1 -pc_hypre_boomeramg_max_levels 2 -ksp_rtol 1e-7 -pc_hypre_boomeramg_max_coarse_size 16 -n 33 -ksp_max_it 30 -pc_hypre_boomeramg_relax_type_all Jacobi
+      args: -ksp_monitor -pc_type hypre -pc_hypre_type boomeramg -pc_hypre_boomeramg_grid_sweeps_down 0 -pc_hypre_boomeramg_grid_sweeps_up 1 -pc_hypre_boomeramg_grid_sweeps_coarse 2 -pc_hypre_boomeramg_max_levels 2 -ksp_rtol 1e-7 -pc_hypre_boomeramg_max_coarse_size 16 -n 33 -ksp_max_it 30 -pc_hypre_boomeramg_relax_type_all Jacobi
       test:
          suffix: hypre
       test:
          suffix: hypre_air
-         args: -pc_hypre_boomeramg_restriction_type 1 -pc_hypre_boomeramg_postrelax F
+         args: -pc_hypre_boomeramg_restriction_type 1 -pc_hypre_boomeramg_postrelax F -pc_hypre_boomeramg_grid_sweeps_down 1 -pc_hypre_boomeramg_prerelax C
 
 TEST*/
