@@ -18,6 +18,7 @@ PETSC_INTERN PetscErrorCode PetscLogStateCreate(PetscLogState *state_p)
   state->bt_num_stages = max_stages;
   num_entries          = state->bt_num_events * state->bt_num_stages;
   PetscCall(PetscBTCreate(num_entries, &state->active));
+  state->current_stage = -1;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -27,6 +28,7 @@ PETSC_INTERN PetscErrorCode PetscLogStateDestroy(PetscLogState state)
   PetscCall(PetscLogRegistryDestroy(state->registry));
   PetscCall(PetscIntStackDestroy(state->stage_stack));
   PetscCall(PetscBTDestroy(&state->active));
+  PetscCall(PetscFree(state));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

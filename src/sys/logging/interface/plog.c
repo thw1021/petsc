@@ -7,6 +7,9 @@
       These routines use a private API that is not used elsewhere in PETSc and is not
       accessible to users. The private API is defined in logimpl.h and the utils directory.
 
+      ***
+
+      This file, and only this file, is for functions that interact with the global logging state
 */
 #include <petsc/private/logimpl.h> /*I    "petscsys.h"   I*/
 #include <petsctime.h>
@@ -20,7 +23,9 @@
 
 #if defined(PETSC_USE_LOG)
 
-// This file, and only this file, is for functions that interact with the global logging state
+PetscLogHandler PetscLogHandlers[PETSC_LOG_HANDLER_MAX] = {0};
+PetscBool       PetscLogMemory                          = PETSC_FALSE;
+PetscBool       PetscLogSyncOn                          = PETSC_FALSE;
 
   #if defined(PETSC_HAVE_THREADSAFETY)
 PetscInt           petsc_log_gid = -1; /* Global threadId counter */
@@ -143,17 +148,17 @@ static PetscErrorCode PetscLogGetHandler(PetscLogHandlerType type, PetscLogHandl
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogGetDefaultHandler(PetscLogHandler *default_handler)
+static PetscErrorCode PetscLogGetDefaultHandler(PetscLogHandler *handler)
 {
   PetscFunctionBegin;
-  PetscCall(PetscLogGetHandler(PETSC_LOG_HANDLER_DEFAULT, default_handler));
+  PetscCall(PetscLogGetHandler(PETSC_LOG_HANDLER_DEFAULT, handler));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogGetNestedHandler(PetscLogHandler *nested_handler)
+static PetscErrorCode PetscLogGetNestedHandler(PetscLogHandler *handler)
 {
   PetscFunctionBegin;
-  PetscCall(PetscLogGetHandler(PETSC_LOG_HANDLER_NESTED, nested_handler));
+  PetscCall(PetscLogGetHandler(PETSC_LOG_HANDLER_NESTED, handler));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -174,8 +179,7 @@ static PetscBool PetscLogInitializeCalled = PETSC_FALSE;
 
 PETSC_INTERN PetscErrorCode PetscLogInitialize(void)
 {
-  int              stage;
-  PetscLogRegistry registry;
+  int stage;
 
   PetscFunctionBegin;
   if (PetscLogInitializeCalled) PetscFunctionReturn(PETSC_SUCCESS);
@@ -183,8 +187,7 @@ PETSC_INTERN PetscErrorCode PetscLogInitialize(void)
 
   /* Setup default logging structures */
   PetscCall(PetscLogStateCreate(&petsc_log_state));
-  registry = petsc_log_state->registry;
-  PetscCall(PetscLogRegistryStageRegister(registry, "Main Stage", &stage));
+  PetscCall(PetscLogStateStageRegister(petsc_log_state, "Main Stage", &stage));
 
   #if defined(PETSC_HAVE_THREADSAFETY)
   petsc_log_tid = 0;
@@ -208,6 +211,7 @@ PETSC_INTERN PetscErrorCode PetscLogFinalize(void)
   PetscFunctionBegin;
 
   /* Resetting phase */
+  for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) PetscCall(PetscLogHandlerDestroy(&PetscLogHandlers[i]));
   PetscCall(PetscLogGetState(&state));
   PetscCall(PetscLogStateDestroy(state));
 
@@ -1395,6 +1399,7 @@ PetscErrorCode PetscLogView(PetscViewer viewer)
   while (!is_empty) {
     PetscCall(PetscIntStackPop(temp_stack, &stage));
     PetscCall(PetscLogStagePush(stage));
+    PetscCall(PetscIntStackEmpty(temp_stack, &is_empty));
   }
   PetscCall(PetscIntStackDestroy(temp_stack));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1753,7 +1758,8 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *handler_p)
   PetscFunctionBegin;
   handler    = *handler_p;
   *handler_p = NULL;
-  if (handler->impl->destroy) PetscCall((*(handler->impl->destroy))(handler->impl->ctx));
+  if (handler == NULL) PetscFunctionReturn(PETSC_SUCCESS);
+  if (handler->impl->destroy) PetscCall((*(handler->impl->destroy))(handler));
   PetscCall(PetscFree(handler->impl));
   PetscCall(PetscFree(handler));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1952,3 +1958,45 @@ PetscErrorCode PetscLogMPEDump(const char sname[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 #endif /* PETSC_USE_LOG && PETSC_HAVE_MPE */
+
+PETSC_INTERN PetscErrorCode PetscLogSetThreshold_Nested(PetscLogHandler, PetscLogDouble, PetscLogDouble *);
+
+/*@
+   PetscLogSetThreshold - Set the threshold time for logging the events; this is a percentage out of 100, so 1. means any event
+          that takes 1 or more percent of the time.
+
+  Logically Collective over `PETSC_COMM_WORLD`
+
+  Input Parameter:
+.   newThresh - the threshold to use
+
+  Output Parameter:
+.   oldThresh - the previously set threshold value
+
+  Options Database Keys:
+. -log_view :filename.xml:ascii_xml - Prints an XML summary of flop and timing information to the file
+
+  Usage:
+.vb
+      PetscInitialize(...);
+      PetscLogNestedBegin();
+      PetscLogSetThreshold(0.1,&oldthresh);
+       ... code ...
+      PetscLogView(viewer);
+      PetscFinalize();
+.ve
+
+  Level: advanced
+
+.seealso: `PetscLogDump()`, `PetscLogAllBegin()`, `PetscLogView()`, `PetscLogTraceBegin()`, `PetscLogDefaultBegin()`,
+          `PetscLogNestedBegin()`
+@*/
+PetscErrorCode PetscLogSetThreshold(PetscLogDouble newThresh, PetscLogDouble *oldThresh)
+{
+  PetscLogHandler handler;
+
+  PetscFunctionBegin;
+  PetscCall(PetscLogGetNestedHandler(&handler));
+  PetscCall(PetscLogSetThreshold_Nested(handler, newThresh, oldThresh));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}

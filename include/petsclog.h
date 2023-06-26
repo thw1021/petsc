@@ -280,12 +280,11 @@ PETSC_EXTERN PetscErrorCode PetscLogEventGetName(PetscLogEvent, const char **);
 PETSC_EXTERN PetscErrorCode PetscLogEventGetPerfInfo(PetscLogStage, PetscLogEvent, PetscEventPerfInfo *);
 PETSC_EXTERN PetscErrorCode PetscLogEventSetDof(PetscLogEvent, PetscInt, PetscLogDouble);
 PETSC_EXTERN PetscErrorCode PetscLogEventSetError(PetscLogEvent, PetscInt, PetscLogDouble);
-PETSC_EXTERN PetscErrorCode PetscLogEventSynchronize(PetscLogEvent, MPI_Comm);
 
 PETSC_EXTERN PetscErrorCode PetscLogClassGetId(const char[], PetscClassId *);
 PETSC_EXTERN PetscErrorCode PetscLogClassGetName(PetscClassId, const char **);
 
-static inline PetscErrorCode PetscLogEventSync(PetscLogEvent e, MPI_Comm comm)
+static inline PETSC_UNUSED PetscErrorCode PetscLogEventSync(PetscLogEvent e, MPI_Comm comm)
 {
   if (PetscLogStateEventCurrentlyActive(petsc_log_state, e)) {
     for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
@@ -299,7 +298,7 @@ static inline PetscErrorCode PetscLogEventSync(PetscLogEvent e, MPI_Comm comm)
   return PETSC_SUCCESS;
 }
 
-static inline PetscErrorCode PetscLogEventBegin_Internal(PetscLogEvent e, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
+static inline PETSC_UNUSED PetscErrorCode PetscLogEventBegin_Internal(PetscLogEvent e, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
 {
   if (PetscLogStateEventCurrentlyActive(petsc_log_state, e)) {
     for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
@@ -314,7 +313,7 @@ static inline PetscErrorCode PetscLogEventBegin_Internal(PetscLogEvent e, PetscO
 }
   #define PetscLogEventBegin(e, o1, o2, o3, o4) PetscLogEventBegin_Internal(e, (PetscObject)(o1), (PetscObject)(o2), (PetscObject)(o3), (PetscObject)(o4))
 
-static inline PetscErrorCode PetscLogEventEnd_Internal(PetscLogEvent e, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
+static inline PETSC_UNUSED PetscErrorCode PetscLogEventEnd_Internal(PetscLogEvent e, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
 {
   if (PetscLogStateEventCurrentlyActive(petsc_log_state, e)) {
     for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
@@ -331,7 +330,7 @@ static inline PetscErrorCode PetscLogEventEnd_Internal(PetscLogEvent e, PetscObj
 
   /* Object functions */
   #define PetscLogObjectParents(p, n, d) PetscMacroReturnStandard(for (int _i = 0; _i < (n); ++_i) PetscCall(PetscLogObjectParent((PetscObject)(p), (PetscObject)(d)[_i]));)
-static inline PetscErrorCode PetscLogObjectCreate_Internal(PetscObject o)
+static inline PETSC_UNUSED PetscErrorCode PetscLogObjectCreate_Internal(PetscObject o)
 {
   if (petsc_log_state) {
     for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
@@ -346,7 +345,7 @@ static inline PetscErrorCode PetscLogObjectCreate_Internal(PetscObject o)
 }
   #define PetscLogObjectCreate(o) PetscLogObjectCreate_Internal((PetscObject)(o))
 
-static inline PetscErrorCode PetscLogObjectDestroy_Internal(PetscObject o)
+static inline PETSC_UNUSED PetscErrorCode PetscLogObjectDestroy_Internal(PetscObject o)
 {
   if (petsc_log_state) {
     for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
@@ -362,7 +361,6 @@ static inline PetscErrorCode PetscLogObjectDestroy_Internal(PetscObject o)
   #define PetscLogObjectDestroy(o) PetscLogObjectDestroy_Internal((PetscObject)(o))
 
 PETSC_EXTERN PetscBool PetscLogMemory;
-
 PETSC_EXTERN PetscBool PetscLogSyncOn; /* true if logging synchronization is enabled */
 
 /* Global flop counter */
@@ -636,6 +634,8 @@ static inline int PetscMPIParallelComm(MPI_Comm comm)
   #define PetscLogEventDeactivate(a)        PETSC_SUCCESS
   #define PetscLogEventDeactivatePush(a)    PETSC_SUCCESS
   #define PetscLogEventDeactivatePop(a)     PETSC_SUCCESS
+  #define PetscLogPauseEventsPush()         PETSC_SUCCESS
+  #define PetscLogPauseEventsPop()          PETSC_SUCCESS
   #define PetscLogEventActivateClass(a)     PETSC_SUCCESS
   #define PetscLogEventDeactivateClass(a)   PETSC_SUCCESS
   #define PetscLogEventSetActiveAll(a, b)   PETSC_SUCCESS
@@ -645,10 +645,17 @@ static inline int PetscMPIParallelComm(MPI_Comm comm)
   #define PetscLogEventSetDof(a, b, c)      PETSC_SUCCESS
   #define PetscLogEventSetError(a, b, c)    PETSC_SUCCESS
 
+  #define PetscLogClassGetId(a, b)   (*(b) = 0, PETSC_SUCCESS)
+  #define PetscLogClassGetName(a, b) (*(b) = 0, PETSC_SUCCESS)
+
   #define PetscLogObjectParents(p, n, c) PETSC_SUCCESS
   #define PetscLogObjectCreate(h)        PETSC_SUCCESS
   #define PetscLogObjectDestroy(h)       PETSC_SUCCESS
 
+  #if defined(PETSC_HAVE_MPE)
+    #define PetscLogMPEBegin() PETSC_SUCCESS
+    #define PetscLogMPEDump(c) PETSC_SUCCESS
+  #endif
   #define PetscLogDefaultBegin()     PETSC_SUCCESS
   #define PetscLogAllBegin()         PETSC_SUCCESS
   #define PetscLogNestedBegin()      PETSC_SUCCESS

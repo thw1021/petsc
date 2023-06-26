@@ -3,6 +3,18 @@
 #include "lognested.h"
 #include "xmlviewer.h"
 
+PETSC_INTERN PetscErrorCode PetscLogSetThreshold_Nested(PetscLogHandler h, PetscLogDouble newThresh, PetscLogDouble *oldThresh)
+{
+  PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->impl->ctx;
+
+  PetscFunctionBegin;
+  if (oldThresh) *oldThresh = nested->threshold_time;
+  if (newThresh == (PetscLogDouble)PETSC_DECIDE) newThresh = 0.01;
+  if (newThresh == (PetscLogDouble)PETSC_DEFAULT) newThresh = 0.01;
+  nested->threshold_time = PetscMax(newThresh, 0.0);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode PetscLogEventGetNestedEvent(PetscLogHandler h, PetscLogRegistry registry, PetscLogEvent e, PetscLogEvent *nested_event)
 {
   PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->impl->ctx;
@@ -26,7 +38,7 @@ static PetscErrorCode PetscLogEventGetNestedEvent(PetscLogHandler h, PetscLogReg
   } else {
     PetscCall(PetscNestedHashIterGet(nested->pair_map, iter, nested_event));
   }
-  
+
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -64,8 +76,8 @@ static PetscErrorCode PetscLogStageGetNestedEvent(PetscLogHandler h, PetscLogReg
 static PetscErrorCode PetscLogNestedCheckNested(PetscLogHandler h, NestedId leaf, PetscLogEvent nested_event)
 {
   PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->impl->ctx;
-  NestedIdPair key;
-  NestedId     val;
+  NestedIdPair           key;
+  NestedId               val;
 
   PetscFunctionBegin;
   PetscCall(PetscIntStackTop(nested->stack, &(key.root)));
@@ -159,7 +171,7 @@ static PetscErrorCode PetscLogHandlerContextCreate_Nested(PetscLogHandler_Nested
 
 static PetscErrorCode PetscLogObjectCreate_Nested(PetscLogHandler h, PetscLogState state, PetscObject obj)
 {
-  PetscLogHandler_Nested nested = (PetscLogHandler_Nested) h->impl->ctx;
+  PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->impl->ctx;
 
   PetscFunctionBegin;
   if (nested->handler->object_create) PetscCall((*(nested->handler->object_create))(nested->handler, state, obj));
@@ -168,7 +180,7 @@ static PetscErrorCode PetscLogObjectCreate_Nested(PetscLogHandler h, PetscLogSta
 
 static PetscErrorCode PetscLogObjectDestroy_Nested(PetscLogHandler h, PetscLogState state, PetscObject obj)
 {
-  PetscLogHandler_Nested nested = (PetscLogHandler_Nested) h->impl->ctx;
+  PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->impl->ctx;
 
   PetscFunctionBegin;
   if (nested->handler->object_destroy) PetscCall((*(nested->handler->object_destroy))(nested->handler, state, obj));
