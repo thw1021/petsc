@@ -456,7 +456,7 @@ allmanpages: chk_loc deletemanualpages
 	-@sed -e 's?<T>?IV?g' -e 's?<t>?iv?g' -e 's?<KeyType>?PetscInt?g'  -e 's?<ValType>?PetscScalar?g' ${hloc}/hashmap.txt >> ${hloc}/generated_khash.h
 	-@sed -e 's?<T>?Obj?g' -e 's?<t>?obj?g' -e 's?<KeyType>?PetscInt64?g'  -e 's?<ValType>?PetscObject?g' ${hloc}/hashmap.txt >> ${hloc}/generated_khash.h
 	-@${RM} ${PETSC_DIR}/${PETSC_ARCH}/manualpages.err
-	-time ${OMAKE_SELF} ACTION=manualpages tree_src LOC=${LOC}
+	-${OMAKE_SELF} ACTION=manualpages tree_src LOC=${LOC}
 	-@sed -e s%man+../%man+manualpages/% ${LOC}/manualpages/manualpages.cit > ${LOC}/manualpages/htmlmap
 	-@cat ${PETSC_DIR}/doc/classic/mpi.www.index >> ${LOC}/manualpages/htmlmap
 	@cat ${PETSC_DIR}/${PETSC_ARCH}/manualpages.err
@@ -514,7 +514,7 @@ manimplementations:
 #
 alldoc_post: chk_loc  chk_c2html
 	-@if command -v parallel &> /dev/null; then \
-           ls include/makefile src/*/makefile | xargs dirname | time parallel -j ${MAKE_TEST_NP} --load ${MAKE_LOAD} 'cd {}; ${OMAKE_SELF} HTMLMAP=${HTMLMAP} LOC=${LOC} PETSC_DIR=${PETSC_DIR} ACTION=html tree' ; \
+           ls include/makefile src/*/makefile | xargs dirname | parallel -j ${MAKE_TEST_NP} --load ${MAKE_LOAD} 'cd {}; ${OMAKE_SELF} HTMLMAP=${HTMLMAP} LOC=${LOC} PETSC_DIR=${PETSC_DIR} ACTION=html tree' ; \
          else \
            ${OMAKE_SELF} HTMLMAP=${HTMLMAP} LOC=${LOC} PETSC_DIR=${PETSC_DIR} ACTION=html tree; \
         fi
