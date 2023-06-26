@@ -247,6 +247,7 @@ static PetscErrorCode PetscLogNestedCreatePerfNodes(MPI_Comm comm, PetscLogHandl
   PetscCall(PetscCalloc1(num_nodes, &tree));
   for (PetscInt node = 0; node < num_nodes; node++) {
     tree[node].id     = node;
+    PetscCall(PetscLogGlobalNamesGlobalGetName(global_events, node, &tree[node].name));
     tree[node].parent = -1;
   }
   PetscCall(PetscNestedHashGetSize(nested->pair_map, &num_map_entries));
@@ -259,9 +260,11 @@ static PetscErrorCode PetscLogNestedCreatePerfNodes(MPI_Comm comm, PetscLogHandl
     PetscInt root_global;
     PetscInt leaf_global;
 
-    PetscCall(PetscLogGlobalNamesLocalGetGlobal(global_events, root_local, &root_global));
     PetscCall(PetscLogGlobalNamesLocalGetGlobal(global_events, leaf_local, &leaf_global));
-    tree[leaf_global].parent = root_global;
+    if (root_local >= 0) {
+      PetscCall(PetscLogGlobalNamesLocalGetGlobal(global_events, root_local, &root_global));
+      tree[leaf_global].parent = root_global;
+    }
   }
   PetscCallMPI(MPI_Comm_size(comm, &size));
   if (size > 1) { // get missing parents from other processes
@@ -318,6 +321,9 @@ PETSC_INTERN PetscErrorCode PetscLogView_Nested(PetscLogHandler handler, PetscVi
   } else if (format == PETSC_VIEWER_ASCII_FLAMEGRAPH) {
     PetscCall(PetscLogView_Nested_Flamegraph(nested, &tree, viewer));
   } else SETERRQ(comm, PETSC_ERR_ARG_INCOMP, "No nested viewer for this format");
+  PetscCall(PetscLogGlobalNamesDestroy(&global_events));
+  PetscCall(PetscFree(tree.nodes));
+  PetscCall(PetscFree(tree.perf));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
