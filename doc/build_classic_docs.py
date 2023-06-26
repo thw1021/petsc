@@ -46,7 +46,7 @@ def main(stage,outdir):
 
       x = time.clock_gettime(time.CLOCK_REALTIME)
       print('==================================================================')
-      print(command)
+      print('Running configure')
       subprocess.run(command, cwd=petsc_dir, check=True)
       print("Time: "+str(time.clock_gettime(time.CLOCK_REALTIME) - x))
       print('==================================================================')
@@ -59,7 +59,7 @@ def main(stage,outdir):
                  'LOC=%s' % loc]
       x = time.clock_gettime(time.CLOCK_REALTIME)
       print('============================================')
-      print(command)
+      print('make allmanpages')
       subprocess.run(command, cwd=petsc_dir, check=True)
       print("Time: "+str(time.clock_gettime(time.CLOCK_REALTIME) - x))
       print('============================================')
@@ -79,7 +79,7 @@ def main(stage,outdir):
                  'LOC=%s' % loc]
       x = time.clock_gettime(time.CLOCK_REALTIME)
       print('============================================')
-      print(command)
+      print('Building manual page links to implementations')
       subprocess.run(command, cwd=petsc_dir, check=True)
       print("Time: "+str(time.clock_gettime(time.CLOCK_REALTIME) - x))
       print('============================================')
@@ -101,7 +101,7 @@ def main(stage,outdir):
                  'LOC=%s' % loc]
       x = time.clock_gettime(time.CLOCK_REALTIME)
       print('============================================')
-      print(command)
+      print('make alldoc')
       subprocess.run(command, cwd=petsc_dir, check=True)
       print("Time: "+str(time.clock_gettime(time.CLOCK_REALTIME) - x))
       print('============================================')
