@@ -7,13 +7,19 @@
 
 typedef int NestedId;
 
-static inline PETSC_UNUSED NestedId NestedIdFromEvent(PetscLogEvent e) { return e; }
-static inline PETSC_UNUSED NestedId NestedIdFromStage(PetscLogStage s) { return -(s+2); }
+static inline PETSC_UNUSED NestedId NestedIdFromEvent(PetscLogEvent e)
+{
+  return e;
+}
+static inline PETSC_UNUSED NestedId NestedIdFromStage(PetscLogStage s)
+{
+  return -(s + 2);
+}
 
 typedef struct _n_NestedIdPair NestedIdPair;
 struct _n_NestedIdPair {
   PetscLogEvent root;
-  NestedId leaf;
+  NestedId      leaf;
 };
 
   #define NestedIdPairHash(key)     PetscHashCombine(PetscHash_UInt32((PetscHash32_t)((key).root)), PetscHash_UInt32((PetscHash32_t)((key).leaf)))
@@ -28,7 +34,7 @@ struct _n_PetscLogHandler_Nested {
   PetscNestedHash pair_map;
   PetscIntStack   stack; // stack of nested ids
   PetscClassId    nested_stage_id;
-  PetscLogDouble  threshold, threshold_time;
+  PetscLogDouble  threshold_time;
 };
 
 typedef struct {

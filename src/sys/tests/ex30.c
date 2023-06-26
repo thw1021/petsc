@@ -5,12 +5,16 @@ static char help[] = "Tests nested events.\n\n";
 
 static PetscErrorCode CallEvents(PetscLogEvent event1, PetscLogEvent event2, PetscLogEvent event3)
 {
+  char *data;
+
   PetscFunctionBegin;
   PetscCall(PetscLogEventBegin(event1, 0, 0, 0, 0));
   PetscCall(PetscSleep(0.1));
   PetscCall(PetscLogEventBegin(event2, 0, 0, 0, 0));
   PetscCall(PetscSleep(0.1));
   PetscCall(PetscLogEventBegin(event3, 0, 0, 0, 0));
+  PetscCall(PetscCalloc1(1048576, &data));
+  PetscCall(PetscFree(data));
   PetscCall(PetscSleep(0.1));
   PetscCall(PetscLogEventEnd(event3, 0, 0, 0, 0));
   PetscCall(PetscLogEventEnd(event2, 0, 0, 0, 0));

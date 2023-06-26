@@ -1,10 +1,4 @@
 
-/*
-     This defines part of the private API for logging performance information. It is intended to be used only by the
-   PETSc PetscLog...() interface and not elsewhere, nor by users. Hence the prototypes for these functions are NOT
-   in the public PETSc include files.
-
-*/
 #include <petsc/private/logimpl.h> /*I    "petscsys.h"   I*/
 
 /*@C
@@ -71,7 +65,7 @@ PetscErrorCode PetscIntStackTop(PetscIntStack stack, int *top)
 {
   PetscFunctionBegin;
   PetscValidPointer(stack, 1);
-  PetscValidIntPointer(top, 2);
+  PetscValidPointer(top, 2); // FIXME: when we have checking for `int` pointers
   *top = stack->stack[stack->top];
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -122,7 +116,7 @@ PetscErrorCode PetscIntStackPop(PetscIntStack stack, int *item)
   PetscValidPointer(stack, 1);
   PetscCheck(stack->top != -1, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Stack is empty");
   if (item) {
-    PetscValidIntPointer(item, 2);
+    PetscValidPointer(item, 2); // FIXME: when we have checking for `int` pointers
     PetscCall(PetscIntStackTop(stack, item));
   }
   --stack->top;
