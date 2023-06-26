@@ -35,6 +35,7 @@ static PetscErrorCode PetscLogEventGetNestedEvent(PetscLogHandler h, PetscLogReg
     PetscCall(PetscLogRegistryEventGetInfo(nested->state->registry, key.root, &nested_event_info));
     PetscCall(PetscSNPrintf(name, sizeof(name) - 1, "%s;%s", nested_event_info.name, event_info.name));
     PetscCall(PetscLogStateEventRegister(nested->state, name, 0, nested_event));
+    PetscCall(PetscNestedHashIterSet(nested->pair_map, iter, *nested_event));
   } else {
     PetscCall(PetscNestedHashIterGet(nested->pair_map, iter, nested_event));
   }
@@ -57,7 +58,7 @@ static PetscErrorCode PetscLogStageGetNestedEvent(PetscLogHandler h, PetscLogReg
     PetscStageRegInfo stage_info;
     char              name[BUFSIZ];
 
-    PetscCall(PetscLogRegistryStageGetInfo(nested->state->registry, stage, &stage_info));
+    PetscCall(PetscLogRegistryStageGetInfo(registry, stage, &stage_info));
     if (key.root >= 0) {
       PetscEventRegInfo nested_event_info;
 
@@ -67,6 +68,7 @@ static PetscErrorCode PetscLogStageGetNestedEvent(PetscLogHandler h, PetscLogReg
       PetscCall(PetscSNPrintf(name, sizeof(name) - 1, "%s", stage_info.name));
     }
     PetscCall(PetscLogStateEventRegister(nested->state, name, nested->nested_stage_id, nested_event));
+    PetscCall(PetscNestedHashIterSet(nested->pair_map, iter, *nested_event));
   } else {
     PetscCall(PetscNestedHashIterGet(nested->pair_map, iter, nested_event));
   }
@@ -130,6 +132,7 @@ static PetscErrorCode PetscLogStagePush_Nested(PetscLogHandler h, PetscLogState 
   PetscLogEvent          nested_event;
 
   PetscFunctionBegin;
+  if (nested->nested_stage_id == -1) PetscCall(PetscClassIdRegister("LogNestedStage", &nested->nested_stage_id));
   PetscCall(PetscLogStageGetNestedEvent(h, state->registry, stage, &nested_event));
   PetscCall((*(nested->handler->event_begin))(nested->handler, nested->state, nested_event, 0, NULL, NULL, NULL, NULL));
   PetscCall(PetscIntStackPush(nested->stack, nested_event));
@@ -158,7 +161,7 @@ static PetscErrorCode PetscLogHandlerContextCreate_Nested(PetscLogHandler_Nested
   nested = *nested_p;
   PetscCall(PetscLogStateCreate(&nested->state));
   PetscCall(PetscIntStackCreate(&nested->stack));
-  PetscCall(PetscClassIdRegister("LogNestedStage", &nested->nested_stage_id));
+  nested->nested_stage_id = -1;
   PetscCall(PetscNestedHashCreate(&nested->pair_map));
   PetscCall(PetscLogHandlerCreate_Default(&nested->handler));
   PetscCall(PetscLogStateStageRegister(nested->state, "", &root_stage));
