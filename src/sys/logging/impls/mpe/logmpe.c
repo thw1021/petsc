@@ -1,6 +1,6 @@
 #include <petsc/private/logimpl.h> /*I "petscsys.h" I*/
 #if defined(PETSC_USE_LOG) && defined(PETSC_HAVE_MPE)
-#include <mpe.h>
+  #include <mpe.h>
 
 static PetscErrorCode PetscLogHandlerEventBegin_MPE(PetscLogHandler handler, PetscLogState state, PetscLogEvent event, int i, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
 {
@@ -30,10 +30,10 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_MPE(PetscLogHandler *handler_p
   PetscCall(PetscNew(handler_p));
   handler = *handler_p;
   PetscCall(PetscNew(&handler->impl));
-  handler->impl->ctx = NULL;
-  handler->impl->type = PETSC_LOG_HANDLER_MPE;
+  handler->impl->ctx   = NULL;
+  handler->impl->type  = PETSC_LOG_HANDLER_MPE;
   handler->event_begin = PetscLogHandlerEventBegin_MPE;
-  handler->event_end = PetscLogHandlerEventEnd_MPE;
+  handler->event_end   = PetscLogHandlerEventEnd_MPE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

@@ -139,7 +139,7 @@ static PetscErrorCode PetscLogTryGetHandler(PetscLogHandlerType type, PetscLogHa
   *handler = NULL;
   for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
     if (PetscLogHandlers[i] && PetscLogHandlers[i]->impl->type == type) {
-      *handler = PetscLogHandlers[i]; 
+      *handler = PetscLogHandlers[i];
       PetscFunctionReturn(PETSC_SUCCESS);
     }
   }
