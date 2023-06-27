@@ -191,7 +191,7 @@ PETSC_INTERN PetscErrorCode PetscLogStateEventIncludeClass(PetscLogState state, 
   PetscCall(PetscLogRegistryGetNumEvents(state->registry, &num_events, NULL));
   PetscCall(PetscLogRegistryGetNumStages(state->registry, &num_stages, NULL));
   for (PetscLogEvent e = 0; e < num_events; e++) {
-    PetscEventRegInfo event_info;
+    PetscLogEventInfo event_info;
     PetscCall(PetscLogRegistryEventGetInfo(state->registry, e, &event_info));
     if (event_info.classid == classid) {
       for (PetscLogStage s = 0; s < num_stages; s++) { PetscCall(PetscBTSet(state->active, s + (e + 1) * state->bt_num_stages)); }
@@ -208,7 +208,7 @@ PETSC_INTERN PetscErrorCode PetscLogStateEventExcludeClass(PetscLogState state, 
   PetscCall(PetscLogRegistryGetNumEvents(state->registry, &num_events, NULL));
   PetscCall(PetscLogRegistryGetNumStages(state->registry, &num_stages, NULL));
   for (PetscLogEvent e = 0; e < num_events; e++) {
-    PetscEventRegInfo event_info;
+    PetscLogEventInfo event_info;
     PetscCall(PetscLogRegistryEventGetInfo(state->registry, e, &event_info));
     if (event_info.classid == classid) {
       for (PetscLogStage s = 0; s < num_stages; s++) { PetscCall(PetscBTClear(state->active, s + (e + 1) * state->bt_num_stages)); }
@@ -225,7 +225,7 @@ PETSC_INTERN PetscErrorCode PetscLogStateEventActivateClass(PetscLogState state,
   PetscFunctionBegin;
   PetscCall(PetscLogRegistryGetNumEvents(state->registry, &num_events, NULL));
   for (PetscLogEvent e = 0; e < num_events; e++) {
-    PetscEventRegInfo event_info;
+    PetscLogEventInfo event_info;
     PetscCall(PetscLogRegistryEventGetInfo(state->registry, e, &event_info));
     if (event_info.classid == classid) PetscCall(PetscBTSet(state->active, stage + (e + 1) * state->bt_num_stages));
   }
@@ -240,7 +240,7 @@ PETSC_INTERN PetscErrorCode PetscLogStateEventDeactivateClass(PetscLogState stat
   PetscFunctionBegin;
   PetscCall(PetscLogRegistryGetNumEvents(state->registry, &num_events, NULL));
   for (PetscLogEvent e = 0; e < num_events; e++) {
-    PetscEventRegInfo event_info;
+    PetscLogEventInfo event_info;
     PetscCall(PetscLogRegistryEventGetInfo(state->registry, e, &event_info));
     if (event_info.classid == classid) PetscCall(PetscBTClear(state->active, stage + (e + 1) * state->bt_num_stages));
   }

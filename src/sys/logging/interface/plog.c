@@ -19,9 +19,9 @@
 #if defined(PETSC_HAVE_TAU_PERFSTUBS)
   #include <../src/sys/perfstubs/timer.h>
 #endif
-#include <../src/sys/logging/impls/default/logdefault.h>
 
 #if defined(PETSC_USE_LOG)
+#include <../src/sys/logging/impls/default/logdefault.h>
 
 PetscLogHandler PetscLogHandlers[PETSC_LOG_HANDLER_MAX] = {0};
 PetscBool       PetscLogMemory                          = PETSC_FALSE;
@@ -685,7 +685,7 @@ PetscErrorCode PetscLogStageGetActive(PetscLogStage stage, PetscBool *isActive)
 @*/
 PetscErrorCode PetscLogStageSetVisible(PetscLogStage stage, PetscBool isVisible)
 {
-  PetscStageRegInfo stage_info;
+  PetscLogStageInfo stage_info;
   PetscLogState     state;
 
   PetscFunctionBegin;
@@ -713,7 +713,7 @@ PetscErrorCode PetscLogStageSetVisible(PetscLogStage stage, PetscBool isVisible)
 @*/
 PetscErrorCode PetscLogStageGetVisible(PetscLogStage stage, PetscBool *isVisible)
 {
-  PetscStageRegInfo stage_info;
+  PetscLogStageInfo stage_info;
   PetscLogState     state;
 
   PetscFunctionBegin;
@@ -750,7 +750,7 @@ PetscErrorCode PetscLogStageGetId(const char name[], PetscLogStage *stage)
 
 PetscErrorCode PetscLogStageGetName(PetscLogStage stage, const char **name)
 {
-  PetscStageRegInfo stage_info;
+  PetscLogStageInfo stage_info;
   PetscLogState     state;
 
   PetscFunctionBegin;
@@ -762,7 +762,7 @@ PetscErrorCode PetscLogStageGetName(PetscLogStage stage, const char **name)
 
 PetscErrorCode PetscLogEventGetName(PetscLogEvent event, const char **name)
 {
-  PetscEventRegInfo event_info;
+  PetscLogEventInfo event_info;
   PetscLogState     state;
 
   PetscFunctionBegin;
@@ -860,7 +860,7 @@ PetscErrorCode PetscLogEventRegister(const char name[], PetscClassId classid, Pe
 @*/
 PetscErrorCode PetscLogEventSetCollective(PetscLogEvent event, PetscBool collective)
 {
-  PetscEventRegInfo event_info;
+  PetscLogEventInfo event_info;
   PetscLogState     state;
 
   PetscFunctionBegin;
