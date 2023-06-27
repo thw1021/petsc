@@ -212,7 +212,7 @@ PETSC_EXTERN PetscErrorCode MatSetFactorType(Mat, MatFactorType);
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCode (*MatSolverFunction)(Mat, MatFactorType, Mat *);
 PETSC_EXTERN PetscErrorCode            MatSolverTypeRegister(MatSolverType, MatType, MatFactorType, MatSolverFunction);
 PETSC_EXTERN PetscErrorCode            MatSolverTypeGet(MatSolverType, MatType, MatFactorType, PetscBool *, PetscBool *, MatSolverFunction *);
-typedef MatSolverType MatSolverPackage PETSC_DEPRECATED_TYPEDEF("Use MatSolverType (since version 3.9)");
+PETSC_DEPRECATED_TYPEDEF("Use MatSolverType (since version 3.9)") typedef MatSolverType MatSolverPackage;
 PETSC_DEPRECATED_FUNCTION("Use MatSolverTypeRegister() (since version 3.9)") static inline PetscErrorCode MatSolverPackageRegister(MatSolverType stype, MatType mtype, MatFactorType ftype, MatSolverFunction f)
 {
   return MatSolverTypeRegister(stype, mtype, ftype, f);

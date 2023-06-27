@@ -448,7 +448,7 @@ Usage of PETSc Functions and Macros
 
    ::
 
-       typedef NewType OldType PETSC_DEPRECATED_TYPEDEF("Use NewType (since version 3.9)");
+       PETSC_DEPRECATED_TYPEDEF("Use NewType (since version 3.9)") typedef NewType OldType;
 
        PETSC_DEPRECATED_FUNCTION("Use NewFunction() (since version 3.9)") PetscErrorCode OldFunction();
 
