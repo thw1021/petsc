@@ -13,6 +13,8 @@
 #include <KokkosSparse_sptrsv.hpp>
 #include <KokkosSparse_spgemm.hpp>
 #include <KokkosSparse_spadd.hpp>
+#include <KokkosBatched_LU_Decl.hpp>
+#include <KokkosBatched_InverseLU_Decl.hpp>
 
 #include <../src/mat/impls/aij/seq/kokkos/aijkok.hpp>
 
@@ -1322,6 +1324,86 @@ static PetscErrorCode MatSetOps_SeqAIJKokkos(Mat A)
 
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSetPreallocationCOO_C", MatSetPreallocationCOO_SeqAIJKokkos));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSetValuesCOO_C", MatSetValuesCOO_SeqAIJKokkos));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+   Extract the (prescribled) diagonal blocks of the matrix and then invert them
+
+  Input Parameters:
++  A       - the MATSEQAIJKOKKOS matrix
+.  bs      - block sizes in 'csr' format, i.e., the i-th block has size bs(i+1) - bs(i)
+.  bs2     - square of block sizes in 'csr' format, i.e., the i-th block should be stored at offset bs2(i) in diagVal[]
+.  blkMap  - map row ids to block ids, i.e., row i belongs to the block blkMap(i)
+-  work    - a work vector (with size = A's row/col size) for use by this routine
+
+  Output Parameter:
+.  diagVal - the (pre-allocated) buffer to store the inverted blocks
+*/
+PETSC_INTERN PetscErrorCode MatInvertVariableBlockDiagonal_SeqAIJKokkos(Mat A, const PetscIntKokkosView &bs, const PetscIntKokkosView &bs2, const PetscIntKokkosView &blkMap, PetscScalarKokkosView &work, PetscScalarKokkosView &diagVal)
+{
+  Mat_SeqAIJKokkos *akok = static_cast<Mat_SeqAIJKokkos *>(A->spptr);
+  PetscInt          N    = A->rmap->n;
+
+  PetscFunctionBegin;
+  // Set the diagonal pointer on device if not already
+  if (N && akok->diag_dual.extent(0) == 0) {
+    PetscCall(MatMarkDiagonal_SeqAIJ(A));
+    akok->SetDiagonal(static_cast<Mat_SeqAIJ *>(A->data)->diag);
+  }
+
+  PetscCall(MatSeqAIJKokkosSyncDevice(A)); // Since we'll access A's value on device
+
+  // Extract the diagonal blocks of the matrix and put them in diagVal[]
+  auto Aa    = akok->a_dual.view_device();
+  auto Ai    = akok->i_dual.view_device();
+  auto Aj    = akok->j_dual.view_device();
+  auto Adiag = akok->diag_dual.view_device();
+  PetscCallCXX(Kokkos::parallel_for(
+    N, KOKKOS_LAMBDA(const PetscInt &i) {
+      PetscInt bid    = blkMap(i);             // row i belongs to this block, i in [0, N)
+      PetscInt rstart = bs(bid);               // this block starts from this row
+      PetscInt n      = bs(bid + 1) - bs(bid); // size of this block
+      PetscInt r      = i - rstart;            // this is the r-th row in this nxn block, r in [0, n)
+      PetscInt offset = bs2(bid) + r * n;      // we want to extract the n nonzeros on this row to this offset in diagVal[]
+
+      if (Ai(i) <= Adiag(i) && Adiag(i) < Ai(i + 1)) { // if the diagonal exists (common case)
+        PetscInt first = Adiag(i) - r;                 // we start to check nonzeros from here along this row
+
+        for (PetscInt k = 0; k < n; k++) {                   // walk n steps to see what column indices we will meet
+          if (first + k < Ai(i) || first + k >= Ai(i + 1)) { // this entry (first+k) is out of range of this row, in other words, its value is zero
+            diagVal(offset + k) = 0.0;
+          } else if (Aj(first + k) == rstart + k) { // this entry is right on the (rstart+k) column
+            diagVal(offset + k) = Aa(first + k);
+          } else { // this entry does not show up in the CSR
+            diagVal(offset + k) = 0.0;
+          }
+        }
+      } else { // rare case that the diagonal does not exist
+        const PetscInt begin = Ai(i);
+        const PetscInt end   = Ai(i + 1);
+        for (PetscInt k = 0; k < n; k++) diagVal(offset + k) = 0.0;
+        for (PetscInt j = begin; j < end; j++) { // scan the whole row; could use binary search but this is a rare case so we did not.
+          if (rstart <= Aj(j) && Aj(j) < rstart + n) diagVal(offset + (Aj(j) - rstart)) = Aa(j);
+          else if (Aj(j) >= rstart + n) break;
+        }
+      }
+    }));
+
+  // Compute the inverse of these blocks
+  PetscInt nblocks = bs.extent(0) - 1;
+  PetscCallCXX(Kokkos::parallel_for(
+    Kokkos::TeamPolicy<>(nblocks, Kokkos::AUTO()), KOKKOS_LAMBDA(const KokkosTeamMemberType &team) {
+      PetscInt     bid  = team.league_rank();    // block id
+      PetscInt     n    = bs(bid + 1) - bs(bid); // size of this block
+      PetscScalar *bbuf = &diagVal(bs2(bid));
+      PetscScalar *wbuf = &work(bs(bid));
+      const auto  &B    = PetscScalarKokkosView2D(bbuf, n, n); // wrap it in a 2D view
+      const auto  &w    = PetscScalarKokkosView(wbuf, n);
+
+      KokkosBatched::TeamLU<KokkosTeamMemberType, KokkosBatched::Algo::LU::Unblocked>::invoke(team, B, 0.0);             // decompose B = LU w/o pivoting
+      KokkosBatched::TeamInverseLU<KokkosTeamMemberType, KokkosBatched::Algo::InverseLU::Unblocked>::invoke(team, B, w); // compute B^-1
+    }));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
