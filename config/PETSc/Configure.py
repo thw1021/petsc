@@ -676,9 +676,11 @@ prepend-path PATH "%s"
     with self.Language(lang):
       is_intel = self.setCompilers.isIntel(self.getCompiler(lang=lang), self.log)
       checkDeprecated('DEPRECATED_FUNCTION', '{} int myfunc(void) {{ return 1; }}', is_intel)
-      checkDeprecated('DEPRECATED_TYPEDEF', 'typedef int my_int {};', is_intel)
+      checkDeprecated('DEPRECATED_TYPEDEF', '{} typedef int my_int;', is_intel)
       checkDeprecated('DEPRECATED_ENUM', 'enum E {{ oldval {}, newval }};', is_intel)
-      checkDeprecated('DEPRECATED_STRUCT', 'struct S {{ int a; }} {};', is_intel)
+      checkDeprecated('DEPRECATED_STRUCT', 'struct {} S {{ int a; }};', is_intel)
+      checkDeprecated('DEPRECATED_OBJECT', '{} static int;', is_intel)
+      checkDeprecated('DEPRECATED_FIELD', 'struct {{ {} int a; }};', is_intel)
       # I was unable to make a CPP macro that takes the old and new values as separate
       # arguments and builds the message needed by _Pragma hence the deprecation message is
       # handled as it is
