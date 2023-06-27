@@ -4733,7 +4733,7 @@ cdef class Mat(Object):
         PetscINCREF(V.obj)
         return (A, U, c, V)
 
-    def setLRCMats(self, A, U, c, V):
+    def setLRCMats(self, Mat A, Mat U, Vec c=None, Mat V=None):
         """Set the constituents of a `Type.LRC` matrix.
 
         Logically collective.
@@ -4754,14 +4754,10 @@ cdef class Mat(Object):
         petsc.MatLRCSetMats
 
         """
-        cdef PetscMat Amat = NULL
-        cdef PetscMat Umat = U.mat
-        cdef PetscVec cvec = NULL
-        cdef PetscMat Vmat = NULL
-        if A is not None: Amat = A.mat
-        if c is not None: cvec = c.vec
-        if V is not None: Vmat = V.mat
-        CHKERR( MatLRCSetMats(self.mat, Amat, Umat, cvec, Vmat) )
+        cdef PetscMat Amat = A.mat if A is not None else <PetscMat>NULL
+        cdef PetscVec cvec = c.vec if c is not None else <PetscVec>NULL
+        cdef PetscMat Vmat = V.mat if V is not None else <PetscMat>NULL
+        CHKERR( MatLRCSetMats(self.mat, Amat, U.mat, cvec, Vmat) )
 
     # H2Opus
 
