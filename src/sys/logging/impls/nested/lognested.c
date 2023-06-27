@@ -28,8 +28,8 @@ static PetscErrorCode PetscLogEventGetNestedEvent(PetscLogHandler h, PetscLogReg
   if (missing) {
     // register a new nested event
     char              name[BUFSIZ];
-    PetscEventRegInfo event_info;
-    PetscEventRegInfo nested_event_info;
+    PetscLogEventInfo event_info;
+    PetscLogEventInfo nested_event_info;
 
     PetscCall(PetscLogRegistryEventGetInfo(registry, e, &event_info));
     PetscCall(PetscLogRegistryEventGetInfo(nested->state->registry, key.root, &nested_event_info));
@@ -55,12 +55,12 @@ static PetscErrorCode PetscLogStageGetNestedEvent(PetscLogHandler h, PetscLogReg
   key.leaf = NestedIdFromStage(stage);
   PetscCall(PetscNestedHashPut(nested->pair_map, key, &iter, &missing));
   if (missing) {
-    PetscStageRegInfo stage_info;
+    PetscLogStageInfo stage_info;
     char              name[BUFSIZ];
 
     PetscCall(PetscLogRegistryStageGetInfo(registry, stage, &stage_info));
     if (key.root >= 0) {
-      PetscEventRegInfo nested_event_info;
+      PetscLogEventInfo nested_event_info;
 
       PetscCall(PetscLogRegistryEventGetInfo(nested->state->registry, key.root, &nested_event_info));
       PetscCall(PetscSNPrintf(name, sizeof(name) - 1, "%s;%s", nested_event_info.name, stage_info.name));

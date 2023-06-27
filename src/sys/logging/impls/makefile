@@ -1,4 +1,5 @@
 -include ../../../../petscdir.mk
+#requiresdefine 'PETSC_USE_LOG'
 
 MANSEC	  = Sys
 SUBMANSEC = Profiling

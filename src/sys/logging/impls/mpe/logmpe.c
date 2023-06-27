@@ -4,7 +4,7 @@
 
 static PetscErrorCode PetscLogHandlerEventBegin_MPE(PetscLogHandler handler, PetscLogState state, PetscLogEvent event, int i, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
 {
-  PetscEventRegInfo event_info;
+  PetscLogEventInfo event_info;
 
   PetscFunctionBegin;
   PetscCall(PetscLogRegistryEventGetInfo(state->registry, event, &event_info));
@@ -14,7 +14,7 @@ static PetscErrorCode PetscLogHandlerEventBegin_MPE(PetscLogHandler handler, Pet
 
 static PetscErrorCode PetscLogHandlerEventEnd_MPE(PetscLogHandler handler, PetscLogState state, PetscLogEvent event, int i, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
 {
-  PetscEventRegInfo event_info;
+  PetscLogEventInfo event_info;
 
   PetscFunctionBegin;
   PetscCall(PetscLogRegistryEventGetInfo(state->registry, event, &event_info));
