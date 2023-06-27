@@ -6,7 +6,8 @@ typedef struct {
   KSP       kspL;
   Vec       scale;
   Vec       x0, y0, x1;
-  Mat       L; /* keep a copy to reuse when obtained with L = A10*A01 */
+  Mat       L;         /* keep a copy to reuse when obtained with L = A10*A01 */
+  Mat       CAdiaginv; /* The product of C and the inverse of the diagional of A */
 } PC_LSC;
 
 static PetscErrorCode PCLSCAllocate_Private(PC pc)
@@ -41,20 +42,34 @@ static PetscErrorCode PCSetUp_LSC(PC pc)
   if (!L) PetscCall(PetscObjectQuery((PetscObject)pc->pmat, "LSC_L", (PetscObject *)&L));
   PetscCall(PetscObjectQuery((PetscObject)pc->pmat, "LSC_Lp", (PetscObject *)&Lp));
   if (!Lp) PetscCall(PetscObjectQuery((PetscObject)pc->mat, "LSC_Lp", (PetscObject *)&Lp));
-  if (!L) {
-    PetscCall(MatSchurComplementGetSubMatrices(pc->mat, NULL, NULL, &B, &C, NULL));
-    if (!lsc->L) {
-      PetscCall(MatMatMult(C, B, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &lsc->L));
-    } else {
-      PetscCall(MatMatMult(C, B, MAT_REUSE_MATRIX, PETSC_DEFAULT, &lsc->L));
-    }
-    Lp = L = lsc->L;
-  }
   if (lsc->scale) {
     Mat Ap;
     PetscCall(MatSchurComplementGetSubMatrices(pc->mat, NULL, &Ap, NULL, NULL, NULL));
     PetscCall(MatGetDiagonal(Ap, lsc->scale)); /* Should be the mass matrix, but we don't have plumbing for that yet */
     PetscCall(VecReciprocal(lsc->scale));
+  }
+  if (!L) {
+    PetscCall(MatSchurComplementGetSubMatrices(pc->mat, NULL, NULL, &B, &C, NULL));
+    if (lsc->scale) {
+      if (!lsc->CAdiaginv) {
+        PetscCall(MatConvert(C, MATSAME, MAT_INITIAL_MATRIX, &lsc->CAdiaginv));
+      } else {
+        PetscCall(MatCopy(C, lsc->CAdiaginv, SAME_NONZERO_PATTERN));
+      }
+      PetscCall(MatDiagonalScale(lsc->CAdiaginv, NULL, lsc->scale));
+      if (!lsc->L) {
+        PetscCall(MatMatMult(lsc->CAdiaginv, B, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &lsc->L));
+      } else {
+        PetscCall(MatMatMult(lsc->CAdiaginv, B, MAT_REUSE_MATRIX, PETSC_DEFAULT, &lsc->L));
+      }
+    } else {
+      if (!lsc->L) {
+        PetscCall(MatMatMult(C, B, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &lsc->L));
+      } else {
+        PetscCall(MatMatMult(C, B, MAT_REUSE_MATRIX, PETSC_DEFAULT, &lsc->L));
+      }
+    }
+    Lp = L = lsc->L;
   }
   PetscCall(KSPSetOperators(lsc->kspL, L, Lp));
   PetscCall(KSPSetFromOptions(lsc->kspL));
@@ -91,6 +106,7 @@ static PetscErrorCode PCReset_LSC(PC pc)
   PetscCall(VecDestroy(&lsc->scale));
   PetscCall(KSPDestroy(&lsc->kspL));
   PetscCall(MatDestroy(&lsc->L));
+  PetscCall(MatDestroy(&lsc->CAdiaginv));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
