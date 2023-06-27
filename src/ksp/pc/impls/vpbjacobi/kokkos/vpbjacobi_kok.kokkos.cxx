@@ -3,6 +3,7 @@
 #include <petscdevice.h>
 #include <../src/ksp/pc/impls/vpbjacobi/vpbjacobi.h>
 #include <../src/mat/impls/aij/seq/kokkos/aijkok.hpp> // for MatInvertVariableBlockDiagonal_SeqAIJKokkos
+#include <KokkosBlas2_gemv.hpp>
 
 /* A class that manages helper arrays assisting parallel PCApply() with Kokkos */
 struct PC_VPBJacobi_Kokkos {
@@ -59,18 +60,17 @@ private:
   }
 };
 
-template <PetscBool transpose>
+template <typename trans>
 static PetscErrorCode PCApplyOrTranspose_VPBJacobi_Kokkos(PC pc, Vec x, Vec y)
 {
   PC_VPBJacobi              *jac   = (PC_VPBJacobi *)pc->data;
   PC_VPBJacobi_Kokkos       *pckok = static_cast<PC_VPBJacobi_Kokkos *>(jac->spptr);
   ConstPetscScalarKokkosView xv;
   PetscScalarKokkosView      yv;
-  PetscScalarKokkosView      diag   = pckok->diag;
-  PetscIntKokkosView         bs     = pckok->bs_dual.view_device();
-  PetscIntKokkosView         bs2    = pckok->bs2_dual.view_device();
-  PetscIntKokkosView         blkMap = pckok->blkMap_dual.view_device();
-  const char                *label  = transpose ? "PCApplyTranspose_VPBJacobi_Kokkos" : "PCApply_VPBJacobi_Kokkos";
+  PetscScalarKokkosView      diag  = pckok->diag;
+  PetscIntKokkosView         bs    = pckok->bs_dual.view_device();
+  PetscIntKokkosView         bs2   = pckok->bs2_dual.view_device();
+  const char                *label = std::is_same<trans, KokkosBlas::Trans::Transpose>::value ? "PCApplyTranspose_VPBJacobi" : "PCApply_VPBJacobi";
 
   PetscFunctionBegin;
   PetscCall(PetscLogGpuTimeBegin());
@@ -78,25 +78,20 @@ static PetscErrorCode PCApplyOrTranspose_VPBJacobi_Kokkos(PC pc, Vec x, Vec y)
   VecErrorIfNotKokkos(y);
   PetscCall(VecGetKokkosView(x, &xv));
   PetscCall(VecGetKokkosViewWrite(y, &yv));
+
   PetscCallCXX(Kokkos::parallel_for(
-    label, pckok->n, KOKKOS_LAMBDA(PetscInt row) {
-      const PetscScalar *Ap, *xp;
-      PetscScalar       *yp;
-      PetscInt           i, j, k, m;
-
-      k  = blkMap(row);                             /* k-th block/matrix */
-      m  = bs(k + 1) - bs(k);                       /* block size of the k-th block */
-      i  = row - bs(k);                             /* i-th row of the block */
-      Ap = &diag(bs2(k) + i * (transpose ? m : 1)); /* Ap points to the first entry of i-th row/column */
-      xp = &xv(bs(k));
-      yp = &yv(bs(k));
-
-      yp[i] = 0.0;
-      for (j = 0; j < m; j++) {
-        yp[i] += Ap[0] * xp[j];
-        Ap += transpose ? 1 : m;
-      }
+    label, Kokkos::TeamPolicy<>(jac->nblocks, Kokkos::AUTO()), KOKKOS_LAMBDA(const KokkosTeamMemberType &team) {
+      PetscInt           bid  = team.league_rank();    // block id
+      PetscInt           n    = bs(bid + 1) - bs(bid); // size of this block
+      const PetscScalar *abuf = &diag(bs2(bid));
+      const PetscScalar *xbuf = &xv(bs(bid));
+      PetscScalar       *ybuf = &yv(bs(bid));
+      const auto        &A    = ConstPetscScalarKokkosView2D(abuf, n, n); // wrap it in a 2D view
+      const auto        &x1   = ConstPetscScalarKokkosView(xbuf, n);
+      const auto        &y1   = PetscScalarKokkosView(ybuf, n);
+      KokkosBlas::TeamGemv<KokkosTeamMemberType, trans>::invoke(team, 1.0, A, x1, 0.0, y1); // y1 = 0.0 * y1 + 1.0 * A * x1
     }));
+
   PetscCall(VecRestoreKokkosView(x, &xv));
   PetscCall(VecRestoreKokkosViewWrite(y, &yv));
   PetscCall(PetscLogGpuFlops(pckok->nsize * 2)); /* FMA on entries in all blocks */
@@ -155,8 +150,8 @@ PETSC_INTERN PetscErrorCode PCSetUp_VPBJacobi_Kokkos(PC pc)
   const auto &blkMap = pckok->blkMap_dual.view_device();
   PetscCall(MatInvertVariableBlockDiagonal_SeqAIJKokkos(pc->pmat, bs, bs2, blkMap, pckok->workVector, pckok->diag));
 
-  pc->ops->apply          = PCApplyOrTranspose_VPBJacobi_Kokkos<PETSC_FALSE>;
-  pc->ops->applytranspose = PCApplyOrTranspose_VPBJacobi_Kokkos<PETSC_TRUE>;
+  pc->ops->apply          = PCApplyOrTranspose_VPBJacobi_Kokkos<KokkosBlas::Trans::NoTranspose>;
+  pc->ops->applytranspose = PCApplyOrTranspose_VPBJacobi_Kokkos<KokkosBlas::Trans::Transpose>;
   pc->ops->destroy        = PCDestroy_VPBJacobi_Kokkos;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
