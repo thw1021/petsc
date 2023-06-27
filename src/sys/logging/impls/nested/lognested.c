@@ -3,7 +3,7 @@
 #include "lognested.h"
 #include "xmlviewer.h"
 
-PETSC_INTERN PetscErrorCode PetscLogSetThreshold_Nested(PetscLogHandler h, PetscLogDouble newThresh, PetscLogDouble *oldThresh)
+PETSC_INTERN PetscErrorCode PetscLogSetThreshold_Nested(PetscLogHandlerEntry h, PetscLogDouble newThresh, PetscLogDouble *oldThresh)
 {
   PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->impl->ctx;
 
@@ -15,7 +15,7 @@ PETSC_INTERN PetscErrorCode PetscLogSetThreshold_Nested(PetscLogHandler h, Petsc
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogEventGetNestedEvent(PetscLogHandler h, PetscLogRegistry registry, PetscLogEvent e, PetscLogEvent *nested_event)
+static PetscErrorCode PetscLogEventGetNestedEvent(PetscLogHandlerEntry h, PetscLogRegistry registry, PetscLogEvent e, PetscLogEvent *nested_event)
 {
   PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->impl->ctx;
   NestedIdPair           key;
@@ -43,7 +43,7 @@ static PetscErrorCode PetscLogEventGetNestedEvent(PetscLogHandler h, PetscLogReg
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogStageGetNestedEvent(PetscLogHandler h, PetscLogRegistry registry, PetscLogStage stage, PetscLogEvent *nested_event)
+static PetscErrorCode PetscLogStageGetNestedEvent(PetscLogHandlerEntry h, PetscLogRegistry registry, PetscLogStage stage, PetscLogEvent *nested_event)
 {
   PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->impl->ctx;
   NestedIdPair           key;
@@ -75,7 +75,7 @@ static PetscErrorCode PetscLogStageGetNestedEvent(PetscLogHandler h, PetscLogReg
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogNestedCheckNested(PetscLogHandler h, NestedId leaf, PetscLogEvent nested_event)
+static PetscErrorCode PetscLogNestedCheckNested(PetscLogHandlerEntry h, NestedId leaf, PetscLogEvent nested_event)
 {
   PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->impl->ctx;
   NestedIdPair           key;
@@ -89,7 +89,7 @@ static PetscErrorCode PetscLogNestedCheckNested(PetscLogHandler h, NestedId leaf
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogEventBegin_Nested(PetscLogHandler h, PetscLogState state, PetscLogEvent e, int t, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
+static PetscErrorCode PetscLogEventBegin_Nested(PetscLogHandlerEntry h, PetscLogState state, PetscLogEvent e, int t, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
 {
   PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->impl->ctx;
   PetscLogEvent          nested_event;
@@ -101,7 +101,7 @@ static PetscErrorCode PetscLogEventBegin_Nested(PetscLogHandler h, PetscLogState
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogEventEnd_Nested(PetscLogHandler h, PetscLogState state, PetscLogEvent e, int t, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
+static PetscErrorCode PetscLogEventEnd_Nested(PetscLogHandlerEntry h, PetscLogState state, PetscLogEvent e, int t, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
 {
   PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->impl->ctx;
   PetscLogEvent          nested_event;
@@ -114,7 +114,7 @@ static PetscErrorCode PetscLogEventEnd_Nested(PetscLogHandler h, PetscLogState s
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogEventSync_Nested(PetscLogHandler h, PetscLogState state, PetscLogEvent e, MPI_Comm comm)
+static PetscErrorCode PetscLogEventSync_Nested(PetscLogHandlerEntry h, PetscLogState state, PetscLogEvent e, MPI_Comm comm)
 {
   PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->impl->ctx;
   PetscLogEvent          nested_event;
@@ -126,7 +126,7 @@ static PetscErrorCode PetscLogEventSync_Nested(PetscLogHandler h, PetscLogState 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogStagePush_Nested(PetscLogHandler h, PetscLogState state, PetscLogStage stage)
+static PetscErrorCode PetscLogStagePush_Nested(PetscLogHandlerEntry h, PetscLogState state, PetscLogStage stage)
 {
   PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->impl->ctx;
   PetscLogEvent          nested_event;
@@ -139,7 +139,7 @@ static PetscErrorCode PetscLogStagePush_Nested(PetscLogHandler h, PetscLogState 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogStagePop_Nested(PetscLogHandler h, PetscLogState state, PetscLogStage stage)
+static PetscErrorCode PetscLogStagePop_Nested(PetscLogHandlerEntry h, PetscLogState state, PetscLogStage stage)
 {
   PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->impl->ctx;
   PetscLogEvent          nested_event;
@@ -173,7 +173,7 @@ static PetscErrorCode PetscLogHandlerContextCreate_Nested(PetscLogHandler_Nested
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogObjectCreate_Nested(PetscLogHandler h, PetscLogState state, PetscObject obj)
+static PetscErrorCode PetscLogObjectCreate_Nested(PetscLogHandlerEntry h, PetscLogState state, PetscObject obj)
 {
   PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->impl->ctx;
 
@@ -182,7 +182,7 @@ static PetscErrorCode PetscLogObjectCreate_Nested(PetscLogHandler h, PetscLogSta
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogObjectDestroy_Nested(PetscLogHandler h, PetscLogState state, PetscObject obj)
+static PetscErrorCode PetscLogObjectDestroy_Nested(PetscLogHandlerEntry h, PetscLogState state, PetscObject obj)
 {
   PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->impl->ctx;
 
@@ -191,7 +191,7 @@ static PetscErrorCode PetscLogObjectDestroy_Nested(PetscLogHandler h, PetscLogSt
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogHandlerDestroy_Nested(PetscLogHandler h)
+static PetscErrorCode PetscLogHandlerDestroy_Nested(PetscLogHandlerEntry h)
 {
   PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->impl->ctx;
 
@@ -301,7 +301,7 @@ static PetscErrorCode PetscLogNestedCreatePerfNodes(MPI_Comm comm, PetscLogHandl
   PetscFunctionReturn(0);
 }
 
-PETSC_INTERN PetscErrorCode PetscLogView_Nested(PetscLogHandler handler, PetscViewer viewer)
+PETSC_INTERN PetscErrorCode PetscLogView_Nested(PetscLogHandlerEntry handler, PetscViewer viewer)
 {
   PetscLogHandler_Nested nested = (PetscLogHandler_Nested)handler->impl->ctx;
   PetscNestedEventNode  *nodes;
@@ -330,9 +330,9 @@ PETSC_INTERN PetscErrorCode PetscLogView_Nested(PetscLogHandler handler, PetscVi
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Nested(PetscLogHandler *handler_p)
+PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Nested(PetscLogHandlerEntry *handler_p)
 {
-  PetscLogHandler handler;
+  PetscLogHandlerEntry handler;
 
   PetscFunctionBegin;
   PetscCall(PetscNew(handler_p));

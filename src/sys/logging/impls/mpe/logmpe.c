@@ -2,7 +2,7 @@
 #if defined(PETSC_USE_LOG) && defined(PETSC_HAVE_MPE)
   #include <mpe.h>
 
-static PetscErrorCode PetscLogHandlerEventBegin_MPE(PetscLogHandler handler, PetscLogState state, PetscLogEvent event, int i, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
+static PetscErrorCode PetscLogHandlerEventBegin_MPE(PetscLogHandlerEntry handler, PetscLogState state, PetscLogEvent event, int i, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
 {
   PetscLogEventInfo event_info;
 
@@ -12,7 +12,7 @@ static PetscErrorCode PetscLogHandlerEventBegin_MPE(PetscLogHandler handler, Pet
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogHandlerEventEnd_MPE(PetscLogHandler handler, PetscLogState state, PetscLogEvent event, int i, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
+static PetscErrorCode PetscLogHandlerEventEnd_MPE(PetscLogHandlerEntry handler, PetscLogState state, PetscLogEvent event, int i, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
 {
   PetscLogEventInfo event_info;
 
@@ -22,9 +22,9 @@ static PetscErrorCode PetscLogHandlerEventEnd_MPE(PetscLogHandler handler, Petsc
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_MPE(PetscLogHandler *handler_p)
+PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_MPE(PetscLogHandlerEntry *handler_p)
 {
-  PetscLogHandler handler;
+  PetscLogHandlerEntry handler;
 
   PetscFunctionBegin;
   PetscCall(PetscNew(handler_p));

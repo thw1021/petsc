@@ -188,7 +188,7 @@ static PetscErrorCode PetscPrintXMLGlobalPerformanceElement(PetscViewer viewer, 
 /* Print the global performance: max, max/min, average and total of
  *      time, objects, flops, flops/sec, memory, MPI messages, MPI message lengths, MPI reductions.
  */
-static PetscErrorCode PetscPrintGlobalPerformance(PetscViewer viewer, PetscLogDouble locTotalTime, PetscLogHandler default_handler)
+static PetscErrorCode PetscPrintGlobalPerformance(PetscViewer viewer, PetscLogDouble locTotalTime, PetscLogHandlerEntry default_handler)
 {
   PetscLogDouble  flops, mem, red, mess;
   PetscInt        num_objects;
@@ -417,7 +417,7 @@ static PetscErrorCode PetscLogNestedTreePrintTop(PetscViewer viewer, PetscNested
 PETSC_INTERN PetscErrorCode PetscLogView_Nested_XML(PetscLogHandler_Nested nested, PetscNestedEventTree *tree, PetscViewer viewer)
 {
   PetscLogDouble  locTotalTime;
-  PetscLogHandler default_handler = nested->handler;
+  PetscLogHandlerEntry default_handler = nested->handler;
 
   PetscFunctionBegin;
   PetscCall(PetscViewerInitASCII_XML(viewer));
