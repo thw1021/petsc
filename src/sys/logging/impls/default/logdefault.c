@@ -249,14 +249,7 @@ PETSC_LOG_RESIZABLE_ARRAY(ObjectArray, Object, PetscObject, NULL, NULL, NULL)
 /* --- Perfstubs --- */
 
 /* Map from (threadid,stage,event) to perfInfo data struct */
-#include <petsc/private/hashmap.h>
-
-typedef struct _PetscHashIJKKey {
-  PetscInt i, j, k;
-} PetscHashIJKKey;
-
-#define PetscHashIJKKeyHash(key)     PetscHashCombine(PetscHashInt((key).i), PetscHashCombine(PetscHashInt((key).j), PetscHashInt((key).k)))
-#define PetscHashIJKKeyEqual(k1, k2) (((k1).i == (k2).i) ? (((k1).j == (k2).j) ? ((k1).k == (k2).k) : 0) : 0)
+#include <petsc/private/hashmapijk.h>
 
 PETSC_HASH_MAP(HMapEvent, PetscHashIJKKey, PetscEventPerfInfo *, PetscHashIJKKeyHash, PetscHashIJKKeyEqual, NULL)
 
