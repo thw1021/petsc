@@ -543,21 +543,22 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
 
   PetscCall(PetscOptionsGetViewers(comm, NULL, NULL, "-log_view", &n_max, NULL, format, NULL));
   if (n_max > 0) {
-    PetscBool any_nested = PETSC_FALSE;
+    PetscBool any_nested  = PETSC_FALSE;
+    PetscBool any_default = PETSC_FALSE;
 
     for (PetscInt i = 0; i < n_max; i++) {
       if (format[i] == PETSC_VIEWER_ASCII_XML || format[i] == PETSC_VIEWER_ASCII_FLAMEGRAPH) {
         any_nested = PETSC_TRUE;
-        break;
+      } else {
+        any_default = PETSC_TRUE;
       }
     }
+    if (any_default) { PetscCall(PetscLogDefaultBegin()); }
     if (any_nested) {
       PetscCall(PetscLogNestedBegin());
       PetscReal threshold = PetscRealConstant(0.01);
       PetscCall(PetscOptionsGetReal(NULL, NULL, "-log_threshold", &threshold, &flg1));
       if (flg1) PetscCall(PetscLogSetThreshold((PetscLogDouble)threshold, NULL));
-    } else {
-      PetscCall(PetscLogDefaultBegin());
     }
   }
 #endif
