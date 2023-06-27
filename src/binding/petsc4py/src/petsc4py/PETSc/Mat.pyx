@@ -4704,7 +4704,7 @@ cdef class Mat(Object):
     def getLRCMats(self) -> tuple[Mat, Mat, Vec, Mat]:
         """Return the constituents of a `Type.LRC` matrix.
 
-        Collective.
+        Not collective.
 
         Returns
         -------
@@ -4732,6 +4732,36 @@ cdef class Mat(Object):
         PetscINCREF(c.obj)
         PetscINCREF(V.obj)
         return (A, U, c, V)
+
+    def setLRCMats(self, A, U, c, V):
+        """Set the constituents of a `Type.LRC` matrix.
+
+        Logically collective.
+
+        Parameters
+        ----------
+        A : Mat
+            The ``A`` matrix, or NULL to omit ``A``.
+        U : Mat
+            The first dense rectangular matrix.
+        c : Vec
+            The sequential vector containing the diagonal of ``C``, or NULL for all ones.
+        V : Mat
+            The second dense rectangular matrix, or NULL for a copy of ``U``.
+
+        See Also
+        --------
+        petsc.MatLRCSetMats
+
+        """
+        cdef PetscMat Amat = NULL
+        cdef PetscMat Umat = U.mat
+        cdef PetscVec cvec = NULL
+        cdef PetscMat Vmat = NULL
+        if A is not None: Amat = A.mat
+        if c is not None: cvec = c.vec
+        if V is not None: Vmat = V.mat
+        CHKERR( MatLRCSetMats(self.mat, Amat, Umat, cvec, Vmat) )
 
     # H2Opus
 
