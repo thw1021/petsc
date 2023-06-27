@@ -171,7 +171,7 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *);
 
 /* --- Registration info types that are not part of the public API, but handlers need to know --- */
 
-/* --- PetscEventRegInfo --- */
+/* --- PetscLogEventInfo --- */
 typedef struct {
   char        *name;       /* The name of this event */
   PetscClassId classid;    /* The class the event is associated with */
@@ -184,20 +184,20 @@ typedef struct {
   int mpe_id_begin; /* MPE IDs that define the event */
   int mpe_id_end;
 #endif
-} PetscEventRegInfo;
+} PetscLogEventInfo;
 
 typedef struct {
   char        *name;    /* The class name */
   PetscClassId classid; /* The integer identifying this class */
-} PetscClassRegInfo;
+} PetscLogClassInfo;
 
-typedef struct _PetscStageRegInfo {
+typedef struct _PetscLogStageInfo {
   char     *name;    /* The stage name */
   PetscBool visible; /* The flag to print info in summary */
 #if defined(PETSC_HAVE_TAU_PERFSTUBS)
   void *timer; /* Associated external tool timer for this event */
 #endif
-} PetscStageRegInfo;
+} PetscLogStageInfo;
 
 /* --- the registry: information about registered things ---
 
@@ -220,12 +220,12 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryGetClassFromClassId(PetscLogRegistry
 PETSC_INTERN PetscErrorCode PetscLogRegistryGetNumEvents(PetscLogRegistry, PetscInt *, PetscInt *);
 PETSC_INTERN PetscErrorCode PetscLogRegistryGetNumStages(PetscLogRegistry, PetscInt *, PetscInt *);
 PETSC_INTERN PetscErrorCode PetscLogRegistryGetNumClasses(PetscLogRegistry, PetscInt *, PetscInt *);
-PETSC_INTERN PetscErrorCode PetscLogRegistryEventGetInfo(PetscLogRegistry, PetscLogEvent, PetscEventRegInfo *);
-PETSC_INTERN PetscErrorCode PetscLogRegistryStageGetInfo(PetscLogRegistry, PetscLogStage, PetscStageRegInfo *);
-PETSC_INTERN PetscErrorCode PetscLogRegistryClassGetInfo(PetscLogRegistry, PetscLogClass, PetscClassRegInfo *);
-PETSC_INTERN PetscErrorCode PetscLogRegistryEventSetInfo(PetscLogRegistry, PetscLogEvent, PetscEventRegInfo);
-PETSC_INTERN PetscErrorCode PetscLogRegistryStageSetInfo(PetscLogRegistry, PetscLogStage, PetscStageRegInfo);
-PETSC_INTERN PetscErrorCode PetscLogRegistryClassSetInfo(PetscLogRegistry, PetscLogClass, PetscClassRegInfo);
+PETSC_INTERN PetscErrorCode PetscLogRegistryEventGetInfo(PetscLogRegistry, PetscLogEvent, PetscLogEventInfo *);
+PETSC_INTERN PetscErrorCode PetscLogRegistryStageGetInfo(PetscLogRegistry, PetscLogStage, PetscLogStageInfo *);
+PETSC_INTERN PetscErrorCode PetscLogRegistryClassGetInfo(PetscLogRegistry, PetscLogClass, PetscLogClassInfo *);
+PETSC_INTERN PetscErrorCode PetscLogRegistryEventSetInfo(PetscLogRegistry, PetscLogEvent, PetscLogEventInfo);
+PETSC_INTERN PetscErrorCode PetscLogRegistryStageSetInfo(PetscLogRegistry, PetscLogStage, PetscLogStageInfo);
+PETSC_INTERN PetscErrorCode PetscLogRegistryClassSetInfo(PetscLogRegistry, PetscLogClass, PetscLogClassInfo);
 
 /* --- globally synchronized registry information --- */
 

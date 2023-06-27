@@ -1255,4 +1255,16 @@ M*/
   #define PetscPragmaSIMD
 #endif
 
+/* gcc warns on deprecated fields in deprecated structs: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=31367,
+   so we have to turn the warnings off inside the structs */
+#if defined(__GNUC__) && !defined(__clang__)
+  #define PETSC_DEPRECATED_FIELD_IN_DEPRECATED_STRUCT(f) \
+    _Pragma("GCC diagnostic push"); \
+    _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\""); \
+    f; \
+    _Pragma("GCC diagnostic pop")
+#else
+  #define PETSC_DEPRECATED_FIELD_IN_DEPRECATED_STRUCT(f) f
+#endif
+
 #endif /* PETSC_PREPROCESSOR_MACROS_H */

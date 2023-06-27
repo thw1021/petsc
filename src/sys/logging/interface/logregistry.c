@@ -22,16 +22,16 @@
   } \
   PETSC_LOG_RESIZABLE_ARRAY_HAS_NAME(Container, Entry, const char *, PetscLog##Container##Equal)
 
-static PetscErrorCode PetscLogClassArrayEqual(PetscClassRegInfo *class_info, PetscClassId classid, PetscBool *is_equal)
+static PetscErrorCode PetscLogClassArrayEqual(PetscLogClassInfo *class_info, PetscClassId classid, PetscBool *is_equal)
 {
   PetscFunctionBegin;
   *is_equal = (class_info->classid == classid) ? PETSC_TRUE : PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_LOG_RESIZABLE_ARRAY_KEY_BY_NAME(EventArray, PetscEventRegInfo)
-PETSC_LOG_RESIZABLE_ARRAY_KEY_BY_NAME(StageArray, PetscStageRegInfo)
-PETSC_LOG_RESIZABLE_ARRAY_HAS_NAME(ClassArray, PetscClassRegInfo, PetscClassId, PetscLogClassArrayEqual)
+PETSC_LOG_RESIZABLE_ARRAY_KEY_BY_NAME(EventArray, PetscLogEventInfo)
+PETSC_LOG_RESIZABLE_ARRAY_KEY_BY_NAME(StageArray, PetscLogStageInfo)
+PETSC_LOG_RESIZABLE_ARRAY_HAS_NAME(ClassArray, PetscLogClassInfo, PetscClassId, PetscLogClassArrayEqual)
 
 struct _n_PetscLogRegistry {
   PetscLogEventArray events;
@@ -86,7 +86,7 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryGetNumClasses(PetscLogRegistry regis
 PETSC_INTERN PetscErrorCode PetscLogRegistryStageRegister(PetscLogRegistry registry, const char sname[], int *stage)
 {
   int               idx;
-  PetscStageRegInfo stage_info;
+  PetscLogStageInfo stage_info;
 
   PetscFunctionBegin;
   PetscCall(PetscLogStageArrayFind(registry->stages, sname, &idx));
@@ -124,7 +124,7 @@ static PetscErrorCode PetscLogMPEGetRGBColor_Internal(const char *str[])
 
 PETSC_INTERN PetscErrorCode PetscLogRegistryEventRegister(PetscLogRegistry registry, const char name[], PetscClassId classid, PetscLogEvent *event)
 {
-  PetscEventRegInfo new_info;
+  PetscLogEventInfo new_info;
 
   PetscFunctionBegin;
   PetscCall(PetscLogRegistryGetEventFromName(registry, name, event));
@@ -161,7 +161,7 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryEventRegister(PetscLogRegistry regis
 
 PETSC_INTERN PetscErrorCode PetscLogRegistryClassRegister(PetscLogRegistry registry, const char name[], PetscClassId classid, PetscLogClass *class)
 {
-  PetscClassRegInfo new_info;
+  PetscLogClassInfo new_info;
 
   PetscFunctionBegin;
   PetscCall(PetscLogRegistryGetClassFromClassId(registry, classid, class));
@@ -194,42 +194,42 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryGetClassFromClassId(PetscLogRegistry
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscLogRegistryEventGetInfo(PetscLogRegistry registry, PetscLogEvent event, PetscEventRegInfo *event_info)
+PETSC_INTERN PetscErrorCode PetscLogRegistryEventGetInfo(PetscLogRegistry registry, PetscLogEvent event, PetscLogEventInfo *event_info)
 {
   PetscFunctionBegin;
   PetscCall(PetscLogEventArrayGet(registry->events, event, event_info));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscLogRegistryStageGetInfo(PetscLogRegistry registry, PetscLogStage stage, PetscStageRegInfo *stage_info)
+PETSC_INTERN PetscErrorCode PetscLogRegistryStageGetInfo(PetscLogRegistry registry, PetscLogStage stage, PetscLogStageInfo *stage_info)
 {
   PetscFunctionBegin;
   PetscCall(PetscLogStageArrayGet(registry->stages, stage, stage_info));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscLogRegistryClassGetInfo(PetscLogRegistry registry, PetscLogClass class, PetscClassRegInfo *class_info)
+PETSC_INTERN PetscErrorCode PetscLogRegistryClassGetInfo(PetscLogRegistry registry, PetscLogClass class, PetscLogClassInfo *class_info)
 {
   PetscFunctionBegin;
   PetscCall(PetscLogClassArrayGet(registry->classes, class, class_info));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscLogRegistryEventSetInfo(PetscLogRegistry registry, PetscLogEvent event, PetscEventRegInfo event_info)
+PETSC_INTERN PetscErrorCode PetscLogRegistryEventSetInfo(PetscLogRegistry registry, PetscLogEvent event, PetscLogEventInfo event_info)
 {
   PetscFunctionBegin;
   PetscCall(PetscLogEventArraySet(registry->events, event, event_info));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscLogRegistryStageSetInfo(PetscLogRegistry registry, PetscLogStage stage, PetscStageRegInfo stage_info)
+PETSC_INTERN PetscErrorCode PetscLogRegistryStageSetInfo(PetscLogRegistry registry, PetscLogStage stage, PetscLogStageInfo stage_info)
 {
   PetscFunctionBegin;
   PetscCall(PetscLogStageArraySet(registry->stages, stage, stage_info));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscLogRegistryClassSetInfo(PetscLogRegistry registry, PetscLogClass class, PetscClassRegInfo class_info)
+PETSC_INTERN PetscErrorCode PetscLogRegistryClassSetInfo(PetscLogRegistry registry, PetscLogClass class, PetscLogClassInfo class_info)
 {
   PetscFunctionBegin;
   PetscCall(PetscLogClassArraySet(registry->classes, class, class_info));
@@ -442,7 +442,7 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryCreateGlobalStageNames(MPI_Comm comm
   PetscCall(PetscLogStageArrayGetSize(registry->stages, &num_stages_local, NULL));
   PetscCall(PetscMalloc1(num_stages_local, &names));
   for (PetscInt i = 0; i < num_stages_local; i++) {
-    PetscStageRegInfo stage_info;
+    PetscLogStageInfo stage_info;
     PetscCall(PetscLogRegistryStageGetInfo(registry, i, &stage_info));
     names[i] = stage_info.name;
   }
@@ -460,7 +460,7 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryCreateGlobalEventNames(MPI_Comm comm
   PetscCall(PetscLogEventArrayGetSize(registry->events, &num_events_local, NULL));
   PetscCall(PetscMalloc1(num_events_local, &names));
   for (PetscInt i = 0; i < num_events_local; i++) {
-    PetscEventRegInfo event_info;
+    PetscLogEventInfo event_info;
     ;
     PetscCall(PetscLogRegistryEventGetInfo(registry, i, &event_info));
     names[i] = event_info.name;
