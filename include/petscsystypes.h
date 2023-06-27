@@ -1053,8 +1053,8 @@ typedef struct {
   int            id;                  /* The integer identifying this event / stage */
   int            depth;               /* The nesting depth of the event call */
   int            count;               /* The number of times this event was executed */
-  PetscBool      active;              /* Deprecated property: activity is controlled through the registry now */
-  PetscBool      visible;             /* Deprecated property: visibility is controlled through the registry now */
+  PETSC_DEPRECATED_FIELD("Use PetscLogEventGetActive() (since version 3.20)") PetscBool active;
+  PETSC_DEPRECATED_FIELD("Use PetscLogStageGetVisible() (since version 3.20)") PetscBool visible;
   PetscLogDouble flops;               /* The flops used in this event */
   PetscLogDouble flops2;              /* The square of flops used in this event */
   PetscLogDouble flopsTmp;            /* The accumulator for flops used in this event */
@@ -1082,5 +1082,24 @@ typedef struct {
 } PetscEventPerfInfo;
 
 typedef struct _n_PetscIntStack *PetscIntStack;
+
+/*MC
+    PetscLogEvent - id used to identify PETSc or user events which timed portions (blocks of executable)
+     code.
+
+    Level: intermediate
+
+.seealso: [](ch_profiling), `PetscLogEventRegister()`, `PetscLogEventBegin()`, `PetscLogEventEnd()`, `PetscLogStage`
+M*/
+typedef int PetscLogEvent;
+
+/*MC
+    PetscLogStage - id used to identify user stages (phases, sections) of runs - for logging
+
+    Level: intermediate
+
+.seealso: [](ch_profiling), `PetscLogStageRegister()`, `PetscLogStagePush()`, `PetscLogStagePop()`, `PetscLogEvent`
+M*/
+typedef int PetscLogStage;
 
 #endif

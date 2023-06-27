@@ -4,19 +4,21 @@
 #include <petscsystypes.h>
 #include <petscconf.h>
 
-PETSC_DEPRECATED_TYPEDEF("PetscClassRegInfo is deprecated (since 3.20)") typedef struct {
+/* These data structures are no longer used by any non-deprecated PETSc interface functions */
+
+typedef struct {
   char        *name;
   PetscClassId classid;
 } PetscClassRegInfo;
 
-PETSC_DEPRECATED_TYPEDEF("PetscClassRegLog is deprecated (since 3.20)") typedef struct _n_PetscClassRegLog *PetscClassRegLog;
-struct PETSC_DEPRECATED_STRUCT("_n_PetscClassRegLog is deprecated (since 3.20)") _n_PetscClassRegLog {
+typedef struct _n_PetscClassRegLog *PetscClassRegLog;
+struct _n_PetscClassRegLog {
   int                numClasses;
   int                maxClasses;
-  PETSC_DEPRECATED_FIELD_IN_DEPRECATED_STRUCT(PetscClassRegInfo *classInfo);
+  PetscClassRegInfo *classInfo;
 };
 
-PETSC_DEPRECATED_TYPEDEF("PetscClassPerfInfo is deprecated (since 3.20)") typedef struct {
+typedef struct {
   PetscClassId   id;
   int            creations;
   int            destructions;
@@ -24,14 +26,14 @@ PETSC_DEPRECATED_TYPEDEF("PetscClassPerfInfo is deprecated (since 3.20)") typede
   PetscLogDouble descMem;
 } PetscClassPerfInfo;
 
-PETSC_DEPRECATED_TYPEDEF("PetscClassPerfLog is deprecated (since 3.20)") typedef struct _n_PetscClassPerfLog *PetscClassPerfLog;
-struct PETSC_DEPRECATED_STRUCT("_n_PetscClassPerfLog is deprecated (since 3.20)") _n_PetscClassPerfLog {
+typedef struct _n_PetscClassPerfLog *PetscClassPerfLog;
+struct _n_PetscClassPerfLog {
   int                 numClasses;
   int                 maxClasses;
-  PETSC_DEPRECATED_FIELD_IN_DEPRECATED_STRUCT(PetscClassPerfInfo *classInfo);
+  PetscClassPerfInfo *classInfo;
 };
 
-PETSC_DEPRECATED_TYPEDEF("PetscEventRegInfo is deprecated (since 3.20)") typedef struct {
+typedef struct {
   char        *name;
   PetscClassId classid;
   PetscBool    collective;
@@ -44,42 +46,82 @@ PETSC_DEPRECATED_TYPEDEF("PetscEventRegInfo is deprecated (since 3.20)") typedef
 #endif
 } PetscEventRegInfo;
 
-PETSC_DEPRECATED_TYPEDEF("PetscEventRegLog is deprecated (since 3.20)") typedef struct _n_PetscEventRegLog *PetscEventRegLog;
-struct PETSC_DEPRECATED_STRUCT("_n_PetscEventRegLog is deprecated (since 3.20)") _n_PetscEventRegLog {
+typedef struct _n_PetscEventRegLog *PetscEventRegLog;
+struct _n_PetscEventRegLog {
   int                numEvents;
   int                maxEvents;
-  PETSC_DEPRECATED_FIELD_IN_DEPRECATED_STRUCT(PetscEventRegInfo *eventInfo); /* The registration information for each event */
+  PetscEventRegInfo *eventInfo; /* The registration information for each event */
 };
 
-PETSC_DEPRECATED_TYPEDEF("PetscEventPerfLog is deprecated (since 3.20)") typedef struct _n_PetscEventPerfLog *PetscEventPerfLog;
-struct PETSC_DEPRECATED_STRUCT("_n_PetscEventRegLog is deprecated (since 3.20)") _n_PetscEventPerfLog {
+typedef struct _n_PetscEventPerfLog *PetscEventPerfLog;
+struct _n_PetscEventPerfLog {
   int                 numEvents;
   int                 maxEvents;
   PetscEventPerfInfo *eventInfo;
 };
 
-PETSC_DEPRECATED_TYPEDEF("PetscStageInfo is deprecated (since 3.20)") typedef struct PETSC_DEPRECATED_STRUCT("_PetscStageInfo is deprecated (since 3.20)") _PetscStageInfo {
+typedef struct _PetscStageInfo {
   char              *name;
   PetscBool          used;
   PetscEventPerfInfo perfInfo;
-  PETSC_DEPRECATED_FIELD_IN_DEPRECATED_STRUCT(PetscEventPerfLog  eventLog);
-  PETSC_DEPRECATED_FIELD_IN_DEPRECATED_STRUCT(PetscClassPerfLog  classLog);
+  PetscClassPerfLog  classLog;
 #if defined(PETSC_HAVE_TAU_PERFSTUBS)
   void *timer;
 #endif
 } PetscStageInfo;
 
-PETSC_DEPRECATED_TYPEDEF("PetscStageLog is deprecated (since 3.20)") typedef struct _n_PetscStageLog *PetscStageLog;
-struct PETSC_DEPRECATED_STRUCT("PetscStageLog is deprecated (since 3.20)") _n_PetscStageLog {
+typedef struct _n_PetscStageLog *PetscStageLog;
+struct _n_PetscStageLog {
   int              numStages;
   int              maxStages;
   PetscIntStack    stack;
   int              curStage;
-  PETSC_DEPRECATED_FIELD_IN_DEPRECATED_STRUCT(PetscStageInfo  *stageInfo);
-  PETSC_DEPRECATED_FIELD_IN_DEPRECATED_STRUCT(PetscEventRegLog eventLog);
-  PETSC_DEPRECATED_FIELD_IN_DEPRECATED_STRUCT(PetscClassRegLog classLog);
+  PetscStageInfo  *stageInfo;
+  PetscEventRegLog eventLog;
+  PetscClassRegLog classLog;
 };
 
+PETSC_DEPRECATED_OBJECT("Use PetscLog interface functions (since version 3.20)") PETSC_UNUSED static PetscStageLog petsc_stageLog = NULL;
 
+PETSC_DEPRECATED_FUNCTION("Use PetscLog interface functions (since version 3.20)") static inline PetscErrorCode PetscLogGetStageLog(PetscStageLog *s)
+{
+  *s = NULL;
+  return PETSC_SUCCESS;
+}
+
+PETSC_DEPRECATED_FUNCTION("Use PetscLog interface functions (since version 3.20)") static inline PetscErrorCode PetscStageLogGetCurrent(PetscStageLog p, int *s)
+{
+  *s = -1;
+  return PETSC_SUCCESS;
+}
+
+PETSC_DEPRECATED_FUNCTION("Use PetscLog interface functions (since version 3.20)") static inline PetscErrorCode PetscStageLogGetEventPerfLog(PetscStageLog s, int i, PetscEventPerfLog *p)
+{
+  *p = NULL;
+  return PETSC_SUCCESS;
+}
+
+PETSC_DEPRECATED_OBJECT("Create a PetscLogHandler object (since version 3.20)") PETSC_UNUSED static PetscErrorCode (*PetscLogPLB)(PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject) = NULL;
+PETSC_DEPRECATED_OBJECT("Create a PetscLogHandler object (since version 3.20)") PETSC_UNUSED static PetscErrorCode (*PetscLogPLE)(PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject) = NULL;
+PETSC_DEPRECATED_OBJECT("Create a PetscLogHandler object (since version 3.20)") PETSC_UNUSED static PetscErrorCode (*PetscLogPHC)(PetscObject);
+PETSC_DEPRECATED_OBJECT("Create a PetscLogHandler object (since version 3.20)") PETSC_UNUSED static PetscErrorCode (*PetscLogPHD)(PetscObject);
+
+PETSC_DEPRECATED_FUNCTION("Create a PetscLogHandler object (since version 3.20)") static inline PetscErrorCode PetscLogSet(PetscErrorCode (*a)(int, int, PetscObject, PetscObject, PetscObject, PetscObject), PetscErrorCode (*b)(int, int, PetscObject, PetscObject, PetscObject, PetscObject))
+{
+  (void)a;
+  (void)b;
+  return PETSC_SUCCESS;
+}
+
+PETSC_DEPRECATED_FUNCTION("Use PetscLogEventsPause() (since version 3.20)") static inline PetscErrorCode PetscLogPushCurrentEvent_Internal(PetscLogEvent e)
+{
+  (void)e;
+  return PETSC_SUCCESS;
+}
+
+PETSC_DEPRECATED_FUNCTION("Use PetscLogEventsUnpause() (since version 3.20)") static inline PetscErrorCode PetscLogPopCurrentEvent_Internal(void)
+{
+  return PETSC_SUCCESS;
+}
 
 #endif /* define PETSCLOGDEPRECATED_H */

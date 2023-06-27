@@ -30,7 +30,7 @@ PETSC_HASH_MAP(NestedHash, NestedIdPair, PetscLogEvent, NestedIdPairHash, Nested
 typedef struct _n_PetscLogHandler_Nested *PetscLogHandler_Nested;
 struct _n_PetscLogHandler_Nested {
   PetscLogState   state;
-  PetscLogHandler handler;
+  PetscLogHandlerEntry handler;
   PetscNestedHash pair_map;
   PetscIntStack   stack; // stack of nested ids
   PetscClassId    nested_stage_id;
