@@ -5,12 +5,12 @@
 
 /*---------------- PetscLogHandlerImpl: things a log handlers must do that don't need to be exposed -----------------*/
 
-typedef PetscErrorCode (*PetscLogEventActivityFn)(PetscLogHandler, PetscLogState, PetscLogEvent);
-typedef PetscErrorCode (*PetscLogStageFn)(PetscLogHandler, PetscLogState, PetscLogStage);
-typedef PetscErrorCode (*PetscLogObjectFn)(PetscLogHandler, PetscLogState, PetscObject);
-typedef PetscErrorCode (*PetscLogPauseFn)(PetscLogHandler, PetscLogState);
-typedef PetscErrorCode (*PetscLogViewFn)(PetscLogHandler, PetscViewer);
-typedef PetscErrorCode (*PetscLogDestroyFn)(PetscLogHandler);
+typedef PetscErrorCode (*PetscLogEventActivityFn)(PetscLogHandlerEntry, PetscLogState, PetscLogEvent);
+typedef PetscErrorCode (*PetscLogStageFn)(PetscLogHandlerEntry, PetscLogState, PetscLogStage);
+typedef PetscErrorCode (*PetscLogObjectFn)(PetscLogHandlerEntry, PetscLogState, PetscObject);
+typedef PetscErrorCode (*PetscLogPauseFn)(PetscLogHandlerEntry, PetscLogState);
+typedef PetscErrorCode (*PetscLogViewFn)(PetscLogHandlerEntry, PetscViewer);
+typedef PetscErrorCode (*PetscLogDestroyFn)(PetscLogHandlerEntry);
 
 typedef enum {
   PETSC_LOG_HANDLER_DEFAULT,
@@ -33,7 +33,7 @@ struct _n_PetscLogHandlerImpl {
   PetscLogPauseFn         pause_pop;
 };
 
-PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *);
+PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandlerEntry *);
 
 /* --- Macros for resizable arrays that show up frequently in the implementation of logging --- */
 
@@ -291,9 +291,9 @@ PETSC_INTERN PetscInt PetscLogGetTid(void);
 
 #ifdef PETSC_USE_LOG
 /* Registration functions */
-PETSC_INTERN PetscErrorCode PetscLogView_Nested(PetscLogHandler, PetscViewer);
-PETSC_INTERN PetscErrorCode PetscLogView_Default(PetscLogHandler, PetscViewer);
-PETSC_INTERN PetscErrorCode PetscLogDump_Default(PetscLogHandler, const char[]);
+PETSC_INTERN PetscErrorCode PetscLogView_Nested(PetscLogHandlerEntry, PetscViewer);
+PETSC_INTERN PetscErrorCode PetscLogView_Default(PetscLogHandlerEntry, PetscViewer);
+PETSC_INTERN PetscErrorCode PetscLogDump_Default(PetscLogHandlerEntry, const char[]);
 PETSC_INTERN PetscErrorCode PetscLogNestedEnd(void);
 
   #if defined(PETSC_HAVE_DEVICE)
