@@ -16,8 +16,9 @@ typedef enum {
   PETSC_LOG_HANDLER_DEFAULT,
   PETSC_LOG_HANDLER_NESTED,
 #if defined(PETSC_HAVE_MPE)
-  PETSC_LOG_HANDLER_MPE
+  PETSC_LOG_HANDLER_MPE,
 #endif
+  PETSC_LOG_HANDLER_USER
 } PetscLogHandlerType;
 
 struct _n_PetscLogHandlerImpl {

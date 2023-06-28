@@ -1102,4 +1102,51 @@ typedef int PetscLogEvent;
 M*/
 typedef int PetscLogStage;
 
+/*E
+   PetscLogHandlerOpType - Operations performed by a log handler
+
+   Level: developer
+
+   Values:
++ `PETSC_LOG_HANDLER_OP_DESTROY`               - Destroy's the user context if necessary in `PetscLogHandlerDestroy()`
+. `PETSC_LOG_HANDLER_OP_EVENT_BEGIN`           - `PetscLogHandlerEventBegin()`
+. `PETSC_LOG_HANDLER_OP_EVENT_END`             - `PetscLogHandlerEventEnd()`
+. `PETSC_LOG_HANDLER_OP_EVENT_SYNC`            - `PetscLogHandlerSync()`
+. `PETSC_LOG_HANDLER_OP_EVENT_DEACTIVATE_PUSH` - `PetscLogHandlerEventDeactivatePush()`
+. `PETSC_LOG_HANDLER_OP_EVENT_DEACTIVATE_POP`  - `PetscLogHandlerEventDeactivatePop()`
+. `PETSC_LOG_HANDLER_OP_EVENTS_PAUSE`          - `PetscLogHandlerEventsPause()`
+. `PETSC_LOG_HANDLER_OP_EVENTS_UNPAUSE`        - `PetscLogHandlerEventsUnpause()`
+. `PETSC_LOG_HANDLER_OP_OBJECT_CREATE`         - `PetscLogHandlerObjectCreate()`
+. `PETSC_LOG_HANDLER_OP_OBJECT_DESTROY`        - `PetscLogHandlerObjectDestroy()`
+. `PETSC_LOG_HANDLER_STAGE_PUSH`               - `PetscLogHandlerStagePush()`
+. `PETSC_LOG_HANDLER_STAGE_POP`                - `PetscLogHandlerStagePop()`
+- `PETSC_LOG_HANDLER_OP_VIEW`                  - `PetscLogHandlerView()`
+
+.seealso: [](ch_profiling), `PetscLogHandler`, `PetscLogHandlerSetOperation()`, `PetscLogHandlerGetOperation()`
+E*/
+typedef enum {
+  PETSC_LOG_HANDLER_OP_DESTROY,
+  PETSC_LOG_HANDLER_OP_EVENT_BEGIN,
+  PETSC_LOG_HANDLER_OP_EVENT_END,
+  PETSC_LOG_HANDLER_OP_EVENT_SYNC,
+  PETSC_LOG_HANDLER_OP_EVENT_DEACTIVATE_PUSH,
+  PETSC_LOG_HANDLER_OP_EVENT_DEACTIVATE_POP,
+  PETSC_LOG_HANDLER_OP_EVENTS_PAUSE,
+  PETSC_LOG_HANDLER_OP_EVENTS_UNPAUSE,
+  PETSC_LOG_HANDLER_OP_OBJECT_CREATE,
+  PETSC_LOG_HANDLER_OP_OBJECT_DESTROY,
+  PETSC_LOG_HANDLER_OP_STAGE_PUSH,
+  PETSC_LOG_HANDLER_OP_STAGE_POP,
+  PETSC_LOG_HANDLER_OP_VIEW,
+} PetscLogHandlerOpType;
+
+/*S
+    PetscLogHandler - Interface for performance logging
+
+    Level: Developer
+
+.seealso: [](ch_profiling), `PetscLogHandlerCreate()`, `PetscLogHandlerDestroy()`, `PetscLogHandlerSetContext()`, `PetscLogHandlerSetOperation()`, `PetscLogAddHandler()`
+S*/
+typedef struct _n_PetscLogHandler *PetscLogHandler;
+
 #endif
