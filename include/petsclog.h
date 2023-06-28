@@ -88,6 +88,25 @@ struct _n_PetscLogState {
   int              bt_num_events;
 };
 
+PETSC_EXTERN PetscErrorCode PetscLogHandlerCreate(MPI_Comm, PetscLogHandler *);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerSetContext(PetscLogHandler, void *);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerGetContext(PetscLogHandler, void *);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerSetOperation(PetscLogHandler, PetscLogHandlerOpType, void (*)(void));
+PETSC_EXTERN PetscErrorCode PetscLogHandlerGetOperation(PetscLogHandler, PetscLogHandlerOpType, void (**)(void));
+PETSC_EXTERN PetscErrorCode PetscLogHandlerEventBegin(PetscLogHandler, PetscLogState, PetscLogEvent, PetscObject, PetscObject, PetscObject, PetscObject);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerEventEnd(PetscLogHandler, PetscLogState, PetscLogEvent, PetscObject, PetscObject, PetscObject, PetscObject);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerEventSync(PetscLogHandler, PetscLogState, PetscLogEvent, MPI_Comm);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerEventIgnorePush(PetscLogHandler, PetscLogState, PetscLogStage, PetscLogEvent);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerEventIgnorePop(PetscLogHandler, PetscLogState, PetscLogStage, PetscLogEvent);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerEventsPause(PetscLogHandler, PetscLogState);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerEventsUnpause(PetscLogHandler, PetscLogState);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerObjectCreate(PetscLogHandler, PetscLogState, PetscObject);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerObjectDestroy(PetscLogHandler, PetscLogState, PetscObject);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerStagePush(PetscLogHandler, PetscLogState, PetscLogStage);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerStagePop(PetscLogHandler, PetscLogState, PetscLogStage);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerView(PetscLogHandler, PetscLogState, PetscViewer);
+
 #define PetscLogStateEventCurrentlyActive(state, event) ((state) && PetscBTLookup((state)->active, (state)->current_stage) && PetscBTLookup((state)->active, (state)->current_stage + (event + 1) * (state)->bt_num_stages))
 
 typedef struct _n_PetscLogHandlerEntry *PetscLogHandlerEntry;

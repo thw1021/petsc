@@ -229,7 +229,7 @@ PETSC_INTERN PetscErrorCode PetscLogFinalize(void)
   PetscFunctionBegin;
 
   /* Resetting phase */
-  for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) PetscCall(PetscLogHandlerDestroy(&PetscLogHandlers[i]));
+  for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) PetscCall(PetscLogHandlerEntryDestroy(&PetscLogHandlers[i]));
   PetscCall(PetscLogGetState(&state));
   PetscCall(PetscLogStateDestroy(state));
 
@@ -1478,7 +1478,8 @@ PetscErrorCode PetscGetFlops(PetscLogDouble *flops)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@ PetscLogObjectState - Record information about an object with the default log handler
+/*@C
+   PetscLogObjectState - Record information about an object with the default log handler
 
    Not Collective
 
@@ -1784,7 +1785,7 @@ PetscErrorCode PetscClassIdRegister(const char name[], PetscClassId *oclass)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandlerEntry *handler_p)
+PETSC_INTERN PetscErrorCode PetscLogHandlerEntryDestroy(PetscLogHandlerEntry *handler_p)
 {
   PetscLogHandlerEntry handler;
 

@@ -201,7 +201,7 @@ static PetscErrorCode PetscLogHandlerDestroy_Nested(PetscLogHandlerEntry h)
   PetscCall(PetscLogStateDestroy(nested->state));
   PetscCall(PetscIntStackDestroy(nested->stack));
   PetscCall(PetscNestedHashDestroy(&nested->pair_map));
-  PetscCall(PetscLogHandlerDestroy(&nested->handler));
+  PetscCall(PetscLogHandlerEntryDestroy(&nested->handler));
   PetscCall(PetscFree(nested));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
