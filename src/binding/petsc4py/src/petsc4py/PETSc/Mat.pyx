@@ -4741,13 +4741,14 @@ cdef class Mat(Object):
         Parameters
         ----------
         A : Mat
-            The ``A`` matrix, or NULL to omit ``A``.
+            The ``A`` matrix, or `None` to omit ``A``.
         U : Mat
             The first dense rectangular matrix.
         c : Vec
-            The sequential vector containing the diagonal of ``C``, or NULL for all ones.
+            The sequential vector containing the diagonal of ``C``,
+            or `None` for all ones.
         V : Mat
-            The second dense rectangular matrix, or NULL for a copy of ``U``.
+            The second dense rectangular matrix, or `None` for a copy of ``U``.
 
         See Also
         --------
