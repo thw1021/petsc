@@ -114,7 +114,7 @@ PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *handler)
   PetscValidPointer(handler, 1);
   h = *handler;
   *handler = NULL;
-  if (--h->refct > 0) PetscFunctionReturn(PETSC_SUCCESS);
+  if (h == NULL || --h->refct > 0) PetscFunctionReturn(PETSC_SUCCESS);
   if (h->Destroy) PetscCall((*((h)->Destroy))(h));
   PetscCall(PetscCommDestroy(&h->comm));
   PetscCall(PetscFree(h));

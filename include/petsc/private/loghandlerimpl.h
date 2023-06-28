@@ -4,9 +4,6 @@
 #include <petsc/private/petscimpl.h>
 
 typedef PetscErrorCode (*_PetscLogDestroyFn)(PetscLogHandler);
-typedef PetscErrorCode (*_PetscLogEventFn)(PetscLogHandler, PetscLogEvent, PetscObject, PetscObject, PetscObject, PetscObject);
-typedef PetscErrorCode (*_PetscLogEventSyncFn)(PetscLogHandler, PetscLogEvent, MPI_Comm);
-typedef PetscErrorCode (*_PetscLogObjectFn)(PetscLogHandler, PetscObject);
 typedef PetscErrorCode (*_PetscLogStageFn)(PetscLogHandler, PetscLogStage);
 typedef PetscErrorCode (*_PetscLogViewFn)(PetscLogHandler, PetscViewer);
 
