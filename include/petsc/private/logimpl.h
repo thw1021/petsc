@@ -246,7 +246,7 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryCreateGlobalEventNames(MPI_Comm, Pet
 PETSC_INTERN PetscErrorCode PetscLogGetState(PetscLogState *);
 PETSC_INTERN PetscErrorCode PetscLogStateCreate(PetscLogState *);
 PETSC_INTERN PetscErrorCode PetscLogStateGetRegistry(PetscLogState, PetscLogRegistry *);
-PETSC_INTERN PetscErrorCode PetscLogStateDestroy(PetscLogState);
+PETSC_INTERN PetscErrorCode PetscLogStateDestroy(PetscLogState *);
 PETSC_INTERN PetscErrorCode PetscLogStateStagePush(PetscLogState, PetscLogStage);
 PETSC_INTERN PetscErrorCode PetscLogStateStagePop(PetscLogState);
 PETSC_INTERN PetscErrorCode PetscLogStateStageSetActive(PetscLogState, PetscLogStage, PetscBool);
