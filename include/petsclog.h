@@ -100,10 +100,6 @@ PETSC_EXTERN PetscErrorCode PetscLogHandlerGetState(PetscLogHandler, PetscLogSta
 PETSC_EXTERN PetscErrorCode PetscLogHandlerEventBegin(PetscLogHandler, PetscLogEvent, PetscObject, PetscObject, PetscObject, PetscObject);
 PETSC_EXTERN PetscErrorCode PetscLogHandlerEventEnd(PetscLogHandler, PetscLogEvent, PetscObject, PetscObject, PetscObject, PetscObject);
 PETSC_EXTERN PetscErrorCode PetscLogHandlerEventSync(PetscLogHandler, PetscLogEvent, MPI_Comm);
-//PETSC_EXTERN PetscErrorCode PetscLogHandlerEventIgnorePush(PetscLogHandler, PetscLogStage, PetscLogEvent);
-//PETSC_EXTERN PetscErrorCode PetscLogHandlerEventIgnorePop(PetscLogHandler, PetscLogStage, PetscLogEvent);
-//PETSC_EXTERN PetscErrorCode PetscLogHandlerEventsPause(PetscLogHandler);
-//PETSC_EXTERN PetscErrorCode PetscLogHandlerEventsUnpause(PetscLogHandler);
 PETSC_EXTERN PetscErrorCode PetscLogHandlerObjectCreate(PetscLogHandler, PetscObject);
 PETSC_EXTERN PetscErrorCode PetscLogHandlerObjectDestroy(PetscLogHandler, PetscObject);
 PETSC_EXTERN PetscErrorCode PetscLogHandlerStagePush(PetscLogHandler, PetscLogStage);
@@ -122,6 +118,7 @@ typedef PetscErrorCode (*_PetscLogEventFn)(PetscLogHandler, PetscLogEvent, Petsc
 typedef PetscErrorCode (*_PetscLogEventSyncFn)(PetscLogHandler, PetscLogEvent, MPI_Comm);
 typedef PetscErrorCode (*_PetscLogObjectFn)(PetscLogHandler, PetscObject);
 
+// PetscLogHandler with critical methods exposed for speed
 typedef struct _n_PetscLogHandlerHot {
   PetscLogHandler      handler;
   _PetscLogEventFn     EventBegin;
@@ -254,6 +251,13 @@ static inline PETSC_UNUSED PetscErrorCode PetscLogEventSync(PetscLogEvent e, MPI
         if (err != PETSC_SUCCESS) return err;
       }
     }
+    for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
+      PetscLogHandlerHot *h = &_PetscLogHandlers[i];
+      if (h->EventSync) {
+        PetscErrorCode err = (*(h->EventSync))(h->handler, e, comm);
+        if (err != PETSC_SUCCESS) return err;
+      }
+    }
   }
   return PETSC_SUCCESS;
 }
@@ -265,6 +269,13 @@ static inline PETSC_UNUSED PetscErrorCode PetscLogEventBegin_Internal(PetscLogEv
       PetscLogHandlerEntry h = PetscLogHandlers[i];
       if (h && h->event_begin) {
         PetscErrorCode err = (*(h->event_begin))(h, petsc_log_state, e, 0, o1, o2, o3, o4);
+        if (err != PETSC_SUCCESS) return err;
+      }
+    }
+    for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
+      PetscLogHandlerHot *h = &_PetscLogHandlers[i];
+      if (h->EventBegin) {
+        PetscErrorCode err = (*(h->EventBegin))(h->handler, e, o1, o2, o3, o4);
         if (err != PETSC_SUCCESS) return err;
       }
     }
@@ -280,6 +291,13 @@ static inline PETSC_UNUSED PetscErrorCode PetscLogEventEnd_Internal(PetscLogEven
       PetscLogHandlerEntry h = PetscLogHandlers[i];
       if (h && h->event_end) {
         PetscErrorCode err = (*(h->event_end))(h, petsc_log_state, e, 0, o1, o2, o3, o4);
+        if (err != PETSC_SUCCESS) return err;
+      }
+    }
+    for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
+      PetscLogHandlerHot *h = &_PetscLogHandlers[i];
+      if (h->EventEnd) {
+        PetscErrorCode err = (*(h->EventEnd))(h->handler, e, o1, o2, o3, o4);
         if (err != PETSC_SUCCESS) return err;
       }
     }
@@ -300,6 +318,13 @@ static inline PETSC_UNUSED PetscErrorCode PetscLogObjectCreate_Internal(PetscObj
         if (err != PETSC_SUCCESS) return err;
       }
     }
+    for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
+      PetscLogHandlerHot *h = &_PetscLogHandlers[i];
+      if (h->ObjectCreate) {
+        PetscErrorCode err = (*(h->ObjectCreate))(h->handler, o);
+        if (err != PETSC_SUCCESS) return err;
+      }
+    }
   }
   return PETSC_SUCCESS;
 }
@@ -312,6 +337,13 @@ static inline PETSC_UNUSED PetscErrorCode PetscLogObjectDestroy_Internal(PetscOb
       PetscLogHandlerEntry h = PetscLogHandlers[i];
       if (h && h->object_destroy) {
         PetscErrorCode err = (*(h->object_destroy))(h, petsc_log_state, o);
+        if (err != PETSC_SUCCESS) return err;
+      }
+    }
+    for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
+      PetscLogHandlerHot *h = &_PetscLogHandlers[i];
+      if (h->ObjectDestroy) {
+        PetscErrorCode err = (*(h->ObjectDestroy))(h->handler, o);
         if (err != PETSC_SUCCESS) return err;
       }
     }
