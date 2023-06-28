@@ -86,6 +86,7 @@ struct _n_PetscLogState {
   int              current_stage;
   int              bt_num_stages;
   int              bt_num_events;
+  int              refct;
 };
 
 PETSC_EXTERN PetscErrorCode PetscLogHandlerCreate(MPI_Comm, PetscLogHandler *);
@@ -94,18 +95,20 @@ PETSC_EXTERN PetscErrorCode PetscLogHandlerSetContext(PetscLogHandler, void *);
 PETSC_EXTERN PetscErrorCode PetscLogHandlerGetContext(PetscLogHandler, void *);
 PETSC_EXTERN PetscErrorCode PetscLogHandlerSetOperation(PetscLogHandler, PetscLogHandlerOpType, void (*)(void));
 PETSC_EXTERN PetscErrorCode PetscLogHandlerGetOperation(PetscLogHandler, PetscLogHandlerOpType, void (**)(void));
-PETSC_EXTERN PetscErrorCode PetscLogHandlerEventBegin(PetscLogHandler, PetscLogState, PetscLogEvent, PetscObject, PetscObject, PetscObject, PetscObject);
-PETSC_EXTERN PetscErrorCode PetscLogHandlerEventEnd(PetscLogHandler, PetscLogState, PetscLogEvent, PetscObject, PetscObject, PetscObject, PetscObject);
-PETSC_EXTERN PetscErrorCode PetscLogHandlerEventSync(PetscLogHandler, PetscLogState, PetscLogEvent, MPI_Comm);
-PETSC_EXTERN PetscErrorCode PetscLogHandlerEventIgnorePush(PetscLogHandler, PetscLogState, PetscLogStage, PetscLogEvent);
-PETSC_EXTERN PetscErrorCode PetscLogHandlerEventIgnorePop(PetscLogHandler, PetscLogState, PetscLogStage, PetscLogEvent);
-PETSC_EXTERN PetscErrorCode PetscLogHandlerEventsPause(PetscLogHandler, PetscLogState);
-PETSC_EXTERN PetscErrorCode PetscLogHandlerEventsUnpause(PetscLogHandler, PetscLogState);
-PETSC_EXTERN PetscErrorCode PetscLogHandlerObjectCreate(PetscLogHandler, PetscLogState, PetscObject);
-PETSC_EXTERN PetscErrorCode PetscLogHandlerObjectDestroy(PetscLogHandler, PetscLogState, PetscObject);
-PETSC_EXTERN PetscErrorCode PetscLogHandlerStagePush(PetscLogHandler, PetscLogState, PetscLogStage);
-PETSC_EXTERN PetscErrorCode PetscLogHandlerStagePop(PetscLogHandler, PetscLogState, PetscLogStage);
-PETSC_EXTERN PetscErrorCode PetscLogHandlerView(PetscLogHandler, PetscLogState, PetscViewer);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerSetState(PetscLogHandler, PetscLogState);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerGetState(PetscLogHandler, PetscLogState *);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerEventBegin(PetscLogHandler, PetscLogEvent, PetscObject, PetscObject, PetscObject, PetscObject);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerEventEnd(PetscLogHandler, PetscLogEvent, PetscObject, PetscObject, PetscObject, PetscObject);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerEventSync(PetscLogHandler, PetscLogEvent, MPI_Comm);
+//PETSC_EXTERN PetscErrorCode PetscLogHandlerEventIgnorePush(PetscLogHandler, PetscLogStage, PetscLogEvent);
+//PETSC_EXTERN PetscErrorCode PetscLogHandlerEventIgnorePop(PetscLogHandler, PetscLogStage, PetscLogEvent);
+//PETSC_EXTERN PetscErrorCode PetscLogHandlerEventsPause(PetscLogHandler);
+//PETSC_EXTERN PetscErrorCode PetscLogHandlerEventsUnpause(PetscLogHandler);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerObjectCreate(PetscLogHandler, PetscObject);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerObjectDestroy(PetscLogHandler, PetscObject);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerStagePush(PetscLogHandler, PetscLogStage);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerStagePop(PetscLogHandler, PetscLogStage);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerView(PetscLogHandler, PetscViewer);
 
 #define PetscLogStateEventCurrentlyActive(state, event) ((state) && PetscBTLookup((state)->active, (state)->current_stage) && PetscBTLookup((state)->active, (state)->current_stage + (event + 1) * (state)->bt_num_stages))
 
@@ -114,6 +117,19 @@ typedef PetscErrorCode (*PetscLogEventFn)(PetscLogHandlerEntry, PetscLogState, P
 typedef PetscErrorCode (*PetscLogEventSyncFn)(PetscLogHandlerEntry, PetscLogState, PetscLogEvent, MPI_Comm);
 typedef PetscErrorCode (*PetscLogObjectFn)(PetscLogHandlerEntry, PetscLogState, PetscObject);
 typedef struct _n_PetscLogHandlerImpl *PetscLogHandlerImpl;
+
+typedef PetscErrorCode (*_PetscLogEventFn)(PetscLogHandler, PetscLogEvent, PetscObject, PetscObject, PetscObject, PetscObject);
+typedef PetscErrorCode (*_PetscLogEventSyncFn)(PetscLogHandler, PetscLogEvent, MPI_Comm);
+typedef PetscErrorCode (*_PetscLogObjectFn)(PetscLogHandler, PetscObject);
+
+typedef struct _n_PetscLogHandlerHot {
+  PetscLogHandler      handler;
+  _PetscLogEventFn     EventBegin;
+  _PetscLogEventFn     EventEnd;
+  _PetscLogEventSyncFn EventSync;
+  _PetscLogObjectFn    ObjectCreate;
+  _PetscLogObjectFn    ObjectDestroy;
+} PetscLogHandlerHot;
 
 struct _n_PetscLogHandlerEntry {
   PetscLogHandlerImpl impl;
@@ -161,6 +177,10 @@ PETSC_EXTERN PetscLogState petsc_log_state;
 
   #define PETSC_LOG_HANDLER_MAX 4
 PETSC_EXTERN PetscLogHandlerEntry PetscLogHandlers[PETSC_LOG_HANDLER_MAX];
+PETSC_EXTERN PetscLogHandlerHot   _PetscLogHandlers[PETSC_LOG_HANDLER_MAX];
+
+PETSC_EXTERN PetscErrorCode PetscLogHandlerStart(PetscLogHandler);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerStop(PetscLogHandler);
 
 PETSC_EXTERN PetscErrorCode PetscGetFlops(PetscLogDouble *);
 
@@ -552,6 +572,9 @@ static inline int PetscMPIParallelComm(MPI_Comm comm)
 #else /* ---Logging is turned off --------------------------------------------*/
 
   #define PetscLogMemory PETSC_FALSE
+
+  #define PetscLogHandlerStart(a) PETSC_SUCCESS
+  #define PetscLogHandlerStop(a) PETSC_SUCCESS
 
   #define PetscLogFlops(n) ((void)(n), PETSC_SUCCESS)
   #define PetscGetFlops(a) (*(a) = 0.0, PETSC_SUCCESS)
