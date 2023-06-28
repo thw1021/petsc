@@ -34,7 +34,7 @@ struct _n_PetscLogHandlerImpl {
   PetscLogPauseFn         pause_pop;
 };
 
-PETSC_INTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandlerEntry *);
+PETSC_INTERN PetscErrorCode PetscLogHandlerEntryDestroy(PetscLogHandlerEntry *);
 
 /* --- Macros for resizable arrays that show up frequently in the implementation of logging --- */
 
