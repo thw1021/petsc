@@ -1051,10 +1051,10 @@ typedef struct _n_PetscOptionsHelpPrinted *PetscOptionsHelpPrinted;
 */
 typedef struct {
   int            id;                  /* The integer identifying this event / stage */
+  PETSC_DEPRECATED_FIELD("Use PetscLogEventGetActive() (since version 3.20)") PetscBool active;
+  PetscBool      visible;             /* The flag to print info in summary */
   int            depth;               /* The nesting depth of the event call */
   int            count;               /* The number of times this event was executed */
-  PETSC_DEPRECATED_FIELD("Use PetscLogEventGetActive() (since version 3.20)") PetscBool active;
-  PETSC_DEPRECATED_FIELD("Use PetscLogStageGetVisible() (since version 3.20)") PetscBool visible;
   PetscLogDouble flops;               /* The flops used in this event */
   PetscLogDouble flops2;              /* The square of flops used in this event */
   PetscLogDouble flopsTmp;            /* The accumulator for flops used in this event */
@@ -1112,10 +1112,6 @@ typedef int PetscLogStage;
 . `PETSC_LOG_HANDLER_OP_EVENT_BEGIN`           - `PetscLogHandlerEventBegin()`
 . `PETSC_LOG_HANDLER_OP_EVENT_END`             - `PetscLogHandlerEventEnd()`
 . `PETSC_LOG_HANDLER_OP_EVENT_SYNC`            - `PetscLogHandlerSync()`
-. `PETSC_LOG_HANDLER_OP_EVENT_DEACTIVATE_PUSH` - `PetscLogHandlerEventDeactivatePush()`
-. `PETSC_LOG_HANDLER_OP_EVENT_DEACTIVATE_POP`  - `PetscLogHandlerEventDeactivatePop()`
-. `PETSC_LOG_HANDLER_OP_EVENTS_PAUSE`          - `PetscLogHandlerEventsPause()`
-. `PETSC_LOG_HANDLER_OP_EVENTS_UNPAUSE`        - `PetscLogHandlerEventsUnpause()`
 . `PETSC_LOG_HANDLER_OP_OBJECT_CREATE`         - `PetscLogHandlerObjectCreate()`
 . `PETSC_LOG_HANDLER_OP_OBJECT_DESTROY`        - `PetscLogHandlerObjectDestroy()`
 . `PETSC_LOG_HANDLER_STAGE_PUSH`               - `PetscLogHandlerStagePush()`
@@ -1129,10 +1125,6 @@ typedef enum {
   PETSC_LOG_HANDLER_OP_EVENT_BEGIN,
   PETSC_LOG_HANDLER_OP_EVENT_END,
   PETSC_LOG_HANDLER_OP_EVENT_SYNC,
-  PETSC_LOG_HANDLER_OP_EVENT_IGNORE_PUSH,
-  PETSC_LOG_HANDLER_OP_EVENT_IGNORE_POP,
-  PETSC_LOG_HANDLER_OP_EVENTS_PAUSE,
-  PETSC_LOG_HANDLER_OP_EVENTS_UNPAUSE,
   PETSC_LOG_HANDLER_OP_OBJECT_CREATE,
   PETSC_LOG_HANDLER_OP_OBJECT_DESTROY,
   PETSC_LOG_HANDLER_OP_STAGE_PUSH,
@@ -1140,13 +1132,6 @@ typedef enum {
   PETSC_LOG_HANDLER_OP_VIEW,
 } PetscLogHandlerOpType;
 
-/*S
-    PetscLogHandler - Interface for performance logging
-
-    Level: Developer
-
-.seealso: [](ch_profiling), `PetscLogHandlerCreate()`, `PetscLogHandlerDestroy()`, `PetscLogHandlerSetContext()`, `PetscLogHandlerSetOperation()`, `PetscLogAddHandler()`
-S*/
 typedef struct _n_PetscLogHandler *PetscLogHandler;
 
 #endif

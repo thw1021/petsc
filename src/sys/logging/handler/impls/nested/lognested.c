@@ -15,13 +15,18 @@ static PetscErrorCode _PetscLogSetThreshold_Nested(PetscLogHandler h, PetscLogDo
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogEventGetNestedEvent(PetscLogHandler h, PetscLogRegistry registry, PetscLogEvent e, PetscLogEvent *nested_event)
+static PetscErrorCode PetscLogEventGetNestedEvent(PetscLogHandler h, PetscLogEvent e, PetscLogEvent *nested_event)
 {
   PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->ctx;
   NestedIdPair           key;
   PetscHashIter          iter;
   PetscBool              missing;
+  PetscLogState          state;
+  PetscLogRegistry       registry;
+
   PetscFunctionBegin;
+  PetscCall(PetscLogHandlerGetState(h, &state));
+  registry = state->registry;
   PetscCall(PetscIntStackTop(nested->stack, &(key.root)));
   key.leaf = NestedIdFromEvent(e);
   PetscCall(PetscNestedHashPut(nested->pair_map, key, &iter, &missing));
@@ -43,14 +48,18 @@ static PetscErrorCode PetscLogEventGetNestedEvent(PetscLogHandler h, PetscLogReg
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogStageGetNestedEvent(PetscLogHandler h, PetscLogRegistry registry, PetscLogStage stage, PetscLogEvent *nested_event)
+static PetscErrorCode PetscLogStageGetNestedEvent(PetscLogHandler h, PetscLogStage stage, PetscLogEvent *nested_event)
 {
   PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->ctx;
   NestedIdPair           key;
   PetscHashIter          iter;
   PetscBool              missing;
+  PetscLogState          state;
+  PetscLogRegistry       registry;
 
   PetscFunctionBegin;
+  PetscCall(PetscLogHandlerGetState(h, &state));
+  registry = state->registry;
   PetscCall(PetscIntStackTop(nested->stack, &(key.root)));
   key.leaf = NestedIdFromStage(stage);
   PetscCall(PetscNestedHashPut(nested->pair_map, key, &iter, &missing));
@@ -89,19 +98,19 @@ static PetscErrorCode PetscLogNestedCheckNested(PetscLogHandler h, NestedId leaf
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogHandlerEventBegin_Nested(PetscLogHandler h, PetscLogState state, PetscLogEvent e, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
+static PetscErrorCode PetscLogHandlerEventBegin_Nested(PetscLogHandler h, PetscLogEvent e, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
 {
   PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->ctx;
   PetscLogEvent          nested_event;
 
   PetscFunctionBegin;
-  PetscCall(PetscLogEventGetNestedEvent(h, state->registry, e, &nested_event));
+  PetscCall(PetscLogEventGetNestedEvent(h, e, &nested_event));
   PetscCall(PetscLogHandlerEventBegin(nested->handler, nested->state, nested_event, o1, o2, o3, o4));
   PetscCall(PetscIntStackPush(nested->stack, nested_event));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogHandlerEventEnd_Nested(PetscLogHandler h, PetscLogState state, PetscLogEvent e, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
+static PetscErrorCode PetscLogHandlerEventEnd_Nested(PetscLogHandler h, PetscLogEvent e, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
 {
   PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->ctx;
   PetscLogEvent          nested_event;
@@ -109,36 +118,36 @@ static PetscErrorCode PetscLogHandlerEventEnd_Nested(PetscLogHandler h, PetscLog
   PetscFunctionBegin;
   PetscCall(PetscIntStackPop(nested->stack, &nested_event));
   if (PetscDefined(USE_DEBUG)) PetscCall(PetscLogNestedCheckNested(h, NestedIdFromEvent(e), nested_event));
-  PetscCall(PetscLogHandlerEventEnd(nested->handler, nested->state, nested_event, o1, o2, o3, o4));
+  PetscCall(PetscLogHandlerEventEnd(nested->handler, nested_event, o1, o2, o3, o4));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogHandlerEventSync_Nested(PetscLogHandler h, PetscLogState state, PetscLogEvent e, MPI_Comm comm)
+static PetscErrorCode PetscLogHandlerEventSync_Nested(PetscLogHandler h, PetscLogEvent e, MPI_Comm comm)
 {
   PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->ctx;
   PetscLogEvent          nested_event;
 
   PetscFunctionBegin;
   if (!nested->handler->EventSync) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscCall(PetscLogEventGetNestedEvent(h, state->registry, e, &nested_event));
-  PetscCall(PetscLogHandlerEventSync(nested->handler, nested->state, nested_event, comm));
+  PetscCall(PetscLogEventGetNestedEvent(h, e, &nested_event));
+  PetscCall(PetscLogHandlerEventSync(nested->handler, nested_event, comm));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogHandlerStagePush_Nested(PetscLogHandler h, PetscLogState state, PetscLogStage stage)
+static PetscErrorCode PetscLogHandlerStagePush_Nested(PetscLogHandler h, PetscLogStage stage)
 {
   PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->ctx;
   PetscLogEvent          nested_event;
 
   PetscFunctionBegin;
   if (nested->nested_stage_id == -1) PetscCall(PetscClassIdRegister("LogNestedStage", &nested->nested_stage_id));
-  PetscCall(PetscLogStageGetNestedEvent(h, state->registry, stage, &nested_event));
-  PetscCall(PetscLogHandlerEventBegin(nested->handler, nested->state, nested_event, NULL, NULL, NULL, NULL));
+  PetscCall(PetscLogStageGetNestedEvent(h, stage, &nested_event));
+  PetscCall(PetscLogHandlerEventBegin(nested->handler, nested_event, NULL, NULL, NULL, NULL));
   PetscCall(PetscIntStackPush(nested->stack, nested_event));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogHandlerStagePop_Nested(PetscLogHandler h, PetscLogState state, PetscLogStage stage)
+static PetscErrorCode PetscLogHandlerStagePop_Nested(PetscLogHandler h, PetscLogStage stage)
 {
   PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->ctx;
   PetscLogEvent          nested_event;
@@ -146,7 +155,7 @@ static PetscErrorCode PetscLogHandlerStagePop_Nested(PetscLogHandler h, PetscLog
   PetscFunctionBegin;
   PetscCall(PetscIntStackPop(nested->stack, &nested_event));
   if (PetscDefined(USE_DEBUG)) PetscCall(PetscLogNestedCheckNested(h, NestedIdFromStage(stage), nested_event));
-  PetscCall(PetscLogHandlerEventEnd(nested->handler, nested->state, nested_event, NULL, NULL, NULL, NULL));
+  PetscCall(PetscLogHandlerEventEnd(nested->handler, nested_event, NULL, NULL, NULL, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -164,29 +173,30 @@ static PetscErrorCode PetscLogHandlerContextCreate_Nested(MPI_Comm comm, PetscLo
   nested->threshold       = 0.01;
   PetscCall(PetscNestedHashCreate(&nested->pair_map));
   PetscCall(_PetscLogHandlerCreate_Default(comm, &nested->handler));
+  PetscCall(PetscLogHandlerSetState(nested->handler, nested->state));
   PetscCall(PetscLogStateStageRegister(nested->state, "", &root_stage));
   PetscAssert(root_stage == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "root stage not zero");
-  PetscCall(PetscLogHandlerStagePush(nested->handler, nested->state, root_stage));
+  PetscCall(PetscLogHandlerStagePush(nested->handler, root_stage));
   PetscCall(PetscLogStateStagePush(nested->state, root_stage));
   PetscCall(PetscIntStackPush(nested->stack, -1));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogHandlerObjectCreate_Nested(PetscLogHandler h, PetscLogState state, PetscObject obj)
+static PetscErrorCode PetscLogHandlerObjectCreate_Nested(PetscLogHandler h, PetscObject obj)
 {
   PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->ctx;
 
   PetscFunctionBegin;
-  if (nested->handler->ObjectCreate) PetscCall(PetscLogHandlerObjectCreate(nested->handler, nested->state, obj));
+  if (nested->handler->ObjectCreate) PetscCall(PetscLogHandlerObjectCreate(nested->handler, obj));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogHandlerObjectDestroy_Nested(PetscLogHandler h, PetscLogState state, PetscObject obj)
+static PetscErrorCode PetscLogHandlerObjectDestroy_Nested(PetscLogHandler h, PetscObject obj)
 {
   PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->ctx;
 
   PetscFunctionBegin;
-  if (nested->handler->ObjectDestroy) PetscCall(PetscLogHandlerObjectDestroy(nested->handler, nested->state, obj));
+  if (nested->handler->ObjectDestroy) PetscCall(PetscLogHandlerObjectDestroy(nested->handler, obj));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -196,8 +206,8 @@ static PetscErrorCode PetscLogHandlerDestroy_Nested(PetscLogHandler h)
 
   PetscFunctionBegin;
   PetscCall(PetscLogStateStagePop(nested->state));
-  PetscCall(PetscLogHandlerStagePop(nested->handler, nested->state, 0));
-  PetscCall(PetscLogStateDestroy(nested->state));
+  PetscCall(PetscLogHandlerStagePop(nested->handler, 0));
+  PetscCall(PetscLogStateDestroy(&nested->state));
   PetscCall(PetscIntStackDestroy(nested->stack));
   PetscCall(PetscNestedHashDestroy(&nested->pair_map));
   PetscCall(PetscLogHandlerDestroy(&nested->handler));
@@ -300,7 +310,7 @@ static PetscErrorCode PetscLogNestedCreatePerfNodes(MPI_Comm comm, PetscLogHandl
   PetscFunctionReturn(0);
 }
 
-static PetscErrorCode PetscLogHandlerView_Nested(PetscLogHandler handler, PetscLogState state, PetscViewer viewer)
+static PetscErrorCode PetscLogHandlerView_Nested(PetscLogHandler handler, PetscViewer viewer)
 {
   PetscLogHandler_Nested nested = (PetscLogHandler_Nested)handler->ctx;
   PetscNestedEventNode  *nodes;
