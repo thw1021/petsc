@@ -50,7 +50,7 @@ PetscErrorCode PetscLogHandlerCreate(MPI_Comm comm, PetscLogHandler *handler)
   h = *handler;
   PetscCall(PetscCommDuplicate(comm, &h->comm, NULL));
   h->refct++;
-  h->type = PETSC_LOG_HANDLER_USER;
+  h->type = _PETSC_LOG_HANDLER_USER;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
