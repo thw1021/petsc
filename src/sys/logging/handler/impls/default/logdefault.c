@@ -640,7 +640,7 @@ static PetscErrorCode PetscLogHandlerEventEnd_Default(PetscLogHandler h, PetscLo
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogHandlerEventIgnorePush_Default(PetscLogHandler h, PetscLogStage stage, PetscLogEvent event)
+PETSC_INTERN PetscErrorCode PetscLogHandlerDefaultDeactivatePush(PetscLogHandler h, PetscLogStage stage, PetscLogEvent event)
 {
   PetscEventPerfInfo *event_perf_info;
 
@@ -650,7 +650,7 @@ static PetscErrorCode PetscLogHandlerEventIgnorePush_Default(PetscLogHandler h, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogHandlerEventIgnorePop_Default(PetscLogHandler h, PetscLogStage stage, PetscLogEvent event)
+PETSC_INTERN PetscErrorCode PetscLogHandlerDefaultDeactivatePop(PetscLogHandler h, PetscLogStage stage, PetscLogEvent event)
 {
   PetscEventPerfInfo *event_perf_info;
 
@@ -660,7 +660,7 @@ static PetscErrorCode PetscLogHandlerEventIgnorePop_Default(PetscLogHandler h, P
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogHandlerEventsPause_Default(PetscLogHandler h)
+PETSC_INTERN PetscErrorCode PetscLogHandlerDefaultEventsPause(PetscLogHandler h)
 {
   PetscLogHandler_Default def = (PetscLogHandler_Default)h->ctx;
   PetscLogDouble          time;
@@ -692,7 +692,7 @@ static PetscErrorCode PetscLogHandlerEventsPause_Default(PetscLogHandler h)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogHandlerEventsUnpause_Default(PetscLogHandler h)
+PETSC_INTERN PetscErrorCode PetscLogHandlerDefaultEventsUnpause(PetscLogHandler h)
 {
   PetscLogHandler_Default def = (PetscLogHandler_Default)h->ctx;
   PetscLogDouble          time;
@@ -849,7 +849,7 @@ PETSC_INTERN PetscErrorCode _PetscLogHandlerDefaultGetNumObjects(PetscLogHandler
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode _PetscLogDump_Default(PetscLogHandler handler, const char sname[])
+PETSC_INTERN PetscErrorCode PetscLogHandlerDump_Default(PetscLogHandler handler, const char sname[])
 {
   PetscLogHandler_Default def = (PetscLogHandler_Default)handler->ctx;
   FILE                   *fd;

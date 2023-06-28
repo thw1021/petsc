@@ -59,7 +59,7 @@ static PetscErrorCode PetscLogHandlerEventEnd_Trace(PetscLogHandler h, PetscLogE
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode _PetscLogHandlerCreate_MPE(MPI_Comm comm, PetscLogHandler *handler_p)
+PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Trace(MPI_Comm comm, PetscLogHandler *handler_p)
 {
   PetscLogHandler handler;
 

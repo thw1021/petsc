@@ -3,7 +3,7 @@
 #include "lognested.h"
 #include "xmlviewer.h"
 
-static PetscErrorCode _PetscLogSetThreshold_Nested(PetscLogHandler h, PetscLogDouble newThresh, PetscLogDouble *oldThresh)
+PETSC_INTERN PetscErrorCode PetscLogHandlerNestedSetThreshold(PetscLogHandler h, PetscLogDouble newThresh, PetscLogDouble *oldThresh)
 {
   PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->ctx;
 
