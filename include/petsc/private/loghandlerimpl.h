@@ -13,19 +13,19 @@ typedef PetscErrorCode (*_PetscLogStageFn)(PetscLogHandler, PetscLogState, Petsc
 typedef PetscErrorCode (*_PetscLogViewFn)(PetscLogHandler, PetscLogState, PetscViewer);
 
 typedef enum {
-  PETSC_LOG_HANDLER_DEFAULT,
-  PETSC_LOG_HANDLER_NESTED,
+  _PETSC_LOG_HANDLER_DEFAULT,
+  _PETSC_LOG_HANDLER_NESTED,
 #if defined(PETSC_HAVE_MPE)
-  PETSC_LOG_HANDLER_MPE,
+  _PETSC_LOG_HANDLER_MPE,
 #endif
-  PETSC_LOG_HANDLER_USER
-} PetscLogHandlerType;
+  _PETSC_LOG_HANDLER_USER
+} _PetscLogHandlerType;
 
 struct _n_PetscLogHandler {
   MPI_Comm               comm;
   void                  *ctx;
   int                    refct;
-  PetscLogHandlerType    type;
+  _PetscLogHandlerType    type;
   _PetscLogDestroyFn     Destroy;
   _PetscLogEventFn       EventBegin;
   _PetscLogEventFn       EventEnd;
