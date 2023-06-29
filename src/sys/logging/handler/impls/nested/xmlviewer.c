@@ -205,7 +205,7 @@ static PetscErrorCode PetscPrintGlobalPerformance(PetscViewer viewer, PetscLogDo
   PetscCall(PetscPrintXMLGlobalPerformanceElement(viewer, "time", "Time (sec)", locTotalTime, print_average_yes, print_total_no));
 
   /*   Objects */
-  PetscCall(_PetscLogHandlerDefaultGetNumObjects(default_handler, &num_objects));
+  PetscCall(PetscLogHandlerDefaultGetNumObjects(default_handler, &num_objects));
   PetscCall(PetscPrintXMLGlobalPerformanceElement(viewer, "objects", "Objects", (PetscLogDouble)num_objects, print_average_yes, print_total_no));
 
   /*   Flop */
@@ -430,7 +430,7 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerView_Nested_XML(PetscLogHandler_Neste
   {
     PetscEventPerfInfo *main_stage_info;
 
-    PetscCall(_PetscLogHandlerDefaultGetEventPerfInfo(nested->handler, 0, 0, &main_stage_info));
+    PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(nested->handler, 0, 0, &main_stage_info));
     locTotalTime = main_stage_info->time;
   }
   PetscCall(PetscPrintGlobalPerformance(viewer, locTotalTime, default_handler));

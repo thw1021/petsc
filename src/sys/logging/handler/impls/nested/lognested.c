@@ -172,7 +172,7 @@ static PetscErrorCode PetscLogHandlerContextCreate_Nested(MPI_Comm comm, PetscLo
   nested->nested_stage_id = -1;
   nested->threshold       = 0.01;
   PetscCall(PetscNestedHashCreate(&nested->pair_map));
-  PetscCall(_PetscLogHandlerCreate_Default(comm, &nested->handler));
+  PetscCall(PetscLogHandlerCreate_Default(comm, &nested->handler));
   PetscCall(PetscLogHandlerSetState(nested->handler, nested->state));
   PetscCall(PetscLogStateStageRegister(nested->state, "", &root_stage));
   PetscAssert(root_stage == 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "root stage not zero");
@@ -299,7 +299,7 @@ static PetscErrorCode PetscLogNestedCreatePerfNodes(MPI_Comm comm, PetscLogHandl
     if (event_id >= 0) {
       PetscEventPerfInfo *event_info;
 
-      PetscCall(_PetscLogHandlerDefaultGetEventPerfInfo(nested->handler, 0, event_id, &event_info));
+      PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(nested->handler, 0, event_id, &event_info));
       perf[node] = *event_info;
     } else {
       PetscCall(PetscArrayzero(&perf[node], 1));
@@ -339,7 +339,7 @@ static PetscErrorCode PetscLogHandlerView_Nested(PetscLogHandler handler, PetscV
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode _PetscLogHandlerCreate_Nested(MPI_Comm comm, PetscLogHandler *handler_p)
+PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Nested(MPI_Comm comm, PetscLogHandler *handler_p)
 {
   PetscLogHandler handler;
 
@@ -347,7 +347,7 @@ PETSC_INTERN PetscErrorCode _PetscLogHandlerCreate_Nested(MPI_Comm comm, PetscLo
   PetscCall(PetscLogHandlerCreate(comm, handler_p));
   handler = *handler_p;
   PetscCall(PetscLogHandlerContextCreate_Nested(comm, (PetscLogHandler_Nested *)&handler->ctx));
-  handler->type             = _PETSC_LOG_HANDLER_NESTED;
+  handler->type             = PETSC_LOG_HANDLER_NESTED;
   handler->Destroy          = PetscLogHandlerDestroy_Nested;
   handler->StagePush        = PetscLogHandlerStagePush_Nested;
   handler->StagePop         = PetscLogHandlerStagePop_Nested;

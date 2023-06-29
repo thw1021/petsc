@@ -1111,7 +1111,7 @@ typedef int PetscLogStage;
 + `PETSC_LOG_HANDLER_OP_DESTROY`               - Destroy's the user context if necessary in `PetscLogHandlerDestroy()`
 . `PETSC_LOG_HANDLER_OP_EVENT_BEGIN`           - `PetscLogHandlerEventBegin()`
 . `PETSC_LOG_HANDLER_OP_EVENT_END`             - `PetscLogHandlerEventEnd()`
-. `PETSC_LOG_HANDLER_OP_EVENT_SYNC`            - `PetscLogHandlerSync()`
+. `PETSC_LOG_HANDLER_OP_EVENT_SYNC`            - `PetscLogHandlerEventSync()`
 . `PETSC_LOG_HANDLER_OP_OBJECT_CREATE`         - `PetscLogHandlerObjectCreate()`
 . `PETSC_LOG_HANDLER_OP_OBJECT_DESTROY`        - `PetscLogHandlerObjectDestroy()`
 . `PETSC_LOG_HANDLER_STAGE_PUSH`               - `PetscLogHandlerStagePush()`
