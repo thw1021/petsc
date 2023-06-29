@@ -105,7 +105,7 @@ static PetscErrorCode PetscLogHandlerEventBegin_Nested(PetscLogHandler h, PetscL
 
   PetscFunctionBegin;
   PetscCall(PetscLogEventGetNestedEvent(h, e, &nested_event));
-  PetscCall(PetscLogHandlerEventBegin(nested->handler, nested->state, nested_event, o1, o2, o3, o4));
+  PetscCall(PetscLogHandlerEventBegin(nested->handler, nested_event, o1, o2, o3, o4));
   PetscCall(PetscIntStackPush(nested->stack, nested_event));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
