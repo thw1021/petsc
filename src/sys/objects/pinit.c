@@ -1189,7 +1189,7 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
 .  -log_summary [filename] - (Deprecated, use `-log_view`) Prints summary of flop and timing information to screen. If the filename is specified the
         summary is written to the file.  See PetscLogView().
 .  -log_exclude: <vec,mat,pc,ksp,snes> - excludes subset of object classes from logging
-.  -log_all [filename] - Logs extensive profiling information  See `PetscLogDump()`.
+.  -log_all [filename] - (Deprecated, use `-log_view`) The same as `-log_view`
 .  -log [filename] - Logs basic profiline information  See `PetscLogDump()`.
 .  -log_mpe [filename] - Creates a logfile viewable by the utility Jumpshot (in MPICH distribution)
 .  -viewfromoptions on,off - Enable or disable `XXXSetFromOptions()` calls, for applications with many small solves turn this off
