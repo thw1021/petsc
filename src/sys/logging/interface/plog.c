@@ -24,7 +24,7 @@
 #if defined(PETSC_USE_LOG)
 #include <../src/sys/logging/handler/impls/default/logdefault.h>
 
-PetscLogHandlerHot   _PetscLogHandlers[PETSC_LOG_HANDLER_MAX] = {0};
+PetscLogHandlerHot   PetscLogHandlers[PETSC_LOG_HANDLER_MAX] = {0};
 PetscBool       PetscLogMemory                          = PETSC_FALSE;
 PetscBool       PetscLogSyncOn                          = PETSC_FALSE;
 
@@ -133,29 +133,29 @@ PetscInt PetscLogGetTid(void)
 
 PetscLogState petsc_log_state = NULL;
 
-static PetscErrorCode _PetscLogTryGetHandler(_PetscLogHandlerType type, PetscLogHandler *handler)
+static PetscErrorCode PetscLogTryGetHandler(PetscLogHandlerType type, PetscLogHandler *handler)
 {
   PetscFunctionBegin;
   PetscValidPointer(handler, 1);
   *handler = NULL;
   for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
-    PetscLogHandler h = _PetscLogHandlers[i].handler;
+    PetscLogHandler h = PetscLogHandlers[i].handler;
     if (h && h->type == type) {
-      *handler = _PetscLogHandlers[i].handler;
+      *handler = PetscLogHandlers[i].handler;
       PetscFunctionReturn(PETSC_SUCCESS);
     }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode _PetscLogGetHandler(_PetscLogHandlerType type, PetscLogHandler *handler)
+static PetscErrorCode PetscLogGetHandler(PetscLogHandlerType type, PetscLogHandler *handler)
 {
   PetscFunctionBegin;
   PetscValidPointer(handler, 1);
-  PetscCall(_PetscLogTryGetHandler(type, handler));
+  PetscCall(PetscLogTryGetHandler(type, handler));
   if (*handler == NULL) {
-    if (type == _PETSC_LOG_HANDLER_DEFAULT) fprintf(stderr, "PETSC ERROR: Logging has not been enabled.\nYou might have forgotten to call PetscInitialize().\n");
-    else if (type == _PETSC_LOG_HANDLER_NESTED) fprintf(stderr, "PETSC ERROR: Nested logging has not been enabled.\n");
+    if (type == PETSC_LOG_HANDLER_DEFAULT) fprintf(stderr, "PETSC ERROR: Logging has not been enabled.\nYou might have forgotten to call PetscInitialize().\n");
+    else if (type == PETSC_LOG_HANDLER_NESTED) fprintf(stderr, "PETSC ERROR: Nested logging has not been enabled.\n");
     PETSCABORT(MPI_COMM_WORLD, PETSC_ERR_SUP);
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -208,8 +208,8 @@ PETSC_INTERN PetscErrorCode PetscLogFinalize(void)
   PetscFunctionBegin;
 
   /* Resetting phase */
-  for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) PetscCall(PetscLogHandlerDestroy(&_PetscLogHandlers[i].handler));
-  PetscCall(PetscArrayzero(_PetscLogHandlers, PETSC_LOG_HANDLER_MAX));
+  for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) PetscCall(PetscLogHandlerDestroy(&PetscLogHandlers[i].handler));
+  PetscCall(PetscArrayzero(PetscLogHandlers, PETSC_LOG_HANDLER_MAX));
   PetscCall(PetscLogStateDestroy(&petsc_log_state));
 
   petsc_TotalFlops         = 0.0;
@@ -280,17 +280,42 @@ static PetscErrorCode PetscLogHandlerCopyToHot(PetscLogHandler h, PetscLogHandle
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  PetscLogHandlerStart - Connect a log handler to PETSc's global stream and
+  global logging state.
+
+  Logically collective
+
+  Input Parameters:
+. h - a `PetscLogHandler`
+
+  Level: developer
+
+  Notes:
+
+  Users should only deed this if they create their own log handlers: handlers that are started
+  from the command line (such as `-log_view` and `-log_trace`) or from a function like
+  `PetscLogNestedBegin()` will automatically be started.
+
+  There is a limit of `PESC_LOG_HANDLER_MAX` handlers that can be active at one time.
+
+  To disconnect a handler from the global strea
+
+.seealso: [](ch_profiling), `PetscLogHandler`, `PetscLogHandlerStop()`, `PetscLogState`
+@*/
 PETSC_EXTERN PetscErrorCode PetscLogHandlerStart(PetscLogHandler h)
 {
   PetscFunctionBegin;
   for (PetscInt i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
-    if (_PetscLogHandlers[i].handler == h) PetscFunctionReturn(PETSC_SUCCESS);
+    if (PetscLogHandlers[i].handler == h) PetscFunctionReturn(PETSC_SUCCESS);
   }
   for (PetscInt i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
-    if (_PetscLogHandlers[i].handler == NULL) {
+    if (PetscLogHandlers[i].handler == NULL) {
       PetscLogState state;
 
-      PetscCall(PetscLogHandlerCopyToHot(h, &_PetscLogHandlers[i]));
+      PetscCheck(h->refct > 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "handler should have a positive reference count");
+      h->refct++;
+      PetscCall(PetscLogHandlerCopyToHot(h, &PetscLogHandlers[i]));
       PetscCall(PetscLogGetState(&state));
       PetscCall(PetscLogHandlerSetState(h, state));
       PetscFunctionReturn(PETSC_SUCCESS);
@@ -304,7 +329,11 @@ PETSC_EXTERN PetscErrorCode PetscLogHandlerStop(PetscLogHandler h)
 {
   PetscFunctionBegin;
   for (PetscInt i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
-    if (_PetscLogHandlers[i].handler == h) PetscCall(PetscArrayzero(&_PetscLogHandlers[i], 1));
+    if (PetscLogHandlers[i].handler == h) {
+      PetscCall(PetscArrayzero(&PetscLogHandlers[i], 1));
+      h->refct--;
+      PetscCheck(h->refct > 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "handler should have a positive reference count");
+    }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -342,9 +371,9 @@ PetscErrorCode PetscLogDefaultBegin(void)
   PetscLogHandler handler;
 
   PetscFunctionBegin;
-  PetscCall(_PetscLogTryGetHandler(_PETSC_LOG_HANDLER_DEFAULT, &handler));
+  PetscCall(PetscLogTryGetHandler(PETSC_LOG_HANDLER_DEFAULT, &handler));
   if (handler) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscCall(_PetscLogHandlerCreate_Default(PETSC_COMM_WORLD, &handler));
+  PetscCall(PetscLogHandlerCreate_Default(PETSC_COMM_WORLD, &handler));
   PetscCall(PetscLogHandlerStart(handler));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -380,14 +409,14 @@ PetscErrorCode PetscLogTraceBegin(FILE *file)
   PetscLogHandler handler;
 
   PetscFunctionBegin;
-  PetscCall(_PetscLogTryGetHandler(_PETSC_LOG_HANDLER_TRACE, &handler));
+  PetscCall(PetscLogTryGetHandler(PETSC_LOG_HANDLER_TRACE, &handler));
   if (handler) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscLogHandlerCreate_Trace(PETSC_COMM_WORLD, &handler));
   PetscCall(PetscLogHandlerStart(handler));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode _PetscLogHandlerCreate_Nested(MPI_Comm, PetscLogHandler *);
+PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Nested(MPI_Comm, PetscLogHandler *);
 
 /*@C
   PetscLogNestedBegin - Turns on nested logging of objects and events. This logs flop
@@ -416,9 +445,9 @@ PetscErrorCode PetscLogNestedBegin(void)
   PetscLogHandler handler;
 
   PetscFunctionBegin;
-  PetscCall(_PetscLogTryGetHandler(_PETSC_LOG_HANDLER_NESTED, &handler));
+  PetscCall(PetscLogTryGetHandler(PETSC_LOG_HANDLER_NESTED, &handler));
   if (handler) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscCall(_PetscLogHandlerCreate_Nested(PETSC_COMM_WORLD, &handler));
+  PetscCall(PetscLogHandlerCreate_Nested(PETSC_COMM_WORLD, &handler));
   PetscCall(PetscLogHandlerStart(handler));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -465,8 +494,8 @@ PetscErrorCode PetscLogActions(PetscBool flag)
   PetscLogHandler handler;
 
   PetscFunctionBegin;
-  PetscCall(_PetscLogTryGetHandler(_PETSC_LOG_HANDLER_DEFAULT, &handler));
-  if (handler) PetscCall(_PetscLogHandlerDefaultSetLogActions(handler, flag));
+  PetscCall(PetscLogTryGetHandler(PETSC_LOG_HANDLER_DEFAULT, &handler));
+  if (handler) PetscCall(PetscLogHandlerDefaultSetLogActions(handler, flag));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -494,8 +523,8 @@ PetscErrorCode PetscLogObjects(PetscBool flag)
   PetscLogHandler handler;
 
   PetscFunctionBegin;
-  PetscCall(_PetscLogTryGetHandler(_PETSC_LOG_HANDLER_DEFAULT, &handler));
-  if (handler) PetscCall(_PetscLogHandlerDefaultSetLogObjects(handler, flag));
+  PetscCall(PetscLogTryGetHandler(PETSC_LOG_HANDLER_DEFAULT, &handler));
+  if (handler) PetscCall(PetscLogHandlerDefaultSetLogObjects(handler, flag));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -572,7 +601,7 @@ PetscErrorCode PetscLogStagePush(PetscLogStage stage)
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
   for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
-    PetscLogHandler h = _PetscLogHandlers[i].handler;
+    PetscLogHandler h = PetscLogHandlers[i].handler;
     if (h && h->StagePush) PetscCall(PetscLogHandlerStagePush(h, stage));
   }
   PetscCall(PetscLogStateStagePush(state, stage));
@@ -613,7 +642,7 @@ PetscErrorCode PetscLogStagePop(void)
   current_stage = petsc_log_state->current_stage;
   PetscCall(PetscLogStateStagePop(state));
   for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
-    PetscLogHandler h = _PetscLogHandlers[i].handler;
+    PetscLogHandler h = PetscLogHandlers[i].handler;
     if (h && h->StagePop) PetscCall(PetscLogHandlerStagePop(h, current_stage));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1018,7 +1047,7 @@ PetscErrorCode PetscLogEventDeactivatePush(PetscLogEvent event)
   PetscLogHandler handler;
 
   PetscFunctionBegin;
-  PetscCall(_PetscLogTryGetHandler(_PETSC_LOG_HANDLER_DEFAULT, &handler));
+  PetscCall(PetscLogTryGetHandler(PETSC_LOG_HANDLER_DEFAULT, &handler));
   if (handler) {
     PetscLogState state;
     PetscLogStage current_stage;
@@ -1059,7 +1088,7 @@ PetscErrorCode PetscLogEventDeactivatePop(PetscLogEvent event)
   PetscLogHandler handler;
 
   PetscFunctionBegin;
-  PetscCall(_PetscLogTryGetHandler(_PETSC_LOG_HANDLER_DEFAULT, &handler));
+  PetscCall(PetscLogTryGetHandler(PETSC_LOG_HANDLER_DEFAULT, &handler));
   if (handler) {
     PetscLogState state;
     PetscLogStage current_stage;
@@ -1080,7 +1109,7 @@ PetscErrorCode PetscLogEventsPause(void)
   PetscLogHandler handler;
 
   PetscFunctionBegin;
-  PetscCall(_PetscLogTryGetHandler(_PETSC_LOG_HANDLER_DEFAULT, &handler));
+  PetscCall(PetscLogTryGetHandler(PETSC_LOG_HANDLER_DEFAULT, &handler));
   if (handler) PetscCall(PetscLogHandlerDefaultEventsPause(handler));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1094,7 +1123,7 @@ PetscErrorCode PetscLogEventsUnpause(void)
   PetscLogHandler handler;
 
   PetscFunctionBegin;
-  PetscCall(_PetscLogTryGetHandler(_PETSC_LOG_HANDLER_DEFAULT, &handler));
+  PetscCall(PetscLogTryGetHandler(PETSC_LOG_HANDLER_DEFAULT, &handler));
   if (handler) PetscCall(PetscLogHandlerDefaultEventsUnpause(handler));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1326,7 +1355,7 @@ PetscErrorCode PetscLogDump(const char sname[])
   PetscLogHandler handler;
 
   PetscFunctionBegin;
-  PetscCall(_PetscLogGetHandler(_PETSC_LOG_HANDLER_DEFAULT, &handler));
+  PetscCall(PetscLogGetHandler(PETSC_LOG_HANDLER_DEFAULT, &handler));
   PetscCall(PetscLogHandlerDump_Default(handler, sname));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1401,10 +1430,10 @@ PetscErrorCode PetscLogView(PetscViewer viewer)
   PetscCheck(isascii, PetscObjectComm((PetscObject)viewer), PETSC_ERR_SUP, "Currently can only view logging to ASCII");
   PetscCall(PetscViewerGetFormat(viewer, &format));
   if (format == PETSC_VIEWER_ASCII_XML || format == PETSC_VIEWER_ASCII_FLAMEGRAPH) {
-    PetscCall(_PetscLogGetHandler(_PETSC_LOG_HANDLER_NESTED, &handler));
+    PetscCall(PetscLogGetHandler(PETSC_LOG_HANDLER_NESTED, &handler));
     PetscCall(PetscLogHandlerView(handler, viewer));
   } else {
-    PetscCall(_PetscLogGetHandler(_PETSC_LOG_HANDLER_DEFAULT, &handler));
+    PetscCall(PetscLogGetHandler(PETSC_LOG_HANDLER_DEFAULT, &handler));
     PetscCall(PetscLogHandlerView(handler, viewer));
   }
   PetscCall(PetscIntStackEmpty(temp_stack, &is_empty));
@@ -1492,10 +1521,10 @@ PetscErrorCode PetscLogObjectState(PetscObject obj, const char format[], ...)
   va_list         Argp;
 
   PetscFunctionBegin;
-  PetscCall(_PetscLogTryGetHandler(_PETSC_LOG_HANDLER_DEFAULT, &handler));
+  PetscCall(PetscLogTryGetHandler(PETSC_LOG_HANDLER_DEFAULT, &handler));
   if (handler) {
     va_start(Argp, format);
-    PetscCall(_PetscLogHandlerDefaultLogObjectState(handler, obj, format, Argp));
+    PetscCall(PetscLogHandlerDefaultLogObjectState(handler, obj, format, Argp));
     va_end(Argp);
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1803,9 +1832,9 @@ PetscErrorCode PetscLogEventGetPerfInfo(PetscLogStage stage, PetscLogEvent event
   PetscFunctionBegin;
   PetscValidPointer(info, 3);
   PetscCall(PetscLogGetState(&state));
-  PetscCall(_PetscLogGetHandler(_PETSC_LOG_HANDLER_DEFAULT, &handler));
+  PetscCall(PetscLogGetHandler(PETSC_LOG_HANDLER_DEFAULT, &handler));
   if (stage < 0) PetscCall(PetscLogStateGetCurrentStage(state, &stage));
-  PetscCall(_PetscLogHandlerDefaultGetEventPerfInfo(handler, stage, event, &event_info));
+  PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(handler, stage, event, &event_info));
   *info = *event_info;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1839,11 +1868,11 @@ PetscErrorCode PetscLogEventSetDof(PetscLogEvent event, PetscInt n, PetscLogDoub
 
   PetscFunctionBegin;
   PetscCheck(!(n < 0) && !(n > 7), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Error index %" PetscInt_FMT " is not in [0, 8)", n);
-  PetscCall(_PetscLogTryGetHandler(_PETSC_LOG_HANDLER_DEFAULT, &handler));
+  PetscCall(PetscLogTryGetHandler(PETSC_LOG_HANDLER_DEFAULT, &handler));
   if (handler) {
     PetscCall(PetscLogGetState(&state));
     PetscCall(PetscLogStateGetCurrentStage(state, &stage));
-    PetscCall(_PetscLogHandlerDefaultGetEventPerfInfo(handler, stage, event, &event_info));
+    PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(handler, stage, event, &event_info));
     event_info->dof[n] = dof;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1882,10 +1911,10 @@ PetscErrorCode PetscLogEventSetError(PetscLogEvent event, PetscInt n, PetscLogDo
   PetscFunctionBegin;
   PetscCheck(!(n < 0) && !(n > 7), PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Error index %" PetscInt_FMT " is not in [0, 8)", n);
   PetscCall(PetscLogGetState(&state));
-  PetscCall(_PetscLogTryGetHandler(_PETSC_LOG_HANDLER_DEFAULT, &handler));
+  PetscCall(PetscLogTryGetHandler(PETSC_LOG_HANDLER_DEFAULT, &handler));
   if (handler) {
     PetscCall(PetscLogStateGetCurrentStage(state, &stage));
-    PetscCall(_PetscLogHandlerDefaultGetEventPerfInfo(handler, stage, event, &event_info));
+    PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(handler, stage, event, &event_info));
     event_info->errors[n] = error;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1894,7 +1923,7 @@ PetscErrorCode PetscLogEventSetError(PetscLogEvent event, PetscInt n, PetscLogDo
 #if defined(PETSC_USE_LOG) && defined(PETSC_HAVE_MPE)
   #include <mpe.h>
 
-PETSC_INTERN PetscErrorCode _PetscLogHandlerCreate_MPE(MPI_Comm, PetscLogHandler *);
+PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_MPE(MPI_Comm, PetscLogHandler *);
 
 PetscBool PetscBeganMPE = PETSC_FALSE;
 
@@ -1931,9 +1960,9 @@ PetscErrorCode PetscLogMPEBegin(void)
   } else {
     PetscCall(PetscInfo(0, "MPE already initialized. Not attempting to reinitialize.\n"));
   }
-  PetscCall(_PetscLogTryGetHandler(_PETSC_LOG_HANDLER_MPE, &handler));
+  PetscCall(PetscLogTryGetHandler(PETSC_LOG_HANDLER_MPE, &handler));
   if (handler) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscCall(_PetscLogHandlerCreate_MPE(PETSC_COMM_WORLD, &handler));
+  PetscCall(PetscLogHandlerCreate_MPE(PETSC_COMM_WORLD, &handler));
   PetscCall(PetscLogHandlerStart(handler));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -2007,7 +2036,7 @@ PetscErrorCode PetscLogSetThreshold(PetscLogDouble newThresh, PetscLogDouble *ol
   PetscLogHandler handler;
 
   PetscFunctionBegin;
-  PetscCall(_PetscLogTryGetHandler(_PETSC_LOG_HANDLER_NESTED, &handler));
+  PetscCall(PetscLogTryGetHandler(PETSC_LOG_HANDLER_NESTED, &handler));
   PetscCall(PetscLogHandlerNestedSetThreshold(handler, newThresh, oldThresh));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

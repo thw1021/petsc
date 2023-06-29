@@ -27,7 +27,7 @@ static PetscErrorCode PetscLogHandlerEventEnd_MPE(PetscLogHandler handler, Petsc
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode _PetscLogHandlerCreate_MPE(MPI_Comm comm, PetscLogHandler *handler_p)
+PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_MPE(MPI_Comm comm, PetscLogHandler *handler_p)
 {
   PetscLogHandler handler;
 
@@ -35,7 +35,7 @@ PETSC_INTERN PetscErrorCode _PetscLogHandlerCreate_MPE(MPI_Comm comm, PetscLogHa
   PetscCall(PetscLogHandlerCreate(comm, handler_p));
   handler              = *handler_p;
   handler->ctx         = NULL;
-  handler->type        = _PETSC_LOG_HANDLER_MPE;
+  handler->type        = PETSC_LOG_HANDLER_MPE;
   handler->EventBegin  = PetscLogHandlerEventBegin_MPE;
   handler->EventEnd    = PetscLogHandlerEventEnd_MPE;
   PetscFunctionReturn(PETSC_SUCCESS);
