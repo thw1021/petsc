@@ -8,6 +8,7 @@ typedef struct {
   Vec       x0, y0, x1;
   Mat       L;         /* keep a copy to reuse when obtained with L = A10*A01 */
   Mat       CAdiaginv; /* The product of C and the inverse of the diagional of A */
+  Mat       A, B, C;
 } PC_LSC;
 
 static PetscErrorCode PCLSCAllocate_Private(PC pc)
@@ -34,14 +35,25 @@ static PetscErrorCode PCLSCAllocate_Private(PC pc)
 static PetscErrorCode PCSetUp_LSC(PC pc)
 {
   PC_LSC *lsc = (PC_LSC *)pc->data;
-  Mat     L = NULL, Lp = NULL, B, C;
+  Mat     L = NULL, Lp = NULL;
 
   PetscFunctionBegin;
   PetscCall(PCLSCAllocate_Private(pc));
+
+  /* Query for L operators, e.b. C * Qvdiag^-1 * B */
   PetscCall(PetscObjectQuery((PetscObject)pc->mat, "LSC_L", (PetscObject *)&L));
   if (!L) PetscCall(PetscObjectQuery((PetscObject)pc->pmat, "LSC_L", (PetscObject *)&L));
   PetscCall(PetscObjectQuery((PetscObject)pc->pmat, "LSC_Lp", (PetscObject *)&Lp));
   if (!Lp) PetscCall(PetscObjectQuery((PetscObject)pc->mat, "LSC_Lp", (PetscObject *)&Lp));
+
+  /* Query for user provided matrices. These may be different than those from the system matrix in the case that the user has constraints like Dirichlet boundary conditions encoded in the system matrix */
+  PetscCall(PetscObjectQuery((PetscObject)pc->pmat, "A", (PetscObject *)&lsc->A));
+  if (!lsc->A) PetscCall(MatSchurComplementGetSubMatrices(pc->mat, NULL, &lsc->A, NULL, NULL, NULL));
+  PetscCall(PetscObjectQuery((PetscObject)pc->pmat, "B", (PetscObject *)&lsc->B));
+  if (!lsc->B) PetscCall(MatSchurComplementGetSubMatrices(pc->mat, NULL, NULL, &lsc->B, NULL, NULL));
+  PetscCall(PetscObjectQuery((PetscObject)pc->pmat, "C", (PetscObject *)&lsc->C));
+  if (!lsc->C) PetscCall(MatSchurComplementGetSubMatrices(pc->mat, NULL, NULL, NULL, &lsc->C, NULL));
+
   if (lsc->scale) {
     Mat Qv = NULL, Q = NULL;
     PetscCall(PetscObjectQuery((PetscObject)pc->pmat, "Q", (PetscObject *)&Q));
@@ -55,24 +67,23 @@ static PetscErrorCode PCSetUp_LSC(PC pc)
     PetscCall(VecReciprocal(lsc->scale));
   }
   if (!L) {
-    PetscCall(MatSchurComplementGetSubMatrices(pc->mat, NULL, NULL, &B, &C, NULL));
     if (lsc->scale) {
       if (!lsc->CAdiaginv) {
-        PetscCall(MatConvert(C, MATSAME, MAT_INITIAL_MATRIX, &lsc->CAdiaginv));
+        PetscCall(MatConvert(lsc->C, MATSAME, MAT_INITIAL_MATRIX, &lsc->CAdiaginv));
       } else {
-        PetscCall(MatCopy(C, lsc->CAdiaginv, SAME_NONZERO_PATTERN));
+        PetscCall(MatCopy(lsc->C, lsc->CAdiaginv, SAME_NONZERO_PATTERN));
       }
       PetscCall(MatDiagonalScale(lsc->CAdiaginv, NULL, lsc->scale));
       if (!lsc->L) {
-        PetscCall(MatMatMult(lsc->CAdiaginv, B, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &lsc->L));
+        PetscCall(MatMatMult(lsc->CAdiaginv, lsc->B, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &lsc->L));
       } else {
-        PetscCall(MatMatMult(lsc->CAdiaginv, B, MAT_REUSE_MATRIX, PETSC_DEFAULT, &lsc->L));
+        PetscCall(MatMatMult(lsc->CAdiaginv, lsc->B, MAT_REUSE_MATRIX, PETSC_DEFAULT, &lsc->L));
       }
     } else {
       if (!lsc->L) {
-        PetscCall(MatMatMult(C, B, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &lsc->L));
+        PetscCall(MatMatMult(lsc->C, lsc->B, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &lsc->L));
       } else {
-        PetscCall(MatMatMult(C, B, MAT_REUSE_MATRIX, PETSC_DEFAULT, &lsc->L));
+        PetscCall(MatMatMult(lsc->C, lsc->B, MAT_REUSE_MATRIX, PETSC_DEFAULT, &lsc->L));
       }
     }
     Lp = L = lsc->L;
@@ -85,17 +96,15 @@ static PetscErrorCode PCSetUp_LSC(PC pc)
 static PetscErrorCode PCApply_LSC(PC pc, Vec x, Vec y)
 {
   PC_LSC *lsc = (PC_LSC *)pc->data;
-  Mat     A, B, C;
 
   PetscFunctionBegin;
-  PetscCall(MatSchurComplementGetSubMatrices(pc->mat, &A, NULL, &B, &C, NULL));
   PetscCall(KSPSolve(lsc->kspL, x, lsc->x1));
   PetscCall(KSPCheckSolve(lsc->kspL, pc, lsc->x1));
-  PetscCall(MatMult(B, lsc->x1, lsc->x0));
+  PetscCall(MatMult(lsc->B, lsc->x1, lsc->x0));
   if (lsc->scale) PetscCall(VecPointwiseMult(lsc->x0, lsc->x0, lsc->scale));
-  PetscCall(MatMult(A, lsc->x0, lsc->y0));
+  PetscCall(MatMult(lsc->A, lsc->x0, lsc->y0));
   if (lsc->scale) PetscCall(VecPointwiseMult(lsc->y0, lsc->y0, lsc->scale));
-  PetscCall(MatMult(C, lsc->y0, lsc->x1));
+  PetscCall(MatMult(lsc->C, lsc->y0, lsc->x1));
   PetscCall(KSPSolve(lsc->kspL, lsc->x1, y));
   PetscCall(KSPCheckSolve(lsc->kspL, pc, y));
   PetscFunctionReturn(PETSC_SUCCESS);
