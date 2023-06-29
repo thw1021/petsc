@@ -22,10 +22,8 @@
 #endif
 
 #if defined(PETSC_USE_LOG)
-#include <../src/sys/logging/impls/default/logdefault.h>
 #include <../src/sys/logging/handler/impls/default/logdefault.h>
 
-PetscLogHandlerEntry PetscLogHandlers[PETSC_LOG_HANDLER_MAX] = {0};
 PetscLogHandlerHot   _PetscLogHandlers[PETSC_LOG_HANDLER_MAX] = {0};
 PetscBool       PetscLogMemory                          = PETSC_FALSE;
 PetscBool       PetscLogSyncOn                          = PETSC_FALSE;
@@ -135,20 +133,6 @@ PetscInt PetscLogGetTid(void)
 
 PetscLogState petsc_log_state = NULL;
 
-static PetscErrorCode PetscLogTryGetHandler(PetscLogHandlerType type, PetscLogHandlerEntry *handler)
-{
-  PetscFunctionBegin;
-  PetscValidPointer(handler, 1);
-  *handler = NULL;
-  for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
-    if (PetscLogHandlers[i] && PetscLogHandlers[i]->impl->type == type) {
-      *handler = PetscLogHandlers[i];
-      PetscFunctionReturn(PETSC_SUCCESS);
-    }
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 static PetscErrorCode _PetscLogTryGetHandler(_PetscLogHandlerType type, PetscLogHandler *handler)
 {
   PetscFunctionBegin;
@@ -157,7 +141,7 @@ static PetscErrorCode _PetscLogTryGetHandler(_PetscLogHandlerType type, PetscLog
   for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
     PetscLogHandler h = _PetscLogHandlers[i].handler;
     if (h && h->type == type) {
-      *handler = PetscLogHandlers[i];
+      *handler = _PetscLogHandlers[i].handler;
       PetscFunctionReturn(PETSC_SUCCESS);
     }
   }
@@ -221,12 +205,9 @@ PETSC_INTERN PetscErrorCode PetscLogInitialize(void)
 
 PETSC_INTERN PetscErrorCode PetscLogFinalize(void)
 {
-  PetscLogState state;
-
   PetscFunctionBegin;
 
   /* Resetting phase */
-  for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) PetscCall(PetscLogHandlerEntryDestroy(&PetscLogHandlers[i]));
   for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) PetscCall(PetscLogHandlerDestroy(&_PetscLogHandlers[i].handler));
   PetscCall(PetscArrayzero(_PetscLogHandlers, PETSC_LOG_HANDLER_MAX));
   PetscCall(PetscLogStateDestroy(&petsc_log_state));
@@ -631,10 +612,6 @@ PetscErrorCode PetscLogStagePop(void)
   PetscCall(PetscLogGetState(&state));
   current_stage = petsc_log_state->current_stage;
   PetscCall(PetscLogStateStagePop(state));
-  for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
-    PetscLogHandlerEntry h = PetscLogHandlers[i];
-    if (h && h->impl->stage_pop) PetscCall((*(h->impl->stage_pop))(h, state, current_stage));
-  }
   for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
     PetscLogHandler h = _PetscLogHandlers[i].handler;
     if (h && h->StagePop) PetscCall(PetscLogHandlerStagePop(h, current_stage));
@@ -1515,10 +1492,10 @@ PetscErrorCode PetscLogObjectState(PetscObject obj, const char format[], ...)
   va_list         Argp;
 
   PetscFunctionBegin;
-  PetscCall(_PetscLogTryGetDefaultHandler(&handler));
+  PetscCall(_PetscLogTryGetHandler(_PETSC_LOG_HANDLER_DEFAULT, &handler));
   if (handler) {
     va_start(Argp, format);
-    PetscCall(PetscLogHandlerDefaultLogObjectState(handler, obj, format, Argp));
+    PetscCall(_PetscLogHandlerDefaultLogObjectState(handler, obj, format, Argp));
     va_end(Argp);
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -1802,20 +1779,6 @@ PetscErrorCode PetscClassIdRegister(const char name[], PetscClassId *oclass)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscLogHandlerEntryDestroy(PetscLogHandlerEntry *handler_p)
-{
-  PetscLogHandlerEntry handler;
-
-  PetscFunctionBegin;
-  handler    = *handler_p;
-  *handler_p = NULL;
-  if (handler == NULL) PetscFunctionReturn(PETSC_SUCCESS);
-  if (handler->impl->destroy) PetscCall((*(handler->impl->destroy))(handler));
-  PetscCall(PetscFree(handler->impl));
-  PetscCall(PetscFree(handler));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /*@C
   PetscLogEventGetPerfInfo - Return the performance information about the given event in the given stage
 
@@ -2007,7 +1970,7 @@ PetscErrorCode PetscLogMPEDump(const char sname[])
 }
 #endif /* PETSC_USE_LOG && PETSC_HAVE_MPE */
 
-PETSC_INTERN PetscErrorCode PetscLogHandlerNestedSetThreshold(PetscLogHandlerEntry, PetscLogDouble, PetscLogDouble *);
+PETSC_INTERN PetscErrorCode PetscLogHandlerNestedSetThreshold(PetscLogHandler, PetscLogDouble, PetscLogDouble *);
 
 /*@
    PetscLogSetThreshold - Set the threshold time for logging the events; this is a percentage out of 100, so 1. means any event
