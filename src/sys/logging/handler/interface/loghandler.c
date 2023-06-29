@@ -260,6 +260,7 @@ PetscErrorCode PetscLogHandlerGetOperation(PetscLogHandler h, PetscLogHandlerOpT
   PETSC_LOG_HANDLER_GET_OP_CASE(EVENT_SYNC,EventSync,EventSync,h,f)
   PETSC_LOG_HANDLER_GET_OP_CASE(OBJECT_CREATE,ObjectCreate,Object,h,f)
   PETSC_LOG_HANDLER_GET_OP_CASE(OBJECT_DESTROY,ObjectDestroy,Object,h,f)
+  PETSC_LOG_HANDLER_GET_OP_CASE(STAGE_PUSH,StagePush,Stage,h,f)
   PETSC_LOG_HANDLER_GET_OP_CASE(STAGE_POP,StagePop,Stage,h,f)
   PETSC_LOG_HANDLER_GET_OP_CASE(VIEW,View,View,h,f)
   }

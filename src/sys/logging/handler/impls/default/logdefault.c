@@ -475,7 +475,7 @@ static PetscErrorCode PetscLogHandlerEventSync_Default(PetscLogHandler h, PetscL
   PetscCall(PetscLogRegistryEventGetInfo(state->registry, event, &event_info));
   if (!event_info.collective) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscLogStateGetCurrentStage(state, &stage));
-  PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(h, stage, event, &event_perf_info));
+  PetscCall(_PetscLogHandlerDefaultGetEventPerfInfo(h, stage, event, &event_perf_info));
   if (event_perf_info->depth > 0) PetscFunctionReturn(PETSC_SUCCESS);
 
   PetscCall(PetscTimeSubtract(&time));
@@ -797,7 +797,7 @@ static PetscErrorCode PetscLogHandlerStagePop_Default(PetscLogHandler h, PetscLo
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogHandlerStageSetVisible_Default(PetscLogHandler h, PetscLogStage stage, PetscBool is_visible)
+PETSC_INTERN PetscErrorCode PetscLogHandlerDefaultStageSetVisible(PetscLogHandler h, PetscLogStage stage, PetscBool is_visible)
 {
   PetscStagePerf *stage_info;
 
@@ -917,7 +917,7 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDump_Default(PetscLogHandler handler,
   for (event = 0; event < num_events; event++) {
     PetscEventPerfInfo *event_info;
 
-    PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(handler, curStage, event, &event_info));
+    PetscCall(_PetscLogHandlerDefaultGetEventPerfInfo(handler, curStage, event, &event_info));
     if (event_info->time != 0.0) flops = event_info->flops / event_info->time;
     else flops = 0.0;
     PetscCall(PetscFPrintf(PETSC_COMM_SELF, fd, "%d %16d %16g %16g %16g\n", event, event_info->count, event_info->flops, event_info->time, flops));
@@ -980,7 +980,7 @@ static PetscErrorCode PetscLogHandlerView_Default_Detailed(PetscLogHandler handl
 
       PetscCall(PetscLogGlobalNamesGlobalGetLocal(global_events, event, &event_id));
       PetscCall(PetscLogGlobalNamesGlobalGetName(global_events, event, &event_name));
-      if (event_id >= 0 && stage_id >= 0) PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(handler, stage_id, event_id, &eventInfo));
+      if (event_id >= 0 && stage_id >= 0) PetscCall(_PetscLogHandlerDefaultGetEventPerfInfo(handler, stage_id, event_id, &eventInfo));
       is_zero = eventInfo->count == 0 ? PETSC_TRUE : PETSC_FALSE;
       PetscCall(MPIU_Allreduce(MPI_IN_PLACE, &is_zero, 1, MPIU_BOOL, MPI_LAND, comm));
       if (!is_zero) { PetscCall(PetscViewerASCIIPrintf(viewer, "Stages[\"%s\"][\"%s\"] = {}\n", stage_name, event_name)); }
@@ -1023,7 +1023,7 @@ static PetscErrorCode PetscLogHandlerView_Default_Detailed(PetscLogHandler handl
 
       PetscCall(PetscLogGlobalNamesGlobalGetLocal(global_events, event, &event_id));
       PetscCall(PetscLogGlobalNamesGlobalGetName(global_events, event, &event_name));
-      if (event_id >= 0 && stage_id >= 0) PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(handler, stage_id, event_id, &eventInfo));
+      if (event_id >= 0 && stage_id >= 0) PetscCall(_PetscLogHandlerDefaultGetEventPerfInfo(handler, stage_id, event_id, &eventInfo));
       is_zero = eventInfo->count == 0 ? PETSC_TRUE : PETSC_FALSE;
       PetscCall(PetscMemcmp(eventInfo, &zero_info, sizeof(zero_info), &is_zero));
       PetscCall(MPIU_Allreduce(MPI_IN_PLACE, &is_zero, 1, MPIU_BOOL, MPI_LAND, comm));
@@ -1107,7 +1107,7 @@ static PetscErrorCode PetscLogHandlerView_Default_CSV(PetscLogHandler handler, P
 
       PetscCall(PetscLogGlobalNamesGlobalGetLocal(global_events, event, &event_id));
       PetscCall(PetscLogGlobalNamesGlobalGetName(global_events, event, &event_name));
-      if (event_id >= 0 && stage_id >= 0) PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(handler, stage_id, event_id, &eventInfo));
+      if (event_id >= 0 && stage_id >= 0) PetscCall(_PetscLogHandlerDefaultGetEventPerfInfo(handler, stage_id, event_id, &eventInfo));
       PetscCall(PetscMemcmp(eventInfo, &zero_info, sizeof(zero_info), &is_zero));
       PetscCall(MPIU_Allreduce(MPI_IN_PLACE, &is_zero, 1, MPIU_BOOL, MPI_LAND, comm));
       if (!is_zero) {
@@ -1556,7 +1556,7 @@ static PetscErrorCode PetscLogHandlerView_Default_Info(PetscLogHandler handler, 
 
       PetscCall(PetscLogGlobalNamesGlobalGetLocal(global_events, event, &event_id));
       PetscCall(PetscLogGlobalNamesGlobalGetName(global_events, event, &event_name));
-      if (event_id >= 0 && stage_id >= 0) { PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(handler, stage_id, event_id, &event_info)); }
+      if (event_id >= 0 && stage_id >= 0) { PetscCall(_PetscLogHandlerDefaultGetEventPerfInfo(handler, stage_id, event_id, &event_info)); }
       PetscCall(PetscMemcmp(event_info, &zero_info, sizeof(zero_info), &is_zero));
       PetscCall(MPIU_Allreduce(MPI_IN_PLACE, &is_zero, 1, MPIU_BOOL, MPI_LAND, comm));
       if (!is_zero) {

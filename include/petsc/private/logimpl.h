@@ -3,39 +3,6 @@
 
 #include <petsc/private/petscimpl.h>
 
-/*---------------- PetscLogHandlerImpl: things a log handlers must do that don't need to be exposed -----------------*/
-
-typedef PetscErrorCode (*PetscLogEventActivityFn)(PetscLogHandlerEntry, PetscLogState, PetscLogEvent);
-typedef PetscErrorCode (*PetscLogStageFn)(PetscLogHandlerEntry, PetscLogState, PetscLogStage);
-typedef PetscErrorCode (*PetscLogObjectFn)(PetscLogHandlerEntry, PetscLogState, PetscObject);
-typedef PetscErrorCode (*PetscLogPauseFn)(PetscLogHandlerEntry, PetscLogState);
-typedef PetscErrorCode (*PetscLogViewFn)(PetscLogHandlerEntry, PetscViewer);
-typedef PetscErrorCode (*PetscLogDestroyFn)(PetscLogHandlerEntry);
-
-typedef enum {
-  PETSC_LOG_HANDLER_DEFAULT,
-  PETSC_LOG_HANDLER_NESTED,
-#if defined(PETSC_HAVE_MPE)
-  PETSC_LOG_HANDLER_MPE,
-#endif
-  PETSC_LOG_HANDLER_USER
-} PetscLogHandlerType;
-
-struct _n_PetscLogHandlerImpl {
-  void                   *ctx;
-  PetscLogHandlerType     type;
-  PetscLogViewFn          view;
-  PetscLogDestroyFn       destroy;
-  PetscLogStageFn         stage_push;
-  PetscLogStageFn         stage_pop;
-  PetscLogEventActivityFn event_deactivate_push;
-  PetscLogEventActivityFn event_deactivate_pop;
-  PetscLogPauseFn         pause_push;
-  PetscLogPauseFn         pause_pop;
-};
-
-PETSC_INTERN PetscErrorCode PetscLogHandlerEntryDestroy(PetscLogHandlerEntry *);
-
 /* --- Macros for resizable arrays that show up frequently in the implementation of logging --- */
 
 #define PETSC_LOG_RESIZABLE_ARRAY(Container, Entry, Key, Constructor, Destructor, Equal) \
@@ -291,12 +258,6 @@ PETSC_INTERN PetscInt PetscLogGetTid(void);
 #endif
 
 #ifdef PETSC_USE_LOG
-/* Registration functions */
-PETSC_INTERN PetscErrorCode PetscLogView_Nested(PetscLogHandlerEntry, PetscViewer);
-PETSC_INTERN PetscErrorCode PetscLogView_Default(PetscLogHandlerEntry, PetscViewer);
-PETSC_INTERN PetscErrorCode PetscLogDump_Default(PetscLogHandlerEntry, const char[]);
-PETSC_INTERN PetscErrorCode PetscLogNestedEnd(void);
-
   #if defined(PETSC_HAVE_DEVICE)
 PETSC_EXTERN PetscBool PetscLogGpuTimeFlag;
   #endif
