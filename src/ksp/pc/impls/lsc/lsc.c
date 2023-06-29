@@ -34,7 +34,7 @@ static PetscErrorCode PCLSCAllocate_Private(PC pc)
 static PetscErrorCode PCSetUp_LSC(PC pc)
 {
   PC_LSC *lsc = (PC_LSC *)pc->data;
-  Mat     L, Lp, B, C;
+  Mat     L = NULL, Lp = NULL, B, C;
 
   PetscFunctionBegin;
   PetscCall(PCLSCAllocate_Private(pc));
@@ -43,9 +43,15 @@ static PetscErrorCode PCSetUp_LSC(PC pc)
   PetscCall(PetscObjectQuery((PetscObject)pc->pmat, "LSC_Lp", (PetscObject *)&Lp));
   if (!Lp) PetscCall(PetscObjectQuery((PetscObject)pc->mat, "LSC_Lp", (PetscObject *)&Lp));
   if (lsc->scale) {
-    Mat Ap;
-    PetscCall(MatSchurComplementGetSubMatrices(pc->mat, NULL, &Ap, NULL, NULL, NULL));
-    PetscCall(MatGetDiagonal(Ap, lsc->scale)); /* Should be the mass matrix, but we don't have plumbing for that yet */
+    Mat Qv = NULL, Q = NULL;
+    PetscCall(PetscObjectQuery((PetscObject)pc->pmat, "Q", (PetscObject *)&Q));
+    if (Q) {
+      IS Arows, Acols;
+      PetscCall(MatSchurComplementGetAIS(pc->mat, &Arows, &Acols));
+      PetscCall(MatCreateSubMatrix(Q, Arows, Acols, MAT_INITIAL_MATRIX, &Qv));
+    }
+    if (!Qv) PetscCall(MatSchurComplementGetSubMatrices(pc->mat, NULL, &Qv, NULL, NULL, NULL));
+    PetscCall(MatGetDiagonal(Qv, lsc->scale));
     PetscCall(VecReciprocal(lsc->scale));
   }
   if (!L) {

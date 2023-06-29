@@ -7,6 +7,7 @@ typedef struct {
   KSP                        ksp;
   Vec                        work1, work2;
   MatSchurComplementAinvType ainvtype;
+  IS                         ArowIS, AcolIS;
 } Mat_SchurComplement;
 
 PETSC_INTERN PetscErrorCode MatCreateVecs_SchurComplement(Mat N, Vec *, Vec *);

@@ -408,6 +408,19 @@ PetscErrorCode MatSchurComplementUpdateSubMatrices(Mat S, Mat A00, Mat Ap00, Mat
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PetscErrorCode MatSchurComplementUpdateAIS(Mat S, IS rows, IS cols)
+{
+  Mat_SchurComplement *Na = (Mat_SchurComplement *)S->data;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(S, MAT_CLASSID, 1);
+
+  Na->ArowIS = rows;
+  Na->AcolIS = cols;
+
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@C
   MatSchurComplementGetSubMatrices - Get the individual submatrices in the Schur complement
 
@@ -446,6 +459,20 @@ PetscErrorCode MatSchurComplementGetSubMatrices(Mat S, Mat *A00, Mat *Ap00, Mat 
   if (A01) *A01 = Na->B;
   if (A10) *A10 = Na->C;
   if (A11) *A11 = Na->D;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode MatSchurComplementGetAIS(Mat S, IS *rows, IS *cols)
+{
+  Mat_SchurComplement *Na = (Mat_SchurComplement *)S->data;
+  PetscBool            flg;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(S, MAT_CLASSID, 1);
+  PetscCall(PetscObjectTypeCompare((PetscObject)S, MATSCHURCOMPLEMENT, &flg));
+  PetscCheck(flg, PetscObjectComm((PetscObject)S), PETSC_ERR_ARG_WRONG, "Not for type %s", ((PetscObject)S)->type_name);
+  if (rows) *rows = Na->ArowIS;
+  if (cols) *cols = Na->AcolIS;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
