@@ -489,7 +489,7 @@ static PetscErrorCode MatConvert_HYPRE_AIJ(Mat A, MatType mtype, MatReuse reuse,
     PetscBool ismpiaij, isseqaij;
     PetscCall(PetscObjectBaseTypeCompare((PetscObject)*B, MATMPIAIJ, &ismpiaij));
     PetscCall(PetscObjectBaseTypeCompare((PetscObject)*B, MATSEQAIJ, &isseqaij));
-    PetscCheck(ismpiaij || isseqaij, comm, PETSC_ERR_SUP, "Only MATMPIAIJ or MATSEQAIJ are supported");
+    PetscCheck(ismpiaij || isseqaij, comm, PETSC_ERR_SUP, "Only MATMPIAIJ or MATSEQAIJ base types are supported");
   }
 #if defined(PETSC_HAVE_HYPRE_DEVICE)
   PetscCheck(HYPRE_MEMORY_DEVICE != hypre_IJMatrixMemoryLocation(hA->ij), comm, PETSC_ERR_SUP, "Not yet implemented");
