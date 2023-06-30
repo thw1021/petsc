@@ -436,15 +436,11 @@ PetscErrorCode PetscOptionsGetViewer(MPI_Comm comm, PetscOptions options, const 
 .  options - options database, use `NULL` for default global database
 .  pre - the string to prepend to the name or `NULL`
 .  name - the option one is seeking
-.  n_max - the maximum number of viewers
-.  viewer - an array to hold at least `n_max` `PetscViewer`s, or `NULL` if not needed
--  format - an array to hold at least `n_max` `PetscViewerFormat`s, or `NULL` if not needed
+.  n_max - on input: the maximum number of viewers; on output: the number of viewers in the comma-separated list
+-  viewer - an array to hold at least `n_max` `PetscViewer`s, or `NULL` if not needed; on output: if not `NULL`, the first `n_max` entries are initialized `PetscViewer`s
 
    Output Parameters:
-+  n_max - the number of viewers in the comma-separated list
-.  viewer - if not `NULL`, the first `n_max` entries are initialied `PetscViewer`s
-.  format - if not `NULL`, the first `n_max` entries are formats for the associated `PetscViewer`s
--  set - `PETSC_TRUE` if found, else `PETSC_FALSE`
+.  set - `PETSC_TRUE` if found, else `PETSC_FALSE`
 
    Level: intermediate
 
