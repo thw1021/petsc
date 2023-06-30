@@ -523,6 +523,11 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
   PetscCall(PetscOptionsHasName(NULL, NULL, "-log_mpe", &flg1));
   if (flg1) PetscCall(PetscLogMPEBegin());
   #endif
+  #if defined(PETSC_HAVE_TAU_PERFSTUBS)
+  flg1 = PETSC_FALSE;
+  PetscCall(PetscOptionsHasName(NULL, NULL, "-log_perfstubs", &flg1));
+  if (flg1) PetscCall(PetscLogPerfstubsBegin());
+  #endif
   flg1 = PETSC_FALSE;
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-log_all", &flg1, NULL));
   PetscCall(PetscOptionsHasName(NULL, NULL, "-log_summary", &flg3));
