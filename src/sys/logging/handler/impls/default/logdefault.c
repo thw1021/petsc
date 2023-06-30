@@ -365,17 +365,15 @@ static PetscErrorCode PetscLogHandlerObjectCreate_Default(PetscLogHandler h, Pet
   PetscLogHandler_Default def = (PetscLogHandler_Default)h->ctx;
   PetscLogState           state;
   PetscLogStage           stage;
-  PetscLogRegistry        registry;
   PetscClassPerf     *classInfo;
   int                     oclass = 0;
 
   PetscFunctionBegin;
   PetscCall(PetscLogHandlerGetState(h, &state));
-  registry = state->registry;
   PetscCall(PetscSpinlockLock(&def->lock));
   /* Record stage info */
   PetscCall(PetscLogStateGetCurrentStage(state, &stage));
-  PetscCall(PetscLogRegistryGetClassFromClassId(registry, obj->classid, &oclass));
+  PetscCall(PetscLogStateGetClassFromClassId(state, obj->classid, &oclass));
   PetscCall(PetscLogHandlerDefaultGetClassPerf(h, stage, oclass, &classInfo));
   classInfo->creations++;
   /* Dynamically enlarge logging structures */
@@ -427,7 +425,7 @@ static PetscErrorCode PetscLogHandlerObjectDestroy_Default(PetscLogHandler h, Pe
   PetscCall(PetscLogStateGetCurrentStage(state, &stage));
   if (stage != -1) {
     /* That can happen if the log summary is output before some things are destroyed */
-    PetscCall(PetscLogRegistryGetClassFromClassId(state->registry, obj->classid, &oclass));
+    PetscCall(PetscLogStateGetClassFromClassId(state, obj->classid, &oclass));
     PetscCall(PetscLogHandlerDefaultGetClassPerf(h, stage, oclass, &classInfo));
     classInfo->destructions++;
   }
@@ -472,7 +470,7 @@ static PetscErrorCode PetscLogHandlerEventSync_Default(PetscLogHandler h, PetscL
   PetscFunctionBegin;
   if (!(PetscLogSyncOn) || comm == MPI_COMM_NULL) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscLogHandlerGetState(h, &state));
-  PetscCall(PetscLogRegistryEventGetInfo(state->registry, event, &event_info));
+  PetscCall(PetscLogStateEventGetInfo(state, event, &event_info));
   if (!event_info.collective) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscLogStateGetCurrentStage(state, &stage));
   PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(h, stage, event, &event_perf_info));
@@ -541,11 +539,11 @@ static PetscErrorCode PetscLogHandlerEventBegin_Default(PetscLogHandler h, Petsc
   if (PetscDeviceInitialized(PETSC_DEVICE_CUDA)) {
     PetscLogEventInfo event_reg_info;
 
-    PetscCall(PetscLogRegistryEventGetInfo(state->registry, event, &event_reg_info));
+    PetscCall(PetscLogStateEventGetInfo(state, event, &event_reg_info));
     nvtxRangePushA(event_reg_info.name);
   }
 #endif
-  PetscCall(PetscLogRegistryEventGetInfo(state->registry, event, &event_info));
+  PetscCall(PetscLogStateEventGetInfo(state, event, &event_info));
   /* Log the performance info */
 #if defined(PETSC_HAVE_TAU_PERFSTUBS)
   if (perfstubs_initialized == PERFSTUBS_SUCCESS && event_info.timer != NULL) PetscStackCallExternalVoid("ps_timer_start_", ps_timer_start_(event_info.timer));
@@ -589,7 +587,7 @@ static PetscErrorCode PetscLogHandlerEventEnd_Default(PetscLogHandler h, PetscLo
     PetscLogDouble    curTime;
     Action            new_action;
 
-    PetscCall(PetscLogRegistryEventGetInfo(state->registry, event, &event_info));
+    PetscCall(PetscLogStateEventGetInfo(state, event, &event_info));
     PetscCall(PetscTime(&curTime));
     new_action.time    = curTime - petsc_BaseTime;
     new_action.action  = PETSC_LOG_ACTION_END;
@@ -621,7 +619,7 @@ static PetscErrorCode PetscLogHandlerEventEnd_Default(PetscLogHandler h, PetscLo
   {
     PetscLogEventInfo event_reg_info;
 
-    PetscCall(PetscLogRegistryEventGetInfo(state->registry, event, &event_reg_info));
+    PetscCall(PetscLogStateEventGetInfo(state, event, &event_reg_info));
     if (perfstubs_initialized == PERFSTUBS_SUCCESS && event_reg_info.timer != NULL) PetscStackCallExternalVoid("ps_timer_stop_", ps_timer_stop_(event_reg_info.timer));
   }
 #endif
@@ -756,7 +754,7 @@ static PetscErrorCode PetscLogHandlerStagePush_Default(PetscLogHandler h, PetscL
   {
     PetscLogStageInfo new_stage_reg_info;
 
-    PetscCall(PetscLogRegistryStageGetInfo(state->registry, new_stage, &new_stage_reg_info));
+    PetscCall(PetscLogStateStageGetInfo(state, new_stage, &new_stage_reg_info));
     if (perfstubs_initialized == PERFSTUBS_SUCCESS && new_stage_reg_info.timer != NULL) PetscStackCallExternalVoid("ps_timer_start_", ps_timer_start_(new_stage_reg_info.timer));
   }
 #endif
@@ -780,7 +778,7 @@ static PetscErrorCode PetscLogHandlerStagePop_Default(PetscLogHandler h, PetscLo
   {
     PetscLogStageInfo old_stage_reg_info;
 
-    PetscCall(PetscLogRegistryStageGetInfo(state->registry, old_stage, &old_stage_reg_info));
+    PetscCall(PetscLogStateStageGetInfo(state, old_stage, &old_stage_reg_info));
     if (perfstubs_initialized == PERFSTUBS_SUCCESS && old_stage_reg_info.timer != NULL) PetscStackCallExternalVoid("ps_timer_stop_", ps_timer_stop_(old_stage_reg_info.timer));
   }
 #endif
@@ -912,7 +910,7 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDump_Default(PetscLogHandler handler,
   /* Output events */
   PetscCall(PetscFPrintf(PETSC_COMM_SELF, fd, "Event log:\n"));
   PetscCall(PetscLogGetState(&state));
-  PetscCall(PetscLogRegistryGetNumEvents(state->registry, &num_events, NULL));
+  PetscCall(PetscLogStateGetNumEvents(state, &num_events));
   PetscCall(PetscLogStateGetCurrentStage(state, &curStage));
   for (event = 0; event < num_events; event++) {
     PetscEventPerfInfo *event_info;
@@ -1403,7 +1401,7 @@ static PetscErrorCode PetscLogHandlerView_Default_Info(PetscLogHandler handler, 
         PetscLogStageInfo stage_reg_info;
         PetscStagePerf   *stage_info;
 
-        PetscCall(PetscLogRegistryStageGetInfo(state->registry, stage_id, &stage_reg_info));
+        PetscCall(PetscLogStateStageGetInfo(state, stage_id, &stage_reg_info));
         PetscCall(PetscLogHandlerDefaultGetStageInfo(handler, stage, &stage_info));
         localStageUsed[stage]    = stage_info->used;
         localStageVisible[stage] = stage_reg_info.visible;
@@ -1517,10 +1515,10 @@ static PetscErrorCode PetscLogHandlerView_Default_Info(PetscLogHandler handler, 
 
 #if defined(PETSC_HAVE_DEVICE)
   /* this indirect way of accessing these values is needed when PETSc is build with multiple libraries since the symbols are not in libpetscsys */
-  PetscCall(PetscLogRegistryGetEventFromName(state->registry, "TAOSolve", &TAO_Solve));
-  PetscCall(PetscLogRegistryGetEventFromName(state->registry, "TSStep", &TS_Step));
-  PetscCall(PetscLogRegistryGetEventFromName(state->registry, "SNESSolve", &SNES_Solve));
-  PetscCall(PetscLogRegistryGetEventFromName(state->registry, "KSPSolve", &KSP_Solve));
+  PetscCall(PetscLogStateGetEventFromName(state, "TAOSolve", &TAO_Solve));
+  PetscCall(PetscLogStateGetEventFromName(state, "TSStep", &TS_Step));
+  PetscCall(PetscLogStateGetEventFromName(state, "SNESSolve", &SNES_Solve));
+  PetscCall(PetscLogStateGetEventFromName(state, "KSPSolve", &KSP_Solve));
 #endif
 
   for (stage = 0; stage < numStages; stage++) {
@@ -1595,7 +1593,7 @@ static PetscErrorCode PetscLogHandlerView_Default_Info(PetscLogHandler handler, 
 #if defined(PETSC_HAVE_DEVICE)
         if (!PetscLogGpuTimeFlag && petsc_gflops > 0) {
           memcpy(&gmaxt, &nas, sizeof(PetscLogDouble));
-          PetscCall(PetscLogRegistryGetEventFromName(state->registry, name, &eventid));
+          PetscCall(PetscLogStateGetEventFromName(state, name, &eventid));
           if (eventid != SNES_Solve && eventid != KSP_Solve && eventid != TS_Step && eventid != TAO_Solve) {
             memcpy(&mint, &nas, sizeof(PetscLogDouble));
             memcpy(&maxt, &nas, sizeof(PetscLogDouble));
@@ -1678,7 +1676,7 @@ static PetscErrorCode PetscLogHandlerView_Default_Info(PetscLogHandler handler, 
     if (localStageUsed[stage]) {
       PetscInt num_classes;
 
-      PetscCall(PetscLogRegistryGetNumClasses(state->registry, &num_classes, NULL));
+      PetscCall(PetscLogStateGetNumClasses(state, &num_classes));
       for (oclass = 0; oclass < num_classes; oclass++) {
         PetscClassPerf *class_perf_info;
 
@@ -1686,7 +1684,7 @@ static PetscErrorCode PetscLogHandlerView_Default_Info(PetscLogHandler handler, 
         if ((class_perf_info->creations > 0) || (class_perf_info->destructions > 0)) {
           PetscLogClassInfo class_reg_info;
 
-          PetscCall(PetscLogRegistryClassGetInfo(state->registry, oclass, &class_reg_info));
+          PetscCall(PetscLogStateClassGetInfo(state, oclass, &class_reg_info));
           PetscCall(PetscFPrintf(comm, fd, "%20s %5d          %5d\n", class_reg_info.name, class_perf_info->creations, class_perf_info->destructions));
         }
       }

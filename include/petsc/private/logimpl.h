@@ -140,32 +140,6 @@
 /* --- Registration info types that are not part of the public API, but handlers need to know --- */
 
 /* --- PetscLogEventInfo --- */
-typedef struct {
-  char        *name;       /* The name of this event */
-  PetscClassId classid;    /* The class the event is associated with */
-  PetscBool    collective; /* Flag this event as collective */
-  PetscBool    visible;    /* The flag to print info in summary */
-#if defined(PETSC_HAVE_TAU_PERFSTUBS)
-  void *timer; /* Associated external tool timer for this event */
-#endif
-#if defined(PETSC_HAVE_MPE)
-  int mpe_id_begin; /* MPE IDs that define the event */
-  int mpe_id_end;
-#endif
-} PetscLogEventInfo;
-
-typedef struct {
-  char        *name;    /* The class name */
-  PetscClassId classid; /* The integer identifying this class */
-} PetscLogClassInfo;
-
-typedef struct _PetscLogStageInfo {
-  char     *name;    /* The stage name */
-  PetscBool visible; /* The flag to print info in summary */
-#if defined(PETSC_HAVE_TAU_PERFSTUBS)
-  void *timer; /* Associated external tool timer for this event */
-#endif
-} PetscLogStageInfo;
 
 /* --- the registry: information about registered things ---
 
@@ -173,8 +147,6 @@ typedef struct _PetscLogStageInfo {
    data that should be useful to more than one type of logging
 
  */
-
-typedef int PetscLogClass;
 
 PETSC_INTERN PetscErrorCode PetscLogGetRegistry(PetscLogRegistry *);
 PETSC_INTERN PetscErrorCode PetscLogRegistryCreate(PetscLogRegistry *);

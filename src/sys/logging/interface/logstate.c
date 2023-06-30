@@ -488,3 +488,206 @@ PetscErrorCode PetscLogStateEventGetActive(PetscLogState state, PetscLogStage st
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@
+  PetscLogStateGetEventFromName - Get a `PetscLogEvent` from the name it was registered with.
+
+  Not collective
+
+  Input Parameters:
++ state - a `PetscLogState`
+- name - an event's name
+
+  Output Parameter:
+. event - the event's id
+
+  Level: developer
+
+.seealso: [](ch_profiling), `PetscLogState`, `PetscLogStateEventRegister()`, `PetscLogStateEventGetInfo()`
+@*/
+PetscErrorCode PetscLogStateGetEventFromName(PetscLogState state, const char name[], PetscLogEvent *event)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscLogRegistryGetEventFromName(state->registry, name, event));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscLogStateGetStageFromName - Get a `PetscLogStage` from the name it was registered with.
+
+  Not collective
+
+  Input Parameters:
++ state - a `PetscLogState`
+- name - a stage's name
+
+  Output Parameter:
+. stage - the stage's id
+
+  Level: developer
+
+.seealso: [](ch_profiling), `PetscLogState`, `PetscLogStateStageRegister()`, `PetscLogStateStageGetInfo()`
+@*/
+PetscErrorCode PetscLogStateGetStageFromName(PetscLogState state, const char name[], PetscLogStage *stage)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscLogRegistryGetStageFromName(state->registry, name, stage));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscLogStateGetClassFromClassId - Get a `PetscLogClass` from the `PetscClassId` it was registered with.
+
+  Not collective
+
+  Input Parameters:
++ state - a `PetscLogState`
+- classid - a `PetscClassId`
+
+  Output Parameter:
+. class - the classes's logging id
+
+  Level: developer
+
+.seealso: [](ch_profiling), `PetscLogState`, `PetscLogStateClassRegister()`, `PetscLogStateClassGetInfo()`
+@*/
+PetscErrorCode PetscLogStateGetClassFromClassId(PetscLogState state, PetscClassId classid, PetscLogClass *stage)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscLogRegistryGetClassFromClassId(state->registry, classid, stage));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscLogStateGetNumEvents - Get the number of registered events in a logging state.
+
+  Not collective
+
+  Input Parameter:
+. state - a `PetscLogState`
+
+  Output Parameter:
+. numEvents - the number of registered `PetscLogEvent`s
+
+  Level: developer
+
+.seealso: [](ch_profiling), `PetscLogState`, `PetscLogStateEventRegister()`
+@*/
+PetscErrorCode PetscLogStateGetNumEvents(PetscLogState state, PetscInt *numEvents)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscLogRegistryGetNumEvents(state->registry, numEvents, NULL));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscLogStateGetNumStages - Get the number of registered stages in a logging state.
+
+  Not collective
+
+  Input Parameter:
+. state - a `PetscLogState`
+
+  Output Parameter:
+. numStages - the number of registered `PetscLogStage`s
+
+  Level: developer
+
+.seealso: [](ch_profiling), `PetscLogState`, `PetscLogStateStageRegister()`
+@*/
+PetscErrorCode PetscLogStateGetNumStages(PetscLogState state, PetscInt *numStages)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscLogRegistryGetNumStages(state->registry, numStages, NULL));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscLogStateGetNumClasses - Get the number of registered classes in a logging state.
+
+  Not collective
+
+  Input Parameter:
+. state - a `PetscLogState`
+
+  Output Parameter:
+. numClasses - the number of registered `PetscLogClass`s
+
+  Level: developer
+
+.seealso: [](ch_profiling), `PetscLogState`, `PetscLogStateClassRegister()`
+@*/
+PetscErrorCode PetscLogStateGetNumClasses(PetscLogState state, PetscInt *numClasses)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscLogRegistryGetNumClasses(state->registry, numClasses, NULL));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscLogStateEventGetInfo - Get the registration information of an event
+
+  Not collective
+
+  Input Parameters:
++ state - a `PetscLogState`
+- event - a registered `PetscLogEvent`
+
+  Output Parameter:
+. info - the `PetscLogEventInfo` of the event will be copied into info
+
+  Level: developer
+
+.seealso: [](ch_profiling), `PetscLogState`, `PetscLogStateEventRegister()`, `PetscLogStateGetEventFromName()`
+@*/
+PetscErrorCode PetscLogStateEventGetInfo(PetscLogState state, PetscLogEvent event, PetscLogEventInfo *info)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscLogRegistryEventGetInfo(state->registry, event, info));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscLogStateStageGetInfo - Get the registration information of an stage
+
+  Not collective
+
+  Input Parameters:
++ state - a `PetscLogState`
+- stage - a registered `PetscLogStage`
+
+  Output Parameter:
+. info - the `PetscLogStageInfo` of the stage will be copied into info
+
+  Level: developer
+
+.seealso: [](ch_profiling), `PetscLogState`, `PetscLogStateStageRegister()`, `PetscLogStateGetStageFromName()`
+@*/
+PetscErrorCode PetscLogStateStageGetInfo(PetscLogState state, PetscLogStage stage, PetscLogStageInfo *info)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscLogRegistryStageGetInfo(state->registry, stage, info));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscLogStateClassGetInfo - Get the registration information of an class
+
+  Not collective
+
+  Input Parameters:
++ state - a `PetscLogState`
+- class - a registered `PetscLogClass`
+
+  Output Parameter:
+. info - the `PetscLogClassInfo` of the class will be copied into info
+
+  Level: developer
+
+.seealso: [](ch_profiling), `PetscLogState`, `PetscLogStateClassRegister()`, `PetscLogStateGetClassFromName()`
+@*/
+PetscErrorCode PetscLogStateClassGetInfo(PetscLogState state, PetscLogClass class, PetscLogClassInfo *info)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscLogRegistryClassGetInfo(state->registry, class, info));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
