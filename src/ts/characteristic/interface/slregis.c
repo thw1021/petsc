@@ -61,7 +61,7 @@ PetscErrorCode CharacteristicInitializePackage(void)
   PetscCall(PetscOptionsGetString(NULL, NULL, "-log_exclude", logList, sizeof(logList), &opt));
   if (opt) {
     PetscCall(PetscStrInList("characteristic", logList, ',', &pkg));
-    if (pkg) PetscCall(PetscLogEventExcludeClass(CHARACTERISTIC_CLASSID));
+    if (pkg) PetscCall(PetscLogClassSetActiveAll(CHARACTERISTIC_CLASSID,PETSC_FALSE));
   }
   /* Process package finalizer */
   PetscCall(PetscRegisterFinalize(CharacteristicFinalizePackage));
