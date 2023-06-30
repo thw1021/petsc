@@ -7,9 +7,6 @@ typedef struct {
   PetscClassId classid;    /* The class the event is associated with */
   PetscBool    collective; /* Flag this event as collective */
   PetscBool    visible;    /* The flag to print info in summary */
-#if defined(PETSC_HAVE_TAU_PERFSTUBS)
-  void *timer; /* Associated external tool timer for this event */
-#endif
 } PetscLogEventInfo;
 
 typedef struct {
@@ -20,9 +17,6 @@ typedef struct {
 typedef struct _PetscLogStageInfo {
   char     *name;    /* The stage name */
   PetscBool visible; /* The flag to print info in summary */
-#if defined(PETSC_HAVE_TAU_PERFSTUBS)
-  void *timer; /* Associated external tool timer for this event */
-#endif
 } PetscLogStageInfo;
 
 PETSC_EXTERN PetscErrorCode PetscLogStateCreate(PetscLogState *);
