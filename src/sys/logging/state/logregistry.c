@@ -93,7 +93,6 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryStageRegister(PetscLogRegistry regis
   PetscCheck(idx == -1, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "An event named %s is already registered", sname);
   *stage = registry->stages->num_entries;
   PetscCall(PetscStrallocpy(sname, &stage_info.name));
-  stage_info.visible = PETSC_TRUE;
   PetscCall(PetscLogStageArrayPush(registry->stages, stage_info));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -108,7 +107,6 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryEventRegister(PetscLogRegistry regis
   *event           = registry->events->num_entries;
   new_info.classid = classid;
   PetscCall(PetscStrallocpy(name, &new_info.name));
-  new_info.visible = PETSC_TRUE;
   PetscCall(PetscLogEventArrayPush(registry->events, new_info));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -187,13 +185,6 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryClassSetInfo(PetscLogRegistry regist
 {
   PetscFunctionBegin;
   PetscCall(PetscLogClassArraySet(registry->classes, class, class_info));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PETSC_INTERN PetscErrorCode PetscLogRegistryStageSetVisible(PetscLogRegistry registry, PetscLogStage stage)
-{
-  PetscFunctionBegin;
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
