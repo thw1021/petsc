@@ -724,20 +724,23 @@ PetscErrorCode PetscLogStageGetActive(PetscLogStage stage, PetscBool *isActive)
   Level: intermediate
 
   Developer Note:
-  What does visible mean, needs to be documented.
+  Visibility only affects the default log handler in `PetscLogView()`: stages that are
+  set to invisible are suppressed from output.
 
 .seealso: [](ch_profiling), `PetscLogStageRegister()`, `PetscLogStagePush()`, `PetscLogStagePop()`, `PetscLogView()`
 @*/
 PetscErrorCode PetscLogStageSetVisible(PetscLogStage stage, PetscBool isVisible)
 {
-  PetscLogStageInfo stage_info;
+  PetscLogHandler   handler;
   PetscLogState     state;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
-  PetscCall(PetscLogRegistryStageGetInfo(state->registry, stage, &stage_info));
-  stage_info.visible = isVisible;
-  PetscCall(PetscLogRegistryStageSetInfo(state->registry, stage, stage_info));
+  if (stage < 0) PetscCall(PetscLogStateGetCurrentStage(state, &stage));
+  PetscCall(PetscLogTryGetHandler(PETSC_LOG_HANDLER_DEFAULT, &handler));
+  if (handler) {
+    PetscCall(PetscLogHandlerDefaultStageSetVisible(handler, stage, isVisible));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -758,13 +761,16 @@ PetscErrorCode PetscLogStageSetVisible(PetscLogStage stage, PetscBool isVisible)
 @*/
 PetscErrorCode PetscLogStageGetVisible(PetscLogStage stage, PetscBool *isVisible)
 {
-  PetscLogStageInfo stage_info;
+  PetscLogHandler   handler;
   PetscLogState     state;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
-  PetscCall(PetscLogRegistryStageGetInfo(state->registry, stage, &stage_info));
-  *isVisible = stage_info.visible;
+  if (stage < 0) PetscCall(PetscLogStateGetCurrentStage(state, &stage));
+  PetscCall(PetscLogTryGetHandler(PETSC_LOG_HANDLER_DEFAULT, &handler));
+  if (handler) {
+    PetscCall(PetscLogHandlerDefaultStageGetVisible(handler, stage, isVisible));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

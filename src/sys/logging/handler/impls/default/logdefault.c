@@ -778,6 +778,16 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDefaultStageSetVisible(PetscLogHandle
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PETSC_INTERN PetscErrorCode PetscLogHandlerDefaultStageGetVisible(PetscLogHandler h, PetscLogStage stage, PetscBool *is_visible)
+{
+  PetscStagePerf *stage_info;
+
+  PetscFunctionBegin;
+  PetscCall(PetscLogHandlerDefaultGetStageInfo(h, stage, &stage_info));
+  *is_visible = stage_info->perfInfo.visible;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 PETSC_INTERN PetscErrorCode PetscLogHandlerDefaultSetLogActions(PetscLogHandler handler, PetscBool flag)
 {
   PetscLogHandler_Default def = (PetscLogHandler_Default)handler->ctx;
@@ -1371,13 +1381,11 @@ static PetscErrorCode PetscLogHandlerView_Default_Info(PetscLogHandler handler, 
 
       PetscCall(PetscLogGlobalNamesGlobalGetLocal(global_stages, stage, &stage_id));
       if (stage_id >= 0) {
-        PetscLogStageInfo stage_reg_info;
         PetscStagePerf   *stage_info;
 
-        PetscCall(PetscLogStateStageGetInfo(state, stage_id, &stage_reg_info));
         PetscCall(PetscLogHandlerDefaultGetStageInfo(handler, stage, &stage_info));
         localStageUsed[stage]    = stage_info->used;
-        localStageVisible[stage] = stage_reg_info.visible;
+        localStageVisible[stage] = stage_info->perfInfo.visible;
       } else {
         localStageUsed[stage]    = PETSC_FALSE;
         localStageVisible[stage] = PETSC_TRUE;
