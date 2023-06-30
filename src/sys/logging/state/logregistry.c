@@ -101,27 +101,6 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryStageRegister(PetscLogRegistry regis
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-#if defined(PETSC_HAVE_MPE)
-  #include <mpe.h>
-
-  #define PETSC_RGB_COLORS_MAX 39
-static const char *PetscLogMPERGBColors[PETSC_RGB_COLORS_MAX] = {"OliveDrab:      ", "BlueViolet:     ", "CadetBlue:      ", "CornflowerBlue: ", "DarkGoldenrod:  ", "DarkGreen:      ", "DarkKhaki:      ", "DarkOliveGreen: ",
-                                                                 "DarkOrange:     ", "DarkOrchid:     ", "DarkSeaGreen:   ", "DarkSlateGray:  ", "DarkTurquoise:  ", "DeepPink:       ", "DarkKhaki:      ", "DimGray:        ",
-                                                                 "DodgerBlue:     ", "GreenYellow:    ", "HotPink:        ", "IndianRed:      ", "LavenderBlush:  ", "LawnGreen:      ", "LemonChiffon:   ", "LightCoral:     ",
-                                                                 "LightCyan:      ", "LightPink:      ", "LightSalmon:    ", "LightSlateGray: ", "LightYellow:    ", "LimeGreen:      ", "MediumPurple:   ", "MediumSeaGreen: ",
-                                                                 "MediumSlateBlue:", "MidnightBlue:   ", "MintCream:      ", "MistyRose:      ", "NavajoWhite:    ", "NavyBlue:       ", "OliveDrab:      "};
-
-static PetscErrorCode PetscLogMPEGetRGBColor_Internal(const char *str[])
-{
-  static int idx = 0;
-
-  PetscFunctionBegin;
-  *str = PetscLogMPERGBColors[idx];
-  idx  = (idx + 1) % PETSC_RGB_COLORS_MAX;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-#endif
-
 PETSC_INTERN PetscErrorCode PetscLogRegistryEventRegister(PetscLogRegistry registry, const char name[], PetscClassId classid, PetscLogEvent *event)
 {
   PetscLogEventInfo new_info;
@@ -135,25 +114,6 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryEventRegister(PetscLogRegistry regis
   new_info.visible = PETSC_TRUE;
 #if defined(PETSC_HAVE_TAU_PERFSTUBS)
   if (perfstubs_initialized == PERFSTUBS_SUCCESS) PetscStackCallExternalVoid("ps_timer_create_", new_info.timer = ps_timer_create_(new_info.name));
-#endif
-#if defined(PETSC_HAVE_MPE)
-  if (MPE_Initialized_logging()) {
-    const char *color;
-    PetscMPIInt rank;
-    int         beginID, endID;
-
-    beginID = MPE_Log_get_event_number();
-    endID   = MPE_Log_get_event_number();
-
-    new_info.mpe_id_begin = beginID;
-    new_info.mpe_id_end   = endID;
-
-    PetscCallMPI(MPI_Comm_rank(PETSC_COMM_WORLD, &rank));
-    if (rank == 0) {
-      PetscCall(PetscLogMPEGetRGBColor_Internal(&color));
-      MPE_Describe_state(beginID, endID, new_info.name, (char *)color);
-    }
-  }
 #endif
   PetscCall(PetscLogEventArrayPush(registry->events, new_info));
   PetscFunctionReturn(PETSC_SUCCESS);

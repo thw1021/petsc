@@ -10,10 +10,6 @@ typedef struct {
 #if defined(PETSC_HAVE_TAU_PERFSTUBS)
   void *timer; /* Associated external tool timer for this event */
 #endif
-#if defined(PETSC_HAVE_MPE)
-  int mpe_id_begin; /* MPE IDs that define the event */
-  int mpe_id_end;
-#endif
 } PetscLogEventInfo;
 
 typedef struct {
