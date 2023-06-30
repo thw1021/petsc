@@ -94,9 +94,6 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryStageRegister(PetscLogRegistry regis
   *stage = registry->stages->num_entries;
   PetscCall(PetscStrallocpy(sname, &stage_info.name));
   stage_info.visible = PETSC_TRUE;
-#if defined(PETSC_HAVE_TAU_PERFSTUBS)
-  if (perfstubs_initialized == PERFSTUBS_SUCCESS) PetscStackCallExternalVoid("ps_timer_create_", stage_info.timer = ps_timer_create_(stage_info.name));
-#endif
   PetscCall(PetscLogStageArrayPush(registry->stages, stage_info));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -112,9 +109,6 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryEventRegister(PetscLogRegistry regis
   new_info.classid = classid;
   PetscCall(PetscStrallocpy(name, &new_info.name));
   new_info.visible = PETSC_TRUE;
-#if defined(PETSC_HAVE_TAU_PERFSTUBS)
-  if (perfstubs_initialized == PERFSTUBS_SUCCESS) PetscStackCallExternalVoid("ps_timer_create_", new_info.timer = ps_timer_create_(new_info.name));
-#endif
   PetscCall(PetscLogEventArrayPush(registry->events, new_info));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
