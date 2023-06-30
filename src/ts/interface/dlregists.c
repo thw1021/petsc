@@ -84,13 +84,13 @@ PetscErrorCode TSInitializePackage(void)
   PetscCall(PetscOptionsGetString(NULL, NULL, "-log_exclude", logList, sizeof(logList), &opt));
   if (opt) {
     PetscCall(PetscStrInList("ts", logList, ',', &pkg));
-    if (pkg) PetscCall(PetscLogEventExcludeClass(TS_CLASSID));
+    if (pkg) PetscCall(PetscLogClassSetActiveAll(TS_CLASSID,PETSC_FALSE));
     PetscCall(PetscStrInList("dm", logList, ',', &cls));
-    if (pkg || cls) PetscCall(PetscLogEventExcludeClass(DMTS_CLASSID));
+    if (pkg || cls) PetscCall(PetscLogClassSetActiveAll(DMTS_CLASSID,PETSC_FALSE));
     PetscCall(PetscStrInList("tsadapt", logList, ',', &cls));
-    if (pkg || cls) PetscCall(PetscLogEventExcludeClass(TSADAPT_CLASSID));
+    if (pkg || cls) PetscCall(PetscLogClassSetActiveAll(TSADAPT_CLASSID,PETSC_FALSE));
     PetscCall(PetscStrInList("tstrajectory", logList, ',', &cls));
-    if (pkg || cls) PetscCall(PetscLogEventExcludeClass(TSTRAJECTORY_CLASSID));
+    if (pkg || cls) PetscCall(PetscLogClassSetActiveAll(TSTRAJECTORY_CLASSID,PETSC_FALSE));
   }
   /* Register package finalizer */
   PetscCall(PetscRegisterFinalize(TSFinalizePackage));

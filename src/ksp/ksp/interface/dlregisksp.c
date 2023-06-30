@@ -101,7 +101,7 @@ PetscErrorCode PCInitializePackage(void)
   PetscCall(PetscOptionsGetString(NULL, NULL, "-log_exclude", logList, sizeof(logList), &opt));
   if (opt) {
     PetscCall(PetscStrInList("pc", logList, ',', &pkg));
-    if (pkg) PetscCall(PetscLogEventExcludeClass(PC_CLASSID));
+    if (pkg) PetscCall(PetscLogClassSetActiveAll(PC_CLASSID, PETSC_FALSE));
   }
   /* Register data */
   PetscCall(PetscObjectComposedDataRegister(&PetscMGLevelId));
@@ -192,11 +192,11 @@ PetscErrorCode KSPInitializePackage(void)
   PetscCall(PetscOptionsGetString(NULL, NULL, "-log_exclude", logList, sizeof(logList), &opt));
   if (opt) {
     PetscCall(PetscStrInList("ksp", logList, ',', &pkg));
-    if (pkg) PetscCall(PetscLogEventExcludeClass(KSP_CLASSID));
+    if (pkg) PetscCall(PetscLogClassSetActiveAll(KSP_CLASSID,PETSC_FALSE));
     PetscCall(PetscStrInList("dm", logList, ',', &cls));
-    if (pkg || cls) PetscCall(PetscLogEventExcludeClass(DMKSP_CLASSID));
+    if (pkg || cls) PetscCall(PetscLogClassSetActiveAll(DMKSP_CLASSID,PETSC_FALSE));
     PetscCall(PetscStrInList("kspguess", logList, ',', &cls));
-    if (pkg || cls) PetscCall(PetscLogEventExcludeClass(KSPGUESS_CLASSID));
+    if (pkg || cls) PetscCall(PetscLogClassSetActiveAll(KSPGUESS_CLASSID,PETSC_FALSE));
   }
   /* Register package finalizer */
   PetscCall(PetscRegisterFinalize(KSPFinalizePackage));

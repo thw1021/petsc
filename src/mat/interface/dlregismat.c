@@ -303,13 +303,13 @@ PetscErrorCode MatInitializePackage(void)
   PetscCall(PetscOptionsGetString(NULL, NULL, "-log_exclude", logList, sizeof(logList), &opt));
   if (opt) {
     PetscCall(PetscStrInList("mat", logList, ',', &pkg));
-    if (pkg) PetscCall(PetscLogEventExcludeClass(MAT_CLASSID));
-    if (pkg) PetscCall(PetscLogEventExcludeClass(MAT_FDCOLORING_CLASSID));
-    if (pkg) PetscCall(PetscLogEventExcludeClass(MAT_COLORING_CLASSID));
-    if (pkg) PetscCall(PetscLogEventExcludeClass(MAT_TRANSPOSECOLORING_CLASSID));
-    if (pkg) PetscCall(PetscLogEventExcludeClass(MAT_PARTITIONING_CLASSID));
-    if (pkg) PetscCall(PetscLogEventExcludeClass(MAT_COARSEN_CLASSID));
-    if (pkg) PetscCall(PetscLogEventExcludeClass(MAT_NULLSPACE_CLASSID));
+    if (pkg) PetscCall(PetscLogClassSetActiveAll(MAT_CLASSID,PETSC_FALSE));
+    if (pkg) PetscCall(PetscLogClassSetActiveAll(MAT_FDCOLORING_CLASSID,PETSC_FALSE));
+    if (pkg) PetscCall(PetscLogClassSetActiveAll(MAT_COLORING_CLASSID,PETSC_FALSE));
+    if (pkg) PetscCall(PetscLogClassSetActiveAll(MAT_TRANSPOSECOLORING_CLASSID,PETSC_FALSE));
+    if (pkg) PetscCall(PetscLogClassSetActiveAll(MAT_PARTITIONING_CLASSID,PETSC_FALSE));
+    if (pkg) PetscCall(PetscLogClassSetActiveAll(MAT_COARSEN_CLASSID,PETSC_FALSE));
+    if (pkg) PetscCall(PetscLogClassSetActiveAll(MAT_NULLSPACE_CLASSID,PETSC_FALSE));
   }
 
   /* Register the PETSc built in factorization based solvers */

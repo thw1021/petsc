@@ -4,7 +4,7 @@
 /*S
    PetscLogState - Interface for the shared state information used by `PetscLogHandler`s.  It holds
    a registry of events (`PetscLogStateEventRegister()`), stages (`PetscLogStateStageRegiser()`), and
-   classes (`PetscLogStateClassRegister()`).  It keeps track of when the use has activated
+   classes (`PetscLogStateClassRegister()`).  It keeps track of when the user has activated
    events (`PetscLogStateEventSetActive()`) and stages (`PetscLogStateStageSetActive()`).  It
    also keeps a stack of running stages (`PetscLogStateStagePush()`, `PetscLogStateStagePop()`).
 
@@ -28,7 +28,6 @@ S*/
   Level: developer
 
   Note:
-
   Most users will not need to create a `PetscLogState`.  The global state `petsc_log_state`
   is created in `PetscInitialize()`.
 
@@ -67,7 +66,6 @@ PetscErrorCode PetscLogStateCreate(PetscLogState *state)
   Level: developer
 
   Note:
-
   Most users will not need to destroy a `PetscLogState`.  The global state `petsc_log_state`
   is destroyed in `PetscFinalize()`.
 
@@ -99,7 +97,6 @@ PetscErrorCode PetscLogStateDestroy(PetscLogState *state)
   Level: developer
 
   Note:
-
   This is called for `petsc_log_state` in `PetscLogStagePush()`.
 
 .seealso: [](ch_profiling), `PetscLogState`, `PetscLogStateStageRegister()`, `PetscLogStateStagePop()`, `PetscLogStateGetCurrentStage()`
@@ -128,7 +125,6 @@ PetscErrorCode PetscLogStateStagePush(PetscLogState state, PetscLogStage stage)
   Level: developer
 
   Note:
-
   This is called for `petsc_log_state` in `PetscLogStagePush()`.
 
 .seealso: [](ch_profiling), `PetscLogState`, `PetscLogStateStageRegister()`, `PetscLogStateStagePush()`, `PetscLogStateGetCurrentStage()`
@@ -161,7 +157,6 @@ PetscErrorCode PetscLogStateStagePop(PetscLogState state)
   Level: developer
 
   Note:
-
   This is called for `petsc_log_state` in `PetscLogGetCurrentStage()`.
 
 .seealso: [](ch_profiling), `PetscLogState`, `PetscLogStateStageRegister()`, `PetscLogStateStagePush()`, `PetscLogStateStagePop()`
@@ -210,17 +205,16 @@ static PetscErrorCode PetscLogStateResize(PetscLogState state)
 
   Not collective
 
-  Input parameters:
+  Input Parameters:
 + state - a `PetscLogState`
 - sname - a unique name
 
-  Output parameter:
+  Output Parameter:
 . stage - the identifier for the registered stage
 
   Level: developer
 
   Note:
-
   This is called for `petsc_log_state` in `PetscLogStageRegister()`.
 
 .seealso: [](ch_profiling), `PetscLogState`, `PetscLogStateStagePush()`, `PetscLogStateStagePop()`
@@ -249,18 +243,17 @@ PetscErrorCode PetscLogStateStageRegister(PetscLogState state, const char sname[
 
   Not collective
 
-  Input parameters:
+  Input Parameters:
 + state - a `PetscLogState`
 . sname - a unique name
 - id - the `PetscClassId` for the type of object most closely associated with this event
 
-  Output parameter:
+  Output Parameter:
 . event - the identifier for the registered event
 
   Level: developer
 
   Note:
-
   This is called for `petsc_log_state` in `PetscLogEventRegister()`.
 
 .seealso: [](ch_profiling), `PetscLogState`, `PetscLogStageRegister()`
@@ -285,7 +278,7 @@ PetscErrorCode PetscLogStateEventRegister(PetscLogState state, const char sname[
 
   Not collective
 
-  Input parameters:
+  Input Parameters:
 + state - a `PetscLogState`
 . stage - a registered `PetscLogStage`
 - isActive - if `PETSC_FALSE`, `PetscLogStateEventGetActive()` will return `PETSC_FALSE` for all events
@@ -293,7 +286,6 @@ PetscErrorCode PetscLogStateEventRegister(PetscLogState state, const char sname[
   Level: developer
 
   Note:
-
   This is called for `petsc_log_state` in `PetscLogStageSetActive()`
 
 .seealso: [](ch_profiling), `PetscLogState`, `PetscLogStateEventSetActive()`
@@ -315,17 +307,16 @@ PetscErrorCode PetscLogStateStageSetActive(PetscLogState state, PetscLogStage st
 
   Not collective
 
-  Input parameters:
+  Input Parameters:
 + state - a `PetscLogState`
 . stage - a registered `PetscLogStage`
 
-  Output parameter:
+  Output Parameter:
 - isActive - if `PETSC_FALSE`, `PetscLogStateEventGetActive()` will return `PETSC_FALSE` for all events
 
   Level: developer
 
   Note:
-
   This is called for `petsc_log_state` in `PetscLogStageGetActive()`. 
 
 .seealso: [](ch_profiling), `PetscLogState`, `PetscLogStageSetActive()`, `PetscLogHandler`, `PetscLogHandlerStart()`, `PetscLogHandlerEventBegin()`, `PetscLogHandlerEventEnd()`
@@ -342,7 +333,7 @@ PetscErrorCode PetscLogStateStageGetActive(PetscLogState state, PetscLogStage st
 
   Not collective
 
-  Input parameters:
+  Input Parameters:
 + state - a `PetscLogState`
 . stage - a registered `PetscLogStage`, or `PETSC_DEFAULT` for the current stage
 . event - a registered `PetscLogEvent`
@@ -351,7 +342,6 @@ PetscErrorCode PetscLogStateStageGetActive(PetscLogState state, PetscLogStage st
   Level: developer
 
   Note:
-
   This is called for `petsc_log_state` in `PetscLogEventSetActive()`. 
 
 .seealso: [](ch_profiling), `PetscLogState`, `PetscLogEventGetActive()`, `PetscLogStateGetCurrentStage()`, `PetscLogEventSetActiveAll()`
@@ -361,7 +351,7 @@ PetscErrorCode PetscLogStateEventSetActive(PetscLogState state, PetscLogStage st
   PetscFunctionBegin;
   stage = (stage < 0) ? state->current_stage : stage;
   PetscCheck(event >= 0 && event < state->bt_num_events, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid event %d should be in [0,%d)", event, state->bt_num_events);
-  PetscCheck(stage >= 0 && stage < state->bt_num_stages, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", event, state->bt_num_stages);
+  PetscCheck(stage >= 0 && stage < state->bt_num_stages, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", stage, state->bt_num_stages);
   PetscCall((isActive ? PetscBTSet : PetscBTClear)(state->active, state->current_stage + (event + 1) * state->bt_num_stages));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -371,7 +361,7 @@ PetscErrorCode PetscLogStateEventSetActive(PetscLogState state, PetscLogStage st
 
   Not collective
 
-  Input parameters:
+  Input Parameters:
 + state - a `PetscLogState`
 . stage - a registered `PetscLogStage`, or `PETSC_DEFAULT` for the current stage
 . event - a registered `PetscLogEvent`
@@ -380,7 +370,6 @@ PetscErrorCode PetscLogStateEventSetActive(PetscLogState state, PetscLogStage st
   Level: developer
 
   Note:
-
   This is called for `petsc_log_state` in `PetscLogEventSetActiveAll()`. 
 
 .seealso: [](ch_profiling), `PetscLogState`, `PetscLogEventGetActive()`
@@ -396,23 +385,60 @@ PetscErrorCode PetscLogStateEventSetActiveAll(PetscLogState state, PetscLogEvent
 }
 
 /*@
-  PetscLogStateEventSetActive - Set a logging event as active or inactive during a logging stage.
+  PetscLogStateClassSetActive - Set logging events associated with an event as active or inactive during a logging stage.
 
   Not collective
 
-  Input parameters:
+  Input Parameters:
 + state - a `PetscLogState`
+. stage - a registered `PetscLogStage`, or `PETSC_DEFAULT` for the current stage
 . classid - a `PetscClassId`
-. event - a registered `PetscLogEvent`
-- isActive - if `PETSC_FALSE`, `PetscLogStateEventGetActive()` will return `PETSC_FALSE` for this stage and this event
+- isActive - if `PETSC_FALSE`, `PetscLogStateEventGetActive()` will return
+             `PETSC_FALSE` for this stage and all events that were associated
+             with this class when they were registered (see
+             `PetscLogStateEventRegister()`).
 
   Level: developer
 
   Note:
+  This is called for `petsc_log_state` in `PetscLogClassSetActive()`. 
 
-  This is called for `petsc_log_state` in `PetscLogEventSetActive()`. 
+.seealso: [](ch_profiling), `PetscLogState`, `PetscLogEventGetActive()`, `PetscLogStateClassSetActive()`
+@*/
+PetscErrorCode PetscLogStateClassSetActive(PetscLogState state, PetscLogStage stage, PetscClassId classid, PetscBool isActive)
+{
+  PetscInt      num_events;
 
-.seealso: [](ch_profiling), `PetscLogState`, `PetscLogEventGetActive()`, `PetscLogStateGetCurrentStage()`
+  PetscFunctionBegin;
+  stage = stage < 0 ? state->current_stage : stage;
+  PetscCheck(stage >= 0 && stage < state->bt_num_stages, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", stage, state->bt_num_stages);
+  PetscCall(PetscLogRegistryGetNumEvents(state->registry, &num_events, NULL));
+  for (PetscLogEvent e = 0; e < num_events; e++) {
+    PetscLogEventInfo event_info;
+    PetscCall(PetscLogRegistryEventGetInfo(state->registry, e, &event_info));
+    if (event_info.classid == classid) PetscCall(PetscBTSet(state->active, stage + (e + 1) * state->bt_num_stages));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscLogStateClassSetActiveAll - Set logging events associated with an event as active or inactive for all logging stages
+
+  Not collective
+
+  Input Parameters:
++ state - a `PetscLogState`
+. classid - a `PetscClassId`
+- isActive - if `PETSC_FALSE`, `PetscLogStateEventGetActive()` will return
+             `PETSC_FALSE` for all events that were associated with this class when they
+             were registered (see `PetscLogStateEventRegister()`).
+
+  Level: developer
+
+  Note:
+  This is called for `petsc_log_state` in `PetscLogClassSetActiveAll()`. 
+
+.seealso: [](ch_profiling), `PetscLogState`, `PetscLogEventGetActive()`, `PetscLogStateClassSetActive()`
 @*/
 PetscErrorCode PetscLogStateClassSetActiveAll(PetscLogState state, PetscClassId classid, PetscBool isActive)
 {
@@ -427,53 +453,6 @@ PetscErrorCode PetscLogStateClassSetActiveAll(PetscLogState state, PetscClassId 
     if (event_info.classid == classid) {
       for (PetscLogStage s = 0; s < num_stages; s++) { PetscCall(PetscBTSet(state->active, s + (e + 1) * state->bt_num_stages)); }
     }
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PETSC_INTERN PetscErrorCode PetscLogStateEventExcludeClass(PetscLogState state, PetscClassId classid)
-{
-  PetscInt num_events, num_stages;
-
-  PetscFunctionBegin;
-  PetscCall(PetscLogRegistryGetNumEvents(state->registry, &num_events, NULL));
-  PetscCall(PetscLogRegistryGetNumStages(state->registry, &num_stages, NULL));
-  for (PetscLogEvent e = 0; e < num_events; e++) {
-    PetscLogEventInfo event_info;
-    PetscCall(PetscLogRegistryEventGetInfo(state->registry, e, &event_info));
-    if (event_info.classid == classid) {
-      for (PetscLogStage s = 0; s < num_stages; s++) { PetscCall(PetscBTClear(state->active, s + (e + 1) * state->bt_num_stages)); }
-    }
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PETSC_INTERN PetscErrorCode PetscLogStateEventActivateClass(PetscLogState state, PetscClassId classid)
-{
-  PetscLogStage stage = state->current_stage;
-  PetscInt      num_events;
-
-  PetscFunctionBegin;
-  PetscCall(PetscLogRegistryGetNumEvents(state->registry, &num_events, NULL));
-  for (PetscLogEvent e = 0; e < num_events; e++) {
-    PetscLogEventInfo event_info;
-    PetscCall(PetscLogRegistryEventGetInfo(state->registry, e, &event_info));
-    if (event_info.classid == classid) PetscCall(PetscBTSet(state->active, stage + (e + 1) * state->bt_num_stages));
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PETSC_INTERN PetscErrorCode PetscLogStateEventDeactivateClass(PetscLogState state, PetscClassId classid)
-{
-  PetscLogStage stage = state->current_stage;
-  PetscInt      num_events;
-
-  PetscFunctionBegin;
-  PetscCall(PetscLogRegistryGetNumEvents(state->registry, &num_events, NULL));
-  for (PetscLogEvent e = 0; e < num_events; e++) {
-    PetscLogEventInfo event_info;
-    PetscCall(PetscLogRegistryEventGetInfo(state->registry, e, &event_info));
-    if (event_info.classid == classid) PetscCall(PetscBTClear(state->active, stage + (e + 1) * state->bt_num_stages));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -494,7 +473,6 @@ PETSC_INTERN PetscErrorCode PetscLogStateEventDeactivateClass(PetscLogState stat
   Level: developer
 
   Note:
-
   This is called for `petsc_log_state` in `PetscLogEventGetActive()`, where it has significance
   for what information is sent to log handlers.
 
@@ -506,7 +484,7 @@ PetscErrorCode PetscLogStateEventGetActive(PetscLogState state, PetscLogStage st
   stage = (stage < 0) ? state->current_stage : stage;
   PetscCheck(event >= 0 && event < state->bt_num_events, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid event %d should be in [0,%d)", event, state->bt_num_events);
   PetscCheck(stage >= 0 && stage < state->bt_num_stages, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", event, state->bt_num_stages);
-  *isActive = PetscLogStateStageEventActive(state, stage, event);
+  *isActive = PetscLogStateStageEventIsActive(state, stage, event);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

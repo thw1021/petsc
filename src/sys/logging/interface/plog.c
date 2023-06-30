@@ -281,8 +281,7 @@ static PetscErrorCode PetscLogHandlerCopyToHot(PetscLogHandler h, PetscLogHandle
 }
 
 /*@
-  PetscLogHandlerStart - Connect a log handler to PETSc's global stream and
-  global logging state.
+  PetscLogHandlerStart - Connect a log handler to PETSc's global logging stream and state.
 
   Logically collective
 
@@ -293,17 +292,17 @@ static PetscErrorCode PetscLogHandlerCopyToHot(PetscLogHandler h, PetscLogHandle
 
   Notes:
 
-  Users should only deed this if they create their own log handlers: handlers that are started
+  Users should only need this if they create their own log handlers: handlers that are started
   from the command line (such as `-log_view` and `-log_trace`) or from a function like
   `PetscLogNestedBegin()` will automatically be started.
 
   There is a limit of `PESC_LOG_HANDLER_MAX` handlers that can be active at one time.
 
-  To disconnect a handler from the global strea
+  To disconnect a handler from the global stream call `PetscLogHandlerStop()`.
 
-.seealso: [](ch_profiling), `PetscLogHandler`, `PetscLogHandlerStop()`, `PetscLogState`
+.seealso: [](ch_profiling), `PetscLogHandler`, `PetscLogState`, `PetscLogHandlerStop()`
 @*/
-PETSC_EXTERN PetscErrorCode PetscLogHandlerStart(PetscLogHandler h)
+PetscErrorCode PetscLogHandlerStart(PetscLogHandler h)
 {
   PetscFunctionBegin;
   for (PetscInt i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
@@ -325,7 +324,24 @@ PETSC_EXTERN PetscErrorCode PetscLogHandlerStart(PetscLogHandler h)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_EXTERN PetscErrorCode PetscLogHandlerStop(PetscLogHandler h)
+/*@
+  PetscLogHandlerStop - Disconnect a log handler from PETSc's global logging stream.
+
+  Logically collective
+
+  Input Parameters:
+. h - a `PetscLogHandler`
+
+  Level: developer
+
+  Note:
+  After `PetscLogHandlerStop()`, the handler can still access the global logging state
+  with `PetscLogHandlerGetState()`, so that it can access the registry when post-processing
+  (for instance, in `PetscLogHandlerView()`),
+
+.seealso: [](ch_profiling), `PetscLogHandler`, `PetscLogState`, `PetscLogHandlerStop()`
+@*/
+PetscErrorCode PetscLogHandlerStop(PetscLogHandler h)
 {
   PetscFunctionBegin;
   for (PetscInt i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
@@ -381,7 +397,7 @@ PetscErrorCode PetscLogDefaultBegin(void)
 PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Trace(MPI_Comm, PetscLogHandler *);
 
 /*@C
-  PetscLogTraceBegin - Activates trace logging.  Every time a PETSc event
+  PetscLogTraceBegin - Begins trace logging.  Every time a PETSc event
   begins or ends, the event name is printed.
 
   Logically Collective on `PETSC_COMM_WORLD`
@@ -390,7 +406,7 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Trace(MPI_Comm, PetscLogHandle
 . file - The file to print trace in (e.g. stdout)
 
   Options Database Key:
-. -log_trace [filename] - Activates `PetscLogTraceBegin()`
+. -log_trace [filename] - Begins `PetscLogTraceBegin()`
 
   Level: intermediate
 
@@ -858,7 +874,7 @@ PetscErrorCode PetscLogEventGetName(PetscLogEvent event, const char **name)
   returned instead of creating a new event.
 
 .seealso: [](ch_profiling), `PetscLogStageRegister()`, `PetscLogEventBegin()`, `PetscLogEventEnd()`, `PetscLogFlops()`,
-          `PetscLogEventActivate()`, `PetscLogEventDeactivate()`, `PetscClassIdRegister()`
+          `PetscLogEventSetActive()`, `PetscClassIdRegister()`
 @*/
 PetscErrorCode PetscLogEventRegister(const char name[], PetscClassId classid, PetscLogEvent *event)
 {
@@ -904,59 +920,37 @@ PetscErrorCode PetscLogEventSetCollective(PetscLogEvent event, PetscBool collect
 }
 
 /*@
-  PetscLogEventIncludeClass - Activates event logging for a PETSc object class in every stage.
+  PetscLogClassSetActiveAll - Activate or inactivate logging for all events associated with a PETSc object class in every stage.
 
   Not Collective
 
   Input Parameter:
-. classid - The object class, for example `MAT_CLASSID`, `SNES_CLASSID`, etc.
++ classid - The object class, for example `MAT_CLASSID`, `SNES_CLASSID`, etc.
+- isActive - if `PETSC_FALSE`, events associated with this class will not be send to log handlers.
 
   Level: developer
 
-.seealso: [](ch_profiling), `PetscLogEventActivateClass()`, `PetscLogEventDeactivateClass()`, `PetscLogEventActivate()`, `PetscLogEventDeactivate()`
+.seealso: [](ch_profiling), `PetscLogEventSetActive()`, `PetscLogEventSetActiveAll()`, `PetscLogStageSetActive()`, `PetscLogClassSetActive()`
 @*/
-PetscErrorCode PetscLogEventIncludeClass(PetscClassId classid)
+PetscErrorCode PetscLogClassSetActiveAll(PetscClassId classid, PetscBool isActive)
 {
   PetscLogState state;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
-  PetscCall(PetscLogStateEventIncludeClass(state, classid));
+  PetscCall(PetscLogStateClassSetActiveAll(state, classid, isActive));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@
-  PetscLogEventExcludeClass - Deactivates event logging for a PETSc object class in every stage.
+  PetscLogEventSetActive - Activate or inactivate logging for an event in a given stage
 
   Not Collective
 
   Input Parameter:
-. classid - The object class, for example `MAT_CLASSID`, `SNES_CLASSID`, etc.
-
-  Level: developer
-
-  Note:
-  If a class is excluded then events associated with that class are not logged.
-
-.seealso: [](ch_profiling), `PetscLogEventDeactivateClass()`, `PetscLogEventActivateClass()`, `PetscLogEventDeactivate()`, `PetscLogEventActivate()`
-@*/
-PetscErrorCode PetscLogEventExcludeClass(PetscClassId classid)
-{
-  PetscLogState state;
-
-  PetscFunctionBegin;
-  PetscCall(PetscLogGetState(&state));
-  PetscCall(PetscLogStateEventExcludeClass(state, classid));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  PetscLogEventActivate - Indicates that a particular event should be logged.
-
-  Not Collective
-
-  Input Parameter:
-. event - The event id
++ stage - A registered `PetscLogStage` (or `PETSC_DEFAULT` for the current stage)
+. event - A `PetscLogEvent`
+- isActive - If `PETSC_FALSE`, activity from this event (`PetscLogEventBegin()`, `PetscLogEventEnd()`, `PetscLogEventSync()`) will not be sent to log handlers dur this stage
 
   Usage:
 .vb
@@ -974,47 +968,13 @@ PetscErrorCode PetscLogEventExcludeClass(PetscClassId classid)
 
 .seealso: [](ch_profiling), `PetscLogEventDeactivate()`, `PetscLogEventDeactivatePush()`, `PetscLogEventDeactivatePop()`
 @*/
-PetscErrorCode PetscLogEventActivate(PetscLogEvent event)
+PetscErrorCode PetscLogEventSetActive(PetscLogStage stage, PetscLogEvent event, PetscBool isActive)
 {
   PetscLogState state;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
-  PetscCall(PetscLogStateEventActivate(state, event));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  PetscLogEventDeactivate - Indicates that a particular event should not be logged.
-
-  Not Collective
-
-  Input Parameter:
-. event - The event id
-
-  Usage:
-.vb
-      PetscLogEventDeactivate(VEC_SetValues);
-        [code where you do not want to log VecSetValues()]
-      PetscLogEventActivate(VEC_SetValues);
-        [code where you do want to log VecSetValues()]
-.ve
-
-  Level: advanced
-
-  Note:
-  The event may be either a pre-defined PETSc event (found in
-  include/petsclog.h) or an event number obtained with `PetscLogEventRegister()`).
-
-.seealso: [](ch_profiling), `PetscLogEventActivate()`, `PetscLogEventDeactivatePush()`, `PetscLogEventDeactivatePop()`
-@*/
-PetscErrorCode PetscLogEventDeactivate(PetscLogEvent event)
-{
-  PetscLogState state;
-
-  PetscFunctionBegin;
-  PetscCall(PetscLogGetState(&state));
-  PetscCall(PetscLogStateEventDeactivate(state, event));
+  PetscCall(PetscLogStateEventSetActive(state, stage, event, isActive));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1036,9 +996,11 @@ PetscErrorCode PetscLogEventDeactivate(PetscLogEvent event)
 
   Level: advanced
 
-  Note:
+  Notes:
   The event may be either a pre-defined PETSc event (found in
   include/petsclog.h) or an event number obtained with `PetscLogEventRegister()`).
+
+  PETSc's default log handler (`PetscLogDefaultBegin()`) respects this function because it can make the output of `PetscLogView()` easier to interpret, but other handlers (such as the nested handler, `PetscLogNestedBegin()`) ignore it because surpressing events is not helpful in their output formats.
 
 .seealso: [](ch_profiling), `PetscLogEventActivate()`, `PetscLogEventDeactivatePop()`, `PetscLogEventDeactivate()`
 @*/
@@ -1101,8 +1063,18 @@ PetscErrorCode PetscLogEventDeactivatePop(PetscLogEvent event)
 }
 
 /*@
-  PetscLogEventsPause - Description
+  PetscLogEventsPause - Put event logging into "paused" mode: timers and counters for in-progress events are paused, and any events that happen before logging is "unpaused" with `PetscLogEventsUnpause()` are logged in the "Main Stage" of execution.
 
+  Not collective
+
+  Level: advanced
+
+  Notes:
+  When an external library or runtime has is initialized it can involve lots of setup time that skews the statistics of any unrelated running events: this function is intended to isolate such calls in the default log summary (`PetscLogDefaultBegin()`, `PetscLogView()`).
+
+  Other log handlers (such as the nested handler, `PetscLogNestedView()`) will ignore this function.
+
+.seealso: [](ch_profiling), `PetscLogEventDeactivatePush()`, `PetscLogEventDeactivatePop()`, `PetscLogEventsUnpause()`
 @*/
 PetscErrorCode PetscLogEventsPause(void)
 {
@@ -1115,8 +1087,13 @@ PetscErrorCode PetscLogEventsPause(void)
 }
 
 /*@
-  PetscLogEventsUnpause - Description
+  PetscLogEventsUnpause - Return logging to normal behavior after it was paused with `PetscLogEventsUnpause()`.
 
+  Not collective
+
+  Level: advanced
+
+.seealso: [](ch_profiling), `PetscLogEventDeactivatePush()`, `PetscLogEventDeactivatePop()`, `PetscLogEventsPause()`
 @*/
 PetscErrorCode PetscLogEventsUnpause(void)
 {
@@ -1152,46 +1129,26 @@ PetscErrorCode PetscLogEventSetActiveAll(PetscLogEvent event, PetscBool isActive
 }
 
 /*@
-  PetscLogEventActivateClass - Activates event logging for a PETSc object class for the current stage
+  PetscLogClassSetActive - Activates event logging for a PETSc object class for the current stage
 
   Not Collective
 
   Input Parameter:
++ stage - A registered `PetscLogStage` (or `PETSC_DEFAULT` for the current stage)
 . classid - The event class, for example `MAT_CLASSID`, `SNES_CLASSID`, etc.
+- isActive - If `PETSC_FALSE`, events associated with this class are not sent to log handlers.
 
   Level: developer
 
-.seealso: [](ch_profiling), `PetscLogEventIncludeClass()`, `PetscLogEventExcludeClass()`, `PetscLogEventDeactivateClass()`, `PetscLogEventActivate()`, `PetscLogEventDeactivate()`
+.seealso: [](ch_profiling), `PetscLogClassSetActiveAll()`, `PetscLogEventSetActive()`, `PetscLogEventSetActiveAll()`, `PetscLogStageSetActive()`
 @*/
-PetscErrorCode PetscLogEventActivateClass(PetscClassId classid)
+PetscErrorCode PetscLogClassSetActive(PetscLogStage stage, PetscClassId classid, PetscBool isActive)
 {
   PetscLogState state;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
-  PetscCall(PetscLogStateEventActivateClass(state, classid));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-  PetscLogEventDeactivateClass - Deactivates event logging for a PETSc object class for the current stage
-
-  Not Collective
-
-  Input Parameter:
-. classid - The event class, for example `MAT_CLASSID`, `SNES_CLASSID`, etc.
-
-  Level: developer
-
-.seealso: [](ch_profiling), `PetscLogEventIncludeClass()`, `PetscLogEventExcludeClass()`, `PetscLogEventActivateClass()`, `PetscLogEventActivate()`, `PetscLogEventDeactivate()`
-@*/
-PetscErrorCode PetscLogEventDeactivateClass(PetscClassId classid)
-{
-  PetscLogState state;
-
-  PetscFunctionBegin;
-  PetscCall(PetscLogGetState(&state));
-  PetscCall(PetscLogStateEventDeactivateClass(state, classid));
+  PetscCall(PetscLogStateClassSetActive(state, stage, classid, isActive));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
