@@ -947,7 +947,7 @@ PetscErrorCode PetscLogClassSetActiveAll(PetscClassId classid, PetscBool isActiv
 
   Not Collective
 
-  Input Parameter:
+  Input Parameters:
 + stage - A registered `PetscLogStage` (or `PETSC_DEFAULT` for the current stage)
 . event - A `PetscLogEvent`
 - isActive - If `PETSC_FALSE`, activity from this event (`PetscLogEventBegin()`, `PetscLogEventEnd()`, `PetscLogEventSync()`) will not be sent to log handlers dur this stage
@@ -975,6 +975,44 @@ PetscErrorCode PetscLogEventSetActive(PetscLogStage stage, PetscLogEvent event, 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
   PetscCall(PetscLogStateEventSetActive(state, stage, event, isActive));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscLogEventGetActive - Check if logging is activate or inactivate logging for an event in a given stage
+
+  Not Collective
+
+  Input Parameters:
++ stage - A registered `PetscLogStage` (or `PETSC_DEFAULT` for the current stage)
+- event - A `PetscLogEvent`
+
+  Output Parameter:
+. isActive - If `PETSC_FALSE`, activity from this event (`PetscLogEventBegin()`, `PetscLogEventEnd()`, `PetscLogEventSync()`) will not be sent to log handlers dur this stage
+
+  Usage:
+.vb
+      PetscLogEventDeactivate(VEC_SetValues);
+        [code where you do not want to log VecSetValues()]
+      PetscLogEventActivate(VEC_SetValues);
+        [code where you do want to log VecSetValues()]
+.ve
+
+  Level: advanced
+
+  Note:
+  The event may be either a pre-defined PETSc event (found in include/petsclog.h)
+  or an event number obtained with `PetscLogEventRegister()`.
+
+.seealso: [](ch_profiling), `PetscLogEventDeactivate()`, `PetscLogEventDeactivatePush()`, `PetscLogEventDeactivatePop()`
+@*/
+PetscErrorCode PetscLogEventGetActive(PetscLogStage stage, PetscLogEvent event, PetscBool *isActive)
+{
+  PetscLogState state;
+
+  PetscFunctionBegin;
+  PetscCall(PetscLogGetState(&state));
+  PetscCall(PetscLogStateEventGetActive(state, stage, event, isActive));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

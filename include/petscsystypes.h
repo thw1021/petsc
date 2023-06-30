@@ -1129,6 +1129,18 @@ typedef int PetscLogEvent;
 M*/
 typedef int PetscLogStage;
 
+/*MC
+    PetscLogClass - id used to identify classes for logging purposes only
+
+    Level: developer
+
+    Note:
+    For the default log handler, this will always be the same as the `PetscClassId`.
+
+.seealso: [](ch_profiling), `PetscLogStageRegister()`, `PetscLogStagePush()`, `PetscLogStagePop()`, `PetscLogEvent`
+M*/
+typedef int PetscLogClass;
+
 /*E
    PetscLogHandlerOpType - Operations performed by a log handler
 

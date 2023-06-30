@@ -22,11 +22,9 @@ static PetscErrorCode PetscLogEventGetNestedEvent(PetscLogHandler h, PetscLogEve
   PetscHashIter          iter;
   PetscBool              missing;
   PetscLogState          state;
-  PetscLogRegistry       registry;
 
   PetscFunctionBegin;
   PetscCall(PetscLogHandlerGetState(h, &state));
-  registry = state->registry;
   PetscCall(PetscIntStackTop(nested->stack, &(key.root)));
   key.leaf = NestedIdFromEvent(e);
   PetscCall(PetscNestedHashPut(nested->pair_map, key, &iter, &missing));
@@ -36,8 +34,8 @@ static PetscErrorCode PetscLogEventGetNestedEvent(PetscLogHandler h, PetscLogEve
     PetscLogEventInfo event_info;
     PetscLogEventInfo nested_event_info;
 
-    PetscCall(PetscLogRegistryEventGetInfo(registry, e, &event_info));
-    PetscCall(PetscLogRegistryEventGetInfo(nested->state->registry, key.root, &nested_event_info));
+    PetscCall(PetscLogStateEventGetInfo(state, e, &event_info));
+    PetscCall(PetscLogStateEventGetInfo(nested->state, key.root, &nested_event_info));
     PetscCall(PetscSNPrintf(name, sizeof(name) - 1, "%s;%s", nested_event_info.name, event_info.name));
     PetscCall(PetscLogStateEventRegister(nested->state, name, event_info.classid, nested_event));
     PetscCall(PetscNestedHashIterSet(nested->pair_map, iter, *nested_event));
@@ -55,11 +53,9 @@ static PetscErrorCode PetscLogStageGetNestedEvent(PetscLogHandler h, PetscLogSta
   PetscHashIter          iter;
   PetscBool              missing;
   PetscLogState          state;
-  PetscLogRegistry       registry;
 
   PetscFunctionBegin;
   PetscCall(PetscLogHandlerGetState(h, &state));
-  registry = state->registry;
   PetscCall(PetscIntStackTop(nested->stack, &(key.root)));
   key.leaf = NestedIdFromStage(stage);
   PetscCall(PetscNestedHashPut(nested->pair_map, key, &iter, &missing));
@@ -67,11 +63,11 @@ static PetscErrorCode PetscLogStageGetNestedEvent(PetscLogHandler h, PetscLogSta
     PetscLogStageInfo stage_info;
     char              name[BUFSIZ];
 
-    PetscCall(PetscLogRegistryStageGetInfo(registry, stage, &stage_info));
+    PetscCall(PetscLogStateStageGetInfo(state, stage, &stage_info));
     if (key.root >= 0) {
       PetscLogEventInfo nested_event_info;
 
-      PetscCall(PetscLogRegistryEventGetInfo(nested->state->registry, key.root, &nested_event_info));
+      PetscCall(PetscLogStateEventGetInfo(nested->state, key.root, &nested_event_info));
       PetscCall(PetscSNPrintf(name, sizeof(name) - 1, "%s;%s", nested_event_info.name, stage_info.name));
     } else {
       PetscCall(PetscSNPrintf(name, sizeof(name) - 1, "%s", stage_info.name));

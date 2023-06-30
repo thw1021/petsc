@@ -10,7 +10,7 @@ static PetscErrorCode PetscLogHandlerEventBegin_MPE(PetscLogHandler handler, Pet
 
   PetscFunctionBegin;
   PetscCall(PetscLogHandlerGetState(handler, &state));
-  PetscCall(PetscLogRegistryEventGetInfo(state->registry, event, &event_info));
+  PetscCall(PetscLogStateEventGetInfo(state, event, &event_info));
   PetscCall(MPE_Log_event(event_info.mpe_id_begin, 0, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -22,7 +22,7 @@ static PetscErrorCode PetscLogHandlerEventEnd_MPE(PetscLogHandler handler, Petsc
 
   PetscFunctionBegin;
   PetscCall(PetscLogHandlerGetState(handler, &state));
-  PetscCall(PetscLogRegistryEventGetInfo(state->registry, event, &event_info));
+  PetscCall(PetscLogStateEventGetInfo(state, event, &event_info));
   PetscCall(MPE_Log_event(event_info.mpe_id_end, 0, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

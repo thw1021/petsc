@@ -26,7 +26,7 @@ static PetscErrorCode PetscLogHandlerEventBegin_Trace(PetscLogHandler h, PetscLo
   PetscCall(PetscLogStateGetCurrentStage(state, &stage));
   /* Log performance info */
   PetscCall(PetscTime(&cur_time));
-  PetscCall(PetscLogRegistryEventGetInfo(state->registry, event, &event_info));
+  PetscCall(PetscLogStateEventGetInfo(state, event, &event_info));
   PetscCall(PetscFPrintf(PETSC_COMM_SELF, tr->petsc_tracefile, "%s[%d] %g Event begin: %s\n", tr->petsc_tracespace, rank, cur_time - tr->petsc_tracetime, event_info.name));
   for (int i = 0; i < PetscMin(sizeof(tr->petsc_tracespace), 2 * tr->petsc_tracelevel); i++) tr->petsc_tracespace[i] = ' ';
   tr->petsc_tracespace[PetscMin(127, 2 * tr->petsc_tracelevel)] = '\0';
@@ -53,7 +53,7 @@ static PetscErrorCode PetscLogHandlerEventEnd_Trace(PetscLogHandler h, PetscLogE
   for (int i = 0; i < PetscMin(sizeof(tr->petsc_tracespace), 2 * tr->petsc_tracelevel); i++) tr->petsc_tracespace[i] = ' ';
   tr->petsc_tracespace[PetscMin(127, 2 * tr->petsc_tracelevel)] = '\0';
   PetscCall(PetscTime(&cur_time));
-  PetscCall(PetscLogRegistryEventGetInfo(state->registry, event, &event_info));
+  PetscCall(PetscLogStateEventGetInfo(state, event, &event_info));
   PetscCall(PetscFPrintf(PETSC_COMM_SELF, tr->petsc_tracefile, "%s[%d] %g Event end: %s\n", tr->petsc_tracespace, rank, cur_time - tr->petsc_tracetime, event_info.name));
   PetscCall(PetscFFlush(tr->petsc_tracefile));
   PetscFunctionReturn(PETSC_SUCCESS);
