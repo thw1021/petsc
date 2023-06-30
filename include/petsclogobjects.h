@@ -2,17 +2,38 @@
 #define PETSCLOGOBJECTS_H
 #include <petscsys.h>
 
+/*S
+  PetscLogEventInfo - A registry entry about a logging event for `PetscLogState`.
+
+  Level: developer
+
+.seealso: [](ch_profiling), `PetscLogEvent`, `PetscLogState`, `PetscLogStateEventGetInfo()`
+S*/
 typedef struct {
   char        *name;       /* The name of this event */
   PetscClassId classid;    /* The class the event is associated with */
   PetscBool    collective; /* Flag this event as collective */
 } PetscLogEventInfo;
 
+/*S
+  PetscLogClassInfo - A registry entry about a class for `PetscLogState`.
+
+  Level: developer
+
+.seealso: [](ch_profiling), `PetscLogClass`, `PetscLogState`, `PetscLogStateEventGetInfo()`
+S*/
 typedef struct {
   char        *name;    /* The class name */
   PetscClassId classid; /* The integer identifying this class */
 } PetscLogClassInfo;
 
+/*S
+  PetscLogStageInfo - A registry entry about a class for `PetscLogState`.
+
+  Level: developer
+
+.seealso: [](ch_profiling), `PetscLogStage`, `PetscLogState`, `PetscLogStateEventGetInfo()`
+S*/
 typedef struct _PetscLogStageInfo {
   char     *name;    /* The stage name */
 } PetscLogStageInfo;
