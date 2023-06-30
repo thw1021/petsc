@@ -148,7 +148,6 @@
 
  */
 
-PETSC_INTERN PetscErrorCode PetscLogGetRegistry(PetscLogRegistry *);
 PETSC_INTERN PetscErrorCode PetscLogRegistryCreate(PetscLogRegistry *);
 PETSC_INTERN PetscErrorCode PetscLogRegistryDestroy(PetscLogRegistry);
 PETSC_INTERN PetscErrorCode PetscLogRegistryStageRegister(PetscLogRegistry, const char[], PetscLogStage *);
