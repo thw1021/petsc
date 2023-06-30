@@ -5,6 +5,7 @@
 typedef struct _n_PetscEventMPE {
   int start;
   int final;
+  int depth;
 } PetscEventMPE;
 
 PETSC_LOG_RESIZABLE_ARRAY(MPEArray, PetscEventMPE, void *, NULL, NULL, NULL);
@@ -98,7 +99,9 @@ static PetscErrorCode PetscLogHandlerEventBegin_MPE(PetscLogHandler handler, Pet
   PetscFunctionBegin;
   PetscCall(PetscLogHandlerMPEUpdate(handler));
   PetscCall(PetscLogMPEArrayGet(mpe->events, event, &mpe_event));
-  PetscCall(MPE_Log_event(mpe_event.start, 0, NULL));
+  mpe_event.depth++;
+  PetscCall(PetscLogMPEArraySet(mpe->events, event, mpe_event));
+  if (mpe_event.depth == 1) PetscCall(MPE_Log_event(mpe_event.start, 0, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -110,7 +113,9 @@ static PetscErrorCode PetscLogHandlerEventEnd_MPE(PetscLogHandler handler, Petsc
   PetscFunctionBegin;
   PetscCall(PetscLogHandlerMPEUpdate(handler));
   PetscCall(PetscLogMPEArrayGet(mpe->events, event, &mpe_event));
-  PetscCall(MPE_Log_event(mpe_event.final, 0, NULL));
+  mpe_event.depth--;
+  PetscCall(PetscLogMPEArraySet(mpe->events, event, mpe_event));
+  if (mpe_event.depth == 0) PetscCall(MPE_Log_event(mpe_event.final, 0, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

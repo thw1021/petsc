@@ -4,6 +4,7 @@
 
 typedef struct _n_PetscEventPS {
   void *timer;
+  int depth;
 } PetscEventPS;
 
 PETSC_LOG_RESIZABLE_ARRAY(PSArray, PetscEventPS, void *, NULL, NULL, NULL);
@@ -88,7 +89,9 @@ static PetscErrorCode PetscLogHandlerEventBegin_Perfstubs(PetscLogHandler handle
   PetscFunctionBegin;
   if (event >= ps->events->num_entries) PetscCall(PetscLogHandlerPSUpdateEvents(handler));
   PetscCall(PetscLogPSArrayGet(ps->events, event, &ps_event));
-  if (ps_event.timer != NULL) PetscStackCallExternalVoid("ps_timer_start_", ps_timer_start_(ps_event.timer));
+  ps_event.depth++;
+  PetscCall(PetscLogPSArraySet(ps->events, event, ps_event));
+  if (ps_event.depth == 1 && ps_event.timer != NULL) PetscStackCallExternalVoid("ps_timer_start_", ps_timer_start_(ps_event.timer));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -100,7 +103,9 @@ static PetscErrorCode PetscLogHandlerEventEnd_Perfstubs(PetscLogHandler handler,
   PetscFunctionBegin;
   if (event >= ps->events->num_entries) PetscCall(PetscLogHandlerPSUpdateEvents(handler));
   PetscCall(PetscLogPSArrayGet(ps->events, event, &ps_event));
-  if (ps_event.timer != NULL) PetscStackCallExternalVoid("ps_timer_stop_", ps_timer_stop_(ps_event.timer));
+  ps_event.depth--;
+  PetscCall(PetscLogPSArraySet(ps->events, event, ps_event));
+  if (ps_event.depth == 0 && ps_event.timer != NULL) PetscStackCallExternalVoid("ps_timer_stop_", ps_timer_stop_(ps_event.timer));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
