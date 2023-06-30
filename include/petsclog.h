@@ -143,12 +143,12 @@ PETSC_EXTERN PetscErrorCode PetscLogMPEBegin(void);
 PETSC_EXTERN PetscErrorCode PetscLogMPEDump(const char[]);
   #endif
 
+#if defined(PETSC_HAVE_TAU_PERFSTUBS)
+PETSC_EXTERN PetscErrorCode PetscLogPerfstubsBegin(void);
+#endif
+
 /* Initialization functions */
 PETSC_EXTERN PetscErrorCode PetscLogDefaultBegin(void);
-PETSC_DEPRECATED_FUNCTION("Use PetscLogDefaultBegin() (since version 3.20)") static inline PetscErrorCode PetscLogAllBegin(void)
-{
-  return PetscLogDefaultBegin();
-}
 PETSC_EXTERN PetscErrorCode PetscLogNestedBegin(void);
 PETSC_EXTERN PetscErrorCode PetscLogTraceBegin(FILE *);
 PETSC_EXTERN PetscErrorCode PetscLogActions(PetscBool);
@@ -571,7 +571,6 @@ static inline int PetscMPIParallelComm(MPI_Comm comm)
     #define PetscLogMPEDump(c) PETSC_SUCCESS
   #endif
   #define PetscLogDefaultBegin()     PETSC_SUCCESS
-  #define PetscLogAllBegin()         PETSC_SUCCESS
   #define PetscLogNestedBegin()      PETSC_SUCCESS
   #define PetscLogTraceBegin(file)   PETSC_SUCCESS
   #define PetscLogActions(a)         PETSC_SUCCESS
@@ -595,6 +594,10 @@ static inline int PetscMPIParallelComm(MPI_Comm comm)
 
 #endif /* PETSC_USE_LOG */
 
+PETSC_DEPRECATED_FUNCTION("Use PetscLogDefaultBegin() (since version 3.20)") static inline PetscErrorCode PetscLogAllBegin(void)
+{
+  return PetscLogDefaultBegin();
+}
 PETSC_DEPRECATED_FUNCTION("Use PetscLogClassSetActiveAll() (since version 3.20)") static inline PetscErrorCode PetscLogEventIncludeClass(PetscClassId id)
 {
   return PetscLogClassSetActiveAll(id, PETSC_TRUE);

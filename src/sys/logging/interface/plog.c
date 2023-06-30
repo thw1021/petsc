@@ -197,9 +197,6 @@ PETSC_INTERN PetscErrorCode PetscLogInitialize(void)
   PetscCallMPI(MPI_Barrier(PETSC_COMM_WORLD));
   PetscCall(PetscTime(&petsc_BaseTime));
   PetscCall(PetscLogStagePush(stage));
-  #if defined(PETSC_HAVE_TAU_PERFSTUBS)
-  PetscStackCallExternalVoid("ps_initialize_", ps_initialize_());
-  #endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1993,6 +1990,36 @@ PetscErrorCode PetscLogMPEDump(const char sname[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 #endif /* PETSC_USE_LOG && PETSC_HAVE_MPE */
+
+#if defined(PETSC_HAVE_TAU_PERFSTUBS)
+
+PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Perfstubs(MPI_Comm, PetscLogHandler *);
+
+/*@C
+   PetscLogPerfstubsBegin - Turns on logging of events using the perfstubs interface.
+
+   Collective over `PETSC_COMM_WORLD`
+
+   Options Database Key:
+. -log_perfstubs - use an external log handler through the perfstubs interface
+
+   Level: advanced
+
+.seealso: [](ch_profiling), `PetscLogDefaultBegin()`, `PetscLogEventSetActive()`
+@*/
+PetscErrorCode PetscLogPerfstubsBegin(void)
+{
+  PetscLogHandler handler;
+
+  PetscFunctionBegin;
+  /* Do MPE initialization */
+  PetscCall(PetscLogTryGetHandler(PETSC_LOG_HANDLER_PERFSTUBS, &handler));
+  if (handler) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(PetscLogHandlerCreate_Perfstubs(PETSC_COMM_WORLD, &handler));
+  PetscCall(PetscLogHandlerStart(handler));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+#endif
 
 PETSC_INTERN PetscErrorCode PetscLogHandlerNestedSetThreshold(PetscLogHandler, PetscLogDouble, PetscLogDouble *);
 

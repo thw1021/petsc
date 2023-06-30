@@ -545,9 +545,6 @@ static PetscErrorCode PetscLogHandlerEventBegin_Default(PetscLogHandler h, Petsc
 #endif
   PetscCall(PetscLogStateEventGetInfo(state, event, &event_info));
   /* Log the performance info */
-#if defined(PETSC_HAVE_TAU_PERFSTUBS)
-  if (perfstubs_initialized == PERFSTUBS_SUCCESS && event_info.timer != NULL) PetscStackCallExternalVoid("ps_timer_start_", ps_timer_start_(event_info.timer));
-#endif
   event_perf_info->count++;
   PetscCall(PetscTime(&time));
   PetscCall(PetscEventPerfInfoTic(event_perf_info, time, PetscLogMemory, (int)event));
@@ -614,15 +611,7 @@ static PetscErrorCode PetscLogHandlerEventEnd_Default(PetscLogHandler h, PetscLo
   if (event_perf_info->depth > 0) PetscFunctionReturn(PETSC_SUCCESS);
   else PetscCheck(event_perf_info->depth == 0, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Logging event had unbalanced begin/end pairs");
 
-    /* Log performance info */
-#if defined(PETSC_HAVE_TAU_PERFSTUBS)
-  {
-    PetscLogEventInfo event_reg_info;
-
-    PetscCall(PetscLogStateEventGetInfo(state, event, &event_reg_info));
-    if (perfstubs_initialized == PERFSTUBS_SUCCESS && event_reg_info.timer != NULL) PetscStackCallExternalVoid("ps_timer_stop_", ps_timer_stop_(event_reg_info.timer));
-  }
-#endif
+  /* Log performance info */
   PetscCall(PetscTime(&time));
   PetscCall(PetscEventPerfInfoToc(event_perf_info, time, PetscLogMemory, (int)event));
   if (PetscDefined(HAVE_THREADSAFETY)) {
@@ -750,14 +739,6 @@ static PetscErrorCode PetscLogHandlerStagePush_Default(PetscLogHandler h, PetscL
   new_stage_info->perfInfo.depth++;
   /* Subtract current quantities so that we obtain the difference when we pop */
   if (PetscBTLookup(state->active, new_stage)) PetscCall(PetscEventPerfInfoTic(&new_stage_info->perfInfo, time, PetscLogMemory, (int)-(new_stage + 2)));
-#if defined(PETSC_HAVE_TAU_PERFSTUBS)
-  {
-    PetscLogStageInfo new_stage_reg_info;
-
-    PetscCall(PetscLogStateStageGetInfo(state, new_stage, &new_stage_reg_info));
-    if (perfstubs_initialized == PERFSTUBS_SUCCESS && new_stage_reg_info.timer != NULL) PetscStackCallExternalVoid("ps_timer_start_", ps_timer_start_(new_stage_reg_info.timer));
-  }
-#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -774,14 +755,6 @@ static PetscErrorCode PetscLogHandlerStagePop_Default(PetscLogHandler h, PetscLo
   PetscCall(PetscLogHandlerGetState(h, &state));
   current_stage = state->current_stage;
   PetscCall(PetscLogHandlerDefaultGetStageInfo(h, old_stage, &old_stage_info));
-#if defined(PETSC_HAVE_TAU_PERFSTUBS)
-  {
-    PetscLogStageInfo old_stage_reg_info;
-
-    PetscCall(PetscLogStateStageGetInfo(state, old_stage, &old_stage_reg_info));
-    if (perfstubs_initialized == PERFSTUBS_SUCCESS && old_stage_reg_info.timer != NULL) PetscStackCallExternalVoid("ps_timer_stop_", ps_timer_stop_(old_stage_reg_info.timer));
-  }
-#endif
   PetscCall(PetscTime(&time));
   old_stage_info->perfInfo.depth--;
   if (PetscBTLookup(state->active, old_stage)) { PetscCall(PetscEventPerfInfoToc(&old_stage_info->perfInfo, time, PetscLogMemory, (int)-(old_stage + 2))); }
