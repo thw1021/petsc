@@ -65,12 +65,12 @@ PetscErrorCode PetscDrawInitializePackage(void)
   if (opt) {
     PetscCall(PetscStrInList("draw", logList, ',', &pkg));
     if (pkg) {
-      PetscCall(PetscLogEventExcludeClass(PETSC_DRAW_CLASSID));
-      PetscCall(PetscLogEventExcludeClass(PETSC_DRAWAXIS_CLASSID));
-      PetscCall(PetscLogEventExcludeClass(PETSC_DRAWLG_CLASSID));
-      PetscCall(PetscLogEventExcludeClass(PETSC_DRAWHG_CLASSID));
-      PetscCall(PetscLogEventExcludeClass(PETSC_DRAWBAR_CLASSID));
-      PetscCall(PetscLogEventExcludeClass(PETSC_DRAWSP_CLASSID));
+      PetscCall(PetscLogClassSetActiveAll(PETSC_DRAW_CLASSID, PETSC_FALSE));
+      PetscCall(PetscLogClassSetActiveAll(PETSC_DRAWAXIS_CLASSID, PETSC_FALSE));
+      PetscCall(PetscLogClassSetActiveAll(PETSC_DRAWLG_CLASSID, PETSC_FALSE));
+      PetscCall(PetscLogClassSetActiveAll(PETSC_DRAWHG_CLASSID, PETSC_FALSE));
+      PetscCall(PetscLogClassSetActiveAll(PETSC_DRAWBAR_CLASSID, PETSC_FALSE));
+      PetscCall(PetscLogClassSetActiveAll(PETSC_DRAWSP_CLASSID, PETSC_FALSE));
     }
   }
   /* Register package finalizer */

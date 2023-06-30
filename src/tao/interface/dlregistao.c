@@ -57,7 +57,7 @@ PetscErrorCode TaoInitializePackage(void)
   PetscCall(PetscOptionsGetString(NULL, NULL, "-log_exclude", logList, sizeof(logList), &opt));
   if (opt) {
     PetscCall(PetscStrInList("tao", logList, ',', &pkg));
-    if (pkg) PetscCall(PetscLogEventExcludeClass(TAO_CLASSID));
+    if (pkg) PetscCall(PetscLogClassSetActiveAll(TAO_CLASSID,PETSC_FALSE));
   }
   /* Register package finalizer */
   PetscCall(PetscRegisterFinalize(TaoFinalizePackage));

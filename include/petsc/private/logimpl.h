@@ -208,26 +208,7 @@ PETSC_INTERN PetscErrorCode PetscLogGlobalNamesLocalGetGlobal(PetscLogGlobalName
 PETSC_INTERN PetscErrorCode PetscLogRegistryCreateGlobalStageNames(MPI_Comm, PetscLogRegistry, PetscLogGlobalNames *);
 PETSC_INTERN PetscErrorCode PetscLogRegistryCreateGlobalEventNames(MPI_Comm, PetscLogRegistry, PetscLogGlobalNames *);
 
-/* --- methods for PetscLogState --- */
-
 PETSC_INTERN PetscErrorCode PetscLogGetState(PetscLogState *);
-PETSC_INTERN PetscErrorCode PetscLogStateCreate(PetscLogState *);
-PETSC_INTERN PetscErrorCode PetscLogStateGetRegistry(PetscLogState, PetscLogRegistry *);
-PETSC_INTERN PetscErrorCode PetscLogStateDestroy(PetscLogState *);
-PETSC_INTERN PetscErrorCode PetscLogStateStagePush(PetscLogState, PetscLogStage);
-PETSC_INTERN PetscErrorCode PetscLogStateStagePop(PetscLogState);
-PETSC_INTERN PetscErrorCode PetscLogStateStageSetActive(PetscLogState, PetscLogStage, PetscBool);
-PETSC_INTERN PetscErrorCode PetscLogStateStageGetActive(PetscLogState, PetscLogStage, PetscBool *);
-PETSC_INTERN PetscErrorCode PetscLogStateGetCurrentStage(PetscLogState, PetscLogStage *);
-PETSC_INTERN PetscErrorCode PetscLogStateStageRegister(PetscLogState, const char[], PetscLogStage *);
-PETSC_INTERN PetscErrorCode PetscLogStateEventRegister(PetscLogState, const char[], PetscClassId, PetscLogEvent *);
-PETSC_INTERN PetscErrorCode PetscLogStateEventIncludeClass(PetscLogState, PetscClassId);
-PETSC_INTERN PetscErrorCode PetscLogStateEventExcludeClass(PetscLogState, PetscClassId);
-PETSC_INTERN PetscErrorCode PetscLogStateEventActivateClass(PetscLogState, PetscClassId);
-PETSC_INTERN PetscErrorCode PetscLogStateEventDeactivateClass(PetscLogState, PetscClassId);
-PETSC_INTERN PetscErrorCode PetscLogStateEventActivate(PetscLogState, PetscLogEvent);
-PETSC_INTERN PetscErrorCode PetscLogStateEventDeactivate(PetscLogState, PetscLogEvent);
-PETSC_INTERN PetscErrorCode PetscLogStateEventSetActiveAll(PetscLogState, PetscLogEvent, PetscBool);
 
 /* --- A simple stack --- */
 

@@ -1,5 +1,5 @@
-#if !defined(PETSCBTTYPE_H)
-  #define PETSCBTTYPE_H
+#if !defined(PETSCBT_H)
+  #define PETSCBT_H
 
   #include <petscsystypes.h>
   #include <petscviewertypes.h>
@@ -7,32 +7,6 @@
 
 /* SUBMANSEC = Sys */
 
-/*S
-     PetscBT - PETSc bitarrays, efficient storage of arrays of boolean values
-
-     Level: advanced
-
-     Notes:
-     The following routines do not have their own manual pages
-
-.vb
-     PetscBTCreate(m,&bt)         - creates a bit array with enough room to hold m values
-     PetscBTDestroy(&bt)          - destroys the bit array
-     PetscBTMemzero(m,bt)         - zeros the entire bit array (sets all values to false)
-     PetscBTSet(bt,index)         - sets a particular entry as true
-     PetscBTClear(bt,index)       - sets a particular entry as false
-     PetscBTLookup(bt,index)      - returns the value
-     PetscBTLookupSet(bt,index)   - returns the value and then sets it true
-     PetscBTLookupClear(bt,index) - returns the value and then sets it false
-     PetscBTLength(m)             - returns number of bytes in array with m bits
-     PetscBTView(m,bt,viewer)     - prints all the entries in a bit array
-.ve
-
-    PETSc does not check error flags on `PetscBTLookup()`, `PetcBTLookupSet()`, `PetscBTLength()` because error checking
-    would cost hundreds more cycles then the operation.
-
-S*/
-typedef char *PetscBT;
 
 /* convert an index i to an index suitable for indexing a PetscBT, such that
  * bt[PetscBTIndex(i)] returns the i'th value of the bt */
@@ -108,4 +82,4 @@ static inline char PetscBTLookupClear(PetscBT array, PetscInt index)
 
 PETSC_EXTERN PetscErrorCode PetscBTView(PetscInt, const PetscBT, PetscViewer);
 
-#endif // #define PETSCBTTYPE_H
+#endif /* #define PETSCBT_H */
