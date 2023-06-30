@@ -29,6 +29,8 @@ Changes: Development
 
 .. rubric:: PetscViewer:
 
+- Add ``PetscViewerASCIIOpenWithFileUnit()`` and ``PetscViewerASCIISetFileUnit()``
+
 .. rubric:: PetscDraw:
 
 .. rubric:: AO:
@@ -115,3 +117,4 @@ Changes: Development
 .. rubric:: Fortran:
 
 - Add ``PetscCheck()`` and ``PetscCheckA()`` for Fortran
+- Change ``PETSC_HAVE_FORTRAN`` to ``PETSC_USE_FORTRAN`` to indicate if PETSc is built with Fortran bindings
