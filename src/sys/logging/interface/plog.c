@@ -1920,7 +1920,7 @@ PetscErrorCode PetscLogEventSetError(PetscLogEvent event, PetscInt n, PetscLogDo
 
 PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_MPE(MPI_Comm, PetscLogHandler *);
 
-PetscBool PetscBeganMPE = PETSC_FALSE;
+static PetscBool PetscBeganMPE = PETSC_FALSE;
 
 /*@C
    PetscLogMPEBegin - Turns on MPE logging of events. This creates large log files
