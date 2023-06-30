@@ -223,11 +223,10 @@ static PetscErrorCode MatHYPRE_IJMatrixCopyIJ_MPIAIJ(Mat A, HYPRE_IJMatrix ij)
     for (i = 0; i < pA->A->rmap->n + 1; i++) hoffd->i[i] = (HYPRE_Int)(poffd->i[i]);
   }
 
+  jj = (PetscInt *)hoffd->j;
 #if PETSC_PKG_HYPRE_VERSION_GE(2, 16, 0)
   PetscCallExternal(hypre_CSRMatrixBigInitialize, hoffd);
   jj = (PetscInt *)hoffd->big_j;
-#else
-  jj = (PetscInt *)hoffd->j;
 #endif
   pjj = poffd->j;
   for (i = 0; i < poffd->nz; i++) jj[i] = garray[pjj[i]];
@@ -479,7 +478,7 @@ static PetscErrorCode MatConvert_HYPRE_AIJ(Mat A, MatType mtype, MatReuse reuse,
   HYPRE_Int           type;
   PetscMPIInt         size;
   PetscBool           sameint = (PetscBool)(sizeof(PetscInt) == sizeof(HYPRE_Int));
-  PetscBool           downs = PETSC_TRUE, oowns = PETSC_TRUE;
+  PetscBool           downs = PETSC_TRUE, oowns = PETSC_TRUE, freeparcsr = PETSC_FALSE;
 
   PetscFunctionBegin;
   comm = PetscObjectComm((PetscObject)A);
@@ -489,14 +488,34 @@ static PetscErrorCode MatConvert_HYPRE_AIJ(Mat A, MatType mtype, MatReuse reuse,
     PetscBool ismpiaij, isseqaij;
     PetscCall(PetscObjectBaseTypeCompare((PetscObject)*B, MATMPIAIJ, &ismpiaij));
     PetscCall(PetscObjectBaseTypeCompare((PetscObject)*B, MATSEQAIJ, &isseqaij));
-    PetscCheck(ismpiaij || isseqaij, comm, PETSC_ERR_SUP, "Only MATMPIAIJ or MATSEQAIJ are supported");
+    PetscCheck(ismpiaij || isseqaij, comm, PETSC_ERR_SUP, "Only MATMPIAIJ or MATSEQAIJ base types are supported");
   }
-#if defined(PETSC_HAVE_HYPRE_DEVICE)
-  PetscCheck(HYPRE_MEMORY_DEVICE != hypre_IJMatrixMemoryLocation(hA->ij), comm, PETSC_ERR_SUP, "Not yet implemented");
-#endif
-  PetscCallMPI(MPI_Comm_size(comm, &size));
-
   PetscCallExternal(HYPRE_IJMatrixGetObject, hA->ij, (void **)&parcsr);
+  PetscCallMPI(MPI_Comm_size(comm, &size));
+#if defined(PETSC_HAVE_HYPRE_DEVICE)
+  if (HYPRE_MEMORY_DEVICE == hypre_IJMatrixMemoryLocation(hA->ij)) {
+    /* Support by copying back on the host and copy to GPU
+       Kind of inefficient, but this is the best we can do now */
+    PetscBool iship, iscuda, iscpu, isaij;
+
+    PetscCall(PetscStrcmp(mtype, MATAIJ, &isaij));
+    if (isaij) {
+  #if defined(HYPRE_USING_HIP)
+      mtype = size > 1 ? MATMPIAIJHIPSPARSE : MATSEQAIJHIPSPARSE;
+  #elif defined(HYPRE_USING_CUDA)
+      mtype = size > 1 ? MATMPIAIJCUSPARSE : MATSEQAIJCUSPARSE;
+  #else
+      mtype = size > 1 ? MATMPIAIJ : MATSEQAIJ;
+  #endif
+    }
+    PetscCall(PetscStrcmpAny(mtype, &iship, MATAIJHIPSPARSE, MATSEQAIJHIPSPARSE, MATMPIAIJHIPSPARSE, ""));
+    PetscCall(PetscStrcmpAny(mtype, &iscuda, MATAIJCUSPARSE, MATSEQAIJCUSPARSE, MATMPIAIJCUSPARSE, ""));
+    PetscCall(PetscStrcmpAny(mtype, &iscpu, MATAIJ, MATSEQAIJ, MATMPIAIJ, ""));
+    PetscAssert(iship || iscuda || iscpu, comm, PETSC_ERR_SUP, "Not for type %s", mtype);
+    parcsr     = hypre_ParCSRMatrixClone_v2(parcsr, 1, HYPRE_MEMORY_HOST);
+    freeparcsr = PETSC_TRUE;
+  }
+#endif
   hdiag = hypre_ParCSRMatrixDiag(parcsr);
   hoffd = hypre_ParCSRMatrixOffd(parcsr);
   m     = hypre_CSRMatrixNumRows(hdiag);
@@ -516,12 +535,12 @@ static PetscErrorCode MatConvert_HYPRE_AIJ(Mat A, MatType mtype, MatReuse reuse,
       PetscCall(MatGetRowIJ(b->A, 0, PETSC_FALSE, PETSC_FALSE, &nr, (const PetscInt **)&dii, (const PetscInt **)&djj, &done));
       PetscCheck(nr == m, PETSC_COMM_SELF, PETSC_ERR_USER, "Cannot reuse mat: invalid number of local rows in diag part! %" PetscInt_FMT " != %" PetscInt_FMT, nr, m);
       PetscCheck(dii[nr] >= dnnz, PETSC_COMM_SELF, PETSC_ERR_USER, "Cannot reuse mat: invalid number of nonzeros in diag part! reuse %" PetscInt_FMT " hypre %" PetscInt_FMT, dii[nr], dnnz);
-      PetscCall(MatSeqAIJGetArray(b->A, &da));
+      PetscCall(MatSeqAIJGetArrayWrite(b->A, &da));
     } else {
       PetscCall(MatGetRowIJ(*B, 0, PETSC_FALSE, PETSC_FALSE, &nr, (const PetscInt **)&dii, (const PetscInt **)&djj, &done));
       PetscCheck(nr == m, PETSC_COMM_SELF, PETSC_ERR_USER, "Cannot reuse mat: invalid number of local rows! %" PetscInt_FMT " != %" PetscInt_FMT, nr, m);
       PetscCheck(dii[nr] >= dnnz, PETSC_COMM_SELF, PETSC_ERR_USER, "Cannot reuse mat: invalid number of nonzeros! reuse %" PetscInt_FMT " hypre %" PetscInt_FMT, dii[nr], dnnz);
-      PetscCall(MatSeqAIJGetArray(*B, &da));
+      PetscCall(MatSeqAIJGetArrayWrite(*B, &da));
     }
   } else { /* MAT_INPLACE_MATRIX */
     downs = (PetscBool)(hypre_CSRMatrixOwnsData(hdiag));
@@ -571,7 +590,7 @@ static PetscErrorCode MatConvert_HYPRE_AIJ(Mat A, MatType mtype, MatReuse reuse,
       PetscCall(MatGetRowIJ(b->B, 0, PETSC_FALSE, PETSC_FALSE, &nr, (const PetscInt **)&oii, (const PetscInt **)&ojj, &done));
       PetscCheck(nr == hr, PETSC_COMM_SELF, PETSC_ERR_USER, "Cannot reuse mat: invalid number of local rows in offdiag part! %" PetscInt_FMT " != %" PetscInt_FMT, nr, hr);
       PetscCheck(oii[nr] >= onnz, PETSC_COMM_SELF, PETSC_ERR_USER, "Cannot reuse matrix: different number of nonzeros in off-diagonal part of matrix! reuse %" PetscInt_FMT " hypre %" PetscInt_FMT, oii[nr], onnz);
-      PetscCall(MatSeqAIJGetArray(b->B, &oa));
+      PetscCall(MatSeqAIJGetArrayWrite(b->B, &oa));
     } else { /* MAT_INPLACE_MATRIX */
       oowns = (PetscBool)(hypre_CSRMatrixOwnsData(hoffd));
       if (!sameint || !oowns) {
@@ -592,7 +611,6 @@ static PetscErrorCode MatConvert_HYPRE_AIJ(Mat A, MatType mtype, MatReuse reuse,
         PetscCall(PetscArraycpy(oii, hypre_CSRMatrixI(hoffd), m + 1));
       }
     }
-    PetscCall(PetscArraycpy(oa, hypre_CSRMatrixData(hoffd), onnz));
 
     offdj = hypre_CSRMatrixJ(hoffd);
     coffd = hypre_ParCSRMatrixColMapOffd(parcsr);
@@ -607,6 +625,8 @@ static PetscErrorCode MatConvert_HYPRE_AIJ(Mat A, MatType mtype, MatReuse reuse,
       PetscCall(PetscMalloc1(mnz, &ojj));
     } else
       for (i = 0; i < onnz; i++) ojj[i] = coffd[offdj[i]];
+
+    PetscCall(PetscArraycpy(oa, hypre_CSRMatrixData(hoffd), onnz));
     iptr = ojj;
     aptr = oa;
     for (i = 0; i < m; i++) {
@@ -715,6 +735,13 @@ static PetscErrorCode MatConvert_HYPRE_AIJ(Mat A, MatType mtype, MatReuse reuse,
       PetscCall(PetscContainerDestroy(&c));
     }
   }
+
+  /* Handle device types conversions */
+  PetscBool isdevice;
+  PetscCall(PetscStrcmpAny(mtype, &isdevice, MATAIJCUSPARSE, MATSEQAIJCUSPARSE, MATMPIAIJCUSPARSE, MATAIJHIPSPARSE, MATSEQAIJHIPSPARSE, MATMPIAIJHIPSPARSE, MATAIJKOKKOS, MATSEQAIJKOKKOS, MATMPIAIJKOKKOS, ""));
+  if (isdevice) PetscCall(MatConvert(*B, mtype, MAT_INPLACE_MATRIX, B));
+
+  if (freeparcsr) PetscCallExternal(hypre_ParCSRMatrixDestroy, parcsr);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -729,34 +756,46 @@ static PetscErrorCode MatAIJGetParCSR_Private(Mat A, hypre_ParCSRMatrix **hA)
   PetscBool           sameint = (PetscBool)(sizeof(PetscInt) == sizeof(HYPRE_Int));
   HYPRE_Int          *hdi = NULL, *hdj = NULL, *hoi = NULL, *hoj = NULL;
   PetscInt           *pdi = NULL, *pdj = NULL, *poi = NULL, *poj = NULL;
-#if defined(PETSC_HAVE_HYPRE_DEVICE)
-  PetscBool iscuda = PETSC_FALSE;
+  PetscBool           iscuda, iship;
+#if defined(PETSC_HAVE_DEVICE) && defined(PETSC_HAVE_HYPRE_DEVICE)
+  PetscBool boundtocpu = A->boundtocpu;
+#else
+  PetscBool boundtocpu = PETSC_TRUE;
 #endif
 
   PetscFunctionBegin;
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)A, MATMPIAIJ, &ismpiaij));
   PetscCall(PetscObjectBaseTypeCompare((PetscObject)A, MATSEQAIJ, &isseqaij));
   PetscCheck(ismpiaij || isseqaij, comm, PETSC_ERR_SUP, "Unsupported type %s", ((PetscObject)A)->type_name);
+  PetscCall(PetscObjectTypeCompareAny((PetscObject)A, &iscuda, MATSEQAIJHIPSPARSE, MATMPIAIJCUSPARSE, ""));
+  PetscCall(PetscObjectTypeCompareAny((PetscObject)A, &iship, MATSEQAIJCUSPARSE, MATMPIAIJHIPSPARSE, ""));
   PetscHYPREInitialize();
   if (ismpiaij) {
     Mat_MPIAIJ *a = (Mat_MPIAIJ *)(A->data);
 
     diag = (Mat_SeqAIJ *)a->A->data;
     offd = (Mat_SeqAIJ *)a->B->data;
-#if defined(PETSC_HAVE_CUDA) && defined(PETSC_HAVE_HYPRE_DEVICE) && defined(HYPRE_USING_CUDA)
-    PetscCall(PetscObjectTypeCompare((PetscObject)A, MATMPIAIJCUSPARSE, &iscuda));
-    if (iscuda && !A->boundtocpu) {
-      sameint = PETSC_TRUE;
-      PetscCall(MatSeqAIJCUSPARSEGetIJ(a->A, PETSC_FALSE, (const HYPRE_Int **)&hdi, (const HYPRE_Int **)&hdj));
-      PetscCall(MatSeqAIJCUSPARSEGetIJ(a->B, PETSC_FALSE, (const HYPRE_Int **)&hoi, (const HYPRE_Int **)&hoj));
-    } else {
-#else
-    {
+    if (!boundtocpu && (iscuda || iship)) {
+#if defined(HYPRE_USING_CUDA) && defined(PETSC_HAVE_CUDA)
+      if (iscuda) {
+        sameint = PETSC_TRUE;
+        PetscCall(MatSeqAIJCUSPARSEGetIJ(a->A, PETSC_FALSE, (const HYPRE_Int **)&hdi, (const HYPRE_Int **)&hdj));
+        PetscCall(MatSeqAIJCUSPARSEGetIJ(a->B, PETSC_FALSE, (const HYPRE_Int **)&hoi, (const HYPRE_Int **)&hoj));
+      }
 #endif
-      pdi = diag->i;
-      pdj = diag->j;
-      poi = offd->i;
-      poj = offd->j;
+#if defined(HYPRE_USING_HIP) && defined(PETSC_HAVE_HIP)
+      if (iship) {
+        sameint = PETSC_TRUE;
+        PetscCall(MatSeqAIJHIPSPARSEGetIJ(a->A, PETSC_FALSE, (const HYPRE_Int **)&hdi, (const HYPRE_Int **)&hdj));
+        PetscCall(MatSeqAIJHIPSPARSEGetIJ(a->B, PETSC_FALSE, (const HYPRE_Int **)&hoi, (const HYPRE_Int **)&hoj));
+      }
+#endif
+    } else {
+      boundtocpu = PETSC_TRUE;
+      pdi        = diag->i;
+      pdj        = diag->j;
+      poi        = offd->i;
+      poj        = offd->j;
       if (sameint) {
         hdi = (HYPRE_Int *)pdi;
         hdj = (HYPRE_Int *)pdj;
@@ -771,17 +810,23 @@ static PetscErrorCode MatAIJGetParCSR_Private(Mat A, hypre_ParCSRMatrix **hA)
   } else {
     diag = (Mat_SeqAIJ *)A->data;
     offd = NULL;
-#if defined(PETSC_HAVE_CUDA) && defined(PETSC_HAVE_HYPRE_DEVICE)
-    PetscCall(PetscObjectTypeCompare((PetscObject)A, MATSEQAIJCUSPARSE, &iscuda));
-    if (iscuda && !A->boundtocpu) {
-      sameint = PETSC_TRUE;
-      PetscCall(MatSeqAIJCUSPARSEGetIJ(A, PETSC_FALSE, (const HYPRE_Int **)&hdi, (const HYPRE_Int **)&hdj));
-    } else {
-#else
-    {
+    if (!boundtocpu && (iscuda || iship)) {
+#if defined(HYPRE_USING_CUDA) && defined(PETSC_HAVE_CUDA)
+      if (iscuda) {
+        sameint = PETSC_TRUE;
+        PetscCall(MatSeqAIJCUSPARSEGetIJ(A, PETSC_FALSE, (const HYPRE_Int **)&hdi, (const HYPRE_Int **)&hdj));
+      }
 #endif
-      pdi = diag->i;
-      pdj = diag->j;
+#if defined(HYPRE_USING_HIP) && defined(PETSC_HAVE_HIP)
+      if (iship) {
+        sameint = PETSC_TRUE;
+        PetscCall(MatSeqAIJHIPSPARSEGetIJ(A, PETSC_FALSE, (const HYPRE_Int **)&hdi, (const HYPRE_Int **)&hdj));
+      }
+#endif
+    } else {
+      boundtocpu = PETSC_TRUE;
+      pdi        = diag->i;
+      pdj        = diag->j;
       if (sameint) {
         hdi = (HYPRE_Int *)pdi;
         hdj = (HYPRE_Int *)pdj;
@@ -840,7 +885,7 @@ static PetscErrorCode MatAIJGetParCSR_Private(Mat A, hypre_ParCSRMatrix **hA)
     hypre_CSRMatrixSetDataOwner(hoffd, 0);
   }
 #if defined(PETSC_HAVE_HYPRE_DEVICE)
-  PetscCallExternal(hypre_ParCSRMatrixInitialize_v2, tA, iscuda ? HYPRE_MEMORY_DEVICE : HYPRE_MEMORY_HOST);
+  PetscCallExternal(hypre_ParCSRMatrixInitialize_v2, tA, !boundtocpu ? HYPRE_MEMORY_DEVICE : HYPRE_MEMORY_HOST);
 #else
   #if PETSC_PKG_HYPRE_VERSION_LT(2, 18, 0)
   PetscCallExternal(hypre_ParCSRMatrixInitialize, tA);
@@ -1302,6 +1347,10 @@ static PetscErrorCode MatDestroy_HYPRE(Mat A)
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatConvert_hypre_is_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_seqaij_hypre_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_mpiaij_hypre_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_seqaijhipsparse_hypre_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_mpiaijhipsparse_hypre_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_seqaijcusparse_hypre_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatProductSetFromOptions_mpiaijcusparse_hypre_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatHYPRESetPreallocation_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatHYPREGetParCSR_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatSetPreallocationCOO_C", NULL));
@@ -2448,10 +2497,14 @@ PETSC_EXTERN PetscErrorCode MatCreate_HYPRE(Mat B)
   PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatSetValuesCOO_C", MatSetValuesCOO_HYPRE));
 #if defined(PETSC_HAVE_HYPRE_DEVICE)
   #if defined(HYPRE_USING_HIP)
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatProductSetFromOptions_seqaijhipsparse_hypre_C", MatProductSetFromOptions_HYPRE));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatProductSetFromOptions_mpiaijhipsparse_hypre_C", MatProductSetFromOptions_HYPRE));
   PetscCall(PetscDeviceInitialize(PETSC_DEVICE_HIP));
   PetscCall(MatSetVecType(B, VECHIP));
   #endif
   #if defined(HYPRE_USING_CUDA)
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatProductSetFromOptions_seqaijcusparse_hypre_C", MatProductSetFromOptions_HYPRE));
+  PetscCall(PetscObjectComposeFunction((PetscObject)B, "MatProductSetFromOptions_mpiaijcusparse_hypre_C", MatProductSetFromOptions_HYPRE));
   PetscCall(PetscDeviceInitialize(PETSC_DEVICE_CUDA));
   PetscCall(MatSetVecType(B, VECCUDA));
   #endif
