@@ -27,11 +27,11 @@ int main(int argc, char **args)
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-matmatmult", &testmatmatmult, NULL));
   PetscCall(MatCreate(PETSC_COMM_WORLD, &A));
 #if PetscDefined(HAVE_HYPRE_DEVICE)
-#if PetscDefined(HAVE_HIP)
+  #if PetscDefined(HAVE_HIP)
   mtype = MATAIJHIPSPARSE;
-#elif PetscDefined(HAVE_CUDA)
+  #elif PetscDefined(HAVE_CUDA)
   mtype = MATAIJCUSPARSE;
-#endif
+  #endif
 #endif
 
   if (!flg) { /* Create a matrix and test MatSetValues */
