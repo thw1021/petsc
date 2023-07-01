@@ -53,29 +53,17 @@ cdef class Log:
         return event
 
     @classmethod
-    def begin(cls, all: bool = False):
+    def begin(cls):
         """Turn on logging of objects and events.
 
         Collective.
 
-        Parameters
-        ----------
-        all
-            Whether to enable extensive logging.
-
-        Notes
-        -----
-        If ``all == True`` logging is extensive;
-        this creates large log files and slows the program down.
-        If ``all == False``, the default logging functions are used.
-
         See Also
         --------
-        petsc.PetscLogAllBegin, petsc.PetscLogDefaultBegin
+        petsc.PetscLogDefaultBegin
 
         """
-        if all: CHKERR( PetscLogAllBegin() )
-        else:   CHKERR( PetscLogDefaultBegin() )
+        CHKERR( PetscLogDefaultBegin() )
 
     @classmethod
     def view(cls, Viewer viewer=None) -> None:
@@ -420,20 +408,19 @@ cdef class LogClass:
     #
 
     def activate(self):
-        CHKERR( PetscLogClassActivate(self.id) )
+        CHKERR( PetscLogClassSetActive(PETSC_DEFAULT, self.id, PETSC_TRUE) )
 
     def deactivate(self):
-        CHKERR( PetscLogClassDeactivate(self.id) )
+        CHKERR( PetscLogClassSetActive(PETSC_DEFAULT, self.id, PETSC_TRUE) )
 
     def getActive(self):
         <void>self # unused
         raise NotImplementedError
 
     def setActive(self, flag):
-        if flag:
-            CHKERR( PetscLogClassActivate(self.id) )
-        else:
-            CHKERR( PetscLogClassDeactivate(self.id) )
+        cdef PetscBool tval = PETSC_FALSE
+        if flag: tval = PETSC_TRUE
+        CHKERR( PetscLogClassSetActive(PETSC_DEFAULT, self.id, tval) )
 
     property active:
         def __get__(self):
@@ -534,10 +521,10 @@ cdef class LogEvent:
 
         See Also
         --------
-        petsc.PetscLogEventActivate
+        petsc.PetscLogEventSetActive
 
         """
-        CHKERR( PetscLogEventActivate(self.id) )
+        CHKERR( PetscLogEventSetActive(PETSC_DEFAULT, self.id, PETSC_TRUE) )
 
     def deactivate(self) -> None:
         """Indicate that the event should not be logged.
@@ -546,10 +533,10 @@ cdef class LogEvent:
 
         See Also
         --------
-        petsc.PetscLogEventDeactivate
+        petsc.PetscLogEventSetActive
 
         """
-        CHKERR( PetscLogEventDeactivate(self.id) )
+        CHKERR( PetscLogEventSetActive(PETSC_DEFAULT, self.id, PETSC_FALSE) )
 
     def getActive(self):
         <void>self # unused
@@ -567,13 +554,12 @@ cdef class LogEvent:
 
         See Also
         --------
-        petsc.PetscLogEventDeactivate, petsc.PetscLogEventActivate
+        petsc.PetscLogEventSetActive
 
         """
-        if flag:
-            CHKERR( PetscLogEventActivate(self.id) )
-        else:
-            CHKERR( PetscLogEventDeactivate(self.id) )
+        cdef PetscBool tval = PETSC_FALSE
+        if flag: tval = PETSC_TRUE
+        CHKERR( PetscLogEventSetActive(PETSC_DEFAULT, self.id, tval) )
 
     property active:
         def __get__(self):

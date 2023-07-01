@@ -9,7 +9,6 @@ cdef extern from * nogil:
         PetscLogDouble numReductions
 
     PetscErrorCode PetscLogDefaultBegin()
-    PetscErrorCode PetscLogAllBegin()
     PetscErrorCode PetscLogView(PetscViewer)
     PetscErrorCode PetscLogIsActive(PetscBool*)
 
@@ -33,19 +32,18 @@ cdef extern from * nogil:
     PetscErrorCode PetscLogStageGetVisible(PetscLogStage,PetscBool*)
     PetscErrorCode PetscLogStageGetId(char[],PetscLogStage*)
 
-    ctypedef int PetscLogClass "PetscClassId"
+    ctypedef int PetscLogClass
     PetscErrorCode PetscLogClassRegister"PetscClassIdRegister"(char[],PetscLogClass*)
-    PetscErrorCode PetscLogClassActivate"PetscLogEventActivateClass"(PetscLogClass)
-    PetscErrorCode PetscLogClassDeactivate"PetscLogEventDeactivateClass"(PetscLogClass)
+    PetscErrorCode PetscLogClassSetActive(PetscLogStage,PetscLogClass,PetscBool)
 
     ctypedef int PetscLogEvent
     PetscErrorCode PetscLogEventRegister(char[],PetscLogClass,PetscLogEvent*)
     PetscErrorCode PetscLogEventBegin(PetscLogEvent,PetscObject,PetscObject,PetscObject,PetscObject)
     PetscErrorCode PetscLogEventEnd(PetscLogEvent,PetscObject,PetscObject,PetscObject,PetscObject)
 
-    PetscErrorCode PetscLogEventActivate(PetscLogEvent)
-    PetscErrorCode PetscLogEventDeactivate(PetscLogEvent)
+    PetscErrorCode PetscLogEventSetActive(PetscLogStage,PetscLogEvent,PetscBool)
     PetscErrorCode PetscLogEventSetActiveAll(PetscLogEvent,PetscBool)
+    PetscErrorCode PetscLogEventGetActive(PetscLogStage,PetscLogEvent,PetscBool*)
     PetscErrorCode PetscLogEventGetPerfInfo(PetscLogStage,PetscLogEvent,PetscEventPerfInfo*)
 
 cdef extern from * nogil: # custom.h

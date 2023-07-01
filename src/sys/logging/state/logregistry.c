@@ -22,16 +22,20 @@
   } \
   PETSC_LOG_RESIZABLE_ARRAY_HAS_NAME(Container, Entry, const char *, PetscLog##Container##Equal)
 
-static PetscErrorCode PetscLogClassArrayEqual(PetscLogClassInfo *class_info, PetscClassId classid, PetscBool *is_equal)
+static PetscErrorCode PetscLogClassArrayEqual(PetscLogClassInfo *class_info, PetscLogClassInfo *key, PetscBool *is_equal)
 {
   PetscFunctionBegin;
-  *is_equal = (class_info->classid == classid) ? PETSC_TRUE : PETSC_FALSE;
+  if (key->name) {
+    PetscCall(PetscStrcmp(class_info->name, key->name, is_equal)); \
+  } else {
+    *is_equal = (class_info->classid == key->classid) ? PETSC_TRUE : PETSC_FALSE;
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PETSC_LOG_RESIZABLE_ARRAY_KEY_BY_NAME(EventArray, PetscLogEventInfo)
 PETSC_LOG_RESIZABLE_ARRAY_KEY_BY_NAME(StageArray, PetscLogStageInfo)
-PETSC_LOG_RESIZABLE_ARRAY_HAS_NAME(ClassArray, PetscLogClassInfo, PetscClassId, PetscLogClassArrayEqual)
+PETSC_LOG_RESIZABLE_ARRAY_HAS_NAME(ClassArray, PetscLogClassInfo, PetscLogClassInfo *, PetscLogClassArrayEqual)
 
 struct _n_PetscLogRegistry {
   PetscLogEventArray events;
@@ -141,8 +145,23 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryGetStageFromName(PetscLogRegistry re
 
 PETSC_INTERN PetscErrorCode PetscLogRegistryGetClassFromClassId(PetscLogRegistry registry, PetscClassId classid, PetscLogStage *class)
 {
+  PetscLogClassInfo key;
+
   PetscFunctionBegin;
-  PetscCall(PetscLogClassArrayFind(registry->classes, classid, class));
+  key.name = NULL;
+  key.classid = classid;
+  PetscCall(PetscLogClassArrayFind(registry->classes, &key, class));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode PetscLogRegistryGetClassFromName(PetscLogRegistry registry, const char name[], PetscLogStage *class)
+{
+  PetscLogClassInfo key;
+
+  PetscFunctionBegin;
+  key.name = (char *) name;
+  key.classid = -1;
+  PetscCall(PetscLogClassArrayFind(registry->classes, &key, class));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

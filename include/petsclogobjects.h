@@ -2,6 +2,8 @@
 #define PETSCLOGOBJECTS_H
 #include <petscsys.h>
 
+/* SUBMANSEC = Profiling */
+
 /*S
   PetscLogEventInfo - A registry entry about a logging event for `PetscLogState`.
 
@@ -60,6 +62,7 @@ PETSC_EXTERN PetscErrorCode PetscLogStateEventGetActive(PetscLogState, PetscLogS
 
 PETSC_EXTERN PetscErrorCode PetscLogStateGetEventFromName(PetscLogState, const char[], PetscLogEvent *);
 PETSC_EXTERN PetscErrorCode PetscLogStateGetStageFromName(PetscLogState, const char[], PetscLogStage *);
+PETSC_EXTERN PetscErrorCode PetscLogStateGetClassFromName(PetscLogState, const char[], PetscLogClass *);
 PETSC_EXTERN PetscErrorCode PetscLogStateGetClassFromClassId(PetscLogState, PetscClassId, PetscLogClass *);
 PETSC_EXTERN PetscErrorCode PetscLogStateGetNumEvents(PetscLogState, PetscInt *);
 PETSC_EXTERN PetscErrorCode PetscLogStateGetNumStages(PetscLogState, PetscInt *);
