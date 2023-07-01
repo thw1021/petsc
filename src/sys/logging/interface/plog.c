@@ -1010,7 +1010,7 @@ PetscErrorCode PetscLogClassSetActiveAll(PetscClassId classid, PetscBool isActiv
   Input Parameters:
 + stage - A registered `PetscLogStage` (or `PETSC_DEFAULT` for the current stage)
 . event - A `PetscLogEvent`
-- isActive - If `PETSC_FALSE`, activity from this event (`PetscLogEventBegin()`, `PetscLogEventEnd()`, `PetscLogEventSync()`) will not be sent to log handlers dur this stage
+- isActive - If `PETSC_FALSE`, activity from this event (`PetscLogEventBegin()`, `PetscLogEventEnd()`, `PetscLogEventSync()`) will not be sent to log handlers during this stage
 
   Usage:
 .vb
@@ -1048,7 +1048,7 @@ PetscErrorCode PetscLogEventSetActive(PetscLogStage stage, PetscLogEvent event, 
 - event - A `PetscLogEvent`
 
   Output Parameter:
-. isActive - If `PETSC_FALSE`, activity from this event (`PetscLogEventBegin()`, `PetscLogEventEnd()`, `PetscLogEventSync()`) will not be sent to log handlers dur this stage
+. isActive - If `PETSC_FALSE`, activity from this event (`PetscLogEventBegin()`, `PetscLogEventEnd()`, `PetscLogEventSync()`) will not be sent to log handlers during this stage
 
   Level: advanced
 
