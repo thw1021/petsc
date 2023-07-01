@@ -309,10 +309,10 @@ PetscErrorCode PetscLogStateStageSetActive(PetscLogState state, PetscLogStage st
 
   Input Parameters:
 + state - a `PetscLogState`
-. stage - a registered `PetscLogStage`
+- stage - a registered `PetscLogStage`
 
   Output Parameter:
-- isActive - if `PETSC_FALSE`, `PetscLogStateEventGetActive()` will return `PETSC_FALSE` for all events
+. isActive - if `PETSC_FALSE`, `PetscLogStateEventGetActive()` will return `PETSC_FALSE` for all events
 
   Level: developer
 
@@ -531,6 +531,29 @@ PetscErrorCode PetscLogStateGetStageFromName(PetscLogState state, const char nam
 {
   PetscFunctionBegin;
   PetscCall(PetscLogRegistryGetStageFromName(state->registry, name, stage));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  PetscLogStateGetClassFromName - Get a `PetscLogClass` from the name of the class it was registered with.
+
+  Not collective
+
+  Input Parameters:
++ state - a `PetscLogState`
+- name - the name string of the class
+
+  Output Parameter:
+. class - the classes's logging id
+
+  Level: developer
+
+.seealso: [](ch_profiling), `PetscLogState`, `PetscLogStateClassRegister()`, `PetscLogStateClassGetInfo()`
+@*/
+PetscErrorCode PetscLogStateGetClassFromName(PetscLogState state, const char name[], PetscLogClass *stage)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscLogRegistryGetClassFromName(state->registry, name, stage));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

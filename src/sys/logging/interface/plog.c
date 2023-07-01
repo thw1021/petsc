@@ -799,6 +799,21 @@ PetscErrorCode PetscLogStageGetId(const char name[], PetscLogStage *stage)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@C
+  PetscLogStageGetName - Returns the stage name when given the stage id.
+
+  Not Collective
+
+  Input Parameter:
+. stage - The stage, , or -1 if no stage with that name exists
+
+  Output Parameter:
+. name  - The stage name
+
+  Level: intermediate
+
+.seealso: [](ch_profiling), `PetscLogStageRegister()`, `PetscLogStagePush()`, `PetscLogStagePop()`, `PetscPreLoadBegin()`, `PetscPreLoadEnd()`, `PetscPreLoadStage()`
+@*/
 PetscErrorCode PetscLogStageGetName(PetscLogStage stage, const char **name)
 {
   PetscLogStageInfo stage_info;
@@ -811,6 +826,21 @@ PetscErrorCode PetscLogStageGetName(PetscLogStage stage, const char **name)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@C
+  PetscLogEventGetName - Returns the event name when given the event id.
+
+  Not Collective
+
+  Input Parameter:
+. event - The event, , or -1 if no event with that name exists
+
+  Output Parameter:
+. name  - The event name
+
+  Level: intermediate
+
+.seealso: [](ch_profiling), `PetscLogEventRegister()`, `PetscLogEventBegin()`, `PetscLogEventEnd()`, `PetscPreLoadBegin()`, `PetscPreLoadEnd()`, `PetscPreLoadEvent()`
+@*/
 PetscErrorCode PetscLogEventGetName(PetscLogEvent event, const char **name)
 {
   PetscLogEventInfo event_info;
@@ -820,6 +850,33 @@ PetscErrorCode PetscLogEventGetName(PetscLogEvent event, const char **name)
   PetscCall(PetscLogGetState(&state));
   PetscCall(PetscLogRegistryEventGetInfo(state->registry, event, &event_info));
   *name = event_info.name;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  PetscLogClassGetName - Returns the class name when given the class id.
+
+  Not Collective
+
+  Input Parameter:
+. class - The class, , or -1 if no class with that name exists
+
+  Output Parameter:
+. name  - The class name
+
+  Level: intermediate
+
+.seealso: [](ch_profiling), `PetscLogClassRegister()`, `PetscLogClassBegin()`, `PetscLogClassEnd()`, `PetscPreLoadBegin()`, `PetscPreLoadEnd()`, `PetscPreLoadClass()`
+@*/
+PetscErrorCode PetscLogClassGetName(PetscLogClass class, const char **name)
+{
+  PetscLogClassInfo class_info;
+  PetscLogState     state;
+
+  PetscFunctionBegin;
+  PetscCall(PetscLogGetState(&state));
+  PetscCall(PetscLogRegistryClassGetInfo(state->registry, class, &class_info));
+  *name = class_info.name;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -927,7 +984,7 @@ PetscErrorCode PetscLogEventSetCollective(PetscLogEvent event, PetscBool collect
 
   Not Collective
 
-  Input Parameter:
+  Input Parameters:
 + classid - The object class, for example `MAT_CLASSID`, `SNES_CLASSID`, etc.
 - isActive - if `PETSC_FALSE`, events associated with this class will not be send to log handlers.
 
@@ -957,9 +1014,9 @@ PetscErrorCode PetscLogClassSetActiveAll(PetscClassId classid, PetscBool isActiv
 
   Usage:
 .vb
-      PetscLogEventDeactivate(VEC_SetValues);
+      PetscLogEventSetActive(VEC_SetValues, PETSC_FALSE);
         [code where you do not want to log VecSetValues()]
-      PetscLogEventActivate(VEC_SetValues);
+      PetscLogEventSetActive(VEC_SetValues, PETSC_TRUE);
         [code where you do want to log VecSetValues()]
 .ve
 
@@ -969,7 +1026,7 @@ PetscErrorCode PetscLogClassSetActiveAll(PetscClassId classid, PetscBool isActiv
   The event may be either a pre-defined PETSc event (found in include/petsclog.h)
   or an event number obtained with `PetscLogEventRegister()`.
 
-.seealso: [](ch_profiling), `PetscLogEventDeactivate()`, `PetscLogEventDeactivatePush()`, `PetscLogEventDeactivatePop()`
+.seealso: [](ch_profiling), `PetscLogEventDeactivatePush()`, `PetscLogEventDeactivatePop()`
 @*/
 PetscErrorCode PetscLogEventSetActive(PetscLogStage stage, PetscLogEvent event, PetscBool isActive)
 {
@@ -993,21 +1050,13 @@ PetscErrorCode PetscLogEventSetActive(PetscLogStage stage, PetscLogEvent event, 
   Output Parameter:
 . isActive - If `PETSC_FALSE`, activity from this event (`PetscLogEventBegin()`, `PetscLogEventEnd()`, `PetscLogEventSync()`) will not be sent to log handlers dur this stage
 
-  Usage:
-.vb
-      PetscLogEventDeactivate(VEC_SetValues);
-        [code where you do not want to log VecSetValues()]
-      PetscLogEventActivate(VEC_SetValues);
-        [code where you do want to log VecSetValues()]
-.ve
-
   Level: advanced
 
   Note:
   The event may be either a pre-defined PETSc event (found in include/petsclog.h)
   or an event number obtained with `PetscLogEventRegister()`.
 
-.seealso: [](ch_profiling), `PetscLogEventDeactivate()`, `PetscLogEventDeactivatePush()`, `PetscLogEventDeactivatePop()`
+.seealso: [](ch_profiling), `PetscLogEventDeactivatePush()`, `PetscLogEventDeactivatePop()`
 @*/
 PetscErrorCode PetscLogEventGetActive(PetscLogStage stage, PetscLogEvent event, PetscBool *isActive)
 {
@@ -1043,7 +1092,7 @@ PetscErrorCode PetscLogEventGetActive(PetscLogStage stage, PetscLogEvent event, 
 
   PETSc's default log handler (`PetscLogDefaultBegin()`) respects this function because it can make the output of `PetscLogView()` easier to interpret, but other handlers (such as the nested handler, `PetscLogNestedBegin()`) ignore it because surpressing events is not helpful in their output formats.
 
-.seealso: [](ch_profiling), `PetscLogEventActivate()`, `PetscLogEventDeactivatePop()`, `PetscLogEventDeactivate()`
+.seealso: [](ch_profiling), `PetscLogEventSetActive()`, `PetscLogEventDeactivatePop()`
 @*/
 PetscErrorCode PetscLogEventDeactivatePush(PetscLogEvent event)
 {
@@ -1084,7 +1133,7 @@ PetscErrorCode PetscLogEventDeactivatePush(PetscLogEvent event)
   The event may be either a pre-defined PETSc event (found in
   include/petsclog.h) or an event number obtained with `PetscLogEventRegister()`).
 
-.seealso: [](ch_profiling), `PetscLogEventActivate()`, `PetscLogEventDeactivatePush()`
+.seealso: [](ch_profiling), `PetscLogEventSetActive()`, `PetscLogEventDeactivatePush()`
 @*/
 PetscErrorCode PetscLogEventDeactivatePop(PetscLogEvent event)
 {
@@ -1157,7 +1206,7 @@ PetscErrorCode PetscLogEventsUnpause(void)
 
   Level: advanced
 
-.seealso: [](ch_profiling), `PetscLogEventActivate()`, `PetscLogEventDeactivate()`
+.seealso: [](ch_profiling), `PetscLogEventSetActive()`
 @*/
 PetscErrorCode PetscLogEventSetActiveAll(PetscLogEvent event, PetscBool isActive)
 {
@@ -1174,7 +1223,7 @@ PetscErrorCode PetscLogEventSetActiveAll(PetscLogEvent event, PetscBool isActive
 
   Not Collective
 
-  Input Parameter:
+  Input Parameters:
 + stage - A registered `PetscLogStage` (or `PETSC_DEFAULT` for the current stage)
 . classid - The event class, for example `MAT_CLASSID`, `SNES_CLASSID`, etc.
 - isActive - If `PETSC_FALSE`, events associated with this class are not sent to log handlers.
@@ -1317,6 +1366,31 @@ PetscErrorCode PetscLogEventGetId(const char name[], PetscLogEvent *event)
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
   PetscCall(PetscLogRegistryGetEventFromName(state->registry, name, event));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  PetscLogClassGetId - Returns the `PetscLogClass` when given the class name.
+
+  Not Collective
+
+  Input Parameter:
+. name  - The class name
+
+  Output Parameter:
+. class - The `PetscLogClass` id, or -1 if no event with that name exists
+
+  Level: intermediate
+
+.seealso: [](ch_profiling), `PetscLogEventBegin()`, `PetscLogEventEnd()`, `PetscLogStageGetId()`
+@*/
+PetscErrorCode PetscLogClassGetId(const char name[], PetscLogEvent *event)
+{
+  PetscLogState state;
+
+  PetscFunctionBegin;
+  PetscCall(PetscLogGetState(&state));
+  PetscCall(PetscLogRegistryGetClassFromName(state->registry, name, event));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1941,8 +2015,7 @@ static PetscBool PetscBeganMPE = PETSC_FALSE;
    intended for production runs since it logs only flop rates and object
    creation (and should not significantly slow the programs).
 
-.seealso: [](ch_profiling), `PetscLogDump()`, `PetscLogDefaultBegin()`, `PetscLogAllBegin()`, `PetscLogEventActivate()`,
-          `PetscLogEventDeactivate()`
+.seealso: [](ch_profiling), `PetscLogDump()`, `PetscLogDefaultBegin()`, `PetscLogAllBegin()`, `PetscLogEventSetActive()`,
 @*/
 PetscErrorCode PetscLogMPEBegin(void)
 {
@@ -1971,7 +2044,7 @@ PetscErrorCode PetscLogMPEBegin(void)
    Collective over `PETSC_COMM_WORLD`
 
    Input Parameter:
-. sname: filename for the MPE logfile
+. sname - filename for the MPE logfile
 
    Level: advanced
 
