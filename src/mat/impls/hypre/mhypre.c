@@ -223,11 +223,10 @@ static PetscErrorCode MatHYPRE_IJMatrixCopyIJ_MPIAIJ(Mat A, HYPRE_IJMatrix ij)
     for (i = 0; i < pA->A->rmap->n + 1; i++) hoffd->i[i] = (HYPRE_Int)(poffd->i[i]);
   }
 
+  jj = (PetscInt *)hoffd->j;
 #if PETSC_PKG_HYPRE_VERSION_GE(2, 16, 0)
   PetscCallExternal(hypre_CSRMatrixBigInitialize, hoffd);
   jj = (PetscInt *)hoffd->big_j;
-#else
-  jj = (PetscInt *)hoffd->j;
 #endif
   pjj = poffd->j;
   for (i = 0; i < poffd->nz; i++) jj[i] = garray[pjj[i]];
@@ -501,13 +500,13 @@ static PetscErrorCode MatConvert_HYPRE_AIJ(Mat A, MatType mtype, MatReuse reuse,
 
     PetscCall(PetscStrcmp(mtype, MATAIJ, &isaij));
     if (isaij) {
-    #if defined(HYPRE_USING_HIP)
+  #if defined(HYPRE_USING_HIP)
       mtype = size > 1 ? MATMPIAIJHIPSPARSE : MATSEQAIJHIPSPARSE;
-    #elif defined(HYPRE_USING_CUDA)
+  #elif defined(HYPRE_USING_CUDA)
       mtype = size > 1 ? MATMPIAIJCUSPARSE : MATSEQAIJCUSPARSE;
-    #else
+  #else
       mtype = size > 1 ? MATMPIAIJ : MATSEQAIJ;
-    #endif
+  #endif
     }
     PetscCall(PetscStrcmpAny(mtype, &iship, MATAIJHIPSPARSE, MATSEQAIJHIPSPARSE, MATMPIAIJHIPSPARSE, ""));
     PetscCall(PetscStrcmpAny(mtype, &iscuda, MATAIJCUSPARSE, MATSEQAIJCUSPARSE, MATMPIAIJCUSPARSE, ""));
@@ -757,9 +756,9 @@ static PetscErrorCode MatAIJGetParCSR_Private(Mat A, hypre_ParCSRMatrix **hA)
   PetscInt           *pdi = NULL, *pdj = NULL, *poi = NULL, *poj = NULL;
   PetscBool           iscuda, iship;
 #if defined(PETSC_HAVE_DEVICE) && defined(PETSC_HAVE_HYPRE_DEVICE)
-  PetscBool           boundtocpu = A->boundtocpu;
+  PetscBool boundtocpu = A->boundtocpu;
 #else
-  PetscBool           boundtocpu = PETSC_TRUE;
+  PetscBool boundtocpu = PETSC_TRUE;
 #endif
 
   PetscFunctionBegin;
@@ -791,10 +790,10 @@ static PetscErrorCode MatAIJGetParCSR_Private(Mat A, hypre_ParCSRMatrix **hA)
 #endif
     } else {
       boundtocpu = PETSC_TRUE;
-      pdi = diag->i;
-      pdj = diag->j;
-      poi = offd->i;
-      poj = offd->j;
+      pdi        = diag->i;
+      pdj        = diag->j;
+      poi        = offd->i;
+      poj        = offd->j;
       if (sameint) {
         hdi = (HYPRE_Int *)pdi;
         hdj = (HYPRE_Int *)pdj;
@@ -824,8 +823,8 @@ static PetscErrorCode MatAIJGetParCSR_Private(Mat A, hypre_ParCSRMatrix **hA)
 #endif
     } else {
       boundtocpu = PETSC_TRUE;
-      pdi = diag->i;
-      pdj = diag->j;
+      pdi        = diag->i;
+      pdj        = diag->j;
       if (sameint) {
         hdi = (HYPRE_Int *)pdi;
         hdj = (HYPRE_Int *)pdj;
