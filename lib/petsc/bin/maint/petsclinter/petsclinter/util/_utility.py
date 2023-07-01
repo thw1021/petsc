@@ -41,7 +41,7 @@ def initialize_libclang(clang_dir=None, clang_lib=None):
   """
   clxconf = clx.conf
   if not clxconf.loaded:
-    clxconf.set_compatibility_check(True)
+    clxconf.set_compatibility_check(False)
     if clang_lib:
       clang_lib = pl.Path(clang_lib).resolve()
       clxconf.set_library_file(str(clang_lib))
