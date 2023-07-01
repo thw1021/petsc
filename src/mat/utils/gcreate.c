@@ -90,7 +90,8 @@ PetscErrorCode MatCreate(MPI_Comm comm, Mat *A)
   B->congruentlayouts = PETSC_DECIDE;
   B->preallocated     = PETSC_FALSE;
 #if defined(PETSC_HAVE_DEVICE)
-  B->boundtocpu = PETSC_TRUE;
+  B->boundtocpu        = PETSC_TRUE;
+  B->bindingpropagates = PETSC_TRUE;
 #endif
   *A = B;
   PetscFunctionReturn(PETSC_SUCCESS);
