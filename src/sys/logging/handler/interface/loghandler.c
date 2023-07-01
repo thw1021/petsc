@@ -67,6 +67,8 @@ S*/
   Output Parameter:
 . handler - the `PetscLogHandler`
 
+  Level: developer
+
   Note:
   This does not put the handler in use in PETSc's global logging system: use `PetscLogHandlerStart()` after creation.
 
@@ -247,7 +249,7 @@ PetscErrorCode PetscLogHandlerGetOperation(PetscLogHandler h, PetscLogHandlerOpT
 + h - the `PetscLogHandler`
 - state - the `PetscLogState`
 
-  level: developer
+  Level: developer
 
   Note:
   Most users well not need to set a state explicitly: the global logging state `petsc_log_state` is set when calling `PetscLogHandlerStart()`
@@ -278,7 +280,7 @@ PetscErrorCode PetscLogHandlerSetState(PetscLogHandler h, PetscLogState state)
   Output Parameter:
 . state - the `PetscLogState`
 
-  level: developer
+  Level: developer
 
   Note:
   For a log handler started with `PetscLogHandlerStart()`, this will be the PETSc global logging state, `petsc_log_state`
