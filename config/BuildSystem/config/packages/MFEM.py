@@ -8,7 +8,7 @@ class Configure(config.package.Package):
     #self.version                = '4.0.0'
     #self.versionname            = 'MFEM_VERSION_STRING'
     #self.versioninclude         = 'mfem/config.hpp'
-    self.gitcommit              = 'v4.4' # tags do not include subminor
+    self.gitcommit              = 'v4.5.2'
     self.download               = ['git://https://github.com/mfem/mfem.git']
     self.linkedbypetsc          = 0
     self.downloadonWindows      = 1
@@ -32,6 +32,7 @@ class Configure(config.package.Package):
     self.slepc  = framework.require('config.packages.slepc',self)
     self.ceed   = framework.require('config.packages.libceed',self)
     self.cuda   = framework.require('config.packages.cuda',self)
+    self.hip    = framework.require('config.packages.hip',self)
     self.openmp = framework.require('config.packages.openmp',self)
     self.deps   = [self.mpi,self.hypre,self.metis]
     self.odeps  = [self.slepc,self.ceed,self.cuda,self.openmp]
@@ -97,7 +98,8 @@ class Configure(config.package.Package):
       g.write('PREFIX = '+prefix+'\n')
       g.write('MPICXX = '+cxx+'\n')
       g.write('export GHV_CXX = '+ghv+'\n')
-      g.write('CXXFLAGS = '+cxxflags+'\n')
+      if not self.hip.found: #MFEM uses hipcc as compiler for everything
+        g.write('CXXFLAGS = '+cxxflags+'\n')
       if self.argDB['with-shared-libraries']:
         g.write('SHARED = YES\n')
         g.write('STATIC = NO\n')
@@ -175,6 +177,17 @@ class Configure(config.package.Package):
         if hasattr(self.cuda, 'cudaArch'):
           g.write(self.cuda.cmakeArchProperty()+'\n')
         g.write('CXXFLAGS := '+cudaFlags+' $(addprefix -Xcompiler ,$(CXXFLAGS))\n')
+      if self.hip.found:
+        self.pushLanguage('HIP')
+        hipcc = self.getCompiler()
+        hipFlags = self.getCompilerFlags()
+        self.popLanguage()
+        g.write('MFEM_USE_HIP = YES\n')
+        g.write('HIP_CXX = '+hipcc+'\n')
+        hipflags = hipflags.replace('-fvisibility=hidden','')
+        g.write('HIP_FLAGS = '+hipFlags+'\n')
+        g.write('MPI_OPT = '+self.mpi.includepaths+'\n')
+        g.write('MPI_LIB = '+self.mpi.libpaths+' '+self.mpi.mpilibs+'\n')
       g.close()
 
     self.addDefine('HAVE_MFEM',1)
