@@ -835,7 +835,6 @@ static PetscErrorCode PCSetUp_FieldSplit(PC pc)
       }
       PetscCall(ISDestroy(&ccis));
       PetscCall(MatSchurComplementUpdateSubMatrices(jac->schur, jac->mat[0], jac->pmat[0], jac->B, jac->C, jac->mat[1]));
-      PetscCall(MatSchurComplementUpdateAIS(jac->schur, jac->head->is, jac->head->is_col));
       if (jac->schurpre == PC_FIELDSPLIT_SCHUR_PRE_SELFP) {
         PetscCall(MatDestroy(&jac->schurp));
         PetscCall(MatSchurComplementGetPmat(jac->schur, MAT_INITIAL_MATRIX, &jac->schurp));
@@ -873,7 +872,6 @@ static PetscErrorCode PCSetUp_FieldSplit(PC pc)
       PetscCall(MatCreate(((PetscObject)jac->mat[0])->comm, &jac->schur));
       PetscCall(MatSetType(jac->schur, MATSCHURCOMPLEMENT));
       PetscCall(MatSchurComplementSetSubMatrices(jac->schur, jac->mat[0], jac->pmat[0], jac->B, jac->C, jac->mat[1]));
-      PetscCall(MatSchurComplementUpdateAIS(jac->schur, jac->head->is, jac->head->is_col));
       PetscCall(PetscSNPrintf(schurmatprefix, sizeof(schurmatprefix), "%sfieldsplit_%s_", ((PetscObject)pc)->prefix ? ((PetscObject)pc)->prefix : "", ilink->splitname));
       PetscCall(MatSetOptionsPrefix(jac->schur, schurmatprefix));
       PetscCall(MatSchurComplementGetKSP(jac->schur, &kspt));

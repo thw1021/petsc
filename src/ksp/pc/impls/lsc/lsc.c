@@ -47,23 +47,18 @@ static PetscErrorCode PCSetUp_LSC(PC pc)
   if (!Lp) PetscCall(PetscObjectQuery((PetscObject)pc->mat, "LSC_Lp", (PetscObject *)&Lp));
 
   /* Query for user provided matrices. These may be different than those from the system matrix in the case that the user has constraints like Dirichlet boundary conditions encoded in the system matrix */
-  PetscCall(PetscObjectQuery((PetscObject)pc->pmat, "A", (PetscObject *)&lsc->A));
+  PetscCall(PetscObjectQuery((PetscObject)pc->pmat, "LSC_A", (PetscObject *)&lsc->A));
   if (!lsc->A) PetscCall(MatSchurComplementGetSubMatrices(pc->mat, NULL, &lsc->A, NULL, NULL, NULL));
-  PetscCall(PetscObjectQuery((PetscObject)pc->pmat, "B", (PetscObject *)&lsc->B));
+  PetscCall(PetscObjectQuery((PetscObject)pc->pmat, "LSC_B", (PetscObject *)&lsc->B));
   if (!lsc->B) PetscCall(MatSchurComplementGetSubMatrices(pc->mat, NULL, NULL, &lsc->B, NULL, NULL));
-  PetscCall(PetscObjectQuery((PetscObject)pc->pmat, "C", (PetscObject *)&lsc->C));
+  PetscCall(PetscObjectQuery((PetscObject)pc->pmat, "LSC_C", (PetscObject *)&lsc->C));
   if (!lsc->C) PetscCall(MatSchurComplementGetSubMatrices(pc->mat, NULL, NULL, NULL, &lsc->C, NULL));
 
   if (lsc->scale) {
-    Mat Qv = NULL, Q = NULL;
-    PetscCall(PetscObjectQuery((PetscObject)pc->pmat, "Q", (PetscObject *)&Q));
-    if (Q) {
-      IS Arows, Acols;
-      PetscCall(MatSchurComplementGetAIS(pc->mat, &Arows, &Acols));
-      PetscCall(MatCreateSubMatrix(Q, Arows, Acols, MAT_INITIAL_MATRIX, &Qv));
-    }
-    if (!Qv) PetscCall(MatSchurComplementGetSubMatrices(pc->mat, NULL, &Qv, NULL, NULL, NULL));
-    PetscCall(MatGetDiagonal(Qv, lsc->scale));
+    Mat Q_scale;
+    PetscCall(PetscObjectQuery((PetscObject)pc->pmat, "LSC_Q_scale", (PetscObject *)&Q_scale));
+    if (!Q_scale) PetscCall(MatSchurComplementGetSubMatrices(pc->mat, NULL, &Q_scale, NULL, NULL, NULL));
+    PetscCall(MatGetDiagonal(Q_scale, lsc->scale));
     PetscCall(VecReciprocal(lsc->scale));
   }
   if (!L) {
