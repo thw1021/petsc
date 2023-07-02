@@ -3,7 +3,6 @@
 
 #if defined(PETSC_HAVE_FORTRAN_CAPS)
   #define petsclogview_          PETSCLOGVIEW
-  #define petsclogallbegin_      PETSCLOGALLBEGIN
   #define petsclogdefaultbegin_  PETSCLOGDEFAULTBEGIN
   #define petsclognestedbegin_   PETSCLOGNESTEDBEGIN
   #define petsclogdump_          PETSCLOGDUMP
@@ -18,7 +17,6 @@
   #define petsclogeventend_      PETSCLOGEVENTEND
 #elif !defined(PETSC_HAVE_FORTRAN_UNDERSCORE)
   #define petsclogview_          petsclogview
-  #define petsclogallbegin_      petsclogallbegin
   #define petsclogdefaultbegin_  petsclogdefaultbegin
   #define petsclognestedbegin_   petsclognestedbegin
   #define petsclogeventregister_ petsclogeventregister
