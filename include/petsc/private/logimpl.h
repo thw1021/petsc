@@ -137,10 +137,6 @@
     PetscFunctionReturn(PETSC_SUCCESS); \
   }
 
-/* --- Registration info types that are not part of the public API, but handlers need to know --- */
-
-/* --- PetscLogEventInfo --- */
-
 /* --- the registry: information about registered things ---
 
    Log handler instances should not change the registry: it is shared
@@ -179,8 +175,6 @@ PETSC_INTERN PetscErrorCode PetscLogGlobalNamesGlobalGetLocal(PetscLogGlobalName
 PETSC_INTERN PetscErrorCode PetscLogGlobalNamesLocalGetGlobal(PetscLogGlobalNames, PetscInt, PetscInt *);
 PETSC_INTERN PetscErrorCode PetscLogRegistryCreateGlobalStageNames(MPI_Comm, PetscLogRegistry, PetscLogGlobalNames *);
 PETSC_INTERN PetscErrorCode PetscLogRegistryCreateGlobalEventNames(MPI_Comm, PetscLogRegistry, PetscLogGlobalNames *);
-
-PETSC_INTERN PetscErrorCode PetscLogGetState(PetscLogState *);
 
 /* --- A simple stack --- */
 

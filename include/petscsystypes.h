@@ -1153,8 +1153,8 @@ typedef int PetscLogClass;
 . `PETSC_LOG_HANDLER_OP_EVENT_SYNC`            - `PetscLogHandlerEventSync()`
 . `PETSC_LOG_HANDLER_OP_OBJECT_CREATE`         - `PetscLogHandlerObjectCreate()`
 . `PETSC_LOG_HANDLER_OP_OBJECT_DESTROY`        - `PetscLogHandlerObjectDestroy()`
-. `PETSC_LOG_HANDLER_STAGE_PUSH`               - `PetscLogHandlerStagePush()`
-. `PETSC_LOG_HANDLER_STAGE_POP`                - `PetscLogHandlerStagePop()`
+. `PETSC_LOG_HANDLER_OP_STAGE_PUSH`            - `PetscLogHandlerStagePush()`
+. `PETSC_LOG_HANDLER_OP_STAGE_POP`             - `PetscLogHandlerStagePop()`
 - `PETSC_LOG_HANDLER_OP_VIEW`                  - `PetscLogHandlerView()`
 
 .seealso: [](ch_profiling), `PetscLogHandler`, `PetscLogHandlerSetOperation()`, `PetscLogHandlerGetOperation()`
@@ -1171,10 +1171,83 @@ typedef enum {
   PETSC_LOG_HANDLER_OP_VIEW,
 } PetscLogHandlerOpType;
 
+/*S
+  PetscLogHandler - Interface for performance logging.  A log handler receives a `PetscLogState` that has
+  information about the events (`PetscLogEvent`) and stages (`PetscLogStage`) in the logging environment.
+  When a handler is connected to PETSc's global logging stream (`PetscLogHandlerStart()`), it receives
+  updates about events (`PetscLogEventBegin()` / `PetscLogEventEnd()`), stages (`PetscLogStagePush()` /
+  `PetscLogStagePop()`), and objects (`PetscLogObjectCreate()` / `PetscLogObjectDestroy()`).  After
+  collecting information the logger can summarize its data with `PetscLogHandlerView()`.
+   
+  Usage:
+
+.vb
+#include <petscsys.h>
+typedef struct _UserCtx UserCtx;
+
+PetscErrorCode UserEventBegin(PetscLogHandler handler, PetscLogEvent e, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
+{
+  PetscLogState state;
+  UserCtx      *user_context;
+  
+  PetscFunctionBegin;
+  PetscLogHandlerGetState(handler, &state); // use the state to get information about the event, the current stage, etc.
+  PetscLogHandlerGetContext(handler, (void *) &user_context);
+  // ...
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+// ... optionally define callbacks for other operations, see `PetscLogHandlerOpType`
+
+int main() {
+  UserCtx         ctx;
+  PetscLogHandler handler;
+
+  PetscInitialize(...);
+  // ... fill in ctx
+  PetscLogHandlerCreate(PETSC_COMM_WORLD, &handler);
+  PetscLogHandlerSetContext(handler, (void *) &ctx));
+  PetscLogHandlerSetOperation(handler, PETSC_LOG_HANDLER_OP_EVENT_BEGIN, (void (*)(void)) UserEventBegin);
+  // ... set other operations
+  PetscLogHandlerStart(handler); // connect your handler to global logging state
+  // ... run code to be profiled
+  PetscLogHandlerStop(handler); // disconnect your handler from the global logging state
+  PetscLogHandlerView(handler, PETSC_VIEWER_STDOUT_WORLD); // view the results
+  PetscLogHandlerDestroy(&handler);
+  PetscFinalize();
+}
+.ve
+
+  Level: developer
+
+.seealso: [](ch_profiling), `PetscLogHandlerCreate()`, `PetscLogHandlerDestroy()`, `PetscLogHandlerSetContext()`, `PetscLogHandlerSetOperation()`, `PetscLogHandlerStart()`
+S*/
 typedef struct _n_PetscLogHandler *PetscLogHandler;
 
 typedef struct _n_PetscLogRegistry *PetscLogRegistry;
 
+/*S
+   PetscLogState - Interface for the shared state information used by `PetscLogHandler`s.  It holds
+   a registry of events (`PetscLogStateEventRegister()`), stages (`PetscLogStateStageRegiser()`), and
+   classes (`PetscLogStateClassRegister()`).  It keeps track of when the user has activated
+   events (`PetscLogStateEventSetActive()`) and stages (`PetscLogStateStageSetActive()`).  It
+   also keeps a stack of running stages (`PetscLogStateStagePush()`, `PetscLogStateStagePop()`).
+
+   Most users will not need to reference a `PetscLogState` directly: global logging routines
+   like `PetscLogEventRegister()`  and `PetscLogStagePush()` implicitly manipulate PETSc's global
+   logging state, `PetscLogGetState()`.
+
+   Level: developer
+
+   Note:
+
+   The struct defining `PetscLogState` is in a public header so that `PetscLogEventBegin()`,
+   `PetscLogEventEnd()`, `PetscLogObjectCreate()`, and `PetscLogObjectDestroy()` can be defined
+   as macros rather than function calls, but users are discouraged from directly accessing
+   the struct's fields, which are subject to change.
+
+.seealso: [](ch_profiling), `PetscLogStateCreate()`, `PetscLogStateDestroy()`
+S*/
 typedef struct _n_PetscLogState *PetscLogState;
 struct _n_PetscLogState {
   PetscLogRegistry registry;

@@ -1,6 +1,6 @@
 #include <petscviewer.h>
 #include <petsc/private/logimpl.h> /*I "petscsys.h" I*/
-#include <petsc/private/loghandlerimpl.h> /*I "petscsys.h" I*/
+#include <petsc/private/loghandlerimpl.h>
 #if defined(PETSC_HAVE_TAU_PERFSTUBS)
   #include <../src/sys/perfstubs/timer.h>
 #endif

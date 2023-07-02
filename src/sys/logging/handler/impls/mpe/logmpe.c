@@ -1,5 +1,5 @@
-#include <petsc/private/loghandlerimpl.h> /*I "petscsys.h" I*/
 #include <petsc/private/logimpl.h> /*I "petscsys.h" I*/
+#include <petsc/private/loghandlerimpl.h>
 #include <mpe.h>
 
 typedef struct _n_PetscEventMPE {
