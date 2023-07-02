@@ -22,7 +22,7 @@ typedef struct {
 
   Level: developer
 
-.seealso: [](ch_profiling), `PetscLogClass`, `PetscLogState`, `PetscLogStateEventGetInfo()`
+.seealso: [](ch_profiling), `PetscLogClass`, `PetscLogState`, `PetscLogStateStageGetInfo()`
 S*/
 typedef struct {
   char        *name;    /* The class name */
@@ -34,7 +34,7 @@ typedef struct {
 
   Level: developer
 
-.seealso: [](ch_profiling), `PetscLogStage`, `PetscLogState`, `PetscLogStateEventGetInfo()`
+.seealso: [](ch_profiling), `PetscLogStage`, `PetscLogState`, `PetscLogStateClassGetInfo()`
 S*/
 typedef struct _PetscLogStageInfo {
   char     *name;    /* The stage name */

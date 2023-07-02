@@ -1,22 +1,6 @@
 
 #include <petsc/private/logimpl.h> /*I "petsclog.h" I*/
 
-/*S
-   PetscLogState - Interface for the shared state information used by `PetscLogHandler`s.  It holds
-   a registry of events (`PetscLogStateEventRegister()`), stages (`PetscLogStateStageRegiser()`), and
-   classes (`PetscLogStateClassRegister()`).  It keeps track of when the user has activated
-   events (`PetscLogStateEventSetActive()`) and stages (`PetscLogStateStageSetActive()`).  It
-   also keeps a stack of running stages (`PetscLogStateStagePush()`, `PetscLogStateStagePop()`).
-
-   Most users will not need to reference a `PetscLogState` directly: global logging routines
-   like `PetscLogEventRegister()`  and `PetscLogStagePush()` implicitly manipulate PETSc's global
-   logging state, `petsc_log_state`.
-
-   Level: developer
-
-.seealso: [](ch_profiling), `PetscLogStateCreate()`, `PetscLogStateDestroy()`
-S*/
-
 /*@
   PetscLogStateCreate - Create a logging state.
 
@@ -28,7 +12,7 @@ S*/
   Level: developer
 
   Note:
-  Most users will not need to create a `PetscLogState`.  The global state `petsc_log_state`
+  Most users will not need to create a `PetscLogState`.  The global state `PetscLogState()`
   is created in `PetscInitialize()`.
 
 .seealso: [](ch_profiling), `PetscLogState`, `PetscLogStateDestroy()`
@@ -66,7 +50,7 @@ PetscErrorCode PetscLogStateCreate(PetscLogState *state)
   Level: developer
 
   Note:
-  Most users will not need to destroy a `PetscLogState`.  The global state `petsc_log_state`
+  Most users will not need to destroy a `PetscLogState`.  The global state `PetscLogState()`
   is destroyed in `PetscFinalize()`.
 
 .seealso: [](ch_profiling), `PetscLogState`, `PetscLogStateCreate()`
@@ -97,7 +81,7 @@ PetscErrorCode PetscLogStateDestroy(PetscLogState *state)
   Level: developer
 
   Note:
-  This is called for `petsc_log_state` in `PetscLogStagePush()`.
+  This is called for the global state (`PetscLogGetState()`) in `PetscLogStagePush()`.
 
 .seealso: [](ch_profiling), `PetscLogState`, `PetscLogStateStageRegister()`, `PetscLogStateStagePop()`, `PetscLogStateGetCurrentStage()`
 @*/
@@ -125,7 +109,7 @@ PetscErrorCode PetscLogStateStagePush(PetscLogState state, PetscLogStage stage)
   Level: developer
 
   Note:
-  This is called for `petsc_log_state` in `PetscLogStagePush()`.
+  This is called for the global state (`PetscLogGetState()`) in `PetscLogStagePush()`.
 
 .seealso: [](ch_profiling), `PetscLogState`, `PetscLogStateStageRegister()`, `PetscLogStateStagePush()`, `PetscLogStateGetCurrentStage()`
 @*/
@@ -157,7 +141,7 @@ PetscErrorCode PetscLogStateStagePop(PetscLogState state)
   Level: developer
 
   Note:
-  This is called for `petsc_log_state` in `PetscLogGetCurrentStage()`.
+  This is called for the global state (`PetscLogGetState()`) in `PetscLogGetCurrentStage()`.
 
 .seealso: [](ch_profiling), `PetscLogState`, `PetscLogStateStageRegister()`, `PetscLogStateStagePush()`, `PetscLogStateStagePop()`
 @*/
@@ -200,7 +184,7 @@ static PetscErrorCode PetscLogStateResize(PetscLogState state)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+/*@C
   PetscLogStateStageRegister - Register a new stage with a logging state
 
   Not collective
@@ -215,7 +199,7 @@ static PetscErrorCode PetscLogStateResize(PetscLogState state)
   Level: developer
 
   Note:
-  This is called for `petsc_log_state` in `PetscLogStageRegister()`.
+  This is called for the global state (`PetscLogGetState()`) in `PetscLogStageRegister()`.
 
 .seealso: [](ch_profiling), `PetscLogState`, `PetscLogStateStagePush()`, `PetscLogStateStagePop()`
 @*/
@@ -238,7 +222,7 @@ PetscErrorCode PetscLogStateStageRegister(PetscLogState state, const char sname[
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+/*@C
   PetscLogStateEventRegister - Register a new event with a logging state
 
   Not collective
@@ -254,7 +238,7 @@ PetscErrorCode PetscLogStateStageRegister(PetscLogState state, const char sname[
   Level: developer
 
   Note:
-  This is called for `petsc_log_state` in `PetscLogEventRegister()`.
+  This is called for the global state (`PetscLogGetState()`) in `PetscLogEventRegister()`.
 
 .seealso: [](ch_profiling), `PetscLogState`, `PetscLogStageRegister()`
 @*/
@@ -286,7 +270,7 @@ PetscErrorCode PetscLogStateEventRegister(PetscLogState state, const char sname[
   Level: developer
 
   Note:
-  This is called for `petsc_log_state` in `PetscLogStageSetActive()`
+  This is called for the global state (`PetscLogGetState()`) in `PetscLogStageSetActive()`
 
 .seealso: [](ch_profiling), `PetscLogState`, `PetscLogStateEventSetActive()`
 @*/
@@ -317,7 +301,7 @@ PetscErrorCode PetscLogStateStageSetActive(PetscLogState state, PetscLogStage st
   Level: developer
 
   Note:
-  This is called for `petsc_log_state` in `PetscLogStageGetActive()`. 
+  This is called for the global state (`PetscLogGetState()`) in `PetscLogStageGetActive()`. 
 
 .seealso: [](ch_profiling), `PetscLogState`, `PetscLogStageSetActive()`, `PetscLogHandler`, `PetscLogHandlerStart()`, `PetscLogHandlerEventBegin()`, `PetscLogHandlerEventEnd()`
 @*/
@@ -342,7 +326,7 @@ PetscErrorCode PetscLogStateStageGetActive(PetscLogState state, PetscLogStage st
   Level: developer
 
   Note:
-  This is called for `petsc_log_state` in `PetscLogEventSetActive()`. 
+  This is called for the global state (`PetscLogGetState()`) in `PetscLogEventSetActive()`. 
 
 .seealso: [](ch_profiling), `PetscLogState`, `PetscLogEventGetActive()`, `PetscLogStateGetCurrentStage()`, `PetscLogEventSetActiveAll()`
 @*/
@@ -370,7 +354,7 @@ PetscErrorCode PetscLogStateEventSetActive(PetscLogState state, PetscLogStage st
   Level: developer
 
   Note:
-  This is called for `petsc_log_state` in `PetscLogEventSetActiveAll()`. 
+  This is called for the global state (`PetscLogGetState()`) in `PetscLogEventSetActiveAll()`. 
 
 .seealso: [](ch_profiling), `PetscLogState`, `PetscLogEventGetActive()`
 @*/
@@ -401,7 +385,7 @@ PetscErrorCode PetscLogStateEventSetActiveAll(PetscLogState state, PetscLogEvent
   Level: developer
 
   Note:
-  This is called for `petsc_log_state` in `PetscLogClassSetActive()`. 
+  This is called for the global state (`PetscLogGetState()`) in `PetscLogClassSetActive()`. 
 
 .seealso: [](ch_profiling), `PetscLogState`, `PetscLogEventGetActive()`, `PetscLogStateClassSetActive()`
 @*/
@@ -436,7 +420,7 @@ PetscErrorCode PetscLogStateClassSetActive(PetscLogState state, PetscLogStage st
   Level: developer
 
   Note:
-  This is called for `petsc_log_state` in `PetscLogClassSetActiveAll()`. 
+  This is called for the global state (`PetscLogGetState()`) in `PetscLogClassSetActiveAll()`. 
 
 .seealso: [](ch_profiling), `PetscLogState`, `PetscLogEventGetActive()`, `PetscLogStateClassSetActive()`
 @*/
@@ -473,7 +457,7 @@ PetscErrorCode PetscLogStateClassSetActiveAll(PetscLogState state, PetscClassId 
   Level: developer
 
   Note:
-  This is called for `petsc_log_state` in `PetscLogEventGetActive()`, where it has significance
+  This is called for the global state (`PetscLogGetState()`) in `PetscLogEventGetActive()`, where it has significance
   for what information is sent to log handlers.
 
 .seealso: [](ch_profiling), `PetscLogState`, `PetscLogEventGetActive()`, `PetscLogStateGetCurrentStage()`, `PetscLogHandler()`
@@ -511,7 +495,7 @@ PetscErrorCode PetscLogStateGetEventFromName(PetscLogState state, const char nam
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+/*@C
   PetscLogStateGetStageFromName - Get a `PetscLogStage` from the name it was registered with.
 
   Not collective
@@ -534,7 +518,7 @@ PetscErrorCode PetscLogStateGetStageFromName(PetscLogState state, const char nam
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
+/*@C
   PetscLogStateGetClassFromName - Get a `PetscLogClass` from the name of the class it was registered with.
 
   Not collective
