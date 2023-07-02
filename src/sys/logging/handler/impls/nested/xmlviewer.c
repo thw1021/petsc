@@ -11,8 +11,6 @@
 #include "xmlviewer.h"
 #include "lognested.h"
 
-#if defined(PETSC_USE_LOG)
-
 static PetscErrorCode PetscViewerXMLStartSection(PetscViewer viewer, const char *name, const char *desc)
 {
   PetscInt XMLSectionDepthPetsc;
@@ -445,5 +443,3 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerView_Nested_Flamegraph(PetscLogHandle
   PetscCall(PetscLogNestedTreePrintTop(viewer, tree, nested->threshold, PETSC_LOG_NESTED_FLAMEGRAPH));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
-#endif

@@ -12,7 +12,7 @@
       This file, and only this file, is for functions that interact with the global logging state
 */
 #include <petsc/private/logimpl.h> /*I    "petscsys.h"   I*/
-#include <petsc/private/loghandlerimpl.h> /*I    "petscsys.h"   I*/
+#include <petsc/private/loghandlerimpl.h>
 #include <petsctime.h>
 #include <petscviewer.h>
 #include <petscdevice.h>
@@ -161,15 +161,31 @@ static PetscErrorCode PetscLogGetHandler(PetscLogHandlerType type, PetscLogHandl
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscLogGetState(PetscLogState *state_p)
+/*@
+  PetscLogGetState - Get the `PetscLogState` for PETSc's global logging, used
+  by all default log handlers (`PetscLogDefaultBegin()`,
+  `PetscLogNestedBegin()`, `PetscLogTraceBegin()`, `PetscLogMPEBegin()`,
+  `PetscLogPerfstubsBegin()`).
+
+  Collective on `PETSC_COMM_WORLD`
+
+  Output parameter:
+. state - The `PetscLogState` changed by registrations (such as `PetscLogEventRegsiter()`) and
+  actions (such as `PetscLogEventBegin()` or `PetscLogStatePush()`)
+
+  Level: developer
+
+.seealso: [](ch_profiling), `PetscLogState`
+@*/
+PETSC_EXTERN PetscErrorCode PetscLogGetState(PetscLogState *state)
 {
   PetscFunctionBegin;
-  PetscValidPointer(state_p, 1);
+  PetscValidPointer(state, 1);
   if (!petsc_log_state) {
     fprintf(stderr, "PETSC ERROR: Logging has not been enabled.\nYou might have forgotten to call PetscInitialize().\n");
     PETSCABORT(MPI_COMM_WORLD, PETSC_ERR_SUP);
   }
-  *state_p = petsc_log_state;
+  *state = petsc_log_state;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -352,7 +368,7 @@ PetscErrorCode PetscLogHandlerStop(PetscLogHandler h)
 }
 
 /*@C
-  PetscLogDefaultBegin - Turns on logging of objects and events using the default logging functions `PetscLogEventBeginDefault()` and `PetscLogEventEndDefault()`. This logs flop
+  PetscLogDefaultBegin - Turns on logging of objects and events using the default log handler. This logs flop
   rates and object creation and should not slow programs down too much.
   This routine may be called more than once.
 
@@ -377,7 +393,7 @@ PetscErrorCode PetscLogHandlerStop(PetscLogHandler h)
   `PetscLogView()` or `PetscLogDump()` actually cause the printing of
   the logging information.
 
-.seealso: [](ch_profiling), `PetscLogDump()`, `PetscLogAllBegin()`, `PetscLogView()`, `PetscLogTraceBegin()`
+.seealso: [](ch_profiling), `PetscLogDump()`, `PetscLogView()`, `PetscLogTraceBegin()`
 @*/
 PetscErrorCode PetscLogDefaultBegin(void)
 {
@@ -415,7 +431,7 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Trace(MPI_Comm, PetscLogHandle
   to determine where a program is hanging without running in the
   debugger.  Can be used in conjunction with the -info option.
 
-.seealso: [](ch_profiling), `PetscLogDump()`, `PetscLogAllBegin()`, `PetscLogView()`, `PetscLogDefaultBegin()`
+.seealso: [](ch_profiling), `PetscLogDump()`, `PetscLogView()`, `PetscLogDefaultBegin()`
 @*/
 PetscErrorCode PetscLogTraceBegin(FILE *file)
 {
@@ -451,7 +467,7 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Nested(MPI_Comm, PetscLogHandl
 
   Level: advanced
 
-.seealso: `PetscLogDump()`, `PetscLogAllBegin()`, `PetscLogView()`, `PetscLogTraceBegin()`, `PetscLogDefaultBegin()`
+.seealso: `PetscLogDump()`, `PetscLogView()`, `PetscLogTraceBegin()`, `PetscLogDefaultBegin()`
 @*/
 PetscErrorCode PetscLogNestedBegin(void)
 {
@@ -475,7 +491,7 @@ PetscErrorCode PetscLogNestedBegin(void)
 
   Level: beginner
 
-.seealso: [](ch_profiling), `PetscLogDefaultBegin()`, `PetscLogAllBegin()`, `PetscLogSet()`
+.seealso: [](ch_profiling), `PetscLogDefaultBegin()`, `PetscLogSet()`
 @*/
 PetscErrorCode PetscLogIsActive(PetscBool *isActive)
 {
@@ -564,16 +580,6 @@ PetscErrorCode PetscLogStageRegister(const char sname[], PetscLogStage *stage)
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
   PetscCall(PetscLogStateStageRegister(state, sname, stage));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PETSC_INTERN PetscErrorCode PetscLogStagePush_Internal(PetscLogStage stage)
-{
-  PetscLogState state;
-
-  PetscFunctionBegin;
-  PetscCall(PetscLogGetState(&state));
-  PetscCall(PetscLogStateStagePush(state, stage));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -839,7 +845,7 @@ PetscErrorCode PetscLogStageGetName(PetscLogStage stage, const char **name)
 
   Level: intermediate
 
-.seealso: [](ch_profiling), `PetscLogEventRegister()`, `PetscLogEventBegin()`, `PetscLogEventEnd()`, `PetscPreLoadBegin()`, `PetscPreLoadEnd()`, `PetscPreLoadEvent()`
+.seealso: [](ch_profiling), `PetscLogEventRegister()`, `PetscLogEventBegin()`, `PetscLogEventEnd()`, `PetscPreLoadBegin()`, `PetscPreLoadEnd()`, `PetscPreLoadStage()`
 @*/
 PetscErrorCode PetscLogEventGetName(PetscLogEvent event, const char **name)
 {
@@ -1162,7 +1168,7 @@ PetscErrorCode PetscLogEventDeactivatePop(PetscLogEvent event)
   Notes:
   When an external library or runtime has is initialized it can involve lots of setup time that skews the statistics of any unrelated running events: this function is intended to isolate such calls in the default log summary (`PetscLogDefaultBegin()`, `PetscLogView()`).
 
-  Other log handlers (such as the nested handler, `PetscLogNestedView()`) will ignore this function.
+  Other log handlers (such as the nested handler, `PetscLogNestedBegin()`) will ignore this function.
 
 .seealso: [](ch_profiling), `PetscLogEventDeactivatePush()`, `PetscLogEventDeactivatePop()`, `PetscLogEventsUnpause()`
 @*/
@@ -1247,12 +1253,12 @@ PetscErrorCode PetscLogClassSetActive(PetscLogStage stage, PetscClassId classid,
 
    Synopsis:
    #include <petsclog.h>
-   PetscErrorCode PetscLogEventSync(int e,MPI_Comm comm)
+   PetscErrorCode PetscLogEventSync(PetscLogEvent e,MPI_Comm comm)
 
    Collective
 
    Input Parameters:
-+  e - integer associated with the event obtained from PetscLogEventRegister()
++  e - `PetscLogEvent` obtained from `PetscLogEventRegister()`
 -  comm - an MPI communicator
 
    Usage:
@@ -1279,12 +1285,12 @@ M*/
 
    Synopsis:
    #include <petsclog.h>
-   PetscErrorCode PetscLogEventBegin(int e,PetscObject o1,PetscObject o2,PetscObject o3,PetscObject o4)
+   PetscErrorCode PetscLogEventBegin(PetscLogEvent e,PetscObject o1,PetscObject o2,PetscObject o3,PetscObject o4)
 
    Not Collective
 
    Input Parameters:
-+  e - integer associated with the event obtained from PetscLogEventRegister()
++  e - `PetscLogEvent` obtained from `PetscLogEventRegister()`
 -  o1,o2,o3,o4 - objects associated with the event, or 0
 
    Fortran Synopsis:
@@ -1343,6 +1349,49 @@ M*/
 
 .seealso: [](ch_profiling), `PetscLogEventRegister()`, `PetscLogEventBegin()`, `PetscLogFlops()`
 M*/
+
+/*MC
+   PetscLogObjectCreate - Log the creation of a `PetscObject`
+
+   Synopsis:
+   #include <petsclog.h>
+   PetscErrorCode PetscLogObjectCreate(PetscObject h)
+
+   Not Collective
+
+   Input Parameters:
+.  h - A `PetscObject`
+
+   Level: developer
+
+   Developer Note:
+     Called internally by PETSc when creating objects: users do not need to call this directly.
+     Notification of the object creation is sent to each `PetscLogHandler` that is running.
+
+.seealso: [](ch_profiling), `PetscLogHandler`, `PetscLogObjectDestroy()`
+M*/
+
+/*MC
+   PetscLogObjectDestroy - Logs the destruction of a `PetscObject`
+
+   Synopsis:
+   #include <petsclog.h>
+   PetscErrorCode PetscLogObjectDestroy(PetscObject h)
+
+   Not Collective
+
+   Input Parameters:
+.  h - A `PetscObject`
+
+   Level: developer
+
+   Developer Note:
+     Called internally by PETSc when destroying objects: users do not need to call this directly.
+     Notification of the object creation is sent to each `PetscLogHandler` that is running.
+
+.seealso: [](ch_profiling), `PetscLogHandler`, `PetscLogObjectCreate()`
+M*/
+
 
 /*@C
   PetscLogEventGetId - Returns the event id when given the event name.
@@ -1408,7 +1457,7 @@ PetscErrorCode PetscLogClassGetId(const char name[], PetscLogEvent *event)
   Usage:
 .vb
      PetscInitialize(...);
-     PetscLogDefaultBegin(); or PetscLogAllBegin();
+     PetscLogDefaultBegin();
      ... code ...
      PetscLogDump(filename);
      PetscFinalize();
@@ -1420,7 +1469,7 @@ PetscErrorCode PetscLogClassGetId(const char name[], PetscLogEvent *event)
   The default file name is Log.<rank> where <rank> is the MPI process rank. If no name is specified,
   this file will be used.
 
-.seealso: [](ch_profiling), `PetscLogDefaultBegin()`, `PetscLogAllBegin()`, `PetscLogView()`
+.seealso: [](ch_profiling), `PetscLogDefaultBegin()`, `PetscLogView()`
 @*/
 PetscErrorCode PetscLogDump(const char sname[])
 {
@@ -2015,7 +2064,7 @@ static PetscBool PetscBeganMPE = PETSC_FALSE;
    intended for production runs since it logs only flop rates and object
    creation (and should not significantly slow the programs).
 
-.seealso: [](ch_profiling), `PetscLogDump()`, `PetscLogDefaultBegin()`, `PetscLogAllBegin()`, `PetscLogEventSetActive()`,
+.seealso: [](ch_profiling), `PetscLogDump()`, `PetscLogDefaultBegin()`, `PetscLogEventSetActive()`,
 @*/
 PetscErrorCode PetscLogMPEBegin(void)
 {
@@ -2048,7 +2097,7 @@ PetscErrorCode PetscLogMPEBegin(void)
 
    Level: advanced
 
-.seealso: [](ch_profiling), `PetscLogDump()`, `PetscLogAllBegin()`, `PetscLogMPEBegin()`
+.seealso: [](ch_profiling), `PetscLogDump()`, `PetscLogMPEBegin()`
 @*/
 PetscErrorCode PetscLogMPEDump(const char sname[])
 {
@@ -2129,7 +2178,7 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerNestedSetThreshold(PetscLogHandler, P
 
   Level: advanced
 
-.seealso: `PetscLogDump()`, `PetscLogAllBegin()`, `PetscLogView()`, `PetscLogTraceBegin()`, `PetscLogDefaultBegin()`,
+.seealso: `PetscLogDump()`, `PetscLogView()`, `PetscLogTraceBegin()`, `PetscLogDefaultBegin()`,
           `PetscLogNestedBegin()`
 @*/
 PetscErrorCode PetscLogSetThreshold(PetscLogDouble newThresh, PetscLogDouble *oldThresh)

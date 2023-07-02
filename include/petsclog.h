@@ -129,6 +129,7 @@ PETSC_DEPRECATED_FUNCTION("PetscLogObjectMemory() is deprecated (since version 3
 
 #if defined(PETSC_USE_LOG) /* --- Logging is turned on --------------------------------*/
 PETSC_EXTERN PetscLogState petsc_log_state;
+PETSC_EXTERN PetscErrorCode PetscLogGetState(PetscLogState *);
 
   #define PETSC_LOG_HANDLER_MAX 4
 PETSC_EXTERN PetscLogHandlerHot   PetscLogHandlers[PETSC_LOG_HANDLER_MAX];
@@ -525,6 +526,7 @@ static inline int PetscMPIParallelComm(MPI_Comm comm)
 
   #define PetscLogMemory PETSC_FALSE
 
+  #define PetscLogGetState(a)     (*(a) = 0, PETSC_SUCCESS)
   #define PetscLogHandlerStart(a) PETSC_SUCCESS
   #define PetscLogHandlerStop(a) PETSC_SUCCESS
 
