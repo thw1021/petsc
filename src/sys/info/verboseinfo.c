@@ -353,7 +353,7 @@ PetscErrorCode PetscInfoSetFilterCommSelf(PetscInfoCommFlag commSelfFlag)
     Note:
     This function is called automatically during `PetscInitialize()` so users usually do not need to call it themselves.
 
-.seealso: [](sec_PetscInfo), [](sec_PetscInfo), `PetscInfo()`, `PetscInfoAllow()`, `PetscInfoSetFile()`, `PetscInfoSetClasses()`, `PetscInfoSetFilterCommSelf()`, `PetscInfoDestroy()`
+.seealso: [](sec_PetscInfo), `PetscInfo()`, `PetscInfoAllow()`, `PetscInfoSetFile()`, `PetscInfoSetClasses()`, `PetscInfoSetFilterCommSelf()`, `PetscInfoDestroy()`
 @*/
 PetscErrorCode PetscInfoSetFromOptions(PetscOptions options)
 {
