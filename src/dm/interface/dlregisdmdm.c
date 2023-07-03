@@ -171,7 +171,7 @@ PetscErrorCode DMInitializePackage(void)
   PetscCall(PetscOptionsGetString(NULL, NULL, "-log_exclude", logList, sizeof(logList), &opt));
   if (opt) {
     PetscCall(PetscStrInList("dm", logList, ',', &pkg));
-    if (pkg) PetscCall(PetscLogClassSetActiveAll(DM_CLASSID, PETSC_FALSE));
+    if (pkg) PetscCall(PetscLogEventExcludeClass(DM_CLASSID));
   }
 
   PetscCall(DMGenerateRegisterAll());
@@ -251,7 +251,7 @@ PetscErrorCode PetscFEInitializePackage(void)
   PetscCall(PetscOptionsGetString(NULL, NULL, "-log_exclude", logList, sizeof(logList), &opt));
   if (opt) {
     PetscCall(PetscStrInList("fe", logList, ',', &pkg));
-    if (pkg) PetscCall(PetscLogClassSetActiveAll(PETSCFE_CLASSID, PETSC_FALSE));
+    if (pkg) PetscCall(PetscLogEventExcludeClass(PETSCFE_CLASSID));
   }
   /* Register package finalizer */
   PetscCall(PetscRegisterFinalize(PetscFEFinalizePackage));
@@ -316,9 +316,9 @@ PetscErrorCode PetscFVInitializePackage(void)
   PetscCall(PetscOptionsGetString(NULL, NULL, "-log_exclude", logList, sizeof(logList), &opt));
   if (opt) {
     PetscCall(PetscStrInList("fv", logList, ',', &pkg));
-    if (pkg) PetscCall(PetscLogClassSetActiveAll(PETSCFV_CLASSID, PETSC_FALSE));
+    if (pkg) PetscCall(PetscLogEventExcludeClass(PETSCFV_CLASSID));
     PetscCall(PetscStrInList("limiter", logList, ',', &pkg));
-    if (pkg) PetscCall(PetscLogClassSetActiveAll(PETSCLIMITER_CLASSID, PETSC_FALSE));
+    if (pkg) PetscCall(PetscLogEventExcludeClass(PETSCLIMITER_CLASSID));
   }
   /* Register package finalizer */
   PetscCall(PetscRegisterFinalize(PetscFVFinalizePackage));
@@ -379,7 +379,7 @@ PetscErrorCode PetscDSInitializePackage(void)
   PetscCall(PetscOptionsGetString(NULL, NULL, "-log_exclude", logList, sizeof(logList), &opt));
   if (opt) {
     PetscCall(PetscStrInList("ds", logList, ',', &pkg));
-    if (pkg) PetscCall(PetscLogClassSetActiveAll(PETSCDS_CLASSID, PETSC_FALSE));
+    if (pkg) PetscCall(PetscLogEventExcludeClass(PETSCDS_CLASSID));
   }
   /* Register package finalizer */
   PetscCall(PetscRegisterFinalize(PetscDSFinalizePackage));

@@ -59,7 +59,7 @@ PetscErrorCode MatMFFDInitializePackage(void)
   PetscCall(PetscOptionsGetString(NULL, NULL, "-log_exclude", logList, sizeof(logList), &opt));
   if (opt) {
     PetscCall(PetscStrInList("matmffd", logList, ',', &pkg));
-    if (pkg) PetscCall(PetscLogClassSetActiveAll(MATMFFD_CLASSID, PETSC_FALSE));
+    if (pkg) PetscCall(PetscLogEventExcludeClass(MATMFFD_CLASSID));
   }
   /* Register package finalizer */
   PetscCall(PetscRegisterFinalize(MatMFFDFinalizePackage));

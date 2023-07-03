@@ -408,19 +408,20 @@ cdef class LogClass:
     #
 
     def activate(self):
-        CHKERR( PetscLogClassSetActive(PETSC_DEFAULT, self.id, PETSC_TRUE) )
+        CHKERR( PetscLogClassActivate(self.id) )
 
     def deactivate(self):
-        CHKERR( PetscLogClassSetActive(PETSC_DEFAULT, self.id, PETSC_TRUE) )
+        CHKERR( PetscLogClassDeactivate(self.id) )
 
     def getActive(self):
         <void>self # unused
         raise NotImplementedError
 
     def setActive(self, flag):
-        cdef PetscBool tval = PETSC_FALSE
-        if flag: tval = PETSC_TRUE
-        CHKERR( PetscLogClassSetActive(PETSC_DEFAULT, self.id, tval) )
+        if flag:
+            CHKERR( PetscLogClassActivate(self.id) )
+        else:
+            CHKERR( PetscLogClassDeactivate(self.id) )
 
     property active:
         def __get__(self):
@@ -521,10 +522,10 @@ cdef class LogEvent:
 
         See Also
         --------
-        petsc.PetscLogEventSetActive
+        petsc.PetscLogEventActivate
 
         """
-        CHKERR( PetscLogEventSetActive(PETSC_DEFAULT, self.id, PETSC_TRUE) )
+        CHKERR( PetscLogEventActivate(self.id) )
 
     def deactivate(self) -> None:
         """Indicate that the event should not be logged.
@@ -533,10 +534,10 @@ cdef class LogEvent:
 
         See Also
         --------
-        petsc.PetscLogEventSetActive
+        petsc.PetscLogEventDeactivate
 
         """
-        CHKERR( PetscLogEventSetActive(PETSC_DEFAULT, self.id, PETSC_FALSE) )
+        CHKERR( PetscLogEventDeactivate(self.id) )
 
     def getActive(self):
         <void>self # unused
@@ -554,12 +555,13 @@ cdef class LogEvent:
 
         See Also
         --------
-        petsc.PetscLogEventSetActive
+        petsc.PetscLogEventDeactivate, petsc.PetscLogEventActivate
 
         """
-        cdef PetscBool tval = PETSC_FALSE
-        if flag: tval = PETSC_TRUE
-        CHKERR( PetscLogEventSetActive(PETSC_DEFAULT, self.id, tval) )
+        if flag:
+            CHKERR( PetscLogEventActivate(self.id) )
+        else:
+            CHKERR( PetscLogEventDeactivate(self.id) )
 
     property active:
         def __get__(self):
