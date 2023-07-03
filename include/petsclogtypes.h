@@ -4,9 +4,17 @@
 
 /* SUBMANSEC = Profiling */
 
-/*
-    PetscEventPerfInfo - statistics on how many times the event is used, how much time it takes, etc.
-*/
+/*S
+  PetscEventPerfInfo - statistics on how many times the event is used, how much time it takes, etc.
+
+  Level: advanced
+
+  Note: 
+  This is the data structure that describes profiling statsitics collected for an event from
+  the default log handler (`PetscLogDefaultBegin()`) using `PetscLogEventGetPerfInfo()`.
+
+.seealso(): [](ch_profiling)
+S*/
 typedef struct {
   int            id;                  /* The integer identifying this event / stage */
   PETSC_DEPRECATED_FIELD("Use PetscLogEventGetActive() (since version 3.20)") PetscBool active;
