@@ -5,6 +5,7 @@
 #define PETSCLOG_H
 
 #include <petscsystypes.h>
+#include <petsclogtypes.h>
 #include <petsctime.h>
 #include <petscbt.h>
 #include <petscoptions.h>
@@ -76,7 +77,53 @@ PETSC_EXTERN PetscErrorCode PetscIntStackEmpty(PetscIntStack, PetscBool *);
 
 #include <petsclogdeprecated.h>
 
-#include <petsclogobjects.h>
+PETSC_EXTERN PetscErrorCode PetscLogStateCreate(PetscLogState *);
+PETSC_EXTERN PetscErrorCode PetscLogStateDestroy(PetscLogState *);
+PETSC_EXTERN PetscErrorCode PetscLogStateGetRegistry(PetscLogState, PetscLogRegistry *);
+
+PETSC_EXTERN PetscErrorCode PetscLogStateClassRegister(PetscLogState, const char[], PetscLogStage *);
+PETSC_EXTERN PetscErrorCode PetscLogStateClassSetActive(PetscLogState, PetscLogStage, PetscClassId, PetscBool);
+PETSC_EXTERN PetscErrorCode PetscLogStateClassSetActiveAll(PetscLogState, PetscClassId, PetscBool);
+
+PETSC_EXTERN PetscErrorCode PetscLogStateStageRegister(PetscLogState, const char[], PetscLogStage *);
+PETSC_EXTERN PetscErrorCode PetscLogStateStagePush(PetscLogState, PetscLogStage);
+PETSC_EXTERN PetscErrorCode PetscLogStateStagePop(PetscLogState);
+PETSC_EXTERN PetscErrorCode PetscLogStateStageSetActive(PetscLogState, PetscLogStage, PetscBool);
+PETSC_EXTERN PetscErrorCode PetscLogStateStageGetActive(PetscLogState, PetscLogStage, PetscBool *);
+PETSC_EXTERN PetscErrorCode PetscLogStateGetCurrentStage(PetscLogState, PetscLogStage *);
+
+PETSC_EXTERN PetscErrorCode PetscLogStateEventRegister(PetscLogState, const char[], PetscClassId, PetscLogEvent *);
+PETSC_EXTERN PetscErrorCode PetscLogStateEventSetActive(PetscLogState, PetscLogStage, PetscLogEvent, PetscBool);
+PETSC_EXTERN PetscErrorCode PetscLogStateEventSetActiveAll(PetscLogState, PetscLogEvent, PetscBool);
+PETSC_EXTERN PetscErrorCode PetscLogStateEventGetActive(PetscLogState, PetscLogStage, PetscLogEvent, PetscBool *);
+
+PETSC_EXTERN PetscErrorCode PetscLogStateGetEventFromName(PetscLogState, const char[], PetscLogEvent *);
+PETSC_EXTERN PetscErrorCode PetscLogStateGetStageFromName(PetscLogState, const char[], PetscLogStage *);
+PETSC_EXTERN PetscErrorCode PetscLogStateGetClassFromName(PetscLogState, const char[], PetscLogClass *);
+PETSC_EXTERN PetscErrorCode PetscLogStateGetClassFromClassId(PetscLogState, PetscClassId, PetscLogClass *);
+PETSC_EXTERN PetscErrorCode PetscLogStateGetNumEvents(PetscLogState, PetscInt *);
+PETSC_EXTERN PetscErrorCode PetscLogStateGetNumStages(PetscLogState, PetscInt *);
+PETSC_EXTERN PetscErrorCode PetscLogStateGetNumClasses(PetscLogState, PetscInt *);
+PETSC_EXTERN PetscErrorCode PetscLogStateEventGetInfo(PetscLogState, PetscLogEvent, PetscLogEventInfo *);
+PETSC_EXTERN PetscErrorCode PetscLogStateStageGetInfo(PetscLogState, PetscLogStage, PetscLogStageInfo *);
+PETSC_EXTERN PetscErrorCode PetscLogStateClassGetInfo(PetscLogState, PetscLogClass, PetscLogClassInfo *);
+
+PETSC_EXTERN PetscErrorCode PetscLogHandlerCreate(MPI_Comm, PetscLogHandler *);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerSetContext(PetscLogHandler, void *);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerGetContext(PetscLogHandler, void *);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerSetOperation(PetscLogHandler, PetscLogHandlerOpType, void (*)(void));
+PETSC_EXTERN PetscErrorCode PetscLogHandlerGetOperation(PetscLogHandler, PetscLogHandlerOpType, void (**)(void));
+PETSC_EXTERN PetscErrorCode PetscLogHandlerSetState(PetscLogHandler, PetscLogState);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerGetState(PetscLogHandler, PetscLogState *);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerEventBegin(PetscLogHandler, PetscLogEvent, PetscObject, PetscObject, PetscObject, PetscObject);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerEventEnd(PetscLogHandler, PetscLogEvent, PetscObject, PetscObject, PetscObject, PetscObject);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerEventSync(PetscLogHandler, PetscLogEvent, MPI_Comm);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerObjectCreate(PetscLogHandler, PetscObject);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerObjectDestroy(PetscLogHandler, PetscObject);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerStagePush(PetscLogHandler, PetscLogStage);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerStagePop(PetscLogHandler, PetscLogStage);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerView(PetscLogHandler, PetscViewer);
 
 #define PetscLogStateStageEventIsActive(state, stage, event) (PetscBTLookup((state)->active, (stage)) && PetscBTLookup((state)->active, (stage) + (event + 1) * (state)->bt_num_stages))
 #define PetscLogStateEventCurrentlyActive(state, event) ((state) && PetscLogStateStageEventIsActive(state,(state)->current_stage,event))
