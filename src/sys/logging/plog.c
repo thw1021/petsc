@@ -478,6 +478,42 @@ PetscErrorCode PetscLogNestedBegin(void)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Legacy(PetscErrorCode (*)(PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject), PetscErrorCode(*)(PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject), PetscErrorCode (*) (PetscObject), PetscErrorCode (*)(PetscObject), PetscLogHandler *);
+
+/*@C
+  PetscLogCallbacksBegin - Create and start a log handler from callbacks
+  matching the now deprecated function pointers `PetscLogPLB`, `PetscLogPLE`,
+  `PetscLogPHC`, `PetscLogPHD`.
+
+  Logically Collective over `PETSC_COMM_WORLD`
+
+  Input Parameters:
++ PetscLogPLB - A callback that will be executed by `PetscLogEventBegin()`
+. PetscLogPLE - A callback that will be executed by `PetscLogEventEnd()`
+. PetscLogPHC - A callback that will be executed by `PetscLogObjectCreate()`
+- PetscLogPHD - A callback that will be executed by `PetscLogObjectCreate()`
+
+  Level: advanced
+
+  Notes:
+
+  Any of the callbacks may be `NULL`.
+
+  This should help migrate external log handlers to use `PetscLogHandler`, but
+  callbacks that depend on the deprecated `PetscLogStage` datatype will have to be
+  updated.
+
+.seealso: [](ch_profiling), `PetscLogHandler`, `PetscLogHandlerStart()`, `PetscLogState`
+@*/
+PetscErrorCode PetscLogLegacyCallbacksBegin(PetscErrorCode (*PetscLogPLB)(PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject), PetscErrorCode(*PetscLogPLE)(PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject), PetscErrorCode (*PetscLogPHC) (PetscObject), PetscErrorCode (*PetscLogPHD)(PetscObject))
+{
+  PetscLogHandler handler;
+  PetscFunctionBegin;
+  PetscCall(PetscLogHandlerCreate_Legacy(PetscLogPLB, PetscLogPLE, PetscLogPHC, PetscLogPHD, &handler));
+  PetscCall(PetscLogHandlerStart(handler));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@C
   PetscLogIsActive - Check if logging is currently in progress.
 
@@ -808,7 +844,7 @@ PetscErrorCode PetscLogStageGetId(const char name[], PetscLogStage *stage)
   Not Collective
 
   Input Parameter:
-. stage - The stage, , or -1 if no stage with that name exists
+. stage - The stage
 
   Output Parameter:
 . name  - The stage name
@@ -835,7 +871,7 @@ PetscErrorCode PetscLogStageGetName(PetscLogStage stage, const char **name)
   Not Collective
 
   Input Parameter:
-. event - The event, , or -1 if no event with that name exists
+. event - The event
 
   Output Parameter:
 . name  - The event name
@@ -862,7 +898,7 @@ PetscErrorCode PetscLogEventGetName(PetscLogEvent event, const char **name)
   Not Collective
 
   Input Parameter:
-. class - The class, , or -1 if no class with that name exists
+. class - The class
 
   Output Parameter:
 . name  - The class name
@@ -2031,7 +2067,7 @@ PetscErrorCode PetscClassIdRegister(const char name[], PetscClassId *oclass)
     PetscLogClass logclass;
 
     PetscCall(PetscLogGetState(&state));
-    PetscCall(PetscLogRegistryClassRegister(state->registry, name, *oclass, &logclass));
+    PetscCall(PetscLogStateClassRegister(state, name, *oclass, &logclass));
   }
 #endif
   PetscFunctionReturn(PETSC_SUCCESS);
