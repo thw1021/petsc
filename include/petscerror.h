@@ -1135,6 +1135,9 @@ PETSC_EXTERN PetscErrorCode PetscPopErrorHandler(void);
 PETSC_EXTERN PetscErrorCode PetscSignalHandlerDefault(int, void *);
 PETSC_EXTERN PetscErrorCode PetscPushSignalHandler(PetscErrorCode (*)(int, void *), void *);
 PETSC_EXTERN PetscErrorCode PetscPopSignalHandler(void);
+PETSC_EXTERN PetscErrorCode PetscSignalHandlerSetErrorMessage(const char *);
+PETSC_EXTERN PetscErrorCode PetscSignalHandlerClearErrorMessage(void);
+
 PETSC_EXTERN PetscErrorCode PetscCheckPointerSetIntensity(PetscInt);
 PETSC_EXTERN void           PetscSignalSegvCheckPointerOrMpi(void);
 PETSC_DEPRECATED_FUNCTION("Use PetscSignalSegvCheckPointerOrMpi() (since version 3.13)") static inline void PetscSignalSegvCheckPointer(void)

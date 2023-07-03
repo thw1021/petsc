@@ -17,6 +17,9 @@ typedef enum {
 PetscMemkindType currentmktype  = PETSC_MK_HBW_PREFERRED;
 PetscMemkindType previousmktype = PETSC_MK_HBW_PREFERRED;
 #endif
+
+static char SignalErrorMessageMalloc[128];
+
 /*
         We want to make sure that all mallocs of double or complex numbers are complex aligned.
     1) on systems with memalign() we call that routine to get an aligned memory location
@@ -24,14 +27,24 @@ PetscMemkindType previousmktype = PETSC_MK_HBW_PREFERRED;
        - allocate one sizeof(PetscScalar) extra space
        - we shift the pointer up slightly if needed to get PetscScalar aligned
        - if shifted we store at ptr[-1] the amount of shift (plus a classid)
+
+    Since not all systems support debuggers and a failure case is too large a malloc generating a signal we record with
+    PetscSignalHandlerSetErrorMessage() large memory allocations so they get printed when PETSc catches the signal
+
 */
 #define SHIFT_CLASSID 456123
 
 PETSC_EXTERN PetscErrorCode PetscMallocAlign(size_t mem, PetscBool clear, int line, const char func[], const char file[], void **result)
 {
+  size_t trmalloc = PetscMallocGetCurrentSize();
+
   if (!mem) {
     *result = NULL;
     return PETSC_SUCCESS;
+  }
+  if (mem > 1000000000 || trmalloc > 64000000000) {
+    if (trmalloc > 0) PetscCall(PetscSNPrintf(SignalErrorMessageMalloc, sizeof(SignalErrorMessageMalloc), "Attempting malloc of size %zu. Current memory allocated by PETSc %zu\n", mem, trmalloc));
+    else PetscCall(PetscSNPrintf(SignalErrorMessageMalloc, sizeof(SignalErrorMessageMalloc), "Attempting malloc of size %zu.\n", mem));
   }
 #if PetscDefined(HAVE_MEMKIND)
   {
@@ -43,13 +56,20 @@ PETSC_EXTERN PetscErrorCode PetscMallocAlign(size_t mem, PetscBool clear, int li
   }
 #else /* PetscDefined(HAVE_MEMKIND) */
   #if PetscDefined(HAVE_DOUBLE_ALIGN_MALLOC) && (PETSC_MEMALIGN == 8)
+
+  if (mem > 1000000000 || trmalloc > 64000000000) PetscCall(PetscSignalHandlerSetErrorMessage(SignalErrorMessageMalloc));
   if (clear) *result = calloc(1 + mem / sizeof(int), sizeof(int));
   else *result = malloc(mem);
+  if (mem > 1000000000 || trmalloc > 64000000000) PetscSignalHandlerClearErrorMessage();
 
   PetscCheck(*result, PETSC_COMM_SELF, PETSC_ERR_MEM, "Memory requested %.0f", (PetscLogDouble)mem);
   if (PetscLogMemory) PetscCall(PetscMemzero(*result, mem));
   #elif PetscDefined(HAVE_POSIX_MEMALIGN)
+
+  if (mem > 1000000000 || trmalloc > 64000000000) PetscCall(PetscSignalHandlerSetErrorMessage(SignalErrorMessageMalloc));
   int ret = posix_memalign(result, PETSC_MEMALIGN, mem);
+  if (mem > 1000000000 || trmalloc > 64000000000) PetscSignalHandlerClearErrorMessage();
+
   PetscCheck(ret == 0, PETSC_COMM_SELF, PETSC_ERR_MEM, "Memory requested %.0f", (PetscLogDouble)mem);
   if (clear || PetscLogMemory) PetscCall(PetscMemzero(*result, mem));
   #else  /* PetscDefined(HAVE_DOUBLE_ALIGN_MALLOC) || PetscDefined(HAVE_POSIX_MEMALIGN) */

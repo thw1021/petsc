@@ -511,7 +511,6 @@ PetscErrorCode PetscFindInt(PetscInt key, PetscInt n, const PetscInt X[], PetscI
     PetscFunctionReturn(PETSC_SUCCESS);
   }
   PetscValidIntPointer(X, 3);
-  PetscCheckSorted(n, X);
   while (hi - lo > 1) {
     PetscInt mid = lo + (hi - lo) / 2;
     if (key < X[mid]) hi = mid;

@@ -70,6 +70,21 @@ static size_t       PetscLogMallocTraceThreshold = 0;
 static PetscViewer  PetscLogMallocTraceViewer    = NULL;
 
 /*@C
+    PetscMallocGetCurrentSize - get the current amount of memory PetscMalloc() has allocated. This is zero if logging of memory is turned off
+
+   Return value:
+.  mem - the amount of memory
+
+   Level: developer
+
+.seealso: `CHKMEMQ`, `PetscMalloc()`, `PetscFree()`, `PetscMallocSetDebug()`
+@*/
+size_t PetscMallocGetCurrentSize(void)
+{
+  return TRallocated;
+}
+
+/*@C
    PetscMallocValidate - Test the memory for corruption.  This can be called at any time between `PetscInitialize()` and `PetscFinalize()`
 
    Input Parameters:

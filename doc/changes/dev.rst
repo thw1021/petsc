@@ -13,6 +13,8 @@ Changes: Development
 
 - Add ``PetscOptionsBegin()``, ``PetscOptionsEnd()``, ``PetscOptionsInt()``, ``PetscOptionsBool()``, ``PetscOptionsIntArray()``,
   ``PetscOptionsReal()``, ``PetscOptionsRealArray()``, and ``PetscOptionsScalar()`` for Fortran
+- Add ``PetscMallocGetCurrentSize()``
+- Add ``PetscSignalHandlerSetErrorMessage()`` and ``PetscSignalHandlerClearErrorMessage()``
 
 .. rubric:: Configure/Build:
 

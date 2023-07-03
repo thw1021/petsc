@@ -15,8 +15,49 @@ struct SH {
   void      *ctx;
   struct SH *previous;
 };
-static struct SH *sh        = NULL;
-static PetscBool  SignalSet = PETSC_FALSE;
+static struct SH  *sh                 = NULL;
+static PetscBool   SignalSet          = PETSC_FALSE;
+static const char *SignalErrorMessage = NULL;
+
+/*@
+   PetscSignalHandlerSetErrorMessage - Sets a message that will be printed if a signal is detected
+
+   Not Collective
+
+   Input Parameter:
+.  message - the message, must be a static global character array
+
+   Level: developer
+
+   Notes:
+   This allows the developer to provide state information that is not otherwise available before a call that may generate a signal.
+   For example it is used by `PetscMalloc()` to indicate the size of large allocations.
+
+   Normally the state information could be obtained by prudent use of a debugger but some systems such as those run by DOE LCFs make
+   this impossible.
+
+.seealso: `PetscSignalHandlerClearErrorMessage()`, `PetscPushSignalHandler()`
+@*/
+PetscErrorCode PetscSignalHandlerSetErrorMessage(const char *message)
+{
+  SignalErrorMessage = message;
+  return PETSC_SUCCESS;
+}
+
+/*@
+   PetscSignalHandlerClearErrorMessage - Clears the message set with `PetscSignalHandlerSetErrorMessage()`
+
+   Not Collective
+
+   Level: developer
+
+.seealso: `PetscSignalHandlerSetErrorMessage()`, `PetscPushSignalHandler()`
+@*/
+PetscErrorCode PetscSignalHandlerClearErrorMessage(void)
+{
+  SignalErrorMessage = NULL;
+  return PETSC_SUCCESS;
+}
 
 /* Called by MPI_Abort() to suppress user-registered atexit()/on_exit() functions.
    See discussion at https://gitlab.com/petsc/petsc/-/merge_requests/2745.
@@ -142,6 +183,8 @@ PetscErrorCode PetscSignalHandlerDefault(int sig, void *ptr)
   ierr = (*PetscErrorPrintf)("------------------------------------------------------------------------\n");
   if (sig >= 0 && sig <= 20) ierr = (*PetscErrorPrintf)("Caught signal number %d %s\n", sig, SIGNAME[sig]);
   else ierr = (*PetscErrorPrintf)("Caught signal\n");
+
+  if (SignalErrorMessage) ierr = (*PetscErrorPrintf)(SignalErrorMessage);
 
   ierr = (*PetscErrorPrintf)("Try option -start_in_debugger or -on_error_attach_debugger\n");
   ierr = (*PetscErrorPrintf)("or see https://petsc.org/release/faq/#valgrind and https://petsc.org/release/faq/\n");

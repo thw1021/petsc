@@ -1020,6 +1020,7 @@ PETSC_EXTERN                PetscErrorCode (*PetscTrRealloc)(size_t, int, const 
 PETSC_EXTERN PetscErrorCode PetscMallocSetCoalesce(PetscBool);
 PETSC_EXTERN PetscErrorCode PetscMallocSet(PetscErrorCode (*)(size_t, PetscBool, int, const char[], const char[], void **), PetscErrorCode (*)(void *, int, const char[], const char[]), PetscErrorCode (*)(size_t, int, const char[], const char[], void **));
 PETSC_EXTERN PetscErrorCode PetscMallocClear(void);
+PETSC_EXTERN size_t         PetscMallocGetCurrentSize(void);
 
 /*
   Unlike PetscMallocSet and PetscMallocClear which overwrite the existing settings, these two functions save the previous choice of allocator, and should be used in pair.
