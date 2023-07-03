@@ -392,6 +392,7 @@ PETSC_EXTERN PetscErrorCode (*PetscHelpPrintf)(MPI_Comm, const char[], ...) PETS
 /*
      Defines PETSc profiling.
 */
+#include <petsclogtypes.h>
 #include <petsclog.h>
 
 /*

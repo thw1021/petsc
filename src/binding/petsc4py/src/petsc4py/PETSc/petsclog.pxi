@@ -34,16 +34,17 @@ cdef extern from * nogil:
 
     ctypedef int PetscLogClass
     PetscErrorCode PetscLogClassRegister"PetscClassIdRegister"(char[],PetscLogClass*)
-    PetscErrorCode PetscLogClassSetActive(PetscLogStage,PetscLogClass,PetscBool)
+    PetscErrorCode PetscLogClassActivate"PetscLogEventActivateClass"(PetscLogClass)
+    PetscErrorCode PetscLogClassDeactivate"PetscLogEventDeactivateClass"(PetscLogClass)
 
     ctypedef int PetscLogEvent
     PetscErrorCode PetscLogEventRegister(char[],PetscLogClass,PetscLogEvent*)
     PetscErrorCode PetscLogEventBegin(PetscLogEvent,PetscObject,PetscObject,PetscObject,PetscObject)
     PetscErrorCode PetscLogEventEnd(PetscLogEvent,PetscObject,PetscObject,PetscObject,PetscObject)
 
-    PetscErrorCode PetscLogEventSetActive(PetscLogStage,PetscLogEvent,PetscBool)
+    PetscErrorCode PetscLogEventActivate(PetscLogEvent)
+    PetscErrorCode PetscLogEventDeactivate(PetscLogEvent)
     PetscErrorCode PetscLogEventSetActiveAll(PetscLogEvent,PetscBool)
-    PetscErrorCode PetscLogEventGetActive(PetscLogStage,PetscLogEvent,PetscBool*)
     PetscErrorCode PetscLogEventGetPerfInfo(PetscLogStage,PetscLogEvent,PetscEventPerfInfo*)
 
 cdef extern from * nogil: # custom.h
