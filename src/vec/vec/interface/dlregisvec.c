@@ -73,11 +73,11 @@ PetscErrorCode ISInitializePackage(void)
   PetscCall(PetscOptionsGetString(NULL, NULL, "-log_exclude", logList, sizeof(logList), &opt));
   if (opt) {
     PetscCall(PetscStrInList("is", logList, ',', &pkg));
-    if (pkg) PetscCall(PetscLogClassSetActiveAll(IS_CLASSID, PETSC_FALSE));
-    if (pkg) PetscCall(PetscLogClassSetActiveAll(IS_LTOGM_CLASSID, PETSC_FALSE));
+    if (pkg) PetscCall(PetscLogEventExcludeClass(IS_CLASSID));
+    if (pkg) PetscCall(PetscLogEventExcludeClass(IS_LTOGM_CLASSID));
     PetscCall(PetscStrInList("section", logList, ',', &pkg));
-    if (pkg) PetscCall(PetscLogClassSetActiveAll(PETSC_SECTION_CLASSID, PETSC_FALSE));
-    if (pkg) PetscCall(PetscLogClassSetActiveAll(PETSC_SECTION_SYM_CLASSID, PETSC_FALSE));
+    if (pkg) PetscCall(PetscLogEventExcludeClass(PETSC_SECTION_CLASSID));
+    if (pkg) PetscCall(PetscLogEventExcludeClass(PETSC_SECTION_SYM_CLASSID));
   }
   /* Register package finalizer */
   PetscCall(PetscRegisterFinalize(ISFinalizePackage));
@@ -250,8 +250,8 @@ PetscErrorCode VecInitializePackage(void)
   PetscCall(PetscOptionsGetString(NULL, NULL, "-log_exclude", logList, sizeof(logList), &opt));
   if (opt) {
     PetscCall(PetscStrInList("vec", logList, ',', &pkg));
-    if (pkg) PetscCall(PetscLogClassSetActiveAll(VEC_CLASSID,PETSC_FALSE));
-    if (pkg) PetscCall(PetscLogClassSetActiveAll(PETSCSF_CLASSID,PETSC_FALSE));
+    if (pkg) PetscCall(PetscLogEventExcludeClass(VEC_CLASSID));
+    if (pkg) PetscCall(PetscLogEventExcludeClass(PETSCSF_CLASSID));
   }
 
   /*

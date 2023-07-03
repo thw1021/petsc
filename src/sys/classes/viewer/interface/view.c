@@ -63,7 +63,7 @@ PetscErrorCode PetscViewerInitializePackage(void)
   PetscCall(PetscOptionsGetString(NULL, NULL, "-log_exclude", logList, sizeof(logList), &opt));
   if (opt) {
     PetscCall(PetscStrInList("viewer", logList, ',', &pkg));
-    if (pkg) PetscCall(PetscLogClassSetActiveAll(PETSC_VIEWER_CLASSID, PETSC_FALSE));
+    if (pkg) PetscCall(PetscLogEventExcludeClass(PETSC_VIEWER_CLASSID));
   }
 #if defined(PETSC_HAVE_MATHEMATICA)
   PetscCall(PetscViewerMathematicaInitializePackage());
