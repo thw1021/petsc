@@ -3,6 +3,8 @@
 
 #include <petsc/private/petscimpl.h>
 
+#include <petsc/private/logimpldeprecated.h>
+
 /* --- Macros for resizable arrays that show up frequently in the implementation of logging --- */
 
 #define PETSC_LOG_RESIZABLE_ARRAY(Container, Entry, Key, Constructor, Destructor, Equal) \

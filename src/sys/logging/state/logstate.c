@@ -677,6 +677,32 @@ PetscErrorCode PetscLogStateStageGetInfo(PetscLogState state, PetscLogStage stag
 }
 
 /*@
+  PetscLogStateClassRegister - Register a class to with a `PetscLogState` used by `PetscLogHandler`s.
+
+  Logically collective on `PETSC_COMM_WORLD`
+
+  Input Parameters:
++ state - a `PetscLogState`
+. name - the name of a class registered with `PetscClassIdRegister()`
+- classid - the `PetscClassId` obtained from `PetscClassIdRegister()`
+
+  Output Parameter:
+. logclass - a `PetscLogClass` for this class with this state
+
+  Note:
+  Classes are automatically registered with PETSc's global logging state (`PetscLogGetState()`), so this
+  is only needed for non-global states.
+
+.seealso: [](ch_profiling), `PetscLogStateClassGetInfo()` `PetscLogStateGetClassFromName()`, `PetscLogStateGetClassFromClassId()`
+@*/
+PetscErrorCode PetscLogStateClassRegister(PetscLogState state, const char name[], PetscClassId id, PetscLogClass *logclass)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscLogRegistryClassRegister(state->registry, name, id, logclass));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   PetscLogStateClassGetInfo - Get the registration information of an class
 
   Not collective

@@ -2,6 +2,7 @@
 #define PETSCLOGDEPRECATED_H
 
 #include <petscsystypes.h>
+#include <petsclogtypes.h>
 #include <petscconf.h>
 
 /* These data structures are no longer used by any non-deprecated PETSc interface functions */
@@ -83,35 +84,64 @@ struct _n_PetscStageLog {
 
 PETSC_DEPRECATED_OBJECT("Use PetscLog interface functions (since version 3.20)") PETSC_UNUSED static PetscStageLog petsc_stageLog = NULL;
 
-PETSC_DEPRECATED_FUNCTION("Use PetscLog interface functions (since version 3.20)") static inline PetscErrorCode PetscLogGetStageLog(PetscStageLog *s)
+#define PETSC_DEPRECATED_LOG(c) PETSC_DEPRECATED_FUNCTION("Petsc" #c " is unused by PETSc (since version 3.20)") PETSC_UNUSED static inline
+
+/*@C
+  PetscLogGetStageLog - Deprecated.
+
+  Level: deprecated
+
+  Note:
+  PETSc performance logging and profiling is now split up between the logging state (`PetscLogState`) and the log handler (`PetscLogHandler`).
+  The global logging state is obtained with `PetscLogGetState()`; many log handlers may be used at once (`PetscLogHandlerStart()`) and the default log handler is not directly accessible.
+
+.seealso: [](ch_profiling), `PetscLogEventGetPerfInfo()` 
+@*/
+PETSC_DEPRECATED_LOG(StageLog) PetscErrorCode PetscLogGetStageLog(PetscStageLog *s)
 {
   *s = NULL;
   return PETSC_SUCCESS;
 }
 
-PETSC_DEPRECATED_FUNCTION("Use PetscLog interface functions (since version 3.20)") static inline PetscErrorCode PetscStageLogGetCurrent(PetscStageLog p, int *s)
+/*@C
+  PetscStageLogGetCurrent - Deprecated
+
+  Level: deprecated
+
+.seealso: [](ch_profiling)
+@*/
+PETSC_DEPRECATED_LOG(StageLog) PetscErrorCode PetscStageLogGetCurrent(PetscStageLog a, int * b)
 {
-  *s = -1;
+  (void)a;
+  *b = -1;
   return PETSC_SUCCESS;
 }
 
-PETSC_DEPRECATED_FUNCTION("Use PetscLog interface functions (since version 3.20)") static inline PetscErrorCode PetscStageLogGetEventPerfLog(PetscStageLog s, int i, PetscEventPerfLog *p)
-{
-  *p = NULL;
-  return PETSC_SUCCESS;
-}
+/*@C
+  PetscStageLogGetEventPerfLog - Deprecated
 
-PETSC_DEPRECATED_OBJECT("Create a PetscLogHandler object (since version 3.20)") PETSC_UNUSED static PetscErrorCode (*PetscLogPLB)(PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject) = NULL;
-PETSC_DEPRECATED_OBJECT("Create a PetscLogHandler object (since version 3.20)") PETSC_UNUSED static PetscErrorCode (*PetscLogPLE)(PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject) = NULL;
-PETSC_DEPRECATED_OBJECT("Create a PetscLogHandler object (since version 3.20)") PETSC_UNUSED static PetscErrorCode (*PetscLogPHC)(PetscObject);
-PETSC_DEPRECATED_OBJECT("Create a PetscLogHandler object (since version 3.20)") PETSC_UNUSED static PetscErrorCode (*PetscLogPHD)(PetscObject);
+  Level: deprecated
 
-PETSC_DEPRECATED_FUNCTION("Create a PetscLogHandler object (since version 3.20)") static inline PetscErrorCode PetscLogSet(PetscErrorCode (*a)(int, int, PetscObject, PetscObject, PetscObject, PetscObject), PetscErrorCode (*b)(int, int, PetscObject, PetscObject, PetscObject, PetscObject))
+  Note:
+  PETSc performance logging and profiling is now split up between the logging state (`PetscLogState`) and the log handler (`PetscLogHandler`).
+  The global logging state is obtained with `PetscLogGetState()`; many log handlers may be used at once (`PetscLogHandlerStart()`) and the default log handler is not directly accessible.
+
+.seealso: [](ch_profiling)
+@*/
+PETSC_DEPRECATED_LOG(StageLog) PetscErrorCode PetscStageLogGetEventPerfLog(PetscStageLog a, int b, PetscEventPerfLog * c)
 {
   (void)a;
   (void)b;
+  *c = NULL;
   return PETSC_SUCCESS;
 }
+
+#undef PETSC_DEPRECATED_LOG
+
+PETSC_DEPRECATED_OBJECT("User PetscLogLegacyCallbacksBegin() (since version 3.20)") PETSC_UNUSED static PetscErrorCode (*PetscLogPLB)(PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject) = NULL;
+PETSC_DEPRECATED_OBJECT("User PetscLogLegacyCallbacksBegin() (since version 3.20)") PETSC_UNUSED static PetscErrorCode (*PetscLogPLE)(PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject) = NULL;
+PETSC_DEPRECATED_OBJECT("User PetscLogLegacyCallbacksBegin() (since version 3.20)") PETSC_UNUSED static PetscErrorCode (*PetscLogPHC)(PetscObject) = NULL;
+PETSC_DEPRECATED_OBJECT("User PetscLogLegacyCallbacksBegin() (since version 3.20)") PETSC_UNUSED static PetscErrorCode (*PetscLogPHD)(PetscObject) = NULL;
 
 PETSC_DEPRECATED_FUNCTION("Use PetscLogEventsPause() (since version 3.20)") static inline PetscErrorCode PetscLogPushCurrentEvent_Internal(PetscLogEvent e)
 {
