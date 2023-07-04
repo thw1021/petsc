@@ -124,7 +124,7 @@ static PetscErrorCode PetscLogHandlerEventSync_Nested(PetscLogHandler h, PetscLo
   PetscLogEvent          nested_event;
 
   PetscFunctionBegin;
-  if (!nested->handler->EventSync) PetscFunctionReturn(PETSC_SUCCESS);
+  if (!nested->handler->eventSync) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscLogEventGetNestedEvent(h, e, &nested_event));
   PetscCall(PetscLogHandlerEventSync(nested->handler, nested_event, comm));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -183,7 +183,7 @@ static PetscErrorCode PetscLogHandlerObjectCreate_Nested(PetscLogHandler h, Pets
   PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->ctx;
 
   PetscFunctionBegin;
-  if (nested->handler->ObjectCreate) PetscCall(PetscLogHandlerObjectCreate(nested->handler, obj));
+  if (nested->handler->objectCreate) PetscCall(PetscLogHandlerObjectCreate(nested->handler, obj));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -192,7 +192,7 @@ static PetscErrorCode PetscLogHandlerObjectDestroy_Nested(PetscLogHandler h, Pet
   PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->ctx;
 
   PetscFunctionBegin;
-  if (nested->handler->ObjectDestroy) PetscCall(PetscLogHandlerObjectDestroy(nested->handler, obj));
+  if (nested->handler->objectDestroy) PetscCall(PetscLogHandlerObjectDestroy(nested->handler, obj));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -344,14 +344,14 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Nested(MPI_Comm comm, PetscLog
   handler = *handler_p;
   PetscCall(PetscLogHandlerContextCreate_Nested(comm, (PetscLogHandler_Nested *)&handler->ctx));
   handler->type          = PETSC_LOG_HANDLER_NESTED;
-  handler->Destroy       = PetscLogHandlerDestroy_Nested;
-  handler->StagePush     = PetscLogHandlerStagePush_Nested;
-  handler->StagePop      = PetscLogHandlerStagePop_Nested;
-  handler->EventBegin    = PetscLogHandlerEventBegin_Nested;
-  handler->EventEnd      = PetscLogHandlerEventEnd_Nested;
-  handler->EventSync     = PetscLogHandlerEventSync_Nested;
-  handler->ObjectCreate  = PetscLogHandlerObjectCreate_Nested;
-  handler->ObjectDestroy = PetscLogHandlerObjectDestroy_Nested;
-  handler->View          = PetscLogHandlerView_Nested;
+  handler->destroy       = PetscLogHandlerDestroy_Nested;
+  handler->stagePush     = PetscLogHandlerStagePush_Nested;
+  handler->stagePop      = PetscLogHandlerStagePop_Nested;
+  handler->eventBegin    = PetscLogHandlerEventBegin_Nested;
+  handler->eventEnd      = PetscLogHandlerEventEnd_Nested;
+  handler->eventSync     = PetscLogHandlerEventSync_Nested;
+  handler->objectCreate  = PetscLogHandlerObjectCreate_Nested;
+  handler->objectDestroy = PetscLogHandlerObjectDestroy_Nested;
+  handler->view          = PetscLogHandlerView_Nested;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

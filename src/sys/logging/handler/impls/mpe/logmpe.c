@@ -128,8 +128,8 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_MPE(MPI_Comm comm, PetscLogHan
   handler = *handler_p;
   PetscCall(PetscLogHandlerContextCreate_MPE((PetscLogHandler_MPE *)&handler->ctx));
   handler->type       = PETSC_LOG_HANDLER_MPE;
-  handler->Destroy    = PetscLogHandlerDestroy_MPE;
-  handler->EventBegin = PetscLogHandlerEventBegin_MPE;
-  handler->EventEnd   = PetscLogHandlerEventEnd_MPE;
+  handler->destroy    = PetscLogHandlerDestroy_MPE;
+  handler->eventBegin = PetscLogHandlerEventBegin_MPE;
+  handler->eventEnd   = PetscLogHandlerEventEnd_MPE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

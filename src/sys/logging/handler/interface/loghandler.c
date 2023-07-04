@@ -60,7 +60,7 @@ PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *handler)
   h        = *handler;
   *handler = NULL;
   if (h == NULL || --h->refct > 0) PetscFunctionReturn(PETSC_SUCCESS);
-  if (h->Destroy) PetscCall((*((h)->Destroy))(h));
+  if (h->destroy) PetscCall((*((h)->destroy))(h));
   PetscCall(PetscCommDestroy(&h->comm));
   PetscCall(PetscFree(h));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -131,20 +131,20 @@ PetscErrorCode PetscLogHandlerSetOperation(PetscLogHandler h, PetscLogHandlerOpT
   PetscValidPointer(h, 1);
   if (f) PetscValidPointer(f, 3);
   PetscFunctionBegin;
-#define PETSC_LOG_HANDLER_SET_OP_CASE(NAME, Name, Type, h, f) \
+#define PETSC_LOG_HANDLER_SET_OP_CASE(NAME, name, Type, h, f) \
   case PETSC_LOG_HANDLER_OP_##NAME: \
-    (h)->Name = (PetscLog##Type##Fn)f; \
+    (h)->name = (PetscLog##Type##Fn)f; \
     break;
   switch (type) {
-    PETSC_LOG_HANDLER_SET_OP_CASE(DESTROY, Destroy, Destroy, h, f)
-    PETSC_LOG_HANDLER_SET_OP_CASE(EVENT_BEGIN, EventBegin, Event, h, f)
-    PETSC_LOG_HANDLER_SET_OP_CASE(EVENT_END, EventEnd, Event, h, f)
-    PETSC_LOG_HANDLER_SET_OP_CASE(EVENT_SYNC, EventSync, EventSync, h, f)
-    PETSC_LOG_HANDLER_SET_OP_CASE(OBJECT_CREATE, ObjectCreate, Object, h, f)
-    PETSC_LOG_HANDLER_SET_OP_CASE(OBJECT_DESTROY, ObjectDestroy, Object, h, f)
-    PETSC_LOG_HANDLER_SET_OP_CASE(STAGE_PUSH, StagePush, Stage, h, f)
-    PETSC_LOG_HANDLER_SET_OP_CASE(STAGE_POP, StagePop, Stage, h, f)
-    PETSC_LOG_HANDLER_SET_OP_CASE(VIEW, View, View, h, f)
+    PETSC_LOG_HANDLER_SET_OP_CASE(DESTROY, destroy, Destroy, h, f)
+    PETSC_LOG_HANDLER_SET_OP_CASE(EVENT_BEGIN, eventBegin, Event, h, f)
+    PETSC_LOG_HANDLER_SET_OP_CASE(EVENT_END, eventEnd, Event, h, f)
+    PETSC_LOG_HANDLER_SET_OP_CASE(EVENT_SYNC, eventSync, EventSync, h, f)
+    PETSC_LOG_HANDLER_SET_OP_CASE(OBJECT_CREATE, objectCreate, Object, h, f)
+    PETSC_LOG_HANDLER_SET_OP_CASE(OBJECT_DESTROY, objectDestroy, Object, h, f)
+    PETSC_LOG_HANDLER_SET_OP_CASE(STAGE_PUSH, stagePush, Stage, h, f)
+    PETSC_LOG_HANDLER_SET_OP_CASE(STAGE_POP, stagePop, Stage, h, f)
+    PETSC_LOG_HANDLER_SET_OP_CASE(VIEW, view, View, h, f)
   }
 #undef PETSC_LOG_HANDLER_SET_OP_CASE
 
@@ -172,20 +172,20 @@ PetscErrorCode PetscLogHandlerGetOperation(PetscLogHandler h, PetscLogHandlerOpT
   PetscFunctionBegin;
   PetscValidPointer(h, 1);
   PetscValidPointer(f, 3);
-#define PETSC_LOG_HANDLER_GET_OP_CASE(NAME, Name, Type, h, f) \
+#define PETSC_LOG_HANDLER_GET_OP_CASE(NAME, name, Type, h, f) \
   case PETSC_LOG_HANDLER_OP_##NAME: \
-    *f = (void (*)(void))(h)->Name; \
+    *f = (void (*)(void))(h)->name; \
     break;
   switch (type) {
-    PETSC_LOG_HANDLER_GET_OP_CASE(DESTROY, Destroy, Destroy, h, f)
-    PETSC_LOG_HANDLER_GET_OP_CASE(EVENT_BEGIN, EventBegin, Event, h, f)
-    PETSC_LOG_HANDLER_GET_OP_CASE(EVENT_END, EventEnd, Event, h, f)
-    PETSC_LOG_HANDLER_GET_OP_CASE(EVENT_SYNC, EventSync, EventSync, h, f)
-    PETSC_LOG_HANDLER_GET_OP_CASE(OBJECT_CREATE, ObjectCreate, Object, h, f)
-    PETSC_LOG_HANDLER_GET_OP_CASE(OBJECT_DESTROY, ObjectDestroy, Object, h, f)
-    PETSC_LOG_HANDLER_GET_OP_CASE(STAGE_PUSH, StagePush, Stage, h, f)
-    PETSC_LOG_HANDLER_GET_OP_CASE(STAGE_POP, StagePop, Stage, h, f)
-    PETSC_LOG_HANDLER_GET_OP_CASE(VIEW, View, View, h, f)
+    PETSC_LOG_HANDLER_GET_OP_CASE(DESTROY, destroy, Destroy, h, f)
+    PETSC_LOG_HANDLER_GET_OP_CASE(EVENT_BEGIN, eventBegin, Event, h, f)
+    PETSC_LOG_HANDLER_GET_OP_CASE(EVENT_END, eventEnd, Event, h, f)
+    PETSC_LOG_HANDLER_GET_OP_CASE(EVENT_SYNC, eventSync, EventSync, h, f)
+    PETSC_LOG_HANDLER_GET_OP_CASE(OBJECT_CREATE, objectCreate, Object, h, f)
+    PETSC_LOG_HANDLER_GET_OP_CASE(OBJECT_DESTROY, objectDestroy, Object, h, f)
+    PETSC_LOG_HANDLER_GET_OP_CASE(STAGE_PUSH, stagePush, Stage, h, f)
+    PETSC_LOG_HANDLER_GET_OP_CASE(STAGE_POP, stagePop, Stage, h, f)
+    PETSC_LOG_HANDLER_GET_OP_CASE(VIEW, view, View, h, f)
   }
 #undef PETSC_LOG_HANDLER_GET_OP_CASE
 
@@ -269,7 +269,7 @@ PetscErrorCode PetscLogHandlerEventBegin(PetscLogHandler h, PetscLogEvent e, Pet
 {
   PetscFunctionBegin;
   PetscValidPointer(h, 1);
-  PetscLogHandlerTry(h, EventBegin, (h, e, o1, o2, o3, o4));
+  PetscLogHandlerTry(h, eventBegin, (h, e, o1, o2, o3, o4));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -294,7 +294,7 @@ PetscErrorCode PetscLogHandlerEventEnd(PetscLogHandler h, PetscLogEvent e, Petsc
 {
   PetscFunctionBegin;
   PetscValidPointer(h, 1);
-  PetscLogHandlerTry(h, EventEnd, (h, e, o1, o2, o3, o4));
+  PetscLogHandlerTry(h, eventEnd, (h, e, o1, o2, o3, o4));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -330,7 +330,7 @@ PetscErrorCode PetscLogHandlerEventSync(PetscLogHandler h, PetscLogEvent e, MPI_
     // only synchronze if h->comm and comm have the same processes or h->comm is PETSC_COMM_WORLD
     PetscCheck(h_comm_world != MPI_UNEQUAL || compare != MPI_UNEQUAL, comm, PETSC_ERR_SUP, "PetscLogHandlerSync does not support arbitrary mismatched communicators");
   }
-  PetscLogHandlerTry(h, EventSync, (h, e, comm));
+  PetscLogHandlerTry(h, eventSync, (h, e, comm));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -354,7 +354,7 @@ PetscErrorCode PetscLogHandlerObjectCreate(PetscLogHandler h, PetscObject obj)
 {
   PetscFunctionBegin;
   PetscValidPointer(h, 1);
-  PetscLogHandlerTry(h, ObjectCreate, (h, obj));
+  PetscLogHandlerTry(h, objectCreate, (h, obj));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -378,7 +378,7 @@ PetscErrorCode PetscLogHandlerObjectDestroy(PetscLogHandler h, PetscObject obj)
 {
   PetscFunctionBegin;
   PetscValidPointer(h, 1);
-  PetscLogHandlerTry(h, ObjectDestroy, (h, obj));
+  PetscLogHandlerTry(h, objectDestroy, (h, obj));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -405,7 +405,7 @@ PetscErrorCode PetscLogHandlerStagePush(PetscLogHandler h, PetscLogStage stage)
 {
   PetscFunctionBegin;
   PetscValidPointer(h, 1);
-  PetscLogHandlerTry(h, StagePush, (h, stage));
+  PetscLogHandlerTry(h, stagePush, (h, stage));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -432,7 +432,7 @@ PetscErrorCode PetscLogHandlerStagePop(PetscLogHandler h, PetscLogStage stage)
 {
   PetscFunctionBegin;
   PetscValidPointer(h, 1);
-  PetscLogHandlerTry(h, StagePop, (h, stage));
+  PetscLogHandlerTry(h, stagePop, (h, stage));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -455,6 +455,6 @@ PetscErrorCode PetscLogHandlerView(PetscLogHandler h, PetscViewer viewer)
   PetscFunctionBegin;
   PetscValidPointer(h, 1);
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 3);
-  PetscLogHandlerTry(h, View, (h, viewer));
+  PetscLogHandlerTry(h, view, (h, viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

@@ -143,10 +143,10 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Perfstubs(MPI_Comm comm, Petsc
   handler              = *handler_p;
   PetscCall(PetscLogHandlerContextCreate_Perfstubs((PetscLogHandler_Perfstubs *) &handler->ctx));
   handler->type        = PETSC_LOG_HANDLER_PERFSTUBS;
-  handler->Destroy     = PetscLogHandlerDestroy_Perfstubs;
-  handler->EventBegin  = PetscLogHandlerEventBegin_Perfstubs;
-  handler->EventEnd    = PetscLogHandlerEventEnd_Perfstubs;
-  handler->StagePush   = PetscLogHandlerStagePush_Perfstubs;
-  handler->StagePop    = PetscLogHandlerStagePop_Perfstubs;
+  handler->destroy     = PetscLogHandlerDestroy_Perfstubs;
+  handler->eventBegin  = PetscLogHandlerEventBegin_Perfstubs;
+  handler->eventEnd    = PetscLogHandlerEventEnd_Perfstubs;
+  handler->stagePush   = PetscLogHandlerStagePush_Perfstubs;
+  handler->stagePop    = PetscLogHandlerStagePop_Perfstubs;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
