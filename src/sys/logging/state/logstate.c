@@ -301,7 +301,7 @@ PetscErrorCode PetscLogStateStageSetActive(PetscLogState state, PetscLogStage st
   Level: developer
 
   Note:
-  This is called for the global state (`PetscLogGetState()`) in `PetscLogStageGetActive()`. 
+  This is called for the global state (`PetscLogGetState()`) in `PetscLogStageGetActive()`.
 
 .seealso: [](ch_profiling), `PetscLogState`, `PetscLogStageSetActive()`, `PetscLogHandler`, `PetscLogHandlerStart()`, `PetscLogHandlerEventBegin()`, `PetscLogHandlerEventEnd()`
 @*/
@@ -326,7 +326,7 @@ PetscErrorCode PetscLogStateStageGetActive(PetscLogState state, PetscLogStage st
   Level: developer
 
   Note:
-  This is called for the global state (`PetscLogGetState()`) in `PetscLogEventSetActive()`. 
+  This is called for the global state (`PetscLogGetState()`) in `PetscLogEventActivate()` and `PetscLogEventDeactivate()`.
 
 .seealso: [](ch_profiling), `PetscLogState`, `PetscLogEventGetActive()`, `PetscLogStateGetCurrentStage()`, `PetscLogEventSetActiveAll()`
 @*/
@@ -354,7 +354,7 @@ PetscErrorCode PetscLogStateEventSetActive(PetscLogState state, PetscLogStage st
   Level: developer
 
   Note:
-  This is called for the global state (`PetscLogGetState()`) in `PetscLogEventSetActiveAll()`. 
+  This is called for the global state (`PetscLogGetState()`) in `PetscLogEventSetActiveAll()`.
 
 .seealso: [](ch_profiling), `PetscLogState`, `PetscLogEventGetActive()`
 @*/
@@ -383,7 +383,7 @@ PetscErrorCode PetscLogStateEventSetActiveAll(PetscLogState state, PetscLogEvent
   Level: developer
 
   Note:
-  This is called for the global state (`PetscLogGetState()`) in `PetscLogClassSetActive()`. 
+  This is called for the global state (`PetscLogGetState()`) in `PetscLogEventActivateClass()` and `PetscLogEventDeactivateClass()`.
 
 .seealso: [](ch_profiling), `PetscLogState`, `PetscLogEventGetActive()`, `PetscLogStateClassSetActive()`
 @*/
@@ -418,7 +418,7 @@ PetscErrorCode PetscLogStateClassSetActive(PetscLogState state, PetscLogStage st
   Level: developer
 
   Note:
-  This is called for the global state (`PetscLogGetState()`) in `PetscLogClassSetActiveAll()`. 
+  This is called for the global state (`PetscLogGetState()`) in `PetscLogEventIncludeClass()` and `PetscLogEventExcludeClass()`.
 
 .seealso: [](ch_profiling), `PetscLogState`, `PetscLogEventGetActive()`, `PetscLogStateClassSetActive()`
 @*/
