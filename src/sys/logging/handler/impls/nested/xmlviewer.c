@@ -152,6 +152,7 @@ static PetscErrorCode PetscPrintExeSpecs(PetscViewer viewer)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+#if PetscDefined(USE_LOG)
 static PetscErrorCode PetscPrintXMLGlobalPerformanceElement(PetscViewer viewer, const char *name, const char *desc, PetscLogDouble local_val, const PetscBool print_average, const PetscBool print_total)
 {
   PetscLogDouble min, tot, ratio, avg;
@@ -230,6 +231,7 @@ static PetscErrorCode PetscPrintGlobalPerformance(PetscViewer viewer, PetscLogDo
   PetscCall(PetscViewerXMLEndSection(viewer, "globalperformance"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+#endif
 
 /* Print the global performance: max, max/min, average and total of
  *      time, objects, flops, flops/sec, memory, MPI messages, MPI message lengths, MPI reductions.
@@ -415,7 +417,6 @@ static PetscErrorCode PetscLogNestedTreePrintTop(PetscViewer viewer, PetscNested
 PETSC_INTERN PetscErrorCode PetscLogHandlerView_Nested_XML(PetscLogHandler_Nested nested, PetscNestedEventTree *tree, PetscViewer viewer)
 {
   PetscLogDouble  locTotalTime;
-  PetscLogHandler default_handler = nested->handler;
 
   PetscFunctionBegin;
   PetscCall(PetscViewerInitASCII_XML(viewer));
@@ -431,7 +432,11 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerView_Nested_XML(PetscLogHandler_Neste
     PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(nested->handler, 0, 0, &main_stage_info));
     locTotalTime = main_stage_info->time;
   }
-  PetscCall(PetscPrintGlobalPerformance(viewer, locTotalTime, default_handler));
+#if PetscDefined(USE_LOG)
+  PetscCall(PetscPrintGlobalPerformance(viewer, locTotalTime, nested->handler));
+#else
+  (void)locTotalTime;
+#endif
   PetscCall(PetscLogNestedTreePrintTop(viewer, tree, nested->threshold, PETSC_LOG_NESTED_XML));
   PetscCall(PetscViewerXMLEndSection(viewer, "petscroot"));
   PetscFunctionReturn(PETSC_SUCCESS);
