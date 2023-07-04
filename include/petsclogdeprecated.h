@@ -95,7 +95,7 @@ PETSC_DEPRECATED_OBJECT("Use PetscLog interface functions (since version 3.20)")
   PETSc performance logging and profiling is now split up between the logging state (`PetscLogState`) and the log handler (`PetscLogHandler`).
   The global logging state is obtained with `PetscLogGetState()`; many log handlers may be used at once (`PetscLogHandlerStart()`) and the default log handler is not directly accessible.
 
-.seealso: [](ch_profiling), `PetscLogEventGetPerfInfo()` 
+.seealso: [](ch_profiling), `PetscLogEventGetPerfInfo()`
 @*/
 PETSC_DEPRECATED_LOG(StageLog) PetscErrorCode PetscLogGetStageLog(PetscStageLog *s)
 {

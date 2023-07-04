@@ -9,7 +9,7 @@
 
   Level: advanced
 
-  Note: 
+  Note:
   This is the data structure that describes profiling statsitics collected for an event from
   the default log handler (`PetscLogDefaultBegin()`) using `PetscLogEventGetPerfInfo()`.
 
@@ -117,7 +117,7 @@ typedef enum {
   updates about events (`PetscLogEventBegin()` / `PetscLogEventEnd()`), stages (`PetscLogStagePush()` /
   `PetscLogStagePop()`), and objects (`PetscLogObjectCreate()` / `PetscLogObjectDestroy()`).  After
   collecting information the logger can summarize its data with `PetscLogHandlerView()`.
-   
+
   Usage:
 
 .vb
@@ -128,7 +128,7 @@ PetscErrorCode UserEventBegin(PetscLogHandler handler, PetscLogEvent e, PetscObj
 {
   PetscLogState state;
   UserCtx      *user_context;
-  
+
   PetscFunctionBegin;
   PetscLogHandlerGetState(handler, &state); // use the state to get information about the event, the current stage, etc.
   PetscLogHandlerGetContext(handler, (void *) &user_context);
