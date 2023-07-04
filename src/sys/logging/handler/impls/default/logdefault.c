@@ -1785,14 +1785,14 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Default(MPI_Comm comm, PetscLo
   handler = *handler_p;
   PetscCall(PetscLogHandlerContextCreate_Default((PetscLogHandler_Default *)&handler->ctx));
   handler->type          = PETSC_LOG_HANDLER_DEFAULT;
-  handler->Destroy       = PetscLogHandlerDestroy_Default;
-  handler->EventBegin    = PetscLogHandlerEventBegin_Default;
-  handler->EventEnd      = PetscLogHandlerEventEnd_Default;
-  handler->EventSync     = PetscLogHandlerEventSync_Default;
-  handler->ObjectCreate  = PetscLogHandlerObjectCreate_Default;
-  handler->ObjectDestroy = PetscLogHandlerObjectDestroy_Default;
-  handler->StagePush     = PetscLogHandlerStagePush_Default;
-  handler->StagePop      = PetscLogHandlerStagePop_Default;
-  handler->View          = PetscLogHandlerView_Default;
+  handler->destroy       = PetscLogHandlerDestroy_Default;
+  handler->eventBegin    = PetscLogHandlerEventBegin_Default;
+  handler->eventEnd      = PetscLogHandlerEventEnd_Default;
+  handler->eventSync     = PetscLogHandlerEventSync_Default;
+  handler->objectCreate  = PetscLogHandlerObjectCreate_Default;
+  handler->objectDestroy = PetscLogHandlerObjectDestroy_Default;
+  handler->stagePush     = PetscLogHandlerStagePush_Default;
+  handler->stagePop      = PetscLogHandlerStagePop_Default;
+  handler->view          = PetscLogHandlerView_Default;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

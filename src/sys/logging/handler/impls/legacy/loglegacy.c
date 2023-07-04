@@ -53,11 +53,11 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Legacy(PetscErrorCode (*PetscL
   handler = *handler_p;
   PetscCall(PetscNew(&legacy));
   handler->ctx           = (void *)legacy;
-  handler->EventBegin    = PetscLogPLB ? PetscLogHandlerEventBegin_Legacy : NULL;
-  handler->EventEnd      = PetscLogPLE ? PetscLogHandlerEventEnd_Legacy : NULL;
-  handler->ObjectCreate  = PetscLogPLE ? PetscLogHandlerObjectCreate_Legacy : NULL;
-  handler->ObjectDestroy = PetscLogPLE ? PetscLogHandlerObjectDestroy_Legacy : NULL;
-  handler->Destroy       = PetcLogHandlerDestroy_Legacy;
+  handler->eventBegin    = PetscLogPLB ? PetscLogHandlerEventBegin_Legacy : NULL;
+  handler->eventEnd      = PetscLogPLE ? PetscLogHandlerEventEnd_Legacy : NULL;
+  handler->objectCreate  = PetscLogPLE ? PetscLogHandlerObjectCreate_Legacy : NULL;
+  handler->objectDestroy = PetscLogPLE ? PetscLogHandlerObjectDestroy_Legacy : NULL;
+  handler->destroy       = PetcLogHandlerDestroy_Legacy;
 
   PetscFunctionReturn(PETSC_SUCCESS);
 }

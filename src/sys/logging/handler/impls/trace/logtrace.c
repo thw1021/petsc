@@ -67,7 +67,7 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Trace(MPI_Comm comm, PetscLogH
   handler             = *handler_p;
   handler->ctx        = NULL;
   handler->type       = PETSC_LOG_HANDLER_TRACE;
-  handler->EventBegin = PetscLogHandlerEventBegin_Trace;
-  handler->EventEnd   = PetscLogHandlerEventEnd_Trace;
+  handler->eventBegin = PetscLogHandlerEventBegin_Trace;
+  handler->eventEnd   = PetscLogHandlerEventEnd_Trace;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
