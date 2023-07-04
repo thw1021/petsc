@@ -18,12 +18,12 @@
 #include <petscdevice.h>
 #include <petsc/private/deviceimpl.h>
 
-PetscLogDouble petsc_BaseTime        = 0.0;
+PetscLogDouble petsc_BaseTime = 0.0;
 
 PetscInt           petsc_log_gid = -1; /* Global threadId counter */
 PETSC_TLS PetscInt petsc_log_tid = -1; /* Local threadId */
-PetscSpinlock PetscLogSpinLock;
-PetscBool PetscLogTidInitialized = PETSC_FALSE;
+PetscSpinlock      PetscLogSpinLock;
+PetscBool          PetscLogTidInitialized = PETSC_FALSE;
 
 PETSC_INTERN PetscErrorCode PetscLogTidInitialize(void)
 {
@@ -53,7 +53,6 @@ PETSC_INTERN PetscInt PetscLogGetTid(void)
 PetscLogHandlerHot PetscLogHandlers[PETSC_LOG_HANDLER_MAX] = {0};
 PetscBool          PetscLogMemory                          = PETSC_FALSE;
 PetscBool          PetscLogSyncOn                          = PETSC_FALSE;
-
 
 /* Global counters */
 PetscLogDouble petsc_TotalFlops      = 0.0; /* The number of flops */
@@ -136,7 +135,6 @@ PetscErrorCode PetscAddLogDoubleCnt(PetscLogDouble *cnt, PetscLogDouble *tot, Pe
   return PETSC_SUCCESS;
 }
 
-
   #endif
 
 PetscLogState petsc_log_state = NULL;
@@ -208,8 +206,10 @@ PETSC_INTERN PetscErrorCode PetscLogInitialize(void)
 
   /* Setup default logging structures */
   PetscCall(PetscLogStateCreate(&petsc_log_state));
+  for (PetscInt i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
+    if (PetscLogHandlers[i].handler) PetscCall(PetscLogHandlerSetState(PetscLogHandlers[i].handler, petsc_log_state));
+  }
   PetscCall(PetscLogStateStageRegister(petsc_log_state, "Main Stage", &stage));
-
   PetscCall(PetscLogTidInitialize());
 
   /* All processors sync here for more consistent logging */
@@ -326,13 +326,10 @@ PetscErrorCode PetscLogHandlerStart(PetscLogHandler h)
   }
   for (PetscInt i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
     if (PetscLogHandlers[i].handler == NULL) {
-      PetscLogState state;
-
       PetscCheck(h->refct > 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "handler should have a positive reference count");
       h->refct++;
       PetscCall(PetscLogHandlerCopyToHot(h, &PetscLogHandlers[i]));
-      PetscCall(PetscLogGetState(&state));
-      PetscCall(PetscLogHandlerSetState(h, state));
+      if (petsc_log_state) PetscCall(PetscLogHandlerSetState(h, petsc_log_state));
       PetscFunctionReturn(PETSC_SUCCESS);
     }
   }
@@ -592,7 +589,7 @@ PetscErrorCode PetscLogMPEBegin(void)
 }
 
   #if defined(PETSC_HAVE_TAU_PERFSTUBS)
-  #include <../src/sys/perfstubs/timer.h>
+    #include <../src/sys/perfstubs/timer.h>
 PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Perfstubs(MPI_Comm, PetscLogHandler *);
   #endif
 
