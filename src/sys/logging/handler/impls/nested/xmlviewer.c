@@ -58,6 +58,14 @@ static PetscErrorCode PetscViewerXMLEndSection(PetscViewer viewer, const char *n
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/* Initialize a viewer to XML, and initialize the XMLDepth static parameter */
+static PetscErrorCode PetscViewerFinalASCII_XML(PetscViewer viewer)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscViewerXMLEndSection(viewer, "root"));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode PetscViewerXMLPutString(PetscViewer viewer, const char *name, const char *desc, const char *value)
 {
   PetscInt XMLSectionDepthPetsc;
@@ -305,9 +313,9 @@ static PetscErrorCode PetscNestedNameGetBase(const char name[], const char *base
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogNestedTreePrint(PetscViewer viewer, double total_time, double threshold_time, const PetscNestedEventNode *parent_node, PetscEventPerfInfo *parent_info, const PetscNestedEventNode tree[], PetscEventPerfInfo perf[], PetscLogNestedType type)
+static PetscErrorCode PetscLogNestedTreePrint(PetscViewer viewer, double total_time, double threshold_time, const PetscNestedEventNode *parent_node, PetscEventPerfInfo *parent_info, const PetscNestedEventNode tree[], PetscEventPerfInfo perf[], PetscLogNestedType type, PetscBool print_events)
 {
-  PetscInt           num_children = 0;
+  PetscInt           num_children = 0, num_printed;
   PetscInt           num_nodes    = parent_node->num_descendants;
   PetscInt          *perm;
   PetscReal         *times;
@@ -318,6 +326,7 @@ static PetscErrorCode PetscLogNestedTreePrint(PetscViewer viewer, double total_t
     PetscAssert(tree[node].parent == parent_node->id, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Failed tree invariant");
     num_children++;
   }
+  num_printed = num_children;
   PetscCall(PetscMemzero(&other, sizeof(other)));
   PetscCall(PetscMalloc2(num_children + 2, &times, num_children + 2, &perm));
   for (PetscInt i = 0, node = 0; node < num_nodes; i++, node += 1 + tree[node].num_descendants) {
@@ -341,6 +350,7 @@ static PetscErrorCode PetscLogNestedTreePrint(PetscViewer viewer, double total_t
       add_to->messageLength += perf[node].messageLength;
       add_to->numReductions += perf[node].numReductions;
       add_to->count += perf[node].count;
+      num_printed--;
     }
   }
   perm[num_children]      = -1;
@@ -353,10 +363,15 @@ static PetscErrorCode PetscLogNestedTreePrint(PetscViewer viewer, double total_t
      * by apps such as speedscope (https://speedscope.app/). */
     PetscCall(PetscViewerASCIIPrintf(viewer, "%s %" PetscInt64_FMT "\n", parent_node->name, (PetscInt64)(-times[num_children] * 1e6)));
   }
+  if (other.time > 0.0) num_printed++;
+  // number of items other than "self" that will be printed
+  if (num_printed == 0) {
+    PetscCall(PetscFree2(times, perm));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
   // sort descending by time
   PetscCall(PetscSortRealWithArrayInt(num_children + 2, times, perm));
-
-  if (type == PETSC_LOG_NESTED_XML) PetscCall(PetscViewerXMLStartSection(viewer, "events", NULL));
+  if (type == PETSC_LOG_NESTED_XML && print_events) PetscCall(PetscViewerXMLStartSection(viewer, "events", NULL));
   for (PetscInt i = 0; i < num_children + 2; i++) {
     PetscInt       node       = perm[i];
     PetscLogDouble child_time = -times[i];
@@ -372,16 +387,15 @@ static PetscErrorCode PetscLogNestedTreePrint(PetscViewer viewer, double total_t
           const char *base_name;
           PetscCall(PetscNestedNameGetBase(tree[node].name, &base_name));
           PetscCall(PetscLogNestedTreePrintLine(viewer, &perf[node], ((double)perf[node].count) / ((double)parent_info->count), parent_info->count, base_name, total_time));
-          PetscCall(PetscLogNestedTreePrint(viewer, total_time, threshold_time, &tree[node], &perf[node], &tree[node + 1], &perf[node + 1], type));
+          PetscCall(PetscLogNestedTreePrint(viewer, total_time, threshold_time, &tree[node], &perf[node], &tree[node + 1], &perf[node + 1], type, PETSC_TRUE));
         }
         PetscCall(PetscViewerXMLEndSection(viewer, "event"));
       } else if (node >= 0) {
-        PetscCall(PetscLogNestedTreePrint(viewer, total_time, threshold_time, &tree[node], &perf[node], &tree[node + 1], &perf[node + 1], type));
+        PetscCall(PetscLogNestedTreePrint(viewer, total_time, threshold_time, &tree[node], &perf[node], &tree[node + 1], &perf[node + 1], type, PETSC_FALSE));
       }
     }
   }
-  if (type == PETSC_LOG_NESTED_XML) PetscCall(PetscViewerXMLEndSection(viewer, "events"));
-
+  if (type == PETSC_LOG_NESTED_XML && print_events) PetscCall(PetscViewerXMLEndSection(viewer, "events"));
   PetscCall(PetscFree2(times, perm));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -409,7 +423,7 @@ static PetscErrorCode PetscLogNestedTreePrintTop(PetscViewer viewer, PetscNested
     PetscCall(PetscViewerXMLPutDouble(viewer, "timethreshold", NULL, threshold, "%f"));
   }
   threshold_time = time * (threshold / 100.0 + 1.e-12);
-  PetscCall(PetscLogNestedTreePrint(viewer, time, threshold_time, main_stage, main_stage_perf, tree_rem, perf_rem, type));
+  PetscCall(PetscLogNestedTreePrint(viewer, time, threshold_time, main_stage, main_stage_perf, tree_rem, perf_rem, type, PETSC_FALSE));
   if (type == PETSC_LOG_NESTED_XML) PetscCall(PetscViewerXMLEndSection(viewer, "timertree"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -439,6 +453,7 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerView_Nested_XML(PetscLogHandler_Neste
 #endif
   PetscCall(PetscLogNestedTreePrintTop(viewer, tree, nested->threshold, PETSC_LOG_NESTED_XML));
   PetscCall(PetscViewerXMLEndSection(viewer, "petscroot"));
+  PetscCall(PetscViewerFinalASCII_XML(viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

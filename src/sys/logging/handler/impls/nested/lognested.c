@@ -180,9 +180,24 @@ static PetscErrorCode PetscLogHandlerContextCreate_Nested(MPI_Comm comm, PetscLo
 
 static PetscErrorCode PetscLogHandlerObjectCreate_Nested(PetscLogHandler h, PetscObject obj)
 {
+  PetscClassId           classid;
+  PetscInt               num_registered, num_nested_registered;
+  PetscLogState          state;
   PetscLogHandler_Nested nested = (PetscLogHandler_Nested)h->ctx;
 
   PetscFunctionBegin;
+  // register missing objects
+  PetscCall(PetscObjectGetClassId(obj, &classid));
+  PetscCall(PetscLogHandlerGetState(h, &state));
+  PetscCall(PetscLogStateGetNumClasses(nested->state, &num_nested_registered));
+  PetscCall(PetscLogStateGetNumClasses(state, &num_registered));
+  for (PetscLogClass c = num_nested_registered; c < num_registered; c++) {
+    PetscLogClassInfo class_info;
+    PetscLogClass     nested_c;
+
+    PetscCall(PetscLogStateClassGetInfo(state, c, &class_info));
+    PetscCall(PetscLogStateClassRegister(nested->state, class_info.name, class_info.classid, &nested_c));
+  }
   if (nested->handler->objectCreate) PetscCall(PetscLogHandlerObjectCreate(nested->handler, obj));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

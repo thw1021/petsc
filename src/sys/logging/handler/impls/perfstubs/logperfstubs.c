@@ -55,6 +55,7 @@ static PetscErrorCode PetscLogHandlerPSUpdateEvents(PetscLogHandler h)
 
     PetscCall(PetscLogStateEventGetInfo(state, (PetscLogEvent)i, &event_info));
     PetscStackCallExternalVoid("ps_timer_create_", ps_event.timer = ps_timer_create_(event_info.name));
+    ps_event.depth = 0;
     PetscCall(PetscLogPSArrayPush(ps->events, ps_event));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -76,6 +77,7 @@ static PetscErrorCode PetscLogHandlerPSUpdateStages(PetscLogHandler h)
 
     PetscCall(PetscLogStateStageGetInfo(state, (PetscLogStage)i, &stage_info));
     PetscStackCallExternalVoid("ps_timer_create_", ps_stage.timer = ps_timer_create_(stage_info.name));
+    ps_stage.depth = 0;
     PetscCall(PetscLogPSArrayPush(ps->stages, ps_stage));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
