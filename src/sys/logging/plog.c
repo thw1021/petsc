@@ -224,6 +224,10 @@ PETSC_INTERN PetscErrorCode PetscLogFinalize(void)
   PetscFunctionBegin;
 
   /* Resetting phase */
+  // pop remaining stages
+  if (petsc_log_state) {
+    while (petsc_log_state->current_stage >= 0) { PetscCall(PetscLogStagePop()); }
+  }
   for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) PetscCall(PetscLogHandlerDestroy(&PetscLogHandlers[i].handler));
   PetscCall(PetscArrayzero(PetscLogHandlers, PETSC_LOG_HANDLER_MAX));
   PetscCall(PetscLogStateDestroy(&petsc_log_state));
