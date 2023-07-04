@@ -169,7 +169,7 @@ static PetscErrorCode PetscLogGetHandler(PetscLogHandlerType type, PetscLogHandl
   Collective on `PETSC_COMM_WORLD`
 
   Output parameter:
-. state - The `PetscLogState` changed by registrations (such as `PetscLogEventRegsiter()`) and actions (such as `PetscLogEventBegin()` or `PetscLogStatePush()`)
+. state - The `PetscLogState` changed by registrations (such as `PetscLogEventRegister()`) and actions (such as `PetscLogEventBegin()` or `PetscLogStagePush()`)
 
   Level: developer
 
