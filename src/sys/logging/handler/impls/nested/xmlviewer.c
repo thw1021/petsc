@@ -416,7 +416,7 @@ static PetscErrorCode PetscLogNestedTreePrintTop(PetscViewer viewer, PetscNested
 
 PETSC_INTERN PetscErrorCode PetscLogHandlerView_Nested_XML(PetscLogHandler_Nested nested, PetscNestedEventTree *tree, PetscViewer viewer)
 {
-  PetscLogDouble  locTotalTime;
+  PetscLogDouble locTotalTime;
 
   PetscFunctionBegin;
   PetscCall(PetscViewerInitASCII_XML(viewer));

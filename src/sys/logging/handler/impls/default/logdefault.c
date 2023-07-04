@@ -12,45 +12,45 @@
 
 #if !PetscDefined(USE_LOG)
 // zeros for global counters
-static PetscLogDouble petsc_TotalFlops = 0.0;
-static PetscLogDouble petsc_irecv_ct = 0.0;
-static PetscLogDouble petsc_isend_ct = 0.0;
-static PetscLogDouble petsc_recv_ct = 0.0;
-static PetscLogDouble petsc_send_ct = 0.0;
-static PetscLogDouble petsc_irecv_len = 0.0;
-static PetscLogDouble petsc_isend_len = 0.0;
-static PetscLogDouble petsc_recv_len = 0.0;
-static PetscLogDouble petsc_send_len = 0.0;
+static PetscLogDouble petsc_TotalFlops   = 0.0;
+static PetscLogDouble petsc_irecv_ct     = 0.0;
+static PetscLogDouble petsc_isend_ct     = 0.0;
+static PetscLogDouble petsc_recv_ct      = 0.0;
+static PetscLogDouble petsc_send_ct      = 0.0;
+static PetscLogDouble petsc_irecv_len    = 0.0;
+static PetscLogDouble petsc_isend_len    = 0.0;
+static PetscLogDouble petsc_recv_len     = 0.0;
+static PetscLogDouble petsc_send_len     = 0.0;
 static PetscLogDouble petsc_allreduce_ct = 0.0;
-static PetscLogDouble petsc_gather_ct = 0.0;
-static PetscLogDouble petsc_scatter_ct = 0.0;
+static PetscLogDouble petsc_gather_ct    = 0.0;
+static PetscLogDouble petsc_scatter_ct   = 0.0;
 
 /* Thread local storage */
-static PetscLogDouble petsc_TotalFlops_th = 0.0;
-static PetscLogDouble petsc_irecv_ct_th = 0.0;
-static PetscLogDouble petsc_isend_ct_th = 0.0;
-static PetscLogDouble petsc_recv_ct_th = 0.0;
-static PetscLogDouble petsc_send_ct_th = 0.0;
-static PetscLogDouble petsc_irecv_len_th = 0.0;
-static PetscLogDouble petsc_isend_len_th = 0.0;
-static PetscLogDouble petsc_recv_len_th = 0.0;
-static PetscLogDouble petsc_send_len_th = 0.0;
+static PetscLogDouble petsc_TotalFlops_th   = 0.0;
+static PetscLogDouble petsc_irecv_ct_th     = 0.0;
+static PetscLogDouble petsc_isend_ct_th     = 0.0;
+static PetscLogDouble petsc_recv_ct_th      = 0.0;
+static PetscLogDouble petsc_send_ct_th      = 0.0;
+static PetscLogDouble petsc_irecv_len_th    = 0.0;
+static PetscLogDouble petsc_isend_len_th    = 0.0;
+static PetscLogDouble petsc_recv_len_th     = 0.0;
+static PetscLogDouble petsc_send_len_th     = 0.0;
 static PetscLogDouble petsc_allreduce_ct_th = 0.0;
-static PetscLogDouble petsc_gather_ct_th = 0.0;
-static PetscLogDouble petsc_scatter_ct_th = 0.0;
+static PetscLogDouble petsc_gather_ct_th    = 0.0;
+static PetscLogDouble petsc_scatter_ct_th   = 0.0;
 
-#if PetscDefined(HAVE_DEVICE)
+  #if PetscDefined(HAVE_DEVICE)
 /* Global GPU counters */
 static PetscLogDouble petsc_gflops = 0.0;
-static PetscLogDouble petsc_gtime = 0.0;
+static PetscLogDouble petsc_gtime  = 0.0;
 
 /* Thread local storage */
 static PetscLogDouble petsc_ctog_ct_th = 0.0;
 static PetscLogDouble petsc_gtoc_ct_th = 0.0;
 static PetscLogDouble petsc_ctog_sz_th = 0.0;
 static PetscLogDouble petsc_gtoc_sz_th = 0.0;
-static PetscLogDouble petsc_gflops_th = 0.0;
-#endif
+static PetscLogDouble petsc_gflops_th  = 0.0;
+  #endif
 #endif
 
 static PetscErrorCode PetscEventPerfInfoInit(PetscEventPerfInfo *eventInfo)
@@ -1818,10 +1818,13 @@ static PetscErrorCode PetscLogHandlerView_Default(PetscLogHandler handler, Petsc
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PETSC_INTERN PetscErrorCode PetscLogTidInitialize(void);
+
 PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Default(MPI_Comm comm, PetscLogHandler *handler_p)
 {
   PetscFunctionBegin;
   PetscLogHandler handler;
+  PetscCall(PetscLogTidInitialize());
   PetscCall(PetscLogHandlerCreate(comm, handler_p));
   handler = *handler_p;
   PetscCall(PetscLogHandlerContextCreate_Default((PetscLogHandler_Default *)&handler->ctx));
