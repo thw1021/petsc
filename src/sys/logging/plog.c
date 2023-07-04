@@ -17,9 +17,35 @@
 #include <petscviewer.h>
 #include <petscdevice.h>
 #include <petsc/private/deviceimpl.h>
-#if defined(PETSC_HAVE_TAU_PERFSTUBS)
-  #include <../src/sys/perfstubs/timer.h>
-#endif
+
+PetscLogDouble petsc_BaseTime        = 0.0;
+
+PetscInt           petsc_log_gid = -1; /* Global threadId counter */
+PETSC_TLS PetscInt petsc_log_tid = -1; /* Local threadId */
+PetscSpinlock PetscLogSpinLock;
+PetscBool PetscLogTidInitialized = PETSC_FALSE;
+
+PETSC_INTERN PetscErrorCode PetscLogTidInitialize(void)
+{
+  PetscFunctionBegin;
+
+  if (PetscLogTidInitialized) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscLogTidInitialized = PETSC_TRUE;
+  PetscCall(PetscSpinlockCreate(&PetscLogSpinLock));
+  petsc_log_tid = 0;
+  petsc_log_gid = 0;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscInt PetscLogGetTid(void)
+{
+  if (petsc_log_tid < 0) {
+    PetscCall(PetscSpinlockLock(&PetscLogSpinLock));
+    petsc_log_tid = ++petsc_log_gid;
+    PetscCall(PetscSpinlockUnlock(&PetscLogSpinLock));
+  }
+  return petsc_log_tid;
+}
 
 #if defined(PETSC_USE_LOG)
   #include <../src/sys/logging/handler/impls/default/logdefault.h>
@@ -28,16 +54,8 @@ PetscLogHandlerHot PetscLogHandlers[PETSC_LOG_HANDLER_MAX] = {0};
 PetscBool          PetscLogMemory                          = PETSC_FALSE;
 PetscBool          PetscLogSyncOn                          = PETSC_FALSE;
 
-  #if defined(PETSC_HAVE_THREADSAFETY)
-
-PetscInt           petsc_log_gid = -1; /* Global threadId counter */
-PETSC_TLS PetscInt petsc_log_tid = -1; /* Local threadId */
-
-PetscSpinlock PetscLogSpinLock;
-  #endif
 
 /* Global counters */
-PetscLogDouble petsc_BaseTime        = 0.0;
 PetscLogDouble petsc_TotalFlops      = 0.0; /* The number of flops */
 PetscLogDouble petsc_send_ct         = 0.0; /* The number of sends */
 PetscLogDouble petsc_recv_ct         = 0.0; /* The number of receives */
@@ -118,15 +136,6 @@ PetscErrorCode PetscAddLogDoubleCnt(PetscLogDouble *cnt, PetscLogDouble *tot, Pe
   return PETSC_SUCCESS;
 }
 
-PetscInt PetscLogGetTid(void)
-{
-  if (petsc_log_tid < 0) {
-    PetscCall(PetscSpinlockLock(&PetscLogSpinLock));
-    petsc_log_tid = ++petsc_log_gid;
-    PetscCall(PetscSpinlockUnlock(&PetscLogSpinLock));
-  }
-  return petsc_log_tid;
-}
 
   #endif
 
@@ -201,10 +210,7 @@ PETSC_INTERN PetscErrorCode PetscLogInitialize(void)
   PetscCall(PetscLogStateCreate(&petsc_log_state));
   PetscCall(PetscLogStateStageRegister(petsc_log_state, "Main Stage", &stage));
 
-  #if defined(PETSC_HAVE_THREADSAFETY)
-  petsc_log_tid = 0;
-  petsc_log_gid = 0;
-  #endif
+  PetscCall(PetscLogTidInitialize());
 
   /* All processors sync here for more consistent logging */
   PetscCallMPI(MPI_Barrier(PETSC_COMM_WORLD));
@@ -586,6 +592,7 @@ PetscErrorCode PetscLogMPEBegin(void)
 }
 
   #if defined(PETSC_HAVE_TAU_PERFSTUBS)
+  #include <../src/sys/perfstubs/timer.h>
 PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Perfstubs(MPI_Comm, PetscLogHandler *);
   #endif
 
