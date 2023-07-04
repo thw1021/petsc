@@ -250,7 +250,7 @@ PetscErrorCode PetscLogHandlerGetState(PetscLogHandler h, PetscLogState *state)
 
 /*@
   PetscLogHandlerEventBegin - Record the beginning of an event in a log handler
-  
+
   Not collective
 
   Input Arguments:
@@ -275,7 +275,7 @@ PetscErrorCode PetscLogHandlerEventBegin(PetscLogHandler h, PetscLogEvent e, Pet
 
 /*@
   PetscLogHandlerEventEnd - Record the end of an event in a log handler
-  
+
   Not collective
 
   Input Arguments:
@@ -300,7 +300,7 @@ PetscErrorCode PetscLogHandlerEventEnd(PetscLogHandler h, PetscLogEvent e, Petsc
 
 /*@
   PetscLogHandlerEventSync - Synchronize a logging event
-  
+
   Collective over comm
 
   Input Arguments:
@@ -321,7 +321,7 @@ PetscErrorCode PetscLogHandlerEventSync(PetscLogHandler h, PetscLogEvent e, MPI_
 
   PetscFunctionBegin;
   PetscValidPointer(h, 1);
-  PetscCall(MPI_Comm_size(comm, &size));
+  PetscCallMPI(MPI_Comm_size(comm, &size));
   if (comm == MPI_COMM_NULL || size == 1) PetscFunctionReturn(PETSC_SUCCESS); // nothing to sync
   if (PetscDefined(USE_DEBUG)) {
     PetscMPIInt h_comm_world, compare;
