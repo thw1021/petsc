@@ -22,15 +22,15 @@ struct _n_PetscLogHandler {
   PetscLogState       state;
   int                 refct;
   PetscLogHandlerType type;
-  PetscLogDestroyFn   Destroy;
-  PetscLogEventFn     EventBegin;
-  PetscLogEventFn     EventEnd;
-  PetscLogEventSyncFn EventSync;
-  PetscLogObjectFn    ObjectCreate;
-  PetscLogObjectFn    ObjectDestroy;
-  PetscLogStageFn     StagePush;
-  PetscLogStageFn     StagePop;
-  PetscLogViewFn      View;
+  PetscLogDestroyFn   destroy;
+  PetscLogEventFn     eventBegin;
+  PetscLogEventFn     eventEnd;
+  PetscLogEventSyncFn eventSync;
+  PetscLogObjectFn    objectCreate;
+  PetscLogObjectFn    objectDestroy;
+  PetscLogStageFn     stagePush;
+  PetscLogStageFn     stagePop;
+  PetscLogViewFn      view;
 };
 
 #endif /* #define PETSCLOGHANDLERIMPL_H */

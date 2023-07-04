@@ -282,11 +282,11 @@ static PetscErrorCode PetscLogHandlerCopyToHot(PetscLogHandler h, PetscLogHandle
 {
   PetscFunctionBegin;
   hot->handler       = h;
-  hot->EventBegin    = h->EventBegin;
-  hot->EventEnd      = h->EventEnd;
-  hot->EventSync     = h->EventSync;
-  hot->ObjectCreate  = h->ObjectCreate;
-  hot->ObjectDestroy = h->ObjectDestroy;
+  hot->EventBegin    = h->eventBegin;
+  hot->EventEnd      = h->eventEnd;
+  hot->EventSync     = h->eventSync;
+  hot->ObjectCreate  = h->objectCreate;
+  hot->ObjectDestroy = h->objectDestroy;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -739,7 +739,7 @@ PetscErrorCode PetscLogStagePush(PetscLogStage stage)
   PetscCall(PetscLogGetState(&state));
   for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
     PetscLogHandler h = PetscLogHandlers[i].handler;
-    if (h && h->StagePush) PetscCall(PetscLogHandlerStagePush(h, stage));
+    if (h && h->stagePush) PetscCall(PetscLogHandlerStagePush(h, stage));
   }
   PetscCall(PetscLogStateStagePush(state, stage));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -780,7 +780,7 @@ PetscErrorCode PetscLogStagePop(void)
   PetscCall(PetscLogStateStagePop(state));
   for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
     PetscLogHandler h = PetscLogHandlers[i].handler;
-    if (h && h->StagePop) PetscCall(PetscLogHandlerStagePop(h, current_stage));
+    if (h && h->stagePop) PetscCall(PetscLogHandlerStagePop(h, current_stage));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
