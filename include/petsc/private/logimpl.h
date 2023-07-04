@@ -198,13 +198,12 @@ PETSC_INTERN PetscSpinlock PetscLogSpinLock;
     #define PETSC_TLS _Thread_local
   #endif
   #define PETSC_INTERN_TLS extern PETSC_TLS PETSC_VISIBILITY_INTERNAL
-
-/* Access PETSc internal thread id */
-PETSC_INTERN PetscInt PetscLogGetTid(void);
 #else
   #define PETSC_TLS
   #define PETSC_INTERN_TLS PETSC_INTERN
 #endif
+/* Access PETSc internal thread id */
+PETSC_INTERN PetscInt PetscLogGetTid(void);
 
 #ifdef PETSC_USE_LOG
   #if defined(PETSC_HAVE_DEVICE)

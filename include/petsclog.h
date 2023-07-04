@@ -239,7 +239,6 @@ PETSC_EXTERN PetscErrorCode PetscLogClassGetId(const char[], PetscClassId *);
 PETSC_EXTERN PetscErrorCode PetscLogClassGetName(PetscClassId, const char **);
 
 PETSC_EXTERN PetscBool PetscLogMemory;
-
 PETSC_EXTERN PetscBool PetscLogSyncOn; /* true if logging synchronization is enabled */
 
 static inline PETSC_UNUSED PetscErrorCode PetscLogEventSync(PetscLogEvent e, MPI_Comm comm)
@@ -567,6 +566,7 @@ static inline int PetscMPIParallelComm(MPI_Comm comm)
 #else /* ---Logging is turned off --------------------------------------------*/
 
   #define PetscLogMemory PETSC_FALSE
+  #define PetscLogSyncOn PETSC_FALSE
 
   #define PetscLogGetState(a)     (*(a) = 0, PETSC_SUCCESS)
   #define PetscLogHandlerStart(a) PETSC_SUCCESS
@@ -593,6 +593,9 @@ static inline int PetscMPIParallelComm(MPI_Comm comm)
   #define PetscLogEventDeactivate(a)        PETSC_SUCCESS
   #define PetscLogEventDeactivatePush(a)    PETSC_SUCCESS
   #define PetscLogEventDeactivatePop(a)     PETSC_SUCCESS
+  #define PetscLogEventSetActiveAll(a, b)   PETSC_SUCCESS
+  #define PetscLogEventActivateClass(a)     PETSC_SUCCESS
+  #define PetscLogEventDeactivateClass(a)   PETSC_SUCCESS
   #define PetscLogEventGetId(a, b)          (*(b) = 0, PETSC_SUCCESS)
   #define PetscLogEventGetName(a, b)        (*(b) = 0, PETSC_SUCCESS)
   #define PetscLogEventGetPerfInfo(a, b, c) PETSC_SUCCESS
