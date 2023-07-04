@@ -365,7 +365,7 @@ static PetscErrorCode PetscLogHandlerObjectCreate_Default(PetscLogHandler h, Pet
   PetscLogHandler_Default def = (PetscLogHandler_Default)h->ctx;
   PetscLogState           state;
   PetscLogStage           stage;
-  PetscClassPerf     *classInfo;
+  PetscClassPerf         *classInfo;
   int                     oclass = 0;
 
   PetscFunctionBegin;
@@ -415,7 +415,7 @@ static PetscErrorCode PetscLogHandlerObjectDestroy_Default(PetscLogHandler h, Pe
   PetscLogHandler_Default def = (PetscLogHandler_Default)h->ctx;
   PetscLogState           state;
   PetscLogStage           stage;
-  PetscClassPerf     *classInfo;
+  PetscClassPerf         *classInfo;
   int                     oclass = 0;
 
   PetscFunctionBegin;
@@ -744,10 +744,10 @@ static PetscErrorCode PetscLogHandlerStagePush_Default(PetscLogHandler h, PetscL
 
 static PetscErrorCode PetscLogHandlerStagePop_Default(PetscLogHandler h, PetscLogStage old_stage)
 {
-  PetscLogHandler_Default def           = (PetscLogHandler_Default)h->ctx;
+  PetscLogHandler_Default def = (PetscLogHandler_Default)h->ctx;
   PetscLogStage           current_stage;
   PetscStagePerf         *old_stage_info;
-  PetscLogState           state; 
+  PetscLogState           state;
   PetscLogDouble          time;
 
   PetscFunctionBegin;
@@ -1381,7 +1381,7 @@ static PetscErrorCode PetscLogHandlerView_Default_Info(PetscLogHandler handler, 
 
       PetscCall(PetscLogGlobalNamesGlobalGetLocal(global_stages, stage, &stage_id));
       if (stage_id >= 0) {
-        PetscStagePerf   *stage_info;
+        PetscStagePerf *stage_info;
 
         PetscCall(PetscLogHandlerDefaultGetStageInfo(handler, stage, &stage_info));
         localStageUsed[stage]    = stage_info->used;
@@ -1784,15 +1784,15 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Default(MPI_Comm comm, PetscLo
   PetscCall(PetscLogHandlerCreate(comm, handler_p));
   handler = *handler_p;
   PetscCall(PetscLogHandlerContextCreate_Default((PetscLogHandler_Default *)&handler->ctx));
-  handler->type            = PETSC_LOG_HANDLER_DEFAULT;
-  handler->Destroy         = PetscLogHandlerDestroy_Default;
-  handler->EventBegin      = PetscLogHandlerEventBegin_Default;
-  handler->EventEnd        = PetscLogHandlerEventEnd_Default;
-  handler->EventSync       = PetscLogHandlerEventSync_Default;
-  handler->ObjectCreate    = PetscLogHandlerObjectCreate_Default;
-  handler->ObjectDestroy   = PetscLogHandlerObjectDestroy_Default;
-  handler->StagePush       = PetscLogHandlerStagePush_Default;
-  handler->StagePop        = PetscLogHandlerStagePop_Default;
-  handler->View            = PetscLogHandlerView_Default;
+  handler->type          = PETSC_LOG_HANDLER_DEFAULT;
+  handler->Destroy       = PetscLogHandlerDestroy_Default;
+  handler->EventBegin    = PetscLogHandlerEventBegin_Default;
+  handler->EventEnd      = PetscLogHandlerEventEnd_Default;
+  handler->EventSync     = PetscLogHandlerEventSync_Default;
+  handler->ObjectCreate  = PetscLogHandlerObjectCreate_Default;
+  handler->ObjectDestroy = PetscLogHandlerObjectDestroy_Default;
+  handler->StagePush     = PetscLogHandlerStagePush_Default;
+  handler->StagePop      = PetscLogHandlerStagePop_Default;
+  handler->View          = PetscLogHandlerView_Default;
   PetscFunctionReturn(PETSC_SUCCESS);
 }

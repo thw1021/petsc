@@ -17,20 +17,20 @@ typedef enum {
 } PetscLogHandlerType;
 
 struct _n_PetscLogHandler {
-  MPI_Comm               comm;
-  void                  *ctx;
-  PetscLogState          state;
-  int                    refct;
-  PetscLogHandlerType    type;
-  PetscLogDestroyFn     Destroy;
-  PetscLogEventFn       EventBegin;
-  PetscLogEventFn       EventEnd;
-  PetscLogEventSyncFn   EventSync;
-  PetscLogObjectFn      ObjectCreate;
-  PetscLogObjectFn      ObjectDestroy;
-  PetscLogStageFn       StagePush;
-  PetscLogStageFn       StagePop;
-  PetscLogViewFn        View;
+  MPI_Comm            comm;
+  void               *ctx;
+  PetscLogState       state;
+  int                 refct;
+  PetscLogHandlerType type;
+  PetscLogDestroyFn   Destroy;
+  PetscLogEventFn     EventBegin;
+  PetscLogEventFn     EventEnd;
+  PetscLogEventSyncFn EventSync;
+  PetscLogObjectFn    ObjectCreate;
+  PetscLogObjectFn    ObjectDestroy;
+  PetscLogStageFn     StagePush;
+  PetscLogStageFn     StagePop;
+  PetscLogViewFn      View;
 };
 
 #endif /* #define PETSCLOGHANDLERIMPL_H */

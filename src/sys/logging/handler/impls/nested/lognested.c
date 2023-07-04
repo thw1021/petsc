@@ -343,15 +343,15 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Nested(MPI_Comm comm, PetscLog
   PetscCall(PetscLogHandlerCreate(comm, handler_p));
   handler = *handler_p;
   PetscCall(PetscLogHandlerContextCreate_Nested(comm, (PetscLogHandler_Nested *)&handler->ctx));
-  handler->type             = PETSC_LOG_HANDLER_NESTED;
-  handler->Destroy          = PetscLogHandlerDestroy_Nested;
-  handler->StagePush        = PetscLogHandlerStagePush_Nested;
-  handler->StagePop         = PetscLogHandlerStagePop_Nested;
-  handler->EventBegin       = PetscLogHandlerEventBegin_Nested;
-  handler->EventEnd         = PetscLogHandlerEventEnd_Nested;
-  handler->EventSync        = PetscLogHandlerEventSync_Nested;
-  handler->ObjectCreate     = PetscLogHandlerObjectCreate_Nested;
-  handler->ObjectDestroy    = PetscLogHandlerObjectDestroy_Nested;
-  handler->View             = PetscLogHandlerView_Nested;
+  handler->type          = PETSC_LOG_HANDLER_NESTED;
+  handler->Destroy       = PetscLogHandlerDestroy_Nested;
+  handler->StagePush     = PetscLogHandlerStagePush_Nested;
+  handler->StagePop      = PetscLogHandlerStagePop_Nested;
+  handler->EventBegin    = PetscLogHandlerEventBegin_Nested;
+  handler->EventEnd      = PetscLogHandlerEventEnd_Nested;
+  handler->EventSync     = PetscLogHandlerEventSync_Nested;
+  handler->ObjectCreate  = PetscLogHandlerObjectCreate_Nested;
+  handler->ObjectDestroy = PetscLogHandlerObjectDestroy_Nested;
+  handler->View          = PetscLogHandlerView_Nested;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
