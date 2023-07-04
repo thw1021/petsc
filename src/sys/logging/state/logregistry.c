@@ -26,7 +26,7 @@ static PetscErrorCode PetscLogClassArrayEqual(PetscLogClassInfo *class_info, Pet
 {
   PetscFunctionBegin;
   if (key->name) {
-    PetscCall(PetscStrcmp(class_info->name, key->name, is_equal)); \
+    PetscCall(PetscStrcmp(class_info->name, key->name, is_equal));
   } else {
     *is_equal = (class_info->classid == key->classid) ? PETSC_TRUE : PETSC_FALSE;
   }
@@ -148,7 +148,7 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryGetClassFromClassId(PetscLogRegistry
   PetscLogClassInfo key;
 
   PetscFunctionBegin;
-  key.name = NULL;
+  key.name    = NULL;
   key.classid = classid;
   PetscCall(PetscLogClassArrayFind(registry->classes, &key, class));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -159,7 +159,7 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryGetClassFromName(PetscLogRegistry re
   PetscLogClassInfo key;
 
   PetscFunctionBegin;
-  key.name = (char *) name;
+  key.name    = (char *)name;
   key.classid = -1;
   PetscCall(PetscLogClassArrayFind(registry->classes, &key, class));
   PetscFunctionReturn(PETSC_SUCCESS);

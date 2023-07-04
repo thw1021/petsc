@@ -21,7 +21,8 @@
 
 .seealso: [](ch_profiling)
 @*/
-PETSC_DEPRECATED_LOG(ClassPerfInfo) PetscErrorCode PetscLogClassPerfInfoClear(PetscClassPerfInfo *a) {
+PETSC_DEPRECATED_LOG(ClassPerfInfo) PetscErrorCode PetscLogClassPerfInfoClear(PetscClassPerfInfo *a)
+{
   (void)a;
   return PETSC_SUCCESS;
 }
@@ -37,7 +38,8 @@ PETSC_DEPRECATED_LOG(ClassPerfInfo) PetscErrorCode PetscLogClassPerfInfoClear(Pe
 
 .seealso: [](ch_profiling)
 @*/
-PETSC_DEPRECATED_LOG(ClassPerfLog) PetscErrorCode PetscLogClassPerfLogCreate(PetscClassPerfLog *a) {
+PETSC_DEPRECATED_LOG(ClassPerfLog) PetscErrorCode PetscLogClassPerfLogCreate(PetscClassPerfLog *a)
+{
   *a = NULL;
   return PETSC_SUCCESS;
 }
@@ -53,8 +55,9 @@ PETSC_DEPRECATED_LOG(ClassPerfLog) PetscErrorCode PetscLogClassPerfLogCreate(Pet
 
 .seealso: [](ch_profiling)
 @*/
-PETSC_DEPRECATED_LOG(ClassPerfLog) PetscErrorCode PetscLogClassPerfLogDestroy(PetscClassPerfLog a) {
-  (void) a;
+PETSC_DEPRECATED_LOG(ClassPerfLog) PetscErrorCode PetscLogClassPerfLogDestroy(PetscClassPerfLog a)
+{
+  (void)a;
   return PETSC_SUCCESS;
 }
 
@@ -380,7 +383,7 @@ PETSC_DEPRECATED_LOG(EventPerfLog) PetscErrorCode PetscEventPerfLogEnsureSize(Pe
 
 .seealso: [](ch_profiling)
 @*/
-PETSC_DEPRECATED_LOG(EventPerfLog) PetscErrorCode PetscEventPerfLogGetVisible(PetscEventPerfLog a, PetscLogEvent b, PetscBool * c)
+PETSC_DEPRECATED_LOG(EventPerfLog) PetscErrorCode PetscEventPerfLogGetVisible(PetscEventPerfLog a, PetscLogEvent b, PetscBool *c)
 {
   (void)a;
   (void)b;
@@ -417,7 +420,7 @@ PETSC_DEPRECATED_LOG(EventPerfLog) PetscErrorCode PetscEventPerfLogSetVisible(Pe
 
 .seealso: [](ch_profiling)
 @*/
-PETSC_DEPRECATED_LOG(EventRegLog) PetscErrorCode PetscEventRegLogCreate(PetscEventRegLog * a)
+PETSC_DEPRECATED_LOG(EventRegLog) PetscErrorCode PetscEventRegLogCreate(PetscEventRegLog *a)
 {
   *a = NULL;
   return PETSC_SUCCESS;
@@ -449,7 +452,7 @@ PETSC_DEPRECATED_LOG(EventRegLog) PetscErrorCode PetscEventRegLogDestroy(PetscEv
 
 .seealso: [](ch_profiling), `PetscLogEventGetId()`
 @*/
-PETSC_DEPRECATED_LOG(EventRegLog) PetscErrorCode PetscEventRegLogGetEvent(PetscEventRegLog a, const char * b, PetscLogEvent * c)
+PETSC_DEPRECATED_LOG(EventRegLog) PetscErrorCode PetscEventRegLogGetEvent(PetscEventRegLog a, const char *b, PetscLogEvent *c)
 {
   (void)a;
   (void)b;
@@ -467,7 +470,7 @@ PETSC_DEPRECATED_LOG(EventRegLog) PetscErrorCode PetscEventRegLogGetEvent(PetscE
 
 .seealso: [](ch_profiling), `PetscLogEventRegister()`
 @*/
-PETSC_DEPRECATED_LOG(EventRegLog) PetscErrorCode PetscEventRegLogRegister(PetscEventRegLog a, const char * b, PetscClassId c, PetscLogEvent * d)
+PETSC_DEPRECATED_LOG(EventRegLog) PetscErrorCode PetscEventRegLogRegister(PetscEventRegLog a, const char *b, PetscClassId c, PetscLogEvent *d)
 {
   (void)a;
   (void)b;
@@ -518,7 +521,7 @@ M*/
 
 .seealso: [](ch_profiling)
 @*/
-PETSC_DEPRECATED_LOG(StageLog) PetscErrorCode PetscStageLogCreate(PetscStageLog * a)
+PETSC_DEPRECATED_LOG(StageLog) PetscErrorCode PetscStageLogCreate(PetscStageLog *a)
 {
   *a = NULL;
   return PETSC_SUCCESS;
@@ -552,7 +555,7 @@ PETSC_DEPRECATED_LOG(StageLog) PetscErrorCode PetscStageLogDestroy(PetscStageLog
 
 .seealso: [](ch_profiling)
 @*/
-PETSC_DEPRECATED_LOG(StageLog) PetscErrorCode PetscStageLogGetActive(PetscStageLog a, int b, PetscBool * c)
+PETSC_DEPRECATED_LOG(StageLog) PetscErrorCode PetscStageLogGetActive(PetscStageLog a, int b, PetscBool *c)
 {
   (void)a;
   (void)b;
@@ -571,7 +574,7 @@ PETSC_DEPRECATED_LOG(StageLog) PetscErrorCode PetscStageLogGetActive(PetscStageL
 
 .seealso: [](ch_profiling)
 @*/
-PETSC_DEPRECATED_LOG(StageLog) PetscErrorCode PetscStageLogGetClassPerfLog(PetscStageLog a, int b, PetscClassPerfLog * c)
+PETSC_DEPRECATED_LOG(StageLog) PetscErrorCode PetscStageLogGetClassPerfLog(PetscStageLog a, int b, PetscClassPerfLog *c)
 {
   (void)a;
   (void)b;
@@ -590,7 +593,7 @@ PETSC_DEPRECATED_LOG(StageLog) PetscErrorCode PetscStageLogGetClassPerfLog(Petsc
 
 .seealso: [](ch_profiling)
 @*/
-PETSC_DEPRECATED_LOG(StageLog) PetscErrorCode PetscStageLogGetClassRegLog(PetscStageLog a, PetscClassRegLog * c)
+PETSC_DEPRECATED_LOG(StageLog) PetscErrorCode PetscStageLogGetClassRegLog(PetscStageLog a, PetscClassRegLog *c)
 {
   (void)a;
   *c = NULL;
@@ -608,7 +611,7 @@ PETSC_DEPRECATED_LOG(StageLog) PetscErrorCode PetscStageLogGetClassRegLog(PetscS
 
 .seealso: [](ch_profiling)
 @*/
-PETSC_DEPRECATED_LOG(StageLog) PetscErrorCode PetscStageLogGetEventRegLog(PetscStageLog a, PetscEventRegLog * c)
+PETSC_DEPRECATED_LOG(StageLog) PetscErrorCode PetscStageLogGetEventRegLog(PetscStageLog a, PetscEventRegLog *c)
 {
   (void)a;
   *c = NULL;
@@ -626,14 +629,13 @@ PETSC_DEPRECATED_LOG(StageLog) PetscErrorCode PetscStageLogGetEventRegLog(PetscS
 
 .seealso: [](ch_profiling)
 @*/
-PETSC_DEPRECATED_LOG(StageLog) PetscErrorCode PetscStageLogGetStage(PetscStageLog a, const char * b, PetscLogStage * c)
+PETSC_DEPRECATED_LOG(StageLog) PetscErrorCode PetscStageLogGetStage(PetscStageLog a, const char *b, PetscLogStage *c)
 {
   (void)a;
   (void)b;
   *c = -1;
   return PETSC_SUCCESS;
 }
-
 
 /*@C
   PetscStageLogGetVisible - Deprecated
@@ -646,7 +648,7 @@ PETSC_DEPRECATED_LOG(StageLog) PetscErrorCode PetscStageLogGetStage(PetscStageLo
 
 .seealso: [](ch_profiling)
 @*/
-PETSC_DEPRECATED_LOG(StageLog) PetscErrorCode PetscStageLogGetVisible(PetscStageLog a, int b, PetscBool * c)
+PETSC_DEPRECATED_LOG(StageLog) PetscErrorCode PetscStageLogGetVisible(PetscStageLog a, int b, PetscBool *c)
 {
   (void)a;
   (void)b;
@@ -692,7 +694,7 @@ PETSC_DEPRECATED_LOG(StageLog) PetscErrorCode PetscStageLogPush(PetscStageLog a,
 
 .seealso: [](ch_profiling)
 @*/
-PETSC_DEPRECATED_LOG(StageLog) PetscErrorCode PetscStageLogRegister(PetscStageLog a, const char * b, int * c)
+PETSC_DEPRECATED_LOG(StageLog) PetscErrorCode PetscStageLogRegister(PetscStageLog a, const char *b, int *c)
 {
   (void)a;
   (void)b;

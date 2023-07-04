@@ -7,7 +7,6 @@
 
 /* SUBMANSEC = Sys */
 
-
 /* convert an index i to an index suitable for indexing a PetscBT, such that
  * bt[PetscBTIndex(i)] returns the i'th value of the bt */
 static inline size_t PetscBTIndex_Internal(PetscInt index)

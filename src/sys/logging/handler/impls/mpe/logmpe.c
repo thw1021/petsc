@@ -29,7 +29,7 @@ static PetscErrorCode PetscLogHandlerContextCreate_MPE(PetscLogHandler_MPE *mpe_
 
 static PetscErrorCode PetscLogHandlerDestroy_MPE(PetscLogHandler h)
 {
-  PetscLogHandler_MPE mpe = (PetscLogHandler_MPE) h->ctx;
+  PetscLogHandler_MPE mpe = (PetscLogHandler_MPE)h->ctx;
 
   PetscFunctionBegin;
   PetscCall(PetscLogMPEArrayDestroy(&mpe->events));
@@ -37,7 +37,7 @@ static PetscErrorCode PetscLogHandlerDestroy_MPE(PetscLogHandler h)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-  #define PETSC_RGB_COLORS_MAX 39
+#define PETSC_RGB_COLORS_MAX 39
 static const char *PetscLogMPERGBColors[PETSC_RGB_COLORS_MAX] = {"OliveDrab:      ", "BlueViolet:     ", "CadetBlue:      ", "CornflowerBlue: ", "DarkGoldenrod:  ", "DarkGreen:      ", "DarkKhaki:      ", "DarkOliveGreen: ",
                                                                  "DarkOrange:     ", "DarkOrchid:     ", "DarkSeaGreen:   ", "DarkSlateGray:  ", "DarkTurquoise:  ", "DeepPink:       ", "DarkKhaki:      ", "DimGray:        ",
                                                                  "DodgerBlue:     ", "GreenYellow:    ", "HotPink:        ", "IndianRed:      ", "LavenderBlush:  ", "LawnGreen:      ", "LemonChiffon:   ", "LightCoral:     ",
@@ -74,9 +74,9 @@ static PetscErrorCode PetscLogHandlerMPECreateEvent(const char name[], PetscLogM
 
 static PetscErrorCode PetscLogHandlerMPEUpdate(PetscLogHandler h)
 {
-  PetscLogHandler_MPE mpe = (PetscLogHandler_MPE) h->ctx;
-  PetscLogState state;
-  PetscInt      num_events, num_events_old;
+  PetscLogHandler_MPE mpe = (PetscLogHandler_MPE)h->ctx;
+  PetscLogState       state;
+  PetscInt            num_events, num_events_old;
 
   PetscFunctionBegin;
   PetscCall(PetscLogHandlerGetState(h, &state));
@@ -93,8 +93,8 @@ static PetscErrorCode PetscLogHandlerMPEUpdate(PetscLogHandler h)
 
 static PetscErrorCode PetscLogHandlerEventBegin_MPE(PetscLogHandler handler, PetscLogEvent event, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
 {
-  PetscLogHandler_MPE mpe = (PetscLogHandler_MPE) handler->ctx;
-  PetscEventMPE     mpe_event;
+  PetscLogHandler_MPE mpe = (PetscLogHandler_MPE)handler->ctx;
+  PetscEventMPE       mpe_event;
 
   PetscFunctionBegin;
   PetscCall(PetscLogHandlerMPEUpdate(handler));
@@ -107,8 +107,8 @@ static PetscErrorCode PetscLogHandlerEventBegin_MPE(PetscLogHandler handler, Pet
 
 static PetscErrorCode PetscLogHandlerEventEnd_MPE(PetscLogHandler handler, PetscLogEvent event, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
 {
-  PetscLogHandler_MPE mpe = (PetscLogHandler_MPE) handler->ctx;
-  PetscEventMPE     mpe_event;
+  PetscLogHandler_MPE mpe = (PetscLogHandler_MPE)handler->ctx;
+  PetscEventMPE       mpe_event;
 
   PetscFunctionBegin;
   PetscCall(PetscLogHandlerMPEUpdate(handler));
@@ -119,18 +119,17 @@ static PetscErrorCode PetscLogHandlerEventEnd_MPE(PetscLogHandler handler, Petsc
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-
 PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_MPE(MPI_Comm comm, PetscLogHandler *handler_p)
 {
   PetscLogHandler handler;
 
   PetscFunctionBegin;
   PetscCall(PetscLogHandlerCreate(comm, handler_p));
-  handler              = *handler_p;
-  PetscCall(PetscLogHandlerContextCreate_MPE((PetscLogHandler_MPE *) &handler->ctx));
-  handler->type        = PETSC_LOG_HANDLER_MPE;
-  handler->Destroy     = PetscLogHandlerDestroy_MPE;
-  handler->EventBegin  = PetscLogHandlerEventBegin_MPE;
-  handler->EventEnd    = PetscLogHandlerEventEnd_MPE;
+  handler = *handler_p;
+  PetscCall(PetscLogHandlerContextCreate_MPE((PetscLogHandler_MPE *)&handler->ctx));
+  handler->type       = PETSC_LOG_HANDLER_MPE;
+  handler->Destroy    = PetscLogHandlerDestroy_MPE;
+  handler->EventBegin = PetscLogHandlerEventBegin_MPE;
+  handler->EventEnd   = PetscLogHandlerEventEnd_MPE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
