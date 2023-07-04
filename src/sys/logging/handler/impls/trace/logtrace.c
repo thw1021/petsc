@@ -3,10 +3,10 @@
 
 typedef struct _n_PetscLogHandler_Trace *PetscLogHandler_Trace;
 struct _n_PetscLogHandler_Trace {
-  FILE                  *petsc_tracefile;
-  int                    petsc_tracelevel;
-  char                   petsc_tracespace[128];
-  PetscLogDouble         petsc_tracetime;
+  FILE          *petsc_tracefile;
+  int            petsc_tracelevel;
+  char           petsc_tracespace[128];
+  PetscLogDouble petsc_tracetime;
 };
 
 static PetscErrorCode PetscLogHandlerEventBegin_Trace(PetscLogHandler h, PetscLogEvent event, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
@@ -33,7 +33,6 @@ static PetscErrorCode PetscLogHandlerEventBegin_Trace(PetscLogHandler h, PetscLo
   PetscCall(PetscFFlush(tr->petsc_tracefile));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
 
 static PetscErrorCode PetscLogHandlerEventEnd_Trace(PetscLogHandler h, PetscLogEvent event, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
 {
@@ -65,11 +64,10 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Trace(MPI_Comm comm, PetscLogH
 
   PetscFunctionBegin;
   PetscCall(PetscLogHandlerCreate(comm, handler_p));
-  handler              = *handler_p;
-  handler->ctx         = NULL;
-  handler->type        = PETSC_LOG_HANDLER_TRACE;
-  handler->EventBegin  = PetscLogHandlerEventBegin_Trace;
-  handler->EventEnd    = PetscLogHandlerEventEnd_Trace;
+  handler             = *handler_p;
+  handler->ctx        = NULL;
+  handler->type       = PETSC_LOG_HANDLER_TRACE;
+  handler->EventBegin = PetscLogHandlerEventBegin_Trace;
+  handler->EventEnd   = PetscLogHandlerEventEnd_Trace;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-

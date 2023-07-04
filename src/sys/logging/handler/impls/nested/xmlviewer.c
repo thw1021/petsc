@@ -143,9 +143,9 @@ static PetscErrorCode PetscPrintExeSpecs(PetscViewer viewer)
     PetscCall(PetscStrlcat(buildoptions, "Half ", sizeof(buildoptions)));
   }
   if (PetscDefined(USE_64BIT_INDICES)) PetscCall(PetscStrlcat(buildoptions, "Int64 ", sizeof(buildoptions)));
-  #if defined(__cplusplus)
+#if defined(__cplusplus)
   PetscCall(PetscStrlcat(buildoptions, "C++ ", sizeof(buildoptions)));
-  #endif
+#endif
   PetscCall(PetscStrlen(buildoptions, &len));
   if (len) PetscCall(PetscViewerXMLPutString(viewer, "petscbuildoptions", "Petsc build options", buildoptions));
   PetscCall(PetscViewerXMLEndSection(viewer, "runspecification"));

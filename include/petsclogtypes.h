@@ -16,7 +16,7 @@
 .seealso(): [](ch_profiling)
 S*/
 typedef struct {
-  int            id;                  /* The integer identifying this event / stage */
+  int id; /* The integer identifying this event / stage */
   PETSC_DEPRECATED_FIELD("Use PetscLogEventGetActive() (since version 3.20)") PetscBool active;
   PetscBool      visible;             /* The flag to print info in summary */
   int            depth;               /* The nesting depth of the event call */
@@ -231,7 +231,7 @@ typedef struct {
 .seealso: [](ch_profiling), `PetscLogStage`, `PetscLogState`, `PetscLogStateClassGetInfo()`
 S*/
 typedef struct _PetscLogStageInfo {
-  char     *name;    /* The stage name */
+  char *name; /* The stage name */
 } PetscLogStageInfo;
 
 #endif
