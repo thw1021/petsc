@@ -101,32 +101,3 @@ def main(stage,outdir):
       subprocess.run(command, cwd=petsc_dir, check=True)
       print("Time: "+str(time.clock_gettime(time.CLOCK_REALTIME) - x))
       print('============================================')
-
-      try:
-        subprocess.run(['python2', '--version'])
-      except:
-        print('Skipping petsc4py documentation build since python2 is not available in PATH')
-        return
-      rawhtml.append('petsc4py')
-      command = ['make', 'all',
-                 'PETSC_DIR=%s' % petsc_dir,
-                 'PETSC_ARCH=%s' % petsc_arch]
-      x = time.clock_gettime(time.CLOCK_REALTIME)
-      print('==============================================')
-      print('Building library to make petsc4py classic docs')
-      print(command)
-      subprocess.run(command, cwd=petsc_dir, check=True)
-      print("Time: "+str(time.clock_gettime(time.CLOCK_REALTIME) - x))
-      print('==============================================')
-
-      command = ['time','make', 'website',
-                 'PETSC_DIR=%s' % petsc_dir,
-                 'PETSC_ARCH=%s' % petsc_arch,
-                 'LOC=%s' % loc]
-      x = time.clock_gettime(time.CLOCK_REALTIME)
-      print('============================================')
-      print('Building petsc4py classic docs')
-      print(command)
-      subprocess.run(command, cwd=os.path.join(petsc_dir,'src','binding','petsc4py'), check=True)
-      print("Time: "+str(time.clock_gettime(time.CLOCK_REALTIME) - x))
-      print('============================================')

@@ -260,4 +260,27 @@ def _update_htmlmap_links(app):
     update_htmlmap_links.update_htmlmap_links(app.builder,os.path.join('manualpages','htmlmap'))
     print("Time: "+str(time.clock_gettime(time.CLOCK_REALTIME) - x))
     print("============================================")
-    
+
+def build_petsc4py_docs(app):
+    petsc_dir = os.path.dirname(os.path.abspath(os.path.join(__file__,'..')))
+    petsc_arch = 'arch-classic-docs'
+
+    # petsc4py needs to be built to build petsc4py docs via introspection
+    command = ['make', 'all',
+               'PETSC_DIR=%s' % petsc_dir,
+               'PETSC_ARCH=%s' % petsc_arch]
+    print('==============================================')
+    print('Building library to make petsc4py docs')
+    print(command)
+    print('==============================================')
+    subprocess.run(command, cwd=petsc_dir, check=True)
+
+    command = ['make', 'website',
+               'PETSC_DIR=%s' % petsc_dir,
+               'PETSC_ARCH=%s' % petsc_arch,
+               'LOC=%s' % app.outdir]
+    print('============================================')
+    print('Building petsc4py docs')
+    print(command)
+    print('============================================')
+    subprocess.run(command, cwd=os.path.join(petsc_dir,'src','binding','petsc4py'), check=True)
