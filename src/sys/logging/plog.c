@@ -386,7 +386,45 @@ PetscErrorCode PetscLogHandlerStop(PetscLogHandler h)
 PetscErrorCode PetscLogIsActive(PetscBool *isActive)
 {
   PetscFunctionBegin;
-  *isActive = (petsc_log_state) ? PETSC_TRUE : PETSC_FALSE;
+  *isActive = PETSC_FALSE;
+  if (petsc_log_state) {
+    for (PetscInt i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
+      if (PetscLogHandlers[i].handler) {
+        *isActive = PETSC_TRUE;
+        PetscFunctionReturn(PETSC_SUCCESS);
+      }
+    }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_UNUSED static PetscErrorCode PetscLogEventBeginIsActive(PetscBool *isActive)
+{
+  PetscFunctionBegin;
+  *isActive = PETSC_FALSE;
+  if (petsc_log_state) {
+    for (PetscInt i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
+      if (PetscLogHandlers[i].EventBegin) {
+        *isActive = PETSC_TRUE;
+        PetscFunctionReturn(PETSC_SUCCESS);
+      }
+    }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_UNUSED static PetscErrorCode PetscLogEventEndIsActive(PetscBool *isActive)
+{
+  PetscFunctionBegin;
+  *isActive = PETSC_FALSE;
+  if (petsc_log_state) {
+    for (PetscInt i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
+      if (PetscLogHandlers[i].EventEnd) {
+        *isActive = PETSC_TRUE;
+        PetscFunctionReturn(PETSC_SUCCESS);
+      }
+    }
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -2270,8 +2308,11 @@ PetscErrorCode PetscLogGpuTime(void)
 @*/
 PetscErrorCode PetscLogGpuTimeBegin(void)
 {
+  PetscBool isActive;
+
   PetscFunctionBegin;
-  if (!PetscLogPLB || !PetscLogGpuTimeFlag) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(PetscLogEventBeginIsActive(&isActive));
+  if (!isActive || !PetscLogGpuTimeFlag) PetscFunctionReturn(PETSC_SUCCESS);
   if (PetscDefined(HAVE_DEVICE)) {
     PetscDeviceContext dctx;
 
@@ -2292,8 +2333,11 @@ PetscErrorCode PetscLogGpuTimeBegin(void)
 @*/
 PetscErrorCode PetscLogGpuTimeEnd(void)
 {
+  PetscBool isActive;
+
   PetscFunctionBegin;
-  if (!PetscLogPLE || !PetscLogGpuTimeFlag) PetscFunctionReturn(PETSC_SUCCESS);
+  PetscCall(PetscLogEventEndIsActive(&isActive));
+  if (!isActive || !PetscLogGpuTimeFlag) PetscFunctionReturn(PETSC_SUCCESS);
   if (PetscDefined(HAVE_DEVICE)) {
     PetscDeviceContext dctx;
     PetscLogDouble     elapsed;
