@@ -391,7 +391,7 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDefaultGetEventPerfInfo(PetscLogHandl
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogHandlerDefaultGetClassPerf(PetscLogHandler handler, PetscLogStage stage, PetscLogClass class, PetscClassPerf **class_info)
+static PetscErrorCode PetscLogHandlerDefaultGetClassPerf(PetscLogHandler handler, PetscLogStage stage, PetscLogClass clss, PetscClassPerf **class_info)
 {
   PetscLogClassPerfArray class_log;
   PetscStagePerf        *stage_info;
@@ -399,8 +399,8 @@ static PetscErrorCode PetscLogHandlerDefaultGetClassPerf(PetscLogHandler handler
   PetscFunctionBegin;
   PetscCall(PetscLogHandlerDefaultGetStageInfo(handler, stage, &stage_info));
   class_log = stage_info->classLog;
-  PetscCall(PetscLogClassPerfArrayResize(class_log, class + 1));
-  PetscCall(PetscLogClassPerfArrayGetRef(class_log, class, class_info));
+  PetscCall(PetscLogClassPerfArrayResize(class_log, clss + 1));
+  PetscCall(PetscLogClassPerfArrayGetRef(class_log, clss, class_info));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

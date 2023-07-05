@@ -1783,19 +1783,19 @@ M*/
 . name  - The class name
 
   Output Parameter:
-. class - The `PetscLogClass` id, or -1 if no event with that name exists
+. clss - The `PetscLogClass` id, or -1 if no event with that name exists
 
   Level: intermediate
 
 .seealso: [](ch_profiling), `PetscLogEventBegin()`, `PetscLogEventEnd()`, `PetscLogStageGetId()`
 @*/
-PetscErrorCode PetscLogClassGetId(const char name[], PetscLogClass *event)
+PetscErrorCode PetscLogClassGetId(const char name[], PetscLogClass *clss)
 {
   PetscLogState state;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
-  PetscCall(PetscLogRegistryGetClassFromName(state->registry, name, event));
+  PetscCall(PetscLogRegistryGetClassFromName(state->registry, name, clss));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1814,14 +1814,14 @@ PetscErrorCode PetscLogClassGetId(const char name[], PetscLogClass *event)
 
 .seealso: [](ch_profiling), `PetscLogClassRegister()`, `PetscLogClassBegin()`, `PetscLogClassEnd()`, `PetscPreLoadBegin()`, `PetscPreLoadEnd()`, `PetscPreLoadClass()`
 @*/
-PetscErrorCode PetscLogClassGetName(PetscLogClass class, const char **name)
+PetscErrorCode PetscLogClassGetName(PetscLogClass clss, const char **name)
 {
   PetscLogClassInfo class_info;
   PetscLogState     state;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
-  PetscCall(PetscLogRegistryClassGetInfo(state->registry, class, &class_info));
+  PetscCall(PetscLogRegistryClassGetInfo(state->registry, clss, &class_info));
   *name = class_info.name;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
