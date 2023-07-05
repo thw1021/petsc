@@ -116,14 +116,14 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryEventRegister(PetscLogRegistry regis
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscLogRegistryClassRegister(PetscLogRegistry registry, const char name[], PetscClassId classid, PetscLogClass *class)
+PETSC_INTERN PetscErrorCode PetscLogRegistryClassRegister(PetscLogRegistry registry, const char name[], PetscClassId classid, PetscLogClass *clss)
 {
   PetscLogClassInfo new_info;
 
   PetscFunctionBegin;
-  PetscCall(PetscLogRegistryGetClassFromClassId(registry, classid, class));
-  if (*class >= 0) PetscFunctionReturn(PETSC_SUCCESS);
-  *class           = registry->classes->num_entries;
+  PetscCall(PetscLogRegistryGetClassFromClassId(registry, classid, clss));
+  if (*clss >= 0) PetscFunctionReturn(PETSC_SUCCESS);
+  *clss            = registry->classes->num_entries;
   new_info.classid = classid;
   PetscCall(PetscStrallocpy(name, &new_info.name));
   PetscCall(PetscLogClassArrayPush(registry->classes, new_info));
@@ -144,25 +144,25 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryGetStageFromName(PetscLogRegistry re
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscLogRegistryGetClassFromClassId(PetscLogRegistry registry, PetscClassId classid, PetscLogStage *class)
+PETSC_INTERN PetscErrorCode PetscLogRegistryGetClassFromClassId(PetscLogRegistry registry, PetscClassId classid, PetscLogStage *clss)
 {
   PetscLogClassInfo key;
 
   PetscFunctionBegin;
   key.name    = NULL;
   key.classid = classid;
-  PetscCall(PetscLogClassArrayFind(registry->classes, &key, class));
+  PetscCall(PetscLogClassArrayFind(registry->classes, &key, clss));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscLogRegistryGetClassFromName(PetscLogRegistry registry, const char name[], PetscLogStage *class)
+PETSC_INTERN PetscErrorCode PetscLogRegistryGetClassFromName(PetscLogRegistry registry, const char name[], PetscLogStage *clss)
 {
   PetscLogClassInfo key;
 
   PetscFunctionBegin;
   key.name    = (char *)name;
   key.classid = -1;
-  PetscCall(PetscLogClassArrayFind(registry->classes, &key, class));
+  PetscCall(PetscLogClassArrayFind(registry->classes, &key, clss));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -180,10 +180,10 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryStageGetInfo(PetscLogRegistry regist
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscLogRegistryClassGetInfo(PetscLogRegistry registry, PetscLogClass class, PetscLogClassInfo *class_info)
+PETSC_INTERN PetscErrorCode PetscLogRegistryClassGetInfo(PetscLogRegistry registry, PetscLogClass clss, PetscLogClassInfo *class_info)
 {
   PetscFunctionBegin;
-  PetscCall(PetscLogClassArrayGet(registry->classes, class, class_info));
+  PetscCall(PetscLogClassArrayGet(registry->classes, clss, class_info));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -201,10 +201,10 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryStageSetInfo(PetscLogRegistry regist
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscLogRegistryClassSetInfo(PetscLogRegistry registry, PetscLogClass class, PetscLogClassInfo class_info)
+PETSC_INTERN PetscErrorCode PetscLogRegistryClassSetInfo(PetscLogRegistry registry, PetscLogClass clss, PetscLogClassInfo class_info)
 {
   PetscFunctionBegin;
-  PetscCall(PetscLogClassArraySet(registry->classes, class, class_info));
+  PetscCall(PetscLogClassArraySet(registry->classes, clss, class_info));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
