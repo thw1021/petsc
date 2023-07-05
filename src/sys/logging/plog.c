@@ -569,10 +569,9 @@ static PetscBool PetscBeganMPE = PETSC_FALSE;
 @*/
 PetscErrorCode PetscLogMPEBegin(void)
 {
-  PetscLogHandler handler;
-
   PetscFunctionBegin;
   #if defined(PETSC_HAVE_MPE)
+  PetscLogHandler handler;
   /* Do MPE initialization */
   if (!MPE_Initialized_logging()) { /* This function exists in mpich 1.1.2 and higher */
     PetscCall(PetscInfo(0, "Initializing MPE.\n"));
@@ -1840,11 +1839,11 @@ PetscErrorCode PetscLogDump(const char sname[])
 @*/
 PetscErrorCode PetscLogMPEDump(const char sname[])
 {
-  char name[PETSC_MAX_PATH_LEN];
-
   PetscFunctionBegin;
   #if defined(PETSC_HAVE_MPE)
   if (PetscBeganMPE) {
+    char name[PETSC_MAX_PATH_LEN];
+
     PetscCall(PetscInfo(0, "Finalizing MPE.\n"));
     if (sname) {
       PetscCall(PetscStrncpy(name, sname, sizeof(name)));

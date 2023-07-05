@@ -86,7 +86,7 @@ static PetscErrorCode PetscLogHandlerPSUpdateStages(PetscLogHandler h)
 static PetscErrorCode PetscLogHandlerEventBegin_Perfstubs(PetscLogHandler handler, PetscLogEvent event, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
 {
   PetscLogHandler_Perfstubs ps = (PetscLogHandler_Perfstubs) handler->ctx;
-  PetscEventPS     ps_event;
+  PetscEventPS     ps_event = {NULL, 0};
 
   PetscFunctionBegin;
   if (event >= ps->events->num_entries) PetscCall(PetscLogHandlerPSUpdateEvents(handler));
@@ -100,7 +100,7 @@ static PetscErrorCode PetscLogHandlerEventBegin_Perfstubs(PetscLogHandler handle
 static PetscErrorCode PetscLogHandlerEventEnd_Perfstubs(PetscLogHandler handler, PetscLogEvent event, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
 {
   PetscLogHandler_Perfstubs ps = (PetscLogHandler_Perfstubs) handler->ctx;
-  PetscEventPS     ps_event;
+  PetscEventPS     ps_event = {NULL, 0};
 
   PetscFunctionBegin;
   if (event >= ps->events->num_entries) PetscCall(PetscLogHandlerPSUpdateEvents(handler));
@@ -114,7 +114,7 @@ static PetscErrorCode PetscLogHandlerEventEnd_Perfstubs(PetscLogHandler handler,
 static PetscErrorCode PetscLogHandlerStagePush_Perfstubs(PetscLogHandler handler, PetscLogStage stage)
 {
   PetscLogHandler_Perfstubs ps = (PetscLogHandler_Perfstubs) handler->ctx;
-  PetscEventPS     ps_event;
+  PetscEventPS     ps_event = {NULL, 0};
 
   PetscFunctionBegin;
   if (stage >= ps->stages->num_entries) PetscCall(PetscLogHandlerPSUpdateStages(handler));
@@ -126,7 +126,7 @@ static PetscErrorCode PetscLogHandlerStagePush_Perfstubs(PetscLogHandler handler
 static PetscErrorCode PetscLogHandlerStagePop_Perfstubs(PetscLogHandler handler, PetscLogStage stage)
 {
   PetscLogHandler_Perfstubs ps = (PetscLogHandler_Perfstubs) handler->ctx;
-  PetscEventPS     ps_event;
+  PetscEventPS     ps_event = {NULL, 0};
 
   PetscFunctionBegin;
   if (stage >= ps->stages->num_entries) PetscCall(PetscLogHandlerPSUpdateStages(handler));

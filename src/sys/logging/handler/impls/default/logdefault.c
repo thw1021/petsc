@@ -371,14 +371,13 @@ static PetscErrorCode PetscLogHandlerDefaultGetStageInfo(PetscLogHandler handler
   PetscCall(PetscLogStageInfoArrayResize(def->stages, stage + 1));
   PetscCall(PetscLogStageInfoArrayGetRef(def->stages, stage, &stage_info));
   *stage_info_p = stage_info;
-
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 PETSC_INTERN PetscErrorCode PetscLogHandlerDefaultGetEventPerfInfo(PetscLogHandler handler, PetscLogStage stage, PetscLogEvent event, PetscEventPerfInfo **event_info_p)
 {
-  PetscEventPerfInfo    *event_info;
-  PetscStagePerf        *stage_info;
+  PetscEventPerfInfo    *event_info = NULL;
+  PetscStagePerf        *stage_info = NULL;
   PetscLogEventPerfArray event_log;
 
   PetscFunctionBegin;
@@ -493,7 +492,7 @@ static PetscErrorCode PetscLogHandlerObjectDestroy_Default(PetscLogHandler h, Pe
     PetscCall(PetscLogActionArrayPush(def->petsc_actions, new_action));
   }
   if (def->petsc_logObjects) {
-    Object *obj_entry;
+    Object *obj_entry = NULL;
 
     PetscCall(PetscLogObjectArrayGetRef(def->petsc_objects, obj->id, &obj_entry));
     if (obj->name) PetscCall(PetscStrncpy(obj_entry->name, obj->name, 64));
@@ -700,13 +699,13 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDefaultEventsPause(PetscLogHandler h)
   PetscCall(PetscLogStageInfoArrayGetSize(def->stages, &num_stages, NULL));
   PetscCall(PetscTime(&time));
   for (PetscInt stage = 0; stage < num_stages; stage++) {
-    PetscStagePerf *stage_info;
+    PetscStagePerf *stage_info = NULL;
     PetscInt        num_events;
 
     PetscCall(PetscLogStageInfoArrayGetRef(def->stages, stage, &stage_info));
     PetscCall(PetscLogEventPerfArrayGetSize(stage_info->eventLog, &num_events, NULL));
     for (PetscInt event = 0; event < num_events; event++) {
-      PetscEventPerfInfo *event_info;
+      PetscEventPerfInfo *event_info = NULL;
       PetscCall(PetscLogEventPerfArrayGetRef(stage_info->eventLog, event, &event_info));
       if (event_info->depth > 0) {
         event_info->depth *= -1;
@@ -732,13 +731,13 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDefaultEventsUnpause(PetscLogHandler 
   PetscCall(PetscLogStageInfoArrayGetSize(def->stages, &num_stages, NULL));
   PetscCall(PetscTime(&time));
   for (PetscInt stage = 0; stage < num_stages; stage++) {
-    PetscStagePerf *stage_info;
+    PetscStagePerf *stage_info = NULL;
     PetscInt        num_events;
 
     PetscCall(PetscLogStageInfoArrayGetRef(def->stages, stage, &stage_info));
     PetscCall(PetscLogEventPerfArrayGetSize(stage_info->eventLog, &num_events, NULL));
     for (PetscInt event = 0; event < num_events; event++) {
-      PetscEventPerfInfo *event_info;
+      PetscEventPerfInfo *event_info = NULL;
       PetscCall(PetscLogEventPerfArrayGetRef(stage_info->eventLog, event, &event_info));
       if (event_info->depth < 0) {
         event_info->depth *= -1;
@@ -855,7 +854,7 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDefaultLogObjectState(PetscLogHandler
 
   PetscFunctionBegin;
   if (def->petsc_logObjects) {
-    Object *obj_entry;
+    Object *obj_entry = NULL;
 
     PetscCall(PetscLogObjectArrayGetRef(def->petsc_objects, obj->id, &obj_entry));
     PetscCall(PetscVSNPrintf(obj_entry->info, 64, format, &fullLength, Argp));
@@ -916,7 +915,7 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDump_Default(PetscLogHandler handler,
     PetscCall(PetscLogObjectArrayGetSize(def->petsc_objects, &num_objects, NULL));
     PetscCall(PetscFPrintf(PETSC_COMM_SELF, fd, "Objects created %d destroyed %d\n", (int)num_objects, def->petsc_numObjectsDestroyed));
     for (int o = 0; o < num_objects; o++) {
-      Object *object;
+      Object *object = NULL;
 
       PetscCall(PetscLogObjectArrayGetRef(def->petsc_objects, o, &object));
       PetscCall(PetscFPrintf(PETSC_COMM_SELF, fd, "Parent ID: %d Memory: %d\n", object->parent, (int)object->mem));

@@ -407,7 +407,7 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryCreateGlobalStageNames(MPI_Comm comm
   PetscCall(PetscLogStageArrayGetSize(registry->stages, &num_stages_local, NULL));
   PetscCall(PetscMalloc1(num_stages_local, &names));
   for (PetscInt i = 0; i < num_stages_local; i++) {
-    PetscLogStageInfo stage_info;
+    PetscLogStageInfo stage_info = {NULL};
     PetscCall(PetscLogRegistryStageGetInfo(registry, i, &stage_info));
     names[i] = stage_info.name;
   }
@@ -425,8 +425,8 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryCreateGlobalEventNames(MPI_Comm comm
   PetscCall(PetscLogEventArrayGetSize(registry->events, &num_events_local, NULL));
   PetscCall(PetscMalloc1(num_events_local, &names));
   for (PetscInt i = 0; i < num_events_local; i++) {
-    PetscLogEventInfo event_info;
-    ;
+    PetscLogEventInfo event_info = {NULL, 0, PETSC_FALSE};
+
     PetscCall(PetscLogRegistryEventGetInfo(registry, i, &event_info));
     names[i] = event_info.name;
   }
