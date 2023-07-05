@@ -110,6 +110,7 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryEventRegister(PetscLogRegistry regis
   if (*event >= 0) PetscFunctionReturn(PETSC_SUCCESS);
   *event           = registry->events->num_entries;
   new_info.classid = classid;
+  new_info.collective = PETSC_TRUE;
   PetscCall(PetscStrallocpy(name, &new_info.name));
   PetscCall(PetscLogEventArrayPush(registry->events, new_info));
   PetscFunctionReturn(PETSC_SUCCESS);
