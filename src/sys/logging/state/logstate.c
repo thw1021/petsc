@@ -526,16 +526,16 @@ PetscErrorCode PetscLogStateGetStageFromName(PetscLogState state, const char nam
 - name - the name string of the class
 
   Output Parameter:
-. class - the classes's logging id
+. clss - the classes's logging id
 
   Level: developer
 
 .seealso: [](ch_profiling), `PetscLogState`, `PetscLogStateClassRegister()`, `PetscLogStateClassGetInfo()`
 @*/
-PetscErrorCode PetscLogStateGetClassFromName(PetscLogState state, const char name[], PetscLogClass *stage)
+PetscErrorCode PetscLogStateGetClassFromName(PetscLogState state, const char name[], PetscLogClass *clss)
 {
   PetscFunctionBegin;
-  PetscCall(PetscLogRegistryGetClassFromName(state->registry, name, stage));
+  PetscCall(PetscLogRegistryGetClassFromName(state->registry, name, clss));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -549,16 +549,16 @@ PetscErrorCode PetscLogStateGetClassFromName(PetscLogState state, const char nam
 - classid - a `PetscClassId`
 
   Output Parameter:
-. class - the classes's logging id
+. clss - the classes's logging id
 
   Level: developer
 
 .seealso: [](ch_profiling), `PetscLogState`, `PetscLogStateClassRegister()`, `PetscLogStateClassGetInfo()`
 @*/
-PetscErrorCode PetscLogStateGetClassFromClassId(PetscLogState state, PetscClassId classid, PetscLogClass *stage)
+PetscErrorCode PetscLogStateGetClassFromClassId(PetscLogState state, PetscClassId classid, PetscLogClass *clss)
 {
   PetscFunctionBegin;
-  PetscCall(PetscLogRegistryGetClassFromClassId(state->registry, classid, stage));
+  PetscCall(PetscLogRegistryGetClassFromClassId(state->registry, classid, clss));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -707,7 +707,7 @@ PetscErrorCode PetscLogStateClassRegister(PetscLogState state, const char name[]
 
   Input Parameters:
 + state - a `PetscLogState`
-- class - a registered `PetscLogClass`
+- clss - a registered `PetscLogClass`
 
   Output Parameter:
 . info - the `PetscLogClassInfo` of the class will be copied into info
@@ -716,9 +716,9 @@ PetscErrorCode PetscLogStateClassRegister(PetscLogState state, const char name[]
 
 .seealso: [](ch_profiling), `PetscLogState`, `PetscLogStateClassRegister()`, `PetscLogStateGetClassFromName()`
 @*/
-PetscErrorCode PetscLogStateClassGetInfo(PetscLogState state, PetscLogClass class, PetscLogClassInfo *info)
+PetscErrorCode PetscLogStateClassGetInfo(PetscLogState state, PetscLogClass clss, PetscLogClassInfo *info)
 {
   PetscFunctionBegin;
-  PetscCall(PetscLogRegistryClassGetInfo(state->registry, class, info));
+  PetscCall(PetscLogRegistryClassGetInfo(state->registry, clss, info));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
