@@ -318,7 +318,7 @@ static PetscErrorCode PetscLogNestedCreatePerfNodes(MPI_Comm comm, PetscLogHandl
   }
   *tree_p = tree;
   *perf_p = perf;
-  PetscFunctionReturn(0);
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode PetscLogHandlerView_Nested(PetscLogHandler handler, PetscViewer viewer)
