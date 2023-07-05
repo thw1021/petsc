@@ -50,9 +50,22 @@ PETSC_INTERN PetscInt PetscLogGetTid(void)
 #if defined(PETSC_USE_LOG)
   #include <../src/sys/logging/handler/impls/default/logdefault.h>
 
-PetscLogHandlerHot PetscLogHandlers[PETSC_LOG_HANDLER_MAX] = {0};
-PetscBool          PetscLogMemory                          = PETSC_FALSE;
-PetscBool          PetscLogSyncOn                          = PETSC_FALSE;
+  #define PETSC_LOG_HANDLER_HOT_BLANK \
+    { \
+      NULL, NULL, NULL, NULL, NULL, NULL \
+    }
+  #define PETSC_LOG_HANDLERS_BLANK \
+    { \
+      PETSC_LOG_HANDLER_HOT_BLANK, PETSC_LOG_HANDLER_HOT_BLANK, PETSC_LOG_HANDLER_HOT_BLANK, PETSC_LOG_HANDLER_HOT_BLANK \
+    }
+
+PetscLogHandlerHot PetscLogHandlers[PETSC_LOG_HANDLER_MAX] = PETSC_LOG_HANDLERS_BLANK;
+
+  #undef PETSC_LOG_HANDLERS_BLANK
+  #undef PETSC_LOG_HANDLERS_HOT_BLANK
+
+PetscBool PetscLogMemory = PETSC_FALSE;
+PetscBool PetscLogSyncOn = PETSC_FALSE;
 
 /* Global counters */
 PetscLogDouble petsc_TotalFlops      = 0.0; /* The number of flops */

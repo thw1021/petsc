@@ -2,6 +2,7 @@
 #include <petscdevice.h>
 #include <petsc/private/logimpl.h> /*I "petscsys.h" I*/
 #include <petsc/private/loghandlerimpl.h>
+#include <petsc/private/deviceimpl.h>
 #if defined(PETSC_HAVE_TAU_PERFSTUBS)
   #include <../src/sys/perfstubs/timer.h>
 #endif
@@ -647,7 +648,7 @@ static PetscErrorCode PetscLogHandlerEventEnd_Default(PetscLogHandler h, PetscLo
   } else {
     PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(h, stage, event, &event_perf_info));
   }
-  PetscCheck(event_perf_info >= 0, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Trying to end paused event, not allowed");
+  PetscCheck(event_perf_info->depth > 0, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "Trying to end paused event, not allowed");
   event_perf_info->depth--;
   /* Check for double counting */
   if (event_perf_info->depth > 0) PetscFunctionReturn(PETSC_SUCCESS);
@@ -1615,7 +1616,7 @@ static PetscErrorCode PetscLogHandlerView_Default_Info(PetscLogHandler handler, 
         /* Put NaN into the time for all events that may not be time accurately since they may happen asynchronously on the GPU */
         if (!PetscLogGpuTimeFlag && petsc_gflops > 0) {
           memcpy(&gmaxt, &nas, sizeof(PetscLogDouble));
-          if (event_id != SNES_Solve && event_id != KSP_Solve && eventid != TS_Step && event_id != TAO_Solve) {
+          if (event_id != SNES_Solve && event_id != KSP_Solve && event_id != TS_Step && event_id != TAO_Solve) {
             memcpy(&mint, &nas, sizeof(PetscLogDouble));
             memcpy(&maxt, &nas, sizeof(PetscLogDouble));
           }
