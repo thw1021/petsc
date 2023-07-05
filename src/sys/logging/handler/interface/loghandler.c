@@ -128,9 +128,9 @@ PetscErrorCode PetscLogHandlerGetContext(PetscLogHandler handler, void *ctx)
 @*/
 PetscErrorCode PetscLogHandlerSetOperation(PetscLogHandler h, PetscLogHandlerOpType type, void (*f)(void))
 {
+  PetscFunctionBegin;
   PetscValidPointer(h, 1);
   if (f) PetscValidPointer(f, 3);
-  PetscFunctionBegin;
 #define PETSC_LOG_HANDLER_SET_OP_CASE(NAME, name, Type, h, f) \
   case PETSC_LOG_HANDLER_OP_##NAME: \
     (h)->name = (PetscLog##Type##Fn)f; \
@@ -451,7 +451,6 @@ PetscErrorCode PetscLogHandlerStagePop(PetscLogHandler h, PetscLogStage stage)
 @*/
 PetscErrorCode PetscLogHandlerView(PetscLogHandler h, PetscViewer viewer)
 {
-  PetscFunctionBegin;
   PetscFunctionBegin;
   PetscValidPointer(h, 1);
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 3);

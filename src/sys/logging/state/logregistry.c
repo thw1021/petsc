@@ -108,8 +108,8 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryEventRegister(PetscLogRegistry regis
   PetscFunctionBegin;
   PetscCall(PetscLogRegistryGetEventFromName(registry, name, event));
   if (*event >= 0) PetscFunctionReturn(PETSC_SUCCESS);
-  *event           = registry->events->num_entries;
-  new_info.classid = classid;
+  *event              = registry->events->num_entries;
+  new_info.classid    = classid;
   new_info.collective = PETSC_TRUE;
   PetscCall(PetscStrallocpy(name, &new_info.name));
   PetscCall(PetscLogEventArrayPush(registry->events, new_info));
