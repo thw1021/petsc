@@ -366,8 +366,8 @@ static PetscErrorCode PetscLogHandlerDestroy_Default(PetscLogHandler h)
 
 static PetscErrorCode PetscLogHandlerDefaultGetStageInfo(PetscLogHandler handler, PetscLogStage stage, PetscStagePerf **stage_info_p)
 {
-  PetscStagePerf         *stage_info;
-  PetscLogHandler_Default def = (PetscLogHandler_Default)handler->ctx;
+  PetscStagePerf         *stage_info = NULL;
+  PetscLogHandler_Default def        = (PetscLogHandler_Default)handler->ctx;
   PetscFunctionBegin;
   PetscCall(PetscLogStageInfoArrayResize(def->stages, stage + 1));
   PetscCall(PetscLogStageInfoArrayGetRef(def->stages, stage, &stage_info));
