@@ -466,7 +466,7 @@ PetscErrorCode PetscLogStateEventGetActive(PetscLogState state, PetscLogStage st
   stage = (stage < 0) ? state->current_stage : stage;
   PetscCheck(event >= 0 && event < state->bt_num_events, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid event %d should be in [0,%d)", event, state->bt_num_events);
   PetscCheck(stage >= 0 && stage < state->bt_num_stages, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "Invalid stage %d should be in [0,%d)", event, state->bt_num_stages);
-  *isActive = PetscLogStateStageEventIsActive(state, stage, event);
+  *isActive = PetscLogStateStageEventIsActive(state, stage, event) ? PETSC_TRUE : PETSC_FALSE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
