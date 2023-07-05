@@ -47,7 +47,6 @@ def _configure_minimal_petsc(petsc_dir, petsc_arch) -> None:
         '--download-c2html',
         '--with-mkl_sparse_optimize=0',
         '--with-mkl_sparse=0',
-        '--with-petsc4py',
         'PETSC_ARCH=' + petsc_arch,
     ]
     print('==================================================================')
