@@ -1,4 +1,5 @@
 #include <petscviewer.h>
+#include <petscdevice.h>
 #include <petsc/private/logimpl.h> /*I "petscsys.h" I*/
 #include <petsc/private/loghandlerimpl.h>
 #if defined(PETSC_HAVE_TAU_PERFSTUBS)
@@ -1274,8 +1275,7 @@ static PetscErrorCode PetscLogHandlerView_Default_Info(PetscLogHandler handler, 
   char          version[256];
   MPI_Comm      comm;
 #if defined(PETSC_HAVE_DEVICE)
-  PetscLogEvent eventid;
-  PetscInt64    nas = 0x7FF0000000000002;
+  PetscInt64 nas = 0x7FF0000000000002;
 #endif
   PetscLogGlobalNames global_stages, global_events;
   PetscEventPerfInfo  zero_info;
@@ -1599,24 +1599,23 @@ static PetscErrorCode PetscLogHandlerView_Default_Info(PetscLogHandler handler, 
           PetscCall(MPIU_Allreduce(&event_info->mallocIncreaseEvent, &emalmax, 1, MPIU_PETSCLOGDOUBLE, MPI_SUM, comm));
         }
 #if defined(PETSC_HAVE_DEVICE)
-        PetscCall(MPIU_Allreduce(&eventInfo->CpuToGpuCount, &cct, 1, MPIU_PETSCLOGDOUBLE, MPI_SUM, comm));
-        PetscCall(MPIU_Allreduce(&eventInfo->GpuToCpuCount, &gct, 1, MPIU_PETSCLOGDOUBLE, MPI_SUM, comm));
-        PetscCall(MPIU_Allreduce(&eventInfo->CpuToGpuSize, &csz, 1, MPIU_PETSCLOGDOUBLE, MPI_SUM, comm));
-        PetscCall(MPIU_Allreduce(&eventInfo->GpuToCpuSize, &gsz, 1, MPIU_PETSCLOGDOUBLE, MPI_SUM, comm));
-        PetscCall(MPIU_Allreduce(&eventInfo->GpuFlops, &gflops, 1, MPIU_PETSCLOGDOUBLE, MPI_SUM, comm));
-        PetscCall(MPIU_Allreduce(&eventInfo->GpuTime, &gmaxt, 1, MPIU_PETSCLOGDOUBLE, MPI_MAX, comm));
+        PetscCall(MPIU_Allreduce(&event_info->CpuToGpuCount, &cct, 1, MPIU_PETSCLOGDOUBLE, MPI_SUM, comm));
+        PetscCall(MPIU_Allreduce(&event_info->GpuToCpuCount, &gct, 1, MPIU_PETSCLOGDOUBLE, MPI_SUM, comm));
+        PetscCall(MPIU_Allreduce(&event_info->CpuToGpuSize, &csz, 1, MPIU_PETSCLOGDOUBLE, MPI_SUM, comm));
+        PetscCall(MPIU_Allreduce(&event_info->GpuToCpuSize, &gsz, 1, MPIU_PETSCLOGDOUBLE, MPI_SUM, comm));
+        PetscCall(MPIU_Allreduce(&event_info->GpuFlops, &gflops, 1, MPIU_PETSCLOGDOUBLE, MPI_SUM, comm));
+        PetscCall(MPIU_Allreduce(&event_info->GpuTime, &gmaxt, 1, MPIU_PETSCLOGDOUBLE, MPI_MAX, comm));
 #endif
         if (mint < 0.0) {
           PetscCall(PetscFPrintf(comm, fd, "WARNING!!! Minimum time %g over all processors for %s is negative! This happens\n on some machines whose times cannot handle too rapid calls.!\n artificially changing minimum to zero.\n", mint, event_name));
           mint = 0;
         }
         PetscCheck(minf >= 0.0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Minimum flop %g over all processors for %s is negative! Not possible!", minf, event_name);
-        /* Put NaN into the time for all events that may not be time accurately since they may happen asynchronously on the GPU */
 #if defined(PETSC_HAVE_DEVICE)
+        /* Put NaN into the time for all events that may not be time accurately since they may happen asynchronously on the GPU */
         if (!PetscLogGpuTimeFlag && petsc_gflops > 0) {
           memcpy(&gmaxt, &nas, sizeof(PetscLogDouble));
-          PetscCall(PetscLogStateGetEventFromName(state, name, &eventid));
-          if (eventid != SNES_Solve && eventid != KSP_Solve && eventid != TS_Step && eventid != TAO_Solve) {
+          if (event_id != SNES_Solve && event_id != KSP_Solve && eventid != TS_Step && event_id != TAO_Solve) {
             memcpy(&mint, &nas, sizeof(PetscLogDouble));
             memcpy(&maxt, &nas, sizeof(PetscLogDouble));
           }
