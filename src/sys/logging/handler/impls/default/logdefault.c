@@ -57,6 +57,7 @@ static PetscErrorCode PetscEventPerfInfoInit(PetscEventPerfInfo *eventInfo)
 {
   PetscFunctionBegin;
   PetscCall(PetscMemzero(eventInfo, sizeof(*eventInfo)));
+  eventInfo->visible   = PETSC_TRUE;
   eventInfo->id        = -1;
   eventInfo->dof[0]    = -1.0;
   eventInfo->dof[1]    = -1.0;
@@ -1435,7 +1436,7 @@ static PetscErrorCode PetscLogHandlerView_Default_Info(PetscLogHandler handler, 
     PetscCall(MPIU_Allreduce(localStageUsed, stageUsed, numStages, MPIU_BOOL, MPI_LOR, comm));
     PetscCall(MPIU_Allreduce(localStageVisible, stageVisible, numStages, MPIU_BOOL, MPI_LAND, comm));
     for (stage = 0; stage < numStages; stage++) {
-      if (stageUsed[stage]) {
+      if (stageUsed[stage] && stageVisible[stage]) {
         PetscCall(PetscFPrintf(comm, fd, "\nSummary of Stages:   ----- Time ------  ----- Flop ------  --- Messages ---  -- Message Lengths --  -- Reductions --\n"));
         PetscCall(PetscFPrintf(comm, fd, "                        Avg     %%Total     Avg     %%Total    Count   %%Total     Avg         %%Total    Count   %%Total\n"));
         break;
@@ -1446,7 +1447,7 @@ static PetscErrorCode PetscLogHandlerView_Default_Info(PetscLogHandler handler, 
       PetscEventPerfInfo *stage_info;
       const char         *stage_name;
 
-      if (!stageUsed[stage]) continue;
+      if (!(stageUsed[stage] && stageVisible[stage])) continue;
       PetscCall(PetscLogGlobalNamesGlobalGetLocal(global_stages, stage, &stage_id));
       PetscCall(PetscLogGlobalNamesGlobalGetName(global_stages, stage, &stage_name));
       stage_info = &zero_info;
