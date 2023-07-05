@@ -443,9 +443,49 @@ PetscErrorCode testDeprecated(void)
 
   Level: dpcrtd (since 3.18.5)
 
-.seealso: `testDeprecated()`
+.seealso: [](ch_matrices), `testDeprecated()`, [Matrix Factorization](sec_matfactor)
 */
 PetscErrorCode testIllFormedDeprecated(void)
+{
+  return PETSC_SUCCESS;
+}
+
+/*@
+  testValidInOutParams - check that in-out params work
+
+  Input Parameter:
+. foo - the input description for an in-out param
+
+  Output Parameter:
+. foo - the output description for an in-out param
+
+  Level: beginner
+
+.seealso: `testWellFormedFunctionDocString()`
+*/
+PetscErrorCode testValidInOutParams(int *foo)
+{
+  return PETSC_SUCCESS;
+}
+
+/*@
+  testInvalidInOutParams - check that in-out params work
+
+  Input Parameter:
++ foo - the input description for an in-out param
++ baz - asdasdasd
+- foo              - a duplicate description
+
+  Output Parameters:
+. bop = asdas
+- foo    - the output description for an in-out param
+- foo - a duplicate description2
+
+  Level: beginner
+
+.seealso: `testWellFormedFunctionDocString()`
+*/
+PetscErrorCode testInvalidInOutParams(int *foo)
 {
   return PETSC_SUCCESS;
 }
