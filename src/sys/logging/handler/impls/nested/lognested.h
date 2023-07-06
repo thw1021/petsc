@@ -26,7 +26,7 @@ struct _n_NestedIdPair {
   #define NestedIdPairHash(key)     PetscHashCombine(PetscHash_UInt32((PetscHash32_t)((key).root)), PetscHash_UInt32((PetscHash32_t)((key).leaf)))
   #define NestedIdPairEqual(k1, k2) (((k1).root == (k2).root) && ((k1).leaf == (k2).leaf))
 
-PETSC_HASH_MAP(NestedHash, NestedIdPair, PetscLogEvent, NestedIdPairHash, NestedIdPairEqual, -1);
+PETSC_HASH_MAP(NestedHash, NestedIdPair, PetscLogEvent, NestedIdPairHash, NestedIdPairEqual, -1)
 
 typedef struct _n_PetscLogHandler_Nested *PetscLogHandler_Nested;
 struct _n_PetscLogHandler_Nested {
