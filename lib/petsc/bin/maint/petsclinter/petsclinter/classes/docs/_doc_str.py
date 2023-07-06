@@ -11,6 +11,8 @@ import collections
 import clang.cindex as clx
 import petsclinter  as pl
 
+from .. import _util
+
 from .._diag    import DiagnosticManager, Diagnostic
 from .._linter  import Linter
 from .._cursor  import Cursor
@@ -54,6 +56,8 @@ _suspicious_expression_regex = re.compile(
     }
   )
 )
+
+_pragma_regex = re.compile(r'.*PetscClangLinter\s+pragma\s+(\w+):\s*(.*)')
 
 class SectionNotFoundError(pl.BaseError):
   """
@@ -315,10 +319,12 @@ class PetscDocString(DocBase):
   def __init__(self, linter, cursor, indent=2):
     if not isinstance(linter, Linter):
       raise ValueError(type(linter))
+    if not isinstance(cursor, Cursor):
+      raise ValueError(type(cursor))
 
     self.sections.set_verbose(linter.verbose)
     self._linter          = linter
-    self.cursor           = Cursor.cast(cursor)
+    self.cursor           = cursor
     self.raw, self.extent = self._get_sanitized_comment_and_range_from_cursor(self.cursor)
     self.indent           = indent
     self.type             = self.Type.UNKNOWN
@@ -385,17 +391,14 @@ class PetscDocString(DocBase):
 
   @classmethod
   def _get_sanitized_comment_and_range_from_cursor(cls, cursor):
-    if not isinstance(cursor, Cursor):
-      raise ValueError(type(cursor))
-
     raw, extent = cursor.get_comment_and_range()
     extent      = SourceRange.cast(extent, tu=cursor.translation_unit)
 
     if not cls._is_valid_docstring(cursor, raw, extent):
-      raise pl.ParsingError('Not a docstring')
+      raise pl.KnownUnhandleableCursorError('Not a docstring')
 
     rawlines = raw.splitlines()
-    comments = [i for i, line in enumerate(rawlines) if line.lstrip().startswith('/*')]
+    comments = [i for i, line in enumerate(rawlines) if line.lstrip().startswith(('/*', '//'))]
     if len(comments) > 1:
       # this handles the following case:
       #
@@ -409,6 +412,24 @@ class PetscDocString(DocBase):
       extent = extent.resized(lbegin=offset, cbegin=None, cend=None)
     return raw, extent
 
+  def get_pragmas(self):
+    pragmas     = collections.defaultdict(set)
+    start       = self.extent.start
+    flag_prefix = DiagnosticManager.flagprefix
+    for line in reversed(_util.read_file_lines_cached(start.file.name, 'r')[:start.line - 1]):
+      line = line.rstrip()
+      if line.endswith(('}', ';', ')', '>', '"')):
+        break
+      re_match = _pragma_regex.match(line)
+      if re_match:
+        pragmas[re_match.group(1)].update(
+          map(
+            re.compile,
+            filter(None, map(str.strip, re_match.group(2).replace(flag_prefix, '').split(',')))
+          )
+        )
+    return dict(pragmas)
+
   @classmethod
   def is_heading(cls, *args, **kwargs):
     return cls.sections.is_heading(*args, **kwargs)
@@ -420,10 +441,8 @@ class PetscDocString(DocBase):
   @staticmethod
   def make_error_message(message, crange=None, num_context=2, **kwargs):
     if crange is None:
-      crange_text = ''
-    else:
-      crange_text = crange.formatted(num_context=num_context, **kwargs)
-    return f'{message}:\n{crange_text}'
+      return message
+    return f'{message}:\n{crange.formatted(num_context=num_context, **kwargs)}'
 
   def make_source_location(self, lineno, col):
     return SourceLocation.from_position(self.cursor.translation_unit, lineno, col)
@@ -464,7 +483,7 @@ class PetscDocString(DocBase):
     """
     return self.add_error_from_diagnostic(self.make_diagnostic(diag_flag, msg, src_range, **kwargs))
 
-  def clear(self):
+  def reset(self):
     for section in self.sections:
       section.clear()
     self._attr = self._default_attributes()
@@ -489,7 +508,9 @@ class PetscDocString(DocBase):
         if is_floating:
            # don't really know how to handle this for now
           self.type_mod |= self.Modifier.FLOATING
-          raise pl.ParsingError('DON\'T KNOW HOW TO PROPERLY HANDLE FLOATING DOCSTRINGS')
+          raise pl.KnownUnhandleableCursorError(
+            'DON\'T KNOW HOW TO PROPERLY HANDLE FLOATING DOCSTRINGS'
+          )
         break
     return
 
@@ -509,17 +530,20 @@ class PetscDocString(DocBase):
     )
     if pointless:
       begin_sowing_range = self._attr['sowing_char_range']
+      linkage_extent     = SourceRange.cast(linkage_cursor.extent)
       diag               = self.make_diagnostic(
         self.diags.internal_linkage,
-        f'A sowing docstring for a symbol with internal linkage is pointless {Diagnostic.FLAG_SUBST}!',
-        self.extent, highlight=False
+        'A sowing docstring for a symbol with internal linkage is pointless', self.extent,
+        highlight=False
       ).add_note(
-        f'\'{cursor.displayname}\' is declared \'{linked_cursor_name}\' at {Cursor.cast(linkage_cursor)}',
-        location=linkage_cursor.extent.start
+        self.make_error_message(
+          f'\'{cursor.displayname}\' is declared \'{linked_cursor_name}\' here', linkage_extent
+        ),
+        location=linkage_extent.start
       ).add_note(
         'If this docstring is meant as developer-only documentation, remove the sowing chars from the docstring declaration. The linter will then ignore this docstring.'
       ).add_note(
-        f'Sowing chars declared here:\n{begin_sowing_range.formatted(num_context=2)}',
+        self.make_error_message('Sowing chars declared here', begin_sowing_range),
         location=begin_sowing_range.start
       )
       self.add_error_from_diagnostic(diag)
@@ -749,11 +773,12 @@ class PetscDocString(DocBase):
     return heading
 
   def parse(self):
-    self.clear()
+    self.reset()
     self._check_valid_sowing_chars()
     self._check_floating()
     if not self._check_valid_cursor_linkage():
-      raise pl.ParsingError # no point in continuing analysis, the docstring should not exist!
+      # no point in continuing analysis, the docstring should not exist!
+      raise pl.KnownUnhandleableCursorError
     self._check_valid_docstring_spacing()
 
     raw_data     = []
