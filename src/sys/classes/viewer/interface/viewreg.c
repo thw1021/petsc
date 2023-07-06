@@ -295,7 +295,7 @@ static PetscErrorCode PetscOptionsGetViewers_Internal(MPI_Comm comm, PetscOption
 
   PetscFunctionBegin;
   PetscValidCharPointer(name, 4);
-  PetscValidCharPointer(n_max_p, 5);
+  PetscValidIntPointer(n_max_p, 5);
   n_max = *n_max_p;
   PetscCheck(n_max >= 0, comm, PETSC_ERR_ARG_OUTOFRANGE, "Invalid size %" PetscInt_FMT " of passed arrays", *n_max_p);
   *n_max_p = 0;
