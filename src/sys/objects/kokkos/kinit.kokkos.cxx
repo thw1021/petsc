@@ -2,6 +2,10 @@
 #include <petscpkg_version.h>
 #include <petsc_kokkos.hpp>
 
+// the pool is defined in veckok.kokkos.cxx as it is currently only used there
+PETSC_SINGLE_LIBRARY_INTERN PetscScalar *PetscScalarPool;
+PETSC_SINGLE_LIBRARY_INTERN PetscInt     PetscScalarPoolSize;
+
 PetscBool PetscKokkosInitialized = PETSC_FALSE;
 
 Kokkos::DefaultExecutionSpace *PetscKokkosExecutionSpacePtr = nullptr;
@@ -10,7 +14,12 @@ PetscErrorCode PetscKokkosFinalize_Private(void)
 {
   PetscFunctionBegin;
   PetscCallCXX(delete PetscKokkosExecutionSpacePtr);
-  Kokkos::finalize();
+  PetscCallCXX(Kokkos::kokkos_free(PetscScalarPool));
+  PetscScalarPoolSize = 0;
+  if (PetscBeganKokkos) {
+    PetscCallCXX(Kokkos::finalize());
+    PetscBeganKokkos = PETSC_FALSE;
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -79,6 +88,11 @@ PetscErrorCode PetscKokkosInitializeCheck(void)
     PetscCallCXX(PetscKokkosExecutionSpacePtr = new Kokkos::DefaultExecutionSpace());
 #endif
   }
-  PetscKokkosInitialized = PETSC_TRUE;
+  if (!PetscScalarPoolSize) { // A pool for a small count of PetscScalars
+    PetscScalarPoolSize = 1024;
+    PetscCallCXX(PetscScalarPool = static_cast<PetscScalar *>(Kokkos::kokkos_malloc(sizeof(PetscScalar) * PetscScalarPoolSize)));
+  }
+
+  PetscKokkosInitialized = PETSC_TRUE; // PetscKokkosInitializeCheck() was called
   PetscFunctionReturn(PETSC_SUCCESS);
 }
