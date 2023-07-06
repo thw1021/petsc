@@ -117,7 +117,7 @@ def FixDir(petscdir,petscarch,parentdir,dir,verbose):
 
   # new makefile will be created from outbuf
   outbuf  =  '\n'
-  outbuf +=  "#requiresdefine   'PETSC_HAVE_FORTRAN'\n"
+  outbuf +=  "#requiresdefine   'PETSC_USE_FORTRAN_BINDINGS'\n"
   for line in inbuf.splitlines():
     if line.startswith('#requires'):
       outbuf += line + '\n'
@@ -195,6 +195,7 @@ def processDir(petscdir, petscarch,bfort, verbose, dirpath, dirnames, filenames)
       except subprocess.CalledProcessError as e:
         raise SystemError(str(e)+'\nIn '+dirpath+'\n'+e.output.decode(encoding='UTF-8',errors='replace'));
     FixDir(petscdir,petscarch, dirpath,outdir,verbose)
+  return
 
 def updatePetscTypesFromMansec(types, path):
   for file in os.listdir(path):
