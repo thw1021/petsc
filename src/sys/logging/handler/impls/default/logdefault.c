@@ -255,7 +255,7 @@ static PetscErrorCode PetscStageInfoReset(PetscStagePerf *stageInfo)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_LOG_RESIZABLE_ARRAY(StageInfoArray, PetscStagePerf, PetscLogStage, PetscStageInfoInit, PetscStageInfoReset, NULL);
+PETSC_LOG_RESIZABLE_ARRAY(StageInfoArray, PetscStagePerf, PetscLogStage, PetscStageInfoInit, PetscStageInfoReset, NULL)
 
 /* --- Action --- */
 

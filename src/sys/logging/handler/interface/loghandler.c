@@ -130,7 +130,6 @@ PetscErrorCode PetscLogHandlerSetOperation(PetscLogHandler h, PetscLogHandlerOpT
 {
   PetscFunctionBegin;
   PetscValidPointer(h, 1);
-  if (f) PetscValidPointer(f, 3);
 #define PETSC_LOG_HANDLER_SET_OP_CASE(NAME, name, Type, h, f) \
   case PETSC_LOG_HANDLER_OP_##NAME: \
     (h)->name = (PetscLog##Type##Fn)f; \
