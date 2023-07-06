@@ -7,7 +7,7 @@ typedef struct _n_PetscEventPS {
   int depth;
 } PetscEventPS;
 
-PETSC_LOG_RESIZABLE_ARRAY(PSArray, PetscEventPS, void *, NULL, NULL, NULL);
+PETSC_LOG_RESIZABLE_ARRAY(PSArray, PetscEventPS, void *, NULL, NULL, NULL)
 
 typedef struct _n_PetscLogHandler_Perfstubs *PetscLogHandler_Perfstubs;
 

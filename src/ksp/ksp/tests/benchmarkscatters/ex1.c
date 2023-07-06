@@ -74,8 +74,8 @@ PetscErrorCode PetscLogView_VecScatter(PetscViewer viewer)
   MPI_Comm           comm = PetscObjectComm((PetscObject)viewer);
   PetscEventPerfInfo eventInfo;
   PetscLogDouble     locTotalTime, stats[6], maxstats[6], minstats[6], sumstats[6], avetime, ksptime;
-  const int          stage = 2;
-  int                event, events[] = {VEC_ScatterBegin, VEC_ScatterEnd};
+  const int          stage    = 2;
+  int                events[] = {VEC_ScatterBegin, VEC_ScatterEnd};
   PetscMPIInt        rank, size;
   PetscInt           i;
   char               arch[128], hostname[128], username[128], pname[PETSC_MAX_PATH_LEN], date[128], version[256];
