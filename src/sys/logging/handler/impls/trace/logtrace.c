@@ -4,7 +4,7 @@
 typedef struct _n_PetscLogHandler_Trace *PetscLogHandler_Trace;
 struct _n_PetscLogHandler_Trace {
   FILE          *petsc_tracefile;
-  int            petsc_tracelevel;
+  size_t         petsc_tracelevel;
   char           petsc_tracespace[128];
   PetscLogDouble petsc_tracetime;
 };
