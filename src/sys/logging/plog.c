@@ -1224,7 +1224,7 @@ PetscErrorCode PetscLogEventIncludeClass(PetscClassId classid)
 PetscErrorCode PetscLogEventExcludeClass(PetscClassId classid)
 {
   PetscFunctionBegin;
-  PetscCall(PetscLogClassSetActiveAll(classid, PETSC_TRUE));
+  PetscCall(PetscLogClassSetActiveAll(classid, PETSC_FALSE));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

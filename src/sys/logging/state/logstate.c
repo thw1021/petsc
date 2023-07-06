@@ -398,7 +398,7 @@ PetscErrorCode PetscLogStateClassSetActive(PetscLogState state, PetscLogStage st
   for (PetscLogEvent e = 0; e < num_events; e++) {
     PetscLogEventInfo event_info;
     PetscCall(PetscLogRegistryEventGetInfo(state->registry, e, &event_info));
-    if (event_info.classid == classid) PetscCall(PetscBTSet(state->active, stage + (e + 1) * state->bt_num_stages));
+    if (event_info.classid == classid) PetscCall((isActive ? PetscBTSet : PetscBTClear)(state->active, stage + (e + 1) * state->bt_num_stages));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -433,7 +433,7 @@ PetscErrorCode PetscLogStateClassSetActiveAll(PetscLogState state, PetscClassId 
     PetscLogEventInfo event_info;
     PetscCall(PetscLogRegistryEventGetInfo(state->registry, e, &event_info));
     if (event_info.classid == classid) {
-      for (PetscLogStage s = 0; s < num_stages; s++) { PetscCall(PetscBTSet(state->active, s + (e + 1) * state->bt_num_stages)); }
+      for (PetscLogStage s = 0; s < num_stages; s++) { PetscCall((isActive ? PetscBTSet : PetscBTClear)(state->active, s + (e + 1) * state->bt_num_stages)); }
     }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
