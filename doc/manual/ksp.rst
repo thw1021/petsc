@@ -1230,7 +1230,7 @@ expensive but potentially powerful preconditioner, and a low threshold
 (e.g., :math:`x=0.0`) will result in faster coarsening, fewer levels,
 cheaper solves, and generally worse convergence rates.
 
-One can run with ``-info`` and grep for ``PCGAMG`` to get statistics on
+One can run with ``-info :pc`` and grep for ``PCGAMG`` to get statistics on
 each level, which can be used to see if you are coarsening at an
 appropriate rate. With smoothed aggregation you generally want to coarse
 at about a rate of 3:1 in each dimension. Coarsening too slow will
@@ -1284,7 +1284,7 @@ easily add AMG capabilities, like a new AMG methods or an AMG component
 like a matrix triple product. Contact us directly if you are interested
 in contributing.
 
-It is possible but not recommended to algebraic multigrid as a "standalone" solver, that is not accelerating it with a Krylov method. Use a `KSPType` of `KSPRICHARDSON`
+It is possible but not recommended to use algebraic multigrid as a "standalone" solver, that is not accelerating it with a Krylov method. Use a `KSPType` of `KSPRICHARDSON`
 (or equivalently `-ksp_type richardson`) to achieve this. Using `KSPPREONLY` will not work since it only applies a single cycle of multigrid.
 
 Adaptive Interpolation
