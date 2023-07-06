@@ -287,6 +287,7 @@ static PetscErrorCode PetscLogNestedCreatePerfNodes(MPI_Comm comm, PetscLogHandl
       tree[leaf_global].parent = root_global;
     }
   }
+  PetscCall(PetscFree2(keys, vals));
   PetscCallMPI(MPI_Comm_size(comm, &size));
   if (size > 1) { // get missing parents from other processes
     PetscInt *parents;

@@ -478,6 +478,7 @@ PetscErrorCode PetscLogDefaultBegin(void)
   if (handler) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscLogHandlerCreate_Default(PETSC_COMM_WORLD, &handler));
   PetscCall(PetscLogHandlerStart(handler));
+  PetscCall(PetscLogHandlerDestroy(&handler));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -516,6 +517,7 @@ PetscErrorCode PetscLogTraceBegin(FILE *file)
   if (handler) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscLogHandlerCreate_Trace(PETSC_COMM_WORLD, &handler));
   PetscCall(PetscLogHandlerStart(handler));
+  PetscCall(PetscLogHandlerDestroy(&handler));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -552,6 +554,7 @@ PetscErrorCode PetscLogNestedBegin(void)
   if (handler) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscLogHandlerCreate_Nested(PETSC_COMM_WORLD, &handler));
   PetscCall(PetscLogHandlerStart(handler));
+  PetscCall(PetscLogHandlerDestroy(&handler));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -589,6 +592,7 @@ PetscErrorCode PetscLogLegacyCallbacksBegin(PetscErrorCode (*PetscLogPLB)(PetscL
   PetscFunctionBegin;
   PetscCall(PetscLogHandlerCreate_Legacy(PetscLogPLB, PetscLogPLE, PetscLogPHC, PetscLogPHD, &handler));
   PetscCall(PetscLogHandlerStart(handler));
+  PetscCall(PetscLogHandlerDestroy(&handler));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -636,6 +640,7 @@ PetscErrorCode PetscLogMPEBegin(void)
   if (handler) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscLogHandlerCreate_MPE(PETSC_COMM_WORLD, &handler));
   PetscCall(PetscLogHandlerStart(handler));
+  PetscCall(PetscLogHandlerDestroy(&handler));
   #else
   SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_SUP_SYS, "PETSc was configured without MPE support, reconfigure with --with-mpe or --download-mpe");
   #endif
@@ -670,6 +675,7 @@ PetscErrorCode PetscLogPerfstubsBegin(void)
   if (handler) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(PetscLogHandlerCreate_Perfstubs(PETSC_COMM_WORLD, &handler));
   PetscCall(PetscLogHandlerStart(handler));
+  PetscCall(PetscLogHandlerDestroy(&handler));
   #else
   SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_SUP_SYS, "PETSc was configured without perfstubs support, reconfigure with --with-tau-perfstubs");
   #endif

@@ -420,6 +420,8 @@ PetscErrorCode PetscOptionsGetViewer(MPI_Comm comm, PetscOptions options, const 
   PetscBool set_internal;
 
   PetscFunctionBegin;
+  if (viewer) *viewer = NULL;
+  if (format) *format = PETSC_VIEWER_DEFAULT;
   PetscCall(PetscOptionsGetViewers_Internal(comm, options, pre, name, &n_max, viewer, format, &set_internal, PETSC_FUNCTION_NAME, PETSC_FALSE));
   if (set_internal) PetscAssert(n_max == 1, comm, PETSC_ERR_PLIB, "Unexpected: %d != 1 viewers set", (int)n_max);
   if (set) *set = set_internal;
