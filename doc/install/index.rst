@@ -4,9 +4,23 @@
 Install
 =======
 
-PETSc is available from a variety of package managers, if you are not planning to use PETSc with external packages that is likely the easiest way to install it.
+.. note::
+    PETSc is available from several package managers.
+    Depending on your exact needs (for example limited use of :any:`external packages <doc_externalsoftware>`) they are possibly the easiest way for
+    you to install PETSc.
+    Always verify that the package manager is providing a recent enough release of PETSc with support for the external packages you need.
 
-Information and tutorials on setting up a PETSc installation. 
+- Conda: https://anaconda.org/conda-forge/petsc  ``conda install -c conda-forge petsc``
+- Debian: https://packages.debian.org/stable/petsc-dev
+- Fedora: https://packages.fedoraproject.org/pkgs/petsc/petsc
+- Homebrew: https://formulae.brew.sh/formula/petsc ``brew install petsc``
+- MacPorts: https://ports.macports.org/port/petsc  ``sudo port install petsc``
+- Python: https://pypi.org/project/petsc ``python -m pip install mpi4py petsc petsc4py``
+- Slackware: https://slackbuilds.org/repository/15.0/academic/petsc/?search=petsc
+- Spack: https://spack.io ``spack install petsc``
+- Ubuntu: https://packages.ubuntu.com/petsc-dev ``sudo apt install petsc-dev``
+
+Information and tutorials on setting up a PETSc installation.
 
 .. toctree::
    :maxdepth: 2
