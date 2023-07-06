@@ -177,10 +177,13 @@ class Synopsis(SectionBase):
     Ensure that a synopsis is present and properly formatted with Cursor - description
     """
     if symbol is None:
-      diag = docstring.make_diagnostic(
-        self.diags.missing_description, 'Docstring missing synopsis', self.extent, highlight=False
-      ).add_note(f"Expected '{cursor.name} - a very useful description'")
-      docstring.add_error_from_diagnostic(diag)
+      docstring.add_error_from_diagnostic(
+        docstring.make_diagnostic(
+          self.diags.missing_description, 'Docstring missing synopsis', self.extent, highlight=False
+        ).add_note(
+          f"Expected '{cursor.name} - a very useful description'"
+        )
+      )
     return
 
   def _check_macro_synopsis(self, linter, cursor, docstring, explicit_synopsis):
@@ -417,35 +420,48 @@ class FunctionParameterList(ParameterList):
         docstring.add_error_from_diagnostic(diag)
     return
 
+  def _check_no_args_documented(self, linter, docstring, arg_cursors):
+    """
+    Return True (and log the appropriate error) if no arguments were documented, False otherwise
+    """
+    if arg_cursors and not self:
+      # none of the function arguments are documented
+      docstring.add_error_from_diagnostic(
+        docstring.make_diagnostic(
+          self.diags.parameter_documentation,
+          f'Symbol parameters are all undocumented {Diagnostic.FLAG_SUBST}',
+          docstring.extent, highlight=False
+        ).add_note(
+          docstring.make_error_message(
+            'Parameters defined here',
+            SourceRange.from_locations(arg_cursors[0].extent.start, arg_cursors[-1].extent.end)
+          ),
+          location=arg_cursors[0].extent.start
+        )
+      )
+      return True
+
+    if not arg_cursors and self and len(self.items.values()):
+      # function has no arguments, so check there are no parameter docstrings, if so, we can
+      # delete them
+      docstring.add_error_from_source_range(
+        self.diags.parameter_documentation,
+        f"Found parameter docstring(s) but '{docstring.cursor.displayname}' has no parameters",
+        self.extent,
+        highlight=False, patch=Patch(self.extent, '')
+      )
+      return True
+
+    return False
+
   def _check_valid_param_list_from_cursor(self, linter, docstring, arg_cursors):
     """
     Ensure that the parameter list matches the documented values, and that their order is correct
     """
-    if arg_cursors and not self:
-      # none of the function arguments are documented
-      diag = docstring.make_diagnostic(
-        self.diags.parameter_documentation,
-        f'Symbol parameters are all undocumented {Diagnostic.FLAG_SUBST}',
-        docstring.extent, highlight=False
-      ).add_note(
-        docstring.make_error_message(
-          'Parameters defined here',
-          SourceRange.from_locations(arg_cursors[0].extent.start, arg_cursors[-1].extent.end)
-        ),
-        location=arg_cursors[0].extent.start
-      )
-      docstring.add_error_from_diagnostic(diag)
+    if self._check_no_args_documented(linter, docstring, arg_cursors):
       return
 
-    if not arg_cursors:
-      # function has no arguments, so check there are no parameter docstrings, if so, we can
-      # delete them
-      if self and len(self.items.values()):
-        mess = f"Found parameter docstring(s) but '{docstring.cursor.displayname}' has no parameters"
-        docstring.add_error_from_source_range(
-          self.diags.parameter_documentation, mess, self.extent,
-          highlight=False, patch=Patch(self.extent, '')
-        )
+    if not self:
       return
 
     def get_recursive_cursor_list(cursor_list):
@@ -463,9 +479,10 @@ class FunctionParameterList(ParameterList):
           )
       return new_cursor_list
 
+    num_groups  = max(self.items.keys(), default=0)
     arg_cursors = get_recursive_cursor_list(arg_cursors)
     arg_names   = [a.name for a in arg_cursors if a.name]
-    arg_seen    = [False] * len(arg_names)
+    arg_seen    = [0] * len(arg_names)
     not_found   = []
 
     def mark_name_as_seen(name):
@@ -477,18 +494,20 @@ class FunctionParameterList(ParameterList):
           idx = arg_names.index(name, idx)
         except ValueError:
           return -1
-        if not arg_seen[idx]:
-          # argument exists and has not been found yet
+        count = arg_seen[idx]
+        if count == 0 or count <= num_groups:
+          # count = 0 -> argument exists and has not been found yet
+          # count <= num_groups -> argument is possibly in-out and is defined in multiple
+          # groups
           break
         # argument exists but has already been claimed
         idx += 1
-      arg_seen[idx] = True
+      arg_seen[idx] += 1
       return idx
 
     solitary_param_diag = self.diags.solitary_parameter
     for _, group in self.items.items():
-      indices = []
-      remove  = set()
+      remove = set()
       for i, (loc, descr_item, _) in enumerate(group):
         arg, sep = descr_item.arg, descr_item.sep
         if sep == ',' or ',' in arg:
@@ -516,18 +535,15 @@ class FunctionParameterList(ParameterList):
             not_found.append((sub, docstring.make_source_range(sub, descr_item.text, loc.start.line)))
             remove.add(i)
           else:
-            indices.append(idx)
             DescribableItem.cast(descr_item, sep='-').check(docstring, self, loc, expected_sep='-')
 
       self.check_aligned_descriptions(docstring, [g for i, g in enumerate(group) if i not in remove])
 
     args_left = [name for seen, name in zip(arg_seen, arg_names) if not seen]
     if not_found:
-      diag         = self.diags.parameter_documentation
-      base_message = "Extra docstring parameter '{}' not found in symbol parameter list:\n{}"
+      param_doc_diag = self.diags.parameter_documentation
       for i, (arg, loc) in enumerate(not_found):
-        patch   = None
-        message = base_message.format(arg, loc.formatted(num_context=2))
+        patch = None
         try:
           if (len(args_left) == 1) and (i == len(not_found) - 1):
             # if we only have 1 arg left and 1 wasn't found, chances are they are meant to
@@ -540,28 +556,43 @@ class FunctionParameterList(ParameterList):
           else:
             arg_match = difflib.get_close_matches(arg, args_left, n=1)[0]
         except IndexError:
-          pass
+          # the difflib call failed
+          note_loc = docstring.cursor.extent.start
+          note     = docstring.make_error_message(
+            'Parameter list defined here', crange=docstring.cursor
+          )
         else:
           match_cursor = [c for c in arg_cursors if c.name == arg_match][0]
-          message      = f'{message}\n\nmaybe you meant {match_cursor.get_formatted_blurb()}'
+          note_loc     = match_cursor.extent.start
+          note         = docstring.make_error_message(
+            f'Maybe you meant {match_cursor.get_formatted_blurb()}'
+          )
           args_left.remove(arg_match)
           assert mark_name_as_seen(arg_match) != -1, f'{arg_match=} was not found in {arg_names=}'
-        docstring.add_error_from_diagnostic(Diagnostic(diag, message, loc.start, patch=patch))
+        docstring.add_error_from_diagnostic(
+          docstring.make_diagnostic(
+            param_doc_diag, f"Extra docstring parameter \'{arg}\' not found in symbol parameter list",
+            loc, patch=patch
+          ).add_note(
+            note, location=note_loc
+          )
+        )
 
     undoc_param_diag = self.diags.parameter_documentation
     for arg in args_left:
       idx = mark_name_as_seen(arg)
       assert idx != -1, f'{arg=} was not found in {arg_names=}'
-      diag = docstring.make_diagnostic(
-        undoc_param_diag, f'Undocumented parameter \'{arg}\' not found in parameter section',
-        self.extent, highlight=False
-      ).add_note(
-        docstring.make_error_message(
-          f'Parameter \'{arg}\' defined here', arg_cursors[idx], num_context=1
-        ),
-        location=arg_cursors[idx].extent.start
+      docstring.add_error_from_diagnostic(
+        docstring.make_diagnostic(
+          undoc_param_diag, f'Undocumented parameter \'{arg}\' not found in parameter section',
+          self.extent, highlight=False
+        ).add_note(
+          docstring.make_error_message(
+            f'Parameter \'{arg}\' defined here', arg_cursors[idx], num_context=1
+          ),
+          location=arg_cursors[idx].extent.start
+        )
       )
-      docstring.add_error_from_diagnostic(diag)
     return
 
   def check(self, linter, cursor, docstring):
@@ -854,13 +885,13 @@ class SeeAlso(InlineList):
     """
     Ensure that every entry in the seealso list is enclosed in backticks
     """
-    def enclosed_by(string, char):
-      return string.startswith(char) and string.endswith(char)
+    def enclosed_by(string, begin_char, end_char):
+      return string.startswith(begin_char) and string.endswith(end_char)
 
     btick = self.special_chars
     assert btick == '`'
     for loc, text in item_remain:
-      if not enclosed_by(text, btick):
+      if not enclosed_by(text, btick, btick) and not re.search(r'\[.*\]\(\w+\)', text):
         docstring.add_error_from_source_range(
           self.diags.backticks, f"seealso symbol '{text}' not enclosed with '{btick}'",
           loc, patch=Patch(loc, f'{btick}{text.replace(btick, "")}{btick}')
