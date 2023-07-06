@@ -453,7 +453,7 @@ PetscErrorCode PetscLogHandlerView(PetscLogHandler h, PetscViewer viewer)
 {
   PetscFunctionBegin;
   PetscValidPointer(h, 1);
-  PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 3);
+  PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
   PetscLogHandlerTry(h, view, (h, viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
 }

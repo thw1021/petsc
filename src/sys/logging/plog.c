@@ -155,7 +155,7 @@ PetscLogState petsc_log_state = NULL;
 static PetscErrorCode PetscLogTryGetHandler(PetscLogHandlerType type, PetscLogHandler *handler)
 {
   PetscFunctionBegin;
-  PetscValidPointer(handler, 1);
+  PetscValidPointer(handler, 2);
   *handler = NULL;
   for (int i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
     PetscLogHandler h = PetscLogHandlers[i].handler;
@@ -170,7 +170,7 @@ static PetscErrorCode PetscLogTryGetHandler(PetscLogHandlerType type, PetscLogHa
 static PetscErrorCode PetscLogGetHandler(PetscLogHandlerType type, PetscLogHandler *handler)
 {
   PetscFunctionBegin;
-  PetscValidPointer(handler, 1);
+  PetscValidPointer(handler, 2);
   PetscCall(PetscLogTryGetHandler(type, handler));
   if (*handler == NULL) {
     if (type == PETSC_LOG_HANDLER_DEFAULT) fprintf(stderr, "PETSC ERROR: Logging has not been enabled.\nYou might have forgotten to call PetscInitialize().\n");
