@@ -4314,9 +4314,9 @@ static PetscErrorCode DMConvert_pforest_plex(DM dm, DMType newtype, DM *plex)
       if (cdm) {
         PetscFE fe;
   #if !defined(P4_TO_P8)
-        PetscInt celltype = DM_POLYTOPE_QUADRILATERAL;
+        DMPolytopeType celltype = DM_POLYTOPE_QUADRILATERAL;
   #else
-        PetscInt celltype = DM_POLYTOPE_HEXAHEDRON;
+        DMPolytopeType celltype = DM_POLYTOPE_HEXAHEDRON;
   #endif
 
         PetscCall(PetscFECreateLagrangeByCell(PETSC_COMM_SELF, dim, dim, celltype, 1, PETSC_DEFAULT, &fe));
