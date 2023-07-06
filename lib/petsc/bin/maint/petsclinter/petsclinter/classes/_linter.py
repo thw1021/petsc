@@ -373,11 +373,13 @@ class Linter:
     for results in self.find_lintable_expressions(tu, set(func_map.keys())):
       try:
         if isinstance(results, clx.Cursor):
-          docs_map[results.kind](self, results)
+          docs_map[results.kind](self, Cursor.cast(results))
         else:
           func, parent, scope = results
+          func                = Cursor.cast(func)
+          parent              = Cursor.cast(parent)
           func_map[func.spelling](self, func, parent)
-          processed_funcs[Cursor.get_name_from_cursor(parent)].append((Cursor.cast(func), scope))
+          processed_funcs[parent.name].append((func, scope))
       except pl.KnownUnhandleableCursorError as kuce:
         # ignored
         pass
@@ -394,7 +396,7 @@ class Linter:
     if diagnostic.disabled():
       return
 
-    cursor   = Cursor.cast(cursor)
+    assert isinstance(cursor, Cursor)
     filename = cursor.get_file()
 
     if filename not in self.errors:
@@ -497,7 +499,7 @@ class Linter:
     if diag.disabled():
       return
 
-    cursor   = Cursor.cast(cursor)
+    assert isinstance(cursor, Cursor)
     warn_str = f'{util.color.bright_yellow()}{diag.location}: warning:{util.color.reset()} {str(cursor)}\n{diag.format_message()}'
     self.warnings.append((cursor.get_file(), warn_str))
     return
