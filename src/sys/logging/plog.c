@@ -333,6 +333,11 @@ static PetscErrorCode PetscLogHandlerCopyToHot(PetscLogHandler h, PetscLogHandle
 
   To disconnect a handler from the global stream call `PetscLogHandlerStop()`.
 
+  When a log handler is started, stages that have already been pushed with `PetscLogStagePush()`,
+  will be pushed for the new log handler, but it will not be informed of any events that are
+  in progress.  It is recommended to start any user-defined log handlers immediately following
+  before any user-defined stages are pushed.
+
 .seealso: [](ch_profiling), `PetscLogHandler`, `PetscLogState`, `PetscLogHandlerStop()`
 @*/
 PetscErrorCode PetscLogHandlerStart(PetscLogHandler h)
@@ -346,7 +351,25 @@ PetscErrorCode PetscLogHandlerStart(PetscLogHandler h)
       PetscCheck(h->refct > 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "handler should have a positive reference count");
       h->refct++;
       PetscCall(PetscLogHandlerCopyToHot(h, &PetscLogHandlers[i]));
-      if (petsc_log_state) PetscCall(PetscLogHandlerSetState(h, petsc_log_state));
+      if (petsc_log_state) {
+        PetscLogStage stack_height;
+        PetscIntStack orig_stack, temp_stack;
+
+        PetscCall(PetscLogHandlerSetState(h, petsc_log_state));
+        stack_height = petsc_log_state->stage_stack->top + 1;
+        PetscCall(PetscIntStackCreate(&temp_stack));
+        orig_stack                     = petsc_log_state->stage_stack;
+        petsc_log_state->stage_stack   = temp_stack;
+        petsc_log_state->current_stage = -1;
+        for (int s = 0; s < stack_height; s++) {
+          PetscLogStage stage = (PetscLogStage)orig_stack->stack[s];
+          PetscCall(PetscLogHandlerStagePush(h, stage));
+          PetscCall(PetscIntStackPush(temp_stack, stage));
+          petsc_log_state->current_stage = stage;
+        }
+        PetscCall(PetscIntStackDestroy(temp_stack));
+        petsc_log_state->stage_stack = orig_stack;
+      }
       PetscFunctionReturn(PETSC_SUCCESS);
     }
   }
@@ -369,6 +392,9 @@ PetscErrorCode PetscLogHandlerStart(PetscLogHandler h)
   with `PetscLogHandlerGetState()`, so that it can access the registry when post-processing
   (for instance, in `PetscLogHandlerView()`),
 
+  When a log handler is stopped, the remaining stages will be popped before it is
+  disconnected from the log stream.
+
 .seealso: [](ch_profiling), `PetscLogHandler`, `PetscLogState`, `PetscLogHandlerStop()`
 @*/
 PetscErrorCode PetscLogHandlerStop(PetscLogHandler h)
@@ -376,6 +402,35 @@ PetscErrorCode PetscLogHandlerStop(PetscLogHandler h)
   PetscFunctionBegin;
   for (PetscInt i = 0; i < PETSC_LOG_HANDLER_MAX; i++) {
     if (PetscLogHandlers[i].handler == h) {
+      if (petsc_log_state) {
+        PetscLogStage stack_height;
+        PetscIntStack orig_stack, temp_stack;
+
+        PetscCall(PetscLogHandlerSetState(h, petsc_log_state));
+        stack_height = petsc_log_state->stage_stack->top + 1;
+        PetscCall(PetscIntStackCreate(&temp_stack));
+        orig_stack                   = petsc_log_state->stage_stack;
+        petsc_log_state->stage_stack = temp_stack;
+        for (int s = 0; s < stack_height; s++) {
+          PetscLogStage stage = (PetscLogStage)orig_stack->stack[s];
+
+          PetscCall(PetscIntStackPush(temp_stack, stage));
+        }
+        for (int s = 0; s < stack_height; s++) {
+          PetscLogStage stage;
+          PetscBool     empty;
+
+          PetscCall(PetscIntStackPop(temp_stack, &stage));
+          PetscCall(PetscIntStackEmpty(temp_stack, &empty));
+          if (!empty) {
+            PetscCall(PetscIntStackTop(temp_stack, &petsc_log_state->current_stage));
+          } else petsc_log_state->current_stage = -1;
+          PetscCall(PetscLogHandlerStagePop(h, stage));
+        }
+        PetscCall(PetscIntStackDestroy(temp_stack));
+        petsc_log_state->stage_stack = orig_stack;
+        PetscCall(PetscIntStackTop(petsc_log_state->stage_stack, &petsc_log_state->current_stage));
+      }
       PetscCall(PetscArrayzero(&PetscLogHandlers[i], 1));
       h->refct--;
       PetscCheck(h->refct > 0, PETSC_COMM_SELF, PETSC_ERR_PLIB, "handler should have a positive reference count");
