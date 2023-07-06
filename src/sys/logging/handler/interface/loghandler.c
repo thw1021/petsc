@@ -61,6 +61,7 @@ PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *handler)
   *handler = NULL;
   if (h == NULL || --h->refct > 0) PetscFunctionReturn(PETSC_SUCCESS);
   if (h->destroy) PetscCall((*((h)->destroy))(h));
+  PetscCall(PetscLogStateDestroy(&h->state));
   PetscCall(PetscCommDestroy(&h->comm));
   PetscCall(PetscFree(h));
   PetscFunctionReturn(PETSC_SUCCESS);
