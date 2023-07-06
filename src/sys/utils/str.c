@@ -283,7 +283,7 @@ PetscErrorCode PetscStrcasecmp(const char a[], const char b[], PetscBool *t)
   int c;
 
   PetscFunctionBegin;
-  PetscValidBoolPointer(t, 3);
+  PetscValidPointer(t, 3);
   if (!a && !b) c = 0;
   else if (!a || !b) c = 1;
 #if defined(PETSC_HAVE_STRCASECMP)
@@ -329,7 +329,7 @@ PetscErrorCode PetscStrendswithwhich(const char a[], const char *const *bs, Pets
 {
   PetscFunctionBegin;
   PetscValidPointer(bs, 2);
-  PetscValidIntPointer(cnt, 3);
+  PetscValidPointer(cnt, 3);
   *cnt = 0;
   while (bs[*cnt]) {
     PetscBool flg;
@@ -428,7 +428,7 @@ PetscErrorCode PetscTokenFind(PetscToken a, char *result[])
 PetscErrorCode PetscTokenCreate(const char a[], char b, PetscToken *t)
 {
   PetscFunctionBegin;
-  PetscValidCharPointer(a, 1);
+  PetscValidPointer(a, 1);
   PetscValidPointer(t, 3);
   PetscCall(PetscNew(t));
   PetscCall(PetscStrallocpy(a, &(*t)->array));
@@ -482,7 +482,7 @@ PetscErrorCode PetscStrInList(const char str[], const char list[], char sep, Pet
   char      *item;
 
   PetscFunctionBegin;
-  PetscValidBoolPointer(found, 4);
+  PetscValidPointer(found, 4);
   *found = PETSC_FALSE;
   PetscCall(PetscTokenCreate(list, sep, &token));
   PetscCall(PetscTokenFind(token, &item));
@@ -547,8 +547,8 @@ PetscErrorCode PetscStrreplace(MPI_Comm comm, const char aa[], char b[], size_t 
   static size_t DISPLAY_LENGTH = 265, USER_LENGTH = 256, HOST_LENGTH = 256;
 
   PetscFunctionBegin;
-  PetscValidCharPointer(aa, 2);
-  PetscValidCharPointer(b, 3);
+  PetscValidPointer(aa, 2);
+  PetscValidPointer(b, 3);
   if (aa == b) PetscCall(PetscStrallocpy(aa, (char **)&a));
   PetscCall(PetscMalloc1(len, &work));
 
@@ -645,7 +645,7 @@ PetscErrorCode PetscStrcmpAny(const char src[], PetscBool *match, const char cmp
   va_list Argp;
 
   PetscFunctionBegin;
-  PetscValidBoolPointer(match, 2);
+  PetscValidPointer(match, 2);
   *match = PETSC_FALSE;
   if (!src) PetscFunctionReturn(PETSC_SUCCESS);
   va_start(Argp, cmp);
@@ -684,7 +684,7 @@ PetscErrorCode PetscEListFind(PetscInt n, const char *const *list, const char *s
 {
   PetscFunctionBegin;
   if (found) {
-    PetscValidBoolPointer(found, 5);
+    PetscValidPointer(found, 5);
     *found = PETSC_FALSE;
   }
   for (PetscInt i = 0; i < n; ++i) {
@@ -733,7 +733,7 @@ PetscErrorCode PetscEnumFind(const char *const *enumlist, const char *str, Petsc
     *value = (PetscEnum)evalue;
   }
   if (found) {
-    PetscValidBoolPointer(found, 4);
+    PetscValidPointer(found, 4);
     *found = efound;
   }
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -816,7 +816,7 @@ PetscErrorCode PetscStrcat(char s[], const char t[])
 {
   PetscFunctionBegin;
   if (!t) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscValidCharPointer(s, 1);
+  PetscValidPointer(s, 1);
   strcat(s, t);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -846,8 +846,8 @@ PetscErrorCode PetscStrcpy(char s[], const char t[])
 {
   PetscFunctionBegin;
   if (t) {
-    PetscValidCharPointer(s, 1);
-    PetscValidCharPointer(t, 2);
+    PetscValidPointer(s, 1);
+    PetscValidPointer(t, 2);
     strcpy(s, t);
   } else if (s) {
     s[0] = '\0';

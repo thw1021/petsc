@@ -45,7 +45,7 @@ PetscErrorCode ISRenumber(IS subset, IS subset_mult, PetscInt *N, IS *subset_n)
   PetscFunctionBegin;
   PetscValidHeaderSpecific(subset, IS_CLASSID, 1);
   if (subset_mult) PetscValidHeaderSpecific(subset_mult, IS_CLASSID, 2);
-  if (N) PetscValidIntPointer(N, 3);
+  if (N) PetscValidPointer(N, 3);
   else if (!subset_n) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCall(ISGetLocalSize(subset, &n));
   if (subset_mult) {
@@ -864,7 +864,7 @@ PetscErrorCode ISIdentity(IS is, PetscBool *ident)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(is, IS_CLASSID, 1);
-  PetscValidBoolPointer(ident, 2);
+  PetscValidPointer(ident, 2);
   PetscCall(ISGetInfo(is, IS_IDENTITY, IS_GLOBAL, PETSC_TRUE, ident));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -920,8 +920,8 @@ PetscErrorCode ISContiguousLocal(IS is, PetscInt gstart, PetscInt gend, PetscInt
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(is, IS_CLASSID, 1);
-  PetscValidIntPointer(start, 4);
-  PetscValidBoolPointer(contig, 5);
+  PetscValidPointer(start, 4);
+  PetscValidPointer(contig, 5);
   *start  = -1;
   *contig = PETSC_FALSE;
   PetscTryTypeMethod(is, contiguous, gstart, gend, start, contig);
@@ -958,7 +958,7 @@ PetscErrorCode ISPermutation(IS is, PetscBool *perm)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(is, IS_CLASSID, 1);
-  PetscValidBoolPointer(perm, 2);
+  PetscValidPointer(perm, 2);
   PetscCall(ISGetInfo(is, IS_PERMUTATION, IS_GLOBAL, PETSC_FALSE, perm));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1116,7 +1116,7 @@ PetscErrorCode ISGetSize(IS is, PetscInt *size)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(is, IS_CLASSID, 1);
-  PetscValidIntPointer(size, 2);
+  PetscValidPointer(size, 2);
   *size = is->map->N;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1140,7 +1140,7 @@ PetscErrorCode ISGetLocalSize(IS is, PetscInt *size)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(is, IS_CLASSID, 1);
-  PetscValidIntPointer(size, 2);
+  PetscValidPointer(size, 2);
   *size = is->map->n;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1747,7 +1747,7 @@ PetscErrorCode ISSorted(IS is, PetscBool *flg)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(is, IS_CLASSID, 1);
-  PetscValidBoolPointer(flg, 2);
+  PetscValidPointer(flg, 2);
   PetscCall(ISGetInfo(is, IS_SORTED, IS_LOCAL, PETSC_TRUE, flg));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
