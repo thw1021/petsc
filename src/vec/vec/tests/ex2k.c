@@ -55,7 +55,7 @@ int main(int argc, char **argv)
   PetscCheck(testMDot || testMAXPY, PETSC_COMM_WORLD, PETSC_ERR_USER_INPUT, "Unsupported test name: %s", testName);
   PetscCall(PetscDeviceContextGetCurrentContext(&dctx));
   PetscCall(PetscMalloc1(maxys, &vals));
-  for (j = 0; j < maxys; j++) PetscCall(PetscRandomGetValue(rnd, &vals[j]));
+  for (j = 0; j < maxys; j++) vals[j] = 3.14 + j; // same across all processes
 
   PetscCall(PetscLogStageRegister("Profiling", &stage1));
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Vector(N)   "));
