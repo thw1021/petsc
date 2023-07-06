@@ -183,7 +183,7 @@ static PetscErrorCode VecSetValuesCOO_MPIKokkos(Vec x, const PetscScalar v[], In
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode VecSetOps_MPIKokkos(Vec v)
+PetscErrorCode VecSetOps_MPIKokkos(Vec v)
 {
   PetscFunctionBegin;
   v->ops->abs             = VecAbs_SeqKokkos;
@@ -274,6 +274,7 @@ PetscErrorCode VecCreate_MPIKokkos(Vec v)
 {
   Vec_MPI    *vecmpi;
   Vec_Kokkos *veckok;
+  PetscBool   use_gemv;
 
   PetscFunctionBegin;
   PetscCall(PetscKokkosInitializeCheck());
@@ -286,6 +287,15 @@ PetscErrorCode VecCreate_MPIKokkos(Vec v)
   veckok         = new Vec_Kokkos(v->map->n, vecmpi->array, NULL); /* Alloc device array but do not init it */
   v->spptr       = static_cast<void *>(veckok);
   v->offloadmask = PETSC_OFFLOAD_KOKKOS;
+  PetscCall(PetscOptionsHasName(NULL, NULL, "-vec_mdot_use_gemv", &use_gemv));
+  if (use_gemv) {
+    v->ops[0].duplicatevecs = VecDuplicateVecs_Kokkos_GEMV;
+    v->ops[0].mdot          = VecMDot_SeqKokkos_GEMV;
+    v->ops[0].mdot_local    = VecMDot_SeqKokkos_GEMV;
+    v->ops[0].mtdot         = VecMTDot_SeqKokkos_GEMV;
+    v->ops[0].mtdot_local   = VecMTDot_SeqKokkos_GEMV;
+    v->ops[0].maxpy         = VecMAXPY_SeqKokkos_GEMV;
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

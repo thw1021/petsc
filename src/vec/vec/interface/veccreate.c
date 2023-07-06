@@ -1,5 +1,5 @@
-
 #include <petsc/private/vecimpl.h> /*I  "petscvec.h"   I*/
+#include <../src/vec/vec/impls/mpi/pvecimpl.h>
 
 static PetscErrorCode VecCreate_Common_Private(Vec v)
 {
@@ -70,5 +70,33 @@ PetscErrorCode VecCreateWithLayout_Private(PetscLayout map, Vec *vec)
   PetscCall(VecCreate_Common_Private(v));
   v->bstash.bs = map->bs;
   *vec         = v;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  Create a VEC{SEQ, MPI} with the given layout and array
+
+  Collective
+
+  Input Parameter:
++ map   - the layout
+. isMPI - if true, create a VECMPI, otherwise create a VECSEQ (note: one could create VECMPI even with a single process, thus this parameter is needed)
+- array - the array on host
+
+  Output Parameter:
+. V  - The vector object
+*/
+PetscErrorCode VecCreateWithLayoutAndArray_Standard(PetscLayout map, PetscBool isMPI, const PetscScalar array[], Vec *V)
+{
+  PetscFunctionBegin;
+  PetscCall(VecCreateWithLayout_Private(map, V));
+  if (isMPI) {
+    PetscCall(VecCreate_MPI_Private(*V, PETSC_FALSE, 0, array));
+  } else { // caller wants to create VecSeq
+    PetscMPIInt size;
+    PetscCallMPI(MPI_Comm_size(map->comm, &size));
+    PetscCheck(size == 1, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Cannot create VECSEQ on more than one process");
+    PetscCall(VecCreate_Seq_Private(*V, array));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
