@@ -1023,7 +1023,7 @@ PETSC_INTERN PetscErrorCode TaoBNCGSetH0(Tao tao, Mat H0)
 /*@
   TaoBNCGGetType - Return the type for the `TAOBNCG` solver
 
-  Input Parameters:
+  Input Parameter:
 . tao  - the `Tao` solver context
 
   Output Parameter:
