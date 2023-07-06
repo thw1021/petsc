@@ -384,7 +384,7 @@ static PetscErrorCode PetscLogNestedTreePrint(PetscViewer viewer, double total_t
         } else if (node == -2) {
           PetscCall(PetscLogNestedTreePrintLine(viewer, &other, ((double)other.count) / ((double)parent_info->count), parent_info->count, "other", total_time));
         } else {
-          const char *base_name;
+          const char *base_name = NULL;
           PetscCall(PetscNestedNameGetBase(tree[node].name, &base_name));
           PetscCall(PetscLogNestedTreePrintLine(viewer, &perf[node], ((double)perf[node].count) / ((double)parent_info->count), parent_info->count, base_name, total_time));
           PetscCall(PetscLogNestedTreePrint(viewer, total_time, threshold_time, &tree[node], &perf[node], &tree[node + 1], &perf[node + 1], type, PETSC_TRUE));
