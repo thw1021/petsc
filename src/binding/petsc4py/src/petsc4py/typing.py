@@ -22,6 +22,7 @@ from .PETSc import (
     SNES,
     TS,
     TAO,
+    TAOLineSearch,
     DM,
 )
 
@@ -391,12 +392,12 @@ TAOVariableBoundsFunction = Callable[[TAO, Vec, Vec], None]
 TAOConstraintsFunction = Callable[[TAO, Vec, Vec], None]
 """`TAO` constraints callback."""
 
-TAOLSObjectiveFunction = Callable[[TAO, Vec], float]
-"""`TAO` linesearch objective function callback."""
+TAOLSObjectiveFunction = Callable[[TAOLineSearch, Vec], float]
+"""`TAOLineSearch` objective function callback."""
 
-TAOLSGradientFunction = Callable[[TAO, Vec, Vec], None]
-"""`TAO` linesearch objective gradient callback."""
+TAOLSGradientFunction = Callable[[TAOLineSearch, Vec, Vec], None]
+"""`TAOLineSearch` objective gradient callback."""
 
-TAOLSObjectiveGradientFunction =  Callable[[TAO, Vec, Vec], float]
-"""`TAO` linesearch objective function and gradient callback."""
+TAOLSObjectiveGradientFunction = Callable[[TAOLineSearch, Vec, Vec], float]
+"""`TAOLineSearch` objective function and gradient callback."""
 
