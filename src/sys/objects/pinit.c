@@ -1618,6 +1618,8 @@ PetscErrorCode PetscFinalize(void)
   PetscCall(PetscFree(PetscObjects));
 #endif
 
+  PetscCall(PetscObjectRegisterDestroyAll());
+
   /*
      Destroy any packages that registered a finalize
   */
