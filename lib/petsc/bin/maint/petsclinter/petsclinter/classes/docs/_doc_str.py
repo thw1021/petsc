@@ -420,10 +420,9 @@ class PetscDocString(DocBase):
   @staticmethod
   def make_error_message(message, crange=None, num_context=2, **kwargs):
     if crange is None:
-      crange_text = ''
-    else:
-      crange_text = crange.formatted(num_context=num_context, **kwargs)
-    return f'{message}:\n{crange_text}'
+      return message
+    formatted = crange.formatted(num_context=num_context, **kwargs)
+    return f'{message}:\n{formatted}'
 
   def make_source_location(self, lineno, col):
     return SourceLocation.from_position(self.cursor.translation_unit, lineno, col)
@@ -509,17 +508,20 @@ class PetscDocString(DocBase):
     )
     if pointless:
       begin_sowing_range = self._attr['sowing_char_range']
+      linkage_extent     = SourceRange.cast(linkage_cursor.extent)
       diag               = self.make_diagnostic(
         self.diags.internal_linkage,
-        f'A sowing docstring for a symbol with internal linkage is pointless {Diagnostic.FLAG_SUBST}!',
-        self.extent, highlight=False
+        'A sowing docstring for a symbol with internal linkage is pointless', self.extent,
+        highlight=False
       ).add_note(
-        f'\'{cursor.displayname}\' is declared \'{linked_cursor_name}\' at {Cursor.cast(linkage_cursor)}',
-        location=linkage_cursor.extent.start
+        self.make_error_message(
+          f'\'{cursor.displayname}\' is declared \'{linked_cursor_name}\' here', linkage_extent
+        ),
+        location=linkage_extent.start
       ).add_note(
         'If this docstring is meant as developer-only documentation, remove the sowing chars from the docstring declaration. The linter will then ignore this docstring.'
       ).add_note(
-        f'Sowing chars declared here:\n{begin_sowing_range.formatted(num_context=2)}',
+        self.make_error_message('Sowing chars declared here', begin_sowing_range),
         location=begin_sowing_range.start
       )
       self.add_error_from_diagnostic(diag)

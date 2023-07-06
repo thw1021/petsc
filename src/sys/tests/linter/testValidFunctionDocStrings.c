@@ -443,9 +443,106 @@ PetscErrorCode testDeprecated(void)
 
   Level: dpcrtd (since 3.18.5)
 
-.seealso: `testDeprecated()`
+.seealso: [](ch_matrices), `testDeprecated()`, [Matrix Factorization](sec_matfactor)
 */
 PetscErrorCode testIllFormedDeprecated(void)
+{
+  return PETSC_SUCCESS;
+}
+
+/*@
+  testValidInOutParams - check that in-out params work
+
+  Input Parameter:
+. foo - the input description for an in-out param
+
+  Output Parameter:
+. foo - the output description for an in-out param
+
+  Level: beginner
+
+.seealso: `testWellFormedFunctionDocString()`
+*/
+PetscErrorCode testValidInOutParams(int *foo)
+{
+  return PETSC_SUCCESS;
+}
+
+/*@
+  testInvalidInOutParams - check that in-out params work
+
+  Input Parameter:
++ foo - the input description for an in-out param
++ baz - asdasdasd
+- foo              - a duplicate description
+
+  Output Parameters:
+. bop = asdas
+- foo    - the output description for an in-out param
+- foo - a duplicate description2
+
+  Level: beginner
+
+.seealso: `testWellFormedFunctionDocString()`
+*/
+PetscErrorCode testInvalidInOutParams(int *foo)
+{
+  return PETSC_SUCCESS;
+}
+
+/*@C
+  testFunctionParmsSameName - Sets the residual evaluation routine for least-square applications
+
+  Logically Collective
+
+  Input Parameters:
++ tao  - the `Tao` context
+. res  - the res
+. func - the residual evaluation routine
+- ctx  - [optional] user-defined context for private data for the function evaluation
+         routine (may be `NULL`)
+
+  Calling sequence of `func`:
++ tao - the optimizer
+. x   - input vector
+. f   - function value vector
+- ctx - [optional] user-defined function context
+
+  Level: beginner
+
+.seealso: [](ch_tao), `Tao`, `TaoSetObjective()`, `TaoSetJacobianRoutine()`
+@*/
+PetscErrorCode testFunctionParmsSameName(int tao, double res, PetscErrorCode (*func)(int tao, double x, double f, void *ctx), void *ctx)
+{
+  return PETSC_SUCCESS;
+}
+
+/*@C
+  testFunctionParmsSameNameInOut - Sets the residual evaluation routine for least-square applications
+
+  Logically Collective
+
+  Input Parameters:
++ tao  - the `Tao` context (and in-out parm)
+. res  - the res
+. func - the residual evaluation routine
+- ctx  - [optional] user-defined context for private data for the function evaluation
+         routine (may be `NULL`)
+
+  Calling sequence of `func`:
++ tao - the optimizer
+. x   - input vector
+. f   - function value vector
+- ctx - [optional] user-defined function context
+
+  Output Parameter:
+. tao - the in-output parm
+
+  Level: beginner
+
+.seealso: [](ch_tao), `Tao`, `TaoSetObjective()`, `TaoSetJacobianRoutine()`
+@*/
+PetscErrorCode testFunctionParmsSameNameInOut(int *tao, double res, PetscErrorCode (*func)(int tao, double x, double f, void *ctx), void *ctx)
 {
   return PETSC_SUCCESS;
 }
