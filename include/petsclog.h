@@ -236,8 +236,8 @@ PETSC_EXTERN PetscErrorCode PetscLogEventsPause(void);
 PETSC_EXTERN PetscErrorCode PetscLogEventsUnpause(void);
 
 /* Class functions */
-PETSC_EXTERN PetscErrorCode PetscLogClassGetId(const char[], PetscClassId *);
-PETSC_EXTERN PetscErrorCode PetscLogClassGetName(PetscClassId, const char **);
+PETSC_EXTERN PetscErrorCode PetscLogClassGetClassId(const char[], PetscClassId *);
+PETSC_EXTERN PetscErrorCode PetscLogClassIdGetName(PetscClassId, const char **);
 
 PETSC_EXTERN PetscBool PetscLogMemory;
 PETSC_EXTERN PetscBool PetscLogSyncOn; /* true if logging synchronization is enabled */
@@ -605,8 +605,8 @@ static inline int PetscMPIParallelComm(MPI_Comm comm)
   #define PetscLogEventsPause()             PETSC_SUCCESS
   #define PetscLogEventsUnpause()           PETSC_SUCCESS
 
-  #define PetscLogClassGetId(a, b)   (*(b) = 0, PETSC_SUCCESS)
-  #define PetscLogClassGetName(a, b) (*(b) = 0, PETSC_SUCCESS)
+  #define PetscLogClassGetClassId(a, b) (*(b) = 0, PETSC_SUCCESS)
+  #define PetscLogClassIdGetName(a, b)  (*(b) = 0, PETSC_SUCCESS)
 
   #define PetscLogObjectParents(p, n, c) PETSC_SUCCESS
   #define PetscLogObjectCreate(h)        PETSC_SUCCESS

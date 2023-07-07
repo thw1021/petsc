@@ -69,14 +69,13 @@ M*/
 typedef int PetscLogStage;
 
 /*MC
-    PetscLogClass - id used to identify classes for logging purposes only
+    PetscLogClass - id used to identify classes for logging purposes only.  It
+    is not equal to its `PetscClassId`, which is the identifier used for other
+    purposes.
 
     Level: developer
 
-    Note:
-    For the default log handler, this will always be the same as the `PetscClassId`.
-
-.seealso: [](ch_profiling), `PetscLogStageRegister()`, `PetscLogStagePush()`, `PetscLogStagePop()`, `PetscLogEvent`
+.seealso: [](ch_profiling), `PetscLogStageRegister()`, `PetscLogStagePush()`, `PetscLogStagePop()`, `PetscLogEvent`, `PetscLogClassGetClassId()`, `PetscLogClassGetLogId()`
 M*/
 typedef int PetscLogClass;
 

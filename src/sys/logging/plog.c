@@ -1849,7 +1849,7 @@ M*/
 M*/
 
 /*@C
-  PetscLogClassGetId - Returns the `PetscLogClass` when given the class name.
+  PetscLogClassGetClassId - Returns the `PetscClassId` when given the class name.
 
   Not Collective
 
@@ -1857,29 +1857,37 @@ M*/
 . name  - The class name
 
   Output Parameter:
-. clss - The `PetscLogClass` id, or -1 if no event with that name exists
+. classd - The `PetscClassId` id, or -1 if no class with that name exists
 
   Level: intermediate
 
 .seealso: [](ch_profiling), `PetscLogEventBegin()`, `PetscLogEventEnd()`, `PetscLogStageGetId()`
 @*/
-PetscErrorCode PetscLogClassGetId(const char name[], PetscLogClass *clss)
+PetscErrorCode PetscLogClassGetClassId(const char name[], PetscClassId *classid)
 {
-  PetscLogState state;
+  PetscLogClass     log_class;
+  PetscLogClassInfo class_info;
+  PetscLogState     state;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
-  PetscCall(PetscLogRegistryGetClassFromName(state->registry, name, clss));
+  PetscCall(PetscLogRegistryGetClassFromName(state->registry, name, &log_class));
+  if (log_class < 0) {
+    *classid = -1;
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+  PetscCall(PetscLogStateClassGetInfo(state, log_class, &class_info));
+  *classid = class_info.classid;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 /*@C
-  PetscLogClassGetName - Returns the class name when given the class id.
+  PetscLogClassIdGetName - Returns a `PetscClassId`'s name.
 
   Not Collective
 
   Input Parameter:
-. class - The class
+. classid - A `PetscClassId`
 
   Output Parameter:
 . name  - The class name
@@ -1888,14 +1896,16 @@ PetscErrorCode PetscLogClassGetId(const char name[], PetscLogClass *clss)
 
 .seealso: [](ch_profiling), `PetscLogClassRegister()`, `PetscLogClassBegin()`, `PetscLogClassEnd()`, `PetscPreLoadBegin()`, `PetscPreLoadEnd()`, `PetscPreLoadClass()`
 @*/
-PetscErrorCode PetscLogClassGetName(PetscLogClass clss, const char **name)
+PetscErrorCode PetscLogClassIdGetName(PetscClassId classid, const char **name)
 {
+  PetscLogClass     log_class;
   PetscLogClassInfo class_info;
   PetscLogState     state;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
-  PetscCall(PetscLogRegistryClassGetInfo(state->registry, clss, &class_info));
+  PetscCall(PetscLogRegistryGetClassFromClassId(state->registry, classid, &log_class));
+  PetscCall(PetscLogStateClassGetInfo(state, log_class, &class_info));
   *name = class_info.name;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
