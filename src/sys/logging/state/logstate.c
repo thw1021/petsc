@@ -687,6 +687,8 @@ PetscErrorCode PetscLogStateStageGetInfo(PetscLogState state, PetscLogStage stag
   Output Parameter:
 . logclass - a `PetscLogClass` for this class with this state
 
+  Level: developer
+
   Note:
   Classes are automatically registered with PETSc's global logging state (`PetscLogGetState()`), so this
   is only needed for non-global states.
