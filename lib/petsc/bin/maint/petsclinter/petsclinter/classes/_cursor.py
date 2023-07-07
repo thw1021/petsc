@@ -22,19 +22,21 @@ class Cursor:
 
   See __getattr__ below for more info.
   """
-  __slots__ = '__cursor', 'name', 'typename', 'derivedtypename', 'argidx', '_cache'
+  __slots__ = '__cursor', 'extent', 'name', 'typename', 'derivedtypename', 'argidx', '_cache'
 
   def __init__(self, cursor, idx=-12345):
     if isinstance(cursor, Cursor):
       self.__cursor        = cursor.clang_cursor()
+      self._cache          = cursor._cache
+      self.extent          = cursor.extent
       self.name            = cursor.name
       self.typename        = cursor.typename
       self.derivedtypename = cursor.derivedtypename
       self.argidx          = cursor.argidx if idx == -12345 else idx
-      self._cache          = cursor._cache
     elif isinstance(cursor, clx.Cursor):
       self.__cursor        = cursor
       self._cache          = {}
+      self.extent          = SourceRange.cast(cursor.extent)
       self.name            = self.get_name_from_cursor(cursor)
       self.typename        = self.get_typename_from_cursor(cursor)
       self.derivedtypename = self.get_derived_typename_from_cursor(cursor)
@@ -314,7 +316,7 @@ class Cursor:
     kwargs.setdefault('nboth', 2)
     cursor   = cls.cast(cursor)
     aka_mess = '' if cursor.typename == cursor.derivedtypename else f' (a.k.a. \'{cursor.typename}\')'
-    return f'\'{cursor.name}\' of type \'{cursor.derivedtypename}\'{aka_mess}\n{cursor.formatted(**kwargs)}\n'
+    return f'\'{cursor.name}\' of type \'{cursor.derivedtypename}\'{aka_mess}\n{cursor.formatted(**kwargs)}'
 
   def get_formatted_blurb(self, **kwargs):
     return self.get_formatted_blurb_from_cursor(self, **kwargs)
