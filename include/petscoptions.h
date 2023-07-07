@@ -4,7 +4,7 @@
 #ifndef PETSCOPTIONS_H
 #define PETSCOPTIONS_H
 
-#include <petscsystypes.h>
+#include <petscsys.h>
 #include <petscviewertypes.h>
 
 /* SUBMANSEC = Sys */

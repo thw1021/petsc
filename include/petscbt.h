@@ -1,9 +1,9 @@
-#if !defined(PETSCBT_H)
-  #define PETSCBT_H
+#ifndef PETSCBT_H
+#define PETSCBT_H
 
-  #include <petscsystypes.h>
-  #include <petscviewertypes.h>
-  #include <petscstring.h>
+#include <petscsystypes.h>
+#include <petscviewertypes.h>
+#include <petscstring.h>
 
 /* SUBMANSEC = Sys */
 
@@ -81,4 +81,4 @@ static inline char PetscBTLookupClear(PetscBT array, PetscInt index)
 
 PETSC_EXTERN PetscErrorCode PetscBTView(PetscInt, const PetscBT, PetscViewer);
 
-#endif /* #define PETSCBT_H */
+#endif /* PETSCBT_H */

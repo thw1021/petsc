@@ -13,7 +13,6 @@
 #include <math.h>
 #include <petscmacros.h>
 #include <petscsystypes.h>
-#include <petscsysmpi.h>
 
 /* SUBMANSEC = Sys */
 
