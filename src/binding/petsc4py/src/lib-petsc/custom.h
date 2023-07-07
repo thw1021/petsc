@@ -61,7 +61,7 @@ PetscErrorCode PetscLogClassFindId(const char name[], PetscClassId *classid)
   PetscValidIntPointer(classid,2);
   *classid = -1;
   if (!(log_state = petsc_log_state)) PetscFunctionReturn(PETSC_SUCCESS); /* logging is off ? */
-  PetscCall(PetscLogClassGetId(name, classid));
+  PetscCall(PetscLogClassGetClassId(name, classid));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -101,7 +101,7 @@ PetscErrorCode PetscLogClassFindName(PetscClassId classid, const char *name[])
   PetscValidPointer(name,3);
   *name = 0;
   if (!(log_state = petsc_log_state)) PetscFunctionReturn(PETSC_SUCCESS); /* logging is off ? */
-  PetscCall(PetscLogClassGetName(classid, name));
+  PetscCall(PetscLogClassIdGetName(classid, name));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
