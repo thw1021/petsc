@@ -13,7 +13,7 @@
 
 /* SUBMANSEC = Sys */
 
-#include <limits.h> // INT_MIN, INT_MAX
+#include <limits.h> // INT_MIN, INT_MAX, CHAR_BIT
 
 #if defined(__clang__) || (PETSC_CPP_VERSION >= 17)
   // clang allows both [[nodiscard]] and __attribute__((warn_unused_result)) on type

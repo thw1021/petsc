@@ -4,7 +4,7 @@
 #include <petscsystypes.h>
 #include <petscerror.h>
 #include <petscmacros.h>
-#include <petscsysmalloc.h>
+#include <petscsys.h>
 
 /* SUBMANSEC = Sys */
 

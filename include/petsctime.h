@@ -4,8 +4,7 @@
 #ifndef PETSCTIME_H
 #define PETSCTIME_H
 
-#include <petscsystypes.h>
-#include <petscsysmpi.h>
+#include <petscsys.h>
 
 /* SUBMANSEC = Sys */
 
@@ -113,14 +112,6 @@ static inline PetscErrorCode PetscTimeSubtract(PetscLogDouble *v)
 static inline PetscErrorCode PetscTimeAdd(PetscLogDouble *v)
 {
   *v += MPI_Wtime();
-  return PETSC_SUCCESS;
-}
-
-static inline PetscErrorCode PetscTimeAddSubtract(PetscLogDouble *v, PetscLogDouble *w)
-{
-  PetscLogDouble time = MPI_Wtime();
-  if (v) *v += time;
-  if (w) *w -= time;
   return PETSC_SUCCESS;
 }
 
