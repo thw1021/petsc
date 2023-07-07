@@ -1,9 +1,9 @@
 #ifndef PETSCLOGDEPRECATED_H
 #define PETSCLOGDEPRECATED_H
 
-#include <petscsystypes.h>
-#include <petsclogtypes.h>
-#include <petscconf.h>
+#include <petsclog.h>
+
+/* SUBMANSEC = Profiling */
 
 /* These data structures are no longer used by any non-deprecated PETSc interface functions */
 
@@ -152,6 +152,41 @@ PETSC_DEPRECATED_FUNCTION("Use PetscLogEventsPause() (since version 3.20)") stat
 PETSC_DEPRECATED_FUNCTION("Use PetscLogEventsUnpause() (since version 3.20)") static inline PetscErrorCode PetscLogPopCurrentEvent_Internal(void)
 {
   return PETSC_SUCCESS;
+}
+
+/*@C
+  PetscLogAllBegin - Equivalent to `PetscLogDefaultBegin()`.
+
+  Logically Collective on `PETSC_COMM_WORLD`
+
+  Level: deprecated
+
+  Note:
+  In previous versions, PETSc's documentation stated that `PetscLogAllBegin()` "Turns on extensive logging of objects and events," which was not actually true.
+  The actual way to turn on extensive logging of objects and events was, and remains, to call `PetscLogActions()` and `PetscLogObjects()`.
+
+.seealso: [](ch_profiling), `PetscLogDump()`, `PetscLogDefaultBegin()`, `PetscLogActions()`, `PetscLogObjects()`
+@*/
+PETSC_DEPRECATED_FUNCTION("Use PetscLogDefaultBegin() (since version 3.20)") static inline PetscErrorCode PetscLogAllBegin(void)
+{
+  return PetscLogDefaultBegin();
+}
+
+/*@C
+  PetscLogSet - Deprecated.
+
+  Level: deprecated
+
+  Note:
+  PETSc performance logging and profiling is now split up between the logging state (`PetscLogState`) and the log handler (`PetscLogHandler`).
+  The global logging state is obtained with `PetscLogGetState()`; many log handlers may be used at once (`PetscLogHandlerStart()`) and the default log handler is not directly accessible.
+
+.seealso: [](ch_profiling), `PetscLogEventGetPerfInfo()`
+@*/
+PETSC_DEPRECATED_FUNCTION("Create a PetscLogHandler object (since version 3.20)")
+static inline PetscErrorCode PetscLogSet(PetscErrorCode (*a)(int, int, PetscObject, PetscObject, PetscObject, PetscObject), PetscErrorCode (*b)(int, int, PetscObject, PetscObject, PetscObject, PetscObject))
+{
+  return PetscLogLegacyCallbacksBegin(a, b, NULL, NULL);
 }
 
 #endif /* define PETSCLOGDEPRECATED_H */
