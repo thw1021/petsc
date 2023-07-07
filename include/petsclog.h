@@ -594,9 +594,9 @@ static inline int PetscMPIParallelComm(MPI_Comm comm)
   #define PetscLogEventDeactivate(a)        PETSC_SUCCESS
   #define PetscLogEventDeactivatePush(a)    PETSC_SUCCESS
   #define PetscLogEventDeactivatePop(a)     PETSC_SUCCESS
-  #define PetscLogEventSetActiveAll(a, b)   PETSC_SUCCESS
   #define PetscLogEventActivateClass(a)     PETSC_SUCCESS
   #define PetscLogEventDeactivateClass(a)   PETSC_SUCCESS
+  #define PetscLogEventSetActiveAll(a, b)   PETSC_SUCCESS
   #define PetscLogEventGetId(a, b)          (*(b) = 0, PETSC_SUCCESS)
   #define PetscLogEventGetName(a, b)        (*(b) = 0, PETSC_SUCCESS)
   #define PetscLogEventGetPerfInfo(a, b, c) PETSC_SUCCESS
@@ -649,7 +649,7 @@ static inline int PetscMPIParallelComm(MPI_Comm comm)
 
   Note:
   In previous versions, PETSc's documentation stated that `PetscLogAllBegin()` "Turns on extensive logging of objects and events," which was not actually true.
-  The actual way to turn on extensive loffing of objects and events was, and remains, to call `PetscLogActions()` and `PetscLogObjects()`.
+  The actual way to turn on extensive logging of objects and events was, and remains, to call `PetscLogActions()` and `PetscLogObjects()`.
 
 .seealso: [](ch_profiling), `PetscLogDump()`, `PetscLogDefaultBegin()`, `PetscLogActions()`, `PetscLogObjects()`
 @*/
