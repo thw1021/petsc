@@ -7,8 +7,9 @@
 #include <petscsys.h>
 #include <petsctime.h>
 #include <petscbt.h>
+#include <petsclogtypes.h>
 
-/* SUBMANSEC = Sys */
+/* SUBMANSEC = Profiling */
 
 /* General logging of information; different from event logging */
 PETSC_EXTERN PetscErrorCode PetscInfo_Private(const char[], PetscObject, const char[], ...) PETSC_ATTRIBUTE_FORMAT(3, 4);
@@ -72,8 +73,6 @@ PETSC_EXTERN PetscErrorCode PetscIntStackPush(PetscIntStack, int);
 PETSC_EXTERN PetscErrorCode PetscIntStackPop(PetscIntStack, int *);
 PETSC_EXTERN PetscErrorCode PetscIntStackTop(PetscIntStack, int *);
 PETSC_EXTERN PetscErrorCode PetscIntStackEmpty(PetscIntStack, PetscBool *);
-
-#include <petsclogdeprecated.h>
 
 PETSC_EXTERN PetscErrorCode PetscLogStateCreate(PetscLogState *);
 PETSC_EXTERN PetscErrorCode PetscLogStateDestroy(PetscLogState *);
@@ -640,41 +639,6 @@ static inline int PetscMPIParallelComm(MPI_Comm comm)
 
 #endif /* PETSC_USE_LOG */
 
-/*@C
-  PetscLogAllBegin - Equivalent to `PetscLogDefaultBegin()`.
-
-  Logically Collective on `PETSC_COMM_WORLD`
-
-  Level: deprecated
-
-  Note:
-  In previous versions, PETSc's documentation stated that `PetscLogAllBegin()` "Turns on extensive logging of objects and events," which was not actually true.
-  The actual way to turn on extensive logging of objects and events was, and remains, to call `PetscLogActions()` and `PetscLogObjects()`.
-
-.seealso: [](ch_profiling), `PetscLogDump()`, `PetscLogDefaultBegin()`, `PetscLogActions()`, `PetscLogObjects()`
-@*/
-PETSC_DEPRECATED_FUNCTION("Use PetscLogDefaultBegin() (since version 3.20)") static inline PetscErrorCode PetscLogAllBegin(void)
-{
-  return PetscLogDefaultBegin();
-}
-
-/*@C
-  PetscLogSet - Deprecated.
-
-  Level: deprecated
-
-  Note:
-  PETSc performance logging and profiling is now split up between the logging state (`PetscLogState`) and the log handler (`PetscLogHandler`).
-  The global logging state is obtained with `PetscLogGetState()`; many log handlers may be used at once (`PetscLogHandlerStart()`) and the default log handler is not directly accessible.
-
-.seealso: [](ch_profiling), `PetscLogEventGetPerfInfo()`
-@*/
-PETSC_DEPRECATED_FUNCTION("Create a PetscLogHandler object (since version 3.20)")
-static inline PetscErrorCode PetscLogSet(PetscErrorCode (*a)(int, int, PetscObject, PetscObject, PetscObject, PetscObject), PetscErrorCode (*b)(int, int, PetscObject, PetscObject, PetscObject, PetscObject))
-{
-  return PetscLogLegacyCallbacksBegin(a, b, NULL, NULL);
-}
-
 PETSC_EXTERN PetscErrorCode PetscLogObjectState(PetscObject, const char[], ...) PETSC_ATTRIBUTE_FORMAT(2, 3);
 
 #define PetscPreLoadBegin(flag, name) \
@@ -809,5 +773,7 @@ static inline PetscErrorCode PetscLogGpuToCpuScalar(PetscLogDouble size)
 /* remove TLS defines */
 #undef PETSC_EXTERN_TLS
 #undef PETSC_TLS
+
+#include <petsclogdeprecated.h>
 
 #endif
