@@ -163,6 +163,7 @@ PETSC_DEPRECATED_FUNCTION("PetscLogObjectParent() is deprecated (since version 3
   (void)p;
   return PETSC_SUCCESS;
 }
+#define PetscLogObjectParents(p, n, d) PetscMacroReturnStandard(for (int _i = 0; _i < (n); ++_i) PetscCall(PetscLogObjectParent((PetscObject)(p), (PetscObject)(d)[_i]));)
 
 PETSC_DEPRECATED_FUNCTION("PetscLogObjectMemory() is deprecated (since version 3.18)") static inline PetscErrorCode PetscLogObjectMemory(PetscObject o, PetscLogDouble m)
 {
@@ -285,8 +286,7 @@ static inline PETSC_UNUSED PetscErrorCode PetscLogEventEnd_Internal(PetscLogEven
 }
   #define PetscLogEventEnd(e, o1, o2, o3, o4) PetscLogEventEnd_Internal(e, (PetscObject)(o1), (PetscObject)(o2), (PetscObject)(o3), (PetscObject)(o4))
 
-  /* Object functions */
-  #define PetscLogObjectParents(p, n, d) PetscMacroReturnStandard(for (int _i = 0; _i < (n); ++_i) PetscCall(PetscLogObjectParent((PetscObject)(p), (PetscObject)(d)[_i]));)
+/* Object functions */
 static inline PETSC_UNUSED PetscErrorCode PetscLogObjectCreate_Internal(PetscObject o)
 {
   if (petsc_log_state) {
@@ -569,68 +569,67 @@ static inline int PetscMPIParallelComm(MPI_Comm comm)
   #define PetscLogSyncOn PETSC_FALSE
 
   #define PetscLogGetState(a)     (*(a) = 0, PETSC_SUCCESS)
-  #define PetscLogHandlerStart(a) PETSC_SUCCESS
-  #define PetscLogHandlerStop(a)  PETSC_SUCCESS
+  #define PetscLogHandlerStart(a) ((void)(a), PETSC_SUCCESS)
+  #define PetscLogHandlerStop(a)  ((void)(a), PETSC_SUCCESS)
 
   #define PetscLogFlops(n) ((void)(n), PETSC_SUCCESS)
   #define PetscGetFlops(a) (*(a) = 0.0, PETSC_SUCCESS)
 
-  #define PetscLogStageRegister(a, b)   PETSC_SUCCESS
-  #define PetscLogStagePush(a)          PETSC_SUCCESS
+  #define PetscLogStageRegister(a, b)   ((void)(b), PETSC_SUCCESS)
+  #define PetscLogStagePush(a)          ((void)(a), PETSC_SUCCESS)
   #define PetscLogStagePop()            PETSC_SUCCESS
-  #define PetscLogStageSetActive(a, b)  PETSC_SUCCESS
-  #define PetscLogStageGetActive(a, b)  PETSC_SUCCESS
-  #define PetscLogStageGetVisible(a, b) PETSC_SUCCESS
-  #define PetscLogStageSetVisible(a, b) PETSC_SUCCESS
-  #define PetscLogStageGetId(a, b)      (*(b) = 0, PETSC_SUCCESS)
-  #define PetscLogStageGetName(a, b)    (*(b) = 0, PETSC_SUCCESS)
+  #define PetscLogStageSetActive(a, b)  ((void)(a), (void)(b), PETSC_SUCCESS)
+  #define PetscLogStageGetActive(a, b)  ((void)(a), *(b) = PETSC_FALSE, PETSC_SUCCESS)
+  #define PetscLogStageGetVisible(a, b) ((void)(a), *(b) = PETSC_FALSE, PETSC_SUCCESS)
+  #define PetscLogStageSetVisible(a, b) ((void)(a), (void)(b), PETSC_SUCCESS)
+  #define PetscLogStageGetId(a, b)      ((void)(a), *(b) = -1, PETSC_SUCCESS)
+  #define PetscLogStageGetName(a, b)    ((void)(a), *(b) = NULL, PETSC_SUCCESS)
 
-  #define PetscLogEventRegister(a, b, c)    PETSC_SUCCESS
-  #define PetscLogEventSetCollective(a, b)  PETSC_SUCCESS
-  #define PetscLogEventIncludeClass(a)      PETSC_SUCCESS
-  #define PetscLogEventExcludeClass(a)      PETSC_SUCCESS
-  #define PetscLogEventActivate(a)          PETSC_SUCCESS
-  #define PetscLogEventDeactivate(a)        PETSC_SUCCESS
-  #define PetscLogEventDeactivatePush(a)    PETSC_SUCCESS
-  #define PetscLogEventDeactivatePop(a)     PETSC_SUCCESS
-  #define PetscLogEventActivateClass(a)     PETSC_SUCCESS
-  #define PetscLogEventDeactivateClass(a)   PETSC_SUCCESS
-  #define PetscLogEventSetActiveAll(a, b)   PETSC_SUCCESS
-  #define PetscLogEventGetId(a, b)          (*(b) = 0, PETSC_SUCCESS)
-  #define PetscLogEventGetName(a, b)        (*(b) = 0, PETSC_SUCCESS)
-  #define PetscLogEventGetPerfInfo(a, b, c) PETSC_SUCCESS
-  #define PetscLogEventSetDof(a, b, c)      PETSC_SUCCESS
-  #define PetscLogEventSetError(a, b, c)    PETSC_SUCCESS
+  #define PetscLogEventRegister(a, b, c)    ((void)(a), (void)(b), *(c) = -1, PETSC_SUCCESS)
+  #define PetscLogEventSetCollective(a, b)  ((void)(a), (void)(b), PETSC_SUCCESS)
+  #define PetscLogEventIncludeClass(a)      ((void)(a), PETSC_SUCCESS)
+  #define PetscLogEventExcludeClass(a)      ((void)(a), PETSC_SUCCESS)
+  #define PetscLogEventActivate(a)          ((void)(a), PETSC_SUCCESS)
+  #define PetscLogEventDeactivate(a)        ((void)(a), PETSC_SUCCESS)
+  #define PetscLogEventDeactivatePush(a)    ((void)(a), PETSC_SUCCESS)
+  #define PetscLogEventDeactivatePop(a)     ((void)(a), PETSC_SUCCESS)
+  #define PetscLogEventActivateClass(a)     ((void)(a), PETSC_SUCCESS)
+  #define PetscLogEventDeactivateClass(a)   ((void)(a), PETSC_SUCCESS)
+  #define PetscLogEventSetActiveAll(a, b)   ((void)(a), PETSC_SUCCESS)
+  #define PetscLogEventGetId(a, b)          ((void)(a), *(b) = -1, PETSC_SUCCESS)
+  #define PetscLogEventGetName(a, b)        ((void)(a), *(b) = NULL, PETSC_SUCCESS)
+  #define PetscLogEventGetPerfInfo(a, b, c) ((void)(a), (void)(b), *(c) = NULL, PETSC_SUCCESS)
+  #define PetscLogEventSetDof(a, b, c)      ((void)(a), (void)(b), (void)(c), PETSC_SUCCESS)
+  #define PetscLogEventSetError(a, b, c)    ((void)(a), (void)(b), (void)(c), PETSC_SUCCESS)
   #define PetscLogEventsPause()             PETSC_SUCCESS
   #define PetscLogEventsUnpause()           PETSC_SUCCESS
 
-  #define PetscLogClassGetClassId(a, b) (*(b) = 0, PETSC_SUCCESS)
-  #define PetscLogClassIdGetName(a, b)  (*(b) = 0, PETSC_SUCCESS)
+  #define PetscLogClassGetClassId(a, b) (*(b) = -1, PETSC_SUCCESS)
+  #define PetscLogClassIdGetName(a, b)  (*(b) = NULL, PETSC_SUCCESS)
 
-  #define PetscLogObjectParents(p, n, c) PETSC_SUCCESS
-  #define PetscLogObjectCreate(h)        PETSC_SUCCESS
-  #define PetscLogObjectDestroy(h)       PETSC_SUCCESS
+  #define PetscLogObjectCreate(h)  ((void)(h), PETSC_SUCCESS)
+  #define PetscLogObjectDestroy(h) ((void)(h), PETSC_SUCCESS)
 
   #define PetscLogDefaultBegin()                   PETSC_SUCCESS
   #define PetscLogNestedBegin()                    PETSC_SUCCESS
-  #define PetscLogTraceBegin(file)                 PETSC_SUCCESS
+  #define PetscLogTraceBegin(file)                 ((void)(file), PETSC_SUCCESS)
   #define PetscLogMPEBegin()                       PETSC_SUCCESS
   #define PetscLogPerfstubsBegin()                 PETSC_SUCCESS
-  #define PetscLogLegacyCallbacksBegin(a, b, c, d) PETSC_SUCCESS
-  #define PetscLogActions(a)                       PETSC_SUCCESS
-  #define PetscLogObjects(a)                       PETSC_SUCCESS
-  #define PetscLogSetThreshold(a, b)               PETSC_SUCCESS
+  #define PetscLogLegacyCallbacksBegin(a, b, c, d) ((void)(a), (void)(b), (void)(c), (void)(d), PETSC_SUCCESS)
+  #define PetscLogActions(a)                       ((void)(a), PETSC_SUCCESS)
+  #define PetscLogObjects(a)                       ((void)(a), PETSC_SUCCESS)
+  #define PetscLogSetThreshold(a, b)               ((void)(a), (void)(b), PETSC_SUCCESS)
 
   #define PetscLogIsActive(flag) (*(flag) = PETSC_FALSE, PETSC_SUCCESS)
 
-  #define PetscLogView(viewer)      PETSC_SUCCESS
+  #define PetscLogView(viewer)      ((void)(viewer), PETSC_SUCCESS)
   #define PetscLogViewFromOptions() PETSC_SUCCESS
-  #define PetscLogDump(c)           PETSC_SUCCESS
-  #define PetscLogMPEDump(c)        PETSC_SUCCESS
+  #define PetscLogDump(c)           ((void)(c), PETSC_SUCCESS)
+  #define PetscLogMPEDump(c)        ((void)(c), PETSC_SUCCESS)
 
-  #define PetscLogEventSync(e, comm)                            PETSC_SUCCESS
-  #define PetscLogEventBegin(e, o1, o2, o3, o4)                 PETSC_SUCCESS
-  #define PetscLogEventEnd(e, o1, o2, o3, o4)                   PETSC_SUCCESS
+  #define PetscLogEventSync(e, comm)                            ((void)(e), (void)(comm), PETSC_SUCCESS)
+  #define PetscLogEventBegin(e, o1, o2, o3, o4)                 ((void)(e), (void)(o1), (void)(o2), (void)(o3), PETSC_SUCCESS)
+  #define PetscLogEventEnd(e, o1, o2, o3, o4)                   ((void)(e), (void)(o1), (void)(o2), (void)(o3), PETSC_SUCCESS)
 
   /* If PETSC_USE_LOG is NOT defined, these still need to be! */
   #define MPI_Startall_irecv(count, datatype, number, requests) ((number) && MPI_Startall(number, requests))
