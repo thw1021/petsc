@@ -802,6 +802,7 @@ class PetscDocString(DocBase):
       if stripped.startswith('/*') or stripped.endswith('*/'):
         continue
 
+      raise RuntimeError('HERE')
       # TODO remove this, the current active section should be deciding what to do here instead
       # we shouldn't be checking indentation in verbatim blocks
       if stripped.startswith('.vb'):
