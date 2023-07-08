@@ -1183,19 +1183,18 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
         however it slows things down and gives a distorted view of the overall runtime.
 .  -log_trace [filename] - Print traces of all PETSc calls to the screen (useful to determine where a program
         hangs without running in the debugger).  See `PetscLogTraceBegin()`.
-.  -log_view [:filename:format] - Prints summary of flop and timing information to screen or file, see `PetscLogView()`.
-.  -log_view_memory - Includes in the summary from -log_view the memory used in each event, see `PetscLogView()`.
-.  -log_view_gpu_time - Includes in the summary from -log_view the time used in each GPU kernel, see `PetscLogView().
-.  -log_summary [filename] - (Deprecated, use -log_view) Prints summary of flop and timing information to screen. If the filename is specified the
+.  -log_view [:filename:format][,[:filename:format]...] - Prints summary of flop and timing information to screen or file, see `PetscLogView()`.  Up to 4 viewers can be specified.
+.  -log_view_memory - Includes in the summary from `-log_view` the memory used in each event, see `PetscLogView()`.
+ .  -log_view_gpu_time - Includes in the summary from `-log_view` the time used in each GPU kernel, see `PetscLogView()`.
+.  -log_summary [filename] - (Deprecated, use `-log_view`) Prints summary of flop and timing information to screen. If the filename is specified the
         summary is written to the file.  See PetscLogView().
 .  -log_exclude: <vec,mat,pc,ksp,snes> - excludes subset of object classes from logging
-.  -log_all [filename] - Logs extensive profiling information  See `PetscLogDump()`.
+.  -log_all [filename] - (Deprecated, use `-log_view`) The same as `-log_view`
 .  -log [filename] - Logs basic profiline information  See `PetscLogDump()`.
 .  -log_mpe [filename] - Creates a logfile viewable by the utility Jumpshot (in MPICH distribution)
+.  -log_perfstubs - Starts a log handler with the perfstubs interface (which is used by TAU)
 .  -viewfromoptions on,off - Enable or disable `XXXSetFromOptions()` calls, for applications with many small solves turn this off
 -  -check_pointer_intensity 0,1,2 - if pointers are checked for validity (debug version only), using 0 will result in faster code
-
-    Only one of -log_trace, -log_view, -log_all, -log, or -log_mpe may be used at a time
 
    Options Database Keys for SAWs:
 +  -saws_port <portnumber> - port number to publish SAWs data, default is 8080
