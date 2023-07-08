@@ -598,11 +598,12 @@ static inline int PetscMPIParallelComm(MPI_Comm comm)
   #define PetscLogEventSetActiveAll(a, b)   ((void)(a), PETSC_SUCCESS)
   #define PetscLogEventGetId(a, b)          ((void)(a), *(b) = -1, PETSC_SUCCESS)
   #define PetscLogEventGetName(a, b)        ((void)(a), *(b) = NULL, PETSC_SUCCESS)
-  #define PetscLogEventGetPerfInfo(a, b, c) ((void)(a), (void)(b), *(c) = NULL, PETSC_SUCCESS)
-  #define PetscLogEventSetDof(a, b, c)      ((void)(a), (void)(b), (void)(c), PETSC_SUCCESS)
-  #define PetscLogEventSetError(a, b, c)    ((void)(a), (void)(b), (void)(c), PETSC_SUCCESS)
-  #define PetscLogEventsPause()             PETSC_SUCCESS
-  #define PetscLogEventsUnpause()           PETSC_SUCCESS
+  #define PetscLogEventGetPerfInfo(a, b, c) ((void)(a), (void)(b), *(c) = (const PetscEventPerfInfo){0}, PETSC_SUCCESS)
+
+  #define PetscLogEventSetDof(a, b, c)   ((void)(a), (void)(b), (void)(c), PETSC_SUCCESS)
+  #define PetscLogEventSetError(a, b, c) ((void)(a), (void)(b), (void)(c), PETSC_SUCCESS)
+  #define PetscLogEventsPause()          PETSC_SUCCESS
+  #define PetscLogEventsUnpause()        PETSC_SUCCESS
 
   #define PetscLogClassGetClassId(a, b) (*(b) = -1, PETSC_SUCCESS)
   #define PetscLogClassIdGetName(a, b)  (*(b) = NULL, PETSC_SUCCESS)
