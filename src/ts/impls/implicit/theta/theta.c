@@ -179,6 +179,25 @@ static PetscErrorCode TSTheta_SNESSolve(TS ts, Vec b, Vec x)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TSTransferRegister_Theta(TS ts, PetscBool reg)
+{
+  TS_Theta *th = (TS_Theta *)ts->data;
+
+  PetscFunctionBegin;
+  if (reg) {
+    if (th->vec_sol_prev) { /* We need to transfer X0 which will be copied into sol_prev */
+      PetscObject obj = (PetscObject)th->X0;
+      PetscCall(PetscObjectListAdd(&ts->transferobjs, "ts:theta:X0", obj));
+    }
+  } else {
+    PetscObject obj;
+    PetscCall(PetscObjectListFind(ts->transferobjs, "ts:theta:X0", &obj));
+    PetscCall(PetscObjectReference(obj));
+    th->X0 = (Vec)obj;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode TSStep_Theta(TS ts)
 {
   TS_Theta *th         = (TS_Theta *)ts->data;
@@ -1218,20 +1237,21 @@ PETSC_EXTERN PetscErrorCode TSCreate_Theta(TS ts)
   TS_Theta *th;
 
   PetscFunctionBegin;
-  ts->ops->reset          = TSReset_Theta;
-  ts->ops->adjointreset   = TSAdjointReset_Theta;
-  ts->ops->destroy        = TSDestroy_Theta;
-  ts->ops->view           = TSView_Theta;
-  ts->ops->setup          = TSSetUp_Theta;
-  ts->ops->adjointsetup   = TSAdjointSetUp_Theta;
-  ts->ops->adjointreset   = TSAdjointReset_Theta;
-  ts->ops->step           = TSStep_Theta;
-  ts->ops->interpolate    = TSInterpolate_Theta;
-  ts->ops->evaluatewlte   = TSEvaluateWLTE_Theta;
-  ts->ops->rollback       = TSRollBack_Theta;
-  ts->ops->setfromoptions = TSSetFromOptions_Theta;
-  ts->ops->snesfunction   = SNESTSFormFunction_Theta;
-  ts->ops->snesjacobian   = SNESTSFormJacobian_Theta;
+  ts->ops->reset            = TSReset_Theta;
+  ts->ops->adjointreset     = TSAdjointReset_Theta;
+  ts->ops->destroy          = TSDestroy_Theta;
+  ts->ops->view             = TSView_Theta;
+  ts->ops->setup            = TSSetUp_Theta;
+  ts->ops->adjointsetup     = TSAdjointSetUp_Theta;
+  ts->ops->adjointreset     = TSAdjointReset_Theta;
+  ts->ops->step             = TSStep_Theta;
+  ts->ops->interpolate      = TSInterpolate_Theta;
+  ts->ops->evaluatewlte     = TSEvaluateWLTE_Theta;
+  ts->ops->rollback         = TSRollBack_Theta;
+  ts->ops->transferregister = TSTransferRegister_Theta;
+  ts->ops->setfromoptions   = TSSetFromOptions_Theta;
+  ts->ops->snesfunction     = SNESTSFormFunction_Theta;
+  ts->ops->snesjacobian     = SNESTSFormJacobian_Theta;
 #if defined(PETSC_HAVE_COMPLEX)
   ts->ops->linearstability = TSComputeLinearStability_Theta;
 #endif
