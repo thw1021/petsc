@@ -24,7 +24,7 @@ class ReturnCode(enum.IntFlag):
 def main(
     petsc_dir, petsc_arch,
     src_path=None,
-    clang_dir=None, clang_lib=None,
+    clang_dir=None, clang_lib=None, clang_compat_check=True,
     verbose=False,
     workers=-1,
     check_function_filter=None,
@@ -41,19 +41,20 @@ def main(
   petsc_arch -- $PETSC_ARCH
 
   Keyword arguments:
-  src_path             -- directory (or file) to lint (default: $PETSC_DIR/src)
-  clang_dir            -- directory containing libclang.[so|dylib|dll] (default: None)
-  clang_lib            -- direct path to libclang.[so|dylib|dll], overrrides clang_dir if set (default: None)
-  verbose             -- display debugging statements (default: False)
-  workers             -- number of processes for multiprocessing, -1 is number of system CPU's-1, 0 or 1 for serial computation (default: -1)
+  src_path              -- directory (or file) to lint (default: $PETSC_DIR/src)
+  clang_dir             -- directory containing libclang.[so|dylib|dll] (default: None)
+  clang_lib             -- direct path to libclang.[so|dylib|dll], overrrides clang_dir if set (default: None)
+  clang_compat_check    -- do clang lib compatibility check
+  verbose               -- display debugging statements (default: False)
+  workers               -- number of processes for multiprocessing, -1 is number of system CPU's-1, 0 or 1 for serial computation (default: -1)
   check_function_filter -- list of function names as strings to only check for, none == all of them. For example ["PetscValidPointer","PetscValidHeaderSpecific"] (default: None)
-  patch_dir            -- directory to store patches if they are generated (default: $PETSC_DIR/petscLintPatches)
-  apply_patches        -- automatically apply patch files to source if they are generated (default: False)
+  patch_dir             -- directory to store patches if they are generated (default: $PETSC_DIR/petscLintPatches)
+  apply_patches         -- automatically apply patch files to source if they are generated (default: False)
   extra_compiler_flags  -- list of extra compiler flags to append to petsc and system flags. For example ["-I/my/non/standard/include","-Wsome_warning"] (default: None)
   extra_header_includes -- list of #include statements to append to the precompiled mega-header, these must be in the include search path. Use extra_compiler_flags to make any other search path additions. For example ["#include <slepc/private/epsimpl.h>"] (default: None)
   test_output_dir       -- directory containing test output to compare patches against, use special keyword '__at_src__' to use src_path/output (default: None)
-  replace_tests        -- replace output files in test_output_dir with patches generated (default: False)
-  werror              -- treat all linter-generated warnings as errors (default: False)
+  replace_tests         -- replace output files in test_output_dir with patches generated (default: False)
+  werror                -- treat all linter-generated warnings as errors (default: False)
   """
   if extra_compiler_flags is None:
     extra_compiler_flags = []
@@ -70,7 +71,9 @@ def main(
   # pre-processing setup
   if bool(apply_patches) and bool(test_output_dir):
     raise RuntimeError('Test directory and apply patches are both non-zero. It is probably not a good idea to apply patches over the test directory!')
-  clang_dir, clang_lib = pl.util.initialize_libclang(clang_dir=clang_dir, clang_lib=clang_lib)
+  clang_dir, clang_lib = pl.util.initialize_libclang(
+    clang_dir=clang_dir, clang_lib=clang_lib, compat_check=clang_compat_check
+  )
 
   petsc_dir = pl.Path(petsc_dir).resolve()
   if src_path is None:
@@ -108,28 +111,14 @@ def main(
     petsc_dir, petsc_arch, extra_compiler_flags=extra_compiler_flags, verbose=verbose
   )
 
-  class PrecompiledHeader:
-    __slots__ = ('pch',)
-
-    def __init__(self, *args, **kwargs):
-      self.pch = pl.util.build_precompiled_header(*args, **kwargs)
-      return
-
-    def __enter__(self):
-      return self
-
-    def __exit__(self, *args, **kwargs):
-      if verbose:
-        pl.sync_print('Deleting precompiled header', self.pch)
-        self.pch.unlink()
-      return
-
-  with PrecompiledHeader(
+  with pl.util.PrecompiledHeader.from_flags(
       petsc_dir, compiler_flags, extra_header_includes=extra_header_includes, verbose=verbose
   ):
     warnings, errors_left, errors_fixed, patches = pl.WorkerPool(
       workers, verbose=verbose
-    ).setup(compiler_flags, werror=werror).walk(src_path).finalize()
+    ).setup(compiler_flags, clang_compat_check=clang_compat_check, werror=werror).walk(
+      src_path
+    ).finalize()
 
   if test_output_dir is not None:
     from petsclinter.test_main import test_main
@@ -249,7 +238,19 @@ def __build_arg_parser(parent_parsers=None):
     parents=parent_parsers
   )
 
+  group_general = parser.add_argument_group(title='General options')
+  group_general.add_argument('--version', action='version', version=f'%(prog)s {pl.version_str()}')
+  add_bool_argument(group_general, '-v', '--verbose', nargs='?', const=True, default=False, help='verbose progress printed to screen')
+  add_bool_argument(group_general, '--pm', nargs='?', const=True, default=False, help='launch an IPython post_mortem() on any raised exceptions (implies -j/--jobs 1)')
+  add_bool_argument(group_general, '--werror', nargs='?', const=True, default=False, help='treat all warnings as errors')
+  group_general.add_argument('-j', '--jobs', type=int, const=-1, default=-1, nargs='?', help='number of multiprocessing jobs, -1 means number of processors on machine', dest='workers')
+  group_general.add_argument('-p', '--patch-dir', help='directory to store patches in if they are generated, defaults to SRC_DIR/../petscLintPatches', dest='patch_dir')
+  add_bool_argument(group_general, '-a', '--apply-patches', nargs='?', const=True, default=False, help='automatically apply patches that are saved to file', dest='apply_patches')
+  group_general.add_argument('--CXXFLAGS', nargs='+', default=[], help='extra flags to pass to CXX compiler', dest='extra_compiler_flags')
+  group_general.add_argument('--INCLUDEFLAGS', nargs='+', default=[], help='extra include flags to pass to CXX compiler', dest='extra_header_includes')
+
   group_libclang = parser.add_argument_group(title='libClang location settings')
+  add_bool_argument(group_libclang, '--clang-compat-check', nargs='?', const=True, default=True, help='enable clang compatibility check')
   group          = group_libclang.add_mutually_exclusive_group(required=False)
   group.add_argument('--clang_dir', metavar='path', type=pl.Path, nargs='?', default=clang_dir, help='directory containing libclang.[so|dylib|dll], if not given attempts to automatically detect it via llvm-config', dest='clang_dir')
   group.add_argument('--clang_lib', metavar='path', type=pl.Path, nargs='?', help='direct location of libclang.[so|dylib|dll], overrides clang directory if set', dest='clang_lib')
@@ -258,20 +259,14 @@ def __build_arg_parser(parent_parsers=None):
   group_petsc.add_argument('--PETSC_DIR', default=petsc_dir, help='if this option is unused defaults to environment variable $PETSC_DIR', dest='petsc_dir')
   group_petsc.add_argument('--PETSC_ARCH', default=petsc_arch, help='if this option is unused defaults to environment variable $PETSC_ARCH', dest='petsc_arch')
 
-  parser.add_argument('src_path', default=default_src_dir, help='path to files or directory containing source (e.g. $SLEPC_DIR/src)', nargs='*')
-  add_bool_argument(parser, '-v', '--verbose', nargs='?', const=True, default=False, help='verbose progress printed to screen')
+  group_test = parser.add_argument_group(title='Testing settings')
+  group_test.add_argument('--test', metavar='path', nargs='?', const='__at_src__', help='test the linter for correctness. Optionally provide a directory containing the files against which to compare patches, defaults to SRC_DIR/output if no argument is given. The files of correct patches must be in the format [path_from_src_dir_to_testFileName].out', dest='test_output_dir')
+  add_bool_argument(group_test, '--replace', nargs='?', const=True, default=False, help='replace output files in test directory with patches generated', dest='replace_tests')
 
+  group_diag = parser.add_argument_group(title='Diagnostics settings')
   check_function_map_keys = list(pl.checks._register.check_function_map.keys())
   filter_func_choices     = ', '.join(check_function_map_keys)
-  parser.add_argument('--functions', nargs='+', choices=check_function_map_keys, metavar='FUNCTIONNAME', help='filter to display errors only related to list of provided function names, default is all functions. Choose from available function names: '+filter_func_choices, dest='check_function_filter')
-  foo = parser.add_argument('-j', '--jobs', type=int, const=-1, default=-1, nargs='?', help='number of multiprocessing jobs, -1 means number of processors on machine', dest='workers')
-  parser.add_argument('-p', '--patch-dir', help='directory to store patches in if they are generated, defaults to SRC_DIR/../petscLintPatches', dest='patch_dir')
-  add_bool_argument(parser, '-a', '--apply-patches', nargs='?', const=True, default=False, help='automatically apply patches that are saved to file', dest='apply_patches')
-  parser.add_argument('--CXXFLAGS', nargs='+', default=[], help='extra flags to pass to CXX compiler', dest='extra_compiler_flags')
-  parser.add_argument('--INCLUDEFLAGS', nargs='+', default=[], help='extra include flags to pass to CXX compiler', dest='extra_header_includes')
-  parser.add_argument('--test', metavar='path', nargs='?', const='__at_src__', help='test the linter for correctness. Optionally provide a directory containing the files against which to compare patches, defaults to SRC_DIR/output if no argument is given. The files of correct patches must be in the format [path_from_src_dir_to_testFileName].out', dest='test_output_dir')
-  add_bool_argument(parser, '--replace', nargs='?', const=True, default=False, help='replace output files in test directory with patches generated', dest='replace_tests')
-  add_bool_argument(parser, '--werror', nargs='?', const=True, default=False, help='treat all warnings as errors')
+  group_diag.add_argument('--functions', nargs='+', choices=check_function_map_keys, metavar='FUNCTIONNAME', help='filter to display errors only related to list of provided function names, default is all functions. Choose from available function names: '+filter_func_choices, dest='check_function_filter')
 
   class CheckFilter(argparse.Action):
     def __call__(self, parser, namespace, values, *args, **kwargs):
@@ -284,36 +279,38 @@ def __build_arg_parser(parent_parsers=None):
       setattr(namespace, flag, values)
       return
 
-  group_diag = parser.add_argument_group(title='diagnostics')
   add_bool_argument(
     group_diag, '-fdiagnostics-all', nargs='?', const=True, default=True, action=CheckFilter,
     help='enable all diagnostics'
   )
 
   all_diagnostics = set()
+  flag_prefix     = pl.DiagnosticManager.flagprefix
   for diag, helpstr in sorted(pl.DiagnosticManager.registered().items()):
-    diag_flag = f'-f{diag}'
+    diag_flag = f'{flag_prefix}{diag}'
     add_bool_argument(
       group_diag, diag_flag, nargs='?', const=True, default=True, action=CheckFilter, help=helpstr
     )
     all_diagnostics.add(diag_flag)
 
+  parser.add_argument('src_path', default=default_src_dir, help='path to files or directory containing source (e.g. $SLEPC_DIR/src)', nargs='*')
   return parser, all_diagnostics
 
 def parse_command_line_args(argv=None, **kwargs):
   import re
 
   def expand_argv_globs(in_argv, diagnostics):
-    argv  = []
-    skip  = False
-    nargv = len(in_argv)
+    argv        = []
+    skip        = False
+    nargv       = len(in_argv)
+    flag_prefix = pl.DiagnosticManager.flagprefix
 
     # always skip first entry of argv
     for i, argi in enumerate(in_argv[1:], start=1):
       if skip:
         skip = False
         continue
-      if argi.startswith('-f') and '*' in argi:
+      if argi.startswith(flag_prefix) and '*' in argi:
         if i + 1 >= len(in_argv):
           parser.error(f'Glob argument {argi} must be followed by explicit value!')
 
@@ -346,7 +343,7 @@ def namespace_main(args):
   return main(
     args.petsc_dir, args.petsc_arch,
     src_path=args.src_path,
-    clang_dir=args.clang_dir, clang_lib=args.clang_lib,
+    clang_dir=args.clang_dir, clang_lib=args.clang_lib, clang_compat_check=args.clang_compat_check,
     verbose=args.verbose,
     workers=args.workers,
     check_function_filter=args.check_function_filter,
@@ -358,7 +355,21 @@ def namespace_main(args):
 
 def command_line_main():
   args, _ = parse_command_line_args()
-  return namespace_main(args)
+  if args.pm:
+    if args.verbose:
+      pl.sync_print('Running with --pm flag, setting number of workers to 1')
+    args.workers = 1
+    try:
+      import ipdb as py_db # LINT IGNORE
+    except ModuleNotFoundError:
+      import pdb as py_db # LIN`T IGNORE
+
+  try:
+    return namespace_main(args)
+  except:
+    if args.pm:
+      py_db.post_mortem()
+    raise
 
 if __name__ == '__main__':
   sys.exit(command_line_main())
