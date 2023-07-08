@@ -34,6 +34,25 @@ typedef struct {
   TSStepStatus status;
 } TS_Alpha;
 
+static PetscErrorCode TSTransferRegister_Alpha(TS ts, PetscBool reg)
+{
+  TS_Alpha *th = (TS_Alpha *)ts->data;
+
+  PetscFunctionBegin;
+  if (reg) {
+    if (th->vec_sol_prev) { /* We need to transfer X0 which will be copied into sol_prev */
+      PetscObject obj = (PetscObject)th->X0;
+      PetscCall(PetscObjectListAdd(&ts->transferobjs, "ts:alpha:X0", obj));
+    }
+  } else {
+    PetscObject obj;
+    PetscCall(PetscObjectListFind(ts->transferobjs, "ts:alpha:X0", &obj));
+    PetscCall(PetscObjectReference(obj));
+    th->X0 = (Vec)obj;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode TSAlpha_StageTime(TS ts)
 {
   TS_Alpha *th      = (TS_Alpha *)ts->data;
@@ -335,7 +354,7 @@ static PetscErrorCode TSSetUp_Alpha(TS ts)
   PetscBool match;
 
   PetscFunctionBegin;
-  PetscCall(VecDuplicate(ts->vec_sol, &th->X0));
+  if (!th->X0) PetscCall(VecDuplicate(ts->vec_sol, &th->X0));
   PetscCall(VecDuplicate(ts->vec_sol, &th->Xa));
   PetscCall(VecDuplicate(ts->vec_sol, &th->X1));
   PetscCall(VecDuplicate(ts->vec_sol, &th->V0));
@@ -446,18 +465,19 @@ PETSC_EXTERN PetscErrorCode TSCreate_Alpha(TS ts)
   TS_Alpha *th;
 
   PetscFunctionBegin;
-  ts->ops->reset          = TSReset_Alpha;
-  ts->ops->destroy        = TSDestroy_Alpha;
-  ts->ops->view           = TSView_Alpha;
-  ts->ops->setup          = TSSetUp_Alpha;
-  ts->ops->setfromoptions = TSSetFromOptions_Alpha;
-  ts->ops->step           = TSStep_Alpha;
-  ts->ops->evaluatewlte   = TSEvaluateWLTE_Alpha;
-  ts->ops->rollback       = TSRollBack_Alpha;
-  ts->ops->interpolate    = TSInterpolate_Alpha;
-  ts->ops->snesfunction   = SNESTSFormFunction_Alpha;
-  ts->ops->snesjacobian   = SNESTSFormJacobian_Alpha;
-  ts->default_adapt_type  = TSADAPTNONE;
+  ts->ops->reset            = TSReset_Alpha;
+  ts->ops->destroy          = TSDestroy_Alpha;
+  ts->ops->view             = TSView_Alpha;
+  ts->ops->setup            = TSSetUp_Alpha;
+  ts->ops->setfromoptions   = TSSetFromOptions_Alpha;
+  ts->ops->step             = TSStep_Alpha;
+  ts->ops->evaluatewlte     = TSEvaluateWLTE_Alpha;
+  ts->ops->rollback         = TSRollBack_Alpha;
+  ts->ops->interpolate      = TSInterpolate_Alpha;
+  ts->ops->transferregister = TSTransferRegister_Alpha;
+  ts->ops->snesfunction     = SNESTSFormFunction_Alpha;
+  ts->ops->snesjacobian     = SNESTSFormJacobian_Alpha;
+  ts->default_adapt_type    = TSADAPTNONE;
 
   ts->usessnes = PETSC_TRUE;
 

@@ -828,14 +828,13 @@ static PetscErrorCode MonitorParticleError(TS ts, PetscInt step, PetscReal time,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode AdvectParticles(TS ts)
+static PetscErrorCode AdvectParticles(TS ts, PetscInt step, PetscReal time, Vec x, PetscBool *reset, void *ctx)
 {
   TS        sts;
   DM        sdm;
   Vec       coordinates;
   AdvCtx   *adv;
-  PetscReal time;
-  PetscBool lreset, reset;
+  PetscBool lreset;
   PetscInt  dim, n, N, newn, newN;
 
   PetscFunctionBeginUser;
@@ -858,12 +857,21 @@ static PetscErrorCode AdvectParticles(TS ts)
   PetscCall(DMSwarmGetSize(sdm, &newN));
   PetscCall(DMSwarmGetLocalSize(sdm, &newn));
   lreset = (n != newn || N != newN) ? PETSC_TRUE : PETSC_FALSE;
-  PetscCall(MPIU_Allreduce(&lreset, &reset, 1, MPIU_BOOL, MPI_LOR, PetscObjectComm((PetscObject)sts)));
-  if (reset) {
-    PetscCall(TSReset(sts));
-    PetscCall(DMSwarmVectorDefineField(sdm, DMSwarmPICField_coor));
-  }
+  PetscCall(MPIU_Allreduce(&lreset, reset, 1, MPIU_BOOL, MPI_LOR, PetscObjectComm((PetscObject)sts)));
   PetscCall(DMViewFromOptions(sdm, NULL, "-dm_view"));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode Transfer(TS ts, PetscInt nv, Vec vin[], Vec vout[], void *ctx)
+{
+  TS sts;
+  DM sdm;
+
+  PetscFunctionBeginUser;
+  PetscCall(PetscObjectQuery((PetscObject)ts, "_SwarmTS", (PetscObject *)&sts));
+  PetscCall(TSReset(sts));
+  PetscCall(TSGetDM(sts, &sdm));
+  PetscCall(DMSwarmVectorDefineField(sdm, DMSwarmPICField_coor));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -931,7 +939,7 @@ int main(int argc, char **argv)
   PetscCall(VecDuplicate(adv.uf, &adv.ui));
   PetscCall(VecCopy(u, adv.ui));
   PetscCall(TSSetRHSFunction(sts, NULL, FreeStreaming, &adv));
-  PetscCall(TSSetPostStep(ts, AdvectParticles));
+  PetscCall(TSSetTransfer(ts, AdvectParticles, Transfer, NULL));
   PetscCall(PetscObjectCompose((PetscObject)ts, "_SwarmTS", (PetscObject)sts));
   PetscCall(DMSwarmVectorDefineField(sdm, DMSwarmPICField_coor));
   PetscCall(DMCreateGlobalVector(sdm, &adv.x0));
