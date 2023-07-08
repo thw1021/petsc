@@ -205,9 +205,11 @@ PETSC_INTERN PetscSpinlock PetscLogSpinLock;
 /* Access PETSc internal thread id */
 PETSC_INTERN PetscInt PetscLogGetTid(void);
 
-#ifdef PETSC_USE_LOG
-  #if defined(PETSC_HAVE_DEVICE)
+#if defined(PETSC_HAVE_DEVICE)
+  #if defined(PETSC_USE_LOG)
 PETSC_EXTERN PetscBool PetscLogGpuTimeFlag;
+  #else
+PETSC_UNUSED const static PetscBool PetscLogGpuTimeFlag = PETSC_FALSE;
   #endif
 #endif /* PETSC_USE_LOG */
 
