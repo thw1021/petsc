@@ -4,7 +4,7 @@
 Supported External Software
 ***************************
 
-PETSc interfaces many optional external software packages. See :ref:`installing
+PETSc interfaces with many optional external software packages. See :ref:`installing
 packages <doc_config_externalpack>` for more information on downloading and installing
 these softwares, as well as the :doc:`linear solve table
 </overview/linear_solve_table>` for more
