@@ -2,12 +2,9 @@
 
 typedef struct {
   PetscBool allocated;
-  PetscBool scalediag;
   KSP       kspL;
   Vec       scale;
-  Vec       x0, y0, x1;
-  Mat       L;         /* keep a copy to reuse when obtained with L = A10*A01 */
-  Mat       CAdiaginv; /* The product of C and the inverse of the diagional of A */
+  Vec       x0, x1, y1;
 } PC_LSC;
 
 static PetscErrorCode PCLSCAllocate_Private(PC pc)
@@ -24,9 +21,10 @@ static PetscErrorCode PCLSCAllocate_Private(PC pc)
   PetscCall(KSPSetOptionsPrefix(lsc->kspL, ((PetscObject)pc)->prefix));
   PetscCall(KSPAppendOptionsPrefix(lsc->kspL, "lsc_"));
   PetscCall(MatSchurComplementGetSubMatrices(pc->mat, &A, NULL, NULL, NULL, NULL));
-  PetscCall(MatCreateVecs(A, &lsc->x0, &lsc->y0));
-  PetscCall(MatCreateVecs(pc->pmat, &lsc->x1, NULL));
-  if (lsc->scalediag) PetscCall(VecDuplicate(lsc->x0, &lsc->scale));
+  PetscCall(MatCreateVecs(pc->pmat, &lsc->x0, NULL));
+  PetscCall(MatCreateVecs(A, &lsc->x1, &lsc->y1));
+
+  PetscCall(VecDuplicate(lsc->x0, &lsc->scale));
   lsc->allocated = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -34,46 +32,26 @@ static PetscErrorCode PCLSCAllocate_Private(PC pc)
 static PetscErrorCode PCSetUp_LSC(PC pc)
 {
   PC_LSC *lsc = (PC_LSC *)pc->data;
-  Mat     L, Lp, B, C;
+  Mat     L, Lp, Qscale;
 
   PetscFunctionBegin;
   PetscCall(PCLSCAllocate_Private(pc));
 
-  /* Query for L operators, e.b. C * Qvdiag^-1 * B */
+  /* Query for L operators */
   PetscCall(PetscObjectQuery((PetscObject)pc->mat, "LSC_L", (PetscObject *)&L));
   if (!L) PetscCall(PetscObjectQuery((PetscObject)pc->pmat, "LSC_L", (PetscObject *)&L));
   PetscCall(PetscObjectQuery((PetscObject)pc->pmat, "LSC_Lp", (PetscObject *)&Lp));
   if (!Lp) PetscCall(PetscObjectQuery((PetscObject)pc->mat, "LSC_Lp", (PetscObject *)&Lp));
-  if (lsc->scale) {
-    Mat Qscale;
-    PetscCall(PetscObjectQuery((PetscObject)pc->pmat, "LSC_Qscale", (PetscObject *)&Qscale));
-    if (!Qscale) PetscCall(MatSchurComplementGetSubMatrices(pc->mat, NULL, &Qscale, NULL, NULL, NULL));
-    PetscCall(MatGetDiagonal(Qscale, lsc->scale));
-    PetscCall(VecReciprocal(lsc->scale));
-  }
-  if (!L) {
-    PetscCall(MatSchurComplementGetSubMatrices(pc->mat, NULL, NULL, &B, &C, NULL));
-    if (lsc->scale) {
-      if (!lsc->CAdiaginv) {
-        PetscCall(MatConvert(C, MATSAME, MAT_INITIAL_MATRIX, &lsc->CAdiaginv));
-      } else {
-        PetscCall(MatCopy(C, lsc->CAdiaginv, SAME_NONZERO_PATTERN));
-      }
-      PetscCall(MatDiagonalScale(lsc->CAdiaginv, NULL, lsc->scale));
-      if (!lsc->L) {
-        PetscCall(MatMatMult(lsc->CAdiaginv, B, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &lsc->L));
-      } else {
-        PetscCall(MatMatMult(lsc->CAdiaginv, B, MAT_REUSE_MATRIX, PETSC_DEFAULT, &lsc->L));
-      }
-    } else {
-      if (!lsc->L) {
-        PetscCall(MatMatMult(C, B, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &lsc->L));
-      } else {
-        PetscCall(MatMatMult(C, B, MAT_REUSE_MATRIX, PETSC_DEFAULT, &lsc->L));
-      }
-    }
-    Lp = L = lsc->L;
-  }
+  PetscCall(PetscObjectQuery((PetscObject)pc->pmat, "LSC_Qscale", (PetscObject *)&Qscale));
+  if (!Qscale) PetscCall(PetscObjectQuery((PetscObject)pc->mat, "LSC_Qscale", (PetscObject *)&Qscale));
+  PetscCheck(L || Lp, PetscObjectComm((PetscObject)pc), PETSC_ERR_USER, "The user must provide an L operator for LSC preconditioning");
+  PetscCheck(Qscale, PetscObjectComm((PetscObject)pc), PETSC_ERR_USER, "The user must provide a Q matrix for LSC preconditioning");
+  if (!L && Lp)
+    L = Lp;
+  else if (L && !Lp)
+    Lp = L;
+  PetscCall(MatGetDiagonal(Qscale, lsc->scale));
+  PetscCall(VecReciprocal(lsc->scale));
   PetscCall(KSPSetOperators(lsc->kspL, L, Lp));
   PetscCall(KSPSetFromOptions(lsc->kspL));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -86,15 +64,15 @@ static PetscErrorCode PCApply_LSC(PC pc, Vec x, Vec y)
 
   PetscFunctionBegin;
   PetscCall(MatSchurComplementGetSubMatrices(pc->mat, &A, NULL, &B, &C, NULL));
-  PetscCall(KSPSolve(lsc->kspL, x, lsc->x1));
-  PetscCall(KSPCheckSolve(lsc->kspL, pc, lsc->x1));
-  PetscCall(MatMult(B, lsc->x1, lsc->x0));
-  if (lsc->scale) PetscCall(VecPointwiseMult(lsc->x0, lsc->x0, lsc->scale));
-  PetscCall(MatMult(A, lsc->x0, lsc->y0));
-  if (lsc->scale) PetscCall(VecPointwiseMult(lsc->y0, lsc->y0, lsc->scale));
-  PetscCall(MatMult(C, lsc->y0, lsc->x1));
-  PetscCall(KSPSolve(lsc->kspL, lsc->x1, y));
-  PetscCall(KSPCheckSolve(lsc->kspL, pc, y));
+  PetscCall(VecPointwiseMult(lsc->x0, x, lsc->scale));
+  PetscCall(MatMult(B, lsc->x0, lsc->x1));
+  PetscCall(KSPSolve(lsc->kspL, lsc->x1, lsc->y1));
+  PetscCall(KSPCheckSolve(lsc->kspL, pc, lsc->y1));
+  PetscCall(MatMult(A, lsc->y1, lsc->x1));
+  PetscCall(KSPSolve(lsc->kspL, lsc->x1, lsc->y1));
+  PetscCall(KSPCheckSolve(lsc->kspL, pc, lsc->y1));
+  PetscCall(MatMult(C, lsc->y1, y));
+  PetscCall(VecPointwiseMult(y, y, lsc->scale));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -104,12 +82,10 @@ static PetscErrorCode PCReset_LSC(PC pc)
 
   PetscFunctionBegin;
   PetscCall(VecDestroy(&lsc->x0));
-  PetscCall(VecDestroy(&lsc->y0));
   PetscCall(VecDestroy(&lsc->x1));
+  PetscCall(VecDestroy(&lsc->y1));
   PetscCall(VecDestroy(&lsc->scale));
   PetscCall(KSPDestroy(&lsc->kspL));
-  PetscCall(MatDestroy(&lsc->L));
-  PetscCall(MatDestroy(&lsc->CAdiaginv));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -123,14 +99,7 @@ static PetscErrorCode PCDestroy_LSC(PC pc)
 
 static PetscErrorCode PCSetFromOptions_LSC(PC pc, PetscOptionItems *PetscOptionsObject)
 {
-  PC_LSC *lsc = (PC_LSC *)pc->data;
-
   PetscFunctionBegin;
-  PetscOptionsHeadBegin(PetscOptionsObject, "LSC options");
-  {
-    PetscCall(PetscOptionsBool("-pc_lsc_scale_diag", "Use diagonal of velocity block (A) for scaling", "None", lsc->scalediag, &lsc->scalediag, NULL));
-  }
-  PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
