@@ -568,14 +568,14 @@ static inline int PetscMPIParallelComm(MPI_Comm comm)
   #define PetscLogMemory PETSC_FALSE
   #define PetscLogSyncOn PETSC_FALSE
 
-  #define PetscLogGetState(a)     (*(a) = 0, PETSC_SUCCESS)
+  #define PetscLogGetState(a)     (*(a) = NULL, PETSC_SUCCESS)
   #define PetscLogHandlerStart(a) ((void)(a), PETSC_SUCCESS)
   #define PetscLogHandlerStop(a)  ((void)(a), PETSC_SUCCESS)
 
   #define PetscLogFlops(n) ((void)(n), PETSC_SUCCESS)
   #define PetscGetFlops(a) (*(a) = 0.0, PETSC_SUCCESS)
 
-  #define PetscLogStageRegister(a, b)   ((void)(b), PETSC_SUCCESS)
+  #define PetscLogStageRegister(a, b)   ((void)(a), *(b) = -1, PETSC_SUCCESS)
   #define PetscLogStagePush(a)          ((void)(a), PETSC_SUCCESS)
   #define PetscLogStagePop()            PETSC_SUCCESS
   #define PetscLogStageSetActive(a, b)  ((void)(a), (void)(b), PETSC_SUCCESS)

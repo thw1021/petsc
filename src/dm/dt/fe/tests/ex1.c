@@ -193,10 +193,8 @@ static PetscErrorCode TestIntegration(DM dm, PetscInt cbs, PetscInt its)
   PetscScalar    *u, *elemVec;
   IS              cellIS;
   PetscInt        depth, cStart, cEnd, cell, chunkSize = cbs, Nch = 0, Nf, f, totDim, i, k;
-#if defined(PETSC_USE_LOG)
-  PetscLogStage stage;
-  PetscLogEvent event;
-#endif
+  PetscLogStage   stage;
+  PetscLogEvent   event;
 
   PetscFunctionBeginUser;
   PetscCall(PetscLogStageRegister("PetscFE Residual Integration Test", &stage));
@@ -262,11 +260,9 @@ static PetscErrorCode TestIntegration(DM dm, PetscInt cbs, PetscInt its)
 
 static PetscErrorCode TestIntegration2(DM dm, PetscInt cbs, PetscInt its)
 {
-  Vec X, F;
-#if defined(PETSC_USE_LOG)
+  Vec           X, F;
   PetscLogStage stage;
-#endif
-  PetscInt i;
+  PetscInt      i;
 
   PetscFunctionBeginUser;
   PetscCall(PetscLogStageRegister("DMPlex Residual Integration Test", &stage));
