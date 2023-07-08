@@ -7736,9 +7736,9 @@ static inline PetscErrorCode MatCollapseRows(Mat Amat, PetscInt start, PetscInt 
 }
 
 /*
-   This will eventually be folded into MatCreateGraph_AIJ() for optimal performance
+   This will eventually be folded into MatCreateGraph_AIJ() for optimal performance -- should this be in mat/utils/...
 */
-static PetscErrorCode MatFilter_AIJ(Mat Gmat, PetscReal vfilter, Mat *filteredG)
+PETSC_INTERN PetscErrorCode MatAIJFilter(Mat Gmat, PetscReal vfilter, Mat *filteredG)
 {
   PetscInt           Istart, Iend, ncols, nnz0, nnz1, NN, MM, nloc;
   Mat                tGmat;
@@ -8084,7 +8084,7 @@ PETSC_INTERN PetscErrorCode MatCreateGraph_Simple_AIJ(Mat Amat, PetscBool symmet
   if (filter >= 0) {
     Mat Fmat = NULL; /* some silly compiler needs this */
 
-    PetscCall(MatFilter_AIJ(Gmat, filter, &Fmat));
+    PetscCall(MatAIJFilter(Gmat, filter, &Fmat));
     PetscCall(MatDestroy(&Gmat));
     Gmat = Fmat;
   }
