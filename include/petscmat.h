@@ -2490,5 +2490,5 @@ PETSC_EXTERN PetscErrorCode MatEliminateZeros(Mat);
 
 PETSC_EXTERN PetscErrorCode MatCreateDenseFromVecType(MPI_Comm, VecType, PetscInt, PetscInt, PetscInt, PetscInt, PetscInt, PetscScalar *, Mat *);
 
-PETSC_INTERN PetscErrorCode MatAIJFilter(Mat, PetscReal, Mat *);
+PETSC_EXTERN PetscErrorCode MatAIJFilter(Mat, PetscReal, Mat *);
 #endif
