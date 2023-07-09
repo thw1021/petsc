@@ -2739,13 +2739,6 @@ PetscErrorCode DMPlexComputeInterpolatorNested(DM dmc, DM dmf, PetscBool isRefin
     PetscCall(MatChop(In, 1.0e-10));
     PetscCall(MatView(In, NULL));
   }
-  if (0) {
-    Mat Fmat = NULL; /* some silly compiler needs this */
-    PetscCall(MatAIJFilter(In, PETSC_SQRT_MACHINE_EPSILON, &Fmat));
-    PetscCall(MatCopy(Fmat, In, DIFFERENT_NONZERO_PATTERN));
-    PetscCall(MatDestroy(&Fmat));
-    PetscCall(MatViewFromOptions(In, NULL, "-interp_mat_view"));
-  }
   PetscCall(PetscLogEventEnd(DMPLEX_InterpolatorFEM, dmc, dmf, 0, 0));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
