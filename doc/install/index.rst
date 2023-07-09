@@ -12,17 +12,24 @@ Install
     Some package managers provide separate packages for the complex number installation of PETSc.
 
     - Archlinux https://aur.archlinux.org/packages/petsc
-    - Conda: https://anaconda.org/conda-forge/petsc  ``conda install -c conda-forge petsc``
-    - Debian: https://packages.debian.org/petsc-dev ``sudo apt install petsc-dev``
+    - Conda: https://anaconda.org/conda-forge/petsc
+          ``conda install -c conda-forge petsc``
+    - Debian: https://packages.debian.org/petsc-dev
+          ``sudo apt install petsc-dev``
     - Fedora: https://packages.fedoraproject.org/pkgs/petsc/petsc
-    - Homebrew: https://formulae.brew.sh/formula/petsc ``brew install petsc``
-    - MacPorts: https://ports.macports.org/port/petsc  ``sudo port install petsc``
+    - Homebrew: https://formulae.brew.sh/formula/petsc
+          ``brew install petsc``
+    - MacPorts: https://ports.macports.org/port/petsc
+          ``sudo port install petsc``
     - MSYS2 (Windows) https://packages.msys2.org/package/mingw-w64-x86_64-petsc
     - openSUSE https://software.opensuse.org/package/petsc
-    - Python: https://pypi.org/project/petsc ``python -m pip install mpi4py petsc petsc4py``
+    - Python: https://pypi.org/project/petsc
+          ``python -m pip install mpi4py petsc petsc4py``
     - Slackware: https://slackbuilds.org/repository/15.0/academic/petsc/?search=petsc
-    - Spack: https://spack.io ``spack install petsc``
-    - Ubuntu: https://packages.ubuntu.com/petsc-dev ``sudo apt install petsc-dev``
+    - Spack: https://spack.io
+          ``spack install petsc``
+    - Ubuntu: https://packages.ubuntu.com/petsc-dev
+          ``sudo apt install petsc-dev``
 
 Information and tutorials on setting up a PETSc installation.
 
