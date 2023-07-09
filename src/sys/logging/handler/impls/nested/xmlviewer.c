@@ -285,7 +285,7 @@ static PetscErrorCode PetscPrintXMLNestedLinePerfResults(PetscViewer viewer, con
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscLogNestedTreePrintLine(PetscViewer viewer, const PetscEventPerfInfo *perfInfo, PetscLogDouble countsPerCall, int parentCount, const char *name, PetscLogDouble totalTime)
+static PetscErrorCode PetscLogNestedTreePrintLine(PetscViewer viewer, const PetscEventPerfInfo *perfInfo, int childCount, int parentCount, const char *name, PetscLogDouble totalTime)
 {
   PetscLogDouble time = perfInfo->time;
   PetscLogDouble timeMx;
@@ -296,7 +296,7 @@ static PetscErrorCode PetscLogNestedTreePrintLine(PetscViewer viewer, const Pets
   PetscCall(MPIU_Allreduce(&time, &timeMx, 1, MPIU_PETSCLOGDOUBLE, MPI_MAX, comm));
   PetscCall(PetscViewerXMLPutString(viewer, "name", NULL, name));
   PetscCall(PetscPrintXMLNestedLinePerfResults(viewer, "time", time / totalTime * 100.0, 0, 0, 1.02));
-  PetscCall(PetscPrintXMLNestedLinePerfResults(viewer, "ncalls", parentCount > 0 ? countsPerCall : 1.0, 0.99, 1.01, 1.02));
+  PetscCall(PetscPrintXMLNestedLinePerfResults(viewer, "ncalls", parentCount > 0 ? ((PetscLogDouble)childCount) / ((PetscLogDouble)parentCount) : 1.0, 0.99, 1.01, 1.02));
   PetscCall(PetscPrintXMLNestedLinePerfResults(viewer, "mflops", time >= timeMx * 0.001 ? 1e-6 * perfInfo->flops / time : 0, 0, 0.01, 1.05));
   PetscCall(PetscPrintXMLNestedLinePerfResults(viewer, "mbps", time >= timeMx * 0.001 ? perfInfo->messageLength / (1024 * 1024 * time) : 0, 0, 0.01, 1.05));
   PetscCall(PetscPrintXMLNestedLinePerfResults(viewer, "nreductsps", time >= timeMx * 0.001 ? perfInfo->numReductions / time : 0, 0, 0.01, 1.05));
@@ -382,11 +382,11 @@ static PetscErrorCode PetscLogNestedTreePrint(PetscViewer viewer, double total_t
         if (node == -1) {
           PetscCall(PetscLogNestedTreePrintLine(viewer, parent_info, 0, 0, "self", total_time));
         } else if (node == -2) {
-          PetscCall(PetscLogNestedTreePrintLine(viewer, &other, ((double)other.count) / ((double)parent_info->count), parent_info->count, "other", total_time));
+          PetscCall(PetscLogNestedTreePrintLine(viewer, &other, other.count, parent_info->count, "other", total_time));
         } else {
           const char *base_name = NULL;
           PetscCall(PetscNestedNameGetBase(tree[node].name, &base_name));
-          PetscCall(PetscLogNestedTreePrintLine(viewer, &perf[node], ((double)perf[node].count) / ((double)parent_info->count), parent_info->count, base_name, total_time));
+          PetscCall(PetscLogNestedTreePrintLine(viewer, &perf[node], perf[node].count, parent_info->count, base_name, total_time));
           PetscCall(PetscLogNestedTreePrint(viewer, total_time, threshold_time, &tree[node], &perf[node], &tree[node + 1], &perf[node + 1], type, PETSC_TRUE));
         }
         PetscCall(PetscViewerXMLEndSection(viewer, "event"));
