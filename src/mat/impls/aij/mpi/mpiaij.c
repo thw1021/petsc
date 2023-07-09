@@ -7740,7 +7740,7 @@ static inline PetscErrorCode MatCollapseRows(Mat Amat, PetscInt start, PetscInt 
 */
 PETSC_INTERN PetscErrorCode MatAIJFilter(Mat Gmat, PetscReal vfilter, Mat *filteredG)
 {
-  PetscInt           Istart, Iend, ncols, nnz0, nnz1, NN, MM, nrowloc, ncolloc;
+  PetscInt           IstartRow, IstartCol, ncols, nnz0, nnz1, NN, MM, nrowloc, ncolloc;
   Mat                tGmat;
   MPI_Comm           comm;
   const PetscScalar *vals;
@@ -7764,9 +7764,9 @@ PETSC_INTERN PetscErrorCode MatAIJFilter(Mat Gmat, PetscReal vfilter, Mat *filte
 
   // global sizes
   PetscCall(MatGetSize(Gmat, &MM, &NN));
-  PetscCall(MatGetOwnershipRange(Gmat, &Istart, &Iend));
-  PetscCall(MatGetLocalSize(Gmat, NULL, &ncolloc));
-  nrowloc = Iend - Istart;
+  PetscCall(MatGetOwnershipRange(Gmat, &IstartRow, NULL));
+  PetscCall(MatGetOwnershipRangeColumn(Gmat, &IstartCol, NULL));
+  PetscCall(MatGetLocalSize(Gmat, &nrowloc, &ncolloc));
   PetscCall(PetscMalloc2(nrowloc, &d_nnz, nrowloc, &o_nnz));
   if (isseqaij) {
     a = Gmat;
@@ -7802,13 +7802,13 @@ PETSC_INTERN PetscErrorCode MatAIJFilter(Mat Gmat, PetscReal vfilter, Mat *filte
   PetscCall(PetscMalloc2(maxcols, &AA, maxcols, &AJ));
   nnz0 = nnz1 = 0;
   for (c = a, kk = 0; c && kk < 2; c = b, kk++) {
-    for (PetscInt row = 0, grow = Istart, ncol_row, jj; row < nrowloc; row++, grow++) {
+    for (PetscInt row = 0, grow = IstartRow, ncol_row, jj; row < nrowloc; row++, grow++) {
       PetscCall(MatGetRow(c, row, &ncols, &idx, &vals));
       for (ncol_row = jj = 0; jj < ncols; jj++, nnz0++) {
         PetscScalar sv = PetscAbs(PetscRealPart(vals[jj]));
         if (PetscRealPart(sv) > vfilter) {
           nnz1++;
-          PetscInt cid = idx[jj] + Istart; //diag
+          PetscInt cid = idx[jj] + IstartCol; //diag
           if (c != a) cid = garray[idx[jj]];
           AA[ncol_row] = vals[jj];
           AJ[ncol_row] = cid;
