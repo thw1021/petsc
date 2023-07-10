@@ -189,12 +189,11 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryClassGetInfo(PetscLogRegistry regist
 
 PETSC_INTERN PetscErrorCode PetscLogRegistryEventSetCollective(PetscLogRegistry registry, PetscLogEvent event, PetscBool collective)
 {
-  PetscLogEventInfo event_info;
+  PetscLogEventInfo *event_info;
 
   PetscFunctionBegin;
-  PetscCall(PetscLogEventArrayGet(registry->events, event, &event_info));
-  event_info.collective = collective;
-  PetscCall(PetscLogEventArraySet(registry->events, event, event_info));
+  PetscCall(PetscLogEventArrayGetRef(registry->events, event, &event_info));
+  event_info->collective = collective;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
