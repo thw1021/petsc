@@ -390,6 +390,8 @@ static PetscErrorCode TSEventDetection(TS ts)
     fvalue_sign     = PetscSign(PetscRealPart(event->fvalue[i]));
     fvalueprev_sign = PetscSign(PetscRealPart(event->fvalue_prev[i]));
     if (fvalueprev_sign != 0 && (fvalue_sign != fvalueprev_sign)) {
+      if (fvalue_sign < 0 && event->direction[i] > 0) continue;
+      if (fvalue_sign > 0 && event->direction[i] < 0) continue;
       if (!event->iterctr) event->zerocrossing[i] = PETSC_TRUE;
       event->status = TSEVENT_LOCATED_INTERVAL;
       if (event->monitor) PetscCall(PetscViewerASCIIPrintf(event->monitor, "TSEvent: iter %" PetscInt_FMT " - Event %" PetscInt_FMT " interval detected due to sign change [%g - %g]\n", event->iterctr, i, (double)event->ptime_prev, (double)t));
