@@ -341,7 +341,7 @@ PetscErrorCode VecCreate_MPIKokkos(Vec v)
 {
   Vec_MPI    *vecmpi;
   Vec_Kokkos *veckok;
-  PetscBool   use_gemv;
+  PetscBool   use_gemv = PETSC_TRUE;
 
   PetscFunctionBegin;
   PetscCall(PetscKokkosInitializeCheck());
@@ -354,7 +354,7 @@ PetscErrorCode VecCreate_MPIKokkos(Vec v)
   veckok         = new Vec_Kokkos(v->map->n, vecmpi->array, NULL); /* Alloc device array but do not init it */
   v->spptr       = static_cast<void *>(veckok);
   v->offloadmask = PETSC_OFFLOAD_KOKKOS;
-  PetscCall(PetscOptionsHasName(NULL, NULL, "-vec_mdot_use_gemv", &use_gemv));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-vec_mdot_use_gemv", &use_gemv, NULL));
   if (use_gemv) {
     v->ops[0].duplicatevecs = VecDuplicateVecs_MPIKokkos_GEMV;
     v->ops[0].mdot          = VecMDot_MPIKokkos_GEMV;
