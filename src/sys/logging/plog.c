@@ -1034,7 +1034,7 @@ PetscErrorCode PetscLogStageGetId(const char name[], PetscLogStage *stage)
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
-  PetscCall(PetscLogRegistryGetStageFromName(state->registry, name, stage));
+  PetscCall(PetscLogStateGetStageFromName(state, name, stage));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1060,7 +1060,7 @@ PetscErrorCode PetscLogStageGetName(PetscLogStage stage, const char **name)
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
-  PetscCall(PetscLogRegistryStageGetInfo(state->registry, stage, &stage_info));
+  PetscCall(PetscLogStateStageGetInfo(state, stage, &stage_info));
   *name = stage_info.name;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1727,7 +1727,7 @@ PetscErrorCode PetscLogEventGetId(const char name[], PetscLogEvent *event)
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
-  PetscCall(PetscLogRegistryGetEventFromName(state->registry, name, event));
+  PetscCall(PetscLogStateGetEventFromName(state, name, event));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1753,7 +1753,7 @@ PetscErrorCode PetscLogEventGetName(PetscLogEvent event, const char **name)
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
-  PetscCall(PetscLogRegistryEventGetInfo(state->registry, event, &event_info));
+  PetscCall(PetscLogStateEventGetInfo(state, event, &event_info));
   *name = event_info.name;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1868,7 +1868,7 @@ PetscErrorCode PetscLogClassGetClassId(const char name[], PetscClassId *classid)
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
-  PetscCall(PetscLogRegistryGetClassFromName(state->registry, name, &log_class));
+  PetscCall(PetscLogStateGetClassFromName(state, name, &log_class));
   if (log_class < 0) {
     *classid = -1;
     PetscFunctionReturn(PETSC_SUCCESS);
@@ -1901,7 +1901,7 @@ PetscErrorCode PetscLogClassIdGetName(PetscClassId classid, const char **name)
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
-  PetscCall(PetscLogRegistryGetClassFromClassId(state->registry, classid, &log_class));
+  PetscCall(PetscLogStateGetClassFromClassId(state, classid, &log_class));
   PetscCall(PetscLogStateClassGetInfo(state, log_class, &class_info));
   *name = class_info.name;
   PetscFunctionReturn(PETSC_SUCCESS);
