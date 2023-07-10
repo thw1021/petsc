@@ -43,7 +43,7 @@ static PetscErrorCode PetcLogHandlerDestroy_Legacy(PetscLogHandler handler)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Legacy(PetscErrorCode (*PetscLogPLB)(PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject), PetscErrorCode (*PetscLogPLE)(PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject), PetscErrorCode (*PetscLogPHC)(PetscObject), PetscErrorCode (*PetscPHD)(PetscObject), PetscLogHandler *handler_p)
+PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Legacy(PetscErrorCode (*PetscLogPLB)(PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject), PetscErrorCode (*PetscLogPLE)(PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject), PetscErrorCode (*PetscLogPHC)(PetscObject), PetscErrorCode (*PetscLogPHD)(PetscObject), PetscLogHandler *handler_p)
 {
   PetscLogHandler        handler;
   PetscLogHandler_Legacy legacy;
@@ -52,11 +52,15 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Legacy(PetscErrorCode (*PetscL
   PetscCall(PetscLogHandlerCreate(PETSC_COMM_WORLD, handler_p));
   handler = *handler_p;
   PetscCall(PetscNew(&legacy));
+  legacy->PetscLogPLB    = PetscLogPLB;
+  legacy->PetscLogPLE    = PetscLogPLE;
+  legacy->PetscLogPHC    = PetscLogPHC;
+  legacy->PetscLogPHD    = PetscLogPHD;
   handler->ctx           = (void *)legacy;
   handler->eventBegin    = PetscLogPLB ? PetscLogHandlerEventBegin_Legacy : NULL;
   handler->eventEnd      = PetscLogPLE ? PetscLogHandlerEventEnd_Legacy : NULL;
-  handler->objectCreate  = PetscLogPLE ? PetscLogHandlerObjectCreate_Legacy : NULL;
-  handler->objectDestroy = PetscLogPLE ? PetscLogHandlerObjectDestroy_Legacy : NULL;
+  handler->objectCreate  = PetscLogPHC ? PetscLogHandlerObjectCreate_Legacy : NULL;
+  handler->objectDestroy = PetscLogPHD ? PetscLogHandlerObjectDestroy_Legacy : NULL;
   handler->destroy       = PetcLogHandlerDestroy_Legacy;
 
   PetscFunctionReturn(PETSC_SUCCESS);
