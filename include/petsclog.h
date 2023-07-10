@@ -234,7 +234,7 @@ PETSC_EXTERN PetscErrorCode PetscLogEventGetPerfInfo(PetscLogStage, PetscLogEven
 PETSC_EXTERN PetscErrorCode PetscLogEventSetDof(PetscLogEvent, PetscInt, PetscLogDouble);
 PETSC_EXTERN PetscErrorCode PetscLogEventSetError(PetscLogEvent, PetscInt, PetscLogDouble);
 PETSC_EXTERN PetscErrorCode PetscLogEventsPause(void);
-PETSC_EXTERN PetscErrorCode PetscLogEventsUnpause(void);
+PETSC_EXTERN PetscErrorCode PetscLogEventsResume(void);
 
 /* Class functions */
 PETSC_EXTERN PetscErrorCode PetscLogClassGetClassId(const char[], PetscClassId *);
@@ -604,7 +604,7 @@ static inline int PetscMPIParallelComm(MPI_Comm comm)
   #define PetscLogEventSetDof(a, b, c)   ((void)(a), (void)(b), (void)(c), PETSC_SUCCESS)
   #define PetscLogEventSetError(a, b, c) ((void)(a), (void)(b), (void)(c), PETSC_SUCCESS)
   #define PetscLogEventsPause()          PETSC_SUCCESS
-  #define PetscLogEventsUnpause()        PETSC_SUCCESS
+  #define PetscLogEventsResume()         PETSC_SUCCESS
 
   #define PetscLogClassGetClassId(a, b) (*(b) = -1, PETSC_SUCCESS)
   #define PetscLogClassIdGetName(a, b)  (*(b) = NULL, PETSC_SUCCESS)

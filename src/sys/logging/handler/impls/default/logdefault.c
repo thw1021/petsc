@@ -80,10 +80,10 @@ static PetscErrorCode PetscEventPerfInfoInit(PetscEventPerfInfo *eventInfo)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscEventPerfInfoTic_Internal(PetscEventPerfInfo *eventInfo, PetscLogDouble time, PetscBool logMemory, int event, PetscBool unpause)
+static PetscErrorCode PetscEventPerfInfoTic_Internal(PetscEventPerfInfo *eventInfo, PetscLogDouble time, PetscBool logMemory, int event, PetscBool resume)
 {
   PetscFunctionBegin;
-  if (unpause) {
+  if (resume) {
     eventInfo->timeTmp -= time;
     eventInfo->flopsTmp -= petsc_TotalFlops_th;
   } else {
@@ -121,7 +121,7 @@ static PetscErrorCode PetscEventPerfInfoTic(PetscEventPerfInfo *eventInfo, Petsc
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscEventPerfInfoUnpause(PetscEventPerfInfo *eventInfo, PetscLogDouble time, PetscBool logMemory, int event)
+static PetscErrorCode PetscEventPerfInfoResume(PetscEventPerfInfo *eventInfo, PetscLogDouble time, PetscBool logMemory, int event)
 {
   PetscFunctionBegin;
   PetscCall(PetscEventPerfInfoTic_Internal(eventInfo, time, logMemory, event, PETSC_TRUE));
@@ -722,7 +722,7 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDefaultEventsPause(PetscLogHandler h)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscLogHandlerDefaultEventsUnpause(PetscLogHandler h)
+PETSC_INTERN PetscErrorCode PetscLogHandlerDefaultEventsResume(PetscLogHandler h)
 {
   PetscLogHandler_Default def = (PetscLogHandler_Default)h->ctx;
   PetscLogDouble          time;
@@ -743,12 +743,12 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDefaultEventsUnpause(PetscLogHandler 
       PetscCall(PetscLogEventPerfArrayGetRef(stage_info->eventLog, event, &event_info));
       if (event_info->depth < 0) {
         event_info->depth *= -1;
-        PetscCall(PetscEventPerfInfoUnpause(event_info, time, PetscLogMemory, event));
+        PetscCall(PetscEventPerfInfoResume(event_info, time, PetscLogMemory, event));
       }
     }
     if (stage > 0 && stage_info->perfInfo.depth < 0) {
       stage_info->perfInfo.depth *= -1;
-      PetscCall(PetscEventPerfInfoUnpause(&stage_info->perfInfo, time, PetscLogMemory, -(stage + 2)));
+      PetscCall(PetscEventPerfInfoResume(&stage_info->perfInfo, time, PetscLogMemory, -(stage + 2)));
     }
   }
   PetscFunctionReturn(PETSC_SUCCESS);
