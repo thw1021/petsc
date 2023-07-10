@@ -11,6 +11,8 @@ import collections
 import clang.cindex as clx
 import petsclinter  as pl
 
+from .. import _util
+
 from .._diag    import DiagnosticManager, Diagnostic
 from .._linter  import Linter
 from .._cursor  import Cursor
@@ -54,6 +56,11 @@ _suspicious_expression_regex = re.compile(
     }
   )
 )
+
+_pragma_regex = re.compile(r'.*PetscClangLinter\s+pragma\s+(\w+):\s*(.*)')
+
+# Regex to match /* */ patterns
+_c_comment_regex = re.compile(r'\/\*(\*(?!\/)|[^*])*\*\/')
 
 class SectionNotFoundError(pl.BaseError):
   """
@@ -315,10 +322,12 @@ class PetscDocString(DocBase):
   def __init__(self, linter, cursor, indent=2):
     if not isinstance(linter, Linter):
       raise ValueError(type(linter))
+    if not isinstance(cursor, Cursor):
+      raise ValueError(type(cursor))
 
     self.sections.set_verbose(linter.verbose)
     self._linter          = linter
-    self.cursor           = Cursor.cast(cursor)
+    self.cursor           = cursor
     self.raw, self.extent = self._get_sanitized_comment_and_range_from_cursor(self.cursor)
     self.indent           = indent
     self.type             = self.Type.UNKNOWN
@@ -385,29 +394,49 @@ class PetscDocString(DocBase):
 
   @classmethod
   def _get_sanitized_comment_and_range_from_cursor(cls, cursor):
-    if not isinstance(cursor, Cursor):
-      raise ValueError(type(cursor))
-
     raw, extent = cursor.get_comment_and_range()
     extent      = SourceRange.cast(extent, tu=cursor.translation_unit)
 
     if not cls._is_valid_docstring(cursor, raw, extent):
-      raise pl.ParsingError('Not a docstring')
+      raise pl.KnownUnhandleableCursorError('Not a docstring')
 
-    rawlines = raw.splitlines()
-    comments = [i for i, line in enumerate(rawlines) if line.lstrip().startswith('/*')]
-    if len(comments) > 1:
+    last_match = None
+    for re_match in _c_comment_regex.finditer(raw):
+      last_match = re_match
+
+    start = last_match.start()
+    if start:
       # this handles the following case:
       #
       # /* a dummy comment that is attributed to the symbol */
       # /*
       #   the real docstring comment, note no empty line between this and the previous!
+      #   // also handles internal comments
+      #   /* of both kinds */
       # */
       # <the symbol>
-      offset = comments[-1]
-      raw    = '\n'.join(rawlines[offset:])
-      extent = extent.resized(lbegin=offset, cbegin=None, cend=None)
+      assert start > 0
+      extent = extent.resized(lbegin=raw.count('\n', 0, start), cbegin=None, cend=None)
+      raw    = raw[start:]
     return raw, extent
+
+  def get_pragmas(self):
+    pragmas     = collections.defaultdict(set)
+    start       = self.extent.start
+    flag_prefix = DiagnosticManager.flagprefix
+    for line in reversed(_util.read_file_lines_cached(start.file.name, 'r')[:start.line - 1]):
+      line = line.rstrip()
+      if line.endswith(('}', ';', ')', '>', '"')):
+        break
+      re_match = _pragma_regex.match(line)
+      if re_match:
+        pragmas[re_match.group(1)].update(
+          map(
+            re.compile,
+            filter(None, map(str.strip, re_match.group(2).replace(flag_prefix, '').split(',')))
+          )
+        )
+    return dict(pragmas)
 
   @classmethod
   def is_heading(cls, *args, **kwargs):
@@ -420,10 +449,8 @@ class PetscDocString(DocBase):
   @staticmethod
   def make_error_message(message, crange=None, num_context=2, **kwargs):
     if crange is None:
-      crange_text = ''
-    else:
-      crange_text = crange.formatted(num_context=num_context, **kwargs)
-    return f'{message}:\n{crange_text}'
+      return message
+    return f'{message}:\n{crange.formatted(num_context=num_context, **kwargs)}'
 
   def make_source_location(self, lineno, col):
     return SourceLocation.from_position(self.cursor.translation_unit, lineno, col)
@@ -464,7 +491,7 @@ class PetscDocString(DocBase):
     """
     return self.add_error_from_diagnostic(self.make_diagnostic(diag_flag, msg, src_range, **kwargs))
 
-  def clear(self):
+  def reset(self):
     for section in self.sections:
       section.clear()
     self._attr = self._default_attributes()
@@ -489,7 +516,9 @@ class PetscDocString(DocBase):
         if is_floating:
            # don't really know how to handle this for now
           self.type_mod |= self.Modifier.FLOATING
-          raise pl.ParsingError('DON\'T KNOW HOW TO PROPERLY HANDLE FLOATING DOCSTRINGS')
+          raise pl.KnownUnhandleableCursorError(
+            'DON\'T KNOW HOW TO PROPERLY HANDLE FLOATING DOCSTRINGS'
+          )
         break
     return
 
@@ -509,17 +538,20 @@ class PetscDocString(DocBase):
     )
     if pointless:
       begin_sowing_range = self._attr['sowing_char_range']
+      linkage_extent     = SourceRange.cast(linkage_cursor.extent)
       diag               = self.make_diagnostic(
         self.diags.internal_linkage,
-        f'A sowing docstring for a symbol with internal linkage is pointless {Diagnostic.FLAG_SUBST}!',
-        self.extent, highlight=False
+        'A sowing docstring for a symbol with internal linkage is pointless', self.extent,
+        highlight=False
       ).add_note(
-        f'\'{cursor.displayname}\' is declared \'{linked_cursor_name}\' at {Cursor.cast(linkage_cursor)}',
-        location=linkage_cursor.extent.start
+        self.make_error_message(
+          f'\'{cursor.displayname}\' is declared \'{linked_cursor_name}\' here', linkage_extent
+        ),
+        location=linkage_extent.start
       ).add_note(
         'If this docstring is meant as developer-only documentation, remove the sowing chars from the docstring declaration. The linter will then ignore this docstring.'
       ).add_note(
-        f'Sowing chars declared here:\n{begin_sowing_range.formatted(num_context=2)}',
+        self.make_error_message('Sowing chars declared here', begin_sowing_range),
         location=begin_sowing_range.start
       )
       self.add_error_from_diagnostic(diag)
@@ -557,7 +589,7 @@ class PetscDocString(DocBase):
           #
           # we should ignore it, and stop processing this docstring altogether since it is
           # not an actual docstring.
-          raise pl.ParsingError
+          raise pl.KnownUnhandleableCursorError
         if begin_sowing[0] == 'C':
           # sometimes people mix up the order, or forget to add the right letter for the
           # type, for example:
@@ -729,7 +761,7 @@ class PetscDocString(DocBase):
       self.add_error_from_source_range(diag, mess, self.make_source_range(name, line, lineno))
     return heading
 
-  def _check_section_header_that_probably_should_not_be_one(self, heading, line, lineno):
+  def _check_section_header_that_probably_should_not_be_one(self, heading, line, stripped, lineno):
     """
     check that a section header that ends with ':' is not really a header
     """
@@ -744,20 +776,20 @@ class PetscDocString(DocBase):
       if section_guess == '__UNKNOWN_SECTION__':
         assert not line.endswith(r'\:')
         eloc = self.make_source_range(':', line, lineno, offset=line.rfind(':'))
-        mess = f'Sowing treats all lines ending with \':\' as header, are you sure \'{textwrap.shorten(line.strip(), width=35)}\' qualifies? Use \'\:\' to escape the colon if not'
+        mess = f'Sowing treats all lines ending with \':\' as header, are you sure \'{textwrap.shorten(stripped, width=35)}\' qualifies? Use \'\:\' to escape the colon if not'
         self.add_error_from_source_range(self.diags.section_header_fishy_header, mess, eloc)
     return heading
 
   def parse(self):
-    self.clear()
+    self.reset()
     self._check_valid_sowing_chars()
     self._check_floating()
     if not self._check_valid_cursor_linkage():
-      raise pl.ParsingError # no point in continuing analysis, the docstring should not exist!
+      # no point in continuing analysis, the docstring should not exist!
+      raise pl.KnownUnhandleableCursorError
     self._check_valid_docstring_spacing()
 
     raw_data     = []
-    heading_data = []
     section      = self.sections.synopsis
     check_indent = section.check_indent_allowed()
     is_heading   = self._get_is_heading(section)
@@ -795,7 +827,7 @@ class PetscDocString(DocBase):
             is_heading   = self._get_is_heading(section)
         else:
           heading_verdict = self._check_section_header_that_probably_should_not_be_one(
-            heading_verdict, line, lineno
+            heading_verdict, line, stripped, lineno
           )
       else:
         # verbatim blocks are never headings
@@ -806,7 +838,7 @@ class PetscDocString(DocBase):
         # reset the dollar verbatim
         in_verbatim = 0
 
-    raw_data = section.consume(raw_data)
+    section.consume(raw_data)
     for sec in self.sections:
       sec.setup(self)
     return self
