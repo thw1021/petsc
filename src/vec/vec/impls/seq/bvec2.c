@@ -909,13 +909,13 @@ PetscErrorCode VecCreateSeqWithLayoutAndArray_Private(PetscLayout map, const Pet
 PetscErrorCode VecCreate_Seq_Private(Vec v, const PetscScalar array[])
 {
   Vec_Seq  *s;
-  PetscBool use_gemv;
+  PetscBool use_gemv = PETSC_TRUE;
 
   PetscFunctionBegin;
   PetscCall(PetscNew(&s));
   v->ops[0] = DvOps;
 
-  PetscCall(PetscOptionsHasName(NULL, NULL, "-vec_mdot_use_gemv", &use_gemv));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-vec_mdot_use_gemv", &use_gemv, NULL));
   if (use_gemv) {
     v->ops[0].duplicatevecs = VecDuplicateVecs_Seq_GEMV;
     v->ops[0].mdot          = VecMDot_Seq_GEMV;
