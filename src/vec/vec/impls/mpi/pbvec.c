@@ -497,14 +497,14 @@ static struct _VecOps DvOps = {PetscDesignatedInitializer(duplicate, VecDuplicat
 PetscErrorCode VecCreate_MPI_Private(Vec v, PetscBool alloc, PetscInt nghost, const PetscScalar array[])
 {
   Vec_MPI  *s;
-  PetscBool use_gemv;
+  PetscBool use_gemv = PETSC_TRUE;
 
   PetscFunctionBegin;
   PetscCall(PetscNew(&s));
   v->data   = (void *)s;
   v->ops[0] = DvOps;
 
-  PetscCall(PetscOptionsHasName(NULL, NULL, "-vec_mdot_use_gemv", &use_gemv));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-vec_mdot_use_gemv", &use_gemv, NULL));
   if (use_gemv) {
     v->ops[0].duplicatevecs = VecDuplicateVecs_MPI_GEMV;
     v->ops[0].mdot          = VecMDot_MPI_GEMV;
