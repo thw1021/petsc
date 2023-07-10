@@ -79,9 +79,8 @@ int main(int argc, char **argv)
   PetscCall(MPIU_Allreduce(&errors, &tot_errors, 1, MPIU_INT, MPI_SUM, PETSC_COMM_WORLD));
   if (tot_errors) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Error: wrong values were scatterred in vecscatter with bs = %" PetscInt_FMT "\n", bs));
 
-    /* print out event log of VecScatter(bs=1) */
-#if defined(PETSC_USE_LOG)
-  {
+  /* print out event log of VecScatter(bs=1) */
+  if (PetscDefined(USE_LOG)) {
     PetscLogDouble     numMessages, messageLength;
     PetscEventPerfInfo eventInfo;
     PetscInt           tot_msg, tot_len, avg_len;
@@ -95,7 +94,6 @@ int main(int argc, char **argv)
     /* when nproc > 2, tot_msg = 2*nproc*niter, tot_len = tot_msg*sizeof(PetscScalar)*bs */
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "VecScatter(bs=%" PetscInt_FMT ") has sent out %" PetscInt_FMT " messages, total %" PetscInt_FMT " bytes, with average length %" PetscInt_FMT " bytes\n", bs, tot_msg, tot_len, avg_len));
   }
-#endif
 
   PetscCall(ISDestroy(&isx));
   PetscCall(ISDestroy(&isy));
@@ -143,9 +141,8 @@ int main(int argc, char **argv)
   PetscCall(MPIU_Allreduce(&errors, &tot_errors, 1, MPIU_INT, MPI_SUM, PETSC_COMM_WORLD));
   if (tot_errors) PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Error: wrong values were scatterred in vecscatter with bs = %" PetscInt_FMT "\n", bs));
 
-    /* print out event log of VecScatter(bs=4) */
-#if defined(PETSC_USE_LOG)
-  {
+  /* print out event log of VecScatter(bs=4) */
+  if (PetscDefined(USE_LOG)) {
     PetscLogDouble     numMessages, messageLength;
     PetscEventPerfInfo eventInfo;
     PetscInt           tot_msg, tot_len, avg_len;
@@ -159,7 +156,6 @@ int main(int argc, char **argv)
     /* when nproc > 2, tot_msg = 2*nproc*niter, tot_len = tot_msg*sizeof(PetscScalar)*bs */
     PetscCall(PetscPrintf(PETSC_COMM_WORLD, "VecScatter(bs=%" PetscInt_FMT ") has sent out %" PetscInt_FMT " messages, total %" PetscInt_FMT " bytes, with average length %" PetscInt_FMT " bytes\n", bs, tot_msg, tot_len, avg_len));
   }
-#endif
 
   PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Program finished\n"));
   PetscCall(ISDestroy(&isx));

@@ -242,8 +242,7 @@ static PetscErrorCode TestIntegration(DM dm, PetscInt cbs, PetscInt its)
   PetscCall(ISDestroy(&cellIS));
   PetscCall(PetscFree2(u, elemVec));
   PetscCall(PetscLogStagePop());
-#if defined(PETSC_USE_LOG)
-  {
+  if (PetscDefined(USE_LOG)) {
     const char        *title = "Petsc FE Residual Integration";
     PetscEventPerfInfo eventInfo;
     PetscInt           N = (cEnd - cStart) * Nf * its;
@@ -254,7 +253,6 @@ static PetscErrorCode TestIntegration(DM dm, PetscInt cbs, PetscInt its)
     cellRate = eventInfo.time != 0.0 ? N / eventInfo.time : 0.0;
     PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "%s: %" PetscInt_FMT " integrals %" PetscInt_FMT " chunks %" PetscInt_FMT " reps\n  Cell rate: %.2f/s flop rate: %.2f MF/s\n", title, N, Nch, its, (double)cellRate, (double)(flopRate / 1.e6)));
   }
-#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -273,8 +271,7 @@ static PetscErrorCode TestIntegration2(DM dm, PetscInt cbs, PetscInt its)
   PetscCall(DMRestoreLocalVector(dm, &X));
   PetscCall(DMRestoreLocalVector(dm, &F));
   PetscCall(PetscLogStagePop());
-#if defined(PETSC_USE_LOG)
-  {
+  if (PetscDefined(USE_LOG)) {
     const char        *title = "DMPlex Residual Integration";
     PetscEventPerfInfo eventInfo;
     PetscReal          flopRate, cellRate;
@@ -290,7 +287,6 @@ static PetscErrorCode TestIntegration2(DM dm, PetscInt cbs, PetscInt its)
     cellRate = eventInfo.time != 0.0 ? N / eventInfo.time : 0.0;
     PetscCall(PetscPrintf(PetscObjectComm((PetscObject)dm), "%s: %" PetscInt_FMT " integrals %d reps\n  Cell rate: %.2f/s flop rate: %.2f MF/s\n", title, N, eventInfo.count, (double)cellRate, (double)(flopRate / 1.e6)));
   }
-#endif
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
