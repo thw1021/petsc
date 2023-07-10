@@ -81,7 +81,10 @@ PETSC_INTERN PetscErrorCode VecSetValuesCOO_MPI(Vec, const PetscScalar[], Insert
 
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecDot_MPI(Vec, Vec, PetscScalar *);
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecMDot_MPI(Vec, PetscInt, const Vec[], PetscScalar *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecMDot_MPI_GEMV(Vec, PetscInt, const Vec[], PetscScalar *);
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecTDot_MPI(Vec, Vec, PetscScalar *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecMTDot_MPI(Vec, PetscInt, const Vec[], PetscScalar *);
+PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecMTDot_MPI_GEMV(Vec, PetscInt, const Vec[], PetscScalar *);
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecNorm_MPI(Vec, NormType, PetscReal *);
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecMax_MPI(Vec, PetscInt *, PetscReal *);
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecMin_MPI(Vec, PetscInt *, PetscReal *);

@@ -510,6 +510,88 @@ PetscErrorCode VecMTDot_Seq(Vec xin, PetscInt nv, const Vec yin[], PetscScalar *
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode VecMultiDot_Seq_GEMV(PetscBool conjugate, Vec xin, PetscInt nv, const Vec yin[], PetscScalar *z)
+{
+  PetscInt           i, j, nfail;
+  const PetscScalar *xarray, *yarray, *yfirst, *ynext;
+  PetscBool          stop  = PETSC_FALSE;
+  const char        *trans = conjugate ? "C" : "T";
+  PetscInt64         lda   = 0;
+  PetscBLASInt       n, m;
+
+  PetscFunctionBegin;
+  if (xin->map->n == 0) { // otherwise BLAS complains illegal values (0) for lda
+    PetscCall(PetscArrayzero(z, nv));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
+  // caller guarantees xin->map->n <= PETSC_BLAS_INT_MAX
+  PetscCall(PetscBLASIntCast(xin->map->n, &n));
+  PetscCall(VecGetArrayRead(xin, &xarray));
+  i = nfail = 0;
+  while (i < nv) {
+    stop = PETSC_FALSE;
+    PetscCall(VecGetArrayRead(yin[i], &yfirst));
+    yarray = yfirst;
+    for (j = i + 1; j < nv; j++) {
+      PetscCall(VecGetArrayRead(yin[j], &ynext));
+      if (j == i + 1) {
+        lda = ynext - yarray;
+        if (lda < 0 || lda > PETSC_BLAS_INT_MAX || lda - n > 64) stop = PETSC_TRUE;
+      } else if (lda * (j - i) != ynext - yarray) { // not in the same stride? if so, stop here
+        stop = PETSC_TRUE;
+      }
+      PetscCall(VecRestoreArrayRead(yin[j], &ynext));
+      if (stop) break;
+    }
+    PetscCall(VecRestoreArrayRead(yin[i], &yfirst));
+
+    // we found m vectors yin[i..j)
+    m = j - i;
+    if (m > 1) {
+      PetscBLASInt ione = 1, lda2 = (PetscBLASInt)lda;
+      PetscScalar  one = 1, zero = 0;
+      PetscCallBLAS("BLASgemv", BLASgemv_(trans, &n, &m, &one, yarray, &lda2, xarray, &ione, &zero, z + i, &ione));
+    } else {
+      if (nfail == 0) {
+        if (conjugate) PetscCall(VecDot_Seq(xin, yin[i], z + i));
+        else PetscCall(VecTDot_Seq(xin, yin[i], z + i));
+        nfail++;
+      } else break;
+    }
+    i = j;
+  }
+  PetscCall(VecRestoreArrayRead(xin, &xarray));
+  if (i < nv) { // finish the remaining if any
+    if (conjugate) PetscCall(VecMDot_Seq(xin, nv - i, yin + i, z + i));
+    else PetscCall(VecMTDot_Seq(xin, nv - i, yin + i, z + i));
+  }
+  PetscCall(PetscLogFlops(PetscMax(nv * (2.0 * n - 1), 0.0)));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode VecMDot_Seq_GEMV(Vec xin, PetscInt nv, const Vec yin[], PetscScalar *z)
+{
+  PetscFunctionBegin;
+  if (xin->map->n > PETSC_BLAS_INT_MAX) {
+    PetscCall(VecMDot_Seq(xin, nv, yin, z));
+  } else {
+    PetscCall(VecMultiDot_Seq_GEMV(PETSC_TRUE, xin, nv, yin, z));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode VecMTDot_Seq_GEMV(Vec xin, PetscInt nv, const Vec yin[], PetscScalar *z)
+{
+  PetscFunctionBegin;
+  if (xin->map->n > PETSC_BLAS_INT_MAX) {
+    PetscCall(VecMTDot_Seq(xin, nv, yin, z));
+  } else {
+    PetscCall(VecMultiDot_Seq_GEMV(PETSC_FALSE, xin, nv, yin, z));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode VecMinMax_Seq(Vec xin, PetscInt *idx, PetscReal *z, PetscReal minmax, int (*const cmp)(PetscReal, PetscReal))
 {
   const PetscInt n = xin->map->n;

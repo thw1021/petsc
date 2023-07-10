@@ -53,6 +53,37 @@ PetscErrorCode VecDuplicate_MPI(Vec win, Vec *v)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PetscErrorCode VecDuplicateVecs_MPI_GEMV(Vec w, PetscInt m, Vec *V[])
+{
+  PetscInt     nlocal;
+  PetscScalar *array;
+  Vec_MPI     *wmpi = (Vec_MPI *)w->data;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(w, VEC_CLASSID, 1);
+  PetscValidPointer(V, 3);
+  if (wmpi->nghost) { // currently only do GEMV optimiation for vectors without ghosts
+    w->ops->duplicatevecs = VecDuplicateVecs_Default;
+    PetscCall(VecDuplicateVecs(w, m, V));
+  } else {
+    PetscCall(PetscMalloc1(m, V));
+    PetscCall(VecGetLocalSize(w, &nlocal));
+    PetscCall(PetscCalloc1(m * nlocal, &array));
+    for (PetscInt i = 0; i < m; i++) {
+      PetscCall(VecCreateMPIWithLayoutAndArray_Private(w->map, array + i * nlocal, *V + i));
+      PetscCall(PetscObjectListDuplicate(((PetscObject)w)->olist, &((PetscObject)(*V)[i])->olist));
+      PetscCall(PetscFunctionListDuplicate(((PetscObject)w)->qlist, &((PetscObject)(*V)[i])->qlist));
+      (*V)[i]->ops->view          = w->ops->view;
+      (*V)[i]->stash.donotstash   = w->stash.donotstash;
+      (*V)[i]->stash.ignorenegidx = w->stash.ignorenegidx;
+      (*V)[i]->stash.bs           = w->stash.bs;
+    }
+    /* so when the first vector is destroyed it will destroy the array */
+    if (m) ((Vec_MPI *)(*V)[0]->data)->array_allocated = array;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode VecSetOption_MPI(Vec V, VecOption op, PetscBool flag)
 {
   Vec_MPI *v = (Vec_MPI *)V->data;
@@ -465,12 +496,23 @@ static struct _VecOps DvOps = {PetscDesignatedInitializer(duplicate, VecDuplicat
 */
 PetscErrorCode VecCreate_MPI_Private(Vec v, PetscBool alloc, PetscInt nghost, const PetscScalar array[])
 {
-  Vec_MPI *s;
+  Vec_MPI  *s;
+  PetscBool use_gemv = PETSC_TRUE;
 
   PetscFunctionBegin;
   PetscCall(PetscNew(&s));
-  v->data        = (void *)s;
-  v->ops[0]      = DvOps;
+  v->data   = (void *)s;
+  v->ops[0] = DvOps;
+
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-vec_mdot_use_gemv", &use_gemv, NULL));
+  if (use_gemv) {
+    v->ops[0].duplicatevecs = VecDuplicateVecs_MPI_GEMV;
+    v->ops[0].mdot          = VecMDot_MPI_GEMV;
+    v->ops[0].mdot_local    = VecMDot_Seq_GEMV;
+    v->ops[0].mtdot         = VecMTDot_MPI_GEMV;
+    v->ops[0].mtdot_local   = VecMTDot_Seq_GEMV;
+  }
+
   s->nghost      = nghost;
   v->petscnative = PETSC_TRUE;
   if (array) v->offloadmask = PETSC_OFFLOAD_CPU;
@@ -505,6 +547,26 @@ PetscErrorCode VecCreate_MPI_Private(Vec v, PetscBool alloc, PetscInt nghost, co
   PetscCall(PetscObjectComposeFunction((PetscObject)v, "PetscMatlabEngineGet_C", VecMatlabEngineGet_Default));
 #endif
   PetscCall(PetscObjectChangeTypeName((PetscObject)v, VECMPI));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
+  Create a VECMPI with the given layout and array
+
+  Collective
+
+  Input Parameter:
++ map   - the layout
+- array - the array on host
+
+  Output Parameter:
+. V  - The vector object
+*/
+PetscErrorCode VecCreateMPIWithLayoutAndArray_Private(PetscLayout map, const PetscScalar array[], Vec *V)
+{
+  PetscFunctionBegin;
+  PetscCall(VecCreateWithLayout_Private(map, V));
+  PetscCall(VecCreate_MPI_Private(*V, PETSC_FALSE, 0, array));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
