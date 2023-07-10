@@ -537,7 +537,7 @@ PetscErrorCode PetscLogDefaultBegin(void)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Trace(MPI_Comm, PetscLogHandler *);
+PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Trace(MPI_Comm, PetscLogHandler *, FILE *);
 
 /*@C
   PetscLogTraceBegin - Begins trace logging.  Every time a PETSc event
@@ -570,7 +570,7 @@ PetscErrorCode PetscLogTraceBegin(FILE *file)
   PetscFunctionBegin;
   PetscCall(PetscLogTryGetHandler(PETSC_LOG_HANDLER_TRACE, &handler));
   if (handler) PetscFunctionReturn(PETSC_SUCCESS);
-  PetscCall(PetscLogHandlerCreate_Trace(PETSC_COMM_WORLD, &handler));
+  PetscCall(PetscLogHandlerCreate_Trace(PETSC_COMM_WORLD, &handler, file));
   PetscCall(PetscLogHandlerStart(handler));
   PetscCall(PetscLogHandlerDestroy(&handler));
   PetscFunctionReturn(PETSC_SUCCESS);
