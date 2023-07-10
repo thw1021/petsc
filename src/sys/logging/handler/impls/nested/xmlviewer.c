@@ -98,7 +98,7 @@ static PetscErrorCode PetscViewerXMLPutInt(PetscViewer viewer, const char *name,
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode PetscViewerXMLPutDouble(PetscViewer viewer, const char *name, const char *desc, PetscLogDouble value, const char *format)
+static PetscErrorCode PetscViewerXMLPutDouble(PetscViewer viewer, const char *name, PetscLogDouble value, const char *format)
 {
   PetscInt XMLSectionDepthPetsc;
   int      XMLSectionDepth;
@@ -107,11 +107,7 @@ static PetscErrorCode PetscViewerXMLPutDouble(PetscViewer viewer, const char *na
   PetscFunctionBegin;
   PetscCall(PetscViewerASCIIGetTab(viewer, &XMLSectionDepthPetsc));
   XMLSectionDepth = (int)XMLSectionDepthPetsc;
-  if (!desc) {
-    PetscCall(PetscSNPrintf(buffer, sizeof(buffer), "%*s<%s>%s</%s>\n", 2 * XMLSectionDepth, "", name, format, name));
-  } else {
-    PetscCall(PetscSNPrintf(buffer, sizeof(buffer), "%*s<%s desc=\"%s\">%s</%s>\n", 2 * XMLSectionDepth, "", name, desc, format, name));
-  }
+  PetscCall(PetscSNPrintf(buffer, sizeof(buffer), "%*s<%s>%s</%s>\n", 2 * XMLSectionDepth, "", name, format, name));
   PetscCall(PetscViewerASCIIPrintf(viewer, buffer, value));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -183,11 +179,11 @@ static PetscErrorCode PetscPrintXMLGlobalPerformanceElement(PetscViewer viewer, 
   else ratio = 0.0;
 
   PetscCall(PetscViewerXMLStartSection(viewer, name, desc));
-  PetscCall(PetscViewerXMLPutDouble(viewer, "max", NULL, max[0], "%e"));
+  PetscCall(PetscViewerXMLPutDouble(viewer, "max", max[0], "%e"));
   PetscCall(PetscViewerXMLPutInt(viewer, "maxrank", "rank at which max was found", (PetscMPIInt)max[1]));
-  PetscCall(PetscViewerXMLPutDouble(viewer, "ratio", NULL, ratio, "%f"));
-  if (print_average) PetscCall(PetscViewerXMLPutDouble(viewer, "average", NULL, avg, "%e"));
-  if (print_total) PetscCall(PetscViewerXMLPutDouble(viewer, "total", NULL, tot, "%e"));
+  PetscCall(PetscViewerXMLPutDouble(viewer, "ratio", ratio, "%f"));
+  if (print_average) PetscCall(PetscViewerXMLPutDouble(viewer, "average", avg, "%e"));
+  if (print_total) PetscCall(PetscViewerXMLPutDouble(viewer, "total", tot, "%e"));
   PetscCall(PetscViewerXMLEndSection(viewer, name));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -272,13 +268,13 @@ static PetscErrorCode PetscPrintXMLNestedLinePerfResults(PetscViewer viewer, con
   } else {
     PetscCall(PetscViewerXMLStartSection(viewer, name, NULL));
     if (maxvalue > minvalue * minmaxtreshold) {
-      PetscCall(PetscViewerXMLPutDouble(viewer, "avgvalue", NULL, tot / size, "%g"));
-      PetscCall(PetscViewerXMLPutDouble(viewer, "minvalue", NULL, minvalue, "%g"));
-      PetscCall(PetscViewerXMLPutDouble(viewer, "maxvalue", NULL, maxvalue, "%g"));
+      PetscCall(PetscViewerXMLPutDouble(viewer, "avgvalue", tot / size, "%g"));
+      PetscCall(PetscViewerXMLPutDouble(viewer, "minvalue", minvalue, "%g"));
+      PetscCall(PetscViewerXMLPutDouble(viewer, "maxvalue", maxvalue, "%g"));
       PetscCall(PetscViewerXMLPutInt(viewer, "minloc", NULL, minLoc));
       PetscCall(PetscViewerXMLPutInt(viewer, "maxloc", NULL, maxLoc));
     } else {
-      PetscCall(PetscViewerXMLPutDouble(viewer, "value", NULL, tot / size, "%g"));
+      PetscCall(PetscViewerXMLPutDouble(viewer, "value", tot / size, "%g"));
     }
     PetscCall(PetscViewerXMLEndSection(viewer, name));
   }
@@ -419,8 +415,8 @@ static PetscErrorCode PetscLogNestedTreePrintTop(PetscViewer viewer, PetscNested
   /* Print (or ignore) the children in ascending order of total time */
   if (type == PETSC_LOG_NESTED_XML) {
     PetscCall(PetscViewerXMLStartSection(viewer, "timertree", "Timings tree"));
-    PetscCall(PetscViewerXMLPutDouble(viewer, "totaltime", NULL, time, "%f"));
-    PetscCall(PetscViewerXMLPutDouble(viewer, "timethreshold", NULL, threshold, "%f"));
+    PetscCall(PetscViewerXMLPutDouble(viewer, "totaltime", time, "%f"));
+    PetscCall(PetscViewerXMLPutDouble(viewer, "timethreshold", threshold, "%f"));
   }
   threshold_time = time * (threshold / 100.0 + 1.e-12);
   PetscCall(PetscLogNestedTreePrint(viewer, time, threshold_time, main_stage, main_stage_perf, tree_rem, perf_rem, type, PETSC_FALSE));

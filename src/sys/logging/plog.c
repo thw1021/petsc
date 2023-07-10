@@ -1759,7 +1759,7 @@ PetscErrorCode PetscLogEventGetName(PetscLogEvent event, const char **name)
 }
 
 /*@
-  PetscLogEventsPause - Put event logging into "paused" mode: timers and counters for in-progress events are paused, and any events that happen before logging is "unpaused" with `PetscLogEventsUnpause()` are logged in the "Main Stage" of execution.
+  PetscLogEventsPause - Put event logging into "paused" mode: timers and counters for in-progress events are paused, and any events that happen before logging is resumed with `PetscLogEventsResume()` are logged in the "Main Stage" of execution.
 
   Not collective
 
@@ -1770,7 +1770,7 @@ PetscErrorCode PetscLogEventGetName(PetscLogEvent event, const char **name)
 
   Other log handlers (such as the nested handler, `PetscLogNestedBegin()`) will ignore this function.
 
-.seealso: [](ch_profiling), `PetscLogEventDeactivatePush()`, `PetscLogEventDeactivatePop()`, `PetscLogEventsUnpause()`
+.seealso: [](ch_profiling), `PetscLogEventDeactivatePush()`, `PetscLogEventDeactivatePop()`, `PetscLogEventsResume()`
 @*/
 PetscErrorCode PetscLogEventsPause(void)
 {
@@ -1783,7 +1783,7 @@ PetscErrorCode PetscLogEventsPause(void)
 }
 
 /*@
-  PetscLogEventsUnpause - Return logging to normal behavior after it was paused with `PetscLogEventsPause()`.
+  PetscLogEventsResume - Return logging to normal behavior after it was paused with `PetscLogEventsPause()`.
 
   Not collective
 
@@ -1791,13 +1791,13 @@ PetscErrorCode PetscLogEventsPause(void)
 
 .seealso: [](ch_profiling), `PetscLogEventDeactivatePush()`, `PetscLogEventDeactivatePop()`, `PetscLogEventsPause()`
 @*/
-PetscErrorCode PetscLogEventsUnpause(void)
+PetscErrorCode PetscLogEventsResume(void)
 {
   PetscLogHandler handler;
 
   PetscFunctionBegin;
   PetscCall(PetscLogTryGetHandler(PETSC_LOG_HANDLER_DEFAULT, &handler));
-  if (handler) PetscCall(PetscLogHandlerDefaultEventsUnpause(handler));
+  if (handler) PetscCall(PetscLogHandlerDefaultEventsResume(handler));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

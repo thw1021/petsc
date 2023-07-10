@@ -15,7 +15,7 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerDefaultGetNumObjects(PetscLogHandler,
 PETSC_INTERN PetscErrorCode PetscLogHandlerDefaultDeactivatePush(PetscLogHandler, PetscLogStage, PetscLogEvent);
 PETSC_INTERN PetscErrorCode PetscLogHandlerDefaultDeactivatePop(PetscLogHandler, PetscLogStage, PetscLogEvent);
 PETSC_INTERN PetscErrorCode PetscLogHandlerDefaultEventsPause(PetscLogHandler);
-PETSC_INTERN PetscErrorCode PetscLogHandlerDefaultEventsUnpause(PetscLogHandler);
+PETSC_INTERN PetscErrorCode PetscLogHandlerDefaultEventsResume(PetscLogHandler);
 PETSC_INTERN PetscErrorCode PetscLogHandlerDump_Default(PetscLogHandler, const char[]);
 PETSC_INTERN PetscErrorCode PetscLogHandlerDefaultStageSetVisible(PetscLogHandler, PetscLogStage, PetscBool);
 PETSC_INTERN PetscErrorCode PetscLogHandlerDefaultStageGetVisible(PetscLogHandler, PetscLogStage, PetscBool *);

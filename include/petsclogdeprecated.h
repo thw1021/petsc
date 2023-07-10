@@ -138,10 +138,10 @@ PETSC_DEPRECATED_LOG(StageLog) PetscErrorCode PetscStageLogGetEventPerfLog(Petsc
 
 #undef PETSC_DEPRECATED_LOG
 
-PETSC_DEPRECATED_OBJECT("User PetscLogLegacyCallbacksBegin() (since version 3.20)") PETSC_UNUSED static PetscErrorCode (*PetscLogPLB)(PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject) = NULL;
-PETSC_DEPRECATED_OBJECT("User PetscLogLegacyCallbacksBegin() (since version 3.20)") PETSC_UNUSED static PetscErrorCode (*PetscLogPLE)(PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject) = NULL;
-PETSC_DEPRECATED_OBJECT("User PetscLogLegacyCallbacksBegin() (since version 3.20)") PETSC_UNUSED static PetscErrorCode (*PetscLogPHC)(PetscObject)                                                            = NULL;
-PETSC_DEPRECATED_OBJECT("User PetscLogLegacyCallbacksBegin() (since version 3.20)") PETSC_UNUSED static PetscErrorCode (*PetscLogPHD)(PetscObject)                                                            = NULL;
+PETSC_DEPRECATED_OBJECT("Use PetscLogLegacyCallbacksBegin() (since version 3.20)") PETSC_UNUSED static PetscErrorCode (*PetscLogPLB)(PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject) = NULL;
+PETSC_DEPRECATED_OBJECT("Use PetscLogLegacyCallbacksBegin() (since version 3.20)") PETSC_UNUSED static PetscErrorCode (*PetscLogPLE)(PetscLogEvent, int, PetscObject, PetscObject, PetscObject, PetscObject) = NULL;
+PETSC_DEPRECATED_OBJECT("Use PetscLogLegacyCallbacksBegin() (since version 3.20)") PETSC_UNUSED static PetscErrorCode (*PetscLogPHC)(PetscObject)                                                            = NULL;
+PETSC_DEPRECATED_OBJECT("Use PetscLogLegacyCallbacksBegin() (since version 3.20)") PETSC_UNUSED static PetscErrorCode (*PetscLogPHD)(PetscObject)                                                            = NULL;
 
 PETSC_DEPRECATED_FUNCTION("Use PetscLogEventsPause() (since version 3.20)") static inline PetscErrorCode PetscLogPushCurrentEvent_Internal(PetscLogEvent e)
 {
@@ -149,7 +149,7 @@ PETSC_DEPRECATED_FUNCTION("Use PetscLogEventsPause() (since version 3.20)") stat
   return PETSC_SUCCESS;
 }
 
-PETSC_DEPRECATED_FUNCTION("Use PetscLogEventsUnpause() (since version 3.20)") static inline PetscErrorCode PetscLogPopCurrentEvent_Internal(void)
+PETSC_DEPRECATED_FUNCTION("Use PetscLogEventsResume() (since version 3.20)") static inline PetscErrorCode PetscLogPopCurrentEvent_Internal(void)
 {
   return PETSC_SUCCESS;
 }
