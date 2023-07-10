@@ -1485,10 +1485,7 @@ PetscErrorCode PetscFinalize(void)
   if (PetscDefined(USE_LOG) && PetscDefined(HAVE_MPE)) {
     mname[0] = 0;
     PetscCall(PetscOptionsGetString(NULL, NULL, "-log_mpe", mname, sizeof(mname), &flg1));
-    if (flg1) {
-      if (mname[0]) PetscCall(PetscLogMPEDump(mname));
-      else PetscCall(PetscLogMPEDump(0));
-    }
+    if (flg1) PetscCall(PetscLogMPEDump(mname[0] ? mname : NULL));
   }
 
   /*
