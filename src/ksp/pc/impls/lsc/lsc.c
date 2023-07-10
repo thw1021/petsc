@@ -2,8 +2,7 @@
 
 typedef struct {
   PetscBool allocated;
-  KSP       kspL;
-  Vec       scale;
+  KSP       kspL, kspMass;
   Vec       x0, x1, y1;
 } PC_LSC;
 
@@ -24,7 +23,13 @@ static PetscErrorCode PCLSCAllocate_Private(PC pc)
   PetscCall(MatCreateVecs(pc->pmat, &lsc->x0, NULL));
   PetscCall(MatCreateVecs(A, &lsc->x1, &lsc->y1));
 
-  PetscCall(VecDuplicate(lsc->x0, &lsc->scale));
+  PetscCall(KSPCreate(PetscObjectComm((PetscObject)pc), &lsc->kspMass));
+  PetscCall(KSPSetErrorIfNotConverged(lsc->kspMass, pc->erroriffailure));
+  PetscCall(PetscObjectIncrementTabLevel((PetscObject)lsc->kspMass, (PetscObject)pc, 1));
+  PetscCall(KSPSetType(lsc->kspMass, KSPPREONLY));
+  PetscCall(KSPSetOptionsPrefix(lsc->kspMass, ((PetscObject)pc)->prefix));
+  PetscCall(KSPAppendOptionsPrefix(lsc->kspMass, "lsc_mass"));
+
   lsc->allocated = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -50,10 +55,10 @@ static PetscErrorCode PCSetUp_LSC(PC pc)
     L = Lp;
   else if (L && !Lp)
     Lp = L;
-  PetscCall(MatGetDiagonal(Qscale, lsc->scale));
-  PetscCall(VecReciprocal(lsc->scale));
   PetscCall(KSPSetOperators(lsc->kspL, L, Lp));
   PetscCall(KSPSetFromOptions(lsc->kspL));
+  PetscCall(KSPSetOperators(lsc->kspMass, Qscale, Qscale));
+  PetscCall(KSPSetFromOptions(lsc->kspMass));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -64,15 +69,17 @@ static PetscErrorCode PCApply_LSC(PC pc, Vec x, Vec y)
 
   PetscFunctionBegin;
   PetscCall(MatSchurComplementGetSubMatrices(pc->mat, &A, NULL, &B, &C, NULL));
-  PetscCall(VecPointwiseMult(lsc->x0, x, lsc->scale));
+  PetscCall(KSPSolve(lsc->kspMass, x, lsc->x0));
+  PetscCall(KSPCheckSolve(lsc->kspMass, pc, lsc->x0));
   PetscCall(MatMult(B, lsc->x0, lsc->x1));
   PetscCall(KSPSolve(lsc->kspL, lsc->x1, lsc->y1));
   PetscCall(KSPCheckSolve(lsc->kspL, pc, lsc->y1));
   PetscCall(MatMult(A, lsc->y1, lsc->x1));
   PetscCall(KSPSolve(lsc->kspL, lsc->x1, lsc->y1));
   PetscCall(KSPCheckSolve(lsc->kspL, pc, lsc->y1));
-  PetscCall(MatMult(C, lsc->y1, y));
-  PetscCall(VecPointwiseMult(y, y, lsc->scale));
+  PetscCall(MatMult(C, lsc->y1, lsc->x0));
+  PetscCall(KSPSolve(lsc->kspMass, lsc->x0, y));
+  PetscCall(KSPCheckSolve(lsc->kspMass, pc, y));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -84,8 +91,8 @@ static PetscErrorCode PCReset_LSC(PC pc)
   PetscCall(VecDestroy(&lsc->x0));
   PetscCall(VecDestroy(&lsc->x1));
   PetscCall(VecDestroy(&lsc->y1));
-  PetscCall(VecDestroy(&lsc->scale));
   PetscCall(KSPDestroy(&lsc->kspL));
+  PetscCall(KSPDestroy(&lsc->kspMass));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -124,9 +131,6 @@ static PetscErrorCode PCView_LSC(PC pc, PetscViewer viewer)
 
 /*MC
      PCLSC - Preconditioning for Schur complements, based on Least Squares Commutators
-
-   Options Database Key:
-.    -pc_lsc_scale_diag - Use the diagonal of A for scaling
 
    Level: intermediate
 
