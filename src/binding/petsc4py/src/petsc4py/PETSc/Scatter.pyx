@@ -90,9 +90,9 @@ cdef class Scatter(Object):
     def create(
         self,
         Vec vec_from,
-        IS is_from: IS | None,
+        is_from: IS | None,
         Vec vec_to,
-        IS is_to: IS | None,
+        is_to: IS | None,
     ) -> Self:
         """Create a scatter object.
 
@@ -136,8 +136,8 @@ cdef class Scatter(Object):
 
         """
         cdef PetscIS cisfrom = NULL, cisto = NULL
-        if is_from is not None: cisfrom = is_from.iset
-        if is_to   is not None: cisto   = is_to.iset
+        if is_from is not None: cisfrom = (<IS?>is_from).iset
+        if is_to   is not None: cisto   = (<IS?>is_to).iset
         cdef PetscScatter newsct = NULL
         CHKERR( VecScatterCreate(
                 vec_from.vec, cisfrom, vec_to.vec, cisto, &newsct) )
