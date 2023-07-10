@@ -58,16 +58,27 @@ static PetscErrorCode PetscLogHandlerEventEnd_Trace(PetscLogHandler h, PetscLogE
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Trace(MPI_Comm comm, PetscLogHandler *handler_p)
+static PetscErrorCode PetscLogHandlerDestroy_Trace(PetscLogHandler h)
 {
-  PetscLogHandler handler;
+  PetscFunctionBegin;
+  PetscCall(PetscFree(h->ctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Trace(MPI_Comm comm, PetscLogHandler *handler_p, FILE *file)
+{
+  PetscLogHandler       handler;
+  PetscLogHandler_Trace tr;
 
   PetscFunctionBegin;
+  PetscCall(PetscNew(&tr));
+  tr->petsc_tracefile = file;
   PetscCall(PetscLogHandlerCreate(comm, handler_p));
   handler             = *handler_p;
-  handler->ctx        = NULL;
+  handler->ctx        = (void *)tr;
   handler->type       = PETSC_LOG_HANDLER_TRACE;
   handler->eventBegin = PetscLogHandlerEventBegin_Trace;
   handler->eventEnd   = PetscLogHandlerEventEnd_Trace;
+  handler->destroy    = PetscLogHandlerDestroy_Trace;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
