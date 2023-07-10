@@ -161,9 +161,7 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryGetNumClasses(PetscLogRegistry, Pets
 PETSC_INTERN PetscErrorCode PetscLogRegistryEventGetInfo(PetscLogRegistry, PetscLogEvent, PetscLogEventInfo *);
 PETSC_INTERN PetscErrorCode PetscLogRegistryStageGetInfo(PetscLogRegistry, PetscLogStage, PetscLogStageInfo *);
 PETSC_INTERN PetscErrorCode PetscLogRegistryClassGetInfo(PetscLogRegistry, PetscLogClass, PetscLogClassInfo *);
-PETSC_INTERN PetscErrorCode PetscLogRegistryEventSetInfo(PetscLogRegistry, PetscLogEvent, PetscLogEventInfo);
-PETSC_INTERN PetscErrorCode PetscLogRegistryStageSetInfo(PetscLogRegistry, PetscLogStage, PetscLogStageInfo);
-PETSC_INTERN PetscErrorCode PetscLogRegistryClassSetInfo(PetscLogRegistry, PetscLogClass, PetscLogClassInfo);
+PETSC_INTERN PetscErrorCode PetscLogRegistryEventSetCollective(PetscLogRegistry, PetscLogEvent, PetscBool);
 
 /* --- globally synchronized registry information --- */
 

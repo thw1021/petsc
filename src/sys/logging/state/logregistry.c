@@ -187,24 +187,14 @@ PETSC_INTERN PetscErrorCode PetscLogRegistryClassGetInfo(PetscLogRegistry regist
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PETSC_INTERN PetscErrorCode PetscLogRegistryEventSetInfo(PetscLogRegistry registry, PetscLogEvent event, PetscLogEventInfo event_info)
+PETSC_INTERN PetscErrorCode PetscLogRegistryEventSetCollective(PetscLogRegistry registry, PetscLogEvent event, PetscBool collective)
 {
+  PetscLogEventInfo event_info;
+
   PetscFunctionBegin;
+  PetscCall(PetscLogEventArrayGet(registry->events, event, &event_info));
+  event_info.collective = collective;
   PetscCall(PetscLogEventArraySet(registry->events, event, event_info));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PETSC_INTERN PetscErrorCode PetscLogRegistryStageSetInfo(PetscLogRegistry registry, PetscLogStage stage, PetscLogStageInfo stage_info)
-{
-  PetscFunctionBegin;
-  PetscCall(PetscLogStageArraySet(registry->stages, stage, stage_info));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-PETSC_INTERN PetscErrorCode PetscLogRegistryClassSetInfo(PetscLogRegistry registry, PetscLogClass clss, PetscLogClassInfo class_info)
-{
-  PetscFunctionBegin;
-  PetscCall(PetscLogClassArraySet(registry->classes, clss, class_info));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

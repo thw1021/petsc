@@ -90,6 +90,7 @@ PETSC_EXTERN PetscErrorCode PetscLogStateStageGetActive(PetscLogState, PetscLogS
 PETSC_EXTERN PetscErrorCode PetscLogStateGetCurrentStage(PetscLogState, PetscLogStage *);
 
 PETSC_EXTERN PetscErrorCode PetscLogStateEventRegister(PetscLogState, const char[], PetscClassId, PetscLogEvent *);
+PETSC_EXTERN PetscErrorCode PetscLogStateEventSetCollective(PetscLogState, PetscLogEvent, PetscBool);
 PETSC_EXTERN PetscErrorCode PetscLogStateEventSetActive(PetscLogState, PetscLogStage, PetscLogEvent, PetscBool);
 PETSC_EXTERN PetscErrorCode PetscLogStateEventSetActiveAll(PetscLogState, PetscLogEvent, PetscBool);
 PETSC_EXTERN PetscErrorCode PetscLogStateEventGetActive(PetscLogState, PetscLogStage, PetscLogEvent, PetscBool *);

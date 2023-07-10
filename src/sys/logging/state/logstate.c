@@ -258,6 +258,30 @@ PetscErrorCode PetscLogStateEventRegister(PetscLogState state, const char sname[
 }
 
 /*@
+  PetscLogStateEventSetCollective - Set the collective nature of a logging event
+
+  Logically collective
+
+  Input Parameters:
++ state - a `PetscLogState`
+. event - a registered `PetscLogEvent`
+- collective - if `PETSC_TRUE`, MPI processes synchronize during this event, and `PetscLogHandlerEventSync()` can be used to help measure the delays between when the processes begin the event
+
+  Level: developer
+
+  Note:
+  This is called for the global state (`PetscLogGetState()`) in `PetscLogEventSetCollective()`.
+
+.seealso: [](ch_profiling), `PetscLogState`, `PetscLogEventRegister()`
+@*/
+PetscErrorCode PetscLogStateEventSetCollective(PetscLogState state, PetscLogEvent event, PetscBool collective)
+{
+  PetscFunctionBegin;
+  PetscCall(PetscLogRegistryEventSetCollective(state->registry, event, collective));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
   PetscLogStateStageSetActive - Mark a stage as active or inactive.
 
   Not collective

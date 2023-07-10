@@ -1153,14 +1153,11 @@ PetscErrorCode PetscLogEventRegister(const char name[], PetscClassId classid, Pe
 @*/
 PetscErrorCode PetscLogEventSetCollective(PetscLogEvent event, PetscBool collective)
 {
-  PetscLogEventInfo event_info;
-  PetscLogState     state;
+  PetscLogState state;
 
   PetscFunctionBegin;
   PetscCall(PetscLogGetState(&state));
-  PetscCall(PetscLogRegistryEventGetInfo(state->registry, event, &event_info));
-  event_info.collective = collective;
-  PetscCall(PetscLogRegistryEventSetInfo(state->registry, event, event_info));
+  PetscCall(PetscLogStateEventSetCollective(state, event, collective));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
