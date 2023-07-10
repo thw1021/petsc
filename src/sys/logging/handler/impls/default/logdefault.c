@@ -330,14 +330,8 @@ static PetscErrorCode PetscLogHandlerContextCreate_Default(PetscLogHandler_Defau
   PetscCall(PetscLogActionArrayCreate(64, &(def->petsc_actions)));
   PetscCall(PetscLogObjectArrayCreate(64, &(def->petsc_objects)));
 
-  {
-    PetscBool opt;
-
-    PetscCall(PetscOptionsHasName(NULL, NULL, "-log_exclude_actions", &opt));
-    if (opt) def->petsc_logActions = PETSC_FALSE;
-    PetscCall(PetscOptionsHasName(NULL, NULL, "-log_exclude_objects", &opt));
-    if (opt) def->petsc_logObjects = PETSC_FALSE;
-  }
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-log_include_actions", &def->petsc_logActions, NULL));
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-log_include_objects", &def->petsc_logObjects, NULL));
   if (PetscDefined(HAVE_THREADSAFETY)) { PetscCall(PetscHMapEventCreate(&def->eventInfoMap_th)); }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -448,8 +442,9 @@ static PetscErrorCode PetscLogHandlerObjectCreate_Default(PetscLogHandler h, Pet
 
     PetscCall(PetscMemzero(new_object.name, sizeof(new_object.name)));
     PetscCall(PetscMemzero(new_object.info, sizeof(new_object.info)));
-    PetscCall(PetscLogObjectArrayResize(def->petsc_objects, obj->id + 1));
-    PetscCall(PetscLogObjectArraySet(def->petsc_objects, obj->id, new_object));
+    PetscAssert(obj->id >= 1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Object ids from PetscObjectNewId_Internal() start at 1");
+    PetscCall(PetscLogObjectArrayResize(def->petsc_objects, obj->id));
+    PetscCall(PetscLogObjectArraySet(def->petsc_objects, obj->id - 1, new_object));
   }
   PetscCall(PetscSpinlockUnlock(&def->lock));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -496,7 +491,8 @@ static PetscErrorCode PetscLogHandlerObjectDestroy_Default(PetscLogHandler h, Pe
   if (def->petsc_logObjects) {
     Object *obj_entry = NULL;
 
-    PetscCall(PetscLogObjectArrayGetRef(def->petsc_objects, obj->id, &obj_entry));
+    PetscAssert(obj->id >= 1, PETSC_COMM_SELF, PETSC_ERR_PLIB, "Object ids from PetscObjectNewId_Internal() start at 1");
+    PetscCall(PetscLogObjectArrayGetRef(def->petsc_objects, obj->id - 1, &obj_entry));
     if (obj->name) PetscCall(PetscStrncpy(obj_entry->name, obj->name, 64));
     obj_entry->obj = NULL;
   }

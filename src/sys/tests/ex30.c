@@ -24,9 +24,10 @@ static PetscErrorCode CallEvents(PetscLogEvent event1, PetscLogEvent event2, Pet
 
 int main(int argc, char **argv)
 {
-  PetscLogStage stage1, stage2;
-  PetscLogEvent event1, event2, event3;
-  PetscMPIInt   rank;
+  PetscLogStage  stage1, stage2;
+  PetscLogEvent  event1, event2, event3;
+  PetscMPIInt    rank;
+  PetscContainer container;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &argv, (char *)0, help));
@@ -53,6 +54,9 @@ int main(int argc, char **argv)
     PetscCall(CallEvents(event1, event2, event3));
   }
   PetscCall(PetscLogStagePop());
+
+  PetscCall(PetscContainerCreate(PETSC_COMM_WORLD, &container));
+  PetscCall(PetscContainerDestroy(&container));
 
   PetscCall(PetscLogStagePush(stage2));
   {
@@ -100,5 +104,17 @@ int main(int argc, char **argv)
     suffix: 2
     nsize: 1
     args: -log_trace
+
+  test:
+    suffix: 3
+    nsize: 1
+    args: -log_include_actions -log_include_objects -log_all
+    filter: cat Log.0 | grep "\\(Actions accomplished\\|Objects created\\)"
+
+  test:
+    suffix: 4
+    nsize: 1
+    args: -log_view ::ascii_csv
+    filter: grep "Event[123]"
 
  TEST*/

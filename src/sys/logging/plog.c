@@ -746,7 +746,8 @@ PetscErrorCode PetscLogPerfstubsBegin(void)
 . flag - `PETSC_TRUE` if actions are to be logged
 
   Options Database Key:
-. -log_exclude_actions - Turns off actions logging
++ -log_exclude_actions (deprecated) - Does nothing
+- -log_include_actions - Turn on action logging
 
   Level: intermediate
 
@@ -774,7 +775,8 @@ PetscErrorCode PetscLogActions(PetscBool flag)
 . flag - `PETSC_TRUE` if objects are to be logged
 
   Options Database Key:
-. -log_exclude_objects - Turns off objects logging
++ -log_exclude_objects (deprecated) - Does nothing
+- -log_include_objects - Turns on object logging
 
   Level: intermediate
 
