@@ -7738,6 +7738,27 @@ static inline PetscErrorCode MatCollapseRows(Mat Amat, PetscInt start, PetscInt 
 /*
    This will eventually be folded into MatCreateGraph_AIJ() for optimal performance -- should this be in mat/utils/...
 */
+
+/*@
+   MatAIJFilter - create a filtered version of the input matrix
+     Like `MatChop` but creates a new matrix with reduced storage
+     (could be in a util file)
+
+   Collective
+
+
+ Input Parameter:
+ . Amat - matrix
+ - vfilter - the filter threshold. drop all |Gmat[i,j]| <= vfilter
+
+ Output Parameter:
+ . filteredG - output filtered matrix
+
+  Level: advanced
+
+.seealso: `MatChop`
+
+@*/
 PETSC_EXTERN PetscErrorCode MatAIJFilter(Mat Gmat, PetscReal vfilter, Mat *filteredG)
 {
   PetscInt           IstartRow, IstartCol, ncols, nnz0, nnz1, NN, MM, nrowloc, ncolloc;
