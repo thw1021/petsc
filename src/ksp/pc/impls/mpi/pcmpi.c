@@ -180,7 +180,7 @@ static PetscErrorCode PCMPISetMat(PC pc)
     matproperties[5] = !isset ? 0 : (isspd ? 1 : 2);
     PetscCall(MatIsStructurallySymmetricKnown(sA, &isset, &isstructurallysymmetric));
     matproperties[6] = !isset ? 0 : (isstructurallysymmetric ? 1 : 2);
-    /* Created Mat gets prefix of input Mat PLUSE the mpi_linear_solver_server_ portion */
+    /* Created Mat gets prefix of input Mat PLUS the mpi_linear_solver_server_ portion */
     PetscCall(MatGetOptionsPrefix(sA, &prefix));
     PetscCall(PetscStrallocpy(prefix, &cprefix));
     PetscCall(PetscStrlen(cprefix, &clen));
@@ -389,7 +389,7 @@ static PetscErrorCode PCMPIDestroy(PC pc)
 PetscBool PCMPIServerActive = PETSC_FALSE;
 
 /*@C
-     PCMPIServerBegin - starts a server that runs on the `rank !=` 0 MPI processes waiting to process requests for
+     PCMPIServerBegin - starts a server that runs on the `rank != 0` MPI processes waiting to process requests for
      parallel `KSP` solves and management of parallel `KSP` objects.
 
      Logically Collective on all MPI processes except rank 0
