@@ -295,71 +295,6 @@ PetscErrorCode VecMDot_Seq(Vec xin, PetscInt nv, const Vec yin[], PetscScalar *z
 }
 #endif
 
-#define GetArrayRead(x) *((PetscScalar **)(x)->data);
-PetscErrorCode VecMDot_Seq_GEMV(Vec xin, PetscInt nv, const Vec yin[], PetscScalar *z)
-{
-  const PetscInt     n = xin->map->n;
-  PetscInt           j;
-  const PetscScalar *yarray, *array;
-  ptrdiff_t          offset;
-  PetscBLASInt       nb;
-
-  PetscFunctionBegin;
-  if (n == 0) {
-    PetscCall(PetscArrayzero(z, nv));
-    PetscFunctionReturn(PETSC_SUCCESS);
-  }
-  /* the following is an ad hoc parameter based on Barry's Apple M2 laptop */
-  if (n > PETSC_BLAS_INT_MAX || n < 5000) {
-    PetscCall(VecMDot_Seq(xin, nv, yin, z));
-    PetscFunctionReturn(PETSC_SUCCESS);
-  }
-  PetscCall(PetscBLASIntCast(n, &nb));
-  for (PetscInt i = 0; i < nv; i++) {
-    PetscBLASInt cnt;
-
-    yarray = GetArrayRead(yin[i]);
-    offset = 0;
-    for (j = i + 1; j < nv; j++) {
-      array = GetArrayRead(yin[j]);
-      if (offset < 0) break;
-      if (offset == 0) {
-        offset = array - yarray;
-        /* errors on macOS with "BLAS error: Parameter number 7 passed to cblas_dgemv had an invalid value" when offset != n */
-        if (offset != n) {
-          offset = 0;
-          break;
-        }
-        if (offset > PETSC_BLAS_INT_MAX) break;
-      } else if (offset != array - yarray) break;
-      yarray = array;
-    }
-    cnt = j - i;
-    if (cnt == 1) PetscCall(VecDot_Seq(xin, yin[i], z + i));
-    else {
-      PetscBLASInt _ione = 1, nblda = (PetscBLASInt)offset;
-      PetscScalar  _one = 1, _zero = 0;
-
-      yarray = GetArrayRead(yin[i]);
-      array  = GetArrayRead(xin);
-      PetscCallBLAS("BLASgemv", BLASgemv_("C", &nb, &cnt, &_one, yarray, &nblda, array, &_ione, &_zero, z + i, &_ione));
-      PetscCall(PetscInfo((PetscObject)xin, "Number of vectors combined for VecMDot() %d out of %d\n", (int)cnt, (int)nv));
-    }
-    i += cnt - 1;
-  }
-  PetscCall(PetscLogFlops(PetscMax(nv * (2.0 * n - 1), 0.0)));
-  /* comparison with previous code
-  PetscScalar znew[100];
-  VecMDot_Seq_Unrolled(xin,nv,yin,znew);
-  VecView(xin,0);
-    for (PetscInt i=0; i<nv; i++) {
-          VecView(yin[i],0);
-      printf("%d %g %g %g %g\n",i,(znew[i]-z[i])/PetscMax(znew[i],z[i]),znew[i]-z[i],znew[i],z[i]);
-  }
-  */
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 /* ----------------------------------------------------------------------------*/
 PetscErrorCode VecMTDot_Seq(Vec xin, PetscInt nv, const Vec yin[], PetscScalar *z)
 {
@@ -572,6 +507,88 @@ PetscErrorCode VecMTDot_Seq(Vec xin, PetscInt nv, const Vec yin[], PetscScalar *
   }
   PetscCall(VecRestoreArrayRead(xin, &xbase));
   PetscCall(PetscLogFlops(PetscMax(nv * (2.0 * n - 1), 0.0)));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode VecMultiDot_Seq_GEMV(PetscBool conjugate, Vec xin, PetscInt nv, const Vec yin[], PetscScalar *z)
+{
+  PetscInt           i, j, nfail;
+  const PetscScalar *xarray, *yarray, *yfirst, *ynext;
+  PetscBool          stop  = PETSC_FALSE;
+  const char        *trans = conjugate ? "C" : "T";
+  PetscInt64         lda   = 0;
+  PetscBLASInt       n, m;
+
+  PetscFunctionBegin;
+  if (xin->map->n == 0) { // otherwise BLAS complains illegal values (0) for lda
+    PetscCall(PetscArrayzero(z, nv));
+    PetscFunctionReturn(PETSC_SUCCESS);
+  }
+
+  // caller guarantees xin->map->n <= PETSC_BLAS_INT_MAX
+  PetscCall(PetscBLASIntCast(xin->map->n, &n));
+  PetscCall(VecGetArrayRead(xin, &xarray));
+  i = nfail = 0;
+  while (i < nv) {
+    stop = PETSC_FALSE;
+    PetscCall(VecGetArrayRead(yin[i], &yfirst));
+    yarray = yfirst;
+    for (j = i + 1; j < nv; j++) {
+      PetscCall(VecGetArrayRead(yin[j], &ynext));
+      if (j == i + 1) {
+        lda = ynext - yarray;
+        if (lda < 0 || lda > PETSC_BLAS_INT_MAX || lda - n > 64) stop = PETSC_TRUE;
+      } else if (lda * (j - i) != ynext - yarray) { // not in the same stride? if so, stop here
+        stop = PETSC_TRUE;
+      }
+      PetscCall(VecRestoreArrayRead(yin[j], &ynext));
+      if (stop) break;
+    }
+    PetscCall(VecRestoreArrayRead(yin[i], &yfirst));
+
+    // we found m vectors yin[i..j)
+    m = j - i;
+    if (m > 1) {
+      PetscBLASInt ione = 1, lda2 = (PetscBLASInt)lda;
+      PetscScalar  one = 1, zero = 0;
+      PetscCallBLAS("BLASgemv", BLASgemv_(trans, &n, &m, &one, yarray, &lda2, xarray, &ione, &zero, z + i, &ione));
+    } else {
+      if (nfail == 0) {
+        if (conjugate) PetscCall(VecDot_Seq(xin, yin[i], z + i));
+        else PetscCall(VecTDot_Seq(xin, yin[i], z + i));
+        nfail++;
+      } else break;
+    }
+    i = j;
+  }
+  PetscCall(VecRestoreArrayRead(xin, &xarray));
+  if (i < nv) { // finish the remaining if any
+    if (conjugate) PetscCall(VecMDot_Seq(xin, nv - i, yin + i, z + i));
+    else PetscCall(VecMTDot_Seq(xin, nv - i, yin + i, z + i));
+  }
+  PetscCall(PetscLogFlops(PetscMax(nv * (2.0 * n - 1), 0.0)));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode VecMDot_Seq_GEMV(Vec xin, PetscInt nv, const Vec yin[], PetscScalar *z)
+{
+  PetscFunctionBegin;
+  if (xin->map->n > PETSC_BLAS_INT_MAX) {
+    PetscCall(VecMDot_Seq(xin, nv, yin, z));
+  } else {
+    PetscCall(VecMultiDot_Seq_GEMV(PETSC_TRUE, xin, nv, yin, z));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode VecMTDot_Seq_GEMV(Vec xin, PetscInt nv, const Vec yin[], PetscScalar *z)
+{
+  PetscFunctionBegin;
+  if (xin->map->n > PETSC_BLAS_INT_MAX) {
+    PetscCall(VecMTDot_Seq(xin, nv, yin, z));
+  } else {
+    PetscCall(VecMultiDot_Seq_GEMV(PETSC_FALSE, xin, nv, yin, z));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
