@@ -9,13 +9,13 @@ static PetscErrorCode CallEvents(PetscLogEvent event1, PetscLogEvent event2, Pet
 
   PetscFunctionBegin;
   PetscCall(PetscLogEventBegin(event1, 0, 0, 0, 0));
-  PetscCall(PetscSleep(0.1));
+  PetscCall(PetscSleep(0.05));
   PetscCall(PetscLogEventBegin(event2, 0, 0, 0, 0));
   PetscCall(PetscSleep(0.1));
   PetscCall(PetscLogEventBegin(event3, 0, 0, 0, 0));
   PetscCall(PetscCalloc1(1048576, &data));
   PetscCall(PetscFree(data));
-  PetscCall(PetscSleep(0.1));
+  PetscCall(PetscSleep(0.15));
   PetscCall(PetscLogEventEnd(event3, 0, 0, 0, 0));
   PetscCall(PetscLogEventEnd(event2, 0, 0, 0, 0));
   PetscCall(PetscLogEventEnd(event1, 0, 0, 0, 0));
@@ -89,5 +89,11 @@ int main(int argc, char **argv)
   test:
     suffix: 0
     nsize: {{1 2}}
+
+  test:
+    suffix: 1
+    nsize: {{1 2}}
+    args: -log_view ::ascii_flamegraph
+    filter: sed -e "s/\\b[0-9]\\+\\b/time_removed/g"
 
  TEST*/
