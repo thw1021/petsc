@@ -7736,11 +7736,30 @@ static inline PetscErrorCode MatCollapseRows(Mat Amat, PetscInt start, PetscInt 
 }
 
 /*
-   This will eventually be folded into MatCreateGraph_AIJ() for optimal performance
+   This will eventually be folded into MatCreateGraph_AIJ() for optimal performance -- should this be in mat/utils/...
 */
-static PetscErrorCode MatFilter_AIJ(Mat Gmat, PetscReal vfilter, Mat *filteredG)
+/*@C
+   MatAIJFilter - create a filtered version of the input matrix
+     Like `MatChop` but creates a new matrix with reduced storage
+     (could be in a util file)
+
+   Collective
+
+ Input Parameter:
+ . Amat - matrix
+ - vfilter - the filter threshold. drop all |Gmat[i,j]| <= vfilter
+
+ Output Parameter:
+ . filteredG - output filtered matrix
+
+  Level: advanced
+
+.seealso: `MatChop`
+
+@*/
+PETSC_EXTERN PetscErrorCode MatAIJFilter(Mat Gmat, PetscReal vfilter, Mat *filteredG)
 {
-  PetscInt           Istart, Iend, ncols, nnz0, nnz1, NN, MM, nloc;
+  PetscInt           IstartRow, IstartCol, ncols, nnz0, nnz1, NN, MM, nrowloc, ncolloc;
   Mat                tGmat;
   MPI_Comm           comm;
   const PetscScalar *vals;
@@ -7764,9 +7783,10 @@ static PetscErrorCode MatFilter_AIJ(Mat Gmat, PetscReal vfilter, Mat *filteredG)
 
   // global sizes
   PetscCall(MatGetSize(Gmat, &MM, &NN));
-  PetscCall(MatGetOwnershipRange(Gmat, &Istart, &Iend));
-  nloc = Iend - Istart;
-  PetscCall(PetscMalloc2(nloc, &d_nnz, nloc, &o_nnz));
+  PetscCall(MatGetOwnershipRange(Gmat, &IstartRow, NULL));
+  PetscCall(MatGetOwnershipRangeColumn(Gmat, &IstartCol, NULL));
+  PetscCall(MatGetLocalSize(Gmat, &nrowloc, &ncolloc));
+  PetscCall(PetscMalloc2(nrowloc, &d_nnz, nrowloc, &o_nnz));
   if (isseqaij) {
     a = Gmat;
     b = NULL;
@@ -7777,21 +7797,21 @@ static PetscErrorCode MatFilter_AIJ(Mat Gmat, PetscReal vfilter, Mat *filteredG)
     garray        = d->garray;
   }
   /* Determine upper bound on non-zeros needed in new filtered matrix */
-  for (PetscInt row = 0; row < nloc; row++) {
+  for (PetscInt row = 0; row < nrowloc; row++) {
     PetscCall(MatGetRow(a, row, &ncols, NULL, NULL));
     d_nnz[row] = ncols;
     if (ncols > maxcols) maxcols = ncols;
     PetscCall(MatRestoreRow(a, row, &ncols, NULL, NULL));
   }
   if (b) {
-    for (PetscInt row = 0; row < nloc; row++) {
+    for (PetscInt row = 0; row < nrowloc; row++) {
       PetscCall(MatGetRow(b, row, &ncols, NULL, NULL));
       o_nnz[row] = ncols;
       if (ncols > maxcols) maxcols = ncols;
       PetscCall(MatRestoreRow(b, row, &ncols, NULL, NULL));
     }
   }
-  PetscCall(MatSetSizes(tGmat, nloc, nloc, MM, MM));
+  PetscCall(MatSetSizes(tGmat, nrowloc, ncolloc, MM, NN));
   PetscCall(MatSetBlockSizes(tGmat, 1, 1));
   PetscCall(MatSeqAIJSetPreallocation(tGmat, 0, d_nnz));
   PetscCall(MatMPIAIJSetPreallocation(tGmat, 0, d_nnz, 0, o_nnz));
@@ -7801,13 +7821,13 @@ static PetscErrorCode MatFilter_AIJ(Mat Gmat, PetscReal vfilter, Mat *filteredG)
   PetscCall(PetscMalloc2(maxcols, &AA, maxcols, &AJ));
   nnz0 = nnz1 = 0;
   for (c = a, kk = 0; c && kk < 2; c = b, kk++) {
-    for (PetscInt row = 0, grow = Istart, ncol_row, jj; row < nloc; row++, grow++) {
+    for (PetscInt row = 0, grow = IstartRow, ncol_row, jj; row < nrowloc; row++, grow++) {
       PetscCall(MatGetRow(c, row, &ncols, &idx, &vals));
       for (ncol_row = jj = 0; jj < ncols; jj++, nnz0++) {
         PetscScalar sv = PetscAbs(PetscRealPart(vals[jj]));
         if (PetscRealPart(sv) > vfilter) {
           nnz1++;
-          PetscInt cid = idx[jj] + Istart; //diag
+          PetscInt cid = idx[jj] + IstartCol; //diag
           if (c != a) cid = garray[idx[jj]];
           AA[ncol_row] = vals[jj];
           AJ[ncol_row] = cid;
@@ -7823,10 +7843,10 @@ static PetscErrorCode MatFilter_AIJ(Mat Gmat, PetscReal vfilter, Mat *filteredG)
   PetscCall(MatAssemblyEnd(tGmat, MAT_FINAL_ASSEMBLY));
   PetscCall(MatPropagateSymmetryOptions(Gmat, tGmat)); /* Normal Mat options are not relevant ? */
 
-  PetscCall(PetscInfo(tGmat, "\t %g%% nnz after filtering, with threshold %g, %g nnz ave. (N=%" PetscInt_FMT ", max row size %d)\n", (!nnz0) ? 1. : 100. * (double)nnz1 / (double)nnz0, (double)vfilter, (!nloc) ? 1. : (double)nnz0 / (double)nloc, MM, (int)maxcols));
+  PetscCall(PetscInfo(tGmat, "\t %g%% nnz after filtering, with threshold %g, %g nnz ave. (N=%" PetscInt_FMT ", max row size %d)\n", (!nnz0) ? 1. : 100. * (double)nnz1 / (double)nnz0, (double)vfilter, (!nrowloc) ? 1. : (double)nnz0 / (double)nrowloc, MM, (int)maxcols));
 
   *filteredG = tGmat;
-  PetscCall(MatViewFromOptions(tGmat, NULL, "-mat_filter_graph_view"));
+  PetscCall(MatViewFromOptions(tGmat, NULL, "-filter_mat_view"));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -8084,7 +8104,7 @@ PETSC_INTERN PetscErrorCode MatCreateGraph_Simple_AIJ(Mat Amat, PetscBool symmet
   if (filter >= 0) {
     Mat Fmat = NULL; /* some silly compiler needs this */
 
-    PetscCall(MatFilter_AIJ(Gmat, filter, &Fmat));
+    PetscCall(MatAIJFilter(Gmat, filter, &Fmat));
     PetscCall(MatDestroy(&Gmat));
     Gmat = Fmat;
   }

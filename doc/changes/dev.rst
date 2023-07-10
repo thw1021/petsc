@@ -67,6 +67,8 @@ Changes: Development
 - Add support for ``MatLoad()`` and ``MatView()`` to load and store ``MPIAIJ`` matrices that have more than ``PETSC_INT_MAX`` nonzeros, so long as each rank has fewer than ``PETSC_INT_MAX``
 - Add ``MatLRCSetMats()`` and register creation routine for ``MatLRC``
 - Add CUDA/HIP implementation for ``MatGetDiagonal()``
+- Add ``MatAIJFilter()`` promoted static method used in GAMG to create
+  filtered matrix, like ``MatChop()`` that reduces storage
 
 .. rubric:: MatCoarsen:
 
