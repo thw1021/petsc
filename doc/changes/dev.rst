@@ -108,6 +108,7 @@ Changes: Development
 .. rubric:: DM/DA:
 
 - Add support for ``DMDAGetElements()`` for Fortran
+- Remove ``DMDALocalToGlobalBegin()`` and ``DMDALocalToGlobalEnd()``. They have been deprecated since v3.5
 
 .. rubric:: DMSwarm:
 
