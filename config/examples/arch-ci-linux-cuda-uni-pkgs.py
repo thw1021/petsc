@@ -9,7 +9,7 @@ if __name__ == '__main__':
   sys.path.insert(0, os.path.abspath('config'))
   import configure
   configure_options = [
-    '--package-prefix-hash='+petsc_hash_pkgs,
+    #'--package-prefix-hash='+petsc_hash_pkgs,
     '--with-make-test-np=20',
     '--with-mpi=0',
     '--with-cc=gcc',
