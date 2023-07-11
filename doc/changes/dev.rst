@@ -106,6 +106,7 @@ Changes: Development
 
 - Add ``TaoADMMGetRegularizerCoefficient()``
 - Add ``TAOBNCG``, ``TaoBNCGGetType()`` and ``TaoBNCGSetType()``
+- Remove ``TaoDefaultMonitor()``
 
 .. rubric:: DM/DA:
 
