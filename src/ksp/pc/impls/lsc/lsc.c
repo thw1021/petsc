@@ -45,10 +45,10 @@ static PetscErrorCode PCSetUp_LSC(PC pc)
   PetscCall(PetscObjectQuery((PetscObject)pc->pmat, "LSC_Lp", (PetscObject *)&Lp));
   if (!Lp) PetscCall(PetscObjectQuery((PetscObject)pc->mat, "LSC_Lp", (PetscObject *)&Lp));
   if (lsc->scale) {
-    Mat Q_scale;
-    PetscCall(PetscObjectQuery((PetscObject)pc->pmat, "LSC_Q_scale", (PetscObject *)&Q_scale));
-    if (!Q_scale) PetscCall(MatSchurComplementGetSubMatrices(pc->mat, NULL, &Q_scale, NULL, NULL, NULL));
-    PetscCall(MatGetDiagonal(Q_scale, lsc->scale));
+    Mat Qscale;
+    PetscCall(PetscObjectQuery((PetscObject)pc->pmat, "LSC_Qscale", (PetscObject *)&Qscale));
+    if (!Qscale) PetscCall(MatSchurComplementGetSubMatrices(pc->mat, NULL, &Qscale, NULL, NULL, NULL));
+    PetscCall(MatGetDiagonal(Qscale, lsc->scale));
     PetscCall(VecReciprocal(lsc->scale));
   }
   if (!L) {
