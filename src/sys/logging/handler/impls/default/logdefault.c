@@ -478,7 +478,7 @@ static PetscErrorCode PetscLogHandlerObjectDestroy_Default(PetscLogHandler h, Pe
 
     PetscCall(PetscTime(&new_action.time));
     new_action.time -= petsc_BaseTime;
-    new_action.event = -1;
+    new_action.event   = -1;
     new_action.action  = PETSC_LOG_ACTION_DESTROY;
     new_action.classid = obj->classid;
     new_action.id1     = obj->id;

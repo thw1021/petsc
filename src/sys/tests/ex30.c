@@ -97,17 +97,20 @@ int main(int argc, char **argv)
   test:
     suffix: 1
     nsize: {{1 2}}
+    requires: defined(PETSC_USE_LOG)
     args: -log_view ::ascii_flamegraph
     filter: sed -E "s/ [0-9]+/ time_removed/g"
 
   test:
     suffix: 2
+    requires: defined(PETSC_USE_LOG)
     nsize: 1
     args: -log_trace
 
   test:
     suffix: 3
     nsize: 1
+    requires: defined(PETSC_USE_LOG)
     args: -log_include_actions -log_include_objects -log_all
     temporaries: Log.0
     filter: cat Log.0 | grep "\\(Actions accomplished\\|Objects created\\)"
@@ -115,7 +118,16 @@ int main(int argc, char **argv)
   test:
     suffix: 4
     nsize: 1
+    requires: defined(PETSC_USE_LOG)
     args: -log_view ::ascii_csv
     filter: grep "Event[123]" | grep -v "PCMPI"
+
+  test:
+    suffix: 5
+    nsize: 1
+    requires: defined(PETSC_USE_LOG) defined(PETSC_HAVE_MPE)
+    args: -log_mpe ex30_mpe
+    temporaries: ex30_mpe.clog2
+    filter: strings ex30_mpe.clog2 | grep "Event[123]"
 
  TEST*/
