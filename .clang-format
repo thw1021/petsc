@@ -182,6 +182,7 @@ WhitespaceSensitiveMacros:
   - PETSC_DEPRECATED_MACRO
   - PETSC_DEPRECATED_TYPEDEF
   - PETSC_DEPRECATED_IDENTIFIER
+  - PETSC_DEPRECATED_IDENTIFIER_
 TypenameMacros:
   - khash_t
 InsertNewlineAtEOF: true
