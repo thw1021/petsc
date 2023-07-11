@@ -146,10 +146,6 @@ PETSC_EXTERN PetscErrorCode KSPGetResidualNorm(KSP, PetscReal *);
 PETSC_EXTERN PetscErrorCode KSPGetIterationNumber(KSP, PetscInt *);
 PETSC_EXTERN PetscErrorCode KSPGetTotalIterations(KSP, PetscInt *);
 PETSC_EXTERN PetscErrorCode KSPCreateVecs(KSP, PetscInt, Vec **, PetscInt, Vec **);
-PETSC_DEPRECATED_FUNCTION("Use KSPCreateVecs() (since version 3.6)") static inline PetscErrorCode KSPGetVecs(KSP ksp, PetscInt n, Vec **x, PetscInt m, Vec **y)
-{
-  return KSPCreateVecs(ksp, n, x, m, y);
-}
 
 PETSC_EXTERN PetscErrorCode KSPSetPreSolve(KSP, PetscErrorCode (*)(KSP, Vec, Vec, void *), void *);
 PETSC_EXTERN PetscErrorCode KSPSetPostSolve(KSP, PetscErrorCode (*)(KSP, Vec, Vec, void *), void *);
@@ -834,31 +830,6 @@ PETSC_EXTERN PetscErrorCode KSPGetConvergedReasonString(KSP, const char **);
 PETSC_EXTERN PetscErrorCode KSPComputeConvergenceRate(KSP, PetscReal *, PetscReal *, PetscReal *, PetscReal *);
 PETSC_EXTERN PetscErrorCode KSPSetConvergedNegativeCurvature(KSP, PetscBool);
 PETSC_EXTERN PetscErrorCode KSPGetConvergedNegativeCurvature(KSP, PetscBool *);
-
-PETSC_DEPRECATED_FUNCTION("Use KSPConvergedDefault() (since version 3.5)") static inline void KSPDefaultConverged(void)
-{ /* never called */
-}
-#define KSPDefaultConverged (KSPDefaultConverged, KSPConvergedDefault)
-PETSC_DEPRECATED_FUNCTION("Use KSPConvergedDefaultDestroy() (since version 3.5)") static inline void KSPDefaultConvergedDestroy(void)
-{ /* never called */
-}
-#define KSPDefaultConvergedDestroy (KSPDefaultConvergedDestroy, KSPConvergedDefaultDestroy)
-PETSC_DEPRECATED_FUNCTION("Use KSPConvergedDefaultCreate() (since version 3.5)") static inline void KSPDefaultConvergedCreate(void)
-{ /* never called */
-}
-#define KSPDefaultConvergedCreate (KSPDefaultConvergedCreate, KSPConvergedDefaultCreate)
-PETSC_DEPRECATED_FUNCTION("Use KSPConvergedDefaultSetUIRNorm() (since version 3.5)") static inline void KSPDefaultConvergedSetUIRNorm(void)
-{ /* never called */
-}
-#define KSPDefaultConvergedSetUIRNorm (KSPDefaultConvergedSetUIRNorm, KSPConvergedDefaultSetUIRNorm)
-PETSC_DEPRECATED_FUNCTION("Use KSPConvergedDefaultSetUMIRNorm() (since version 3.5)") static inline void KSPDefaultConvergedSetUMIRNorm(void)
-{ /* never called */
-}
-#define KSPDefaultConvergedSetUMIRNorm (KSPDefaultConvergedSetUMIRNorm, KSPConvergedDefaultSetUMIRNorm)
-PETSC_DEPRECATED_FUNCTION("Use KSPConvergedSkip() (since version 3.5)") static inline void KSPSkipConverged(void)
-{ /* never called */
-}
-#define KSPSkipConverged (KSPSkipConverged, KSPConvergedSkip)
 
 PETSC_EXTERN PetscErrorCode KSPComputeOperator(KSP, MatType, Mat *);
 PETSC_DEPRECATED_FUNCTION("Use KSPComputeOperator() (since version 3.12)") static inline PetscErrorCode KSPComputeExplicitOperator(KSP A, Mat *B)

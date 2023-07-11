@@ -89,6 +89,7 @@ Changes: Development
 .. rubric:: KSP:
 
 - Add ``KSPSetMinimumIterations()`` and ``KSPGetMinimumIterations()``
+- Remove ``KSPGetVecs()``, ``KSPDefaultConverged()``, ``KSPDefaultConvergedDestroy()``, ``KSPDefaultConvergedCreate()``, ``KSPDefaultConvergedSetUIRNorm()``, ``KSPDefaultConvergedSetUMIRNorm()``, and ``KSPSkipConverged()``
 
 .. rubric:: SNES:
 
