@@ -402,11 +402,6 @@ PETSC_EXTERN PetscErrorCode SNESGetConvergedReason(SNES, SNESConvergedReason *);
 PETSC_EXTERN PetscErrorCode SNESGetConvergedReasonString(SNES, const char **);
 PETSC_EXTERN PetscErrorCode SNESSetConvergedReason(SNES, SNESConvergedReason);
 
-PETSC_DEPRECATED_FUNCTION("Use SNESConvergedSkip() (since version 3.5)") static inline void SNESSkipConverged(void)
-{ /* never called */
-}
-#define SNESSkipConverged (SNESSkipConverged, SNESConvergedSkip)
-
 /* --------- Solving systems of nonlinear equations --------------- */
 PETSC_EXTERN PetscErrorCode SNESSetFunction(SNES, Vec, PetscErrorCode (*)(SNES, Vec, Vec, void *), void *);
 PETSC_EXTERN PetscErrorCode SNESGetFunction(SNES, Vec *, PetscErrorCode (**)(SNES, Vec, Vec, void *), void **);
@@ -760,15 +755,6 @@ PETSC_EXTERN PetscErrorCode SNESGetNPCSide(SNES, PCSide *);
 PETSC_EXTERN PetscErrorCode SNESSetLineSearch(SNES, SNESLineSearch);
 PETSC_EXTERN PetscErrorCode SNESGetLineSearch(SNES, SNESLineSearch *);
 PETSC_EXTERN PetscErrorCode SNESRestrictHookAdd(SNES, PetscErrorCode (*)(SNES, SNES, void *), void *);
-
-PETSC_DEPRECATED_FUNCTION("Use SNESGetLineSearch() (since version 3.4)") static inline PetscErrorCode SNESGetSNESLineSearch(SNES snes, SNESLineSearch *ls)
-{
-  return SNESGetLineSearch(snes, ls);
-}
-PETSC_DEPRECATED_FUNCTION("Use SNESSetLineSearch() (since version 3.4)") static inline PetscErrorCode SNESSetSNESLineSearch(SNES snes, SNESLineSearch ls)
-{
-  return SNESSetLineSearch(snes, ls);
-}
 
 PETSC_EXTERN PetscErrorCode SNESSetUpMatrices(SNES);
 PETSC_EXTERN PetscErrorCode DMSNESSetFunction(DM, PetscErrorCode (*)(SNES, Vec, Vec, void *), void *);
