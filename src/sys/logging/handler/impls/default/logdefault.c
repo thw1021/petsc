@@ -421,6 +421,7 @@ static PetscErrorCode PetscLogHandlerObjectCreate_Default(PetscLogHandler h, Pet
   if (def->petsc_logActions) {
     Action new_action;
 
+    PetscCall(PetscArrayzero(&new_action, 1));
     PetscCall(PetscTime(&new_action.time));
     new_action.time -= petsc_BaseTime;
     new_action.action  = PETSC_LOG_ACTION_CREATE;
