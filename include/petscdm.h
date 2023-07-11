@@ -240,22 +240,6 @@ PETSC_EXTERN PetscErrorCode DMGetLocalSection(DM, PetscSection *);
 PETSC_EXTERN PetscErrorCode DMSetLocalSection(DM, PetscSection);
 PETSC_EXTERN PetscErrorCode DMGetGlobalSection(DM, PetscSection *);
 PETSC_EXTERN PetscErrorCode DMSetGlobalSection(DM, PetscSection);
-static inline PETSC_DEPRECATED_FUNCTION("Use DMGetSection() (since v3.9)") PetscErrorCode DMGetDefaultSection(DM dm, PetscSection *s)
-{
-  return DMGetSection(dm, s);
-}
-static inline PETSC_DEPRECATED_FUNCTION("Use DMSetSection() (since v3.9)") PetscErrorCode DMSetDefaultSection(DM dm, PetscSection s)
-{
-  return DMSetSection(dm, s);
-}
-static inline PETSC_DEPRECATED_FUNCTION("Use DMGetGlobalSection() (since v3.9)") PetscErrorCode DMGetDefaultGlobalSection(DM dm, PetscSection *s)
-{
-  return DMGetGlobalSection(dm, s);
-}
-static inline PETSC_DEPRECATED_FUNCTION("Use DMSetGlobalSection() (since v3.9)") PetscErrorCode DMSetDefaultGlobalSection(DM dm, PetscSection s)
-{
-  return DMSetGlobalSection(dm, s);
-}
 
 PETSC_EXTERN PetscErrorCode DMGetSectionSF(DM, PetscSF *);
 PETSC_EXTERN PetscErrorCode DMSetSectionSF(DM, PetscSF);
