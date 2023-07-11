@@ -124,6 +124,11 @@ static PetscErrorCode PCView_LSC(PC pc, PetscViewer viewer)
     } else {
       PetscCall(PetscViewerASCIIPrintf(viewer, "PCLSC KSP object not yet created, hence cannot display"));
     }
+    if (jac->kspMass) {
+      PetscCall(KSPView(jac->kspMass, viewer));
+    } else {
+      PetscCall(PetscViewerASCIIPrintf(viewer, "PCLSC Mass KSP object not yet created, hence cannot display"));
+    }
     PetscCall(PetscViewerASCIIPopTab(viewer));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
