@@ -399,12 +399,6 @@ PETSC_EXTERN PetscErrorCode TSSetTimeSpan(TS, PetscInt, PetscReal *);
 PETSC_EXTERN PetscErrorCode TSGetTimeSpan(TS, PetscInt *, const PetscReal **);
 PETSC_EXTERN PetscErrorCode TSGetTimeSpanSolutions(TS, PetscInt *, Vec **);
 
-PETSC_EXTERN PETSC_DEPRECATED_FUNCTION("Use TSSetTime[Step]() (since version 3.8)") PetscErrorCode TSSetInitialTimeStep(TS, PetscReal, PetscReal);
-PETSC_EXTERN PETSC_DEPRECATED_FUNCTION("Use TSSetMax{Steps|Time}() (since version 3.8)") PetscErrorCode TSSetDuration(TS, PetscInt, PetscReal);
-PETSC_EXTERN PETSC_DEPRECATED_FUNCTION("Use TSGetMax{Steps|Time}() (since version 3.8)") PetscErrorCode TSGetDuration(TS, PetscInt *, PetscReal *);
-PETSC_EXTERN PETSC_DEPRECATED_FUNCTION("Use TSGetStepNumber() (since version 3.8)") PetscErrorCode TSGetTimeStepNumber(TS, PetscInt *);
-PETSC_EXTERN PETSC_DEPRECATED_FUNCTION("Use TSGetStepNumber() (since version 3.8)") PetscErrorCode TSGetTotalSteps(TS, PetscInt *);
-
 PETSC_EXTERN PetscErrorCode TSMonitorDefault(TS, PetscInt, PetscReal, Vec, PetscViewerAndFormat *);
 PETSC_EXTERN PetscErrorCode TSMonitorExtreme(TS, PetscInt, PetscReal, Vec, PetscViewerAndFormat *);
 

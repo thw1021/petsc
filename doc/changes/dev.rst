@@ -101,6 +101,7 @@ Changes: Development
 .. rubric:: TS:
 
 - Remove ``TSErrorWeightedNormInfinity()``, ``TSErrorWeightedNorm2()``, ``TSErrorWeightedENormInfinity()``, ``TSErrorWeightedENorm2()`` since the same functionality can be obtained with ``VecErrorWeightedNorms()``
+- Remove ``TSSetInitialTimeStep()``, ``TSGetDuration()``, ``TSSetDuration()``, ``TSGetTimeStepNumber()``, and ``TSGetTotalSteps()``
 
 .. rubric:: TAO:
 
