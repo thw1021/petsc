@@ -1630,10 +1630,6 @@ PETSC_EXTERN PetscErrorCode MatColoringSetWeightType(MatColoring, MatColoringWei
 PETSC_EXTERN PetscErrorCode MatColoringSetWeights(MatColoring, PetscReal *, PetscInt *);
 PETSC_EXTERN PetscErrorCode MatColoringCreateWeights(MatColoring, PetscReal **, PetscInt **lperm);
 PETSC_EXTERN PetscErrorCode MatColoringTest(MatColoring, ISColoring);
-PETSC_DEPRECATED_FUNCTION("Use MatColoringTest() (since version 3.10)") static inline PetscErrorCode MatColoringTestValid(MatColoring matcoloring, ISColoring iscoloring)
-{
-  return MatColoringTest(matcoloring, iscoloring);
-}
 PETSC_EXTERN PetscErrorCode MatISColoringTest(Mat, ISColoring);
 
 /*S
@@ -2003,7 +1999,6 @@ PETSC_EXTERN PetscErrorCode MatISGetLocalMat(Mat, Mat *);
 PETSC_EXTERN PetscErrorCode MatISRestoreLocalMat(Mat, Mat *);
 PETSC_EXTERN PetscErrorCode MatISSetLocalMat(Mat, Mat);
 PETSC_EXTERN PetscErrorCode MatISGetLocalToGlobalMapping(Mat, ISLocalToGlobalMapping *, ISLocalToGlobalMapping *);
-PETSC_EXTERN                PETSC_DEPRECATED_FUNCTION("Use the MatConvert() interface (since version 3.10)") PetscErrorCode MatISGetMPIXAIJ(Mat, MatReuse, Mat *);
 
 /*S
      MatNullSpace - Object that removes a null space from a vector, i.e.

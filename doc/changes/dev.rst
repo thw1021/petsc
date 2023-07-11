@@ -77,6 +77,7 @@ Changes: Development
 - Add ``MatLRCSetMats()`` and register creation routine for ``MatLRC``
 - Add CUDA/HIP implementation for ``MatGetDiagonal()``
 - Remove ``MatSolverPackage``, ``MatSolverPackageRegister()``, ``MatSolverPackageGet()``, ``MatGetSubMatrices()``, ``MatGetSubMatricesMPI()``, ``MatGetSubMatrix()``, ``MatGetVecs()``, ``MatSTRUMPACKSetHSSRelCompTol()``, and ``MatSTRUMPACKSetHSSMinSize()``
+- Remove ``MatColoringTestValid()``, and ``MatISGetMPIXAIJ()``
 
 .. rubric:: MatCoarsen:
 

@@ -2047,38 +2047,6 @@ general_assembly:
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@
-    MatISGetMPIXAIJ - Converts `MATIS` matrix into a parallel `MATAIJ` format
-
-  Input Parameters:
-+  mat - the matrix (should be of type `MATIS`)
--  reuse - either `MAT_INITIAL_MATRIX` or `MAT_REUSE_MATRIX`
-
-  Output Parameter:
-.  newmat - the matrix in `MATAIJ` format
-
-  Level: deprecated
-
-  Note:
-    This function has been deprecated and it will be removed in future releases. Update your code to use the `MatConvert()` interface.
-
-.seealso: [](ch_matrices), `Mat`, `MATIS`, `MatConvert()`
-@*/
-PetscErrorCode MatISGetMPIXAIJ(Mat mat, MatReuse reuse, Mat *newmat)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(mat, MAT_CLASSID, 1);
-  PetscValidLogicalCollectiveEnum(mat, reuse, 2);
-  PetscValidPointer(newmat, 3);
-  if (reuse == MAT_REUSE_MATRIX) {
-    PetscValidHeaderSpecific(*newmat, MAT_CLASSID, 3);
-    PetscCheckSameComm(mat, 1, *newmat, 3);
-    PetscCheck(mat != *newmat, PetscObjectComm((PetscObject)mat), PETSC_ERR_SUP, "Cannot reuse the same matrix");
-  }
-  PetscUseMethod(mat, "MatISGetMPIXAIJ_C", (Mat, MatType, MatReuse, Mat *), (mat, MATAIJ, reuse, newmat));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
 static PetscErrorCode MatDuplicate_IS(Mat mat, MatDuplicateOption op, Mat *newmat)
 {
   Mat_IS  *matis = (Mat_IS *)(mat->data);
@@ -2178,7 +2146,6 @@ static PetscErrorCode MatDestroy_IS(Mat A)
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatISGetLocalMat_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatISSetLocalMat_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatISRestoreLocalMat_C", NULL));
-  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatISGetMPIXAIJ_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatISSetPreallocation_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatISStoreL2L_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatISFixLocalEmpty_C", NULL));
@@ -3432,7 +3399,6 @@ PETSC_EXTERN PetscErrorCode MatCreate_IS(Mat A)
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatISGetLocalMat_C", MatISGetLocalMat_IS));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatISRestoreLocalMat_C", MatISRestoreLocalMat_IS));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatISSetLocalMat_C", MatISSetLocalMat_IS));
-  PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatISGetMPIXAIJ_C", MatConvert_IS_XAIJ));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatISSetPreallocation_C", MatISSetPreallocation_IS));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatISStoreL2L_C", MatISStoreL2L_IS));
   PetscCall(PetscObjectComposeFunction((PetscObject)A, "MatISFixLocalEmpty_C", MatISFixLocalEmpty_IS));
