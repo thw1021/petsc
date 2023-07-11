@@ -757,6 +757,38 @@ PetscErrorCode VecDuplicate_Seq(Vec win, Vec *V)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PetscErrorCode VecDuplicateVecs_Seq_GEMV(Vec w, PetscInt m, Vec *V[])
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(w, VEC_CLASSID, 1);
+  PetscValidPointer(V, 3);
+  // We rely on the duplicate operation being VecDuplicate_Seq. If not, bail out to the default.
+  if (w->ops->duplicate != VecDuplicate_Seq) {
+    w->ops->duplicatevecs = VecDuplicateVecs_Default;
+    PetscCall(VecDuplicateVecs(w, m, V));
+  } else {
+    PetscInt     nlocal;
+    PetscScalar *array;
+
+    PetscCall(PetscMalloc1(m, V));
+    PetscCall(VecGetLocalSize(w, &nlocal));
+    PetscCall(PetscCalloc1(m * nlocal, &array));
+    for (PetscInt i = 0; i < m; i++) {
+      Vec v;
+      PetscCall(VecCreateSeqWithLayoutAndArray_Private(w->map, array + i * nlocal, &v));
+      PetscCall(PetscObjectListDuplicate(((PetscObject)w)->olist, &((PetscObject)v)->olist));
+      PetscCall(PetscFunctionListDuplicate(((PetscObject)w)->qlist, &((PetscObject)v)->qlist));
+      v->ops->view          = w->ops->view;
+      v->stash.ignorenegidx = w->stash.ignorenegidx;
+      (*V)[i]               = v;
+    }
+    // so when the first vector is destroyed it will destroy the array
+    if (m) ((Vec_Seq *)(*V)[0]->data)->array_allocated = array;
+  }
+
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static struct _VecOps DvOps = {
   PetscDesignatedInitializer(duplicate, VecDuplicate_Seq), /* 1 */
   PetscDesignatedInitializer(duplicatevecs, VecDuplicateVecs_Default),
@@ -850,15 +882,47 @@ static struct _VecOps DvOps = {
 };
 
 /*
+  Create a VECSEQ with the given layout and array
+
+  Input Parameter:
++ map   - the layout
+- array - the array on host
+
+  Output Parameter:
+. V  - The vector object
+*/
+PetscErrorCode VecCreateSeqWithLayoutAndArray_Private(PetscLayout map, const PetscScalar array[], Vec *V)
+{
+  PetscMPIInt size;
+
+  PetscFunctionBegin;
+  PetscCall(VecCreateWithLayout_Private(map, V));
+  PetscCallMPI(MPI_Comm_size(map->comm, &size));
+  PetscCheck(size == 1, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Cannot create VECSEQ on more than one process");
+  PetscCall(VecCreate_Seq_Private(*V, array));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*
       This is called by VecCreate_Seq() (i.e. VecCreateSeq()) and VecCreateSeqWithArray()
 */
 PetscErrorCode VecCreate_Seq_Private(Vec v, const PetscScalar array[])
 {
-  Vec_Seq *s;
+  Vec_Seq  *s;
+  PetscBool use_gemv = PETSC_TRUE;
 
   PetscFunctionBegin;
   PetscCall(PetscNew(&s));
   v->ops[0] = DvOps;
+
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-vec_mdot_use_gemv", &use_gemv, NULL));
+  if (use_gemv) {
+    v->ops[0].duplicatevecs = VecDuplicateVecs_Seq_GEMV;
+    v->ops[0].mdot          = VecMDot_Seq_GEMV;
+    v->ops[0].mdot_local    = VecMDot_Seq_GEMV;
+    v->ops[0].mtdot         = VecMTDot_Seq_GEMV;
+    v->ops[0].mtdot_local   = VecMTDot_Seq_GEMV;
+  }
 
   v->data            = (void *)s;
   v->petscnative     = PETSC_TRUE;
