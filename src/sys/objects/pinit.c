@@ -1472,15 +1472,15 @@ PetscErrorCode PetscFinalize(void)
   if (flg2) PetscCall(PetscMemoryView(PETSC_VIEWER_STDOUT_WORLD, "Summary of Memory Usage in PETSc\n"));
 #endif
 
-  if (PetscDefined(USE_LOG)) {
-    flg1 = PETSC_FALSE;
-    PetscCall(PetscOptionsGetBool(NULL, NULL, "-get_total_flops", &flg1, NULL));
-    if (flg1) {
-      PetscLogDouble flops = 0;
-      PetscCallMPI(MPI_Reduce(&petsc_TotalFlops, &flops, 1, MPI_DOUBLE, MPI_SUM, 0, PETSC_COMM_WORLD));
-      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Total flops over all processors %g\n", flops));
-    }
+#if PetscDefined(USE_LOG)
+  flg1 = PETSC_FALSE;
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-get_total_flops", &flg1, NULL));
+  if (flg1) {
+    PetscLogDouble flops = 0;
+    PetscCallMPI(MPI_Reduce(&petsc_TotalFlops, &flops, 1, MPI_DOUBLE, MPI_SUM, 0, PETSC_COMM_WORLD));
+    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Total flops over all processors %g\n", flops));
   }
+#endif
 
   if (PetscDefined(USE_LOG) && PetscDefined(HAVE_MPE)) {
     mname[0] = 0;

@@ -426,8 +426,6 @@ static PetscErrorCode PetscLogNestedTreePrintTop(PetscViewer viewer, PetscNested
 
 PETSC_INTERN PetscErrorCode PetscLogHandlerView_Nested_XML(PetscLogHandler_Nested nested, PetscNestedEventTree *tree, PetscViewer viewer)
 {
-  PetscLogDouble locTotalTime;
-
   PetscFunctionBegin;
   PetscCall(PetscViewerInitASCII_XML(viewer));
   PetscCall(PetscViewerASCIIPrintf(viewer, "<!-- PETSc Performance Summary: -->\n"));
@@ -436,16 +434,15 @@ PETSC_INTERN PetscErrorCode PetscLogHandlerView_Nested_XML(PetscLogHandler_Neste
   // Print global information about this run
   PetscCall(PetscPrintExeSpecs(viewer));
 
+#if PetscDefined(USE_LOG)
   {
     PetscEventPerfInfo *main_stage_info;
+    PetscLogDouble      locTotalTime;
 
     PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(nested->handler, 0, 0, &main_stage_info));
     locTotalTime = main_stage_info->time;
+    PetscCall(PetscPrintGlobalPerformance(viewer, locTotalTime, nested->handler));
   }
-#if PetscDefined(USE_LOG)
-  PetscCall(PetscPrintGlobalPerformance(viewer, locTotalTime, nested->handler));
-#else
-  (void)locTotalTime;
 #endif
   PetscCall(PetscLogNestedTreePrintTop(viewer, tree, nested->threshold, PETSC_LOG_NESTED_XML));
   PetscCall(PetscViewerXMLEndSection(viewer, "petscroot"));
