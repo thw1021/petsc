@@ -28,7 +28,7 @@ static PetscErrorCode PCLSCAllocate_Private(PC pc)
   PetscCall(PetscObjectIncrementTabLevel((PetscObject)lsc->kspMass, (PetscObject)pc, 1));
   PetscCall(KSPSetType(lsc->kspMass, KSPPREONLY));
   PetscCall(KSPSetOptionsPrefix(lsc->kspMass, ((PetscObject)pc)->prefix));
-  PetscCall(KSPAppendOptionsPrefix(lsc->kspMass, "lsc_mass"));
+  PetscCall(KSPAppendOptionsPrefix(lsc->kspMass, "lsc_mass_"));
 
   lsc->allocated = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
