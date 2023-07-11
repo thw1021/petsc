@@ -105,6 +105,7 @@ Changes: Development
 
 - Remove ``TSErrorWeightedNormInfinity()``, ``TSErrorWeightedNorm2()``, ``TSErrorWeightedENormInfinity()``, ``TSErrorWeightedENorm2()`` since the same functionality can be obtained with ``VecErrorWeightedNorms()``
 - Remove ``TSSetInitialTimeStep()``, ``TSGetDuration()``, ``TSSetDuration()``, ``TSGetTimeStepNumber()``, and ``TSGetTotalSteps()``
+- Remove ``-ts_final_time`` runtime option
 
 .. rubric:: TAO:
 

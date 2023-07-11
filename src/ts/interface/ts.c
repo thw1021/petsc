@@ -37,7 +37,6 @@ static PetscErrorCode TSAdaptSetDefaultType(TSAdapt adapt, TSAdaptType default_t
 .  -ts_time_span <t0,...tf> - sets the time span, solutions are computed and stored for each indicated time
 .  -ts_max_steps <steps> - maximum number of time-steps to take
 .  -ts_init_time <time> - initial time to start computation
-.  -ts_final_time <time> - final time to compute to (deprecated: use `-ts_max_time`)
 .  -ts_dt <dt> - initial time step
 .  -ts_exact_final_time <stepover,interpolate,matchstep> - whether to stop at the exact given final time and how to compute the solution at that time
 .  -ts_max_snes_failures <maxfailures> - Maximum number of nonlinear solve failures allowed
@@ -107,7 +106,6 @@ PetscErrorCode TSSetFromOptions(TS ts)
   else PetscCall(TSSetType(ts, defaultType));
 
   /* Handle generic TS options */
-  PetscCall(PetscOptionsDeprecated("-ts_final_time", "-ts_max_time", "3.10", NULL));
   PetscCall(PetscOptionsReal("-ts_max_time", "Maximum time to run to", "TSSetMaxTime", ts->max_time, &ts->max_time, NULL));
   PetscCall(PetscOptionsRealArray("-ts_time_span", "Time span", "TSSetTimeSpan", tspan, &nt, &flg));
   if (flg) PetscCall(TSSetTimeSpan(ts, nt, tspan));
