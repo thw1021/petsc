@@ -24,6 +24,15 @@ Changes: Development
 - Add ``PetscStrcmpAny()`` to compare against multiple non-empty strings
 - Change arguments 4 and 5 of ``PetscViewerBinaryReadAll()`` and ``PetscViewerBinaryWriteAll()`` to ``PetscInt64``
 - Add ``PetscIsCloseAtTolScalar()``
+- Remove ``PetscTellMyCell()`` and related runtime option
+- Remove ``PetscTextBelt()`` and related runtime option
+- Remove deprecated ``-malloc [no]`` startup option
+- Remove deprecated ``-malloc_info`` startup option
+- Remove deprecated ``-debugger_nodes`` startup option
+- Remove deprecated ``-log_summary`` option
+- Remove ``-shared_tmp`` and ``-not_shared_tmp`` options, they never did anything
+- Remove mention of ``-tmp`` runtime option, it never did anything
+- Remove ``PetscURLShorten()``, it has not worked since 2019
 
 .. rubric:: Event Logging:
 
@@ -67,6 +76,8 @@ Changes: Development
 - Add support for ``MatLoad()`` and ``MatView()`` to load and store ``MPIAIJ`` matrices that have more than ``PETSC_INT_MAX`` nonzeros, so long as each rank has fewer than ``PETSC_INT_MAX``
 - Add ``MatLRCSetMats()`` and register creation routine for ``MatLRC``
 - Add CUDA/HIP implementation for ``MatGetDiagonal()``
+- Remove ``MatSolverPackage``, ``MatSolverPackageRegister()``, ``MatSolverPackageGet()``, ``MatGetSubMatrices()``, ``MatGetSubMatricesMPI()``, ``MatGetSubMatrix()``, ``MatGetVecs()``, ``MatSTRUMPACKSetHSSRelCompTol()``, and ``MatSTRUMPACKSetHSSMinSize()``
+- Remove ``MatColoringTestValid()``, and ``MatISGetMPIXAIJ()``
 
 .. rubric:: MatCoarsen:
 
@@ -74,31 +85,40 @@ Changes: Development
 
 - Add ``PCMatGetApplyOperation()`` and ``PCMatSetApplyOperation()``
 - Add ``PCReduceFailedReason()``
+- Remove ``PCFactorSetMatSolverPackage()``, ``PCFactorGetMatSolverPackage()``, ``PCFactorSetUpMatSolverPackage()``, ``PCFieldSplitSchurPrecondition()``, and ``PCMGSetCyclesOnLevel()``
 
 .. rubric:: KSP:
 
 - Add ``KSPSetMinimumIterations()`` and ``KSPGetMinimumIterations()``
+- Remove ``KSPGetVecs()``, ``KSPDefaultConverged()``, ``KSPDefaultConvergedDestroy()``, ``KSPDefaultConvergedCreate()``, ``KSPDefaultConvergedSetUIRNorm()``, ``KSPDefaultConvergedSetUMIRNorm()``, and ``KSPSkipConverged()``
 
 .. rubric:: SNES:
 
 - Add a convenient, developer-level ``SNESConverged()`` function that runs the convergence test and updates the internal converged reason.
 - Swap the order of monitor and convergence test. Now monitors are always called after a convergence test.
 - Deprecate option ``-snes_ms_norms``. Use ``-snes_norm_schedule always``.
+- Remove ``SNESSkipConverged()``, ``SNESGetSNESLineSearch()``, and ``SNESSetSNESLineSearch()``
 
 .. rubric:: SNESLineSearch:
 
 .. rubric:: TS:
 
 - Remove ``TSErrorWeightedNormInfinity()``, ``TSErrorWeightedNorm2()``, ``TSErrorWeightedENormInfinity()``, ``TSErrorWeightedENorm2()`` since the same functionality can be obtained with ``VecErrorWeightedNorms()``
+- Remove ``TSSetInitialTimeStep()``, ``TSGetDuration()``, ``TSSetDuration()``, ``TSGetTimeStepNumber()``, and ``TSGetTotalSteps()``
+- Remove ``-ts_final_time`` runtime option
 
 .. rubric:: TAO:
 
 - Add ``TaoADMMGetRegularizerCoefficient()``
 - Add ``TAOBNCG``, ``TaoBNCGGetType()`` and ``TaoBNCGSetType()``
+- Remove ``TaoDefaultMonitor()``
 
 .. rubric:: DM/DA:
 
 - Add support for ``DMDAGetElements()`` for Fortran
+- Remove ``DMDALocalToGlobalBegin()`` and ``DMDALocalToGlobalEnd()``. They have been deprecated since v3.5
+- Remove ``DMDAGetReducedDMDA()``
+- Remove ``DMGetDefaultSection()``, ``DMSetDefaultSection()``, ``DMGetDefaultGlobalSection()``, and ``DMSetDefaultGlobalSection()``
 
 .. rubric:: DMSwarm:
 

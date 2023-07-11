@@ -170,18 +170,6 @@ PETSC_EXTERN PetscErrorCode PCFactorSetShiftAmount(PC, PetscReal);
 PETSC_EXTERN PetscErrorCode PCFactorSetMatSolverType(PC, MatSolverType);
 PETSC_EXTERN PetscErrorCode PCFactorGetMatSolverType(PC, MatSolverType *);
 PETSC_EXTERN PetscErrorCode PCFactorSetUpMatSolverType(PC);
-PETSC_DEPRECATED_FUNCTION("Use PCFactorSetMatSolverType() (since version 3.9)") static inline PetscErrorCode PCFactorSetMatSolverPackage(PC pc, MatSolverType stype)
-{
-  return PCFactorSetMatSolverType(pc, stype);
-}
-PETSC_DEPRECATED_FUNCTION("Use PCFactorGetMatSolverType() (since version 3.9)") static inline PetscErrorCode PCFactorGetMatSolverPackage(PC pc, MatSolverType *stype)
-{
-  return PCFactorGetMatSolverType(pc, stype);
-}
-PETSC_DEPRECATED_FUNCTION("Use PCFactorSetUpMatSolverType() (since version 3.9)") static inline PetscErrorCode PCFactorSetUpMatSolverPackage(PC pc)
-{
-  return PCFactorSetUpMatSolverType(pc);
-}
 
 PETSC_EXTERN PetscErrorCode PCFactorSetFill(PC, PetscReal);
 PETSC_EXTERN PetscErrorCode PCFactorSetColumnPivot(PC, PetscReal);
@@ -282,7 +270,6 @@ PETSC_EXTERN PetscErrorCode PCFieldSplitGetDiagUseAmat(PC, PetscBool *);
 PETSC_EXTERN PetscErrorCode PCFieldSplitSetOffDiagUseAmat(PC, PetscBool);
 PETSC_EXTERN PetscErrorCode PCFieldSplitGetOffDiagUseAmat(PC, PetscBool *);
 
-PETSC_EXTERN                PETSC_DEPRECATED_FUNCTION("Use PCFieldSplitSetSchurPre() (since version 3.5)") PetscErrorCode PCFieldSplitSchurPrecondition(PC, PCFieldSplitSchurPreType, Mat);
 PETSC_EXTERN PetscErrorCode PCFieldSplitSetSchurPre(PC, PCFieldSplitSchurPreType, Mat);
 PETSC_EXTERN PetscErrorCode PCFieldSplitGetSchurPre(PC, PCFieldSplitSchurPreType *, Mat *);
 PETSC_EXTERN PetscErrorCode PCFieldSplitSetSchurFactType(PC, PCFieldSplitSchurFactType);
@@ -380,10 +367,6 @@ PETSC_EXTERN PetscErrorCode PCMGSetDistinctSmoothUp(PC);
 PETSC_EXTERN PetscErrorCode PCMGSetNumberSmooth(PC, PetscInt);
 PETSC_EXTERN PetscErrorCode PCMGSetCycleType(PC, PCMGCycleType);
 PETSC_EXTERN PetscErrorCode PCMGSetCycleTypeOnLevel(PC, PetscInt, PCMGCycleType);
-PETSC_DEPRECATED_FUNCTION("Use PCMGSetCycleTypeOnLevel() (since version 3.5)") static inline PetscErrorCode PCMGSetCyclesOnLevel(PC pc, PetscInt l, PetscInt t)
-{
-  return PCMGSetCycleTypeOnLevel(pc, l, (PCMGCycleType)t);
-}
 PETSC_EXTERN PetscErrorCode PCMGMultiplicativeSetCycles(PC, PetscInt);
 PETSC_EXTERN PetscErrorCode PCMGSetGalerkin(PC, PCMGGalerkinType);
 PETSC_EXTERN PetscErrorCode PCMGGetGalerkin(PC, PCMGGalerkinType *);

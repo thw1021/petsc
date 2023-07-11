@@ -2160,7 +2160,7 @@ The effectiveness of the Schur complement preconditioner depends on the
 availability of a good preconditioner :math:`\hat Sp` for the Schur
 complement matrix. In general, you are responsible for supplying
 :math:`\hat Sp` via
-``PCFieldSplitSchurPrecondition(pc,PC_FIELDSPLIT_SCHUR_PRE_USER,Sp)``.
+``PCFieldSplitSetSchurPre(pc, PC_FIELDSPLIT_SCHUR_PRE_USER, Sp)``.
 In the absence of a good problem-specific :math:`\hat Sp`, you can use
 some of the built-in options.
 

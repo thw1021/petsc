@@ -480,10 +480,6 @@ PETSC_EXTERN PetscErrorCode TaoGetConvergenceHistory(Tao, PetscReal **, PetscRea
 PETSC_EXTERN PetscErrorCode TaoSetMonitor(Tao, PetscErrorCode (*)(Tao, void *), void *, PetscErrorCode (*)(void **));
 PETSC_EXTERN PetscErrorCode TaoCancelMonitors(Tao);
 PETSC_EXTERN PetscErrorCode TaoMonitorDefault(Tao, void *);
-PETSC_DEPRECATED_FUNCTION("Use TaoMonitorDefault() (since version 3.9)") static inline PetscErrorCode TaoDefaultMonitor(Tao tao, void *ctx)
-{
-  return TaoMonitorDefault(tao, ctx);
-}
 PETSC_EXTERN PetscErrorCode TaoDefaultGMonitor(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoDefaultSMonitor(Tao, void *);
 PETSC_EXTERN PetscErrorCode TaoDefaultCMonitor(Tao, void *);

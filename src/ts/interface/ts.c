@@ -37,7 +37,6 @@ static PetscErrorCode TSAdaptSetDefaultType(TSAdapt adapt, TSAdaptType default_t
 .  -ts_time_span <t0,...tf> - sets the time span, solutions are computed and stored for each indicated time
 .  -ts_max_steps <steps> - maximum number of time-steps to take
 .  -ts_init_time <time> - initial time to start computation
-.  -ts_final_time <time> - final time to compute to (deprecated: use `-ts_max_time`)
 .  -ts_dt <dt> - initial time step
 .  -ts_exact_final_time <stepover,interpolate,matchstep> - whether to stop at the exact given final time and how to compute the solution at that time
 .  -ts_max_snes_failures <maxfailures> - Maximum number of nonlinear solve failures allowed
@@ -107,7 +106,6 @@ PetscErrorCode TSSetFromOptions(TS ts)
   else PetscCall(TSSetType(ts, defaultType));
 
   /* Handle generic TS options */
-  PetscCall(PetscOptionsDeprecated("-ts_final_time", "-ts_max_time", "3.10", NULL));
   PetscCall(PetscOptionsReal("-ts_max_time", "Maximum time to run to", "TSSetMaxTime", ts->max_time, &ts->max_time, NULL));
   PetscCall(PetscOptionsRealArray("-ts_time_span", "Time span", "TSSetTimeSpan", tspan, &nt, &flg));
   if (flg) PetscCall(TSSetTimeSpan(ts, nt, tspan));
@@ -2944,81 +2942,6 @@ PetscErrorCode TSGetMaxTime(TS ts, PetscReal *maxtime)
   PetscValidRealPointer(maxtime, 2);
   *maxtime = ts->max_time;
   PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-   TSSetInitialTimeStep - Deprecated, use `TSSetTime()` and `TSSetTimeStep()`.
-
-   Level: deprecated
-
-@*/
-PetscErrorCode TSSetInitialTimeStep(TS ts, PetscReal initial_time, PetscReal time_step)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
-  PetscCall(TSSetTime(ts, initial_time));
-  PetscCall(TSSetTimeStep(ts, time_step));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-   TSGetDuration - Deprecated, use `TSGetMaxSteps()` and `TSGetMaxTime()`.
-
-   Level: deprecated
-
-@*/
-PetscErrorCode TSGetDuration(TS ts, PetscInt *maxsteps, PetscReal *maxtime)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
-  if (maxsteps) {
-    PetscValidIntPointer(maxsteps, 2);
-    *maxsteps = ts->max_steps;
-  }
-  if (maxtime) {
-    PetscValidRealPointer(maxtime, 3);
-    *maxtime = ts->max_time;
-  }
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-   TSSetDuration - Deprecated, use `TSSetMaxSteps()` and `TSSetMaxTime()`.
-
-   Level: deprecated
-
-@*/
-PetscErrorCode TSSetDuration(TS ts, PetscInt maxsteps, PetscReal maxtime)
-{
-  PetscFunctionBegin;
-  PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
-  PetscValidLogicalCollectiveInt(ts, maxsteps, 2);
-  PetscValidLogicalCollectiveReal(ts, maxtime, 3);
-  if (maxsteps >= 0) ts->max_steps = maxsteps;
-  if (maxtime != (PetscReal)PETSC_DEFAULT) ts->max_time = maxtime;
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
-   TSGetTimeStepNumber - Deprecated, use `TSGetStepNumber()`.
-
-   Level: deprecated
-
-@*/
-PetscErrorCode TSGetTimeStepNumber(TS ts, PetscInt *steps)
-{
-  return TSGetStepNumber(ts, steps);
-}
-
-/*@
-   TSGetTotalSteps - Deprecated, use `TSGetStepNumber()`.
-
-   Level: deprecated
-
-@*/
-PetscErrorCode TSGetTotalSteps(TS ts, PetscInt *steps)
-{
-  return TSGetStepNumber(ts, steps);
 }
 
 /*@

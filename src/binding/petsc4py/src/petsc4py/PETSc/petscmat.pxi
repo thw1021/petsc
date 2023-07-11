@@ -205,7 +205,6 @@ cdef extern from * nogil:
 
     PetscErrorCode MatCreateIS(MPI_Comm,PetscInt,PetscInt,PetscInt,PetscInt,PetscInt,PetscLGMap,PetscLGMap,PetscMat*)
     PetscErrorCode MatISGetLocalMat(PetscMat,PetscMat*)
-    PetscErrorCode MatISGetMPIXAIJ(PetscMat,PetscMatReuse,PetscMat*)
 
     PetscErrorCode MatCreateScatter(MPI_Comm,PetscScatter,PetscMat*)
     PetscErrorCode MatScatterSetVecScatter(PetscMat,PetscScatter)

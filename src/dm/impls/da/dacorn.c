@@ -293,18 +293,6 @@ PetscErrorCode DMGetLocalBoundingIndices_DMDA(DM dm, PetscReal lmin[], PetscReal
 }
 
 /*@
-   DMDAGetReducedDMDA - Deprecated; use DMDACreateCompatibleDMDA()
-
-   Level: deprecated
-@*/
-PetscErrorCode DMDAGetReducedDMDA(DM da, PetscInt nfields, DM *nda)
-{
-  PetscFunctionBegin;
-  PetscCall(DMDACreateCompatibleDMDA(da, nfields, nda));
-  PetscFunctionReturn(PETSC_SUCCESS);
-}
-
-/*@
    DMDACreateCompatibleDMDA - Creates a `DMDA` with the same layout but with fewer or more fields
 
    Collective
