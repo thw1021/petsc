@@ -98,7 +98,7 @@ int main(int argc, char **argv)
     suffix: 1
     nsize: {{1 2}}
     args: -log_view ::ascii_flamegraph
-    filter: sed -e "s/\\b[0-9]\\+\\b/time_removed/g"
+    filter: sed -E "s/ [0-9]+/ time_removed/g"
 
   test:
     suffix: 2
