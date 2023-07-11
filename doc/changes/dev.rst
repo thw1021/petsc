@@ -32,6 +32,7 @@ Changes: Development
 - Remove deprecated ``-log_summary`` option
 - Remove ``-shared_tmp`` and ``-not_shared_tmp`` options, they never did anything
 - Remove mention of ``-tmp`` runtime option, it never did anything
+- Remove ``PetscURLShorten()``, it has not worked since 2019
 
 .. rubric:: Event Logging:
 
