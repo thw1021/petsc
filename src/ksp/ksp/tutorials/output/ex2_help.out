@@ -41,8 +41,6 @@ Options for all PETSc programs:
  -options_left: dump list of unused options
  -options_left no: don't dump list of unused options
  -tmp tmpdir: alternative /tmp directory
- -shared_tmp: tmp directory is shared by all processors
- -not_shared_tmp: each processor has separate tmp directory
  -memory_view: print memory usage at end of run
  -get_total_flops: total flops over all processors
  -log_view [:filename:[format]]: logging objects and events

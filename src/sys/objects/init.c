@@ -563,8 +563,6 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
     PetscCall((*PetscHelpPrintf)(comm, " -options_left: dump list of unused options\n"));
     PetscCall((*PetscHelpPrintf)(comm, " -options_left no: don't dump list of unused options\n"));
     PetscCall((*PetscHelpPrintf)(comm, " -tmp tmpdir: alternative /tmp directory\n"));
-    PetscCall((*PetscHelpPrintf)(comm, " -shared_tmp: tmp directory is shared by all processors\n"));
-    PetscCall((*PetscHelpPrintf)(comm, " -not_shared_tmp: each processor has separate tmp directory\n"));
     PetscCall((*PetscHelpPrintf)(comm, " -memory_view: print memory usage at end of run\n"));
 #if defined(PETSC_USE_LOG)
     PetscCall((*PetscHelpPrintf)(comm, " -get_total_flops: total flops over all processors\n"));
