@@ -109,6 +109,7 @@ int main(int argc, char **argv)
     suffix: 3
     nsize: 1
     args: -log_include_actions -log_include_objects -log_all
+    temporaries: Log.0
     filter: cat Log.0 | grep "\\(Actions accomplished\\|Objects created\\)"
 
   test:
