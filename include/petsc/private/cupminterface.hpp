@@ -919,6 +919,14 @@ private:
     using ::Petsc::device::cupm::impl::Interface<T>::PetscCUPMLaunchKernel1D; \
     using ::Petsc::device::cupm::impl::Interface<T>::PetscDeviceCopyModeToCUPMMemcpyKind
 
+  #if PetscDefined(HAVE_CUDA)
+extern template struct PETSC_SINGLE_LIBRARY_VISIBILITY_INTERNAL Interface<DeviceType::CUDA>;
+  #endif
+
+  #if PetscDefined(HAVE_HIP)
+extern template struct PETSC_SINGLE_LIBRARY_VISIBILITY_INTERNAL Interface<DeviceType::HIP>;
+  #endif
+
 } // namespace impl
 
 } // namespace cupm
