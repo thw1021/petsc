@@ -115,6 +115,6 @@ int main(int argc, char **argv)
     suffix: 4
     nsize: 1
     args: -log_view ::ascii_csv
-    filter: grep "Event[123]"
+    filter: grep "Event[123]" | grep -v "PCMPI"
 
  TEST*/
