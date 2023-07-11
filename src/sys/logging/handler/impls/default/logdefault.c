@@ -424,6 +424,7 @@ static PetscErrorCode PetscLogHandlerObjectCreate_Default(PetscLogHandler h, Pet
     PetscCall(PetscTime(&new_action.time));
     new_action.time -= petsc_BaseTime;
     new_action.action  = PETSC_LOG_ACTION_CREATE;
+    new_action.event   = -1;
     new_action.classid = obj->classid;
     new_action.id1     = obj->id;
     new_action.id2     = -1;
@@ -439,6 +440,7 @@ static PetscErrorCode PetscLogHandlerObjectCreate_Default(PetscLogHandler h, Pet
 
     new_object.parent = -1;
     new_object.obj    = obj;
+    new_object.mem    = 0;
 
     PetscCall(PetscMemzero(new_object.name, sizeof(new_object.name)));
     PetscCall(PetscMemzero(new_object.info, sizeof(new_object.info)));
