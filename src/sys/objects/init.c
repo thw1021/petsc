@@ -410,9 +410,8 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
   PetscCall(PetscOptionsGetString(NULL, NULL, "-start_in_debugger", string, sizeof(string), &flg1));
   PetscCall(PetscOptionsGetString(NULL, NULL, "-stop_for_debugger", string, sizeof(string), &flg2));
   if (flg1 || flg2) {
-    PetscMPIInt    size;
-    PetscInt       lsize, *ranks;
-    MPI_Errhandler err_handler;
+    PetscMPIInt size;
+    PetscInt    lsize, *ranks;
     /*
        we have to make sure that all processors have opened
        connections to all other processors, otherwise once the
@@ -433,32 +432,7 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
     /* check if this processor node should be in debugger */
     PetscCall(PetscMalloc1(size, &ranks));
     lsize = size;
-    /* Deprecated in 3.14 */
-    PetscCall(PetscOptionsGetIntArray(NULL, NULL, "-debugger_nodes", ranks, &lsize, &flag));
-    if (flag) {
-      const char *const quietopt = "-options_suppress_deprecated_warnings";
-      char              msg[4096];
-      PetscBool         quiet = PETSC_FALSE;
-
-      PetscCall(PetscOptionsGetBool(NULL, NULL, quietopt, &quiet, NULL));
-      if (!quiet) {
-        PetscCall(PetscStrncpy(msg, "** PETSc DEPRECATION WARNING ** : the option ", sizeof(msg)));
-        PetscCall(PetscStrlcat(msg, "-debugger_nodes", sizeof(msg)));
-        PetscCall(PetscStrlcat(msg, " is deprecated as of version ", sizeof(msg)));
-        PetscCall(PetscStrlcat(msg, "3.14", sizeof(msg)));
-        PetscCall(PetscStrlcat(msg, " and will be removed in a future release.", sizeof(msg)));
-        PetscCall(PetscStrlcat(msg, " Please use the option ", sizeof(msg)));
-        PetscCall(PetscStrlcat(msg, "-debugger_ranks", sizeof(msg)));
-        PetscCall(PetscStrlcat(msg, " instead.", sizeof(msg)));
-        PetscCall(PetscStrlcat(msg, " (Silence this warning with ", sizeof(msg)));
-        PetscCall(PetscStrlcat(msg, quietopt, sizeof(msg)));
-        PetscCall(PetscStrlcat(msg, ")\n", sizeof(msg)));
-        PetscCall(PetscPrintf(comm, "%s", msg));
-      }
-    } else {
-      lsize = size;
-      PetscCall(PetscOptionsGetIntArray(NULL, NULL, "-debugger_ranks", ranks, &lsize, &flag));
-    }
+    PetscCall(PetscOptionsGetIntArray(NULL, NULL, "-debugger_ranks", ranks, &lsize, &flag));
     if (flag) {
       for (i = 0; i < lsize; i++) {
         if (ranks[i] == rank) {
@@ -467,7 +441,10 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
         }
       }
     }
+    PetscCall(PetscFree(ranks));
     if (!flag) {
+      MPI_Errhandler err_handler;
+
       PetscCall(PetscSetDebuggerFromString(string));
       PetscCall(PetscPushErrorHandler(PetscAbortErrorHandler, NULL));
       if (flg1) {
@@ -480,7 +457,6 @@ PETSC_INTERN PetscErrorCode PetscOptionsCheckInitial_Private(const char help[])
     } else {
       PetscCall(PetscWaitOnError());
     }
-    PetscCall(PetscFree(ranks));
   }
 
   PetscCall(PetscOptionsGetString(NULL, NULL, "-on_error_emacs", emacsmachinename, sizeof(emacsmachinename), &flg1));
