@@ -49,9 +49,6 @@ PETSC_EXTERN PetscMPIInt MPIAPI Petsc_DelTmpShared(MPI_Comm comm, PetscMPIInt ke
    Output Parameter:
 .  dir - directory name
 
-   Options Database Keys:
-.    -tmp tmpdir - name of the directory you wish to use as tmp
-
    Environmental Variables:
 +     `PETSC_SHARED_TMP` - indicates the directory is known to be shared among the MPI processes
 .     `PETSC_NOT_SHARED_TMP` - indicates the directory is known to be not shared among the MPI processes
@@ -82,9 +79,6 @@ PetscErrorCode PetscGetTmp(MPI_Comm comm, char dir[], size_t len)
 
    Output Parameter:
 .  shared - `PETSC_TRUE` or `PETSC_FALSE`
-
-   Options Database Keys:
-.    -tmp tmpdir - name of the directory you wish to use as tmp
 
    Environmental Variables:
 +     `PETSC_SHARED_TMP`  - indicates the directory is known to be shared among the MPI processes

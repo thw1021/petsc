@@ -40,7 +40,6 @@ Options for all PETSc programs:
  -options_view: dump list of options inputted
  -options_left: dump list of unused options
  -options_left no: don't dump list of unused options
- -tmp tmpdir: alternative /tmp directory
  -memory_view: print memory usage at end of run
  -get_total_flops: total flops over all processors
  -log_view [:filename:[format]]: logging objects and events

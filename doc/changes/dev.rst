@@ -31,6 +31,7 @@ Changes: Development
 - Remove deprecated ``-debugger_nodes`` startup option
 - Remove deprecated ``-log_summary`` option
 - Remove ``-shared_tmp`` and ``-not_shared_tmp`` options, they never did anything
+- Remove mention of ``-tmp`` runtime option, it never did anything
 
 .. rubric:: Event Logging:
 

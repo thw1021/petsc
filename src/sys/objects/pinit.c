@@ -1156,7 +1156,6 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
 .  -malloc_requested_size - malloc logging will record the requested size rather than size after alignment
 .  -fp_trap - Stops on floating point exceptions
 .  -no_signal_handler - Indicates not to trap error signals
-.  -tmp - alternative name of /tmp directory
 .  -get_total_flops - returns total flops done by all processors
 -  -memory_view - Print memory usage at end of run
 
