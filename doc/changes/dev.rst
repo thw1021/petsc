@@ -29,6 +29,7 @@ Changes: Development
 - Remove deprecated ``-malloc [no]`` startup option
 - Remove deprecated ``-malloc_info`` startup option
 - Remove deprecated ``-debugger_nodes`` startup option
+- Remove deprecated ``-log_summary`` option
 
 .. rubric:: Event Logging:
 
