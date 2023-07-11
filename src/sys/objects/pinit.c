@@ -1183,19 +1183,18 @@ PETSC_INTERN PetscErrorCode PetscInitialize_Common(const char *prog, const char 
         however it slows things down and gives a distorted view of the overall runtime.
 .  -log_trace [filename] - Print traces of all PETSc calls to the screen (useful to determine where a program
         hangs without running in the debugger).  See `PetscLogTraceBegin()`.
-.  -log_view [:filename:format] - Prints summary of flop and timing information to screen or file, see `PetscLogView()`.
-.  -log_view_memory - Includes in the summary from -log_view the memory used in each event, see `PetscLogView()`.
-.  -log_view_gpu_time - Includes in the summary from -log_view the time used in each GPU kernel, see `PetscLogView().
-.  -log_summary [filename] - (Deprecated, use -log_view) Prints summary of flop and timing information to screen. If the filename is specified the
+.  -log_view [:filename:format][,[:filename:format]...] - Prints summary of flop and timing information to screen or file, see `PetscLogView()`.  Up to 4 viewers can be specified.
+.  -log_view_memory - Includes in the summary from `-log_view` the memory used in each event, see `PetscLogView()`.
+ .  -log_view_gpu_time - Includes in the summary from `-log_view` the time used in each GPU kernel, see `PetscLogView()`.
+.  -log_summary [filename] - (Deprecated, use `-log_view`) Prints summary of flop and timing information to screen. If the filename is specified the
         summary is written to the file.  See PetscLogView().
 .  -log_exclude: <vec,mat,pc,ksp,snes> - excludes subset of object classes from logging
-.  -log_all [filename] - Logs extensive profiling information  See `PetscLogDump()`.
+.  -log_all [filename] - (Deprecated, use `-log_view`) The same as `-log_view`
 .  -log [filename] - Logs basic profiline information  See `PetscLogDump()`.
 .  -log_mpe [filename] - Creates a logfile viewable by the utility Jumpshot (in MPICH distribution)
+.  -log_perfstubs - Starts a log handler with the perfstubs interface (which is used by TAU)
 .  -viewfromoptions on,off - Enable or disable `XXXSetFromOptions()` calls, for applications with many small solves turn this off
 -  -check_pointer_intensity 0,1,2 - if pointers are checked for validity (debug version only), using 0 will result in faster code
-
-    Only one of -log_trace, -log_view, -log_all, -log, or -log_mpe may be used at a time
 
    Options Database Keys for SAWs:
 +  -saws_port <portnumber> - port number to publish SAWs data, default is 8080
@@ -1356,9 +1355,7 @@ PetscErrorCode PetscFinalize(void)
   PetscInt    nopt;
   PetscBool   flg1 = PETSC_FALSE, flg2 = PETSC_FALSE, flg3 = PETSC_FALSE;
   PetscBool   flg;
-#if defined(PETSC_USE_LOG)
-  char mname[PETSC_MAX_PATH_LEN];
-#endif
+  char        mname[PETSC_MAX_PATH_LEN];
 
   PetscFunctionBegin;
   PetscCheck(PetscInitializeCalled, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, "PetscInitialize() must be called before PetscFinalize()");
@@ -1475,64 +1472,59 @@ PetscErrorCode PetscFinalize(void)
   if (flg2) PetscCall(PetscMemoryView(PETSC_VIEWER_STDOUT_WORLD, "Summary of Memory Usage in PETSc\n"));
 #endif
 
-#if defined(PETSC_USE_LOG)
-  flg1 = PETSC_FALSE;
-  PetscCall(PetscOptionsGetBool(NULL, NULL, "-get_total_flops", &flg1, NULL));
-  if (flg1) {
-    PetscLogDouble flops = 0;
-    PetscCallMPI(MPI_Reduce(&petsc_TotalFlops, &flops, 1, MPI_DOUBLE, MPI_SUM, 0, PETSC_COMM_WORLD));
-    PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Total flops over all processors %g\n", flops));
+  if (PetscDefined(USE_LOG)) {
+    flg1 = PETSC_FALSE;
+    PetscCall(PetscOptionsGetBool(NULL, NULL, "-get_total_flops", &flg1, NULL));
+    if (flg1) {
+      PetscLogDouble flops = 0;
+      PetscCallMPI(MPI_Reduce(&petsc_TotalFlops, &flops, 1, MPI_DOUBLE, MPI_SUM, 0, PETSC_COMM_WORLD));
+      PetscCall(PetscPrintf(PETSC_COMM_WORLD, "Total flops over all processors %g\n", flops));
+    }
   }
-#endif
 
-#if defined(PETSC_USE_LOG)
-  #if defined(PETSC_HAVE_MPE)
-  mname[0] = 0;
-  PetscCall(PetscOptionsGetString(NULL, NULL, "-log_mpe", mname, sizeof(mname), &flg1));
-  if (flg1) {
-    if (mname[0]) PetscCall(PetscLogMPEDump(mname));
-    else PetscCall(PetscLogMPEDump(0));
+  if (PetscDefined(USE_LOG) && PetscDefined(HAVE_MPE)) {
+    mname[0] = 0;
+    PetscCall(PetscOptionsGetString(NULL, NULL, "-log_mpe", mname, sizeof(mname), &flg1));
+    if (flg1) PetscCall(PetscLogMPEDump(mname[0] ? mname : NULL));
   }
-  #endif
-#endif
 
   /*
      Free all objects registered with PetscObjectRegisterDestroy() such as PETSC_VIEWER_XXX_().
   */
   PetscCall(PetscObjectRegisterDestroyAll());
 
-#if defined(PETSC_USE_LOG)
-  PetscCall(PetscOptionsPushGetViewerOff(PETSC_FALSE));
-  PetscCall(PetscLogViewFromOptions());
-  PetscCall(PetscOptionsPopGetViewerOff());
+  if (PetscDefined(USE_LOG)) {
+    PetscCall(PetscOptionsPushGetViewerOff(PETSC_FALSE));
+    PetscCall(PetscLogViewFromOptions());
+    PetscCall(PetscOptionsPopGetViewerOff());
 
-  mname[0] = 0;
-  PetscCall(PetscOptionsGetString(NULL, NULL, "-log_summary", mname, sizeof(mname), &flg1));
-  if (flg1) {
-    PetscViewer viewer;
-    PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, "\n\n WARNING:   -log_summary is being deprecated; switch to -log_view\n\n\n"));
-    if (mname[0]) {
-      PetscCall(PetscViewerASCIIOpen(PETSC_COMM_WORLD, mname, &viewer));
-      PetscCall(PetscLogView(viewer));
-      PetscCall(PetscViewerDestroy(&viewer));
-    } else {
-      viewer = PETSC_VIEWER_STDOUT_WORLD;
-      PetscCall(PetscViewerPushFormat(viewer, PETSC_VIEWER_DEFAULT));
-      PetscCall(PetscLogView(viewer));
-      PetscCall(PetscViewerPopFormat(viewer));
+    mname[0] = 0;
+    PetscCall(PetscOptionsGetString(NULL, NULL, "-log_summary", mname, sizeof(mname), &flg1));
+    if (flg1) {
+      PetscViewer viewer;
+      PetscCall((*PetscHelpPrintf)(PETSC_COMM_WORLD, "\n\n WARNING:   -log_summary is being deprecated; switch to -log_view\n\n\n"));
+      if (mname[0]) {
+        PetscCall(PetscViewerASCIIOpen(PETSC_COMM_WORLD, mname, &viewer));
+        PetscCall(PetscLogView(viewer));
+        PetscCall(PetscViewerDestroy(&viewer));
+      } else {
+        viewer = PETSC_VIEWER_STDOUT_WORLD;
+        PetscCall(PetscViewerPushFormat(viewer, PETSC_VIEWER_DEFAULT));
+        PetscCall(PetscLogView(viewer));
+        PetscCall(PetscViewerPopFormat(viewer));
+      }
     }
+
+    /*
+       Free any objects created by the last block of code.
+       */
+    PetscCall(PetscObjectRegisterDestroyAll());
+
+    mname[0] = 0;
+    PetscCall(PetscOptionsGetString(NULL, NULL, "-log_all", mname, sizeof(mname), &flg1));
+    PetscCall(PetscOptionsGetString(NULL, NULL, "-log", mname, sizeof(mname), &flg2));
+    if (flg1 || flg2) PetscCall(PetscLogDump(mname));
   }
-
-  /*
-     Free any objects created by the last block of code.
-  */
-  PetscCall(PetscObjectRegisterDestroyAll());
-
-  mname[0] = 0;
-  PetscCall(PetscOptionsGetString(NULL, NULL, "-log_all", mname, sizeof(mname), &flg1));
-  PetscCall(PetscOptionsGetString(NULL, NULL, "-log", mname, sizeof(mname), &flg2));
-  if (flg1 || flg2) PetscCall(PetscLogDump(mname));
-#endif
 
   flg1 = PETSC_FALSE;
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-no_signal_handler", &flg1, NULL));
@@ -1610,9 +1602,7 @@ PetscErrorCode PetscFinalize(void)
       PetscCallMPI(MPI_Comm_free(&local_comm));
     }
   }
-#endif
 
-#if defined(PETSC_USE_LOG)
   PetscObjectsCounts    = 0;
   PetscObjectsMaxCounts = 0;
   PetscCall(PetscFree(PetscObjects));
