@@ -2321,11 +2321,6 @@ PetscErrorCode PCFieldSplitSetSchurPre(PC pc, PCFieldSplitSchurPreType ptype, Ma
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode PCFieldSplitSchurPrecondition(PC pc, PCFieldSplitSchurPreType ptype, Mat pre)
-{
-  return PCFieldSplitSetSchurPre(pc, ptype, pre);
-} /* Deprecated name */
-
 /*@
     PCFieldSplitGetSchurPre - For Schur complement fieldsplit, determine how the Schur complement will be
     preconditioned.  See `PCFieldSplitSetSchurPre()` for details.

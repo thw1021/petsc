@@ -83,6 +83,7 @@ Changes: Development
 
 - Add ``PCMatGetApplyOperation()`` and ``PCMatSetApplyOperation()``
 - Add ``PCReduceFailedReason()``
+- Remove ``PCFactorSetMatSolverPackage()``, ``PCFactorGetMatSolverPackage()``, ``PCFactorSetUpMatSolverPackage()``, ``PCFieldSplitSchurPrecondition()``, and ``PCMGSetCyclesOnLevel()``
 
 .. rubric:: KSP:
 

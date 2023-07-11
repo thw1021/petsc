@@ -243,7 +243,6 @@ PetscErrorCode PCSetFromOptions_Factor(PC pc, PetscOptionItems *PetscOptionsObje
   PetscCall(PetscOptionsBool("-pc_factor_reuse_ordering", "Reuse ordering from previous factorization", "PCFactorSetReuseOrdering", PETSC_FALSE, &flg, &set));
   if (set) PetscCall(PCFactorSetReuseOrdering(pc, flg));
 
-  PetscCall(PetscOptionsDeprecated("-pc_factor_mat_solver_package", "-pc_factor_mat_solver_type", "3.9", NULL));
   PetscCall(PetscOptionsString("-pc_factor_mat_solver_type", "Specific direct solver to use", "MatGetFactor", ((PC_Factor *)factor)->solvertype, solvertype, sizeof(solvertype), &flg));
   if (flg) PetscCall(PCFactorSetMatSolverType(pc, solvertype));
   PetscCall(PCFactorSetDefaultOrdering_Factor(pc));
