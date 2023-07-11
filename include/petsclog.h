@@ -241,14 +241,14 @@ struct _n_PetscStageLog {
   PetscClassRegLog classLog;  /* The registered classes */
 };
 
-PETSC_DEPRECATED_FUNCTION("PetscLogObjectParent() is deprecated (since version 3.18)") static inline PetscErrorCode PetscLogObjectParent(PetscObject o, PetscObject p)
+PETSC_DEPRECATED_FUNCTION(3, 18, 0, PetscLogObjectParent(), ) static inline PetscErrorCode PetscLogObjectParent(PetscObject o, PetscObject p)
 {
   (void)o;
   (void)p;
   return PETSC_SUCCESS;
 }
 
-PETSC_DEPRECATED_FUNCTION("PetscLogObjectMemory() is deprecated (since version 3.18)") static inline PetscErrorCode PetscLogObjectMemory(PetscObject o, PetscLogDouble m)
+PETSC_DEPRECATED_FUNCTION(3, 18, 0, PetscLogObjectMemory(), ) static inline PetscErrorCode PetscLogObjectMemory(PetscObject o, PetscLogDouble m)
 {
   (void)o;
   (void)m;
