@@ -3,6 +3,47 @@ static char help[] = "Tests nested events.\n\n";
 
 #include <petscsys.h>
 
+// Create a phony perfstubs implementation for testing
+
+PETSC_EXTERN void ps_tool_initialize(void)
+{
+  PetscFunctionBegin;
+  PetscCallContinue(PetscPrintf(PETSC_COMM_SELF, "ps_tool_initialize()\n"));
+  PetscFunctionReturnVoid();
+}
+
+PETSC_EXTERN void ps_tool_finalize(void)
+{
+  PetscFunctionBegin;
+  PetscCallContinue(PetscPrintf(PETSC_COMM_SELF, "ps_tool_finalize()\n"));
+  PetscFunctionReturnVoid();
+}
+
+PETSC_EXTERN void *ps_tool_timer_create(const char name[])
+{
+  PetscFunctionBegin;
+  PetscCallContinue(PetscPrintf(PETSC_COMM_SELF, "ps_tool_timer_create(\"%s\")\n", name));
+  PetscFunctionReturn((void *)name);
+}
+
+PETSC_EXTERN void *ps_tool_timer_start(void *arg)
+{
+  const char *name = (const char *)arg;
+
+  PetscFunctionBegin;
+  PetscCallContinue(PetscPrintf(PETSC_COMM_SELF, "ps_tool_timer_start() [%s]\n", name));
+  PetscFunctionReturn(NULL);
+}
+
+PETSC_EXTERN void *ps_tool_timer_stop(void *arg)
+{
+  const char *name = (const char *)arg;
+
+  PetscFunctionBegin;
+  PetscCallContinue(PetscPrintf(PETSC_COMM_SELF, "ps_tool_timer_stop() [%s]\n", name));
+  PetscFunctionReturn(NULL);
+}
+
 static PetscErrorCode CallEvents(PetscLogEvent event1, PetscLogEvent event2, PetscLogEvent event3)
 {
   char *data;
@@ -132,9 +173,8 @@ int main(int argc, char **argv)
 
   test:
     suffix: 6
-    output_file: output/ex30_0.out
     nsize: 1
-    requires: defined(PETSC_USE_LOG) defined(PETSC_HAVE_TAU_PERFSTUBS)
+    requires: defined(PETSC_USE_LOG) defined(PETSC_HAVE_TAU_PERFSTUBS) defined(PETSC_HAVE_DLFCN_H)
     args: -log_perfstubs
 
  TEST*/
