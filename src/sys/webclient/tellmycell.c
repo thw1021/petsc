@@ -2,34 +2,34 @@
 #include <petscwebclient.h>
 
 /*@C
-     PetscTellMyCell - Sends an SMS to an American/Canadian phone number
+  PetscTellMyCell - Sends an SMS to an American/Canadian phone number
 
-   Not Collective, only the first process in `MPI_Comm` does anything
+  Not Collective, only the first process in `MPI_Comm` does anything
 
-   Input Parameters:
-+  comm - the MPI communicator
-.  number - the 10 digit telephone number
--  message - the message
+  Input Parameters:
++ comm    - the MPI communicator
+. number  - the 10 digit telephone number
+- message - the message
 
-   Output Parameter:
-.   flg - `PETSC_TRUE` if the text was sent
+  Output Parameter:
+. flg - `PETSC_TRUE` if the text was sent
 
-   Options Database Keys:
-+   -tellmycell <number[,message]> - send a message to the give number when the program ends
-.   -tellmycell_user <Username> - this value is created when registering at tellmycell.com
--   -tellmycell_password <Password> - this value is created when registering at tellmycell.com
+  Options Database Keys:
++ -tellmycell <number[,message]>  - send a message to the give number when the program ends
+. -tellmycell_user <Username>     - this value is created when registering at tellmycell.com
+- -tellmycell_password <Password> - this value is created when registering at tellmycell.com
 
-   Level: intermediate
+  Level: intermediate
 
-   Notes:
-    You must register for an account at tellmycell.com (you get 10 free texts with registration)
+  Notes:
+  You must register for an account at tellmycell.com (you get 10 free texts with registration)
 
-   You must provide `-tellmycell_user <Username>` and `-tellmycell_password <Password>` in the options database
+  You must provide `-tellmycell_user <Username>` and `-tellmycell_password <Password>` in the options database
 
-   It would be nice to provide this as a free service but that would require making the PETSc TellMyCell password public.
+  It would be nice to provide this as a free service but that would require making the PETSc TellMyCell password public.
 
-   Developer Note:
-    Perhaps the Username and Password should be arguments to this function.
+  Developer Notes:
+  Perhaps the Username and Password should be arguments to this function.
 
 .seealso: `PetscTextBelt()`, `PetscHTTPSRequest()`, `PetscHTTPSConnect()`, `PetscSSLInitializeContext()`
 @*/
