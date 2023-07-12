@@ -194,9 +194,7 @@ PetscErrorCode DMSNESSetFunctionLocal(DM dm, PetscErrorCode (*func)(DM, Vec, Vec
 }
 
 /*@C
-  DMSNESSetBoundaryLocal - set a local boundary value function. This function is called with local vector
-  containing the local vector information PLUS ghost point information. It should insert values into the local
-  vector that do not come from the global vector, such as essential boundary condition data.
+  DMSNESSetBoundaryLocal - set a function to insert, for example, essential boundary conditions into a ghosted solution vector
 
   Logically Collective
 
@@ -204,6 +202,12 @@ PetscErrorCode DMSNESSetFunctionLocal(DM dm, PetscErrorCode (*func)(DM, Vec, Vec
 + dm   - `DM` to associate callback with
 . func - local boundary value evaluation
 - ctx  - optional context for local boundary value evaluation
+
+  Calling sequence of `func`:
+$  PetscErrorCode func(DM dm, Vec X, void *ctx)
++ dm  - the `DM` context
+.  X - ghosted solution vector, approriate locations (such as essential boundary condition nodes) should be filled
+- ctx - a user provided context
 
   Level: advanced
 

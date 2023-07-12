@@ -1863,11 +1863,7 @@ PetscErrorCode SNESSetFunction(SNES snes, Vec r, PetscErrorCode (*f)(SNES, Vec, 
 }
 
 /*@C
-  SNESSetInitialFunction - Sets the function vector to be used as the
-  initial function value at the initialization of the method.  In some
-  instances, the user has precomputed the function before calling
-  `SNESSolve()`.  This function allows one to avoid a redundant call
-  to `SNESComputeFunction()` in that case.
+  SNESSetInitialFunction - Set an already computed function evaluation at the initial guess to be reused by `SNESSolve()`.
 
   Logically Collective
 
