@@ -37,7 +37,7 @@ static PetscErrorCode PetscLogHandlerDestroy_Perfstubs(PetscLogHandler h)
   PetscFunctionBegin;
   PetscCall(PetscLogPSArrayGetSize(ps->events, &num_events, NULL));
   for (PetscInt i = 0; i < num_events; i++) {
-    PetscEventPS event;
+    PetscEventPS event = {NULL, 0};
 
     PetscCall(PetscLogPSArrayGet(ps->events, i, &event));
     PetscStackCallExternalVoid("ps_timer_destroy_", ps_timer_destroy_(event.timer));
@@ -46,7 +46,7 @@ static PetscErrorCode PetscLogHandlerDestroy_Perfstubs(PetscLogHandler h)
 
   PetscCall(PetscLogPSArrayGetSize(ps->stages, &num_stages, NULL));
   for (PetscInt i = 0; i < num_stages; i++) {
-    PetscEventPS stage;
+    PetscEventPS stage = {NULL, 0};
 
     PetscCall(PetscLogPSArrayGet(ps->stages, i, &stage));
     PetscStackCallExternalVoid("ps_timer_destroy_", ps_timer_destroy_(stage.timer));
@@ -71,8 +71,8 @@ static PetscErrorCode PetscLogHandlerPSUpdateEvents(PetscLogHandler h)
   PetscCall(PetscLogStateGetNumEvents(state, &num_events));
   PetscCall(PetscLogPSArrayGetSize(ps->events, &num_events_old, NULL));
   for (PetscInt i = num_events_old; i < num_events; i++) {
-    PetscLogEventInfo event_info;
-    PetscEventPS      ps_event;
+    PetscLogEventInfo event_info = {NULL, -1, PETSC_FALSE};
+    PetscEventPS      ps_event = {NULL, 0};
 
     PetscCall(PetscLogStateEventGetInfo(state, (PetscLogEvent)i, &event_info));
     PetscStackCallExternalVoid("ps_timer_create_", ps_event.timer = ps_timer_create_(event_info.name));
@@ -93,8 +93,8 @@ static PetscErrorCode PetscLogHandlerPSUpdateStages(PetscLogHandler h)
   PetscCall(PetscLogStateGetNumStages(state, &num_stages));
   PetscCall(PetscLogPSArrayGetSize(ps->stages, &num_stages_old, NULL));
   for (PetscInt i = num_stages_old; i < num_stages; i++) {
-    PetscLogStageInfo stage_info;
-    PetscEventPS      ps_stage;
+    PetscLogStageInfo stage_info = {NULL};
+    PetscEventPS      ps_stage = {NULL, 0};
 
     PetscCall(PetscLogStateStageGetInfo(state, (PetscLogStage)i, &stage_info));
     PetscStackCallExternalVoid("ps_timer_create_", ps_stage.timer = ps_timer_create_(stage_info.name));
