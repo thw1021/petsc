@@ -1,12 +1,16 @@
-#ifndef __VECIMPL_KOKKOS_HPP
-#define __VECIMPL_KOKKOS_HPP
+#ifndef KOKKOSIMPL_HPP
+#define KOKKOSIMPL_HPP
 
 /* types used by all petsc kokkos code */
 
-#include <petscvec_kokkos.hpp>
+#include <petscsystypes.h>
 #include <Kokkos_Core.hpp>
 #include <Kokkos_DualView.hpp>
 #include <Kokkos_OffsetView.hpp>
+
+// the pool is defined in veckok.kokkos.cxx as it is currently only used there
+PETSC_SINGLE_LIBRARY_INTERN PetscScalar *PetscScalarPool;
+PETSC_SINGLE_LIBRARY_INTERN PetscInt     PetscScalarPoolSize;
 
 using DefaultExecutionSpace = Kokkos::DefaultExecutionSpace;
 using DefaultMemorySpace    = Kokkos::DefaultExecutionSpace::memory_space;
