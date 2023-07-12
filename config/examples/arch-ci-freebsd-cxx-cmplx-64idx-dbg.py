@@ -16,6 +16,7 @@ configure_options = [
   '--download-bison',
   '--download-revolve=1',
   '--with-strict-petscerrorcode',
+  '--with-tau-perfstubs=0', # requires linux to test
   ]
 
 if __name__ == '__main__':
