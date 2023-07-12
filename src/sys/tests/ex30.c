@@ -174,7 +174,7 @@ int main(int argc, char **argv)
   test:
     suffix: 6
     nsize: 1
-    requires: defined(PETSC_USE_LOG) defined(PETSC_HAVE_TAU_PERFSTUBS) defined(PETSC_HAVE_DLFCN_H)
+    requires: defined(PETSC_USE_LOG) defined(PETSC_HAVE_TAU_PERFSTUBS) defined(PETSC_HAVE_DLFCN_H) defined(PETSC_USE_SHARED_LIBRARIES)
     args: -log_perfstubs
 
  TEST*/
