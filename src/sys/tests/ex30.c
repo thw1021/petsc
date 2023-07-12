@@ -130,4 +130,11 @@ int main(int argc, char **argv)
     temporaries: ex30_mpe.clog2
     filter: strings ex30_mpe.clog2 | grep "Event[123]"
 
+  test:
+    suffix: 6
+    output_file: output/ex30_0.out
+    nsize: 1
+    requires: defined(PETSC_USE_LOG) defined(PETSC_HAVE_TAU_PERFSTUBS)
+    args: -log_perfstubs
+
  TEST*/
