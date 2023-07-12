@@ -1,0 +1,6 @@
+[0:647.153:PetscLogHandlerEventBegin_User] Event "Event 1" started: now running 1 times
+[0:647.153:PetscLogHandlerEventBegin_User] Event "Event 2" started: now running 1 times
+[0:647.153:PetscLogHandlerEventBegin_User] Event "Event 1" started: now running 2 times
+[0:647.153:PetscLogHandlerEventEnd_User  ] Event "Event 1" stopped: now running 1 times
+[0:647.153:PetscLogHandlerEventEnd_User  ] Event "Event 2" stopped: now running 0 times
+[0:647.153:PetscLogHandlerEventEnd_User  ] Event "Event 1" stopped: now running 0 times
