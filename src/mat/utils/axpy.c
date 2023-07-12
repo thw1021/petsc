@@ -441,7 +441,7 @@ PetscErrorCode MatComputeOperatorTranspose(Mat inmat, MatType mattype, Mat *mat)
 }
 
 /*@
-  MatChop - Set all values in the matrix less than the tolerance to zero
+  MatFilter - Set all values in the matrix less than or equal to the tolerance to zero
 
   Input Parameters:
 + A   - The matrix
@@ -466,7 +466,7 @@ PetscErrorCode MatChop(Mat A, PetscReal tol)
     PetscCall(MatGetSize(a, &rStart, &rEnd));
     PetscCall(MatDenseGetArray(a, &newVals));
     for (; colMax < rEnd; ++colMax) {
-      for (maxRows = 0; maxRows < rStart; ++maxRows) newVals[maxRows + colMax * r] = PetscAbsScalar(newVals[maxRows + colMax * r]) < tol ? 0.0 : newVals[maxRows + colMax * r];
+      for (maxRows = 0; maxRows < rStart; ++maxRows) newVals[maxRows + colMax * r] = PetscAbsScalar(newVals[maxRows + colMax * r]) <= tol ? 0.0 : newVals[maxRows + colMax * r];
     }
     PetscCall(MatDenseRestoreArray(a, &newVals));
   } else {
@@ -495,7 +495,7 @@ PetscErrorCode MatChop(Mat A, PetscReal tol)
         PetscCall(MatGetRow(A, r, &ncols, &cols, &vals));
         for (c = 0; c < ncols; ++c) {
           newCols[c] = cols[c];
-          newVals[c] = PetscAbsScalar(vals[c]) < tol ? 0.0 : vals[c];
+          newVals[c] = PetscAbsScalar(vals[c]) <= tol ? 0.0 : vals[c];
         }
         newcols = ncols;
         PetscCall(MatRestoreRow(A, r, &ncols, &cols, &vals));
