@@ -193,7 +193,6 @@ class SectionBase(DocBase):
     return self._lines
 
   def consume(self, data):
-    data = list(data)
     if data:
       self.lines().extend(data)
       self.raw    = '\n'.join(s for _, s, _ in self.lines())
@@ -389,8 +388,7 @@ class ParameterList(SectionBase):
     align_diag  = self.diags.alignment
     group_args  = [item.arg for _, item, _ in group]
     lens        = list(map(len, group_args))
-    max_arg_len = max(lens) if lens else 0
-    assert max_arg_len >= 0, f'Negative maximum argument length {max_arg_len}'
+    max_arg_len = max(lens, default=0)
     longest_arg = group_args[lens.index(max_arg_len)] if lens else 'NO ARGS'
 
     for loc, item, _ in group:
@@ -398,7 +396,7 @@ class ParameterList(SectionBase):
       arg   = item.arg
       descr = item.description
       text  = item.text
-      fixed = '{} {:{width}} - {}'.format(pre, arg, descr, width=max_arg_len)
+      fixed = f'{pre} {arg:{max_arg_len}} - {descr}'
       try:
         diff_index = next(
           i for i, (a1, a2) in enumerate(itertools.zip_longest(text, fixed)) if a1 != a2
@@ -455,8 +453,7 @@ class ParameterList(SectionBase):
   def _check_prefixes(self, docstring):
     for key, opts in sorted(self.items.items()):
       lopts = len(opts)
-      if lopts < 1:
-        raise RuntimeError(f'number of options {lopts} < 1, key: {key}, items: {items}')
+      assert lopts >= 1, f'number of options {lopts} < 1, key: {key}, items: {items}'
 
       if lopts == 1:
         # only 1 option, should start with '.'
