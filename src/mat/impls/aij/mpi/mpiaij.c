@@ -2705,8 +2705,8 @@ PetscErrorCode MatEliminateZeros_MPIAIJ(Mat A)
   Mat_MPIAIJ *a = (Mat_MPIAIJ *)A->data;
 
   PetscFunctionBegin;
-  PetscCall(MatEliminateZeros(a->A));
-  PetscCall(MatEliminateZeros(a->B));
+  PetscCall(MatEliminateZeros_SeqAIJ_Private(a->A, PETSC_TRUE));  // always keep (possibly zero) diagonal coefficients
+  PetscCall(MatEliminateZeros_SeqAIJ_Private(a->B, PETSC_FALSE)); // do not keep zero diagonal coefficients
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
