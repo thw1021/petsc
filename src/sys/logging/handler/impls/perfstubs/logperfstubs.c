@@ -14,6 +14,7 @@ typedef struct _n_PetscLogHandler_Perfstubs *PetscLogHandler_Perfstubs;
 struct _n_PetscLogHandler_Perfstubs {
   PetscLogPSArray events;
   PetscLogPSArray stages;
+  PetscBool       started_perfstubs;
 };
 
 static PetscErrorCode PetscLogHandlerContextCreate_Perfstubs(PetscLogHandler_Perfstubs *ps_p)
@@ -30,11 +31,31 @@ static PetscErrorCode PetscLogHandlerContextCreate_Perfstubs(PetscLogHandler_Per
 
 static PetscErrorCode PetscLogHandlerDestroy_Perfstubs(PetscLogHandler h)
 {
+  PetscInt                  num_events, num_stages;
   PetscLogHandler_Perfstubs ps = (PetscLogHandler_Perfstubs) h->ctx;
 
   PetscFunctionBegin;
+  PetscCall(PetscLogPSArrayGetSize(ps->events, &num_events, NULL));
+  for (PetscInt i = 0; i < num_events; i++) {
+    PetscEventPS event;
+
+    PetscCall(PetscLogPSArrayGet(ps->events, i, &event));
+    PetscStackCallExternalVoid("ps_timer_destroy_", ps_timer_destroy_(event.timer));
+  }
   PetscCall(PetscLogPSArrayDestroy(&ps->events));
+
+  PetscCall(PetscLogPSArrayGetSize(ps->stages, &num_stages, NULL));
+  for (PetscInt i = 0; i < num_stages; i++) {
+    PetscEventPS stage;
+
+    PetscCall(PetscLogPSArrayGet(ps->stages, i, &stage));
+    PetscStackCallExternalVoid("ps_timer_destroy_", ps_timer_destroy_(stage.timer));
+  }
   PetscCall(PetscLogPSArrayDestroy(&ps->stages));
+
+  if (ps->started_perfstubs) {
+    PetscStackCallExternalVoid("ps_finalize_", ps_finalize_());
+  }
   PetscCall(PetscFree(ps));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -137,13 +158,23 @@ static PetscErrorCode PetscLogHandlerStagePop_Perfstubs(PetscLogHandler handler,
 
 PETSC_INTERN PetscErrorCode PetscLogHandlerCreate_Perfstubs(MPI_Comm comm, PetscLogHandler *handler_p)
 {
-  PetscLogHandler handler;
+  PetscBool                 started_perfstubs;
+  PetscLogHandler           handler;
+  PetscLogHandler_Perfstubs lps;
 
   PetscFunctionBegin;
-  if (perfstubs_initialized == PERFSTUBS_UNKNOWN) PetscStackCallExternalVoid("ps_initialize_", ps_initialize_());
+  if (perfstubs_initialized == PERFSTUBS_UNKNOWN) {
+    PetscStackCallExternalVoid("ps_initialize_", ps_initialize_());
+    started_perfstubs = PETSC_TRUE;
+  } else {
+    started_perfstubs = PETSC_FALSE;
+  }
+  PetscCheck(perfstubs_initialized == PERFSTUBS_SUCCESS, comm, PETSC_ERR_LIB, "perfstubs could not be initialized");
+  PetscCall(PetscLogHandlerContextCreate_Perfstubs(&lps));
+  lps->started_perfstubs = started_perfstubs;
   PetscCall(PetscLogHandlerCreate(comm, handler_p));
   handler              = *handler_p;
-  PetscCall(PetscLogHandlerContextCreate_Perfstubs((PetscLogHandler_Perfstubs *) &handler->ctx));
+  handler->ctx         = (void *) lps;
   handler->type        = PETSC_LOG_HANDLER_PERFSTUBS;
   handler->destroy     = PetscLogHandlerDestroy_Perfstubs;
   handler->eventBegin  = PetscLogHandlerEventBegin_Perfstubs;
