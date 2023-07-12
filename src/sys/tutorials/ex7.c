@@ -115,9 +115,9 @@ static PetscErrorCode PetscLogHandlerCreateUser(MPI_Comm comm, PetscLogHandler *
   handler = *handler_p;
   PetscCall(HandlerCtxCreate(&ctx));
   PetscCall(PetscLogHandlerSetContext(handler, (void *)ctx));
-  PetscCall(PetscLogHandlerSetOperation(handler, PETSC_LOG_HANDLER_OP_EVENT_BEGIN, (void(*))PetscLogHandlerEventBegin_User));
-  PetscCall(PetscLogHandlerSetOperation(handler, PETSC_LOG_HANDLER_OP_EVENT_END, (void(*))PetscLogHandlerEventEnd_User));
-  PetscCall(PetscLogHandlerSetOperation(handler, PETSC_LOG_HANDLER_OP_DESTROY, (void(*))PetscLogHandlerDestroy_User));
+  PetscCall(PetscLogHandlerSetOperation(handler, PETSC_LOG_HANDLER_OP_EVENT_BEGIN, (void(*)(void))PetscLogHandlerEventBegin_User));
+  PetscCall(PetscLogHandlerSetOperation(handler, PETSC_LOG_HANDLER_OP_EVENT_END, (void(*)(void))PetscLogHandlerEventEnd_User));
+  PetscCall(PetscLogHandlerSetOperation(handler, PETSC_LOG_HANDLER_OP_DESTROY, (void(*)(void))PetscLogHandlerDestroy_User));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
