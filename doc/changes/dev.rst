@@ -30,6 +30,7 @@ Changes: Development
 .. rubric:: PetscViewer:
 
 - Add ``PetscViewerASCIIOpenWithFileUnit()`` and ``PetscViewerASCIISetFileUnit()``
+- Add ``PetscOptionsGetViewers()`` for getting multiple comma-separated viewers, which is now used in `-log_view`
 
 .. rubric:: PetscDraw:
 

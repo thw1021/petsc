@@ -26,5 +26,6 @@ if __name__ == '__main__':
     '--download-metis',
     '--download-parmetis',
     '--with-strict-petscerrorcode=0',
+    '--with-tau-perfstubs=0', # requires linux
   ]
   configure.petsc_configure(configure_options)
