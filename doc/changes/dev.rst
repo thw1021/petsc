@@ -75,6 +75,7 @@ Changes: Development
 - Add CUDA/HIP implementation for ``MatGetDiagonal()``
 - Expose ``MatComputeVariableBlockEnvelope()`` in public headers
 - Add ``MatEliminateZeros()`` implementations for ``MatBAIJ`` and ``MatSBAIJ``
+- Deprecate ``MatChop()`` in favor of ``MatFilter()``, with an additional parameter to compress the underlying storage
 
 .. rubric:: MatCoarsen:
 
