@@ -27,5 +27,6 @@ if __name__ == '__main__':
     '--with-shared-libraries=0',
     '--with-mpi-f90module-visibility=0',
     '--with-strict-petscerrorcode',
+    '--with-tau-perfstubs=0', # requires linux to test
   ]
   configure.petsc_configure(configure_options)
