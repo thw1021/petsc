@@ -109,6 +109,30 @@ PETSC_EXTERN PetscErrorCode PetscLogStateEventGetInfo(PetscLogState, PetscLogEve
 PETSC_EXTERN PetscErrorCode PetscLogStateStageGetInfo(PetscLogState, PetscLogStage, PetscLogStageInfo *);
 PETSC_EXTERN PetscErrorCode PetscLogStateClassGetInfo(PetscLogState, PetscLogClass, PetscLogClassInfo *);
 
+PETSC_EXTERN PetscErrorCode PetscLogHandlerCreate(MPI_Comm, PetscLogHandler *);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerDestroy(PetscLogHandler *);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerSetContext(PetscLogHandler, void *);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerGetContext(PetscLogHandler, void *);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerSetEventBegin(PetscLogHandler, PetscErrorCode (*)(PetscLogHandler, PetscLogEvent, PetscObject, PetscObject, PetscObject, PetscObject));
+PETSC_EXTERN PetscErrorCode PetscLogHandlerSetEventEnd(PetscLogHandler, PetscErrorCode (*)(PetscLogHandler, PetscLogEvent, PetscObject, PetscObject, PetscObject, PetscObject));
+PETSC_EXTERN PetscErrorCode PetscLogHandlerSetEventSync(PetscLogHandler, PetscErrorCode (*)(PetscLogHandler, PetscLogEvent, MPI_Comm));
+PETSC_EXTERN PetscErrorCode PetscLogHandlerSetStagePush(PetscLogHandler, PetscErrorCode (*)(PetscLogHandler, PetscLogStage));
+PETSC_EXTERN PetscErrorCode PetscLogHandlerSetStagePop(PetscLogHandler, PetscErrorCode (*)(PetscLogHandler, PetscLogStage));
+PETSC_EXTERN PetscErrorCode PetscLogHandlerSetObjectCreate(PetscLogHandler, PetscErrorCode (*)(PetscLogHandler, PetscObject));
+PETSC_EXTERN PetscErrorCode PetscLogHandlerSetObjectDestroy(PetscLogHandler, PetscErrorCode (*)(PetscLogHandler, PetscObject));
+PETSC_EXTERN PetscErrorCode PetscLogHandlerSetDestroy(PetscLogHandler, PetscErrorCode (*)(PetscLogHandler));
+PETSC_EXTERN PetscErrorCode PetscLogHandlerSetView(PetscLogHandler, PetscErrorCode (*)(PetscLogHandler, PetscViewer));
+PETSC_EXTERN PetscErrorCode PetscLogHandlerSetState(PetscLogHandler, PetscLogState);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerGetState(PetscLogHandler, PetscLogState *);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerEventBegin(PetscLogHandler, PetscLogEvent, PetscObject, PetscObject, PetscObject, PetscObject);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerEventEnd(PetscLogHandler, PetscLogEvent, PetscObject, PetscObject, PetscObject, PetscObject);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerEventSync(PetscLogHandler, PetscLogEvent, MPI_Comm);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerObjectCreate(PetscLogHandler, PetscObject);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerObjectDestroy(PetscLogHandler, PetscObject);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerStagePush(PetscLogHandler, PetscLogStage);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerStagePop(PetscLogHandler, PetscLogStage);
+PETSC_EXTERN PetscErrorCode PetscLogHandlerView(PetscLogHandler, PetscViewer);
+
 /* All events are inactive if an invalid stage is set, like if there have been more stage pops than stage pushes */
 #define PetscLogStateStageEventIsActive(state, stage, event) ((stage >= 0) && PetscBTLookup((state)->active, (stage)) && PetscBTLookup((state)->active, (stage) + (event + 1) * (state)->bt_num_stages))
 
