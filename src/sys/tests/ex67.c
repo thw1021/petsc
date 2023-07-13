@@ -8,8 +8,8 @@ const char help[] = "Test PetscValidPointer type generics";
     PetscBool     same_string; \
     PetscDataType data_type         = PetscValidPointer_PetscDataType(h); \
     const char    expected_string[] = string; \
-    PetscInfo(NULL, "PetscValidPointer_PetscDataType(%s *h) = PETSC_%s\n", expected_string, PetscDataTypes[data_type]); \
-    PetscInfo(NULL, "PetscValidPointer_String(%s *h) = \"%s\"\n", expected_string, PetscValidPointer_String(h)); \
+    PetscCall(PetscInfo(NULL, "PetscValidPointer_PetscDataType(%s *h) = PETSC_%s\n", expected_string, PetscDataTypes[data_type])); \
+    PetscCall(PetscInfo(NULL, "PetscValidPointer_String(%s *h) = \"%s\"\n", expected_string, PetscValidPointer_String(h))); \
     PetscCheck(data_type == PETSC_TYPE, PETSC_COMM_SELF, PETSC_ERR_PLIB, "[PetscValidPointer_PetscDataType(%s *h) = %s] != PETSC_%s", expected_string, PetscDataTypes[data_type], PetscDataTypes[PETSC_TYPE]); \
     PetscCall(PetscStrcmp(PetscValidPointer_String(h), expected_string, &same_string)); \
     PetscCheck(same_string, PETSC_COMM_SELF, PETSC_ERR_PLIB, "[PetscValidPointer_String(%s *h) = \"%s\"] != \"%s\"", expected_string, PetscValidPointer_String(h), expected_string); \
