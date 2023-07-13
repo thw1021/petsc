@@ -7,6 +7,7 @@ typedef enum {
   PETSC_LOG_HANDLER_USER,
   PETSC_LOG_HANDLER_DEFAULT,
   PETSC_LOG_HANDLER_NESTED,
+  PETSC_LOG_HANDLER_TRACE
 } PetscLogHandlerType;
 
 struct _n_PetscLogHandler {
