@@ -2700,7 +2700,7 @@ PetscErrorCode MatInvertVariableBlockDiagonal_MPIAIJ(Mat A, PetscInt nblocks, co
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode MatEliminateZeros_MPIAIJ(Mat A)
+static PetscErrorCode MatEliminateZeros_MPIAIJ(Mat A)
 {
   Mat_MPIAIJ *a = (Mat_MPIAIJ *)A->data;
 
