@@ -74,6 +74,7 @@ Changes: Development
 - Add ``MatLRCSetMats()`` and register creation routine for ``MatLRC``
 - Add CUDA/HIP implementation for ``MatGetDiagonal()``
 - Expose ``MatComputeVariableBlockEnvelope()`` in public headers
+- Add ``MatEliminateZeros()`` implementations for ``MatBAIJ`` and ``MatSBAIJ``
 
 .. rubric:: MatCoarsen:
 
