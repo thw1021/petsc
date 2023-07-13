@@ -30,6 +30,7 @@ Changes: Development
 - Remove deprecated ``-malloc_info`` startup option
 - Remove deprecated ``-log_summary`` option
 - Remove ``PetscURLShorten()``, it has not worked since 2019
+- The functions ``PetscIntStackCreate()``, ``PetscIntStackDestroy()``, ``PetscIntStackPush()``, ``PetscIntStackPop()``, and ``PetscIntStackEmpty()``, which were already visible symbols in the PETSc library, are now declared in the header file `petsclog.h`.
 
 .. rubric:: Event Logging:
 
