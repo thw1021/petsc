@@ -36,6 +36,14 @@ Changes: Development
 
 - Add ``PetscLogState`` interface for describing profiling events and stages
 - Add ``PetscLogHandler`` interface that interprets the profiling events of a ``PetscLogState``
+- Add ``PetscLogPerfstubsBegin()`` for log handling with PerfStubs/TAU
+- Add ``PetscLogLegacyCallbacksBegin()`` to transition old log handler callbacks to the ``PetscLogHandler``-based approach
+- Add ``PetscLogHandlerStart()`` to connect a ``PetscLogHandler`` to PETSc's global logging events
+- Add ``PetscLogStageGetName()``
+- Add ``PetscLogEventGetName()``
+- Add ``PetscLogEventsPause()`` and ``PetscLogEventsResume()`` to isolate a logging event from unrelated in-process events
+- Add ``PetscLogClassGetClassId()``
+- Add ``PetscLogClassIdGetName()``
 
 .. rubric:: PetscViewer:
 
