@@ -1763,6 +1763,16 @@ PetscErrorCode MatGetDiagonalBlock_MPISBAIJ(Mat A, Mat *a)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode MatEliminateZeros_MPISBAIJ(Mat A)
+{
+  Mat_MPISBAIJ *a = (Mat_MPISBAIJ *)A->data;
+
+  PetscFunctionBegin;
+  PetscCall(MatEliminateZeros_SeqSBAIJ_Private(a->A, PETSC_TRUE)); // always keep (possibly zero) diagonal coefficients
+  PetscCall(MatEliminateZeros_SeqBAIJ_Private(a->B, PETSC_FALSE)); // do not keep zero diagonal coefficients
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static struct _MatOps MatOps_Values = {MatSetValues_MPISBAIJ,
                                        MatGetRow_MPISBAIJ,
                                        MatRestoreRow_MPISBAIJ,
@@ -1914,7 +1924,7 @@ static struct _MatOps MatOps_Values = {MatSetValues_MPISBAIJ,
                                        NULL,
                                        NULL,
                                        /*150*/ NULL,
-                                       NULL};
+                                       MatEliminateZeros_MPISBAIJ};
 
 PetscErrorCode MatMPISBAIJSetPreallocation_MPISBAIJ(Mat B, PetscInt bs, PetscInt d_nz, const PetscInt *d_nnz, PetscInt o_nz, const PetscInt *o_nnz)
 {

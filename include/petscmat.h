@@ -509,6 +509,7 @@ PETSC_EXTERN PetscErrorCode MatInvertBlockDiagonal(Mat, const PetscScalar **);
 PETSC_EXTERN PetscErrorCode MatInvertVariableBlockDiagonal(Mat, PetscInt, const PetscInt *, PetscScalar *);
 PETSC_EXTERN PetscErrorCode MatInvertBlockDiagonalMat(Mat, Mat);
 PETSC_EXTERN PetscErrorCode MatInvertVariableBlockEnvelope(Mat, MatReuse, Mat *);
+PETSC_EXTERN PetscErrorCode MatComputeVariableBlockEnvelope(Mat);
 
 PETSC_EXTERN PetscErrorCode MatSetValues(Mat, PetscInt, const PetscInt[], PetscInt, const PetscInt[], const PetscScalar[], InsertMode);
 PETSC_EXTERN PetscErrorCode MatSetValuesIS(Mat, IS, IS, const PetscScalar[], InsertMode);
@@ -2473,7 +2474,11 @@ PETSC_EXTERN PetscErrorCode MatNestSetVecType(Mat, VecType);
 PETSC_EXTERN PetscErrorCode MatNestSetSubMats(Mat, PetscInt, const IS[], PetscInt, const IS[], const Mat[]);
 PETSC_EXTERN PetscErrorCode MatNestSetSubMat(Mat, PetscInt, PetscInt, Mat);
 
-PETSC_EXTERN PetscErrorCode MatChop(Mat, PetscReal);
+PETSC_EXTERN PetscErrorCode MatFilter(Mat, PetscReal, PetscBool);
+PETSC_DEPRECATED_FUNCTION(3, 20, 0, "MatFilter()", ) static inline PetscErrorCode MatChop(Mat A, PetscReal tol)
+{
+  return MatFilter(A, tol, PETSC_FALSE);
+}
 PETSC_EXTERN PetscErrorCode MatComputeBandwidth(Mat, PetscReal, PetscInt *);
 
 PETSC_EXTERN PetscErrorCode MatSubdomainsCreateCoalesce(Mat, PetscInt, PetscInt *, IS **);
