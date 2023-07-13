@@ -79,10 +79,71 @@ typedef int PetscLogStage;
 M*/
 typedef int PetscLogClass;
 
+/*S
+  PetscLogHandler - Interface for performance logging.  A log handler receives a `PetscLogState` that has
+  information about the events (`PetscLogEvent`) and stages (`PetscLogStage`) in the logging environment.
+
+  Usage:
+
+.vb
+#include <petscsys.h>
+typedef struct _UserCtx UserCtx;
+
+PetscErrorCode UserEventBegin(PetscLogHandler handler, PetscLogEvent e, PetscObject o1, PetscObject o2, PetscObject o3, PetscObject o4)
+{
+  PetscLogState state;
+  UserCtx      *user_context;
+
+  PetscFunctionBegin;
+  PetscLogHandlerGetState(handler, &state); // use the state to get information about the event, the current stage, etc.
+  PetscLogHandlerGetContext(handler, (void *) &user_context);
+  // ...
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+// ... optionally define callbacks for other operations, see `PetscLogHandlerOpType`
+
+int main() {
+  UserCtx         ctx;
+  PetscLogHandler handler;
+
+  PetscInitialize(...);
+  // ... fill in ctx
+  PetscLogHandlerCreate(PETSC_COMM_WORLD, &handler);
+  PetscLogHandlerSetContext(handler, (void *) &ctx));
+  PetscLogHandlerSetEventBegin(handler, UserEventBegin);
+  // ... set other operations
+  PetscLogHandlerStart(handler); // connect your handler to global logging state
+  // ... run code to be profiled
+  PetscLogHandlerStop(handler); // disconnect your handler from the global logging state
+  PetscLogHandlerView(handler, PETSC_VIEWER_STDOUT_WORLD); // view the results
+  PetscLogHandlerDestroy(&handler);
+  PetscFinalize();
+}
+.ve
+
+  Level: developer
+
+.seealso: [](ch_profiling), `PetscLogHandlerCreate()`,
+          `PetscLogHandlerSetContext()`, `PetscLogHandlerGetContext()`,
+          `PetscLogHandlerSetState()`, `PetscLogHandlerGetState()`,
+          `PetscLogHandlerEventBegin()`, `PetscLogHandlerSetEventBegin()`,
+          `PetscLogHandlerEventEnd()`, `PetscLogHandlerSetEventEnd()`,
+          `PetscLogHandlerEventSync()`, `PetscLogHandlerSetEventSync()`,
+          `PetscLogHandlerObjectCreate()`, `PetscLogHandlerSetObjectCreate()`,
+          `PetscLogHandlerObjectDestroy()`, `PetscLogHandlerSetObjectDestroy()`,
+          `PetscLogHandlerStagePush()`, `PetscLogHandlerSetStagePush()`,
+          `PetscLogHandlerStagePop()`, `PetscLogHandlerSetStagePop()`,
+          `PetscLogHandlerView()`, `PetscLogHandlerSetView()`,
+          `PetscLogHandlerView()`, `PetscLogHandlerSetView()`,
+          `PetscLogHandlerDestroy()`, `PetscLogHandlerSetDestroy()`
+S*/
+typedef struct _n_PetscLogHandler *PetscLogHandler;
+
 typedef struct _n_PetscLogRegistry *PetscLogRegistry;
 
 /*S
-   PetscLogState - Interface for the shared state information used by log handlers.  It holds
+   PetscLogState - Interface for the shared state information used by `PetscLogHandler`s.  It holds
    a registry of events (`PetscLogStateEventRegister()`), stages (`PetscLogStateStageRegister()`), and
    classes (`PetscLogStateClassRegister()`).  It keeps track of when the user has activated
    events (`PetscLogStateEventSetActive()`) and stages (`PetscLogStateStageSetActive()`).  It
