@@ -49,6 +49,7 @@ configure_options = [
   #'--download-spai=1',
   #'--with-coverage',
   '--with-strict-petscerrorcode',
+  '--with-tau-perfstubs=0', # requires linux to test
   ]
 
 if __name__ == '__main__':

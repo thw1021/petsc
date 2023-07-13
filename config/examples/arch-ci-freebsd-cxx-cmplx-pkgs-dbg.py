@@ -38,6 +38,7 @@ configure_options = [
   '--download-kokkos-kernels=1',
   '--with-ssl=1',
   '--with-strict-petscerrorcode=0',
+  '--with-tau-perfstubs=0', # requires linux to test
   ]
 
 if __name__ == '__main__':
