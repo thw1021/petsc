@@ -496,7 +496,7 @@ PetscErrorCode MatBoundToCPU(Mat A, PetscBool *flg)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
-  PetscValidBoolPointer(flg, 2);
+  PetscValidPointer(flg, 2);
 #if defined(PETSC_HAVE_DEVICE)
   *flg = A->boundtocpu;
 #else
@@ -595,8 +595,8 @@ PetscErrorCode MatSetPreallocationCOO(Mat A, PetscCount ncoo, PetscInt coo_i[], 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
   PetscValidType(A, 1);
-  if (ncoo) PetscValidIntPointer(coo_i, 3);
-  if (ncoo) PetscValidIntPointer(coo_j, 4);
+  if (ncoo) PetscValidPointer(coo_i, 3);
+  if (ncoo) PetscValidPointer(coo_j, 4);
   PetscCall(PetscLayoutSetUp(A->rmap));
   PetscCall(PetscLayoutSetUp(A->cmap));
   PetscCall(PetscObjectQueryFunction((PetscObject)A, "MatSetPreallocationCOO_C", &f));
@@ -649,8 +649,8 @@ PetscErrorCode MatSetPreallocationCOOLocal(Mat A, PetscCount ncoo, PetscInt coo_
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
   PetscValidType(A, 1);
-  if (ncoo) PetscValidIntPointer(coo_i, 3);
-  if (ncoo) PetscValidIntPointer(coo_j, 4);
+  if (ncoo) PetscValidPointer(coo_i, 3);
+  if (ncoo) PetscValidPointer(coo_j, 4);
   PetscCheck(ncoo <= PETSC_MAX_INT, PETSC_COMM_SELF, PETSC_ERR_ARG_OUTOFRANGE, "ncoo %" PetscCount_FMT " overflowed PetscInt; configure --with-64-bit-indices or request support", ncoo);
   PetscCall(PetscLayoutSetUp(A->rmap));
   PetscCall(PetscLayoutSetUp(A->cmap));
@@ -767,7 +767,7 @@ PetscErrorCode MatGetBindingPropagates(Mat A, PetscBool *flg)
 {
   PetscFunctionBegin;
   PetscValidHeaderSpecific(A, MAT_CLASSID, 1);
-  PetscValidBoolPointer(flg, 2);
+  PetscValidPointer(flg, 2);
 #if defined(PETSC_HAVE_VIENNACL) || defined(PETSC_HAVE_CUDA) || defined(PETSC_HAVE_HIP)
   *flg = A->bindingpropagates;
 #else

@@ -89,7 +89,7 @@ PetscBool PetscCheckPointer(const void *ptr, PetscDataType dtype)
   } else {
     switch (dtype) {
     case PETSC_INT: {
-      PETSC_UNUSED PetscInt x = (PetscInt) * (volatile PetscInt *)ptr;
+      PETSC_UNUSED PetscInt x = *(volatile PetscInt *)ptr;
       break;
     }
   #if defined(PETSC_USE_COMPLEX)

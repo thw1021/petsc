@@ -83,7 +83,7 @@ PetscErrorCode PetscObjectGetTabLevel(PetscObject obj, PetscInt *tab)
 {
   PetscFunctionBegin;
   PetscValidHeader(obj, 1);
-  PetscValidIntPointer(tab, 2);
+  PetscValidPointer(tab, 2);
   *tab = obj->tablevel;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
