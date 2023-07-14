@@ -53,7 +53,8 @@ static inline PetscErrorCode PetscHYPREFinalize_Private(void)
       PetscCallExternal(HYPRE_Initialize, ); \
       PetscCall(PetscRegisterFinalize(PetscHYPREFinalize_Private)); \
     } \
-    (void)0
+    do { \
+    } while (0)
 #else
   #define PetscHYPREInitialize() (void)0
 #endif

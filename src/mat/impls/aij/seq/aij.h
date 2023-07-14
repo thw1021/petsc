@@ -226,7 +226,9 @@ static inline PetscErrorCode MatSeqXAIJFreeAIJ(Mat AA, MatScalar **a, PetscInt *
     RMAX = AIMAX[ROW] = AIMAX[ROW] + CHUNKSIZE; \
     Ain->maxnz += BS2 * CHUNKSIZE; \
     Ain->reallocs++; \
-  }
+  } \
+  do { \
+  } while (0)
 
 #define MatSeqXAIJReallocateAIJ_structure_only(Amat, AM, BS2, NROW, ROW, COL, RMAX, AI, AJ, RP, AIMAX, NONEW, datatype) \
   if (NROW >= RMAX) { \
@@ -258,7 +260,9 @@ static inline PetscErrorCode MatSeqXAIJFreeAIJ(Mat AA, MatScalar **a, PetscInt *
     RMAX = AIMAX[ROW] = AIMAX[ROW] + CHUNKSIZE; \
     Ain->maxnz += BS2 * CHUNKSIZE; \
     Ain->reallocs++; \
-  }
+  } \
+  do { \
+  } while (0)
 
 PETSC_INTERN PetscErrorCode MatSeqAIJSetPreallocation_SeqAIJ(Mat, PetscInt, const PetscInt *);
 PETSC_INTERN PetscErrorCode MatSetPreallocationCOO_SeqAIJ(Mat, PetscCount, PetscInt[], PetscInt[]);
@@ -476,7 +480,9 @@ PETSC_INTERN PetscErrorCode MatSetSeqAIJWithArrays_private(MPI_Comm, PetscInt, P
         xv -= nnz; \
         xi -= nnz; \
       } \
-    }
+    } \
+    do { \
+    } while (0)
 
 #elif defined(PETSC_KERNEL_USE_UNROLL_2)
   #define PetscSparseDenseMinusDot(sum, r, xv, xi, nnz) \
@@ -488,14 +494,18 @@ PETSC_INTERN PetscErrorCode MatSetSeqAIJWithArrays_private(MPI_Comm, PetscInt, P
         sum -= (xv[__i] * r[__i1] + xv[__i + 1] * r[__i2]); \
       } \
       if (nnz & 0x1) sum -= xv[__i] * r[xi[__i]]; \
-    }
+    } \
+    do { \
+    } while (0)
 
 #else
   #define PetscSparseDenseMinusDot(sum, r, xv, xi, nnz) \
     { \
       PetscInt __i; \
       for (__i = 0; __i < nnz; __i++) sum -= xv[__i] * r[xi[__i]]; \
-    }
+    } \
+    do { \
+    } while (0)
 #endif
 
 /*
@@ -542,7 +552,9 @@ PETSC_INTERN PetscErrorCode MatSetSeqAIJWithArrays_private(MPI_Comm, PetscInt, P
         xv -= nnz; \
         xi -= nnz; \
       } \
-    }
+    } \
+    do { \
+    } while (0)
 
 #elif defined(PETSC_KERNEL_USE_UNROLL_2)
   #define PetscSparseDensePlusDot(sum, r, xv, xi, nnz) \
@@ -554,7 +566,9 @@ PETSC_INTERN PetscErrorCode MatSetSeqAIJWithArrays_private(MPI_Comm, PetscInt, P
         sum += (xv[__i] * r[__i1] + xv[__i + 1] * r[__i2]); \
       } \
       if (nnz & 0x1) sum += xv[__i] * r[xi[__i]]; \
-    }
+    } \
+    do { \
+    } while (0)
 
 #elif defined(PETSC_USE_AVX512_KERNELS) && defined(PETSC_HAVE_IMMINTRIN_H) && defined(__AVX512F__) && defined(PETSC_USE_REAL_DOUBLE) && !defined(PETSC_USE_COMPLEX) && !defined(PETSC_USE_64BIT_INDICES) && !defined(PETSC_SKIP_IMMINTRIN_H_CUDAWORKAROUND)
   #define PetscSparseDensePlusDot(sum, r, xv, xi, nnz) PetscSparseDensePlusDot_AVX512_Private(&(sum), (r), (xv), (xi), (nnz))
@@ -564,7 +578,9 @@ PETSC_INTERN PetscErrorCode MatSetSeqAIJWithArrays_private(MPI_Comm, PetscInt, P
     { \
       PetscInt __i; \
       for (__i = 0; __i < nnz; __i++) sum += xv[__i] * r[xi[__i]]; \
-    }
+    } \
+    do { \
+    } while (0)
 #endif
 
 #if defined(PETSC_USE_AVX512_KERNELS) && defined(PETSC_HAVE_IMMINTRIN_H) && defined(__AVX512F__) && defined(PETSC_USE_REAL_DOUBLE) && !defined(PETSC_USE_COMPLEX) && !defined(PETSC_USE_64BIT_INDICES) && !defined(PETSC_SKIP_IMMINTRIN_H_CUDAWORKAROUND)

@@ -15,7 +15,9 @@ static inline PetscErrorCode PetscArgSortPixVal(const PetscDrawXiPixVal v[PETSC_
     tmp = a; \
     a   = b; \
     b   = tmp; \
-  }
+  } \
+  do { \
+  } while (0)
   PetscFunctionBegin;
   if (right <= 1) {
     if (right == 1) {

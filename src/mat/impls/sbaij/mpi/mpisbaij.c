@@ -239,7 +239,9 @@ PetscErrorCode MatRetrieveValues_MPISBAIJ(Mat mat)
     A->nonzerostate++; \
   a_noinsert:; \
     ailen[brow] = nrow; \
-  }
+  } \
+  do { \
+  } while (0)
 
 #define MatSetValues_SeqSBAIJ_B_Private(row, col, value, addv, orow, ocol) \
   { \
@@ -280,7 +282,9 @@ PetscErrorCode MatRetrieveValues_MPISBAIJ(Mat mat)
     B->nonzerostate++; \
   b_noinsert:; \
     bilen[brow] = nrow; \
-  }
+  } \
+  do { \
+  } while (0)
 
 /* Only add/insert a(i,j) with i<=j (blocks).
    Any a(i,j) with i>j input by user is ignored or generates an error

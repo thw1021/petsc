@@ -64,7 +64,9 @@ PetscErrorCode VecHYPRE_IJVectorCopy(Vec v, VecHYPRE_IJVector ij)
     hypre_Vector    *local_vector = hypre_ParVectorLocalVector(par_vector); \
     savedvalue                    = local_vector->data; \
     local_vector->data            = newvalue; \
-  }
+  } \
+  do { \
+  } while (0)
 
 /*
   This routine access the pointer to the raw data of the "v" to be passed to HYPRE

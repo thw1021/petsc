@@ -13,7 +13,9 @@
     t = a; \
     a = b; \
     b = t; \
-  }
+  } \
+  do { \
+  } while (0)
 
 static PetscErrorCode PetscSortIntWithPermutation_Private(const PetscInt v[], PetscInt vdx[], PetscInt right)
 {

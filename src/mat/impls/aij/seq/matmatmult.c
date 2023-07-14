@@ -910,7 +910,9 @@ PetscErrorCode MatMatMultSymbolic_SeqAIJ_SeqAIJ_RowMerge(Mat A, Mat B, PetscReal
       } \
       window_min = PetscMin(window[k], window_min); \
     } \
-  }
+  } \
+  do { \
+  } while (0)
 
       /************** L E V E L  1 ***************/
       /* Merge up to 8 rows of B to L1 work array*/

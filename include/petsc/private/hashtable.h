@@ -5,7 +5,14 @@
 
 #define kh_inline   inline
 #define klib_unused PETSC_UNUSED
+#if !defined(kh_foreach_value)
+  #define undef_kh_foreach_value
+#endif
 #include <petsc/private/khash/khash.h>
+#if defined(undef_kh_foreach_value)
+  #undef kh_foreach_value
+  #undef undef_kh_foreach_value
+#endif
 
 /* Required for khash <= 0.2.5 */
 #if !defined(kcalloc)
@@ -93,7 +100,9 @@
         (vvar) = kh_val(h, __i); \
         code; \
       } \
-    }
+    } \
+    do { \
+    } while (0)
 #endif /*kh_foreach_value*/
 
 /* --- Helper macro for error checking --- */

@@ -236,7 +236,9 @@ PETSC_INTERN PetscErrorCode MatResetPreallocationCOO_MPIAIJ(Mat);
         (void)PetscLogFlops(2.0 * _pnz); \
       } \
     } \
-  }
+  } \
+  do { \
+  } while (0)
 
 #define AProw_nonscalable(i, ad, ao, p_loc, p_oth, apa) \
   { \
@@ -276,6 +278,8 @@ PETSC_INTERN PetscErrorCode MatResetPreallocationCOO_MPIAIJ(Mat);
         (void)PetscLogFlops(2.0 * _pnz); \
       } \
     } \
-  }
+  } \
+  do { \
+  } while (0)
 
 #endif
