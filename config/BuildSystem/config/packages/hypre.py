@@ -1,5 +1,6 @@
 import config.package
 import os
+import re
 
 class Configure(config.package.GNUPackage):
   def __init__(self, framework):
@@ -122,6 +123,16 @@ class Configure(config.package.GNUPackage):
       cucc = self.getCompiler()
       devflags += ' '.join(('','-expt-extended-lambda',stdflag,'-x','cu',''))
       devflags += self.getCompilerFlags() + ' ' + self.setCompilers.CUDAPPFLAGS + ' ' + self.mpi.includepaths+ ' ' + self.headers.toString(self.dinclude)
+      # remove -Xcompiler -fvisibility=hidden
+      # Note the extra \s at the end. This only specifically only handles forms where the
+      # -Xcompiler directive is for -fvsibility=hidden only!
+      devflags = re.sub(r'-Xcompiler\s+-fvisibility=hidden\s', '', devflags)
+      # handle -Xcompiler -fsome_other_flag,-fvisibility=hidden
+      devflags = re.sub(r',-fvisibility=hidden\s', ' ', devflags)
+      # handle -Xcompiler -fsome_other_flag,-fvisibility=hidden,-fyet_another_flag
+      devflags = re.sub(r',-fvisibility=hidden,', ',', devflags)
+      # handle -Xcompiler -fvisibility=hidden,-fsome_another_flag
+      devflags = re.sub(r'\s-fvisibility=hidden,', ' ', devflags)
       self.popLanguage()
     elif self.openmp.found:
       args.append('--with-openmp')
