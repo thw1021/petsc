@@ -325,17 +325,48 @@ class Package(config.base.Configure):
     return keep
 
   def removeWarningFlags(self,flags):
-    outflags = []
-    for flag in flags:
-      if not flag in ['-Werror','-Wall','-Wwrite-strings','-Wno-strict-aliasing','-Wno-unknown-pragmas',
-                      '-Wno-unused-variable','-Wno-unused-dummy-argument','-fvisibility=hidden','-std=c89',
-                      '-pedantic','--coverage','-Mfree','-fdefault-integer-8','-fsanitize=address',
-                      '-fstack-protector']:
-        if flag == '-g3':
-          outflags.append('-g')
-        else:
-          outflags.append(flag)
-    return outflags
+    flags = self.rmArgs(
+      flags,
+      {
+        '-Werror', '-Wall', '-Wwrite-strings', '-Wno-strict-aliasing', '-Wno-unknown-pragmas',
+        '-Wno-unused-variable', '-Wno-unused-dummy-argument', '-std=c89', '-pedantic','--coverage',
+        '-Mfree', '-fdefault-integer-8', '-fsanitize=address', '-fstack-protector'
+      }
+    )
+    return ['-g' if f == '-g3' else f for f in flags]
+
+  def removeVisibilityFlag(self, flags, pair_prefix=None):
+    """
+    Remove -fvisibility=hidden from flags.
+
+    Parameters
+    ----------
+
+    - flags       - iterable (or string) of flags to remove from
+    - pair_prefix - (Optional) if not None, indicates that -fvisibility=hidden is in a pair, and is
+                    prefixed by str(pair_prefix). For example, pair_prefix='-Xcompiler' indicates that
+                    visibility flag is specificied as <COMPILER_NAME> -Xcompiler -fvisibility=hidden
+
+    Return
+    ------
+    flags - list of post-processed flags
+    """
+    if isinstance(flags, str):
+      flags = flags.split()
+
+    vis_flag = '-fvisibility=hidden'
+    if pair_prefix is None:
+      return self.rmArgs(flags, {vis_flag})
+    assert isinstance(pair_prefix, str)
+    # deals with bare PAIR_PREFIX -fvisibility=hidden
+    flag_str = ' '.join(self.rmArgsPair(flags, {vis_flag}, remove_ahead=False))
+    # handle PAIR_PREFIX -fsome_other_flag,-fvisibility=hidden
+    flag_str = re.sub(r',{}\s'.format(vis_flag), ' ', flag_str)
+    # handle PAIR_PREFIX -fsome_other_flag,-fvisibility=hidden,-fyet_another_flag
+    flag_str = re.sub(r',{},'.format(vis_flag), ',', flag_str)
+    # handle PAIR_PREFIX -fvisibility=hidden,-fsome_another_flag
+    flag_str = re.sub(r'\s{},'.format(vis_flag), ' ', flag_str)
+    return flag_str.split()
 
   def removeCoverageFlag(self, flags, is_pair = False, **kwargs):
     if isinstance(flags, str):
@@ -375,7 +406,8 @@ class Package(config.base.Configure):
 
   def updatePackageCFlags(self,flags):
     '''To turn off various warnings or errors the compilers may produce with external packages, remove or add appropriate compiler flags'''
-    outflags = self.removeWarningFlags(flags.split())
+    outflags = self.removeVisibilityFlag(flags.split())
+    outflags = self.removeWarningFlags(outflags)
     outflags = self.removeCoverageFlag(outflags)
     with self.Language('C'):
       if config.setCompilers.Configure.isClang(self.getCompiler(), self.log):
@@ -385,7 +417,8 @@ class Package(config.base.Configure):
     return ' '.join(outflags)
 
   def updatePackageFFlags(self,flags):
-    outflags = self.removeWarningFlags(flags.split())
+    outflags = self.removeVisibilityFlag(flags.split())
+    outflags = self.removeWarningFlags(outflags)
     outflags = self.removeCoverageFlag(outflags)
     with self.Language('FC'):
       if config.setCompilers.Configure.isNAG(self.getLinker(), self.log):
@@ -395,14 +428,15 @@ class Package(config.base.Configure):
     return ' '.join(outflags)
 
   def updatePackageCxxFlags(self,flags):
-    outflags = self.removeWarningFlags(flags.split())
+    outflags = self.removeVisibilityFlag(flags.split())
+    outflags = self.removeWarningFlags(outflags)
     outflags = self.removeCoverageFlag(outflags)
     outflags = self.removeStdCxxFlag(outflags)
     return ' '.join(outflags)
 
   def updatePackageCUDAFlags(self, flags):
-    outflags = self.removeCoverageFlag(flags, is_pair=True, remove_ahead=False)
-    #outflags = self.removeCoverageFlag(flags)
+    outflags = self.removeVisibilityFlag(flags, pair_prefix='-Xcompiler')
+    outflags = self.removeCoverageFlag(outflags, is_pair=True, remove_ahead=False)
     return ' '.join(outflags)
 
   def getDefaultLanguage(self):
