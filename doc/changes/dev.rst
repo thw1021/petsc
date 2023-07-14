@@ -73,6 +73,8 @@ Changes: Development
 - Add support for ``MatLoad()`` and ``MatView()`` to load and store ``MPIAIJ`` matrices that have more than ``PETSC_INT_MAX`` nonzeros, so long as each rank has fewer than ``PETSC_INT_MAX``
 - Add ``MatLRCSetMats()`` and register creation routine for ``MatLRC``
 - Add CUDA/HIP implementation for ``MatGetDiagonal()``
+- Expose ``MatComputeVariableBlockEnvelope()`` in public headers
+- Add ``MatEliminateZeros()`` implementations for ``MatBAIJ`` and ``MatSBAIJ``
 
 .. rubric:: MatCoarsen:
 
