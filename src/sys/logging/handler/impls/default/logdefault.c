@@ -216,20 +216,36 @@ typedef enum {
   PETSC_LOG_ACTION_END,
 } PetscLogActionType;
 
+typedef struct _Action {
+  PetscLogActionType action;        /* The type of execution */
+  PetscLogEvent      event;         /* The event number */
+  PetscClassId       classid;       /* The event class id */
+  PetscLogDouble     time;          /* The time of occurrence */
+  PetscLogDouble     flops;         /* The cumulative flops */
+  PetscLogDouble     mem;           /* The current memory usage */
+  PetscLogDouble     maxmem;        /* The maximum memory usage */
+  int                id1, id2, id3; /* The ids of associated objects */
+} Action;
+
 PETSC_LOG_RESIZABLE_ARRAY(ActionArray, Action, PetscLogEvent, NULL, NULL, NULL)
 
 /* --- Object --- */
+
+/* The structure for object logging */
+typedef struct _Object {
+  PetscObject    obj;      /* The associated PetscObject */
+  int            parent;   /* The parent id */
+  PetscLogDouble mem;      /* The memory associated with the object */
+  char           name[64]; /* The object name */
+  char           info[64]; /* The information string */
+} Object;
 
 PETSC_LOG_RESIZABLE_ARRAY(ObjectArray, Object, PetscObject, NULL, NULL, NULL)
 
 /* Map from (threadid,stage,event) to perfInfo data struct */
 #include <petsc/private/hashmapijk.h>
 
-#if !PetscDefined(HAVE_THREADSAFETY)
-// PetscHMapEvent is only declared in logimpl.h if PetscDefined(HAVE_THREADSAFETY): define it otherwise so that we
-// can just always have it in the struct
 PETSC_HASH_MAP(HMapEvent, PetscHashIJKKey, PetscEventPerfInfo *, PetscHashIJKKeyHash, PetscHashIJKKeyEqual, NULL)
-#endif
 
 typedef struct _n_PetscLogHandler_Default *PetscLogHandler_Default;
 struct _n_PetscLogHandler_Default {
