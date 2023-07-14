@@ -21,7 +21,7 @@ const char help[] = "Test PetscValidPointer type generics";
 int main(int argc, char **argv)
 {
   PetscCall(PetscInitialize(&argc, &argv, NULL, help));
-#if defined(__cplusplus) || PETSC_C_VERSION >= 11
+#if defined(PetscValidPointer_PetscDataType)
   // clang-format off
   PETSC_TEST_VALID_POINTER_GENERICS(          char, PETSC_CHAR   );
   PETSC_TEST_VALID_POINTER_GENERICS(   signed char, PETSC_CHAR   );
