@@ -1,0 +1,14 @@
+[0:1539.53:MyObjectCreateHandler ] object class: PetscContainer
+[0:1539.53:MyObjectCreateHandler ] object class: PetscContainer
+[0:1539.53:MyObjectCreateHandler ] object class: PetscContainer
+[0:1539.53:MyObjectCreateHandler ] object class: PetscContainer
+[0:1539.53:MyEventBeginHandler   ] event name: User class
+[0:1539.53:MyEventBeginHandler   ]   associated object name: Container 1
+[0:1539.53:MyEventBeginHandler   ]   associated object name: Container 2
+[0:1539.53:MyEventBeginHandler   ]   associated object name: Container 3
+[0:1539.53:MyEventBeginHandler   ]   associated object name: Container 4
+[0:1539.53:MyEventEndHandler     ] event name: User class
+[0:1539.53:MyObjectDestroyHandler] object type: PetscContainer, name: Container 1
+[0:1539.53:MyObjectDestroyHandler] object type: PetscContainer, name: Container 2
+[0:1539.53:MyObjectDestroyHandler] object type: PetscContainer, name: Container 3
+[0:1539.53:MyObjectDestroyHandler] object type: PetscContainer, name: Container 4
