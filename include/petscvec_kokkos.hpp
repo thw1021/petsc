@@ -16,6 +16,13 @@
 #include <petscvec.h>
 
 #if defined(PETSC_HAVE_KOKKOS)
+  #if defined(__clang__)
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wextra-semi-stmt"
+  #elif defined(__GNUC__) || defined(__GNUG__)
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wextra-semi"
+  #endif
   #include <Kokkos_Core.hpp>
 
 /*@C

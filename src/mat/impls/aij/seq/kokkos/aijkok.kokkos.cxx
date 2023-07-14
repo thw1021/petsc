@@ -5,7 +5,6 @@
 #include <petscsystypes.h>
 #include <petscerror.h>
 
-#include <Kokkos_Core.hpp>
 #include <KokkosBlas.hpp>
 #include <KokkosSparse_CrsMatrix.hpp>
 #include <KokkosSparse_spmv.hpp>
