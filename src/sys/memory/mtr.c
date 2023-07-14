@@ -591,7 +591,7 @@ PetscErrorCode PetscMallocGetMaximumUsage(PetscLogDouble *space)
 PetscErrorCode PetscMallocPushMaximumUsage(int event)
 {
   PetscFunctionBegin;
-  if (++NumTRMaxMems > MAXTRMAXMEMS) PetscFunctionReturn(PETSC_SUCCESS);
+  if (event < 0 || ++NumTRMaxMems > MAXTRMAXMEMS) PetscFunctionReturn(PETSC_SUCCESS);
   TRMaxMems[NumTRMaxMems - 1]       = TRallocated;
   TRMaxMemsEvents[NumTRMaxMems - 1] = event;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -620,7 +620,7 @@ PetscErrorCode PetscMallocPopMaximumUsage(int event, PetscLogDouble *mu)
 {
   PetscFunctionBegin;
   *mu = 0;
-  if (NumTRMaxMems-- > MAXTRMAXMEMS) PetscFunctionReturn(PETSC_SUCCESS);
+  if (event < 0 || NumTRMaxMems-- > MAXTRMAXMEMS) PetscFunctionReturn(PETSC_SUCCESS);
   PetscCheck(TRMaxMemsEvents[NumTRMaxMems] == event, PETSC_COMM_SELF, PETSC_ERR_MEMC, "PetscMallocPush/PopMaximumUsage() are not nested");
   *mu = TRMaxMems[NumTRMaxMems];
   PetscFunctionReturn(PETSC_SUCCESS);
