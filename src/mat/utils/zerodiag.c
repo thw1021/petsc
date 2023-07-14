@@ -12,7 +12,9 @@
     _t = a; \
     a  = b; \
     b  = _t; \
-  }
+  } \
+  do { \
+  } while (0)
 
 /*@
     MatReorderForNonzeroDiagonal - Changes matrix ordering to remove

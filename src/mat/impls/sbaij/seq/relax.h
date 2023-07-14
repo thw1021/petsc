@@ -29,7 +29,9 @@
         xv -= nnz; \
         xi -= nnz; \
       } \
-    }
+    } \
+    do { \
+    } while (0)
 
 #elif defined(PETSC_KERNEL_USE_UNROLL_2)
   #define PetscSparseDensePlusDot_no_function(sum, r, xv, xi, nnz) \
@@ -41,14 +43,18 @@
         sum += (xv[__i] * r[__i1] + xv[__i + 1] * r[__i2]); \
       } \
       if (nnz & 0x1) sum += xv[__i] * r[xi[__i]]; \
-    }
+    } \
+    do { \
+    } while (0)
 
 #else
   #define PetscSparseDensePlusDot_no_function(sum, r, xv, xi, nnz) \
     { \
       PetscInt __i; \
       for (__i = 0; __i < nnz; __i++) sum += xv[__i] * r[xi[__i]]; \
-    }
+    } \
+    do { \
+    } while (0)
 #endif
 
 #if defined(USESHORT)

@@ -45,7 +45,9 @@ static char FIXCHARSTRING[1024];
         if (*ierr) return; \
       } else b = a; \
     } \
-  }
+  } \
+  do { \
+  } while (0)
 
 PETSC_EXTERN void chkmemfortran_(int *line, char *file, PetscErrorCode *ierr, PETSC_FORTRAN_CHARLEN_T len)
 {

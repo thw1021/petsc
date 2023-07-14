@@ -35,7 +35,9 @@ PetscErrorCode PetscDrawInterpolatedTriangle_X(PetscDraw_X *win, int x1, int y_1
     _a = a; \
     a  = b; \
     b  = _a; \
-  }
+  } \
+  do { \
+  } while (0)
   if (y_1 > y2) {
     SWAP(y_1, y2);
     SWAP(t1, t2);

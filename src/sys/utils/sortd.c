@@ -13,7 +13,9 @@
     t = a; \
     a = b; \
     b = t; \
-  }
+  } \
+  do { \
+  } while (0)
 
 /*@
    PetscSortedReal - Determines whether the array of `PetscReal` is sorted.
@@ -113,7 +115,9 @@ PetscErrorCode PetscSortReal(PetscInt n, PetscReal v[])
     it = c; \
     c  = d; \
     d  = it; \
-  }
+  } \
+  do { \
+  } while (0)
 
 /* modified from PetscSortIntWithArray_Private */
 static PetscErrorCode PetscSortRealWithArrayInt_Private(PetscReal *v, PetscInt *V, PetscInt right)

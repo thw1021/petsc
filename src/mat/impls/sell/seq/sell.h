@@ -114,7 +114,9 @@ static inline PetscErrorCode MatSeqXSELLFreeSELL(Mat AA, MatScalar **val, PetscI
     Ain->reallocs++; \
     if (WIDTH >= Ain->maxallocrow) Ain->maxallocrow += MUL; \
     if (WIDTH >= Ain->rlenmax) Ain->rlenmax++; \
-  }
+  } \
+  do { \
+  } while (0)
 
 #define MatSetValue_SeqSELL_Private(A, row, col, value, addv, orow, ocol, cp, vp, lastcol, low, high) \
   { \
@@ -186,7 +188,9 @@ static inline PetscErrorCode MatSeqXSELLFreeSELL(Mat AA, MatScalar **val, PetscI
       low = _i + 1; \
       high++; \
     } \
-  }
+  } \
+  do { \
+  } while (0)
 
 PETSC_INTERN PetscErrorCode MatSeqSELLSetPreallocation_SeqSELL(Mat, PetscInt, const PetscInt[]);
 PETSC_INTERN PetscErrorCode MatMult_SeqSELL(Mat, Vec, Vec);

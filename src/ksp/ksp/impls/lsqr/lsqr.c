@@ -7,7 +7,9 @@
     c = a; \
     a = b; \
     b = c; \
-  }
+  } \
+  do { \
+  } while (0)
 
 #include <petsc/private/kspimpl.h> /*I "petscksp.h" I*/
 #include <petscdraw.h>

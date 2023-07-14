@@ -3694,7 +3694,9 @@ PetscErrorCode PetscSectionSetUseFieldOffsets(PetscSection s, PetscBool flg)
       PetscCall(PetscMemcpy(&a1[o1], &a0[o0], n *unitsize)); \
     } \
     *newArray = (void *)a1; \
-  }
+  } \
+  do { \
+  } while (0)
 
 /*@
   PetscSectionExtractDofsFromArray - Extracts elements of an array corresponding to DOFs of specified points.

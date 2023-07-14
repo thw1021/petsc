@@ -1577,7 +1577,9 @@ PetscErrorCode PCGASMDestroySubdomains(PetscInt n, IS **iis, IS **ois)
       *n += PetscMin(PetscMax(*xright_loc - xleft, 0), width); \
       *n -= PetscMin(PetscMax(*xleft_loc - xleft, 0), width); \
     } \
-  }
+  } \
+  do { \
+  } while (0)
 
 /*@C
    PCGASMCreateSubdomains2D - Creates the index sets for the `PCGASM` overlapping Schwarz

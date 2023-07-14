@@ -180,7 +180,9 @@ PetscErrorCode MatCreateColmap_MPIBAIJ_Private(Mat mat)
     ap[bs2 * _i + bs * cidx + ridx] = value; \
   a_noinsert:; \
     ailen[brow] = nrow; \
-  }
+  } \
+  do { \
+  } while (0)
 
 #define MatSetValues_SeqBAIJ_B_Private(row, col, value, addv, orow, ocol) \
   { \
@@ -220,7 +222,9 @@ PetscErrorCode MatCreateColmap_MPIBAIJ_Private(Mat mat)
     ap[bs2 * _i + bs * cidx + ridx] = value; \
   b_noinsert:; \
     bilen[brow] = nrow; \
-  }
+  } \
+  do { \
+  } while (0)
 
 PetscErrorCode MatSetValues_MPIBAIJ(Mat mat, PetscInt m, const PetscInt im[], PetscInt n, const PetscInt in[], const PetscScalar v[], InsertMode addv)
 {
