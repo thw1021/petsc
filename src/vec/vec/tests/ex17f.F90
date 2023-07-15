@@ -30,8 +30,8 @@
 
       NN = size*n
 
-      PetscCallA(VecCreateMPI(PETSC_COMM_WORLD,PETSC_DECIDE,NN,y,ierr))
-      PetscCallA(VecCreateSeq(PETSC_COMM_SELF,NN,x,ierr))
+      PetscCallA(VecCreateFromOptions(PETSC_COMM_WORLD,PETSC_NULL_CHARACTER,ione,PETSC_DECIDE,NN,y,ierr))
+      PetscCallA(VecCreateFromOptions(PETSC_COMM_SELF,PETSC_NULL_CHARACTER,ione,NN,NN,x,ierr))
 
       PetscCallA(VecSet(x,zero,ierr))
       PetscCallA(VecGetOwnershipRange(y,low,high,ierr))
