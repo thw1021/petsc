@@ -1,0 +1,13 @@
+[0:1293.68:PetscLogHandlerStagePush_User ] Pushing initial stage "Main Stage"
+[0:1293.68:PetscLogHandlerEventBegin_User] Event "Event 1" started: now running 1 times
+[0:1293.68:PetscLogHandlerStagePush_User ] Pushing stage stage "Stage 1" (replacing "Main Stage")
+[0:1293.68:PetscLogHandlerEventBegin_User] Event "Event 2" started: now running 1 times
+[0:1293.68:PetscLogHandlerEventSync_User ] Event "Event 1" synced: took 6.25e-07 seconds
+[0:1293.68:PetscLogHandlerEventBegin_User] Event "Event 1" started: now running 2 times
+[0:1293.68:PetscLogHandlerEventEnd_User  ] Event "Event 1" stopped: now running 1 times
+[0:1293.68:PetscLogHandlerEventEnd_User  ] Event "Event 2" stopped: now running 0 times
+[0:1293.68:PetscLogHandlerStagePop_User  ] Popping stage "Stage 1" (back to "Main Stage")
+[0:1293.68:PetscLogHandlerEventEnd_User  ] Event "Event 1" stopped: now running 0 times
+[0:1293.68:PetscLogHandlerStagePop_User  ] Popping initial stage "Main Stage"
+2 events were seen by the handler
+1 object(s) were created and 1 object(s) were destroyed
