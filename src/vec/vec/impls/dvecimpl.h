@@ -63,4 +63,8 @@ PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecPointwiseMult_Seq(Vec, Vec, Vec);
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecPointwiseDivide_Seq(Vec, Vec, Vec);
 PETSC_SINGLE_LIBRARY_INTERN PetscErrorCode VecAXPY_Seq(Vec, PetscScalar, Vec);
 
+PETSC_INTERN PetscErrorCode VecMDot_Seq_GEMV(Vec, PetscInt, const Vec[], PetscScalar *);
+PETSC_INTERN PetscErrorCode VecMTDot_Seq_GEMV(Vec, PetscInt, const Vec[], PetscScalar *);
+PETSC_INTERN PetscErrorCode VecMAXPY_Seq_GEMV(Vec, PetscInt, const PetscScalar *, Vec *);
+
 #endif // PETSC_DVECIMPL_H
