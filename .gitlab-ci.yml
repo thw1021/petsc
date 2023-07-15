@@ -990,7 +990,7 @@ osx-cxx-pkgs-opt:
   variables:
     PETSC_OPTIONS: -vecscatter_mpi1 false -options_left false
     TEST_ARCH: arch-ci-osx-cxx-pkgs-opt
-    MAKE_CXXFLAGS: -Werror -Wno-pass-failed
+    MAKE_CXXFLAGS: -Werror -Wno-pass-failed -Wextra-semi-stmt
     INIT_SCRIPT: .zprofile
 
 osx-dbg:
