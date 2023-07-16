@@ -99,6 +99,7 @@ int main(int argc, char **args)
       args: -pc_type {{bjacobi lu ilu mat cholesky icc none shell asm gasm}shared output}
       test:
          suffix: 1
+         requires: !hip
          output_file: output/ex77_preonly.out
          args: -ksp_type preonly
       test:
@@ -205,6 +206,7 @@ int main(int argc, char **args)
       args: -pc_type {{cholesky icc none}shared output} -transpose
       test:
          suffix: 1_transpose
+         requires: !hip
          output_file: output/ex77_preonly.out
          args: -ksp_type preonly
       test:
