@@ -502,11 +502,16 @@ PETSC_EXTERN PetscErrorCode TSSetPreStage(TS, PetscErrorCode (*)(TS, PetscReal))
 PETSC_EXTERN PetscErrorCode TSSetPostStage(TS, PetscErrorCode (*)(TS, PetscReal, PetscInt, Vec *));
 PETSC_EXTERN PetscErrorCode TSSetPostEvaluate(TS, PetscErrorCode (*)(TS));
 PETSC_EXTERN PetscErrorCode TSSetPostStep(TS, PetscErrorCode (*)(TS));
+PETSC_EXTERN PetscErrorCode TSSetTransfer(TS, PetscErrorCode (*)(TS, PetscInt, PetscReal, Vec, PetscBool *, void *), PetscErrorCode (*)(TS, PetscInt, Vec[], Vec[], void *), void *);
 PETSC_EXTERN PetscErrorCode TSPreStep(TS);
 PETSC_EXTERN PetscErrorCode TSPreStage(TS, PetscReal);
 PETSC_EXTERN PetscErrorCode TSPostStage(TS, PetscReal, PetscInt, Vec *);
 PETSC_EXTERN PetscErrorCode TSPostEvaluate(TS);
 PETSC_EXTERN PetscErrorCode TSPostStep(TS);
+PETSC_EXTERN PetscErrorCode TSTransfer(TS);
+PETSC_EXTERN PetscErrorCode TSTransferRetrieveVec(TS, const char *, Vec *);
+PETSC_EXTERN PetscErrorCode TSTransferRegisterVec(TS, const char *, Vec);
+
 PETSC_EXTERN PetscErrorCode TSInterpolate(TS, PetscReal, Vec);
 PETSC_EXTERN PetscErrorCode TSSetTolerances(TS, PetscReal, Vec, PetscReal, Vec);
 PETSC_EXTERN PetscErrorCode TSGetTolerances(TS, PetscReal *, Vec *, PetscReal *, Vec *);

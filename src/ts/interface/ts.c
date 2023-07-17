@@ -2705,6 +2705,7 @@ PetscErrorCode TSDestroy(TS *ts)
   PetscCall(TSReset(*ts));
   PetscCall(TSAdjointReset(*ts));
   if ((*ts)->forward_solve) PetscCall(TSForwardReset(*ts));
+  PetscCall(TSTransferReset(*ts));
 
   /* if memory was published with SAWs then destroy it */
   PetscCall(PetscObjectSAWsViewOff((PetscObject)*ts));
@@ -3703,6 +3704,247 @@ PetscErrorCode TSComputeExactError(TS ts, Vec u, Vec e)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+/*@C
+  TSSetTransfer - Sets the transfer operations.
+
+  Logically Collective
+
+  Input Parameters:
++ ts   - The `TS` context obtained from `TSCreate()`
+. setup - The setup function
+- transfer - The transfer function
+
+  Calling sequence of `setup`:
+$   PetscErrorCode setup(TS ts, PetscInt step, PetscReal time, Vec state, PetscBool *resize, void *ctx)
++   ts - the TS context
+.   step - the current step
+.   time - the current time
+.   state - the current vector of state
+.   resize - (output parameter) `PETSC_TRUE` if need resizing, `PETSC_FALSE` otherwise
+-   ctx - user defined context
+
+  Calling sequence of `transfer`:
+$   PetscErrorCode transfer(TS ts, PetscInt nv, Vec vecsin[], Vec vecsout[], void *ctx)
++   ts - the TS context
+.   nv - the number of vectors to be transferred
+.   vecsin - array of vectors to be transferred
+.   vecsout - array of transferred vectors
+-   ctx - user defined context
+
+  Notes:
+    The input and output arrays passed to `transfer` are allocated by PETSc.
+    Vectors in `vecsout` must be created by the user.
+    Ownership of vectors in `vecsout` is transferred to PETSc.
+
+  Level: advanced
+
+.seealso: [](ch_ts), `TS`
+@*/
+PetscErrorCode TSSetTransfer(TS ts, PetscErrorCode (*setup)(TS, PetscInt, PetscReal, Vec, PetscBool *, void *), PetscErrorCode (*transfer)(TS, PetscInt, Vec[], Vec[], void *), void *ctx)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
+  ts->transfersetup = setup;
+  ts->transfer      = transfer;
+  ts->transferctx   = ctx;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  TSTransferRegisterOrRetrieve - Register or import vectors transferred with `TSTransfer()`.
+
+  Collective
+
+  Input Parameters:
++ ts   - The `TS` context obtained from `TSCreate()`
+- flg - If `PETSC_TRUE` each TS implementation (e.g. `TSBDF`) will register vectors to be transferred, if `PETSC_FALSE` vectors will be imported from transferred vectors.
+
+  Level: developer
+
+  Note:
+  `TSTransferRegisterOrRetrieve()` is declared PETSC_INTERN since it is
+   used within time stepping implementations,
+   so most users would not generally call this routine themselves.
+
+.seealso: [](ch_ts), `TS`, `TSSetTransfer()`
+@*/
+PetscErrorCode TSTransferRegisterOrRetrieve(TS ts, PetscBool flg)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
+  PetscTryTypeMethod(ts, transferregister, flg);
+  /* PetscTryTypeMethod(adapt, transferregister, flg); */
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode TSTransferReset(TS ts)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
+  PetscCall(PetscObjectListDestroy(&ts->transferobjs));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TSTransferVecs(TS ts, PetscInt cnt, Vec vecsin[], Vec vecsout[])
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
+  PetscValidLogicalCollectiveInt(ts, cnt, 2);
+  for (PetscInt i = 0; i < cnt; i++) PetscCall(VecLockReadPush(vecsin[i]));
+  if (ts->transfer) {
+    PetscCall(PetscInfo(ts, "Transferring %" PetscInt_FMT " vectors\n", cnt));
+    PetscCallBack("TS callback transfer", (*ts->transfer)(ts, cnt, vecsin, vecsout, ts->transferctx));
+  }
+  for (PetscInt i = 0; i < cnt; i++) PetscCall(VecLockReadPop(vecsin[i]));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  TSTransferRegisterVec - Register a vector to be transferred with `TSTransfer()`.
+
+  Collective
+
+  Input Parameters:
++ ts   - The `TS` context obtained from `TSCreate()`
+. name - A string identifiying the vector
+- vec - The vector
+
+  Level: developer
+
+  Note:
+  `TSTransferRegisterVec()` is typically used within time stepping implementations,
+  so most users would not generally call this routine themselves.
+
+.seealso: [](ch_ts), `TS`, `TSSetTransfer()`, `TSTransfer()`, `TSTransferRetrieveVec()`
+@*/
+PetscErrorCode TSTransferRegisterVec(TS ts, const char *name, Vec vec)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
+  PetscValidCharPointer(name, 2);
+  if (vec) PetscValidHeaderSpecific(vec, VEC_CLASSID, 3);
+  PetscCall(PetscObjectListAdd(&ts->transferobjs, name, (PetscObject)vec));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  TSTransferRetrieveVec - Retrieve a vector registered with `TSTransferRegisterVec()`.
+
+  Collective
+
+  Input Parameters:
++ ts   - The `TS` context obtained from `TSCreate()`
+. name - A string identifiying the vector
+- vec - The vector
+
+  Level: developer
+
+  Note:
+  `TSTransferRetrieveVec()` is typically used within time stepping implementations,
+  so most users would not generally call this routine themselves.
+
+.seealso: [](ch_ts), `TS`, `TSSetTransfer()`, `TSTransfer()`, `TSTransferRegisterVec()`
+@*/
+PetscErrorCode TSTransferRetrieveVec(TS ts, const char *name, Vec *vec)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
+  PetscValidCharPointer(name, 2);
+  PetscValidPointer(vec, 3);
+  PetscCall(PetscObjectListFind(ts->transferobjs, name, (PetscObject *)vec));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+static PetscErrorCode TSTransferGetVecArray(TS ts, PetscInt *nv, const char **names[], Vec *vecs[])
+{
+  PetscInt        cnt;
+  PetscObjectList tmp;
+  Vec            *vecsin  = NULL;
+  const char    **namesin = NULL;
+
+  PetscFunctionBegin;
+  for (tmp = ts->transferobjs, cnt = 0; tmp; tmp = tmp->next)
+    if (tmp->obj && tmp->obj->classid == VEC_CLASSID) cnt++;
+  if (names) PetscCall(PetscMalloc1(cnt, &vecsin));
+  if (vecs) PetscCall(PetscMalloc1(cnt, &namesin));
+  for (tmp = ts->transferobjs, cnt = 0; tmp; tmp = tmp->next) {
+    if (tmp->obj && tmp->obj->classid == VEC_CLASSID) {
+      if (vecs) vecsin[cnt] = (Vec)tmp->obj;
+      if (names) namesin[cnt] = tmp->name;
+      cnt++;
+    }
+  }
+  if (nv) *nv = cnt;
+  if (names) *names = namesin;
+  if (vecs) *vecs = vecsin;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  TSTransfer - Runs the user-defined transfer functions provided with `TSSetTransfer()`
+
+  Collective
+
+  Input Parameter:
+. ts   - The `TS` context obtained from `TSCreate()`
+
+  Level: developer
+
+  Note:
+  `TSTransfer()` is typically used within time stepping implementations,
+  so most users would not generally call this routine themselves.
+
+.seealso: [](ch_ts), `TS`, `TSSetTransfer()`
+@*/
+PetscErrorCode TSTransfer(TS ts)
+{
+  PetscInt     nv      = 0;
+  const char **names   = NULL;
+  Vec         *vecsin  = NULL;
+  const char  *solname = "ts:vec_sol";
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
+  if (ts->transfersetup) {
+    PetscBool flg = PETSC_FALSE;
+
+    PetscCall(VecLockReadPush(ts->vec_sol));
+    PetscCallBack("TS callback transfer setup", (*ts->transfersetup)(ts, ts->steps, ts->ptime, ts->vec_sol, &flg, ts->transferctx));
+    PetscCall(VecLockReadPop(ts->vec_sol));
+    if (flg) {
+      PetscCall(TSTransferRegisterVec(ts, solname, ts->vec_sol));
+      PetscCall(TSTransferRegisterOrRetrieve(ts, PETSC_TRUE)); /* specific impls register their own objects */
+    }
+  }
+
+  PetscCall(TSTransferGetVecArray(ts, &nv, &names, &vecsin));
+  if (nv) {
+    Vec *vecsout, vecsol;
+
+    /* Reset internal objects */
+    PetscCall(TSReset(ts));
+
+    /* Transfer needed vectors (users can call SetJacobian, SetDM here) */
+    PetscCall(PetscCalloc1(nv, &vecsout));
+    PetscCall(TSTransferVecs(ts, nv, vecsin, vecsout));
+    for (PetscInt i = 0; i < nv; i++) {
+      PetscCall(TSTransferRegisterVec(ts, names[i], vecsout[i]));
+      PetscCall(VecDestroy(&vecsout[i]));
+    }
+    PetscCall(PetscFree(vecsout));
+    PetscCall(TSTransferRegisterOrRetrieve(ts, PETSC_FALSE)); /* specific impls import the transferred objects */
+
+    PetscCall(TSTransferRetrieveVec(ts, solname, &vecsol));
+    if (vecsol) PetscCall(TSSetSolution(ts, vecsol));
+    PetscAssert(ts->vec_sol, PetscObjectComm((PetscObject)ts), PETSC_ERR_ARG_NULL, "Missing TS solution");
+  }
+
+  PetscCall(PetscFree(names));
+  PetscCall(PetscFree(vecsin));
+  PetscCall(TSTransferReset(ts));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@
   TSSolve - Steps the requested number of timesteps.
 
@@ -3857,6 +4099,7 @@ PetscErrorCode TSSolve(TS ts, Vec u)
       if (!ts->steprollback) {
         PetscCall(TSTrajectorySet(ts->trajectory, ts, ts->steps, ts->ptime, ts->vec_sol));
         PetscCall(TSPostStep(ts));
+        PetscCall(TSTransfer(ts));
       }
     }
     PetscCall(TSMonitor(ts, ts->steps, ts->ptime, ts->vec_sol));
