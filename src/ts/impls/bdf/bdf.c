@@ -331,6 +331,30 @@ static PetscErrorCode TSRollBack_BDF(TS ts)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode TSTransferRegister_BDF(TS ts, PetscBool reg)
+{
+  TS_BDF     *bdf     = (TS_BDF *)ts->data;
+  const char *names[] = {"", "ts:bdf:1", "ts:bdf:2", "ts:bdf:3", "ts:bdf:4", "ts:bdf:5", "ts:bdf:6", ""};
+  PetscInt    i, maxn = (PetscInt)(sizeof(bdf->work) / sizeof(Vec) - 1);
+
+  PetscFunctionBegin;
+  PetscAssert(maxn == 7, PetscObjectComm((PetscObject)ts), PETSC_ERR_PLIB, "names need to be redefined");
+  if (reg) {
+    for (i = 1; i < PetscMin(bdf->n + 1, maxn); i++) { PetscCall(TSTransferRegisterVec(ts, names[i], bdf->work[i])); }
+  } else {
+    for (i = 1; i < maxn; i++) {
+      PetscCall(TSTransferRetrieveVec(ts, names[i], &bdf->work[i]));
+      if (!bdf->work[i]) break;
+      PetscCall(PetscObjectReference((PetscObject)bdf->work[i]));
+      if (bdf->transientvar) {
+        PetscCall(VecDuplicate(bdf->work[i], &bdf->tvwork[i]));
+        PetscCall(TSComputeTransientVariable(ts, bdf->work[i], bdf->tvwork[i]));
+      }
+    }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 static PetscErrorCode SNESTSFormFunction_BDF(SNES snes, Vec X, Vec F, TS ts)
 {
   TS_BDF   *bdf = (TS_BDF *)ts->data;
@@ -385,7 +409,6 @@ static PetscErrorCode TSReset_BDF(TS ts)
   size_t  i, n = sizeof(bdf->work) / sizeof(Vec);
 
   PetscFunctionBegin;
-  bdf->k = bdf->n = 0;
   for (i = 0; i < n; i++) {
     PetscCall(VecDestroy(&bdf->work[i]));
     PetscCall(VecDestroy(&bdf->tvwork[i]));
@@ -410,16 +433,18 @@ static PetscErrorCode TSDestroy_BDF(TS ts)
 static PetscErrorCode TSSetUp_BDF(TS ts)
 {
   TS_BDF   *bdf = (TS_BDF *)ts->data;
-  size_t    i, n = sizeof(bdf->work) / sizeof(Vec);
+  size_t    n   = sizeof(bdf->work) / sizeof(Vec);
   PetscReal low, high, two = 2;
+  PetscInt  cnt = 0;
 
   PetscFunctionBegin;
   PetscCall(TSHasTransientVariable(ts, &bdf->transientvar));
-  bdf->k = bdf->n = 0;
-  for (i = 0; i < n; i++) {
-    PetscCall(VecDuplicate(ts->vec_sol, &bdf->work[i]));
-    if (i && bdf->transientvar) PetscCall(VecDuplicate(ts->vec_sol, &bdf->tvwork[i]));
+  for (size_t i = 0; i < n; i++) {
+    if (!bdf->work[i]) PetscCall(VecDuplicate(ts->vec_sol, &bdf->work[i]));
+    else cnt++;
+    if (i && bdf->transientvar && !bdf->tvwork[i]) PetscCall(VecDuplicate(ts->vec_sol, &bdf->tvwork[i]));
   }
+  if (!cnt) bdf->k = bdf->n = 0;
   PetscCall(VecDuplicate(ts->vec_sol, &bdf->vec_dot));
   PetscCall(VecDuplicate(ts->vec_sol, &bdf->vec_wrk));
   PetscCall(VecDuplicate(ts->vec_sol, &bdf->vec_lte));
@@ -497,18 +522,19 @@ PETSC_EXTERN PetscErrorCode TSCreate_BDF(TS ts)
   TS_BDF *bdf;
 
   PetscFunctionBegin;
-  ts->ops->reset          = TSReset_BDF;
-  ts->ops->destroy        = TSDestroy_BDF;
-  ts->ops->view           = TSView_BDF;
-  ts->ops->setup          = TSSetUp_BDF;
-  ts->ops->setfromoptions = TSSetFromOptions_BDF;
-  ts->ops->step           = TSStep_BDF;
-  ts->ops->evaluatewlte   = TSEvaluateWLTE_BDF;
-  ts->ops->rollback       = TSRollBack_BDF;
-  ts->ops->interpolate    = TSInterpolate_BDF;
-  ts->ops->snesfunction   = SNESTSFormFunction_BDF;
-  ts->ops->snesjacobian   = SNESTSFormJacobian_BDF;
-  ts->default_adapt_type  = TSADAPTBASIC;
+  ts->ops->reset            = TSReset_BDF;
+  ts->ops->destroy          = TSDestroy_BDF;
+  ts->ops->view             = TSView_BDF;
+  ts->ops->setup            = TSSetUp_BDF;
+  ts->ops->setfromoptions   = TSSetFromOptions_BDF;
+  ts->ops->step             = TSStep_BDF;
+  ts->ops->evaluatewlte     = TSEvaluateWLTE_BDF;
+  ts->ops->rollback         = TSRollBack_BDF;
+  ts->ops->interpolate      = TSInterpolate_BDF;
+  ts->ops->transferregister = TSTransferRegister_BDF;
+  ts->ops->snesfunction     = SNESTSFormFunction_BDF;
+  ts->ops->snesjacobian     = SNESTSFormJacobian_BDF;
+  ts->default_adapt_type    = TSADAPTBASIC;
 
   ts->usessnes = PETSC_TRUE;
 
@@ -516,6 +542,7 @@ PETSC_EXTERN PetscErrorCode TSCreate_BDF(TS ts)
   ts->data = (void *)bdf;
 
   bdf->status = TS_STEP_COMPLETE;
+  for (size_t i = 0; i < sizeof(bdf->work) / sizeof(Vec); i++) { bdf->work[i] = bdf->tvwork[i] = NULL; }
 
   PetscCall(PetscObjectComposeFunction((PetscObject)ts, "TSBDFSetOrder_C", TSBDFSetOrder_BDF));
   PetscCall(PetscObjectComposeFunction((PetscObject)ts, "TSBDFGetOrder_C", TSBDFGetOrder_BDF));

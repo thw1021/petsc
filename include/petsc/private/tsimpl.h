@@ -64,6 +64,7 @@ struct _TSOps {
   PetscErrorCode (*startingmethod)(TS);
   PetscErrorCode (*initcondition)(TS, Vec);
   PetscErrorCode (*exacterror)(TS, Vec, Vec);
+  PetscErrorCode (*transferregister)(TS, PetscBool);
 };
 
 /*
@@ -164,6 +165,9 @@ struct _p_TS {
   TSAdaptType default_adapt_type;
   TSEvent     event;
 
+  /* ---------------- Transfer  ---------------------*/
+  PetscObjectList transferobjs;
+
   /* ---------------- User (or PETSc) Provided stuff ---------------------*/
   PetscErrorCode (*monitor[MAXTSMONITORS])(TS, PetscInt, PetscReal, Vec, void *);
   PetscErrorCode (*monitordestroy[MAXTSMONITORS])(void **);
@@ -181,6 +185,9 @@ struct _p_TS {
   PetscErrorCode (*postevaluate)(TS);
   PetscErrorCode (*poststep)(TS);
   PetscErrorCode (*functiondomainerror)(TS, PetscReal, Vec, PetscBool *);
+  PetscErrorCode (*transfersetup)(TS, PetscInt, PetscReal, Vec, PetscBool *, void *);
+  PetscErrorCode (*transfer)(TS, PetscInt, Vec[], Vec[], void *);
+  void *transferctx;
 
   /* ---------------------- Sensitivity Analysis support -----------------*/
   TSTrajectory trajectory; /* All solutions are kept here for the entire time integration process */
@@ -547,6 +554,9 @@ PETSC_EXTERN PetscErrorCode TSAdaptHistorySetTSHistory(TSAdapt, TSHistory, Petsc
 
 PETSC_INTERN PetscErrorCode TSTrajectoryReconstruct_Private(TSTrajectory, TS, PetscReal, Vec, Vec);
 PETSC_INTERN PetscErrorCode TSTrajectorySetUp_Basic(TSTrajectory, TS);
+
+PETSC_INTERN PetscErrorCode TSTransferRegisterOrRetrieve(TS, PetscBool);
+PETSC_INTERN PetscErrorCode TSTransferReset(TS);
 
 PETSC_EXTERN PetscLogEvent TSTrajectory_Set;
 PETSC_EXTERN PetscLogEvent TSTrajectory_Get;
