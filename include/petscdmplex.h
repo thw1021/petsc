@@ -116,7 +116,7 @@ PETSC_EXTERN PetscErrorCode DMPlexInterpolatePointSF(DM, PetscSF);
 PETSC_EXTERN PetscErrorCode DMPlexIsInterpolated(DM, DMPlexInterpolatedFlag *);
 PETSC_EXTERN PetscErrorCode DMPlexIsInterpolatedCollective(DM, DMPlexInterpolatedFlag *);
 
-PETSC_EXTERN PetscErrorCode DMPlexFilter(DM, DMLabel, PetscInt, DM *);
+PETSC_EXTERN PetscErrorCode DMPlexFilter(DM, DMLabel, PetscInt, PetscBool, PetscBool, PetscBool, PetscBool, PetscErrorCode (*)(DM, PetscInt, PetscInt *, PetscInt[], void *), void *, DM *);
 PETSC_EXTERN PetscErrorCode DMPlexGetCellNumbering(DM, IS *);
 PETSC_EXTERN PetscErrorCode DMPlexGetVertexNumbering(DM, IS *);
 PETSC_EXTERN PetscErrorCode DMPlexCreatePointNumbering(DM, IS *);
@@ -259,6 +259,7 @@ PETSC_EXTERN PetscErrorCode DMPlexSetMigrationSF(DM, PetscSF);
 PETSC_EXTERN PetscErrorCode DMPlexGetMigrationSF(DM, PetscSF *);
 PETSC_EXTERN PetscErrorCode DMPlexDistributionSetName(DM, const char[]);
 PETSC_EXTERN PetscErrorCode DMPlexDistributionGetName(DM, const char *[]);
+PETSC_EXTERN PetscErrorCode DMPlexMarkInteriorExteriorFacets(DM, PetscInt, PetscInt, DMLabel, DMLabel);
 
 /*E
    DMPlexReorderDefaultFlag - Flag indicating whether the `DMPLEX` should be reordered by default
