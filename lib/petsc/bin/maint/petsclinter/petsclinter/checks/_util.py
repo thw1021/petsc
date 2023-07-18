@@ -6,6 +6,8 @@
 import itertools
 import clang.cindex as clx
 
+from .._error import ParsingError
+
 from ..classes._diag    import DiagnosticManager, Diagnostic
 from ..classes._cursor  import Cursor
 from ..classes._patch   import Patch
@@ -284,7 +286,7 @@ def check_traceable_to_parent_args(obj, parent_arg_names, trace=None):
       # it's not traceable to a function argument, so maybe its a global static variable
       if len([r for r in all_possible_references if r.storage_class == clx.StorageClass.STATIC]):
         # a global variable is not a function argumment, so this is unhandleable
-        raise pl.ParsingError('PETSC_CLANG_STATIC_ANALYZER_IGNORE')
+        raise ParsingError('PETSC_CLANG_STATIC_ANALYZER_IGNORE')
 
     assert len(arg_refs), f'Could not determine the origin of cursor {obj}'
     # take the first, as this is the earliest
@@ -327,7 +329,7 @@ def check_traceable_to_parent_args(obj, parent_arg_names, trace=None):
     alternate_cursor = [c for c in iterator if Cursor.get_name_from_cursor(c) != obj.name]
     potential_parents.extend(alternate_cursor)
   if not potential_parents:
-    raise pl.ParsingError
+    raise ParsingError
   # arguably at this point anything other than len(potential_parents) should be 1,
   # and anything else can be considered a failure of this routine (therefore a RTE)
   # as it should be able to detect the definition.
@@ -341,7 +343,7 @@ def check_traceable_to_parent_args(obj, parent_arg_names, trace=None):
       loc = parent_arg_names.index(name)
     except ValueError as ve:
       # name isn't in the parent arguments, so we raise parsing error from it
-      raise pl.ParsingError from ve
+      raise ParsingError from ve
   else:
     parent = Cursor(parent, obj.argidx)
     # deeper into the rabbit hole
@@ -380,7 +382,7 @@ def check_matching_arg_num(linter, obj, idx, parent_args):
   except ValueError:
     try:
       parent_idx, trace = check_traceable_to_parent_args(obj, parent_arg_names)
-    except pl.ParsingError as pe:
+    except ParsingError as pe:
       # If the parent arguments don't contain the symbol and we couldn't determine a
       # definition then we cannot check for correct numbering, so we cannot do
       # anything here but emit a warning
