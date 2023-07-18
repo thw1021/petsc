@@ -16,16 +16,36 @@ class Color:
     __COLOR_RESET__         = ''
 
   @classmethod
-  def bright_red(cls):
+  def bright_red(cls) -> str:
+    r"""Return the ASCII code for bright red
+
+    Returns
+    -------
+    ret :
+      the ASCII code for bright red for the current terminal type
+    """
     return cls.__COLOR_BRIGHT_RED__
 
   @classmethod
-  def bright_yellow(cls):
+  def bright_yellow(cls) -> str:
+    r"""Return the ASCII code for bright yellow
+
+    Returns
+    -------
+    ret :
+      the ASCII code for bright yellow
+    """
     return cls.__COLOR_BRIGHT_YELLOW__
 
   @classmethod
-  def reset(cls):
-    return cls.__COLOR_RESET__
+  def reset(cls) -> str:
+    r"""Return the ASCII code for resetting color
 
+    Returns
+    -------
+    ret :
+      the ASCII code to reset all color characteristics
+    """
+    return cls.__COLOR_RESET__
 
 color = Color()
