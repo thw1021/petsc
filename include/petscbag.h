@@ -60,7 +60,6 @@ PETSC_EXTERN PetscErrorCode PetscBagView(PetscBag, PetscViewer);
 PETSC_EXTERN PetscErrorCode PetscBagLoad(PetscViewer, PetscBag);
 PETSC_EXTERN PetscErrorCode PetscBagViewFromOptions(PetscBag, PetscObject, const char[]);
 
-
 #define PETSC_BAG_FILE_CLASSID 1211219
 
 #endif

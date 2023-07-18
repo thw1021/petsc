@@ -598,7 +598,6 @@ PETSC_EXTERN PetscErrorCode DMDATSSetRHSJacobianLocal(DM, PetscErrorCode (*)(DMD
 PETSC_EXTERN PetscErrorCode DMDATSSetIFunctionLocal(DM, InsertMode, PetscErrorCode (*)(DMDALocalInfo *, PetscReal, void *, void *, void *, void *), void *);
 PETSC_EXTERN PetscErrorCode DMDATSSetIJacobianLocal(DM, PetscErrorCode (*)(DMDALocalInfo *, PetscReal, void *, void *, PetscReal, Mat, Mat, void *), void *);
 
-
 typedef struct _n_TSMonitorLGCtx *TSMonitorLGCtx;
 typedef struct {
   Vec            ray;
