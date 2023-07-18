@@ -33,7 +33,7 @@ def main(
     extra_compiler_flags=None, extra_header_includes=None,
     test_output_dir=None, replace_tests=False,
     werror=False
-):
+) -> int:
   """
   entry point for linter
 
@@ -76,7 +76,7 @@ def main(
     clang_dir=clang_dir, clang_lib=clang_lib, compat_check=clang_compat_check
   )
 
-  petsc_dir = pl.Path(petsc_dir).resolve()
+  petsc_dir = pl.classes.Path(petsc_dir).resolve()
   if src_path is None:
     src_path = [petsc_dir / 'src']
   else:
@@ -179,7 +179,7 @@ def main(
   if warnings:
     if verbose:
       pl.sync_print(format_str.format(' Found Warnings '))
-      pl.sync_print('\n'.join(s for tup in warnings for _, s in tup))
+      pl.sync_print('\n'.join(e for _, e in warnings))
       pl.sync_print(format_str.format(' End warnings '))
     if werror:
       ret |= ReturnCode.ERROR_WERROR
@@ -398,7 +398,7 @@ def command_line_main():
       pl.sync_print('Running with --pm flag, setting number of workers to 1')
     args.workers = 1
     try:
-      import ipdb as py_db # LINT IGNORE
+      import ipdb as py_db # type: ignore
     except ModuleNotFoundError:
       import pdb as py_db # LINT IGNORE
 
