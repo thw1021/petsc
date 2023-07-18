@@ -3,7 +3,7 @@
 #include <petsc/private/taoimpl.h>
 #include <../src/tao/matrix/submatfree.h>
 
-/*@C
+/*
   TaoVecGetSubVec - Gets a subvector using the IS
 
   Input Parameters:
@@ -19,7 +19,7 @@
   maskvalue should usually be 0.0, unless a pointwise divide will be used.
 
   Level: developer
-@*/
+*/
 PetscErrorCode TaoVecGetSubVec(Vec vfull, IS is, TaoSubsetType reduced_type, PetscReal maskvalue, Vec *vreduced)
 {
   PetscInt        nfull, nreduced, nreduced_local, rlow, rhigh, flow, fhigh;
@@ -86,7 +86,7 @@ PetscErrorCode TaoVecGetSubVec(Vec vfull, IS is, TaoSubsetType reduced_type, Pet
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*
   TaoMatGetSubMat - Gets a submatrix using the `IS`
 
   Input Parameters:
@@ -99,7 +99,7 @@ PetscErrorCode TaoVecGetSubVec(Vec vfull, IS is, TaoSubsetType reduced_type, Pet
 . Msub - the submatrix
 
   Level: developer
-@*/
+*/
 PetscErrorCode TaoMatGetSubMat(Mat M, IS is, Vec v1, TaoSubsetType subset_type, Mat *Msub)
 {
   IS        iscomp;
@@ -149,7 +149,7 @@ PetscErrorCode TaoMatGetSubMat(Mat M, IS is, Vec v1, TaoSubsetType subset_type, 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*
   TaoEstimateActiveBounds - Generates index sets for variables at the lower and upper
   bounds, as well as fixed variables where lower and upper bounds equal each other.
 
@@ -174,7 +174,7 @@ PetscErrorCode TaoMatGetSubMat(Mat M, IS is, Vec v1, TaoSubsetType subset_type, 
   This estimation is based on Bertsekas' method, with a built in diagonal scaling value of 1.0e-3.
 
   Level: developer
-@*/
+*/
 PetscErrorCode TaoEstimateActiveBounds(Vec X, Vec XL, Vec XU, Vec G, Vec S, Vec W, PetscReal steplen, PetscReal *bound_tol, IS *active_lower, IS *active_upper, IS *active_fixed, IS *active, IS *inactive)
 {
   PetscReal          wnorm;
@@ -315,7 +315,7 @@ PetscErrorCode TaoEstimateActiveBounds(Vec X, Vec XL, Vec XU, Vec G, Vec S, Vec 
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*
   TaoBoundStep - Ensures the correct zero or adjusted step direction
   values for active variables.
 
@@ -332,7 +332,7 @@ PetscErrorCode TaoEstimateActiveBounds(Vec X, Vec XL, Vec XU, Vec G, Vec S, Vec 
 . S - step direction to be modified
 
   Level: developer
-@*/
+*/
 PetscErrorCode TaoBoundStep(Vec X, Vec XL, Vec XU, IS active_lower, IS active_upper, IS active_fixed, PetscReal scale, Vec S)
 {
   Vec step_lower, step_upper, step_fixed;
@@ -375,7 +375,7 @@ PetscErrorCode TaoBoundStep(Vec X, Vec XL, Vec XU, IS active_lower, IS active_up
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-/*@C
+/*
   TaoBoundSolution - Ensures that the solution vector is snapped into the bounds within a given tolerance.
 
   Collective
@@ -393,7 +393,7 @@ PetscErrorCode TaoBoundStep(Vec X, Vec XL, Vec XU, IS active_lower, IS active_up
   Level: developer
 
 .seealso: `TAOBNCG`, `TAOBNTL`, `TAOBNTR`
-@*/
+*/
 PetscErrorCode TaoBoundSolution(Vec X, Vec XL, Vec XU, PetscReal bound_tol, PetscInt *nDiff, Vec Xout)
 {
   PetscInt           i, n, low, high, nDiff_loc = 0;
