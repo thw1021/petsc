@@ -1099,6 +1099,5 @@ PETSC_EXTERN PetscErrorCode DMPolytopeGetOrientation(DMPolytopeType, const Petsc
 PETSC_EXTERN PetscErrorCode DMPolytopeGetVertexOrientation(DMPolytopeType, const PetscInt[], const PetscInt[], PetscInt *);
 PETSC_EXTERN PetscErrorCode DMPolytopeInCellTest(DMPolytopeType, const PetscReal[], PetscBool *);
 
-PETSC_EXTERN PetscErrorCode PetscDTComputeFaceQuadPermutation(DMPolytopeType, PetscQuadrature, PetscInt *, IS *[]);
 
 #endif
