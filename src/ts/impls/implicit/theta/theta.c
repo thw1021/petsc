@@ -188,6 +188,7 @@ static PetscErrorCode TSStep_Theta(TS ts)
 
   PetscFunctionBegin;
   if (!ts->steprollback) {
+    if (th->extrapolate && !ts->steprestart) PetscCall(VecAXPBYPCZ(th->Xdot, -th->shift, th->shift, 0, th->X0, th->X));
     if (th->vec_sol_prev) PetscCall(VecCopy(th->X0, th->vec_sol_prev));
     PetscCall(VecCopy(ts->vec_sol, th->X0));
   }
@@ -203,11 +204,9 @@ static PetscErrorCode TSStep_Theta(TS ts)
       PetscCall(VecZeroEntries(th->Xdot));
       PetscCall(TSComputeIFunction(ts, ts->ptime, th->X0, th->Xdot, th->affine, PETSC_FALSE));
       PetscCall(VecScale(th->affine, (th->Theta - 1) / th->Theta));
-    } else if (th->affine) { /* Just in case th->endpoint is changed between calls to TSStep_Theta() */
-      PetscCall(VecZeroEntries(th->affine));
     }
     PetscCall(TSPreStage(ts, th->stage_time));
-    PetscCall(TSTheta_SNESSolve(ts, th->affine, th->X));
+    PetscCall(TSTheta_SNESSolve(ts, th->endpoint ? th->affine : NULL, th->X));
     PetscCall(TSPostStage(ts, th->stage_time, 0, &th->X));
     PetscCall(TSAdaptCheckStage(ts->adapt, ts, th->stage_time, th->X, &stageok));
     if (!stageok) goto reject_step;
@@ -216,8 +215,9 @@ static PetscErrorCode TSStep_Theta(TS ts)
     if (th->endpoint) {
       PetscCall(VecCopy(th->X, ts->vec_sol));
     } else {
-      PetscCall(VecAXPBYPCZ(th->Xdot, -th->shift, th->shift, 0, th->X0, th->X));
-      PetscCall(VecAXPY(ts->vec_sol, ts->time_step, th->Xdot));
+      PetscScalar s[] = {-1 / th->Theta, 1 / th->Theta};
+      Vec         v[] = {th->X0, th->X};
+      PetscCall(VecMAXPY(ts->vec_sol, 2, s, v));
     }
     PetscCall(TSAdaptChoose(ts->adapt, ts, ts->time_step, NULL, &next_time_step, &accept));
     th->status = accept ? TS_STEP_COMPLETE : TS_STEP_INCOMPLETE;
