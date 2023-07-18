@@ -335,17 +335,17 @@ class Package(config.base.Configure):
     )
     return ['-g' if f == '-g3' else f for f in flags]
 
-  def removeVisibilityFlag(self, flags, pair_prefix=None):
+  def __remove_flag_pair(self, flags, flag_to_remove, pair_prefix):
     """
-    Remove -fvisibility=hidden from flags.
+    Remove FLAG_TO_REMOVE from FLAGS
 
     Parameters
     ----------
-
-    - flags       - iterable (or string) of flags to remove from
-    - pair_prefix - (Optional) if not None, indicates that -fvisibility=hidden is in a pair, and is
-                    prefixed by str(pair_prefix). For example, pair_prefix='-Xcompiler' indicates that
-                    visibility flag is specificied as <COMPILER_NAME> -Xcompiler -fvisibility=hidden
+    - flags          - iterable (or string) of flags to remove from
+    - flag_to_remove - the flag to remove
+    - pair_prefix    - (Optional) if not None, indicates that FLAG_TO_REMOVE is in a pair, and
+                       is prefixed by str(pair_prefix). For example, pair_prefix='-Xcompiler' indicates
+                       that the flag is specificied as <COMPILER_NAME> -Xcompiler FLAG_TO_REMOVE
 
     Return
     ------
@@ -354,26 +354,26 @@ class Package(config.base.Configure):
     if isinstance(flags, str):
       flags = flags.split()
 
-    vis_flag = '-fvisibility=hidden'
     if pair_prefix is None:
-      return self.rmArgs(flags, {vis_flag})
+      return self.rmArgs(flags, {flag_to_remove})
     assert isinstance(pair_prefix, str)
-    # deals with bare PAIR_PREFIX -fvisibility=hidden
-    flag_str = ' '.join(self.rmArgsPair(flags, {vis_flag}, remove_ahead=False))
-    # handle PAIR_PREFIX -fsome_other_flag,-fvisibility=hidden
-    flag_str = re.sub(r',{}\s'.format(vis_flag), ' ', flag_str)
-    # handle PAIR_PREFIX -fsome_other_flag,-fvisibility=hidden,-fyet_another_flag
-    flag_str = re.sub(r',{},'.format(vis_flag), ',', flag_str)
-    # handle PAIR_PREFIX -fvisibility=hidden,-fsome_another_flag
-    flag_str = re.sub(r'\s{},'.format(vis_flag), ' ', flag_str)
+    # deals with bare PAIR_PREFIX FLAG_TO_REMOVE
+    flag_str = ' '.join(self.rmArgsPair(flags, {flag_to_remove}, remove_ahead=False))
+    # handle PAIR_PREFIX -fsome_other_flag,FLAG_TO_REMOVE
+    flag_str = re.sub(r',{}\s'.format(flag_to_remove), ' ', flag_str)
+    # handle PAIR_PREFIX -fsome_other_flag,FLAG_TO_REMOVE,-fyet_another_flag
+    flag_str = re.sub(r',{},'.format(flag_to_remove), ',', flag_str)
+    # handle PAIR_PREFIX FLAG_TO_REMOVE,-fsome_another_flag
+    flag_str = re.sub(r'\s{},'.format(flag_to_remove), ' ', flag_str)
     return flag_str.split()
 
-  def removeCoverageFlag(self, flags, is_pair = False, **kwargs):
-    if isinstance(flags, str):
-      flags = flags.split()
+  def removeVisibilityFlag(self, flags, pair_prefix=None):
+    """Remove -fvisibility=hidden from flags."""
+    return self.__remove_flag_pair(flags, '-fvisibility=hidden', pair_prefix)
 
-    rm_func = self.rmArgsPair if is_pair else self.rmArgs
-    return rm_func(flags, {'--coverage'}, **kwargs)
+  def removeCoverageFlag(self, flags, pair_prefix=None):
+    """Remove --coverage from flags."""
+    return self.__remove_flag_pair(flags, '--coverage', pair_prefix)
 
   def removeStdCxxFlag(self,flags):
     '''Remove the -std=[CXX_VERSION] flag from the list of flags, but only for CMake packages'''
@@ -436,7 +436,7 @@ class Package(config.base.Configure):
 
   def updatePackageCUDAFlags(self, flags):
     outflags = self.removeVisibilityFlag(flags, pair_prefix='-Xcompiler')
-    outflags = self.removeCoverageFlag(outflags, is_pair=True, remove_ahead=False)
+    outflags = self.removeCoverageFlag(outflags, pair_prefix='-Xcompiler')
     return ' '.join(outflags)
 
   def getDefaultLanguage(self):
