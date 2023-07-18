@@ -3,9 +3,13 @@
 # Created: Mon Jun 20 19:42:53 2022 (-0400)
 # @author: Jacob Faibussowitsch
 """
+from __future__ import annotations
+
 import functools
 
-from .. import util
+from ..typing import *
+
+from ..util._color import Color
 
 def verbose_print(*args, **kwargs):
     """
@@ -30,24 +34,24 @@ def only_files(cursor, level, **kwargs):
 
 # A function show(level, *args) would have been simpler but less fun
 # and you'd need a separate parameter for the AST walkers if you want it to be exchangeable.
-class Level(int):
+class IndentLevel(int):
   """
   represent currently visited level of a tree
   """
-  def view(self, *args):
+  def view(self, *args) -> str:
     """
     pretty print an indented line
     """
     return '  '*self+' '.join(map(str, args))
 
-  def __add__(self, inc):
+  def __add__(self, inc: int):
     """
     increase number of tabs and newlines
     """
-    return Level(super().__add__(inc))
+    return IndentLevel(super().__add__(inc))
 
 def check_valid_type(t):
-  import clang.cindex as clx
+  import clang.cindex as clx # type: ignore[import]
 
   return t.kind != clx.TypeKind.INVALID
 
@@ -67,7 +71,7 @@ def view_type(t, level, title):
     retList.extend(view_type(t.get_pointee(), level + 1, 'points to:'))
   return retList
 
-def view_ast_from_cursor(cursor, pred=verbose_print, level=Level(), max_depth=-1, **kwargs):
+def view_ast_from_cursor(cursor, pred=verbose_print, level = IndentLevel(), max_depth = -1, **kwargs):
   """
   pretty print cursor AST
   """
@@ -90,11 +94,11 @@ def view_ast_from_cursor(cursor, pred=verbose_print, level=Level(), max_depth=-1
 # constructing the error messages and diagnostics and hence we make about a 8x performance
 # improvement by caching the files read
 @functools.lru_cache
-def read_file_lines_cached(*args, **kwargs):
+def read_file_lines_cached(*args, **kwargs) -> list[str]:
   with open(*args, **kwargs) as fd:
     return fd.readlines()
 
-def get_raw_source_from_source_range(source_range, num_before_context=0, num_after_context=0, num_context=0, trim=False, tight=False):
+def get_raw_source_from_source_range(source_range: SourceRangeLike, num_before_context: int = 0, num_after_context: int = 0, num_context: int = 0, trim: bool = False, tight: bool = False) -> str:
   num_before_context   = num_before_context if num_before_context else num_context
   num_after_context    = num_after_context  if num_after_context  else num_context
   rstart, rend         = source_range.start, source_range.end
@@ -123,10 +127,10 @@ def get_raw_source_from_source_range(source_range, num_before_context=0, num_aft
     return '\n'.join([s[min_spaces:].rstrip() for s in line_list])
   return ''.join(line_list)
 
-def get_raw_source_from_cursor(cursor, **kwargs):
+def get_raw_source_from_cursor(cursor: CursorLike, **kwargs) -> str:
   return get_raw_source_from_source_range(cursor.extent, **kwargs)
 
-def get_formatted_source_from_source_range(source_range, num_before_context=0, num_after_context=0, num_context=0, view=False, highlight=True, trim=True):
+def get_formatted_source_from_source_range(source_range: SourceRangeLike, num_before_context: int  = 0, num_after_context: int = 0, num_context: int = 0, view: bool = False, highlight: bool = True, trim: bool = True) -> str:
   num_before_context   = num_before_context if num_before_context else num_context
   num_after_context    = num_after_context  if num_after_context  else num_context
   begin, end           = source_range.start, source_range.end
@@ -141,7 +145,7 @@ def get_formatted_source_from_source_range(source_range, num_before_context=0, n
     symbol_end    = end.column - 1
     begin_offset  = max(symbol_begin, 0)
     len_underline = max(abs(max(symbol_end, 1) - begin_offset), 1)
-    underline     = begin_offset * ' ' + util.color.bright_yellow() + len_underline * '^' + util.color.reset()
+    underline     = begin_offset * ' ' + Color.bright_yellow() + len_underline * '^' + Color.reset()
 
   line_list = []
   raw_lines = read_file_lines_cached(begin.file.name, 'r')[lo_bound - 1:hi_bound]
@@ -149,7 +153,7 @@ def get_formatted_source_from_source_range(source_range, num_before_context=0, n
     indicator = '>' if (line_begin <= line_file <= line_end) else ' '
     prefix    = f'{indicator} {line_file: <{max_width}}: '
     if highlight and (line_file == line_begin):
-      line = f'{line[:symbol_begin]}{util.color.bright_yellow()}{line[symbol_begin:symbol_end]}{util.color.reset()}{line[symbol_end:]}'
+      line = f'{line[:symbol_begin]}{Color.bright_yellow()}{line[symbol_begin:symbol_end]}{Color.reset()}{line[symbol_end:]}'
       line_list.extend([
         (prefix, line),
         (' ' * len(prefix), underline)
@@ -171,10 +175,10 @@ def get_formatted_source_from_source_range(source_range, num_before_context=0, n
     print(src_str)
   return src_str
 
-def get_formatted_source_from_cursor(cursor, **kwargs):
+def get_formatted_source_from_cursor(cursor: CursorLike, **kwargs) -> str:
   return get_formatted_source_from_source_range(cursor.extent, **kwargs)
 
-def view_cursor_full(cursor, **kwargs):
+def view_cursor_full(cursor: CursorLike, **kwargs) -> list[str]:
   ret = [
     f'Spelling:        {cursor.spelling}',
     f'Type:            {cursor.type.spelling}',
