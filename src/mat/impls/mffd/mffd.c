@@ -755,7 +755,7 @@ PetscErrorCode MatMFFDGetH(Mat mat, PetscScalar *h)
   If this is not set then it will use the function set with `SNESSetFunction()` if `MatCreateSNESMF()` was used.
 
 .seealso: [](ch_matrices), `Mat`, `MATMFFD`, `MatCreateSNESMF()`, `MatMFFDGetH()`, `MatCreateMFFD()`,
-          `MatMFFDSetHHistory()`, `MatMFFDResetHHistory()`, `SNESetFunction()`
+          `MatMFFDSetHHistory()`, `MatMFFDResetHHistory()`, `SNESSetFunction()`
 @*/
 PetscErrorCode MatMFFDSetFunction(Mat mat, PetscErrorCode (*func)(void *funcctx, Vec x, Vec f), void *funcctx)
 {
