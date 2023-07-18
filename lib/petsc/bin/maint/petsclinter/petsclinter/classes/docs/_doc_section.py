@@ -31,7 +31,7 @@ class DefaultSection(SectionBase):
     return DiagnosticManager.flag_prefix(super())('', *flags)
 
   def __init__(self, *args, **kwargs):
-    kwargs.setdefault('name', 'UNKNOWN')
+    kwargs.setdefault('name', 'UNKNOWN_SECTION')
     kwargs.setdefault('titles', ('__UNKNOWN_SECTION__',))
     super().__init__(*args, **kwargs)
     return
