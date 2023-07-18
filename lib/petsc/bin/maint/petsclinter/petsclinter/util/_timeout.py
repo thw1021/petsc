@@ -3,29 +3,46 @@
 # Created: Tue Nov 29 18:02:22 2022 (-0500)
 # @author: Jacob Faibussowitsch
 """
+from __future__ import annotations
+
 import os
 import errno
 import signal
 import functools
 
-from .._error import BaseError
+from .._typing import *
+from .._error  import TimeoutError
 
-class TimeoutError(BaseError):
-  """
-  An error to indicate some operation timed out
-  """
-  pass
+if TYPE_CHECKING:
+  from types import FrameType
 
-def timeout(seconds=10, error_message=None):
-  """
-  Decorator to run the decorated function for SECONDS seconds. If the function exceeds this time,
-  raises a TimeoutError.
+_F = TypeVar('_F', bound='Callable[..., Any]')
+
+def timeout(seconds: int = 10, error_message: Optional[str] = None) -> Callable[[_F], _F]:
+  r"""Decorator to run the decorated function for `seconds` seconds.
+
+  Parameters
+  ----------
+  seconds : 10, optional
+    the number of seconds to wait before timing out
+  error_message : optional
+    the error message to attach to the timeout
+
+  Returns
+  -------
+  decorator : callable
+    the wrapped function
+
+  Raises
+  ------
+  TimeoutError
+    If the function exceeds `seconds` seconds of execution time
   """
   if error_message is None:
     error_message = os.strerror(errno.ETIME)
 
-  def decorator(func):
-    def timeout_handler(signum, frame):
+  def decorator(func: _F) -> _F:
+    def timeout_handler(signum: int, frame: Optional[FrameType]) -> NoReturn:
       raise TimeoutError(error_message)
 
     @functools.wraps(func)
@@ -39,5 +56,5 @@ def timeout(seconds=10, error_message=None):
         signal.alarm(0)
       return result
 
-    return wrapper
+    return TYPE_CAST(_F, wrapper)
   return decorator
