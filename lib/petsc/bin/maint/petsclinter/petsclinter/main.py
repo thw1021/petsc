@@ -33,7 +33,7 @@ def main(
     extra_compiler_flags=None, extra_header_includes=None,
     test_output_dir=None, replace_tests=False,
     werror=False
-):
+) -> int:
   """
   entry point for linter
 
@@ -179,7 +179,7 @@ def main(
   if warnings:
     if verbose:
       pl.sync_print(format_str.format(' Found Warnings '))
-      pl.sync_print('\n'.join(s for tup in warnings for _, s in tup))
+      pl.sync_print('\n'.join(e for _, e in warnings))
       pl.sync_print(format_str.format(' End warnings '))
     if werror:
       ret |= ReturnCode.ERROR_WERROR
@@ -216,11 +216,10 @@ __ADVANCED_HELP_FLAG__ = '--help-hidden'
 def __build_arg_parser(parent_parsers=None, advanced_help=False):
   import argparse
 
-  def add_advanced_argument(prsr, *args, help=None, **kwargs):
-    def help_str(descr):
-      return descr if advanced_help else argparse.SUPPRESS
-
-    return prsr.add_argument(*args, help=help_str(help), **kwargs)
+  def add_advanced_argument(prsr, *args, **kwargs):
+    if not advanced_help:
+      kwargs['help'] = argparse.SUPPRESS
+    return prsr.add_argument(*args, **kwargs)
 
   def add_bool_argument(prsr, *args, advanced=False, **kwargs):
     def str2bool(v):
@@ -329,14 +328,13 @@ def __build_arg_parser(parent_parsers=None, advanced_help=False):
   return parser, all_diagnostics
 
 def parse_command_line_args(argv=None, **kwargs):
-  import re
-
   def expand_argv_globs(in_argv, diagnostics):
+    import re
+
     argv        = []
     skip        = False
     nargv       = len(in_argv)
     flag_prefix = pl.DiagnosticManager.flagprefix
-
     # always skip first entry of argv
     for i, argi in enumerate(in_argv[1:], start=1):
       if skip:
@@ -376,7 +374,7 @@ def parse_command_line_args(argv=None, **kwargs):
 
   return args, parser
 
-def namespace_main(args):
+def namespace_main(args) -> int:
   return main(
     args.petsc_dir, args.petsc_arch,
     src_path=args.src_path,
@@ -390,7 +388,7 @@ def namespace_main(args):
     werror=args.werror
   )
 
-def command_line_main():
+def command_line_main() -> int:
   args, _ = parse_command_line_args()
   have_pm = args.pm
   if have_pm:
@@ -398,7 +396,7 @@ def command_line_main():
       pl.sync_print('Running with --pm flag, setting number of workers to 1')
     args.workers = 1
     try:
-      import ipdb as py_db # LINT IGNORE
+      import ipdb as py_db # type: ignore
     except ModuleNotFoundError:
       import pdb as py_db # LINT IGNORE
 
