@@ -1734,7 +1734,7 @@ PetscErrorCode MatSetValuesStencil(Mat mat, PetscInt m, const MatStencil idxm[],
   PetscValidPointer(idxm, 3);
   PetscValidPointer(idxn, 5);
 
-  if ((m + n) <= (PetscInt)(sizeof(buf) / sizeof(PetscInt))) {
+  if ((m + n) <= (PetscInt)PETSC_STATIC_ARRAY_LENGTH(buf)) {
     jdxm = buf;
     jdxn = buf + m;
   } else {
@@ -1845,7 +1845,7 @@ PetscErrorCode MatSetValuesBlockedStencil(Mat mat, PetscInt m, const MatStencil 
   PetscValidPointer(idxn, 5);
   PetscValidScalarPointer(v, 6);
 
-  if ((m + n) <= (PetscInt)(sizeof(buf) / sizeof(PetscInt))) {
+  if ((m + n) <= (PetscInt)PETSC_STATIC_ARRAY_LENGTH(buf)) {
     jdxm = buf;
     jdxn = buf + m;
   } else {
@@ -2024,7 +2024,7 @@ PetscErrorCode MatSetValuesBlocked(Mat mat, PetscInt m, const PetscInt idxm[], P
     PetscInt i, j, bs, cbs;
 
     PetscCall(MatGetBlockSizes(mat, &bs, &cbs));
-    if (m * bs + n * cbs <= (PetscInt)(sizeof(buf) / sizeof(PetscInt))) {
+    if ((m * bs + n * cbs) <= (PetscInt)PETSC_STATIC_ARRAY_LENGTH(buf)) {
       iidxm = buf;
       iidxn = buf + m * bs;
     } else {
@@ -2154,7 +2154,7 @@ PetscErrorCode MatGetValuesLocal(Mat mat, PetscInt nrow, const PetscInt irow[], 
   if (mat->ops->getvalueslocal) PetscUseTypeMethod(mat, getvalueslocal, nrow, irow, ncol, icol, y);
   else {
     PetscInt buf[8192], *bufr = NULL, *bufc = NULL, *irowm, *icolm;
-    if ((nrow + ncol) <= (PetscInt)(sizeof(buf) / sizeof(PetscInt))) {
+    if ((nrow + ncol) <= (PetscInt)PETSC_STATIC_ARRAY_LENGTH(buf)) {
       irowm = buf;
       icolm = buf + nrow;
     } else {
@@ -2401,7 +2401,7 @@ PetscErrorCode MatSetValuesLocal(Mat mat, PetscInt nrow, const PetscInt irow[], 
     PetscInt        buf[8192], *bufr = NULL, *bufc = NULL;
     const PetscInt *irowm, *icolm;
 
-    if ((!mat->rmap->mapping && !mat->cmap->mapping) || (nrow + ncol) <= (PetscInt)(sizeof(buf) / sizeof(PetscInt))) {
+    if ((!mat->rmap->mapping && !mat->cmap->mapping) || (nrow + ncol) <= (PetscInt)PETSC_STATIC_ARRAY_LENGTH(buf)) {
       bufr  = buf;
       bufc  = buf + nrow;
       irowm = bufr;
@@ -2501,7 +2501,7 @@ PetscErrorCode MatSetValuesBlockedLocal(Mat mat, PetscInt nrow, const PetscInt i
     PetscInt        buf[8192], *bufr = NULL, *bufc = NULL;
     const PetscInt *irowm, *icolm;
 
-    if ((!mat->rmap->mapping && !mat->cmap->mapping) || (nrow + ncol) <= (PetscInt)(sizeof(buf) / sizeof(PetscInt))) {
+    if ((!mat->rmap->mapping && !mat->cmap->mapping) || (nrow + ncol) <= ((PetscInt)PETSC_STATIC_ARRAY_LENGTH(buf))) {
       bufr  = buf;
       bufc  = buf + nrow;
       irowm = bufr;
