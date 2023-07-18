@@ -3,6 +3,10 @@
 # Created: Mon Jun 20 17:59:46 2022 (-0400)
 # @author: Jacob Faibussowitsch
 """
+from __future__ import annotations
+
+from typing import Optional, Union
+
 import os
 import enum
 import time
@@ -13,7 +17,9 @@ import clang.cindex as clx
 import petsclinter  as pl
 
 from ..util._timeout import timeout, TimeoutError
+from ..util._clang   import CXTranslationUnit
 
+from ._path   import Path, PathLike, StrPathLike
 from ._diag   import DiagnosticManager
 from ._linter import Linter
 
@@ -29,9 +35,22 @@ allow_file_extensions = ('.c', '.cpp', '.cxx', '.cu', '.cc', '.h', '.hpp', '.inc
 
 class WorkerPool(mp.queues.JoinableQueue):
   __slots__ = (
-    'parallel', 'error_queue', 'return_queue', 'lock', 'workers', 'num_workers', 'timeout',
+    'parallel', 'error_queue', 'return_queue', 'lock', 'workers', 'num_workers',
     'verbose', 'warnings', 'errors_left', 'errors_fixed', 'patches', 'linter'
   )
+
+  parallel: bool
+  error_queue: mp.Queue
+  return_queue: mp.Queue
+  lock: mp.synchronize.RLock
+  workers: list[mp.Process]
+  num_workers: int
+  verbose: bool
+  warnings: list[tuple[Path, str]]
+  errors_left: list[tuple[Path, str]]
+  errors_fixed: list[tuple[Path, str]]
+  patches: list[tuple[Path, str]]
+  linter: Linter
 
   class QueueSignal(enum.IntEnum):
     """
@@ -43,13 +62,23 @@ class WorkerPool(mp.queues.JoinableQueue):
     ERRORS_FIXED = enum.auto()
     EXIT_QUEUE   = enum.auto()
 
-  def __init__(self, num_workers, timeout=2, verbose=False, **kwargs):
+  def __init__(self, num_workers: int, verbose: bool = False, **kwargs) -> None:
+    r"""Construct a `WorkerPool`
+
+    Parameters
+    ----------
+    num_workers :
+      the number of workers to spawn in the pool
+    verbose : optional
+      print verbose output
+    **kwargs : optional
+      additional keyword argument to `multiprocessing.queues.JoinableQueue` constructor
+    """
     if num_workers < 0:
       num_workers = max(mp.cpu_count() - 1, 1)
 
     super().__init__(num_workers, **kwargs, ctx=mp.get_context())
     self.num_workers  = num_workers
-    self.timeout      = timeout
     self.verbose      = verbose
     self.warnings     = []
     self.errors_left  = []
@@ -78,7 +107,19 @@ class WorkerPool(mp.queues.JoinableQueue):
     return
 
   @timeout(seconds=10)
-  def __crash_and_burn(self, message):
+  def __crash_and_burn(self, message: str) -> None:
+    r"""Forcefully cull the pool
+
+    Parameters
+    ----------
+    message :
+      an informative message to print on crashing
+
+    Raises
+    ------
+    RuntimeError :
+      raises a RuntimeError in all cases
+    """
     if getattr(self, 'parallel', False):
       for worker in getattr(self, 'workers', []):
         try:
@@ -87,12 +128,23 @@ class WorkerPool(mp.queues.JoinableQueue):
           pass
     raise RuntimeError(message)
 
-  def __print(self, *args, **kwargs):
+  def __print(self, *args, **kwargs) -> None:
     if self.verbose:
       pl.sync_print(*args, **kwargs)
     return
 
-  def __consume_results(self):
+  def __consume_results(self) -> None:
+    r"""Consume pending results from the queue
+
+    Raises
+    ------
+    ValueError :
+      if an unknown QueueSignal is returned from the pipe
+
+    Notes
+    -----
+    Does nothing if not parallel (`self.num_workers` == 1)
+    """
     if not self.parallel:
       return
 
@@ -128,7 +180,27 @@ class WorkerPool(mp.queues.JoinableQueue):
           raise ValueError(f'Unknown data returned by return_queue {signal}, {data}')
     return
 
-  def setup(self, compiler_flags, clang_lib=None, clang_options=None, clang_compat_check=True, werror=False):
+  def setup(self, compiler_flags: list[str], clang_lib: Optional[PathLike] = None, clang_options: Optional[CXTranslationUnit] = None, clang_compat_check: bool = True, werror: bool = False) -> WorkerPool:
+    r"""Set up a `WorkerPool` instance
+
+    Parameters
+    ----------
+    compiler_flags :
+      the list of compiler flags to pass to the `Linter`
+    clang_lib : optional
+      the path to libclang
+    clang_options: optional
+      the options to pass to the `Linter`, defaults to `petsclinter.util.base_clang_options`
+    clang_compat_check: optional
+      whether to do compatibility checks (if this initializes libclang)
+    werror:
+      whether to treat warnings as errors
+
+    Returns
+    -------
+    self:
+      the `WorkerPool` instance
+    """
     if clang_lib is None:
       assert clx.conf.loaded, 'Must initialize libClang first'
       clang_lib = clx.conf.get_filename()
@@ -161,7 +233,25 @@ class WorkerPool(mp.queues.JoinableQueue):
       )
     return self
 
-  def walk(self, src_path_list, exclude_dirs=None, exclude_dir_suff=None, allow_file_suff=None):
+  def walk(self, src_path_list: list[PathLike], exclude_dirs: Optional[set[str]] = None, exclude_dir_suff: Optional[tuple[str, ...]] = None, allow_file_suff: Optional[tuple[str, ...]] = None) -> WorkerPool:
+    r"""Walk `src_path_list` and process it
+
+    Parameters
+    ----------
+    src_path_list :
+      a list of paths to process
+    exclude_dirs : optional
+      a list or set to exclude from processing
+    exclude_dir_suff : optional
+      a set of suffixes to ignore
+    allow_file_suff : optional
+      a list of suffixes to explicitly allow
+
+    Returns
+    -------
+    self :
+      the `WorkerPool` instance
+    """
     if exclude_dirs is None:
       exclude_dirs = exclude_dir_names
     if exclude_dir_suff is None:
@@ -174,9 +264,9 @@ class WorkerPool(mp.queues.JoinableQueue):
         self.put(src_path)
         continue
 
-      _, initial_dirs, _ = next(os.walk(src_path))
-      initial_dirs = [d for d in initial_dirs if d not in exclude_dirs]
-      initial_dirs = {str(src_path / d) for d in initial_dirs if not d.endswith(exclude_dir_suff)}
+      _, dirs, _   = next(os.walk(src_path))
+      dir_gen      = (d for d in dirs if d not in exclude_dirs)
+      initial_dirs = {str(src_path / d) for d in dir_gen if not d.endswith(exclude_dir_suff)}
       for root, dirs, files in os.walk(src_path):
         self.__print('Processing directory', root)
         dirs[:] = [d for d in dirs if d not in exclude_dirs]
@@ -190,14 +280,21 @@ class WorkerPool(mp.queues.JoinableQueue):
           self.__consume_results()
     return self
 
-  def put(self, filename):
+  def put(self, item: Union[StrPathLike, QueueSignal]) -> None:
+    r"""Put `filename` into the queue for processing
+
+    Parameters
+    ----------
+    item :
+      the item to put into the queue
+    """
     if self.parallel:
       # continuously put files onto the queue, if the queue is full we block for
       # queueTimeout seconds and if we still cannot insert to the queue we check
       # children for errors. If no errors are found we try again.
       while 1:
         try:
-          super().put(filename, True, self.timeout)
+          super().put(item, True, 2)
         except queue.Full:
           # we don't want to join here since a child may have encountered an error!
           self.check()
@@ -205,14 +302,22 @@ class WorkerPool(mp.queues.JoinableQueue):
           # only get here if put is successful
           break
     else:
-      err_left, err_fixed, warnings, patches = self.linter.parse(filename).diagnostics()
+      assert not isinstance(item, self.QueueSignal)
+      err_left, err_fixed, warnings, patches = self.linter.parse(item).diagnostics()
       self.errors_left.extend(err_left)
       self.errors_fixed.extend(err_fixed)
       self.warnings.append(warnings)
       self.patches.extend(patches)
     return
 
-  def check(self):
+  def check(self) -> None:
+    r"""Check for errors from the queue
+
+    Notes
+    -----
+    Calls `self.__crash_and_burn()` if any errors are detected, but does nothing if running in
+    serial
+    """
     if not self.parallel:
       return
 
@@ -246,7 +351,24 @@ class WorkerPool(mp.queues.JoinableQueue):
       self.__crash_and_burn('Error in child process detected')
     return
 
-  def finalize(self):
+  def finalize(self) -> tuple[list[tuple[Path, str]], list[tuple[Path, str]], list, list[tuple[Path, str]]]:
+    r"""Finalize the queue and return the results
+
+    Returns
+    -------
+    warnings :
+      the list of warnings
+    errors_left :
+      the remaining (unfixed) errors
+    errors_fixed :
+      the fixed errors
+    patches :
+      the generated patches
+
+    Notes
+    -----
+    If running in parallel, and workers fail to finalize in time, calls `self.__crash_and_burn()`
+    """
     if self.parallel:
       # join here to colocate error messages if needs be
       self.join()
@@ -275,10 +397,10 @@ class WorkerPool(mp.queues.JoinableQueue):
         if sum(live_list) == 0:
           break
       else:
-        alive = '\n'.join(
+        mess = '\n'.join(
           f'{worker.name}: {"alive" if alive else "terminated"}' for worker, alive in zip(self.workers, live_list)
         )
-        self.__crash_and_burn(f'Timed out! Workers failed to terminate:\n{alive}')
+        self.__crash_and_burn(f'Timed out! Workers failed to terminate:\n{mess}')
 
       self.error_queue.close()
       self.return_queue.close()

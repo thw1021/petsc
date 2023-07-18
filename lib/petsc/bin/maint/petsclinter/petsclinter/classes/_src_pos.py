@@ -3,6 +3,10 @@
 # Created: Mon Jun 20 19:13:15 2022 (-0400)
 # @author: Jacob Faibussowitsch
 """
+from __future__ import annotations
+
+from typing import Union, Optional
+
 import weakref
 import functools
 import clang.cindex as clx
@@ -48,7 +52,13 @@ class SourceLocation(AttributeCache):
   __filecache = ClangFileNameCache()
   __slots__   = 'source_location', 'translation_unit', 'offset'
 
-  def __init__(self, source_location, tu=None):
+  source_location: clx.SourceLocation
+  translation_unit: Optional[clx.TranslationUnit]
+  offset: int
+
+  SourceLocationLike = Union[clx.SourceLocation, "SourceLocation"]
+
+  def __init__(self, source_location: SourceLocationLike, tu: Optional[clx.TranslationUni] = None) -> None:
     if isinstance(source_location, SourceLocation):
       if tu is None:
         tu = source_location.translation_unit
@@ -115,12 +125,30 @@ class SourceLocation(AttributeCache):
       return other
     raise NotImplementedError(type(other))
 
+SourceLocationLike = SourceLocation.SourceLocationLike
+
 @functools.total_ordering
 class SourceRange(AttributeCache):
   """Like SourceLocation but for clx.SourceRanges"""
   __slots__ = 'source_range', 'translation_unit', '_end', '_start'
 
-  def __init__(self, source_range, tu=None):
+  source_range: clx.SourceRange
+  translation_unit: Optional[clx.TranslationUnit]
+  _end: Optional[SourceLocation]
+  _start: Optional[SourceLocation]
+
+  SourceRangeLike = Union[clx.SourceRange, "SourceRange"]
+
+  def __init__(self, source_range: SourceRangeLike, tu: Optional[clx.TranslationUnit] = None) -> None:
+    r"""Construct a `SourceRange`
+
+    Parameters
+    ----------
+    source_range:
+      the source `SourceRange`
+    tu: optional
+      the translation unit
+    """
     if isinstance(source_range, type(self)):
       if tu is None:
         tu = source_range.translation_unit
@@ -139,19 +167,19 @@ class SourceRange(AttributeCache):
     self.translation_unit = tu # store a reference to guard against GC
     return
 
-  def __hash__(self):
+  def __hash__(self) -> int:
     return hash(self.__start()) ^ hash(self.__end())
 
-  def __repr__(self):
+  def __repr__(self) -> str:
     return f'<self:{object.__repr__(self)}, tu: {self.translation_unit}, source range: {self.source_range}>'
 
-  def __getattr__(self, attr):
+  def __getattr__(self, attr: str):
     return super().get_cached(attr, getattr, self.source_range, attr)
 
-  def __eq__(self, other):
+  def __eq__(self, other: Union[clx.SourceRange, SourceRange]) -> bool:
     return self is other or self.source_range.__eq__(self.as_clang_source_range(other))
 
-  def __lt__(self, other):
+  def __lt__(self, other: Union[clx.SourceRange, SourceRange, SourceLocationLike]) -> bool:
     # If all this nonsense seems like a micro-optimization, it kinda is but also kinda
     # isn't. For regular usage this is way overkill, but all this __start() and __end()
     # caching and skipping the cast saves roughly 20s in a 100s run when overlap() is
@@ -169,7 +197,7 @@ class SourceRange(AttributeCache):
       return self.__start() < other
     return self_end < other
 
-  def __contains__(self, other):
+  def __contains__(self, other: Union[clx.SourceRange, SourceRange, SourceLocationLike]) -> bool:
     def contains(loc):
       # reimplement clx.SourceRange.__contains__() as it has a bug
       return start <= loc <= self.__end()
@@ -186,26 +214,26 @@ class SourceRange(AttributeCache):
       return contains(cast(other))
     raise ValueError(type(other))
 
-  def __len__(self):
+  def __len__(self) -> int:
     return self.__end().offset - self.__start().offset
 
-  def __getitem__(self, idx):
+  def __getitem__(self, idx: int) -> str:
     return super().get_cached(
       '__raw_src', _util.get_raw_source_from_source_range, self
     ).splitlines()[idx]
 
-  def __start(self):
+  def __start(self) -> SourceLocation:
     if self._start is None:
       self._start = SourceLocation.cast(self.start)
     return self._start
 
-  def __end(self):
+  def __end(self) -> SourceLocation:
     if self._end is None:
       self._end = SourceLocation.cast(self.end)
     return self._end
 
   @classmethod
-  def cast(cls, other, **kwargs):
+  def cast(cls, other: SourceRangeLike, **kwargs) -> SourceRange:
     if isinstance(other, cls):
       return other
     if isinstance(other, clx.SourceRange):
@@ -213,7 +241,7 @@ class SourceRange(AttributeCache):
     raise NotImplementedError(type(other))
 
   @classmethod
-  def from_locations(cls, left, right, tu=None):
+  def from_locations(cls, left: SourceLocationLike, right: SourceLocationLike, tu: Optional[clx.TranslationUnit] = None) -> SourceRange:
     if tu is None:
       attr = 'translation_unit'
       tu   = getattr(left, attr, None)
@@ -224,7 +252,7 @@ class SourceRange(AttributeCache):
     return cls(clx.SourceRange.from_locations(as_clang_sl(left), as_clang_sl(right)), tu=tu)
 
   @classmethod
-  def from_positions(cls, tu, line_left, col_left, line_right, col_right):
+  def from_positions(cls, tu: clx.TranslationUnit, line_left: int, col_left: int, line_right: int, col_right: int) -> SourceRange:
     filename = SourceLocation.get_filename_from_tu(tu)
     from_pos = clx.SourceLocation.from_position
     begin    = from_pos(tu, filename, line_left, col_left)
@@ -232,7 +260,7 @@ class SourceRange(AttributeCache):
     return cls(clx.SourceRange.from_locations(begin, end), tu=tu)
 
   @classmethod
-  def as_clang_source_range(cls, other):
+  def as_clang_source_range(cls, other: SourceRangeLike) -> clx.SourceRange:
     if isinstance(other, cls):
       return other.source_range
     if isinstance(other, clx.SourceRange):
@@ -240,30 +268,40 @@ class SourceRange(AttributeCache):
     raise NotImplementedError(type(other))
 
   @classmethod
-  def merge(cls, left, right, **kwargs):
+  def merge(cls, left: SourceRangeLike, right: SourceRangeLike, **kwargs) -> SourceRange:
     cast  = SourceLocation.cast
     start = min(cast(left.start), cast(right.start))
     end   = max(cast(left.end),   cast(right.end))
     return cls.from_locations(start, end, **kwargs)
 
-  def merge_with(self, other):
+  def merge_with(self, other: SourceRangeLike) -> SourceRange:
     return self.merge(self, other, tu=self.translation_unit)
 
-  def overlaps(self, other):
+  def overlaps(self, other: SourceRangeLike) -> bool:
     end = self.__end()
     if isinstance(other, type(self)):
       return end >= other.__start() and other.__end() >= self.__start()
     cast = SourceLocation.cast
     return end >= cast(other.start) and cast(other.end) >= self.__start()
 
-  def resized(self, lbegin=0, lend=0, cbegin=0, cend=0):
-    """
-    return a resized SourceRange, if the sourceRange was resized it is a new object
+  def resized(self, lbegin: int = 0, lend: int = 0, cbegin: int = 0, cend: int = 0) -> SourceRange:
+    r"""Return a resized SourceRange, if the sourceRange was resized it is a new object
 
-    lbegin - number of lines to increment or decrement self.start.lines by
-    lend   - number of lines to increment or decrement self.end.lines by
-    cbegin - number of columns to increment or decrement self.start.colummn by, None for BOL
-    cend   - number of columns to increment or decrement self.end.colummn by, None for EOL
+    Parameters
+    ----------
+    lbegin: optional
+      number of lines to increment or decrement self.start.lines by
+    lend: optional
+      number of lines to increment or decrement self.end.lines by
+    cbegin: optional
+      number of columns to increment or decrement self.start.colummn by, None for BOL
+    cend: optional
+      number of columns to increment or decrement self.end.colummn by, None for EOL
+
+    Returns
+    -------
+    ret:
+      the resized `SourceRange`
     """
     start = self.start
     if cbegin is None:
@@ -279,13 +317,45 @@ class SourceRange(AttributeCache):
 
 
   @functools.lru_cache
-  def raw(self, *args, **kwargs):
+  def raw(self, *args, **kwargs) -> str:
+    r"""Get the raw source for a `SourceRange`
+
+    Parameters
+    ----------
+    *args: iterable
+      the positional arguments to `petsclinter._util.get_raw_source_from_source_range()`
+    **kwargs: dict
+      the keyword arguments to `petsclinter._util.get_raw_source_from_source_range()`
+
+    Returns
+    -------
+    ret:
+      the raw source of the `SourceRange`
+    """
     return _util.get_raw_source_from_source_range(self, *args, **kwargs)
 
   @functools.lru_cache
-  def formatted(self, *args, **kwargs):
+  def formatted(self, *args, **kwargs) -> str:
+    r"""Get the formatted source for a `SourceRange`
+
+    Parameters
+    ----------
+    *args: iterable
+      the positional arguments to `petsclinter._util.get_formatted_source_from_source_range()`
+    **kwargs: dict
+      the keyword arguments to `petsclinter._util.get_formatted_source_from_source_range()`
+
+    Returns
+    -------
+    ret:
+      the formatted source of the `SourceRange`
+    """
     return _util.get_formatted_source_from_source_range(self, *args, **kwargs)
 
-  def view(self, *args, **kwargs):
+  def view(self, *args, **kwargs) -> None:
+    r"""View a `SourceRange`"""
     kwargs.setdefault('num_context', 5)
-    return print(self.formatted(*args, **kwargs))
+    print(self.formatted(*args, **kwargs))
+    return
+
+SourceRangeLike = SourceRange.SourceRangeLike

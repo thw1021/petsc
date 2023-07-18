@@ -3,12 +3,18 @@
 # Created: Mon Jun 20 18:42:44 2022 (-0400)
 # @author: Jacob Faibussowitsch
 """
+from __future__ import annotations
+
+from typing import Union, Optional, Any
+
 import clang.cindex as clx
 import petsclinter  as pl
 
 from ._src_pos import SourceRange, SourceLocation
 from ._path    import Path
 from .         import _util
+
+from .._error import KnownUnhandleableCursorError, ParsingError
 
 from ..util._clang import *
 
@@ -24,7 +30,31 @@ class Cursor:
   """
   __slots__ = '__cursor', 'extent', 'name', 'typename', 'derivedtypename', 'argidx', '_cache'
 
-  def __init__(self, cursor, idx=-12345):
+  __cursor: clx.Cursor
+  extent: SourceRange
+  name: str
+  typename: str
+  derivedtypename: str
+  argidx: int
+  _cache: dict[str, Any]
+
+  CursorLike = Union[clx.Cursor, "Cursor"]
+
+  def __init__(self, cursor: CursorLike, idx: int = -12345) -> None:
+    r"""Construct a `Cursor`
+
+    Parameters
+    ----------
+    cursor :
+      the cursor to construct this cursor from, can be a `clang.cindex.Cursor` or another `Cursor`
+    id : optional
+      the index into the parent functions arguments for this cursor, if applicable
+
+    Raises
+    ------
+    ValueError
+      if `cursor` is not a `Cursor` or a `clang.cindex.Cursor`
+    """
     if isinstance(cursor, Cursor):
       self.__cursor        = cursor.clang_cursor()
       self._cache          = cursor._cache
@@ -45,7 +75,7 @@ class Cursor:
       raise ValueError(type(cursor))
     return
 
-  def __getattr__(self, attr):
+  def __getattr__(self, attr: str):
     """
     Allows us to essentialy fake being a clang cursor, if __getattribute__ fails
     (i.e. the value wasn't found in self), then we try the cursor. So we can do things
@@ -54,14 +84,33 @@ class Cursor:
     """
     return getattr(self.__cursor, attr)
 
-  def __str__(self):
+  def __str__(self) -> str:
     return f'{self.get_formatted_location_string()}\n{self.get_formatted_blurb()}'
 
-  def __hash__(self):
+  def __hash__(self) -> int:
     return hash(self.__cursor.hash)
 
   @classmethod
-  def _unhandleable_cursor(cls, cursor):
+  def _unhandleable_cursor(cls, cursor: CursorLike) -> None:
+    r"""Given a `cursor`, try to construct as useful an error message as possible from it before
+    self destructing
+
+    Parameters
+    ----------
+    cursor :
+      the cursor to construct the message from
+
+    Raises
+    ------
+    KnownUnhandleableCursorError
+      if the cursor is known not to be handleable
+    RuntimeError
+      this is raised in all other cases
+
+    Notes
+    -----
+    This function is 'noreturn'
+    """
     # For whatever reason (perhaps because its macro stringization hell) PETSC_HASH_MAP
     # and PetscKernel_XXX absolutely __brick__ the AST. The resultant cursors have no
     # children, no name, no tokens, and a completely incorrect SourceLocation.
@@ -70,14 +119,14 @@ class Cursor:
     errstr = cls.error_view_from_cursor(cursor)
     if 'PETSC_HASH' in srcstr:
       if '_MAP' in srcstr:
-        raise pl.KnownUnhandleableCursorError(f'Encountered unparsable PETSC_HASH_MAP for cursor {errstr}')
+        raise KnownUnhandleableCursorError(f'Encountered unparsable PETSC_HASH_MAP for cursor {errstr}')
       if '_SET' in srcstr:
-        raise pl.KnownUnhandleableCursorError(f'Encountered unparsable PETSC_HASH_SET for cursor {errstr}')
-      raise pl.KnownUnhandleableCursorError(f'Unhandled unparsable PETSC_HASH_XXX for cursor {errstr}')
+        raise KnownUnhandleableCursorError(f'Encountered unparsable PETSC_HASH_SET for cursor {errstr}')
+      raise KnownUnhandleableCursorError(f'Unhandled unparsable PETSC_HASH_XXX for cursor {errstr}')
     if 'PetscKernel_' in srcstr:
-      raise pl.KnownUnhandleableCursorError(f'Encountered unparsable PetscKernel_XXX for cursor {errstr}')
+      raise KnownUnhandleableCursorError(f'Encountered unparsable PetscKernel_XXX for cursor {errstr}')
     if ('PetscOptions' in srcstr) or ('PetscObjectOptions' in srcstr):
-      raise pl.KnownUnhandleableCursorError(f'Encountered unparsable Petsc[Object]OptionsBegin for cursor {errstr}')
+      raise KnownUnhandleableCursorError(f'Encountered unparsable Petsc[Object]OptionsBegin for cursor {errstr}')
     try:
       cursor_view = '\n'.join(_util.view_cursor_full(cursor, max_depth=10))
     except Exception as exc:
@@ -86,23 +135,44 @@ class Cursor:
       f'Could not determine useful name for cursor {errstr}\nxxx {"-" * 80} xxx\n{cursor_view}'
     )
 
-  def _get_cached(self, attr, func, *args, **kwargs):
+  def _get_cached(self, attr: str, func, *args, **kwargs):
     cache = self._cache
     if attr not in cache:
       cache[attr] = func(*args, **kwargs)
     return cache[attr]
 
   @classmethod
-  def cast(cls, cursor):
-    """like numpy.asanyarray but for Cursors"""
-    clx_cursor = clx.Cursor
-    if not isinstance(cursor, (clx_cursor, cls)):
-      raise ValueError(type(cursor))
-    return cls(cursor) if isinstance(cursor, clx_cursor) else cursor
+  def cast(cls, cursor: CursorLike) -> Cursor:
+    r"""like numpy.asanyarray but for `Cursor`s
+
+    Parameters
+    ----------
+    cursor :
+      the cursor object to cast
+
+    Returns
+    -------
+    cursor :
+      either a newly constructed `Cursor` or `cursor` unchanged
+    """
+    return cursor if isinstance(cursor, Cursor) else cls(cursor)
 
   @classmethod
-  def error_view_from_cursor(cls, cursor):
-    """
+  def error_view_from_cursor(cls, cursor: CursorLike) -> str:
+    r"""Get error handling information from a cursor
+
+    Parameters
+    ----------
+    cursor :
+      the cursor to extract information from
+
+    Returns
+    -------
+    ret :
+      a hopefully useful string to pass to an exception
+
+    Notes
+    -----
     Something has gone wrong, and we try to extract as much information from the cursor as
     possible for the exception. Nothing is guaranteed to be useful here.
     """
@@ -113,17 +183,26 @@ class Cursor:
     return f"'{cursor.displayname}' of kind '{cursor.kind}' of type '{typename}' at {loc_str}:\n{src_str}"
 
   @classmethod
-  def get_name_from_cursor(cls, cursor):
-    """
-    Try to convert **&(PetscObject)obj[i]+73 to obj
+  def get_name_from_cursor(cls, cursor: CursorLike) -> str:
+    r"""Try to convert **&(PetscObject)obj[i]+73 to obj
+
+    Parameters
+    ----------
+    cursor :
+      the cursor
+
+    Returns
+    -------
+    name :
+      the sanitized name of `cursor`
     """
     if isinstance(cursor, cls):
       return cursor.name
 
-    def cls_get_name_from_cursor_safe_call(*args, **kwargs):
+    def cls_get_name_from_cursor_safe_call(*args, **kwargs) -> str:
       try:
         ret = cls.get_name_from_cursor(*args, **kwargs)
-      except (RuntimeError, pl.ParsingError):
+      except (RuntimeError, ParsingError):
         ret = None
       return ret
 
@@ -138,8 +217,7 @@ class Cursor:
         # its certainly funky when a binary operation doesn't have a binary system of
         # operands
         assert len(operands) == 2, f'Found {len(operands)} operands for binary operator when only expecting 2 for cursor {cls.error_view_from_cursor(cursor)}'
-        for oper in operands:
-          name = cls_get_name_from_cursor_safe_call(oper)
+        for name in map(cls_get_name_from_cursor_safe_call, operands):
           if name:
             break
       else:
@@ -205,10 +283,19 @@ class Cursor:
     return name
 
   @classmethod
-  def get_raw_name_from_cursor(cls, cursor):
-    """
-    if get_name_from_cursor tries to convert **&(PetscObject)obj[i]+73 to obj then this function
+  def get_raw_name_from_cursor(cls, cursor: CursorLike) -> str:
+    r"""If get_name_from_cursor tries to convert **&(PetscObject)obj[i]+73 to obj then this function
     tries to extract **&(PetscObject)obj[i]+73 in the cleanest way possible
+
+    Parameters
+    ----------
+    cursor :
+      the cursor
+
+    Returns
+    -------
+    name :
+      the un-sanitized name of `cursor`
     """
     cls_instance = isinstance(cursor, cls)
     if cls_instance:
@@ -222,7 +309,7 @@ class Cursor:
       try:
         # now we try for the formatted name
         name = cls.get_name_from_cursor(cursor)
-      except pl.ParsingError:
+      except ParsingError:
         # noreturn
         cls._unhandleable_cursor(cursor)
     if cls_instance:
@@ -230,26 +317,58 @@ class Cursor:
     return name
 
   @classmethod
-  def get_typename_from_cursor(cls, cursor):
-    """
-    Try to get the most canonical type from a cursor so DM -> _p_DM *
+  def get_typename_from_cursor(cls, cursor: CursorLike) -> str:
+    r"""Try to get the most canonical type from a cursor so DM -> _p_DM *
+
+    Parameters
+    ----------
+    cursor :
+      the cursor
+
+    Returns
+    -------
+    name :
+      the canonical type of `cursor`
     """
     if isinstance(cursor, cls):
-      ret = cursor.typename
-    else:
-      canon = cursor.type.get_canonical().spelling
-      ret   = canon if canon else cls.get_derived_typename_from_cursor(cursor)
-    return ret
+      return cursor.typename
+    canon = cursor.type.get_canonical().spelling
+    return canon if canon else cls.get_derived_typename_from_cursor(cursor)
 
   @staticmethod
-  def get_derived_typename_from_cursor(cursor):
-    """
-    Get the least canonical type form a cursor so DM -> DM
+  def get_derived_typename_from_cursor(cursor: CursorLike) -> str:
+    r"""Get the least canonical type form a cursor so DM -> DM
+
+    Parameters
+    ----------
+    cursor :
+      the cursor
+
+    Returns
+    -------
+    name :
+      the least canonical type of `cursor`
     """
     return cursor.type.spelling
 
   @classmethod
-  def has_internal_linkage_from_cursor(cls, cursor):
+  def has_internal_linkage_from_cursor(cls, cursor: CursorLike) -> tuple[bool, str, Optional[clx.Cursor]]:
+    r"""Determine whether `cursor` has internal linkage
+
+    Parameters
+    ----------
+    cursor :
+      the cursor to check
+
+    Returns
+    -------
+    is_internal :
+      True if `cursor` has internal linkage, False otherwise
+    internal_attr_src :
+      the raw text of the internal linkage attribute
+    internal_cursor :
+      the cursor corresponding to the internal linkage designation
+    """
     def check():
       if cursor.linkage == clx.LinkageKind.INTERNAL:
         # is a static function or variable
@@ -260,26 +379,68 @@ class Cursor:
         if child.kind.is_attribute() and child.spelling in hidden_visibility:
           # is PETSC_INTERN
           return True, SourceRange(child.extent).raw(tight=True), child
-      return False, None, None
+      return False, '', None
 
     if isinstance(cursor, cls):
       return cursor._get_cached('internal_linkage', check)
     return check()
 
-  def has_internal_linkage(self):
+  def has_internal_linkage(self) -> tuple[bool, str, Optional[clx.Cursor]]:
+    r"""See `Cursor.has_internal_linkage_from_cursor()`"""
     return self.has_internal_linkage_from_cursor(self)
 
   @staticmethod
-  def get_raw_source_from_cursor(cursor, nbefore=0, nafter=0, nboth=0, **kwargs):
+  def get_raw_source_from_cursor(cursor: CursorLike, nbefore: int = 0, nafter: int = 0, nboth: int = 0, **kwargs) -> str:
+    r"""Get the raw source from a `cursor`
+
+    Parameters
+    ----------
+    cursor :
+      the cursor to get from
+    nbefore : optional
+      number of additional lines before the cursor extent to get
+    nafter : optional
+      number of additional lines after the cursor extent to get
+    nboth : optional
+      number of additional lines before and after the cursor extent to get
+    **kwargs : dict
+      additional keyword arguments to `petsclinter.classes._util.get_raw_source_from_cursor()`
+
+    Returns
+    -------
+    src :
+      the raw source
+    """
     return _util.get_raw_source_from_cursor(
       cursor, num_before_context=nbefore, num_after_context=nafter, num_context=nboth, **kwargs
     )
 
-  def raw(self, **kwargs):
+  def raw(self, **kwargs) -> str:
+    r"""See `Cursor.get_raw_source_from_cursor()`"""
     return self.get_raw_source_from_cursor(self, **kwargs)
 
   @classmethod
-  def get_formatted_source_from_cursor(cls, cursor, nbefore=0, nafter=0, nboth=0, **kwargs):
+  def get_formatted_source_from_cursor(cls, cursor: CursorLike, nbefore: int = 0, nafter: int = 0, nboth: int = 0, **kwargs) -> str:
+    r"""Get the formatted source from a `cursor`
+
+    Parameters
+    ----------
+    cursor :
+      the cursor to get from
+    nbefore : optional
+      number of additional lines before the cursor extent to get
+    nafter : optional
+      number of additional lines after the cursor extent to get
+    nboth : optional
+      number of additional lines before and after the cursor extent to get
+    **kwargs : dict
+      additional keyword arguments to `petsclinter.classes._util.get_formatted_source_from_cursor()`
+
+    Returns
+    -------
+    src :
+      the formatted source
+    """
     # __extent_final attribute set in getIncludedFileFromCursor() since the translation
     # unit is wrong!
     extent = cursor.extent
@@ -294,47 +455,108 @@ class Cursor:
     kwargs.setdefault('num_context', nboth)
     return _util.get_formatted_source_from_source_range(extent, **kwargs)
 
-  def formatted(self, **kwargs):
+  def formatted(self, **kwargs) -> str:
+    r"""See `Cursor.get_formatted_source_from_cursor()`"""
     return self.get_formatted_source_from_cursor(self, **kwargs)
 
-  def view(self, **kwargs):
+  def view(self, **kwargs) -> None:
+    r"""View a `Cursor`
+
+    Parameters
+    ----------
+    **kwargs :
+      keyword arguments to pass to `Cursor.formatted()`
+    """
     kwargs.setdefault('nboth', 5)
-    return pl.sync_print(self.formatted(**kwargs))
+    pl.sync_print(self.formatted(**kwargs))
+    return
 
   @classmethod
-  def get_formatted_location_string_from_cursor(cls, cursor):
+  def get_formatted_location_string_from_cursor(cls, cursor: CursorLike) -> str:
+    r"""Return the file:func:line for `cursor`
+
+    Parameters
+    ----------
+    cursor :
+      the cursor to get it from
+
+    Returns
+    locstr :
+      the location string
+    """
     loc = cursor.location
     if isinstance(loc, SourceLocation):
       return str(loc)
     return f'{cls.get_file_from_cursor(cursor)}:{loc.line}:{loc.column}'
 
-  def get_formatted_location_string(self):
+  def get_formatted_location_string(self) -> str:
+    r"""See `Cursor.get_formatted_location_string_from_cursor()`"""
     return self.get_formatted_location_string_from_cursor(self)
 
   @classmethod
-  def get_formatted_blurb_from_cursor(cls, cursor, **kwargs):
+  def get_formatted_blurb_from_cursor(cls, cursor: CursorLike, **kwargs) -> str:
+    r"""Get a formatted blurb for `cursor` suitable for viewing
+
+    Parameters
+    ----------
+    cursor :
+      the cursor
+    **kwargs :
+      additional keyword arguments to pass to `Cursor.formatted()`
+
+    Returns
+    -------
+    blurb :
+      the formatted blurb
+    """
     kwargs.setdefault('nboth', 2)
     cursor   = cls.cast(cursor)
     aka_mess = '' if cursor.typename == cursor.derivedtypename else f' (a.k.a. \'{cursor.typename}\')'
     return f'\'{cursor.name}\' of type \'{cursor.derivedtypename}\'{aka_mess}\n{cursor.formatted(**kwargs)}'
 
-  def get_formatted_blurb(self, **kwargs):
+  def get_formatted_blurb(self, **kwargs) -> str:
+    r"""See `Cursor.get_formatted_blurb_from_cursor()`"""
     return self.get_formatted_blurb_from_cursor(self, **kwargs)
 
   @staticmethod
-  def view_ast_from_cursor(cursor):
-    return pl.sync_print('\n'.join(_util.view_ast_from_cursor(cursor)))
+  def view_ast_from_cursor(cursor: CursorLike) -> None:
+    r"""View the AST for a cursor
 
-  def view_ast(self):
-    return self.view_ast_from_cursor(self)
+    Parameters
+    ----------
+    cursor :
+      the cursor to view
+
+    Notes
+    -----
+    Shows a lot of useful information, but is unsuitable for showing the user. Essentially a developer
+    debug tool
+    """
+    pl.sync_print('\n'.join(_util.view_ast_from_cursor(cursor)))
+    return
+
+  def view_ast(self) -> None:
+    r"""See `Cursor.view_ast_from_cursor()`"""
+    self.view_ast_from_cursor(self)
+    return
 
   @classmethod
-  def find_cursor_references_from_cursor(cls, cursor):
-    """
-    Brute force find and collect all references in a file that pertain to a particular
-    cursor. Essentially refers to finding every reference to the symbol that the cursor
-    represents, so this function is only useful for first-class symbols (i.e. variables,
-    functions)
+  def find_cursor_references_from_cursor(cls, cursor: CursorLike) -> list[Cursor]:
+    r"""Brute force find and collect all references in a file that pertain to a particular
+    cursor.
+
+    Essentially refers to finding every reference to the symbol that the cursor represents, so
+    this function is only useful for first-class symbols (i.e. variables, functions)
+
+    Parameters
+    ----------
+    cursor :
+      the cursor to search for references
+
+    Returns
+    -------
+    found_cursors :
+      a list of references to the cursor in the file
     """
     cx_callback, found_cursors = make_cxcursor_and_range_callback(cursor)
     get_clang_function(
@@ -342,21 +564,59 @@ class Cursor:
     )(cls.get_clang_cursor_from_cursor(cursor), cls.get_clang_file_from_cursor(cursor), cx_callback)
     return found_cursors
 
-  def find_cursor_references(self):
+  def find_cursor_references(self) -> list[Cursor]:
+    r"""See `Cursor.find_cursor_references_from_cursor()`"""
     return self.find_cursor_references_from_cursor(self)
 
   @classmethod
-  def get_comment_and_range_from_cursor(cls, cursor):
+  def get_comment_and_range_from_cursor(cls, cursor: CursorLike) -> tuple[str, clx.SourceRange]:
+    r"""Get the docstring comment and its source range from a cursor
+
+    Parameters
+    ----------
+    cursor :
+      the cursor to get it from
+
+    Returns
+    -------
+    raw_comment :
+      the raw comment text
+    cursor_range :
+      the source range for the comment
+    """
     cursor_range = get_clang_function('clang_Cursor_getCommentRange', [clx.Cursor], clx.SourceRange)(
       cls.get_clang_cursor_from_cursor(cursor)
     )
     return cursor.raw_comment, cursor_range
 
-  def get_comment_and_range(self):
+  def get_comment_and_range(self) -> tuple[str, clx.SourceRange]:
+    r"""See `Cursor.get_comment_and_range_from_cursor()`"""
     return self.get_comment_and_range_from_cursor(self)
 
   @classmethod
-  def get_clang_file_from_cursor(cls, cursor):
+  def get_clang_file_from_cursor(cls, cursor: Union[CursorLike, clx.TranslationUnit]) -> clx.File:
+    r"""Get the `clang.cindex.File` from a cursor
+
+    Parameters
+    ----------
+    cursor :
+      the cursor
+
+    Returns
+    -------
+    clx_file :
+      the `clang.cindex.File` object
+
+    Raises
+    ------
+    ValueError
+      if `cursor` is not one of `Cursor`, `clang.cindex.Cursor` or a `clang.cindex.TranslationUnit`
+
+    Notes
+    -----
+    Instantiating one of these files is for whatever reason stupidly expensive, and does not appear to
+    be cached by clang at all, so this function serves to cache that
+    """
     if isinstance(cursor, cls):
       return cursor._get_cached('file', lambda c: c.location.file, cursor)
     if isinstance(cursor, clx.Cursor):
@@ -366,37 +626,52 @@ class Cursor:
     raise ValueError(type(cursor))
 
   @classmethod
-  def get_file_from_cursor(cls, cursor):
+  def get_file_from_cursor(cls, cursor: Union[CursorLike, clx.TranslationUnit]) -> Path:
+    r"""See `Cursor.get_clang_file_from_cursor()`"""
     return Path(str(cls.get_clang_file_from_cursor(cursor)))
 
-  def get_file(self):
+  def get_file(self) -> Path:
+    r"""See `Cursor.get_file_from_cursor()`"""
     return self.get_file_from_cursor(self)
 
-  @classmethod
-  def is_variadic_function_from_cursor(cls, cursor):
-    def check():
-      try:
-        return cursor.type.is_function_variadic()
-      except AssertionError:
-        return False
-      # if cursor.kind == clx.CursorKind.FUNCTION_DECL:
-      #   return cursor.displayname.split(',')[-1].replace(')', '').split()[0] == '...'
-      # return False
+  @staticmethod
+  def is_variadic_function_from_cursor(cursor: CursorLike) -> bool:
+    r"""Answers the question 'is this cursor variadic'?
 
-    if isinstance(cursor, cls):
-      return cursor._get_cached('variadic_function', check)
-    return check()
+    Parameters
+    ----------
+    cursor :
+      the cursor
 
-  def is_variadic_function(self):
+    Returns
+    -------
+    variadic :
+      True if `cursor` is a variadic function, False otherwise
+    """
+    return cursor.type.is_function_variadic()
+
+  def is_variadic_function(self) -> bool:
+    r"""See `Cursor.is_variadic_function_from_cursor()`"""
     return self.is_variadic_function_from_cursor(self)
 
   @classmethod
-  def get_declaration_from_cursor(cls, cursor):
-    # cx_callback, found_cursors = make_cxcursor_and_range_callback(cursor)
-    # get_clang_function(
-    #   'clang_findIncludesInFile', [clx.TranslationUnit, clx.File, PetscCXCursorAndRangeVisitor]
-    # )(tu, cursor_file, cx_callback)
-    # if not found_cursors:
+  def get_declaration_from_cursor(cls, cursor: CursorLike) -> Cursor:
+    r"""Get the declaration cursor for a cursor
+
+    Parameters
+    ----------
+    cursor :
+      the cursor
+
+    Returns
+    -------
+    decl :
+      The original declaration of the cursor
+
+    Notes
+    -----
+    I don't believe this fully works yet
+    """
     if cursor.type.kind in clx_function_type_kinds:
       cursor_file = cls.get_clang_file_from_cursor(cursor)
       canon       = cursor.canonical
@@ -408,30 +683,39 @@ class Cursor:
           if refs:
             assert len(refs) == 1, 'Don\'t know how to handle >1 ref!'
             return Cursor.cast(refs[0])
-    # do this the hard way, manually search the entire TU for the declaration
-    usr        = cursor.get_usr()
-    cursor_loc = cursor.location
-    for child in cursor.translation_unit.cursor.walk_preorder():
-      # don't add ourselves to the list
-      if child.get_usr() == usr and child.location != cursor_loc:
-        child = cls.cast(child)
-        child._cache['__extent_final'] = True
-        found_cursors.append(child)
-    return found_cursors
+    return cursor
 
-  def get_declaration(self):
+  def get_declaration(self) -> Cursor:
+    r"""See `Cursor.get_declaration_from_cursor()`"""
     return self.get_declaration_from_cursor(self)
 
   @classmethod
-  def get_clang_cursor_from_cursor(cls, cursor):
+  def get_clang_cursor_from_cursor(cls, cursor: CursorLike) -> clx.Cursor:
+    r"""Given a cursor, return the underlying clang cursor
+
+    Parameters
+    ----------
+    cursor :
+      the cursor
+
+    Returns
+    -------
+    clang_cursor :
+      the `clang.cindex.Cursor`
+
+    Raises
+    ------
+    ValueError
+      if `cursor` is not a `Cursor` or `clang.cindex.Cursor`
+    """
     if isinstance(cursor, cls):
       return cursor.__cursor
     if isinstance(cursor, clx.Cursor):
       return cursor
     raise ValueError(type(cursor))
 
-  def clang_cursor(self):
-    """
-    return the internal clang cursor
-    """
+  def clang_cursor(self) -> clx.Cursor:
+    r"""See `Cursor.get_clang_cursor_from_cursor()`"""
     return self.get_clang_cursor_from_cursor(self)
+
+CursorLike = Cursor.CursorLike

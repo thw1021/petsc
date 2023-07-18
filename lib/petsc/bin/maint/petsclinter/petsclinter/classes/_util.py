@@ -34,13 +34,13 @@ class Level(int):
   """
   represent currently visited level of a tree
   """
-  def view(self, *args):
+  def view(self, *args) -> str:
     """
     pretty print an indented line
     """
     return '  '*self+' '.join(map(str, args))
 
-  def __add__(self, inc):
+  def __add__(self, inc: int):
     """
     increase number of tabs and newlines
     """
@@ -90,11 +90,11 @@ def view_ast_from_cursor(cursor, pred=verbose_print, level=Level(), max_depth=-1
 # constructing the error messages and diagnostics and hence we make about a 8x performance
 # improvement by caching the files read
 @functools.lru_cache
-def read_file_lines_cached(*args, **kwargs):
+def read_file_lines_cached(*args, **kwargs) -> list[str]:
   with open(*args, **kwargs) as fd:
     return fd.readlines()
 
-def get_raw_source_from_source_range(source_range, num_before_context=0, num_after_context=0, num_context=0, trim=False, tight=False):
+def get_raw_source_from_source_range(source_range, num_before_context: int = 0, num_after_context: int = 0, num_context: int = 0, trim: bool = False, tight: bool = False) -> str:
   num_before_context   = num_before_context if num_before_context else num_context
   num_after_context    = num_after_context  if num_after_context  else num_context
   rstart, rend         = source_range.start, source_range.end
@@ -123,10 +123,10 @@ def get_raw_source_from_source_range(source_range, num_before_context=0, num_aft
     return '\n'.join([s[min_spaces:].rstrip() for s in line_list])
   return ''.join(line_list)
 
-def get_raw_source_from_cursor(cursor, **kwargs):
+def get_raw_source_from_cursor(cursor, **kwargs) -> str:
   return get_raw_source_from_source_range(cursor.extent, **kwargs)
 
-def get_formatted_source_from_source_range(source_range, num_before_context=0, num_after_context=0, num_context=0, view=False, highlight=True, trim=True):
+def get_formatted_source_from_source_range(source_range, num_before_context: int  = 0, num_after_context: int = 0, num_context: int = 0, view: bool = False, highlight: bool = True, trim: bool = True) -> str:
   num_before_context   = num_before_context if num_before_context else num_context
   num_after_context    = num_after_context  if num_after_context  else num_context
   begin, end           = source_range.start, source_range.end
@@ -171,10 +171,10 @@ def get_formatted_source_from_source_range(source_range, num_before_context=0, n
     print(src_str)
   return src_str
 
-def get_formatted_source_from_cursor(cursor, **kwargs):
+def get_formatted_source_from_cursor(cursor, **kwargs) -> str:
   return get_formatted_source_from_source_range(cursor.extent, **kwargs)
 
-def view_cursor_full(cursor, **kwargs):
+def view_cursor_full(cursor, **kwargs) -> list[str]:
   ret = [
     f'Spelling:        {cursor.spelling}',
     f'Type:            {cursor.type.spelling}',
