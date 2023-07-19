@@ -17,6 +17,7 @@ configure_options = [
   '--download-eigen',
   #'--with-coverage',
   '--with-strict-petscerrorcode=0',
+  '--with-tau-perfstubs=0', # requires linux to test
   ]
 
 if __name__ == '__main__':

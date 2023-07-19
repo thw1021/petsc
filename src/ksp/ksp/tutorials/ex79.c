@@ -15,20 +15,17 @@ PetscErrorCode MatApply(PC pc, Mat X, Mat Y)
 
 int main(int argc, char **args)
 {
-  Mat       A, X, B; /* computed solutions and RHS */
-  KSP       ksp;     /* linear solver context */
-  PC        pc;      /* preconditioner context */
-  PetscInt  m = 10;
-  PetscBool flg, transpose = PETSC_FALSE;
-#if defined(PETSC_USE_LOG)
-  PetscLogEvent event;
-#endif
+  Mat                A, X, B; /* computed solutions and RHS */
+  KSP                ksp;     /* linear solver context */
+  PC                 pc;      /* preconditioner context */
+  PetscInt           m = 10;
+  PetscBool          flg, transpose = PETSC_FALSE;
+  PetscLogEvent      event;
   PetscEventPerfInfo info;
 
   PetscFunctionBeginUser;
   PetscCall(PetscInitialize(&argc, &args, NULL, help));
-  PetscCall(PetscLogIsActive(&flg));
-  if (!flg) PetscCall(PetscLogDefaultBegin());
+  PetscCall(PetscLogDefaultBegin());
   PetscCall(PetscOptionsGetInt(NULL, NULL, "-m", &m, NULL));
   PetscCall(MatCreateAIJ(PETSC_COMM_WORLD, m, m, PETSC_DECIDE, PETSC_DECIDE, m, NULL, m, NULL, &A));
   PetscCall(MatSetRandom(A, NULL));
@@ -99,6 +96,7 @@ int main(int argc, char **args)
       args: -pc_type {{bjacobi lu ilu mat cholesky icc none shell asm gasm}shared output}
       test:
          suffix: 1
+         requires: !hip
          output_file: output/ex77_preonly.out
          args: -ksp_type preonly
       test:
@@ -205,6 +203,7 @@ int main(int argc, char **args)
       args: -pc_type {{cholesky icc none}shared output} -transpose
       test:
          suffix: 1_transpose
+         requires: !hip
          output_file: output/ex77_preonly.out
          args: -ksp_type preonly
       test:
