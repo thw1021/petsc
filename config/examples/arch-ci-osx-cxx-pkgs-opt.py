@@ -57,6 +57,7 @@ configure_options = [
   '--download-kokkos-kernels=1',
   '--download-htool=1',
   '--with-strict-petscerrorcode',
+  '--with-tau-perfstubs=0', # requires linux to test
   ]
 
 if __name__ == '__main__':
