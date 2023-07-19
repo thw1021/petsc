@@ -810,13 +810,6 @@ PetscErrorCode DMTSUnsetRHSFunctionContext_Internal(DM dm)
 . tvar - a function that transforms to transient variables
 - ctx  - a context for tvar
 
-  Calling sequence of `tvar`:
-$   PetscErrorCode tvar(TS ts, Vec p, Vec c, void *ctx);
-+   ts - timestep context
-.   p - input vector (primitive form)
-.   c - output vector, transient variables (conservative form)
-- ctx - [optional] user-defined function context
-
   Level: advanced
 
   Notes:
@@ -908,13 +901,6 @@ PetscErrorCode DMTSGetSolutionFunction(DM dm, TSSolutionFunction *func, void **c
 . func - solution function evaluation routine
 - ctx  - context for solution evaluation
 
-  Calling sequence of `f`:
-$   PetscErrorCode f(TS ts, PetscReal t, Vec u, void *ctx);
-+   ts - timestep context
-.   t - current timestep
-.   u - output vector
-- ctx - [optional] user-defined function context
-
   Level: advanced
 
   Note:
@@ -946,13 +932,6 @@ PetscErrorCode DMTSSetSolutionFunction(DM dm, TSSolutionFunction func, void *ctx
 . func - forcing function evaluation routine
 - ctx  - context for solution evaluation
 
-  Calling sequence of `func`:
-$     PetscErrorCode func (TS ts, PetscReal t, Vec f,void *ctx)
-+   ts - timestep context
-.   t - current timestep
-.   f - output vector
-- ctx - [optional] user-defined function context
-
   Level: advanced
 
   Note:
@@ -960,7 +939,8 @@ $     PetscErrorCode func (TS ts, PetscReal t, Vec f,void *ctx)
   associated with the `DM`.  This makes the interface consistent regardless of whether the user interacts with a `DM` or
   not. If `DM` took a more central role at some later date, this could become the primary method of setting the residual.
 
-.seealso: [](ch_ts), `DM`, `TS`, `DMTSSetContext()`, `TSSetFunction()`, `DMTSSetJacobian()`, `TSSetForcingFunction()`, `DMTSGetForcingFunction()`
+.seealso: [](ch_ts), `DM`, `TS`, `TSForcingFunction`, `DMTSSetContext()`, `TSSetFunction()`,
+`DMTSSetJacobian()`, `TSSetForcingFunction()`, `DMTSGetForcingFunction()`
 @*/
 PetscErrorCode DMTSSetForcingFunction(DM dm, TSForcingFunction func, void *ctx)
 {
@@ -1052,17 +1032,6 @@ PetscErrorCode DMTSGetRHSFunction(DM dm, TSRHSFunction *func, void **ctx)
 . func - Jacobian evaluation routine
 - ctx  - context for residual evaluation
 
-  Calling sequence of `f`:
-$    PetscErrorCode f(TS ts, PetscReal t, Vec U, Vec U_t, PetscReal a, Mat Amat, Mat Pmat, void *ctx);
-+  ts  - the `TS` context obtained from `TSCreate()`
-.  t    - time at step/stage being solved
-.  U    - state vector
-.  U_t  - time derivative of state vector
-.  a    - shift
-.  Amat - (approximate) Jacobian of F(t,U,W+a*U), equivalent to dF/dU + a*dF/dU_t
-.  Pmat - matrix used for constructing preconditioner, usually the same as Amat
-- ctx - [optional] user-defined context for matrix evaluation routine
-
   Level: advanced
 
   Note:
@@ -1070,7 +1039,8 @@ $    PetscErrorCode f(TS ts, PetscReal t, Vec U, Vec U_t, PetscReal a, Mat Amat,
   associated with the `DM`.  This makes the interface consistent regardless of whether the user interacts with a `DM` or
   not. If `DM` took a more central role at some later date, this could become the primary method of setting the Jacobian.
 
-.seealso: [](ch_ts), `TS`, `DM`, `DMTSSetContext()`, `TSSetRHSFunction()`, `DMTSGetJacobian()`, `TSSetIJacobian()`, `TSSetIFunction()`
+.seealso: [](ch_ts), `TS`, `DM`, `TSIJacobian`, `DMTSSetContext()`, `TSSetRHSFunction()`,
+`DMTSGetJacobian()`, `TSSetIJacobian()`, `TSSetIFunction()`
 @*/
 PetscErrorCode DMTSSetIJacobian(DM dm, TSIJacobian func, void *ctx)
 {
@@ -1180,15 +1150,6 @@ PetscErrorCode DMTSGetIJacobian(DM dm, TSIJacobian *func, void **ctx)
 . func - Jacobian evaluation routine
 - ctx  - context for residual evaluation
 
-  Calling sequence of `func`:
-$     PetscErrorCode func(TS ts, PetscReal t, Vec u, Mat A, Mat B, void *ctx);
-+  ts  - the `TS` context obtained from `TSCreate()`
-.  t - current timestep
-.  u - input vector
-.  Amat - (approximate) Jacobian matrix
-.  Pmat - matrix from which preconditioner is to be constructed (usually the same as Amat)
-- ctx - [optional] user-defined context for matrix evaluation routine
-
   Level: advanced
 
   Note:
@@ -1199,7 +1160,7 @@ $     PetscErrorCode func(TS ts, PetscReal t, Vec u, Mat A, Mat B, void *ctx);
   Developer Notes:
   If `DM` took a more central role at some later date, this could become the primary method of setting the Jacobian.
 
-.seealso: [](ch_ts), `DMTSSetContext()`, `TSSetFunction()`, `DMTSGetJacobian()`, `TSSetRHSJacobian()`
+.seealso: [](ch_ts), `TSRHSJacobian`, `DMTSSetContext()`, `TSSetFunction()`, `DMTSGetJacobian()`, `TSSetRHSJacobian()`
 @*/
 PetscErrorCode DMTSSetRHSJacobian(DM dm, TSRHSJacobian func, void *ctx)
 {

@@ -401,7 +401,7 @@ $ PetscErrorCode ihessianproductfunc(TS ts, PetscReal t, Vec U, Vec *Vl, Vec Vr,
 .   Vl - an array of input vectors to be left-multiplied with the Hessian
 .   Vr - input vector to be right-multiplied with the Hessian
 .   VHV - an array of output vectors for vector-Hessian-vector product
--   ctx - [optional] user-defined function context
+- ctx - [optional] user-defined function context
 
   Level: intermediate
 
@@ -623,7 +623,7 @@ $ PetscErrorCode rhshessianproductfunc(TS ts, PetscReal t, Vec U, Vec *Vl, Vec V
 .   Vl - an array of input vectors to be left-multiplied with the Hessian
 .   Vr - input vector to be right-multiplied with the Hessian
 .   VHV - an array of output vectors for vector-Hessian-vector product
--   ctx - [optional] user-defined function context
+- ctx - [optional] user-defined function context
 
   Level: intermediate
 
@@ -1245,7 +1245,7 @@ PetscErrorCode TSAdjointMonitorSetFromOptions(TS ts, const char name[], const ch
 
   Calling sequence of `adjointmonitor`:
 $    PetscErrorCode adjointmonitor(TS ts, PetscInt steps, PetscReal time, Vec u, PetscInt numcost, Vec *lambda, Vec *mu, void *adjointmctx)
-+    ts - the `TS` context
++ ts          - the `TS` context
 .    steps - iteration number (after the final time step the monitor routine is called with a step of -1, this is at the final time which may have
   been interpolated to)
 .    time - current time
@@ -1253,7 +1253,7 @@ $    PetscErrorCode adjointmonitor(TS ts, PetscInt steps, PetscReal time, Vec u,
 .    numcost - number of cost functionos
 .    lambda - sensitivities to initial conditions
 .    mu - sensitivities to parameters
--    adjointmctx - [optional] adjoint monitoring context
+- adjointmctx - [optional] adjoint monitoring context
 
   Level: intermediate
 
