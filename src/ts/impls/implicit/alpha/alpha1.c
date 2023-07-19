@@ -498,14 +498,6 @@ PETSC_EXTERN PetscErrorCode TSCreate_Alpha(TS ts)
 
   Logically Collective
 
-  The algorithmic parameters \alpha_m and \alpha_f of the
-  generalized-\alpha method can be computed in terms of a specified
-  spectral radius \rho in [0,1] for infinite time step in order to
-
-  control high-frequency numerical damping:
-  \alpha_m = 0.5*(3-\rho)/(1+\rho)
-  \alpha_f = 1/(1+\rho)
-
   Input Parameters:
 + ts     - timestepping context
 - radius - the desired spectral radius
@@ -514,6 +506,15 @@ PETSC_EXTERN PetscErrorCode TSCreate_Alpha(TS ts)
 . -ts_alpha_radius <radius> - set alpha radius
 
   Level: intermediate
+
+  Notes:
+  The algorithmic parameters \alpha_m and \alpha_f of the
+  generalized-\alpha method can be computed in terms of a specified
+  spectral radius \rho in [0,1] for infinite time step in order to
+
+  control high-frequency numerical damping\:
+  \alpha_m = 0.5*(3-\rho)/(1+\rho)
+  \alpha_f = 1/(1+\rho)
 
 .seealso: [](ch_ts), `TS`, `TSALPHA`, `TSAlphaSetParams()`, `TSAlphaGetParams()`
 @*/
@@ -532,15 +533,6 @@ PetscErrorCode TSAlphaSetRadius(TS ts, PetscReal radius)
 
   Logically Collective
 
-  Second-order accuracy can be obtained so long as:
-  \gamma = 0.5 + alpha_m - alpha_f
-
-  Unconditional stability requires:
-  \alpha_m >= \alpha_f >= 0.5
-
-  Backward Euler method is recovered with:
-  \alpha_m = \alpha_f = gamma = 1
-
   Input Parameters:
 + ts      - timestepping context
 . alpha_m - algorithmic parameter
@@ -555,6 +547,15 @@ PetscErrorCode TSAlphaSetRadius(TS ts, PetscReal radius)
   Level: advanced
 
   Note:
+  Second-order accuracy can be obtained so long as\:
+  \gamma = 0.5 + alpha_m - alpha_f
+
+  Unconditional stability requires\:
+  \alpha_m >= \alpha_f >= 0.5
+
+  Backward Euler method is recovered with\:
+  \alpha_m = \alpha_f = gamma = 1
+
   Use of this function is normally only required to hack `TSALPHA` to
   use a modified integration scheme. Users should call
   `TSAlphaSetRadius()` to set the desired spectral radius of the methods
