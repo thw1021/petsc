@@ -716,7 +716,7 @@ class DeveloperNotes(Prose):
 
   def __init__(self, *args, **kwargs):
     kwargs.setdefault('name', 'developer notes')
-    kwargs.setdefault('keywords', ('Developer', ))
+    kwargs.setdefault('titles', ('Developer Notes', 'Developer Note'))
     super().__init__(*args, **kwargs)
 
 class References(Prose):
@@ -737,6 +737,7 @@ class FortranNotes(Prose):
 
   def __init__(self, *args, **kwargs):
     kwargs.setdefault('name', 'fortran notes')
+    kwargs.setdefault('titles', ('Fortran Notes', 'Fortran Note'))
     kwargs.setdefault('keywords', ('Fortran', ))
     super().__init__(*args, **kwargs)
     return
