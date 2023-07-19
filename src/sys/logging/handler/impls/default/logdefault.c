@@ -263,6 +263,7 @@ struct _n_PetscLogHandler_Default {
   PetscLogDouble         petsc_tracetime;
   PetscHMapEvent         eventInfoMap_th;
   int                    pause_depth;
+  PetscBool              use_threadsafe;
 };
 
 /* --- PetscLogHandler_Default --- */
@@ -280,7 +281,8 @@ static PetscErrorCode PetscLogHandlerContextCreate_Default(PetscLogHandler_Defau
 
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-log_include_actions", &def->petsc_logActions, NULL));
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-log_include_objects", &def->petsc_logObjects, NULL));
-  if (PetscDefined(HAVE_THREADSAFETY)) { PetscCall(PetscHMapEventCreate(&def->eventInfoMap_th)); }
+  PetscCall(PetscOptionsGetBool(NULL, NULL, "-log_handler_default_use_threadsafe_events", &def->use_threadsafe, NULL));
+  if (PetscDefined(HAVE_THREADSAFETY) || def->use_threadsafe) { PetscCall(PetscHMapEventCreate(&def->eventInfoMap_th)); }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -524,7 +526,7 @@ static PetscErrorCode PetscLogHandlerEventBegin_Default(PetscLogHandler h, Petsc
   PetscCall(PetscLogHandlerEventSync_Default(h, event, PetscObjectComm(o1)));
   PetscCall(PetscLogStateGetCurrentStage(state, &stage));
   if (def->pause_depth > 0) stage = 0; // in pause-mode, all events run on the main stage
-  if (PetscDefined(HAVE_THREADSAFETY)) {
+  if (PetscDefined(HAVE_THREADSAFETY) || def->use_threadsafe) {
     PetscCall(PetscLogGetStageEventPerfInfo_threaded(def, stage, event, &event_perf_info));
     if (event_perf_info->depth == 0) { PetscCall(PetscEventPerfInfoInit(event_perf_info)); }
   } else {
@@ -599,7 +601,7 @@ static PetscErrorCode PetscLogHandlerEventEnd_Default(PetscLogHandler h, PetscLo
   }
   PetscCall(PetscLogStateGetCurrentStage(state, &stage));
   if (def->pause_depth > 0) stage = 0; // all events run on the main stage in pause-mode
-  if (PetscDefined(HAVE_THREADSAFETY)) {
+  if (PetscDefined(HAVE_THREADSAFETY) || def->use_threadsafe) {
     PetscCall(PetscLogGetStageEventPerfInfo_threaded(def, stage, event, &event_perf_info));
   } else {
     PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(h, stage, event, &event_perf_info));
@@ -613,7 +615,7 @@ static PetscErrorCode PetscLogHandlerEventEnd_Default(PetscLogHandler h, PetscLo
   /* Log performance info */
   PetscCall(PetscTime(&time));
   PetscCall(PetscEventPerfInfoToc(event_perf_info, time, PetscLogMemory, (int)event));
-  if (PetscDefined(HAVE_THREADSAFETY)) {
+  if (PetscDefined(HAVE_THREADSAFETY) || def->use_threadsafe) {
     PetscEventPerfInfo *event_perf_info_global;
     PetscCall(PetscSpinlockLock(&def->lock));
     PetscCall(PetscLogHandlerDefaultGetEventPerfInfo(h, stage, event, &event_perf_info_global));
