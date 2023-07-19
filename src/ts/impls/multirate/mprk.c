@@ -442,12 +442,17 @@ PetscErrorCode TSMPRKFinalizePackage(void)
 . sbase  - number of stages in the base methods
 . ratio1 - stepsize ratio at 1st level (e.g. slow/medium)
 . ratio2 - stepsize ratio at 2nd level (e.g. medium/fast)
+. Asb    - stage coefficients for slow components(dimension s*s, row-major)
+. bsb    - step completion table for slow components(dimension s)
+. csb    - abscissa for slow components(dimension s)
+. rsb    - ????????????????????
+. Amb    - ????????????????????
+. bmb    - ????????????????????
+. cmb    - ????????????????????
+. rmb    - ????????????????????
 . Af     - stage coefficients for fast components(dimension s*s, row-major)
 . bf     - step completion table for fast components(dimension s)
-. cf     - abscissa for fast components(dimension s)
-.  As - stage coefficients for slow components(dimension s*s, row-major)
-.  bs - step completion table for slow components(dimension s)
--  cs - abscissa for slow components(dimension s)
+- cf     - abscissa for fast components(dimension s)
 
   Level: advanced
 
