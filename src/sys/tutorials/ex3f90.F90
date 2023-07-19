@@ -88,6 +88,8 @@
            PetscCallMPIA(MPI_Isend( message, msgLen, MPI_DOUBLE_PRECISION,mod(rank+1,size),tagMsg+rank, PETSC_COMM_WORLD, req, ierr))
            PetscCallMPIA(MPI_Recv( message, msgLen, MPI_DOUBLE_PRECISION,mod(rank-1+size,size),tagMsg+mod(rank-1+size,size), PETSC_COMM_WORLD,status, ierr))
            PetscCallMPIA(MPI_Wait(req,MPI_STATUS_IGNORE,ierr))
+           ierr = PetscASend(msgLen, MPI_DOUBLE_PRECISION)
+           ierr = PetscARecv(msgLen, MPI_DOUBLE_PRECISION)
          end if
          PetscCallA(PetscLogEventEnd(Lessons,ierr))
 
@@ -121,9 +123,11 @@
 
          item = rank*(3-rank)
          PetscCallMPIA(MPI_Allreduce(item, maxItem, 1, MPI_INTEGER, MPI_MAX,PETSC_COMM_WORLD, ierr))
+         ierr = PetscAReduce()
 
          item = rank*(10-rank)
          PetscCallMPIA(MPI_Allreduce(item, maxItem, 1, MPI_INTEGER, MPI_MAX,PETSC_COMM_WORLD, ierr))
+         ierr = PetscAReduce()
 
          PetscCallA(PetscLogFlops(58988d0,ierr))
          PetscCallA(PetscSleep(0.6*second,ierr))
@@ -198,6 +202,8 @@
            PetscCallMPIA(MPI_Isend( message, msgLen, MPI_DOUBLE_PRECISION,mod(rank+1,size),tagMsg+rank, PETSC_COMM_WORLD, req, ierr))
            PetscCallMPIA(MPI_Recv( message, msgLen, MPI_DOUBLE_PRECISION,mod(rank-1+size,size),tagMsg+mod(rank-1+size,size), PETSC_COMM_WORLD,status, ierr))
            PetscCallMPIA(MPI_Wait(req,MPI_STATUS_IGNORE,ierr))
+           ierr = PetscASend(msgLen, MPI_DOUBLE_PRECISION)
+           ierr = PetscARecv(msgLen, MPI_DOUBLE_PRECISION)
          end if
          PetscCallA(PetscLogEventEnd(Lessons,ierr))
 
