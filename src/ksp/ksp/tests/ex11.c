@@ -288,4 +288,9 @@ int main(int argc, char **argv)
       args: -f ${DATAFILESPATH}/matrices/underworld32.gz -fc_ksp_view_pre -fc_pc_type lu
       requires: datafilespath mumps double !complex !defined(PETSC_USE_64BIT_INDICES)
 
+    test:
+      suffix: scale
+      args: -f ${DATAFILESPATH}/matrices/underworld32.gz -fc_ksp_monitor -fc_ksp_type fgmres -fc_ksp_max_it 100 -fc_pc_type fieldsplit -fc_pc_fieldsplit_type SCHUR -fc_pc_fieldsplit_schur_fact_type full -fc_fieldsplit_velocity_ksp_type gmres -fc_fieldsplit_velocity_pc_type lu -fc_fieldsplit_pressure_ksp_max_it 100 -fc_fieldsplit_pressure_ksp_monitor -fc_fieldsplit_pressure_pc_type lsc -fc_fieldsplit_pressure_lsc_ksp_type gmres -fc_fieldsplit_pressure_lsc_ksp_max_it 100 -fc_fieldsplit_pressure_lsc_pc_type hypre -fc_fieldsplit_pressure_lsc_pc_hypre_type boomeramg -test_fs 0 -fc_ksp_converged_reason -fc_fieldsplit_pressure_ksp_converged_reason -fc_fieldsplit_pressure_ksp_type fgmres -fc_fieldsplit_pressure_pc_lsc_scale_diag -options_left
+      requires: datafilespath double hypre !complex
+
 TEST*/
