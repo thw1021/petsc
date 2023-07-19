@@ -7482,7 +7482,7 @@ static PetscErrorCode EnvelopeDataDestroy(EnvelopeData *edata)
   Collective
 
   Input Parameter:
-.  mat - the matrix
+. mat - the matrix
 
   Level: intermediate
 
