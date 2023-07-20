@@ -49,6 +49,11 @@ Changes: Development
 
 .. rubric:: TS:
 
+- Add ``TSSetPostEventStep()`` to control the first step after event
+- Option ``-ts_event_post_event_step`` can now accept special value 0 to keep the previous time steps after event
+- Deprecate ``TSSetPostEventIntervalStep()``
+- Deprecate option ``-ts_event_post_eventinterval_step``
+
 .. rubric:: TAO:
 
 .. rubric:: DM/DA:
