@@ -1,0 +1,68 @@
+  Residual norms for fc_ solve.
+  0 KSP Residual norm 3.318956929128e-07 
+    Residual norms for fc_fieldsplit_pressure_ solve.
+    0 KSP Residual norm 1.945627691614e-01 
+    1 KSP Residual norm 3.707976320850e-02 
+    2 KSP Residual norm 3.546423032371e-03 
+    3 KSP Residual norm 5.898425615913e-04 
+    4 KSP Residual norm 4.654246231796e-05 
+    5 KSP Residual norm 1.042633152113e-05 
+    6 KSP Residual norm 1.360501891224e-06 
+  Linear fc_fieldsplit_pressure_ solve converged due to CONVERGED_RTOL iterations 6
+  1 KSP Residual norm 4.515447160058e-13 
+Linear fc_ solve converged due to CONVERGED_RTOL iterations 1
+[ 0] 16 bytes PetscCommRestoreComm() at /raid/lindad/moose/petsc/src/sys/objects/tagm.c:159
+[ 0] 656 bytes MatDuplicateNoCreate_SeqAIJ() at /raid/lindad/moose/petsc/src/mat/impls/aij/seq/aij.c:4954
+[ 0] 54448 bytes MatDuplicateNoCreate_SeqAIJ() at /raid/lindad/moose/petsc/src/mat/impls/aij/seq/aij.c:4926
+[ 0] 656 bytes MatDuplicateNoCreate_SeqAIJ() at /raid/lindad/moose/petsc/src/mat/impls/aij/seq/aij.c:4921
+[ 0] 656 bytes MatDuplicateNoCreate_SeqAIJ() at /raid/lindad/moose/petsc/src/mat/impls/aij/seq/aij.c:4919
+[ 0] 16 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 32 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 32 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 32 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 32 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 16 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 48 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 48 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 48 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 32 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 32 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 32 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 32 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 32 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 32 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 32 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 32 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 32 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 64 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 32 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 32 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 32 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 32 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 32 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 32 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 32 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 32 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 32 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 32 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 16 bytes PetscFunctionListCreate_Private() at /raid/lindad/moose/petsc/src/sys/dll/reg.c:258
+[ 0] 1696 bytes MatCreate_SeqAIJ() at /raid/lindad/moose/petsc/src/mat/impls/aij/seq/aij.c:4809
+[ 0] 16 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 16 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 3120 bytes MatCreate() at /raid/lindad/moose/petsc/src/mat/utils/gcreate.c:77
+[ 0] 160 bytes PetscObjectComposedDataIncreaseReal() at /raid/lindad/moose/petsc/src/sys/objects/state.c:144
+[ 0] 16 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 64 bytes VecCreate_Seq_Private() at /raid/lindad/moose/petsc/src/vec/vec/impls/seq/bvec2.c:860
+[ 0] 4624 bytes VecCreate_Seq() at /raid/lindad/moose/petsc/src/vec/vec/impls/seq/bvec3.c:34
+[ 0] 16 bytes PetscStrallocpy() at /raid/lindad/moose/petsc/include/petscstring.h:152
+[ 0] 1680 bytes VecCreateWithLayout_Private() at /raid/lindad/moose/petsc/src/vec/vec/interface/veccreate.c:67
+[ 0] 16 bytes PCFieldSplitGetSubKSP_FieldSplit_Schur() at /raid/lindad/moose/petsc/src/ksp/pc/impls/fieldsplit/fieldsplit.c:1724
+[ 0] 16 bytes PetscLayoutSetUp() at /raid/lindad/moose/petsc/src/vec/is/utils/pmap.c:248
+[ 0] 16 bytes PetscLayoutSetUp() at /raid/lindad/moose/petsc/src/vec/is/utils/pmap.c:248
+[ 0] 112 bytes PetscLayoutCreate() at /raid/lindad/moose/petsc/src/vec/is/utils/pmap.c:54
+[ 0] 112 bytes PetscLayoutCreate() at /raid/lindad/moose/petsc/src/vec/is/utils/pmap.c:54
+[ 0] 16 bytes PetscCommBuildTwoSided_Allreduce() at /raid/lindad/moose/petsc/src/sys/utils/mpits.c:149
+[ 0] 16 bytes PetscLayoutSetUp() at /raid/lindad/moose/petsc/src/vec/is/utils/pmap.c:248
+[ 0] 112 bytes PetscLayoutCreate() at /raid/lindad/moose/petsc/src/vec/is/utils/pmap.c:54
+[ 0] 16 bytes PetscCommDuplicate() at /raid/lindad/moose/petsc/src/sys/objects/tagm.c:224
+[ 0] 48 bytes PetscCommDuplicate() at /raid/lindad/moose/petsc/src/sys/objects/tagm.c:220
