@@ -68,7 +68,7 @@ except ImportError:
 
 # Cython
 
-CYTHON = '0.29.32'
+CYTHON = '3.0.0'
 
 def cython_req():
     return CYTHON
