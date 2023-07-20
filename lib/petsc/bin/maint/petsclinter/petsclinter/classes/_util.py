@@ -3,6 +3,14 @@
 # Created: Mon Jun 20 19:42:53 2022 (-0400)
 # @author: Jacob Faibussowitsch
 """
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+  from ._src_pos import SourceRangeLike
+  from ._cursor  import CursorLike
+
 from .. import util
 
 def verbose_print(*args, **kwargs):
@@ -65,7 +73,7 @@ def view_type(t, level, title):
     retList.extend(view_type(t.get_pointee(), level + 1, 'points to:'))
   return retList
 
-def view_ast_from_cursor(cursor, pred=verbose_print, level=Level(), max_depth=-1, **kwargs):
+def view_ast_from_cursor(cursor: CursorLike, pred=verbose_print, level: Level = Level(), max_depth: int = -1, **kwargs) -> list:
   """
   pretty print cursor AST
   """
@@ -105,7 +113,7 @@ def read_file_lines_cached(*args, **kwargs) -> list[str]:
 
 del _functools_lru_cache
 
-def get_raw_source_from_source_range(source_range, num_before_context: int = 0, num_after_context: int = 0, num_context: int = 0, trim: bool = False, tight: bool = False) -> str:
+def get_raw_source_from_source_range(source_range: SourceRangeLike, num_before_context: int = 0, num_after_context: int = 0, num_context: int = 0, trim: bool = False, tight: bool = False) -> str:
   num_before_context   = num_before_context if num_before_context else num_context
   num_after_context    = num_after_context  if num_after_context  else num_context
   rstart, rend         = source_range.start, source_range.end
@@ -134,10 +142,10 @@ def get_raw_source_from_source_range(source_range, num_before_context: int = 0, 
     return '\n'.join([s[min_spaces:].rstrip() for s in line_list])
   return ''.join(line_list)
 
-def get_raw_source_from_cursor(cursor, **kwargs) -> str:
+def get_raw_source_from_cursor(cursor: CursorLike, **kwargs) -> str:
   return get_raw_source_from_source_range(cursor.extent, **kwargs)
 
-def get_formatted_source_from_source_range(source_range, num_before_context: int  = 0, num_after_context: int = 0, num_context: int = 0, view: bool = False, highlight: bool = True, trim: bool = True) -> str:
+def get_formatted_source_from_source_range(source_range: SourceRangeLike, num_before_context: int  = 0, num_after_context: int = 0, num_context: int = 0, view: bool = False, highlight: bool = True, trim: bool = True) -> str:
   num_before_context   = num_before_context if num_before_context else num_context
   num_after_context    = num_after_context  if num_after_context  else num_context
   begin, end           = source_range.start, source_range.end
@@ -182,10 +190,10 @@ def get_formatted_source_from_source_range(source_range, num_before_context: int
     print(src_str)
   return src_str
 
-def get_formatted_source_from_cursor(cursor, **kwargs) -> str:
+def get_formatted_source_from_cursor(cursor: CursorLike, **kwargs) -> str:
   return get_formatted_source_from_source_range(cursor.extent, **kwargs)
 
-def view_cursor_full(cursor, **kwargs) -> list[str]:
+def view_cursor_full(cursor: CursorLike, **kwargs) -> list[str]:
   ret = [
     f'Spelling:        {cursor.spelling}',
     f'Type:            {cursor.type.spelling}',

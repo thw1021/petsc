@@ -204,7 +204,7 @@ class Cursor:
       try:
         ret = cls.get_name_from_cursor(*args, **kwargs)
       except (RuntimeError, ParsingError):
-        ret = None
+        ret = ''
       return ret
 
     name = None
@@ -559,11 +559,13 @@ class Cursor:
     found_cursors :
       a list of references to the cursor in the file
     """
+    import typing
+
     cx_callback, found_cursors = make_cxcursor_and_range_callback(cursor)
     get_clang_function(
       'clang_findReferencesInFile', [clx.Cursor, clx.File, PetscCXCursorAndRangeVisitor]
     )(cls.get_clang_cursor_from_cursor(cursor), cls.get_clang_file_from_cursor(cursor), cx_callback)
-    return found_cursors
+    return typing.cast(list[Cursor], found_cursors)
 
   def find_cursor_references(self) -> list[Cursor]:
     r"""See `Cursor.find_cursor_references_from_cursor()`"""

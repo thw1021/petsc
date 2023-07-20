@@ -3,8 +3,10 @@
 # Created: Mon Jun 20 17:45:39 2022 (-0400)
 # @author: Jacob Faibussowitsch
 """
+from __future__ import annotations
+
 from typing import Optional, TYPE_CHECKING
-from collections.abc import Callable, Sequence, MutableSequence
+from collections.abc import Callable, Sequence
 
 import enum
 import ctypes
@@ -164,7 +166,7 @@ class PetscCXCursorAndRangeVisitor(ctypes.Structure):
     ('visit',   CXCursorAndRangeVisitorCallBackProto)
   ]
 
-def make_cxcursor_and_range_callback(cursor: "CursorLike", found_cursors: Optional[MutableSequence["Cursor"]] = None, parsing_error_handler: Optional[Callable[[ParsingError], None]] = None) -> tuple[PetscCXCursorAndRangeVisitor, MutableSequence["Cursor"]]:
+def make_cxcursor_and_range_callback(cursor: CursorLike, parsing_error_handler: Optional[Callable[[ParsingError], None]] = None) -> tuple[PetscCXCursorAndRangeVisitor, list[Cursor]]:
   r"""Make a clang cxcursor and range callback functor
 
   Parameters
@@ -182,16 +184,14 @@ def make_cxcursor_and_range_callback(cursor: "CursorLike", found_cursors: Option
   cx_callback, found_cursors : callable, array_like
     the callback and found_cursors list
   """
-  import petsclinter as pl
   from ..classes._cursor import Cursor
-
-  if found_cursors is None:
-    found_cursors = []
+  import petsclinter as pl
 
   if parsing_error_handler is None:
     parsing_error_handler = lambda exc: None
 
-  def visitor(ctx, cursor, src_range):
+  found_cursors = []
+  def visitor(ctx, cursor: clx.Cursor, src_range: clx.SourceRange) -> CXChildVisitResult:
     # The "cursor" returned here is actually just a CXCursor, not the real
     # clx.Cursor that we lead python to believe in our function prototype. Luckily we
     # have all we need to remake the python object from scratch
@@ -201,7 +201,6 @@ def make_cxcursor_and_range_callback(cursor: "CursorLike", found_cursors: Option
     except ParsingError as pe:
       parsing_error_handler(pe)
     except Exception:
-
       import traceback
 
       string = "Full error full error message below:"
