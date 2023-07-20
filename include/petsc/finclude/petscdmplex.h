@@ -11,5 +11,6 @@
 #define DMPlexInterpolatedFlag PetscEnum
 #define DMPlexTPSType PetscEnum
 #define DMPlexReorderDefaultFlag PetscEnum
+#define DMPlexLocationAlgorithm PetscEnum
 
 #endif
