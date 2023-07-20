@@ -5403,6 +5403,76 @@ PetscErrorCode TSFunctionDomainError(TS ts, PetscReal stagetime, Vec Y, PetscBoo
 }
 
 /*@C
+  TSCopy - This function copies the configuration to a new `TS` object.
+
+  Collective
+
+  Input Parameter:
+. tsin    - The input `TS`
+
+  Output Parameter:
+. tsout   - The copied `TS`
+
+  Level: developer
+
+  Notes:
+  This is called by `TSClone()`, which also sets the `DM` and `SNES`.
+
+.seealso: [](ch_ts), `TS`, `SNES`, `TSClone()`, `TSCreate()`, `TSSetType()`, `TSSetUp()`, `TSDestroy()`, `TSSetProblemType()`
+@*/
+PetscErrorCode TSCopy(TS tsin, TS tsout)
+{
+  TSType type;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(tsin, TS_CLASSID, 1);
+  PetscValidHeaderSpecific(tsout, TS_CLASSID, 2);
+
+  PetscCall(PetscObjectDereference((PetscObject)tsout->adapt));
+  tsout->adapt = tsin->adapt;
+  PetscCall(PetscObjectReference((PetscObject)tsout->adapt));
+
+  PetscCall(PetscObjectDereference((PetscObject)tsout->trajectory));
+  tsout->trajectory = tsin->trajectory;
+  PetscCall(PetscObjectReference((PetscObject)tsout->trajectory));
+
+  tsout->event = tsin->event;
+  if (tsout->event) tsout->event->refct++;
+
+  tsout->problem_type      = tsin->problem_type;
+  tsout->ptime             = tsin->ptime;
+  tsout->ptime_prev        = tsin->ptime_prev;
+  tsout->time_step         = tsin->time_step;
+  tsout->max_time          = tsin->max_time;
+  tsout->steps             = tsin->steps;
+  tsout->max_steps         = tsin->max_steps;
+  tsout->steprestart       = tsin->steprestart;
+  tsout->equation_type     = tsin->equation_type;
+  tsout->atol              = tsin->atol;
+  tsout->rtol              = tsin->rtol;
+  tsout->max_snes_failures = tsin->max_snes_failures;
+  tsout->max_reject        = tsin->max_reject;
+  tsout->errorifstepfailed = tsin->errorifstepfailed;
+
+  PetscCall(TSGetType(tsin, &type));
+  PetscCall(TSSetType(tsout, type));
+
+  tsout->cfltime          = tsin->cfltime;
+  tsout->cfltime_local    = tsin->cfltime_local;
+  tsout->exact_final_time = tsin->exact_final_time;
+
+  tsout->ops[0] = tsin->ops[0];
+
+  if (((PetscObject)tsin)->fortran_func_pointers) {
+    PetscInt i;
+    PetscCall(PetscMalloc((10) * sizeof(void (*)(void)), &((PetscObject)tsout)->fortran_func_pointers));
+    for (i = 0; i < 10; i++) ((PetscObject)tsout)->fortran_func_pointers[i] = ((PetscObject)tsin)->fortran_func_pointers[i];
+  }
+  PetscTryTypeMethod(tsin, copy, tsout);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
   TSClone - This function clones a time step `TS` object.
 
   Collective
@@ -5419,6 +5489,8 @@ PetscErrorCode TSFunctionDomainError(TS ts, PetscReal stagetime, Vec Y, PetscBoo
   This function is used to create a clone of a `TS` object. It is used in `TSARKIMEX` for initializing the slope for first stage explicit methods.
   It will likely be replaced in the future with a mechanism of switching methods on the fly.
 
+  This calls `TSCopy()` underneath, but also sets the `DM` and `SNES`.
+
   When using `TSDestroy()` on a clone the user has to first reset the correct `TS` reference in the embedded `SNES` object: e.g., by running
 .vb
  SNES snes_dup = NULL;
@@ -5426,78 +5498,27 @@ PetscErrorCode TSFunctionDomainError(TS ts, PetscReal stagetime, Vec Y, PetscBoo
  TSSetSNES(ts,snes_dup);
 .ve
 
-.seealso: [](ch_ts), `TS`, `SNES`, `TSCreate()`, `TSSetType()`, `TSSetUp()`, `TSDestroy()`, `TSSetProblemType()`
+.seealso: [](ch_ts), `TS`, `SNES`, `TSCopy()`, `TSCreate()`, `TSSetType()`, `TSSetUp()`, `TSDestroy()`, `TSSetProblemType()`
 @*/
 PetscErrorCode TSClone(TS tsin, TS *tsout)
 {
-  TS     t;
-  SNES   snes_start;
-  DM     dm;
-  TSType type;
+  SNES snes;
+  DM   dm;
 
   PetscFunctionBegin;
-  PetscAssertPointer(tsin, 1);
+  PetscValidHeaderSpecific(tsin, TS_CLASSID, 1);
+  PetscAssertPointer(tsout, 2);
   *tsout = NULL;
 
-  PetscCall(PetscHeaderCreate(t, TS_CLASSID, "TS", "Time stepping", "TS", PetscObjectComm((PetscObject)tsin), TSDestroy, TSView));
+  PetscCall(TSCreate(PetscObjectComm((PetscObject)tsin), tsout));
 
-  /* General TS description */
-  t->numbermonitors    = 0;
-  t->monitorFrequency  = 1;
-  t->setupcalled       = 0;
-  t->ksp_its           = 0;
-  t->snes_its          = 0;
-  t->nwork             = 0;
-  t->rhsjacobian.time  = PETSC_MIN_REAL;
-  t->rhsjacobian.scale = 1.;
-  t->ijacobian.shift   = 1.;
+  PetscCall(TSCopy(tsin, *tsout));
 
-  PetscCall(TSGetSNES(tsin, &snes_start));
-  PetscCall(TSSetSNES(t, snes_start));
+  PetscCall(TSGetSNES(tsin, &snes));
+  PetscCall(TSSetSNES(*tsout, snes));
 
   PetscCall(TSGetDM(tsin, &dm));
-  PetscCall(TSSetDM(t, dm));
-
-  t->adapt = tsin->adapt;
-  PetscCall(PetscObjectReference((PetscObject)t->adapt));
-
-  t->trajectory = tsin->trajectory;
-  PetscCall(PetscObjectReference((PetscObject)t->trajectory));
-
-  t->event = tsin->event;
-  if (t->event) t->event->refct++;
-
-  t->problem_type      = tsin->problem_type;
-  t->ptime             = tsin->ptime;
-  t->ptime_prev        = tsin->ptime_prev;
-  t->time_step         = tsin->time_step;
-  t->max_time          = tsin->max_time;
-  t->steps             = tsin->steps;
-  t->max_steps         = tsin->max_steps;
-  t->equation_type     = tsin->equation_type;
-  t->atol              = tsin->atol;
-  t->rtol              = tsin->rtol;
-  t->max_snes_failures = tsin->max_snes_failures;
-  t->max_reject        = tsin->max_reject;
-  t->errorifstepfailed = tsin->errorifstepfailed;
-
-  PetscCall(TSGetType(tsin, &type));
-  PetscCall(TSSetType(t, type));
-
-  t->vec_sol = NULL;
-
-  t->cfltime          = tsin->cfltime;
-  t->cfltime_local    = tsin->cfltime_local;
-  t->exact_final_time = tsin->exact_final_time;
-
-  t->ops[0] = tsin->ops[0];
-
-  if (((PetscObject)tsin)->fortran_func_pointers) {
-    PetscInt i;
-    PetscCall(PetscMalloc((10) * sizeof(void (*)(void)), &((PetscObject)t)->fortran_func_pointers));
-    for (i = 0; i < 10; i++) ((PetscObject)t)->fortran_func_pointers[i] = ((PetscObject)tsin)->fortran_func_pointers[i];
-  }
-  *tsout = t;
+  PetscCall(TSSetDM(*tsout, dm));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

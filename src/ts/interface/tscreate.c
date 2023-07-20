@@ -52,6 +52,7 @@ PetscErrorCode TSCreate(MPI_Comm comm, TS *ts)
   t->max_snes_failures = 1;
   t->max_reject        = 10;
   t->errorifstepfailed = PETSC_TRUE;
+  t->monitorFrequency  = 1;
 
   t->rhsjacobian.time  = PETSC_MIN_REAL;
   t->rhsjacobian.scale = 1.0;

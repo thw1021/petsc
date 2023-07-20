@@ -247,6 +247,7 @@ PETSC_EXTERN PetscErrorCode TSFinalizePackage(void);
 
 PETSC_EXTERN PetscErrorCode TSCreate(MPI_Comm, TS *);
 PETSC_EXTERN PetscErrorCode TSClone(TS, TS *);
+PETSC_EXTERN PetscErrorCode TSCopy(TS, TS);
 PETSC_EXTERN PetscErrorCode TSDestroy(TS *);
 
 PETSC_EXTERN PetscErrorCode TSSetProblemType(TS, TSProblemType);
@@ -751,9 +752,14 @@ PETSC_EXTERN PetscErrorCode DMTSGetIJacobianLocal(DM, PetscErrorCode (**)(DM, Pe
 PETSC_EXTERN PetscErrorCode DMTSSetIJacobianLocal(DM, PetscErrorCode (*)(DM, PetscReal, Vec, Vec, PetscReal, Mat, Mat, void *), void *);
 PETSC_EXTERN PetscErrorCode DMTSGetRHSFunctionLocal(DM, PetscErrorCode (**)(DM, PetscReal, Vec, Vec, void *), void **);
 PETSC_EXTERN PetscErrorCode DMTSSetRHSFunctionLocal(DM, PetscErrorCode (*)(DM, PetscReal, Vec, Vec, void *), void *);
+PETSC_EXTERN PetscErrorCode DMTSGetRHSJacobianLocal(DM, PetscErrorCode (**)(DM, PetscReal, Vec, Mat, Mat, void *), void **);
+PETSC_EXTERN PetscErrorCode DMTSSetRHSJacobianLocal(DM, PetscErrorCode (*)(DM, PetscReal, Vec, Mat, Mat, void *), void *);
 PETSC_EXTERN PetscErrorCode DMTSCreateRHSMassMatrix(DM);
 PETSC_EXTERN PetscErrorCode DMTSCreateRHSMassMatrixLumped(DM);
+PETSC_EXTERN PetscErrorCode DMTSGetRHSMassMatrixLumped(DM, Vec *);
+PETSC_EXTERN PetscErrorCode DMTSSetRHSMassMatrixLumped(DM, Vec);
 PETSC_EXTERN PetscErrorCode DMTSDestroyRHSMassMatrix(DM);
+PETSC_EXTERN PetscErrorCode DMTSCreateSubDMTS(DM, DM);
 
 PETSC_EXTERN PetscErrorCode DMTSSetIFunctionSerialize(DM, PetscErrorCode (*)(void *, PetscViewer), PetscErrorCode (*)(void **, PetscViewer));
 PETSC_EXTERN PetscErrorCode DMTSSetIJacobianSerialize(DM, PetscErrorCode (*)(void *, PetscViewer), PetscErrorCode (*)(void **, PetscViewer));

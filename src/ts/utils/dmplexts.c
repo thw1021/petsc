@@ -258,6 +258,7 @@ PetscErrorCode DMPlexTSComputeRHSFunctionFEM(DM dm, PetscReal time, Vec locX, Ve
   PetscCall(DMTSConvertPlex(dm, &plex, PETSC_TRUE));
   PetscCall(DMPlexGetAllCells_Internal(plex, &allcellIS));
   PetscCall(DMGetNumDS(dm, &Nds));
+
   for (s = 0; s < Nds; ++s) {
     PetscDS      ds;
     IS           cellIS;
@@ -279,6 +280,69 @@ PetscErrorCode DMPlexTSComputeRHSFunctionFEM(DM dm, PetscReal time, Vec locX, Ve
       PetscCall(ISDestroy(&pointIS));
     }
     PetscCall(DMPlexComputeResidual_Internal(plex, key, cellIS, time, locX, NULL, time, locG, user));
+    PetscCall(ISDestroy(&cellIS));
+  }
+  PetscCall(ISDestroy(&allcellIS));
+  PetscCall(DMDestroy(&plex));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@
+  DMPlexTSComputeRHSJacobianFEM - Form the Jacobian `Jac` from the local input `locX` using pointwise functions specified by the user
+
+  Input Parameters:
++ dm - The mesh
+. t - The time
+. locX  - Local solution
+- user - The user context
+
+  Output Parameters:
++ Jac - the Jacobian
+- JacP - an additional approximation for the Jacobian to be used to compute the preconditioner (often is `Jac`)
+
+  Level: developer
+
+.seealso: [](ch_ts), `TS`, `DM`, `DMPlexTSComputeIFunctionFEM()`, `DMPlexTSComputeRHSFunctionFEM()`
+@*/
+PetscErrorCode DMPlexTSComputeRHSJacobianFEM(DM dm, PetscReal time, Vec locX, Mat Jac, Mat JacP, void *user)
+{
+  DM        plex;
+  IS        allcellIS;
+  PetscBool hasJac, hasPrec;
+  PetscInt  Nds, s;
+
+  PetscFunctionBegin;
+  PetscCall(DMTSConvertPlex(dm, &plex, PETSC_TRUE));
+  PetscCall(DMPlexGetAllCells_Internal(plex, &allcellIS));
+  PetscCall(DMGetNumDS(dm, &Nds));
+  for (s = 0; s < Nds; ++s) {
+    PetscDS      ds;
+    IS           cellIS;
+    PetscFormKey key;
+
+    PetscCall(DMGetRegionNumDS(dm, s, &key.label, NULL, &ds, NULL));
+    key.value = 0;
+    key.field = 0;
+    key.part  = 100;
+    if (!key.label) {
+      PetscCall(PetscObjectReference((PetscObject)allcellIS));
+      cellIS = allcellIS;
+    } else {
+      IS pointIS;
+
+      key.value = 1;
+      PetscCall(DMLabelGetStratumIS(key.label, key.value, &pointIS));
+      PetscCall(ISIntersect_Caching_Internal(allcellIS, pointIS, &cellIS));
+      PetscCall(ISDestroy(&pointIS));
+    }
+    if (!s) {
+      PetscCall(PetscDSHasJacobian(ds, &hasJac));
+      //PetscCall(PetscDSHasRHSJacobianPreconditioner(ds, &hasPrec));
+      hasPrec = PETSC_FALSE;
+      if (hasJac && hasPrec) PetscCall(MatZeroEntries(Jac));
+      PetscCall(MatZeroEntries(JacP));
+    }
+    PetscCall(DMPlexComputeJacobian_Internal(plex, key, cellIS, time, 0.0, locX, NULL, Jac, JacP, user));
     PetscCall(ISDestroy(&cellIS));
   }
   PetscCall(ISDestroy(&allcellIS));

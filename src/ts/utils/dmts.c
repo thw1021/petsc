@@ -1268,3 +1268,29 @@ PetscErrorCode DMTSSetIJacobianSerialize(DM dm, PetscErrorCode (*view)(void *, P
   tsdm->ops->ijacobianload = load;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
+PetscErrorCode DMTSCreateSubDMTS(DM dm, DM subdm)
+{
+  Vec massinv;
+
+  PetscFunctionBegin;
+  PetscCall(DMCopyDMTS(dm, subdm));
+  // Recreate the inverse of the lumped mass matrix
+  PetscCall(DMTSGetRHSMassMatrixLumped(subdm, &massinv));
+  if (massinv) PetscCall(DMTSCreateRHSMassMatrixLumped(subdm));
+  // Reset the context since it is now changed
+  PetscErrorCode (*ifunc)(DM, PetscReal, Vec, Vec, Vec, void *);
+  PetscErrorCode (*ijac)(DM, PetscReal, Vec, Vec, PetscReal, Mat, Mat, void *);
+  PetscErrorCode (*rhsfunc)(DM, PetscReal, Vec, Vec, void *);
+  PetscErrorCode (*rhsjac)(DM, PetscReal, Vec, Mat, Mat, void *);
+  void *ctx;
+  PetscCall(DMTSGetIFunctionLocal(subdm, &ifunc, &ctx));
+  PetscCall(DMTSSetIFunctionLocal(subdm, ifunc, ctx));
+  PetscCall(DMTSGetIJacobianLocal(subdm, &ijac, &ctx));
+  PetscCall(DMTSSetIJacobianLocal(subdm, ijac, ctx));
+  PetscCall(DMTSGetRHSFunctionLocal(subdm, &rhsfunc, &ctx));
+  PetscCall(DMTSSetRHSFunctionLocal(subdm, rhsfunc, ctx));
+  PetscCall(DMTSGetRHSJacobianLocal(subdm, &rhsjac, &ctx));
+  PetscCall(DMTSSetRHSJacobianLocal(subdm, rhsjac, ctx));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
