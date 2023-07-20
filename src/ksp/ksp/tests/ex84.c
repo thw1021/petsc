@@ -12,8 +12,7 @@ PetscErrorCode LSCLoadOperators(Mat *A, Mat *Q, Mat *L, Vec *rhs, IS *velocity, 
   PetscFunctionBeginUser;
   PetscCall(MatCreate(PETSC_COMM_WORLD, A));
   PetscCall(MatCreate(PETSC_COMM_WORLD, Q));
-  if (L)
-    PetscCall(MatCreate(PETSC_COMM_WORLD, L));
+  if (L) PetscCall(MatCreate(PETSC_COMM_WORLD, L));
   PetscCall(ISCreate(PETSC_COMM_WORLD, velocity));
   PetscCall(ISCreate(PETSC_COMM_WORLD, pressure));
   PetscCall(VecCreate(PETSC_COMM_WORLD, rhs));
@@ -26,8 +25,7 @@ PetscErrorCode LSCLoadOperators(Mat *A, Mat *Q, Mat *L, Vec *rhs, IS *velocity, 
   PetscCall(ISLoad(*velocity, viewer));
   PetscCall(ISLoad(*pressure, viewer));
   PetscCall(MatLoad(*Q, viewer));
-  if (L)
-    PetscCall(MatLoad(*L, viewer));
+  if (L) PetscCall(MatLoad(*L, viewer));
   PetscCall(PetscViewerDestroy(&viewer));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -40,19 +38,17 @@ PetscErrorCode port_lsd_bfbt(void)
   PC        pc_A;
   IS        isu, isp;
   PetscBool commute_lsc = PETSC_FALSE;
-  KSP * subksp; // This will be length two, with the former being the A KSP and the latter being the
-                // Schur complement KSP
-  KSP schur_complement_ksp;
-  PC lsc_pc;
+  KSP      *subksp; // This will be length two, with the former being the A KSP and the latter being the
+                    // Schur complement KSP
+  KSP      schur_complement_ksp;
+  PC       lsc_pc;
   PetscInt num_splits;
-  Mat lsc_pc_pmat;
+  Mat      lsc_pc_pmat;
 
   PetscFunctionBeginUser;
   PetscCall(PetscOptionsGetBool(NULL, NULL, "-commute_lsc", &commute_lsc, NULL));
-  if (commute_lsc)
-    PetscCall(LSCLoadOperators(&A, &Q, &L, &b, &isu, &isp));
-  else
-    PetscCall(LSCLoadOperators(&A, &Q, NULL, &b, &isu, &isp));
+  if (commute_lsc) PetscCall(LSCLoadOperators(&A, &Q, &L, &b, &isu, &isp));
+  else PetscCall(LSCLoadOperators(&A, &Q, NULL, &b, &isu, &isp));
   PetscCall(VecDuplicate(b, &x));
 
   PetscCall(PetscObjectReference((PetscObject)A));
@@ -76,8 +72,7 @@ PetscErrorCode port_lsd_bfbt(void)
   PetscCall(KSPGetPC(schur_complement_ksp, &lsc_pc));
   PetscCall(PCGetOperators(lsc_pc, NULL, &lsc_pc_pmat));
   PetscCall(PetscObjectCompose((PetscObject)lsc_pc_pmat, "LSC_Qscale", (PetscObject)Q));
-  if (commute_lsc)
-    PetscCall(PetscObjectCompose((PetscObject)lsc_pc_pmat, "LSC_L", (PetscObject)L));
+  if (commute_lsc) PetscCall(PetscObjectCompose((PetscObject)lsc_pc_pmat, "LSC_L", (PetscObject)L));
 
   PetscCall(KSPSolve(ksp_A, b, x));
 
@@ -85,8 +80,7 @@ PetscErrorCode port_lsd_bfbt(void)
   PetscCall(MatDestroy(&P));
   PetscCall(MatDestroy(&A));
   PetscCall(MatDestroy(&Q));
-  if (L)
-    PetscCall(MatDestroy(&L));
+  if (L) PetscCall(MatDestroy(&L));
   PetscCall(VecDestroy(&x));
   PetscCall(VecDestroy(&b));
   PetscCall(ISDestroy(&isu));

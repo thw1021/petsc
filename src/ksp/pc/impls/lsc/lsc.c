@@ -54,18 +54,13 @@ static PetscErrorCode PCSetUp_LSC(PC pc)
   PetscCall(PetscObjectQuery((PetscObject)pc->pmat, "LSC_Qscale", (PetscObject *)&Qscale));
   if (!Qscale) PetscCall(PetscObjectQuery((PetscObject)pc->mat, "LSC_Qscale", (PetscObject *)&Qscale));
 
-  if (lsc->commute)
-  {
+  if (lsc->commute) {
     PetscCheck(L || Lp, PetscObjectComm((PetscObject)pc), PETSC_ERR_USER, "The user must provide an L operator for LSC preconditioning when commuting");
-    if (!L && Lp)
-      L = Lp;
-    else if (L && !Lp)
-      Lp = L;
+    if (!L && Lp) L = Lp;
+    else if (L && !Lp) Lp = L;
 
     PetscCheck(Qscale, PetscObjectComm((PetscObject)pc), PETSC_ERR_USER, "The user must provide a Q matrix for LSC preconditioning when commuting");
-  }
-  else
-  {
+  } else {
     if (lsc->scale) {
       if (!Qscale) PetscCall(MatSchurComplementGetSubMatrices(pc->mat, NULL, &Qscale, NULL, NULL, NULL));
       PetscCall(MatGetDiagonal(Qscale, lsc->scale));
@@ -109,8 +104,7 @@ static PetscErrorCode PCApply_LSC(PC pc, Vec x, Vec y)
 
   PetscFunctionBegin;
   PetscCall(MatSchurComplementGetSubMatrices(pc->mat, &A, NULL, &B, &C, NULL));
-  if (lsc->commute)
-  {
+  if (lsc->commute) {
     PetscCall(KSPSolve(lsc->kspMass, x, lsc->Svec0));
     PetscCall(KSPCheckSolve(lsc->kspMass, pc, lsc->Svec0));
     PetscCall(MatMult(B, lsc->Svec0, lsc->Avec0));
@@ -122,9 +116,7 @@ static PetscErrorCode PCApply_LSC(PC pc, Vec x, Vec y)
     PetscCall(MatMult(C, lsc->Avec1, lsc->Svec0));
     PetscCall(KSPSolve(lsc->kspMass, lsc->Svec0, y));
     PetscCall(KSPCheckSolve(lsc->kspMass, pc, y));
-  }
-  else
-  {
+  } else {
     PetscCall(KSPSolve(lsc->kspL, x, lsc->Svec0));
     PetscCall(KSPCheckSolve(lsc->kspL, pc, lsc->Svec0));
     PetscCall(MatMult(B, lsc->Svec0, lsc->Avec0));
@@ -148,10 +140,8 @@ static PetscErrorCode PCReset_LSC(PC pc)
   PetscCall(VecDestroy(&lsc->Svec0));
   PetscCall(KSPDestroy(&lsc->kspL));
   PetscCall(KSPDestroy(&lsc->kspMass));
-  if (lsc->L)
-    PetscCall(MatDestroy(&lsc->L));
-  if (lsc->scale)
-    PetscCall(VecDestroy(&lsc->scale));
+  if (lsc->L) PetscCall(MatDestroy(&lsc->L));
+  if (lsc->scale) PetscCall(VecDestroy(&lsc->scale));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -171,8 +161,7 @@ static PetscErrorCode PCSetFromOptions_LSC(PC pc, PetscOptionItems *PetscOptions
   PetscOptionsHeadBegin(PetscOptionsObject, "LSC options");
   {
     PetscCall(PetscOptionsBool("-pc_lsc_commute", "Whether to commute the LSC preconditioner in the style of Olshanskii", "None", lsc->commute, &lsc->commute, NULL));
-    if (!lsc->commute)
-      PetscCall(PetscOptionsBool("-pc_lsc_scale_diag", "Use diagonal of velocity block (A) for scaling", "None", lsc->scalediag, &lsc->scalediag, NULL));
+    if (!lsc->commute) PetscCall(PetscOptionsBool("-pc_lsc_scale_diag", "Use diagonal of velocity block (A) for scaling", "None", lsc->scalediag, &lsc->scalediag, NULL));
   }
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
