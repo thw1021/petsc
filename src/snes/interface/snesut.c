@@ -308,7 +308,11 @@ PetscErrorCode SNESMonitorDefault(SNES snes, PetscInt its, PetscReal fgnorm, Pet
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERDRAW, &isdraw));
   PetscCall(PetscViewerPushFormat(viewer, format));
   if (isascii) {
+    const char *prefix;
+
     PetscCall(PetscViewerASCIIAddTab(viewer, ((PetscObject)snes)->tablevel));
+    PetscCall(PetscObjectGetOptionsPrefix((PetscObject)snes, &prefix));
+    if (its == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "  Residual norms for %s solve.\n", prefix));
     if (format == PETSC_VIEWER_ASCII_INFO_DETAIL) {
       Vec       dx;
       PetscReal upnorm;
@@ -676,18 +680,20 @@ PetscErrorCode SNESMonitorDefaultField(SNES snes, PetscInt its, PetscReal fgnorm
   PetscCall(VecGetDM(r, &dm));
   if (!dm) PetscCall(SNESMonitorDefault(snes, its, fgnorm, vf));
   else {
-    PetscSection s, gs;
+    PetscSection s;
     PetscInt     Nf, f;
+    const char  *prefix;
 
     PetscCall(DMGetLocalSection(dm, &s));
-    PetscCall(DMGetGlobalSection(dm, &gs));
-    if (!s || !gs) PetscCall(SNESMonitorDefault(snes, its, fgnorm, vf));
+    if (!s) PetscCall(SNESMonitorDefault(snes, its, fgnorm, vf));
     PetscCall(PetscSectionGetNumFields(s, &Nf));
     PetscCheck(Nf <= 256, PetscObjectComm((PetscObject)snes), PETSC_ERR_SUP, "Do not support %" PetscInt_FMT " fields > 256", Nf);
-    PetscCall(PetscSectionVecNorm(s, gs, r, NORM_2, res));
+    PetscCall(DMVecNormField(dm, r, NORM_2, res));
     PetscCall(PetscObjectGetTabLevel((PetscObject)snes, &tablevel));
     PetscCall(PetscViewerPushFormat(viewer, vf->format));
     PetscCall(PetscViewerASCIIAddTab(viewer, tablevel));
+    PetscCall(PetscObjectGetOptionsPrefix((PetscObject)snes, &prefix));
+    if (its == 0 && prefix) PetscCall(PetscViewerASCIIPrintf(viewer, "  Residual norms for %s solve.\n", prefix));
     PetscCall(PetscViewerASCIIPrintf(viewer, "%3" PetscInt_FMT " SNES Function norm %14.12e [", its, (double)fgnorm));
     for (f = 0; f < Nf; ++f) {
       if (f) PetscCall(PetscViewerASCIIPrintf(viewer, ", "));

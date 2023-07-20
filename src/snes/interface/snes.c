@@ -521,6 +521,10 @@ PetscErrorCode SNESView(SNES snes, PetscViewer viewer)
     PetscCall(PetscViewerASCIIPopTab(viewer));
   }
   if (snes->npc && snes->usesnpc) {
+    PCSide npcside;
+
+    PetscCall(SNESGetNPCSide(snes, &npcside));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  NPC side %s\n", PCSides[npcside]));
     PetscCall(PetscViewerASCIIPushTab(viewer));
     PetscCall(SNESView(snes->npc, viewer));
     PetscCall(PetscViewerASCIIPopTab(viewer));
@@ -5437,6 +5441,7 @@ PetscErrorCode SNESSetDM(SNES snes, DM dm)
     PetscCall(SNESSetDM(snes->npc, snes->dm));
     PetscCall(SNESSetNPCSide(snes, snes->npcside));
   }
+  PetscTryTypeMethod(snes, setdm, dm);
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

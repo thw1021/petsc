@@ -113,6 +113,108 @@ PetscErrorCode DMSetSubdofIS(DM dm, IS subdofIS)
 }
 
 /*@C
+  DMCreateSubDMIS - Returns an `IS` encapsulating a subproblem defined by the fields in the `PetscSection` in the `DM`.
+
+  Not Collective
+
+  Input Parameters:
++ dm     - The `DM` object
+. Nf     - The number of fields in this subproblem
+- fields - The field numbers of the selected fields
+
+  Output Parameter:
+. is - The global indices for the subproblem
+
+  Level: intermediate
+
+.seealso `DMCreateSubDM()`, `DMGetLocalSection()`
+@*/
+PetscErrorCode DMCreateSubDMIS(DM dm, PetscInt Nf, const PetscInt fields[], IS *is)
+{
+  PetscSection s, gs;
+  PetscInt    *subIndices;
+  PetscInt     bs = 0, subSize = 0, subOff = 0, pStart, pEnd, bsLocal[2], bsMinMax[2];
+
+  PetscFunctionBegin;
+  PetscCall(DMGetLocalSection(dm, &s));
+  PetscCall(DMGetGlobalSection(dm, &gs));
+  for (PetscInt f = 0; f < Nf; ++f) {
+    PetscInt Nc;
+
+    PetscCall(PetscSectionGetFieldComponents(s, fields[f], &Nc));
+    bs += Nc;
+  }
+  PetscCall(PetscSectionGetChart(gs, &pStart, &pEnd));
+  for (PetscInt p = pStart; p < pEnd; ++p) {
+    PetscInt gdof, pSubSize = 0;
+
+    PetscCall(PetscSectionGetDof(gs, p, &gdof));
+    if (gdof > 0) {
+      for (PetscInt f = 0; f < Nf; ++f) {
+        PetscInt fdof, fcdof;
+
+        PetscCall(PetscSectionGetFieldDof(s, p, fields[f], &fdof));
+        PetscCall(PetscSectionGetFieldConstraintDof(s, p, fields[f], &fcdof));
+        pSubSize += fdof - fcdof;
+      }
+      subSize += pSubSize;
+      // TODO Can probably take the LCD instead of 1 here
+      if (pSubSize && bs != pSubSize) {
+        // Layout does not admit a pointwise block size
+        bs = 1;
+      }
+    }
+  }
+  // Must have same blocksize on all procs (some might have no points)
+  bsLocal[0] = bs < 0 ? PETSC_MAX_INT : bs;
+  bsLocal[1] = bs;
+  PetscCall(PetscGlobalMinMaxInt(PetscObjectComm((PetscObject)dm), bsLocal, bsMinMax));
+  if (bsMinMax[0] != bsMinMax[1]) {
+    bs = 1;
+  } else {
+    bs = bsMinMax[0];
+  }
+  PetscCall(PetscMalloc1(subSize, &subIndices));
+  for (PetscInt p = pStart; p < pEnd; ++p) {
+    PetscInt gdof, goff;
+
+    PetscCall(PetscSectionGetDof(gs, p, &gdof));
+    if (gdof > 0) {
+      PetscCall(PetscSectionGetOffset(gs, p, &goff));
+      for (PetscInt f = 0; f < Nf; ++f) {
+        PetscInt fdof, fcdof, poff = 0;
+
+        // Can get rid of this loop by storing field information in the global section
+        for (PetscInt f2 = 0; f2 < fields[f]; ++f2) {
+          PetscCall(PetscSectionGetFieldDof(s, p, f2, &fdof));
+          PetscCall(PetscSectionGetFieldConstraintDof(s, p, f2, &fcdof));
+          poff += fdof - fcdof;
+        }
+        PetscCall(PetscSectionGetFieldDof(s, p, fields[f], &fdof));
+        PetscCall(PetscSectionGetFieldConstraintDof(s, p, fields[f], &fcdof));
+        for (PetscInt fc = 0; fc < fdof - fcdof; ++fc, ++subOff) subIndices[subOff] = goff + poff + fc;
+      }
+    }
+  }
+  PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)dm), subSize, subIndices, PETSC_OWN_POINTER, is));
+  if (bs > 1) {
+    // We need to check that the block size does not come from non-contiguous fields
+    PetscInt i, j, set = 1, rset = 1;
+    for (i = 0; i < subSize; i += bs) {
+      for (j = 0; j < bs; ++j) {
+        if (subIndices[i + j] != subIndices[i] + j) {
+          set = 0;
+          break;
+        }
+      }
+    }
+    PetscCall(MPIU_Allreduce(&set, &rset, 1, MPIU_INT, MPI_PROD, PetscObjectComm((PetscObject)dm)));
+    if (rset) PetscCall(ISSetBlockSize(*is, bs));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
   DMCreateSectionSubDM - Returns an `IS` and subDM+subSection encapsulating a subproblem defined by the fields in a `PetscSection` in the `DM`.
 
   Not Collective
@@ -132,13 +234,12 @@ PetscErrorCode DMSetSubdofIS(DM dm, IS subdofIS)
   This handles all information in the `DM` class and the `PetscSection`. This is used as the basis for creating subDMs in specialized classes,
   such as `DMPLEX` and `DMFOREST`
 
-.seealso: `DMCreateSubDM()`, `DMGetLocalSection()`, `DMPlexSetMigrationSF()`, `DMView()`
+.seealso: `DMCreateSubDM()`, `DMCreateSubDMIS()`, `DMGetLocalSection()`, `DMPlexSetMigrationSF()`, `DMView()`
 @*/
 PetscErrorCode DMCreateSectionSubDM(DM dm, PetscInt numFields, const PetscInt fields[], IS *is, DM *subdm)
 {
   PetscSection section, sectionGlobal;
-  PetscInt    *subIndices;
-  PetscInt     subSize = 0, subOff = 0, Nf, f, pStart, pEnd, p;
+  PetscInt     Nf;
 
   PetscFunctionBegin;
   if (!numFields) PetscFunctionReturn(PETSC_SUCCESS);
@@ -148,91 +249,16 @@ PetscErrorCode DMCreateSectionSubDM(DM dm, PetscInt numFields, const PetscInt fi
   PetscCheck(sectionGlobal, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Must set default global section for DM before splitting fields");
   PetscCall(PetscSectionGetNumFields(section, &Nf));
   PetscCheck(numFields <= Nf, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_WRONG, "Number of requested fields %" PetscInt_FMT " greater than number of DM fields %" PetscInt_FMT, numFields, Nf);
-  if (is) {
-    PetscInt bs, bsLocal[2], bsMinMax[2];
-
-    for (f = 0, bs = 0; f < numFields; ++f) {
-      PetscInt Nc;
-
-      PetscCall(PetscSectionGetFieldComponents(section, fields[f], &Nc));
-      bs += Nc;
-    }
-    PetscCall(PetscSectionGetChart(sectionGlobal, &pStart, &pEnd));
-    for (p = pStart; p < pEnd; ++p) {
-      PetscInt gdof, pSubSize = 0;
-
-      PetscCall(PetscSectionGetDof(sectionGlobal, p, &gdof));
-      if (gdof > 0) {
-        for (f = 0; f < numFields; ++f) {
-          PetscInt fdof, fcdof;
-
-          PetscCall(PetscSectionGetFieldDof(section, p, fields[f], &fdof));
-          PetscCall(PetscSectionGetFieldConstraintDof(section, p, fields[f], &fcdof));
-          pSubSize += fdof - fcdof;
-        }
-        subSize += pSubSize;
-        if (pSubSize && bs != pSubSize) {
-          /* Layout does not admit a pointwise block size */
-          bs = 1;
-        }
-      }
-    }
-    /* Must have same blocksize on all procs (some might have no points) */
-    bsLocal[0] = bs < 0 ? PETSC_MAX_INT : bs;
-    bsLocal[1] = bs;
-    PetscCall(PetscGlobalMinMaxInt(PetscObjectComm((PetscObject)dm), bsLocal, bsMinMax));
-    if (bsMinMax[0] != bsMinMax[1]) {
-      bs = 1;
-    } else {
-      bs = bsMinMax[0];
-    }
-    PetscCall(PetscMalloc1(subSize, &subIndices));
-    for (p = pStart; p < pEnd; ++p) {
-      PetscInt gdof, goff;
-
-      PetscCall(PetscSectionGetDof(sectionGlobal, p, &gdof));
-      if (gdof > 0) {
-        PetscCall(PetscSectionGetOffset(sectionGlobal, p, &goff));
-        for (f = 0; f < numFields; ++f) {
-          PetscInt fdof, fcdof, fc, f2, poff = 0;
-
-          /* Can get rid of this loop by storing field information in the global section */
-          for (f2 = 0; f2 < fields[f]; ++f2) {
-            PetscCall(PetscSectionGetFieldDof(section, p, f2, &fdof));
-            PetscCall(PetscSectionGetFieldConstraintDof(section, p, f2, &fcdof));
-            poff += fdof - fcdof;
-          }
-          PetscCall(PetscSectionGetFieldDof(section, p, fields[f], &fdof));
-          PetscCall(PetscSectionGetFieldConstraintDof(section, p, fields[f], &fcdof));
-          for (fc = 0; fc < fdof - fcdof; ++fc, ++subOff) subIndices[subOff] = goff + poff + fc;
-        }
-      }
-    }
-    PetscCall(ISCreateGeneral(PetscObjectComm((PetscObject)dm), subSize, subIndices, PETSC_OWN_POINTER, is));
-    if (bs > 1) {
-      /* We need to check that the block size does not come from non-contiguous fields */
-      PetscInt i, j, set = 1, rset = 1;
-      for (i = 0; i < subSize; i += bs) {
-        for (j = 0; j < bs; ++j) {
-          if (subIndices[i + j] != subIndices[i] + j) {
-            set = 0;
-            break;
-          }
-        }
-      }
-      PetscCall(MPIU_Allreduce(&set, &rset, 1, MPIU_INT, MPI_PROD, PetscObjectComm((PetscObject)dm)));
-      if (rset) PetscCall(ISSetBlockSize(*is, bs));
-    }
-  }
+  if (is) PetscCall(DMCreateSubDMIS(dm, numFields, fields, is));
   if (subdm) {
     PetscSection subsection;
     PetscBool    haveNull = PETSC_FALSE;
-    PetscInt     f, nf = 0, of = 0;
+    PetscInt     nf = 0, of = 0;
 
     PetscCall(PetscSectionCreateSubsection(section, numFields, fields, &subsection));
     PetscCall(DMSetLocalSection(*subdm, subsection));
     PetscCall(PetscSectionDestroy(&subsection));
-    for (f = 0; f < numFields; ++f) {
+    for (PetscInt f = 0; f < numFields; ++f) {
       (*subdm)->nullspaceConstructors[f] = dm->nullspaceConstructors[fields[f]];
       if ((*subdm)->nullspaceConstructors[f]) {
         haveNull = PETSC_TRUE;
@@ -242,7 +268,7 @@ PetscErrorCode DMCreateSectionSubDM(DM dm, PetscInt numFields, const PetscInt fi
     }
     if (dm->probs) {
       PetscCall(DMSetNumFields(*subdm, numFields));
-      for (f = 0; f < numFields; ++f) {
+      for (PetscInt f = 0; f < numFields; ++f) {
         PetscObject disc;
 
         PetscCall(DMGetField(dm, fields[f], NULL, &disc));
@@ -453,5 +479,49 @@ PetscErrorCode DMCreateSectionSuperDM(DM dms[], PetscInt len, IS **is, DM *super
   }
   PetscCall(PetscSectionDestroy(&supersection));
   PetscCall(PetscFree3(Nfs, sections, sectionGlobals));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  DMVecNormField - Computes the vector norm, separated into field components.
+
+  Input Parameters:
++ s    - the local Section
+. gs   - the global section
+. x    - the vector
+- type - one of `NORM_1`, `NORM_2`, `NORM_INFINITY`.
+
+  Output Parameter:
+. val  - the array of norms
+
+  Level: intermediate
+
+.seealso: `VecNorm()`, `PetscSectionCreate()`
+@*/
+PetscErrorCode DMVecNormField(DM dm, Vec x, NormType type, PetscReal val[])
+{
+  PetscSection s, gs;
+  PetscInt     Nf;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscValidHeaderSpecific(x, VEC_CLASSID, 2);
+  PetscAssertPointer(val, 4);
+  PetscCall(DMGetLocalSection(dm, &s));
+  PetscCall(DMGetGlobalSection(dm, &gs));
+  PetscCall(PetscSectionGetNumFields(s, &Nf));
+  if (Nf < 2) PetscCall(VecNorm(x, type, val));
+  else {
+    for (PetscInt f = 0; f < Nf; ++f) {
+      Vec subv;
+      IS  is;
+
+      PetscCall(DMCreateSubDMIS(dm, 1, &f, &is));
+      PetscCall(VecGetSubVector(x, is, &subv));
+      PetscCall(VecNorm(subv, type, &val[f]));
+      PetscCall(VecDestroy(&subv));
+      PetscCall(ISDestroy(&is));
+    }
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

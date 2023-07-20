@@ -799,6 +799,19 @@ static PetscErrorCode SNESSolve_Composite(SNES snes)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+static PetscErrorCode SNESSetDM_Composite(SNES snes, DM dm)
+{
+  SNES_Composite    *comp = (SNES_Composite *)snes->data;
+  SNES_CompositeLink next = comp->head;
+
+  PetscFunctionBegin;
+  while (next) {
+    PetscCall(SNESSetDM(next->snes, dm));
+    next = next->next;
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*MC
      SNESCOMPOSITE - Build a preconditioner by composing together several nonlinear solvers
 
@@ -830,6 +843,7 @@ PETSC_EXTERN PetscErrorCode SNESCreate_Composite(SNES snes)
   snes->ops->destroy        = SNESDestroy_Composite;
   snes->ops->setfromoptions = SNESSetFromOptions_Composite;
   snes->ops->view           = SNESView_Composite;
+  snes->ops->setdm          = SNESSetDM_Composite;
 
   snes->usesksp = PETSC_FALSE;
 

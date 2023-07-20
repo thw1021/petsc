@@ -49,6 +49,8 @@ typedef const char *SNESType;
 #define SNESASPIN            "aspin"
 #define SNESCOMPOSITE        "composite"
 #define SNESPATCH            "patch"
+#define SNESMULTIBLOCK       "multiblock"
+#define SNESNONE             "none"
 
 /* Logging support */
 PETSC_EXTERN PetscClassId SNES_CLASSID;
@@ -817,10 +819,10 @@ PETSC_EXTERN PetscErrorCode DMSNESGetFunctionLocal(DM, PetscErrorCode (**)(DM, V
 PETSC_EXTERN PetscErrorCode DMSNESGetJacobianLocal(DM, PetscErrorCode (**)(DM, Vec, Mat, Mat, void *), void **);
 
 /* Routines for Multiblock solver */
-PETSC_EXTERN PetscErrorCode SNESMultiblockSetFields(SNES, const char[], PetscInt, const PetscInt *);
-PETSC_EXTERN PetscErrorCode SNESMultiblockSetIS(SNES, const char[], IS);
-PETSC_EXTERN PetscErrorCode SNESMultiblockSetBlockSize(SNES, PetscInt);
+PETSC_EXTERN PetscErrorCode SNESMultiblockAddBlock(SNES, const char[], PetscInt, const PetscInt *);
+PETSC_EXTERN PetscErrorCode SNESMultiblockAddDomainBlock(SNES, const char[], const char[], PetscInt);
 PETSC_EXTERN PetscErrorCode SNESMultiblockSetType(SNES, PCCompositeType);
+PETSC_EXTERN PetscErrorCode SNESMultiblockGetSubSNES(SNES, PetscInt *, SNES *[]);
 
 /*J
     SNESMSType - String with the name of a PETSc `SNESMS` method.

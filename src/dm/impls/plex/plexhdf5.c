@@ -410,7 +410,12 @@ PetscErrorCode VecView_Plex_Local_HDF5_Internal(Vec v, PetscViewer viewer)
         PetscCall(VecRestoreArray(subv, &suba));
         PetscCall(DMLabelDestroy(&cutVertexLabel));
       } else {
-        PetscCall(PetscSectionGetField_Internal(section, sectionGlobal, gv, f, pStart, pEnd, &is, &subv));
+        PetscInt bs;
+
+        PetscCall(DMCreateSubDMIS(dmBC, 1, &f, &is));
+        PetscCall(VecGetSubVector(gv, is, &subv));
+        PetscCall(ISGetBlockSize(is, &bs));
+        PetscCall(VecSetBlockSize(subv, bs));
       }
       PetscCall(PetscStrncpy(subname, name, sizeof(subname)));
       PetscCall(PetscStrlcat(subname, "_", sizeof(subname)));
@@ -433,8 +438,8 @@ PetscErrorCode VecView_Plex_Local_HDF5_Internal(Vec v, PetscViewer viewer)
         PetscCall(PetscViewerHDF5WriteObjectAttribute(viewer, (PetscObject)subv, componentNameLabel, PETSC_STRING, componentName));
       }
 
-      if (cutLabel) PetscCall(VecDestroy(&subv));
-      else PetscCall(PetscSectionRestoreField_Internal(section, sectionGlobal, gv, f, pStart, pEnd, &is, &subv));
+      if (!cutLabel) PetscCall(ISDestroy(&is));
+      PetscCall(VecDestroy(&subv));
       PetscCall(PetscViewerHDF5PopGroup(viewer));
     }
   }
