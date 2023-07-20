@@ -9689,18 +9689,22 @@ static void g0_identity_private(PetscInt dim, PetscInt Nf, PetscInt NfAux, const
 
 PetscErrorCode DMCreateMassMatrixLumped_Plex(DM dm, Vec *mass)
 {
-  DM           dmc;
-  PetscDS      ds;
-  Vec          ones, locmass;
-  IS           cellIS;
-  PetscFormKey key;
-  PetscInt     depth;
+  DM            dmc;
+  PetscDS       ds;
+  PetscWeakForm wf;
+  Vec           ones, locmass;
+  IS            cellIS;
+  PetscFormKey  key;
+  PetscInt      Nf, depth;
 
   PetscFunctionBegin;
   PetscCall(DMClone(dm, &dmc));
   PetscCall(DMCopyDisc(dm, dmc));
   PetscCall(DMGetDS(dmc, &ds));
-  PetscCall(PetscDSSetJacobian(ds, 0, 0, g0_identity_private, NULL, NULL, NULL));
+  PetscCall(PetscDSGetNumFields(ds, &Nf));
+  PetscCall(PetscDSGetWeakForm(ds, &wf));
+  PetscCall(PetscWeakFormClear(wf));
+  for (PetscInt f = 0; f < Nf; ++f) PetscCall(PetscDSSetJacobian(ds, f, f, g0_identity_private, NULL, NULL, NULL));
   PetscCall(DMCreateGlobalVector(dmc, mass));
   PetscCall(DMGetLocalVector(dmc, &ones));
   PetscCall(DMGetLocalVector(dmc, &locmass));
@@ -9739,14 +9743,15 @@ PetscErrorCode DMCreateMassMatrix_Plex(DM dmCoarse, DM dmFine, Mat *mass)
     Vec           u;
     IS            cellIS;
     PetscFormKey  key;
-    PetscInt      depth;
+    PetscInt      Nf, depth;
 
     PetscCall(DMClone(dmFine, &dmc));
     PetscCall(DMCopyDisc(dmFine, dmc));
     PetscCall(DMGetDS(dmc, &ds));
+    PetscCall(PetscDSGetNumFields(ds, &Nf));
     PetscCall(PetscDSGetWeakForm(ds, &wf));
     PetscCall(PetscWeakFormClear(wf));
-    PetscCall(PetscDSSetJacobian(ds, 0, 0, g0_identity_private, NULL, NULL, NULL));
+    for (PetscInt f = 0; f < Nf; ++f) PetscCall(PetscDSSetJacobian(ds, f, f, g0_identity_private, NULL, NULL, NULL));
     PetscCall(DMCreateMatrix(dmc, mass));
     PetscCall(DMGetLocalVector(dmc, &u));
     PetscCall(DMPlexGetDepth(dmc, &depth));
