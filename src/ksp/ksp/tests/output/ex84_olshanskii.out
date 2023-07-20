@@ -24,4 +24,3 @@
   Linear fc_fieldsplit_pressure_ solve converged due to CONVERGED_RTOL iterations 19
   1 KSP Residual norm 3.056975304221e-13 
 Linear fc_ solve converged due to CONVERGED_RTOL iterations 1
-[ 0] 16 bytes PCFieldSplitGetSubKSP_FieldSplit_Schur() at /raid/lindad/moose/petsc/src/ksp/pc/impls/fieldsplit/fieldsplit.c:1724

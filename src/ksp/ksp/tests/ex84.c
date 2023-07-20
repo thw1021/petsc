@@ -91,6 +91,7 @@ PetscErrorCode port_lsd_bfbt(void)
   PetscCall(VecDestroy(&b));
   PetscCall(ISDestroy(&isu));
   PetscCall(ISDestroy(&isp));
+  PetscCall(PetscFree(subksp));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

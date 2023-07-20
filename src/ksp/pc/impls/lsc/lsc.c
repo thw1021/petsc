@@ -83,6 +83,7 @@ static PetscErrorCode PCSetUp_LSC(PC pc)
         } else {
           PetscCall(MatMatMult(CAdiaginv, B, MAT_REUSE_MATRIX, PETSC_DEFAULT, &lsc->L));
         }
+        PetscCall(MatDestroy(&CAdiaginv));
       } else {
         if (!lsc->L) {
           PetscCall(MatMatMult(C, B, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &lsc->L));
@@ -149,6 +150,8 @@ static PetscErrorCode PCReset_LSC(PC pc)
   PetscCall(KSPDestroy(&lsc->kspMass));
   if (lsc->L)
     PetscCall(MatDestroy(&lsc->L));
+  if (lsc->scale)
+    PetscCall(VecDestroy(&lsc->scale));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
