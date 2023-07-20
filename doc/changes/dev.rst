@@ -153,6 +153,10 @@ Changes: Development
 
 - Remove ``TSErrorWeightedNormInfinity()``, ``TSErrorWeightedNorm2()``, ``TSErrorWeightedENormInfinity()``, ``TSErrorWeightedENorm2()`` since the same functionality can be obtained with ``VecErrorWeightedNorms()``
 - Add support for time-dependent solvers with varying solution size using ``TSSetResize()``
+- Add ``TSSetPostEventStep()`` to control the first step after event
+- Option ``-ts_event_post_event_step`` can now accept special value 0 to keep the previous time steps after event
+- Deprecate ``TSSetPostEventIntervalStep()``
+- Deprecate option ``-ts_event_post_eventinterval_step``
 
 .. rubric:: TAO:
 
