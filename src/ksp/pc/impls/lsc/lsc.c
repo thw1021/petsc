@@ -71,7 +71,7 @@ static PetscErrorCode PCSetUp_LSC(PC pc)
       PetscCall(MatSchurComplementGetSubMatrices(pc->mat, NULL, NULL, &B, &C, NULL));
       if (lsc->scale) {
         Mat CAdiaginv;
-        PetscCall(MatConvert(C, MATSAME, MAT_INITIAL_MATRIX, &CAdiaginv));
+        PetscCall(MatDuplicate(C, MAT_COPY_VALUES, &CAdiaginv));
         PetscCall(MatDiagonalScale(CAdiaginv, NULL, lsc->scale));
         if (!lsc->L) {
           PetscCall(MatMatMult(CAdiaginv, B, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &lsc->L));
