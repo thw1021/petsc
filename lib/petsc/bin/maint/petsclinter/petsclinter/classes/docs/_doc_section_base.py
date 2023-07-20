@@ -3,6 +3,10 @@
 # Created: Sun Nov 20 12:27:36 2022 (-0500)
 # @author: Jacob Faibussowitsch
 """
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import difflib
 import textwrap
 import itertools
@@ -13,6 +17,14 @@ from .._diag    import DiagnosticManager, Diagnostic
 from .._src_pos import SourceRange
 from .._patch   import Patch
 
+if TYPE_CHECKING:
+  from typing import Union, Optional
+
+  from .._linter  import Linter
+  from .._src_pos import SourceLocationLike, SourceRangeLike
+
+  from ._doc_str  import PetscDocString
+
 """
 ==========================================================================================
 Base Classes
@@ -21,7 +33,13 @@ Base Classes
 class DescribableItem:
   __slots__ = 'text', 'prefix', 'arg', 'description', 'sep'
 
-  def __init__(self, raw, prefixes=None, sep='-'):
+  text: str
+  prefix: str
+  arg: str
+  description: str
+  sep: str
+
+  def __init__(self, raw: str, prefixes=None, sep: str = '-') -> None:
     split_param = self.split_param
     text        = raw.strip()
 
@@ -39,7 +57,7 @@ class DescribableItem:
           arg = text.split(prefix, maxsplit=1)[1].strip()
         else:
           arg, *descr = text.split(maxsplit=1)
-          if isinstance(descr, list):
+          if isinstance(descr, (list, tuple)):
             descr = descr[0] if len(descr) else ''
           assert isinstance(descr, str)
     self.text        = raw
@@ -50,13 +68,13 @@ class DescribableItem:
     return
 
   @classmethod
-  def cast(cls, other, **kwargs):
+  def cast(cls, other, **kwargs) -> DescribableItem:
     if isinstance(other, cls):
       return other
     return cls(other, **kwargs)
 
   @staticmethod
-  def split_param(text, prefixes, char):
+  def split_param(text: str, prefixes, char: str) -> tuple[str, str, str]:
     r"""
     retrieve groups '([\.+-$])\s*([A-z,-]+) - (.*)'
     """
@@ -83,15 +101,15 @@ class DescribableItem:
       # if we hit neither then there is no '-' in text, possible case of '[prefix] foo'?
     return prefix, arg.strip(), descr.lstrip()
 
-  def arglen(self):
+  def arglen(self) -> int:
     """
     return a length l such that text[:l] returns all text up until the end of the arg name
     """
     arg = self.arg
     return self.text.find(arg) + len(arg)
 
-  def check(self, docstring, section, loc, expected_sep=None):
-    if expected_sep is None:
+  def check(self, docstring: PetscDocString, section, loc: SourceRange, expected_sep: str = '') -> None:
+    if not expected_sep:
       expected_sep = self.sep
 
     name = section.transform(section.name)
@@ -110,11 +128,11 @@ class DocBase:
   __slots__ = tuple()
 
   @classmethod
-  def __diagnostic_prefix__(cls, *flags):
+  def __diagnostic_prefix__(cls, *flags) -> str:
     return cls.diagnostic_flag('-'.join(flags))
 
   @classmethod
-  def diagnostic_flag(cls, text, *, prefix='doc'):
+  def diagnostic_flag(cls, text: str, *, prefix: str = 'doc'):
     if isinstance(text, str):
       return collections.deque((prefix, text) if prefix == 'doc' else ('doc', prefix, text))
     if not isinstance(text, collections.deque):
@@ -150,7 +168,10 @@ class SectionBase(DocBase):
     'solitary'
   )
 
-  def __init__(self, name, required=False, keywords=None, titles=None, solitary=True):
+  name: str
+  required: bool
+
+  def __init__(self, name: str, required: bool = False, keywords=None, titles=None, solitary: bool = True) -> None:
     assert isinstance(name, str)
     titlename = name.title()
     if titles is None:
@@ -170,17 +191,17 @@ class SectionBase(DocBase):
     self.clear()
     return
 
-  def __str__(self):
+  def __str__(self) -> str:
     return '\n'.join([
       f'Type:   {type(self)}',
       f'Name:   {self.name}',
       f'Extent: {self.extent}'
     ])
 
-  def __bool__(self):
+  def __bool__(self) -> bool:
     return bool(self.lines())
 
-  def clear(self):
+  def clear(self) -> None:
     self.raw          = ''
     self.extent       = None
     self._lines       = []
@@ -188,19 +209,19 @@ class SectionBase(DocBase):
     self.seen_headers = {}
     return
 
-  def lines(self, headings_only=False):
+  def lines(self, headings_only: bool = False):
     if headings_only:
       return [(loc, line, verdict) for loc, line, verdict in self._lines if verdict > 0]
     return self._lines
 
-  def consume(self, data):
+  def consume(self, data: list) -> list:
     if data:
       self.lines().extend(data)
       self.raw    = '\n'.join(s for _, s, _ in self.lines())
       self.extent = SourceRange.from_locations(self.lines()[0][0].start, self.lines()[-1][0].end)
     return []
 
-  def setup(self, docstring, inspect_line=None):
+  def setup(self, docstring: PetscDocString, inspect_line=None) -> None:
     inspect = inspect_line is not None
     seen    = collections.defaultdict(list)
 
@@ -217,26 +238,26 @@ class SectionBase(DocBase):
     self.seen_headers = dict(seen)
     return
 
-  def barren(self):
+  def barren(self) -> bool:
     lines = self.lines()
     return not self.items and sum(not line.strip() for _, line, _ in lines) == len(lines) - 1
 
   @staticmethod
-  def transform(text):
+  def transform(text: str) -> str:
     return text.title()
 
   @staticmethod
-  def check_indent_allowed():
+  def check_indent_allowed() -> bool:
     return True
 
-  def _check_required_section_found(self, docstring):
+  def _check_required_section_found(self, docstring: PetscDocString) -> None:
     if not self and self.required:
       diag = self.diags.section_header_missing
       mess = f'Required section \'{self.titles[0]}\' not found'
       docstring.add_error_from_source_range(diag, mess, docstring.extent, highlight=False)
     return
 
-  def _check_section_is_not_barren(self, docstring):
+  def _check_section_is_not_barren(self, docstring: PetscDocString) -> None:
     """
     check that a section isn't just a solitary header out on its own
     """
@@ -247,7 +268,7 @@ class SectionBase(DocBase):
       docstring.add_error_from_source_range(diag, mess, self.extent, highlight=highlight)
     return
 
-  def _check_section_header_spelling(self, linter, docstring, headings=None, transform=None):
+  def _check_section_header_spelling(self, linter: Linter, docstring: PetscDocString, headings=None, transform=None) -> None:
     """
     Check that a section header is correctly spelled and formatted. Sections may be found
     through fuzzy matching so this check asserts that a particular heading is actually correct
@@ -296,7 +317,7 @@ class SectionBase(DocBase):
         )
     return
 
-  def _check_duplicate_headers(self, docstring):
+  def _check_duplicate_headers(self, docstring: PetscDocString) -> None:
     """
     Check that a particular heading is not repeated within the docstring
     """
@@ -324,7 +345,7 @@ class SectionBase(DocBase):
       )
     return
 
-  def _check_section_header_solitary(self, docstring, headings=None):
+  def _check_section_header_solitary(self, docstring: PetscDocString, headings=None) -> None:
     """
     Check that a section appears solitarily on its line, i.e. that there is no other text after
     ':'
