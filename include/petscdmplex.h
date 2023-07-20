@@ -443,6 +443,7 @@ PETSC_EXTERN PetscErrorCode DMPlexTSComputeRHSFunctionFVM(DM, PetscReal, Vec, Ve
 PETSC_EXTERN PetscErrorCode DMPlexTSComputeIFunctionFEM(DM, PetscReal, Vec, Vec, Vec, void *);
 PETSC_EXTERN PetscErrorCode DMPlexTSComputeIJacobianFEM(DM, PetscReal, Vec, Vec, PetscReal, Mat, Mat, void *);
 PETSC_EXTERN PetscErrorCode DMPlexTSComputeRHSFunctionFEM(DM, PetscReal, Vec, Vec, void *);
+PETSC_EXTERN PetscErrorCode DMPlexTSComputeRHSJacobianFEM(DM, PetscReal, Vec, Mat, Mat, void *);
 
 PETSC_EXTERN PetscErrorCode DMPlexReconstructGradientsFVM(DM, Vec, Vec);
 
