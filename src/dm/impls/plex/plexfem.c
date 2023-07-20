@@ -3350,36 +3350,38 @@ PetscErrorCode DMPlexComputeInjectorFEM(DM dmc, DM dmf, VecScatter *sc, void *us
 @*/
 PetscErrorCode DMPlexGetCellFields(DM dm, IS cellIS, Vec locX, Vec locX_t, Vec locA, PetscScalar **u, PetscScalar **u_t, PetscScalar **a)
 {
-  DM              plex, plexA = NULL;
+  DM              dmIn, plexIn, plexA = NULL;
   DMEnclosureType encAux;
-  PetscSection    section, sectionAux;
-  PetscDS         prob;
+  PetscSection    sectionIn, sectionAux;
+  PetscDS         ds, dsIn;
   const PetscInt *cells;
   PetscInt        cStart, cEnd, numCells, totDim, totDimAux, c;
 
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscValidHeaderSpecific(cellIS, IS_CLASSID, 2);
   PetscValidHeaderSpecific(locX, VEC_CLASSID, 3);
   if (locX_t) PetscValidHeaderSpecific(locX_t, VEC_CLASSID, 4);
   if (locA) PetscValidHeaderSpecific(locA, VEC_CLASSID, 5);
   PetscAssertPointer(u, 6);
   PetscAssertPointer(u_t, 7);
   PetscAssertPointer(a, 8);
-  PetscCall(DMPlexConvertPlex(dm, &plex, PETSC_FALSE));
   PetscCall(ISGetPointRange(cellIS, &cStart, &cEnd, &cells));
-  PetscCall(DMGetLocalSection(dm, &section));
-  PetscCall(DMGetCellDS(dm, cells ? cells[cStart] : cStart, &prob, NULL));
-  PetscCall(PetscDSGetTotalDimension(prob, &totDim));
+  PetscCall(VecGetDM(locX, &dmIn));
+  PetscCall(DMPlexConvertPlex(dmIn, &plexIn, PETSC_FALSE));
+  PetscCall(DMGetLocalSection(dmIn, &sectionIn));
+  PetscCall(DMGetCellDS(dm, cells ? cells[cStart] : cStart, &ds, &dsIn));
+  PetscCall(PetscDSGetTotalDimension(dsIn ? dsIn : ds, &totDim));
   if (locA) {
     DM      dmAux;
-    PetscDS probAux;
+    PetscDS dsAux;
 
     PetscCall(VecGetDM(locA, &dmAux));
     PetscCall(DMGetEnclosureRelation(dmAux, dm, &encAux));
     PetscCall(DMPlexConvertPlex(dmAux, &plexA, PETSC_FALSE));
     PetscCall(DMGetLocalSection(dmAux, &sectionAux));
-    PetscCall(DMGetDS(dmAux, &probAux));
-    PetscCall(PetscDSGetTotalDimension(probAux, &totDimAux));
+    PetscCall(DMGetDS(dmAux, &dsAux));
+    PetscCall(PetscDSGetTotalDimension(dsAux, &totDimAux));
   }
   numCells = cEnd - cStart;
   PetscCall(DMGetWorkArray(dm, numCells * totDim, MPIU_SCALAR, u));
@@ -3391,25 +3393,28 @@ PetscErrorCode DMPlexGetCellFields(DM dm, IS cellIS, Vec locX, Vec locX_t, Vec l
     const PetscInt cell = cells ? cells[c] : c;
     const PetscInt cind = c - cStart;
     PetscScalar   *x = NULL, *x_t = NULL, *ul = *u, *ul_t = *u_t, *al = *a;
-    PetscInt       i;
+    PetscInt       Ncl, i;
 
-    PetscCall(DMPlexVecGetClosure(plex, section, locX, cell, NULL, &x));
+    PetscCall(DMPlexVecGetClosure(plexIn, sectionIn, locX, cell, &Ncl, &x));
+    PetscCheck(Ncl == totDim, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Closure size %" PetscInt_FMT " != %" PetscInt_FMT " cell DS size", Ncl, totDim);
     for (i = 0; i < totDim; ++i) ul[cind * totDim + i] = x[i];
-    PetscCall(DMPlexVecRestoreClosure(plex, section, locX, cell, NULL, &x));
+    PetscCall(DMPlexVecRestoreClosure(plexIn, sectionIn, locX, cell, &Ncl, &x));
     if (locX_t) {
-      PetscCall(DMPlexVecGetClosure(plex, section, locX_t, cell, NULL, &x_t));
+      PetscCall(DMPlexVecGetClosure(plexIn, sectionIn, locX_t, cell, &Ncl, &x_t));
+      PetscCheck(Ncl == totDim, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Closure size %" PetscInt_FMT " != %" PetscInt_FMT " cell DS size", Ncl, totDim);
       for (i = 0; i < totDim; ++i) ul_t[cind * totDim + i] = x_t[i];
-      PetscCall(DMPlexVecRestoreClosure(plex, section, locX_t, cell, NULL, &x_t));
+      PetscCall(DMPlexVecRestoreClosure(plexIn, sectionIn, locX_t, cell, &Ncl, &x_t));
     }
     if (locA) {
       PetscInt subcell;
       PetscCall(DMGetEnclosurePoint(plexA, dm, encAux, cell, &subcell));
-      PetscCall(DMPlexVecGetClosure(plexA, sectionAux, locA, subcell, NULL, &x));
+      PetscCall(DMPlexVecGetClosure(plexA, sectionAux, locA, subcell, &Ncl, &x));
+      PetscCheck(Ncl == totDimAux, PETSC_COMM_SELF, PETSC_ERR_ARG_INCOMP, "Closure size %" PetscInt_FMT " != %" PetscInt_FMT " aux DS size", Ncl, totDimAux);
       for (i = 0; i < totDimAux; ++i) al[cind * totDimAux + i] = x[i];
-      PetscCall(DMPlexVecRestoreClosure(plexA, sectionAux, locA, subcell, NULL, &x));
+      PetscCall(DMPlexVecRestoreClosure(plexA, sectionAux, locA, subcell, &Ncl, &x));
     }
   }
-  PetscCall(DMDestroy(&plex));
+  PetscCall(DMDestroy(&plexIn));
   if (locA) PetscCall(DMDestroy(&plexA));
   PetscCall(ISRestorePointRange(cellIS, &cStart, &cEnd, &cells));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -3456,13 +3461,12 @@ static PetscErrorCode DMPlexGetHybridCellFields(DM dm, IS cellIS, Vec locX, Vec 
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscValidHeaderSpecific(cellIS, IS_CLASSID, 2);
   PetscValidHeaderSpecific(locX, VEC_CLASSID, 3);
-  if (locX_t) { PetscValidHeaderSpecific(locX_t, VEC_CLASSID, 4); }
-  if (locA) { PetscValidHeaderSpecific(locA, VEC_CLASSID, 5); }
+  if (locX_t) PetscValidHeaderSpecific(locX_t, VEC_CLASSID, 4);
+  if (locA) PetscValidHeaderSpecific(locA, VEC_CLASSID, 5);
   PetscAssertPointer(u, 6);
   PetscAssertPointer(u_t, 7);
   PetscAssertPointer(a, 8);
   PetscCall(ISGetPointRange(cellIS, &cStart, &cEnd, &cells));
-  numCells = cEnd - cStart;
   PetscCall(DMPlexConvertPlex(dm, &plex, PETSC_FALSE));
   PetscCall(DMGetLocalSection(dm, &section));
   PetscCall(DMGetCellDS(dm, cells ? cells[cStart] : cStart, &ds, &dsIn));
@@ -3470,15 +3474,16 @@ static PetscErrorCode DMPlexGetHybridCellFields(DM dm, IS cellIS, Vec locX, Vec 
   PetscCall(PetscDSGetTotalDimension(dsIn, &totDim));
   if (locA) {
     DM      dmAux;
-    PetscDS probAux;
+    PetscDS dsAux;
 
     PetscCall(VecGetDM(locA, &dmAux));
     PetscCall(DMGetEnclosureRelation(dmAux, dm, &encAux));
     PetscCall(DMPlexConvertPlex(dmAux, &plexA, PETSC_FALSE));
     PetscCall(DMGetLocalSection(dmAux, &sectionAux));
-    PetscCall(DMGetDS(dmAux, &probAux));
-    PetscCall(PetscDSGetTotalDimension(probAux, &totDimAux));
+    PetscCall(DMGetDS(dmAux, &dsAux));
+    PetscCall(PetscDSGetTotalDimension(dsAux, &totDimAux));
   }
+  numCells = cEnd - cStart;
   PetscCall(DMGetWorkArray(dm, numCells * totDim, MPIU_SCALAR, u));
   if (locX_t) PetscCall(DMGetWorkArray(dm, numCells * totDim, MPIU_SCALAR, u_t));
   else {
@@ -4117,9 +4122,9 @@ PetscErrorCode DMPlexComputeResidual_Patch_Internal(DM dm, PetscSection section,
         /* Integrate FE residual to get elemVec (need fields at quadrature points) */
         /*   For FV, I think we use a P0 basis and the cell coefficients (for subdivided cells, we can tweak the basis tabulation to be the indicator function) */
         PetscCall(PetscFEGeomGetChunk(geom, 0, offset, &chunkGeom));
-        PetscCall(PetscFEIntegrateResidual(prob, key, Ne, chunkGeom, u, u_t, probAux, a, t, elemVec));
+        PetscCall(PetscFEIntegrateResidual(prob, prob, key, Ne, chunkGeom, u, u_t, probAux, a, t, elemVec));
         PetscCall(PetscFEGeomGetChunk(geom, offset, numCells, &chunkGeom));
-        PetscCall(PetscFEIntegrateResidual(prob, key, Nr, chunkGeom, &u[offset * totDim], u_t ? &u_t[offset * totDim] : NULL, probAux, &a[offset * totDimAux], t, &elemVec[offset * totDim]));
+        PetscCall(PetscFEIntegrateResidual(prob, prob, key, Nr, chunkGeom, &u[offset * totDim], u_t ? &u_t[offset * totDim] : NULL, probAux, &a[offset * totDimAux], t, &elemVec[offset * totDim]));
         PetscCall(PetscFEGeomRestoreChunk(geom, offset, numCells, &chunkGeom));
       } else if (id == PETSCFV_CLASSID) {
         PetscFV fv = (PetscFV)obj;
@@ -4345,9 +4350,9 @@ PetscErrorCode DMPlexComputeJacobian_Patch_Internal(DM dm, PetscSection section,
       PetscCall(PetscDSGetDiscretization(prob, fieldI, (PetscObject *)&fe));
       for (fieldJ = 0; fieldJ < Nf; ++fieldJ) {
         key.field = fieldI * Nf + fieldJ;
-        if (hasJac) PetscCall(PetscFEIntegrateJacobian(prob, PETSCFE_JACOBIAN, key, Ncell, cgeomFEM, u, u_t, probAux, a, t, X_tShift, elemMat));
-        if (hasPrec) PetscCall(PetscFEIntegrateJacobian(prob, PETSCFE_JACOBIAN_PRE, key, Ncell, cgeomFEM, u, u_t, probAux, a, t, X_tShift, elemMatP));
-        if (hasDyn) PetscCall(PetscFEIntegrateJacobian(prob, PETSCFE_JACOBIAN_DYN, key, Ncell, cgeomFEM, u, u_t, probAux, a, t, X_tShift, elemMatD));
+        if (hasJac) PetscCall(PetscFEIntegrateJacobian(prob, prob, PETSCFE_JACOBIAN, key, Ncell, cgeomFEM, u, u_t, probAux, a, t, X_tShift, elemMat));
+        if (hasPrec) PetscCall(PetscFEIntegrateJacobian(prob, prob, PETSCFE_JACOBIAN_PRE, key, Ncell, cgeomFEM, u, u_t, probAux, a, t, X_tShift, elemMatP));
+        if (hasDyn) PetscCall(PetscFEIntegrateJacobian(prob, prob, PETSCFE_JACOBIAN_DYN, key, Ncell, cgeomFEM, u, u_t, probAux, a, t, X_tShift, elemMatD));
       }
       /* For finite volume, add the identity */
       if (!isFE[fieldI]) {
@@ -4695,6 +4700,7 @@ PetscErrorCode DMPlexComputeResidual_Internal(DM dm, PetscFormKey key, IS cellIS
   DM               dmGrad     = NULL;
   DMLabel          ghostLabel = NULL;
   PetscDS          ds         = NULL;
+  PetscDS          dsIn       = NULL;
   PetscDS          dsAux      = NULL;
   PetscSection     section    = NULL;
   PetscBool        useFEM     = PETSC_FALSE;
@@ -4709,7 +4715,7 @@ PetscErrorCode DMPlexComputeResidual_Internal(DM dm, PetscFormKey key, IS cellIS
   IS               chunkIS;
   const PetscInt  *cells;
   PetscInt         cStart, cEnd, numCells;
-  PetscInt         Nf, f, totDim, totDimAux, numChunks, cellChunkSize, faceChunkSize, chunk, fStart, fEnd;
+  PetscInt         Nf, f, totDim, totDimIn, totDimAux, numChunks, cellChunkSize, faceChunkSize, chunk, fStart, fEnd;
   PetscInt         maxDegree  = PETSC_MAX_INT;
   PetscQuadrature  affineQuad = NULL, *quads = NULL;
   PetscFEGeom     *affineGeom = NULL, **geoms = NULL;
@@ -4726,9 +4732,11 @@ PetscErrorCode DMPlexComputeResidual_Internal(DM dm, PetscFormKey key, IS cellIS
   /* 1: Get sizes from dm and dmAux */
   PetscCall(DMGetLocalSection(dm, &section));
   PetscCall(DMGetLabel(dm, "ghost", &ghostLabel));
-  PetscCall(DMGetCellDS(dm, cells ? cells[cStart] : cStart, &ds, NULL));
+  PetscCall(DMGetCellDS(dm, cells ? cells[cStart] : cStart, &ds, &dsIn));
+  dsIn = dsIn ? dsIn : ds;
   PetscCall(PetscDSGetNumFields(ds, &Nf));
   PetscCall(PetscDSGetTotalDimension(ds, &totDim));
+  PetscCall(PetscDSGetTotalDimension(dsIn, &totDimIn));
   PetscCall(DMGetAuxiliaryVec(dm, key.label, key.value, key.part, &locA));
   if (locA) {
     PetscInt subcell;
@@ -4861,9 +4869,9 @@ PetscErrorCode DMPlexComputeResidual_Internal(DM dm, PetscFormKey key, IS cellIS
         /* Integrate FE residual to get elemVec (need fields at quadrature points) */
         /*   For FV, I think we use a P0 basis and the cell coefficients (for subdivided cells, we can tweak the basis tabulation to be the indicator function) */
         PetscCall(PetscFEGeomGetChunk(geom, 0, offset, &chunkGeom));
-        PetscCall(PetscFEIntegrateResidual(ds, key, Ne, chunkGeom, u, u_t, dsAux, a, t, elemVec));
+        PetscCall(PetscFEIntegrateResidual(ds, dsIn, key, Ne, chunkGeom, u, u_t, dsAux, a, t, elemVec));
         PetscCall(PetscFEGeomGetChunk(geom, offset, numCells, &chunkGeom));
-        PetscCall(PetscFEIntegrateResidual(ds, key, Nr, chunkGeom, &u[offset * totDim], u_t ? &u_t[offset * totDim] : NULL, dsAux, a ? &a[offset * totDimAux] : NULL, t, &elemVec[offset * totDim]));
+        PetscCall(PetscFEIntegrateResidual(ds, dsIn, key, Nr, chunkGeom, &u[offset * totDimIn], u_t ? &u_t[offset * totDimIn] : NULL, dsAux, a ? &a[offset * totDimAux] : NULL, t, &elemVec[offset * totDim]));
         PetscCall(PetscFEGeomRestoreChunk(geom, offset, numCells, &chunkGeom));
       } else if (id == PETSCFV_CLASSID) {
         PetscFV fv = (PetscFV)obj;
@@ -5545,16 +5553,18 @@ PetscErrorCode DMPlexComputeJacobian_Internal(DM dm, PetscFormKey key, IS cellIS
 {
   DM_Plex        *mesh  = (DM_Plex *)dm->data;
   const char     *name  = "Jacobian";
-  DM              dmAux = NULL, plex, tdm;
+  DM              dmAux = NULL, dmIn, plex, tdm;
+  PetscDS         ds    = NULL;
+  PetscDS         dsIn  = NULL;
+  PetscDS         dsAux = NULL;
   DMEnclosureType encAux;
   Vec             A, tv;
   DMField         coordField;
-  PetscDS         prob, probAux = NULL;
-  PetscSection    section, globalSection, sectionAux;
+  PetscSection    section, sectionIn, globalSection, sectionAux;
   PetscScalar    *elemMat, *elemMatP, *elemMatD, *u, *u_t, *a = NULL;
   const PetscInt *cells;
   PetscInt        Nf, fieldI, fieldJ;
-  PetscInt        totDim, totDimAux = 0, cStart, cEnd, numCells, c;
+  PetscInt        totDim, totDimIn, totDimAux = 0, cStart, cEnd, numCells, c;
   PetscBool       hasJac = PETSC_FALSE, hasPrec = PETSC_FALSE, hasDyn, hasFV = PETSC_FALSE, transform;
 
   PetscFunctionBegin;
@@ -5567,16 +5577,20 @@ PetscErrorCode DMPlexComputeJacobian_Internal(DM dm, PetscFormKey key, IS cellIS
   PetscCall(DMGetBasisTransformDM_Internal(dm, &tdm));
   PetscCall(DMGetBasisTransformVec_Internal(dm, &tv));
   PetscCall(DMGetLocalSection(dm, &section));
+  PetscCall(VecGetDM(X, &dmIn));
+  PetscCall(DMGetLocalSection(dmIn, &sectionIn));
   PetscCall(DMGetGlobalSection(dm, &globalSection));
-  PetscCall(DMGetCellDS(dm, cells ? cells[cStart] : cStart, &prob, NULL));
-  PetscCall(PetscDSGetNumFields(prob, &Nf));
-  PetscCall(PetscDSGetTotalDimension(prob, &totDim));
-  PetscCall(PetscDSHasJacobian(prob, &hasJac));
-  PetscCall(PetscDSHasJacobianPreconditioner(prob, &hasPrec));
+  PetscCall(DMGetCellDS(dm, cells ? cells[cStart] : cStart, &ds, &dsIn));
+  dsIn = dsIn ? dsIn : ds;
+  PetscCall(PetscDSGetNumFields(ds, &Nf));
+  PetscCall(PetscDSGetTotalDimension(ds, &totDim));
+  PetscCall(PetscDSGetTotalDimension(dsIn, &totDimIn));
+  PetscCall(PetscDSHasJacobian(ds, &hasJac));
+  PetscCall(PetscDSHasJacobianPreconditioner(ds, &hasPrec));
   /* user passed in the same matrix, avoid double contributions and
      only assemble the Jacobian */
   if (hasJac && Jac == JacP) hasPrec = PETSC_FALSE;
-  PetscCall(PetscDSHasDynamicJacobian(prob, &hasDyn));
+  PetscCall(PetscDSHasDynamicJacobian(ds, &hasDyn));
   hasDyn = hasDyn && (X_tShift != 0.0) ? PETSC_TRUE : PETSC_FALSE;
   PetscCall(DMGetAuxiliaryVec(dm, key.label, key.value, key.part, &A));
   if (A) {
@@ -5584,10 +5598,10 @@ PetscErrorCode DMPlexComputeJacobian_Internal(DM dm, PetscFormKey key, IS cellIS
     PetscCall(DMGetEnclosureRelation(dmAux, dm, &encAux));
     PetscCall(DMConvert(dmAux, DMPLEX, &plex));
     PetscCall(DMGetLocalSection(plex, &sectionAux));
-    PetscCall(DMGetDS(dmAux, &probAux));
-    PetscCall(PetscDSGetTotalDimension(probAux, &totDimAux));
+    PetscCall(DMGetDS(dmAux, &dsAux));
+    PetscCall(PetscDSGetTotalDimension(dsAux, &totDimAux));
   }
-  PetscCall(PetscMalloc5(numCells * totDim, &u, X_t ? numCells * totDim : 0, &u_t, hasJac ? numCells * totDim * totDim : 0, &elemMat, hasPrec ? numCells * totDim * totDim : 0, &elemMatP, hasDyn ? numCells * totDim * totDim : 0, &elemMatD));
+  PetscCall(PetscMalloc5(numCells * totDimIn, &u, X_t ? numCells * totDimIn : 0, &u_t, hasJac ? numCells * totDim * totDim : 0, &elemMat, hasPrec ? numCells * totDim * totDim : 0, &elemMatP, hasDyn ? numCells * totDim * totDim : 0, &elemMatD));
   if (dmAux) PetscCall(PetscMalloc1(numCells * totDimAux, &a));
   PetscCall(DMGetCoordinateField(dm, &coordField));
   for (c = cStart; c < cEnd; ++c) {
@@ -5596,13 +5610,13 @@ PetscErrorCode DMPlexComputeJacobian_Internal(DM dm, PetscFormKey key, IS cellIS
     PetscScalar   *x = NULL, *x_t = NULL;
     PetscInt       i;
 
-    PetscCall(DMPlexVecGetClosure(dm, section, X, cell, NULL, &x));
-    for (i = 0; i < totDim; ++i) u[cind * totDim + i] = x[i];
-    PetscCall(DMPlexVecRestoreClosure(dm, section, X, cell, NULL, &x));
+    PetscCall(DMPlexVecGetClosure(dmIn, sectionIn, X, cell, NULL, &x));
+    for (i = 0; i < totDimIn; ++i) u[cind * totDimIn + i] = x[i];
+    PetscCall(DMPlexVecRestoreClosure(dmIn, sectionIn, X, cell, NULL, &x));
     if (X_t) {
-      PetscCall(DMPlexVecGetClosure(dm, section, X_t, cell, NULL, &x_t));
-      for (i = 0; i < totDim; ++i) u_t[cind * totDim + i] = x_t[i];
-      PetscCall(DMPlexVecRestoreClosure(dm, section, X_t, cell, NULL, &x_t));
+      PetscCall(DMPlexVecGetClosure(dmIn, sectionIn, X_t, cell, NULL, &x_t));
+      for (i = 0; i < totDimIn; ++i) u_t[cind * totDimIn + i] = x_t[i];
+      PetscCall(DMPlexVecRestoreClosure(dmIn, sectionIn, X_t, cell, NULL, &x_t));
     }
     if (dmAux) {
       PetscInt subcell;
@@ -5627,7 +5641,7 @@ PetscErrorCode DMPlexComputeJacobian_Internal(DM dm, PetscFormKey key, IS cellIS
     PetscInt     maxDegree;
     PetscFEGeom *cgeomFEM, *chunkGeom = NULL, *remGeom = NULL;
 
-    PetscCall(PetscDSGetDiscretization(prob, fieldI, (PetscObject *)&fe));
+    PetscCall(PetscDSGetDiscretization(ds, fieldI, (PetscObject *)&fe));
     PetscCall(PetscObjectGetClassId((PetscObject)fe, &id));
     if (id == PETSCFV_CLASSID) {
       hasFV = PETSC_TRUE;
@@ -5655,16 +5669,16 @@ PetscErrorCode DMPlexComputeJacobian_Internal(DM dm, PetscFormKey key, IS cellIS
     for (fieldJ = 0; fieldJ < Nf; ++fieldJ) {
       key.field = fieldI * Nf + fieldJ;
       if (hasJac) {
-        PetscCall(PetscFEIntegrateJacobian(prob, PETSCFE_JACOBIAN, key, Ne, chunkGeom, u, u_t, probAux, a, t, X_tShift, elemMat));
-        PetscCall(PetscFEIntegrateJacobian(prob, PETSCFE_JACOBIAN, key, Nr, remGeom, &u[offset * totDim], u_t ? &u_t[offset * totDim] : NULL, probAux, a ? &a[offset * totDimAux] : NULL, t, X_tShift, &elemMat[offset * totDim * totDim]));
+        PetscCall(PetscFEIntegrateJacobian(ds, dsIn, PETSCFE_JACOBIAN, key, Ne, chunkGeom, u, u_t, dsAux, a, t, X_tShift, elemMat));
+        PetscCall(PetscFEIntegrateJacobian(ds, dsIn, PETSCFE_JACOBIAN, key, Nr, remGeom, &u[offset * totDimIn], u_t ? &u_t[offset * totDimIn] : NULL, dsAux, a ? &a[offset * totDimAux] : NULL, t, X_tShift, &elemMat[offset * totDim * totDim]));
       }
       if (hasPrec) {
-        PetscCall(PetscFEIntegrateJacobian(prob, PETSCFE_JACOBIAN_PRE, key, Ne, chunkGeom, u, u_t, probAux, a, t, X_tShift, elemMatP));
-        PetscCall(PetscFEIntegrateJacobian(prob, PETSCFE_JACOBIAN_PRE, key, Nr, remGeom, &u[offset * totDim], u_t ? &u_t[offset * totDim] : NULL, probAux, a ? &a[offset * totDimAux] : NULL, t, X_tShift, &elemMatP[offset * totDim * totDim]));
+        PetscCall(PetscFEIntegrateJacobian(ds, dsIn, PETSCFE_JACOBIAN_PRE, key, Ne, chunkGeom, u, u_t, dsAux, a, t, X_tShift, elemMatP));
+        PetscCall(PetscFEIntegrateJacobian(ds, dsIn, PETSCFE_JACOBIAN_PRE, key, Nr, remGeom, &u[offset * totDimIn], u_t ? &u_t[offset * totDimIn] : NULL, dsAux, a ? &a[offset * totDimAux] : NULL, t, X_tShift, &elemMatP[offset * totDim * totDim]));
       }
       if (hasDyn) {
-        PetscCall(PetscFEIntegrateJacobian(prob, PETSCFE_JACOBIAN_DYN, key, Ne, chunkGeom, u, u_t, probAux, a, t, X_tShift, elemMatD));
-        PetscCall(PetscFEIntegrateJacobian(prob, PETSCFE_JACOBIAN_DYN, key, Nr, remGeom, &u[offset * totDim], u_t ? &u_t[offset * totDim] : NULL, probAux, a ? &a[offset * totDimAux] : NULL, t, X_tShift, &elemMatD[offset * totDim * totDim]));
+        PetscCall(PetscFEIntegrateJacobian(ds, dsIn, PETSCFE_JACOBIAN_DYN, key, Ne, chunkGeom, u, u_t, dsAux, a, t, X_tShift, elemMatD));
+        PetscCall(PetscFEIntegrateJacobian(ds, dsIn, PETSCFE_JACOBIAN_DYN, key, Nr, remGeom, &u[offset * totDimIn], u_t ? &u_t[offset * totDimIn] : NULL, dsAux, a ? &a[offset * totDimAux] : NULL, t, X_tShift, &elemMatD[offset * totDim * totDim]));
       }
     }
     PetscCall(PetscFEGeomRestoreChunk(cgeomFEM, offset, numCells, &remGeom));
@@ -5682,8 +5696,8 @@ PetscErrorCode DMPlexComputeJacobian_Internal(DM dm, PetscFormKey key, IS cellIS
     PetscInt     offsetI, NcI, NbI = 1, fc, f;
 
     for (fieldI = 0; fieldI < Nf; ++fieldI) {
-      PetscCall(PetscDSGetDiscretization(prob, fieldI, (PetscObject *)&fv));
-      PetscCall(PetscDSGetFieldOffset(prob, fieldI, &offsetI));
+      PetscCall(PetscDSGetDiscretization(ds, fieldI, (PetscObject *)&fv));
+      PetscCall(PetscDSGetFieldOffset(ds, fieldI, &offsetI));
       PetscCall(PetscObjectGetClassId((PetscObject)fv, &id));
       if (id != PETSCFV_CLASSID) continue;
       /* Put in the identity */
@@ -6201,11 +6215,11 @@ PetscErrorCode DMPlexComputeJacobian_Action_Internal(DM dm, PetscFormKey key, IS
     PetscCall(PetscFEGeomGetChunk(cgeomFEM, offset, numCells, &remGeom));
     for (fieldJ = 0; fieldJ < Nf; ++fieldJ) {
       key.field = fieldI * Nf + fieldJ;
-      PetscCall(PetscFEIntegrateJacobian(prob, PETSCFE_JACOBIAN, key, Ne, chunkGeom, u, u_t, probAux, a, t, X_tShift, elemMat));
-      PetscCall(PetscFEIntegrateJacobian(prob, PETSCFE_JACOBIAN, key, Nr, remGeom, &u[offset * totDim], u_t ? &u_t[offset * totDim] : NULL, probAux, &a[offset * totDimAux], t, X_tShift, &elemMat[offset * totDim * totDim]));
+      PetscCall(PetscFEIntegrateJacobian(prob, prob, PETSCFE_JACOBIAN, key, Ne, chunkGeom, u, u_t, probAux, a, t, X_tShift, elemMat));
+      PetscCall(PetscFEIntegrateJacobian(prob, prob, PETSCFE_JACOBIAN, key, Nr, remGeom, &u[offset * totDim], u_t ? &u_t[offset * totDim] : NULL, probAux, &a[offset * totDimAux], t, X_tShift, &elemMat[offset * totDim * totDim]));
       if (hasDyn) {
-        PetscCall(PetscFEIntegrateJacobian(prob, PETSCFE_JACOBIAN_DYN, key, Ne, chunkGeom, u, u_t, probAux, a, t, X_tShift, elemMatD));
-        PetscCall(PetscFEIntegrateJacobian(prob, PETSCFE_JACOBIAN_DYN, key, Nr, remGeom, &u[offset * totDim], u_t ? &u_t[offset * totDim] : NULL, probAux, &a[offset * totDimAux], t, X_tShift, &elemMatD[offset * totDim * totDim]));
+        PetscCall(PetscFEIntegrateJacobian(prob, prob, PETSCFE_JACOBIAN_DYN, key, Ne, chunkGeom, u, u_t, probAux, a, t, X_tShift, elemMatD));
+        PetscCall(PetscFEIntegrateJacobian(prob, prob, PETSCFE_JACOBIAN_DYN, key, Nr, remGeom, &u[offset * totDim], u_t ? &u_t[offset * totDim] : NULL, probAux, &a[offset * totDimAux], t, X_tShift, &elemMatD[offset * totDim * totDim]));
       }
     }
     PetscCall(PetscFEGeomRestoreChunk(cgeomFEM, offset, numCells, &remGeom));
