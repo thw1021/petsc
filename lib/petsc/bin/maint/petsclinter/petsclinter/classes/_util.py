@@ -3,8 +3,6 @@
 # Created: Mon Jun 20 19:42:53 2022 (-0400)
 # @author: Jacob Faibussowitsch
 """
-import functools
-
 from .. import util
 
 def verbose_print(*args, **kwargs):
@@ -86,13 +84,26 @@ def view_ast_from_cursor(cursor, pred=verbose_print, level=Level(), max_depth=-1
       )
   return ret_list
 
+def _functools_lru_cache(func, *args, **kwargs):
+  from ..__version__ import py_version_lt
+
+  if py_version_lt(3, 8, 0):
+    decorator = func
+  else:
+    from functools import lru_cache
+
+    decorator = lru_cache(func, *args, **kwargs)
+  return decorator
+
 # surprise, surprise, we end up reading the same files over and over again when
 # constructing the error messages and diagnostics and hence we make about a 8x performance
 # improvement by caching the files read
-@functools.lru_cache
+@_functools_lru_cache
 def read_file_lines_cached(*args, **kwargs) -> list[str]:
   with open(*args, **kwargs) as fd:
     return fd.readlines()
+
+del _functools_lru_cache
 
 def get_raw_source_from_source_range(source_range, num_before_context: int = 0, num_after_context: int = 0, num_context: int = 0, trim: bool = False, tight: bool = False) -> str:
   num_before_context   = num_before_context if num_before_context else num_context

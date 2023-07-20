@@ -167,7 +167,7 @@ class _DiagnosticsManager:
     return flag
 
   @classmethod
-  def flag_prefix(cls, obj: Any) -> Callable[[str], str]:
+  def flag_prefix(cls, obj: object) -> Callable[[str], str]:
     r"""Return the flag prefix
 
     Parameters
@@ -326,7 +326,7 @@ class _DiagnosticsManager:
     return f'{self.flagprefix}{self.check_flag(flag)}'
 
   @contextlib.contextmanager
-  def push_from(self, dict_like: dict[str, Iterable[re.Match]]):
+  def push_from(self, dict_like: dict[str, Iterable[re.Pattern]]):
     r"""Temporarily enable or disable flags based on `dict_like`
 
     Parameters

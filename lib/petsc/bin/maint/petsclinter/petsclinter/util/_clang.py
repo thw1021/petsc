@@ -3,14 +3,17 @@
 # Created: Mon Jun 20 17:45:39 2022 (-0400)
 # @author: Jacob Faibussowitsch
 """
-from typing import Optional
-from collections.abc import Iterable, Callable
+from typing import Optional, TYPE_CHECKING
+from collections.abc import Callable, Sequence, MutableSequence
 
 import enum
 import ctypes
 import clang.cindex as clx
 
 from .._error import ParsingError
+
+if TYPE_CHECKING:
+  from ..classes._cursor import Cursor, CursorLike
 
 class CXTranslationUnit(enum.IntFlag):
   """
@@ -161,7 +164,7 @@ class PetscCXCursorAndRangeVisitor(ctypes.Structure):
     ('visit',   CXCursorAndRangeVisitorCallBackProto)
   ]
 
-def make_cxcursor_and_range_callback(cursor: clx.Cursor, found_cursors: Optional[list["petsclinter.Cursor"]] = None, parsing_error_handler: Optional[Callable[[ParsingError], None]] = None) -> tuple[PetscCXCursorAndRangeVisitor, list["Cursor"]]:
+def make_cxcursor_and_range_callback(cursor: "CursorLike", found_cursors: Optional[MutableSequence["Cursor"]] = None, parsing_error_handler: Optional[Callable[[ParsingError], None]] = None) -> tuple[PetscCXCursorAndRangeVisitor, MutableSequence["Cursor"]]:
   r"""Make a clang cxcursor and range callback functor
 
   Parameters
@@ -273,7 +276,7 @@ class ClangFunction:
       raise RuntimeError(f'{self._function.__name__}() returned nonzero exit code {ret}')
     return ret
 
-def get_clang_function(name: str, arg_types: Iterable[type], ret_type: Optional[type] = None) -> ClangFunction:
+def get_clang_function(name: str, arg_types: Sequence[type], ret_type: Optional[type] = None) -> ClangFunction:
   r"""Get (or register) the clang function RET_TYPE (NAME *)(ARG_TYPES...)
 
   A useful helper routine to reduce verbiage when retrieving a clang function which maye or may not

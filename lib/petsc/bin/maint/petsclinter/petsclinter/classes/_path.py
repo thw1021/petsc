@@ -5,12 +5,13 @@
 """
 from __future__ import annotations
 
-import typing
+from typing import Union, TypeAlias
+
 import pathlib
 
 from .. import __version__
 
-class Path(type(pathlib.Path())):
+class Path(type(pathlib.Path())): # type: ignore
   """
   a basic pathlib.Path wrapper with some additional utility backported
   """
@@ -73,5 +74,5 @@ class Path(type(pathlib.Path())):
       super().unlink(missing_ok=missing_ok)
     return
 
-PathLike    = typing.Union[pathlib.Path, Path]
-StrPathLike = typing.Union[PathLike, str]
+PathLike: TypeAlias    = Union[pathlib.Path, Path]
+StrPathLike: TypeAlias = Union[PathLike, str]

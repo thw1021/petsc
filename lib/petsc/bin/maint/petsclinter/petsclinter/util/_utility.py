@@ -44,10 +44,6 @@ def subprocess_run(*args, **kwargs):
     if subprocess.run raises a subprocess.CalledProcessError, this routine converts it into a
     RuntimeError with the output attached
   """
-  if __version__.py_version_lt(3, 7):
-    if kwargs.pop('capture_output', None):
-      kwargs.setdefault('stdout', subprocess.PIPE)
-      kwargs.setdefault('stderr', subprocess.PIPE)
   try:
     ret = subprocess.run(*args, **kwargs)
   except subprocess.CalledProcessError as cpe:

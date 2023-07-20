@@ -5,7 +5,8 @@
 """
 from __future__ import annotations
 
-from typing import Union, Optional, Any
+from typing import Union, Optional, Any, TypeAlias
+from collections.abc import Callable
 
 import clang.cindex as clx
 import petsclinter  as pl
@@ -38,7 +39,7 @@ class Cursor:
   argidx: int
   _cache: dict[str, Any]
 
-  CursorLike = Union[clx.Cursor, "Cursor"]
+  CursorLike: TypeAlias = Union[clx.Cursor, "Cursor"]
 
   def __init__(self, cursor: CursorLike, idx: int = -12345) -> None:
     r"""Construct a `Cursor`
@@ -75,7 +76,7 @@ class Cursor:
       raise ValueError(type(cursor))
     return
 
-  def __getattr__(self, attr: str):
+  def __getattr__(self, attr: str) -> Any:
     """
     Allows us to essentialy fake being a clang cursor, if __getattribute__ fails
     (i.e. the value wasn't found in self), then we try the cursor. So we can do things
@@ -135,7 +136,7 @@ class Cursor:
       f'Could not determine useful name for cursor {errstr}\nxxx {"-" * 80} xxx\n{cursor_view}'
     )
 
-  def _get_cached(self, attr: str, func, *args, **kwargs):
+  def _get_cached(self, attr: str, func: Callable, *args, **kwargs) -> Any:
     cache = self._cache
     if attr not in cache:
       cache[attr] = func(*args, **kwargs)
@@ -155,7 +156,7 @@ class Cursor:
     cursor :
       either a newly constructed `Cursor` or `cursor` unchanged
     """
-    return cursor if isinstance(cursor, Cursor) else cls(cursor)
+    return cursor if isinstance(cursor, cls) else cls(cursor)
 
   @classmethod
   def error_view_from_cursor(cls, cursor: CursorLike) -> str:
@@ -718,4 +719,4 @@ class Cursor:
     r"""See `Cursor.get_clang_cursor_from_cursor()`"""
     return self.get_clang_cursor_from_cursor(self)
 
-CursorLike = Cursor.CursorLike
+CursorLike: TypeAlias = Cursor.CursorLike
