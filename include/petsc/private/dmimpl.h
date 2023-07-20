@@ -305,6 +305,7 @@ struct _p_DM {
   DMBoundary   boundary; /* List of boundary conditions */
   PetscInt     Nds;      /* Number of discrete systems defined on the total domain */
   DMSpace     *probs;    /* Array of discrete systems */
+  IS           subdofIS; // IS mapping sol on this DM to the sol on the superDM, from DMCreateSubDM()
   /* Output structures */
   DM        dmBC;              /* The DM with boundary conditions in the global DM */
   PetscInt  outputSequenceNum; /* The current sequence number for output */

@@ -85,6 +85,33 @@ PetscErrorCode DMCreateLocalVector_Section_Private(DM dm, Vec *vec)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
+PetscErrorCode DMGetSubdofIS(DM dm, IS *subdofIS)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscAssertPointer(subdofIS, 2);
+  *subdofIS = dm->subdofIS;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+PetscErrorCode DMSetSubdofIS(DM dm, IS subdofIS)
+{
+  PetscSection gs;
+  PetscInt     n, n2;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscValidHeaderSpecific(subdofIS, IS_CLASSID, 2);
+  PetscCall(DMGetGlobalSection(dm, &gs));
+  PetscCall(PetscSectionGetConstrainedStorageSize(gs, &n));
+  PetscCall(ISGetLocalSize(subdofIS, &n2));
+  PetscCheck(n2 == n, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_SIZ, "Subdof IS size %" PetscInt_FMT " != %" PetscInt_FMT " local size of global vector", n2, n);
+  PetscCall(PetscObjectReference((PetscObject)subdofIS));
+  PetscCall(ISDestroy(&dm->subdofIS));
+  dm->subdofIS = subdofIS;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@C
   DMCreateSectionSubDM - Returns an `IS` and subDM+subSection encapsulating a subproblem defined by the fields in a `PetscSection` in the `DM`.
 
@@ -295,6 +322,7 @@ PetscErrorCode DMCreateSectionSubDM(DM dm, PetscInt numFields, const PetscInt fi
       PetscCall(MatNullSpaceDestroy(&nullSpace));
     }
     if (dm->coarseMesh) PetscCall(DMCreateSubDM(dm->coarseMesh, numFields, fields, NULL, &(*subdm)->coarseMesh));
+    if (is) PetscCall(DMSetSubdofIS(*subdm, *is));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }

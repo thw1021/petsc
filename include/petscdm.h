@@ -108,6 +108,7 @@ PETSC_EXTERN PetscErrorCode DMInterpolateSolution(DM, DM, Mat, Vec, Vec);
 PETSC_EXTERN PetscErrorCode DMExtrude(DM, PetscInt, DM *);
 PETSC_EXTERN PetscErrorCode DMSetFromOptions(DM);
 PETSC_EXTERN PetscErrorCode DMViewFromOptions(DM, PetscObject, const char[]);
+PETSC_EXTERN PetscErrorCode DMViewDSFromOptions(DM, PetscObject, const char[]);
 
 PETSC_EXTERN PetscErrorCode DMGenerate(DM, const char[], PetscBool, DM *);
 PETSC_EXTERN PetscErrorCode DMGenerateRegister(const char[], PetscErrorCode (*)(DM, PetscBool, DM *), PetscErrorCode (*)(DM, PetscReal *, DM *), PetscErrorCode (*)(DM, Vec, DMLabel, DMLabel, DM *), PetscInt);
@@ -209,6 +210,8 @@ PETSC_EXTERN PetscErrorCode DMCreateSectionSuperDM(DM[], PetscInt, IS **, DM *);
 PETSC_EXTERN PetscErrorCode DMCreateFieldDecomposition(DM, PetscInt *, char ***, IS **, DM **);
 PETSC_EXTERN PetscErrorCode DMCreateDomainDecomposition(DM, PetscInt *, char ***, IS **, IS **, DM **);
 PETSC_EXTERN PetscErrorCode DMCreateDomainDecompositionScatters(DM, PetscInt, DM *, VecScatter **, VecScatter **, VecScatter **);
+PETSC_EXTERN PetscErrorCode DMGetSubdofIS(DM, IS *);
+PETSC_EXTERN PetscErrorCode DMSetSubdofIS(DM, IS);
 
 PETSC_EXTERN PetscErrorCode DMGetRefineLevel(DM, PetscInt *);
 PETSC_EXTERN PetscErrorCode DMSetRefineLevel(DM, PetscInt);

@@ -154,6 +154,7 @@ PetscErrorCode DMClone(DM dm, DM *newdm)
   PetscCall(DMSetDimension(*newdm, dim));
   PetscTryTypeMethod(dm, clone, newdm);
   (*newdm)->setupcalled = dm->setupcalled;
+  (*newdm)->cloneOpts   = dm->cloneOpts;
   PetscCall(DMGetPointSF(dm, &sf));
   PetscCall(DMSetPointSF(*newdm, sf));
   PetscCall(DMGetApplicationContext(dm, &ctx));
@@ -896,6 +897,55 @@ PetscErrorCode DMSetFromOptions(DM dm)
   /* process any options handlers added with PetscObjectAddOptionsHandler() */
   PetscCall(PetscObjectProcessOptionsHandlers((PetscObject)dm, PetscOptionsObject));
   PetscOptionsEnd();
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+   DMViewDSFromOptions - View the `PetscDS` objects in a `DM` in a particular way based on a request in the options database
+
+   Collective
+
+   Input Parameters:
++  dm - the `DM` object
+.  obj - optional object that provides the prefix for the options database (if `NULL` then the prefix in obj is used)
+-  optionname - option string that is used to activate viewing
+
+   Level: intermediate
+
+   Note:
+   See `PetscObjectViewFromOptions()` for a list of values that can be provided in the options database to determine how the `PetscDS`es are viewed
+
+.seealso: [](ch_dmbase), `DM`, `DMView()`, `PetscObjectViewFromOptions()`, `DMCreate()`, `PetscObjectViewFromOptions()`
+@*/
+PetscErrorCode DMViewDSFromOptions(DM dm, PetscObject obj, const char name[])
+{
+  PetscObject       o = obj ? obj : (PetscObject)dm;
+  PetscViewer       viewer;
+  PetscViewerFormat format;
+  PetscBool         flg;
+
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
+  PetscCall(PetscOptionsGetViewer(PetscObjectComm(o), o->options, o->prefix, name, &viewer, &format, &flg));
+  if (flg) {
+    const char *name, *prefix;
+
+    PetscCall(PetscViewerPushFormat(viewer, format));
+    PetscCall(PetscObjectGetName((PetscObject)dm, &name));
+    PetscCall(PetscObjectGetOptionsPrefix((PetscObject)dm, &prefix));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "Discrete Spaces for DM %s", name ? name : ""));
+    if (prefix) PetscCall(PetscViewerASCIIPrintf(viewer, " (%s)", prefix));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "\n"));
+  }
+  for (PetscInt d = 0; d < dm->Nds; ++d) {
+    PetscCall(PetscDSSetFromOptions(dm->probs[d].ds));
+    if (flg) PetscCall(PetscDSView(dm->probs[d].ds, viewer));
+  }
+  if (flg) {
+    PetscCall(PetscViewerFlush(viewer));
+    PetscCall(PetscViewerPopFormat(viewer));
+    PetscCall(PetscViewerDestroy(&viewer));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -4240,26 +4290,7 @@ PetscErrorCode DMGetLocalSection(DM dm, PetscSection *section)
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscAssertPointer(section, 2);
   if (!dm->localSection && dm->ops->createlocalsection) {
-    PetscInt d;
-
-    if (dm->setfromoptionscalled) {
-      PetscObject       obj = (PetscObject)dm;
-      PetscViewer       viewer;
-      PetscViewerFormat format;
-      PetscBool         flg;
-
-      PetscCall(PetscOptionsGetViewer(PetscObjectComm(obj), obj->options, obj->prefix, "-dm_petscds_view", &viewer, &format, &flg));
-      if (flg) PetscCall(PetscViewerPushFormat(viewer, format));
-      for (d = 0; d < dm->Nds; ++d) {
-        PetscCall(PetscDSSetFromOptions(dm->probs[d].ds));
-        if (flg) PetscCall(PetscDSView(dm->probs[d].ds, viewer));
-      }
-      if (flg) {
-        PetscCall(PetscViewerFlush(viewer));
-        PetscCall(PetscViewerPopFormat(viewer));
-        PetscCall(PetscViewerDestroy(&viewer));
-      }
-    }
+    if (dm->setfromoptionscalled) PetscCall(DMViewDSFromOptions(dm, NULL, "-dm_petscds_view"));
     PetscUseTypeMethod(dm, createlocalsection);
     if (dm->localSection) PetscCall(PetscObjectViewFromOptions((PetscObject)dm->localSection, NULL, "-dm_petscsection_view"));
   }
@@ -5447,7 +5478,7 @@ PetscErrorCode DMGetDS(DM dm, PetscDS *ds)
 @*/
 PetscErrorCode DMGetCellDS(DM dm, PetscInt point, PetscDS *ds, PetscDS *dsIn)
 {
-  PetscDS  dsDef = NULL;
+  PetscDS  dsDef = NULL, dsDefIn = NULL;
   PetscInt s;
 
   PetscFunctionBeginHot;
@@ -5461,7 +5492,8 @@ PetscErrorCode DMGetCellDS(DM dm, PetscInt point, PetscDS *ds, PetscDS *dsIn)
     PetscInt val;
 
     if (!dm->probs[s].label) {
-      dsDef = dm->probs[s].ds;
+      dsDef   = dm->probs[s].ds;
+      dsDefIn = dm->probs[s].dsIn;
     } else {
       PetscCall(DMLabelGetValue(dm->probs[s].label, point, &val));
       if (val >= 0) {
@@ -5472,6 +5504,7 @@ PetscErrorCode DMGetCellDS(DM dm, PetscInt point, PetscDS *ds, PetscDS *dsIn)
     }
   }
   if (ds && !*ds) *ds = dsDef;
+  if (dsIn && !*dsIn) *dsIn = dsDefIn;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
