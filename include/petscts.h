@@ -8,6 +8,8 @@
 #include <petscsnes.h>
 #include <petscconvest.h>
 
+/*I <petscts.h> I*/
+
 /* SUBMANSEC = TS */
 
 /*S
@@ -452,7 +454,7 @@ PETSC_EXTERN PetscErrorCode TSSetTimeStep(TS, PetscReal);
 PETSC_EXTERN PetscErrorCode TSGetStepNumber(TS, PetscInt *);
 PETSC_EXTERN PetscErrorCode TSSetStepNumber(TS, PetscInt);
 
-/*J
+/*@
   TSRHSFunction - An `TS` explicit residual evaluation function
 
   Calling Sequence:
@@ -469,7 +471,7 @@ PETSC_EXTERN PetscErrorCode TSSetStepNumber(TS, PetscInt);
 @*/
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCode (*TSRHSFunction)(TS ts, PetscReal t, Vec u, Vec F, void *ctx);
 
-/*J
+/*S
   TSRHSJacobian - A `TS` Jacobian evaluation function
 
   Calling Sequence:
