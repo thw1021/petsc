@@ -32,8 +32,10 @@ from ._doc_section      import Level, Notes, FortranNotes, DeveloperNotes, Sourc
 from ._doc_section      import SeeAlso
 
 if TYPE_CHECKING:
-  from typing          import Union, Any, Optional
+  from typing          import Union, Any, Optional, TypeVar
   from collections.abc import Iterable, Sequence, Generator
+
+  SectionImpl = TypeVar('SectionImpl', bound=SectionBase)
 
 @enum.unique
 class Verdict(enum.IntEnum):
@@ -100,7 +102,7 @@ class SectionManager:
   _cachekey: tuple[str, ...]
   _findcache: dict[tuple[str, ...], dict[str, SectionBase]]
 
-  def __init__(self, *args: SectionBase, verbose: bool = False) -> None:
+  def __init__(self, *args: SectionImpl, verbose: bool = False) -> None:
     r"""Construct a `SectionManager` object
 
     Parameters
@@ -139,7 +141,7 @@ class SectionManager:
   def __iter__(self) -> SectionBase:
     yield from self._sections.values()
 
-  def __contains__(self, section: SectionBase) -> bool:
+  def __contains__(self, section: SectionImpl) -> bool:
     return self.registered(section)
 
   def _print(self, *args, **kwargs) -> None:
@@ -273,7 +275,7 @@ class SectionManager:
       cache[lohead] = matched
     return sections[matched]
 
-  def registered(self, section: SectionBase) -> bool:
+  def registered(self, section: SectionImpl) -> bool:
     r"""Determine whether a section has already been registered with the `SectionManager`
 
     Parameters
@@ -409,7 +411,7 @@ class SectionManager:
     raise GuessHeadingFailError(f'Could not guess heading for:\n{line}')
 
 @DiagnosticManager.register(
-  ('internal-linkage','Verify that symbols with internal linkage don\'t have docstrings'),
+  ('internal-linkage','Verif2y that symbols with internal linkage don\'t have docstrings'),
   ('sowing-chars','Verify that sowing begin and end indicators match the symbol type'),
   ('symbol-spacing','Verify that dosctrings occur immediately above that which they describe'),
   ('indentation','Verify that docstring text is correctly indented'),
@@ -808,10 +810,15 @@ class PetscDocString(DocBase):
         break
     return
 
-  def _check_valid_cursor_linkage(self):
-    """
-    check that a cursor has external linkage, there is no point producing a manpage for function
-    that is impossible to call
+  def _check_valid_cursor_linkage(self) -> bool:
+    r"""Check that a cursor has external linkage, there is no point producing a manpage for function
+    that is impossible to call.
+
+    Returns
+    -------
+    ret :
+      True if the cursor has external linkage (and therefore should be checked), False if the cursor
+      has internal linkage (and is therefore pointless to check)
     """
     cursor = self.cursor
     # TODO, this should probably also check that the header the cursor is defined in is public
@@ -843,9 +850,15 @@ class PetscDocString(DocBase):
       self.add_error_from_diagnostic(diag)
     return not pointless
 
-  def _check_valid_sowing_chars(self):
-    """
-    check that the sowing prefix and postfix match the expected and are symmetric
+  def _check_valid_sowing_chars(self) -> None:
+    r"""Check that the sowing prefix and postfix match the expected and are symmetric
+
+    Raises
+    ------
+    KnownUnhandleableCursorError
+      if start of the comment line is invalid
+    RuntimeError
+      if the start comment contains an unknown sowing char
     """
     sowing_type, lay_type, self.type = self.clx_to_sowing_type[self.cursor.type.kind]
     # check the beginning
@@ -934,29 +947,14 @@ class PetscDocString(DocBase):
       self.add_error_from_source_range(
         diag_name, mess, restloc, patch=Patch(restloc, '\n' + (' '*self.indent) + rest)
       )
-
-    # now check the end
-    line       = splitlines[-1]
-    end_sowing = line.split('*/')[0].split()
-    try:
-      end_sowing = end_sowing[-1]
-    except IndexError:
-      pass
-    else:
-      if sorted(end_sowing) != sorted(begin_sowing) and 0:
-        # TODO: REVIEW: should this check exist?
-        correct = begin_sowing[::-1]
-        endline = self.extent.end.line
-        mess    = f'Invalid comment end line, sowing identifier(s) do not match begin identifier(s). Expected \'{correct}*/\' found \'{end_sowing}*/\''
-        patch   = Patch(self.make_source_range(line, line, endline), line.replace(end_sowing, correct))
-        self.add_error_from_source_range(
-          diag_name, mess, self.make_source_range(end_sowing, line, endline), patch=patch
-        )
     return
 
-  def _check_valid_docstring_spacing(self):
-    """
-    Check that the docstring itself is flush against the thing it describes, i.e.:
+  def _check_valid_docstring_spacing(self) -> None:
+    r"""Check that the docstring itself is flush against the thing it describes.
+
+    Notes
+    -----
+    Checks that
 
     /*
       PetscFooBar - ...
@@ -986,9 +984,17 @@ class PetscDocString(DocBase):
       self.add_error_from_source_range(diag, mess, eloc, highlight=False, patch=Patch(floc, ''))
     return
 
-  def _check_valid_indentation(self, lineno, line, left_stripped):
-    """
-    If the line is regular (not empty, or a parameter list), check that line is indented correctly
+  def _check_valid_indentation(self, lineno: int, line: str, left_stripped: str) -> None:
+    r"""If the line is regular (not empty, or a parameter list), check that line is indented correctly
+
+    Parameters
+    ----------
+    lineno :
+      the line number of the line
+    line :
+      the line itself
+    left_stripped :
+      the line that has been left-stripped
     """
     linelen = len(line)
     if linelen:
@@ -1001,9 +1007,19 @@ class PetscDocString(DocBase):
         self.add_error_from_source_range(diag, mess, loc, patch=Patch(loc, ' ' * expected_ind))
     return
 
-  def _check_valid_section_spacing(self, prevline, lineno):
-    """
-    Check that sections have at least 1 empty line between them, i.e.:
+  def _check_valid_section_spacing(self, prevline: str, lineno: int) -> None:
+    r"""Check that sections have at least 1 empty line between them
+
+    Parameters
+    ----------
+    prevline :
+      the previous line
+    lineno :
+      the current line number
+
+    Notes
+    -----
+    Checks for:
 
     Notes:
     asdadsadasdads
@@ -1027,9 +1043,22 @@ class PetscDocString(DocBase):
       )
     return
 
-  def _check_section_header_typo(self, verdict, line, lineno):
-    """
-    Check that a section header that looks like a section header is actually one
+  def _check_section_header_typo(self, verdict: Verdict, line: str, lineno: int) -> Verdict:
+    r"""Check that a section header that looks like a section header is actually one
+
+    Parameters
+    ----------
+    verdict :
+      the current header verdict of the line
+    line :
+      the line
+    lineno :
+      the line number
+
+    Returns
+    -------
+    verdict :
+      the new verdict (if changed)
     """
     if verdict == Verdict.MAYBE_HEADING:
       try:
@@ -1048,26 +1077,54 @@ class PetscDocString(DocBase):
       )
     return verdict
 
-  def _check_section_header_that_probably_should_not_be_one(self, heading, line, stripped, lineno):
+  def _check_section_header_that_probably_should_not_be_one(self, verdict: Verdict, line: str, stripped: str, lineno: int) -> Verdict:
+    r"""Check that a section header that ends with ':' is not really a header
+
+    Parameters
+    ----------
+    verdict :
+      the current heading verdict
+    line :
+      the line
+    stripped :
+      `line` but stripped
+    lineno :
+      the line number
+
+    Returns
+    -------
+    verdict :
+      the update verdict
     """
-    check that a section header that ends with ':' is not really a header
-    """
-    if heading < 0:
+    if verdict < 0:
       try:
         possible_heading, section_guess = self.guess_heading(line, cache_result=False)
       except GuessHeadingFailError as ghfe:
         # Not being able to guess the heading here is OK since we aren't sure this isn't a
         # heading after all
         self.sections._print(ghfe)
-        return Verdict.NOT_HEADING
-      if section_guess == '__UNKNOWN_SECTION__':
-        assert not line.endswith(r'\:')
-        eloc = self.make_source_range(':', line, lineno, offset=line.rfind(':'))
-        mess = f'Sowing treats all lines ending with \':\' as header, are you sure \'{textwrap.shorten(stripped, width=35)}\' qualifies? Use \'\:\' to escape the colon if not'
-        self.add_error_from_source_range(self.diags.section_header_fishy_header, mess, eloc)
-    return heading
+        verdict = Verdict.NOT_HEADING
+      else:
+        if section_guess == '__UNKNOWN_SECTION__':
+          assert not line.endswith(r'\:')
+          eloc = self.make_source_range(':', line, lineno, offset=line.rfind(':'))
+          mess = f'Sowing treats all lines ending with \':\' as header, are you sure \'{textwrap.shorten(stripped, width=35)}\' qualifies? Use \'\:\' to escape the colon if not'
+          self.add_error_from_source_range(self.diags.section_header_fishy_header, mess, eloc)
+    return verdict
 
-  def parse(self):
+  def parse(self) -> PetscDocString:
+    r"""Parse a docstring
+
+    Returns
+    -------
+    docstring :
+      the `PetscDocString` instance
+
+    Raises
+    ------
+    KnownUnhandleableCursorError
+      if the cursor has internal linkage and should not have its docstring checked
+    """
     self.reset()
     self._check_valid_sowing_chars()
     self._check_floating()
@@ -1076,13 +1133,14 @@ class PetscDocString(DocBase):
       raise KnownUnhandleableCursorError
     self._check_valid_docstring_spacing()
 
-    raw_data     = []
     section      = self.sections.synopsis
     check_indent = section.check_indent_allowed()
     # if True we are in a verbatim block. We should not try to detect any kind of
     # headers until we reach the end of the verbatim block
     in_verbatim = 0
     prev_line   = ''
+
+    raw_data: list[tuple[SourceRange, str, Verdict]] = []
     for lineno, line in enumerate(self.raw.splitlines(), start=self.extent.start.line):
       left_stripped = line.lstrip()
       stripped      = left_stripped.rstrip()
@@ -1110,7 +1168,7 @@ class PetscDocString(DocBase):
           # we may switch headings, we should check indentation
           if not check_indent:
             self._check_valid_indentation(lineno, line, left_stripped)
-          self._check_valid_section_spacing(raw_data[-1][1] if raw_data else None, lineno)
+          self._check_valid_section_spacing(prev_line, lineno)
           new_section = self.sections.find(stripped.split(':', maxsplit=1)[0].strip().casefold())
           if new_section != section:
             raw_data     = section.consume(raw_data)

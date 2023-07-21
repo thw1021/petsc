@@ -147,6 +147,7 @@ class Addline:
 
 @DiagnosticManager.register(
   ('duplicate-function', 'Check for duplicate function-calls on the same execution path'),
+  ('parsing-error', 'Generic parsing errors')
 )
 class Linter:
   """
@@ -446,7 +447,6 @@ class Linter:
       fname, args=self.flags, unsaved_files=[(fname, src)], options=self.clang_opts
     )
 
-  @DiagnosticManager.register(('parsing-error', 'Generic parsing errors'))
   def process(self, tu: clx.TranslationUnit) -> None:
     r"""Process a translation unit for errors
 
@@ -461,7 +461,7 @@ class Linter:
     """
     func_map        = pl.checks._register.check_function_map
     docs_map        = pl.checks._register.check_doc_map
-    parsing_diag    = self.process.diags.parsing_error
+    parsing_diag    = self.diags.parsing_error
     processed_funcs = collections.defaultdict(list)
 
     for results in self.find_lintable_expressions(tu, set(func_map.keys())):

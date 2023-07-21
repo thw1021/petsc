@@ -5,27 +5,40 @@
 """
 from __future__ import annotations
 
-from collections.abc import Iterable, Callable
-from typing import Optional, Union, Any
+from typing import TYPE_CHECKING
 
-import re
 import copy
 import inspect
 import functools
 import contextlib
 
-from ._patch   import Patch
-from ._src_pos import SourceLocation, SourceLocationLike
+from ._src_pos import SourceLocation
+
+if TYPE_CHECKING:
+  from typing          import Optional, Union, Any, TypeVar, Protocol
+  from collections.abc import Iterable, Callable
+
+  import re
+  import typing
+
+  from ._patch   import Patch
+  from ._src_pos import SourceLocationLike
+
+  T = TypeVar('T')
+  FuncOrClass = TypeVar('FuncOrClass')
+
+  class HasDiagnostics(Protocol):
+    diags: DiagnosticMap
 
 class DiagnosticMapProxy:
   __slots__ = '__diag_map', '__mro'
 
-  def __init__(self, diag_map, mro):
+  def __init__(self, diag_map: DiagnosticMap, mro: tuple[type, ...]) -> None:
     self.__diag_map = diag_map
     self.__mro      = mro
     return
 
-  def __fuzzy_get_attribute__(self, in_diags, in_attr):
+  def __fuzzy_get_attribute__(self, in_diags: dict[str, str], in_attr: str) -> tuple[bool, str]:
     try:
       return True, in_diags[in_attr]
     except KeyError:
@@ -33,9 +46,9 @@ class DiagnosticMapProxy:
     attr_items = [v for k, v in in_diags.items() if k.endswith(in_attr)]
     if len(attr_items) == 1:
       return True, attr_items[0]
-    return False, None
+    return False, ''
 
-  def __getattr__(self, attr):
+  def __getattr__(self, attr: str) -> str:
     diag_map = self.__diag_map
     try:
       return getattr(diag_map, attr)
@@ -212,14 +225,17 @@ class _DiagnosticsManager:
     return flag
 
   @classmethod
-  def register(cls, *args):
-    def decorator(symbol):
+  def register(cls, *args: tuple[str, str]) -> Callable[[FuncOrClass], HasDiagnostics]:
+    def decorator(symbol: FuncOrClass) -> HasDiagnostics:
       if inspect.isclass(symbol):
         wrapper = symbol
       else:
+        assert callable(symbol)
         @functools.wraps(symbol)
-        def wrapper(*args, **kwargs):
+        def fn_wrapper(*args, **kwargs):
           return symbol(*args, **kwargs)
+
+        wrapper = fn_wrapper
 
       symbol_flag_prefix = cls.flag_prefix(wrapper)
       diag_list          = [(cls.__expand_flag(symbol_flag_prefix(d)), h.casefold()) for d, h in args]
@@ -227,6 +243,8 @@ class _DiagnosticsManager:
         wrapper.diags = DiagnosticMap()
       wrapper.diags.update(wrapper, [d for d, _ in diag_list])
       cls._registered.update(diag_list)
+      if TYPE_CHECKING:
+        return typing.cast(HasDiagnostics, wrapper)
       return wrapper
     return decorator
 
@@ -388,9 +406,6 @@ class Diagnostic:
     """
     if notes is None:
       notes = []
-
-    if patch is not None:
-      assert isinstance(patch, Patch)
 
     self.flag     = DiagnosticManager.check_flag(flag)
     self.message  = str(message)

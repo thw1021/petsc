@@ -125,7 +125,7 @@ class DescribableItem:
     return
 
 class DocBase:
-  __slots__ = tuple()
+  __slots__: tuple[str, ...] = tuple()
 
   @classmethod
   def __diagnostic_prefix__(cls, *flags) -> str:
@@ -140,6 +140,7 @@ class DocBase:
     if not text[0].startswith(prefix):
       text.appendleft(prefix)
     return text
+
 
 @DiagnosticManager.register(
   ('section-header-missing', 'Verify that required sections exist in the docstring'),

@@ -5,7 +5,7 @@
 """
 from __future__ import annotations
 
-from typing import Optional, Union, Any, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 import os
 import enum
@@ -23,8 +23,12 @@ from ._linter import Linter
 
 if TYPE_CHECKING:
   from collections.abc import Collection, MutableSequence
-  from ..util._clang   import CXTranslationUnit
-  from ._path          import Path, PathLike, StrPathLike
+  from typing          import Optional, Union, Any, TypeVar
+
+  from ..util._clang import CXTranslationUnit
+  from ._path        import Path, PathLike, StrPathLike
+
+  PoolImpl = TypeVar('PoolImpl', bound='WorkerPoolBase')
 
 # directory names to exclude from processing, case sensitive
 exclude_dir_names = {
@@ -85,7 +89,7 @@ class WorkerPoolBase(abc.ABC):
   def put(self, item) -> None:
     return
 
-  def setup(self, compiler_flags: list[str], clang_lib: Optional[PathLike] = None, clang_options: Optional[CXTranslationUnit] = None, clang_compat_check: bool = True, werror: bool = False) -> WorkerPoolBase:
+  def setup(self: PoolImpl, compiler_flags: list[str], clang_lib: Optional[PathLike] = None, clang_options: Optional[CXTranslationUnit] = None, clang_compat_check: bool = True, werror: bool = False) -> PoolImpl:
     r"""Set up a `WorkerPool` instance
 
     Parameters
@@ -116,7 +120,7 @@ class WorkerPoolBase(abc.ABC):
     self._setup(compiler_flags, clang_lib, clang_options, clang_compat_check, werror)
     return self
 
-  def walk(self, src_path_list: list[PathLike], exclude_dirs: Optional[Collection[str]] = None, exclude_dir_suff: Optional[tuple[str, ...]] = None, allow_file_suff: Optional[tuple[str, ...]] = None) -> WorkerPoolBase:
+  def walk(self: PoolImpl, src_path_list: list[PathLike], exclude_dirs: Optional[Collection[str]] = None, exclude_dir_suff: Optional[tuple[str, ...]] = None, allow_file_suff: Optional[tuple[str, ...]] = None) -> PoolImpl:
     r"""Walk `src_path_list` and process it
 
     Parameters
@@ -163,7 +167,7 @@ class WorkerPoolBase(abc.ABC):
           self._consume_results()
     return self
 
-  def finalize(self) -> tuple[list[tuple[Path, str]], list[tuple[Path, str]], list, list[tuple[Path, str]]]:
+  def finalize(self: PoolImpl) -> tuple[list[tuple[Path, str]], list[tuple[Path, str]], list, list[tuple[Path, str]]]:
     r"""Finalize the queue and return the results
 
     Returns
@@ -411,8 +415,7 @@ class SerialPool(WorkerPoolBase):
   def _finalize(self) -> None:
     return
 
-  def put(self, item) -> None:
-    assert not isinstance(item, self.QueueSignal)
+  def put(self, item: PathLike) -> None:
     err_left, err_fixed, warnings, patches = self.linter.parse(item).diagnostics()
     self.errors_left.extend(err_left)
     self.errors_fixed.extend(err_fixed)
@@ -420,7 +423,7 @@ class SerialPool(WorkerPoolBase):
     self.patches.extend(patches)
     return
 
-def WorkerPool(num_workers: int, verbose: bool = False) -> WorkerPoolBase:
+def WorkerPool(num_workers: int, verbose: bool = False) -> Union[SerialPool, ParallelPool]:
   if num_workers < 0:
       num_workers = max(mp.cpu_count() - 1, 1)
 
