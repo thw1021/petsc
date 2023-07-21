@@ -97,6 +97,9 @@ class Configure(config.package.CMakePackage):
     elif self.sycl.found:
       args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_COMPILER=')
       args.append('-DCMAKE_CXX_COMPILER='+self.getCompiler('SYCL'))
+      if self.argDB['with-kokkos-kernels-tpl']:
+        if "MKLROOT" in os.environ or "MKL_ROOT" in os.environ: # KK uses them to find MKL
+          args.append('-DKokkosKernels_ENABLE_TPL_MKL=ON')
 
     # These options will be taken from Kokkos configuration
     args = self.rmArgsStartsWith(args,'-DCMAKE_CXX_STANDARD=')
