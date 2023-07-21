@@ -1,6 +1,7 @@
 #include <petsc/private/petscimpl.h>
 #include <petsc/private/bagimpl.h> /*I  "petscbag.h"   I*/
 #include <petscviewer.h>
+#include <petscviewerhdf5.h>
 
 /*
       Adds item to the linked list in a bag
@@ -649,7 +650,7 @@ PetscErrorCode PetscBagSetFromOptions(PetscBag bag)
 @*/
 PetscErrorCode PetscBagView(PetscBag bag, PetscViewer view)
 {
-  PetscBool    isascii, isbinary;
+  PetscBool    isascii, isbinary, ishdf5;
   PetscBagItem nitem = bag->bagitems;
 
   PetscFunctionBegin;
@@ -657,6 +658,7 @@ PetscErrorCode PetscBagView(PetscBag bag, PetscViewer view)
   PetscValidHeaderSpecific(view, PETSC_VIEWER_CLASSID, 2);
   PetscCall(PetscObjectTypeCompare((PetscObject)view, PETSCVIEWERASCII, &isascii));
   PetscCall(PetscObjectTypeCompare((PetscObject)view, PETSCVIEWERBINARY, &isbinary));
+  PetscCall(PetscObjectTypeCompare((PetscObject)view, PETSCVIEWERHDF5, &ishdf5));
   if (isascii) {
     if (bag->bagprefix) {
       PetscCall(PetscViewerASCIIPrintf(view, "PetscBag Object:  %s (%s) %s\n", bag->bagname, bag->bagprefix, bag->baghelp));
@@ -746,6 +748,27 @@ PetscErrorCode PetscBagView(PetscBag bag, PetscViewer view)
       PetscCall(PetscFPrintf(comm, info, "#$$ Set.%s = PetscBinaryRead(fd);\n", bag->bagname));
       PetscCall(PetscFPrintf(comm, info, "#--- end code written by PetscViewerBinary for MATLAB format ---#\n\n"));
     }
+  } else if (ishdf5) {
+#if defined(PETSC_HAVE_HDF5)
+    PetscCall(PetscViewerHDF5PushGroup(view, "bags"));
+    PetscCall(PetscViewerHDF5PushGroup(view, bag->bagname));
+
+    PetscCall(PetscViewerHDF5WriteAttribute(view, NULL, "count", PETSC_INT, &bag->count));
+    PetscCall(PetscViewerHDF5WriteAttribute(view, NULL, "help", PETSC_STRING, &bag->baghelp));
+    while (nitem) {
+      PetscCall(PetscViewerHDF5PushGroup(view, nitem->name));
+      PetscCall(PetscViewerHDF5WriteAttribute(view, NULL, "count", PETSC_INT, &nitem->msize));
+      PetscCheck(nitem->msize == 1, PETSC_COMM_SELF, PETSC_ERR_SUP, "Not coded for item size %" PetscInt_FMT " > 1", nitem->msize);
+      PetscCall(PetscViewerHDF5WriteAttribute(view, NULL, "help", PETSC_STRING, &nitem->help));
+      PetscCall(PetscViewerHDF5WriteAttribute(view, NULL, "value", nitem->dtype, ((char *)bag) + nitem->offset));
+      PetscCall(PetscViewerHDF5PopGroup(view));
+      nitem = nitem->next;
+    }
+    PetscCall(PetscViewerHDF5PopGroup(view));
+    PetscCall(PetscViewerHDF5PopGroup(view));
+#else
+    SETERRQ(PetscObjectComm((PetscObject)view), PETSC_ERR_SUP, "PETSc not configured with HDF5 support. Reconfigure using --download-hdf5");
+#endif
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -810,7 +833,7 @@ PetscErrorCode PetscBagViewFromOptions(PetscBag bag, PetscObject bobj, const cha
 @*/
 PetscErrorCode PetscBagLoad(PetscViewer view, PetscBag bag)
 {
-  PetscBool    isbinary;
+  PetscBool    isbinary, ishdf5;
   PetscInt     classid, bagcount, dtype, msize, offset, deprecatedbagsize;
   char         name[PETSC_BAG_NAME_LENGTH], help[PETSC_BAG_HELP_LENGTH], **list;
   PetscBagItem nitem;
@@ -824,42 +847,69 @@ PetscErrorCode PetscBagLoad(PetscViewer view, PetscBag bag)
   PetscCallMPI(MPI_Comm_compare(comm, bag->bagcomm, &flag));
   PetscCheck(flag == MPI_CONGRUENT || flag == MPI_IDENT, PETSC_COMM_SELF, PETSC_ERR_ARG_NOTSAMECOMM, "Different communicators in the viewer and bag");
   PetscCall(PetscObjectTypeCompare((PetscObject)view, PETSCVIEWERBINARY, &isbinary));
-  PetscCheck(isbinary, PETSC_COMM_SELF, PETSC_ERR_SUP, "No support for this viewer type");
+  PetscCall(PetscObjectTypeCompare((PetscObject)view, PETSCVIEWERHDF5, &ishdf5));
+  PetscCheck(isbinary || ishdf5, PETSC_COMM_SELF, PETSC_ERR_SUP, "No support for this viewer type");
 
-  PetscCall(PetscViewerBinaryRead(view, &classid, 1, NULL, PETSC_INT));
-  PetscCheck(classid == PETSC_BAG_FILE_CLASSID, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Not PetscBag next in binary file");
-  PetscCall(PetscViewerBinaryRead(view, &deprecatedbagsize, 1, NULL, PETSC_INT));
-  PetscCall(PetscViewerBinaryRead(view, &bagcount, 1, NULL, PETSC_INT));
-  PetscCheck(bagcount == bag->count, comm, PETSC_ERR_ARG_INCOMP, "Bag in file has different number of entries %d then passed in bag %d", (int)bagcount, (int)bag->count);
-  PetscCall(PetscViewerBinaryRead(view, bag->bagname, PETSC_BAG_NAME_LENGTH, NULL, PETSC_CHAR));
-  PetscCall(PetscViewerBinaryRead(view, bag->baghelp, PETSC_BAG_HELP_LENGTH, NULL, PETSC_CHAR));
+  if (isbinary) {
+    PetscCall(PetscViewerBinaryRead(view, &classid, 1, NULL, PETSC_INT));
+    PetscCheck(classid == PETSC_BAG_FILE_CLASSID, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Not PetscBag next in binary file");
+    PetscCall(PetscViewerBinaryRead(view, &deprecatedbagsize, 1, NULL, PETSC_INT));
+    PetscCall(PetscViewerBinaryRead(view, &bagcount, 1, NULL, PETSC_INT));
+    PetscCheck(bagcount == bag->count, comm, PETSC_ERR_ARG_INCOMP, "Bag in file has different number of entries %d then passed in bag %d", (int)bagcount, (int)bag->count);
+    PetscCall(PetscViewerBinaryRead(view, bag->bagname, PETSC_BAG_NAME_LENGTH, NULL, PETSC_CHAR));
+    PetscCall(PetscViewerBinaryRead(view, bag->baghelp, PETSC_BAG_HELP_LENGTH, NULL, PETSC_CHAR));
 
-  nitem = bag->bagitems;
-  for (PetscInt i = 0; i < bagcount; i++) {
-    PetscCall(PetscViewerBinaryRead(view, &offset, 1, NULL, PETSC_INT));
-    /* ignore the offset in the file */
-    PetscCall(PetscViewerBinaryRead(view, &dtype, 1, NULL, PETSC_INT));
-    PetscCall(PetscViewerBinaryRead(view, name, PETSC_BAG_NAME_LENGTH, NULL, PETSC_CHAR));
-    PetscCall(PetscViewerBinaryRead(view, help, PETSC_BAG_HELP_LENGTH, NULL, PETSC_CHAR));
-    PetscCall(PetscViewerBinaryRead(view, &msize, 1, NULL, PETSC_INT));
+    nitem = bag->bagitems;
+    for (PetscInt i = 0; i < bagcount; i++) {
+      PetscCall(PetscViewerBinaryRead(view, &offset, 1, NULL, PETSC_INT));
+      /* ignore the offset in the file */
+      PetscCall(PetscViewerBinaryRead(view, &dtype, 1, NULL, PETSC_INT));
+      PetscCall(PetscViewerBinaryRead(view, name, PETSC_BAG_NAME_LENGTH, NULL, PETSC_CHAR));
+      PetscCall(PetscViewerBinaryRead(view, help, PETSC_BAG_HELP_LENGTH, NULL, PETSC_CHAR));
+      PetscCall(PetscViewerBinaryRead(view, &msize, 1, NULL, PETSC_INT));
 
-    if (dtype == (PetscInt)PETSC_CHAR) {
-      PetscCall(PetscViewerBinaryRead(view, ((char *)bag) + nitem->offset, msize, NULL, PETSC_CHAR));
-    } else if (dtype == (PetscInt)PETSC_REAL) {
-      PetscCall(PetscViewerBinaryRead(view, ((char *)bag) + nitem->offset, msize, NULL, PETSC_REAL));
-    } else if (dtype == (PetscInt)PETSC_SCALAR) {
-      PetscCall(PetscViewerBinaryRead(view, ((char *)bag) + nitem->offset, 1, NULL, PETSC_SCALAR));
-    } else if (dtype == (PetscInt)PETSC_INT) {
-      PetscCall(PetscViewerBinaryRead(view, ((char *)bag) + nitem->offset, msize, NULL, PETSC_INT));
-    } else if (dtype == (PetscInt)PETSC_BOOL) {
-      PetscCall(PetscViewerBinaryRead(view, ((char *)bag) + nitem->offset, msize, NULL, PETSC_BOOL));
-    } else if (dtype == (PetscInt)PETSC_ENUM) {
-      PetscCall(PetscViewerBinaryRead(view, ((char *)bag) + nitem->offset, 1, NULL, PETSC_ENUM));
-      PetscCall(PetscViewerBinaryReadStringArray(view, &list));
-      /* don't need to save list because it is already registered in the bag */
-      PetscCall(PetscFree(list));
+      if (dtype == (PetscInt)PETSC_CHAR) {
+        PetscCall(PetscViewerBinaryRead(view, ((char *)bag) + nitem->offset, msize, NULL, PETSC_CHAR));
+      } else if (dtype == (PetscInt)PETSC_REAL) {
+        PetscCall(PetscViewerBinaryRead(view, ((char *)bag) + nitem->offset, msize, NULL, PETSC_REAL));
+      } else if (dtype == (PetscInt)PETSC_SCALAR) {
+        PetscCall(PetscViewerBinaryRead(view, ((char *)bag) + nitem->offset, 1, NULL, PETSC_SCALAR));
+      } else if (dtype == (PetscInt)PETSC_INT) {
+        PetscCall(PetscViewerBinaryRead(view, ((char *)bag) + nitem->offset, msize, NULL, PETSC_INT));
+      } else if (dtype == (PetscInt)PETSC_BOOL) {
+        PetscCall(PetscViewerBinaryRead(view, ((char *)bag) + nitem->offset, msize, NULL, PETSC_BOOL));
+      } else if (dtype == (PetscInt)PETSC_ENUM) {
+        PetscCall(PetscViewerBinaryRead(view, ((char *)bag) + nitem->offset, 1, NULL, PETSC_ENUM));
+        PetscCall(PetscViewerBinaryReadStringArray(view, &list));
+        /* don't need to save list because it is already registered in the bag */
+        PetscCall(PetscFree(list));
+      }
+      nitem = nitem->next;
     }
-    nitem = nitem->next;
+  } else if (ishdf5) {
+#if defined(PETSC_HAVE_HDF5)
+    PetscCall(PetscViewerHDF5PushGroup(view, "bags"));
+    PetscCall(PetscViewerHDF5PushGroup(view, bag->bagname));
+
+    PetscCall(PetscViewerHDF5ReadAttribute(view, NULL, "count", PETSC_INT, NULL, &bagcount));
+    PetscCall(PetscViewerHDF5ReadAttribute(view, NULL, "help", PETSC_STRING, NULL, &bag->baghelp));
+    PetscCheck(bagcount == bag->count, comm, PETSC_ERR_ARG_INCOMP, "Bag in file has different number of entries %d then passed in bag %d", (int)bagcount, (int)bag->count);
+    nitem = bag->bagitems;
+    for (PetscInt i = 0; i < bagcount; i++) {
+      PetscCall(PetscViewerHDF5PushGroup(view, nitem->name));
+      PetscCall(PetscViewerHDF5ReadAttribute(view, NULL, "count", PETSC_INT, NULL, &nitem->msize));
+      PetscCheck(nitem->msize == 1, PETSC_COMM_SELF, PETSC_ERR_SUP, "Not coded for item size %" PetscInt_FMT " > 1", nitem->msize);
+      PetscCall(PetscViewerHDF5ReadAttribute(view, NULL, "help", PETSC_STRING, NULL, &nitem->help));
+      PetscCall(PetscViewerHDF5ReadAttributeType(view, NULL, nitem->name, &nitem->dtype));
+      PetscCall(PetscViewerHDF5ReadAttribute(view, NULL, "value", nitem->dtype, NULL, ((char *)bag) + nitem->offset));
+      PetscCall(PetscViewerHDF5PopGroup(view));
+      nitem = nitem->next;
+    }
+    PetscCall(PetscViewerHDF5PopGroup(view));
+    PetscCall(PetscViewerHDF5PopGroup(view));
+#else
+    SETERRQ(PetscObjectComm((PetscObject)view), PETSC_ERR_SUP, "PETSc not configured with HDF5 support. Reconfigure using --download-hdf5");
+#endif
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
