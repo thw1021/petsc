@@ -161,7 +161,8 @@ static PetscErrorCode PCSetFromOptions_LSC(PC pc, PetscOptionItems *PetscOptions
   PetscOptionsHeadBegin(PetscOptionsObject, "LSC options");
   {
     PetscCall(PetscOptionsBool("-pc_lsc_commute", "Whether to commute the LSC preconditioner in the style of Olshanskii", "None", lsc->commute, &lsc->commute, NULL));
-    if (!lsc->commute) PetscCall(PetscOptionsBool("-pc_lsc_scale_diag", "Use diagonal of velocity block (A) for scaling", "None", lsc->scalediag, &lsc->scalediag, NULL));
+    PetscCall(PetscOptionsBool("-pc_lsc_scale_diag", "Whether to scale BBt products. Will use the inverse of the diagonal of Qscale or A if the former is not provided.", "None", lsc->scalediag, &lsc->scalediag, NULL));
+    PetscCheck(lsc->scalediag + lsc->commute < 2, PetscObjectComm((PetscObject)pc), PETSC_ERR_USER, "Diagonal based scaling is not used when doing a commuted LSC. Either do not ask for diagonal based scaling or use non-commuted LSC in the original style of Elman");
   }
   PetscOptionsHeadEnd();
   PetscFunctionReturn(PETSC_SUCCESS);
