@@ -452,7 +452,7 @@ PETSC_EXTERN PetscErrorCode TSSetTimeStep(TS, PetscReal);
 PETSC_EXTERN PetscErrorCode TSGetStepNumber(TS, PetscInt *);
 PETSC_EXTERN PetscErrorCode TSSetStepNumber(TS, PetscInt);
 
-/*J
+/*P
   TSRHSFunction - An `TS` explicit residual evaluation function
 
   Calling Sequence:
@@ -465,10 +465,10 @@ PETSC_EXTERN PetscErrorCode TSSetStepNumber(TS, PetscInt);
   Level: beginner
 
 .seealso: [](ch_ts), `TS`, `TSSetRHSFunction()`, `DMTSSetRHSFunction()`
-J*/
+P*/
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCode (*TSRHSFunction)(TS ts, PetscReal t, Vec u, Vec F, void *ctx);
 
-/*J
+/*P
   TSRHSJacobian - A `TS` Jacobian evaluation function
 
   Calling Sequence:
@@ -482,7 +482,7 @@ PETSC_EXTERN_TYPEDEF typedef PetscErrorCode (*TSRHSFunction)(TS ts, PetscReal t,
   Level: beginner
 
 .seealso: [](ch_ts), `TS`, `TSSetRHSJacobian()`, `DMTSSetRHSJacobian()`
-J*/
+P*/
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCode (*TSRHSJacobian)(TS ts, PetscReal t, Vec u, Mat Amat, Mat Pmat, void *ctx);
 PETSC_EXTERN_TYPEDEF typedef PetscErrorCode (*TSRHSJacobianP)(TS, PetscReal, Vec, Mat, void *);
 PETSC_EXTERN PetscErrorCode TSSetRHSFunction(TS, Vec, TSRHSFunction, void *);
