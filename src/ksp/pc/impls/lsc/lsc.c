@@ -59,7 +59,7 @@ static PetscErrorCode PCSetUp_LSC(PC pc)
     if (!L && Lp) L = Lp;
     else if (L && !Lp) Lp = L;
 
-    PetscCheck(Qscale, PetscObjectComm((PetscObject)pc), PETSC_ERR_USER, "The user must provide a Q matrix for LSC preconditioning when commuting");
+    PetscCheck(Qscale, PetscObjectComm((PetscObject)pc), PETSC_ERR_USER, "The user must provide a Qscale matrix for LSC preconditioning when commuting");
   } else {
     if (lsc->scale) {
       if (!Qscale) PetscCall(MatSchurComplementGetSubMatrices(pc->mat, NULL, &Qscale, NULL, NULL, NULL));
