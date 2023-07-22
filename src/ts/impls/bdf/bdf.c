@@ -433,7 +433,7 @@ static PetscErrorCode TSDestroy_BDF(TS ts)
 static PetscErrorCode TSSetUp_BDF(TS ts)
 {
   TS_BDF   *bdf = (TS_BDF *)ts->data;
-  size_t    n = PETSC_STATIC_ARRAY_LENGTH(bdf->work);
+  size_t    n   = PETSC_STATIC_ARRAY_LENGTH(bdf->work);
   PetscReal low, high, two = 2;
   PetscInt  cnt = 0;
 
