@@ -6463,7 +6463,9 @@ PetscErrorCode DMOutputSequenceLoad(DM dm, PetscViewer viewer, const char *name,
   PetscFunctionBegin;
   PetscValidHeaderSpecific(dm, DM_CLASSID, 1);
   PetscValidHeaderSpecific(viewer, PETSC_VIEWER_CLASSID, 2);
+  PetscValidLogicalCollectiveInt(dm, num, 4);
   PetscAssertPointer(val, 5);
+  PetscCheck(num >= 0, PetscObjectComm((PetscObject)dm), PETSC_ERR_ARG_OUTOFRANGE, "Sequence number must be non-negative: %" PetscInt_FMT, num);
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERHDF5, &ishdf5));
   if (ishdf5) {
 #if defined(PETSC_HAVE_HDF5)

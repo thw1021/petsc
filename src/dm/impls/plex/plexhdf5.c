@@ -200,7 +200,7 @@ static PetscErrorCode DMPlexGetHDF5Name_Private(DM dm, const char *name[])
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-static PetscErrorCode DMSequenceView_HDF5(DM dm, const char *seqname, PetscInt seqnum, PetscScalar value, PetscViewer viewer)
+PetscErrorCode DMSequenceView_HDF5(DM dm, const char *seqname, PetscInt seqnum, PetscScalar value, PetscViewer viewer)
 {
   Vec         stamp;
   PetscMPIInt rank;

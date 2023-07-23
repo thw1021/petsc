@@ -409,6 +409,7 @@ PETSC_EXTERN PetscErrorCode DMView_GLVis(DM, PetscViewer, PetscErrorCode (*)(DM,
 */
 
 #if defined(PETSC_HAVE_HDF5)
+PETSC_EXTERN PetscErrorCode DMSequenceView_HDF5(DM, const char *, PetscInt, PetscScalar, PetscViewer);
 PETSC_EXTERN PetscErrorCode DMSequenceLoad_HDF5_Internal(DM, const char *, PetscInt, PetscScalar *, PetscViewer);
 #endif
 

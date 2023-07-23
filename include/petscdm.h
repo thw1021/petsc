@@ -213,6 +213,7 @@ PETSC_EXTERN PetscErrorCode DMCreateDomainDecompositionScatters(DM, PetscInt, DM
 PETSC_EXTERN PetscErrorCode DMGetSubdofIS(DM, IS *);
 PETSC_EXTERN PetscErrorCode DMSetSubdofIS(DM, IS);
 PETSC_EXTERN PetscErrorCode DMCreateSubDMIS(DM, PetscInt, const PetscInt[], IS *);
+PETSC_EXTERN PetscErrorCode DMCreateSubDomainIS(DM, DM, IS *);
 PETSC_EXTERN PetscErrorCode DMVecNormField(DM, Vec, NormType, PetscReal[]);
 
 PETSC_EXTERN PetscErrorCode DMGetRefineLevel(DM, PetscInt *);
