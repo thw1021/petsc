@@ -91,6 +91,9 @@
 #define TSARKIMEX4      '4'
 #define TSARKIMEX5      '5'
 
+#define TSDIRKType character*(80)
+#define TSDIRK212      '212'
+
 #define TSROSWType character*(80)
 #define TSROSW2M          '2m'
 #define TSROSW2P          '2p'
