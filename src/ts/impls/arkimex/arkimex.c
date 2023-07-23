@@ -1,8 +1,8 @@
 /*
-  Code for timestepping with additive Runge-Kutta IMEX method
+  Code for timestepping with additive Runge-Kutta IMEX method or Diagonally Implicit Runge-Kutta methods.
 
   Notes:
-  The general system is written as
+  For ARK, the general system is written as
 
   F(t,U,Udot) = G(t,U)
 
@@ -13,6 +13,7 @@
 #include <petscdm.h>
 
 static TSARKIMEXType  TSARKIMEXDefault = TSARKIMEX3;
+static TSDIRKType     TSDIRKDefault    = TSDIRK212;
 static PetscBool      TSARKIMEXRegisterAllCalled;
 static PetscBool      TSARKIMEXPackageInitialized;
 static PetscErrorCode TSExtrapolate_ARKIMEX(TS, PetscReal, Vec);
@@ -20,11 +21,12 @@ static PetscErrorCode TSExtrapolate_ARKIMEX(TS, PetscReal, Vec);
 typedef struct _ARKTableau *ARKTableau;
 struct _ARKTableau {
   char      *name;
+  PetscBool  additive;             /* If False, it is a DIRK method */
   PetscInt   order;                /* Classical approximation order of the method */
   PetscInt   s;                    /* Number of stages */
-  PetscBool  stiffly_accurate;     /* The implicit part is stiffly accurate*/
-  PetscBool  FSAL_implicit;        /* The implicit part is FSAL*/
-  PetscBool  explicit_first_stage; /* The implicit part has an explicit first stage*/
+  PetscBool  stiffly_accurate;     /* The implicit part is stiffly accurate */
+  PetscBool  FSAL_implicit;        /* The implicit part is FSAL */
+  PetscBool  explicit_first_stage; /* The implicit part has an explicit first stage */
   PetscInt   pinterp;              /* Interpolation order */
   PetscReal *At, *bt, *ct;         /* Stiff tableau */
   PetscReal *A, *b, *c;            /* Non-stiff tableau */
@@ -62,6 +64,7 @@ typedef struct {
   Vec *VecsSensiTemp;  /* Vectors to be multiplied with Jacobian transpose */
   Vec *VecsSensiPTemp; /* Temporary Vectors to store JacobianP-transpose-vector product */
 } TS_ARKIMEX;
+
 /*MC
      TSARKIMEXARS122 - Second order ARK IMEX scheme.
 
@@ -73,10 +76,11 @@ typedef struct {
      Level: advanced
 
      References:
-.    * -  U. Ascher, S. Ruuth, R. J. Spiteri, Implicit explicit Runge Kutta methods for time dependent Partial Differential Equations. Appl. Numer. Math. 25, (1997).
+.    * - U. Ascher, S. Ruuth, R. J. Spiteri, Implicit explicit Runge Kutta methods for time dependent Partial Differential Equations. Appl. Numer. Math. 25, (1997).
 
 .seealso: [](ch_ts), `TSARKIMEX`, `TSARKIMEXType`, `TSARKIMEXSetType()`
 M*/
+
 /*MC
      TSARKIMEXA2 - Second order ARK IMEX scheme with A-stable implicit part.
 
@@ -89,6 +93,7 @@ M*/
 
 .seealso: [](ch_ts), `TSARKIMEX`, `TSARKIMEXType`, `TSARKIMEXSetType()`
 M*/
+
 /*MC
      TSARKIMEXL2 - Second order ARK IMEX scheme with L-stable implicit part.
 
@@ -100,10 +105,11 @@ M*/
      Level: advanced
 
     References:
-.   * -  L. Pareschi, G. Russo, Implicit Explicit Runge Kutta schemes and applications to hyperbolic systems with relaxations. Journal of Scientific Computing Volume: 25, Issue: 1, October, 2005.
+.   * - L. Pareschi, G. Russo, Implicit Explicit Runge Kutta schemes and applications to hyperbolic systems with relaxations. Journal of Scientific Computing Volume: 25, Issue: 1, October, 2005.
 
 .seealso: [](ch_ts), `TSARKIMEX`, `TSARKIMEXType`, `TSARKIMEXSetType()`
 M*/
+
 /*MC
      TSARKIMEX1BEE - First order backward Euler represented as an ARK IMEX scheme with extrapolation as error estimator. This is a 3-stage method.
 
@@ -116,6 +122,7 @@ M*/
 
 .seealso: [](ch_ts), `TSARKIMEX`, `TSARKIMEXType`, `TSARKIMEXSetType()`
 M*/
+
 /*MC
      TSARKIMEX2C - Second order ARK IMEX scheme with L-stable implicit part.
 
@@ -128,6 +135,7 @@ M*/
 
 .seealso: [](ch_ts), `TSARKIMEX`, `TSARKIMEXType`, `TSARKIMEXSetType()`
 M*/
+
 /*MC
      TSARKIMEX2D - Second order ARK IMEX scheme with L-stable implicit part.
 
@@ -140,6 +148,7 @@ M*/
 
 .seealso: [](ch_ts), `TSARKIMEX`, `TSARKIMEXType`, `TSARKIMEXSetType()`
 M*/
+
 /*MC
      TSARKIMEX2E - Second order ARK IMEX scheme with L-stable implicit part.
 
@@ -152,13 +161,14 @@ M*/
 
 .seealso: [](ch_ts), `TSARKIMEX`, `TSARKIMEXType`, `TSARKIMEXSetType()`
 M*/
+
 /*MC
      TSARKIMEXPRSSP2 - Second order SSP ARK IMEX scheme.
 
      This method has three implicit stages.
 
      References:
-.    * -  L. Pareschi, G. Russo, Implicit Explicit Runge Kutta schemes and applications to hyperbolic systems with relaxations. Journal of Scientific Computing Volume: 25, Issue: 1, October, 2005.
+.    * - L. Pareschi, G. Russo, Implicit Explicit Runge Kutta schemes and applications to hyperbolic systems with relaxations. Journal of Scientific Computing Volume: 25, Issue: 1, October, 2005.
 
      This method is referred to as SSP2-(3,3,2) in https://arxiv.org/abs/1110.4375
 
@@ -169,6 +179,7 @@ M*/
 
 .seealso: [](ch_ts), `TSARKIMEX`, `TSARKIMEXType`, `TSARKIMEXSetType()`
 M*/
+
 /*MC
      TSARKIMEX3 - Third order ARK IMEX scheme with L-stable implicit part.
 
@@ -180,10 +191,11 @@ M*/
      Level: advanced
 
      References:
-.    * -  Kennedy and Carpenter 2003.
+.    * - Kennedy and Carpenter 2003.
 
 .seealso: [](ch_ts), `TSARKIMEX`, `TSARKIMEXType`, `TSARKIMEXSetType()`
 M*/
+
 /*MC
      TSARKIMEXARS443 - Third order ARK IMEX scheme.
 
@@ -195,11 +207,12 @@ M*/
      Level: advanced
 
      References:
-+    * -  U. Ascher, S. Ruuth, R. J. Spiteri, Implicit explicit Runge Kutta methods for time dependent Partial Differential Equations. Appl. Numer. Math. 25, (1997).
--    * -  This method is referred to as ARS(4,4,3) in https://arxiv.org/abs/1110.4375
++    * - U. Ascher, S. Ruuth, R. J. Spiteri, Implicit explicit Runge Kutta methods for time dependent Partial Differential Equations. Appl. Numer. Math. 25, (1997).
+-    * - This method is referred to as ARS(4,4,3) in https://arxiv.org/abs/1110.4375
 
 .seealso: [](ch_ts), `TSARKIMEX`, `TSARKIMEXType`, `TSARKIMEXSetType()`
 M*/
+
 /*MC
      TSARKIMEXBPR3 - Third order ARK IMEX scheme.
 
@@ -215,6 +228,7 @@ M*/
 
 .seealso: [](ch_ts), `TSARKIMEX`, `TSARKIMEXType`, `TSARKIMEXSetType()`
 M*/
+
 /*MC
      TSARKIMEX4 - Fourth order ARK IMEX scheme with L-stable implicit part.
 
@@ -230,6 +244,7 @@ M*/
 
 .seealso: [](ch_ts), `TSARKIMEX`, `TSARKIMEXType`, `TSARKIMEXSetType()`
 M*/
+
 /*MC
      TSARKIMEX5 - Fifth order ARK IMEX scheme with L-stable implicit part.
 
@@ -246,6 +261,17 @@ M*/
 .seealso: [](ch_ts), `TSARKIMEX`, `TSARKIMEXType`, `TSARKIMEXSetType()`
 M*/
 
+static PetscErrorCode TSHasRHSFunction(TS ts, PetscBool *has)
+{
+  TSRHSFunction func;
+
+  PetscFunctionBegin;
+  *has = PETSC_FALSE;
+  PetscCall(DMTSGetRHSFunction(ts->dm, &func, NULL));
+  if (func) *has = PETSC_TRUE;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
 /*@C
   TSARKIMEXRegisterAll - Registers all of the additive Runge-Kutta implicit-explicit methods in `TSARKIMEX`
 
@@ -261,154 +287,290 @@ PetscErrorCode TSARKIMEXRegisterAll(void)
   if (TSARKIMEXRegisterAllCalled) PetscFunctionReturn(PETSC_SUCCESS);
   TSARKIMEXRegisterAllCalled = PETSC_TRUE;
 
+#define RC  PetscRealConstant
+#define s2  RC(1.414213562373095048802)  /* PetscSqrtReal((PetscReal)2.0) */
+#define us2 RC(0.2928932188134524755992) /* 1.0-1.0/PetscSqrtReal((PetscReal)2.0); */
+
+  /* Diagonally implicit methods */
   {
-    const PetscReal A[3][3] =
-      {
-        {0.0, 0.0, 0.0},
-        {0.0, 0.0, 0.0},
-        {0.0, 0.5, 0.0}
-    },
-                    At[3][3] = {{1.0, 0.0, 0.0}, {0.0, 0.5, 0.0}, {0.0, 0.5, 0.5}}, b[3] = {0.0, 0.5, 0.5}, bembedt[3] = {1.0, 0.0, 0.0};
+    const PetscReal A[2][2] = {
+      {RC(1.0),  RC(0.0)},
+      {RC(-1.0), RC(1.0)}
+    };
+    const PetscReal b[2]      = {RC(0.5), RC(0.5)};
+    const PetscReal bembed[2] = {RC(1.0), RC(0.0)};
+    PetscCall(TSDIRKRegister(TSDIRK212, 2, 2, &A[0][0], b, NULL, bembed, 1, b));
+  }
+
+  {
+    const PetscReal A[6][6] = {
+      {RC(3.337723370858640e-01),  RC(0.0),                    RC(0.0),                    RC(0.0),                    RC(0.0),                    RC(0.0)                  },
+      {RC(-2.690151875162680e-01), RC(5.763961719126690e-01),  RC(0.0),                    RC(0.0),                    RC(0.0),                    RC(0.0)                  },
+      {RC(6.465901794486330e-01),  RC(-7.596332998405290e-01), RC(1.953520909703380e-01),  RC(0.0),                    RC(0.0),                    RC(0.0)                  },
+      {RC(-2.097669828629370e+00), RC(2.883892723603330e+00),  RC(-1.455782151279380e-01), RC(2.480362499547490e-01),  RC(0.0),                    RC(0.0)                  },
+      {RC(2.420906658080530e+00),  RC(-3.267292599063710e+00), RC(6.936209681760170e-01),  RC(-1.659762595936020e-01), RC(8.224302221809330e-01),  RC(0.0)                  },
+      {RC(-3.194732205134400e+00), RC(3.979558967265820e+00),  RC(-8.506939116519650e-01), RC(1.904565908702810e-01),  RC(-7.514584732620520e-01), RC(8.134345159561560e-01)}
+    };
+    const PetscReal b[6] = {RC(5.112077677339720e-02), RC(-1.183679576669420e-01), RC(1.469625116542270e-01), RC(2.744717150475150e-01), RC(4.503634617019080e-01), RC(1.954494924898950e-01)};
+    PetscCall(TSDIRKRegister(TSDIRK606A, 6, 6, &A[0][0], b, NULL, NULL, 1, b));
+  }
+
+  /* Additive methods */
+  {
+    const PetscReal A[3][3] = {
+      {0.0, 0.0, 0.0},
+      {0.0, 0.0, 0.0},
+      {0.0, 0.5, 0.0}
+    };
+    const PetscReal At[3][3] = {
+      {1.0, 0.0, 0.0},
+      {0.0, 0.5, 0.0},
+      {0.0, 0.5, 0.5}
+    };
+    const PetscReal b[3]       = {0.0, 0.5, 0.5};
+    const PetscReal bembedt[3] = {1.0, 0.0, 0.0};
     PetscCall(TSARKIMEXRegister(TSARKIMEX1BEE, 2, 3, &At[0][0], b, NULL, &A[0][0], b, NULL, bembedt, bembedt, 1, b, NULL));
   }
   {
-    const PetscReal A[2][2] =
-      {
-        {0.0, 0.0},
-        {0.5, 0.0}
-    },
-                    At[2][2] = {{0.0, 0.0}, {0.0, 0.5}}, b[2] = {0.0, 1.0}, bembedt[2] = {0.5, 0.5};
-    /* binterpt[2][2] = {{1.0,-1.0},{0.0,1.0}};  second order dense output has poor stability properties and hence it is not currently in use*/
+    const PetscReal A[2][2] = {
+      {0.0, 0.0},
+      {0.5, 0.0}
+    };
+    const PetscReal At[2][2] = {
+      {0.0, 0.0},
+      {0.0, 0.5}
+    };
+    const PetscReal b[2]       = {0.0, 1.0};
+    const PetscReal bembedt[2] = {0.5, 0.5};
+    /* binterpt[2][2] = {{1.0,-1.0},{0.0,1.0}};  second order dense output has poor stability properties and hence it is not currently in use */
     PetscCall(TSARKIMEXRegister(TSARKIMEXARS122, 2, 2, &At[0][0], b, NULL, &A[0][0], b, NULL, bembedt, bembedt, 1, b, NULL));
   }
   {
-    const PetscReal A[2][2] =
-      {
-        {0.0, 0.0},
-        {1.0, 0.0}
-    },
-                    At[2][2] = {{0.0, 0.0}, {0.5, 0.5}}, b[2] = {0.5, 0.5}, bembedt[2] = {0.0, 1.0};
-    /* binterpt[2][2] = {{1.0,-0.5},{0.0,0.5}}  second order dense output has poor stability properties and hence it is not currently in use*/
+    const PetscReal A[2][2] = {
+      {0.0, 0.0},
+      {1.0, 0.0}
+    };
+    const PetscReal At[2][2] = {
+      {0.0, 0.0},
+      {0.5, 0.5}
+    };
+    const PetscReal b[2]       = {0.5, 0.5};
+    const PetscReal bembedt[2] = {0.0, 1.0};
+    /* binterpt[2][2] = {{1.0,-0.5},{0.0,0.5}}  second order dense output has poor stability properties and hence it is not currently in use */
     PetscCall(TSARKIMEXRegister(TSARKIMEXA2, 2, 2, &At[0][0], b, NULL, &A[0][0], b, NULL, bembedt, bembedt, 1, b, NULL));
   }
   {
-    /* const PetscReal us2 = 1.0-1.0/PetscSqrtReal((PetscReal)2.0);    Direct evaluation: 0.2928932188134524755992. Used below to ensure all values are available at compile time   */
-    const PetscReal A[2][2] =
-      {
-        {0.0, 0.0},
-        {1.0, 0.0}
-    },
-                    At[2][2] = {{0.2928932188134524755992, 0.0}, {1.0 - 2.0 * 0.2928932188134524755992, 0.2928932188134524755992}}, b[2] = {0.5, 0.5}, bembedt[2] = {0.0, 1.0}, binterpt[2][2] = {{(0.2928932188134524755992 - 1.0) / (2.0 * 0.2928932188134524755992 - 1.0), -1 / (2.0 * (1.0 - 2.0 * 0.2928932188134524755992))}, {1 - (0.2928932188134524755992 - 1.0) / (2.0 * 0.2928932188134524755992 - 1.0), -1 / (2.0 * (1.0 - 2.0 * 0.2928932188134524755992))}}, binterp[2][2] = {{1.0, -0.5}, {0.0, 0.5}};
+    const PetscReal A[2][2] = {
+      {0.0, 0.0},
+      {1.0, 0.0}
+    };
+    const PetscReal At[2][2] = {
+      {us2,             0.0},
+      {1.0 - 2.0 * us2, us2}
+    };
+    const PetscReal b[2]           = {0.5, 0.5};
+    const PetscReal bembedt[2]     = {0.0, 1.0};
+    const PetscReal binterpt[2][2] = {
+      {(us2 - 1.0) / (2.0 * us2 - 1.0),     -1 / (2.0 * (1.0 - 2.0 * us2))},
+      {1 - (us2 - 1.0) / (2.0 * us2 - 1.0), -1 / (2.0 * (1.0 - 2.0 * us2))}
+    };
+    const PetscReal binterp[2][2] = {
+      {1.0, -0.5},
+      {0.0, 0.5 }
+    };
     PetscCall(TSARKIMEXRegister(TSARKIMEXL2, 2, 2, &At[0][0], b, NULL, &A[0][0], b, NULL, bembedt, bembedt, 2, binterpt[0], binterp[0]));
   }
   {
-    /* const PetscReal s2 = PetscSqrtReal((PetscReal)2.0),  Direct evaluation: 1.414213562373095048802. Used below to ensure all values are available at compile time   */
-    const PetscReal A[3][3] =
-      {
-        {0,                           0,   0},
-        {2 - 1.414213562373095048802, 0,   0},
-        {0.5,                         0.5, 0}
-    },
-                    At[3][3] = {{0, 0, 0}, {1 - 1 / 1.414213562373095048802, 1 - 1 / 1.414213562373095048802, 0}, {1 / (2 * 1.414213562373095048802), 1 / (2 * 1.414213562373095048802), 1 - 1 / 1.414213562373095048802}}, bembedt[3] = {(4. - 1.414213562373095048802) / 8., (4. - 1.414213562373095048802) / 8., 1 / (2. * 1.414213562373095048802)}, binterpt[3][2] = {{1.0 / 1.414213562373095048802, -1.0 / (2.0 * 1.414213562373095048802)}, {1.0 / 1.414213562373095048802, -1.0 / (2.0 * 1.414213562373095048802)}, {1.0 - 1.414213562373095048802, 1.0 / 1.414213562373095048802}};
+    const PetscReal A[3][3] = {
+      {0,      0,   0},
+      {2 - s2, 0,   0},
+      {0.5,    0.5, 0}
+    };
+    const PetscReal At[3][3] = {
+      {0,            0,            0         },
+      {1 - 1 / s2,   1 - 1 / s2,   0         },
+      {1 / (2 * s2), 1 / (2 * s2), 1 - 1 / s2}
+    };
+    const PetscReal bembedt[3]     = {(4. - s2) / 8., (4. - s2) / 8., 1 / (2. * s2)};
+    const PetscReal binterpt[3][2] = {
+      {1.0 / s2, -1.0 / (2.0 * s2)},
+      {1.0 / s2, -1.0 / (2.0 * s2)},
+      {1.0 - s2, 1.0 / s2         }
+    };
     PetscCall(TSARKIMEXRegister(TSARKIMEX2C, 2, 3, &At[0][0], NULL, NULL, &A[0][0], NULL, NULL, bembedt, bembedt, 2, binterpt[0], NULL));
   }
   {
-    /* const PetscReal s2 = PetscSqrtReal((PetscReal)2.0),  Direct evaluation: 1.414213562373095048802. Used below to ensure all values are available at compile time   */
-    const PetscReal A[3][3] =
-      {
-        {0,                           0,    0},
-        {2 - 1.414213562373095048802, 0,    0},
-        {0.75,                        0.25, 0}
-    },
-                    At[3][3] = {{0, 0, 0}, {1 - 1 / 1.414213562373095048802, 1 - 1 / 1.414213562373095048802, 0}, {1 / (2 * 1.414213562373095048802), 1 / (2 * 1.414213562373095048802), 1 - 1 / 1.414213562373095048802}}, bembedt[3] = {(4. - 1.414213562373095048802) / 8., (4. - 1.414213562373095048802) / 8., 1 / (2. * 1.414213562373095048802)}, binterpt[3][2] = {{1.0 / 1.414213562373095048802, -1.0 / (2.0 * 1.414213562373095048802)}, {1.0 / 1.414213562373095048802, -1.0 / (2.0 * 1.414213562373095048802)}, {1.0 - 1.414213562373095048802, 1.0 / 1.414213562373095048802}};
+    const PetscReal A[3][3] = {
+      {0,      0,    0},
+      {2 - s2, 0,    0},
+      {0.75,   0.25, 0}
+    };
+    const PetscReal At[3][3] = {
+      {0,            0,            0         },
+      {1 - 1 / s2,   1 - 1 / s2,   0         },
+      {1 / (2 * s2), 1 / (2 * s2), 1 - 1 / s2}
+    };
+    const PetscReal bembedt[3]     = {(4. - s2) / 8., (4. - s2) / 8., 1 / (2. * s2)};
+    const PetscReal binterpt[3][2] = {
+      {1.0 / s2, -1.0 / (2.0 * s2)},
+      {1.0 / s2, -1.0 / (2.0 * s2)},
+      {1.0 - s2, 1.0 / s2         }
+    };
     PetscCall(TSARKIMEXRegister(TSARKIMEX2D, 2, 3, &At[0][0], NULL, NULL, &A[0][0], NULL, NULL, bembedt, bembedt, 2, binterpt[0], NULL));
   }
   { /* Optimal for linear implicit part */
-    /* const PetscReal s2 = PetscSqrtReal((PetscReal)2.0),  Direct evaluation: 1.414213562373095048802. Used below to ensure all values are available at compile time   */
-    const PetscReal A[3][3] =
-      {
-        {0,                                     0,                                     0},
-        {2 - 1.414213562373095048802,           0,                                     0},
-        {(3 - 2 * 1.414213562373095048802) / 6, (3 + 2 * 1.414213562373095048802) / 6, 0}
-    },
-                    At[3][3] = {{0, 0, 0}, {1 - 1 / 1.414213562373095048802, 1 - 1 / 1.414213562373095048802, 0}, {1 / (2 * 1.414213562373095048802), 1 / (2 * 1.414213562373095048802), 1 - 1 / 1.414213562373095048802}}, bembedt[3] = {(4. - 1.414213562373095048802) / 8., (4. - 1.414213562373095048802) / 8., 1 / (2. * 1.414213562373095048802)}, binterpt[3][2] = {{1.0 / 1.414213562373095048802, -1.0 / (2.0 * 1.414213562373095048802)}, {1.0 / 1.414213562373095048802, -1.0 / (2.0 * 1.414213562373095048802)}, {1.0 - 1.414213562373095048802, 1.0 / 1.414213562373095048802}};
+    const PetscReal A[3][3] = {
+      {0,                0,                0},
+      {2 - s2,           0,                0},
+      {(3 - 2 * s2) / 6, (3 + 2 * s2) / 6, 0}
+    };
+    const PetscReal At[3][3] = {
+      {0,            0,            0         },
+      {1 - 1 / s2,   1 - 1 / s2,   0         },
+      {1 / (2 * s2), 1 / (2 * s2), 1 - 1 / s2}
+    };
+    const PetscReal bembedt[3]     = {(4. - s2) / 8., (4. - s2) / 8., 1 / (2. * s2)};
+    const PetscReal binterpt[3][2] = {
+      {1.0 / s2, -1.0 / (2.0 * s2)},
+      {1.0 / s2, -1.0 / (2.0 * s2)},
+      {1.0 - s2, 1.0 / s2         }
+    };
     PetscCall(TSARKIMEXRegister(TSARKIMEX2E, 2, 3, &At[0][0], NULL, NULL, &A[0][0], NULL, NULL, bembedt, bembedt, 2, binterpt[0], NULL));
   }
   { /* Optimal for linear implicit part */
-    const PetscReal A[3][3] =
-      {
-        {0,   0,   0},
-        {0.5, 0,   0},
-        {0.5, 0.5, 0}
-    },
-                    At[3][3] = {{0.25, 0, 0}, {0, 0.25, 0}, {1. / 3, 1. / 3, 1. / 3}};
+    const PetscReal A[3][3] = {
+      {0,   0,   0},
+      {0.5, 0,   0},
+      {0.5, 0.5, 0}
+    };
+    const PetscReal At[3][3] = {
+      {0.25,   0,      0     },
+      {0,      0.25,   0     },
+      {1. / 3, 1. / 3, 1. / 3}
+    };
     PetscCall(TSARKIMEXRegister(TSARKIMEXPRSSP2, 2, 3, &At[0][0], NULL, NULL, &A[0][0], NULL, NULL, NULL, NULL, 0, NULL, NULL));
   }
   {
-    const PetscReal A[4][4] =
-      {
-        {0,                                0,                                0,                                 0},
-        {1767732205903. / 2027836641118.,  0,                                0,                                 0},
-        {5535828885825. / 10492691773637., 788022342437. / 10882634858940.,  0,                                 0},
-        {6485989280629. / 16251701735622., -4246266847089. / 9704473918619., 10755448449292. / 10357097424841., 0}
-    },
-                    At[4][4] = {{0, 0, 0, 0}, {1767732205903. / 4055673282236., 1767732205903. / 4055673282236., 0, 0}, {2746238789719. / 10658868560708., -640167445237. / 6845629431997., 1767732205903. / 4055673282236., 0}, {1471266399579. / 7840856788654., -4482444167858. / 7529755066697., 11266239266428. / 11593286722821., 1767732205903. / 4055673282236.}}, bembedt[4] = {2756255671327. / 12835298489170., -10771552573575. / 22201958757719., 9247589265047. / 10645013368117., 2193209047091. / 5459859503100.}, binterpt[4][2] = {{4655552711362. / 22874653954995., -215264564351. / 13552729205753.}, {-18682724506714. / 9892148508045., 17870216137069. / 13817060693119.}, {34259539580243. / 13192909600954., -28141676662227. / 17317692491321.}, {584795268549. / 6622622206610., 2508943948391. / 7218656332882.}};
+    const PetscReal A[4][4] = {
+      {0,                                0,                                0,                                 0},
+      {1767732205903. / 2027836641118.,  0,                                0,                                 0},
+      {5535828885825. / 10492691773637., 788022342437. / 10882634858940.,  0,                                 0},
+      {6485989280629. / 16251701735622., -4246266847089. / 9704473918619., 10755448449292. / 10357097424841., 0}
+    };
+    const PetscReal At[4][4] = {
+      {0,                                0,                                0,                                 0                              },
+      {1767732205903. / 4055673282236.,  1767732205903. / 4055673282236.,  0,                                 0                              },
+      {2746238789719. / 10658868560708., -640167445237. / 6845629431997.,  1767732205903. / 4055673282236.,   0                              },
+      {1471266399579. / 7840856788654.,  -4482444167858. / 7529755066697., 11266239266428. / 11593286722821., 1767732205903. / 4055673282236.}
+    };
+    const PetscReal bembedt[4]     = {2756255671327. / 12835298489170., -10771552573575. / 22201958757719., 9247589265047. / 10645013368117., 2193209047091. / 5459859503100.};
+    const PetscReal binterpt[4][2] = {
+      {4655552711362. / 22874653954995.,  -215264564351. / 13552729205753.  },
+      {-18682724506714. / 9892148508045., 17870216137069. / 13817060693119. },
+      {34259539580243. / 13192909600954., -28141676662227. / 17317692491321.},
+      {584795268549. / 6622622206610.,    2508943948391. / 7218656332882.   }
+    };
     PetscCall(TSARKIMEXRegister(TSARKIMEX3, 3, 4, &At[0][0], NULL, NULL, &A[0][0], NULL, NULL, bembedt, bembedt, 2, binterpt[0], NULL));
   }
   {
-    const PetscReal A[5][5] =
-      {
-        {0,        0,       0,      0,       0},
-        {1. / 2,   0,       0,      0,       0},
-        {11. / 18, 1. / 18, 0,      0,       0},
-        {5. / 6,   -5. / 6, .5,     0,       0},
-        {1. / 4,   7. / 4,  3. / 4, -7. / 4, 0}
-    },
-                    At[5][5] = {{0, 0, 0, 0, 0}, {0, 1. / 2, 0, 0, 0}, {0, 1. / 6, 1. / 2, 0, 0}, {0, -1. / 2, 1. / 2, 1. / 2, 0}, {0, 3. / 2, -3. / 2, 1. / 2, 1. / 2}}, *bembedt = NULL;
-    PetscCall(TSARKIMEXRegister(TSARKIMEXARS443, 3, 5, &At[0][0], NULL, NULL, &A[0][0], NULL, NULL, bembedt, bembedt, 0, NULL, NULL));
+    const PetscReal A[5][5] = {
+      {0,        0,       0,      0,       0},
+      {1. / 2,   0,       0,      0,       0},
+      {11. / 18, 1. / 18, 0,      0,       0},
+      {5. / 6,   -5. / 6, .5,     0,       0},
+      {1. / 4,   7. / 4,  3. / 4, -7. / 4, 0}
+    };
+    const PetscReal At[5][5] = {
+      {0, 0,       0,       0,      0     },
+      {0, 1. / 2,  0,       0,      0     },
+      {0, 1. / 6,  1. / 2,  0,      0     },
+      {0, -1. / 2, 1. / 2,  1. / 2, 0     },
+      {0, 3. / 2,  -3. / 2, 1. / 2, 1. / 2}
+    };
+    PetscCall(TSARKIMEXRegister(TSARKIMEXARS443, 3, 5, &At[0][0], NULL, NULL, &A[0][0], NULL, NULL, NULL, NULL, 0, NULL, NULL));
   }
   {
-    const PetscReal A[5][5] =
-      {
-        {0,      0,      0,      0, 0},
-        {1,      0,      0,      0, 0},
-        {4. / 9, 2. / 9, 0,      0, 0},
-        {1. / 4, 0,      3. / 4, 0, 0},
-        {1. / 4, 0,      3. / 5, 0, 0}
-    },
-                    At[5][5] = {{0, 0, 0, 0, 0}, {.5, .5, 0, 0, 0}, {5. / 18, -1. / 9, .5, 0, 0}, {.5, 0, 0, .5, 0}, {.25, 0, .75, -.5, .5}}, *bembedt = NULL;
-    PetscCall(TSARKIMEXRegister(TSARKIMEXBPR3, 3, 5, &At[0][0], NULL, NULL, &A[0][0], NULL, NULL, bembedt, bembedt, 0, NULL, NULL));
+    const PetscReal A[5][5] = {
+      {0,      0,      0,      0, 0},
+      {1,      0,      0,      0, 0},
+      {4. / 9, 2. / 9, 0,      0, 0},
+      {1. / 4, 0,      3. / 4, 0, 0},
+      {1. / 4, 0,      3. / 5, 0, 0}
+    };
+    const PetscReal At[5][5] = {
+      {0,       0,       0,   0,   0 },
+      {.5,      .5,      0,   0,   0 },
+      {5. / 18, -1. / 9, .5,  0,   0 },
+      {.5,      0,       0,   .5,  0 },
+      {.25,     0,       .75, -.5, .5}
+    };
+    PetscCall(TSARKIMEXRegister(TSARKIMEXBPR3, 3, 5, &At[0][0], NULL, NULL, &A[0][0], NULL, NULL, NULL, NULL, 0, NULL, NULL));
   }
   {
-    const PetscReal A[6][6] =
-      {
-        {0,                               0,                                 0,                                 0,                                0,              0},
-        {1. / 2,                          0,                                 0,                                 0,                                0,              0},
-        {13861. / 62500.,                 6889. / 62500.,                    0,                                 0,                                0,              0},
-        {-116923316275. / 2393684061468., -2731218467317. / 15368042101831., 9408046702089. / 11113171139209.,  0,                                0,              0},
-        {-451086348788. / 2902428689909., -2682348792572. / 7519795681897.,  12662868775082. / 11960479115383., 3355817975965. / 11060851509271., 0,              0},
-        {647845179188. / 3216320057751.,  73281519250. / 8382639484533.,     552539513391. / 3454668386233.,    3354512671639. / 8306763924573.,  4040. / 17871., 0}
-    },
-                    At[6][6] = {{0, 0, 0, 0, 0, 0}, {1. / 4, 1. / 4, 0, 0, 0, 0}, {8611. / 62500., -1743. / 31250., 1. / 4, 0, 0, 0}, {5012029. / 34652500., -654441. / 2922500., 174375. / 388108., 1. / 4, 0, 0}, {15267082809. / 155376265600., -71443401. / 120774400., 730878875. / 902184768., 2285395. / 8070912., 1. / 4, 0}, {82889. / 524892., 0, 15625. / 83664., 69875. / 102672., -2260. / 8211, 1. / 4}}, bembedt[6] = {4586570599. / 29645900160., 0, 178811875. / 945068544., 814220225. / 1159782912., -3700637. / 11593932., 61727. / 225920.}, binterpt[6][3] = {{6943876665148. / 7220017795957., -54480133. / 30881146., 6818779379841. / 7100303317025.},  {0, 0, 0},
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    {7640104374378. / 9702883013639., -11436875. / 14766696., 2173542590792. / 12501825683035.}, {-20649996744609. / 7521556579894., 174696575. / 18121608., -31592104683404. / 5083833661969.},
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    {8854892464581. / 2390941311638., -12120380. / 966161., 61146701046299. / 7138195549469.},   {-11397109935349. / 6675773540249., 3843. / 706., -17219254887155. / 4939391667607.}};
+    const PetscReal A[6][6] = {
+      {0,                               0,                                 0,                                 0,                                0,              0},
+      {1. / 2,                          0,                                 0,                                 0,                                0,              0},
+      {13861. / 62500.,                 6889. / 62500.,                    0,                                 0,                                0,              0},
+      {-116923316275. / 2393684061468., -2731218467317. / 15368042101831., 9408046702089. / 11113171139209.,  0,                                0,              0},
+      {-451086348788. / 2902428689909., -2682348792572. / 7519795681897.,  12662868775082. / 11960479115383., 3355817975965. / 11060851509271., 0,              0},
+      {647845179188. / 3216320057751.,  73281519250. / 8382639484533.,     552539513391. / 3454668386233.,    3354512671639. / 8306763924573.,  4040. / 17871., 0}
+    };
+    const PetscReal At[6][6] = {
+      {0,                            0,                       0,                       0,                   0,             0     },
+      {1. / 4,                       1. / 4,                  0,                       0,                   0,             0     },
+      {8611. / 62500.,               -1743. / 31250.,         1. / 4,                  0,                   0,             0     },
+      {5012029. / 34652500.,         -654441. / 2922500.,     174375. / 388108.,       1. / 4,              0,             0     },
+      {15267082809. / 155376265600., -71443401. / 120774400., 730878875. / 902184768., 2285395. / 8070912., 1. / 4,        0     },
+      {82889. / 524892.,             0,                       15625. / 83664.,         69875. / 102672.,    -2260. / 8211, 1. / 4}
+    };
+    const PetscReal bembedt[6]     = {4586570599. / 29645900160., 0, 178811875. / 945068544., 814220225. / 1159782912., -3700637. / 11593932., 61727. / 225920.};
+    const PetscReal binterpt[6][3] = {
+      {6943876665148. / 7220017795957.,   -54480133. / 30881146., 6818779379841. / 7100303317025.  },
+      {0,                                 0,                      0                                },
+      {7640104374378. / 9702883013639.,   -11436875. / 14766696., 2173542590792. / 12501825683035. },
+      {-20649996744609. / 7521556579894., 174696575. / 18121608., -31592104683404. / 5083833661969.},
+      {8854892464581. / 2390941311638.,   -12120380. / 966161.,   61146701046299. / 7138195549469. },
+      {-11397109935349. / 6675773540249., 3843. / 706.,           -17219254887155. / 4939391667607.}
+    };
     PetscCall(TSARKIMEXRegister(TSARKIMEX4, 4, 6, &At[0][0], NULL, NULL, &A[0][0], NULL, NULL, bembedt, bembedt, 3, binterpt[0], NULL));
   }
   {
-    const PetscReal A[8][8] =
-      {
-        {0,                                  0,                              0,                                 0,                                  0,                               0,                                 0,                               0},
-        {41. / 100,                          0,                              0,                                 0,                                  0,                               0,                                 0,                               0},
-        {367902744464. / 2072280473677.,     677623207551. / 8224143866563., 0,                                 0,                                  0,                               0,                                 0,                               0},
-        {1268023523408. / 10340822734521.,   0,                              1029933939417. / 13636558850479.,  0,                                  0,                               0,                                 0,                               0},
-        {14463281900351. / 6315353703477.,   0,                              66114435211212. / 5879490589093.,  -54053170152839. / 4284798021562.,  0,                               0,                                 0,                               0},
-        {14090043504691. / 34967701212078.,  0,                              15191511035443. / 11219624916014., -18461159152457. / 12425892160975., -281667163811. / 9011619295870., 0,                                 0,                               0},
-        {19230459214898. / 13134317526959.,  0,                              21275331358303. / 2942455364971.,  -38145345988419. / 4862620318723.,  -1. / 8,                         -1. / 8,                           0,                               0},
-        {-19977161125411. / 11928030595625., 0,                              -40795976796054. / 6384907823539., 177454434618887. / 12078138498510., 782672205425. / 8267701900261.,  -69563011059811. / 9646580694205., 7356628210526. / 4942186776405., 0}
-    },
-                    At[8][8] = {{0, 0, 0, 0, 0, 0, 0, 0}, {41. / 200., 41. / 200., 0, 0, 0, 0, 0, 0}, {41. / 400., -567603406766. / 11931857230679., 41. / 200., 0, 0, 0, 0, 0}, {683785636431. / 9252920307686., 0, -110385047103. / 1367015193373., 41. / 200., 0, 0, 0, 0}, {3016520224154. / 10081342136671., 0, 30586259806659. / 12414158314087., -22760509404356. / 11113319521817., 41. / 200., 0, 0, 0}, {218866479029. / 1489978393911., 0, 638256894668. / 5436446318841., -1179710474555. / 5321154724896., -60928119172. / 8023461067671., 41. / 200., 0, 0}, {1020004230633. / 5715676835656., 0, 25762820946817. / 25263940353407., -2161375909145. / 9755907335909., -211217309593. / 5846859502534., -4269925059573. / 7827059040749., 41. / 200, 0}, {-872700587467. / 9133579230613., 0, 0, 22348218063261. / 9555858737531., -1143369518992. / 8141816002931., -39379526789629. / 19018526304540., 32727382324388. / 42900044865799., 41. / 200.}}, bembedt[8] = {-975461918565. / 9796059967033., 0, 0, 78070527104295. / 32432590147079., -548382580838. / 3424219808633., -33438840321285. / 15594753105479., 3629800801594. / 4656183773603., 4035322873751. / 18575991585200.}, binterpt[8][3] = {{-17674230611817. / 10670229744614., 43486358583215. / 12773830924787., -9257016797708. / 5021505065439.}, {0, 0, 0}, {0, 0, 0}, {65168852399939. / 7868540260826., -91478233927265. / 11067650958493., 26096422576131. / 11239449250142.}, {15494834004392. / 5936557850923., -79368583304911. / 10890268929626., 92396832856987. / 20362823103730.}, {-99329723586156. / 26959484932159., -12239297817655. / 9152339842473., 30029262896817. / 10175596800299.}, {-19024464361622. / 5461577185407., 115839755401235. / 10719374521269., -26136350496073. / 3983972220547.}, {-6511271360970. / 6095937251113., 5843115559534. / 2180450260947., -5289405421727. / 3760307252460.}};
+    const PetscReal A[8][8] = {
+      {0,                                  0,                              0,                                 0,                                  0,                               0,                                 0,                               0},
+      {41. / 100,                          0,                              0,                                 0,                                  0,                               0,                                 0,                               0},
+      {367902744464. / 2072280473677.,     677623207551. / 8224143866563., 0,                                 0,                                  0,                               0,                                 0,                               0},
+      {1268023523408. / 10340822734521.,   0,                              1029933939417. / 13636558850479.,  0,                                  0,                               0,                                 0,                               0},
+      {14463281900351. / 6315353703477.,   0,                              66114435211212. / 5879490589093.,  -54053170152839. / 4284798021562.,  0,                               0,                                 0,                               0},
+      {14090043504691. / 34967701212078.,  0,                              15191511035443. / 11219624916014., -18461159152457. / 12425892160975., -281667163811. / 9011619295870., 0,                                 0,                               0},
+      {19230459214898. / 13134317526959.,  0,                              21275331358303. / 2942455364971.,  -38145345988419. / 4862620318723.,  -1. / 8,                         -1. / 8,                           0,                               0},
+      {-19977161125411. / 11928030595625., 0,                              -40795976796054. / 6384907823539., 177454434618887. / 12078138498510., 782672205425. / 8267701900261.,  -69563011059811. / 9646580694205., 7356628210526. / 4942186776405., 0}
+    };
+    const PetscReal At[8][8] = {
+      {0,                                0,                                0,                                 0,                                  0,                                0,                                  0,                                 0         },
+      {41. / 200.,                       41. / 200.,                       0,                                 0,                                  0,                                0,                                  0,                                 0         },
+      {41. / 400.,                       -567603406766. / 11931857230679., 41. / 200.,                        0,                                  0,                                0,                                  0,                                 0         },
+      {683785636431. / 9252920307686.,   0,                                -110385047103. / 1367015193373.,   41. / 200.,                         0,                                0,                                  0,                                 0         },
+      {3016520224154. / 10081342136671., 0,                                30586259806659. / 12414158314087., -22760509404356. / 11113319521817., 41. / 200.,                       0,                                  0,                                 0         },
+      {218866479029. / 1489978393911.,   0,                                638256894668. / 5436446318841.,    -1179710474555. / 5321154724896.,   -60928119172. / 8023461067671.,   41. / 200.,                         0,                                 0         },
+      {1020004230633. / 5715676835656.,  0,                                25762820946817. / 25263940353407., -2161375909145. / 9755907335909.,   -211217309593. / 5846859502534.,  -4269925059573. / 7827059040749.,   41. / 200,                         0         },
+      {-872700587467. / 9133579230613.,  0,                                0,                                 22348218063261. / 9555858737531.,   -1143369518992. / 8141816002931., -39379526789629. / 19018526304540., 32727382324388. / 42900044865799., 41. / 200.}
+    };
+    const PetscReal bembedt[8]     = {-975461918565. / 9796059967033., 0, 0, 78070527104295. / 32432590147079., -548382580838. / 3424219808633., -33438840321285. / 15594753105479., 3629800801594. / 4656183773603., 4035322873751. / 18575991585200.};
+    const PetscReal binterpt[8][3] = {
+      {-17674230611817. / 10670229744614., 43486358583215. / 12773830924787.,  -9257016797708. / 5021505065439. },
+      {0,                                  0,                                  0                                },
+      {0,                                  0,                                  0                                },
+      {65168852399939. / 7868540260826.,   -91478233927265. / 11067650958493., 26096422576131. / 11239449250142.},
+      {15494834004392. / 5936557850923.,   -79368583304911. / 10890268929626., 92396832856987. / 20362823103730.},
+      {-99329723586156. / 26959484932159., -12239297817655. / 9152339842473.,  30029262896817. / 10175596800299.},
+      {-19024464361622. / 5461577185407.,  115839755401235. / 10719374521269., -26136350496073. / 3983972220547.},
+      {-6511271360970. / 6095937251113.,   5843115559534. / 2180450260947.,    -5289405421727. / 3760307252460. }
+    };
     PetscCall(TSARKIMEXRegister(TSARKIMEX5, 5, 8, &At[0][0], NULL, NULL, &A[0][0], NULL, NULL, bembedt, bembedt, 3, binterpt[0], NULL));
   }
+#undef RC
+#undef us2
+#undef s2
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -476,7 +638,7 @@ PetscErrorCode TSARKIMEXFinalizePackage(void)
 /*@C
   TSARKIMEXRegister - register a `TSARKIMEX` scheme by providing the entries in the Butcher tableau and optionally embedded approximations and interpolation
 
-  Not Collective, but the same schemes should be registered on all processes on which they will be used
+  Logically Collective.
 
   Input Parameters:
 + name     - identifier for method
@@ -509,6 +671,12 @@ PetscErrorCode TSARKIMEXRegister(TSARKIMEXType name, PetscInt order, PetscInt s,
 
   PetscFunctionBegin;
   PetscCall(TSARKIMEXInitializePackage());
+  for (link = ARKTableauList; link; link = link->next) {
+    PetscBool match;
+
+    PetscCall(PetscStrcmp(link->tab.name, name, &match));
+    PetscCheck(!match, PETSC_COMM_SELF, PETSC_ERR_ARG_WRONG, "Method with name \"%s\" already registered", name);
+  }
   PetscCall(PetscNew(&link));
   t = &link->tab;
   PetscCall(PetscStrallocpy(name, &t->name));
@@ -516,29 +684,44 @@ PetscErrorCode TSARKIMEXRegister(TSARKIMEXType name, PetscInt order, PetscInt s,
   t->s     = s;
   PetscCall(PetscMalloc6(s * s, &t->At, s, &t->bt, s, &t->ct, s * s, &t->A, s, &t->b, s, &t->c));
   PetscCall(PetscArraycpy(t->At, At, s * s));
-  PetscCall(PetscArraycpy(t->A, A, s * s));
+  if (A) {
+    PetscCall(PetscArraycpy(t->A, A, s * s));
+    t->additive = PETSC_TRUE;
+  }
+
   if (bt) PetscCall(PetscArraycpy(t->bt, bt, s));
   else
     for (i = 0; i < s; i++) t->bt[i] = At[(s - 1) * s + i];
-  if (b) PetscCall(PetscArraycpy(t->b, b, s));
-  else
-    for (i = 0; i < s; i++) t->b[i] = t->bt[i];
+
+  if (t->additive) {
+    if (b) PetscCall(PetscArraycpy(t->b, b, s));
+    else
+      for (i = 0; i < s; i++) t->b[i] = t->bt[i];
+  } else PetscCall(PetscArrayzero(t->b, s));
+
   if (ct) PetscCall(PetscArraycpy(t->ct, ct, s));
   else
     for (i = 0; i < s; i++)
       for (j = 0, t->ct[i] = 0; j < s; j++) t->ct[i] += At[i * s + j];
-  if (c) PetscCall(PetscArraycpy(t->c, c, s));
-  else
-    for (i = 0; i < s; i++)
-      for (j = 0, t->c[i] = 0; j < s; j++) t->c[i] += A[i * s + j];
+
+  if (t->additive) {
+    if (c) PetscCall(PetscArraycpy(t->c, c, s));
+    else
+      for (i = 0; i < s; i++)
+        for (j = 0, t->c[i] = 0; j < s; j++) t->c[i] += A[i * s + j];
+  } else PetscCall(PetscArrayzero(t->c, s));
+
   t->stiffly_accurate = PETSC_TRUE;
   for (i = 0; i < s; i++)
     if (t->At[(s - 1) * s + i] != t->bt[i]) t->stiffly_accurate = PETSC_FALSE;
+
   t->explicit_first_stage = PETSC_TRUE;
   for (i = 0; i < s; i++)
     if (t->At[i] != 0.0) t->explicit_first_stage = PETSC_FALSE;
-  /*def of FSAL can be made more precise*/
+
+  /* def of FSAL can be made more precise */
   t->FSAL_implicit = (PetscBool)(t->explicit_first_stage && t->stiffly_accurate);
+
   if (bembedt) {
     PetscCall(PetscMalloc2(s, &t->bembedt, s, &t->bembed));
     PetscCall(PetscArraycpy(t->bembedt, bembedt, s));
@@ -549,8 +732,39 @@ PetscErrorCode TSARKIMEXRegister(TSARKIMEXType name, PetscInt order, PetscInt s,
   PetscCall(PetscMalloc2(s * pinterp, &t->binterpt, s * pinterp, &t->binterp));
   PetscCall(PetscArraycpy(t->binterpt, binterpt, s * pinterp));
   PetscCall(PetscArraycpy(t->binterp, binterp ? binterp : binterpt, s * pinterp));
+
   link->next     = ARKTableauList;
   ARKTableauList = link;
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  TSDIRKRegister - register a `TSDIRK` scheme by providing the entries in its Butcher tableau and, optionally, embedded approximations and interpolation
+
+  Logically Collective.
+
+  Input Parameters:
++ name     - identifier for method
+. order    - approximation order of method
+. s        - number of stages, this is the dimension of the matrices below
+. At       - Butcher table of stage coefficients (dimension `s`*`s`, row-major order)
+. bt       - Butcher table for completing the step (dimension `s`; pass `NULL` to use the last row of `At`)
+. ct       - Abscissa of each stage (dimension s, NULL to use row sums of At)
+. bembedt  - Stiff part of completion table for embedded method (dimension s; `NULL` if not available)
+. pinterp  - Order of the interpolation scheme, equal to the number of columns of `binterpt` and `binterp`
+- binterpt - Coefficients of the interpolation formula (dimension s*pinterp)
+
+  Level: advanced
+
+  Note:
+  Several `TSDIRK` methods are provided, the use of this function is only needed to create new methods.
+
+.seealso: [](ch_ts), `TSDIRK`, `TSType`, `TS`
+@*/
+PetscErrorCode TSDIRKRegister(TSDIRKType name, PetscInt order, PetscInt s, const PetscReal At[], const PetscReal bt[], const PetscReal ct[], const PetscReal bembedt[], PetscInt pinterp, const PetscReal binterpt[])
+{
+  PetscFunctionBegin;
+  PetscCall(TSARKIMEXRegister(name, order, s, At, bt, ct, NULL, NULL, NULL, bembedt, NULL, pinterp, binterpt, NULL));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -576,6 +790,7 @@ static PetscErrorCode TSEvaluateStep_ARKIMEX(TS ts, PetscInt order, Vec X, Petsc
   PetscScalar *w   = ark->work;
   PetscReal    h;
   PetscInt     s = tab->s, j;
+  PetscBool    hasG;
 
   PetscFunctionBegin;
   switch (ark->status) {
@@ -597,9 +812,12 @@ static PetscErrorCode TSEvaluateStep_ARKIMEX(TS ts, PetscInt order, Vec X, Petsc
         PetscCall(VecCopy(ts->vec_sol, X));
         for (j = 0; j < s; j++) w[j] = h * tab->bt[j];
         PetscCall(VecMAXPY(X, s, w, ark->YdotI));
-        if (ark->imex) { /* Method is IMEX, complete the explicit formula */
-          for (j = 0; j < s; j++) w[j] = h * tab->b[j];
-          PetscCall(VecMAXPY(X, s, w, ark->YdotRHS));
+        if (tab->additive && ark->imex) { /* Method is IMEX, complete the explicit formula */
+          PetscCall(TSHasRHSFunction(ts, &hasG));
+          if (hasG) {
+            for (j = 0; j < s; j++) w[j] = h * tab->b[j];
+            PetscCall(VecMAXPY(X, s, w, ark->YdotRHS));
+          }
         }
       }
     } else PetscCall(VecCopy(ts->vec_sol, X));
@@ -611,14 +829,24 @@ static PetscErrorCode TSEvaluateStep_ARKIMEX(TS ts, PetscInt order, Vec X, Petsc
       PetscCall(VecCopy(ts->vec_sol, X));
       for (j = 0; j < s; j++) w[j] = h * tab->bembedt[j];
       PetscCall(VecMAXPY(X, s, w, ark->YdotI));
-      for (j = 0; j < s; j++) w[j] = h * tab->bembed[j];
-      PetscCall(VecMAXPY(X, s, w, ark->YdotRHS));
+      if (tab->additive) {
+        PetscCall(TSHasRHSFunction(ts, &hasG));
+        if (hasG) {
+          for (j = 0; j < s; j++) w[j] = h * tab->bembed[j];
+          PetscCall(VecMAXPY(X, s, w, ark->YdotRHS));
+        }
+      }
     } else { /* Rollback and re-complete using (bet-be,be-b) */
       PetscCall(VecCopy(ts->vec_sol, X));
       for (j = 0; j < s; j++) w[j] = h * (tab->bembedt[j] - tab->bt[j]);
       PetscCall(VecMAXPY(X, tab->s, w, ark->YdotI));
-      for (j = 0; j < s; j++) w[j] = h * (tab->bembed[j] - tab->b[j]);
-      PetscCall(VecMAXPY(X, s, w, ark->YdotRHS));
+      if (tab->additive) {
+        PetscCall(TSHasRHSFunction(ts, &hasG));
+        if (hasG) {
+          for (j = 0; j < s; j++) w[j] = h * (tab->bembed[j] - tab->b[j]);
+          PetscCall(VecMAXPY(X, s, w, ark->YdotRHS));
+        }
+      }
     }
     if (done) *done = PETSC_TRUE;
     PetscFunctionReturn(PETSC_SUCCESS);
@@ -684,8 +912,15 @@ static PetscErrorCode TSRollBack_ARKIMEX(TS ts)
   }
   for (j = 0; j < s; j++) w[j] = -h * bt[j];
   PetscCall(VecMAXPY(ts->vec_sol, s, w, YdotI));
-  for (j = 0; j < s; j++) w[j] = -h * b[j];
-  PetscCall(VecMAXPY(ts->vec_sol, s, w, YdotRHS));
+  if (tab->additive) {
+    PetscBool hasG;
+
+    PetscCall(TSHasRHSFunction(ts, &hasG));
+    if (hasG) {
+      for (j = 0; j < s; j++) w[j] = -h * b[j];
+      PetscCall(VecMAXPY(ts->vec_sol, s, w, YdotRHS));
+    }
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -702,16 +937,17 @@ static PetscErrorCode TSStep_ARKIMEX(TS ts)
   SNES             snes;
   PetscInt         i, j, its, lits;
   PetscInt         rejections = 0;
-  PetscBool        stageok, accept = PETSC_TRUE;
+  PetscBool        hasG, stageok, accept = PETSC_TRUE;
   PetscReal        next_time_step = ts->time_step;
 
   PetscFunctionBegin;
   if (ark->extrapolate && !ark->Y_prev) {
     PetscCall(VecDuplicateVecs(ts->vec_sol, tab->s, &ark->Y_prev));
     PetscCall(VecDuplicateVecs(ts->vec_sol, tab->s, &ark->YdotI_prev));
-    PetscCall(VecDuplicateVecs(ts->vec_sol, tab->s, &ark->YdotRHS_prev));
+    if (tab->additive) PetscCall(VecDuplicateVecs(ts->vec_sol, tab->s, &ark->YdotRHS_prev));
   }
 
+  PetscCall(TSHasRHSFunction(ts, &hasG));
   if (!ts->steprollback) {
     if (ts->equation_type >= TS_EQ_IMPLICIT) { /* Save the initial slope for the next step */
       PetscCall(VecCopy(YdotI[s - 1], Ydot0));
@@ -719,8 +955,8 @@ static PetscErrorCode TSStep_ARKIMEX(TS ts)
     if (ark->extrapolate && !ts->steprestart) { /* Save the Y, YdotI, YdotRHS for extrapolation initial guess */
       for (i = 0; i < s; i++) {
         PetscCall(VecCopy(Y[i], ark->Y_prev[i]));
-        PetscCall(VecCopy(YdotRHS[i], ark->YdotRHS_prev[i]));
         PetscCall(VecCopy(YdotI[i], ark->YdotI_prev[i]));
+        if (tab->additive && hasG) PetscCall(VecCopy(YdotRHS[i], ark->YdotRHS_prev[i]));
       }
     }
   }
@@ -730,7 +966,7 @@ static PetscErrorCode TSStep_ARKIMEX(TS ts)
     if (PetscDefined(USE_DEBUG)) {
       PetscBool id = PETSC_FALSE;
       PetscCall(TSARKIMEXTestMassIdentity(ts, &id));
-      PetscCheck(id, PetscObjectComm((PetscObject)ts), PETSC_ERR_ARG_INCOMP, "This scheme requires an identity mass matrix, however the TSIFunction you provide does not utilize an identity mass matrix");
+      PetscCheck(id, PetscObjectComm((PetscObject)ts), PETSC_ERR_ARG_INCOMP, "This scheme requires an identity mass matrix, however the TSIFunction you provided does not utilize an identity mass matrix");
     }
     PetscCall(TSClone(ts, &ts_start));
     PetscCall(TSSetSolution(ts_start, ts->vec_sol));
@@ -775,16 +1011,20 @@ static PetscErrorCode TSStep_ARKIMEX(TS ts)
         PetscCall(VecCopy(ts->vec_sol, Y[i]));
         for (j = 0; j < i; j++) w[j] = h * At[i * s + j];
         PetscCall(VecMAXPY(Y[i], i, w, YdotI));
-        for (j = 0; j < i; j++) w[j] = h * A[i * s + j];
-        PetscCall(VecMAXPY(Y[i], i, w, YdotRHS));
+        if (tab->additive && hasG) {
+          for (j = 0; j < i; j++) w[j] = h * A[i * s + j];
+          PetscCall(VecMAXPY(Y[i], i, w, YdotRHS));
+        }
       } else {
         ark->scoeff = 1. / At[i * s + i];
         /* Ydot = shift*(Y-Z) */
         PetscCall(VecCopy(ts->vec_sol, Z));
         for (j = 0; j < i; j++) w[j] = h * At[i * s + j];
         PetscCall(VecMAXPY(Z, i, w, YdotI));
-        for (j = 0; j < i; j++) w[j] = h * A[i * s + j];
-        PetscCall(VecMAXPY(Z, i, w, YdotRHS));
+        if (tab->additive && hasG) {
+          for (j = 0; j < i; j++) w[j] = h * A[i * s + j];
+          PetscCall(VecMAXPY(Z, i, w, YdotRHS));
+        }
         if (extrapolate && !ts->steprestart) {
           /* Initial guess extrapolated from previous time step stage values */
           PetscCall(TSExtrapolate_ARKIMEX(ts, c[i], Y[i]));
@@ -809,8 +1049,8 @@ static PetscErrorCode TSStep_ARKIMEX(TS ts)
       }
       if (ts->equation_type >= TS_EQ_IMPLICIT) {
         if (i == 0 && tab->explicit_first_stage) {
-          PetscCheck(tab->stiffly_accurate, PetscObjectComm((PetscObject)ts), PETSC_ERR_SUP, "TSARKIMEX %s is not stiffly accurate and therefore explicit-first stage methods cannot be used if the equation is implicit because the slope cannot be evaluated",
-                     ark->tableau->name);
+          PetscCheck(tab->stiffly_accurate, PetscObjectComm((PetscObject)ts), PETSC_ERR_SUP, "%s %s is not stiffly accurate and therefore explicit-first stage methods cannot be used if the equation is implicit because the slope cannot be evaluated",
+                     ((PetscObject)ts)->type_name, ark->tableau->name);
           PetscCall(VecCopy(Ydot0, YdotI[0])); /* YdotI = YdotI(tn-1) */
         } else {
           PetscCall(VecAXPBYPCZ(YdotI[i], -ark->scoeff / h, ark->scoeff / h, 0, Z, Y[i])); /* YdotI = shift*(X-Z) */
@@ -823,10 +1063,12 @@ static PetscErrorCode TSStep_ARKIMEX(TS ts)
         } else {
           PetscCall(VecAXPBYPCZ(YdotI[i], -ark->scoeff / h, ark->scoeff / h, 0, Z, Y[i])); /* YdotI = shift*(X-Z) */
         }
-        if (ark->imex) {
-          PetscCall(TSComputeRHSFunction(ts, t + h * c[i], Y[i], YdotRHS[i]));
-        } else {
-          PetscCall(VecZeroEntries(YdotRHS[i]));
+        if (tab->additive && hasG) {
+          if (ark->imex) {
+            PetscCall(TSComputeRHSFunction(ts, t + h * c[i], Y[i], YdotRHS[i]));
+          } else {
+            PetscCall(VecZeroEntries(YdotRHS[i]));
+          }
         }
       }
       PetscCall(TSPostStage(ts, ark->stage_time, i, Y));
@@ -860,6 +1102,7 @@ static PetscErrorCode TSStep_ARKIMEX(TS ts)
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
 /*
   This adjoint step function assumes the partitioned ODE system has an identity mass matrix and thus can be represented in the form
   Udot = H(t,U) + G(t,U)
@@ -1008,14 +1251,15 @@ static PetscErrorCode TSAdjointStep_ARKIMEX(TS ts)
 static PetscErrorCode TSInterpolate_ARKIMEX(TS ts, PetscReal itime, Vec X)
 {
   TS_ARKIMEX      *ark = (TS_ARKIMEX *)ts->data;
-  PetscInt         s = ark->tableau->s, pinterp = ark->tableau->pinterp, i, j;
+  ARKTableau       tab = ark->tableau;
+  PetscInt         s = tab->s, pinterp = tab->pinterp, i, j;
   PetscReal        h;
   PetscReal        tt, t;
-  PetscScalar     *bt, *b;
-  const PetscReal *Bt = ark->tableau->binterpt, *B = ark->tableau->binterp;
+  PetscScalar     *bt = ark->work, *b = ark->work + s;
+  const PetscReal *Bt = tab->binterpt, *B = tab->binterp;
 
   PetscFunctionBegin;
-  PetscCheck(Bt && B, PetscObjectComm((PetscObject)ts), PETSC_ERR_SUP, "TSARKIMEX %s does not have an interpolation formula", ark->tableau->name);
+  PetscCheck(Bt && B, PetscObjectComm((PetscObject)ts), PETSC_ERR_SUP, "%s %s does not have an interpolation formula", ((PetscObject)ts)->type_name, ark->tableau->name);
   switch (ark->status) {
   case TS_STEP_INCOMPLETE:
   case TS_STEP_PENDING:
@@ -1029,7 +1273,6 @@ static PetscErrorCode TSInterpolate_ARKIMEX(TS ts, PetscReal itime, Vec X)
   default:
     SETERRQ(PetscObjectComm((PetscObject)ts), PETSC_ERR_PLIB, "Invalid TSStepStatus");
   }
-  PetscCall(PetscMalloc2(s, &bt, s, &b));
   for (i = 0; i < s; i++) bt[i] = b[i] = 0;
   for (j = 0, tt = t; j < pinterp; j++, tt *= t) {
     for (i = 0; i < s; i++) {
@@ -1039,25 +1282,29 @@ static PetscErrorCode TSInterpolate_ARKIMEX(TS ts, PetscReal itime, Vec X)
   }
   PetscCall(VecCopy(ark->Y[0], X));
   PetscCall(VecMAXPY(X, s, bt, ark->YdotI));
-  PetscCall(VecMAXPY(X, s, b, ark->YdotRHS));
-  PetscCall(PetscFree2(bt, b));
+  if (tab->additive) {
+    PetscBool hasG;
+    PetscCall(TSHasRHSFunction(ts, &hasG));
+    if (hasG) PetscCall(VecMAXPY(X, s, b, ark->YdotRHS));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
 static PetscErrorCode TSExtrapolate_ARKIMEX(TS ts, PetscReal c, Vec X)
 {
   TS_ARKIMEX      *ark = (TS_ARKIMEX *)ts->data;
-  PetscInt         s = ark->tableau->s, pinterp = ark->tableau->pinterp, i, j;
+  ARKTableau       tab = ark->tableau;
+  PetscInt         s = tab->s, pinterp = tab->pinterp, i, j;
   PetscReal        h, h_prev, t, tt;
-  PetscScalar     *bt, *b;
-  const PetscReal *Bt = ark->tableau->binterpt, *B = ark->tableau->binterp;
+  PetscScalar     *bt = ark->work, *b = ark->work + s;
+  const PetscReal *Bt = tab->binterpt, *B = tab->binterp;
 
   PetscFunctionBegin;
   PetscCheck(Bt && B, PetscObjectComm((PetscObject)ts), PETSC_ERR_SUP, "TSARKIMEX %s does not have an interpolation formula", ark->tableau->name);
-  PetscCall(PetscCalloc2(s, &bt, s, &b));
   h      = ts->time_step;
   h_prev = ts->ptime - ts->ptime_prev;
   t      = 1 + h / h_prev * c;
+  for (i = 0; i < s; i++) bt[i] = b[i] = 0;
   for (j = 0, tt = t; j < pinterp; j++, tt *= t) {
     for (i = 0; i < s; i++) {
       bt[i] += h * Bt[i * pinterp + j] * tt;
@@ -1067,12 +1314,13 @@ static PetscErrorCode TSExtrapolate_ARKIMEX(TS ts, PetscReal c, Vec X)
   PetscCheck(ark->Y_prev, PetscObjectComm((PetscObject)ts), PETSC_ERR_SUP, "Stages from previous step have not been stored");
   PetscCall(VecCopy(ark->Y_prev[0], X));
   PetscCall(VecMAXPY(X, s, bt, ark->YdotI_prev));
-  PetscCall(VecMAXPY(X, s, b, ark->YdotRHS_prev));
-  PetscCall(PetscFree2(bt, b));
+  if (tab->additive) {
+    PetscBool hasG;
+    PetscCall(TSHasRHSFunction(ts, &hasG));
+    if (hasG) PetscCall(VecMAXPY(X, s, b, ark->YdotRHS_prev));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-
-/*------------------------------------------------------------*/
 
 static PetscErrorCode TSARKIMEXTableauReset(TS ts)
 {
@@ -1251,14 +1499,14 @@ static PetscErrorCode TSARKIMEXTableauSetUp(TS ts)
   ARKTableau  tab = ark->tableau;
 
   PetscFunctionBegin;
-  PetscCall(PetscMalloc1(tab->s, &ark->work));
+  PetscCall(PetscMalloc1(2 * tab->s, &ark->work));
   PetscCall(VecDuplicateVecs(ts->vec_sol, tab->s, &ark->Y));
   PetscCall(VecDuplicateVecs(ts->vec_sol, tab->s, &ark->YdotI));
-  PetscCall(VecDuplicateVecs(ts->vec_sol, tab->s, &ark->YdotRHS));
+  if (tab->additive) PetscCall(VecDuplicateVecs(ts->vec_sol, tab->s, &ark->YdotRHS));
   if (ark->extrapolate) {
     PetscCall(VecDuplicateVecs(ts->vec_sol, tab->s, &ark->Y_prev));
     PetscCall(VecDuplicateVecs(ts->vec_sol, tab->s, &ark->YdotI_prev));
-    PetscCall(VecDuplicateVecs(ts->vec_sol, tab->s, &ark->YdotRHS_prev));
+    if (tab->additive) PetscCall(VecDuplicateVecs(ts->vec_sol, tab->s, &ark->YdotRHS_prev));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1280,7 +1528,6 @@ static PetscErrorCode TSSetUp_ARKIMEX(TS ts)
   PetscCall(TSGetSNES(ts, &snes));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
-/*------------------------------------------------------------*/
 
 static PetscErrorCode TSAdjointSetUp_ARKIMEX(TS ts)
 {
@@ -1294,7 +1541,7 @@ static PetscErrorCode TSAdjointSetUp_ARKIMEX(TS ts)
   if (PetscDefined(USE_DEBUG)) {
     PetscBool id = PETSC_FALSE;
     PetscCall(TSARKIMEXTestMassIdentity(ts, &id));
-    PetscCheck(id, PetscObjectComm((PetscObject)ts), PETSC_ERR_ARG_INCOMP, "Adjoint ARKIMEX requires an identity mass matrix, however the TSIFunction you provide does not utilize an identity mass matrix");
+    PetscCheck(id, PetscObjectComm((PetscObject)ts), PETSC_ERR_ARG_INCOMP, "Adjoint ARKIMEX requires an identity mass matrix, however the TSIFunction you provided does not utilize an identity mass matrix");
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1302,25 +1549,36 @@ static PetscErrorCode TSAdjointSetUp_ARKIMEX(TS ts)
 static PetscErrorCode TSSetFromOptions_ARKIMEX(TS ts, PetscOptionItems *PetscOptionsObject)
 {
   TS_ARKIMEX *ark = (TS_ARKIMEX *)ts->data;
+  PetscBool   dirk;
 
   PetscFunctionBegin;
-  PetscOptionsHeadBegin(PetscOptionsObject, "ARKIMEX ODE solver options");
+  PetscCall(PetscObjectTypeCompare((PetscObject)ts, TSDIRK, &dirk));
+  PetscOptionsHeadBegin(PetscOptionsObject, dirk ? "DIRK ODE solver options" : "ARKIMEX ODE solver options");
   {
     ARKTableauLink link;
     PetscInt       count, choice;
     PetscBool      flg;
     const char   **namelist;
-    for (link = ARKTableauList, count = 0; link; link = link->next, count++)
-      ;
+    for (link = ARKTableauList, count = 0; link; link = link->next) {
+      if (!dirk && link->tab.additive) count++;
+      if (dirk && !link->tab.additive) count++;
+    }
     PetscCall(PetscMalloc1(count, (char ***)&namelist));
-    for (link = ARKTableauList, count = 0; link; link = link->next, count++) namelist[count] = link->tab.name;
-    PetscCall(PetscOptionsEList("-ts_arkimex_type", "Family of ARK IMEX method", "TSARKIMEXSetType", (const char *const *)namelist, count, ark->tableau->name, &choice, &flg));
-    if (flg) PetscCall(TSARKIMEXSetType(ts, namelist[choice]));
+    for (link = ARKTableauList, count = 0; link; link = link->next) {
+      if (!dirk && link->tab.additive) namelist[count++] = link->tab.name;
+      if (dirk && !link->tab.additive) namelist[count++] = link->tab.name;
+    }
+    if (dirk) {
+      PetscCall(PetscOptionsEList("-ts_dirk_type", "Family of DIRK method", "TSDIRKSetType", (const char *const *)namelist, count, ark->tableau->name, &choice, &flg));
+      if (flg) PetscCall(TSDIRKSetType(ts, namelist[choice]));
+    } else {
+      PetscCall(PetscOptionsEList("-ts_arkimex_type", "Family of ARK IMEX method", "TSARKIMEXSetType", (const char *const *)namelist, count, ark->tableau->name, &choice, &flg));
+      if (flg) PetscCall(TSARKIMEXSetType(ts, namelist[choice]));
+      flg = (PetscBool)!ark->imex;
+      PetscCall(PetscOptionsBool("-ts_arkimex_fully_implicit", "Solve the problem fully implicitly", "TSARKIMEXSetFullyImplicit", flg, &flg, NULL));
+      ark->imex = (PetscBool)!flg;
+    }
     PetscCall(PetscFree(namelist));
-
-    flg = (PetscBool)!ark->imex;
-    PetscCall(PetscOptionsBool("-ts_arkimex_fully_implicit", "Solve the problem fully implicitly", "TSARKIMEXSetFullyImplicit", flg, &flg, NULL));
-    ark->imex = (PetscBool)!flg;
     PetscCall(PetscOptionsBool("-ts_arkimex_initial_guess_extrapolate", "Extrapolate the initial guess for the stage solution from stage values of the previous time step", "", ark->extrapolate, &ark->extrapolate, NULL));
   }
   PetscOptionsHeadEnd();
@@ -1330,9 +1588,10 @@ static PetscErrorCode TSSetFromOptions_ARKIMEX(TS ts, PetscOptionItems *PetscOpt
 static PetscErrorCode TSView_ARKIMEX(TS ts, PetscViewer viewer)
 {
   TS_ARKIMEX *ark = (TS_ARKIMEX *)ts->data;
-  PetscBool   iascii;
+  PetscBool   iascii, dirk;
 
   PetscFunctionBegin;
+  PetscCall(PetscObjectTypeCompare((PetscObject)ts, TSDIRK, &dirk));
   PetscCall(PetscObjectTypeCompare((PetscObject)viewer, PETSCVIEWERASCII, &iascii));
   if (iascii) {
     ARKTableau    tab = ark->tableau;
@@ -1342,15 +1601,15 @@ static PetscErrorCode TSView_ARKIMEX(TS ts, PetscViewer viewer)
 
     PetscCall(TSARKIMEXGetType(ts, &arktype));
     PetscCall(TSARKIMEXGetFullyImplicit(ts, &flg));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  ARK IMEX %s\n", arktype));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  %s %s\n", dirk ? "DIRK" : "ARK IMEX", arktype));
     PetscCall(PetscFormatRealArray(buf, sizeof(buf), "% 8.6f", tab->s, tab->ct));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  Stiff abscissa       ct = %s\n", buf));
+    PetscCall(PetscViewerASCIIPrintf(viewer, "  %sabscissa       ct = %s\n", dirk ? "" : "Stiff ", buf));
     PetscCall(PetscFormatRealArray(buf, sizeof(buf), "% 8.6f", tab->s, tab->c));
     PetscCall(PetscViewerASCIIPrintf(viewer, "Fully implicit: %s\n", flg ? "yes" : "no"));
     PetscCall(PetscViewerASCIIPrintf(viewer, "Stiffly accurate: %s\n", tab->stiffly_accurate ? "yes" : "no"));
     PetscCall(PetscViewerASCIIPrintf(viewer, "Explicit first stage: %s\n", tab->explicit_first_stage ? "yes" : "no"));
     PetscCall(PetscViewerASCIIPrintf(viewer, "FSAL property: %s\n", tab->FSAL_implicit ? "yes" : "no"));
-    PetscCall(PetscViewerASCIIPrintf(viewer, "  Nonstiff abscissa     c = %s\n", buf));
+    if (!dirk) PetscCall(PetscViewerASCIIPrintf(viewer, "  Nonstiff abscissa     c = %s\n", buf));
   }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
@@ -1474,6 +1733,7 @@ static PetscErrorCode TSARKIMEXGetType_ARKIMEX(TS ts, TSARKIMEXType *arktype)
   *arktype = ark->tableau->name;
   PetscFunctionReturn(PETSC_SUCCESS);
 }
+
 static PetscErrorCode TSARKIMEXSetType_ARKIMEX(TS ts, TSARKIMEXType arktype)
 {
   TS_ARKIMEX    *ark = (TS_ARKIMEX *)ts->data;
@@ -1525,6 +1785,8 @@ static PetscErrorCode TSDestroy_ARKIMEX(TS ts)
     PetscCall(DMSubDomainHookRemove(ts->dm, DMSubDomainHook_TSARKIMEX, DMSubDomainRestrictHook_TSARKIMEX, ts));
   }
   PetscCall(PetscFree(ts->data));
+  PetscCall(PetscObjectComposeFunction((PetscObject)ts, "TSDIRKGetType_C", NULL));
+  PetscCall(PetscObjectComposeFunction((PetscObject)ts, "TSDIRKSetType_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)ts, "TSARKIMEXGetType_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)ts, "TSARKIMEXSetType_C", NULL));
   PetscCall(PetscObjectComposeFunction((PetscObject)ts, "TSARKIMEXSetFullyImplicit_C", NULL));
@@ -1558,9 +1820,11 @@ M*/
 PETSC_EXTERN PetscErrorCode TSCreate_ARKIMEX(TS ts)
 {
   TS_ARKIMEX *ark;
+  PetscBool   dirk;
 
   PetscFunctionBegin;
   PetscCall(TSARKIMEXInitializePackage());
+  PetscCall(PetscObjectTypeCompare((PetscObject)ts, TSDIRK, &dirk));
 
   ts->ops->reset          = TSReset_ARKIMEX;
   ts->ops->adjointreset   = TSAdjointReset_ARKIMEX;
@@ -1583,17 +1847,103 @@ PETSC_EXTERN PetscErrorCode TSCreate_ARKIMEX(TS ts)
 
   PetscCall(PetscNew(&ark));
   ts->data  = (void *)ark;
-  ark->imex = PETSC_TRUE;
+  ark->imex = dirk ? PETSC_FALSE : PETSC_TRUE;
 
   ark->VecsDeltaLam   = NULL;
   ark->VecsSensiTemp  = NULL;
   ark->VecsSensiPTemp = NULL;
 
   PetscCall(PetscObjectComposeFunction((PetscObject)ts, "TSARKIMEXGetType_C", TSARKIMEXGetType_ARKIMEX));
-  PetscCall(PetscObjectComposeFunction((PetscObject)ts, "TSARKIMEXSetType_C", TSARKIMEXSetType_ARKIMEX));
-  PetscCall(PetscObjectComposeFunction((PetscObject)ts, "TSARKIMEXSetFullyImplicit_C", TSARKIMEXSetFullyImplicit_ARKIMEX));
   PetscCall(PetscObjectComposeFunction((PetscObject)ts, "TSARKIMEXGetFullyImplicit_C", TSARKIMEXGetFullyImplicit_ARKIMEX));
+  if (!dirk) {
+    PetscCall(PetscObjectComposeFunction((PetscObject)ts, "TSARKIMEXSetType_C", TSARKIMEXSetType_ARKIMEX));
+    PetscCall(PetscObjectComposeFunction((PetscObject)ts, "TSARKIMEXSetFullyImplicit_C", TSARKIMEXSetFullyImplicit_ARKIMEX));
+    PetscCall(TSARKIMEXSetType(ts, TSARKIMEXDefault));
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
-  PetscCall(TSARKIMEXSetType(ts, TSARKIMEXDefault));
+/* ------------------------------------------------------------ */
+
+static PetscErrorCode TSDIRKSetType_DIRK(TS ts, TSDIRKType dirktype)
+{
+  TS_ARKIMEX *ark = (TS_ARKIMEX *)ts->data;
+
+  PetscFunctionBegin;
+  PetscCall(TSARKIMEXSetType_ARKIMEX(ts, dirktype));
+  PetscCheck(!ark->tableau->additive, PetscObjectComm((PetscObject)ts), PETSC_ERR_ARG_WRONG, "Method \"%s\" is not DIRK", dirktype);
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  TSDIRKSetType - Set the type of `TSDIRK` scheme
+
+  Logically Collective
+
+  Input Parameters:
++ ts       - timestepping context
+- dirktype - type of `TSDIRK` scheme
+
+  Options Database Key:
+. -ts_dirkimex_type - set `TSDIRK` scheme type
+
+  Level: intermediate
+
+.seealso: [](ch_ts), `TSDIRKGetType()`, `TSDIRK`, `TSDIRKType`
+@*/
+PetscErrorCode TSDIRKSetType(TS ts, TSDIRKType dirktype)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
+  PetscAssertPointer(dirktype, 2);
+  PetscTryMethod(ts, "TSDIRKSetType_C", (TS, TSDIRKType), (ts, dirktype));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*@C
+  TSDIRKGetType - Get the type of `TSDIRK` scheme
+
+  Logically Collective
+
+  Input Parameter:
+. ts - timestepping context
+
+  Output Parameter:
+. dirktype - type of `TSDIRK` scheme
+
+  Level: intermediate
+
+.seealso: [](ch_ts), `TSDIRKSetType()`
+@*/
+PetscErrorCode TSDIRKGetType(TS ts, TSDIRKType *dirktype)
+{
+  PetscFunctionBegin;
+  PetscValidHeaderSpecific(ts, TS_CLASSID, 1);
+  PetscUseMethod(ts, "TSDIRKGetType_C", (TS, TSDIRKType *), (ts, dirktype));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+/*MC
+      TSDIRK - ODE and DAE solver using Diagonally implicit Runge-Kutta schemes
+
+  Level: beginner
+
+  Notes:
+  The default is `TSDIRK212`, it can be changed with `TSDIRKSetType()` or -ts_dirk_type
+
+  If the equation is implicit or a DAE, then `TSSetEquationType()` needs to be set accordingly. Refer to the manual for further information.
+
+.seealso: [](ch_ts), `TSCreate()`, `TS`, `TSSetType()`, `TSDIRKSetType()`, `TSDIRKGetType()`, `TSDIRKRegister()`.
+M*/
+PETSC_EXTERN PetscErrorCode TSCreate_DIRK(TS ts)
+{
+  PetscFunctionBegin;
+  PetscCall(TSCreate_ARKIMEX(ts));
+
+  /* Enable DIRK API */
+  PetscCall(PetscObjectComposeFunction((PetscObject)ts, "TSDIRKGetType_C", TSARKIMEXGetType_ARKIMEX));
+  PetscCall(PetscObjectComposeFunction((PetscObject)ts, "TSDIRKSetType_C", TSDIRKSetType_DIRK));
+
+  PetscCall(TSDIRKSetType(ts, TSDIRKDefault));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
