@@ -7,7 +7,7 @@ import multiprocessing as mp
 import petsclinter     as pl
 
 from .classes._diag   import DiagnosticManager
-from .classes._pool   import WorkerPool
+from .classes._pool   import WorkerPoolBase
 from .classes._linter import Linter
 
 from .util._timeout import timeout
@@ -51,16 +51,16 @@ def __main_loop(file_queue, return_queue, linter):
   try:
     while 1:
       filename = file_queue.get()
-      if filename == WorkerPool.QueueSignal.EXIT_QUEUE:
+      if filename == WorkerPoolBase.QueueSignal.EXIT_QUEUE:
         # bail, the queue is done feeding us work
         break
 
       errors_left, errors_fixed, warnings, patches = linter.parse(filename).diagnostics()
       return_queue.put((
-        (WorkerPool.QueueSignal.UNIFIED_DIFF, patches),
-        (WorkerPool.QueueSignal.ERRORS_LEFT , errors_left),
-        (WorkerPool.QueueSignal.ERRORS_FIXED, errors_fixed),
-        (WorkerPool.QueueSignal.WARNING     , warnings)
+        (WorkerPoolBase.QueueSignal.UNIFIED_DIFF, patches),
+        (WorkerPoolBase.QueueSignal.ERRORS_LEFT , errors_left),
+        (WorkerPoolBase.QueueSignal.ERRORS_FIXED, errors_fixed),
+        (WorkerPoolBase.QueueSignal.WARNING     , warnings)
       ))
       file_queue.task_done()
   except Exception as exc:
