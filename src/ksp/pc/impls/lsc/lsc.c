@@ -25,12 +25,14 @@ static PetscErrorCode PCLSCAllocate_Private(PC pc)
   PetscCall(MatCreateVecs(pc->pmat, &lsc->Svec0, NULL));
   if (lsc->scalediag) PetscCall(VecDuplicate(lsc->Avec0, &lsc->scale));
 
-  PetscCall(KSPCreate(PetscObjectComm((PetscObject)pc), &lsc->kspMass));
-  PetscCall(KSPSetErrorIfNotConverged(lsc->kspMass, pc->erroriffailure));
-  PetscCall(PetscObjectIncrementTabLevel((PetscObject)lsc->kspMass, (PetscObject)pc, 1));
-  PetscCall(KSPSetType(lsc->kspMass, KSPPREONLY));
-  PetscCall(KSPSetOptionsPrefix(lsc->kspMass, ((PetscObject)pc)->prefix));
-  PetscCall(KSPAppendOptionsPrefix(lsc->kspMass, "lsc_mass_"));
+  if (lsc->commute) {
+    PetscCall(KSPCreate(PetscObjectComm((PetscObject)pc), &lsc->kspMass));
+    PetscCall(KSPSetErrorIfNotConverged(lsc->kspMass, pc->erroriffailure));
+    PetscCall(PetscObjectIncrementTabLevel((PetscObject)lsc->kspMass, (PetscObject)pc, 1));
+    PetscCall(KSPSetType(lsc->kspMass, KSPPREONLY));
+    PetscCall(KSPSetOptionsPrefix(lsc->kspMass, ((PetscObject)pc)->prefix));
+    PetscCall(KSPAppendOptionsPrefix(lsc->kspMass, "lsc_mass_"));
+  } else lsc->kspMass = NULL;
 
   lsc->allocated = PETSC_TRUE;
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -92,8 +94,10 @@ static PetscErrorCode PCSetUp_LSC(PC pc)
 
   PetscCall(KSPSetOperators(lsc->kspL, L, Lp));
   PetscCall(KSPSetFromOptions(lsc->kspL));
-  PetscCall(KSPSetOperators(lsc->kspMass, Qscale, Qscale));
-  PetscCall(KSPSetFromOptions(lsc->kspMass));
+  if (lsc->commute) {
+    PetscCall(KSPSetOperators(lsc->kspMass, Qscale, Qscale));
+    PetscCall(KSPSetFromOptions(lsc->kspMass));
+  }
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -139,7 +143,7 @@ static PetscErrorCode PCReset_LSC(PC pc)
   PetscCall(VecDestroy(&lsc->Avec1));
   PetscCall(VecDestroy(&lsc->Svec0));
   PetscCall(KSPDestroy(&lsc->kspL));
-  PetscCall(KSPDestroy(&lsc->kspMass));
+  if (lsc->commute) PetscCall(KSPDestroy(&lsc->kspMass));
   if (lsc->L) PetscCall(MatDestroy(&lsc->L));
   if (lsc->scale) PetscCall(VecDestroy(&lsc->scale));
   PetscFunctionReturn(PETSC_SUCCESS);
@@ -182,10 +186,12 @@ static PetscErrorCode PCView_LSC(PC pc, PetscViewer viewer)
     } else {
       PetscCall(PetscViewerASCIIPrintf(viewer, "PCLSC KSP object not yet created, hence cannot display"));
     }
-    if (jac->kspMass) {
-      PetscCall(KSPView(jac->kspMass, viewer));
-    } else {
-      PetscCall(PetscViewerASCIIPrintf(viewer, "PCLSC Mass KSP object not yet created, hence cannot display"));
+    if (jac->commute) {
+      if (jac->kspMass) {
+        PetscCall(KSPView(jac->kspMass, viewer));
+      } else {
+        PetscCall(PetscViewerASCIIPrintf(viewer, "PCLSC Mass KSP object not yet created, hence cannot display"));
+      }
     }
     PetscCall(PetscViewerASCIIPopTab(viewer));
   }
