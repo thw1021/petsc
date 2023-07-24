@@ -44,7 +44,7 @@ class WorkerPoolBase(abc.ABC):
   __slots__ = ('verbose', 'warnings', 'errors_left', 'errors_fixed', 'patches')
 
   verbose: bool
-  warnings: MutableSequence
+  warnings: list[tuple[Path, str]]
   errors_left: list[tuple[Path, str]]
   errors_fixed: list[tuple[Path, str]]
   patches: list[tuple[Path, str]]
@@ -186,11 +186,7 @@ class WorkerPoolBase(abc.ABC):
     If running in parallel, and workers fail to finalize in time, calls `self.__crash_and_burn()`
     """
     self._finalize()
-    errors_left  = [e for e in self.errors_left  if e] # remove any None's
-    errors_fixed = [e for e in self.errors_fixed if e]
-    warnings     = [w for w in self.warnings     if w]
-    patches      = [p for p in self.patches      if p]
-    return warnings, errors_left, errors_fixed, patches
+    return self.warnings[:], self.errors_left[:], self.errors_fixed[:], self.patches[:]
 
 class ParallelPool(WorkerPoolBase):
   __slots__ = ('input_queue', 'error_queue', 'return_queue', 'lock', 'workers', 'num_workers')
@@ -252,14 +248,14 @@ class ParallelPool(WorkerPoolBase):
     self.check()
     return_q = self.return_queue
     try:
-      qsize = return_q.qsize()
+      qsize_mess = str(return_q.qsize())
     except NotImplementedError:
       # https://docs.python.org/3/library/multiprocessing.html#multiprocessing.Queue.qsize
       #
       # Note that this may raise NotImplementedError on Unix platforms like macOS where
       # sem_getvalue() is not implemented.
-      qsize = '0' if return_q.empty() else 'unknown (not implemented on platform)'
-    self._print('Estimated number of results:', qsize)
+      qsize_mess = '0' if return_q.empty() else 'unknown (not implemented on platform)'
+    self._print('Estimated number of results:', qsize_mess)
 
     while not return_q.empty():
       try:
