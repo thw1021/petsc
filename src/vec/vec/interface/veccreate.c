@@ -56,7 +56,7 @@ PetscErrorCode VecCreate(MPI_Comm comm, Vec *vec)
 }
 
 /*@C
-  VecCreateFromOptions - Creates an vector whose type is set from the options database
+  VecCreateFromOptions - Creates a vector whose type is set from the options database
 
   Collective
 
@@ -81,7 +81,7 @@ PetscErrorCode VecCreate(MPI_Comm comm, Vec *vec)
 PetscErrorCode VecCreateFromOptions(MPI_Comm comm, const char *prefix, PetscInt bs, PetscInt m, PetscInt n, Vec *vec)
 {
   PetscFunctionBegin;
-  PetscValidPointer(vec, 5);
+  PetscAssertPointer(vec, 6);
   PetscCall(VecCreate(comm, vec));
   if (prefix) PetscCall(VecSetOptionsPrefix(*vec, prefix));
   PetscCall(VecSetBlockSize(*vec, bs));

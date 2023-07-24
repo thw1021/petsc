@@ -129,7 +129,7 @@ PetscErrorCode MatCreate(MPI_Comm comm, Mat *A)
 PetscErrorCode MatCreateFromOptions(MPI_Comm comm, const char *prefix, PetscInt bs, PetscInt m, PetscInt n, PetscInt M, PetscInt N, Mat *A)
 {
   PetscFunctionBegin;
-  PetscValidPointer(A, 7);
+  PetscAssertPointer(A, 8);
   PetscCall(MatCreate(comm, A));
   if (prefix) PetscCall(MatSetOptionsPrefix(*A, prefix));
   PetscCall(MatSetBlockSize(*A, bs));

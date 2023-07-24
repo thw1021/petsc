@@ -6,7 +6,7 @@
       implicit none
 
       PetscErrorCode ierr
-      PetscInt  nlocal, row,i1
+      PetscInt  nlocal, row, i1
       PetscScalar num
       PetscMPIInt rank
       Vec v1, v2
