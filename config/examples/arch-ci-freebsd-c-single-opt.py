@@ -15,6 +15,7 @@ configure_options = [
   '--download-parmetis',
   '--download-cmake',  # needed by metis/parmetis
   '--with-strict-petscerrorcode',
+  '--with-tau-perfstubs=0', # requires linux to test
 ]
 
 if __name__ == '__main__':
